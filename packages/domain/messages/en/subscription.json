@@ -74,6 +74,14 @@
     "expires": "Transfer deadline: {date}",
     "copyAmount": "Copy amount",
     "copyCode": "Copy code",
-    "done": "Got it"
+    "done": "Got it",
+    "partialIntro": "We have received {paid}. Transfer the remaining amount below with the EXACT reference — the plan activates as soon as it is paid in full.",
+    "qrAlt": "VietQR code for the plan payment transfer",
+    "bank": "Bank",
+    "accountNumber": "Account number",
+    "accountName": "Account holder",
+    "copyAccount": "Copy account number",
+    "autoActivateNote": "The plan activates automatically once the money arrives — you can close this page; we will notify you.",
+    "pendingTitle": "Invoice awaiting bank transfer"
   }
 }

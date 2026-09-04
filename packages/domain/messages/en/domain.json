@@ -12,6 +12,12 @@
     "system": "System",
     "customer": "Renter"
   },
+  "bankMatchStatus": {
+    "unmatched": "Unmatched",
+    "matched": "Matched",
+    "manual": "Manual match",
+    "ignored": "Skipped"
+  },
   "billingMode": {
     "commission": "Per-trip commission",
     "package": "Slot-based plan"
@@ -190,6 +196,7 @@
   "inviteStatus": {
     "pending": "Pending",
     "accepted": "Joined",
+    "declined": "Declined",
     "expired": "Expired",
     "revoked": "Revoked"
   },
@@ -265,7 +272,8 @@
     "subscription_expiring": "Plan expiring soon",
     "subscription_expired": "Plan expired",
     "subscription_lapsed": "Switched to per-trip commission",
-    "free_trips_exhausted": "Free trips used up"
+    "free_trips_exhausted": "Free trips used up",
+    "subscription_activated": "Plan activated"
   },
   "occupancySourceType": {
     "booking": "Booking",
@@ -502,6 +510,16 @@
     "valid": "Valid",
     "expiring_soon": "Expiring soon",
     "expired": "Expired"
+  },
+  "vehicleDocumentPreset": {
+    "contract_badge": "Contract vehicle badge",
+    "transport_licence": "Transport business licence",
+    "physical_damage_insurance": "Own-damage insurance (bodywork)",
+    "passenger_insurance": "Passenger accident insurance",
+    "road_fee_stamp": "Road toll stamp",
+    "gps_certificate": "GPS tracker certificate",
+    "purchase_contract": "Purchase contract / vehicle invoice",
+    "authorisation_letter": "Vehicle use authorisation letter"
   },
   "vehicleDocumentType": {
     "registration": "Vehicle registration",

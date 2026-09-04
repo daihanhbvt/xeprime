@@ -1,0 +1,23 @@
+.list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
+.link {
+  font-size: 14.5px;
+  color: var(--xp-color-primary);
+}
+
+.link:hover {
+  text-decoration: underline;
+}

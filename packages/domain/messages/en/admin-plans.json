@@ -55,10 +55,8 @@
     "graceDays": "Grace period after expiry",
     "graceDaysUnit": "days",
     "sectionIncentive": "Break-even assumptions",
-    "incentiveIntro": "The system rejects a plan that beats the commission track below its own included slots — enter assumptions to verify.",
     "assumedGmv": "Assumed revenue / vehicle / month",
     "assumedCommission": "Commission % to compare against",
-    "incentiveWarning": "The base fee is below the {min} threshold — the break-even point falls under the included slots, so saving will be rejected.",
     "sectionOther": "Other limits & features",
     "maxMembers": "Max members",
     "maxBranches": "Max branches",
@@ -76,7 +74,8 @@
       "assumedCommissionRequired": "Enter the commission % to compare against",
       "integer": "Whole number",
       "nonNegative": "Must not be negative"
-    }
+    },
+    "gmvReferenceNote": "The GMV assumption is now REFERENCE ONLY for pricing (ADR 0029 removed the funnel check — per-trip fees are borne by the customer, so no base-price floor)."
   },
   "tenant": {
     "title": "Service plan",

@@ -8,3 +8,4 @@ export type TenantPlan = Schemas['TenantPlanDto'];
 export type SubscriptionInvoice = Schemas['SubscriptionInvoiceDto'];
 export type PurchaseSubscriptionInput = Schemas['PurchaseSubscriptionDto'];
 export type SlotUsage = Schemas['SlotUsageDto'];
+export type PaymentInfo = Schemas['PaymentInfoDto'];

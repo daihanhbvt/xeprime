@@ -28,6 +28,7 @@ import { VehicleWizard } from './VehicleWizard';
 import { CreateVehiclePricingStep } from './CreateVehiclePricingStep';
 import { useActiveBranches } from '@/features/branches/hooks/use-branches';
 import { branchLabel } from '@/features/branches/branch-label';
+import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import styles from './VehicleForm.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 
@@ -83,7 +84,11 @@ export interface VehicleSubmitOptions {
 interface VehicleFormProps {
   submitting: boolean;
   errorMessage?: string | null;
-  onSubmit: (values: VehicleFormValues, options: VehicleSubmitOptions) => void;
+  /**
+   * NÉM lại lỗi API để wizard gắn được lỗi cấp trường vào đúng ô (và nhảy về bước chứa nó).
+   * Nuốt lỗi ở phía trang thì người dùng chỉ còn một toast chung trên một form 30 ô.
+   */
+  onSubmit: (values: VehicleFormValues, options: VehicleSubmitOptions) => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -101,9 +106,12 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
   const tBranches = useTranslations('Branches');
   const fmt = useAppFormat();
 
+  const applyApiFieldErrors = useApiFieldErrors();
+
   const {
     control,
     handleSubmit,
+    setError,
     setValue,
     trigger,
     getValues,
@@ -180,10 +188,34 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
   /** Lỗi của RIÊNG bước đang mở — dùng cho dải tổng hợp đầu thẻ (Figma `193:2687`). */
   const stepErrors = steps[step]!.fields.filter((field) => errors[field]).length;
 
+  /** Mọi ô nhập wizard thật sự có — bộ lọc cho lỗi cấp trường mà server trả về. */
+  const wizardFields = useMemo(() => steps.flatMap((s) => [...s.fields]), [steps]);
+
+  /** Đưa người dùng về bước chứa lỗi đầu tiên — dùng chung cho lỗi yup và lỗi từ server. */
+  function goToStepWithError(hasError: (field: keyof VehicleFormValues) => boolean) {
+    const target = steps.findIndex((candidate) => candidate.fields.some(hasError));
+    if (target >= 0) setStep(target);
+  }
+
   const values = getValues();
   function submitNow(options: VehicleSubmitOptions) {
     void handleSubmit(
-      (formValues) => onSubmit(formValues, options),
+      async (formValues) => {
+        try {
+          await onSubmit(formValues, options);
+        } catch (err) {
+          /*
+           * Server bắt được thứ yup bỏ lọt (luật chỉ có ở backend: số chữ số thập phân, độ dài…)
+           * → gắn vào đúng ô và nhảy về bước chứa nó, thay vì để người dùng đứng ở bước xác nhận
+           * với một dòng "Dữ liệu gửi lên không hợp lệ" không chỉ được chỗ nào.
+           */
+          const applied = applyApiFieldErrors(err, setError, { fields: wizardFields });
+          if (applied.length > 0) {
+            const bad = new Set<string>(applied);
+            goToStepWithError((field) => bad.has(field));
+          }
+        }
+      },
       /*
        * Gửi mà schema không hợp lệ → **nhảy về bước chứa lỗi đầu tiên**.
        *
@@ -192,10 +224,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
        * xác nhận chỉ đứng im không giải thích gì.
        */
       (formErrors) => {
-        const target = steps.findIndex((candidate) =>
-          candidate.fields.some((field) => formErrors[field]),
-        );
-        if (target >= 0) setStep(target);
+        goToStepWithError((field) => Boolean(formErrors[field]));
       },
     )();
   }

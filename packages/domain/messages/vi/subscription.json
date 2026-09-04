@@ -74,6 +74,14 @@
     "expires": "Hạn chuyển khoản: {date}",
     "copyAmount": "Sao chép số tiền",
     "copyCode": "Sao chép mã",
-    "done": "Đã hiểu"
+    "done": "Đã hiểu",
+    "partialIntro": "Đã nhận {paid}. Chuyển nốt số còn thiếu bên dưới với ĐÚNG nội dung — gói kích hoạt ngay khi đủ tiền.",
+    "qrAlt": "Mã VietQR chuyển khoản thanh toán gói",
+    "bank": "Ngân hàng",
+    "accountNumber": "Số tài khoản",
+    "accountName": "Chủ tài khoản",
+    "copyAccount": "Sao chép số tài khoản",
+    "autoActivateNote": "Gói tự kích hoạt khi tiền về — bạn không cần giữ trang này mở, hệ thống sẽ báo khi xong.",
+    "pendingTitle": "Hoá đơn đang chờ chuyển khoản"
   }
 }

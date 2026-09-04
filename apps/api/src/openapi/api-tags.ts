@@ -169,6 +169,13 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
           'tự mua gói. Mua = sinh hoá đơn + mã đối soát XPG; gói CHỈ kích hoạt khi tiền đã về ' +
           '(ADR 0026 điều 4).',
       },
+      {
+        name: 'billing',
+        description:
+          'Đối soát tiền vào qua SePay (ADR 0016/0022): webhook ghi giao dịch ngân hàng thô, ' +
+          'khớp theo mã đối soát và kích hoạt gói khi hoá đơn đủ tiền. Idempotent bằng unique ' +
+          'DB; trùng giao dịch trả 200.',
+      },
     ],
   },
   {

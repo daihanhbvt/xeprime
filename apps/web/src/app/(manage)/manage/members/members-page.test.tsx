@@ -43,8 +43,14 @@ vi.mock('@/features/members/hooks/use-member-mutations', () => ({
   useRemoveMember: () => removeMember,
 }));
 
-vi.mock('@/features/members/components/AddMemberModal', () => ({
-  AddMemberModal: ({ open }: { open: boolean }) => (open ? <div data-testid="add-member" /> : null),
+vi.mock('@/features/members/components/InviteMemberModal', () => ({
+  InviteMemberModal: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="invite-member" /> : null,
+}));
+
+// Bảng lời mời có bộ test riêng và query riêng — bộ này chỉ kiểm bảng THÀNH VIÊN.
+vi.mock('@/features/members/components/PendingInvitesPanel', () => ({
+  PendingInvitesPanel: () => null,
 }));
 
 const me = vi.hoisted(() => ({ id: 'me-1' }));
@@ -144,15 +150,15 @@ describe('/manage/members — trạng thái', () => {
   it('rỗng + KHÔNG có quyền mời: không có lối thêm nào', () => {
     renderWith([]);
 
-    expect(screen.queryByRole('button', { name: /Thêm thành viên/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Mời thành viên/ })).toBeNull();
   });
 
   it('rỗng + có quyền mời: mở được form thêm', () => {
     grant(PERMISSION.MEMBER_INVITE);
     renderWith([]);
 
-    fireEvent.click(screen.getAllByRole('button', { name: /Thêm thành viên/ })[0]!);
-    expect(screen.getByTestId('add-member')).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('button', { name: /Mời thành viên/ })[0]!);
+    expect(screen.getByTestId('invite-member')).toBeTruthy();
   });
 });
 

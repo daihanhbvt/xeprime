@@ -2,6 +2,7 @@ import {
   ApartmentOutlined,
   AppstoreOutlined,
   AuditOutlined,
+  BankOutlined,
   CalendarOutlined,
   CarOutlined,
   CreditCardOutlined,
@@ -415,6 +416,15 @@ export const PLATFORM_NAV: readonly NavSection[] = [
         href: ROUTES.MANAGE.ADMIN_PLANS,
         permission: PERMISSION.PLATFORM_BILLING_MANAGE,
         icon: CreditCardOutlined,
+      },
+      {
+        // Cùng quyền với quản trị gói: cả hai đều là việc TIỀN của nền tảng, và
+        // `finance_admin` có sẵn quyền đó.
+        key: 'admin-bank-transactions',
+        labelKey: 'platform.bankTransactions',
+        href: ROUTES.MANAGE.ADMIN_BANK_TRANSACTIONS,
+        permission: PERMISSION.PLATFORM_BILLING_MANAGE,
+        icon: BankOutlined,
       },
       {
         key: 'admin-banners',

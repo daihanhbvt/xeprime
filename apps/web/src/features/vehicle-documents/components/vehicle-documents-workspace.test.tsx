@@ -168,6 +168,14 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+/** Mọi hành động của một hàng nằm trong menu ⋮ — mở nó ra rồi mới bấm được mục nào. */
+async function openRowMenu(title: string) {
+  fireEvent.click(screen.getByRole('button', { name: `Thao tác cho ${title}` }));
+  await screen.findByRole('menu');
+}
+
+const REGISTRATION = 'Đăng ký xe (Cà vẹt)';
+
 describe('Tab Giấy tờ (Wave 5 + 5.1)', () => {
   it('thiếu documents.view: màn không có quyền, KHÔNG bật query', () => {
     permissions.granted = new Set();
@@ -176,30 +184,32 @@ describe('Tab Giấy tờ (Wave 5 + 5.1)', () => {
     expect(documentsQuery.enabled).toBe(false);
   });
 
-  it('chỉ có view (summary-only): chế độ xem, không nút hành động, KHÔNG request chi tiết', () => {
+  it('chỉ có view (summary-only): chế độ xem, KHÔNG có menu hành động, KHÔNG request chi tiết', () => {
     permissions.granted = new Set([PERMISSION.VEHICLE_DOCUMENT_VIEW]);
     renderTab();
     expect(screen.getByText(/Chế độ xem/)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Tải lên tài liệu/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: /Trích xuất OCR/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: /Nhập thủ công/ })).toBeNull();
-    // Không có view_files → không mở được file/lịch sử dù thấy trạng thái.
-    expect(screen.queryByRole('button', { name: 'Xem file' })).toBeNull();
-    expect(screen.queryByRole('button', { name: /Lịch sử/ })).toBeNull();
+    // Không hành động nào khả dụng → RowActions không dựng cả nút ⋮.
+    expect(screen.queryByRole('button', { name: /Thao tác cho/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Thêm loại giấy tờ/ })).toBeNull();
     // Không quyền chi tiết → hook chi tiết không bao giờ được bật (không rò rỉ PII qua request).
     expect(detailQuery.enabledRequests).toEqual([]);
   });
 
-  it('có manage nhưng thiếu view_details: nút sửa/OCR ẩn — không sửa mù dữ liệu nhạy cảm', () => {
+  it('có manage nhưng thiếu view_details: menu chỉ còn thay file + xoá, không Xem chi tiết/OCR', async () => {
     permissions.granted = new Set([
       PERMISSION.VEHICLE_DOCUMENT_VIEW,
       PERMISSION.VEHICLE_DOCUMENT_MANAGE,
     ]);
     renderTab();
-    // Tải file vẫn được (không cần đọc metadata nhạy cảm).
-    expect(screen.getByRole('button', { name: /Tải lại/ })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Nhập thủ công/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: /Trích xuất OCR/ })).toBeNull();
+    await openRowMenu(REGISTRATION);
+    // Thay file vẫn được (không cần đọc metadata nhạy cảm).
+    expect(screen.getByRole('menuitem', { name: /Thay thế file/ })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: /Xoá/ })).toBeTruthy();
+    expect(screen.queryByRole('menuitem', { name: /Xem chi tiết/ })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: /Nhập từ OCR/ })).toBeNull();
+    // Thiếu view_files → không tải xuống, không lịch sử.
+    expect(screen.queryByRole('menuitem', { name: /Tải xuống/ })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: /Lịch sử/ })).toBeNull();
   });
 
   it('đủ 4 loại hàng: 3 loại chuẩn luôn hiện (Chưa có khi trống) + trạng thái đúng META', () => {
@@ -208,7 +218,7 @@ describe('Tab Giấy tờ (Wave 5 + 5.1)', () => {
       doc({ id: 'doc-2', type: 'insurance', expiresAt: '2026-07-01', presentation: 'expired' }),
     ];
     renderTab();
-    expect(screen.getByText('Đăng ký xe (Cà vẹt)')).toBeTruthy();
+    expect(screen.getByText(REGISTRATION)).toBeTruthy();
     expect(screen.getByText('Đăng kiểm kỹ thuật')).toBeTruthy();
     expect(screen.getByText('Bảo hiểm TNDS bắt buộc')).toBeTruthy();
     expect(screen.getByText('Còn hiệu lực')).toBeTruthy();
@@ -218,11 +228,12 @@ describe('Tab Giấy tờ (Wave 5 + 5.1)', () => {
     expect(screen.getByText(/đã hết hiệu lực từ ngày/)).toBeTruthy();
   });
 
-  it('Xem file: xin signed URL qua endpoint kiểm quyền (activeVersionId từ summary) — không <a href>', async () => {
+  it('Tải xuống: xin signed URL qua endpoint kiểm quyền (activeVersionId từ summary) — không <a href>', async () => {
     const opened = vi.spyOn(window, 'open').mockImplementation(() => null);
     const view = renderTab();
     expect(view.container.querySelector('a[href]')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Xem file' }));
+    await openRowMenu(REGISTRATION);
+    fireEvent.click(screen.getByRole('menuitem', { name: /Tải xuống/ }));
     await waitFor(() =>
       expect(api.fetchDocumentDownload).toHaveBeenCalledWith('vehicle-1', 'doc-1', 'ver-1'),
     );
@@ -232,15 +243,53 @@ describe('Tab Giấy tờ (Wave 5 + 5.1)', () => {
     opened.mockRestore();
   });
 
-  it('OCR chưa cấu hình (thực tế hiện tại): 503 → mở form nhập thủ công', async () => {
+  it('OCR chưa cấu hình (thực tế hiện tại): 503 → mở thẳng form nhập thủ công', async () => {
     api.requestDocumentOcr.mockRejectedValue(
       new ApiClientError({ code: 'OCR_NOT_CONFIGURED', message: 'chưa cấu hình', status: 503 }),
     );
     renderTab();
-    fireEvent.click(screen.getByRole('button', { name: /Trích xuất OCR/ }));
+    await openRowMenu(REGISTRATION);
+    fireEvent.click(screen.getByRole('menuitem', { name: /Nhập từ OCR/ }));
     // Fallback tường minh: hộp thoại nhập tay mở ra, không giả kết quả OCR.
     expect(await screen.findByText(/Nhập thông tin giấy tờ/)).toBeTruthy();
     expect(screen.getByLabelText(/Họ tên chủ xe/)).toBeTruthy();
+  });
+
+  /* Yêu cầu mới: xem được thông tin đã nhập/đã quét mà KHÔNG phải mở form sửa. */
+  it('Xem chi tiết: bề mặt CHỈ ĐỌC hiện giá trị đã nhập, ô trống nói rõ là chưa nhập', async () => {
+    detailQuery.data = detailOf({ plateNumber: '43K12345', engineNumber: 'M27201234' });
+    renderTab();
+    await openRowMenu(REGISTRATION);
+    fireEvent.click(screen.getByRole('menuitem', { name: /Xem chi tiết/ }));
+
+    expect(await screen.findByText('Thông tin giấy tờ')).toBeTruthy();
+    expect(screen.getByText('43K12345')).toBeTruthy();
+    expect(screen.getByText('Nguyễn Văn A')).toBeTruthy();
+    expect(screen.getByText('M27201234')).toBeTruthy();
+    // Trường chưa có giá trị hiện chữ mờ, không để ô rỗng khó hiểu.
+    expect(screen.getAllByText('Chưa nhập').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Chưa chọn').length).toBeGreaterThan(0);
+    // Chỉ đọc: không có ô nhập nào và không có nút Lưu.
+    expect(screen.queryByLabelText(/Họ tên chủ xe/)).toBeNull();
+    expect(screen.queryByRole('button', { name: /Lưu giấy tờ/ })).toBeNull();
+  });
+
+  it('Xem chi tiết → Chỉnh sửa: chuyển sang form, lưu dùng rowVersion của bản CHI TIẾT', async () => {
+    api.updateVehicleDocument.mockResolvedValue(detailOf({}));
+    renderTab();
+    await openRowMenu(REGISTRATION);
+    fireEvent.click(screen.getByRole('menuitem', { name: /Xem chi tiết/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Chỉnh sửa/ }));
+
+    expect(await screen.findByLabelText(/Họ tên chủ xe/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Lưu giấy tờ/ }));
+    await waitFor(() => expect(api.updateVehicleDocument).toHaveBeenCalledTimes(1));
+    const [, , body] = api.updateVehicleDocument.mock.calls[0] as [
+      string,
+      string,
+      { expectedRowVersion: number },
+    ];
+    expect(body.expectedRowVersion).toBe(3); // rowVersion của bản chi tiết, không phải list
   });
 
   it('backend trả 403 khi tải chi tiết: hộp thoại báo thiếu quyền, nút Lưu bị khoá', async () => {
@@ -248,21 +297,11 @@ describe('Tab Giấy tờ (Wave 5 + 5.1)', () => {
     detailQuery.isError = true;
     detailQuery.error = new ApiClientError({ code: 'FORBIDDEN', message: 'forbidden', status: 403 });
     renderTab();
-    fireEvent.click(screen.getByRole('button', { name: /Nhập thủ công/ }));
+    await openRowMenu(REGISTRATION);
+    fireEvent.click(screen.getByRole('menuitem', { name: /Xem chi tiết/ }));
     expect(await screen.findByText('Không có quyền xem chi tiết giấy tờ')).toBeTruthy();
     const saveButton = screen.getByRole('button', { name: /Lưu giấy tờ/ });
     expect((saveButton as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it('sửa metadata dùng rowVersion từ bản CHI TIẾT vừa tải (không dính dữ liệu cũ trong list)', async () => {
-    api.updateVehicleDocument.mockResolvedValue(detailOf({}));
-    renderTab();
-    fireEvent.click(screen.getByRole('button', { name: /Nhập thủ công/ }));
-    expect(await screen.findByLabelText(/Họ tên chủ xe/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /Lưu giấy tờ/ }));
-    await waitFor(() => expect(api.updateVehicleDocument).toHaveBeenCalledTimes(1));
-    const [, , body] = api.updateVehicleDocument.mock.calls[0] as [string, string, { expectedRowVersion: number }];
-    expect(body.expectedRowVersion).toBe(3); // rowVersion của bản chi tiết, không phải list
   });
 
   it('OCR needs_review: bảng Hiện tại/Nhận dạng trong khung cuộn, KHÔNG chọn sẵn, chỉ áp trường đã tick', async () => {
@@ -281,7 +320,8 @@ describe('Tab Giấy tờ (Wave 5 + 5.1)', () => {
     });
     api.applyDocumentOcr.mockResolvedValue(detailOf({}));
     const view = renderTab();
-    fireEvent.click(screen.getByRole('button', { name: /Trích xuất OCR/ }));
+    await openRowMenu(REGISTRATION);
+    fireEvent.click(screen.getByRole('menuitem', { name: /Nhập từ OCR/ }));
 
     expect(await screen.findByText(/độ tin cậy trích xuất: 87%/)).toBeTruthy();
     // Cột "Hiện tại" lấy từ bản chi tiết (endpoint kiểm quyền riêng).
@@ -316,7 +356,8 @@ describe('Tab Giấy tờ (Wave 5 + 5.1)', () => {
     });
     api.applyDocumentOcr.mockResolvedValue(detailOf({}));
     renderTab();
-    fireEvent.click(screen.getByRole('button', { name: /Trích xuất OCR/ }));
+    await openRowMenu(REGISTRATION);
+    fireEvent.click(screen.getByRole('menuitem', { name: /Nhập từ OCR/ }));
     fireEvent.click(await screen.findByRole('button', { name: /Bỏ qua — đã đối soát/ }));
     await waitFor(() =>
       expect(api.applyDocumentOcr).toHaveBeenCalledWith('vehicle-1', 'doc-1', 'job-1', {
@@ -325,4 +366,138 @@ describe('Tab Giấy tờ (Wave 5 + 5.1)', () => {
       }),
     );
   });
+
+  it('xoá giấy tờ: có xác nhận, gọi archive rồi báo thành công (file/lịch sử vẫn giữ)', async () => {
+    api.archiveVehicleDocument.mockResolvedValue({ id: 'doc-1' });
+    renderTab();
+    await openRowMenu(REGISTRATION);
+    fireEvent.click(screen.getByRole('menuitem', { name: /Xoá/ }));
+
+    // Hành động không đảo ngược từ giao diện → phải qua bước xác nhận, chưa gọi API.
+    expect(await screen.findByText('Xoá giấy tờ khỏi danh mục?')).toBeTruthy();
+    expect(screen.getByText(/vẫn được lưu để đối soát/)).toBeTruthy();
+    expect(api.archiveVehicleDocument).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Xoá giấy tờ' }));
+    await waitFor(() =>
+      expect(api.archiveVehicleDocument).toHaveBeenCalledWith('vehicle-1', 'doc-1'),
+    );
+    expect(await screen.findByText('Đã xoá giấy tờ khỏi danh mục')).toBeTruthy();
+  });
+
+  /*
+   * Hàng chưa có file: TẢI LÊN phải là một cái nút nhìn thấy được. Bản trước gom mọi hành động
+   * vào menu ⋮, nên ba hàng loại chuẩn mở ra ở trạng thái "Chưa có" mà không chỉ được chỗ bắt
+   * đầu — đúng bước đầu tiên của cả màn lại là bước bị giấu.
+   */
+  it('hàng chưa có file: nút Tải lên nằm NGOÀI menu, và ô bên trái cũng bấm để tải lên', () => {
+    documentsQuery.data = [];
+    renderTab();
+    // Ba loại chuẩn, mỗi hàng một nút tải lên hiện rõ — không phải mở menu mới thấy.
+    expect(screen.getAllByRole('button', { name: /Tải lên tài liệu$/ })).toHaveLength(3);
+    // Không còn hành động phụ nào → RowActions không dựng nút ⋮ thừa.
+    expect(screen.queryByRole('button', { name: /Thao tác cho/ })).toBeNull();
+    // Ô bên trái là điểm bấm lớn cho cùng việc đó.
+    expect(
+      screen.getByRole('button', { name: `Tải lên tài liệu cho ${REGISTRATION}` }),
+    ).toBeTruthy();
+  });
+
+  it('hàng ĐÃ có file: ô bên trái mở file, tải lên lùi vào menu thành Thay thế file', async () => {
+    const opened = vi.spyOn(window, 'open').mockImplementation(() => null);
+    renderTab();
+    // Hàng đã đủ file thì không mời tải lên nữa (hai hàng chuẩn còn trống vẫn mời — đó là đúng).
+    expect(
+      screen.queryByRole('button', { name: `Tải lên tài liệu cho ${REGISTRATION}` }),
+    ).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: `Mở file ${REGISTRATION}` }));
+    await waitFor(() =>
+      expect(api.fetchDocumentDownload).toHaveBeenCalledWith('vehicle-1', 'doc-1', 'ver-1'),
+    );
+    opened.mockRestore();
+
+    await openRowMenu(REGISTRATION);
+    expect(screen.getByRole('menuitem', { name: /Thay thế file/ })).toBeTruthy();
+  });
+
+  it('thiếu manage: xem được chi tiết nhưng không có Chỉnh sửa/Xoá', async () => {
+    permissions.granted = new Set([
+      PERMISSION.VEHICLE_DOCUMENT_VIEW,
+      PERMISSION.VEHICLE_DOCUMENT_DETAIL_VIEW,
+      PERMISSION.VEHICLE_DOCUMENT_FILE_VIEW,
+    ]);
+    renderTab();
+    await openRowMenu(REGISTRATION);
+    expect(screen.queryByRole('menuitem', { name: /Xoá/ })).toBeNull();
+    fireEvent.click(screen.getByRole('menuitem', { name: /Xem chi tiết/ }));
+    expect(await screen.findByText('Thông tin giấy tờ')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Chỉnh sửa/ })).toBeNull();
+  });
+  /*
+   * Thêm loại giấy tờ = CHỌN loại + đính kèm ảnh/file. Trước đây ô tên là input tự do và hộp
+   * thoại kèm cả chín ô metadata — nhập tên tay ra năm cách viết cho cùng một loại giấy tờ, và
+   * bắt điền metadata ngay lúc chưa đọc tờ giấy.
+   */
+  it('Thêm loại giấy tờ: tên là danh sách chọn, KHÔNG có ô metadata nào', async () => {
+    renderTab();
+    fireEvent.click(screen.getByRole('button', { name: /Thêm loại giấy tờ/ }));
+
+    expect(await screen.findByLabelText(/Loại giấy tờ/)).toBeTruthy();
+    // Không còn ô gõ tự do cho tên, và không lôi metadata vào bước này.
+    expect(screen.queryByLabelText('Tên loại giấy tờ')).toBeNull();
+    expect(screen.queryByLabelText(/Biển số xe/)).toBeNull();
+    expect(screen.queryByLabelText(/Số khung/)).toBeNull();
+    expect(screen.queryByLabelText(/Ghi chú/)).toBeNull();
+    // Chỉ còn đúng phần đính kèm.
+    expect(screen.getByRole('button', { name: /Chọn ảnh hoặc file/ })).toBeTruthy();
+  });
+
+  it('chọn một mục có sẵn: lưu MÃ preset vào customTypeName, hàng hiện nhãn đã dịch', async () => {
+    api.createVehicleDocument.mockResolvedValue(detailOf({ id: 'doc-9' }));
+    renderTab();
+    fireEvent.click(screen.getByRole('button', { name: /Thêm loại giấy tờ/ }));
+    fireEvent.mouseDown(await screen.findByLabelText(/Loại giấy tờ/));
+    fireEvent.click(await screen.findByTitle('Phù hiệu xe hợp đồng'));
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm giấy tờ' }));
+
+    await waitFor(() => expect(api.createVehicleDocument).toHaveBeenCalledTimes(1));
+    expect(api.createVehicleDocument).toHaveBeenCalledWith('vehicle-1', {
+      type: 'other',
+      customTypeName: 'contract_badge',
+    });
+  });
+
+  it('chọn "Khác": mở ô nhập tên, bắt buộc điền, lưu đúng chữ người dùng gõ', async () => {
+    api.createVehicleDocument.mockResolvedValue(detailOf({ id: 'doc-9' }));
+    renderTab();
+    fireEvent.click(screen.getByRole('button', { name: /Thêm loại giấy tờ/ }));
+    fireEvent.mouseDown(await screen.findByLabelText(/Loại giấy tờ/));
+    fireEvent.click(await screen.findByTitle('Khác — tự đặt tên'));
+
+    const nameInput = await screen.findByLabelText('Tên loại giấy tờ');
+    // Bỏ trống thì không gọi API.
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm giấy tờ' }));
+    expect(await screen.findByText('Nhập tên loại giấy tờ')).toBeTruthy();
+    expect(api.createVehicleDocument).not.toHaveBeenCalled();
+
+    fireEvent.change(nameInput, { target: { value: 'Giấy phép con' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm giấy tờ' }));
+    await waitFor(() =>
+      expect(api.createVehicleDocument).toHaveBeenCalledWith('vehicle-1', {
+        type: 'other',
+        customTypeName: 'Giấy phép con',
+      }),
+    );
+  });
+
+  it('tên preset hiện nhãn đã dịch, tên tự đặt hiện nguyên văn', () => {
+    documentsQuery.data = [
+      doc({ id: 'doc-a', type: 'other', customTypeName: 'contract_badge' }),
+      doc({ id: 'doc-b', type: 'other', customTypeName: 'Giấy phép con' }),
+    ];
+    renderTab();
+    expect(screen.getByText('Phù hiệu xe hợp đồng')).toBeTruthy();
+    expect(screen.getByText('Giấy phép con')).toBeTruthy();
+  });
+
 });

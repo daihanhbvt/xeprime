@@ -220,6 +220,14 @@ export const queryKeys = {
   members: {
     all: ['members'] as const,
     list: (params: QueryParams) => ['members', 'list', params] as const,
+    /**
+     * Lời mời nằm DƯỚI `members` chứ không thành nhánh riêng: nhận một lời mời làm đổi cả danh
+     * sách mời lẫn danh sách thành viên, nên một lần `invalidateQueries({ queryKey: members.all })`
+     * phải quét được cả hai. Tách nhánh là để lọt đúng một nửa.
+     */
+    invites: (params: QueryParams) => ['members', 'invites', params] as const,
+    /** Xem trước lời mời — khoá theo token vì đây là dữ liệu của MỘT lời mời cụ thể. */
+    invitePreview: (token: string) => ['members', 'invite-preview', token] as const,
   },
   receipts: {
     all: ['receipts'] as const,
@@ -254,6 +262,12 @@ export const queryKeys = {
     all: ['platform-dashboard'] as const,
     summary: () => ['platform-dashboard', 'summary'] as const,
   },
+  /** Sổ giao dịch ngân hàng của nền tảng (R2 — ADR 0022). */
+  bankTransactions: {
+    all: ['bank-transactions'] as const,
+    list: (params: QueryParams) => ['bank-transactions', 'list', params] as const,
+    detail: (id: string) => ['bank-transactions', 'detail', id] as const,
+  },
   platformStaff: {
     all: ['platform-staff'] as const,
     list: (params: QueryParams) => ['platform-staff', 'list', params] as const,
@@ -270,6 +284,8 @@ export const queryKeys = {
     me: () => ['subscription', 'me'] as const,
     plans: () => ['subscription', 'plans'] as const,
     invoices: (page: number) => ['subscription', 'invoices', page] as const,
+    /** Thông tin nhận chuyển khoản của nền tảng — gần như tĩnh, cache dài. */
+    paymentInfo: () => ['subscription', 'payment-info'] as const,
   },
   marketplace: {
     all: ['marketplace'] as const,

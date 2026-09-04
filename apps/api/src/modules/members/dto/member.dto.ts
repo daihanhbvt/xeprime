@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MEMBERSHIP_STATUS_VALUES, TENANT_ROLE_VALUES } from '@xeprime/types';
 import { Type } from 'class-transformer';
-import { IsEmail, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 
 const DEFAULT_LIMIT = 20;
@@ -35,18 +35,6 @@ export class MemberListQueryDto {
   @Min(1)
   @Max(MAX_LIMIT)
   limit?: number;
-}
-
-/** Thêm thành viên theo email của user ĐÃ có tài khoản (mời-qua-email để sau — cần SMTP). */
-export class AddMemberDto {
-  @ApiProperty({ example: 'nhanvien@congty.vn' })
-  @IsEmail({}, { message: 'Email không hợp lệ' })
-  @MaxLength(255)
-  email!: string;
-
-  @ApiProperty({ enum: TENANT_ROLE_VALUES, description: 'Không nhận shop_owner (chủ shop là người tạo)' })
-  @IsIn(TENANT_ROLE_VALUES)
-  roleKey!: string;
 }
 
 export class UpdateMemberRoleDto {

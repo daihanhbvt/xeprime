@@ -69,6 +69,14 @@ export const TENANT_DOCUMENT_TYPE_VALUES = Object.values(
 export const INVITE_STATUS = {
   PENDING: 'pending',
   ACCEPTED: 'accepted',
+  /**
+   * Người được mời TỰ từ chối.
+   *
+   * Tách hẳn khỏi `revoked` (gian hàng rút lời mời) dù cả hai đều kết thúc lời mời: gian hàng
+   * cần biết ai đã trả lời "không" để đừng mời lại người đó, còn `revoked` là quyết định của
+   * chính họ. Gộp hai thứ lại thì danh sách mời không trả lời được câu hỏi nào trong hai.
+   */
+  DECLINED: 'declined',
   EXPIRED: 'expired',
   REVOKED: 'revoked',
 } as const;
@@ -78,6 +86,7 @@ export const INVITE_STATUS_VALUES = Object.values(INVITE_STATUS) as InviteStatus
 export const INVITE_STATUS_META: Readonly<Record<InviteStatus, StatusMeta>> = {
   [INVITE_STATUS.PENDING]: { label: 'Đang chờ', color: STATUS_COLOR.WAITING },
   [INVITE_STATUS.ACCEPTED]: { label: 'Đã tham gia', color: STATUS_COLOR.SUCCESS },
+  [INVITE_STATUS.DECLINED]: { label: 'Đã từ chối', color: STATUS_COLOR.DANGER },
   [INVITE_STATUS.EXPIRED]: { label: 'Hết hạn', color: STATUS_COLOR.NEUTRAL },
   [INVITE_STATUS.REVOKED]: { label: 'Đã thu hồi', color: STATUS_COLOR.DANGER },
 };

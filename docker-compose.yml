@@ -21,6 +21,35 @@ services:
       timeout: 5s
       retries: 10
 
+  # Dev mailbox. Catches every message the API sends instead of delivering it anywhere,
+  # so invite and password-reset links can be opened as a real recipient would — rendered
+  # HTML, clickable button — without an SMTP account and with zero risk of mailing a real
+  # address from a developer machine.
+  #
+  # Runs by default rather than behind a profile: the same `docker compose up` that gives
+  # you a database now gives you a mailbox, and the .env defaults point at it. Skipping it
+  # would leave SMTP_HOST set with nothing listening, which turns "send an invite" into a
+  # 500 — worse than the log fallback it replaced.
+  #
+  # Data is deliberately not persisted; a mailbox that survives restarts is a place where
+  # week-old reset tokens accumulate.
+  mailpit:
+    image: axllent/mailpit:v1.31
+    container_name: xeprime-mailpit
+    restart: unless-stopped
+    environment:
+      # Bind to every interface inside the container so the published ports work; the
+      # container itself is only reachable from this machine.
+      MP_SMTP_BIND_ADDR: '0.0.0.0:1025'
+      MP_UI_BIND_ADDR: '0.0.0.0:8025'
+      MP_MAX_MESSAGES: '500'
+      # No relay is configured on purpose, and Mailpit forwards nothing without one — a
+      # real address in a To: header during a test goes into this mailbox, not to a person.
+    ports:
+      # 1025 = SMTP (SMTP_PORT), 8025 = web mailbox at http://localhost:8025
+      - '1025:1025'
+      - '8025:8025'
+
   # Enabled from Phase 5 when apps/worker starts running BullMQ jobs.
   # Kept here so `docker compose --profile worker up` works without editing this file.
   redis:

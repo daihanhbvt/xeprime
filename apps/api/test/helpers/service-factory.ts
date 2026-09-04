@@ -1,6 +1,8 @@
 import { newId } from '@xeprime/prisma';
 import { BRANCH_STATUS } from '@xeprime/types';
+import { ConfigService } from '@nestjs/config';
 import { AuditService } from '../../src/modules/audit/audit.service';
+import { NotificationService } from '../../src/modules/notification/notification.service';
 import { BillingService } from '../../src/modules/billing/billing.service';
 import { BranchesService } from '../../src/modules/branches/branches.service';
 import { CatalogService } from '../../src/modules/catalog/catalog.service';
@@ -49,6 +51,20 @@ export function makeDisabledGeoService(prisma: PrismaService): GeoService {
  * chúng để mô phỏng lỗi giữa transaction. Nếu factory luôn tự dựng instance riêng, spy sẽ gắn
  * vào một đối tượng KHÁC với đối tượng service thật gọi — test xanh/đỏ vì lý do sai.
  */
+/**
+ * BillingService — mọc thêm NotificationService (R2: kích hoạt gói khi tiền về phát thông báo).
+ * Notification chỉ cần prisma nên dùng bản THẬT, không mock — cùng lý do ghi ở đầu file.
+ */
+export function makeBillingService(prisma: PrismaService): BillingService {
+  return new BillingService(
+    prisma,
+    new AuditService(prisma),
+    new NotificationService(prisma),
+    // ConfigService trần đọc process.env — spec không đặt SEPAY_* nên paymentInfo trả "chưa cấu hình", đúng mặc định dev.
+    new ConfigService(),
+  );
+}
+
 export function makeVehiclesService(
   prisma: PrismaService,
   overrides: { listings?: ListingsService } = {},
@@ -59,7 +75,7 @@ export function makeVehiclesService(
     audit,
     overrides.listings ?? new ListingsService(prisma),
     makeBranchesService(prisma),
-    new BillingService(prisma, audit),
+    makeBillingService(prisma),
     new CatalogService(prisma, audit),
     new PricingService(prisma, audit, new ListingsService(prisma)),
   );
@@ -76,7 +92,7 @@ export function makeTenantsService(prisma: PrismaService): TenantsService {
     audit,
     new ProvincesService(prisma, audit),
     makeBranchesService(prisma),
-    new BillingService(prisma, audit),
+    makeBillingService(prisma),
   );
 }
 

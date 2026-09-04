@@ -1,0 +1,125 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.amount {
+  font-size: 16px;
+  color: var(--xp-color-price);
+}
+
+/* Nội dung chuyển khoản là chuỗi ngân hàng ghép, dài và không có dấu cách — phải ngắt được. */
+.content {
+  overflow-wrap: anywhere;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--xp-color-text);
+  margin-bottom: 8px;
+}
+
+.empty {
+  padding: 14px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.suggestions {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.suggestion,
+.suggestionOn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: 10px;
+}
+
+.suggestionOn {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-bg-layout);
+}
+
+.suggestionInfo {
+  min-width: 0;
+}
+
+.suggestionHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.code {
+  font-family: var(--xp-font-mono, monospace);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.suggestionMeta {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--xp-color-text-tertiary);
+  overflow-wrap: anywhere;
+}
+
+.matchForm {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--xp-color-primary);
+  border-radius: 12px;
+  background: var(--xp-color-bg-container);
+}
+
+.fieldError {
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--xp-color-error);
+}
+
+.actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+}
+
+.ignoreRow {
+  margin-top: 16px;
+}
+
+.confirmBody {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rawHint {
+  margin-bottom: 8px;
+  font-size: 12.5px;
+  color: var(--xp-color-text-tertiary);
+}
+
+/* Payload gốc có thể dài — cuộn trong khối của nó, không đẩy cả dialog rộng ra. */
+.raw {
+  max-height: 240px;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--xp-color-bg-layout);
+  font-family: var(--xp-font-mono, monospace);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

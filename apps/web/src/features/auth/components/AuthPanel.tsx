@@ -20,6 +20,7 @@ import {
 } from '@xeprime/validators';
 import { TextField } from '@/components/form/TextField';
 import { ROUTES } from '@/constants/routes';
+import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { PhoneLoginForm } from '@/features/phone-verification/components/PhoneLoginForm';
 import {
   AUTH_PROVIDER,
@@ -215,6 +216,13 @@ export function AuthPanel({
           </div>
         </>
       ) : null}
+
+      {/*
+        Cam kết pháp lý đứng NGAY dưới bộ nút đăng nhập/đăng ký, đúng chỗ và đúng lúc: modal
+        đăng nhập và `/manage/login` đều không có chân trang marketplace, nên nếu không có
+        dòng này thì cả hai đường vào tài khoản không hề dẫn tới điều khoản nào.
+      */}
+      <LegalConsentNote place="auth" className={styles.consent} />
 
       {onModeChange ? (
         <div className={styles.switch}>

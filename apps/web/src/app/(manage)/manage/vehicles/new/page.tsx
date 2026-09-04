@@ -38,27 +38,39 @@ export default function NewVehiclePage() {
    * duyệt gọi tiếp `POST /vehicles/:id/submit-public`. Bước hai hỏng thì xe VẪN đã được tạo, nên
    * thông báo phải nói rõ điều đó thay vì báo "lỗi tạo xe" — người dùng bấm lại sẽ tạo xe thứ hai.
    */
-  function handleSubmit(values: VehicleFormValues, { submitForReview }: VehicleSubmitOptions) {
+  async function handleSubmit(
+    values: VehicleFormValues,
+    { submitForReview }: VehicleSubmitOptions,
+  ) {
     // `tenantId` KHÔNG nằm trong payload: backend lấy từ membership/scope (CLAUDE.md §6.1).
-    create.mutate(formValuesToInput(values), {
-      onSuccess: async (vehicle) => {
-        if (!submitForReview) {
-          message.success('Đã lưu nháp xe');
-          setCreated({ vehicle, submittedForReview: false });
-          return;
-        }
+    let vehicle: VehicleDetail;
+    try {
+      vehicle = await create.mutateAsync(formValuesToInput(values));
+    } catch (error) {
+      message.error(getErrorMessage(error));
+      /*
+       * NÉM LẠI, không nuốt: wizard cần chính lỗi này để gắn `error.details` vào đúng ô nhập
+       * và nhảy về bước chứa nó. Nuốt ở đây thì người dùng chỉ còn một toast chung và phải tự
+       * dò ô sai trên cả wizard.
+       */
+      throw error;
+    }
 
-        try {
-          const submitted = await submitVehiclePublic(vehicle.id);
-          message.success('Đã tạo xe và gửi duyệt công khai');
-          setCreated({ vehicle: submitted, submittedForReview: true });
-        } catch (error) {
-          message.warning(`Đã tạo xe nhưng chưa gửi duyệt được: ${getErrorMessage(error)}`);
-          setCreated({ vehicle, submittedForReview: false });
-        }
-      },
-      onError: (error) => message.error(getErrorMessage(error)),
-    });
+    if (!submitForReview) {
+      message.success('Đã lưu nháp xe');
+      setCreated({ vehicle, submittedForReview: false });
+      return;
+    }
+
+    try {
+      const submitted = await submitVehiclePublic(vehicle.id);
+      message.success('Đã tạo xe và gửi duyệt công khai');
+      setCreated({ vehicle: submitted, submittedForReview: true });
+    } catch (error) {
+      // Xe ĐÃ được tạo — không ném tiếp, nếu không người dùng bấm lại sẽ tạo xe thứ hai.
+      message.warning(`Đã tạo xe nhưng chưa gửi duyệt được: ${getErrorMessage(error)}`);
+      setCreated({ vehicle, submittedForReview: false });
+    }
   }
 
   // Thiếu quyền tạo → thay TOÀN BỘ nội dung, không dựng một form không gửi được. Đây chỉ là lớp

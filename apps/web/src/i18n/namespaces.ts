@@ -57,6 +57,8 @@ export const MESSAGE_NAMESPACES = [
   { file: 'finance', namespace: 'Finance' },
   // Quản trị gói dịch vụ (admin nền tảng) — chuyển đợt W1 (ADR 0015/0020).
   { file: 'admin-plans', namespace: 'AdminPlans' },
+  // Hàng đợi đối soát tiền vào của admin nền tảng (R2 — ADR 0022).
+  { file: 'bank-transactions', namespace: 'BankTransactions' },
   { file: 'members', namespace: 'Members' },
   { file: 'drivers', namespace: 'Drivers' },
   { file: 'maintenance', namespace: 'Maintenance' },

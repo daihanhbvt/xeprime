@@ -45,6 +45,11 @@
   font-weight: 600;
 }
 
+.consent {
+  margin-top: 16px;
+  text-align: left;
+}
+
 .actions {
   display: flex;
   justify-content: flex-end;

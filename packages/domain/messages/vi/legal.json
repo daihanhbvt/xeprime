@@ -12,7 +12,21 @@
     "toc": "Nội dung văn bản",
     "related": "Văn bản liên quan",
     "backToHome": "Về trang chủ",
+    "allDocs": "Tất cả văn bản pháp lý",
     "printHint": "Bạn có thể lưu hoặc in trang này để giữ bản sao."
+  },
+  "index": {
+    "title": "Văn bản pháp lý",
+    "subtitle": "Bốn văn bản điều chỉnh việc sử dụng XePrime. Bản đang hiển thị có hiệu lực từ {date}.",
+    "supportHeading": "Cần phản ánh một việc cụ thể?",
+    "supportBody": "Trung tâm hỗ trợ là nơi tiếp nhận phản ánh, khiếu nại và tranh chấp giữa người thuê với gian hàng.",
+    "supportLink": "Tới trung tâm hỗ trợ"
+  },
+  "consent": {
+    "auth": "Tiếp tục tức là bạn đồng ý với <terms>Điều khoản sử dụng</terms> và <privacy>Chính sách bảo mật</privacy> của XePrime.",
+    "booking": "Gửi yêu cầu tức là bạn đồng ý với <terms>Điều khoản sử dụng</terms> và <cancellation>Chính sách huỷ và hoàn tiền</cancellation>.",
+    "subscription": "Mua gói tức là bạn đồng ý với <terms>Điều khoản sử dụng</terms> và <rules>Quy chế hoạt động sàn</rules>.",
+    "shop": "Tạo gian hàng tức là bạn đồng ý với <rules>Quy chế hoạt động sàn</rules> và <terms>Điều khoản sử dụng</terms>."
   },
   "docs": {
     "terms": {

@@ -183,6 +183,10 @@
 }
 
 /* Nút chốt của cả trang — cao hơn `controlHeightLG` một bậc để nó là điểm nhấn, đúng mẫu. */
+.consent {
+  margin-top: 12px;
+}
+
 .submit.submit {
   height: 48px;
   font-size: var(--xp-font-size-body-lg);

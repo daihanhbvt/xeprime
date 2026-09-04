@@ -226,6 +226,28 @@ export const envSchema = z
      */
     PLAN_FEATURE_ENFORCEMENT: z.enum(['off', 'warn', 'on']).default('warn'),
 
+    /*
+     * --- SePay: đối soát tiền VÀO tài khoản nền tảng (ADR 0016/0022, R2) ---
+     *
+     * BỐN biến là MỘT nhóm bật/tắt: khai một nửa là cấu hình gõ thiếu và fail lúc boot
+     * (kiểm ở superRefine dưới, cùng khuôn cặp OAuth). Chưa khai thì:
+     *   • webhook `/sepay/webhook` trả 503 `SEPAY_NOT_CONFIGURED` — fail closed;
+     *   • màn thanh toán hoá đơn gói không hiện VietQR, chỉ còn mã + số tiền (như trước R2).
+     * Không nằm trong nhóm BẮT BUỘC ở production vì tài khoản SePay/ngân hàng thật là phụ
+     * thuộc ngoài chưa ký — đưa vào nhóm bắt buộc trước khi có giá trị là chặn deploy của mọi
+     * thứ khác. Khi tài khoản có thật: khai ở GitHub Environment rồi chuyển 4 biến này xuống
+     * nhóm bắt buộc của `APP_ENV=production` trong một PR riêng.
+     *
+     * `SEPAY_API_KEY` là khoá WEBHOOK (SePay gửi `Authorization: Apikey …`), so sánh time-safe
+     * ở `SepayService` — không phải khoá gọi API của SePay.
+     */
+    SEPAY_API_KEY: z.string().min(16).optional(),
+    /** Mã ngân hàng theo chuẩn VietQR (vd `VCB`, `TCB`) — dùng dựng ảnh QR quicklink. */
+    SEPAY_BANK_CODE: z.string().optional(),
+    SEPAY_ACCOUNT_NUMBER: z.string().optional(),
+    /** Tên chủ tài khoản in trên QR — người chuyển đối chiếu trước khi bấm gửi. */
+    SEPAY_ACCOUNT_NAME: z.string().optional(),
+
     // --- Web + Email (cho link đặt lại mật khẩu) ---
     APP_WEB_URL: z.string().default('http://localhost:3000'),
     // SMTP tuỳ chọn: chưa cấu hình thì EmailService in link ra log (dev), không gửi thật.
@@ -249,6 +271,27 @@ export const envSchema = z
           path: [env[idKey] ? secretKey : idKey],
           message: `${idKey} và ${secretKey} phải khai cùng nhau (hoặc bỏ trống cả hai để tắt provider)`,
         });
+      }
+    }
+
+    // SePay là nhóm bốn-biến-hoặc-không: một endpoint công khai có quyền ghi tiền mà thiếu
+    // khoá, hoặc một QR thiếu số tài khoản, đều là cấu hình gõ thiếu — fail lúc boot.
+    const sepayKeys = [
+      'SEPAY_API_KEY',
+      'SEPAY_BANK_CODE',
+      'SEPAY_ACCOUNT_NUMBER',
+      'SEPAY_ACCOUNT_NAME',
+    ] as const;
+    const sepaySet = sepayKeys.filter((key) => Boolean(env[key]));
+    if (sepaySet.length > 0 && sepaySet.length < sepayKeys.length) {
+      for (const key of sepayKeys) {
+        if (!env[key]) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [key],
+            message: `${key} thiếu — bốn biến SEPAY_* phải khai cùng nhau (hoặc bỏ trống cả bốn để tắt)`,
+          });
+        }
       }
     }
 

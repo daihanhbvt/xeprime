@@ -248,6 +248,12 @@ jobs:
           V_SMTP_PORT: ${{ vars.SMTP_PORT }}
           V_SMTP_USER: ${{ vars.SMTP_USER }}
           V_SMTP_FROM: ${{ vars.SMTP_FROM }}
+          # Ba biến SePay dưới đây là Variable chứ không phải Secret: chúng in ra mã VietQR mà
+          # người trả tiền nhìn thấy, nên chúng công khai theo bản chất. Chỉ khoá webhook
+          # (SEPAY_API_KEY) là Secret.
+          V_SEPAY_BANK_CODE: ${{ vars.SEPAY_BANK_CODE }}
+          V_SEPAY_ACCOUNT_NUMBER: ${{ vars.SEPAY_ACCOUNT_NUMBER }}
+          V_SEPAY_ACCOUNT_NAME: ${{ vars.SEPAY_ACCOUNT_NAME }}
           V_FIRESTORE_ENABLED: ${{ vars.FIRESTORE_ENABLED }}
           V_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
           V_FIREBASE_CLIENT_EMAIL: ${{ vars.FIREBASE_CLIENT_EMAIL }}
@@ -274,6 +280,7 @@ jobs:
           S_ESMS_SECRET_KEY: ${{ secrets.ESMS_SECRET_KEY }}
           S_ESMS_BRANDNAME: ${{ secrets.ESMS_BRANDNAME }}
           S_SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          S_SEPAY_API_KEY: ${{ secrets.SEPAY_API_KEY }}
           S_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           S_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           S_FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
@@ -417,6 +424,14 @@ jobs:
           kv SMTP_USER "${V_SMTP_USER:-}"
           kv SMTP_PASS "${S_SMTP_PASS:-}"
           kv SMTP_FROM "${V_SMTP_FROM:-}"
+
+          # Bốn biến SePay đi CÙNG NHAU hoặc cùng để trống — `env.schema.ts` từ chối boot nếu
+          # khai lẻ. Trống cả bốn: webhook trả 503 `SEPAY_NOT_CONFIGURED` (fail closed) và màn
+          # thanh toán không hiện QR; phần còn lại của app chạy bình thường.
+          kv SEPAY_API_KEY "${S_SEPAY_API_KEY:-}"
+          kv SEPAY_BANK_CODE "${V_SEPAY_BANK_CODE:-}"
+          kv SEPAY_ACCOUNT_NUMBER "${V_SEPAY_ACCOUNT_NUMBER:-}"
+          kv SEPAY_ACCOUNT_NAME "${V_SEPAY_ACCOUNT_NAME:-}"
 
           kv R2_ACCOUNT_ID "${V_R2_ACCOUNT_ID:-}"
           kv R2_ACCESS_KEY_ID "${S_R2_ACCESS_KEY_ID:-}"

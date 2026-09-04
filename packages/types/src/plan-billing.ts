@@ -210,6 +210,48 @@ export function parsePlanSlots(value: unknown): PlanSlots {
   return { car: asCount(raw?.['car'], 0), motorbike: asCount(raw?.['motorbike'], 0) };
 }
 
+/**
+ * Đọc `subscription_invoices.lines_json` — `null` khi thiếu trường BẮT BUỘC để kích hoạt.
+ *
+ * Khác `parsePlanLimits` (rơi về mặc định rỗng): mặc định hoá một snapshot hoá đơn là kích hoạt
+ * một gói 0 tháng 0 chỗ — với DỮ LIỆU TIỀN, "không làm gì và đẩy sang hàng đợi admin" đúng hơn
+ * "đoán một giá trị". Caller nhận `null` thì để giao dịch nằm ở trạng thái chưa khớp kèm ghi chú.
+ */
+export function parsePlanInvoiceSnapshot(value: unknown): PlanInvoiceSnapshot | null {
+  const raw = asRecord(value);
+  if (!raw) return null;
+
+  const planId = typeof raw['planId'] === 'string' ? raw['planId'] : null;
+  const planCode = typeof raw['planCode'] === 'string' ? raw['planCode'] : null;
+  const termMonths = asCount(raw['termMonths'], 0);
+  if (!planId || !planCode || termMonths < 1) return null;
+
+  const lines: PlanInvoiceLine[] = Array.isArray(raw['lines'])
+    ? (raw['lines'] as unknown[])
+        .map((l) => {
+          const r = asRecord(l);
+          if (!r) return null;
+          const kind = r['kind'];
+          if (kind !== 'base' && kind !== 'slot' && kind !== 'add_slot') return null;
+          const unitPrice = asMoneyString(r['unitPrice']);
+          const amount = asMoneyString(r['amount']);
+          if (unitPrice === null || amount === null) return null;
+          const vehicleType = r['vehicleType'];
+          return {
+            kind,
+            ...(vehicleType === 'car' || vehicleType === 'motorbike' ? { vehicleType } : {}),
+            quantity: asCount(r['quantity'], 0),
+            months: asCount(r['months'], 0),
+            unitPrice,
+            amount,
+          };
+        })
+        .filter((l): l is PlanInvoiceLine => l !== null)
+    : [];
+
+  return { planId, planCode, termMonths, slots: parsePlanSlots(raw['slots']), lines };
+}
+
 /** Đọc `plans.assumed_monthly_gmv_json` — `null` khi thiếu/hỏng, để caller quyết đường đi. */
 export function parsePlanAssumedGmv(value: unknown): PlanAssumedGmvJson | null {
   const raw = asRecord(value);
@@ -231,23 +273,6 @@ export function parsePlanAssumedGmv(value: unknown): PlanAssumedGmvJson | null {
 /** % giảm của một kỳ hạn theo bảng `terms` của bậc gói — kỳ không khai báo = 0%. */
 export function termDiscountPercent(limits: PlanLimitsJson, termMonths: number): number {
   return limits.terms.find((t) => t.months === termMonths)?.discountPercent ?? 0;
-}
-
-/**
- * Phí nền TỐI THIỂU để bậc gói `package` qua được KIỂM ĐIỂM GIAO (ADR 0020):
- * `includedCars × commissionPercent% × G`. Dưới ngưỡng này, điểm hoà vốn so với tuyến hoa
- * hồng rơi xuống dưới số chỗ gồm sẵn — chủ xe nhỏ hơn quy mô gói cũng thấy gói rẻ hơn.
- *
- * Đây là phép tính XEM TRƯỚC cho form (number, đủ chính xác với tiền VND); nguồn sự thật khi
- * lưu là `BillingService` chạy cùng công thức bằng Decimal.
- */
-export function minBasePriceMonthlyPreview(
-  includedCars: number,
-  assumedGmv: PlanAssumedGmvJson,
-): number {
-  const gmv = Number(assumedGmv.monthlyGmvPerCar);
-  if (!Number.isFinite(gmv) || includedCars <= 0) return 0;
-  return Math.round((includedCars * assumedGmv.commissionPercent * gmv) / 100);
 }
 
 /**

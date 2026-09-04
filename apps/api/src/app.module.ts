@@ -21,6 +21,8 @@ import { LocationsModule } from './modules/locations/locations.module';
 import { BranchesModule } from './modules/branches/branches.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { EmailModule } from './modules/email/email.module';
+import { SepayModule } from './modules/sepay/sepay.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { FirebaseModule } from './modules/firebase/firebase.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
@@ -89,6 +91,8 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
     AuthModule,
     RbacModule,
     AuditModule,
+    EmailModule,
+    SepayModule,
     NotificationModule,
     FirebaseModule,
 

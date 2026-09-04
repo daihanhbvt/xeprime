@@ -123,31 +123,29 @@ describe('PlanFormModal — chế độ tạo', () => {
     expect(screen.getByLabelText('Phí nền / tháng')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Tạo gói' }));
-    await waitFor(() =>
-      expect(screen.getByText('Nhập phí nền (0 nếu miễn phí)')).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText('Nhập phí nền (0 nếu miễn phí)')).toBeTruthy());
     expect(create.mutate).not.toHaveBeenCalled();
   });
 
-  it('cảnh báo kiểm điểm giao hiện NGAY trong form khi phí nền dưới ngưỡng', async () => {
+  /**
+   * Đảo ngược bài test cũ: cảnh báo kiểm điểm giao đã bị gỡ cùng chính phép kiểm (ADR 0029 —
+   * phí theo chuyến nay do khách gánh nên phí nền không còn sàn nào). Gói pilot chính thức có
+   * phí nền 0đ, nên một cảnh báo ở đây sẽ chặn đúng cấu hình mà sản phẩm đang bán.
+   */
+  it('KHÔNG còn cảnh báo ngưỡng phí nền — gói phí nền 0đ là hợp lệ', async () => {
     renderModal(null);
     fireEvent.click(screen.getByRole('radio', { name: /Gói theo chỗ/ }));
 
-    // Ngưỡng = 5 chỗ × 10% × 1.000.000 = 500.000 — phí nền 400k phải bật cảnh báo.
-    fireEvent.change(screen.getByLabelText('Phí nền / tháng'), { target: { value: '400000' } });
+    fireEvent.change(screen.getByLabelText('Phí nền / tháng'), { target: { value: '0' } });
     fireEvent.change(screen.getByLabelText('Chỗ ô tô gồm sẵn trong phí nền'), {
       target: { value: '5' },
     });
     fireEvent.change(screen.getByLabelText('Doanh thu giả định / xe / tháng'), {
       target: { value: '1000000' },
     });
-    fireEvent.change(screen.getByLabelText('% hoa hồng tuyến A để so'), {
-      target: { value: '10' },
-    });
 
-    await waitFor(() =>
-      expect(screen.getByText(/điểm hoà vốn rơi xuống dưới số chỗ gồm sẵn/)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(/THAM KHẢO cho việc định giá/)).toBeTruthy());
+    expect(screen.queryByText(/điểm hoà vốn/)).toBeNull();
   });
 
   it('thành công: báo "Đã tạo gói" rồi đóng', async () => {
@@ -232,9 +230,7 @@ describe('PlanFormModal — lỗi', () => {
       }),
     );
 
-    expect(
-      await screen.findByText(/Mức giá này làm gói rẻ hơn hoa hồng/),
-    ).toBeTruthy();
+    expect(await screen.findByText(/Mức giá này làm gói rẻ hơn hoa hồng/)).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
   });
 });

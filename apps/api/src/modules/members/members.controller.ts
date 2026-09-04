@@ -1,5 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Param, Patch, Query } from '@nestjs/common';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
 import {
   CurrentTenant,
@@ -10,7 +10,6 @@ import {
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
-  AddMemberDto,
   MemberDto,
   MemberListQueryDto,
   MemberPageDto,
@@ -38,18 +37,6 @@ export class MembersController {
     @Query() query: MemberListQueryDto,
   ): Promise<MemberPageDto> {
     return this.members.list(tenant.tenantId, query) as Promise<MemberPageDto>;
-  }
-
-  @Post()
-  @RequirePermissions(PERMISSION.MEMBER_INVITE)
-  @ApiOperation({ summary: 'Thêm thành viên theo email (user phải đã có tài khoản)' })
-  @ApiCreatedResponse({ type: MemberDto })
-  add(
-    @CurrentTenant() tenant: TenantContext,
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: AddMemberDto,
-  ): Promise<MemberDto> {
-    return this.members.add(tenant.tenantId, user.id, dto);
   }
 
   @Patch(':userId')

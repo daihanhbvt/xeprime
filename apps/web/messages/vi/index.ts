@@ -38,6 +38,7 @@ import branches from '@xeprime/domain/messages/vi/branches.json';
 import customers from '@xeprime/domain/messages/vi/customers.json';
 import finance from '@xeprime/domain/messages/vi/finance.json';
 import adminPlans from '@xeprime/domain/messages/vi/admin-plans.json';
+import bankTransactions from '@xeprime/domain/messages/vi/bank-transactions.json';
 import subscription from '@xeprime/domain/messages/vi/subscription.json';
 import members from '@xeprime/domain/messages/vi/members.json';
 import drivers from '@xeprime/domain/messages/vi/drivers.json';
@@ -70,6 +71,7 @@ const messages = {
   Customers: customers,
   Finance: finance,
   AdminPlans: adminPlans,
+  BankTransactions: bankTransactions,
   Subscription: subscription,
   Members: members,
   Drivers: drivers,

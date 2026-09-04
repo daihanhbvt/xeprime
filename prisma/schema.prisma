@@ -2679,6 +2679,50 @@ model SubscriptionInvoice {
   @@map("subscription_invoices")
 }
 
+/// Sổ giao dịch tiền VÀO tài khoản nền tảng — MỘT bảng cho mọi nguồn (ADR 0022 điều 2).
+///
+/// Ghi THÔ trước, khớp sau: webhook chèn dòng này trước khi biết nội dung khớp vào đâu, nhờ
+/// vậy giao dịch không khớp được vẫn có chỗ nằm chờ admin thay vì bị bỏ rồi retry chèn lại.
+/// `content` giữ nguyên văn làm bằng chứng; `reference_code` là phần rút ra được.
+///
+/// KHÔNG có `tenant_id` và `matched_ref_id` KHÔNG có khoá ngoại (hai loại đích — ADR 0022):
+/// tenant luôn suy từ ĐÍCH ĐÃ KHỚP, không bao giờ từ payload. Toàn vẹn đến từ kỷ luật một
+/// writer: chỉ `SepayService` ghi bảng này, và ghi cột `matched_*` trong CÙNG transaction với
+/// hiệu ứng ở phía đích.
+model BankTransaction {
+  id            String    @id @db.Char(26)
+  /// Nhà cung cấp đối soát — nằm trong khoá unique để sau này thêm nguồn không đổi schema.
+  provider      String    @default("sepay") @db.VarChar(30)
+  /// Mã giao dịch phía nhà cung cấp — cùng `provider` là CHỐT CHỐNG GHI ĐÔI (ADR 0016 điều 4).
+  providerTxId  String    @map("provider_tx_id") @db.VarChar(100)
+  amountIn      Decimal   @map("amount_in") @db.Decimal(14, 2)
+  /// Nội dung chuyển khoản NGUYÊN VĂN — bằng chứng khi tranh cãi, không bao giờ sửa.
+  content       String    @db.Text
+  /// Mã đối soát rút được từ `content` (`XPG…`/`XPH…`) — NULL khi ngân hàng cắt nội dung.
+  referenceCode String?   @map("reference_code") @db.VarChar(20)
+  /// Thời điểm giao dịch theo NGÂN HÀNG (khác created_at là lúc webhook tới).
+  bankTime      DateTime? @map("bank_time") @db.Timestamptz(3)
+  /// @xeprime/types → BankMatchStatus (unmatched | matched | manual | ignored); DB canh CHECK.
+  matchStatus   String    @default("unmatched") @map("match_status") @db.VarChar(30)
+  /// @xeprime/types → BankMatchTargetType; DB canh CHECK. NULL khi chưa khớp.
+  matchedType   String?   @map("matched_type") @db.VarChar(50)
+  matchedRefId  String?   @map("matched_ref_id") @db.Char(26)
+  /// Lý do khi khớp tay / bỏ qua — dòng `manual`/`ignored` không có ghi chú là không truy được.
+  matchNote     String?   @map("match_note") @db.Text
+  /// Admin thao tác tay (NULL với dòng máy tự khớp) — mỗi dòng `manual` là một người chịu trách nhiệm.
+  matchedBy     String?   @map("matched_by") @db.Char(26)
+  matchedAt     DateTime? @map("matched_at") @db.Timestamptz(3)
+  /// Payload webhook nguyên trạng — nằm ở DB làm bằng chứng, KHÔNG bao giờ ghi ra log.
+  rawJson       Json      @map("raw_json") @db.JsonB
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([provider, providerTxId])
+  @@index([matchStatus, createdAt])
+  @@index([referenceCode])
+  @@map("bank_transactions")
+}
+
 // ---------------------------------------------------------------------------
 // Bản đồ — cache tra cứu vị trí (tích hợp 24/08/2026)
 // ---------------------------------------------------------------------------

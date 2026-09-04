@@ -71,6 +71,28 @@ export const API_ERROR_CODE = {
   /** Đổi code thất bại, `debug_token` không khớp app, hoặc `id_token` không hợp lệ. */
   SOCIAL_EXCHANGE_FAILED: 'SOCIAL_EXCHANGE_FAILED',
 
+  /*
+   * Thư mời vào gian hàng (R1 — thay cho việc thêm thẳng người vào tenant).
+   *
+   * Bốn mã riêng thay vì `NOT_FOUND`/`CONFLICT` chung, vì bốn lối đi tiếp khác hẳn nhau và
+   * người đọc màn hình mời là người NGOÀI gian hàng — họ không có gì để tự suy ra.
+   */
+  /** Token không tồn tại, đã dùng, đã bị thu hồi, hoặc đã bị chính người nhận từ chối. */
+  INVITE_INVALID: 'INVITE_INVALID',
+  /** Còn đúng nhưng quá `expires_at`. Việc cần làm là xin gian hàng gửi lại, không phải thử lại. */
+  INVITE_EXPIRED: 'INVITE_EXPIRED',
+  /**
+   * Đang đăng nhập bằng một tài khoản KHÁC với email được mời.
+   *
+   * Không tự nhận lời mời cho tài khoản đang đăng nhập: link mời đi qua email/chat và có thể
+   * bị chuyển tiếp, nên "ai cầm link thì vào được" là một cách chiếm chỗ trong gian hàng người
+   * khác. `details` mang `{ invitedEmail }` đã che bớt để người dùng biết cần đăng nhập bằng
+   * hộp thư nào mà không lộ nguyên địa chỉ cho người cầm link nhầm.
+   */
+  INVITE_EMAIL_MISMATCH: 'INVITE_EMAIL_MISMATCH',
+  /** Đã là thành viên đang hoạt động của chính gian hàng này — lời mời không còn việc gì để làm. */
+  INVITE_ALREADY_MEMBER: 'INVITE_ALREADY_MEMBER',
+
   // Phân quyền
   FORBIDDEN: 'FORBIDDEN',
   MISSING_PERMISSION: 'MISSING_PERMISSION',
@@ -130,13 +152,11 @@ export const API_ERROR_CODE = {
   // Gói/hạn (ADR 0010 · tách theo loại xe từ ADR 0015 điều 7)
   PLAN_LIMIT_REACHED: 'PLAN_LIMIT_REACHED',
   /**
-   * Bậc gói `package` vi phạm KIỂM ĐIỂM GIAO (ADR 0020): điểm hoà vốn so với tuyến hoa hồng
-   * nằm DƯỚI `includedCars` của chính bậc đó — tức là chủ xe nhỏ hơn quy mô gói cũng thấy gói
-   * rẻ hơn, và tuyến hoa hồng mất vai trò phễu. Đây là quy tắc trong code, không phải núm vặn.
+   * ĐÃ NGHỈ HƯU (ADR 0029) — **không endpoint nào còn trả mã này**.
    *
-   * Cũng ném khi thiếu dữ liệu để kiểm (`assumed_monthly_gmv_json`, đơn giá chỗ ô tô) —
-   * một bậc gói bán tiền thật không được lưu khi chưa chứng minh được bài toán khuyến khích.
-   * `details` mang `{ reason }` (`'BREAKEVEN_BELOW_INCLUDED'` | `'MISSING_ASSUMPTIONS'`).
+   * Trước đây: bậc gói `package` vi phạm kiểm điểm giao của ADR 0020 (phí nền quá thấp so với
+   * tuyến hoa hồng). ADR 0029 chuyển phí theo chuyến sang PHÍA KHÁCH nên phép kiểm mất cơ sở
+   * và đã bị gỡ. Giữ khoá để log/audit cũ vẫn đọc được — đừng ném lại mã này.
    */
   PLAN_INCENTIVE_INVALID: 'PLAN_INCENTIVE_INVALID',
 
@@ -196,6 +216,26 @@ export const API_ERROR_CODE = {
    * đây là endpoint công khai duy nhất có quyền ghi tiền.
    */
   SEPAY_SIGNATURE_INVALID: 'SEPAY_SIGNATURE_INVALID',
+  /**
+   * Nhóm biến SEPAY_* chưa khai — webhook trả 503 fail-closed thay vì nhận tiền mà không có
+   * khoá để kiểm. SePay sẽ retry, và đó là hành vi đúng: tiền không mất, chỉ chờ cấu hình.
+   */
+  SEPAY_NOT_CONFIGURED: 'SEPAY_NOT_CONFIGURED',
+  /**
+   * Giao dịch ngân hàng này KHÔNG còn ở trạng thái chờ xử lý — ai đó vừa khớp/bỏ qua nó, hoặc
+   * webhook đã tự khớp xong. Ném khi admin bấm khớp tay trên một dòng đã được xử lý.
+   *
+   * Lối đi tiếp là TẢI LẠI danh sách, không phải thử lại: trạng thái đã đổi thật.
+   */
+  BANK_TX_ALREADY_HANDLED: 'BANK_TX_ALREADY_HANDLED',
+  /**
+   * Hoá đơn admin chọn để khớp tay không còn nhận tiền được (`void` / `draft`).
+   *
+   * Mã riêng vì lối đi tiếp rất cụ thể: bảo gian hàng tạo lại hoá đơn rồi khớp vào mã mới —
+   * KHÔNG mở lại một hoá đơn đã chết, vì kỳ và giá của nó có thể đã cũ. `details` mang
+   * `{ invoiceStatus }`.
+   */
+  BANK_TX_TARGET_NOT_PAYABLE: 'BANK_TX_TARGET_NOT_PAYABLE',
 
   // Sổ Thu-Chi (Phase 6 · epic nối tiền)
   /**

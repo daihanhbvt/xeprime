@@ -12,7 +12,6 @@ import {
   PLAN_FEATURE_VALUES,
   SUBSCRIPTION_TERM_MONTHS,
   isPlanFeature,
-  minBasePriceMonthlyPreview,
 } from '@xeprime/types';
 import { NumberField } from '@/components/form/NumberField';
 import { CheckboxGroupField } from '@/components/form/CheckboxGroupField';
@@ -22,7 +21,6 @@ import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { getErrorCode } from '@/services/api-client';
-import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useCreatePlan, useUpdatePlan } from '../hooks/use-plan-mutations';
@@ -40,7 +38,7 @@ const TERM_FIELDS = [
  * Tạo/sửa bậc gói theo mô hình cước theo CHỖ (ADR 0015/0020): chế độ thu phí quyết định bộ núm
  * hiện ra — tuyến hoa hồng chỉ có %, tuyến gói có phí nền + đơn giá chỗ + kỳ hạn + giả định
  * kiểm điểm giao. Cảnh báo kiểm điểm giao hiện NGAY trong form (phép xem trước dùng chung
- * `minBasePriceMonthlyPreview`); nguồn sự thật vẫn là BillingService — lỗi trả về đọc từ MÃ.
+ * nguồn sự thật vẫn là BillingService — lỗi trả về đọc từ MÃ. Kiểm điểm giao đã gỡ (ADR 0029).
  *
  * Sửa thì `code` bị khoá (định danh, ADR 0010); tiền nhập number ở form và hoá string khi gửi
  * API (ADR 0007). Remount theo `open` để form sạch mỗi lần mở.
@@ -58,7 +56,6 @@ export function PlanFormModal({
   const t = useTranslations('AdminPlans');
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
-  const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
   const create = useCreatePlan();
@@ -70,7 +67,11 @@ export function PlanFormModal({
 
   const schema = useMemo(() => {
     const int = (v: yup.NumberSchema<number | null | undefined>) =>
-      v.nullable().defined().integer(t('form.validation.integer')).min(0, t('form.validation.nonNegative'));
+      v
+        .nullable()
+        .defined()
+        .integer(t('form.validation.integer'))
+        .min(0, t('form.validation.nonNegative'));
     return yup.object({
       code: yup
         .string()
@@ -88,7 +89,8 @@ export function PlanFormModal({
         .max(20)
         .when('billingMode', {
           is: BILLING_MODE.COMMISSION,
-          then: (s) => s.test('required', t('form.validation.commissionRequired'), (v) => v != null),
+          then: (s) =>
+            s.test('required', t('form.validation.commissionRequired'), (v) => v != null),
         }),
       basePriceMonthly: yup
         .number()
@@ -149,9 +151,14 @@ export function PlanFormModal({
           billingMode: plan.billingMode as FormValues['billingMode'],
           commissionPercent: plan.commissionPercent,
           basePriceMonthly: Number(plan.basePriceMonthly),
-          perCarPrice: plan.limits.perVehiclePrice.car != null ? Number(plan.limits.perVehiclePrice.car) : null,
+          perCarPrice:
+            plan.limits.perVehiclePrice.car != null
+              ? Number(plan.limits.perVehiclePrice.car)
+              : null,
           perMotorbikePrice:
-            plan.limits.perVehiclePrice.motorbike != null ? Number(plan.limits.perVehiclePrice.motorbike) : null,
+            plan.limits.perVehiclePrice.motorbike != null
+              ? Number(plan.limits.perVehiclePrice.motorbike)
+              : null,
           includedCars: plan.limits.includedCars,
           includedMotorbikes: plan.limits.includedMotorbikes,
           maxCars: plan.limits.maxCars,
@@ -161,7 +168,9 @@ export function PlanFormModal({
           discountM6: termDiscountOf(plan, 6),
           discountM12: termDiscountOf(plan, 12),
           graceDays: plan.limits.graceDays,
-          gmvPerCar: plan.assumedMonthlyGmv ? Number(plan.assumedMonthlyGmv.monthlyGmvPerCar) : null,
+          gmvPerCar: plan.assumedMonthlyGmv
+            ? Number(plan.assumedMonthlyGmv.monthlyGmvPerCar)
+            : null,
           gmvCommission: plan.assumedMonthlyGmv?.commissionPercent ?? null,
           maxMembers: plan.limits.maxMembers,
           maxBranches: plan.limits.maxBranches,
@@ -197,22 +206,6 @@ export function PlanFormModal({
 
   const isPackage = watch('billingMode') === BILLING_MODE.PACKAGE;
 
-  // Cảnh báo kiểm điểm giao NGAY khi gõ (ADR 0020) — cùng công thức server, tính bản xem trước.
-  const [wBase, wIncluded, wGmv, wGmvCommission] = [
-    watch('basePriceMonthly'),
-    watch('includedCars'),
-    watch('gmvPerCar'),
-    watch('gmvCommission'),
-  ];
-  const incentiveMin = useMemo(() => {
-    if (!isPackage || wGmv == null || wGmvCommission == null || !wIncluded) return null;
-    const min = minBasePriceMonthlyPreview(wIncluded, {
-      monthlyGmvPerCar: String(wGmv),
-      commissionPercent: wGmvCommission,
-    });
-    return wBase != null && wBase < min ? min : null;
-  }, [isPackage, wBase, wIncluded, wGmv, wGmvCommission]);
-
   const onSubmit = handleSubmit((values) => {
     const isPkg = values.billingMode === BILLING_MODE.PACKAGE;
     const discounts: Record<number, number | null | undefined> = {
@@ -239,7 +232,8 @@ export function PlanFormModal({
       limits: {
         perVehiclePrice: {
           car: isPkg && values.perCarPrice != null ? String(values.perCarPrice) : null,
-          motorbike: isPkg && values.perMotorbikePrice != null ? String(values.perMotorbikePrice) : null,
+          motorbike:
+            isPkg && values.perMotorbikePrice != null ? String(values.perMotorbikePrice) : null,
         },
         includedCars: (isPkg ? values.includedCars : 0) ?? 0,
         includedMotorbikes: (isPkg ? values.includedMotorbikes : 0) ?? 0,
@@ -291,7 +285,12 @@ export function PlanFormModal({
           <TextField control={control} name="code" label={t('form.code')} placeholder="basic" />
         ) : null}
         <TextField control={control} name="name" label={t('form.name')} />
-        <TextAreaField control={control} name="description" label={t('form.description')} rows={2} />
+        <TextAreaField
+          control={control}
+          name="description"
+          label={t('form.description')}
+          rows={2}
+        />
 
         <RadioGroupField
           control={control}
@@ -323,7 +322,13 @@ export function PlanFormModal({
           />
         ) : (
           <>
-            <NumberField control={control} name="basePriceMonthly" label={t('form.basePriceMonthly')} money min={0} />
+            <NumberField
+              control={control}
+              name="basePriceMonthly"
+              label={t('form.basePriceMonthly')}
+              money
+              min={0}
+            />
 
             <Divider plain>{t('form.sectionSlots')}</Divider>
             <NumberField
@@ -342,9 +347,25 @@ export function PlanFormModal({
               min={0}
               help={t('form.perPriceHelp')}
             />
-            <NumberField control={control} name="includedCars" label={t('form.includedCars')} min={0} />
-            <NumberField control={control} name="includedMotorbikes" label={t('form.includedMotorbikes')} min={0} />
-            <NumberField control={control} name="maxCars" label={t('form.maxCars')} min={0} help={t('form.maxHelp')} />
+            <NumberField
+              control={control}
+              name="includedCars"
+              label={t('form.includedCars')}
+              min={0}
+            />
+            <NumberField
+              control={control}
+              name="includedMotorbikes"
+              label={t('form.includedMotorbikes')}
+              min={0}
+            />
+            <NumberField
+              control={control}
+              name="maxCars"
+              label={t('form.maxCars')}
+              min={0}
+              help={t('form.maxHelp')}
+            />
             <NumberField
               control={control}
               name="maxMotorbikes"
@@ -374,8 +395,14 @@ export function PlanFormModal({
             />
 
             <Divider plain>{t('form.sectionIncentive')}</Divider>
-            <Alert type="info" showIcon message={t('form.incentiveIntro')} />
-            <NumberField control={control} name="gmvPerCar" label={t('form.assumedGmv')} money min={0} />
+            <Alert type="info" showIcon message={t('form.gmvReferenceNote')} />
+            <NumberField
+              control={control}
+              name="gmvPerCar"
+              label={t('form.assumedGmv')}
+              money
+              min={0}
+            />
             <NumberField
               control={control}
               name="gmvCommission"
@@ -385,19 +412,24 @@ export function PlanFormModal({
               max={20}
               precision={2}
             />
-            {incentiveMin != null ? (
-              <Alert
-                type="warning"
-                showIcon
-                message={t('form.incentiveWarning', { min: fmt.money(String(incentiveMin)) })}
-              />
-            ) : null}
           </>
         )}
 
         <Divider plain>{t('form.sectionOther')}</Divider>
-        <NumberField control={control} name="maxMembers" label={t('form.maxMembers')} min={0} help={t('form.maxHelp')} />
-        <NumberField control={control} name="maxBranches" label={t('form.maxBranches')} min={0} help={t('form.maxHelp')} />
+        <NumberField
+          control={control}
+          name="maxMembers"
+          label={t('form.maxMembers')}
+          min={0}
+          help={t('form.maxHelp')}
+        />
+        <NumberField
+          control={control}
+          name="maxBranches"
+          label={t('form.maxBranches')}
+          min={0}
+          help={t('form.maxHelp')}
+        />
         <CheckboxGroupField
           control={control}
           name="features"

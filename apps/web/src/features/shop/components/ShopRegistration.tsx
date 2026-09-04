@@ -20,6 +20,7 @@ import { trailingRequiredMark } from '@/components/form/required-mark';
 import { SelectField } from '@/components/form/SelectField';
 import { TextField } from '@/components/form/TextField';
 import { getErrorMessage } from '@/services/api-client';
+import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useRegisterShop } from '../hooks/use-shop';
@@ -219,6 +220,13 @@ export function ShopRegistration() {
           >
             {t('form.submit')}
           </Button>
+
+          {/*
+            Quy chế sàn ràng buộc NGƯỜI BÁN kể từ khoảnh khắc này (Luật TMĐT 122/2025 và Nghị
+            định 248/2026 — ADR 0028 điều 9), nên nó phải hiện ở đây chứ không chỉ ở chân trang
+            của khu công khai mà cổng quản lý không có.
+          */}
+          <LegalConsentNote place="shop" className={styles.consent} />
         </form>
       </Form>
     </section>

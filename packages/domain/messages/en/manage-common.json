@@ -91,6 +91,10 @@
     "contact": {
       "title": "Still stuck?",
       "body": "Reach out to your shop owner or administrator for access and further guidance."
+    },
+    "legal": {
+      "title": "Legal documents",
+      "body": "The marketplace operating rules bind your shop: listing requirements, ranking, service fees and how disputes are handled. They open in a new tab so you don't lose what you are working on."
     }
   }
 }

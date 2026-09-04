@@ -6,13 +6,16 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  AUDIT_ACTOR_SCOPE,
   BANK_MATCH_TARGET_TYPE,
   BILLING_MODE,
   COMMISSION_TRACK_TERM_MONTHS,
   FREE_TRIP_ALLOWANCE,
+  NOTIFICATION_TYPE,
   PLAN_STATUS,
   SUBSCRIPTION_INVOICE_STATUS,
   SUBSCRIPTION_INVOICE_TTL_HOURS,
@@ -21,6 +24,7 @@ import {
   VEHICLE_TYPE,
   addCalendarMonthsVn,
   parsePlanAssumedGmv,
+  parsePlanInvoiceSnapshot,
   parsePlanLimits,
   parsePlanSlots,
   termDiscountPercent,
@@ -34,12 +38,14 @@ import {
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { NotificationService } from '../notification/notification.service';
 import {
   AddSlotsDto,
   AssignSubscriptionDto,
   CreatePlanDto,
   CurrentPlanDto,
   MySubscriptionDto,
+  PaymentInfoDto,
   PlanDto,
   PlanListQueryDto,
   PurchaseSubscriptionDto,
@@ -128,7 +134,26 @@ export class BillingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly notifications: NotificationService,
+    private readonly config: ConfigService,
   ) {}
+
+  /**
+   * Thông tin nhận chuyển khoản của nền tảng — nguồn cho ảnh VietQR ở màn thanh toán hoá đơn.
+   * Cấu hình đi theo nhóm bốn-biến-hoặc-không (env.schema đã canh), nên chỉ cần dò một biến.
+   */
+  paymentInfo(): PaymentInfoDto {
+    const bankCode = this.config.get<string>('SEPAY_BANK_CODE') ?? null;
+    if (!bankCode) {
+      return { configured: false, bankCode: null, accountNumber: null, accountName: null };
+    }
+    return {
+      configured: true,
+      bankCode,
+      accountNumber: this.config.get<string>('SEPAY_ACCOUNT_NUMBER') ?? null,
+      accountName: this.config.get<string>('SEPAY_ACCOUNT_NAME') ?? null,
+    };
+  }
 
   // -------------------------------------------------------------------------
   // Plans
@@ -146,7 +171,10 @@ export class BillingService {
   }
 
   async createPlan(actorUserId: string, dto: CreatePlanDto): Promise<PlanDto> {
-    const dup = await this.prisma.plan.findUnique({ where: { code: dto.code }, select: { id: true } });
+    const dup = await this.prisma.plan.findUnique({
+      where: { code: dto.code },
+      select: { id: true },
+    });
     if (dup) {
       throw new ConflictException({
         code: API_ERROR_CODE.CONFLICT,
@@ -731,7 +759,10 @@ export class BillingService {
           tenantId,
           deletedAt: null,
           publicStatus: {
-            in: [VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW, VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC],
+            in: [
+              VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW,
+              VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+            ],
           },
         },
         _count: { _all: true },
@@ -743,8 +774,7 @@ export class BillingService {
     // Cùng cách suy hạn mức với assertVehicleQuota — không có định nghĩa thứ hai.
     const limits = current ? parsePlanLimits(current.plan.limitsJson) : null;
     const slots = current?.slotsJson != null ? parsePlanSlots(current.slotsJson) : null;
-    const unlimited =
-      !current || current.billingMode === BILLING_MODE.COMMISSION;
+    const unlimited = !current || current.billingMode === BILLING_MODE.COMMISSION;
     const limitOf = (type: 'car' | 'motorbike'): number | null => {
       if (unlimited || !limits) return null;
       if (slots) return type === 'car' ? slots.car : slots.motorbike;
@@ -826,13 +856,30 @@ export class BillingService {
       });
     }
     const limits = parsePlanLimits(plan.limitsJson);
+
+    /*
+     * `limits.terms` là danh sách kỳ hạn ĐƯỢC BÁN của plan, không chỉ là bảng giảm giá
+     * (ADR 0029 điều 3 — giá pilot bán tối thiểu 3 tháng). DTO chỉ chặn được tập kỳ hạn
+     * toàn cục [1,3,6,12]; plan thu hẹp thêm ở đây, và đây là lớp chặn thật — ẩn lựa chọn
+     * ở PurchaseModal chỉ là UX. Danh sách rỗng (plan cũ chưa khai) = không thu hẹp.
+     */
+    const allowedTerms = limits.terms.map((t) => t.months);
+    if (allowedTerms.length > 0 && !allowedTerms.includes(dto.termMonths)) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: `Gói này chỉ bán theo kỳ hạn ${allowedTerms.join('/')} tháng`,
+        details: { field: 'termMonths', allowedTerms },
+      });
+    }
+
     const slots = this.resolvePurchaseSlots(limits, dto.slots);
     const pricing = this.priceTerm(plan.basePriceMonthly, limits, slots, dto.termMonths);
     if (pricing.total.isZero()) {
-      // Gói 0đ không có gì để mua — tuyến hoa hồng là mặc định, không đi qua hoá đơn.
+      // 0đ = không có gì để mua: hoặc gói tuyến hoa hồng, hoặc gói giá-theo-chỗ mà chưa chọn
+      // chỗ nào (ADR 0029 — phí nền 0đ, tiền nằm hết ở chỗ xe).
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Gói này không cần mua — không có khoản phải trả',
+        message: 'Không có khoản phải trả — chọn ít nhất một chỗ xe',
       });
     }
 
@@ -900,6 +947,247 @@ export class BillingService {
   }
 
   /**
+   * Áp MỘT khoản tiền ngân hàng vào hoá đơn gói theo mã đối soát — do `SepayService` gọi,
+   * TRONG cùng transaction với dòng `bank_transactions` (ADR 0022 điều 2: cột `matched_*` và
+   * hiệu ứng ở đích phải cùng sống cùng chết).
+   *
+   * Nằm ở BillingService vì đây là writer duy nhất của `subscription_invoices` và
+   * `tenant_subscriptions` — SePay sở hữu sổ ngân hàng, không sở hữu hoá đơn.
+   *
+   * ## An toàn khi chạy lặp / song song
+   *
+   * Chống ghi đôi cấp GIAO DỊCH nằm ở unique `(provider, provider_tx_id)` phía caller. Ở đây
+   * lo phần còn lại: HAI giao dịch KHÁC NHAU cùng trả một hoá đơn chạy song song.
+   *  - Cộng dồn bằng `increment` nguyên tử, không đọc-rồi-ghi.
+   *  - Lật `paid` + kích hoạt bằng MỘT `updateMany` có điều kiện trạng thái (khuôn claim của
+   *    `subscription-lifecycle`): hai bên cùng đủ tiền thì đúng một bên claim được, bên kia
+   *    thấy `count = 0` và dừng ở "đã trả rồi" — không bao giờ hai subscription.
+   *
+   * ## Chuyển thiếu / thừa (ADR 0016 điều 6)
+   *
+   * Thiếu → `partially_paid`, KHÔNG kích hoạt, giữ nguyên mã để chuyển bù (`expiresAt` được
+   * XOÁ: hoá đơn đã có tiền thật thì không được để job lật `void` — tiền về sau hạn vài phút
+   * mà mã chết là admin phải xử lý tay một ca lẽ ra tự xong). Thừa → ghi có kỳ sau: `paidAmount`
+   * giữ nguyên phần dư làm bằng chứng, admin thấy chênh lệch ở màn đối soát.
+   */
+  async applyBankPaymentWithinTx(
+    tx: Prisma.TransactionClient,
+    args: { code: string; amount: Prisma.Decimal; providerTxId: string },
+  ): Promise<
+    | { outcome: 'invoice_not_found' }
+    | { outcome: 'invoice_closed'; invoiceId: string; tenantId: string; status: string }
+    | { outcome: 'partial'; invoiceId: string; tenantId: string; paid: string; total: string }
+    | { outcome: 'already_paid'; invoiceId: string; tenantId: string }
+    | { outcome: 'activated'; invoiceId: string; tenantId: string; subscriptionId: string }
+  > {
+    const invoice = await tx.subscriptionInvoice.findUnique({
+      where: { code: args.code.toUpperCase() },
+      select: { id: true, tenantId: true, status: true, totalAmount: true, linesJson: true },
+    });
+    if (!invoice) return { outcome: 'invoice_not_found' };
+
+    // string[] tường minh: cột status là String (ADR 0005) nên phép includes so với giá trị DB.
+    const payable: string[] = [
+      SUBSCRIPTION_INVOICE_STATUS.ISSUED,
+      SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID,
+    ];
+
+    if (invoice.status === SUBSCRIPTION_INVOICE_STATUS.PAID) {
+      // Tiền về lần nữa cho hoá đơn đã đủ: cộng dồn làm BẰNG CHỨNG chênh lệch (paid > total
+      // hiện ở màn đối soát), không kích hoạt gì thêm.
+      await tx.subscriptionInvoice.update({
+        where: { id: invoice.id },
+        data: { paidAmount: { increment: args.amount } },
+      });
+      return { outcome: 'already_paid', invoiceId: invoice.id, tenantId: invoice.tenantId };
+    }
+    if (!payable.includes(invoice.status)) {
+      // `void`/`draft`: tiền về cho một mã đã chết — KHÔNG tự xử lý. Giao dịch nằm ở hàng đợi
+      // chưa khớp để admin quyết (hoàn, hay khớp tay sang hoá đơn thay thế).
+      return {
+        outcome: 'invoice_closed',
+        invoiceId: invoice.id,
+        tenantId: invoice.tenantId,
+        status: invoice.status,
+      };
+    }
+
+    const credited = await tx.subscriptionInvoice.updateMany({
+      where: { id: invoice.id, status: { in: payable } },
+      data: { paidAmount: { increment: args.amount } },
+    });
+    if (credited.count === 0) {
+      /*
+       * Trạng thái vừa bị lật GIỮA findUnique và increment — hoặc job `void` hoá đơn quá hạn,
+       * hoặc một webhook song song vừa trả đủ. `count = 0` nghĩa là tiền CHƯA được cộng vào
+       * đâu; bỏ qua chỗ này là giao dịch bị đánh dấu "đã khớp" trong khi hoá đơn không nhận
+       * được đồng nào.
+       */
+      const current = await tx.subscriptionInvoice.findUniqueOrThrow({
+        where: { id: invoice.id },
+        select: { status: true },
+      });
+      if (current.status === SUBSCRIPTION_INVOICE_STATUS.PAID) {
+        // Cộng làm bằng chứng thừa — cùng đường với nhánh PAID ở trên.
+        await tx.subscriptionInvoice.update({
+          where: { id: invoice.id },
+          data: { paidAmount: { increment: args.amount } },
+        });
+        return { outcome: 'already_paid', invoiceId: invoice.id, tenantId: invoice.tenantId };
+      }
+      return {
+        outcome: 'invoice_closed',
+        invoiceId: invoice.id,
+        tenantId: invoice.tenantId,
+        status: current.status,
+      };
+    }
+    const updated = await tx.subscriptionInvoice.findUniqueOrThrow({
+      where: { id: invoice.id },
+      select: { paidAmount: true, totalAmount: true },
+    });
+
+    if (updated.paidAmount.lt(updated.totalAmount)) {
+      await tx.subscriptionInvoice.updateMany({
+        where: { id: invoice.id, status: SUBSCRIPTION_INVOICE_STATUS.ISSUED },
+        // Xem docblock: hoá đơn đã có tiền thật thì thôi hạn `void`.
+        data: { status: SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID, expiresAt: null },
+      });
+      return {
+        outcome: 'partial',
+        invoiceId: invoice.id,
+        tenantId: invoice.tenantId,
+        paid: updated.paidAmount.toString(),
+        total: updated.totalAmount.toString(),
+      };
+    }
+
+    const claimed = await tx.subscriptionInvoice.updateMany({
+      where: { id: invoice.id, status: { in: payable } },
+      data: { status: SUBSCRIPTION_INVOICE_STATUS.PAID, paidAt: new Date(), expiresAt: null },
+    });
+    if (claimed.count === 0) {
+      // Giao dịch song song vừa claim xong — tiền của mình thành phần dư, như nhánh PAID trên.
+      return { outcome: 'already_paid', invoiceId: invoice.id, tenantId: invoice.tenantId };
+    }
+
+    const subscriptionId = await this.activateFromInvoiceWithinTx(tx, {
+      invoiceId: invoice.id,
+      tenantId: invoice.tenantId,
+      totalAmount: invoice.totalAmount,
+      linesJson: invoice.linesJson,
+      providerTxId: args.providerTxId,
+    });
+    return {
+      outcome: 'activated',
+      invoiceId: invoice.id,
+      tenantId: invoice.tenantId,
+      subscriptionId,
+    };
+  }
+
+  /**
+   * Mở gói từ SNAPSHOT của hoá đơn đã trả đủ — kỳ THẬT chốt tại đây (nối đuôi gói còn hạn,
+   * đúng phép tính của `assign`), không phải kỳ "dự kiến" in trên hoá đơn lúc phát hành.
+   *
+   * Snapshot là nguồn của planId/termMonths/slots (số tiền đã thoả thuận — ADR 0024); riêng
+   * `billingMode`/`commissionPercent` đọc từ dòng plan HIỆN TẠI vì chúng được snapshot vào
+   * subscription ngay bây giờ — thời điểm kích hoạt chính là thời điểm "tạo" theo ADR 0024.
+   *
+   * Snapshot hỏng (dữ liệu tay/cũ) → ném để transaction ABORT: dòng bank_transaction cũng không
+   * được ghi, SePay retry, và lỗi nổi lên ở log thay vì một gói mở sai chỗ.
+   */
+  private async activateFromInvoiceWithinTx(
+    tx: Prisma.TransactionClient,
+    args: {
+      invoiceId: string;
+      tenantId: string;
+      totalAmount: Prisma.Decimal;
+      linesJson: Prisma.JsonValue;
+      providerTxId: string;
+    },
+  ): Promise<string> {
+    const snapshot = parsePlanInvoiceSnapshot(args.linesJson);
+    if (!snapshot) {
+      throw new Error(`Hoá đơn ${args.invoiceId} có lines_json không kích hoạt được`);
+    }
+    const plan = await tx.plan.findUniqueOrThrow({
+      where: { id: snapshot.planId },
+      select: { id: true, name: true, billingMode: true, commissionPercent: true },
+    });
+
+    const now = new Date();
+    const tail = await tx.tenantSubscription.findFirst({
+      where: { tenantId: args.tenantId, status: SUBSCRIPTION_STATUS.ACTIVE, endsAt: { gt: now } },
+      orderBy: { endsAt: 'desc' },
+      select: { endsAt: true },
+    });
+    const startsAt = tail ? tail.endsAt : now;
+    const endsAt = addCalendarMonthsVn(startsAt, snapshot.termMonths);
+
+    const sub = await tx.tenantSubscription.create({
+      data: {
+        id: newId(),
+        tenantId: args.tenantId,
+        planId: plan.id,
+        status: SUBSCRIPTION_STATUS.ACTIVE,
+        price: args.totalAmount,
+        termMonths: snapshot.termMonths,
+        slotsJson: snapshot.slots as unknown as Prisma.InputJsonValue,
+        billingMode: plan.billingMode,
+        commissionPercent: plan.commissionPercent,
+        startsAt,
+        endsAt,
+        // Người tạo là HỆ THỐNG (webhook) — cột NULL, dấu vết nằm ở audit + bank_transactions.
+        createdBy: null,
+      },
+      select: { id: true, startsAt: true, endsAt: true },
+    });
+
+    await tx.subscriptionInvoice.update({
+      where: { id: args.invoiceId },
+      // Kỳ thật thay kỳ dự kiến — hoá đơn phải kể đúng câu chuyện của gói nó đã mở.
+      data: { subscriptionId: sub.id, periodFrom: sub.startsAt, periodTo: sub.endsAt },
+    });
+
+    await this.audit.record(
+      {
+        tenantId: args.tenantId,
+        actorScope: AUDIT_ACTOR_SCOPE.SYSTEM,
+        action: 'subscription.activate_from_payment',
+        targetType: 'tenant_subscription',
+        targetId: sub.id,
+        after: {
+          invoiceId: args.invoiceId,
+          planId: plan.id,
+          termMonths: snapshot.termMonths,
+          slots: snapshot.slots,
+          price: args.totalAmount.toString(),
+          startsAt: sub.startsAt.toISOString(),
+          endsAt: sub.endsAt.toISOString(),
+          // Mã giao dịch phía nhà cung cấp — KHÔNG phải nội dung chuyển khoản hay số TK.
+          providerTxId: args.providerTxId,
+        },
+      },
+      tx,
+    );
+
+    await this.notifications.emitToTenantMembers(
+      args.tenantId,
+      {
+        type: NOTIFICATION_TYPE.SUBSCRIPTION_ACTIVATED,
+        title: `Gói ${plan.name} đã kích hoạt`,
+        // Cùng cách in ngày với các tin vòng đời gói ở `subscription-lifecycle` — múi giờ VN.
+        body: `Tiền đã về đủ. Gói hiệu lực tới ${sub.endsAt.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}.`,
+        tenantId: args.tenantId,
+      },
+      tx,
+    );
+
+    return sub.id;
+  }
+
+  /**
    * Số chỗ mua: bỏ trống = đúng số gồm sẵn; không mua DƯỚI mức gồm sẵn — phí nền đã bao chúng,
    * ghi con số nhỏ hơn chỉ tạo ra một hạn mức giả thấp hơn thứ tenant đã trả tiền. Vượt trần
    * bậc gói thì từ chối.
@@ -954,8 +1242,12 @@ export class BillingService {
     const slots = current.slotsJson === null ? null : parsePlanSlots(current.slotsJson);
     const limit =
       vehicleType === VEHICLE_TYPE.CAR
-        ? (slots ? slots.car : limits.maxCars)
-        : (slots ? slots.motorbike : limits.maxMotorbikes);
+        ? slots
+          ? slots.car
+          : limits.maxCars
+        : slots
+          ? slots.motorbike
+          : limits.maxMotorbikes;
     if (limit == null) return;
 
     const scope = opts.scope ?? 'fleet';
@@ -1010,52 +1302,13 @@ export class BillingService {
       }
       return input;
     }
-    // package: KHÔNG có % hoa hồng (0đ trên chuyến — ADR 0020). Tự xoá thay vì bắt client gửi
+    // package: KHÔNG có % hoa hồng (0đ phí dịch vụ trên chuyến). Tự xoá thay vì bắt client gửi
     // null tường minh — không có cách đọc thứ hai cho tổ hợp package + %.
-    this.assertPlanIncentive(input.basePriceMonthly, input.limits, input.assumedGmv);
+    //
+    // KHÔNG còn kiểm điểm giao ở đây (ADR 0029 gỡ ADR 0020): phí theo chuyến nay do KHÁCH gánh
+    // trên giá đặt xe, nên phí nền 0đ không giết phễu — động lực nâng cấp là giá cạnh tranh
+    // trên chợ, không phải chi phí trực tiếp của chủ xe. `assumedMonthlyGmv` thành tham khảo.
     return { ...input, commissionPercent: null };
-  }
-
-  /**
-   * KIỂM ĐIỂM GIAO (ADR 0020) — quy tắc trong code, không phải núm vặn.
-   *
-   * Điểm hoà vốn của gói so với tuyến hoa hồng không được nằm DƯỚI `includedCars`: với
-   * N ≤ includedCars chi phí gói = phí nền (chỗ đã gồm sẵn), nên "hoà vốn dưới includedCars"
-   * ⇔ `basePriceMonthly < includedCars × commissionPercent% × G`. Vi phạm nghĩa là chủ xe
-   * NHỎ HƠN quy mô gói cũng thấy gói rẻ hơn — tuyến hoa hồng mất vai trò phễu.
-   *
-   * `includedCars = 0` ⇒ ngưỡng 0đ, mọi phí nền qua được — đúng theo phát biểu của ADR;
-   * bậc gói gian hàng tử tế nên có includedCars > 0 để phép kiểm có răng.
-   */
-  private assertPlanIncentive(
-    basePriceMonthly: string,
-    limits: PlanLimitsJson,
-    assumedGmv: PlanAssumedGmvJson | null,
-  ): void {
-    if (assumedGmv === null) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.PLAN_INCENTIVE_INVALID,
-        message: 'Bậc gói package phải có assumedMonthlyGmv để kiểm điểm giao (ADR 0020)',
-        details: { reason: 'MISSING_ASSUMPTIONS' },
-      });
-    }
-    const threshold = new Prisma.Decimal(assumedGmv.monthlyGmvPerCar)
-      .mul(assumedGmv.commissionPercent)
-      .div(100)
-      .mul(limits.includedCars)
-      .toDecimalPlaces(2);
-    if (new Prisma.Decimal(basePriceMonthly).lessThan(threshold)) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.PLAN_INCENTIVE_INVALID,
-        message: 'Điểm hoà vốn nằm dưới số chỗ gồm sẵn — phí nền quá thấp so với tuyến hoa hồng',
-        details: {
-          reason: 'BREAKEVEN_BELOW_INCLUDED',
-          basePriceMonthly,
-          minBasePriceMonthly: threshold.toString(),
-          includedCars: limits.includedCars,
-        },
-      });
-    }
   }
 
   /**
@@ -1161,9 +1414,7 @@ export class BillingService {
         discountAmount: args.discountAmount,
         totalAmount: total,
         paidAmount: args.paid ? total : 0,
-        status: args.paid
-          ? SUBSCRIPTION_INVOICE_STATUS.PAID
-          : SUBSCRIPTION_INVOICE_STATUS.ISSUED,
+        status: args.paid ? SUBSCRIPTION_INVOICE_STATUS.PAID : SUBSCRIPTION_INVOICE_STATUS.ISSUED,
         paidAt: args.paid ? new Date() : null,
         expiresAt: args.paid ? null : (args.expiresAt ?? null),
       },

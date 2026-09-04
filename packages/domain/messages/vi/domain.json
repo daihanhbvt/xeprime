@@ -12,6 +12,12 @@
     "system": "Hệ thống",
     "customer": "Khách thuê"
   },
+  "bankMatchStatus": {
+    "unmatched": "Chưa khớp",
+    "matched": "Đã khớp",
+    "manual": "Khớp tay",
+    "ignored": "Bỏ qua"
+  },
   "billingMode": {
     "commission": "Hoa hồng theo chuyến",
     "package": "Gói theo chỗ"
@@ -190,6 +196,7 @@
   "inviteStatus": {
     "pending": "Đang chờ",
     "accepted": "Đã tham gia",
+    "declined": "Đã từ chối",
     "expired": "Hết hạn",
     "revoked": "Đã thu hồi"
   },
@@ -265,7 +272,8 @@
     "subscription_expiring": "Gói sắp hết hạn",
     "subscription_expired": "Gói đã hết hạn",
     "subscription_lapsed": "Đã chuyển sang tính hoa hồng",
-    "free_trips_exhausted": "Hết lượt miễn phí"
+    "free_trips_exhausted": "Hết lượt miễn phí",
+    "subscription_activated": "Gói đã kích hoạt"
   },
   "occupancySourceType": {
     "booking": "Đơn thuê",
@@ -502,6 +510,16 @@
     "valid": "Còn hiệu lực",
     "expiring_soon": "Sắp hết hạn",
     "expired": "Đã hết hạn"
+  },
+  "vehicleDocumentPreset": {
+    "contract_badge": "Phù hiệu xe hợp đồng",
+    "transport_licence": "Giấy phép kinh doanh vận tải",
+    "physical_damage_insurance": "Bảo hiểm vật chất xe (thân vỏ)",
+    "passenger_insurance": "Bảo hiểm tai nạn người ngồi trên xe",
+    "road_fee_stamp": "Tem thu phí đường bộ",
+    "gps_certificate": "Chứng nhận thiết bị giám sát hành trình",
+    "purchase_contract": "Hợp đồng mua bán / hoá đơn xe",
+    "authorisation_letter": "Giấy uỷ quyền sử dụng xe"
   },
   "vehicleDocumentType": {
     "registration": "Đăng ký xe (Cà vẹt)",

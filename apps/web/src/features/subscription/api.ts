@@ -2,6 +2,7 @@ import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
 import { apiGet, apiPost, fetchPage, type Paged } from '@/services/api-client';
 import type {
   MySubscription,
+  PaymentInfo,
   PurchaseSubscriptionInput,
   SubscriptionInvoice,
   TenantPlan,
@@ -14,6 +15,10 @@ export const fetchMySubscription = (): Promise<MySubscription> =>
 
 export const fetchTenantPlans = (): Promise<TenantPlan[]> =>
   apiGet<TenantPlan[]>('/subscription/plans');
+
+/** Tài khoản nhận chuyển khoản của nền tảng — nguồn dựng ảnh VietQR (ADR 0016 điều 5). */
+export const fetchPaymentInfo = (): Promise<PaymentInfo> =>
+  apiGet<PaymentInfo>('/subscription/payment-info');
 
 export type InvoiceListResult = Paged<SubscriptionInvoice>;
 

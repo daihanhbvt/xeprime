@@ -12,7 +12,21 @@
     "toc": "Contents",
     "related": "Related documents",
     "backToHome": "Back to home",
+    "allDocs": "All legal documents",
     "printHint": "You can save or print this page to keep a copy."
+  },
+  "index": {
+    "title": "Legal documents",
+    "subtitle": "The four documents that govern the use of XePrime. The version shown here is effective from {date}.",
+    "supportHeading": "Need to report something specific?",
+    "supportBody": "The support centre is where reports, complaints and disputes between renters and shops are received.",
+    "supportLink": "Go to the support centre"
+  },
+  "consent": {
+    "auth": "By continuing you agree to XePrime's <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>.",
+    "booking": "Sending this request means you agree to the <terms>Terms of Service</terms> and the <cancellation>Cancellation and Refund Policy</cancellation>.",
+    "subscription": "Buying a plan means you agree to the <terms>Terms of Service</terms> and the <rules>Marketplace Operating Rules</rules>.",
+    "shop": "Creating a shop means you agree to the <rules>Marketplace Operating Rules</rules> and the <terms>Terms of Service</terms>."
   },
   "docs": {
     "terms": {

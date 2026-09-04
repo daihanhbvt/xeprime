@@ -29,6 +29,18 @@
   color: var(--xp-color-text-secondary);
 }
 
+/* Bậc điều hướng duy nhất của trang — nhỏ, mờ, không tranh chỗ với tiêu đề văn bản. */
+.upLink {
+  display: inline-block;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.upLink:hover {
+  color: var(--xp-color-primary);
+}
+
 .header {
   padding-bottom: 20px;
   border-bottom: 1px solid var(--xp-color-border-secondary);
@@ -137,21 +149,6 @@
   color: var(--xp-color-text-tertiary);
 }
 
-.related {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.relatedLink {
-  font-size: 14.5px;
-  color: var(--xp-color-primary);
-}
-
-.relatedLink:hover {
-  text-decoration: underline;
-}
 
 @media (max-width: 600px) {
   .title {

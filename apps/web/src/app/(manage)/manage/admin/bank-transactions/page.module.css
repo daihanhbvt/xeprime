@@ -1,0 +1,22 @@
+.subtitle {
+  margin-bottom: 14px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--xp-color-text-secondary);
+  max-width: 760px;
+}
+
+.amount {
+  color: var(--xp-color-price);
+  white-space: nowrap;
+}
+
+/* Nội dung chuyển khoản do ngân hàng ghép — dài, viết liền, phải ngắt được trong ô. */
+.content {
+  overflow-wrap: anywhere;
+}
+
+.code {
+  font-family: var(--xp-font-mono, monospace);
+  letter-spacing: 0.06em;
+}

@@ -9,6 +9,7 @@ import {
   SUBSCRIPTION_INVOICE_STATUS,
   SUBSCRIPTION_RENEWAL_REMINDER_DAYS,
   SUBSCRIPTION_STATUS,
+  VEHICLE_TYPE,
   addCalendarMonthsVn,
   parsePlanLimits,
   termDiscountPercent,
@@ -322,45 +323,101 @@ async function offerPlanOnFreeTripsExhausted(prisma: PrismaClient, now: Date): P
         'Từ đơn tiếp theo, mỗi chuyến chịu hoa hồng của nền tảng. Mua gói theo chỗ ở màn "Gói của tôi" để về 0đ trên chuyến.';
 
       if (offerPlan) {
+        /*
+         * ADR 0029 — gói giá phẳng theo CHỖ, không phí nền: hoá đơn chào phải dựng theo đội xe
+         * hiện có của tenant (mua đúng số chỗ họ cần) và theo kỳ hạn NHỎ NHẤT plan còn bán
+         * (`limits.terms` từ ADR 0029 là danh sách kỳ được bán — bán tối thiểu 3 tháng thì lời
+         * chào cũng 3 tháng, một hoá đơn kỳ 1 tháng là lời chào không mua nổi).
+         */
         const limits = parsePlanLimits(offerPlan.limitsJson);
+        const termMonths = limits.terms.length ? Math.min(...limits.terms.map((t) => t.months)) : 1;
+        const [carCount, motorbikeCount] = await Promise.all([
+          tx.vehicle.count({
+            where: { tenantId: tenant.id, deletedAt: null, vehicleType: VEHICLE_TYPE.CAR },
+          }),
+          tx.vehicle.count({
+            where: { tenantId: tenant.id, deletedAt: null, vehicleType: VEHICLE_TYPE.MOTORBIKE },
+          }),
+        ]);
+        const slots = {
+          car: Math.max(carCount, limits.includedCars),
+          motorbike: Math.max(motorbikeCount, limits.includedMotorbikes),
+        };
+
         const base = new Prisma.Decimal(offerPlan.basePriceMonthly);
-        const discount = termDiscountPercent(limits, 1);
-        const subtotal = base.toDecimalPlaces(2);
+        const carPrice = new Prisma.Decimal(limits.perVehiclePrice.car ?? 0);
+        const motoPrice = new Prisma.Decimal(limits.perVehiclePrice.motorbike ?? 0);
+        const extraCars = Math.max(0, slots.car - limits.includedCars);
+        const extraMotos = Math.max(0, slots.motorbike - limits.includedMotorbikes);
+        const monthly = base
+          .add(carPrice.mul(extraCars))
+          .add(motoPrice.mul(extraMotos))
+          .toDecimalPlaces(2);
+        const discount = termDiscountPercent(limits, termMonths);
+        const subtotal = monthly.mul(termMonths).toDecimalPlaces(2);
         const discountAmount = subtotal.mul(discount).div(100).toDecimalPlaces(2);
-        const snapshot: PlanInvoiceSnapshot = {
-          planId: offerPlan.id,
-          planCode: offerPlan.code,
-          termMonths: 1,
-          slots: { car: limits.includedCars, motorbike: limits.includedMotorbikes },
-          lines: [
-            {
+        const total = subtotal.sub(discountAmount);
+
+        // Đội xe rỗng + không phí nền = 0đ: không có gì để chào, chỉ nhắc — một hoá đơn 0đ
+        // là rác trong sổ và webhook không có gì để khớp.
+        if (total.gt(0)) {
+          const lines: PlanInvoiceSnapshot['lines'] = [];
+          if (base.gt(0)) {
+            lines.push({
               kind: 'base',
               quantity: 1,
-              months: 1,
+              months: termMonths,
               unitPrice: base.toString(),
-              amount: subtotal.toString(),
+              amount: base.mul(termMonths).toDecimalPlaces(2).toString(),
+            });
+          }
+          if (extraCars > 0) {
+            lines.push({
+              kind: 'slot',
+              vehicleType: 'car',
+              quantity: extraCars,
+              months: termMonths,
+              unitPrice: carPrice.toString(),
+              amount: carPrice.mul(extraCars).mul(termMonths).toDecimalPlaces(2).toString(),
+            });
+          }
+          if (extraMotos > 0) {
+            lines.push({
+              kind: 'slot',
+              vehicleType: 'motorbike',
+              quantity: extraMotos,
+              months: termMonths,
+              unitPrice: motoPrice.toString(),
+              amount: motoPrice.mul(extraMotos).mul(termMonths).toDecimalPlaces(2).toString(),
+            });
+          }
+          const snapshot: PlanInvoiceSnapshot = {
+            planId: offerPlan.id,
+            planCode: offerPlan.code,
+            termMonths,
+            slots,
+            lines,
+          };
+          const invoice = await tx.subscriptionInvoice.create({
+            data: {
+              id: newId(),
+              tenantId: tenant.id,
+              subscriptionId: null,
+              code: newReferenceCode(BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE),
+              periodFrom: now,
+              periodTo: addCalendarMonthsVn(now, termMonths),
+              linesJson: snapshot as unknown as Prisma.InputJsonValue,
+              subtotal,
+              discountAmount,
+              totalAmount: total,
+              paidAmount: 0,
+              status: SUBSCRIPTION_INVOICE_STATUS.ISSUED,
+              expiresAt: new Date(now.getTime() + FREE_TRIP_OFFER_TTL_DAYS * MS_PER_DAY),
             },
-          ],
-        };
-        const invoice = await tx.subscriptionInvoice.create({
-          data: {
-            id: newId(),
-            tenantId: tenant.id,
-            subscriptionId: null,
-            code: newReferenceCode(BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE),
-            periodFrom: now,
-            periodTo: addCalendarMonthsVn(now, 1),
-            linesJson: snapshot as unknown as Prisma.InputJsonValue,
-            subtotal,
-            discountAmount,
-            totalAmount: subtotal.sub(discountAmount),
-            paidAmount: 0,
-            status: SUBSCRIPTION_INVOICE_STATUS.ISSUED,
-            expiresAt: new Date(now.getTime() + FREE_TRIP_OFFER_TTL_DAYS * MS_PER_DAY),
-          },
-          select: { code: true, totalAmount: true },
-        });
-        body = `Từ đơn tiếp theo, mỗi chuyến chịu hoa hồng của nền tảng. Đã tạo sẵn hoá đơn gói ${offerPlan.name} (${invoice.totalAmount.toString()}đ/tháng) — chuyển khoản với nội dung ${invoice.code} để kích hoạt, hoặc chọn gói khác ở màn "Gói của tôi".`;
+            select: { code: true, totalAmount: true },
+          });
+          body = `Từ đơn tiếp theo, mỗi chuyến chịu phí dịch vụ của nền tảng. Đã tạo sẵn hoá đơn gói ${offerPlan.name} cho đội xe hiện tại (${invoice.totalAmount.toString()}đ/${termMonths} tháng) — chuyển khoản với nội dung ${invoice.code} để kích hoạt, hoặc chọn lại ở màn "Gói của tôi".`;
+        }
       }
 
       await notifyTenantMembers(tx, tenant.id, {

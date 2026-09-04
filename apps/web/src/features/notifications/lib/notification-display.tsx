@@ -40,6 +40,7 @@ const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   [NOTIFICATION_TYPE.SUBSCRIPTION_EXPIRED]: <CreditCardOutlined />,
   [NOTIFICATION_TYPE.SUBSCRIPTION_LAPSED]: <CreditCardOutlined />,
   [NOTIFICATION_TYPE.FREE_TRIPS_EXHAUSTED]: <GiftOutlined />,
+  [NOTIFICATION_TYPE.SUBSCRIPTION_ACTIVATED]: <CreditCardOutlined />,
 };
 
 export function notificationIcon(type: string): ReactNode {

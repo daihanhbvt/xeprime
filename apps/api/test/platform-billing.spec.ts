@@ -7,10 +7,8 @@ import {
   VEHICLE_TYPE,
   addCalendarMonthsVn,
 } from '@xeprime/types';
-import { AuditService } from '../src/modules/audit/audit.service';
-import { BillingService } from '../src/modules/billing/billing.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeVehiclesService, vehicleCreator } from './helpers/service-factory';
+import { makeVehiclesService, vehicleCreator, makeBillingService } from './helpers/service-factory';
 
 /**
  * Phase 7 — Gói/hạn (ADR 0010), chạy trên PostgreSQL THẬT. Kiểm chứng: plan CRUD + code unique,
@@ -20,8 +18,7 @@ import { makeVehiclesService, vehicleCreator } from './helpers/service-factory';
  */
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
-const audit = new AuditService(asService);
-const billing = new BillingService(asService, audit);
+const billing = makeBillingService(asService);
 const vehicles = makeVehiclesService(asService);
 const createVehicle = vehicleCreator(vehicles, asService);
 
@@ -158,7 +155,7 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
   });
 
   maybe(
-    'kiểm điểm giao (ADR 0020): package thiếu giả định / phí nền dưới ngưỡng bị TỪ CHỐI',
+    'bậc gói package (ADR 0029): phí nền 0đ hợp lệ, không cần giả định, % hoa hồng tự xoá',
     async () => {
       const packageKnobs = {
         billingMode: BILLING_MODE.PACKAGE,
@@ -169,44 +166,30 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
           maxCars: 10,
           terms: [
             { months: 1, discountPercent: 0 },
+            { months: 3, discountPercent: 0 },
             { months: 12, discountPercent: 10 },
           ],
         },
-        // Ngưỡng = 5 × 10% × 1.000.000 = 500.000đ/tháng.
+        // Từ ADR 0029 đây là THAM KHẢO định giá — không còn là đầu vào của phép kiểm nào.
         assumedMonthlyGmv: { monthlyGmvPerCar: '1000000', commissionPercent: 10 },
       };
 
-      // Thiếu giả định → không chứng minh được bài toán khuyến khích → từ chối.
-      await expect(
-        billing.createPlan(actorId, {
-          code: `pkg-nogmv-${RUN}`,
-          name: 'Gói thiếu giả định',
-          billingMode: BILLING_MODE.PACKAGE,
-          limits: packageKnobs.limits,
-        }),
-      ).rejects.toMatchObject({
-        response: {
-          code: API_ERROR_CODE.PLAN_INCENTIVE_INVALID,
-          details: { reason: 'MISSING_ASSUMPTIONS' },
-        },
+      /*
+       * Đảo ngược bài test cũ, có chủ đích: kiểm điểm giao của ADR 0020 đã bị ADR 0029 gỡ
+       * (phí theo chuyến nay do KHÁCH gánh nên phí nền thấp không phá phễu). Ba ca dưới đây
+       * từng bị TỪ CHỐI với `PLAN_INCENTIVE_INVALID`; giờ chúng phải LƯU ĐƯỢC — gói pilot
+       * chính thức có phí nền 0đ.
+       */
+      const noGmv = await mkPlan('pkg-nogmv', {
+        billingMode: BILLING_MODE.PACKAGE,
+        limits: packageKnobs.limits,
+        basePriceMonthly: '0',
       });
+      expect(noGmv.basePriceMonthly).toBe('0');
 
-      // Phí nền 400k < ngưỡng 500k → điểm hoà vốn rơi dưới includedCars → từ chối.
-      await expect(
-        billing.createPlan(actorId, {
-          code: `pkg-cheap-${RUN}`,
-          name: 'Gói phá phễu',
-          ...packageKnobs,
-          basePriceMonthly: '400000',
-        }),
-      ).rejects.toMatchObject({
-        response: {
-          code: API_ERROR_CODE.PLAN_INCENTIVE_INVALID,
-          details: { reason: 'BREAKEVEN_BELOW_INCLUDED', minBasePriceMonthly: '500000' },
-        },
-      });
+      const cheap = await mkPlan('pkg-cheap', { ...packageKnobs, basePriceMonthly: '400000' });
+      expect(cheap.basePriceMonthly).toBe('400000');
 
-      // Đúng ngưỡng thì lưu được; % hoa hồng bị tự xoá (package không có %).
       const ok = await mkPlan('pkg-ok', { ...packageKnobs, basePriceMonthly: '500000' });
       pkgPlanId = ok.id;
       expect(ok.billingMode).toBe(BILLING_MODE.PACKAGE);
@@ -214,12 +197,10 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
       expect(ok.basePriceMonthly).toBe('500000');
       expect(ok.limits.includedCars).toBe(5);
 
-      // Update chạy trên hình MERGED: chỉ hạ phí nền cũng bị kiểm lại và từ chối.
-      await expect(
-        billing.updatePlan(actorId, ok.id, { basePriceMonthly: '499999' }),
-      ).rejects.toMatchObject({
-        response: { code: API_ERROR_CODE.PLAN_INCENTIVE_INVALID },
-      });
+      // Hạ phí nền qua update cũng tự do — không còn ngưỡng nào canh.
+      const lowered = await billing.updatePlan(actorId, ok.id, { basePriceMonthly: '1000' });
+      expect(lowered.basePriceMonthly).toBe('1000');
+      await billing.updatePlan(actorId, ok.id, { basePriceMonthly: '500000' });
 
       // Gán (tenant riêng, không đụng các phép đếm ở test sau): mua thêm chỗ tính đơn giá.
       const sub = await billing.assign(tenantPkgId, actorId, {
@@ -253,54 +234,53 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
     },
   );
 
-  maybe('gán → gói hiện hành đúng (snapshot mode); ends_at THÁNG LỊCH; gia hạn nối đuôi', async () => {
-    const before = await billing.currentPlan(tenantId);
-    expect(before).toBeNull();
+  maybe(
+    'gán → gói hiện hành đúng (snapshot mode); ends_at THÁNG LỊCH; gia hạn nối đuôi',
+    async () => {
+      const before = await billing.currentPlan(tenantId);
+      expect(before).toBeNull();
 
-    const first = await billing.assign(tenantId, actorId, {
-      planId,
-      termMonths: 1,
-      note: 'Gán lần đầu',
-    });
-    expect(first.status).toBe(SUBSCRIPTION_STATUS.ACTIVE);
-    // Bậc commission: phí nền 0, không chỗ tính tiền → cả kỳ 0đ (tiền của tuyến này nằm ở
-    // khoản giữ chỗ theo chuyến — ADR 0021, không phải ở thuê bao).
-    expect(first.price).toBe('0');
-    // SNAPSHOT chế độ lúc gán (ADR 0024 điều 2).
-    expect(first.billingMode).toBe(BILLING_MODE.COMMISSION);
-    expect(first.commissionPercent).toBe(10);
-    expect(first.termMonths).toBe(1);
-    // THÁNG LỊCH, không phải +30 ngày (ADR 0015 điều 2).
-    expect(first.endsAt).toBe(
-      addCalendarMonthsVn(new Date(first.startsAt), 1).toISOString(),
-    );
+      const first = await billing.assign(tenantId, actorId, {
+        planId,
+        termMonths: 1,
+        note: 'Gán lần đầu',
+      });
+      expect(first.status).toBe(SUBSCRIPTION_STATUS.ACTIVE);
+      // Bậc commission: phí nền 0, không chỗ tính tiền → cả kỳ 0đ (tiền của tuyến này nằm ở
+      // khoản giữ chỗ theo chuyến — ADR 0021, không phải ở thuê bao).
+      expect(first.price).toBe('0');
+      // SNAPSHOT chế độ lúc gán (ADR 0024 điều 2).
+      expect(first.billingMode).toBe(BILLING_MODE.COMMISSION);
+      expect(first.commissionPercent).toBe(10);
+      expect(first.termMonths).toBe(1);
+      // THÁNG LỊCH, không phải +30 ngày (ADR 0015 điều 2).
+      expect(first.endsAt).toBe(addCalendarMonthsVn(new Date(first.startsAt), 1).toISOString());
 
-    const current = await billing.currentPlan(tenantId);
-    expect(current?.planId).toBe(planId);
-    expect(current?.maxVehicles).toBe(1);
-    expect(current?.billingMode).toBe(BILLING_MODE.COMMISSION);
-    expect(current?.commissionPercent).toBe(10);
+      const current = await billing.currentPlan(tenantId);
+      expect(current?.planId).toBe(planId);
+      expect(current?.maxVehicles).toBe(1);
+      expect(current?.billingMode).toBe(BILLING_MODE.COMMISSION);
+      expect(current?.commissionPercent).toBe(10);
 
-    // Gia hạn trước hạn → chu kỳ mới NỐI ĐUÔI, không chồng; 12 tháng lịch từ điểm nối.
-    const second = await billing.assign(tenantId, actorId, { planId, termMonths: 12 });
-    expect(second.startsAt).toBe(first.endsAt);
-    expect(second.endsAt).toBe(
-      addCalendarMonthsVn(new Date(second.startsAt), 12).toISOString(),
-    );
+      // Gia hạn trước hạn → chu kỳ mới NỐI ĐUÔI, không chồng; 12 tháng lịch từ điểm nối.
+      const second = await billing.assign(tenantId, actorId, { planId, termMonths: 12 });
+      expect(second.startsAt).toBe(first.endsAt);
+      expect(second.endsAt).toBe(addCalendarMonthsVn(new Date(second.startsAt), 12).toISOString());
 
-    const history = await billing.listSubscriptions(tenantId, {});
-    expect(history.meta.total).toBe(2);
-    expect(history.data[0]!.id).toBe(second.id); // mới nhất trước
+      const history = await billing.listSubscriptions(tenantId, {});
+      expect(history.meta.total).toBe(2);
+      expect(history.data[0]!.id).toBe(second.id); // mới nhất trước
 
-    const renewAudit = await prisma.auditLog.findFirst({
-      where: { targetId: second.id, action: 'subscription.renew' },
-    });
-    expect(renewAudit).toBeTruthy();
-    const assignAudit = await prisma.auditLog.findFirst({
-      where: { targetId: first.id, action: 'subscription.assign' },
-    });
-    expect(assignAudit).toBeTruthy();
-  });
+      const renewAudit = await prisma.auditLog.findFirst({
+        where: { targetId: second.id, action: 'subscription.renew' },
+      });
+      expect(renewAudit).toBeTruthy();
+      const assignAudit = await prisma.auditLog.findFirst({
+        where: { targetId: first.id, action: 'subscription.assign' },
+      });
+      expect(assignAudit).toBeTruthy();
+    },
+  );
 
   maybe(
     'quota CHỖ theo LOẠI XE (ADR 0015 điều 1+7): slots chặn từng loại kèm details; tuyến hoa hồng và không gói thoải mái',
@@ -401,6 +381,20 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
       expect(paid[0]!.totalAmount.toString()).toBe('700000');
       expect(paid[1]!.totalAmount.toString()).toBe('7560000');
       expect(paid.every((i) => i.subscriptionId !== null)).toBe(true);
+
+      /*
+       * Kỳ hạn NGOÀI danh sách gói bán bị từ chối ở SERVER (ADR 0029 điều 3) — gói này bán
+       * 1/3/12, nên kỳ 6 tháng không mua được dù nó nằm trong bộ kỳ hạn toàn cục của DTO.
+       * Ẩn lựa chọn ở PurchaseModal chỉ là UX; đây mới là lớp chặn.
+       */
+      await expect(
+        billing.purchase(tenantPkgId, actorId, { planId: pkgPlanId, termMonths: 6 }),
+      ).rejects.toMatchObject({
+        response: {
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          details: { field: 'termMonths', allowedTerms: [1, 3, 12] },
+        },
+      });
 
       // Tenant tự mua: hoá đơn ISSUED, CHƯA có subscription — gói chỉ bật khi tiền về (ADR 0026).
       const inv = await billing.purchase(tenantPkgId, actorId, {
@@ -505,11 +499,11 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
     await expect(billing.updatePlan(actorId, newId(), { price: '1' })).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.NOT_FOUND },
     });
-    await expect(
-      billing.assign(newId(), actorId, { planId, termMonths: 1 }),
-    ).rejects.toMatchObject({
-      response: { code: API_ERROR_CODE.NOT_FOUND },
-    });
+    await expect(billing.assign(newId(), actorId, { planId, termMonths: 1 })).rejects.toMatchObject(
+      {
+        response: { code: API_ERROR_CODE.NOT_FOUND },
+      },
+    );
     await expect(billing.cancel(tenantId, actorId, newId())).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.NOT_FOUND },
     });
