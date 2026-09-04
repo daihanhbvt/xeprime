@@ -59,7 +59,9 @@ const fakeR2 = {
     return found ? { size: found.size, contentType: found.contentType } : null;
   },
   async readPrivateObjectPrefix(key: string) {
-    return objects.has(key) ? new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0]) : null;
+    return objects.has(key)
+      ? new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0])
+      : null;
   },
   async presignPrivateDownload() {
     return { downloadUrl: 'https://r2.local/signed-get', expiresIn: 120 };
@@ -73,7 +75,14 @@ const vehicles = makeVehiclesService(asService);
 const createVehicleWithBranch = vehicleCreator(vehicles, asService);
 const files = new VehicleContractsService(asService, fakeR2 as unknown as R2Service, audit);
 const odometer = new OdometerService(asService, audit);
-const maintenance = new MaintenanceService(asService, occupancy, odometer, files, audit, new ReceiptsService(asService, audit));
+const maintenance = new MaintenanceService(
+  asService,
+  occupancy,
+  odometer,
+  files,
+  audit,
+  new ReceiptsService(asService, audit),
+);
 const bookings = new BookingsService(
   asService,
   occupancy,
@@ -741,9 +750,7 @@ describe('Hàng đợi Thiếu KM trả', () => {
     expect(after.data.some((row) => row.bookingId === booking.id)).toBe(false);
 
     const row = await alerts.forVehicle(tenantId, vehicle.id, OPERATIONS_SCOPE);
-    expect(row.alerts.map((a) => a.kind)).not.toContain(
-      VEHICLE_ALERT_KIND.MISSING_RETURN_ODOMETER,
-    );
+    expect(row.alerts.map((a) => a.kind)).not.toContain(VEHICLE_ALERT_KIND.MISSING_RETURN_ODOMETER);
     expect(row.currentOdometerKm).toBe(60_900);
   });
 
@@ -839,7 +846,20 @@ describe('Cảnh báo không rò dữ liệu nhạy cảm', () => {
       // URL luôn là đường dẫn nội bộ, không bao giờ là tài nguyên riêng tư/đã ký.
       if (alert.href) {
         expect(alert.href.startsWith('/manage/')).toBe(true);
-        expect(alert.href).not.toMatch(/r2|signed|token|download/i);
+        /*
+         * Soi từ nhạy cảm SAU KHI bỏ ULID ra khỏi đường dẫn.
+         *
+         * ULID là 26 ký tự base32 ngẫu nhiên, nên nó chứa "r2" hoặc "token" thuần do may rủi
+         * với xác suất vài phần trăm mỗi lần chạy — CI đã đỏ đúng kiểu đó với
+         * `01M1NNPGBK[R2]CS45TJ5TX5DMEA`. Một test bảo mật đỏ ngẫu nhiên còn tệ hơn không có:
+         * nó dạy người ta bấm "chạy lại", và lần rò thật cũng sẽ bị bấm chạy lại.
+         *
+         * Thứ cần kiểm là HÌNH DẠNG đường dẫn (nội bộ, không phải tài nguyên đã ký), còn định
+         * danh thì không mang thông tin gì để rò.
+         */
+        expect(alert.href.replace(/[0-9A-HJKMNP-TV-Z]{26}/g, ':id')).not.toMatch(
+          /r2|signed|token|download/i,
+        );
       }
       // Không tên file, không khoá object, không chuỗi tiền dài.
       const text = `${alert.title} ${alert.detail ?? ''}`;
