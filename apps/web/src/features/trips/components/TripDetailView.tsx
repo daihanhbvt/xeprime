@@ -40,6 +40,7 @@ import type { CustomerTripDetail } from '../types';
 import { CancelTripDialog } from './CancelTripDialog';
 import { CustomerTripTimeline } from './CustomerTripTimeline';
 import { TripFinanceCard } from './TripFinanceCard';
+import { TripHoldPanel } from './TripHoldPanel';
 import { TripHandoverEvidence } from './TripHandoverEvidence';
 import styles from './TripDetailView.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -358,6 +359,11 @@ export function TripDetailView({ tripId }: { tripId: string }) {
         </div>
 
         <aside className={styles.side}>
+          {/*
+            Khoản giữ chỗ đứng TRƯỚC khối tiền của chuyến: khi chuyến đang chờ tiền thì đây là
+            việc duy nhất khách cần làm, và nó không được nằm dưới một bảng số liệu.
+          */}
+          {data.hold ? <TripHoldPanel hold={data.hold} /> : null}
           {data.finance ? (
             <TripFinanceCard finance={data.finance} closed={closed} />
           ) : (

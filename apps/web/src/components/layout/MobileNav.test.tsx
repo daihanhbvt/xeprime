@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
-import { PERMISSION, type Permission } from '@xeprime/types';
+import { FEATURE_STATE, PERMISSION, PLAN_FEATURE, type Permission } from '@xeprime/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { makeStore, type AppStore } from '@/store/make-store';
@@ -20,6 +20,7 @@ import { MobileNav } from './MobileNav';
 const nav = vi.hoisted(() => ({ pathname: '/manage' }));
 const user = vi.hoisted(() => ({ platformRole: null as string | null }));
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
+const features = vi.hoisted(() => ({ states: {} as Record<string, string> }));
 
 vi.mock('next/navigation', () => ({
   usePathname: () => nav.pathname,
@@ -35,6 +36,11 @@ vi.mock('@/hooks/use-permissions', () => ({
     hasAny: (...ps: string[]) => ps.some((p) => perms.granted.has(p)),
     isLoading: false,
   }),
+}));
+
+vi.mock('@/hooks/use-feature', () => ({
+  useFeatureStates: () => features.states,
+  usePlanEndsAt: () => null,
 }));
 
 // Huy hiệu lấy từ hai query thật (chat + yêu cầu đặt xe) — chặn ở ranh giới đó, test này lo
@@ -94,6 +100,7 @@ beforeEach(() => {
   nav.pathname = '/manage';
   user.platformRole = null;
   grant(...SHOP_TAB_PERMISSIONS, PERMISSION.VEHICLE_VIEW);
+  features.states = {};
 });
 
 afterEach(cleanup);
@@ -351,5 +358,90 @@ describe('MobileNav — Drawer menu đầy đủ', () => {
     });
 
     await waitFor(() => expect(store.getState().app.mobileNavOpen).toBe(false));
+  });
+});
+
+/**
+ * Trục NĂNG LỰC ở thanh tab dưới đáy — ADR 0027 điều 2/3.
+ *
+ * `MobileTab.feature` tồn tại từ lâu kèm ghi chú *"trường có mặt để lần sau không ai thêm được
+ * một tab bị gác mà quên lọc"*, nhưng `MobileNav` chỉ lọc `permission` — tấm lưới chưa bao giờ
+ * được mắc vào. Bốn tab thật đều thuộc bậc cơ bản nên không lộ ra, nên spec này DỰNG một tab có
+ * cờ để kiểm chính bộ lọc, thay vì chờ tới ngày ai đó thêm tab thật rồi mới phát hiện.
+ */
+describe('MobileNav — lọc theo cờ tính năng (ADR 0027)', () => {
+  /** Tab thứ năm mang cờ `finance` — chèn vào đúng nguồn mà `MobileNav` đọc. */
+  function withGatedTab() {
+    vi.doMock('@/constants/nav', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('@/constants/nav')>();
+      return {
+        ...actual,
+        mobileTabsForScope: (isPlatform: boolean) => [
+          ...actual.mobileTabsForScope(isPlatform),
+          {
+            key: 'finance',
+            labelKey: 'manage.finance',
+            href: '/manage/finance',
+            permission: PERMISSION.FINANCE_VIEW,
+            icon: () => null,
+            feature: PLAN_FEATURE.FINANCE,
+          },
+        ],
+      };
+    });
+    return import('./MobileNav');
+  }
+
+  afterEach(() => {
+    vi.doUnmock('@/constants/nav');
+    vi.resetModules();
+  });
+
+  async function renderWithGatedTab() {
+    const { MobileNav: Patched } = await withGatedTab();
+    store = makeStore();
+    return render(
+      <Provider store={store}>
+        <Patched />
+      </Provider>,
+    );
+  }
+
+  it('feature hidden ⇒ tab BIẾN MẤT khỏi thanh dưới đáy', async () => {
+    grant(...SHOP_TAB_PERMISSIONS, PERMISSION.FINANCE_VIEW);
+    features.states = { [PLAN_FEATURE.FINANCE]: FEATURE_STATE.HIDDEN };
+
+    const { container } = await renderWithGatedTab();
+
+    expect(within(bottomBar(container)).queryByRole('link', { name: 'Tài chính' })).toBeNull();
+    // Các tab bậc cơ bản KHÔNG bị ảnh hưởng — một cờ chỉ gác đúng nhóm của nó.
+    expect(tab(bottomBar(container), 'Lịch xe')).toBeTruthy();
+  });
+
+  it('feature read_only ⇒ tab VẪN HIỆN để xem dữ liệu cũ (ADR 0027 điều 3)', async () => {
+    grant(...SHOP_TAB_PERMISSIONS, PERMISSION.FINANCE_VIEW);
+    features.states = { [PLAN_FEATURE.FINANCE]: FEATURE_STATE.READ_ONLY };
+
+    const { container } = await renderWithGatedTab();
+
+    expect(tab(bottomBar(container), 'Tài chính')).toBeTruthy();
+  });
+
+  it('có cờ nhưng THIẾU QUYỀN ⇒ vẫn ẩn: hai trục kiểm NỐI TIẾP, không thay nhau', async () => {
+    grant(...SHOP_TAB_PERMISSIONS); // không có FINANCE_VIEW
+    features.states = { [PLAN_FEATURE.FINANCE]: FEATURE_STATE.ENABLED };
+
+    const { container } = await renderWithGatedTab();
+
+    expect(within(bottomBar(container)).queryByRole('link', { name: 'Tài chính' })).toBeNull();
+  });
+
+  it('cache CŨ (chưa có `features`) KHÔNG khoá ai — mặc định là cho qua', async () => {
+    grant(...SHOP_TAB_PERMISSIONS, PERMISSION.FINANCE_VIEW);
+    features.states = {};
+
+    const { container } = await renderWithGatedTab();
+
+    expect(tab(bottomBar(container), 'Tài chính')).toBeTruthy();
   });
 });

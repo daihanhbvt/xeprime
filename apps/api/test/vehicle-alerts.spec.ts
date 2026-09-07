@@ -19,9 +19,7 @@ import {
 import 'reflect-metadata';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
-import { BookingsService } from '../src/modules/bookings/bookings.service';
 import { CustomersService } from '../src/modules/customers/customers.service';
-import { DriversService } from '../src/modules/drivers/drivers.service';
 import { HandoversService } from '../src/modules/bookings/handovers/handovers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
@@ -34,7 +32,7 @@ import {
 } from '../src/modules/vehicles/vehicle-alerts.service';
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeVehiclesService, vehicleCreator } from './helpers/service-factory';
+import { makeBookingsService, makeVehiclesService, vehicleCreator } from './helpers/service-factory';
 
 /**
  * Wave 8 — Tổng hợp việc cần làm của xe + hàng đợi "Thiếu KM trả", trên PostgreSQL THẬT.
@@ -83,14 +81,12 @@ const maintenance = new MaintenanceService(
   audit,
   new ReceiptsService(asService, audit),
 );
-const bookings = new BookingsService(
-  asService,
-  occupancy,
-  audit,
-  notifications,
-  new DriversService(asService, audit),
-  new CustomersService(asService, audit),
-);
+const bookings = makeBookingsService(asService, {
+  occupancy: occupancy,
+  audit: audit,
+  notifications: notifications,
+  customers: new CustomersService(asService, audit),
+});
 const handovers = new HandoversService(asService, bookings, odometer, maintenance, files, audit);
 const alerts = new VehicleAlertsService(asService);
 

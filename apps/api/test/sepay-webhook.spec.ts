@@ -12,7 +12,7 @@ import {
 import { SepayService } from '../src/modules/sepay/sepay.service';
 import type { BillingService } from '../src/modules/billing/billing.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBillingService } from './helpers/service-factory';
+import { makeBillingService, makeBookingHoldsService } from './helpers/service-factory';
 
 /**
  * Đường tiền SePay → hoá đơn gói → kích hoạt — chạy trên PostgreSQL THẬT (R2, ADR 0016/0022).
@@ -34,10 +34,10 @@ const API_KEY = 'test-sepay-key-0123456789abcdef';
 const config = {
   get: (key: string) => (key === 'SEPAY_API_KEY' ? API_KEY : undefined),
 } as unknown as ConfigService;
-const sepay = new SepayService(asService, billing, config);
+const sepay = new SepayService(asService, billing, makeBookingHoldsService(asService), config);
 
 /** Bản không cấu hình — kiểm fail-closed. */
-const sepayUnconfigured = new SepayService(asService, billing, {
+const sepayUnconfigured = new SepayService(asService, billing, makeBookingHoldsService(asService), {
   get: () => undefined,
 } as unknown as ConfigService);
 

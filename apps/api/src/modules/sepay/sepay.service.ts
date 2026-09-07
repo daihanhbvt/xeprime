@@ -18,6 +18,7 @@ import {
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BillingService } from '../billing/billing.service';
+import { BookingHoldsService } from '../holds/booking-holds.service';
 import type { SepayWebhookResultDto } from './dto/sepay.dto';
 
 /**
@@ -46,6 +47,7 @@ export class SepayService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly billing: BillingService,
+    private readonly holds: BookingHoldsService,
     config: ConfigService,
   ) {
     const key = config.get<string>('SEPAY_API_KEY');
@@ -118,9 +120,42 @@ export class SepayService {
           },
         });
 
-        // Chỉ hoá đơn gói đi tự động ở R2. `XPH…` (giữ chỗ — R3) và mã không nhận ra đều nằm
-        // lại `unmatched` cho admin; KHÔNG đoán (nguyên tắc 4).
-        if (target !== BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE || !referenceCode) {
+        // Mã không rút được ⇒ nằm lại `unmatched` cho admin; KHÔNG đoán theo số tiền (nguyên tắc 4).
+        if (!referenceCode) return { matched: false as const, note: null };
+
+        // `XPH…` — khoản giữ chỗ của khách (R3, ADR 0022 điều 3). Đủ tiền thì ĐƠN THUÊ được tạo
+        // ngay trong transaction này, cùng kỷ luật với kích hoạt gói: tiền về là hiệu lực, không
+        // phụ thuộc trình duyệt khách có quay lại hay không.
+        if (target === BANK_MATCH_TARGET_TYPE.BOOKING_HOLD) {
+          const applied = await this.holds.applyBankPaymentWithinTx(db, {
+            code: referenceCode,
+            amount: tx.amount,
+            providerTxId: tx.providerTxId,
+          });
+          switch (applied.outcome) {
+            case 'hold_not_found':
+              return { matched: false as const, note: 'hold_not_found' };
+            case 'hold_closed':
+              return { matched: false as const, note: `hold_${applied.status}` };
+            case 'partial':
+            case 'already_paid':
+            case 'activated': {
+              await db.bankTransaction.updateMany({
+                where: { provider: 'sepay', providerTxId: tx.providerTxId },
+                data: {
+                  matchStatus: BANK_MATCH_STATUS.MATCHED,
+                  matchedType: BANK_MATCH_TARGET_TYPE.BOOKING_HOLD,
+                  matchedRefId: applied.holdId,
+                  matchedAt: new Date(),
+                  matchNote: applied.outcome === 'already_paid' ? 'overpaid' : null,
+                },
+              });
+              return { matched: true as const, note: applied.outcome };
+            }
+          }
+        }
+
+        if (target !== BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE) {
           return { matched: false as const, note: null };
         }
 

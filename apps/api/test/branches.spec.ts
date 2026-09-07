@@ -390,13 +390,21 @@ describe('Đăng ký gian hàng tạo chi nhánh mặc định', () => {
         where: { tenantId: shop.id, status: 'active', startsAt: { lte: now }, endsAt: { gt: now } },
         select: { billingMode: true, price: true, termMonths: true, plan: { select: { limitsJson: true } } },
       });
-      // Điều kiện an toàn của ADR 0027: gói hiện hành PHẢI có, và phải mang cờ năng lực —
-      // không có gói nghĩa là mất sạch tính năng nâng cao ngày bật cổng chặn.
+      // Điều kiện an toàn của ADR 0027: gói hiện hành PHẢI có. "Không có gói" là trạng thái tệ
+      // nhất — nó cho tập cờ RỖNG y như bậc cơ bản, nhưng KHÔNG phân biệt được với nó, nên ngày
+      // bật cổng chặn không ai biết tenant đó là chủ xe cơ bản hay là một hàng dữ liệu sót.
       expect(sub).not.toBeNull();
       expect(sub?.billingMode).toBe('commission');
       expect(sub?.price.toString()).toBe('0');
       expect(sub?.termMonths).toBe(12);
-      expect((sub?.plan.limitsJson as { features?: string[] })?.features ?? []).toContain('finance');
+      /*
+       * Gian hàng mới hạ cánh ở bậc CƠ BẢN (Owner Lite) — ADR 0027 điều 1, ADR 0028 điều 1.
+       *
+       * Trước 07/09/2026 dòng này khẳng định ngược lại (`toContain('finance')`), vì seed cấp đủ
+       * cả bảy cờ cho gói hoa hồng. Đó chính là lỗi dữ liệu làm hai bậc năng lực không tồn tại:
+       * chủ xe mới mở đúng bằng gian hàng đã trả tiền, nên "nâng cấp" không mở thêm gì cả.
+       */
+      expect((sub?.plan.limitsJson as { features?: string[] })?.features ?? []).toEqual([]);
 
       await prisma.tenantSubscription.deleteMany({ where: { tenantId: shop.id } });
       await prisma.tenantBranch.deleteMany({ where: { tenantId: shop.id } });

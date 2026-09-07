@@ -164,7 +164,16 @@
       "depositNote": "* The deposit is refunded in full when the vehicle is returned undamaged.",
       "title": "Price breakdown",
       "deposit": "Security deposit",
-      "depositHint": "A fixed deposit in VND; it is not part of the customer total and is not discounted."
+      "depositHint": "A fixed deposit in VND; it is not part of the customer total and is not discounted.",
+      "feesTitle": "Charges included with this trip",
+      "customerTotal": "Your total",
+      "ownerNet": "Host receives",
+      "ownerNetHint": "What the host earns from this trip. The XePrime service fee is paid by the guest and is NOT deducted from the host's rental income.",
+      "holdAmount": "Pay now to reserve",
+      "holdHint": "Transferred to XePrime to confirm the trip. The remaining rental is paid directly to the host at pickup.",
+      "payAtHandover": "Pay the host at pickup",
+      "feesNote": "Every line names who receives it. Final amounts are locked when the host approves.",
+      "noFees": "No extra charges on this trip."
     },
     "filterBar": {
       "allOf": "{label}: All",

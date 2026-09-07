@@ -20,6 +20,7 @@ export * from './auth-identifier';
 export * from './long-term';
 export * from './plan-billing';
 export * from './holds';
+export * from './fee-policy';
 export * from './pricing';
 export * from './shop-profile';
 export * from './rbac';

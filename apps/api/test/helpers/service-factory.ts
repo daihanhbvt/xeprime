@@ -2,6 +2,14 @@ import { newId } from '@xeprime/prisma';
 import { BRANCH_STATUS } from '@xeprime/types';
 import { ConfigService } from '@nestjs/config';
 import { AuditService } from '../../src/modules/audit/audit.service';
+import { BookingHoldsService } from '../../src/modules/holds/booking-holds.service';
+import { BookingRequestsService } from '../../src/modules/booking-requests/booking-requests.service';
+import { BookingsService } from '../../src/modules/bookings/bookings.service';
+import { OccupancyService } from '../../src/modules/calendar/occupancy.service';
+import { CustomersService } from '../../src/modules/customers/customers.service';
+import { DriversService } from '../../src/modules/drivers/drivers.service';
+import { FeePoliciesService } from '../../src/modules/fee-policies/fee-policies.service';
+import { HoldSettlementService } from '../../src/modules/holds/hold-settlement.service';
 import { NotificationService } from '../../src/modules/notification/notification.service';
 import { BillingService } from '../../src/modules/billing/billing.service';
 import { BranchesService } from '../../src/modules/branches/branches.service';
@@ -60,8 +68,109 @@ export function makeBillingService(prisma: PrismaService): BillingService {
     prisma,
     new AuditService(prisma),
     new NotificationService(prisma),
+    // R3: gán/huỷ gói kéo theo đồng bộ chế độ thu phí lên listing (ADR 0024 ràng buộc 2).
+    new ListingsService(prisma),
     // ConfigService trần đọc process.env — spec không đặt SEPAY_* nên paymentInfo trả "chưa cấu hình", đúng mặc định dev.
     new ConfigService(),
+  );
+}
+
+/**
+ * `BookingHoldsService` (R3) — writer của `booking_holds`. Dùng service THẬT ở mọi mắt xích:
+ * spec giữ chỗ kiểm đúng đường tiền mà production chạy, kể cả bước tạo đơn khi tiền về.
+ */
+export function makeBookingHoldsService(prisma: PrismaService): BookingHoldsService {
+  const audit = new AuditService(prisma);
+  const notifications = new NotificationService(prisma);
+  return new BookingHoldsService(
+    prisma,
+    makeBookingsService(prisma),
+    new OccupancyService(prisma),
+    new HoldSettlementService(prisma, audit, notifications),
+    makeBillingService(prisma),
+    audit,
+    notifications,
+  );
+}
+
+/**
+ * `BookingRequestsService` — mười dependency, dựng tay ở sáu spec. `phoneVerification`/`auth`
+ * là hai chỗ spec BẮT BUỘC thay bằng stub (không đi qua OTP/đăng nhập thật), nên chúng là tham
+ * số; phần còn lại factory tự lo.
+ */
+export function makeBookingRequestsService(
+  prisma: PrismaService,
+  stubs: {
+    phoneVerification: ConstructorParameters<typeof BookingRequestsService>[4];
+    auth: ConstructorParameters<typeof BookingRequestsService>[5];
+    bookings?: BookingsService;
+    audit?: AuditService;
+    notifications?: NotificationService;
+    occupancy?: OccupancyService;
+    pricing?: PricingService;
+    customers?: CustomersService;
+  },
+): BookingRequestsService {
+  const audit = stubs.audit ?? new AuditService(prisma);
+  const notifications = stubs.notifications ?? new NotificationService(prisma);
+  return new BookingRequestsService(
+    prisma,
+    stubs.bookings ?? makeBookingsService(prisma),
+    audit,
+    notifications,
+    stubs.phoneVerification,
+    stubs.auth,
+    stubs.occupancy ?? new OccupancyService(prisma),
+    stubs.pricing ?? makePricingService(prisma),
+    stubs.customers ?? new CustomersService(prisma, audit),
+    makeBookingHoldsService(prisma),
+  );
+}
+
+/**
+ * `PricingService` — mọc thêm hai dependency ở R3 (`BillingService`, `FeePoliciesService`) để
+ * báo giá gắn được phụ phí phía khách theo ADR 0029. Đúng ca mà factory này sinh ra để giải:
+ * hơn mười spec dựng nó bằng tay.
+ *
+ * `overrides.listings` giữ nguyên lý do cũ — vài spec `jest.spyOn` chính instance đó.
+ */
+export function makePricingService(
+  prisma: PrismaService,
+  overrides: { listings?: ListingsService } = {},
+): PricingService {
+  return new PricingService(
+    prisma,
+    new AuditService(prisma),
+    overrides.listings ?? new ListingsService(prisma),
+    makeBillingService(prisma),
+    new FeePoliciesService(prisma, new AuditService(prisma)),
+  );
+}
+
+/**
+ * `BookingsService` — mọc thêm `HoldSettlementService` ở R3: đơn kết thúc/huỷ là lúc chốt kết
+ * cục khoản giữ chỗ (ADR 0028 điều 6). Service thật, không mock: nó chỉ cần prisma + audit +
+ * notification, và spec nào không có hold thì hook tự thoát ở câu `findFirst` đầu tiên.
+ */
+export function makeBookingsService(
+  prisma: PrismaService,
+  overrides: {
+    occupancy?: OccupancyService;
+    audit?: AuditService;
+    notifications?: NotificationService;
+    customers?: CustomersService;
+  } = {},
+): BookingsService {
+  const audit = overrides.audit ?? new AuditService(prisma);
+  const notifications = overrides.notifications ?? new NotificationService(prisma);
+  return new BookingsService(
+    prisma,
+    overrides.occupancy ?? new OccupancyService(prisma),
+    audit,
+    notifications,
+    new DriversService(prisma, audit),
+    overrides.customers ?? new CustomersService(prisma, audit),
+    new HoldSettlementService(prisma, audit, notifications),
   );
 }
 
@@ -77,7 +186,7 @@ export function makeVehiclesService(
     makeBranchesService(prisma),
     makeBillingService(prisma),
     new CatalogService(prisma, audit),
-    new PricingService(prisma, audit, new ListingsService(prisma)),
+    makePricingService(prisma),
   );
 }
 
@@ -101,7 +210,7 @@ export function makePublicListingsService(prisma: PrismaService): PublicListings
   return new PublicListingsService(
     prisma,
     new ProvincesService(prisma, audit),
-    new PricingService(prisma, audit, new ListingsService(prisma)),
+    makePricingService(prisma),
   );
 }
 

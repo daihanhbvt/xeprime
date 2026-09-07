@@ -15,17 +15,13 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import type { AuthService } from '../src/modules/auth/auth.service';
-import { BookingRequestsService } from '../src/modules/booking-requests/booking-requests.service';
-import { BookingsService } from '../src/modules/bookings/bookings.service';
 import { ChatService } from '../src/modules/chat/chat.service';
 import { CustomersService } from '../src/modules/customers/customers.service';
-import { DriversService } from '../src/modules/drivers/drivers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
-import { ListingsService } from '../src/modules/public-listings/listings.service';
-import { PricingService } from '../src/modules/pricing/pricing.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makeBookingRequestsService, makeBookingsService, makePricingService } from './helpers/service-factory';
 
 /**
  * Hộp thư yêu cầu thuê của gian hàng, trên PostgreSQL THẬT.
@@ -44,17 +40,15 @@ const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const notifications = new NotificationService(asService);
-const pricing = new PricingService(asService, audit, new ListingsService(asService));
+const pricing = makePricingService(asService);
 const occupancy = new OccupancyService(asService);
 const customers = new CustomersService(asService, audit);
-const bookings = new BookingsService(
-  asService,
-  occupancy,
-  audit,
-  notifications,
-  new DriversService(asService, audit),
-  customers,
-);
+const bookings = makeBookingsService(asService, {
+  occupancy: occupancy,
+  audit: audit,
+  notifications: notifications,
+  customers: customers,
+});
 
 const phoneVerification = {
   assertPhoneVerifiedForBooking: async () => {},
@@ -63,17 +57,16 @@ const auth = {
   resolveOrCreateUserByPhone: async () => ({ userId: null }),
 } as unknown as AuthService;
 
-const requests = new BookingRequestsService(
-  asService,
-  bookings,
-  audit,
-  notifications,
-  phoneVerification,
-  auth,
-  occupancy,
-  pricing,
-  customers,
-);
+const requests = makeBookingRequestsService(asService, {
+  bookings: bookings,
+  audit: audit,
+  notifications: notifications,
+  phoneVerification: phoneVerification,
+  auth: auth,
+  occupancy: occupancy,
+  pricing: pricing,
+  customers: customers,
+});
 
 // ChatService chỉ đụng ConfigService cho R2 (đính kèm) — spec này không gửi tin nào.
 const chat = new ChatService(asService, { get: () => undefined } as unknown as ConfigService);

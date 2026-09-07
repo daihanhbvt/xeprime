@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { BillingModule } from '../billing/billing.module';
+import { FeePoliciesModule } from '../fee-policies/fee-policies.module';
 import { GeoModule } from '../geo/geo.module';
 import { ListingsSyncModule } from '../public-listings/listings-sync.module';
 import { DeliveryDistanceService } from './delivery-distance.service';
@@ -19,7 +21,9 @@ import { VehicleDailyPricesController } from './vehicle-daily-prices.controller'
   // cho các xe đang kế thừa — ghi qua writer duy nhất của public_listings (ADR 0008).
   // GeoModule: khoảng cách giao xe hỏi bản đồ ở `DeliveryDistanceService` — PricingService
   // vẫn không biết Internet tồn tại.
-  imports: [ListingsSyncModule, GeoModule],
+  // BillingModule + FeePoliciesModule (R3): báo giá công khai gắn phụ phí phía khách theo chế độ
+  // thu phí của tenant và chính sách phí hiện hành (ADR 0029) — đọc, không ghi.
+  imports: [ListingsSyncModule, GeoModule, BillingModule, FeePoliciesModule],
   // `VehicleDailyPricesController`: giá riêng theo ngày — writer là chính PricingService,
   // để mọi báo giá và bản ghi đè cùng một chủ (không lặp lại writer thứ hai ở VehiclesService).
   controllers: [ShopPoliciesController, PublicQuoteController, VehicleDailyPricesController],

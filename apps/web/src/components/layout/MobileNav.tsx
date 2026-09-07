@@ -6,10 +6,12 @@ import { EllipsisOutlined } from '@ant-design/icons';
 import { Drawer } from 'antd';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { FEATURE_STATE, isFeatureVisible } from '@xeprime/types';
 import { Logo } from '@/components/brand/Logo';
 import { mobileTabsForScope } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { useFeatureStates } from '@/hooks/use-feature';
 import { usePermissions } from '@/hooks/use-permissions';
 import { cx } from '@/lib/cx';
 import { decorativeIcon } from '@/lib/decorative-icon';
@@ -47,12 +49,29 @@ export function MobileNav() {
   const open = useAppSelector((s) => s.app.mobileNavOpen);
   const { data: user } = useCurrentUser();
   const { has } = usePermissions();
+  const featureStates = useFeatureStates();
   // Trả tiêu điểm về đúng nút đã mở Drawer — nếu không, đóng xong tiêu điểm rơi về <body> và
   // người dùng bàn phím phải Tab lại từ đầu trang.
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   const close = () => dispatch(setMobileNavOpen(false));
-  const tabs = mobileTabsForScope(Boolean(user?.platformRole)).filter((tab) => has(tab.permission));
+  /*
+   * HAI trục lọc, nối tiếp nhau — đúng vị từ `canSeeLeaf` của `useManageNav` (ADR 0027 điều 2):
+   * `permission` trả lời "anh là ai", `feature` trả lời "gian hàng này có gì".
+   *
+   * Trước đợt này chỉ có `has(tab.permission)`, dù `MobileTab.feature` đã tồn tại kèm ghi chú
+   * *"trường có mặt để lần sau không ai thêm được một tab bị gác mà quên lọc"* — tấm lưới đó
+   * chưa bao giờ được mắc vào. Bốn tab hiện tại đều thuộc bậc cơ bản nên chưa lộ ra, nhưng thêm
+   * một tab có cờ là thanh dưới đáy dẫn thẳng vào trang mà server sẽ 403.
+   *
+   * Cờ vắng trong cache ⇒ `enabled`, cùng mặc định "cho qua" của `useFeature`.
+   */
+  const tabs = mobileTabsForScope(Boolean(user?.platformRole)).filter(
+    (tab) =>
+      has(tab.permission) &&
+      (tab.feature === undefined ||
+        isFeatureVisible(featureStates[tab.feature] ?? FEATURE_STATE.ENABLED)),
+  );
   const badges = useNavBadges();
   const { items, selectedKey, openKeys, onOpenChange } = useManageNav({ onNavigate: close });
 

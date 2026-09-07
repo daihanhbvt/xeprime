@@ -10,16 +10,12 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import type { AuthService } from '../src/modules/auth/auth.service';
-import { BookingRequestsService } from '../src/modules/booking-requests/booking-requests.service';
-import { BookingsService } from '../src/modules/bookings/bookings.service';
 import { CustomersService } from '../src/modules/customers/customers.service';
-import { DriversService } from '../src/modules/drivers/drivers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
-import { ListingsService } from '../src/modules/public-listings/listings.service';
-import { PricingService } from '../src/modules/pricing/pricing.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makeBookingRequestsService, makeBookingsService, makePricingService } from './helpers/service-factory';
 
 /**
  * Wave 12 — hai lỗ hổng GHI được phát hiện khi soát toàn tuyến, trên PostgreSQL THẬT.
@@ -34,15 +30,13 @@ const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const notifications = new NotificationService(asService);
-const pricing = new PricingService(asService, audit, new ListingsService(asService));
-const bookings = new BookingsService(
-  asService,
-  new OccupancyService(asService),
-  audit,
-  notifications,
-  new DriversService(asService, audit),
-  new CustomersService(asService, audit),
-);
+const pricing = makePricingService(asService);
+const bookings = makeBookingsService(asService, {
+  occupancy: new OccupancyService(asService),
+  audit: audit,
+  notifications: notifications,
+  customers: new CustomersService(asService, audit),
+});
 
 /**
  * Nhánh test không đi qua OTP hay đăng nhập: SĐT coi như đã xác thực, và khách vãng lai được
@@ -57,17 +51,15 @@ const auth = {
   resolveOrCreateUserByPhone: async () => ({ userId: guestUserId }),
 } as unknown as AuthService;
 
-const requests = new BookingRequestsService(
-  asService,
-  bookings,
-  audit,
-  notifications,
-  phoneVerification,
-  auth,
-  new OccupancyService(asService),
-  pricing,
-  new CustomersService(asService, audit),
-);
+const requests = makeBookingRequestsService(asService, {
+  bookings: bookings,
+  audit: audit,
+  notifications: notifications,
+  phoneVerification: phoneVerification,
+  auth: auth,
+  pricing: pricing,
+  customers: new CustomersService(asService, audit),
+});
 
 let dbAvailable = false;
 let ownerId: string;

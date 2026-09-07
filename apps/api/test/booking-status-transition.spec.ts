@@ -14,13 +14,12 @@ import {
   type BookingStatus,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
-import { BookingsService } from '../src/modules/bookings/bookings.service';
 import { TransitionBookingDto } from '../src/modules/bookings/dto/booking.dto';
 import { CustomersService } from '../src/modules/customers/customers.service';
-import { DriversService } from '../src/modules/drivers/drivers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makeBookingsService } from './helpers/service-factory';
 
 /**
  * Quyết định trạng thái của gian hàng trên một đơn: xác nhận · hủy · ghi nhận khách không đến.
@@ -39,14 +38,12 @@ const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const occupancy = new OccupancyService(asService);
-const bookings = new BookingsService(
-  asService,
-  occupancy,
-  audit,
-  new NotificationService(asService),
-  new DriversService(asService, audit),
-  new CustomersService(asService, audit),
-);
+const bookings = makeBookingsService(asService, {
+  occupancy: occupancy,
+  audit: audit,
+  notifications: new NotificationService(asService),
+  customers: new CustomersService(asService, audit),
+});
 
 let dbAvailable = false;
 let ownerId: string;

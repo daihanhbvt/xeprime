@@ -166,5 +166,26 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
     );
   }
 
+  /*
+   * Sắp xếp `paths` và `components.schemas` theo THỨ TỰ TÊN, không theo thứ tự Nest quét module.
+   *
+   * Vì sao: spec là artifact ĐƯỢC COMMIT và được review như code. Thứ tự mặc định đến từ trình
+   * tự duyệt module/controller, nên chỉ cần thêm MỘT dòng `imports` vào một module là hàng trăm
+   * route đổi chỗ và `git diff` phình lên hàng chục nghìn dòng — che mất đúng cái cần nhìn là
+   * "route nào mới, schema nào đổi". Sắp xếp ổn định khiến diff của contract luôn đọc được.
+   */
+  document.paths = sortByKey(document.paths);
+  if (document.components?.schemas) {
+    document.components.schemas = sortByKey(document.components.schemas);
+  }
+
   return document;
+}
+
+/** Sắp xếp khoá của một object theo thứ tự từ điển, giữ nguyên giá trị. */
+function sortByKey<T>(obj: Record<string, T>): Record<string, T> {
+  return Object.fromEntries(Object.entries(obj).sort(([a], [b]) => a.localeCompare(b))) as Record<
+    string,
+    T
+  >;
 }

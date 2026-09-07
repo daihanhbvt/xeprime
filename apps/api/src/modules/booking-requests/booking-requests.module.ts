@@ -3,6 +3,7 @@ import { BookingsModule } from '../bookings/bookings.module';
 import { CalendarModule } from '../calendar/calendar.module';
 import { ChatModule } from '../chat/chat.module';
 import { CustomersModule } from '../customers/customers.module';
+import { HoldsModule } from '../holds/holds.module';
 import { PhoneVerificationModule } from '../phone-verification/phone-verification.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { BookingRequestsController } from './booking-requests.controller';
@@ -26,6 +27,7 @@ import { BookingRequestsService } from './booking-requests.service';
     CalendarModule,
     ChatModule,
     CustomersModule,
+    HoldsModule,
     PhoneVerificationModule,
     PricingModule,
   ],

@@ -96,6 +96,48 @@ export const PLAN_FEATURE = {
 export type PlanFeature = (typeof PLAN_FEATURE)[keyof typeof PLAN_FEATURE];
 export const PLAN_FEATURE_VALUES = Object.values(PLAN_FEATURE) as PlanFeature[];
 
+/**
+ * RANH GIỚI HAI BẬC — "một danh sách tường minh" mà ADR 0027 điều 1 đòi.
+ *
+ * ADR 0027 nói thẳng vì sao danh sách này phải tồn tại ở một chỗ có tên: *"thiếu danh sách đó thì
+ * mỗi màn mới lại tự quyết định lấy, và sáu tháng sau không ai trả lời được «gian hàng trả tiền
+ * để được thêm cái gì»"*. Trước đợt này ranh giới chỉ sống trong một mảng cục bộ của seed, và
+ * mảng đó cấp ĐỦ CẢ BẢY cờ cho cả gói hoa hồng lẫn gói thuê bao — nghĩa là hai bậc năng lực của
+ * ADR 0027 **chưa hề tồn tại trên dữ liệu**, dù toàn bộ guard, hook và menu đã đúng.
+ *
+ * Đây là DỮ LIỆU MẶC ĐỊNH của bậc gói, không phải quy tắc: admin vẫn sửa
+ * `plans.limits_json.features` của từng bậc ở màn quản trị, và guard vẫn đọc từ đó
+ * (ADR 0027 điều 4). Hai hằng dưới đây chỉ chốt bậc gói SEED ra đời với cờ nào.
+ */
+
+/**
+ * Gian hàng thuê bao — mở toàn bộ bộ quản lý (cột phải của bảng ở ADR 0027 điều 1).
+ *
+ * KHÔNG gồm `escrow_hold`: ADR 0025 chưa thi công, chưa endpoint nào ghi dữ liệu escrow. Cấp một
+ * cờ cho tính năng chưa tồn tại là hứa một thứ không bấm được.
+ */
+export const FULL_MANAGE_FEATURES: readonly PlanFeature[] = [
+  PLAN_FEATURE.FINANCE,
+  PLAN_FEATURE.DEBTS,
+  PLAN_FEATURE.MAINTENANCE,
+  PLAN_FEATURE.MEMBERS,
+  PLAN_FEATURE.BRANCHES,
+  PLAN_FEATURE.DRIVERS,
+  PLAN_FEATURE.CONTRACTS,
+];
+
+/**
+ * Chủ xe cơ bản (Owner Lite) — **rỗng có chủ đích**, không phải "chưa khai".
+ *
+ * Bộ cơ bản không nằm trong `PLAN_FEATURE` chút nào: xe, lịch, yêu cầu thuê, đơn thuê, giao/nhận,
+ * sổ khách, đánh giá, chat, hồ sơ gian hàng đều KHÔNG có cờ gác nên chủ xe nào cũng dùng được
+ * (xem docblock của `PLAN_FEATURE`). Vì vậy "Owner Lite" đúng nghĩa là **không cờ nâng cao nào**.
+ *
+ * Chủ xe vẫn thấy tiền của TỪNG đơn — nó nằm trên chính đơn thuê, không bị cờ nào gác. Thứ họ
+ * không có là **sổ tổng hợp** (ADR 0027 điều 1).
+ */
+export const OWNER_LITE_FEATURES: readonly PlanFeature[] = [];
+
 export function isPlanFeature(value: unknown): value is PlanFeature {
   return typeof value === 'string' && (PLAN_FEATURE_VALUES as string[]).includes(value);
 }

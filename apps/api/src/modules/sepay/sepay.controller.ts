@@ -1,9 +1,16 @@
-import { Body, Controller, Headers, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, Headers, HttpCode, Post, Res } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiExtension, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { Public } from '../../common/decorators';
-import { SepayWebhookResultDto } from './dto/sepay.dto';
+import { SepayWebhookAckDto } from './dto/sepay.dto';
 import { SepayService } from './sepay.service';
+
+/**
+ * SePay Test mode currently validates this acknowledgement as a raw response body. Keep the
+ * whitespace stable instead of letting Express JSON serialization minify the object.
+ */
+const SEPAY_WEBHOOK_ACK_BODY = '{"success": true}';
 
 /**
  * Webhook tiền vào từ SePay — endpoint CÔNG KHAI duy nhất có quyền ghi tiền (ADR 0022).
@@ -29,15 +36,19 @@ export class SepayController {
   @Public()
   @SkipThrottle()
   @HttpCode(200)
+  @ApiExtension('x-xeprime-raw-response', true)
   @ApiOperation({ summary: 'Webhook SePay — ghi giao dịch tiền vào và khớp hoá đơn gói' })
-  @ApiOkResponse({ type: SepayWebhookResultDto })
-  webhook(
+  @ApiOkResponse({ type: SepayWebhookAckDto })
+  async webhook(
     @Headers('authorization') authorization: string | undefined,
     // `unknown` có chủ đích: DTO + pipe `forbidNonWhitelisted` sẽ 400 mọi trường mới SePay
     // thêm vào — cùng bẫy đã ghi ở `bootstrap.ts` cho OAuth callback. Bóc tay trong service.
     @Body() payload: unknown,
-  ): Promise<SepayWebhookResultDto> {
+    @Res() response: Response,
+  ): Promise<void> {
     this.sepay.assertApiKey(authorization);
-    return this.sepay.ingest(payload);
+    await this.sepay.ingest(payload);
+
+    response.status(200).type('application/json').send(SEPAY_WEBHOOK_ACK_BODY);
   }
 }

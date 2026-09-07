@@ -7,7 +7,7 @@ import type { OpenAPIObject } from '@nestjs/swagger';
 import { AppModule } from '../src/app.module';
 import { buildOpenApiDocument } from '../src/bootstrap';
 import { API_TAGS } from '../src/openapi/api-tags';
-import { COOKIE_SECURITY_SCHEME } from '../src/openapi/enhance-document';
+import { COOKIE_SECURITY_SCHEME, RAW_RESPONSE_EXTENSION } from '../src/openapi/enhance-document';
 import { collectRouteAccess } from '../src/openapi/route-access';
 
 /**
@@ -138,6 +138,11 @@ describe('OpenAPI · hình dạng response', () => {
     const wrong: string[] = [];
     for (const route of routes) {
       if (ENVELOPE_EXEMPT_PATHS.has(route.path)) continue;
+      if (
+        (route.operation as unknown as Record<string, unknown>)[RAW_RESPONSE_EXTENSION] === true
+      ) {
+        continue;
+      }
 
       for (const [status, response] of Object.entries(route.operation.responses)) {
         const code = Number(status);
@@ -158,6 +163,22 @@ describe('OpenAPI · hình dạng response', () => {
     }
 
     expect(wrong).toEqual([]);
+  });
+
+  it('response raw của bên thứ ba được đánh dấu và mô tả đúng shape không envelope', () => {
+    const rawRoutes = routes.filter(
+      (route) =>
+        (route.operation as unknown as Record<string, unknown>)[RAW_RESPONSE_EXTENSION] === true,
+    );
+
+    expect(rawRoutes.map((route) => route.label)).toEqual(['POST /sepay/webhook']);
+
+    const response = rawRoutes[0]?.operation.responses['200'];
+    expect(
+      response && !('$ref' in response) ? response.content?.['application/json']?.schema : null,
+    ).toMatchObject({
+      $ref: '#/components/schemas/SepayWebhookAckDto',
+    });
   });
 
   it('mọi response 2xx đều có mô tả', () => {
@@ -319,7 +340,9 @@ function summarizeDrift(committed: OpenAPIObject, current: OpenAPIObject): strin
 
   // Cùng bộ khoá mà nội dung vẫn khác: đổi field/mô tả/nhánh lỗi bên trong một endpoint có sẵn.
   if (lines.length === 0) {
-    lines.push('  Cùng bộ đường dẫn và schema — khác ở chi tiết bên trong (field, mô tả, response).');
+    lines.push(
+      '  Cùng bộ đường dẫn và schema — khác ở chi tiết bên trong (field, mô tả, response).',
+    );
   }
 
   return lines.join('\n');

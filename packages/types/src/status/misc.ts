@@ -29,6 +29,8 @@ export const APPROVAL_TARGET_TYPE = {
   VEHICLE: 'vehicle',
   TENANT_DOCUMENT: 'tenant_document',
   VEHICLE_DOCUMENT: 'vehicle_document',
+  /** Hồ sơ người bán (R3): danh tính pháp lý, thuế, tài khoản nhận tiền. */
+  SELLER_PROFILE: 'seller_profile',
 } as const;
 
 export type ApprovalTargetType = (typeof APPROVAL_TARGET_TYPE)[keyof typeof APPROVAL_TARGET_TYPE];
@@ -217,6 +219,12 @@ export const OCCUPANCY_SOURCE_TYPE = {
   BOOKING: 'booking',
   BLOCKED_RANGE: 'blocked_range',
   MAINTENANCE: 'maintenance',
+  /**
+   * Yêu cầu thuê ĐÃ DUYỆT đang chờ khách chuyển giữ chỗ (R3, tuyến hoa hồng). Chiếm lịch từ lúc
+   * duyệt tới lúc tiền về (thành đơn) hoặc hết hạn (nhả) — khoá mềm theo cửa sổ của chính sách
+   * phí. Nếu không chiếm, hai khách cùng được duyệt một chỗ và nền tảng phải hoàn một người.
+   */
+  BOOKING_REQUEST: 'booking_request',
 } as const;
 
 export type OccupancySourceType =
@@ -232,6 +240,7 @@ export const OCCUPANCY_SOURCE_TYPE_META: Readonly<Record<OccupancySourceType, St
     color: STATUS_COLOR.NEUTRAL,
   },
   [OCCUPANCY_SOURCE_TYPE.MAINTENANCE]: { label: 'Bảo dưỡng', color: STATUS_COLOR.SPECIAL },
+  [OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST]: { label: 'Chờ giữ chỗ', color: STATUS_COLOR.WAITING },
 };
 
 /**
