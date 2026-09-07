@@ -48,11 +48,25 @@ let planId: string;
 
 let txCounter = 0;
 
+/**
+ * Tiền tố mã giao dịch RIÊNG của spec này.
+ *
+ * `bank_transactions` là bảng TOÀN SÀN — không có `tenant_id` để lọc (ADR 0022 điều 2), nên hai
+ * spec cùng đụng vào nó sẽ giẫm lên nhau. Jest chạy 4 worker song song (`jest.config.js`), và
+ * `bank-transactions-admin.spec.ts` cũng ghi vào đây: một `deleteMany({})` không điều kiện sẽ
+ * xoá đúng những dòng spec kia đang đếm dở, làm cả hai đỏ theo lịch xếp worker chứ không theo
+ * lỗi thật. Mọi lượt xoá/đếm ở đây vì vậy đều lọc theo tiền tố này.
+ */
+const TX_PREFIX = 'sepay-';
+
+/** Chỉ những dòng do spec này tạo ra. */
+const ownRows = { providerTxId: { startsWith: TX_PREFIX } } as const;
+
 /** Payload đúng định dạng SePay gửi; mỗi lượt gọi một mã giao dịch mới trừ khi ép trùng. */
 function payload(over: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
   txCounter += 1;
   return {
-    id: `sepay-${txCounter}-${newId().slice(-6)}`,
+    id: `${TX_PREFIX}${txCounter}-${newId().slice(-6)}`,
     gateway: 'MBBank',
     transactionDate: '2026-09-03 10:15:00',
     accountNumber: '0000111122',
@@ -141,7 +155,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
   if (!dbAvailable) return;
-  await prisma.bankTransaction.deleteMany({});
+  await prisma.bankTransaction.deleteMany({ where: ownRows });
   await prisma.subscriptionInvoice.deleteMany({ where: { tenantId } });
   await prisma.tenantSubscription.deleteMany({ where: { tenantId } });
   await prisma.notification.deleteMany({ where: { tenantId } });
@@ -149,7 +163,7 @@ afterEach(async () => {
 
 afterAll(async () => {
   if (dbAvailable) {
-    await prisma.bankTransaction.deleteMany({});
+    await prisma.bankTransaction.deleteMany({ where: ownRows });
     await prisma.subscriptionInvoice.deleteMany({ where: { tenantId } });
     await prisma.tenantSubscription.deleteMany({ where: { tenantId } });
     await prisma.notification.deleteMany({ where: { tenantId } });
@@ -197,7 +211,7 @@ describe('Ghi thô và idempotency', () => {
     );
     expect(result).toMatchObject({ received: true, duplicate: false, matched: false });
 
-    const row = await prisma.bankTransaction.findFirstOrThrow({});
+    const row = await prisma.bankTransaction.findFirstOrThrow({ where: ownRows });
     expect(row.matchStatus).toBe(BANK_MATCH_STATUS.UNMATCHED);
     expect(row.referenceCode).toBeNull();
 
@@ -220,7 +234,7 @@ describe('Ghi thô và idempotency', () => {
     expect(first).toMatchObject({ duplicate: false, matched: true, note: 'activated' });
     expect(second).toMatchObject({ duplicate: true, matched: false });
 
-    expect(await prisma.bankTransaction.count()).toBe(1);
+    expect(await prisma.bankTransaction.count({ where: ownRows })).toBe(1);
     const after = await prisma.subscriptionInvoice.findUniqueOrThrow({ where: { id: invoice.id } });
     expect(after.paidAmount.toString()).toBe(after.totalAmount.toString());
     expect(await prisma.tenantSubscription.count({ where: { tenantId } })).toBe(1);
@@ -236,7 +250,7 @@ describe('Ghi thô và idempotency', () => {
 
     const results = await Promise.all([sepay.ingest(body), sepay.ingest(body)]);
     expect(results.filter((r) => r.duplicate)).toHaveLength(1);
-    expect(await prisma.bankTransaction.count()).toBe(1);
+    expect(await prisma.bankTransaction.count({ where: ownRows })).toBe(1);
     expect(await prisma.tenantSubscription.count({ where: { tenantId } })).toBe(1);
   });
 
@@ -252,7 +266,7 @@ describe('Ghi thô và idempotency', () => {
       received: true,
       note: 'invalid_amount',
     });
-    expect(await prisma.bankTransaction.count()).toBe(0);
+    expect(await prisma.bankTransaction.count({ where: ownRows })).toBe(0);
   });
 });
 
@@ -330,7 +344,7 @@ describe('Thiếu / đủ / thừa tiền (ADR 0016 điều 6)', () => {
     const extra = await sepay.ingest(payload({ content: invoice.code, transferAmount: 30_000 }));
     expect(extra).toMatchObject({ matched: true, note: 'already_paid' });
 
-    const rows = await prisma.bankTransaction.findMany({ orderBy: { createdAt: 'asc' } });
+    const rows = await prisma.bankTransaction.findMany({ where: ownRows, orderBy: { createdAt: 'asc' } });
     expect(rows[1]!.matchNote).toBe('overpaid');
     expect(await prisma.tenantSubscription.count({ where: { tenantId } })).toBe(1);
   });
@@ -356,7 +370,7 @@ describe('Mã chết và mã lạ', () => {
     const result = await sepay.ingest(payload({ content: 'XPG23456789' }));
     expect(result).toMatchObject({ matched: false, note: 'invoice_not_found' });
 
-    const row = await prisma.bankTransaction.findFirstOrThrow({});
+    const row = await prisma.bankTransaction.findFirstOrThrow({ where: ownRows });
     expect(row.matchStatus).toBe(BANK_MATCH_STATUS.UNMATCHED);
     expect(row.referenceCode).toBe('XPG23456789');
   });

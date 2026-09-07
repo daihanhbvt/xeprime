@@ -9987,7 +9987,7 @@ export interface components {
              */
             email: string;
             /**
-             * @description Không nhận `shop_owner` — chủ gian hàng là người tạo gian hàng, không mời được
+             * @description Không nhận `shop_owner` — chủ gian hàng là người tạo gian hàng, không mời được. Giá trị đó nằm trong enum nhưng bị `InvitesService.create` từ chối bằng `VALIDATION_FAILED`.
              * @enum {string}
              */
             roleKey: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer";
@@ -10723,7 +10723,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Vượt giới hạn 120 request / 60 giây.
+             * @description Vượt giới hạn 5 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */
@@ -10854,7 +10854,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Vượt giới hạn 120 request / 60 giây.
+             * @description Vượt giới hạn 5 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */
@@ -11087,7 +11087,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Vượt giới hạn 120 request / 60 giây.
+             * @description Vượt giới hạn 5 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */
@@ -11193,7 +11193,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Vượt giới hạn 120 request / 60 giây.
+             * @description Vượt giới hạn 10 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */
@@ -11490,7 +11490,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Vượt giới hạn 120 request / 60 giây.
+             * @description Vượt giới hạn 5 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */
@@ -11621,7 +11621,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Vượt giới hạn 120 request / 60 giây.
+             * @description Vượt giới hạn 5 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */
@@ -11752,7 +11752,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Vượt giới hạn 120 request / 60 giây.
+             * @description Vượt giới hạn 10 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */
@@ -11883,7 +11883,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Vượt giới hạn 120 request / 60 giây.
+             * @description Vượt giới hạn 20 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */
@@ -11989,7 +11989,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Vượt giới hạn 120 request / 60 giây.
+             * @description Vượt giới hạn 20 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */
@@ -12104,7 +12104,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Vượt giới hạn 120 request / 60 giây.
+             * @description Vượt giới hạn 20 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */
@@ -12215,7 +12215,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Vượt giới hạn 120 request / 60 giây.
+             * @description Vượt giới hạn 20 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */
@@ -12378,27 +12378,6 @@ export interface operations {
                      *       "error": {
                      *         "code": "CONFLICT",
                      *         "message": "Dữ liệu đã tồn tại"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Vượt giới hạn 120 request / 60 giây.
-             *
-             *     Mã lỗi: `RATE_LIMITED`
-             */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "RATE_LIMITED",
-                     *         "message": "Vượt giới hạn số request"
                      *       }
                      *     }
                      */
@@ -19278,7 +19257,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Vượt giới hạn 120 request / 60 giây.
+             * @description Vượt giới hạn 15 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */
@@ -42724,7 +42703,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Vượt giới hạn 120 request / 60 giây.
+             * @description Vượt giới hạn 5 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */
@@ -42834,7 +42813,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Vượt giới hạn 120 request / 60 giây.
+             * @description Vượt giới hạn 10 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */
@@ -42965,7 +42944,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Vượt giới hạn 120 request / 60 giây.
+             * @description Vượt giới hạn 10 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */
@@ -43096,7 +43075,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Vượt giới hạn 120 request / 60 giây.
+             * @description Vượt giới hạn 10 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */
@@ -45471,7 +45450,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Vượt giới hạn 120 request / 60 giây.
+             * @description Vượt giới hạn 10 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */
@@ -45750,7 +45729,7 @@ export interface operations {
                 };
             };
             /**
-             * @description Vượt giới hạn 120 request / 60 giây.
+             * @description Vượt giới hạn 20 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */

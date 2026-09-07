@@ -43,10 +43,24 @@ let tenantId: string;
 let planId: string;
 let txCounter = 0;
 
+/**
+ * Tiền tố mã giao dịch RIÊNG của spec này.
+ *
+ * `bank_transactions` là bảng TOÀN SÀN — không có `tenant_id` để lọc (ADR 0022 điều 2). Jest
+ * chạy 4 worker song song (`jest.config.js`) và `sepay-webhook.spec.ts` cũng ghi vào đúng bảng
+ * này, nên mọi khẳng định kiểu "cả bảng có N dòng" là một lời nói dối phụ thuộc lịch xếp worker.
+ * Ở đây xoá theo tiền tố, và khẳng định theo TƯ CÁCH THÀNH VIÊN của đúng dòng đang xét
+ * (`toContain(tx.id)`) thay vì theo độ dài danh sách — vốn cũng là điều mỗi test thật sự muốn nói.
+ */
+const TX_PREFIX = 'adm-';
+
+/** Chỉ những dòng do spec này tạo ra. */
+const ownRows = { providerTxId: { startsWith: TX_PREFIX } } as const;
+
 function payload(over: Record<string, unknown> = {}): Record<string, unknown> {
   txCounter += 1;
   return {
-    id: `adm-${txCounter}-${newId().slice(-6)}`,
+    id: `${TX_PREFIX}${txCounter}-${newId().slice(-6)}`,
     transferType: 'in',
     transferAmount: 300_000,
     content: 'chuyen tien khong ghi ma',
@@ -64,8 +78,13 @@ const issueInvoice = () =>
 
 /** Giao dịch KHÔNG rút được mã — đúng ca mà hàng đợi admin sinh ra để giải. */
 async function unmatchedTx(amount: number) {
-  await sepay.ingest(payload({ transferAmount: amount }));
-  return prisma.bankTransaction.findFirstOrThrow({ orderBy: { createdAt: 'desc' } });
+  const body = payload({ transferAmount: amount });
+  await sepay.ingest(body);
+  // Tra theo ĐÚNG mã vừa gửi, không phải "dòng mới nhất": dòng mới nhất của cả bảng có thể là
+  // của spec khác đang chạy song song (xem docblock của `TX_PREFIX`).
+  return prisma.bankTransaction.findFirstOrThrow({
+    where: { providerTxId: String(body['id']) },
+  });
 }
 
 beforeAll(async () => {
@@ -137,7 +156,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
   if (!dbAvailable) return;
-  await prisma.bankTransaction.deleteMany({});
+  await prisma.bankTransaction.deleteMany({ where: ownRows });
   await prisma.auditLog.deleteMany({ where: { targetType: 'bank_transaction' } });
   await prisma.subscriptionInvoice.deleteMany({ where: { tenantId } });
   await prisma.tenantSubscription.deleteMany({ where: { tenantId } });
@@ -146,7 +165,7 @@ afterEach(async () => {
 
 afterAll(async () => {
   if (dbAvailable) {
-    await prisma.bankTransaction.deleteMany({});
+    await prisma.bankTransaction.deleteMany({ where: ownRows });
     await prisma.auditLog.deleteMany({ where: { targetType: 'bank_transaction' } });
     await prisma.subscriptionInvoice.deleteMany({ where: { tenantId } });
     await prisma.tenantSubscription.deleteMany({ where: { tenantId } });
@@ -162,15 +181,18 @@ afterAll(async () => {
 describe('Hàng đợi', () => {
   it('mặc định chỉ trả giao dịch CHƯA KHỚP, mới nhất trước', async () => {
     if (!dbAvailable) return;
-    await unmatchedTx(300_000);
-    await unmatchedTx(500_000);
+    const older = await unmatchedTx(300_000);
+    const newer = await unmatchedTx(500_000);
 
     const page = await admin.list({});
-    expect(page.data).toHaveLength(2);
+    // Lọc về dòng của spec này rồi mới xét thứ tự: khẳng định trên toàn bảng sẽ vỡ khi
+    // `sepay-webhook.spec.ts` chạy song song (xem docblock của `TX_PREFIX`).
+    const mine = page.data.filter((r) => r.providerTxId.startsWith(TX_PREFIX));
+    expect(mine.map((r) => r.id)).toEqual([newer.id, older.id]);
     expect(page.data.every((r) => r.matchStatus === BANK_MATCH_STATUS.UNMATCHED)).toBe(true);
-    expect(page.data[0]!.amountIn).toBe('500000');
+    expect(mine[0]!.amountIn).toBe('500000');
     // Danh sách KHÔNG mang payload gốc — nó chỉ mở ở màn chi tiết.
-    expect(page.data[0]).not.toHaveProperty('rawJson');
+    expect(mine[0]).not.toHaveProperty('rawJson');
   });
 
   it('gợi ý sắp hoá đơn khớp số tiền lên đầu — nhưng KHÔNG tự khớp (ADR 0022 điều 4)', async () => {
@@ -305,9 +327,12 @@ describe('Bỏ qua', () => {
     expect(result.matchedByName).toBe('Nhân viên tài chính');
 
     // Dòng KHÔNG bị xoá — sổ ngân hàng là bằng chứng.
-    expect(await prisma.bankTransaction.count()).toBe(1);
-    expect((await admin.list({})).data).toHaveLength(0);
-    expect((await admin.list({ matchStatus: BANK_MATCH_STATUS.IGNORED })).data).toHaveLength(1);
+    expect(await prisma.bankTransaction.count({ where: ownRows })).toBe(1);
+    // Rời hàng đợi mặc định, nhưng vẫn tra được bằng bộ lọc `ignored`.
+    expect((await admin.list({})).data.map((r) => r.id)).not.toContain(tx.id);
+    expect(
+      (await admin.list({ matchStatus: BANK_MATCH_STATUS.IGNORED })).data.map((r) => r.id),
+    ).toContain(tx.id);
 
     const audit = await prisma.auditLog.findFirstOrThrow({
       where: { targetType: 'bank_transaction', targetId: tx.id },

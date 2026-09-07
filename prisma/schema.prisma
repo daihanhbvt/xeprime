@@ -2565,15 +2565,19 @@ model Plan {
   /// terms: [{months, discountPercent}], graceDays, features: [...] }.
   /// Giá / % / số chỗ là DỮ LIỆU admin sửa được; QUY TẮC nằm trong code.
   limitsJson   Json?    @map("limits_json") @db.JsonB
-  /// Phí nền mỗi tháng của bậc gói (ADR 0020): phải đủ lớn để gói chỉ có lợi từ một số xe
-  /// nhất định trở lên — `base_price_monthly = 0` giết vai trò phễu của tuyến hoa hồng.
+  /// Phí nền mỗi tháng của bậc gói. ⚠ ADR 0020 từng bắt nó phải đủ lớn để gói chỉ có lợi từ một
+  /// quy mô đội xe trở lên; **ADR 0029 điều 3–4 GỠ ràng buộc đó**. Gói pilot giá phẳng theo chỗ
+  /// đặt `base_price_monthly = 0` một cách CÓ CHỦ ĐÍCH — tiền nằm hết ở đơn giá chỗ xe, và động
+  /// lực nâng cấp là giá cạnh tranh trên chợ chứ không phải phí nền. Đừng khôi phục phép kiểm.
   basePriceMonthly Decimal @default(0) @map("base_price_monthly") @db.Decimal(14, 2)
   /// @xeprime/types → BillingMode (commission | package) — ADR 0020. DB canh bằng CHECK.
   billingMode  String   @default("commission") @map("billing_mode") @db.VarChar(30)
   /// BẮT BUỘC (1–20, CHECK) khi `billing_mode = 'commission'`; NULL khi `package`.
   commissionPercent Decimal? @map("commission_percent") @db.Decimal(5, 2)
-  /// Doanh thu giả định mỗi xe mỗi tháng, admin nhập — đầu vào của phép KIỂM ĐIỂM GIAO
-  /// (ADR 0020): điểm hoà vốn so với tuyến hoa hồng không được nằm dưới `includedCars`.
+  /// Doanh thu giả định mỗi xe mỗi tháng, admin nhập. ⚠ Từng là đầu vào của phép KIỂM ĐIỂM GIAO
+  /// (ADR 0020); **ADR 0029 điều 4 cho phép kiểm đó nghỉ hưu** nên cột này nay chỉ là số THAM
+  /// KHẢO khi định giá, không chặn việc lưu gói và không có endpoint nào còn ném
+  /// `PLAN_INCENTIVE_INVALID`.
   assumedMonthlyGmvJson Json? @map("assumed_monthly_gmv_json") @db.JsonB
   /// @xeprime/types → PlanStatus (active | archived)
   status       String   @default("active") @db.VarChar(50)

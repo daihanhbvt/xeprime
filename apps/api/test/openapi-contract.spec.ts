@@ -180,9 +180,28 @@ describe('OpenAPI · nhánh lỗi', () => {
     expect(document.components?.schemas?.ApiErrorDto).toBeDefined();
   });
 
-  it('mọi route đều mô tả 429 và 500', () => {
-    const missing = routes.filter((r) => !r.operation.responses['429'] || !r.operation.responses['500']);
-    expect(missing.map((r) => r.label)).toEqual([]);
+  /**
+   * Route đứng NGOÀI throttler nên KHÔNG được mô tả 429 — nó không bao giờ trả mã đó.
+   *
+   * Danh sách khai tay chứ không suy từ metadata: đây là một ngoại lệ về BẢO MẬT (một endpoint
+   * công khai có quyền ghi tiền, tự bỏ rate limit), nên nó phải được ai đó gõ tên ra và giải
+   * thích. Thêm một route vào đây là một quyết định có review, không phải hệ quả của một
+   * decorator ai đó vừa dán.
+   */
+  const NO_RATE_LIMIT: Readonly<Record<string, string>> = {
+    // ADR 0022 ràng buộc 4: SePay bắn dồn khi retry; chặn nó là tự trì hoãn tiền của chính mình.
+    // Cửa thật là khoá `Authorization: Apikey …` so time-safe trong `SepayService`.
+    'POST /sepay/webhook': '@SkipThrottle()',
+  };
+
+  it('mọi route đều mô tả 500, và mô tả 429 trừ các route khai miễn throttle', () => {
+    const missing500 = routes.filter((r) => !r.operation.responses['500']);
+    expect(missing500.map((r) => r.label)).toEqual([]);
+
+    // So bằng BẢN ĐỒ hai chiều: thiếu 429 ở route thường thì đỏ, mà THỪA 429 ở route miễn
+    // throttle cũng đỏ — bản thứ hai mới là thứ bắt được việc tài liệu quay lại nói dối.
+    const without429 = routes.filter((r) => !r.operation.responses['429']).map((r) => r.label);
+    expect(without429.sort()).toEqual(Object.keys(NO_RATE_LIMIT).sort());
   });
 
   it('route cần đăng nhập đều mô tả 401', () => {

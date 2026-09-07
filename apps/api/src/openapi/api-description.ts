@@ -93,7 +93,10 @@ Bộ lọc riêng của từng endpoint mô tả tại chính endpoint đó.
 Thuê dài hạn là gói cố định 1/2/3/6/9/12 **tháng lịch**; server tự tính ngày trả từ ngày nhận —
 client không gửi lên và không được suy bằng \`số tháng × 30\` (ADR 0011).
 
-Giai đoạn này **không có thanh toán trực tuyến**: mọi thu/chi là ghi sổ thủ công (ADR 0013).
+Tiền thuê xe của khách **chưa đi qua nền tảng**: thu/chi của đơn vẫn là ghi sổ thủ công. Đường
+tiền tự động duy nhất đang chạy là **hoá đơn gói của gian hàng**, đối soát bằng webhook SePay
+(ADR 0016/0022) — nền tảng không giữ tiền hộ ai ở luồng đó. Lệnh cấm cũ của ADR 0013 đã được
+ADR 0028 thay bằng một lộ trình có release gate.
 
 ## Mã lỗi
 
@@ -108,7 +111,7 @@ Mã dùng chung ở mọi endpoint:
 | 404 | \`${API_ERROR_CODE.NOT_FOUND}\` | Không có bản ghi, hoặc có nhưng thuộc gian hàng khác. |
 | 409 | \`${API_ERROR_CODE.CONFLICT}\` | Trùng bản ghi đã tồn tại. |
 | 409 | \`${API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT}\` | Xe đã có lịch trùng khoảng thời gian. Chặn bằng ràng buộc \`EXCLUDE USING gist\` ở DB (ADR 0006) — kiểm tra phía client chỉ là gợi ý UX, luôn phải xử lý mã này. |
-| 429 | \`${API_ERROR_CODE.RATE_LIMITED}\` | Vượt 120 request / 60 giây. |
+| 429 | \`${API_ERROR_CODE.RATE_LIMITED}\` | Vượt hạn mức. Mức chung là 120 request / 60 giây, nhưng các cửa dò (đăng nhập, đăng ký, quên mật khẩu, OTP, báo giá công khai) siết chặt hơn — con số THẬT của từng endpoint nằm ở mô tả nhánh 429 của chính endpoint đó. |
 | 500 | \`${API_ERROR_CODE.INTERNAL_ERROR}\` | Lỗi server. Ở production \`message\` được che, tra log theo request-id. |
 
 Toàn bộ mã (gồm cả mã nghiệp vụ riêng của từng luồng):
