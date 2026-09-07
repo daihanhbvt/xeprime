@@ -1,7 +1,203 @@
 {
+  "page": {
+    "title": "Khách hàng",
+    "subtitle": "Sổ khách của gian hàng: lịch sử thuê, công nợ, ghi chú và giấy tờ — chỉ gian hàng của bạn nhìn thấy.",
+    "add": "Thêm khách hàng",
+    "totalLabel": "{count, plural, other {# khách}}"
+  },
+  "permission": {
+    "title": "Bạn chưa có quyền xem sổ khách",
+    "description": "Liên hệ chủ gian hàng để được cấp quyền \"Khách hàng\"."
+  },
+  "summary": {
+    "ariaLabel": "Chỉ số sổ khách",
+    "active": "Khách đang hoạt động",
+    "activeShort": "Đang hoạt động",
+    "returning": "Khách quen (≥ {count} chuyến)",
+    "returningShort": "Khách quen ≥{count}",
+    "debt": "Còn nợ · {count, plural, other {# khách}}",
+    "debtShort": "Còn nợ · {count, plural, other {# khách}}",
+    "risk": "Cần lưu ý / từ chối phục vụ",
+    "riskShort": "Lưu ý / từ chối"
+  },
+  "filters": {
+    "search": "Tìm khách hàng",
+    "searchPlaceholder": "Tìm theo tên, số điện thoại hoặc email",
+    "relationship": "Nhóm khách",
+    "sort": "Sắp xếp"
+  },
+  "hints": {
+    "relationship": "\"Khách quen\" là khách đã hoàn tất từ 2 chuyến trở lên. \"Đã lưu trữ\" nằm ngoài mọi nhóm khác.",
+    "riskLevel": "\"Cần lưu ý\" chỉ nhắc người trực, không chặn gì. \"Từ chối phục vụ\" chặn yêu cầu và đơn MỚI ở gian hàng này; đơn đang có giữ nguyên.",
+    "notes": "Ghi chú chỉ hiển thị trong gian hàng của bạn — khách không bao giờ nhìn thấy.",
+    "documents": "Tệp nằm trong kho riêng tư. Mỗi lần mở đều được ghi vào nhật ký hệ thống và cần quyền xem tệp.",
+    "debt": "Còn nợ = tổng tiền đơn − đã thu, bỏ qua đơn đã huỷ."
+  },
+  "list": {
+    "label": "Sổ khách của gian hàng",
+    "errorTitle": "Không tải được danh sách khách hàng",
+    "emptyTitle": "Sổ khách còn trống",
+    "emptyBody": "Khách sẽ tự vào sổ khi bạn lập đơn thuê hoặc nhận yêu cầu từ Marketplace. Bạn cũng có thể thêm tay ngay bây giờ.",
+    "noResultsTitle": "Không có khách nào khớp bộ lọc",
+    "noResultsBody": "Thử bỏ bớt điều kiện lọc hoặc tìm bằng số điện thoại.",
+    "clearFilters": "Xoá bộ lọc"
+  },
+  "card": {
+    "identity": "Khách hàng",
+    "returning": "Khách quen",
+    "archived": "Đã lưu trữ",
+    "rentals": "Số lần thuê",
+    "activeBookings": "{count, plural, other {# đơn đang chạy}}",
+    "lastRental": "Lần thuê cuối",
+    "lastRentalShort": "Lần cuối",
+    "neverRented": "Chưa thuê",
+    "totalValue": "Tổng giá trị",
+    "debt": "Còn nợ",
+    "status": "Trạng thái",
+    "actions": "Thao tác",
+    "open": "Xem hồ sơ"
+  },
   "detail": {
     "title": "Hồ sơ khách hàng",
-    "openPage": "Mở trang đầy đủ"
+    "openPage": "Mở trang đầy đủ",
+    "errorTitle": "Không mở được hồ sơ khách",
+    "backToList": "Về sổ khách",
+    "phone": "Số điện thoại",
+    "copyPhone": "Sao chép số điện thoại",
+    "email": "Email",
+    "copyEmail": "Sao chép email",
+    "address": "Địa chỉ",
+    "source": "Nguồn hồ sơ",
+    "account": "Tài khoản XePrime",
+    "accountLinked": "Đã liên kết",
+    "accountNotLinked": "Chưa liên kết",
+    "createdAt": "Vào sổ từ",
+    "copied": "Đã sao chép",
+    "archivedBannerTitle": "Hồ sơ đang lưu trữ",
+    "archivedBannerBody": "Lịch sử thuê vẫn giữ nguyên và mở được từ đơn cũ. Khôi phục hồ sơ để chỉnh sửa hoặc ghi chú thêm.",
+    "blockedBannerTitle": "Gian hàng đang từ chối phục vụ khách này",
+    "blockedBannerBody": "Yêu cầu và đơn MỚI bị chặn ở gian hàng này. Khách chỉ nhận được thông báo trung tính, không biết lý do nội bộ.",
+    "watchlistBannerTitle": "Khách được đánh dấu cần lưu ý",
+    "watchlistBannerBody": "Đây chỉ là lời nhắc cho người trực — không thao tác nào bị chặn."
+  },
+  "actions": {
+    "edit": "Sửa hồ sơ",
+    "createBooking": "Tạo đơn thuê",
+    "createBookingBlocked": "Khách đang bị từ chối phục vụ — đổi mức rủi ro trước khi lập đơn mới",
+    "addNote": "Thêm ghi chú",
+    "risk": "Mức rủi ro",
+    "archive": "Lưu trữ",
+    "restore": "Khôi phục",
+    "more": "Thao tác khác",
+    "archived": "Đã lưu trữ hồ sơ khách",
+    "restored": "Đã khôi phục hồ sơ khách"
+  },
+  "stats": {
+    "completed": "Chuyến đã hoàn tất",
+    "completedShort": "Đã hoàn tất",
+    "active": "Đơn đang chạy / sắp tới",
+    "activeShort": "Đang / sắp tới",
+    "totalValue": "Tổng giá trị thuê",
+    "totalValueShort": "Tổng giá trị",
+    "paid": "Đã thu",
+    "debt": "Còn nợ",
+    "noShowLate": "Không nhận xe / trả muộn",
+    "noShowLateShort": "Không nhận / muộn",
+    "lastRental": "Lần thuê gần nhất",
+    "lastRentalShort": "Thuê gần nhất"
+  },
+  "tabs": {
+    "overview": "Tổng quan",
+    "history": "Lịch sử thuê",
+    "finance": "Thu chi",
+    "notes": "Ghi chú nội bộ",
+    "documents": "Giấy tờ"
+  },
+  "overview": {
+    "recentTitle": "Hoạt động gần đây",
+    "recentEmpty": "Khách chưa có chuyến nào.",
+    "recentHidden": "Bạn chưa có quyền xem đơn thuê nên phần này được ẩn."
+  },
+  "history": {
+    "label": "Lịch sử thuê của khách",
+    "booking": "Đơn thuê",
+    "vehicle": "Xe",
+    "range": "Thời gian",
+    "service": "Dịch vụ",
+    "status": "Trạng thái",
+    "total": "Tổng tiền",
+    "debt": "Còn nợ",
+    "errorTitle": "Không tải được lịch sử thuê",
+    "emptyTitle": "Khách chưa có chuyến nào",
+    "emptyBody": "Lịch sử sẽ xuất hiện ngay khi bạn lập đơn thuê đầu tiên cho khách này.",
+    "totalLabel": "{count, plural, other {# chuyến}}"
+  },
+  "form": {
+    "addTitle": "Thêm khách hàng",
+    "editTitle": "Sửa hồ sơ khách",
+    "fullName": "Họ và tên",
+    "fullNamePlaceholder": "Nguyễn Văn An",
+    "phone": "Số điện thoại",
+    "phonePlaceholder": "0901234567",
+    "phoneHelp": "Đây là cách hệ thống nhận ra khách quen — cùng một số chỉ có một hồ sơ trong gian hàng.",
+    "email": "Email (không bắt buộc)",
+    "address": "Địa chỉ (không bắt buộc)",
+    "submitAdd": "Thêm khách",
+    "submitEdit": "Lưu",
+    "created": "Đã thêm khách vào sổ",
+    "updated": "Đã cập nhật hồ sơ khách",
+    "duplicateHint": "Hai hồ sơ không được tự gộp lại. Hãy mở hồ sơ đang có để cập nhật, hoặc kiểm tra lại số điện thoại vừa nhập.",
+    "duplicateOpen": "Mở hồ sơ đang có"
+  },
+  "risk": {
+    "title": "Đánh dấu mức rủi ro",
+    "level": "Mức rủi ro",
+    "reason": "Lý do",
+    "reasonOptional": "Ghi chú (không bắt buộc)",
+    "reasonPlaceholder": "Ví dụ: trả xe muộn 2 lần, không liên lạc được ngày 12/08",
+    "privacy": "Lý do chỉ hiển thị trong gian hàng của bạn. Khách không bao giờ nhìn thấy nội dung này, và yêu cầu bị từ chối chỉ nhận được thông báo trung tính.",
+    "saved": "Đã cập nhật mức rủi ro của khách"
+  },
+  "notes": {
+    "type": "Loại ghi chú",
+    "body": "Nội dung",
+    "bodyPlaceholder": "Ví dụ: khách quen, luôn trả xe đúng giờ; thích xe số sàn.",
+    "add": "Thêm ghi chú",
+    "added": "Đã thêm ghi chú",
+    "errorTitle": "Không tải được ghi chú",
+    "emptyTitle": "Chưa có ghi chú nào về khách này",
+    "deletedAuthor": "Người dùng đã xoá",
+    "removeTitle": "Gỡ ghi chú này?",
+    "removeOk": "Gỡ",
+    "removed": "Đã gỡ ghi chú",
+    "removeLabel": "Gỡ ghi chú ngày {date}"
+  },
+  "documents": {
+    "type": "Loại giấy tờ",
+    "customName": "Tên giấy tờ khác",
+    "customNamePlaceholder": "Tên giấy tờ (ví dụ: Hộ chiếu)",
+    "expiresAt": "Hạn giấy tờ (không bắt buộc)",
+    "expiresTag": "Hạn {date}",
+    "upload": "Tải giấy tờ lên",
+    "uploaded": "Đã tải giấy tờ lên kho riêng tư",
+    "uploadsNotConfigured": "Kho tài liệu riêng tư chưa được cấu hình — liên hệ quản trị hệ thống",
+    "errorTitle": "Không tải được danh sách giấy tờ",
+    "emptyTitle": "Chưa có giấy tờ nào của khách này",
+    "unknownUploader": "Không rõ người tải",
+    "verified": "Đã đối chiếu · {date}",
+    "notVerified": "Chưa đối chiếu",
+    "openFile": "Mở tệp",
+    "verify": "Đã đối chiếu",
+    "verifyAgain": "Đối chiếu lại",
+    "verifyRecorded": "Đã ghi nhận đối chiếu",
+    "removeTitle": "Gỡ giấy tờ này khỏi hồ sơ khách?",
+    "removeOk": "Gỡ",
+    "removed": "Đã gỡ giấy tờ",
+    "removeLabel": "Gỡ {name}",
+    "pickSourceTitle": "Tải giấy tờ lên",
+    "pickCamera": "Chụp ảnh",
+    "pickLibrary": "Chọn từ thư viện",
+    "pickDocument": "Chọn tệp PDF"
   },
   "finance": {
     "list": {
@@ -13,5 +209,18 @@
       "uncategorized": "Chưa phân loại",
       "viewAll": "Xem tất cả {count, plural, other {# phiếu}}"
     }
+  },
+  "validation": {
+    "fullNameRequired": "Nhập họ tên khách",
+    "fullNameMax": "Họ tên tối đa 255 ký tự",
+    "phoneRequired": "Nhập số điện thoại",
+    "phoneInvalid": "Số điện thoại không hợp lệ (ví dụ 0901234567)",
+    "emailInvalid": "Email không hợp lệ",
+    "emailMax": "Email tối đa 255 ký tự",
+    "addressMax": "Địa chỉ tối đa 500 ký tự",
+    "reasonRequired": "Nhập lý do để người sau hiểu vì sao có đánh dấu này",
+    "reasonMax": "Lý do tối đa 1000 ký tự",
+    "noteBodyRequired": "Nhập nội dung ghi chú",
+    "noteBodyMax": "Ghi chú tối đa 2000 ký tự"
   }
 }

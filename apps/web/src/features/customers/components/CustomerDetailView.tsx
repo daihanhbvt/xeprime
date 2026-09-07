@@ -10,15 +10,14 @@ import {
 } from '@ant-design/icons';
 import { App, Alert, Button, Result, Skeleton, Space, Tabs, Tag, Tooltip } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
   PERMISSION,
   TENANT_CUSTOMER_RISK_LEVEL,
   TENANT_CUSTOMER_RISK_LEVEL_META,
-  TENANT_CUSTOMER_SOURCE_LABEL,
   type TenantCustomerRiskLevel,
-  type TenantCustomerSource,
 } from '@xeprime/types';
 import { CopyButton } from '@/components/data-display/CopyButton';
 import { EntityIdentity } from '@/components/data-display/EntityIdentity';
@@ -29,8 +28,8 @@ import { CustomerReceiptsPanel } from './CustomerReceiptsPanel';
 import { useIsDesktop } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
 import { isZeroMoney } from '@/lib/money';
-import { getErrorMessage } from '@/services/api-client';
-import { CUSTOMER_HINTS } from '../constants';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import { useCustomer, useSetCustomerArchived } from '../hooks/use-customers';
 import { CustomerBookingHistory } from './CustomerBookingHistory';
 import { CustomerDocumentsPanel } from './CustomerDocumentsPanel';
@@ -92,7 +91,11 @@ export function CustomerDetailView({
    */
   embedded?: boolean;
 }) {
+  const t = useTranslations('Customers');
+  const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
+  const errorMessage = useErrorMessage();
 
   const router = useRouter();
   const { message } = App.useApp();
@@ -124,12 +127,8 @@ export function CustomerDetailView({
   if (!canView) {
     return (
       <div className={styles.page}>
-        <ManagePageHeader title="Khách hàng" onBack={back} />
-        <Result
-          status="403"
-          title="Bạn chưa có quyền xem sổ khách"
-          subTitle='Liên hệ chủ gian hàng để được cấp quyền "Khách hàng".'
-        />
+        <ManagePageHeader title={t('page.title')} onBack={back} />
+        <Result status="403" title={t('permission.title')} subTitle={t('permission.description')} />
       </div>
     );
   }
@@ -137,7 +136,7 @@ export function CustomerDetailView({
   if (isLoading) {
     return (
       <div className={styles.page}>
-        <ManagePageHeader title="Hồ sơ khách hàng" onBack={back} />
+        <ManagePageHeader title={t('detail.title')} onBack={back} />
         <Skeleton active avatar paragraph={{ rows: 6 }} />
       </div>
     );
@@ -146,18 +145,18 @@ export function CustomerDetailView({
   if (isError || !data) {
     return (
       <div className={styles.page}>
-        <ManagePageHeader title="Hồ sơ khách hàng" onBack={back} />
+        <ManagePageHeader title={t('detail.title')} onBack={back} />
         <Result
           status="warning"
-          title="Không mở được hồ sơ khách"
-          subTitle={error ? getErrorMessage(error) : undefined}
+          title={t('detail.errorTitle')}
+          subTitle={error ? errorMessage(error) : undefined}
           extra={
             <Space>
               <Button onClick={() => void refetch()} loading={isFetching}>
-                Thử lại
+                {tCommon('actions.retry')}
               </Button>
               <Button type="primary" onClick={back}>
-                Về sổ khách
+                {t('detail.backToList')}
               </Button>
             </Space>
           }
@@ -175,8 +174,8 @@ export function CustomerDetailView({
       { id: customerId, archived: !archived },
       {
         onSuccess: () =>
-          message.success(archived ? 'Đã khôi phục hồ sơ khách' : 'Đã lưu trữ hồ sơ khách'),
-        onError: (err) => message.error(getErrorMessage(err)),
+          message.success(archived ? t('actions.restored') : t('actions.archived')),
+        onError: (err) => message.error(errorMessage(err)),
       },
     );
   }
@@ -185,16 +184,12 @@ export function CustomerDetailView({
     <Space wrap>
       {canManage ? (
         <Button icon={<EditOutlined />} onClick={() => setEditOpen(true)} disabled={archived}>
-          Sửa hồ sơ
+          {t('actions.edit')}
         </Button>
       ) : null}
       {canCreateBooking ? (
         <Tooltip
-          title={
-            blocked
-              ? 'Khách đang bị từ chối phục vụ — đổi mức rủi ro trước khi lập đơn mới'
-              : undefined
-          }
+          title={blocked ? t('actions.createBookingBlocked') : undefined}
         >
           <Button
             type="primary"
@@ -213,13 +208,13 @@ export function CustomerDetailView({
               )
             }
           >
-            Tạo đơn thuê
+            {t('actions.createBooking')}
           </Button>
         </Tooltip>
       ) : null}
       {canManage ? (
         <Button icon={<FileAddOutlined />} onClick={() => setActiveTab('notes')}>
-          Thêm ghi chú
+          {t('actions.addNote')}
         </Button>
       ) : null}
       {canManageRisk ? (
@@ -228,7 +223,7 @@ export function CustomerDetailView({
           danger={blocked}
           onClick={() => setRiskOpen(true)}
         >
-          Mức rủi ro
+          {t('actions.risk')}
         </Button>
       ) : null}
       {canManage ? (
@@ -237,7 +232,7 @@ export function CustomerDetailView({
           loading={setArchived.isPending}
           onClick={toggleArchived}
         >
-          {archived ? 'Khôi phục' : 'Lưu trữ'}
+          {archived ? t('actions.restore') : t('actions.archive')}
         </Button>
       ) : null}
     </Space>
@@ -247,47 +242,47 @@ export function CustomerDetailView({
     <aside className={styles.profileCard}>
       <EntityIdentity
         name={data.fullName}
-        subtitle={TENANT_CUSTOMER_SOURCE_LABEL[data.source as TenantCustomerSource] ?? data.source}
+        subtitle={domainLabel('tenantCustomerSource', data.source)}
         kind="person"
         size="lg"
         initialSource={data.fullName}
       />
       <dl className={styles.profileList}>
         <div>
-          <dt>Số điện thoại</dt>
+          <dt>{t('detail.phone')}</dt>
           {/* Gọi được VÀ chép được: ngoài quầy thì bấm gọi, ngồi máy thì dán sang Zalo/sổ tay. */}
           <dd className={styles.copyRow}>
             <a href={`tel:${data.phone}`}>{data.phone}</a>
-            <CopyButton value={data.phone} label="Sao chép số điện thoại" />
+            <CopyButton value={data.phone} label={t('detail.copyPhone')} />
           </dd>
         </div>
         {data.email ? (
           <div>
-            <dt>Email</dt>
+            <dt>{t('detail.email')}</dt>
             <dd className={styles.copyRow}>
               <a href={`mailto:${data.email}`}>{data.email}</a>
-              <CopyButton value={data.email} label="Sao chép email" />
+              <CopyButton value={data.email} label={t('detail.copyEmail')} />
             </dd>
           </div>
         ) : null}
         {data.address ? (
           <div>
-            <dt>Địa chỉ</dt>
+            <dt>{t('detail.address')}</dt>
             <dd>{data.address}</dd>
           </div>
         ) : null}
         <div>
-          <dt>Tài khoản XePrime</dt>
+          <dt>{t('detail.account')}</dt>
           <dd>
             {data.hasAccount ? (
-              <Tag color="blue">Đã liên kết</Tag>
+              <Tag color="blue">{t('detail.accountLinked')}</Tag>
             ) : (
-              <span className={styles.muted}>Chưa liên kết</span>
+              <span className={styles.muted}>{t('detail.accountNotLinked')}</span>
             )}
           </dd>
         </div>
         <div>
-          <dt>Vào sổ từ</dt>
+          <dt>{t('detail.createdAt')}</dt>
           <dd>{fmt.date(data.createdAt)}</dd>
         </div>
       </dl>
@@ -302,7 +297,7 @@ export function CustomerDetailView({
           meta={TENANT_CUSTOMER_RISK_LEVEL_META}
           group="tenantCustomerRiskLevel"
         />
-        {archived ? <Tag>Đã lưu trữ</Tag> : null}
+        {archived ? <Tag>{t('card.archived')}</Tag> : null}
       </div>
       {actions}
     </div>
@@ -312,7 +307,7 @@ export function CustomerDetailView({
   const contactLine = (
     <span className={styles.headerSub}>
       <a href={`tel:${data.phone}`}>{data.phone}</a>
-      <CopyButton value={data.phone} label="Sao chép số điện thoại" />
+      <CopyButton value={data.phone} label={t('detail.copyPhone')} />
       {data.email ? <span className={styles.headerEmail}>· {data.email}</span> : null}
     </span>
   );
@@ -342,8 +337,8 @@ export function CustomerDetailView({
           className={styles.banner}
           type="info"
           showIcon
-          message="Hồ sơ đang lưu trữ"
-          description="Lịch sử thuê vẫn giữ nguyên và mở được từ đơn cũ. Khôi phục hồ sơ để chỉnh sửa hoặc ghi chú thêm."
+          message={t('detail.archivedBannerTitle')}
+          description={t('detail.archivedBannerBody')}
         />
       ) : null}
 
@@ -353,15 +348,13 @@ export function CustomerDetailView({
           type={blocked ? 'error' : 'warning'}
           showIcon
           message={
-            blocked ? 'Gian hàng đang từ chối phục vụ khách này' : 'Khách được đánh dấu cần lưu ý'
+            blocked ? t('detail.blockedBannerTitle') : t('detail.watchlistBannerTitle')
           }
           description={
             <>
               {data.riskReason ? <div>{data.riskReason}</div> : null}
               <div className={styles.bannerHint}>
-                {blocked
-                  ? 'Yêu cầu và đơn MỚI bị chặn ở gian hàng này. Khách chỉ nhận được thông báo trung tính, không biết lý do nội bộ.'
-                  : 'Đây chỉ là lời nhắc cho người trực — không thao tác nào bị chặn.'}
+                {blocked ? t('detail.blockedBannerBody') : t('detail.watchlistBannerBody')}
               </div>
             </>
           }
@@ -369,26 +362,26 @@ export function CustomerDetailView({
       ) : null}
 
       <div className={styles.summaryGrid}>
-        <SummaryCard label="Chuyến đã hoàn tất" value={data.completedRentalCount} />
-        <SummaryCard label="Đơn đang chạy / sắp tới" value={data.activeBookingCount} />
+        <SummaryCard label={t('stats.completed')} value={data.completedRentalCount} />
+        <SummaryCard label={t('stats.active')} value={data.activeBookingCount} />
         {canViewFinance ? (
           <>
-            <SummaryCard label="Tổng giá trị thuê" value={fmt.money(data.totalBookingAmount)} />
-            <SummaryCard label="Đã thu" value={fmt.money(data.paidAmount)} />
+            <SummaryCard label={t('stats.totalValue')} value={fmt.money(data.totalBookingAmount)} />
+            <SummaryCard label={t('stats.paid')} value={fmt.money(data.paidAmount)} />
             <SummaryCard
-              label={<LabelWithHint label="Còn nợ" hint={CUSTOMER_HINTS.debt} />}
+              label={<LabelWithHint label={t('stats.debt')} hint={t('hints.debt')} />}
               value={fmt.money(data.debtAmount)}
               danger={!isZeroMoney(data.debtAmount)}
             />
           </>
         ) : null}
         <SummaryCard
-          label="Không nhận xe / trả muộn"
+          label={t('stats.noShowLate')}
           value={`${data.noShowCount} / ${data.lateReturnCount}`}
           danger={data.noShowCount > 0 || data.lateReturnCount > 0}
         />
         <SummaryCard
-          label="Lần thuê gần nhất"
+          label={t('stats.lastRental')}
           value={data.lastRentalAt ? fmt.date(data.lastRentalAt) : '—'}
         />
       </div>
@@ -401,12 +394,12 @@ export function CustomerDetailView({
             items={[
               {
                 key: 'overview',
-                label: 'Tổng quan',
+                label: t('tabs.overview'),
                 children: (
                   <div className={styles.overview}>
                     {isDesktop ? null : profileCard}
                     <section className={styles.recent}>
-                      <h2 className={styles.sectionTitle}>Hoạt động gần đây</h2>
+                      <h2 className={styles.sectionTitle}>{t('overview.recentTitle')}</h2>
                       {canViewBookings ? (
                         data.recentBookings.length > 0 ? (
                           <ul className={styles.recentList}>
@@ -419,12 +412,10 @@ export function CustomerDetailView({
                             ))}
                           </ul>
                         ) : (
-                          <p className={styles.muted}>Khách chưa có chuyến nào.</p>
+                          <p className={styles.muted}>{t('overview.recentEmpty')}</p>
                         )
                       ) : (
-                        <p className={styles.muted}>
-                          Bạn chưa có quyền xem đơn thuê nên phần này được ẩn.
-                        </p>
+                        <p className={styles.muted}>{t('overview.recentHidden')}</p>
                       )}
                     </section>
                   </div>
@@ -434,7 +425,7 @@ export function CustomerDetailView({
                 ? [
                     {
                       key: 'history',
-                      label: 'Lịch sử thuê',
+                      label: t('tabs.history'),
                       children: (
                         <CustomerBookingHistory
                           customerId={customerId}
@@ -449,14 +440,14 @@ export function CustomerDetailView({
                 ? [
                     {
                       key: 'finance',
-                      label: 'Thu chi',
+                      label: t('tabs.finance'),
                       children: <CustomerReceiptsPanel customerId={customerId} />,
                     },
                   ]
                 : []),
               {
                 key: 'notes',
-                label: 'Ghi chú nội bộ',
+                label: t('tabs.notes'),
                 children: (
                   <CustomerNotesPanel
                     customerId={customerId}
@@ -467,7 +458,7 @@ export function CustomerDetailView({
               },
               {
                 key: 'documents',
-                label: 'Giấy tờ',
+                label: t('tabs.documents'),
                 children: (
                   <CustomerDocumentsPanel
                     customerId={customerId}

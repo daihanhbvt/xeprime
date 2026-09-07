@@ -1,124 +1,50 @@
+// Side-effect import, KHÔNG xoá: nạp module này là lúc client mặc định của WEB được cấu hình.
+import '@/services/api-client';
+
 import {
-  apiDelete,
-  apiGet,
-  apiPatch,
-  apiPost,
-  fetchPage,
+  ApiClientError,
+  CUSTOMERS_DEFAULT_LIMIT,
+  CUSTOMER_HISTORY_DEFAULT_LIMIT,
+  customerFiltersToParams,
+  customersApi,
+  duplicateCustomerId,
   type Paged,
-  type QueryParams,
-} from '@/services/api-client';
-import { ApiClientError } from '@/services/api-client';
-import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
+} from '@xeprime/api-client';
 import { uploadToR2, validateDocumentFile } from '@/services/upload';
-import type {
-  CreateCustomerNoteInput,
-  CreateTenantCustomerInput,
-  CustomerBooking,
-  CustomerDocument,
-  CustomerDocumentDownload,
-  VerifyCustomerDocumentInput,
-  CustomerDocumentPresign,
-  CustomerFilters,
-  CustomerNote,
-  TenantCustomer,
-  TenantCustomerDetail,
-  TenantCustomerSummary,
-  UpdateCustomerRiskInput,
-  UpdateTenantCustomerInput,
-} from './types';
-
-export const CUSTOMERS_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
-/** Lịch sử thuê hiện trong một tab hẹp — trang ngắn hơn danh sách chính. */
-export const CUSTOMER_HISTORY_DEFAULT_LIMIT = 10;
-
-export type { Paged };
-
-export function filtersToParams(filters: CustomerFilters): QueryParams {
-  return {
-    q: filters.q ?? null,
-    relationship: filters.relationship ?? null,
-    sort: filters.sort ?? null,
-    page: filters.page ?? 1,
-    limit: filters.limit ?? CUSTOMERS_DEFAULT_LIMIT,
-  };
-}
-
-export const fetchCustomers = (filters: CustomerFilters): Promise<Paged<TenantCustomer>> =>
-  fetchPage<TenantCustomer>('/customers', filtersToParams(filters), CUSTOMERS_DEFAULT_LIMIT);
-
-export const fetchCustomerSummary = (): Promise<TenantCustomerSummary> =>
-  apiGet<TenantCustomerSummary>('/customers/summary');
-
-export const fetchCustomer = (id: string): Promise<TenantCustomerDetail> =>
-  apiGet<TenantCustomerDetail>(`/customers/${id}`);
-
-export const createCustomer = (body: CreateTenantCustomerInput): Promise<TenantCustomerDetail> =>
-  apiPost<TenantCustomerDetail>('/customers', body);
-
-export const updateCustomer = (
-  id: string,
-  body: UpdateTenantCustomerInput,
-): Promise<TenantCustomerDetail> => apiPatch<TenantCustomerDetail>(`/customers/${id}`, body);
-
-export const archiveCustomer = (id: string): Promise<TenantCustomerDetail> =>
-  apiPost<TenantCustomerDetail>(`/customers/${id}/archive`, {});
-
-export const restoreCustomer = (id: string): Promise<TenantCustomerDetail> =>
-  apiPost<TenantCustomerDetail>(`/customers/${id}/restore`, {});
-
-export const updateCustomerRisk = (
-  id: string,
-  body: UpdateCustomerRiskInput,
-): Promise<TenantCustomerDetail> => apiPost<TenantCustomerDetail>(`/customers/${id}/risk`, body);
-
-export const fetchCustomerBookings = (
-  id: string,
-  page: number,
-  limit = CUSTOMER_HISTORY_DEFAULT_LIMIT,
-): Promise<Paged<CustomerBooking>> =>
-  fetchPage<CustomerBooking>(`/customers/${id}/bookings`, { page, limit }, limit);
-
-export const fetchCustomerNotes = (
-  id: string,
-  page: number,
-  limit = CUSTOMER_HISTORY_DEFAULT_LIMIT,
-): Promise<Paged<CustomerNote>> =>
-  fetchPage<CustomerNote>(`/customers/${id}/notes`, { page, limit }, limit);
-
-export const createCustomerNote = (
-  id: string,
-  body: CreateCustomerNoteInput,
-): Promise<CustomerNote> => apiPost<CustomerNote>(`/customers/${id}/notes`, body);
-
-export const deleteCustomerNote = (id: string, noteId: string): Promise<{ ok: true }> =>
-  apiDelete<{ ok: true }>(`/customers/${id}/notes/${noteId}`);
-
-export const fetchCustomerDocuments = (id: string): Promise<CustomerDocument[]> =>
-  apiGet<CustomerDocument[]>(`/customers/${id}/documents`);
-
-export const deleteCustomerDocument = (id: string, documentId: string): Promise<{ ok: true }> =>
-  apiDelete<{ ok: true }>(`/customers/${id}/documents/${documentId}`);
+import type { CustomerDocument, PresignCustomerDocumentInput } from './types';
 
 /**
- * Ghi nhận ĐỐI CHIẾU giấy tờ — thao tác thủ công của nhân viên, backend ghi ai/lúc nào + audit.
- * Hệ thống KHÔNG gọi API định danh quốc gia; đây là lời khai có truy vết.
+ * Lối vào API của sổ khách trên WEB — lớp vỏ mỏng quanh `@xeprime/api-client`.
+ *
+ * Toàn bộ phần gọi mạng đã ở package dùng chung để app native dùng lại đúng một bộ đường dẫn,
+ * một bộ query params và một cách đọc `details` của lỗi 409. Ở lại đây đúng MỘT thứ: bước tải
+ * tệp, vì nó dùng `File` + `XMLHttpRequest` — hai thứ Metro không đọc được, và cũng là lý do
+ * `packages/*` cấm import chúng.
  */
-export const verifyCustomerDocument = (
-  id: string,
-  documentId: string,
-  input: VerifyCustomerDocumentInput,
-): Promise<CustomerDocument> =>
-  apiPost<CustomerDocument>(`/customers/${id}/documents/${documentId}/verify`, input);
+export {
+  CUSTOMERS_DEFAULT_LIMIT,
+  CUSTOMER_HISTORY_DEFAULT_LIMIT,
+  customerFiltersToParams as filtersToParams,
+  duplicateCustomerId,
+  type Paged,
+};
 
-/**
- * Mở giấy tờ: URL ký NGẮN HẠN xin ngay lúc bấm, không bao giờ lưu vào state hay cache.
- * Backend kiểm quyền `customers.documents.view_files` và ghi một dòng audit cho mỗi lần gọi.
- */
-export const fetchCustomerDocumentDownload = (
-  id: string,
-  documentId: string,
-): Promise<CustomerDocumentDownload> =>
-  apiGet<CustomerDocumentDownload>(`/customers/${id}/documents/${documentId}/download`);
+export const fetchCustomers = customersApi.list;
+export const fetchCustomerSummary = customersApi.summary;
+export const fetchCustomer = customersApi.detail;
+export const createCustomer = customersApi.create;
+export const updateCustomer = customersApi.update;
+export const archiveCustomer = customersApi.archive;
+export const restoreCustomer = customersApi.restore;
+export const updateCustomerRisk = customersApi.updateRisk;
+export const fetchCustomerBookings = customersApi.bookings;
+export const fetchCustomerNotes = customersApi.notes;
+export const createCustomerNote = customersApi.addNote;
+export const deleteCustomerNote = customersApi.deleteNote;
+export const fetchCustomerDocuments = customersApi.documents;
+export const deleteCustomerDocument = customersApi.deleteDocument;
+export const verifyCustomerDocument = customersApi.verifyDocument;
+export const fetchCustomerDocumentDownload = customersApi.documentDownload;
 
 export interface UploadCustomerDocumentInput {
   documentType: string;
@@ -150,14 +76,17 @@ export async function uploadCustomerDocument(
     });
   }
 
-  const ticket = await apiPost<CustomerDocumentPresign>(`/customers/${id}/documents/presign`, {
-    documentType: input.documentType,
+  const ticket = await customersApi.presignDocument(id, {
+    // Loại giấy tờ đến từ ô chọn (state `string`) và MIME đến từ chính tệp người dùng chọn —
+    // cả hai chỉ thu hẹp được ở SERVER (`@IsIn`), nên thu hẹp kiểu ở đây thay vì bịa một lớp
+    // kiểm thứ hai ở client rồi để nó trôi khỏi DTO.
+    documentType: input.documentType as PresignCustomerDocumentInput['documentType'],
     customTypeName: input.customTypeName ?? null,
     expiresAt: input.expiresAt ?? null,
     fileName: input.file.name,
-    contentType: input.file.type,
+    contentType: input.file.type as PresignCustomerDocumentInput['contentType'],
     fileSize: input.file.size,
   });
   await uploadToR2(ticket.uploadUrl, input.file, onProgress);
-  return apiPost<CustomerDocument>(`/customers/${id}/documents/${ticket.documentId}/complete`, {});
+  return customersApi.completeDocument(id, ticket.documentId);
 }

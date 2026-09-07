@@ -23,6 +23,7 @@
       "expo-localization",
       "expo-web-browser",
       "expo-font",
+      "expo-document-picker",
       [
         "expo-image-picker",
         {

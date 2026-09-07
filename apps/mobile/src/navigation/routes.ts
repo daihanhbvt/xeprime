@@ -72,7 +72,23 @@ export const ROUTES = {
       filters?.vehicleId
         ? { pathname: '/manage/bookings', params: { vehicleId: filters.vehicleId } }
         : '/manage/bookings',
-    bookingCreate: (): Href => '/manage/bookings/new',
+    /**
+     * Tạo đơn tại quầy. `prefill` mang tên + SĐT của một khách đã có trong sổ — cùng vai với
+     * `?customerName=&customerPhone=` mà web đặt lên URL khi bấm "Tạo đơn thuê" ở hồ sơ khách.
+     *
+     * Điền sẵn chứ KHÔNG dựng form thứ hai: một form tạo đơn nữa là hai bộ luật giá/lịch sẽ trôi
+     * khỏi nhau.
+     */
+    bookingCreate: (prefill?: { customerName?: string; customerPhone?: string }): Href =>
+      prefill?.customerName || prefill?.customerPhone
+        ? {
+            pathname: '/manage/bookings/new',
+            params: {
+              ...(prefill.customerName ? { customerName: prefill.customerName } : {}),
+              ...(prefill.customerPhone ? { customerPhone: prefill.customerPhone } : {}),
+            },
+          }
+        : '/manage/bookings/new',
     bookingDetail: (bookingId: string): Href => ({
       pathname: '/manage/bookings/[id]',
       params: { id: bookingId },
@@ -138,6 +154,31 @@ export const ROUTES = {
       }
     },
     maintenance: (): Href => '/manage/maintenance',
+
+    /** Sổ khách của gian hàng (CUS-01) — mục `customers` của menu quản lý. */
+    customers: (): Href => '/manage/customers',
+    /**
+     * Hồ sơ một khách (CUS-02) — route THẬT, deep-link được, y như web `/manage/customers/[id]`.
+     *
+     * Không phải một tấm trượt: hồ sơ khách được gửi cho nhau và mở lại nhiều lần trong ngày.
+     */
+    customerDetail: (customerId: string): Href => ({
+      pathname: '/manage/customers/[id]',
+      params: { id: customerId },
+    }),
+
+    /**
+     * Sổ Thu-Chi đã LỌC SẴN — đường đi từ hồ sơ một khách sang đúng tập phiếu sinh ra con số
+     * trên đó. Gương của `receiptsPath.filtered` bên web.
+     */
+    receipts: (filters?: { tenantCustomerId?: string; from?: string; to?: string; status?: string }): Href => {
+      const params = Object.fromEntries(
+        Object.entries(filters ?? {}).filter(([, value]) => Boolean(value)),
+      ) as Record<string, string>;
+      return Object.keys(params).length > 0
+        ? { pathname: '/manage/receipts', params }
+        : '/manage/receipts';
+    },
     vehiclePricing: (vehicleId: string): Href => ({
       pathname: '/manage/vehicles/[id]/pricing',
       params: { id: vehicleId },

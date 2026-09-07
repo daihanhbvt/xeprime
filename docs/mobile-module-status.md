@@ -18,7 +18,7 @@
 | Marketplace | 6 | 5 | 1 | Thiếu **MKT-05** trang gian hàng công khai |
 | Booking / Rental | 16 | **16** | 0 (1 phần) | **BKG-14** xem được, chưa in/xuất PDF |
 | Vehicle | 13 | 11 | 2 | **VEH-08** bỏ · **VEH-13** hoãn |
-| Customer | 4 | 1 | 3 | Chỉ có CUS-04 (hồ sơ tài khoản khách) |
+| Customer | 4 | **4** | 0 | Xong trọn (07/09) — `docs/mobile-customer-module-status.md` |
 | Shop | 9 | 1 | 8 | Chỉ có SHP-07 (tổng quan gian hàng) |
 | Finance | 6 | 2 | 4 | Chỉ có FIN-05/06 (tiền của MỘT đơn) |
 | Calendar | 3 | 0 | 3 | CAL-03 là ràng buộc CSDL, không phải màn |
@@ -67,10 +67,19 @@ Chi tiết ở `docs/mobile-vehicle-module-status.md`. Tóm tắt:
 - **VEH-13 (giá theo ngày) — HOÃN.** Lối vào duy nhất trên web là ô ngày ở `/manage/calendar`,
   mà app chưa có màn lịch. **Chặn bởi CAL-01.**
 
-### 2.5 Customer — 1/4
+### 2.5 Customer — 4/4 ✅
 
-Có CUS-04 (`/(tabs)/account`). Thiếu sổ khách, hồ sơ khách, đánh giá rủi ro — mục `customers`
-trong `manage-nav.ts` vẫn chưa có `href`.
+Đủ CUS-01→04 (07/09/2026). Route: `/manage/customers` · `/manage/customers/[id]` · `/account`.
+Mục `customers` trong `manage-nav.ts` đã có `href`. Chi tiết, ma trận quyền và phần còn nợ:
+`docs/mobile-customer-module-status.md`.
+
+⚠️ **Sửa mô tả cũ về CUS-04.** Bản 03/09 tính CUS-04 là "đã có" vì tab Tài khoản tồn tại; code
+thật lúc đó chỉ hiện avatar + tên từ `/auth/me`, **không** có hồ sơ (`/users/me`), không sửa
+được tên/ảnh, không có trạng thái xác thực SĐT. Đợt này mới thật sự parity với `AccountView`
+bên web.
+
+Đi kèm: dựng `/manage/receipts` ở dạng **sổ Thu-Chi đã lọc sẵn** để hai lối đi từ hồ sơ khách
+không thành nút chết. Đó chưa phải FIN-02 — xem §2.7.
 
 ### 2.6 Shop — 1/9
 
@@ -87,8 +96,18 @@ dựng trong module Booking.
 
 Thiếu bốn màn SỔ SÁCH: tổng quan tài chính, sổ thu-chi, danh mục thu chi, công nợ.
 
+07/09: có thêm `/manage/receipts` nhưng **chỉ là danh sách đã lọc theo một thực thể** (đích của
+"Xem tất cả N phiếu" ở hồ sơ khách). Chưa có thẻ tổng theo bộ lọc, chưa tạo/duyệt/huỷ phiếu, chưa
+có chi tiết phiếu — nên FIN-02 vẫn tính là CHƯA xong, và mục `receipts` trong menu vẫn chưa có
+`href`. Mở FIN-02 thì mở rộng chính màn đó.
+
 ⚠️ Đây là lý do Hồ sơ 360 của xe **không có** khối tiền theo kỳ (`FinanceEntityPanel` bên web) —
 xem `mobile-vehicle-module-status.md` §2.
+
+⚠️ Tab **"Thu chi" của hồ sơ khách thì CÓ** khối tiền theo kỳ và danh sách phiếu gần nhất — nó
+dựng được vì endpoint tổng hợp/chuỗi/phiếu đã có sẵn ở server từ web. Nhưng nó mới chỉ ĐỌC:
+không mở được chi tiết phiếu, không tạo/duyệt/huỷ. Danh sách việc phải quay lại làm khi mở
+FIN-01→04 nằm ở **§3.3**.
 
 ### 2.8 Calendar — 0/3 ⛔ chặn hai thứ khác
 
@@ -140,11 +159,27 @@ Thiếu: SYS-05 trung tâm hỗ trợ · SYS-09 tìm kiếm toàn cục · và b
 | **Chưa có test nào** cho module | Cao | Ba chỗ ưu tiên: `publication.ts`, `sensitive-changes.ts`, nhánh `source` của màn giá |
 | Ba khu web còn chuỗi thô | Thấp | App đã `t()`; chuyển web sau chỉ là thay chuỗi |
 
-### 3.3 Nợ chung của app (không thuộc module nào)
+### 3.3 Customer — chờ Finance để đóng tab "Thu chi"
+
+Module Customer tính là **4/4 xong**, nhưng tab "Thu chi" của hồ sơ khách
+(`CustomerFinancePanel`) mới chỉ ĐỌC được tiền, chưa THAO TÁC được. Không phải nợ của Customer:
+nó chờ đúng bốn màn sổ sách của Finance (FIN-01→04).
+
+**Khi làm Finance, quay lại đúng những chỗ này:**
 
 | Nợ | Mức | Ghi chú |
 | --- | --- | --- |
-| **Lỗi yup là tiếng Việt cứng** | Trung bình | `@xeprime/validators` gắn chết câu lỗi. Người xem tiếng Anh vẫn thấy tiếng Việt ở lỗi form. **Web y hệt** — sửa phải sửa ở package và đổi cả hai client |
+| **Phiếu trong tab chỉ ĐỌC** | Trung bình | `ReceiptCard` không có `onPress` vì chưa có màn chi tiết phiếu để dẫn tới. Có FIN-02 thì gắn `onPress` + `DetailChevron`, đừng dựng màn chi tiết thứ hai |
+| **Không tạo / duyệt / huỷ phiếu từ hồ sơ khách** | Trung bình | Web cũng chưa cho làm từ panel này, nên KHÔNG được đi trước web — mở cùng đợt và theo đúng luồng web |
+| **"Xem tất cả N phiếu" dẫn tới màn còn dở** | Trung bình | `/manage/receipts` hiện chỉ là danh sách đã lọc theo một thực thể: chưa có thẻ tổng theo bộ lọc, chưa có danh mục thu chi. Mở FIN-02 thì **mở rộng chính màn đó** — chi tiết ở `docs/mobile-customer-module-status.md` §5 |
+| Mục `receipts` trong menu vẫn chưa có `href` | Cố ý | Gắn `href` là tuyên bố FIN-02 xong. Chạm vào đang báo "Chức năng đang được phát triển" — đúng quy ước `comingSoon` ở `manage-nav.ts` |
+| Biểu đồ xu hướng dựng bằng `View` | Thấp | Đủ cho hai series cùng thang. Thêm đường lợi nhuận thì lúc đó mới cân nhắc `react-native-svg` |
+
+### 3.4 Nợ chung của app (không thuộc module nào)
+
+| Nợ | Mức | Ghi chú |
+| --- | --- | --- |
+| **Lỗi yup là tiếng Việt cứng** | Trung bình (đang giảm dần) | `@xeprime/validators` gắn chết câu lỗi ở phần lớn schema. Schema nào đã đổi message thành MÃ (`vehicleSourceFormSchema`, `accountProfileSchema`, ba schema Customer từ 07/09) thì đi qua `useValidationResolver` và dịch được ở CẢ HAI client. Phần còn lại vẫn tiếng Việt cứng |
 | **Message rich (`<b>`, `<n>`) gọi bằng `t()` trần → in ra NGUYÊN KHOÁ** | Cao | Đã dính hai lần (`overview.odometer`, `source.confirmType.body`). Còn 6 khoá cần soi: `list.row.{bookings,income,profit,loss}`, `overview.plate`, `source.partnership.shopShare` |
 | `.expo/types/router.d.ts` sinh SAI khi có Metro khác chạy | Trung bình | `rm -rf .expo/types` → khởi động lại Expo → **rồi mới** typecheck. Đã ghi ở `apps/mobile/README.md` §10 |
 | iOS chưa build lần nào | Cao (trước phát hành) | `apps/mobile/README.md` §10 |
@@ -166,9 +201,10 @@ Xếp theo **cái gì đang chặn cái gì**, không theo độ khó.
 3. **Làm mịn UI/UX màn danh sách xe + Hồ sơ 360** — đã có phản hồi thực tế (03/09): thẻ xe quá
    cao do chip trạng thái xuống dòng, bảng thông số 17 dòng phần lớn rỗng và nhãn wrap, tiêu đề
    thẻ không nhất quán.
-4. **Finance FIN-01→04** — mở khoá khối tiền theo kỳ ở Hồ sơ 360.
+4. **Finance FIN-01→04** — mở khoá khối tiền theo kỳ ở Hồ sơ 360, **và đóng nốt tab "Thu chi"
+   của hồ sơ khách** (§3.3): chi tiết phiếu, tạo/duyệt/huỷ, thẻ tổng theo bộ lọc, danh mục.
 5. **Communication COM-01/04/07** — chat thật + thông báo + push.
-6. MKT-05, Customer, Admin.
+6. MKT-05 và Admin. *(Customer đã xong 07/09.)*
 
 ---
 

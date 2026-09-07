@@ -1,6 +1,8 @@
 'use client';
 
 import { AlertOutlined, StopOutlined, TeamOutlined, WalletOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
+import { TENANT_CUSTOMER_RETURNING_MIN_RENTALS } from '@xeprime/types';
 import { StatCard } from '@/features/dashboard/components/StatCard';
 import type { TenantCustomerSummary } from '../types';
 import styles from './CustomerSummaryCards.module.css';
@@ -22,6 +24,7 @@ export function CustomerSummaryCards({
   loading: boolean;
   canViewFinance: boolean;
 }) {
+  const t = useTranslations('Customers.summary');
   const fmt = useAppFormat();
 
   const riskCount = (summary?.watchlistCustomers ?? 0) + (summary?.blockedCustomers ?? 0);
@@ -29,14 +32,14 @@ export function CustomerSummaryCards({
   return (
     <div className={styles.grid}>
       <StatCard
-        label="Khách đang hoạt động"
+        label={t('active')}
         value={summary?.activeCustomers ?? 0}
         icon={TeamOutlined}
         tone="blue"
         loading={loading}
       />
       <StatCard
-        label="Khách quen (≥ 2 chuyến)"
+        label={t('returning', { count: TENANT_CUSTOMER_RETURNING_MIN_RENTALS })}
         value={summary?.returningCustomers ?? 0}
         icon={TeamOutlined}
         tone="green"
@@ -44,7 +47,7 @@ export function CustomerSummaryCards({
       />
       {canViewFinance ? (
         <StatCard
-          label={`Còn nợ · ${summary?.debtCustomers ?? 0} khách`}
+          label={t('debt', { count: summary?.debtCustomers ?? 0 })}
           value={fmt.money(summary?.totalDebt)}
           icon={WalletOutlined}
           tone="gold"
@@ -53,7 +56,7 @@ export function CustomerSummaryCards({
         />
       ) : null}
       <StatCard
-        label="Cần lưu ý / từ chối phục vụ"
+        label={t('risk')}
         value={riskCount}
         icon={riskCount > 0 ? AlertOutlined : StopOutlined}
         tone="red"

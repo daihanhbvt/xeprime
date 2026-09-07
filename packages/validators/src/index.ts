@@ -16,7 +16,14 @@ import {
   SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
   SOURCE_CONTRACT_MAX_FILES,
+  TENANT_CUSTOMER_FIELD_MAX,
+  TENANT_CUSTOMER_NOTE_TYPE,
+  TENANT_CUSTOMER_NOTE_TYPE_VALUES,
+  TENANT_CUSTOMER_RISK_LEVEL,
+  TENANT_CUSTOMER_RISK_LEVEL_VALUES,
   TENANT_TYPE_VALUES,
+  type TenantCustomerNoteType,
+  type TenantCustomerRiskLevel,
   TRANSMISSION_TYPE_VALUES,
   VEHICLE_DOCUMENT_PRESET_VALUES,
   VEHICLE_DOCUMENT_TYPE,
@@ -473,8 +480,7 @@ export const vehicleDocumentCreateSchema = yup.object({
     .max(160, 'customTypeNameMax')
     .when('preset', {
       is: VEHICLE_DOCUMENT_TYPE.OTHER,
-      then: (s) =>
-        s.test('required', 'customTypeNameRequired', (value) => Boolean(value?.trim())),
+      then: (s) => s.test('required', 'customTypeNameRequired', (value) => Boolean(value?.trim())),
     }),
 });
 
@@ -525,12 +531,7 @@ export type MaintenanceProfileFormValues = yup.InferType<typeof maintenanceProfi
 export const odometerCorrectionFormSchema = yup.object({
   odometerKm: odometerKmSchema.required('odometerRequired'),
   reasonCode: yup.string().oneOf(ODOMETER_CORRECTION_REASON_VALUES).required('reasonCodeRequired'),
-  reason: yup
-    .string()
-    .trim()
-    .required('reasonRequired')
-    .min(3, 'reasonMin')
-    .max(1000, 'reasonMax'),
+  reason: yup.string().trim().required('reasonRequired').min(3, 'reasonMin').max(1000, 'reasonMax'),
 });
 
 export type OdometerCorrectionFormValues = yup.InferType<typeof odometerCorrectionFormSchema>;
@@ -541,7 +542,11 @@ export type OdometerCorrectionFormValues = yup.InferType<typeof odometerCorrecti
  * KHÔNG đổi `moneySchema` (export ở trên): nó còn được `apps/web/src/features/bookings/schema.ts`
  * dùng, màn đó chưa có `useValidationResolver`.
  */
-const maintenanceCostSchema = yup.number().typeError('costTypeError').integer('costInteger').min(0, 'costMin');
+const maintenanceCostSchema = yup
+  .number()
+  .typeError('costTypeError')
+  .integer('costInteger')
+  .min(0, 'costMin');
 
 /**
  * Các mảnh dùng chung của form phiếu bảo dưỡng.
@@ -741,3 +746,70 @@ export const accountProfileSchema = yup.object({
 export type AccountProfileValues = yup.InferType<typeof accountProfileSchema>;
 
 export * from './auth';
+
+/**
+ * SỔ KHÁCH của gian hàng (S-01) — ba form dùng ở CẢ web và app native.
+ *
+ * Message là MÃ, `useValidationResolver` tra `Customers.validation.*` (cùng quy ước với
+ * `vehicleSourceFormSchema`). Chép schema sang app native là dựng bản thứ hai của cùng một luật,
+ * và bản thứ hai luôn trôi khỏi bản đầu — mà luật ở đây trùng với `class-validator` của DTO
+ * backend và với CHECK ở DB, nên lệch một chỗ là lệch ba lớp.
+ *
+ * Yup báo lỗi SỚM cho người dùng; lớp chặn thật vẫn là backend (CLAUDE.md mục 4).
+ */
+export const customerFormSchema = yup.object({
+  fullName: yup
+    .string()
+    .trim()
+    .required('fullNameRequired')
+    .max(TENANT_CUSTOMER_FIELD_MAX.FULL_NAME, 'fullNameMax'),
+  phone: yup.string().trim().required('phoneRequired').matches(VN_PHONE_PATTERN, 'phoneInvalid'),
+  email: yup
+    .string()
+    .trim()
+    .max(TENANT_CUSTOMER_FIELD_MAX.EMAIL, 'emailMax')
+    .default('')
+    // `yup.email()` từ chối chuỗi rỗng, mà email là KHÔNG BẮT BUỘC — nên tự kiểm, bỏ qua rỗng.
+    .test('email', 'emailInvalid', (value) => !value || yup.string().email().isValidSync(value)),
+  address: yup.string().trim().max(TENANT_CUSTOMER_FIELD_MAX.ADDRESS, 'addressMax').default(''),
+});
+
+export type CustomerFormValues = yup.InferType<typeof customerFormSchema>;
+
+/**
+ * Đổi mức rủi ro. Lý do BẮT BUỘC khi khác `normal` — cùng luật với DTO backend và với CHECK
+ * `tenant_customers_risk_reason_required_check` ở DB, nên ba lớp không thể lệch nhau.
+ */
+export const customerRiskSchema = yup.object({
+  riskLevel: yup
+    .mixed<TenantCustomerRiskLevel>()
+    .oneOf(TENANT_CUSTOMER_RISK_LEVEL_VALUES)
+    .required()
+    .default(TENANT_CUSTOMER_RISK_LEVEL.NORMAL),
+  reason: yup
+    .string()
+    .trim()
+    .max(TENANT_CUSTOMER_FIELD_MAX.RISK_REASON, 'reasonMax')
+    .default('')
+    .when('riskLevel', {
+      is: (value: TenantCustomerRiskLevel) => value !== TENANT_CUSTOMER_RISK_LEVEL.NORMAL,
+      then: (schema) => schema.required('reasonRequired'),
+    }),
+});
+
+export type CustomerRiskFormValues = yup.InferType<typeof customerRiskSchema>;
+
+export const customerNoteSchema = yup.object({
+  noteType: yup
+    .mixed<TenantCustomerNoteType>()
+    .oneOf(TENANT_CUSTOMER_NOTE_TYPE_VALUES)
+    .required()
+    .default(TENANT_CUSTOMER_NOTE_TYPE.GENERAL),
+  body: yup
+    .string()
+    .trim()
+    .required('noteBodyRequired')
+    .max(TENANT_CUSTOMER_FIELD_MAX.NOTE_BODY, 'noteBodyMax'),
+});
+
+export type CustomerNoteFormValues = yup.InferType<typeof customerNoteSchema>;
