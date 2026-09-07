@@ -38,7 +38,7 @@ import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { VehicleEditTabs } from '@/features/vehicles/components/VehicleEditTabs';
-import { DateField } from '@/features/vehicles/components/DateField';
+import { DateField } from '@/components/ui/DateField';
 import { useVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';

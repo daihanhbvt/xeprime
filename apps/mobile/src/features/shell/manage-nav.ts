@@ -164,6 +164,7 @@ const SHOP_NAV: readonly ManageNavSection[] = [
         labelKey: 'manage.customers',
         icon: 'people-outline',
         permission: PERMISSION.CUSTOMER_VIEW,
+        href: ROUTES.manage.customers(),
       },
     ],
   },

@@ -184,7 +184,8 @@
       "added": "Category added",
       "system": "System",
       "delete": "Delete category"
-    }
+    },
+    "uncategorized": "Uncategorised"
   },
   "debts": {
     "page": {

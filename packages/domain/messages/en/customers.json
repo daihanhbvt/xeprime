@@ -1,7 +1,203 @@
 {
+  "page": {
+    "title": "Customers",
+    "subtitle": "Your shop's customer book: rental history, debt, notes and documents — visible only to your shop.",
+    "add": "Add customer",
+    "totalLabel": "{count, plural, one {# customer} other {# customers}}"
+  },
+  "permission": {
+    "title": "You don't have permission to view the customer book",
+    "description": "Ask the shop owner to grant you the \"Customers\" permission."
+  },
+  "summary": {
+    "ariaLabel": "Customer book metrics",
+    "active": "Active customers",
+    "activeShort": "Active",
+    "returning": "Returning (≥ {count} trips)",
+    "returningShort": "Returning ≥{count}",
+    "debt": "Outstanding · {count, plural, one {# customer} other {# customers}}",
+    "debtShort": "Owing · {count, plural, one {# customer} other {# customers}}",
+    "risk": "Watchlist / refused service",
+    "riskShort": "Watchlist / refused"
+  },
+  "filters": {
+    "search": "Find a customer",
+    "searchPlaceholder": "Search by name, phone number or email",
+    "relationship": "Customer group",
+    "sort": "Sort by"
+  },
+  "hints": {
+    "relationship": "\"Returning\" means a customer who has completed 2 or more trips. \"Archived\" sits outside every other group.",
+    "riskLevel": "\"Watchlist\" only warns whoever is on duty, it blocks nothing. \"Refused service\" blocks NEW requests and bookings at this shop; existing bookings are untouched.",
+    "notes": "Notes are visible only inside your shop — the customer never sees them.",
+    "documents": "Files live in private storage. Every time one is opened it is written to the audit log, and it needs the file-view permission.",
+    "debt": "Outstanding = booking total − amount collected, ignoring cancelled bookings."
+  },
+  "list": {
+    "label": "Shop customer book",
+    "errorTitle": "Could not load the customer list",
+    "emptyTitle": "The customer book is empty",
+    "emptyBody": "Customers are added automatically when you create a booking or accept a Marketplace request. You can also add one by hand right now.",
+    "noResultsTitle": "No customer matches these filters",
+    "noResultsBody": "Try removing a filter, or search by phone number.",
+    "clearFilters": "Clear filters"
+  },
+  "card": {
+    "identity": "Customer",
+    "returning": "Returning",
+    "archived": "Archived",
+    "rentals": "Rentals",
+    "activeBookings": "{count, plural, one {# booking in progress} other {# bookings in progress}}",
+    "lastRental": "Last rental",
+    "lastRentalShort": "Last",
+    "neverRented": "Never rented",
+    "totalValue": "Total value",
+    "debt": "Outstanding",
+    "status": "Status",
+    "actions": "Actions",
+    "open": "Open profile"
+  },
   "detail": {
     "title": "Customer profile",
-    "openPage": "Open full page"
+    "openPage": "Open full page",
+    "errorTitle": "Could not open the customer profile",
+    "backToList": "Back to customer book",
+    "phone": "Phone number",
+    "copyPhone": "Copy phone number",
+    "email": "Email",
+    "copyEmail": "Copy email",
+    "address": "Address",
+    "source": "Profile source",
+    "account": "XePrime account",
+    "accountLinked": "Linked",
+    "accountNotLinked": "Not linked",
+    "createdAt": "In the book since",
+    "copied": "Copied",
+    "archivedBannerTitle": "This profile is archived",
+    "archivedBannerBody": "Rental history is kept intact and still opens from old bookings. Restore the profile to edit it or add notes.",
+    "blockedBannerTitle": "This shop is refusing service to this customer",
+    "blockedBannerBody": "NEW requests and bookings are blocked at this shop. The customer only receives a neutral message and never learns the internal reason.",
+    "watchlistBannerTitle": "This customer is flagged for attention",
+    "watchlistBannerBody": "This is only a reminder for whoever is on duty — nothing is blocked."
+  },
+  "actions": {
+    "edit": "Edit profile",
+    "createBooking": "Create booking",
+    "createBookingBlocked": "This customer is refused service — change the risk level before creating a new booking",
+    "addNote": "Add note",
+    "risk": "Risk level",
+    "archive": "Archive",
+    "restore": "Restore",
+    "more": "More actions",
+    "archived": "Customer profile archived",
+    "restored": "Customer profile restored"
+  },
+  "stats": {
+    "completed": "Completed trips",
+    "completedShort": "Completed",
+    "active": "Bookings in progress / upcoming",
+    "activeShort": "In progress / upcoming",
+    "totalValue": "Total rental value",
+    "totalValueShort": "Total value",
+    "paid": "Collected",
+    "debt": "Outstanding",
+    "noShowLate": "No-shows / late returns",
+    "noShowLateShort": "No-show / late",
+    "lastRental": "Most recent rental",
+    "lastRentalShort": "Last rental"
+  },
+  "tabs": {
+    "overview": "Overview",
+    "history": "Rental history",
+    "finance": "Money",
+    "notes": "Internal notes",
+    "documents": "Documents"
+  },
+  "overview": {
+    "recentTitle": "Recent activity",
+    "recentEmpty": "This customer has no trips yet.",
+    "recentHidden": "You don't have permission to view bookings, so this section is hidden."
+  },
+  "history": {
+    "label": "Customer rental history",
+    "booking": "Booking",
+    "vehicle": "Vehicle",
+    "range": "Period",
+    "service": "Service",
+    "status": "Status",
+    "total": "Total",
+    "debt": "Outstanding",
+    "errorTitle": "Could not load the rental history",
+    "emptyTitle": "This customer has no trips yet",
+    "emptyBody": "History appears as soon as you create the first booking for this customer.",
+    "totalLabel": "{count, plural, one {# trip} other {# trips}}"
+  },
+  "form": {
+    "addTitle": "Add customer",
+    "editTitle": "Edit customer profile",
+    "fullName": "Full name",
+    "fullNamePlaceholder": "Jane Doe",
+    "phone": "Phone number",
+    "phonePlaceholder": "0901234567",
+    "phoneHelp": "This is how the system recognises a returning customer — one number means one profile within the shop.",
+    "email": "Email (optional)",
+    "address": "Address (optional)",
+    "submitAdd": "Add customer",
+    "submitEdit": "Save",
+    "created": "Customer added to the book",
+    "updated": "Customer profile updated",
+    "duplicateHint": "Two profiles are never merged automatically. Open the existing profile to update it, or check the phone number you just entered.",
+    "duplicateOpen": "Open the existing profile"
+  },
+  "risk": {
+    "title": "Set risk level",
+    "level": "Risk level",
+    "reason": "Reason",
+    "reasonOptional": "Note (optional)",
+    "reasonPlaceholder": "For example: returned the vehicle late twice, unreachable on 12/08",
+    "privacy": "The reason is visible only inside your shop. The customer never sees it, and a refused request only receives a neutral message.",
+    "saved": "Customer risk level updated"
+  },
+  "notes": {
+    "type": "Note type",
+    "body": "Content",
+    "bodyPlaceholder": "For example: regular customer, always returns on time; prefers manual transmission.",
+    "add": "Add note",
+    "added": "Note added",
+    "errorTitle": "Could not load the notes",
+    "emptyTitle": "No notes about this customer yet",
+    "deletedAuthor": "Deleted user",
+    "removeTitle": "Remove this note?",
+    "removeOk": "Remove",
+    "removed": "Note removed",
+    "removeLabel": "Remove note from {date}"
+  },
+  "documents": {
+    "type": "Document type",
+    "customName": "Other document name",
+    "customNamePlaceholder": "Document name (for example: Passport)",
+    "expiresAt": "Expiry date (optional)",
+    "expiresTag": "Expires {date}",
+    "upload": "Upload document",
+    "uploaded": "Document uploaded to private storage",
+    "uploadsNotConfigured": "Private document storage is not configured — contact the system administrator",
+    "errorTitle": "Could not load the document list",
+    "emptyTitle": "No documents for this customer yet",
+    "unknownUploader": "Uploader unknown",
+    "verified": "Checked · {date}",
+    "notVerified": "Not checked",
+    "openFile": "Open file",
+    "verify": "Mark as checked",
+    "verifyAgain": "Check again",
+    "verifyRecorded": "Check recorded",
+    "removeTitle": "Remove this document from the customer profile?",
+    "removeOk": "Remove",
+    "removed": "Document removed",
+    "removeLabel": "Remove {name}",
+    "pickSourceTitle": "Upload document",
+    "pickCamera": "Take a photo",
+    "pickLibrary": "Choose from library",
+    "pickDocument": "Choose a PDF file"
   },
   "finance": {
     "list": {
@@ -13,5 +209,18 @@
       "uncategorized": "Uncategorised",
       "viewAll": "View all {count, plural, one {# voucher} other {# vouchers}}"
     }
+  },
+  "validation": {
+    "fullNameRequired": "Enter the customer's full name",
+    "fullNameMax": "Full name is limited to 255 characters",
+    "phoneRequired": "Enter a phone number",
+    "phoneInvalid": "Invalid phone number (for example 0901234567)",
+    "emailInvalid": "Invalid email",
+    "emailMax": "Email is limited to 255 characters",
+    "addressMax": "Address is limited to 500 characters",
+    "reasonRequired": "Give a reason so whoever reads this later understands the flag",
+    "reasonMax": "Reason is limited to 1000 characters",
+    "noteBodyRequired": "Enter the note content",
+    "noteBodyMax": "Note is limited to 2000 characters"
   }
 }

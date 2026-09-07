@@ -43,7 +43,7 @@ import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
-import { DateField } from './components/DateField';
+import { DateField } from '@/components/ui/DateField';
 import { SourceContractFiles } from './components/SourceContractFiles';
 import { emptySourceFormValues, sourceDetailToFormValues, sourceFormValuesToInput } from './source-mappers';
 import { useSaveVehicleSource, useVehicle, useVehicleSource } from './hooks/use-vehicle';

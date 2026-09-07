@@ -1,22 +1,22 @@
 'use client';
 
-import { yupResolver } from '@hookform/resolvers/yup';
 import { App, Button, Space, Typography } from 'antd';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import {
-  API_ERROR_CODE,
-  TENANT_CUSTOMER_SOURCE_LABEL,
-  type TenantCustomerSource,
-} from '@xeprime/types';
+import { API_ERROR_CODE } from '@xeprime/types';
 import { DialogForm } from '@/components/form/DialogForm';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { ApiClientError, getErrorCode, getErrorMessage } from '@/services/api-client';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useErrorMessage } from '@/i18n/use-error-message';
+import { useValidationResolver } from '@/i18n/use-validation-resolver';
+import { getErrorCode, getErrorMessage } from '@/services/api-client';
+import { duplicateCustomerId } from '../api';
 import { useCreateCustomer, useUpdateCustomer } from '../hooks/use-customers';
 import { customerFormSchema, type CustomerFormValues } from '../schema';
-import type { DuplicatePhoneDetails, TenantCustomerDetail } from '../types';
+import type { TenantCustomerDetail } from '../types';
 import styles from './CustomerFormModal.module.css';
 
 const EMPTY: CustomerFormValues = { fullName: '', phone: '', email: '', address: '' };
@@ -29,13 +29,6 @@ function toValues(customer: TenantCustomerDetail | null): CustomerFormValues {
     email: customer.email ?? '',
     address: customer.address ?? '',
   };
-}
-
-/** Id hồ sơ đang giữ SĐT trùng, nếu backend gửi kèm — để mở thẳng hồ sơ đó. */
-function duplicateCustomerId(error: unknown): string | null {
-  if (!(error instanceof ApiClientError)) return null;
-  const details = error.details as DuplicatePhoneDetails | undefined;
-  return details?.customerId ?? null;
 }
 
 /**
@@ -57,9 +50,11 @@ export function CustomerFormModal({
   onClose: () => void;
   onOpenExisting?: (customerId: string) => void;
 }) {
+  const t = useTranslations('Customers.form');
+
   return (
     <ResponsiveDialog
-      title={customer ? 'Sửa hồ sơ khách' : 'Thêm khách hàng'}
+      title={customer ? t('editTitle') : t('addTitle')}
       open={open}
       size="md"
       onClose={onClose}
@@ -92,6 +87,11 @@ function CustomerForm({
   onDone: () => void;
   onOpenExisting?: (customerId: string) => void;
 }) {
+  const t = useTranslations('Customers.form');
+  const tCustomers = useTranslations('Customers');
+  const tCommon = useTranslations('Common');
+  const domainLabel = useDomainLabel();
+  const errorMessage = useErrorMessage();
   const { message } = App.useApp();
   const create = useCreateCustomer();
   const update = useUpdateCustomer();
@@ -101,8 +101,12 @@ function CustomerForm({
     null,
   );
 
+  const resolver = useValidationResolver<CustomerFormValues>(
+    customerFormSchema,
+    'Customers.validation',
+  );
   const { control, handleSubmit } = useForm<CustomerFormValues>({
-    resolver: yupResolver(customerFormSchema),
+    resolver,
     defaultValues: toValues(customer),
   });
 
@@ -116,15 +120,21 @@ function CustomerForm({
     };
     const done = {
       onSuccess: () => {
-        message.success(customer ? 'Đã cập nhật hồ sơ khách' : 'Đã thêm khách vào sổ');
+        message.success(customer ? t('updated') : t('created'));
         onDone();
       },
       onError: (err: unknown) => {
         if (getErrorCode(err) === API_ERROR_CODE.CUSTOMER_PHONE_DUPLICATE) {
+          /*
+           * NGOẠI LỆ có chủ đích với luật "dịch lỗi từ MÃ": câu của backend mang TÊN hồ sơ đang
+           * giữ số đó ("…đã thuộc hồ sơ \"Nguyễn Văn An\"…"), và bảng dịch không thể có dữ liệu
+           * đó. Dịch theo mã ở đây biến một câu chỉ đúng chỗ cần sửa thành một câu chung chung.
+           * Cùng lập luận với `useErrorMessage` của app native. Phần giải thích quanh nó vẫn dịch.
+           */
           setDuplicate({ message: getErrorMessage(err), customerId: duplicateCustomerId(err) });
           return;
         }
-        message.error(getErrorMessage(err));
+        message.error(errorMessage(err));
       },
     };
     if (customer) update.mutate({ id: customer.id, body }, done);
@@ -136,29 +146,28 @@ function CustomerForm({
       <TextField
         control={control}
         name="fullName"
-        label="Họ và tên"
-        placeholder="Nguyễn Văn An"
+        label={t('fullName')}
+        placeholder={t('fullNamePlaceholder')}
         required
       />
       <TextField
         control={control}
         name="phone"
-        label="Số điện thoại"
+        label={t('phone')}
         type="tel"
-        placeholder="0901234567"
+        placeholder={t('phonePlaceholder')}
         autoComplete="tel"
         required
-        help="Đây là cách hệ thống nhận ra khách quen — cùng một số chỉ có một hồ sơ trong gian hàng."
+        help={t('phoneHelp')}
       />
-      <TextField control={control} name="email" label="Email (không bắt buộc)" type="email" />
-      <TextAreaField control={control} name="address" label="Địa chỉ (không bắt buộc)" rows={2} />
+      <TextField control={control} name="email" label={t('email')} type="email" />
+      <TextAreaField control={control} name="address" label={t('address')} rows={2} />
 
       {customer ? (
         <div className={styles.readonlyRow}>
-          <span className={styles.readonlyLabel}>Nguồn hồ sơ</span>
+          <span className={styles.readonlyLabel}>{tCustomers('detail.source')}</span>
           <span className={styles.readonlyValue}>
-            {TENANT_CUSTOMER_SOURCE_LABEL[customer.source as TenantCustomerSource] ??
-              customer.source}
+            {domainLabel('tenantCustomerSource', customer.source)}
           </span>
         </div>
       ) : null}
@@ -166,10 +175,7 @@ function CustomerForm({
       {duplicate ? (
         <div className={styles.duplicate} role="alert">
           <Typography.Text strong>{duplicate.message}</Typography.Text>
-          <p className={styles.duplicateHint}>
-            Hai hồ sơ không được tự gộp lại. Hãy mở hồ sơ đang có để cập nhật, hoặc kiểm tra lại số
-            điện thoại vừa nhập.
-          </p>
+          <p className={styles.duplicateHint}>{t('duplicateHint')}</p>
           {duplicate.customerId && onOpenExisting ? (
             <Button
               type="primary"
@@ -178,7 +184,7 @@ function CustomerForm({
                 onDone();
               }}
             >
-              Mở hồ sơ đang có
+              {t('duplicateOpen')}
             </Button>
           ) : null}
         </div>
@@ -187,10 +193,10 @@ function CustomerForm({
       <div className={styles.actions}>
         <Space>
           <Button onClick={onDone} disabled={saving}>
-            Đóng
+            {tCommon('actions.close')}
           </Button>
           <Button type="primary" htmlType="submit" loading={saving}>
-            {customer ? 'Lưu' : 'Thêm khách'}
+            {customer ? t('submitEdit') : t('submitAdd')}
           </Button>
         </Space>
       </div>

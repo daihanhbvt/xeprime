@@ -19,6 +19,17 @@ interface AppHeaderProps {
   onBack?: () => void;
   title?: string;
   subtitle?: string;
+  /**
+   * Nhãn nhỏ đứng NGAY CẠNH tiêu đề — mức rủi ro của khách, trạng thái lưu trữ của một hồ sơ.
+   *
+   * Ở cạnh cái tên chứ không phải một hàng riêng dưới thân trang: đây là thứ định tính chính
+   * đối tượng đang mở, nên nó phải đọc được cùng lúc với tên, và nó phải còn nhìn thấy khi
+   * người dùng đã cuộn qua vài khối. Một hàng nhãn nằm trong thân trang thì cuộn là mất.
+   *
+   * Tiêu đề co lại nhường chỗ cho nhãn (nhãn không co) — một cái tên bị cắt bằng "…" vẫn nhận
+   * ra được, còn "Từ chối phục…" thì mất đúng phần nói ra hệ quả.
+   */
+  badge?: ReactNode;
   /** Khu bên phải — nên là `IconButton` để giữ đúng vùng chạm. */
   right?: ReactNode;
   /**
@@ -55,6 +66,7 @@ export function AppHeader({
   left,
   title,
   subtitle,
+  badge,
   right,
   variant = 'solid',
   tone = 'surface',
@@ -109,9 +121,23 @@ export function AppHeader({
           <BrandMark tone={tone} />
         ) : showTitle && title ? (
           <>
-            <Text col={fg} fos={fontSize.body} fow={fontWeight.semibold} numberOfLines={1}>
-              {title}
-            </Text>
+            <XStack ai="center" gap={space.xs}>
+              {/*
+                `flexShrink` phải khai TƯỜNG MINH: trong React Native nó mặc định là 0, không
+                phải 1 như CSS. Thiếu nó thì một tên dài giữ nguyên bề rộng tự nhiên và đẩy nhãn
+                tràn khỏi thanh thay vì tự cắt.
+              */}
+              <Text
+                flexShrink={1}
+                col={fg}
+                fos={fontSize.body}
+                fow={fontWeight.semibold}
+                numberOfLines={1}
+              >
+                {title}
+              </Text>
+              {badge}
+            </XStack>
             {subtitle ? (
               <Text col={fgMuted} fos={fontSize.label} numberOfLines={1}>
                 {subtitle}

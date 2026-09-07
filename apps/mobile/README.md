@@ -670,7 +670,7 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
 - Hạ tầng: timeout + retry policy, SecureStore, logger, đa ngữ vi/en type-safe trên **gốc
   message dùng chung với web**, bộ component trạng thái/UI + skeleton, hệ toast một mối.
 
-22 test suite / 162 case (+ suite live-bearer chỉ chạy khi có `XP_LIVE_API=1`).
+38 test suite (+ suite live-bearer chỉ chạy khi có `XP_LIVE_API=1`).
 
 **Chưa có:** iOS chưa build lần nào, `app.config.ts` tách dev/staging/prod, App Links /
 Universal Links (liên kết đặt lại mật khẩu trong email vì thế mở ở trình duyệt), refetch theo
@@ -733,6 +733,37 @@ file rồi typecheck sẽ báo `Type '"/manage/vehicles/[id]/edit"' is not assig
 `.../edit/index` như một đoạn tĩnh. Nguyên nhân là dev server đang chạy tự cập nhật file đó theo
 kiểu tăng dần và ra danh sách thiếu. Cách chữa: `rm -rf .expo/types` rồi khởi động lại Expo (một
 cổng còn trống) để nó sinh lại từ đầu, **rồi mới** chạy typecheck.
+
+### Module Customer (07/09/2026)
+
+Sổ khách của gian hàng đã chạy trọn: xem sổ → mở hồ sơ → lịch sử thuê · tiền · ghi chú · giấy tờ
+→ đánh dấu rủi ro → lập đơn cho khách. Kèm màn Tài khoản của khách được đưa về đúng parity web.
+
+| Chặng | Dòng tracking | Ở đâu |
+| --- | --- | --- |
+| Sổ khách + thêm khách | CUS-01 | `src/features/customers/CustomerListScreen.tsx` · `components/CustomerCard` · `CustomerSummaryBar` · `CustomerFormSheet` |
+| Hồ sơ khách (5 khu) | CUS-02 | `CustomerDetailScreen.tsx` · `components/CustomerBookingHistory` · `CustomerFinancePanel` · `CustomerNotesPanel` · `CustomerDocumentsPanel` |
+| Mức rủi ro / từ chối phục vụ | CUS-03 | `components/CustomerRiskSheet.tsx` |
+| Hồ sơ tài khoản của khách | CUS-04 | `src/features/account/AccountScreen.tsx` · `hooks/use-account.ts` |
+| Sổ Thu-Chi đã lọc sẵn (phụ thuộc) | — | `src/features/finance/ReceiptListScreen.tsx` — **chưa phải FIN-02**, chỉ để "Xem tất cả N phiếu" có đích thật |
+
+**Cần dựng lại dev client**: đợt này thêm hai native module — `expo-document-picker` (chọn tệp
+PDF cho giấy tờ khách) và `expo-clipboard` (chép SĐT/email ở hồ sơ khách). Đã khai plugin
+`expo-document-picker` trong `app.json`. Bản dev client cũ sẽ nổ ở tab Giấy tờ và ở nút chép —
+`pnpm --filter @xeprime/mobile android` (hoặc `ios`) để dựng lại.
+
+**Năm tab của web thành một dải tab CUỘN NGANG.** Năm nhãn tiếng Việt không vừa 390dp; bóp lại
+thì "Ghi chú nội bộ" bị cắt. Nội dung, quyền và thứ tự các khu giữ nguyên. Cùng lý do, năm hành
+động của header web đi vào một tấm trượt "Thao tác khác".
+
+**Biểu đồ doanh thu dựng bằng `View`, KHÔNG kéo `react-native-svg` vào.** Một biểu đồ cột đơn
+thang chỉ cần hình chữ nhật; thêm một native module nữa để vẽ chúng là cái giá không đổi lấy gì.
+Native không có hover nên tooltip của web thành một dòng chi tiết hiện khi chạm vào cột.
+
+**Ba luật CUS-03 phải giữ**: `watchlist` chỉ CẢNH BÁO (không chặn gì), `blocked` chặn đơn và yêu
+cầu MỚI ở đúng gian hàng đó (`CustomersService.resolveWithinTx` cũng ném 409 — ẩn nút không phải
+lớp bảo vệ), và lý do BẮT BUỘC khi khác `normal`. Chi tiết + ma trận quyền:
+`docs/mobile-customer-module-status.md`.
 
 ## 11. Đánh giá kiến trúc — **8.5 / 10**
 

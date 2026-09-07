@@ -267,3 +267,51 @@ export {
   type SaveMaintenanceProfileInput,
   type SaveMaintenanceRecordInput,
 } from './features/vehicle-maintenance/api';
+
+// Customer (CUS-01 → 03) — sổ khách của GIAN HÀNG, khác hẳn giám sát khách toàn nền tảng.
+export {
+  customersApi,
+  customerFiltersToParams,
+  duplicateCustomerId,
+  CUSTOMERS_DEFAULT_LIMIT,
+  CUSTOMER_HISTORY_DEFAULT_LIMIT,
+  type CreateCustomerNoteInput,
+  type CreateTenantCustomerInput,
+  type CustomerBooking,
+  type CustomerDocument,
+  type CustomerDocumentDownload,
+  type CustomerDocumentPresign,
+  type CustomerFilters,
+  type CustomerNote,
+  type DuplicatePhoneDetails,
+  type PresignCustomerDocumentInput,
+  type TenantCustomer,
+  type TenantCustomerDetail,
+  type TenantCustomerSummary,
+  type UpdateCustomerRiskInput,
+  type UpdateTenantCustomerInput,
+  type VerifyCustomerDocumentInput,
+} from './features/customers/api';
+
+// Tài khoản của CON NGƯỜI đang đăng nhập (CUS-04) — `/users/me`, khác `/auth/me`.
+export { accountApi, type UpdateProfileInput, type UserProfile } from './features/account/api';
+
+// Tiền (FIN-01/02) — phần sổ Thu-Chi và báo cáo theo kỳ mà hồ sơ xe / hồ sơ khách dùng lại.
+export {
+  receiptsApi,
+  financeApi,
+  receiptFiltersToParams,
+  receiptSummaryParams,
+  financeRangeParams,
+  financeSeriesParams,
+  RECEIPTS_DEFAULT_LIMIT,
+  type FinancePeriodFilters,
+  type FinanceScope,
+  type FinanceSeries,
+  type FinanceSeriesBucket,
+  type FinanceSummary,
+  type Receipt,
+  type ReceiptDetail,
+  type ReceiptFilters,
+  type ReceiptSummary,
+} from './features/finance/api';

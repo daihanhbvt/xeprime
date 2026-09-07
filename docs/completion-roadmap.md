@@ -154,6 +154,7 @@ Mục tiêu: app native phục vụ trọn luồng người thuê, đồng thờ
 - Deep links/App Links, environment profiles, iOS build và CI release.
 - Crash/error reporting và analytics đồng nhất web/mobile.
 - Duy trì và sửa lỗi cho lát cắt Mobile Manage hiện có: inbox yêu cầu, booking, giao/nhận, quyết toán và thu tiền.
+- **Khi FIN-02 (sổ Thu-Chi trên native) xong thì QUAY LẠI module Customer khoá nốt ba đầu dây cố ý để hở**: `ReceiptCard` trong tab Thu chi của hồ sơ khách gắn `onPress` + `DetailChevron` dẫn sang chi tiết phiếu; link "Xem tất cả N phiếu" trỏ tới màn sổ đã đủ chức năng thay vì màn còn dở; mục `receipts` ở `manage-nav.ts` được gắn `href` (gắn sớm là tuyên bố FIN-02 xong). Mở rộng CHÍNH màn `/manage/receipts` đang có, đừng dựng màn thứ hai — chi tiết ở `docs/mobile-customer-module-status.md` §5 và `docs/mobile-module-status.md` §2.7.
 - Chưa mở rộng thành Full Manage parity trên native; xe, tài chính nâng cao, thành viên, chi nhánh, báo cáo và cấu hình sâu vẫn ưu tiên responsive web cho tới sau controlled pilot.
 
 ## 4. Thứ tự ưu tiên Admin/Manage

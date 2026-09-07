@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
-import {
-  BOOKING_STATUS_META, SERVICE_TYPE_LABEL, type BookingStatus, type ServiceType, } from '@xeprime/types';
+import { BOOKING_STATUS_META, type BookingStatus } from '@xeprime/types';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { bookingPath } from '@/constants/routes';
@@ -14,6 +14,7 @@ import { useCustomerBookings } from '../hooks/use-customers';
 import type { CustomerBooking } from '../types';
 import styles from './CustomerBookingHistory.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 
 const MIN_TABLE_WIDTH = 900;
 
@@ -33,7 +34,9 @@ export function CustomerBookingHistory({
   canViewFinance: boolean;
   canOpenBooking: boolean;
 }) {
+  const t = useTranslations('Customers.history');
   const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
 
   const [page, setPage] = useState(1);
   const { data, isFetching, isError, refetch } = useCustomerBookings(customerId, page);
@@ -48,7 +51,7 @@ export function CustomerBookingHistory({
 
   const columns: DataTableColumn<CustomerBooking>[] = [
     {
-      title: 'Đơn thuê',
+      title: t('booking'),
       key: 'code',
       width: 180,
       render: (_, row) =>
@@ -61,7 +64,7 @@ export function CustomerBookingHistory({
         ),
     },
     {
-      title: 'Xe',
+      title: t('vehicle'),
       key: 'vehicle',
       width: 220,
       render: (_, row) => (
@@ -72,7 +75,7 @@ export function CustomerBookingHistory({
       ),
     },
     {
-      title: 'Thời gian',
+      title: t('range'),
       key: 'range',
       width: 240,
       render: (_, row) => (
@@ -80,23 +83,27 @@ export function CustomerBookingHistory({
       ),
     },
     {
-      title: 'Dịch vụ',
+      title: t('service'),
       key: 'service',
       width: 140,
-      render: (_, row) => SERVICE_TYPE_LABEL[row.serviceType as ServiceType] ?? row.serviceType,
+      render: (_, row) => domainLabel('serviceType', row.serviceType),
     },
     {
-      title: 'Trạng thái',
+      title: t('status'),
       key: 'status',
       width: 140,
       render: (_, row) => (
-        <StatusTag value={row.status as BookingStatus} meta={BOOKING_STATUS_META} group="bookingStatus" />
+        <StatusTag
+          value={row.status as BookingStatus}
+          meta={BOOKING_STATUS_META}
+          group="bookingStatus"
+        />
       ),
     },
     ...(canViewFinance
       ? ([
           {
-            title: 'Tổng tiền',
+            title: t('total'),
             key: 'total',
             width: 150,
             align: 'right',
@@ -105,7 +112,7 @@ export function CustomerBookingHistory({
             ),
           },
           {
-            title: 'Còn nợ',
+            title: t('debt'),
             key: 'debt',
             width: 140,
             align: 'right',
@@ -129,7 +136,11 @@ export function CustomerBookingHistory({
         ) : (
           <span className={styles.code}>{row.code}</span>
         )}
-        <StatusTag value={row.status as BookingStatus} meta={BOOKING_STATUS_META} group="bookingStatus" />
+        <StatusTag
+          value={row.status as BookingStatus}
+          meta={BOOKING_STATUS_META}
+          group="bookingStatus"
+        />
       </header>
       <div className={styles.vehicleName}>{row.vehicleName}</div>
       <div className={styles.meta}>
@@ -139,7 +150,9 @@ export function CustomerBookingHistory({
         <div className={styles.cardMoney}>
           <span>{fmt.money(row.totalAmount)}</span>
           {!isZeroMoney(row.debtAmount) ? (
-            <span className={styles.debt}>Còn nợ {fmt.money(row.debtAmount)}</span>
+            <span className={styles.debt}>
+              {t('debt')} {fmt.money(row.debtAmount)}
+            </span>
           ) : null}
         </div>
       ) : null}
@@ -148,25 +161,18 @@ export function CustomerBookingHistory({
 
   return (
     <DataTable<CustomerBooking>
-      label="Lịch sử thuê của khách"
+      label={t('label')}
       columns={columns}
       items={items}
       minWidth={MIN_TABLE_WIDTH}
       loading={isFetching}
-      error={
-        isError && !data
-          ? { title: 'Không tải được lịch sử thuê', onRetry: () => void refetch() }
-          : null
-      }
-      empty={{
-        title: 'Khách chưa có chuyến nào',
-        description: 'Lịch sử sẽ xuất hiện ngay khi bạn lập đơn thuê đầu tiên cho khách này.',
-      }}
+      error={isError && !data ? { title: t('errorTitle'), onRetry: () => void refetch() } : null}
+      empty={{ title: t('emptyTitle'), description: t('emptyBody') }}
       renderCard={renderCard}
       pagination={{
         meta,
         onChange: (nextPage) => setPage(nextPage),
-        totalLabel: (total) => `${total} chuyến`,
+        totalLabel: (total) => t('totalLabel', { count: total }),
       }}
     />
   );

@@ -5,19 +5,19 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { useTranslations } from 'use-intl';
 import { dayjs } from '@xeprime/domain';
-import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
-import { FieldLabel, FieldMessage, FieldShell } from '@/components/ui/Field';
+import { DatePickerSheet } from './DatePickerSheet';
+import { FieldLabel, FieldMessage, FieldShell } from './Field';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { colors, fieldFontSize, iconSize, space } from '@/theme/tokens';
 
 /**
- * Sàn ngày của hồ sơ nguồn xe.
+ * Sàn ngày MẶC ĐỊNH của mọi ô ngày trong form.
  *
- * `DatePickerSheet` mặc định chặn quá khứ vì nó sinh ra cho lịch ĐẶT XE. Hồ sơ nguồn thì ngược
- * lại: ngày mua, ngày ký hợp đồng vay đều nằm ở quá khứ. 1980 khớp `MIN_VEHICLE_YEAR` của
- * `vehicleFormSchema` — không có chiếc xe nào trong hệ thống cũ hơn thế.
+ * DatePickerSheet mặc định chặn quá khứ vì nó sinh ra cho lịch ĐẶT XE. Form hồ sơ thì ngược lại:
+ * ngày mua, ngày ký hợp đồng vay, hạn một tờ CCCD đã hết hạn đều nằm ở quá khứ. 1980 khớp
+ * MIN_VEHICLE_YEAR của vehicleFormSchema — không có chiếc xe nào trong hệ thống cũ hơn thế.
  */
-const SOURCE_DATE_FLOOR = dayjs('1980-01-01');
+export const FORM_DATE_FLOOR = dayjs('1980-01-01');
 
 /**
  * Ô chọn NGÀY (không kèm giờ) cho React Hook Form — giá trị là chuỗi `YYYY-MM-DD`.
@@ -99,7 +99,7 @@ export function DateField<T extends FieldValues>({
         onClose={() => setOpen(false)}
         value={value}
         title={label}
-        minDate={SOURCE_DATE_FLOOR}
+        minDate={FORM_DATE_FLOOR}
         onChange={(next) => {
           field.onChange(next);
           setOpen(false);

@@ -1,16 +1,18 @@
 'use client';
 
-import { yupResolver } from '@hookform/resolvers/yup';
 import { App } from 'antd';
-import { useEffect } from 'react';
+import { useTranslations } from 'next-intl';
+import { useEffect, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { TENANT_CUSTOMER_RISK_LEVEL, type TenantCustomerRiskLevel } from '@xeprime/types';
 import { DialogForm } from '@/components/form/DialogForm';
 import { SelectField } from '@/components/form/SelectField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { getErrorMessage } from '@/services/api-client';
-import { CUSTOMER_HINTS, RISK_LEVEL_OPTIONS } from '../constants';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useErrorMessage } from '@/i18n/use-error-message';
+import { useValidationResolver } from '@/i18n/use-validation-resolver';
+import { RISK_LEVEL_VALUES } from '../constants';
 import { useUpdateCustomerRisk } from '../hooks/use-customers';
 import { customerRiskSchema, type CustomerRiskFormValues } from '../schema';
 import type { TenantCustomerDetail } from '../types';
@@ -33,14 +35,31 @@ export function CustomerRiskModal({
   customer: TenantCustomerDetail | null;
   onClose: () => void;
 }) {
+  const t = useTranslations('Customers');
+  const tCommon = useTranslations('Common');
+  const domainLabel = useDomainLabel();
+  const errorMessage = useErrorMessage();
   const { message } = App.useApp();
   const mutation = useUpdateCustomerRisk();
 
+  const resolver = useValidationResolver<CustomerRiskFormValues>(
+    customerRiskSchema,
+    'Customers.validation',
+  );
   const { control, handleSubmit, reset } = useForm<CustomerRiskFormValues>({
-    resolver: yupResolver(customerRiskSchema),
+    resolver,
     defaultValues: { riskLevel: TENANT_CUSTOMER_RISK_LEVEL.NORMAL, reason: '' },
   });
   const riskLevel = useWatch({ control, name: 'riskLevel' });
+
+  const levelOptions = useMemo(
+    () =>
+      RISK_LEVEL_VALUES.map((value) => ({
+        value,
+        label: domainLabel('tenantCustomerRiskLevel', value),
+      })),
+    [domainLabel],
+  );
 
   useEffect(() => {
     if (open && customer) {
@@ -63,21 +82,21 @@ export function CustomerRiskModal({
       },
       {
         onSuccess: () => {
-          message.success('Đã cập nhật mức rủi ro của khách');
+          message.success(t('risk.saved'));
           onClose();
         },
-        onError: (err) => message.error(getErrorMessage(err)),
+        onError: (err) => message.error(errorMessage(err)),
       },
     );
   });
 
   return (
     <ResponsiveDialog
-      title="Đánh dấu mức rủi ro"
+      title={t('risk.title')}
       open={open}
       size="sm"
-      okText="Lưu"
-      cancelText="Đóng"
+      okText={tCommon('actions.save')}
+      cancelText={tCommon('actions.close')}
       destructive={riskLevel === TENANT_CUSTOMER_RISK_LEVEL.BLOCKED}
       confirmLoading={mutation.isPending}
       onOk={() => void submit()}
@@ -87,23 +106,22 @@ export function CustomerRiskModal({
         <SelectField
           control={control}
           name="riskLevel"
-          label="Mức rủi ro"
-          options={RISK_LEVEL_OPTIONS}
+          label={t('risk.level')}
+          options={levelOptions}
         />
-        <p className={styles.hint}>{CUSTOMER_HINTS.riskLevel}</p>
+        <p className={styles.hint}>{t('hints.riskLevel')}</p>
         <TextAreaField
           control={control}
           name="reason"
           label={
-            riskLevel === TENANT_CUSTOMER_RISK_LEVEL.NORMAL ? 'Ghi chú (không bắt buộc)' : 'Lý do'
+            riskLevel === TENANT_CUSTOMER_RISK_LEVEL.NORMAL
+              ? t('risk.reasonOptional')
+              : t('risk.reason')
           }
           rows={3}
-          placeholder="Ví dụ: trả xe muộn 2 lần, không liên lạc được ngày 12/08"
+          placeholder={t('risk.reasonPlaceholder')}
         />
-        <p className={styles.hint}>
-          Lý do chỉ hiển thị trong gian hàng của bạn. Khách không bao giờ nhìn thấy nội dung này, và
-          yêu cầu bị từ chối chỉ nhận được thông báo trung tính.
-        </p>
+        <p className={styles.hint}>{t('risk.privacy')}</p>
       </DialogForm>
     </ResponsiveDialog>
   );
