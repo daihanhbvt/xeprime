@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import type { ServiceType, VehicleType } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Card } from '@/components/ui/Card';
@@ -94,7 +95,7 @@ function ContractBody({
   const s = contract.snapshot;
 
   const bankLine = s.shop.bankAccountNo
-    ? [s.shop.bankAccountNo, s.shop.bankName, s.shop.bankAccountName].filter(Boolean).join(' · ')
+    ? [s.shop.bankAccountNo, s.shop.bankName, s.shop.bankAccountName].filter(Boolean).join(LIST_SEPARATOR)
     : null;
   const brandModel = [s.vehicle.brand, s.vehicle.model].filter(Boolean).join(' ');
 

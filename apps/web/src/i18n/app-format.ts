@@ -1,5 +1,6 @@
 import type { useFormatter, useTranslations } from 'next-intl';
 import { PICKUP_PREFERENCE, type IsoDateTimeString, type MoneyString } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { rentalDurationParts, toAppTz, type Dayjs } from '@/lib/datetime';
 import { pickupWishParts, type PickupWish } from '@/lib/long-term';
 import { compactMoneyParts, formatMoneyVnd, wholeUnits, type MoneySeparators } from '@/lib/money';
@@ -122,12 +123,6 @@ export const DATE_PATTERN: Readonly<
   vi: { date: 'DD/MM/YYYY', dateTime: 'DD/MM/YYYY HH:mm', dayMonth: 'DD/MM' },
   en: { date: 'MM/DD/YYYY', dateTime: 'MM/DD/YYYY HH:mm', dayMonth: 'MM/DD' },
 };
-
-/**
- * Dấu ngăn giữa các nhãn dịch vụ. Là KÝ HIỆU, không phải chữ — giống nhau ở mọi ngôn ngữ, nên
- * nó nằm trong mã chứ không nằm trong bó message (dịch một dấu chấm giữa là việc vô nghĩa).
- */
-const SERVICE_SEPARATOR = ' · ';
 
 /** Hoa chữ cái đầu theo luật của chính chuỗi đó — `toLocaleUpperCase` an toàn với tiếng Việt. */
 function capitalizeFirst(text: string): string {
@@ -304,7 +299,7 @@ export function createAppFormat(
 
     serviceTypes: (values) => {
       if (!values || values.length === 0) return t('labels.emptyValue');
-      return values.map((value) => domainLabel('serviceType', value)).join(SERVICE_SEPARATOR);
+      return values.map((value) => domainLabel('serviceType', value)).join(LIST_SEPARATOR);
     },
 
     count: (value) => format.number(value, 'integer'),

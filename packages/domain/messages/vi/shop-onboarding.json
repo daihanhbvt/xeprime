@@ -57,5 +57,14 @@
   "privacy": {
     "title": "Bảo mật thông tin",
     "body": "Thông tin của bạn được bảo mật và chỉ dùng để xác minh gian hàng."
+  },
+  "validation": {
+    "nameRequired": "Tên gian hàng là bắt buộc",
+    "nameMin": "Tối thiểu 2 ký tự",
+    "tenantTypeRequired": "Chọn loại hình",
+    "provinceRequired": "Chọn tỉnh/thành nơi đặt gian hàng",
+    "provinceInvalid": "Mã tỉnh không hợp lệ",
+    "phoneInvalid": "Số điện thoại không hợp lệ",
+    "emailInvalid": "Email không hợp lệ"
   }
 }

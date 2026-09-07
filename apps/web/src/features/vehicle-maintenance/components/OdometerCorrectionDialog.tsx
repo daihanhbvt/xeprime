@@ -1,7 +1,6 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App, Form } from 'antd';
 import { useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
@@ -20,6 +19,7 @@ import type { MaintenanceProfile } from '../types';
 import styles from './VehicleMaintenanceWorkspace.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useValidationResolver } from '@/i18n/use-validation-resolver';
 
 /**
  * Điều chỉnh KM thủ công (Wave 6 §9.1).
@@ -60,8 +60,12 @@ export function OdometerCorrectionDialog({
     () => ({ odometerKm: null as unknown as number, reasonCode: 'handover_error', reason: '' }),
     [],
   );
+  const resolver = useValidationResolver<OdometerCorrectionFormValues>(
+    odometerCorrectionFormSchema,
+    'Maintenance.validation',
+  );
   const { control, handleSubmit, reset } = useForm<OdometerCorrectionFormValues>({
-    resolver: yupResolver(odometerCorrectionFormSchema),
+    resolver,
     defaultValues: defaults,
   });
 

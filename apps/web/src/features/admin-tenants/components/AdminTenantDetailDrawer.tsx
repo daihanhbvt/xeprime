@@ -10,6 +10,7 @@ import {
   type TenantStatus,
   type TenantType,
 } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
@@ -158,7 +159,7 @@ function detailItems(t: AdminTenantDetail, fmt: AppFormat) {
     {
       key: 'ownerContact',
       label: 'Liên hệ chủ',
-      children: [t.ownerPhone, t.ownerEmail].filter(Boolean).join(' · ') || '—',
+      children: [t.ownerPhone, t.ownerEmail].filter(Boolean).join(LIST_SEPARATOR) || '—',
     },
     { key: 'phone', label: 'SĐT shop', children: t.phone ?? '—' },
     { key: 'province', label: 'Tỉnh/TP', children: t.provinceName ?? '—' },

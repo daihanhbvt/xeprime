@@ -70,8 +70,17 @@ export function InviteMemberModal({ open, onClose }: { open: boolean; onClose: (
     invite.mutate(
       { email: values.email.trim(), roleKey: values.roleKey },
       {
-        onSuccess: () => {
-          message.success(t('toast.invited'));
+        /*
+         * Lời mời đã tạo, nhưng thư có thể KHÔNG gửi được (SMTP hỏng) — server nói thẳng qua
+         * `emailSent`. Báo "Đã gửi lời mời" trong trường hợp đó là nói dối người gửi và bắt họ
+         * chờ một lá thư không tồn tại; cảnh báo ở lại lâu hơn toast vì nó cần hành động tiếp.
+         */
+        onSuccess: (created) => {
+          if (created.emailSent) {
+            message.success(t('toast.invited'));
+          } else {
+            message.warning(t('toast.invitedNoEmail'), 8);
+          }
           onClose();
         },
         onError: (err) => message.error(errorMessage(err)),

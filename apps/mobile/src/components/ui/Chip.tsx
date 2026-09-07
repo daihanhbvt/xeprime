@@ -23,6 +23,19 @@ interface ChipProps {
    * `filled`: mục chưa chọn có nền chìm và viền — dùng khi các viên đứng rời nhau (lộ trình).
    */
   variant?: 'segmented' | 'filled';
+  /**
+   * `accent`: viền, icon và chữ đều màu vàng đậm.
+   *
+   * Dành cho viên DẪN ĐI (mục lục, lối tắt sang màn khác) — thứ không có trạng thái chọn.
+   * Viền xám của viên chọn nói "đây là một lựa chọn đang tắt", sai hẳn nghĩa ở chỗ đó.
+   */
+  tone?: 'default' | 'accent';
+  /**
+   * Vai trò cho trình đọc màn hình. Mặc định `tab` vì phần lớn viên là một lựa chọn trong dải;
+   * viên dẫn sang màn khác phải là `button`, nếu không người dùng nghe "tab" rồi chờ nội dung
+   * đổi tại chỗ.
+   */
+  role?: 'tab' | 'button';
 }
 
 /**
@@ -49,17 +62,40 @@ export function Chip({
   grow = false,
   size = 'md',
   variant = 'filled',
+  tone = 'default',
+  role = 'tab',
 }: ChipProps) {
   const segmented = variant === 'segmented';
-  const idleBg = segmented ? 'transparent' : colors.surfaceMuted;
-  const idleBorder = segmented ? 'transparent' : colors.border;
+  const accent = tone === 'accent';
+  /*
+    Chip CHƯA CHỌN dùng nền TRẮNG + viền, không phải mảng xám.
 
-  const body = (
+    Trên form, chip là một loại ô nhập (chọn dịch vụ, chọn loại xe) và phải đọc cùng ngôn ngữ với
+    `TextField`/`SelectField` ngay bên trên nó — trắng + viền. Giữ nền xám ở đây thì cùng một
+    khối form có hai kiểu ô, và mắt hiểu nhầm chip xám là ô đang bị khoá.
+
+    `borderInput` chứ không `border`: viền phải thấy được trên nền trắng của thẻ.
+  */
+  const idleBg = segmented ? 'transparent' : colors.surface;
+  const idleBorder = accent
+    ? colors.primary
+    : segmented
+      ? 'transparent'
+      : colors.borderInput;
+  const idleFg = accent ? colors.primaryActive : colors.text;
+
+  /*
+   * Nhận `pressed` để viên ĐỔI MÀU lúc ngón tay còn đặt trên nó.
+   *
+   * Viên dẫn đi mở ra cả một màn khác; không có phản hồi chạm thì trên máy chậm người dùng
+   * tưởng hụt và bấm tiếp — đúng thứ `useNavigateOnce` phải đi dọn sau.
+   */
+  const renderBody = (pressed: boolean) => (
     <XStack
       ai="center"
       jc="center"
       gap={space.xs}
-      bg={selected ? colors.primary : idleBg}
+      bg={selected ? colors.primary : pressed && accent ? colors.primaryLight : idleBg}
       bc={selected ? colors.primary : idleBorder}
       bw={1}
       br={radius.pill}
@@ -68,10 +104,14 @@ export function Chip({
     >
       {leading}
       {icon ? (
-        <Ionicons name={icon} size={15} color={selected ? colors.onPrimary : colors.textMuted} />
+        <Ionicons
+          name={icon}
+          size={15}
+          color={selected ? colors.onPrimary : accent ? colors.primaryActive : colors.textMuted}
+        />
       ) : null}
       <Text
-        col={selected ? colors.onPrimary : colors.text}
+        col={selected ? colors.onPrimary : idleFg}
         fos={size === 'sm' ? fontSize.label : fontSize.bodySm}
         fow={selected ? fontWeight.semibold : fontWeight.medium}
         numberOfLines={1}
@@ -81,19 +121,19 @@ export function Chip({
     </XStack>
   );
 
-  if (!onPress) return body;
+  if (!onPress) return renderBody(false);
 
   const slop = Math.ceil((sizing.touchTarget - CHIP_HEIGHT[size]) / 2);
 
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole="tab"
-      accessibilityState={{ selected }}
+      accessibilityRole={role}
+      {...(role === 'tab' ? { accessibilityState: { selected } } : {})}
       hitSlop={{ top: slop, bottom: slop }}
       style={grow ? { flex: 1 } : undefined}
     >
-      {body}
+      {({ pressed }) => renderBody(pressed)}
     </Pressable>
   );
 }

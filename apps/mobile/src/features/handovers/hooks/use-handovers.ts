@@ -1,5 +1,6 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { HandoverPhotoSlot, HandoverType } from '@xeprime/types';
+import { keepPageData } from '@/queries/keep-page-data';
 import { queryKeys } from '@/queries/query-keys';
 import {
   handoversApi,
@@ -205,9 +206,16 @@ const MISSING_ODOMETER_LIMIT = 20;
  * Biên bản trả đã xác nhận nhưng không có số KM là một lỗ trong hồ sơ xe: mọi phép tính bảo dưỡng
  * theo KM sau đó đều dựa trên một mốc cũ.
  */
-export function useMissingOdometerQueue(page: number, limit = MISSING_ODOMETER_LIMIT) {
+export function useMissingOdometerQueue(
+  { page, q, limit = MISSING_ODOMETER_LIMIT }: { page: number; q?: string; limit?: number },
+  enabled = true,
+) {
+  const params = { page, limit, ...(q ? { q } : {}) };
   return useQuery({
-    queryKey: queryKeys.maintenance.missingReturnKm({ page, limit }),
-    queryFn: () => handoversApi.missingOdometer({ page, limit }),
+    queryKey: queryKeys.maintenance.missingReturnKm(params),
+    queryFn: () => handoversApi.missingOdometer(params),
+    enabled,
+    // Đổi trang GIỮ nguyên danh sách cũ trên màn — không nháy về khung xương giữa hai trang.
+    placeholderData: keepPageData<Awaited<ReturnType<typeof handoversApi.missingOdometer>>>(params),
   });
 }

@@ -3,10 +3,14 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { dayjs } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
+import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
+import { FieldBox } from '@/components/ui/FieldBox';
 import { SearchInput } from '@/components/ui/SearchInput';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 export interface FilterOption {
@@ -15,12 +19,16 @@ export interface FilterOption {
 }
 
 /**
- * Một chiều lọc: nhãn + các lựa chọn + giá trị đang chọn.
+ * Một chiều lọc đơn chọn: nhãn + các lựa chọn + giá trị đang chọn.
  *
  * Mỗi nhóm là ĐƠN CHỌN — đúng những gì DTO backend nhận (`status`, `serviceType`, `sort` đều là
  * một giá trị). Nhóm nào cần đa chọn thì phải sửa cả DTO trước, không mở ở tầng giao diện.
+ *
+ * `kind` để TRỐNG được: đơn chọn là dạng mặc định, nên hàng chục nơi gọi sẵn có không phải khai
+ * thêm gì khi tấm này học được dạng thứ hai.
  */
-export interface FilterGroup {
+export interface FilterSelectGroup {
+  readonly kind?: 'select';
   readonly key: string;
   readonly label: string;
   readonly options: readonly FilterOption[];
@@ -29,16 +37,65 @@ export interface FilterGroup {
   readonly resetValue: string;
 }
 
-/** Số chiều đang khác mặc định — hiện trên nút lọc để biết có gì đang bật mà không phải mở ra. */
-export function activeFilterCount(groups: readonly FilterGroup[]): number {
-  return groups.filter((group) => group.value !== group.resetValue).length;
+/**
+ * Chiều lọc KHOẢNG NGÀY — bản native của `{ kind: 'dateRange' }` bên `FilterBar`.
+ *
+ * Giữ HAI tham số độc lập đúng như backend nhận (`from`/`to`), không tự chế một chuỗi ghép: đó là
+ * hợp đồng web đã chốt và có test canh (`FilterBar.test.tsx`). Đổi lại nó chiếm hai khoá trong bản
+ * nháp nhưng vẫn ĐẾM LÀ MỘT chiều đang bật — một khoảng ngày là một ý định lọc.
+ */
+export interface FilterDateRangeGroup {
+  readonly kind: 'dateRange';
+  readonly label: string;
+  readonly fromKey: string;
+  readonly toKey: string;
+  /** `YYYY-MM-DD`; chuỗi rỗng = chưa đặt đầu này. */
+  readonly from: string;
+  readonly to: string;
 }
+
+export type FilterGroup = FilterSelectGroup | FilterDateRangeGroup;
 
 /** Nháp = giá trị đang chọn của từng chiều, gom theo `key`. */
 type Draft = Record<string, string>;
 
+/** Các tham số một chiều CHIẾM: khoảng ngày chiếm hai, mọi chiều còn lại chiếm một. */
+function groupEntries(group: FilterGroup): readonly (readonly [string, string])[] {
+  return group.kind === 'dateRange'
+    ? [
+        [group.fromKey, group.from],
+        [group.toKey, group.to],
+      ]
+    : [[group.key, group.value]];
+}
+
+/** Khoá dùng làm `key` của React và của chip tóm tắt — khoảng ngày lấy đầu `from`. */
+const groupId = (group: FilterGroup): string =>
+  group.kind === 'dateRange' ? group.fromKey : group.key;
+
+/** Chiều này có đang lọc gì không, đọc theo BẢN NHÁP (rơi về giá trị đang áp dụng nếu chưa đụng). */
+function isGroupActive(group: FilterGroup, draft: Draft): boolean {
+  return group.kind === 'dateRange'
+    ? Boolean(draft[group.fromKey] ?? group.from) || Boolean(draft[group.toKey] ?? group.to)
+    : (draft[group.key] ?? group.value) !== group.resetValue;
+}
+
+/** Số chiều đang khác mặc định — hiện trên nút lọc để biết có gì đang bật mà không phải mở ra. */
+export function activeFilterCount(groups: readonly FilterGroup[]): number {
+  const applied = draftFrom(groups);
+  return groups.filter((group) => isGroupActive(group, applied)).length;
+}
+
 const draftFrom = (groups: readonly FilterGroup[]): Draft =>
-  Object.fromEntries(groups.map((group) => [group.key, group.value]));
+  Object.fromEntries(groups.flatMap(groupEntries));
+
+/**
+ * Sàn của lịch chọn trong bộ lọc.
+ *
+ * `DatePickerSheet` mặc định sàn là NGÀY MAI vì nó sinh ra cho lịch đặt xe. Bộ lọc thì ngược hẳn:
+ * thứ người ta lọc thường đã xảy ra rồi. Lấy mốc 01/1980 như màn hồ sơ nguồn xe.
+ */
+const FILTER_DATE_FLOOR = dayjs('1980-01-01');
 
 /**
  * Tấm trượt lọc dùng chung cho mọi màn danh sách của khu quản lý — thay cho dải chip nằm thẳng
@@ -74,6 +131,9 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
 }) {
   const t = useTranslations('Common.filters');
   const tActions = useTranslations('Common.actions');
+  const tLabels = useTranslations('Common.labels');
+  const tUnits = useTranslations('Common.units');
+  const fmt = useAppFormat();
 
   const [draft, setDraft] = useState<Draft>(() => draftFrom(groups));
 
@@ -110,23 +170,65 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
     setDraft((prev) => ({ ...prev, [groupKey]: value }));
   }, []);
 
+  /**
+   * Chữ hiện trên chip tóm tắt của MỘT chiều.
+   *
+   * Khoảng ngày đọc y như web (`rangeLabel` của `FilterBar`): đủ hai đầu thì `từ → đến`, thiếu
+   * một đầu thì nói rõ đầu nào có — "Từ 20/09/2026" và "Đến 20/09/2026" là hai bộ lọc khác nhau,
+   * in trần mỗi con số thì không phân biệt được.
+   */
+  const chipValue = (group: FilterGroup): string => {
+    if (group.kind !== 'dateRange') {
+      const value = draft[group.key] ?? group.value;
+      return group.options.find((option) => option.value === value)?.label ?? '';
+    }
+    const from = draft[group.fromKey] ?? group.from;
+    const to = draft[group.toKey] ?? group.to;
+    if (from && to) return tUnits('range', { from: fmt.dateKey(from), to: fmt.dateKey(to) });
+    return from
+      ? `${tLabels('from')} ${fmt.dateKey(from)}`
+      : `${tLabels('to')} ${fmt.dateKey(to)}`;
+  };
+
+  /** Gỡ chip: khoảng ngày phải xoá CẢ HAI đầu — bỏ sót một đầu là bộ lọc vẫn còn mà chip đã biến mất. */
+  const clearGroup = (group: FilterGroup) => {
+    if (group.kind !== 'dateRange') {
+      select(group.key, group.resetValue);
+      return;
+    }
+    setDraft((prev) => ({ ...prev, [group.fromKey]: '', [group.toKey]: '' }));
+  };
+
   /** Các chiều đang khác mặc định TRONG NHÁP — nguồn của dải chip tóm tắt và của số đếm. */
-  const active = groups.filter((group) => (draft[group.key] ?? group.value) !== group.resetValue);
+  const active = groups.filter((group) => isGroupActive(group, draft));
   const searchActive = searchDraft.trim().length > 0;
   const activeCount = active.length + (searchActive ? 1 : 0);
 
   const apply = () => {
     // Chỉ gọi cho chiều THỰC SỰ đổi: mỗi lần gọi là một lần nơi gọi đặt lại trang về 1.
     for (const group of groups) {
-      const next = draft[group.key] ?? group.value;
-      if (next !== group.value) onChange(group.key, next);
+      for (const [key, applied] of groupEntries(group)) {
+        const next = draft[key] ?? applied;
+        if (next !== applied) onChange(key, next);
+      }
     }
     if (searchDraft !== searchValue) onSearchChange(searchDraft);
     onClose();
   };
 
   const reset = () => {
-    setDraft(Object.fromEntries(groups.map((group) => [group.key, group.resetValue])));
+    setDraft(
+      Object.fromEntries(
+        groups.flatMap((group) =>
+          group.kind === 'dateRange'
+            ? [
+                [group.fromKey, ''],
+                [group.toKey, ''],
+              ]
+            : [[group.key, group.resetValue]],
+        ),
+      ),
+    );
     setSearchDraft('');
   };
 
@@ -157,15 +259,9 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
                 ) : null}
                 {active.map((group) => (
                   <ActiveChip
-                    key={group.key}
-                    label={t('chip', {
-                      label: group.label,
-                      value:
-                        group.options.find(
-                          (option) => option.value === (draft[group.key] ?? group.value),
-                        )?.label ?? '',
-                    })}
-                    onRemove={() => select(group.key, group.resetValue)}
+                    key={groupId(group)}
+                    label={t('chip', { label: group.label, value: chipValue(group) })}
+                    onRemove={() => clearGroup(group)}
                   />
                 ))}
               </XStack>
@@ -206,14 +302,24 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
           variant="boxed"
         />
 
-        {groups.map((group) => (
-          <Group
-            key={group.key}
-            group={group}
-            value={draft[group.key] ?? group.value}
-            onSelect={select}
-          />
-        ))}
+        {groups.map((group) =>
+          group.kind === 'dateRange' ? (
+            <DateRangeGroup
+              key={group.fromKey}
+              group={group}
+              from={draft[group.fromKey] ?? group.from}
+              to={draft[group.toKey] ?? group.to}
+              onSelect={select}
+            />
+          ) : (
+            <Group
+              key={group.key}
+              group={group}
+              value={draft[group.key] ?? group.value}
+              onSelect={select}
+            />
+          ),
+        )}
       </YStack>
     </BottomSheet>
   );
@@ -224,7 +330,7 @@ const Group = memo(function Group({
   value,
   onSelect,
 }: {
-  group: FilterGroup;
+  group: FilterSelectGroup;
   value: string;
   onSelect: (groupKey: string, value: string) => void;
 }) {
@@ -252,6 +358,74 @@ const Group = memo(function Group({
           />
         ))}
       </XStack>
+    </YStack>
+  );
+});
+
+/**
+ * Chiều KHOẢNG NGÀY: hai ô ngày cạnh nhau, mỗi ô mở chính `DatePickerSheet` của app.
+ *
+ * Hai ô RIÊNG chứ không phải một vùng chạm chung như `RangeFieldBox` của màn đặt xe: ở đây hai
+ * đầu độc lập thật — lọc "từ 20/09" mà bỏ trống đầu kia là một bộ lọc hợp lệ, còn khoảng thuê thì
+ * không có nghĩa nếu thiếu ngày trả.
+ *
+ * Đầu "Đến" lấy SÀN là ngày đã chọn ở đầu "Từ" — `RangePicker` bên web cũng chặn đúng vậy, và một
+ * khoảng ngược đầu chỉ trả về danh sách rỗng mà không nói vì sao.
+ */
+const DateRangeGroup = memo(function DateRangeGroup({
+  group,
+  from,
+  to,
+  onSelect,
+}: {
+  group: FilterDateRangeGroup;
+  from: string;
+  to: string;
+  onSelect: (groupKey: string, value: string) => void;
+}) {
+  const t = useTranslations('Common.labels');
+  const fmt = useAppFormat();
+  const [picking, setPicking] = useState<'from' | 'to' | null>(null);
+  const editingTo = picking === 'to';
+
+  return (
+    <YStack gap={space.sm}>
+      <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+        {group.label}
+      </Text>
+
+      <XStack gap={space.sm}>
+        <YStack f={1}>
+          <FieldBox
+            label={t('from')}
+            value={from ? fmt.dateKey(from) : ''}
+            placeholder={t('selectDate')}
+            icon="calendar-outline"
+            onPress={() => setPicking('from')}
+          />
+        </YStack>
+        <YStack f={1}>
+          <FieldBox
+            label={t('to')}
+            value={to ? fmt.dateKey(to) : ''}
+            placeholder={t('selectDate')}
+            icon="calendar-outline"
+            onPress={() => setPicking('to')}
+          />
+        </YStack>
+      </XStack>
+
+      <DatePickerSheet
+        open={picking !== null}
+        onClose={() => setPicking(null)}
+        value={editingTo ? to : from}
+        title={editingTo ? t('to') : t('from')}
+        minDate={editingTo && from ? dayjs(from) : FILTER_DATE_FLOOR}
+        onChange={(next) => {
+          onSelect(editingTo ? group.toKey : group.fromKey, next);
+          setPicking(null);
+        }}
+      />
     </YStack>
   );
 });

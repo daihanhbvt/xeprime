@@ -57,5 +57,14 @@
   "privacy": {
     "title": "Your data is safe",
     "body": "Your details are kept private and used only to verify your shop."
+  },
+  "validation": {
+    "nameRequired": "Shop name is required",
+    "nameMin": "At least 2 characters",
+    "tenantTypeRequired": "Select a business type",
+    "provinceRequired": "Select the shop's province",
+    "provinceInvalid": "Invalid province code",
+    "phoneInvalid": "Invalid phone number",
+    "emailInvalid": "Invalid email address"
   }
 }

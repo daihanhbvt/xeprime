@@ -105,6 +105,9 @@ export const VEHICLE_DOCUMENT_PRESENTATION = {
 
 export type VehicleDocumentPresentation =
   (typeof VEHICLE_DOCUMENT_PRESENTATION)[keyof typeof VEHICLE_DOCUMENT_PRESENTATION];
+export const VEHICLE_DOCUMENT_PRESENTATION_VALUES = Object.values(
+  VEHICLE_DOCUMENT_PRESENTATION,
+) as VehicleDocumentPresentation[];
 
 export const VEHICLE_DOCUMENT_PRESENTATION_META: Readonly<
   Record<VehicleDocumentPresentation, StatusMeta>

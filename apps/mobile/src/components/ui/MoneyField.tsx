@@ -1,10 +1,19 @@
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { TextInput } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { CURRENCY_SUFFIX, formatMoneyInput, parseMoneyInput } from '@xeprime/domain';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
-import { colors, fontSize, fontWeight, sizing, space } from '@/theme/tokens';
+import { colors, fieldFontSize, fontWeight, sizing, space } from '@/theme/tokens';
+
+/** Không phụ thuộc prop/state nào — dựng MỘT lần ở module scope, không phải mỗi lần render. */
+const INPUT_STYLE = {
+  flex: 1,
+  color: colors.text,
+  fontSize: fieldFontSize.value,
+  minHeight: sizing.touchTarget,
+  paddingVertical: 0,
+} as const;
 
 /**
  * Ô nhập TIỀN — bản native của `MoneyInput` bên web.
@@ -25,6 +34,7 @@ export function MoneyField<T extends FieldValues>({
   name,
   label,
   hint,
+  placeholder,
   required = false,
   editable = true,
 }: {
@@ -32,23 +42,13 @@ export function MoneyField<T extends FieldValues>({
   name: Path<T>;
   label: string;
   hint?: string;
+  placeholder?: string;
   required?: boolean;
   editable?: boolean;
 }) {
   const { field, fieldState } = useController({ control, name });
   const inputRef = useRef<TextInput>(null);
   const [focused, setFocused] = useState(false);
-
-  const inputStyle = useMemo(
-    () => ({
-      flex: 1,
-      color: colors.text,
-      fontSize: fontSize.body,
-      minHeight: sizing.touchTarget,
-      paddingVertical: 0,
-    }),
-    [],
-  );
 
   const error = fieldState.error?.message;
 
@@ -73,12 +73,13 @@ export function MoneyField<T extends FieldValues>({
           onFocus={() => setFocused(true)}
           editable={editable}
           keyboardType="number-pad"
+          {...(placeholder === undefined ? {} : { placeholder })}
           placeholderTextColor={colors.placeholder}
-          style={inputStyle}
+          style={INPUT_STYLE}
         />
 
         {/* Đơn vị là TRANG TRÍ của ô, không nằm trong giá trị — đúng vai `suffix` bên web. */}
-        <Text col={colors.textMuted} fos={fontSize.body} fow={fontWeight.medium}>
+        <Text col={colors.textMuted} fos={fieldFontSize.affix} fow={fontWeight.medium}>
           {CURRENCY_SUFFIX}
         </Text>
       </FieldShell>

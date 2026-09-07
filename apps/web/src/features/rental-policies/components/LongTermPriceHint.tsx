@@ -3,6 +3,7 @@
 import { Alert } from 'antd';
 import {
   LONG_TERM_PACKAGE_MONTHS, LONG_TERM_PRICE_HINT_DAYS_PER_MONTH, LONG_TERM_SUGGEST_RATIO, longTermPackageAmounts, longTermPackageLabel, type DiscountTier, } from '@xeprime/types';
+import { useTranslations } from 'next-intl';
 import styles from './LongTermPriceHint.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 
@@ -41,6 +42,7 @@ export function LongTermPriceHint({
   )[];
   discountEnabled?: boolean;
 }) {
+  const t = useTranslations('Vehicles.pricing.longTermHint');
   const fmt = useAppFormat();
 
   const weekday = weekdayPrice == null ? null : Number(weekdayPrice);
@@ -49,7 +51,11 @@ export function LongTermPriceHint({
   const monthReference = weekday * LONG_TERM_PRICE_HINT_DAYS_PER_MONTH;
   const suggestMin = roundSuggest(monthReference * LONG_TERM_SUGGEST_RATIO.min);
   const suggestMax = roundSuggest(monthReference * LONG_TERM_SUGGEST_RATIO.max);
-  const suggestion = `Gợi ý ${fmt.money(String(suggestMin))} – ${fmt.money(String(suggestMax))}/tháng — thuê theo ngày cả tháng đã là ${fmt.money(String(monthReference))}, giá dài hạn nên thấp hơn để khách có lý do cam kết.`;
+  const suggestion = t('suggestion', {
+    min: fmt.money(String(suggestMin)),
+    max: fmt.money(String(suggestMax)),
+    reference: fmt.money(String(monthReference)),
+  });
 
   const monthly = monthlyPrice == null ? null : Number(monthlyPrice);
   if (monthly == null || !Number.isFinite(monthly) || monthly <= 0) {
@@ -57,7 +63,7 @@ export function LongTermPriceHint({
       <Alert
         type="info"
         showIcon
-        title={`Giá tự lái ${fmt.money(String(weekday))}/ngày — chưa đặt giá thuê dài hạn`}
+        title={t('noMonthly', { weekday: fmt.money(String(weekday)) })}
         description={suggestion}
       />
     );
@@ -68,8 +74,11 @@ export function LongTermPriceHint({
       <Alert
         type="warning"
         showIcon
-        title={`Giá tháng (${fmt.money(String(monthly))}) không rẻ hơn thuê theo ngày cả tháng (${fmt.money(String(monthReference))})`}
-        description={`Khách không có lý do chọn gói dài hạn với mức này. ${suggestion}`}
+        title={t('notCheaper', {
+          monthly: fmt.money(String(monthly)),
+          reference: fmt.money(String(monthReference)),
+        })}
+        description={`${t('notCheaperBody')} ${suggestion}`}
       />
     );
   }
@@ -94,18 +103,18 @@ export function LongTermPriceHint({
     <Alert
       type="success"
       showIcon
-      title={`Giá dài hạn cơ sở ${fmt.money(String(monthly))}/tháng`}
+      title={t('base', { monthly: fmt.money(String(monthly)) })}
       description={
         <>
           <p className={styles.lead}>{suggestion}</p>
-          <p className={styles.lead}>Khách sẽ thấy các gói sau (đã gồm ưu đãi cam kết thời hạn):</p>
+          <p className={styles.lead}>{t('packagesLead')}</p>
           <ul className={styles.packages}>
             {packages.map((pkg) => (
               <li key={pkg.packageMonths}>
                 <span className={styles.pkgName}>{longTermPackageLabel(pkg.packageMonths)}</span>
                 <span className={styles.pkgTotal}>{fmt.money(pkg.finalPackageAmount)}</span>
                 <span className={styles.pkgUnit}>
-                  {fmt.money(pkg.effectiveMonthlyAmount)}/tháng
+                  {t('perMonth', { amount: fmt.money(pkg.effectiveMonthlyAmount) })}
                   {pkg.durationDiscountPercent ? ` · −${pkg.durationDiscountPercent}%` : ''}
                 </span>
               </li>

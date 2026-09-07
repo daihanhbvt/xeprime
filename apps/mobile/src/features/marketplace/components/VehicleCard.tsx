@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { memo } from 'react';
-import { Image } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { SERVICE_TYPE, VEHICLE_TYPE_LABEL, type VehicleType } from '@xeprime/types';
@@ -18,6 +18,9 @@ import type { PublicListing } from '../api';
 
 /** Ảnh 16:10 — đủ cao để nhận ra chiếc xe, đủ thấp để thẻ sau lộ ra ở cuối màn. */
 const PHOTO_RATIO = 16 / 10;
+
+/** Không phụ thuộc prop/state — dựng MỘT lần ở module scope, không phải mỗi lần render. */
+const FILL_STYLE = { width: '100%', height: '100%' } as const;
 
 interface VehicleCardProps {
   listing: PublicListing;
@@ -99,8 +102,10 @@ function VehicleCardImpl({ listing, onPress }: VehicleCardProps) {
         {listing.mainImageUrl ? (
           <Image
             source={{ uri: listing.mainImageUrl }}
-            style={{ width: '100%', height: '100%' }}
-            resizeMode="cover"
+            style={FILL_STYLE}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
             accessibilityLabel={listing.name}
           />
         ) : (

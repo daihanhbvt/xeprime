@@ -1,8 +1,7 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { FlatList, RefreshControl } from 'react-native';
+import { FlatList, RefreshControl, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Text, XStack, YStack } from 'tamagui';
-import { useRouter } from 'expo-router';
 import { useTranslations } from 'use-intl';
 import { BOOKING_REQUEST_STATUS, PERMISSION, SERVICE_TYPE_VALUES } from '@xeprime/types';
 import { Screen } from '@/components/layout/Screen';
@@ -22,7 +21,9 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { ROUTES } from '@/navigation/routes';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
+import { LIST_TUNING } from '@/theme/list-tuning';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
 import { BookingRequestDetailScreen } from './BookingRequestDetailScreen';
@@ -47,6 +48,10 @@ const SERVICE_ALL = 'all';
 const SKELETON_ROWS = 3;
 const SEARCH_DEBOUNCE_MS = 350;
 
+// Ở module scope, không inline: FlatList coi `keyExtractor` mới là prop đổi và dựng lại cả cây con.
+const keyOf = (request: BookingRequestItem) => request.id;
+const tabKeyOf = (tab: { value: string }) => tab.value;
+
 /**
  * Hộp thư yêu cầu thuê (BKG-02 → 05).
  *
@@ -66,7 +71,7 @@ export function BookingRequestInboxScreen() {
   const permissions = usePermissions();
   const tLabels = useTranslations('Common.labels');
   const domainLabel = useDomainLabel();
-  const router = useRouter();
+  const navigateOnce = useNavigateOnce();
 
   const [status, setStatus] = useState<string>(DEFAULT_REQUEST_TAB);
   const [search, setSearch] = useState('');
@@ -169,12 +174,24 @@ export function BookingRequestInboxScreen() {
   const openDetail = useCallback(
     (request: BookingRequestItem) => {
       if (request.bookingId && permissions.has(PERMISSION.BOOKING_VIEW)) {
-        router.push(ROUTES.manage.bookingDetail(request.bookingId));
+        navigateOnce(ROUTES.manage.bookingDetail(request.bookingId));
         return;
       }
       setDetail(request);
     },
-    [router, permissions],
+    [permissions, navigateOnce],
+  );
+
+  const renderItem = useCallback<ListRenderItem<BookingRequestItem>>(
+    ({ item }) => (
+      <BookingRequestCard
+        request={item}
+        onApprove={setApproving}
+        onReject={setRejecting}
+        onOpenDetail={openDetail}
+      />
+    ),
+    [openDetail],
   );
 
   function confirmApprove(body?: Parameters<typeof approve.mutate>[0]['body']) {
@@ -290,10 +307,12 @@ export function BookingRequestInboxScreen() {
           {...(meta === undefined ? {} : { meta })}
           onPageChange={setPage}
         >
-          {({ onScroll, headerHeight }) => {
+          {({ onScroll, headerHeight, contentContainerStyle }) => {
             // Khung xương, lỗi và rỗng đều đi qua MỘT vùng cuộn có kéo-làm-mới: đúng lúc cần làm
             // mới nhất (rỗng, hoặc vừa mất sóng) mà là khối tĩnh thì không kéo được gì.
-            const StateScroll = ({ children }: { children: ReactNode }) => (
+            // Là HÀM trả JSX chứ không phải component khai trong render — component mới mỗi lần
+            // render là React tháo vùng cuộn ra gắn lại đúng lúc `isRefetching` đổi.
+            const inStateScroll = (children: ReactNode) => (
               <ManageStateScroll
                 onScroll={onScroll}
                 headerHeight={headerHeight}
@@ -305,21 +324,21 @@ export function BookingRequestInboxScreen() {
             );
 
             return query.isPending ? (
-              <StateScroll>
+              inStateScroll(
                 <YStack px={layout.screenX} gap={layout.inline}>
                   {Array.from({ length: SKELETON_ROWS }, (_, i) => (
                     <RecordCardSkeleton key={i} />
                   ))}
-                </YStack>
-              </StateScroll>
+                </YStack>,
+              )
             ) : query.isError ? (
-              <StateScroll>
+              inStateScroll(
                 <ScreenError
                   error={query.error}
                   title={t('states.errorTitle')}
                   onRetry={() => void query.refetch()}
-                />
-              </StateScroll>
+                />,
+              )
             ) : items.length === 0 ? (
               /*
                 BA nguyên nhân rỗng, ba màn khác nhau — gương đúng `EmptyState` của web. Nói sai
@@ -329,8 +348,8 @@ export function BookingRequestInboxScreen() {
                   · tab Cần xử lý → tin VUI: hộp thư sạch, không có gì phải làm;
                   · tab khác      → tab đó chưa có yêu cầu nào, lối ra là đổi tab.
               */
-              <StateScroll>
-                {hasFilters ? (
+              inStateScroll(
+                hasFilters ? (
                   <ScreenMessage
                     icon="search-outline"
                     title={t('states.emptySearchTitle')}
@@ -348,26 +367,15 @@ export function BookingRequestInboxScreen() {
                     title={t('states.emptyFilteredTitle')}
                     description={t('states.emptyFilteredBody')}
                   />
-                )}
-              </StateScroll>
+                ),
+              )
             ) : (
               <Animated.FlatList
                 data={items}
-                keyExtractor={(request) => request.id}
-                renderItem={({ item }) => (
-                  <BookingRequestCard
-                    request={item}
-                    onApprove={setApproving}
-                    onReject={setRejecting}
-                    onOpenDetail={openDetail}
-                  />
-                )}
-                contentContainerStyle={{
-                  paddingHorizontal: layout.screenX,
-                  paddingTop: headerHeight,
-                  paddingBottom: layout.screenX,
-                  gap: layout.inline,
-                }}
+                keyExtractor={keyOf}
+                {...LIST_TUNING}
+                renderItem={renderItem}
+                contentContainerStyle={contentContainerStyle}
                 onScroll={onScroll}
                 scrollEventThrottle={scrollThrottle.frame}
                 refreshControl={
@@ -471,7 +479,12 @@ function StatusTabs({
     <FlatList
       horizontal
       data={REQUEST_INBOX_TABS}
-      keyExtractor={(tab) => tab.value}
+      keyExtractor={tabKeyOf}
+      /*
+        KHÔNG dùng `LIST_TUNING` ở đây: hằng đó tính cho danh sách THẺ cuộn dọc dài. Dải tab chỉ
+        có vài mục và cuộn ngang — `initialNumToRender: 6` sẽ giấu tab thứ bảy trở đi ở khung hình
+        đầu, còn `removeClippedSubviews` trên danh sách ngang là nguồn lỗi ô trắng.
+      */
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ paddingHorizontal: layout.screenX, gap: space.xs }}
       // `flexGrow: 0`: một FlatList ngang trong cột dọc sẽ nuốt hết chiều cao còn lại.

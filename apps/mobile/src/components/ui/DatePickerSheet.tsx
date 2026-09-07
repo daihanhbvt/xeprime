@@ -1,20 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
-import { Text, YStack } from 'tamagui';
 import { dayjs, DAY_PARAM_FORMAT, type Dayjs } from '@xeprime/domain';
 import { BottomSheet } from './BottomSheet';
-import { MonthGrid, useDayAccessibilityLabel, visibleDays } from './MonthGrid';
-import { colors, fontSize, fontWeight, radius, sizing } from '@/theme/tokens';
-
-interface DayMark {
-  selected: boolean;
-  disabled: boolean;
-}
-
-const styles = StyleSheet.create({
-  /** `dayContainer` của thư viện canh giữa theo chiều ngang — ô phải TRÀN cột mới bấm trúng. */
-  cell: { alignSelf: 'stretch' },
-});
+import { DayCell, MonthGrid, type DayMark, visibleDays } from './MonthGrid';
 
 export function DatePickerSheet({
   open,
@@ -35,7 +22,38 @@ export function DatePickerSheet({
   const floor = (minDate ?? dayjs().add(1, 'day')).startOf('day');
   const selected = value ? dayjs(value) : null;
 
-  const [month, setMonth] = useState<Dayjs>(() => (selected ?? floor).startOf('month'));
+  /*
+   * Tháng mở ra khi CHƯA chọn gì là tháng HIỆN TẠI, không phải tháng của `minDate`.
+   *
+   * Lịch đặt xe có sàn = ngày mai nên hai thứ đó trùng nhau và khác biệt không lộ ra. Hồ sơ nguồn
+   * xe thì sàn là 01/1980 (ngày mua nằm ở quá khứ): mở ra giữa năm 1980 và bắt người dùng bấm
+   * mũi tên hơn năm trăm lần mới tới hôm nay.
+   */
+  const initialMonth = (selected ?? dayjs()).startOf('month');
+  const [month, setMonth] = useState<Dayjs>(initialMonth);
+
+  /*
+   * Sheet không unmount khi đóng, nên tháng đang xem sống qua cả những lần mở sau. Đưa nó về mốc
+   * đầu ở MỖI lần mở: cuộn về 2019 để tìm ngày mua rồi mở lại ô khác và thấy 2019 là một thứ
+   * không ai đoán được.
+   */
+  const initialMonthKey = initialMonth.valueOf();
+  const [openedAt, setOpenedAt] = useState<number | null>(null);
+  /*
+   * Đặt lại tháng NGAY TRONG RENDER, không qua `useEffect`.
+   *
+   * Đây là mẫu "chỉnh state khi prop đổi" mà React khuyến nghị: đặt state trong effect làm màn
+   * vẽ MỘT LẦN với tháng cũ rồi vẽ lại — người dùng thấy tháng nhấp nháy đúng lúc tấm trượt mở
+   * ra. Đặt trong render thì React huỷ luôn lượt vẽ dở và vẽ lại trước khi có gì lên màn hình.
+   *
+   * `openedAt` là mốc so sánh, không phải cờ bật/tắt: cùng một lần mở, mọi render sau đều thấy
+   * `openedAt === initialMonthKey` nên không đặt lại nữa — nút chuyển tháng vẫn bấm được.
+   */
+  if (open && openedAt !== initialMonthKey) {
+    setOpenedAt(initialMonthKey);
+    setMonth(dayjs(initialMonthKey));
+  }
+  if (!open && openedAt !== null) setOpenedAt(null);
 
   const floorAt = floor.valueOf();
   const marks = useMemo(() => {
@@ -69,47 +87,5 @@ export function DatePickerSheet({
         renderDay={renderDay}
       />
     </BottomSheet>
-  );
-}
-
-function DayCell({
-  day,
-  mark,
-  onPress,
-}: {
-  day: Dayjs;
-  mark: DayMark | undefined;
-  onPress: () => void;
-}) {
-  const label = useDayAccessibilityLabel();
-  const selected = mark?.selected ?? false;
-  const disabled = mark?.disabled ?? false;
-
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={styles.cell}
-      accessibilityRole="button"
-      accessibilityLabel={label(day)}
-      accessibilityState={{ selected, disabled }}
-    >
-      <YStack
-        h={sizing.touchTarget}
-        ai="center"
-        jc="center"
-        br={radius.md}
-        bg={selected ? colors.primary : 'transparent'}
-      >
-        {/* Chỉ ĐANG CHỌN và KHOÁ đổi màu chữ — "ngoài tháng" thì không, vì ô đó vẫn chọn được. */}
-        <Text
-          col={selected ? colors.onPrimary : disabled ? colors.textDisabled : colors.text}
-          fos={fontSize.bodySm}
-          fow={selected ? fontWeight.bold : fontWeight.regular}
-        >
-          {day.date()}
-        </Text>
-      </YStack>
-    </Pressable>
   );
 }

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { StyleSheet } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { Calendar, type CalendarProps, type DateData } from 'react-native-calendars';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { DAY_PARAM_FORMAT, dayjs, type Dayjs } from '@xeprime/domain';
 import { IconButton } from './IconButton';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 /** `day()` của Day.js: 0 = Chủ nhật, khớp thứ tự nhãn `Common.weekdayShort.0…6`. */
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
@@ -30,6 +30,8 @@ const CALENDAR_THEME: CalendarProps['theme'] = {
 const styles = StyleSheet.create({
   /** Thư viện đệm sẵn 5px hai bên; bỏ đi để cột ngày thẳng hàng với hàng thứ ở trên. */
   calendar: { paddingLeft: 0, paddingRight: 0 },
+  /** `dayContainer` của thư viện canh giữa theo chiều ngang — ô phải TRÀN cột mới bấm trúng. */
+  cell: { alignSelf: 'stretch' },
 });
 
 /** Kiểu `marking` của thư viện — `markedDates` ở đây chở dữ liệu của MÌNH nên phải ép kiểu. */
@@ -181,4 +183,59 @@ export function MonthGrid<TMark>({
 export function useDayAccessibilityLabel(): (day: Dayjs, note?: string) => string {
   const fmt = useAppFormat();
   return (day, note) => [fmt.fullDate(day), note].filter(Boolean).join(', ');
+}
+
+/** Trạng thái tối thiểu để vẽ một ô ngày — mọi picker lịch trong app dùng chung hình này. */
+export interface DayMark {
+  selected: boolean;
+  disabled: boolean;
+}
+
+/**
+ * Ô ngày dùng chung cho mọi picker lịch (`DatePickerSheet`, `MomentPickerSheet`, …).
+ *
+ * Trước đây mỗi picker tự định nghĩa một bản — hai bản trôi khác màu/bo góc/độ đậm chữ cho
+ * đúng cùng hai trạng thái (khoá, đang chọn) mà không ai chủ ý muốn khác nhau. Một định nghĩa ở
+ * đây thì "lịch nào cũng giống lịch nào" là mặc định, không phải thứ phải nhớ giữ đồng bộ tay.
+ */
+export function DayCell({
+  day,
+  mark,
+  onPress,
+}: {
+  day: Dayjs;
+  mark: DayMark | undefined;
+  onPress: () => void;
+}) {
+  const label = useDayAccessibilityLabel();
+  const selected = mark?.selected ?? false;
+  const disabled = mark?.disabled ?? false;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={styles.cell}
+      accessibilityRole="button"
+      accessibilityLabel={label(day)}
+      accessibilityState={{ selected, disabled }}
+    >
+      <YStack
+        h={sizing.touchTarget}
+        ai="center"
+        jc="center"
+        br={radius.md}
+        bg={selected ? colors.primary : 'transparent'}
+      >
+        {/* Chỉ ĐANG CHỌN và KHOÁ đổi màu chữ — "ngoài tháng" thì không, vì ô đó vẫn chọn được. */}
+        <Text
+          col={selected ? colors.onPrimary : disabled ? colors.textDisabled : colors.text}
+          fos={fontSize.bodySm}
+          fow={selected ? fontWeight.bold : fontWeight.regular}
+        >
+          {day.date()}
+        </Text>
+      </YStack>
+    </Pressable>
+  );
 }

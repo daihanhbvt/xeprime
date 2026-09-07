@@ -172,5 +172,27 @@
       "ratingRange": "Chọn từ {min} đến {max} sao",
       "commentTooLong": "Nhận xét tối đa {max} ký tự"
     }
+  },
+  "hold": {
+    "title": "Chuyển khoản giữ chỗ",
+    "intro": "Chủ xe đã duyệt. Chuyển khoản giữ chỗ để chốt chuyến — đúng số tiền và nội dung dưới đây.",
+    "partialIntro": "Đã nhận {paid}. Chuyển nốt phần còn thiếu với CÙNG nội dung chuyển khoản để chốt chuyến.",
+    "qrAlt": "Mã QR chuyển khoản giữ chỗ",
+    "bank": "Ngân hàng",
+    "accountNumber": "Số tài khoản",
+    "accountName": "Chủ tài khoản",
+    "amount": "Số tiền",
+    "code": "Nội dung chuyển khoản",
+    "copyAccount": "Sao chép số tài khoản",
+    "copyAmount": "Sao chép số tiền",
+    "copyCode": "Sao chép nội dung",
+    "expires": "Hạn chuyển: {time}. Quá hạn, xe được mở lại cho khách khác.",
+    "freeCancel": "Huỷ trước {time} được hoàn toàn bộ khoản giữ chỗ.",
+    "restAtHandover": "Phần tiền thuê còn lại trả trực tiếp chủ xe khi nhận xe.",
+    "paid": "Đã giữ chỗ {amount}. Chuyến của bạn đã được chốt.",
+    "expired": "Hết hạn chuyển khoản giữ chỗ nên xe đã được mở lại. Bạn có thể đặt lại chuyến khác.",
+    "refundPaid": "XePrime đã hoàn {amount} về tài khoản bạn khai.",
+    "refundPending": "Đang chờ XePrime chuyển trả {amount}.",
+    "refundNeedsAccount": "Có {amount} chờ hoàn — liên hệ hỗ trợ để cung cấp tài khoản nhận."
   }
 }

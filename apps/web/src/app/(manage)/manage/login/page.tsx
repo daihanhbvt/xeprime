@@ -1,11 +1,11 @@
 'use client';
 
 import { ArrowLeftOutlined } from '@ant-design/icons';
-import { Button } from 'antd';
+import { Button, Spin } from 'antd';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { Logo } from '@/components/brand/Logo';
 import { ROUTES } from '@/constants/routes';
 import { AuthPanel } from '@/features/auth/components/AuthPanel';
@@ -16,7 +16,7 @@ import {
   AUTH_MODE,
   resolvePortalDestination,
 } from '@/features/auth/post-auth-destination';
-import type { CurrentUser } from '@/hooks/use-current-user';
+import { useCurrentUser, type CurrentUser } from '@/hooks/use-current-user';
 import styles from './portal-login.module.css';
 
 /**
@@ -42,6 +42,7 @@ function PortalLoginView() {
   const router = useRouter();
   const search = useSearchParams();
   const { refreshAfterAuth } = useAuthCache();
+  const { data: user } = useCurrentUser();
 
   const intent = search.get('intent');
   const next = search.get('next');
@@ -52,6 +53,25 @@ function PortalLoginView() {
    * `AuthModalProvider` (đó là chuyện của khu `(public)`).
    */
   const authError = search.get(AUTH_ERROR_PARAM);
+
+  /*
+   * ĐÃ đăng nhập mà mở thẳng URL này → đưa về đúng chỗ của họ, đừng hiện form đăng nhập.
+   *
+   * Việc này phải làm ở ĐÂY chứ không phải ở proxy: proxy chỉ thấy cookie CÓ hay KHÔNG, không
+   * verify được nó (docblock `proxy.ts`), nên nếu proxy đá người có cookie hỏng về `/manage`
+   * thì shell lại đá ngược về đây — vòng lặp, đúng lý do proxy cố tình không làm. Ở client thì
+   * căn cứ là `/auth/me` đã xác thực THẬT: có `user` nghĩa là phiên còn sống, không thể lặp.
+   *
+   * Đích tính bằng `resolvePortalDestination` — cùng hàm với sau khi đăng nhập, nên vào bằng
+   * URL hay vào bằng form đều kết thúc ở một chỗ.
+   */
+  useEffect(() => {
+    if (!user) return;
+    router.replace(resolvePortalDestination({ user, next, intent }));
+  }, [user, next, intent, router]);
+
+  // Đang chuyển hướng: không hiện form nữa — nó là một form chết, điền vào cũng vô nghĩa.
+  if (user) return <Spin fullscreen />;
 
   async function handleAuthenticated(user: CurrentUser) {
     // Điều hướng theo SCOPE THẬT lấy từ `/auth/me` sau khi làm mới cache — không đoán từ form.

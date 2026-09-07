@@ -4,9 +4,11 @@ import {
   compactMoneyParts,
   formatMoneyVnd,
   pickupWishParts,
+  remainingKm as remainingKmParts,
   rentalDurationParts,
   toAppTz,
   wholeUnits,
+  LIST_SEPARATOR,
   type Dayjs,
   type MoneySeparators,
   type PickupWish,
@@ -20,8 +22,7 @@ import type { DomainLabel } from './domain';
  *
  * BẢN SAO của `apps/web/src/i18n/app-format.ts`, cố ý giữ nguyên từng khoá message và từng
  * quyết định định dạng: một số tiền hay một mốc giao xe phải đọc y hệt nhau trên web và trên
- * app. Khác web đúng hai chỗ — `use-intl` thay `next-intl` (chỉ là KIỂU), và chưa có
- * `remainingKm` vì app chưa mở màn bảo dưỡng.
+ * app. Khác web đúng một chỗ — `use-intl` thay `next-intl`, và đó chỉ là KIỂU.
  *
  * Sửa bên nào cũng phải sửa bên kia, cho tới khi cả cụm được đưa về `@xeprime/domain`.
  *
@@ -62,6 +63,8 @@ export interface AppFormat {
   km: (value: number | null | undefined) => string;
   distanceKm: (value: number | null | undefined) => string;
   kmNumber: (value: number | null | undefined) => string;
+  /** Quãng đường tới mốc bảo dưỡng: `Còn 1.200 km` · `Quá hạn 300 km` · `Chưa đủ dữ liệu`. */
+  remainingKm: (value: number | null | undefined) => string;
 
   packageLabel: (months: number | null | undefined) => string | null;
   pickupWish: (wish: PickupWish) => string;
@@ -85,12 +88,6 @@ export const DATE_PATTERN: Readonly<
   vi: { date: 'DD/MM/YYYY', dateTime: 'DD/MM/YYYY HH:mm', dayMonth: 'DD/MM' },
   en: { date: 'MM/DD/YYYY', dateTime: 'MM/DD/YYYY HH:mm', dayMonth: 'MM/DD' },
 };
-
-/**
- * Dấu ngăn giữa các nhãn dịch vụ. Là KÝ HIỆU, không phải chữ — giống nhau ở mọi ngôn ngữ, nên
- * nó nằm trong mã chứ không nằm trong bó message.
- */
-const SERVICE_SEPARATOR = ' · ';
 
 /** Hoa chữ cái đầu theo luật của chính chuỗi đó — `toLocaleUpperCase` an toàn với tiếng Việt. */
 function capitalizeFirst(text: string): string {
@@ -218,6 +215,14 @@ export function createAppFormat(
         : t('units.km', { value: format.number(value, 'distance') }),
     kmNumber: (value) =>
       value == null ? t('labels.notAvailable') : format.number(value, 'integer'),
+    remainingKm: (value) => {
+      const parts = remainingKmParts(value);
+      if (parts.kind === 'unknown' || parts.km === null) return t('labels.insufficientData');
+      const km = format.number(parts.km, 'integer');
+      return parts.kind === 'overdue'
+        ? t('units.kmOverdue', { value: km })
+        : t('units.kmRemaining', { value: km });
+    },
 
     packageLabel: (months) => (months == null ? null : t('units.month', { count: months })),
     pickupWish: (wish) => {
@@ -243,7 +248,7 @@ export function createAppFormat(
 
     serviceTypes: (values) => {
       if (!values || values.length === 0) return t('labels.emptyValue');
-      return values.map((value) => domainLabel('serviceType', value)).join(SERVICE_SEPARATOR);
+      return values.map((value) => domainLabel('serviceType', value)).join(LIST_SEPARATOR);
     },
 
     count: (value) => format.number(value, 'integer'),

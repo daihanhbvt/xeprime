@@ -13,7 +13,9 @@ import enMarketplace from '@xeprime/domain/messages/en/marketplace.json';
 import enMobileShell from '@xeprime/domain/messages/en/mobile-shell.json';
 import enNavigation from '@xeprime/domain/messages/en/navigation.json';
 import enManageCommon from '@xeprime/domain/messages/en/manage-common.json';
-import enShops from '@xeprime/domain/messages/en/shops.json';
+import enVehicles from '@xeprime/domain/messages/en/vehicles.json';
+import enBranches from '@xeprime/domain/messages/en/branches.json';
+import enMaintenance from '@xeprime/domain/messages/en/maintenance.json';
 import viBookingRequests from '@xeprime/domain/messages/vi/booking-requests.json';
 import viBookings from '@xeprime/domain/messages/vi/bookings.json';
 import viChat from '@xeprime/domain/messages/vi/chat.json';
@@ -29,7 +31,9 @@ import viMarketplace from '@xeprime/domain/messages/vi/marketplace.json';
 import viMobileShell from '@xeprime/domain/messages/vi/mobile-shell.json';
 import viNavigation from '@xeprime/domain/messages/vi/navigation.json';
 import viManageCommon from '@xeprime/domain/messages/vi/manage-common.json';
-import viShops from '@xeprime/domain/messages/vi/shops.json';
+import viVehicles from '@xeprime/domain/messages/vi/vehicles.json';
+import viBranches from '@xeprime/domain/messages/vi/branches.json';
+import viMaintenance from '@xeprime/domain/messages/vi/maintenance.json';
 import { type AppLocale } from './config';
 
 /**
@@ -65,7 +69,9 @@ export const MESSAGES = {
     Marketplace: viMarketplace,
     Listings: viListings,
     ManageCommon: viManageCommon,
-    Shops: viShops,
+    Vehicles: viVehicles,
+    Branches: viBranches,
+    Maintenance: viMaintenance,
     MobileShell: viMobileShell,
   },
   en: {
@@ -83,7 +89,9 @@ export const MESSAGES = {
     Marketplace: enMarketplace,
     Listings: enListings,
     ManageCommon: enManageCommon,
-    Shops: enShops,
+    Vehicles: enVehicles,
+    Branches: enBranches,
+    Maintenance: enMaintenance,
     MobileShell: enMobileShell,
   },
 } as const satisfies Record<AppLocale, unknown>;

@@ -8,7 +8,7 @@ import {
   SERVICE_TYPE,
   type PublicListingDetail,
 } from '@xeprime/types';
-import { dayjs, DAY_PARAM_FORMAT, type RentalMode } from '@xeprime/domain';
+import { dayjs, DAY_PARAM_FORMAT, type RentalMode, LIST_SEPARATOR } from '@xeprime/domain';
 import type { BookingRequestFormValues } from '../booking-schema';
 import { FormSection } from '@/components/ui/FormSection';
 import { DataRow } from '@/components/ui/DataRow';
@@ -155,7 +155,7 @@ export function RequestReviewStep({
               value={
                 [listing.pickupPoint.branchName, listing.pickupPoint.address]
                   .filter(Boolean)
-                  .join(' · ') || '—'
+                  .join(LIST_SEPARATOR) || '—'
               }
             />
           ) : null}

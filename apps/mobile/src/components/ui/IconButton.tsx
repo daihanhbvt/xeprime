@@ -4,12 +4,18 @@ import { XStack } from 'tamagui';
 import { colors, radius, sizing } from '@/theme/tokens';
 import type { IconName } from './Chip';
 
-type Tone = 'plain' | 'surface' | 'primary';
+type Tone = 'plain' | 'surface' | 'primary' | 'danger';
 
 const TONE: Record<Tone, { bg: string; fg: string; border: string }> = {
   plain: { bg: 'transparent', fg: colors.text, border: 'transparent' },
   surface: { bg: colors.surfaceMuted, fg: colors.text, border: colors.border },
   primary: { bg: colors.primary, fg: colors.onPrimary, border: colors.primary },
+  /*
+    `danger` không có NỀN: nó dành cho nút xoá đứng trên thanh tiêu đề, và một ô đỏ đặc ở góc
+    phải header đọc ra như một cảnh báo đang xảy ra chứ không như một nút bấm được. Chỉ hình vẽ
+    đỏ là đủ để nói "thao tác này phá huỷ" — câu xác nhận phía sau mới là lớp chặn thật.
+  */
+  danger: { bg: 'transparent', fg: colors.danger, border: 'transparent' },
 };
 
 interface IconButtonProps {
@@ -47,7 +53,7 @@ export function IconButton({
         h={sizing.touchTarget}
         br={radius.pill}
         bg={skin.bg}
-        bw={tone === 'plain' ? 0 : 1}
+        bw={tone === 'plain' || tone === 'danger' ? 0 : 1}
         bc={skin.border}
         ai="center"
         jc="center"

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { Controller, useForm } from 'react-hook-form';
-import { Text, XStack, YStack } from 'tamagui';
+import { useForm } from 'react-hook-form';
+import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
 import {
@@ -14,15 +14,19 @@ import {
 import { REASON_MAX } from '@/lib/reason';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
-import { Chip } from '@/components/ui/Chip';
+import { Callout } from '@/components/ui/Callout';
+import { DataRow } from '@/components/ui/DataRow';
+import { NumberField } from '@/components/ui/NumberField';
+import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
-import { getErrorCode } from '@/lib/api-client';
+import { ApiClientError, getErrorCode } from '@/lib/api-client';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { colors, radius, space } from '@/theme/tokens';
 import { useResolveHandoverOdometer } from '../hooks/use-handovers';
-import type { Handover } from '../api';
+import type { Handover, HandoverContext } from '../api';
 
 /** Suy từ CHÍNH schema — `yup.oneOf` thu hẹp kiểu, interface viết tay sẽ lệch với resolver. */
 type ResolveFormValues = yup.InferType<ReturnType<typeof buildSchema>>;
@@ -60,21 +64,36 @@ function buildSchema(labels: { km: string; reason: string }) {
 export function ResolveOdometerSheet({
   bookingId,
   type,
+  context,
   handover,
   onClose,
 }: {
   bookingId: string;
   type: HandoverType;
+  /** Ngữ cảnh bàn giao của đơn — nguồn của hai con số đối chiếu ở đầu tấm. */
+  context: HandoverContext;
   handover: Handover;
   onClose: () => void;
 }) {
   const t = useTranslations('Bookings.handover.odometerFix');
   const domainLabel = useDomainLabel();
+  const fmt = useAppFormat();
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
   const resolve = useResolveHandoverOdometer(bookingId, type);
 
-  const [decreaseBlocked, setDecreaseBlocked] = useState(false);
+  /*
+   * Hai câu trả lời KHÁC NHAU cùng mang mã `ODOMETER_DECREASE_FORBIDDEN`:
+   *
+   * - 403: thiếu hẳn `vehicles.odometer.decrease` — đi xin quyền, không có đường vòng.
+   * - 409 (`requiresConfirmation`): CÓ quyền, chỉ là chưa xác nhận — còn một bước nữa.
+   *
+   * Gộp hai thứ đó vào một câu đỏ như trước là khoá cứng người có thẩm quyền: họ không bao giờ
+   * giảm được số KM từ app, trong khi web cho họ bấm "vẫn giảm".
+   */
+  const [decrease, setDecrease] = useState<{ message: string; canConfirm: boolean } | null>(
+    null,
+  );
 
   const schema = useMemo(() => buildSchema({ km: t('kmLabel'), reason: t('reasonHint') }), [t]);
 
@@ -87,31 +106,40 @@ export function ResolveOdometerSheet({
     },
   });
 
-  const submit = handleSubmit((values) => {
-    setDecreaseBlocked(false);
-    resolve.mutate(
-      {
-        odometerKm: values.odometerKm,
-        reasonCode: values.reasonCode,
-        reason: values.reason,
-        expectedRowVersion: handover.rowVersion,
-      },
-      {
-        onSuccess: () => {
-          toast.showSuccess(t('success'));
-          onClose();
+  const submit = (confirmDecrease = false) =>
+    handleSubmit((values) => {
+      setDecrease(null);
+      resolve.mutate(
+        {
+          odometerKm: values.odometerKm,
+          reasonCode: values.reasonCode,
+          reason: values.reason,
+          confirmDecrease,
+          expectedRowVersion: handover.rowVersion,
         },
-        onError: (error) => {
-          const code = getErrorCode(error);
-          if (code === API_ERROR_CODE.ODOMETER_DECREASE_FORBIDDEN) {
-            setDecreaseBlocked(true);
-            return;
-          }
-          toast.showError(errorMessage(error));
+        {
+          onSuccess: () => {
+            toast.showSuccess(t('success'));
+            onClose();
+          },
+          onError: (error) => {
+            if (getErrorCode(error) !== API_ERROR_CODE.ODOMETER_DECREASE_FORBIDDEN) {
+              toast.showError(errorMessage(error));
+              return;
+            }
+            const details = error instanceof ApiClientError ? error.details : null;
+            const canConfirm =
+              typeof details === 'object' &&
+              details !== null &&
+              (details as { requiresConfirmation?: boolean }).requiresConfirmation === true;
+            setDecrease({
+              message: canConfirm ? t('decreaseConfirm') : t('decreaseForbidden'),
+              canConfirm,
+            });
+          },
         },
-      },
-    );
-  });
+      );
+    })();
 
   return (
     <BottomSheet
@@ -120,63 +148,75 @@ export function ResolveOdometerSheet({
       /* Tiêu đề theo VIỆC, như web: bổ sung một số còn thiếu khác với sửa một số đã ghi. */
       title={handover.odometerMissing ? t('openMissing') : t('openCorrect')}
       footer={
-        <Button label={t('confirm')} loading={resolve.isPending} onPress={() => void submit()} />
+        <Button label={t('confirm')} loading={resolve.isPending} onPress={() => submit()} />
       }
     >
-      <Text col={colors.textMuted} fos={fontSize.bodySm}>
-        {t('lead')}
-      </Text>
+      <YStack gap={space.sm}>
+        {/* Cùng ba khối mở đầu với web: cảnh báo · ô đối chiếu · form. */}
+        {handover.odometerMissing ? (
+          <Callout tone="warning" title={t('missingTitle')}>
+            {t('missingBody')}
+          </Callout>
+        ) : null}
 
-      <TextField
-        control={control}
-        name="odometerKm"
-        label={t('kmLabel')}
-        keyboardType="number-pad"
-        required
-      />
-
-      {decreaseBlocked ? (
-        <YStack bg={colors.dangerSurface} p={space.md} br={space.xs}>
-          <Text col={colors.danger} fos={fontSize.bodySm}>
-            {t('decreaseForbidden')}
-          </Text>
+        {/*
+          Hai con số để ĐỐI CHIẾU trước khi gõ: KM hiện tại của xe và KM lúc giao. Không có chúng
+          thì người dùng nhập một số vào khoảng không và chỉ biết mình sai khi server từ chối.
+        */}
+        <YStack p={space.sm} br={radius.md} bg={colors.surfaceMuted} bw={1} bc={colors.borderSubtle}>
+          <DataRow label={t('currentVehicleKm')} value={fmt.km(context.vehicleOdometerKm)} />
+          {context.pickupOdometerKm == null ? null : (
+            <DataRow label={t('pickupKm')} value={fmt.km(context.pickupOdometerKm)} />
+          )}
         </YStack>
-      ) : null}
 
-      <Controller
-        control={control}
-        name="reasonCode"
-        render={({ field }) => (
-          <YStack gap={space.xs}>
-            <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.medium}>
-              {t('reasonCodeLabel')}
-            </Text>
-            <XStack gap={space.xs} flexWrap="wrap">
-              {ODOMETER_CORRECTION_REASON_VALUES.map((code) => (
-                <Chip
-                  key={code}
-                  label={domainLabel('odometerCorrectionReason', code)}
-                  selected={field.value === code}
-                  size="sm"
-                  onPress={() => field.onChange(code)}
-                />
-              ))}
-            </XStack>
-          </YStack>
-        )}
-      />
+        {decrease ? (
+          <Callout tone="danger" title={t('decreaseTitle')}>
+            {decrease.message}
+          </Callout>
+        ) : null}
+        {decrease?.canConfirm ? (
+          <Button
+            label={t('decreaseOverride')}
+            variant="danger"
+            loading={resolve.isPending}
+            onPress={() => submit(true)}
+          />
+        ) : null}
 
-      <TextField
-        control={control}
-        name="reason"
-        label={t('reasonLabel')}
-        placeholder={t('reasonPlaceholder')}
-        hint={t('reasonHint')}
-        multiline
-        rows={3}
-        maxLength={REASON_MAX}
-        required
-      />
+        <NumberField
+          control={control}
+          name="odometerKm"
+          label={t('kmLabel')}
+          suffix="km"
+          min={0}
+          integer
+          required
+        />
+
+        <SelectField
+          control={control}
+          name="reasonCode"
+          label={t('reasonCodeLabel')}
+          options={ODOMETER_CORRECTION_REASON_VALUES.map((code) => ({
+            value: code,
+            label: domainLabel('odometerCorrectionReason', code),
+          }))}
+          required
+        />
+
+        <TextField
+          control={control}
+          name="reason"
+          label={t('reasonLabel')}
+          placeholder={t('reasonPlaceholder')}
+          hint={t('reasonHint')}
+          multiline
+          rows={3}
+          maxLength={REASON_MAX}
+          required
+        />
+      </YStack>
     </BottomSheet>
   );
 }

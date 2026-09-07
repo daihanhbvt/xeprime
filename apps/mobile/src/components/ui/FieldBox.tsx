@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, YStack } from 'tamagui';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
 import type { IconName } from './Chip';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { colors, fieldFontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 
 export function FieldBox({
   label,
@@ -40,7 +40,7 @@ export function FieldBox({
           f={1}
           py={space.sm}
           col={filled ? colors.text : colors.placeholder}
-          fos={fontSize.body}
+          fos={fieldFontSize.value}
           fow={filled ? fontWeight.medium : fontWeight.regular}
         >
           {filled ? value : placeholder}

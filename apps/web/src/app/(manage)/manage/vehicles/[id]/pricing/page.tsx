@@ -5,6 +5,7 @@ import { App, Button, Skeleton } from 'antd';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { ROUTES, vehiclePath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -86,7 +87,7 @@ export default function VehiclePricingPage() {
       title="Giá & chính sách"
       subtitle={
         vehicle.data
-          ? [vehicle.data.name, vehicle.data.plateNumber].filter(Boolean).join(' · ')
+          ? [vehicle.data.name, vehicle.data.plateNumber].filter(Boolean).join(LIST_SEPARATOR)
           : 'Cấu hình giá thuê và chính sách áp dụng riêng cho xe'
       }
       extra={

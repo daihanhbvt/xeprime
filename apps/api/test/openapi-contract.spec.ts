@@ -7,7 +7,7 @@ import type { OpenAPIObject } from '@nestjs/swagger';
 import { AppModule } from '../src/app.module';
 import { buildOpenApiDocument } from '../src/bootstrap';
 import { API_TAGS } from '../src/openapi/api-tags';
-import { COOKIE_SECURITY_SCHEME } from '../src/openapi/enhance-document';
+import { COOKIE_SECURITY_SCHEME, RAW_RESPONSE_EXTENSION } from '../src/openapi/enhance-document';
 import { collectRouteAccess } from '../src/openapi/route-access';
 
 /**
@@ -138,6 +138,11 @@ describe('OpenAPI · hình dạng response', () => {
     const wrong: string[] = [];
     for (const route of routes) {
       if (ENVELOPE_EXEMPT_PATHS.has(route.path)) continue;
+      if (
+        (route.operation as unknown as Record<string, unknown>)[RAW_RESPONSE_EXTENSION] === true
+      ) {
+        continue;
+      }
 
       for (const [status, response] of Object.entries(route.operation.responses)) {
         const code = Number(status);
@@ -160,6 +165,22 @@ describe('OpenAPI · hình dạng response', () => {
     expect(wrong).toEqual([]);
   });
 
+  it('response raw của bên thứ ba được đánh dấu và mô tả đúng shape không envelope', () => {
+    const rawRoutes = routes.filter(
+      (route) =>
+        (route.operation as unknown as Record<string, unknown>)[RAW_RESPONSE_EXTENSION] === true,
+    );
+
+    expect(rawRoutes.map((route) => route.label)).toEqual(['POST /sepay/webhook']);
+
+    const response = rawRoutes[0]?.operation.responses['200'];
+    expect(
+      response && !('$ref' in response) ? response.content?.['application/json']?.schema : null,
+    ).toMatchObject({
+      $ref: '#/components/schemas/SepayWebhookAckDto',
+    });
+  });
+
   it('mọi response 2xx đều có mô tả', () => {
     const blank: string[] = [];
     for (const route of routes) {
@@ -180,9 +201,28 @@ describe('OpenAPI · nhánh lỗi', () => {
     expect(document.components?.schemas?.ApiErrorDto).toBeDefined();
   });
 
-  it('mọi route đều mô tả 429 và 500', () => {
-    const missing = routes.filter((r) => !r.operation.responses['429'] || !r.operation.responses['500']);
-    expect(missing.map((r) => r.label)).toEqual([]);
+  /**
+   * Route đứng NGOÀI throttler nên KHÔNG được mô tả 429 — nó không bao giờ trả mã đó.
+   *
+   * Danh sách khai tay chứ không suy từ metadata: đây là một ngoại lệ về BẢO MẬT (một endpoint
+   * công khai có quyền ghi tiền, tự bỏ rate limit), nên nó phải được ai đó gõ tên ra và giải
+   * thích. Thêm một route vào đây là một quyết định có review, không phải hệ quả của một
+   * decorator ai đó vừa dán.
+   */
+  const NO_RATE_LIMIT: Readonly<Record<string, string>> = {
+    // ADR 0022 ràng buộc 4: SePay bắn dồn khi retry; chặn nó là tự trì hoãn tiền của chính mình.
+    // Cửa thật là khoá `Authorization: Apikey …` so time-safe trong `SepayService`.
+    'POST /sepay/webhook': '@SkipThrottle()',
+  };
+
+  it('mọi route đều mô tả 500, và mô tả 429 trừ các route khai miễn throttle', () => {
+    const missing500 = routes.filter((r) => !r.operation.responses['500']);
+    expect(missing500.map((r) => r.label)).toEqual([]);
+
+    // So bằng BẢN ĐỒ hai chiều: thiếu 429 ở route thường thì đỏ, mà THỪA 429 ở route miễn
+    // throttle cũng đỏ — bản thứ hai mới là thứ bắt được việc tài liệu quay lại nói dối.
+    const without429 = routes.filter((r) => !r.operation.responses['429']).map((r) => r.label);
+    expect(without429.sort()).toEqual(Object.keys(NO_RATE_LIMIT).sort());
   });
 
   it('route cần đăng nhập đều mô tả 401', () => {
@@ -300,7 +340,9 @@ function summarizeDrift(committed: OpenAPIObject, current: OpenAPIObject): strin
 
   // Cùng bộ khoá mà nội dung vẫn khác: đổi field/mô tả/nhánh lỗi bên trong một endpoint có sẵn.
   if (lines.length === 0) {
-    lines.push('  Cùng bộ đường dẫn và schema — khác ở chi tiết bên trong (field, mô tả, response).');
+    lines.push(
+      '  Cùng bộ đường dẫn và schema — khác ở chi tiết bên trong (field, mô tả, response).',
+    );
   }
 
   return lines.join('\n');

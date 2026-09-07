@@ -1,4 +1,5 @@
-import { Image, Linking, Pressable } from 'react-native';
+import { Linking, Pressable } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -15,15 +16,18 @@ import {
   type TenantCustomerRiskLevel,
   type VehicleType,
 } from '@xeprime/types';
-import { telHref, toAppTz, zaloHref } from '@xeprime/domain';
+import { telHref, toAppTz, zaloHref, LIST_SEPARATOR } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
+import { DetailChevron } from '@/components/ui/DetailArrow';
 import { DataRow } from '@/components/ui/DataRow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { ROUTES } from '@/navigation/routes';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { layout } from '@/theme/layout';
@@ -33,6 +37,10 @@ import type { BookingRequestItem } from './api';
 
 const VEHICLE_THUMB = { width: 96, height: 72 } as const;
 const AVATAR_SIZE = 44;
+
+/** Không phụ thuộc prop/state — dựng MỘT lần ở module scope, không phải mỗi lần render. */
+const VEHICLE_THUMB_STYLE = { ...VEHICLE_THUMB, borderRadius: radius.sm };
+const AVATAR_STYLE = { width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: radius.pill };
 
 /**
  * Chi tiết MỘT yêu cầu thuê — bản native của `BookingRequestDetailDialog`. Thẻ hộp thư để QUÉT,
@@ -57,13 +65,15 @@ export function BookingRequestDetailScreen({
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const permissions = usePermissions();
+  const navigateOnce = useNavigateOnce();
 
   const status = request.status as BookingRequestStatus;
   const meta = BOOKING_REQUEST_STATUS_META[status];
   const isPending = status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL;
   const canApprove = permissions.has(PERMISSION.BOOKING_REQUEST_APPROVE);
+  const canViewVehicle = permissions.has(PERMISSION.VEHICLE_VIEW);
 
-  const vehicleMeta = [request.vehicleCode, request.vehiclePlate].filter(Boolean).join(' · ');
+  const vehicleMeta = [request.vehicleCode, request.vehiclePlate].filter(Boolean).join(LIST_SEPARATOR);
 
   const riskLevel = request.customerRiskLevel as TenantCustomerRiskLevel | null;
   const showRisk = riskLevel != null && riskLevel !== TENANT_CUSTOMER_RISK_LEVEL.NORMAL;
@@ -98,15 +108,39 @@ export function BookingRequestDetailScreen({
             </XStack>
           </Card>
 
-          <Card>
+          {/*
+            Mở được HỒ SƠ 360 của xe ngay từ đây — web cũng vậy (`VehicleDetailDialog` mở từ hộp
+            thư). Đang duyệt yêu cầu mà muốn kiểm hạn đăng kiểm hay KM của xe thì xem tại chỗ,
+            không phải đi vòng qua danh sách xe.
+
+            Khác web ở VỎ, không ở nghĩa: web mở overlay để giữ chỗ đang đứng, native đẩy một màn
+            và nút Lui trả về đúng đây — đó là hành vi đi sâu chuẩn của stack khu quản lý.
+
+            Gác `vehicles.view`: thiếu quyền thì khối vẫn hiện đủ thông tin, chỉ không bấm được.
+          */}
+          <Card
+            {...(canViewVehicle
+              ? {
+                  onPress: () => navigateOnce(ROUTES.manage.vehicleDetail(request.vehicleId)),
+                  accessibilityLabel: request.vehicleName,
+                }
+              : {})}
+          >
             <YStack gap={space.sm}>
               <SectionTitle>{t('vehicle.heading')}</SectionTitle>
-              <XStack gap={space.sm}>
+              {/*
+                Cả thẻ đã bắt chạm (`onPress` ở trên) nên mũi tên chỉ đi KÈM nội dung, không phải
+                một đích chạm riêng — thêm `DetailArrow` nổi ở đây sẽ là lối vào thứ hai cho đúng
+                một việc.
+              */}
+              <XStack ai="center" gap={space.sm}>
                 {request.vehicleImageUrl ? (
                   <Image
                     source={{ uri: request.vehicleImageUrl }}
-                    style={{ ...VEHICLE_THUMB, borderRadius: radius.sm }}
-                    resizeMode="cover"
+                    style={VEHICLE_THUMB_STYLE}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    transition={150}
                     accessibilityLabel={request.vehicleName}
                   />
                 ) : (
@@ -139,6 +173,7 @@ export function BookingRequestDetailScreen({
                     <Chip label={domainLabel('serviceType', request.serviceType)} size="sm" />
                   </XStack>
                 </YStack>
+                {canViewVehicle ? <DetailChevron /> : null}
               </XStack>
             </YStack>
           </Card>
@@ -150,8 +185,9 @@ export function BookingRequestDetailScreen({
                 {request.customerAvatarUrl ? (
                   <Image
                     source={{ uri: request.customerAvatarUrl }}
-                    style={{ width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: radius.pill }}
-                    resizeMode="cover"
+                    style={AVATAR_STYLE}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
                   />
                 ) : (
                   <YStack

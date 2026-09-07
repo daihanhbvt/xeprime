@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthModal } from './AuthModal';
 import { AuthModalProvider, AuthUrlSync } from './AuthModalProvider';
+import { renderWithIntl } from '@/i18n/test-utils';
 
 /**
  * Khoá lại hành vi trung tâm của thay đổi này: đăng ký xong KHÔNG đi `/manage`, KHÔNG hiện form
@@ -344,5 +345,99 @@ describe('AuthModal — vỏ overlay & ranh giới (Wave 1B)', () => {
 
     await waitFor(() => expect(api.login).toHaveBeenCalled());
     expect(nav.push).not.toHaveBeenCalledWith('/manage/admin');
+  });
+});
+
+/**
+ * Ô "Email hoặc số điện thoại" nhận HAI loại giá trị, nên nó là ô duy nhất trong form mà một câu
+ * "không hợp lệ" chung chung không nói được gì: người gõ thiếu tên miền và người gõ thiếu một
+ * chữ số cần hai câu khác nhau để biết sửa ở đâu.
+ *
+ * Luật nằm ở `@xeprime/types` và được cả yup (web + app native) lẫn DTO backend dùng chung — ở
+ * đây khoá phần web THẤY được: đúng câu lỗi, và KHÔNG gửi request khi định dạng còn sai.
+ */
+describe('AuthModal — validate định danh đăng nhập', () => {
+  async function openLogin() {
+    renderModal('auth=login');
+    await waitFor(() => expect(visibleTitle('Đăng nhập XePrime')).toBeTruthy());
+  }
+
+  function submitLogin(identifier: string) {
+    fireEvent.change(screen.getByLabelText('Email hoặc số điện thoại'), {
+      target: { value: identifier },
+    });
+    fireEvent.change(screen.getByLabelText('Mật khẩu'), { target: { value: 'Abcd1234' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng nhập' }));
+  }
+
+  it('email thiếu tên miền → "Email không hợp lệ", không gọi API', async () => {
+    await openLogin();
+    submitLogin('khach@xeprime');
+
+    expect(await screen.findByText('Email không hợp lệ')).toBeTruthy();
+    expect(api.login).not.toHaveBeenCalled();
+  });
+
+  it('SĐT thiếu chữ số → "Số điện thoại không hợp lệ", không gọi API', async () => {
+    await openLogin();
+    submitLogin('0901');
+
+    expect(await screen.findByText('Số điện thoại không hợp lệ')).toBeTruthy();
+    expect(api.login).not.toHaveBeenCalled();
+  });
+
+  it('chuỗi không ra email cũng không ra số → câu lỗi nêu cả hai lựa chọn kèm ví dụ', async () => {
+    await openLogin();
+    submitLogin('nguyenvana');
+
+    expect(await screen.findByText(/Nhập email .* hoặc số điện thoại/)).toBeTruthy();
+    expect(api.login).not.toHaveBeenCalled();
+  });
+
+  it('sửa lại cho đúng thì gửi được, và gửi bản đã trim', async () => {
+    await openLogin();
+    submitLogin('nguyenvana');
+    expect(await screen.findByText(/Nhập email .* hoặc số điện thoại/)).toBeTruthy();
+
+    submitLogin('  khach@xeprime.test  ');
+    await waitFor(() => expect(api.login).toHaveBeenCalledWith('khach@xeprime.test', 'Abcd1234'));
+  });
+
+  it('nhận cả SĐT dạng +84 và dạng chép từ danh bạ (có dấu cách)', async () => {
+    await openLogin();
+    submitLogin('+84901234567');
+    await waitFor(() => expect(api.login).toHaveBeenCalledWith('+84901234567', 'Abcd1234'));
+
+    api.login.mockClear();
+    submitLogin('090 123 4567');
+    await waitFor(() => expect(api.login).toHaveBeenCalledWith('090 123 4567', 'Abcd1234'));
+  });
+
+  /**
+   * Câu lỗi của schema từng nằm cứng bằng tiếng Việt trong `@xeprime/validators`, nên giao diện
+   * tiếng Anh vẫn ăn tiếng Việt ngay khi bấm Đăng nhập. Test này khoá phần nối dây đó lại.
+   */
+  it('theo ngôn ngữ đang đọc — giao diện tiếng Anh báo lỗi bằng tiếng Anh', async () => {
+    nav.search = 'auth=login';
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderWithIntl(
+      <QueryClientProvider client={queryClient}>
+        <AuthModalProvider>
+          <AuthUrlSync />
+          <AuthModal />
+        </AuthModalProvider>
+      </QueryClientProvider>,
+      { locale: 'en' },
+    );
+    await waitFor(() => expect(visibleTitle('Sign in to XePrime')).toBeTruthy());
+
+    fireEvent.change(screen.getByLabelText('Email or phone number'), {
+      target: { value: 'khach@xeprime' },
+    });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Abcd1234' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(await screen.findByText('That email address is not valid')).toBeTruthy();
+    expect(api.login).not.toHaveBeenCalled();
   });
 });

@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { Pressable, StyleSheet, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { CountBadge } from '@/components/ui/CountBadge';
 import { Pagination } from '@/components/ui/Pagination';
 import { useCollapseOnScroll, type CollapseOnScroll } from '@/hooks/use-collapse-on-scroll';
 import { layout } from '@/theme/layout';
@@ -60,39 +61,7 @@ const styles = StyleSheet.create({
     dòng tự căn glyph theo baseline của nó, không theo tâm khung. Không có nó thì flexbox của
     khung cha làm việc căn giữa, và nó căn đúng.
   */
-  filterCountText: {
-    includeFontPadding: false,
-    textAlign: 'center',
-    textAlignVertical: 'center',
-  },
 });
-
-/** Đường kính huy hiệu đếm. 20 chứ không phải 18: 18 vừa khít một chữ số nên trông như bị bó. */
-const COUNT_SIZE = 20;
-
-/** Con số bộ lọc đang bật, gắn trên nút "Bộ lọc". Gold đặc + chữ tối, trùng tông huy hiệu menu. */
-function FilterCount({ count }: { count: number }) {
-  return (
-    <YStack
-      minWidth={COUNT_SIZE}
-      h={COUNT_SIZE}
-      px={space.xs}
-      br={radius.pill}
-      bg={colors.primary}
-      ai="center"
-      jc="center"
-    >
-      <Text
-        col={colors.onPrimary}
-        fos={fontSize.label}
-        fow={fontWeight.bold}
-        style={styles.filterCountText}
-      >
-        {count}
-      </Text>
-    </YStack>
-  );
-}
 
 /**
  * Vỏ của một màn danh sách trong khu quản lý — gom bốn thứ mọi bảng dữ liệu ở đây đều cần: tiêu
@@ -142,7 +111,13 @@ export function ManageListShell({
   groups: readonly FilterGroup[];
   onFilterChange: (groupKey: string, value: string) => void;
   meta?: { page: number; limit: number; total: number } | undefined;
-  onPageChange: (page: number) => void;
+  /**
+   * Bỏ trống ở màn CUỘN VÔ HẠN — ở đó không có trang để đổi.
+   *
+   * `meta` và `onPageChange` đi thành cặp: có `meta` là có thanh phân trang ở chân, và thanh
+   * đó cần chỗ để gọi khi người dùng bấm. Màn cuộn vô hạn không truyền cái nào cả.
+   */
+  onPageChange?: (page: number) => void;
   /**
    * Danh sách.
    *
@@ -153,10 +128,18 @@ export function ManageListShell({
     /** Handler của Reanimated — gắn thẳng vào `onScroll` của `Animated.FlatList`/`FlatList`. */
     onScroll: CollapseOnScroll['onScroll'];
     headerHeight: number;
+    /**
+     * `contentContainerStyle` cho danh sách THẺ — đã chừa `headerHeight` ở trên và cùng một
+     * tham chiếu giữa các lần render. Bốn màn từng tự viết object này inline, và một object mới
+     * mỗi render là một lần `FlatList` so prop rồi dựng lại cả cây con giữa lúc đang cuộn.
+     */
+    contentContainerStyle: ViewStyle;
   }) => ReactNode;
 }) {
   const t = useTranslations('Common.filters');
   const [filtering, setFiltering] = useState(false);
+  const openFilters = useCallback(() => setFiltering(true), []);
+  const closeFilters = useCallback(() => setFiltering(false), []);
 
   /*
    * Chiều cao khối đầu trang phải ĐO, không được đoán: nó đổi theo màn (hộp thư có dải tab,
@@ -169,6 +152,16 @@ export function ManageListShell({
     heightValue: headHeightSv,
     onLayout: measureHead,
   } = useCollapseOnScroll();
+
+  const contentContainerStyle = useMemo<ViewStyle>(
+    () => ({
+      paddingHorizontal: layout.screenX,
+      paddingTop: headHeight,
+      paddingBottom: layout.screenX,
+      gap: layout.inline,
+    }),
+    [headHeight],
+  );
 
   /*
    * Từ khoá tìm kiếm cũng là MỘT bộ lọc.
@@ -236,7 +229,7 @@ export function ManageListShell({
     */
     <>
       <YStack f={1} ov="hidden">
-        {children({ onScroll, headerHeight: headHeight })}
+        {children({ onScroll, headerHeight: headHeight, contentContainerStyle })}
 
         <Animated.View style={[styles.head, headStyle]} onLayout={measureHead}>
           <XStack ai="center" gap={space.sm} px={layout.screenX} pt={space.md} pb={space.xs}>
@@ -262,7 +255,7 @@ export function ManageListShell({
               người dùng phải mở tấm trượt mới biết vì sao danh sách ngắn bất thường.
             */}
             <Pressable
-              onPress={() => setFiltering(true)}
+              onPress={openFilters}
               accessibilityRole="button"
               accessibilityLabel={
                 count > 0 ? `${t('title')}, ${t('activeCount', { count })}` : t('open')
@@ -288,7 +281,7 @@ export function ManageListShell({
               >
                 {t('title')}
               </Text>
-              {count > 0 ? <FilterCount count={count} /> : null}
+              {count > 0 ? <CountBadge count={count} /> : null}
             </Pressable>
           </XStack>
 
@@ -301,7 +294,7 @@ export function ManageListShell({
       </YStack>
 
       {/* NGOÀI vùng cuộn và KHÔNG ẩn theo cuộn — xem ghi chú ở `Pagination` và ở đầu file. */}
-      {meta ? (
+      {meta && onPageChange ? (
         <Pagination
           page={meta.page}
           limit={meta.limit}
@@ -318,7 +311,7 @@ export function ManageListShell({
         searchLabel={searchLabel}
         searchPlaceholder={searchPlaceholder}
         onSearchChange={onSearchChange}
-        onClose={() => setFiltering(false)}
+        onClose={closeFilters}
       />
     </>
   );

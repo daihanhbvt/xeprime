@@ -113,6 +113,7 @@ export const tamaguiConfig = createTamagui({
   tokens,
   themes: { light, dark: light },
   fonts: { body: bodyFont, heading: displayFont },
+  defaultFont: 'body',
   defaultTheme: 'light',
   shorthands: {
     bg: 'backgroundColor',

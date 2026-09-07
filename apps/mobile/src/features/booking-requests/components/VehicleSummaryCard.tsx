@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'react-native';
+import { Image } from 'expo-image';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { CATALOG_TYPE, SERVICE_TYPE, type PublicListingDetail } from '@xeprime/types';
-import { applyDiscountPercent } from '@xeprime/domain';
+import { applyDiscountPercent, LIST_SEPARATOR } from '@xeprime/domain';
 import { catalogLabel } from '@xeprime/api-client';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
@@ -14,6 +14,14 @@ import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /** Thumbnail ngang giữ mốc nhận diện xe nhưng vẫn để step và trường đầu tiên nằm gần màn đầu. */
 const VEHICLE_THUMB = { width: 112, height: 84 } as const;
+
+/** Không phụ thuộc prop/state — dựng MỘT lần ở module scope, không phải mỗi lần render. */
+const VEHICLE_THUMB_IMAGE_STYLE = {
+  width: VEHICLE_THUMB.width,
+  height: VEHICLE_THUMB.height,
+  borderRadius: radius.md,
+  backgroundColor: colors.surfaceMuted,
+};
 
 /**
  * Hồ sơ xe ở đầu luồng gửi yêu cầu — bản native của `VehicleSummaryPanel`.
@@ -96,13 +104,10 @@ export function VehicleSummaryCard({
           {listing.mainImageUrl ? (
             <Image
               source={{ uri: listing.mainImageUrl }}
-              style={{
-                width: VEHICLE_THUMB.width,
-                height: VEHICLE_THUMB.height,
-                borderRadius: radius.md,
-                backgroundColor: colors.surfaceMuted,
-              }}
-              resizeMode="cover"
+              style={VEHICLE_THUMB_IMAGE_STYLE}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={150}
             />
           ) : (
             <YStack
@@ -124,7 +129,7 @@ export function VehicleSummaryCard({
                   <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.semibold}>
                     {(listing.serviceTypes ?? [])
                       .map((s) => domainLabel('serviceType', s))
-                      .join(' · ')
+                      .join(LIST_SEPARATOR)
                       .toUpperCase()}
                   </Text>
                 </XStack>
@@ -144,7 +149,7 @@ export function VehicleSummaryCard({
             <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={2}>
               {[domainLabel('vehicleType', listing.vehicleType), listing.shopProvince]
                 .filter(Boolean)
-                .join(' · ')}
+                .join(LIST_SEPARATOR)}
             </Text>
 
             {/* Giá 0đ là giá THẬT; chỉ ẩn khi backend không có giá cho dịch vụ này. */}

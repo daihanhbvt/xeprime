@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, Image, Modal, Pressable, useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
+import { ActivityIndicator, Modal, Pressable, useWindowDimensions } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { toAppTz } from '@xeprime/domain';
@@ -272,7 +273,8 @@ function PhotoViewer({ url, onClose }: { url: string | null; onClose: () => void
             key={url}
             source={{ uri: url }}
             style={{ width, height: height * 0.8 }}
-            resizeMode="contain"
+            contentFit="contain"
+            cachePolicy="memory-disk"
             onError={() => setFailed(true)}
             onLoad={() => setFailed(false)}
           />

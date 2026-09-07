@@ -5,7 +5,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { BottomSheet } from './BottomSheet';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
-import { colors, fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
+import { colors, fieldFontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
 
 export interface SelectControlOption {
   readonly value: string;
@@ -69,7 +69,7 @@ export function SelectControl({
           <Text
             f={1}
             col={current ? colors.text : colors.placeholder}
-            fos={fontSize.body}
+            fos={fieldFontSize.value}
             numberOfLines={1}
           >
             {current?.label ?? placeholder ?? t('choose')}
@@ -99,13 +99,13 @@ export function SelectControl({
                 <YStack f={1} gap={2}>
                   <Text
                     col={selected ? colors.primaryActive : colors.text}
-                    fos={fontSize.body}
+                    fos={fieldFontSize.value}
                     fow={selected ? fontWeight.semibold : fontWeight.regular}
                   >
                     {option.label}
                   </Text>
                   {option.hint ? (
-                    <Text col={colors.textMuted} fos={fontSize.label}>
+                    <Text col={colors.textMuted} fos={fieldFontSize.message}>
                       {option.hint}
                     </Text>
                   ) : null}

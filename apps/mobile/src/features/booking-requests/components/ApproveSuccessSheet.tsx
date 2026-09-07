@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { toAppTz } from '@xeprime/domain';
@@ -8,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { DataRow } from '@/components/ui/DataRow';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { colors, fontSize, iconSize, radius, space } from '@/theme/tokens';
 import type { BookingRequestItem } from '../api';
 
@@ -26,7 +26,7 @@ export function ApproveSuccessSheet({
 }) {
   const t = useTranslations('BookingRequests');
   const fmt = useAppFormat();
-  const router = useRouter();
+  const navigateOnce = useNavigateOnce();
 
   const pickup = request.pickupAt ? toAppTz(request.pickupAt) : null;
   const dropoff = request.returnAt ? toAppTz(request.returnAt) : null;
@@ -47,7 +47,7 @@ export function ApproveSuccessSheet({
               size="lg"
               onPress={() => {
                 onClose();
-                router.push(ROUTES.manage.bookingDetail(bookingId));
+                navigateOnce(ROUTES.manage.bookingDetail(bookingId));
               }}
             />
           ) : null}

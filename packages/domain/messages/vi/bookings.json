@@ -93,8 +93,7 @@
     "vehicle": "Xe",
     "period": "Thời gian thuê",
     "total": "Tổng tiền",
-    "status": "Trạng thái",
-    "viewDetailOf": "Xem chi tiết đơn {code}"
+    "status": "Trạng thái"
   },
   "money": {
     "baseAmount": "Tiền thuê",
@@ -194,7 +193,6 @@
     "odometerFix": {
       "openMissing": "Bổ sung KM còn thiếu",
       "openCorrect": "Điều chỉnh KM biên bản",
-      "lead": "Biên bản đã xác nhận nên số KM chỉ đổi được qua đường này, và mọi thay đổi đều vào nhật ký.",
       "kmLabel": "Chỉ số KM thực tế",
       "reasonCodeLabel": "Lý do",
       "reasonLabel": "Diễn giải chi tiết",
@@ -202,7 +200,14 @@
       "reasonHint": "Bắt buộc và được ghi vào nhật ký — một số KM đổi mà không ai biết vì sao là thứ không được phép tồn tại.",
       "confirm": "Lưu chỉ số KM",
       "success": "Đã cập nhật chỉ số KM của biên bản",
-      "decreaseForbidden": "Giảm số KM cần quyền riêng (vehicles.odometer.decrease). Hạ số KM xuống có thể che giấu quãng đường đã chạy, nên nó không nằm trong quyền sửa thông thường."
+      "decreaseForbidden": "Giảm số KM cần quyền riêng (vehicles.odometer.decrease). Hạ số KM xuống có thể che giấu quãng đường đã chạy, nên nó không nằm trong quyền sửa thông thường.",
+      "missingTitle": "Biên bản này đang thiếu chỉ số KM",
+      "missingBody": "KM hiện tại của xe chưa được cập nhật từ chuyến này. Nhập số đọc thực tế để đồng bộ lại hồ sơ xe và mốc bảo dưỡng.",
+      "currentVehicleKm": "KM hiện tại của xe",
+      "pickupKm": "KM lúc giao",
+      "decreaseTitle": "Số KM mới thấp hơn KM hiện tại",
+      "decreaseConfirm": "Giảm số KM có thể che giấu quãng đường đã chạy, nên nó cần một lần xác nhận nữa.",
+      "decreaseOverride": "Tôi có thẩm quyền, vẫn giảm"
     },
     "advancedPickup": "Thêm thông tin bàn giao — Không bắt buộc",
     "advancedReturn": "Thêm thông tin khi nhận xe — Không bắt buộc",
@@ -375,14 +380,18 @@
     "permissionDenied": "Bạn không có quyền tạo đơn thuê."
   },
   "missingKm": {
-    "title": "Thiếu KM trả",
-    "open": "Hàng đợi thiếu KM trả",
-    "lead": "Biên bản trả đã xác nhận nhưng chưa có chỉ số KM. Mọi phép tính bảo dưỡng theo KM sau đó đều dựa trên một mốc cũ.",
     "empty": "Không còn việc thiếu KM trả",
     "errorTitle": "Không tải được danh sách việc thiếu KM",
-    "pickupKm": "KM lúc giao",
     "fix": "Bổ sung KM",
-    "confirmedAt": "Xác nhận trả lúc"
+    "noPlate": "Chưa có biển số",
+    "bookingLine": "Đơn {code}",
+    "pickupKmLine": "KM lúc giao: {value}",
+    "needPermission": "Cần quyền chỉnh KM",
+    "resolveForbiddenTitle": "Không có quyền mở biên bản bàn giao này",
+    "resolveForbiddenBody": "Bổ sung KM cần quyền xem bàn giao của đơn tương ứng.",
+    "resolveErrorTitle": "Không tải được biên bản để bổ sung KM",
+    "resolveErrorBody": "Kết nối có thể bị gián đoạn. Việc này vẫn còn trong hàng đợi.",
+    "emptyBody": "Mọi biên bản trả xe đã có chỉ số KM — số KM của đội xe đang đầy đủ."
   },
   "edit": {
     "title": "Sửa đơn thuê",

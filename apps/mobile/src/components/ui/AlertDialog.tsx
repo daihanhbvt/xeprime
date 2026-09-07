@@ -1,4 +1,6 @@
+import type { ReactNode } from 'react';
 import { Modal, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { Button } from './Button';
@@ -15,8 +17,13 @@ import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
  * với thao tác phá huỷ); và nó không có trạng thái ĐANG CHẠY, nên người dùng bấm lại vì tưởng
  * chưa ăn. Hộp này luôn nhận `loading` và giữ nút hành động ở TRÊN.
  *
- * Không phải `BottomSheet`: tấm trượt là nơi LÀM một việc, hộp này là nơi TRẢ LỜI một câu hỏi —
- * nó neo giữa màn, hẹp, và không cuộn.
+ * Neo ĐÁY màn, rộng hết bề ngang, bo góc trên — cùng hình thái với `BottomSheet`.
+ *
+ * Bản đầu định neo giữa màn (`jc="center"` + đệm hai bên) nhưng chưa bao giờ chạy như thế: lớp
+ * phủ là một `flex: 1` ĐỨNG TRONG LUỒNG, nên nó nuốt hết chỗ trống và đẩy hộp xuống đáy. Kết
+ * quả là một hộp dính đáy nhưng vẫn thừa hai dải trắng hai bên, và bo bốn góc ở một thứ đang
+ * chạm mép dưới. Neo đáy là hình thái đúng cho một câu hỏi trên điện thoại — ngón cái với tới —
+ * nên giữ nó và làm cho tử tế thay vì kéo ngược lên giữa.
  */
 export function AlertDialog({
   open,
@@ -31,7 +38,12 @@ export function AlertDialog({
 }: {
   open: boolean;
   title: string;
-  message?: string;
+  /**
+   * Nhận `ReactNode` chứ không chỉ chuỗi: một số câu xác nhận là message ICU có thẻ rich
+   * (`<b>`), và `t.rich` trả về node. Ép về chuỗi ở đó nghĩa là mất phần nhấn, hoặc tệ hơn là
+   * in ra nguyên khoá.
+   */
+  message?: ReactNode;
   confirmLabel: string;
   /** Bỏ trống thì dùng "Huỷ" của `Common.actions`. */
   cancelLabel?: string;
@@ -42,6 +54,7 @@ export function AlertDialog({
   onCancel: () => void;
 }) {
   const t = useTranslations('Common.actions');
+  const insets = useSafeAreaInsets();
 
   return (
     <Modal
@@ -51,17 +64,24 @@ export function AlertDialog({
       onRequestClose={onCancel}
       statusBarTranslucent
     >
-      <YStack f={1} jc="center" px={layout.screenX}>
+      <YStack f={1}>
         {/*
           Lớp phủ là ANH EM của hộp, không phải cha: bọc hộp trong một `Pressable` phủ toàn màn
           thì mọi cú chạm vào chính hộp cũng đóng nó.
         */}
         <Pressable style={appStyles.scrim} onPress={onCancel} accessibilityLabel={t('close')} />
 
+        {/*
+          `pb` cộng thêm safe-area ĐÁY: thanh điều hướng Android nằm ĐÈ lên cửa sổ modal, và
+          không cộng nó vào thì nút "Huỷ" — nút dưới cùng — bị che mất một nửa.
+        */}
         <YStack
           bg={colors.surface}
-          br={radius.lg}
-          p={layout.screenX}
+          borderTopLeftRadius={radius.lg}
+          borderTopRightRadius={radius.lg}
+          px={layout.screenX}
+          pt={layout.screenX}
+          pb={layout.screenX + insets.bottom}
           gap={space.md}
           accessibilityViewIsModal
           accessibilityRole="alert"

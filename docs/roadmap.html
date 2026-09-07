@@ -64,11 +64,15 @@
         min-width: 320px;
         background:
           radial-gradient(circle at 8% 4%, rgba(216, 255, 98, 0.2), transparent 27rem),
-          radial-gradient(circle at 92% 16%, rgba(13, 103, 82, 0.13), transparent 30rem),
-          var(--canvas);
+          radial-gradient(circle at 92% 16%, rgba(13, 103, 82, 0.13), transparent 30rem), var(--canvas);
         color: var(--ink);
         font-family:
-          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
           sans-serif;
         line-height: 1.55;
       }
@@ -694,6 +698,10 @@
 
       .check-item {
         position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 6px;
+        align-items: start;
       }
 
       .check-item label {
@@ -709,6 +717,27 @@
 
       .check-item label:hover {
         background: color-mix(in srgb, var(--brand) 6%, transparent);
+      }
+
+      .check-item__prompt {
+        margin: 7px 7px 0 0;
+        padding: 5px 8px;
+        border: 1px solid color-mix(in srgb, var(--brand) 24%, var(--line));
+        border-radius: 9px;
+        background: color-mix(in srgb, var(--paper) 92%, transparent);
+        color: var(--brand);
+        font: inherit;
+        font-size: 10px;
+        font-weight: 850;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      .check-item__prompt:hover,
+      .check-item__prompt:focus-visible {
+        border-color: var(--brand);
+        background: color-mix(in srgb, var(--brand) 9%, var(--paper));
+        outline: none;
       }
 
       .check-item input {
@@ -1292,6 +1321,7 @@
         .topbar,
         .toolbar,
         .release-card__actions,
+        .check-item__prompt,
         .prompt-grid,
         .utility-panel,
         .toast {
@@ -1336,9 +1366,7 @@
         </a>
         <div class="topbar__actions">
           <a class="button button--quiet desktop-only" href="./completion-roadmap.md">Mở Markdown</a>
-          <button class="icon-button" id="themeToggle" type="button" aria-label="Đổi giao diện sáng tối">
-            ◐
-          </button>
+          <button class="icon-button" id="themeToggle" type="button" aria-label="Đổi giao diện sáng tối">◐</button>
         </div>
       </div>
     </header>
@@ -1349,11 +1377,11 @@
           <p class="eyebrow">Functional alpha · Controlled pilot next</p>
           <h1 id="pageTitle">Từ sản phẩm đã chạy đến marketplace có thể vận hành.</h1>
           <p class="hero__lead">
-            Một bảng điều hành nội bộ cho R0–R6. Chỉ tick khi có bằng chứng; mỗi gate là điều
-            kiện phát hành, không phải danh sách mong muốn.
+            Một bảng điều hành nội bộ cho R0–R6. Chỉ tick khi có bằng chứng; mỗi gate là điều kiện phát hành, không phải
+            danh sách mong muốn.
           </p>
           <div class="hero__meta">
-            <span class="meta-pill">Nguồn: roadmap 03/09/2026</span>
+            <span class="meta-pill">Nguồn: roadmap 07/09/2026</span>
             <span class="meta-pill">Tiến độ lưu trên trình duyệt này</span>
             <span class="meta-pill">Prompt Claude Code tích hợp</span>
           </div>
@@ -1379,7 +1407,7 @@
           </div>
           <div class="hero__next">
             <span>Trọng tâm đề xuất</span>
-            <strong>R1 · Ổn định web pilot và tạo baseline chất lượng mới</strong>
+            <strong>Đóng Gate R1 · Review và nghiệm thu lát cắt SePay R2 đã có</strong>
           </div>
         </aside>
       </section>
@@ -1388,17 +1416,16 @@
         <div class="section-heading">
           <div>
             <span class="section-kicker">Business guardrails</span>
-            <h2>Năm quyết định đang dẫn đường</h2>
+            <h2>Sáu quyết định đang dẫn đường</h2>
             <p>
-              Đây là input cố định cho prompt. Giá production, thuế và bảo hiểm vẫn phải qua
-              validation gate trước khi bật cho khách thật.
+              Đây là input cố định cho prompt. Giá production, thuế và bảo hiểm vẫn phải qua validation gate trước khi
+              bật cho khách thật.
             </p>
           </div>
           <div class="source-links" aria-label="Tài liệu nguồn">
             <a href="./design/02_PRODUCT_VISION.md">Product Vision</a>
-            <a href="./decisions/0028-marketplace-subscription-fees-and-custodied-funds.md"
-              >ADR 0028</a
-            >
+            <a href="./decisions/0028-marketplace-subscription-fees-and-custodied-funds.md">ADR 0028</a>
+            <a href="./decisions/0029-per-vehicle-flat-pricing-and-customer-side-fees.md">ADR 0029</a>
           </div>
         </div>
         <div class="decision-grid" id="decisionGrid"></div>
@@ -1410,29 +1437,19 @@
             <span class="section-kicker">Release roadmap</span>
             <h2>R0 → R6</h2>
             <p>
-              Tick một đầu việc khi đã có bằng chứng trong code, test, cấu hình hoặc vận hành.
-              Gate chỉ tick sau khi toàn bộ điều kiện nghiệm thu đã đạt.
+              Tick một đầu việc khi đã có bằng chứng trong code, test, cấu hình hoặc vận hành. Gate chỉ tick sau khi
+              toàn bộ điều kiện nghiệm thu đã đạt.
             </p>
           </div>
         </div>
 
         <div class="toolbar" aria-label="Bộ lọc roadmap">
           <div class="filters" id="filters">
-            <button class="filter-button" type="button" data-filter="all" aria-pressed="true">
-              Tất cả
-            </button>
-            <button class="filter-button" type="button" data-filter="current" aria-pressed="false">
-              Trọng tâm
-            </button>
-            <button class="filter-button" type="button" data-filter="money" aria-pressed="false">
-              Tiền & billing
-            </button>
-            <button class="filter-button" type="button" data-filter="operations" aria-pressed="false">
-              Vận hành
-            </button>
-            <button class="filter-button" type="button" data-filter="mobile" aria-pressed="false">
-              Mobile
-            </button>
+            <button class="filter-button" type="button" data-filter="all" aria-pressed="true">Tất cả</button>
+            <button class="filter-button" type="button" data-filter="current" aria-pressed="false">Trọng tâm</button>
+            <button class="filter-button" type="button" data-filter="money" aria-pressed="false">Tiền & billing</button>
+            <button class="filter-button" type="button" data-filter="operations" aria-pressed="false">Vận hành</button>
+            <button class="filter-button" type="button" data-filter="mobile" aria-pressed="false">Mobile</button>
           </div>
           <div class="toolbar__right">
             <input
@@ -1458,8 +1475,8 @@
             <span class="section-kicker">Cross-release workstreams</span>
             <h2>Admin và Owner/Manage</h2>
             <p>
-              Đây không phải hai phase làm riêng. Mỗi đầu việc thuộc R1–R5 và chỉ được hiển thị
-              lại theo vai trò; checkbox đồng bộ với release gốc và không bị cộng tiến độ hai lần.
+              Đây không phải hai phase làm riêng. Mỗi đầu việc thuộc R1–R5 và chỉ được hiển thị lại theo vai trò;
+              checkbox đồng bộ với release gốc và không bị cộng tiến độ hai lần.
             </p>
           </div>
           <div class="source-links">
@@ -1471,8 +1488,9 @@
         <div class="workstream-note">
           <strong>Không nằm trong điều kiện hoàn thiện pilot R1–R5</strong>
           <p>
-            Auto payout, BI lớn, custom workflow/role, OCR hoặc e-sign nâng cao và native Manage
-            được hoãn. R6 tập trung app cho người thuê, không clone portal quản lý lên native.
+            Auto payout, BI lớn, custom workflow/role, OCR hoặc e-sign nâng cao và việc mở rộng Full Manage parity trên
+            native được hoãn. Lát cắt Mobile Manage đã có vẫn được duy trì; R6 ưu tiên hoàn tất hành trình người thuê và
+            production readiness.
           </p>
         </div>
       </section>
@@ -1483,8 +1501,8 @@
             <span class="section-kicker" style="color: var(--accent)">Quality debt</span>
             <h3>Nợ chất lượng cần đóng bằng bằng chứng</h3>
             <p>
-              Không tick theo cảm giác. Ghi nhận output test, dashboard monitoring, biên bản UAT
-              hoặc restore drill tương ứng.
+              Không tick theo cảm giác. Ghi nhận output test, dashboard monitoring, biên bản UAT hoặc restore drill
+              tương ứng.
             </p>
             <button class="button" id="qualityPromptButton" type="button">Mở prompt kiểm định</button>
           </div>
@@ -1498,8 +1516,8 @@
             <span class="section-kicker">Prompt library</span>
             <h2>Giao việc cho Claude Code</h2>
             <p>
-              Prompt luôn nhắc Claude đọc tài liệu canonical, kiểm tra hiện trạng trước khi sửa,
-              giữ thay đổi của người dùng và xác minh đúng phạm vi.
+              Mỗi checklist có prompt riêng. Prompt cấp release tự chọn đầu việc chưa hoàn thành đầu tiên, luôn yêu cầu
+              audit hiện trạng trước khi sửa và dừng sau một lát cắt nghiệm thu được.
             </p>
           </div>
         </div>
@@ -1550,7 +1568,7 @@
         "use strict";
 
         var STORAGE_KEY = "xeprime-roadmap-state-v1";
-        var SOURCE_DATE = "2026-09-03";
+        var SOURCE_DATE = "2026-09-07";
 
         var decisions = [
           {
@@ -1558,8 +1576,12 @@
             text: "R3 trả phần còn lại trực tiếp cho chủ xe; R4 mới mở thu hộ tùy chọn.",
           },
           {
+            title: "Phí dịch vụ nằm phía khách",
+            text: "Tuyến Basic cộng 10% pilot vào báo giá khách; không khấu trừ phí XePrime khỏi tiền thuê chủ xe. Tuyến gói là 0%.",
+          },
+          {
             title: "Giá gói pilot",
-            text: "100.000đ/ô tô/tháng · 40.000đ/xe máy/tháng · tối thiểu 3 tháng.",
+            text: "Giá phẳng 100.000đ/chỗ ô tô/tháng · 40.000đ/chỗ xe máy/tháng · tối thiểu 3 tháng; không phí nền, chỗ gồm sẵn hay overage chéo.",
           },
           {
             title: "Bảo hiểm dự kiến PVI",
@@ -1586,14 +1608,14 @@
             tasks: [
               "Dọn tài liệu lịch sử không còn là nguồn sống.",
               "Viết lại Product Vision, Gap Analysis, Information Architecture và roadmap.",
-              "Ghi ADR 0028 cho business model marketplace + subscription.",
+              "Ghi ADR 0028 và ADR 0029 cho business model, giá gói và phía trả phí.",
               "Đánh dấu ADR cũ bị ghi đè toàn phần hoặc một phần.",
             ],
-            gate:
-              "Các quyết định sản phẩm hiện hành đã nằm trong tài liệu canonical và không còn liên kết nội bộ hỏng.",
+            gate: "Các quyết định sản phẩm hiện hành đã nằm trong tài liệu canonical và không còn liên kết nội bộ hỏng.",
             promptNotes: [
-              "Đây là một lượt audit tài liệu, không tự ý xây feature mới.",
+              "Đây là một lượt audit tài liệu, không tự ý xây feature mới hoặc sửa source sản phẩm.",
               "Đối chiếu code, migration và OpenAPI khi tài liệu nói một tính năng đã tồn tại.",
+              "ADR Accepted mới nhất thắng trong phạm vi ghi đè; ADR 0029 thắng cách hiểu cũ về người trả phí dịch vụ và giá gói.",
               "Nếu phát hiện mâu thuẫn, sửa nguồn canonical hoặc ghi gap; không phục hồi tài liệu cũ.",
             ],
           },
@@ -1614,11 +1636,11 @@
               "Rà CSRF, PII reveal, rate limit và audit cho hành động nhạy cảm.",
               "Chạy UAT happy path theo role trên desktop và mobile web.",
             ],
-            gate:
-              "3–5 shop chạy request → giao → trả → quyết toán mà không cần sửa dữ liệu trực tiếp.",
+            gate: "3–5 shop chạy request → giao → trả → quyết toán mà không cần sửa dữ liệu trực tiếp.",
             promptNotes: [
               "Bắt đầu bằng audit read-only và tạo baseline; không tin trạng thái cũ trong tài liệu.",
               "Chia công việc thành vertical slice nhỏ. Không biến toàn bộ R1 thành một diff khổng lồ.",
+              "Dashboard thật, invitation token, legal/consent và email delivery đã có trên code hiện tại; review trước, không dựng lại nếu đã đúng.",
               "Ưu tiên lỗi chặn pilot, bảo mật và dữ liệu thật trước polish giao diện.",
             ],
           },
@@ -1628,19 +1650,22 @@
             title: "Thu tiền gói thuê bao",
             objective: "Đưa nguồn doanh thu đơn giản nhất vào vận hành trước.",
             group: "money",
+            current: true,
             tasks: [
-              "Hoàn thành SePay/VietQR cho subscription invoice.",
+              "Review và hoàn thiện lát cắt SePay/VietQR cho subscription invoice đã có trên feature branch.",
               "Đối soát idempotent cho đúng, thiếu, thừa, sai mã và webhook trùng.",
               "Chỉ kích hoạt hoặc gia hạn sau khi tiền đã được xác nhận.",
               "Admin xử lý invoice/giao dịch chưa khớp theo luồng có audit.",
               "Định nghĩa grace, read-only và downgrade mà không làm mất dữ liệu.",
               "Làm trang so sánh Basic Owner và Gian hàng.",
-              "Áp dụng policy pilot: 100.000đ/ô tô/tháng, 40.000đ/xe máy/tháng, tối thiểu 3 tháng.",
+              "Áp dụng giá phẳng theo chỗ: 100.000đ/ô tô/tháng, 40.000đ/xe máy/tháng, bán kỳ hạn 3/6/12 tháng; không phí nền, chỗ gồm sẵn hay overage chéo.",
             ],
-            gate:
-              "Một shop tự mua/gia hạn gói và hệ thống đối soát đúng mà admin không sửa database.",
+            gate: "Một shop tự mua/gia hạn gói và hệ thống đối soát đúng mà admin không sửa database.",
             promptNotes: [
-              "Giá phải là policy theo loại xe và ngày hiệu lực, không rải magic number.",
+              "Đọc ADR 0016, 0022, 0027, 0028 và 0029 trước khi sửa billing hoặc payment.",
+              "Code W4 đã có trên nhánh feature/web-subscription-payments; audit và đóng gap, không viết lại từ đầu.",
+              "Giá là policy theo loại xe và ngày hiệu lực; basePriceMonthly = 0, mỗi xe là một chỗ tính tiền độc lập.",
+              "limits.terms là danh sách kỳ hạn được bán; self-service phải từ chối kỳ hạn ngoài danh sách và không sửa hồi tố subscription cũ.",
               "Webhook, polling và job phải an toàn khi chạy lặp.",
               "Không log secret, payload nhạy cảm hoặc thông tin tài khoản ngân hàng đầy đủ.",
             ],
@@ -1649,23 +1674,25 @@
             id: "r3",
             code: "R3",
             title: "Giao dịch Basic Owner",
-            objective: "Thu phí theo chuyến nhưng giới hạn lượng tiền XePrime giữ.",
+            objective:
+              "Cộng phí dịch vụ vào giá khách minh bạch, hoàn tất Owner Lite và giới hạn lượng tiền XePrime giữ.",
             group: "money",
             tasks: [
               "Tạo Owner Lite navigation và dashboard trên cùng feature/API với Manage.",
               "Xác minh người bán, loại chủ thể, thông tin thuế và tài khoản nhận tiền.",
-              "Tạo fee policy có phiên bản và snapshot bất biến trên booking.",
-              "Hiển thị quote breakdown cho khách và net earning cho chủ xe.",
+              "Tạo policy có phiên bản và booking snapshot cho phí dịch vụ, thuế thật và hai lớp bảo hiểm.",
+              "Hiển thị quote khách và owner earning: tuyến Basic cộng 10% phí XePrime phía khách, không trừ tiền thuê chủ xe; tuyến gói là 0%.",
               "Triển khai khoản giữ chỗ bắt buộc, expiry, cancellation và refund.",
               "Tích hợp hai lớp bảo hiểm dự kiến PVI sau khi đủ hợp đồng/policy/certificate.",
-              "Tách phí dịch vụ, thuế, bảo hiểm và khoản phải trả chủ xe.",
+              "Tách phí dịch vụ, thuế, bảo hiểm và khoản phải trả chủ xe theo đúng người hưởng/chịu và quy tắc hoàn.",
               "Tạo support case/dispute gắn booking và evidence.",
               "Tạo money operations cùng daily reconciliation tối thiểu cho admin.",
             ],
-            gate:
-              "Tiền vào, hoàn và giữ của mọi case UAT khớp sổ; không có bút toán mồ côi hoặc cộng đôi.",
+            gate: "Tiền vào, hoàn và giữ của mọi case UAT khớp sổ; không có bút toán mồ côi hoặc cộng đôi.",
             promptNotes: [
+              "Đọc ADR 0022, 0024, 0027, 0028 và 0029 trước khi sửa quote, booking hoặc luồng tiền.",
               "R3 mặc định khách trả phần còn lại trực tiếp cho chủ xe.",
+              "Phí dịch vụ XePrime nằm phía khách; chỉ bảo vệ xe, thuế hoặc khoản hợp lệ khác mới có thể ảnh hưởng owner earning theo policy thật.",
               "Không gọi phí XePrime là thuế/bảo hiểm; không gọi số dư là ví điện tử.",
               "PVI chỉ là đối tác dự kiến. Không dùng tên/logo hoặc thu phí trước khi có căn cứ thật.",
               "Bảo vệ xe do chủ xe chịu; bảo hiểm chuyến đi chỉ tính khi người thuê giữ lựa chọn.",
@@ -1685,9 +1712,9 @@
               "Xử lý reversal, failed payout và thay đổi tài khoản nhận tiền có cooldown.",
               "Đối soát tách tiền XePrime khỏi tiền phải trả người khác.",
             ],
-            gate:
-              "Số dư ngân hàng khớp ledger hằng ngày và không có yêu cầu rút quá SLA trong pilot.",
+            gate: "Số dư ngân hàng khớp ledger hằng ngày và không có yêu cầu rút quá SLA trong pilot.",
             promptNotes: [
+              "Đọc ADR 0025, 0028 và 0029; R4 kế thừa snapshot và phân bổ đã được kiểm chứng ở R3.",
               "Dừng triển khai tiền thật nếu chưa có legal/payment gate; có thể làm domain model/test sau feature flag.",
               "Số dư là công nợ nội bộ, không có nạp/chuyển/thanh toán ngang hàng.",
               "Mọi sửa sai tài chính dùng reversal/compensating entry, không UPDATE lịch sử.",
@@ -1702,12 +1729,11 @@
             tasks: [
               "Onboard 5–10 đối tác gồm Basic Owner và Gian hàng.",
               "Tập trung 50–100 xe thật trong một khu vực đủ mật độ.",
-              "Theo dõi funnel, hủy/no-show, dispute, payout và chi phí support.",
+              "Theo dõi funnel, hủy/no-show, dispute, payout, chi phí support và tác động tổng giá khách đến conversion/owner earning.",
               "Thử nghiệm cohort giá gói, phí dịch vụ và ranking mà không hồi tố booking.",
               "Diễn tập restore database, incident response và hoàn tiền.",
             ],
-            gate:
-              "Có booking lặp lại, reconciliation ổn định, support xử lý được ngoại lệ và unit economics không âm.",
+            gate: "Có booking lặp lại, reconciliation ổn định, support xử lý được ngoại lệ và unit economics không âm.",
             promptNotes: [
               "Không dùng dữ liệu vanity. Mọi metric phải có định nghĩa, nguồn event và owner.",
               "Không A/B trực tiếp trên policy của booking đang chạy.",
@@ -1717,20 +1743,21 @@
           {
             id: "r6",
             code: "R6",
-            title: "Mobile parity và public launch",
-            objective: "App native phục vụ trọn luồng người thuê và đủ điều kiện public launch.",
+            title: "Mobile customer completion và public launch",
+            objective:
+              "App native phục vụ trọn luồng người thuê, duy trì lát cắt quản lý đã có và đủ điều kiện public launch.",
             group: "mobile",
             tasks: [
               "Hoàn thiện booking, hold/payment, trips, chat và push trên mobile.",
               "Thiết lập deep links/App Links, environment profiles, iOS build và CI release.",
               "Đồng bộ crash/error reporting và analytics giữa web/mobile.",
-              "Giữ Manage trên responsive web; không clone portal chủ xe lên native.",
+              "Duy trì inbox/booking/giao nhận/quyết toán/thu tiền đã có trên Mobile Manage; chưa mở rộng thành Full Manage parity.",
             ],
-            gate:
-              "Đạt public-launch gate: E2E, restore drill, incident runbook, analytics và không còn dead link quan trọng.",
+            gate: "Đạt public-launch gate: E2E, restore drill, incident runbook, analytics và không còn dead link quan trọng.",
             promptNotes: [
               "Dùng chung contract, domain rule và design tokens; không copy business logic từ web.",
-              "Ưu tiên customer journey; portal quản lý native nằm ngoài scope release này.",
+              "Ưu tiên customer journey; Mobile Manage hiện có nằm trong phạm vi bảo trì và sửa regression, không phải phạm vi mở rộng feature quản trị.",
+              "Xe, tài chính nâng cao, thành viên, chi nhánh, báo cáo và cấu hình sâu tiếp tục dùng responsive web tới sau controlled pilot.",
               "Kiểm thử deep link, token refresh, offline/error state và app lifecycle trên thiết bị thật.",
             ],
           },
@@ -1765,7 +1792,8 @@
                 refs: ["r3-task-1"],
               },
               {
-                label: "Fee/tax/insurance policy có phiên bản, snapshot và audit.",
+                label:
+                  "Fee/tax/insurance policy có phiên bản, snapshot và audit; phí XePrime tuyến Basic nằm phía khách.",
                 phase: "R3",
                 refs: ["r3-task-2", "r3-task-5"],
               },
@@ -1790,8 +1818,7 @@
                 refs: ["r5-task-2", "r5-task-3"],
               },
             ],
-            gate:
-              "Admin xử lý happy path và ngoại lệ mà không sửa DB, không xem PII ngoài nhu cầu và không tạo chênh lệch sổ.",
+            gate: "Admin xử lý happy path và ngoại lệ mà không sửa DB, không xem PII ngoài nhu cầu và không tạo chênh lệch sổ.",
             promptNotes: [
               "Đây là workstream cắt ngang R1–R5, không phải một phase triển khai riêng sau R5.",
               "Ưu tiên P0 trước: seller compliance, money operations, policy và support.",
@@ -1837,7 +1864,7 @@
                 refs: ["r3-task-0"],
               },
               {
-                label: "Quote/net earning và giữ chỗ minh bạch để hoàn thành booking tối thiểu.",
+                label: "Quote/net earning và giữ chỗ minh bạch; không trừ phí dịch vụ XePrime khỏi tiền thuê chủ xe.",
                 phase: "R3",
                 refs: ["r3-task-3", "r3-task-4"],
               },
@@ -1847,8 +1874,7 @@
                 refs: ["r4-task-2"],
               },
             ],
-            gate:
-              "Capability bị chặn ở server; Owner Lite hoàn tất booking; Full Manage không có menu giả hoặc KPI giả.",
+            gate: "Capability bị chặn ở server; Owner Lite hoàn tất booking; Full Manage không có menu giả hoặc KPI giả.",
             promptNotes: [
               "Đây là workstream nằm trong R1–R4, không tạo backlog độc lập sau các release.",
               "Không tạo role mới chỉ để phân biệt Basic và Full; dùng feature/capability.",
@@ -1871,8 +1897,7 @@
             "Cắm error tracking, uptime monitoring và product analytics.",
             "Hoàn tất backup/versioning cần thiết và chạy restore drill thành công.",
           ],
-          gate:
-            "Mỗi bằng chứng có ngày chạy, môi trường, output và người chịu trách nhiệm xử lý khi thất bại.",
+          gate: "Mỗi bằng chứng có ngày chạy, môi trường, output và người chịu trách nhiệm xử lý khi thất bại.",
           promptNotes: [
             "Chỉ sửa lỗi tìm thấy sau khi đã phân loại; không dùng format toàn repo để che diff.",
             "Chạy kiểm tra scoped trước, sau đó mới mở rộng theo rủi ro.",
@@ -2052,6 +2077,16 @@
             label.appendChild(box);
             label.appendChild(copy);
             li.appendChild(label);
+            var promptButton = element("button", "check-item__prompt", completion.checked ? "Rà lại" : "Prompt");
+            promptButton.type = "button";
+            promptButton.setAttribute(
+              "aria-label",
+              (completion.checked ? "Rà lại: " : "Tạo prompt: ") + taskLabel(task),
+            );
+            promptButton.addEventListener("click", function () {
+              openPrompt(item, index);
+            });
+            li.appendChild(promptButton);
             list.appendChild(li);
           });
           return list;
@@ -2132,9 +2167,7 @@
           var visible = releases.filter(releaseMatches);
 
           if (!visible.length) {
-            releaseList.appendChild(
-              element("div", "empty", "Không có release phù hợp với bộ lọc hiện tại."),
-            );
+            releaseList.appendChild(element("div", "empty", "Không có release phù hợp với bộ lọc hiện tại."));
             return;
           }
 
@@ -2149,9 +2182,7 @@
             var rail = element("aside", "release-card__rail");
             var railTop = document.createElement("div");
             railTop.appendChild(element("span", "release-code", release.code));
-            railTop.appendChild(
-              element("span", "release-index", "Mốc " + (releases.indexOf(release) + 1) + "/7"),
-            );
+            railTop.appendChild(element("span", "release-index", "Mốc " + (releases.indexOf(release) + 1) + "/7"));
             rail.appendChild(railTop);
             rail.appendChild(createProgress(stats, true));
 
@@ -2170,7 +2201,7 @@
             body.appendChild(createGate(release));
 
             var actions = element("div", "release-card__actions");
-            var promptButton = element("button", "button button--primary", "Mở prompt " + release.code);
+            var promptButton = element("button", "button button--primary", "Prompt việc tiếp theo " + release.code);
             promptButton.type = "button";
             promptButton.addEventListener("click", function () {
               openPrompt(release);
@@ -2207,7 +2238,7 @@
             card.appendChild(createChecklist(item));
             card.appendChild(createAcceptance(item));
 
-            var button = element("button", "button button--primary", "Mở prompt " + item.title);
+            var button = element("button", "button button--primary", "Prompt việc tiếp theo");
             button.type = "button";
             button.addEventListener("click", function () {
               openPrompt(item);
@@ -2238,7 +2269,7 @@
             card.appendChild(element("span", "prompt-card__code", item.code));
             card.appendChild(element("h3", "", item.title));
             card.appendChild(element("p", "", item.objective));
-            var button = element("button", "button", "Xem và sao chép");
+            var button = element("button", "button", "Sao chép việc tiếp theo");
             button.type = "button";
             button.addEventListener("click", function () {
               openPrompt(item);
@@ -2271,28 +2302,60 @@
           renderQuality();
         }
 
-        function buildPrompt(item) {
+        function nextOpenTaskIndex(item) {
+          for (var index = 0; index < item.tasks.length; index += 1) {
+            if (!taskCompletion(item, index).checked) return index;
+          }
+          return null;
+        }
+
+        function buildPrompt(item, selectedTaskIndex) {
+          var hasSelectedTask =
+            typeof selectedTaskIndex === "number" && selectedTaskIndex >= 0 && selectedTaskIndex < item.tasks.length;
+          var selectedTask = hasSelectedTask ? item.tasks[selectedTaskIndex] : null;
+          var selectedDone = hasSelectedTask ? taskCompletion(item, selectedTaskIndex).checked : false;
+          var selectedPhase =
+            selectedTask && typeof selectedTask === "object" && selectedTask.phase
+              ? " [" + selectedTask.phase + "]"
+              : "";
+          var openCount = item.tasks.filter(function (_task, index) {
+            return !taskCompletion(item, index).checked;
+          }).length;
           var lines = [
             "Bạn đang làm việc trong monorepo XePrime tại root repository.",
             "",
             "TRƯỚC KHI THAY ĐỔI",
-            "1. Đọc toàn bộ CLAUDE.md và các instruction áp dụng trong repo.",
-            "2. Đọc docs/design/02_PRODUCT_VISION.md, docs/completion-roadmap.md, docs/design/03_PRODUCT_GAP_ANALYSIS.md và docs/decisions/0028-marketplace-subscription-fees-and-custodied-funds.md.",
-            "3. Kiểm tra git status và giữ nguyên mọi thay đổi hiện có của người dùng. Không reset, checkout hoặc ghi đè file ngoài phạm vi.",
-            "4. Audit code, migration, OpenAPI và test hiện có trước khi kết luận đầu việc nào thiếu. Không dựa riêng vào checklist.",
+            "1. Đọc toàn bộ CLAUDE.md và mọi instruction áp dụng cho file sẽ chạm tới.",
+            "2. Đọc docs/README.md, docs/design/02_PRODUCT_VISION.md, docs/completion-roadmap.md, docs/design/03_PRODUCT_GAP_ANALYSIS.md, docs/decisions/README.md, docs/decisions/0028-marketplace-subscription-fees-and-custodied-funds.md và docs/decisions/0029-per-vehicle-flat-pricing-and-customer-side-fees.md.",
+            "3. Khi tài liệu mâu thuẫn: code/migration/OpenAPI quyết định cái đã triển khai; ADR Accepted mới nhất quyết định hành vi mục tiêu trong phạm vi ghi đè; completion-roadmap quyết định thứ tự và gate.",
+            "4. Ghi nhận branch + HEAD hiện tại, kiểm tra git status và giữ nguyên mọi thay đổi của người dùng. Không reset, checkout hoặc ghi đè file ngoài phạm vi.",
+            "5. Audit code, migration, OpenAPI và test hiện có trước khi kết luận còn thiếu. Không xây lại thứ đã có chỉ vì checklist hoặc tài liệu cũ nói chưa có.",
             "",
             "HẠNG MỤC: " + item.code + " — " + item.title,
             "",
-            "MỤC TIÊU",
+            "MỤC TIÊU RELEASE / WORKSTREAM",
             item.objective,
             "",
-            "PHẠM VI CẦN ĐỐI CHIẾU / TRIỂN KHAI",
           ];
 
-          item.tasks.forEach(function (task, index) {
-            var phase = task && typeof task === "object" && task.phase ? " [" + task.phase + "]" : "";
-            lines.push(String(index + 1) + "." + phase + " " + taskLabel(task));
-          });
+          if (hasSelectedTask) {
+            lines.push(
+              "CHECKLIST DUY NHẤT ĐƯỢC GIAO TRONG LƯỢT NÀY",
+              "1." + selectedPhase + " " + taskLabel(selectedTask),
+              "",
+              "TRẠNG THÁI CHECKLIST",
+              selectedDone
+                ? "Mục này đang được tick hoàn thành. Chỉ rà bằng chứng và regression; không dựng lại nếu implementation hiện tại đã đúng."
+                : "Mục này chưa được tick. Còn " + openCount + " mục chưa hoàn thành trong hạng mục.",
+              "",
+              "Không triển khai các checklist còn lại trong cùng lượt. Nếu phát hiện dependency chặn, báo rõ dependency và dừng thay vì mở rộng diff.",
+            );
+          } else {
+            lines.push(
+              "PHẠM VI DUY NHẤT CỦA LƯỢT NÀY",
+              "Toàn bộ checklist đang được tick. Chỉ audit bằng chứng của gate/điều kiện nghiệm thu và regression; không tự mở feature mới.",
+            );
+          }
 
           lines.push(
             "",
@@ -2308,38 +2371,51 @@
 
           lines.push(
             "",
-            "NGUYÊN TẮC CHUNG",
-            "- Ưu tiên một vertical slice hoàn chỉnh thay vì tạo nhiều màn/API placeholder.",
+            "NGUYÊN TẮC BUSINESS HIỆN HÀNH — ADR 0028 + 0029",
+            "- Basic Owner không trả thuê bao. Phí dịch vụ XePrime 10% pilot được cộng vào báo giá khách ở tuyến Basic, không khấu trừ khỏi tiền thuê chủ xe; tuyến gói là 0%.",
+            "- Giá gói pilot là giá phẳng theo từng chỗ: 100.000đ/ô tô/tháng, 40.000đ/xe máy/tháng, bán kỳ hạn 3/6/12 tháng; không phí nền, chỗ gồm sẵn hoặc overage chéo loại xe.",
+            "- Thuế và bảo hiểm là dòng tiền riêng, chỉ dùng tỷ lệ/sản phẩm thật sau legal/partner gate; không dùng chúng để che doanh thu XePrime.",
+            "- R3 mặc định khách trả phần còn lại trực tiếp chủ xe; R4 mới mở thu hộ đầy đủ sau legal/payment/operations gate.",
+            "- Số dư chủ xe là công nợ nội bộ, không phải ví điện tử đa dụng.",
+            "",
+            "NGUYÊN TẮC KỸ THUẬT VÀ AN TOÀN",
+            "- Hoàn thiện một vertical slice có thể nghiệm thu; không tạo màn/API placeholder.",
             "- Mọi quyền hạn phải được enforce ở server; ẩn UI không phải kiểm soát truy cập.",
-            "- Mọi giá/phí/chính sách cần cấu hình có phiên bản và ngày hiệu lực; booking lưu snapshot.",
-            "- Không gọi doanh thu XePrime là thuế hoặc bảo hiểm. Không quảng bá số dư chủ xe như ví điện tử.",
-            "- Không dùng tên/logo PVI hoặc mô tả quyền lợi chưa có hợp đồng/policy thật.",
-            "- Không sửa .env, không in secret, không reset database và không thực hiện deploy nếu chưa được yêu cầu rõ.",
+            "- Mọi giá/phí/chính sách cần cấu hình có phiên bản và ngày hiệu lực; booking lưu snapshot bất biến.",
+            "- Không dùng tên/logo PVI hoặc mô tả quyền lợi khi chưa có hợp đồng, policy và certificate flow thật.",
+            "- Không sửa .env, không in secret, không reset database; không commit, push, merge, tạo PR hoặc deploy nếu chưa được yêu cầu rõ.",
             "- Dùng i18n cho mọi text hiển thị. Không clone business logic giữa web, mobile và API.",
-            "- Bổ sung migration, OpenAPI/types, audit, test và tài liệu khi thay đổi thực sự yêu cầu.",
+            "- Bổ sung migration, OpenAPI/types, audit và test khi thay đổi thực sự yêu cầu; không tạo migration rỗng hoặc tài liệu để che implementation thiếu.",
             "",
             "CÁCH THỰC HIỆN",
-            "1. Báo cáo ngắn hiện trạng: đã có / thiếu / sai so với scope.",
-            "2. Lập kế hoạch theo dependency và chọn lát cắt nhỏ nhất có thể nghiệm thu.",
-            "3. Triển khai đến cùng lát cắt đã chọn, gồm error/empty/loading states và authorization.",
-            "4. Chạy test scoped trước; sau đó chạy typecheck/lint/build liên quan theo mức rủi ro. Nêu rõ test bị skip do thiếu DB/service.",
-            "5. Review diff để tìm regression, lộ PII, race/idempotency và sai lệch tiền.",
-            "6. Chỉ cập nhật roadmap khi có bằng chứng gate hoặc checklist thực sự hoàn thành.",
+            "1. Audit read-only đúng checklist được giao và báo ngắn: đã có / thiếu / sai / bằng chứng hiện có.",
+            "2. Nếu code đã đúng, chỉ chạy kiểm chứng phù hợp và không rewrite. Nếu còn gap, chọn thay đổi nhỏ nhất đóng được checklist.",
+            "3. Triển khai đến cùng lát cắt đã chọn, gồm authorization và loading/empty/error states khi có UI.",
+            "4. Chạy test scoped trước; sau đó typecheck/lint/build liên quan theo rủi ro. Nêu rõ test bị skip do thiếu DB/service hoặc cấu hình ngoài.",
+            "5. Review diff để tìm regression, lộ PII, race/idempotency, sai lệch tiền và thay đổi ngoài phạm vi.",
+            "6. Dừng sau checklist được giao. Không tự chuyển sang checklist tiếp theo.",
+            "7. Không tự sửa/tick roadmap trừ khi đầu việc là tài liệu hoặc người dùng yêu cầu; cung cấp bằng chứng để người dùng quyết định tick.",
             "",
             "ĐẦU RA MONG MUỐN",
-            "- Tóm tắt kết quả theo: đã có, vừa làm, còn thiếu, rủi ro/gate.",
+            "- Kết quả checklist: đã có từ trước, vừa làm, còn thiếu và ảnh hưởng tới gate.",
             "- Danh sách file thay đổi và migration/config/env name mới nếu có; không ghi giá trị secret.",
-            "- Các command kiểm tra đã chạy cùng kết quả.",
-            "- Không tuyên bố hoàn thành toàn bộ " + item.code + " nếu mới chỉ xong một phần.",
+            "- Các command kiểm tra đã chạy cùng PASS/FAIL/SKIP và lý do.",
+            "- Rủi ro còn lại, dependency ngoài repo và bước nghiệm thu thủ công nếu có.",
+            "- Không tuyên bố hoàn thành toàn bộ " + item.code + " nếu chỉ hoàn thành checklist này.",
           );
 
           return lines.join("\n");
         }
 
-        function openPrompt(item) {
-          promptTitle.textContent = item.code + " · " + item.title;
-          promptSubtitle.textContent = "Prompt được sinh từ checklist và gate hiện hành.";
-          promptText.value = buildPrompt(item);
+        function openPrompt(item, selectedTaskIndex) {
+          var resolvedTaskIndex = typeof selectedTaskIndex === "number" ? selectedTaskIndex : nextOpenTaskIndex(item);
+          var hasTask = typeof resolvedTaskIndex === "number";
+          promptTitle.textContent =
+            item.code + " · " + item.title + (hasTask ? " · Mục " + String(resolvedTaskIndex + 1) : " · Gate");
+          promptSubtitle.textContent = hasTask
+            ? "Prompt chỉ xử lý một checklist; dùng nút cạnh checklist để chọn mục khác."
+            : "Checklist đã được tick hết; prompt này chỉ rà bằng chứng nghiệm thu.";
+          promptText.value = buildPrompt(item, resolvedTaskIndex);
           if (typeof promptDialog.showModal === "function") {
             promptDialog.showModal();
           } else {
@@ -2394,10 +2470,12 @@
         function setTheme(theme) {
           appState.theme = theme === "dark" ? "dark" : "light";
           document.documentElement.dataset.theme = appState.theme;
-          document.getElementById("themeToggle").setAttribute(
-            "aria-label",
-            appState.theme === "dark" ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối",
-          );
+          document
+            .getElementById("themeToggle")
+            .setAttribute(
+              "aria-label",
+              appState.theme === "dark" ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối",
+            );
           saveState();
         }
 
@@ -2479,10 +2557,7 @@
           if (!button) return;
           activeFilter = button.dataset.filter;
           document.querySelectorAll("[data-filter]").forEach(function (candidate) {
-            candidate.setAttribute(
-              "aria-pressed",
-              candidate.dataset.filter === activeFilter ? "true" : "false",
-            );
+            candidate.setAttribute("aria-pressed", candidate.dataset.filter === activeFilter ? "true" : "false");
           });
           renderReleases();
         });

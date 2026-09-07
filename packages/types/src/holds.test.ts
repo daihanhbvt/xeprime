@@ -55,10 +55,17 @@ describe('mốc thời gian của khoản giữ chỗ', () => {
     expect(HOLD_FREE_CANCEL_HOURS).toBe(4);
   });
 
-  it('hạn chuyển khoản là đúng 15 phút sau khi tạo', () => {
+  it('hạn chuyển khoản nhận cửa sổ từ CHÍNH SÁCH; mặc định 24 giờ (R3 — giữ chỗ SAU khi duyệt)', () => {
     const created = new Date('2026-08-28T03:00:00.000Z');
-    expect(holdExpiresAt(created).toISOString()).toBe('2026-08-28T03:15:00.000Z');
-    expect(HOLD_PAYMENT_WINDOW_MINUTES).toBe(15);
+    // Cửa sổ do chính sách phí hiện hành đặt — hold thật luôn đi qua tham số này.
+    expect(holdExpiresAt(created, 15).toISOString()).toBe('2026-08-28T03:15:00.000Z');
+    expect(holdExpiresAt(created, 24 * 60).toISOString()).toBe('2026-08-29T03:00:00.000Z');
+  });
+
+  it('mặc định (không truyền cửa sổ) là 24 giờ', () => {
+    const created = new Date('2026-08-28T03:00:00.000Z');
+    expect(holdExpiresAt(created).toISOString()).toBe('2026-08-29T03:00:00.000Z');
+    expect(HOLD_PAYMENT_WINDOW_MINUTES).toBe(24 * 60);
   });
 
   /**

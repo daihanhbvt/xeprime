@@ -1,5 +1,5 @@
 import type { Href } from 'expo-router';
-import { PERMISSION, type Permission } from '@xeprime/types';
+import { PERMISSION, PLAN_FEATURE, type Permission, type PlanFeature } from '@xeprime/types';
 import type { IconName } from '@/components/ui/Chip';
 import { ROUTES } from '@/navigation/routes';
 
@@ -41,6 +41,14 @@ export interface ManageNavLeaf {
   readonly permission: Permission;
   readonly href?: Href;
   readonly badge?: ManageNavBadge;
+  /**
+   * Cờ NĂNG LỰC THEO GÓI (ADR 0027) — trục ĐỘC LẬP với , kiểm nối tiếp.
+   *
+   * Gương của  ở . Quyền trả lời "vai này được làm
+   * không"; cờ gói trả lời "gian hàng đã mua chưa". Gộp hai thứ vào một trường là mở đường cho
+   * việc hết hạn gói làm mất luôn quyền xem sổ của chính mình.
+   */
+  readonly feature?: PlanFeature;
 }
 
 /**
@@ -110,12 +118,15 @@ const SHOP_NAV: readonly ManageNavSection[] = [
             labelKey: 'manage.vehicleList',
             icon: 'list-outline',
             permission: PERMISSION.VEHICLE_VIEW,
+            href: ROUTES.manage.vehicles(),
           },
           {
             key: 'maintenance',
             labelKey: 'manage.maintenance',
             icon: 'construct-outline',
             permission: PERMISSION.VEHICLE_MAINTENANCE_VIEW,
+            feature: PLAN_FEATURE.MAINTENANCE,
+            href: ROUTES.manage.maintenance(),
           },
         ],
       },
@@ -218,12 +229,6 @@ const SHOP_NAV: readonly ManageNavSection[] = [
         permission: PERMISSION.TENANT_VIEW,
       },
       {
-        key: 'pickup-areas',
-        labelKey: 'manage.pickupAreas',
-        icon: 'location-outline',
-        permission: PERMISSION.TENANT_VIEW,
-      },
-      {
         key: 'shop-branches',
         labelKey: 'manage.shopBranches',
         icon: 'git-network-outline',
@@ -240,12 +245,6 @@ const SHOP_NAV: readonly ManageNavSection[] = [
         labelKey: 'manage.members',
         icon: 'person-add-outline',
         permission: PERMISSION.MEMBER_VIEW,
-      },
-      {
-        key: 'trash',
-        labelKey: 'manage.trash',
-        icon: 'trash-outline',
-        permission: PERMISSION.TENANT_VIEW,
       },
     ],
   },

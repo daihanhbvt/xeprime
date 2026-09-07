@@ -9,6 +9,7 @@ import {
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { CustomerHoldDto } from '../../holds/dto/hold.dto';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 
 const DEFAULT_LIMIT = 10;
@@ -218,6 +219,14 @@ export class CustomerTripDetailDto extends CustomerTripListItemDto {
   /** `null` khi chuyến chưa được nhận — chưa có đơn thì chưa có tiền. */
   @ApiPropertyOptional({ type: CustomerTripFinanceDto, nullable: true })
   finance!: CustomerTripFinanceDto | null;
+  /**
+   * Khoản GIỮ CHỖ của chuyến (R3, tuyến hoa hồng) — `null` với chuyến không cần giữ chỗ.
+   *
+   * Nằm trong chi tiết chuyến chứ không phải một endpoint riêng: khách mở đúng một màn để biết
+   * "phải chuyển bao nhiêu, nội dung gì, trước khi nào".
+   */
+  @ApiPropertyOptional({ type: CustomerHoldDto, nullable: true })
+  hold!: CustomerHoldDto | null;
 
   @ApiPropertyOptional({ type: CustomerTripReviewDto, nullable: true })
   review!: CustomerTripReviewDto | null;

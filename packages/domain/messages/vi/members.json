@@ -28,7 +28,8 @@
     "roleChanged": "Đã đổi vai trò",
     "removed": "Đã gỡ thành viên",
     "invited": "Đã gửi lời mời",
-    "revoked": "Đã thu hồi lời mời"
+    "revoked": "Đã thu hồi lời mời",
+    "invitedNoEmail": "Đã tạo lời mời nhưng CHƯA gửi được thư. Kiểm tra cấu hình email, rồi mời lại địa chỉ này."
   },
   "form": {
     "title": "Mời thành viên",

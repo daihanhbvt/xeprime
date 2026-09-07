@@ -229,7 +229,11 @@ export function BookingPriceSummary({
       return (
         <div className={styles.bar}>
           <span className={styles.barLabel}>{totalLabel}</span>
-          <b className={styles.barAmount}>{fmt.money(breakdown.totalAmount)}</b>
+          {/* Thanh thu gọn hiện số KHÁCH TRẢ (đã gồm phụ phí) — hiện giá thuê trần ở đây rồi
+              bung ra một con số lớn hơn là đúng thứ ADR 0029 cấm. */}
+          <b className={styles.barAmount}>
+            {fmt.money(breakdown.fees?.customerTotalAmount ?? breakdown.totalAmount)}
+          </b>
           {expandButton()}
         </div>
       );
@@ -241,6 +245,7 @@ export function BookingPriceSummary({
           totalAmount={breakdown.totalAmount}
           totalLabel={totalLabel}
           depositAmount={breakdown.depositAmount}
+          fees={breakdown.fees ?? null}
           title={
             longTerm
               ? t('price.packageTitle', { months: longTerm.packageMonths })

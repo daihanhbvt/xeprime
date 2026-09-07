@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { Pressable } from 'react-native';
 import { Text, XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -7,11 +6,12 @@ import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
 import { Avatar } from '@/components/ui/Avatar';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { ROUTES } from '@/navigation/routes';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 
 export function HeaderActions() {
   const t = useTranslations('Navigation.public');
-  const router = useRouter();
+  const navigateOnce = useNavigateOnce();
   const { data: user } = useCurrentUser();
 
   return (
@@ -20,7 +20,7 @@ export function HeaderActions() {
 
       {user ? (
         <Pressable
-          onPress={() => router.push(ROUTES.account.home())}
+          onPress={() => navigateOnce(ROUTES.account.home())}
           accessibilityRole="button"
           accessibilityLabel={t('account')}
         >
@@ -28,7 +28,7 @@ export function HeaderActions() {
         </Pressable>
       ) : (
         <Pressable
-          onPress={() => router.push(ROUTES.account.login())}
+          onPress={() => navigateOnce(ROUTES.account.login())}
           accessibilityRole="button"
           accessibilityLabel={t('login')}
           style={({ pressed }) => (pressed ? { opacity: 0.85 } : null)}

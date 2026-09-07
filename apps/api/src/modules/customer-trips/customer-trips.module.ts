@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BookingsModule } from '../bookings/bookings.module';
+import { HoldsModule } from '../holds/holds.module';
 import { VehiclesModule } from '../vehicles/vehicles.module';
 import { CustomerTripsController } from './customer-trips.controller';
 import { CustomerTripsService } from './customer-trips.service';
@@ -17,7 +18,7 @@ import { CustomerTripsService } from './customer-trips.service';
  * viết lại bốn điều kiện đó — và quên một trong bốn.
  */
 @Module({
-  imports: [BookingsModule, VehiclesModule],
+  imports: [BookingsModule, HoldsModule, VehiclesModule],
   controllers: [CustomerTripsController],
   providers: [CustomerTripsService],
 })

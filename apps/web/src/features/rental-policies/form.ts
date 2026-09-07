@@ -1,4 +1,5 @@
 import { COLLATERAL_MODE, type LongTermPackageMonths } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import type { PolicyFormValues, VehiclePricingFormValues } from './schema';
 import type { RentalPolicyValues, SaveRentalPolicyInput } from './types';
 
@@ -105,5 +106,5 @@ export function deliverySummaryText(values: {
   if (values.deliveryMaxRadiusKm != null) {
     parts.push(`>${values.deliveryMaxRadiusKm} km: Báo giá thủ công theo thỏa thuận`);
   }
-  return parts.join(' · ');
+  return parts.join(LIST_SEPARATOR);
 }

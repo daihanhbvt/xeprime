@@ -150,6 +150,29 @@ export const fontSize = {
 } as const;
 
 /**
+ * Cỡ chữ BÊN TRONG một ô nhập liệu — nguồn duy nhất cho mọi field của app.
+ *
+ * Tách khỏi `fontSize` vì thang chữ ở `@xeprime/ui` là thang của WEB: bậc `body` (14px) là cỡ
+ * nội dung mặc định của desktop, nên ô nhập bên đó dùng nó là đúng. Native thì không — gần ba
+ * phần tư chữ trong app này chạy ở bậc 12px, nên một ô dùng thẳng `fontSize.body` hiện ra to
+ * hơn chính NHÃN của nó và to hơn mọi thứ quanh nó.
+ *
+ * Bốn khe hiện cùng một giá trị nhưng giữ TÊN riêng, vì chúng là bốn vai khác nhau: đổi cỡ chữ
+ * gõ vào mà không muốn nhãn to theo là việc sẽ xảy ra, và lúc đó chỉ sửa một dòng ở đây thay vì
+ * đi dò lại từng field.
+ */
+export const fieldFontSize = {
+  /** Chữ người dùng gõ, và giá trị đã chọn hiện trong ô (ngày, tháng, lựa chọn). */
+  value: fontSize.bodySm,
+  /** Nhãn phía trên ô. */
+  label: fontSize.bodySm,
+  /** Chú thích và thông báo lỗi dưới ô. */
+  message: fontSize.bodySm,
+  /** Chữ phụ NẰM TRONG ô: đơn vị, hậu tố tiền tệ, bộ đếm ký tự, nhãn của một đầu khoảng. */
+  affix: fontSize.label,
+} as const;
+
+/**
  * RN chỉ nhận chuỗi cho `fontWeight`; token giữ đúng cùng con số với web.
  * Ép kiểu vì `XP_TOKENS` khai giá trị là `string` chung, không phải union của RN.
  */

@@ -4,10 +4,11 @@ import { LockOutlined } from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMutation } from '@tanstack/react-query';
 import { Alert, Button } from 'antd';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { resetPasswordSchema, type ResetPasswordValues } from '@xeprime/validators';
+import { buildResetPasswordSchema, type ResetPasswordValues } from '@xeprime/validators';
 import { TextField } from '@/components/form/TextField';
+import { useAuthSchemaLabels } from '@/features/auth/hooks/use-auth-schema-labels';
 import { getErrorMessage } from '@/services/api-client';
 import { setPassword } from '@/services/auth.service';
 import styles from './SetPasswordPrompt.module.css';
@@ -29,8 +30,10 @@ export function SetPasswordPrompt({
 }) {
   const t = useTranslations('Auth.setPassword');
   const [error, setError] = useState<string | null>(null);
+  const labels = useAuthSchemaLabels();
+  const schema = useMemo(() => buildResetPasswordSchema(labels), [labels]);
   const { control, handleSubmit } = useForm<ResetPasswordValues>({
-    resolver: yupResolver(resetPasswordSchema),
+    resolver: yupResolver(schema),
     defaultValues: { password: '', confirmPassword: '' },
   });
 

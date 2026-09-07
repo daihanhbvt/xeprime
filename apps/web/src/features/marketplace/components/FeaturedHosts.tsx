@@ -10,6 +10,7 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { useFeaturedShops } from '../hooks/use-featured-shops';
 import type { PublicShopSummary } from '../types';
 import styles from './FeaturedHosts.module.css';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 
 // Figma `18:4`: đúng MỘT hàng 4 gian hàng — nhiều hơn là thành danh bạ, không còn là "nổi bật".
 const LIMIT = 4;
@@ -69,7 +70,7 @@ function HostCard({ shop }: { shop: PublicShopSummary }) {
   const fmt = useAppFormat();
   const meta = [t('vehicleCount', { count: shop.vehicleCount }), shop.provinceName]
     .filter(Boolean)
-    .join(' · ');
+    .join(LIST_SEPARATOR);
   const rating = Number(shop.ratingAvg);
   const hasRating = shop.ratingCount > 0 && Number.isFinite(rating);
 

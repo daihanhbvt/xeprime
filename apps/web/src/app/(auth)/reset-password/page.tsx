@@ -6,13 +6,14 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Suspense, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { resetPasswordSchema, type ResetPasswordValues } from '@xeprime/validators';
+import { buildResetPasswordSchema, type ResetPasswordValues } from '@xeprime/validators';
 import { Logo } from '@/components/brand/Logo';
 import { TextField } from '@/components/form/TextField';
 import { ROUTES } from '@/constants/routes';
 import { resetPassword } from '@/services/auth.service';
+import { useAuthSchemaLabels } from '@/features/auth/hooks/use-auth-schema-labels';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import styles from '../auth-card.module.css';
 
@@ -33,8 +34,10 @@ function ResetPasswordForm() {
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
 
+  const labels = useAuthSchemaLabels();
+  const schema = useMemo(() => buildResetPasswordSchema(labels), [labels]);
   const { control, handleSubmit } = useForm<ResetPasswordValues>({
-    resolver: yupResolver(resetPasswordSchema),
+    resolver: yupResolver(schema),
     defaultValues: { password: '', confirmPassword: '' },
   });
 

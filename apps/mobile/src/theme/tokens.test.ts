@@ -1,6 +1,6 @@
 import { XP_TOKENS } from '@xeprime/ui';
 import { elevation } from './elevation';
-import { colors, fontSize, fontWeight, radius, sizing, space } from './tokens';
+import { colors, fieldFontSize, fontSize, fontWeight, radius, sizing, space } from './tokens';
 
 /**
  * Token của hệ thiết kế viết bằng ngôn ngữ CSS; native đọc lại chúng qua hai bộ chuyển đổi
@@ -23,14 +23,12 @@ describe('màu native lấy từ token dùng chung', () => {
 });
 
 describe('kích thước native lấy từ token dùng chung', () => {
-  const scales = { space, radius, fontSize, sizing };
+  const scales = { space, radius, fontSize, fieldFontSize, sizing };
 
   it.each(Object.entries(scales))('%s toàn số hữu hạn dương', (_name, scale) => {
     // Gom thành bảng rồi so một lần: `toBe(true)` trong vòng lặp chỉ báo "false ≠ true",
     // không nói khoá nào hỏng. Jest không nhận message ở `expect` như Vitest.
-    const bad = Object.entries(scale).filter(
-      ([, value]) => !Number.isFinite(value) || value <= 0,
-    );
+    const bad = Object.entries(scale).filter(([, value]) => !Number.isFinite(value) || value <= 0);
     expect(bad).toEqual([]);
   });
 

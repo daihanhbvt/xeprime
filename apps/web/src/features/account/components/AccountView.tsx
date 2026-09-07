@@ -9,7 +9,6 @@ import {
   SafetyCertificateOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App, Avatar, Button, Card, Spin, Tag } from 'antd';
 import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
@@ -23,6 +22,7 @@ import { ShopEntryCard } from './ShopEntryCard';
 import styles from './AccountView.module.css';
 import { useTranslations } from 'next-intl';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { useValidationResolver } from '@/i18n/use-validation-resolver';
 
 /**
  * Trang gốc của khu tài khoản — hồ sơ của CON NGƯỜI đang đăng nhập.
@@ -67,8 +67,12 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
   const update = useUpdateMyProfile();
   const [isEditing, setIsEditing] = useState(false);
 
+  const resolver = useValidationResolver<AccountProfileValues>(
+    accountProfileSchema,
+    'Account.validation',
+  );
   const { control, handleSubmit, reset, formState } = useForm<AccountProfileValues>({
-    resolver: yupResolver(accountProfileSchema),
+    resolver,
     defaultValues: {
       displayName: profile.displayName,
       avatarUrl: profile.avatarUrl ?? null,

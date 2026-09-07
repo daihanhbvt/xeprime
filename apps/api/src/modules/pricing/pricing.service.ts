@@ -24,7 +24,10 @@ import {
   type LegacyDiscountTier,
   type PolicySource,
 } from '@xeprime/types';
+import { computeCustomerFees, type CustomerFeeBreakdown } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
+import { BillingService } from '../billing/billing.service';
+import { FeePoliciesService } from '../fee-policies/fee-policies.service';
 import { ListingsService } from '../public-listings/listings.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -92,7 +95,33 @@ export class PricingService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly listings: ListingsService,
+    private readonly billing: BillingService,
+    private readonly feePolicies: FeePoliciesService,
   ) {}
+
+  // -------------------------------------------------------------------------
+  // Phụ phí phía KHÁCH — ADR 0029 (R3)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Phụ phí của một chuyến trên xe của `tenantId`, tính trên `baseAmount` = tổng bảng kê giá thuê.
+   *
+   * `null` khi chưa có chính sách phí nào hiệu lực: báo giá vẫn hiện, chỉ không có dòng phụ phí
+   * — và không có hold nào sinh ra (`BookingRequestsService.approve` xử lý nhánh đó).
+   *
+   * `quoteIsEstimate` ⇒ vẫn tính để hiện "dự kiến", nhưng `holdAmount = null`: không thu % trên
+   * một báo giá tạm tính (CLAUDE.md).
+   */
+  async customerFeesFor(
+    tenantId: string,
+    baseAmount: string,
+    quoteIsEstimate: boolean,
+  ): Promise<CustomerFeeBreakdown | null> {
+    const policy = await this.feePolicies.findEffective();
+    if (!policy) return null;
+    const billingMode = await this.billing.billingModeFor(tenantId);
+    return computeCustomerFees({ billingMode, policy, baseAmount, quoteIsEstimate });
+  }
 
   // -------------------------------------------------------------------------
   // Chính sách mặc định của gian hàng
@@ -859,8 +888,11 @@ export class PricingService {
   buildSnapshot(
     breakdown: QuoteBreakdownDto,
     policy: EffectivePolicy | null,
+    fees?: CustomerFeeBreakdown | null,
   ): BookingPriceSnapshot {
     return {
+      // Phụ phí phía khách (ADR 0029) — vắng mặt = không có phí, KHÔNG suy ngược (xem kiểu).
+      ...(fees ? { fees } : {}),
       calculatedAt: new Date().toISOString(),
       source: 'quote',
       currency: 'VND',
@@ -965,13 +997,18 @@ export class PricingService {
       if (query.packageMonths == null) {
         throw invalid('Chọn gói thuê dài hạn để xem giá');
       }
+      const longTermBreakdown = this.buildLongTermPackageQuote({
+        monthlyPrice: decimalToString(vehicle.monthlyPrice),
+        packageMonths: query.packageMonths,
+        policy,
+        delivery: null,
+      });
       return {
-        breakdown: this.buildLongTermPackageQuote({
-          monthlyPrice: decimalToString(vehicle.monthlyPrice),
-          packageMonths: query.packageMonths,
-          policy,
-          delivery: null,
-        }),
+        breakdown: {
+          ...longTermBreakdown,
+          // Dài hạn chưa chốt giờ nhận ⇒ như báo giá tạm tính: hiện phí dự kiến, không thu giữ chỗ.
+          fees: await this.customerFeesFor(vehicle.tenantId, longTermBreakdown.totalAmount, true),
+        },
         delivery,
       };
     }
@@ -1005,7 +1042,17 @@ export class PricingService {
       discountPercent: vehicle.discountPercent,
     });
 
-    return { breakdown, delivery };
+    return {
+      breakdown: {
+        ...breakdown,
+        fees: await this.customerFeesFor(
+          vehicle.tenantId,
+          breakdown.totalAmount,
+          breakdown.estimateNote != null,
+        ),
+      },
+      delivery,
+    };
   }
 }
 

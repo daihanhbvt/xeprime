@@ -16,6 +16,7 @@ import {
   type TenantCustomerRiskLevel,
   type VehicleType,
 } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { EntityIdentity } from '@/components/data-display/EntityIdentity';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
 import { StatusTag } from '@/components/data-display/StatusTag';
@@ -89,7 +90,7 @@ function DetailBody({
 
   const phoneLink = telHref(request.customerPhone);
   const zaloLink = zaloHref(request.customerPhone);
-  const vehicleMeta = [request.vehicleCode, request.vehiclePlate].filter(Boolean).join(' · ');
+  const vehicleMeta = [request.vehicleCode, request.vehiclePlate].filter(Boolean).join(LIST_SEPARATOR);
 
   /** Cùng cụm nút dùng chung với thẻ ở danh sách — một hành động, một cách trình bày. */
   const decisionActions: RowAction[] = [

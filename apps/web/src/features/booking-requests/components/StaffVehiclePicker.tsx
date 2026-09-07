@@ -4,6 +4,7 @@ import { CarOutlined } from '@ant-design/icons';
 import { Button, Empty, Result, Skeleton, Spin } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { VEHICLE_OPERATION_STATUS_META, type VehicleOperationStatus } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { AutoSearchInput } from '@/components/filter/AutoSearchInput';
 import { useInfiniteVehicles } from '@/features/vehicles/hooks/use-infinite-vehicles';
@@ -122,7 +123,7 @@ export function StaffVehiclePicker({ onPick }: { onPick: (vehicle: VehicleListIt
                   <span className={styles.body}>
                     <span className={styles.name}>{vehicle.name}</span>
                     <span className={styles.meta}>
-                      {[vehicle.plateNumber, vehicle.code].filter(Boolean).join(' · ')}
+                      {[vehicle.plateNumber, vehicle.code].filter(Boolean).join(LIST_SEPARATOR)}
                     </span>
                     <span className={styles.tags}>
                       <StatusTag

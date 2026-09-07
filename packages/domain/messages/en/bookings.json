@@ -93,8 +93,7 @@
     "vehicle": "Vehicle",
     "period": "Rental period",
     "total": "Total",
-    "status": "Status",
-    "viewDetailOf": "View booking {code} details"
+    "status": "Status"
   },
   "money": {
     "baseAmount": "Rental",
@@ -194,7 +193,6 @@
     "odometerFix": {
       "openMissing": "Add the missing odometer",
       "openCorrect": "Correct the odometer",
-      "lead": "The record is confirmed, so the odometer can only change through this path — and every change is written to the audit log.",
       "kmLabel": "Actual odometer reading",
       "reasonCodeLabel": "Reason",
       "reasonLabel": "Details",
@@ -202,7 +200,14 @@
       "reasonHint": "Required and written to the audit log — an odometer that changes with no explanation is something that must not exist.",
       "confirm": "Save odometer reading",
       "success": "Odometer updated",
-      "decreaseForbidden": "Lowering the odometer needs a separate permission (vehicles.odometer.decrease). Reducing it can hide distance actually driven, so it is not part of ordinary edit rights."
+      "decreaseForbidden": "Lowering the odometer needs a separate permission (vehicles.odometer.decrease). Reducing it can hide distance actually driven, so it is not part of ordinary edit rights.",
+      "missingTitle": "This record is missing its odometer reading",
+      "missingBody": "The vehicle's current odometer has not been updated from this trip. Enter the actual reading to sync the vehicle profile and its maintenance milestones.",
+      "currentVehicleKm": "Vehicle odometer now",
+      "pickupKm": "Pickup odometer",
+      "decreaseTitle": "The new reading is lower than the current one",
+      "decreaseConfirm": "Lowering the odometer can hide distance already driven, so it takes one more confirmation.",
+      "decreaseOverride": "I have authority, lower it anyway"
     },
     "advancedPickup": "Add handover details — optional",
     "advancedReturn": "Add return details — optional",
@@ -375,14 +380,18 @@
     "permissionDenied": "You do not have permission to create bookings."
   },
   "missingKm": {
-    "title": "Missing return odometer",
-    "open": "Missing-odometer queue",
-    "lead": "Return handovers that were confirmed without an odometer reading. Every km-based maintenance calculation after that runs on a stale figure.",
     "empty": "No outstanding missing-odometer work",
     "errorTitle": "Could not load the missing-odometer list",
-    "pickupKm": "Odometer at handover",
     "fix": "Add reading",
-    "confirmedAt": "Return confirmed at"
+    "noPlate": "No plate number",
+    "bookingLine": "Booking {code}",
+    "pickupKmLine": "Pickup odometer: {value}",
+    "needPermission": "Requires odometer edit permission",
+    "resolveForbiddenTitle": "No permission to open this handover record",
+    "resolveForbiddenBody": "Filling in the odometer needs view access to that booking’s handover.",
+    "resolveErrorTitle": "Could not load the handover record",
+    "resolveErrorBody": "The connection may have dropped. This task stays in the queue.",
+    "emptyBody": "Every return record has an odometer reading — the fleet's numbers are complete."
   },
   "edit": {
     "title": "Edit booking",

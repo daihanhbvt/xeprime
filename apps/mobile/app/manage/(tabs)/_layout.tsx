@@ -34,8 +34,9 @@ export default function ManageTabsLayout() {
         <Tabs.Screen name="index" />
         <Tabs.Screen name="requests" />
         <Tabs.Screen name="bookings" />
+        <Tabs.Screen name="vehicles" />
+        <Tabs.Screen name="maintenance" />
         <Tabs.Screen name="more" />
-        <Tabs.Screen name="handovers/missing-odometer" />
       </Tabs>
     </ManageDrawerHost>
   );

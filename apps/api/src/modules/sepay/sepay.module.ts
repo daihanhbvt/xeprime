@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BillingModule } from '../billing/billing.module';
+import { HoldsModule } from '../holds/holds.module';
 import { BankTransactionsController } from './bank-transactions.controller';
 import { BankTransactionsService } from './bank-transactions.service';
 import { SepayController } from './sepay.controller';
@@ -11,7 +12,7 @@ import { SepayService } from './sepay.service';
  * đó) trong CÙNG transaction — hai sổ không bao giờ lệch nhau nửa chừng.
  */
 @Module({
-  imports: [BillingModule],
+  imports: [BillingModule, HoldsModule],
   controllers: [SepayController, BankTransactionsController],
   providers: [SepayService, BankTransactionsService],
   exports: [SepayService],

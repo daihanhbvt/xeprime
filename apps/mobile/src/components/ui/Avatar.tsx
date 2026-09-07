@@ -1,4 +1,5 @@
-import { Image, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
+import { StyleSheet } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { colors, fontWeight, radius } from '@/theme/tokens';
 
@@ -32,7 +33,7 @@ export function Avatar({ name, url, size = 40 }: AvatarProps) {
       ov="hidden"
     >
       {url ? (
-        <Image source={{ uri: url }} style={styles.image} resizeMode="cover" />
+        <Image source={{ uri: url }} style={styles.image} contentFit="cover" cachePolicy="memory-disk" />
       ) : (
         <Text col={colors.onPrimary} fos={size / 2.5} fow={fontWeight.bold}>
           {initial || '?'}

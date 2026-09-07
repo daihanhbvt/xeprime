@@ -23,7 +23,7 @@ import {
   type ServiceType,
 } from '@xeprime/types';
 import { STALE_TIME } from '@xeprime/api-client';
-import { dayjs, type Dayjs, type RentalMode } from '@xeprime/domain';
+import { dayjs, type Dayjs, type RentalMode, LIST_SEPARATOR } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
@@ -50,7 +50,7 @@ import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { queryKeys } from '@/queries/query-keys';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { colors, fieldFontSize, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { VehiclePickerSheet } from './components/VehiclePickerSheet';
 import { useListing } from '@/features/marketplace/hooks/use-marketplace-data';
 import { useCheckConflict, useCreateBooking } from './hooks/use-bookings';
@@ -483,7 +483,7 @@ function StaffBookingFlow({ onBack }: { onBack: () => void }) {
                     label={t('doneCustomer')}
                     value={[getValues('customerName'), getValues('customerPhone')]
                       .filter(Boolean)
-                      .join(' · ')}
+                      .join(LIST_SEPARATOR)}
                   />
                   {/*
                     Mốc GỌN (`10:00 · 03/09`) chứ không phải mốc đầy đủ: khoảng thuê có hai đầu,
@@ -624,7 +624,7 @@ function StaffBookingFlow({ onBack }: { onBack: () => void }) {
               */}
               {isLongTerm ? (
                 <YStack gap={space.xs}>
-                  <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.medium}>
+                  <Text col={colors.textMuted} fos={fieldFontSize.label} fow={fontWeight.medium}>
                     {t('pickupAtLabel')}
                   </Text>
                   <Card
@@ -632,19 +632,19 @@ function StaffBookingFlow({ onBack }: { onBack: () => void }) {
                     accessibilityLabel={t('pickupAtField')}
                   >
                     <YStack gap={2}>
-                      <Text col={colors.textMuted} fos={fontSize.label}>
+                      <Text col={colors.textMuted} fos={fieldFontSize.affix}>
                         {t('pickupAtField')}
                       </Text>
                       <Text
                         col={range.pickupAt ? colors.text : colors.placeholder}
-                        fos={fontSize.body}
+                        fos={fieldFontSize.value}
                         fow={fontWeight.medium}
                       >
                         {range.pickupAt ? fmt.rentalPoint(range.pickupAt) : t('pickupAtEmpty')}
                       </Text>
                     </YStack>
                   </Card>
-                  <Text col={colors.textMuted} fos={fontSize.label}>
+                  <Text col={colors.textMuted} fos={fieldFontSize.message}>
                     {derivedReturnAt
                       ? t('derivedReturn', { value: fmt.rentalPoint(derivedReturnAt) })
                       : t('derivedReturnEmpty')}
@@ -652,7 +652,7 @@ function StaffBookingFlow({ onBack }: { onBack: () => void }) {
                 </YStack>
               ) : (
                 <YStack gap={space.xs}>
-                  <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.medium}>
+                  <Text col={colors.textMuted} fos={fieldFontSize.label} fow={fontWeight.medium}>
                     {t('scheduleLabel')}
                   </Text>
                   <Card
@@ -661,7 +661,7 @@ function StaffBookingFlow({ onBack }: { onBack: () => void }) {
                   >
                     <Text
                       col={range.pickupAt && range.returnAt ? colors.text : colors.placeholder}
-                      fos={fontSize.body}
+                      fos={fieldFontSize.value}
                       fow={fontWeight.medium}
                     >
                       {range.pickupAt && range.returnAt

@@ -198,6 +198,15 @@ export const PERMISSION = {
   PAYMENT_VOID: 'payments.void',
   CONTRACT_MANAGE: 'contracts.manage',
 
+  // Hồ sơ người bán (R3 — ADR 0028 gate 1): danh tính pháp lý, thuế, tài khoản nhận tiền.
+  // Chỉ chủ gian hàng: đổi tài khoản nhận tiền là quyết định TIỀN của chính chủ.
+  SELLER_PROFILE_VIEW: 'seller_profile.view',
+  SELLER_PROFILE_MANAGE: 'seller_profile.manage',
+
+  // Hỗ trợ / tranh chấp gắn đơn (R3). Xem case của gian hàng mình và trả lời.
+  SUPPORT_VIEW: 'support.view',
+  SUPPORT_MANAGE: 'support.manage',
+
   // Nền tảng
   PLATFORM_DASHBOARD_VIEW: 'platform.dashboard.view',
   PLATFORM_TENANT_MANAGE: 'platform.tenants.manage',
@@ -237,6 +246,16 @@ export const PERMISSION = {
    */
   PLATFORM_LOCATION_VIEW: 'platform.locations.view',
   PLATFORM_LOCATION_MANAGE: 'platform.locations.manage',
+
+  // ── R3: vận hành tiền marketplace ────────────────────────────────────────
+  /** Chính sách phí có phiên bản (ADR 0028/0029): soạn, kích hoạt, lưu trữ. */
+  PLATFORM_FEE_POLICY_MANAGE: 'platform.fee_policies.manage',
+  /** Xác minh người bán: duyệt/từ chối hồ sơ, xem PII hồ sơ (CCCD, tài khoản ngân hàng đầy đủ). */
+  PLATFORM_SELLER_VERIFY: 'platform.sellers.verify',
+  /** Money operations: hàng đợi giữ chỗ, chuyển trả, đối chiếu ngày. */
+  PLATFORM_MONEY_MANAGE: 'platform.money.manage',
+  /** Support case / tranh chấp toàn sàn: nhận, phân công, kết luận. */
+  PLATFORM_SUPPORT_MANAGE: 'platform.support.manage',
 } as const;
 
 export type Permission = (typeof PERMISSION)[keyof typeof PERMISSION];
@@ -294,6 +313,9 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       PERMISSION.CALENDAR_VIEW,
       // Xem tình trạng gói/hạn mức để điều hành đội xe; MUA gói vẫn là việc của chủ gian hàng.
       PERMISSION.SUBSCRIPTION_VIEW,
+      PERMISSION.SELLER_PROFILE_VIEW,
+      PERMISSION.SUPPORT_VIEW,
+      PERMISSION.SUPPORT_MANAGE,
       PERMISSION.FINANCE_VIEW,
       PERMISSION.RECEIPT_CREATE,
       PERMISSION.RECEIPT_APPROVE,
@@ -321,6 +343,7 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       PERMISSION.HANDOVER_CONFIRM,
       PERMISSION.BOOKING_REQUEST_VIEW,
       PERMISSION.BOOKING_VIEW,
+      PERMISSION.SUPPORT_VIEW,
       PERMISSION.BOOKING_CREATE,
       PERMISSION.BOOKING_UPDATE,
       // Xem hồ sơ để chọn tài xế khi gán vào đơn (gán = `bookings.update` đã có ở trên);
@@ -348,6 +371,7 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       PERMISSION.HANDOVER_VIEW,
       PERMISSION.BOOKING_REQUEST_VIEW,
       PERMISSION.BOOKING_VIEW,
+      PERMISSION.SUPPORT_VIEW,
       PERMISSION.DRIVER_VIEW,
       // Read-only sổ khách: hồ sơ + số liệu tổng hợp. Không sửa, không đổi rủi ro, và không
       // mở được giấy tờ tuỳ thân của khách.
@@ -376,6 +400,8 @@ export const DEFAULT_PLATFORM_ROLE_PERMISSIONS: Readonly<
     PERMISSION.PLATFORM_APPROVAL_REVIEW,
     PERMISSION.PLATFORM_VEHICLE_VIEW,
     PERMISSION.PLATFORM_VEHICLE_MODERATE,
+    // Reviewer xác minh người bán cùng lúc với duyệt gian hàng/xe.
+    PERMISSION.PLATFORM_SELLER_VERIFY,
   ],
   // Hỗ trợ cần liên hệ được khách → là role duy nhất ngoài admin được bỏ mask PII.
   [PLATFORM_ROLE.SUPPORT]: [
@@ -384,6 +410,8 @@ export const DEFAULT_PLATFORM_ROLE_PERMISSIONS: Readonly<
     PERMISSION.PLATFORM_BOOKING_VIEW,
     PERMISSION.PLATFORM_CUSTOMER_VIEW,
     PERMISSION.PLATFORM_CUSTOMER_PII_VIEW,
+    // Support xử lý case/tranh chấp — và cần đọc được hồ sơ hỗ trợ của gian hàng.
+    PERMISSION.PLATFORM_SUPPORT_MANAGE,
   ],
   [PLATFORM_ROLE.FINANCE_ADMIN]: [
     PERMISSION.PLATFORM_DASHBOARD_VIEW,
@@ -391,5 +419,9 @@ export const DEFAULT_PLATFORM_ROLE_PERMISSIONS: Readonly<
     PERMISSION.PLATFORM_TENANT_MANAGE,
     PERMISSION.PLATFORM_BILLING_MANAGE,
     PERMISSION.PLATFORM_BOOKING_VIEW,
+    // R3: finance_admin vận hành tiền marketplace và chính sách phí.
+    PERMISSION.PLATFORM_FEE_POLICY_MANAGE,
+    PERMISSION.PLATFORM_MONEY_MANAGE,
+    PERMISSION.PLATFORM_SELLER_VERIFY,
   ],
 };

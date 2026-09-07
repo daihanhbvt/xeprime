@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { colors, fieldFontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 /**
  * Ô khoảng thuê — bản native của `RentalDateTimeRangeField variant="labelled"` bên web.
@@ -68,7 +68,7 @@ export function RangeFieldBox({
         <YStack jc="center" minHeight={40}>
           {filled && durationText ? (
             <XStack bg={colors.surfaceSelected} br={radius.sm} px={space.xs} py={2}>
-              <Text col={colors.primaryActive} fos={fontSize.label} fow={fontWeight.semibold}>
+              <Text col={colors.primaryActive} fos={fieldFontSize.affix} fow={fontWeight.semibold}>
                 {durationText}
               </Text>
             </XStack>
@@ -89,13 +89,13 @@ function Endpoint({ label, value }: { label: string; value: string }) {
 
   return (
     <XStack ai="baseline" gap={space.xs}>
-      <Text col={colors.textMuted} fos={fontSize.label} width={58}>
+      <Text col={colors.textMuted} fos={fieldFontSize.affix} width={58}>
         {label}
       </Text>
       <Text
         f={1}
         col={value ? colors.text : colors.placeholder}
-        fos={fontSize.bodySm}
+        fos={fieldFontSize.value}
         fow={value ? fontWeight.semibold : fontWeight.regular}
       >
         {value || t('pickDateTime')}

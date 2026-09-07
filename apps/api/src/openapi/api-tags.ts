@@ -182,7 +182,21 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
     title: 'Tương tác',
     tags: [
       { name: 'notifications', description: 'Thông báo trong ứng dụng và trạng thái đã đọc.' },
+      {
+        name: 'customer-support',
+        description: 'Yêu cầu hỗ trợ của khách thuê; tranh chấp phải gắn chuyến của chính họ.',
+      },
       { name: 'reviews', description: 'Đánh giá gian hàng nhận được và phản hồi của chủ xe.' },
+      {
+        name: 'seller-profile',
+        description:
+          'Hồ sơ người bán: danh tính pháp lý, thuế và tài khoản nhận tiền (ADR 0028 gate 1). ' +
+          'Bộ cơ bản — chủ xe nào cũng phải khai được, và xác minh đi qua hàng đợi duyệt chung.',
+      },
+      {
+        name: 'support',
+        description: 'Yêu cầu hỗ trợ / tranh chấp gắn đơn, nhìn từ phía gian hàng.',
+      },
       {
         name: 'conversations',
         description: 'Danh sách hội thoại và thành viên. PostgreSQL là source of truth (ADR 0009).',
@@ -212,6 +226,28 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
       { name: 'platform-banners', description: 'Biên tập banner marketplace.' },
       { name: 'platform-plans', description: 'Gói dịch vụ bán cho gian hàng và hạn mức đi kèm.' },
       { name: 'platform-subscriptions', description: 'Thuê bao của gian hàng: gia hạn, đổi gói.' },
+      {
+        name: 'platform-fee-policies',
+        description:
+          'Chính sách phí có phiên bản (ADR 0028/0029): phí dịch vụ, thuế, bảo hiểm. ' +
+          'Đúng một bản hiệu lực; bản đã kích hoạt là bất biến và booking snapshot theo nó.',
+      },
+      {
+        name: 'platform-money',
+        description:
+          'Vận hành tiền marketplace: hàng đợi khoản giữ chỗ, chuyển trả và đối chiếu ngày. ' +
+          'Không có đường nào sửa/xoá một dòng tiền — chỉ chốt kết cục và ghi bằng chứng.',
+      },
+      {
+        name: 'platform-sellers',
+        description: 'Xác minh hồ sơ người bán — danh sách che PII, chi tiết mở đủ để đối chiếu.',
+      },
+      {
+        name: 'platform-support',
+        description:
+          'Hỗ trợ và tranh chấp toàn sàn. Kết luận tranh chấp là điều kiện để chốt kết cục ' +
+          'khoản giữ chỗ — hai bước tách rời, không trộn phán xét với thao tác kế toán.',
+      },
       {
         name: 'platform-audit',
         description: 'Nhật ký `audit_logs` — mọi hành động quản trị quan trọng đều để lại vết.',

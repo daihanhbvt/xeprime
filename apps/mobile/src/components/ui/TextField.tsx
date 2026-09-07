@@ -4,14 +4,11 @@ import { useController, type Control, type FieldValues, type Path } from 'react-
 import { Pressable, TextInput, type TextInputProps } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
-import { colors, fontSize, iconSize, sizing, space } from '@/theme/tokens';
+import { colors, fieldFontSize, iconSize, sizing, space } from '@/theme/tokens';
 import type { IconName } from './Chip';
 
-/** Chiều cao một dòng của ô nhiều dòng — cùng nhịp với `fontSize.body` × 1.4. */
-const LINE_HEIGHT = 22;
-
-/** Bộ đếm ký tự chỉ hiện khi đã dùng quá phần này của trần — trước đó nó chỉ là nhiễu. */
-const COUNTER_AT = 0.6;
+/** Chiều cao một dòng của ô nhiều dòng — cùng nhịp dòng 1.5 mà Tamagui dùng cho chữ trong ô. */
+const LINE_HEIGHT = Math.round(fieldFontSize.value * 1.5);
 
 interface TextFieldProps<T extends FieldValues> {
   control: Control<T>;
@@ -58,6 +55,9 @@ interface TextFieldProps<T extends FieldValues> {
   onSubmitEditing?: TextInputProps['onSubmitEditing'];
 }
 
+/** Chữ trong ô chỉ đọc: mờ như nhãn phụ, để mắt không đọc nó thành một ô đang chờ nhập. */
+const READ_ONLY_TEXT = { color: colors.textMuted };
+
 /** Form state ở React Hook Form, không Redux (ADR 0004). */
 export function TextField<T extends FieldValues>({
   control,
@@ -72,6 +72,8 @@ export function TextField<T extends FieldValues>({
   maxLength,
   ...inputProps
 }: TextFieldProps<T>) {
+  /* `editable={false}` là cách React Native khai "chỉ đọc"; vỏ ô cần biết để đổi hình. */
+  const readOnly = inputProps.editable === false;
   const { field, fieldState } = useController({ control, name });
   const inputRef = useRef<TextInput>(null);
   const [focused, setFocused] = useState(false);
@@ -87,7 +89,7 @@ export function TextField<T extends FieldValues>({
     () => ({
       flex: 1,
       color: colors.text,
-      fontSize: fontSize.body,
+      fontSize: fieldFontSize.value,
       minHeight: multiline ? rows * LINE_HEIGHT : sizing.touchTarget,
       paddingVertical: multiline ? space.sm : 0,
     }),
@@ -108,6 +110,7 @@ export function TextField<T extends FieldValues>({
         dựng lại cây con, mà `TextInput` nằm trong đó — focus mất ngay khi vừa chạm.
       */}
       <FieldShell
+        disabled={readOnly}
         focused={focused}
         invalid={Boolean(error)}
         align={multiline ? 'flex-start' : 'center'}
@@ -129,7 +132,7 @@ export function TextField<T extends FieldValues>({
           {...(maxLength === undefined ? {} : { maxLength })}
           textAlignVertical={multiline ? 'top' : 'center'}
           placeholderTextColor={colors.placeholder}
-          style={inputStyle}
+          style={readOnly ? [inputStyle, READ_ONLY_TEXT] : inputStyle}
           {...inputProps}
         />
 
@@ -154,8 +157,13 @@ export function TextField<T extends FieldValues>({
 
       <FieldMessage error={error} hint={hint} />
 
-      {maxLength !== undefined && String(field.value ?? '').length > maxLength * COUNTER_AT ? (
-        <Text col={colors.textMuted} fos={fontSize.label} ta="right">
+      {/*
+        Có `maxLength` là có bộ đếm, ngay từ ký tự đầu — đúng `showCount` của `<TextArea>` bên
+        web. Bản cũ giấu nó tới khi dùng quá 60% trần: người dùng gõ một đoạn dài mà không hề
+        biết có giới hạn, rồi bị chặn ở đâu đó giữa chừng không rõ vì sao.
+      */}
+      {maxLength !== undefined ? (
+        <Text col={colors.textMuted} fos={fieldFontSize.affix} ta="right">
           {String(field.value ?? '').length}/{maxLength}
         </Text>
       ) : null}

@@ -17,6 +17,7 @@ import { useAdminVehicle, useVehicleModeration } from '../hooks/use-admin-vehicl
 import type { AdminVehicleDetail } from '../types';
 import styles from './AdminVehicleDetailDrawer.module.css';
 import { useAppFormat, type AppFormat } from '@/i18n/use-app-format';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 
 export function AdminVehicleDetailDrawer({
   vehicleId,
@@ -163,7 +164,7 @@ function detailItems(v: AdminVehicleDetail, labels: CatalogLabels, fmt: AppForma
     labels.fuelTypeLabel(v.fuelType),
   ]
     .filter(Boolean)
-    .join(' · ');
+    .join(LIST_SEPARATOR);
 
   return [
     { key: 'code', label: 'Mã xe', children: v.code },

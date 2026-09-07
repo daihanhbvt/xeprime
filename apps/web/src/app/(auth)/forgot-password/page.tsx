@@ -5,25 +5,28 @@ import { CheckCircleFilled, MailOutlined } from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { forgotPasswordSchema, type ForgotPasswordValues } from '@xeprime/validators';
+import { buildForgotPasswordSchema, type ForgotPasswordValues } from '@xeprime/validators';
 import { Logo } from '@/components/brand/Logo';
 import { TextField } from '@/components/form/TextField';
 import { ROUTES } from '@/constants/routes';
 import { forgotPassword } from '@/services/auth.service';
+import { useAuthSchemaLabels } from '@/features/auth/hooks/use-auth-schema-labels';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import styles from '../auth-card.module.css';
 
 export default function ForgotPasswordPage() {
   const t = useTranslations('Auth');
   const errorMessage = useErrorMessage();
+  const labels = useAuthSchemaLabels();
+  const schema = useMemo(() => buildForgotPasswordSchema(labels), [labels]);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
 
   const { control, handleSubmit } = useForm<ForgotPasswordValues>({
-    resolver: yupResolver(forgotPasswordSchema),
+    resolver: yupResolver(schema),
     defaultValues: { email: '' },
   });
 

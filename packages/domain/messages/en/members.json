@@ -28,7 +28,8 @@
     "roleChanged": "Role updated",
     "removed": "Member removed",
     "invited": "Invitation sent",
-    "revoked": "Invitation revoked"
+    "revoked": "Invitation revoked",
+    "invitedNoEmail": "Invitation created but the email could not be sent. Check the email configuration, then invite this address again."
   },
   "form": {
     "title": "Invite a member",

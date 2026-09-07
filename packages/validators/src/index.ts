@@ -15,6 +15,7 @@ import {
   ODOMETER_MAX_KM,
   SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
+  SOURCE_CONTRACT_MAX_FILES,
   TENANT_TYPE_VALUES,
   TRANSMISSION_TYPE_VALUES,
   VEHICLE_DOCUMENT_PRESET_VALUES,
@@ -52,14 +53,19 @@ const MAX_VEHICLE_YEAR = new Date().getFullYear() + 1;
 
 /** Text tuỳ chọn: chuỗi trim, rỗng coi như bỏ trống (map sang undefined khi gửi API). */
 const optionalText = (max: number) => yup.string().trim().max(max).default('');
-const optionalPositiveInt = (label: string, max: number) =>
+/**
+ * `code` là TIỀN TỐ mã, không phải nhãn hiển thị — `useValidationResolver` tra
+ * `Vehicles.form.validation.${code}TypeError` v.v. Chỉ `vehicleFormSchema` dùng hàm này (kiểm
+ * bằng grep trước khi sửa); đổi cho schema khác thì phải kiểm lại đúng điều đó.
+ */
+const optionalPositiveInt = (code: string, max: number) =>
   yup
     .number()
     .transform((v, orig) => (orig === '' || orig === null || orig === undefined ? null : v))
-    .typeError(`${label} phải là số`)
-    .integer(`${label} phải là số nguyên`)
-    .min(1, `${label} phải lớn hơn 0`)
-    .max(max, `${label} vượt quá giới hạn cho phép`)
+    .typeError(`${code}TypeError`)
+    .integer(`${code}Integer`)
+    .min(1, `${code}Min`)
+    .max(max, `${code}Max`)
     .nullable()
     .default(null);
 /**
@@ -101,43 +107,61 @@ export const maxDecimalsTest = (
  * `@IsNumber({ maxDecimalPlaces: 2 })` ở `vehicle.dto.ts` và cột `Decimal(6, 2)`.
  */
 const METRIC_DECIMALS = 2;
-const optionalMetric = (label: string) =>
+/** `code` là tiền tố mã — cùng quy ước với `optionalPositiveInt`, chỉ `vehicleFormSchema` dùng. */
+const optionalMetric = (code: string) =>
   yup
     .number()
     .transform((v, orig) => (orig === '' || orig === null || orig === undefined ? null : v))
-    .typeError(`${label} phải là số`)
-    .min(0, `${label} không được âm`)
-    .max(999, `${label} vượt quá giới hạn cho phép`)
-    .test(
-      maxDecimalsTest(
-        METRIC_DECIMALS,
-        `${label} chỉ nhận tối đa ${METRIC_DECIMALS} chữ số thập phân`,
-      ),
-    )
+    .typeError(`${code}TypeError`)
+    .min(0, `${code}Min`)
+    .max(999, `${code}Max`)
+    .test(maxDecimalsTest(METRIC_DECIMALS, `${code}Decimals`))
     .nullable()
     .default(null);
 
+/**
+ * Giá theo ngày/giờ/tháng — bản LOCAL của `moneySchema` với message là MÃ.
+ *
+ * KHÔNG đổi `moneySchema` (export ở trên): nó còn được `apps/web/src/features/bookings/schema.ts`
+ * dùng, và màn đó chưa có `useValidationResolver` — đổi message của `moneySchema` sẽ làm màn đó
+ * hiện nguyên mã lỗi lên UI.
+ */
+const vehiclePriceSchema = yup
+  .number()
+  .typeError('priceTypeError')
+  .integer('priceInteger')
+  .min(0, 'priceMin');
+
+/*
+ * Message của schema này là MÃ — `useValidationResolver` tra `Vehicles.form.validation.*`.
+ * Xem docblock `vehicleSourceFormSchema` về quy ước chung; đây là schema thứ hai được dịch.
+ *
+ * `manufactureYear.max` CÒN CHỮ VIỆT CỨNG có chủ đích: cận trên là `năm hiện tại + 1`, tính lúc
+ * CHẠY chứ không phải hằng số — `useValidationResolver` hiện chỉ tra mã tĩnh, chưa truyền tham
+ * số động vào message dịch. Sửa đúng cần thêm cơ chế tham số ở cả hai hook; để lại một nợ nhỏ,
+ * đã ghi rõ, còn hơn xây cơ chế đó chỉ cho một trường.
+ */
 export const vehicleFormSchema = yup.object({
   code: yup.string().trim().max(80).default(''),
-  name: yup.string().trim().required('Tên xe là bắt buộc').max(255),
+  name: yup.string().trim().required('nameRequired').max(255),
   /**
    * Chi nhánh giữ xe — BẮT BUỘC. Đây là vị trí công khai của xe trên marketplace, nên không có
    * mặc định ngầm: form chọn sẵn chi nhánh mặc định của gian hàng, người dùng đổi được.
    */
-  branchId: yup.string().trim().required('Chọn chi nhánh giữ xe'),
-  vehicleType: yup.string().oneOf(VEHICLE_TYPE_VALUES).required('Chọn loại xe'),
+  branchId: yup.string().trim().required('branchRequired'),
+  vehicleType: yup.string().oneOf(VEHICLE_TYPE_VALUES).required('vehicleTypeRequired'),
   /** MẢNG dịch vụ xe phục vụ được (17/08) — một xe đăng đồng thời tự lái/có tài xế/dài hạn. */
   serviceTypes: yup
     .array()
     .of(yup.string().oneOf(SERVICE_TYPE_VALUES).required())
-    .min(1, 'Chọn ít nhất một loại dịch vụ')
-    .required('Chọn loại dịch vụ')
+    .min(1, 'serviceTypesMin')
+    .required('serviceTypesRequired')
     .default([SERVICE_TYPE.SELF_DRIVE]),
-  sourceType: yup.string().oneOf(VEHICLE_SOURCE_TYPE_VALUES).required('Chọn hình thức nguồn xe'),
+  sourceType: yup.string().oneOf(VEHICLE_SOURCE_TYPE_VALUES).required('sourceTypeRequired'),
   operationStatus: yup
     .string()
     .oneOf(VEHICLE_OPERATION_STATUS_VALUES)
-    .required('Chọn trạng thái vận hành'),
+    .required('operationStatusRequired'),
   plateNumber: optionalText(50),
   brand: optionalText(100),
   model: optionalText(100),
@@ -147,84 +171,77 @@ export const vehicleFormSchema = yup.object({
     .oneOf(FUEL_TYPE_VALUES)
     .nullable()
     .default(null)
-    .test(
-      'vehicle-fuel-compatible',
-      'Nguồn năng lượng không phù hợp với loại phương tiện',
-      function compatibleFuel(value) {
-        return isVehicleFuelTypeAllowed(String(this.parent.vehicleType ?? ''), value);
-      },
-    ),
+    .test('vehicle-fuel-compatible', 'fuelTypeIncompatible', function compatibleFuel(value) {
+      return isVehicleFuelTypeAllowed(String(this.parent.vehicleType ?? ''), value);
+    }),
   /** Kiểu dáng thân xe — chỉ có nghĩa với ô tô; đổi sang xe máy thì form tự xoá. */
   bodyType: yup
     .string()
     .oneOf(BODY_TYPE_VALUES)
     .nullable()
     .default(null)
-    .test(
-      'body-type-car-only',
-      'Kiểu dáng thân xe chỉ áp dụng cho ô tô',
-      function carBodyTypeOnly(value) {
-        return this.parent.vehicleType === VEHICLE_TYPE.CAR || value == null;
-      },
-    ),
+    .test('body-type-car-only', 'bodyTypeCarOnly', function carBodyTypeOnly(value) {
+      return this.parent.vehicleType === VEHICLE_TYPE.CAR || value == null;
+    }),
   manufactureYear: yup
     .number()
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
-    .typeError('Đời xe phải là số')
-    .integer('Đời xe phải là số nguyên')
-    .min(MIN_VEHICLE_YEAR, `Đời xe từ ${MIN_VEHICLE_YEAR}`)
+    .typeError('yearTypeError')
+    .integer('yearInteger')
+    .min(MIN_VEHICLE_YEAR, 'yearMin')
+    // Xem docblock trên `vehicleFormSchema`: cận trên tính lúc chạy, chưa dịch được bằng mã tĩnh.
     .max(MAX_VEHICLE_YEAR, `Đời xe tối đa ${MAX_VEHICLE_YEAR}`)
     .nullable()
     .default(null),
   seatCount: yup
     .number()
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
-    .typeError('Số chỗ phải là số')
-    .integer('Số chỗ phải là số nguyên')
-    .min(1, 'Ít nhất 1 chỗ')
-    .max(64, 'Tối đa 64 chỗ')
+    .typeError('seatCountTypeError')
+    .integer('seatCountInteger')
+    .min(1, 'seatCountMin')
+    .max(64, 'seatCountMax')
     .nullable()
     .default(null),
-  lengthMm: optionalPositiveInt('Chiều dài', 30000),
-  widthMm: optionalPositiveInt('Chiều rộng', 10000),
-  heightMm: optionalPositiveInt('Chiều cao', 10000),
-  curbWeightKg: optionalPositiveInt('Trọng lượng', 100000),
-  engineDisplacementCc: optionalPositiveInt('Dung tích động cơ', 30000),
-  horsepowerHp: optionalPositiveInt('Công suất', 5000),
+  lengthMm: optionalPositiveInt('lengthMm', 30000),
+  widthMm: optionalPositiveInt('widthMm', 10000),
+  heightMm: optionalPositiveInt('heightMm', 10000),
+  curbWeightKg: optionalPositiveInt('curbWeightKg', 100000),
+  engineDisplacementCc: optionalPositiveInt('engineDisplacementCc', 30000),
+  horsepowerHp: optionalPositiveInt('horsepowerHp', 5000),
   transmission: yup.string().oneOf(TRANSMISSION_TYPE_VALUES).nullable().default(null),
-  fuelConsumptionCity: optionalMetric('Mức tiêu thụ trong đô thị'),
-  fuelConsumptionHighway: optionalMetric('Mức tiêu thụ ngoài đô thị'),
-  fuelConsumptionCombined: optionalMetric('Mức tiêu thụ kết hợp'),
-  weekdayPrice: moneySchema
+  fuelConsumptionCity: optionalMetric('fuelConsumptionCity'),
+  fuelConsumptionHighway: optionalMetric('fuelConsumptionHighway'),
+  fuelConsumptionCombined: optionalMetric('fuelConsumptionCombined'),
+  weekdayPrice: vehiclePriceSchema
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
     .nullable()
     .default(null),
-  weekendPrice: moneySchema
+  weekendPrice: vehiclePriceSchema
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
     .nullable()
     .default(null),
   /** Giá thuê theo giờ — bỏ trống = xe không cho thuê giờ (tiện ích "Thuê theo giờ"). */
-  hourlyPrice: moneySchema
+  hourlyPrice: vehiclePriceSchema
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
     .nullable()
     .default(null),
   /** Giá tháng tham chiếu thuê dài hạn — chỉ có nghĩa khi serviceTypes chứa long_term. */
-  monthlyPrice: moneySchema
+  monthlyPrice: vehiclePriceSchema
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
     .nullable()
     .default(null),
   /** Giá/ngày đã gồm tài xế (nội thành/cơ bản) — chỉ có nghĩa khi serviceTypes chứa with_driver. */
-  withDriverDailyPrice: moneySchema
+  withDriverDailyPrice: vehiclePriceSchema
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
     .nullable()
     .default(null),
   /** Giá/ngày có tài xế lộ trình liên tỉnh (khứ hồi) — bỏ trống = rơi về giá cơ bản. */
-  withDriverInterCityPrice: moneySchema
+  withDriverInterCityPrice: vehiclePriceSchema
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
     .nullable()
     .default(null),
   /** Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều — bỏ trống = fallback liên tỉnh → cơ bản. */
-  withDriverOneWayPrice: moneySchema
+  withDriverOneWayPrice: vehiclePriceSchema
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
     .nullable()
     .default(null),
@@ -233,10 +250,10 @@ export const vehicleFormSchema = yup.object({
   discountPercent: yup
     .number()
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
-    .typeError('% giảm giá phải là số')
-    .integer('% giảm giá phải là số nguyên')
-    .min(0, 'Tối thiểu 0%')
-    .max(100, 'Tối đa 100%')
+    .typeError('discountPercentTypeError')
+    .integer('discountPercentInteger')
+    .min(0, 'discountPercentMin')
+    .max(100, 'discountPercentMax')
     .nullable()
     .default(null),
   description: optionalText(4000),
@@ -244,27 +261,34 @@ export const vehicleFormSchema = yup.object({
     .string()
     .trim()
     .transform((v) => (v === '' ? null : v))
-    .url('Đường dẫn ảnh không hợp lệ')
+    .url('mainImageUrlInvalid')
     .max(2000)
     .nullable()
     .default(null),
   images: yup
     .array()
-    .of(yup.string().trim().url('Đường dẫn ảnh không hợp lệ').max(2000).required())
-    .max(20, 'Tối đa 20 ảnh')
+    .of(yup.string().trim().url('imageUrlInvalid').max(2000).required())
+    .max(20, 'imagesMax')
     .default([]),
   features: yup.array().of(yup.string().oneOf(VEHICLE_FEATURE_KEYS).required()).default([]),
 });
 
 export type VehicleFormValues = yup.InferType<typeof vehicleFormSchema>;
 
-/** Số nguyên VND tuỳ chọn — form nhập number (NumberField), hoá chuỗi khi gửi API (ADR 0007). */
+/**
+ * Số nguyên VND tuỳ chọn — form nhập number (NumberField), hoá chuỗi khi gửi API (ADR 0007).
+ *
+ * Chỉ `vehicleSourceFormSchema` dùng hàm này (kiểm bằng grep trước khi sửa) — message ở đây là
+ * MÃ để `useValidationResolver` tra `Vehicles.source.validation.*`, không phải chữ hiển thị
+ * thẳng. Đổi hàm này cho schema khác thì phải kiểm lại đúng điều đó, nếu không màn kia sẽ hiện
+ * nguyên mã lỗi lên UI.
+ */
 const optionalMoney = yup
   .number()
   .transform((v, orig) => (orig === '' || orig === null || orig === undefined ? null : v))
-  .typeError('Vui lòng nhập số')
-  .integer('Số tiền phải là số nguyên')
-  .min(0, 'Số tiền không được âm')
+  .typeError('moneyTypeError')
+  .integer('moneyInteger')
+  .min(0, 'moneyMin')
   .nullable()
   .default(null);
 
@@ -277,8 +301,19 @@ const optionalDate = yup.string().trim().nullable().default(null);
  * còn lại tuỳ chọn. Trường lạc biến thể không cần chặn ở đây — form chỉ render trường của
  * biến thể đang chọn và mapper chỉ gửi đúng nhóm đó.
  */
+/*
+ * Message của schema này là MÃ, không phải chữ hiển thị — `useValidationResolver` (bản web ở
+ * `apps/web/src/i18n`, bản app ở `apps/mobile/src/i18n`) tra ra chữ thật ở
+ * `Vehicles.source.validation.*` trước khi react-hook-form thấy `fieldState.error`. Đây là
+ * schema DUY NHẤT đã được dịch — mọi schema khác trong file này vẫn còn chữ Việt cứng, nợ chung
+ * chưa trả (xem `docs/mobile-vehicle-module-status.md`).
+ *
+ * `termMonths`/`paymentDay` KHÔNG dùng `optionalPositiveInt` như các schema khác: hàm đó ghép
+ * nhãn tiếng Việt thẳng vào message (`` `${label} phải là số` ``) nên không tra mã được — viết
+ * riêng bốn dòng ở đây rẻ hơn nhiều so với đổi một hàm dùng chung bởi `vehicleFormSchema`.
+ */
 export const vehicleSourceFormSchema = yup.object({
-  sourceType: yup.string().oneOf(VEHICLE_SOURCE_TYPE_VALUES).required('Chọn hình thức nguồn xe'),
+  sourceType: yup.string().oneOf(VEHICLE_SOURCE_TYPE_VALUES).required('sourceTypeRequired'),
 
   // owned — tất cả tuỳ chọn
   purchaseDate: optionalDate,
@@ -293,7 +328,7 @@ export const vehicleSourceFormSchema = yup.object({
     .default('')
     .when('sourceType', {
       is: 'financed',
-      then: (s) => s.required('Nhập ngân hàng / tổ chức tín dụng'),
+      then: (s) => s.required('bankNameRequired'),
     }),
   contractNumber: optionalText(120),
   originalPrincipal: optionalMoney,
@@ -302,12 +337,20 @@ export const vehicleSourceFormSchema = yup.object({
   interestRatePercent: yup
     .number()
     .transform((v, orig) => (orig === '' || orig === null || orig === undefined ? null : v))
-    .typeError('Lãi suất phải là số')
-    .min(0, 'Lãi suất không được âm')
-    .max(100, 'Lãi suất tối đa 100%')
+    .typeError('interestRateTypeError')
+    .min(0, 'interestRateMin')
+    .max(100, 'interestRateMax')
     .nullable()
     .default(null),
-  termMonths: optionalPositiveInt('Thời hạn vay', 600),
+  termMonths: yup
+    .number()
+    .transform((v, orig) => (orig === '' || orig === null || orig === undefined ? null : v))
+    .typeError('termMonthsTypeError')
+    .integer('termMonthsInteger')
+    .min(1, 'termMonthsMin')
+    .max(600, 'termMonthsMax')
+    .nullable()
+    .default(null),
   interestMethod: yup
     .string()
     .oneOf([...VEHICLE_FINANCE_INTEREST_METHOD_VALUES])
@@ -322,29 +365,37 @@ export const vehicleSourceFormSchema = yup.object({
     .default('')
     .when('sourceType', {
       is: (value: string) => value === 'rented' || value === 'partnership',
-      then: (s) => s.required('Nhập tên chủ xe / doanh nghiệp'),
+      then: (s) => s.required('ownerNameRequired'),
     }),
   ownerPhone: optionalText(30),
-  ownerEmail: yup.string().trim().email('Email không hợp lệ').max(160).default(''),
+  ownerEmail: yup.string().trim().email('ownerEmailInvalid').max(160).default(''),
   monthlyRent: optionalMoney.when('sourceType', {
     is: 'rented',
-    then: (s) => s.required('Nhập tiền thuê hàng tháng'),
+    then: (s) => s.required('monthlyRentRequired'),
   }),
   commissionPercent: yup
     .number()
     .transform((v, orig) => (orig === '' || orig === null || orig === undefined ? null : v))
-    .typeError('Tỷ lệ phải là số')
-    .min(0, 'Tỷ lệ tối thiểu 0%')
-    .max(100, 'Tỷ lệ tối đa 100%')
+    .typeError('commissionTypeError')
+    .min(0, 'commissionMin')
+    .max(100, 'commissionMax')
     .nullable()
     .default(null)
     .when('sourceType', {
       is: 'partnership',
-      then: (s) => s.required('Nhập tỷ lệ chia sẻ doanh thu'),
+      then: (s) => s.required('commissionRequired'),
     }),
 
   // chung
-  paymentDay: optionalPositiveInt('Ngày đến hạn', 31),
+  paymentDay: yup
+    .number()
+    .transform((v, orig) => (orig === '' || orig === null || orig === undefined ? null : v))
+    .typeError('paymentDayTypeError')
+    .integer('paymentDayInteger')
+    .min(1, 'paymentDayMin')
+    .max(31, 'paymentDayMax')
+    .nullable()
+    .default(null),
   startDate: optionalDate,
   endDate: optionalDate,
   /**
@@ -361,7 +412,7 @@ export const vehicleSourceFormSchema = yup.object({
         status: yup.string().oneOf(['ready', 'legacy']).required(),
       }),
     )
-    .max(10, 'Tối đa 10 tệp hợp đồng')
+    .max(SOURCE_CONTRACT_MAX_FILES, 'contractFilesMax')
     .default([]),
   notes: optionalText(4000),
 });
@@ -372,14 +423,18 @@ export type VehicleSourceFormValues = yup.InferType<typeof vehicleSourceFormSche
  * Metadata giấy tờ xe (Wave 5) — nhập tay hoặc chỉnh sau OCR. Mọi trường tuỳ chọn
  * (giấy tờ không bắt buộc); ràng buộc ngày ở backend là lớp chặn thật.
  */
+/*
+ * Message của hai schema dưới đây là MÃ, tra `Vehicles.documents.validation.*` — cùng quy ước
+ * `useValidationResolver`, xem docblock `vehicleSourceFormSchema`.
+ */
 export const vehicleDocumentFormSchema = yup.object({
-  type: yup.string().oneOf(VEHICLE_DOCUMENT_TYPE_VALUES).required('Chọn loại giấy tờ'),
+  type: yup.string().oneOf(VEHICLE_DOCUMENT_TYPE_VALUES).required('documentTypeRequired'),
   customTypeName: yup
     .string()
     .trim()
     .max(160)
     .default('')
-    .when('type', { is: 'other', then: (s) => s.required('Nhập tên loại giấy tờ') }),
+    .when('type', { is: 'other', then: (s) => s.required('customTypeNameRequired') }),
   documentNumber: optionalText(120),
   holderName: optionalText(160),
   holderAddress: optionalText(255),
@@ -408,20 +463,18 @@ export const vehicleDocumentCreateSchema = yup.object({
     .string()
     .defined()
     .default('')
-    .oneOf(
-      [...VEHICLE_DOCUMENT_PRESET_VALUES, VEHICLE_DOCUMENT_TYPE.OTHER, ''],
-      'Chọn loại giấy tờ trong danh sách',
-    )
-    .test('required', 'Chọn loại giấy tờ', (value) => Boolean(value)),
+    .oneOf([...VEHICLE_DOCUMENT_PRESET_VALUES, VEHICLE_DOCUMENT_TYPE.OTHER, ''], 'presetInvalid')
+    .test('required', 'documentTypeRequired', (value) => Boolean(value)),
   customTypeName: yup
     .string()
     .trim()
     .defined()
     .default('')
-    .max(160, 'Tối đa 160 ký tự')
+    .max(160, 'customTypeNameMax')
     .when('preset', {
       is: VEHICLE_DOCUMENT_TYPE.OTHER,
-      then: (s) => s.test('required', 'Nhập tên loại giấy tờ', (value) => Boolean(value?.trim())),
+      then: (s) =>
+        s.test('required', 'customTypeNameRequired', (value) => Boolean(value?.trim())),
     }),
 });
 
@@ -431,23 +484,31 @@ export type VehicleDocumentCreateValues = yup.InferType<typeof vehicleDocumentCr
 // Bảo dưỡng & KM (Wave 6) — docs/design/12 §9
 // ---------------------------------------------------------------------------
 
-/** Số KM: nguyên, không âm, trong trần vận hành. Backend + CHECK ở DB là lớp chặn thật. */
+/**
+ * Số KM: nguyên, không âm, trong trần vận hành. Backend + CHECK ở DB là lớp chặn thật.
+ *
+ * Message là MÃ — `useValidationResolver` tra `Maintenance.validation.*` (web) /
+ * `Vehicles.maintenance.validation.*` (app), hai namespace riêng vì hai bên đang đặt UI bảo
+ * dưỡng ở hai chỗ khác nhau (nợ gộp namespace ghi ở `docs/mobile-vehicle-module-status.md`).
+ * Dùng chung cho `maintenanceProfileFormSchema`, `odometerCorrectionFormSchema`,
+ * `maintenanceRecordFields` — cả ba đều được dịch trong đợt này nên đổi an toàn.
+ */
 const odometerKmSchema = yup
   .number()
   .transform((v, orig) => (orig === '' || orig === null || orig === undefined ? null : v))
-  .typeError('Số KM phải là số')
-  .integer('Số KM phải là số nguyên')
-  .min(0, 'Số KM không được âm')
-  .max(ODOMETER_MAX_KM, 'Số KM vượt quá giới hạn cho phép');
+  .typeError('odometerTypeError')
+  .integer('odometerInteger')
+  .min(0, 'odometerMin')
+  .max(ODOMETER_MAX_KM, 'odometerMax');
 
 export const maintenanceProfileFormSchema = yup.object({
   oilChangeIntervalKm: yup
     .number()
     .transform((v, orig) => (orig === '' || orig === null || orig === undefined ? null : v))
-    .typeError('Chu kỳ phải là số')
-    .integer('Chu kỳ phải là số nguyên')
-    .min(1, 'Chu kỳ phải lớn hơn 0')
-    .max(1_000_000, 'Chu kỳ vượt quá giới hạn cho phép')
+    .typeError('oilIntervalTypeError')
+    .integer('oilIntervalInteger')
+    .min(1, 'oilIntervalMin')
+    .max(1_000_000, 'oilIntervalMax')
     .nullable()
     .default(null),
   lastServiceKm: odometerKmSchema.nullable().default(null),
@@ -462,20 +523,25 @@ export type MaintenanceProfileFormValues = yup.InferType<typeof maintenanceProfi
  * một số KM đổi mà không ai biết vì sao là thứ không được phép tồn tại (§9.1).
  */
 export const odometerCorrectionFormSchema = yup.object({
-  odometerKm: odometerKmSchema.required('Nhập số KM mới'),
-  reasonCode: yup
-    .string()
-    .oneOf(ODOMETER_CORRECTION_REASON_VALUES)
-    .required('Chọn lý do điều chỉnh'),
+  odometerKm: odometerKmSchema.required('odometerRequired'),
+  reasonCode: yup.string().oneOf(ODOMETER_CORRECTION_REASON_VALUES).required('reasonCodeRequired'),
   reason: yup
     .string()
     .trim()
-    .required('Nhập lý do chi tiết')
-    .min(3, 'Lý do quá ngắn')
-    .max(1000, 'Lý do tối đa 1000 ký tự'),
+    .required('reasonRequired')
+    .min(3, 'reasonMin')
+    .max(1000, 'reasonMax'),
 });
 
 export type OdometerCorrectionFormValues = yup.InferType<typeof odometerCorrectionFormSchema>;
+
+/**
+ * Chi phí phiếu bảo dưỡng — bản LOCAL của `moneySchema` với message là MÃ.
+ *
+ * KHÔNG đổi `moneySchema` (export ở trên): nó còn được `apps/web/src/features/bookings/schema.ts`
+ * dùng, màn đó chưa có `useValidationResolver`.
+ */
+const maintenanceCostSchema = yup.number().typeError('costTypeError').integer('costInteger').min(0, 'costMin');
 
 /**
  * Các mảnh dùng chung của form phiếu bảo dưỡng.
@@ -486,17 +552,17 @@ export type OdometerCorrectionFormValues = yup.InferType<typeof odometerCorrecti
  * schema banner cũng sống cạnh component của nó.
  */
 export const maintenanceRecordFields = {
-  type: yup.string().oneOf(MAINTENANCE_TYPE_VALUES).required('Chọn loại bảo dưỡng'),
+  type: yup.string().oneOf(MAINTENANCE_TYPE_VALUES).required('recordTypeRequired'),
   customTypeName: yup
     .string()
     .trim()
     .max(160)
     .default('')
-    .when('type', { is: 'other', then: (s) => s.required('Nhập tên hạng mục') }),
+    .when('type', { is: 'other', then: (s) => s.required('recordCustomTypeNameRequired') }),
   title: optionalText(255),
   odometerKm: odometerKmSchema.nullable().default(null),
   providerName: optionalText(255),
-  cost: moneySchema.nullable().default(null),
+  cost: maintenanceCostSchema.nullable().default(null),
   receiptCode: optionalText(100),
   notes: optionalText(2000),
 };
@@ -546,35 +612,27 @@ export type BookingPeriodValues = yup.InferType<typeof bookingPeriodSchema>;
 // Gian hàng (đăng ký + hồ sơ) — Phase 2 duyệt shop
 // ---------------------------------------------------------------------------
 
+/*
+ * Message là MÃ — `useValidationResolver` tra `ShopOnboarding.validation.*` (chỉ web dùng
+ * schema này; app chưa có màn đăng ký gian hàng).
+ */
 export const registerShopSchema = yup.object({
-  name: yup
-    .string()
-    .trim()
-    .required('Tên gian hàng là bắt buộc')
-    .min(2, 'Tối thiểu 2 ký tự')
-    .max(255),
-  tenantType: yup.string().oneOf(TENANT_TYPE_VALUES).required('Chọn loại hình'),
+  name: yup.string().trim().required('nameRequired').min(2, 'nameMin').max(255),
+  tenantType: yup.string().oneOf(TENANT_TYPE_VALUES).required('tenantTypeRequired'),
   /**
    * Tỉnh/thành là BẮT BUỘC: đăng ký gian hàng tạo luôn chi nhánh mặc định, và chi nhánh đó là
    * nguồn vị trí công khai của mọi xe sau này. Giá trị là MÃ 2 ký tự lấy từ `GET /provinces` —
    * KHÔNG kiểm theo danh sách cứng ở đây, backend mới là nơi biết tỉnh nào đang mở.
    */
-  provinceCode: yup
-    .string()
-    .trim()
-    .required('Chọn tỉnh/thành nơi đặt gian hàng')
-    .length(2, 'Mã tỉnh không hợp lệ'),
+  provinceCode: yup.string().trim().required('provinceRequired').length(2, 'provinceInvalid'),
   address: yup.string().trim().max(500).default(''),
   // default('') + excludeEmptyString: bỏ trống là hợp lệ, chỉ validate khi có nhập.
   phone: yup
     .string()
     .trim()
     .default('')
-    .matches(VN_PHONE_PATTERN, {
-      message: 'Số điện thoại không hợp lệ',
-      excludeEmptyString: true,
-    }),
-  email: yup.string().trim().default('').email('Email không hợp lệ'),
+    .matches(VN_PHONE_PATTERN, { message: 'phoneInvalid', excludeEmptyString: true }),
+  email: yup.string().trim().default('').email('emailInvalid'),
 });
 
 export type RegisterShopValues = yup.InferType<typeof registerShopSchema>;
@@ -583,40 +641,25 @@ export type RegisterShopValues = yup.InferType<typeof registerShopSchema>;
  * Form thêm/sửa chi nhánh. Dùng chung cho cả hai vì hai màn nhập ĐÚNG cùng một bộ trường —
  * trạng thái/mặc định đi bằng endpoint riêng, không phải input của form.
  */
+/** Message là MÃ — `useValidationResolver` tra `Branches.validation.*` (chỉ web có màn chi nhánh). */
 export const branchFormSchema = yup.object({
-  name: yup
-    .string()
-    .trim()
-    .required('Tên chi nhánh là bắt buộc')
-    .min(2, 'Tối thiểu 2 ký tự')
-    .max(255),
-  provinceCode: yup
-    .string()
-    .trim()
-    .required('Chọn tỉnh/thành của chi nhánh')
-    .length(2, 'Mã tỉnh không hợp lệ'),
+  name: yup.string().trim().required('nameRequired').min(2, 'nameMin').max(255),
+  provinceCode: yup.string().trim().required('provinceRequired').length(2, 'provinceInvalid'),
   address: yup.string().trim().max(500).default(''),
   phone: yup
     .string()
     .trim()
     .default('')
-    .matches(VN_PHONE_PATTERN, {
-      message: 'Số điện thoại không hợp lệ',
-      excludeEmptyString: true,
-    }),
+    .matches(VN_PHONE_PATTERN, { message: 'phoneInvalid', excludeEmptyString: true }),
 });
 
 export type BranchFormValues = yup.InferType<typeof branchFormSchema>;
 
 const profileText = (max: number) => yup.string().trim().max(max).default('');
 
+/** Message là MÃ — `useValidationResolver` tra `Shop.validation.*` (chỉ web có màn hồ sơ gian hàng). */
 export const shopProfileSchema = yup.object({
-  displayName: yup
-    .string()
-    .trim()
-    .required('Tên hiển thị là bắt buộc')
-    .max(255)
-    .default(''),
+  displayName: yup.string().trim().required('displayNameRequired').max(255).default(''),
   bio: profileText(2000),
   address: profileText(500),
   /**
@@ -629,27 +672,22 @@ export const shopProfileSchema = yup.object({
   provinceCode: yup
     .string()
     .trim()
-    .required('Chọn tỉnh/thành của gian hàng')
-    .length(2, 'Mã tỉnh không hợp lệ')
+    .required('provinceRequired')
+    .length(2, 'provinceInvalid')
     .default(''),
   /**
    * Chủ gian hàng — dữ liệu NỘI BỘ cho đội ngũ XePrime, không hiện cho khách. Họ tên + SĐT là bắt
    * buộc vì hồ sơ duyệt phải liên hệ được với một người thật; email để trống được, do một phần
    * chủ shop chỉ đăng nhập bằng SĐT (passwordless) và không có email nào để khai.
    */
-  ownerFullName: yup
-    .string()
-    .trim()
-    .required('Họ tên chủ gian hàng là bắt buộc')
-    .max(255)
-    .default(''),
+  ownerFullName: yup.string().trim().required('ownerFullNameRequired').max(255).default(''),
   ownerPhone: yup
     .string()
     .trim()
-    .required('Số điện thoại chủ gian hàng là bắt buộc')
-    .matches(VN_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
+    .required('ownerPhoneRequired')
+    .matches(VN_PHONE_PATTERN, { message: 'ownerPhoneInvalid' })
     .default(''),
-  ownerEmail: yup.string().trim().default('').email('Email không hợp lệ'),
+  ownerEmail: yup.string().trim().default('').email('ownerEmailInvalid'),
   taxCode: profileText(50),
   businessLicenseNo: profileText(100),
   bankName: profileText(100),
@@ -659,7 +697,7 @@ export const shopProfileSchema = yup.object({
     .string()
     .trim()
     .transform((v) => (v === '' ? null : v))
-    .url('Đường dẫn logo không hợp lệ')
+    .url('logoUrlInvalid')
     .max(2000)
     .nullable()
     .default(null),
@@ -668,7 +706,7 @@ export const shopProfileSchema = yup.object({
     .string()
     .trim()
     .transform((v) => (v === '' ? null : v))
-    .url('Đường dẫn ảnh bìa không hợp lệ')
+    .url('coverUrlInvalid')
     .max(2000)
     .nullable()
     .default(null),
@@ -682,18 +720,19 @@ export type ShopProfileValues = yup.InferType<typeof shopProfileSchema>;
  * Chỉ hai trường vì backend chỉ nhận đúng hai: `email`/`phone` là khoá nhận diện, muốn đổi thì
  * phải qua luồng xác thực riêng. Đưa chúng vào form ở đây sẽ là chức năng giả.
  */
+/** Message là MÃ — `useValidationResolver` tra `Account.validation.*` (chỉ web có màn này). */
 export const accountProfileSchema = yup.object({
   displayName: yup
     .string()
     .trim()
-    .required('Vui lòng nhập họ tên')
-    .max(255, 'Họ tên tối đa 255 ký tự')
+    .required('displayNameRequired')
+    .max(255, 'displayNameMax')
     .default(''),
   avatarUrl: yup
     .string()
     .trim()
     .transform((v) => (v === '' ? null : v))
-    .url('Đường dẫn ảnh không hợp lệ')
+    .url('avatarUrlInvalid')
     .max(2000)
     .nullable()
     .default(null),

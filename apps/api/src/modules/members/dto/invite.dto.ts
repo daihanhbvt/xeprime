@@ -21,8 +21,14 @@ export class CreateInviteDto {
 
   @ApiProperty({
     enum: TENANT_ROLE_VALUES,
-    description: 'Không nhận `shop_owner` — chủ gian hàng là người tạo gian hàng, không mời được',
+    description:
+      'Không nhận `shop_owner` — chủ gian hàng là người tạo gian hàng, không mời được. ' +
+      'Giá trị đó nằm trong enum nhưng bị `InvitesService.create` từ chối bằng `VALIDATION_FAILED`.',
   })
+  // `TENANT_ROLE_VALUES` trọn vẹn, KHÔNG lọc bớt `shop_owner`: enum ở đây là danh sách vai trò
+  // hợp lệ của gian hàng, và cắt nó đi làm tài liệu Swagger mô tả sai tập vai trò đang tồn tại.
+  // Việc cấm mời chủ gian hàng là LUẬT NGHIỆP VỤ nên nó nằm ở service, cùng chỗ với các luật
+  // còn lại của lời mời (đã là thành viên, đã có lời mời đang chờ).
   @IsIn(TENANT_ROLE_VALUES)
   roleKey!: string;
 }
@@ -67,6 +73,21 @@ export class InviteDto {
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Tên người gửi lời mời' })
   createdByName!: string | null;
+}
+
+/**
+ * Kết quả TẠO một lời mời — có thêm `emailSent`, và chỉ ở đây.
+ *
+ * Tách khỏi `InviteDto` vì nó là kết quả của MỘT lần gửi, không phải thuộc tính của lời mời:
+ * đọc lại danh sách ngày hôm sau thì "lần gửi đó có thành công không" đã là chuyện quá khứ, và
+ * một cột luôn `true` trong bảng chỉ tạo cảm giác an toàn giả.
+ */
+export class CreateInviteResultDto extends InviteDto {
+  @ApiProperty({
+    description:
+      'false khi lời mời ĐÃ được tạo nhưng thư không gửi được (SMTP hỏng). Giao diện phải nói rõ để người gửi bấm Gửi lại — không được coi như đã gửi.',
+  })
+  emailSent!: boolean;
 }
 
 export class InvitePageDto {

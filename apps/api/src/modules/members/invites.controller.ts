@@ -10,7 +10,13 @@ import {
   TenantScoped,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
-import { CreateInviteDto, InviteDto, InviteListQueryDto, InvitePageDto } from './dto/invite.dto';
+import {
+  CreateInviteDto,
+  CreateInviteResultDto,
+  InviteDto,
+  InviteListQueryDto,
+  InvitePageDto,
+} from './dto/invite.dto';
 import { InvitesService } from './invites.service';
 
 /**
@@ -48,12 +54,12 @@ export class InvitesController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @RequirePermissions(PERMISSION.MEMBER_INVITE)
   @ApiOperation({ summary: 'Gửi thư mời tham gia gian hàng (email + vai trò)' })
-  @ApiCreatedResponse({ type: InviteDto })
+  @ApiCreatedResponse({ type: CreateInviteResultDto })
   create(
     @CurrentTenant() tenant: TenantContext,
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateInviteDto,
-  ): Promise<InviteDto> {
+  ): Promise<CreateInviteResultDto> {
     return this.invites.create(tenant.tenantId, user.id, dto);
   }
 

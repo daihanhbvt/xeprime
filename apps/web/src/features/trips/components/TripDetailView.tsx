@@ -21,6 +21,7 @@ import {
   isCustomerTripClosed,
   type CustomerTripStage,
 } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import { Stars } from '@/components/data-display/Stars';
 import { StatusTag } from '@/components/data-display/StatusTag';
@@ -39,6 +40,7 @@ import type { CustomerTripDetail } from '../types';
 import { CancelTripDialog } from './CancelTripDialog';
 import { CustomerTripTimeline } from './CustomerTripTimeline';
 import { TripFinanceCard } from './TripFinanceCard';
+import { TripHoldPanel } from './TripHoldPanel';
 import { TripHandoverEvidence } from './TripHandoverEvidence';
 import styles from './TripDetailView.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -194,7 +196,7 @@ export function TripDetailView({ tripId }: { tripId: string }) {
                     data.vehicle.fuelType,
                   ]
                     .filter(Boolean)
-                    .join(' · ') || t('detail.specsEmpty')}
+                    .join(LIST_SEPARATOR) || t('detail.specsEmpty')}
                 </p>
                 {/* Biển số chỉ có sau khi chủ xe nhận chuyến — server quyết định, không phải UI. */}
                 {data.vehicle.plateNumber ? (
@@ -357,6 +359,11 @@ export function TripDetailView({ tripId }: { tripId: string }) {
         </div>
 
         <aside className={styles.side}>
+          {/*
+            Khoản giữ chỗ đứng TRƯỚC khối tiền của chuyến: khi chuyến đang chờ tiền thì đây là
+            việc duy nhất khách cần làm, và nó không được nằm dưới một bảng số liệu.
+          */}
+          {data.hold ? <TripHoldPanel hold={data.hold} /> : null}
           {data.finance ? (
             <TripFinanceCard finance={data.finance} closed={closed} />
           ) : (

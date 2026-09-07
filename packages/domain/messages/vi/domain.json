@@ -571,5 +571,11 @@
   "vehicleType": {
     "car": "Ô tô",
     "motorbike": "Xe máy"
+  },
+  "feeLine": {
+    "service_fee": "Phí dịch vụ XePrime",
+    "tax": "Thuế khấu trừ/nộp thay",
+    "trip_insurance": "Bảo hiểm chuyến đi",
+    "vehicle_protection": "Bảo vệ xe"
   }
 }

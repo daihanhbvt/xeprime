@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView } from 'react-native';
+import { Pressable, RefreshControl, ScrollView } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
@@ -16,7 +16,7 @@ import {
   type VehicleType,
 } from '@xeprime/types';
 import { catalogLabel } from '@xeprime/api-client';
-import { serviceTypesFor, serviceUsesRentalRange } from '@xeprime/domain';
+import { serviceTypesFor, serviceUsesRentalRange, LIST_SEPARATOR } from '@xeprime/domain';
 import { type MarketplaceFilters, type PublicListing } from '@xeprime/types';
 import { dayjs, rentalDurationParts } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -31,6 +31,7 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { layout } from '@/theme/layout';
+import { LIST_TUNING } from '@/theme/list-tuning';
 import { appStyles } from '@/theme/styles';
 import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
@@ -260,7 +261,7 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
       : null,
   ]
     .filter(Boolean)
-    .join(' · ');
+    .join(LIST_SEPARATOR);
 
   // Đọc theo ngữ cảnh ĐÃ ÁP DỤNG, cùng nguồn với các chip ngay dưới; thứ tự và luật "xe máy
   // không có tài xế" lấy từ package dùng chung.
@@ -540,12 +541,20 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
           <Animated.FlatList
             data={results.listings}
             keyExtractor={keyExtractor}
+            {...LIST_TUNING}
             onScroll={onScroll}
             scrollEventThrottle={scrollThrottle.frame}
             contentContainerStyle={listPadding}
+            refreshControl={
+              <RefreshControl
+                refreshing={results.isRefreshing}
+                onRefresh={results.refresh}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
+              />
+            }
             ItemSeparatorComponent={Separator}
             renderItem={renderItem}
-            onEndReachedThreshold={0.5}
             onEndReached={results.fetchNextPage}
             ListFooterComponent={
               results.appendError ? (

@@ -22,6 +22,9 @@ import type { RouteAccess } from './route-access';
 /** Tên security scheme do `DocumentBuilder.addCookieAuth()` đặt (mặc định là `cookie`). */
 export const COOKIE_SECURITY_SCHEME = 'cookie';
 
+/** Operation trả contract raw của bên thứ ba, không đi qua envelope `{ data }` của XePrime. */
+export const RAW_RESPONSE_EXTENSION = 'x-xeprime-raw-response';
+
 /*
  * Kiểu dẫn xuất từ `OpenAPIObject` thay vì import sâu vào `@nestjs/swagger/dist/...` — barrel
  * của package chỉ export `OpenAPIObject`, và import sâu sẽ vỡ khi package đổi bố cục dist.
@@ -124,6 +127,9 @@ function wrapSuccessResponses(
   operation: OperationObject,
   schemas: Record<string, SchemaOrRef>,
 ): void {
+  const isRawResponse =
+    (operation as unknown as Record<string, unknown>)[RAW_RESPONSE_EXTENSION] === true;
+
   for (const [status, response] of Object.entries(operation.responses)) {
     if (!isSuccessStatus(status) || !isResponseObject(response)) continue;
 
@@ -132,7 +138,7 @@ function wrapSuccessResponses(
     }
 
     const media = response.content?.['application/json'];
-    if (!media?.schema || isEnveloped(media.schema, schemas)) continue;
+    if (!media?.schema || isRawResponse || isEnveloped(media.schema, schemas)) continue;
 
     media.schema = {
       type: 'object',
@@ -249,14 +255,29 @@ function addErrorResponses(
     );
   }
 
-  // ThrottlerGuard là guard global (120 request / 60 giây) nên áp cho mọi endpoint.
-  setResponse(operation, '429', 'Vượt giới hạn 120 request / 60 giây', [
-    API_ERROR_CODE.RATE_LIMITED,
-  ]);
+  // ThrottlerGuard là guard global nên áp cho mọi endpoint; mức thì KHÔNG đồng nhất — các cửa
+  // dò (đăng nhập, đăng ký, OTP, báo giá công khai) siết chặt hơn hẳn bằng `@Throttle`. Con số
+  // dưới đây đọc từ chính metadata đó, nên tài liệu không trôi khỏi decorator.
+  if (route.rateLimit?.kind !== 'skipped') {
+    setResponse(operation, '429', describeRateLimit(route.rateLimit), [
+      API_ERROR_CODE.RATE_LIMITED,
+    ]);
+  }
 
   setResponse(operation, '500', 'Lỗi không lường trước phía server', [
     API_ERROR_CODE.INTERNAL_ERROR,
   ]);
+}
+
+/** Mức chung khai ở `ThrottlerModule.forRoot` (`app.module.ts`) — route không khai riêng thì dùng nó. */
+const GLOBAL_RATE_LIMIT = { limit: 120, ttlMs: 60_000 } as const;
+
+function describeRateLimit(rateLimit: RouteAccess['rateLimit']): string {
+  const { limit, ttlMs } =
+    rateLimit?.kind === 'custom'
+      ? { limit: rateLimit.limit, ttlMs: rateLimit.ttlMs }
+      : GLOBAL_RATE_LIMIT;
+  return `Vượt giới hạn ${limit} request / ${ttlMs / 1000} giây`;
 }
 
 function collectForbiddenCodes(route: RouteAccess): string[] {

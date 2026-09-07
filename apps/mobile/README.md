@@ -561,8 +561,26 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
   Tamagui giả định thang size `$1…$12` của config mặc định, còn thang ở đây là token XePrime —
   trộn vào là kích thước loạn.
 - Màn hình KHÔNG dựng thẻ/viên/nút từ `XStack` trần: dùng `src/components/ui/` (`Card`, `Chip`,
-  `Button`, `IconButton`, `Avatar`, `TextField`, `Skeleton`, `StatusIcon`). Đó là chỗ độ nổi, bo góc và vùng
+  `Button`, `IconButton`, `Avatar`, `TextField`, `NumberField`, `MoneyField`, `Skeleton`,
+  `StatusIcon`, `Callout`, `RadioField`, `ProgressBar`). Đó là chỗ độ nổi, bo góc và vùng
   chạm được quyết định MỘT lần — dựng tay ở từng màn là mỗi màn một kiểu.
+- **Thanh tiến độ đi qua [`<ProgressBar>`](src/components/ui/ProgressBar.tsx)** — bản native của
+  `<Progress>` (AntD), ba tông `active`/`success`/`exception`. Nó KẸP `percent` về 0–100 ngay
+  trong component: nguồn thường là một phép chia dữ liệu thật (KM đã đi / chu kỳ thay nhớt) và
+  vượt 100 là chuyện bình thường khi xe quá hạn — không kẹp thì thanh tô tràn ra ngoài thẻ.
+- **Khối thông báo trong luồng đọc đi qua [`<Callout>`](src/components/ui/Callout.tsx)** — bản
+  native của `<Alert showIcon>` bên web, bốn tông `info`/`warning`/`success`/`danger`. Trước
+  đó mỗi màn tự vẽ một `YStack bg={colors.infoSurface}`, và chúng khác nhau ở viền, lề và cỡ
+  chữ — cùng một vai trò mà mỗi màn một hình.
+- **Thẻ mở ra màn chi tiết chỉ mang MŨI TÊN `>`, không mang nút "Xem chi tiết"** —
+  [`<DetailChevron>`](src/components/ui/DetailArrow.tsx), đặt cuối hàng cuối hoặc ở mép phải
+  hàng, không bắt chạm (cả thẻ đã là đích). Nút có chữ chỉ dành cho thẻ đã có sẵn một HÀNG hành
+  động — `VehicleCard` với `Xem · Sửa · Lịch` — nơi mở chi tiết là một lựa chọn giữa nhiều
+  lựa chọn. `<DetailArrow>` (mũi tên nổi tuyệt đối, bấm được) chỉ dùng khi thân thẻ đã bắt chạm
+  cho việc KHÁC.
+- **Nhóm lựa chọn của form: 2 lựa chọn → [`<RadioField>`](src/components/ui/RadioField.tsx),
+  từ 3 → [`<SelectField>`](src/components/ui/SelectField.tsx).** Cả hai nối RHF sẵn; `RadioOption`
+  là viên rời cho lựa chọn KHÔNG sống trong form.
 - **Mọi lịch tháng đi qua [`<MonthGrid>`](src/components/ui/MonthGrid.tsx)**, dựng trên
   `react-native-calendars`. Thư viện lo cơ học lịch (trang tháng, ngày của tháng kề, bố cục
   tuần); tiêu đề · nhãn thứ · cách vẽ một ô là của mình — đúng như web bọc `react-day-picker` và
@@ -588,6 +606,10 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
   `linear-gradient`) mà RN không hiểu.
   Palette hiện **chỉ có bản sáng**, nên `app.json` khoá `userInterfaceStyle: "light"` — mở
   `"automatic"` cùng lúc với việc bổ sung palette tối *ở `@xeprime/ui`*, không sớm hơn.
+- Chữ BÊN TRONG một ô nhập lấy từ `fieldFontSize` (`value` · `label` · `message` · `affix`),
+  không phải `fontSize` trực tiếp. `fontSize` là thang của WEB: bậc `body` 14px là cỡ nội dung
+  mặc định của desktop, còn app này chạy gần ba phần tư chữ ở 12px — ô viết theo `fontSize.body`
+  hiện ra to hơn chính nhãn của nó. Gom một chỗ nên sau này đổi cỡ chữ trong ô là sửa một dòng.
 - Mọi màn bọc bằng [`<Screen>`](src/components/layout/Screen.tsx) — safe area, tránh bàn phím,
   `keyboardShouldPersistTaps` gom một chỗ. Màn danh sách tràn viền đặt `padded={false}` để giữ
   phần cấu trúc mà bỏ lề trang.
@@ -604,6 +626,11 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
 - Ảnh tĩnh khai trong [src/assets.ts](src/assets.ts): Metro nội suy đường dẫn lúc build nên nó
   phải là hằng, không dựng động được. Kiểu của `import ảnh` khai ở [global.d.ts](global.d.ts)
   vì `expo/types` chỉ khai báo module cho CSS.
+- Tải tệp lên R2 đi qua [src/lib/r2-image-upload.ts](src/lib/r2-image-upload.ts):
+  `uploadImageToR2` cho ảnh CÔNG KHAI (trả `publicUrl`), `uploadPrivateImageToR2` cho tài liệu
+  RIÊNG TƯ (trả `fileId`, nơi gọi tự đính vào hồ sơ). Đừng viết lại hai bước presign → PUT ở
+  từng màn: cái bẫy `Content-Length` được ký vào URL chỉ đóng khi số byte đo MỘT lần, ngay
+  cạnh chỗ gửi.
 - Không dùng `console.*` — đi qua [src/lib/logger.ts](src/lib/logger.ts), im lặng ở bản phát
   hành và là chỗ cắm Sentry sau.
 
@@ -666,13 +693,46 @@ quyết toán → khách đánh giá.
 | P4 biên bản bàn giao | BKG-09 | `src/features/handovers/` |
 | P5 quyết toán & tiền | BKG-10, 11 · FIN-05/06 | `src/features/settlement/` |
 | P6 tạo đơn tại quầy | BKG-06 | `src/features/bookings/CreateBookingScreen.tsx` |
-| P7 hợp đồng | BKG-14 | ⛔ **CHẶN** — cần endpoint xuất PDF ở server |
+| P7 hợp đồng | BKG-14 | `src/features/contracts/` — **XEM được** (đọc từ `snapshot`); còn thiếu **in/xuất PDF khổ A4**, cần endpoint ở server |
 
 **Cần dựng lại dev client**: P4 thêm `expo-image-picker` + `expo-image-manipulator` (camera
 cho ảnh hiện trạng), và khai plugin `expo-image-picker` trong `app.json` với hai chuỗi xin quyền.
 Plugin đó KHÔNG phải trang trí: thiếu nó thì iOS crash ngay lúc xin quyền (Info.plist không có
 `NSCameraUsageDescription`) và App Store từ chối bản build. Bản dev client cũ sẽ nổ ở màn biên
 bản bàn giao — `pnpm --filter @xeprime/mobile android` (hoặc `ios`) để dựng lại.
+
+**`expo-image` là component `<Image>` DUY NHẤT cho ảnh MẠNG** (thẻ xe, thẻ chuyến, ảnh hồ sơ,
+xem ảnh phóng to…) — thay `Image` của `react-native` vì bộ nhớ đệm hai tầng (RAM + đĩa) và giải
+mã native không chặn luồng JS; đây là lý do màn hồ sơ xe không còn khựng khi mở (`MediaCard` tải
+tới 20 ảnh cùng lúc). Logo/icon **bundled trong app** (`images.logo`, ảnh danh mục hãng/kiểu dáng)
+vẫn dùng `Image` của `react-native` — không có gì để đệm cho một asset đã nằm sẵn trong bundle.
+Đây cũng là module native mới: dev client cũ chưa có nó, cần dựng lại
+(`pnpm --filter @xeprime/mobile android`/`ios`) trước khi test trên máy thật; Expo Go thì đã có
+sẵn theo SDK.
+
+### Module Vehicle (03/09/2026)
+
+Đội xe của gian hàng đã chạy trọn trên app: xem đội xe → mở hồ sơ 360 → thêm xe → sửa xe →
+đặt giá → theo dõi giấy tờ và bảo dưỡng.
+
+| Chặng | Dòng tracking | Ở đâu |
+| --- | --- | --- |
+| P1a hạ tầng + danh sách | VEH-01 | `src/features/vehicles/VehicleListScreen.tsx` |
+| P1b hồ sơ 360 + lên chợ + thêm xe | VEH-03, 12, 02 | `VehicleDetailScreen` · `components/VehiclePublishCard` · `CreateVehicleScreen` |
+| P2 sửa xe + ảnh + giá | VEH-04, 06, 05 | `VehicleEditHubScreen` + `VehicleEditFormScreen` · `src/lib/r2-image-upload.ts` · `src/features/vehicle-pricing/` |
+| P3 nguồn xe + bảo dưỡng + giấy tờ | VEH-11, 09, 10, 07 | `VehicleSourceScreen` · `src/features/vehicle-maintenance/` · `src/features/vehicle-documents/` |
+| VEH-08 OCR giấy tờ | — | ⛔ **BỎ** — tracking đánh `Blocked`, web chưa có bản tương đương để clone |
+| VEH-13 giá theo ngày | — | ⏸ **HOÃN** sang module Calendar — lối vào duy nhất trên web là ô lịch |
+
+**Hub sửa xe là SÁU ROUTE, không phải sáu tab**: ở 390px sáu tab chữ không vừa một hàng. Giá trị
+đoạn đường dẫn lấy từ `src/navigation/vehicle-edit-tab.ts` — cùng bộ chuỗi mà `?tab=` của web
+dùng, nên một liên kết sâu do web hay thông báo đẩy sinh ra vẫn tới đúng chỗ.
+
+**Bẫy đã vấp — `.expo/types/router.d.ts` sinh SAI khi có Metro khác đang chạy.** Thêm một route
+file rồi typecheck sẽ báo `Type '"/manage/vehicles/[id]/edit"' is not assignable`, hoặc sinh ra
+`.../edit/index` như một đoạn tĩnh. Nguyên nhân là dev server đang chạy tự cập nhật file đó theo
+kiểu tăng dần và ra danh sách thiếu. Cách chữa: `rm -rf .expo/types` rồi khởi động lại Expo (một
+cổng còn trống) để nó sinh lại từ đầu, **rồi mới** chạy typecheck.
 
 ## 11. Đánh giá kiến trúc — **8.5 / 10**
 

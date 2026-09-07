@@ -78,6 +78,15 @@ model User {
   conversationParticipations ConversationParticipant[] @relation("participant_user")
   sentMessages               Message[]                 @relation("message_sender")
   tenantCustomerProfiles     TenantCustomer[]          @relation("tenant_customer_account")
+  customerBookingHolds       BookingHold[]             @relation("hold_customer")
+  customerHoldRefunds        HoldRefund[]              @relation("refund_customer")
+  paidHoldRefunds            HoldRefund[]              @relation("refund_payer")
+  createdFeePolicies         FeePolicy[]               @relation("fee_policy_creator")
+  activatedFeePolicies       FeePolicy[]               @relation("fee_policy_activator")
+  verifiedSellerProfiles     SellerProfile[]           @relation("seller_verifier")
+  openedSupportCases         SupportCase[]             @relation("case_opener")
+  assignedSupportCases       SupportCase[]             @relation("case_assignee")
+  supportCaseEvents          SupportCaseEvent[]
 
   @@index([status])
   @@index([createdAt])
@@ -112,22 +121,22 @@ model UserIdentity {
 // ---------------------------------------------------------------------------
 
 model Tenant {
-  id          String    @id @db.Char(26)
-  code        String    @unique @db.VarChar(50)
-  slug        String    @unique @db.VarChar(120)
-  name        String    @db.VarChar(255)
+  id                 String    @id @db.Char(26)
+  code               String    @unique @db.VarChar(50)
+  slug               String    @unique @db.VarChar(120)
+  name               String    @db.VarChar(255)
   /// individual | business
-  tenantType  String    @default("individual") @map("tenant_type") @db.VarChar(50)
+  tenantType         String    @default("individual") @map("tenant_type") @db.VarChar(50)
   /// @xeprime/types → TenantStatus. Client KHÔNG được set trực tiếp (CLAUDE.md mục 5).
-  status      String    @default("draft") @db.VarChar(50)
-  ownerUserId String    @map("owner_user_id") @db.Char(26)
-  phone       String?   @db.VarChar(30)
-  email       String?   @db.VarChar(255)
-  ratingAvg   Decimal   @default(0) @map("rating_avg") @db.Decimal(3, 2)
-  ratingCount Int       @default(0) @map("rating_count")
+  status             String    @default("draft") @db.VarChar(50)
+  ownerUserId        String    @map("owner_user_id") @db.Char(26)
+  phone              String?   @db.VarChar(30)
+  email              String?   @db.VarChar(255)
+  ratingAvg          Decimal   @default(0) @map("rating_avg") @db.Decimal(3, 2)
+  ratingCount        Int       @default(0) @map("rating_count")
   /// Số lượt MIỄN PHÍ đã tiêu (ADR 0026 điều 8) — CỘT, không phải phép đếm lúc đọc: tăng trong
   /// cùng transaction tạo đơn, CHECK >= 0 ở DB. So với `FREE_TRIP_ALLOWANCE` (@xeprime/types).
-  freeTripsUsed Int     @default(0) @map("free_trips_used")
+  freeTripsUsed      Int       @default(0) @map("free_trips_used")
   /// Claim của job vòng đời: đã sinh hoá đơn chào gói + nhắc khi tiêu hết lượt (ADR 0026 điều 4).
   freeTripsOfferedAt DateTime? @map("free_trips_offered_at") @db.Timestamptz(3)
   /// Tính năng nâng cao tenant ĐÃ TỪNG dùng (ADR 0027 điều 3) — @xeprime/types → PlanFeature[],
@@ -136,10 +145,10 @@ model Tenant {
   /// ⚠️ KHÔNG BAO GIỜ cấp quyền từ cột này: nó chỉ chọn giữa `read_only` và `hidden` — cả hai
   /// đều là "gói hiện hành KHÔNG có cờ". Quyền dùng đến từ `plans.limits_json.features`.
   /// Ghi bởi `FeatureUsageInterceptor` sau một lượt GHI thành công; append-only.
-  usedFeatures String[] @default([]) @map("used_features")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
+  usedFeatures       String[]  @default([]) @map("used_features")
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt          DateTime? @map("deleted_at") @db.Timestamptz(3)
 
   owner                         User                           @relation("tenant_owner", fields: [ownerUserId], references: [id])
   profile                       TenantProfile?
@@ -185,6 +194,10 @@ model Tenant {
   tenantCustomers               TenantCustomer[]
   tenantCustomerNotes           TenantCustomerNote[]
   tenantCustomerDocuments       TenantCustomerDocument[]
+  bookingHolds                  BookingHold[]
+  holdRefunds                   HoldRefund[]
+  sellerProfile                 SellerProfile?
+  supportCases                  SupportCase[]
 
   @@index([status])
   @@index([ownerUserId])
@@ -851,6 +864,7 @@ model Vehicle {
   branch                 TenantBranch?                  @relation(fields: [branchId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction)
   creator                User?                          @relation("vehicle_creator", fields: [createdBy], references: [id])
   bookings               Booking[]
+  bookingHolds           BookingHold[]
   bookingRequests        BookingRequest[]
   occupancies            VehicleOccupancy[]
   reviews                Review[]
@@ -1036,6 +1050,12 @@ model PublicListing {
   withDriverOneWayPrice    Decimal? @map("with_driver_one_way_price") @db.Decimal(14, 2)
   deliveryEnabled          Boolean  @default(false) @map("delivery_enabled")
   noCollateral             Boolean  @default(false) @map("no_collateral")
+  /// @xeprime/types → BillingMode — denormalize từ gói HIỆN HÀNH của tenant (ADR 0024 ràng buộc 1):
+  /// card chợ phải nói được "giá này chưa gồm phí dịch vụ X%" mà không join subscription.
+  /// Chỉ ListingsService ghi (ADR 0008); BillingService gọi `syncBillingForTenant` khi gói đổi.
+  billingMode              String   @default("package") @map("billing_mode") @db.VarChar(30)
+  /// % phí dịch vụ đang áp (policy hiện hành) — NULL ở tuyến gói. Snapshot HIỂN THỊ, không phải giá đơn.
+  serviceFeePercent        Decimal? @map("service_fee_percent") @db.Decimal(5, 2)
   discountPercent          Int?     @map("discount_percent")
   /// Denormalize từ vehicle_features (key thuộc VEHICLE_FEATURE_LABEL) — filter `hasEvery`
   /// + facet count qua GIN index, khỏi join 2 bảng mỗi query marketplace.
@@ -1110,6 +1130,18 @@ model Booking {
   /// để giải thích số tiền về sau. Đổi chính sách KHÔNG được ghi lại field này (chỉ ghi lúc
   /// create). Cấu trúc → @xeprime/types `BookingPriceSnapshot`.
   priceSnapshot         Json?     @map("price_snapshot_json") @db.JsonB
+  /// ── Phụ phí phía KHÁCH — ADR 0029 (R3). Đóng băng lúc tạo (ADR 0024), không tính lại. ──
+  /// @xeprime/types → BillingMode. NULL = đơn gian hàng tự lập (ngoài luồng chợ — ADR 0028 điều 9)
+  /// hoặc đơn trước 07/09/2026: không có phí, KHÔNG suy ngược.
+  billingMode           String?   @map("billing_mode") @db.VarChar(30)
+  /// % phí dịch vụ ĐÃ ÁP cho đơn này — tuyến gói 0, tuyến hoa hồng theo policy lúc tạo.
+  serviceFeePercent     Decimal?  @map("service_fee_percent") @db.Decimal(5, 2)
+  /// Phí dịch vụ XePrime — KHÁCH gánh, KHÔNG nằm trong `total_amount` (doanh thu gian hàng).
+  serviceFeeAmount      Decimal   @default(0) @map("service_fee_amount") @db.Decimal(14, 2)
+  /// Tổng KHÁCH TRẢ = total_amount + Σ phụ phí phía khách. NULL khi không có phí (như billing_mode).
+  customerTotalAmount   Decimal?  @map("customer_total_amount") @db.Decimal(14, 2)
+  /// Phiên bản chính sách phí đã áp — để đọc lại snapshot mà không phải suy từ ngày.
+  feePolicyId           String?   @map("fee_policy_id") @db.Char(26)
   note                  String?   @db.Text
   /// Tài xế được gán cho đơn (chủ yếu đơn with_driver) — plan 17/08. NULL = chưa phân công.
   driverId              String?   @map("driver_id") @db.Char(26)
@@ -1139,6 +1171,9 @@ model Booking {
   handovers         VehicleHandover[]
   surcharges        BookingSurcharge[]
   depositSettlement BookingDepositSettlement?
+  feePolicy         FeePolicy?                @relation(fields: [feePolicyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  hold              BookingHold?
+  supportCases      SupportCase[]
 
   @@unique([tenantId, code])
   /// Mục tiêu cho composite FK của `vehicle_handovers`: một biên bản bàn giao phải trỏ về
@@ -1239,6 +1274,8 @@ model BookingRequest {
   customer       User?           @relation("request_customer", fields: [customerUserId], references: [id], onDelete: SetNull)
   /// Composite FK (tenant_customer_id, tenant_id) — chặn gắn chéo gian hàng ở tầng DB.
   tenantCustomer TenantCustomer? @relation(fields: [tenantCustomerId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction, map: "booking_requests_tenant_customer_fkey")
+  hold           BookingHold?
+  supportCases   SupportCase[]
 
   @@index([tenantId, status])
   @@index([vehicleId])
@@ -2068,25 +2105,25 @@ model VehicleOccupancy {
 /// trong CÙNG transaction (ADR 0006), ghi qua `VehicleBlocksService` → `OccupancyService` —
 /// không module nào khác đụng vào cả hai bảng. Trùng lịch do exclusion constraint từ chối.
 model VehicleBlock {
-  id         String   @id @db.Char(26)
-  tenantId   String   @map("tenant_id") @db.Char(26)
-  vehicleId  String   @map("vehicle_id") @db.Char(26)
-  startAt    DateTime @map("start_at") @db.Timestamptz(3)
-  endAt      DateTime @map("end_at") @db.Timestamptz(3)
+  id          String   @id @db.Char(26)
+  tenantId    String   @map("tenant_id") @db.Char(26)
+  vehicleId   String   @map("vehicle_id") @db.Char(26)
+  startAt     DateTime @map("start_at") @db.Timestamptz(3)
+  endAt       DateTime @map("end_at") @db.Timestamptz(3)
   /// @xeprime/types → VehicleBlockReason
-  reason     String   @db.VarChar(30)
-  note       String?  @db.Text
+  reason      String   @db.VarChar(30)
+  note        String?  @db.Text
   /// Optimistic concurrency như phiếu bảo dưỡng — hai người cùng sửa thì người sau bị 409.
-  rowVersion Int      @default(1) @map("row_version")
+  rowVersion  Int      @default(1) @map("row_version")
   /// Mã LÔ khi block sinh ra từ thao tác "khoá toàn bộ xe trong ngày"; NULL = khoá lẻ từng xe.
   ///
   /// Tồn tại để GỠ LẠI ĐƯỢC. Công tắc trên lịch phải bật/tắt được, mà tắt thì phải biết chính
   /// xác gỡ những dòng nào. Không có mã lô thì cách duy nhất là đoán theo (ngày + lý do) — và
   /// đoán sai nghĩa là gỡ nhầm một lịch khoá ai đó đặt tay vì lý do thật.
   bulkBatchId String?  @map("bulk_batch_id") @db.Char(26)
-  createdBy  String?  @map("created_by") @db.Char(26)
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy   String?  @map("created_by") @db.Char(26)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
@@ -2546,40 +2583,44 @@ model Contract {
 /// Danh mục gói dịch vụ. BillingService là writer DUY NHẤT. Plan chỉ archive, không xoá
 /// (FK RESTRICT từ tenant_subscriptions).
 model Plan {
-  id           String   @id @db.Char(26)
-  code         String   @unique @db.VarChar(50)
-  name         String   @db.VarChar(255)
-  description  String?  @db.Text
+  id                    String   @id @db.Char(26)
+  code                  String   @unique @db.VarChar(50)
+  name                  String   @db.VarChar(255)
+  description           String?  @db.Text
   /// ⚠ Cột của mô hình gói phẳng ADR 0010 — thay bằng `basePriceMonthly` + `limitsJson.perVehiclePrice`
   /// (ADR 0015). Giữ lại ở bước expand; drop ở đợt contract sau khi không còn code nào đọc.
-  price        Decimal  @default(0) @db.Decimal(14, 2)
-  currency     String   @default("VND") @db.VarChar(10)
+  price                 Decimal  @default(0) @db.Decimal(14, 2)
+  currency              String   @default("VND") @db.VarChar(10)
   /// ⚠ ADR 0015 điều 2: kỳ hạn nay tính bằng THÁNG LỊCH ở `tenant_subscriptions.term_months`.
   /// Cột này chỉ còn cho dữ liệu cũ — drop ở đợt contract.
-  durationDays Int      @map("duration_days")
+  durationDays          Int      @map("duration_days")
   /// ⚠ NULL = không giới hạn (ADR 0010). Thay bằng `limitsJson.maxCars`/`maxMotorbikes` (ADR 0015) —
   /// drop ở đợt contract.
-  maxVehicles  Int?     @map("max_vehicles")
+  maxVehicles           Int?     @map("max_vehicles")
   /// Núm vặn của bậc gói (ADR 0015 điều 4): { perVehiclePrice: {car, motorbike}, includedCars,
   /// includedMotorbikes, maxCars, maxMotorbikes, maxMembers, maxBranches,
   /// terms: [{months, discountPercent}], graceDays, features: [...] }.
   /// Giá / % / số chỗ là DỮ LIỆU admin sửa được; QUY TẮC nằm trong code.
-  limitsJson   Json?    @map("limits_json") @db.JsonB
-  /// Phí nền mỗi tháng của bậc gói (ADR 0020): phải đủ lớn để gói chỉ có lợi từ một số xe
-  /// nhất định trở lên — `base_price_monthly = 0` giết vai trò phễu của tuyến hoa hồng.
-  basePriceMonthly Decimal @default(0) @map("base_price_monthly") @db.Decimal(14, 2)
+  limitsJson            Json?    @map("limits_json") @db.JsonB
+  /// Phí nền mỗi tháng của bậc gói. ⚠ ADR 0020 từng bắt nó phải đủ lớn để gói chỉ có lợi từ một
+  /// quy mô đội xe trở lên; **ADR 0029 điều 3–4 GỠ ràng buộc đó**. Gói pilot giá phẳng theo chỗ
+  /// đặt `base_price_monthly = 0` một cách CÓ CHỦ ĐÍCH — tiền nằm hết ở đơn giá chỗ xe, và động
+  /// lực nâng cấp là giá cạnh tranh trên chợ chứ không phải phí nền. Đừng khôi phục phép kiểm.
+  basePriceMonthly      Decimal  @default(0) @map("base_price_monthly") @db.Decimal(14, 2)
   /// @xeprime/types → BillingMode (commission | package) — ADR 0020. DB canh bằng CHECK.
-  billingMode  String   @default("commission") @map("billing_mode") @db.VarChar(30)
+  billingMode           String   @default("commission") @map("billing_mode") @db.VarChar(30)
   /// BẮT BUỘC (1–20, CHECK) khi `billing_mode = 'commission'`; NULL khi `package`.
-  commissionPercent Decimal? @map("commission_percent") @db.Decimal(5, 2)
-  /// Doanh thu giả định mỗi xe mỗi tháng, admin nhập — đầu vào của phép KIỂM ĐIỂM GIAO
-  /// (ADR 0020): điểm hoà vốn so với tuyến hoa hồng không được nằm dưới `includedCars`.
-  assumedMonthlyGmvJson Json? @map("assumed_monthly_gmv_json") @db.JsonB
+  commissionPercent     Decimal? @map("commission_percent") @db.Decimal(5, 2)
+  /// Doanh thu giả định mỗi xe mỗi tháng, admin nhập. ⚠ Từng là đầu vào của phép KIỂM ĐIỂM GIAO
+  /// (ADR 0020); **ADR 0029 điều 4 cho phép kiểm đó nghỉ hưu** nên cột này nay chỉ là số THAM
+  /// KHẢO khi định giá, không chặn việc lưu gói và không có endpoint nào còn ném
+  /// `PLAN_INCENTIVE_INVALID`.
+  assumedMonthlyGmvJson Json?    @map("assumed_monthly_gmv_json") @db.JsonB
   /// @xeprime/types → PlanStatus (active | archived)
-  status       String   @default("active") @db.VarChar(50)
-  sortOrder    Int      @default(0) @map("sort_order")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  status                String   @default("active") @db.VarChar(50)
+  sortOrder             Int      @default(0) @map("sort_order")
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   subscriptions TenantSubscription[]
 
@@ -2591,35 +2632,35 @@ model Plan {
 /// (trừ huỷ sớm active → cancelled). "Gói hiện hành" = dòng active có starts_at <= now() < ends_at;
 /// "expired" suy ra từ ends_at, không có job lật status.
 model TenantSubscription {
-  id        String   @id @db.Char(26)
-  tenantId  String   @map("tenant_id") @db.Char(26)
-  planId    String   @map("plan_id") @db.Char(26)
+  id                String    @id @db.Char(26)
+  tenantId          String    @map("tenant_id") @db.Char(26)
+  planId            String    @map("plan_id") @db.Char(26)
   /// @xeprime/types → SubscriptionStatus; chỉ ghi active | cancelled.
-  status    String   @default("active") @db.VarChar(50)
+  status            String    @default("active") @db.VarChar(50)
   /// Snapshot giá lúc gán.
-  price     Decimal  @db.Decimal(14, 2)
+  price             Decimal   @db.Decimal(14, 2)
   /// Kỳ hạn THÁNG LỊCH chọn lúc mua (ADR 0015 điều 2–3): 1|3|6|12, CHECK ở DB.
   /// `ends_at = addCalendarMonthsVn(starts_at, term_months)`. NULL tạm ở bước expand —
   /// backfill xong siết NOT NULL ở đợt contract.
-  termMonths Int?    @map("term_months")
+  termMonths        Int?      @map("term_months")
   /// Số chỗ đã mua theo loại xe (ADR 0015 điều 1), vd { car: 5, motorbike: 10 }.
   /// Số chỗ đã mua CHÍNH LÀ hạn mức xe — không có bước đếm xe cuối kỳ.
-  slotsJson  Json?   @map("slots_json") @db.JsonB
+  slotsJson         Json?     @map("slots_json") @db.JsonB
   /// SNAPSHOT chế độ thu phí lúc gán (ADR 0024 điều 2) — KHÔNG đọc xuyên qua `plans`:
   /// admin sửa bậc gói không được lật chế độ của tenant giữa kỳ.
-  billingMode String? @map("billing_mode") @db.VarChar(30)
+  billingMode       String?   @map("billing_mode") @db.VarChar(30)
   /// SNAPSHOT % hoa hồng lúc gán, đi cùng `billing_mode` (ADR 0024 điều 2).
-  commissionPercent Decimal? @map("commission_percent") @db.Decimal(5, 2)
-  startsAt  DateTime @map("starts_at") @db.Timestamptz(3)
-  endsAt    DateTime @map("ends_at") @db.Timestamptz(3)
+  commissionPercent Decimal?  @map("commission_percent") @db.Decimal(5, 2)
+  startsAt          DateTime  @map("starts_at") @db.Timestamptz(3)
+  endsAt            DateTime  @map("ends_at") @db.Timestamptz(3)
   /// Ba cột CLAIM của job vòng đời (cùng khuôn `booking_requests.first_reminded_at`):
   /// nhắc sắp hết hạn · báo hết hạn/ân hạn · đã chuyển tuyến hoa hồng khi hết ân hạn.
   renewalRemindedAt DateTime? @map("renewal_reminded_at") @db.Timestamptz(3)
   expiryNotifiedAt  DateTime? @map("expiry_notified_at") @db.Timestamptz(3)
   lapseHandledAt    DateTime? @map("lapse_handled_at") @db.Timestamptz(3)
-  note      String?  @db.Text
-  createdBy String?  @map("created_by") @db.Char(26)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  note              String?   @db.Text
+  createdBy         String?   @map("created_by") @db.Char(26)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
   tenant   Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   plan     Plan                  @relation(fields: [planId], references: [id], onDelete: Restrict)
@@ -2815,7 +2856,7 @@ model PublicHoliday {
   /// END-EXCLUSIVE (ngày 30/04 về với `end.date = 2026-05-01`). Giá trị lưu ở đây ĐÃ trừ một
   /// ngày (`googleAllDayEndToInclusive`). Truy vấn overlap vì thế là `start_date <= :to AND
   /// end_date >= :from`, không có `- 1` nào ở tầng đọc.
-  endDate DateTime @map("end_date") @db.Date
+  endDate   DateTime @map("end_date") @db.Date
 
   name        String  @db.VarChar(255)
   description String? @db.Text
@@ -2823,12 +2864,12 @@ model PublicHoliday {
   /// `HolidayEventType` ở @xeprime/types (ADR 0005 — status là String, union type ở types).
   eventType String @map("event_type") @db.VarChar(30)
   /// `HolidaySource`: `google_calendar` | `manual`. Đồng bộ CHỈ được xoá dòng của chính nó.
-  source String @db.VarChar(30)
+  source    String @db.VarChar(30)
 
   /// Lần sửa gần nhất phía Google — dùng để diff, KHÔNG lộ ra API công khai.
   googleUpdatedAt DateTime? @map("google_updated_at") @db.Timestamptz(3)
   /// Lượt đồng bộ gần nhất chạm tới dòng này — trưng cho người dùng biết dữ liệu mới tới đâu.
-  syncedAt DateTime @map("synced_at") @db.Timestamptz(3)
+  syncedAt        DateTime  @map("synced_at") @db.Timestamptz(3)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -2852,7 +2893,7 @@ model HolidaySyncRun {
   finishedAt DateTime? @map("finished_at") @db.Timestamptz(3)
 
   /// `HolidaySyncStatus`: `success` | `failed`.
-  status String @db.VarChar(20)
+  status  String @db.VarChar(20)
   /// `HolidaySyncTrigger`: `scheduled` (vòng lặp worker) | `manual` (script CLI).
   trigger String @db.VarChar(20)
 
@@ -2869,4 +2910,263 @@ model HolidaySyncRun {
   /// "Hôm nay đã đồng bộ thành công chưa" + đọc lịch sử gần nhất.
   @@index([startedAt])
   @@map("holiday_sync_runs")
+}
+
+// ---------------------------------------------------------------------------
+// R3 — Giao dịch Basic Owner: chính sách phí, khoản giữ chỗ, hoàn, người bán, support
+// (07/09/2026 — ADR 0028 · ADR 0029 · ADR 0024)
+// ---------------------------------------------------------------------------
+
+/// Chính sách PHÍ có phiên bản — ADR 0028 điều 2–3, ADR 0029 điều 1–2.
+///
+/// Đúng MỘT bản `active` tại mọi thời điểm (unique một phần ở migration). Kích hoạt bản mới
+/// tự lưu trữ bản cũ trong cùng transaction — không có khoảng trống. Bản `active`/`archived`
+/// BẤT BIẾN: đơn đã snapshot theo nó phải đọc lại được đúng số.
+///
+/// Mọi `*_enabled = false` là một CỔNG chưa mở (tư vấn thuế, hợp đồng bảo hiểm), không phải một
+/// tỷ lệ 0 — CHECK ở DB không cho bật cổng mà thiếu căn cứ đi kèm (ADR 0028 điều 4–5).
+model FeePolicy {
+  id      String  @id @db.Char(26)
+  /// Tăng dần, unique — số hiển thị cho admin và snapshot lên đơn.
+  version Int     @unique
+  /// @xeprime/types → FeePolicyStatus (draft | active | archived); DB canh CHECK.
+  status  String  @default("draft") @db.VarChar(30)
+  name    String  @db.VarChar(120)
+  note    String? @db.Text
+
+  /// % phí dịch vụ áp cho TUYẾN HOA HỒNG. Tuyến gói luôn 0 (quy tắc trong code, không có cột).
+  serviceFeePercent        Decimal @map("service_fee_percent") @db.Decimal(5, 2)
+  holdMinAmount            Decimal @default(20000) @map("hold_min_amount") @db.Decimal(14, 2)
+  holdPaymentWindowMinutes Int     @default(1440) @map("hold_payment_window_minutes")
+  freeCancelHours          Int     @default(4) @map("free_cancel_hours")
+
+  taxEnabled Boolean  @default(false) @map("tax_enabled")
+  taxPercent Decimal? @map("tax_percent") @db.Decimal(5, 2)
+  taxLabel   String?  @map("tax_label") @db.VarChar(120)
+
+  tripInsuranceEnabled     Boolean  @default(false) @map("trip_insurance_enabled")
+  tripInsurancePercent     Decimal? @map("trip_insurance_percent") @db.Decimal(5, 2)
+  vehicleProtectionEnabled Boolean  @default(false) @map("vehicle_protection_enabled")
+  vehicleProtectionPercent Decimal? @map("vehicle_protection_percent") @db.Decimal(5, 2)
+  /// Đối tác bảo hiểm THẬT — bắt buộc khi một dòng bảo hiểm bật. Không điền trước khi có hợp đồng.
+  insurancePartnerName     String?  @map("insurance_partner_name") @db.VarChar(120)
+
+  effectiveFrom DateTime? @map("effective_from") @db.Timestamptz(3)
+  effectiveTo   DateTime? @map("effective_to") @db.Timestamptz(3)
+  activatedBy   String?   @map("activated_by") @db.Char(26)
+  activatedAt   DateTime? @map("activated_at") @db.Timestamptz(3)
+  createdBy     String?   @map("created_by") @db.Char(26)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  creator   User?         @relation("fee_policy_creator", fields: [createdBy], references: [id], onDelete: SetNull)
+  activator User?         @relation("fee_policy_activator", fields: [activatedBy], references: [id], onDelete: SetNull)
+  bookings  Booking[]
+  holds     BookingHold[]
+
+  @@index([status])
+  @@map("fee_policies")
+}
+
+/// Khoản GIỮ CHỖ khách chuyển cho XePrime — ADR 0028 điều 6–7 (R3, tuyến hoa hồng).
+///
+/// Sinh ra khi chủ xe DUYỆT yêu cầu; chiếm lịch (occupancy `booking_request`) tới khi tiền về
+/// (→ đơn thuê, cùng transaction webhook) hoặc hết hạn (→ nhả lịch, worker). Mã `XPH…` unique
+/// toàn sàn — cùng không gian tên với `subscription_invoices.code` (ADR 0022 điều 3).
+///
+/// Ở R3 `allocation_json` phân bổ 100% cho phí dịch vụ (XePrime chỉ giữ tiền CỦA MÌNH — "giới hạn
+/// lượng tiền XePrime giữ"). Phần tiền thuê còn lại khách trả TRỰC TIẾP chủ xe lúc nhận xe.
+/// `price_snapshot_json` giữ trọn snapshot giá đã chốt lúc duyệt để lúc tiền về tạo đơn bằng
+/// ĐÚNG con số đó — không tính lại theo policy mới (ADR 0024).
+model BookingHold {
+  id                String    @id @db.Char(26)
+  /// Mã đối soát `XPH` + 8 ký tự (ADR 0016 điều 5).
+  code              String    @unique @db.VarChar(20)
+  tenantId          String    @map("tenant_id") @db.Char(26)
+  bookingRequestId  String    @unique @map("booking_request_id") @db.Char(26)
+  bookingId         String?   @unique @map("booking_id") @db.Char(26)
+  customerUserId    String?   @map("customer_user_id") @db.Char(26)
+  vehicleId         String    @map("vehicle_id") @db.Char(26)
+  /// @xeprime/types → BookingHoldPurpose. R3 chỉ `commission`; `escrow` là ADR 0025 (chưa mở).
+  purpose           String    @default("commission") @db.VarChar(20)
+  /// @xeprime/types → BookingHoldStatus; DB canh CHECK.
+  status            String    @default("pending") @db.VarChar(20)
+  /// @xeprime/types → BookingHoldOutcome; NULL tới khi chốt. CHECK theo purpose (ADR 0025 điều 4).
+  outcome           String?   @db.VarChar(30)
+  amount            Decimal   @db.Decimal(14, 2)
+  paidAmount        Decimal   @default(0) @map("paid_amount") @db.Decimal(14, 2)
+  feePolicyId       String    @map("fee_policy_id") @db.Char(26)
+  /// [{ key, beneficiary, bearer, amount }] — chỗ tiền này đi đâu khi chốt.
+  allocationJson    Json      @map("allocation_json") @db.JsonB
+  /// BookingPriceSnapshot đầy đủ (có `fees`) — nguồn tạo đơn lúc tiền về.
+  priceSnapshotJson Json      @map("price_snapshot_json") @db.JsonB
+  /// { pickupAt, returnAt, packageMonths } — lịch đã chốt lúc duyệt.
+  scheduleJson      Json      @map("schedule_json") @db.JsonB
+  /// Mốc huỷ miễn phí — CỘT đóng băng lúc tạo (ADR 0021 điều 7 vẫn giữ), không tính lại.
+  freeCancelUntil   DateTime  @map("free_cancel_until") @db.Timestamptz(3)
+  expiresAt         DateTime  @map("expires_at") @db.Timestamptz(3)
+  paidAt            DateTime? @map("paid_at") @db.Timestamptz(3)
+  releasedAt        DateTime? @map("released_at") @db.Timestamptz(3)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bookingRequest BookingRequest @relation(fields: [bookingRequestId], references: [id], onDelete: Cascade)
+  booking        Booking?       @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  customer       User?          @relation("hold_customer", fields: [customerUserId], references: [id], onDelete: SetNull)
+  vehicle        Vehicle        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  feePolicy      FeePolicy      @relation(fields: [feePolicyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  refund         HoldRefund?
+
+  /// Worker quét hold quá hạn; admin xem hàng đợi theo trạng thái.
+  @@index([status, expiresAt])
+  @@index([tenantId, createdAt])
+  @@index([customerUserId, status])
+  @@map("booking_holds")
+}
+
+/// Yêu cầu CHUYỂN TRẢ khoản giữ chỗ — ADR 0028 điều 8 (R3).
+///
+/// Không phải sổ công nợ (đó là R4): ở R3 XePrime chỉ giữ tiền của mình nên "hoàn" là admin
+/// chuyển khoản TAY về tài khoản khách khai rồi ghi mã giao dịch. Tối đa MỘT yêu cầu mỗi hold —
+/// unique `hold_id` chặn hoàn hai lần bằng DB, không bằng check ở app.
+model HoldRefund {
+  id                String    @id @db.Char(26)
+  holdId            String    @unique @map("hold_id") @db.Char(26)
+  tenantId          String    @map("tenant_id") @db.Char(26)
+  customerUserId    String?   @map("customer_user_id") @db.Char(26)
+  amount            Decimal   @db.Decimal(14, 2)
+  /// @xeprime/types → HoldRefundStatus; DB canh CHECK.
+  status            String    @default("pending") @db.VarChar(20)
+  /// @xeprime/types → HoldRefundReason; DB canh CHECK.
+  reason            String    @db.VarChar(30)
+  /// Tài khoản nhận hoàn do KHÁCH khai — PII, che ở danh sách, chỉ admin có quyền mới thấy đủ.
+  bankCode          String?   @map("bank_code") @db.VarChar(20)
+  bankAccountNumber String?   @map("bank_account_number") @db.VarChar(40)
+  bankAccountName   String?   @map("bank_account_name") @db.VarChar(160)
+  paidBy            String?   @map("paid_by") @db.Char(26)
+  paidAt            DateTime? @map("paid_at") @db.Timestamptz(3)
+  /// Mã giao dịch ngân hàng chiều RA — bằng chứng đã chuyển (ADR 0022 hoãn đối soát chiều ra).
+  bankReference     String?   @map("bank_reference") @db.VarChar(100)
+  note              String?   @db.Text
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  hold     BookingHold @relation(fields: [holdId], references: [id], onDelete: Cascade)
+  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer User?       @relation("refund_customer", fields: [customerUserId], references: [id], onDelete: SetNull)
+  payer    User?       @relation("refund_payer", fields: [paidBy], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@map("hold_refunds")
+}
+
+/// Hồ sơ NGƯỜI BÁN — ADR 0028 release gate 1 (R3).
+///
+/// `tenants.tenant_type` vẫn là nhãn hiển thị (ADR 0014 điều 2); `entity_type` ở đây mới là dữ
+/// liệu pháp lý/thuế do người bán khai và admin xác minh qua `approval_tasks`
+/// (`target_type = seller_profile`). Ở R3 hồ sơ CHƯA chặn đăng xe/nhận đơn — cổng đó là R4.
+model SellerProfile {
+  id                String    @id @db.Char(26)
+  tenantId          String    @unique @map("tenant_id") @db.Char(26)
+  /// @xeprime/types → SellerEntityType; DB canh CHECK.
+  entityType        String    @default("individual") @map("entity_type") @db.VarChar(30)
+  /// Tên pháp lý: họ tên (cá nhân) / tên hộ / tên doanh nghiệp.
+  legalName         String?   @map("legal_name") @db.VarChar(255)
+  /// Mã số thuế (hộ/doanh nghiệp) hoặc MST cá nhân.
+  taxId             String?   @map("tax_id") @db.VarChar(30)
+  /// Số CCCD/hộ chiếu của người đại diện — PII, chỉ `platform.sellers.verify` xem đầy đủ.
+  idNumber          String?   @map("id_number") @db.VarChar(30)
+  idIssuedAt        DateTime? @map("id_issued_at") @db.Date
+  idIssuedBy        String?   @map("id_issued_by") @db.VarChar(160)
+  bankCode          String?   @map("bank_code") @db.VarChar(20)
+  bankAccountNumber String?   @map("bank_account_number") @db.VarChar(40)
+  bankAccountName   String?   @map("bank_account_name") @db.VarChar(160)
+  /// @xeprime/types → SellerProfileStatus; DB canh CHECK.
+  status            String    @default("draft") @db.VarChar(30)
+  submittedAt       DateTime? @map("submitted_at") @db.Timestamptz(3)
+  verifiedBy        String?   @map("verified_by") @db.Char(26)
+  verifiedAt        DateTime? @map("verified_at") @db.Timestamptz(3)
+  reviewNote        String?   @map("review_note") @db.Text
+  /// Lần đổi tài khoản nhận tiền gần nhất — R4 dùng để đặt cooldown trước khi rút.
+  bankChangedAt     DateTime? @map("bank_changed_at") @db.Timestamptz(3)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  verifier User?  @relation("seller_verifier", fields: [verifiedBy], references: [id], onDelete: SetNull)
+
+  @@index([status, submittedAt])
+  @@map("seller_profiles")
+}
+
+/// SUPPORT CASE / tranh chấp — Gap Analysis §3.D (R3).
+///
+/// Gắn đơn/yêu cầu khi có; `tenant_id` NULL với case thuần tài khoản của khách. Case
+/// `dispute` đang mở TẠM GIỮ việc chốt kết cục khoản giữ chỗ của đơn đó
+/// (`BookingHoldsService.settle` kiểm trước khi ghi).
+model SupportCase {
+  id               String    @id @db.Char(26)
+  /// `SC` + 6 ký tự — mã người dùng đọc/nhắc qua điện thoại.
+  code             String    @unique @db.VarChar(20)
+  tenantId         String?   @map("tenant_id") @db.Char(26)
+  bookingId        String?   @map("booking_id") @db.Char(26)
+  bookingRequestId String?   @map("booking_request_id") @db.Char(26)
+  openedByUserId   String    @map("opened_by_user_id") @db.Char(26)
+  /// @xeprime/types → SupportParty (customer | tenant | platform).
+  openedByScope    String    @map("opened_by_scope") @db.VarChar(20)
+  /// @xeprime/types → SupportCaseCategory; DB canh CHECK.
+  category         String    @db.VarChar(30)
+  /// @xeprime/types → SupportCaseStatus; DB canh CHECK.
+  status           String    @default("open") @db.VarChar(30)
+  /// @xeprime/types → SupportCasePriority; DB canh CHECK.
+  priority         String    @default("normal") @db.VarChar(20)
+  subject          String    @db.VarChar(255)
+  description      String    @db.Text
+  assigneeUserId   String?   @map("assignee_user_id") @db.Char(26)
+  resolution       String?   @db.Text
+  resolvedAt       DateTime? @map("resolved_at") @db.Timestamptz(3)
+  closedAt         DateTime? @map("closed_at") @db.Timestamptz(3)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant         Tenant?            @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  booking        Booking?           @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  bookingRequest BookingRequest?    @relation(fields: [bookingRequestId], references: [id], onDelete: SetNull)
+  opener         User               @relation("case_opener", fields: [openedByUserId], references: [id])
+  assignee       User?              @relation("case_assignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  events         SupportCaseEvent[]
+
+  @@index([status, priority, createdAt])
+  @@index([tenantId, status])
+  @@index([openedByUserId, createdAt])
+  @@index([bookingId])
+  @@map("support_cases")
+}
+
+/// Dòng thời gian của case — APPEND-ONLY. Ghi chú `internal` chỉ nhân sự nền tảng thấy.
+model SupportCaseEvent {
+  id             String   @id @db.Char(26)
+  caseId         String   @map("case_id") @db.Char(26)
+  actorUserId    String   @map("actor_user_id") @db.Char(26)
+  /// @xeprime/types → SupportParty.
+  actorScope     String   @map("actor_scope") @db.VarChar(20)
+  /// @xeprime/types → SupportCaseEventKind; DB canh CHECK.
+  kind           String   @db.VarChar(30)
+  /// @xeprime/types → SupportEventVisibility (public | internal).
+  visibility     String   @default("public") @db.VarChar(20)
+  body           String?  @db.Text
+  fromStatus     String?  @map("from_status") @db.VarChar(30)
+  toStatus       String?  @map("to_status") @db.VarChar(30)
+  /// Bằng chứng: khoá object ở bucket RIÊNG TƯ (R2) + tên gốc + MIME. URL ký ngắn hạn lúc đọc.
+  attachmentKey  String?  @map("attachment_key") @db.Text
+  attachmentName String?  @map("attachment_name") @db.VarChar(255)
+  attachmentMime String?  @map("attachment_mime") @db.VarChar(100)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  case  SupportCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  actor User        @relation(fields: [actorUserId], references: [id])
+
+  @@index([caseId, createdAt])
+  @@map("support_case_events")
 }

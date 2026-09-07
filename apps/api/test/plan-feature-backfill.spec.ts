@@ -205,7 +205,15 @@ describe('backfill used_features — vị từ quyết định read_only vs hidd
       data: {
         id: newId(),
         tenantId: id,
-        code: `CN2${id.slice(-3)}`,
+        /*
+         * `CN2` + BỐN ký tự cuối, không phải ba.
+         *
+         * Chi nhánh mặc định ở `mkTenant` mang mã `CN` + bốn ký tự cuối. Với ba ký tự, hai mã
+         * bằng nhau đúng khi ký tự thứ tư từ cuối của ULID là `2` — 1/32 lần chạy, và unique
+         * `(tenant_id, code)` làm spec đỏ với một lỗi trông như ngẫu nhiên. Bốn ký tự làm hai
+         * mã khác độ dài nên không bao giờ trùng, bất kể ULID sinh ra gì.
+         */
+        code: `CN2${id.slice(-4)}`,
         name: 'Chi nhánh 2',
         provinceCode: '79',
       },

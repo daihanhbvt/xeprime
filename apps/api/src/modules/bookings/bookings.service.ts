@@ -38,6 +38,7 @@ import { NotificationService } from '../notification/notification.service';
 import { OccupancyService } from '../calendar/occupancy.service';
 import { CustomersService } from '../customers/customers.service';
 import { DriversService } from '../drivers/drivers.service';
+import { HoldSettlementService } from '../holds/hold-settlement.service';
 import {
   BOOKING_DEFAULT_LIMIT,
   BOOKING_MAX_LIMIT,
@@ -64,6 +65,11 @@ const LIST_SELECT = {
   totalAmount: true,
   paidAmount: true,
   depositAmount: true,
+  // Phụ phí phía khách (ADR 0029, R3) — NULL/0 ở đơn ngoài luồng chợ.
+  billingMode: true,
+  serviceFeePercent: true,
+  serviceFeeAmount: true,
+  customerTotalAmount: true,
   createdAt: true,
   vehicle: { select: { name: true, plateNumber: true } },
   driver: { select: { id: true, name: true, phone: true } },
@@ -100,6 +106,8 @@ export class BookingsService {
     private readonly notifications: NotificationService,
     private readonly drivers: DriversService,
     private readonly customers: CustomersService,
+    /** R3: chốt kết cục khoản giữ chỗ khi đơn kết thúc/huỷ (ADR 0028 điều 6). */
+    private readonly holdSettlement: HoldSettlementService,
   ) {}
 
   async list(
@@ -318,6 +326,12 @@ export class BookingsService {
         depositAmount: deposit,
         totalAmount: total,
         priceSnapshot: priceSnapshot as unknown as Prisma.InputJsonValue,
+        /*
+         * Cột phí phía KHÁCH đọc từ chính snapshot (ADR 0029): một nguồn, không có đường nào đặt
+         * cột lệch khỏi snapshot. Snapshot không có `fees` (đơn gian hàng tự lập — ngoài luồng
+         * chợ, ADR 0028 điều 9) ⇒ NULL/0.
+         */
+        ...feeColumns(priceSnapshot),
         note: dto.note ?? null,
         createdBy: userId,
       },
@@ -763,6 +777,19 @@ export class BookingsService {
       await this.occupancy.release(tx, OCCUPANCY_SOURCE_TYPE.BOOKING, id);
     }
 
+    /*
+     * Khoản giữ chỗ của tuyến hoa hồng (R3): đơn kết thúc/huỷ/no-show là lúc chốt tiền về tay ai.
+     * Hook KHÔNG ném vì lý do tiền — chuyển trạng thái là việc vận hành xe; có tranh chấp mở thì
+     * kết cục để trống cho admin. Cùng transaction để không có đơn đã huỷ mà tiền chưa có kết cục.
+     */
+    await this.holdSettlement.settleForBookingWithinTx(tx, {
+      bookingId: id,
+      tenantId,
+      to,
+      actorScope: opts.actorScope ?? AUDIT_ACTOR_SCOPE.TENANT,
+      actorUserId: userId,
+    });
+
     await this.audit.record(
       {
         tenantId,
@@ -999,6 +1026,21 @@ function orderByOf(sort: BookingListQueryDto['sort']): Prisma.BookingOrderByWith
 /** Decimal → string do ResponseInterceptor lo (ADR 0007); ở đây giữ nguyên kiểu. */
 type BookingListRow = Prisma.BookingGetPayload<{ select: typeof LIST_SELECT }>;
 type BookingDetailRow = Prisma.BookingGetPayload<{ select: typeof DETAIL_SELECT }>;
+
+/** Cột phí phía khách từ snapshot — `undefined` giữ default của cột (NULL / 0). */
+function feeColumns(snapshot: BookingPriceSnapshot) {
+  const fees = snapshot.fees;
+  if (!fees) return {};
+  return {
+    billingMode: fees.billingMode,
+    serviceFeePercent: fees.policy.serviceFeePercent,
+    serviceFeeAmount: new Prisma.Decimal(
+      fees.lines.find((l) => l.key === 'service_fee')?.amount ?? '0',
+    ),
+    customerTotalAmount: new Prisma.Decimal(fees.customerTotalAmount),
+    feePolicyId: fees.policy.policyId,
+  };
+}
 
 function toListItem(b: BookingListRow): BookingListItemDto {
   return {

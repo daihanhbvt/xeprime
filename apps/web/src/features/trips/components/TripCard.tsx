@@ -7,6 +7,7 @@ import {
   SERVICE_TYPE,
   type CustomerTripStage,
 } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { tripPath } from '@/constants/routes';
 import type { CustomerTrip } from '../types';
@@ -66,7 +67,7 @@ export function TripCard({ trip }: { trip: CustomerTrip }) {
               ? fmt.shortDateTimeRange(trip.pickupAt, trip.returnAt)
               : [fmt.packageLabel(trip.longTermPackageMonths), fmt.pickupWish(trip)]
                   .filter(Boolean)
-                  .join(' · ')}
+                  .join(LIST_SEPARATOR)}
           </span>
         </p>
         <p className={styles.meta}>

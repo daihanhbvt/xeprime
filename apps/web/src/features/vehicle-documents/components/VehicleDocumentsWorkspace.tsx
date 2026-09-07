@@ -20,7 +20,6 @@ import {
   UploadOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { yupResolver } from '@hookform/resolvers/yup';
 import {
   Alert,
   App,
@@ -93,6 +92,7 @@ import type { DomainLabel } from '@/i18n/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
+import { useValidationResolver } from '@/i18n/use-validation-resolver';
 
 const STANDARD_TYPES: readonly VehicleDocumentType[] = [
   VEHICLE_DOCUMENT_TYPE.REGISTRATION,
@@ -766,9 +766,13 @@ function AddDocumentDialog({
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
+  const createResolver = useValidationResolver<VehicleDocumentCreateValues>(
+    vehicleDocumentCreateSchema,
+    'Vehicles.documents.validation',
+  );
 
   const { control, handleSubmit, reset } = useForm<VehicleDocumentCreateValues>({
-    resolver: yupResolver(vehicleDocumentCreateSchema),
+    resolver: createResolver,
     defaultValues: { preset: '', customTypeName: '' },
   });
   const preset = useWatch({ control, name: 'preset' });
@@ -1100,8 +1104,12 @@ function DocumentDetailDialog({
     }),
     [document, current],
   );
+  const metadataResolver = useValidationResolver<VehicleDocumentFormValues>(
+    vehicleDocumentFormSchema,
+    'Vehicles.documents.validation',
+  );
   const { control, handleSubmit, reset } = useForm<VehicleDocumentFormValues>({
-    resolver: yupResolver(vehicleDocumentFormSchema),
+    resolver: metadataResolver,
     defaultValues: defaults,
     values: defaults,
   });

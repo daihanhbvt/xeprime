@@ -8,16 +8,13 @@ import {
   TENANT_STATUS,
   VEHICLE_TYPE,
 } from '@xeprime/types';
-import { AuditService } from '../src/modules/audit/audit.service';
 import { GeoService } from '../src/modules/geo/geo.service';
 import { GeoNotConfiguredProvider, type GeoProvider } from '../src/modules/geo/geo-provider';
 import { GoogleGeoProvider } from '../src/modules/geo/google-geo.provider';
 import { DeliveryDistanceService } from '../src/modules/pricing/delivery-distance.service';
 import type { SaveRentalPolicyDto } from '../src/modules/pricing/dto/pricing.dto';
-import { PricingService } from '../src/modules/pricing/pricing.service';
-import { ListingsService } from '../src/modules/public-listings/listings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeVehiclesService, vehicleCreator } from './helpers/service-factory';
+import { makePricingService, makeVehiclesService, vehicleCreator } from './helpers/service-factory';
 
 /**
  * Tích hợp bản đồ cho giao xe tận nơi (24/08/2026), chạy trên PostgreSQL THẬT.
@@ -35,8 +32,7 @@ import { makeVehiclesService, vehicleCreator } from './helpers/service-factory';
  */
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
-const audit = new AuditService(asService);
-const pricing = new PricingService(asService, audit, new ListingsService(asService));
+const pricing = makePricingService(asService);
 const vehicles = makeVehiclesService(asService);
 const createVehicle = vehicleCreator(vehicles, asService);
 

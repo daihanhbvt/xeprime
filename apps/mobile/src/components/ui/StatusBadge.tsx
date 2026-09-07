@@ -29,6 +29,16 @@ export function statusTone(color: StatusColor): { fg: string; bg: string } {
   return TONE[color];
 }
 
+/**
+ * Cỡ chữ của biến thể `xs` — bậc DƯỚI `font-size-label` (12px), nên không có token cho nó.
+ *
+ * Thang chữ Figma dừng ở 12 vì trên web nhãn trạng thái luôn nằm trong một hàng chữ bình thường.
+ * Bậc này chỉ dành cho nhãn nằm ĐÈ lên ảnh: ở đó bề rộng khả dụng là bề rộng tấm ảnh, không phải
+ * bề rộng thẻ, và 12px làm viên nhãn chiếm gần trọn ảnh — không còn nhìn ra ảnh chụp cái gì.
+ * Giữ ở 10 chứ không nhỏ hơn, và luôn `semibold`, để vẫn đọc được trên nền ảnh.
+ */
+const XS_FONT_SIZE = 10;
+
 export function StatusBadge({
   label,
   color,
@@ -36,8 +46,11 @@ export function StatusBadge({
 }: {
   label: string;
   color: StatusColor;
-  /** `sm` cho nhãn phụ nằm trong một hàng dày đặc (thẻ danh sách). */
-  size?: 'sm' | 'md';
+  /**
+   * `sm` cho nhãn phụ nằm trong một hàng dày đặc (thẻ danh sách).
+   * `xs` cho nhãn nằm ĐÈ lên ảnh, nơi bề rộng bị chặn bởi tấm ảnh — xem {@link XS_FONT_SIZE}.
+   */
+  size?: 'xs' | 'sm' | 'md';
 }) {
   const tone = statusTone(color);
 
@@ -48,13 +61,18 @@ export function StatusBadge({
       maxWidth="100%"
       bg={tone.bg}
       br={radius.pill}
-      px={size === 'sm' ? space.xs : space.sm}
-      py={2}
+      px={size === 'md' ? space.sm : space.xs}
+      py={size === 'xs' ? 1 : 2}
     >
+      {/*
+        `flexShrink` + `numberOfLines` = cắt bằng dấu "…" thay vì tràn ra ngoài khung.
+        Chỉ ăn khi nơi gọi cho khung một bề rộng XÁC ĐỊNH: `maxWidth: '100%'` quy theo bề rộng đã
+        resolve của cha, mà cha rộng `auto` thì phần trăm không quy được và viên nhãn cứ thế nở ra.
+      */}
       <Text
         flexShrink={1}
         col={tone.fg}
-        fos={size === 'sm' ? fontSize.label : fontSize.bodySm}
+        fos={size === 'xs' ? XS_FONT_SIZE : size === 'sm' ? fontSize.label : fontSize.bodySm}
         fow={fontWeight.semibold}
         numberOfLines={1}
       >

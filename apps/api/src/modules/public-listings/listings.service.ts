@@ -1,12 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
+  BILLING_MODE,
   COLLATERAL_MODE,
+  FEE_POLICY_STATUS,
   LISTING_STATUS,
   REVIEW_STATUS,
   VEHICLE_PUBLIC_STATUS,
   type ListingStatus,
 } from '@xeprime/types';
+import { currentSubscriptionWhere } from '../../common/plan/feature-state';
 import { PrismaService } from '../../prisma/prisma.service';
 
 /**
@@ -65,6 +68,7 @@ export class ListingsService {
     // "Miễn thế chấp" từ 20/08 là HỆ QUẢ của chính sách hiệu lực, không còn là cờ nhập tay trên
     // xe — trước đây hai thứ độc lập nên một xe có thể vừa gắn nhãn vừa đòi cọc 5 triệu.
     const noCollateral = await resolveNoCollateral(tx, v.tenantId, v.id, v.vehicleType);
+    const billing = await resolveBilling(tx, v.tenantId);
 
     if (status === LISTING_STATUS.ACTIVE) {
       // Xe đã duyệt → tạo/cập nhật snapshot đầy đủ, đưa về hiển thị. Rating tính lại từ review
@@ -98,6 +102,8 @@ export class ListingsService {
         withDriverOneWayPrice: v.withDriverOneWayPrice,
         deliveryEnabled: v.deliveryEnabled,
         noCollateral,
+        billingMode: billing.billingMode,
+        serviceFeePercent: billing.serviceFeePercent,
         discountPercent: v.discountPercent,
         // Sort key để mảng ổn định giữa các lần sync (so sánh/diff không nhiễu).
         features: v.features.map((f) => f.featureKey).sort(),
@@ -115,6 +121,23 @@ export class ListingsService {
     // Chưa duyệt / bị ẩn / xoá mềm: chỉ hạ trạng thái listing NẾU đã có row. Xe chưa từng duyệt
     // (draft/pending) không có listing → updateMany không khớp, không tạo listing ma.
     await tx.publicListing.updateMany({ where: { vehicleId }, data: { status } });
+  }
+
+  /**
+   * Đồng bộ chế độ thu phí + % phí dịch vụ lên MỌI listing của một gian hàng — ADR 0024 ràng
+   * buộc 2/3: BillingService gọi khi gán/huỷ/kích hoạt gói, TRONG cùng transaction. Một câu
+   * UPDATE gộp, cùng lý do với `syncBranchLocation`. Job vòng đời gói ở worker làm việc tương
+   * đương bằng SQL trần khi hết ân hạn.
+   */
+  async syncBillingForTenant(
+    tenantId: string,
+    tx: Prisma.TransactionClient = this.prisma,
+  ): Promise<void> {
+    const billing = await resolveBilling(tx, tenantId);
+    await tx.publicListing.updateMany({
+      where: { tenantId },
+      data: { billingMode: billing.billingMode, serviceFeePercent: billing.serviceFeePercent },
+    });
   }
 
   /**
@@ -223,6 +246,38 @@ async function aggregateRating(
   return {
     avg: agg._avg.rating != null ? agg._avg.rating.toFixed(2) : null,
     count: agg._count._all,
+  };
+}
+
+/**
+ * Chế độ thu phí hiện hành của tenant + % phí dịch vụ đang áp — để card chợ nói được "chưa gồm
+ * phí dịch vụ X%" mà không join lúc đọc (ADR 0024 ràng buộc 1).
+ *
+ * Truy vấn Prisma trần, CỐ Ý không nhận `BillingService`/`FeePoliciesService`: `ListingsService`
+ * phải ở lại module LÁ (xem `resolveNoCollateral`). Cùng vị từ "gói hiện hành" với guard
+ * (`currentSubscriptionWhere`) nên không lệch. Không có gói ⇒ `package` (0%) — an toàn khi hỏng
+ * (ADR 0024 điều 3).
+ */
+async function resolveBilling(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+): Promise<{ billingMode: string; serviceFeePercent: Prisma.Decimal | null }> {
+  const [sub, policy] = await Promise.all([
+    tx.tenantSubscription.findFirst({
+      where: { tenantId, ...currentSubscriptionWhere(new Date()) },
+      orderBy: { endsAt: 'desc' },
+      select: { billingMode: true },
+    }),
+    tx.feePolicy.findFirst({
+      where: { status: FEE_POLICY_STATUS.ACTIVE },
+      select: { serviceFeePercent: true },
+    }),
+  ]);
+  const billingMode = sub?.billingMode ?? BILLING_MODE.PACKAGE;
+  return {
+    billingMode,
+    serviceFeePercent:
+      billingMode === BILLING_MODE.COMMISSION && policy ? policy.serviceFeePercent : null,
   };
 }
 

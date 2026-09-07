@@ -12,8 +12,9 @@ import {
   DEFAULT_PLATFORM_ROLE_PERMISSIONS,
   DEFAULT_TENANT_ROLE_PERMISSIONS,
   FINANCE_CATEGORY_TYPE,
+  FULL_MANAGE_FEATURES,
+  OWNER_LITE_FEATURES,
   PERMISSION_VALUES,
-  PLAN_FEATURE,
   PLAN_STATUS,
   PLATFORM_ROLE,
   PLATFORM_ROLE_LABEL,
@@ -186,19 +187,26 @@ async function seedFinanceCategories(): Promise<FinanceCategoryIds> {
 }
 
 /**
- * Cờ năng lực backfill cho cả ba gói: ĐỦ 7 cờ đang dùng (trừ `escrow_hold` — ADR 0025 chưa thi
- * công). Mọi tenant hôm nay không có rào chắn nào; gói thiếu cờ nghĩa là ngày cổng chặn bật
- * (ADR 0027) họ MẤT quyền — W3 mới là đợt cân chỉnh từng gói, đợt này thà rộng còn siết sau.
+ * Cờ năng lực của từng bậc gói — ranh giới hai bậc lấy từ `@xeprime/types`, KHÔNG khai lại ở đây.
+ *
+ * ⚠️ Đợt trước cấp `ALL_CURRENT_FEATURES` (đủ 7 cờ) cho **cả ba** gói với ghi chú "thà rộng còn
+ * siết sau". Hệ quả là hai bậc năng lực của ADR 0027 chưa hề tồn tại trên dữ liệu: gói hoa hồng
+ * `free` — nơi MỌI gian hàng mới hạ cánh (`assignDefaultPlanWithinTx`) — mở đúng bằng gói thuê
+ * bao, nên "nâng cấp lên gian hàng" không mở thêm gì và tấm so sánh ở màn "Gói của tôi" luôn
+ * hiện "đã có tất cả". Đợt này siết đúng như ADR 0027 điều 1.
+ *
+ * An toàn cho tenant đang vận hành nằm ở CHỖ KHÁC, không phải ở đây: `tenants.used_features`
+ * (migration 20260830000000) làm tenant đã có dữ liệu rơi vào `read_only` chứ không phải
+ * `hidden` — họ mất quyền GHI, không mất quyền XEM (ADR 0027 điều 3). Và cổng chặn vẫn ở
+ * `PLAN_FEATURE_ENFORCEMENT=warn` nên chưa ai bị chặn thật; `docs/deployment.md` §9.4b là nơi
+ * quyết định lúc nào bật `on`.
  */
-const ALL_CURRENT_FEATURES = [
-  PLAN_FEATURE.FINANCE,
-  PLAN_FEATURE.DEBTS,
-  PLAN_FEATURE.MAINTENANCE,
-  PLAN_FEATURE.MEMBERS,
-  PLAN_FEATURE.BRANCHES,
-  PLAN_FEATURE.DRIVERS,
-  PLAN_FEATURE.CONTRACTS,
-];
+const FEATURES_BY_TIER = {
+  /** Tuyến hoa hồng = chủ xe cơ bản. Rỗng có chủ đích — xem `OWNER_LITE_FEATURES`. */
+  ownerLite: [...OWNER_LITE_FEATURES],
+  /** Tuyến gói = gian hàng thuê bao. */
+  fullManage: [...FULL_MANAGE_FEATURES],
+};
 
 /** Bốn kỳ hạn chuẩn (ADR 0015 điều 3) — % giảm là DỮ LIỆU đặt tạm, admin chỉnh ở màn quản trị. */
 const DEFAULT_TERMS = [
@@ -256,7 +264,7 @@ const PLANS: ReadonlyArray<{
       maxBranches: null,
       terms: DEFAULT_TERMS,
       graceDays: 7,
-      features: ALL_CURRENT_FEATURES,
+      features: FEATURES_BY_TIER.ownerLite,
     },
     price: 0,
     durationDays: 30,
@@ -293,7 +301,7 @@ const PLANS: ReadonlyArray<{
         { months: 12, discountPercent: 0 },
       ],
       graceDays: 7,
-      features: ALL_CURRENT_FEATURES,
+      features: FEATURES_BY_TIER.fullManage,
     },
     price: 0,
     durationDays: 30,
@@ -324,7 +332,7 @@ const PLANS: ReadonlyArray<{
       maxBranches: 1,
       terms: DEFAULT_TERMS,
       graceDays: 7,
-      features: ALL_CURRENT_FEATURES,
+      features: FEATURES_BY_TIER.fullManage,
     },
     price: 490_000,
     durationDays: 30,
@@ -352,7 +360,7 @@ const PLANS: ReadonlyArray<{
       maxBranches: null,
       terms: DEFAULT_TERMS,
       graceDays: 7,
-      features: ALL_CURRENT_FEATURES,
+      features: FEATURES_BY_TIER.fullManage,
     },
     price: 1_490_000,
     durationDays: 30,

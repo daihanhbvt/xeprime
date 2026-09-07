@@ -8,7 +8,14 @@ import { withIntl } from '@/i18n/test-utils';
 import { ApiClientError, CLIENT_ERROR_CODE } from '@/lib/api-client';
 import { RequireSession } from './RequireSession';
 
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
+/*
+ * `useNavigation` có mặt vì `useNavigateOnce` đọc `isFocused()` để chặn chạm lặp — thiếu nó thì
+ * mọi màn dùng hook đều nổ ngay lúc render trong test.
+ */
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: jest.fn() }),
+  useNavigation: () => ({ isFocused: () => true }),
+}));
 
 const SECRET = 'Dữ liệu của phiên';
 

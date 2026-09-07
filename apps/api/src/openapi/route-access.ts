@@ -30,7 +30,19 @@ export interface RouteAccess {
   readonly feature: PlanFeature | null;
   /** Route hình-đọc dù không phải GET — xem `@FeatureReadSafe()`. */
   readonly featureReadSafe: boolean;
+  /**
+   * Hạn mức riêng của route, đọc từ metadata `@Throttle`/`@SkipThrottle`.
+   *
+   * `null` = không khai gì ⇒ rơi về mức chung của `ThrottlerModule.forRoot` trong `app.module.ts`.
+   * Đọc metadata thay vì chép số vào docs vì đúng lý do đã ghi ở docblock của file: một con số
+   * viết tay trong tài liệu sẽ trôi khỏi decorator, và cửa đăng nhập là chỗ tệ nhất để tài liệu
+   * nói 120 trong khi thực tế là 5.
+   */
+  readonly rateLimit: RouteRateLimit | null;
 }
+
+/** `skipped` = `@SkipThrottle()` (vd webhook SePay — ADR 0022 ràng buộc 4). */
+export type RouteRateLimit = { readonly kind: 'skipped' } | { readonly kind: 'custom'; readonly limit: number; readonly ttlMs: number };
 
 /**
  * Quét toàn bộ controller và trả về bản đồ `operationId → điều kiện truy cập`.
@@ -73,12 +85,41 @@ export function collectRouteAccess(app: INestApplication): Map<string, RouteAcce
           platformOnly: readFlag(PLATFORM_ONLY_KEY, handler, controller),
           feature: readFeature(handler, controller),
           featureReadSafe: readFlag(FEATURE_READ_SAFE_KEY, handler, controller),
+          rateLimit: readRateLimit(handler, controller),
         });
       }
     }
   }
 
   return map;
+}
+
+/*
+ * Khoá metadata của `@nestjs/throttler` v6: `Throttle`/`SkipThrottle` ghi `<KHOÁ><tên hạn mức>`
+ * (xem `throttler.decorator.js`). Cả repo chỉ dùng hạn mức tên `default`.
+ *
+ * Chép ba chuỗi này thay vì import từ `@nestjs/throttler/dist/throttler.constants`: đó là đường
+ * dẫn nội bộ, không nằm trong `exports` của package, và một bản nâng cấp đổi cấu trúc `dist` sẽ
+ * làm gãy build vì một dòng tài liệu. Chuỗi sai thì `openapi-throttle.spec.ts` đỏ ngay.
+ */
+const THROTTLER_LIMIT_KEY = 'THROTTLER:LIMITdefault';
+const THROTTLER_TTL_KEY = 'THROTTLER:TTLdefault';
+const THROTTLER_SKIP_KEY = 'THROTTLER:SKIPdefault';
+
+/** Method thắng class — đúng `getAllAndOverride` mà `ThrottlerGuard` dùng lúc chạy. */
+function readRateLimit(handler: unknown, controller: unknown): RouteRateLimit | null {
+  for (const target of [handler, controller] as object[]) {
+    if (Reflect.getMetadata(THROTTLER_SKIP_KEY, target) === true) return { kind: 'skipped' };
+
+    const limit: unknown = Reflect.getMetadata(THROTTLER_LIMIT_KEY, target);
+    const ttl: unknown = Reflect.getMetadata(THROTTLER_TTL_KEY, target);
+    // Hạn mức khai bằng hàm (`(ctx) => n`) không rút ra được một con số cho tài liệu — bỏ qua,
+    // để route đó hiện mức chung thay vì in ra một con số bịa.
+    if (typeof limit === 'number' && typeof ttl === 'number') {
+      return { kind: 'custom', limit, ttlMs: ttl };
+    }
+  }
+  return null;
 }
 
 /** Marker ở method thắng marker ở controller — đúng thứ tự `Reflector.getAllAndOverride` của guard. */

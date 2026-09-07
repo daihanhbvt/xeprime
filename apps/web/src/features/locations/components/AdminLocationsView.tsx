@@ -3,6 +3,7 @@
 import { Switch, Tag, Tooltip } from 'antd';
 import { useState } from 'react';
 import { PERMISSION, PROVINCE_ADMINISTRATIVE_TYPE } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { AutoSearchInput } from '@/components/filter/AutoSearchInput';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
@@ -68,8 +69,8 @@ export function AdminLocationsView() {
         aliases.length === 0 ? (
           '—'
         ) : (
-          <Tooltip title={aliases.join(' · ')}>
-            <span className={styles.aliases}>{aliases.slice(0, 3).join(' · ')}</span>
+          <Tooltip title={aliases.join(LIST_SEPARATOR)}>
+            <span className={styles.aliases}>{aliases.slice(0, 3).join(LIST_SEPARATOR)}</span>
           </Tooltip>
         ),
     },

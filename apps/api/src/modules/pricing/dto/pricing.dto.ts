@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  BILLING_MODE_VALUES,
+  FEE_LINE_VALUES,
   COLLATERAL_ASSET_TYPE_VALUES,
   COLLATERAL_MODE_VALUES,
   DELIVERY_DISTANCE_STATUS_VALUES,
@@ -492,6 +494,57 @@ export class QuoteBreakdownDto {
    */
   @ApiPropertyOptional({ type: String, nullable: true })
   estimateNote!: string | null;
+  /**
+   * PHỤ PHÍ PHÍA KHÁCH — ADR 0029 (R3). `null`/vắng = không có phụ phí (chưa có chính sách, hoặc
+   * ngữ cảnh không áp). `rows`/`totalAmount` ở trên VẪN là bảng kê giá THUÊ (doanh thu gian hàng);
+   * tổng KHÁCH TRẢ là `fees.customerTotalAmount`.
+   */
+  @ApiPropertyOptional({ type: () => CustomerFeeBreakdownDto, nullable: true })
+  fees?: CustomerFeeBreakdownDto | null;
+}
+
+/** Một dòng phụ phí — cùng shape `FeeLine` ở @xeprime/types. */
+export class FeeLineDto {
+  @ApiProperty({ enum: FEE_LINE_VALUES }) key!: string;
+  @ApiProperty({ example: 'platform' }) beneficiary!: string;
+  @ApiProperty({ example: 'customer' }) bearer!: string;
+  @ApiProperty() percent!: number;
+  @ApiProperty({ description: 'VND string' }) amount!: string;
+  @ApiPropertyOptional({ type: String }) partnerName?: string;
+}
+
+export class FeePolicySnapshotDto {
+  @ApiProperty() policyId!: string;
+  @ApiProperty() version!: number;
+  @ApiProperty() serviceFeePercent!: number;
+  @ApiProperty() holdMinAmount!: string;
+  @ApiProperty() holdPaymentWindowMinutes!: number;
+  @ApiProperty() freeCancelHours!: number;
+  @ApiProperty() taxEnabled!: boolean;
+  @ApiPropertyOptional({ type: Number, nullable: true }) taxPercent!: number | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) taxLabel!: string | null;
+  @ApiProperty() tripInsuranceEnabled!: boolean;
+  @ApiPropertyOptional({ type: Number, nullable: true }) tripInsurancePercent!: number | null;
+  @ApiProperty() vehicleProtectionEnabled!: boolean;
+  @ApiPropertyOptional({ type: Number, nullable: true }) vehicleProtectionPercent!: number | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) insurancePartnerName!: string | null;
+}
+
+/** Cùng shape `CustomerFeeBreakdown` ở @xeprime/types — snapshot vào `price_snapshot_json.fees`. */
+export class CustomerFeeBreakdownDto {
+  @ApiProperty({ enum: BILLING_MODE_VALUES }) billingMode!: string;
+  @ApiProperty({ type: FeePolicySnapshotDto }) policy!: FeePolicySnapshotDto;
+  @ApiProperty({ description: 'Mẫu số = tổng bảng kê giá thuê' }) baseAmount!: string;
+  @ApiProperty({ type: [FeeLineDto] }) lines!: FeeLineDto[];
+  @ApiProperty({ description: 'Tổng phụ phí KHÁCH gánh' }) customerFeeTotal!: string;
+  @ApiProperty({ description: 'Số KHÁCH TRẢ cả chuyến (chưa gồm cọc)' }) customerTotalAmount!: string;
+  @ApiProperty({ description: 'Chủ xe THỰC NHẬN' }) ownerNetAmount!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Khoản giữ chỗ khách chuyển XePrime — null khi không cần (tuyến gói, báo giá tạm tính)',
+  })
+  holdAmount!: string | null;
 }
 
 /** Tóm tắt giao nhận cho khách xem trước khi đặt (public). */

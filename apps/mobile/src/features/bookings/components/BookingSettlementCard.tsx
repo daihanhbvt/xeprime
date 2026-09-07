@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { isNegativeMoney, isZeroMoney, subtractMoney } from '@xeprime/domain';
@@ -25,6 +24,7 @@ import { useSettlement } from '@/features/settlement/hooks/use-settlement';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 /**
@@ -44,7 +44,7 @@ export function BookingSettlementCard({ bookingId }: { bookingId: string }) {
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const permissions = usePermissions();
-  const router = useRouter();
+  const navigateOnce = useNavigateOnce();
   const [takingDeposit, setTakingDeposit] = useState(false);
 
   const canView = permissions.has(PERMISSION.BOOKING_VIEW);
@@ -77,7 +77,7 @@ export function BookingSettlementCard({ bookingId }: { bookingId: string }) {
   const hasSurcharges = data.surcharges.length > 0;
 
   /* Mở màn Quyết toán — nơi có cả ba form web mở bằng modal. */
-  const openSettlement = () => router.push(ROUTES.manage.settlement(bookingId));
+  const openSettlement = () => navigateOnce(ROUTES.manage.settlement(bookingId));
 
   /*
    * Chỉ nói chuyện hoàn tiền khi thật sự CÓ tiền trong tay. `received` (đang thuê, cọc còn giữ)

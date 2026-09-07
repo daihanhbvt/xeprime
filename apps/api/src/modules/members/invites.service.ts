@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -22,6 +23,7 @@ import { maskEmail } from '../../common/mask';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import {
   CreateInviteDto,
+  CreateInviteResultDto,
   INVITE_DEFAULT_LIMIT,
   INVITE_MAX_LIMIT,
   InviteAnswerDto,
@@ -65,6 +67,8 @@ const SELECT = {
 
 @Injectable()
 export class InvitesService {
+  private readonly logger = new Logger(InvitesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
@@ -108,7 +112,11 @@ export class InvitesService {
    * chỉ cần quyền `members.invite` của MỘT gian hàng bất kỳ, và một danh sách email để dò là
    * thứ ai cũng có.
    */
-  async create(tenantId: string, actorUserId: string, dto: CreateInviteDto): Promise<InviteDto> {
+  async create(
+    tenantId: string,
+    actorUserId: string,
+    dto: CreateInviteDto,
+  ): Promise<CreateInviteResultDto> {
     if (dto.roleKey === TENANT_ROLE.SHOP_OWNER) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
@@ -190,14 +198,36 @@ export class InvitesService {
     });
 
     // Gửi mail NGOÀI transaction: SMTP chậm và có thể lỗi, và một transaction giữ mở suốt thời
-    // gian đó khoá hàng lâu hơn cần thiết. Mail hỏng thì lời mời vẫn còn và gửi lại được.
+    // gian đó khoá hàng lâu hơn cần thiết.
     const tenant = await this.prisma.tenant.findUniqueOrThrow({
       where: { id: tenantId },
       select: { name: true },
     });
-    await this.email.sendTenantInvite(email, tenant.name, this.inviteUrl(token), expiresAt);
 
-    return toDto(row);
+    /*
+     * SMTP hỏng KHÔNG được làm hỏng cả thao tác.
+     *
+     * Lời mời đã nằm trong database ở dòng trên và đã hiện ở bảng "Lời mời đang chờ". Để lỗi
+     * gửi thư ném lên là biến một việc ĐÃ XONG MỘT NỬA thành HTTP 500 — người dùng thấy "Máy chủ
+     * gặp sự cố", bấm lại, và mỗi lần bấm lại thu hồi lời mời cũ rồi tạo lời mời mới. Đó đúng là
+     * chuyện đã xảy ra trên staging ngày 04/09/2026 khi SMTP thật vừa được bật.
+     *
+     * Nhưng cũng KHÔNG im lặng nuốt lỗi: `emailSent = false` đi thẳng lên giao diện để người gửi
+     * biết mà bấm Gửi lại, thay vì ngồi chờ một lá thư không bao giờ tới. Nói dối rằng đã gửi
+     * còn tệ hơn báo lỗi.
+     */
+    let emailSent = true;
+    try {
+      await this.email.sendTenantInvite(email, tenant.name, this.inviteUrl(token), expiresAt);
+    } catch (error) {
+      emailSent = false;
+      // Địa chỉ nhận đã che, và KHÔNG log link/token — log là nơi nhiều người đọc được hơn DB.
+      this.logger.error(
+        `Không gửi được thư mời tới ${maskEmail(email)}: ${error instanceof Error ? error.message : 'lỗi không rõ'}`,
+      );
+    }
+
+    return { ...toDto(row), emailSent };
   }
 
   async revoke(tenantId: string, actorUserId: string, inviteId: string): Promise<InviteDto> {

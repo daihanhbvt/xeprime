@@ -31,6 +31,7 @@ import { fromDateOnly } from '../../common/date-only';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { BookingsService } from '../bookings/bookings.service';
+import { BookingHoldsService } from '../holds/booking-holds.service';
 import { NotificationService } from '../notification/notification.service';
 import { SettlementService } from '../bookings/settlement/settlement.service';
 import { SourceContractDownloadDto } from '../vehicles/dto/vehicle-source.dto';
@@ -76,6 +77,8 @@ export class CustomerTripsService {
     private readonly prisma: PrismaService,
     private readonly settlement: SettlementService,
     private readonly bookings: BookingsService,
+    /** R3: huỷ khi đang chờ chuyển giữ chỗ phải nhả lịch + đóng hold. */
+    private readonly holds: BookingHoldsService,
     /**
      * Lõi phát signed URL của kho riêng tư (Wave 4.1) — mượn, không dựng lại. Nó đã khoá sẵn
      * điều kiện tenant + xe + mục đích + trạng thái `ready` trong CHÍNH câu truy vấn, nên một
@@ -163,6 +166,8 @@ export class CustomerTripsService {
       actualPickupAt: booking?.actualPickupAt?.toISOString() ?? null,
       actualReturnAt: booking?.actualReturnAt?.toISOString() ?? null,
       finance: booking ? await this.finance(booking) : null,
+      // Khoản giữ chỗ của CHÍNH chuyến này — service tự khoá theo `customerUserId`.
+      hold: await this.holds.findForTrip(row.id, customerUserId),
       review: booking?.review
         ? {
             id: booking.review.id,
@@ -227,11 +232,28 @@ export class CustomerTripsService {
       return this.detail(customerUserId, id);
     }
 
+    /*
+     * Hai trạng thái huỷ được mà chưa có đơn: `pending_host_approval` (chưa ai duyệt) và
+     * `awaiting_hold` (đã duyệt, đang chờ khách chuyển giữ chỗ — R3). Cái sau CHIẾM LỊCH nên
+     * huỷ phải nhả chỗ và đóng hold; cái trước không giữ gì cả.
+     */
+    const cancellable: string[] = [
+      BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+      BOOKING_REQUEST_STATUS.AWAITING_HOLD,
+    ];
     await this.prisma.$transaction(async (tx) => {
       const claimed = await tx.bookingRequest.updateMany({
-        where: { id: row.id, status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL },
+        where: { id: row.id, status: { in: cancellable } },
         data: { status: BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER },
       });
+      if (claimed.count > 0 && row.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD) {
+        await this.holds.cancelForRequestWithinTx(tx, {
+          requestId: row.id,
+          tenantId: row.tenantId,
+          actorUserId: customerUserId,
+          actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
+        });
+      }
       // 0 dòng = gian hàng vừa duyệt/từ chối xen vào giữa. Không ghi đè quyết định của họ.
       if (claimed.count === 0) throw cancelNotAllowed(stage);
 

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -22,6 +23,8 @@ const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 giờ
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly rbac: RbacService,
@@ -192,7 +195,23 @@ export class AuthService {
 
     const webUrl = this.config.getOrThrow<string>('APP_WEB_URL').replace(/\/+$/, '');
     const resetUrl = `${webUrl}/reset-password?token=${token}`;
-    await this.email.sendPasswordReset(user.email, user.displayName, resetUrl);
+
+    /*
+     * Nuốt lỗi gửi thư ở ĐÂY là một quyết định bảo mật, không phải sự cẩu thả.
+     *
+     * Hàm này cố ý im lặng khi email không tồn tại (`return` ở trên). Nếu SMTP hỏng mà ném lên,
+     * endpoint trả 500 cho email CÓ THẬT và 200 cho email không có — chênh lệch đó là một máy dò
+     * tài khoản hoàn hảo, và nó chỉ xuất hiện đúng vào lúc hệ thống đang trục trặc.
+     *
+     * Người dùng thấy cùng một câu "đã gửi nếu email tồn tại"; vận hành thấy lỗi thật trong log.
+     */
+    try {
+      await this.email.sendPasswordReset(user.email, user.displayName, resetUrl);
+    } catch (error) {
+      this.logger.error(
+        `Không gửi được thư đặt lại mật khẩu: ${error instanceof Error ? error.message : 'lỗi không rõ'}`,
+      );
+    }
   }
 
   /** Đặt mật khẩu mới từ token. Token dùng một lần và phải còn hạn. */

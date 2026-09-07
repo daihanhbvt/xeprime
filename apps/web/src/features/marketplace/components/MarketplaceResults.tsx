@@ -23,6 +23,7 @@ import styles from './MarketplaceResults.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useTranslations } from 'next-intl';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 
 /** Số ô khung chờ — bằng đúng cỡ trang của API để lưới không đổi hình khi dữ liệu về. */
 const SKELETON_COUNT = 12;
@@ -185,7 +186,7 @@ export function MarketplaceResults() {
       : null,
   ]
     .filter(Boolean)
-    .join(' · ');
+    .join(LIST_SEPARATOR);
 
   const sort = filters.sort ?? DEFAULT_LISTING_SORT;
 

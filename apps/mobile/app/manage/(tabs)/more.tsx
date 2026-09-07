@@ -1,17 +1,13 @@
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
-import { useRouter } from 'expo-router';
 import { useTranslations } from 'use-intl';
-import { PERMISSION } from '@xeprime/types';
 import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
 import { Screen } from '@/components/layout/Screen';
 import { Card } from '@/components/ui/Card';
-import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { ScopeSwitcherSheet } from '@/features/shell/ScopeSwitcher';
-import { ROUTES } from '@/navigation/routes';
 import { colors, fontSize, iconSize, space } from '@/theme/tokens';
 
 /**
@@ -24,9 +20,6 @@ import { colors, fontSize, iconSize, space } from '@/theme/tokens';
 export default function ManageMoreRoute() {
   const t = useTranslations('MobileShell.more');
   const tAccount = useTranslations('Account');
-  const tMissing = useTranslations('Bookings.missingKm');
-  const permissions = usePermissions();
-  const router = useRouter();
   const [switching, setSwitching] = useState(false);
 
   return (
@@ -47,21 +40,6 @@ export default function ManageMoreRoute() {
             <Ionicons name="chevron-forward" size={iconSize.md} color={colors.textMuted} />
           </XStack>
         </Card>
-
-        {permissions.has(PERMISSION.HANDOVER_VIEW) ? (
-          <Card
-            onPress={() => router.push(ROUTES.manage.missingOdometer())}
-            accessibilityLabel={tMissing('open')}
-          >
-            <XStack ai="center" gap={space.md}>
-              <Ionicons name="warning-outline" size={iconSize.lg} color={colors.warning} />
-              <Text f={1} col={colors.text} fos={fontSize.body}>
-                {tMissing('open')}
-              </Text>
-              <Ionicons name="chevron-forward" size={iconSize.md} color={colors.textMuted} />
-            </XStack>
-          </Card>
-        ) : null}
 
         <Card lift="flat" padded={false}>
           <XStack ai="center" jc="space-between" gap={space.sm} p={space.md}>

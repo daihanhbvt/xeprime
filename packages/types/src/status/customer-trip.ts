@@ -221,6 +221,8 @@ export function isCustomerTripFilter(value: unknown): value is CustomerTripFilte
  */
 export const CUSTOMER_CANCELLABLE_STAGES: readonly CustomerTripStage[] = [
   CUSTOMER_TRIP_STAGE.PENDING_APPROVAL,
+  // Đang chờ chuyển giữ chỗ (R3): chưa có tiền nào về, huỷ là nhả chỗ — không có gì để hoàn.
+  CUSTOMER_TRIP_STAGE.AWAITING_HOLD,
   CUSTOMER_TRIP_STAGE.READY,
 ];
 

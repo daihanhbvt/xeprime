@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, Pressable } from 'react-native';
+import { useCallback } from 'react';
+import { ActivityIndicator, Keyboard, Pressable } from 'react-native';
 import { Text, XStack } from 'tamagui';
 import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import type { IconName } from './Chip';
@@ -18,6 +19,14 @@ type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'accent';
  * Quyết toán, Ảnh bàn giao…) không đọc ra ngang hàng với hành động chính của màn.
  */
 type Size = 'sm' | 'md' | 'lg';
+/**
+ * `pill` là mặc định của app — nút hành động chính chiếm trọn bề ngang, bo tròn hết cỡ.
+ *
+ * `square` (bo `border-radius` 10px, đúng `--xp-border-radius` mà `RowActions.module.css`
+ * của web dùng) dành cho một HÀNG nút nhỏ nằm trong thẻ. Ở đó pill làm ba viên thuốc con nằm
+ * cạnh nhau, không đọc ra là một nhóm thao tác của thẻ.
+ */
+type Shape = 'pill' | 'square';
 
 const VARIANT: Record<Variant, { bg: string; fg: string; border: string }> = {
   primary: { bg: colors.primary, fg: colors.onPrimary, border: colors.primary },
@@ -35,6 +44,7 @@ interface ButtonProps {
   icon?: IconName;
   loading?: boolean;
   disabled?: boolean;
+  shape?: Shape;
   /** Mặc định chiếm trọn bề ngang — nút hành động chính trên mobile hầu như luôn full width. */
   block?: boolean;
 }
@@ -44,12 +54,32 @@ export function Button({
   onPress,
   variant = 'primary',
   size = 'md',
+  shape = 'pill',
   icon,
   loading = false,
   disabled = false,
   block = true,
 }: ButtonProps) {
   const blocked = disabled || loading;
+
+  /**
+   * ĐÓNG BÀN PHÍM trước khi chạy hành động.
+   *
+   * Bấm một nút trong lúc bàn phím đang mở nghĩa là người dùng đã gõ xong. React Native không tự
+   * đóng: chạm sang một `Pressable` khác KHÔNG làm ô nhập mất tiêu điểm trên Android, nên bấm
+   * "Lưu" xong bàn phím vẫn che nửa dưới màn — che đúng chỗ toast báo kết quả, che luôn màn tiếp
+   * theo nếu hành động đó điều hướng.
+   *
+   * Đặt ở `Button` chứ không ở từng màn: 137 chỗ gọi, và một chỗ quên là một màn hành xử khác
+   * phần còn lại. `Keyboard.dismiss()` là no-op khi không có bàn phím nên nút nào cũng gọi được.
+   *
+   * Nó cũng làm ô đang gõ nhả tiêu điểm, tức `onBlur` của React Hook Form chạy TRƯỚC `onPress` —
+   * đúng thứ tự cần cho ô cuối cùng được validate trước khi submit.
+   */
+  const press = useCallback(() => {
+    Keyboard.dismiss();
+    onPress();
+  }, [onPress]);
   const skin = VARIANT[variant];
   /*
    * Chữ nút bị khoá dùng `textMuted`, KHÔNG `textDisabled`: cái sau đặt trên nền `surfaceMuted`
@@ -66,7 +96,7 @@ export function Button({
       trong vẫn là Tamagui — Tamagui cho HÌNH, primitive React Native cho THAO TÁC.
     */
     <Pressable
-      onPress={onPress}
+      onPress={press}
       disabled={blocked}
       accessibilityRole="button"
       accessibilityState={{ busy: loading, disabled: blocked }}
@@ -82,7 +112,7 @@ export function Button({
         bg={blocked && variant !== 'ghost' ? colors.surfaceMuted : skin.bg}
         bc={blocked ? colors.border : skin.border}
         bw={variant === 'ghost' ? 0 : 1}
-        br={radius.pill}
+        br={shape === 'square' ? radius.md : radius.pill}
         px={size === 'sm' ? space.md : space.lg}
         minHeight={size === 'lg' ? sizing.touchTarget + space.sm : sizing.touchTarget}
       >

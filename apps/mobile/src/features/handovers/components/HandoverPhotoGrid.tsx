@@ -1,13 +1,7 @@
-import { useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import {
-  ActivityIndicator,
-  Image,
-  Modal,
-  Pressable,
-  StyleSheet,
-  useWindowDimensions,
-} from 'react-native';
+import { Image } from 'expo-image';
+import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -21,6 +15,7 @@ import { AlertDialog } from '@/components/ui/AlertDialog';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
+import { PhotoViewer } from '@/components/ui/PhotoViewer';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useDomainLabel } from '@/i18n/domain';
@@ -212,6 +207,11 @@ export function HandoverPhotoGrid({
     [bookingId, errorMessage, taken, toast, type],
   );
 
+  // Chuyển `open` (async) thành một handler void ổn định — `PhotoSlot` chỉ cần bấm-là-chạy.
+  const openSlot = useCallback((slot: HandoverPhotoSlot) => void open(slot), [open]);
+
+  const confirmRemove = useCallback((slot: HandoverPhotoSlot) => setRemovingSlot(slot), []);
+
   /*
    * Danh sách `fileId` phải ỔN ĐỊNH giữa các lần render: nó là dependency của `useQueries`, và
    * một mảng dựng lại mỗi nhịp sẽ dựng lại cả bộ query — tức là xin vé mới liên tục.
@@ -225,10 +225,6 @@ export function HandoverPhotoGrid({
   );
 
   const photoUrls = useHandoverPhotoUrls(bookingId, type, fileIds, canViewFiles);
-
-  function confirmRemove(slot: HandoverPhotoSlot) {
-    setRemovingSlot(slot);
-  }
 
   // Không quyền nào trong hai quyền trên: lưới không có việc gì để làm ở đây.
   if (!canManage && !canViewFiles) return null;
@@ -254,9 +250,9 @@ export function HandoverPhotoGrid({
             canOpen={canViewFiles && Boolean(taken.get(slot)?.fileId)}
             thumbnailUrl={photoUrls[taken.get(slot)?.fileId ?? '']}
             canManage={canManage}
-            onCapture={() => setPicking(slot)}
-            onOpen={() => void open(slot)}
-            onRemove={() => confirmRemove(slot)}
+            onCapture={setPicking}
+            onOpen={openSlot}
+            onRemove={confirmRemove}
           />
         ))}
       </XStack>
@@ -286,7 +282,11 @@ export function HandoverPhotoGrid({
         </Text>
       </BottomSheet>
 
-      <PhotoViewer url={preview} onClose={() => setPreview(null)} />
+      <PhotoViewer
+        url={preview}
+        unavailableLabel={t('unavailable')}
+        onClose={() => setPreview(null)}
+      />
 
       {/* Ảnh hiện trạng là BẰNG CHỨNG — gỡ rồi thì phải ra chỗ xe chụp lại, nên hỏi trước. */}
       <AlertDialog
@@ -315,8 +315,14 @@ export function HandoverPhotoGrid({
  *
  * Ô ĐÃ CÓ ẢNH mở ảnh khi chạm — không xoá. Xoá là một nút riêng ở góc, và còn hỏi lại: ảnh hiện
  * trạng là bằng chứng, mất nó bằng một cú chạm nhầm là mất thứ không chụp lại được.
+ *
+ * MEMO vì lưới re-render mỗi khi `busySlot`/`preview` đổi (một cú bấm ở một ô); không có nó thì
+ * cả năm ô dựng lại theo, dù bốn ô còn lại không đổi gì. Ba handler nhận thẳng `slot` và đến từ
+ * props ỔN ĐỊNH của cha (`setPicking`/`openSlot`/`confirmRemove`, đều giữ nguyên danh tính giữa
+ * các lần render) — memo chỉ có tác dụng khi props so sánh bằng nhau, và một closure dựng mới
+ * mỗi render ở nơi gọi sẽ vô hiệu hoá nó ngay.
  */
-function PhotoSlot({
+const PhotoSlot = memo(function PhotoSlot({
   slot,
   filled,
   busy,
@@ -334,9 +340,9 @@ function PhotoSlot({
   canManage: boolean;
   /** URL ký của chính tấm ảnh — vắng khi chưa xin được vé, hoặc không có quyền xem tệp. */
   thumbnailUrl: string | undefined;
-  onCapture: () => void;
-  onOpen: () => void;
-  onRemove: () => void;
+  onCapture: (slot: HandoverPhotoSlot) => void;
+  onOpen: (slot: HandoverPhotoSlot) => void;
+  onRemove: (slot: HandoverPhotoSlot) => void;
 }) {
   const t = useTranslations('Bookings.handover.photos');
   const domainLabel = useDomainLabel();
@@ -349,7 +355,13 @@ function PhotoSlot({
   const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
   const thumbnail = thumbnailUrl && thumbnailUrl !== brokenUrl ? thumbnailUrl : null;
 
-  const press = filled ? (canOpen ? onOpen : undefined) : canManage ? onCapture : undefined;
+  const press = filled
+    ? canOpen
+      ? () => onOpen(slot)
+      : undefined
+    : canManage
+      ? () => onCapture(slot)
+      : undefined;
 
   return (
     <YStack>
@@ -393,16 +405,16 @@ function PhotoSlot({
               lời câu khác: "tấm đó chụp có được không". Câu đó chỉ có tấm ảnh trả lời được, và
               phải trả lời mà không bắt họ mở từng ô ra xem.
 
-              `resizeMode="cover"` để ảnh lấp kín ô: `contain` chừa hai dải trống, và năm ô như
+              `contentFit="cover"` để ảnh lấp kín ô: `contain` chừa hai dải trống, và năm ô như
               vậy thì lưới trông thủng lỗ chỗ.
             */
             <>
               <Image
                 source={{ uri: thumbnail }}
                 style={styles.thumbnail}
-                resizeMode="cover"
+                contentFit="cover"
+                cachePolicy="memory-disk"
                 onError={() => setBrokenUrl(thumbnail)}
-                accessibilityIgnoresInvertColors
               />
               {/*
                 Con mắt nằm TRÊN ảnh, trong một đĩa tối mờ: ảnh chụp xe có vùng sáng vùng tối
@@ -465,49 +477,12 @@ function PhotoSlot({
           <IconButton
             icon="close-circle"
             label={t('remove')}
-            onPress={onRemove}
+            onPress={() => onRemove(slot)}
             size={iconSize.md}
           />
         </XStack>
       ) : null}
     </YStack>
   );
-}
+});
 
-/** Xem ảnh toàn màn. URL ký sống ngắn nên không có bước tải về, chỉ xem. */
-function PhotoViewer({ url, onClose }: { url: string | null; onClose: () => void }) {
-  const t = useTranslations('Common.actions');
-  const tPhotos = useTranslations('Bookings.handover.photos');
-  const { width, height } = useWindowDimensions();
-  const [failed, setFailed] = useState(false);
-
-  return (
-    <Modal visible={url != null} transparent animationType="fade" onRequestClose={onClose}>
-      <YStack f={1} bg="rgba(0,0,0,0.92)" ai="center" jc="center">
-        <XStack pos="absolute" top={40} right={space.sm} zi={1}>
-          <IconButton icon="close" label={t('close')} onPress={onClose} tone="surface" />
-        </XStack>
-        {url && !failed ? (
-          <Image
-            /*
-             * `key={url}` để mỗi URL là một `<Image>` MỚI.
-             *
-             * `failed` là state của component này; không có key thì một URL ký hết hạn đặt cờ đó
-             * lên và mọi ảnh mở sau đều hiện "không mở được" — dù chúng hoàn toàn bình thường.
-             */
-            key={url}
-            source={{ uri: url }}
-            style={{ width, height: height * 0.8 }}
-            resizeMode="contain"
-            onError={() => setFailed(true)}
-            onLoad={() => setFailed(false)}
-          />
-        ) : (
-          <Text col={colors.textInverse} fos={fontSize.body}>
-            {tPhotos('unavailable')}
-          </Text>
-        )}
-      </YStack>
-    </Modal>
-  );
-}

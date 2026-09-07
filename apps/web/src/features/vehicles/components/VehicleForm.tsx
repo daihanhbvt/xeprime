@@ -1,7 +1,6 @@
 'use client';
 
 import { Alert, Button, Form } from 'antd';
-import { yupResolver } from '@hookform/resolvers/yup';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
@@ -31,6 +30,7 @@ import { branchLabel } from '@/features/branches/branch-label';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import styles from './VehicleForm.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useValidationResolver } from '@/i18n/use-validation-resolver';
 
 /** Mặc định khi tạo mới: chọn sẵn giá trị hợp lệ để select bắt buộc không rỗng. */
 const EMPTY_DEFAULTS: VehicleFormValues = {
@@ -107,6 +107,10 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
   const fmt = useAppFormat();
 
   const applyApiFieldErrors = useApiFieldErrors();
+  const resolver = useValidationResolver<VehicleFormValues>(
+    vehicleFormSchema,
+    'Vehicles.form.validation',
+  );
 
   const {
     control,
@@ -117,7 +121,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
     getValues,
     formState: { errors, isDirty },
   } = useForm<VehicleFormValues>({
-    resolver: yupResolver(vehicleFormSchema),
+    resolver,
     defaultValues: EMPTY_DEFAULTS,
   });
 
