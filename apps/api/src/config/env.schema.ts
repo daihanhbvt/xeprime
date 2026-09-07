@@ -240,8 +240,17 @@ export const envSchema = z
      *
      * `SEPAY_API_KEY` là khoá WEBHOOK (SePay gửi `Authorization: Apikey …`), so sánh time-safe
      * ở `SepayService` — không phải khoá gọi API của SePay.
+     *
+     * ⚠️ `preprocess` biến chuỗi RỖNG thành `undefined` trước khi kiểm độ dài. Toàn bộ file này
+     * coi "rỗng = chưa khai" (`superRefine` dưới dùng `Boolean(env[key])`, `kv()` của deploy bỏ
+     * qua giá trị rỗng), nhưng `.min(16)` chạy TRƯỚC superRefine nên một dòng `SEPAY_API_KEY=`
+     * bỏ trống trong `.env.example` làm API từ chối boot — và CI thì `cp .env.example .env`.
+     * Sàn 16 ký tự vẫn áp nguyên cho khoá THẬT.
      */
-    SEPAY_API_KEY: z.string().min(16).optional(),
+    SEPAY_API_KEY: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      z.string().min(16).optional(),
+    ),
     /** Mã ngân hàng theo chuẩn VietQR (vd `VCB`, `TCB`) — dùng dựng ảnh QR quicklink. */
     SEPAY_BANK_CODE: z.string().optional(),
     SEPAY_ACCOUNT_NUMBER: z.string().optional(),

@@ -1,0 +1,73 @@
+{
+  "page": {
+    "customerTitle": "Yêu cầu hỗ trợ",
+    "customerSubtitle": "Yêu cầu hỗ trợ và tranh chấp của bạn với XePrime.",
+    "tenantTitle": "Yêu cầu hỗ trợ",
+    "tenantSubtitle": "Hỗ trợ và tranh chấp liên quan tới chuyến của gian hàng.",
+    "platformTitle": "Hỗ trợ / tranh chấp",
+    "platformSubtitle": "Hàng đợi toàn sàn — ưu tiên cao trước. Kết luận tranh chấp mở khoá việc chốt khoản giữ chỗ.",
+    "tableLabel": "Yêu cầu hỗ trợ",
+    "openButton": "Mở yêu cầu",
+    "loadError": "Không tải được danh sách.",
+    "empty": "Chưa có yêu cầu nào.",
+    "total": "{count} yêu cầu",
+    "noPermissionTitle": "Không có quyền truy cập",
+    "noPermission": "Bạn cần quyền dưới đây để xem yêu cầu hỗ trợ của gian hàng.",
+    "backHome": "Về trang chủ"
+  },
+  "filters": {
+    "search": "Tìm kiếm",
+    "searchPlaceholder": "Mã yêu cầu hoặc tiêu đề",
+    "status": "Trạng thái",
+    "category": "Loại"
+  },
+  "columns": {
+    "case": "Yêu cầu",
+    "category": "Loại",
+    "status": "Trạng thái",
+    "updatedAt": "Cập nhật"
+  },
+  "form": {
+    "title": "Mở yêu cầu hỗ trợ",
+    "category": "Loại yêu cầu",
+    "subject": "Tiêu đề",
+    "subjectRequired": "Nhập tiêu đề (tối thiểu 5 ký tự).",
+    "description": "Mô tả",
+    "descriptionRequired": "Mô tả tối thiểu 10 ký tự.",
+    "bookingId": "Mã đơn thuê liên quan",
+    "bookingIdHint": "Lấy ở chi tiết chuyến.",
+    "bookingRequired": "Tranh chấp phải gắn một chuyến.",
+    "disputeHint": "Tranh chấp sẽ TẠM GIỮ việc chốt khoản giữ chỗ của chuyến đó cho tới khi có kết luận.",
+    "submit": "Gửi",
+    "openedSuccess": "Đã mở yêu cầu hỗ trợ."
+  },
+  "detail": {
+    "title": "Chi tiết yêu cầu",
+    "pickOne": "Chọn một yêu cầu để xem chi tiết.",
+    "loadError": "Không tải được yêu cầu.",
+    "openedBy": "Người mở",
+    "tenant": "Gian hàng",
+    "booking": "Đơn thuê",
+    "assignee": "Người phụ trách",
+    "createdAt": "Mở lúc",
+    "resolution": "Kết luận",
+    "timeline": "Dòng thời gian",
+    "noEvents": "Chưa có trao đổi nào.",
+    "internalTag": "Nội bộ",
+    "statusChanged": "Chuyển sang: {status}",
+    "closedNotice": "Yêu cầu đã đóng. Cần trao đổi tiếp thì mở một yêu cầu mới.",
+    "reply": "Trả lời",
+    "replyLabel": "Nội dung trả lời",
+    "replyPlaceholder": "Nhập nội dung…",
+    "internalNote": "Ghi chú nội bộ (khách và gian hàng không thấy)",
+    "send": "Gửi",
+    "moveTo": "Chuyển sang {status}",
+    "resolveTitle": "Kết luận",
+    "resolveHint": "Người mở yêu cầu đọc đúng câu này. Với tranh chấp, sau bước này mới chốt được khoản giữ chỗ.",
+    "resolutionLabel": "Nội dung kết luận",
+    "resolutionPlaceholder": "Kết luận…",
+    "resolutionRequired": "Nhập kết luận (tối thiểu 5 ký tự).",
+    "resolveSubmit": "Kết luận",
+    "resolveSuccess": "Đã kết luận yêu cầu."
+  }
+}

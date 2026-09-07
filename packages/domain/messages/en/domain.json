@@ -577,5 +577,81 @@
     "tax": "Withheld / remitted tax",
     "trip_insurance": "Trip insurance",
     "vehicle_protection": "Vehicle protection"
+  },
+  "sellerEntityType": {
+    "individual": "Individual",
+    "household_business": "Household business",
+    "company": "Company"
+  },
+  "sellerProfileStatus": {
+    "draft": "Not submitted",
+    "submitted": "Pending verification",
+    "verified": "Verified",
+    "changes_requested": "Changes requested",
+    "rejected": "Rejected"
+  },
+  "feePolicyStatus": {
+    "draft": "Draft",
+    "active": "Active",
+    "archived": "Archived"
+  },
+  "feePolicyActivationBlocker": {
+    "service_fee_out_of_range": "Service fee % is out of the allowed range",
+    "tax_requires_rate_and_label": "Tax needs both a rate and a tax name",
+    "insurance_requires_partner": "Insurance needs a real partner name",
+    "trip_insurance_requires_rate": "Trip insurance needs a rate",
+    "vehicle_protection_requires_rate": "Vehicle protection needs a rate",
+    "hold_window_out_of_range": "Payment window is out of the allowed range",
+    "free_cancel_out_of_range": "Free-cancel hours is out of the allowed range"
+  },
+  "bookingHoldStatus": {
+    "pending": "Awaiting payment",
+    "underpaid": "Partially paid",
+    "paid": "Hold paid",
+    "expired": "Payment window expired",
+    "cancelled": "Cancelled",
+    "released": "Settled"
+  },
+  "bookingHoldOutcome": {
+    "kept": "Used for the trip",
+    "refunded": "Refunded to customer",
+    "forfeited": "Compensated to owner",
+    "released_to_shop": "Released to shop"
+  },
+  "holdRefundStatus": {
+    "pending": "Pending transfer",
+    "paid": "Transferred",
+    "rejected": "Refund rejected"
+  },
+  "holdRefundReason": {
+    "early_cancel": "Cancelled before free-cancel deadline",
+    "owner_cancel": "Owner cancelled the trip",
+    "overpaid": "Overpaid",
+    "admin_decision": "XePrime decision"
+  },
+  "supportCaseStatus": {
+    "open": "New",
+    "in_progress": "In progress",
+    "waiting_party": "Awaiting reply",
+    "resolved": "Resolved",
+    "closed": "Closed"
+  },
+  "supportCaseCategory": {
+    "dispute": "Trip dispute",
+    "incident": "Trip incident",
+    "payment": "Payment / refund",
+    "account": "Account",
+    "other": "Other"
+  },
+  "supportCaseParty": {
+    "customer": "Renter",
+    "tenant": "Shop",
+    "platform": "XePrime"
+  },
+  "supportCasePriority": {
+    "low": "Low",
+    "normal": "Normal",
+    "high": "High",
+    "urgent": "Urgent"
   }
 }

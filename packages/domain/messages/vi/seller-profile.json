@@ -1,0 +1,48 @@
+{
+  "page": {
+    "title": "Hồ sơ người bán",
+    "subtitle": "Danh tính và tài khoản nhận tiền của gian hàng — điều kiện trước khi nhận tiền khách thật.",
+    "loadError": "Không tải được hồ sơ.",
+    "noPermissionTitle": "Không có quyền truy cập",
+    "noPermission": "Bạn cần quyền dưới đây để xem hồ sơ người bán của gian hàng.",
+    "backHome": "Về trang chủ",
+    "changesRequested": "Nền tảng yêu cầu bổ sung",
+    "rejected": "Hồ sơ bị từ chối",
+    "pendingReview": "Đang chờ nền tảng xác minh.",
+    "verified": "Hồ sơ đã được xác minh.",
+    "readOnly": "Hồ sơ đang chờ xác minh — không sửa được lúc này."
+  },
+  "form": {
+    "entityType": "Loại chủ thể",
+    "legalName": "Tên pháp lý / tên doanh nghiệp",
+    "taxId": "Mã số thuế",
+    "taxIdHint": "Bắt buộc với hộ kinh doanh và doanh nghiệp.",
+    "idNumber": "Số CCCD / hộ chiếu người đại diện",
+    "idIssuedAt": "Ngày cấp",
+    "idIssuedBy": "Nơi cấp",
+    "bankCode": "Mã ngân hàng",
+    "bankCodeHint": "Theo chuẩn VietQR, ví dụ VCB, TCB.",
+    "bankAccountNumber": "Số tài khoản nhận tiền",
+    "bankAccountName": "Tên chủ tài khoản",
+    "saved": "Đã lưu hồ sơ.",
+    "submitted": "Đã gửi xác minh.",
+    "reset": "Hoàn tác",
+    "missingFields": "Còn {count} mục bắt buộc trước khi gửi xác minh",
+    "missingField": {
+      "legalName": "Tên pháp lý",
+      "bankCode": "Mã ngân hàng",
+      "bankAccountNumber": "Số tài khoản",
+      "bankAccountName": "Tên chủ tài khoản",
+      "idNumber": "Số CCCD/hộ chiếu",
+      "taxId": "Mã số thuế"
+    },
+    "submitForReview": "Gửi xác minh",
+    "saveBeforeSubmit": "Lưu thay đổi trước khi gửi xác minh.",
+    "validation": {
+      "taxId": "Mã số thuế không hợp lệ",
+      "idNumber": "Số giấy tờ không hợp lệ",
+      "bankCode": "Mã ngân hàng không hợp lệ",
+      "bankAccountNumber": "Số tài khoản không hợp lệ"
+    }
+  }
+}

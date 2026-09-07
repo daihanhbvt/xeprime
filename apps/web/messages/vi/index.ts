@@ -43,6 +43,11 @@ import subscription from '@xeprime/domain/messages/vi/subscription.json';
 import members from '@xeprime/domain/messages/vi/members.json';
 import drivers from '@xeprime/domain/messages/vi/drivers.json';
 import maintenance from '@xeprime/domain/messages/vi/maintenance.json';
+import sellerProfile from '@xeprime/domain/messages/vi/seller-profile.json';
+import supportCases from '@xeprime/domain/messages/vi/support-cases.json';
+import feePolicies from '@xeprime/domain/messages/vi/fee-policies.json';
+import platformMoney from '@xeprime/domain/messages/vi/platform-money.json';
+import platformSellers from '@xeprime/domain/messages/vi/platform-sellers.json';
 
 const messages = {
   Common: common,
@@ -76,6 +81,11 @@ const messages = {
   Members: members,
   Drivers: drivers,
   Maintenance: maintenance,
+  SellerProfile: sellerProfile,
+  SupportCases: supportCases,
+  FeePolicies: feePolicies,
+  PlatformMoney: platformMoney,
+  PlatformSellers: platformSellers,
 };
 
 export default messages;

@@ -1,0 +1,84 @@
+{
+  "page": {
+    "title": "Money operations",
+    "subtitle": "Booking holds, refunds and daily reconciliation of incoming payments.",
+    "loadError": "Could not load the data.",
+    "holdsEmpty": "No booking holds.",
+    "holdsTotal": "{count} booking holds",
+    "refundsEmpty": "No refunds.",
+    "refundsTotal": "{count} refunds"
+  },
+  "tabs": {
+    "holds": "Booking holds",
+    "refunds": "Refunds",
+    "reconciliation": "Daily reconciliation"
+  },
+  "filters": {
+    "search": "Search",
+    "holdsSearchPlaceholder": "XPH code, customer name, shop name",
+    "status": "Status",
+    "scope": "Scope",
+    "unsettledOnly": "Awaiting settlement",
+    "allHolds": "All"
+  },
+  "columns": {
+    "code": "Code",
+    "tenant": "Shop",
+    "customer": "Customer",
+    "amount": "Amount",
+    "paidAmount": "Received {amount}",
+    "status": "Status",
+    "outcome": "Outcome",
+    "reason": "Reason",
+    "createdAt": "Created",
+    "disputeOpen": "Dispute open",
+    "settleAction": "Settle",
+    "markPaidAction": "Mark transferred",
+    "rejectAction": "Reject"
+  },
+  "settle": {
+    "title": "Settle booking hold {code}",
+    "outcome": "Outcome",
+    "note": "Reason",
+    "noteRequired": "A reason is required (at least 5 characters).",
+    "submit": "Settle",
+    "success": "Outcome settled.",
+    "disputeOpen": "This booking still has an open dispute — resolve it before settling the money.",
+    "auditHint": "This action is written to the audit log and cannot be undone."
+  },
+  "refundPaid": {
+    "title": "Record refund transfer",
+    "account": "Payout account",
+    "noAccount": "The customer has not provided a refund account yet — cannot transfer.",
+    "bankReference": "Bank transaction reference",
+    "referenceRequired": "Enter the bank transaction reference.",
+    "note": "Note",
+    "submit": "Record",
+    "success": "Refund transfer recorded."
+  },
+  "reject": {
+    "title": "Reject refund — the customer will see this reason",
+    "notePlaceholder": "Reason…",
+    "noteLabel": "Reason",
+    "noteRequired": "A reason is required (at least 5 characters).",
+    "submit": "Reject",
+    "success": "Refund rejected."
+  },
+  "reconciliation": {
+    "date": "Reconciliation date",
+    "retry": "Retry",
+    "balanced": "Balanced — every incoming payment is accounted for.",
+    "varianceWarning": "Off by {amount}",
+    "varianceHint": "Some incoming payments fall outside every bucket. Check the payment reconciliation queue.",
+    "amountWithCount": "{amount} · {count} transactions",
+    "bankIn": "Bank inflow",
+    "matchedSubscriptions": "Matched to plan invoices",
+    "matchedHolds": "Matched to booking holds",
+    "unmatched": "Unmatched",
+    "ignored": "Ignored",
+    "refundsPaid": "Refunds transferred today",
+    "refundsPending": "Refunds pending",
+    "holdsUnsettled": "Holds awaiting settlement",
+    "variance": "Variance"
+  }
+}

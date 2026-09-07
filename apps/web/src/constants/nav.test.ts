@@ -58,7 +58,7 @@ function hrefsOf(sections: typeof SHOP_NAV): string[] {
 }
 
 describe('nav — cấu trúc khối', () => {
-  it('gian hàng: 6 khối theo hành trình chủ xe, tổng 18 mục lá', () => {
+  it('gian hàng: 6 khối theo hành trình chủ xe, tổng 20 mục lá', () => {
     expect(SHOP_NAV.map((section) => section.key)).toEqual([
       'overview',
       'operations',
@@ -68,8 +68,9 @@ describe('nav — cấu trúc khối', () => {
       'support',
     ]);
     // 20 từ W2 (thêm "Gói của tôi"), rồi 18 từ 03/09/2026: gỡ hai mục placeholder
-    // "Khu vực nhận xe" và "Thùng rác" (R1 — ẩn menu chưa có luồng).
-    expect(flattenLeaves(SHOP_NAV)).toHaveLength(18);
+    // "Khu vực nhận xe" và "Thùng rác" (R1 — ẩn menu chưa có luồng). Lại 20 ở R3: "Hồ sơ
+    // người bán" và "Yêu cầu hỗ trợ" — cả hai thuộc bộ CƠ BẢN, không mục nào gắn cờ tính năng.
+    expect(flattenLeaves(SHOP_NAV)).toHaveLength(20);
   });
 
   it('Tổng quan và Hỗ trợ luôn hiện (`pinned`), bốn khối giữa gập được', () => {
@@ -77,10 +78,12 @@ describe('nav — cấu trúc khối', () => {
     expect(pinned).toEqual(['overview', 'support']);
   });
 
-  it('nền tảng: 2 khối, tổng 13 mục lá — cây này KHÔNG bị sắp lại', () => {
+  it('nền tảng: 2 khối, tổng 17 mục lá — cây này KHÔNG bị sắp lại', () => {
     expect(PLATFORM_NAV.map((section) => section.key)).toEqual(['overview', 'platform']);
     // 13 từ R2: thêm "Đối soát tiền vào" (ADR 0022 điều 4 — hàng đợi khớp tay của admin).
-    expect(flattenLeaves(PLATFORM_NAV)).toHaveLength(13);
+    // 17 từ R3: xác minh người bán, chính sách phí, money operations, hỗ trợ/tranh chấp —
+    // bốn bề mặt của gate R3 "admin không phải sửa database".
+    expect(flattenLeaves(PLATFORM_NAV)).toHaveLength(17);
   });
 
   it('đúng ba mục cha (submenu): đội xe, đơn thuê, tài chính', () => {
@@ -206,16 +209,16 @@ describe('nav — ranh giới gian hàng ↔ nền tảng', () => {
 });
 
 describe('nav — vai trò gian hàng nhìn thấy gì', () => {
-  it('shop_owner thấy đủ 18 mục', () => {
+  it('shop_owner thấy đủ 20 mục', () => {
     expect(
       visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_OWNER], false),
-    ).toHaveLength(18);
+    ).toHaveLength(20);
   });
 
-  it('shop_manager cũng thấy đủ 18 mục (có MEMBER_VIEW, FINANCE_VIEW và SUBSCRIPTION_VIEW)', () => {
+  it('shop_manager cũng thấy đủ 20 mục (có MEMBER_VIEW, FINANCE_VIEW và SUBSCRIPTION_VIEW)', () => {
     expect(
       visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_MANAGER], false),
-    ).toHaveLength(18);
+    ).toHaveLength(20);
   });
 
   it('shop_staff KHÔNG thấy tài chính và người dùng', () => {
@@ -246,10 +249,10 @@ describe('nav — vai trò gian hàng nhìn thấy gì', () => {
 });
 
 describe('nav — vai trò nền tảng nhìn thấy gì', () => {
-  it('platform_admin thấy đủ 13 mục', () => {
+  it('platform_admin thấy đủ 17 mục', () => {
     expect(
       visibleLabels(DEFAULT_PLATFORM_ROLE_PERMISSIONS[PLATFORM_ROLE.PLATFORM_ADMIN], true),
-    ).toHaveLength(13);
+    ).toHaveLength(17);
   });
 
   it('platform_staff chỉ thấy 5 mục đọc, KHÔNG thấy mục quản trị của super admin', () => {

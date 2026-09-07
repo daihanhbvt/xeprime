@@ -1,0 +1,34 @@
+.form {
+  min-width: 0;
+  max-width: 640px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.alert {
+  margin-bottom: var(--xp-space-md);
+}
+
+.fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.submitRow {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  margin-top: var(--xp-space-md);
+}
+
+.hint {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}

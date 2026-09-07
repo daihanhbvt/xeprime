@@ -64,6 +64,16 @@ export const MESSAGE_NAMESPACES = [
   { file: 'maintenance', namespace: 'Maintenance' },
   // "Gói của tôi" phía gian hàng — W2 (ADR 0015/0026).
   { file: 'subscription', namespace: 'Subscription' },
+  // Hồ sơ người bán do gian hàng khai (R3 — ADR 0028 release gate 1).
+  { file: 'seller-profile', namespace: 'SellerProfile' },
+  // Case hỗ trợ/tranh chấp — dùng chung ba bề mặt khách/gian hàng/nền tảng (R3).
+  { file: 'support-cases', namespace: 'SupportCases' },
+  // Quản trị chính sách phí có phiên bản (R3 — ADR 0028 điều 2–3).
+  { file: 'fee-policies', namespace: 'FeePolicies' },
+  // Money operations của nền tảng: hàng đợi giữ chỗ, chuyển trả, đối chiếu ngày (R3).
+  { file: 'platform-money', namespace: 'PlatformMoney' },
+  // Hàng đợi xác minh người bán của nền tảng (R3 — ADR 0028 release gate 1).
+  { file: 'platform-sellers', namespace: 'PlatformSellers' },
   // ⚠️ `mobile-shell` là VỎ app native (màn lỗi cấp app, not-found, điều hướng gốc), KHÔNG
   // phải "mọi chữ của mobile". Namespace vẫn chia theo TÍNH NĂNG, không theo client: màn
   // booking trên app dùng lại `bookings`/`booking-requests` như web, chuỗi xe dùng lại

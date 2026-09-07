@@ -346,4 +346,32 @@ export const queryKeys = {
     conversations: () => ['chat', 'conversations'] as const,
     unreadCount: () => ['chat', 'unread-count'] as const,
   },
+  /** Hồ sơ người bán do CHÍNH gian hàng khai (R3 — ADR 0028 release gate 1). */
+  sellerProfile: {
+    all: ['seller-profile'] as const,
+    me: () => ['seller-profile', 'me'] as const,
+  },
+  /** Hàng đợi xác minh người bán của nền tảng — tách khỏi `sellerProfile` (phạm vi tenant). */
+  platformSellers: {
+    all: ['platform-sellers'] as const,
+    list: (params: QueryParams) => ['platform-sellers', 'list', params] as const,
+    detail: (id: string) => ['platform-sellers', 'detail', id] as const,
+  },
+  feePolicies: {
+    all: ['fee-policies'] as const,
+    list: () => ['fee-policies', 'list'] as const,
+  },
+  /** Khoản giữ chỗ + hoàn tiền + đối soát ngày, phạm vi nền tảng (R3 — ADR 0028). */
+  platformMoney: {
+    all: ['platform-money'] as const,
+    holds: (params: QueryParams) => ['platform-money', 'holds', params] as const,
+    refunds: (params: QueryParams) => ['platform-money', 'refunds', params] as const,
+    reconciliation: (date: string) => ['platform-money', 'reconciliation', date] as const,
+  },
+  /** Support case — ba bề mặt (khách/gian hàng/nền tảng) cùng dùng chung nhánh dữ liệu. */
+  supportCases: {
+    all: ['support-cases'] as const,
+    list: (params: QueryParams) => ['support-cases', 'list', params] as const,
+    detail: (id: string) => ['support-cases', 'detail', id] as const,
+  },
 } as const;
