@@ -1,7 +1,6 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App, Col, Form, List, Row } from 'antd';
 import { useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
@@ -30,6 +29,7 @@ import { makeMaintenanceRecordFormSchema, type MaintenanceRecordFormValues } fro
 import type { MaintenanceRecord } from '../types';
 import styles from './VehicleMaintenanceWorkspace.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useValidationResolver } from '@/i18n/use-validation-resolver';
 
 const TYPE_OPTIONS = MAINTENANCE_TYPE_VALUES.map((value) => ({
   value,
@@ -100,9 +100,13 @@ export function MaintenanceRecordDialog({
     [record],
   );
 
+  const resolver = useValidationResolver<MaintenanceRecordFormValues>(
+    recordSchema,
+    'Maintenance.validation',
+  );
   // `values` để RHF tự đồng bộ khi đổi phiếu — không cần effect reset thủ công.
   const { control, handleSubmit, reset } = useForm<MaintenanceRecordFormValues>({
-    resolver: yupResolver(recordSchema),
+    resolver,
     defaultValues: defaults,
     values: defaults,
   });

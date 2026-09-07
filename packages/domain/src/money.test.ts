@@ -3,6 +3,9 @@ import {
   absoluteMoney,
   compactMoneyParts,
   formatMoneyVnd,
+  formatNumberInput,
+  normalizeNumberInput,
+  parseNumberInput,
   isNegativeMoney,
   isZeroMoney,
   subtractMoney,
@@ -130,5 +133,78 @@ describe('compactMoneyParts — rút gọn cho chỗ hẹp', () => {
   it('quá nhỏ để rút gọn ⇒ null, nơi gọi hiện dạng đầy đủ', () => {
     expect(compactMoneyParts('999', VI)).toBeNull();
     expect(compactMoneyParts('0', VI)).toBeNull();
+  });
+});
+
+/*
+ * Ô nhập SỐ ĐO — quy ước Việt Nam: `.` ngăn nhóm nghìn, `,` ngăn thập phân.
+ *
+ * Có test vì lỗi ở đây KHÔNG hiện ra: bản đầu lọc mọi thứ không phải chữ số, nên gõ `2.8` cho ra
+ * `28` — ô vẫn xanh, form vẫn hợp lệ, và mức tiêu thụ nhiên liệu lặng lẽ gấp mười lần.
+ */
+describe('formatNumberInput', () => {
+  it('ngăn nhóm nghìn bằng dấu chấm', () => {
+    expect(formatNumberInput(12500)).toBe('12.500');
+    expect(formatNumberInput(1234567)).toBe('1.234.567');
+  });
+
+  it('phần thập phân ngăn bằng dấu phẩy', () => {
+    expect(formatNumberInput(2.8)).toBe('2,8');
+    expect(formatNumberInput(1234.56)).toBe('1.234,56');
+  });
+
+  it('grouped: false cho năm sản xuất — 2019 chứ không phải 2.019', () => {
+    expect(formatNumberInput(2019, { grouped: false })).toBe('2019');
+  });
+
+  it('chưa nhập là chuỗi rỗng, không phải "0"', () => {
+    expect(formatNumberInput(null)).toBe('');
+    expect(formatNumberInput(undefined)).toBe('');
+    expect(formatNumberInput(0)).toBe('0');
+  });
+});
+
+describe('normalizeNumberInput', () => {
+  it('nhận cả dấu chấm lẫn dấu phẩy làm dấu thập phân', () => {
+    expect(normalizeNumberInput('2.8')).toBe('2,8');
+    expect(normalizeNumberInput('2,8')).toBe('2,8');
+  });
+
+  it('giữ đúng MỘT dấu thập phân', () => {
+    expect(normalizeNumberInput('2,8,5')).toBe('2,85');
+    expect(normalizeNumberInput('1.2.3')).toBe('1,23');
+  });
+
+  it('giữ được trạng thái nửa chừng khi đang gõ', () => {
+    expect(normalizeNumberInput('2,')).toBe('2,');
+  });
+
+  it('bỏ chữ và ký tự lạ', () => {
+    expect(normalizeNumberInput('12abc,5 km')).toBe('12,5');
+  });
+
+  it('integer: bỏ luôn dấu thập phân', () => {
+    expect(normalizeNumberInput('2,8', { integer: true })).toBe('28');
+    expect(normalizeNumberInput('100', { integer: true })).toBe('100');
+  });
+});
+
+describe('parseNumberInput', () => {
+  it('đọc số thập phân theo dấu phẩy', () => {
+    expect(parseNumberInput('2,8')).toBe(2.8);
+    expect(parseNumberInput('12')).toBe(12);
+  });
+
+  it('rỗng và dấu phẩy trơ là CHƯA NHẬP, không phải 0', () => {
+    expect(parseNumberInput('')).toBeNull();
+    expect(parseNumberInput(',')).toBeNull();
+  });
+
+  it('số 0 vẫn là 0', () => {
+    expect(parseNumberInput('0')).toBe(0);
+  });
+
+  it('đi qua normalize rồi parse thì không mất chữ số nào', () => {
+    expect(parseNumberInput(normalizeNumberInput('2.8'))).toBe(2.8);
   });
 });

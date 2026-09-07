@@ -12,6 +12,7 @@ import {
   PLAN_FEATURE,
   type DriverStatus,
 } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { FeatureWriteTooltip } from '@/components/feedback/FeatureWriteTooltip';
@@ -179,7 +180,7 @@ export default function DriversPage() {
       render: (_, row) => (
         <div>
           <span className={styles.meta}>
-            {[row.licenseNo, row.idNo].filter(Boolean).join(' · ') || tCommon('labels.emptyValue')}
+            {[row.licenseNo, row.idNo].filter(Boolean).join(LIST_SEPARATOR) || tCommon('labels.emptyValue')}
           </span>
           <LicenseExpiryTag licenseExpiresAt={row.licenseExpiresAt ?? null} />
         </div>

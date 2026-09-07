@@ -39,7 +39,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { APP_TIME_ZONE, dayjs, type Dayjs } from '@/lib/datetime';
 import { getErrorMessage } from '@/services/api-client';
 import { priceMarkerKey, useCalendarData } from '../hooks/use-calendar-data';
-import { holidayRunAround } from '@xeprime/domain';
+import { holidayRunAround, LIST_SEPARATOR } from '@xeprime/domain';
 import { useCalendarHolidays } from '../hooks/use-calendar-holidays';
 import { useBulkBlockDay, useBulkDayPreview, useReleaseBulkBlock } from '../hooks/use-bulk-day';
 import { formatDateKey, formatDateTime, listDays } from '../utils/calendar-date.util';
@@ -988,7 +988,7 @@ function ResourceCell({ resource, collapsed }: { resource: CalendarResource; col
                 {resource.plateNumber ?? resource.code}
                 {showStatus && statusMeta ? (
                   <span className={styles.resourceStatus}>
-                    {' · '}
+                    {LIST_SEPARATOR}
                     {domainLabel(
                       'vehicleOperationStatus',
                       resource.operationStatus,
@@ -1166,9 +1166,9 @@ function EventTrack({
 
 /** Tách `DH1234 · Tên khách` của title đơn thuê — dữ liệu event cố ý nhẹ, không mang cả đơn. */
 function splitBookingTitle(title: string): { code: string | null; customer: string } {
-  const idx = title.indexOf(' · ');
+  const idx = title.indexOf(LIST_SEPARATOR);
   if (idx === -1) return { code: null, customer: title };
-  return { code: title.slice(0, idx), customer: title.slice(idx + 3) };
+  return { code: title.slice(0, idx), customer: title.slice(idx + LIST_SEPARATOR.length) };
 }
 
 /**

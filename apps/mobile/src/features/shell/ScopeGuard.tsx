@@ -11,6 +11,7 @@ import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { SESSION_STATUS, useSessionGate } from '@/features/auth/hooks/use-session-gate';
 import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
 import { ROUTES } from '@/navigation/routes';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { fireAndForget } from '@/lib/fire-and-forget';
 import { useAppDispatch } from '@/store/hooks';
 import { forgetScope, scopeHome } from './use-shell-scope';
@@ -40,6 +41,7 @@ import { scopeChanged } from './shell-scope.slice';
 export function ScopeGuard({ children }: { children: ReactNode }) {
   const t = useTranslations('MobileShell.scope');
   const router = useRouter();
+  const navigateOnce = useNavigateOnce();
   const dispatch = useAppDispatch();
   const toast = useAppToast();
   const { status, error, retry } = useSessionGate();
@@ -83,7 +85,7 @@ export function ScopeGuard({ children }: { children: ReactNode }) {
             icon="lock-closed-outline"
             title={t('signInRequired')}
             actionLabel={t('signIn')}
-            onAction={() => router.push(ROUTES.account.login())}
+            onAction={() => navigateOnce(ROUTES.account.login())}
           />
         </Screen>
       );

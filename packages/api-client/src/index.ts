@@ -202,10 +202,68 @@ export {
 
 export { reviewsApi, type CreateReviewInput } from './features/reviews/api';
 
+// Vehicle (VEH-01 → 12)
 export {
   vehiclesApi,
   vehicleFiltersToParams,
   VEHICLES_DEFAULT_LIMIT,
+  type CreateVehicleInput,
+  type FleetSummary,
+  type RentalPolicyValues,
+  type SaveRentalPolicyInput,
+  type SaveVehiclePricingInput,
+  type SaveVehicleSourceInput,
+  type ShopRentalPolicy,
+  type SourceContractDownload,
+  type SourceContractPresign,
+  type UpdateVehicleInput,
+  type UploadMeta,
+  type UploadPresign,
+  type Vehicle360Summary,
+  type VehicleAlertGroup,
+  type VehicleAlertItem,
+  type VehicleBookingBrief,
+  type VehicleDetail,
   type VehicleFilters,
   type VehicleListItem,
+  type VehiclePricing,
+  type VehicleSort,
+  type VehicleSource,
+  type VehicleSourceContractFile,
+  type VehicleSourceDetail,
+  type VehicleStats,
 } from './features/vehicles/api';
+
+export { branchesApi, branchLabel, type Branch, type BranchList } from './features/branches/api';
+
+export {
+  vehicleDocumentsApi,
+  type ApplyOcrFieldsInput,
+  type DocumentDownload,
+  type DocumentPresign,
+  type SaveVehicleDocumentInput,
+  type VehicleDocumentDetail,
+  type VehicleDocumentOcrFieldResult,
+  type VehicleDocumentOcrJob,
+  type VehicleDocumentSummary,
+  type VehicleDocumentVersion,
+} from './features/vehicle-documents/api';
+
+export {
+  maintenanceApi,
+  maintenanceBoardToParams,
+  MAINTENANCE_DEFAULT_LIMIT,
+  type CompleteMaintenanceInput,
+  type CorrectOdometerInput,
+  type MaintenanceAttachment,
+  type MaintenanceBoardFilters,
+  type MaintenanceBoardItem,
+  type MaintenanceBoardSummary,
+  type MaintenanceDownload,
+  type MaintenancePresign,
+  type MaintenanceProfile,
+  type MaintenanceRecord,
+  type OdometerReading,
+  type SaveMaintenanceProfileInput,
+  type SaveMaintenanceRecordInput,
+} from './features/vehicle-maintenance/api';

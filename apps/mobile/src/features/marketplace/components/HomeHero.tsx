@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
+import { Image } from 'expo-image';
 import {
-  Image,
   Linking,
   Pressable,
   ScrollView,
@@ -140,7 +140,8 @@ function BannerSlide({
         <Image
           source={{ uri: source }}
           style={{ width, height }}
-          resizeMode="cover"
+          contentFit="cover"
+          cachePolicy="memory-disk"
           accessibilityLabel={banner.altText}
           onLoad={() => setLoaded(true)}
           // Ảnh hỏng: dừng nhịp thở — chạy mãi là hứa một tấm ảnh không bao giờ tới.

@@ -1,7 +1,6 @@
 'use client';
 
 import { EditOutlined, HistoryOutlined, PlusOutlined } from '@ant-design/icons';
-import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App, Button, Card, Col, Form, List, Progress, Row, Skeleton, Tag } from 'antd';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
@@ -28,6 +27,7 @@ import { OdometerHistoryDialog } from './OdometerHistoryDialog';
 import styles from './VehicleMaintenanceWorkspace.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useTranslations } from 'next-intl';
 
 /**
@@ -160,8 +160,12 @@ function MaintenanceTab({
     }),
     [profile],
   );
+  const resolver = useValidationResolver<MaintenanceProfileFormValues>(
+    maintenanceProfileFormSchema,
+    'Maintenance.validation',
+  );
   const { control, handleSubmit, formState } = useForm<MaintenanceProfileFormValues>({
-    resolver: yupResolver(maintenanceProfileFormSchema),
+    resolver,
     defaultValues: defaults,
     values: defaults,
   });

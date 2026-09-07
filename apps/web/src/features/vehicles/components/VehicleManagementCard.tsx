@@ -12,6 +12,7 @@ import {
   type VehiclePublicStatus,
   type VehicleSourceType,
 } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { vehiclePath } from '@/constants/routes';
@@ -71,7 +72,7 @@ export function VehicleManagementCard({
 
   const empty = tLabels('emptyValue');
   const specs = `${domainLabel('vehicleType', vehicle.vehicleType)} / ${fmt.serviceTypes(vehicle.serviceTypes)}`;
-  const identity = [vehicle.code, vehicle.plateNumber].filter(Boolean).join(' · ');
+  const identity = [vehicle.code, vehicle.plateNumber].filter(Boolean).join(LIST_SEPARATOR);
   const sourceType = (vehicle.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED) as VehicleSourceType;
 
   // Lãi/lỗ chỉ tính khi CẢ HAI vế cùng phạm vi luỹ kế — không trộn số theo kỳ với số luỹ kế.

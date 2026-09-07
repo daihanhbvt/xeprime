@@ -1,23 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { dayjs, DAY_PARAM_FORMAT, type Dayjs } from '@xeprime/domain';
 import { BottomSheet } from './BottomSheet';
 import { Button } from './Button';
-import { MonthGrid, visibleDays } from './MonthGrid';
+import { DayCell, MonthGrid, type DayMark, visibleDays } from './MonthGrid';
 import { StepSlider } from './StepSlider';
-import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
-
-interface DayMark {
-  selected: boolean;
-  disabled: boolean;
-}
-
-const styles = StyleSheet.create({
-  /** `dayContainer` của thư viện canh giữa theo chiều ngang — ô phải TRÀN cột mới bấm trúng. */
-  cell: { alignSelf: 'stretch' },
-});
+import { colors, fieldFontSize, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 
 /**
  * Kéo theo TỪNG PHÚT, không nhảy 15 một.
@@ -321,56 +310,17 @@ function SummaryCard({
       bg={highlighted ? colors.primaryLight : colors.surfaceMuted}
       bc={highlighted ? colors.primary : colors.borderInput}
     >
-      <Text col={colors.textMuted} fos={fontSize.label}>
+      <Text col={colors.textMuted} fos={fieldFontSize.affix}>
         {label}
       </Text>
       <Text
         col={highlighted ? colors.primaryActive : colors.text}
-        fos={fontSize.body}
+        fos={fieldFontSize.value}
         fow={fontWeight.bold}
         numberOfLines={1}
       >
         {value}
       </Text>
     </YStack>
-  );
-}
-
-function DayCell({
-  day,
-  mark,
-  onPress,
-}: {
-  day: Dayjs;
-  mark: DayMark | undefined;
-  onPress: () => void;
-}) {
-  const disabled = mark?.disabled ?? false;
-  const selected = mark?.selected ?? false;
-
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={styles.cell}
-      accessibilityRole="button"
-      accessibilityState={{ selected, disabled }}
-    >
-      <YStack
-        ai="center"
-        jc="center"
-        h={sizing.touchTarget}
-        br={radius.sm}
-        bg={selected ? colors.primary : 'transparent'}
-      >
-        <Text
-          col={disabled ? colors.placeholder : selected ? colors.onPrimary : colors.text}
-          fos={fontSize.bodySm}
-          fow={selected ? fontWeight.semibold : fontWeight.regular}
-        >
-          {day.date()}
-        </Text>
-      </YStack>
-    </Pressable>
   );
 }

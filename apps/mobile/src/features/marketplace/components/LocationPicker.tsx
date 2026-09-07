@@ -11,7 +11,16 @@ import { Chip } from '@/components/ui/Chip';
 import { IconButton } from '@/components/ui/IconButton';
 import { layout } from '@/theme/layout';
 import { appStyles } from '@/theme/styles';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import {
+  colors,
+  fieldFontSize,
+  fontSize,
+  fontWeight,
+  iconSize,
+  radius,
+  sizing,
+  space,
+} from '@/theme/tokens';
 import { useSearchExperience } from '../search-context';
 import { SectionError } from './SectionError';
 
@@ -155,7 +164,7 @@ export function LocationPicker({ open, onClose, onSelect }: LocationPickerProps)
                   style={{
                     flex: 1,
                     color: colors.text,
-                    fontSize: fontSize.body,
+                    fontSize: fieldFontSize.value,
                     minHeight: sizing.touchTarget,
                   }}
                 />
@@ -275,7 +284,7 @@ function Row({
         <Text
           f={1}
           col={colors.text}
-          fos={fontSize.body}
+          fos={fieldFontSize.value}
           fow={selected ? fontWeight.semibold : fontWeight.regular}
           numberOfLines={1}
         >

@@ -30,6 +30,11 @@ export {
   applyDiscountPercent,
   formatMoneyInput,
   parseMoneyInput,
+  formatNumberInput,
+  normalizeNumberInput,
+  parseNumberInput,
+  NUMBER_GROUP_SEPARATOR,
+  NUMBER_DECIMAL_SEPARATOR,
   moneyToVietnameseWords,
   type CompactMoneyParts,
   type MoneyCompactUnit,
@@ -155,3 +160,8 @@ export {
   type SearchDraft,
   type SearchFilterPatch,
 } from './search-draft';
+
+/** Ký hiệu trình bày dùng chung — không phải chữ, nên không nằm trong bó message. */
+export { LIST_SEPARATOR } from './display';
+
+export { remainingKm, type RemainingKm, type RemainingKmKind } from './odometer';

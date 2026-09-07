@@ -21,6 +21,8 @@ export type DocumentUploadMimeType = (typeof DOCUMENT_UPLOAD_MIME_TYPES)[number]
 
 export const DOCUMENT_UPLOAD_MAX_BYTES = IMAGE_UPLOAD_MAX_BYTES;
 
+export const SOURCE_CONTRACT_MAX_FILES = 10;
+
 /**
  * Tài liệu riêng tư gắn với xe (Wave 4.1) — hợp đồng nguồn xe; Wave 5 tái dùng cho giấy tờ.
  * Nhị phân ở bucket R2 riêng tư, metadata do server sở hữu (`vehicle_private_files`).

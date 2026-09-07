@@ -4,6 +4,7 @@ import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { VEHICLE_OPERATION_STATUS } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -115,7 +116,7 @@ function VehicleRow({
             {vehicle.name}
           </Text>
           <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
-            {[vehicle.plateNumber, vehicle.code].filter(Boolean).join(' · ')}
+            {[vehicle.plateNumber, vehicle.code].filter(Boolean).join(LIST_SEPARATOR)}
           </Text>
           {unavailable ? (
             <Text col={colors.warning} fos={fontSize.label}>

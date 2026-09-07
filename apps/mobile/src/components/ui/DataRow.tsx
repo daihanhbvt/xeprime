@@ -11,6 +11,7 @@ export function DataRow({
   tone = 'default',
   strong = false,
   block = false,
+  labelWide = false,
 }: {
   label: string;
   /** Dòng phụ dưới NHÃN — giải thích nhãn nghĩa là gì. */
@@ -34,6 +35,14 @@ export function DataRow({
   tone?: 'default' | 'muted' | 'discount' | 'danger' | 'price';
   strong?: boolean;
   block?: boolean;
+  /**
+   * Đảo tỉ lệ hai cột cho bảng có NHÃN DÀI mà GIÁ TRỊ NGẮN.
+   *
+   * Mặc định 3:7 chuẩn cho dòng tiền — nhãn hai chữ ("Tổng tiền"), giá trị dài
+   * ("1.200.000 ₫ · còn nợ"). Bảng thông số kỹ thuật thì ngược hẳn: "Trọng lượng bản thân" ↔
+   * "—". Giữ 3:7 ở đó thì gần như mọi nhãn đều xuống hai dòng trong khi cột phải bỏ trống 70%.
+   */
+  labelWide?: boolean;
 }) {
   const valueColor =
     tone === 'price'
@@ -47,7 +56,7 @@ export function DataRow({
             : colors.text;
 
   const valueText = (
-    <YStack gap={2} {...(block ? {} : { f: 7 })}>
+    <YStack gap={2} {...(block ? {} : { f: labelWide ? 4 : 7 })}>
       <XStack ai="center" gap={space.xs} jc={block ? 'flex-start' : 'flex-end'}>
         {/*
           `flexShrink` phải khai TƯỜNG MINH: trong React Native nó mặc định là 0, không phải 1
@@ -75,7 +84,7 @@ export function DataRow({
   );
 
   const labelBlock = (
-    <YStack gap={2} {...(block ? {} : { f: 3 })}>
+    <YStack gap={2} {...(block ? {} : { f: labelWide ? 6 : 3 })}>
       <Text
         col={colors.textMuted}
         flexShrink={1}

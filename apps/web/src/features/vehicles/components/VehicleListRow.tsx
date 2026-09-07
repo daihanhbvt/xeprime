@@ -10,6 +10,7 @@ import {
   type VehicleOperationStatus,
   type VehiclePublicStatus,
 } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { vehiclePath } from '@/constants/routes';
@@ -59,7 +60,7 @@ export function VehicleListRow({
     `${domainLabel('vehicleType', vehicle.vehicleType)} / ${fmt.serviceTypes(vehicle.serviceTypes)}`,
   ]
     .filter(Boolean)
-    .join(' · ');
+    .join(LIST_SEPARATOR);
 
   const hasFinance = stats?.totalIncome != null && stats?.totalExpense != null;
   const profit = hasFinance ? subtractMoney(stats.totalIncome, stats.totalExpense) : null;

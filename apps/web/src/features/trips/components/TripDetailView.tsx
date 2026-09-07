@@ -21,6 +21,7 @@ import {
   isCustomerTripClosed,
   type CustomerTripStage,
 } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import { Stars } from '@/components/data-display/Stars';
 import { StatusTag } from '@/components/data-display/StatusTag';
@@ -194,7 +195,7 @@ export function TripDetailView({ tripId }: { tripId: string }) {
                     data.vehicle.fuelType,
                   ]
                     .filter(Boolean)
-                    .join(' · ') || t('detail.specsEmpty')}
+                    .join(LIST_SEPARATOR) || t('detail.specsEmpty')}
                 </p>
                 {/* Biển số chỉ có sau khi chủ xe nhận chuyến — server quyết định, không phải UI. */}
                 {data.vehicle.plateNumber ? (

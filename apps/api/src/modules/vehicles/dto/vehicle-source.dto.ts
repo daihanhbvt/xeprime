@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   DOCUMENT_UPLOAD_MAX_BYTES,
   DOCUMENT_UPLOAD_MIME_TYPES,
+  SOURCE_CONTRACT_MAX_FILES,
   VEHICLE_FINANCE_INTEREST_METHOD_VALUES,
   VEHICLE_SOURCE_TYPE_VALUES,
 } from '@xeprime/types';
@@ -25,7 +26,6 @@ import { IsCalendarDate } from '../../../common/calendar-date';
 const MONEY_PATTERN = /^\d{1,12}(\.\d{1,2})?$/;
 /** % dạng chuỗi 0–100, tối đa 2 số lẻ (hoa hồng, lãi suất). */
 const PERCENT_PATTERN = /^(100(\.0{1,2})?|\d{1,2}(\.\d{1,2})?)$/;
-const MAX_CONTRACT_FILES = 10;
 /** ULID 26 ký tự Crockford — id file riêng tư do SERVER phát, client chỉ nộp lại. */
 const ULID_PATTERN = /^[0-9A-HJKMNP-TV-Z]{26}$/;
 
@@ -225,7 +225,7 @@ export class SaveVehicleSourceDto {
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(MAX_CONTRACT_FILES)
+  @ArrayMaxSize(SOURCE_CONTRACT_MAX_FILES)
   @Matches(ULID_PATTERN, { each: true })
   contractFileIds?: string[];
 

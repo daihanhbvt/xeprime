@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { RefreshControl } from 'react-native';
+import { RefreshControl, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { useRouter } from 'expo-router';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { BOOKING_STATUS_VALUES, PERMISSION } from '@xeprime/types';
@@ -19,7 +18,9 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
 import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
+import { LIST_TUNING } from '@/theme/list-tuning';
 import { colors } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
 import { BookingCard } from './components/BookingCard';
@@ -42,6 +43,9 @@ const SEARCH_DEBOUNCE_MS = 350;
 /** Sentinel "mọi trạng thái" của giao diện — không endpoint nào nhận `status=all`. */
 const STATUS_ALL = 'all';
 
+// Ở module scope, không inline: FlatList coi `keyExtractor` mới là prop đổi và dựng lại cả cây con.
+const keyOf = (booking: BookingListItem) => booking.id;
+
 /**
  * Danh sách đơn thuê (BKG-07).
  *
@@ -49,10 +53,10 @@ const STATUS_ALL = 'all';
  * cả kho về rồi lọc tại chỗ. Bộ lọc sống ở state màn hình: mobile không có URL để chia sẻ, và bộ
  * lọc này chết theo màn (ADR 0004).
  */
-export function BookingListScreen() {
+export function BookingListScreen({ vehicleId }: { vehicleId?: string }) {
   const t = useTranslations('Bookings.list');
   const tCreate = useTranslations('Bookings.create');
-  const router = useRouter();
+  const navigateOnce = useNavigateOnce();
   const permissions = usePermissions();
   const domainLabel = useDomainLabel();
 
@@ -64,6 +68,9 @@ export function BookingListScreen() {
 
   const query = useBookingsPage({
     ...(status === STATUS_ALL ? {} : { status }),
+    // Lọc theo xe đến từ ĐƯỜNG DẪN, không phải tấm lọc: nó là ngữ cảnh của lối đi từ hồ sơ xe,
+    // giống hệt `?vehicleId=` bên web.
+    ...(vehicleId ? { vehicleId } : {}),
     ...(debouncedSearch.trim() ? { q: debouncedSearch.trim() } : {}),
     sort,
     page,
@@ -129,8 +136,13 @@ export function BookingListScreen() {
   );
 
   const openBooking = useCallback(
-    (booking: BookingListItem) => router.push(ROUTES.manage.bookingDetail(booking.id)),
-    [router],
+    (booking: BookingListItem) => navigateOnce(ROUTES.manage.bookingDetail(booking.id)),
+    [navigateOnce],
+  );
+
+  const renderItem = useCallback<ListRenderItem<BookingListItem>>(
+    ({ item }) => <BookingCard booking={item} onPress={openBooking} />,
+    [openBooking],
   );
 
   const filtered = status !== STATUS_ALL || debouncedSearch.trim().length > 0;
@@ -160,7 +172,7 @@ export function BookingListScreen() {
                 icon="add"
                 label={tCreate('open')}
                 tone="primary"
-                onPress={() => router.push(ROUTES.manage.bookingCreate())}
+                onPress={() => navigateOnce(ROUTES.manage.bookingCreate())}
               />
             ) : null
           }
@@ -173,13 +185,16 @@ export function BookingListScreen() {
           {...(meta === undefined ? {} : { meta })}
           onPageChange={setPage}
         >
-          {({ onScroll, headerHeight }) => {
+          {({ onScroll, headerHeight, contentContainerStyle }) => {
             /*
               Khung xương, lỗi và rỗng đều đi qua MỘT vùng cuộn có kéo-làm-mới. Trước đây chúng
               là khối tĩnh, nên đúng lúc cần làm mới nhất — danh sách rỗng, hoặc vừa mất sóng —
               lại là lúc không kéo được gì.
+
+              Là HÀM trả JSX chứ không phải component khai trong render — component mới mỗi lần
+              render là React tháo vùng cuộn ra gắn lại đúng lúc `isRefetching` đổi.
             */
-            const StateScroll = ({ children }: { children: ReactNode }) => (
+            const inStateScroll = (children: ReactNode) => (
               <ManageStateScroll
                 onScroll={onScroll}
                 headerHeight={headerHeight}
@@ -191,28 +206,28 @@ export function BookingListScreen() {
             );
 
             return query.isPending ? (
-              <StateScroll>
+              inStateScroll(
                 <YStack px={layout.screenX} gap={layout.inline}>
                   {Array.from({ length: SKELETON_ROWS }, (_, i) => (
                     <RecordCardSkeleton key={i} />
                   ))}
-                </YStack>
-              </StateScroll>
+                </YStack>,
+              )
             ) : query.isError ? (
-              <StateScroll>
+              inStateScroll(
                 <ScreenError
                   error={query.error}
                   title={t('errorTitle')}
                   onRetry={() => void query.refetch()}
-                />
-              </StateScroll>
+                />,
+              )
             ) : items.length === 0 ? (
               /*
                 Đang lọc mà rỗng thì lối ra là GỠ bộ lọc — nút phải nằm ngay đó. Không có nút,
                 người dùng đứng trước một màn trắng và cách duy nhất là tự nhớ mình đã lọc gì.
               */
-              <StateScroll>
-                {filtered ? (
+              inStateScroll(
+                filtered ? (
                   <ScreenMessage
                     icon="search-outline"
                     title={t('emptyFilteredTitle')}
@@ -224,19 +239,15 @@ export function BookingListScreen() {
                     title={t('emptyTitle')}
                     description={t('emptyBody')}
                   />
-                )}
-              </StateScroll>
+                ),
+              )
             ) : (
               <Animated.FlatList
                 data={items}
-                keyExtractor={(booking) => booking.id}
-                renderItem={({ item }) => <BookingCard booking={item} onPress={openBooking} />}
-                contentContainerStyle={{
-                  paddingHorizontal: layout.screenX,
-                  paddingTop: headerHeight,
-                  paddingBottom: layout.screenX,
-                  gap: layout.inline,
-                }}
+                keyExtractor={keyOf}
+                {...LIST_TUNING}
+                renderItem={renderItem}
+                contentContainerStyle={contentContainerStyle}
                 onScroll={onScroll}
                 scrollEventThrottle={scrollThrottle.frame}
                 refreshControl={

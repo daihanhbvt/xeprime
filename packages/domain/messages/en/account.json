@@ -54,5 +54,10 @@
       "body": "Review applications and monitor shops across the whole system.",
       "action": "Open admin portal"
     }
+  },
+  "validation": {
+    "displayNameRequired": "Please enter your full name",
+    "displayNameMax": "Full name is limited to 255 characters",
+    "avatarUrlInvalid": "Invalid image URL"
   }
 }

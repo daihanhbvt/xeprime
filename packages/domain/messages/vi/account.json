@@ -54,5 +54,10 @@
       "body": "Duyệt hồ sơ, theo dõi gian hàng và toàn bộ hệ thống.",
       "action": "Vào trang quản trị"
     }
+  },
+  "validation": {
+    "displayNameRequired": "Vui lòng nhập họ tên",
+    "displayNameMax": "Họ tên tối đa 255 ký tự",
+    "avatarUrlInvalid": "Đường dẫn ảnh không hợp lệ"
   }
 }

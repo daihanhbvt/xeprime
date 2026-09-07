@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { memo, useCallback } from 'react';
-import { Image } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { CUSTOMER_TRIP_STAGE_META, SERVICE_TYPE, type CustomerTripStage } from '@xeprime/types';
@@ -15,6 +15,9 @@ import type { CustomerTrip } from '../api';
 
 /** Ảnh vuông nhỏ bên trái — thẻ chuyến ưu tiên THỜI GIAN và trạng thái, không phải ảnh xe. */
 const THUMB = 72;
+
+/** Không phụ thuộc prop/state — dựng MỘT lần ở module scope, không phải mỗi lần render. */
+const THUMB_STYLE = { width: THUMB, height: THUMB, borderRadius: radius.md };
 
 interface TripCardProps {
   trip: CustomerTrip;
@@ -50,8 +53,10 @@ function TripCardImpl({ trip, onPress }: TripCardProps) {
           {trip.vehicle.imageUrl ? (
             <Image
               source={{ uri: trip.vehicle.imageUrl }}
-              style={{ width: THUMB, height: THUMB, borderRadius: radius.md }}
-              resizeMode="cover"
+              style={THUMB_STYLE}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={150}
             />
           ) : (
             <YStack

@@ -174,5 +174,16 @@
       "cover": "Shop page cover image",
       "bank": "Payout account"
     }
+  },
+  "validation": {
+    "displayNameRequired": "Display name is required",
+    "provinceRequired": "Select the shop's province",
+    "provinceInvalid": "Invalid province code",
+    "ownerFullNameRequired": "Shop owner's full name is required",
+    "ownerPhoneRequired": "Shop owner's phone number is required",
+    "ownerPhoneInvalid": "Invalid phone number",
+    "ownerEmailInvalid": "Invalid email address",
+    "logoUrlInvalid": "Invalid logo URL",
+    "coverUrlInvalid": "Invalid cover image URL"
   }
 }

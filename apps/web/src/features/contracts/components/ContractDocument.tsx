@@ -7,6 +7,7 @@ import {
   routeTypeLabel,
   type ServiceType,
 } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import type { Contract } from '../types';
 import styles from './ContractDocument.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -23,13 +24,13 @@ export function ContractDocument({ contract }: { contract: Contract }) {
   const fmt = useAppFormat();
 
   const { snapshot: s, contractNo, createdAt } = contract;
-  const shopContact = [s.shop.phone, s.shop.email].filter(Boolean).join(' · ');
+  const shopContact = [s.shop.phone, s.shop.email].filter(Boolean).join(LIST_SEPARATOR);
   const shopLegal = [
     s.shop.taxCode ? `MST: ${s.shop.taxCode}` : null,
     s.shop.businessLicenseNo ? `GPKD: ${s.shop.businessLicenseNo}` : null,
   ]
     .filter(Boolean)
-    .join(' · ');
+    .join(LIST_SEPARATOR);
 
   return (
     <article className={styles.sheet} data-print-root>

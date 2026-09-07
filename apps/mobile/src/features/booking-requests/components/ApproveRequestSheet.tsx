@@ -10,7 +10,7 @@ import { DataRow } from '@/components/ui/DataRow';
 import { Chip } from '@/components/ui/Chip';
 import { RentalRangeSheet } from '@/features/marketplace/components/RentalRangeSheet';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { colors, fieldFontSize, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { ApproveBookingRequestInput, BookingRequestItem } from '../api';
 
 /**
@@ -133,23 +133,23 @@ export function ApproveRequestSheet({
           )}
 
           <YStack gap={space.xs}>
-            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+            <Text col={colors.text} fos={fieldFontSize.label} fow={fontWeight.semibold}>
               {t('longTerm.pickupLabel')}
             </Text>
             <Card onPress={() => setPicking(true)} accessibilityLabel={t('longTerm.pickupLabel')}>
               <Text
                 col={pickupAt ? colors.text : colors.placeholder}
-                fos={fontSize.body}
+                fos={fieldFontSize.value}
                 fow={fontWeight.medium}
               >
                 {pickupAt ? fmt.rentalPoint(pickupAt) : t('longTerm.pickupPlaceholder')}
               </Text>
             </Card>
-            <Text col={colors.textMuted} fos={fontSize.label}>
+            <Text col={colors.textMuted} fos={fieldFontSize.message}>
               {t('longTerm.pickupHint')}
             </Text>
             {/* KHÔNG in ngày trả: nó = ngày nhận + N THÁNG LỊCH do server tính, client tự cộng sẽ sai (ADR 0011). */}
-            <Text col={colors.textMuted} fos={fontSize.label}>
+            <Text col={colors.textMuted} fos={fieldFontSize.message}>
               {t('longTerm.returnHint')}
             </Text>
           </YStack>

@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Image, Linking, Pressable, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
+import { Linking, Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -21,7 +22,7 @@ import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { DataRow, Divider } from '@/components/ui/DataRow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { telHref, toAppTz, zaloHref } from '@xeprime/domain';
+import { telHref, toAppTz, zaloHref, LIST_SEPARATOR } from '@xeprime/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useDomainLabel } from '@/i18n/domain';
@@ -34,6 +35,9 @@ const THUMB_WIDTH = 76;
 const THUMB_HEIGHT = 57;
 
 const AVATAR_SIZE = 32;
+
+/** Không phụ thuộc prop/state — dựng MỘT lần ở module scope, không phải mỗi lần render. */
+const AVATAR_STYLE = { width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: radius.pill };
 
 const styles = StyleSheet.create({
   /** Giữ nút đủ rộng để đọc nhãn; hàng liên hệ sẽ tự xuống dòng trên màn hình hẹp. */
@@ -88,7 +92,7 @@ function BookingRequestCardImpl({
 
   const openDetail = () => onOpenDetail(request);
 
-  const vehicleMeta = [request.vehicleCode, request.vehiclePlate].filter(Boolean).join(' · ');
+  const vehicleMeta = [request.vehicleCode, request.vehiclePlate].filter(Boolean).join(LIST_SEPARATOR);
 
   const riskLevel = request.customerRiskLevel as TenantCustomerRiskLevel | null;
   const showRisk = riskLevel != null && riskLevel !== TENANT_CUSTOMER_RISK_LEVEL.NORMAL;
@@ -123,7 +127,9 @@ function BookingRequestCardImpl({
             <Image
               source={{ uri: request.vehicleImageUrl }}
               style={styles.thumb}
-              resizeMode="cover"
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={150}
               accessibilityLabel={request.vehicleName}
             />
           ) : (
@@ -173,8 +179,9 @@ function BookingRequestCardImpl({
             {request.customerAvatarUrl ? (
               <Image
                 source={{ uri: request.customerAvatarUrl }}
-                style={{ width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: radius.pill }}
-                resizeMode="cover"
+                style={AVATAR_STYLE}
+                contentFit="cover"
+                cachePolicy="memory-disk"
               />
             ) : (
               <YStack

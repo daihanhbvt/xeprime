@@ -174,5 +174,16 @@
       "cover": "Ảnh bìa trang gian hàng",
       "bank": "Tài khoản nhận tiền"
     }
+  },
+  "validation": {
+    "displayNameRequired": "Tên hiển thị là bắt buộc",
+    "provinceRequired": "Chọn tỉnh/thành của gian hàng",
+    "provinceInvalid": "Mã tỉnh không hợp lệ",
+    "ownerFullNameRequired": "Họ tên chủ gian hàng là bắt buộc",
+    "ownerPhoneRequired": "Số điện thoại chủ gian hàng là bắt buộc",
+    "ownerPhoneInvalid": "Số điện thoại không hợp lệ",
+    "ownerEmailInvalid": "Email không hợp lệ",
+    "logoUrlInvalid": "Đường dẫn logo không hợp lệ",
+    "coverUrlInvalid": "Đường dẫn ảnh bìa không hợp lệ"
   }
 }

@@ -22,6 +22,7 @@ import {
   type MaintenanceType,
 } from '@xeprime/types';
 import type { PaginationMeta } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { actionColumn, DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { EntityIdentity } from '@/components/data-display/EntityIdentity';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
@@ -190,7 +191,7 @@ export function MaintenanceBoardTable({
           <EntityIdentity
             kind="vehicle"
             name={row.vehicleName}
-            subtitle={[row.vehicleCode, row.plateNumber].filter(Boolean).join(' · ')}
+            subtitle={[row.vehicleCode, row.plateNumber].filter(Boolean).join(LIST_SEPARATOR)}
             imageUrl={row.mainImageUrl}
           />
         </Link>
@@ -341,7 +342,7 @@ function MaintenanceBoardCard({
         <StatusTag value={status} meta={MAINTENANCE_DUE_STATUS_META} group="maintenanceDueStatus" />
       </header>
       <p className={styles.cardSub}>
-        {[row.vehicleCode, row.plateNumber].filter(Boolean).join(' · ')}
+        {[row.vehicleCode, row.plateNumber].filter(Boolean).join(LIST_SEPARATOR)}
       </p>
       <p className={styles.cardBody}>
         {row.currentOdometerKm == null

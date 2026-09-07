@@ -15,6 +15,7 @@ import {
   type ReceiptStatus,
   type ReceiptType,
 } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -257,7 +258,7 @@ function ReceiptCard({ row }: { row: Receipt }) {
       </div>
       {row.customerName || vehicle ? (
         <div className={styles.cardLine}>
-          {[row.customerName, vehicle].filter(Boolean).join(' · ')}
+          {[row.customerName, vehicle].filter(Boolean).join(LIST_SEPARATOR)}
         </div>
       ) : null}
       {row.description ? <div className={styles.cardMuted}>{row.description}</div> : null}

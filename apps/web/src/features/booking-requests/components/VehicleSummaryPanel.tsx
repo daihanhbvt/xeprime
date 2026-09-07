@@ -5,6 +5,7 @@ import { Skeleton } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { CATALOG_TYPE, SERVICE_TYPE } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { shopPath } from '@/constants/routes';
 import { catalogLabel } from '@/features/catalog/types';
 import { useCatalog } from '@/features/catalog/use-catalog';
@@ -91,7 +92,7 @@ export function VehicleSummaryPanel({
       : t('price.perMonth')
     : t('price.perDay');
 
-  const location = [listing?.shopProvince].filter(Boolean).join(' · ');
+  const location = [listing?.shopProvince].filter(Boolean).join(LIST_SEPARATOR);
 
   const specs = listing
     ? ([
@@ -140,7 +141,7 @@ export function VehicleSummaryPanel({
         <div className={styles.badges}>
           {listing ? (
             <span className={styles.badge}>
-              {(listing.serviceTypes ?? []).map((s) => dl('serviceType', s)).join(' · ')}
+              {(listing.serviceTypes ?? []).map((s) => dl('serviceType', s)).join(LIST_SEPARATOR)}
             </span>
           ) : null}
           {discount > 0 ? <DiscountTag percent={discount} size="sm" /> : null}
@@ -148,7 +149,7 @@ export function VehicleSummaryPanel({
         <h3 className={styles.name}>{name}</h3>
         {listing ? (
           <p className={styles.meta}>
-            {[dl('vehicleType', listing.vehicleType), location].filter(Boolean).join(' · ')}
+            {[dl('vehicleType', listing.vehicleType), location].filter(Boolean).join(LIST_SEPARATOR)}
           </p>
         ) : null}
 

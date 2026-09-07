@@ -18,6 +18,7 @@ import {
   type SubscriptionStatus,
   type SubscriptionTermMonths,
 } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { dayjs } from '@/lib/datetime';
@@ -69,7 +70,7 @@ export function TenantPlanSection({
             <div className={styles.currentName}>{currentPlan.planName}</div>
             <div className={styles.meta}>
               {t('tenant.expires', { date: fmt.date(currentPlan.endsAt) })}
-              {' · '}
+              {LIST_SEPARATOR}
               {currentPlan.slots
                 ? t('tenant.slotsSummary', {
                     car: currentPlan.slots.car,

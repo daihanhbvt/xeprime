@@ -33,6 +33,14 @@ interface ScreenProps {
    * component này sinh ra để chặn.
    */
   refreshing?: boolean;
+  /**
+   * Có `onRefresh` hay không là quyết định MỘT LẦN cho vòng đời màn — đừng bật/tắt theo state.
+   *
+   * React Native chỉ bọc `AndroidSwipeRefreshLayout` quanh `ScrollView` khi có `refreshControl`;
+   * cho prop này lúc có lúc không là đổi cây view gốc, và `ScrollView` bị dựng lại — ô đang gõ
+   * mất tiêu điểm, bàn phím sập, màn nhảy về đầu. Muốn tạm ngưng làm mới thì để `onRefresh` nằm
+   * yên và tự bỏ qua bên trong.
+   */
   onRefresh?: () => void;
 }
 

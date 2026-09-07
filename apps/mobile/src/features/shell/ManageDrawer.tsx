@@ -3,16 +3,19 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
-import { useRouter, usePathname } from 'expo-router';
+import { usePathname } from 'expo-router';
 import { useTranslations } from 'use-intl';
+import { FEATURE_STATE, isFeatureVisible, type FeatureState, type PlanFeature } from '@xeprime/types';
 import { images } from '@/assets';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { APP_NAME } from '@/lib/app-name';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { useFeatureStates } from '@/features/auth/hooks/use-feature';
 import { useAuthenticatedUser } from '@/features/auth/hooks/use-authenticated-user';
 import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
 import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, sidebar, space } from '@/theme/tokens';
 import {
@@ -108,19 +111,20 @@ export function ManageDrawer() {
   const tMore = useTranslations('MobileShell.more');
   const tShell = useTranslations('ManageCommon.shell');
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const navigateOnce = useNavigateOnce();
   const pathname = usePathname();
   const toast = useAppToast();
   const user = useAuthenticatedUser();
   const { tenant } = useTenantScope();
   const permissions = usePermissions();
+  const featureStates = useFeatureStates();
   const domainLabel = useDomainLabel();
   const badges = useManageNavBadges();
   const drawer = useManageDrawer();
 
   const sections = useMemo(
-    () => resolveSections(Boolean(user.platformRole), permissions.has, badges),
-    [user.platformRole, permissions, badges],
+    () => resolveSections(Boolean(user.platformRole), permissions.has, featureStates, badges),
+    [user.platformRole, permissions, featureStates, badges],
   );
 
   const [collapsedSections, setCollapsedSections] = useState<Readonly<Record<string, boolean>>>({});
@@ -142,15 +146,15 @@ export function ManageDrawer() {
       }
       // Đóng TRƯỚC khi đi: tấm menu còn mở trên màn mới đọc như điều hướng chưa chạy.
       drawer.close();
-      router.push(leaf.href);
+      navigateOnce(leaf.href);
     },
-    [drawer, router, toast, tStates],
+    [drawer, toast, tStates, navigateOnce],
   );
 
   const openMore = useCallback(() => {
     drawer.close();
-    router.push(ROUTES.manage.more());
-  }, [drawer, router]);
+    navigateOnce(ROUTES.manage.more());
+  }, [drawer, navigateOnce]);
 
   const labelOf = useCallback((node: { labelKey: string }) => t(node.labelKey as never), [t]);
 
@@ -326,7 +330,9 @@ function initialOf(name: string): string {
 function isLeafActive(leaf: ManageNavLeaf, pathname: string): boolean {
   if (!leaf.href) return false;
   const target = String(leaf.href);
-  return target === '/manage' ? pathname === target : pathname.startsWith(target);
+  return target === String(ROUTES.manage.home())
+    ? pathname === target
+    : pathname.startsWith(target);
 }
 
 /** Nhánh có chứa trang đang mở không — dùng để BUNG SẴN nhánh đó, y như `submenu-selected`. */
@@ -337,14 +343,25 @@ function branchHasActive(node: ResolvedBranch, pathname: string): boolean {
 function resolveSections(
   isPlatform: boolean,
   has: (permission: ManageNavLeaf['permission']) => boolean,
+  featureStates: Partial<Record<PlanFeature, FeatureState>>,
   badges: ManageNavBadgeCounts,
 ): readonly ResolvedSection[] {
   const badgeOf = (key: ManageNavBadge | undefined) => (key ? badges[key] : 0);
 
+  /*
+   * Hai trục độc lập kiểm NỐI TIẾP, đúng `canSeeLeaf` của web (ADR 0027 điều 2): `permission`
+   * trả lời "anh là ai", `feature` trả lời "gian hàng này có gì". Cờ vắng trong cache ⇒ coi
+   * như `enabled` — xem docblock của `useFeature` về việc vì sao mặc định phải là "cho qua".
+   */
+  const canSeeLeaf = (leaf: ManageNavLeaf): boolean =>
+    has(leaf.permission) &&
+    (leaf.feature === undefined ||
+      isFeatureVisible(featureStates[leaf.feature] ?? FEATURE_STATE.ENABLED));
+
   const resolveNode = (node: ManageNavNode): ResolvedNode | null => {
     if (!isManageNavBranch(node)) {
-      // Quyền chỉ ẨN mục — chặn thật là guard backend (CLAUDE.md mục 6).
-      return has(node.permission) ? { kind: 'leaf', leaf: node, badge: badgeOf(node.badge) } : null;
+      // Quyền/năng lực chỉ ẨN mục — chặn thật là guard backend (CLAUDE.md mục 6).
+      return canSeeLeaf(node) ? { kind: 'leaf', leaf: node, badge: badgeOf(node.badge) } : null;
     }
 
     /*
@@ -353,7 +370,7 @@ function resolveSections(
      * này, và nhờ vậy thu hồi một quyền con không bao giờ làm biến mất cả nhánh còn lại.
      */
     const children = node.children
-      .filter((child) => has(child.permission))
+      .filter(canSeeLeaf)
       .map<ResolvedLeaf>((child) => ({ kind: 'leaf', leaf: child, badge: badgeOf(child.badge) }));
 
     return children.length > 0 ? { kind: 'branch', branch: node, children } : null;

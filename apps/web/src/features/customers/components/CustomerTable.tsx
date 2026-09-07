@@ -12,6 +12,7 @@ import { cx } from '@/lib/cx';
 import type { TenantCustomer } from '../types';
 import styles from './CustomerTable.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 
 const MIN_TABLE_WIDTH = 1040;
 
@@ -72,7 +73,7 @@ export function CustomerTable({
       render: (_, row) => (
         <EntityIdentity
           name={row.fullName}
-          subtitle={[row.phone, row.email].filter(Boolean).join(' · ')}
+          subtitle={[row.phone, row.email].filter(Boolean).join(LIST_SEPARATOR)}
           kind="person"
           initialSource={row.fullName}
         />

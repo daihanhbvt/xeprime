@@ -1,6 +1,5 @@
 'use client';
 
-import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App, Button, Card, Collapse, Form, Skeleton, Tabs } from 'antd';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -17,6 +16,7 @@ import {
   type VehiclePublicStatus,
 } from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
@@ -50,6 +50,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import styles from './VehicleEditWorkspace.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useValidationResolver } from '@/i18n/use-validation-resolver';
 
 type EditableTab = 'information' | 'media';
 type WorkspaceTab = EditableTab | 'pricing' | 'source' | 'documents' | 'maintenance';
@@ -137,6 +138,10 @@ export function VehicleEditWorkspace({
    */
   const [sourceDirty, setSourceDirty] = useState(false);
   const [sourceResetKey, setSourceResetKey] = useState(0);
+  const resolver = useValidationResolver<VehicleFormValues>(
+    vehicleFormSchema,
+    'Vehicles.form.validation',
+  );
   const {
     control,
     getFieldState,
@@ -148,7 +153,7 @@ export function VehicleEditWorkspace({
     trigger,
     formState: { isDirty, errors },
   } = useForm<VehicleFormValues>({
-    resolver: yupResolver(vehicleFormSchema),
+    resolver,
     defaultValues: initialValues,
   });
   const vehicleType = useWatch({ control, name: 'vehicleType' });
@@ -302,7 +307,7 @@ export function VehicleEditWorkspace({
       <header className={styles.vehicleHeader}>
         <div>
           <h1>{vehicle.name}</h1>
-          <p>{[vehicle.code, vehicle.plateNumber].filter(Boolean).join(' · ')}</p>
+          <p>{[vehicle.code, vehicle.plateNumber].filter(Boolean).join(LIST_SEPARATOR)}</p>
         </div>
         {/* Cùng `StatusTag` với danh sách và Hồ sơ 360 — nhãn theo ngôn ngữ, màu theo META. */}
         <div className={styles.statuses}>

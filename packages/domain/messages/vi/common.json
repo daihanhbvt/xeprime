@@ -45,7 +45,8 @@
     "done": "Xong",
     "agree": "Đồng ý",
     "choose": "Chọn…",
-    "now": "Bây giờ"
+    "now": "Bây giờ",
+    "clearValue": "Xoá giá trị"
   },
   "states": {
     "loading": "Đang tải…",
@@ -62,7 +63,8 @@
     "loadMore": "Tải thêm",
     "endOfList": "Đã hết danh sách",
     "loadError": "Không tải được dữ liệu",
-    "featureComingSoon": "Chức năng đang được phát triển."
+    "featureComingSoon": "Chức năng đang được phát triển.",
+    "imageUnavailable": "Không mở được ảnh."
   },
   "labels": {
     "yes": "Có",
@@ -85,7 +87,8 @@
     "createdAt": "Ngày tạo",
     "updatedAt": "Cập nhật",
     "comingSoon": "Sắp có",
-    "emptyValue": "—"
+    "emptyValue": "—",
+    "selectDate": "Chọn ngày"
   },
   "units": {
     "day": "{count, plural, other {# ngày}}",
@@ -210,6 +213,17 @@
       "minute": "Phút",
       "date": "Ngày",
       "time": "Giờ"
+    },
+    "fileList": {
+      "upload": "Tải lên tài liệu",
+      "uploading": "Đang tải lên…",
+      "empty": "Chưa có tài liệu nào",
+      "hint": "PDF, JPG, PNG — tối đa 10MB mỗi tệp",
+      "hintImageOnly": "Ảnh JPG, PNG — tối đa 10MB mỗi tệp",
+      "maxReached": "Tối đa {count, plural, other {# tệp}}",
+      "downloadFile": "Tải xuống {name}",
+      "removeFile": "Gỡ tệp {name}",
+      "legacyNote": "Tài liệu cũ cần được tải lên lại để bảo đảm quyền riêng tư"
     }
   },
   "filters": {
@@ -220,5 +234,9 @@
     "subtitle": "Chọn tiêu chí để thu hẹp danh sách",
     "chip": "{label}: {value}",
     "none": "Chưa áp dụng bộ lọc nào"
+  },
+  "permissions": {
+    "cameraDenied": "Chưa có quyền dùng máy ảnh. Vào Cài đặt → XePrime để bật quyền Máy ảnh.",
+    "libraryDenied": "Chưa có quyền đọc thư viện ảnh. Vào Cài đặt → XePrime để bật quyền Ảnh."
   }
 }

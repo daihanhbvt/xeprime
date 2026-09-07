@@ -37,6 +37,7 @@ import {
   type RouteType,
   type ServiceType,
 } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { LongTermPackageStep } from './LongTermPackageStep';
 import {
   RentalDateTimeRangeField,
@@ -1335,7 +1336,7 @@ export function RequestBookingFlow({
                 <div className={styles.reviewRow}>
                   <dt>{t('pickup.self')}</dt>
                   <dd>
-                    {[pickupPoint.branchName, pickupPoint.address].filter(Boolean).join(' · ')}
+                    {[pickupPoint.branchName, pickupPoint.address].filter(Boolean).join(LIST_SEPARATOR)}
                   </dd>
                 </div>
               ) : null}

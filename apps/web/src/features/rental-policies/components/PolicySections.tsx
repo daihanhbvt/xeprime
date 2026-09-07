@@ -23,6 +23,7 @@ import {
   LONG_TERM_PACKAGE_MONTHS,
   longTermPackageLabel,
 } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { CheckboxGroupField } from '@/components/form/CheckboxGroupField';
 import { NumberField } from '@/components/form/NumberField';
 import { RadioGroupField } from '@/components/form/RadioGroupField';
@@ -608,7 +609,7 @@ function DiscountSection({
                   <span>
                     {legacyTiers
                       .map((tier) => `từ ${tier.minDays} ngày giảm ${tier.percent}%`)
-                      .join(' · ')}
+                      .join(LIST_SEPARATOR)}
                   </span>
                   <br />
                   <span>

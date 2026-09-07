@@ -10,7 +10,6 @@ import {
   ShopOutlined,
 } from '@ant-design/icons';
 import { Alert, Button, Form } from 'antd';
-import { yupResolver } from '@hookform/resolvers/yup';
 import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
@@ -23,6 +22,7 @@ import { getErrorMessage } from '@/services/api-client';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useRegisterShop } from '../hooks/use-shop';
 import styles from './ShopRegistration.module.css';
 
@@ -45,8 +45,12 @@ export function ShopRegistration() {
     [domainLabel],
   );
 
+  const resolver = useValidationResolver<RegisterShopValues>(
+    registerShopSchema,
+    'ShopOnboarding.validation',
+  );
   const { control, handleSubmit } = useForm<RegisterShopValues>({
-    resolver: yupResolver(registerShopSchema),
+    resolver,
     defaultValues: {
       name: '',
       tenantType: TENANT_TYPE.INDIVIDUAL,

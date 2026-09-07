@@ -34,6 +34,7 @@
   "toast": {
     "saved": "Đã cập nhật bảo dưỡng",
     "completed": "Đã lưu bảo dưỡng thành công!",
+    "canceled": "Đã hủy lịch bảo dưỡng",
     "updated": "Đã cập nhật phiếu bảo dưỡng",
     "created": "Đã tạo lịch bảo dưỡng",
     "scheduleConflict": "Khoảng thời gian này đã có lịch khác — hãy chọn thời điểm khác.",
@@ -162,5 +163,25 @@
     "addRecord": "Thêm bảo dưỡng",
     "upcomingEmpty": "Chưa có lịch bảo dưỡng nào sắp tới.",
     "attachments": "{count, plural, other {# chứng từ}}"
+  },
+  "validation": {
+    "odometerTypeError": "Số KM phải là số",
+    "odometerInteger": "Số KM phải là số nguyên",
+    "odometerMin": "Số KM không được âm",
+    "odometerMax": "Số KM vượt quá giới hạn cho phép",
+    "odometerRequired": "Nhập số KM mới",
+    "oilIntervalTypeError": "Chu kỳ phải là số",
+    "oilIntervalInteger": "Chu kỳ phải là số nguyên",
+    "oilIntervalMin": "Chu kỳ phải lớn hơn 0",
+    "oilIntervalMax": "Chu kỳ vượt quá giới hạn cho phép",
+    "reasonCodeRequired": "Chọn lý do điều chỉnh",
+    "reasonRequired": "Nhập lý do chi tiết",
+    "reasonMin": "Lý do quá ngắn",
+    "reasonMax": "Lý do tối đa 1000 ký tự",
+    "recordTypeRequired": "Chọn loại bảo dưỡng",
+    "recordCustomTypeNameRequired": "Nhập tên hạng mục",
+    "costTypeError": "Vui lòng nhập số",
+    "costInteger": "Số tiền phải là số nguyên",
+    "costMin": "Số tiền không được âm"
   }
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Image, Linking, Pressable, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
+import { Linking, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -36,6 +37,7 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { AssignDriverSheet } from './components/AssignDriverSheet';
@@ -247,7 +249,9 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
                     <Image
                       source={{ uri: booking.vehicleImageUrl }}
                       style={styles.vehicleImage}
-                      resizeMode="cover"
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                      transition={150}
                       accessibilityLabel={booking.vehicleName}
                     />
                   ) : null}
@@ -547,7 +551,7 @@ function BookingActionBar({
   const createContract = useCreateContract();
   const errorMessage = useErrorMessage();
   const toast = useAppToast();
-  const router = useRouter();
+  const navigateOnce = useNavigateOnce();
   const permissions = usePermissions();
 
   // Chỉ hỏi ngữ cảnh bàn giao khi đơn CÒN SỐNG — đơn đã khép thì không chiều nào mở được nữa.
@@ -633,7 +637,7 @@ function BookingActionBar({
       disabled: createContract.isPending,
       onPress: () =>
         createContract.mutate(booking.id, {
-          onSuccess: (contract) => router.push(ROUTES.manage.contract(contract.id)),
+          onSuccess: (contract) => navigateOnce(ROUTES.manage.contract(contract.id)),
           onError: (error) => toast.showError(errorMessage(error)),
         }),
     });
@@ -648,7 +652,7 @@ function BookingActionBar({
     actions.push({
       label: t('moneyHistory'),
       icon: 'receipt-outline',
-      onPress: () => router.push(ROUTES.manage.payments(booking.id)),
+      onPress: () => navigateOnce(ROUTES.manage.payments(booking.id)),
     });
   }
 
@@ -690,7 +694,7 @@ function BookingActionBar({
     actions.push({
       label: t('handoverPhotos'),
       icon: 'images-outline',
-      onPress: () => router.push(ROUTES.manage.handoverPhotos(booking.id)),
+      onPress: () => navigateOnce(ROUTES.manage.handoverPhotos(booking.id)),
     });
   }
 
@@ -710,7 +714,7 @@ function BookingActionBar({
           <Button
             label={cta.label}
             size="lg"
-            onPress={() => router.push(ROUTES.manage.handover(booking.id, cta.type))}
+            onPress={() => navigateOnce(ROUTES.manage.handover(booking.id, cta.type))}
           />
         ) : null}
 

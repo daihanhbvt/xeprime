@@ -1,4 +1,5 @@
 import type { Href } from 'expo-router';
+import { VEHICLE_EDIT_TAB, type VehicleEditTab } from './vehicle-edit-tab';
 
 /**
  * BẢN ĐỒ ROUTE CỦA APP — nguồn duy nhất cho mọi lối đi giữa các màn.
@@ -63,7 +64,14 @@ export const ROUTES = {
     home: (): Href => '/manage',
     more: (): Href => '/manage/more',
     requests: (): Href => '/manage/requests',
-    bookings: (): Href => '/manage/bookings',
+    /**
+     * Danh sách đơn thuê. `vehicleId` lọc theo MỘT xe — cùng tham số web đặt trên URL
+     * (`/manage/bookings?vehicleId=…`), dùng cho lối đi từ hồ sơ xe.
+     */
+    bookings: (filters?: { vehicleId?: string }): Href =>
+      filters?.vehicleId
+        ? { pathname: '/manage/bookings', params: { vehicleId: filters.vehicleId } }
+        : '/manage/bookings',
     bookingCreate: (): Href => '/manage/bookings/new',
     bookingDetail: (bookingId: string): Href => ({
       pathname: '/manage/bookings/[id]',
@@ -92,7 +100,48 @@ export const ROUTES = {
       pathname: '/manage/contracts/[id]',
       params: { id: contractId },
     }),
-    missingOdometer: (): Href => '/manage/handovers/missing-odometer',
+
+    /** Đội xe của gian hàng — danh sách, thêm xe, hồ sơ 360, hub sửa xe, giá & chính sách. */
+    vehicles: (): Href => '/manage/vehicles',
+    vehicleNew: (): Href => '/manage/vehicles/new',
+    vehicleDetail: (vehicleId: string): Href => ({
+      pathname: '/manage/vehicles/[id]',
+      params: { id: vehicleId },
+    }),
+    /** Hub sửa xe — sáu mục, mỗi mục một màn riêng (xem `vehicleEditTab`). */
+    vehicleEdit: (vehicleId: string): Href => ({
+      pathname: '/manage/vehicles/[id]/edit',
+      params: { id: vehicleId },
+    }),
+    /**
+     * Một mục của hub sửa xe. `tab` là `VEHICLE_EDIT_TAB.*` — cùng bộ giá trị web đặt trong
+     * `?tab=`, nên một đường dẫn sâu do web hay thông báo đẩy sinh ra vẫn tới đúng chỗ.
+     *
+     * "Giá & chính sách" KHÔNG có màn con: nó là route riêng `vehiclePricing`, y như web
+     * (`/manage/vehicles/[id]/pricing`).
+     */
+    vehicleEditTab: (vehicleId: string, tab: VehicleEditTab): Href => {
+      const params = { id: vehicleId };
+      switch (tab) {
+        case VEHICLE_EDIT_TAB.PRICING:
+          return { pathname: '/manage/vehicles/[id]/pricing', params };
+        case VEHICLE_EDIT_TAB.MEDIA:
+          return { pathname: '/manage/vehicles/[id]/edit/media', params };
+        case VEHICLE_EDIT_TAB.SOURCE:
+          return { pathname: '/manage/vehicles/[id]/edit/source', params };
+        case VEHICLE_EDIT_TAB.DOCUMENTS:
+          return { pathname: '/manage/vehicles/[id]/edit/documents', params };
+        case VEHICLE_EDIT_TAB.MAINTENANCE:
+          return { pathname: '/manage/vehicles/[id]/edit/maintenance', params };
+        default:
+          return { pathname: '/manage/vehicles/[id]/edit/information', params };
+      }
+    },
+    maintenance: (): Href => '/manage/maintenance',
+    vehiclePricing: (vehicleId: string): Href => ({
+      pathname: '/manage/vehicles/[id]/pricing',
+      params: { id: vehicleId },
+    }),
   },
 
   /** Gốc app — chỉ dùng cho fallback khi không có màn nào để lui về. */

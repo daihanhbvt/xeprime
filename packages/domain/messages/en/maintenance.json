@@ -34,6 +34,7 @@
   "toast": {
     "saved": "Maintenance updated",
     "completed": "Maintenance saved",
+    "canceled": "Maintenance schedule canceled",
     "updated": "Maintenance record updated",
     "created": "Maintenance scheduled",
     "scheduleConflict": "That time window already has another booking — pick a different slot.",
@@ -162,5 +163,25 @@
     "addRecord": "Add maintenance",
     "upcomingEmpty": "No upcoming maintenance scheduled.",
     "attachments": "{count, plural, one {# attachment} other {# attachments}}"
+  },
+  "validation": {
+    "odometerTypeError": "Odometer reading must be a number",
+    "odometerInteger": "Odometer reading must be a whole number",
+    "odometerMin": "Odometer reading cannot be negative",
+    "odometerMax": "Odometer reading exceeds the allowed limit",
+    "odometerRequired": "Enter the new odometer reading",
+    "oilIntervalTypeError": "Interval must be a number",
+    "oilIntervalInteger": "Interval must be a whole number",
+    "oilIntervalMin": "Interval must be greater than 0",
+    "oilIntervalMax": "Interval exceeds the allowed limit",
+    "reasonCodeRequired": "Select a reason for the correction",
+    "reasonRequired": "Enter a detailed reason",
+    "reasonMin": "Reason is too short",
+    "reasonMax": "Reason is limited to 1000 characters",
+    "recordTypeRequired": "Select a maintenance type",
+    "recordCustomTypeNameRequired": "Enter the item name",
+    "costTypeError": "Please enter a number",
+    "costInteger": "The amount must be a whole number",
+    "costMin": "The amount cannot be negative"
   }
 }
