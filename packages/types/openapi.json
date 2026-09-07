@@ -41414,7 +41414,7 @@
         "properties": {
           "identifier": {
             "type": "string",
-            "description": "Email hoặc số điện thoại",
+            "description": "Email, hoặc SĐT Việt Nam dạng 0xxxxxxxxx / +84xxxxxxxxx",
             "example": "ban@congty.vn"
           },
           "password": {
@@ -41494,7 +41494,7 @@
         "properties": {
           "identifier": {
             "type": "string",
-            "description": "Email hoặc số điện thoại",
+            "description": "Email, hoặc SĐT Việt Nam dạng 0xxxxxxxxx / +84xxxxxxxxx",
             "example": "ban@congty.vn"
           },
           "password": {

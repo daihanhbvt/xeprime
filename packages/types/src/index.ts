@@ -16,6 +16,7 @@ export * from './locale';
 export * from './catalog';
 export * from './marketplace';
 export * from './phone';
+export * from './auth-identifier';
 export * from './long-term';
 export * from './plan-billing';
 export * from './holds';

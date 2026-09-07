@@ -5798,7 +5798,7 @@ export interface components {
         };
         LoginDto: {
             /**
-             * @description Email hoặc số điện thoại
+             * @description Email, hoặc SĐT Việt Nam dạng 0xxxxxxxxx / +84xxxxxxxxx
              * @example ban@congty.vn
              */
             identifier: string;
@@ -5828,7 +5828,7 @@ export interface components {
         };
         MobileLoginDto: {
             /**
-             * @description Email hoặc số điện thoại
+             * @description Email, hoặc SĐT Việt Nam dạng 0xxxxxxxxx / +84xxxxxxxxx
              * @example ban@congty.vn
              */
             identifier: string;

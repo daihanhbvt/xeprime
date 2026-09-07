@@ -1,4 +1,9 @@
 import * as yup from 'yup';
+import {
+  detectLoginIdentifierKind,
+  isValidLoginIdentifier,
+  LOGIN_IDENTIFIER_KIND,
+} from '@xeprime/types';
 import { buildRequiredPhoneSchema, type PhoneSchemaLabels } from './phone';
 
 /**
@@ -28,10 +33,19 @@ export interface AuthSchemaLabels extends PhoneSchemaLabels {
   nameRequired: string;
   confirmRequired: string;
   confirmMismatch: string;
+  /**
+   * Ô "email hoặc SĐT" mà không đoán được người dùng định nhập gì (vd `nguyenvana`).
+   *
+   * Tuỳ chọn — thiếu thì rơi về câu tiếng Việt mặc định. Hai trường hợp còn lại KHÔNG cần khoá
+   * mới: gõ có `@` thì dùng `emailInvalid`, gõ ra dáng số thì dùng `invalid` (câu lỗi SĐT) —
+   * đúng câu người dùng sẽ thấy ở ô email và ô SĐT riêng lẻ, nên không có bản dịch thứ hai cho
+   * cùng một ý.
+   */
+  identifierInvalid?: string;
 }
 
-/** Câu lỗi mặc định — TIẾNG VIỆT, cho `apps/web` (lớp validate của web chưa i18n hoá). */
-const VI: AuthSchemaLabels = {
+/** Câu lỗi mặc định — TIẾNG VIỆT, cho client nào chưa cấp bản dịch của mình. */
+const VI: Required<AuthSchemaLabels> = {
   invalid: 'Số điện thoại không hợp lệ',
   required: 'Vui lòng nhập số điện thoại',
   passwordRequired: 'Vui lòng nhập mật khẩu',
@@ -41,6 +55,7 @@ const VI: AuthSchemaLabels = {
   emailInvalid: 'Email không hợp lệ',
   emailRequired: 'Vui lòng nhập email',
   identifierRequired: 'Vui lòng nhập email hoặc số điện thoại',
+  identifierInvalid: 'Nhập email (vd ban@congty.vn) hoặc số điện thoại (vd 0901234567)',
   nameRequired: 'Vui lòng nhập họ tên',
   confirmRequired: 'Vui lòng nhập lại mật khẩu',
   confirmMismatch: 'Mật khẩu nhập lại không khớp',
@@ -65,9 +80,40 @@ const buildConfirmSchema = (labels: AuthSchemaLabels) =>
     .required(labels.confirmRequired)
     .oneOf([yup.ref('password')], labels.confirmMismatch);
 
+/**
+ * Ô "Email hoặc số điện thoại" của màn đăng nhập.
+ *
+ * Luật nằm ở `@xeprime/types` (`isValidLoginIdentifier`) vì backend phân nhánh email/SĐT theo
+ * đúng chuỗi này; ở đây chỉ chọn CÂU LỖI theo thứ người dùng đang gõ dở. Một `.test()` chứ không
+ * phải hai nhánh `oneOf`: yup gộp lỗi của `oneOf` thành một câu chung, mà "chung chung" đúng là
+ * thứ ô này phải tránh.
+ */
+export const buildLoginIdentifierSchema = (labels: AuthSchemaLabels) =>
+  yup
+    .string()
+    .trim()
+    .required(labels.identifierRequired)
+    .test({
+      name: 'login-identifier',
+      test(value, ctx) {
+        // Bỏ trống đã có `required()` lo — chạy tiếp ở đây chỉ tạo hai câu lỗi cho một ô trống.
+        if (!value) return true;
+        if (isValidLoginIdentifier(value)) return true;
+
+        const kind = detectLoginIdentifierKind(value);
+        const message =
+          kind === LOGIN_IDENTIFIER_KIND.EMAIL
+            ? labels.emailInvalid
+            : kind === LOGIN_IDENTIFIER_KIND.PHONE
+              ? labels.invalid
+              : (labels.identifierInvalid ?? VI.identifierInvalid);
+        return ctx.createError({ message });
+      },
+    });
+
 export const buildLoginSchema = (labels: AuthSchemaLabels) =>
   yup.object({
-    identifier: yup.string().trim().required(labels.identifierRequired),
+    identifier: buildLoginIdentifierSchema(labels),
     password: yup.string().required(labels.passwordRequired),
   });
 
@@ -93,6 +139,7 @@ export const buildResetPasswordSchema = (labels: AuthSchemaLabels) =>
 
 export const passwordSchema = buildPasswordSchema(VI);
 export const requiredEmailSchema = buildRequiredEmailSchema(VI);
+export const loginIdentifierSchema = buildLoginIdentifierSchema(VI);
 
 export const loginSchema = buildLoginSchema(VI);
 export type LoginValues = yup.InferType<typeof loginSchema>;

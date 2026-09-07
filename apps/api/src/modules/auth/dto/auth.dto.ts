@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { FEATURE_STATE_VALUES, PLAN_FEATURE_VALUES, VN_PHONE_PATTERN } from '@xeprime/types';
+import { IsLoginIdentifier } from '../../../common/login-identifier';
 
 const PASSWORD_MIN = 8;
 
@@ -31,12 +32,13 @@ export class RegisterDto extends PasswordField {
 
 export class LoginDto {
   @ApiProperty({
-    description: 'Email hoặc số điện thoại',
+    description: 'Email, hoặc SĐT Việt Nam dạng 0xxxxxxxxx / +84xxxxxxxxx',
     example: 'ban@congty.vn',
   })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
   @MinLength(1, { message: 'Vui lòng nhập email hoặc số điện thoại' })
+  @IsLoginIdentifier()
   identifier!: string;
 
   @ApiProperty()
