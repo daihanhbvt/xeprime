@@ -347,3 +347,42 @@ describe('Thư mời — danh sách của gian hàng', () => {
     expect(all.data).toHaveLength(1);
   });
 });
+
+/**
+ * SMTP hỏng — chuyện đã xảy ra thật trên staging ngày 04/09/2026 ngay khi bật email thật.
+ *
+ * Lời mời đã nằm trong database trước khi chạm tới SMTP, nên để lỗi gửi thư ném lên là biến một
+ * việc ĐÃ XONG MỘT NỬA thành HTTP 500: người dùng thấy "Máy chủ gặp sự cố", bấm lại, và mỗi lần
+ * bấm lại thu hồi lời mời cũ rồi tạo lời mời mới.
+ *
+ * Nhưng cũng không được im lặng nuốt lỗi — `emailSent: false` là cách nói thật với người gửi.
+ */
+describe('Thư mời — SMTP hỏng', () => {
+  it('vẫn tạo được lời mời, và nói thẳng rằng thư CHƯA gửi được', async () => {
+    if (!dbAvailable) return;
+
+    const failing = {
+      sendTenantInvite: () => Promise.reject(new Error('ECONNREFUSED smtp.resend.com:587')),
+    } as unknown as EmailService;
+    const service = new InvitesService(asService, new AuditService(asService), failing, config);
+
+    const created = await service.create(tenantId, ownerId, {
+      email: `smtp-down-${Date.now()}@congty.vn`,
+      roleKey: TENANT_ROLE.SHOP_STAFF,
+    });
+
+    expect(created.emailSent).toBe(false);
+    expect(created.status).toBe(INVITE_STATUS.PENDING);
+
+    // Lời mời PHẢI còn trong database — nếu không thì "thử lại" là cách duy nhất, mà thử lại
+    // cũng hỏng y hệt.
+    const row = await prisma.tenantInvite.findUnique({ where: { id: created.id } });
+    expect(row?.status).toBe(INVITE_STATUS.PENDING);
+  });
+
+  it('gửi được thì emailSent là true', async () => {
+    if (!dbAvailable) return;
+    const created = await invite();
+    expect(created.emailSent).toBe(true);
+  });
+});

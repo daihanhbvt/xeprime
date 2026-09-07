@@ -5798,7 +5798,7 @@ export interface components {
         };
         LoginDto: {
             /**
-             * @description Email hoặc số điện thoại
+             * @description Email, hoặc SĐT Việt Nam dạng 0xxxxxxxxx / +84xxxxxxxxx
              * @example ban@congty.vn
              */
             identifier: string;
@@ -5828,7 +5828,7 @@ export interface components {
         };
         MobileLoginDto: {
             /**
-             * @description Email hoặc số điện thoại
+             * @description Email, hoặc SĐT Việt Nam dạng 0xxxxxxxxx / +84xxxxxxxxx
              * @example ban@congty.vn
              */
             identifier: string;
@@ -9991,6 +9991,22 @@ export interface components {
              * @enum {string}
              */
             roleKey: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer";
+        };
+        CreateInviteResultDto: {
+            id: string;
+            email: string;
+            /** @enum {string} */
+            roleKey: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer";
+            /** @enum {string} */
+            status: "pending" | "accepted" | "declined" | "expired" | "revoked";
+            /** @description ISO-8601 UTC */
+            expiresAt: string;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+            /** @description Tên người gửi lời mời */
+            createdByName?: string | null;
+            /** @description false khi lời mời ĐÃ được tạo nhưng thư không gửi được (SMTP hỏng). Giao diện phải nói rõ để người gửi bấm Gửi lại — không được coi như đã gửi. */
+            emailSent: boolean;
         };
         InvitePreviewDto: {
             /**
@@ -45366,7 +45382,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["InviteDto"];
+                        data: components["schemas"]["CreateInviteResultDto"];
                     };
                 };
             };

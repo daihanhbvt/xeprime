@@ -10,11 +10,11 @@ import {
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, Button, Divider, Tabs } from 'antd';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
-  loginSchema,
-  registerSchema,
+  buildLoginSchema,
+  buildRegisterSchema,
   type LoginValues,
   type RegisterValues,
 } from '@xeprime/validators';
@@ -30,6 +30,7 @@ import {
   type AuthProvider,
   type CurrentUser,
 } from '@/services/auth.service';
+import { useAuthSchemaLabels } from '../hooks/use-auth-schema-labels';
 import { AUTH_MODE, type AuthMode } from '../post-auth-destination';
 import { startSocialLogin } from '../lib/social-auth-url';
 import { SetPasswordPrompt } from './SetPasswordPrompt';
@@ -287,8 +288,11 @@ function PasswordForm({
   onSubmit: (values: LoginValues) => void;
 }) {
   const t = useTranslations('Auth');
+  const labels = useAuthSchemaLabels();
+  // Schema phải dựng lại khi đổi ngôn ngữ — câu lỗi nằm TRONG schema, không phải trong component.
+  const schema = useMemo(() => buildLoginSchema(labels), [labels]);
   const { control, handleSubmit } = useForm<LoginValues>({
-    resolver: yupResolver(loginSchema),
+    resolver: yupResolver(schema),
     defaultValues: { identifier: '', password: '' },
   });
 
@@ -344,8 +348,10 @@ function RegisterForm({
   onSubmit: (values: { displayName: string; phone: string; password: string }) => void;
 }) {
   const t = useTranslations('Auth');
+  const labels = useAuthSchemaLabels();
+  const schema = useMemo(() => buildRegisterSchema(labels), [labels]);
   const { control, handleSubmit } = useForm<RegisterValues>({
-    resolver: yupResolver(registerSchema),
+    resolver: yupResolver(schema),
     defaultValues: { displayName: '', phone: '', password: '', confirmPassword: '' },
   });
 

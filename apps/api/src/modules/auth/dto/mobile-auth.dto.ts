@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
+import { IsLoginIdentifier } from '../../../common/login-identifier';
 import { MeDto, RegisterDto } from './auth.dto';
 
 /**
@@ -44,10 +45,14 @@ export class MobileDeviceDto {
 
 /** `POST /auth/mobile/login` — email/SĐT + mật khẩu. */
 export class MobileLoginDto {
-  @ApiProperty({ description: 'Email hoặc số điện thoại', example: 'ban@congty.vn' })
+  @ApiProperty({
+    description: 'Email, hoặc SĐT Việt Nam dạng 0xxxxxxxxx / +84xxxxxxxxx',
+    example: 'ban@congty.vn',
+  })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
   @MinLength(1, { message: 'Vui lòng nhập email hoặc số điện thoại' })
+  @IsLoginIdentifier()
   identifier!: string;
 
   @ApiProperty()
