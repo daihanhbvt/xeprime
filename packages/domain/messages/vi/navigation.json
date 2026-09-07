@@ -53,8 +53,10 @@
     "subscription": "Gói của tôi",
     "members": "Người dùng & phân quyền",
     "drivers": "Tài xế",
+    "sellerProfile": "Hồ sơ người bán",
     "chat": "Trò chuyện",
     "support": "Trung tâm hỗ trợ",
+    "supportCases": "Yêu cầu hỗ trợ",
     "openMenu": "Mở menu",
     "fullMenu": "Menu đầy đủ"
   },
@@ -82,6 +84,10 @@
     "catalog": "Danh mục lọc",
     "locations": "Tỉnh/thành",
     "audit": "Nhật ký hệ thống",
-    "bankTransactions": "Đối soát tiền vào"
+    "bankTransactions": "Đối soát tiền vào",
+    "sellers": "Xác minh người bán",
+    "feePolicies": "Chính sách phí",
+    "money": "Money operations",
+    "support": "Hỗ trợ / tranh chấp"
   }
 }

@@ -1,0 +1,48 @@
+{
+  "page": {
+    "title": "Seller profile",
+    "subtitle": "Your shop's identity and payout account — required before receiving real customer payments.",
+    "loadError": "Could not load the profile.",
+    "noPermissionTitle": "Access denied",
+    "noPermission": "You need the permission below to view the shop's seller profile.",
+    "backHome": "Back to home",
+    "changesRequested": "The platform requested changes",
+    "rejected": "Profile rejected",
+    "pendingReview": "Awaiting platform verification.",
+    "verified": "Profile verified.",
+    "readOnly": "Profile is pending verification — cannot be edited right now."
+  },
+  "form": {
+    "entityType": "Entity type",
+    "legalName": "Legal name / business name",
+    "taxId": "Tax ID",
+    "taxIdHint": "Required for household businesses and companies.",
+    "idNumber": "Representative's ID / passport number",
+    "idIssuedAt": "Issue date",
+    "idIssuedBy": "Issued by",
+    "bankCode": "Bank code",
+    "bankCodeHint": "VietQR standard, e.g. VCB, TCB.",
+    "bankAccountNumber": "Payout account number",
+    "bankAccountName": "Account holder name",
+    "saved": "Profile saved.",
+    "submitted": "Sent for verification.",
+    "reset": "Undo",
+    "missingFields": "{count} required fields left before you can submit for verification",
+    "missingField": {
+      "legalName": "Legal name",
+      "bankCode": "Bank code",
+      "bankAccountNumber": "Account number",
+      "bankAccountName": "Account holder name",
+      "idNumber": "ID / passport number",
+      "taxId": "Tax ID"
+    },
+    "submitForReview": "Submit for verification",
+    "saveBeforeSubmit": "Save your changes before submitting for verification.",
+    "validation": {
+      "taxId": "Invalid tax ID",
+      "idNumber": "Invalid ID number",
+      "bankCode": "Invalid bank code",
+      "bankAccountNumber": "Invalid account number"
+    }
+  }
+}

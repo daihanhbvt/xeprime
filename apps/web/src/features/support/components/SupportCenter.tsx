@@ -9,7 +9,7 @@ import {
   UsergroupAddOutlined,
   WalletOutlined,
 } from '@ant-design/icons';
-import { Card, Collapse } from 'antd';
+import { Button, Card, Collapse } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { createElement, type ComponentType } from 'react';
@@ -98,8 +98,10 @@ const FAQ_KEYS = [
  * hỏi mà cấu trúc menu không tự nói ra được (yêu cầu đặt xe khác đơn thuê chỗ nào, vì sao xe
  * chưa lên marketplace, bảo dưỡng nằm ở đâu).
  *
- * Trang CỐ Ý không có form gửi ticket hay số hotline: hệ thống chưa có kênh hỗ trợ nào ở
- * backend, và một biểu mẫu không gửi đi đâu còn tệ hơn không có gì.
+ * Trang này KHÔNG tự dựng form gửi ticket — kênh hỗ trợ thật đã có từ R3 (`support_cases`,
+ * ADR 0028 release gate 7) và sống ở `/manage/support/cases`, nơi mỗi yêu cầu có mã, dòng thời
+ * gian và người phụ trách. Ở đây chỉ có ĐƯỜNG DẪN sang đó: hai chỗ cùng nhận yêu cầu là hai
+ * hàng đợi, và cái thứ hai sẽ là cái không ai trực.
  */
 export function SupportCenter() {
   const t = useTranslations('ManageCommon');
@@ -170,6 +172,14 @@ export function SupportCenter() {
       <Card className={styles.contact} size="small">
         <h2 className={styles.contactTitle}>{t('support.contact.title')}</h2>
         <p className={styles.cardText}>{t('support.contact.body')}</p>
+        {has(PERMISSION.SUPPORT_VIEW) ? (
+          <>
+            <p className={styles.cardText}>{t('support.contact.casesBody')}</p>
+            <Link href={ROUTES.MANAGE.SUPPORT_CASES}>
+              <Button type="primary">{t('support.contact.casesCta')}</Button>
+            </Link>
+          </>
+        ) : null}
       </Card>
     </div>
   );

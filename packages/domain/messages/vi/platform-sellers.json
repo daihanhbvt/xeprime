@@ -1,0 +1,43 @@
+{
+  "page": {
+    "title": "Xác minh người bán",
+    "subtitle": "Hàng đợi hồ sơ người bán chờ nền tảng xác minh trước khi nhận tiền khách thật.",
+    "tableLabel": "Hồ sơ người bán",
+    "loadError": "Không tải được danh sách.",
+    "empty": "Không có hồ sơ nào.",
+    "total": "{count} hồ sơ"
+  },
+  "filters": {
+    "search": "Tìm kiếm",
+    "searchPlaceholder": "Tên gian hàng, tên pháp lý, mã số thuế",
+    "status": "Trạng thái"
+  },
+  "columns": {
+    "tenant": "Gian hàng",
+    "entityType": "Loại chủ thể",
+    "legalName": "Tên pháp lý",
+    "taxId": "Mã số thuế",
+    "idNumber": "Số CCCD/hộ chiếu",
+    "bankAccount": "Tài khoản nhận tiền",
+    "status": "Trạng thái",
+    "submittedAt": "Ngày gửi"
+  },
+  "drawer": {
+    "title": "Chi tiết hồ sơ người bán",
+    "loadError": "Không tải được hồ sơ.",
+    "reviewNote": "Ghi chú xét duyệt",
+    "verifiedBy": "Người xác minh",
+    "verify": "Xác minh đạt",
+    "requestChanges": "Yêu cầu bổ sung",
+    "requestChangesTitle": "Yêu cầu bổ sung — người bán sẽ nhận được ghi chú này",
+    "requestChangesSuccess": "Đã yêu cầu bổ sung.",
+    "reject": "Từ chối",
+    "rejectTitle": "Từ chối hồ sơ — người bán sẽ nhận được lý do này",
+    "rejectSuccess": "Đã từ chối hồ sơ.",
+    "verifySuccess": "Đã xác minh hồ sơ.",
+    "notePlaceholder": "Lý do…",
+    "noteLabel": "Lý do",
+    "noteRequired": "Cần nhập lý do.",
+    "handled": "Hồ sơ này đã được xử lý."
+  }
+}

@@ -90,7 +90,9 @@
     },
     "contact": {
       "title": "Still stuck?",
-      "body": "Reach out to your shop owner or administrator for access and further guidance."
+      "body": "Reach out to your shop owner or administrator for access and further guidance.",
+      "casesBody": "For anything XePrime has to handle — trip disputes, incidents, money — open a support request so it gets a tracking code.",
+      "casesCta": "Open a support request"
     },
     "legal": {
       "title": "Legal documents",

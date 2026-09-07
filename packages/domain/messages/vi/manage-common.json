@@ -90,7 +90,9 @@
     },
     "contact": {
       "title": "Chưa tìm thấy câu trả lời?",
-      "body": "Liên hệ chủ gian hàng hoặc quản trị viên của bạn để được cấp quyền và hướng dẫn thêm."
+      "body": "Liên hệ chủ gian hàng hoặc quản trị viên của bạn để được cấp quyền và hướng dẫn thêm.",
+      "casesBody": "Việc cần XePrime xử lý — tranh chấp chuyến, sự cố, tiền nong — thì mở một yêu cầu hỗ trợ để có mã theo dõi.",
+      "casesCta": "Mở yêu cầu hỗ trợ"
     },
     "legal": {
       "title": "Văn bản pháp lý",

@@ -1,0 +1,17 @@
+.page {
+  min-width: 0;
+}
+
+.header {
+  margin-bottom: var(--xp-space-md);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--xp-font-size-h2);
+}
+
+.subtitle {
+  margin: var(--xp-space-xs) 0 0;
+  color: var(--xp-color-text-secondary);
+}

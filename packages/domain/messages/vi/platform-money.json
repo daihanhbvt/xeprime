@@ -1,0 +1,84 @@
+{
+  "page": {
+    "title": "Money operations",
+    "subtitle": "Khoản giữ chỗ, chuyển trả và đối chiếu tiền vào theo ngày.",
+    "loadError": "Không tải được dữ liệu.",
+    "holdsEmpty": "Không có khoản giữ chỗ nào.",
+    "holdsTotal": "{count} khoản giữ chỗ",
+    "refundsEmpty": "Không có khoản hoàn nào.",
+    "refundsTotal": "{count} khoản hoàn"
+  },
+  "tabs": {
+    "holds": "Khoản giữ chỗ",
+    "refunds": "Chuyển trả",
+    "reconciliation": "Đối chiếu ngày"
+  },
+  "filters": {
+    "search": "Tìm kiếm",
+    "holdsSearchPlaceholder": "Mã XPH, tên khách, tên gian hàng",
+    "status": "Trạng thái",
+    "scope": "Phạm vi",
+    "unsettledOnly": "Chờ chốt kết cục",
+    "allHolds": "Tất cả"
+  },
+  "columns": {
+    "code": "Mã",
+    "tenant": "Gian hàng",
+    "customer": "Khách",
+    "amount": "Số tiền",
+    "paidAmount": "Đã nhận {amount}",
+    "status": "Trạng thái",
+    "outcome": "Kết cục",
+    "reason": "Lý do",
+    "createdAt": "Tạo lúc",
+    "disputeOpen": "Đang tranh chấp",
+    "settleAction": "Chốt kết cục",
+    "markPaidAction": "Đã chuyển",
+    "rejectAction": "Từ chối"
+  },
+  "settle": {
+    "title": "Chốt kết cục khoản giữ chỗ {code}",
+    "outcome": "Kết cục",
+    "note": "Lý do",
+    "noteRequired": "Cần nhập lý do (tối thiểu 5 ký tự).",
+    "submit": "Chốt",
+    "success": "Đã chốt kết cục.",
+    "disputeOpen": "Đơn này còn tranh chấp mở — kết luận tranh chấp trước khi chốt tiền.",
+    "auditHint": "Thao tác này ghi vào nhật ký hệ thống và không hoàn tác được."
+  },
+  "refundPaid": {
+    "title": "Ghi nhận đã chuyển trả",
+    "account": "Tài khoản nhận",
+    "noAccount": "Khách chưa khai tài khoản nhận hoàn — chưa chuyển được.",
+    "bankReference": "Mã giao dịch ngân hàng",
+    "referenceRequired": "Nhập mã giao dịch ngân hàng.",
+    "note": "Ghi chú",
+    "submit": "Ghi nhận",
+    "success": "Đã ghi nhận chuyển trả."
+  },
+  "reject": {
+    "title": "Từ chối khoản hoàn — khách sẽ đọc lý do này",
+    "notePlaceholder": "Lý do…",
+    "noteLabel": "Lý do",
+    "noteRequired": "Cần nhập lý do (tối thiểu 5 ký tự).",
+    "submit": "Từ chối",
+    "success": "Đã từ chối khoản hoàn."
+  },
+  "reconciliation": {
+    "date": "Ngày đối chiếu",
+    "retry": "Thử lại",
+    "balanced": "Khớp — không có dòng tiền nào ngoài nhóm.",
+    "varianceWarning": "Lệch {amount}",
+    "varianceHint": "Có dòng tiền vào không thuộc nhóm nào. Kiểm tra hàng đợi đối soát tiền vào.",
+    "amountWithCount": "{amount} · {count} giao dịch",
+    "bankIn": "Tiền vào ngân hàng",
+    "matchedSubscriptions": "Đã khớp hoá đơn gói",
+    "matchedHolds": "Đã khớp khoản giữ chỗ",
+    "unmatched": "Chưa khớp",
+    "ignored": "Bỏ qua",
+    "refundsPaid": "Hoàn đã chuyển trong ngày",
+    "refundsPending": "Hoàn đang chờ",
+    "holdsUnsettled": "Giữ chỗ chưa chốt kết cục",
+    "variance": "Chênh lệch"
+  }
+}
