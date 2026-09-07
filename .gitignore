@@ -53,3 +53,6 @@ XePrime_Project_Tracking.xlsx
 
 .uat-artifacts
 ~$*
+
+# Bản dump DB tạo tay trước khi migrate — chứa DỮ LIỆU THẬT, không bao giờ vào git.
+backups/
