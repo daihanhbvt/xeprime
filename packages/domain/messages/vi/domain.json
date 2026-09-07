@@ -577,5 +577,81 @@
     "tax": "Thuế khấu trừ/nộp thay",
     "trip_insurance": "Bảo hiểm chuyến đi",
     "vehicle_protection": "Bảo vệ xe"
+  },
+  "sellerEntityType": {
+    "individual": "Cá nhân",
+    "household_business": "Hộ kinh doanh",
+    "company": "Doanh nghiệp"
+  },
+  "sellerProfileStatus": {
+    "draft": "Chưa gửi",
+    "submitted": "Chờ xác minh",
+    "verified": "Đã xác minh",
+    "changes_requested": "Cần bổ sung",
+    "rejected": "Bị từ chối"
+  },
+  "feePolicyStatus": {
+    "draft": "Nháp",
+    "active": "Đang hiệu lực",
+    "archived": "Đã lưu trữ"
+  },
+  "feePolicyActivationBlocker": {
+    "service_fee_out_of_range": "% phí dịch vụ ngoài khoảng cho phép",
+    "tax_requires_rate_and_label": "Thuế cần cả tỷ lệ và tên loại thuế",
+    "insurance_requires_partner": "Bảo hiểm cần tên đối tác thật",
+    "trip_insurance_requires_rate": "Bảo hiểm chuyến đi cần tỷ lệ",
+    "vehicle_protection_requires_rate": "Bảo vệ xe cần tỷ lệ",
+    "hold_window_out_of_range": "Cửa sổ chuyển khoản ngoài khoảng cho phép",
+    "free_cancel_out_of_range": "Số giờ huỷ miễn phí ngoài khoảng cho phép"
+  },
+  "bookingHoldStatus": {
+    "pending": "Chờ chuyển giữ chỗ",
+    "underpaid": "Chuyển còn thiếu",
+    "paid": "Đã giữ chỗ",
+    "expired": "Hết hạn chuyển",
+    "cancelled": "Đã huỷ",
+    "released": "Đã chốt"
+  },
+  "bookingHoldOutcome": {
+    "kept": "Đã dùng cho chuyến",
+    "refunded": "Đã hoàn khách",
+    "forfeited": "Bồi thường chủ xe",
+    "released_to_shop": "Đã chuyển gian hàng"
+  },
+  "holdRefundStatus": {
+    "pending": "Chờ chuyển trả",
+    "paid": "Đã chuyển trả",
+    "rejected": "Từ chối hoàn"
+  },
+  "holdRefundReason": {
+    "early_cancel": "Khách huỷ trước mốc miễn phí",
+    "owner_cancel": "Chủ xe huỷ chuyến",
+    "overpaid": "Chuyển thừa",
+    "admin_decision": "Quyết định của XePrime"
+  },
+  "supportCaseStatus": {
+    "open": "Mới",
+    "in_progress": "Đang xử lý",
+    "waiting_party": "Chờ phản hồi",
+    "resolved": "Đã giải quyết",
+    "closed": "Đã đóng"
+  },
+  "supportCaseCategory": {
+    "dispute": "Tranh chấp chuyến đi",
+    "incident": "Sự cố trong chuyến",
+    "payment": "Thanh toán / hoàn tiền",
+    "account": "Tài khoản",
+    "other": "Khác"
+  },
+  "supportCaseParty": {
+    "customer": "Khách thuê",
+    "tenant": "Gian hàng",
+    "platform": "XePrime"
+  },
+  "supportCasePriority": {
+    "low": "Thấp",
+    "normal": "Bình thường",
+    "high": "Cao",
+    "urgent": "Khẩn cấp"
   }
 }

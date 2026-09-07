@@ -1,0 +1,43 @@
+{
+  "page": {
+    "title": "Seller verification",
+    "subtitle": "Seller profiles waiting for platform verification before they can receive real customer payments.",
+    "tableLabel": "Seller profiles",
+    "loadError": "Could not load the list.",
+    "empty": "No profiles.",
+    "total": "{count} profiles"
+  },
+  "filters": {
+    "search": "Search",
+    "searchPlaceholder": "Shop name, legal name, tax ID",
+    "status": "Status"
+  },
+  "columns": {
+    "tenant": "Shop",
+    "entityType": "Entity type",
+    "legalName": "Legal name",
+    "taxId": "Tax ID",
+    "idNumber": "ID / passport number",
+    "bankAccount": "Payout account",
+    "status": "Status",
+    "submittedAt": "Submitted"
+  },
+  "drawer": {
+    "title": "Seller profile detail",
+    "loadError": "Could not load the profile.",
+    "reviewNote": "Review note",
+    "verifiedBy": "Verified by",
+    "verify": "Verify",
+    "requestChanges": "Request changes",
+    "requestChangesTitle": "Request changes — the seller will see this note",
+    "requestChangesSuccess": "Changes requested.",
+    "reject": "Reject",
+    "rejectTitle": "Reject profile — the seller will see this reason",
+    "rejectSuccess": "Profile rejected.",
+    "verifySuccess": "Profile verified.",
+    "notePlaceholder": "Reason…",
+    "noteLabel": "Reason",
+    "noteRequired": "A reason is required.",
+    "handled": "This profile has already been handled."
+  }
+}

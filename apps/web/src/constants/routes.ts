@@ -71,6 +71,8 @@ export const ROUTES = {
     SHOP_BRANCHES: '/manage/shop/branches',
     /** Chính sách thuê mặc định của gian hàng (Wave 2 — cọc/giao nhận/quá giờ/ưu đãi). */
     SHOP_POLICIES: '/manage/shop/policies',
+    /** Hồ sơ người bán do gian hàng khai — điều kiện trước khi nhận tiền khách thật (ADR 0028 gate 1). */
+    SELLER_PROFILE: '/manage/shop/seller-profile',
     MEMBERS: '/manage/members',
     /** "Gói của tôi" — gói hiện hành, hạn mức chỗ, lượt miễn phí, mua gói (W2, ADR 0015/0026). */
     SUBSCRIPTION: '/manage/subscription',
@@ -78,6 +80,8 @@ export const ROUTES = {
     CHAT: '/manage/chat',
     /** Trung tâm hỗ trợ của cổng quản lý — hướng dẫn nhanh + câu hỏi thường gặp. */
     SUPPORT: '/manage/support',
+    /** Case hỗ trợ / tranh chấp của gian hàng (R3 — ADR 0028 release gate 7). */
+    SUPPORT_CASES: '/manage/support/cases',
 
     // Quản trị nền tảng
     ADMIN: '/manage/admin',
@@ -94,6 +98,14 @@ export const ROUTES = {
     /** Danh mục hành chính (tỉnh/thành) — dữ liệu dùng chung cho mọi gian hàng. */
     ADMIN_LOCATIONS: '/manage/admin/locations',
     ADMIN_BANNERS: '/manage/admin/marketplace-banners',
+    /** Hàng đợi xác minh người bán (R3 — ADR 0028 release gate 1). */
+    ADMIN_SELLERS: '/manage/admin/sellers',
+    /** Quản trị chính sách phí có phiên bản (R3 — ADR 0028 điều 2–3). */
+    ADMIN_FEE_POLICIES: '/manage/admin/fee-policies',
+    /** Money operations: hàng đợi giữ chỗ, chuyển trả, đối chiếu ngày (R3 — ADR 0028 gate 6–7). */
+    ADMIN_MONEY: '/manage/admin/money',
+    /** Hàng đợi hỗ trợ/tranh chấp toàn sàn (R3 — ADR 0028 release gate 7). */
+    ADMIN_SUPPORT: '/manage/admin/support',
   },
 } as const;
 

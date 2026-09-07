@@ -1,0 +1,73 @@
+{
+  "page": {
+    "customerTitle": "Support requests",
+    "customerSubtitle": "Your support requests and disputes with XePrime.",
+    "tenantTitle": "Support requests",
+    "tenantSubtitle": "Support and disputes about your shop's trips.",
+    "platformTitle": "Support / disputes",
+    "platformSubtitle": "Marketplace-wide queue — highest priority first. Resolving a dispute unlocks settling its booking hold.",
+    "tableLabel": "Support requests",
+    "openButton": "Open a request",
+    "loadError": "Could not load the list.",
+    "empty": "No requests yet.",
+    "total": "{count} requests",
+    "noPermissionTitle": "Access denied",
+    "noPermission": "You need the permission below to view the shop's support requests.",
+    "backHome": "Back to home"
+  },
+  "filters": {
+    "search": "Search",
+    "searchPlaceholder": "Case code or subject",
+    "status": "Status",
+    "category": "Category"
+  },
+  "columns": {
+    "case": "Request",
+    "category": "Category",
+    "status": "Status",
+    "updatedAt": "Updated"
+  },
+  "form": {
+    "title": "Open a support request",
+    "category": "Category",
+    "subject": "Subject",
+    "subjectRequired": "Enter a subject (at least 5 characters).",
+    "description": "Description",
+    "descriptionRequired": "Description must be at least 10 characters.",
+    "bookingId": "Related booking ID",
+    "bookingIdHint": "Find it on the trip detail page.",
+    "bookingRequired": "A dispute must reference a trip.",
+    "disputeHint": "A dispute HOLDS the settlement of that trip's booking hold until it is resolved.",
+    "submit": "Submit",
+    "openedSuccess": "Support request opened."
+  },
+  "detail": {
+    "title": "Request detail",
+    "pickOne": "Pick a request to see its detail.",
+    "loadError": "Could not load the request.",
+    "openedBy": "Opened by",
+    "tenant": "Shop",
+    "booking": "Booking",
+    "assignee": "Assignee",
+    "createdAt": "Opened",
+    "resolution": "Resolution",
+    "timeline": "Timeline",
+    "noEvents": "No messages yet.",
+    "internalTag": "Internal",
+    "statusChanged": "Moved to: {status}",
+    "closedNotice": "This request is closed. Open a new request to continue the conversation.",
+    "reply": "Reply",
+    "replyLabel": "Reply body",
+    "replyPlaceholder": "Type your message…",
+    "internalNote": "Internal note (customer and shop cannot see it)",
+    "send": "Send",
+    "moveTo": "Move to {status}",
+    "resolveTitle": "Resolution",
+    "resolveHint": "The person who opened the request reads exactly this. For disputes, the booking hold can only be settled after this step.",
+    "resolutionLabel": "Resolution body",
+    "resolutionPlaceholder": "Resolution…",
+    "resolutionRequired": "Enter a resolution (at least 5 characters).",
+    "resolveSubmit": "Resolve",
+    "resolveSuccess": "Request resolved."
+  }
+}

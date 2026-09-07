@@ -1,0 +1,111 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.placeholder {
+  padding: var(--xp-space-lg);
+  color: var(--xp-color-text-secondary);
+  text-align: center;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+.code {
+  font-family: var(--xp-font-family-mono, monospace);
+}
+
+.subject {
+  margin: 0;
+  font-size: var(--xp-font-size-h3);
+}
+
+.description {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.sectionTitle {
+  margin: 0 0 var(--xp-space-xs);
+  font-size: var(--xp-font-size-md);
+}
+
+.events {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.event,
+.eventInternal {
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-radius-md);
+  padding: var(--xp-space-sm);
+}
+
+/* Ghi chú nội bộ phải NHÌN là biết khác — người viết cần thấy ai đọc được trước khi gõ. */
+.eventInternal {
+  border-style: dashed;
+  background: var(--xp-color-bg-layout);
+}
+
+.eventHead {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+.eventMeta {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}
+
+.eventBody {
+  margin: var(--xp-space-xs) 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.reply {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+}
+
+.resolveBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-subtle);
+  padding-top: var(--xp-space-md);
+}
+
+.hint {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}

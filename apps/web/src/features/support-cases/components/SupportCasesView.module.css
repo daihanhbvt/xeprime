@@ -1,0 +1,5 @@
+.code {
+  font-family: var(--xp-font-family-mono, monospace);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}

@@ -1,0 +1,10 @@
+.code {
+  font-family: var(--xp-font-family-mono, monospace);
+}
+
+.reconciliation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  max-width: 720px;
+}
