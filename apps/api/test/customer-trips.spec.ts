@@ -27,19 +27,16 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
-import { BookingsService } from '../src/modules/bookings/bookings.service';
 import { CustomersService } from '../src/modules/customers/customers.service';
-import { DriversService } from '../src/modules/drivers/drivers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { CustomerTripsService } from '../src/modules/customer-trips/customer-trips.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
-import { ListingsService } from '../src/modules/public-listings/listings.service';
-import { PricingService } from '../src/modules/pricing/pricing.service';
 import { SettlementService } from '../src/modules/bookings/settlement/settlement.service';
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makeBookingHoldsService, makeBookingsService, makePricingService } from './helpers/service-factory';
 
 /**
  * Wave 11 — chuyến của KHÁCH, trên PostgreSQL THẬT.
@@ -56,18 +53,16 @@ const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const notifications = new NotificationService(asService);
-const pricing = new PricingService(asService, audit, new ListingsService(asService));
+const pricing = makePricingService(asService);
 const receipts = new ReceiptsService(asService, audit);
 const settlement = new SettlementService(asService, audit, pricing, notifications, receipts);
 const occupancy = new OccupancyService(asService);
-const bookings = new BookingsService(
-  asService,
-  occupancy,
-  audit,
-  notifications,
-  new DriversService(asService, audit),
-  new CustomersService(asService, audit),
-);
+const bookings = makeBookingsService(asService, {
+  occupancy: occupancy,
+  audit: audit,
+  notifications: notifications,
+  customers: new CustomersService(asService, audit),
+});
 /**
  * R2 giả — chỉ cần đủ để `downloadFor` ký được một vé. Bài kiểm ở đây là ĐIỀU KIỆN nào cho
  * phép ký, không phải chữ ký trông ra sao (`r2-private.spec.ts` lo phần đó).
@@ -83,6 +78,7 @@ const trips = new CustomerTripsService(
   asService,
   settlement,
   bookings,
+  makeBookingHoldsService(asService),
   files,
   notifications,
   audit,

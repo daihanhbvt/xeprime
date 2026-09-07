@@ -3,6 +3,7 @@ import { CalendarModule } from '../calendar/calendar.module';
 import { CustomersModule } from '../customers/customers.module';
 import { DriversModule } from '../drivers/drivers.module';
 import { FinanceModule } from '../finance/finance.module';
+import { HoldSettlementModule } from '../holds/hold-settlement.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { VehiclesModule } from '../vehicles/vehicles.module';
 import { BookingsController } from './bookings.controller';
@@ -39,6 +40,8 @@ import { SettlementService } from './settlement/settlement.service';
     DriversModule,
     CustomersModule,
     FinanceModule,
+    // `HoldSettlementModule` (R3): chốt kết cục khoản giữ chỗ khi đơn kết thúc — module lá, không vòng.
+    HoldSettlementModule,
   ],
   controllers: [
     BookingsController,

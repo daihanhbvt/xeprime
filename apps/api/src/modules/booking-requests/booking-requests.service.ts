@@ -26,6 +26,7 @@ import {
   USER_STATUS,
   VEHICLE_PUBLIC_STATUS,
   type BookingRequestDeliveryQuote,
+  type BookingPriceSnapshot,
 } from '@xeprime/types';
 import { fromDateOnly, toDateOnly } from '../../common/date-only';
 import { normalizePhone, phoneLookupVariants } from '../../common/phone';
@@ -36,6 +37,7 @@ import { AuthService } from '../auth/auth.service';
 import { OccupancyService } from '../calendar/occupancy.service';
 import { NotificationService } from '../notification/notification.service';
 import { BookingsService } from '../bookings/bookings.service';
+import { BookingHoldsService } from '../holds/booking-holds.service';
 import { CustomersService } from '../customers/customers.service';
 import { PhoneVerificationService } from '../phone-verification/phone-verification.service';
 import { PricingService } from '../pricing/pricing.service';
@@ -130,6 +132,8 @@ export class BookingRequestsService {
     private readonly occupancy: OccupancyService,
     private readonly pricing: PricingService,
     private readonly customers: CustomersService,
+    /** R3: tuyến hoa hồng duyệt xong sinh khoản giữ chỗ thay vì tạo đơn ngay (ADR 0028 điều 6). */
+    private readonly holds: BookingHoldsService,
   ) {}
 
   /**
@@ -730,7 +734,29 @@ export class BookingRequestsService {
             withDriverOneWayPrice: req.vehicle.withDriverOneWayPrice?.toFixed(0) ?? null,
             discountPercent: req.vehicle.discountPercent,
           });
-    const snapshot = this.pricing.buildSnapshot(breakdown, policy);
+    /*
+     * PHỤ PHÍ PHÍA KHÁCH (ADR 0029) — tính bằng chính sách hiệu lực và chế độ thu phí của gian
+     * hàng, rồi ĐÓNG BĂNG vào snapshot (ADR 0024). Báo giá còn tạm tính (`estimateNote`) thì
+     * `holdAmount` là null: không thu % trên một con số chưa chốt.
+     */
+    const fees = await this.pricing.customerFeesFor(
+      tenantId,
+      breakdown.totalAmount,
+      breakdown.estimateNote != null,
+    );
+    const snapshot = this.pricing.buildSnapshot(breakdown, policy, fees);
+
+    /*
+     * HAI ĐƯỜNG DUYỆT, tách theo việc chuyến này có khoản giữ chỗ hay không:
+     *
+     *  - CÓ (tuyến hoa hồng, giá đã chốt) → sinh `booking_holds`, yêu cầu sang `awaiting_hold`,
+     *    CHIẾM LỊCH ngay. Đơn thuê chỉ ra đời khi tiền về (webhook / khớp tay).
+     *  - KHÔNG (tuyến gói, hoặc báo giá tạm tính, hoặc chưa có chính sách phí) → giữ nguyên
+     *    đường cũ: tạo đơn ngay lúc duyệt.
+     */
+    if (fees?.holdAmount) {
+      return this.approveWithHold(tenantId, userId, id, req, schedule, snapshot, fees.holdAmount);
+    }
 
     const row = await this.prisma.$transaction(async (tx) => {
       const booking = await this.bookings.createWithinTx(
@@ -827,6 +853,67 @@ export class BookingRequestsService {
       return updated;
     });
 
+    return toDto(row);
+  }
+
+  /**
+   * Duyệt yêu cầu ở tuyến CÓ GIỮ CHỖ: chốt lịch + sinh hold, KHÔNG tạo đơn.
+   *
+   * Thứ tự trong transaction giống hệt `approve`: chiếm quyền quyết định SAU khi hold đã tạo —
+   * worker expire chen vào giữa thì cả transaction quay đầu, không để lại hold mồ côi.
+   */
+  private async approveWithHold(
+    tenantId: string,
+    userId: string,
+    id: string,
+    req: PendingRequestRow,
+    schedule: ApprovalSchedule,
+    snapshot: BookingPriceSnapshot,
+    holdAmount: string,
+  ): Promise<BookingRequestDto> {
+    const row = await this.prisma.$transaction(async (tx) => {
+      await this.holds.createForApprovedRequestWithinTx(tx, {
+        tenantId,
+        requestId: id,
+        vehicleId: req.vehicleId,
+        vehicleName: req.vehicle.name,
+        customerUserId: req.customerUserId,
+        schedule: {
+          pickupAt: schedule.pickupAt,
+          returnAt: schedule.returnAt,
+          packageMonths: schedule.packageMonths,
+        },
+        snapshot,
+        actorUserId: userId,
+      });
+
+      await this.claimPending(tx, tenantId, id, {
+        status: BOOKING_REQUEST_STATUS.AWAITING_HOLD,
+        pickupAt: schedule.pickupAt,
+        returnAt: schedule.returnAt,
+        longTermPackageMonths: schedule.packageMonths,
+        decidedBy: userId,
+        decidedAt: new Date(),
+      });
+
+      const updated = await tx.bookingRequest.findFirstOrThrow({
+        where: { id, tenantId },
+        select: SELECT,
+      });
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: 'tenant',
+          action: 'booking_request.approve_await_hold',
+          targetType: 'booking_request',
+          targetId: id,
+          after: { holdAmount },
+        },
+        tx,
+      );
+      return updated;
+    });
     return toDto(row);
   }
 

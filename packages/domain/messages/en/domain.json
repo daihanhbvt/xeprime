@@ -571,5 +571,11 @@
   "vehicleType": {
     "car": "Car",
     "motorbike": "Motorbike"
+  },
+  "feeLine": {
+    "service_fee": "XePrime service fee",
+    "tax": "Withheld / remitted tax",
+    "trip_insurance": "Trip insurance",
+    "vehicle_protection": "Vehicle protection"
   }
 }

@@ -9,12 +9,10 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
-import { BookingsService } from '../src/modules/bookings/bookings.service';
 import { CustomersService } from '../src/modules/customers/customers.service';
 import { DriversService } from '../src/modules/drivers/drivers.service';
-import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import { NotificationService } from '../src/modules/notification/notification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makeBookingsService } from './helpers/service-factory';
 
 /**
  * Lịch bận tài xế (17/08), trên PostgreSQL THẬT:
@@ -31,14 +29,10 @@ const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const drivers = new DriversService(asService, audit);
-const bookings = new BookingsService(
-  asService,
-  new OccupancyService(asService),
+const bookings = makeBookingsService(asService, {
   audit,
-  new NotificationService(asService),
-  drivers,
-  new CustomersService(asService, audit),
-);
+  customers: new CustomersService(asService, audit),
+});
 
 let dbAvailable = false;
 let ownerId: string;

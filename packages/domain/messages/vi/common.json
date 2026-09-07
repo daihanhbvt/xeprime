@@ -164,7 +164,16 @@
       "depositNote": "* Tiền cọc được hoàn trả 100% khi bàn trả xe không phát sinh thiệt hại.",
       "title": "Chi tiết giá thuê",
       "deposit": "Tiền đặt cọc thế chấp",
-      "depositHint": "Cọc cố định bằng VND, không nằm trong tổng khách trả và không chịu giảm giá."
+      "depositHint": "Cọc cố định bằng VND, không nằm trong tổng khách trả và không chịu giảm giá.",
+      "feesTitle": "Các khoản đi kèm chuyến",
+      "customerTotal": "Tổng bạn trả",
+      "ownerNet": "Chủ xe thực nhận",
+      "ownerNetHint": "Số chủ xe nhận từ chuyến này. Phí dịch vụ XePrime do khách trả, KHÔNG trừ vào tiền thuê của chủ xe.",
+      "holdAmount": "Chuyển trước để giữ chỗ",
+      "holdHint": "Chuyển khoản cho XePrime để chốt chuyến. Phần tiền thuê còn lại trả trực tiếp chủ xe khi nhận xe.",
+      "payAtHandover": "Trả chủ xe khi nhận xe",
+      "feesNote": "Mỗi khoản ghi rõ ai nhận. Số cuối cùng được chốt khi chủ xe duyệt yêu cầu.",
+      "noFees": "Chuyến này không có khoản đi kèm nào."
     },
     "filterBar": {
       "allOf": "{label}: Tất cả",

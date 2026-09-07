@@ -12,6 +12,7 @@ import { pumpOutbox } from './jobs/outbox-pump';
 import { runRetention } from './jobs/retention';
 import { sweepBookingRequestDeadlines } from './jobs/booking-request-deadlines';
 import { sweepSubscriptionLifecycle } from './jobs/subscription-lifecycle';
+import { sweepBookingHoldExpiry } from './jobs/booking-hold-expiry';
 import { purgeExpiredOauthStates } from './jobs/oauth-state-cleanup';
 import { HOLIDAY_INTERVAL_MS, shouldRunHolidaySync, syncHolidays } from './jobs/holiday-sync';
 
@@ -57,6 +58,9 @@ const LOCK_DEADLINES = 4_203;
 const LOCK_HOLIDAYS = 4_204;
 const LOCK_OAUTH_STATES = 4_205;
 const LOCK_SUBSCRIPTION_LIFECYCLE = 4_206;
+const LOCK_HOLD_EXPIRY = 4_207;
+/** Hold hết hạn theo phút; một phút một nhịp là đủ mịn và job chạy lại ra 0 dòng. */
+const HOLD_EXPIRY_INTERVAL_MS = 60_000;
 
 const prisma = createPrismaClient();
 let stopping = false;
@@ -112,6 +116,14 @@ async function main(): Promise<void> {
             `chuyển tuyến ${result.lapsed}, void hoá đơn ${result.invoicesVoided}, chào gói ${result.freeTripOffers}`,
         );
       }
+    }),
+    /*
+     * Khoản giữ chỗ quá hạn (R3 — ADR 0028): lật `expired`, yêu cầu `hold_expired`, nhả lịch, báo
+     * hai bên. Việc nghiệp vụ lõi — chạy ở mọi cấu hình.
+     */
+    loop('hết hạn giữ chỗ', LOCK_HOLD_EXPIRY, HOLD_EXPIRY_INTERVAL_MS, async () => {
+      const result = await sweepBookingHoldExpiry(prisma);
+      if (result.expired) console.log(`giữ chỗ: hết hạn ${result.expired}`);
     }),
     loop('dọn phiên OAuth dở dang', LOCK_OAUTH_STATES, OAUTH_STATE_INTERVAL_MS, async () => {
       const purged = await purgeExpiredOauthStates(prisma);

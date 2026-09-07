@@ -10,6 +10,9 @@ import {
   GiftOutlined,
   HourglassOutlined,
   RollbackOutlined,
+  SafetyCertificateOutlined,
+  MessageOutlined,
+  DollarOutlined,
   ShopOutlined,
   StarOutlined,
 } from '@ant-design/icons';
@@ -41,6 +44,16 @@ const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   [NOTIFICATION_TYPE.SUBSCRIPTION_LAPSED]: <CreditCardOutlined />,
   [NOTIFICATION_TYPE.FREE_TRIPS_EXHAUSTED]: <GiftOutlined />,
   [NOTIFICATION_TYPE.SUBSCRIPTION_ACTIVATED]: <CreditCardOutlined />,
+  // Khoản giữ chỗ (R3, ADR 0028): cùng họ icon TIỀN, phân biệt bằng chặng của nó.
+  [NOTIFICATION_TYPE.HOLD_REQUESTED]: <DollarOutlined />,
+  [NOTIFICATION_TYPE.HOLD_PAID]: <CheckCircleOutlined />,
+  [NOTIFICATION_TYPE.HOLD_EXPIRED]: <HourglassOutlined />,
+  [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: <RollbackOutlined />,
+  // Hồ sơ người bán — dùng icon chứng nhận, không phải icon gian hàng: đây là danh tính pháp lý.
+  [NOTIFICATION_TYPE.SELLER_PROFILE_VERIFIED]: <SafetyCertificateOutlined />,
+  [NOTIFICATION_TYPE.SELLER_PROFILE_CHANGES_REQUESTED]: <SafetyCertificateOutlined />,
+  [NOTIFICATION_TYPE.SELLER_PROFILE_REJECTED]: <SafetyCertificateOutlined />,
+  [NOTIFICATION_TYPE.SUPPORT_CASE_UPDATED]: <MessageOutlined />,
 };
 
 export function notificationIcon(type: string): ReactNode {

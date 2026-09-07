@@ -24,11 +24,12 @@ export const HOLD_FREE_CANCEL_HOURS = 4;
 /**
  * Khách có bấy nhiêu phút để chuyển khoản trước khi hold hết hạn và nhả lịch.
  *
- * 15 phút là mặt rẻ của một đánh đổi cố ý: hold chiếm lịch NGAY khi bấm đặt chứ không đợi tiền
- * về (ADR 0021 điều 6), nên cửa sổ càng dài thì bề mặt phá hoại càng rộng — nhưng cửa sổ quá
- * ngắn thì khách mở app ngân hàng xong quay lại đã mất chỗ.
+ * Mặc định 24 giờ (R3, ADR 0028): giữ chỗ được tạo SAU KHI CHỦ XE DUYỆT, khách không ngồi chờ
+ * trên màn hình — họ nhận thông báo rồi quay lại chuyển tiền. Cửa sổ ngắn kiểu đặt-ngay (15 phút
+ * của ADR 0021 cũ) sẽ giết phần lớn chuyến thật. Con số thật của từng hold lấy từ chính sách phí
+ * hiện hành (`FeePolicyValues.holdPaymentWindowMinutes`); hằng này là mặc định khi seed policy.
  */
-export const HOLD_PAYMENT_WINDOW_MINUTES = 15;
+export const HOLD_PAYMENT_WINDOW_MINUTES = 24 * 60;
 
 /**
  * Sàn số tiền giữ chỗ. Dưới mức này thì phí chuyển khoản và công đối soát vượt khoản thu.
@@ -97,13 +98,16 @@ export const WITHDRAWAL_TERMS = {
  * lệch đồng hồ máy khách sẽ rơi đúng vào lúc tiền phụ thuộc vào nó. Web/mobile đọc
  * `freeCancelUntil` từ API rồi so với `Date.now()`.
  */
-export function holdFreeCancelUntil(pickupAt: Date): Date {
-  return new Date(pickupAt.getTime() - HOLD_FREE_CANCEL_HOURS * MS_PER_HOUR);
+export function holdFreeCancelUntil(pickupAt: Date, hours: number = HOLD_FREE_CANCEL_HOURS): Date {
+  return new Date(pickupAt.getTime() - hours * MS_PER_HOUR);
 }
 
 /** Hạn chuyển khoản của một hold tạo lúc `from`. SERVER tính. */
-export function holdExpiresAt(from: Date): Date {
-  return new Date(from.getTime() + HOLD_PAYMENT_WINDOW_MINUTES * MS_PER_MINUTE);
+export function holdExpiresAt(
+  from: Date,
+  windowMinutes: number = HOLD_PAYMENT_WINDOW_MINUTES,
+): Date {
+  return new Date(from.getTime() + windowMinutes * MS_PER_MINUTE);
 }
 
 /**

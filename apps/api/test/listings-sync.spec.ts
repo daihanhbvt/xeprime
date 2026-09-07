@@ -13,14 +13,8 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
 import { PlatformApprovalService } from '../src/modules/platform-admin/platform-approval.service';
-import { PricingService } from '../src/modules/pricing/pricing.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import {
-  makePublicListingsService,
-  makeVehiclesService,
-  seedBranch,
-  seedProvince,
-} from './helpers/service-factory';
+import { makePricingService, makePublicListingsService, makeVehiclesService, seedBranch, seedProvince } from './helpers/service-factory';
 
 /**
  * Gap 3 — 4 test bắt buộc ADR 0008 (§Test), chạy qua các service THẬT trên PostgreSQL:
@@ -34,7 +28,7 @@ const audit = new AuditService(asService);
 const notifications = new NotificationService(asService);
 const listings = new ListingsService(asService);
 const vehicles = makeVehiclesService(asService);
-const pricing = new PricingService(asService, audit, listings);
+const pricing = makePricingService(asService, { listings });
 const approvals = new PlatformApprovalService(asService, audit, notifications, listings);
 const publicListings = makePublicListingsService(asService);
 

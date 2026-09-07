@@ -23,6 +23,10 @@ import { UsersModule } from './modules/users/users.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { EmailModule } from './modules/email/email.module';
 import { SepayModule } from './modules/sepay/sepay.module';
+import { FeePoliciesModule } from './modules/fee-policies/fee-policies.module';
+import { HoldsModule } from './modules/holds/holds.module';
+import { SellerProfileModule } from './modules/seller-profile/seller-profile.module';
+import { SupportModule } from './modules/support/support.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { FirebaseModule } from './modules/firebase/firebase.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
@@ -123,6 +127,12 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
     DriversModule,
     CustomersModule,
     HolidaysModule,
+    // R3 — giao dịch Basic Owner. Đăng ký CUỐI để route mới nối vào đuôi OpenAPI thay vì chèn
+    // giữa, giữ diff của contract đọc được.
+    FeePoliciesModule,
+    HoldsModule,
+    SellerProfileModule,
+    SupportModule,
   ],
   providers: [
     // Thứ tự quan trọng (guard global chạy theo đúng thứ tự khai báo): Throttler chặn trước

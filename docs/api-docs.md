@@ -10,11 +10,11 @@ Dev mới vào dự án muốn biết API có gì, gọi thế nào, trả về 
 pnpm --filter @xeprime/api dev     # cần Postgres đang chạy (docker compose up -d db)
 ```
 
-| Địa chỉ | Là gì |
-| --- | --- |
-| http://localhost:4000/docs | Swagger UI — đọc, thử gọi trực tiếp |
-| http://localhost:4000/docs-json | Spec thô, import thẳng vào Postman / Insomnia / Scalar |
-| `packages/types/openapi.json` | Bản spec đã commit — xem được mà **không cần chạy server** |
+| Địa chỉ                         | Là gì                                                      |
+| ------------------------------- | ---------------------------------------------------------- |
+| http://localhost:4000/docs      | Swagger UI — đọc, thử gọi trực tiếp                        |
+| http://localhost:4000/docs-json | Spec thô, import thẳng vào Postman / Insomnia / Scalar     |
+| `packages/types/openapi.json`   | Bản spec đã commit — xem được mà **không cần chạy server** |
 
 Swagger UI **tắt khi `NODE_ENV=production`** (nó phơi toàn bộ bề mặt API). Muốn đưa tài liệu cho
 người ngoài mà không dựng server: gửi `packages/types/openapi.json`, mở bằng bất kỳ viewer nào.
@@ -24,7 +24,7 @@ người ngoài mà không dựng server: gửi `packages/types/openapi.json`, m
 API đã bind `0.0.0.0` sẵn, nên chỉ cần mở `http://<IP-máy-bạn>:4000/docs`. Hai thứ chặn đường:
 
 1. **Windows Firewall.** Rule `Node.js JavaScript Runtime` cài sẵn thường chỉ áp cho profile
-   *Public*, trong khi Wi-Fi ở nhà/văn phòng là *Private* → inbound bị chặn. Mở theo CỔNG (hẹp hơn
+   _Public_, trong khi Wi-Fi ở nhà/văn phòng là _Private_ → inbound bị chặn. Mở theo CỔNG (hẹp hơn
    nới rule cho cả `node.exe`), chạy PowerShell **Administrator**:
 
    ```powershell
@@ -71,14 +71,14 @@ curl -b jar.txt http://localhost:4000/bookings?page=1
 
 Sáu endpoint dưới nhóm `auth`, tiền tố `/auth/mobile`:
 
-| Endpoint | Trả về | Ghi chú |
-| --- | --- | --- |
-| `POST /auth/mobile/login` | `MobileSessionDto` (tokens + `MeDto`) | Email/SĐT + mật khẩu. Throttle 5 req/phút |
-| `POST /auth/mobile/register` | `MobileSessionDto` | SĐT + mật khẩu. **SĐT chưa xác thực** — xem ghi chú dưới bảng |
-| `POST /auth/mobile/phone/login` | `MobileSessionDto` | SĐT + OTP. Hai bước trước (`/auth/phone/send-otp`, `verify-otp`) dùng chung với web |
-| `POST /auth/mobile/social/exchange` | `MobileSessionDto` | Đổi one-time code của Google/Facebook. Xem §2.3 |
-| `POST /auth/mobile/refresh` | `MobileTokenPairDto` | **Xoay**: trả cặp mới, token cũ chết ngay |
-| `POST /auth/mobile/logout` | 204 | Thu hồi phiên của thiết bị. Luôn 204, kể cả token lạ |
+| Endpoint                            | Trả về                                | Ghi chú                                                                             |
+| ----------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------- |
+| `POST /auth/mobile/login`           | `MobileSessionDto` (tokens + `MeDto`) | Email/SĐT + mật khẩu. Throttle 5 req/phút                                           |
+| `POST /auth/mobile/register`        | `MobileSessionDto`                    | SĐT + mật khẩu. **SĐT chưa xác thực** — xem ghi chú dưới bảng                       |
+| `POST /auth/mobile/phone/login`     | `MobileSessionDto`                    | SĐT + OTP. Hai bước trước (`/auth/phone/send-otp`, `verify-otp`) dùng chung với web |
+| `POST /auth/mobile/social/exchange` | `MobileSessionDto`                    | Đổi one-time code của Google/Facebook. Xem §2.3                                     |
+| `POST /auth/mobile/refresh`         | `MobileTokenPairDto`                  | **Xoay**: trả cặp mới, token cũ chết ngay                                           |
+| `POST /auth/mobile/logout`          | 204                                   | Thu hồi phiên của thiết bị. Luôn 204, kể cả token lạ                                |
 
 **Bốn cửa vào, một loại phiên.** Mọi endpoint trên đều trả cùng `MobileSessionDto` — app không
 cần biết người dùng đã vào bằng cách nào.
@@ -139,7 +139,10 @@ const result = await WebBrowser.openAuthSessionAsync(
 
 // 3. Đổi mã lấy phiên
 const code = new URL(result.url).searchParams.get('code');
-const session = await mobileAuthApi.exchangeSocialCode(authClient, { code, codeVerifier });
+const session = await mobileAuthApi.exchangeSocialCode(authClient, {
+  code,
+  codeVerifier,
+});
 ```
 
 Bốn điều dễ vấp:
@@ -153,7 +156,6 @@ Bốn điều dễ vấp:
   `codeVerifier` cũng **đốt luôn mã**.
 - **Lỗi cũng về deep link**: `xeprime://auth/callback?error=<mã>`. App phải đọc cả `code` lẫn
   `error`, nếu không nó sẽ đứng im khi người dùng bấm huỷ ở màn đồng ý.
-
 
 ## 3. Đọc gì trên mỗi endpoint
 
@@ -193,12 +195,12 @@ type BookingDetail = components['schemas']['BookingDetailDto'];
 Phần lớn tài liệu KHÔNG viết tay. `buildOpenApiDocument()` trong
 [bootstrap.ts](../apps/api/src/bootstrap.ts) chạy hậu xử lý trên document mà Swagger quét được:
 
-| Thứ được thêm | Suy từ | File |
-| --- | --- | --- |
-| Nhóm tag + mô tả + thứ tự | danh mục khai báo tập trung | [api-tags.ts](../apps/api/src/openapi/api-tags.ts) |
-| Trang mô tả đầu (quy ước, mã lỗi) | `API_ERROR_CODE` của `@xeprime/types` | [api-description.ts](../apps/api/src/openapi/api-description.ts) |
-| Ổ khoá + quyền + phạm vi | metadata `@Public` / `@RequirePermissions` / `@TenantScoped` / `@PlatformOnly` | [route-access.ts](../apps/api/src/openapi/route-access.ts) |
-| Lớp bọc `{ data }`, nhánh lỗi 400/401/403/404/409/429/500 | `ResponseInterceptor`, guard, `AllExceptionsFilter` | [enhance-document.ts](../apps/api/src/openapi/enhance-document.ts) |
+| Thứ được thêm                                             | Suy từ                                                                         | File                                                               |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| Nhóm tag + mô tả + thứ tự                                 | danh mục khai báo tập trung                                                    | [api-tags.ts](../apps/api/src/openapi/api-tags.ts)                 |
+| Trang mô tả đầu (quy ước, mã lỗi)                         | `API_ERROR_CODE` của `@xeprime/types`                                          | [api-description.ts](../apps/api/src/openapi/api-description.ts)   |
+| Ổ khoá + quyền + phạm vi                                  | metadata `@Public` / `@RequirePermissions` / `@TenantScoped` / `@PlatformOnly` | [route-access.ts](../apps/api/src/openapi/route-access.ts)         |
+| Lớp bọc `{ data }`, nhánh lỗi 400/401/403/404/409/429/500 | `ResponseInterceptor`, guard, `AllExceptionsFilter`                            | [enhance-document.ts](../apps/api/src/openapi/enhance-document.ts) |
 
 Nghĩa là: **sửa quyền của endpoint thì tài liệu tự đổi theo** — không có bản viết tay nào để trôi
 lệch khỏi hành vi thật.
@@ -223,8 +225,9 @@ Bỏ sót thì `apps/api/test/openapi-contract.spec.ts` fail, kèm danh sách đ
 pnpm --filter @xeprime/api test -- openapi-contract
 ```
 
-Spec đó khoá lại 17 khẳng định: mọi route có summary và tag đã khai báo, mọi route nói rõ cần
-đăng nhập hay không và khớp `@Public` thật, mọi response 2xx mô tả đúng lớp bọc `{ data }`, mọi
+Spec đó khoá lại các khẳng định: mọi route có summary và tag đã khai báo, mọi route nói rõ cần
+đăng nhập hay không và khớp `@Public` thật, mọi response 2xx mô tả đúng lớp bọc `{ data }` hoặc
+được đánh dấu tường minh là raw response theo contract bên thứ ba, mọi
 route có 429/500, route cần đăng nhập có 401, route công khai KHÔNG có 401, route đòi quyền có
 403 và liệt kê đúng permission.
 
@@ -235,7 +238,11 @@ tiếp tục compile theo type CŨ. Test fail sẽ chỉ đúng đường dẫn/
 
 ## 7. Ngoại lệ đã biết
 
-`GET /health` là endpoint DUY NHẤT không có lớp bọc `{ data }`. `ResponseInterceptor` bỏ qua
-payload đã có sẵn khoá `error`, mà kết quả `@nestjs/terminus` luôn có khoá đó. Giữ nguyên vì
-tiện cho uptime monitor: đọc thẳng `status` không phải bóc lớp. Xem
-[health.dto.ts](../apps/api/src/modules/health/dto/health.dto.ts).
+Hai loại endpoint không có lớp bọc `{ data }`:
+
+- `GET /health`: `ResponseInterceptor` bỏ qua payload đã có sẵn khoá `error`, mà kết quả
+  `@nestjs/terminus` luôn có khoá đó. Giữ nguyên để uptime monitor đọc thẳng `status`. Xem
+  [health.dto.ts](../apps/api/src/modules/health/dto/health.dto.ts).
+- Endpoint tích hợp buộc phải theo response contract của bên thứ ba. Chúng phải gắn
+  `x-xeprime-raw-response` trong OpenAPI và có HTTP test khoá raw body. Hiện tại chỉ có
+  `POST /sepay/webhook`, trả đúng `{"success": true}` sau khi giao dịch đã được xử lý.

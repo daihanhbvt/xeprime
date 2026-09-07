@@ -149,3 +149,18 @@
 .footer {
   display: flex;
 }
+
+/* Khối phụ phí phía khách (ADR 0029) — tách hẳn khỏi bảng kê giá thuê bằng một đường kẻ, vì
+   đây là tiền của NGƯỜI KHÁC (XePrime, ngân sách, hãng bảo hiểm), không phải doanh thu gian hàng. */
+.feesBlock {
+  margin-top: var(--xp-space-3);
+  padding-top: var(--xp-space-3);
+  border-top: 1px solid var(--xp-color-border);
+}
+
+.feesTitle {
+  margin: 0 0 var(--xp-space-2);
+  font-size: var(--xp-font-size-sm);
+  font-weight: 600;
+  color: var(--xp-color-text-secondary);
+}

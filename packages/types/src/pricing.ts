@@ -1,5 +1,6 @@
 import type { DiscountTier, LegacyDiscountTier } from './long-term';
 import type { BillingMode } from './status/billing';
+import type { CustomerFeeBreakdown } from './fee-policy';
 import { STATUS_COLOR, type StatusMeta } from './status/meta';
 
 /**
@@ -190,6 +191,10 @@ export interface PriceBreakdownRow {
 }
 
 /**
+ * ⚠️ MÔ HÌNH CŨ (ADR 0021, đã bị ADR 0028/0029 thay): hoa hồng trừ phía chủ xe. Giữ kiểu này
+ * CHỈ để đọc snapshot lịch sử; đơn mới ghi `fees` (phụ phí phía KHÁCH). Không viết code mới
+ * sinh ra `platformFee`.
+ *
  * Phần phía CHỦ XE của một chuyến — ADR 0021 điều 9.
  *
  * **Cố ý KHÔNG phải một `PRICE_ROW`.** Hai lý do cứng, và cả hai đều đắt nếu bỏ qua:
@@ -259,6 +264,13 @@ export interface BookingPriceSnapshot {
    * cùng cảnh báo đã ghi cho `policy.collateralMode` ở dưới.
    */
   platformFee?: PlatformFeeSnapshot;
+  /**
+   * PHỤ PHÍ PHÍA KHÁCH — ADR 0029 (R3). Thay thế `platformFee` cho đơn tạo từ 07/09/2026.
+   *
+   * Vắng mặt ⇒ đơn tạo trực tiếp bởi gian hàng (giao dịch ngoài luồng chợ, không có phí — ADR 0028
+   * điều 9) HOẶC đơn trước đợt này. Đọc ra `undefined` là "không có phụ phí", KHÔNG suy ngược.
+   */
+  fees?: CustomerFeeBreakdown;
   /** Chính sách hiệu lực lúc chốt (bản sao nguyên trạng) — null khi source = manual. */
   policy: {
     source: PolicySource;

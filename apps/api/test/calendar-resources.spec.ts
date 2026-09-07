@@ -1,13 +1,11 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import { API_ERROR_CODE, OCCUPANCY_SOURCE_TYPE, TENANT_STATUS, VEHICLE_TYPE } from '@xeprime/types';
 import 'reflect-metadata';
-import { AuditService } from '../src/modules/audit/audit.service';
 import { CalendarController } from '../src/modules/calendar/calendar.controller';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import { ListingsService } from '../src/modules/public-listings/listings.service';
-import { PricingService } from '../src/modules/pricing/pricing.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import type { TenantContext } from '../src/common/types/request-context';
+import { makePricingService } from './helpers/service-factory';
 
 /**
  * Lịch xe (Wave lịch, vòng 2) trên PostgreSQL THẬT.
@@ -19,8 +17,7 @@ import type { TenantContext } from '../src/common/types/request-context';
  */
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
-const audit = new AuditService(asService);
-const pricing = new PricingService(asService, audit, new ListingsService(asService));
+const pricing = makePricingService(asService);
 const controller = new CalendarController(asService, new OccupancyService(asService), pricing);
 
 let dbAvailable = false;

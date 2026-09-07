@@ -13,7 +13,7 @@ import { BankTransactionsService } from '../src/modules/sepay/bank-transactions.
 import { SepayService } from '../src/modules/sepay/sepay.service';
 import type { BillingService } from '../src/modules/billing/billing.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBillingService } from './helpers/service-factory';
+import { makeBillingService, makeBookingHoldsService } from './helpers/service-factory';
 
 /**
  * Hàng đợi đối soát + KHỚP TAY của admin (R2 mục 4, ADR 0022 điều 4) — PostgreSQL THẬT.
@@ -32,7 +32,7 @@ const asService = prisma as unknown as PrismaService;
 const billing: BillingService = makeBillingService(asService);
 const admin = new BankTransactionsService(asService, new AuditService(asService), billing);
 
-const sepay = new SepayService(asService, billing, {
+const sepay = new SepayService(asService, billing, makeBookingHoldsService(asService), {
   get: () => 'test-key-0123456789abcdef',
 } as unknown as ConfigService);
 

@@ -16,16 +16,15 @@ import {
 } from '@xeprime/types';
 import { PERMISSIONS_KEY } from '../src/common/decorators';
 import { AuditService } from '../src/modules/audit/audit.service';
-import { BookingsService } from '../src/modules/bookings/bookings.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { CustomerDocumentsService } from '../src/modules/customers/customer-documents.service';
 import { CustomersController } from '../src/modules/customers/customers.controller';
 import { CustomerDocumentsController } from '../src/modules/customers/customer-documents.controller';
 import { CustomersService } from '../src/modules/customers/customers.service';
-import { DriversService } from '../src/modules/drivers/drivers.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makeBookingsService } from './helpers/service-factory';
 
 /**
  * Sổ khách của GIAN HÀNG (gap S-01), chạy trên PostgreSQL THẬT:
@@ -45,14 +44,12 @@ const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const customers = new CustomersService(asService, audit);
-const bookings = new BookingsService(
-  asService,
-  new OccupancyService(asService),
-  audit,
-  new NotificationService(asService),
-  new DriversService(asService, audit),
-  customers,
-);
+const bookings = makeBookingsService(asService, {
+  occupancy: new OccupancyService(asService),
+  audit: audit,
+  notifications: new NotificationService(asService),
+  customers: customers,
+});
 
 /** R2 giả: spec này kiểm SCOPE + QUYỀN của giấy tờ, không kiểm việc ký URL (r2-private.spec lo). */
 const r2Stub = {

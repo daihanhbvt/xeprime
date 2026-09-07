@@ -16,13 +16,12 @@ import {
 import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
-import { BookingsService } from '../src/modules/bookings/bookings.service';
 import { CustomersService } from '../src/modules/customers/customers.service';
-import { DriversService } from '../src/modules/drivers/drivers.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import { FinanceOverviewService } from '../src/modules/finance/finance-overview.service';
 import { PaymentsService } from '../src/modules/payments/payments.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makeBookingsService } from './helpers/service-factory';
 
 /**
  * S2 — Ghi nhận thanh toán (writer duy nhất của paid_amount), chạy trên PostgreSQL THẬT. Kiểm
@@ -32,14 +31,12 @@ import type { PrismaService } from '../src/prisma/prisma.service';
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
-const bookings = new BookingsService(
-  asService,
-  new OccupancyService(asService),
-  audit,
-  new NotificationService(asService),
-  new DriversService(asService, audit),
-  new CustomersService(asService, audit),
-);
+const bookings = makeBookingsService(asService, {
+  occupancy: new OccupancyService(asService),
+  audit: audit,
+  notifications: new NotificationService(asService),
+  customers: new CustomersService(asService, audit),
+});
 const payments = new PaymentsService(
   asService,
   audit,

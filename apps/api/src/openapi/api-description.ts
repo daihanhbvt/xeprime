@@ -20,7 +20,7 @@ API của XePrime — nền tảng cho thuê xe nhiều gian hàng (multi-tenant
 
 ## Lớp bọc response
 
-Mọi response thành công đều được bọc một lớp \`data\`; endpoint phân trang có thêm \`meta\`:
+Response thành công của API XePrime được bọc một lớp \`data\`; endpoint phân trang có thêm \`meta\`:
 
 \`\`\`jsonc
 // GET /bookings/{id}
@@ -31,6 +31,8 @@ Mọi response thành công đều được bọc một lớp \`data\`; endpoint
 \`\`\`
 
 Schema trong tài liệu này đã bao gồm lớp bọc đó, nên copy thẳng ra client là đúng shape thật.
+Ngoại lệ là endpoint tích hợp bên thứ ba được đánh dấu \`x-xeprime-raw-response\`, ví dụ webhook
+SePay phải trả nguyên \`{"success": true}\` theo contract của nhà cung cấp.
 
 Lỗi luôn cùng một hình dạng, ở mọi mã HTTP:
 

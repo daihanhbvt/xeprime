@@ -22,6 +22,9 @@ import type { RouteAccess } from './route-access';
 /** Tên security scheme do `DocumentBuilder.addCookieAuth()` đặt (mặc định là `cookie`). */
 export const COOKIE_SECURITY_SCHEME = 'cookie';
 
+/** Operation trả contract raw của bên thứ ba, không đi qua envelope `{ data }` của XePrime. */
+export const RAW_RESPONSE_EXTENSION = 'x-xeprime-raw-response';
+
 /*
  * Kiểu dẫn xuất từ `OpenAPIObject` thay vì import sâu vào `@nestjs/swagger/dist/...` — barrel
  * của package chỉ export `OpenAPIObject`, và import sâu sẽ vỡ khi package đổi bố cục dist.
@@ -124,6 +127,9 @@ function wrapSuccessResponses(
   operation: OperationObject,
   schemas: Record<string, SchemaOrRef>,
 ): void {
+  const isRawResponse =
+    (operation as unknown as Record<string, unknown>)[RAW_RESPONSE_EXTENSION] === true;
+
   for (const [status, response] of Object.entries(operation.responses)) {
     if (!isSuccessStatus(status) || !isResponseObject(response)) continue;
 
@@ -132,7 +138,7 @@ function wrapSuccessResponses(
     }
 
     const media = response.content?.['application/json'];
-    if (!media?.schema || isEnveloped(media.schema, schemas)) continue;
+    if (!media?.schema || isRawResponse || isEnveloped(media.schema, schemas)) continue;
 
     media.schema = {
       type: 'object',

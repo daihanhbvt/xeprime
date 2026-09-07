@@ -55,6 +55,24 @@ export const NOTIFICATION_TYPE = {
    * redirect trình duyệt: khách rời sang app ngân hàng và có thể không bao giờ quay lại trang.
    */
   SUBSCRIPTION_ACTIVATED: 'subscription_activated',
+
+  // Khoản giữ chỗ (R3 — ADR 0028 điều 6–7). Tuyến hoa hồng: duyệt xong khách mới chuyển tiền.
+  /** Chủ xe đã duyệt — KHÁCH cần chuyển khoản giữ chỗ trước hạn. */
+  HOLD_REQUESTED: 'hold_requested',
+  /** Tiền giữ chỗ đã về, đơn đã tạo — cả hai bên. Webhook phát. */
+  HOLD_PAID: 'hold_paid',
+  /** Quá hạn chuyển giữ chỗ, chỗ đã nhả — cả hai bên. Worker phát. */
+  HOLD_EXPIRED: 'hold_expired',
+  /** Admin đã chuyển trả khoản giữ chỗ — khách. */
+  HOLD_REFUND_PAID: 'hold_refund_paid',
+
+  // Hồ sơ người bán (R3)
+  SELLER_PROFILE_VERIFIED: 'seller_profile_verified',
+  SELLER_PROFILE_CHANGES_REQUESTED: 'seller_profile_changes_requested',
+  SELLER_PROFILE_REJECTED: 'seller_profile_rejected',
+
+  // Support case (R3)
+  SUPPORT_CASE_UPDATED: 'support_case_updated',
 } as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPE)[keyof typeof NOTIFICATION_TYPE];
@@ -83,6 +101,7 @@ export const NOTIFICATION_TARGET_TYPE = {
   REVIEW: 'review',
   TENANT: 'tenant',
   VEHICLE: 'vehicle',
+  SUPPORT_CASE: 'support_case',
 } as const;
 
 export type NotificationTargetType =
@@ -156,5 +175,28 @@ export const NOTIFICATION_TYPE_META: Readonly<Record<NotificationType, Notificat
   [NOTIFICATION_TYPE.SUBSCRIPTION_ACTIVATED]: {
     label: 'Gói đã kích hoạt',
     color: STATUS_COLOR.SUCCESS,
+  },
+  // R3 — khoản giữ chỗ
+  [NOTIFICATION_TYPE.HOLD_REQUESTED]: { label: 'Cần chuyển giữ chỗ', color: STATUS_COLOR.WAITING },
+  [NOTIFICATION_TYPE.HOLD_PAID]: { label: 'Đã giữ chỗ', color: STATUS_COLOR.SUCCESS },
+  [NOTIFICATION_TYPE.HOLD_EXPIRED]: { label: 'Hết hạn giữ chỗ', color: STATUS_COLOR.NEUTRAL },
+  [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: { label: 'Đã hoàn giữ chỗ', color: STATUS_COLOR.SUCCESS },
+  // R3 — hồ sơ người bán
+  [NOTIFICATION_TYPE.SELLER_PROFILE_VERIFIED]: {
+    label: 'Hồ sơ đã xác minh',
+    color: STATUS_COLOR.SUCCESS,
+  },
+  [NOTIFICATION_TYPE.SELLER_PROFILE_CHANGES_REQUESTED]: {
+    label: 'Hồ sơ cần bổ sung',
+    color: STATUS_COLOR.WARNING,
+  },
+  [NOTIFICATION_TYPE.SELLER_PROFILE_REJECTED]: {
+    label: 'Hồ sơ bị từ chối',
+    color: STATUS_COLOR.DANGER,
+  },
+  // R3 — support case
+  [NOTIFICATION_TYPE.SUPPORT_CASE_UPDATED]: {
+    label: 'Cập nhật yêu cầu hỗ trợ',
+    color: STATUS_COLOR.INFO,
   },
 };

@@ -205,6 +205,37 @@ export const API_ERROR_CODE = {
    * `details` mang `{ reason }`.
    */
   INSTANT_BOOK_UNAVAILABLE: 'INSTANT_BOOK_UNAVAILABLE',
+  /** Hold không ở trạng thái chờ tiền — đã trả, đã hết hạn hoặc đã huỷ. `details` mang `{ status }`. */
+  HOLD_NOT_PENDING: 'HOLD_NOT_PENDING',
+  /** Khoản giữ chỗ đang bị TẠM GIỮ vì có tranh chấp mở — không chốt kết cục được (R3). */
+  HOLD_LOCKED_BY_DISPUTE: 'HOLD_LOCKED_BY_DISPUTE',
+
+  // Chính sách phí (R3 — ADR 0028/0029)
+  /** Không có chính sách phí nào đang hiệu lực — lỗi CẤU HÌNH, chặn tạo hold. */
+  FEE_POLICY_MISSING: 'FEE_POLICY_MISSING',
+  /** Chỉ bản nháp mới sửa/kích hoạt được. */
+  FEE_POLICY_NOT_DRAFT: 'FEE_POLICY_NOT_DRAFT',
+  /**
+   * Bản chính sách không đủ điều kiện kích hoạt (ADR 0028 điều 4–5): bật thuế/bảo hiểm mà chưa
+   * có căn cứ thật. `details` mang `{ blockers: string[] }` — khoá của `feePolicyActivationBlockers`.
+   */
+  FEE_POLICY_ACTIVATION_BLOCKED: 'FEE_POLICY_ACTIVATION_BLOCKED',
+
+  // Hoàn khoản giữ chỗ (R3)
+  /** Yêu cầu hoàn đã được xử lý (paid/rejected) — không đổi được nữa. */
+  REFUND_ALREADY_HANDLED: 'REFUND_ALREADY_HANDLED',
+  /** Chưa có tài khoản nhận hoàn — khách phải khai trước khi hoàn được ghi nhận. */
+  REFUND_ACCOUNT_REQUIRED: 'REFUND_ACCOUNT_REQUIRED',
+
+  // Hồ sơ người bán (R3)
+  /** Hồ sơ ở trạng thái không cho sửa/gửi (đang chờ xác minh). `details` mang `{ status }`. */
+  SELLER_PROFILE_NOT_EDITABLE: 'SELLER_PROFILE_NOT_EDITABLE',
+  /** Thiếu trường bắt buộc để gửi xác minh. `details` mang `{ missing: string[] }`. */
+  SELLER_PROFILE_INCOMPLETE: 'SELLER_PROFILE_INCOMPLETE',
+
+  // Support case (R3)
+  /** Case đã đóng — mở case mới thay vì viết tiếp. */
+  SUPPORT_CASE_CLOSED: 'SUPPORT_CASE_CLOSED',
 
   // Ví (ADR 0023)
   /** Số dư khả dụng không đủ cho yêu cầu rút (đã trừ phần đang bị khoá bởi yêu cầu chờ duyệt). */

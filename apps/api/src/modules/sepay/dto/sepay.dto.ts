@@ -1,7 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+/** Phản hồi công khai theo đúng hợp đồng webhook của SePay; không dùng envelope `{ data }`. */
+export class SepayWebhookAckDto {
+  @ApiProperty({
+    enum: [true],
+    example: true,
+    description: 'SePay chỉ coi lần gửi webhook là thành công khi trường này bằng true',
+  })
+  success!: true;
+}
+
 /**
- * Kết quả webhook trả cho SePay.
+ * Kết quả xử lý nội bộ trước khi controller trả acknowledgement tối giản cho SePay.
  *
  * `received: true` trong MỌI trường hợp đã nhận được (kể cả trùng, kể cả payload bỏ qua) —
  * hợp đồng với SePay là "200 nghĩa là thôi retry" (ADR 0022 ràng buộc 5). Chi tiết cho người

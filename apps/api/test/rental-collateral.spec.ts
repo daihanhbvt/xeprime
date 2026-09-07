@@ -9,12 +9,10 @@ import {
   TENANT_STATUS,
   VEHICLE_TYPE,
 } from '@xeprime/types';
-import { AuditService } from '../src/modules/audit/audit.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
-import { PricingService } from '../src/modules/pricing/pricing.service';
 import type { SaveRentalPolicyDto } from '../src/modules/pricing/dto/pricing.dto';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeVehiclesService, vehicleCreator } from './helpers/service-factory';
+import { makePricingService, makeVehiclesService, vehicleCreator } from './helpers/service-factory';
 
 /**
  * Chuẩn hoá chính sách BẢO ĐẢM (gap C-04, 20/08) trên PostgreSQL THẬT.
@@ -29,9 +27,8 @@ import { makeVehiclesService, vehicleCreator } from './helpers/service-factory';
  */
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
-const audit = new AuditService(asService);
 const listings = new ListingsService(asService);
-const pricing = new PricingService(asService, audit, listings);
+const pricing = makePricingService(asService, { listings });
 const vehicles = makeVehiclesService(asService);
 const createVehicle = vehicleCreator(vehicles, asService);
 

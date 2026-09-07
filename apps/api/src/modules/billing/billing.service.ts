@@ -13,6 +13,7 @@ import {
   AUDIT_ACTOR_SCOPE,
   BANK_MATCH_TARGET_TYPE,
   BILLING_MODE,
+  type BillingMode,
   COMMISSION_TRACK_TERM_MONTHS,
   FREE_TRIP_ALLOWANCE,
   NOTIFICATION_TYPE,
@@ -36,6 +37,7 @@ import {
   type PlanSlots,
   type VehicleType,
 } from '@xeprime/types';
+import { ListingsService } from '../public-listings/listings.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
@@ -135,6 +137,8 @@ export class BillingService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly notifications: NotificationService,
+    /** ADR 0024 ràng buộc 2: BillingService GỌI writer của `public_listings`, không tự ghi. */
+    private readonly listings: ListingsService,
     private readonly config: ConfigService,
   ) {}
 
@@ -1420,6 +1424,24 @@ export class BillingService {
       },
       select: INVOICE_SELECT,
     });
+  }
+
+  /**
+   * Chế độ thu phí HIỆN HÀNH của tenant — ADR 0024 điều 1/3: đọc từ snapshot trên dòng gói hiện
+   * hành; không có gói ⇒ `package` (0%) — an toàn khi hỏng là không lấy tiền mà không giải thích
+   * được. Đây là nguồn duy nhất cho báo giá, duyệt yêu cầu và denormalize listing.
+   */
+  async billingModeFor(
+    tenantId: string,
+    now: Date = new Date(),
+    tx?: Prisma.TransactionClient,
+  ): Promise<BillingMode> {
+    const current = await this.findCurrent(tenantId, now, tx);
+    if (!current) {
+      this.logger.warn(`Tenant ${tenantId} không có gói hiện hành — coi là tuyến gói (0%)`);
+      return BILLING_MODE.PACKAGE;
+    }
+    return (current.billingMode as BillingMode | null) ?? BILLING_MODE.PACKAGE;
   }
 
   private findCurrent(tenantId: string, now: Date, tx?: Prisma.TransactionClient) {
