@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import nodemailer from 'nodemailer';
 import { EmailService } from '../src/modules/email/email.service';
@@ -79,6 +80,32 @@ describe('EmailService — dựng transporter', () => {
   it('thiếu SMTP_PORT: rơi về 587 (STARTTLS) chứ không phải undefined', () => {
     makeService({ SMTP_FROM: FROM, SMTP_HOST: 'smtp.example.com' });
     expect(createTransport.mock.calls[0]![0]).toMatchObject({ port: 587 });
+  });
+
+  /**
+   * Chỉ thiếu MỖI `SMTP_PASS` — đúng cấu hình đã làm staging 500 ngày 04/09/2026.
+   *
+   * Nguy hiểm của nó là trông rất bình thường: host đúng, user đúng, service khởi động sạch,
+   * chỉ có chuyến thư là hỏng. Nên ngoài việc không đính `auth`, log phải CẢNH BÁO và gọi tên
+   * đúng biến thiếu — một dòng `log` bình thản ở đây làm người chẩn đoán đi vòng.
+   */
+  it('có user nhưng THIẾU pass: không đính auth, và cảnh báo gọi tên SMTP_PASS', () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+
+    makeService({
+      SMTP_FROM: FROM,
+      SMTP_HOST: 'smtp.resend.com',
+      SMTP_PORT: 587,
+      SMTP_USER: 'resend',
+    });
+
+    expect(createTransport.mock.calls[0]![0]).not.toHaveProperty('auth');
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('SMTP_PASS'));
+    expect(log).not.toHaveBeenCalled();
+
+    warn.mockRestore();
+    log.mockRestore();
   });
 });
 

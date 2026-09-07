@@ -69,6 +69,21 @@ export class InviteDto {
   createdByName!: string | null;
 }
 
+/**
+ * Kết quả TẠO một lời mời — có thêm `emailSent`, và chỉ ở đây.
+ *
+ * Tách khỏi `InviteDto` vì nó là kết quả của MỘT lần gửi, không phải thuộc tính của lời mời:
+ * đọc lại danh sách ngày hôm sau thì "lần gửi đó có thành công không" đã là chuyện quá khứ, và
+ * một cột luôn `true` trong bảng chỉ tạo cảm giác an toàn giả.
+ */
+export class CreateInviteResultDto extends InviteDto {
+  @ApiProperty({
+    description:
+      'false khi lời mời ĐÃ được tạo nhưng thư không gửi được (SMTP hỏng). Giao diện phải nói rõ để người gửi bấm Gửi lại — không được coi như đã gửi.',
+  })
+  emailSent!: boolean;
+}
+
 export class InvitePageDto {
   @ApiProperty({ type: [InviteDto] }) data!: InviteDto[];
   @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;

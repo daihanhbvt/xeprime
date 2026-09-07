@@ -99,9 +99,28 @@ describe('InviteMemberModal — hành vi hiện tại', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Gửi' }));
 
     await waitFor(() => expect(mutation.mutate).toHaveBeenCalled());
-    mutation.mutate.mock.calls[0]![1].onSuccess();
+    mutation.mutate.mock.calls[0]![1].onSuccess({ emailSent: true });
 
     expect(await screen.findByText('Đã gửi lời mời')).toBeTruthy();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * SMTP hỏng: lời mời ĐÃ tạo nhưng thư không đi được. Server trả `emailSent: false` thay vì
+   * ném 500 (staging 04/09/2026), và màn hình phải nói thật — báo "Đã gửi lời mời" ở đây là để
+   * người gửi ngồi chờ một lá thư không tồn tại.
+   */
+  it('tạo được nhưng thư hỏng: cảnh báo CHƯA gửi được, không nói đã gửi', async () => {
+    const { onClose } = renderModal();
+    fillForm();
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi' }));
+
+    await waitFor(() => expect(mutation.mutate).toHaveBeenCalled());
+    mutation.mutate.mock.calls[0]![1].onSuccess({ emailSent: false });
+
+    expect(await screen.findByText(/CHƯA gửi được thư/)).toBeTruthy();
+    expect(screen.queryByText('Đã gửi lời mời')).toBeNull();
+    // Vẫn đóng: lời mời có thật và đã nằm ở bảng "Lời mời đang chờ".
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

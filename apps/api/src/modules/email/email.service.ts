@@ -22,6 +22,7 @@ export class EmailService implements OnModuleDestroy {
     if (host) {
       const user = this.config.get<string>('SMTP_USER');
       const pass = this.config.get<string>('SMTP_PASS');
+      const authenticated = Boolean(user && pass);
 
       this.transporter = nodemailer.createTransport({
         host,
@@ -34,9 +35,27 @@ export class EmailService implements OnModuleDestroy {
          * cách hợp lệ để nói "SMTP không cần đăng nhập", không phải là cấu hình thiếu — mà ở
          * production thì `env.schema.ts` đã bắt buộc cả hai, nên đường này không nới lỏng gì.
          */
-        ...(user && pass ? { auth: { user, pass } } : {}),
+        ...(authenticated ? { auth: { user, pass } } : {}),
       });
-      this.logger.log(`Email qua SMTP ${host}${user ? '' : ' (không đăng nhập)'}`);
+
+      /*
+       * Log phải phản ánh ĐÚNG nhánh vừa chọn, không phải một biến gần giống.
+       *
+       * Bản đầu in dựa trên `SMTP_USER` trong khi quyết định dùng `user && pass`. Trên staging
+       * 04/09/2026, `SMTP_PASS` bị thiếu: nodemailer nối tới Resend mà không đăng nhập, thư hỏng,
+       * còn dòng log vẫn trông hoàn toàn bình thường — chẩn đoán đi vòng vì tin vào nó.
+       *
+       * Và đây là `warn` chứ không phải `log`: một SMTP thật không đăng nhập gần như luôn là
+       * cấu hình thiếu. Hộp thư dev là ngoại lệ, nên câu chữ nói rõ cả hai khả năng.
+       */
+      if (authenticated) {
+        this.logger.log(`Email qua SMTP ${host} (đăng nhập bằng ${user})`);
+      } else {
+        this.logger.warn(
+          `Email qua SMTP ${host} KHÔNG đăng nhập — thiếu ${!user ? 'SMTP_USER' : 'SMTP_PASS'}. ` +
+            'Đúng với hộp thư dev (Mailpit); nhà cung cấp thật sẽ từ chối gửi.',
+        );
+      }
     } else {
       this.transporter = null;
       this.logger.warn('Chưa cấu hình SMTP — email sẽ in ra log thay vì gửi thật (dev).');

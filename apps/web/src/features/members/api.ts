@@ -10,6 +10,7 @@ import {
 } from '@/services/api-client';
 import type {
   CreateInviteInput,
+  CreateInviteResult,
   Invite,
   InviteAnswer,
   InviteFilters,
@@ -62,8 +63,8 @@ export const removeMember = (userId: string): Promise<{ userId: string }> =>
 export const fetchInvites = (filters: InviteFilters): Promise<InviteListResult> =>
   fetchPage<Invite>('/members/invites', inviteFiltersToParams(filters), MEMBERS_DEFAULT_LIMIT);
 
-export const createInvite = (body: CreateInviteInput): Promise<Invite> =>
-  apiPost<Invite>('/members/invites', body);
+export const createInvite = (body: CreateInviteInput): Promise<CreateInviteResult> =>
+  apiPost<CreateInviteResult>('/members/invites', body);
 
 export const revokeInvite = (id: string): Promise<Invite> =>
   apiPost<Invite>(`/members/invites/${id}/revoke`, {});

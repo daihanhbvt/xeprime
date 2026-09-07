@@ -34946,7 +34946,7 @@
                   "type": "object",
                   "properties": {
                     "data": {
-                      "$ref": "#/components/schemas/InviteDto"
+                      "$ref": "#/components/schemas/CreateInviteResultDto"
                     }
                   },
                   "required": [
@@ -54689,6 +54689,62 @@
         "required": [
           "email",
           "roleKey"
+        ]
+      },
+      "CreateInviteResultDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "roleKey": {
+            "type": "string",
+            "enum": [
+              "shop_owner",
+              "shop_manager",
+              "shop_staff",
+              "shop_viewer"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "declined",
+              "expired",
+              "revoked"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "createdByName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tên người gửi lời mời"
+          },
+          "emailSent": {
+            "type": "boolean",
+            "description": "false khi lời mời ĐÃ được tạo nhưng thư không gửi được (SMTP hỏng). Giao diện phải nói rõ để người gửi bấm Gửi lại — không được coi như đã gửi."
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "roleKey",
+          "status",
+          "expiresAt",
+          "createdAt",
+          "emailSent"
         ]
       },
       "InvitePreviewDto": {
