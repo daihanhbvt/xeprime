@@ -10,6 +10,7 @@ import {
   type BookingStatus,
   type VehicleOperationStatus,
 } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { EntityIdentity } from '@/components/data-display/EntityIdentity';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { bookingPath, vehiclePath } from '@/constants/routes';
@@ -101,7 +102,7 @@ export function VehicleLinkCard({ vehicle }: { vehicle: ReceiptVehicleOption }) 
   return (
     <ReceiptLinkCard
       imageUrl={vehicle.imageUrl}
-      title={[vehicle.code, vehicle.name, vehicle.plateNumber].filter(Boolean).join(' · ')}
+      title={[vehicle.code, vehicle.name, vehicle.plateNumber].filter(Boolean).join(LIST_SEPARATOR)}
       subtitle={vehicleLabel(vehicle.name, vehicle.plateNumber)}
       tag={
         <StatusTag
@@ -131,7 +132,7 @@ export function BookingLinkCard({ booking }: { booking: ReceiptBookingOption }) 
   return (
     <ReceiptLinkCard
       imageUrl={booking.vehicleImageUrl}
-      title={[booking.code, booking.customerName, booking.plateNumber].filter(Boolean).join(' · ')}
+      title={[booking.code, booking.customerName, booking.plateNumber].filter(Boolean).join(LIST_SEPARATOR)}
       subtitle={vehicleLabel(booking.vehicleName, booking.plateNumber)}
       tag={
         <StatusTag

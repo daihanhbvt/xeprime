@@ -1,11 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
 import { Text, XStack } from 'tamagui';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { colors, fieldFontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 export function FieldLabel({ label, required = false }: { label: string; required?: boolean }) {
+  /*
+    Nhãn dùng màu CHỮ CHÍNH, không phải `textMuted`.
+
+    Nhãn, chữ gợi ý và chữ trong ô mà cùng một tông mờ thì ba loại nội dung khác hẳn nhau đọc ra
+    như một khối. Nhãn là thứ được quét đầu tiên khi dò form nên nó phải đậm nhất trong ba; chữ
+    gợi ý ở `FieldMessage` mới là phần được phép mờ.
+  */
   return (
-    <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.medium}>
+    <Text col={colors.text} fos={fieldFontSize.label} fow={fontWeight.semibold}>
       {label}
       {required ? <Text col={colors.danger}> *</Text> : null}
     </Text>
@@ -23,7 +30,7 @@ export function FieldMessage({
     return (
       <XStack ai="center" gap={space.xs}>
         <Ionicons name="alert-circle" size={iconSize.xs} color={colors.danger} />
-        <Text f={1} col={colors.danger} fos={fontSize.bodySm}>
+        <Text f={1} col={colors.danger} fos={fieldFontSize.message}>
           {error}
         </Text>
       </XStack>
@@ -31,7 +38,7 @@ export function FieldMessage({
   }
   if (hint) {
     return (
-      <Text col={colors.textMuted} fos={fontSize.bodySm}>
+      <Text col={colors.textMuted} fos={fieldFontSize.message}>
         {hint}
       </Text>
     );
@@ -43,6 +50,7 @@ export function FieldShell({
   children,
   focused = false,
   invalid = false,
+  disabled = false,
   align = 'center',
   onPress,
   accessibilityRole,
@@ -51,6 +59,14 @@ export function FieldShell({
   children: ReactNode;
   focused?: boolean;
   invalid?: boolean;
+  /**
+   * Ô chỉ đọc — nền xám, viền nhạt.
+   *
+   * `editable={false}` của React Native chỉ CHẶN gõ chứ không đổi hình: ô khoá trông y hệt ô
+   * nhập được, và người dùng chạm vào rồi tưởng bàn phím hỏng. Web có `disabled` của AntD lo
+   * phần này; ở đây phải tự vẽ.
+   */
+  disabled?: boolean;
   align?: 'center' | 'flex-start';
   onPress?: () => void;
   accessibilityRole?: 'button';
@@ -59,20 +75,27 @@ export function FieldShell({
   const active = invalid ? colors.danger : colors.primary;
 
   /*
-   * Viền lúc NGHỈ dùng `borderInput`, KHÔNG dùng `border`.
+   * Nền TRẮNG + viền thấy được — không phải một mảng xám.
    *
-   * Nền ô là `surfaceMuted`, và trên một thẻ trắng thì `border` với nền đó chỉ chênh nhau khoảng
-   * 1.08:1 — nhìn bằng mắt thường gần như không thấy đường viền, nên ô nhập trông như một mảng
-   * xám trôi nổi. `borderInput` là tông đậm hơn dành riêng cho việc này.
+   * Bản đầu tô `surfaceMuted` cho cả ô. Trên một form dài, mười mảng xám xếp dọc làm cả màn
+   * thành một khối xám điệp: mắt không tách được đâu là ô nhập, đâu là nền, và không ô nào nổi
+   * lên khi được chọn. Nền trắng đẩy chữ người dùng gõ lên trước, còn ranh giới ô do VIỀN vẽ —
+   * đúng cách `<Input>` của AntD làm bên web, nên hai bên cũng đọc giống nhau.
+   *
+   * Viền lúc nghỉ dùng `borderInput` chứ không `border`: `border` là tông cho đường chia giữa
+   * hai khối, nhạt hơn hẳn, và một ô nhập viền bằng nó trông như chưa vẽ xong.
+   *
+   * Ba trạng thái đọc được bằng MÀU VIỀN, không bằng độ dày: đổi `borderWidth` khi focus làm
+   * nội dung nhảy 1px mỗi lần chạm vào ô.
    */
   return (
     <XStack
       ai={align}
       gap={space.sm}
-      bg={colors.surfaceMuted}
-      br={radius.sm}
+      bg={disabled ? colors.surfaceMuted : colors.surface}
+      br={radius.md}
       bw={1}
-      bc={focused || invalid ? active : colors.borderInput}
+      bc={disabled ? colors.border : focused || invalid ? active : colors.borderInput}
       px={space.sm}
       minHeight={sizing.touchTarget}
       {...(onPress ? { onPress } : {})}

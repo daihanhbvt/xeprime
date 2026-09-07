@@ -17,6 +17,7 @@ import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
+import { LIST_TUNING } from '@/theme/list-tuning';
 import { colors, space } from '@/theme/tokens';
 import { TripCard } from './components/TripCard';
 import { useTripsInfinite } from './hooks/use-trips';
@@ -146,7 +147,6 @@ export function TripsScreen() {
             renderItem={renderTrip}
             contentContainerStyle={styles.listContent}
             onEndReached={loadMore}
-            onEndReachedThreshold={0.5}
             refreshControl={refreshControl}
             /*
               Truyền KIỂU component, không phải một phần tử: `<TripCardSkeleton />` là object mới
@@ -154,20 +154,7 @@ export function TripsScreen() {
               suốt. Tham chiếu hàm thì bền.
             */
             ListFooterComponent={query.isFetchingNextPage ? TripCardSkeleton : null}
-            /*
-              Cửa sổ dựng của danh sách dài.
-
-              Mặc định của `FlatList` là `initialNumToRender: 10` và `windowSize: 21` — tức nó giữ
-              sống khoảng 10 màn hình thẻ quanh vùng đang xem. Thẻ chuyến có ảnh, huy hiệu trạng
-              thái và bốn dòng chữ, nên con số đó là rất nhiều view cho thứ không ai nhìn.
-
-              `initialNumToRender: 6` ≈ hai màn đầu (một trang là 10 mục), `windowSize: 7` giữ ba
-              màn quanh vùng xem. `removeClippedSubviews` tháo view đã ra khỏi màn khỏi cây native.
-            */
-            initialNumToRender={6}
-            maxToRenderPerBatch={6}
-            windowSize={7}
-            removeClippedSubviews
+            {...LIST_TUNING}
           />
         )}
       </Screen>

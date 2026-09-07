@@ -1,6 +1,9 @@
+import type { ReactNode } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
-import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { colors, fieldFontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import type { IconName } from './Chip';
 
 /**
  * Đường kính vòng chọn, và cạnh của chấm bên trong.
@@ -10,6 +13,10 @@ import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tok
  */
 const RING = 20;
 const DOT = 10;
+
+/** Ô hình vuông bo góc — đủ to để hình đọc được, đủ nhỏ để không tranh chỗ với nhãn. */
+const ICON_BOX = 32;
+const ICON_SIZE = 18;
 
 const styles = StyleSheet.create({
   /** Hàng phải kéo hết bề ngang: nhãn dài xuống dòng trong khung của nó, không co lại quanh chữ. */
@@ -26,25 +33,37 @@ const styles = StyleSheet.create({
  * Không phải `Chip` vì chip cắt nhãn ở một dòng — với nhãn là cả một câu, phần bị cắt chính là
  * phần giải thích.
  */
-export function RadioOption({
+/**
+ * Vỏ chung của một dòng lựa chọn — khung, viền, nền, vùng chạm, chỗ đặt nhãn.
+ *
+ * Radio và checkbox chỉ khác nhau ở CÁI DẤU bên trái. Để mỗi loại tự vẽ khung thì hai loại
+ * nằm cạnh nhau trong cùng một form sẽ lệch đệm, lệch bo góc, lệch màu khi chọn — và người
+ * dùng đọc ra là hai thành phần khác nhau chứ không phải hai kiểu chọn.
+ */
+function OptionShell({
   label,
   hint,
   checked,
-  disabled = false,
+  disabled,
+  icon,
+  role,
+  indicator,
   onPress,
 }: {
   label: string;
-  /** Dòng phụ dưới nhãn — chỉ khi có thứ cần nói thêm mà nhãn không chứa nổi. */
   hint?: string;
   checked: boolean;
-  disabled?: boolean;
+  disabled: boolean;
+  icon?: IconName;
+  role: 'radio' | 'checkbox';
+  indicator: ReactNode;
   onPress: () => void;
 }) {
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      accessibilityRole="radio"
+      accessibilityRole={role}
       accessibilityState={{ checked, disabled }}
       style={styles.stretch}
     >
@@ -60,6 +79,119 @@ export function RadioOption({
         bc={checked ? colors.primary : colors.border}
         opacity={disabled ? 0.5 : 1}
       >
+        {indicator}
+
+        {/*
+          Ô biểu tượng đứng GIỮA dấu chọn và nhãn.
+
+          Nền là màu thương hiệu ĐẶC với hình trắng, không phải vàng nhạt: cả hàng đã nằm trên
+          nền trắng và viền nhạt, thêm một mảng vàng nhạt nữa thì ô hình chìm mất và không còn
+          làm được việc của nó — giúp phân biệt bốn lựa chọn bằng HÌNH thay vì phải đọc chữ.
+        */}
+        {icon ? (
+          <XStack
+            width={ICON_BOX}
+            height={ICON_BOX}
+            ai="center"
+            jc="center"
+            br={radius.sm}
+            bg={colors.primary}
+          >
+            <Ionicons name={icon} size={ICON_SIZE} color={colors.onPrimary} />
+          </XStack>
+        ) : null}
+
+        {/* `f={1}` để nhãn dài xuống dòng thay vì đẩy dấu chọn ra khỏi khung. */}
+        <YStack f={1} gap={2}>
+          <Text col={colors.text} fos={fieldFontSize.value} fow={fontWeight.medium}>
+            {label}
+          </Text>
+          {hint ? (
+            <Text col={colors.textMuted} fos={fieldFontSize.message}>
+              {hint}
+            </Text>
+          ) : null}
+        </YStack>
+      </XStack>
+    </Pressable>
+  );
+}
+
+/**
+ * Một dòng lựa chọn CHỌN NHIỀU — cùng khung với `RadioOption`, khác đúng cái dấu.
+ *
+ * Dấu VUÔNG chứ không tròn: hình phải nói được chọn được mấy cái. Một hàng ô tròn mà bấm hai
+ * cái cùng sáng là hình nói dối, và người dùng sẽ bấm lại vì tưởng mình chọn nhầm.
+ */
+export function CheckOption({
+  label,
+  hint,
+  checked,
+  disabled = false,
+  onPress,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <OptionShell
+      label={label}
+      {...(hint === undefined ? {} : { hint })}
+      checked={checked}
+      disabled={disabled}
+      role="checkbox"
+      onPress={onPress}
+      indicator={
+        <XStack
+          width={RING}
+          height={RING}
+          ai="center"
+          jc="center"
+          br={radius.sm}
+          bw={1}
+          bc={checked ? colors.primary : colors.borderInput}
+          bg={checked ? colors.primary : colors.surface}
+        >
+          {checked ? <Ionicons name="checkmark" size={TICK} color={colors.onPrimary} /> : null}
+        </XStack>
+      }
+    />
+  );
+}
+
+/** Cỡ dấu tick — nhỏ hơn ô vuông đủ để còn thấy viền quanh nó. */
+const TICK = 14;
+
+export function RadioOption({
+  label,
+  hint,
+  icon,
+  checked,
+  disabled = false,
+  onPress,
+}: {
+  label: string;
+  /** Dòng phụ dưới nhãn — chỉ khi có thứ cần nói thêm mà nhãn không chứa nổi. */
+  hint?: string;
+  /** Hình đại diện cho lựa chọn — bốn hình khác nhau nhận ra nhanh hơn bốn cái tên. */
+  icon?: IconName;
+  checked: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <OptionShell
+      label={label}
+      {...(hint === undefined ? {} : { hint })}
+      checked={checked}
+      disabled={disabled}
+      {...(icon === undefined ? {} : { icon })}
+      role="radio"
+      onPress={onPress}
+      indicator={
         <XStack
           width={RING}
           height={RING}
@@ -75,19 +207,7 @@ export function RadioOption({
           */}
           {checked ? <XStack width={DOT} height={DOT} br={DOT / 2} bg={colors.primary} /> : null}
         </XStack>
-
-        {/* `f={1}` để nhãn dài xuống dòng thay vì đẩy vòng chọn ra khỏi khung. */}
-        <YStack f={1} gap={2}>
-          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
-            {label}
-          </Text>
-          {hint ? (
-            <Text col={colors.textMuted} fos={fontSize.label}>
-              {hint}
-            </Text>
-          ) : null}
-        </YStack>
-      </XStack>
-    </Pressable>
+      }
+    />
   );
 }

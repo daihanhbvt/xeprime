@@ -8,6 +8,7 @@ import {
   VEHICLE_OPERATION_STATUS_META,
   type VehicleOperationStatus,
 } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { VEHICLE_EDIT_TAB, vehiclePath, vehicleTabPath } from '@/constants/routes';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -50,7 +51,7 @@ export function VehicleCreateSuccess({
         <div className={styles.vehicleInfo}>
           <strong>{vehicle.name}</strong>
           <span>
-            {[vehicle.plateNumber, vehicle.code, sourceLabel].filter(Boolean).join(' · ')}
+            {[vehicle.plateNumber, vehicle.code, sourceLabel].filter(Boolean).join(LIST_SEPARATOR)}
           </span>
         </div>
         {/* Cùng `StatusTag` với danh sách và Hồ sơ 360 — không tự dựng `Tag` thứ hai ở đây. */}

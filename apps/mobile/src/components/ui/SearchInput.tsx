@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, TextInput } from 'react-native';
 import { XStack } from 'tamagui';
-import { colors, fontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { colors, fieldFontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 /**
  * Ô tìm kiếm KHÔNG gắn form — cho những danh sách lọc ở server.
@@ -33,7 +33,8 @@ export function SearchInput({
     <XStack
       ai="center"
       gap={space.sm}
-      bg={boxed ? colors.surface : colors.surfaceMuted}
+      // Trắng ở CẢ hai biến thể: ô tìm kiếm cũng là ô nhập, cùng ngôn ngữ với `FieldShell`.
+      bg={colors.surface}
       // Viền nghỉ vì cùng lý do với `TextField`: nền xám nhạt biến mất trên thẻ trắng.
       bw={1}
       bc={colors.borderInput}
@@ -52,7 +53,7 @@ export function SearchInput({
         placeholderTextColor={colors.placeholder}
         accessibilityLabel={label}
         returnKeyType="search"
-        style={{ flex: 1, color: colors.text, fontSize: fontSize.body }}
+        style={{ flex: 1, color: colors.text, fontSize: fieldFontSize.value }}
       />
       {value ? (
         <Pressable

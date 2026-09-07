@@ -1,12 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { bookingRequestRemainingMs, isBookingRequestPastDue } from '@xeprime/types';
+import { useNow } from '@/hooks/use-now';
 import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
-
-/** Nhịp đếm — một giây. Đủ mượt cho một hạn 60 phút, và rẻ hơn hẳn nhịp theo khung hình. */
-const TICK_MS = 1000;
 
 /** Dưới mốc này thì đổi sang màu cảnh báo: còn đủ để mở máy và bấm, không đủ để quên. */
 const URGENT_MS = 15 * 60_000;
@@ -19,17 +17,17 @@ const URGENT_MS = 15 * 60_000;
  */
 export function RespondDeadline({ respondBy }: { respondBy: string }) {
   const t = useTranslations('BookingRequests.deadline');
-  // State là MỐC HIỆN TẠI, không phải số mili-giây còn lại: giữ "còn lại" buộc phải `setState`
-  // trong effect mỗi khi `respondBy` đổi (thẻ tái sử dụng khi cuộn) — một vòng render thừa.
-  const [now, setNow] = useState(() => Date.now());
+  /*
+   * Giờ lấy từ đồng hồ CHUNG (`useNow`), không phải timer riêng của thẻ — xem chú thích ở hook.
+   *
+   * Hết hạn là một chiều: chốt bằng state để thôi đăng ký đồng hồ, vì `expired` cần `now` để
+   * tính còn `useNow` cần biết `expired` để dừng — chốt lại là cách cắt vòng đó.
+   */
+  const [done, setDone] = useState(false);
+  const now = useNow(!done);
   const remaining = bookingRequestRemainingMs(respondBy, new Date(now));
   const expired = remaining <= 0 || isBookingRequestPastDue(respondBy, new Date(now));
-
-  useEffect(() => {
-    if (expired) return;
-    const id = setInterval(() => setNow(Date.now()), TICK_MS);
-    return () => clearInterval(id);
-  }, [expired]);
+  if (expired && !done) setDone(true);
 
   if (expired) {
     return (

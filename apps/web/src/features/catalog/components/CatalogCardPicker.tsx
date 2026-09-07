@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useId } from 'react';
 import type { CatalogItem } from '../types';
 import styles from './CatalogCardPicker.module.css';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 
 interface CatalogCardPickerProps {
   items: readonly CatalogItem[];
@@ -91,7 +92,7 @@ export function CatalogCardPicker({
                   count !== undefined && countSuffix ? `${count} ${countSuffix}` : null,
                 ]
                   .filter(Boolean)
-                  .join(' · ')}
+                  .join(LIST_SEPARATOR)}
               </span>
             ) : null}
             {active ? <CheckOutlined className={styles.check} aria-hidden /> : null}

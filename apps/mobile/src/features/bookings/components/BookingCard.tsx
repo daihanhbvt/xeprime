@@ -3,8 +3,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { BOOKING_STATUS_META, type BookingStatus } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { Card } from '@/components/ui/Card';
-import { DetailArrow } from '@/components/ui/DetailArrow';
+import { DetailChevron } from '@/components/ui/DetailArrow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
@@ -36,7 +37,7 @@ function BookingCardImpl({
   const meta = BOOKING_STATUS_META[status];
 
   // Mã đơn và SĐT đứng cùng dòng dưới tên — đúng cột "khách" của web.
-  const identity = [booking.code, booking.customerPhone].filter(Boolean).join(' · ');
+  const identity = [booking.code, booking.customerPhone].filter(Boolean).join(LIST_SEPARATOR);
 
   /*
    * MỘT hàm mở cho cả thẻ lẫn mũi tên — cùng khuôn với `TripCard`. Viết `() => onPress(booking)`
@@ -46,10 +47,8 @@ function BookingCardImpl({
   const open = useCallback(() => onPress(booking), [onPress, booking]);
 
   return (
-    <Card onPress={open} accessibilityLabel={`${booking.customerName} · ${booking.code}`}>
+    <Card onPress={open} accessibilityLabel={`${booking.customerName}${LIST_SEPARATOR}${booking.code}`}>
       <YStack gap={space.sm}>
-        <DetailArrow label={t('card.viewDetailOf', { code: booking.code })} onPress={open} />
-
         <XStack ai="flex-start" jc="space-between" gap={space.sm}>
           <YStack f={1} gap={2}>
             <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold} numberOfLines={1}>
@@ -96,13 +95,23 @@ function BookingCardImpl({
 
         <YStack height={1} bg={colors.borderSubtle} />
 
+        {/*
+          Mũi tên `>` cuối hàng tổng tiền — DẤU HIỆU thẻ mở ra được, không phải một nút nữa.
+
+          Cả thẻ đã là đích chạm, nên một nút "Xem chi tiết" ở chân thẻ chỉ là lối vào thứ hai cho
+          đúng một việc, lại còn nặng bằng một hành động chính. Mũi tên đứng ở đây chứ không nổi
+          tuyệt đối ở góc trên: góc trên là chỗ của nhãn trạng thái, hai thứ chồng nhau.
+        */}
         <XStack ai="center" jc="space-between" gap={space.sm}>
           <Text col={colors.textMuted} fos={fontSize.label}>
             {t('card.total')}
           </Text>
-          <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
-            {fmt.money(booking.totalAmount)}
-          </Text>
+          <XStack ai="center" gap={space.xs}>
+            <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
+              {fmt.money(booking.totalAmount)}
+            </Text>
+            <DetailChevron />
+          </XStack>
         </XStack>
       </YStack>
     </Card>

@@ -13,6 +13,7 @@ import {
   isHandoverEditable,
   HANDOVER_STATUS,
   HANDOVER_STATUS_META,
+  type HandoverCondition,
   type HandoverStatus,
   type HandoverType,
 } from '@xeprime/types';
@@ -248,7 +249,7 @@ function HandoverForm({
       {
         occurredAt: occurredAt.toISOString(),
         odometerKm: values.odometerKm,
-        ...(values.condition ? { condition: values.condition as 'normal' | 'attention' } : {}),
+        ...(values.condition ? { condition: values.condition as HandoverCondition } : {}),
         notes: values.notes || null,
         ...(handover ? { expectedRowVersion: handover.rowVersion } : {}),
       },
@@ -499,6 +500,7 @@ function HandoverForm({
         <ResolveOdometerSheet
           bookingId={context.bookingId}
           type={type}
+          context={context}
           handover={handover}
           onClose={() => setFixingOdometer(false)}
         />

@@ -88,5 +88,12 @@
     "setDefault": "Set as the default branch",
     "activated": "Branch reactivated",
     "deactivated": "Branch deactivated"
+  },
+  "validation": {
+    "nameRequired": "Branch name is required",
+    "nameMin": "At least 2 characters",
+    "provinceRequired": "Select the branch's province",
+    "provinceInvalid": "Invalid province code",
+    "phoneInvalid": "Invalid phone number"
   }
 }

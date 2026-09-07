@@ -1,7 +1,12 @@
 import { draftToFilterPatch } from '@xeprime/domain';
 import { useCallback, useRef, useState, type ComponentProps } from 'react';
 import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
-import { useWindowDimensions, type LayoutChangeEvent, type ScrollView } from 'react-native';
+import {
+  RefreshControl,
+  useWindowDimensions,
+  type LayoutChangeEvent,
+  type ScrollView,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { YStack } from 'tamagui';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
@@ -48,7 +53,12 @@ function HomeContent() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { data: user } = useCurrentUser();
-  const { data: banners, isLoading: bannersLoading } = useBanners();
+  const {
+    data: banners,
+    isLoading: bannersLoading,
+    isRefetching: bannersRefetching,
+    refetch: refetchBanners,
+  } = useBanners();
   const { draft, submit } = useSearchExperience();
 
   const threshold = stickyThreshold(width);
@@ -127,6 +137,18 @@ function HomeContent() {
         // Reanimated không xuất kiểu instance của bản bọc; runtime vẫn là một `ScrollView`.
         ref={scrollRef as ComponentProps<typeof Animated.ScrollView>['ref']}
         contentContainerStyle={{ paddingBottom: bottomPadding }}
+        /*
+          Kéo-làm-mới cho banner — thứ DUY NHẤT trên trang này đến từ server; ô tìm kiếm là
+          state cục bộ và danh mục đã có cache riêng.
+        */
+        refreshControl={
+          <RefreshControl
+            refreshing={bannersRefetching}
+            onRefresh={() => void refetchBanners()}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
         keyboardShouldPersistTaps="handled"
         onScroll={onScroll}
         scrollEventThrottle={scrollThrottle.frame}

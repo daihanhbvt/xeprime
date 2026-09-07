@@ -45,7 +45,8 @@
     "done": "Done",
     "agree": "OK",
     "choose": "Select…",
-    "now": "Now"
+    "now": "Now",
+    "clearValue": "Clear value"
   },
   "states": {
     "loading": "Loading…",
@@ -62,7 +63,8 @@
     "loadMore": "Load more",
     "endOfList": "You've reached the end",
     "loadError": "Couldn't load the data",
-    "featureComingSoon": "This feature is coming soon."
+    "featureComingSoon": "This feature is coming soon.",
+    "imageUnavailable": "Couldn't open this image."
   },
   "labels": {
     "yes": "Yes",
@@ -85,7 +87,8 @@
     "createdAt": "Created",
     "updatedAt": "Updated",
     "comingSoon": "Coming soon",
-    "emptyValue": "—"
+    "emptyValue": "—",
+    "selectDate": "Select date"
   },
   "units": {
     "day": "{count, plural, one {# day} other {# days}}",
@@ -210,6 +213,17 @@
       "minute": "Minute",
       "date": "Date",
       "time": "Time"
+    },
+    "fileList": {
+      "upload": "Upload document",
+      "uploading": "Uploading…",
+      "empty": "No documents yet",
+      "hint": "PDF, JPG, PNG — up to 10MB per file",
+      "hintImageOnly": "JPG, PNG images — up to 10MB per file",
+      "maxReached": "{count, plural, one {# file} other {# files}} maximum",
+      "downloadFile": "Download {name}",
+      "removeFile": "Remove file {name}",
+      "legacyNote": "This older document must be re-uploaded to keep it private"
     }
   },
   "filters": {
@@ -220,5 +234,9 @@
     "subtitle": "Narrow the list down by criteria",
     "chip": "{label}: {value}",
     "none": "No filters applied yet"
+  },
+  "permissions": {
+    "cameraDenied": "Camera access is off. Open Settings → XePrime and allow Camera.",
+    "libraryDenied": "Photo access is off. Open Settings → XePrime and allow Photos."
   }
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Image, Linking, Pressable } from 'react-native';
+import { Image } from 'expo-image';
+import { Linking, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -13,7 +14,7 @@ import {
   SERVICE_TYPE,
   type CustomerTripStage,
 } from '@xeprime/types';
-import { dayjs } from '@xeprime/domain';
+import { dayjs, LIST_SEPARATOR } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
@@ -32,6 +33,7 @@ import { getErrorCode } from '@/lib/api-client';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { CancelTripSheet } from './components/CancelTripSheet';
@@ -63,7 +65,11 @@ export function TripDetailScreen({ tripId }: { tripId: string }) {
           title={t('detail.heading')}
           onBack={() => goBackOr(router, ROUTES.booking.list())}
         />
-        <Screen edges={['left', 'right', 'bottom']}>
+        <Screen
+          edges={['left', 'right', 'bottom']}
+          refreshing={query.isRefetching}
+          onRefresh={() => void query.refetch()}
+        >
           <TripDetailSkeleton />
         </Screen>
       </>
@@ -343,6 +349,9 @@ function TripDetailBody({ trip }: { trip: CustomerTripDetail }) {
 /** Ảnh xe 16:9 — cùng tỉ lệ với mọi chỗ khác trong app, và đủ để nhận ra chiếc xe. */
 const VEHICLE_PHOTO_RATIO = 16 / 9;
 
+/** Không phụ thuộc prop/state — dựng MỘT lần ở module scope, không phải mỗi lần render. */
+const VEHICLE_PHOTO_STYLE = { width: '100%', aspectRatio: VEHICLE_PHOTO_RATIO } as const;
+
 /**
  * Khối "Thông tin phương tiện" — **ảnh · tên (bấm được, sang trang xe) · thông số · biển số**,
  * cùng bộ với khối đầu tiên bên web: đó là thứ khách đối chiếu khi ra tới điểm nhận.
@@ -351,7 +360,7 @@ const VEHICLE_PHOTO_RATIO = 16 / 9;
  */
 function VehicleBlock({ trip }: { trip: CustomerTripDetail }) {
   const t = useTranslations('Trips.detail');
-  const router = useRouter();
+  const navigateOnce = useNavigateOnce();
   const { vehicle } = trip;
 
   /*
@@ -365,15 +374,17 @@ function VehicleBlock({ trip }: { trip: CustomerTripDetail }) {
       vehicle.fuelType,
     ]
       .filter(Boolean)
-      .join(' · ') || t('specsEmpty');
+      .join(LIST_SEPARATOR) || t('specsEmpty');
 
   return (
     <Card padded={false}>
       {vehicle.imageUrl ? (
         <Image
           source={{ uri: vehicle.imageUrl }}
-          style={{ width: '100%', aspectRatio: VEHICLE_PHOTO_RATIO }}
-          resizeMode="cover"
+          style={VEHICLE_PHOTO_STYLE}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={150}
         />
       ) : null}
 
@@ -383,7 +394,7 @@ function VehicleBlock({ trip }: { trip: CustomerTripDetail }) {
         </Text>
 
         <Pressable
-          onPress={() => router.push(ROUTES.explore.listingDetail(vehicle.id))}
+          onPress={() => navigateOnce(ROUTES.explore.listingDetail(vehicle.id))}
           accessibilityRole="link"
           accessibilityLabel={vehicle.name}
         >

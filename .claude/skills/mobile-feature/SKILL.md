@@ -81,10 +81,10 @@ Never reinvent logic that is already canonical in the monorepo:
 * **API client**: consume endpoints and TanStack Query keys from `@xeprime/api-client`.
 * **Design tokens**: `XP_TOKENS` in `@xeprime/ui` is the SINGLE source for colors, typography,
   radii, spacing and shadows across every client (ADR 0003). On native, consume them through
-  `src/theme/tokens.ts` (`colors`, `space`, `radius`, `fontSize`, `fontWeight`, `iconSize`,
-  `sizing`) and `src/theme/elevation.ts` — those files translate CSS-flavoured token values into
-  React Native ones. Never write a hex code or a raw size into a component, and never start a local
-  palette: the last one drifted until native primary was black while web was gold.
+  `src/theme/tokens.ts` (`colors`, `space`, `radius`, `fontSize`, `fieldFontSize`, `fontWeight`,
+  `iconSize`, `sizing`) and `src/theme/elevation.ts` — those files translate CSS-flavoured token
+  values into React Native ones. Never write a hex code or a raw size into a component, and never
+  start a local palette: the last one drifted until native primary was black while web was gold.
 * **UI strings**: the message root is `@xeprime/domain/messages/{vi,en}`, shared verbatim with
   `apps/web` — one key, one translation. `src/i18n/messages.ts` is only a gather table; add the
   namespace a feature already owns (`bookings`, `vehicles`, …) rather than copying strings.
@@ -354,10 +354,16 @@ the field.
   kit already covers (see the `react-native-svg` note in `StripePattern`/`BrandMark`: a native
   module absent from the installed dev build crashes at runtime, not at build time).
 * **Sizes and colors come from `src/theme/tokens.ts`** (`space`, `radius`, `fontSize`,
-  `fontWeight`, `iconSize`, `sizing`, `colors`) — the native adapter over `XP_TOKENS`, NOT
-  Tamagui's own theme tokens. `sizing.touchTarget` is the 44pt/48dp floor — use it rather than
-  typing a number. `iconSize` (`xs`/`sm`/`md`/`lg`) is the icon scale: named by ROLE, not by
-  pixel count.
+  `fieldFontSize`, `fontWeight`, `iconSize`, `sizing`, `colors`) — the native adapter over
+  `XP_TOKENS`, NOT Tamagui's own theme tokens. `sizing.touchTarget` is the 44pt/48dp floor — use
+  it rather than typing a number. `iconSize` (`xs`/`sm`/`md`/`lg`) is the icon scale: named by
+  ROLE, not by pixel count.
+* **Text INSIDE a form control uses `fieldFontSize`, never `fontSize` directly** — `value` for
+  what the user typed or picked, `label` above the box, `message` for hint and error, `affix` for
+  a unit or counter inside it. `fontSize` is the WEB scale: its `body` step (14px) is desktop's
+  default content size, while this app runs nearly three quarters of its text at 12px, so a field
+  written against `fontSize.body` renders larger than its own label. One constant also means a
+  future change to input text is one edit, not a sweep across every field.
 * **Confirmations go through [`<AlertDialog>`](../../../apps/mobile/src/components/ui/AlertDialog.tsx),
   never `Alert.alert`.** The OS dialog ignores the design tokens, orders its buttons differently
   on iOS and Android (so the same array yields "Cancel | Delete" on one and the reverse on the

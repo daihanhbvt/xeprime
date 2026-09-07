@@ -7,6 +7,7 @@ import {
   requiredIdentityDocuments,
   SERVICE_TYPE,
 } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { catalogLabel, type CatalogMap } from '@/features/catalog/types';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
@@ -324,7 +325,7 @@ export async function ListingDetailView({
             <p className={styles.pickupAddress}>
               {[listing.pickupPoint.branchName, listing.pickupPoint.address]
                 .filter(Boolean)
-                .join(' · ')}
+                .join(LIST_SEPARATOR)}
             </p>
             {listing.pickupPoint.provinceName ? (
               <p className={styles.pickupMeta}>{listing.pickupPoint.provinceName}</p>

@@ -7,7 +7,6 @@ import {
   KeyOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
-import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App, Button, Card, Col, Form, Radio, Row, Skeleton, Tag } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
@@ -43,6 +42,7 @@ import type { VehicleDetail, VehicleSource } from '../types';
 import styles from './VehicleSourceWorkspace.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useValidationResolver } from '@/i18n/use-validation-resolver';
 
 const SOURCE_ICON: Record<VehicleSourceType, React.ReactNode> = {
   [VEHICLE_SOURCE_TYPE.OWNED]: <HomeOutlined />,
@@ -163,13 +163,17 @@ function VehicleSourceForm({
         : emptySourceFormValues(source.sourceType),
     [source],
   );
+  const resolver = useValidationResolver<VehicleSourceFormValues>(
+    vehicleSourceFormSchema,
+    'Vehicles.source.validation',
+  );
   const {
     control,
     handleSubmit,
     reset,
     formState: { isDirty, errors },
   } = useForm<VehicleSourceFormValues>({
-    resolver: yupResolver(vehicleSourceFormSchema),
+    resolver,
     defaultValues: initialValues,
   });
   const [confirmTypeChange, setConfirmTypeChange] = useState<VehicleSourceFormValues | null>(null);

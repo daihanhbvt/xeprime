@@ -105,6 +105,14 @@ export function useInfinitePublicListings(filters: MarketplaceFilters) {
     appendError: query.isError && query.data ? query.error : null,
     hasNextPage: query.hasNextPage,
     isFetchingNextPage: query.isFetchingNextPage,
+    /**
+     * Đang tải lại TỪ ĐẦU do người dùng kéo — không tính lúc nối trang.
+     *
+     * `isRefetching` của TanStack bật cả khi `fetchNextPage` chạy, nên dùng trần thì vòng quay
+     * kéo-làm-mới hiện lên mỗi lần cuộn tới đáy.
+     */
+    isRefreshing: query.isRefetching && !query.isFetchingNextPage,
+    refresh: retryInitial,
     /** Guard sẵn chống gọi trùng — chỗ gọi cứ gọi, hook tự bỏ qua khi đang bay hoặc hết trang. */
     fetchNextPage,
     retryInitial,

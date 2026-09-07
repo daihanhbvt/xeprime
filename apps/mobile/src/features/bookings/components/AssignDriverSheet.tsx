@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -139,7 +140,7 @@ function DriverRow({
           </Text>
           {warnings.length > 0 ? (
             <Text col={colors.warning} fos={fontSize.label} numberOfLines={2}>
-              {warnings.join(' · ')}
+              {warnings.join(LIST_SEPARATOR)}
             </Text>
           ) : null}
         </YStack>

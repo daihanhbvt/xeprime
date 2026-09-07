@@ -274,3 +274,60 @@ export function parseMoneyInput(value: string | null | undefined): number | null
   const digits = String(value ?? '').replace(/\D/g, '');
   return digits === '' ? null : Number(digits);
 }
+
+export const NUMBER_GROUP_SEPARATOR = '.';
+export const NUMBER_DECIMAL_SEPARATOR = ',';
+
+/**
+ * Chuỗi hiển thị của một SỐ ĐO trong ô nhập — `12.500`, `2,8`, `2019`.
+ *
+ * `grouped: false` cho những con số KHÔNG phải số lượng: năm sản xuất phải đọc là `2019` chứ
+ * không phải `2.019`. Đây đúng là lý do `NumberField` tách khỏi `MoneyField` ngay từ đầu.
+ *
+ * Không dùng `Intl.NumberFormat`: nó bám `locale` (xem hằng ở trên), và với số thập phân nó còn
+ * tự làm tròn theo `maximumFractionDigits` mặc định — một ô nhập không được phép sửa số người
+ * dùng vừa gõ.
+ */
+export function formatNumberInput(
+  value: number | null | undefined,
+  options: { grouped?: boolean } = {},
+): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return '';
+
+  const [whole, fraction] = String(value).split('.');
+  const head =
+    options.grouped === false
+      ? (whole ?? '')
+      : (whole ?? '').replace(/\B(?=(\d{3})+(?!\d))/g, NUMBER_GROUP_SEPARATOR);
+
+  return fraction ? `${head}${NUMBER_DECIMAL_SEPARATOR}${fraction}` : head;
+}
+
+/**
+ * Chuẩn hoá thứ người dùng vừa gõ vào ô SỐ ĐO — giữ chữ số và ĐÚNG MỘT dấu thập phân.
+ *
+ * Nhận cả `,` lẫn `.` làm dấu thập phân dù quy ước hiển thị là `,`: bàn phím số của hai nền tảng
+ * cho hai dấu khác nhau, và người dùng dán số từ chỗ khác vào thì kiểu gì cũng gặp cả hai. Dấu
+ * ngăn nhóm bị bỏ luôn ở đây — nó là trang trí, không phải giá trị.
+ *
+ * Trả về CHUỖI chứ không phải số, vì trạng thái nửa chừng `2,` là hợp lệ trong lúc gõ mà không
+ * có số nào biểu diễn được nó.
+ */
+export function normalizeNumberInput(text: string, options: { integer?: boolean } = {}): string {
+  if (options.integer) return text.replace(/\D/g, '');
+
+  const cleaned = text.replace(/[.,]/g, NUMBER_DECIMAL_SEPARATOR).replace(/[^\d,]/g, '');
+  const [head, ...rest] = cleaned.split(NUMBER_DECIMAL_SEPARATOR);
+  return rest.length > 0 ? `${head}${NUMBER_DECIMAL_SEPARATOR}${rest.join('')}` : (head ?? '');
+}
+
+/**
+ * Số của một chuỗi đã chuẩn hoá. `''` và `','` đều là **chưa nhập** (`null`), không phải `0` —
+ * cùng luật với `parseMoneyInput`.
+ */
+export function parseNumberInput(text: string): number | null {
+  const normalized = text.replace(NUMBER_DECIMAL_SEPARATOR, '.');
+  if (normalized === '' || normalized === '.') return null;
+  const value = Number(normalized);
+  return Number.isNaN(value) ? null : value;
+}

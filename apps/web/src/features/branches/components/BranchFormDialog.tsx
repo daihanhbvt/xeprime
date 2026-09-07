@@ -1,6 +1,5 @@
 'use client';
 
-import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, Button } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
@@ -11,6 +10,7 @@ import { TextField } from '@/components/form/TextField';
 import { DialogForm } from '@/components/form/DialogForm';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
+import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { mapPlaceUrl, toGeoPoint } from '@/lib/map-embed';
 import { useCreateBranch, useUpdateBranch } from '../hooks/use-branches';
 import type { Branch } from '../types';
@@ -45,8 +45,12 @@ export function BranchFormDialog({
   const update = useUpdateBranch();
   const submitting = create.isPending || update.isPending;
 
+  const resolver = useValidationResolver<BranchFormValues>(
+    branchFormSchema,
+    'Branches.validation',
+  );
   const { control, handleSubmit } = useForm<BranchFormValues>({
-    resolver: yupResolver(branchFormSchema),
+    resolver,
     defaultValues: {
       name: branch?.name ?? '',
       provinceCode: branch?.provinceCode ?? '',

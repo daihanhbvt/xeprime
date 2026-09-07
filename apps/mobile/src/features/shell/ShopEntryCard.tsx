@@ -3,6 +3,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { APP_SCOPE } from './app-scope';
 import { Card } from '@/components/ui/Card';
+import { DetailChevron } from '@/components/ui/DetailArrow';
 import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
 import { useDomainLabel } from '@/i18n/domain';
 import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
@@ -39,7 +40,7 @@ export function ShopEntryCard() {
             {t('manageSubtitle', { role: domainLabel('tenantRole', tenant.roleKey) })}
           </Text>
         </YStack>
-        <Ionicons name="chevron-forward" size={iconSize.md} color={colors.textMuted} />
+        <DetailChevron size={iconSize.md} />
       </XStack>
     </Card>
   );

@@ -12,7 +12,6 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { Alert, App, Button, Form, Modal } from 'antd';
-import { yupResolver } from '@hookform/resolvers/yup';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useState, type ReactNode } from 'react';
@@ -35,6 +34,7 @@ import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ROUTES, shopPath } from '@/constants/routes';
 import { cx } from '@/lib/cx';
 import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
+import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { getErrorMessage } from '@/services/api-client';
 import { presignShopMedia } from '@/services/upload';
 import type { MyShop, UpdateProfileInput } from '../types';
@@ -141,11 +141,12 @@ export function ShopProfileWorkspace({
   const provinces = useProvinceOptions();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  const resolver = useValidationResolver<ShopProfileValues>(shopProfileSchema, 'Shop.validation');
   // `values` (không phải `defaultValues`): sau khi lưu, query trả hồ sơ mới và form phải theo —
   // nếu không, "Huỷ bỏ" mời người dùng hoàn tác thứ đã lưu xong rồi.
   const { control, handleSubmit, reset, formState, getValues } =
     useForm<ShopProfileValues>({
-      resolver: yupResolver(shopProfileSchema),
+      resolver,
       values: toValues(shop),
     });
 

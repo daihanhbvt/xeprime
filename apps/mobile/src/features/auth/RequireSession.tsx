@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import type { ReactNode } from 'react';
 import { useTranslations } from 'use-intl';
 import { Screen } from '@/components/layout/Screen';
@@ -6,6 +5,7 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenLoading } from '@/components/state/ScreenLoading';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { ROUTES } from '@/navigation/routes';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { SESSION_STATUS, useSessionGate } from './hooks/use-session-gate';
 
 /**
@@ -32,7 +32,7 @@ export function RequireSession({
   fallback?: ReactNode;
 }) {
   const t = useTranslations('Account');
-  const router = useRouter();
+  const navigateOnce = useNavigateOnce();
   const { status, error, retry } = useSessionGate();
 
   switch (status) {
@@ -52,7 +52,7 @@ export function RequireSession({
             icon="lock-closed-outline"
             title={t('signInRequired')}
             actionLabel={t('signIn')}
-            onAction={() => router.push(ROUTES.account.login())}
+            onAction={() => navigateOnce(ROUTES.account.login())}
           />
         </Screen>
       );

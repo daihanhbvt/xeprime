@@ -1,4 +1,5 @@
-import { Image, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
+import { StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useState } from 'react';
 import { useTranslations } from 'use-intl';
@@ -94,7 +95,9 @@ export function FeaturedLocations({ onPicked }: { onPicked?: () => void }) {
                     <Image
                       source={{ uri: item.imageUrl }}
                       style={styles.photo}
-                      resizeMode="cover"
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                      transition={150}
                     />
                   ) : null}
                 </YStack>

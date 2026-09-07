@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useState } from 'react';
+import { Image } from 'expo-image';
 import {
-  Image,
+  RefreshControl,
   ScrollView,
   useWindowDimensions,
   type NativeScrollEvent,
@@ -19,9 +20,8 @@ import {
   SERVICE_TYPE,
   type ServiceType,
 } from '@xeprime/types';
-import { applyDiscountPercent } from '@xeprime/domain';
+import { applyDiscountPercent, LIST_SEPARATOR } from '@xeprime/domain';
 import { catalogLabel } from '@xeprime/api-client';
-import { useRouter } from 'expo-router';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ListingDetailSkeleton } from '@/components/ui/Skeleton';
@@ -38,6 +38,7 @@ import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
 import { ROUTES } from '@/navigation/routes';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useListing, useListingReviews } from './hooks/use-marketplace-data';
 import type { PublicListingDetail } from './api';
 import { FeatureChip } from './components/FeatureChip';
@@ -148,6 +149,8 @@ export function ListingDetailScreen({
         }
         onScroll={onScroll}
         onServiceChange={setChosenService}
+        refreshing={listing.isRefetching}
+        onRefresh={() => void listing.refetch()}
       />
 
       {/*
@@ -174,7 +177,7 @@ export function ListingDetailScreen({
  */
 function RequestBar({ vehicleId, serviceType }: { vehicleId: string; serviceType?: string }) {
   const t = useTranslations('BookingRequests.flow');
-  const router = useRouter();
+  const navigateOnce = useNavigateOnce();
   const insets = useSafeAreaInsets();
 
   return (
@@ -190,7 +193,7 @@ function RequestBar({ vehicleId, serviceType }: { vehicleId: string; serviceType
       <Button
         label={t('cta')}
         size="lg"
-        onPress={() => router.push(ROUTES.booking.request(vehicleId, serviceType))}
+        onPress={() => navigateOnce(ROUTES.booking.request(vehicleId, serviceType))}
       />
     </YStack>
   );
@@ -201,12 +204,16 @@ function DetailBody({
   activeService,
   onScroll,
   onServiceChange,
+  refreshing,
+  onRefresh,
 }: {
   listing: PublicListingDetail;
   /** Dịch vụ đang chọn — do VỎ giữ, vì thanh CTA đáy nằm ngoài vùng cuộn này. */
   activeService: string;
   onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onServiceChange: (serviceType: string) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const t = useTranslations('Listings.detail');
   const tCard = useTranslations('Listings.card');
@@ -281,6 +288,18 @@ function DetailBody({
       contentContainerStyle={{ paddingBottom: layout.section + insets.bottom }}
       onScroll={onScroll}
       scrollEventThrottle={scrollThrottle.half}
+      /*
+        Kéo-làm-mới đặt ở ĐÂY chứ không ở khung ngoài: khung ngoài là một `YStack` không cuộn,
+        còn cử chỉ kéo chỉ nảy trên chính vùng đang cuộn.
+      */
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={colors.primary}
+          colors={[colors.primary]}
+        />
+      }
     >
       <Gallery name={listing.name} mainImageUrl={listing.mainImageUrl} images={listing.images} />
 
@@ -518,7 +537,7 @@ function DetailBody({
               <Body>
                 {[listing.pickupPoint.branchName, listing.pickupPoint.address]
                   .filter(Boolean)
-                  .join(' · ')}
+                  .join(LIST_SEPARATOR)}
               </Body>
               {listing.pickupPoint.provinceName ? (
                 <Text col={colors.textMuted} fos={fontSize.bodySm}>
@@ -662,7 +681,9 @@ function Gallery({
             key={url}
             source={{ uri: url }}
             style={{ width, height }}
-            resizeMode="cover"
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
             accessibilityLabel={name}
           />
         ))}

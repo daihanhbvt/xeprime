@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image, Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import type { CatalogItem } from '@xeprime/api-client';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { BODY_TYPE_ART } from '../body-type-art';
 
@@ -51,7 +52,7 @@ export function CatalogCardPicker({
           count !== undefined && countSuffix ? `${count} ${countSuffix}` : null,
         ]
           .filter(Boolean)
-          .join(' · ');
+          .join(LIST_SEPARATOR);
 
         return (
           <Pressable

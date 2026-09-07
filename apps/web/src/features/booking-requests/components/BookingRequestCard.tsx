@@ -28,6 +28,7 @@ import {
   type TenantCustomerRiskLevel,
   type VehicleType,
 } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { EntityIdentity } from '@/components/data-display/EntityIdentity';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
 import { StatusTag } from '@/components/data-display/StatusTag';
@@ -127,7 +128,7 @@ export function BookingRequestCard({
    * dùng để gọi một yêu cầu ("cái Carnival hôm qua").
    */
   const titleId = `booking-request-${request.id}-title`;
-  const vehicleMeta = [request.vehicleCode, request.vehiclePlate].filter(Boolean).join(' · ');
+  const vehicleMeta = [request.vehicleCode, request.vehiclePlate].filter(Boolean).join(LIST_SEPARATOR);
 
   const riskLevel = request.customerRiskLevel as TenantCustomerRiskLevel | null;
   const showRisk = riskLevel != null && riskLevel !== TENANT_CUSTOMER_RISK_LEVEL.NORMAL;

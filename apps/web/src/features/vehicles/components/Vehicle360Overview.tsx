@@ -34,6 +34,7 @@ import {
   type VehiclePublicStatus,
   type VehicleSourceType,
 } from '@xeprime/types';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { PreviewImage, PreviewImageGroup } from '@/components/data-display/PreviewImage';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { StatusTag } from '@/components/data-display/StatusTag';
@@ -827,7 +828,7 @@ function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
         detail.paymentDay ? t('source.paymentDay', { day: detail.paymentDay }) : null,
       ]
         .filter(Boolean)
-        .join(' · ')
+        .join(LIST_SEPARATOR)
     : '';
 
   return (
