@@ -21,8 +21,14 @@ export class CreateInviteDto {
 
   @ApiProperty({
     enum: TENANT_ROLE_VALUES,
-    description: 'Không nhận `shop_owner` — chủ gian hàng là người tạo gian hàng, không mời được',
+    description:
+      'Không nhận `shop_owner` — chủ gian hàng là người tạo gian hàng, không mời được. ' +
+      'Giá trị đó nằm trong enum nhưng bị `InvitesService.create` từ chối bằng `VALIDATION_FAILED`.',
   })
+  // `TENANT_ROLE_VALUES` trọn vẹn, KHÔNG lọc bớt `shop_owner`: enum ở đây là danh sách vai trò
+  // hợp lệ của gian hàng, và cắt nó đi làm tài liệu Swagger mô tả sai tập vai trò đang tồn tại.
+  // Việc cấm mời chủ gian hàng là LUẬT NGHIỆP VỤ nên nó nằm ở service, cùng chỗ với các luật
+  // còn lại của lời mời (đã là thành viên, đã có lời mời đang chờ).
   @IsIn(TENANT_ROLE_VALUES)
   roleKey!: string;
 }

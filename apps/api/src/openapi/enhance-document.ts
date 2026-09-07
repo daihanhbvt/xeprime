@@ -249,14 +249,29 @@ function addErrorResponses(
     );
   }
 
-  // ThrottlerGuard là guard global (120 request / 60 giây) nên áp cho mọi endpoint.
-  setResponse(operation, '429', 'Vượt giới hạn 120 request / 60 giây', [
-    API_ERROR_CODE.RATE_LIMITED,
-  ]);
+  // ThrottlerGuard là guard global nên áp cho mọi endpoint; mức thì KHÔNG đồng nhất — các cửa
+  // dò (đăng nhập, đăng ký, OTP, báo giá công khai) siết chặt hơn hẳn bằng `@Throttle`. Con số
+  // dưới đây đọc từ chính metadata đó, nên tài liệu không trôi khỏi decorator.
+  if (route.rateLimit?.kind !== 'skipped') {
+    setResponse(operation, '429', describeRateLimit(route.rateLimit), [
+      API_ERROR_CODE.RATE_LIMITED,
+    ]);
+  }
 
   setResponse(operation, '500', 'Lỗi không lường trước phía server', [
     API_ERROR_CODE.INTERNAL_ERROR,
   ]);
+}
+
+/** Mức chung khai ở `ThrottlerModule.forRoot` (`app.module.ts`) — route không khai riêng thì dùng nó. */
+const GLOBAL_RATE_LIMIT = { limit: 120, ttlMs: 60_000 } as const;
+
+function describeRateLimit(rateLimit: RouteAccess['rateLimit']): string {
+  const { limit, ttlMs } =
+    rateLimit?.kind === 'custom'
+      ? { limit: rateLimit.limit, ttlMs: rateLimit.ttlMs }
+      : GLOBAL_RATE_LIMIT;
+  return `Vượt giới hạn ${limit} request / ${ttlMs / 1000} giây`;
 }
 
 function collectForbiddenCodes(route: RouteAccess): string[] {

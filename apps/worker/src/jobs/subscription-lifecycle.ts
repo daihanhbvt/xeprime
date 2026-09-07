@@ -263,9 +263,13 @@ async function voidExpiredInvoices(prisma: PrismaClient, now: Date): Promise<num
 }
 
 /**
- * Tiêu hết lượt miễn phí (ADR 0026 điều 4): sinh SẴN hoá đơn gói mặc định (kỳ 1 tháng, đúng số
- * chỗ gồm sẵn) + nhắc — và ghi audit để sau này dò cụm lách ưu đãi (ADR 0026 §chống lách).
- * KHÔNG kích hoạt gì: gói chỉ bật khi tiền về.
+ * Tiêu hết lượt miễn phí (ADR 0026 điều 4): sinh SẴN hoá đơn gói mặc định + nhắc — và ghi audit
+ * để sau này dò cụm lách ưu đãi (ADR 0026 §chống lách). KHÔNG kích hoạt gì: gói chỉ bật khi
+ * tiền về.
+ *
+ * Hoá đơn chào dựng theo **đội xe hiện có** và **kỳ hạn nhỏ nhất plan còn bán** (ADR 0029 §Hệ
+ * quả). Bản đầu nhân phí nền × 1 tháng, và với gói giá phẳng (`base_price_monthly = 0`) thì đó
+ * là một hoá đơn 0đ — một lời chào không mua nổi.
  *
  * Đây là người ghi `subscription_invoices` THỨ HAI ngoài BillingService — cùng tiền lệ
  * `lib/notify.ts`: hình dạng hàng khoá bằng `@xeprime/types` + kiểu Prisma, unique mã do DB gác.
