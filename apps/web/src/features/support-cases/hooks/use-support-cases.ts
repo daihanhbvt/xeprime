@@ -10,6 +10,7 @@ import {
   postSupportMessage,
   resolveSupportCase,
   transitionSupportCase,
+  withdrawAccountDeletionCase,
 } from '../api';
 import type {
   OpenSupportCaseInput,
@@ -64,6 +65,15 @@ export function useTransitionSupportCase(surface: SupportSurface) {
   return useMutation({
     mutationFn: ({ id, ...body }: { id: string } & TransitionSupportCaseInput) =>
       transitionSupportCase(surface, id, body),
+    onSuccess: invalidate,
+  });
+}
+
+/** Rút yêu cầu xoá tài khoản của chính mình (`/account/delete-account`). */
+export function useWithdrawAccountDeletion() {
+  const invalidate = useInvalidateSupport();
+  return useMutation({
+    mutationFn: (id: string) => withdrawAccountDeletionCase(id),
     onSuccess: invalidate,
   });
 }

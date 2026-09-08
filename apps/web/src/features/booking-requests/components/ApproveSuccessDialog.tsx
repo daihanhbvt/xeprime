@@ -9,7 +9,7 @@ import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { bookingPath } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { toAppTz } from '@/lib/datetime';
-import type { BookingRequestItem } from '../types';
+import type { BookingRequestDecisionTarget } from '../types';
 import styles from './ApproveSuccessDialog.module.css';
 
 /**
@@ -28,7 +28,7 @@ export function ApproveSuccessDialog({
   open,
   onClose,
 }: {
-  request: BookingRequestItem;
+  request: BookingRequestDecisionTarget;
   open: boolean;
   onClose: () => void;
 }) {

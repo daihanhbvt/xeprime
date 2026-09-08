@@ -409,3 +409,11 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Một câu giải thích hệ quả của việc bấm Duyệt — nó giữ chỗ một chiếc xe thật. */
+.hostHint {
+  margin: 0 0 var(--xp-space-sm);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}

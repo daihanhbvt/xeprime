@@ -16,6 +16,23 @@ import { BOOKING_STATUS, type BookingStatus } from './booking';
 import { BOOKING_REQUEST_STATUS, type BookingRequestStatus } from './booking-request';
 import { STATUS_COLOR, type StatusMeta } from './meta';
 
+/**
+ * Người đang xem đứng ở PHÍA NÀO của chuyến này.
+ *
+ * Cùng một con người vừa cho thuê vừa đi thuê (ADR 0014), và "Chuyến của tôi" trộn cả hai vào
+ * MỘT danh sách — nên mỗi dòng phải tự nói mình thuộc phía nào. Không suy ở client bằng cách so
+ * id: server đã biết chắc, còn client thì phải đoán từ dữ liệu đã bị che bớt.
+ */
+export const TRIP_ROLE = {
+  /** Xe của tôi, khách của tôi — tôi là người duyệt và bàn giao. */
+  HOST: 'host',
+  /** Tôi là người đi thuê xe của người khác. */
+  RENTER: 'renter',
+} as const;
+
+export type TripRole = (typeof TRIP_ROLE)[keyof typeof TRIP_ROLE];
+export const TRIP_ROLE_VALUES = Object.values(TRIP_ROLE) as TripRole[];
+
 export const CUSTOMER_TRIP_STAGE = {
   /** Đã gửi yêu cầu, chủ xe chưa trả lời. Chưa có đơn thuê. */
   PENDING_APPROVAL: 'pending_approval',

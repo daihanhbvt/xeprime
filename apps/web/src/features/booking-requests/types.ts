@@ -4,6 +4,50 @@ import type { components, PaginationMeta } from '@xeprime/types';
 type Schemas = components['schemas'];
 
 export type BookingRequestItem = Schemas['BookingRequestDto'];
+
+/**
+ * Bộ trường TỐI THIỂU mà bốn hộp thoại quyết định (duyệt · duyệt dài hạn · từ chối · báo kết
+ * quả) thật sự đọc.
+ *
+ * Tồn tại vì màn "Chuyến của tôi" cũng duyệt/từ chối được, nhưng nó đọc chuyến từ `/trips` —
+ * một DTO khác, cố ý hẹp hơn (không có ghi chú nội bộ, không có hồ sơ khách của gian hàng).
+ * Bắt nó dựng một `BookingRequestItem` đầy đủ nghĩa là bịa ra những trường nó không có.
+ *
+ * `Pick` chứ không phải một interface viết tay: kiểu của từng trường lấy NGUYÊN từ contract,
+ * nên `BookingRequestItem` luôn thoả (hộp thư gian hàng không đổi một dòng), và một lần đổi
+ * contract không thể để hai bên hiểu khác nhau về cùng một trường.
+ */
+export type BookingRequestDecisionTarget = Omit<
+  Pick<
+    BookingRequestItem,
+    | 'id'
+    | 'bookingId'
+    | 'vehicleId'
+    | 'vehicleName'
+    | 'vehiclePlate'
+    | 'customerName'
+    | 'customerPhone'
+    | 'serviceType'
+    | 'pickupAt'
+    | 'returnAt'
+    | 'deliveryRequested'
+    | 'longTermPackageMonths'
+    | 'pickupPreference'
+    | 'requestedPickupDate'
+    | 'pickupWindowStartDate'
+    | 'pickupWindowEndDate'
+  >,
+  'customerPhone' | 'serviceType' | 'pickupPreference'
+> & {
+  /**
+   * `null` khi chưa được phép liên hệ — chuyến tuyến hoa hồng còn đang chờ duyệt (ADR 0028
+   * điều 9). Hộp thư gian hàng luôn có số thật nên vẫn thoả kiểu này.
+   */
+  readonly customerPhone: string | null;
+  /** Mã dịch vụ đi trên dây; `/trips` khai `string` còn hộp thư khai union — `string` nhận cả hai. */
+  readonly serviceType: string;
+  readonly pickupPreference?: string | null;
+};
 export type CreateBookingRequestInput = Schemas['CreateBookingRequestDto'];
 /** Body duyệt — thuê dài hạn bắt buộc `scheduledPickupAt` (ADR 0011). */
 export type ApproveBookingRequestInput = Schemas['ApproveBookingRequestDto'];

@@ -38,6 +38,8 @@ interface VehicleManagementCardProps {
   alertsLoading?: boolean;
   alertsFailed?: boolean;
   actions: RowAction[];
+  /** Đích của tên xe — mặc định Hồ sơ 360 ở `/manage`; xem `VehicleCardGrid`. */
+  detailHref?: (id: string) => string;
 }
 
 /**
@@ -64,6 +66,7 @@ export function VehicleManagementCard({
   alertsLoading = false,
   alertsFailed = false,
   actions,
+  detailHref = vehiclePath.detail,
 }: VehicleManagementCardProps) {
   const t = useTranslations('Vehicles.list');
   const tLabels = useTranslations('Common.labels');
@@ -98,7 +101,7 @@ export function VehicleManagementCard({
         <div className={styles.identity}>
           <div className={styles.identityHead}>
             <Link
-              href={vehiclePath.detail(vehicle.id)}
+              href={detailHref(vehicle.id)}
               className={styles.name}
               title={vehicle.name}
             >

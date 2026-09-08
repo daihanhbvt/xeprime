@@ -61,6 +61,19 @@ export class CustomerSupportController {
     return this.support.open(this.actor(user), dto);
   }
 
+  @Post(':id/withdraw')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Rút yêu cầu xoá tài khoản (chỉ case account_deletion còn mở do chính bạn mở)',
+  })
+  @ApiOkResponse({ type: SupportCaseDetailDto })
+  withdraw(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<SupportCaseDetailDto> {
+    return this.support.withdrawAccountDeletion(id, user.id);
+  }
+
   @Post(':id/messages')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Gửi thêm thông tin / bằng chứng dạng văn bản' })

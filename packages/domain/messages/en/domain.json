@@ -637,6 +637,7 @@
     "incident": "Trip incident",
     "payment": "Payment / refund",
     "account": "Account",
+    "account_deletion": "Account deletion request",
     "other": "Other"
   },
   "supportCaseParty": {

@@ -34,6 +34,27 @@ vi.mock('@/features/auth/components/AuthModalProvider', () => ({
   useNextFromCurrentPath: () => () => '/trips',
 }));
 
+/*
+ * Hai cộng tác viên của phía CHỦ XE, mock cùng kiểu với `useTrips` ở trên.
+ *
+ * Danh sách nay phục vụ cả hai phía (08/09/2026), nên nó hỏi quyền và cầm luồng duyệt/từ chối.
+ * Bộ test này khoá hành vi DANH SÁCH — tab, bộ lọc URL, ba trạng thái rỗng/lỗi/hết phiên — nên
+ * kéo cả TanStack Query vào chỉ để hai hook đó chạy thật là đổi thứ đang được kiểm.
+ * Luồng quyết định có test riêng ở `features/booking-requests`.
+ */
+vi.mock('@/hooks/use-permissions', () => ({
+  usePermissions: () => ({ has: () => true, hasAny: () => true, isLoading: false }),
+}));
+
+vi.mock('@/features/booking-requests/hooks/use-booking-request-decisions', () => ({
+  useBookingRequestDecisions: () => ({
+    openApprove: vi.fn(),
+    openReject: vi.fn(),
+    decisionActionFor: () => null,
+    dialogs: null,
+  }),
+}));
+
 const TRIP = {
   id: 'RQ1',
   bookingId: 'BK1',

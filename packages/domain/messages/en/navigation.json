@@ -25,7 +25,16 @@
     "documents": "Documents & verification",
     "notifications": "Notifications",
     "support": "Support",
-    "settings": "Settings"
+    "settings": "Settings",
+    "groupAccount": "Account",
+    "vehicles": "My vehicles",
+    "calendar": "Vehicle calendar",
+    "hostGuide": "Host guide",
+    "tax": "Tax information",
+    "contractsDocuments": "Contracts & documents",
+    "dataProtection": "Data protection",
+    "changePassword": "Change password",
+    "deleteAccount": "Request account deletion"
   },
   "manage": {
     "home": "Home",

@@ -23,12 +23,12 @@ import {
   type Dayjs,
 } from '@/lib/datetime';
 import { queryKeys } from '@/services/query-keys';
-import type { ApproveBookingRequestInput, BookingRequestItem } from '../types';
+import type { ApproveBookingRequestInput, BookingRequestDecisionTarget } from '../types';
 
 import styles from './ApproveLongTermDialog.module.css';
 
 interface Props {
-  request: BookingRequestItem | null;
+  request: BookingRequestDecisionTarget | null;
   submitting: boolean;
   /** Lỗi từ lần duyệt vừa rồi (vd trùng lịch 409) — hộp thoại ở lại để chọn giờ khác. */
   error: string | null;
@@ -49,7 +49,7 @@ function ApproveLongTermForm({
   error,
   onCancel,
   onConfirm,
-}: Props & { request: BookingRequestItem }) {
+}: Props & { request: BookingRequestDecisionTarget }) {
   const t = useTranslations('BookingRequests');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();

@@ -13,6 +13,8 @@ export type CurrentUser = Schemas['MeDto'];
 export type LoginInput = Schemas['LoginDto'];
 export type RegisterInput = Schemas['RegisterDto'];
 export type SetPasswordInput = Schemas['SetPasswordDto'];
+/** `POST /auth/password/change` — đổi mật khẩu khi đã đăng nhập, cần mật khẩu hiện tại. */
+export type ChangePasswordInput = Schemas['ChangePasswordDto'];
 export type ForgotPasswordInput = Schemas['ForgotPasswordDto'];
 export type ResetPasswordInput = Schemas['ResetPasswordDto'];
 

@@ -3174,6 +3174,10 @@ model SupportCase {
   @@index([tenantId, status])
   @@index([openedByUserId, createdAt])
   @@index([bookingId])
+  // ⚠️ Ngoài Prisma: partial UNIQUE index `support_cases_open_account_deletion_key`
+  // ON (opened_by_user_id) WHERE category = 'account_deletion' AND status IN (open, in_progress,
+  // waiting_party) — mỗi người tối đa MỘT yêu cầu xoá tài khoản còn mở (migration 20260908120000).
+  // `migrate dev` sẽ đề nghị DROP nó; đừng nhận.
   @@map("support_cases")
 }
 

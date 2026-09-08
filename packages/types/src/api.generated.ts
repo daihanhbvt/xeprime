@@ -164,6 +164,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/password/change": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Đổi mật khẩu — cần mật khẩu hiện tại; tài khoản chưa có thì dùng password/set
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         */
+        post: operations["AuthController_changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/password/forgot": {
         parameters: {
             query?: never;
@@ -2564,6 +2584,26 @@ export interface paths {
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          */
         post: operations["CustomerSupportController_message"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/support/cases/{id}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rút yêu cầu xoá tài khoản (chỉ case account_deletion còn mở do chính bạn mở)
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         */
+        post: operations["CustomerSupportController_withdraw"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7285,6 +7325,12 @@ export interface components {
             sortOrder: number;
             active: boolean;
         };
+        ChangePasswordDto: {
+            /** @description Mật khẩu đang dùng */
+            currentPassword: string;
+            /** @example matkhaumoi456 */
+            newPassword: string;
+        };
         ChatUnreadCountDto: {
             /**
              * @description Tổng tin chưa đọc mọi hội thoại (phía người xem)
@@ -8139,6 +8185,14 @@ export interface components {
         };
         CustomerTripDetailDto: {
             id: string;
+            /** @enum {string} */
+            role: "host" | "renter";
+            renter?: components["schemas"]["CustomerTripRenterDto"] | null;
+            respondBy?: string | null;
+            /** @description Được lộ SĐT và mở hội thoại chưa */
+            canContact: boolean;
+            /** @description Tổng tiền còn tạm tính, chưa chốt vào đơn */
+            totalIsEstimate: boolean;
             bookingId?: string | null;
             /** @description Mã đơn (sau khi được nhận) */
             code?: string | null;
@@ -8178,8 +8232,18 @@ export interface components {
             actualPickupAt?: string | null;
             actualReturnAt?: string | null;
             finance?: components["schemas"]["CustomerTripFinanceDto"] | null;
+            estimate?: components["schemas"]["CustomerTripEstimateDto"] | null;
             hold?: components["schemas"]["CustomerHoldDto"] | null;
             review?: components["schemas"]["CustomerTripReviewDto"] | null;
+        };
+        CustomerTripEstimateDto: {
+            /** @description Các dòng của giá THUÊ */
+            rows: components["schemas"]["PriceBreakdownRowDto"][];
+            /** @description Tổng giá thuê, TRƯỚC phụ phí — doanh thu của gian hàng */
+            rentalTotal: string;
+            /** @description Cọc thế chấp hoàn trả — KHÔNG nằm trong tổng */
+            depositAmount: string;
+            fees?: components["schemas"]["CustomerFeeBreakdownDto"] | null;
         };
         CustomerTripFinanceDto: {
             /** @example VND */
@@ -8252,6 +8316,14 @@ export interface components {
         };
         CustomerTripListItemDto: {
             id: string;
+            /** @enum {string} */
+            role: "host" | "renter";
+            renter?: components["schemas"]["CustomerTripRenterDto"] | null;
+            respondBy?: string | null;
+            /** @description Được lộ SĐT và mở hội thoại chưa */
+            canContact: boolean;
+            /** @description Tổng tiền còn tạm tính, chưa chốt vào đơn */
+            totalIsEstimate: boolean;
             bookingId?: string | null;
             /** @description Mã đơn (sau khi được nhận) */
             code?: string | null;
@@ -8291,6 +8363,11 @@ export interface components {
             data: components["schemas"]["CustomerTripListItemDto"][];
             meta: components["schemas"]["PaginationMetaDto"];
             counts: components["schemas"]["CustomerTripCountsDto"];
+        };
+        CustomerTripRenterDto: {
+            name: string;
+            /** @description null khi chưa được liên hệ */
+            phone?: string | null;
         };
         CustomerTripReviewDto: {
             id: string;
@@ -9234,7 +9311,7 @@ export interface components {
         };
         OpenSupportCaseDto: {
             /** @enum {string} */
-            category: "dispute" | "incident" | "payment" | "account" | "other";
+            category: "dispute" | "incident" | "payment" | "account" | "account_deletion" | "other";
             /** @example Xe giao không đúng mô tả */
             subject: string;
             description: string;
@@ -10880,7 +10957,7 @@ export interface components {
             /** @description Mã người dùng đọc/nhắc qua điện thoại */
             code: string;
             /** @enum {string} */
-            category: "dispute" | "incident" | "payment" | "account" | "other";
+            category: "dispute" | "incident" | "payment" | "account" | "account_deletion" | "other";
             /** @enum {string} */
             status: "open" | "in_progress" | "waiting_party" | "resolved" | "closed";
             /** @enum {string} */
@@ -10909,7 +10986,7 @@ export interface components {
             /** @description Mã người dùng đọc/nhắc qua điện thoại */
             code: string;
             /** @enum {string} */
-            category: "dispute" | "incident" | "payment" | "account" | "other";
+            category: "dispute" | "incident" | "payment" | "account" | "account_deletion" | "other";
             /** @enum {string} */
             status: "open" | "in_progress" | "waiting_party" | "resolved" | "closed";
             /** @enum {string} */
@@ -12834,6 +12911,133 @@ export interface operations {
             };
             /**
              * @description Vượt giới hạn 10 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    AuthController_changePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordDto"];
+            };
+        };
+        responses: {
+            /** @description Thành công, không có nội dung trả về */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 5 request / 60 giây.
              *
              *     Mã lỗi: `RATE_LIMITED`
              */
@@ -29468,7 +29672,7 @@ export interface operations {
             query?: {
                 /** @description Bỏ trống = case còn MỞ */
                 status?: "open" | "in_progress" | "waiting_party" | "resolved" | "closed";
-                category?: "dispute" | "incident" | "payment" | "account" | "other";
+                category?: "dispute" | "incident" | "payment" | "account" | "account_deletion" | "other";
                 /** @description Tìm theo mã case / tiêu đề */
                 q?: string;
                 page?: number;
@@ -29849,6 +30053,156 @@ export interface operations {
                 "application/json": components["schemas"]["PostSupportEventDto"];
             };
         };
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["SupportCaseDetailDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    CustomerSupportController_withdraw: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Thành công */
             200: {
@@ -40332,7 +40686,7 @@ export interface operations {
             query?: {
                 /** @description Bỏ trống = case còn MỞ */
                 status?: "open" | "in_progress" | "waiting_party" | "resolved" | "closed";
-                category?: "dispute" | "incident" | "payment" | "account" | "other";
+                category?: "dispute" | "incident" | "payment" | "account" | "account_deletion" | "other";
                 /** @description Tìm theo mã case / tiêu đề */
                 q?: string;
                 page?: number;
@@ -47528,7 +47882,7 @@ export interface operations {
             query?: {
                 /** @description Bỏ trống = case còn MỞ */
                 status?: "open" | "in_progress" | "waiting_party" | "resolved" | "closed";
-                category?: "dispute" | "incident" | "payment" | "account" | "other";
+                category?: "dispute" | "incident" | "payment" | "account" | "account_deletion" | "other";
                 /** @description Tìm theo mã case / tiêu đề */
                 q?: string;
                 page?: number;
