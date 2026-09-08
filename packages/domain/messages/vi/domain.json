@@ -101,12 +101,8 @@
     "other": "Giấy tờ khác"
   },
   "customerTripFilter": {
-    "all": "Tất cả",
-    "pending": "Chờ xác nhận",
-    "upcoming": "Sắp tới",
-    "active": "Đang thuê",
-    "completed": "Hoàn thành",
-    "cancelled": "Đã hủy"
+    "current": "Chuyến hiện tại",
+    "history": "Lịch sử chuyến"
   },
   "customerTripStage": {
     "pending_approval": "Chờ xác nhận",

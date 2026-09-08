@@ -7,9 +7,9 @@ import { useTranslations } from 'next-intl';
 import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
 import { BranchScopeSelector } from '@/features/branches/components/BranchScopeSelector';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
-import { useChatUnreadCount } from '@/features/chat/hooks/use-chat-unread-count';
+import { CHAT_SIDE } from '@xeprime/types';
+import { useChatBadge } from '@/features/chat/hooks/use-chat-badge';
 import { usePortalLogout } from '@/features/auth/hooks/use-portal-logout';
-import { ROUTES } from '@/constants/routes';
 import { initialOf } from '@/lib/initials';
 import { useAppDispatch } from '@/store/hooks';
 import { setMobileNavOpen } from '@/store/slices/app.slice';
@@ -33,7 +33,7 @@ export function Topbar({ user }: { user: CurrentUser }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const logout = usePortalLogout();
-  const { data: chatUnread } = useChatUnreadCount();
+  const chatBadge = useChatBadge(CHAT_SIDE.SHOP);
 
   const tenantName = user.tenant?.name;
 
@@ -53,13 +53,13 @@ export function Topbar({ user }: { user: CurrentUser }) {
       <div className={styles.right}>
         {/* Đứng TRƯỚC tin nhắn/thông báo, đúng vị trí như ở header marketplace. */}
         <LocaleSwitcher />
-        <Badge count={chatUnread?.count ?? 0} size="small" overflowCount={99}>
+        <Badge count={chatBadge.count} size="small" overflowCount={99}>
           <Button
             type="text"
             shape="circle"
             icon={<MessageOutlined aria-hidden />}
             aria-label={t('manage.chat')}
-            onClick={() => router.push(ROUTES.MANAGE.CHAT)}
+            onClick={() => router.push(chatBadge.href)}
           />
         </Badge>
         <NotificationBell context="manage" />

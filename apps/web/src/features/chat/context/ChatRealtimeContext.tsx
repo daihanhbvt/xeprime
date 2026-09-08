@@ -3,7 +3,7 @@
 import type { Firestore } from 'firebase/firestore';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useCurrentUser } from '@/hooks/use-current-user';
-import { fetchFirebaseChatToken } from '../api';
+import { chatApi } from '../api';
 import { getChatDb, isFirebaseConfigured, signInChat } from '../lib/firebase-client';
 
 interface ChatRealtime {
@@ -31,7 +31,7 @@ export function ChatRealtimeProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     void (async () => {
       try {
-        const res = await fetchFirebaseChatToken();
+        const res = await chatApi.firebaseToken();
         if (cancelled || !res.enabled || !res.token) return;
         await signInChat(res.token);
         if (!cancelled) setReady(true);

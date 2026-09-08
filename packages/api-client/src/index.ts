@@ -138,6 +138,25 @@ export {
   type TripsResult,
 } from './features/trips/api';
 
+// Chat (ADR 0009) — một client cho web và app native.
+export {
+  chatApi,
+  conversationFiltersToParams,
+  CONVERSATIONS_DEFAULT_LIMIT,
+  MESSAGES_DEFAULT_LIMIT,
+  type ChatAttachmentPresign,
+  type ChatMessage,
+  type ChatUnreadSummary,
+  type ConversationFilters,
+  type ConversationListResult,
+  type ConversationSummary,
+  type FirebaseChatToken,
+  type MessageAttachment,
+  type MessageCursor,
+  type MessagePage,
+  type SendMessageInput,
+} from './features/chat/api';
+
 export {
   bookingsApi,
   bookingFiltersToParams,

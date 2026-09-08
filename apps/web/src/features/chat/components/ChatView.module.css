@@ -1,6 +1,19 @@
+/*
+ * Chiều cao khung chat — và lý do nó phải VỪA ĐÚNG khung nhìn.
+ *
+ * `100dvh` chứ không `100vh`: trên trình duyệt di động `100vh` là chiều cao khi thanh địa chỉ ĐÃ
+ * thu lại, nên lúc thanh còn hiện thì ô soạn tin nằm dưới mép màn hình. `dvh` co giãn theo vùng
+ * nhìn thấy thật; `vh` đứng trước làm bản dự phòng cho trình duyệt cũ.
+ *
+ * `--xp-chat-offset` là phần chiều cao KHÔNG thuộc về chat (header dính + lề). Nơi gọi đặt nó
+ * theo bề mặt, và con số đó phải đúng — nếu khung chat cao hơn chỗ còn lại, ô soạn tin bị đẩy
+ * xuống dưới mép màn hình và **trình duyệt tự cuộn cả TRANG** để kéo ô đang có con trỏ vào tầm
+ * nhìn. Đó chính là cú "nhắn xong là trang nhảy xuống tận footer": không phải mã chat cuộn, mà
+ * là hành vi mặc định của trình duyệt với một phần tử đang focus nằm ngoài khung nhìn. Khung vừa
+ * đủ chỗ thì không còn gì để cuộn.
+ */
 .wrap {
   display: flex;
-  height: calc(100vh - 168px);
   min-height: 420px;
   border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius);
@@ -8,12 +21,110 @@
   background: var(--xp-color-bg-container);
 }
 
+/*
+ * Khu KHÁCH (`/chat`) — khối tự tính chiều cao vì nó nằm trong một trang cuộn được.
+ *
+ * Trừ đi header dính (60px) và lề trên–dưới 12px mỗi bên, tổng đúng bằng phần khung nhìn còn
+ * lại. Footer đã được gỡ khỏi route này (`MarketFooterSlot`), nên trang không còn gì để cuộn.
+ *
+ * Bề ngang 1140px — cùng khổ với phần còn lại của marketplace. Full-bleed trên màn 1700px kéo
+ * bong bóng chat ra tận hai mép: mắt phải quét cả sải tay cho một dòng vốn dài vài chữ.
+ */
+.wrapCustomer {
+  --xp-chat-offset: calc(var(--xp-market-header-height) + 24px);
+
+  max-width: 1140px;
+  margin-inline: auto;
+  margin-block: 12px;
+  height: calc(100vh - var(--xp-chat-offset));
+  height: calc(100dvh - var(--xp-chat-offset));
+}
+
+/*
+ * Khu QUẢN LÝ (`/manage/chat`) — KHÔNG tự tính chiều cao.
+ *
+ * Route này nằm trong `VIEWPORT_PORTAL_PATHS` của `AppShell`: vỏ đã khoá `100dvh` và tắt cuộn ở
+ * `.content`, nên chat chỉ cần lấp trọn ô được giao. Tự trừ chiều cao ở đây lần nữa là đoán lại
+ * một con số mà vỏ đã biết chính xác — và đoán sai thì khung hụt hoặc tràn.
+ *
+ * KHÔNG chặn bề ngang: khu quản lý đã có sidebar chiếm cột trái và `.content` đã chừa lề
+ * `--xp-space-md` quanh nội dung. Thêm `max-width` + canh giữa ở đây sẽ mở một dải trống lớn
+ * giữa menu và khung chat — đúng thứ cần bỏ, không phải thứ cần thêm.
+ */
+.wrapShop {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
 .listPane {
   width: 320px;
   max-width: 40%;
   border-right: 1px solid var(--xp-color-border);
-  overflow-y: auto;
   flex-shrink: 0;
+  display: flex;
+  min-height: 0;
+}
+
+.listInner {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+}
+
+.listHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid var(--xp-color-border);
+  flex-shrink: 0;
+}
+
+.filterRow {
+  display: flex;
+  gap: 6px;
+}
+
+.filterChip {
+  border: 1px solid var(--xp-color-border);
+  background: transparent;
+  color: var(--xp-color-text-secondary);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+
+.filterChip:hover {
+  background: var(--xp-gold-wash);
+}
+
+.filterChipActive {
+  background: var(--xp-color-primary);
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-text-light-solid, #fff);
+}
+
+.listScroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.listSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+}
+
+.sentinel {
+  height: 1px;
 }
 
 .threadPane {
@@ -24,8 +135,11 @@
 }
 
 .centerPane {
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   height: 100%;
   padding: 24px;
   text-align: center;
@@ -57,8 +171,8 @@
   padding: 11px 14px;
   cursor: pointer;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: flex-start;
+  gap: 10px;
   transition: background 0.12s ease;
 }
 
@@ -66,8 +180,25 @@
   background: var(--xp-color-bg-sand, var(--xp-gold-soft));
 }
 
+.convItem:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: -2px;
+}
+
 .convActive {
   background: var(--xp-gold-wash);
+}
+
+.convAvatar {
+  flex-shrink: 0;
+}
+
+.convBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
 }
 
 .convTop {
@@ -92,6 +223,14 @@
   flex-shrink: 0;
 }
 
+.convVehicle {
+  font-size: 11.5px;
+  color: var(--xp-gold-deep);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .convBottom {
   display: flex;
   align-items: center;
@@ -107,17 +246,23 @@
   white-space: nowrap;
 }
 
+.convPreviewUnread {
+  color: var(--xp-color-text);
+  font-weight: 600;
+}
+
 /* --- Thread --- */
 .thread {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
 }
 
 .threadHead {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding: 10px 14px;
   border-bottom: 1px solid var(--xp-color-border);
   flex-shrink: 0;
@@ -125,41 +270,141 @@
 
 .threadTitleWrap {
   min-width: 0;
+  flex: 1;
 }
 
 .threadTitle {
   font-size: 14.5px;
   font-weight: 700;
   color: var(--xp-color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .threadSub {
   font-size: 12px;
   color: var(--xp-color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.threadAction {
+  flex-shrink: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--xp-gold-deep);
+  border: 1px solid var(--xp-color-border);
+  border-radius: 999px;
+  padding: 5px 12px;
+  white-space: nowrap;
+}
+
+.threadAction:hover {
+  background: var(--xp-gold-wash);
 }
 
 .backBtn {
   display: none;
 }
 
+/* Bọc ngoài khung cuộn để nút "có tin mới" neo được vào đáy mà không cuộn theo. */
+.messagesWrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+}
+
 .messages {
   flex: 1;
   overflow-y: auto;
+  /* Cuộn hết danh sách thì DỪNG, không đẩy tiếp cho trang phía sau cuộn theo. */
+  overscroll-behavior: contain;
+  /*
+   * Tắt neo cuộn của trình duyệt.
+   *
+   * Cơ chế đó tự dịch `scrollTop` để giữ một phần tử "mốc" đứng yên khi nội dung phía trên đổi
+   * chiều cao — đúng việc mà hook `useThreadScroll` đang làm bằng tay, và làm theo luật khác
+   * (tin mới thì bám đáy, tải tin cũ thì giữ chỗ đang đọc). Để cả hai cùng chạy thì mỗi lần ảnh
+   * trong bong bóng tải xong là hai bên giằng nhau một nhịp, nhìn thấy được thành giật.
+   */
+  overflow-anchor: none;
   padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
+  min-height: 0;
+}
+
+/*
+ * Đẩy hội thoại NGẮN xuống đáy khung.
+ *
+ * Cột flex căn từ trên xuống, nên một thread hai tin dính lên mép trên và chừa một khoảng trắng
+ * cao gần hết màn — đọc như trang bị lỗi. `margin-top: auto` ở phần tử đầu ăn hết phần dư đó.
+ *
+ * Cố ý KHÔNG dùng `justify-content: flex-end`: khi nội dung dài hơn khung, cách đó đẩy tin cũ
+ * TRÀN qua mép trên và không cuộn tới được. Lề `auto` tự về 0 khi hết chỗ dư, nên không có
+ * trường hợp đó.
+ */
+.messages > :first-child {
+  margin-top: auto;
+}
+
+.messages:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: -2px;
 }
 
 .loadOlder {
   display: flex;
   justify-content: center;
-  padding-bottom: 6px;
+  padding-bottom: 8px;
+}
+
+.groupWrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.daySeparator {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 8px;
+}
+
+.daySeparator span {
+  font-size: 11.5px;
+  color: var(--xp-color-text-tertiary);
+  background: var(--xp-color-bg-layout, var(--xp-gold-wash));
+  border-radius: 999px;
+  padding: 3px 12px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 8px;
+}
+
+.groupMine {
+  align-items: flex-end;
+}
+
+.senderName {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--xp-color-text-tertiary);
+  padding-left: 4px;
+  margin-bottom: 2px;
 }
 
 .bubbleRow {
   display: flex;
   justify-content: flex-start;
+  width: 100%;
 }
 
 .bubbleRowMine {
@@ -178,8 +423,23 @@
 }
 
 .bubbleMine {
-  background: var(--xp-gold-soft);
-  border-color: var(--xp-gold-soft);
+  background: var(--xp-color-primary);
+  border-color: var(--xp-color-primary);
+}
+
+.bubbleMine .bubbleText,
+.bubbleMine .bubbleTime,
+.bubbleMine .bubbleState {
+  color: var(--xp-color-text-light-solid, #fff);
+}
+
+/* Tin đang bay: mờ đi để phân biệt với tin server đã nhận, nhưng vẫn đọc được. */
+.bubblePending {
+  opacity: 0.65;
+}
+
+.bubbleFailed {
+  border-color: var(--xp-color-error);
 }
 
 .bubbleText {
@@ -190,14 +450,33 @@
   word-break: break-word;
 }
 
-.bubbleTime {
-  font-size: 10.5px;
-  color: var(--xp-color-text-tertiary);
-  align-self: flex-end;
+.bubbleMeta {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
-.attachImageLink {
-  display: block;
+.bubbleTime,
+.bubbleState {
+  font-size: 10.5px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.bubbleStateFailed {
+  font-size: 10.5px;
+  color: var(--xp-color-error);
+}
+
+.failedActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.attachGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .attachImage {
@@ -208,30 +487,169 @@
 }
 
 .attachFile {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12.5px;
   color: var(--xp-gold-deep);
-  text-decoration: underline;
-  word-break: break-all;
+  background: var(--xp-color-bg-container);
+  border: 1px solid var(--xp-color-border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  max-width: 100%;
+}
+
+.attachFileName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Nút "có tin nhắn mới" — nổi trên khung cuộn, KHÔNG cuộn theo nội dung. */
+.newBelow {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: 999px;
+  padding: 7px 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--xp-color-primary);
+  color: var(--xp-color-text-light-solid, #fff);
+  box-shadow: var(--xp-box-shadow, 0 4px 12px rgb(0 0 0 / 18%));
+}
+
+/* --- Empty thread pane --- */
+.emptyThreadPane {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 100%;
+  padding: 32px;
+  text-align: center;
+}
+
+.emptyMark {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: var(--xp-gold-wash);
+  margin-bottom: 8px;
+}
+
+.emptyTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--xp-color-text);
+  margin: 0;
+}
+
+.emptyText {
+  font-size: 13px;
+  color: var(--xp-color-text-secondary);
+  margin: 0;
+  max-width: 380px;
 }
 
 /* --- Composer --- */
 .composer {
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
   border-top: 1px solid var(--xp-color-border);
   flex-shrink: 0;
 }
 
+.composerRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
 .composerInput {
   flex: 1;
 }
 
-/* --- Mobile: một cột --- */
+.tray {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 168px;
+  overflow-y: auto;
+}
+
+.trayItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: 8px;
+  background: var(--xp-color-bg-layout, var(--xp-gold-wash));
+}
+
+.trayItemFailed {
+  border-color: var(--xp-color-error);
+}
+
+.trayThumb {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.trayFileIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.trayName {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--xp-color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trayFailed {
+  font-size: 11.5px;
+  color: var(--xp-color-error);
+  flex-shrink: 0;
+}
+
+/* --- Màn hẹp: một cột, list ↔ thread --- */
 @media (max-width: 768px) {
-  .wrap {
-    height: calc(100vh - 140px);
+  /*
+   * Màn hẹp còn một thứ nữa chiếm chỗ: thanh tab cố định dưới đáy (`MobileTabBar`, hiện từ
+   * ≤760px) và dải safe-area của máy tai thỏ. Không trừ chúng ra thì khung chat cao đúng bằng
+   * phần thanh tab đang đè lên — ô soạn tin nằm dưới thanh đó, và cú nhảy trang quay lại y hệt.
+   *
+   * `.wrapShop` không cần nhánh này: route quản lý nằm trong `VIEWPORT_PORTAL_PATHS` nên vỏ đã
+   * ẩn hẳn bottom-nav và tự khoá chiều cao.
+   */
+  .wrapCustomer {
+    --xp-chat-offset: calc(
+      var(--xp-market-header-height) + 24px + 58px + env(safe-area-inset-bottom, 0px)
+    );
   }
 
   .listPane {
@@ -255,4 +673,112 @@
   .bubble {
     max-width: 84%;
   }
+
+  /* Vùng chạm 44px theo WCAG — nút nhỏ hơn thì ngón tay trượt sang dòng bên cạnh. */
+  .convItem {
+    min-height: 64px;
+  }
+
+  .filterChip {
+    min-height: 32px;
+    padding: 6px 14px;
+  }
+}
+
+/* --- Ngữ cảnh xe: thẻ chờ ở ô soạn tin + thẻ đã gắn trên bong bóng --- */
+
+/*
+ * Thẻ "đang nhắn về xe này" nằm TRÊN ô nhập, kiểu khối trích dẫn của trình soạn tin nhắn.
+ *
+ * Nó là thứ thay cho việc tách hội thoại theo xe: người dùng vẫn thấy rõ mình đang hỏi chiếc
+ * nào, nhưng câu hỏi đó đi vào đúng một hộp thư chung với gian hàng.
+ */
+.contextChip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--xp-color-border);
+  border-left: 3px solid var(--xp-color-primary);
+  border-radius: 8px;
+  background: var(--xp-color-bg-layout, var(--xp-gold-wash));
+}
+
+.contextThumb {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.contextBody {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.contextLabel {
+  font-size: 11px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.contextName {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--xp-color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * Thẻ xe TRONG bong bóng — nền riêng, không ăn theo màu bong bóng.
+ *
+ * Bong bóng "của tôi" nền gold đậm; để thẻ trong suốt thì tên xe chìm hẳn vào nền. Nền container
+ * giữ thẻ đọc được ở cả hai phía và cũng nói đúng bản chất: nó là một trích dẫn, không phải chữ
+ * người dùng gõ.
+ */
+.vehicleCard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--xp-color-bg-container);
+  border: 1px solid var(--xp-color-border);
+  max-width: 100%;
+}
+
+.vehicleCard:hover {
+  border-color: var(--xp-color-primary);
+}
+
+.vehicleCardThumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.vehicleCardBody {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.vehicleCardLabel {
+  font-size: 10.5px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.vehicleCardName {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--xp-gold-deep);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

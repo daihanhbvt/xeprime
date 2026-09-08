@@ -25,6 +25,8 @@ import {
   TENANT_ROLE,
   TENANT_STATUS,
   VEHICLE_TYPE,
+  isCustomerTripClosed,
+  type CustomerTripStage,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { CustomersService } from '../src/modules/customers/customers.service';
@@ -36,7 +38,11 @@ import { SettlementService } from '../src/modules/bookings/settlement/settlement
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingHoldsService, makeBookingsService, makePricingService } from './helpers/service-factory';
+import {
+  makeBookingHoldsService,
+  makeBookingsService,
+  makePricingService,
+} from './helpers/service-factory';
 
 /**
  * Wave 11 — chuyến của KHÁCH, trên PostgreSQL THẬT.
@@ -591,24 +597,44 @@ describe('Bằng chứng bàn giao', () => {
   });
 });
 
+/** DTO khai `stage` là string (mã đi trên dây); thu hẹp về union một chỗ, không ép kiểu rải rác. */
+const closed = (stage: string) => isCustomerTripClosed(stage as CustomerTripStage);
+
 describe('Lọc và đếm', () => {
   maybe('mỗi tab đếm đúng bằng chính vị từ lọc của nó', async () => {
-    const res = await trips.list(customerId, { filter: CUSTOMER_TRIP_FILTER.ACTIVE });
-    expect(res.data.every((row) => row.stage === CUSTOMER_TRIP_STAGE.ACTIVE)).toBe(true);
-    expect(res.meta.total).toBe(res.counts.active);
+    const current = await trips.list(customerId, { filter: CUSTOMER_TRIP_FILTER.CURRENT });
+    expect(current.data.every((row) => !closed(row.stage))).toBe(true);
+    expect(current.meta.total).toBe(current.counts.current);
 
-    const all = await trips.list(customerId, {});
-    expect(all.meta.total).toBe(all.counts.all);
-    // Các tab con cộng lại đúng bằng tab Tất cả — không chuyến nào rơi ra ngoài mọi tab.
-    const { pending, upcoming, active, completed, cancelled } = all.counts;
-    expect(pending + upcoming + active + completed + cancelled).toBe(all.counts.all);
+    const history = await trips.list(customerId, { filter: CUSTOMER_TRIP_FILTER.HISTORY });
+    expect(history.data.every((row) => closed(row.stage))).toBe(true);
+    expect(history.meta.total).toBe(history.counts.history);
   });
 
-  maybe('tab Đã hủy gom cả từ-chối lẫn không-nhận-xe', async () => {
-    const res = await trips.list(customerId, { filter: CUSTOMER_TRIP_FILTER.CANCELLED });
+  maybe('hai tab phủ kín — không chuyến nào rơi ra ngoài cả hai', async () => {
+    // Không còn tab `Tất cả` để hứng phần rơi rớt, nên đây là bài kiểm tra duy nhất chặn việc
+    // một trạng thái mới (hay một trạng thái bị bỏ sót như `awaiting_hold` trước đây) làm
+    // chuyến biến mất khỏi màn hình của khách.
+    const total = await prisma.bookingRequest.count({ where: { customerUserId: customerId } });
+    const { counts } = await trips.list(customerId, {});
+    expect(counts.current + counts.history).toBe(total);
+  });
+
+  maybe('mặc định là tab Chuyến hiện tại, không phải toàn bộ', async () => {
+    const res = await trips.list(customerId, {});
+    expect(res.data.every((row) => !closed(row.stage))).toBe(true);
+    expect(res.meta.total).toBe(res.counts.current);
+  });
+
+  maybe('Lịch sử gom cả hoàn thành, từ chối lẫn không nhận xe', async () => {
+    const res = await trips.list(customerId, {
+      filter: CUSTOMER_TRIP_FILTER.HISTORY,
+      limit: 50,
+    });
     const stages = new Set(res.data.map((row) => row.stage));
     expect(stages.has(CUSTOMER_TRIP_STAGE.REJECTED)).toBe(true);
     expect(stages.has(CUSTOMER_TRIP_STAGE.NO_SHOW)).toBe(true);
+    expect(stages.has(CUSTOMER_TRIP_STAGE.COMPLETED)).toBe(true);
   });
 });
 
@@ -992,7 +1018,11 @@ describe('Tổng tiền: danh sách khớp chi tiết', () => {
     });
 
     const detail = await trips.detail(customerId, requestId);
-    const list = await trips.list(customerId, { limit: 50 });
+    const list = await trips.list(customerId, {
+      // Chuyến ĐÃ HOÀN THÀNH nằm ở tab lịch sử — tab mặc định giờ là `Chuyến hiện tại`.
+      filter: CUSTOMER_TRIP_FILTER.HISTORY,
+      limit: 50,
+    });
     const row = list.data.find((item) => item.id === requestId);
 
     expect(detail.finance?.finalTotal).toBe('3022000.00');
@@ -1014,7 +1044,11 @@ describe('Tổng tiền: danh sách khớp chi tiết', () => {
     });
 
     const detail = await trips.detail(customerId, requestId);
-    const list = await trips.list(customerId, { limit: 50 });
+    const list = await trips.list(customerId, {
+      // Chuyến ĐÃ HOÀN THÀNH nằm ở tab lịch sử — tab mặc định giờ là `Chuyến hiện tại`.
+      filter: CUSTOMER_TRIP_FILTER.HISTORY,
+      limit: 50,
+    });
     const row = list.data.find((item) => item.id === requestId);
 
     expect(detail.finance?.finalTotal).toBe('1000000.00');

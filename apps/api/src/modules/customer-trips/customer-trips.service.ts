@@ -4,8 +4,13 @@ import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
   BOOKING_REQUEST_STATUS,
+  BOOKING_REQUEST_STATUS_VALUES,
   BOOKING_STATUS,
+  BOOKING_STATUS_VALUES,
   CUSTOMER_TRIP_FILTER,
+  CUSTOMER_TRIP_FILTER_DEFAULT,
+  CUSTOMER_TRIP_FILTER_STAGES,
+  CUSTOMER_TRIP_FILTER_VALUES,
   HANDOVER_PHOTO_SLOT_VALUES,
   HANDOVER_STATUS,
   HANDOVER_TYPE,
@@ -96,7 +101,7 @@ export class CustomerTripsService {
     const paging = resolvePaging(query, CUSTOMER_TRIP_DEFAULT_LIMIT, CUSTOMER_TRIP_MAX_LIMIT);
     const filter: CustomerTripFilter = isCustomerTripFilter(query.filter)
       ? query.filter
-      : CUSTOMER_TRIP_FILTER.ALL;
+      : CUSTOMER_TRIP_FILTER_DEFAULT;
 
     const where = this.whereFor(customerUserId, filter);
 
@@ -469,49 +474,27 @@ export class CustomerTripsService {
    * Điều kiện lọc theo TAB. Chặng của khách là giá trị suy ra chứ không phải cột, nên mỗi tab
    * dịch ngược thành một vị từ trên hai cột trạng thái thật — vẫn lọc và phân trang ở DB, không
    * bao giờ kéo cả danh sách về rồi lọc trong Node.
+   *
+   * Danh sách trạng thái lấy từ `FILTER_STATUSES` (suy ngược bằng chính `customerTripStage`),
+   * không viết tay: bản trước liệt kê tay và đã bỏ sót `awaiting_hold`, `hold_expired` cùng các
+   * yêu cầu đã duyệt mà chưa có đơn — những chuyến đó không nằm trong tab nào và biến mất khỏi
+   * màn hình của khách.
    */
   private whereFor(
     customerUserId: string,
     filter: CustomerTripFilter,
   ): Prisma.BookingRequestWhereInput {
-    const mine: Prisma.BookingRequestWhereInput = { customerUserId };
+    const { bookingStatuses, requestStatuses } = FILTER_STATUSES[filter];
 
-    switch (filter) {
-      case CUSTOMER_TRIP_FILTER.PENDING:
-        return {
-          ...mine,
-          bookingId: null,
-          status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
-        };
-      case CUSTOMER_TRIP_FILTER.UPCOMING:
-        return {
-          ...mine,
-          booking: { status: { in: [BOOKING_STATUS.RESERVED, BOOKING_STATUS.CONFIRMED] } },
-        };
-      case CUSTOMER_TRIP_FILTER.ACTIVE:
-        return { ...mine, booking: { status: BOOKING_STATUS.ACTIVE } };
-      case CUSTOMER_TRIP_FILTER.COMPLETED:
-        return { ...mine, booking: { status: BOOKING_STATUS.COMPLETED } };
-      case CUSTOMER_TRIP_FILTER.CANCELLED:
-        return {
-          ...mine,
-          OR: [
-            {
-              bookingId: null,
-              status: {
-                in: [
-                  BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
-                  BOOKING_REQUEST_STATUS.EXPIRED,
-                  BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER,
-                ],
-              },
-            },
-            { booking: { status: { in: [BOOKING_STATUS.CANCELLED, BOOKING_STATUS.NO_SHOW] } } },
-          ],
-        };
-      default:
-        return mine;
-    }
+    return {
+      customerUserId,
+      // Có đơn thuê thì đơn nói; chưa có đơn thì trạng thái yêu cầu nói — đúng thứ tự ưu tiên
+      // của `customerTripStage`, nên hai nhánh không bao giờ nhận cùng một dòng.
+      OR: [
+        { booking: { is: { status: { in: bookingStatuses } } } },
+        { booking: { is: null }, status: { in: requestStatuses } },
+      ],
+    };
   }
 
   /** Đếm cho từng tab bằng CHÍNH vị từ của tab đó — con số trên tab và danh sách không lệch. */
@@ -519,17 +502,53 @@ export class CustomerTripsService {
     const count = (filter: CustomerTripFilter) =>
       this.prisma.bookingRequest.count({ where: this.whereFor(customerUserId, filter) });
 
-    const [all, pending, upcoming, active, completed, cancelled] = await Promise.all([
-      count(CUSTOMER_TRIP_FILTER.ALL),
-      count(CUSTOMER_TRIP_FILTER.PENDING),
-      count(CUSTOMER_TRIP_FILTER.UPCOMING),
-      count(CUSTOMER_TRIP_FILTER.ACTIVE),
-      count(CUSTOMER_TRIP_FILTER.COMPLETED),
-      count(CUSTOMER_TRIP_FILTER.CANCELLED),
+    const [current, history] = await Promise.all([
+      count(CUSTOMER_TRIP_FILTER.CURRENT),
+      count(CUSTOMER_TRIP_FILTER.HISTORY),
     ]);
-    return { all, pending, upcoming, active, completed, cancelled };
+    return { current, history };
   }
 }
+
+/**
+ * Tab → hai tập trạng thái THẬT ở DB, suy ngược bằng chính phép chiếu `customerTripStage`.
+ *
+ * Đây là chỗ duy nhất biết tab nào ứng với trạng thái nào, và nó không liệt kê gì cả: mỗi
+ * trạng thái vận hành được đem chiếu ra chặng rồi hỏi xem chặng đó thuộc tab nào. Thêm một
+ * trạng thái vào `BOOKING_STATUS`/`BOOKING_REQUEST_STATUS` là nó tự vào đúng tab — không có
+ * đường nào để một chuyến rơi ra ngoài mọi tab rồi biến mất khỏi màn hình khách.
+ */
+type FilterStatuses = Readonly<
+  Record<
+    CustomerTripFilter,
+    { bookingStatuses: BookingStatus[]; requestStatuses: BookingRequestStatus[] }
+  >
+>;
+
+const FILTER_STATUSES: FilterStatuses = Object.fromEntries(
+  CUSTOMER_TRIP_FILTER_VALUES.map((filter) => {
+    const stages: readonly CustomerTripStage[] = CUSTOMER_TRIP_FILTER_STAGES[filter];
+    return [
+      filter,
+      {
+        bookingStatuses: BOOKING_STATUS_VALUES.filter((status) =>
+          stages.includes(
+            customerTripStage({
+              // Yêu cầu đã sinh đơn thì trạng thái của nó chỉ còn là lịch sử — phép chiếu bỏ qua.
+              requestStatus: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
+              bookingStatus: status,
+            }),
+          ),
+        ),
+        requestStatuses: BOOKING_REQUEST_STATUS_VALUES.filter((status) =>
+          stages.includes(customerTripStage({ requestStatus: status, bookingStatus: null })),
+        ),
+      },
+    ];
+  }),
+  // `Object.fromEntries` trả `{ [k: string]: … }`; ép về đúng bản đồ theo tab. An toàn vì khoá
+  // đi thẳng từ `CUSTOMER_TRIP_FILTER_VALUES` nên không thiếu tab nào.
+) as FilterStatuses;
 
 // ── Truy vấn ─────────────────────────────────────────────────────────────────
 

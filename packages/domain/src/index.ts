@@ -165,3 +165,26 @@ export {
 export { LIST_SEPARATOR } from './display';
 
 export { remainingKm, type RemainingKm, type RemainingKmKind } from './odometer';
+
+/**
+ * Hợp nhất tin nhắn của một thread chat — dùng chung web ↔ native.
+ *
+ * Nằm ở domain vì đây là LUẬT chứ không phải trình bày: ba nguồn không đồng bộ (REST, tin lạc
+ * quan, tín hiệu realtime) đến theo thứ tự bất kỳ, và "tin nào là trùng" phải có đúng một câu
+ * trả lời cho cả hai client (ADR 0009).
+ */
+export {
+  CHAT_SEND_STATE,
+  compareMessages,
+  groupThreadMessages,
+  isOwnSideMessage,
+  newClientMessageId,
+  markThreadMessageFailed,
+  mergeThreadMessages,
+  removeThreadMessage,
+  type ChatSendState,
+  type GroupThreadOptions,
+  type ThreadGroup,
+  type ThreadMessage,
+  type ThreadMessageLike,
+} from './chat-thread';

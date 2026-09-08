@@ -66,7 +66,7 @@ const TRIP = {
   createdAt: '2026-08-01T00:00:00.000Z',
 };
 
-const COUNTS = { all: 4, pending: 1, upcoming: 1, active: 1, completed: 1, cancelled: 0 };
+const COUNTS = { current: 3, history: 1 };
 
 beforeEach(() => {
   query.data = {
@@ -93,12 +93,13 @@ function renderView() {
 }
 
 describe('Danh sách chuyến', () => {
-  it('tab hiện số của SERVER, không phải số chuyến trong trang hiện tại', () => {
+  it('có ĐÚNG hai tab, và tab hiện số của SERVER', () => {
     renderView();
-    // Trang chỉ có 1 thẻ nhưng tab `Tất cả` phải nói 4 — đếm ở client là sai ngay khi có
-    // nhiều hơn một trang.
-    expect(screen.getByText('Tất cả (4)')).toBeTruthy();
-    expect(screen.getByText('Hoàn thành (1)')).toBeTruthy();
+    // Trang chỉ có 1 thẻ nhưng tab phải nói 3 — đếm ở client là sai ngay khi có nhiều hơn một
+    // trang. Và chỉ hai tab: một tab cho mỗi chặng là màn cũ.
+    expect(screen.getAllByRole('tab')).toHaveLength(2);
+    expect(screen.getByText('Chuyến hiện tại (3)')).toBeTruthy();
+    expect(screen.getByText('Lịch sử chuyến (1)')).toBeTruthy();
   });
 
   it('thẻ chuyến hiện tổng tiền và cách nhận xe', () => {
@@ -121,20 +122,43 @@ describe('Danh sách chuyến', () => {
   });
 
   it('đọc tab đang mở từ URL', () => {
-    nav.params = new URLSearchParams('filter=completed');
+    nav.params = new URLSearchParams('filter=history');
     renderView();
-    // Tab đang chọn phải là `Hoàn thành`, không phải mặc định `Tất cả`.
-    expect(screen.getByRole('tab', { selected: true }).textContent).toContain('Hoàn thành');
+    // Tab đang chọn phải là `Lịch sử chuyến`, không phải mặc định `Chuyến hiện tại`.
+    expect(screen.getByRole('tab', { selected: true }).textContent).toContain('Lịch sử chuyến');
   });
 
-  it('danh sách trống mời đi tìm xe', () => {
+  it('không có tham số thì mở tab Chuyến hiện tại', () => {
+    renderView();
+    expect(screen.getByRole('tab', { selected: true }).textContent).toContain('Chuyến hiện tại');
+  });
+
+  it('tab Chuyến hiện tại trống thì mời đi tìm xe', () => {
     query.data = {
       items: [],
       meta: { page: 1, limit: 10, total: 0, hasNext: false },
       counts: COUNTS,
     };
     renderView();
-    expect(screen.getByText('Bạn chưa có chuyến đi nào')).toBeTruthy();
+    expect(screen.getByText('Bạn chưa có chuyến nào đang diễn ra')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Tìm xe' })).toBeTruthy();
+  });
+
+  /*
+   * Lịch sử trống là một câu chuyện khác: mời đi tìm xe ở đây là lạc đề khi khách có thể đang
+   * có chuyến chạy dở ở tab bên cạnh.
+   */
+  it('tab Lịch sử trống thì đưa về tab chuyến hiện tại, không mời tìm xe', () => {
+    nav.params = new URLSearchParams('filter=history');
+    query.data = {
+      items: [],
+      meta: { page: 1, limit: 10, total: 0, hasNext: false },
+      counts: COUNTS,
+    };
+    renderView();
+    expect(screen.getByText('Chưa có chuyến nào kết thúc')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Xem chuyến hiện tại' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Tìm xe' })).toBeNull();
   });
 
   it('lỗi tải cho thử lại', () => {
@@ -173,7 +197,7 @@ describe('Danh sách chuyến', () => {
     query.isLoading = true;
     query.data = undefined;
     renderView();
-    expect(screen.queryByText('Bạn chưa có chuyến đi nào')).toBeNull();
+    expect(screen.queryByText('Bạn chưa có chuyến nào đang diễn ra')).toBeNull();
     expect(document.querySelector('[aria-busy="true"]')).toBeTruthy();
   });
 });

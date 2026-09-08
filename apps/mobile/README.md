@@ -230,6 +230,8 @@ apps/mobile/
     │   ├── shell/                #   VỎ app: khu Khách ↔ Quản lý (slice · ScopeGuard · switcher)
     │   ├── booking-requests/     #   BKG-01→05 — wizard gửi yêu cầu + hộp thư duyệt
     │   ├── bookings/             #   BKG-06→08, 12, 13 — danh sách · chi tiết · tạo tay
+    │   ├── chat/                 #   ADR 0009 — hộp thư KHÁCH + thread (FlatList `inverted`)
+    │   │                         #     luật gộp tin dùng chung ở @xeprime/domain/chat-thread
     │   ├── handovers/            #   BKG-09 — biên bản giao/nhận + ảnh hiện trạng (camera)
     │   ├── settlement/           #   BKG-10/11 + FIN-05/06 — quyết toán · phụ phí · thu tiền
     │   └── trips/                #   BKG-15/16 — chuyến của khách + đánh giá

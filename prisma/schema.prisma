@@ -869,6 +869,8 @@ model Vehicle {
   occupancies            VehicleOccupancy[]
   reviews                Review[]
   conversations          Conversation[]
+  /// Tin nhắn NHẮC TỚI xe này (thẻ ngữ cảnh), không phải hội thoại thuộc về xe — xem `Message`.
+  messageContexts        Message[]         @relation("message_vehicle_context")
   publicListing          PublicListing?
   images                 VehicleImage[]
   features               VehicleFeature[]
@@ -2290,6 +2292,11 @@ model Conversation {
   firebaseConversationId String?   @unique @map("firebase_conversation_id") @db.VarChar(160)
   tenantId               String    @map("tenant_id") @db.Char(26)
   customerUserId         String?   @map("customer_user_id") @db.Char(26)
+  /// Xe được NHẮC TỚI gần nhất trong hội thoại — denorm cho dòng preview ở danh sách.
+  ///
+  /// KHÔNG còn là danh tính của hội thoại (xem `@@unique` ở cuối model): một thread có thể nói về
+  /// nhiều xe, và cột này chỉ trả lời "lần cuối họ đang bàn về xe nào". Ngữ cảnh thật của từng
+  /// câu nằm ở `Message.vehicleId`.
   vehicleId              String?   @map("vehicle_id") @db.Char(26)
   /// Liên kết ngữ cảnh (tham chiếu mềm, không FK để tránh vòng phụ thuộc).
   bookingId              String?   @map("booking_id") @db.Char(26)
@@ -2312,6 +2319,16 @@ model Conversation {
   participants ConversationParticipant[]
   messages     Message[]
 
+  /// MỘT hội thoại cho mỗi cặp (khách, GIAN HÀNG).
+  ///
+  /// Danh tính là gian hàng, KHÔNG phải chiếc xe: khách hỏi ba xe của cùng một salon vẫn đang nói
+  /// chuyện với đúng một người bán, nên tách theo xe là cắt vụn một cuộc trò chuyện ra ba hộp thư
+  /// và cả hai bên phải nhớ mình đã nói gì ở đâu. Ngữ cảnh xe chuyển xuống TỪNG TIN NHẮN
+  /// (`Message.vehicleId`) dưới dạng thẻ đính kèm.
+  ///
+  /// Ở Postgres NULL không đụng NULL, nên hội thoại chưa có `customer_user_id` (khách vãng lai)
+  /// không bị ràng buộc này gom nhầm lại với nhau.
+  @@unique([customerUserId, tenantId], map: "conversations_customer_tenant_key")
   @@index([tenantId, lastMessageAt])
   @@index([customerUserId, lastMessageAt])
   @@index([bookingId])
@@ -2343,6 +2360,15 @@ model Message {
   conversationId    String   @map("conversation_id") @db.Char(26)
   firebaseMessageId String?  @map("firebase_message_id") @db.VarChar(160)
   senderUserId      String?  @map("sender_user_id") @db.Char(26)
+  /// Khoá chống-gửi-trùng do CLIENT sinh (ULID). Gửi lại sau timeout mạng trả về đúng tin cũ thay
+  /// vì tạo tin thứ hai — bảo đảm bằng unique DB, không bằng check ở tầng app.
+  clientMessageId   String?  @map("client_message_id") @db.VarChar(64)
+  /// Xe mà tin nhắn này NÓI VỀ — thẻ ngữ cảnh hiện kèm bong bóng, bấm vào mở tin đăng.
+  ///
+  /// Đây là chỗ ngữ cảnh xe sống sau khi danh tính hội thoại chuyển sang (khách, gian hàng):
+  /// khách mở chat từ một tin đăng thì câu ĐẦU TIÊN mang theo `vehicle_id` đó, nên cùng một
+  /// thread vẫn nói rõ đang hỏi chiếc nào mà không phải đẻ ra hội thoại thứ hai.
+  vehicleId         String?  @map("vehicle_id") @db.Char(26)
   /// @xeprime/types → SenderType
   senderType        String   @map("sender_type") @db.VarChar(50)
   /// @xeprime/types → MessageType
@@ -2354,11 +2380,18 @@ model Message {
 
   conversation Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender       User?            @relation("message_sender", fields: [senderUserId], references: [id], onDelete: SetNull)
+  /// Xe bị xoá thì tin nhắn Ở LẠI, chỉ mất thẻ ngữ cảnh — lịch sử trò chuyện không phải là dữ
+  /// liệu phụ thuộc vòng đời của một tin đăng.
+  vehicle      Vehicle?         @relation("message_vehicle_context", fields: [vehicleId], references: [id], onDelete: SetNull)
   attachments  ChatAttachment[]
   outbox       MessageOutbox?
 
-  /// Phân trang lịch sử theo cursor (sentAt) trong một hội thoại.
-  @@index([conversationId, sentAt])
+  @@unique([conversationId, clientMessageId], map: "messages_conversation_client_key")
+  /// Cursor phân trang là CẶP (sentAt, id): hai tin cùng mili-giây thì `sentAt` một mình vừa bỏ
+  /// sót vừa trả trùng. Index mang cả hai cột để keyset chạy trên index chứ không phải sort.
+  @@index([conversationId, sentAt, id])
+  /// "Khách này đã hỏi những xe nào" — tra ngược từ xe sang các câu nhắc tới nó.
+  @@index([vehicleId])
   @@map("messages")
 }
 

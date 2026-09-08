@@ -50,8 +50,9 @@ export function useStartBookingRequestConversation() {
   return useMutation({
     mutationFn: (id: string) => startBookingRequestConversation(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.chat.conversations() });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.chat.unreadCount() });
+      // Tiền tố `chat` phủ cả hai bề mặt: thread vừa mở nằm ở inbox gian hàng, nhưng cùng tài
+      // khoản đó có thể đang mở hộp thư khách ở tab khác.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.chat.all });
     },
   });
 }

@@ -10412,6 +10412,19 @@
         "operationId": "ConversationsController_list",
         "parameters": [
           {
+            "name": "side",
+            "required": true,
+            "in": "query",
+            "description": "customer = hộp thư khách · shop = inbox gian hàng",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "shop"
+              ]
+            }
+          },
+          {
             "name": "page",
             "required": false,
             "in": "query",
@@ -10430,6 +10443,25 @@
               "maximum": 50,
               "default": 20,
               "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên phía bên kia hoặc tên xe",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "unreadOnly",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ hội thoại còn tin chưa đọc",
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
@@ -10509,7 +10541,7 @@
             }
           }
         },
-        "summary": "Danh sách hội thoại của tôi (phân trang)",
+        "summary": "Hộp thư của một bề mặt (khách hoặc gian hàng), phân trang",
         "tags": [
           "conversations"
         ],
@@ -10645,6 +10677,144 @@
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002)."
       }
     },
+    "/conversations/{id}": {
+      "get": {
+        "operationId": "ConversationsController_detail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "side",
+            "required": true,
+            "in": "query",
+            "description": "customer = hộp thư khách · shop = inbox gian hàng",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "shop"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ConversationSummaryDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Một hội thoại theo id — mở deep link không nằm ở trang đầu",
+        "tags": [
+          "conversations"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002)."
+      }
+    },
     "/conversations/{id}/messages": {
       "get": {
         "operationId": "ConversationsController_messages",
@@ -10662,6 +10832,15 @@
             "required": false,
             "in": "query",
             "description": "Cursor: lấy tin CŨ hơn mốc ISO này (phân trang lịch sử)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "beforeId",
+            "required": false,
+            "in": "query",
+            "description": "Nửa thứ hai của cursor: id của tin cũ nhất trang trước",
             "schema": {
               "type": "string"
             }
@@ -10770,7 +10949,7 @@
             }
           }
         },
-        "summary": "Lịch sử tin nhắn (cursor, mới nhất trước)",
+        "summary": "Lịch sử tin nhắn (cursor keyset, mới nhất trước)",
         "tags": [
           "conversations"
         ],
@@ -10919,7 +11098,7 @@
             }
           }
         },
-        "summary": "Gửi một tin nhắn",
+        "summary": "Gửi một tin nhắn (idempotent theo clientMessageId)",
         "tags": [
           "conversations"
         ],
@@ -11075,7 +11254,21 @@
     "/conversations/unread-count": {
       "get": {
         "operationId": "ConversationsController_unreadCount",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "side",
+            "required": true,
+            "in": "query",
+            "description": "customer = hộp thư khách · shop = inbox gian hàng",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "customer",
+                "shop"
+              ]
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Thành công",
@@ -11086,6 +11279,106 @@
                   "properties": {
                     "data": {
                       "$ref": "#/components/schemas/ChatUnreadCountDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tổng tin chưa đọc của một bề mặt (cho badge icon chat)",
+        "tags": [
+          "conversations"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002)."
+      }
+    },
+    "/conversations/unread-summary": {
+      "get": {
+        "operationId": "ConversationsController_unreadSummary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ChatUnreadSummaryDto"
                     }
                   },
                   "required": [
@@ -11144,7 +11437,7 @@
             }
           }
         },
-        "summary": "Tổng tin chưa đọc mọi hội thoại (cho badge icon chat)",
+        "summary": "Chưa đọc của cả hai vai — cho badge biểu tượng chat ở mọi trang",
         "tags": [
           "conversations"
         ],
@@ -37194,15 +37487,11 @@
             "required": false,
             "in": "query",
             "schema": {
-              "default": "all",
+              "default": "current",
               "type": "string",
               "enum": [
-                "all",
-                "pending",
-                "upcoming",
-                "active",
-                "completed",
-                "cancelled"
+                "current",
+                "history"
               ]
             }
           },
@@ -49057,6 +49346,31 @@
           "count"
         ]
       },
+      "ChatUnreadSummaryDto": {
+        "type": "object",
+        "properties": {
+          "customer": {
+            "type": "number",
+            "example": 2,
+            "description": "Chưa đọc ở hộp thư KHÁCH"
+          },
+          "shop": {
+            "type": "number",
+            "example": 5,
+            "description": "Chưa đọc ở inbox GIAN HÀNG (0 nếu không thuộc shop nào)"
+          },
+          "total": {
+            "type": "number",
+            "example": 7,
+            "description": "Tổng hai vai — con số cho badge biểu tượng chat"
+          }
+        },
+        "required": [
+          "customer",
+          "shop",
+          "total"
+        ]
+      },
       "CheckAvailabilityDto": {
         "type": "object",
         "properties": {
@@ -49540,19 +49854,34 @@
           },
           "vehicleId": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "Xe được nhắc gần nhất"
           },
           "vehicleName": {
             "type": "string",
             "nullable": true
           },
+          "vehicleImageUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ảnh đại diện xe (R2)"
+          },
           "partyName": {
             "type": "string",
             "description": "Tên phía bên kia (khách thấy tên shop, shop thấy tên khách)"
           },
+          "partyAvatarUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Avatar phía bên kia"
+          },
           "side": {
             "type": "string",
-            "description": "side của người xem: customer | shop"
+            "description": "side của người xem: customer | shop",
+            "enum": [
+              "customer",
+              "shop"
+            ]
           },
           "lastMessageText": {
             "type": "string",
@@ -51408,32 +51737,18 @@
       "CustomerTripCountsDto": {
         "type": "object",
         "properties": {
-          "all": {
-            "type": "number"
+          "current": {
+            "type": "number",
+            "description": "Chuyến chưa khép: chờ duyệt · chờ giữ chỗ · sắp tới · đang thuê"
           },
-          "pending": {
-            "type": "number"
-          },
-          "upcoming": {
-            "type": "number"
-          },
-          "active": {
-            "type": "number"
-          },
-          "completed": {
-            "type": "number"
-          },
-          "cancelled": {
-            "type": "number"
+          "history": {
+            "type": "number",
+            "description": "Chuyến đã khép: hoàn thành · huỷ · từ chối · không nhận xe"
           }
         },
         "required": [
-          "all",
-          "pending",
-          "upcoming",
-          "active",
-          "completed",
-          "cancelled"
+          "current",
+          "history"
         ]
       },
       "CustomerTripDetailDto": {
@@ -54395,6 +54710,10 @@
             "type": "string",
             "nullable": true
           },
+          "senderName": {
+            "type": "string",
+            "nullable": true
+          },
           "senderType": {
             "type": "string"
           },
@@ -54404,6 +54723,21 @@
           "text": {
             "type": "string",
             "nullable": true
+          },
+          "clientMessageId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Khoá idempotency client gửi kèm — client dùng để khớp tin lạc quan với tin thật"
+          },
+          "vehicle": {
+            "nullable": true,
+            "description": "Xe tin nhắn này nói về — null khi câu đó không gắn ngữ cảnh nào",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MessageVehicleDto"
+              }
+            ]
           },
           "attachments": {
             "type": "array",
@@ -54439,10 +54773,34 @@
             "type": "string",
             "nullable": true,
             "description": "Cursor cho lần tải cũ hơn"
+          },
+          "nextBeforeId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nửa thứ hai của cursor"
           }
         },
         "required": [
           "data"
+        ]
+      },
+      "MessageVehicleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name"
         ]
       },
       "MissingOdometerItemDto": {
@@ -57252,11 +57610,17 @@
             "type": "string",
             "description": "MIME type",
             "maxLength": 100
+          },
+          "fileSize": {
+            "type": "number",
+            "description": "Kích thước file (byte)",
+            "maximum": 10485760
           }
         },
         "required": [
           "fileName",
-          "contentType"
+          "contentType",
+          "fileSize"
         ]
       },
       "PresignCustomerDocumentDto": {
@@ -59890,6 +60254,15 @@
               "file",
               "system"
             ]
+          },
+          "clientMessageId": {
+            "type": "string",
+            "description": "ULID client sinh; gửi lại cùng khoá là idempotent",
+            "maxLength": 64
+          },
+          "vehicleId": {
+            "type": "string",
+            "description": "ID xe làm ngữ cảnh cho tin nhắn này"
           },
           "attachments": {
             "type": "array",

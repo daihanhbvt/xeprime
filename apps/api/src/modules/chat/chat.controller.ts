@@ -1,6 +1,12 @@
-import { BadRequestException, Body, Controller, Post } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Post,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { API_ERROR_CODE } from '@xeprime/types';
+import { API_ERROR_CODE, CHAT_ATTACHMENT_MAX_BYTES } from '@xeprime/types';
 import { CurrentUser } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { FirebaseAppService } from '../firebase/firebase-app.service';
@@ -28,6 +34,13 @@ export class ChatController {
     return { enabled: true, token };
   }
 
+  /**
+   * Đính kèm sống ở R2, KHÔNG ở Firebase (ADR 0009 §5) — nên điều kiện là `r2.enabled`.
+   *
+   * Bản trước gác bằng `firebase.enabled`: tắt realtime (hoặc chưa cấu hình Firebase ở môi
+   * trường dev) là mất luôn khả năng gửi ảnh, dù bucket vẫn chạy. Chat phải dùng được đầy đủ
+   * trên REST khi realtime hỏng — đó là cả lý do Firestore chỉ là projection.
+   */
   @Post('attachments/presign')
   @ApiOperation({ summary: 'Xin presigned URL để upload đính kèm chat lên R2' })
   @ApiCreatedResponse({ type: PresignResultDto })
@@ -35,10 +48,16 @@ export class ChatController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: PresignAttachmentDto,
   ): Promise<PresignResultDto> {
-    if (!this.firebase.enabled) {
+    if (!this.r2.enabled) {
+      throw new ServiceUnavailableException({
+        code: API_ERROR_CODE.UPLOADS_NOT_CONFIGURED,
+        message: 'Đính kèm chưa khả dụng (chưa cấu hình lưu trữ)',
+      });
+    }
+    if (dto.fileSize > CHAT_ATTACHMENT_MAX_BYTES) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Đính kèm chưa khả dụng (chat realtime chưa bật)',
+        message: 'Tệp đính kèm vượt quá dung lượng cho phép',
       });
     }
     return this.r2.presignUpload({

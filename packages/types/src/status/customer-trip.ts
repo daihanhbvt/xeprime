@@ -154,14 +154,24 @@ export function isCustomerTripClosed(stage: CustomerTripStage): boolean {
 
 // ── Bộ lọc danh sách ─────────────────────────────────────────────────────────
 
-/** Tab lọc trên màn `Chuyến của tôi`. Một tab gom nhiều chặng — không phải ánh xạ 1-1. */
+/**
+ * Tab lọc trên màn `Chuyến của tôi` — **đúng hai tab**.
+ *
+ * Bản trước có sáu (`Tất cả` + bốn chặng + `Đã hủy`) và đó là một bản sao của máy trạng thái
+ * vận hành đem dán lên mặt khách. Khách chỉ hỏi hai câu: *"chuyến nào tôi còn phải lo?"* và
+ * *"chuyến cũ của tôi đâu?"*. Mọi thứ tinh vi hơn (chờ duyệt · chờ chuyển giữ chỗ · sắp tới ·
+ * đang thuê) đã có **nhãn chặng trên từng thẻ** nói rồi — nói lại bằng tab chỉ khiến người dùng
+ * phải mở bốn tab mới biết mình có bao nhiêu chuyến, và trên màn 390px thì dải tab bắt đầu cuộn
+ * ngang.
+ *
+ * Hai tab này **phủ kín và không giao nhau** theo đúng `isCustomerTripClosed` — không có chuyến
+ * nào rơi ra ngoài cả hai, nên `Tất cả` cũng mất luôn lý do tồn tại.
+ */
 export const CUSTOMER_TRIP_FILTER = {
-  ALL: 'all',
-  PENDING: 'pending',
-  UPCOMING: 'upcoming',
-  ACTIVE: 'active',
-  COMPLETED: 'completed',
-  CANCELLED: 'cancelled',
+  /** Chuyến còn đang chạy: chờ duyệt · chờ chuyển giữ chỗ · sắp tới · đang thuê. */
+  CURRENT: 'current',
+  /** Chuyến đã khép: hoàn thành · huỷ · bị từ chối · không nhận xe. */
+  HISTORY: 'history',
 } as const;
 
 export type CustomerTripFilter = (typeof CUSTOMER_TRIP_FILTER)[keyof typeof CUSTOMER_TRIP_FILTER];
@@ -170,35 +180,30 @@ export const CUSTOMER_TRIP_FILTER_VALUES = Object.values(
   CUSTOMER_TRIP_FILTER,
 ) as CustomerTripFilter[];
 
+/**
+ * Tab mở sẵn khi vào màn — nguồn CHUNG cho web (giá trị ngầm định của `?filter=`), native và
+ * backend (query rỗng). Ba nơi tự chọn mặc định riêng là ba nơi có thể lệch nhau.
+ */
+export const CUSTOMER_TRIP_FILTER_DEFAULT: CustomerTripFilter = CUSTOMER_TRIP_FILTER.CURRENT;
+
 export const CUSTOMER_TRIP_FILTER_LABEL: Readonly<Record<CustomerTripFilter, string>> = {
-  [CUSTOMER_TRIP_FILTER.ALL]: 'Tất cả',
-  [CUSTOMER_TRIP_FILTER.PENDING]: 'Chờ xác nhận',
-  [CUSTOMER_TRIP_FILTER.UPCOMING]: 'Sắp tới',
-  [CUSTOMER_TRIP_FILTER.ACTIVE]: 'Đang thuê',
-  [CUSTOMER_TRIP_FILTER.COMPLETED]: 'Hoàn thành',
-  [CUSTOMER_TRIP_FILTER.CANCELLED]: 'Đã hủy',
+  [CUSTOMER_TRIP_FILTER.CURRENT]: 'Chuyến hiện tại',
+  [CUSTOMER_TRIP_FILTER.HISTORY]: 'Lịch sử chuyến',
 };
 
-/** Chặng nào thuộc tab nào — dùng chung cho cả đếm ở server lẫn nhãn ở client. */
+/**
+ * Chặng nào thuộc tab nào — dùng chung cho cả đếm ở server lẫn nhãn ở client.
+ *
+ * Suy ra TỪ `isCustomerTripClosed` chứ không liệt kê tay: thêm một chặng mới vào
+ * `CUSTOMER_TRIP_STAGE` là nó tự rơi vào đúng một trong hai tab, không có đường nào để quên.
+ */
 export const CUSTOMER_TRIP_FILTER_STAGES: Readonly<
   Record<CustomerTripFilter, readonly CustomerTripStage[]>
 > = {
-  [CUSTOMER_TRIP_FILTER.ALL]: CUSTOMER_TRIP_STAGE_VALUES,
-  // Tab gom cả hai chặng "chuyến chưa được chốt" — dù việc cần làm thuộc về hai người khác
-  // nhau. Với khách thì đây vẫn là một câu hỏi duy nhất: "chuyến của tôi đã chắc chưa?".
-  // Sự khác biệt (ai phải hành động) do NHÃN CHẶNG trên từng dòng nói, không phải do tab.
-  [CUSTOMER_TRIP_FILTER.PENDING]: [
-    CUSTOMER_TRIP_STAGE.PENDING_APPROVAL,
-    CUSTOMER_TRIP_STAGE.AWAITING_HOLD,
-  ],
-  [CUSTOMER_TRIP_FILTER.UPCOMING]: [CUSTOMER_TRIP_STAGE.READY],
-  [CUSTOMER_TRIP_FILTER.ACTIVE]: [CUSTOMER_TRIP_STAGE.ACTIVE],
-  [CUSTOMER_TRIP_FILTER.COMPLETED]: [CUSTOMER_TRIP_STAGE.COMPLETED],
-  [CUSTOMER_TRIP_FILTER.CANCELLED]: [
-    CUSTOMER_TRIP_STAGE.CANCELLED,
-    CUSTOMER_TRIP_STAGE.REJECTED,
-    CUSTOMER_TRIP_STAGE.NO_SHOW,
-  ],
+  [CUSTOMER_TRIP_FILTER.CURRENT]: CUSTOMER_TRIP_STAGE_VALUES.filter(
+    (stage) => !isCustomerTripClosed(stage),
+  ),
+  [CUSTOMER_TRIP_FILTER.HISTORY]: CUSTOMER_TRIP_STAGE_VALUES.filter(isCustomerTripClosed),
 };
 
 export function isCustomerTripFilter(value: unknown): value is CustomerTripFilter {

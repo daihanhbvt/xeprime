@@ -1,11 +1,16 @@
-import type { components } from '@xeprime/types';
-
-/** Shape chat lấy từ contract OpenAPI (ADR 0007) — không viết tay lại DTO. */
-type Schemas = components['schemas'];
-
-export type ConversationSummary = Schemas['ConversationSummaryDto'];
-export type ChatMessage = Schemas['MessageDto'];
-export type MessageAttachment = Schemas['MessageAttachmentDto'];
-export type SendMessageInput = Schemas['SendMessageDto'];
-export type PresignResult = Schemas['PresignResultDto'];
-export type FirebaseChatToken = Schemas['FirebaseTokenDto'];
+/**
+ * Shape chat lấy từ contract OpenAPI qua `@xeprime/api-client` (ADR 0007) — không viết tay lại
+ * DTO, và không khai lần thứ hai ở web: app native import đúng những type này.
+ */
+export type {
+  ChatAttachmentPresign,
+  ChatMessage,
+  ConversationFilters,
+  ConversationListResult,
+  ConversationSummary,
+  FirebaseChatToken,
+  MessageAttachment,
+  MessageCursor,
+  MessagePage,
+  SendMessageInput,
+} from '@xeprime/api-client';
