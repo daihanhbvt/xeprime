@@ -306,3 +306,55 @@ export async function uploadPrivateFileToR2<TTicket extends { uploadUrl: string 
 
   return ticket;
 }
+
+/**
+ * Tải MỘT tệp lên kho CÔNG KHAI và trả URL công khai của nó.
+ *
+ * Song sinh của {@link uploadPrivateFileToR2}, khác đúng ở kho đích và thứ nhận về: chứng từ
+ * phiếu thu/chi (hoá đơn xăng, rửa xe, biên lai chuyển khoản) không mang giấy tờ tuỳ thân, nên
+ * nó nằm cùng mức phơi bày với ảnh xe và được nhắc tới bằng URL chứ không bằng id.
+ *
+ * `uploadImageToR2` đã lo phần ẢNH (nó nén trước khi gửi). Hàm này là đường cho những tệp KHÔNG
+ * nén được — PDF — nên nó phải kiểm MIME + dung lượng ngay sau khi đo số byte thật: một bản scan
+ * 30MB mà không chặn ở đây sẽ đi trọn vòng presign rồi mới bị DTO từ chối.
+ *
+ * Cùng cái bẫy `Content-Length`: server ký số byte VÀO URL, nên mở file ra TRƯỚC rồi mới presign
+ * theo đúng số byte sắp gửi. Lệch là R2 trả **403**.
+ */
+export async function uploadPublicFileToR2(
+  file: PickedFile,
+  presign: (meta: UploadMeta) => Promise<UploadPresign>,
+): Promise<string> {
+  const body = await (await fetch(file.uri)).blob();
+
+  const rejection = validateDocumentUpload({ type: file.contentType, size: body.size });
+  if (rejection) throw new UploadRejectedError(rejection);
+
+  const meta: UploadMeta = {
+    fileName: file.fileName,
+    contentType: file.contentType,
+    fileSize: body.size,
+  };
+
+  let ticket: UploadPresign;
+  try {
+    ticket = await presign(meta);
+  } catch (error) {
+    throw new ImageUploadError('presign', error);
+  }
+
+  try {
+    const response = await fetch(ticket.uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.contentType },
+      body,
+    });
+    if (!response.ok) {
+      throw new Error(`R2 PUT ${response.status} ${response.statusText}`);
+    }
+  } catch (error) {
+    throw new ImageUploadError('upload', error);
+  }
+
+  return ticket.publicUrl;
+}

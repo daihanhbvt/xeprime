@@ -1,5 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
 import { Pressable } from 'react-native';
+import { useTranslations } from 'use-intl';
 import { Text, XStack, YStack } from 'tamagui';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
@@ -17,9 +19,31 @@ import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/t
  * ("Quản lý giấy tờ", "Chỉnh sửa giá"), đúng vai `extra` của `<Card>` bên web. Nằm ở đây chứ
  * không để mỗi màn tự dựng: một hàng tiêu đề có nút phải luôn là hàng tiêu đề, không phải một
  * hàng khác.
+ *
+ * **THU GỌN**: truyền `collapsed` + `onToggleCollapsed` thì cả hàng tiêu đề thành vùng chạm và
+ * mọc một mũi tên lật ở mép phải. Đích chạm là CẢ HÀNG chứ không riêng cái mũi tên — một mũi tên
+ * 16px là đích tệ nhất có thể đặt trên màn cảm ứng, còn hàng tiêu đề thì luôn rộng bằng thẻ.
+ *
+ * Nội dung do NƠI GỌI tự ẩn: khối tiêu đề không sở hữu thứ nằm dưới nó, và nơi gọi mới biết cái
+ * gì đáng giữ lại khi thu (thẻ số ẩn đi, nhưng một cảnh báo thì không).
  */
-export function BlockTitle({ children, action }: { children: string; action?: ReactNode }) {
-  return (
+/** Đường kính huy hiệu mũi tên thu/mở — vừa đủ ôm hình 16px mà không cao hơn hàng chữ hoa. */
+const TOGGLE_SIZE = 24;
+
+export function BlockTitle({
+  children,
+  action,
+  collapsed,
+  onToggleCollapsed,
+}: {
+  children: string;
+  action?: ReactNode;
+  /** Bỏ trống = khối không thu gọn được và hàng tiêu đề không bắt chạm. */
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
+}) {
+  const tActions = useTranslations('Common.actions');
+  const head = (
     /*
       Tiêu đề và ĐƯỜNG KẺ đi liền nhau thành một khối.
 
@@ -58,15 +82,58 @@ export function BlockTitle({ children, action }: { children: string; action?: Re
         >
           {children.toUpperCase()}
         </Text>
-        {action ? (
+        {action || onToggleCollapsed ? (
           <>
             <YStack f={1} />
             {action}
+            {onToggleCollapsed ? (
+              /*
+                Mũi tên nằm trong một HUY HIỆU tròn có nền và viền, không đứng trần.
+
+                Hàng tiêu đề toàn chữ hoa mờ; một mũi tên xám 16px thả giữa đó đọc ra như dấu
+                trang trí cuối dòng — người dùng không biết nó bấm được, mà cả hàng lại là vùng
+                chạm nên họ cũng không thử. Nền gold nhạt + viền gold là cùng ngôn ngữ với vạch
+                dẫn và đường kẻ của chính khối tiêu đề này, nên nó nổi lên mà không thành một
+                vật lạ.
+              */
+              <XStack
+                w={TOGGLE_SIZE}
+                h={TOGGLE_SIZE}
+                br={radius.pill}
+                bg={colors.primaryLight}
+                bw={1}
+                bc={colors.primary}
+                ai="center"
+                jc="center"
+              >
+                <Ionicons
+                  name={collapsed ? 'chevron-down' : 'chevron-up'}
+                  size={iconSize.sm}
+                  color={colors.primaryActive}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no"
+                />
+              </XStack>
+            ) : null}
           </>
         ) : null}
       </XStack>
       <YStack h={1} bg={colors.primary} />
     </YStack>
+  );
+
+  if (!onToggleCollapsed) return head;
+
+  return (
+    <Pressable
+      onPress={onToggleCollapsed}
+      accessibilityRole="button"
+      accessibilityState={{ expanded: !collapsed }}
+      accessibilityLabel={`${children} — ${collapsed ? tActions('expand') : tActions('collapse')}`}
+      style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+    >
+      {head}
+    </Pressable>
   );
 }
 

@@ -152,9 +152,7 @@ describe('CustomerDetailScreen — quyền', () => {
     await view.findAllByText('Nguyễn Văn An');
 
     expect(view.queryByText('Lịch sử thuê')).toBeNull();
-    expect(
-      view.getByText('Bạn chưa có quyền xem đơn thuê nên phần này được ẩn.'),
-    ).toBeTruthy();
+    expect(view.getByText('Bạn chưa có quyền xem đơn thuê nên phần này được ẩn.')).toBeTruthy();
   });
 
   it('có `bookings.view`: khu lịch sử thuê xuất hiện', async () => {
@@ -215,10 +213,7 @@ describe('CustomerDetailScreen — mức rủi ro (CUS-03)', () => {
   });
 
   it('chỉ `customers.manage_risk` mới thấy hành động đổi mức rủi ro', async () => {
-    const withoutRisk = await renderScreen([
-      PERMISSION.CUSTOMER_VIEW,
-      PERMISSION.CUSTOMER_MANAGE,
-    ]);
+    const withoutRisk = await renderScreen([PERMISSION.CUSTOMER_VIEW, PERMISSION.CUSTOMER_MANAGE]);
     await withoutRisk.findAllByText('Nguyễn Văn An');
     expect(withoutRisk.queryByRole('button', { name: new RegExp('Mức rủi ro$') })).toBeNull();
     // RNTL v14: `unmount` là async — không await thì cây thứ nhất còn sống và test kế bị nhiễu.
@@ -246,11 +241,13 @@ describe('CustomerDetailScreen — hồ sơ lưu trữ', () => {
     expect(await view.findByRole('button', { name: new RegExp('Khôi phục$') })).toBeTruthy();
     expect(view.queryByRole('button', { name: new RegExp('Lưu trữ$') })).toBeNull();
 
-    expect(view.getByRole('button', { name: new RegExp('Sửa hồ sơ$') }).props.accessibilityState.disabled).toBe(
-      true,
-    );
     expect(
-      view.getByRole('button', { name: new RegExp('Tạo đơn thuê$') }).props.accessibilityState.disabled,
+      view.getByRole('button', { name: new RegExp('Sửa hồ sơ$') }).props.accessibilityState
+        .disabled,
+    ).toBe(true);
+    expect(
+      view.getByRole('button', { name: new RegExp('Tạo đơn thuê$') }).props.accessibilityState
+        .disabled,
     ).toBe(true);
   });
 });

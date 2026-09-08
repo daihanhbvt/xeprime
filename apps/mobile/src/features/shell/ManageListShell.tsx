@@ -134,10 +134,58 @@ export function ManageListShell({
      * mỗi render là một lần `FlatList` so prop rồi dựng lại cả cây con giữa lúc đang cuộn.
      */
     contentContainerStyle: ViewStyle;
+    /**
+     * Gắn vào `ref` của chính danh sách — thứ cho phép vỏ đưa nó VỀ ĐẦU khi đổi trang.
+     *
+     * Callback ref chứ không phải object ref: mỗi màn có một `FlatList<T>` với `T` riêng, mà một
+     * object ref thì bất biến theo kiểu nên không màn nào gán vừa. Hàm nhận `unknown` thì gán vào
+     * đâu cũng được, và vỏ chỉ cần đúng một phương thức của nó.
+     *
+     * Bỏ không gắn thì phân trang vẫn chạy, chỉ mất phần cuộn về đầu.
+     */
+    bindList: (node: unknown) => void;
   }) => ReactNode;
 }) {
   const t = useTranslations('Common.filters');
   const [filtering, setFiltering] = useState(false);
+
+  /**
+   * Đổi trang là ĐƯA DANH SÁCH VỀ ĐẦU.
+   *
+   * Không làm thì vị trí cuộn được giữ nguyên qua lần đổi trang: đọc hết trang 1 rồi bấm sang
+   * trang 2, người dùng rơi thẳng vào mục 17–20 của trang mới và không hề biết mình đã bỏ qua mục
+   * 11–16 — một danh sách trông như thiếu mất một khúc. Nó là lỗi lộ ra đúng ở người dùng CHỊU KHÓ
+   * cuộn hết trang, tức là người đọc kỹ nhất.
+   *
+   * Nằm ở vỏ chứ không ở từng màn: thanh phân trang đã ở đây, và sáu màn tự nhớ việc này thì màn
+   * thứ bảy sẽ quên.
+   *
+   * `animated: false`: người dùng vừa bấm sang một TRANG KHÁC, không phải vuốt trong cùng một
+   * danh sách — vẽ cảnh cuộn vun vút về đầu là mô tả sai chuyện vừa xảy ra. Cú nhảy này vẫn bắn
+   * sự kiện cuộn với `y = 0`, nên khối đầu trang tự mở lại theo đúng đường của nó.
+   */
+  /*
+   * Node danh sách giữ ở STATE chứ không ở ref: `children` được gọi NGAY TRONG lúc render, nên
+   * mọi thứ đi qua nó đều bị coi là "đọc ref khi render" (`react-hooks/refs`) — và luật đó đúng,
+   * một giá trị chỉ tồn tại trong ref thì React không có cách nào biết để dựng lại `changePage`
+   * khi danh sách được gắn vào. Callback ref chỉ chạy lúc gắn và lúc tháo, nên cái giá là đúng
+   * một lần render thêm cho mỗi lần danh sách vào/ra cây.
+   */
+  const [list, setList] = useState<{
+    scrollToOffset?: (params: { offset: number; animated?: boolean }) => void;
+  } | null>(null);
+
+  const bindList = useCallback((node: unknown) => {
+    setList(node as { scrollToOffset?: (params: { offset: number }) => void } | null);
+  }, []);
+
+  const changePage = useCallback(
+    (page: number) => {
+      onPageChange?.(page);
+      list?.scrollToOffset?.({ offset: 0, animated: false });
+    },
+    [list, onPageChange],
+  );
   const openFilters = useCallback(() => setFiltering(true), []);
   const closeFilters = useCallback(() => setFiltering(false), []);
 
@@ -229,7 +277,7 @@ export function ManageListShell({
     */
     <>
       <YStack f={1} ov="hidden">
-        {children({ onScroll, headerHeight: headHeight, contentContainerStyle })}
+        {children({ onScroll, headerHeight: headHeight, contentContainerStyle, bindList })}
 
         <Animated.View style={[styles.head, headStyle]} onLayout={measureHead}>
           <XStack ai="center" gap={space.sm} px={layout.screenX} pt={space.md} pb={space.xs}>
@@ -295,12 +343,7 @@ export function ManageListShell({
 
       {/* NGOÀI vùng cuộn và KHÔNG ẩn theo cuộn — xem ghi chú ở `Pagination` và ở đầu file. */}
       {meta && onPageChange ? (
-        <Pagination
-          page={meta.page}
-          limit={meta.limit}
-          total={meta.total}
-          onChange={onPageChange}
-        />
+        <Pagination page={meta.page} limit={meta.limit} total={meta.total} onChange={changePage} />
       ) : null}
 
       <ManageFilterSheet

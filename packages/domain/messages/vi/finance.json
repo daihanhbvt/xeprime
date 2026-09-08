@@ -126,7 +126,10 @@
         "remove": "Gỡ {name}",
         "retry": "Tải lại {name}",
         "uploading": "Đang tải {name}",
-        "tooMany": "Tối đa {max} tệp"
+        "tooMany": "Tối đa {max} tệp",
+        "sourceCamera": "Chụp ảnh",
+        "sourceLibrary": "Chọn từ thư viện",
+        "sourcePdf": "Chọn tệp PDF"
       },
       "submit": {
         "income": "Tạo khoản thu",
@@ -171,6 +174,7 @@
       "income": "Tổng thu",
       "expense": "Tổng chi",
       "balance": "Cân đối (thu − chi)",
+      "title": "Thống kê",
       "approvedCount": "Phiếu đã duyệt",
       "cash": "Tiền mặt {value}",
       "transfer": "Chuyển khoản {value}",
@@ -183,9 +187,15 @@
       "namePlaceholder": "Tên danh mục mới",
       "added": "Đã thêm danh mục",
       "system": "Hệ thống",
-      "delete": "Xoá danh mục"
+      "custom": "Tự tạo",
+      "delete": "Xoá danh mục",
+      "nameLabel": "Tên danh mục"
     },
-    "uncategorized": "Chưa phân loại"
+    "uncategorized": "Chưa phân loại",
+    "booking": {
+      "title": "Khoản ghi ở sổ Thu-Chi",
+      "error": "Không tải được phiếu thu chi của đơn"
+    }
   },
   "debts": {
     "page": {
@@ -289,7 +299,8 @@
         "day": "Ngày",
         "week": "Tuần",
         "month": "Tháng"
-      }
+      },
+      "tapHint": "Chạm vào một mốc trên biểu đồ để xem số của mốc đó."
     },
     "categories": {
       "incomeTitle": "Doanh thu theo danh mục",

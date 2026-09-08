@@ -653,5 +653,9 @@
     "normal": "Bình thường",
     "high": "Cao",
     "urgent": "Khẩn cấp"
+  },
+  "receiptSourceGroup": {
+    "business": "Tiền của gian hàng",
+    "held_funds": "Tiền giữ hộ"
   }
 }

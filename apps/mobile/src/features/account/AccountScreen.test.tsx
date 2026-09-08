@@ -169,15 +169,10 @@ describe('AccountScreen — chỉnh sửa hồ sơ', () => {
     const invalidate = jest.spyOn(view.queryClient, 'invalidateQueries');
 
     await fireEvent.press(view.getByRole('button', { name: new RegExp('Chỉnh sửa hồ sơ$') }));
-    await fireEvent.changeText(
-      await view.findByDisplayValue('Nguyễn Văn An'),
-      'Nguyễn Văn Bình',
-    );
+    await fireEvent.changeText(await view.findByDisplayValue('Nguyễn Văn An'), 'Nguyễn Văn Bình');
     await fireEvent.press(view.getByRole('button', { name: new RegExp('Lưu thay đổi$') }));
 
-    await waitFor(() =>
-      expect(update).toHaveBeenCalledWith({ displayName: 'Nguyễn Văn Bình' }),
-    );
+    await waitFor(() => expect(update).toHaveBeenCalledWith({ displayName: 'Nguyễn Văn Bình' }));
 
     // Hai vế BẮT BUỘC: thiếu vế thứ hai thì header vẫn hiện tên cũ tới lần mở app sau.
     await waitFor(() =>

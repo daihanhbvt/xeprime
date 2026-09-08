@@ -154,9 +154,10 @@ describe('CustomerListScreen — gate tài chính', () => {
    * nhét vào thẻ là mỗi dòng cao thêm hai hàng cho hai con số không ai quét khi lướt.
    */
   it('thẻ KHÔNG mang "số đơn đang chạy" hay "tổng giá trị" — đó là cột của bảng desktop', async () => {
-    const view = await renderScreen([PERMISSION.CUSTOMER_VIEW, PERMISSION.FINANCE_VIEW], [
-      row({ activeBookingCount: 2 }),
-    ]);
+    const view = await renderScreen(
+      [PERMISSION.CUSTOMER_VIEW, PERMISSION.FINANCE_VIEW],
+      [row({ activeBookingCount: 2 })],
+    );
     await view.findByText('Nguyễn Văn An');
 
     expect(view.queryByText(/đơn đang chạy/)).toBeNull();

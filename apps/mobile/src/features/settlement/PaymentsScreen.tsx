@@ -152,6 +152,7 @@ function PaymentRow({ bookingId, payment }: { bookingId: string; payment: Paymen
             <Button
               label={t('void')}
               variant="ghost"
+              icon="close-circle-outline"
               loading={voidPayment.isPending}
               onPress={() => setConfirming(true)}
             />

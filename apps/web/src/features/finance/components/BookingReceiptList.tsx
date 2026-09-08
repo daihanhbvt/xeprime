@@ -1,6 +1,7 @@
 'use client';
 
 import { Alert, List, Skeleton, Typography } from 'antd';
+import { useTranslations } from 'next-intl';
 import {
   RECEIPT_SOURCE,
   RECEIPT_SOURCE_META,
@@ -28,6 +29,7 @@ const PREVIEW_LIMIT = 20;
  * liệt kê lại là kể hai lần một khoản.
  */
 export function BookingReceiptList({ bookingId }: { bookingId: string }) {
+  const t = useTranslations('Finance.receipts');
   const fmt = useAppFormat();
   const { data, isLoading, isError } = useReceipts({ bookingId, limit: PREVIEW_LIMIT });
 
@@ -35,14 +37,14 @@ export function BookingReceiptList({ bookingId }: { bookingId: string }) {
 
   if (isLoading) return <Skeleton active paragraph={{ rows: 2 }} title={false} />;
   if (isError) {
-    return <Alert type="warning" showIcon message="Không tải được phiếu thu chi của đơn" />;
+    return <Alert type="warning" showIcon message={t('booking.error')} />;
   }
   if (items.length === 0) return null;
 
   return (
     <section className={styles.section}>
       <Typography.Text type="secondary" className={styles.title}>
-        Khoản ghi ở sổ Thu-Chi
+        {t('booking.title')}
       </Typography.Text>
       <List
         size="small"
@@ -52,7 +54,7 @@ export function BookingReceiptList({ bookingId }: { bookingId: string }) {
             <div className={styles.row}>
               <ReceiptAmount type={row.type} amount={row.amount} />
               <span className={styles.meta}>
-                {fmt.date(row.occurredAt)} · {row.categoryName ?? 'Chưa phân loại'}
+                {fmt.date(row.occurredAt)} · {row.categoryName ?? t('uncategorized')}
               </span>
               <StatusTag
                 value={row.source as ReceiptSource}

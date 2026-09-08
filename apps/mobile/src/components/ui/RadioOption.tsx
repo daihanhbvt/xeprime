@@ -75,7 +75,19 @@ function OptionShell({
         minHeight={sizing.touchTarget}
         bw={1}
         br={radius.md}
-        bg={checked ? colors.surfaceSelected : colors.surface}
+        /*
+          Nền hàng đang chọn là NỀN CHÌM TRUNG TÍNH, không phải `surfaceSelected`.
+
+          `color-bg-selected` và `color-primary-light` cùng là `#fdf6e3`, nên một hàng đang chọn
+          từng có ba lớp gold chồng lên nhau: nền gold nhạt, viền gold, và ô biểu tượng gold ĐẶC
+          nằm giữa. Ô biểu tượng — thứ giúp phân biệt các lựa chọn bằng hình — chìm mất trong
+          chính cái nền cùng tông với nó.
+
+          Việc "đang chọn" đã do VIỀN gold và dấu chọn gold nói; nền chỉ cần tách hàng đó khỏi
+          nền trắng của form, và một sắc xám trung tính làm đúng việc đó mà không tranh tông với
+          hai thứ kia.
+        */
+        bg={checked ? colors.surfaceMuted : colors.surface}
         bc={checked ? colors.primary : colors.border}
         opacity={disabled ? 0.5 : 1}
       >

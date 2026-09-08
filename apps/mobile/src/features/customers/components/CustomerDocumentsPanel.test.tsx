@@ -34,7 +34,10 @@ async function renderPanel(
   const listSpy = jest.spyOn(customersApi, 'documents').mockResolvedValue(documents);
   const downloadSpy = jest
     .spyOn(customersApi, 'documentDownload')
-    .mockResolvedValue({ downloadUrl: 'https://r2.test/signed', expiresAt: '2026-08-01T02:02:00.000Z' });
+    .mockResolvedValue({
+      downloadUrl: 'https://r2.test/signed',
+      expiresAt: '2026-08-01T02:02:00.000Z',
+    });
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

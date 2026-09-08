@@ -1,15 +1,26 @@
 import type { components } from '@xeprime/types';
 import { getApiClient, type Paged } from '../../client';
 import type { QueryParams } from '../../url';
+import type { UploadMeta, UploadPresign } from '../vehicles/api';
 
 type Schemas = components['schemas'];
 
 export type Receipt = Schemas['ReceiptListItemDto'];
 export type ReceiptDetail = Schemas['ReceiptDetailDto'];
 export type ReceiptSummary = Schemas['ReceiptSummaryDto'];
+export type CreateReceiptInput = Schemas['CreateReceiptDto'];
+export type ReceiptBookingOption = Schemas['ReceiptBookingOptionDto'];
+export type ReceiptVehicleOption = Schemas['ReceiptVehicleOptionDto'];
+export type FinanceCategory = Schemas['FinanceCategoryDto'];
+export type CreateCategoryInput = Schemas['CreateCategoryDto'];
+export type DebtItem = Schemas['DebtItemDto'];
 export type FinanceSummary = Schemas['FinanceSummaryDto'];
 export type FinanceSeries = Schemas['FinanceSeriesDto'];
 export type FinanceSeriesBucket = Schemas['FinanceSeriesBucketDto'];
+export type FinanceCategoryBreakdown = Schemas['FinanceCategoryBreakdownDto'];
+export type FinanceCategoryBreakdownItem = Schemas['FinanceCategoryBreakdownItemDto'];
+export type VehicleProfit = Schemas['VehicleProfitItemDto'];
+export type CustomerRevenue = Schemas['CustomerRevenueItemDto'];
 
 export const RECEIPTS_DEFAULT_LIMIT = 20;
 
@@ -70,6 +81,32 @@ export function receiptSummaryParams(filters: ReceiptFilters): QueryParams {
   return rest;
 }
 
+/**
+ * Khoá lọc THẬT SỰ đi xuống API — mọi thứ ngoài phân trang.
+ *
+ * Dùng để trả lời "màn này có đang lọc gì không", thứ quyết định trạng thái rỗng nói "chưa có
+ * phiếu nào" hay "không có phiếu khớp bộ lọc". Gương của `RECEIPT_FILTER_KEYS` bên web, đặt ở
+ * package dùng chung để hai client không đếm lệch nhau.
+ */
+export const RECEIPT_FILTER_KEYS = [
+  'type',
+  'status',
+  'categoryId',
+  'source',
+  'sourceGroup',
+  'paymentMethod',
+  'bookingId',
+  'vehicleId',
+  'tenantCustomerId',
+  'q',
+  'from',
+  'to',
+] as const satisfies readonly (keyof ReceiptFilters)[];
+
+export function hasReceiptFilters(filters: ReceiptFilters): boolean {
+  return RECEIPT_FILTER_KEYS.some((key) => Boolean(filters[key]));
+}
+
 /** KỲ của mọi bề mặt tiền theo kỳ — hai đầu `YYYY-MM-DD` + độ mịn biểu đồ. */
 export interface FinancePeriodFilters {
   from?: string;
@@ -86,6 +123,21 @@ export interface FinancePeriodFilters {
 export interface FinanceScope {
   vehicleId?: string;
   tenantCustomerId?: string;
+}
+
+/**
+ * Kỳ + phân trang/sắp xếp của HAI bảng xếp hạng ở màn Tổng quan doanh thu.
+ *
+ * Hai bảng (theo xe, theo khách) phân trang và sắp xếp RIÊNG, nên mỗi bảng mang tiền tố tham số
+ * của mình. Dùng chung một cặp sẽ làm bấm sang trang ở bảng này nhảy luôn cả bảng kia.
+ */
+export interface FinanceOverviewFilters extends FinancePeriodFilters {
+  sort?: string;
+  page?: number;
+  limit?: number;
+  customerSort?: string;
+  customerPage?: number;
+  customerLimit?: number;
 }
 
 /**
@@ -111,6 +163,55 @@ export function financeSeriesParams(
   return { ...financeRangeParams(filters, scope), granularity: filters.granularity ?? null };
 }
 
+export function financeByCategoryParams(
+  filters: FinancePeriodFilters,
+  type: string,
+  scope: FinanceScope = {},
+): QueryParams {
+  return { ...financeRangeParams(filters, scope), type };
+}
+
+export function vehicleProfitParams(filters: FinanceOverviewFilters): QueryParams {
+  return {
+    ...financeRangeParams(filters),
+    sort: filters.sort ?? null,
+    page: filters.page ?? 1,
+    limit: filters.limit ?? RECEIPTS_DEFAULT_LIMIT,
+  };
+}
+
+/**
+ * Bảng doanh thu theo khách: tiền tố `customer*` chỉ tồn tại ở TẦNG GIAO DIỆN — xuống API thì cả
+ * hai bảng đều là `sort`/`page`/`limit`. Tiền tố là chuyện của một màn có hai bảng, không phải
+ * của endpoint.
+ */
+export function customerRevenueParams(filters: FinanceOverviewFilters): QueryParams {
+  return {
+    from: filters.from ?? null,
+    to: filters.to ?? null,
+    sort: filters.customerSort ?? null,
+    page: filters.customerPage ?? 1,
+    limit: filters.customerLimit ?? RECEIPTS_DEFAULT_LIMIT,
+  };
+}
+
+/** Bộ lọc màn Công nợ — từ khoá + nhóm hạn trả, cả hai lọc ở SERVER. */
+export interface DebtFilters {
+  q?: string;
+  filter?: string;
+  page?: number;
+  limit?: number;
+}
+
+export function debtFiltersToParams(filters: DebtFilters): QueryParams {
+  return {
+    q: filters.q ?? null,
+    filter: filters.filter ?? null,
+    page: filters.page ?? 1,
+    limit: filters.limit ?? RECEIPTS_DEFAULT_LIMIT,
+  };
+}
+
 export const receiptsApi = {
   list(filters: ReceiptFilters): Promise<Paged<Receipt>> {
     return getApiClient().fetchPage<Receipt>(
@@ -128,6 +229,83 @@ export const receiptsApi = {
   summary(filters: ReceiptFilters): Promise<ReceiptSummary> {
     return getApiClient().get<ReceiptSummary>('/receipts/summary', receiptSummaryParams(filters));
   },
+
+  create(body: CreateReceiptInput): Promise<ReceiptDetail> {
+    return getApiClient().post<ReceiptDetail>('/receipts', body);
+  },
+
+  approve(id: string): Promise<ReceiptDetail> {
+    return getApiClient().post<ReceiptDetail>(`/receipts/${encodeURIComponent(id)}/approve`);
+  },
+
+  cancel(id: string, reason?: string): Promise<ReceiptDetail> {
+    return getApiClient().post<ReceiptDetail>(`/receipts/${encodeURIComponent(id)}/cancel`, {
+      reason,
+    });
+  },
+
+  /** Đơn gợi ý cho ô "Liên kết đơn thuê" — server đã sắp đơn còn nợ lên trước. */
+  bookingOptions(q?: string): Promise<ReceiptBookingOption[]> {
+    return getApiClient().get<ReceiptBookingOption[]>('/receipts/booking-options', {
+      q: q?.trim() || null,
+    });
+  },
+
+  /**
+   * Xe gợi ý cho ô "Liên kết xe". `includeId` giữ xe đang chọn sẵn trong kết quả kể cả khi nó
+   * không khớp từ khoá đang gõ — không có nó, gõ tìm xe khác sẽ làm ô chọn hiện lại id thô.
+   */
+  vehicleOptions(q?: string, includeId?: string | null): Promise<ReceiptVehicleOption[]> {
+    return getApiClient().get<ReceiptVehicleOption[]>('/receipts/vehicle-options', {
+      q: q?.trim() || null,
+      includeId: includeId || null,
+    });
+  },
+
+  /**
+   * Presign chứng từ của phiếu (ảnh hoặc PDF) — bucket CÔNG KHAI, cùng mức phơi bày với ảnh xe.
+   *
+   * `fileSize` được server ký vào URL (`content-length` nằm trong `X-Amz-SignedHeaders`), nên số
+   * khai ở đây phải khớp TUYỆT ĐỐI số byte lúc PUT, nếu không R2 trả 403.
+   */
+  presignAttachment(meta: UploadMeta): Promise<UploadPresign> {
+    return getApiClient().post<UploadPresign>('/uploads/receipt-attachments/presign', meta);
+  },
+};
+
+/**
+ * Danh mục thu/chi của gian hàng.
+ *
+ * CỐ Ý không có `update`: backend có `PATCH /finance/categories/:id` từ Phase 6 nhưng KHÔNG giao
+ * diện nào gọi nó — mở nút đổi tên ở app mà web chưa có là app đi trước web, đúng thứ luật clone
+ * cấm. Mở cùng lúc hai bên hoặc không mở.
+ */
+export const financeCategoriesApi = {
+  list(type?: string): Promise<FinanceCategory[]> {
+    return getApiClient().get<FinanceCategory[]>(
+      '/finance/categories',
+      type ? { type } : undefined,
+    );
+  },
+
+  create(body: CreateCategoryInput): Promise<FinanceCategory> {
+    return getApiClient().post<FinanceCategory>('/finance/categories', body);
+  },
+
+  remove(id: string): Promise<void> {
+    return getApiClient().delete<void>(`/finance/categories/${encodeURIComponent(id)}`);
+  },
+};
+
+/** Công nợ — tính động từ `bookings`, phân trang ở SERVER. */
+export const debtsApi = {
+  list(filters: DebtFilters): Promise<Paged<DebtItem>> {
+    return getApiClient().fetchPage<DebtItem>(
+      '/debts',
+      debtFiltersToParams(filters),
+      RECEIPTS_DEFAULT_LIMIT,
+    );
+  },
 };
 
 /**
@@ -142,5 +320,33 @@ export const financeApi = {
 
   series(filters: FinancePeriodFilters, scope?: FinanceScope): Promise<FinanceSeries> {
     return getApiClient().get<FinanceSeries>('/finance/series', financeSeriesParams(filters, scope));
+  },
+
+  /** Cơ cấu MỘT chiều tiền — gọi hai lần (thu và chi) để hai khối tải song song, không nối đuôi. */
+  byCategory(
+    filters: FinancePeriodFilters,
+    type: string,
+    scope?: FinanceScope,
+  ): Promise<FinanceCategoryBreakdown> {
+    return getApiClient().get<FinanceCategoryBreakdown>(
+      '/finance/by-category',
+      financeByCategoryParams(filters, type, scope),
+    );
+  },
+
+  byVehicle(filters: FinanceOverviewFilters): Promise<Paged<VehicleProfit>> {
+    return getApiClient().fetchPage<VehicleProfit>(
+      '/finance/by-vehicle',
+      vehicleProfitParams(filters),
+      RECEIPTS_DEFAULT_LIMIT,
+    );
+  },
+
+  byCustomer(filters: FinanceOverviewFilters): Promise<Paged<CustomerRevenue>> {
+    return getApiClient().fetchPage<CustomerRevenue>(
+      '/finance/by-customer',
+      customerRevenueParams(filters),
+      RECEIPTS_DEFAULT_LIMIT,
+    );
   },
 };

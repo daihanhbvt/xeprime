@@ -25,13 +25,21 @@ type PaymentFormValues = yup.InferType<ReturnType<typeof buildPaymentSchema>>;
 
 function buildPaymentSchema(amountLabel: string) {
   return yup.object({
+    /*
+     * Cùng luật với `recordPaymentSchema` của web: bắt buộc và LỚN HƠN 0.
+     *
+     * Bản trước còn `.integer()` — một ràng buộc app tự thêm mà web không có. Cột tiền là
+     * `Decimal(14,2)`, nên một khoản 50.000,50 hợp lệ ở server lại bị chặn ở app: hai client
+     * nhận hai tập giá trị khác nhau cho cùng một ô.
+     */
     amount: yup
       .number()
       .transform((v, orig) => (orig === '' || orig === null ? undefined : v))
       .typeError(amountLabel)
-      .integer(amountLabel)
-      .min(1, amountLabel)
-      .required(amountLabel),
+      .nullable()
+      .defined()
+      .moreThan(0, amountLabel)
+      .test('required', amountLabel, (v) => v != null),
     method: yup.string().oneOf(PAYMENT_METHOD_VALUES).required(),
     referenceCode: yup.string().trim().max(NOTE_MAX).default(''),
     description: yup.string().trim().max(NOTE_MAX).default(''),
@@ -78,12 +86,17 @@ export function RecordPaymentSheet({
   const isDeposit = kind === PAYMENT_KIND.DEPOSIT;
   const schema = useMemo(() => buildPaymentSchema(t('amountLabel')), [t]);
 
+  /*
+   * Số gợi ý chỉ để ĐIỀN SẴN ô nhập (ô tiền làm việc trên `number`); giá trị gửi đi vẫn hoá chuỗi.
+   * Không có gợi ý thì ô để TRỐNG — một số 0 điền sẵn đọc ra như "không còn nợ gì", và người dùng
+   * bấm Ghi nhận là ghi một khoản 0đ. Web cũng mặc định `null`.
+   */
   const suggested = Number(debtAmount ?? 0);
 
   const { control, handleSubmit } = useForm<PaymentFormValues>({
     resolver: yupResolver(schema),
     defaultValues: {
-      amount: Number.isFinite(suggested) && suggested > 0 ? suggested : 0,
+      amount: Number.isFinite(suggested) && suggested > 0 ? suggested : null,
       method: PAYMENT_METHOD_VALUES[0] as PaymentFormValues['method'],
       referenceCode: '',
       description: '',
@@ -115,7 +128,12 @@ export function RecordPaymentSheet({
       onClose={onClose}
       title={isDeposit ? t('recordDepositTitle') : t('recordTitle')}
       footer={
-        <Button label={t('recordOk')} loading={record.isPending} onPress={() => void submit()} />
+        <Button
+          label={t('recordOk')}
+          icon="cash-outline"
+          loading={record.isPending}
+          onPress={() => void submit()}
+        />
       }
     >
       {debtAmount ? (

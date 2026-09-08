@@ -39,6 +39,18 @@ export function statusTone(color: StatusColor): { fg: string; bg: string } {
  */
 const XS_FONT_SIZE = 10;
 
+/**
+ * Hệ số dòng của chữ trong viên — PHẢI khai tường minh.
+ *
+ * `fos` ở đây nhận một SỐ chứ không phải token cỡ chữ, nên Tamagui không suy ra được
+ * `lineHeight` tương ứng và rơi về dòng của cỡ mặc định (24pt cho chữ 12pt). Trên Android, hộp
+ * dòng cao hơn glyph nhiều như vậy đẩy chữ lệch khỏi nền viên: chữ nổi lên trên còn nền tụt
+ * xuống dưới — đúng cảnh vỡ của nhãn "Thu"/"Chi" ở tấm trượt Danh mục thu/chi.
+ *
+ * 1.35 là bậc chật vừa đủ ôm cả dấu tiếng Việt ("Đã duyệt", "Chờ") mà không thổi viên cao lên.
+ */
+const LINE_HEIGHT_RATIO = 1.35;
+
 export function StatusBadge({
   label,
   color,
@@ -53,6 +65,7 @@ export function StatusBadge({
   size?: 'xs' | 'sm' | 'md';
 }) {
   const tone = statusTone(color);
+  const textSize = size === 'xs' ? XS_FONT_SIZE : size === 'sm' ? fontSize.label : fontSize.bodySm;
 
   return (
     <XStack
@@ -60,6 +73,16 @@ export function StatusBadge({
       alignSelf="flex-start"
       maxWidth="100%"
       bg={tone.bg}
+      /*
+        VIỀN cùng màu chữ — đúng cách `<Tag>` của AntD dựng nhãn bên web.
+
+        Chỉ nền nhạt thôi thì viên chìm hẳn vào thẻ: trên nền trắng, một mảng xanh 8% với chữ
+        xanh đọc ra là chữ có màu chứ không phải một cái nhãn. Nét viền khép khối lại, và nó
+        cũng là thứ giữ cho viên còn thấy được khi nằm trên nền đã tô màu (thẻ `muted`,
+        `accent`) — chỗ mà nền nhạt của viên gần như trùng với nền dưới nó.
+      */
+      bw={1}
+      bc={tone.fg}
       br={radius.pill}
       px={size === 'md' ? space.sm : space.xs}
       py={size === 'xs' ? 1 : 2}
@@ -72,7 +95,8 @@ export function StatusBadge({
       <Text
         flexShrink={1}
         col={tone.fg}
-        fos={size === 'xs' ? XS_FONT_SIZE : size === 'sm' ? fontSize.label : fontSize.bodySm}
+        fos={textSize}
+        lh={Math.round(textSize * LINE_HEIGHT_RATIO)}
         fow={fontWeight.semibold}
         numberOfLines={1}
       >

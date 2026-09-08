@@ -167,13 +167,25 @@ export const ROUTES = {
       params: { id: customerId },
     }),
 
+    /** Tổng quan doanh thu (FIN-01) — ba lớp tiền của một kỳ + hai bảng xếp hạng. */
+    finance: (): Href => '/manage/finance',
+
+    /** Công nợ (FIN-04) — các đơn còn nợ, lọc và phân trang ở server. */
+    debts: (): Href => '/manage/debts',
+
     /**
-     * Sổ Thu-Chi đã LỌC SẴN — đường đi từ hồ sơ một khách sang đúng tập phiếu sinh ra con số
-     * trên đó. Gương của `receiptsPath.filtered` bên web.
+     * Sổ Thu-Chi (FIN-02), tuỳ chọn LỌC SẴN — đường đi từ thẻ tổng, hồ sơ xe hay hồ sơ khách
+     * sang đúng tập phiếu sinh ra con số trên đó. Gương của `receiptsPath.filtered` bên web:
+     * cùng bộ tên tham số, nên một liên kết sâu do web hay thông báo đẩy sinh ra vẫn tới đúng chỗ.
+     *
+     * `create` KHÔNG phải bộ lọc — nó là Ý ĐỊNH mở sẵn form tạo phiếu, và web mã hoá nó thành cờ
+     * `1` trên URL. Giữ nguyên quy ước đó ở đây.
      */
-    receipts: (filters?: { tenantCustomerId?: string; from?: string; to?: string; status?: string }): Href => {
+    receipts: (filters?: ReceiptRouteFilters): Href => {
       const params = Object.fromEntries(
-        Object.entries(filters ?? {}).filter(([, value]) => Boolean(value)),
+        Object.entries(filters ?? {})
+          .filter(([, value]) => Boolean(value))
+          .map(([key, value]) => [key, value === true ? '1' : String(value)]),
       ) as Record<string, string>;
       return Object.keys(params).length > 0
         ? { pathname: '/manage/receipts', params }
@@ -190,6 +202,28 @@ export const ROUTES = {
     index: (): Href => '/',
   },
 } as const;
+
+/**
+ * Bộ lọc mang sang sổ Thu-Chi qua route params — CÙNG tên tham số với `?…` của web.
+ *
+ * `create` là ý định giao diện, không phải bộ lọc: nó không xuống API và không tính vào "đang
+ * lọc". Kiểu `boolean` ở đây, hoá thành cờ `'1'` trên đường dẫn (đúng quy ước web).
+ */
+export type ReceiptRouteFilters = {
+  type?: string;
+  status?: string;
+  categoryId?: string;
+  source?: string;
+  sourceGroup?: string;
+  paymentMethod?: string;
+  bookingId?: string;
+  vehicleId?: string;
+  tenantCustomerId?: string;
+  q?: string;
+  from?: string;
+  to?: string;
+  create?: boolean;
+};
 
 /**
  * Ngữ cảnh tìm kiếm đi qua route params. Expo Router chỉ chuyển được giá trị nguyên thuỷ, nên

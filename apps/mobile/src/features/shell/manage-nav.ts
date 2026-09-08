@@ -190,18 +190,29 @@ const SHOP_NAV: readonly ManageNavSection[] = [
             labelKey: 'manage.financeOverview',
             icon: 'stats-chart-outline',
             permission: PERMISSION.FINANCE_VIEW,
+            feature: PLAN_FEATURE.FINANCE,
+            href: ROUTES.manage.finance(),
           },
           {
             key: 'receipts',
             labelKey: 'manage.receipts',
             icon: 'swap-horizontal-outline',
             permission: PERMISSION.FINANCE_VIEW,
+            feature: PLAN_FEATURE.FINANCE,
+            href: ROUTES.manage.receipts(),
           },
           {
+            /*
+             * Công nợ gác bằng cờ gói RIÊNG (`debts`), không phải `finance` — đúng cờ mà
+             * `GET /debts` mang ở backend. Gộp hai cờ vào một là ẩn nhầm một màn mà gian hàng đã
+             * mua, hoặc mở một màn họ chưa mua.
+             */
             key: 'debts',
             labelKey: 'manage.debts',
             icon: 'card-outline',
             permission: PERMISSION.FINANCE_VIEW,
+            feature: PLAN_FEATURE.DEBTS,
+            href: ROUTES.manage.debts(),
           },
         ],
       },

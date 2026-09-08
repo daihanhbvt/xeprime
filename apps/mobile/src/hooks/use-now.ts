@@ -1,5 +1,5 @@
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useState, useSyncExternalStore } from 'react';
+import { useScreenFocused } from './use-screen-focused';
+import { useSyncExternalStore } from 'react';
 
 const TICK_MS = 1000;
 
@@ -46,14 +46,7 @@ const readNow = (): number => now;
  * `enabled = false` (đã hết hạn) trả về nhịp cuối và không đăng ký gì.
  */
 export function useNow(enabled = true): number {
-  const [focused, setFocused] = useState(false);
-
-  useFocusEffect(
-    useCallback(() => {
-      setFocused(true);
-      return () => setFocused(false);
-    }, []),
-  );
+  const focused = useScreenFocused();
 
   return useSyncExternalStore(enabled && focused ? subscribe : subscribeFrozen, readNow, readNow);
 }

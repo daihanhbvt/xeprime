@@ -1,14 +1,18 @@
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   RECEIPT_SOURCE_META,
   RECEIPT_STATUS_META,
   RECEIPT_TYPE,
+  RECEIPT_TYPE_META,
   type ReceiptSource,
   type ReceiptStatus,
+  type ReceiptType,
 } from '@xeprime/types';
+import { LIST_SEPARATOR, vehicleLabel } from '@xeprime/domain';
 import { Card } from '@/components/ui/Card';
+import { DetailChevron } from '@/components/ui/DetailArrow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
@@ -18,37 +22,74 @@ import type { Receipt } from '../api';
 /**
  * Một phiếu thu/chi trên app native.
  *
- * MỘT thẻ cho cả hai bề mặt đang hiện nó — khu "Thu chi" của hồ sơ khách và sổ Thu-Chi đã lọc.
- * Hai bản chép tay sẽ lệch nhau ở lần đổi đầu tiên, mà đây là chỗ người dùng đối chiếu tiền:
- * một bên hiện nguồn phiếu còn bên kia quên là đủ để họ đọc ra hai con số khác nhau.
+ * MỘT thẻ cho MỌI bề mặt hiện phiếu — sổ Thu-Chi, khu "Thu chi" của hồ sơ khách, khối tiền của
+ * hồ sơ xe. Hai bản chép tay sẽ lệch nhau ở lần đổi đầu tiên, mà đây là chỗ người dùng đối chiếu
+ * tiền: một bên hiện nguồn phiếu còn bên kia quên là đủ để họ đọc ra hai con số khác nhau.
  *
  * Dấu +/− và MÀU do `type` quyết định, không do số tiền: `amount` của phiếu chi vẫn là số dương
  * trên dây (ADR 0007), chiều tiền nằm ở `type`.
+ *
+ * `onPress` mở CHI TIẾT — cùng một implementation ở mọi lối vào (`ReceiptDetailSheet`). Thiếu nó
+ * thì thẻ vẫn là một khối đọc, không có mũi tên và không bắt chạm: một thẻ bấm được mà không mở
+ * ra gì tệ hơn hẳn một thẻ chỉ để đọc.
  */
 function ReceiptCardImpl({
   receipt,
   showDescription = false,
+  onPress,
 }: {
   receipt: Receipt;
   /** Sổ Thu-Chi hiện thêm diễn giải; khu tiền của hồ sơ khách thì không (chỗ hẹp hơn). */
   showDescription?: boolean;
+  onPress?: (id: string) => void;
 }) {
   const t = useTranslations('Finance.receipts');
+  const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
 
   const income = receipt.type === RECEIPT_TYPE.INCOME;
+  const vehicle = vehicleLabel(receipt.vehicleName, receipt.plateNumber);
+
+  /**
+   * Khách · xe (biển số) · mã đơn — đúng cột "Đối tượng" của bảng web, gộp thành một dòng.
+   *
+   * Thiếu dòng này thì "đối tượng" của một dòng sổ là ba id 26 ký tự: sổ có số nhưng không trả
+   * lời được tiền của ai, xe nào.
+   */
+  const subject = [receipt.customerName, vehicle, receipt.bookingCode]
+    .filter(Boolean)
+    .join(LIST_SEPARATOR);
+
+  const open = useCallback(() => onPress?.(receipt.id), [onPress, receipt.id]);
 
   return (
-    <Card>
+    <Card
+      {...(onPress
+        ? {
+            onPress: open,
+            /*
+             * Nhãn khả truy cập = MÃ PHIẾU + số tiền có dấu. Chỉ số tiền thì một danh sách hai
+             * mươi phiếu đọc ra là hai mươi con số không phân biệt được với nhau.
+             */
+            accessibilityLabel: [
+              receipt.receiptNo,
+              `${income ? '+' : '−'} ${fmt.money(receipt.amount)}`,
+            ]
+              .filter(Boolean)
+              .join(LIST_SEPARATOR),
+          }
+        : {})}
+    >
       <YStack gap={space.xs}>
+        {/* Tầng 1 — SỐ TIỀN là thứ to nhất của thẻ, nhãn trạng thái đối diện. */}
         <XStack ai="center" gap={space.xs}>
           <Text
             f={1}
             minWidth={0}
             col={income ? colors.success : colors.danger}
-            fos={fontSize.body}
-            fow={fontWeight.semibold}
+            fos={fontSize.h4}
+            fow={fontWeight.bold}
             numberOfLines={1}
           >
             {income ? '+' : '−'} {fmt.money(receipt.amount)}
@@ -60,24 +101,59 @@ function ReceiptCardImpl({
           />
         </XStack>
 
-        <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={2}>
-          {fmt.date(receipt.occurredAt)} · {receipt.categoryName ?? t('uncategorized')}
-          {receipt.bookingCode ? ` · ${receipt.bookingCode}` : ''}
-        </Text>
+        {/*
+          Tầng 2 — hai nhãn ĐI CÙNG NHAU: loại phiếu và nguồn sinh ra nó.
 
-        {showDescription && receipt.description ? (
-          <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={2}>
-            {receipt.description}
-          </Text>
-        ) : null}
-
-        {/* Nguồn phiếu: `manual` mới sửa/huỷ tay được — người đọc sổ cần biết ngay. */}
-        <XStack>
+          Loại phiếu lặp lại điều dấu +/− đã nói, và đó là chủ ý của thẻ web: dấu trừ là một nét
+          ngang dễ trượt mắt trong danh sách dài, còn "Phiếu chi" thì không đọc nhầm được. Nguồn
+          đứng ngay cạnh vì hai câu hỏi đi liền nhau — tiền vào hay ra, và ai sinh ra phiếu này:
+          chỉ `manual` mới sửa/huỷ tay được.
+        */}
+        <XStack ai="center" gap={space.xs} flexWrap="wrap">
+          <StatusBadge
+            label={domainLabel('receiptType', receipt.type)}
+            color={RECEIPT_TYPE_META[receipt.type as ReceiptType].color}
+            size="sm"
+          />
           <StatusBadge
             label={domainLabel('receiptSource', receipt.source)}
             color={RECEIPT_SOURCE_META[receipt.source as ReceiptSource].color}
             size="sm"
           />
+        </XStack>
+
+        {/* Tầng 3 — NGÀY và DANH MỤC: khoản này xảy ra lúc nào, thuộc nhóm nào. */}
+        <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+          {fmt.date(receipt.occurredAt)} · {receipt.categoryName ?? t('uncategorized')}
+        </Text>
+
+        {/* Tầng 4 — ĐỐI TƯỢNG, ăn mực đen: dòng trả lời "tiền của ai, xe nào". */}
+        {subject ? (
+          <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
+            {subject}
+          </Text>
+        ) : null}
+
+        {/* Tầng 5 — diễn giải người ghi tự nhập. */}
+        {showDescription && receipt.description ? (
+          <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={2}>
+            {receipt.description}
+          </Text>
+        ) : null}
+
+        {/*
+          Tầng 6 — MÃ PHIẾU và phương thức, mờ nhất thẻ.
+
+          Chúng là thứ TRA CỨU chứ không phải thứ đọc lướt: mã phiếu chỉ dùng khi đối chiếu với
+          một chứng từ ngoài, phương thức chỉ dùng khi soát quỹ. Ở tầng chữ mờ nhất thì chúng
+          luôn có mặt mà không tranh chỗ với bốn tầng trên.
+        */}
+        <XStack ai="center" gap={space.xs}>
+          <Text f={1} minWidth={0} col={colors.placeholder} fos={fontSize.label} numberOfLines={1}>
+            {receipt.receiptNo ?? tCommon('labels.emptyValue')} ·{' '}
+            {domainLabel('paymentMethod', receipt.paymentMethod)}
+          </Text>
+          {onPress ? <DetailChevron /> : null}
         </XStack>
       </YStack>
     </Card>

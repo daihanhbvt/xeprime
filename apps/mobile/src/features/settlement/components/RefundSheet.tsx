@@ -5,7 +5,7 @@ import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
 import { REFUND_METHOD_VALUES } from '@xeprime/types';
-import { dayjs, type Dayjs } from '@xeprime/domain';
+import { dayjs, isZeroMoney, type Dayjs } from '@xeprime/domain';
 import { REASON_MAX } from '@/lib/reason';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
@@ -30,11 +30,18 @@ type RefundFormValues = yup.InferType<ReturnType<typeof buildRefundSchema>>;
 
 function buildRefundSchema(labels: { amount: string; method: string; reason: string }) {
   return yup.object({
+    /*
+     * KHÔNG có `.integer()`: cột tiền là `Decimal(14,2)` và web không chặn phần lẻ — một ràng buộc
+     * chỉ có ở app nghĩa là hai client nhận hai tập giá trị khác nhau cho cùng một ô.
+     *
+     * TRẦN "không hoàn quá cọc đã thu" cố ý KHÔNG kiểm ở đây: `SettlementService.assertRefundable`
+     * mới là nơi có `depositReceived` đúng tại thời điểm ghi, và web cũng để server từ chối. Số cọc
+     * đã thu hiện ngay đầu tấm để người nhập thấy trần trước khi gõ.
+     */
     refundAmount: yup
       .number()
       .transform((v, orig) => (orig === '' || orig === null ? undefined : v))
       .typeError(labels.amount)
-      .integer(labels.amount)
       .min(0, labels.amount)
       .required(labels.amount),
     refundMethod: yup.string().oneOf(REFUND_METHOD_VALUES).required(labels.method),
@@ -161,6 +168,7 @@ export function RefundSheet({
       footer={
         <Button
           label={correcting ? t('correct') : t('record')}
+          icon={correcting ? 'create-outline' : 'arrow-undo-outline'}
           loading={record.isPending || correct.isPending}
           onPress={() => void submit()}
         />
@@ -169,13 +177,13 @@ export function RefundSheet({
       {/* Hai con số dẫn dắt, đúng như web: hoàn bao nhiêu là suy từ chúng. */}
       <YStack gap={space.xs}>
         <DataRow label={t('depositReceived')} value={fmt.money(settlement.depositReceived)} />
-        {Number(settlement.surchargeTotal) > 0 ? (
+        {isZeroMoney(settlement.surchargeTotal) ? null : (
           <DataRow
             label={t('minusSurcharge')}
             value={`−${fmt.money(settlement.surchargeTotal)}`}
             tone="discount"
           />
-        ) : null}
+        )}
       </YStack>
 
       <MoneyField

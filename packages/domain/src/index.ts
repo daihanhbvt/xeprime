@@ -162,6 +162,6 @@ export {
 } from './search-draft';
 
 /** Ký hiệu trình bày dùng chung — không phải chữ, nên không nằm trong bó message. */
-export { LIST_SEPARATOR } from './display';
+export { LIST_SEPARATOR, vehicleLabel } from './display';
 
 export { remainingKm, type RemainingKm, type RemainingKmKind } from './odometer';

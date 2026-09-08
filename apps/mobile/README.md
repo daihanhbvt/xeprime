@@ -670,12 +670,13 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
 - Hạ tầng: timeout + retry policy, SecureStore, logger, đa ngữ vi/en type-safe trên **gốc
   message dùng chung với web**, bộ component trạng thái/UI + skeleton, hệ toast một mối.
 
-38 test suite (+ suite live-bearer chỉ chạy khi có `XP_LIVE_API=1`).
+52 test suite (+ suite live-bearer chỉ chạy khi có `XP_LIVE_API=1`).
 
 **Chưa có:** iOS chưa build lần nào, `app.config.ts` tách dev/staging/prod, App Links /
 Universal Links (liên kết đặt lại mật khẩu trong email vì thế mở ở trình duyệt), refetch theo
-`AppState`/NetInfo, push notification, chat thật, đặt xe, và toàn bộ cổng quản lý. Lộ trình
-chung: `docs/completion-roadmap.md`.
+`AppState`/NetInfo, push notification, chat thật, và các module Shop · Calendar · Admin của cổng
+quản lý (bốn module đã xong liệt kê ngay dưới). Lộ trình chung: `docs/completion-roadmap.md`;
+trạng thái từng module của app: `docs/mobile-module-status.md`.
 
 ---
 
@@ -756,14 +757,62 @@ PDF cho giấy tờ khách) và `expo-clipboard` (chép SĐT/email ở hồ sơ 
 thì "Ghi chú nội bộ" bị cắt. Nội dung, quyền và thứ tự các khu giữ nguyên. Cùng lý do, năm hành
 động của header web đi vào một tấm trượt "Thao tác khác".
 
-**Biểu đồ doanh thu dựng bằng `View`, KHÔNG kéo `react-native-svg` vào.** Một biểu đồ cột đơn
-thang chỉ cần hình chữ nhật; thêm một native module nữa để vẽ chúng là cái giá không đổi lấy gì.
-Native không có hover nên tooltip của web thành một dòng chi tiết hiện khi chạm vào cột.
+**Biểu đồ doanh thu ĐÃ CHUYỂN sang `react-native-gifted-charts` (đợt Finance, 07/09).** Bản
+đầu dựng bằng `View` trần với lý do "một biểu đồ cột đơn thang chỉ cần hình chữ nhật" — lý do đó
+hết đúng khi FIN-01 cần đủ hình của web: trục Y tiền, lưới ngang, mốc 0 cho kỳ lỗ, và **đường lợi
+nhuận**. Chi tiết ở mục "Biểu đồ" của module Finance bên dưới. Native không có hover nên tooltip
+của web vẫn là một dòng chi tiết hiện khi chạm vào cột — phần đó giữ nguyên.
 
 **Ba luật CUS-03 phải giữ**: `watchlist` chỉ CẢNH BÁO (không chặn gì), `blocked` chặn đơn và yêu
 cầu MỚI ở đúng gian hàng đó (`CustomersService.resolveWithinTx` cũng ném 409 — ẩn nút không phải
 lớp bảo vệ), và lý do BẮT BUỘC khi khác `normal`. Chi tiết + ma trận quyền:
 `docs/mobile-customer-module-status.md`.
+
+### Module Finance (07/09/2026)
+
+Sổ sách tiền của gian hàng đã chạy trọn: tổng quan tài chính → sổ Thu-Chi → danh mục thu chi →
+công nợ, cộng phần tiền của TỪNG đơn vốn đã có từ module Booking.
+
+| FIN | Nội dung | Ở đâu |
+| --- | --- | --- |
+| 01 | Tổng quan tài chính — ba lớp tiền, biểu đồ, cơ cấu danh mục, hai dải xếp hạng | `src/features/finance/FinanceOverviewScreen.tsx` |
+| 02 | Sổ Thu-Chi — lọc, tổng theo bộ lọc, chi tiết phiếu, tạo/duyệt/huỷ | `ReceiptListScreen.tsx` + `components/Receipt*` |
+| 03 | Danh mục thu chi | `components/CategoryManagerSheet.tsx` (tấm trượt trong FIN-02) |
+| 04 | Công nợ | `DebtListScreen.tsx` · `components/DebtCard.tsx` |
+| 05 · 06 | Thu tiền · huỷ phiếu thu · thu/hoàn cọc | `src/features/settlement/` — đã có từ module Booking, đợt này **audit + vá parity** |
+
+**BA LỚP TIỀN không được trộn.** "Doanh thu" là của một KỲ và đã loại cọc; "Tiền vào" là dòng
+tiền quỹ và CÓ cọc; "Cọc đang giữ"/"Công nợ" là số TẠI THỜI ĐIỂM NÀY, không đổi khi chọn kỳ
+khác. Mỗi ô tổng dẫn tới đúng tập phiếu sinh ra nó (`sourceGroup` + `status=approved`) — thiếu
+một tham số là thẻ nói một số còn danh sách nó mở ra nói số khác.
+
+**MỘT màn chi tiết phiếu cho mọi lối vào** (`ReceiptDetailSheet`) và **MỘT khối tiền theo kỳ**
+(`FinanceEntityPanel`, dùng ở cả hồ sơ xe lẫn hồ sơ khách). Đừng dựng bản thứ hai cho một bề
+mặt mới — đó là cách hai con số cùng tên bắt đầu lệch nhau.
+
+**Biểu đồ: `react-native-gifted-charts` 1.4.78** (`BarChart` + `showLine`) — bản native của
+`recharts` `<ComposedChart>` bên web. Cùng một hình: hai cột cùng thang cho doanh thu/chi phí,
+một đường cho lợi nhuận, một trục Y tiền rút gọn, lưới ngang, mốc 0 khi có lỗ.
+
+`BarChart` không có khái niệm "nhóm" — cặp cột được tạo bằng một dải cột xen kẽ hai độ rộng khe,
+và **đường lợi nhuận phải tự căn vào tâm cặp**. Phép căn đó nằm ở
+[`revenue-trend-layout.ts`](src/features/finance/components/revenue-trend-layout.ts), tách khỏi
+component và có test riêng: đường lệch nửa nhóm vẫn render bình thường, chỉ người dùng mới thấy
+nó chỉ vào sai cột — không có test số học thì không ai bắt được.
+
+⚠️ **Ba dependency đi liền nhau, thiếu một là màn Tổng quan doanh thu TRẮNG** khi có dữ liệu:
+`react-native-gifted-charts` · `react-native-svg` · **`expo-linear-gradient`**. Cái thứ ba trông
+như không liên quan (mình không dùng gradient nào), nhưng `BarChart` import tĩnh
+`Components/common/LinearGradient`, và module đó `require` gói gradient rồi **ném lỗi** nếu không
+tìm thấy. `RevenueTrendChart.test.tsx` dựng biểu đồ thật để chặn đúng ca này.
+
+**PHẢI dựng lại dev client**: đợt này thêm hai native module — `react-native-svg` và
+`expo-linear-gradient`. Chạy `pnpm --filter @xeprime/mobile android` (hoặc `ios`); bản dev client
+cũ sẽ nổ ở màn Tổng quan doanh thu và ở khối tiền của hồ sơ xe/khách.
+
+Chi tiết, ma trận quyền, bốn luật tiền, phần audit FIN-05/06 và ba vấn đề phát hiện ở web:
+`docs/mobile-finance-module-status.md`.
+
 
 ## 11. Đánh giá kiến trúc — **8.5 / 10**
 

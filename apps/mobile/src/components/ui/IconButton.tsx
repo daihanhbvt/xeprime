@@ -28,7 +28,10 @@ const TONE: Record<Tone, { bg: string; fg: string; border: string }> = {
     không có mép, nên nó đọc ra như một vệt màu chứ không như một vật bấm được — mà đây đúng là
     thứ phải mời người ta chạm vào.
 
-    Không dùng cho nút trên thanh tiêu đề: ở đó một ô màu đặc tranh chỗ với chính tiêu đề.
+    Trên hàng tiêu đề thì được, NHƯNG chỉ ba tông này — chúng là nền NHẠT. Cấm ở đó là tông có
+    nền đặc (`primary`) cho nút phụ: hai ô màu đặc cạnh nhau thì không còn cái nào là hành động
+    chính, và chúng tranh chỗ với chính cái tiêu đề. Một ô nhạt đứng cạnh một ô đặc thì ngược
+    lại — cùng họ màu, khác trọng lượng, đọc ngay ra cái nào là việc chính.
   */
   accent: { bg: colors.primaryLight, fg: colors.primaryActive, border: colors.primaryActive },
   success: { bg: colors.successSurface, fg: colors.success, border: colors.success },

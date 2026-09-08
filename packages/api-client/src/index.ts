@@ -296,22 +296,42 @@ export {
 // Tài khoản của CON NGƯỜI đang đăng nhập (CUS-04) — `/users/me`, khác `/auth/me`.
 export { accountApi, type UpdateProfileInput, type UserProfile } from './features/account/api';
 
-// Tiền (FIN-01/02) — phần sổ Thu-Chi và báo cáo theo kỳ mà hồ sơ xe / hồ sơ khách dùng lại.
+// Tiền (FIN-01→04) — sổ Thu-Chi, danh mục, công nợ và báo cáo theo kỳ (hồ sơ xe/khách dùng lại).
 export {
   receiptsApi,
   financeApi,
+  financeCategoriesApi,
+  debtsApi,
   receiptFiltersToParams,
   receiptSummaryParams,
+  hasReceiptFilters,
+  RECEIPT_FILTER_KEYS,
   financeRangeParams,
   financeSeriesParams,
+  financeByCategoryParams,
+  vehicleProfitParams,
+  customerRevenueParams,
+  debtFiltersToParams,
   RECEIPTS_DEFAULT_LIMIT,
+  type CreateCategoryInput,
+  type CreateReceiptInput,
+  type CustomerRevenue,
+  type DebtFilters,
+  type DebtItem,
+  type FinanceCategory,
+  type FinanceCategoryBreakdown,
+  type FinanceCategoryBreakdownItem,
+  type FinanceOverviewFilters,
   type FinancePeriodFilters,
   type FinanceScope,
   type FinanceSeries,
   type FinanceSeriesBucket,
   type FinanceSummary,
   type Receipt,
+  type ReceiptBookingOption,
   type ReceiptDetail,
   type ReceiptFilters,
   type ReceiptSummary,
+  type ReceiptVehicleOption,
+  type VehicleProfit,
 } from './features/finance/api';
