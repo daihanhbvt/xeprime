@@ -1,5 +1,6 @@
 import { apiDelete, apiGet, apiPost, type ApiClient } from '../../client';
 import type {
+  ChangePasswordInput,
   CurrentUser,
   ForgotPasswordInput,
   LoginInput,
@@ -37,6 +38,12 @@ export const authApi = {
   login: (body: LoginInput): Promise<CurrentUser> => apiPost<CurrentUser>('/auth/login', body),
   me: (): Promise<CurrentUser> => apiGet<CurrentUser>('/auth/me'),
   setPassword: (body: SetPasswordInput): Promise<void> => apiPost<void>('/auth/password/set', body),
+  /**
+   * Đổi mật khẩu khi ĐÃ có mật khẩu — khác `setPassword` (đặt lần đầu cho tài khoản OTP/social).
+   * Sai mật khẩu hiện tại là 400 `CURRENT_PASSWORD_INCORRECT`, không phải 401: phiên vẫn còn.
+   */
+  changePassword: (body: ChangePasswordInput): Promise<void> =>
+    apiPost<void>('/auth/password/change', body),
   forgotPassword: (body: ForgotPasswordInput): Promise<void> =>
     apiPost<void>('/auth/password/forgot', body),
   resetPassword: (body: ResetPasswordInput): Promise<void> =>

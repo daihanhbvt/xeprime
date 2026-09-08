@@ -83,6 +83,9 @@ const files = new VehicleContractsService(asService, fakeR2 as unknown as R2Serv
 const trips = new CustomerTripsService(
   asService,
   settlement,
+  // Dịch vụ giá THẬT (spec này chạy trên DB thật) — báo giá tạm tính của yêu cầu chưa duyệt
+  // vì thế đi đúng đường mà production đi.
+  pricing,
   bookings,
   makeBookingHoldsService(asService),
   files,

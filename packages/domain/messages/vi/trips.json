@@ -11,7 +11,12 @@
     "viewCurrent": "Xem chuyến hiện tại",
     "errorTitle": "Không tải được danh sách chuyến",
     "refreshing": "Đang cập nhật…",
-    "retry": "Thử lại"
+    "retry": "Thử lại",
+    "stageFilterLabel": "Lọc theo trạng thái chuyến",
+    "stageAll": "Tất cả trạng thái",
+    "stageEmptyTitle": "Không có chuyến nào ở trạng thái này",
+    "stageEmptyBody": "Bộ lọc chỉ áp cho trang đang xem. Thử xoá lọc hoặc chuyển trang.",
+    "stageClear": "Xoá lọc trạng thái"
   },
   "auth": {
     "expiredTitle": "Phiên đăng nhập đã hết hạn",
@@ -24,7 +29,14 @@
     "total": "Tổng thanh toán",
     "awaitingQuote": "Chờ báo giá",
     "viewDetail": "Xem chi tiết",
-    "viewDetailOf": "Xem chi tiết {name}"
+    "viewDetailOf": "Xem chi tiết {name}",
+    "roleHost": "Cho thuê",
+    "roleRenter": "Đặt xe",
+    "renter": "Khách thuê",
+    "renterUnknown": "Chưa rõ",
+    "approve": "Xác nhận",
+    "reject": "Từ chối",
+    "estimated": "Tạm tính · chốt khi duyệt"
   },
   "pickup": {
     "delivery": "Giao xe tận nơi",
@@ -115,7 +127,8 @@
     "contactShop": "Nhắn tin cho cửa hàng",
     "call": "Gọi",
     "review": "Đánh giá",
-    "cancel": "Huỷ chuyến"
+    "cancel": "Huỷ chuyến",
+    "contactLocked": "Kênh liên hệ mở sau khi chủ xe duyệt yêu cầu. Mọi trao đổi trước đó nằm ngoài phạm vi hỗ trợ của XePrime."
   },
   "cancel": {
     "title": "Huỷ chuyến đi?",
@@ -195,5 +208,53 @@
     "refundPaid": "XePrime đã hoàn {amount} về tài khoản bạn khai.",
     "refundPending": "Đang chờ XePrime chuyển trả {amount}.",
     "refundNeedsAccount": "Có {amount} chờ hoàn — liên hệ hỗ trợ để cung cấp tài khoản nhận."
+  },
+  "sides": {
+    "ariaLabel": "Chọn phía của chuyến",
+    "owner": "Xe tôi cho thuê",
+    "renter": "Chuyến tôi đi thuê"
+  },
+  "owner": {
+    "heading": "Chuyến cho thuê",
+    "sub": "Yêu cầu thuê cần duyệt và các đơn thuê trên xe của bạn.",
+    "requests": {
+      "title": "Yêu cầu chờ duyệt",
+      "sub": "Khách đang chờ bạn đồng ý. Duyệt là hệ thống giữ xe cho khung giờ đó.",
+      "listLabel": "Yêu cầu thuê chờ duyệt",
+      "emptyTitle": "Không còn yêu cầu nào chờ bạn",
+      "emptyBody": "Yêu cầu thuê mới sẽ xuất hiện ở đây kèm hạn phản hồi.",
+      "errorTitle": "Không tải được yêu cầu thuê"
+    },
+    "bookings": {
+      "title": "Đơn thuê",
+      "listLabel": "Đơn thuê trên xe của tôi",
+      "statusLabel": "Lọc theo trạng thái đơn",
+      "statusAll": "Tất cả trạng thái",
+      "emptyTitle": "Chưa có đơn thuê nào",
+      "emptyBody": "Đơn được tạo ngay khi bạn duyệt một yêu cầu thuê.",
+      "noResultsTitle": "Không có đơn nào ở trạng thái này",
+      "noResultsBody": "Thử chọn một trạng thái khác hoặc xoá bộ lọc.",
+      "errorTitle": "Không tải được đơn thuê"
+    },
+    "card": {
+      "customer": "Khách thuê",
+      "schedule": "Thời gian thuê",
+      "amountDue": "Phải thu",
+      "openDetail": "Xem chi tiết & thao tác"
+    }
+  },
+  "host": {
+    "decisionTitle": "Yêu cầu thuê xe",
+    "decisionHint": "Khách đang chờ bạn đồng ý. Duyệt là hệ thống giữ xe cho khung giờ đó.",
+    "approve": "Duyệt & giữ xe",
+    "reject": "Từ chối"
+  },
+  "estimate": {
+    "title": "Chi tiết giá",
+    "badge": "Tạm tính",
+    "rentalTotal": "Tiền thuê",
+    "ownerNet": "Bạn thực nhận",
+    "noteRenter": "Giá tính theo chính sách đang áp dụng. Số chốt được xác nhận khi chủ xe duyệt yêu cầu.",
+    "noteHost": "Phụ phí chuyến nằm ở phía khách và không trừ vào tiền của bạn. Số chốt được xác nhận khi bạn duyệt yêu cầu."
   }
 }

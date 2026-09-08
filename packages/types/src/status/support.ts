@@ -20,6 +20,14 @@ export const SUPPORT_CASE_CATEGORY = {
   PAYMENT: 'payment',
   /** Tài khoản, đăng nhập, dữ liệu cá nhân. */
   ACCOUNT: 'account',
+  /**
+   * YÊU CẦU xoá tài khoản — do chính chủ tài khoản mở, nền tảng xử lý tay.
+   *
+   * Là một case chứ không phải một cú xoá: repo chưa có chính sách lưu trữ/ẩn danh hoá đủ để
+   * xoá cứng người dùng cùng đơn thuê, hoá đơn và audit của họ. Mỗi người chỉ có TỐI ĐA MỘT case
+   * loại này còn mở — partial unique index ở DB (`support_cases_open_account_deletion_key`).
+   */
+  ACCOUNT_DELETION: 'account_deletion',
   OTHER: 'other',
 } as const;
 
@@ -38,6 +46,7 @@ export const SUPPORT_CASE_CATEGORY_LABEL: Readonly<Record<SupportCaseCategory, s
   [SUPPORT_CASE_CATEGORY.INCIDENT]: 'Sự cố trong chuyến',
   [SUPPORT_CASE_CATEGORY.PAYMENT]: 'Thanh toán / hoàn tiền',
   [SUPPORT_CASE_CATEGORY.ACCOUNT]: 'Tài khoản',
+  [SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION]: 'Yêu cầu xoá tài khoản',
   [SUPPORT_CASE_CATEGORY.OTHER]: 'Khác',
 };
 

@@ -17,9 +17,7 @@
   "identityLockedTitle": "Email và số điện thoại chưa đổi được",
   "identityLockedBody": "Hai thông tin này dùng để đăng nhập nên cần một luồng xác thực riêng. Liên hệ hỗ trợ nếu bạn cần đổi.",
   "sidebar": {
-    "personal": "Cá nhân",
-    "rental": "Thuê xe",
-    "preferences": "Thiết lập"
+    "userCard": "Người đang đăng nhập"
   },
   "profile": {
     "eyebrow": "Hồ sơ cá nhân",
@@ -59,5 +57,173 @@
     "displayNameRequired": "Vui lòng nhập họ tên",
     "displayNameMax": "Họ tên tối đa 255 ký tự",
     "avatarUrlInvalid": "Đường dẫn ảnh không hợp lệ"
+  },
+  "ownerGate": {
+    "title": "Khu vực dành cho chủ xe",
+    "body": "Mục này chỉ mở cho tài khoản là chủ gian hàng. Đăng xe cho thuê để quản lý xe, lịch và giấy tờ ngay tại đây.",
+    "bodyMember": "Bạn đang là thành viên của gian hàng {shop}. Các màn quản lý xe và lịch nằm ở cổng quản lý.",
+    "becomeOwner": "Trở thành chủ xe",
+    "openManage": "Vào cổng quản lý",
+    "backToAccount": "Về tài khoản của tôi"
+  },
+  "vehicles": {
+    "title": "Danh sách xe",
+    "subtitle": "Xe của bạn trên XePrime — trạng thái vận hành, giá và việc cần làm.",
+    "loading": "Đang tải danh sách xe…",
+    "serviceFilterLabel": "Lọc theo dịch vụ",
+    "statusFilterLabel": "Lọc theo trạng thái vận hành",
+    "statusAll": "Tất cả trạng thái",
+    "manage": "Quản lý xe",
+    "manageSoon": "Quản lý xe ngay tại đây sẽ được bổ sung sau. Trong lúc chờ, bạn sửa thông tin xe ở cổng quản lý.",
+    "viewDetail": "Xem chi tiết",
+    "addVehicle": "Thêm xe",
+    "tips": {
+      "guideTitle": "Cẩm nang cho thuê xe",
+      "guideBody": "Quy trình bàn giao, nhận lại xe và hồ sơ thủ tục cần chuẩn bị.",
+      "documentsTitle": "Hợp đồng & chứng từ mẫu",
+      "documentsBody": "Biểu mẫu hợp đồng, biên bản bàn giao và chứng từ thuế để tải về."
+    },
+    "detail": {
+      "title": "Chi tiết xe",
+      "back": "Về danh sách xe"
+    }
+  },
+  "calendar": {
+    "title": "Lịch xe",
+    "subtitle": "Đơn thuê, khoá lịch và giá riêng theo ngày của từng xe.",
+    "back": "Thoát toàn màn hình"
+  },
+  "hostGuide": {
+    "title": "Cẩm nang cho thuê xe",
+    "subtitle": "Hướng dẫn và biểu mẫu giúp bạn cho thuê xe an toàn, đúng thủ tục.",
+    "policyHeading": "Cập nhật chính sách",
+    "policyBody": "Quy chế sàn và điều khoản đang có hiệu lực từ {date}."
+  },
+  "resources": {
+    "pdfBadge": "PDF",
+    "open": "Mở {title} (PDF, mở tab mới)",
+    "items": {
+      "safeRentalProcess": {
+        "title": "Quy trình cho thuê xe an toàn",
+        "description": "Hướng dẫn các bước bàn giao, nhận lại xe và chuẩn bị hồ sơ thủ tục."
+      },
+      "taxSettlementGuide": {
+        "title": "Cẩm nang quyết toán thuế thu nhập",
+        "description": "Hướng dẫn kê khai và thực hiện nghĩa vụ thuế minh bạch từ doanh thu cho thuê."
+      },
+      "rentalContractTemplate": {
+        "title": "Hợp đồng cho thuê",
+        "description": "Mẫu hợp đồng cho thuê xe giữa chủ xe và người thuê."
+      },
+      "handoverRecordTemplate": {
+        "title": "Biên bản bàn giao xe",
+        "description": "Mẫu biên bản ghi nhận tình trạng xe lúc giao và lúc nhận lại."
+      },
+      "pitSettlementDocument": {
+        "title": "Chứng từ quyết toán thuế thu nhập cá nhân",
+        "description": "Mẫu chứng từ dùng khi quyết toán thuế thu nhập cá nhân từ cho thuê xe."
+      },
+      "taxRefundRequest": {
+        "title": "Văn bản đề nghị hoàn thuế gửi Cơ quan Thuế",
+        "description": "Mẫu văn bản đề nghị hoàn thuế khi có số thuế nộp thừa."
+      }
+    }
+  },
+  "contracts": {
+    "title": "Hợp đồng & Chứng từ",
+    "subtitle": "Biểu mẫu dùng chung khi bàn giao xe và quyết toán thuế.",
+    "templatesHeading": "Hợp đồng mẫu",
+    "templatesBody": "Chọn loại hợp đồng mẫu bạn muốn xem hoặc tải về để phục vụ bàn giao xe.",
+    "documentsHeading": "Chứng từ quyết toán",
+    "note": "Đây là biểu mẫu chung. Hợp đồng của từng đơn thuê được lập ở cổng quản lý."
+  },
+  "tax": {
+    "title": "Thông tin khai thuế",
+    "subtitle": "Danh tính người bán để XePrime kê khai đúng nghĩa vụ thuế khi cần.",
+    "entityType": "Loại hình kinh doanh",
+    "entityHint": "Cách XePrime khấu trừ hoặc nộp thay thuế (nếu có) phụ thuộc loại chủ thể và kết luận của tư vấn thuế. Tỷ lệ áp dụng sẽ được thông báo trước khi có hiệu lực, không cấu hình sẵn ở đây.",
+    "residencyTitle": "Loại hình cư trú",
+    "residencyBody": "XePrime chưa lưu thông tin cư trú. Nếu việc phân loại cư trú / không cư trú cần thiết cho kê khai, nền tảng sẽ hỏi riêng khi cấu hình thuế thật.",
+    "legalName": "Tên đầy đủ",
+    "legalNameBusiness": "Tên hộ kinh doanh / doanh nghiệp",
+    "idNumber": "Số CCCD",
+    "idNumberHint": "Số căn cước của người đứng tên.",
+    "taxId": "Mã số thuế",
+    "save": "Lưu thông tin",
+    "saved": "Đã lưu thông tin khai thuế.",
+    "fullProfile": "Tài khoản nhận tiền và giấy tờ đầy đủ khai ở hồ sơ người bán.",
+    "openFullProfile": "Mở hồ sơ người bán",
+    "loadError": "Không tải được thông tin khai thuế.",
+    "viewOnly": "Bạn chỉ có quyền xem thông tin này."
+  },
+  "dataProtection": {
+    "title": "Chính sách bảo vệ dữ liệu",
+    "badge": "Bảo vệ dữ liệu",
+    "heading": "An tâm tối đa cùng XePrime",
+    "intro": "Tóm tắt những gì XePrime làm với dữ liệu của bạn, theo Chính sách bảo mật đang có hiệu lực.",
+    "points": {
+      "location": "Dữ liệu vị trí chỉ dùng để tìm xe gần bạn và tính quãng đường giao xe.",
+      "bank": "Thông tin tài khoản ngân hàng chỉ dùng để chuyển trả và hoàn tiền theo đúng quy định.",
+      "masking": "Số điện thoại và giấy tờ được che ở mọi màn không cần tới chúng.",
+      "rights": "Bạn có quyền xem, sửa và yêu cầu xoá dữ liệu của mình."
+    },
+    "commitment": "XePrime cam kết bảo mật và sử dụng dữ liệu cá nhân của khách hàng một cách minh bạch, an toàn và đúng quy định.",
+    "consentNote": "Bản tóm tắt này chỉ để đọc. Việc bật/tắt từng mục sẽ có khi nền tảng lưu được lựa chọn của bạn — hiện chưa có.",
+    "lastUpdated": "Bản đang hiệu lực từ {date}",
+    "readPolicy": "Xem chính sách chi tiết"
+  },
+  "changePassword": {
+    "title": "Cập nhật bảo mật",
+    "subtitle": "Cập nhật mật khẩu để bảo vệ tài khoản của bạn.",
+    "firstTimeTitle": "Đặt mật khẩu lần đầu",
+    "firstTimeBody": "Tài khoản này đăng nhập bằng OTP hoặc mạng xã hội nên chưa có mật khẩu. Đặt mật khẩu để lần sau đăng nhập nhanh hơn — không cần mật khẩu hiện tại.",
+    "currentPassword": "Mật khẩu hiện tại",
+    "newPassword": "Mật khẩu mới",
+    "confirmPassword": "Xác nhận mật khẩu mới",
+    "submit": "Cập nhật mật khẩu",
+    "submitFirstTime": "Đặt mật khẩu",
+    "success": "Đã cập nhật mật khẩu.",
+    "successFirstTime": "Đã đặt mật khẩu. Lần sau bạn đăng nhập được bằng mật khẩu này.",
+    "requirementsTitle": "Yêu cầu của mật khẩu",
+    "requirements": {
+      "passwordTooShort": "Ít nhất {min} ký tự",
+      "passwordNeedsLetter": "Chứa ít nhất 1 chữ cái",
+      "passwordNeedsDigit": "Chứa ít nhất 1 chữ số (0-9)"
+    },
+    "requirementMet": "Đạt",
+    "requirementUnmet": "Chưa đạt"
+  },
+  "deleteAccount": {
+    "title": "Yêu cầu xoá tài khoản",
+    "subtitle": "Gửi yêu cầu để XePrime xử lý việc xoá tài khoản của bạn.",
+    "warningTitle": "Đây là một yêu cầu, XePrime xử lý thủ công",
+    "warningBody": "Sau khi gửi, tài khoản vẫn đăng nhập bình thường cho tới khi XePrime xác nhận và hoàn tất. Bạn rút yêu cầu được trong lúc chờ.",
+    "confirmTitle": "Xác nhận gửi yêu cầu xoá tài khoản",
+    "confirmBody": "Khi yêu cầu được chấp nhận, những nội dung sau sẽ được xử lý theo Chính sách bảo mật và nghĩa vụ lưu trữ hiện hành:",
+    "items": {
+      "profile": "Thông tin cá nhân & hồ sơ người bán",
+      "vehicles": "Danh sách xe đã đăng",
+      "trips": "Lịch sử chuyến đi & đánh giá",
+      "billing": "Dữ liệu hoá đơn & lịch sử thanh toán"
+    },
+    "retentionNote": "Một số dữ liệu (hoá đơn, chứng từ thuế, nhật ký giao dịch) có thể phải lưu theo thời hạn pháp luật quy định trước khi xoá hẳn.",
+    "acknowledge": "Tôi hiểu đây là yêu cầu xoá tài khoản và XePrime sẽ liên hệ, xử lý theo quy trình.",
+    "confirmPhraseLabel": "Xác nhận bằng cách nhập lại cụm từ sau",
+    "confirmPhrase": "XOÁ TÀI KHOẢN",
+    "confirmPhrasePlaceholder": "Nhập {phrase} để xác nhận",
+    "confirmPhraseMismatch": "Cụm từ chưa đúng.",
+    "acknowledgeRequired": "Bạn cần xác nhận đã hiểu.",
+    "submit": "Gửi yêu cầu xoá tài khoản",
+    "reset": "Huỷ bỏ",
+    "submitted": "Đã gửi yêu cầu xoá tài khoản.",
+    "caseSubject": "Yêu cầu xoá tài khoản",
+    "caseDescription": "Người dùng tự gửi yêu cầu xoá tài khoản từ khu tài khoản.",
+    "pendingTitle": "Yêu cầu của bạn đang được xử lý",
+    "pendingBody": "Mã yêu cầu {code}. XePrime sẽ liên hệ qua email hoặc số điện thoại trên tài khoản nếu cần xác minh thêm.",
+    "sentAt": "Gửi lúc {date}",
+    "withdraw": "Rút yêu cầu xoá tài khoản",
+    "withdrawConfirm": "Rút yêu cầu này? Tài khoản của bạn giữ nguyên.",
+    "withdrawn": "Đã rút yêu cầu xoá tài khoản.",
+    "loadError": "Không kiểm tra được yêu cầu hiện có."
   }
 }

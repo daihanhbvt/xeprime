@@ -7,6 +7,7 @@ import type { AuthenticatedUser } from '../../common/types/request-context';
 import { AuthService } from './auth.service';
 import { SessionService } from './session.service';
 import {
+  ChangePasswordDto,
   ForgotPasswordDto,
   LoginDto,
   MeDto,
@@ -82,6 +83,21 @@ export class AuthController {
     @Body() dto: SetPasswordDto,
   ): Promise<void> {
     await this.auth.setPassword(user.id, dto.password);
+  }
+
+  @Post('password/change')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  // 5/phút — bằng `login`: route này SO mật khẩu hiện tại, tức là một cửa dò mật khẩu của chính
+  // phiên đang đăng nhập (máy bỏ quên, cookie bị lấy). Không hãm thì kẻ có phiên đoán được mật
+  // khẩu cũ để đổi sang mật khẩu của họ và chiếm hẳn tài khoản.
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Đổi mật khẩu — cần mật khẩu hiện tại; tài khoản chưa có thì dùng password/set' })
+  @ApiNoContentResponse()
+  async changePassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ChangePasswordDto,
+  ): Promise<void> {
+    await this.auth.changePassword(user.id, dto.currentPassword, dto.newPassword);
   }
 
   @Public()

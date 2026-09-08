@@ -17,6 +17,10 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { useOpenSupportCase } from '../hooks/use-support-cases';
 import type { SupportSurface } from '../types';
 
+const OPENABLE_CATEGORIES = SUPPORT_CASE_CATEGORY_VALUES.filter(
+  (value) => value !== SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION,
+);
+
 /**
  * Mở một yêu cầu hỗ trợ.
  *
@@ -44,7 +48,7 @@ export function OpenCaseModal({
   const schema = useMemo(
     () =>
       yup.object({
-        category: yup.string().oneOf(SUPPORT_CASE_CATEGORY_VALUES).required(),
+        category: yup.string().oneOf(OPENABLE_CATEGORIES).required(),
         subject: yup.string().trim().min(5, t('form.subjectRequired')).max(255).required(t('form.subjectRequired')),
         description: yup
           .string()
@@ -111,7 +115,10 @@ export function OpenCaseModal({
           control={control}
           name="category"
           label={t('form.category')}
-          options={SUPPORT_CASE_CATEGORY_VALUES.map((value) => ({
+          // `account_deletion` có luồng riêng ở `/account/delete-account` (checkbox xác nhận, cụm từ
+          // xác nhận, idempotent) — không nằm trong ô chọn chung để tránh gửi nhầm một yêu cầu
+          // xoá tài khoản như một câu hỏi thường.
+          options={OPENABLE_CATEGORIES.map((value) => ({
             value,
             label: domainLabel('supportCaseCategory', value),
           }))}

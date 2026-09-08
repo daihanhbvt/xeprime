@@ -1,7 +1,7 @@
 import { App } from 'antd';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CUSTOMER_TRIP_STAGE, DEPOSIT_STATUS } from '@xeprime/types';
+import { CUSTOMER_TRIP_STAGE, DEPOSIT_STATUS, TRIP_ROLE } from '@xeprime/types';
 import { ApiClientError } from '@/services/api-client';
 
 import { TripDetailView } from './TripDetailView';
@@ -60,6 +60,13 @@ vi.mock('@/features/chat/components/ChatWithShopButton', () => ({
 
 const TRIP: CustomerTripDetail = {
   id: 'RQ1',
+  // Fixture là chuyến KHÁCH ĐI THUÊ — đúng phía mà màn chi tiết này phục vụ.
+  role: TRIP_ROLE.RENTER,
+  renter: null,
+  respondBy: null,
+  canContact: true,
+  // Chuyến đã có đơn ⇒ giá đã chốt, không phải số tạm tính.
+  totalIsEstimate: false,
   bookingId: 'BK1',
   code: 'XP-2026-0042',
   stage: CUSTOMER_TRIP_STAGE.READY,

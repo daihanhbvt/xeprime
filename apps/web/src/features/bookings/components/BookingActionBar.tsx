@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import {
   HANDOVER_TYPE,
+  PLAN_FEATURE,
   PERMISSION,
   isBookingFinal,
   type BookingStatus,
@@ -21,6 +22,7 @@ import { useHandoverContext } from '@/features/handovers/hooks';
 import { BookingReceiptList } from '@/features/finance/components/BookingReceiptList';
 import { PaymentHistory } from '@/features/payments/components/PaymentHistory';
 import { RecordPaymentModal } from '@/features/payments/components/RecordPaymentModal';
+import { useFeature } from '@/hooks/use-feature';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { isZeroMoney } from '@/lib/money';
@@ -64,6 +66,20 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
   const canRecordPayment = has(PERMISSION.PAYMENT_RECORD);
   const canUpdate = has(PERMISSION.BOOKING_UPDATE);
   const canViewFinance = has(PERMISSION.FINANCE_VIEW);
+
+  /*
+   * Trục NĂNG LỰC theo gói (ADR 0027 điều 2) — kiểm NỐI TIẾP với quyền, không thay nó.
+   *
+   * Chủ xe cơ bản có đủ mọi permission của vai `shop_owner`, nên nếu chỉ hỏi quyền thì hàng nút
+   * này bày ra Hợp đồng / Lịch sử tiền / Thu tiền cho họ — và cả ba chắc chắn nhận 403 từ
+   * `@RequiresFeature` ở backend. Ẩn nút không bảo vệ gì (ADR 0027 điều 4), nhưng bày một nút
+   * chắc chắn hỏng thì tệ hơn: nó hứa một tính năng thuộc gói mà họ chưa mua.
+   *
+   * Bàn giao và ảnh hiện trạng CỐ Ý không nằm sau gói nào: chúng là bước tối thiểu để hoàn thành
+   * một chuyến, và ADR 0027 điều 1 xếp "giao và nhận lại xe" vào bộ cơ bản.
+   */
+  const contractsFeature = useFeature(PLAN_FEATURE.CONTRACTS);
+  const financeFeature = useFeature(PLAN_FEATURE.FINANCE);
 
   const { data: handover } = useHandoverContext(booking.id, canViewHandover);
   const createContract = useCreateContract();
@@ -112,7 +128,7 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
             booking={booking}
             pickupConfirmed={Boolean(handover?.pickup?.confirmedAt)}
           />
-          {canContract ? (
+          {canContract && contractsFeature.isVisible ? (
             <Button
               loading={createContract.isPending}
               onClick={() =>
@@ -130,7 +146,9 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
             phiếu của ĐƠN, còn "sổ" là cuốn sổ Thu-Chi của cả gian hàng — hai thứ khác nhau mà
             gọi cùng một chữ thì người dùng tưởng mình đang mở nhầm chỗ.
           */}
-          <Button onClick={() => setHistoryOpen(true)}>{t('moneyHistory')}</Button>
+          {financeFeature.isVisible ? (
+            <Button onClick={() => setHistoryOpen(true)}>{t('moneyHistory')}</Button>
+          ) : null}
           {/*
             Đơn đã khép thì server từ chối mọi lần ghi (Wave 12). Nút vẫn đứng nguyên chỗ nhưng
             mờ đi và nói lý do — biến mất thì hàng nút nhảy chỗ giữa các đơn, còn để bấm được
@@ -145,7 +163,12 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
               {t('edit')}
             </Button>
           ) : null}
-          {canRecordPayment ? (
+          {/*
+            Thu tiền thuộc gói: ở tuyến cơ bản, tiền thuê và cọc do hai bên tự thanh toán với
+            nhau (ADR 0028 điều 7A) — nền tảng không thu hộ, nên một nút "Thu tiền" ở đây là một
+            lời hứa sai về việc tiền đang chạy qua đâu.
+          */}
+          {canRecordPayment && financeFeature.isVisible ? (
             // Hết nợ thì nút vẫn đứng nguyên chỗ nhưng nói rõ là không còn gì để thu.
             <Button disabled={!hasDebt} onClick={() => setPayOpen(true)}>
               {hasDebt ? t('collect') : t('collected')}

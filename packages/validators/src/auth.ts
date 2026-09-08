@@ -61,14 +61,37 @@ const VI: Required<AuthSchemaLabels> = {
   confirmMismatch: 'Mật khẩu nhập lại không khớp',
 };
 
-/** Mật khẩu: tối thiểu 8 ký tự, có cả chữ và số. */
+/** Khoá của từng quy tắc mật khẩu — trùng tên với khoá câu lỗi trong `AuthSchemaLabels`. */
+export type PasswordRuleKey = 'passwordTooShort' | 'passwordNeedsLetter' | 'passwordNeedsDigit';
+
+/**
+ * Ba quy tắc mật khẩu ở dạng ĐỌC ĐƯỢC TỪNG CÁI — nguồn duy nhất cho cả schema lẫn bảng "Yêu cầu
+ * của mật khẩu" trên màn đổi mật khẩu.
+ *
+ * Bảng tick ✓/✗ theo từng quy tắc phải đánh giá đúng thứ schema sẽ từ chối. Nếu bảng tự viết lại
+ * ba biểu thức của riêng nó thì sớm muộn hai bên lệch nhau, và người dùng thấy cả ba dòng xanh
+ * nhưng bấm Lưu vẫn đỏ — lỗi khó chịu nhất vì màn hình đang nói dối họ.
+ */
+export const PASSWORD_RULES: ReadonlyArray<{
+  readonly key: PasswordRuleKey;
+  readonly test: (value: string) => boolean;
+}> = [
+  { key: 'passwordTooShort', test: (value) => value.length >= PASSWORD_MIN },
+  { key: 'passwordNeedsLetter', test: (value) => /[A-Za-z]/.test(value) },
+  { key: 'passwordNeedsDigit', test: (value) => /\d/.test(value) },
+];
+
+/**
+ * Mật khẩu: tối thiểu 8 ký tự, có cả chữ và số.
+ *
+ * Dựng TỪ `PASSWORD_RULES` để luật và bảng hiển thị không thể lệch nhau. Tên của mỗi `.test`
+ * chính là khoá quy tắc, nên lỗi trả về vẫn chỉ đúng dòng nào chưa đạt.
+ */
 export const buildPasswordSchema = (labels: AuthSchemaLabels) =>
-  yup
-    .string()
-    .required(labels.passwordRequired)
-    .min(PASSWORD_MIN, labels.passwordTooShort)
-    .matches(/[A-Za-z]/, labels.passwordNeedsLetter)
-    .matches(/\d/, labels.passwordNeedsDigit);
+  PASSWORD_RULES.reduce(
+    (schema, rule) => schema.test(rule.key, labels[rule.key], (value) => rule.test(value ?? '')),
+    yup.string().required(labels.passwordRequired),
+  );
 
 export const buildRequiredEmailSchema = (labels: AuthSchemaLabels) =>
   yup.string().trim().email(labels.emailInvalid).required(labels.emailRequired);

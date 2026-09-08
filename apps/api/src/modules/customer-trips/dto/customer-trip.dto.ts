@@ -3,6 +3,7 @@ import {
   CUSTOMER_TRIP_FILTER_DEFAULT,
   CUSTOMER_TRIP_FILTER_VALUES,
   CUSTOMER_TRIP_STAGE_VALUES,
+  TRIP_ROLE_VALUES,
   DEPOSIT_STATUS_VALUES,
   REFUND_METHOD_VALUES,
   SURCHARGE_CATEGORY_VALUES,
@@ -10,6 +11,7 @@ import {
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
 import { CustomerHoldDto } from '../../holds/dto/hold.dto';
+import { CustomerFeeBreakdownDto, PriceBreakdownRowDto } from '../../pricing/dto/pricing.dto';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 
 const DEFAULT_LIMIT = 10;
@@ -135,9 +137,59 @@ export class CustomerTripFinanceDto {
   legacyPricing!: boolean;
 }
 
+/** Khách thuê, nhìn từ phía CHỦ XE. SĐT gác theo `canContact` — xem `CustomerTripListItemDto`. */
+export class CustomerTripRenterDto {
+  @ApiProperty() name!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'null khi chưa được liên hệ' })
+  phone!: string | null;
+}
+
 export class CustomerTripListItemDto {
   /** Định danh chuyến = id YÊU CẦU thuê — tồn tại từ lúc gửi, trước cả khi có đơn. */
   @ApiProperty() id!: string;
+
+  /**
+   * Phía của NGƯỜI ĐANG XEM (@xeprime/types → TripRole).
+   *
+   * `host` chỉ xuất hiện với chủ gian hàng, và chỉ trên chuyến của chính gian hàng đó — phạm vi
+   * nằm trong WHERE của truy vấn, không phải một câu lọc sau khi đọc.
+   */
+  @ApiProperty({ enum: TRIP_ROLE_VALUES })
+  role!: string;
+
+  /**
+   * Khách thuê của chuyến. CHỈ có mặt khi `role = host`; ở phía người đi thuê nó là `null` vì
+   * chính họ là khách và màn hình đã nói điều đó bằng tên gian hàng.
+   */
+  @ApiPropertyOptional({ type: CustomerTripRenterDto, nullable: true })
+  renter!: CustomerTripRenterDto | null;
+
+  /**
+   * Hạn chủ xe phải trả lời (ISO-8601 UTC) — đồng hồ đếm ngược trên thẻ chờ duyệt.
+   * `null` khi chuyến đã qua bước duyệt.
+   */
+  @ApiPropertyOptional({ type: String, nullable: true })
+  respondBy!: string | null;
+
+  /**
+   * Hai bên đã được phép liên hệ trực tiếp chưa.
+   *
+   * `false` khi chuyến TUYẾN HOA HỒNG còn đang chờ duyệt: nền tảng không dẫn hai bên ra ngoài
+   * trước khi có một chuyến thật (ADR 0028 điều 9). Gian hàng thuê bao được liên hệ ngay — họ
+   * đã trả cước và được phép chốt trực tiếp.
+   */
+  @ApiProperty({ description: 'Được lộ SĐT và mở hội thoại chưa' })
+  canContact!: boolean;
+
+  /**
+   * `totalAmount` là số TẠM TÍNH, chưa được đóng băng vào đơn (ADR 0024).
+   *
+   * Đúng với chuyến chưa được duyệt: nó được tính lại theo chính sách ĐANG hiệu lực mỗi lần
+   * đọc, nên gian hàng đổi giá là nó đổi theo. Giao diện PHẢI nói rõ — một con số tạm tính
+   * trưng ra như giá chốt là lời hứa mà hệ thống không giữ.
+   */
+  @ApiProperty({ description: 'Tổng tiền còn tạm tính, chưa chốt vào đơn' })
+  totalIsEstimate!: boolean;
   @ApiPropertyOptional({ type: String, nullable: true }) bookingId!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Mã đơn (sau khi được nhận)' })
   code!: string | null;
@@ -201,6 +253,31 @@ export class CustomerTripListItemDto {
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
 }
 
+/**
+ * Bảng kê giá TẠM TÍNH của một chuyến chưa được duyệt.
+ *
+ * Cùng ba mảnh với báo giá công khai và với snapshot trên đơn — `rows` (giá thuê),
+ * `fees` (phụ phí phía khách, ADR 0029) và tổng — nên giao diện dùng lại đúng một component
+ * bảng giá cho cả ba nguồn, không nơi nào tự vẽ lại hàng tiền.
+ */
+export class CustomerTripEstimateDto {
+  @ApiProperty({ type: [PriceBreakdownRowDto], description: 'Các dòng của giá THUÊ' })
+  rows!: PriceBreakdownRowDto[];
+
+  @ApiProperty({ description: 'Tổng giá thuê, TRƯỚC phụ phí — doanh thu của gian hàng' })
+  rentalTotal!: string;
+
+  @ApiProperty({ description: 'Cọc thế chấp hoàn trả — KHÔNG nằm trong tổng' })
+  depositAmount!: string;
+
+  /**
+   * Phụ phí phía khách. `null` khi sàn chưa có chính sách phí hiệu lực — lúc đó tổng khách
+   * trả bằng đúng giá thuê, và giao diện KHÔNG được bịa ra một dòng phí 0đ.
+   */
+  @ApiPropertyOptional({ type: CustomerFeeBreakdownDto, nullable: true })
+  fees!: CustomerFeeBreakdownDto | null;
+}
+
 export class CustomerTripPageDto {
   @ApiProperty({ type: [CustomerTripListItemDto] }) data!: CustomerTripListItemDto[];
   @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
@@ -226,6 +303,17 @@ export class CustomerTripDetailDto extends CustomerTripListItemDto {
   /** `null` khi chuyến chưa được nhận — chưa có đơn thì chưa có tiền. */
   @ApiPropertyOptional({ type: CustomerTripFinanceDto, nullable: true })
   finance!: CustomerTripFinanceDto | null;
+
+  /**
+   * Bảng kê giá TẠM TÍNH — chỉ có mặt khi chuyến CHƯA có đơn (`finance === null`).
+   *
+   * Hai khối loại trừ nhau theo đúng thứ tự đó: có đơn thì `finance` là số đã đóng băng
+   * (ADR 0024); chưa có đơn thì đây là con số khách vừa xem trước khi bấm gửi, tính lại theo
+   * chính sách đang hiệu lực. Không bao giờ cả hai cùng có, nên không màn nào phải chọn giữa
+   * hai con số.
+   */
+  @ApiPropertyOptional({ type: CustomerTripEstimateDto, nullable: true })
+  estimate!: CustomerTripEstimateDto | null;
   /**
    * Khoản GIỮ CHỖ của chuyến (R3, tuyến hoa hồng) — `null` với chuyến không cần giữ chỗ.
    *

@@ -4,13 +4,7 @@ import { App, Button, Pagination, Tabs } from 'antd';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import {
-  API_ERROR_CODE,
-  BOOKING_REQUEST_STATUS,
-  PERMISSION,
-  SERVICE_TYPE,
-  SERVICE_TYPE_VALUES,
-} from '@xeprime/types';
+import { BOOKING_REQUEST_STATUS, PERMISSION, SERVICE_TYPE_VALUES } from '@xeprime/types';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
 import { LoadingState } from '@/components/feedback/LoadingState';
@@ -22,29 +16,17 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
 import { currentPathWithQuery } from '@/features/auth/safe-next';
-import { getErrorCode } from '@/services/api-client';
 import { BOOKING_REQUEST_TABS } from '../constants';
 import { useBookingRequestFilters } from '../hooks/use-booking-request-filters';
-import {
-  useApproveBookingRequest,
-  useRejectBookingRequest,
-  useStartBookingRequestConversation,
-} from '../hooks/use-booking-request-mutations';
+import { useBookingRequestDecisions } from '../hooks/use-booking-request-decisions';
+import { useStartBookingRequestConversation } from '../hooks/use-booking-request-mutations';
 import { BookingDetailDialog } from '@/features/bookings/components/BookingDetailDialog';
 import { CustomerDetailDialog } from '@/features/customers/components/CustomerDetailDialog';
 import { VehicleDetailDialog } from '@/features/vehicles/components/VehicleDetailDialog';
 import { useBookingRequests } from '../hooks/use-booking-requests';
-import type {
-  ApproveBookingRequestInput,
-  BookingRequestItem,
-  BookingRequestStatusCount,
-} from '../types';
-import { ApproveBookingRequestDialog } from './ApproveBookingRequestDialog';
-import { ApproveSuccessDialog } from './ApproveSuccessDialog';
-import { ApproveLongTermDialog } from './ApproveLongTermDialog';
+import type { BookingRequestItem, BookingRequestStatusCount } from '../types';
 import { BookingRequestCard, type BookingRequestAction } from './BookingRequestCard';
 import { BookingRequestDetailDialog } from './BookingRequestDetailDialog';
-import { RejectBookingRequestDialog } from './RejectBookingRequestDialog';
 import styles from './BookingRequestsView.module.css';
 
 /**
@@ -85,14 +67,14 @@ export function BookingRequestsView() {
     useBookingRequestFilters();
   const { data, isError, isFetching, refetch } = useBookingRequests(filters);
 
-  const approve = useApproveBookingRequest();
-  const reject = useRejectBookingRequest();
+  /*
+   * Luồng quyết định (duyệt · duyệt dài hạn · từ chối · báo kết quả) nằm ở hook dùng chung —
+   * khu tài khoản của chủ xe dùng ĐÚNG luồng này, và một bản chép thứ hai là một chỗ để quên
+   * nhánh 409 trùng lịch.
+   */
+  const decisions = useBookingRequestDecisions();
   const startConversation = useStartBookingRequestConversation();
 
-  /** Yêu cầu đang mở trong từng hộp thoại — cả ba loại trừ nhau. */
-  const [approveTarget, setApproveTarget] = useState<BookingRequestItem | null>(null);
-  const [longTermTarget, setLongTermTarget] = useState<BookingRequestItem | null>(null);
-  const [rejectTarget, setRejectTarget] = useState<BookingRequestItem | null>(null);
   /**
    * Bốn overlay chi tiết, mỗi cái một mảnh state riêng.
    *
@@ -103,10 +85,6 @@ export function BookingRequestsView() {
   const [detailRequest, setDetailRequest] = useState<BookingRequestItem | null>(null);
   const [vehicleDetailId, setVehicleDetailId] = useState<string | null>(null);
   const [customerDetail, setCustomerDetail] = useState<{ id: string; name: string } | null>(null);
-  const [approveError, setApproveError] = useState<string | null>(null);
-  /** Yêu cầu vừa duyệt xong — mở hộp kết quả kèm lối sang đơn vừa tạo. */
-  const [approvedResult, setApprovedResult] = useState<BookingRequestItem | null>(null);
-  const [rejectError, setRejectError] = useState<string | null>(null);
 
   const items = data?.items ?? [];
   const meta = data?.meta;
@@ -120,78 +98,8 @@ export function BookingRequestsView() {
    * phải bị chặn — đó là hai kết cục loại trừ nhau.
    */
   function pendingActionFor(id: string): BookingRequestAction | null {
-    if (approve.isPending && approve.variables?.id === id) return 'approve';
-    if (reject.isPending && reject.variables?.id === id) return 'reject';
     if (startConversation.isPending && startConversation.variables === id) return 'message';
-    return null;
-  }
-
-  /** Chỉ hai QUYẾT ĐỊNH — "đang mở hội thoại" không khoá nút của hộp thoại chi tiết. */
-  function decisionActionFor(id: string): 'approve' | 'reject' | null {
-    const action = pendingActionFor(id);
-    return action === 'approve' || action === 'reject' ? action : null;
-  }
-
-  /**
-   * Hai lỗi có LỐI ĐI TIẾP riêng, nên chúng không được rơi vào câu chung:
-   *
-   *  - trùng lịch (409, từ constraint DB — ADR 0006): chọn khung giờ khác hoặc xe khác;
-   *  - quá hạn phản hồi: không còn gì để bấm, việc cần làm là gọi cho khách.
-   *
-   * Dùng chung cho cả duyệt và từ chối vì cả hai đều qua cùng cửa `claimPending` ở server.
-   */
-  function decisionErrorText(err: unknown): string {
-    const code = getErrorCode(err);
-    if (code === API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT) return t('approve.scheduleConflict');
-    if (code === API_ERROR_CODE.BOOKING_REQUEST_EXPIRED) return t('approve.expired');
-    return errorMessage(err);
-  }
-
-  /**
-   * Dịch vụ theo ngày: lịch đã có trên yêu cầu → hỏi xác nhận rồi duyệt. THUÊ DÀI HẠN: khách
-   * mới nêu nguyện vọng, gian hàng phải chốt ngày giờ nhận trong hộp thoại (ADR 0011).
-   */
-  function openApprove(row: BookingRequestItem) {
-    setApproveError(null);
-    if (row.serviceType === SERVICE_TYPE.LONG_TERM) setLongTermTarget(row);
-    else setApproveTarget(row);
-  }
-
-  function confirmApprove(row: BookingRequestItem, body?: ApproveBookingRequestInput) {
-    setApproveError(null);
-    approve.mutate(
-      { id: row.id, body },
-      {
-        /*
-         * Kết quả mở thành một HỘP THOẠI, không phải toast: duyệt xong là đã có một đơn thuê
-         * thật và người trực còn nguyên một chuỗi việc trên chính đơn đó. Toast báo xong rồi
-         * biến mất bỏ họ lại giữa danh sách yêu cầu, phải tự đi tìm đơn mình vừa tạo.
-         */
-        onSuccess: (approved) => {
-          setApproveTarget(null);
-          setLongTermTarget(null);
-          setApprovedResult(approved);
-        },
-        // Trùng lịch (409): GIỮ hộp thoại mở để chọn giờ khác, không mất dữ liệu đã nhập.
-        onError: (err) => setApproveError(decisionErrorText(err)),
-      },
-    );
-  }
-
-  function confirmReject(reason: string) {
-    if (!rejectTarget) return;
-    setRejectError(null);
-    reject.mutate(
-      { id: rejectTarget.id, reason },
-      {
-        onSuccess: () => {
-          message.success(t('reject.success'));
-          setRejectTarget(null);
-        },
-        // Hộp thoại ở lại: lý do vừa gõ là công sức thật, không được nuốt mất vì một lần lỗi.
-        onError: (err) => setRejectError(decisionErrorText(err)),
-      },
-    );
+    return decisions.decisionActionFor(id);
   }
 
   function openConversation(row: BookingRequestItem) {
@@ -384,11 +292,8 @@ export function BookingRequestsView() {
                   canViewCustomer={canViewCustomer}
                   canViewBooking={canViewBooking}
                   pendingAction={pendingActionFor(request.id)}
-                  onApprove={openApprove}
-                  onReject={(row) => {
-                    setRejectError(null);
-                    setRejectTarget(row);
-                  }}
+                  onApprove={decisions.openApprove}
+                  onReject={decisions.openReject}
                   onMessage={openConversation}
                   onOpenDetail={openDetail}
                   onOpenVehicle={openVehicleDetail}
@@ -434,16 +339,15 @@ export function BookingRequestsView() {
       <BookingRequestDetailDialog
         request={detailRequest}
         canApprove={canApprove}
-        pendingAction={detailRequest ? decisionActionFor(detailRequest.id) : null}
+        pendingAction={detailRequest ? decisions.decisionActionFor(detailRequest.id) : null}
         onClose={() => setDetailRequest(null)}
         onApprove={(row) => {
           setDetailRequest(null);
-          openApprove(row);
+          decisions.openApprove(row);
         }}
         onReject={(row) => {
           setDetailRequest(null);
-          setRejectError(null);
-          setRejectTarget(row);
+          decisions.openReject(row);
         }}
         onOpenVehicle={openVehicleDetail}
         onOpenCustomer={openCustomerDetail}
@@ -468,47 +372,7 @@ export function BookingRequestsView() {
         />
       ) : null}
 
-      {/* Dựng có điều kiện: mỗi lần duyệt là một instance mới, không giữ lại đơn của lần trước. */}
-      {approvedResult ? (
-        <ApproveSuccessDialog
-          request={approvedResult}
-          open
-          onClose={() => setApprovedResult(null)}
-        />
-      ) : null}
-
-      <ApproveBookingRequestDialog
-        request={approveTarget}
-        submitting={approve.isPending}
-        error={approveError}
-        onCancel={() => {
-          setApproveTarget(null);
-          setApproveError(null);
-        }}
-        onConfirm={() => approveTarget && confirmApprove(approveTarget)}
-      />
-
-      <ApproveLongTermDialog
-        request={longTermTarget}
-        submitting={approve.isPending}
-        error={approveError}
-        onCancel={() => {
-          setLongTermTarget(null);
-          setApproveError(null);
-        }}
-        onConfirm={(body) => longTermTarget && confirmApprove(longTermTarget, body)}
-      />
-
-      <RejectBookingRequestDialog
-        request={rejectTarget}
-        submitting={reject.isPending}
-        error={rejectError}
-        onCancel={() => {
-          setRejectTarget(null);
-          setRejectError(null);
-        }}
-        onConfirm={confirmReject}
-      />
+      {decisions.dialogs}
     </div>
   );
 }

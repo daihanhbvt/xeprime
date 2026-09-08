@@ -4,6 +4,7 @@ import { HoldsModule } from '../holds/holds.module';
 import { VehiclesModule } from '../vehicles/vehicles.module';
 import { CustomerTripsController } from './customer-trips.controller';
 import { CustomerTripsService } from './customer-trips.service';
+import { PricingModule } from '../pricing/pricing.module';
 
 /**
  * Màn `Chuyến của tôi` phía khách (Wave 11).
@@ -18,7 +19,7 @@ import { CustomerTripsService } from './customer-trips.service';
  * viết lại bốn điều kiện đó — và quên một trong bốn.
  */
 @Module({
-  imports: [BookingsModule, HoldsModule, VehiclesModule],
+  imports: [PricingModule, BookingsModule, HoldsModule, VehiclesModule],
   controllers: [CustomerTripsController],
   providers: [CustomerTripsService],
 })

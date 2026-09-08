@@ -25,7 +25,16 @@
     "documents": "Giấy tờ & Xác minh",
     "notifications": "Thông báo",
     "support": "Hỗ trợ",
-    "settings": "Cài đặt"
+    "settings": "Cài đặt",
+    "groupAccount": "Tài khoản",
+    "vehicles": "Danh sách xe",
+    "calendar": "Lịch xe",
+    "hostGuide": "Cẩm nang cho thuê xe",
+    "tax": "Thông tin khai thuế",
+    "contractsDocuments": "Hợp đồng & Chứng từ",
+    "dataProtection": "Chính sách bảo vệ dữ liệu",
+    "changePassword": "Đổi mật khẩu",
+    "deleteAccount": "Yêu cầu xoá tài khoản"
   },
   "manage": {
     "home": "Trang chủ",

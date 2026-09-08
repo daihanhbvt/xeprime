@@ -25,6 +25,11 @@ interface VehicleCardGridProps {
   /** `shape` để nhãn hành động khớp bề mặt: thẻ desktop nhãn đầy đủ, hàng mobile nhãn rút gọn. */
   rowActions: (row: VehicleListItem, shape: 'card' | 'row') => RowAction[];
   onPageChange: (page: number, pageSize: number) => void;
+  /**
+   * Đích của tên xe. Mặc định là Hồ sơ 360 ở `/manage`; khu tài khoản của chủ xe
+   * (`/account/vehicles`) truyền đường của nó để CÙNG một lưới dẫn về đúng vỏ đang đứng.
+   */
+  detailHref?: (id: string) => string;
 }
 
 /** Một hàng lưới đầy của bố cục desktop 5 cột (bản chỉnh 11/08/2026). */
@@ -50,6 +55,7 @@ export function VehicleCardGrid({
   emptyAction,
   rowActions,
   onPageChange,
+  detailHref,
 }: VehicleCardGridProps) {
   const t = useTranslations('Vehicles.list.grid');
   const tCommon = useTranslations('Common.actions');
@@ -158,6 +164,7 @@ export function VehicleCardGrid({
                 alerts={alerts.byId.get(item.id)}
                 {...cardAlertState}
                 actions={rowActions(item, 'row')}
+                detailHref={detailHref}
               />
             </li>
           ))}
@@ -177,6 +184,7 @@ export function VehicleCardGrid({
                 alerts={alerts.byId.get(item.id)}
                 {...cardAlertState}
                 actions={rowActions(item, 'card')}
+                detailHref={detailHref}
               />
             </li>
           ))}

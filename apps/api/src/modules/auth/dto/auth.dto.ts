@@ -50,6 +50,26 @@ export class LoginDto {
 /** Đặt mật khẩu cho tài khoản CHƯA có mật khẩu (vd tạo bằng SĐT/OTP). Cần đăng nhập. */
 export class SetPasswordDto extends PasswordField {}
 
+/**
+ * Đổi mật khẩu khi ĐÃ đăng nhập — cần mật khẩu hiện tại làm bằng chứng.
+ *
+ * Không kế thừa `PasswordField` vì trường mới tên `newPassword`: hai ô cùng tên `password` trên
+ * một form là chỗ để autofill của trình duyệt điền nhầm ô cũ vào ô mới.
+ */
+export class ChangePasswordDto {
+  @ApiProperty({ description: 'Mật khẩu đang dùng' })
+  @IsString()
+  @MinLength(1, { message: 'Vui lòng nhập mật khẩu hiện tại' })
+  currentPassword!: string;
+
+  @ApiProperty({ minLength: PASSWORD_MIN, example: 'matkhaumoi456' })
+  @IsString()
+  @MinLength(PASSWORD_MIN, { message: `Mật khẩu tối thiểu ${PASSWORD_MIN} ký tự` })
+  @Matches(/[A-Za-z]/, { message: 'Mật khẩu cần có chữ' })
+  @Matches(/d/, { message: 'Mật khẩu cần có số' })
+  newPassword!: string;
+}
+
 export class ForgotPasswordDto {
   @ApiProperty({ example: 'ban@congty.vn' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))

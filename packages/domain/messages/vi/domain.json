@@ -637,6 +637,7 @@
     "incident": "Sự cố trong chuyến",
     "payment": "Thanh toán / hoàn tiền",
     "account": "Tài khoản",
+    "account_deletion": "Yêu cầu xoá tài khoản",
     "other": "Khác"
   },
   "supportCaseParty": {

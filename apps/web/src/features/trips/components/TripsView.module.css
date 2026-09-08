@@ -66,3 +66,14 @@
     font-size: var(--xp-font-size-h2);
   }
 }
+
+/* Bộ lọc chặng nằm ở khe phải của hàng tab — cùng nhịp với thanh lọc của hộp thư gian hàng. */
+.stageFilter {
+  min-width: 200px;
+}
+
+@media (max-width: 640px) {
+  .stageFilter {
+    min-width: 148px;
+  }
+}

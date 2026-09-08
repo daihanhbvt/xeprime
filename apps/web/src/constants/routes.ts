@@ -35,6 +35,27 @@ export const ROUTES = {
    */
   ACCOUNT: {
     ROOT: '/account',
+    /*
+     * Khu CHỦ XE trong /account (08/09/2026): bản rút gọn cho người có ít xe — cùng feature, cùng
+     * API với `/manage`, chỉ khác vỏ điều hướng (ADR 0027/0028: Owner Lite dùng chung source).
+     * Chỉ hiện với `tenant.roleKey === shop_owner`; nhân viên gian hàng dùng `/manage`.
+     */
+    /** Danh sách xe của chủ xe — cùng `features/vehicles` với `/manage/vehicles`. */
+    VEHICLES: '/account/vehicles',
+    /** Lịch xe — import thẳng `CalendarScheduler`, không có lịch thứ hai. */
+    CALENDAR: '/account/calendar',
+    /** Cẩm nang cho thuê xe — tài liệu PDF ở `public/owner-resources/` (xem `owner-resources.ts`). */
+    HOST_GUIDE: '/account/host-guide',
+    /** Thông tin khai thuế — bản compact của hồ sơ người bán (`/seller-profile`). */
+    TAX: '/account/tax',
+    /** Hợp đồng & chứng từ MẪU (thư viện PDF) — không phải hợp đồng theo đơn thuê. */
+    CONTRACTS_DOCUMENTS: '/account/contracts-documents',
+    /** Chính sách bảo vệ dữ liệu — dẫn tới văn bản thật ở `/legal/privacy`. */
+    DATA_PROTECTION: '/account/data-protection',
+    /** Đổi mật khẩu (có mật khẩu hiện tại) hoặc đặt lần đầu (tài khoản OTP/social). */
+    CHANGE_PASSWORD: '/account/change-password',
+    /** YÊU CẦU xoá tài khoản — mở support case `account_deletion`, nền tảng xử lý tay. */
+    DELETE_ACCOUNT: '/account/delete-account',
     /** Tiền của các chuyến đã thuê — đọc từ `payments`, không phải ví. */
     PAYMENTS: '/account/payments',
     FAVORITES: '/account/favorites',
@@ -110,6 +131,14 @@ export const ROUTES = {
 } as const;
 
 export type ManageRoute = (typeof ROUTES.MANAGE)[keyof typeof ROUTES.MANAGE];
+
+/**
+ * Chi tiết một xe nhìn từ KHU TÀI KHOẢN của chủ xe — cùng `VehicleDetailContent` với
+ * `/manage/vehicles/[id]`, chỉ khác vỏ và đường quay lại.
+ */
+export const accountVehiclePath = {
+  detail: (id: string): string => `${ROUTES.ACCOUNT.VEHICLES}/${id}`,
+};
 
 /** Đường dẫn động của xe — hàm để không rải template `/manage/vehicles/${id}` khắp component. */
 export const vehiclePath = {

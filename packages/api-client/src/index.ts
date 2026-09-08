@@ -99,6 +99,7 @@ export type {
   RegisterInput,
   ResetPasswordInput,
   SetPasswordInput,
+  ChangePasswordInput,
 } from './features/auth/types';
 
 // Booking / Rental (BKG-01 → 16, FIN-05/06)

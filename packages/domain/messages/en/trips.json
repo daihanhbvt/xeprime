@@ -11,7 +11,12 @@
     "viewCurrent": "View current trips",
     "errorTitle": "Couldn't load your trips",
     "refreshing": "Refreshing…",
-    "retry": "Try again"
+    "retry": "Try again",
+    "stageFilterLabel": "Filter by trip status",
+    "stageAll": "All statuses",
+    "stageEmptyTitle": "No trips with this status",
+    "stageEmptyBody": "The filter applies to the page you are viewing. Clear it or try another page.",
+    "stageClear": "Clear status filter"
   },
   "auth": {
     "expiredTitle": "Your session has expired",
@@ -24,7 +29,14 @@
     "total": "Total",
     "awaitingQuote": "Awaiting quote",
     "viewDetail": "View details",
-    "viewDetailOf": "View {name} details"
+    "viewDetailOf": "View {name} details",
+    "roleHost": "Hosting",
+    "roleRenter": "Booked",
+    "renter": "Renter",
+    "renterUnknown": "Unknown",
+    "approve": "Approve",
+    "reject": "Decline",
+    "estimated": "Estimate · final on approval"
   },
   "pickup": {
     "delivery": "Delivered to you",
@@ -115,7 +127,8 @@
     "contactShop": "Message the host",
     "call": "Call",
     "review": "Review",
-    "cancel": "Cancel trip"
+    "cancel": "Cancel trip",
+    "contactLocked": "Contact opens once the host approves your request. Anything arranged before that is outside XePrime support."
   },
   "cancel": {
     "title": "Cancel this trip?",
@@ -195,5 +208,53 @@
     "refundPaid": "XePrime refunded {amount} to the account you provided.",
     "refundPending": "Waiting for XePrime to transfer {amount} back to you.",
     "refundNeedsAccount": "{amount} is waiting to be refunded — contact support with your bank account."
+  },
+  "sides": {
+    "ariaLabel": "Choose trip side",
+    "owner": "Vehicles I rent out",
+    "renter": "Trips I booked"
+  },
+  "owner": {
+    "heading": "Trips I host",
+    "sub": "Rental requests waiting for you, and bookings on your vehicles.",
+    "requests": {
+      "title": "Requests awaiting approval",
+      "sub": "Guests are waiting for your answer. Approving holds the vehicle for that period.",
+      "listLabel": "Rental requests awaiting approval",
+      "emptyTitle": "Nothing waiting for you",
+      "emptyBody": "New rental requests show up here with their response deadline.",
+      "errorTitle": "Couldn't load rental requests"
+    },
+    "bookings": {
+      "title": "Bookings",
+      "listLabel": "Bookings on my vehicles",
+      "statusLabel": "Filter by booking status",
+      "statusAll": "All statuses",
+      "emptyTitle": "No bookings yet",
+      "emptyBody": "A booking is created as soon as you approve a rental request.",
+      "noResultsTitle": "No bookings with this status",
+      "noResultsBody": "Try another status or clear the filter.",
+      "errorTitle": "Couldn't load bookings"
+    },
+    "card": {
+      "customer": "Renter",
+      "schedule": "Rental period",
+      "amountDue": "Amount due",
+      "openDetail": "View details & actions"
+    }
+  },
+  "host": {
+    "decisionTitle": "Rental request",
+    "decisionHint": "The guest is waiting for you. Approving holds the vehicle for that period.",
+    "approve": "Approve & hold vehicle",
+    "reject": "Decline"
+  },
+  "estimate": {
+    "title": "Price details",
+    "badge": "Estimate",
+    "rentalTotal": "Rental",
+    "ownerNet": "You receive",
+    "noteRenter": "Priced with the policy in force. The final amount is confirmed when the host approves.",
+    "noteHost": "Trip fees sit on the guest side and are not deducted from your payout. The final amount is confirmed when you approve."
   }
 }

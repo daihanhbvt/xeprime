@@ -9,7 +9,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * Khu khách hàng — danh sách chuyến. Dữ liệu cá nhân nên không cần SEO; client island.
+ * Khu khách hàng — "Chuyến của tôi", MỘT danh sách cho cả hai phía: chuyến tôi cho thuê và
+ * chuyến tôi đi thuê. Server trộn hai phía trong cùng một truy vấn (xem `CustomerTripsService`),
+ * nên trang chỉ có một view. Dữ liệu cá nhân nên không cần SEO; client island.
  *
  * `Suspense` là bắt buộc: `TripsView` đọc `useSearchParams` (tab + trang sống ở URL, ADR 0004),
  * và Next bắt mọi cây có nó phải nằm trong một ranh giới Suspense.

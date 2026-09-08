@@ -48,6 +48,18 @@ export const API_ERROR_CODE = {
   INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
   INVALID_RESET_TOKEN: 'INVALID_RESET_TOKEN',
   ACCOUNT_LOCKED: 'ACCOUNT_LOCKED',
+  /*
+   * Đổi mật khẩu khi ĐÃ đăng nhập (`POST /auth/password/change`).
+   *
+   * Cố ý KHÔNG dùng lại `INVALID_CREDENTIALS`: mã đó đi kèm 401 và web coi 401 là "phiên hỏng"
+   * ở nhiều chỗ — người gõ sai mật khẩu cũ không được bị đá ra khỏi tài khoản.
+   */
+  /** Mật khẩu hiện tại không đúng. */
+  CURRENT_PASSWORD_INCORRECT: 'CURRENT_PASSWORD_INCORRECT',
+  /** Tài khoản chưa có mật khẩu — dùng `POST /auth/password/set` (đặt lần đầu) thay vì đổi. */
+  PASSWORD_NOT_SET: 'PASSWORD_NOT_SET',
+  /** Mật khẩu mới trùng mật khẩu hiện tại. */
+  PASSWORD_UNCHANGED: 'PASSWORD_UNCHANGED',
 
   /*
    * Đăng nhập mạng xã hội — ADR 0019.
@@ -236,6 +248,11 @@ export const API_ERROR_CODE = {
   // Support case (R3)
   /** Case đã đóng — mở case mới thay vì viết tiếp. */
   SUPPORT_CASE_CLOSED: 'SUPPORT_CASE_CLOSED',
+  /**
+   * Loại case này chỉ do CHÍNH người dùng mở cho tài khoản của mình (`account_deletion`) —
+   * gian hàng/nền tảng không mở hộ, và không gắn đơn thuê.
+   */
+  SUPPORT_CASE_CATEGORY_NOT_ALLOWED: 'SUPPORT_CASE_CATEGORY_NOT_ALLOWED',
 
   // Ví (ADR 0023)
   /** Số dư khả dụng không đủ cho yêu cầu rút (đã trừ phần đang bị khoá bởi yêu cầu chờ duyệt). */
