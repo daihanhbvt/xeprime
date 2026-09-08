@@ -24,6 +24,21 @@ export const DOCUMENT_UPLOAD_MAX_BYTES = IMAGE_UPLOAD_MAX_BYTES;
 export const SOURCE_CONTRACT_MAX_FILES = 10;
 
 /**
+ * Đính kèm chat (ADR 0009 §5): ảnh hiện inline, tài liệu tải về.
+ *
+ * Khai ở đây chứ không suy lại ở mỗi phía. Trước đó DTO của backend dựng bộ này từ
+ * `IMAGE_UPLOAD_*` còn web dựng từ `DOCUMENT_UPLOAD_*`; hai hằng đang bằng nhau nên không ai
+ * thấy gì, nhưng nới một bên là client cho gửi thứ server sẽ từ chối — và người dùng chỉ biết
+ * sau khi đã chờ hết một vòng tải lên.
+ */
+export const CHAT_ATTACHMENT_MIME_TYPES = DOCUMENT_UPLOAD_MIME_TYPES;
+
+export const CHAT_ATTACHMENT_MAX_BYTES = DOCUMENT_UPLOAD_MAX_BYTES;
+
+/** Số tệp tối đa một tin nhắn mang được — DTO `@ArrayMaxSize` và ô soạn tin đọc chung số này. */
+export const CHAT_ATTACHMENT_MAX_COUNT = 6;
+
+/**
  * Tài liệu riêng tư gắn với xe (Wave 4.1) — hợp đồng nguồn xe; Wave 5 tái dùng cho giấy tờ.
  * Nhị phân ở bucket R2 riêng tư, metadata do server sở hữu (`vehicle_private_files`).
  */

@@ -341,10 +341,21 @@ export const queryKeys = {
     handoverPhotos: (id: string, slots: readonly string[]) =>
       ['trips', 'detail', id, 'handover-photos', slots] as const,
   },
+  /**
+   * `side` nằm TRONG khoá, không phải ngoài lề: hộp thư khách và inbox gian hàng là hai tập dữ
+   * liệu khác nhau, và một khoá chung nghĩa là mở `/manage/chat` sẽ ghi đè cache của `/chat` —
+   * người dùng quay lại thấy danh sách của vai kia trong lúc request mới đang bay.
+   */
   chat: {
     all: ['chat'] as const,
-    conversations: () => ['chat', 'conversations'] as const,
-    unreadCount: () => ['chat', 'unread-count'] as const,
+    conversations: (side: string, params?: QueryParams) =>
+      params
+        ? (['chat', 'conversations', side, params] as const)
+        : (['chat', 'conversations', side] as const),
+    conversation: (side: string, id: string) => ['chat', 'conversation', side, id] as const,
+    unreadCount: (side: string) => ['chat', 'unread-count', side] as const,
+    /** Chưa đọc CẢ HAI vai — badge biểu tượng chat, không thuộc bề mặt nào. */
+    unreadSummary: () => ['chat', 'unread-summary'] as const,
   },
   /** Hồ sơ người bán do CHÍNH gian hàng khai (R3 — ADR 0028 release gate 1). */
   sellerProfile: {

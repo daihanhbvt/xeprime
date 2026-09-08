@@ -20,7 +20,7 @@ import { Topbar } from './Topbar';
 const push = vi.hoisted(() => vi.fn());
 const logout = vi.hoisted(() => vi.fn(async () => undefined));
 const nav = vi.hoisted(() => ({ pathname: '/manage/vehicles' }));
-const chat = vi.hoisted(() => ({ data: undefined as { count: number } | undefined }));
+const chat = vi.hoisted(() => ({ count: 0, href: '/manage/chat' }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push, replace: vi.fn() }),
@@ -31,8 +31,8 @@ vi.mock('@/features/auth/hooks/use-portal-logout', () => ({
   usePortalLogout: () => logout,
 }));
 
-vi.mock('@/features/chat/hooks/use-chat-unread-count', () => ({
-  useChatUnreadCount: () => chat,
+vi.mock('@/features/chat/hooks/use-chat-badge', () => ({
+  useChatBadge: () => chat,
 }));
 
 vi.mock('@/features/notifications/components/NotificationBell', () => ({
@@ -113,7 +113,7 @@ beforeEach(() => {
   push.mockReset();
   logout.mockReset();
   nav.pathname = '/manage/vehicles';
-  chat.data = undefined;
+  chat.count = 0;
   perms.granted = new Set<string>(['tenant.view', 'vehicles.view']);
   branchScope.value = {
     branchId: null,
@@ -255,7 +255,7 @@ describe('Topbar — hành động người dùng', () => {
   });
 
   it('huy hiệu chat hiện số tin chưa đọc', () => {
-    chat.data = { count: 7 };
+    chat.count = 7;
     renderTopbar();
 
     expect(screen.getByText('7')).toBeTruthy();

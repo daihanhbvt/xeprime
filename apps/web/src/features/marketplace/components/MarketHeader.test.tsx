@@ -18,8 +18,8 @@ const state = vi.hoisted(() => ({
 
 vi.mock('@/hooks/use-current-user', () => ({ useCurrentUser: () => ({ data: state.user }) }));
 
-vi.mock('@/features/chat/hooks/use-chat-unread-count', () => ({
-  useChatUnreadCount: () => ({ data: { count: state.unread } }),
+vi.mock('@/features/chat/hooks/use-chat-badge', () => ({
+  useChatBadge: () => ({ count: state.unread, href: '/chat' }),
 }));
 
 vi.mock('@/features/auth/components/AuthModalProvider', () => ({

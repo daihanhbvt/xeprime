@@ -16,6 +16,7 @@ import { cx } from '@/lib/cx';
 import { ROUTES } from '@/constants/routes';
 import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
 import { AUTH_MODE } from '@/features/auth/post-auth-destination';
+import { CHAT_SIDE } from '@xeprime/types';
 import { useChatUnreadCount } from '@/features/chat/hooks/use-chat-unread-count';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import styles from './MobileTabBar.module.css';
@@ -43,7 +44,7 @@ export function MobileTabBar() {
   const t = useTranslations('Navigation.public');
   const pathname = usePathname();
   const { data: user } = useCurrentUser();
-  const { data: chatUnread } = useChatUnreadCount(!!user);
+  const { data: chatUnread } = useChatUnreadCount(CHAT_SIDE.CUSTOMER, !!user);
   const { open } = useAuthModal();
   const nextFromHere = useNextFromCurrentPath();
 

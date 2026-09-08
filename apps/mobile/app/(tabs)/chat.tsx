@@ -1,20 +1,25 @@
-import { useTranslations } from 'use-intl';
-import { Screen } from '@/components/layout/Screen';
-import { ScreenMessage } from '@/components/state/ScreenMessage';
+import { ListRowSkeleton } from '@/components/ui/Skeleton';
 import { RequireSession } from '@/features/auth/RequireSession';
+import { ChatListScreen } from '@/features/chat/ChatListScreen';
 
+/**
+ * Tab "Tin nhắn". Cổng phiên ở đây chứ không trong màn: một deep link `xeprime://chat` hay một
+ * thông báo đẩy mở thẳng màn này, và ẩn tab không phải chặn nó.
+ */
 export default function ChatRoute() {
-  const t = useTranslations('Chat');
-
   return (
-    <RequireSession>
-      <Screen edges={['left', 'right']} scroll={false}>
-        <ScreenMessage
-          icon="chatbubble-ellipses-outline"
-          title={t('empty')}
-          description={t('pickConversation')}
-        />
-      </Screen>
+    <RequireSession fallback={<ChatListFallback />}>
+      <ChatListScreen />
     </RequireSession>
+  );
+}
+
+function ChatListFallback() {
+  return (
+    <>
+      {[0, 1, 2, 3, 4, 5].map((row) => (
+        <ListRowSkeleton key={row} />
+      ))}
+    </>
   );
 }

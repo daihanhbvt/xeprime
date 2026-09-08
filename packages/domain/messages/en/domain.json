@@ -101,12 +101,8 @@
     "other": "Other document"
   },
   "customerTripFilter": {
-    "all": "All",
-    "pending": "Awaiting confirmation",
-    "upcoming": "Upcoming",
-    "active": "On rent",
-    "completed": "Completed",
-    "cancelled": "Cancelled"
+    "current": "Current trips",
+    "history": "Trip history"
   },
   "customerTripStage": {
     "pending_approval": "Awaiting confirmation",

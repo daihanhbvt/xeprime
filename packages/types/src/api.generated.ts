@@ -1522,7 +1522,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Danh sách hội thoại của tôi (phân trang)
+         * Hộp thư của một bề mặt (khách hoặc gian hàng), phân trang
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          */
         get: operations["ConversationsController_list"];
@@ -1538,6 +1538,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/conversations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Một hội thoại theo id — mở deep link không nằm ở trang đầu
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         */
+        get: operations["ConversationsController_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/conversations/{id}/messages": {
         parameters: {
             query?: never;
@@ -1546,13 +1566,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lịch sử tin nhắn (cursor, mới nhất trước)
+         * Lịch sử tin nhắn (cursor keyset, mới nhất trước)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          */
         get: operations["ConversationsController_messages"];
         put?: never;
         /**
-         * Gửi một tin nhắn
+         * Gửi một tin nhắn (idempotent theo clientMessageId)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          */
         post: operations["ConversationsController_send"];
@@ -1590,10 +1610,30 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Tổng tin chưa đọc mọi hội thoại (cho badge icon chat)
+         * Tổng tin chưa đọc của một bề mặt (cho badge icon chat)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          */
         get: operations["ConversationsController_unreadCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/conversations/unread-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Chưa đọc của cả hai vai — cho badge biểu tượng chat ở mọi trang
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         */
+        get: operations["ConversationsController_unreadSummary"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7252,6 +7292,23 @@ export interface components {
              */
             count: number;
         };
+        ChatUnreadSummaryDto: {
+            /**
+             * @description Chưa đọc ở hộp thư KHÁCH
+             * @example 2
+             */
+            customer: number;
+            /**
+             * @description Chưa đọc ở inbox GIAN HÀNG (0 nếu không thuộc shop nào)
+             * @example 5
+             */
+            shop: number;
+            /**
+             * @description Tổng hai vai — con số cho badge biểu tượng chat
+             * @example 7
+             */
+            total: number;
+        };
         CheckAvailabilityDto: {
             /** @description ID xe (ULID) */
             vehicleId: string;
@@ -7403,12 +7460,20 @@ export interface components {
         };
         ConversationSummaryDto: {
             id: string;
+            /** @description Xe được nhắc gần nhất */
             vehicleId?: string | null;
             vehicleName?: string | null;
+            /** @description Ảnh đại diện xe (R2) */
+            vehicleImageUrl?: string | null;
             /** @description Tên phía bên kia (khách thấy tên shop, shop thấy tên khách) */
             partyName: string;
-            /** @description side của người xem: customer | shop */
-            side: string;
+            /** @description Avatar phía bên kia */
+            partyAvatarUrl?: string | null;
+            /**
+             * @description side của người xem: customer | shop
+             * @enum {string}
+             */
+            side: "customer" | "shop";
             lastMessageText?: string | null;
             /** @description ISO-8601 UTC */
             lastMessageAt?: string | null;
@@ -8067,12 +8132,10 @@ export interface components {
             recordedAt: string;
         };
         CustomerTripCountsDto: {
-            all: number;
-            pending: number;
-            upcoming: number;
-            active: number;
-            completed: number;
-            cancelled: number;
+            /** @description Chuyến chưa khép: chờ duyệt · chờ giữ chỗ · sắp tới · đang thuê */
+            current: number;
+            /** @description Chuyến đã khép: hoàn thành · huỷ · từ chối · không nhận xe */
+            history: number;
         };
         CustomerTripDetailDto: {
             id: string;
@@ -8976,9 +9039,14 @@ export interface components {
             id: string;
             conversationId: string;
             senderUserId?: string | null;
+            senderName?: string | null;
             senderType: string;
             messageType: string;
             text?: string | null;
+            /** @description Khoá idempotency client gửi kèm — client dùng để khớp tin lạc quan với tin thật */
+            clientMessageId?: string | null;
+            /** @description Xe tin nhắn này nói về — null khi câu đó không gắn ngữ cảnh nào */
+            vehicle?: components["schemas"]["MessageVehicleDto"] | null;
             attachments: components["schemas"]["MessageAttachmentDto"][];
             /** @description ISO-8601 UTC */
             sentAt: string;
@@ -8988,6 +9056,13 @@ export interface components {
             data: components["schemas"]["MessageDto"][];
             /** @description Cursor cho lần tải cũ hơn */
             nextBefore?: string | null;
+            /** @description Nửa thứ hai của cursor */
+            nextBeforeId?: string | null;
+        };
+        MessageVehicleDto: {
+            id: string;
+            name: string;
+            imageUrl?: string | null;
         };
         MissingOdometerItemDto: {
             handoverId: string;
@@ -9778,6 +9853,8 @@ export interface components {
             fileName: string;
             /** @description MIME type */
             contentType: string;
+            /** @description Kích thước file (byte) */
+            fileSize: number;
         };
         PresignCustomerDocumentDto: {
             /** @enum {string} */
@@ -10619,6 +10696,10 @@ export interface components {
             text?: string | null;
             /** @enum {string} */
             messageType?: "text" | "image" | "file" | "system";
+            /** @description ULID client sinh; gửi lại cùng khoá là idempotent */
+            clientMessageId?: string;
+            /** @description ID xe làm ngữ cảnh cho tin nhắn này */
+            vehicleId?: string;
             attachments?: components["schemas"]["AttachmentInputDto"][];
         };
         SendOtpDto: {
@@ -22261,9 +22342,15 @@ export interface operations {
     };
     ConversationsController_list: {
         parameters: {
-            query?: {
+            query: {
+                /** @description customer = hộp thư khách · shop = inbox gian hàng */
+                side: "customer" | "shop";
                 page?: number;
                 limit?: number;
+                /** @description Tìm theo tên phía bên kia hoặc tên xe */
+                q?: string;
+                /** @description Chỉ hội thoại còn tin chưa đọc */
+                unreadOnly?: boolean;
             };
             header?: never;
             path?: never;
@@ -22497,11 +22584,145 @@ export interface operations {
             };
         };
     };
+    ConversationsController_detail: {
+        parameters: {
+            query: {
+                /** @description customer = hộp thư khách · shop = inbox gian hàng */
+                side: "customer" | "shop";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ConversationSummaryDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     ConversationsController_messages: {
         parameters: {
             query?: {
                 /** @description Cursor: lấy tin CŨ hơn mốc ISO này (phân trang lịch sử) */
                 before?: string;
+                /** @description Nửa thứ hai của cursor: id của tin cũ nhất trang trước */
+                beforeId?: string;
                 limit?: number;
             };
             header?: never;
@@ -22934,7 +23155,10 @@ export interface operations {
     };
     ConversationsController_unreadCount: {
         parameters: {
-            query?: never;
+            query: {
+                /** @description customer = hộp thư khách · shop = inbox gian hàng */
+                side: "customer" | "shop";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -22949,6 +23173,112 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["ChatUnreadCountDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    ConversationsController_unreadSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ChatUnreadSummaryDto"];
                     };
                 };
             };
@@ -48603,7 +48933,7 @@ export interface operations {
     CustomerTripsController_list: {
         parameters: {
             query?: {
-                filter?: "all" | "pending" | "upcoming" | "active" | "completed" | "cancelled";
+                filter?: "current" | "history";
                 page?: number;
                 limit?: number;
             };

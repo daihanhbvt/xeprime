@@ -2,7 +2,7 @@ import { Suspense, type ReactNode } from 'react';
 import { AuthModal } from '@/features/auth/components/AuthModal';
 import { AuthModalProvider, AuthUrlSync } from '@/features/auth/components/AuthModalProvider';
 import { MarketHeader } from '@/features/marketplace/components/MarketHeader';
-import { MarketFooter } from '@/features/marketplace/components/MarketFooter';
+import { MarketFooterSlot } from '@/features/marketplace/components/MarketFooterSlot';
 import { MobileTabBar } from '@/features/marketplace/components/MobileTabBar';
 import styles from './public-layout.module.css';
 
@@ -27,7 +27,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
       <div className={styles.wrapper}>
         <MarketHeader />
         <main className={styles.main}>{children}</main>
-        <MarketFooter />
+        <MarketFooterSlot />
         <MobileTabBar />
       </div>
       <AuthModal />

@@ -46,6 +46,11 @@ export const ROUTES = {
   /** Trò chuyện với gian hàng. */
   chat: {
     list: (): Href => '/chat',
+    /** Một cuộc trò chuyện. Nhận id nên deep link và thông báo đẩy mở thẳng được. */
+    thread: (conversationId: string): Href => ({
+      pathname: '/chat/[id]',
+      params: { id: conversationId },
+    }),
   },
 
   /** Tài khoản, đăng nhập, hồ sơ. */

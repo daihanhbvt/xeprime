@@ -32,14 +32,7 @@ export interface TripsResult {
   counts: CustomerTripCounts;
 }
 
-const EMPTY_COUNTS: CustomerTripCounts = {
-  all: 0,
-  pending: 0,
-  upcoming: 0,
-  active: 0,
-  completed: 0,
-  cancelled: 0,
-};
+const EMPTY_COUNTS: CustomerTripCounts = { current: 0, history: 0 };
 
 export function tripsToParams(filter: string, page: number): QueryParams {
   return { filter, page, limit: TRIPS_DEFAULT_LIMIT };

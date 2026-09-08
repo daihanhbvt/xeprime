@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  CUSTOMER_TRIP_FILTER,
+  CUSTOMER_TRIP_FILTER_DEFAULT,
   CUSTOMER_TRIP_FILTER_VALUES,
   CUSTOMER_TRIP_STAGE_VALUES,
   DEPOSIT_STATUS_VALUES,
@@ -18,7 +18,10 @@ const MAX_LIMIT = 50;
 export { DEFAULT_LIMIT as CUSTOMER_TRIP_DEFAULT_LIMIT, MAX_LIMIT as CUSTOMER_TRIP_MAX_LIMIT };
 
 export class CustomerTripListQueryDto {
-  @ApiPropertyOptional({ enum: CUSTOMER_TRIP_FILTER_VALUES, default: CUSTOMER_TRIP_FILTER.ALL })
+  @ApiPropertyOptional({
+    enum: CUSTOMER_TRIP_FILTER_VALUES,
+    default: CUSTOMER_TRIP_FILTER_DEFAULT,
+  })
   @IsOptional()
   @IsIn(CUSTOMER_TRIP_FILTER_VALUES)
   filter?: string;
@@ -39,14 +42,18 @@ export class CustomerTripListQueryDto {
   limit?: number;
 }
 
-/** Số chuyến theo từng tab — server đếm để tab không nói một số còn danh sách trả số khác. */
+/**
+ * Số chuyến theo từng tab — server đếm để tab không nói một số còn danh sách trả số khác.
+ *
+ * Đúng hai khoá vì màn khách có đúng hai tab, và hai tab đó phủ kín mọi chặng: `current +
+ * history` chính là tổng số chuyến của khách — không cần một khoá `all` thứ ba nói lại.
+ */
 export class CustomerTripCountsDto {
-  @ApiProperty() all!: number;
-  @ApiProperty() pending!: number;
-  @ApiProperty() upcoming!: number;
-  @ApiProperty() active!: number;
-  @ApiProperty() completed!: number;
-  @ApiProperty() cancelled!: number;
+  @ApiProperty({ description: 'Chuyến chưa khép: chờ duyệt · chờ giữ chỗ · sắp tới · đang thuê' })
+  current!: number;
+
+  @ApiProperty({ description: 'Chuyến đã khép: hoàn thành · huỷ · từ chối · không nhận xe' })
+  history!: number;
 }
 
 /** Xe của chuyến — chỉ phần khách được thấy. Không biển số trước khi chủ xe nhận chuyến. */

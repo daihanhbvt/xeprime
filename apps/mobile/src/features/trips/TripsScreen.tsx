@@ -6,6 +6,7 @@ import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   CUSTOMER_TRIP_FILTER,
+  CUSTOMER_TRIP_FILTER_DEFAULT,
   CUSTOMER_TRIP_FILTER_VALUES,
   type CustomerTripFilter,
 } from '@xeprime/types';
@@ -48,7 +49,7 @@ export function TripsScreen() {
   const domainLabel = useDomainLabel();
   const router = useRouter();
 
-  const [filter, setFilter] = useState<CustomerTripFilter>(CUSTOMER_TRIP_FILTER.ALL);
+  const [filter, setFilter] = useState<CustomerTripFilter>(CUSTOMER_TRIP_FILTER_DEFAULT);
   const query = useTripsInfinite(filter);
 
   const items = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data]);
@@ -127,18 +128,25 @@ export function TripsScreen() {
         ) : items.length === 0 ? (
           <ScreenMessage
             icon="calendar-outline"
-            title={t('list.emptyTitle')}
-            description={
-              filter === CUSTOMER_TRIP_FILTER.ALL
-                ? t('list.emptyAllBody')
-                : t('list.emptyFilteredBody')
+            title={
+              filter === CUSTOMER_TRIP_FILTER.HISTORY
+                ? t('list.emptyHistoryTitle')
+                : t('list.emptyCurrentTitle')
             }
-            {...(filter === CUSTOMER_TRIP_FILTER.ALL
+            description={
+              filter === CUSTOMER_TRIP_FILTER.HISTORY
+                ? t('list.emptyHistoryBody')
+                : t('list.emptyCurrentBody')
+            }
+            {...(filter === CUSTOMER_TRIP_FILTER.HISTORY
               ? {
+                  actionLabel: t('list.viewCurrent'),
+                  onAction: () => setFilter(CUSTOMER_TRIP_FILTER.CURRENT),
+                }
+              : {
                   actionLabel: t('list.findVehicle'),
                   onAction: () => router.replace(ROUTES.explore.home()),
-                }
-              : {})}
+                })}
           />
         ) : (
           <FlatList
