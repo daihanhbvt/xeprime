@@ -94,6 +94,23 @@ export const colors = {
 } as const;
 
 /**
+ * Màu BIỂU ĐỒ — cùng token với web (`chart-theme.ts` đọc `var(--xp-color-viz-*)`).
+ *
+ * Tách khỏi `colors` vì đây là bảng màu có VAI, không phải màu giao diện: doanh thu không phải
+ * "thành công" và chi phí không phải "nguy hiểm". Bản đầu của app tô biểu đồ bằng
+ * `colors.success`/`colors.danger`/`colors.primaryActive` — kết quả là cùng một báo cáo mà web
+ * và app ra hai bộ màu khác hẳn, đúng ở bề mặt người dùng mở cả hai lên để đối chiếu; và một cột
+ * chi phí bình thường bị mượn luôn sắc thái cảnh báo.
+ */
+export const chartColors = {
+  revenue: resolve('color-viz-revenue'),
+  cost: resolve('color-viz-cost'),
+  profit: resolve('color-viz-profit'),
+  grid: resolve('color-viz-grid'),
+  axis: resolve('color-viz-axis'),
+} as const;
+
+/**
  * Bảng màu NỀN TỐI của vỏ khu quản lý — sidebar và thanh trên của nó.
  *
  * Là một bộ RIÊNG, không phải bảng sáng ở trên tô tối lại: trên `bg` thì `colors.textMuted`

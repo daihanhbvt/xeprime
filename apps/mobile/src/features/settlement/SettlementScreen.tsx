@@ -265,11 +265,16 @@ function SettlementBody({
                   <Button
                     label={t('refund.correct')}
                     variant="secondary"
+                    icon="create-outline"
                     onPress={() => setRefunding(true)}
                   />
                 ) : null
               ) : canRecord ? (
-                <Button label={t('refund.record')} onPress={() => setRefunding(true)} />
+                <Button
+                  label={t('refund.record')}
+                  icon="arrow-undo-outline"
+                  onPress={() => setRefunding(true)}
+                />
               ) : null}
             </YStack>
           </Card>
@@ -365,6 +370,7 @@ function SurchargeRow({
           <Button
             label={t('remove')}
             variant="ghost"
+            icon="trash-outline"
             block={false}
             loading={loading}
             onPress={onRemove}

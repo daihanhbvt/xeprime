@@ -20,15 +20,15 @@
 | Vehicle | 13 | 11 | 2 | **VEH-08** bỏ · **VEH-13** hoãn |
 | Customer | 4 | **4** | 0 | Xong trọn (07/09) — `docs/mobile-customer-module-status.md` |
 | Shop | 9 | 1 | 8 | Chỉ có SHP-07 (tổng quan gian hàng) |
-| Finance | 6 | 2 | 4 | Chỉ có FIN-05/06 (tiền của MỘT đơn) |
+| Finance | 6 | **6** | 0 | Xong trọn (07/09) — `docs/mobile-finance-module-status.md` |
 | Calendar | 3 | 0 | 3 | CAL-03 là ràng buộc CSDL, không phải màn |
 | Communication | 7 | 0 | 7 | COM-01 mới là màn rỗng |
 | Payment | 4 | 0 | 4 | **Không làm ở giai đoạn này** — ADR 0013 |
 | Admin / Management | 13 | 0 | 13 | Toàn bộ P3 |
 | System | 9 | 4 | 5 | i18n · hợp đồng API · R2 · test (một phần) |
 
-**Đã đóng gần trọn hai module lớn nhất**: Booking/Rental (16 dòng) và Vehicle (13 dòng) — cộng
-lại 29/97 dòng, và là phần nghiệp vụ nặng nhất của cổng quản lý.
+**Đã đóng trọn bốn module lớn nhất**: Booking/Rental (16 dòng), Vehicle (11/13), Customer (4)
+và Finance (6) — cộng lại 37/97 dòng, và là toàn bộ phần nghiệp vụ nặng của cổng quản lý.
 
 ---
 
@@ -89,25 +89,18 @@ hàng, chi nhánh, **chính sách thuê mặc định (SHP-04)**, nhân sự, t�
 ⚠️ **SHP-04 liên đới trực tiếp tới VEH-05**: màn Giá & chính sách của xe cho phép "đặt lại theo
 chính sách gian hàng", nhưng app chưa có màn để XEM/SỬA chính sách gian hàng đó.
 
-### 2.7 Finance — 2/6
+### 2.7 Finance — 6/6 ✅
 
-Có FIN-05 (ghi nhận thu tiền của đơn) và FIN-06 (thu/hoàn cọc) — cả hai gắn với MỘT đơn cụ thể,
-dựng trong module Booking.
+Đủ FIN-01→06 (07/09/2026). Route: `/manage/finance` · `/manage/receipts` · `/manage/debts`;
+danh mục thu chi là tấm trượt mở từ sổ Thu-Chi; FIN-05/06 vẫn ở màn đơn thuê. Ba mục
+`finance-overview` · `receipts` · `debts` trong `manage-nav.ts` đã có `href` + cờ gói.
 
-Thiếu bốn màn SỔ SÁCH: tổng quan tài chính, sổ thu-chi, danh mục thu chi, công nợ.
+Chi tiết, ma trận quyền, bốn luật tiền và phần audit FIN-05/06:
+`docs/mobile-finance-module-status.md`.
 
-07/09: có thêm `/manage/receipts` nhưng **chỉ là danh sách đã lọc theo một thực thể** (đích của
-"Xem tất cả N phiếu" ở hồ sơ khách). Chưa có thẻ tổng theo bộ lọc, chưa tạo/duyệt/huỷ phiếu, chưa
-có chi tiết phiếu — nên FIN-02 vẫn tính là CHƯA xong, và mục `receipts` trong menu vẫn chưa có
-`href`. Mở FIN-02 thì mở rộng chính màn đó.
-
-⚠️ Đây là lý do Hồ sơ 360 của xe **không có** khối tiền theo kỳ (`FinanceEntityPanel` bên web) —
-xem `mobile-vehicle-module-status.md` §2.
-
-⚠️ Tab **"Thu chi" của hồ sơ khách thì CÓ** khối tiền theo kỳ và danh sách phiếu gần nhất — nó
-dựng được vì endpoint tổng hợp/chuỗi/phiếu đã có sẵn ở server từ web. Nhưng nó mới chỉ ĐỌC:
-không mở được chi tiết phiếu, không tạo/duyệt/huỷ. Danh sách việc phải quay lại làm khi mở
-FIN-01→04 nằm ở **§3.3**.
+Hai khối dùng chung mở khoá theo: Hồ sơ 360 của xe **giờ CÓ** khối tiền theo kỳ
+(`FinanceEntityPanel`, cùng component với tab "Thu chi" của hồ sơ khách), và mọi `ReceiptCard`
+đều mở CÙNG một màn chi tiết phiếu.
 
 ### 2.8 Calendar — 0/3 ⛔ chặn hai thứ khác
 
@@ -159,21 +152,17 @@ Thiếu: SYS-05 trung tâm hỗ trợ · SYS-09 tìm kiếm toàn cục · và b
 | **Chưa có test nào** cho module | Cao | Ba chỗ ưu tiên: `publication.ts`, `sensitive-changes.ts`, nhánh `source` của màn giá |
 | Ba khu web còn chuỗi thô | Thấp | App đã `t()`; chuyển web sau chỉ là thay chuỗi |
 
-### 3.3 Customer — chờ Finance để đóng tab "Thu chi"
+### 3.3 Customer — nợ tab "Thu chi" đã ĐÓNG (07/09, đợt Finance)
 
-Module Customer tính là **4/4 xong**, nhưng tab "Thu chi" của hồ sơ khách
-(`CustomerFinancePanel`) mới chỉ ĐỌC được tiền, chưa THAO TÁC được. Không phải nợ của Customer:
-nó chờ đúng bốn màn sổ sách của Finance (FIN-01→04).
+Bốn khoản nợ dưới đây đã đóng; giữ lại bảng để người đọc sau biết chúng được giải thế nào.
 
-**Khi làm Finance, quay lại đúng những chỗ này:**
-
-| Nợ | Mức | Ghi chú |
-| --- | --- | --- |
-| **Phiếu trong tab chỉ ĐỌC** | Trung bình | `ReceiptCard` không có `onPress` vì chưa có màn chi tiết phiếu để dẫn tới. Có FIN-02 thì gắn `onPress` + `DetailChevron`, đừng dựng màn chi tiết thứ hai |
-| **Không tạo / duyệt / huỷ phiếu từ hồ sơ khách** | Trung bình | Web cũng chưa cho làm từ panel này, nên KHÔNG được đi trước web — mở cùng đợt và theo đúng luồng web |
-| **"Xem tất cả N phiếu" dẫn tới màn còn dở** | Trung bình | `/manage/receipts` hiện chỉ là danh sách đã lọc theo một thực thể: chưa có thẻ tổng theo bộ lọc, chưa có danh mục thu chi. Mở FIN-02 thì **mở rộng chính màn đó** — chi tiết ở `docs/mobile-customer-module-status.md` §5 |
-| Mục `receipts` trong menu vẫn chưa có `href` | Cố ý | Gắn `href` là tuyên bố FIN-02 xong. Chạm vào đang báo "Chức năng đang được phát triển" — đúng quy ước `comingSoon` ở `manage-nav.ts` |
-| Biểu đồ xu hướng dựng bằng `View` | Thấp | Đủ cho hai series cùng thang. Thêm đường lợi nhuận thì lúc đó mới cân nhắc `react-native-svg` |
+| Nợ | Đóng thế nào |
+| --- | --- |
+| **Phiếu trong tab chỉ ĐỌC** | `ReceiptCard` nhận `onPress` + mọc `DetailChevron`, mở `ReceiptDetailSheet` — CÙNG implementation với sổ Thu-Chi |
+| **Không tạo / duyệt / huỷ phiếu từ hồ sơ khách** | Giữ nguyên như web: panel không có ba hành động đó. Thao tác đi qua chi tiết phiếu hoặc sổ Thu-Chi |
+| **"Xem tất cả N phiếu" dẫn tới màn còn dở** | `/manage/receipts` giờ là FIN-02 đầy đủ; lối vào giữ `tenantCustomerId` và màn đích hiện một viên phạm vi nói rõ đang lọc theo ai |
+| Mục `receipts` trong menu chưa có `href` | Đã gắn, cùng `finance-overview` và `debts` |
+| Biểu đồ xu hướng dựng bằng `View` | Vẫn vậy — đủ cho hai series cùng thang. Thêm đường lợi nhuận thì lúc đó mới cân nhắc `react-native-svg` |
 
 ### 3.4 Nợ chung của app (không thuộc module nào)
 
@@ -201,10 +190,8 @@ Xếp theo **cái gì đang chặn cái gì**, không theo độ khó.
 3. **Làm mịn UI/UX màn danh sách xe + Hồ sơ 360** — đã có phản hồi thực tế (03/09): thẻ xe quá
    cao do chip trạng thái xuống dòng, bảng thông số 17 dòng phần lớn rỗng và nhãn wrap, tiêu đề
    thẻ không nhất quán.
-4. **Finance FIN-01→04** — mở khoá khối tiền theo kỳ ở Hồ sơ 360, **và đóng nốt tab "Thu chi"
-   của hồ sơ khách** (§3.3): chi tiết phiếu, tạo/duyệt/huỷ, thẻ tổng theo bộ lọc, danh mục.
-5. **Communication COM-01/04/07** — chat thật + thông báo + push.
-6. MKT-05 và Admin. *(Customer đã xong 07/09.)*
+4. **Communication COM-01/04/07** — chat thật + thông báo + push.
+5. MKT-05 và Admin. *(Customer xong 07/09; Finance xong 07/09.)*
 
 ---
 

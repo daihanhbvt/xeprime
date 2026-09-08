@@ -26,6 +26,7 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { useRenderTrace, useTracedRenderItem } from '@/dev/list-trace';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { colors } from '@/theme/tokens';
@@ -71,6 +72,9 @@ function vehicleKeyExtractor(vehicle: VehicleListItem): string {
  * Chỉ số và cảnh báo là HAI truy vấn riêng chạy sau danh sách — xem `use-vehicles.ts`.
  */
 export function VehicleListScreen() {
+  // Dev-only: đếm số lần màn render lại. Xem `src/dev/list-trace.ts`.
+  useRenderTrace('Vehicles');
+
   const t = useTranslations('Vehicles.list');
   const tLabels = useTranslations('Common.labels');
   const tStates = useTranslations('Common.states');
@@ -242,6 +246,9 @@ export function VehicleListScreen() {
     ],
   );
 
+  // Dev-only: đo thời gian dựng từng thẻ, in gộp mỗi giây.
+  const tracedRenderItem = useTracedRenderItem('Vehicles', renderItem);
+
   const filtered =
     vehicleType !== ALL ||
     serviceType !== ALL ||
@@ -352,7 +359,7 @@ export function VehicleListScreen() {
               <Animated.FlatList
                 data={items}
                 keyExtractor={vehicleKeyExtractor}
-                renderItem={renderItem}
+                renderItem={tracedRenderItem}
                 contentContainerStyle={contentContainerStyle}
                 onScroll={onScroll}
                 scrollEventThrottle={scrollThrottle.frame}

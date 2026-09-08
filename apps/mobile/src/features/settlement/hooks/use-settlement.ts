@@ -36,9 +36,25 @@ export function useSettlement(bookingId: string, enabled = true) {
 function adoptSettlement(queryClient: QueryClient, bookingId: string) {
   return (settlement: BookingSettlement) => {
     queryClient.setQueryData(queryKeys.bookings.settlement(bookingId), settlement);
-    void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
+    invalidateMoneyBranches(queryClient);
   };
+}
+
+/**
+ * MỌI nhánh đọc lại số tiền của một đơn — ghi một khoản (thu, hoàn cọc, phụ phí) đổi hết cùng lúc.
+ *
+ * `receipts`/`debts` là phần app còn thiếu so với web: thu tiền sinh một phiếu `source=payment`
+ * trong sổ và làm giảm công nợ của đơn, nên bỏ hai nhánh này nghĩa là sổ Thu-Chi và màn Công nợ
+ * giữ số cũ cho tới khi cache tự hết hạn — đúng lúc người vừa thu tiền đi đối chiếu.
+ * `customers` vì ba ô tiền ở hồ sơ khách đọc cùng dữ liệu đó.
+ */
+function invalidateMoneyBranches(queryClient: QueryClient): void {
+  void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.receipts.all });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.debts.all });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
 }
 
 export function useAddSurcharge(bookingId: string) {
@@ -115,10 +131,9 @@ export function useRecordPayment(bookingId: string) {
     mutationFn: (body: RecordPaymentInput) => paymentsApi.record(bookingId, body),
     onSuccess: (booking) => {
       queryClient.setQueryData(queryKeys.bookings.detail(bookingId), booking);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.payments.history(bookingId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.settlement(bookingId) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
+      invalidateMoneyBranches(queryClient);
     },
   });
 }
@@ -131,9 +146,8 @@ export function useVoidPayment(bookingId: string) {
     mutationFn: (paymentId: string) => paymentsApi.void(paymentId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.payments.history(bookingId) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.settlement(bookingId) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
+      invalidateMoneyBranches(queryClient);
     },
   });
 }

@@ -44,3 +44,25 @@ describe('useAppFormat — mốc thuê', () => {
     expect((await format()).shortDateTime('2026-08-26T03:00:00.000Z')).toBe('10:00 · 26/08');
   });
 });
+
+/**
+ * Nhãn mốc của biểu đồ.
+ *
+ * Bản đầy đủ `Tháng 9 năm 2026` dài gấp ba bề rộng một dải trên màn 390dp và bị cắt thành
+ * `Tháng…` — nhãn mất đúng phần nói ra nó là tháng nào. Hai hàm, hai vai: trục lấy bản ngắn, thẻ
+ * chi tiết giữ bản đầy đủ của web.
+ */
+describe('useAppFormat — nhãn mốc biểu đồ', () => {
+  it('monthYearShort cho ra 09/2026, không phải "Tháng 9 năm 2026"', async () => {
+    expect((await format()).monthYearShort(new Date('2026-09-01T12:00:00Z'))).toBe('09/2026');
+  });
+
+  it('bản đầy đủ vẫn là chuỗi của web, cho thẻ chi tiết', async () => {
+    expect((await format()).monthYear(new Date('2026-09-01T12:00:00Z'))).toBe('Tháng 9 năm 2026');
+  });
+
+  it('lấy trưa UTC nên mốc không rơi sang tháng khác vì lệch múi giờ', async () => {
+    // 31/12 trưa UTC = 31/12 19:00 giờ VN — vẫn tháng 12, không nhảy sang tháng 1 năm sau.
+    expect((await format()).monthYearShort(new Date('2026-12-31T12:00:00Z'))).toBe('12/2026');
+  });
+});

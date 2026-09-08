@@ -102,7 +102,14 @@ export function SurchargeSheet({
       open={open}
       onClose={onClose}
       title={t('add')}
-      footer={<Button label={t('add')} loading={loading} onPress={() => void submit()} />}
+      footer={
+        <Button
+          label={t('add')}
+          icon="add-circle-outline"
+          loading={loading}
+          onPress={() => void submit()}
+        />
+      }
     >
       <SelectField
         control={control}

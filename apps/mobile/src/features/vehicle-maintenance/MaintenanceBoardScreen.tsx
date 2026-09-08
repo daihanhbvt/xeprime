@@ -38,6 +38,7 @@ import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
 import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { useRenderTrace, useTracedRenderItem } from '@/dev/list-trace';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
@@ -92,6 +93,9 @@ const queueKeyOf = (item: MissingOdometerItem) => item.handoverId;
  * Vẫn chung tiêu đề, chung ô tìm kiếm, chung phân trang.
  */
 export function MaintenanceBoardScreen() {
+  // Dev-only: đếm số lần màn render lại. Xem `src/dev/list-trace.ts`.
+  useRenderTrace('Maintenance');
+
   const t = useTranslations('Vehicles.maintenance.board');
   const tFilters = useTranslations('Maintenance.filters');
   const tMissing = useTranslations('Bookings.missingKm');
@@ -237,6 +241,9 @@ export function MaintenanceBoardScreen() {
     [canManage, canCorrectOdometer, openVehicle],
   );
 
+  // Dev-only: đo thời gian dựng từng thẻ, in gộp mỗi giây.
+  const tracedRenderItem = useTracedRenderItem('Maintenance', renderItem);
+
   const renderQueueItem = useCallback<ListRenderItem<MissingOdometerItem>>(
     ({ item }) => <MissingOdometerCard item={item} onFix={() => setResolving(item)} />,
     [],
@@ -280,7 +287,7 @@ export function MaintenanceBoardScreen() {
           {...(meta === undefined ? {} : { meta })}
           onPageChange={setPage}
         >
-          {({ onScroll, headerHeight, contentContainerStyle }) => {
+          {({ onScroll, headerHeight, contentContainerStyle, bindList }) => {
             // Là HÀM trả JSX chứ không phải component khai trong render — component mới mỗi lần
             // render là React tháo vùng cuộn ra gắn lại đúng lúc `isRefetching` đổi.
             const inStateScroll = (children: ReactNode) => (
@@ -337,6 +344,7 @@ export function MaintenanceBoardScreen() {
               )
             ) : isQueue ? (
               <Animated.FlatList
+                ref={bindList}
                 data={queueItems}
                 keyExtractor={queueKeyOf}
                 {...LIST_TUNING}
@@ -355,10 +363,11 @@ export function MaintenanceBoardScreen() {
               />
             ) : (
               <Animated.FlatList
+                ref={bindList}
                 data={items}
                 keyExtractor={keyOf}
                 {...LIST_TUNING}
-                renderItem={renderItem}
+                renderItem={tracedRenderItem}
                 contentContainerStyle={contentContainerStyle}
                 onScroll={onScroll}
                 scrollEventThrottle={scrollThrottle.frame}

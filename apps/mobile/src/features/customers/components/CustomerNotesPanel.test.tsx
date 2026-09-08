@@ -108,7 +108,9 @@ describe('CustomerNotesPanel — quyền ghi', () => {
     await view.findByText('Khách quen, luôn trả xe đúng giờ');
 
     expect(
-      view.getByText('Ghi chú chỉ hiển thị trong gian hàng của bạn — khách không bao giờ nhìn thấy.'),
+      view.getByText(
+        'Ghi chú chỉ hiển thị trong gian hàng của bạn — khách không bao giờ nhìn thấy.',
+      ),
     ).toBeTruthy();
 
     await fireEvent.changeText(

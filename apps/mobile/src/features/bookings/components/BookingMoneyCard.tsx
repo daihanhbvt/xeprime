@@ -1,6 +1,6 @@
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { isZeroMoney } from '@xeprime/domain';
+import { isNegativeMoney, isZeroMoney, subtractMoney } from '@xeprime/domain';
 import { Card } from '@/components/ui/Card';
 import { DataRow, Divider } from '@/components/ui/DataRow';
 import { InlineAction } from '@/components/ui/InlineAction';
@@ -42,8 +42,13 @@ export function BookingMoneyCard({
   const fmt = useAppFormat();
 
   const hasDebt = !isZeroMoney(booking.debtAmount);
-  /* Cùng phép so của web: đã thu trừ phải thu, chỉ nói khi dương. */
-  const overCollected = Number(booking.collectedAmount) - Number(booking.amountDue);
+  /*
+   * Thu vượt = đã thu − phải thu, chỉ khi DƯƠNG. Tính trên CHUỖI tiền, không `Number` (ADR 0007):
+   * bản trước quy hai số tiền về float rồi trừ — sai từ 2^53 trở lên và lệch với web, nơi phép
+   * này đi qua `subtractMoney`.
+   */
+  const excess = subtractMoney(booking.collectedAmount, booking.amountDue);
+  const overCollected = isNegativeMoney(excess) || isZeroMoney(excess) ? null : excess;
 
   return (
     <Card>
@@ -128,8 +133,8 @@ export function BookingMoneyCard({
           Thu VƯỢT phải thu: gần như luôn là một khoản phát sinh đã thu tiền nhưng chưa ghi nhận
           trên đơn. Nói thẳng thay vì để hai con số lệch nhau không lời — đúng như web.
         */}
-        {overCollected > 0 ? (
-          <DataRow label={t('overCollected')} value={fmt.money(String(overCollected))} />
+        {overCollected ? (
+          <DataRow label={t('overCollected')} value={fmt.money(overCollected)} />
         ) : null}
 
         {/* Cọc là tài sản GIỮ HỘ, không phải tiền thuê đã thu — nên nó đứng riêng dưới vạch. */}

@@ -25,6 +25,7 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
 import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
+import { useRenderTrace, useTracedRenderItem } from '@/dev/list-trace';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { scrollThrottle } from '@/theme/motion';
@@ -57,6 +58,9 @@ const keyOf = (customer: TenantCustomer) => customer.id;
  * không có URL để chia sẻ, và bộ lọc này chết theo màn (ADR 0004).
  */
 export function CustomerListScreen() {
+  // Dev-only: đếm số lần màn render lại. Xem `src/dev/list-trace.ts`.
+  useRenderTrace('Customers');
+
   const t = useTranslations('Customers');
   const navigateOnce = useNavigateOnce();
   const permissions = usePermissions();
@@ -160,6 +164,9 @@ export function CustomerListScreen() {
     [canViewFinance, openCustomer],
   );
 
+  // Dev-only: đo thời gian dựng từng thẻ, in gộp mỗi giây.
+  const tracedRenderItem = useTracedRenderItem('Customers', renderItem);
+
   /*
    * Sắp xếp KHÔNG tính là "đang lọc": đổi thứ tự không làm mất dòng nào, nên trạng thái rỗng vẫn
    * phải là "chưa có khách" chứ không phải "không khớp bộ lọc". Cùng luật với `useCustomerFilters`
@@ -224,7 +231,7 @@ export function CustomerListScreen() {
           {...(meta === undefined ? {} : { meta })}
           onPageChange={setPage}
         >
-          {({ onScroll, headerHeight, contentContainerStyle }) => {
+          {({ onScroll, headerHeight, contentContainerStyle, bindList }) => {
             const inStateScroll = (children: ReactNode) => (
               <ManageStateScroll
                 onScroll={onScroll}
@@ -277,10 +284,11 @@ export function CustomerListScreen() {
               )
             ) : (
               <Animated.FlatList
+                ref={bindList}
                 data={items}
                 keyExtractor={keyOf}
                 {...LIST_TUNING}
-                renderItem={renderItem}
+                renderItem={tracedRenderItem}
                 contentContainerStyle={contentContainerStyle}
                 onScroll={onScroll}
                 scrollEventThrottle={scrollThrottle.frame}

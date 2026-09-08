@@ -649,5 +649,9 @@
     "normal": "Normal",
     "high": "High",
     "urgent": "Urgent"
+  },
+  "receiptSourceGroup": {
+    "business": "Shop money",
+    "held_funds": "Held funds"
   }
 }

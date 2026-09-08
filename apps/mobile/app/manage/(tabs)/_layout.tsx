@@ -37,6 +37,9 @@ export default function ManageTabsLayout() {
         <Tabs.Screen name="vehicles" />
         <Tabs.Screen name="maintenance" />
         <Tabs.Screen name="customers" />
+        <Tabs.Screen name="finance" />
+        <Tabs.Screen name="receipts" />
+        <Tabs.Screen name="debts" />
         <Tabs.Screen name="more" />
       </Tabs>
     </ManageDrawerHost>

@@ -85,7 +85,7 @@ giấy tờ, không lập đơn mới.
 | --- | --- | --- |
 | **FIN-02 đầy đủ** | Trung bình | `/manage/receipts` hiện chỉ là danh sách đã lọc: chưa có thẻ tổng theo bộ lọc, chưa tạo/duyệt/huỷ phiếu, chưa có chi tiết phiếu, chưa quản lý danh mục. Cố ý **không** gắn vào menu quản lý để không tuyên bố FIN-02 xong. Mở FIN-02 thì mở rộng chính màn này, đừng dựng màn thứ hai |
 | **Rebuild dev client** | Bắt buộc trước khi chạy thử | Thêm hai native module: `expo-document-picker` (chọn PDF) và `expo-clipboard` (chép SĐT/email). Chạy `pnpm --filter @xeprime/mobile android` (hoặc `ios`) — bản dev client cũ sẽ báo thiếu module |
-| Biểu đồ xu hướng dựng bằng View | Thấp | Không kéo `react-native-svg` vào chỉ để vẽ hình chữ nhật. Đủ cho hai series cùng thang; muốn thêm đường lợi nhuận thì lúc đó mới cân nhắc SVG |
+| ~~Biểu đồ xu hướng dựng bằng View~~ | **Đã đổi 07/09** | Đúng như dự liệu ở dòng này: khi cần thêm ĐƯỜNG LỢI NHUẬN (FIN-01) thì bản `View` hết đủ. Đợt Finance chuyển sang `react-native-gifted-charts`; xem `docs/mobile-finance-module-status.md` |
 | `.expo/types` chưa sinh lại | Thấp | Typed routes chỉ được kiểm khi Expo đã chạy một lần — xem `apps/mobile/README.md` §10 |
 
 ---
@@ -120,7 +120,7 @@ Chỉ đổi **cách trình bày**, không đổi dữ liệu, hành động, qu
 | Dải 4 thẻ KPI rời | **MỘT thẻ, chia ô bằng đường kẻ mảnh** (2×2) | Bốn ô `f={1}` một hàng ở 390dp còn ~84dp/ô và nhãn xuống ba dòng; bốn khối xám rời thì mỗi khối cao một kiểu và đọc ra như bốn mảnh vụn. Thẻ có kẻ chia thì ô ăn theo chiều cao hàng, mép luôn thẳng. Công nợ dùng dạng rút gọn (`12,5tr`) vì ô rộng ~160dp |
 | Thẻ mobile web: danh tính · nhãn · 3 chỉ số | Y hệt, nhãn nằm ĐỐI DIỆN tên (chia cứng **6:4**, nhãn được 2 dòng) | `StatusBadge` không có bề rộng nội tại: tên khách dài bóp nó còn vài ký tự. 7:3 vẫn cắt "Từ chối phục vụ"; 6:4 + `lines={2}` thì viên nhãn cao thêm một dòng thay vì nói nửa câu |
 | `<input type=file>` | Tấm trượt ba nguồn: máy ảnh · thư viện ảnh · tệp PDF | Native không có một ô chọn tệp vạn năng |
-| Tooltip trên biểu đồ | Chạm một cột để hiện dòng chi tiết ngay dưới | Native không có hover |
+| Tooltip trên biểu đồ | Chạm một cột để hiện dòng chi tiết ngay dưới | Native không có hover. Giữ nguyên sau khi đổi thư viện biểu đồ (07/09) |
 | Ô lọc hiện trên trang | Ô lọc trong tấm trượt (`ManageListShell`) | Quy ước sẵn có của mọi màn danh sách trong khu quản lý |
 
 ---
