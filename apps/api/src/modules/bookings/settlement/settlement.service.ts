@@ -9,6 +9,9 @@ import {
   API_ERROR_CODE,
   BOOKING_STATUS,
   DEPOSIT_STATUS,
+  DRIVER_SURCHARGE_KIND_SPEC,
+  type DriverSurchargeKind,
+  type RentalTermsSnapshot,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   PAYMENT_KIND,
@@ -481,6 +484,7 @@ export class SettlementService {
         depositAmount: true,
         returnAt: true,
         actualReturnAt: true,
+        rentalTerms: true,
       },
     });
     if (!booking) {
@@ -593,6 +597,7 @@ export class SettlementService {
       depositAmount: Prisma.Decimal;
       returnAt: Date;
       actualReturnAt: Date | null;
+      rentalTerms?: Prisma.JsonValue | null;
     },
   ): Promise<BookingSettlementDto> {
     const [snapshot, settlement, overtime] = await Promise.all([
@@ -645,6 +650,7 @@ export class SettlementService {
           }
         : null,
       overtime,
+      surchargeRules: surchargeRulesOf(booking.rentalTerms ?? null),
     };
   }
 
@@ -743,6 +749,22 @@ export class SettlementService {
     });
     return new Map(users.map((user) => [user.id, user.displayName]));
   }
+}
+
+/**
+ * Quy tắc phụ phí đã đóng băng trên đơn → gợi ý cho hộp ghi khoản thật. Đọc SNAPSHOT, không đọc
+ * thiết lập hiện hành của xe: chủ xe đổi mức sau khi khách đặt thì đơn vẫn theo mức đã công bố.
+ */
+function surchargeRulesOf(raw: unknown) {
+  const terms = raw as RentalTermsSnapshot | null;
+  if (!terms || !Array.isArray(terms.surchargeRules)) return [];
+  return terms.surchargeRules.map((rule) => ({
+    kind: rule.kind,
+    category: DRIVER_SURCHARGE_KIND_SPEC[rule.kind as DriverSurchargeKind]?.category ?? 'other',
+    unit: rule.unit,
+    amount: rule.amount,
+    thresholdValue: rule.thresholdValue,
+  }));
 }
 
 function toSurchargeDto(row: SurchargeRow, names: Map<string, string>): BookingSurchargeDto {

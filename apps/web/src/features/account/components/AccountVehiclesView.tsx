@@ -29,8 +29,8 @@ import styles from './AccountVehiclesView.module.css';
  * cổng quản lý; khác nhau ở bộ lọc ít hơn (dịch vụ + trạng thái vận hành, theo mockup) và ở hai
  * hành động trên thẻ:
  *  - "Xem chi tiết" → `/account/vehicles/[id]` (cùng `VehicleDetailContent`, khác vỏ);
- *  - "Quản lý xe" → CHƯA có luồng trong khu này. Nút để disabled kèm lý do thay vì dẫn sang
- *    `/manage` giả làm "quản lý ngay tại đây" — một nút hứa thứ chưa có là một nút nói dối.
+ *  - "Quản lý xe" → `/account/vehicles/[id]/manage` (08/09/2026): không gian riêng của xe với
+ *    menu trái theo dịch vụ — cùng feature/API với `/manage`, chỉ khác vỏ.
  *
  * Được `OwnerGate` bọc ở trang: người không phải chủ gian hàng không tới được đây, nên không có
  * request tenant nào bay đi vô ích.
@@ -104,9 +104,7 @@ export function AccountVehiclesView() {
         label: t('manage'),
         showLabel: true,
         primary: true,
-        disabled: true,
-        disabledReason: t('manageSoon'),
-        onClick: () => undefined,
+        onClick: () => router.push(accountVehiclePath.manage(row.id)),
       },
       {
         key: 'view',

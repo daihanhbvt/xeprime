@@ -230,16 +230,22 @@ describe('public_listings sync (ADR 0008)', () => {
     expect(await inSearch(vApprove)).toBe(true);
   });
 
-  maybe('sửa giá xe approved → listing hidden + xe vào hàng chờ duyệt', async () => {
+  /*
+   * 09/09/2026 (ghi đè ADR 0008): giá đổi là ÁP DỤNG NGAY ngoài chợ — listing giữ `active`,
+   * số mới hiện lên luôn, và không có phiếu duyệt lại nào sinh ra. Đây chính là lý do đổi luật:
+   * giá ngoài chợ phải là giá thật, không phải giá của lần duyệt gần nhất.
+   */
+  maybe('sửa giá xe approved → listing giữ active và mang giá mới ngay', async () => {
     await vehicles.update(tenantId, vApprove, ownerId, { weekdayPrice: '999000' });
 
     const listing = await prisma.publicListing.findUniqueOrThrow({
       where: { vehicleId: vApprove },
-      select: { status: true },
+      select: { status: true, weekdayPrice: true },
     });
-    expect(listing.status).toBe(LISTING_STATUS.HIDDEN);
-    expect(await inSearch(vApprove)).toBe(false);
-    await expect(publicListings.getById(vApprove)).rejects.toThrow();
+    expect(listing.status).toBe(LISTING_STATUS.ACTIVE);
+    expect(String(listing.weekdayPrice)).toBe('999000');
+    expect(await inSearch(vApprove)).toBe(true);
+    expect(String((await publicListings.getById(vApprove)).weekdayPrice)).toBe('999000');
 
     const pending = await prisma.approvalTask.count({
       where: {
@@ -248,48 +254,32 @@ describe('public_listings sync (ADR 0008)', () => {
         status: APPROVAL_STATUS.PENDING,
       },
     });
-    expect(pending).toBe(1);
+    expect(pending).toBe(0);
+  });
+
+  maybe('sửa CĂN CƯỚC xe approved bị từ chối — listing không đổi', async () => {
+    await expect(
+      vehicles.update(tenantId, vApprove, ownerId, { plateNumber: '51A-000.11' }),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(await inSearch(vApprove)).toBe(true);
   });
 
   maybe(
-    'sửa hourlyPrice/discountPercent (nhạy cảm mới) → knock-back; sửa tiện ích thường thì không',
+    'giá giờ/% giảm và chính sách gian hàng đổi → listing vẫn active, nhãn đổi theo',
     async () => {
-      // vApprove đang pending từ test trước — duyệt lại cho active.
-      const task = await prisma.approvalTask.findFirstOrThrow({
-        where: {
-          targetType: APPROVAL_TARGET_TYPE.VEHICLE,
-          targetId: vApprove,
-          status: APPROVAL_STATUS.PENDING,
-        },
-        select: { id: true },
-      });
-      await approvals.approve(task.id, reviewerId);
-      expect(await inSearch(vApprove)).toBe(true);
-
-      // Giá giờ / % giảm là trường nhạy cảm (VEHICLE_PUBLIC_SENSITIVE_FIELDS) → hạ về chờ duyệt.
       await vehicles.update(tenantId, vApprove, ownerId, {
         hourlyPrice: '150000',
         discountPercent: 20,
       });
-      const hidden = await prisma.publicListing.findUniqueOrThrow({
+      const stillActive = await prisma.publicListing.findUniqueOrThrow({
         where: { vehicleId: vApprove },
         select: { status: true },
       });
-      expect(hidden.status).toBe(LISTING_STATUS.HIDDEN);
+      expect(stillActive.status).toBe(LISTING_STATUS.ACTIVE);
 
-      // Duyệt lại rồi đổi CHÍNH SÁCH gian hàng sang "miễn thế chấp" → listing giữ active và
-      // nhãn trên sàn đổi theo. Từ 20/08 `noCollateral` KHÔNG còn là cờ nhập tay trên xe: nó
-      // suy từ chính sách hiệu lực, nên đây mới là đường duy nhất làm nó đổi.
-      const task2 = await prisma.approvalTask.findFirstOrThrow({
-        where: {
-          targetType: APPROVAL_TARGET_TYPE.VEHICLE,
-          targetId: vApprove,
-          status: APPROVAL_STATUS.PENDING,
-        },
-        select: { id: true },
-      });
-      await approvals.approve(task2.id, reviewerId);
-
+      // Đổi CHÍNH SÁCH gian hàng sang "miễn thế chấp" → nhãn trên sàn đổi theo. Từ 20/08
+      // `noCollateral` KHÔNG còn là cờ nhập tay trên xe: nó suy từ chính sách hiệu lực, nên
+      // đây mới là đường duy nhất làm nó đổi.
       await pricing.saveShopPolicy(
         tenantId,
         ownerId,

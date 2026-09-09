@@ -4,6 +4,8 @@ import {
   BOOKING_STATUS_VALUES,
   CATALOG_KEY_PATTERN,
   SERVICE_TYPE_VALUES,
+  VEHICLE_GALLERY_MAX_IMAGES,
+  VEHICLE_IMAGE_TYPE_VALUES,
   VEHICLE_OPERATION_STATUS_VALUES,
   VEHICLE_PUBLIC_STATUS_VALUES,
   TRANSMISSION_TYPE_VALUES,
@@ -27,6 +29,7 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 import { VehicleAlertDto } from './vehicle-alert.dto';
@@ -169,6 +172,33 @@ export class VehicleListItemDto {
   @ApiProperty({ description: 'ISO-8601 UTC' }) updatedAt!: string;
 }
 
+/**
+ * Một ảnh thư viện kèm VỊ TRÍ (08/09/2026). `images: string[]` cũ vẫn trả song song — consumer cũ
+ * (thẻ xe, chợ, app native) không đổi gì; `type` chỉ là cách sắp ô ở màn quản lý.
+ */
+export class VehicleMediaItemDto {
+  @ApiProperty() url!: string;
+  @ApiProperty({
+    enum: VEHICLE_IMAGE_TYPE_VALUES,
+    description: 'Ảnh cũ chưa gán loại được trả `other` (fallback đọc, không ghi lại)',
+  })
+  type!: string;
+  @ApiProperty() sortOrder!: number;
+}
+
+/** Một ảnh gửi lên kèm loại — `type` bỏ trống = `other`. */
+export class VehicleMediaInputDto {
+  @ApiProperty({ description: 'URL công khai đã upload qua presign' })
+  @IsString()
+  @MaxLength(2000)
+  url!: string;
+
+  @ApiPropertyOptional({ enum: VEHICLE_IMAGE_TYPE_VALUES })
+  @IsOptional()
+  @IsIn(VEHICLE_IMAGE_TYPE_VALUES)
+  type?: string;
+}
+
 /** Tóm tắt lần gửi duyệt công khai gần nhất — để shop thấy lý do bị từ chối/bổ sung. */
 export class VehiclePublicReviewDto {
   @ApiProperty({ enum: APPROVAL_STATUS_VALUES }) status!: string;
@@ -194,6 +224,12 @@ export class VehicleDetailDto extends VehicleListItemDto {
   @ApiPropertyOptional({ type: Number, nullable: true }) horsepowerHp!: number | null;
   @ApiPropertyOptional({ type: String, nullable: true, enum: TRANSMISSION_TYPE_VALUES })
   transmission!: string | null;
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Xe điện: số km đi được sau một lần sạc đầy',
+  })
+  electricRangeKm!: number | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'L/100km dạng decimal string' })
   fuelConsumptionCity!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'L/100km dạng decimal string' })
@@ -243,6 +279,10 @@ export class VehicleDetailDto extends VehicleListItemDto {
 
   @ApiProperty({ type: [String], description: 'URL ảnh gallery theo thứ tự' })
   images!: string[];
+
+  /** Cùng danh sách với `images`, kèm loại và thứ tự — cho màn thư viện theo ô (08/09/2026). */
+  @ApiProperty({ type: [VehicleMediaItemDto] })
+  media!: VehicleMediaItemDto[];
 
   @ApiProperty({ type: [String], description: 'Key tiện ích (VEHICLE_FEATURE_LABEL)' })
   features!: string[];
@@ -442,6 +482,20 @@ export class CreateVehicleDto {
   @Max(999)
   fuelConsumptionCombined?: number | null;
 
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    minimum: 1,
+    maximum: 2000,
+    description: 'Xe điện: km mỗi lần sạc đầy. Gửi null = bỏ khai.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(2000)
+  electricRangeKm?: number | null;
+
   // Các trường có thể GỠ giá trị (gửi null) — @IsOptional bỏ qua validate khi null,
   // service ghi null xuống DB để xoá (vd đổi ô tô → xe máy thì bỏ kiểu dáng).
   // `type: String` bắt buộc với field nullable — thiếu nó openapi-typescript sinh
@@ -565,14 +619,28 @@ export class CreateVehicleDto {
 
   @ApiPropertyOptional({
     type: [String],
-    description: 'URL ảnh gallery theo thứ tự (thay toàn bộ khi gửi)',
+    description:
+      'URL ảnh gallery theo thứ tự (thay toàn bộ khi gửi). Loại ảnh đã gán của URL còn giữ lại được bảo toàn; bỏ qua khi gửi `media`.',
   })
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(20)
+  @ArrayMaxSize(VEHICLE_GALLERY_MAX_IMAGES)
   @IsString({ each: true })
   @MaxLength(2000, { each: true })
   images?: string[];
+
+  /**
+   * Thư viện ảnh KÈM LOẠI (08/09/2026) — thay toàn bộ khi gửi, thứ tự mảng = thứ tự hiển thị.
+   * Client cũ vẫn gửi `images`; khi có cả hai thì `media` thắng. Không lưu một file hai lần:
+   * URL trùng bị khử.
+   */
+  @ApiPropertyOptional({ type: [VehicleMediaInputDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(VEHICLE_GALLERY_MAX_IMAGES)
+  @ValidateNested({ each: true })
+  @Type(() => VehicleMediaInputDto)
+  media?: VehicleMediaInputDto[];
 
   @ApiPropertyOptional({
     isArray: true,
@@ -624,6 +692,16 @@ export class VehicleStatsDto {
 
   @ApiPropertyOptional({ description: 'Tổng chi luỹ kế (phiếu chi đã duyệt), dạng string' })
   totalExpense?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Điểm đánh giá trung bình của xe (review published) — null khi chưa có',
+  })
+  ratingAvg!: string | null;
+
+  @ApiProperty({ description: 'Số lượt đánh giá published của xe' })
+  ratingCount!: number;
 }
 
 export class VehicleStatsListDto {

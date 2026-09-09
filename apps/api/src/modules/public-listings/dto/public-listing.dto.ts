@@ -362,6 +362,47 @@ export class ListingCollateralDto {
   @ApiProperty({ description: 'VND string — chỉ khác 0 khi mode = cash' }) depositAmount!: string;
 }
 
+/**
+ * Điều kiện thuê CÔNG BỐ cho khách theo từng dịch vụ (08/09/2026) — giấy tờ phải xuất trình,
+ * cách đối chiếu (luôn thủ công), điều khoản, cọc giữ chuyến có tài xế và "đặt nhanh".
+ * Mã đi trên dây, FE dịch nhãn (ADR 0012). KHÔNG có dữ liệu nội bộ nào ở đây.
+ */
+export class ListingRentalTermsDto {
+  @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
+  @ApiProperty({ type: [String], description: 'CUSTOMER_DOCUMENT_TYPE — bộ HIỆU LỰC' })
+  requiredDocuments!: string[];
+  @ApiProperty({ description: 'IDENTITY_VERIFY_METHOD — đối chiếu TAY, kể cả qua app VNeID của khách' })
+  identityVerifyMethod!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) termsText!: string | null;
+  @ApiProperty() requireTermsAcceptance!: boolean;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'DRIVER_DEPOSIT_MODE — chỉ with_driver' })
+  depositMode!: string | null;
+  @ApiProperty({ description: 'Xe bật tự động nhận cho dịch vụ này (điều kiện cụ thể do báo giá trả)' })
+  instantBookEnabled!: boolean;
+  @ApiProperty() autoAcceptMinLeadMinutes!: number;
+  @ApiProperty() autoAcceptMaxLeadMinutes!: number;
+  @ApiPropertyOptional({ type: Number, nullable: true }) minRentalMinutes!: number | null;
+}
+
+export class ListingHandoverWindowDto {
+  @ApiProperty({ example: '06:00' }) start!: string;
+  @ApiProperty({ example: '22:00' }) end!: string;
+}
+
+/** Khung giờ giao/nhận của xe — rỗng = mọi giờ. Server vẫn kiểm lại lúc gửi yêu cầu. */
+export class ListingHandoverDto {
+  @ApiProperty({ type: [ListingHandoverWindowDto] }) pickupWindows!: ListingHandoverWindowDto[];
+  @ApiProperty({ type: [ListingHandoverWindowDto] }) returnWindows!: ListingHandoverWindowDto[];
+}
+
+/** Một khoản phụ phí MẶC ĐỊNH đang bật của chuyến có tài xế — công bố trước, ghi nhận sau. */
+export class ListingDriverSurchargeRuleDto {
+  @ApiProperty({ description: 'DRIVER_SURCHARGE_KIND' }) kind!: string;
+  @ApiProperty({ description: 'DRIVER_SURCHARGE_UNIT' }) unit!: string;
+  @ApiProperty({ description: 'VND string — ADR 0007' }) amount!: string;
+  @ApiPropertyOptional({ type: Number, nullable: true }) thresholdValue!: number | null;
+}
+
 export class PublicListingDetailDto extends PublicListingDto {
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) color!: string | null;
@@ -407,6 +448,17 @@ export class PublicListingDetailDto extends PublicListingDto {
    */
   @ApiPropertyOptional({ type: ListingCollateralDto, nullable: true })
   collateral!: ListingCollateralDto | null;
+
+  /** Một mục cho mỗi dịch vụ xe đăng có thiết lập riêng (tự lái, có tài xế) — 08/09/2026. */
+  @ApiProperty({ type: [ListingRentalTermsDto] })
+  rentalTerms!: ListingRentalTermsDto[];
+
+  @ApiProperty({ type: ListingHandoverDto })
+  handover!: ListingHandoverDto;
+
+  /** Chỉ khoản ĐANG BẬT; rỗng khi xe không có dịch vụ có tài xế hoặc chưa cấu hình. */
+  @ApiProperty({ type: [ListingDriverSurchargeRuleDto] })
+  driverSurchargeRules!: ListingDriverSurchargeRuleDto[];
 }
 
 export class PublicListingPageMetaDto {

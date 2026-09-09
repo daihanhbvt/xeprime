@@ -1,0 +1,131 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--xp-space-sm) var(--xp-space-md);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+
+.fact {
+  display: flex;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.fact dt {
+  min-width: 72px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.fact dd {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.money {
+  color: var(--xp-color-price);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.muted {
+  color: var(--xp-color-text-tertiary);
+  font-weight: var(--xp-font-weight-regular);
+}
+
+.customer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 96px;
+}
+
+.customerName {
+  max-width: 140px;
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-bold);
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.foot {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  padding-top: var(--xp-space-sm);
+  border-top: 1px dashed var(--xp-color-border-subtle);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.status {
+  display: inline-flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.auto {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--xp-color-primary-active);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.kind {
+  color: var(--xp-color-text-tertiary);
+}
+
+.time {
+  color: var(--xp-color-text-tertiary);
+}
+
+.open {
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.pagination {
+  align-self: flex-end;
+}
+
+@media (max-width: 640px) {
+  .card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .customer {
+    flex-direction: row;
+    justify-content: flex-start;
+  }
+
+  .customerName {
+    text-align: start;
+  }
+}

@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, isAccountVehicleManagePath } from '@/constants/routes';
 import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
 import { AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -50,7 +50,11 @@ export function AccountShell({ children }: { children: ReactNode }) {
   const nextFromHere = useNextFromCurrentPath();
   const tCommon = useTranslations('Common');
   const pathname = usePathname();
-  const fullWidth = FULL_WIDTH_PATHS.includes(pathname);
+  /*
+   * Không gian "Quản lý xe" có menu trái RIÊNG của xe nên khớp theo TIỀN TỐ (mọi mục con, kể cả
+   * gốc tự chuyển hướng) — không thể liệt kê từng đường như lịch xe vì id xe nằm trong URL.
+   */
+  const fullWidth = FULL_WIDTH_PATHS.includes(pathname) || isAccountVehicleManagePath(pathname);
 
   if (isLoading) {
     return (

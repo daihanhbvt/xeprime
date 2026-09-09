@@ -289,16 +289,15 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
     });
   });
 
-  it('xoá ảnh đại diện gửi null có chủ đích và đi qua xác nhận của xe public', async () => {
+  it('xoá ảnh đại diện gửi null có chủ đích, lưu thẳng không hỏi lại (ADR 0030)', async () => {
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'Hình ảnh & tiện ích' }));
     fireEvent.click(screen.getAllByRole('button', { name: /Xoá ảnh/ })[0]!);
     fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
-    expect(await screen.findByText('Xác nhận thay đổi nhạy cảm')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Xác nhận & Lưu' }));
 
     await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
     expect(update.mutateAsync.mock.calls[0]![0].mainImageUrl).toBeNull();
+    expect(screen.queryByText('Xác nhận thay đổi nhạy cảm')).toBeNull();
   });
 
   it('tab Nguồn xe (Wave 4): sửa dở rồi chuyển tab phải qua xác nhận bỏ thay đổi', async () => {
@@ -319,14 +318,25 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
     expect(screen.getByDisplayValue('Chưa lưu')).toBeTruthy();
   });
 
-  it('thay đổi nhạy cảm của xe public phải xác nhận trước khi gọi API', async () => {
+  /*
+   * ADR 0030: xe đã lên chợ thì CĂN CƯỚC của nó (biển số · hộp số · nhiên liệu · năm sản xuất)
+   * bị khoá ngay tại ô nhập, thay cho luật cũ "sửa được nhưng phải duyệt lại". Server vẫn là
+   * chốt chặn thật (`VEHICLE_FIELD_LOCKED`); ô khoá chỉ để người dùng khỏi gõ xong mới biết.
+   */
+  it('xe công khai: ô biển số bị khoá và nói rõ lý do', () => {
     renderPage();
-    fireEvent.change(screen.getByLabelText(/Biển số xe/), { target: { value: '51A-999.99' } });
+    const plate = screen.getByLabelText(/Biển số xe/);
+    expect(plate.hasAttribute('disabled')).toBe(true);
+    expect(screen.getAllByText(/Đã khoá vì xe đang trên chợ/).length).toBeGreaterThan(0);
+  });
+
+  it('xe công khai: sửa trường khác lưu thẳng, không hộp xác nhận nào', async () => {
+    renderPage();
+    fireEvent.change(screen.getByLabelText(/^Màu sắc/), { target: { value: 'Xanh rêu' } });
     fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
-    expect(await screen.findByText('Xác nhận thay đổi nhạy cảm')).toBeTruthy();
-    expect(update.mutateAsync).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Xác nhận & Lưu' }));
+
     await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText('Xác nhận thay đổi nhạy cảm')).toBeNull();
   });
 
   /*

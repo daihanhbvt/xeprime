@@ -372,3 +372,13 @@
     align-items: flex-start;
   }
 }
+
+/* Lối sang lịch xe để đặt giá riêng theo ngày (08/09/2026) — một dòng link + một dòng giải thích. */
+.calendarLink {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: var(--xp-space-sm);
+  border-top: 1px dashed var(--xp-color-border-subtle);
+  font-weight: var(--xp-font-weight-semibold);
+}

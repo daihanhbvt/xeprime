@@ -15,6 +15,7 @@ import {
   DollarOutlined,
   ShopOutlined,
   StarOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import { NOTIFICATION_TARGET_TYPE, NOTIFICATION_TYPE, type NotificationType } from '@xeprime/types';
 import { ROUTES, tripPath } from '@/constants/routes';
@@ -33,6 +34,8 @@ const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   // Hạn phản hồi 60 phút: đồng hồ cho lời nhắc, đồng hồ-đã-dừng cho lúc hết giờ.
   [NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRING]: <ClockCircleOutlined />,
   [NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRED]: <HourglassOutlined />,
+  // Hệ thống tự nhận chuyến theo thiết lập của chủ xe — tia sét, không phải dấu tích của người duyệt.
+  [NOTIFICATION_TYPE.BOOKING_AUTO_ACCEPTED]: <ThunderboltOutlined />,
   [NOTIFICATION_TYPE.SHOP_APPROVED]: <ShopOutlined />,
   [NOTIFICATION_TYPE.SHOP_REJECTED]: <ShopOutlined />,
   [NOTIFICATION_TYPE.VEHICLE_APPROVED]: <CarOutlined />,

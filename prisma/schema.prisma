@@ -191,6 +191,10 @@ model Tenant {
   bookingDepositSettlements     BookingDepositSettlement[]
   vehicleBlocks                 VehicleBlock[]
   vehicleDailyPrices            VehicleDailyPrice[]
+  vehicleOperationSettings      VehicleOperationSetting[]
+  vehicleHandoverWindows        VehicleHandoverWindow[]
+  vehicleServiceSettings        VehicleServiceSetting[]
+  vehicleDriverSurchargeRules   VehicleDriverSurchargeRule[]
   tenantCustomers               TenantCustomer[]
   tenantCustomerNotes           TenantCustomerNote[]
   tenantCustomerDocuments       TenantCustomerDocument[]
@@ -817,6 +821,8 @@ model Vehicle {
   transmission             String?   @db.VarChar(30)
   fuelConsumptionCity      Decimal?  @map("fuel_consumption_city") @db.Decimal(6, 2)
   fuelConsumptionHighway   Decimal?  @map("fuel_consumption_highway") @db.Decimal(6, 2)
+  /// Xe ĐIỆN: số km đi được sau một lần sạc đầy. NULL = chưa khai. CHECK 1..2000 ở migration.
+  electricRangeKm         Int?      @map("electric_range_km")
   fuelConsumptionCombined  Decimal?  @map("fuel_consumption_combined") @db.Decimal(6, 2)
   /// @xeprime/types → VehicleOperationStatus
   operationStatus          String    @default("available") @map("operation_status") @db.VarChar(50)
@@ -870,7 +876,7 @@ model Vehicle {
   reviews                Review[]
   conversations          Conversation[]
   /// Tin nhắn NHẮC TỚI xe này (thẻ ngữ cảnh), không phải hội thoại thuộc về xe — xem `Message`.
-  messageContexts        Message[]         @relation("message_vehicle_context")
+  messageContexts        Message[]                      @relation("message_vehicle_context")
   publicListing          PublicListing?
   images                 VehicleImage[]
   features               VehicleFeature[]
@@ -889,6 +895,12 @@ model Vehicle {
   handoverPhotos         VehicleHandoverPhoto[]
   blocks                 VehicleBlock[]
   dailyPrices            VehicleDailyPrice[]
+  /// Quan hệ 1-n về mặt Prisma dù `vehicle_id` đã UNIQUE: 1-1 với FK tổ hợp đòi thêm một unique
+  /// (vehicle_id, tenant_id) thừa ở DB. Service đọc bằng `findUnique({ vehicleId })`.
+  operationSettings      VehicleOperationSetting[]
+  handoverWindows        VehicleHandoverWindow[]
+  serviceSettings        VehicleServiceSetting[]
+  driverSurchargeRules   VehicleDriverSurchargeRule[]
 
   @@unique([tenantId, code])
   /// Mục tiêu cho composite FK (vehicle_id, tenant_id) của các bảng con nhạy cảm — DB tự chặn
@@ -929,6 +941,122 @@ model VehicleImage {
 
   @@index([vehicleId, sortOrder])
   @@map("vehicle_images")
+}
+
+// ---------------------------------------------------------------------------
+// Thiết lập VẬN HÀNH theo xe (08/09/2026) — khung giờ giao nhận, thời gian chết, tự động nhận
+// chuyến, giấy tờ/điều khoản theo dịch vụ, phụ phí mặc định có tài xế.
+//
+// Writer DUY NHẤT của cả bốn bảng: `VehicleSettingsService` (apps/api). Không có dòng = mặc định
+// (buffer 0, mọi giờ, không tự động nhận, bộ giấy tờ tối thiểu theo luật). Owner Lite và
+// /manage cùng đọc/ghi qua một API.
+// ---------------------------------------------------------------------------
+
+/// Thời gian chết giữa hai chuyến của MỘT xe. Khung giờ giao nhận ở `vehicle_handover_windows`.
+model VehicleOperationSetting {
+  id                      String   @id @db.Char(26)
+  tenantId                String   @map("tenant_id") @db.Char(26)
+  vehicleId               String   @unique @map("vehicle_id") @db.Char(26)
+  /// Phút chuẩn bị giữa hai chuyến — COPY vào `vehicle_occupancies.buffer_minutes` lúc giữ chỗ
+  /// hoặc dời lịch (ADR 0006). KHÔNG sửa occupancy đã có. CHECK 0..1440 ở migration.
+  turnaroundBufferMinutes Int      @default(0) @map("turnaround_buffer_minutes")
+  updatedBy               String?  @map("updated_by") @db.Char(26)
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// FK COMPOSITE (vehicle_id, tenant_id) — DB chặn thiết lập trỏ "tenant A + xe của tenant B".
+  vehicle Vehicle @relation(fields: [vehicleId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId])
+  @@map("vehicle_operation_settings")
+}
+
+/// Một khung giờ giao (pickup) hoặc nhận lại (return) trong ngày, giờ Việt Nam.
+///
+/// Chồng lấn giữa hai khung cùng loại của cùng xe bị chặn bằng
+/// `EXCLUDE USING gist (vehicle_id WITH =, kind WITH =, int4range(start_minute, end_minute) WITH &&)`
+/// viết tay ở migration — Prisma không mô tả được. Không có khung nào = nhận mọi giờ.
+model VehicleHandoverWindow {
+  id          String   @id @db.Char(26)
+  tenantId    String   @map("tenant_id") @db.Char(26)
+  vehicleId   String   @map("vehicle_id") @db.Char(26)
+  /// @xeprime/types → HandoverWindowKind (pickup | return) — CHECK ở migration.
+  kind        String   @db.VarChar(20)
+  /// Phút kể từ 00:00 giờ Việt Nam. CHECK: 0 ≤ start < end ≤ 1440 — không qua nửa đêm trong một dòng.
+  startMinute Int      @map("start_minute")
+  endMinute   Int      @map("end_minute")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([vehicleId, kind, startMinute])
+  @@index([tenantId])
+  @@map("vehicle_handover_windows")
+}
+
+/// Thiết lập theo (xe, dịch vụ) — CHỈ self_drive | with_driver (CHECK). Thuê dài hạn luôn do gian
+/// hàng chốt lịch tay (ADR 0011) nên không có dòng nào ở đây.
+model VehicleServiceSetting {
+  id                       String   @id @db.Char(26)
+  tenantId                 String   @map("tenant_id") @db.Char(26)
+  vehicleId                String   @map("vehicle_id") @db.Char(26)
+  /// @xeprime/types → ServiceType — CHECK IN ('self_drive', 'with_driver').
+  serviceType              String   @map("service_type") @db.VarChar(50)
+  /// Tự động nhận yêu cầu đạt đủ điều kiện (server quyết, không phải toggle trang trí).
+  autoAcceptEnabled        Boolean  @default(false) @map("auto_accept_enabled")
+  /// Khoảng "đặt trước" cho phép tự động nhận, tính bằng PHÚT tới giờ nhận. CHECK 0 ≤ min ≤ max ≤ 129600.
+  autoAcceptMinLeadMinutes Int      @default(360) @map("auto_accept_min_lead_minutes")
+  autoAcceptMaxLeadMinutes Int      @default(10080) @map("auto_accept_max_lead_minutes")
+  /// Thời lượng thuê tối thiểu (phút) — chỉ có tài xế; NULL = không giới hạn. CHECK ≥ 0.
+  minRentalMinutes         Int?     @map("min_rental_minutes")
+  /// @xeprime/types → RouteType[] — lộ trình ưu tiên tự động nhận (có tài xế). CHECK subset.
+  preferredRouteTypes      String[] @default([]) @map("preferred_route_types") @db.VarChar(30)
+  /// @xeprime/types → CustomerDocumentType[] — giấy tờ chủ xe yêu cầu THÊM/THAY. CHECK subset, không 'other'.
+  requiredDocuments        String[] @default([]) @map("required_documents") @db.VarChar(50)
+  /// @xeprime/types → IdentityVerifyMethod — luôn là đối chiếu TAY (vneid = nhân viên soi app khách). CHECK.
+  identityVerifyMethod     String   @default("in_person") @map("identity_verify_method") @db.VarChar(30)
+  /// Điều khoản hiển thị cho khách, ≤ 4000 ký tự (DTO). Snapshot vào yêu cầu/đơn lúc gửi.
+  termsText                String?  @map("terms_text") @db.Text
+  requireTermsAcceptance   Boolean  @default(false) @map("require_terms_acceptance")
+  /// @xeprime/types → DriverDepositMode — hôm nay CHỈ 'none' được ghi (DTO); CHECK giữ đủ 3 mã để mở sau.
+  depositMode              String   @default("none") @map("deposit_mode") @db.VarChar(20)
+  updatedBy                String?  @map("updated_by") @db.Char(26)
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([vehicleId, serviceType])
+  @@index([tenantId])
+  @@map("vehicle_service_settings")
+}
+
+/// Mức phụ phí MẶC ĐỊNH của dịch vụ có tài xế — QUY TẮC công bố trước với khách, KHÔNG phải khoản
+/// đã ghi vào đơn (khoản thật vẫn là `booking_surcharges`). Một dòng mỗi (xe, loại).
+model VehicleDriverSurchargeRule {
+  id             String   @id @db.Char(26)
+  tenantId       String   @map("tenant_id") @db.Char(26)
+  vehicleId      String   @map("vehicle_id") @db.Char(26)
+  /// @xeprime/types → DriverSurchargeKind (overtime | waiting | long_distance | overnight) — CHECK.
+  kind           String   @db.VarChar(30)
+  enabled        Boolean  @default(false)
+  /// VND/đơn vị (đơn vị cố định theo loại — DRIVER_SURCHARGE_KIND_SPEC). CHECK ≥ 0.
+  amount         Decimal  @default(0) @db.Decimal(14, 2)
+  /// Ngưỡng theo loại: phút-trong-ngày (ngoài giờ) · phút chờ miễn phí · km/ngày. NULL với overnight. CHECK ≥ 0.
+  thresholdValue Int?     @map("threshold_value")
+  updatedBy      String?  @map("updated_by") @db.Char(26)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([vehicleId, kind])
+  @@index([tenantId])
+  @@map("vehicle_driver_surcharge_rules")
 }
 
 /// Tiện ích xe (bluetooth, camera lùi…). Key thuộc `@xeprime/types` VEHICLE_FEATURE_LABEL.
@@ -1145,6 +1273,9 @@ model Booking {
   /// Phiên bản chính sách phí đã áp — để đọc lại snapshot mà không phải suy từ ngày.
   feePolicyId           String?   @map("fee_policy_id") @db.Char(26)
   note                  String?   @db.Text
+  /// Điều kiện thuê đã đóng băng — COPY từ `booking_requests.rental_terms_json` lúc duyệt; đơn
+  /// gian hàng tự lập lấy thiết lập hiệu lực lúc tạo. NULL ở đơn trước 08/09/2026.
+  rentalTerms           Json?     @map("rental_terms_json") @db.JsonB
   /// Tài xế được gán cho đơn (chủ yếu đơn with_driver) — plan 17/08. NULL = chưa phân công.
   driverId              String?   @map("driver_id") @db.Char(26)
   /// Hồ sơ khách trong SỔ KHÁCH của gian hàng (S-01). NULL với đơn lịch sử không có SĐT dùng
@@ -1267,6 +1398,14 @@ model BookingRequest {
   tenantCustomerId      String?   @map("tenant_customer_id") @db.Char(26)
   decidedBy             String?   @map("decided_by") @db.Char(26)
   decidedAt             DateTime? @map("decided_at") @db.Timestamptz(3)
+  /// @xeprime/types → BookingRequestDecisionSource. `system` = tự động nhận theo thiết lập của
+  /// chủ xe (khi đó `decided_by` NULL). NULL ở bản ghi chưa quyết hoặc trước 08/09/2026. CHECK.
+  decisionSource        String?   @map("decision_source") @db.VarChar(20)
+  /// Điều kiện thuê ĐÓNG BĂNG lúc khách gửi — giấy tờ, cách đối chiếu, điều khoản (+ thời điểm
+  /// khách đồng ý), phụ phí mặc định có tài xế, khung giờ và thời gian chết tại thời điểm đó.
+  /// @xeprime/types → RentalTermsSnapshot. Copy nguyên sang `bookings.rental_terms_json` khi duyệt;
+  /// chủ xe đổi thiết lập về sau KHÔNG viết lại cột này.
+  rentalTerms           Json?     @map("rental_terms_json") @db.JsonB
   createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 

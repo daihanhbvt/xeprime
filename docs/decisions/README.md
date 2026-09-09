@@ -22,7 +22,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0005](0005-status-enums.md) | Status enum tập trung | Accepted |
 | [0006](0006-booking-concurrency.md) | DB constraint chống trùng lịch | Accepted |
 | [0007](0007-api-type-contract.md) | Client type sinh từ OpenAPI | Accepted |
-| [0008](0008-public-listings-sync.md) | Đồng bộ public listing qua một writer | Accepted |
+| [0008](0008-public-listings-sync.md) | Đồng bộ public listing qua một writer | Accepted; **điều 2 bị 0030 ghi đè** |
 | [0009](0009-chat-firestore-projection.md) | PostgreSQL là nguồn thật của chat, Firestore là projection | Accepted |
 | [0010](0010-billing-plans-subscriptions.md) | Subscription append-only | Accepted; pricing được 0015/0028 sửa |
 | [0011](0011-long-term-fixed-packages.md) | Thuê dài hạn theo tháng lịch | Accepted |
@@ -44,6 +44,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0027](0027-feature-tiers-basic-owner-vs-shop.md) | Basic Owner và Full Shop capability | Accepted; làm rõ bởi 0028 |
 | [0028](0028-marketplace-subscription-fees-and-custodied-funds.md) | Mô hình hiện hành: hai lựa chọn, phí minh bạch, hold/payout có gate | Accepted; giá pilot cụ thể hoá bởi 0029 |
 | [0029](0029-per-vehicle-flat-pricing-and-customer-side-fees.md) | Giá gói phẳng theo chỗ; phụ phí chuyến phía khách | **Accepted** |
+| [0030](0030-locked-identity-fields-instead-of-reapproval.md) | Khoá căn cước xe thay cho "sửa là duyệt lại" | **Accepted; ghi đè 0008 điều 2** |
 
 ## Quy tắc thêm ADR
 

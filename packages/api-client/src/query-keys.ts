@@ -137,6 +137,18 @@ export const queryKeys = {
     maintenanceRecords: (id: string) => ['vehicles', 'maintenance', id, 'records'] as const,
     odometerHistory: (id: string, page: number) =>
       ['vehicles', 'maintenance', id, 'odometer', page] as const,
+    /** Thiết lập vận hành theo xe (08/09/2026) — khung giờ giao nhận + thời gian chết. */
+    operationSettings: (id: string) => ['vehicles', 'operation-settings', id] as const,
+    /** Thiết lập theo dịch vụ (tự động nhận, giấy tờ, điều khoản, cọc giữ chuyến). */
+    serviceSettings: (id: string) => ['vehicles', 'service-settings', id] as const,
+    /** Phụ phí mặc định có tài xế. */
+    driverSurchargeRules: (id: string) => ['vehicles', 'driver-surcharge-rules', id] as const,
+    /**
+     * Lịch sử chuyến của MỘT xe — đơn + yêu cầu trộn ở server. Dưới nhánh `vehicles` để mọi
+     * mutation của xe làm mới; duyệt/từ chối yêu cầu cũng phải invalidate nhánh này.
+     */
+    tripHistory: (id: string, params: QueryParams) =>
+      ['vehicles', 'trip-history', id, params] as const,
   },
   /** Trung tâm bảo dưỡng toàn đội xe (Wave 6) — domain riêng vì không thuộc một xe nào. */
   maintenance: {

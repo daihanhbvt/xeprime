@@ -6,6 +6,7 @@ import { PublicDestinationsController } from './public-destinations.controller';
 import { PublicShopsController } from './public-shops.controller';
 import { ListingsSyncModule } from './listings-sync.module';
 import { PublicListingsService } from './public-listings.service';
+import { VehicleSettingsModule } from '../vehicle-settings/vehicle-settings.module';
 
 /**
  * Marketplace công khai. Snapshot `public_listings` do `ListingsSyncModule` giữ (writer,
@@ -14,7 +15,8 @@ import { PublicListingsService } from './public-listings.service';
 @Module({
   // Quy tham số `province` (tên, link cũ) về mã đi qua ProvincesService — không tự query bảng bí danh.
   // PricingModule: chi tiết listing lộ mốc ưu đãi dài hạn (đọc qua effectivePolicy — một nguồn giá).
-  imports: [LocationsModule, PricingModule, ListingsSyncModule],
+  // VehicleSettingsModule: chi tiết xe công bố giấy tờ/điều khoản/khung giờ/phụ phí mặc định.
+  imports: [LocationsModule, PricingModule, ListingsSyncModule, VehicleSettingsModule],
   controllers: [PublicListingsController, PublicDestinationsController, PublicShopsController],
   providers: [PublicListingsService],
   exports: [ListingsSyncModule],

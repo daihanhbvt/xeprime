@@ -26,6 +26,7 @@ import {
   TENANT_CUSTOMER_SOURCE,
   type AuditActorScope,
   type BookingPriceSnapshot,
+  type RentalTermsSnapshot,
   type BookingStatus,
   type PaginationMeta,
 } from '@xeprime/types';
@@ -38,6 +39,7 @@ import { NotificationService } from '../notification/notification.service';
 import { OccupancyService } from '../calendar/occupancy.service';
 import { CustomersService } from '../customers/customers.service';
 import { DriversService } from '../drivers/drivers.service';
+import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
 import { HoldSettlementService } from '../holds/hold-settlement.service';
 import {
   BOOKING_DEFAULT_LIMIT,
@@ -97,6 +99,18 @@ const DETAIL_SELECT = {
 /** Nguồn tạo đơn: trực tiếp (shop lập) hay từ duyệt yêu cầu Marketplace. Quyết định có thông báo. */
 export type BookingCreateSource = 'direct' | 'from_request';
 
+/**
+ * Phần đi kèm một đơn tạo TRONG transaction của luồng gọi (08/09/2026) — không nằm trong
+ * `CreateBookingDto` vì client không được gửi hai thứ này:
+ *  - `driverId`: tài xế do hệ thống chọn khi TỰ ĐỘNG nhận chuyến có tài xế — gán ngay lúc INSERT
+ *    để `bookings_driver_schedule_excl` gác trong cùng transaction;
+ *  - `rentalTerms`: điều kiện thuê đã đóng băng trên yêu cầu — copy nguyên, không tính lại.
+ */
+export interface BookingCreateExtras {
+  driverId?: string | null;
+  rentalTerms?: RentalTermsSnapshot | null;
+}
+
 @Injectable()
 export class BookingsService {
   constructor(
@@ -108,6 +122,8 @@ export class BookingsService {
     private readonly customers: CustomersService,
     /** R3: chốt kết cục khoản giữ chỗ khi đơn kết thúc/huỷ (ADR 0028 điều 6). */
     private readonly holdSettlement: HoldSettlementService,
+    /** Thời gian chết + snapshot điều kiện thuê theo xe (08/09/2026). */
+    private readonly settings: VehicleSettingsService,
   ) {}
 
   async list(
@@ -220,7 +236,11 @@ export class BookingsService {
   async createWithinTx(
     tx: Prisma.TransactionClient,
     tenantId: string,
-    userId: string,
+    /**
+     * Người tạo — `null` khi HỆ THỐNG tự nhận chuyến (không có ai bấm): `created_by` NULL và
+     * audit ghi `actorScope: system`. Luồng gian hàng lập tay/duyệt tay luôn truyền id thật.
+     */
+    userId: string | null,
     dto: CreateBookingDto,
     source: BookingCreateSource = 'direct',
     snapshot?: BookingPriceSnapshot,
@@ -234,6 +254,7 @@ export class BookingsService {
      * Bỏ trống → service tự tìm-hoặc-tạo theo SĐT trên đơn.
      */
     tenantCustomerId?: string | null,
+    extras: BookingCreateExtras = {},
   ): Promise<BookingDetailDto> {
     // Hành trình đi cùng dịch vụ: with_driver bắt buộc lộ trình + địa chỉ đón (liên tỉnh thêm
     // điểm đến), dịch vụ khác bị normalize về null — CHECK DB là chốt chặn cuối.
@@ -295,6 +316,24 @@ export class BookingsService {
         mode: 'internal',
       }));
 
+    /*
+     * Tài xế gán ngay lúc tạo (chỉ khi HỆ THỐNG tự nhận chuyến có tài xế): cùng ba điều kiện
+     * của gán tay (`findAssignable`), và INSERT ngay dưới đây chạy qua
+     * `bookings_driver_schedule_excl` — hai chuyến đua nhau thì DB từ chối kẻ đến sau.
+     */
+    const driver = extras.driverId
+      ? await this.drivers.findAssignable(tenantId, extras.driverId, { pickupAt, returnAt }, tx)
+      : null;
+
+    /*
+     * Điều kiện thuê ĐÓNG BĂNG (08/09/2026): luồng duyệt yêu cầu truyền snapshot đã ghi lúc khách
+     * gửi; đơn gian hàng tự lập chụp thiết lập hiệu lực NGAY LÚC NÀY. Chủ xe đổi thiết lập về sau
+     * không viết lại cột này.
+     */
+    const rentalTerms =
+      extras.rentalTerms ??
+      (await this.settings.rentalTermsSnapshotFor(tx, dto.vehicleId, serviceType, null));
+
     const id = newId();
     const code = `DH${id.slice(-6).toUpperCase()}`;
 
@@ -332,6 +371,8 @@ export class BookingsService {
          * chợ, ADR 0028 điều 9) ⇒ NULL/0.
          */
         ...feeColumns(priceSnapshot),
+        rentalTerms: rentalTerms as unknown as Prisma.InputJsonValue,
+        driverId: driver?.id ?? null,
         note: dto.note ?? null,
         createdBy: userId,
       },
@@ -345,17 +386,26 @@ export class BookingsService {
       sourceId: id,
       startAt: pickupAt,
       endAt: returnAt,
+      // Thời gian chết của XE tại thời điểm giữ chỗ — cộng vào `period` để constraint gác luôn
+      // khoảng chuẩn bị (ADR 0006). Xe chưa cấu hình ⇒ 0, không âm thầm áp mặc định nào khác.
+      bufferMinutes: await this.settings.turnaroundBufferFor(tx, dto.vehicleId),
     });
 
     await this.audit.record(
       {
         tenantId,
         actorUserId: userId,
-        actorScope: 'tenant',
+        actorScope: userId ? AUDIT_ACTOR_SCOPE.TENANT : AUDIT_ACTOR_SCOPE.SYSTEM,
         action: 'booking.create',
         targetType: 'booking',
         targetId: id,
-        after: { code, vehicleId: dto.vehicleId, pickupAt, returnAt },
+        after: {
+          code,
+          vehicleId: dto.vehicleId,
+          pickupAt,
+          returnAt,
+          ...(driver ? { driverId: driver.id, driverName: driver.name } : {}),
+        },
       },
       tx,
     );
@@ -389,6 +439,7 @@ export class BookingsService {
       where: { id, tenantId, deletedAt: null },
       select: {
         id: true,
+        vehicleId: true,
         status: true,
         serviceType: true,
         longTermPackageMonths: true,
@@ -488,7 +539,15 @@ export class BookingsService {
       });
 
       if (rescheduled) {
-        await this.occupancy.reschedule(tx, OCCUPANCY_SOURCE_TYPE.BOOKING, id, pickupAt, returnAt);
+        // Dời lịch = occupancy MỚI theo ADR 0006 → nhận thời gian chết hiện hành của xe.
+        await this.occupancy.reschedule(
+          tx,
+          OCCUPANCY_SOURCE_TYPE.BOOKING,
+          id,
+          pickupAt,
+          returnAt,
+          await this.settings.turnaroundBufferFor(tx, current.vehicleId),
+        );
       }
 
       return updated;

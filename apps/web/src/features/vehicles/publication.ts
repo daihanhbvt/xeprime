@@ -10,8 +10,7 @@ export type PublishRequirementKey =
   | 'longTermPrice'
   | 'withDriverPrice'
   | 'mainImage'
-  | 'plateNumber'
-  | 'description';
+  | 'plateNumber';
 
 /**
  * Điều kiện tối thiểu để xe được lên chợ — khớp `missingPublicFields` ở backend và cột
@@ -51,7 +50,7 @@ export const PUBLISH_REQUIREMENTS: readonly {
   },
   { key: 'mainImage', applies: () => true, present: (v) => Boolean(v.mainImageUrl) },
   { key: 'plateNumber', applies: () => true, present: (v) => Boolean(v.plateNumber) },
-  { key: 'description', applies: () => true, present: (v) => Boolean(v.description) },
+  // Mô tả bỏ khỏi danh sách bắt buộc 09/09/2026 — xem missingPublicFields ở backend.
 ];
 
 /** Các điều kiện CÓ HIỆU LỰC với xe này (checklist chỉ hiện điều kiện áp dụng). */

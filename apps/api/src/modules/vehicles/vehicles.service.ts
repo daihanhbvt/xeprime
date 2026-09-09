@@ -13,11 +13,13 @@ import {
   BOOKING_STATUS,
   POLICY_SOURCE,
   RECEIPT_TYPE,
+  REVIEW_STATUS,
   SERVICE_TYPE,
+  vehicleImageTypeOf,
   TENANT_STATUS,
   isVehicleFuelTypeAllowed,
   VEHICLE_OPERATION_STATUS,
-  VEHICLE_PUBLIC_SENSITIVE_FIELDS,
+  VEHICLE_LOCKED_AFTER_APPROVAL_FIELDS,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_SUBMITTABLE,
   VEHICLE_TYPE,
@@ -45,6 +47,7 @@ import {
   VehicleDetailDto,
   VehicleListItemDto,
   VehicleListQueryDto,
+  VehicleMediaItemDto,
   VehicleStatsDto,
   VehiclePublicReviewDto,
 } from './dto/vehicle.dto';
@@ -91,6 +94,7 @@ const DETAIL_SELECT = {
   fuelConsumptionCity: true,
   fuelConsumptionHighway: true,
   fuelConsumptionCombined: true,
+  electricRangeKm: true,
   hourlyPrice: true,
   monthlyPrice: true,
   withDriverDailyPrice: true,
@@ -118,9 +122,12 @@ const SENSITIVE_SELECT = {
   plateNumber: true,
   vehicleType: true,
   fuelType: true,
+  transmission: true,
+  manufactureYear: true,
   bodyType: true,
   serviceTypes: true,
   mainImageUrl: true,
+  deliveryEnabled: true,
 } satisfies Prisma.VehicleSelect;
 
 @Injectable()
@@ -157,13 +164,20 @@ export class VehiclesService {
 
     const bookingScope = { tenantId, vehicleId: { in: ids }, deletedAt: null };
 
-    const [bookingGroups, receiptGroups] = await Promise.all([
+    const [bookingGroups, ratingGroups, receiptGroups] = await Promise.all([
       this.prisma.booking.groupBy({
         by: ['vehicleId', 'status'],
         where: {
           ...bookingScope,
           status: { in: [BOOKING_STATUS.ACTIVE, BOOKING_STATUS.COMPLETED] },
         },
+        _count: { _all: true },
+      }),
+      // Điểm đánh giá của xe — cùng vị từ với thẻ chợ (`ratingsByVehicle`): review published.
+      this.prisma.review.groupBy({
+        by: ['vehicleId'],
+        where: { tenantId, vehicleId: { in: ids }, status: REVIEW_STATUS.PUBLISHED },
+        _avg: { rating: true },
         _count: { _all: true },
       }),
       // Không có quyền tài chính thì KHÔNG chạy truy vấn — số liệu không được rời khỏi DB.
@@ -188,10 +202,16 @@ export class VehiclesService {
         receiptGroups.find((g) => g.vehicleId === vehicleId && g.type === type)?._sum.amount ??
         null;
 
+      const rating = ratingGroups.find((g) => g.vehicleId === vehicleId);
       const stats: VehicleStatsDto = {
         vehicleId,
         activeBookings: bookingsOf(BOOKING_STATUS.ACTIVE),
         completedBookings: bookingsOf(BOOKING_STATUS.COMPLETED),
+        ratingAvg:
+          rating && rating._count._all > 0 && rating._avg.rating != null
+            ? (Math.round(Number(rating._avg.rating) * 10) / 10).toFixed(1)
+            : null,
+        ratingCount: rating?._count._all ?? 0,
       };
 
       if (canViewFinance) {
@@ -253,7 +273,13 @@ export class VehiclesService {
     const [statsRow] = await this.stats(tenantId, [id], opts.canViewFinance);
     // `stats()` luôn trả một dòng cho mỗi id truyền vào; fallback chỉ để thoả type index-access.
     const result: Vehicle360SummaryDto = {
-      stats: statsRow ?? { vehicleId: id, activeBookings: 0, completedBookings: 0 },
+      stats: statsRow ?? {
+        vehicleId: id,
+        activeBookings: 0,
+        completedBookings: 0,
+        ratingAvg: null,
+        ratingCount: 0,
+      },
     };
 
     if (!opts.canViewBookings) return result;
@@ -365,7 +391,7 @@ export class VehiclesService {
       this.prisma.vehicleImage.findMany({
         where: { vehicleId: id },
         orderBy: { sortOrder: 'asc' },
-        select: { imageUrl: true },
+        select: { imageUrl: true, imageType: true, sortOrder: true },
       }),
       this.prisma.vehicleFeature.findMany({
         where: { vehicleId: id },
@@ -384,7 +410,12 @@ export class VehiclesService {
     return toDetail(
       row,
       review,
-      images.map((i) => i.imageUrl),
+      images.map((i) => ({
+        url: i.imageUrl,
+        // Ảnh cũ chưa gán loại → `other` khi ĐỌC; DB giữ nguyên tới khi chủ xe bấm lưu.
+        type: vehicleImageTypeOf(i.imageType),
+        sortOrder: i.sortOrder,
+      })),
       features.map((f) => f.featureKey),
     );
   }
@@ -463,11 +494,14 @@ export class VehiclesService {
       await this.assertCodeFree(tenantId, dto.code, tx);
     }
 
-    // ADR 0008: xe đang công khai mà sửa trường nhạy cảm (giá/biển số/loại/ảnh…) phải hạ về
-    // chờ duyệt lại, không để thông tin đã đổi hiển thị ngoài chợ khi chưa qua kiểm duyệt.
-    const knockBack =
-      current.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC &&
-      hasSensitiveChange(current, dto);
+    /*
+     * 09/09/2026 (ghi đè ADR 0008): xe ĐÃ DUYỆT thì căn cước của nó bị KHOÁ — biển số, loại xe,
+     * hộp số, nhiên liệu, năm sản xuất. Sửa những trường đó là biến listing đã kiểm duyệt thành
+     * một chiếc xe khác, nên server từ chối thẳng thay vì âm thầm hạ xe về chờ duyệt lại.
+     *
+     * Mọi trường còn lại — kể cả GIÁ và ảnh — sửa tự do và hiệu lực ngay ngoài chợ.
+     */
+    assertNoLockedFieldChange(current, dto);
 
     // Chuyển xe sang chi nhánh khác = đổi VỊ TRÍ CÔNG KHAI của nó. Kiểm quyền sở hữu + trạng
     // thái ngay đây, và ghi audit riêng: "xe này chuyển từ đâu sang đâu" là câu hỏi có thật khi
@@ -489,26 +523,11 @@ export class VehiclesService {
       ...writableFields(dto),
       // Bỏ một dịch vụ → giá chuyên biệt của nó bị xoá theo (FE đã cảnh báo trước khi lưu).
       ...(dto.serviceTypes !== undefined ? orphanPriceClears(dto.serviceTypes) : {}),
-      ...(knockBack ? { publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW } : {}),
     };
 
-    const updated = await tx.vehicle.update({
-      where: { id: current.id },
-      data,
-      select: DETAIL_SELECT,
-    });
+    await tx.vehicle.update({ where: { id: current.id }, data });
     await this.replaceMedia(tx, current.id, tenantId, dto);
-    if (knockBack) {
-      await this.createVehicleApprovalTask(tx, {
-        vehicleId: current.id,
-        tenantId,
-        actorUserId: userId,
-        fromStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
-        snapshot: updated,
-        action: 'resubmit',
-      });
-    }
-    // Mọi sửa xe → đồng bộ snapshot public_listings; nhạy cảm đổi → pending → listing ẩn (ADR 0008).
+    // Mọi sửa xe → đồng bộ snapshot public_listings ngay, để chợ không trưng thông tin cũ.
     await this.listings.syncFromVehicle(current.id, tx);
 
     if (branchChanged) {
@@ -654,9 +673,17 @@ export class VehiclesService {
         : {}),
       ...(dto.discountPercent !== undefined ? { discountPercent: dto.discountPercent } : {}),
     };
-    const priceChanged = hasSensitiveChange(current, priceDto);
-    const knockBack =
-      current.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC && priceChanged;
+
+    /*
+     * Cờ `vehicles.delivery_enabled` (chip tiện ích trên thẻ) đi THEO chính sách hiệu lực sau lần
+     * lưu này (08/09/2026): ghi đè thì theo bộ chính sách riêng, đặt lại thì theo mặc định gian
+     * hàng. Không có lần lưu nào để hai nguồn lệch nhau nữa. `null` = gian hàng chưa có chính
+     * sách ⇒ giữ nguyên cờ.
+     */
+    const deliverySync = overriding
+      ? dto.policy!.deliveryEnabled
+      : ((await this.pricing.shopPolicyValues(tenantId, current.vehicleType))?.deliveryEnabled ??
+        null);
 
     await this.prisma.$transaction(async (tx) => {
       const existingOverride = await tx.rentalPolicy.findUnique({
@@ -678,25 +705,15 @@ export class VehiclesService {
         policyChanged = true;
       }
 
-      if (Object.keys(priceDto).length > 0) {
-        const updated = await tx.vehicle.update({
-          where: { id: current.id },
-          data: {
-            ...writableFields(priceDto),
-            ...(knockBack ? { publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW } : {}),
-          },
-          select: DETAIL_SELECT,
-        });
-        if (knockBack) {
-          await this.createVehicleApprovalTask(tx, {
-            vehicleId: current.id,
-            tenantId,
-            actorUserId: userId,
-            fromStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
-            snapshot: updated,
-            action: 'resubmit',
-          });
-        }
+      const vehicleData: Prisma.VehicleUpdateInput = {
+        // Giá đổi là hiệu lực NGAY ngoài chợ (09/09/2026) — không hạ xe về chờ duyệt lại nữa.
+        ...writableFields(priceDto),
+        ...(deliverySync != null && deliverySync !== current.deliveryEnabled
+          ? { deliveryEnabled: deliverySync }
+          : {}),
+      };
+      if (Object.keys(vehicleData).length > 0) {
+        await tx.vehicle.update({ where: { id: current.id }, data: vehicleData });
       }
 
       /*
@@ -704,7 +721,7 @@ export class VehiclesService {
        * chấp" trên sàn nay suy từ chính sách hiệu lực, nên bật/tắt ghi đè cũng làm nó đổi dù
        * không đụng đồng nào tiền giá. Chạy sau nhánh giá để đọc được giá vừa ghi.
        */
-      if (Object.keys(priceDto).length > 0 || policyChanged) {
+      if (Object.keys(vehicleData).length > 0 || policyChanged) {
         await this.listings.syncFromVehicle(current.id, tx);
       }
 
@@ -751,7 +768,6 @@ export class VehiclesService {
               : {}),
             ...(dto.discountPercent !== undefined ? { discountPercent: dto.discountPercent } : {}),
             policy: overriding ? (dto.policy as unknown as Prisma.InputJsonValue) : null,
-            knockBack,
           },
         },
         tx,
@@ -771,15 +787,29 @@ export class VehiclesService {
     tenantId: string,
     dto: CreateVehicleDto | UpdateVehicleDto,
   ): Promise<void> {
-    if (dto.images !== undefined) {
+    /*
+     * Hai hình thái đầu vào, MỘT bảng (08/09/2026):
+     *  - `media` (màn thư viện theo ô): URL + loại, thứ tự mảng = sortOrder; URL trùng bị khử để
+     *    không lưu một file hai lần.
+     *  - `images` (client cũ, app native): chỉ URL. Loại đã gán của URL còn giữ lại được BẢO TOÀN
+     *    — một lần lưu từ form cũ không được xoá sạch vị trí ảnh chủ xe đã sắp ở màn mới.
+     */
+    const media =
+      dto.media !== undefined
+        ? dedupeByUrl(dto.media.map((m) => ({ url: m.url.trim(), type: m.type ?? null })))
+        : dto.images !== undefined
+          ? await this.preserveImageTypes(tx, vehicleId, dto.images)
+          : null;
+    if (media) {
       await tx.vehicleImage.deleteMany({ where: { vehicleId } });
-      if (dto.images.length > 0) {
+      if (media.length > 0) {
         await tx.vehicleImage.createMany({
-          data: dto.images.map((imageUrl, index) => ({
+          data: media.map((item, index) => ({
             id: newId(),
             vehicleId,
             tenantId,
-            imageUrl,
+            imageUrl: item.url,
+            imageType: item.type,
             sortOrder: index,
           })),
         });
@@ -794,6 +824,22 @@ export class VehiclesService {
         });
       }
     }
+  }
+
+  /** Loại ảnh hiện có theo URL — để `images: string[]` cũ không xoá mất vị trí đã gán. */
+  private async preserveImageTypes(
+    tx: Prisma.TransactionClient,
+    vehicleId: string,
+    urls: string[],
+  ): Promise<Array<{ url: string; type: string | null }>> {
+    const existing = await tx.vehicleImage.findMany({
+      where: { vehicleId },
+      select: { imageUrl: true, imageType: true },
+    });
+    const typeOf = new Map(existing.map((i) => [i.imageUrl, i.imageType]));
+    return dedupeByUrl(
+      urls.map((u) => u.trim()).filter(Boolean).map((url) => ({ url, type: typeOf.get(url) ?? null })),
+    );
   }
 
   /**
@@ -1032,6 +1078,7 @@ interface VehicleWritableFields {
   fuelConsumptionCity?: number | null;
   fuelConsumptionHighway?: number | null;
   fuelConsumptionCombined?: number | null;
+  electricRangeKm?: number | null;
   operationStatus?: string;
   description?: string | null;
   mainImageUrl?: string | null;
@@ -1085,6 +1132,7 @@ function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritab
     ...(dto.fuelConsumptionCombined !== undefined
       ? { fuelConsumptionCombined: dto.fuelConsumptionCombined }
       : {}),
+    ...(dto.electricRangeKm !== undefined ? { electricRangeKm: dto.electricRangeKm } : {}),
     ...(dto.operationStatus !== undefined ? { operationStatus: dto.operationStatus } : {}),
     ...(dto.description !== undefined ? { description: dto.description } : {}),
     ...(dto.mainImageUrl !== undefined ? { mainImageUrl: dto.mainImageUrl } : {}),
@@ -1180,10 +1228,20 @@ function toListItem(
   };
 }
 
+/** Giữ lần xuất hiện ĐẦU của mỗi URL — thứ tự người dùng sắp không đổi. */
+function dedupeByUrl<T extends { url: string }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (!item.url || seen.has(item.url)) return false;
+    seen.add(item.url);
+    return true;
+  });
+}
+
 function toDetail(
   v: VehicleRow,
   latestPublicReview: VehiclePublicReviewDto | null = null,
-  images: string[] = [],
+  media: VehicleMediaItemDto[] = [],
   features: string[] = [],
 ): VehicleDetailDto {
   return {
@@ -1200,6 +1258,7 @@ function toDetail(
     fuelConsumptionCity: v.fuelConsumptionCity as unknown as string | null,
     fuelConsumptionHighway: v.fuelConsumptionHighway as unknown as string | null,
     fuelConsumptionCombined: v.fuelConsumptionCombined as unknown as string | null,
+    electricRangeKm: v.electricRangeKm,
     hourlyPrice: v.hourlyPrice as unknown as string | null,
     monthlyPrice: v.monthlyPrice as unknown as string | null,
     withDriverDailyPrice: v.withDriverDailyPrice as unknown as string | null,
@@ -1208,7 +1267,8 @@ function toDetail(
     deliveryEnabled: v.deliveryEnabled,
     description: v.description,
     createdAt: v.createdAt as unknown as string,
-    images,
+    images: media.map((m) => m.url),
+    media,
     features,
     latestPublicReview,
   };
@@ -1216,23 +1276,31 @@ function toDetail(
 
 type SensitiveRow = Prisma.VehicleGetPayload<{ select: typeof SENSITIVE_SELECT }>;
 
-/**
- * Khoá so sánh trường nhạy cảm — MẢNG canonicalize (dedupe + sort + join) để đổi THỨ TỰ chọn
- * dịch vụ không bị tính là thay đổi. Công thức này có bản đối xứng ở FE
- * (`apps/web/features/vehicles/sensitive-changes.ts`) — sửa một bên phải sửa cả hai.
- */
-function sensitiveKey(value: unknown): string | null {
-  if (value == null) return null;
-  if (Array.isArray(value)) return [...new Set(value)].sort().join(',');
+/** Khoá so sánh — `null` và chuỗi rỗng là một, để "chưa khai" không bị tính là đổi. */
+function fieldKey(value: unknown): string | null {
+  if (value == null || value === '') return null;
   return String(value);
 }
 
-/** Có trường nhạy cảm nào được sửa sang giá trị khác hiện tại không (ADR 0008). */
-function hasSensitiveChange(current: SensitiveRow, dto: UpdateVehicleDto): boolean {
-  return VEHICLE_PUBLIC_SENSITIVE_FIELDS.some((field) => {
+/**
+ * Chặn sửa CĂN CƯỚC của một chiếc xe đang công khai (09/09/2026).
+ *
+ * Trả về danh sách trường vi phạm trong `details.fields` để FE chỉ đúng ô bị khoá; xe chưa
+ * duyệt (nháp, chờ duyệt, đã gỡ) thì sửa thoải mái.
+ */
+function assertNoLockedFieldChange(current: SensitiveRow, dto: UpdateVehicleDto): void {
+  if (current.publicStatus !== VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC) return;
+  const locked = VEHICLE_LOCKED_AFTER_APPROVAL_FIELDS.filter((field) => {
     const next = dto[field];
     if (next === undefined) return false; // không đụng tới trường này
-    return sensitiveKey(current[field]) !== sensitiveKey(next);
+    return fieldKey(current[field]) !== fieldKey(next);
+  });
+  if (locked.length === 0) return;
+  throw new ConflictException({
+    code: API_ERROR_CODE.VEHICLE_FIELD_LOCKED,
+    message:
+      'Xe đang hiển thị trên chợ nên không đổi được biển số, loại xe, hộp số, nhiên liệu hay năm sản xuất. Gỡ xe khỏi chợ trước nếu cần sửa.',
+    details: { fields: locked },
   });
 }
 
@@ -1256,7 +1324,8 @@ function missingPublicFields(v: VehicleRow): string[] {
   }
   if (!v.mainImageUrl) missing.push('ảnh đại diện');
   if (!v.plateNumber) missing.push('biển số');
-  if (!v.description) missing.push('mô tả xe');
+  // Mô tả KHÔNG còn bắt buộc (09/09/2026): ảnh + thông số + giá đã đủ để khách quyết định, và
+  // một ô mô tả bắt buộc chỉ đẻ ra những dòng "xe đẹp, máy êm" viết cho có.
   return missing;
 }
 

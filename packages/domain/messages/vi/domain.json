@@ -98,7 +98,8 @@
   "customerDocumentType": {
     "citizen_id": "CCCD / CMND",
     "driver_licence": "Giấy phép lái xe",
-    "other": "Giấy tờ khác"
+    "other": "Giấy tờ khác",
+    "passport": "Hộ chiếu"
   },
   "customerTripFilter": {
     "current": "Chuyến hiện tại",
@@ -269,7 +270,8 @@
     "subscription_expired": "Gói đã hết hạn",
     "subscription_lapsed": "Đã chuyển sang tính hoa hồng",
     "free_trips_exhausted": "Hết lượt miễn phí",
-    "subscription_activated": "Gói đã kích hoạt"
+    "subscription_activated": "Gói đã kích hoạt",
+    "booking_auto_accepted": "Tự động nhận chuyến"
   },
   "occupancySourceType": {
     "booking": "Đơn thuê",
@@ -401,7 +403,10 @@
     "overtime": "Quá giờ",
     "cleaning": "Vệ sinh",
     "damage": "Hư hại / bồi thường",
-    "other": "Khác"
+    "other": "Khác",
+    "waiting": "Phí chờ",
+    "long_distance": "Phụ phí đường dài",
+    "overnight": "Tài xế lưu trú qua đêm"
   },
   "tenantCustomerNoteType": {
     "general": "Ghi chú chung",
@@ -654,5 +659,65 @@
   "receiptSourceGroup": {
     "business": "Tiền của gian hàng",
     "held_funds": "Tiền giữ hộ"
+  },
+  "vehicleImageType": {
+    "front": "Ảnh mặt trước",
+    "rear": "Ảnh mặt sau",
+    "left": "Ảnh bên trái",
+    "right": "Ảnh bên phải",
+    "interior": "Ảnh nội thất",
+    "other": "Ảnh khác"
+  },
+  "handoverWindowKind": {
+    "pickup": "Thời gian giao xe",
+    "return": "Thời gian nhận xe"
+  },
+  "driverSurchargeKind": {
+    "overtime": "Phụ phí ngoài giờ",
+    "waiting": "Phụ phí chờ đợi",
+    "long_distance": "Phụ phí xe đi đường dài",
+    "overnight": "Phụ phí tài xế lưu trú qua đêm"
+  },
+  "driverSurchargeUnit": {
+    "per_hour": "đ / giờ",
+    "per_30_minutes": "đ / 30 phút",
+    "per_km": "đ / km",
+    "per_night": "đ / đêm"
+  },
+  "driverDepositMode": {
+    "none": "Không yêu cầu đặt cọc trước (thanh toán sau chuyến đi)",
+    "percent_30": "Yêu cầu đặt cọc 30% tổng chi phí chuyến đi để giữ lịch tài xế",
+    "percent_50": "Yêu cầu đặt cọc 50% trước chuyến đi"
+  },
+  "autoAcceptBlocker": {
+    "disabled": "Xe chưa bật tự động nhận chuyến",
+    "service_not_supported": "Dịch vụ này không hỗ trợ tự động nhận",
+    "lead_too_short": "Giờ nhận xe quá gần so với mức đặt trước tối thiểu",
+    "lead_too_long": "Giờ nhận xe quá xa so với mức đặt trước tối đa",
+    "outside_handover_window": "Giờ giao/nhận nằm ngoài khung giờ chủ xe phục vụ",
+    "below_min_duration": "Thời lượng thuê ngắn hơn mức tối thiểu",
+    "quote_estimate": "Giá còn tạm tính, chủ xe cần xác nhận",
+    "schedule_busy": "Xe bận trong khoảng thời gian này",
+    "no_driver": "Không có tài xế rảnh cho khung giờ này",
+    "hold_required_with_driver": "Chuyến có tài xế cần chủ xe xác nhận trước khi giữ chỗ",
+    "terms_not_accepted": "Khách chưa đồng ý điều khoản thuê"
+  },
+  "bookingRequestDecisionSource": {
+    "host": "Chủ xe quyết định",
+    "system": "Hệ thống tự động nhận"
+  },
+  "vehicleTripHistoryKind": {
+    "booking": "Đơn thuê",
+    "request": "Yêu cầu thuê"
+  },
+  "vehicleTripHistoryFilter": {
+    "all": "Tất cả",
+    "completed": "Hoàn thành",
+    "cancelled": "Đã hủy"
+  },
+  "driverSurchargeThresholdKind": {
+    "minute_of_day": "sau giờ",
+    "grace_minutes": "sau số phút chờ miễn phí",
+    "km_per_day": "quãng đường vượt mỗi ngày"
   }
 }

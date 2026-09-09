@@ -17,6 +17,7 @@ export * from './vehicle';
 export * from './vehicle-alert';
 export * from './vehicle-document';
 export * from './vehicle-maintenance';
+export * from './vehicle-settings';
 export * from './booking';
 export * from './booking-request';
 export * from './customer-trip';

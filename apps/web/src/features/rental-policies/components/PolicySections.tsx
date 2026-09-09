@@ -7,6 +7,7 @@ import {
   PlusOutlined,
 } from '@ant-design/icons';
 import { Alert, Button } from 'antd';
+import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import {
   useFieldArray,
@@ -16,10 +17,9 @@ import {
   type FieldErrors,
 } from 'react-hook-form';
 import {
-  COLLATERAL_ASSET_TYPE_LABEL,
   COLLATERAL_ASSET_TYPE_VALUES,
   COLLATERAL_MODE,
-  COLLATERAL_MODE_META,
+  COLLATERAL_MODE_VALUES,
   LONG_TERM_PACKAGE_MONTHS,
   longTermPackageLabel,
 } from '@xeprime/types';
@@ -36,6 +36,7 @@ import { PolicyInfoTip } from './PolicyInfoTip';
 
 import styles from './PolicySections.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 
 type LegacyTierView = { minDays: number; percent: number };
 
@@ -47,7 +48,13 @@ interface PolicySectionsProps {
   disabled?: boolean;
 }
 
-/** Bốn khối dùng chung cho policy gian hàng và policy ghi đè theo xe. */
+/**
+ * Bốn khối dùng chung cho policy gian hàng và policy ghi đè theo xe.
+ *
+ * Từng khối cũng được export riêng (`CollateralPolicySection`, `DeliveryPolicySection`) để không
+ * gian quản lý xe (08/09/2026) dựng màn "Giao xe tận nơi" và "Thủ tục cho thuê" từ ĐÚNG các ô
+ * này — không có bản sao thứ hai của bảng bậc phí hay ba chế độ bảo đảm.
+ */
 export function PolicySections({
   control,
   depositHint,
@@ -55,29 +62,22 @@ export function PolicySections({
   numbered = true,
   disabled = false,
 }: PolicySectionsProps) {
-  const n = (index: number, title: string) => (numbered ? `${index}. ${title}` : title);
+  const t = useTranslations('RentalPolicies.sections');
+  const n = (index: number, title: string) => (numbered ? t('numbered', { index, title }) : title);
 
   return (
     <div className={styles.stack}>
-      <DepositSection
+      <CollateralPolicySection
         control={control}
-        title={n(1, 'Yêu cầu bảo đảm (thế chấp)')}
+        title={n(1, t('depositTitle'))}
         hint={depositHint}
         disabled={disabled}
       />
-      <DeliverySection
-        control={control}
-        title={n(2, 'Dịch vụ giao nhận xe tận nơi')}
-        disabled={disabled}
-      />
-      <OvertimeSection
-        control={control}
-        title={n(3, 'Phí trả xe quá giờ thỏa thuận')}
-        disabled={disabled}
-      />
+      <DeliveryPolicySection control={control} title={n(2, t('deliveryTitle'))} disabled={disabled} />
+      <OvertimeSection control={control} title={n(3, t('overtimeTitle'))} disabled={disabled} />
       <DiscountSection
         control={control}
-        title={n(4, 'Ưu đãi cam kết thời hạn (thuê dài hạn)')}
+        title={n(4, t('discountTitle'))}
         legacyTiers={legacyDiscountTiers}
         disabled={disabled}
       />
@@ -119,30 +119,6 @@ function HeadLabel({
   );
 }
 
-/** Ba chế độ bảo đảm, nhãn lấy từ META của `@xeprime/types` — component không tự biết mã nào. */
-const COLLATERAL_MODE_OPTIONS = [
-  {
-    value: COLLATERAL_MODE.CASH,
-    label: COLLATERAL_MODE_META[COLLATERAL_MODE.CASH].label,
-    description: 'Khách đặt một khoản tiền, hoàn lại khi bàn giao xe xong.',
-  },
-  {
-    value: COLLATERAL_MODE.ASSET,
-    label: COLLATERAL_MODE_META[COLLATERAL_MODE.ASSET].label,
-    description: 'Khách để lại giấy tờ hoặc tài sản thay cho tiền — gian hàng không giữ tiền.',
-  },
-  {
-    value: COLLATERAL_MODE.NONE,
-    label: COLLATERAL_MODE_META[COLLATERAL_MODE.NONE].label,
-    description: 'Không yêu cầu bảo đảm. Xe sẽ mang nhãn "Miễn thế chấp" trên sàn.',
-  },
-] as const;
-
-const COLLATERAL_ASSET_OPTIONS = COLLATERAL_ASSET_TYPE_VALUES.map((value) => ({
-  value,
-  label: COLLATERAL_ASSET_TYPE_LABEL[value],
-}));
-
 /**
  * Khối BẢO ĐẢM — ba chế độ loại trừ nhau (gap C-04). Chỉ phần thuộc chế độ đang chọn hiện ra:
  * ô tiền cọc ở `cash`, danh mục tài sản ở `asset`, `none` không có gì để nhập.
@@ -150,32 +126,57 @@ const COLLATERAL_ASSET_OPTIONS = COLLATERAL_ASSET_TYPE_VALUES.map((value) => ({
  * Giấu phần không liên quan thay vì disable nó: một ô tiền cọc mờ đi bên cạnh "Miễn thế chấp"
  * vẫn khiến người dùng tưởng số cũ còn hiệu lực, trong khi `formToSaveInput` đã ép nó về 0.
  */
-function DepositSection({
-  control,
+export function CollateralPolicySection<T extends PolicyFormValues>({
+  control: outerControl,
   title,
   hint,
-  disabled,
+  disabled = false,
+  /** Mô tả từng chế độ do nơi gọi truyền để nói đúng ngữ cảnh (gian hàng vs một xe). */
+  optionDescriptions,
 }: {
-  control: Control<PolicyFormValues>;
+  control: Control<T>;
   title: string;
   hint?: ReactNode;
-  disabled: boolean;
+  disabled?: boolean;
+  optionDescriptions?: Partial<Record<string, string>>;
 }) {
+  /*
+   * Form của nơi gọi có thể là một BỘ BAO HÀM `PolicyFormValues` (màn "Thủ tục cho thuê" gộp
+   * chính sách bảo đảm với thiết lập dịch vụ). RHF không suy được `'collateralMode' extends
+   * Path<T>`, nên quy chiếu MỘT lần ở đây thay vì ép kiểu ở từng ô bên dưới — vẫn an toàn vì
+   * ràng buộc `T extends PolicyFormValues` bảo đảm các trường này có thật.
+   */
+  const control = outerControl as unknown as Control<PolicyFormValues>;
+  const t = useTranslations('RentalPolicies.sections');
+  const domainLabel = useDomainLabel();
   const mode = useWatch({ control, name: 'collateralMode' });
+
+  const defaultDescriptions: Record<string, string> = {
+    [COLLATERAL_MODE.CASH]: t('collateralCashDesc'),
+    [COLLATERAL_MODE.ASSET]: t('collateralAssetDesc'),
+    [COLLATERAL_MODE.NONE]: t('collateralNoneDesc'),
+  };
+  const modeOptions = COLLATERAL_MODE_VALUES.map((value) => ({
+    value,
+    label: domainLabel('collateralMode', value),
+    description: optionDescriptions?.[value] ?? defaultDescriptions[value],
+  }));
+  const assetOptions = COLLATERAL_ASSET_TYPE_VALUES.map((value) => ({
+    value,
+    label: domainLabel('collateralAssetType', value),
+  }));
 
   return (
     <section className={styles.card} aria-label={title}>
-      <SectionTitle title={title} infoLabel="Giải thích yêu cầu bảo đảm">
-        Bảo đảm là thứ gian hàng giữ để phòng rủi ro: tiền cọc, tài sản/giấy tờ, hoặc không yêu
-        cầu gì. Đây là việc RIÊNG với đối chiếu giấy tờ tuỳ thân — đối chiếu thì lượt thuê nào
-        cũng cần.
+      <SectionTitle title={title} infoLabel={t('depositInfoLabel')}>
+        {t('depositInfo')}
       </SectionTitle>
 
       <RadioGroupField
         control={control}
         name="collateralMode"
-        label="Hình thức bảo đảm"
-        options={COLLATERAL_MODE_OPTIONS}
+        label={t('collateralMode')}
+        options={modeOptions}
         disabled={disabled}
         required
       />
@@ -186,12 +187,9 @@ function DepositSection({
             <NumberField
               control={control}
               name="depositAmount"
-              label="Số tiền cọc mặc định"
+              label={t('depositAmount')}
               labelAccessory={
-                <PolicyInfoTip label="Giải thích số tiền cọc mặc định">
-                  Mức tiền cố định bằng VND, thu riêng với giá thuê, không chịu chiết khấu và chỉ
-                  áp dụng cho lượt đặt mới. Booking đã chốt giữ nguyên mức cọc cũ.
-                </PolicyInfoTip>
+                <PolicyInfoTip label={t('depositAmountInfoLabel')}>{t('depositAmountInfo')}</PolicyInfoTip>
               }
               money
               required
@@ -207,35 +205,38 @@ function DepositSection({
         <CheckboxGroupField
           control={control}
           name="collateralAssetTypes"
-          label="Loại tài sản nhận thế chấp"
-          options={COLLATERAL_ASSET_OPTIONS}
+          label={t('assetTypes')}
+          options={assetOptions}
           disabled={disabled}
           required
-          help="Khách chỉ cần đáp ứng MỘT trong các hình thức đã chọn."
+          help={t('assetTypesHelp')}
         />
       ) : null}
 
       {mode === COLLATERAL_MODE.NONE ? (
-        <Alert
-          type="info"
-          showIcon
-          message="Không thu cọc và không giữ tài sản"
-          description='Xe áp dụng chính sách này sẽ hiện nhãn "Miễn thế chấp" và lọc được theo tiêu chí đó trên sàn.'
-        />
+        <Alert type="info" showIcon message={t('noneTitle')} description={t('noneBody')} />
       ) : null}
     </section>
   );
 }
 
-function DeliverySection({
-  control,
+export function DeliveryPolicySection<T extends PolicyFormValues>({
+  control: outerControl,
   title,
-  disabled,
+  disabled = false,
 }: {
-  control: Control<PolicyFormValues>;
+  control: Control<T>;
   title: string;
-  disabled: boolean;
+  disabled?: boolean;
 }) {
+  /*
+   * Form của nơi gọi có thể là một BỘ BAO HÀM `PolicyFormValues` (màn "Thủ tục cho thuê" gộp
+   * chính sách bảo đảm với thiết lập dịch vụ). RHF không suy được `'collateralMode' extends
+   * Path<T>`, nên quy chiếu MỘT lần ở đây thay vì ép kiểu ở từng ô bên dưới — vẫn an toàn vì
+   * ràng buộc `T extends PolicyFormValues` bảo đảm các trường này có thật.
+   */
+  const control = outerControl as unknown as Control<PolicyFormValues>;
+  const t = useTranslations('RentalPolicies.sections');
   const enabled = useWatch({ control, name: 'deliveryEnabled' });
   const tiers = useWatch({ control, name: 'deliveryTiers' }) ?? [];
   const radius = useWatch({ control, name: 'deliveryMaxRadiusKm' });
@@ -255,44 +256,35 @@ function DeliverySection({
   return (
     <section className={styles.card} aria-label={title}>
       <div className={styles.cardHeader}>
-        <SectionTitle title={title} infoLabel="Giải thích phí giao nhận">
-          Phí được tính theo khoảng cách một chiều từ vị trí gian hàng đến điểm khách nhận xe.
+        <SectionTitle title={title} infoLabel={t('deliveryInfoLabel')}>
+          {t('deliveryInfo')}
         </SectionTitle>
         <SwitchField
           control={control}
           name="deliveryEnabled"
-          label={enabled ? 'Đang bật' : 'Đang tắt'}
+          label={enabled ? t('on') : t('off')}
           disabled={disabled}
         />
       </div>
       {enabled ? (
         <>
-          <div className={styles.tierTable} role="group" aria-label="Bậc phí giao nhận">
+          <div className={styles.tierTable} role="group" aria-label={t('tierTable')}>
             <div className={styles.tierHead}>
-              <HeadLabel
-                infoLabel="Giải thích khoảng cách bắt đầu"
-                info="Mốc bắt đầu tự động lấy từ điểm kết thúc của bậc trước để không tạo khoảng trống."
-              >
-                Khoảng cách từ (km)
+              <HeadLabel infoLabel={t('fromKmInfoLabel')} info={t('fromKmInfo')}>
+                {t('fromKm')}
               </HeadLabel>
-              <HeadLabel
-                infoLabel="Giải thích khoảng cách kết thúc"
-                info="Nhập giới hạn trên của bậc phí này. Các mốc phải tăng dần."
-              >
-                Khoảng cách đến (km)
+              <HeadLabel infoLabel={t('toKmInfoLabel')} info={t('toKmInfo')}>
+                {t('toKm')}
               </HeadLabel>
-              <HeadLabel
-                infoLabel="Giải thích phí giao nhận áp dụng"
-                info="Nhập 0 nếu gian hàng miễn phí giao nhận trong khoảng cách này."
-              >
-                Phí áp dụng (VND)
+              <HeadLabel infoLabel={t('feeInfoLabel')} info={t('feeInfo')}>
+                {t('fee')}
               </HeadLabel>
-              <span className={styles.tierActionHead}>Thao tác</span>
+              <span className={styles.tierActionHead}>{t('actions')}</span>
             </div>
             <div className={styles.tierMobileHead} aria-hidden="true">
-              <span>Khoảng cách</span>
-              <span>Phí áp dụng</span>
-              <span>Thao tác</span>
+              <span>{t('distance')}</span>
+              <span>{t('feeShort')}</span>
+              <span>{t('actions')}</span>
             </div>
 
             {fields.map((field, index) => (
@@ -308,7 +300,7 @@ function DeliverySection({
                     <NumberField
                       control={control}
                       name={`deliveryTiers.${index}.toKm`}
-                      label={`Mốc đến của bậc ${index + 1} (km)`}
+                      label={t('tierToLabel', { index: index + 1 })}
                       addonAfter="km"
                       min={0}
                       disabled={disabled}
@@ -318,11 +310,9 @@ function DeliverySection({
                 <NumberField
                   control={control}
                   name={`deliveryTiers.${index}.fee`}
-                  label={`Phí của bậc ${index + 1}`}
+                  label={t('tierFeeLabel', { index: index + 1 })}
                   money
-                  help={
-                    tiers[index]?.fee === 0 || tiers[index]?.fee == null ? 'Miễn phí' : undefined
-                  }
+                  help={tiers[index]?.fee === 0 || tiers[index]?.fee == null ? t('free') : undefined}
                   disabled={disabled}
                 />
                 <Button
@@ -330,11 +320,11 @@ function DeliverySection({
                   type="text"
                   danger
                   icon={<DeleteOutlined aria-hidden="true" />}
-                  aria-label={`Xóa bậc ${index + 1}`}
+                  aria-label={t('removeTier', { index: index + 1 })}
                   onClick={() => remove(index)}
                   disabled={disabled}
                 >
-                  <span className={styles.deleteText}>Xóa</span>
+                  <span className={styles.deleteText}>{t('remove')}</span>
                 </Button>
               </div>
             ))}
@@ -346,7 +336,7 @@ function DeliverySection({
               onClick={() => append({ toKm: null, fee: null })}
               disabled={disabled}
             >
-              Thêm khoảng cách
+              {t('addTier')}
             </Button>
             {crossError ? (
               <span className={styles.tierError} role="alert">
@@ -354,7 +344,7 @@ function DeliverySection({
               </span>
             ) : tiersComplete ? (
               <span className={styles.tierOk}>
-                <CheckCircleOutlined aria-hidden="true" /> Không có khoảng trống hoặc chồng lấn
+                <CheckCircleOutlined aria-hidden="true" /> {t('tiersOk')}
               </span>
             ) : null}
           </div>
@@ -363,13 +353,8 @@ function DeliverySection({
             <NumberField
               control={control}
               name="deliveryMaxRadiusKm"
-              label="Bán kính hỗ trợ tối đa tự giao"
-              labelAccessory={
-                <PolicyInfoTip label="Giải thích bán kính hỗ trợ tối đa">
-                  Mốc này phải khớp điểm kết thúc của bậc cuối. Ngoài bán kính, khách thấy “Liên hệ
-                  chủ xe” và shop báo giá giao nhận thủ công.
-                </PolicyInfoTip>
-              }
+              label={t('radius')}
+              labelAccessory={<PolicyInfoTip label={t('radiusInfoLabel')}>{t('radiusInfo')}</PolicyInfoTip>}
               addonAfter="km"
               min={0}
               required
@@ -381,16 +366,17 @@ function DeliverySection({
             <div className={styles.previewCard}>
               <InfoCircleOutlined className={styles.previewIcon} aria-hidden="true" />
               <span>
-                <strong>Tiền tối thiểu hiển thị với khách đặt:</strong>{' '}
-                {deliverySummaryText({ deliveryTiers: tiers, deliveryMaxRadiusKm: radius })}
+                <strong>{t('deliveryPreview')}</strong>{' '}
+                {deliverySummaryText(
+                  { deliveryTiers: tiers, deliveryMaxRadiusKm: radius },
+                  { free: t('free'), manualBeyond: t('manualBeyond') },
+                )}
               </span>
             </div>
           ) : null}
         </>
       ) : (
-        <p className={styles.disabledNote}>
-          Đang tắt — khách không thể yêu cầu giao xe tận nơi khi đặt.
-        </p>
+        <p className={styles.disabledNote}>{t('deliveryOff')}</p>
       )}
     </section>
   );
@@ -405,30 +391,27 @@ function OvertimeSection({
   title: string;
   disabled: boolean;
 }) {
+  const t = useTranslations('RentalPolicies.sections');
+  const tWorkspace = useTranslations('RentalPolicies.workspace');
   const fmt = useAppFormat();
 
   const fee = useWatch({ control, name: 'overtimeFeePerHour' });
 
   return (
     <section className={styles.card} aria-label={title}>
-      <SectionTitle title={title} infoLabel="Giải thích phí quá giờ">
-        Phí quá giờ được tính khi bàn trả xe, sau khi trừ thời gian miễn phí và áp dụng đơn vị làm
-        tròn đã cấu hình.
+      <SectionTitle title={title} infoLabel={t('overtimeInfoLabel')}>
+        {t('overtimeInfo')}
       </SectionTitle>
       <div className={styles.fieldRow}>
         <div className={styles.overtimeField}>
           <NumberField
             control={control}
             name="overtimeFeePerHour"
-            label="Phí mỗi giờ phát sinh"
-            labelAccessory={
-              <PolicyInfoTip label="Giải thích phí mỗi giờ phát sinh">
-                Mức phí cho mỗi giờ khách trả xe trễ sau khoảng miễn phí.
-              </PolicyInfoTip>
-            }
+            label={t('overtimeFee')}
+            labelAccessory={<PolicyInfoTip label={t('overtimeFeeInfoLabel')}>{t('overtimeFeeInfo')}</PolicyInfoTip>}
             money
-            addonAfter="đ / giờ"
-            placeholder="Cần cấu hình"
+            addonAfter={tWorkspace('perHour')}
+            placeholder={t('needsConfig')}
             disabled={disabled}
           />
         </div>
@@ -436,15 +419,13 @@ function OvertimeSection({
           <NumberField
             control={control}
             name="overtimeGraceMinutes"
-            label="Thời gian miễn phí tối đa"
+            label={t('overtimeGrace')}
             labelAccessory={
-              <PolicyInfoTip label="Giải thích thời gian miễn phí tối đa">
-                Khoảng trễ chưa phát sinh phí quá giờ.
-              </PolicyInfoTip>
+              <PolicyInfoTip label={t('overtimeGraceInfoLabel')}>{t('overtimeGraceInfo')}</PolicyInfoTip>
             }
-            addonAfter="phút"
+            addonAfter={t('minutes')}
             min={0}
-            placeholder="Cần cấu hình"
+            placeholder={t('needsConfig')}
             disabled={disabled}
           />
         </div>
@@ -452,25 +433,23 @@ function OvertimeSection({
           <NumberField
             control={control}
             name="overtimeRoundingMinutes"
-            label="Đơn vị làm tròn tối thiểu"
+            label={t('overtimeRounding')}
             labelAccessory={
-              <PolicyInfoTip label="Giải thích đơn vị làm tròn tối thiểu">
-                Bước thời gian nhỏ nhất dùng để làm tròn khi hệ thống tính phí.
-              </PolicyInfoTip>
+              <PolicyInfoTip label={t('overtimeRoundingInfoLabel')}>{t('overtimeRoundingInfo')}</PolicyInfoTip>
             }
-            addonAfter="phút"
+            addonAfter={t('minutes')}
             min={1}
-            placeholder="Cần cấu hình"
+            placeholder={t('needsConfig')}
             disabled={disabled}
           />
         </div>
       </div>
       <div className={styles.formulaCard}>
-        <span className={styles.previewTitle}>Công thức tính phí phạt trễ hạn tự động:</span>
+        <span className={styles.previewTitle}>{t('overtimeFormulaTitle')}</span>
         <span className={styles.previewText}>
           {fee != null
-            ? `Phí quá giờ = (số giờ trễ thực tế) × ${fmt.money(String(fee))}. Tính ở bước bàn trả xe.`
-            : 'Chưa cấu hình phí mỗi giờ — phí quá giờ sẽ thoả thuận thủ công ở bước bàn trả xe.'}
+            ? t('overtimeFormula', { fee: fmt.money(String(fee)) })
+            : t('overtimeFormulaMissing')}
         </span>
       </div>
     </section>
@@ -488,6 +467,7 @@ function DiscountSection({
   legacyTiers?: readonly LegacyTierView[];
   disabled: boolean;
 }) {
+  const t = useTranslations('RentalPolicies.sections');
   const enabled = useWatch({ control, name: 'discountEnabled' });
   const tiers = useWatch({ control, name: 'discountTiers' }) ?? [];
   const { errors } = useFormState({ control, name: 'discountTiers' });
@@ -509,64 +489,54 @@ function DiscountSection({
   return (
     <section className={styles.card} aria-label={title}>
       <div className={styles.cardHeader}>
-        <SectionTitle title={title} infoLabel="Giải thích ưu đãi thuê dài hạn">
-          Chỉ áp dụng cho thuê dài hạn. Khách nhận mốc giảm cao nhất mà gói đã chọn đạt tới và các
-          mốc không cộng dồn; ví dụ gói 9 tháng hưởng mốc 6 tháng nếu chưa có mốc cao hơn.
+        <SectionTitle title={title} infoLabel={t('discountInfoLabel')}>
+          {t('discountInfo')}
         </SectionTitle>
         <SwitchField
           control={control}
           name="discountEnabled"
-          label={enabled ? 'Đang bật' : 'Đang tắt'}
+          label={enabled ? t('on') : t('off')}
           disabled={disabled}
         />
       </div>
 
       {enabled ? (
         <>
-          <div className={styles.tierTable} role="group" aria-label="Mốc ưu đãi thuê dài hạn">
+          <div className={styles.tierTable} role="group" aria-label={t('discountTable')}>
             <div className={styles.discountHead}>
-              <HeadLabel
-                infoLabel="Giải thích gói thuê áp dụng ưu đãi"
-                info="Chỉ chọn trong các gói cố định 1, 2, 3, 6, 9 hoặc 12 tháng."
-              >
-                Gói thuê từ
+              <HeadLabel infoLabel={t('packageFromInfoLabel')} info={t('packageFromInfo')}>
+                {t('packageFrom')}
               </HeadLabel>
-              <HeadLabel
-                infoLabel="Giải thích mức giảm"
-                info="Phần trăm được trừ trên giá gốc của toàn bộ gói thuê dài hạn."
-              >
-                Mức giảm (%)
+              <HeadLabel infoLabel={t('percentInfoLabel')} info={t('percentInfo')}>
+                {t('percent')}
               </HeadLabel>
-              <HeadLabel
-                infoLabel="Giải thích ghi chú ưu đãi"
-                info="Nội dung ngắn giúp gian hàng nhận biết mục đích của mốc ưu đãi."
-              >
-                Ghi chú
+              <HeadLabel infoLabel={t('noteInfoLabel')} info={t('noteInfo')}>
+                {t('note')}
               </HeadLabel>
-              <span className={styles.tierActionHead}>Thao tác</span>
+              <span className={styles.tierActionHead}>{t('actions')}</span>
             </div>
             {fields.map((field, index) => (
               <div key={field.id} className={styles.discountRow}>
                 <SelectField
                   control={control}
                   name={`discountTiers.${index}.minMonths`}
-                  label={`Mốc gói của bậc ${index + 1}`}
+                  label={t('tierPackageLabel', { index: index + 1 })}
                   options={optionsFor(index)}
-                  placeholder="Chọn gói"
+                  placeholder={t('choosePackage')}
                   disabled={disabled}
                 />
                 <NumberField
                   control={control}
                   name={`discountTiers.${index}.percent`}
-                  label={`Mức giảm của mốc ${index + 1}`}
+                  label={t('tierPercentLabel', { index: index + 1 })}
                   percent
                   disabled={disabled}
                 />
                 <TextField
                   control={control}
                   name={`discountTiers.${index}.note`}
-                  label={`Ghi chú mốc ${index + 1}`}
-                  placeholder="Ghi chú ưu đãi…"
+                  label={t('tierNoteLabel', { index: index + 1 })}
+                  placeholder={t('notePlaceholder')}
                   disabled={disabled}
                 />
                 <Button
@@ -574,11 +544,11 @@ function DiscountSection({
                   type="text"
                   danger
                   icon={<DeleteOutlined aria-hidden="true" />}
-                  aria-label={`Xóa mốc ưu đãi ${index + 1}`}
+                  aria-label={t('removeDiscountTier', { index: index + 1 })}
                   onClick={() => remove(index)}
                   disabled={disabled}
                 >
-                  <span className={styles.deleteText}>Xóa</span>
+                  <span className={styles.deleteText}>{t('remove')}</span>
                 </Button>
               </div>
             ))}
@@ -590,7 +560,7 @@ function DiscountSection({
               disabled={disabled || nextUnusedMonths == null}
               onClick={() => append({ minMonths: nextUnusedMonths, percent: null, note: '' })}
             >
-              Thêm mốc ưu đãi
+              {t('addDiscountTier')}
             </Button>
             {crossError ? (
               <span className={styles.tierError} role="alert">
@@ -603,32 +573,27 @@ function DiscountSection({
             <Alert
               type="warning"
               showIcon
-              title={`${legacyTiers.length} mốc ưu đãi cũ theo NGÀY chưa quy đổi được sang gói`}
+              title={t('legacyTitle', { count: legacyTiers.length })}
               description={
                 <>
                   <span>
                     {legacyTiers
-                      .map((tier) => `từ ${tier.minDays} ngày giảm ${tier.percent}%`)
+                      .map((tier) => t('legacyTier', { days: tier.minDays, percent: tier.percent }))
                       .join(LIST_SEPARATOR)}
                   </span>
                   <br />
-                  <span>
-                    Các mốc này không còn được tính giá. Chọn lại mốc theo gói rồi lưu; hệ thống
-                    không tự quy đổi để tránh thay đổi giá ngoài ý muốn.
-                  </span>
+                  <span>{t('legacyBody')}</span>
                 </>
               }
             />
           ) : null}
           <div className={styles.formulaCard}>
-            <span className={styles.previewTitle}>Công thức tính giá gói:</span>
-            <span className={styles.previewText}>
-              giá_gói = giá_tháng × số_tháng − (giá_tháng × số_tháng × phần_trăm_giảm)
-            </span>
+            <span className={styles.previewTitle}>{t('discountFormulaTitle')}</span>
+            <span className={styles.previewText}>{t('discountFormula')}</span>
           </div>
         </>
       ) : (
-        <p className={styles.disabledNote}>Đang tắt — mọi lượt đặt tính nguyên giá thuê cơ bản.</p>
+        <p className={styles.disabledNote}>{t('discountOff')}</p>
       )}
     </section>
   );

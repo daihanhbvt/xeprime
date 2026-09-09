@@ -3,29 +3,35 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { App, Alert, Button, Input, Select } from 'antd';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
-  SURCHARGE_CATEGORY, SURCHARGE_CATEGORY_LABEL, SURCHARGE_CATEGORY_VALUES, type SurchargeCategory, } from '@xeprime/types';
+  SURCHARGE_CATEGORY,
+  SURCHARGE_CATEGORY_LABEL,
+  SURCHARGE_CATEGORY_VALUES,
+  type SurchargeCategory,
+} from '@xeprime/types';
 import { MoneyInput } from '@/components/form/MoneyInput';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { getErrorMessage } from '@/services/api-client';
 import { useAddSurcharge, useVoidSurcharge } from '../hooks';
 import type { BookingSettlement } from '../types';
 import styles from './SurchargeDialog.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
-
-const CATEGORY_OPTIONS = SURCHARGE_CATEGORY_VALUES.map((value) => ({
-  value,
-  label: SURCHARGE_CATEGORY_LABEL[value],
-}));
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useErrorMessage } from '@/i18n/use-error-message';
 
 /**
  * `Ghi nhận phát sinh` (Wave 10 §4.2) — tác vụ NÂNG CAO, không phải một bước của luồng trả xe.
  *
- * Bốn danh mục: quá giờ · vệ sinh · hư hại/bồi thường · khác. **Không có nhiên liệu** — Wave 10
- * bỏ hẳn mức xăng khỏi bàn giao nên cũng không có phụ phí thiếu xăng để ghi.
+ * Danh mục: quá giờ · vệ sinh · hư hại/bồi thường · chờ đợi · đường dài · lưu trú qua đêm · khác.
+ * **Không có nhiên liệu** — Wave 10 bỏ hẳn mức xăng khỏi bàn giao nên cũng không có phụ phí
+ * thiếu xăng để ghi.
  *
  * Ghi ở đây KHÔNG tạo giao dịch ngân hàng và KHÔNG cần khách xác nhận; nó chỉ thay đổi con số
  * đề xuất hoàn cọc — và con số đó do SERVER tính, hộp này chỉ hiển thị lại.
+ *
+ * 08/09/2026: đơn có tài xế mang theo bảng phụ phí chủ xe ĐÃ CÔNG BỐ lúc đặt
+ * (`settlement.surchargeRules` — snapshot, không đọc lại cấu hình hiện tại). Chọn danh mục có
+ * quy tắc thì số tiền/đơn vị được gợi ý sẵn; chủ xe vẫn nhập số thực tế và lý do.
  */
 export function SurchargeDialog({
   bookingId,
@@ -38,7 +44,11 @@ export function SurchargeDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  const t = useTranslations('Bookings.settlement');
+  const tActions = useTranslations('Common.actions');
   const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
+  const errorMessage = useErrorMessage();
 
   const { message } = App.useApp();
   const add = useAddSurcharge(bookingId);
@@ -49,43 +59,52 @@ export function SurchargeDialog({
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  const categoryLabel = (value: SurchargeCategory) =>
+    domainLabel('surchargeCategory', value, SURCHARGE_CATEGORY_LABEL[value]);
+  const categoryOptions = SURCHARGE_CATEGORY_VALUES.map((value) => ({
+    value,
+    label: categoryLabel(value),
+  }));
+
   /** Gợi ý quá giờ do server tính từ chính sách + giờ trả thực tế — chủ xe nhận, sửa hoặc bỏ. */
   const overtime = settlement.overtime;
-  const canSuggest =
+  const canSuggestOvertime =
     category === SURCHARGE_CATEGORY.OVERTIME && overtime.available && overtime.amount != null;
+  /** Quy tắc phụ phí có tài xế đã công bố cho danh mục đang chọn (nếu có). */
+  const rule = settlement.surchargeRules.find((r) => r.category === category) ?? null;
 
   function submit() {
     setError(null);
     if (amount == null || amount <= 0) {
-      setError('Nhập số tiền lớn hơn 0.');
+      setError(t('surcharges.amountRequired'));
       return;
     }
     if (!reason.trim()) {
-      setError('Nhập lý do — đây là khoản trừ vào tiền cọc của khách.');
+      setError(t('surcharges.reasonRequired'));
       return;
     }
     add.mutate(
       { category, amount: String(amount), reason: reason.trim() },
       {
         onSuccess: () => {
-          message.success('Đã ghi nhận khoản phát sinh');
+          message.success(t('surcharges.addSuccess'));
           setAmount(null);
           setReason('');
         },
-        onError: (err) => setError(getErrorMessage(err)),
+        onError: (err) => setError(errorMessage(err)),
       },
     );
   }
 
   return (
     <ResponsiveDialog
-      title="Ghi nhận phát sinh"
+      title={t('surcharges.add')}
       open={open}
       onClose={onClose}
       size="lg"
       footer={
         <Button type="primary" onClick={onClose}>
-          Xong
+          {tActions('done')}
         </Button>
       }
     >
@@ -97,7 +116,7 @@ export function SurchargeDialog({
               <li key={row.id} className={styles.item}>
                 <span className={styles.itemBody}>
                   <span className={styles.itemHead}>
-                    <b>{SURCHARGE_CATEGORY_LABEL[row.category as SurchargeCategory]}</b>
+                    <b>{categoryLabel(row.category as SurchargeCategory)}</b>
                     <b className={styles.money}>{fmt.money(row.amount)}</b>
                   </span>
                   <span className={styles.itemReason}>{row.reason}</span>
@@ -106,14 +125,16 @@ export function SurchargeDialog({
                   type="text"
                   danger
                   icon={<DeleteOutlined />}
-                  aria-label={`Gỡ khoản ${SURCHARGE_CATEGORY_LABEL[row.category as SurchargeCategory]}`}
+                  aria-label={t('surcharges.removeAria', {
+                    category: categoryLabel(row.category as SurchargeCategory),
+                  })}
                   loading={remove.isPending}
                   onClick={() =>
                     remove.mutate(
-                      { id: row.id, reason: 'Gỡ khỏi quyết toán' },
+                      { id: row.id, reason: t('surcharges.removeReason') },
                       {
-                        onSuccess: () => message.success('Đã gỡ khoản phát sinh'),
-                        onError: (err) => message.error(getErrorMessage(err)),
+                        onSuccess: () => message.success(t('surcharges.removeSuccess')),
+                        onError: (err) => message.error(errorMessage(err)),
                       },
                     )
                   }
@@ -122,54 +143,75 @@ export function SurchargeDialog({
             ))}
           </ul>
         ) : (
-          <p className={styles.empty}>Chưa ghi nhận khoản phát sinh nào.</p>
+          <p className={styles.empty}>{t('surcharges.empty')}</p>
         )}
 
         {/* ── Thêm khoản mới ─────────────────────────────────────────── */}
         <div className={styles.form}>
           <div className={styles.formRow}>
             <label className={styles.field}>
-              <span className={styles.label}>Phân loại</span>
+              <span className={styles.label}>{t('surcharges.categoryLabel')}</span>
               <Select
                 value={category}
                 onChange={(next) => setCategory(next)}
-                options={CATEGORY_OPTIONS}
+                options={categoryOptions}
                 className={styles.control}
               />
             </label>
             <label className={styles.field}>
-              <span className={styles.label}>Số tiền (đ)</span>
+              <span className={styles.label}>{t('surcharges.amountLabel')}</span>
               <MoneyInput
                 value={amount}
                 onChange={(value) => setAmount(value ?? null)}
                 min={0}
-                placeholder="600.000"
                 className={styles.control}
               />
             </label>
           </div>
 
-          {canSuggest ? (
+          {canSuggestOvertime ? (
             <Alert
               type="warning"
               showIcon
-              message={`Đề xuất từ chính sách quá giờ: ${fmt.money(overtime.amount!)}`}
+              message={t('surcharges.overtimeSuggestion', { amount: fmt.money(overtime.amount!) })}
               description={overtime.formula}
               action={
                 <Button size="small" onClick={() => setAmount(Number(overtime.amount))}>
-                  Dùng số này
+                  {t('overtime.apply')}
+                </Button>
+              }
+            />
+          ) : null}
+
+          {rule ? (
+            <Alert
+              type="info"
+              showIcon
+              message={t('surcharges.ruleSuggestion', {
+                kind: domainLabel('driverSurchargeKind', rule.kind),
+                amount: fmt.money(rule.amount),
+                unit: domainLabel('driverSurchargeUnit', rule.unit),
+              })}
+              description={
+                rule.thresholdValue != null
+                  ? t('surcharges.ruleThreshold', { value: rule.thresholdValue })
+                  : t('surcharges.ruleHint')
+              }
+              action={
+                <Button size="small" onClick={() => setAmount(Number(rule.amount))}>
+                  {t('overtime.apply')}
                 </Button>
               }
             />
           ) : null}
 
           <label className={styles.field}>
-            <span className={styles.label}>Lý do chi tiết</span>
+            <span className={styles.label}>{t('surcharges.reasonLabel')}</span>
             <Input.TextArea
               rows={2}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Ví dụ: khách trả muộn 6 tiếng do kẹt xe ngoài tỉnh"
+              placeholder={t('surcharges.reasonPlaceholder')}
             />
           </label>
 
@@ -181,36 +223,33 @@ export function SurchargeDialog({
             loading={add.isPending}
             className={styles.addBtn}
           >
-            Thêm phí phát sinh
+            {t('surcharges.addButton')}
           </Button>
         </div>
 
         {/* ── Phương án hoàn cọc (server tính) ───────────────────────── */}
         <dl className={styles.totals}>
           <div className={styles.totalRow}>
-            <dt>Tiền cọc đã nhận</dt>
+            <dt>{t('depositReceived')}</dt>
             <dd>{fmt.money(settlement.depositReceived)}</dd>
           </div>
           <div className={styles.totalRow}>
-            <dt>Tổng chi phí phát sinh</dt>
+            <dt>{t('surchargeTotal')}</dt>
             <dd className={styles.negative}>−{fmt.money(settlement.surchargeTotal)}</dd>
           </div>
           <div className={styles.totalRowStrong}>
-            <dt>Đề xuất hoàn lại cho khách</dt>
+            <dt>{t('proposedRefund')}</dt>
             <dd className={styles.positive}>{fmt.money(settlement.proposedRefund)}</dd>
           </div>
           {Number(settlement.additionalDue) > 0 ? (
             <div className={styles.totalRowStrong}>
-              <dt>Cần thu thêm</dt>
+              <dt>{t('additionalDue')}</dt>
               <dd className={styles.negative}>{fmt.money(settlement.additionalDue)}</dd>
             </div>
           ) : null}
         </dl>
 
-        <p className={styles.note}>
-          Các con số trên là ghi nhận vận hành. Hệ thống không tạo giao dịch ngân hàng và không yêu
-          cầu khách xác nhận.
-        </p>
+        <p className={styles.note}>{t('surcharges.operationalNote')}</p>
       </div>
     </ResponsiveDialog>
   );

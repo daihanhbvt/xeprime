@@ -57,6 +57,7 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     fuelConsumptionCity: values.fuelConsumptionCity ?? undefined,
     fuelConsumptionHighway: values.fuelConsumptionHighway ?? undefined,
     fuelConsumptionCombined: values.fuelConsumptionCombined ?? undefined,
+    electricRangeKm: values.electricRangeKm ?? undefined,
     weekdayPrice: values.weekdayPrice == null ? undefined : String(values.weekdayPrice),
     weekendPrice: values.weekendPrice == null ? undefined : String(values.weekendPrice),
     hourlyPrice: values.hourlyPrice == null ? null : String(values.hourlyPrice),
@@ -112,6 +113,7 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
       v.fuelConsumptionHighway == null ? null : Number(v.fuelConsumptionHighway),
     fuelConsumptionCombined:
       v.fuelConsumptionCombined == null ? null : Number(v.fuelConsumptionCombined),
+    electricRangeKm: v.electricRangeKm ?? null,
     weekdayPrice: v.weekdayPrice == null ? null : Number(v.weekdayPrice),
     weekendPrice: v.weekendPrice == null ? null : Number(v.weekendPrice),
     hourlyPrice: v.hourlyPrice == null ? null : Number(v.hourlyPrice),
@@ -161,6 +163,7 @@ export function informationValuesToInput(values: VehicleFormValues): UpdateVehic
     fuelConsumptionCity: values.fuelConsumptionCity,
     fuelConsumptionHighway: values.fuelConsumptionHighway,
     fuelConsumptionCombined: values.fuelConsumptionCombined,
+    electricRangeKm: values.electricRangeKm,
   };
 }
 
@@ -172,5 +175,32 @@ export function mediaValuesToInput(values: VehicleFormValues): UpdateVehicleInpu
     features: values.features ?? [],
     // Chuỗi rỗng là thao tác xoá mô tả có chủ đích; không đổi thành undefined.
     description: textOrNull(values.description),
+  };
+}
+
+/**
+ * Payload của mục "Thông tin xe" trong không gian quản lý xe (08/09/2026) — CHỈ những trường
+ * màn đó hiện: biển số, thông số cơ bản, mô tả, tiện ích. Tên/loại xe/dịch vụ/chi nhánh/giá/ảnh
+ * không đi qua đây nên không thể bị ghi đè bởi một màn không hiển thị chúng.
+ */
+export function manageInformationValuesToInput(values: VehicleFormValues): UpdateVehicleInput {
+  return {
+    plateNumber: textOrNull(values.plateNumber),
+    brand: textOrNull(values.brand),
+    model: textOrNull(values.model),
+    color: textOrNull(values.color),
+    fuelType: values.fuelType,
+    bodyType: values.vehicleType === VEHICLE_TYPE.CAR ? (values.bodyType ?? null) : null,
+    manufactureYear: values.manufactureYear,
+    seatCount: values.seatCount,
+    transmission: values.transmission,
+    fuelConsumptionCity: values.fuelConsumptionCity,
+    fuelConsumptionHighway: values.fuelConsumptionHighway,
+    fuelConsumptionCombined: values.fuelConsumptionCombined,
+    // Xe điện đo bằng km/lần sạc; xe xăng đo bằng lít/100km — form chỉ hiện đúng một ô, nhưng
+    // gửi cả hai để ô kia được XOÁ khi chủ xe đổi loại nhiên liệu.
+    electricRangeKm: values.electricRangeKm,
+    description: textOrNull(values.description),
+    features: values.features ?? [],
   };
 }

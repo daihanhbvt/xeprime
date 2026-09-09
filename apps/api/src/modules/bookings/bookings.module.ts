@@ -6,6 +6,7 @@ import { FinanceModule } from '../finance/finance.module';
 import { HoldSettlementModule } from '../holds/hold-settlement.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { VehiclesModule } from '../vehicles/vehicles.module';
+import { VehicleSettingsModule } from '../vehicle-settings/vehicle-settings.module';
 import { BookingsController } from './bookings.controller';
 import { BookingsService } from './bookings.service';
 import { BookingHandoversController } from './handovers/booking-handovers.controller';
@@ -36,6 +37,8 @@ import { SettlementService } from './settlement/settlement.service';
   imports: [
     CalendarModule,
     VehiclesModule,
+    // Thời gian chết + snapshot điều kiện thuê khi tạo/dời đơn (08/09/2026) — module lá, không vòng.
+    VehicleSettingsModule,
     PricingModule,
     DriversModule,
     CustomersModule,

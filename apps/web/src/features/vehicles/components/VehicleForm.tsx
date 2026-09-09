@@ -65,6 +65,7 @@ const EMPTY_DEFAULTS: VehicleFormValues = {
   fuelConsumptionCity: null,
   fuelConsumptionHighway: null,
   fuelConsumptionCombined: null,
+  electricRangeKm: null,
   weekdayPrice: null,
   weekendPrice: null,
   hourlyPrice: null,

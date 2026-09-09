@@ -2,6 +2,7 @@
 
 import { Alert, Button } from 'antd';
 import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { branchFormSchema, type BranchFormValues } from '@xeprime/validators';
 import { EmbedMap } from '@/components/data-display/EmbedMap';
@@ -32,11 +33,17 @@ export function BranchFormDialog({
   open,
   branch,
   onClose,
+  notice,
 }: {
   open: boolean;
   /** Có = sửa, không = tạo mới. */
   branch: Branch | null;
   onClose: () => void;
+  /**
+   * Cảnh báo ngữ cảnh đặt trên form — ví dụ màn quản lý MỘT xe nhắc rằng chi nhánh này đang giữ
+   * nhiều xe và sửa địa chỉ sẽ đổi vị trí của tất cả. Hộp thoại không tự suy điều đó.
+   */
+  notice?: ReactNode;
 }) {
   const t = useTranslations('Branches');
   const tc = useTranslations('Common');
@@ -108,6 +115,8 @@ export function BranchFormDialog({
           }
         />
       ) : null}
+
+      {notice}
 
       {provinces.isError ? (
         <Alert
