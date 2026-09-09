@@ -6,7 +6,6 @@ import { useState, type ReactNode } from 'react';
 import {
   SERVICE_TYPE,
   isServiceType,
-  VEHICLE_PUBLIC_STATUS,
   isVehicleServiceTypeAllowed,
   type ServiceType,
 } from '@xeprime/types';
@@ -48,7 +47,6 @@ export function useServiceToggle(vehicle: VehicleDetail, canEdit: boolean): Serv
 
   // Mã lạ trong dữ liệu cũ không được kéo theo vào lệnh ghi — lọc về đúng union rồi mới gửi.
   const current = (vehicle.serviceTypes ?? []).filter(isServiceType);
-  const isPublic = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
 
   function blockedReason(service: ServiceType, enabled: boolean): string | null {
     if (!canEdit) return t('nav.toggleNoPermission');
@@ -94,8 +92,12 @@ export function useServiceToggle(vehicle: VehicleDetail, canEdit: boolean): Serv
       ? [...new Set([...current, service])]
       : current.filter((s) => s !== service);
     if (next.length === 0) return;
-    // Công khai → duyệt lại; tắt dịch vụ có giá → mất giá. Cả hai đều đáng hỏi trước khi lưu.
-    if (isPublic || (!enabled && priceLoss(service))) {
+    /*
+     * Chỉ còn MỘT lý do phải hỏi: tắt một dịch vụ đang có giá riêng sẽ XOÁ giá đó (server dọn
+     * giá mồ côi). Bật/tắt dịch vụ của xe công khai không còn kéo xe về chờ duyệt lại từ
+     * 09/09/2026, nên không hỏi lại chuyện đã không còn xảy ra.
+     */
+    if (!enabled && priceLoss(service)) {
       setPendingChange({ service, enabled, next });
       return;
     }
@@ -105,11 +107,7 @@ export function useServiceToggle(vehicle: VehicleDetail, canEdit: boolean): Serv
   const dialog = (
     <ResponsiveDialog
       open={pendingChange !== null}
-      title={
-        pendingChange && isPublic
-          ? t('serviceToggle.confirmTitle')
-          : t('serviceToggle.priceLossTitle')
-      }
+      title={t('serviceToggle.priceLossTitle')}
       size="sm"
       confirmLoading={update.isPending}
       onClose={() => setPendingChange(null)}
@@ -119,7 +117,6 @@ export function useServiceToggle(vehicle: VehicleDetail, canEdit: boolean): Serv
       okText={t('serviceToggle.confirmOk')}
       destructive={Boolean(pendingChange && !pendingChange.enabled)}
     >
-      {isPublic ? <p>{t('serviceToggle.confirmBody')}</p> : null}
       {pendingChange && !pendingChange.enabled && priceLoss(pendingChange.service) ? (
         <p>{t('serviceToggle.priceLossBody')}</p>
       ) : null}

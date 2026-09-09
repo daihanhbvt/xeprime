@@ -42,8 +42,6 @@
     "toggleNoPermission": "Bạn không có quyền sửa xe."
   },
   "serviceToggle": {
-    "confirmTitle": "Đổi dịch vụ của xe đang công khai?",
-    "confirmBody": "Xe sẽ chuyển về chờ duyệt lại và tạm ẩn khỏi marketplace cho tới khi nền tảng duyệt.",
     "confirmOk": "Xác nhận & lưu",
     "priceLossTitle": "Tắt dịch vụ này sẽ xoá giá chuyên biệt của nó",
     "priceLossBody": "Bật lại về sau sẽ phải nhập giá lại. Các đơn đã chốt không bị ảnh hưởng.",
@@ -66,8 +64,7 @@
     "hours": "{count, plural, other {# giờ}}",
     "minutes": "{count, plural, other {# phút}}",
     "days": "{count, plural, other {# ngày}}",
-    "weeks": "{count, plural, other {# tuần}}",
-    "publicWarning": "Xe đang công khai. Thay đổi nhạy cảm sẽ đưa xe về chờ duyệt lại và tạm ẩn khỏi marketplace."
+    "weeks": "{count, plural, other {# tuần}}"
   },
   "information": {
     "plateTitle": "Biển số đăng ký",
@@ -83,7 +80,9 @@
     "addressMapTitle": "Bản đồ vị trí xe",
     "addressSharedTitle": "Chi nhánh này đang giữ {count, plural, other {# xe}}",
     "addressSharedBody": "Sửa địa chỉ chi nhánh sẽ đổi vị trí công khai của tất cả các xe đó. Muốn đặt xe ở nơi khác, hãy tạo/chọn chi nhánh khác ở cổng quản lý.",
-    "saved": "Đã lưu thông tin xe"
+    "saved": "Đã lưu thông tin xe",
+    "lockedNotice": "Xe đang hiển thị trên chợ: biển số, hộp số, nhiên liệu và năm sản xuất đã khoá. Mọi thông tin khác — gồm cả giá — sửa là có hiệu lực ngay.",
+    "lockedField": "Đã khoá vì xe đang trên chợ. Gỡ xe khỏi chợ nếu cần đổi."
   },
   "images": {
     "reorderToggle": "Cho phép kéo thả để sắp xếp thứ tự hình ảnh.",

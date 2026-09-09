@@ -12,21 +12,19 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
-import { Alert, App, Progress, Switch, Tag, Upload } from 'antd';
+import { App, Progress, Switch, Tag, Upload } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   IMAGE_UPLOAD_MIME_TYPES,
   VEHICLE_GALLERY_MAX_IMAGES,
   VEHICLE_IMAGE_SLOT_ORDER,
-  VEHICLE_PUBLIC_STATUS,
   isSingleVehicleImageSlot,
   type VehicleImageType,
 } from '@xeprime/types';
 
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
-import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { PublishRequiredLabel } from '@/features/vehicles/components/VehicleCompleteness';
 import { useUpdateVehicle } from '@/features/vehicles/hooks/use-vehicle-mutations';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -86,7 +84,6 @@ export function ImagesSection() {
   const [items, setItems] = useState<MediaItem[]>(initial.items);
   const [pending, setPending] = useState<PendingUpload[]>([]);
   const [reorder, setReorder] = useState(false);
-  const [confirmSensitive, setConfirmSensitive] = useState(false);
   /*
    * Upload chạy bất đồng bộ và kết thúc sau nhiều lần render, nên mọi thay đổi danh sách đều
    * dùng dạng HÀM (`setItems(prev => …)`): hai ảnh tải xong cùng lúc vẫn cộng dồn đúng, và
@@ -94,7 +91,6 @@ export function ImagesSection() {
    */
   const sequence = useRef(0);
 
-  const isPublic = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
   const dirty =
     main !== initial.main || JSON.stringify(items) !== JSON.stringify(initial.items);
 
@@ -193,19 +189,13 @@ export function ImagesSection() {
         mainImageUrl: main,
         media: items.map((i) => ({ url: i.url, type: i.type })),
       });
-      setConfirmSensitive(false);
       message.success(t('saved'));
     } catch (err) {
-      setConfirmSensitive(false);
       message.error(errorMessage(err));
     }
   }
 
   function save() {
-    if (isPublic && main !== initial.main) {
-      setConfirmSensitive(true);
-      return;
-    }
     void submit();
   }
 
@@ -233,7 +223,6 @@ export function ImagesSection() {
           </label>
           <span className={styles.hint}>{t('minimumHint', { max: VEHICLE_GALLERY_MAX_IMAGES })}</span>
         </div>
-        {isPublic ? <Alert type="warning" showIcon message={tEdit('publicWarning')} /> : null}
         <MainImageTile
           url={main}
           canEdit={canEdit}
@@ -321,18 +310,6 @@ export function ImagesSection() {
         disabled={!canEdit || !dirty || pending.length > 0}
       />
 
-      <ResponsiveDialog
-        open={confirmSensitive}
-        title={tEdit('sensitive.title')}
-        size="sm"
-        confirmLoading={update.isPending}
-        onClose={() => setConfirmSensitive(false)}
-        onOk={() => void submit()}
-        okText={tEdit('sensitive.ok')}
-        cancelText={tActions('cancel')}
-      >
-        <p>{tEdit('sensitive.body')}</p>
-      </ResponsiveDialog>
     </form>
   );
 }

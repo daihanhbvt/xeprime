@@ -19,7 +19,7 @@ import {
   TENANT_STATUS,
   isVehicleFuelTypeAllowed,
   VEHICLE_OPERATION_STATUS,
-  VEHICLE_PUBLIC_SENSITIVE_FIELDS,
+  VEHICLE_LOCKED_AFTER_APPROVAL_FIELDS,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_SUBMITTABLE,
   VEHICLE_TYPE,
@@ -94,6 +94,7 @@ const DETAIL_SELECT = {
   fuelConsumptionCity: true,
   fuelConsumptionHighway: true,
   fuelConsumptionCombined: true,
+  electricRangeKm: true,
   hourlyPrice: true,
   monthlyPrice: true,
   withDriverDailyPrice: true,
@@ -121,6 +122,8 @@ const SENSITIVE_SELECT = {
   plateNumber: true,
   vehicleType: true,
   fuelType: true,
+  transmission: true,
+  manufactureYear: true,
   bodyType: true,
   serviceTypes: true,
   mainImageUrl: true,
@@ -491,11 +494,14 @@ export class VehiclesService {
       await this.assertCodeFree(tenantId, dto.code, tx);
     }
 
-    // ADR 0008: xe đang công khai mà sửa trường nhạy cảm (giá/biển số/loại/ảnh…) phải hạ về
-    // chờ duyệt lại, không để thông tin đã đổi hiển thị ngoài chợ khi chưa qua kiểm duyệt.
-    const knockBack =
-      current.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC &&
-      hasSensitiveChange(current, dto);
+    /*
+     * 09/09/2026 (ghi đè ADR 0008): xe ĐÃ DUYỆT thì căn cước của nó bị KHOÁ — biển số, loại xe,
+     * hộp số, nhiên liệu, năm sản xuất. Sửa những trường đó là biến listing đã kiểm duyệt thành
+     * một chiếc xe khác, nên server từ chối thẳng thay vì âm thầm hạ xe về chờ duyệt lại.
+     *
+     * Mọi trường còn lại — kể cả GIÁ và ảnh — sửa tự do và hiệu lực ngay ngoài chợ.
+     */
+    assertNoLockedFieldChange(current, dto);
 
     // Chuyển xe sang chi nhánh khác = đổi VỊ TRÍ CÔNG KHAI của nó. Kiểm quyền sở hữu + trạng
     // thái ngay đây, và ghi audit riêng: "xe này chuyển từ đâu sang đâu" là câu hỏi có thật khi
@@ -517,26 +523,11 @@ export class VehiclesService {
       ...writableFields(dto),
       // Bỏ một dịch vụ → giá chuyên biệt của nó bị xoá theo (FE đã cảnh báo trước khi lưu).
       ...(dto.serviceTypes !== undefined ? orphanPriceClears(dto.serviceTypes) : {}),
-      ...(knockBack ? { publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW } : {}),
     };
 
-    const updated = await tx.vehicle.update({
-      where: { id: current.id },
-      data,
-      select: DETAIL_SELECT,
-    });
+    await tx.vehicle.update({ where: { id: current.id }, data });
     await this.replaceMedia(tx, current.id, tenantId, dto);
-    if (knockBack) {
-      await this.createVehicleApprovalTask(tx, {
-        vehicleId: current.id,
-        tenantId,
-        actorUserId: userId,
-        fromStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
-        snapshot: updated,
-        action: 'resubmit',
-      });
-    }
-    // Mọi sửa xe → đồng bộ snapshot public_listings; nhạy cảm đổi → pending → listing ẩn (ADR 0008).
+    // Mọi sửa xe → đồng bộ snapshot public_listings ngay, để chợ không trưng thông tin cũ.
     await this.listings.syncFromVehicle(current.id, tx);
 
     if (branchChanged) {
@@ -682,9 +673,6 @@ export class VehiclesService {
         : {}),
       ...(dto.discountPercent !== undefined ? { discountPercent: dto.discountPercent } : {}),
     };
-    const priceChanged = hasSensitiveChange(current, priceDto);
-    const knockBack =
-      current.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC && priceChanged;
 
     /*
      * Cờ `vehicles.delivery_enabled` (chip tiện ích trên thẻ) đi THEO chính sách hiệu lực sau lần
@@ -718,28 +706,14 @@ export class VehiclesService {
       }
 
       const vehicleData: Prisma.VehicleUpdateInput = {
+        // Giá đổi là hiệu lực NGAY ngoài chợ (09/09/2026) — không hạ xe về chờ duyệt lại nữa.
         ...writableFields(priceDto),
-        ...(knockBack ? { publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW } : {}),
         ...(deliverySync != null && deliverySync !== current.deliveryEnabled
           ? { deliveryEnabled: deliverySync }
           : {}),
       };
       if (Object.keys(vehicleData).length > 0) {
-        const updated = await tx.vehicle.update({
-          where: { id: current.id },
-          data: vehicleData,
-          select: DETAIL_SELECT,
-        });
-        if (knockBack) {
-          await this.createVehicleApprovalTask(tx, {
-            vehicleId: current.id,
-            tenantId,
-            actorUserId: userId,
-            fromStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
-            snapshot: updated,
-            action: 'resubmit',
-          });
-        }
+        await tx.vehicle.update({ where: { id: current.id }, data: vehicleData });
       }
 
       /*
@@ -794,7 +768,6 @@ export class VehiclesService {
               : {}),
             ...(dto.discountPercent !== undefined ? { discountPercent: dto.discountPercent } : {}),
             policy: overriding ? (dto.policy as unknown as Prisma.InputJsonValue) : null,
-            knockBack,
           },
         },
         tx,
@@ -1105,6 +1078,7 @@ interface VehicleWritableFields {
   fuelConsumptionCity?: number | null;
   fuelConsumptionHighway?: number | null;
   fuelConsumptionCombined?: number | null;
+  electricRangeKm?: number | null;
   operationStatus?: string;
   description?: string | null;
   mainImageUrl?: string | null;
@@ -1158,6 +1132,7 @@ function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritab
     ...(dto.fuelConsumptionCombined !== undefined
       ? { fuelConsumptionCombined: dto.fuelConsumptionCombined }
       : {}),
+    ...(dto.electricRangeKm !== undefined ? { electricRangeKm: dto.electricRangeKm } : {}),
     ...(dto.operationStatus !== undefined ? { operationStatus: dto.operationStatus } : {}),
     ...(dto.description !== undefined ? { description: dto.description } : {}),
     ...(dto.mainImageUrl !== undefined ? { mainImageUrl: dto.mainImageUrl } : {}),
@@ -1283,6 +1258,7 @@ function toDetail(
     fuelConsumptionCity: v.fuelConsumptionCity as unknown as string | null,
     fuelConsumptionHighway: v.fuelConsumptionHighway as unknown as string | null,
     fuelConsumptionCombined: v.fuelConsumptionCombined as unknown as string | null,
+    electricRangeKm: v.electricRangeKm,
     hourlyPrice: v.hourlyPrice as unknown as string | null,
     monthlyPrice: v.monthlyPrice as unknown as string | null,
     withDriverDailyPrice: v.withDriverDailyPrice as unknown as string | null,
@@ -1300,23 +1276,31 @@ function toDetail(
 
 type SensitiveRow = Prisma.VehicleGetPayload<{ select: typeof SENSITIVE_SELECT }>;
 
-/**
- * Khoá so sánh trường nhạy cảm — MẢNG canonicalize (dedupe + sort + join) để đổi THỨ TỰ chọn
- * dịch vụ không bị tính là thay đổi. Công thức này có bản đối xứng ở FE
- * (`apps/web/features/vehicles/sensitive-changes.ts`) — sửa một bên phải sửa cả hai.
- */
-function sensitiveKey(value: unknown): string | null {
-  if (value == null) return null;
-  if (Array.isArray(value)) return [...new Set(value)].sort().join(',');
+/** Khoá so sánh — `null` và chuỗi rỗng là một, để "chưa khai" không bị tính là đổi. */
+function fieldKey(value: unknown): string | null {
+  if (value == null || value === '') return null;
   return String(value);
 }
 
-/** Có trường nhạy cảm nào được sửa sang giá trị khác hiện tại không (ADR 0008). */
-function hasSensitiveChange(current: SensitiveRow, dto: UpdateVehicleDto): boolean {
-  return VEHICLE_PUBLIC_SENSITIVE_FIELDS.some((field) => {
+/**
+ * Chặn sửa CĂN CƯỚC của một chiếc xe đang công khai (09/09/2026).
+ *
+ * Trả về danh sách trường vi phạm trong `details.fields` để FE chỉ đúng ô bị khoá; xe chưa
+ * duyệt (nháp, chờ duyệt, đã gỡ) thì sửa thoải mái.
+ */
+function assertNoLockedFieldChange(current: SensitiveRow, dto: UpdateVehicleDto): void {
+  if (current.publicStatus !== VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC) return;
+  const locked = VEHICLE_LOCKED_AFTER_APPROVAL_FIELDS.filter((field) => {
     const next = dto[field];
     if (next === undefined) return false; // không đụng tới trường này
-    return sensitiveKey(current[field]) !== sensitiveKey(next);
+    return fieldKey(current[field]) !== fieldKey(next);
+  });
+  if (locked.length === 0) return;
+  throw new ConflictException({
+    code: API_ERROR_CODE.VEHICLE_FIELD_LOCKED,
+    message:
+      'Xe đang hiển thị trên chợ nên không đổi được biển số, loại xe, hộp số, nhiên liệu hay năm sản xuất. Gỡ xe khỏi chợ trước nếu cần sửa.',
+    details: { fields: locked },
   });
 }
 
@@ -1340,7 +1324,8 @@ function missingPublicFields(v: VehicleRow): string[] {
   }
   if (!v.mainImageUrl) missing.push('ảnh đại diện');
   if (!v.plateNumber) missing.push('biển số');
-  if (!v.description) missing.push('mô tả xe');
+  // Mô tả KHÔNG còn bắt buộc (09/09/2026): ảnh + thông số + giá đã đủ để khách quyết định, và
+  // một ô mô tả bắt buộc chỉ đẻ ra những dòng "xe đẹp, máy êm" viết cho có.
   return missing;
 }
 

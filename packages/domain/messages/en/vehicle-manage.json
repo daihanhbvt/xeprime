@@ -42,8 +42,6 @@
     "toggleNoPermission": "You do not have permission to edit vehicles."
   },
   "serviceToggle": {
-    "confirmTitle": "Change services of a public vehicle?",
-    "confirmBody": "The vehicle will go back to review and be hidden from the marketplace until approved again.",
     "confirmOk": "Confirm & save",
     "priceLossTitle": "Turning this service off clears its dedicated prices",
     "priceLossBody": "You will have to enter prices again when you re-enable it. Confirmed bookings are not affected.",
@@ -66,8 +64,7 @@
     "hours": "{count, plural, one {# hour} other {# hours}}",
     "minutes": "{count, plural, one {# minute} other {# minutes}}",
     "days": "{count, plural, one {# day} other {# days}}",
-    "weeks": "{count, plural, one {# week} other {# weeks}}",
-    "publicWarning": "This vehicle is public. Sensitive changes send it back to review and hide it from the marketplace."
+    "weeks": "{count, plural, one {# week} other {# weeks}}"
   },
   "information": {
     "plateTitle": "Registration plate",
@@ -83,7 +80,9 @@
     "addressMapTitle": "Vehicle location map",
     "addressSharedTitle": "This branch holds {count, plural, one {# vehicle} other {# vehicles}}",
     "addressSharedBody": "Editing the branch address changes the public location of all of them. To place this vehicle elsewhere, create or pick another branch in the management portal.",
-    "saved": "Vehicle details saved"
+    "saved": "Vehicle details saved",
+    "lockedNotice": "This vehicle is live on the marketplace: plate number, transmission, fuel type and manufacture year are locked. Everything else — pricing included — takes effect immediately.",
+    "lockedField": "Locked while the vehicle is on the marketplace. Remove it from the marketplace to change this."
   },
   "images": {
     "reorderToggle": "Allow drag and drop to reorder photos.",

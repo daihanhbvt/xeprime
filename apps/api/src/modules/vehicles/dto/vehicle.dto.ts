@@ -224,6 +224,12 @@ export class VehicleDetailDto extends VehicleListItemDto {
   @ApiPropertyOptional({ type: Number, nullable: true }) horsepowerHp!: number | null;
   @ApiPropertyOptional({ type: String, nullable: true, enum: TRANSMISSION_TYPE_VALUES })
   transmission!: string | null;
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Xe điện: số km đi được sau một lần sạc đầy',
+  })
+  electricRangeKm!: number | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'L/100km dạng decimal string' })
   fuelConsumptionCity!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'L/100km dạng decimal string' })
@@ -475,6 +481,20 @@ export class CreateVehicleDto {
   @Min(0)
   @Max(999)
   fuelConsumptionCombined?: number | null;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    minimum: 1,
+    maximum: 2000,
+    description: 'Xe điện: km mỗi lần sạc đầy. Gửi null = bỏ khai.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(2000)
+  electricRangeKm?: number | null;
 
   // Các trường có thể GỠ giá trị (gửi null) — @IsOptional bỏ qua validate khi null,
   // service ghi null xuống DB để xoá (vd đổi ô tô → xe máy thì bỏ kiểu dáng).

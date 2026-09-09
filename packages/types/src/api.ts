@@ -119,6 +119,12 @@ export const API_ERROR_CODE = {
   // Nghiệp vụ lịch (ADR 0006)
   BOOKING_SCHEDULE_CONFLICT: 'BOOKING_SCHEDULE_CONFLICT',
   /**
+   * Sửa một trường bị khoá của xe ĐANG công khai (biển số, loại xe, hộp số, nhiên liệu, năm sản
+   * xuất). Mã riêng thay vì `VALIDATION_FAILED`: giá trị gửi lên hợp lệ, thứ sai là thời điểm —
+   * FE dùng mã này để chỉ đúng ô bị khoá và mời gỡ xe khỏi chợ nếu thật sự cần đổi.
+   */
+  VEHICLE_FIELD_LOCKED: 'VEHICLE_FIELD_LOCKED',
+  /**
    * Đã có một yêu cầu thuê y hệt (cùng xe + SĐT + khung giờ) đang chờ shop phản hồi.
    * Mã riêng thay vì `CONFLICT` chung: FE hiện hộp "Yêu cầu trùng lặp" có lối đi tiếp
    * (xem chuyến / nhắn chủ xe), khác hẳn một alert lỗi thường.

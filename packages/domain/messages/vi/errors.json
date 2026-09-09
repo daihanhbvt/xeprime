@@ -79,7 +79,8 @@
     "BANK_TX_TARGET_NOT_PAYABLE": "Hoá đơn đã chọn không còn nhận tiền được. Đề nghị gian hàng tạo lại hoá đơn rồi khớp vào mã mới.",
     "HANDOVER_WINDOW_VIOLATION": "Giờ nhận hoặc trả xe nằm ngoài khung giờ giao nhận của chủ xe. Chọn giờ khác.",
     "RENTAL_TERMS_ACCEPTANCE_REQUIRED": "Bạn cần đồng ý điều khoản thuê của chủ xe trước khi gửi.",
-    "MIN_RENTAL_DURATION": "Thời lượng thuê ngắn hơn mức tối thiểu chủ xe yêu cầu."
+    "MIN_RENTAL_DURATION": "Thời lượng thuê ngắn hơn mức tối thiểu chủ xe yêu cầu.",
+    "VEHICLE_FIELD_LOCKED": "Xe đang hiển thị trên chợ nên không đổi được biển số, loại xe, hộp số, nhiên liệu hay năm sản xuất. Gỡ xe khỏi chợ trước nếu cần sửa."
   },
   "upload": {
     "imageType": "Chỉ nhận ảnh JPG, PNG hoặc WebP",

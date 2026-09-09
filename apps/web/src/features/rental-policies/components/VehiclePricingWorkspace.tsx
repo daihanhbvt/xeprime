@@ -80,9 +80,9 @@ function PricingTitle({
  *  - **Ghi đè** (State B): sửa giá + toàn bộ chính sách riêng cho xe. "Đặt lại theo gian hàng"
  *    XOÁ bản ghi đè (có xác nhận — tùy chỉnh sẽ mất).
  *
- * Thay đổi nhạy cảm (State D — theo hành vi THẬT của hệ thống, ADR 0008): xe đang công khai mà
- * đổi GIÁ sẽ bị đưa về chờ duyệt lại và tạm ẩn khỏi sàn — hộp xác nhận nói đúng điều đó, không
- * hứa "áp dụng ngay" như bản nháp thiết kế.
+ * Giá của xe đang công khai đổi là ÁP DỤNG NGAY ngoài chợ (09/09/2026 — ghi đè luật "sửa giá
+ * thì duyệt lại" của ADR 0008). Chỉ căn cước của xe (biển số, loại xe, hộp số, nhiên liệu, năm
+ * sản xuất) mới bị khoá, và khoá đó nằm ở màn Thông tin xe chứ không phải ở đây.
  *
  * Không gian quản lý xe (08/09/2026) dùng lại nguyên component này với `visibleServices` +
  * `policyMode="hidden"` — cùng form, cùng mapper, cùng hộp xác nhận; không có màn giá thứ hai.
@@ -196,31 +196,11 @@ export function VehiclePricingWorkspace({
       ...(sendPolicy ? { policy: formToSaveInput(values) } : {}),
     };
 
-    const changed = (next: string | null | undefined, prev: string | null | undefined): boolean =>
-      next !== undefined && (next ?? null) !== (prev ?? null);
-    const priceChanged =
-      changed(body.weekdayPrice, pricing.weekdayPrice) ||
-      changed(body.weekendPrice ?? null, pricing.weekendPrice) ||
-      changed(body.hourlyPrice, pricing.hourlyPrice) ||
-      (body.discountPercent !== undefined &&
-        (body.discountPercent ?? null) !== (pricing.discountPercent ?? null)) ||
-      changed(body.monthlyPrice, pricing.monthlyPrice) ||
-      changed(body.withDriverDailyPrice, pricing.withDriverDailyPrice) ||
-      changed(body.withDriverInterCityPrice, pricing.withDriverInterCityPrice) ||
-      changed(body.withDriverOneWayPrice, pricing.withDriverOneWayPrice);
-
-    if (pricing.isPublic && priceChanged) {
-      // Nói đúng hệ quả thật (ADR 0008): đổi giá xe công khai → chờ duyệt lại + tạm ẩn listing.
-      modal.confirm({
-        title: t('confirmPriceTitle'),
-        content: t('confirmPriceBody', { vehicle: vehicleLabel }),
-        okText: t('confirmPriceOk'),
-        cancelText: t('cancel'),
-        onOk: () => onSave(body),
-      });
-      return;
-    }
-
+    /*
+     * 09/09/2026: đổi giá của xe ĐANG công khai có hiệu lực NGAY ngoài chợ — không còn hạ xe về
+     * chờ duyệt lại, nên cũng không còn hộp cảnh báo về việc đó. Hộp xác nhận chung bên dưới
+     * vẫn giữ: nó nói đúng thứ sắp được ghi.
+     */
     // Nói đúng thứ sắp được lưu: ở chế độ kế thừa KHÔNG có chính sách riêng nào được ghi, nên
     // hộp thoại không được hứa điều đó (giá và chính sách đã là hai trục tách rời từ 20/08).
     modal.confirm({

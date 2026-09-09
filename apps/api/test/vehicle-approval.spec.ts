@@ -1,11 +1,14 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  API_ERROR_CODE,
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
   MEMBERSHIP_STATUS,
+  FUEL_TYPE,
   NOTIFICATION_TYPE,
   TENANT_ROLE,
   TENANT_STATUS,
+  TRANSMISSION_TYPE,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
 } from '@xeprime/types';
@@ -201,9 +204,16 @@ describe('Vehicle public approval (WS0)', () => {
     expect(notif).not.toBeNull();
   });
 
-  maybe('sửa giá xe đang công khai → tự hạ về chờ duyệt lại + phiếu mới', async () => {
+  /*
+   * 09/09/2026 — luật thay cho "sửa là duyệt lại" của ADR 0008: xe đã lên chợ thì CĂN CƯỚC bị
+   * khoá (biển số · loại xe · hộp số · nhiên liệu · năm sản xuất), mọi thứ khác sửa tự do và
+   * hiệu lực ngay. Không còn phiếu duyệt lại nào sinh ra từ thao tác sửa xe.
+   */
+  maybe('sửa giá xe đang công khai → hiệu lực NGAY, không hạ về chờ duyệt', async () => {
     const updated = await vehicles.update(tenantId, vehicleId, ownerId, { weekdayPrice: '650000' });
-    expect(updated.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW);
+    expect(updated.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC);
+    // Ở tầng service tiền còn là Decimal — interceptor mới đổi sang chuỗi ở tầng HTTP (ADR 0007).
+    expect(String(updated.weekdayPrice)).toBe('650000');
 
     const pending = await prisma.approvalTask.count({
       where: {
@@ -212,29 +222,69 @@ describe('Vehicle public approval (WS0)', () => {
         status: APPROVAL_STATUS.PENDING,
       },
     });
-    expect(pending).toBe(1);
+    expect(pending).toBe(0);
   });
 
-  maybe('sửa trường không nhạy cảm (mô tả) không đụng trạng thái duyệt', async () => {
-    // Xe đang pending sau test trên; đổi mô tả không được đổi publicStatus.
+  maybe('sửa mô tả/ảnh của xe công khai cũng không đụng trạng thái duyệt', async () => {
     const updated = await vehicles.update(tenantId, vehicleId, ownerId, {
-      description: 'Mô tả mới, không nhạy cảm.',
+      description: 'Mô tả mới.',
+      mainImageUrl: 'https://img/main-2.jpg',
     });
-    expect(updated.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW);
+    expect(updated.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC);
+  });
+
+  maybe('sửa CĂN CƯỚC của xe công khai bị từ chối, dữ liệu giữ nguyên', async () => {
+    for (const patch of [
+      { plateNumber: '51A-999.99' },
+      { transmission: TRANSMISSION_TYPE.MANUAL },
+      { fuelType: FUEL_TYPE.DIESEL },
+      { manufactureYear: 2019 },
+    ]) {
+      await expect(vehicles.update(tenantId, vehicleId, ownerId, patch)).rejects.toMatchObject({
+        status: 409,
+        response: { code: API_ERROR_CODE.VEHICLE_FIELD_LOCKED },
+      });
+    }
+
+    const row = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: vehicleId },
+      select: { plateNumber: true, publicStatus: true },
+    });
+    expect(row.plateNumber).not.toBe('51A-999.99');
+    expect(row.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC);
+  });
+
+  maybe('xe CHƯA lên chợ thì bốn trường đó vẫn sửa thoải mái', async () => {
+    const draft = await seedVehicle(tenantId);
+    const updated = await vehicles.update(tenantId, draft, ownerId, {
+      plateNumber: '51A-777.77',
+      manufactureYear: 2020,
+    });
+    expect(updated.plateNumber).toBe('51A-777.77');
+    expect(updated.manufactureYear).toBe(2020);
   });
 
   maybe('platform từ chối (cần lý do) → xe rejected', async () => {
-    const taskId = await pendingTaskId(vehicleId);
+    // Sửa xe không còn sinh phiếu duyệt lại, nên case này tự gửi duyệt một xe mới của mình.
+    const rejectable = await seedVehicle(tenantId);
+    await vehicles.submitForPublicReview(tenantId, rejectable, ownerId);
+    const taskId = await pendingTaskId(rejectable);
     await expect(approvals.reject(taskId, reviewerId)).rejects.toThrow(/lý do/);
 
     const detail = await approvals.reject(taskId, reviewerId, 'Ảnh mờ, thiếu giấy tờ.');
     expect(detail.status).toBe(APPROVAL_STATUS.REJECTED);
 
     const vehicle = await prisma.vehicle.findUniqueOrThrow({
-      where: { id: vehicleId },
+      where: { id: rejectable },
       select: { publicStatus: true },
     });
     expect(vehicle.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.REJECTED);
+  });
+
+  maybe('KHÔNG có mô tả vẫn gửi duyệt được (09/09/2026 — mô tả thôi bắt buộc)', async () => {
+    const noDescription = await seedVehicle(tenantId, { description: null });
+    const submitted = await vehicles.submitForPublicReview(tenantId, noDescription, ownerId);
+    expect(submitted.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW);
   });
 
   maybe('thiếu điều kiện (không giá/ảnh) → chặn gửi duyệt', async () => {

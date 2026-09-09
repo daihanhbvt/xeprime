@@ -4,11 +4,7 @@ import { Alert, App, Button, Col, Form, Row } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import {
-  TRANSMISSION_TYPE_VALUES,
-  VEHICLE_PUBLIC_STATUS,
-  VEHICLE_TYPE,
-} from '@xeprime/types';
+import { TRANSMISSION_TYPE_VALUES, VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
 
 import { EmbedMap } from '@/components/data-display/EmbedMap';
@@ -17,21 +13,18 @@ import { SelectField } from '@/components/form/SelectField';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
-import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { BranchFormDialog } from '@/features/branches/components/BranchFormDialog';
 import { useBranches } from '@/features/branches/hooks/use-branches';
 import { PublishRequiredLabel } from '@/features/vehicles/components/VehicleCompleteness';
 import {
   BrandSelect,
   FeaturesSelect,
+  FuelMetricField,
   FuelTypeSelect,
 } from '@/features/vehicles/components/VehicleFormSections';
-import { useSensitiveChangeLabels } from '@/features/vehicles/hooks/use-publication-labels';
 import { useUpdateVehicle } from '@/features/vehicles/hooks/use-vehicle-mutations';
 import { manageInformationValuesToInput, vehicleToFormValues } from '@/features/vehicles/mappers';
-import { sensitiveChanges } from '@/features/vehicles/sensitive-changes';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
-import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
@@ -53,8 +46,7 @@ const FIELDS: ReadonlyArray<keyof VehicleFormValues> = [
   'color',
   'transmission',
   'fuelConsumptionCombined',
-  'engineDisplacementCc',
-  'horsepowerHp',
+  'electricRangeKm',
   'description',
   'features',
 ];
@@ -73,10 +65,7 @@ export function InformationSection() {
   const tForm = useTranslations('Vehicles.form');
   const tEdit = useTranslations('Vehicles.edit');
   const tActions = useTranslations('Common.actions');
-  const tCommon = useTranslations('Common');
   const domainLabel = useDomainLabel();
-  const fmt = useAppFormat();
-  const sensitiveLabels = useSensitiveChangeLabels();
   const errorMessage = useErrorMessage();
   const applyApiFieldErrors = useApiFieldErrors();
   const { message } = App.useApp();
@@ -86,33 +75,22 @@ export function InformationSection() {
   const resolver = useValidationResolver<VehicleFormValues>(vehicleFormSchema, 'Vehicles.form.validation');
   const { control, getValues, handleSubmit, reset, setError, trigger, formState } =
     useForm<VehicleFormValues>({ resolver, values: initialValues });
-  const [confirmSensitive, setConfirmSensitive] = useState(false);
+  /** Xe đã lên chợ: căn cước bị khoá (biển số, hộp số, nhiên liệu, năm SX) — server chặn lại. */
   const isPublic = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
-  const isCar = vehicle.vehicleType === VEHICLE_TYPE.CAR;
-
-  const changesOf = (values: VehicleFormValues) =>
-    sensitiveChanges(initialValues, values, fmt, domainLabel, sensitiveLabels);
 
   async function save() {
     if (!(await trigger([...FIELDS]))) return;
-    const values = getValues();
-    if (isPublic && changesOf(values).length > 0) {
-      setConfirmSensitive(true);
-      return;
-    }
-    await submit(values);
+    await submit(getValues());
   }
 
   async function submit(values: VehicleFormValues) {
     try {
       const updated = await update.mutateAsync(manageInformationValuesToInput(values));
       reset(vehicleToFormValues(updated));
-      setConfirmSensitive(false);
       message.success(t('information.saved'));
     } catch (err) {
       const applied = applyApiFieldErrors(err, setError, { fields: FIELDS });
       if (applied.length === 0) message.error(errorMessage(err));
-      setConfirmSensitive(false);
     }
   }
 
@@ -131,7 +109,13 @@ export function InformationSection() {
         }}
         className={styles.form}
       >
-        {isPublic ? <Alert type="warning" showIcon message={tEdit('publicWarning')} /> : null}
+        {/*
+          Xe đang trên chợ: căn cước của nó bị khoá, phần còn lại sửa là hiệu lực ngay. Nói rõ
+          ở đầu màn để chủ xe không phải thử từng ô mới biết ô nào không bấm được.
+        */}
+        {isPublic ? (
+          <Alert type="info" showIcon message={t('information.lockedNotice')} />
+        ) : null}
 
         <div className={styles.grid}>
           <div className={styles.column}>
@@ -141,8 +125,8 @@ export function InformationSection() {
                 name="plateNumber"
                 label={<PublishRequiredLabel label={tForm('specs.plateNumber')} />}
                 placeholder={tForm('specs.platePlaceholder')}
-                help={t('information.plateHelp')}
-                disabled={!canEdit}
+                help={isPublic ? t('information.lockedField') : t('information.plateHelp')}
+                disabled={!canEdit || isPublic}
               />
             </SectionCard>
             <AddressCard canEdit={canEdit} />
@@ -168,19 +152,21 @@ export function InformationSection() {
                   options={transmissionOptions}
                   allowClear
                   placeholder={tForm('advanced.transmissionPlaceholder')}
+                  help={isPublic ? t('information.lockedField') : undefined}
+                  disabled={!canEdit || isPublic}
                 />
               </Col>
               <Col xs={24} sm={12}>
-                <FuelTypeSelect control={control} vehicleType={vehicle.vehicleType} />
-              </Col>
-              <Col xs={24} sm={12}>
-                <NumberField
+                <FuelTypeSelect
                   control={control}
-                  name="fuelConsumptionCombined"
-                  label={tForm('advanced.consumptionCombined')}
-                  placeholder={tForm('advanced.consumptionCombinedPlaceholder')}
-                  min={0}
+                  vehicleType={vehicle.vehicleType}
+                  help={isPublic ? t('information.lockedField') : undefined}
+                  disabled={!canEdit || isPublic}
                 />
+              </Col>
+              <Col xs={24} sm={12}>
+                {/* Ô đo lường đổi theo nhiên liệu: lít/100km cho xe xăng, km/lần sạc cho xe điện. */}
+                <FuelMetricField control={control} disabled={!canEdit} />
               </Col>
               <Col xs={24} sm={12}>
                 <BrandSelect control={control} />
@@ -200,6 +186,8 @@ export function InformationSection() {
                   label={tForm('specs.manufactureYear')}
                   min={1980}
                   max={new Date().getFullYear() + 1}
+                  help={isPublic ? t('information.lockedField') : undefined}
+                  disabled={!canEdit || isPublic}
                 />
               </Col>
               <Col xs={24} sm={12}>
@@ -210,28 +198,6 @@ export function InformationSection() {
                   placeholder={tForm('specs.colorPlaceholder')}
                 />
               </Col>
-              {isCar ? (
-                <>
-                  <Col xs={24} sm={12}>
-                    <NumberField
-                      control={control}
-                      name="engineDisplacementCc"
-                      label={tForm('advanced.engineDisplacementCc')}
-                      placeholder={tForm('advanced.enginePlaceholder')}
-                      min={1}
-                    />
-                  </Col>
-                  <Col xs={24} sm={12}>
-                    <NumberField
-                      control={control}
-                      name="horsepowerHp"
-                      label={tForm('advanced.horsepowerHp')}
-                      placeholder={tForm('advanced.horsepowerPlaceholder')}
-                      min={1}
-                    />
-                  </Col>
-                </>
-              ) : null}
             </Row>
           </SectionCard>
         </div>
@@ -240,7 +206,7 @@ export function InformationSection() {
           <TextAreaField
             control={control}
             name="description"
-            label={<PublishRequiredLabel label={tForm('media.description')} />}
+            label={tForm('media.description')}
             placeholder={tForm('media.descriptionPlaceholder')}
             maxLength={4000}
             rows={5}
@@ -265,26 +231,6 @@ export function InformationSection() {
         />
       </form>
 
-      <ResponsiveDialog
-        open={confirmSensitive}
-        title={tEdit('sensitive.title')}
-        size="sm"
-        confirmLoading={update.isPending}
-        onClose={() => setConfirmSensitive(false)}
-        onOk={() => void submit(getValues())}
-        okText={tEdit('sensitive.ok')}
-        cancelText={tCommon('actions.cancel')}
-      >
-        <p>{tEdit('sensitive.body')}</p>
-        <ul>
-          {changesOf(getValues()).map((change) => (
-            <li key={change.field}>
-              <strong>{tEdit('sensitive.change', { label: change.label })}</strong> {change.before} →{' '}
-              {change.after}
-            </li>
-          ))}
-        </ul>
-      </ResponsiveDialog>
     </Form>
   );
 }

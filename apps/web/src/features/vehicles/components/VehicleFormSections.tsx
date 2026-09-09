@@ -9,12 +9,14 @@ import {
   CATALOG_TYPE,
   SERVICE_TYPE,
   TRANSMISSION_TYPE_VALUES,
+  FUEL_TYPE,
   VEHICLE_TYPE,
   VEHICLE_SOURCE_TYPE,
   VEHICLE_SOURCE_TYPE_VALUES,
   vehicleFuelTypesFor,
   type VehicleSourceType,
 } from '@xeprime/types';
+import type { ReactNode } from 'react';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { CatalogCardPicker } from '@/features/catalog/components/CatalogCardPicker';
 import { LongTermPriceHint } from '@/features/rental-policies/components/LongTermPriceHint';
@@ -180,6 +182,14 @@ export interface SectionProps {
   branchOptions?: readonly { value: string; label: string }[];
   branchLoading?: boolean;
   branchDisabled?: boolean;
+  /**
+   * Lý do bốn ô CĂN CƯỚC của xe bị khoá (biển số · hộp số · nhiên liệu · năm sản xuất) —
+   * truyền khi xe đang công khai. `undefined` = mở bình thường.
+   *
+   * Nơi gọi truyền CHỮ chứ component không tự đoán: cùng luật nhưng hai màn nói khác nhau
+   * (cổng gian hàng vs khu tài khoản của chủ xe), và luật thật vẫn nằm ở server.
+   */
+  lockedNotice?: ReactNode;
 }
 
 export function BasicSection({
@@ -424,7 +434,10 @@ export function SourceTypeSection({ control }: Pick<SectionProps, 'control'>) {
 }
 
 /** Thông số mở rộng là tuỳ chọn và chỉ xuất hiện trong vùng thu gọn của workspace chỉnh sửa. */
-export function AdvancedSpecsSection({ control }: Pick<SectionProps, 'control'>) {
+export function AdvancedSpecsSection({
+  control,
+  lockedNotice,
+}: Pick<SectionProps, 'control' | 'lockedNotice'>) {
   const t = useTranslations('Vehicles.form.advanced');
   const tCommon = useTranslations('Common.labels');
   const domainLabel = useDomainLabel();
@@ -507,6 +520,8 @@ export function AdvancedSpecsSection({ control }: Pick<SectionProps, 'control'>)
               options={transmissionOptions}
               allowClear
               placeholder={t('transmissionPlaceholder')}
+              help={lockedNotice}
+              disabled={Boolean(lockedNotice)}
             />
           </Col>
         </Row>
@@ -548,7 +563,7 @@ export function AdvancedSpecsSection({ control }: Pick<SectionProps, 'control'>)
   );
 }
 
-export function SpecsSection({ control, isCar }: SectionProps) {
+export function SpecsSection({ control, isCar, lockedNotice }: SectionProps) {
   const t = useTranslations('Vehicles.form.specs');
 
   return (
@@ -559,7 +574,8 @@ export function SpecsSection({ control, isCar }: SectionProps) {
           name="plateNumber"
           label={<PublishRequiredLabel label={t('plateNumber')} />}
           placeholder={t('platePlaceholder')}
-          help={t('plateHelp')}
+          help={lockedNotice ?? t('plateHelp')}
+          disabled={Boolean(lockedNotice)}
         />
       </Col>
       <Col xs={24} sm={12}>
@@ -581,6 +597,8 @@ export function SpecsSection({ control, isCar }: SectionProps) {
           placeholder={String(CURRENT_YEAR)}
           min={1980}
           max={CURRENT_YEAR + 1}
+          help={lockedNotice}
+          disabled={Boolean(lockedNotice)}
         />
       </Col>
       <Col xs={24} sm={12}>
@@ -597,6 +615,8 @@ export function SpecsSection({ control, isCar }: SectionProps) {
         <FuelTypeSelect
           control={control}
           vehicleType={isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE}
+          help={lockedNotice}
+          disabled={Boolean(lockedNotice)}
         />
       </Col>
       <Col xs={24} sm={12}>
@@ -639,10 +659,56 @@ export function BrandSelect({ control }: Pick<SectionProps, 'control'>) {
   );
 }
 
+/**
+ * Ô thông số nhiên liệu, đổi theo LOẠI nhiên liệu đang chọn (09/09/2026).
+ *
+ * Xăng/dầu/hybrid đo bằng lít cho 100 km; xe điện đo bằng km mỗi lần sạc đầy — hai đại lượng
+ * khác đơn vị nên là hai cột khác nhau, và người nhập chỉ thấy đúng ô của xe mình. Chưa chọn
+ * nhiên liệu thì chưa hỏi: hỏi trước là bắt người ta đoán đơn vị.
+ */
+export function FuelMetricField({
+  control,
+  disabled,
+}: Pick<SectionProps, 'control'> & { disabled?: boolean }) {
+  const t = useTranslations('Vehicles.form.advanced');
+  const fuelType = useWatch({ control, name: 'fuelType' });
+  if (!fuelType) return null;
+
+  return fuelType === FUEL_TYPE.ELECTRIC ? (
+    <NumberField
+      control={control}
+      name="electricRangeKm"
+      label={t('electricRange')}
+      placeholder={t('electricRangePlaceholder')}
+      help={t('electricRangeHelp')}
+      min={1}
+      max={2000}
+      disabled={disabled}
+    />
+  ) : (
+    <NumberField
+      control={control}
+      name="fuelConsumptionCombined"
+      label={t('consumption')}
+      placeholder={t('consumptionPlaceholder')}
+      help={t('consumptionHelp')}
+      min={0}
+      disabled={disabled}
+    />
+  );
+}
+
 export function FuelTypeSelect({
   control,
   vehicleType,
-}: Pick<SectionProps, 'control'> & { vehicleType: string }) {
+  help,
+  disabled,
+}: Pick<SectionProps, 'control'> & {
+  vehicleType: string;
+  /** Lý do ô bị khoá (xe đang trên chợ) — nơi gọi truyền chữ, component không tự đoán. */
+  help?: ReactNode;
+  disabled?: boolean;
+}) {
   const t = useTranslations('Vehicles.form.specs');
   const current = useWatch({ control, name: 'fuelType' });
   const allOptions = useCatalogOptions(CATALOG_TYPE.FUEL_TYPE, current);
@@ -657,6 +723,8 @@ export function FuelTypeSelect({
       placeholder={
         vehicleType === VEHICLE_TYPE.CAR ? t('fuelPlaceholderCar') : t('fuelPlaceholderMotorbike')
       }
+      help={help}
+      disabled={disabled}
       allowClear
     />
   );
@@ -938,7 +1006,7 @@ export function FeaturesDescriptionSection({ control }: SectionProps) {
         <TextAreaField
           control={control}
           name="description"
-          label={<PublishRequiredLabel label={t('description')} />}
+          label={t('description')}
           placeholder={t('descriptionPlaceholder')}
           maxLength={4000}
           rows={5}

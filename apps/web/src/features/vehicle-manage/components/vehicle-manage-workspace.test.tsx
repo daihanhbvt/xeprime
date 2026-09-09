@@ -314,13 +314,27 @@ describe('Công tắc dịch vụ — không làm rơi dịch vụ khác', () =>
     await waitFor(() => expect(update.mutateAsync).not.toHaveBeenCalled());
   });
 
-  it('xe đang công khai: hỏi xác nhận trước khi đổi dịch vụ vì phải duyệt lại', async () => {
+  it('xe đang công khai: bật thêm dịch vụ lưu thẳng, không còn hỏi "duyệt lại" (ADR 0030)', async () => {
     renderWorkspace();
 
     fireEvent.click(screen.getByRole('switch', { name: /có tài xế/i }));
-    // Chưa gửi gì cả — hộp xác nhận phải đứng trước lệnh ghi.
+    await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(/duyệt lại/i)).toBeNull();
+  });
+
+  it('tắt dịch vụ ĐANG CÓ GIÁ vẫn hỏi — lưu là mất giá đó', async () => {
+    queries.vehicle = {
+      ...queries.vehicle,
+      data: vehicle({
+        serviceTypes: [SERVICE_TYPE.SELF_DRIVE, SERVICE_TYPE.WITH_DRIVER],
+        withDriverDailyPrice: '1300000',
+      }),
+    };
+    renderWorkspace();
+
+    fireEvent.click(screen.getByRole('switch', { name: /có tài xế/i }));
     expect(update.mutateAsync).not.toHaveBeenCalled();
-    expect(await screen.findByText(/duyệt lại/i)).toBeTruthy();
+    expect(await screen.findByText(/mất giá|xoá giá/i)).toBeTruthy();
   });
 
   it('thiếu quyền sửa: công tắc bị khoá', () => {

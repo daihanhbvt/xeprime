@@ -216,6 +216,8 @@ export const vehicleFormSchema = yup.object({
   engineDisplacementCc: optionalPositiveInt('engineDisplacementCc', 30000),
   horsepowerHp: optionalPositiveInt('horsepowerHp', 5000),
   transmission: yup.string().oneOf(TRANSMISSION_TYPE_VALUES).nullable().default(null),
+  /** Xe ĐIỆN: km mỗi lần sạc đầy — số nguyên, cùng trần 2000 với CHECK ở DB. */
+  electricRangeKm: optionalPositiveInt('electricRangeKm', 2000),
   fuelConsumptionCity: optionalMetric('fuelConsumptionCity'),
   fuelConsumptionHighway: optionalMetric('fuelConsumptionHighway'),
   fuelConsumptionCombined: optionalMetric('fuelConsumptionCombined'),

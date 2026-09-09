@@ -201,7 +201,13 @@
       "consumptionHighwayPlaceholder": "VD: 5.2",
       "consumptionCombined": "Kết hợp",
       "consumptionCombinedPlaceholder": "VD: 6.5",
-      "hint": "Các thông số kỹ thuật giúp tăng khả năng tìm thấy xe; bạn có thể cập nhật sau."
+      "hint": "Các thông số kỹ thuật giúp tăng khả năng tìm thấy xe; bạn có thể cập nhật sau.",
+      "consumption": "Mức tiêu thụ nhiên liệu",
+      "consumptionPlaceholder": "7.5",
+      "consumptionHelp": "Số lít nhiên liệu cho quãng đường 100 km",
+      "electricRange": "Quãng đường mỗi lần sạc",
+      "electricRangePlaceholder": "350",
+      "electricRangeHelp": "Số km đi được trong một lần sạc đầy"
     },
     "specs": {
       "plateNumber": "Biển số xe",
@@ -404,8 +410,7 @@
       "longTermPrice": "Giá tháng thuê dài hạn",
       "withDriverPrice": "Giá/ngày có tài xế",
       "mainImage": "Ảnh đại diện",
-      "plateNumber": "Biển số",
-      "description": "Mô tả xe"
+      "plateNumber": "Biển số"
     },
     "status": {
       "pending": {
@@ -581,7 +586,6 @@
       "operations": "Vận hành & điều kiện thuê"
     },
     "errors": "{count, plural, other {# lỗi}} cần sửa trước khi lưu",
-    "publicWarning": "Xe đang công khai. Thay đổi thông tin nhạy cảm sẽ đưa xe về chờ duyệt lại và tạm ẩn khỏi marketplace.",
     "cards": {
       "basic": "Thông tin cơ bản",
       "status": "Quản lý trạng thái",
@@ -599,12 +603,6 @@
       "body": "Dữ liệu bạn vừa thay đổi trong tab này chưa được lưu.",
       "ok": "Bỏ thay đổi",
       "cancel": "Tiếp tục chỉnh sửa"
-    },
-    "sensitive": {
-      "title": "Xác nhận thay đổi nhạy cảm",
-      "body": "Xe sẽ chuyển về trạng thái chờ duyệt lại và tạm ẩn khỏi marketplace.",
-      "ok": "Xác nhận & Lưu",
-      "change": "{label}:"
     },
     "pricingTab": {
       "loadError": "Không tải được giá & chính sách",
@@ -626,7 +624,9 @@
     "saved": {
       "information": "Đã lưu thông tin xe",
       "media": "Đã lưu hình ảnh & tiện ích"
-    }
+    },
+    "lockedNotice": "Xe đang hiển thị trên chợ: biển số, hộp số, nhiên liệu và năm sản xuất đã khoá. Mọi thông tin khác — gồm cả giá — sửa là có hiệu lực ngay.",
+    "lockedField": "Đã khoá vì xe đang trên chợ. Gỡ xe khỏi chợ nếu cần đổi."
   },
   "source": {
     "noPermission": "Bạn không có quyền xem thông tin tài chính của xe này. Vui lòng liên hệ chủ gian hàng hoặc quản trị viên hệ thống để được cấp quyền.",

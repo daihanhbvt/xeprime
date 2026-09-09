@@ -264,3 +264,31 @@ describe('Ảnh theo vị trí — tương thích ngược với client cũ', ()
     ]);
   });
 });
+
+/**
+ * Thông số nhiên liệu theo LOẠI nhiên liệu (09/09/2026): xe xăng khai lít/100km, xe điện khai
+ * km mỗi lần sạc. Hai cột riêng — đổi loại nhiên liệu thì ô không dùng nữa phải được xoá, chứ
+ * không để lại một con số cũ mà giao diện không còn hiện.
+ */
+describe('Quãng đường mỗi lần sạc của xe điện', () => {
+  maybe('lưu và đọc lại đúng số km; gửi null thì xoá', async () => {
+    const created = await createBase('EV-1');
+    const updated = await vehicles.update(tenantId, created.id, ownerId, {
+      fuelType: 'electric',
+      electricRangeKm: 350,
+      fuelConsumptionCombined: null,
+    });
+    expect(updated.electricRangeKm).toBe(350);
+    expect(updated.fuelConsumptionCombined).toBeNull();
+
+    const cleared = await vehicles.update(tenantId, created.id, ownerId, { electricRangeKm: null });
+    expect(cleared.electricRangeKm).toBeNull();
+  });
+
+  maybe('số ngoài dải bị DB/DTO chặn — không có xe chạy 9999 km một lần sạc', async () => {
+    const created = await createBase('EV-2');
+    await expect(
+      prisma.vehicle.update({ where: { id: created.id }, data: { electricRangeKm: 9999 } }),
+    ).rejects.toThrow();
+  });
+});

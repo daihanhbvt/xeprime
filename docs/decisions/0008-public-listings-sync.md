@@ -2,6 +2,11 @@
 
 Ngày: 22/07/2026 · Trạng thái: Accepted · Áp dụng ở Phase 3
 
+> ⚠️ **Điều 2 đã bị ADR 0030 ghi đè (09/09/2026).** "Sửa trường nhạy cảm → ẩn listing + duyệt lại"
+> không còn hiệu lực: xe đã duyệt bị KHOÁ năm trường căn cước, mọi thứ khác (kể cả giá) sửa là
+> hiệu lực ngay. Phần còn lại của ADR này — một service ghi duy nhất, không denormalize trạng
+> thái tenant, xoá mềm → archived — vẫn nguyên giá trị.
+
 ## Bối cảnh
 
 `public_listings` là bảng snapshot: nó nhân bản ~20 cột từ `vehicles`, `vehicle_pricing`, `branches`, `tenants` để marketplace query nhanh trên một bảng phẳng.

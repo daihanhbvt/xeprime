@@ -201,7 +201,13 @@
       "consumptionHighwayPlaceholder": "e.g. 5.2",
       "consumptionCombined": "Combined",
       "consumptionCombinedPlaceholder": "e.g. 6.5",
-      "hint": "Technical specifications make the vehicle easier to find; you can fill them in later."
+      "hint": "Technical specifications make the vehicle easier to find; you can fill them in later.",
+      "consumption": "Fuel consumption",
+      "consumptionPlaceholder": "7.5",
+      "consumptionHelp": "Litres of fuel per 100 km",
+      "electricRange": "Range per full charge",
+      "electricRangePlaceholder": "350",
+      "electricRangeHelp": "Kilometres the vehicle covers on one full charge"
     },
     "specs": {
       "plateNumber": "Licence plate",
@@ -404,8 +410,7 @@
       "longTermPrice": "Long-term monthly price",
       "withDriverPrice": "With-driver day rate",
       "mainImage": "Cover photo",
-      "plateNumber": "Licence plate",
-      "description": "Vehicle description"
+      "plateNumber": "Licence plate"
     },
     "status": {
       "pending": {
@@ -581,7 +586,6 @@
       "operations": "Operations & rental terms"
     },
     "errors": "{count, plural, one {# error} other {# errors}} to fix before saving",
-    "publicWarning": "This vehicle is live. Changing sensitive information sends it back for review and temporarily hides it from the marketplace.",
     "cards": {
       "basic": "Basic information",
       "status": "Status management",
@@ -599,12 +603,6 @@
       "body": "The changes you made on this tab have not been saved.",
       "ok": "Discard changes",
       "cancel": "Keep editing"
-    },
-    "sensitive": {
-      "title": "Confirm sensitive changes",
-      "body": "The vehicle will go back to pending review and be temporarily hidden from the marketplace.",
-      "ok": "Confirm & save",
-      "change": "{label}:"
     },
     "pricingTab": {
       "loadError": "Could not load the pricing & policies",
@@ -626,7 +624,9 @@
     "saved": {
       "information": "Vehicle details saved",
       "media": "Photos and features saved"
-    }
+    },
+    "lockedNotice": "This vehicle is live on the marketplace: plate number, transmission, fuel type and manufacture year are locked. Everything else — pricing included — takes effect immediately.",
+    "lockedField": "Locked while the vehicle is on the marketplace. Remove it from the marketplace to change this."
   },
   "source": {
     "noPermission": "You do not have permission to view this vehicle's financial information. Contact the shop owner or a system administrator to request access.",

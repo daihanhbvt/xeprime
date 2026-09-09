@@ -821,6 +821,8 @@ model Vehicle {
   transmission             String?   @db.VarChar(30)
   fuelConsumptionCity      Decimal?  @map("fuel_consumption_city") @db.Decimal(6, 2)
   fuelConsumptionHighway   Decimal?  @map("fuel_consumption_highway") @db.Decimal(6, 2)
+  /// Xe ĐIỆN: số km đi được sau một lần sạc đầy. NULL = chưa khai. CHECK 1..2000 ở migration.
+  electricRangeKm         Int?      @map("electric_range_km")
   fuelConsumptionCombined  Decimal?  @map("fuel_consumption_combined") @db.Decimal(6, 2)
   /// @xeprime/types → VehicleOperationStatus
   operationStatus          String    @default("available") @map("operation_status") @db.VarChar(50)

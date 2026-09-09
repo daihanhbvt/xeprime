@@ -598,11 +598,12 @@ describe('/manage/vehicles/[id] — tiến trình gửi duyệt', () => {
     expect(screen.queryByRole('button', { name: /Gửi duyệt/ })).toBeNull();
   });
 
-  it('đủ điều kiện: danh sách hiện đủ 4 mục và nút gửi bấm được', () => {
+  // ADR 0030: mô tả KHÔNG còn là điều kiện lên chợ, checklist còn ba mục (giá · ảnh · biển số).
+  it('đủ điều kiện: danh sách hiện đủ 3 mục và nút gửi bấm được', () => {
     grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
     renderPage();
 
-    expect(within(reviewPanel()).getAllByText('Đã có')).toHaveLength(4);
+    expect(within(reviewPanel()).getAllByText('Đã có')).toHaveLength(3);
     const button = screen.getByRole('button', { name: /Gửi duyệt công khai/ });
     fireEvent.click(button);
     expect(submitPublic.mutate).toHaveBeenCalledTimes(1);
@@ -610,10 +611,11 @@ describe('/manage/vehicles/[id] — tiến trình gửi duyệt', () => {
 
   it('thiếu điều kiện: nêu đúng mục còn thiếu và KHOÁ nút gửi', () => {
     grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
+    // Thiếu MÔ TẢ không còn chặn gửi duyệt — chỉ thiếu biển số mới là điều kiện chưa đủ.
     detail.data = vehicle({ description: null, plateNumber: null });
     renderPage();
 
-    expect(within(reviewPanel()).getAllByText('Chưa có')).toHaveLength(2);
+    expect(within(reviewPanel()).getAllByText('Chưa có')).toHaveLength(1);
     const button = screen.getByRole('button', { name: /Gửi duyệt công khai/ });
     expect(button.hasAttribute('disabled')).toBe(true);
 

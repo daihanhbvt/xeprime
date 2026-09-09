@@ -8063,6 +8063,8 @@ export interface components {
             fuelConsumptionCity?: number | null;
             fuelConsumptionHighway?: number | null;
             fuelConsumptionCombined?: number | null;
+            /** @description Xe điện: km mỗi lần sạc đầy. Gửi null = bỏ khai. */
+            electricRangeKm?: number | null;
             /**
              * @description Key kiểu dáng thuộc danh mục `body_type` (GET /catalog) — chỉ với ô tô. Gửi null để xoá.
              * @example suv
@@ -11673,6 +11675,8 @@ export interface components {
             fuelConsumptionCity?: number | null;
             fuelConsumptionHighway?: number | null;
             fuelConsumptionCombined?: number | null;
+            /** @description Xe điện: km mỗi lần sạc đầy. Gửi null = bỏ khai. */
+            electricRangeKm?: number | null;
             /**
              * @description Key kiểu dáng thuộc danh mục `body_type` (GET /catalog) — chỉ với ô tô. Gửi null để xoá.
              * @example suv
@@ -11949,6 +11953,8 @@ export interface components {
             horsepowerHp?: number | null;
             /** @enum {string|null} */
             transmission?: "automatic" | "manual" | "cvt" | "dct" | "other" | null;
+            /** @description Xe điện: số km đi được sau một lần sạc đầy */
+            electricRangeKm?: number | null;
             /** @description L/100km dạng decimal string */
             fuelConsumptionCity?: string | null;
             /** @description L/100km dạng decimal string */

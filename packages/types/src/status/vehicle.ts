@@ -69,6 +69,31 @@ export function vehicleFeatureLabel(key: string): string {
   return (VEHICLE_FEATURE_LABEL as Record<string, string>)[key] ?? key;
 }
 
+/**
+ * Trường KHOÁ khi xe đã được duyệt lên chợ (09/09/2026 — ghi đè luật "sửa là duyệt lại" của
+ * ADR 0008).
+ *
+ * Đây là căn cước của chiếc xe: đổi nó sau khi duyệt tức là biến listing đã kiểm duyệt thành
+ * một chiếc xe khác — khách đặt xe số này lại nhận xe số khác. Muốn đổi thì gỡ xe khỏi chợ.
+ *
+ * Mọi thứ còn lại (giá, ảnh, mô tả, tiện ích, dịch vụ, màu…) sửa TỰ DO và hiệu lực ngay: chúng
+ * mô tả cùng một chiếc xe, và bắt chủ xe chờ duyệt lại chỉ để đổi giá là lý do khiến giá ngoài
+ * chợ luôn cũ.
+ */
+export const VEHICLE_LOCKED_AFTER_APPROVAL_FIELDS = [
+  'plateNumber',
+  'vehicleType',
+  'transmission',
+  'fuelType',
+  'manufactureYear',
+] as const;
+export type VehicleLockedField = (typeof VEHICLE_LOCKED_AFTER_APPROVAL_FIELDS)[number];
+
+/**
+ * @deprecated Luật "sửa trường này thì xe về chờ duyệt lại" đã bỏ từ 09/09/2026 — dùng
+ * `VEHICLE_LOCKED_AFTER_APPROVAL_FIELDS`. Hằng cũ còn ở đây vì `apps/mobile` chưa chuyển;
+ * xoá khi màn sửa xe của app native cập nhật theo.
+ */
 export const VEHICLE_PUBLIC_SENSITIVE_FIELDS = [
   'weekdayPrice',
   'weekendPrice',
