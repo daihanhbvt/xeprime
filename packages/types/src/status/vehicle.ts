@@ -60,6 +60,15 @@ export const VEHICLE_FEATURE_LABEL = {
   screen: 'Màn hình giải trí',
   map: 'Bản đồ',
   child_seat: 'Ghế trẻ em',
+  // Xe máy (09/09/2026) — trước đó form xe máy vẫn hiện nguyên bộ tiện nghi ô tô.
+  abs: 'Phanh ABS',
+  traction_control: 'Kiểm soát lực kéo',
+  smart_key: 'Khoá thông minh',
+  phone_holder: 'Giá đỡ điện thoại',
+  top_box: 'Thùng sau (top box)',
+  helmet_included: 'Kèm mũ bảo hiểm',
+  raincoat_included: 'Kèm áo mưa',
+  anti_theft: 'Khoá chống trộm',
 } as const;
 
 export type VehicleFeatureKey = keyof typeof VEHICLE_FEATURE_LABEL;
@@ -415,7 +424,9 @@ export const FUEL_TYPE_LABEL: Readonly<Record<FuelType, string>> = {
  */
 export const VEHICLE_FUEL_TYPES: Readonly<Record<VehicleType, readonly FuelType[]>> = {
   [VEHICLE_TYPE.CAR]: [FUEL_TYPE.GASOLINE, FUEL_TYPE.DIESEL, FUEL_TYPE.ELECTRIC, FUEL_TYPE.HYBRID],
-  [VEHICLE_TYPE.MOTORBIKE]: [FUEL_TYPE.GASOLINE, FUEL_TYPE.ELECTRIC],
+  // Xe máy hybrid đã bán tại VN (Yamaha GEAR 125 Hybrid, Janus/Grande bản hybrid) — ma trận cũ
+  // chỉ có xăng/điện nên những xe đó không khai đúng được nguồn năng lượng của chính nó.
+  [VEHICLE_TYPE.MOTORBIKE]: [FUEL_TYPE.GASOLINE, FUEL_TYPE.ELECTRIC, FUEL_TYPE.HYBRID],
 };
 
 export function vehicleFuelTypesFor(vehicleType: string): readonly FuelType[] {
@@ -428,6 +439,32 @@ export function isVehicleFuelTypeAllowed(
 ): boolean {
   return fuelType == null || vehicleFuelTypesFor(vehicleType).includes(fuelType as FuelType);
 }
+
+/*
+ * Ma trận "trường nào có nghĩa với xe nào" (`vehicleFieldPolicy`, `vehicleEnergySpecPolicy`,
+ * `VehicleFieldApplicability`) đã chuyển sang `./vehicle-profile` từ 09/09/2026: nó không còn
+ * chỉ nói về năng lượng mà quyết định cả số chỗ, kiểu dáng và phân khúc xe máy. Cả hai vẫn
+ * xuất ra từ `@xeprime/types`, nơi gọi không phải đổi import.
+ */
+
+/** Trần giá trị của các thông số năng lượng — dùng chung cho yup, class-validator và CHECK ở DB. */
+export const VEHICLE_ENERGY_LIMITS = {
+  /** Km mỗi lần sạc đầy. */
+  electricRangeKm: { min: 1, max: 2000 },
+  /** Dung lượng pin (kWh). */
+  batteryCapacityKwh: { min: 1, max: 500 },
+  /** Tiêu thụ điện (kWh/100km). */
+  electricConsumptionKwhPer100Km: { min: 1, max: 200 },
+} as const;
+
+/**
+ * Số ảnh TỐI THIỂU để một chiếc xe được gửi lên chợ.
+ *
+ * Bốn góc (trước · sau · bên · nội thất) là mức tối thiểu để khách tin đây là xe thật. Con số
+ * sống ở đây vì cả form, checklist và `submit-public` ở server cùng đọc — ba bản sao của nó là
+ * ba cơ hội để giao diện nói "đủ" trong khi server nói "chưa".
+ */
+export const VEHICLE_PUBLIC_MIN_IMAGES = 4;
 
 /**
  * Kiểu dáng thân xe (body type) — thuộc tính dữ liệu như nhiên liệu, chỉ áp dụng cho ô tô

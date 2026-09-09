@@ -61,10 +61,28 @@ async function seedVehicle(
       plateNumber: '51K-123.45',
       description: 'Xe gia đình 5 chỗ, máy xăng.',
       mainImageUrl: 'https://img.example/vios.jpg',
+      // Hồ sơ đủ điều kiện lên chợ theo luật 09/09/2026 (danh tính xe + thông số nguồn năng lượng).
+      brand: 'toyota',
+      model: 'Vios',
+      manufactureYear: 2022,
+      seatCount: 5,
+      fuelType: 'gasoline',
+      transmission: 'automatic',
+      fuelConsumptionCombined: 7.5,
       weekdayPrice: '600000',
       weekendPrice: '750000',
       ...overrides,
     },
+  });
+  // Ảnh thư viện: luật 09/09/2026 đòi tối thiểu 4 URL KHÁC NHAU (ảnh đại diện tính là một).
+  await prisma.vehicleImage.createMany({
+    data: [1, 2, 3].map((n) => ({
+      id: newId(),
+      tenantId,
+      vehicleId: id,
+      imageUrl: `https://img.example/approval-${id.slice(-4)}-${n}.jpg`,
+      sortOrder: n,
+    })),
   });
   return id;
 }

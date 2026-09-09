@@ -61,6 +61,14 @@ async function seedVehicle(): Promise<string> {
       plateNumber: '51K-123.45',
       description: 'Xe 5 chỗ máy xăng.',
       mainImageUrl: 'https://img.example/vios.jpg',
+      // Hồ sơ đủ điều kiện lên chợ theo luật 09/09/2026 (danh tính xe + thông số nguồn năng lượng).
+      brand: 'toyota',
+      model: 'Vios',
+      manufactureYear: 2022,
+      seatCount: 5,
+      fuelType: 'gasoline',
+      transmission: 'automatic',
+      fuelConsumptionCombined: 7.5,
       weekdayPrice: '600000',
       // Field facet mới — snapshot phải mang đủ (assert ở test duyệt xe).
       bodyType: 'sedan',
@@ -68,6 +76,16 @@ async function seedVehicle(): Promise<string> {
       deliveryEnabled: true,
       discountPercent: 10,
     },
+  });
+  // Ảnh thư viện: luật 09/09/2026 đòi tối thiểu 4 URL KHÁC NHAU (ảnh đại diện tính là một).
+  await prisma.vehicleImage.createMany({
+    data: [1, 2, 3].map((n) => ({
+      id: newId(),
+      tenantId,
+      vehicleId: id,
+      imageUrl: `https://img.example/listing-${id.slice(-4)}-${n}.jpg`,
+      sortOrder: n,
+    })),
   });
   await prisma.vehicleFeature.create({
     data: { id: newId(), vehicleId: id, featureKey: 'bluetooth' },

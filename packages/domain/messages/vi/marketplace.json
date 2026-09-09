@@ -123,7 +123,8 @@
     "apply": "Áp dụng",
     "priceRangeValue": "{from} – {to}",
     "countSuffix": "xe",
-    "applyWithCount": "Áp dụng ({count, plural, other {# xe}})"
+    "applyWithCount": "Áp dụng ({count, plural, other {# xe}})",
+    "motorbikeCategory": "Phân khúc xe máy"
   },
   "ownerCta": {
     "title": "Đăng xe cho thuê",

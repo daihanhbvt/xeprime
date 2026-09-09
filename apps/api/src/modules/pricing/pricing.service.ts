@@ -57,6 +57,8 @@ const POLICY_SELECT = {
   overtimeRoundingMinutes: true,
   discountEnabled: true,
   discountTiers: true,
+  includedDistanceKmPerDay: true,
+  excessDistanceFeePerKm: true,
   updatedAt: true,
 } satisfies Prisma.RentalPolicySelect;
 
@@ -369,6 +371,21 @@ export class PricingService {
             `${longTermPackageLabel(prev.minMonths)} (${prev.percent}%)`,
         );
       }
+    }
+
+    /*
+     * Hạn mức quãng đường đi CẶP. Một hạn mức không kèm giá vượt là lời hứa không thực thi được
+     * lúc quyết toán; một giá vượt không kèm hạn mức thì không biết vượt từ đâu. CHECK ở DB chặn
+     * cả hai, nhưng người dùng phải nhận được câu nói rõ chỗ sai chứ không phải lỗi ràng buộc thô.
+     */
+    const hasLimit = dto.includedDistanceKmPerDay != null;
+    const hasExcessFee = dto.excessDistanceFeePerKm != null;
+    if (hasLimit !== hasExcessFee) {
+      throw invalid(
+        hasLimit
+          ? 'Đặt hạn mức km/ngày thì phải khai phí cho mỗi km vượt'
+          : 'Có phí vượt km thì phải đặt hạn mức km/ngày',
+      );
     }
   }
 
@@ -927,6 +944,9 @@ export class PricingService {
             // Đóng băng ĐỦ mốc đang lưu (canonical + legacy chưa dọn) — snapshot phải giải
             // thích được cấu hình tại thời điểm chốt, kể cả phần máy giá đã bỏ qua.
             discountTiers: [...policy.values.discountTiers, ...policy.values.legacyDiscountTiers],
+            // Hạn mức km là ĐIỀU KHOẢN: đóng băng để lúc quyết toán tính đúng luật đã hứa.
+            includedDistanceKmPerDay: policy.values.includedDistanceKmPerDay,
+            excessDistanceFeePerKm: policy.values.excessDistanceFeePerKm,
           }
         : null,
     };
@@ -1171,6 +1191,10 @@ function toValues(row: PolicyRow): RentalPolicyValuesDto {
     legacyDiscountTiers: storedTiers(row.discountTiers)
       .map(legacyDiscountTierFromStored)
       .filter((t): t is LegacyDiscountTier => t !== null),
+    includedDistanceKmPerDay: row.includedDistanceKmPerDay,
+    excessDistanceFeePerKm: row.excessDistanceFeePerKm
+      ? row.excessDistanceFeePerKm.toFixed(0)
+      : null,
     updatedAt: row.updatedAt.toISOString(),
   };
 }
@@ -1193,6 +1217,11 @@ export function policyData(dto: SaveRentalPolicyDto) {
     overtimeRoundingMinutes: dto.overtimeRoundingMinutes ?? null,
     discountEnabled: dto.discountEnabled,
     discountTiers: dto.discountTiers as unknown as Prisma.InputJsonValue,
+    // Hạn mức km: giữ CẶP hoặc bỏ cả cặp — nửa vời bị CHECK ở DB chặn, và `validatePolicy`
+    // đã nói trước bằng câu người đọc được.
+    includedDistanceKmPerDay: dto.includedDistanceKmPerDay ?? null,
+    excessDistanceFeePerKm:
+      dto.excessDistanceFeePerKm != null ? new Prisma.Decimal(dto.excessDistanceFeePerKm) : null,
   };
 }
 

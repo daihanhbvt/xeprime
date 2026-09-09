@@ -107,14 +107,20 @@ describe('resolvePortalDestination', () => {
 });
 
 describe('resolveOwnerCtaHref', () => {
-  it('chưa đăng nhập → portal login kèm owner intent và next=onboarding', () => {
-    expect(resolveOwnerCtaHref(null)).toBe(
-      '/manage/login?intent=owner&next=%2Fmanage%2Fonboarding',
-    );
+  /*
+   * 09/09/2026: CTA chủ xe dẫn tới LANDING công khai trước, không ném thẳng vào form tạo gian
+   * hàng. Người ta phải đọc được lời mời trước khi bị hỏi tài khoản; landing tự rẽ tiếp
+   * (login → onboarding → wizard) theo trạng thái thật.
+   */
+  it('chưa đăng nhập → landing đăng xe, KHÔNG hỏi tài khoản ngay', () => {
+    expect(resolveOwnerCtaHref(null)).toBe(ROUTES.LIST_YOUR_VEHICLE.ROOT);
   });
 
-  it('đã đăng nhập chưa có shop → onboarding; có shop → portal', () => {
-    expect(resolveOwnerCtaHref(customer)).toBe(ROUTES.MANAGE.ONBOARDING);
+  it('đã đăng nhập chưa có shop → vẫn landing (chưa tạo tenant cho ai)', () => {
+    expect(resolveOwnerCtaHref(customer)).toBe(ROUTES.LIST_YOUR_VEHICLE.ROOT);
+  });
+
+  it('đã có gian hàng → vào thẳng cổng quản lý', () => {
     expect(resolveOwnerCtaHref(owner)).toBe(ROUTES.MANAGE.ROOT);
   });
 });

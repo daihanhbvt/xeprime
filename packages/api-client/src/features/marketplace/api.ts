@@ -34,6 +34,9 @@ export function toListingQueryParams(filters: MarketplaceFilters): QueryParams {
     province: filters.provinceCode ? null : (filters.province ?? null),
     brand: filters.brand?.length ? filters.brand.join(',') : null,
     bodyType: filters.bodyType?.length ? filters.bodyType.join(',') : null,
+    motorbikeCategory: filters.motorbikeCategory?.length
+      ? filters.motorbikeCategory.join(',')
+      : null,
     seats: filters.seats?.length ? filters.seats.join(',') : null,
     fuelType: filters.fuelType?.length ? filters.fuelType.join(',') : null,
     features: filters.features?.length ? filters.features.join(',') : null,

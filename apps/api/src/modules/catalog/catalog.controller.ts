@@ -3,8 +3,14 @@ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PUBLIC_CACHE_SECONDS } from '@xeprime/types';
 import { Public } from '../../common/decorators';
 import { PublicCache } from '../../common/http-cache';
+import { CatalogModelService } from './catalog-model.service';
 import { CatalogService } from './catalog.service';
-import { CatalogItemDto, CatalogQueryDto } from './dto/catalog.dto';
+import {
+  CatalogItemDto,
+  CatalogModelDto,
+  CatalogModelQueryDto,
+  CatalogQueryDto,
+} from './dto/catalog.dto';
 
 /**
  * Danh mục lọc — đọc công khai.
@@ -19,7 +25,10 @@ import { CatalogItemDto, CatalogQueryDto } from './dto/catalog.dto';
 @ApiTags('catalog')
 @Controller('catalog')
 export class CatalogController {
-  constructor(private readonly catalog: CatalogService) {}
+  constructor(
+    private readonly catalog: CatalogService,
+    private readonly models: CatalogModelService,
+  ) {}
 
   @Public()
   @Get()
@@ -28,5 +37,20 @@ export class CatalogController {
   @ApiOkResponse({ type: [CatalogItemDto] })
   list(@Query() query: CatalogQueryDto): Promise<CatalogItemDto[]> {
     return this.catalog.list(query);
+  }
+
+  /**
+   * Mẫu xe của MỘT loại phương tiện (và một hãng nếu đã chọn) — ô thứ hai của cặp chọn phụ thuộc.
+   *
+   * Tách khỏi `GET /catalog` vì đây là truy vấn có tham số bắt buộc và có ô tìm kiếm; nhét chung
+   * sẽ biến một endpoint danh mục phẳng, cache tốt, thành một endpoint tra cứu.
+   */
+  @Public()
+  @Get('models')
+  @PublicCache(PUBLIC_CACHE_SECONDS.catalog)
+  @ApiOperation({ summary: 'Mẫu xe theo loại phương tiện và hãng' })
+  @ApiOkResponse({ type: [CatalogModelDto] })
+  listModels(@Query() query: CatalogModelQueryDto): Promise<CatalogModelDto[]> {
+    return this.models.list(query);
   }
 }

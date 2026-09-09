@@ -66,5 +66,9 @@
     "provinceInvalid": "Invalid province code",
     "phoneInvalid": "Invalid phone number",
     "emailInvalid": "Invalid email address"
+  },
+  "ownerVariant": {
+    "title": "Set up your host profile",
+    "intro": "Your contact details and pick-up address. You can change them any time."
   }
 }

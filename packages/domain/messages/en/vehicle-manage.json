@@ -99,7 +99,8 @@
       "left": "Full left side",
       "right": "Full right side",
       "interior": "Clean front cabin",
-      "other": "Boot, engine bay, details…"
+      "other": "Boot, engine bay, details…",
+      "dashboard": "Instrument cluster with the odometer readable"
     },
     "remove": "Remove {slot} photo",
     "retry": "Retry {name}",

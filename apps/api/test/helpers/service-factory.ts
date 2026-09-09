@@ -13,6 +13,7 @@ import { HoldSettlementService } from '../../src/modules/holds/hold-settlement.s
 import { NotificationService } from '../../src/modules/notification/notification.service';
 import { BillingService } from '../../src/modules/billing/billing.service';
 import { BranchesService } from '../../src/modules/branches/branches.service';
+import { CatalogModelService } from '../../src/modules/catalog/catalog-model.service';
 import { CatalogService } from '../../src/modules/catalog/catalog.service';
 import { GeoNotConfiguredProvider } from '../../src/modules/geo/geo-provider';
 import { GeoService } from '../../src/modules/geo/geo.service';
@@ -202,6 +203,7 @@ export function makeVehiclesService(
     makeBranchesService(prisma),
     makeBillingService(prisma),
     new CatalogService(prisma, audit),
+    new CatalogModelService(prisma, audit),
     makePricingService(prisma),
   );
 }

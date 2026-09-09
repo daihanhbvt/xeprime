@@ -167,8 +167,10 @@ function vehicle(over: Partial<VehicleDetail> = {}): VehicleDetail {
     noCollateral: false,
     discountPercent: null,
     description: 'Xe 16 chỗ đời 2021.',
+    transmission: 'manual',
+    fuelConsumptionCombined: '9.50',
     mainImageUrl: 'https://cdn.test/main.jpg',
-    images: [],
+    images: ['https://cdn.test/1.jpg', 'https://cdn.test/2.jpg', 'https://cdn.test/3.jpg'],
     features: [],
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-08-01T00:00:00.000Z',
@@ -599,11 +601,16 @@ describe('/manage/vehicles/[id] — tiến trình gửi duyệt', () => {
   });
 
   // ADR 0030: mô tả KHÔNG còn là điều kiện lên chợ, checklist còn ba mục (giá · ảnh · biển số).
-  it('đủ điều kiện: danh sách hiện đủ 3 mục và nút gửi bấm được', () => {
+  /*
+   * Checklist khớp `missingPublicFields` ở backend (09/09/2026): giá tự lái · ảnh đại diện ·
+   * đủ 4 ảnh · biển số · danh tính xe · thông số nguồn năng lượng. Sáu mục, không phải ba.
+   */
+  it('đủ điều kiện: mọi mục đều "Đã có" và nút gửi bấm được', () => {
     grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
     renderPage();
 
-    expect(within(reviewPanel()).getAllByText('Đã có')).toHaveLength(3);
+    expect(within(reviewPanel()).getAllByText('Đã có')).toHaveLength(6);
+    expect(within(reviewPanel()).queryByText('Chưa có')).toBeNull();
     const button = screen.getByRole('button', { name: /Gửi duyệt công khai/ });
     fireEvent.click(button);
     expect(submitPublic.mutate).toHaveBeenCalledTimes(1);
@@ -611,11 +618,11 @@ describe('/manage/vehicles/[id] — tiến trình gửi duyệt', () => {
 
   it('thiếu điều kiện: nêu đúng mục còn thiếu và KHOÁ nút gửi', () => {
     grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
-    // Thiếu MÔ TẢ không còn chặn gửi duyệt — chỉ thiếu biển số mới là điều kiện chưa đủ.
-    detail.data = vehicle({ description: null, plateNumber: null });
+    // Thiếu MÔ TẢ không còn chặn gửi duyệt; thiếu biển số và thiếu ảnh thì có.
+    detail.data = vehicle({ description: null, plateNumber: null, images: [] });
     renderPage();
 
-    expect(within(reviewPanel()).getAllByText('Chưa có')).toHaveLength(1);
+    expect(within(reviewPanel()).getAllByText('Chưa có')).toHaveLength(2);
     const button = screen.getByRole('button', { name: /Gửi duyệt công khai/ });
     expect(button.hasAttribute('disabled')).toBe(true);
 

@@ -1,0 +1,59 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-md);
+  max-width: 560px;
+  margin: 0 auto;
+  padding: var(--xp-space-2xl) var(--xp-space-md);
+  text-align: center;
+}
+
+.badge,
+.badgeWarning {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--xp-border-radius-circle);
+  font-size: 32px;
+}
+
+.badge {
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.badgeWarning {
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.vehicle {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.body {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+}
+
+.alert {
+  width: 100%;
+  text-align: left;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--xp-space-sm);
+}

@@ -98,12 +98,15 @@ export function isPlatformRoute(pathname: string): boolean {
  * Chưa đăng nhập → portal login kèm owner intent; đã có gian hàng → thẳng vào portal.
  */
 export function resolveOwnerCtaHref(user: AuthScope | null | undefined): string {
-  if (!user) {
-    return `${ROUTES.MANAGE.LOGIN}?intent=${AUTH_INTENT.OWNER}&next=${encodeURIComponent(
-      ROUTES.MANAGE.ONBOARDING,
-    )}`;
-  }
-  return user.tenant ? ROUTES.MANAGE.ROOT : ROUTES.MANAGE.ONBOARDING;
+  /*
+   * 09/09/2026: mọi CTA chủ xe đi qua LANDING "Đăng xe cho thuê" trước.
+   *
+   * Trước đây nút này ném thẳng người chưa đăng nhập vào form tạo gian hàng — hỏi tên gian hàng
+   * và mã số thuế trước khi họ kịp biết mình được gì. Landing là trang công khai, đọc xong mới
+   * quyết định, và chính nó rẽ tiếp theo trạng thái thật (đăng nhập → onboarding → wizard).
+   */
+  if (!user || !user.tenant) return ROUTES.LIST_YOUR_VEHICLE.ROOT;
+  return ROUTES.MANAGE.ROOT;
 }
 
 /** Đích khi phiên hỏng/hết hạn ở khu quản lý: quay lại portal login, giữ đường đang mở. */

@@ -3,29 +3,28 @@
 import { Alert, App, Button, Col, Form, Row } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { TRANSMISSION_TYPE_VALUES, VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
+import { useForm, useWatch } from 'react-hook-form';
+import { VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
 
 import { EmbedMap } from '@/components/data-display/EmbedMap';
 import { NumberField } from '@/components/form/NumberField';
-import { SelectField } from '@/components/form/SelectField';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { BranchFormDialog } from '@/features/branches/components/BranchFormDialog';
 import { useBranches } from '@/features/branches/hooks/use-branches';
 import { PublishRequiredLabel } from '@/features/vehicles/components/VehicleCompleteness';
+import { VehicleClassificationFields } from '@/features/vehicles/components/VehicleClassificationFields';
+import { VehicleEnergyFields } from '@/features/vehicles/components/VehicleEnergyFields';
+import { VehicleIdentityFields } from '@/features/vehicles/components/VehicleIdentityFields';
 import {
-  BrandSelect,
   FeaturesSelect,
-  FuelMetricField,
-  FuelTypeSelect,
+  useTransmissionOptions,
 } from '@/features/vehicles/components/VehicleFormSections';
 import { useUpdateVehicle } from '@/features/vehicles/hooks/use-vehicle-mutations';
 import { manageInformationValuesToInput, vehicleToFormValues } from '@/features/vehicles/mappers';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
-import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { mapPlaceUrl, toGeoPoint } from '@/lib/map-embed';
@@ -47,6 +46,9 @@ const FIELDS: ReadonlyArray<keyof VehicleFormValues> = [
   'transmission',
   'fuelConsumptionCombined',
   'electricRangeKm',
+  'batteryCapacityKwh',
+  'electricConsumptionKwhPer100Km',
+  'engineDisplacementCc',
   'description',
   'features',
 ];
@@ -65,7 +67,6 @@ export function InformationSection() {
   const tForm = useTranslations('Vehicles.form');
   const tEdit = useTranslations('Vehicles.edit');
   const tActions = useTranslations('Common.actions');
-  const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
   const applyApiFieldErrors = useApiFieldErrors();
   const { message } = App.useApp();
@@ -73,8 +74,11 @@ export function InformationSection() {
 
   const initialValues = useMemo(() => vehicleToFormValues(vehicle), [vehicle]);
   const resolver = useValidationResolver<VehicleFormValues>(vehicleFormSchema, 'Vehicles.form.validation');
-  const { control, getValues, handleSubmit, reset, setError, trigger, formState } =
+  const { control, getValues, handleSubmit, reset, setError, setValue, trigger, formState } =
     useForm<VehicleFormValues>({ resolver, values: initialValues });
+  // Nguồn năng lượng quyết định bộ truyền động hợp lệ — theo dõi để ô chọn đổi ngay khi
+  // người dùng đổi từ xăng sang điện, chứ không đợi lưu rồi mới biết.
+  const fuelType = useWatch({ control, name: `fuelType` });
   /** Xe đã lên chợ: căn cước bị khoá (biển số, hộp số, nhiên liệu, năm SX) — server chặn lại. */
   const isPublic = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
 
@@ -94,10 +98,12 @@ export function InformationSection() {
     }
   }
 
-  const transmissionOptions = TRANSMISSION_TYPE_VALUES.map((value) => ({
-    value,
-    label: domainLabel('transmissionType', value),
-  }));
+  /*
+   * Bộ truyền động theo LOẠI XE + nguồn năng lượng: một chiếc SH không có "số sàn", còn xe điện
+   * thì truyền động một cấp. Cùng hàm mà backend dùng để từ chối giá trị sai, nên form không đưa
+   * ra một lựa chọn mà server sẽ chặn.
+   */
+  const transmissionOptions = useTransmissionOptions(vehicle.vehicleType, fuelType);
 
   return (
     <Form component={false} layout="vertical" colon={false}>
@@ -134,49 +140,40 @@ export function InformationSection() {
 
           <SectionCard title={t('information.basicTitle')}>
             <Row gutter={16}>
-              <Col xs={24} sm={12}>
-                <NumberField
-                  control={control}
-                  name="seatCount"
-                  label={tForm('specs.seatCount')}
-                  placeholder={tForm('specs.seatPlaceholder')}
-                  min={1}
-                  max={64}
-                />
-              </Col>
-              <Col xs={24} sm={12}>
-                <SelectField
-                  control={control}
-                  name="transmission"
-                  label={tForm('advanced.transmission')}
-                  options={transmissionOptions}
-                  allowClear
-                  placeholder={tForm('advanced.transmissionPlaceholder')}
-                  help={isPublic ? t('information.lockedField') : undefined}
-                  disabled={!canEdit || isPublic}
-                />
-              </Col>
-              <Col xs={24} sm={12}>
-                <FuelTypeSelect
+              {/*
+                Hãng → Mẫu xe, rồi phân loại theo loại xe. Cùng component với wizard đăng nhanh
+                và form đầy đủ ở `/manage` — ba màn không thể hỏi khác nhau.
+              */}
+              <Col xs={24}>
+                <VehicleIdentityFields
                   control={control}
                   vehicleType={vehicle.vehicleType}
-                  help={isPublic ? t('information.lockedField') : undefined}
-                  disabled={!canEdit || isPublic}
+                  lockedNotice={isPublic ? t('information.lockedField') : undefined}
+                  disabled={!canEdit}
+                  setValue={setValue}
                 />
               </Col>
-              <Col xs={24} sm={12}>
-                {/* Ô đo lường đổi theo nhiên liệu: lít/100km cho xe xăng, km/lần sạc cho xe điện. */}
-                <FuelMetricField control={control} disabled={!canEdit} />
-              </Col>
-              <Col xs={24} sm={12}>
-                <BrandSelect control={control} />
-              </Col>
-              <Col xs={24} sm={12}>
-                <TextField
+              <Col xs={24}>
+                <VehicleClassificationFields
                   control={control}
-                  name="model"
-                  label={tForm('specs.model')}
-                  placeholder={tForm('specs.modelPlaceholder')}
+                  vehicleType={vehicle.vehicleType}
+                  disabled={!canEdit}
+                  setValue={setValue}
+                />
+              </Col>
+              <Col xs={24}>
+                {/*
+                  Nguồn năng lượng và thông số của nó dùng CHUNG khối với hai wizard đăng xe —
+                  cùng ma trận `vehicleEnergySpecPolicy`, nên ba màn không bao giờ hỏi khác nhau.
+                  Nhiên liệu và hộp số bị khoá khi xe đang trên chợ (ADR 0030).
+                */}
+                <VehicleEnergyFields
+                  control={control}
+                  vehicleType={vehicle.vehicleType}
+                  transmissionOptions={transmissionOptions}
+                  lockedNotice={isPublic ? t('information.lockedField') : undefined}
+                  disabled={!canEdit || isPublic}
+                  setValue={setValue}
                 />
               </Col>
               <Col xs={24} sm={12}>
@@ -218,7 +215,7 @@ export function InformationSection() {
             <div className={formStyles.fieldLabel} id="vehicle-features-label">
               {tForm('media.features')}
             </div>
-            <FeaturesSelect control={control} />
+            <FeaturesSelect control={control} vehicleType={vehicle.vehicleType} />
           </div>
         </SectionCard>
 

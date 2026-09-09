@@ -175,14 +175,16 @@ describe('AuthModal — sau khi đăng ký', () => {
     expect(nav.push).not.toHaveBeenCalledWith('/manage/shop');
   });
 
-  it('"Trở thành chủ xe" mở owner onboarding (chỉ ở đó mới có form tạo shop)', async () => {
+  it('"Trở thành chủ xe" mở landing đăng xe, KHÔNG tự tạo gian hàng', async () => {
     renderModal('auth=register');
     await waitFor(() => expect(visibleTitle('Tạo tài khoản XePrime')).toBeTruthy());
     await submitRegister();
     await waitFor(() => expect(screen.getByText('Tạo tài khoản thành công')).toBeTruthy());
 
     fireEvent.click(screen.getByRole('button', { name: /Trở thành chủ xe/ }));
-    expect(nav.push).toHaveBeenCalledWith('/manage/onboarding');
+    // 09/09/2026: landing công khai trước; form tạo gian hàng chỉ mở khi người dùng bấm tiếp ở đó.
+    expect(nav.push).toHaveBeenCalledWith('/list-your-vehicle');
+    expect(nav.push).not.toHaveBeenCalledWith('/manage/onboarding');
   });
 
   it('"Đóng" khi không có next → ở lại trang, không điều hướng đi đâu', async () => {

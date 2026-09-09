@@ -13,7 +13,16 @@ export { toListingQueryParams };
  * next/navigation để unit-test được. Quy ước wire: mảng = CSV (`sedan,suv`), boolean = `1`.
  */
 
-const ARRAY_KEYS = ['brand', 'bodyType', 'seats', 'fuelType', 'features'] as const;
+const ARRAY_KEYS = [
+  'brand',
+  'bodyType',
+  // Chiều lọc của xe máy — đối xứng với `bodyType`, nên nó cũng phải sống trong URL: một bộ lọc
+  // không chia sẻ được bằng link là một bộ lọc mất khi tải lại trang (ADR 0004).
+  'motorbikeCategory',
+  'seats',
+  'fuelType',
+  'features',
+] as const;
 const BOOLEAN_KEYS = ['hourly', 'delivery', 'noCollateral', 'discount'] as const;
 const NUMBER_KEYS = ['minSeats', 'priceMin', 'priceMax', 'page', 'limit'] as const;
 // Từ khoá `q` đã bị BỎ khỏi contract FE (yêu cầu 17/08 — gõ sai key là không ra xe, không thân

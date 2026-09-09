@@ -26,6 +26,7 @@ import trips from '@xeprime/domain/messages/en/trips.json';
 import account from '@xeprime/domain/messages/en/account.json';
 import legal from '@xeprime/domain/messages/en/legal.json';
 import support from '@xeprime/domain/messages/en/support.json';
+import listYourVehicle from '@xeprime/domain/messages/en/list-your-vehicle.json';
 import manageCommon from '@xeprime/domain/messages/en/manage-common.json';
 import dashboard from '@xeprime/domain/messages/en/dashboard.json';
 import shopOnboarding from '@xeprime/domain/messages/en/shop-onboarding.json';
@@ -39,6 +40,7 @@ import rentalPolicies from '@xeprime/domain/messages/en/rental-policies.json';
 import branches from '@xeprime/domain/messages/en/branches.json';
 import customers from '@xeprime/domain/messages/en/customers.json';
 import finance from '@xeprime/domain/messages/en/finance.json';
+import adminCatalog from '@xeprime/domain/messages/en/admin-catalog.json';
 import adminPlans from '@xeprime/domain/messages/en/admin-plans.json';
 import bankTransactions from '@xeprime/domain/messages/en/bank-transactions.json';
 import subscription from '@xeprime/domain/messages/en/subscription.json';
@@ -66,6 +68,7 @@ const messages = {
   Account: account,
   Legal: legal,
   Support: support,
+  ListYourVehicle: listYourVehicle,
   ManageCommon: manageCommon,
   Dashboard: dashboard,
   ShopOnboarding: shopOnboarding,
@@ -79,6 +82,7 @@ const messages = {
   Branches: branches,
   Customers: customers,
   Finance: finance,
+  AdminCatalog: adminCatalog,
   AdminPlans: adminPlans,
   BankTransactions: bankTransactions,
   Subscription: subscription,

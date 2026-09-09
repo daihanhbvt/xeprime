@@ -87,7 +87,10 @@
       "title": "Danh sách xe",
       "loading": "Đang tải danh sách xe…",
       "addVehicle": "Thêm xe",
-      "addFirstVehicle": "Thêm xe đầu tiên"
+      "addFirstVehicle": "Thêm xe đầu tiên",
+      "addVehicleQuick": "Đăng nhanh xe tự lái",
+      "addVehicleAdvanced": "Thiết lập nâng cao",
+      "addVehicleMore": "Cách thêm xe khác"
     }
   },
   "alerts": {
@@ -207,7 +210,13 @@
       "consumptionHelp": "Số lít nhiên liệu cho quãng đường 100 km",
       "electricRange": "Quãng đường mỗi lần sạc",
       "electricRangePlaceholder": "350",
-      "electricRangeHelp": "Số km đi được trong một lần sạc đầy"
+      "electricRangeHelp": "Số km đi được trong một lần sạc đầy",
+      "batteryCapacity": "Dung lượng pin",
+      "batteryCapacityPlaceholder": "42",
+      "batteryCapacityHelp": "kWh — bỏ trống nếu bạn không rõ",
+      "electricConsumption": "Mức tiêu thụ điện",
+      "electricConsumptionPlaceholder": "15",
+      "electricConsumptionHelp": "kWh cho quãng đường 100 km — không bắt buộc"
     },
     "specs": {
       "plateNumber": "Biển số xe",
@@ -216,7 +225,7 @@
       "brand": "Hãng xe",
       "brandPlaceholder": "Chọn hãng xe",
       "model": "Dòng xe (Model)",
-      "modelPlaceholder": "VD: Vios",
+      "modelPlaceholder": "Chọn mẫu xe",
       "manufactureYear": "Năm sản xuất",
       "seatCount": "Số chỗ ngồi",
       "seatPlaceholder": "VD: 5",
@@ -226,7 +235,13 @@
       "color": "Màu sắc",
       "colorPlaceholder": "VD: Trắng",
       "bodyType": "Kiểu dáng xe",
-      "bodyTypeHint": "Giúp khách lọc xe trên chợ. Bấm lại để bỏ chọn."
+      "bodyTypeHint": "Giúp khách lọc xe trên chợ. Bấm lại để bỏ chọn.",
+      "modelHelp": "Chọn đúng mẫu để xe hiện ra khi khách lọc theo dòng xe.",
+      "modelPickBrandFirst": "Chọn hãng xe trước để hiện danh sách mẫu.",
+      "modelEmpty": "Hãng này chưa có mẫu xe trong danh mục.",
+      "motorbikeCategory": "Phân khúc xe",
+      "motorbikeCategoryPlaceholder": "Chọn phân khúc",
+      "motorbikeCategoryHelp": "Khách lọc xe máy theo phân khúc — chọn sai thì xe khó được tìm thấy."
     },
     "prices": {
       "weekday": "Giá ngày thường",
@@ -401,7 +416,9 @@
       "discountPercentMax": "Tối đa 100%",
       "mainImageUrlInvalid": "Đường dẫn ảnh không hợp lệ",
       "imageUrlInvalid": "Đường dẫn ảnh không hợp lệ",
-      "imagesMax": "Tối đa 20 ảnh"
+      "imagesMax": "Tối đa 20 ảnh",
+      "seatCountCarOnly": "Số chỗ ngồi chỉ áp dụng cho ô tô",
+      "motorbikeCategoryMotorbikeOnly": "Phân khúc chỉ áp dụng cho xe máy"
     }
   },
   "publish": {
@@ -410,7 +427,10 @@
       "longTermPrice": "Giá tháng thuê dài hạn",
       "withDriverPrice": "Giá/ngày có tài xế",
       "mainImage": "Ảnh đại diện",
-      "plateNumber": "Biển số"
+      "plateNumber": "Biển số",
+      "photos": "Tối thiểu 4 ảnh xe",
+      "identity": "Hãng, mẫu, năm sản xuất và số chỗ",
+      "energySpec": "Thông số của nguồn năng lượng"
     },
     "status": {
       "pending": {

@@ -66,5 +66,9 @@
     "provinceInvalid": "Mã tỉnh không hợp lệ",
     "phoneInvalid": "Số điện thoại không hợp lệ",
     "emailInvalid": "Email không hợp lệ"
+  },
+  "ownerVariant": {
+    "title": "Thiết lập hồ sơ chủ xe",
+    "intro": "Thông tin liên hệ và địa chỉ nhận xe của bạn. Bạn sửa lại bất cứ lúc nào."
   }
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { Form, Select } from 'antd';
+import type React from 'react';
 import { useId, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import styles from './field.module.css';
@@ -10,12 +11,26 @@ export interface SelectFieldOption {
   readonly label: string;
 }
 
+export interface SelectFieldOptionGroup {
+  readonly label: string;
+  readonly options: readonly SelectFieldOption[];
+}
+
 interface SelectFieldProps<T extends FieldValues> {
   control: Control<T>;
   name: Path<T>;
   /** `ReactNode` để feature tự gắn dấu hiệu riêng cạnh nhãn (xem `TextField`). */
   label: ReactNode;
   options: readonly SelectFieldOption[];
+  /**
+   * Options chia NHÓM — thắng `options` khi có mặt.
+   *
+   * Cần cho ô "Mẫu xe": mẫu đang phân phối và mẫu đời trước phải tách nhóm, vì gộp một danh
+   * sách phẳng thì xe đang bán chìm giữa xe đã ngừng. Nhãn nhóm do nơi gọi dịch.
+   */
+  optionGroups?: readonly SelectFieldOptionGroup[];
+  /** Chữ hiện khi danh sách rỗng — mặc định của AntD là tiếng Anh. */
+  notFoundContent?: ReactNode;
   placeholder?: string;
   /** Cho phép xoá chọn (field về null) — dùng cho select tuỳ chọn như nhiên liệu. */
   allowClear?: boolean;
@@ -53,6 +68,7 @@ export function SelectField<T extends FieldValues>({
   name,
   label,
   options,
+  optionGroups,
   placeholder,
   allowClear,
   disabled,
@@ -62,6 +78,7 @@ export function SelectField<T extends FieldValues>({
   loading,
   mode,
   onSearch,
+  notFoundContent,
 }: SelectFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
   // AntD `Select` không tự nhận `htmlFor` của `Form.Item` — thiếu `id` tường minh thì bấm nhãn
@@ -89,7 +106,10 @@ export function SelectField<T extends FieldValues>({
           field.onChange(value ?? (mode === 'multiple' ? [] : null))
         }
         onBlur={field.onBlur}
-        options={options as { value: string; label: string }[]}
+        options={
+          (optionGroups ?? options) as React.ComponentProps<typeof Select>['options']
+        }
+        notFoundContent={notFoundContent}
         placeholder={placeholder}
         allowClear={allowClear}
         disabled={disabled}

@@ -66,6 +66,19 @@ export const ROUTES = {
     SUPPORT: '/account/support',
     SETTINGS: '/account/settings',
   },
+  /**
+   * Đăng xe cho thuê — CỬA VÀO công khai của chủ xe mới (09/09/2026).
+   *
+   * Nằm ngoài `/manage` có chủ đích: người chưa có gian hàng không nên gặp cổng quản lý trước
+   * khi biết mình sẽ được gì. Landing xem không cần đăng nhập; bấm CTA mới đi qua auth →
+   * onboarding → wizard.
+   */
+  LIST_YOUR_VEHICLE: {
+    ROOT: '/list-your-vehicle',
+    /** Wizard đăng xe nhanh 3 bước — cần đăng nhập + có gian hàng (guard ở trang). */
+    REGISTER: '/list-your-vehicle/register',
+  },
+
   MANAGE: {
     ROOT: '/manage',
     /** Đăng nhập cổng quản lý (chủ xe / nhân viên / quản trị nền tảng). Route CÔNG KHAI. */
@@ -197,6 +210,50 @@ export function vehicleManageSectionOf(pathname: string): VehicleManageSection |
 }
 
 /** Đường dẫn động của xe — hàm để không rải template `/manage/vehicles/${id}` khắp component. */
+/**
+ * Nơi người dùng bấm vào wizard đăng xe nhanh — quyết định nút "Quay lại" và đích sau khi lưu.
+ *
+ * Là một ENUM đóng, không phải URL tự do trong query: nhận URL từ query rồi redirect tới đó là
+ * cách tự mở một lỗ open-redirect trên chính luồng đăng xe.
+ */
+export const VEHICLE_REGISTRATION_SOURCE = {
+  /** Từ chợ / landing công khai. */
+  MARKETPLACE: 'marketplace',
+  /** Từ khu tài khoản của chủ xe (`/account/vehicles`). */
+  ACCOUNT: 'account',
+  /** Từ cổng gian hàng (`/manage/vehicles`). */
+  MANAGE: 'manage',
+} as const;
+
+export type VehicleRegistrationSource =
+  (typeof VEHICLE_REGISTRATION_SOURCE)[keyof typeof VEHICLE_REGISTRATION_SOURCE];
+export const VEHICLE_REGISTRATION_SOURCE_VALUES = Object.values(
+  VEHICLE_REGISTRATION_SOURCE,
+) as VehicleRegistrationSource[];
+
+export function isVehicleRegistrationSource(
+  value: string | null | undefined,
+): value is VehicleRegistrationSource {
+  return (VEHICLE_REGISTRATION_SOURCE_VALUES as string[]).includes(value ?? '');
+}
+
+/** Trang danh sách xe tương ứng với nơi người dùng đi vào — dùng cho nút quay lại và sau khi lưu. */
+export function vehicleListPathFor(source: VehicleRegistrationSource): string {
+  switch (source) {
+    case VEHICLE_REGISTRATION_SOURCE.MANAGE:
+      return ROUTES.MANAGE.VEHICLES;
+    case VEHICLE_REGISTRATION_SOURCE.ACCOUNT:
+      return ROUTES.ACCOUNT.VEHICLES;
+    default:
+      return ROUTES.LIST_YOUR_VEHICLE.ROOT;
+  }
+}
+
+/** Wizard đăng xe nhanh, mang theo ngữ cảnh mở. */
+export function listYourVehicleRegisterPath(source: VehicleRegistrationSource): string {
+  return `${ROUTES.LIST_YOUR_VEHICLE.REGISTER}?from=${source}`;
+}
+
 export const vehiclePath = {
   detail: (id: string): string => `/manage/vehicles/${id}`,
   edit: (id: string): string => `/manage/vehicles/${id}/edit`,

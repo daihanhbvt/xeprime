@@ -1,0 +1,29 @@
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: var(--xp-space-sm);
+  gap: var(--xp-space-sm);
+}
+
+/* Đủ rộng cho tên hãng dài nhất mà không kéo dài cả thanh công cụ trên màn hẹp. */
+.brandSelect {
+  min-width: 220px;
+}
+
+.label {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.key,
+.sub {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* Mẫu chưa có nguồn tra cứu: nhạt hơn nhưng vẫn đọc được — đây là việc cần làm, không phải lỗi. */
+.missing {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}

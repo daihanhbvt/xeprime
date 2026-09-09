@@ -10,14 +10,14 @@ import {
 import { App, Button, Segmented, Tag } from 'antd';
 import { useState } from 'react';
 import {
+  CATALOG_ITEM_TYPES,
   CATALOG_TYPE,
   CATALOG_TYPES_WITH_ICON,
-  CATALOG_TYPE_HINT,
-  CATALOG_TYPE_LABEL,
-  CATALOG_TYPE_VALUES,
   STATUS_COLOR,
+  type CatalogItemType,
   type CatalogType,
 } from '@xeprime/types';
+import { useTranslations } from 'next-intl';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { getErrorMessage } from '@/services/api-client';
@@ -28,6 +28,8 @@ import {
   useDeleteCatalogItem,
   useReorderCatalog,
 } from '@/features/catalog/use-admin-catalog';
+import { CatalogModelsPanel } from '@/features/catalog/components/CatalogModelsPanel';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import styles from './catalog-page.module.css';
 
@@ -41,9 +43,21 @@ const MIN_TABLE_WIDTH = 900;
  * — sửa ở đây là ô chọn trong form tạo xe và bộ lọc ngoài chợ đổi theo.
  */
 export default function AdminCatalogPage() {
+  const t = useTranslations('AdminCatalog.page');
+  const tCol = useTranslations('AdminCatalog.columns');
+  const tStatus = useTranslations('AdminCatalog.status');
+  const tActions = useTranslations('AdminCatalog.actions');
+  const domainLabel = useDomainLabel();
   const { message } = App.useApp();
+
+  /*
+   * Chiều thứ năm — MẪU XE — có bảng riêng và bộ lọc riêng (loại phương tiện × hãng), nên nó là
+   * một panel khác chứ không phải một tab nữa của cùng bảng. Nó vẫn nằm chung màn hình này vì
+   * với người quản trị thì đó vẫn là "danh mục xe".
+   */
   const [type, setType] = useState<CatalogType>(CATALOG_TYPE.BODY_TYPE);
-  const { data, isError, refetch, isFetching } = useAdminCatalog(type);
+  const isModelTab = type === CATALOG_TYPE.VEHICLE_MODEL;
+  const { data, isError, refetch, isFetching } = useAdminCatalog(type as CatalogItemType);
   const remove = useDeleteCatalogItem();
   const reorder = useReorderCatalog();
 
@@ -65,7 +79,7 @@ export default function AdminCatalogPage() {
 
   function handleDelete(item: CatalogItemAdmin) {
     remove.mutate(item.id, {
-      onSuccess: () => message.success('Đã xoá mục'),
+      onSuccess: () => message.success(tActions('deleted')),
       onError: (err) => message.error(getErrorMessage(err)),
     });
   }
@@ -79,12 +93,17 @@ export default function AdminCatalogPage() {
     if (target < 0 || target >= items.length) return;
     const ids = items.map((i) => i.id);
     [ids[index], ids[target]] = [ids[target]!, ids[index]!];
-    reorder.mutate({ type, ids }, { onError: (err) => message.error(getErrorMessage(err)) });
+    // Tab mẫu xe không dùng bảng này (nút sắp xếp cũng không hiện ở đó), nên ở đây `type`
+    // luôn là một chiều của `catalog_items`.
+    reorder.mutate(
+      { type: type as CatalogItemType, ids },
+      { onError: (err) => message.error(getErrorMessage(err)) },
+    );
   }
 
   const createButton = (
     <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-      Thêm mục
+      {t('addItem')}
     </Button>
   );
 
@@ -92,20 +111,20 @@ export default function AdminCatalogPage() {
     ...(withIcon
       ? [
           {
-            title: 'Ảnh',
+            title: tCol('icon'),
             key: 'icon',
             width: 90,
             render: (_: unknown, item: CatalogItemAdmin) =>
               item.iconUrl ? (
                 <PreviewImage src={item.iconUrl} alt="" className={styles.icon} />
               ) : (
-                <span className={styles.noIcon}>Chưa có</span>
+                <span className={styles.noIcon}>{tCol('noIcon')}</span>
               ),
           } satisfies DataTableColumn<CatalogItemAdmin>,
         ]
       : []),
     {
-      title: 'Tên hiển thị',
+      title: tCol('label'),
       key: 'label',
       width: 280,
       render: (_, item) => (
@@ -115,23 +134,35 @@ export default function AdminCatalogPage() {
         </div>
       ),
     },
-    { title: 'Mã', key: 'key', width: 160, render: (_, item) => <code>{item.key}</code> },
+    { title: tCol('key'), key: 'key', width: 160, render: (_, item) => <code>{item.key}</code> },
     {
-      title: 'Đang dùng',
+      title: tCol('usage'),
       key: 'usage',
       align: 'right',
       width: 110,
-      render: (_, item) => (item.usageCount > 0 ? `${item.usageCount} xe` : '—'),
+      render: (_, item) =>
+        item.usageCount > 0 ? tCol('usageValue', { count: item.usageCount }) : '—',
     },
     {
-      title: 'Trạng thái',
+      title: tCol('vehicleTypes'),
+      key: 'vehicleTypes',
+      width: 150,
+      // Mảng rỗng = áp dụng mọi loại xe. Hiện chữ đó thay vì một ô trống: "trống" ở đây rất dễ
+      // đọc thành "chưa cấu hình", trong khi nó là trạng thái mặc định và đúng.
+      render: (_, item) =>
+        item.vehicleTypes.length === 0
+          ? tCol('allVehicleTypes')
+          : item.vehicleTypes.map((v) => domainLabel('vehicleType', v)).join(' · '),
+    },
+    {
+      title: tCol('status'),
       key: 'active',
       width: 110,
       render: (_, item) =>
         item.active ? (
-          <Tag color={STATUS_COLOR.SUCCESS}>Đang bật</Tag>
+          <Tag color={STATUS_COLOR.SUCCESS}>{tStatus('active')}</Tag>
         ) : (
-          <Tag color={STATUS_COLOR.NEUTRAL}>Đã tắt</Tag>
+          <Tag color={STATUS_COLOR.NEUTRAL}>{tStatus('inactive')}</Tag>
         ),
     },
     actionColumn<CatalogItemAdmin>(
@@ -140,36 +171,36 @@ export default function AdminCatalogPage() {
         return [
           {
             key: 'edit',
-            label: 'Chỉnh sửa',
+            label: tActions('edit'),
             icon: <EditOutlined />,
             onClick: () => openEdit(item),
           },
           {
             key: 'up',
-            label: 'Đưa lên trên',
+            label: tActions('moveUp'),
             icon: <ArrowUpOutlined />,
             disabled: index <= 0 || reorder.isPending,
             onClick: () => move(index, -1),
           },
           {
             key: 'down',
-            label: 'Đưa xuống dưới',
+            label: tActions('moveDown'),
             icon: <ArrowDownOutlined />,
             disabled: index >= items.length - 1 || reorder.isPending,
             onClick: () => move(index, 1),
           },
           {
             key: 'delete',
-            label: 'Xoá',
+            label: tActions('delete'),
             icon: <DeleteOutlined />,
             danger: true,
             // Mục đã có xe dùng thì không xoá được — backend cũng chặn, đây chỉ là nói trước.
             disabled: item.usageCount > 0,
             loading: remove.isPending && remove.variables === item.id,
             confirm: {
-              title: 'Xoá hẳn mục này khỏi danh mục?',
-              okText: 'Xoá',
-              cancelText: 'Đóng',
+              title: tActions('confirmDelete'),
+              okText: tActions('confirmOk'),
+              cancelText: tActions('confirmCancel'),
             },
             onClick: () => handleDelete(item),
           },
@@ -181,40 +212,40 @@ export default function AdminCatalogPage() {
 
   return (
     <div>
-      <ManagePageHeader title="Danh mục lọc" />
+      <ManagePageHeader title={t('title')} />
 
       <div className={styles.toolbar}>
         <Segmented<CatalogType>
           value={type}
           onChange={setType}
-          options={CATALOG_TYPE_VALUES.map((value) => ({
+          options={[...CATALOG_ITEM_TYPES, CATALOG_TYPE.VEHICLE_MODEL].map((value) => ({
             value,
-            label: CATALOG_TYPE_LABEL[value],
+            label: domainLabel('catalogType', value),
           }))}
         />
-        {createButton}
+        {isModelTab ? null : createButton}
       </div>
-      <p className={styles.hint}>{CATALOG_TYPE_HINT[type]}</p>
+      <p className={styles.hint}>{domainLabel('catalogTypeHint', type)}</p>
 
+      {isModelTab ? <CatalogModelsPanel /> : (
       <DataTable<CatalogItemAdmin>
-        label={CATALOG_TYPE_LABEL[type]}
+        label={domainLabel('catalogType', type)}
         columns={columns}
         items={items}
         onRowClick={openEdit}
         minWidth={MIN_TABLE_WIDTH}
         loading={isFetching}
         error={
-          isError && !data
-            ? { title: 'Không tải được danh mục', onRetry: () => void refetch() }
-            : null
+          isError && !data ? { title: t('loadError'), onRetry: () => void refetch() } : null
         }
-        empty={{ title: 'Danh mục này chưa có mục nào', action: createButton }}
+        empty={{ title: t('empty'), action: createButton }}
       />
+      )}
 
       <CatalogItemFormModal
         key={`${type}:${editing?.id ?? 'new'}`}
-        open={formOpen}
-        type={type}
+        open={formOpen && !isModelTab}
+        type={type as CatalogItemType}
         item={editing}
         onClose={() => setFormOpen(false)}
       />

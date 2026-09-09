@@ -1,5 +1,51 @@
-import { SERVICE_TYPE, VEHICLE_PUBLIC_STATUS, type VehiclePublicStatus } from '@xeprime/types';
+import {
+  SERVICE_TYPE,
+  VEHICLE_PUBLIC_MIN_IMAGES,
+  VEHICLE_PUBLIC_STATUS,
+  vehicleFieldPolicy,
+  type VehiclePublicStatus,
+} from '@xeprime/types';
 import type { VehicleDetail } from './types';
+
+/** Ảnh đại diện ∪ thư viện, khử trùng theo URL — cùng phép đếm với backend. */
+function distinctImageCount(vehicle: VehicleDetail): number {
+  const urls = new Set<string>(vehicle.images ?? []);
+  if (vehicle.mainImageUrl) urls.add(vehicle.mainImageUrl);
+  return urls.size;
+}
+
+/**
+ * Đã khai đủ thông số BẮT BUỘC của loại xe + nguồn năng lượng đang chọn chưa.
+ *
+ * Cùng `vehicleFieldPolicy` mà backend dùng trong `missingPublicFields` — sửa một bên phải sửa
+ * cả hai, và đó chính là lý do luật nằm ở `@xeprime/types` chứ không viết lại ở đây.
+ */
+function energySpecReady(vehicle: VehicleDetail): boolean {
+  if (!vehicle.fuelType) return false;
+  const policy = vehicleFieldPolicy(vehicle.vehicleType, vehicle.fuelType);
+  if (policy.fuelConsumption === 'required' && vehicle.fuelConsumptionCombined == null) return false;
+  if (policy.engineDisplacementCc === 'required' && vehicle.engineDisplacementCc == null) {
+    return false;
+  }
+  if (policy.electricRangeKm === 'required' && vehicle.electricRangeKm == null) return false;
+  if (policy.transmission === 'required' && !vehicle.transmission) return false;
+  return true;
+}
+
+/**
+ * Danh tính đã đủ chưa — bộ trường KHÁC nhau giữa ô tô và xe máy.
+ *
+ * Ô tô cần số chỗ; xe máy cần phân khúc (tay ga / xe số / côn tay). Hỏi số chỗ của một chiếc
+ * Wave là hỏi một câu không có câu trả lời, còn bỏ qua phân khúc thì chiếc xe gần như không ai
+ * lọc ra được ngoài chợ.
+ */
+function identityReady(vehicle: VehicleDetail): boolean {
+  if (!vehicle.brand || !vehicle.model || vehicle.manufactureYear == null) return false;
+  const policy = vehicleFieldPolicy(vehicle.vehicleType, vehicle.fuelType);
+  if (policy.seatCount === 'required' && vehicle.seatCount == null) return false;
+  if (policy.motorbikeCategory === 'required' && !vehicle.motorbikeCategory) return false;
+  return true;
+}
 
 /**
  * Khoá của một điều kiện lên chợ. Đây là MÃ nội bộ, không phải chữ hiện ra — nhãn tương ứng nằm
@@ -10,7 +56,10 @@ export type PublishRequirementKey =
   | 'longTermPrice'
   | 'withDriverPrice'
   | 'mainImage'
-  | 'plateNumber';
+  | 'photos'
+  | 'plateNumber'
+  | 'identity'
+  | 'energySpec';
 
 /**
  * Điều kiện tối thiểu để xe được lên chợ — khớp `missingPublicFields` ở backend và cột
@@ -49,7 +98,23 @@ export const PUBLISH_REQUIREMENTS: readonly {
     present: (v) => Boolean(v.withDriverDailyPrice),
   },
   { key: 'mainImage', applies: () => true, present: (v) => Boolean(v.mainImageUrl) },
+  /*
+   * Bốn ảnh KHÁC NHAU (09/09/2026). Đếm trên tập URL đã khử trùng, gồm cả ảnh đại diện — đúng
+   * cách backend đếm, nếu không checklist sẽ nói "đủ" trong khi `submit-public` từ chối.
+   */
+  {
+    key: 'photos',
+    applies: () => true,
+    present: (v) => distinctImageCount(v) >= VEHICLE_PUBLIC_MIN_IMAGES,
+  },
   { key: 'plateNumber', applies: () => true, present: (v) => Boolean(v.plateNumber) },
+  /**
+   * Danh tính chiếc xe: hãng · mẫu · năm, cộng chiều phân loại của loại xe đó (số chỗ với ô tô,
+   * phân khúc với xe máy) — khách lọc và so sánh bằng đúng những thứ này.
+   */
+  { key: 'identity', applies: () => true, present: (v) => identityReady(v) },
+  /** Thông số của ĐÚNG nguồn năng lượng đã chọn — ma trận dùng chung với backend. */
+  { key: 'energySpec', applies: () => true, present: (v) => energySpecReady(v) },
   // Mô tả bỏ khỏi danh sách bắt buộc 09/09/2026 — xem missingPublicFields ở backend.
 ];
 

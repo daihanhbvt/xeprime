@@ -123,7 +123,8 @@
     "apply": "Apply",
     "priceRangeValue": "{from} – {to}",
     "countSuffix": "vehicles",
-    "applyWithCount": "Apply ({count, plural, one {# vehicle} other {# vehicles}})"
+    "applyWithCount": "Apply ({count, plural, one {# vehicle} other {# vehicles}})",
+    "motorbikeCategory": "Motorbike category"
   },
   "ownerCta": {
     "title": "List your vehicle",

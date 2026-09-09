@@ -179,9 +179,11 @@ describe('resolveAccountNav', () => {
     }
   });
 
-  it('người chưa có gian hàng nào được mời mở gian hàng (đi qua resolveOwnerCtaHref)', () => {
+  it('người chưa có gian hàng được mời qua LANDING đăng xe, không phải form tạo shop', () => {
     const cta = resolveAccountNav(user())[0]?.items.find((i) => i.key === 'becomeOwner');
-    expect(cta?.href).toBe(ROUTES.MANAGE.ONBOARDING);
+    // 09/09/2026: CTA dừng ở trang giới thiệu công khai; gian hàng chỉ được tạo khi người dùng
+    // bấm tiếp ở đó (`resolveOwnerCtaHref`).
+    expect(cta?.href).toBe(ROUTES.LIST_YOUR_VEHICLE.ROOT);
     expect(cta?.labelKey).toBe('public.becomeOwner');
   });
 });

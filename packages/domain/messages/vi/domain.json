@@ -61,7 +61,8 @@
     "vehicle_brand": "Hãng xe",
     "body_type": "Kiểu dáng xe",
     "fuel_type": "Nguồn năng lượng",
-    "vehicle_feature": "Tiện ích xe"
+    "vehicle_feature": "Tiện ích xe",
+    "vehicle_model": "Mẫu xe"
   },
   "contractStatus": {
     "draft": "Nháp",
@@ -458,10 +459,16 @@
     "business": "Doanh nghiệp"
   },
   "transmissionType": {
-    "automatic": "Tự động",
-    "manual": "Số sàn",
+    "automatic": "Số tự động (AT)",
+    "manual": "Số sàn (MT)",
     "cvt": "CVT",
+    "e_cvt": "E-CVT (hybrid)",
     "dct": "Ly hợp kép (DCT)",
+    "amt": "Số sàn tự động (AMT)",
+    "direct_drive": "Truyền động một cấp",
+    "automatic_cvt": "Tay ga",
+    "semi_automatic": "Xe số",
+    "manual_clutch": "Côn tay",
     "other": "Khác"
   },
   "userStatus": {
@@ -666,7 +673,8 @@
     "left": "Ảnh bên trái",
     "right": "Ảnh bên phải",
     "interior": "Ảnh nội thất",
-    "other": "Ảnh khác"
+    "other": "Ảnh khác",
+    "dashboard": "Ảnh đồng hồ (ODO)"
   },
   "handoverWindowKind": {
     "pickup": "Thời gian giao xe",
@@ -719,5 +727,27 @@
     "minute_of_day": "sau giờ",
     "grace_minutes": "sau số phút chờ miễn phí",
     "km_per_day": "quãng đường vượt mỗi ngày"
+  },
+  "motorbikeCategory": {
+    "scooter": "Xe tay ga",
+    "underbone": "Xe số",
+    "naked": "Naked bike",
+    "sport": "Sport bike",
+    "cruiser": "Cruiser",
+    "adventure": "Adventure",
+    "touring": "Touring",
+    "offroad": "Off-road",
+    "other": "Khác"
+  },
+  "catalogMarketStatus": {
+    "current": "Đang phân phối",
+    "legacy": "Mẫu xe đời trước"
+  },
+  "catalogTypeHint": {
+    "vehicle_brand": "Hiện ở ô \"Hãng xe\" khi tạo/sửa xe và ở bộ lọc ngoài chợ.",
+    "body_type": "Hiện thành thẻ có ảnh khi tạo/sửa xe và ở bộ lọc \"Loại xe\" ngoài chợ.",
+    "fuel_type": "Hiện ở ô \"Nguồn năng lượng\" khi tạo/sửa xe và ở bộ lọc ngoài chợ.",
+    "vehicle_feature": "Hiện ở phần \"Tiện ích\" khi tạo/sửa xe và ở bộ lọc ngoài chợ.",
+    "vehicle_model": "Hiện ở ô \"Mẫu xe\" sau khi chọn hãng. Mỗi mẫu thuộc một hãng và một loại xe."
   }
 }

@@ -3,11 +3,12 @@
 import { ArrowLeftOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { Button, Popover, Spin } from 'antd';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
 import { Logo } from '@/components/brand/Logo';
 import { ROUTES } from '@/constants/routes';
+import { safeNextPath } from '@/features/auth/safe-next';
 import { ShopRegistration } from '@/features/shop/components/ShopRegistration';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import styles from './onboarding.module.css';
@@ -33,12 +34,21 @@ import styles from './onboarding.module.css';
 export default function OwnerOnboardingPage() {
   const t = useTranslations('ShopOnboarding');
   const router = useRouter();
+  const params = useSearchParams();
   const { data: user, isLoading } = useCurrentUser();
   const hasTenant = Boolean(user?.tenant);
+  /*
+   * Đích sau khi tạo hồ sơ. `safeNextPath` chỉ nhận đường dẫn NỘI BỘ — tham số này đến từ URL,
+   * nên nó là bề mặt open-redirect nếu tin thẳng. Không có `next` hợp lệ thì về hồ sơ gian hàng
+   * như trước.
+   */
+  const next = safeNextPath(params.get('next'), ROUTES.MANAGE.SHOP);
+  /** Đến từ luồng đăng xe → dùng chữ dành cho chủ xe cá nhân, không phải chữ "mở gian hàng". */
+  const fromListing = next.startsWith(ROUTES.LIST_YOUR_VEHICLE.ROOT);
 
   useEffect(() => {
-    if (hasTenant) router.replace(ROUTES.MANAGE.SHOP);
-  }, [hasTenant, router]);
+    if (hasTenant) router.replace(next);
+  }, [hasTenant, next, router]);
 
   if (isLoading || !user || hasTenant) {
     return (
@@ -89,7 +99,11 @@ export default function OwnerOnboardingPage() {
       </section>
 
       <main className={styles.content}>
-        <ShopRegistration />
+        <ShopRegistration
+          variant={fromListing ? 'owner' : 'shop'}
+          prefill={{ name: user.displayName, phone: user.phone, email: user.email }}
+          onCreated={() => router.replace(next)}
+        />
 
         <div className={styles.back}>
           <Link href={ROUTES.HOME}>

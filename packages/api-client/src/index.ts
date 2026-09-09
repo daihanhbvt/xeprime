@@ -67,10 +67,13 @@ export { queryKeys } from './query-keys';
 export {
   catalogApi,
   catalogLabel,
+  catalogModelApi,
   groupCatalog,
   EMPTY_CATALOG,
   type CatalogItem,
   type CatalogMap,
+  type CatalogModel,
+  type CatalogModelQuery,
 } from './features/catalog';
 
 export {

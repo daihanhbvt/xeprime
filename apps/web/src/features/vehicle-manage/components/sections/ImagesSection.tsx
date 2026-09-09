@@ -18,7 +18,7 @@ import { useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   IMAGE_UPLOAD_MIME_TYPES,
   VEHICLE_GALLERY_MAX_IMAGES,
-  VEHICLE_IMAGE_SLOT_ORDER,
+  vehicleImageSlotsFor,
   isSingleVehicleImageSlot,
   type VehicleImageType,
 } from '@xeprime/types';
@@ -234,7 +234,8 @@ export function ImagesSection() {
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className={styles.grid}>
-          {VEHICLE_IMAGE_SLOT_ORDER.map((slot) => {
+          {/* Ô thứ năm đổi theo loại xe: ô tô hỏi ảnh nội thất, xe máy hỏi ảnh mặt đồng hồ. */}
+          {vehicleImageSlotsFor(vehicle.vehicleType).map((slot) => {
             const slotItems = items.filter((i) => i.type === slot);
             const slotPending = pending.filter((p) => p.slot === slot);
             const single = isSingleVehicleImageSlot(slot);
