@@ -10,11 +10,14 @@ import {
   SERVICE_TYPE,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
+  hasVehicleServiceSettings,
   type PaginationMeta,
   type SeatBucket,
+  type ServiceType,
 } from '@xeprime/types';
 import { ProvincesService } from '../locations/provinces.service';
 import { PricingService } from '../pricing/pricing.service';
+import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import type {
   FacetBucketDto,
@@ -22,6 +25,7 @@ import type {
   ListingFacetsQueryDto,
   PublicDestinationDto,
   PublicDestinationQueryDto,
+  ListingRentalTermsDto,
   PublicListingDetailDto,
   PublicListingDto,
   PublicListingQueryDto,
@@ -191,6 +195,7 @@ export class PublicListingsService {
     private readonly prisma: PrismaService,
     private readonly provinces: ProvincesService,
     private readonly pricing: PricingService,
+    private readonly settings: VehicleSettingsService,
   ) {}
 
   /**
@@ -700,13 +705,38 @@ export class PublicListingsService {
      * DUY NHẤT trả lời được "xe này có đặt giao tận nơi được không" — cùng giá trị mà
      * `BookingRequestsService` dùng để chấp nhận/từ chối `deliveryRequested`.
      */
-    const [rating, completedTripCount, policy] = await Promise.all([
-      this.ratingsByVehicle([v.id]).then((ratings) => ratings.get(v.id)),
-      this.prisma.booking.count({
-        where: { vehicleId: v.id, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
-      }),
-      this.pricing.effectivePolicy(v.tenantId, v.id),
-    ]);
+    const [rating, completedTripCount, policy, handover, surchargeRules, rentalTerms] =
+      await Promise.all([
+        this.ratingsByVehicle([v.id]).then((ratings) => ratings.get(v.id)),
+        this.prisma.booking.count({
+          where: { vehicleId: v.id, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
+        }),
+        this.pricing.effectivePolicy(v.tenantId, v.id),
+        this.settings.handoverWindowsFor(this.prisma, v.id),
+        // Chỉ chuyến có tài xế mới có phụ phí mặc định; chỉ khoản đang bật mới công bố.
+        v.serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER)
+          ? this.settings.surchargeRulesFor(this.prisma, v.id)
+          : Promise.resolve([]),
+        Promise.all(
+          v.serviceTypes
+            .filter((s) => hasVehicleServiceSettings(s))
+            .map(async (s): Promise<ListingRentalTermsDto> => {
+              const setting = await this.settings.serviceSettingFor(this.prisma, v.id, s as ServiceType);
+              return {
+                serviceType: s,
+                requiredDocuments: setting.effectiveRequiredDocuments,
+                identityVerifyMethod: setting.identityVerifyMethod,
+                termsText: setting.termsText,
+                requireTermsAcceptance: setting.requireTermsAcceptance,
+                depositMode: s === SERVICE_TYPE.WITH_DRIVER ? setting.depositMode : null,
+                instantBookEnabled: setting.autoAcceptEnabled,
+                autoAcceptMinLeadMinutes: setting.autoAcceptMinLeadMinutes,
+                autoAcceptMaxLeadMinutes: setting.autoAcceptMaxLeadMinutes,
+                minRentalMinutes: setting.minRentalMinutes,
+              };
+            }),
+        ),
+      ]);
 
     /*
      * Giá SÁU gói thuê dài hạn (ADR 0011): bảng chọn gói phải hiện TIỀN THẬT ngay khi mở, nên
@@ -795,6 +825,11 @@ export class PublicListingsService {
             depositAmount: policy.values.depositAmount,
           }
         : null,
+      rentalTerms,
+      handover: { pickupWindows: handover.pickup, returnWindows: handover.return },
+      driverSurchargeRules: surchargeRules
+        .filter((r) => r.enabled)
+        .map((r) => ({ kind: r.kind, unit: r.unit, amount: r.amount, thresholdValue: r.thresholdValue })),
     };
   }
 }

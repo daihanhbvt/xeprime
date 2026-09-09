@@ -1,0 +1,299 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.reorder {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  cursor: pointer;
+}
+
+.hint {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  font-style: italic;
+}
+
+/* ── Ảnh đại diện ─────────────────────────────────────────────────────── */
+.mainRow {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-md);
+}
+
+.mainTileWrap {
+  position: relative;
+  flex: none;
+}
+
+.mainPhoto,
+.mainPlaceholder {
+  width: 160px;
+  height: 108px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  object-fit: cover;
+  background: var(--xp-color-bg-layout);
+}
+
+.mainProgress {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(255 255 255 / 70%);
+}
+
+.mainText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mainActions {
+  display: flex;
+  gap: var(--xp-space-sm);
+}
+
+.linkBtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--xp-color-link);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  cursor: pointer;
+}
+
+.linkBtn:disabled {
+  opacity: var(--xp-disabled-opacity);
+  cursor: default;
+}
+
+.dangerBtn {
+  color: var(--xp-color-error);
+}
+
+/* ── Lưới ô vị trí ─────────────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--xp-space-md);
+}
+
+.slot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.slotDroppable {
+  border-style: dashed;
+}
+
+.slotOver {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-bg-selected);
+}
+
+.slotBody {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+  min-height: 132px;
+}
+
+.slotFoot {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.slotTitle {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.slotHelper {
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-sm);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.slotDone {
+  padding: 0;
+  border: 0;
+}
+
+.doneTag {
+  margin: 0;
+}
+
+.thumb {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  transform: translate(var(--drag-x, 0), var(--drag-y, 0));
+}
+
+/* Ô "Ảnh khác" chứa nhiều ảnh nhỏ hơn. */
+.slotBody:has(.thumb + .thumb) .thumb,
+.slotBody:has(.thumb + .addTile) .thumb {
+  width: 132px;
+  aspect-ratio: 4 / 3;
+}
+
+.thumbDraggable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.thumbDragging {
+  z-index: 10;
+  box-shadow: var(--xp-shadow-md);
+  cursor: grabbing;
+}
+
+.photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.removeBtn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 55%);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  place-items: center;
+}
+
+.removeBtn:hover {
+  background: var(--xp-color-error);
+}
+
+.addTile,
+.pendingTile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--xp-space-xs);
+  width: 100%;
+  min-height: 132px;
+  border: 1px dashed var(--xp-color-primary);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-primary);
+  cursor: pointer;
+}
+
+.slotBody:has(.thumb) .addTile {
+  width: 132px;
+  min-height: 99px;
+}
+
+.addTile:hover {
+  background: var(--xp-color-bg-selected);
+}
+
+.addLabel {
+  padding: 4px 12px;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pendingTile {
+  border-color: var(--xp-color-border);
+  color: var(--xp-color-text-tertiary);
+  cursor: default;
+}
+
+.failedTile {
+  border-color: var(--xp-color-error);
+  color: var(--xp-color-error);
+  text-align: center;
+}
+
+.failedTile > span {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pendingActions {
+  display: flex;
+  gap: var(--xp-space-xs);
+}
+
+.pendingActions button {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-container);
+  color: inherit;
+  cursor: pointer;
+  place-items: center;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mainRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

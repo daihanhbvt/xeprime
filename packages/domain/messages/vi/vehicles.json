@@ -577,7 +577,8 @@
       "pricing": "Giá & chính sách",
       "source": "Nguồn xe & tài chính",
       "documents": "Giấy tờ",
-      "maintenance": "Bảo dưỡng & KM"
+      "maintenance": "Bảo dưỡng & KM",
+      "operations": "Vận hành & điều kiện thuê"
     },
     "errors": "{count, plural, other {# lỗi}} cần sửa trước khi lưu",
     "publicWarning": "Xe đang công khai. Thay đổi thông tin nhạy cảm sẽ đưa xe về chờ duyệt lại và tạm ẩn khỏi marketplace.",

@@ -17,6 +17,7 @@ import {
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
+import { AutoAcceptPreviewDto } from '../../vehicle-settings/dto/vehicle-settings.dto';
 import {
   ArrayMaxSize,
   IsArray,
@@ -558,6 +559,13 @@ export class DeliverySummaryDto {
 export class PublicQuoteDto {
   @ApiProperty({ type: QuoteBreakdownDto }) breakdown!: QuoteBreakdownDto;
   @ApiProperty({ type: DeliverySummaryDto }) delivery!: DeliverySummaryDto;
+  /**
+   * Yêu cầu với đúng khoảng/dịch vụ này có được HỆ THỐNG tự nhận không (08/09/2026). Server
+   * quyết định; client chỉ hiện nhãn "đặt nhanh" khi trường này nói có — không suy từ toggle.
+   * Vắng mặt/null ở báo giá dài hạn (luôn do gian hàng chốt lịch).
+   */
+  @ApiPropertyOptional({ type: () => AutoAcceptPreviewDto, nullable: true })
+  autoAccept?: AutoAcceptPreviewDto | null;
 }
 
 export class PublicQuoteQueryDto {

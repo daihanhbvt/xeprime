@@ -1,0 +1,84 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  margin-bottom: var(--xp-space-xs);
+  padding: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: auto 132px auto 132px auto;
+  gap: var(--xp-space-sm);
+  align-items: center;
+}
+
+/* Nhãn "Từ/Đến" nằm trên hàng; nhãn của SelectField chỉ dành cho trình đọc màn hình. */
+.row :global(.ant-form-item-label) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.row :global(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+.rowLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.add {
+  align-self: flex-start;
+  padding-left: 0;
+}
+
+.note {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.error {
+  margin: 0;
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.bufferOptions {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.customBuffer {
+  max-width: 220px;
+}
+
+@media (max-width: 640px) {
+  .row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .row > :nth-child(3),
+  .row > :nth-child(4) {
+    grid-column: span 1;
+  }
+}

@@ -174,3 +174,29 @@ export function mediaValuesToInput(values: VehicleFormValues): UpdateVehicleInpu
     description: textOrNull(values.description),
   };
 }
+
+/**
+ * Payload của mục "Thông tin xe" trong không gian quản lý xe (08/09/2026) — CHỈ những trường
+ * màn đó hiện: biển số, thông số cơ bản, mô tả, tiện ích. Tên/loại xe/dịch vụ/chi nhánh/giá/ảnh
+ * không đi qua đây nên không thể bị ghi đè bởi một màn không hiển thị chúng.
+ */
+export function manageInformationValuesToInput(values: VehicleFormValues): UpdateVehicleInput {
+  return {
+    plateNumber: textOrNull(values.plateNumber),
+    brand: textOrNull(values.brand),
+    model: textOrNull(values.model),
+    color: textOrNull(values.color),
+    fuelType: values.fuelType,
+    bodyType: values.vehicleType === VEHICLE_TYPE.CAR ? (values.bodyType ?? null) : null,
+    manufactureYear: values.manufactureYear,
+    seatCount: values.seatCount,
+    transmission: values.transmission,
+    fuelConsumptionCity: values.fuelConsumptionCity,
+    fuelConsumptionHighway: values.fuelConsumptionHighway,
+    fuelConsumptionCombined: values.fuelConsumptionCombined,
+    engineDisplacementCc: values.engineDisplacementCc,
+    horsepowerHp: values.horsepowerHp,
+    description: textOrNull(values.description),
+    features: values.features ?? [],
+  };
+}

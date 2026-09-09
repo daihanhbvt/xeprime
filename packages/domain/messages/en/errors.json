@@ -76,7 +76,10 @@
     "INVITE_EMAIL_MISMATCH": "This invitation is for a different email address. Sign in with the address that received it.",
     "INVITE_ALREADY_MEMBER": "You are already a member of this shop.",
     "BANK_TX_ALREADY_HANDLED": "This transaction has already been handled. Reload the list to see its current state.",
-    "BANK_TX_TARGET_NOT_PAYABLE": "The selected invoice can no longer accept payment. Ask the shop to issue a new invoice and match against the new code."
+    "BANK_TX_TARGET_NOT_PAYABLE": "The selected invoice can no longer accept payment. Ask the shop to issue a new invoice and match against the new code.",
+    "HANDOVER_WINDOW_VIOLATION": "Pickup or return time is outside the host’s handover hours. Pick another time.",
+    "RENTAL_TERMS_ACCEPTANCE_REQUIRED": "You need to accept the host’s rental terms before sending.",
+    "MIN_RENTAL_DURATION": "The rental is shorter than the host’s minimum duration."
   },
   "upload": {
     "imageType": "Only JPG, PNG or WebP images are accepted",

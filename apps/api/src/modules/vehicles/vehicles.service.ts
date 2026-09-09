@@ -13,7 +13,9 @@ import {
   BOOKING_STATUS,
   POLICY_SOURCE,
   RECEIPT_TYPE,
+  REVIEW_STATUS,
   SERVICE_TYPE,
+  vehicleImageTypeOf,
   TENANT_STATUS,
   isVehicleFuelTypeAllowed,
   VEHICLE_OPERATION_STATUS,
@@ -45,6 +47,7 @@ import {
   VehicleDetailDto,
   VehicleListItemDto,
   VehicleListQueryDto,
+  VehicleMediaItemDto,
   VehicleStatsDto,
   VehiclePublicReviewDto,
 } from './dto/vehicle.dto';
@@ -121,6 +124,7 @@ const SENSITIVE_SELECT = {
   bodyType: true,
   serviceTypes: true,
   mainImageUrl: true,
+  deliveryEnabled: true,
 } satisfies Prisma.VehicleSelect;
 
 @Injectable()
@@ -157,13 +161,20 @@ export class VehiclesService {
 
     const bookingScope = { tenantId, vehicleId: { in: ids }, deletedAt: null };
 
-    const [bookingGroups, receiptGroups] = await Promise.all([
+    const [bookingGroups, ratingGroups, receiptGroups] = await Promise.all([
       this.prisma.booking.groupBy({
         by: ['vehicleId', 'status'],
         where: {
           ...bookingScope,
           status: { in: [BOOKING_STATUS.ACTIVE, BOOKING_STATUS.COMPLETED] },
         },
+        _count: { _all: true },
+      }),
+      // Điểm đánh giá của xe — cùng vị từ với thẻ chợ (`ratingsByVehicle`): review published.
+      this.prisma.review.groupBy({
+        by: ['vehicleId'],
+        where: { tenantId, vehicleId: { in: ids }, status: REVIEW_STATUS.PUBLISHED },
+        _avg: { rating: true },
         _count: { _all: true },
       }),
       // Không có quyền tài chính thì KHÔNG chạy truy vấn — số liệu không được rời khỏi DB.
@@ -188,10 +199,16 @@ export class VehiclesService {
         receiptGroups.find((g) => g.vehicleId === vehicleId && g.type === type)?._sum.amount ??
         null;
 
+      const rating = ratingGroups.find((g) => g.vehicleId === vehicleId);
       const stats: VehicleStatsDto = {
         vehicleId,
         activeBookings: bookingsOf(BOOKING_STATUS.ACTIVE),
         completedBookings: bookingsOf(BOOKING_STATUS.COMPLETED),
+        ratingAvg:
+          rating && rating._count._all > 0 && rating._avg.rating != null
+            ? (Math.round(Number(rating._avg.rating) * 10) / 10).toFixed(1)
+            : null,
+        ratingCount: rating?._count._all ?? 0,
       };
 
       if (canViewFinance) {
@@ -253,7 +270,13 @@ export class VehiclesService {
     const [statsRow] = await this.stats(tenantId, [id], opts.canViewFinance);
     // `stats()` luôn trả một dòng cho mỗi id truyền vào; fallback chỉ để thoả type index-access.
     const result: Vehicle360SummaryDto = {
-      stats: statsRow ?? { vehicleId: id, activeBookings: 0, completedBookings: 0 },
+      stats: statsRow ?? {
+        vehicleId: id,
+        activeBookings: 0,
+        completedBookings: 0,
+        ratingAvg: null,
+        ratingCount: 0,
+      },
     };
 
     if (!opts.canViewBookings) return result;
@@ -365,7 +388,7 @@ export class VehiclesService {
       this.prisma.vehicleImage.findMany({
         where: { vehicleId: id },
         orderBy: { sortOrder: 'asc' },
-        select: { imageUrl: true },
+        select: { imageUrl: true, imageType: true, sortOrder: true },
       }),
       this.prisma.vehicleFeature.findMany({
         where: { vehicleId: id },
@@ -384,7 +407,12 @@ export class VehiclesService {
     return toDetail(
       row,
       review,
-      images.map((i) => i.imageUrl),
+      images.map((i) => ({
+        url: i.imageUrl,
+        // Ảnh cũ chưa gán loại → `other` khi ĐỌC; DB giữ nguyên tới khi chủ xe bấm lưu.
+        type: vehicleImageTypeOf(i.imageType),
+        sortOrder: i.sortOrder,
+      })),
       features.map((f) => f.featureKey),
     );
   }
@@ -658,6 +686,17 @@ export class VehiclesService {
     const knockBack =
       current.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC && priceChanged;
 
+    /*
+     * Cờ `vehicles.delivery_enabled` (chip tiện ích trên thẻ) đi THEO chính sách hiệu lực sau lần
+     * lưu này (08/09/2026): ghi đè thì theo bộ chính sách riêng, đặt lại thì theo mặc định gian
+     * hàng. Không có lần lưu nào để hai nguồn lệch nhau nữa. `null` = gian hàng chưa có chính
+     * sách ⇒ giữ nguyên cờ.
+     */
+    const deliverySync = overriding
+      ? dto.policy!.deliveryEnabled
+      : ((await this.pricing.shopPolicyValues(tenantId, current.vehicleType))?.deliveryEnabled ??
+        null);
+
     await this.prisma.$transaction(async (tx) => {
       const existingOverride = await tx.rentalPolicy.findUnique({
         where: { vehicleId: id },
@@ -678,13 +717,17 @@ export class VehiclesService {
         policyChanged = true;
       }
 
-      if (Object.keys(priceDto).length > 0) {
+      const vehicleData: Prisma.VehicleUpdateInput = {
+        ...writableFields(priceDto),
+        ...(knockBack ? { publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW } : {}),
+        ...(deliverySync != null && deliverySync !== current.deliveryEnabled
+          ? { deliveryEnabled: deliverySync }
+          : {}),
+      };
+      if (Object.keys(vehicleData).length > 0) {
         const updated = await tx.vehicle.update({
           where: { id: current.id },
-          data: {
-            ...writableFields(priceDto),
-            ...(knockBack ? { publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW } : {}),
-          },
+          data: vehicleData,
           select: DETAIL_SELECT,
         });
         if (knockBack) {
@@ -704,7 +747,7 @@ export class VehiclesService {
        * chấp" trên sàn nay suy từ chính sách hiệu lực, nên bật/tắt ghi đè cũng làm nó đổi dù
        * không đụng đồng nào tiền giá. Chạy sau nhánh giá để đọc được giá vừa ghi.
        */
-      if (Object.keys(priceDto).length > 0 || policyChanged) {
+      if (Object.keys(vehicleData).length > 0 || policyChanged) {
         await this.listings.syncFromVehicle(current.id, tx);
       }
 
@@ -771,15 +814,29 @@ export class VehiclesService {
     tenantId: string,
     dto: CreateVehicleDto | UpdateVehicleDto,
   ): Promise<void> {
-    if (dto.images !== undefined) {
+    /*
+     * Hai hình thái đầu vào, MỘT bảng (08/09/2026):
+     *  - `media` (màn thư viện theo ô): URL + loại, thứ tự mảng = sortOrder; URL trùng bị khử để
+     *    không lưu một file hai lần.
+     *  - `images` (client cũ, app native): chỉ URL. Loại đã gán của URL còn giữ lại được BẢO TOÀN
+     *    — một lần lưu từ form cũ không được xoá sạch vị trí ảnh chủ xe đã sắp ở màn mới.
+     */
+    const media =
+      dto.media !== undefined
+        ? dedupeByUrl(dto.media.map((m) => ({ url: m.url.trim(), type: m.type ?? null })))
+        : dto.images !== undefined
+          ? await this.preserveImageTypes(tx, vehicleId, dto.images)
+          : null;
+    if (media) {
       await tx.vehicleImage.deleteMany({ where: { vehicleId } });
-      if (dto.images.length > 0) {
+      if (media.length > 0) {
         await tx.vehicleImage.createMany({
-          data: dto.images.map((imageUrl, index) => ({
+          data: media.map((item, index) => ({
             id: newId(),
             vehicleId,
             tenantId,
-            imageUrl,
+            imageUrl: item.url,
+            imageType: item.type,
             sortOrder: index,
           })),
         });
@@ -794,6 +851,22 @@ export class VehiclesService {
         });
       }
     }
+  }
+
+  /** Loại ảnh hiện có theo URL — để `images: string[]` cũ không xoá mất vị trí đã gán. */
+  private async preserveImageTypes(
+    tx: Prisma.TransactionClient,
+    vehicleId: string,
+    urls: string[],
+  ): Promise<Array<{ url: string; type: string | null }>> {
+    const existing = await tx.vehicleImage.findMany({
+      where: { vehicleId },
+      select: { imageUrl: true, imageType: true },
+    });
+    const typeOf = new Map(existing.map((i) => [i.imageUrl, i.imageType]));
+    return dedupeByUrl(
+      urls.map((u) => u.trim()).filter(Boolean).map((url) => ({ url, type: typeOf.get(url) ?? null })),
+    );
   }
 
   /**
@@ -1180,10 +1253,20 @@ function toListItem(
   };
 }
 
+/** Giữ lần xuất hiện ĐẦU của mỗi URL — thứ tự người dùng sắp không đổi. */
+function dedupeByUrl<T extends { url: string }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (!item.url || seen.has(item.url)) return false;
+    seen.add(item.url);
+    return true;
+  });
+}
+
 function toDetail(
   v: VehicleRow,
   latestPublicReview: VehiclePublicReviewDto | null = null,
-  images: string[] = [],
+  media: VehicleMediaItemDto[] = [],
   features: string[] = [],
 ): VehicleDetailDto {
   return {
@@ -1208,7 +1291,8 @@ function toDetail(
     deliveryEnabled: v.deliveryEnabled,
     description: v.description,
     createdAt: v.createdAt as unknown as string,
-    images,
+    images: media.map((m) => m.url),
+    media,
     features,
     latestPublicReview,
   };

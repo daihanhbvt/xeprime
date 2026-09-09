@@ -130,6 +130,12 @@ export const requestFormSchema = yup.object({
       is: PICKUP_METHOD.DELIVERY,
       then: (s) => s.required('Nhập địa chỉ giao xe'),
     }),
+  /**
+   * Khách đồng ý điều khoản riêng của chủ xe (08/09/2026). Bắt buộc hay không phụ thuộc vào
+   * `rentalTerms.requireTermsAcceptance` của xe — dữ liệu server, nên luồng kiểm ở bước Xác nhận
+   * thay vì trong schema; server kiểm lại (`RENTAL_TERMS_ACCEPTANCE_REQUIRED`).
+   */
+  acceptedTerms: yup.boolean().default(false),
 });
 
 export type RequestFormValues = yup.InferType<typeof requestFormSchema>;

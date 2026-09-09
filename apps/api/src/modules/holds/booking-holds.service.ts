@@ -25,6 +25,7 @@ import {
   maskAccountNumber,
   type AuditActorScope,
   type BookingPriceSnapshot,
+  type RentalTermsSnapshot,
   type PaginationMeta,
 } from '@xeprime/types';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
@@ -34,6 +35,7 @@ import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
 import { BookingsService } from '../bookings/bookings.service';
 import { OccupancyService } from '../calendar/occupancy.service';
+import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
 import { NotificationService } from '../notification/notification.service';
 import { HoldSettlementService } from './hold-settlement.service';
 import {
@@ -137,6 +139,8 @@ export class BookingHoldsService {
     private readonly prisma: PrismaService,
     private readonly bookings: BookingsService,
     private readonly occupancy: OccupancyService,
+    /** Thời gian chết của xe cộng vào lịch giữ chỗ (08/09/2026 — ADR 0006). */
+    private readonly settings: VehicleSettingsService,
     private readonly settlement: HoldSettlementService,
     /** Chỉ để đọc tài khoản nhận tiền của nền tảng — một nguồn với màn mua gói. */
     private readonly billing: BillingService,
@@ -156,7 +160,8 @@ export class BookingHoldsService {
       customerUserId: string | null;
       schedule: HoldSchedule;
       snapshot: BookingPriceSnapshot;
-      actorUserId: string;
+      /** `null` khi hệ thống tự động nhận chuyến — audit ghi `actorScope: system`. */
+      actorUserId: string | null;
     },
   ): Promise<{ id: string; code: string; amount: string; expiresAt: Date }> {
     const fees = input.snapshot.fees;
@@ -236,13 +241,14 @@ export class BookingHoldsService {
       sourceId: input.requestId,
       startAt: input.schedule.pickupAt,
       endAt: input.schedule.returnAt,
+      bufferMinutes: await this.settings.turnaroundBufferFor(tx, input.vehicleId),
     });
 
     await this.audit.record(
       {
         tenantId: input.tenantId,
         actorUserId: input.actorUserId,
-        actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+        actorScope: input.actorUserId ? AUDIT_ACTOR_SCOPE.TENANT : AUDIT_ACTOR_SCOPE.SYSTEM,
         action: 'booking_hold.create',
         targetType: 'booking_hold',
         targetId: id,
@@ -441,6 +447,7 @@ export class BookingHoldsService {
             destination: true,
             tenantCustomerId: true,
             decidedBy: true,
+            rentalTerms: true,
             vehicle: { select: { name: true } },
           },
         },
@@ -457,8 +464,8 @@ export class BookingHoldsService {
     await this.occupancy.release(tx, OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST, req.id);
 
     // Người "tạo" đơn là người đã DUYỆT — quyết định của họ sinh ra đơn này; khách chỉ chuyển tiền.
-    const creator = req.decidedBy ?? hold.customerUserId;
-    if (!creator) throw new Error(`Hold ${holdId}: không xác định được người tạo đơn`);
+    // Yêu cầu do HỆ THỐNG tự nhận không có ai duyệt: `decided_by` NULL ⇒ đơn cũng không có người tạo.
+    const creator = req.decidedBy ?? null;
 
     const booking = await this.bookings.createWithinTx(
       tx,
@@ -483,6 +490,8 @@ export class BookingHoldsService {
       'from_request',
       snapshot,
       req.tenantCustomerId,
+      // Điều kiện thuê đã đóng băng trên yêu cầu — copy nguyên sang đơn (08/09/2026).
+      { rentalTerms: (req.rentalTerms as unknown as RentalTermsSnapshot | null) ?? null },
     );
 
     const claimed = await tx.bookingRequest.updateMany({

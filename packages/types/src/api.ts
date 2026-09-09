@@ -153,6 +153,15 @@ export const API_ERROR_CODE = {
   /** Khách yêu cầu giao tận nơi nhưng chính sách hiệu lực của xe không bật giao nhận. */
   DELIVERY_NOT_SUPPORTED: 'DELIVERY_NOT_SUPPORTED',
   /**
+   * Giờ nhận/trả nằm ngoài khung giờ giao nhận chủ xe đã đặt cho xe (08/09/2026). Server kiểm
+   * khi khách gửi yêu cầu và khi gian hàng chốt giờ nhận dài hạn — FE chỉ là preview.
+   */
+  HANDOVER_WINDOW_VIOLATION: 'HANDOVER_WINDOW_VIOLATION',
+  /** Chủ xe bắt buộc khách đồng ý điều khoản trước khi gửi yêu cầu mà payload chưa tích. */
+  RENTAL_TERMS_ACCEPTANCE_REQUIRED: 'RENTAL_TERMS_ACCEPTANCE_REQUIRED',
+  /** Thời lượng thuê ngắn hơn mức tối thiểu chủ xe đặt cho dịch vụ có tài xế. */
+  MIN_RENTAL_DURATION: 'MIN_RENTAL_DURATION',
+  /**
    * Khách bấm huỷ chuyến ở chặng không còn huỷ được (xe đã giao, chuyến đã xong, hoặc yêu cầu
    * đã bị từ chối/huỷ trước đó).
    *

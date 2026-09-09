@@ -44,6 +44,27 @@
     "pickupPoint": {
       "title": "Điểm nhận xe",
       "mapTitle": "Bản đồ điểm nhận xe"
+    },
+    "terms": {
+      "title": "Thủ tục & điều kiện thuê",
+      "instantBook": "Đặt ngay",
+      "instantBookHint": "Yêu cầu hợp lệ trong khung giờ cho phép sẽ được xác nhận tự động.",
+      "documents": "Giấy tờ cần có: {documents}",
+      "verify": "Đối chiếu: {method}",
+      "driverDepositNone": "Không cần cọc giữ chuyến.",
+      "driverDeposit": "Cọc giữ chuyến: {mode}",
+      "acceptanceRequired": "Bạn cần đồng ý điều khoản của chủ xe khi gửi yêu cầu."
+    },
+    "handover": {
+      "title": "Khung giờ giao nhận",
+      "pickup": "Nhận xe: {windows}",
+      "return": "Trả xe: {windows}"
+    },
+    "surcharges": {
+      "title": "Phụ phí có thể phát sinh",
+      "rule": "{kind}: {amount}/{unit}",
+      "threshold": "áp dụng {kind} từ {value}",
+      "note": "Phụ phí được ghi nhận khi quyết toán chuyến, chưa nằm trong giá hiển thị."
     }
   },
   "reviews": {

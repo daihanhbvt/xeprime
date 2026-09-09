@@ -32,6 +32,12 @@ export const NOTIFICATION_TYPE = {
    * tín hiệu để đi chọn xe khác. Gian hàng nhận nó như một việc đã tuột mất.
    */
   BOOKING_REQUEST_EXPIRED: 'booking_request_expired',
+  /**
+   * Hệ thống TỰ ĐỘNG nhận một yêu cầu theo thiết lập của chủ xe (08/09/2026) — gửi cho gian
+   * hàng. Loại riêng, không mượn `BOOKING_REQUEST_SUBMITTED`: người trực không phải bấm duyệt gì,
+   * và không được nhận "có yêu cầu mới" rồi ngay sau đó "đã duyệt".
+   */
+  BOOKING_AUTO_ACCEPTED: 'booking_auto_accepted',
   SHOP_APPROVED: 'shop_approved',
   SHOP_REJECTED: 'shop_rejected',
   VEHICLE_APPROVED: 'vehicle_approved',
@@ -143,6 +149,10 @@ export const NOTIFICATION_TYPE_META: Readonly<Record<NotificationType, Notificat
   [NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRING]: {
     label: 'Yêu cầu sắp hết hạn',
     color: STATUS_COLOR.WARNING,
+  },
+  [NOTIFICATION_TYPE.BOOKING_AUTO_ACCEPTED]: {
+    label: 'Tự động nhận chuyến',
+    color: STATUS_COLOR.SUCCESS,
   },
   [NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRED]: {
     label: 'Yêu cầu quá hạn phản hồi',

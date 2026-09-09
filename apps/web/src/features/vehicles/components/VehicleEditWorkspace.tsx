@@ -43,6 +43,7 @@ import {
 import { VehicleDocumentsWorkspace } from '@/features/vehicle-documents/components/VehicleDocumentsWorkspace';
 import { VehicleMaintenanceWorkspace } from '@/features/vehicle-maintenance/components/VehicleMaintenanceWorkspace';
 import { VehicleSourceWorkspace } from './VehicleSourceWorkspace';
+import { VehicleOperationsPanel } from '@/features/vehicle-manage/components/VehicleOperationsPanel';
 import { useActiveBranches } from '@/features/branches/hooks/use-branches';
 import { branchLabel } from '@/features/branches/branch-label';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
@@ -289,6 +290,12 @@ export function VehicleEditWorkspace({
           onDirtyChange={setSourceDirty}
         />
       ),
+    },
+    {
+      key: VEHICLE_EDIT_TAB.OPERATIONS,
+      label: t('tabs.operations'),
+      // Cùng section với không gian quản lý xe của Owner Lite — một mã nguồn cho hai tuyến.
+      children: <VehicleOperationsPanel vehicle={vehicle} canEdit={canUpdate} />,
     },
     {
       key: 'documents',

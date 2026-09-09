@@ -190,3 +190,77 @@ describe('Vehicle gallery + features (Gap 4)', () => {
     expect(featAfter).toBe(0);
   });
 });
+
+/**
+ * Thư viện ảnh THEO Ô (08/09/2026) — màn "Hình ảnh" của không gian quản lý xe gửi `media`
+ * (URL + vị trí), client cũ và app native vẫn gửi `images` (chỉ URL). Cùng một bảng
+ * `vehicle_images`; điều phải giữ là hai hình thái không giẫm lên nhau.
+ */
+describe('Ảnh theo vị trí — tương thích ngược với client cũ', () => {
+  maybe('media gán vị trí và giữ thứ tự; images cũ vẫn đọc ra đúng danh sách URL', async () => {
+    const created = await createBase('MED-SLOT-1');
+    const updated = await vehicles.update(tenantId, created.id, ownerId, {
+      media: [
+        { url: 'https://img/front.jpg', type: 'front' },
+        { url: 'https://img/rear.jpg', type: 'rear' },
+        { url: 'https://img/other.jpg' },
+      ],
+    });
+
+    // Ảnh chưa gán vị trí đọc ra là "other" — màn thư viện xếp nó vào ô "Ảnh khác" thay vì
+    // bắt giao diện tự đoán từ một giá trị rỗng.
+    expect(updated.media.map((m) => [m.url, m.type])).toEqual([
+      ['https://img/front.jpg', 'front'],
+      ['https://img/rear.jpg', 'rear'],
+      ['https://img/other.jpg', 'other'],
+    ]);
+    // Trường cũ vẫn là danh sách URL theo đúng thứ tự — app native không phải sửa gì.
+    expect(updated.images).toEqual([
+      'https://img/front.jpg',
+      'https://img/rear.jpg',
+      'https://img/other.jpg',
+    ]);
+  });
+
+  maybe('client cũ lưu bằng images KHÔNG xoá vị trí ảnh chủ xe đã sắp', async () => {
+    const created = await createBase('MED-SLOT-2');
+    await vehicles.update(tenantId, created.id, ownerId, {
+      media: [
+        { url: 'https://img/front.jpg', type: 'front' },
+        { url: 'https://img/left.jpg', type: 'left' },
+      ],
+    });
+
+    // Form cũ gửi lại đúng hai URL đó (đảo thứ tự) — vị trí phải được bảo toàn.
+    const legacy = await vehicles.update(tenantId, created.id, ownerId, {
+      images: ['https://img/left.jpg', 'https://img/front.jpg'],
+    });
+    expect(legacy.media.map((m) => [m.url, m.type])).toEqual([
+      ['https://img/left.jpg', 'left'],
+      ['https://img/front.jpg', 'front'],
+    ]);
+  });
+
+  maybe('cùng một URL không lưu hai dòng dù gửi lặp', async () => {
+    const created = await createBase('MED-SLOT-3');
+    const updated = await vehicles.update(tenantId, created.id, ownerId, {
+      media: [
+        { url: 'https://img/dup.jpg', type: 'front' },
+        { url: 'https://img/dup.jpg', type: 'rear' },
+      ],
+    });
+    expect(updated.media).toHaveLength(1);
+    expect(await prisma.vehicleImage.count({ where: { vehicleId: created.id } })).toBe(1);
+  });
+
+  maybe('không gửi media lẫn images → giữ nguyên cả URL lẫn vị trí', async () => {
+    const created = await createBase('MED-SLOT-4');
+    await vehicles.update(tenantId, created.id, ownerId, {
+      media: [{ url: 'https://img/front.jpg', type: 'front' }],
+    });
+    const untouched = await vehicles.update(tenantId, created.id, ownerId, { name: 'Đổi tên' });
+    expect(untouched.media).toEqual([
+      { url: 'https://img/front.jpg', type: 'front', sortOrder: 0 },
+    ]);
+  });
+});

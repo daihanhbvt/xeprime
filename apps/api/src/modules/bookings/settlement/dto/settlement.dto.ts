@@ -95,6 +95,15 @@ export class DepositRefundDto {
  * (số cấu hình) mà là tổng khoản `payments.kind = 'deposit'` đã thu — không có bằng chứng đã
  * thu tiền thì không có việc hoàn tiền.
  */
+/** Quy tắc phụ phí MẶC ĐỊNH đã đóng băng trên đơn (chuyến có tài xế) — để gợi ý khoản thật. */
+export class SettlementSurchargeRuleDto {
+  @ApiProperty({ description: 'DRIVER_SURCHARGE_KIND' }) kind!: string;
+  @ApiProperty({ description: 'SURCHARGE_CATEGORY tương ứng khi ghi khoản thật' }) category!: string;
+  @ApiProperty({ description: 'DRIVER_SURCHARGE_UNIT' }) unit!: string;
+  @ApiProperty({ description: 'VND string — ADR 0007' }) amount!: string;
+  @ApiPropertyOptional({ type: Number, nullable: true }) thresholdValue!: number | null;
+}
+
 export class BookingSettlementDto {
   @ApiProperty() bookingId!: string;
   @ApiProperty({ description: 'Cọc theo cấu hình đơn — CHƯA chắc đã thu' })
@@ -108,6 +117,13 @@ export class BookingSettlementDto {
   depositStatus!: string;
   @ApiPropertyOptional({ type: DepositRefundDto, nullable: true }) refund!: DepositRefundDto | null;
   @ApiProperty({ type: OvertimeSuggestionDto }) overtime!: OvertimeSuggestionDto;
+
+  /**
+   * Mức phụ phí đã công bố với khách LÚC ĐẶT (snapshot trên đơn, 08/09/2026) — gợi ý số tiền và
+   * lý do khi ghi khoản thật; không tự cộng vào đơn. Rỗng với đơn tự lái/đơn cũ.
+   */
+  @ApiProperty({ type: [SettlementSurchargeRuleDto] })
+  surchargeRules!: SettlementSurchargeRuleDto[];
 }
 
 export class RecordDepositRefundDto {

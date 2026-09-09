@@ -1,0 +1,20 @@
+.hint {
+  margin: 0 0 var(--xp-space-md);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.collapse {
+  background: var(--xp-color-bg-container);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+}
+
+.off {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+}

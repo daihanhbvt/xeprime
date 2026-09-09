@@ -577,7 +577,8 @@
       "pricing": "Pricing & policies",
       "source": "Ownership & finance",
       "documents": "Documents",
-      "maintenance": "Maintenance & odometer"
+      "maintenance": "Maintenance & odometer",
+      "operations": "Operations & rental terms"
     },
     "errors": "{count, plural, one {# error} other {# errors}} to fix before saving",
     "publicWarning": "This vehicle is live. Changing sensitive information sends it back for review and temporarily hides it from the marketplace.",

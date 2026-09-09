@@ -284,6 +284,16 @@ export const SERVICE_TYPE = {
 export type ServiceType = (typeof SERVICE_TYPE)[keyof typeof SERVICE_TYPE];
 export const SERVICE_TYPE_VALUES = Object.values(SERVICE_TYPE) as ServiceType[];
 
+/**
+ * Thu hẹp một chuỗi bất kỳ về mã dịch vụ thật — cùng idiom với `isRouteType`.
+ *
+ * Cần vì `serviceTypes` đi trên dây là `string[]` (OpenAPI), còn mọi tính toán trong app dùng
+ * union `ServiceType`: không có guard thì mỗi nơi đọc lại ép kiểu một kiểu.
+ */
+export function isServiceType(value: unknown): value is ServiceType {
+  return typeof value === 'string' && (SERVICE_TYPE_VALUES as string[]).includes(value);
+}
+
 export const SERVICE_TYPE_LABEL: Readonly<Record<ServiceType, string>> = {
   [SERVICE_TYPE.SELF_DRIVE]: 'Tự lái',
   [SERVICE_TYPE.WITH_DRIVER]: 'Có tài xế',

@@ -6,6 +6,7 @@ import { CustomersModule } from '../customers/customers.module';
 import { HoldsModule } from '../holds/holds.module';
 import { PhoneVerificationModule } from '../phone-verification/phone-verification.module';
 import { PricingModule } from '../pricing/pricing.module';
+import { VehicleSettingsModule } from '../vehicle-settings/vehicle-settings.module';
 import { BookingRequestsController } from './booking-requests.controller';
 import { PublicBookingRequestsController } from './public-booking-requests.controller';
 import { BookingRequestsService } from './booking-requests.service';
@@ -30,6 +31,8 @@ import { BookingRequestsService } from './booking-requests.service';
     HoldsModule,
     PhoneVerificationModule,
     PricingModule,
+    // Khung giờ giao nhận, điều khoản và tự động nhận chuyến (08/09/2026).
+    VehicleSettingsModule,
   ],
   controllers: [BookingRequestsController, PublicBookingRequestsController],
   providers: [BookingRequestsService],

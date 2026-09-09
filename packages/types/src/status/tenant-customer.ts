@@ -103,6 +103,11 @@ export const TENANT_CUSTOMER_NOTE_TYPE_META: Readonly<Record<TenantCustomerNoteT
 export const CUSTOMER_DOCUMENT_TYPE = {
   CITIZEN_ID: 'citizen_id',
   DRIVER_LICENCE: 'driver_licence',
+  /**
+   * Hộ chiếu — khách nước ngoài không có CCCD (08/09/2026). Chủ xe chọn nó THAY CCCD ở thiết lập
+   * thủ tục cho thuê; đối chiếu là XUẤT TRÌNH/đối chiếu, không bao giờ "giữ bản gốc".
+   */
+  PASSPORT: 'passport',
   OTHER: 'other',
 } as const;
 
@@ -115,6 +120,7 @@ export const CUSTOMER_DOCUMENT_TYPE_VALUES = Object.values(
 export const CUSTOMER_DOCUMENT_TYPE_LABEL: Readonly<Record<CustomerDocumentType, string>> = {
   [CUSTOMER_DOCUMENT_TYPE.CITIZEN_ID]: 'CCCD / CMND',
   [CUSTOMER_DOCUMENT_TYPE.DRIVER_LICENCE]: 'Giấy phép lái xe',
+  [CUSTOMER_DOCUMENT_TYPE.PASSPORT]: 'Hộ chiếu',
   [CUSTOMER_DOCUMENT_TYPE.OTHER]: 'Giấy tờ khác',
 };
 

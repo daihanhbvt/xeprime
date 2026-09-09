@@ -2,12 +2,16 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   addDateKeyDays,
   API_ERROR_CODE,
+  AUDIT_ACTOR_SCOPE,
+  AUTO_ACCEPT_BLOCKER,
+  BOOKING_REQUEST_DECISION_SOURCE,
   BOOKING_REQUEST_STATUS,
   BOOKING_REQUEST_STATUS_VALUES,
   bookingRequestRespondBy,
@@ -25,8 +29,13 @@ import {
   TENANT_STATUS,
   USER_STATUS,
   VEHICLE_PUBLIC_STATUS,
+  type AutoAcceptBlocker,
+  type BookingRequestDecisionSource,
   type BookingRequestDeliveryQuote,
   type BookingPriceSnapshot,
+  type CustomerFeeBreakdown,
+  type RentalTermsSnapshot,
+  type ServiceType,
 } from '@xeprime/types';
 import { fromDateOnly, toDateOnly } from '../../common/date-only';
 import { normalizePhone, phoneLookupVariants } from '../../common/phone';
@@ -41,6 +50,8 @@ import { BookingHoldsService } from '../holds/booking-holds.service';
 import { CustomersService } from '../customers/customers.service';
 import { PhoneVerificationService } from '../phone-verification/phone-verification.service';
 import { PricingService } from '../pricing/pricing.service';
+import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
+import type { EffectivePolicy } from '../pricing/pricing.service';
 import {
   ApproveBookingRequestDto,
   BOOKING_REQUEST_DEFAULT_LIMIT,
@@ -87,6 +98,7 @@ const SELECT = {
   createdAt: true,
   respondBy: true,
   decidedAt: true,
+  decisionSource: true,
   /**
    * `customerUserId` được chọn để suy ra `canMessageOnPlatform` — nó KHÔNG bao giờ đi ra DTO
    * (xem `toDto`): định danh tài khoản xuyên gian hàng không có việc gì ở inbox của một shop.
@@ -120,6 +132,21 @@ interface ApprovalSchedule {
   packageMonths: number | null;
 }
 
+/**
+ * Ai đang quyết định yêu cầu — người trong gian hàng bấm duyệt, hay HỆ THỐNG tự nhận theo thiết
+ * lập của chủ xe (08/09/2026). Cùng một đường commit cho cả hai; khác nhau đúng ở người ký.
+ */
+interface DecisionActor {
+  userId: string | null;
+  source: BookingRequestDecisionSource;
+}
+
+/** Kết quả tự động nhận — để receipt nói đúng chuyện gì vừa xảy ra. */
+interface AutoAcceptOutcome {
+  status: string;
+  bookingId: string | null;
+}
+
 @Injectable()
 export class BookingRequestsService {
   constructor(
@@ -134,7 +161,11 @@ export class BookingRequestsService {
     private readonly customers: CustomersService,
     /** R3: tuyến hoa hồng duyệt xong sinh khoản giữ chỗ thay vì tạo đơn ngay (ADR 0028 điều 6). */
     private readonly holds: BookingHoldsService,
+    /** Khung giờ giao nhận, điều khoản, tự động nhận chuyến theo xe (08/09/2026). */
+    private readonly settings: VehicleSettingsService,
   ) {}
+
+  private readonly logger = new Logger(BookingRequestsService.name);
 
   /**
    * Xe khả dụng để đặt: đã `approved_public` và thuộc shop `active`. `tenantId` suy từ xe ở server
@@ -347,6 +378,39 @@ export class BookingRequestsService {
     }
 
     /*
+     * Thiết lập THEO XE (08/09/2026) — kiểm ở SERVER, giao diện chỉ là preview:
+     *   - giờ nhận/trả phải rơi vào khung giờ giao nhận chủ xe đặt (dài hạn: kiểm lúc duyệt);
+     *   - thời lượng tối thiểu của chuyến có tài xế;
+     *   - chủ xe bắt buộc đồng ý điều khoản thì payload phải tích.
+     * Điều kiện tại thời điểm này được ĐÓNG BĂNG vào yêu cầu — chủ xe đổi sau không viết lại.
+     */
+    const setting = await this.settings.serviceSettingFor(
+      this.prisma,
+      vehicle.id,
+      serviceType as ServiceType,
+    );
+    if (pickupAt) {
+      await this.settings.assertHandoverWindows(this.prisma, vehicle.id, pickupAt, returnAt);
+    }
+    this.settings.assertServiceConstraints(setting, {
+      pickupAt,
+      returnAt,
+      acceptedTerms: dto.acceptedTerms === true,
+    });
+    const rentalTerms = await this.settings.rentalTermsSnapshotFor(
+      this.prisma,
+      vehicle.id,
+      serviceType,
+      dto.acceptedTerms === true ? new Date() : null,
+    );
+    /*
+     * Ứng viên tự động nhận: dịch vụ theo ngày và xe đang bật. Quyết định thật nằm ở
+     * `tryAutoAccept` SAU khi yêu cầu đã tồn tại — ở đây chỉ để biết thông báo "có yêu cầu mới"
+     * có nên đi ngay trong transaction ghi yêu cầu hay chờ xem hệ thống có nhận được không.
+     */
+    const autoCandidate = !longTerm && setting.autoAcceptEnabled;
+
+    /*
      * Gian hàng từ chối phục vụ SĐT này (S-01)?
      *
      * Đặt SAU cửa OTP là có chủ đích: người gửi phải chứng minh sở hữu SĐT trước khi biết kết
@@ -426,20 +490,22 @@ export class BookingRequestsService {
              * chưa phải một chỗ đã giữ.
              */
             respondBy: bookingRequestRespondBy(new Date()),
+            rentalTerms: rentalTerms as unknown as Prisma.InputJsonValue,
           },
         });
 
-        await this.notifications.emitToTenantMembers(
-          vehicle.tenantId,
-          {
-            type: NOTIFICATION_TYPE.BOOKING_REQUEST_SUBMITTED,
-            title: `Yêu cầu thuê mới: ${dto.customerName}`,
-            body: vehicle.name,
-            targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
-            targetId: id,
-          },
-          tx,
-        );
+        /*
+         * Ứng viên tự động nhận thì KHÔNG báo "có yêu cầu mới cần duyệt" ở đây: nếu hệ thống nhận
+         * được, người trực sẽ nhận một tin "đã tự nhận" chứ không phải hai tin trái ngược nhau;
+         * nếu không nhận được, tin "yêu cầu mới" được gửi ngay sau đó (xem dưới).
+         */
+        if (!autoCandidate) {
+          await this.notifications.emitToTenantMembers(
+            vehicle.tenantId,
+            submittedNotification(dto.customerName, vehicle.name, id),
+            tx,
+          );
+        }
       });
     } catch (err) {
       // Partial unique index chống double-submit: cùng (xe, SĐT, giờ nhận, giờ trả) đang pending.
@@ -450,10 +516,153 @@ export class BookingRequestsService {
       throw err;
     }
 
+    let auto: AutoAcceptOutcome | null = null;
+    if (autoCandidate) {
+      auto = await this.tryAutoAccept(vehicle.tenantId, id);
+      if (!auto) {
+        // Không tự nhận được (lịch vừa bị chiếm, thiếu tài xế, giá tạm tính…) → về luồng duyệt tay.
+        await this.notifications.emitToTenantMembers(
+          vehicle.tenantId,
+          submittedNotification(dto.customerName, vehicle.name, id),
+        );
+      }
+    }
+
     return {
-      receipt: { id, status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL, authenticated: true },
+      receipt: {
+        id,
+        status: auto?.status ?? BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+        authenticated: true,
+        autoAccepted: auto != null,
+        bookingId: auto?.bookingId ?? null,
+      },
       loginUserId,
     };
+  }
+
+  /**
+   * HỆ THỐNG tự nhận một yêu cầu vừa gửi — cùng đường duyệt với gian hàng (`commitDecision`),
+   * chỉ khác người ký. Mọi điều kiện kiểm ở đây; điều kiện nào không đạt thì yêu cầu ở lại
+   * `pending_host_approval` cho chủ xe — KHÔNG bao giờ tự từ chối khách.
+   *
+   * Lịch bận và tài xế trùng KHÔNG kiểm bằng SELECT trước: constraint DB quyết định lúc ghi
+   * (ADR 0006), và mọi lỗi lúc commit đều rơi về chờ duyệt tay. Trả `null` = không nhận.
+   */
+  private async tryAutoAccept(tenantId: string, id: string): Promise<AutoAcceptOutcome | null> {
+    try {
+      const req = await this.loadPending(tenantId, id);
+      if (req.serviceType === SERVICE_TYPE.LONG_TERM) return null;
+      const [setting, windows, policy] = await Promise.all([
+        this.settings.serviceSettingFor(this.prisma, req.vehicleId, req.serviceType as ServiceType),
+        this.settings.handoverWindowsFor(this.prisma, req.vehicleId),
+        this.pricing.effectivePolicy(tenantId, req.vehicleId),
+      ]);
+      const schedule = this.resolveApprovalSchedule(req, {});
+      const breakdown = await this.quoteFor(req, schedule, policy);
+      const fees = await this.pricing.customerFeesFor(
+        tenantId,
+        breakdown.totalAmount,
+        breakdown.estimateNote != null,
+      );
+      const terms = req.rentalTerms as unknown as RentalTermsSnapshot | null;
+      const blocker = this.settings.evaluateAutoAccept(setting, windows, {
+        serviceType: req.serviceType,
+        pickupAt: schedule.pickupAt,
+        returnAt: schedule.returnAt,
+        quoteIsEstimate: breakdown.estimateNote != null,
+        holdRequired: Boolean(fees?.holdAmount),
+        termsAccepted: !setting.requireTermsAcceptance || terms?.termsAcceptedAt != null,
+      });
+      if (blocker) {
+        await this.recordAutoAcceptSkip(tenantId, id, blocker);
+        return null;
+      }
+
+      let driverId: string | null = null;
+      if (req.serviceType === SERVICE_TYPE.WITH_DRIVER) {
+        const driver = await this.settings.pickAssignableDriver(this.prisma, tenantId, {
+          pickupAt: schedule.pickupAt,
+          returnAt: schedule.returnAt,
+        });
+        if (!driver) {
+          await this.recordAutoAcceptSkip(tenantId, id, AUTO_ACCEPT_BLOCKER.NO_DRIVER);
+          return null;
+        }
+        driverId = driver.id;
+      }
+
+      const snapshot = this.pricing.buildSnapshot(breakdown, policy, fees);
+      const row = await this.commitDecision(
+        tenantId,
+        { userId: null, source: BOOKING_REQUEST_DECISION_SOURCE.SYSTEM },
+        id,
+        req,
+        schedule,
+        snapshot,
+        fees,
+        { driverId },
+      );
+      return { status: row.status, bookingId: row.bookingId };
+    } catch (err) {
+      /*
+       * Trùng lịch (23P01 của xe hoặc tài xế), yêu cầu vừa hết hạn, khách vừa bị chặn… — tất cả
+       * là "hệ thống không nhận được", không phải lỗi của khách. Yêu cầu đã tồn tại và ở lại
+       * hàng chờ duyệt; ghi log để vận hành thấy vì sao.
+       */
+      this.logger.warn(
+        `Tự động nhận yêu cầu ${id} thất bại — rơi về chờ duyệt tay: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return null;
+    }
+  }
+
+  /** Dấu vết "hệ thống đã cân nhắc và bỏ qua" — chủ xe đọc được vì sao chuyến không tự nhận. */
+  private async recordAutoAcceptSkip(
+    tenantId: string,
+    id: string,
+    blocker: AutoAcceptBlocker,
+  ): Promise<void> {
+    await this.audit.record({
+      tenantId,
+      actorUserId: null,
+      actorScope: AUDIT_ACTOR_SCOPE.SYSTEM,
+      action: 'booking_request.auto_accept_skipped',
+      targetType: 'booking_request',
+      targetId: id,
+      after: { blocker },
+    });
+  }
+
+  /**
+   * Bảng kê giá của một yêu cầu THEO NGÀY (tự lái / có tài xế) — MỘT hàm cho cả duyệt tay lẫn
+   * tự động nhận, nên hai đường không thể tính ra hai con số.
+   */
+  private async quoteFor(
+    req: PendingRequestRow,
+    schedule: ApprovalSchedule,
+    policy: EffectivePolicy | null,
+  ) {
+    return this.pricing.buildDailyQuote({
+      weekdayPrice: req.vehicle.weekdayPrice?.toFixed(0) ?? null,
+      weekendPrice: req.vehicle.weekendPrice?.toFixed(0) ?? null,
+      pickupAt: schedule.pickupAt,
+      returnAt: schedule.returnAt,
+      policy,
+      // Miễn phí lúc duyệt — không dòng giao nhận nào trong snapshot giá gốc.
+      delivery: null,
+      // Giá riêng theo ngày áp cả ở đây — snapshot của đơn phải khớp báo giá khách đã thấy.
+      dailyOverrides: await this.pricing.dailyOverridesFor(
+        req.vehicleId,
+        schedule.pickupAt,
+        schedule.returnAt,
+      ),
+      serviceType: req.serviceType,
+      routeType: req.routeType,
+      withDriverDailyPrice: req.vehicle.withDriverDailyPrice?.toFixed(0) ?? null,
+      withDriverInterCityPrice: req.vehicle.withDriverInterCityPrice?.toFixed(0) ?? null,
+      withDriverOneWayPrice: req.vehicle.withDriverOneWayPrice?.toFixed(0) ?? null,
+      discountPercent: req.vehicle.discountPercent,
+    });
   }
 
   /**
@@ -704,7 +913,13 @@ export class BookingRequestsService {
      * Dài hạn tính theo GÓI tháng lịch — không đi qua máy giá ngày, không đụng giá riêng theo
      * ngày và không ăn khuyến mãi trực tiếp của tự lái (ADR 0011). Khách xem giá gói nào ở
      * marketplace thì duyệt ra đúng con số đó, vì cùng một hàm tính.
+     *
+     * Dài hạn: giờ nhận do gian hàng vừa chốt phải rơi vào khung giờ giao xe của chính chiếc xe
+     * (08/09/2026) — khách không có lịch để kiểm lúc gửi, nên kiểm ở đây.
      */
+    if (req.serviceType === SERVICE_TYPE.LONG_TERM) {
+      await this.settings.assertHandoverWindows(this.prisma, req.vehicleId, schedule.pickupAt, null);
+    }
     const breakdown =
       req.serviceType === SERVICE_TYPE.LONG_TERM
         ? this.pricing.buildLongTermPackageQuote({
@@ -713,27 +928,7 @@ export class BookingRequestsService {
             policy,
             delivery: null,
           })
-        : this.pricing.buildDailyQuote({
-            weekdayPrice: req.vehicle.weekdayPrice?.toFixed(0) ?? null,
-            weekendPrice: req.vehicle.weekendPrice?.toFixed(0) ?? null,
-            pickupAt: schedule.pickupAt,
-            returnAt: schedule.returnAt,
-            policy,
-            // Miễn phí lúc duyệt — không dòng giao nhận nào trong snapshot giá gốc.
-            delivery: null,
-            // Giá riêng theo ngày áp cả ở đây — snapshot của đơn phải khớp báo giá khách đã thấy.
-            dailyOverrides: await this.pricing.dailyOverridesFor(
-              req.vehicleId,
-              schedule.pickupAt,
-              schedule.returnAt,
-            ),
-            serviceType: req.serviceType,
-            routeType: req.routeType,
-            withDriverDailyPrice: req.vehicle.withDriverDailyPrice?.toFixed(0) ?? null,
-            withDriverInterCityPrice: req.vehicle.withDriverInterCityPrice?.toFixed(0) ?? null,
-            withDriverOneWayPrice: req.vehicle.withDriverOneWayPrice?.toFixed(0) ?? null,
-            discountPercent: req.vehicle.discountPercent,
-          });
+        : await this.quoteFor(req, schedule, policy);
     /*
      * PHỤ PHÍ PHÍA KHÁCH (ADR 0029) — tính bằng chính sách hiệu lực và chế độ thu phí của gian
      * hàng, rồi ĐÓNG BĂNG vào snapshot (ADR 0024). Báo giá còn tạm tính (`estimateNote`) thì
@@ -746,23 +941,51 @@ export class BookingRequestsService {
     );
     const snapshot = this.pricing.buildSnapshot(breakdown, policy, fees);
 
-    /*
-     * HAI ĐƯỜNG DUYỆT, tách theo việc chuyến này có khoản giữ chỗ hay không:
-     *
-     *  - CÓ (tuyến hoa hồng, giá đã chốt) → sinh `booking_holds`, yêu cầu sang `awaiting_hold`,
-     *    CHIẾM LỊCH ngay. Đơn thuê chỉ ra đời khi tiền về (webhook / khớp tay).
-     *  - KHÔNG (tuyến gói, hoặc báo giá tạm tính, hoặc chưa có chính sách phí) → giữ nguyên
-     *    đường cũ: tạo đơn ngay lúc duyệt.
-     */
-    if (fees?.holdAmount) {
-      return this.approveWithHold(tenantId, userId, id, req, schedule, snapshot, fees.holdAmount);
-    }
+    const row = await this.commitDecision(
+      tenantId,
+      { userId, source: BOOKING_REQUEST_DECISION_SOURCE.HOST },
+      id,
+      req,
+      schedule,
+      snapshot,
+      fees,
+      {},
+    );
+    return toDto(row);
+  }
 
-    const row = await this.prisma.$transaction(async (tx) => {
+  /**
+   * ĐƯỜNG DUYỆT DUY NHẤT — gian hàng bấm duyệt và hệ thống tự nhận đều đi qua đây (08/09/2026),
+   * nên giá, snapshot, giữ chỗ, chiếm quyền quyết định, audit và thông báo chỉ có MỘT bản.
+   *
+   * HAI nhánh, tách theo việc chuyến này có khoản giữ chỗ hay không:
+   *  - CÓ (tuyến hoa hồng, giá đã chốt) → sinh `booking_holds`, yêu cầu sang `awaiting_hold`,
+   *    CHIẾM LỊCH ngay. Đơn thuê chỉ ra đời khi tiền về (webhook / khớp tay).
+   *  - KHÔNG (tuyến gói, hoặc báo giá tạm tính, hoặc chưa có chính sách phí) → tạo đơn ngay.
+   *
+   * `opts.driverId`: tài xế hệ thống chọn khi tự nhận chuyến có tài xế — gán TRONG transaction
+   * tạo đơn để `bookings_driver_schedule_excl` gác; duyệt tay không dùng (gán sau ở đơn).
+   */
+  private async commitDecision(
+    tenantId: string,
+    actor: DecisionActor,
+    id: string,
+    req: PendingRequestRow,
+    schedule: ApprovalSchedule,
+    snapshot: BookingPriceSnapshot,
+    fees: CustomerFeeBreakdown | null,
+    opts: { driverId?: string | null },
+  ): Promise<BookingRequestRow> {
+    if (fees?.holdAmount) {
+      return this.approveWithHold(tenantId, actor, id, req, schedule, snapshot, fees.holdAmount);
+    }
+    const isSystem = actor.source === BOOKING_REQUEST_DECISION_SOURCE.SYSTEM;
+
+    return this.prisma.$transaction(async (tx) => {
       const booking = await this.bookings.createWithinTx(
         tx,
         tenantId,
-        userId,
+        actor.userId,
         {
           vehicleId: req.vehicleId,
           customerName: req.customerName,
@@ -772,19 +995,17 @@ export class BookingRequestsService {
           pickupAt: schedule.pickupAt.toISOString(),
           returnAt: schedule.returnAt.toISOString(),
           longTermPackageMonths: schedule.packageMonths ?? undefined,
-          // Fix 17/08: trước đây serviceType KHÔNG được map — mọi đơn sinh từ yêu cầu đều rơi
-          // về default self_drive, kể cả chuyến có tài xế/dài hạn.
           serviceType: req.serviceType,
-          // Hành trình đi cùng đơn (đợt hoàn thiện 17/08): lộ trình/địa chỉ đón/điểm đến của
-          // yêu cầu with_driver copy nguyên sang Booking — chi tiết đơn, phân công tài xế,
-          // chuyến của khách và hợp đồng đều nhìn thấy, không phải quay lại yêu cầu gốc.
+          // Hành trình đi cùng đơn: lộ trình/địa chỉ đón/điểm đến của yêu cầu with_driver copy
+          // nguyên sang Booking — chi tiết đơn, phân công tài xế, chuyến của khách và hợp đồng
+          // đều nhìn thấy, không phải quay lại yêu cầu gốc.
           routeType: req.routeType ?? undefined,
           pickupAddress: req.pickupAddress ?? undefined,
           destination: req.destination ?? undefined,
-          baseAmount: rowAmount(breakdown.rows, 'base'),
-          discountAmount: rowAmountAbs(breakdown.rows, 'discount'),
-          deliveryFee: rowAmount(breakdown.rows, 'delivery'),
-          depositAmount: breakdown.depositAmount,
+          baseAmount: rowAmount(snapshot.rows, 'base'),
+          discountAmount: rowAmountAbs(snapshot.rows, 'discount'),
+          deliveryFee: rowAmount(snapshot.rows, 'delivery'),
+          depositAmount: snapshot.depositAmount,
         },
         'from_request',
         snapshot,
@@ -792,6 +1013,11 @@ export class BookingRequestsService {
         // hồ sơ có thể đã được sửa sau lúc khách gửi, và tra lại sẽ đẻ ra một khách thứ hai.
         // Yêu cầu LEGACY (trước migration) không có id thì `createWithinTx` tự tìm-hoặc-tạo.
         req.tenantCustomerId,
+        {
+          driverId: opts.driverId ?? null,
+          // Điều kiện thuê đã đóng băng lúc khách gửi — đi nguyên sang đơn.
+          rentalTerms: (req.rentalTerms as unknown as RentalTermsSnapshot | null) ?? null,
+        },
       );
 
       /*
@@ -811,8 +1037,9 @@ export class BookingRequestsService {
         pickupAt: schedule.pickupAt,
         returnAt: schedule.returnAt,
         longTermPackageMonths: schedule.packageMonths,
-        decidedBy: userId,
+        decidedBy: actor.userId,
         decidedAt: new Date(),
+        decisionSource: actor.source,
       });
 
       const updated = await tx.bookingRequest.findFirstOrThrow({
@@ -823,12 +1050,12 @@ export class BookingRequestsService {
       await this.audit.record(
         {
           tenantId,
-          actorUserId: userId,
-          actorScope: 'tenant',
-          action: 'booking_request.approve',
+          actorUserId: actor.userId,
+          actorScope: isSystem ? AUDIT_ACTOR_SCOPE.SYSTEM : AUDIT_ACTOR_SCOPE.TENANT,
+          action: isSystem ? 'booking_request.auto_accept' : 'booking_request.approve',
           targetType: 'booking_request',
           targetId: id,
-          after: { bookingId: booking.id },
+          after: { bookingId: booking.id, ...(opts.driverId ? { driverId: opts.driverId } : {}) },
         },
         tx,
       );
@@ -840,9 +1067,23 @@ export class BookingRequestsService {
           req.customerUserId,
           {
             type: NOTIFICATION_TYPE.BOOKING_REQUEST_APPROVED,
-            title: 'Yêu cầu thuê đã được duyệt',
+            title: isSystem ? 'Yêu cầu thuê đã được xác nhận ngay' : 'Yêu cầu thuê đã được duyệt',
             body: `${req.vehicle.name} · đã tạo đơn thuê`,
             tenantId,
+            targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+            targetId: booking.id,
+          },
+          tx,
+        );
+      }
+      // Người trực nhận MỘT tin "đã tự nhận" — không phải "yêu cầu mới" rồi "đã duyệt".
+      if (isSystem) {
+        await this.notifications.emitToTenantMembers(
+          tenantId,
+          {
+            type: NOTIFICATION_TYPE.BOOKING_AUTO_ACCEPTED,
+            title: `Đã tự động nhận chuyến: ${req.customerName}`,
+            body: `${req.vehicle.name} · đơn ${booking.code}`,
             targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
             targetId: booking.id,
           },
@@ -852,26 +1093,25 @@ export class BookingRequestsService {
 
       return updated;
     });
-
-    return toDto(row);
   }
 
   /**
    * Duyệt yêu cầu ở tuyến CÓ GIỮ CHỖ: chốt lịch + sinh hold, KHÔNG tạo đơn.
    *
-   * Thứ tự trong transaction giống hệt `approve`: chiếm quyền quyết định SAU khi hold đã tạo —
-   * worker expire chen vào giữa thì cả transaction quay đầu, không để lại hold mồ côi.
+   * Thứ tự trong transaction giống hệt nhánh tạo đơn: chiếm quyền quyết định SAU khi hold đã
+   * tạo — worker expire chen vào giữa thì cả transaction quay đầu, không để lại hold mồ côi.
    */
   private async approveWithHold(
     tenantId: string,
-    userId: string,
+    actor: DecisionActor,
     id: string,
     req: PendingRequestRow,
     schedule: ApprovalSchedule,
     snapshot: BookingPriceSnapshot,
     holdAmount: string,
-  ): Promise<BookingRequestDto> {
-    const row = await this.prisma.$transaction(async (tx) => {
+  ): Promise<BookingRequestRow> {
+    const isSystem = actor.source === BOOKING_REQUEST_DECISION_SOURCE.SYSTEM;
+    return this.prisma.$transaction(async (tx) => {
       await this.holds.createForApprovedRequestWithinTx(tx, {
         tenantId,
         requestId: id,
@@ -884,7 +1124,7 @@ export class BookingRequestsService {
           packageMonths: schedule.packageMonths,
         },
         snapshot,
-        actorUserId: userId,
+        actorUserId: actor.userId,
       });
 
       await this.claimPending(tx, tenantId, id, {
@@ -892,8 +1132,9 @@ export class BookingRequestsService {
         pickupAt: schedule.pickupAt,
         returnAt: schedule.returnAt,
         longTermPackageMonths: schedule.packageMonths,
-        decidedBy: userId,
+        decidedBy: actor.userId,
         decidedAt: new Date(),
+        decisionSource: actor.source,
       });
 
       const updated = await tx.bookingRequest.findFirstOrThrow({
@@ -903,18 +1144,32 @@ export class BookingRequestsService {
       await this.audit.record(
         {
           tenantId,
-          actorUserId: userId,
-          actorScope: 'tenant',
-          action: 'booking_request.approve_await_hold',
+          actorUserId: actor.userId,
+          actorScope: isSystem ? AUDIT_ACTOR_SCOPE.SYSTEM : AUDIT_ACTOR_SCOPE.TENANT,
+          action: isSystem
+            ? 'booking_request.auto_accept_await_hold'
+            : 'booking_request.approve_await_hold',
           targetType: 'booking_request',
           targetId: id,
           after: { holdAmount },
         },
         tx,
       );
+      if (isSystem) {
+        await this.notifications.emitToTenantMembers(
+          tenantId,
+          {
+            type: NOTIFICATION_TYPE.BOOKING_AUTO_ACCEPTED,
+            title: `Đã tự động nhận chuyến: ${req.customerName}`,
+            body: `${req.vehicle.name} · chờ khách chuyển giữ chỗ`,
+            targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
+            targetId: id,
+          },
+          tx,
+        );
+      }
       return updated;
     });
-    return toDto(row);
   }
 
   /**
@@ -1018,6 +1273,7 @@ export class BookingRequestsService {
         rejectReason: reason ?? null,
         decidedBy: userId,
         decidedAt: new Date(),
+        decisionSource: BOOKING_REQUEST_DECISION_SOURCE.HOST,
       });
 
       const updated = await tx.bookingRequest.findFirstOrThrow({
@@ -1143,6 +1399,8 @@ const PENDING_SELECT = {
   destination: true,
   deliveryRequested: true,
   deliveryQuote: true,
+  /// Điều kiện thuê đã đóng băng lúc khách gửi — copy sang đơn khi duyệt (08/09/2026).
+  rentalTerms: true,
   vehicle: {
     select: {
       name: true,
@@ -1214,6 +1472,18 @@ function toDto(r: BookingRequestRow): BookingRequestDto {
     createdAt: r.createdAt as unknown as string,
     respondBy: r.respondBy as unknown as string,
     decidedAt: (r.decidedAt as unknown as string | null) ?? null,
+    decisionSource: r.decisionSource ?? null,
+  };
+}
+
+/** Tin "có yêu cầu mới" cho người trực — MỘT bản cho cả hai nhánh (ghi ngay / sau khi tự nhận hụt). */
+function submittedNotification(customerName: string, vehicleName: string, requestId: string) {
+  return {
+    type: NOTIFICATION_TYPE.BOOKING_REQUEST_SUBMITTED,
+    title: `Yêu cầu thuê mới: ${customerName}`,
+    body: vehicleName,
+    targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
+    targetId: requestId,
   };
 }
 

@@ -510,7 +510,7 @@ describe('/manage/vehicles/[id] — khối tổng hợp (summary)', () => {
 
   it('thiếu quyền tài chính: KHÔNG dựng khối tiền của xe', () => {
     summary.data = summaryOf({
-      stats: { vehicleId: 'v1', activeBookings: 1, completedBookings: 12 },
+      stats: { vehicleId: 'v1', activeBookings: 1, completedBookings: 12, ratingCount: 0 },
     });
     renderPage();
 

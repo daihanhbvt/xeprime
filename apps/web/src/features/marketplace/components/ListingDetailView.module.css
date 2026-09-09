@@ -354,3 +354,13 @@
   font-size: var(--xp-font-size-body-sm);
   line-height: var(--xp-line-height-body-sm);
 }
+
+/* Thủ tục/khung giờ/phụ phí do chủ xe cấu hình (08/09/2026) — dùng chung kiểu khối bảo đảm. */
+.termsText {
+  white-space: pre-wrap;
+}
+
+.surchargeList {
+  margin: 0;
+  padding-left: var(--xp-space-md);
+}

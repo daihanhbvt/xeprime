@@ -622,7 +622,7 @@ export function SpecsSection({ control, isCar }: SectionProps) {
  * Trước đây đây là ô AutoComplete gõ gì cũng lưu, nên bộ lọc ngoài chợ mọc ra "Toyota",
  * "toyota " và "TOYOTA" thành ba hãng khác nhau. Giá trị lưu xuống là `key` của danh mục.
  */
-function BrandSelect({ control }: Pick<SectionProps, 'control'>) {
+export function BrandSelect({ control }: Pick<SectionProps, 'control'>) {
   const t = useTranslations('Vehicles.form.specs');
   const current = useWatch({ control, name: 'brand' });
   const options = useCatalogOptions(CATALOG_TYPE.VEHICLE_BRAND, current);
@@ -639,7 +639,7 @@ function BrandSelect({ control }: Pick<SectionProps, 'control'>) {
   );
 }
 
-function FuelTypeSelect({
+export function FuelTypeSelect({
   control,
   vehicleType,
 }: Pick<SectionProps, 'control'> & { vehicleType: string }) {
@@ -663,7 +663,7 @@ function FuelTypeSelect({
 }
 
 /** Tiện ích — cùng danh mục `vehicle_feature` mà bộ lọc ngoài chợ dùng. */
-function FeaturesSelect({ control }: Pick<SectionProps, 'control'>) {
+export function FeaturesSelect({ control }: Pick<SectionProps, 'control'>) {
   const { items } = useCatalogItems(CATALOG_TYPE.VEHICLE_FEATURE);
   const options = useMemo(
     () => items.map((item) => ({ value: item.key, label: item.label })),

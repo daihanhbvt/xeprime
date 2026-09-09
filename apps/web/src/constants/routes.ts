@@ -138,7 +138,63 @@ export type ManageRoute = (typeof ROUTES.MANAGE)[keyof typeof ROUTES.MANAGE];
  */
 export const accountVehiclePath = {
   detail: (id: string): string => `${ROUTES.ACCOUNT.VEHICLES}/${id}`,
+  /** Không gian "Quản lý xe" của chủ xe (08/09/2026) — gốc tự chuyển tới mục đầu tiên. */
+  manage: (id: string): string => `${ROUTES.ACCOUNT.VEHICLES}/${id}/manage`,
 };
+
+/**
+ * Các mục của không gian "Quản lý xe" (`/account/vehicles/[id]/manage/<mục>`) — GIÁ TRỊ đường
+ * dẫn, không phải nhãn. Menu trái, trang con và `VehicleEditWorkspace` ở `/manage` cùng đọc.
+ *
+ * Nhóm "có tài xế" KHÔNG có mục "Tiện ích bổ sung": mockup có nó nhưng nghiệp vụ không — phụ phí
+ * mặc định đã nằm ở `WITH_DRIVER_SURCHARGES`.
+ */
+export const VEHICLE_MANAGE_SECTION = {
+  INFORMATION: 'information',
+  IMAGES: 'images',
+  DOCUMENTS: 'documents',
+  TRIP_HISTORY: 'trip-history',
+  SELF_DRIVE_PRICING: 'self-drive/pricing',
+  SELF_DRIVE_OPTIMIZATION: 'self-drive/optimization',
+  SELF_DRIVE_DELIVERY: 'self-drive/delivery',
+  SELF_DRIVE_HANDOVER_TIME: 'self-drive/handover-time',
+  SELF_DRIVE_TERMS: 'self-drive/terms',
+  WITH_DRIVER_PRICING: 'with-driver/pricing',
+  WITH_DRIVER_OPTIMIZATION: 'with-driver/optimization',
+  WITH_DRIVER_SURCHARGES: 'with-driver/surcharges',
+  WITH_DRIVER_TERMS: 'with-driver/terms',
+} as const;
+
+export type VehicleManageSection =
+  (typeof VEHICLE_MANAGE_SECTION)[keyof typeof VEHICLE_MANAGE_SECTION];
+export const VEHICLE_MANAGE_SECTION_VALUES = Object.values(
+  VEHICLE_MANAGE_SECTION,
+) as VehicleManageSection[];
+
+/** Mục mở mặc định khi vào gốc `/manage` của một xe. */
+export const VEHICLE_MANAGE_DEFAULT_SECTION: VehicleManageSection = VEHICLE_MANAGE_SECTION.INFORMATION;
+
+export const accountVehicleManagePath = {
+  section: (id: string, section: VehicleManageSection): string =>
+    `${accountVehiclePath.manage(id)}/${section}`,
+};
+
+/**
+ * Đường dẫn có thuộc không gian quản lý xe không — `AccountShell` dùng để chuyển sang bố cục
+ * trọn bề ngang cho CẢ tiền tố (mọi mục con), khác lịch xe chỉ khớp tuyệt đối.
+ */
+export function isAccountVehicleManagePath(pathname: string): boolean {
+  return /^\/account\/vehicles\/[^/]+\/manage(\/|$)/.test(pathname);
+}
+
+/** Mục đang mở suy từ đường dẫn — `null` khi đang ở gốc hoặc một mục lạ. */
+export function vehicleManageSectionOf(pathname: string): VehicleManageSection | null {
+  const match = /^\/account\/vehicles\/[^/]+\/manage\/(.+?)\/?$/.exec(pathname);
+  const candidate = match?.[1];
+  return candidate && (VEHICLE_MANAGE_SECTION_VALUES as string[]).includes(candidate)
+    ? (candidate as VehicleManageSection)
+    : null;
+}
 
 /** Đường dẫn động của xe — hàm để không rải template `/manage/vehicles/${id}` khắp component. */
 export const vehiclePath = {
@@ -163,6 +219,8 @@ export const VEHICLE_EDIT_TAB = {
   SOURCE: 'source',
   DOCUMENTS: 'documents',
   MAINTENANCE: 'maintenance',
+  /** Vận hành & điều kiện thuê (08/09/2026) — cùng các khối với không gian quản lý xe ở /account. */
+  OPERATIONS: 'operations',
 } as const;
 
 export type VehicleEditTab = (typeof VEHICLE_EDIT_TAB)[keyof typeof VEHICLE_EDIT_TAB];

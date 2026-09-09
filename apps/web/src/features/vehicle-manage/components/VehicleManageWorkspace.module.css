@@ -1,0 +1,43 @@
+/*
+ * Không gian quản lý xe chiếm trọn bề ngang (AccountShell đã ẩn menu tài khoản): cột menu xe
+ * bên trái, nội dung bên phải. Nền xám nhạt của trang, thẻ trắng do từng mục tự dựng.
+ */
+.workspace {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  align-items: start;
+  gap: var(--xp-space-md);
+  max-width: var(--xp-container-max-width);
+  width: 100%;
+  margin: 0 auto;
+}
+
+.sidebar {
+  position: sticky;
+  top: calc(var(--xp-market-header-height) + var(--xp-space-md));
+  min-width: 0;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    position: static;
+  }
+}

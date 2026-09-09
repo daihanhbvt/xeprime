@@ -84,7 +84,12 @@ function payload(code: string, amount: number): Record<string, unknown> {
     transferType: 'in',
     transferAmount: amount,
     content: `chuyen khoan ${code}`,
-    transactionDate: '2026-09-07 09:00:00',
+    /*
+     * NGÀY HÔM NAY theo giờ Việt Nam, không phải một mốc cứng: `dailyReconciliation` lọc theo
+     * `bank_time`, nên một ngày cố định biến case đối chiếu thành quả bom hẹn giờ — xanh tới
+     * ngày đó rồi đỏ mãi mãi (đã nổ ngày 09/09/2026).
+     */
+    transactionDate: `${new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })} 09:00:00`,
   };
 }
 
