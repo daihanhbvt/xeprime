@@ -2,7 +2,7 @@ import {
   SERVICE_TYPE,
   VEHICLE_PUBLIC_MIN_IMAGES,
   VEHICLE_PUBLIC_STATUS,
-  vehicleEnergySpecPolicy,
+  vehicleFieldPolicy,
   type VehiclePublicStatus,
 } from '@xeprime/types';
 import type { VehicleDetail } from './api';
@@ -14,13 +14,34 @@ function distinctImageCount(vehicle: VehicleDetail): number {
   return urls.size;
 }
 
-/** Đã khai đủ thông số BẮT BUỘC của nguồn năng lượng đang chọn chưa. */
+/**
+ * Đã khai đủ thông số BẮT BUỘC của loại xe + nguồn năng lượng đang chọn chưa.
+ *
+ * Cùng `vehicleFieldPolicy` mà backend dùng trong `missingPublicFields` — bản đối xứng ở web là
+ * `apps/web/src/features/vehicles/publication.ts`. Ba nơi lệch nhau một điều kiện là chủ xe được
+ * bảo "đủ rồi" ở app và "còn thiếu" ở server.
+ */
 function energySpecReady(vehicle: VehicleDetail): boolean {
   if (!vehicle.fuelType) return false;
-  const policy = vehicleEnergySpecPolicy(vehicle.vehicleType, vehicle.fuelType);
+  const policy = vehicleFieldPolicy(vehicle.vehicleType, vehicle.fuelType);
   if (policy.fuelConsumption === 'required' && vehicle.fuelConsumptionCombined == null) return false;
+  if (policy.engineDisplacementCc === 'required' && vehicle.engineDisplacementCc == null) {
+    return false;
+  }
   if (policy.electricRangeKm === 'required' && vehicle.electricRangeKm == null) return false;
   if (policy.transmission === 'required' && !vehicle.transmission) return false;
+  return true;
+}
+
+/**
+ * Danh tính đã đủ chưa — bộ trường KHÁC nhau giữa ô tô và xe máy: ô tô cần số chỗ, xe máy cần
+ * phân khúc. Hỏi số chỗ của một chiếc Wave là hỏi một câu không có câu trả lời.
+ */
+function identityReady(vehicle: VehicleDetail): boolean {
+  if (!vehicle.brand || !vehicle.model || vehicle.manufactureYear == null) return false;
+  const policy = vehicleFieldPolicy(vehicle.vehicleType, vehicle.fuelType);
+  if (policy.seatCount === 'required' && vehicle.seatCount == null) return false;
+  if (policy.motorbikeCategory === 'required' && !vehicle.motorbikeCategory) return false;
   return true;
 }
 
@@ -81,12 +102,7 @@ export const PUBLISH_REQUIREMENTS: readonly {
     present: (v) => distinctImageCount(v) >= VEHICLE_PUBLIC_MIN_IMAGES,
   },
   { key: 'plateNumber', applies: () => true, present: (v) => Boolean(v.plateNumber) },
-  {
-    key: 'identity',
-    applies: () => true,
-    present: (v) =>
-      Boolean(v.brand) && Boolean(v.model) && v.manufactureYear != null && v.seatCount != null,
-  },
+  { key: 'identity', applies: () => true, present: (v) => identityReady(v) },
   { key: 'energySpec', applies: () => true, present: (v) => energySpecReady(v) },
 ];
 

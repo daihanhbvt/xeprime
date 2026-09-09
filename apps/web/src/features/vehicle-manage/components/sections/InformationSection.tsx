@@ -3,8 +3,8 @@
 import { Alert, App, Button, Col, Form, Row } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { TRANSMISSION_TYPE_VALUES, VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
+import { useForm, useWatch } from 'react-hook-form';
+import { VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
 
 import { EmbedMap } from '@/components/data-display/EmbedMap';
@@ -15,15 +15,16 @@ import { TextField } from '@/components/form/TextField';
 import { BranchFormDialog } from '@/features/branches/components/BranchFormDialog';
 import { useBranches } from '@/features/branches/hooks/use-branches';
 import { PublishRequiredLabel } from '@/features/vehicles/components/VehicleCompleteness';
+import { VehicleClassificationFields } from '@/features/vehicles/components/VehicleClassificationFields';
 import { VehicleEnergyFields } from '@/features/vehicles/components/VehicleEnergyFields';
+import { VehicleIdentityFields } from '@/features/vehicles/components/VehicleIdentityFields';
 import {
-  BrandSelect,
   FeaturesSelect,
+  useTransmissionOptions,
 } from '@/features/vehicles/components/VehicleFormSections';
 import { useUpdateVehicle } from '@/features/vehicles/hooks/use-vehicle-mutations';
 import { manageInformationValuesToInput, vehicleToFormValues } from '@/features/vehicles/mappers';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
-import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { mapPlaceUrl, toGeoPoint } from '@/lib/map-embed';
@@ -66,7 +67,6 @@ export function InformationSection() {
   const tForm = useTranslations('Vehicles.form');
   const tEdit = useTranslations('Vehicles.edit');
   const tActions = useTranslations('Common.actions');
-  const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
   const applyApiFieldErrors = useApiFieldErrors();
   const { message } = App.useApp();
@@ -76,6 +76,9 @@ export function InformationSection() {
   const resolver = useValidationResolver<VehicleFormValues>(vehicleFormSchema, 'Vehicles.form.validation');
   const { control, getValues, handleSubmit, reset, setError, setValue, trigger, formState } =
     useForm<VehicleFormValues>({ resolver, values: initialValues });
+  // Nguồn năng lượng quyết định bộ truyền động hợp lệ — theo dõi để ô chọn đổi ngay khi
+  // người dùng đổi từ xăng sang điện, chứ không đợi lưu rồi mới biết.
+  const fuelType = useWatch({ control, name: `fuelType` });
   /** Xe đã lên chợ: căn cước bị khoá (biển số, hộp số, nhiên liệu, năm SX) — server chặn lại. */
   const isPublic = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
 
@@ -95,10 +98,12 @@ export function InformationSection() {
     }
   }
 
-  const transmissionOptions = TRANSMISSION_TYPE_VALUES.map((value) => ({
-    value,
-    label: domainLabel('transmissionType', value),
-  }));
+  /*
+   * Bộ truyền động theo LOẠI XE + nguồn năng lượng: một chiếc SH không có "số sàn", còn xe điện
+   * thì truyền động một cấp. Cùng hàm mà backend dùng để từ chối giá trị sai, nên form không đưa
+   * ra một lựa chọn mà server sẽ chặn.
+   */
+  const transmissionOptions = useTransmissionOptions(vehicle.vehicleType, fuelType);
 
   return (
     <Form component={false} layout="vertical" colon={false}>
@@ -135,14 +140,25 @@ export function InformationSection() {
 
           <SectionCard title={t('information.basicTitle')}>
             <Row gutter={16}>
-              <Col xs={24} sm={12}>
-                <NumberField
+              {/*
+                Hãng → Mẫu xe, rồi phân loại theo loại xe. Cùng component với wizard đăng nhanh
+                và form đầy đủ ở `/manage` — ba màn không thể hỏi khác nhau.
+              */}
+              <Col xs={24}>
+                <VehicleIdentityFields
                   control={control}
-                  name="seatCount"
-                  label={tForm('specs.seatCount')}
-                  placeholder={tForm('specs.seatPlaceholder')}
-                  min={1}
-                  max={64}
+                  vehicleType={vehicle.vehicleType}
+                  lockedNotice={isPublic ? t('information.lockedField') : undefined}
+                  disabled={!canEdit}
+                  setValue={setValue}
+                />
+              </Col>
+              <Col xs={24}>
+                <VehicleClassificationFields
+                  control={control}
+                  vehicleType={vehicle.vehicleType}
+                  disabled={!canEdit}
+                  setValue={setValue}
                 />
               </Col>
               <Col xs={24}>
@@ -158,17 +174,6 @@ export function InformationSection() {
                   lockedNotice={isPublic ? t('information.lockedField') : undefined}
                   disabled={!canEdit || isPublic}
                   setValue={setValue}
-                />
-              </Col>
-              <Col xs={24} sm={12}>
-                <BrandSelect control={control} />
-              </Col>
-              <Col xs={24} sm={12}>
-                <TextField
-                  control={control}
-                  name="model"
-                  label={tForm('specs.model')}
-                  placeholder={tForm('specs.modelPlaceholder')}
                 />
               </Col>
               <Col xs={24} sm={12}>
@@ -210,7 +215,7 @@ export function InformationSection() {
             <div className={formStyles.fieldLabel} id="vehicle-features-label">
               {tForm('media.features')}
             </div>
-            <FeaturesSelect control={control} />
+            <FeaturesSelect control={control} vehicleType={vehicle.vehicleType} />
           </div>
         </SectionCard>
 

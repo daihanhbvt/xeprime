@@ -40,6 +40,7 @@ export class ListingsService {
         brand: true,
         model: true,
         seatCount: true,
+        motorbikeCategory: true,
         fuelType: true,
         bodyType: true,
         mainImageUrl: true,
@@ -84,6 +85,9 @@ export class ListingsService {
         brand: v.brand,
         model: v.model,
         seatCount: v.seatCount,
+        // Chiều lọc của xe máy, đối xứng với bodyType của ô tô. Mirror ở đây vì bộ lọc
+        // marketplace chỉ đọc public_listings, không join sang vehicles (ADR 0008).
+        motorbikeCategory: v.motorbikeCategory,
         fuelType: v.fuelType,
         bodyType: v.bodyType,
         branchId: v.branchId,

@@ -1,7 +1,8 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { CATALOG_TYPE, type CatalogType } from '@xeprime/types';
+import { CATALOG_TYPE, type CatalogItemType } from '@xeprime/types';
+import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 import { queryKeys } from '@/services/query-keys';
 import { fetchCatalog } from './api';
@@ -23,7 +24,7 @@ export function useCatalog(): { catalog: CatalogMap; isLoading: boolean } {
 }
 
 /** Một chiều danh mục. */
-export function useCatalogItems(type: CatalogType): {
+export function useCatalogItems(type: CatalogItemType): {
   items: readonly CatalogItem[];
   isLoading: boolean;
 } {
@@ -61,15 +62,16 @@ export function useCatalogLabels(): CatalogLabels {
  * lại nó vào cuối, có ghi chú, để hiện đúng cái đang lưu mà vẫn thấy là mục đã ngừng dùng.
  */
 export function useCatalogOptions(
-  type: CatalogType,
+  type: CatalogItemType,
   current?: string | null,
 ): { value: string; label: string }[] {
   const { items } = useCatalogItems(type);
+  const t = useTranslations(`AdminCatalog.columns`);
   return useMemo(() => {
     const options = items.map((item) => ({ value: item.key, label: item.label }));
     if (current && !options.some((option) => option.value === current)) {
-      options.push({ value: current, label: `${current} (đã ngừng dùng)` });
+      options.push({ value: current, label: t('retiredOption', { key: current }) });
     }
     return options;
-  }, [items, current]);
+  }, [items, current, t]);
 }

@@ -60,6 +60,15 @@ export const VEHICLE_FEATURE_LABEL = {
   screen: 'Màn hình giải trí',
   map: 'Bản đồ',
   child_seat: 'Ghế trẻ em',
+  // Xe máy (09/09/2026) — trước đó form xe máy vẫn hiện nguyên bộ tiện nghi ô tô.
+  abs: 'Phanh ABS',
+  traction_control: 'Kiểm soát lực kéo',
+  smart_key: 'Khoá thông minh',
+  phone_holder: 'Giá đỡ điện thoại',
+  top_box: 'Thùng sau (top box)',
+  helmet_included: 'Kèm mũ bảo hiểm',
+  raincoat_included: 'Kèm áo mưa',
+  anti_theft: 'Khoá chống trộm',
 } as const;
 
 export type VehicleFeatureKey = keyof typeof VEHICLE_FEATURE_LABEL;
@@ -415,7 +424,9 @@ export const FUEL_TYPE_LABEL: Readonly<Record<FuelType, string>> = {
  */
 export const VEHICLE_FUEL_TYPES: Readonly<Record<VehicleType, readonly FuelType[]>> = {
   [VEHICLE_TYPE.CAR]: [FUEL_TYPE.GASOLINE, FUEL_TYPE.DIESEL, FUEL_TYPE.ELECTRIC, FUEL_TYPE.HYBRID],
-  [VEHICLE_TYPE.MOTORBIKE]: [FUEL_TYPE.GASOLINE, FUEL_TYPE.ELECTRIC],
+  // Xe máy hybrid đã bán tại VN (Yamaha GEAR 125 Hybrid, Janus/Grande bản hybrid) — ma trận cũ
+  // chỉ có xăng/điện nên những xe đó không khai đúng được nguồn năng lượng của chính nó.
+  [VEHICLE_TYPE.MOTORBIKE]: [FUEL_TYPE.GASOLINE, FUEL_TYPE.ELECTRIC, FUEL_TYPE.HYBRID],
 };
 
 export function vehicleFuelTypesFor(vehicleType: string): readonly FuelType[] {
@@ -429,85 +440,12 @@ export function isVehicleFuelTypeAllowed(
   return fuelType == null || vehicleFuelTypesFor(vehicleType).includes(fuelType as FuelType);
 }
 
-/**
- * Thông số kỹ thuật nào CÓ NGHĨA với một chiếc xe, theo loại phương tiện + nguồn năng lượng.
- *
- * Vì sao là một hàm dùng chung: form ẩn ô, validator đòi giá trị, backend chuẩn hoá lúc ghi và
- * checklist lên chợ đều phải trả lời cùng một câu hỏi. Ba bản sao của câu trả lời đó là ba cơ
- * hội để giao diện nói "đủ điều kiện" trong khi server từ chối bằng một luật khác.
- *
- *  - `required`: thiếu thì không lên chợ được.
- *  - `optional`: hỏi, nhưng bỏ trống vẫn hợp lệ.
- *  - `hidden`: không có nghĩa với xe này — form ẩn, và backend XOÁ giá trị cũ nếu còn sót.
+/*
+ * Ma trận "trường nào có nghĩa với xe nào" (`vehicleFieldPolicy`, `vehicleEnergySpecPolicy`,
+ * `VehicleFieldApplicability`) đã chuyển sang `./vehicle-profile` từ 09/09/2026: nó không còn
+ * chỉ nói về năng lượng mà quyết định cả số chỗ, kiểu dáng và phân khúc xe máy. Cả hai vẫn
+ * xuất ra từ `@xeprime/types`, nơi gọi không phải đổi import.
  */
-export type VehicleFieldApplicability = 'required' | 'optional' | 'hidden';
-
-export interface VehicleEnergySpecPolicy {
-  /** Lít/100km — xe đốt trong và hybrid. */
-  fuelConsumption: VehicleFieldApplicability;
-  /** Km mỗi lần sạc đầy — xe điện (hybrid khai được nhưng không bắt buộc: enum chưa tách HEV/PHEV). */
-  electricRangeKm: VehicleFieldApplicability;
-  /** Dung lượng pin kWh. */
-  batteryCapacityKwh: VehicleFieldApplicability;
-  /** kWh/100km. */
-  electricConsumption: VehicleFieldApplicability;
-  /** Dung tích động cơ đốt trong (cc). */
-  engineDisplacementCc: VehicleFieldApplicability;
-  /** Hộp số — xe điện vẫn có hộp số một cấp nhưng không phải thông tin khách hỏi. */
-  transmission: VehicleFieldApplicability;
-}
-
-const ENERGY_POLICY_HIDDEN: VehicleEnergySpecPolicy = {
-  fuelConsumption: 'hidden',
-  electricRangeKm: 'hidden',
-  batteryCapacityKwh: 'hidden',
-  electricConsumption: 'hidden',
-  engineDisplacementCc: 'hidden',
-  transmission: 'hidden',
-};
-
-/**
- * Chưa chọn nguồn năng lượng thì chưa hỏi thông số nào của nó — hỏi trước là bắt người dùng
- * đoán đơn vị.
- */
-export function vehicleEnergySpecPolicy(
-  vehicleType: string,
-  fuelType: string | null | undefined,
-): VehicleEnergySpecPolicy {
-  const isCar = vehicleType === VEHICLE_TYPE.CAR;
-  switch (fuelType) {
-    case FUEL_TYPE.GASOLINE:
-    case FUEL_TYPE.DIESEL:
-      return {
-        ...ENERGY_POLICY_HIDDEN,
-        fuelConsumption: 'required',
-        engineDisplacementCc: isCar ? 'optional' : 'hidden',
-        transmission: isCar ? 'required' : 'optional',
-      };
-    case FUEL_TYPE.ELECTRIC:
-      return {
-        ...ENERGY_POLICY_HIDDEN,
-        electricRangeKm: 'required',
-        batteryCapacityKwh: 'optional',
-        electricConsumption: 'optional',
-        transmission: isCar ? 'optional' : 'hidden',
-      };
-    case FUEL_TYPE.HYBRID:
-      // Enum chưa tách HEV (không cắm sạc) với PHEV, nên KHÔNG bắt mọi xe hybrid khai quãng
-      // đường chạy điện — bắt buộc một con số nửa xe không có là ép người dùng bịa.
-      return {
-        ...ENERGY_POLICY_HIDDEN,
-        fuelConsumption: 'required',
-        electricRangeKm: 'optional',
-        batteryCapacityKwh: 'optional',
-        electricConsumption: 'optional',
-        engineDisplacementCc: isCar ? 'optional' : 'hidden',
-        transmission: isCar ? 'required' : 'optional',
-      };
-    default:
-      return ENERGY_POLICY_HIDDEN;
-  }
-}
 
 /** Trần giá trị của các thông số năng lượng — dùng chung cho yup, class-validator và CHECK ở DB. */
 export const VEHICLE_ENERGY_LIMITS = {

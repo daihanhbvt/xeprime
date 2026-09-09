@@ -12,6 +12,8 @@ import { FilterPanel } from './FilterPanel';
 const FACETS: PublicListingFacets = {
   total: 14,
   price: { min: '400000', max: '1500000' },
+  // Xe máy có phân khúc riêng; danh sách rỗng là trạng thái THẬT khi khách đang lọc ô tô.
+  motorbikeCategory: [],
   bodyType: [
     { key: 'sedan', count: 3 },
     { key: 'suv', count: 2 },

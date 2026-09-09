@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { newId } from '@xeprime/prisma';
-import { CATALOG_TYPE, CATALOG_TYPE_LABEL, type CatalogType } from '@xeprime/types';
+import { API_ERROR_CODE, CATALOG_TYPE, CATALOG_TYPE_LABEL, type CatalogType } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import type {
@@ -27,7 +27,20 @@ const SELECT = {
   iconUrl: true,
   sortOrder: true,
   active: true,
+  vehicleTypes: true,
 } as const;
+
+/**
+ * Mục áp dụng cho loại xe đang hỏi.
+ *
+ * MẢNG RỖNG = mọi loại, nên điều kiện phải là "rỗng HOẶC có chứa". Lọc thẳng bằng `has` sẽ nuốt
+ * mất mọi mục chưa gắn nhãn (tiện nghi admin thêm sau), và form bỗng thiếu lựa chọn mà không ai
+ * đổi gì.
+ */
+function appliesTo(vehicleType: string | undefined) {
+  if (!vehicleType) return {};
+  return { OR: [{ vehicleTypes: { isEmpty: true } }, { vehicleTypes: { has: vehicleType } }] };
+}
 
 /** Nhãn chiều danh mục dùng trong thông báo lỗi validate — "Hãng xe \"kiaa\" không có". */
 const LABEL_OF = CATALOG_TYPE_LABEL;
@@ -49,7 +62,11 @@ export class CatalogService {
   /** Mục đang bật, đã sắp thứ tự — dùng cho bộ lọc công khai và form tạo xe. */
   async list(query: CatalogQueryDto): Promise<CatalogItemDto[]> {
     const rows = await this.prisma.catalogItem.findMany({
-      where: { active: true, ...(query.type ? { type: query.type } : {}) },
+      where: {
+        active: true,
+        ...(query.type ? { type: query.type } : {}),
+        ...appliesTo(query.vehicleType),
+      },
       orderBy: [{ type: 'asc' }, { sortOrder: 'asc' }, { label: 'asc' }],
       select: SELECT,
     });
@@ -63,6 +80,7 @@ export class CatalogService {
       where: {
         ...(includeInactive ? {} : { active: true }),
         ...(query.type ? { type: query.type } : {}),
+        ...appliesTo(query.vehicleType),
       },
       orderBy: [{ type: 'asc' }, { sortOrder: 'asc' }, { label: 'asc' }],
       select: SELECT,
@@ -94,6 +112,7 @@ export class CatalogService {
           description: dto.description?.trim() || null,
           iconUrl: dto.iconUrl?.trim() || null,
           sortOrder: dto.sortOrder ?? (await this.nextSortOrder(dto.type)),
+          vehicleTypes: dto.vehicleTypes ?? [],
           active: dto.active ?? true,
         },
         select: SELECT,
@@ -129,6 +148,7 @@ export class CatalogService {
           ...('description' in dto ? { description: dto.description?.trim() || null } : {}),
           ...('iconUrl' in dto ? { iconUrl: dto.iconUrl?.trim() || null } : {}),
           ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
+          ...(dto.vehicleTypes !== undefined ? { vehicleTypes: dto.vehicleTypes } : {}),
           ...(dto.active !== undefined ? { active: dto.active } : {}),
         },
         select: SELECT,
@@ -226,6 +246,13 @@ export class CatalogService {
     bodyType?: string | null;
     fuelType?: string | null;
     features?: readonly string[];
+    /**
+     * Loại phương tiện của chiếc xe đang lưu. Có nó thì danh mục chặn được cả "sai loại xe" chứ
+     * không chỉ "không tồn tại": một chiếc xe máy gắn hãng Toyota, hay một chiếc ô tô gắn tiện
+     * nghi "kèm mũ bảo hiểm", đều là giá trị CÓ THẬT trong danh mục — chỉ là không dành cho nó.
+     * Ẩn ở form mà không chặn ở đây thì một client cũ vẫn ghi được.
+     */
+    vehicleType?: string;
   }): Promise<void> {
     const wanted: Array<{ type: CatalogType; keys: string[] }> = [
       { type: CATALOG_TYPE.VEHICLE_BRAND, keys: input.brand ? [input.brand] : [] },
@@ -238,17 +265,35 @@ export class CatalogService {
 
     const rows = await this.prisma.catalogItem.findMany({
       where: { OR: wanted.map(({ type, keys }) => ({ type, key: { in: keys } })) },
-      select: { type: true, key: true },
+      select: { type: true, key: true, vehicleTypes: true },
     });
-    const known = new Set(rows.map((r) => `${r.type}:${r.key}`));
+    const known = new Map(rows.map((r) => [`${r.type}:${r.key}`, r.vehicleTypes] as const));
 
     const invalid = wanted.flatMap(({ type, keys }) =>
       keys.filter((key) => !known.has(`${type}:${key}`)).map((key) => `${LABEL_OF[type]} "${key}"`),
     );
     if (invalid.length > 0) {
-      throw new BadRequestException(
-        `Giá trị không có trong danh mục: ${invalid.join(', ')}. Danh mục do quản trị nền tảng cấu hình.`,
-      );
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: `Giá trị không có trong danh mục: ${invalid.join(', ')}. Danh mục do quản trị nền tảng cấu hình.`,
+      });
+    }
+
+    const vehicleType = input.vehicleType;
+    if (!vehicleType) return;
+    const wrongType = wanted.flatMap(({ type, keys }) =>
+      keys
+        .filter((key) => {
+          const types = known.get(`${type}:${key}`) ?? [];
+          return types.length > 0 && !types.includes(vehicleType);
+        })
+        .map((key) => `${LABEL_OF[type]} "${key}"`),
+    );
+    if (wrongType.length > 0) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: `Không dùng được cho loại xe này: ${wrongType.join(', ')}.`,
+      });
     }
   }
 
@@ -279,6 +324,11 @@ export class CatalogService {
         return this.prisma.vehicleFeature.count({
           where: { featureKey: key, vehicle: { deletedAt: null } },
         });
+      // Mẫu xe sống ở `vehicle_catalog_models` (CatalogModelService). CHECK ở DB không cho
+      // `catalog_items` mang type này, nên nhánh này không xảy ra — có mặt để switch còn vét
+      // đủ union, thay vì lặng lẽ trả undefined khi bộ chiều danh mục lớn thêm.
+      case CATALOG_TYPE.VEHICLE_MODEL:
+        return 0;
     }
   }
 

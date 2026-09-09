@@ -99,6 +99,9 @@ export const queryKeys = {
     all: ['catalog'] as const,
     list: () => ['catalog', 'list'] as const,
     admin: (params: QueryParams) => ['catalog', 'admin', params] as const,
+    /** Mẫu xe: khoá theo (loại xe, hãng) — đổi hãng là một cache khác, không hiện nhầm. */
+    models: (vehicleType: string, brandKey: string, includeId: string) =>
+      ['catalog', 'models', vehicleType, brandKey, includeId] as const,
   },
   vehicles: {
     all: ['vehicles'] as const,

@@ -7,6 +7,7 @@ import {
   DEFAULT_LISTING_SORT,
   FUEL_TYPE_VALUES,
   LISTING_SORT_VALUES,
+  MOTORBIKE_CATEGORY_VALUES,
   SEAT_BUCKET_VALUES,
   SERVICE_TYPE_VALUES,
   VEHICLE_FEATURE_KEYS,
@@ -81,6 +82,17 @@ export class PublicListingQueryDto {
   @IsArray()
   @IsIn(BODY_TYPE_VALUES, { each: true })
   bodyType?: string[];
+
+  @ApiPropertyOptional({
+    type: [String],
+    enum: MOTORBIKE_CATEGORY_VALUES,
+    description: 'Phân khúc xe máy — chiều lọc đối xứng với bodyType của ô tô',
+  })
+  @IsOptional()
+  @Transform(splitCsv)
+  @IsArray()
+  @IsIn(MOTORBIKE_CATEGORY_VALUES, { each: true })
+  motorbikeCategory?: string[];
 
   @ApiPropertyOptional({ type: String, description: 'Bucket số chỗ — CSV (4,5,7,8plus)' })
   @IsOptional()
@@ -238,6 +250,14 @@ export class PublicListingDto {
   @ApiPropertyOptional({ type: String, nullable: true }) fuelType!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Kiểu dáng (BODY_TYPE)' })
   bodyType!: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    enum: MOTORBIKE_CATEGORY_VALUES,
+    description: 'Phân khúc — chỉ xe máy',
+  })
+  motorbikeCategory!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) mainImageUrl!: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Tiền dạng string — ADR 0007' })
@@ -538,6 +558,9 @@ export class ListingFacetsDto {
   @ApiProperty({ type: PriceBoundsDto }) price!: PriceBoundsDto;
   @ApiProperty({ type: [FacetBucketDto], description: 'Theo kiểu dáng (BODY_TYPE key)' })
   bodyType!: FacetBucketDto[];
+
+  @ApiProperty({ type: [FacetBucketDto], description: 'Phân khúc xe máy (rỗng khi lọc ô tô)' })
+  motorbikeCategory!: FacetBucketDto[];
   @ApiProperty({ type: [FacetBucketDto], description: 'Theo hãng xe (tên hãng như đã lưu)' })
   brand!: FacetBucketDto[];
   @ApiProperty({ type: [FacetBucketDto], description: 'Theo bucket số chỗ (SEAT_BUCKET key)' })

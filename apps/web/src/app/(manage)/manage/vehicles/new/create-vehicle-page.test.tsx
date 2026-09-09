@@ -10,6 +10,9 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/manage/vehicles/new',
   useSearchParams: () => new URLSearchParams(),
 }));
+vi.mock('@/features/catalog/use-catalog-models', async () =>
+  (await import('@/features/catalog/test-catalog')).catalogModelsModuleMock(),
+);
 vi.mock('@/features/catalog/use-catalog', async () =>
   (await import('@/features/catalog/test-catalog')).catalogModuleMock(),
 );

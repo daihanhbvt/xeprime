@@ -99,7 +99,8 @@
       "left": "Chụp toàn thân hông bên trái",
       "right": "Chụp toàn thân hông bên phải",
       "interior": "Khoang nội thất trước sạch sẽ",
-      "other": "Khoang hành lý, động cơ, chi tiết…"
+      "other": "Khoang hành lý, động cơ, chi tiết…",
+      "dashboard": "Ảnh mặt đồng hồ, thấy rõ số ODO"
     },
     "remove": "Xoá ảnh {slot}",
     "retry": "Thử lại {name}",

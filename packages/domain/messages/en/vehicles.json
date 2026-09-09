@@ -225,7 +225,7 @@
       "brand": "Make",
       "brandPlaceholder": "Select a make",
       "model": "Model",
-      "modelPlaceholder": "e.g. Vios",
+      "modelPlaceholder": "Select a model",
       "manufactureYear": "Year of manufacture",
       "seatCount": "Seats",
       "seatPlaceholder": "e.g. 5",
@@ -235,7 +235,13 @@
       "color": "Colour",
       "colorPlaceholder": "e.g. White",
       "bodyType": "Body type",
-      "bodyTypeHint": "Helps customers filter vehicles on the marketplace. Click again to deselect."
+      "bodyTypeHint": "Helps customers filter vehicles on the marketplace. Click again to deselect.",
+      "modelHelp": "Pick the exact model so your vehicle appears when guests filter by model.",
+      "modelPickBrandFirst": "Select a brand first to load its models.",
+      "modelEmpty": "No models listed for this brand yet.",
+      "motorbikeCategory": "Category",
+      "motorbikeCategoryPlaceholder": "Select a category",
+      "motorbikeCategoryHelp": "Guests filter motorbikes by category — the wrong one makes your bike hard to find."
     },
     "prices": {
       "weekday": "Weekday price",
@@ -410,7 +416,9 @@
       "discountPercentMax": "Maximum 100%",
       "mainImageUrlInvalid": "Invalid image URL",
       "imageUrlInvalid": "Invalid image URL",
-      "imagesMax": "Maximum 20 photos"
+      "imagesMax": "Maximum 20 photos",
+      "seatCountCarOnly": "Seat count applies to cars only",
+      "motorbikeCategoryMotorbikeOnly": "Category applies to motorbikes only"
     }
   },
   "publish": {

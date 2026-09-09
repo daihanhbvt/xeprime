@@ -26,13 +26,21 @@ export const VEHICLE_IMAGE_TYPE = {
   LEFT: 'left',
   RIGHT: 'right',
   INTERIOR: 'interior',
+  /** Xe máy: mặt đồng hồ / ODO — thay chỗ của `interior`. */
+  DASHBOARD: 'dashboard',
   OTHER: 'other',
 } as const;
 
 export type VehicleImageType = (typeof VEHICLE_IMAGE_TYPE)[keyof typeof VEHICLE_IMAGE_TYPE];
 export const VEHICLE_IMAGE_TYPE_VALUES = Object.values(VEHICLE_IMAGE_TYPE) as VehicleImageType[];
 
-/** Thứ tự ô ảnh trên màn thư viện — mặt trước tới nội thất, "khác" đứng cuối. */
+/**
+ * Thứ tự ô ảnh trên màn thư viện — mặt trước tới nội thất, "khác" đứng cuối.
+ *
+ * @deprecated Dùng `vehicleImageSlotsFor(vehicleType)`: ô thứ năm KHÁC nhau giữa ô tô (nội thất)
+ * và xe máy (mặt đồng hồ). Hằng này giữ lại cho `apps/mobile` cho tới khi màn ảnh của app native
+ * chuyển theo.
+ */
 export const VEHICLE_IMAGE_SLOT_ORDER: readonly VehicleImageType[] = [
   VEHICLE_IMAGE_TYPE.FRONT,
   VEHICLE_IMAGE_TYPE.REAR,
@@ -42,12 +50,30 @@ export const VEHICLE_IMAGE_SLOT_ORDER: readonly VehicleImageType[] = [
   VEHICLE_IMAGE_TYPE.OTHER,
 ];
 
+/**
+ * Ô ảnh của MỘT loại xe.
+ *
+ * Bốn góc là chung; ô thứ năm là chỗ hai loại xe khác nhau. Hỏi "ảnh nội thất" của một chiếc
+ * Wave là hỏi một tấm ảnh không tồn tại — và ô trống đó đếm vào số ảnh tối thiểu để lên chợ.
+ */
+export function vehicleImageSlotsFor(vehicleType: string): readonly VehicleImageType[] {
+  return [
+    VEHICLE_IMAGE_TYPE.FRONT,
+    VEHICLE_IMAGE_TYPE.REAR,
+    VEHICLE_IMAGE_TYPE.LEFT,
+    VEHICLE_IMAGE_TYPE.RIGHT,
+    vehicleType === 'motorbike' ? VEHICLE_IMAGE_TYPE.DASHBOARD : VEHICLE_IMAGE_TYPE.INTERIOR,
+    VEHICLE_IMAGE_TYPE.OTHER,
+  ];
+}
+
 export const VEHICLE_IMAGE_TYPE_LABEL: Readonly<Record<VehicleImageType, string>> = {
   [VEHICLE_IMAGE_TYPE.FRONT]: 'Ảnh mặt trước',
   [VEHICLE_IMAGE_TYPE.REAR]: 'Ảnh mặt sau',
   [VEHICLE_IMAGE_TYPE.LEFT]: 'Ảnh bên trái',
   [VEHICLE_IMAGE_TYPE.RIGHT]: 'Ảnh bên phải',
   [VEHICLE_IMAGE_TYPE.INTERIOR]: 'Ảnh nội thất',
+  [VEHICLE_IMAGE_TYPE.DASHBOARD]: 'Ảnh đồng hồ (ODO)',
   [VEHICLE_IMAGE_TYPE.OTHER]: 'Ảnh khác',
 };
 

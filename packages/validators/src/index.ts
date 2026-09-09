@@ -9,6 +9,7 @@ import * as yup from 'yup';
 import {
   BODY_TYPE_VALUES,
   FUEL_TYPE_VALUES,
+  MOTORBIKE_CATEGORY_VALUES,
   isVehicleFuelTypeAllowed,
   MAINTENANCE_TYPE_VALUES,
   ODOMETER_CORRECTION_REASON_VALUES,
@@ -170,8 +171,16 @@ export const vehicleFormSchema = yup.object({
     .oneOf(VEHICLE_OPERATION_STATUS_VALUES)
     .required('operationStatusRequired'),
   plateNumber: optionalText(50),
+  /**
+   * Hãng và mẫu xe: hai ô này KHÔNG còn do người dùng gõ.
+   *
+   * Form gửi `vehicleCatalogModelId`, backend chép nhãn hãng/tên mẫu từ danh mục xuống. Schema
+   * vẫn giữ hai trường vì màn hình đọc lại giá trị canonical để hiển thị, và vì xe khai tay (mẫu
+   * chưa có trong danh mục) vẫn được giữ nguyên chữ đã có.
+   */
   brand: optionalText(100),
   model: optionalText(100),
+  vehicleCatalogModelId: yup.string().nullable().default(null),
   color: optionalText(80),
   fuelType: yup
     .string()
@@ -180,6 +189,18 @@ export const vehicleFormSchema = yup.object({
     .default(null)
     .test('vehicle-fuel-compatible', 'fuelTypeIncompatible', function compatibleFuel(value) {
       return isVehicleFuelTypeAllowed(String(this.parent.vehicleType ?? ''), value);
+    }),
+  /**
+   * Phân khúc xe máy — chiều đối xứng với `bodyType` của ô tô, và là chiều khách lọc ngoài chợ.
+   * Cùng luật mà DB giữ bằng CHECK và backend kiểm bằng `vehicleFieldPolicy`.
+   */
+  motorbikeCategory: yup
+    .string()
+    .oneOf(MOTORBIKE_CATEGORY_VALUES)
+    .nullable()
+    .default(null)
+    .test('motorbike-only', 'motorbikeCategoryMotorbikeOnly', function motorbikeOnly(value) {
+      return this.parent.vehicleType === VEHICLE_TYPE.MOTORBIKE || value == null;
     }),
   /** Kiểu dáng thân xe — chỉ có nghĩa với ô tô; đổi sang xe máy thì form tự xoá. */
   bodyType: yup
@@ -208,7 +229,12 @@ export const vehicleFormSchema = yup.object({
     .min(1, 'seatCountMin')
     .max(64, 'seatCountMax')
     .nullable()
-    .default(null),
+    .default(null)
+    // Số chỗ ngồi là chiều của Ô TÔ. Một chiếc xe máy "2 chỗ" nghe có vẻ vô hại, nhưng nó đi
+    // thẳng vào bộ lọc "4/5/7 chỗ" ngoài chợ và làm bẩn kết quả của cả nhóm ô tô.
+    .test('seat-count-car-only', 'seatCountCarOnly', function carSeatsOnly(value) {
+      return this.parent.vehicleType === VEHICLE_TYPE.CAR || value == null;
+    }),
   lengthMm: optionalPositiveInt('lengthMm', 30000),
   widthMm: optionalPositiveInt('widthMm', 10000),
   heightMm: optionalPositiveInt('heightMm', 10000),

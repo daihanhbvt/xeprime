@@ -14,6 +14,7 @@ export { STATUS_COLOR, type StatusColor, type StatusMeta } from './meta';
 export * from './tenant';
 export * from './branch';
 export * from './vehicle';
+export * from './vehicle-profile';
 export * from './vehicle-alert';
 export * from './vehicle-document';
 export * from './vehicle-maintenance';

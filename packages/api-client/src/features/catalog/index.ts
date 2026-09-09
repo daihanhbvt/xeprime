@@ -1,11 +1,11 @@
-import type { CatalogType, components } from '@xeprime/types';
+import type { CatalogItemType, components } from '@xeprime/types';
 import { getApiClient } from '../../client';
 
 /** Shape từ OpenAPI (ADR 0007) — không viết tay lại. */
 export type CatalogItem = components['schemas']['CatalogItemDto'];
 
 /** Danh mục đã gom theo chiều — dạng mọi màn hình tiêu thụ. */
-export type CatalogMap = Readonly<Record<CatalogType, readonly CatalogItem[]>>;
+export type CatalogMap = Readonly<Record<CatalogItemType, readonly CatalogItem[]>>;
 
 export const EMPTY_CATALOG: CatalogMap = {
   vehicle_brand: [],
@@ -43,5 +43,27 @@ export function catalogLabel(
 export const catalogApi = {
   async list(): Promise<CatalogMap> {
     return groupCatalog(await getApiClient().get<CatalogItem[]>('/catalog'));
+  },
+};
+
+/** Mẫu xe của danh mục — bảng riêng, nên có API riêng (xem `CatalogModelDto` ở backend). */
+export type CatalogModel = components['schemas']['CatalogModelDto'];
+
+export interface CatalogModelQuery {
+  vehicleType: string;
+  brandKey?: string;
+  search?: string;
+  /** Mẫu đang gắn với xe đang sửa — luôn có mặt trong kết quả kể cả khi đã tắt. */
+  includeId?: string;
+}
+
+export const catalogModelApi = {
+  async list(query: CatalogModelQuery): Promise<CatalogModel[]> {
+    return getApiClient().get<CatalogModel[]>('/catalog/models', {
+      vehicleType: query.vehicleType,
+      ...(query.brandKey ? { brandKey: query.brandKey } : {}),
+      ...(query.search ? { search: query.search } : {}),
+      ...(query.includeId ? { includeId: query.includeId } : {}),
+    });
   },
 };

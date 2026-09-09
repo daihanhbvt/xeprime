@@ -3,7 +3,7 @@
 import { Button, Select, Slider, Switch } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  CATALOG_TYPE, DEFAULT_LISTING_SORT, LISTING_AMENITY_DESC, LISTING_AMENITY_LABEL, LISTING_AMENITY_VALUES, LISTING_SORT_LABEL, LISTING_SORT_VALUES, SEAT_BUCKET_LABEL, SEAT_BUCKET_VALUES, VEHICLE_TYPE, vehicleFuelTypesFor, type ListingAmenity, } from '@xeprime/types';
+  CATALOG_TYPE, DEFAULT_LISTING_SORT, LISTING_AMENITY_DESC, LISTING_AMENITY_LABEL, LISTING_AMENITY_VALUES, LISTING_SORT_LABEL, LISTING_SORT_VALUES, MOTORBIKE_CATEGORY_VALUES, SEAT_BUCKET_LABEL, SEAT_BUCKET_VALUES, VEHICLE_TYPE, vehicleFuelTypesFor, type ListingAmenity, } from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { CatalogCardPicker } from '@/features/catalog/components/CatalogCardPicker';
 import { useCatalog, useCatalogLabels } from '@/features/catalog/use-catalog';
@@ -28,6 +28,7 @@ interface FilterDraft {
   priceMin?: number;
   priceMax?: number;
   bodyType: string[];
+  motorbikeCategory: string[];
   brand: string[];
   seats: string[];
   fuelType: string[];
@@ -44,6 +45,7 @@ function draftFromFilters(filters: MarketplaceFilters): FilterDraft {
     priceMin: filters.priceMin,
     priceMax: filters.priceMax,
     bodyType: filters.bodyType ?? [],
+    motorbikeCategory: filters.motorbikeCategory ?? [],
     brand: filters.brand ?? [],
     seats: filters.seats ?? [],
     fuelType: filters.fuelType ?? [],
@@ -64,6 +66,7 @@ function draftToPatch(draft: FilterDraft): Partial<MarketplaceFilters> {
     priceMin: draft.priceMin,
     priceMax: draft.priceMax,
     bodyType: draft.bodyType,
+    motorbikeCategory: draft.motorbikeCategory,
     brand: draft.brand,
     seats: draft.seats,
     fuelType: draft.fuelType,
@@ -125,6 +128,7 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
       priceMin: debouncedDraft.priceMin,
       priceMax: debouncedDraft.priceMax,
       bodyType: debouncedDraft.bodyType,
+      motorbikeCategory: debouncedDraft.motorbikeCategory,
       brand: debouncedDraft.brand,
       seats: debouncedDraft.seats,
       fuelType: debouncedDraft.fuelType,
@@ -155,6 +159,7 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
   const countOf = useMemo(() => {
     const maps = {
       bodyType: new Map(facets?.bodyType.map((b) => [b.key, b.count]) ?? []),
+      motorbikeCategory: new Map(facets?.motorbikeCategory.map((b) => [b.key, b.count]) ?? []),
       seats: new Map(facets?.seats.map((b) => [b.key, b.count]) ?? []),
       fuelType: new Map(facets?.fuelType.map((b) => [b.key, b.count]) ?? []),
       features: new Map(facets?.features.map((b) => [b.key, b.count]) ?? []),
@@ -198,6 +203,9 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
         });
 
   const showBodyType = filters.vehicleType !== VEHICLE_TYPE.MOTORBIKE;
+  const showMotorbikeCategory = filters.vehicleType !== VEHICLE_TYPE.CAR;
+  // Số chỗ là chiều của ô tô: hỏi "5 chỗ" khi khách đang lọc xe máy là hỏi một câu vô nghĩa.
+  const showSeats = filters.vehicleType !== VEHICLE_TYPE.MOTORBIKE;
   const amenityCount: Record<ListingAmenity, number | null> = {
     hourly: facets ? facets.amenities.hourly : null,
     delivery: facets ? facets.amenities.delivery : null,
@@ -266,6 +274,28 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
         </section>
       ) : null}
 
+      {showMotorbikeCategory ? (
+        <section className={styles.section}>
+          <h4 className={styles.sectionTitle}>{t('motorbikeCategory')}</h4>
+          <div className={styles.chipGrid}>
+            {MOTORBIKE_CATEGORY_VALUES.map((key) => (
+              <FacetChip
+                key={key}
+                label={domainLabel('motorbikeCategory', key)}
+                count={countOf('motorbikeCategory', key)}
+                active={draft.motorbikeCategory.includes(key)}
+                onToggle={() =>
+                  setDraft((d) => ({
+                    ...d,
+                    motorbikeCategory: toggle(d.motorbikeCategory, key),
+                  }))
+                }
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {brandOptions.length > 0 ? (
         <section className={styles.section}>
           <h4 className={styles.sectionTitle}>{t('brand')}</h4>
@@ -284,6 +314,7 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
         </section>
       ) : null}
 
+      {showSeats ? (
       <section className={styles.section}>
         <h4 className={styles.sectionTitle}>{t('seats')}</h4>
         <div className={styles.chipGrid}>
@@ -298,6 +329,7 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
           ))}
         </div>
       </section>
+      ) : null}
 
       <section className={styles.section}>
         <h4 className={styles.sectionTitle}>{t('fuelType')}</h4>

@@ -4,7 +4,7 @@ import { Col, Row } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 import { useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
-import { TRANSMISSION_TYPE_VALUES, VEHICLE_TYPE, VEHICLE_TYPE_VALUES } from '@xeprime/types';
+import { VEHICLE_TYPE, VEHICLE_TYPE_VALUES } from '@xeprime/types';
 
 import { NumberField } from '@/components/form/NumberField';
 import { RadioGroupField } from '@/components/form/RadioGroupField';
@@ -12,10 +12,13 @@ import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { useCatalogOptions } from '@/features/catalog/use-catalog';
 import { CATALOG_TYPE } from '@xeprime/types';
+import { useCatalogModels } from '@/features/catalog/use-catalog-models';
+import { VehicleClassificationFields } from '@/features/vehicles/components/VehicleClassificationFields';
 import { VehicleEnergyFields } from '@/features/vehicles/components/VehicleEnergyFields';
+import { VehicleIdentityFields } from '@/features/vehicles/components/VehicleIdentityFields';
 import {
-  BrandSelect,
   FeaturesSelect,
+  useTransmissionOptions,
 } from '@/features/vehicles/components/VehicleFormSections';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 
@@ -45,18 +48,20 @@ export function QuickVehicleInfoStep({ control, setValue, vehicleType }: Props) 
   const domainLabel = useDomainLabel();
 
   const brand = useWatch({ control, name: 'brand' });
-  const model = useWatch({ control, name: 'model' });
+  const modelId = useWatch({ control, name: 'vehicleCatalogModelId' });
+  const fuelType = useWatch({ control, name: 'fuelType' });
   const year = useWatch({ control, name: 'manufactureYear' });
   const brandOptions = useCatalogOptions(CATALOG_TYPE.VEHICLE_BRAND, brand);
 
-  const transmissionOptions = useMemo(
-    () =>
-      TRANSMISSION_TYPE_VALUES.map((value) => ({
-        value,
-        label: domainLabel('transmissionType', value),
-      })),
-    [domainLabel],
-  );
+  // Tên mẫu để gợi ý tên xe lấy từ DANH MỤC — ô "Mẫu xe" giờ là select, không còn chữ tự do.
+  const { models } = useCatalogModels({
+    vehicleType: vehicleType || VEHICLE_TYPE.CAR,
+    brandKey: brand,
+    includeId: modelId,
+  });
+  const model = models.find((m) => m.id === modelId)?.label ?? null;
+
+  const transmissionOptions = useTransmissionOptions(vehicleType || VEHICLE_TYPE.CAR, fuelType);
   const vehicleTypeOptions = useMemo(
     () =>
       VEHICLE_TYPE_VALUES.map((value) => ({
@@ -100,25 +105,22 @@ export function QuickVehicleInfoStep({ control, setValue, vehicleType }: Props) 
       <section className={styles.block}>
         <h3 className={styles.blockTitle}>{t('basicTitle')}</h3>
         <Row gutter={16}>
-          <Col xs={24} sm={12}>
-            <BrandSelect control={control as never} />
-          </Col>
-          <Col xs={24} sm={12}>
-            <TextField
-              control={control}
-              name="model"
-              label={tForm('specs.model')}
-              placeholder={tForm('specs.modelPlaceholder')}
+          {/*
+            Hãng → Mẫu xe và các ô phân loại dùng CHUNG component với form đầy đủ ở `/manage`:
+            một chủ xe đăng nhanh rồi vào sửa lại phải thấy đúng những ô đó, hỏi đúng cách đó.
+          */}
+          <Col xs={24}>
+            <VehicleIdentityFields
+              control={control as never}
+              vehicleType={vehicleType || VEHICLE_TYPE.CAR}
+              setValue={setValue as never}
             />
           </Col>
-          <Col xs={24} sm={12}>
-            <NumberField
-              control={control}
-              name="seatCount"
-              label={tForm('specs.seatCount')}
-              placeholder={tForm('specs.seatPlaceholder')}
-              min={1}
-              max={64}
+          <Col xs={24}>
+            <VehicleClassificationFields
+              control={control as never}
+              vehicleType={vehicleType || VEHICLE_TYPE.CAR}
+              setValue={setValue as never}
             />
           </Col>
           <Col xs={24} sm={12}>
@@ -188,7 +190,10 @@ export function QuickVehicleInfoStep({ control, setValue, vehicleType }: Props) 
 
       <section className={styles.block}>
         <h3 className={styles.blockTitle}>{t('featuresTitle')}</h3>
-        <FeaturesSelect control={control as never} />
+        <FeaturesSelect
+          control={control as never}
+          vehicleType={vehicleType || VEHICLE_TYPE.CAR}
+        />
       </section>
     </div>
   );

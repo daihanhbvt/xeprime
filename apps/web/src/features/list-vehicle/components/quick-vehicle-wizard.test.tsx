@@ -55,6 +55,9 @@ vi.mock('@/features/branches/hooks/use-branches', () => ({
 }));
 
 /** Danh mục thật đến từ API — mock trả đúng bộ của TỪNG loại, không phải một danh sách chung. */
+vi.mock('@/features/catalog/use-catalog-models', async () =>
+  (await import('@/features/catalog/test-catalog')).catalogModelsModuleMock(),
+);
 vi.mock('@/features/catalog/use-catalog', () => ({
   useCatalog: () => ({ catalog: {}, isLoading: false }),
   useCatalogItems: () => ({ items: [], isLoading: false }),
@@ -122,7 +125,9 @@ async function fillToLastStep() {
   const consumption = await screen.findByLabelText(/Mức tiêu thụ nhiên liệu/);
   fireEvent.change(consumption, { target: { value: '7.5' } });
   fireEvent.mouseDown(screen.getByLabelText(/Hộp số/));
-  fireEvent.click(await screen.findByText('Tự động'));
+  // Nhãn hộp số nói rõ ký hiệu từ 09/09/2026 — 'Tự động' một mình không phân biệt nổi AT với
+  // CVT hay tay ga của xe máy.
+  fireEvent.click(await screen.findByText('Số tự động (AT)'));
 
   fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
   const price = await screen.findByLabelText(/Giá thuê mỗi ngày/);

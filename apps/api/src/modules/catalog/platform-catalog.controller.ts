@@ -14,9 +14,15 @@ import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nes
 import { PERMISSION } from '@xeprime/types';
 import { CurrentUser, PlatformOnly, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
+import { CatalogModelService } from './catalog-model.service';
 import { CatalogService } from './catalog.service';
 import {
   CatalogAdminQueryDto,
+  CatalogModelAdminDto,
+  CatalogModelAdminQueryDto,
+  CatalogModelDto,
+  CreateCatalogModelDto,
+  UpdateCatalogModelDto,
   CatalogItemAdminDto,
   CatalogItemDto,
   CreateCatalogItemDto,
@@ -35,7 +41,51 @@ import {
 @PlatformOnly()
 @RequirePermissions(PERMISSION.PLATFORM_CATALOG_MANAGE)
 export class PlatformCatalogController {
-  constructor(private readonly catalog: CatalogService) {}
+  constructor(
+    private readonly catalog: CatalogService,
+    private readonly models: CatalogModelService,
+  ) {}
+
+  /*
+   * MẪU XE — route tĩnh 'models' phải đứng trước mọi route ':id' bên dưới, nếu không 'models'
+   * bị bắt làm id và PATCH/DELETE mẫu xe rơi vào nhánh sửa mục danh mục.
+   */
+
+  @Get('models')
+  @ApiOperation({ summary: 'Mẫu xe của một loại phương tiện, kèm mẫu đã tắt và số xe đang gắn' })
+  @ApiOkResponse({ type: [CatalogModelAdminDto] })
+  listModels(@Query() query: CatalogModelAdminQueryDto): Promise<CatalogModelAdminDto[]> {
+    return this.models.listForAdmin(query);
+  }
+
+  @Post('models')
+  @ApiOperation({ summary: 'Thêm mẫu xe vào danh mục' })
+  @ApiOkResponse({ type: CatalogModelDto })
+  createModel(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateCatalogModelDto,
+  ): Promise<CatalogModelDto> {
+    return this.models.create(user.id, dto);
+  }
+
+  @Patch('models/:id')
+  @ApiOperation({ summary: 'Sửa mẫu xe (không đổi hãng và loại phương tiện)' })
+  @ApiOkResponse({ type: CatalogModelDto })
+  updateModel(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateCatalogModelDto,
+  ): Promise<CatalogModelDto> {
+    return this.models.update(user.id, id, dto);
+  }
+
+  @Delete('models/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Xoá mẫu xe chưa có xe nào gắn (đã có xe thì tắt, không xoá)' })
+  @ApiNoContentResponse()
+  removeModel(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<void> {
+    return this.models.remove(user.id, id);
+  }
 
   @Get()
   @ApiOperation({ summary: 'Danh mục đầy đủ, kèm mục đã tắt và số xe đang dùng' })

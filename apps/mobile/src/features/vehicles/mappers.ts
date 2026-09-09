@@ -45,6 +45,11 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     fuelType: values.fuelType ?? undefined,
     // Các trường nullable mới gửi null tường minh để XOÁ được giá trị khi sửa (backend nhận null).
     bodyType: values.vehicleType === VEHICLE_TYPE.CAR ? (values.bodyType ?? null) : null,
+    motorbikeCategory:
+      values.vehicleType === VEHICLE_TYPE.MOTORBIKE ? (values.motorbikeCategory ?? null) : null,
+    // Backend chép `brand`/`model` từ mẫu này xuống — app native chưa có ô chọn mẫu xe, nên nó
+    // gửi lại đúng liên kết đang có thay vì âm thầm gỡ ra.
+    vehicleCatalogModelId: values.vehicleCatalogModelId ?? null,
     manufactureYear: values.manufactureYear ?? undefined,
     seatCount: values.seatCount ?? undefined,
     lengthMm: values.lengthMm ?? undefined,
@@ -98,6 +103,8 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
     color: v.color ?? '',
     fuelType: (v.fuelType ?? null) as FuelType | null,
     bodyType: (v.bodyType ?? null) as BodyType | null,
+    motorbikeCategory: (v.motorbikeCategory ?? null) as VehicleFormValues['motorbikeCategory'],
+    vehicleCatalogModelId: v.vehicleCatalogModelId ?? null,
     manufactureYear: v.manufactureYear ?? null,
     seatCount: v.seatCount ?? null,
     lengthMm: v.lengthMm ?? null,

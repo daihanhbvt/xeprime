@@ -801,8 +801,19 @@ model Vehicle {
   /// thời; 'both' đã khai tử — nó là tổ hợp, không phải giá trị). Tập con hợp lệ + không rỗng
   /// giữ bằng CHECK ở migration; service canonicalize (sort+dedupe) trước khi ghi.
   serviceTypes                   String[]  @default(["self_drive"]) @map("service_types") @db.VarChar(50)
+  /// Nhãn hãng xe — CANONICAL, do backend ghi từ `vehicleCatalogModelId` hoặc từ catalog hãng.
+  /// Vẫn là cột riêng (không đọc qua join) vì `public_listings` và mọi báo cáo cũ đọc thẳng nó,
+  /// và vì xe đời cũ/nhập lẻ có thể không khớp mẫu nào trong danh mục.
   brand                          String?   @db.VarChar(100)
+  /// Tên mẫu xe — CANONICAL. Client KHÔNG được tự đặt cặp hãng/mẫu: nó gửi
+  /// `vehicleCatalogModelId`, backend chép nhãn từ danh mục xuống đây (xem `VehiclesService`).
   model                          String?   @db.VarChar(100)
+  /// Mẫu xe trong danh mục chuẩn. NULL = xe khai tay (mẫu không có trong danh mục, hoặc dữ liệu
+  /// cũ trước 09/09/2026) — vẫn hợp lệ, chỉ mất khả năng lọc/gợi ý theo mẫu.
+  vehicleCatalogModelId          String?   @map("vehicle_catalog_model_id") @db.Char(26)
+  /// @xeprime/types → MotorbikeCategory. Chỉ có nghĩa khi vehicleType = motorbike; CHECK ở
+  /// migration chặn ô tô mang giá trị này (bộ lọc ngoài chợ dựa vào đó).
+  motorbikeCategory              String?   @map("motorbike_category") @db.VarChar(30)
   manufactureYear                Int?      @map("manufacture_year")
   color                          String?   @db.VarChar(80)
   seatCount                      Int?      @map("seat_count")
@@ -817,7 +828,9 @@ model Vehicle {
   curbWeightKg                   Int?      @map("curb_weight_kg")
   engineDisplacementCc           Int?      @map("engine_displacement_cc")
   horsepowerHp                   Int?      @map("horsepower_hp")
-  /// @xeprime/types → TransmissionType.
+  /// @xeprime/types → TransmissionTypeExt. Bộ mã mở rộng 09/09/2026: ô tô thêm `e_cvt`/`amt`,
+  /// xe điện dùng `direct_drive`, xe máy dùng `automatic_cvt`/`semi_automatic`/`manual_clutch`.
+  /// Năm mã cũ giữ nguyên giá trị nên dữ liệu trước đó không phải chuyển đổi.
   transmission                   String?   @db.VarChar(30)
   fuelConsumptionCity            Decimal?  @map("fuel_consumption_city") @db.Decimal(6, 2)
   fuelConsumptionHighway         Decimal?  @map("fuel_consumption_highway") @db.Decimal(6, 2)
@@ -873,6 +886,9 @@ model Vehicle {
   /// còn xoá thẳng một chi nhánh đang có xe thì bị chặn — đúng ý "không xoá cứng khi còn tham chiếu".
   branch                 TenantBranch?                  @relation(fields: [branchId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction)
   creator                User?                          @relation("vehicle_creator", fields: [createdBy], references: [id])
+  /// `onDelete: SetNull` — gỡ một mẫu khỏi danh mục KHÔNG được xoá xe của chủ xe; xe chỉ mất
+  /// liên kết chuẩn hoá, còn `brand`/`model` đã chép xuống nên listing vẫn hiển thị đủ.
+  catalogModel           VehicleCatalogModel?           @relation(fields: [vehicleCatalogModelId], references: [id], onDelete: SetNull)
   bookings               Booking[]
   bookingHolds           BookingHold[]
   bookingRequests        BookingRequest[]
@@ -1085,26 +1101,94 @@ model VehicleFeature {
 /// `key` là giá trị lưu xuống `vehicles`/`public_listings`; `label` chỉ để hiển thị, đổi nhãn
 /// không đụng dữ liệu xe. `CatalogService` là đường ghi duy nhất.
 model CatalogItem {
-  id          String   @id @db.Char(26)
+  id           String   @id @db.Char(26)
   /// @xeprime/types → CatalogType (vehicle_brand | body_type | fuel_type | vehicle_feature).
   /// CHECK ở migration giữ bộ giá trị đóng.
-  type        String   @db.VarChar(50)
+  type         String   @db.VarChar(50)
   /// Bất biến sau khi tạo — sửa key là mồ côi toàn bộ xe đang trỏ vào.
-  key         String   @db.VarChar(80)
-  label       String   @db.VarChar(120)
+  key          String   @db.VarChar(80)
+  label        String   @db.VarChar(120)
   /// Dòng phụ dưới nhãn ở picker/bộ lọc ("5 chỗ · gầm cao").
-  description String?  @db.VarChar(255)
+  description  String?  @db.VarChar(255)
   /// Kiểu dáng dùng `/body-types/*.png`, hãng xe dùng logo `/brands/*.svg`.
-  iconUrl     String?  @map("icon_url") @db.Text
-  sortOrder   Int      @default(0) @map("sort_order")
+  iconUrl      String?  @map("icon_url") @db.Text
+  sortOrder    Int      @default(0) @map("sort_order")
+  /// Loại phương tiện mục này áp dụng — MẢNG RỖNG = áp dụng cho mọi loại.
+  ///
+  /// Có nó vì một danh mục phẳng không trả lời được "Honda có bán ô tô lẫn xe máy, còn Piaggio
+  /// chỉ có xe máy": trước đây form xe máy vẫn hiện Toyota, và form ô tô vẫn hiện "kèm mũ bảo hiểm".
+  /// Nguồn giá trị là `VEHICLE_FEATURE_VEHICLE_TYPES` (@xeprime/types) — seed chép xuống, không
+  /// gõ tay hai nơi.
+  vehicleTypes String[] @default([]) @map("vehicle_types") @db.VarChar(20)
   /// Tắt = ẩn khỏi form và bộ lọc; xe cũ trỏ vào key này vẫn hiển thị đúng nhãn.
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@unique([type, key])
   @@index([type, active, sortOrder])
   @@map("catalog_items")
+}
+
+/// Mẫu xe chuẩn của danh mục — nguồn để chuẩn hoá cặp (hãng, mẫu) trên `vehicles`.
+///
+/// Vì sao là bảng riêng chứ không phải một `catalog_items` nữa: một mẫu xe mang theo hãng, loại
+/// phương tiện, khoảng năm sản xuất, nguồn năng lượng và kiểu truyền động hỗ trợ, phân khúc xe máy,
+/// cùng nguồn tra cứu đã đối chiếu. Nhồi tất cả vào bảng danh mục phẳng thì câu hỏi đơn giản nhất
+/// ("Honda có mẫu xe máy nào đang phân phối?") phải parse JSON, và không ràng buộc nổi hãng.
+///
+/// Bảng này KHÔNG thuộc tenant: nó là dữ liệu nền của nền tảng, chỉ `platform_admin` sửa.
+model VehicleCatalogModel {
+  id                   String    @id @db.Char(26)
+  /// Slug `<hãng>-<mẫu>` (`catalogModelKey` ở @xeprime/types) — ổn định khi hãng đổi cách viết
+  /// hoa tên xe. Bất biến sau khi tạo: sửa key là mồ côi mọi xe đang trỏ vào.
+  key                  String    @db.VarChar(120)
+  /// Tên hiển thị ĐÚNG như hãng công bố ("Innova Cross", "SH Mode 125").
+  label                String    @db.VarChar(120)
+  /// `catalog_items.key` của hãng (type = 'vehicle_brand').
+  ///
+  /// Ở DB có FK TỔ HỢP `(brand_catalog_type, brand_key) → catalog_items(type, key)`, trong đó
+  /// `brand_catalog_type` là cột GENERATED cố định 'vehicle_brand'. Prisma không mô tả được cột
+  /// generated nên nó KHÔNG xuất hiện ở đây — giống các FK tổ hợp `(id, tenant_id)` khác trong
+  /// schema này, `migrate dev` sẽ đòi DROP nó; đọc header migration trước khi chấp nhận.
+  brandKey             String    @map("brand_key") @db.VarChar(80)
+  /// @xeprime/types → VehicleType. Một mẫu chỉ thuộc MỘT loại phương tiện.
+  vehicleType          String    @map("vehicle_type") @db.VarChar(20)
+  /// @xeprime/types → CatalogMarketStatus (current | legacy). `legacy` vẫn chọn được, chỉ nằm ở
+  /// nhóm "Mẫu xe đời trước" — phần lớn xe cho thuê ở VN là xe đời trước.
+  marketStatus         String    @default("current") @map("market_status") @db.VarChar(20)
+  /// Năm bắt đầu/kết thúc bán tại VN. NULL = chưa xác minh được mốc — KHÔNG suy đoán.
+  yearFrom             Int?      @map("year_from")
+  yearTo               Int?      @map("year_to")
+  /// @xeprime/types → MotorbikeCategory. Chỉ mẫu xe máy có; CHECK chặn ô tô mang giá trị.
+  motorbikeCategory    String?   @map("motorbike_category") @db.VarChar(30)
+  /// Nguồn năng lượng mẫu này có bản thương mại tại VN — rỗng = chưa xác minh, form không lọc.
+  fuelTypes            String[]  @default([]) @map("fuel_types") @db.VarChar(20)
+  /// Kiểu truyền động mẫu này có — rỗng = chưa xác minh.
+  transmissions        String[]  @default([]) @map("transmissions") @db.VarChar(30)
+  /// Dung tích xi-lanh công bố (cc) — dùng để GỢI Ý khi chủ xe chọn mẫu, không ghi đè.
+  engineDisplacementCc Int?      @map("engine_displacement_cc")
+  /// Số chỗ công bố — chỉ ô tô, dùng để gợi ý.
+  seatCount            Int?      @map("seat_count")
+  /// URL trang sản phẩm CHÍNH HÃNG đã đối chiếu. Bắt buộc với dữ liệu seed: không có nguồn thì
+  /// không đưa mẫu vào danh mục.
+  sourceUrl            String?   @map("source_url") @db.Text
+  /// Ngày đối chiếu nguồn ở trên. Cùng với `sourceUrl`, đây là thứ phân biệt "đã kiểm" với
+  /// "nhớ mang máng" khi danh mục được rà lại sau này.
+  verifiedAt           DateTime? @map("verified_at") @db.Timestamptz(3)
+  sortOrder            Int       @default(0) @map("sort_order")
+  active               Boolean   @default(true)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  vehicles Vehicle[]
+
+  @@unique([key])
+  /// Một hãng không có hai mẫu trùng tên trong cùng loại phương tiện.
+  @@unique([brandKey, vehicleType, label])
+  /// Truy vấn chính của form: "mẫu đang bật của hãng X, loại Y" — sắp theo nhóm rồi thứ tự.
+  @@index([vehicleType, brandKey, active, marketStatus, sortOrder])
+  @@map("vehicle_catalog_models")
 }
 
 // ---------------------------------------------------------------------------
@@ -1162,10 +1246,14 @@ model PublicListing {
   serviceTypes             String[] @default(["self_drive"]) @map("service_types") @db.VarChar(50)
   brand                    String?  @db.VarChar(100)
   model                    String?  @db.VarChar(100)
+  /// Mirror `vehicles.seat_count` — chỉ ô tô có (xe máy luôn NULL, CHECK ở migration).
   seatCount                Int?     @map("seat_count")
   fuelType                 String?  @map("fuel_type") @db.VarChar(50)
-  /// @xeprime/types → BodyType
+  /// @xeprime/types → BodyType — chiều lọc của Ô TÔ.
   bodyType                 String?  @map("body_type") @db.VarChar(50)
+  /// @xeprime/types → MotorbikeCategory — chiều lọc của XE MÁY, đối xứng với `bodyType`.
+  /// Nằm ở đây (không join sang `vehicles`) vì bộ lọc marketplace chỉ đọc bảng này (ADR 0008).
+  motorbikeCategory        String?  @map("motorbike_category") @db.VarChar(30)
   /// Chi nhánh giữ xe tại thời điểm snapshot — nguồn của `provinceCode`/`provinceName` dưới đây.
   branchId                 String?  @map("branch_id") @db.Char(26)
   /// Mã tỉnh CHUẨN — thứ mọi bộ lọc marketplace so khớp. Chỉ ListingsService ghi (ADR 0008).
@@ -1216,6 +1304,7 @@ model PublicListing {
   @@index([tenantId, status])
   @@index([weekdayPrice])
   @@index([status, bodyType])
+  @@index([status, motorbikeCategory])
   @@index([status, fuelType])
   @@index([features], type: Gin)
   @@map("public_listings")

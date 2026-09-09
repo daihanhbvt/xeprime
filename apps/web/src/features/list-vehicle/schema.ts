@@ -30,8 +30,12 @@ const VEHICLE_FIELDS = [
   'plateNumber',
   'brand',
   'model',
+  // Mẫu xe chuẩn: wizard nhanh cũng gửi id danh mục như form đầy đủ — không có lý do gì để
+  // xe đăng nhanh kém chuẩn hoá hơn xe đăng ở /manage.
+  'vehicleCatalogModelId',
   'manufactureYear',
   'seatCount',
+  'motorbikeCategory',
   'color',
   'fuelType',
   'transmission',
@@ -151,8 +155,10 @@ export const QUICK_VEHICLE_DEFAULTS: QuickVehicleValues = {
   plateNumber: '',
   brand: '',
   model: '',
+  vehicleCatalogModelId: null,
   manufactureYear: null,
   seatCount: null,
+  motorbikeCategory: null,
   color: '',
   fuelType: null,
   transmission: null,

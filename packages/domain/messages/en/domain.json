@@ -61,7 +61,8 @@
     "vehicle_brand": "Vehicle brand",
     "body_type": "Body type",
     "fuel_type": "Fuel type",
-    "vehicle_feature": "Vehicle feature"
+    "vehicle_feature": "Vehicle feature",
+    "vehicle_model": "Vehicle model"
   },
   "contractStatus": {
     "draft": "Draft",
@@ -458,10 +459,16 @@
     "business": "Business"
   },
   "transmissionType": {
-    "automatic": "Automatic",
-    "manual": "Manual",
+    "automatic": "Automatic (AT)",
+    "manual": "Manual (MT)",
     "cvt": "CVT",
+    "e_cvt": "e-CVT (hybrid)",
     "dct": "Dual-clutch (DCT)",
+    "amt": "Automated manual (AMT)",
+    "direct_drive": "Single-speed",
+    "automatic_cvt": "Twist-and-go",
+    "semi_automatic": "Semi-automatic",
+    "manual_clutch": "Manual clutch",
     "other": "Other"
   },
   "userStatus": {
@@ -666,7 +673,8 @@
     "left": "Left side",
     "right": "Right side",
     "interior": "Interior",
-    "other": "Other photos"
+    "other": "Other photos",
+    "dashboard": "Odometer photo"
   },
   "handoverWindowKind": {
     "pickup": "Handover hours",
@@ -719,5 +727,27 @@
     "minute_of_day": "after the hour",
     "grace_minutes": "after the free waiting minutes",
     "km_per_day": "distance beyond the daily allowance"
+  },
+  "motorbikeCategory": {
+    "scooter": "Scooter",
+    "underbone": "Underbone",
+    "naked": "Naked bike",
+    "sport": "Sport bike",
+    "cruiser": "Cruiser",
+    "adventure": "Adventure",
+    "touring": "Touring",
+    "offroad": "Off-road",
+    "other": "Other"
+  },
+  "catalogMarketStatus": {
+    "current": "Currently sold",
+    "legacy": "Earlier model"
+  },
+  "catalogTypeHint": {
+    "vehicle_brand": "Shown in the \"Brand\" field when adding a vehicle, and in marketplace filters.",
+    "body_type": "Shown as picture cards when adding a vehicle, and in the marketplace \"Type\" filter.",
+    "fuel_type": "Shown in the \"Energy source\" field when adding a vehicle, and in filters.",
+    "vehicle_feature": "Shown under \"Features\" when adding a vehicle, and in marketplace filters.",
+    "vehicle_model": "Shown in the \"Model\" field once a brand is picked. Each model belongs to one brand and one vehicle type."
   }
 }

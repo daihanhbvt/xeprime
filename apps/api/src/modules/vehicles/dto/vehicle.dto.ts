@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
+  MOTORBIKE_CATEGORY_VALUES,
   VEHICLE_ENERGY_LIMITS,
   APPROVAL_STATUS_VALUES,
   BOOKING_STATUS_VALUES,
@@ -9,7 +10,7 @@ import {
   VEHICLE_IMAGE_TYPE_VALUES,
   VEHICLE_OPERATION_STATUS_VALUES,
   VEHICLE_PUBLIC_STATUS_VALUES,
-  TRANSMISSION_TYPE_VALUES,
+  TRANSMISSION_TYPE_EXT_VALUES,
   VEHICLE_SOURCE_TYPE_VALUES,
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
@@ -155,6 +156,19 @@ export class VehicleListItemDto {
   })
   bodyType!: string | null;
   @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    enum: MOTORBIKE_CATEGORY_VALUES,
+    description: 'Phân khúc xe máy — đối xứng với bodyType của ô tô',
+  })
+  motorbikeCategory!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Mẫu xe chuẩn đang gắn (GET /catalog/models); null = xe khai tay',
+  })
+  vehicleCatalogModelId!: string | null;
+  @ApiPropertyOptional({
     type: Number,
     nullable: true,
     description: '% khuyến mãi trực tiếp cho tiền thuê tự lái (0–100)',
@@ -223,7 +237,7 @@ export class VehicleDetailDto extends VehicleListItemDto {
   @ApiPropertyOptional({ type: Number, nullable: true }) curbWeightKg!: number | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) engineDisplacementCc!: number | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) horsepowerHp!: number | null;
-  @ApiPropertyOptional({ type: String, nullable: true, enum: TRANSMISSION_TYPE_VALUES })
+  @ApiPropertyOptional({ type: String, nullable: true, enum: TRANSMISSION_TYPE_EXT_VALUES })
   transmission!: string | null;
   @ApiPropertyOptional({
     type: Number,
@@ -462,9 +476,9 @@ export class CreateVehicleDto {
   @Max(5000)
   horsepowerHp?: number | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true, enum: TRANSMISSION_TYPE_VALUES })
+  @ApiPropertyOptional({ type: String, nullable: true, enum: TRANSMISSION_TYPE_EXT_VALUES })
   @IsOptional()
-  @IsIn(TRANSMISSION_TYPE_VALUES)
+  @IsIn(TRANSMISSION_TYPE_EXT_VALUES)
   transmission?: string | null;
 
   @ApiPropertyOptional({ type: Number, nullable: true, minimum: 0, maximum: 999 })
@@ -548,6 +562,34 @@ export class CreateVehicleDto {
   @IsString()
   @Matches(CATALOG_KEY_PATTERN, { message: 'bodyType phải là key trong danh mục kiểu dáng' })
   bodyType?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    enum: MOTORBIKE_CATEGORY_VALUES,
+    description: 'Phân khúc — chỉ với xe máy. Gửi null để xoá.',
+    example: 'scooter',
+  })
+  @IsOptional()
+  @IsIn(MOTORBIKE_CATEGORY_VALUES)
+  motorbikeCategory?: string | null;
+
+  /*
+   * Mẫu xe chuẩn. Gửi id này thay vì gõ tay `brand`/`model`: backend chép nhãn hãng và tên mẫu
+   * từ danh mục xuống, nên không có đường nào lưu được một chiếc xe máy hiệu Toyota.
+   *
+   * Vẫn cho phép bỏ trống — mẫu chưa có trong danh mục, xe nhập lẻ, hoặc xe đời cũ. Khi đó
+   * `brand`/`model` client gửi được giữ nguyên, xe chỉ mất khả năng lọc theo mẫu chuẩn.
+   */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Id mẫu xe trong danh mục (GET /catalog/models). Gửi null để gỡ liên kết.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(26)
+  vehicleCatalogModelId?: string | null;
 
   @ApiPropertyOptional({ enum: VEHICLE_OPERATION_STATUS_VALUES })
   @IsOptional()

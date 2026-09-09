@@ -131,6 +131,9 @@ vi.mock('@/features/vehicle-documents/components/VehicleDocumentsWorkspace', () 
 }));
 
 /** Danh mục hãng/tiện ích là truy vấn dùng chung — cắt ở biên để không phải dựng QueryClient. */
+vi.mock('@/features/catalog/use-catalog-models', async () =>
+  (await import('@/features/catalog/test-catalog')).catalogModelsModuleMock(),
+);
 vi.mock('@/features/catalog/use-catalog', () => ({
   useCatalog: () => ({ catalog: {}, isLoading: false }),
   useCatalogItems: () => ({ items: [], isLoading: false }),

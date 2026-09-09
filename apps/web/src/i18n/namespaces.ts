@@ -61,6 +61,7 @@ export const MESSAGE_NAMESPACES = [
   // Mới có màn Công nợ; sổ Thu-Chi vẫn còn chuỗi thô — xem `i18n:audit`.
   { file: 'finance', namespace: 'Finance' },
   // Quản trị gói dịch vụ (admin nền tảng) — chuyển đợt W1 (ADR 0015/0020).
+  { file: 'admin-catalog', namespace: 'AdminCatalog' },
   { file: 'admin-plans', namespace: 'AdminPlans' },
   // Hàng đợi đối soát tiền vào của admin nền tảng (R2 — ADR 0022).
   { file: 'bank-transactions', namespace: 'BankTransactions' },

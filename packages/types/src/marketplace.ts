@@ -48,6 +48,8 @@ export interface MarketplaceFilters {
   returnAt?: string;
   brand?: string[];
   bodyType?: string[];
+  /** Phân khúc xe máy — chiều lọc đối xứng với `bodyType` của ô tô. */
+  motorbikeCategory?: string[];
   seats?: string[];
   fuelType?: string[];
   features?: string[];

@@ -1,4 +1,4 @@
-import { COLLATERAL_MODE } from '@xeprime/types';
+import { COLLATERAL_MODE, VEHICLE_TYPE } from '@xeprime/types';
 
 import type { CreateVehicleInput } from '@/features/vehicles/types';
 import type { RentalPolicyValues, SaveRentalPolicyInput } from '@/features/rental-policies/types';
@@ -36,7 +36,12 @@ export function quickVehicleToCreateInput(values: QuickVehicleValues): CreateVeh
     color: textOrUndefined(values.color),
     fuelType: values.fuelType ?? undefined,
     manufactureYear: values.manufactureYear ?? undefined,
-    seatCount: values.seatCount ?? undefined,
+    // Số chỗ chỉ có nghĩa với ô tô, phân khúc chỉ có nghĩa với xe máy — gửi đúng vế của loại
+    // xe đang khai, thay vì để server phải dọn hộ.
+    seatCount: values.vehicleType === VEHICLE_TYPE.CAR ? (values.seatCount ?? undefined) : undefined,
+    motorbikeCategory:
+      values.vehicleType === VEHICLE_TYPE.MOTORBIKE ? (values.motorbikeCategory ?? null) : null,
+    vehicleCatalogModelId: values.vehicleCatalogModelId ?? null,
     transmission: values.transmission ?? undefined,
     fuelConsumptionCombined: values.fuelConsumptionCombined ?? undefined,
     electricRangeKm: values.electricRangeKm ?? undefined,

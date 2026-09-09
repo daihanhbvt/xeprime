@@ -53,6 +53,8 @@ const EMPTY_DEFAULTS: VehicleFormValues = {
   color: '',
   fuelType: null,
   bodyType: null,
+  motorbikeCategory: null,
+  vehicleCatalogModelId: null,
   manufactureYear: null,
   seatCount: null,
   lengthMm: null,

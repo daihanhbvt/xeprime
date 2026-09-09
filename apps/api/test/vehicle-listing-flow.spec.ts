@@ -233,13 +233,25 @@ describe('Thông số theo nguồn năng lượng', () => {
     expect(created.electricRangeKm).toBe(60);
   });
 
-  maybe('xe máy không có hộp số/dung tích của ô tô — server dọn khi đổi loại xe', async () => {
-    const created = await createListableVehicle({ engineDisplacementCc: 1500 });
+  maybe('đổi ô tô → xe máy: mất số chỗ và kiểu dáng, GIỮ dung tích xi-lanh', async () => {
+    const created = await createListableVehicle({
+      engineDisplacementCc: 1500,
+      bodyType: 'sedan',
+    });
+    expect(created.seatCount).toBe(5);
+
     const bike = await vehicles.update(tenantId, created.id, ownerId, {
       vehicleType: VEHICLE_TYPE.MOTORBIKE,
       fuelType: FUEL_TYPE.GASOLINE,
     });
-    expect(bike.engineDisplacementCc).toBeNull();
+
+    // Hai chiều của Ô TÔ: xe máy không có "5 chỗ" và không có "Sedan".
+    expect(bike.seatCount).toBeNull();
+    expect(bike.bodyType).toBeNull();
+    // Dung tích xi-lanh thì CÓ nghĩa với xe máy — giữ nguyên con số chủ xe đã khai.
+    expect(bike.engineDisplacementCc).toBe(1500);
+    // Hộp số ô tô ("số tự động") không thuộc bộ mã của xe máy → server dọn.
+    expect(bike.transmission).toBeNull();
   });
 });
 
@@ -541,7 +553,13 @@ describe('Đề xuất phí vượt km lúc quyết toán', () => {
           bookingId,
           vehicleId: vehicle.id,
           type,
-          status: HANDOVER_STATUS.COMPLETED,
+          // `confirmed` là trạng thái CHỐT của biên bản bàn giao (không có `completed`) — chỉ
+          // biên bản đã chốt mới được dùng làm mốc số KM đối soát.
+          status: HANDOVER_STATUS.CONFIRMED,
+          // CHECK `vh_confirmed_has_actor`: một biên bản đã CHỐT phải có người chốt và thời điểm
+          // chốt — DB không cho tồn tại biên bản "confirmed" mà không ai đứng tên.
+          confirmedAt: new Date(),
+          confirmedBy: ownerId,
           odometerKm: km,
         },
       });

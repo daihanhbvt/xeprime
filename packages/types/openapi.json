@@ -10070,6 +10070,19 @@
                 "vehicle_feature"
               ]
             }
+          },
+          {
+            "name": "vehicleType",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ trả mục dùng được cho loại xe này (hãng, tiện nghi, kiểu dáng). Bỏ trống = không lọc.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
           }
         ],
         "responses": {
@@ -10144,6 +10157,130 @@
           }
         },
         "summary": "Danh mục lọc đang bật (hãng xe / kiểu dáng / nhiên liệu / tiện ích)",
+        "tags": [
+          "catalog"
+        ],
+        "security": [],
+        "description": "**Truy cập:** công khai — không cần đăng nhập."
+      }
+    },
+    "/catalog/models": {
+      "get": {
+        "operationId": "CatalogController_listModels",
+        "parameters": [
+          {
+            "name": "vehicleType",
+            "required": true,
+            "in": "query",
+            "description": "Bắt buộc — mẫu xe luôn thuộc một loại",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
+          },
+          {
+            "name": "brandKey",
+            "required": false,
+            "in": "query",
+            "description": "Khoá hãng; bỏ trống = mọi hãng của loại xe đó",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên, bỏ dấu — \"civic\" khớp \"CIVIC\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeId",
+            "required": false,
+            "in": "query",
+            "description": "Id mẫu đang gắn với xe đang sửa. Mẫu đó LUÔN nằm trong kết quả kể cả khi đã tắt — bằng không form sẽ hiện ô rỗng cho một chiếc xe vẫn đang có mẫu.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CatalogModelDto"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Mẫu xe theo loại phương tiện và hãng",
         "tags": [
           "catalog"
         ],
@@ -23169,6 +23306,19 @@
             }
           },
           {
+            "name": "vehicleType",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ trả mục dùng được cho loại xe này (hãng, tiện nghi, kiểu dáng). Bỏ trống = không lọc.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
+          },
+          {
             "name": "includeInactive",
             "required": false,
             "in": "query",
@@ -23730,6 +23880,623 @@
           }
         },
         "summary": "Xoá mục chưa có xe nào dùng (đã có xe thì tắt, không xoá)",
+        "tags": [
+          "platform-catalog"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
+    "/platform/catalog/models": {
+      "get": {
+        "operationId": "PlatformCatalogController_listModels",
+        "parameters": [
+          {
+            "name": "vehicleType",
+            "required": true,
+            "in": "query",
+            "description": "Bắt buộc — mẫu xe luôn thuộc một loại",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
+          },
+          {
+            "name": "brandKey",
+            "required": false,
+            "in": "query",
+            "description": "Khoá hãng; bỏ trống = mọi hãng của loại xe đó",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên, bỏ dấu — \"civic\" khớp \"CIVIC\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeId",
+            "required": false,
+            "in": "query",
+            "description": "Id mẫu đang gắn với xe đang sửa. Mẫu đó LUÔN nằm trong kết quả kể cả khi đã tắt — bằng không form sẽ hiện ô rỗng cho một chiếc xe vẫn đang có mẫu.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeInactive",
+            "required": false,
+            "in": "query",
+            "description": "true = kèm mẫu đã tắt",
+            "schema": {
+              "default": true,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CatalogModelAdminDto"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Mẫu xe của một loại phương tiện, kèm mẫu đã tắt và số xe đang gắn",
+        "tags": [
+          "platform-catalog"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session)."
+      },
+      "post": {
+        "operationId": "PlatformCatalogController_createModel",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCatalogModelDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CatalogModelDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Thêm mẫu xe vào danh mục",
+        "tags": [
+          "platform-catalog"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
+    "/platform/catalog/models/{id}": {
+      "patch": {
+        "operationId": "PlatformCatalogController_updateModel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCatalogModelDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CatalogModelDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sửa mẫu xe (không đổi hãng và loại phương tiện)",
+        "tags": [
+          "platform-catalog"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.catalog.manage` (đọc từ DB mỗi request, không nằm trong session)."
+      },
+      "delete": {
+        "operationId": "PlatformCatalogController_removeModel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Thành công, không có nội dung trả về"
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Xoá mẫu xe chưa có xe nào gắn (đã có xe thì tắt, không xoá)",
         "tags": [
           "platform-catalog"
         ],
@@ -32155,6 +32922,29 @@
             }
           },
           {
+            "name": "motorbikeCategory",
+            "required": false,
+            "in": "query",
+            "description": "Phân khúc xe máy — chiều lọc đối xứng với bodyType của ô tô",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "scooter",
+                  "underbone",
+                  "naked",
+                  "sport",
+                  "cruiser",
+                  "adventure",
+                  "touring",
+                  "offroad",
+                  "other"
+                ]
+              }
+            }
+          },
+          {
             "name": "seats",
             "required": false,
             "in": "query",
@@ -32947,6 +33737,29 @@
             "description": "Kiểu dáng thân xe — CSV (BODY_TYPE)",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "motorbikeCategory",
+            "required": false,
+            "in": "query",
+            "description": "Phân khúc xe máy — chiều lọc đối xứng với bodyType của ô tô",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "scooter",
+                  "underbone",
+                  "naked",
+                  "sport",
+                  "cruiser",
+                  "adventure",
+                  "touring",
+                  "offroad",
+                  "other"
+                ]
+              }
             }
           },
           {
@@ -50678,6 +51491,17 @@
           "active": {
             "type": "boolean"
           },
+          "vehicleTypes": {
+            "type": "array",
+            "description": "Loại xe mục này áp dụng. MẢNG RỖNG = mọi loại.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
+          },
           "usageCount": {
             "type": "number",
             "description": "Số xe đang trỏ vào key này (mọi gian hàng)"
@@ -50692,6 +51516,7 @@
           "iconUrl",
           "sortOrder",
           "active",
+          "vehicleTypes",
           "usageCount"
         ]
       },
@@ -50733,6 +51558,17 @@
           },
           "active": {
             "type": "boolean"
+          },
+          "vehicleTypes": {
+            "type": "array",
+            "description": "Loại xe mục này áp dụng. MẢNG RỖNG = mọi loại.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
           }
         },
         "required": [
@@ -50743,6 +51579,224 @@
           "description",
           "iconUrl",
           "sortOrder",
+          "active",
+          "vehicleTypes"
+        ]
+      },
+      "CatalogModelAdminDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string",
+            "example": "honda-sh-mode-125"
+          },
+          "label": {
+            "type": "string",
+            "example": "SH Mode 125"
+          },
+          "brandKey": {
+            "type": "string",
+            "example": "honda"
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "car",
+              "motorbike"
+            ]
+          },
+          "marketStatus": {
+            "type": "string",
+            "enum": [
+              "current",
+              "legacy"
+            ],
+            "description": "current = đang phân phối · legacy = mẫu đời trước, vẫn chọn được"
+          },
+          "motorbikeCategory": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "scooter",
+              "underbone",
+              "naked",
+              "sport",
+              "cruiser",
+              "adventure",
+              "touring",
+              "offroad",
+              "other"
+            ],
+            "description": "Chỉ mẫu xe máy"
+          },
+          "fuelTypes": {
+            "description": "Rỗng = chưa xác minh, đừng dùng để lọc",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "transmissions": {
+            "description": "Rỗng = chưa xác minh",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "engineDisplacementCc": {
+            "type": "number",
+            "nullable": true
+          },
+          "seatCount": {
+            "type": "number",
+            "nullable": true
+          },
+          "yearFrom": {
+            "type": "number",
+            "nullable": true
+          },
+          "yearTo": {
+            "type": "number",
+            "nullable": true
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "sourceUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Trang sản phẩm chính hãng đã đối chiếu"
+          },
+          "verifiedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "usageCount": {
+            "type": "number",
+            "description": "Số xe đang gắn mẫu này"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "label",
+          "brandKey",
+          "vehicleType",
+          "marketStatus",
+          "motorbikeCategory",
+          "fuelTypes",
+          "transmissions",
+          "engineDisplacementCc",
+          "seatCount",
+          "yearFrom",
+          "yearTo",
+          "active",
+          "sourceUrl",
+          "verifiedAt",
+          "usageCount"
+        ]
+      },
+      "CatalogModelDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string",
+            "example": "honda-sh-mode-125"
+          },
+          "label": {
+            "type": "string",
+            "example": "SH Mode 125"
+          },
+          "brandKey": {
+            "type": "string",
+            "example": "honda"
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "car",
+              "motorbike"
+            ]
+          },
+          "marketStatus": {
+            "type": "string",
+            "enum": [
+              "current",
+              "legacy"
+            ],
+            "description": "current = đang phân phối · legacy = mẫu đời trước, vẫn chọn được"
+          },
+          "motorbikeCategory": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "scooter",
+              "underbone",
+              "naked",
+              "sport",
+              "cruiser",
+              "adventure",
+              "touring",
+              "offroad",
+              "other"
+            ],
+            "description": "Chỉ mẫu xe máy"
+          },
+          "fuelTypes": {
+            "description": "Rỗng = chưa xác minh, đừng dùng để lọc",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "transmissions": {
+            "description": "Rỗng = chưa xác minh",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "engineDisplacementCc": {
+            "type": "number",
+            "nullable": true
+          },
+          "seatCount": {
+            "type": "number",
+            "nullable": true
+          },
+          "yearFrom": {
+            "type": "number",
+            "nullable": true
+          },
+          "yearTo": {
+            "type": "number",
+            "nullable": true
+          },
+          "active": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "label",
+          "brandKey",
+          "vehicleType",
+          "marketStatus",
+          "motorbikeCategory",
+          "fuelTypes",
+          "transmissions",
+          "engineDisplacementCc",
+          "seatCount",
+          "yearFrom",
+          "yearTo",
           "active"
         ]
       },
@@ -51761,6 +52815,17 @@
             "type": "number",
             "default": 0
           },
+          "vehicleTypes": {
+            "type": "array",
+            "description": "Bỏ trống = áp dụng mọi loại xe",
+            "items": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
+          },
           "active": {
             "type": "boolean",
             "default": true
@@ -51770,6 +52835,110 @@
           "type",
           "key",
           "label"
+        ]
+      },
+      "CreateCatalogModelDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "example": "CIVIC"
+          },
+          "brandKey": {
+            "type": "string",
+            "example": "honda"
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "car",
+              "motorbike"
+            ]
+          },
+          "marketStatus": {
+            "type": "string",
+            "enum": [
+              "current",
+              "legacy"
+            ],
+            "default": "current"
+          },
+          "motorbikeCategory": {
+            "type": "string",
+            "enum": [
+              "scooter",
+              "underbone",
+              "naked",
+              "sport",
+              "cruiser",
+              "adventure",
+              "touring",
+              "offroad",
+              "other"
+            ],
+            "nullable": true
+          },
+          "fuelTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "gasoline",
+                "diesel",
+                "electric",
+                "hybrid"
+              ]
+            }
+          },
+          "transmissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "automatic",
+                "manual",
+                "cvt",
+                "e_cvt",
+                "dct",
+                "amt",
+                "direct_drive",
+                "automatic_cvt",
+                "semi_automatic",
+                "manual_clutch",
+                "other"
+              ]
+            }
+          },
+          "engineDisplacementCc": {
+            "type": "number",
+            "nullable": true
+          },
+          "seatCount": {
+            "type": "number",
+            "nullable": true
+          },
+          "yearFrom": {
+            "type": "number",
+            "nullable": true
+          },
+          "yearTo": {
+            "type": "number",
+            "nullable": true
+          },
+          "sourceUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Trang sản phẩm chính hãng — nguồn của dữ liệu này"
+          },
+          "active": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "label",
+          "brandKey",
+          "vehicleType"
         ]
       },
       "CreateCategoryDto": {
@@ -52322,7 +53491,13 @@
               "automatic",
               "manual",
               "cvt",
+              "e_cvt",
               "dct",
+              "amt",
+              "direct_drive",
+              "automatic_cvt",
+              "semi_automatic",
+              "manual_clutch",
               "other"
             ]
           },
@@ -52370,6 +53545,28 @@
             "nullable": true,
             "description": "Key kiểu dáng thuộc danh mục `body_type` (GET /catalog) — chỉ với ô tô. Gửi null để xoá.",
             "example": "suv"
+          },
+          "motorbikeCategory": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "scooter",
+              "underbone",
+              "naked",
+              "sport",
+              "cruiser",
+              "adventure",
+              "touring",
+              "offroad",
+              "other"
+            ],
+            "description": "Phân khúc — chỉ với xe máy. Gửi null để xoá.",
+            "example": "scooter"
+          },
+          "vehicleCatalogModelId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Id mẫu xe trong danh mục (GET /catalog/models). Gửi null để gỡ liên kết."
           },
           "operationStatus": {
             "type": "string",
@@ -55753,6 +56950,13 @@
               "$ref": "#/components/schemas/FacetBucketDto"
             }
           },
+          "motorbikeCategory": {
+            "description": "Phân khúc xe máy (rỗng khi lọc ô tô)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FacetBucketDto"
+            }
+          },
           "brand": {
             "description": "Theo hãng xe (tên hãng như đã lưu)",
             "type": "array",
@@ -55789,6 +56993,7 @@
           "total",
           "price",
           "bodyType",
+          "motorbikeCategory",
           "brand",
           "seats",
           "fuelType",
@@ -59992,6 +61197,22 @@
             "nullable": true,
             "description": "Kiểu dáng (BODY_TYPE)"
           },
+          "motorbikeCategory": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "scooter",
+              "underbone",
+              "naked",
+              "sport",
+              "cruiser",
+              "adventure",
+              "touring",
+              "offroad",
+              "other"
+            ],
+            "description": "Phân khúc — chỉ xe máy"
+          },
           "mainImageUrl": {
             "type": "string",
             "nullable": true
@@ -60194,6 +61415,7 @@
           "name",
           "vehicleType",
           "serviceTypes",
+          "motorbikeCategory",
           "deliveryEnabled",
           "noCollateral",
           "shopName",
@@ -60256,6 +61478,22 @@
             "type": "string",
             "nullable": true,
             "description": "Kiểu dáng (BODY_TYPE)"
+          },
+          "motorbikeCategory": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "scooter",
+              "underbone",
+              "naked",
+              "sport",
+              "cruiser",
+              "adventure",
+              "touring",
+              "offroad",
+              "other"
+            ],
+            "description": "Phân khúc — chỉ xe máy"
           },
           "mainImageUrl": {
             "type": "string",
@@ -60350,6 +61588,7 @@
           "name",
           "vehicleType",
           "serviceTypes",
+          "motorbikeCategory",
           "deliveryEnabled",
           "noCollateral",
           "shopName",
@@ -63952,6 +65191,103 @@
           "sortOrder": {
             "type": "number"
           },
+          "vehicleTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UpdateCatalogModelDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "marketStatus": {
+            "type": "string",
+            "enum": [
+              "current",
+              "legacy"
+            ]
+          },
+          "motorbikeCategory": {
+            "type": "string",
+            "enum": [
+              "scooter",
+              "underbone",
+              "naked",
+              "sport",
+              "cruiser",
+              "adventure",
+              "touring",
+              "offroad",
+              "other"
+            ],
+            "nullable": true
+          },
+          "fuelTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "gasoline",
+                "diesel",
+                "electric",
+                "hybrid"
+              ]
+            }
+          },
+          "transmissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "automatic",
+                "manual",
+                "cvt",
+                "e_cvt",
+                "dct",
+                "amt",
+                "direct_drive",
+                "automatic_cvt",
+                "semi_automatic",
+                "manual_clutch",
+                "other"
+              ]
+            }
+          },
+          "engineDisplacementCc": {
+            "type": "number",
+            "nullable": true
+          },
+          "seatCount": {
+            "type": "number",
+            "nullable": true
+          },
+          "yearFrom": {
+            "type": "number",
+            "nullable": true
+          },
+          "yearTo": {
+            "type": "number",
+            "nullable": true
+          },
+          "sourceUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "sortOrder": {
+            "type": "number"
+          },
           "active": {
             "type": "boolean"
           }
@@ -64388,7 +65724,13 @@
               "automatic",
               "manual",
               "cvt",
+              "e_cvt",
               "dct",
+              "amt",
+              "direct_drive",
+              "automatic_cvt",
+              "semi_automatic",
+              "manual_clutch",
               "other"
             ]
           },
@@ -64436,6 +65778,28 @@
             "nullable": true,
             "description": "Key kiểu dáng thuộc danh mục `body_type` (GET /catalog) — chỉ với ô tô. Gửi null để xoá.",
             "example": "suv"
+          },
+          "motorbikeCategory": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "scooter",
+              "underbone",
+              "naked",
+              "sport",
+              "cruiser",
+              "adventure",
+              "touring",
+              "offroad",
+              "other"
+            ],
+            "description": "Phân khúc — chỉ với xe máy. Gửi null để xoá.",
+            "example": "scooter"
+          },
+          "vehicleCatalogModelId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Id mẫu xe trong danh mục (GET /catalog/models). Gửi null để gỡ liên kết."
           },
           "operationStatus": {
             "type": "string",
@@ -65131,6 +66495,27 @@
             "nullable": true,
             "description": "Key kiểu dáng — tra nhãn ở danh mục `body_type` (GET /catalog)"
           },
+          "motorbikeCategory": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "scooter",
+              "underbone",
+              "naked",
+              "sport",
+              "cruiser",
+              "adventure",
+              "touring",
+              "offroad",
+              "other"
+            ],
+            "description": "Phân khúc xe máy — đối xứng với bodyType của ô tô"
+          },
+          "vehicleCatalogModelId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mẫu xe chuẩn đang gắn (GET /catalog/models); null = xe khai tay"
+          },
           "discountPercent": {
             "type": "number",
             "nullable": true,
@@ -65214,7 +66599,13 @@
               "automatic",
               "manual",
               "cvt",
+              "e_cvt",
               "dct",
+              "amt",
+              "direct_drive",
+              "automatic_cvt",
+              "semi_automatic",
+              "manual_clutch",
               "other"
             ]
           },
@@ -65721,6 +67112,27 @@
             "nullable": true,
             "description": "Key kiểu dáng — tra nhãn ở danh mục `body_type` (GET /catalog)"
           },
+          "motorbikeCategory": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "scooter",
+              "underbone",
+              "naked",
+              "sport",
+              "cruiser",
+              "adventure",
+              "touring",
+              "offroad",
+              "other"
+            ],
+            "description": "Phân khúc xe máy — đối xứng với bodyType của ô tô"
+          },
+          "vehicleCatalogModelId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mẫu xe chuẩn đang gắn (GET /catalog/models); null = xe khai tay"
+          },
           "discountPercent": {
             "type": "number",
             "nullable": true,
@@ -65791,6 +67203,7 @@
               "left",
               "right",
               "interior",
+              "dashboard",
               "other"
             ]
           }
@@ -65813,6 +67226,7 @@
               "left",
               "right",
               "interior",
+              "dashboard",
               "other"
             ],
             "description": "Ảnh cũ chưa gán loại được trả `other` (fallback đọc, không ghi lại)"
