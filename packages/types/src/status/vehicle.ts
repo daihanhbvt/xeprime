@@ -430,6 +430,105 @@ export function isVehicleFuelTypeAllowed(
 }
 
 /**
+ * Thông số kỹ thuật nào CÓ NGHĨA với một chiếc xe, theo loại phương tiện + nguồn năng lượng.
+ *
+ * Vì sao là một hàm dùng chung: form ẩn ô, validator đòi giá trị, backend chuẩn hoá lúc ghi và
+ * checklist lên chợ đều phải trả lời cùng một câu hỏi. Ba bản sao của câu trả lời đó là ba cơ
+ * hội để giao diện nói "đủ điều kiện" trong khi server từ chối bằng một luật khác.
+ *
+ *  - `required`: thiếu thì không lên chợ được.
+ *  - `optional`: hỏi, nhưng bỏ trống vẫn hợp lệ.
+ *  - `hidden`: không có nghĩa với xe này — form ẩn, và backend XOÁ giá trị cũ nếu còn sót.
+ */
+export type VehicleFieldApplicability = 'required' | 'optional' | 'hidden';
+
+export interface VehicleEnergySpecPolicy {
+  /** Lít/100km — xe đốt trong và hybrid. */
+  fuelConsumption: VehicleFieldApplicability;
+  /** Km mỗi lần sạc đầy — xe điện (hybrid khai được nhưng không bắt buộc: enum chưa tách HEV/PHEV). */
+  electricRangeKm: VehicleFieldApplicability;
+  /** Dung lượng pin kWh. */
+  batteryCapacityKwh: VehicleFieldApplicability;
+  /** kWh/100km. */
+  electricConsumption: VehicleFieldApplicability;
+  /** Dung tích động cơ đốt trong (cc). */
+  engineDisplacementCc: VehicleFieldApplicability;
+  /** Hộp số — xe điện vẫn có hộp số một cấp nhưng không phải thông tin khách hỏi. */
+  transmission: VehicleFieldApplicability;
+}
+
+const ENERGY_POLICY_HIDDEN: VehicleEnergySpecPolicy = {
+  fuelConsumption: 'hidden',
+  electricRangeKm: 'hidden',
+  batteryCapacityKwh: 'hidden',
+  electricConsumption: 'hidden',
+  engineDisplacementCc: 'hidden',
+  transmission: 'hidden',
+};
+
+/**
+ * Chưa chọn nguồn năng lượng thì chưa hỏi thông số nào của nó — hỏi trước là bắt người dùng
+ * đoán đơn vị.
+ */
+export function vehicleEnergySpecPolicy(
+  vehicleType: string,
+  fuelType: string | null | undefined,
+): VehicleEnergySpecPolicy {
+  const isCar = vehicleType === VEHICLE_TYPE.CAR;
+  switch (fuelType) {
+    case FUEL_TYPE.GASOLINE:
+    case FUEL_TYPE.DIESEL:
+      return {
+        ...ENERGY_POLICY_HIDDEN,
+        fuelConsumption: 'required',
+        engineDisplacementCc: isCar ? 'optional' : 'hidden',
+        transmission: isCar ? 'required' : 'optional',
+      };
+    case FUEL_TYPE.ELECTRIC:
+      return {
+        ...ENERGY_POLICY_HIDDEN,
+        electricRangeKm: 'required',
+        batteryCapacityKwh: 'optional',
+        electricConsumption: 'optional',
+        transmission: isCar ? 'optional' : 'hidden',
+      };
+    case FUEL_TYPE.HYBRID:
+      // Enum chưa tách HEV (không cắm sạc) với PHEV, nên KHÔNG bắt mọi xe hybrid khai quãng
+      // đường chạy điện — bắt buộc một con số nửa xe không có là ép người dùng bịa.
+      return {
+        ...ENERGY_POLICY_HIDDEN,
+        fuelConsumption: 'required',
+        electricRangeKm: 'optional',
+        batteryCapacityKwh: 'optional',
+        electricConsumption: 'optional',
+        engineDisplacementCc: isCar ? 'optional' : 'hidden',
+        transmission: isCar ? 'required' : 'optional',
+      };
+    default:
+      return ENERGY_POLICY_HIDDEN;
+  }
+}
+
+/** Trần giá trị của các thông số năng lượng — dùng chung cho yup, class-validator và CHECK ở DB. */
+export const VEHICLE_ENERGY_LIMITS = {
+  /** Km mỗi lần sạc đầy. */
+  electricRangeKm: { min: 1, max: 2000 },
+  /** Dung lượng pin (kWh). */
+  batteryCapacityKwh: { min: 1, max: 500 },
+  /** Tiêu thụ điện (kWh/100km). */
+  electricConsumptionKwhPer100Km: { min: 1, max: 200 },
+} as const;
+
+/**
+ * Số ảnh TỐI THIỂU để một chiếc xe được gửi lên chợ.
+ *
+ * Bốn góc (trước · sau · bên · nội thất) là mức tối thiểu để khách tin đây là xe thật. Con số
+ * sống ở đây vì cả form, checklist và `submit-public` ở server cùng đọc — ba bản sao của nó là
+ * ba cơ hội để giao diện nói "đủ" trong khi server nói "chưa".
+ */
+export const VEHICLE_PUBLIC_MIN_IMAGES = 4;
+
+/**
  * Kiểu dáng thân xe (body type) — thuộc tính dữ liệu như nhiên liệu, chỉ áp dụng cho ô tô
  * (`vehicleType = car`). Đây là chiều "Loại xe" trong bộ lọc marketplace (database_design §9.9).
  */

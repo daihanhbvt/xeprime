@@ -1,0 +1,171 @@
+{
+  "landing": {
+    "title": "List your vehicle",
+    "back": "Back",
+    "cta": "List a self-drive vehicle",
+    "subtitle": "Earn more every month with XePrime",
+    "policyLink": "Marketplace rules",
+    "steps": {
+      "title": "Simple and quick to get listed",
+      "info": {
+        "title": "Enter vehicle details",
+        "desc": "Brand, model, transmission and the basic specs."
+      },
+      "images": {
+        "title": "Upload vehicle photos",
+        "desc": "At least 4 clear photos: front, rear, side and interior."
+      },
+      "review": {
+        "title": "XePrime reviews your listing",
+        "desc": "Our team checks the details and switches the listing on."
+      },
+      "rent": {
+        "title": "Start renting out",
+        "desc": "Receive booking requests from renters on the marketplace."
+      }
+    }
+  },
+  "wizard": {
+    "loading": "Loading…",
+    "exit": "Exit",
+    "backToList": "Back to vehicles",
+    "saveDraft": "Save draft",
+    "finish": "Save & submit for review",
+    "savedDraft": "Vehicle saved as a draft",
+    "savedAndSubmitted": "Vehicle saved and submitted for review",
+    "draftExists": "The vehicle is already saved — trying again continues on that vehicle instead of creating a new one.",
+    "manageVehicle": "Manage vehicle",
+    "signInTitle": "Sign in to list a vehicle",
+    "signInBody": "Listing a vehicle needs an account so we can reach you and pay out rentals.",
+    "signInCta": "Sign in",
+    "needTenantTitle": "Create your host profile first",
+    "needTenantBody": "The host profile holds your contact details and pick-up address.",
+    "needTenantCta": "Create host profile",
+    "forbiddenTitle": "No permission to add vehicles",
+    "forbiddenBody": "Your account is not allowed to add vehicles in this shop.",
+    "steps": {
+      "info": {
+        "title": "Vehicle details",
+        "short": "Details",
+        "heading": "1. Vehicle details"
+      },
+      "rental": {
+        "title": "Renting",
+        "short": "Renting",
+        "heading": "2. Rental setup"
+      },
+      "images": {
+        "title": "Vehicle photos",
+        "short": "Photos",
+        "heading": "3. Vehicle photos"
+      }
+    },
+    "errors": {
+      "energyRequired": "Please fill in the specs required for the selected energy source."
+    }
+  },
+  "info": {
+    "typeTitle": "Vehicle type",
+    "typeLabel": "What are you renting out?",
+    "plateTitle": "Plate number",
+    "plateHint": "The plate number is checked against the vehicle documents during review.",
+    "basicTitle": "Basic details",
+    "energyTitle": "Energy source",
+    "nameLabel": "Display name",
+    "namePlaceholder": "For example: Toyota Vios 2023",
+    "nameHelp": "This is the name renters see on the marketplace.",
+    "nameSuggestion": "Use suggestion: {name}",
+    "descriptionTitle": "Description",
+    "descriptionHelp": "Optional, but a clear description helps renters decide faster.",
+    "featuresTitle": "Amenities"
+  },
+  "rental": {
+    "priceTitle": "Daily price",
+    "priceHint": "This price applies to every day. You can set day-specific prices on the vehicle calendar later.",
+    "priceLabel": "Price per day (đ)",
+    "pricePreview": "Renters see: {price}",
+    "discountTitle": "Discount",
+    "discountHint": "A percentage off the daily price.",
+    "discountAria": "Discount percentage",
+    "discountValue": "{percent}% off",
+    "autoAcceptTitle": "Instant booking",
+    "autoAcceptHint": "Automatically confirm valid requests. Fine-tune it later in vehicle management.",
+    "addressTitle": "Vehicle address",
+    "addressHint": "Default hand-over address, taken from the branch that holds the vehicle.",
+    "addressLabel": "Branch holding the vehicle",
+    "addressLoadError": "Could not load your branches. Try again in a moment.",
+    "addressManageLink": "Manage branches and addresses",
+    "deliveryTitle": "Delivery to renter",
+    "deliveryHint": "Deliver the vehicle to the renter within the radius you choose.",
+    "deliveryFreeLabel": "Free delivery within (km)",
+    "deliveryFreeHelp": "Leave empty if you charge from the first kilometre.",
+    "deliveryRadiusLabel": "Maximum delivery distance (km)",
+    "deliveryRadiusHelp": "Beyond this radius you and the renter agree directly.",
+    "deliveryFeeLabel": "Delivery fee (đ)",
+    "deliveryFeeHelp": "Flat fee for one delivery within the radius above.",
+    "mileageTitle": "Mileage limit",
+    "mileageHint": "Set a daily kilometre allowance; anything beyond it is recorded at settlement.",
+    "mileageIncludedLabel": "Kilometres included per day",
+    "mileageIncludedHelp": "Already covered by the rental price.",
+    "mileageExcessLabel": "Fee per extra kilometre (đ)",
+    "mileageExcessHelp": "Only suggested at return — it is recorded once you confirm.",
+    "termsTitle": "Rental terms",
+    "termsHint": "Spell out what you expect from renters. They read this before booking.",
+    "termsLabel": "Your terms",
+    "termsPlaceholder": "For example: no smoking in the car; return the vehicle at the agreed time."
+  },
+  "images": {
+    "title": "Vehicle photos",
+    "intro": "Upload photos from several angles to build trust. Clear photos get booked more often.",
+    "mainImageHelp": "This photo represents the vehicle on the marketplace and in lists.",
+    "counter": "{count}/{min} photos",
+    "counterAria": "Progress towards the minimum number of photos",
+    "missing": "{count, plural, one {# more photo} other {# more photos}} needed to submit for review. You can still save a draft now.",
+    "enough": "Enough photos to submit for review.",
+    "anglesTitle": "Suggested angles",
+    "angles": {
+      "front": "Front: headlights and plate visible",
+      "rear": "Rear of the vehicle",
+      "side": "Side profile, whole body in frame",
+      "interior": "Interior: seats and dashboard"
+    }
+  },
+  "success": {
+    "submittedTitle": "Submitted for review",
+    "submittedBody": "We will check the listing and switch it on for renters.",
+    "draftTitle": "Saved as a draft",
+    "draftBody": "The vehicle is not on the marketplace yet. Finish it and submit whenever you are ready.",
+    "partialTitle": "Vehicle saved, one part did not finish",
+    "partialBody": "The vehicle already exists in your list — do not create it again. Open vehicle management to save the rest.",
+    "shopPendingTitle": "Your host profile needs approval first",
+    "shopPendingBody": "Vehicles can only go live after the platform approves your host profile.",
+    "shopPendingCta": "Finish host profile",
+    "manageCta": "Manage this vehicle",
+    "addAnotherCta": "List another vehicle",
+    "listCta": "Back to vehicles"
+  },
+  "validation": {
+    "weekdayPriceRequired": "Enter the daily rental price",
+    "priceTypeError": "The price must be a number",
+    "priceInteger": "The price must be a whole number",
+    "priceMin": "The price cannot be negative",
+    "deliveryRadiusRequired": "Enter the maximum delivery distance",
+    "deliveryRadiusMin": "The delivery distance must be greater than 0",
+    "deliveryRadiusMax": "Up to 500 km",
+    "deliveryFreeMin": "The free distance cannot be negative",
+    "deliveryFeeRequired": "Enter the delivery fee",
+    "deliveryFeeTypeError": "The delivery fee must be a number",
+    "deliveryFeeInteger": "The delivery fee must be a whole number",
+    "deliveryFeeMin": "The delivery fee cannot be negative",
+    "mileageRequired": "Enter the kilometres included per day",
+    "mileageInteger": "The allowance must be a whole number",
+    "mileageMin": "The minimum allowance is 50 km/day",
+    "mileageMax": "The maximum allowance is 2000 km/day",
+    "excessFeeRequired": "Enter the fee per extra kilometre",
+    "excessFeeTypeError": "The excess fee must be a number",
+    "excessFeeInteger": "The excess fee must be a whole number",
+    "excessFeeMin": "The excess fee cannot be negative",
+    "excessFeeMax": "The excess fee is too high",
+    "termsTooLong": "The terms are too long"
+  }
+}

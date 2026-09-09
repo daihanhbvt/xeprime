@@ -1,0 +1,20 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+/* Neo focus: chuyển bước xong đưa con trỏ bàn phím về đầu nội dung, không nhìn thấy được. */
+.focusAnchor {
+  outline: none;
+}
+
+.alert {
+  margin-bottom: var(--xp-space-md);
+}
+
+.finalActions {
+  display: flex;
+  gap: var(--xp-space-sm);
+  flex-wrap: wrap;
+}

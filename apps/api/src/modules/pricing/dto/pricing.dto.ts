@@ -8,6 +8,7 @@ import {
   type DeliveryDistanceStatus,
   DELIVERY_QUOTE_SOURCE_VALUES,
   LONG_TERM_PACKAGE_MONTHS_VALUES,
+  MILEAGE_LIMIT,
   POLICY_SOURCE_VALUES,
   PRICE_ROW_VALUES,
   ROUTE_TYPE_VALUES,
@@ -201,6 +202,33 @@ export class SaveRentalPolicyDto {
   @ValidateNested({ each: true })
   @Type(() => DiscountTierDto)
   discountTiers!: DiscountTierDto[];
+
+  /*
+   * Hạn mức quãng đường đi CẶP: cùng null = không giới hạn (mặc định), đã đặt hạn mức thì phải
+   * có giá vượt. Quan hệ giữa hai trường kiểm ở `validatePolicy`; CHECK ở DB là chốt cuối.
+   */
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    minimum: MILEAGE_LIMIT.minKmPerDay,
+    maximum: MILEAGE_LIMIT.maxKmPerDay,
+    description: 'Số km/ngày đã nằm trong giá thuê tự lái — null = không giới hạn',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(MILEAGE_LIMIT.minKmPerDay)
+  @Max(MILEAGE_LIMIT.maxKmPerDay)
+  includedDistanceKmPerDay?: number | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Tiền mỗi km VƯỢT hạn mức (VND) — không cộng vào báo giá lúc đặt, chỉ đề xuất lúc quyết toán',
+  })
+  @IsOptional()
+  @Matches(MONEY_PATTERN, { message: 'Phí vượt km không hợp lệ (số VND không âm)' })
+  excessDistanceFeePerKm?: string | null;
 }
 
 /** Giá trị chính sách trả về — tiers cùng shape với input, tiền là string. */
@@ -216,6 +244,18 @@ export class RentalPolicyValuesDto {
   @ApiPropertyOptional({ type: Number, nullable: true }) overtimeGraceMinutes!: number | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) overtimeRoundingMinutes!: number | null;
   @ApiProperty() discountEnabled!: boolean;
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Km/ngày trong giá — null = không giới hạn quãng đường',
+  })
+  includedDistanceKmPerDay!: number | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'VND mỗi km vượt hạn mức (ADR 0007: tiền là chuỗi)',
+  })
+  excessDistanceFeePerKm!: string | null;
   @ApiProperty({ type: [DiscountTierDto], description: 'Mốc ưu đãi canonical (theo tháng)' })
   discountTiers!: DiscountTierDto[];
   @ApiProperty({

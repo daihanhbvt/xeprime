@@ -87,7 +87,10 @@
       "title": "Vehicles",
       "loading": "Loading the vehicle list…",
       "addVehicle": "Add vehicle",
-      "addFirstVehicle": "Add the first vehicle"
+      "addFirstVehicle": "Add the first vehicle",
+      "addVehicleQuick": "Quick self-drive listing",
+      "addVehicleAdvanced": "Advanced setup",
+      "addVehicleMore": "More ways to add a vehicle"
     }
   },
   "alerts": {
@@ -207,7 +210,13 @@
       "consumptionHelp": "Litres of fuel per 100 km",
       "electricRange": "Range per full charge",
       "electricRangePlaceholder": "350",
-      "electricRangeHelp": "Kilometres the vehicle covers on one full charge"
+      "electricRangeHelp": "Kilometres the vehicle covers on one full charge",
+      "batteryCapacity": "Battery capacity",
+      "batteryCapacityPlaceholder": "42",
+      "batteryCapacityHelp": "kWh — leave empty if you are unsure",
+      "electricConsumption": "Electric consumption",
+      "electricConsumptionPlaceholder": "15",
+      "electricConsumptionHelp": "kWh per 100 km — optional"
     },
     "specs": {
       "plateNumber": "Licence plate",
@@ -410,7 +419,10 @@
       "longTermPrice": "Long-term monthly price",
       "withDriverPrice": "With-driver day rate",
       "mainImage": "Cover photo",
-      "plateNumber": "Licence plate"
+      "plateNumber": "Licence plate",
+      "photos": "At least 4 vehicle photos",
+      "identity": "Brand, model, year and seats",
+      "energySpec": "Specs for the energy source"
     },
     "status": {
       "pending": {

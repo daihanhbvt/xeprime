@@ -7254,11 +7254,12 @@ export interface components {
             refund?: components["schemas"]["DepositRefundDto"] | null;
             overtime: components["schemas"]["OvertimeSuggestionDto"];
             surchargeRules: components["schemas"]["SettlementSurchargeRuleDto"][];
+            excessMileage: components["schemas"]["ExcessMileageSuggestionDto"];
         };
         BookingSurchargeDto: {
             id: string;
             /** @enum {string} */
-            category: "overtime" | "cleaning" | "damage" | "waiting" | "long_distance" | "overnight" | "other";
+            category: "overtime" | "cleaning" | "damage" | "waiting" | "long_distance" | "overnight" | "excess_mileage" | "other";
             /** @description Tiền dạng chuỗi — ADR 0007 */
             amount: string;
             reason: string;
@@ -8065,6 +8066,10 @@ export interface components {
             fuelConsumptionCombined?: number | null;
             /** @description Xe điện: km mỗi lần sạc đầy. Gửi null = bỏ khai. */
             electricRangeKm?: number | null;
+            /** @description Xe điện: dung lượng pin (kWh). Gửi null = bỏ khai. */
+            batteryCapacityKwh?: number | null;
+            /** @description Xe điện: mức tiêu thụ điện (kWh/100km). Gửi null = bỏ khai. */
+            electricConsumptionKwhPer100Km?: number | null;
             /**
              * @description Key kiểu dáng thuộc danh mục `body_type` (GET /catalog) — chỉ với ô tô. Gửi null để xoá.
              * @example suv
@@ -8325,7 +8330,7 @@ export interface components {
         };
         CustomerSurchargeDto: {
             /** @enum {string} */
-            category: "overtime" | "cleaning" | "damage" | "waiting" | "long_distance" | "overnight" | "other";
+            category: "overtime" | "cleaning" | "damage" | "waiting" | "long_distance" | "overnight" | "excess_mileage" | "other";
             /** @description Tiền dạng string — ADR 0007 */
             amount: string;
             /** @description Lý do chủ xe ghi — khách được thấy để đối chiếu */
@@ -8702,6 +8707,25 @@ export interface components {
         };
         DriverSurchargeRulesDto: {
             items: components["schemas"]["DriverSurchargeRuleDto"][];
+        };
+        ExcessMileageSuggestionDto: {
+            /** @description Có đủ dữ kiện (hạn mức + hai chỉ số đồng hồ) để đề xuất không */
+            available: boolean;
+            /** @description Km/ngày trong giá theo snapshot của đơn */
+            includedKmPerDay?: number | null;
+            /** @description Số ngày tính phí của chuyến */
+            chargedDays: number;
+            /** @description Hạn mức tổng = số ngày × km mỗi ngày */
+            allowedKm: number;
+            /** @description Km thực tế đã chạy (đồng hồ trả − đồng hồ giao) */
+            actualKm: number;
+            /** @description Km vượt hạn mức (không âm) */
+            excessKm: number;
+            feePerKm?: string | null;
+            /** @description Tiền đề xuất */
+            amount?: string | null;
+            /** @description Diễn giải công thức */
+            formula?: string | null;
         };
         FacetBucketDto: {
             /** @description Giá trị của option (body type key, tên hãng, bucket số chỗ…) */
@@ -9130,6 +9154,12 @@ export interface components {
             start: string;
             /** @example 22:00 */
             end: string;
+        };
+        ListingMileagePolicyDto: {
+            /** @description Số km/ngày đã nằm trong giá thuê */
+            includedKmPerDay: number;
+            /** @description VND mỗi km vượt — ghi nhận lúc quyết toán, không cộng vào báo giá */
+            excessFeePerKm: string;
         };
         ListingRentalTermsDto: {
             /** @enum {string} */
@@ -10367,6 +10397,17 @@ export interface components {
             rentalTerms: components["schemas"]["ListingRentalTermsDto"][];
             handover: components["schemas"]["ListingHandoverDto"];
             driverSurchargeRules: components["schemas"]["ListingDriverSurchargeRuleDto"][];
+            mileagePolicy?: components["schemas"]["ListingMileagePolicyDto"] | null;
+            /** @description L/100km (xăng/dầu/hybrid) */
+            fuelConsumptionCombined?: string | null;
+            /** @description Km mỗi lần sạc đầy (xe điện) */
+            electricRangeKm?: number | null;
+            /** @description Dung lượng pin (kWh) */
+            batteryCapacityKwh?: string | null;
+            /** @description kWh/100km */
+            electricConsumptionKwhPer100Km?: string | null;
+            /** @description @xeprime/types → TransmissionType */
+            transmission?: string | null;
         };
         PublicListingDto: {
             id: string;
@@ -10704,6 +10745,10 @@ export interface components {
             overtimeGraceMinutes?: number | null;
             overtimeRoundingMinutes?: number | null;
             discountEnabled: boolean;
+            /** @description Km/ngày trong giá — null = không giới hạn quãng đường */
+            includedDistanceKmPerDay?: number | null;
+            /** @description VND mỗi km vượt hạn mức (ADR 0007: tiền là chuỗi) */
+            excessDistanceFeePerKm?: string | null;
             /** @description Mốc ưu đãi canonical (theo tháng) */
             discountTiers: components["schemas"]["DiscountTierDto"][];
             /** @description Mốc cũ theo ngày không quy đổi được — chỉ để cảnh báo, KHÔNG tính giá */
@@ -10884,6 +10929,10 @@ export interface components {
             overtimeRoundingMinutes?: number | null;
             discountEnabled: boolean;
             discountTiers: components["schemas"]["DiscountTierDto"][];
+            /** @description Số km/ngày đã nằm trong giá thuê tự lái — null = không giới hạn */
+            includedDistanceKmPerDay?: number | null;
+            /** @description Tiền mỗi km VƯỢT hạn mức (VND) — không cộng vào báo giá lúc đặt, chỉ đề xuất lúc quyết toán */
+            excessDistanceFeePerKm?: string | null;
         };
         SaveSellerProfileDto: {
             /** @enum {string} */
@@ -10907,7 +10956,7 @@ export interface components {
              * @description KHÔNG có danh mục nhiên liệu
              * @enum {string}
              */
-            category: "overtime" | "cleaning" | "damage" | "waiting" | "long_distance" | "overnight" | "other";
+            category: "overtime" | "cleaning" | "damage" | "waiting" | "long_distance" | "overnight" | "excess_mileage" | "other";
             /** @description VND, không âm (chuỗi — ADR 0007) */
             amount: string;
             /** @description Lý do — bắt buộc, đây là khoản trừ vào tiền của khách */
@@ -11111,6 +11160,10 @@ export interface components {
             overtimeGraceMinutes?: number | null;
             overtimeRoundingMinutes?: number | null;
             discountEnabled: boolean;
+            /** @description Km/ngày trong giá — null = không giới hạn quãng đường */
+            includedDistanceKmPerDay?: number | null;
+            /** @description VND mỗi km vượt hạn mức (ADR 0007: tiền là chuỗi) */
+            excessDistanceFeePerKm?: string | null;
             /** @description Mốc ưu đãi canonical (theo tháng) */
             discountTiers: components["schemas"]["DiscountTierDto"][];
             /** @description Mốc cũ theo ngày không quy đổi được — chỉ để cảnh báo, KHÔNG tính giá */
@@ -11677,6 +11730,10 @@ export interface components {
             fuelConsumptionCombined?: number | null;
             /** @description Xe điện: km mỗi lần sạc đầy. Gửi null = bỏ khai. */
             electricRangeKm?: number | null;
+            /** @description Xe điện: dung lượng pin (kWh). Gửi null = bỏ khai. */
+            batteryCapacityKwh?: number | null;
+            /** @description Xe điện: mức tiêu thụ điện (kWh/100km). Gửi null = bỏ khai. */
+            electricConsumptionKwhPer100Km?: number | null;
             /**
              * @description Key kiểu dáng thuộc danh mục `body_type` (GET /catalog) — chỉ với ô tô. Gửi null để xoá.
              * @example suv
@@ -11955,6 +12012,10 @@ export interface components {
             transmission?: "automatic" | "manual" | "cvt" | "dct" | "other" | null;
             /** @description Xe điện: số km đi được sau một lần sạc đầy */
             electricRangeKm?: number | null;
+            /** @description Xe điện: dung lượng pin (kWh) */
+            batteryCapacityKwh?: string | null;
+            /** @description Xe điện: mức tiêu thụ điện (kWh/100km) */
+            electricConsumptionKwhPer100Km?: string | null;
             /** @description L/100km dạng decimal string */
             fuelConsumptionCity?: string | null;
             /** @description L/100km dạng decimal string */

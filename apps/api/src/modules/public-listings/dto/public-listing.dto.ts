@@ -403,6 +403,13 @@ export class ListingDriverSurchargeRuleDto {
   @ApiPropertyOptional({ type: Number, nullable: true }) thresholdValue!: number | null;
 }
 
+/** Hạn mức km/ngày đã công bố + tiền mỗi km vượt (ADR 0007: tiền là chuỗi). */
+export class ListingMileagePolicyDto {
+  @ApiProperty({ description: 'Số km/ngày đã nằm trong giá thuê' }) includedKmPerDay!: number;
+  @ApiProperty({ description: 'VND mỗi km vượt — ghi nhận lúc quyết toán, không cộng vào báo giá' })
+  excessFeePerKm!: string;
+}
+
 export class PublicListingDetailDto extends PublicListingDto {
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) color!: string | null;
@@ -459,6 +466,25 @@ export class PublicListingDetailDto extends PublicListingDto {
   /** Chỉ khoản ĐANG BẬT; rỗng khi xe không có dịch vụ có tài xế hoặc chưa cấu hình. */
   @ApiProperty({ type: [ListingDriverSurchargeRuleDto] })
   driverSurchargeRules!: ListingDriverSurchargeRuleDto[];
+
+  /**
+   * Hạn mức quãng đường của chuyến tự lái (09/09/2026) — null = không giới hạn. Khách phải thấy
+   * TRƯỚC khi đặt: phí vượt km chỉ xuất hiện lúc quyết toán, nên nó phải được công bố từ đây.
+   */
+  @ApiPropertyOptional({ type: ListingMileagePolicyDto, nullable: true })
+  mileagePolicy!: ListingMileagePolicyDto | null;
+
+  /** Thông số NĂNG LƯỢNG đúng theo loại xe: lít/100km với xe xăng, km mỗi lần sạc với xe điện. */
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'L/100km (xăng/dầu/hybrid)' })
+  fuelConsumptionCombined!: string | null;
+  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Km mỗi lần sạc đầy (xe điện)' })
+  electricRangeKm!: number | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Dung lượng pin (kWh)' })
+  batteryCapacityKwh!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'kWh/100km' })
+  electricConsumptionKwhPer100Km!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: '@xeprime/types → TransmissionType' })
+  transmission!: string | null;
 }
 
 export class PublicListingPageMetaDto {

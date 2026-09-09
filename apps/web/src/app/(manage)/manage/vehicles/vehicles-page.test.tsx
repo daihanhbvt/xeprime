@@ -353,12 +353,27 @@ describe('/manage/vehicles — dữ liệu và quyền', () => {
     expect(within(row).getAllByRole('button')).toHaveLength(3);
   });
 
-  it('quyền tạo mở nút "Thêm xe" ở đầu trang', () => {
+  /*
+   * Hai lối thêm xe (09/09/2026): nút chính là "đăng nhanh" cho chiếc xe tự lái thông thường,
+   * menu phụ giữ wizard NÂNG CAO của gian hàng (nhiều dịch vụ, nguồn xe, nhiều chi nhánh).
+   * Bỏ lối nâng cao là lấy mất những trường chỉ gian hàng mới cần.
+   */
+  it('quyền tạo mở nút đăng nhanh, mang theo ngữ cảnh "manage"', () => {
     grant(PERMISSION.VEHICLE_CREATE);
     setQuery({ data: { items: [vehicle()], meta: META } });
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: /Thêm xe/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Đăng nhanh xe tự lái/ }));
+    expect(nav.push).toHaveBeenCalledWith('/list-your-vehicle/register?from=manage');
+  });
+
+  it('wizard NÂNG CAO của gian hàng vẫn mở được từ menu phụ', async () => {
+    grant(PERMISSION.VEHICLE_CREATE);
+    setQuery({ data: { items: [vehicle()], meta: META } });
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cách thêm xe khác' }));
+    fireEvent.click(await screen.findByText('Thiết lập nâng cao'));
     expect(nav.push).toHaveBeenCalledWith('/manage/vehicles/new');
   });
 

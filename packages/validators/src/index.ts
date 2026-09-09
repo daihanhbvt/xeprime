@@ -218,6 +218,10 @@ export const vehicleFormSchema = yup.object({
   transmission: yup.string().oneOf(TRANSMISSION_TYPE_VALUES).nullable().default(null),
   /** Xe ĐIỆN: km mỗi lần sạc đầy — số nguyên, cùng trần 2000 với CHECK ở DB. */
   electricRangeKm: optionalPositiveInt('electricRangeKm', 2000),
+  /** Xe ĐIỆN: dung lượng pin (kWh) — tuỳ chọn, hai chữ số thập phân như các thông số đo được. */
+  batteryCapacityKwh: optionalMetric('batteryCapacityKwh'),
+  /** Xe ĐIỆN: tiêu thụ điện (kWh/100km) — tuỳ chọn. */
+  electricConsumptionKwhPer100Km: optionalMetric('electricConsumptionKwhPer100Km'),
   fuelConsumptionCity: optionalMetric('fuelConsumptionCity'),
   fuelConsumptionHighway: optionalMetric('fuelConsumptionHighway'),
   fuelConsumptionCombined: optionalMetric('fuelConsumptionCombined'),

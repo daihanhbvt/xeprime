@@ -9,7 +9,12 @@ import { PERMISSION } from '@xeprime/types';
 
 import type { RowAction } from '@/components/data-display/RowActions';
 import { PermissionState } from '@/components/feedback/PermissionState';
-import { ROUTES, accountVehiclePath } from '@/constants/routes';
+import {
+  ROUTES,
+  VEHICLE_REGISTRATION_SOURCE,
+  accountVehiclePath,
+  listYourVehicleRegisterPath,
+} from '@/constants/routes';
 import { VehicleCardGrid } from '@/features/vehicles/components/VehicleCardGrid';
 import { VehicleStatusChips } from '@/features/vehicles/components/VehicleStatusChips';
 import { VEHICLES_DEFAULT_LIMIT } from '@/features/vehicles/api';
@@ -91,7 +96,9 @@ export function AccountVehiclesView() {
     <Button
       type="primary"
       icon={<PlusOutlined />}
-      onClick={() => router.push(ROUTES.MANAGE.VEHICLE_NEW)}
+      onClick={() =>
+        router.push(listYourVehicleRegisterPath(VEHICLE_REGISTRATION_SOURCE.ACCOUNT))
+      }
     >
       {t('addVehicle')}
     </Button>

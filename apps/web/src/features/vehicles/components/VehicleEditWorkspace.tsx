@@ -383,9 +383,7 @@ export function VehicleEditWorkspace({
                           <small>{t('advanced.hint')}</small>
                         </span>
                       ),
-                      children: (
-                        <AdvancedSpecsSection control={control} lockedNotice={lockedNotice} />
-                      ),
+                      children: <AdvancedSpecsSection control={control} />,
                     },
                   ]}
                 />

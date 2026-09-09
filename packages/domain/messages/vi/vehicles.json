@@ -87,7 +87,10 @@
       "title": "Danh sách xe",
       "loading": "Đang tải danh sách xe…",
       "addVehicle": "Thêm xe",
-      "addFirstVehicle": "Thêm xe đầu tiên"
+      "addFirstVehicle": "Thêm xe đầu tiên",
+      "addVehicleQuick": "Đăng nhanh xe tự lái",
+      "addVehicleAdvanced": "Thiết lập nâng cao",
+      "addVehicleMore": "Cách thêm xe khác"
     }
   },
   "alerts": {
@@ -207,7 +210,13 @@
       "consumptionHelp": "Số lít nhiên liệu cho quãng đường 100 km",
       "electricRange": "Quãng đường mỗi lần sạc",
       "electricRangePlaceholder": "350",
-      "electricRangeHelp": "Số km đi được trong một lần sạc đầy"
+      "electricRangeHelp": "Số km đi được trong một lần sạc đầy",
+      "batteryCapacity": "Dung lượng pin",
+      "batteryCapacityPlaceholder": "42",
+      "batteryCapacityHelp": "kWh — bỏ trống nếu bạn không rõ",
+      "electricConsumption": "Mức tiêu thụ điện",
+      "electricConsumptionPlaceholder": "15",
+      "electricConsumptionHelp": "kWh cho quãng đường 100 km — không bắt buộc"
     },
     "specs": {
       "plateNumber": "Biển số xe",
@@ -410,7 +419,10 @@
       "longTermPrice": "Giá tháng thuê dài hạn",
       "withDriverPrice": "Giá/ngày có tài xế",
       "mainImage": "Ảnh đại diện",
-      "plateNumber": "Biển số"
+      "plateNumber": "Biển số",
+      "photos": "Tối thiểu 4 ảnh xe",
+      "identity": "Hãng, mẫu, năm sản xuất và số chỗ",
+      "energySpec": "Thông số của nguồn năng lượng"
     },
     "status": {
       "pending": {

@@ -20,6 +20,8 @@ import {
   isVehicleFuelTypeAllowed,
   VEHICLE_OPERATION_STATUS,
   VEHICLE_LOCKED_AFTER_APPROVAL_FIELDS,
+  VEHICLE_PUBLIC_MIN_IMAGES,
+  vehicleEnergySpecPolicy,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_SUBMITTABLE,
   VEHICLE_TYPE,
@@ -95,6 +97,8 @@ const DETAIL_SELECT = {
   fuelConsumptionHighway: true,
   fuelConsumptionCombined: true,
   electricRangeKm: true,
+  batteryCapacityKwh: true,
+  electricConsumptionKwhPer100Km: true,
   hourlyPrice: true,
   monthlyPrice: true,
   withDriverDailyPrice: true,
@@ -523,6 +527,8 @@ export class VehiclesService {
       ...writableFields(dto),
       // Bỏ một dịch vụ → giá chuyên biệt của nó bị xoá theo (FE đã cảnh báo trước khi lưu).
       ...(dto.serviceTypes !== undefined ? orphanPriceClears(dto.serviceTypes) : {}),
+      // Đổi loại xe/nguồn năng lượng → dọn thông số không còn nghĩa (server không tin form đã ẩn).
+      ...clearIncompatibleEnergyFields(current, dto),
     };
 
     await tx.vehicle.update({ where: { id: current.id }, data });
@@ -892,7 +898,8 @@ export class VehiclesService {
       });
     }
 
-    const missing = missingPublicFields(vehicle);
+    const imageCount = await countDistinctImages(this.prisma, vehicle.id, vehicle.mainImageUrl);
+    const missing = missingPublicFields(vehicle, imageCount);
     if (missing.length > 0) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
@@ -1079,6 +1086,8 @@ interface VehicleWritableFields {
   fuelConsumptionHighway?: number | null;
   fuelConsumptionCombined?: number | null;
   electricRangeKm?: number | null;
+  batteryCapacityKwh?: number | null;
+  electricConsumptionKwhPer100Km?: number | null;
   operationStatus?: string;
   description?: string | null;
   mainImageUrl?: string | null;
@@ -1133,6 +1142,12 @@ function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritab
       ? { fuelConsumptionCombined: dto.fuelConsumptionCombined }
       : {}),
     ...(dto.electricRangeKm !== undefined ? { electricRangeKm: dto.electricRangeKm } : {}),
+    ...(dto.batteryCapacityKwh !== undefined
+      ? { batteryCapacityKwh: dto.batteryCapacityKwh }
+      : {}),
+    ...(dto.electricConsumptionKwhPer100Km !== undefined
+      ? { electricConsumptionKwhPer100Km: dto.electricConsumptionKwhPer100Km }
+      : {}),
     ...(dto.operationStatus !== undefined ? { operationStatus: dto.operationStatus } : {}),
     ...(dto.description !== undefined ? { description: dto.description } : {}),
     ...(dto.mainImageUrl !== undefined ? { mainImageUrl: dto.mainImageUrl } : {}),
@@ -1259,6 +1274,8 @@ function toDetail(
     fuelConsumptionHighway: v.fuelConsumptionHighway as unknown as string | null,
     fuelConsumptionCombined: v.fuelConsumptionCombined as unknown as string | null,
     electricRangeKm: v.electricRangeKm,
+    batteryCapacityKwh: v.batteryCapacityKwh as unknown as string | null,
+    electricConsumptionKwhPer100Km: v.electricConsumptionKwhPer100Km as unknown as string | null,
     hourlyPrice: v.hourlyPrice as unknown as string | null,
     monthlyPrice: v.monthlyPrice as unknown as string | null,
     withDriverDailyPrice: v.withDriverDailyPrice as unknown as string | null,
@@ -1305,13 +1322,43 @@ function assertNoLockedFieldChange(current: SensitiveRow, dto: UpdateVehicleDto)
 }
 
 /**
+ * Xoá các thông số KHÔNG CÒN NGHĨA sau khi đổi loại xe / nguồn năng lượng.
+ *
+ * Backend không tin việc form đã ẩn ô: một client cũ (hoặc app native chưa cập nhật) vẫn gửi
+ * được `fuelConsumptionCombined` cho xe điện, và để lại con số đó nghĩa là trang xe công khai
+ * khoe "7.5 L/100km" trên một chiếc xe chạy pin.
+ *
+ * Chỉ xoá khi lệnh ghi thật sự ĐỘNG tới loại xe hoặc nguồn năng lượng — sửa mô tả không được
+ * âm thầm dọn thông số của xe.
+ */
+function clearIncompatibleEnergyFields(
+  current: { vehicleType: string; fuelType: string | null },
+  dto: UpdateVehicleDto,
+): Partial<VehicleWritableFields> {
+  if (dto.vehicleType === undefined && dto.fuelType === undefined) return {};
+  const vehicleType = dto.vehicleType ?? current.vehicleType;
+  const fuelType = dto.fuelType !== undefined ? dto.fuelType : current.fuelType;
+  const policy = vehicleEnergySpecPolicy(vehicleType, fuelType);
+  return {
+    ...(policy.fuelConsumption === 'hidden'
+      ? { fuelConsumptionCity: null, fuelConsumptionHighway: null, fuelConsumptionCombined: null }
+      : {}),
+    ...(policy.electricRangeKm === 'hidden' ? { electricRangeKm: null } : {}),
+    ...(policy.batteryCapacityKwh === 'hidden' ? { batteryCapacityKwh: null } : {}),
+    ...(policy.electricConsumption === 'hidden' ? { electricConsumptionKwhPer100Km: null } : {}),
+    ...(policy.engineDisplacementCc === 'hidden' ? { engineDisplacementCc: null } : {}),
+    ...(policy.transmission === 'hidden' ? { transmission: null } : {}),
+  };
+}
+
+/**
  * Điều kiện tối thiểu để xe được lên chợ; trả danh sách còn thiếu (rỗng = đủ).
  *
  * Giá kiểm THEO DỊCH VỤ xe đăng (17/08): đăng dịch vụ nào thì phải niêm yết giá chuyên biệt
  * của dịch vụ đó — không âm thầm lấy giá tự lái trưng như tổng giá có tài xế/dài hạn. Bản đối
  * xứng ở FE: `apps/web/features/vehicles/publication.ts` — sửa một bên phải sửa cả hai.
  */
-function missingPublicFields(v: VehicleRow): string[] {
+function missingPublicFields(v: VehicleRow, imageCount: number): string[] {
   const missing: string[] = [];
   if (v.serviceTypes.includes(SERVICE_TYPE.SELF_DRIVE) && v.weekdayPrice == null) {
     missing.push('giá thuê tự lái (ngày thường)');
@@ -1323,10 +1370,56 @@ function missingPublicFields(v: VehicleRow): string[] {
     missing.push('giá/ngày có tài xế');
   }
   if (!v.mainImageUrl) missing.push('ảnh đại diện');
+  /*
+   * Bốn ảnh khác nhau (09/09/2026): khách không đặt một chiếc xe chỉ có một tấm ảnh chụp xa.
+   * Đếm trên tập URL đã khử trùng và có cả ảnh đại diện — cùng một tấm dùng làm ảnh đại diện
+   * lẫn ảnh thư viện chỉ tính MỘT.
+   */
+  if (imageCount < VEHICLE_PUBLIC_MIN_IMAGES) {
+    missing.push(`ít nhất ${VEHICLE_PUBLIC_MIN_IMAGES} ảnh xe (hiện có ${imageCount})`);
+  }
   if (!v.plateNumber) missing.push('biển số');
-  // Mô tả KHÔNG còn bắt buộc (09/09/2026): ảnh + thông số + giá đã đủ để khách quyết định, và
-  // một ô mô tả bắt buộc chỉ đẻ ra những dòng "xe đẹp, máy êm" viết cho có.
+  if (!v.brand) missing.push('hãng xe');
+  if (!v.model) missing.push('mẫu xe');
+  if (v.manufactureYear == null) missing.push('năm sản xuất');
+  if (v.seatCount == null) missing.push('số chỗ ngồi');
+  if (!v.fuelType) missing.push('nguồn năng lượng');
+  // Mô tả KHÔNG bắt buộc (09/09/2026): ảnh + thông số + giá đã đủ để khách quyết định, và một
+  // ô mô tả bắt buộc chỉ đẻ ra những dòng "xe đẹp, máy êm" viết cho có.
+
+  /*
+   * Thông số năng lượng hỏi ĐÚNG thứ có nghĩa với chiếc xe này: xe xăng khai lít/100km, xe điện
+   * khai quãng đường mỗi lần sạc, hybrid chỉ bắt phần xăng (enum chưa tách HEV/PHEV).
+   */
+  const energy = vehicleEnergySpecPolicy(v.vehicleType, v.fuelType);
+  if (energy.fuelConsumption === 'required' && v.fuelConsumptionCombined == null) {
+    missing.push('mức tiêu thụ nhiên liệu');
+  }
+  if (energy.electricRangeKm === 'required' && v.electricRangeKm == null) {
+    missing.push('quãng đường mỗi lần sạc đầy');
+  }
+  if (energy.transmission === 'required' && !v.transmission) missing.push('hộp số');
   return missing;
+}
+
+/**
+ * Số ảnh THẬT của một chiếc xe: ảnh đại diện ∪ thư viện, khử trùng theo URL.
+ *
+ * Đếm hai nguồn riêng rồi cộng lại sẽ tính đôi tấm ảnh vừa làm đại diện vừa nằm trong thư viện —
+ * và checklist báo "đủ 4" trong khi khách chỉ thấy 3 tấm khác nhau.
+ */
+async function countDistinctImages(
+  db: Prisma.TransactionClient | PrismaService,
+  vehicleId: string,
+  mainImageUrl: string | null,
+): Promise<number> {
+  const rows = await db.vehicleImage.findMany({
+    where: { vehicleId },
+    select: { imageUrl: true },
+  });
+  const urls = new Set(rows.map((row) => row.imageUrl));
+  if (mainImageUrl) urls.add(mainImageUrl);
+  return urls.size;
 }
 
 /** Ảnh chụp hồ sơ xe lúc gửi duyệt — reviewer thấy đúng thứ đã gửi (Decimal → string). */

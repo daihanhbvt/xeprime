@@ -43,6 +43,7 @@ export const MESSAGE_NAMESPACES = [
   { file: 'support', namespace: 'Support' },
 
   // — Cổng quản lý —
+  { file: 'list-your-vehicle', namespace: 'ListYourVehicle' },
   { file: 'manage-common', namespace: 'ManageCommon' },
   { file: 'dashboard', namespace: 'Dashboard' },
   { file: 'shop-onboarding', namespace: 'ShopOnboarding' },

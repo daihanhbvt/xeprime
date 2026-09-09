@@ -9,7 +9,6 @@ import {
   CATALOG_TYPE,
   SERVICE_TYPE,
   TRANSMISSION_TYPE_VALUES,
-  FUEL_TYPE,
   VEHICLE_TYPE,
   VEHICLE_SOURCE_TYPE,
   VEHICLE_SOURCE_TYPE_VALUES,
@@ -32,6 +31,13 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { presignVehicleImage } from '@/services/upload';
 import { useVehicleOptions } from '../hooks/use-vehicle-options';
 import { PublishRequiredLabel } from './VehicleCompleteness';
+/*
+ * Import VÒNG có chủ đích: `VehicleEnergyFields` dùng `FuelTypeSelect` của file này, còn file
+ * này dùng lại khối đó ở `SpecsSection`. ESM giải quyết được vì cả hai chỉ tham chiếu nhau lúc
+ * RENDER, không phải lúc khởi tạo module. Tách `FuelTypeSelect` ra file riêng sẽ sạch hơn, nhưng
+ * đó là một lần đổi import ở chín nơi — để lại đây một ghi chú thay vì một refactor lén.
+ */
+import { VehicleEnergyFields } from './VehicleEnergyFields';
 import styles from './VehicleForm.module.css';
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -82,9 +88,7 @@ export const VEHICLE_SECTIONS: ReadonlyArray<{
       'widthMm',
       'heightMm',
       'curbWeightKg',
-      'engineDisplacementCc',
       'horsepowerHp',
-      'transmission',
       'fuelConsumptionCity',
       'fuelConsumptionHighway',
       'fuelConsumptionCombined',
@@ -434,18 +438,9 @@ export function SourceTypeSection({ control }: Pick<SectionProps, 'control'>) {
 }
 
 /** Thông số mở rộng là tuỳ chọn và chỉ xuất hiện trong vùng thu gọn của workspace chỉnh sửa. */
-export function AdvancedSpecsSection({
-  control,
-  lockedNotice,
-}: Pick<SectionProps, 'control' | 'lockedNotice'>) {
+export function AdvancedSpecsSection({ control }: Pick<SectionProps, 'control'>) {
   const t = useTranslations('Vehicles.form.advanced');
   const tCommon = useTranslations('Common.labels');
-  const domainLabel = useDomainLabel();
-
-  const transmissionOptions = TRANSMISSION_TYPE_VALUES.map((value) => ({
-    value,
-    label: domainLabel('transmissionType', value),
-  }));
 
   return (
     <div className={styles.advancedStack}>
@@ -492,17 +487,13 @@ export function AdvancedSpecsSection({
         </Row>
       </section>
       <section className={styles.subSection}>
+        {/*
+          Dung tích động cơ nằm ở khối NĂNG LƯỢNG (chỉ có nghĩa với xe đốt trong) — ở đây chỉ còn
+          công suất, thứ mọi loại xe đều có. Hai ô cùng tên trên một form là hai nguồn cho cùng
+          một giá trị, và người dùng không biết ô nào đang được lưu.
+        */}
         <h3 className={styles.subSectionTitle}>{t('engineTitle')}</h3>
         <Row gutter={16}>
-          <Col xs={24} sm={12}>
-            <NumberField
-              control={control}
-              name="engineDisplacementCc"
-              label={t('engineDisplacementCc')}
-              placeholder={t('enginePlaceholder')}
-              min={1}
-            />
-          </Col>
           <Col xs={24} sm={12}>
             <NumberField
               control={control}
@@ -510,18 +501,6 @@ export function AdvancedSpecsSection({
               label={t('horsepowerHp')}
               placeholder={t('horsepowerPlaceholder')}
               min={1}
-            />
-          </Col>
-          <Col xs={24} sm={12}>
-            <SelectField
-              control={control}
-              name="transmission"
-              label={t('transmission')}
-              options={transmissionOptions}
-              allowClear
-              placeholder={t('transmissionPlaceholder')}
-              help={lockedNotice}
-              disabled={Boolean(lockedNotice)}
             />
           </Col>
         </Row>
@@ -565,6 +544,11 @@ export function AdvancedSpecsSection({
 
 export function SpecsSection({ control, isCar, lockedNotice }: SectionProps) {
   const t = useTranslations('Vehicles.form.specs');
+  const domainLabel = useDomainLabel();
+  const transmissionOptions = TRANSMISSION_TYPE_VALUES.map((value) => ({
+    value,
+    label: domainLabel('transmissionType', value),
+  }));
 
   return (
     <Row gutter={16}>
@@ -612,14 +596,6 @@ export function SpecsSection({ control, isCar, lockedNotice }: SectionProps) {
         />
       </Col>
       <Col xs={24} sm={12}>
-        <FuelTypeSelect
-          control={control}
-          vehicleType={isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE}
-          help={lockedNotice}
-          disabled={Boolean(lockedNotice)}
-        />
-      </Col>
-      <Col xs={24} sm={12}>
         <TextField
           control={control}
           name="color"
@@ -632,6 +608,20 @@ export function SpecsSection({ control, isCar, lockedNotice }: SectionProps) {
           <BodyTypePicker control={control} />
         </Col>
       ) : null}
+      {/*
+        Nguồn năng lượng + thông số của nó dùng CHUNG một khối với wizard đăng xe nhanh
+        (`VehicleEnergyFields`): xe xăng hỏi lít/100km, xe điện hỏi km mỗi lần sạc, và ma trận
+        quyết định là `vehicleEnergySpecPolicy` ở `@xeprime/types` — cùng hàm backend dùng.
+      */}
+      <Col xs={24}>
+        <VehicleEnergyFields
+          control={control}
+          vehicleType={isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE}
+          transmissionOptions={transmissionOptions}
+          lockedNotice={lockedNotice}
+          disabled={Boolean(lockedNotice)}
+        />
+      </Col>
     </Row>
   );
 }
@@ -655,45 +645,6 @@ export function BrandSelect({ control }: Pick<SectionProps, 'control'>) {
       placeholder={t('brandPlaceholder')}
       allowClear
       showSearch
-    />
-  );
-}
-
-/**
- * Ô thông số nhiên liệu, đổi theo LOẠI nhiên liệu đang chọn (09/09/2026).
- *
- * Xăng/dầu/hybrid đo bằng lít cho 100 km; xe điện đo bằng km mỗi lần sạc đầy — hai đại lượng
- * khác đơn vị nên là hai cột khác nhau, và người nhập chỉ thấy đúng ô của xe mình. Chưa chọn
- * nhiên liệu thì chưa hỏi: hỏi trước là bắt người ta đoán đơn vị.
- */
-export function FuelMetricField({
-  control,
-  disabled,
-}: Pick<SectionProps, 'control'> & { disabled?: boolean }) {
-  const t = useTranslations('Vehicles.form.advanced');
-  const fuelType = useWatch({ control, name: 'fuelType' });
-  if (!fuelType) return null;
-
-  return fuelType === FUEL_TYPE.ELECTRIC ? (
-    <NumberField
-      control={control}
-      name="electricRangeKm"
-      label={t('electricRange')}
-      placeholder={t('electricRangePlaceholder')}
-      help={t('electricRangeHelp')}
-      min={1}
-      max={2000}
-      disabled={disabled}
-    />
-  ) : (
-    <NumberField
-      control={control}
-      name="fuelConsumptionCombined"
-      label={t('consumption')}
-      placeholder={t('consumptionPlaceholder')}
-      help={t('consumptionHelp')}
-      min={0}
-      disabled={disabled}
     />
   );
 }

@@ -112,6 +112,10 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
       v.fuelConsumptionHighway == null ? null : Number(v.fuelConsumptionHighway),
     fuelConsumptionCombined:
       v.fuelConsumptionCombined == null ? null : Number(v.fuelConsumptionCombined),
+    electricRangeKm: v.electricRangeKm ?? null,
+    batteryCapacityKwh: v.batteryCapacityKwh == null ? null : Number(v.batteryCapacityKwh),
+    electricConsumptionKwhPer100Km:
+      v.electricConsumptionKwhPer100Km == null ? null : Number(v.electricConsumptionKwhPer100Km),
     weekdayPrice: v.weekdayPrice == null ? null : Number(v.weekdayPrice),
     weekendPrice: v.weekendPrice == null ? null : Number(v.weekendPrice),
     hourlyPrice: v.hourlyPrice == null ? null : Number(v.hourlyPrice),

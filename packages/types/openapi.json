@@ -50037,6 +50037,9 @@
             "items": {
               "$ref": "#/components/schemas/SettlementSurchargeRuleDto"
             }
+          },
+          "excessMileage": {
+            "$ref": "#/components/schemas/ExcessMileageSuggestionDto"
           }
         },
         "required": [
@@ -50049,7 +50052,8 @@
           "additionalDue",
           "depositStatus",
           "overtime",
-          "surchargeRules"
+          "surchargeRules",
+          "excessMileage"
         ]
       },
       "BookingSurchargeDto": {
@@ -50067,6 +50071,7 @@
               "waiting",
               "long_distance",
               "overnight",
+              "excess_mileage",
               "other"
             ]
           },
@@ -52346,6 +52351,20 @@
             "maximum": 2000,
             "description": "Xe điện: km mỗi lần sạc đầy. Gửi null = bỏ khai."
           },
+          "batteryCapacityKwh": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Xe điện: dung lượng pin (kWh). Gửi null = bỏ khai."
+          },
+          "electricConsumptionKwhPer100Km": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Xe điện: mức tiêu thụ điện (kWh/100km). Gửi null = bỏ khai."
+          },
           "bodyType": {
             "type": "string",
             "nullable": true,
@@ -53158,6 +53177,7 @@
               "waiting",
               "long_distance",
               "overnight",
+              "excess_mileage",
               "other"
             ]
           },
@@ -54404,6 +54424,57 @@
         },
         "required": [
           "items"
+        ]
+      },
+      "ExcessMileageSuggestionDto": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "Có đủ dữ kiện (hạn mức + hai chỉ số đồng hồ) để đề xuất không"
+          },
+          "includedKmPerDay": {
+            "type": "number",
+            "nullable": true,
+            "description": "Km/ngày trong giá theo snapshot của đơn"
+          },
+          "chargedDays": {
+            "type": "number",
+            "description": "Số ngày tính phí của chuyến"
+          },
+          "allowedKm": {
+            "type": "number",
+            "description": "Hạn mức tổng = số ngày × km mỗi ngày"
+          },
+          "actualKm": {
+            "type": "number",
+            "description": "Km thực tế đã chạy (đồng hồ trả − đồng hồ giao)"
+          },
+          "excessKm": {
+            "type": "number",
+            "description": "Km vượt hạn mức (không âm)"
+          },
+          "feePerKm": {
+            "type": "string",
+            "nullable": true
+          },
+          "amount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tiền đề xuất"
+          },
+          "formula": {
+            "type": "string",
+            "nullable": true,
+            "description": "Diễn giải công thức"
+          }
+        },
+        "required": [
+          "available",
+          "chargedDays",
+          "allowedKm",
+          "actualKm",
+          "excessKm"
         ]
       },
       "FacetBucketDto": {
@@ -55761,6 +55832,23 @@
         "required": [
           "start",
           "end"
+        ]
+      },
+      "ListingMileagePolicyDto": {
+        "type": "object",
+        "properties": {
+          "includedKmPerDay": {
+            "type": "number",
+            "description": "Số km/ngày đã nằm trong giá thuê"
+          },
+          "excessFeePerKm": {
+            "type": "string",
+            "description": "VND mỗi km vượt — ghi nhận lúc quyết toán, không cộng vào báo giá"
+          }
+        },
+        "required": [
+          "includedKmPerDay",
+          "excessFeePerKm"
         ]
       },
       "ListingRentalTermsDto": {
@@ -60065,6 +60153,40 @@
             "items": {
               "$ref": "#/components/schemas/ListingDriverSurchargeRuleDto"
             }
+          },
+          "mileagePolicy": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ListingMileagePolicyDto"
+              }
+            ]
+          },
+          "fuelConsumptionCombined": {
+            "type": "string",
+            "nullable": true,
+            "description": "L/100km (xăng/dầu/hybrid)"
+          },
+          "electricRangeKm": {
+            "type": "number",
+            "nullable": true,
+            "description": "Km mỗi lần sạc đầy (xe điện)"
+          },
+          "batteryCapacityKwh": {
+            "type": "string",
+            "nullable": true,
+            "description": "Dung lượng pin (kWh)"
+          },
+          "electricConsumptionKwhPer100Km": {
+            "type": "string",
+            "nullable": true,
+            "description": "kWh/100km"
+          },
+          "transmission": {
+            "type": "string",
+            "nullable": true,
+            "description": "@xeprime/types → TransmissionType"
           }
         },
         "required": [
@@ -61182,6 +61304,16 @@
           "discountEnabled": {
             "type": "boolean"
           },
+          "includedDistanceKmPerDay": {
+            "type": "number",
+            "nullable": true,
+            "description": "Km/ngày trong giá — null = không giới hạn quãng đường"
+          },
+          "excessDistanceFeePerKm": {
+            "type": "string",
+            "nullable": true,
+            "description": "VND mỗi km vượt hạn mức (ADR 0007: tiền là chuỗi)"
+          },
           "discountTiers": {
             "description": "Mốc ưu đãi canonical (theo tháng)",
             "type": "array",
@@ -61713,6 +61845,18 @@
             "items": {
               "$ref": "#/components/schemas/DiscountTierDto"
             }
+          },
+          "includedDistanceKmPerDay": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 50,
+            "maximum": 2000,
+            "description": "Số km/ngày đã nằm trong giá thuê tự lái — null = không giới hạn"
+          },
+          "excessDistanceFeePerKm": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tiền mỗi km VƯỢT hạn mức (VND) — không cộng vào báo giá lúc đặt, chỉ đề xuất lúc quyết toán"
           }
         },
         "required": [
@@ -61790,6 +61934,7 @@
               "waiting",
               "long_distance",
               "overnight",
+              "excess_mileage",
               "other"
             ],
             "description": "KHÔNG có danh mục nhiên liệu"
@@ -62433,6 +62578,16 @@
           },
           "discountEnabled": {
             "type": "boolean"
+          },
+          "includedDistanceKmPerDay": {
+            "type": "number",
+            "nullable": true,
+            "description": "Km/ngày trong giá — null = không giới hạn quãng đường"
+          },
+          "excessDistanceFeePerKm": {
+            "type": "string",
+            "nullable": true,
+            "description": "VND mỗi km vượt hạn mức (ADR 0007: tiền là chuỗi)"
           },
           "discountTiers": {
             "description": "Mốc ưu đãi canonical (theo tháng)",
@@ -64262,6 +64417,20 @@
             "maximum": 2000,
             "description": "Xe điện: km mỗi lần sạc đầy. Gửi null = bỏ khai."
           },
+          "batteryCapacityKwh": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Xe điện: dung lượng pin (kWh). Gửi null = bỏ khai."
+          },
+          "electricConsumptionKwhPer100Km": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Xe điện: mức tiêu thụ điện (kWh/100km). Gửi null = bỏ khai."
+          },
           "bodyType": {
             "type": "string",
             "nullable": true,
@@ -65053,6 +65222,16 @@
             "type": "number",
             "nullable": true,
             "description": "Xe điện: số km đi được sau một lần sạc đầy"
+          },
+          "batteryCapacityKwh": {
+            "type": "string",
+            "nullable": true,
+            "description": "Xe điện: dung lượng pin (kWh)"
+          },
+          "electricConsumptionKwhPer100Km": {
+            "type": "string",
+            "nullable": true,
+            "description": "Xe điện: mức tiêu thụ điện (kWh/100km)"
           },
           "fuelConsumptionCity": {
             "type": "string",

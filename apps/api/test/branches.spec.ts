@@ -526,6 +526,20 @@ describe('Chi nhánh phải có tỉnh mới lên chợ được', () => {
       weekdayPrice: '500000',
       mainImageUrl: 'https://img.example/x.jpg',
       description: 'Xe 5 chỗ máy xăng, đầy đủ giấy tờ.',
+      // Đủ điều kiện lên chợ theo luật 09/09/2026 — spec này kiểm TỈNH của chi nhánh, nên phần
+      // còn lại của hồ sơ phải hợp lệ để không lẫn hai lý do từ chối.
+      brand: 'toyota',
+      model: 'Vios',
+      manufactureYear: 2022,
+      seatCount: 5,
+      fuelType: 'gasoline',
+      transmission: 'automatic',
+      fuelConsumptionCombined: 7.5,
+      images: [
+        'https://img.example/branch-1.jpg',
+        'https://img.example/branch-2.jpg',
+        'https://img.example/branch-3.jpg',
+      ],
     });
 
     await expect(vehicles.submitForPublicReview(tenantId, v.id, ownerId)).rejects.toMatchObject({

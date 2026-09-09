@@ -10,6 +10,8 @@ import {
   BOOKING_STATUS,
   DEPOSIT_STATUS,
   DRIVER_SURCHARGE_KIND_SPEC,
+  HANDOVER_TYPE,
+  type BookingPriceSnapshot,
   type DriverSurchargeKind,
   type RentalTermsSnapshot,
   NOTIFICATION_TARGET_TYPE,
@@ -33,6 +35,7 @@ import { PricingService } from '../../pricing/pricing.service';
 import {
   BookingSettlementDto,
   BookingSurchargeDto,
+  ExcessMileageSuggestionDto,
   CorrectDepositRefundDto,
   OvertimeSuggestionDto,
   RecordDepositRefundDto,
@@ -482,9 +485,11 @@ export class SettlementService {
         vehicleId: true,
         tenantCustomerId: true,
         depositAmount: true,
+        pickupAt: true,
         returnAt: true,
         actualReturnAt: true,
         rentalTerms: true,
+        priceSnapshot: true,
       },
     });
     if (!booking) {
@@ -595,15 +600,18 @@ export class SettlementService {
       status: string;
       vehicleId: string;
       depositAmount: Prisma.Decimal;
+      pickupAt?: Date | null;
       returnAt: Date;
       actualReturnAt: Date | null;
       rentalTerms?: Prisma.JsonValue | null;
+      priceSnapshot?: Prisma.JsonValue | null;
     },
   ): Promise<BookingSettlementDto> {
-    const [snapshot, settlement, overtime] = await Promise.all([
+    const [snapshot, settlement, overtime, excessMileage] = await Promise.all([
       this.moneySnapshot(tenantId, booking.id, booking.depositAmount),
       this.prisma.bookingDepositSettlement.findUnique({ where: { bookingId: booking.id } }),
       this.overtimeSuggestion(tenantId, booking),
+      this.excessMileageSuggestion(booking),
     ]);
 
     const names = await this.actorNames([
@@ -651,6 +659,74 @@ export class SettlementService {
         : null,
       overtime,
       surchargeRules: surchargeRulesOf(booking.rentalTerms ?? null),
+      excessMileage,
+    };
+  }
+
+  /**
+   * Đề xuất phí VƯỢT KM từ hạn mức ĐÃ ĐÓNG BĂNG trên đơn + hai chỉ số đồng hồ km.
+   *
+   * Hạn mức đọc từ `price_snapshot` chứ không từ chính sách hiện tại: chủ xe siết hạn mức sau
+   * chuyến không được phép viết lại điều khoản của chuyến đã đi (ADR 0024).
+   *
+   * Số km cho phép = số ngày TÍNH PHÍ × km/ngày. Số ngày lấy từ chính snapshot giá (cùng con số
+   * đã dùng để tính tiền thuê), nên khách không bị tính hai kiểu ngày ở hai chỗ.
+   */
+  private async excessMileageSuggestion(booking: {
+    id: string;
+    priceSnapshot?: Prisma.JsonValue | null;
+  }): Promise<ExcessMileageSuggestionDto> {
+    const empty: ExcessMileageSuggestionDto = {
+      available: false,
+      includedKmPerDay: null,
+      chargedDays: 0,
+      allowedKm: 0,
+      actualKm: 0,
+      excessKm: 0,
+      feePerKm: null,
+      amount: null,
+      formula: null,
+    };
+
+    const snapshot = booking.priceSnapshot as unknown as BookingPriceSnapshot | null;
+    const includedKmPerDay = snapshot?.policy?.includedDistanceKmPerDay ?? null;
+    const feePerKm = snapshot?.policy?.excessDistanceFeePerKm ?? null;
+    if (includedKmPerDay == null || feePerKm == null) return empty;
+
+    const chargedDays = snapshot?.days ?? 0;
+    if (chargedDays <= 0) return empty;
+
+    // Km lúc GIAO và lúc NHẬN LẠI — cả hai đều phải có; thiếu một đầu thì không có quãng đường.
+    const handovers = await this.prisma.vehicleHandover.findMany({
+      where: { bookingId: booking.id, odometerKm: { not: null } },
+      orderBy: { createdAt: 'asc' },
+      select: { type: true, odometerKm: true },
+    });
+    const pickupKm =
+      handovers.find((row) => row.type === HANDOVER_TYPE.PICKUP)?.odometerKm ?? null;
+    const returnKm = handovers.find((row) => row.type === HANDOVER_TYPE.RETURN)?.odometerKm ?? null;
+    if (pickupKm == null || returnKm == null || returnKm < pickupKm) {
+      return { ...empty, includedKmPerDay, chargedDays, feePerKm };
+    }
+
+    const actualKm = returnKm - pickupKm;
+    const allowedKm = includedKmPerDay * chargedDays;
+    const excessKm = Math.max(0, actualKm - allowedKm);
+    const amount = new Prisma.Decimal(feePerKm).mul(excessKm);
+
+    return {
+      available: true,
+      includedKmPerDay,
+      chargedDays,
+      allowedKm,
+      actualKm,
+      excessKm,
+      feePerKm,
+      amount: amount.toFixed(2),
+      formula:
+        excessKm > 0
+          ? `Chạy ${actualKm} km, hạn mức ${allowedKm} km (${chargedDays} ngày × ${includedKmPerDay} km) → vượt ${excessKm} km × ${feePerKm}đ/km`
+          : `Chạy ${actualKm} km, trong hạn mức ${allowedKm} km`,
     };
   }
 

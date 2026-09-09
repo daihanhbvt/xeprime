@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
+  VEHICLE_ENERGY_LIMITS,
   APPROVAL_STATUS_VALUES,
   BOOKING_STATUS_VALUES,
   CATALOG_KEY_PATTERN,
@@ -230,6 +231,14 @@ export class VehicleDetailDto extends VehicleListItemDto {
     description: 'Xe điện: số km đi được sau một lần sạc đầy',
   })
   electricRangeKm!: number | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Xe điện: dung lượng pin (kWh)' })
+  batteryCapacityKwh!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Xe điện: mức tiêu thụ điện (kWh/100km)',
+  })
+  electricConsumptionKwhPer100Km!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'L/100km dạng decimal string' })
   fuelConsumptionCity!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'L/100km dạng decimal string' })
@@ -492,9 +501,37 @@ export class CreateVehicleDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  @Min(1)
-  @Max(2000)
+  @Min(VEHICLE_ENERGY_LIMITS.electricRangeKm.min)
+  @Max(VEHICLE_ENERGY_LIMITS.electricRangeKm.max)
   electricRangeKm?: number | null;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    minimum: VEHICLE_ENERGY_LIMITS.batteryCapacityKwh.min,
+    maximum: VEHICLE_ENERGY_LIMITS.batteryCapacityKwh.max,
+    description: 'Xe điện: dung lượng pin (kWh). Gửi null = bỏ khai.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(VEHICLE_ENERGY_LIMITS.batteryCapacityKwh.min)
+  @Max(VEHICLE_ENERGY_LIMITS.batteryCapacityKwh.max)
+  batteryCapacityKwh?: number | null;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    minimum: VEHICLE_ENERGY_LIMITS.electricConsumptionKwhPer100Km.min,
+    maximum: VEHICLE_ENERGY_LIMITS.electricConsumptionKwhPer100Km.max,
+    description: 'Xe điện: mức tiêu thụ điện (kWh/100km). Gửi null = bỏ khai.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(VEHICLE_ENERGY_LIMITS.electricConsumptionKwhPer100Km.min)
+  @Max(VEHICLE_ENERGY_LIMITS.electricConsumptionKwhPer100Km.max)
+  electricConsumptionKwhPer100Km?: number | null;
 
   // Các trường có thể GỠ giá trị (gửi null) — @IsOptional bỏ qua validate khi null,
   // service ghi null xuống DB để xoá (vd đổi ô tô → xe máy thì bỏ kiểu dáng).

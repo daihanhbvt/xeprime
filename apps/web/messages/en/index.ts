@@ -26,6 +26,7 @@ import trips from '@xeprime/domain/messages/en/trips.json';
 import account from '@xeprime/domain/messages/en/account.json';
 import legal from '@xeprime/domain/messages/en/legal.json';
 import support from '@xeprime/domain/messages/en/support.json';
+import listYourVehicle from '@xeprime/domain/messages/en/list-your-vehicle.json';
 import manageCommon from '@xeprime/domain/messages/en/manage-common.json';
 import dashboard from '@xeprime/domain/messages/en/dashboard.json';
 import shopOnboarding from '@xeprime/domain/messages/en/shop-onboarding.json';
@@ -66,6 +67,7 @@ const messages = {
   Account: account,
   Legal: legal,
   Support: support,
+  ListYourVehicle: listYourVehicle,
   ManageCommon: manageCommon,
   Dashboard: dashboard,
   ShopOnboarding: shopOnboarding,

@@ -40,7 +40,6 @@ import {
   StatusSection,
 } from './components/VehicleFormSteps';
 import { informationValuesToInput, mediaValuesToInput, vehicleToFormValues } from './mappers';
-import { sensitiveChanges } from './sensitive-changes';
 import { useUpdateVehicle, useVehicle } from './hooks/use-vehicle';
 import { branchLabel, branchesApi, type UpdateVehicleInput, type VehicleDetail } from './api';
 
@@ -92,8 +91,8 @@ const FIELDS: Record<VehicleEditFormTab, ReadonlyArray<keyof VehicleFormValues>>
  * không mang giá: hai màn ghi đè dữ liệu của nhau là cách chắc chắn để mất ảnh khi sửa biển số.
  *
  * Xe đang CÔNG KHAI mà đổi một trường nhạy cảm (giá, biển số, loại xe, dịch vụ, ảnh đại diện…)
- * sẽ bị đưa về chờ duyệt lại — hộp xác nhận liệt kê đúng những gì đổi, so bằng `sensitiveChanges`
- * (cùng công thức với `hasSensitiveChange` ở backend, nên FE và BE không bao giờ bất đồng).
+ * bị KHOÁ ở năm trường căn cước (ADR 0030); mọi trường khác lưu là hiệu lực ngay. Server trả
+ * `VEHICLE_FIELD_LOCKED` nếu có ai cố sửa trường khoá, và app hiện câu lỗi dùng chung.
  */
 export function VehicleEditFormScreen({
   vehicleId,
@@ -184,7 +183,6 @@ function EditForm({
   const update = useUpdateVehicle(vehicle.id);
 
   const initialValues = useMemo(() => vehicleToFormValues(vehicle), [vehicle]);
-  const [confirmSensitive, setConfirmSensitive] = useState(false);
   const resolver = useValidationResolver<VehicleFormValues>(
     vehicleFormSchema,
     'Vehicles.form.validation',
@@ -260,23 +258,10 @@ function EditForm({
   const isMediaTab = tab === VEHICLE_EDIT_TAB.MEDIA;
 
   /** Gọi ở HAI chỗ (chặn lưu và liệt kê trong hộp xác nhận) — gói một lần thay vì truyền 5 tham số. */
-  const changesOf = (values: VehicleFormValues) =>
-    sensitiveChanges(initialValues, values, fmt, domainLabel, {
-      field: (field) => tSensitive(`fields.${field}`),
-      empty: tSensitive('empty'),
-      imageSet: tSensitive('imageSet'),
-      percent: (value) => tSensitive('percent', { value }),
-    });
-
   async function save() {
     const valid = await trigger([...activeFields]);
     if (!valid) return;
-    const values = getValues();
-    if (isPublic && changesOf(values).length > 0) {
-      setConfirmSensitive(true);
-      return;
-    }
-    await submit(values);
+    await submit(getValues());
   }
 
   async function submit(values: VehicleFormValues) {
@@ -286,14 +271,12 @@ function EditForm({
     try {
       const updated = await update.mutateAsync(body);
       reset(vehicleToFormValues(updated));
-      setConfirmSensitive(false);
       /*
         Câu báo KẾT QUẢ, không phải nhãn nút. Trước đây toast in ra `tActions('saveChanges')` —
         đúng chữ trên nút vừa bấm ("Lưu thay đổi"), nên nó không nói được là đã lưu xong hay chưa.
       */
       toast.showSuccess(t(isMediaTab ? 'saved.media' : 'saved.information'));
     } catch (error) {
-      setConfirmSensitive(false);
       toast.showError(errorMessage(error));
     }
   }
@@ -326,8 +309,12 @@ function EditForm({
             </Text>
           ) : null}
 
-          {/* `showIcon` như mọi `<Alert>` của web — xem `Notice`. */}
-          {isPublic ? <Notice tone="warning" title={t('publicWarning')} /> : null}
+          {/*
+            Xe đang trên chợ: căn cước của nó (biển số · loại xe · hộp số · nhiên liệu · năm sản
+            xuất) bị KHOÁ ở server từ 09/09/2026 (ADR 0030) — sửa sẽ nhận `VEHICLE_FIELD_LOCKED`.
+            Mọi thứ khác, kể cả giá, có hiệu lực ngay và không còn phải duyệt lại.
+          */}
+          {isPublic ? <Notice tone="info" title={t('lockedNotice')} /> : null}
 
           {!isMediaTab ? (
             <>
@@ -388,29 +375,6 @@ function EditForm({
         onCancel={leave.cancel}
       />
 
-      <AlertDialog
-        open={confirmSensitive}
-        title={t('sensitive.title')}
-        // Chỉ tính khi hộp thoại THẬT SỰ mở — mỗi thay đổi qua `fmt.money`/`domainLabel` cho cả
-        // chục trường nhạy cảm, không đáng làm lại ở những render không liên quan (đổi loại xe,
-        // mở hộp thoại bỏ thay đổi, branches refetch…).
-        message={
-          confirmSensitive
-            ? [
-                t('sensitive.body'),
-                ...changesOf(getValues()).map(
-                  (change) =>
-                    `${t('sensitive.change', { label: change.label })} ${change.before} → ${change.after}`,
-                ),
-              ].join('\n')
-            : ''
-        }
-        confirmLabel={t('sensitive.ok')}
-        cancelLabel={tActions('cancel')}
-        loading={update.isPending}
-        onConfirm={() => void submit(getValues())}
-        onCancel={() => setConfirmSensitive(false)}
-      />
     </>
   );
 }

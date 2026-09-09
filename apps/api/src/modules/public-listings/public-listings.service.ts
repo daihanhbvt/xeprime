@@ -681,6 +681,13 @@ export class PublicListingsService {
         description: true,
         color: true,
         manufactureYear: true,
+        // Thông số NĂNG LƯỢNG khách hỏi trước khi đặt (09/09/2026) — xe xăng đọc lít/100km,
+        // xe điện đọc quãng đường mỗi lần sạc; trang xe chỉ hiện cái có nghĩa với loại xe đó.
+        transmission: true,
+        fuelConsumptionCombined: true,
+        electricRangeKm: true,
+        batteryCapacityKwh: true,
+        electricConsumptionKwhPer100Km: true,
         tenant: {
           select: {
             name: true,
@@ -830,6 +837,19 @@ export class PublicListingsService {
       driverSurchargeRules: surchargeRules
         .filter((r) => r.enabled)
         .map((r) => ({ kind: r.kind, unit: r.unit, amount: r.amount, thresholdValue: r.thresholdValue })),
+      mileagePolicy:
+        policy?.values.includedDistanceKmPerDay != null &&
+        policy.values.excessDistanceFeePerKm != null
+          ? {
+              includedKmPerDay: policy.values.includedDistanceKmPerDay,
+              excessFeePerKm: policy.values.excessDistanceFeePerKm,
+            }
+          : null,
+      fuelConsumptionCombined: v.fuelConsumptionCombined?.toFixed(2) ?? null,
+      electricRangeKm: v.electricRangeKm,
+      batteryCapacityKwh: v.batteryCapacityKwh?.toFixed(2) ?? null,
+      electricConsumptionKwhPer100Km: v.electricConsumptionKwhPer100Km?.toFixed(2) ?? null,
+      transmission: v.transmission,
     };
   }
 }

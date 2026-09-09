@@ -9,18 +9,16 @@ import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
 
 import { EmbedMap } from '@/components/data-display/EmbedMap';
 import { NumberField } from '@/components/form/NumberField';
-import { SelectField } from '@/components/form/SelectField';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { BranchFormDialog } from '@/features/branches/components/BranchFormDialog';
 import { useBranches } from '@/features/branches/hooks/use-branches';
 import { PublishRequiredLabel } from '@/features/vehicles/components/VehicleCompleteness';
+import { VehicleEnergyFields } from '@/features/vehicles/components/VehicleEnergyFields';
 import {
   BrandSelect,
   FeaturesSelect,
-  FuelMetricField,
-  FuelTypeSelect,
 } from '@/features/vehicles/components/VehicleFormSections';
 import { useUpdateVehicle } from '@/features/vehicles/hooks/use-vehicle-mutations';
 import { manageInformationValuesToInput, vehicleToFormValues } from '@/features/vehicles/mappers';
@@ -47,6 +45,9 @@ const FIELDS: ReadonlyArray<keyof VehicleFormValues> = [
   'transmission',
   'fuelConsumptionCombined',
   'electricRangeKm',
+  'batteryCapacityKwh',
+  'electricConsumptionKwhPer100Km',
+  'engineDisplacementCc',
   'description',
   'features',
 ];
@@ -73,7 +74,7 @@ export function InformationSection() {
 
   const initialValues = useMemo(() => vehicleToFormValues(vehicle), [vehicle]);
   const resolver = useValidationResolver<VehicleFormValues>(vehicleFormSchema, 'Vehicles.form.validation');
-  const { control, getValues, handleSubmit, reset, setError, trigger, formState } =
+  const { control, getValues, handleSubmit, reset, setError, setValue, trigger, formState } =
     useForm<VehicleFormValues>({ resolver, values: initialValues });
   /** Xe đã lên chợ: căn cước bị khoá (biển số, hộp số, nhiên liệu, năm SX) — server chặn lại. */
   const isPublic = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
@@ -144,29 +145,20 @@ export function InformationSection() {
                   max={64}
                 />
               </Col>
-              <Col xs={24} sm={12}>
-                <SelectField
-                  control={control}
-                  name="transmission"
-                  label={tForm('advanced.transmission')}
-                  options={transmissionOptions}
-                  allowClear
-                  placeholder={tForm('advanced.transmissionPlaceholder')}
-                  help={isPublic ? t('information.lockedField') : undefined}
-                  disabled={!canEdit || isPublic}
-                />
-              </Col>
-              <Col xs={24} sm={12}>
-                <FuelTypeSelect
+              <Col xs={24}>
+                {/*
+                  Nguồn năng lượng và thông số của nó dùng CHUNG khối với hai wizard đăng xe —
+                  cùng ma trận `vehicleEnergySpecPolicy`, nên ba màn không bao giờ hỏi khác nhau.
+                  Nhiên liệu và hộp số bị khoá khi xe đang trên chợ (ADR 0030).
+                */}
+                <VehicleEnergyFields
                   control={control}
                   vehicleType={vehicle.vehicleType}
-                  help={isPublic ? t('information.lockedField') : undefined}
+                  transmissionOptions={transmissionOptions}
+                  lockedNotice={isPublic ? t('information.lockedField') : undefined}
                   disabled={!canEdit || isPublic}
+                  setValue={setValue}
                 />
-              </Col>
-              <Col xs={24} sm={12}>
-                {/* Ô đo lường đổi theo nhiên liệu: lít/100km cho xe xăng, km/lần sạc cho xe điện. */}
-                <FuelMetricField control={control} disabled={!canEdit} />
               </Col>
               <Col xs={24} sm={12}>
                 <BrandSelect control={control} />

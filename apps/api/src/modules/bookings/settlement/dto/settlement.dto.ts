@@ -75,6 +75,32 @@ export class OvertimeSuggestionDto {
   formula!: string | null;
 }
 
+/**
+ * Đề xuất phí VƯỢT KM của chuyến tự lái (09/09/2026).
+ *
+ * Chỉ là ĐỀ XUẤT: chủ xe bấm ghi mới thành phụ phí thật. Hệ thống không tự trừ tiền khách vì
+ * quãng đường thực tế còn phụ thuộc những thứ nó không biết (khách báo trước, chủ xe đồng ý cho
+ * chạy thêm, đồng hồ km hỏng…).
+ *
+ * `available: false` khi thiếu bất kỳ dữ kiện nào — hạn mức, số km lúc giao hoặc lúc nhận lại.
+ * Nói rõ là chưa đủ dữ liệu, KHÔNG dựng một số 0 trông như "không vượt".
+ */
+export class ExcessMileageSuggestionDto {
+  @ApiProperty({ description: 'Có đủ dữ kiện (hạn mức + hai chỉ số đồng hồ) để đề xuất không' })
+  available!: boolean;
+  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Km/ngày trong giá theo snapshot của đơn' })
+  includedKmPerDay!: number | null;
+  @ApiProperty({ description: 'Số ngày tính phí của chuyến' }) chargedDays!: number;
+  @ApiProperty({ description: 'Hạn mức tổng = số ngày × km mỗi ngày' }) allowedKm!: number;
+  @ApiProperty({ description: 'Km thực tế đã chạy (đồng hồ trả − đồng hồ giao)' }) actualKm!: number;
+  @ApiProperty({ description: 'Km vượt hạn mức (không âm)' }) excessKm!: number;
+  @ApiPropertyOptional({ type: String, nullable: true }) feePerKm!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tiền đề xuất' })
+  amount!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Diễn giải công thức' })
+  formula!: string | null;
+}
+
 // ── Hoàn cọc ────────────────────────────────────────────────────────────────
 
 export class DepositRefundDto {
@@ -124,6 +150,10 @@ export class BookingSettlementDto {
    */
   @ApiProperty({ type: [SettlementSurchargeRuleDto] })
   surchargeRules!: SettlementSurchargeRuleDto[];
+
+  /** Đề xuất phí vượt km — chủ xe xác nhận mới thành khoản thật. */
+  @ApiProperty({ type: ExcessMileageSuggestionDto })
+  excessMileage!: ExcessMileageSuggestionDto;
 }
 
 export class RecordDepositRefundDto {
