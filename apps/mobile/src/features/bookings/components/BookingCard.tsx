@@ -5,6 +5,7 @@ import { useTranslations } from 'use-intl';
 import { BOOKING_STATUS_META, type BookingStatus } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { Card } from '@/components/ui/Card';
+import { CardAccent } from '@/components/ui/CardAccent';
 import { DetailChevron } from '@/components/ui/DetailArrow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -21,6 +22,11 @@ import type { BookingListItem } from '../api';
  *
  * KHÔNG dùng `DataRow`: cột nhãn cố định của nó tiêu một phần ba bề ngang cho hai từ mà người đọc
  * đã biết trước. Icon dẫn dòng thay cột nhãn nên mỗi dữ kiện gói trong ĐÚNG một dòng.
+ *
+ * **Vạch màu trạng thái ở mép trái** — cùng ngôn ngữ với thẻ Chi nhánh · Tài xế · Nhân sự · Khách
+ * hàng. Trên một danh sách đơn, thứ người vận hành tìm là CỤM: đơn nào đang chạy, đơn nào quá hạn
+ * trả, đơn nào vừa huỷ. Một mép màu liền mạch cho phép lướt bắt cụm đó mà không phải đọc từng
+ * viên nhãn ở đầu bên kia thẻ. Viên nhãn vẫn còn nguyên — vạch là lối vào nhanh, KHÔNG thay chữ.
  */
 function BookingCardImpl({
   booking,
@@ -47,73 +53,81 @@ function BookingCardImpl({
   const open = useCallback(() => onPress(booking), [onPress, booking]);
 
   return (
-    <Card onPress={open} accessibilityLabel={`${booking.customerName}${LIST_SEPARATOR}${booking.code}`}>
-      <YStack gap={space.sm}>
-        <XStack ai="flex-start" jc="space-between" gap={space.sm}>
-          <YStack f={1} gap={2}>
-            <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold} numberOfLines={1}>
-              {booking.customerName}
-            </Text>
-            <Text col={colors.textMuted} fos={fontSize.bodySm} numberOfLines={1}>
-              {identity}
-            </Text>
-          </YStack>
-          <StatusBadge
-            label={domainLabel('bookingStatus', status, meta.label)}
-            color={meta.color}
-            size="sm"
-          />
-        </XStack>
+    <Card
+      padded={false}
+      onPress={open}
+      accessibilityLabel={`${booking.customerName}${LIST_SEPARATOR}${booking.code}`}
+    >
+      <XStack>
+        <CardAccent color={meta.color} />
 
-        <YStack height={1} bg={colors.borderSubtle} />
-
-        <YStack gap={space.xs}>
-          <FactLine icon="car-outline">
-            {/* Tên xe co lại, BIỂN SỐ thì không — biển số mới là thứ định danh chiếc xe ngoài bãi. */}
-            <Text
-              col={colors.text}
-              fos={fontSize.bodySm}
-              fow={fontWeight.medium}
-              numberOfLines={1}
-              f={1}
-            >
-              {booking.vehicleName}
-            </Text>
-            {booking.vehiclePlate ? (
-              <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                {booking.vehiclePlate}
+        <YStack f={1} minWidth={0} p={space.md} gap={space.sm}>
+          <XStack ai="flex-start" jc="space-between" gap={space.sm}>
+            <YStack f={1} gap={2}>
+              <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold} numberOfLines={1}>
+                {booking.customerName}
               </Text>
-            ) : null}
-          </FactLine>
-
-          <FactLine icon="time-outline">
-            <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1} f={1}>
-              {fmt.shortDateTimeRange(booking.pickupAt, booking.returnAt)}
-            </Text>
-          </FactLine>
-        </YStack>
-
-        <YStack height={1} bg={colors.borderSubtle} />
-
-        {/*
-          Mũi tên `>` cuối hàng tổng tiền — DẤU HIỆU thẻ mở ra được, không phải một nút nữa.
-
-          Cả thẻ đã là đích chạm, nên một nút "Xem chi tiết" ở chân thẻ chỉ là lối vào thứ hai cho
-          đúng một việc, lại còn nặng bằng một hành động chính. Mũi tên đứng ở đây chứ không nổi
-          tuyệt đối ở góc trên: góc trên là chỗ của nhãn trạng thái, hai thứ chồng nhau.
-        */}
-        <XStack ai="center" jc="space-between" gap={space.sm}>
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {t('card.total')}
-          </Text>
-          <XStack ai="center" gap={space.xs}>
-            <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
-              {fmt.money(booking.totalAmount)}
-            </Text>
-            <DetailChevron />
+              <Text col={colors.textMuted} fos={fontSize.bodySm} numberOfLines={1}>
+                {identity}
+              </Text>
+            </YStack>
+            <StatusBadge
+              label={domainLabel('bookingStatus', status, meta.label)}
+              color={meta.color}
+              size="sm"
+            />
           </XStack>
-        </XStack>
-      </YStack>
+
+          <YStack height={1} bg={colors.borderSubtle} />
+
+          <YStack gap={space.xs}>
+            <FactLine icon="car-outline">
+              {/* Tên xe co lại, BIỂN SỐ thì không — biển số mới là thứ định danh chiếc xe ngoài bãi. */}
+              <Text
+                col={colors.text}
+                fos={fontSize.bodySm}
+                fow={fontWeight.medium}
+                numberOfLines={1}
+                f={1}
+              >
+                {booking.vehicleName}
+              </Text>
+              {booking.vehiclePlate ? (
+                <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                  {booking.vehiclePlate}
+                </Text>
+              ) : null}
+            </FactLine>
+
+            <FactLine icon="time-outline">
+              <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1} f={1}>
+                {fmt.shortDateTimeRange(booking.pickupAt, booking.returnAt)}
+              </Text>
+            </FactLine>
+          </YStack>
+
+          <YStack height={1} bg={colors.borderSubtle} />
+
+          {/*
+            Mũi tên `>` cuối hàng tổng tiền — DẤU HIỆU thẻ mở ra được, không phải một nút nữa.
+
+            Cả thẻ đã là đích chạm, nên một nút "Xem chi tiết" ở chân thẻ chỉ là lối vào thứ hai cho
+            đúng một việc, lại còn nặng bằng một hành động chính. Mũi tên đứng ở đây chứ không nổi
+            tuyệt đối ở góc trên: góc trên là chỗ của nhãn trạng thái, hai thứ chồng nhau.
+          */}
+          <XStack ai="center" jc="space-between" gap={space.sm}>
+            <Text col={colors.textMuted} fos={fontSize.label}>
+              {t('card.total')}
+            </Text>
+            <XStack ai="center" gap={space.xs}>
+              <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
+                {fmt.money(booking.totalAmount)}
+              </Text>
+              <DetailChevron />
+            </XStack>
+          </XStack>
+        </YStack>
+      </XStack>
     </Card>
   );
 }

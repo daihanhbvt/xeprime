@@ -1,6 +1,11 @@
 import viNavigation from '@xeprime/domain/messages/vi/navigation.json';
 import enNavigation from '@xeprime/domain/messages/en/navigation.json';
-import { isManageNavBranch, manageNavForScope, type ManageNavLeaf } from './manage-nav';
+import {
+  isManageNavBranch,
+  manageNavForScope,
+  matchActiveHref,
+  type ManageNavLeaf,
+} from './manage-nav';
 
 /**
  * Cây menu khu quản lý — hai bất biến, cả hai đều đã từng gãy trên máy thật.
@@ -66,5 +71,47 @@ describe('manage-nav — không mục nào trỏ tới chỗ chưa dựng', () =
     const keys = ALL_LEAVES.map((leaf) => leaf.key);
     expect(keys).not.toContain('pickup-areas');
     expect(keys).not.toContain('trash');
+  });
+});
+
+/**
+ * Mục menu đang mở — bug thật ngày 09/09/2026: vào Chi nhánh thì "Cửa hàng" cũng sáng.
+ *
+ * Nguyên nhân là so từng mục bằng `startsWith`, mà `/manage/shop/branches` bắt đầu bằng cả
+ * `/manage/shop`. Web không dính vì `matchSelectedKey` chọn tiền tố DÀI NHẤT; app nay dùng đúng
+ * luật đó.
+ */
+describe('matchActiveHref — đúng MỘT mục sáng', () => {
+  const LEAVES = leavesOf(manageNavForScope(false));
+  const HOME = '/manage';
+  const active = (pathname: string) => matchActiveHref(pathname, LEAVES, HOME);
+
+  it('trang con thắng trang cha: /manage/shop/branches KHÔNG làm Cửa hàng sáng', () => {
+    expect(active('/manage/shop/branches')).toBe('/manage/shop/branches');
+  });
+
+  it('/manage/shop/policies cũng vậy', () => {
+    expect(active('/manage/shop/policies')).toBe('/manage/shop/policies');
+  });
+
+  it('chính trang cha thì cha sáng', () => {
+    expect(active('/manage/shop')).toBe('/manage/shop');
+  });
+
+  it('trang con KHÔNG có mục menu riêng vẫn sáng mục gần nhất', () => {
+    expect(active('/manage/vehicles/new')).toBe('/manage/vehicles');
+  });
+
+  it('Tổng quan chỉ khớp tuyệt đối — nếu không thì trang nào cũng làm nó sáng', () => {
+    expect(active('/manage')).toBe('/manage');
+    expect(active('/manage/vehicles')).not.toBe('/manage');
+  });
+
+  it('đường dẫn ngoài khu quản lý: không mục nào sáng', () => {
+    expect(active('/explore')).toBeNull();
+  });
+
+  it('KHÔNG khớp theo tiền tố chuỗi cụt: /manage/shopping không phải /manage/shop', () => {
+    expect(active('/manage/shopping')).toBeNull();
   });
 });

@@ -1,14 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useMemo, useState } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { Button } from '@/components/ui/Button';
+import { SearchInput } from '@/components/ui/SearchInput';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { useAssignableDrivers } from '../hooks/use-bookings';
 import type { AssignableDriver, BookingDetail } from '../api';
+
+/** Dưới ngưỡng này thì cả danh sách vừa một màn — ô tìm chỉ tổ thêm một bước. */
+const SEARCH_THRESHOLD = 5;
 
 /**
  * Gán tài xế cho một đơn (BKG-12).
@@ -19,23 +23,32 @@ import type { AssignableDriver, BookingDetail } from '../api';
  * Hai cờ cảnh báo đến từ server, không suy ở client: `busy` (có đơn sống giao nhau với khung
  * giờ) và `licenseExpired` (GPLX hết hạn trước ngày trả). Cả hai chỉ CẢNH BÁO — gian hàng vẫn
  * gán được, vì họ biết chuyện mà hệ thống không biết (tài xế đã đổi lịch, bằng vừa gia hạn).
+ *
+ * Tấm này CHỈ chọn người. "Bỏ gán" nằm ở hàng tài xế trên màn đơn, cùng chỗ với "Đổi" — đúng
+ * như web, và vì đó là hai việc khác nhau: bỏ gán không cần mở danh sách nào cả. Có ở cả hai
+ * nơi thì cùng một việc có hai lối, và lối trong tấm chọn là lối không ai tìm tới.
+ *
+ * Lọc bằng ô tìm ngay TRONG danh sách đã tải, không gọi lại API: đây là bản native của
+ * `showSearch` + `optionFilterProp="label"` trên `Select` của web, vốn cũng lọc trên đúng bộ
+ * option đã nạp. `/drivers/assignable` trả trọn danh sách đang hoạt động nên không có trang
+ * nào để tải thêm — hỏi lại server chỉ tốn một vòng mạng cho cùng một câu trả lời.
  */
 export function AssignDriverSheet({
   open,
   onClose,
   booking,
+  pending = false,
   onSelect,
-  onUnassign,
-  loading,
 }: {
   open: boolean;
   onClose: () => void;
   booking: BookingDetail;
+  /** `assignDriver.isPending` — khoá cả danh sách trong lúc PATCH đang chạy, chống bấm đúp. */
+  pending?: boolean;
   onSelect: (driverId: string) => void;
-  onUnassign: () => void;
-  loading: boolean;
 }) {
   const t = useTranslations('Bookings.driver');
+  const [search, setSearch] = useState('');
 
   const query = useAssignableDrivers(
     {
@@ -46,17 +59,33 @@ export function AssignDriverSheet({
     open,
   );
 
+  /* Khớp theo TÊN hoặc SỐ ĐIỆN THOẠI — người trực thường nhớ số trước khi nhớ tên đầy đủ. */
+  const drivers = useMemo(() => {
+    const all = query.data ?? [];
+    const needle = search.trim().toLocaleLowerCase();
+    if (!needle) return all;
+    return all.filter(
+      (driver) => driver.name.toLocaleLowerCase().includes(needle) || driver.phone.includes(needle),
+    );
+  }, [query.data, search]);
+
+  const total = query.data?.length ?? 0;
+
   return (
-    <BottomSheet
-      open={open}
-      onClose={onClose}
-      title={t('sheetTitle')}
-      footer={
-        booking.driver ? (
-          <Button label={t('unassign')} variant="danger" loading={loading} onPress={onUnassign} />
-        ) : undefined
-      }
-    >
+    <BottomSheet open={open} onClose={onClose} title={t('sheetTitle')}>
+      {/*
+        Ô tìm chỉ có nghĩa khi danh sách đủ dài để phải tìm. Một gian hàng ba tài xế mà vẫn bắt
+        đọc qua một ô nhập trước khi thấy ba cái tên là thêm một bước cho không.
+      */}
+      {total > SEARCH_THRESHOLD ? (
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          label={t('searchLabel')}
+          placeholder={t('searchPlaceholder')}
+        />
+      ) : null}
+
       {query.isPending ? (
         <YStack gap={space.sm}>
           <Skeleton height={56} />
@@ -67,16 +96,22 @@ export function AssignDriverSheet({
         <Text col={colors.textMuted} fos={fontSize.bodySm}>
           {t('errorTitle')}
         </Text>
-      ) : (query.data?.length ?? 0) === 0 ? (
+      ) : total === 0 ? (
         <Text col={colors.textMuted} fos={fontSize.bodySm}>
           {t('empty')}
         </Text>
+      ) : drivers.length === 0 ? (
+        /* Tìm hụt KHÁC gian hàng chưa có tài xế nào — hai câu, không gộp. */
+        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          {t('searchEmpty', { query: search.trim() })}
+        </Text>
       ) : (
-        query.data?.map((driver) => (
+        drivers.map((driver) => (
           <DriverRow
             key={driver.id}
             driver={driver}
             selected={booking.driver?.id === driver.id}
+            disabled={pending}
             onPress={() => onSelect(driver.id)}
           />
         ))
@@ -88,10 +123,13 @@ export function AssignDriverSheet({
 function DriverRow({
   driver,
   selected,
+  disabled = false,
   onPress,
 }: {
   driver: AssignableDriver;
   selected: boolean;
+  /** Có PATCH gán tài xế đang chạy — khoá cả hàng để một cú bấm đúp không bắn hai request. */
+  disabled?: boolean;
   onPress: () => void;
 }) {
   const t = useTranslations('Bookings.driver');
@@ -107,7 +145,7 @@ function DriverRow({
    * Giấu đi thì người phân công tưởng tài xế đó không tồn tại và đi tìm mãi; để bấm được thì
    * hoặc ăn 409, hoặc tệ hơn là gán trúng một người đang bận xe khác.
    */
-  const unavailable = driver.busy || driver.licenseExpired;
+  const unavailable = driver.busy || driver.licenseExpired || disabled;
 
   return (
     <Pressable

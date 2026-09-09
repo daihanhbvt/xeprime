@@ -62,6 +62,7 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     fuelConsumptionCity: values.fuelConsumptionCity ?? undefined,
     fuelConsumptionHighway: values.fuelConsumptionHighway ?? undefined,
     fuelConsumptionCombined: values.fuelConsumptionCombined ?? undefined,
+    electricRangeKm: values.electricRangeKm ?? undefined,
     weekdayPrice: values.weekdayPrice == null ? undefined : String(values.weekdayPrice),
     weekendPrice: values.weekendPrice == null ? undefined : String(values.weekendPrice),
     hourlyPrice: values.hourlyPrice == null ? null : String(values.hourlyPrice),
@@ -130,8 +131,7 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
     withDriverDailyPrice: v.withDriverDailyPrice == null ? null : Number(v.withDriverDailyPrice),
     withDriverInterCityPrice:
       v.withDriverInterCityPrice == null ? null : Number(v.withDriverInterCityPrice),
-    withDriverOneWayPrice:
-      v.withDriverOneWayPrice == null ? null : Number(v.withDriverOneWayPrice),
+    withDriverOneWayPrice: v.withDriverOneWayPrice == null ? null : Number(v.withDriverOneWayPrice),
     deliveryEnabled: v.deliveryEnabled,
     discountPercent: v.discountPercent ?? null,
     description: v.description ?? '',
@@ -172,6 +172,7 @@ export function informationValuesToInput(values: VehicleFormValues): UpdateVehic
     fuelConsumptionCity: values.fuelConsumptionCity,
     fuelConsumptionHighway: values.fuelConsumptionHighway,
     fuelConsumptionCombined: values.fuelConsumptionCombined,
+    electricRangeKm: values.electricRangeKm,
   };
 }
 

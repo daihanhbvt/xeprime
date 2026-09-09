@@ -67,6 +67,7 @@
     "phoneInvalid": "Invalid phone number",
     "emailInvalid": "Invalid email address"
   },
+  "created": "Shop created. Complete the profile, then submit it for review.",
   "ownerVariant": {
     "title": "Set up your host profile",
     "intro": "Your contact details and pick-up address. You can change them any time."

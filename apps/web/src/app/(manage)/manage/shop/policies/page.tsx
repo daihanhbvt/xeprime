@@ -3,16 +3,12 @@
 import { CheckCircleOutlined, CarOutlined, DashboardOutlined } from '@ant-design/icons';
 import { App, Button, Result, Skeleton, Tabs } from 'antd';
 import Link from 'next/link';
+import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
-import {
-  PERMISSION,
-  VEHICLE_TYPE,
-  VEHICLE_TYPE_LABEL,
-  VEHICLE_TYPE_VALUES,
-  type VehicleType,
-} from '@xeprime/types';
+import { PERMISSION, VEHICLE_TYPE, VEHICLE_TYPE_VALUES, type VehicleType } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { PolicyInfoTip } from '@/features/rental-policies/components/PolicyInfoTip';
@@ -24,6 +20,8 @@ import styles from './page.module.css';
 
 /** Chính sách mặc định tách riêng theo loại xe; đơn đã chốt luôn giữ snapshot ở backend. */
 export default function ShopPoliciesPage() {
+  const t = useTranslations('Shop.policies');
+  const tShop = useTranslations('Shop');
   const { has } = usePermissions();
   const canView = has(PERMISSION.TENANT_VIEW);
   const canEdit = has(PERMISSION.TENANT_UPDATE);
@@ -32,12 +30,12 @@ export default function ShopPoliciesPage() {
     return (
       <PermissionState
         kind="forbidden"
-        title="Không có quyền truy cập"
-        description="Bạn cần quyền dưới đây để xem chính sách thuê của gian hàng."
+        title={t('forbidden.title')}
+        description={t('forbidden.description')}
         missingPermissions={[PERMISSION.TENANT_VIEW]}
         action={
           <Link href={ROUTES.MANAGE.ROOT}>
-            <Button type="primary">Về trang chủ</Button>
+            <Button type="primary">{tShop('page.forbidden.backHome')}</Button>
           </Link>
         }
       />
@@ -46,10 +44,7 @@ export default function ShopPoliciesPage() {
 
   return (
     <div className={styles.page}>
-      <ManagePageHeader
-        title="Chính sách thuê mặc định"
-        subtitle="Thiết lập các quy định và chi phí áp dụng mặc định cho mọi đơn thuê."
-      />
+      <ManagePageHeader title={t('title')} subtitle={t('subtitle')} />
       <PolicyWorkspace canEdit={canEdit} />
     </div>
   );
@@ -57,11 +52,20 @@ export default function ShopPoliciesPage() {
 
 /** Một workspace theo loại xe: query, mutation và form không bị lẫn dữ liệu giữa hai tab. */
 function PolicyWorkspace({ canEdit }: { canEdit: boolean }) {
+  const t = useTranslations('Shop.policies');
+  const tCommon = useTranslations('Common');
+  const locale = useLocale();
+  const domainLabel = useDomainLabel();
   const { message } = App.useApp();
   const [vehicleType, setVehicleType] = useState<VehicleType>(VEHICLE_TYPE.CAR);
   const { data, isLoading, isError, refetch } = useShopPolicy(vehicleType);
   const save = useSaveShopPolicy(vehicleType);
-  const vehicleLabel = VEHICLE_TYPE_LABEL[vehicleType].toLowerCase();
+  /*
+   * Nhãn loại xe dựng lúc RENDER qua `Domain.vehicleType`, không lấy từ `VEHICLE_TYPE_LABEL`:
+   * bảng đó là chuỗi tiếng Việt đóng băng ở module scope, nên giao diện tiếng Anh vẫn hiện
+   * "Ô tô" — và ở SSR nó còn đóng băng ngôn ngữ của request ĐẦU TIÊN trong tiến trình.
+   */
+  const vehicleLabel = domainLabel('vehicleType', vehicleType).toLocaleLowerCase(locale);
 
   return (
     <>
@@ -70,16 +74,10 @@ function PolicyWorkspace({ canEdit }: { canEdit: boolean }) {
           {data ? (
             <span className={styles.appliedPill}>
               <CheckCircleOutlined aria-hidden="true" />
-              <span>
-                Đã áp dụng cho {data.inheritingVehicles} {vehicleLabel}
-              </span>
+              <span>{t('applied', { count: data.inheritingVehicles, vehicle: vehicleLabel })}</span>
               {data.overriddenVehicles > 0 ? (
-                <PolicyInfoTip
-                  label="Giải thích phạm vi áp dụng chính sách"
-                  placement="bottomRight"
-                >
-                  {data.overriddenVehicles} xe đang dùng chính sách riêng nên không kế thừa bộ chính
-                  sách mặc định này.
+                <PolicyInfoTip label={t('appliedTipLabel')} placement="bottomRight">
+                  {t('overridden', { count: data.overriddenVehicles })}
                 </PolicyInfoTip>
               ) : null}
             </span>
@@ -99,7 +97,7 @@ function PolicyWorkspace({ canEdit }: { canEdit: boolean }) {
                 ) : (
                   <DashboardOutlined aria-hidden="true" />
                 )}
-                {VEHICLE_TYPE_LABEL[value]}
+                {domainLabel('vehicleType', value)}
               </span>
             ),
           }))}
@@ -109,10 +107,10 @@ function PolicyWorkspace({ canEdit }: { canEdit: boolean }) {
       {isError && !data ? (
         <Result
           status="error"
-          title="Không tải được chính sách thuê"
+          title={t('loadError')}
           extra={
             <Button type="primary" onClick={() => void refetch()}>
-              Thử lại
+              {tCommon('actions.retry')}
             </Button>
           }
         />
@@ -133,7 +131,7 @@ function PolicyWorkspace({ canEdit }: { canEdit: boolean }) {
           onSubmit={(body) =>
             save.mutate(body, {
               onSuccess: () =>
-                message.success(`Đã lưu chính sách thuê cho ${VEHICLE_TYPE_LABEL[vehicleType]}`),
+                message.success(t('saved', { vehicle: domainLabel('vehicleType', vehicleType) })),
               onError: (error) => message.error(getErrorMessage(error)),
             })
           }

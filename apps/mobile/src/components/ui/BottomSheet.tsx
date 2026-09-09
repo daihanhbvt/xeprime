@@ -75,7 +75,14 @@ export function BottomSheet({
           borderTopWidth={1}
           borderColor={colors.borderSubtle}
           ov="hidden"
-          pb={insets.bottom}
+          /*
+            Lề đáy có SÀN, không chỉ là safe-area inset.
+
+            Trong `Modal` của Android, `useSafeAreaInsets()` trả bottom = 0 dù thanh điều hướng
+            vẫn đè lên tấm trượt — nên lề bằng đúng inset cho ra 0, và MỤC CUỐI của danh sách
+            nằm khuất dưới thanh đó. Lấy max với một lề thật để dòng cuối luôn có chỗ thở.
+          */
+          pb={Math.max(insets.bottom, space.md)}
         >
           <YStack ai="center" pt={space.sm}>
             <YStack w={space.xl} h={space.xs} br={radius.pill} bg={colors.borderInput} />

@@ -18,6 +18,13 @@ import enBranches from '@xeprime/domain/messages/en/branches.json';
 import enCustomers from '@xeprime/domain/messages/en/customers.json';
 import enFinance from '@xeprime/domain/messages/en/finance.json';
 import enMaintenance from '@xeprime/domain/messages/en/maintenance.json';
+import enDashboard from '@xeprime/domain/messages/en/dashboard.json';
+import enDrivers from '@xeprime/domain/messages/en/drivers.json';
+import enLegal from '@xeprime/domain/messages/en/legal.json';
+import enMembers from '@xeprime/domain/messages/en/members.json';
+import enShop from '@xeprime/domain/messages/en/shop.json';
+import enShopOnboarding from '@xeprime/domain/messages/en/shop-onboarding.json';
+import enShops from '@xeprime/domain/messages/en/shops.json';
 import viBookingRequests from '@xeprime/domain/messages/vi/booking-requests.json';
 import viBookings from '@xeprime/domain/messages/vi/bookings.json';
 import viChat from '@xeprime/domain/messages/vi/chat.json';
@@ -38,6 +45,13 @@ import viBranches from '@xeprime/domain/messages/vi/branches.json';
 import viCustomers from '@xeprime/domain/messages/vi/customers.json';
 import viFinance from '@xeprime/domain/messages/vi/finance.json';
 import viMaintenance from '@xeprime/domain/messages/vi/maintenance.json';
+import viDashboard from '@xeprime/domain/messages/vi/dashboard.json';
+import viDrivers from '@xeprime/domain/messages/vi/drivers.json';
+import viLegal from '@xeprime/domain/messages/vi/legal.json';
+import viMembers from '@xeprime/domain/messages/vi/members.json';
+import viShop from '@xeprime/domain/messages/vi/shop.json';
+import viShopOnboarding from '@xeprime/domain/messages/vi/shop-onboarding.json';
+import viShops from '@xeprime/domain/messages/vi/shops.json';
 import { type AppLocale } from './config';
 
 /**
@@ -78,6 +92,13 @@ export const MESSAGES = {
     Customers: viCustomers,
     Finance: viFinance,
     Maintenance: viMaintenance,
+    Dashboard: viDashboard,
+    Drivers: viDrivers,
+    Legal: viLegal,
+    Members: viMembers,
+    Shop: viShop,
+    ShopOnboarding: viShopOnboarding,
+    Shops: viShops,
     MobileShell: viMobileShell,
   },
   en: {
@@ -100,6 +121,13 @@ export const MESSAGES = {
     Customers: enCustomers,
     Finance: enFinance,
     Maintenance: enMaintenance,
+    Dashboard: enDashboard,
+    Drivers: enDrivers,
+    Legal: enLegal,
+    Members: enMembers,
+    Shop: enShop,
+    ShopOnboarding: enShopOnboarding,
+    Shops: enShops,
     MobileShell: enMobileShell,
   },
 } as const satisfies Record<AppLocale, unknown>;

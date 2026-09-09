@@ -18,6 +18,7 @@
     "search": "Search",
     "filter": "Filters",
     "reset": "Reset",
+    "undo": "Undo",
     "clear": "Clear filters",
     "back": "Back",
     "next": "Continue",
@@ -90,7 +91,9 @@
     "updatedAt": "Updated",
     "comingSoon": "Coming soon",
     "emptyValue": "—",
-    "selectDate": "Select date"
+    "selectDate": "Select date",
+    "enabled": "On",
+    "disabled": "Off"
   },
   "units": {
     "day": "{count, plural, one {# day} other {# days}}",
@@ -249,5 +252,12 @@
   "permissions": {
     "cameraDenied": "Camera access is off. Open Settings → XePrime and allow Camera.",
     "libraryDenied": "Photo access is off. Open Settings → XePrime and allow Photos."
+  },
+  "image": {
+    "takePhoto": "Take a photo",
+    "chooseFromLibrary": "Choose from library",
+    "changeImage": "Change photo",
+    "addImage": "Add photo",
+    "removeImage": "Remove photo"
   }
 }

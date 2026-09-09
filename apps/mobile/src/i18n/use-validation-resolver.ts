@@ -31,19 +31,46 @@ export function useValidationResolver<T extends FieldValues>(
 }
 
 /**
+ * Ngăn cách MÃ và tham số trong message của schema: `tiersGap::{"last":5,"radius":10}`.
+ *
+ * Phần lớn câu lỗi là hằng nên chỉ cần một mã. Số ít câu nhắc lại CHÍNH con số người dùng vừa gõ
+ * ("khoảng trống giữa mốc 5 km và 10 km") thì không thể dựng sẵn ở schema — nơi không có ngôn
+ * ngữ nào cả — nên schema gửi kèm tham số ở đây, và chỗ này ghép chúng vào bản dịch.
+ */
+const PARAMS_SEPARATOR = '::';
+
+/**
  * Đệ quy vì `contractFiles` là mảng object — lỗi lồng nhau vẫn phải qua đúng một chỗ dịch.
  *
  * `message` của yup là chuỗi ĐỘNG (đọc từ schema lúc chạy), nên không khớp kiểu union tĩnh mà
- * `useTranslations` yêu cầu cho `t.has`/`t` — ép kiểu ở đúng hai lời gọi đó, không phải né kiểu
- * cho cả hàm.
+ * `useTranslations` yêu cầu cho `t.has`/`t` — ép kiểu ở đúng những lời gọi đó, không phải né
+ * kiểu cho cả hàm.
  */
 function translateErrors(errors: Record<string, unknown>, t: ReturnType<typeof useTranslations>): void {
   for (const value of Object.values(errors)) {
     if (!value || typeof value !== 'object') continue;
     const err = value as { message?: unknown };
-    if (typeof err.message === 'string' && t.has(err.message as never)) {
-      err.message = t(err.message as never);
+    if (typeof err.message === 'string') {
+      const translated = translateMessage(err.message, t);
+      if (translated != null) err.message = translated;
     }
     translateErrors(value as Record<string, unknown>, t);
+  }
+}
+
+/** `null` = không phải mã của namespace này; giữ nguyên chuỗi gốc, y hệt hành vi cũ. */
+function translateMessage(
+  raw: string,
+  t: ReturnType<typeof useTranslations>,
+): string | null {
+  const at = raw.indexOf(PARAMS_SEPARATOR);
+  const code = at === -1 ? raw : raw.slice(0, at);
+  if (!t.has(code as never)) return null;
+  if (at === -1) return t(code as never);
+  try {
+    return t(code as never, JSON.parse(raw.slice(at + PARAMS_SEPARATOR.length)));
+  } catch {
+    // Tham số hỏng thì vẫn phải ra được một câu đọc được, không phải một mã trần.
+    return t(code as never);
   }
 }

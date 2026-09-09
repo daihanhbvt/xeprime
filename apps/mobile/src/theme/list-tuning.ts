@@ -38,3 +38,20 @@ export const LIST_TUNING = {
    */
   removeClippedSubviews: Platform.OS === 'android',
 } as const;
+
+/**
+ * Cùng cửa sổ dựng, nhưng KHÔNG cắt subview — dành cho danh sách có thẻ CAO kèm ảnh lớn.
+ *
+ * `removeClippedSubviews` tính vùng cắt theo khung của view cha, và phép tính đó sai đúng ở
+ * những cell cao hơn hẳn phần còn lại: nửa dưới của thẻ (khối chỉ số, thanh thao tác) và cả tấm
+ * ảnh bị tháo khỏi cây native trong khi mắt vẫn đang nhìn thấy chỗ đó — ra "thẻ trắng" lúc cuộn.
+ * Đây là cùng một lỗi mà docblock trên đã ghi cho iOS, chỉ khác là thẻ càng cao thì Android càng
+ * dính.
+ *
+ * Đổi lại là ít bộ nhớ tiết kiệm hơn, nhưng `windowSize: 7` đã chặn số hàng sống cùng lúc rồi —
+ * còn một thẻ trống thì không có cách nào chữa từ phía người dùng.
+ */
+export const MEDIA_LIST_TUNING = {
+  ...LIST_TUNING,
+  removeClippedSubviews: false,
+} as const;

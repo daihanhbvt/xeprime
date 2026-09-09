@@ -1,6 +1,6 @@
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import type { MaintenanceBoardItem } from '@xeprime/api-client';
+import type { MaintenanceBoardItem } from '@/api/vehicle-maintenance/api';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { BottomSheet } from '@/components/ui/BottomSheet';

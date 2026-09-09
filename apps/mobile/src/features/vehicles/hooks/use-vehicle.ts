@@ -117,17 +117,10 @@ export function useSaveVehicleSource(vehicleId: string) {
   });
 }
 
-/**
- * Chính sách thuê MẶC ĐỊNH của gian hàng, theo LOẠI XE.
+/*
+ * `useShopPolicy` đã DỜI sang `features/rental-policies/hooks/use-shop-policy.ts` (SHP-04).
  *
- * Xe mới kế thừa nguyên bộ này (cọc, giao nhận, phí quá giờ, ưu đãi dài hạn) nên bước Giá của
- * luồng tạo phải cho xem trước — người dùng cần biết mình đang nhận cái gì trước khi bấm tạo.
- * Ô tô và xe máy là hai bộ riêng, nên `vehicleType` nằm trong query key.
+ * Chính sách mặc định là dữ liệu của GIAN HÀNG, không của một chiếc xe: từ khi có màn cấu hình
+ * riêng, để nó ở đây nghĩa là hai feature cùng sở hữu một khái niệm — và bản thứ hai sẽ mọc ra ở
+ * lần cần đọc tiếp theo. Bước Giá của luồng thêm xe import thẳng từ chủ sở hữu mới.
  */
-export function useShopPolicy(vehicleType: string, enabled = true) {
-  return useQuery({
-    queryKey: queryKeys.rentalPolicies.shop(vehicleType),
-    queryFn: () => vehiclesApi.shopPolicy(vehicleType),
-    enabled,
-  });
-}

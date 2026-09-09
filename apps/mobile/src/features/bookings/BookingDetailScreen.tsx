@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Linking, Pressable, StyleSheet } from 'react-native';
@@ -21,6 +21,7 @@ import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { DataRow } from '@/components/ui/DataRow';
+import { IconButton } from '@/components/ui/IconButton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -31,7 +32,7 @@ import { queryKeys } from '@/queries/query-keys';
 import { useHandoverContext } from '@/features/handovers/hooks/use-handovers';
 import { useCreateContract } from '@/features/contracts/hooks/use-contract';
 import { RecordPaymentSheet } from '@/features/settlement/components/RecordPaymentSheet';
-import { isZeroMoney, toAppTz } from '@xeprime/domain';
+import { isZeroMoney, LIST_SEPARATOR, toAppTz } from '@xeprime/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -180,6 +181,19 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
 
   const transition = useTransitionBooking(booking.id);
   const assignDriver = useAssignDriver(booking.id);
+
+  /*
+   * Bỏ gán KHÔNG hỏi lại, đúng như web: nó gỡ một liên kết, không xoá gì, và gán lại chỉ mất
+   * hai chạm. Một hộp xác nhận cho việc hoàn tác được là một bước thừa lặp mỗi ngày.
+   */
+  const unassignDriver = useCallback(
+    () =>
+      assignDriver.mutate(null, {
+        onSuccess: () => toast.showSuccess(t('driver.unassignSuccess')),
+        onError: (error) => toast.showError(errorMessage(error)),
+      }),
+    [assignDriver, errorMessage, t, toast],
+  );
   const updateFee = useUpdateDeliveryFee(booking.id);
 
   const status = booking.status as BookingStatus;
@@ -408,55 +422,119 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
               <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
                 {t('driver.title')}
               </Text>
+
               {/*
-                Nút gán/đổi đứng NGAY CẠNH tên tài xế, không nằm một hàng riêng bên dưới: nó thao
-                tác đúng dòng đó, và một nút chiếm trọn bề ngang cho một việc hiếm làm khối này
-                cao gấp rưỡi mà không thêm thông tin nào.
+                Hành trình NHẮC LẠI ngay tại khối phân công, dù khối thông tin đơn phía trên đã
+                có đủ ba dòng đó — web cũng lặp đúng như vậy, và có lý do: người trực chọn tài xế
+                theo tuyến ("đi Huế thì giao anh Tuấn"), nên hỏi "chạy đâu" mà phải cuộn ngược
+                lên là chỗ dễ gán nhầm nhất.
+
+                Chỉ đơn CÓ TÀI XẾ mới có tuyến để nhắc.
               */}
-              <XStack ai="center" gap={space.sm}>
-                <Ionicons
-                  name="person-circle-outline"
-                  size={iconSize.lg}
-                  color={colors.textMuted}
-                />
-                <YStack f={1} gap={1}>
-                  <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                    {/*
-                      Chưa phân công mà đơn CÓ TÀI XẾ thì câu phải nói ra điều đó — đơn thiếu
-                      người lái là một việc còn treo, khác hẳn một đơn tự lái vốn không cần ai.
-                      Web tách hai câu đúng ở chỗ này.
-                    */}
-                    {booking.driver
-                      ? booking.driver.name
-                      : withDriver
-                        ? t('driver.noneWithDriver')
-                        : t('driver.none')}
-                  </Text>
-                  {/*
-                    SĐT tách dòng và IN ĐẬM: đây là con số người trực đọc để gọi, không phải một
-                    chú thích. Gộp chung dòng với tên bằng dấu "·" thì nó chìm vào tên.
-                  */}
-                  {booking.driver?.phone ? (
-                    <Pressable
-                      onPress={() => void Linking.openURL(`tel:${booking.driver?.phone}`)}
-                      accessibilityRole="button"
-                      accessibilityLabel={booking.driver.phone}
-                    >
-                      <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.bold}>
-                        {booking.driver.phone}
-                      </Text>
-                    </Pressable>
-                  ) : null}
-                </YStack>
-                {canUpdate && !closed ? (
-                  <Button
-                    label={booking.driver ? t('driver.change') : t('driver.assign')}
-                    variant="secondary"
-                    block={false}
-                    onPress={() => setAssigningDriver(true)}
+              {withDriver && booking.routeType ? (
+                <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                  {[
+                    domainLabel('routeType', booking.routeType),
+                    booking.pickupAddress
+                      ? t('driver.routePickup', { address: booking.pickupAddress })
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(LIST_SEPARATOR)}
+                  {booking.destination
+                    ? ` ${t('driver.routeDestination', { address: booking.destination })}`
+                    : ''}
+                </Text>
+              ) : null}
+              {booking.driver ? (
+                <XStack ai="center" gap={space.sm}>
+                  <Ionicons
+                    name="person-circle-outline"
+                    size={iconSize.lg}
+                    color={colors.textMuted}
                   />
-                ) : null}
-              </XStack>
+                  <YStack f={1} gap={1}>
+                    <Text col={colors.text} fos={fontSize.body} fow={fontWeight.medium}>
+                      {booking.driver.name}
+                    </Text>
+                    {/*
+                      SĐT là một liên kết GỌI ĐƯỢC, đúng như `<a href="tel:">` của web: đây là
+                      con số người trực bấm để gọi, không phải một chú thích cạnh tên.
+                    */}
+                    {booking.driver.phone ? (
+                      <Pressable
+                        onPress={() => void Linking.openURL(`tel:${booking.driver?.phone}`)}
+                        accessibilityRole="button"
+                        accessibilityLabel={booking.driver.phone}
+                      >
+                        <Text col={colors.primaryActive} fos={fontSize.bodySm}>
+                          {booking.driver.phone}
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                  </YStack>
+
+                  {/*
+                    HAI nút, đúng như web: "Đổi" mở lại danh sách, "Bỏ gán" gỡ hẳn người khỏi đơn.
+                    Chúng là hai việc khác nhau — gỡ tài xế mà không thay ai là một trạng thái hợp
+                    lệ (đơn hoãn, người nghỉ), và bắt phải chọn người mới mới gỡ được là bịa thêm
+                    một ràng buộc server không có. "Bỏ gán" không hỏi lại (xem `unassignDriver`
+                    phía trên) nên tự nó cần một chỉ báo đang chạy — `IconButton` gánh việc đó
+                    bằng `loading`, không qua `AlertDialog`.
+
+                    Icon-only, đứng NGAY hàng với tên: vùng chạm 44dp cố định của `IconButton` nhỏ
+                    hơn nhiều so với `Button` mang chữ, nên hai nút cộng tên tài xế cộng số điện
+                    thoại vừa một hàng ở 360dp mà không phải bóp nút.
+                  */}
+                  {canUpdate && !closed ? (
+                    <XStack gap={space.xs}>
+                      <IconButton
+                        icon="swap-horizontal-outline"
+                        label={t('driver.change')}
+                        tone="accent"
+                        onPress={() => setAssigningDriver(true)}
+                      />
+                      <IconButton
+                        icon="person-remove-outline"
+                        label={t('driver.unassign')}
+                        tone="dangerSurface"
+                        loading={assignDriver.isPending}
+                        onPress={unassignDriver}
+                      />
+                    </XStack>
+                  ) : null}
+                </XStack>
+              ) : (
+                <XStack ai="center" gap={space.sm}>
+                  <Ionicons
+                    name="person-circle-outline"
+                    size={iconSize.lg}
+                    color={colors.textMuted}
+                  />
+                  {/*
+                    Đơn CÓ TÀI XẾ mà chưa phân công thì nhắc bằng MÀU CẢNH BÁO, không phải chữ xám
+                    cho qua — đúng `.missing` của web. Đơn tự lái vốn không cần ai nên chỉ là một
+                    dòng ghi chú (`.meta`). Hai sự thật khác nhau, hai cách đọc khác nhau.
+                  */}
+                  <Text
+                    f={1}
+                    col={withDriver ? colors.warning : colors.textMuted}
+                    fos={fontSize.bodySm}
+                    {...(withDriver ? { fow: fontWeight.medium } : {})}
+                  >
+                    {withDriver ? t('driver.noneWithDriver') : t('driver.none')}
+                  </Text>
+                  {canUpdate && !closed ? (
+                    <Button
+                      label={t('driver.assign')}
+                      variant={withDriver ? 'primary' : 'secondary'}
+                      size="sm"
+                      block={false}
+                      onPress={() => setAssigningDriver(true)}
+                    />
+                  ) : null}
+                </XStack>
+              )}
             </YStack>
           </Card>
 
@@ -481,20 +559,11 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
         open={assigningDriver}
         onClose={() => setAssigningDriver(false)}
         booking={booking}
-        loading={assignDriver.isPending}
+        pending={assignDriver.isPending}
         onSelect={(driverId) =>
           assignDriver.mutate(driverId, {
             onSuccess: () => {
               toast.showSuccess(t('driver.assignSuccess'));
-              setAssigningDriver(false);
-            },
-            onError: (error) => toast.showError(errorMessage(error)),
-          })
-        }
-        onUnassign={() =>
-          assignDriver.mutate(null, {
-            onSuccess: () => {
-              toast.showSuccess(t('driver.unassignSuccess'));
               setAssigningDriver(false);
             },
             onError: (error) => toast.showError(errorMessage(error)),

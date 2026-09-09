@@ -25,7 +25,6 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
 import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
-import { useRenderTrace, useTracedRenderItem } from '@/dev/list-trace';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { scrollThrottle } from '@/theme/motion';
@@ -58,9 +57,6 @@ const keyOf = (customer: TenantCustomer) => customer.id;
  * không có URL để chia sẻ, và bộ lọc này chết theo màn (ADR 0004).
  */
 export function CustomerListScreen() {
-  // Dev-only: đếm số lần màn render lại. Xem `src/dev/list-trace.ts`.
-  useRenderTrace('Customers');
-
   const t = useTranslations('Customers');
   const navigateOnce = useNavigateOnce();
   const permissions = usePermissions();
@@ -163,9 +159,6 @@ export function CustomerListScreen() {
     ),
     [canViewFinance, openCustomer],
   );
-
-  // Dev-only: đo thời gian dựng từng thẻ, in gộp mỗi giây.
-  const tracedRenderItem = useTracedRenderItem('Customers', renderItem);
 
   /*
    * Sắp xếp KHÔNG tính là "đang lọc": đổi thứ tự không làm mất dòng nào, nên trạng thái rỗng vẫn
@@ -272,13 +265,15 @@ export function CustomerListScreen() {
                     description={t('list.noResultsBody')}
                   />
                 ) : (
+                  /*
+                    KHÔNG có nút "thêm" ở đây: nó đã nằm ở hàng tiêu đề (`ManageListShell action`),
+                    và danh sách rỗng thì không có gì để cuộn nên hàng đó đứng nguyên trên màn —
+                    hai nút cùng một việc trong cùng một khung hình.
+                  */
                   <ScreenMessage
                     icon="people-outline"
                     title={t('list.emptyTitle')}
                     description={t('list.emptyBody')}
-                    {...(canManage
-                      ? { actionLabel: t('page.add'), onAction: () => setFormOpen(true) }
-                      : {})}
                   />
                 ),
               )
@@ -288,7 +283,7 @@ export function CustomerListScreen() {
                 data={items}
                 keyExtractor={keyOf}
                 {...LIST_TUNING}
-                renderItem={tracedRenderItem}
+                renderItem={renderItem}
                 contentContainerStyle={contentContainerStyle}
                 onScroll={onScroll}
                 scrollEventThrottle={scrollThrottle.frame}

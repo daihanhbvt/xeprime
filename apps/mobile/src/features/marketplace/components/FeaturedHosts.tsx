@@ -19,7 +19,8 @@ const LIMIT = 4;
  * "Gian hàng nổi bật" — shop đang hoạt động có xe công khai, sắp theo điểm đánh giá.
  * Điểm và số xe đều từ backend, không biên tập tay.
  *
- * `onOpenShop` vắng mặt = thẻ chỉ hiển thị; trang gian hàng (MKT-05) chưa dựng.
+ * `onOpenShop` vắng mặt = thẻ chỉ hiển thị. Trang chủ luôn truyền vào; prop để tuỳ chọn cho
+ * những chỗ nhúng khối này mà không có nơi để đi tiếp.
  */
 export function FeaturedHosts({ onOpenShop }: { onOpenShop?: (slug: string) => void }) {
   const t = useTranslations('Marketplace.hosts');

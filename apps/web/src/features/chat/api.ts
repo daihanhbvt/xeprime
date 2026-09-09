@@ -1,15 +1,129 @@
-import { chatApi } from '@xeprime/api-client';
 import { CHAT_ATTACHMENT_MAX_BYTES, CHAT_ATTACHMENT_MIME_TYPES } from '@xeprime/types';
-import { ApiClientError } from '@/services/api-client';
+import { ApiClientError, apiGet, apiPost, apiRequest, fetchPage } from '@/services/api-client';
 import { uploadToR2 } from '@/services/upload';
-import type { ChatAttachmentPresign } from './types';
+import type {
+  ChatAttachmentPresign,
+  ChatMessage,
+  ChatUnreadSummary,
+  ConversationFilters,
+  ConversationListResult,
+  ConversationSummary,
+  FirebaseChatToken,
+  MessageCursor,
+  MessagePage,
+  SendMessageInput,
+} from './types';
 
 /**
- * Phần WEB của lối gọi chat. Toàn bộ phần gọi HTTP nằm ở `chatApi` (`@xeprime/api-client`) để
- * app native dùng lại nguyên vẹn; ở đây chỉ còn thứ dính vào `File` của trình duyệt — thứ Metro
- * không đọc được và là lý do nó không đi vào package dùng chung.
+ * Lối gọi API chat của WEB.
+ *
+ * ADR 0031: app native có bản riêng ở `apps/mobile/src/api/chat/api.ts`. Đường dẫn, tham số và
+ * cách bóc phong bì phải khớp nhau — chúng gọi cùng một backend — nhưng sửa một bên KHÔNG còn
+ * tự động sang bên kia.
+ *
+ * `side` là tham số BẮT BUỘC của mọi lời gọi đọc danh sách, và đó là chủ đích: một tài khoản có
+ * thể vừa thuê xe của gian hàng khác vừa là nhân viên gian hàng mình, nên "hội thoại của tôi"
+ * không phải một khái niệm — nó là hai hộp thư. Bắt buộc ở chữ ký hàm nghĩa là không có nơi gọi
+ * nào quên nó và nhận về một danh sách trộn.
  */
-export { chatApi };
+const CONVERSATIONS_DEFAULT_LIMIT = 20;
+const MESSAGES_DEFAULT_LIMIT = 30;
+
+interface MessageEnvelope {
+  data: ChatMessage[];
+  nextBefore?: string | null;
+  nextBeforeId?: string | null;
+}
+
+export const chatApi = {
+  list(filters: ConversationFilters, page: number): Promise<ConversationListResult> {
+    return fetchPage<ConversationSummary>(
+      '/conversations',
+      {
+        side: filters.side,
+        page,
+        limit: CONVERSATIONS_DEFAULT_LIMIT,
+        ...(filters.q?.trim() ? { q: filters.q.trim() } : {}),
+        ...(filters.unreadOnly ? { unreadOnly: true } : {}),
+      },
+      CONVERSATIONS_DEFAULT_LIMIT,
+    );
+  },
+
+  /**
+   * Một hội thoại theo id — đường vào của deep link.
+   *
+   * Không suy từ danh sách: một thread im lặng ba tuần nằm ở trang 4, và `?c=` trong email hay
+   * thông báo đẩy phải mở được nó mà không phải tải hết các trang trước.
+   */
+  detail(id: string, side: string): Promise<ConversationSummary> {
+    return apiGet<ConversationSummary>(`/conversations/${encodeURIComponent(id)}`, { side });
+  },
+
+  /** Khách mở/lấy hội thoại với shop về một xe. Idempotent ở DB — bấm nhiều lần vẫn một thread. */
+  start(vehicleId: string): Promise<ConversationSummary> {
+    return apiPost<ConversationSummary>('/conversations', { vehicleId });
+  },
+
+  unreadCount(side: string): Promise<{ count: number }> {
+    return apiGet<{ count: number }>('/conversations/unread-count', { side });
+  },
+
+  /**
+   * Chưa đọc của CẢ HAI vai — cho biểu tượng chat trên thanh trên cùng.
+   *
+   * Khác `unreadCount(side)`: cái kia đếm cho MỘT hộp thư (mục menu trỏ thẳng vào hộp thư đó
+   * phải hiện đúng số của nó). Cái này trả lời "có gì đang đợi tôi ở bất kỳ đâu", nên chủ gian
+   * hàng đang lướt chợ xe vẫn thấy khách nhắn vào shop.
+   */
+  unreadSummary(): Promise<ChatUnreadSummary> {
+    return apiGet<ChatUnreadSummary>('/conversations/unread-summary');
+  },
+
+  async messages(conversationId: string, cursor?: MessageCursor | null): Promise<MessagePage> {
+    const res = (await apiRequest<ChatMessage[]>(
+      `/conversations/${encodeURIComponent(conversationId)}/messages`,
+      {
+        query: {
+          limit: MESSAGES_DEFAULT_LIMIT,
+          ...(cursor
+            ? { before: cursor.before, ...(cursor.beforeId ? { beforeId: cursor.beforeId } : {}) }
+            : {}),
+        },
+      },
+    )) as MessageEnvelope;
+
+    return {
+      data: res.data,
+      next: res.nextBefore ? { before: res.nextBefore, beforeId: res.nextBeforeId ?? null } : null,
+    };
+  },
+
+  send(conversationId: string, body: SendMessageInput): Promise<ChatMessage> {
+    return apiPost<ChatMessage>(
+      `/conversations/${encodeURIComponent(conversationId)}/messages`,
+      body,
+    );
+  },
+
+  markRead(conversationId: string): Promise<{ conversationId: string; unread: number }> {
+    return apiPost<{ conversationId: string; unread: number }>(
+      `/conversations/${encodeURIComponent(conversationId)}/read`,
+    );
+  },
+
+  firebaseToken(): Promise<FirebaseChatToken> {
+    return apiPost<FirebaseChatToken>('/chat/firebase-token');
+  },
+
+  presignAttachment(meta: {
+    fileName: string;
+    contentType: string;
+    fileSize: number;
+  }): Promise<ChatAttachmentPresign> {
+    return apiPost<ChatAttachmentPresign>('/chat/attachments/presign', meta);
+  },
+};
 
 /** `accept` của `<input type="file">` — dựng từ chính bộ MIME dùng chung, không gõ lại chuỗi. */
 export const CHAT_ATTACHMENT_ACCEPT = CHAT_ATTACHMENT_MIME_TYPES.join(',');

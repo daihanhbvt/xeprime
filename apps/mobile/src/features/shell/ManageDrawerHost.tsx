@@ -19,6 +19,7 @@ const WIDTH_RATIO = 0.86;
 
 const styles = StyleSheet.create({
   panel: { position: 'absolute', top: 0, bottom: 0, left: 0 },
+  hidden: { opacity: 0 },
 });
 
 interface ManageDrawerControl {
@@ -123,10 +124,17 @@ function Scrim({
 }) {
   const style = useAnimatedStyle(() => ({ opacity: progress.value }));
 
+  /*
+   * `opacity: 0` nằm trong style TĨNH, không chỉ trong style hoạt cảnh.
+   *
+   * Reanimated áp style của nó ở luồng UI SAU khi khung hình đầu đã vẽ. Không có giá trị nghỉ ở
+   * style tĩnh thì khung hình đó lấy mặc định `opacity: 1` — cả màn hình bị phủ một lớp tối rồi
+   * biến mất ngay, mỗi lần vào khu quản lý. Style hoạt cảnh xếp SAU nên vẫn thắng khi nó tới.
+   */
   return (
     <Animated.View
       pointerEvents={visible ? 'auto' : 'none'}
-      style={[StyleSheet.absoluteFill, style]}
+      style={[StyleSheet.absoluteFill, styles.hidden, style]}
     >
       <Pressable style={appStyles.scrim} onPress={onPress} accessible={false} />
     </Animated.View>
@@ -146,12 +154,18 @@ function Panel({
     transform: [{ translateX: -width * (1 - progress.value) }],
   }));
 
+  /* Cùng lý do với `Scrim`: vị trí NGHỈ (trượt hẳn ra ngoài) phải có sẵn ở style tĩnh, nếu
+     không khung hình đầu vẽ tấm menu nằm nguyên giữa màn rồi mới bị đẩy đi. */
   return (
     <Animated.View
       pointerEvents={visible ? 'auto' : 'none'}
       accessibilityElementsHidden={!visible}
       importantForAccessibility={visible ? 'auto' : 'no-hide-descendants'}
-      style={[styles.panel, { width, backgroundColor: sidebar.bg }, style]}
+      style={[
+        styles.panel,
+        { width, backgroundColor: sidebar.bg, transform: [{ translateX: -width }] },
+        style,
+      ]}
     >
       <ManageDrawer />
     </Animated.View>

@@ -94,7 +94,7 @@ giấy tờ, không lập đơn mới.
 
 | Nợ | Đóng thế nào |
 | --- | --- |
-| Customer API chưa đóng gói ở `@xeprime/api-client` | `packages/api-client/src/features/customers/api.ts` — DTO lấy từ `components['schemas']`, một `customerFiltersToParams` cho cả hai client, `duplicateCustomerId` đọc `details` của 409 ở đúng một chỗ. Web giữ vỏ mỏng (`apps/web/src/features/customers/api.ts`) chỉ còn bước upload dùng `File`/`XMLHttpRequest` |
+| Customer API chưa đóng gói ở `@xeprime/api-client` | `apps/mobile/src/api/customers/api.ts` — DTO lấy từ `components['schemas']`, `customerFiltersToParams` serialize bộ lọc, `duplicateCustomerId` đọc `details` của 409. Từ ADR 0031 web có BẢN RIÊNG ở `apps/web/src/features/customers/api.ts` (cùng đường dẫn, cùng tham số) — sửa contract phải sửa cả hai |
 | Account API và Finance API chưa dùng chung | `features/account/api.ts` (`/users/me`) và `features/finance/api.ts` (`/receipts`, `/finance/summary`, `/finance/series`) ở cùng package |
 | Yup schema Customer chỉ có ở web | Chuyển vào `@xeprime/validators` với message là MÃ; `useValidationResolver(schema, 'Customers.validation')` dịch. Web và app dùng chung một schema |
 | Vị từ gate tài chính chép ở feature web | `relationshipValues` · `sortValues` · `isAllowedRelationship` · `isAllowedSort` chuyển vào `@xeprime/types`, ngay cạnh `TENANT_CUSTOMER_FINANCE_*` mà chúng đọc. `isPreviewableImage` vào `packages/types/src/upload.ts` |
@@ -129,7 +129,7 @@ Chỉ đổi **cách trình bày**, không đổi dữ liệu, hành động, qu
 
 | File | Khoá lại điều gì |
 | --- | --- |
-| `packages/api-client/src/features/customers/api.test.ts` | Serialize bộ lọc (một nguồn cho hai client) · gate tài chính của nhóm/sắp xếp · đọc `customerId` từ 409 |
+| `apps/mobile/src/api/customers/api.test.ts` (bản web: `apps/web/src/features/customers/api.test.ts`) | Serialize bộ lọc (một nguồn cho hai client) · gate tài chính của nhóm/sắp xếp · đọc `customerId` từ 409 |
 | `packages/validators/src/customers.test.ts` | Ba schema dùng chung: bắt buộc tên/SĐT, SĐT sai định dạng bị chặn ở client, lý do bắt buộc khi khác `normal`, các trần độ dài khớp DTO |
 | `apps/mobile/.../CustomerListScreen.test.tsx` | Ma trận quyền · ẩn hẳn tiền khi thiếu `finance.view` · rỗng-thật khác rỗng-do-lọc · điều hướng tới route chi tiết · `all` không xuống API |
 | `apps/mobile/.../CustomerDetailScreen.test.tsx` | Ma trận quyền · `watchlist` không chặn · `blocked` chặn tạo đơn · hồ sơ lưu trữ chỉ đọc · "Tạo đơn thuê" đi tới luồng đơn đã có kèm prefill |

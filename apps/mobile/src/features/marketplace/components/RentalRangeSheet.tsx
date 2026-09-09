@@ -18,6 +18,7 @@ import {
 } from '@xeprime/domain';
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
+import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
 import { StripePattern } from '@/components/ui/StripePattern';
 import { MonthGrid, useDayAccessibilityLabel, visibleDays } from '@/components/ui/MonthGrid';
 import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
@@ -385,7 +386,7 @@ export function RentalRangeSheet({
             bg={colors.surface}
             borderTopLeftRadius={radius.lg}
             borderTopRightRadius={radius.lg}
-            pb={insets.bottom}
+            pb={Math.max(insets.bottom, space.md)}
           >
             <XStack ai="center" gap={space.xs} px={space.sm} pt={space.sm}>
               <IconButton icon="close" label={tCommon('actions.cancel')} onPress={onCancel} />
@@ -491,44 +492,23 @@ export function RentalRangeSheet({
                   */}
                   {durationOpen ? (
                     <YStack bw={1} bc={colors.border} br={radius.md} ov="hidden">
-                      <YStack>
-                        {HOURLY_DURATIONS.map((hours) => {
-                          const selected = hours === hourlyDuration;
-                          return (
-                            <Pressable
-                              key={hours}
-                              accessibilityRole="radio"
-                              accessibilityState={{ selected }}
-                              onPress={() => {
-                                setHourly(hourlyStart, hours);
-                                setDurationOpen(false);
-                              }}
-                            >
-                              <XStack
-                                ai="center"
-                                gap={space.sm}
-                                px={layout.screenX}
-                                minHeight={sizing.touchTarget}
-                                bg={selected ? colors.surfaceSelected : 'transparent'}
-                              >
-                                <Ionicons
-                                  name={selected ? 'radio-button-on' : 'radio-button-off'}
-                                  size={17}
-                                  color={selected ? colors.primary : colors.border}
-                                />
-                                <Text f={1} col={colors.text} fos={fontSize.bodySm}>
-                                  {tCommon('units.hour', { count: hours })}
-                                </Text>
-                                <Text col={colors.textMuted} fos={fontSize.label}>
-                                  {t('durationEndsAt', {
-                                    time: hourlyStart.add(hours, 'hour').format(pattern.dateTime),
-                                  })}
-                                </Text>
-                              </XStack>
-                            </Pressable>
-                          );
-                        })}
-                      </YStack>
+                      <MenuOptionList>
+                        {HOURLY_DURATIONS.map((hours) => (
+                          <MenuOption
+                            key={hours}
+                            label={tCommon('units.hour', { count: hours })}
+                            meta={t('durationEndsAt', {
+                              time: hourlyStart.add(hours, 'hour').format(pattern.dateTime),
+                            })}
+                            selected={hours === hourlyDuration}
+                            inset
+                            onPress={() => {
+                              setHourly(hourlyStart, hours);
+                              setDurationOpen(false);
+                            }}
+                          />
+                        ))}
+                      </MenuOptionList>
                     </YStack>
                   ) : null}
                 </YStack>
@@ -852,7 +832,7 @@ function TimeSheet({
             bg={colors.surface}
             borderTopLeftRadius={radius.lg}
             borderTopRightRadius={radius.lg}
-            pb={insets.bottom}
+            pb={Math.max(insets.bottom, space.md)}
           >
             <Text
               col={colors.text}
@@ -864,36 +844,17 @@ function TimeSheet({
               {title}
             </Text>
             <ScrollView>
-              {TIME_OPTIONS.map((hhmm) => {
-                const selected = hhmm === current;
-                return (
-                  <Pressable
+              <MenuOptionList>
+                {TIME_OPTIONS.map((hhmm) => (
+                  <MenuOption
                     key={hhmm}
+                    label={hhmm}
+                    selected={hhmm === current}
+                    inset
                     onPress={() => onSelect(hhmm)}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected }}
-                  >
-                    <XStack
-                      ai="center"
-                      jc="space-between"
-                      px={layout.screenX}
-                      minHeight={sizing.touchTarget}
-                      bg={selected ? colors.surfaceSelected : 'transparent'}
-                    >
-                      <Text
-                        col={colors.text}
-                        fos={fontSize.body}
-                        fow={selected ? fontWeight.semibold : fontWeight.regular}
-                      >
-                        {hhmm}
-                      </Text>
-                      {selected ? (
-                        <Ionicons name="checkmark" size={17} color={colors.primaryActive} />
-                      ) : null}
-                    </XStack>
-                  </Pressable>
-                );
-              })}
+                  />
+                ))}
+              </MenuOptionList>
             </ScrollView>
           </YStack>
         </YStack>

@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { BOOKING_REQUEST_STATUS, PERMISSION } from '@xeprime/types';
-import { bookingRequestsApi } from '@/features/booking-requests/api';
+import { bookingRequestFiltersToParams, bookingRequestsApi } from '@/features/booking-requests/api';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
+import { useBranchScopeParams } from '@/features/branches/hooks/use-branch-scope';
 import { FIRST_PAGE } from '@/queries/use-clamped-page';
 import { queryKeys } from '@/queries/query-keys';
 import { MANAGE_NAV_BADGE, type ManageNavBadge } from './manage-nav';
@@ -37,15 +38,21 @@ export function useManageNavBadges(): ManageNavBadgeCounts {
   const isShopScope = Boolean(user) && !user?.platformRole;
   const enabled = isShopScope && permissions.has(PERMISSION.BOOKING_REQUEST_VIEW);
 
-  const params = {
+  /*
+   * Đếm theo ĐÚNG scope chi nhánh mà hộp thư đang dùng — nếu không thì huy hiệu báo 5 trong khi
+   * danh sách mở ra chỉ có 2, và người dùng đi tìm ba yêu cầu không tồn tại.
+   */
+  const branchScope = useBranchScopeParams();
+  const filters = {
     status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
     page: FIRST_PAGE,
     limit: COUNT_ONLY_LIMIT,
+    ...branchScope,
   };
 
   const pending = useQuery({
-    queryKey: queryKeys.bookingRequests.list(params),
-    queryFn: async () => (await bookingRequestsApi.list(params)).meta.total,
+    queryKey: queryKeys.bookingRequests.list(bookingRequestFiltersToParams(filters)),
+    queryFn: async () => (await bookingRequestsApi.list(filters)).meta.total,
     enabled,
     refetchInterval: BADGE_REFRESH_INTERVAL_MS,
   });

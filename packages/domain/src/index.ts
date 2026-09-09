@@ -164,7 +164,16 @@ export {
 /** Ký hiệu trình bày dùng chung — không phải chữ, nên không nằm trong bó message. */
 export { LIST_SEPARATOR, vehicleLabel } from './display';
 
-export { remainingKm, type RemainingKm, type RemainingKmKind } from './odometer';
+export { deliverySummaryText } from './rental-policy';
+
+export {
+  maintenanceCyclePercent,
+  remainingKm,
+  type RemainingKm,
+  type RemainingKmKind,
+} from './odometer';
+
+export { buildVietQrUrl } from './vietqr';
 
 /**
  * Hợp nhất tin nhắn của một thread chat — dùng chung web ↔ native.

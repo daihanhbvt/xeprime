@@ -183,25 +183,28 @@ nhau thì `invalidateQueries` sau một lần ghi chỉ làm mới một nửa.
 TanStack Query **không** là dependency — `queryKeys` chỉ là object hằng. Mỗi app tự cài phiên bản
 `@tanstack/react-query` của nó.
 
-## Trạng thái chuyển đổi
+## Ranh giới: cái gì ở đây, cái gì không (ADR 0031)
 
-Hôm nay package có: client runtime, transport, query key, feature `auth` — đủ để app native đăng
-nhập, làm mới token và gọi mọi endpoint bằng Bearer (ADR 0017) — và feature `marketplace`.
+Package này là **hạ tầng HTTP**, không phải nơi mô tả nghiệp vụ. Quy tắc một dòng: *thứ gì không
+cần biết XePrime có nghiệp vụ gì thì ở lại; thứ gì biết `/customers` tồn tại thì đi.*
 
-`marketplace` ở đây CHỈ có phần gọi API: `marketplaceApi` và `toListingQueryParams`. Hai thứ đó
-phải dùng chung chứ không chép, vì chúng giữ quy ước serialize filter (mảng → CSV, boolean → `1`,
-có `provinceCode` thì bỏ `province`) và cái bẫy `/public/listings/:id/reviews` — endpoint đó trả
-**sẵn** phong bì `{ summary, data, meta }` nên phải gọi qua `request`, dùng `get` là bóc mất
-`summary`.
+| | Ở đâu |
+| --- | --- |
+| Cấu hình client, phong bì `{data,meta}`, phân trang, `ApiClientError` + mã lỗi, `AuthTransport`, `platformFetch`, `STALE_TIME`, `queryKeys` | **ở đây** |
+| Đường dẫn endpoint, serialize bộ lọc, alias DTO theo feature — bản của app native | `apps/mobile/src/api/<feature>/` (đủ 25 feature) |
+| Đường dẫn endpoint, serialize bộ lọc, alias DTO theo feature — bản của web | `apps/web/src/features/<feature>/api.ts` + `apps/web/src/services/auth.service.ts` (chỉ 5 feature web thật sự dùng) |
+| Shape công khai (`PublicListing`, `MarketplaceFilters`, `components['schemas']`…) | `@xeprime/types` — sinh từ OpenAPI (ADR 0007); backend cũng đọc được mà không kéo theo client HTTP |
+| Luật nghiệp vụ (`draftToFilterPatch`, tiền, múi giờ, gói dài hạn…) | `@xeprime/domain` — không phải chuyện gọi HTTP |
+| Đọc/ghi URL searchParams | `apps/web` — chỉ web có thanh địa chỉ |
+| Upload dùng `File`/`XMLHttpRequest` | `apps/web/src/services/upload.ts` · `apps/mobile/src/lib/r2-image-upload.ts` — Metro không đọc được chúng |
 
-Hai thứ KHÔNG ở đây, có chủ đích:
+`queryKeys` **cố ý** ở lại đây dù hai app đã tách tầng feature: hai app gọi cùng một endpoint mà
+đặt key khác nhau thì `invalidateQueries` sau một lần ghi chỉ làm mới một nửa.
 
-| Thứ | Ở đâu | Vì sao |
-| --- | --- | --- |
-| Shape công khai (`PublicListing`, `MarketplaceFilters`…) | `@xeprime/types` (`marketplace.ts`) | Kiểu sinh từ OpenAPI (ADR 0007). Backend cũng đọc được, mà không kéo theo client HTTP |
-| Luật thẻ tìm kiếm (`draftToFilterPatch`, `serviceTypesFor`…) | `@xeprime/domain` (`search-draft.ts`) | Đó là NGHIỆP VỤ — "dịch vụ nào phát tham số nào", ADR 0011 nằm trong đó — không phải chuyện gọi HTTP |
+### Đánh đổi phải nhớ
 
-Phần đọc/ghi URL searchParams ở lại `apps/web` vì chỉ web có thanh địa chỉ.
-
-Các feature `api.ts`/`types.ts` còn lại trong `apps/web/src/features/*` chỉ chuyển sang package
-dùng chung khi mobile thực sự dùng tới. Không chuyển hàng loạt: mỗi feature là một bước tự verify được.
+Web và native có HAI bản của `auth`, `catalog`, `chat`, `customers`, `marketplace`. **Đổi một
+trường DTO hay một tham số lọc là phải sửa cả hai** — không còn gì tự đồng bộ. Cái bắt lỗi lệch
+nhau là `packages/types/src/api.generated.ts` (đổi tên field ⇒ đỏ typecheck ở cả hai app) và các
+test hàm thuần đứng đôi (`filtersToParams`, `toListingQueryParams`). Type KHÔNG bắt được việc hai
+bên gửi hai bộ query param khác nhau — chỗ nào có nguy cơ đó thì phải có test ở cả hai phía.

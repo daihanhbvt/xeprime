@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable } from 'react-native';
-import { Text, XStack, YStack } from 'tamagui';
+import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { BottomSheet } from './BottomSheet';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
-import { colors, fieldFontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
+import { MenuOption, MenuOptionList } from './MenuOption';
+import { colors, fieldFontSize, iconSize, space } from '@/theme/tokens';
 
 export interface SelectControlOption {
   readonly value: string;
@@ -36,6 +37,7 @@ export function SelectControl({
   error,
   required = false,
   placeholder,
+  disabled = false,
 }: {
   label: string;
   value: string | null;
@@ -46,6 +48,12 @@ export function SelectControl({
   required?: boolean;
   /** Chữ mờ khi chưa chọn gì. Bỏ trống thì dùng "Chọn…" của `Common.actions`. */
   placeholder?: string;
+  /**
+   * Ô chỉ đọc — chặn mở tấm chọn, không chỉ đổi hình. `fieldset[disabled]` của web không có bản
+   * tương đương ở đây (`FieldShell` là `View`, không phải `<select>`), nên phải tự chặn `onPress`
+   * — thiếu dòng này thì ô "trông khoá" nhưng vẫn đổi được giá trị.
+   */
+  disabled?: boolean;
 }) {
   const t = useTranslations('Common.actions');
   const [open, setOpen] = useState(false);
@@ -61,11 +69,15 @@ export function SelectControl({
         cập, nên ô chọn sẽ đọc ra như một mảng chữ chứ không phải một nút bấm được.
       */}
       <Pressable
-        onPress={() => setOpen(true)}
+        onPress={() => {
+          if (!disabled) setOpen(true);
+        }}
+        disabled={disabled}
         accessibilityRole="button"
         accessibilityLabel={label}
+        accessibilityState={{ disabled }}
       >
-        <FieldShell focused={false} invalid={Boolean(error)} align="center">
+        <FieldShell focused={false} invalid={Boolean(error)} disabled={disabled} align="center">
           <Text
             f={1}
             col={current ? colors.text : colors.placeholder}
@@ -74,49 +86,31 @@ export function SelectControl({
           >
             {current?.label ?? placeholder ?? t('choose')}
           </Text>
-          <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
+          <Ionicons
+            name="chevron-down"
+            size={iconSize.sm}
+            color={disabled ? colors.textDisabled : colors.textMuted}
+          />
         </FieldShell>
       </Pressable>
 
       <FieldMessage error={error} hint={hint} />
 
       <BottomSheet open={open} onClose={() => setOpen(false)} title={label}>
-        {options.map((option) => {
-          const selected = option.value === value;
-          return (
-            <Pressable
+        <MenuOptionList>
+          {options.map((option) => (
+            <MenuOption
               key={option.value}
-              accessibilityRole="radio"
-              accessibilityState={{ selected }}
-              accessibilityLabel={option.label}
+              label={option.label}
+              {...(option.hint === undefined ? {} : { hint: option.hint })}
+              selected={option.value === value}
               onPress={() => {
                 onChange(option.value);
                 setOpen(false);
               }}
-              style={({ pressed }) => (pressed ? { backgroundColor: colors.surfaceMuted } : null)}
-            >
-              <XStack ai="center" gap={space.sm} minHeight={sizing.touchTarget} py={space.xs}>
-                <YStack f={1} gap={2}>
-                  <Text
-                    col={selected ? colors.primaryActive : colors.text}
-                    fos={fieldFontSize.value}
-                    fow={selected ? fontWeight.semibold : fontWeight.regular}
-                  >
-                    {option.label}
-                  </Text>
-                  {option.hint ? (
-                    <Text col={colors.textMuted} fos={fieldFontSize.message}>
-                      {option.hint}
-                    </Text>
-                  ) : null}
-                </YStack>
-                {selected ? (
-                  <Ionicons name="checkmark" size={iconSize.md} color={colors.primaryActive} />
-                ) : null}
-              </XStack>
-            </Pressable>
-          );
-        })}
+            />
+          ))}
+        </MenuOptionList>
       </BottomSheet>
     </YStack>
   );

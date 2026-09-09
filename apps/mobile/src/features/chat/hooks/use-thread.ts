@@ -1,5 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { chatApi, type ChatMessage, type MessageCursor, type SendMessageInput } from '@xeprime/api-client';
+import {
+  chatApi,
+  type ChatMessage,
+  type MessageCursor,
+  type SendMessageInput,
+} from '@/api/chat/api';
 import {
   CHAT_SEND_STATE,
   markThreadMessageFailed,

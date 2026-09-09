@@ -5,7 +5,11 @@
     "loadError": "Couldn't load the driver list",
     "empty": "No drivers yet",
     "emptyHint": "Add a driver so you can assign one to chauffeured bookings.",
-    "total": "{count, plural, one {# driver} other {# drivers}}"
+    "total": "{count, plural, one {# driver} other {# drivers}}",
+    "forbidden": {
+      "title": "No access",
+      "description": "You need permission to view shop drivers. Ask the shop owner to grant it."
+    }
   },
   "filters": {
     "search": "Search drivers",

@@ -74,7 +74,8 @@
     "frameTitle": "Map of the branch location",
     "hint": "The location is derived automatically from the address above. It is the starting point for delivery fees — if the pin is in the wrong place, write a more detailed address and save again.",
     "pending": "We could not derive a location from this address. Add the street number, street name and ward, then save again so the system can retry.",
-    "addressFirst": "Enter an address and save so the system can place this branch on the map."
+    "addressFirst": "Enter an address and save so the system can place this branch on the map.",
+    "open": "Open in Maps"
   },
   "scope": {
     "all": "All branches",

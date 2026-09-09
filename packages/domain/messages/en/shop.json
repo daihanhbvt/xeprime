@@ -185,5 +185,32 @@
     "ownerEmailInvalid": "Invalid email address",
     "logoUrlInvalid": "Invalid logo URL",
     "coverUrlInvalid": "Invalid cover image URL"
+  },
+  "policies": {
+    "title": "Default rental policy",
+    "subtitle": "Set the rules and charges applied by default to every booking.",
+    "applied": "Applied to {count, plural, one {# {vehicle}} other {# {vehicle}s}}",
+    "overridden": "{count, plural, other {# vehicle(s)}} use their own policy and do not inherit this default.",
+    "loadError": "Could not load the rental policy",
+    "forbidden": {
+      "title": "No access",
+      "description": "You need the permission below to view your shop rental policy."
+    },
+    "emptyTitle": "No rental policy configured yet",
+    "emptyBody": "Without a policy, new bookings take no deposit, offer no delivery and carry no long-term discount. Fill in the settings below, then save the policy.",
+    "readOnly": "You can only view the shop rental policy.",
+    "dirty": "You have unsaved changes",
+    "depositHint": "{count, plural, other {# vehicle(s)}} use this deposit",
+    "submit": "Save policy",
+    "reset": "Discard changes",
+    "saved": "Saved the rental policy for {vehicle}",
+    "confirm": {
+      "title": "Apply the new rental policy?",
+      "body": "The new policy applies to new bookings. Bookings already confirmed keep their original price and deposit.",
+      "bodyInheriting": "The new policy applies immediately to {count, plural, other {# vehicle(s)}} inheriting it, starting from new bookings. Bookings already confirmed keep their original price and deposit.",
+      "ok": "Apply changes"
+    },
+    "appliedTipLabel": "How this policy applies",
+    "dirtyDiscard": "Discard"
   }
 }

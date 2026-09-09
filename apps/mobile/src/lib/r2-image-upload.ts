@@ -2,7 +2,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { validateDocumentUpload, type UploadRejection } from '@xeprime/types';
-import type { UploadMeta, UploadPresign } from '@xeprime/api-client';
+import type { UploadMeta, UploadPresign } from '@/api/vehicles/api';
 
 /**
  * Bề rộng tối đa sau khi nén — cùng con số với ảnh bàn giao.

@@ -5,11 +5,29 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 import { layout } from '@/theme/layout';
 import { colors, space } from '@/theme/tokens';
+
+/** Khoảng thở giữa đáy ô đang gõ và mép trên bàn phím. */
+const KEYBOARD_GAP = space.md;
+
+/**
+ * Đệm thêm dưới nội dung KHI bàn phím mở.
+ *
+ * Không có nó thì ô CUỐI trang không cuộn lên được: cuộn tối đa bị chặn bởi chiều cao nội dung,
+ * mà ô cuối gần như chạm đáy nội dung — `scrollTo` bị kẹp lại và ô vẫn nằm dưới bàn phím.
+ */
+const KEYBOARD_TAIL = space.xl;
+
+/**
+ * Nhịp báo vị trí cuộn. Handler chỉ ghi một số vào ref (không render lại), nhưng vẫn là một lần
+ * gọi qua cầu JS mỗi nhịp — 100ms đủ để giữ con số gần đúng mà không bám theo từng khung hình.
+ */
+const SCROLL_REPORT_MS = 100;
 
 interface ScreenProps {
   children: ReactNode;
@@ -70,10 +88,45 @@ export function Screen({
    * phím ngay lúc mount thì con số 0 đó là con số được dùng thật — xem effect đo lại bên dưới.
    */
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+  /** Đệm đuôi nội dung khi bàn phím đang mở — xem {@link KEYBOARD_TAIL}. */
+  const [keyboardTail, setKeyboardTail] = useState(0);
   const frame = useRef<View>(null);
 
   const measureFrame = useCallback(() => {
     frame.current?.measureInWindow((_x, y) => setKeyboardOffset(y));
+  }, []);
+
+  /**
+   * Bàn phím mở lên KHÔNG tự kéo ô đang gõ vào tầm nhìn — đây là việc phải tự làm.
+   *
+   * `KeyboardAvoidingView` chỉ CO vùng nhìn thấy lại (để thanh `footer` không bị che); nội dung
+   * trong `ScrollView` đứng yên, nên ô nằm ở nửa dưới trang lọt xuống dưới mép bàn phím và người
+   * dùng gõ mù. React Native không có auto-scroll cho việc này: `ScrollView` chỉ phơi ra hàm cuộn
+   * theo lệnh, còn `automaticallyAdjustKeyboardInsets` là của riêng iOS và sẽ cộng chồng lên phần
+   * mà `KeyboardAvoidingView` đã co.
+   *
+   * Trên Android `softwareKeyboardLayoutMode: "resize"` cũng không cứu được: từ Expo SDK 53 ứng
+   * dụng chạy edge-to-edge, cửa sổ KHÔNG còn tự co lại theo bàn phím nữa.
+   *
+   * Đo bằng toạ độ CỬA SỔ cho cả hai đầu (ô nhập và mép bàn phím) — cùng một hệ quy chiếu, nên
+   * không phải bù chiều cao thanh trên như phép tính nội-dung-tương-đối của `ScrollView`.
+   */
+  const scroller = useRef<ScrollView>(null);
+  const scrollY = useRef(0);
+
+  const revealFocusedInput = useCallback((keyboardTop: number) => {
+    const input = TextInput.State.currentlyFocusedInput();
+    if (!input || !scroller.current) return;
+
+    input.measureInWindow((_x, y, _width, height) => {
+      const overlap = y + height + KEYBOARD_GAP - keyboardTop;
+      /*
+       * Không chồng lấn thì không cuộn — gồm luôn trường hợp ô đang gõ thuộc một tấm trượt mở đè
+       * lên màn: tấm trượt tự nâng nội dung của nó, ở đây không có gì để làm.
+       */
+      if (overlap <= 0) return;
+      scroller.current?.scrollTo({ y: scrollY.current + overlap, animated: true });
+    });
   }, []);
 
   /*
@@ -82,9 +135,18 @@ export function Screen({
    * offset 0 — ô vẫn nằm dưới bàn phím, và không layout nào bắn thêm để tự sửa.
    */
   useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', measureFrame);
-    return () => show.remove();
-  }, [measureFrame]);
+    const show = Keyboard.addListener('keyboardDidShow', (event) => {
+      measureFrame();
+      setKeyboardTail(KEYBOARD_TAIL);
+      revealFocusedInput(event.endCoordinates.screenY);
+    });
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardTail(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, [measureFrame, revealFocusedInput]);
+
   const contentStyle = [
     styles.content,
     padded ? styles.padded : null,
@@ -93,9 +155,18 @@ export function Screen({
 
   const body = scroll ? (
     <ScrollView
-      contentContainerStyle={contentStyle}
+      ref={scroller}
+      contentContainerStyle={[
+        contentStyle,
+        keyboardTail > 0 ? { paddingBottom: (padded ? space.lg : 0) + keyboardTail } : null,
+      ]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
+      // Ghi vào ref, không vào state — vị trí cuộn chỉ cần cho lần cuộn tới ô đang gõ.
+      onScroll={(event) => {
+        scrollY.current = event.nativeEvent.contentOffset.y;
+      }}
+      scrollEventThrottle={SCROLL_REPORT_MS}
       {...(onRefresh
         ? {
             refreshControl: (

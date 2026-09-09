@@ -19,7 +19,6 @@ import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
 import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
-import { useRenderTrace, useTracedRenderItem } from '@/dev/list-trace';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { colors } from '@/theme/tokens';
@@ -55,9 +54,6 @@ const keyOf = (booking: BookingListItem) => booking.id;
  * lọc này chết theo màn (ADR 0004).
  */
 export function BookingListScreen({ vehicleId }: { vehicleId?: string }) {
-  // Dev-only: đếm số lần màn render lại. Xem `src/dev/list-trace.ts`.
-  useRenderTrace('Bookings');
-
   const t = useTranslations('Bookings.list');
   const tCreate = useTranslations('Bookings.create');
   const navigateOnce = useNavigateOnce();
@@ -148,9 +144,6 @@ export function BookingListScreen({ vehicleId }: { vehicleId?: string }) {
     ({ item }) => <BookingCard booking={item} onPress={openBooking} />,
     [openBooking],
   );
-
-  // Dev-only: đo thời gian dựng từng thẻ, in gộp mỗi giây.
-  const tracedRenderItem = useTracedRenderItem('Bookings', renderItem);
 
   const filtered = status !== STATUS_ALL || debouncedSearch.trim().length > 0;
 
@@ -254,7 +247,7 @@ export function BookingListScreen({ vehicleId }: { vehicleId?: string }) {
                 data={items}
                 keyExtractor={keyOf}
                 {...LIST_TUNING}
-                renderItem={tracedRenderItem}
+                renderItem={renderItem}
                 contentContainerStyle={contentContainerStyle}
                 onScroll={onScroll}
                 scrollEventThrottle={scrollThrottle.frame}

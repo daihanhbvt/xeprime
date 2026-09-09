@@ -7,7 +7,7 @@ export {
   duplicateCustomerId,
   CUSTOMERS_DEFAULT_LIMIT,
   CUSTOMER_HISTORY_DEFAULT_LIMIT,
-} from '@xeprime/api-client';
+} from '@/api/customers/api';
 
 export type {
   CreateCustomerNoteInput,
@@ -26,4 +26,4 @@ export type {
   UpdateCustomerRiskInput,
   UpdateTenantCustomerInput,
   VerifyCustomerDocumentInput,
-} from '@xeprime/api-client';
+} from '@/api/customers/api';

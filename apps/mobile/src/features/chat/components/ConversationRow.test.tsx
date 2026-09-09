@@ -1,4 +1,4 @@
-import type { ConversationSummary } from '@xeprime/api-client';
+import type { ConversationSummary } from '@/api/chat/api';
 import { fireEvent, render } from '@testing-library/react-native';
 import { CHAT_SIDE } from '@xeprime/types';
 import { withIntl } from '@/i18n/test-utils';

@@ -36,7 +36,6 @@ import bookings from '@xeprime/domain/messages/vi/bookings.json';
 import calendar from '@xeprime/domain/messages/vi/calendar.json';
 import vehicles from '@xeprime/domain/messages/vi/vehicles.json';
 import vehicleManage from '@xeprime/domain/messages/vi/vehicle-manage.json';
-import rentalPolicies from '@xeprime/domain/messages/vi/rental-policies.json';
 import branches from '@xeprime/domain/messages/vi/branches.json';
 import customers from '@xeprime/domain/messages/vi/customers.json';
 import finance from '@xeprime/domain/messages/vi/finance.json';
@@ -78,7 +77,6 @@ const messages = {
   Calendar: calendar,
   Vehicles: vehicles,
   VehicleManage: vehicleManage,
-  RentalPolicies: rentalPolicies,
   Branches: branches,
   Customers: customers,
   Finance: finance,

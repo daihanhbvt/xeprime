@@ -29,12 +29,8 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/services/auth.service', () => ({
   destroySession: () => api.destroySession(),
+  fetchCurrentUser: () => api.me(),
 }));
-
-vi.mock('@xeprime/api-client', async (importOriginal) => {
-  const actual = await importOriginal<Record<string, unknown>>();
-  return { ...actual, authApi: { me: () => api.me() } };
-});
 
 const USER = { id: 'U1', displayName: 'Khách A' };
 

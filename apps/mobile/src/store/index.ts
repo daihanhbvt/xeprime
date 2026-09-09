@@ -1,5 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { localeReducer } from '@/i18n/locale.slice';
+import { branchScopeReducer } from '@/features/branches/branch-scope.slice';
 import { shellScopeReducer } from '@/features/shell/shell-scope.slice';
 
 /**
@@ -10,6 +11,7 @@ export const store = configureStore({
   reducer: {
     locale: localeReducer,
     shellScope: shellScopeReducer,
+    branchScope: branchScopeReducer,
   },
 });
 

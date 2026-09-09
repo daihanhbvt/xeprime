@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { catalogModelApi, type CatalogModel } from '@xeprime/api-client';
+import { catalogModelApi, type CatalogModel } from './api';
 import { CATALOG_MARKET_STATUS } from '@xeprime/types';
 import { useMemo } from 'react';
 import { queryKeys } from '@/services/query-keys';

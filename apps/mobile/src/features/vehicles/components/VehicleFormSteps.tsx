@@ -20,18 +20,19 @@ import { BlockTitle } from '@/components/ui/BlockTitle';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { FieldLabel } from '@/components/ui/Field';
+import { ImageUploadField } from '@/components/ui/ImageUploadField';
 import { MoneyField } from '@/components/ui/MoneyField';
 import { NumberField } from '@/components/ui/NumberField';
 import { RadioOption } from '@/components/ui/RadioOption';
 import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
-import { LongTermPriceHint } from '@/features/vehicle-pricing/components/LongTermPriceHint';
-import { ToggleRow } from '@/features/vehicle-pricing/components/PolicySections';
+import { LongTermPriceHint } from '@/features/rental-policies/components/LongTermPriceHint';
+import { ToggleRow } from '@/features/rental-policies/components/PolicySections';
 import { useCatalog } from '@/features/catalog/use-catalog';
 import { useDomainLabel } from '@/i18n/domain';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
-import { VehicleImagePicker } from './VehicleImagePicker';
+import { uploadsApi } from '../api';
 
 interface StepProps {
   control: Control<VehicleFormValues>;
@@ -85,7 +86,6 @@ export function Notice({
   );
 }
 
-
 /**
  * Bước 1 — thông tin cơ bản + thông số vận hành + hình thức nguồn xe.
  *
@@ -97,6 +97,7 @@ export function BasicStep({
   branchOptions,
   branchLoading,
   codeReadOnly = false,
+  lockedNotice,
 }: Pick<StepProps, 'control'> & {
   branchOptions: readonly { value: string; label: string }[];
   branchLoading: boolean;
@@ -107,6 +108,13 @@ export function BasicStep({
    * form thông tin là đổi thứ mà mọi chứng từ cũ đang trỏ tới.
    */
   codeReadOnly?: boolean;
+  /**
+   * Xe đang CÔNG KHAI: backend từ chối đổi `vehicleType`/`plateNumber`/`transmission`/
+   * `fuelType`/`manufactureYear` (409 `VEHICLE_FIELD_LOCKED` — `assertNoLockedFieldChange`).
+   * Có giá trị = khoá ô, đúng `lockedNotice` của `VehicleEditWorkspace` bên web: khoá field
+   * bằng `disabled` + đổi hẳn dòng gợi ý, không phải ẩn đi hay chặn lúc lưu.
+   */
+  lockedNotice?: string;
 }) {
   const t = useTranslations('Vehicles.form');
   const domainLabel = useDomainLabel();
@@ -152,13 +160,14 @@ export function BasicStep({
         name="vehicleType"
         label={t('basic.vehicleType')}
         options={vehicleTypeOptions}
+        disabled={Boolean(lockedNotice)}
+        {...(lockedNotice ? { hint: lockedNotice } : {})}
         required
       />
 
       {/* MẢNG dịch vụ — một xe đăng đồng thời tự lái / có tài xế / dài hạn. */}
       <ServiceTypesField control={control} />
       <ServicePriceRemovalWarning control={control} />
-
     </YStack>
   );
 }
@@ -170,7 +179,14 @@ export function BasicStep({
  * wizard tạo xe nối thẳng sau khối cơ bản dưới một tiêu đề phụ, còn màn sửa cho nó hẳn một thẻ
  * "Thông số kỹ thuật" đứng sau thẻ "Quản lý trạng thái".
  */
-export function SpecsSection({ control, isCar }: StepProps) {
+export function SpecsSection({
+  control,
+  isCar,
+  lockedNotice,
+}: StepProps & {
+  /** Xem docblock của `BasicStep` — cùng cơ chế khoá `plateNumber`/`manufactureYear`/`fuelType`. */
+  lockedNotice?: string;
+}) {
   const t = useTranslations('Vehicles.form');
   const { catalog } = useCatalog();
 
@@ -194,13 +210,13 @@ export function SpecsSection({ control, isCar }: StepProps) {
 
   return (
     <YStack gap={space.md}>
-
       <TextField
         control={control}
         name="plateNumber"
         label={t('specs.plateNumber')}
         placeholder={t('specs.platePlaceholder')}
-        hint={t('specs.plateHelp')}
+        hint={lockedNotice ?? t('specs.plateHelp')}
+        editable={!lockedNotice}
       />
       <SelectField
         control={control}
@@ -221,6 +237,8 @@ export function SpecsSection({ control, isCar }: StepProps) {
         grouped={false}
         label={t('specs.manufactureYear')}
         placeholder={String(new Date().getFullYear())}
+        {...(lockedNotice ? { hint: lockedNotice } : {})}
+        editable={!lockedNotice}
       />
       <NumberField
         control={control}
@@ -229,7 +247,7 @@ export function SpecsSection({ control, isCar }: StepProps) {
         label={t('specs.seatCount')}
         placeholder={t('specs.seatPlaceholder')}
       />
-      <FuelTypeField control={control} isCar={isCar} />
+      <FuelTypeField control={control} isCar={isCar} lockedNotice={lockedNotice} />
       <TextField
         control={control}
         name="color"
@@ -322,7 +340,7 @@ function ServiceTypesField({ control }: { control: Control<VehicleFormValues> })
  * Nguồn năng lượng phụ thuộc LOẠI PHƯƠNG TIỆN: xe máy chỉ nhận xăng/điện, nên danh sách phải
  * lọc theo `vehicleFuelTypesFor` — cùng hàm backend dùng để từ chối tổ hợp không hợp lệ.
  */
-function FuelTypeField({ control, isCar }: StepProps) {
+function FuelTypeField({ control, isCar, lockedNotice }: StepProps & { lockedNotice?: string }) {
   const t = useTranslations('Vehicles.form.specs');
   const { catalog } = useCatalog();
   const vehicleType = isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE;
@@ -343,6 +361,8 @@ function FuelTypeField({ control, isCar }: StepProps) {
       label={t('fuelType')}
       options={options}
       placeholder={isCar ? t('fuelPlaceholderCar') : t('fuelPlaceholderMotorbike')}
+      disabled={Boolean(lockedNotice)}
+      {...(lockedNotice ? { hint: lockedNotice } : {})}
     />
   );
 }
@@ -560,13 +580,22 @@ export function MediaStep({ control }: StepProps) {
       <Card>
         <YStack gap={space.md}>
           <BlockTitle>{tCards('images')}</BlockTitle>
-          <VehicleImagePicker
+          {/* Ảnh xe đi qua endpoint riêng của xe — quyền `vehicles.update`, không phải quyền gian hàng. */}
+          <ImageUploadField
             control={control}
             name="mainImageUrl"
             label={t('mainImage')}
+            emptyLabel={t('addMainImage')}
+            presign={uploadsApi.vehicleImage}
             required
           />
-          <VehicleImagePicker control={control} name="images" label={t('gallery')} multiple />
+          <ImageUploadField
+            control={control}
+            name="images"
+            label={t('gallery')}
+            presign={uploadsApi.vehicleImage}
+            multiple
+          />
         </YStack>
       </Card>
 
@@ -629,9 +658,7 @@ function FeaturesField({
                     selected={active}
                     onPress={() =>
                       field.onChange(
-                        active
-                          ? selected.filter((k) => k !== item.key)
-                          : [...selected, item.key],
+                        active ? selected.filter((k) => k !== item.key) : [...selected, item.key],
                       )
                     }
                   />
@@ -646,7 +673,14 @@ function FeaturesField({
 }
 
 /** Thông số kỹ thuật nâng cao — chỉ có ở màn SỬA, luồng tạo không hỏi (đúng như web). */
-export function AdvancedSpecsSection({ control }: { control: Control<VehicleFormValues> }) {
+export function AdvancedSpecsSection({
+  control,
+  lockedNotice,
+}: {
+  control: Control<VehicleFormValues>;
+  /** Xem docblock của `BasicStep` — cùng cơ chế khoá, áp cho `transmission`. */
+  lockedNotice?: string;
+}) {
   const t = useTranslations('Vehicles.form.advanced');
   const domainLabel = useDomainLabel();
 
@@ -658,10 +692,34 @@ export function AdvancedSpecsSection({ control }: { control: Control<VehicleForm
   return (
     <YStack gap={space.md}>
       <GroupTitle>{t('dimensionsTitle')}</GroupTitle>
-      <NumberField control={control} name="lengthMm" label={t('lengthMm')} suffix="mm" placeholder={t('lengthPlaceholder')} />
-      <NumberField control={control} name="widthMm" label={t('widthMm')} suffix="mm" placeholder={t('widthPlaceholder')} />
-      <NumberField control={control} name="heightMm" label={t('heightMm')} suffix="mm" placeholder={t('heightPlaceholder')} />
-      <NumberField control={control} name="curbWeightKg" label={t('curbWeightKg')} suffix="kg" placeholder={t('curbWeightPlaceholder')} />
+      <NumberField
+        control={control}
+        name="lengthMm"
+        label={t('lengthMm')}
+        suffix="mm"
+        placeholder={t('lengthPlaceholder')}
+      />
+      <NumberField
+        control={control}
+        name="widthMm"
+        label={t('widthMm')}
+        suffix="mm"
+        placeholder={t('widthPlaceholder')}
+      />
+      <NumberField
+        control={control}
+        name="heightMm"
+        label={t('heightMm')}
+        suffix="mm"
+        placeholder={t('heightPlaceholder')}
+      />
+      <NumberField
+        control={control}
+        name="curbWeightKg"
+        label={t('curbWeightKg')}
+        suffix="kg"
+        placeholder={t('curbWeightPlaceholder')}
+      />
 
       <GroupTitle>{t('engineTitle')}</GroupTitle>
       <NumberField
@@ -671,13 +729,21 @@ export function AdvancedSpecsSection({ control }: { control: Control<VehicleForm
         placeholder={t('enginePlaceholder')}
         suffix="cc"
       />
-      <NumberField control={control} name="horsepowerHp" label={t('horsepowerHp')} suffix="HP" placeholder={t('horsepowerPlaceholder')} />
+      <NumberField
+        control={control}
+        name="horsepowerHp"
+        label={t('horsepowerHp')}
+        suffix="HP"
+        placeholder={t('horsepowerPlaceholder')}
+      />
       <SelectField
         control={control}
         name="transmission"
         label={t('transmission')}
         options={transmissionOptions}
         placeholder={t('transmissionPlaceholder')}
+        disabled={Boolean(lockedNotice)}
+        {...(lockedNotice ? { hint: lockedNotice } : {})}
       />
 
       <GroupTitle>{t('consumptionTitle')}</GroupTitle>

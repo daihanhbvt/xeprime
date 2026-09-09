@@ -174,7 +174,7 @@ function HomeContent() {
             }
           />
           <FeaturedLocations onPicked={scrollToPreview} />
-          <FeaturedHosts />
+          <FeaturedHosts onOpenShop={(slug) => navigateOnce(ROUTES.explore.shopDetail(slug))} />
           <RentalSteps />
         </YStack>
       </Animated.ScrollView>

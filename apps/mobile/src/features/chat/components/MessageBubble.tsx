@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import type { ChatMessage, MessageAttachment } from '@xeprime/api-client';
+import type { ChatMessage, MessageAttachment } from '@/api/chat/api';
 import { CHAT_SEND_STATE, type ChatSendState } from '@xeprime/domain';
 import { Image } from 'expo-image';
 import { memo } from 'react';

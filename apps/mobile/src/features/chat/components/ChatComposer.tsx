@@ -7,7 +7,7 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useImageErrorMessage } from '@/lib/image-permission-message';
 import { IMAGE_SOURCE, pickImages, uploadImageToR2 } from '@/lib/r2-image-upload';
-import { chatApi } from '@xeprime/api-client';
+import { chatApi } from '@/api/chat/api';
 import { CHAT_ATTACHMENT_MAX_COUNT } from '@xeprime/types';
 import { colors, fieldFontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
 import type { SendAttachment } from '../hooks/use-thread';

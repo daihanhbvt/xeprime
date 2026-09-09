@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { chatApi, type ChatMessage } from '@xeprime/api-client';
+import { chatApi, type ChatMessage } from '@/api/chat/api';
 import { CHAT_SEND_STATE } from '@xeprime/domain';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
@@ -12,8 +12,8 @@ import { useThread } from './use-thread';
  * tin lạc quan hiện ra NGAY, bản server thay chỗ nó thay vì nằm cạnh, và — quan trọng nhất —
  * phản hồi của hội thoại A không được rơi vào hội thoại B sau khi người dùng đã chuyển màn.
  */
-jest.mock('@xeprime/api-client', () => {
-  const actual = jest.requireActual('@xeprime/api-client');
+jest.mock('@/api/chat/api', () => {
+  const actual = jest.requireActual('@/api/chat/api');
   return {
     ...actual,
     chatApi: {

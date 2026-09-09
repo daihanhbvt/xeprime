@@ -5,7 +5,7 @@ export {
   maintenanceApi,
   maintenanceBoardToParams,
   MAINTENANCE_DEFAULT_LIMIT,
-} from '@xeprime/api-client';
+} from '@/api/vehicle-maintenance/api';
 
 export type {
   CompleteMaintenanceInput,
@@ -19,4 +19,4 @@ export type {
   OdometerReading,
   SaveMaintenanceProfileInput,
   SaveMaintenanceRecordInput,
-} from '@xeprime/api-client';
+} from '@/api/vehicle-maintenance/api';

@@ -25,6 +25,15 @@ export const TENANT_ROLE = {
 export type TenantRole = (typeof TENANT_ROLE)[keyof typeof TENANT_ROLE];
 export const TENANT_ROLE_VALUES = Object.values(TENANT_ROLE) as TenantRole[];
 
+/**
+ * Vai trò có thể MỜI/ĐỔI VAI qua màn Nhân sự — không gồm `shop_owner`: "một gian hàng một
+ * chủ" không đổi được qua đường mời/đổi vai (chuyển chủ sở hữu, nếu có, là một luồng khác).
+ * Web và app native từng khai lại danh sách này ở mỗi client; đây là nguồn dùng chung duy nhất.
+ */
+export const ASSIGNABLE_TENANT_ROLES: readonly TenantRole[] = TENANT_ROLE_VALUES.filter(
+  (role) => role !== TENANT_ROLE.SHOP_OWNER,
+);
+
 export const TENANT_ROLE_LABEL: Readonly<Record<TenantRole, string>> = {
   [TENANT_ROLE.SHOP_OWNER]: 'Chủ gian hàng',
   [TENANT_ROLE.SHOP_MANAGER]: 'Quản lý gian hàng',

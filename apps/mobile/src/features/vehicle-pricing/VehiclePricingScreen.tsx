@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -23,8 +22,8 @@ import { Card } from '@/components/ui/Card';
 import { DataRow } from '@/components/ui/DataRow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { MoneyField } from '@/components/ui/MoneyField';
-import { LongTermPriceHint } from './components/LongTermPriceHint';
-import type { PolicyFormValues } from './schema';
+import { LongTermPriceHint } from '@/features/rental-policies/components/LongTermPriceHint';
+import type { PolicyFormValues } from '@/features/rental-policies/schema';
 import { NumberField } from '@/components/ui/NumberField';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -37,15 +36,20 @@ import { discountedPriceVnd } from '@/features/vehicles/pricing';
 import { useDomainLabel } from '@/i18n/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { goBackOr } from '@/navigation/go-back-or';
 import { useLeaveGuard } from '@/hooks/use-leave-guard';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
-import { PolicySections, ToggleRow } from './components/PolicySections';
-import { formToSaveInput, policyToForm } from './form';
-import { vehiclePricingFormSchema, type VehiclePricingFormValues } from './schema';
+import { PolicySections, ToggleRow } from '@/features/rental-policies/components/PolicySections';
+import { formToSaveInput, policyToForm } from '@/features/rental-policies/form';
+import {
+  vehiclePricingFormSchema,
+  type VehiclePricingFormValues,
+} from '@/features/rental-policies/schema';
 import { useSaveVehiclePricing, useVehiclePricing } from './hooks/use-vehicle-pricing';
 import type { SaveVehiclePricingInput, VehiclePricing } from './api';
 
@@ -164,9 +168,12 @@ function VehiclePricingForm({
 }) {
   const t = useTranslations('Vehicles.pricing');
   const tActions = useTranslations('Common.actions');
+  /* Câu "bỏ thay đổi chưa lưu" là của TAB SỬA XE nói chung (`Vehicles.edit.discard`), không
+     riêng tab giá — ba tab hỏi cùng một câu nên chúng dùng chung một bộ chữ. */
+  const tEdit = useTranslations('Vehicles.edit');
   const toast = useAppToast();
-  const tStates = useTranslations('Common.states');
   const errorMessage = useErrorMessage();
+  const navigateOnce = useNavigateOnce();
   const save = useSaveVehiclePricing(vehicleId);
 
   const overriding = pricing.source === POLICY_SOURCE.VEHICLE;
@@ -183,8 +190,12 @@ function VehiclePricingForm({
 
   const label = vehiclePlate ? `${vehicleName} (${vehiclePlate})` : vehicleName;
 
+  const resolver = useValidationResolver<VehiclePricingFormValues>(
+    vehiclePricingFormSchema,
+    'Vehicles.pricing.validation',
+  );
   const { control, handleSubmit, reset, setValue, formState } = useForm<VehiclePricingFormValues>({
-    resolver: yupResolver(vehiclePricingFormSchema),
+    resolver,
     /*
      * Giá ngày thường chỉ bắt buộc khi xe đăng tự lái. `policyEditable` tắt mọi ràng buộc của
      * khối CHÍNH SÁCH khi xe đang kế thừa: các ô đó không hiện ra để sửa nên không được phép chặn
@@ -330,9 +341,16 @@ function VehiclePricingForm({
         footer={
           canEdit ? (
             <Button
-              label={t('confirm.ok')}
+              label={tActions('saveChanges')}
               loading={save.isPending}
-              disabled={!formState.isDirty}
+              /*
+               * Chuyển từ kế thừa sang tự tuỳ chỉnh (hoặc ngược lại) là một thay đổi CẦN LƯU dù
+               * chưa gõ lại ô nào — `PolicySections` điền sẵn đúng giá trị chính sách gian hàng
+               * lúc bật ghi đè, nên RHF thấy y hệt `defaultValues` và `formState.isDirty` vẫn
+               * `false`. So `editMode` (ý định đang chọn) với `overriding` (nguồn đã lưu): khác
+               * nhau tức có thay đổi nguồn cần lưu, dù không ô nào bị sửa.
+               */
+              disabled={!formState.isDirty && editMode === overriding}
               onPress={() => void submit()}
             />
           ) : undefined
@@ -371,14 +389,11 @@ function VehiclePricingForm({
 
                 Đang tuỳ chỉnh riêng thì chính sách gian hàng không còn chi phối xe này, và một
                 đường dẫn sang đó chỉ khiến người dùng tưởng sửa bên kia là xe này đổi theo.
-
-                App chưa có màn chính sách gian hàng nên trả lời bằng một câu, không dựng nút
-                chết im lặng.
               */}
               {editMode ? null : (
                 <BlockLink
                   label={t('source.viewShopPolicy')}
-                  onPress={() => toast.showInfo(tStates('featureComingSoon'))}
+                  onPress={() => navigateOnce(ROUTES.manage.shopPolicies())}
                 />
               )}
             </YStack>
@@ -491,6 +506,9 @@ function VehiclePricingForm({
             <PolicySections
               control={control as unknown as Parameters<typeof PolicySections>[0]['control']}
               disabled={!canEdit || save.isPending}
+              /* Bốn khối ở đây chỉ là một phần của trang giá theo xe, không phải cả trang — đánh
+                 số 1–4 sẽ nói dối về vị trí của chúng. Web truyền đúng cờ này ở cùng chỗ. */
+              numbered={false}
             />
           ) : (
             <InheritedPolicyCard
@@ -515,6 +533,28 @@ function VehiclePricingForm({
           onCancel={() => setPending(null)}
         />
       ) : null}
+
+      {/*
+        Hộp "bỏ thay đổi chưa lưu?" — `useLeaveGuard` chỉ CHẶN, nó không tự vẽ gì.
+
+        Thiếu khối này thì `leave.guard` cất ý định rời màn vào `pending` rồi bật một cờ không ai
+        đọc: bấm Lui hay đổi tab đều không có phản ứng nào, và màn hình đứng im như nút hỏng.
+        `reset()` chạy trước `leave.confirm()` để lần quay lại tab này không mở ra bản nháp cũ —
+        `values` của React Hook Form giữ nguyên giá trị đang bẩn.
+      */}
+      <AlertDialog
+        open={leave.open}
+        title={tEdit('discard.title')}
+        message={tEdit('discard.body')}
+        confirmLabel={tEdit('discard.ok')}
+        cancelLabel={tEdit('discard.cancel')}
+        destructive
+        onConfirm={() => {
+          reset();
+          leave.confirm();
+        }}
+        onCancel={leave.cancel}
+      />
     </>
   );
 }
@@ -632,7 +672,11 @@ function DirectDiscount({
           ) : enabled && discountedWeekday ? (
             <>
               <XStack ai="center" gap={space.xs}>
-                <Text col={colors.textMuted} fos={fontSize.bodySm} textDecorationLine="line-through">
+                <Text
+                  col={colors.textMuted}
+                  fos={fontSize.bodySm}
+                  textDecorationLine="line-through"
+                >
                   {fmt.money(String(weekdayPrice))}
                 </Text>
                 <XStack bg={colors.discount} br={radius.sm} px={space.sm} py={2}>
@@ -697,7 +741,6 @@ function PreviewLine({ label, value }: { label: string; value: string }) {
     </YStack>
   );
 }
-
 
 /**
  * Chính sách ĐANG ÁP DỤNG khi xe kế thừa của gian hàng — bản native của `InheritedPolicyCard`.
@@ -783,11 +826,26 @@ function InheritedPolicyCard({
             <DataRow
               labelWide
               label={t('discount')}
-              value={maxDiscount == null ? t('discountOff') : t('discountMax', { percent: maxDiscount })}
+              value={
+                maxDiscount == null ? t('discountOff') : t('discountMax', { percent: maxDiscount })
+              }
             />
           </YStack>
         ) : (
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>{t('emptyBody')}</Text>
+          /*
+            `t.rich` chứ không `t`: câu này bọc tên trang chính sách trong thẻ <policies> để
+            BÊN WEB biến nó thành liên kết. Cùng MỘT khoá cho hai client — tách làm hai khoá là
+            hai bản dịch của cùng một câu, và chúng sẽ lệch nhau ở lần sửa chữ đầu tiên.
+          */
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            {t.rich('emptyBody', {
+              policies: (chunks) => (
+                <Text col={colors.text} fow={fontWeight.semibold}>
+                  {chunks}
+                </Text>
+              ),
+            })}
+          </Text>
         )}
 
         {canEdit ? <Button label={t('edit')} variant="secondary" onPress={onEdit} /> : null}

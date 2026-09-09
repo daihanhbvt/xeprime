@@ -5,7 +5,11 @@
     "loadError": "Không tải được danh sách tài xế",
     "empty": "Chưa có tài xế nào",
     "emptyHint": "Thêm tài xế để gán vào các đơn thuê xe có tài xế.",
-    "total": "{count, plural, other {# tài xế}}"
+    "total": "{count, plural, other {# tài xế}}",
+    "forbidden": {
+      "title": "Không có quyền truy cập",
+      "description": "Bạn cần quyền xem tài xế của gian hàng. Liên hệ chủ gian hàng để được cấp quyền."
+    }
   },
   "filters": {
     "search": "Tìm tài xế",

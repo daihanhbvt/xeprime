@@ -178,14 +178,14 @@ export function CustomerRevenueList({
                         key: 'trips',
                         label: t('columns.trips'),
                         value: fmt.count(row.trips),
-                        icon: 'repeat-outline',
+                        icon: 'repeat',
                         tone: METRIC_TONE.count,
                       },
                       {
                         key: 'share',
                         label: t('columns.share'),
                         value: shareLabel(row.sharePercent),
-                        icon: 'pie-chart-outline',
+                        icon: 'pie-chart',
                         tone: METRIC_TONE.share,
                       },
                     ]}

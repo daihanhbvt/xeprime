@@ -1,4 +1,5 @@
-import { authApi, type CurrentUser, type MobileRegisterInput } from '@xeprime/api-client';
+import { authApi } from '@/api/auth/api';
+import { type CurrentUser, type MobileRegisterInput } from '@/api/auth/types';
 import type { AuthProvider } from '@xeprime/types';
 import {
   signInWithOtp,
@@ -66,4 +67,4 @@ export function destroySession(): Promise<void> {
  * khoản (`client: 'native'`). Đi qua đúng kho token đang dùng — không có đường thứ hai.
  */
 export { adoptSession as adoptMobileSession, describeDevice } from '@/lib/auth-session';
-export type { MobileSession } from '@xeprime/api-client';
+export type { MobileSession } from '@/api/auth/types';

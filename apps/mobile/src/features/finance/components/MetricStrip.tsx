@@ -6,14 +6,28 @@ import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 /** Huy hiệu tròn quanh biểu tượng — vừa đủ ôm một icon 13pt, không lấn chỗ con số. */
 const BADGE_SIZE = 22;
 
-/** Cỡ icon trong huy hiệu — nhỏ hơn `iconSize.xs` một bậc vì nó nằm trong vòng tròn 22pt. */
-const BADGE_ICON = 12;
+/**
+ * Cỡ icon trong huy hiệu — vẫn nhỏ hơn `iconSize.xs`, nhưng KHÔNG nhỏ hơn được nữa.
+ *
+ * Icon ở đây là thứ duy nhất phân biệt hai dòng chỉ số khi lướt; ở 12pt nét của một hình vẽ
+ * đường (pie-chart, repeat) mảnh gần bằng nét chữ 11px bên cạnh, và cả dải đọc ra thành hai
+ * dòng chữ xám chứ không phải hai chỉ số có biểu tượng. 13pt trong vòng tròn 22pt vẫn còn 4,5pt
+ * lề mỗi bên — đủ để huy hiệu là huy hiệu, không phải một ô vuông bo góc.
+ */
+const BADGE_ICON = 13;
 
 export interface Metric {
   /** Khoá React — dùng khoá message của nhãn, đừng lấy chỉ số mảng. */
   key: string;
   label: string;
   value: string;
+  /**
+   * Biểu tượng ĐẶC (`repeat`, `pie-chart`), không phải biến thể `-outline`.
+   *
+   * Huy hiệu ở đây chỉ 22pt và nền của nó là một sắc nhạt 8–10%: hình vẽ đường trong khung đó
+   * gần như tan vào nền, nên cái đọc được chỉ còn cái vòng tròn màu. Hình đặc giữ đúng vai của
+   * nó — nhận ra chỉ số trước khi kịp đọc nhãn.
+   */
   icon: IconName;
   /**
    * Màu VAI TRÒ của chỉ số — ăn vào biểu tượng và nền huy hiệu, KHÔNG ăn vào con số.
@@ -70,7 +84,21 @@ export function MetricStrip({ items }: { items: readonly Metric[] }) {
             <Ionicons name={item.icon} size={BADGE_ICON} color={item.tone.fg} />
           </YStack>
 
-          <Text f={1} minWidth={0} col={colors.placeholder} fos={fontSize.label} numberOfLines={1}>
+          {/*
+            Nhãn ở mực THỨ CẤP chứ không phải mực mờ nhất: `placeholder` là mực của chữ CHƯA CÓ
+            (gợi ý trong ô nhập, giá trị rỗng). Một nhãn chỉ số thì luôn có nội dung thật, và ở
+            mực đó nó nhạt hơn cả đường kẻ phân cách ngay trên nó — dải số đọc ra như đang bị vô
+            hiệu hoá. `medium` để nhãn đứng ngang vai con số ở cột phải thay vì lửng lơ giữa
+            chữ thường và nền.
+          */}
+          <Text
+            f={1}
+            minWidth={0}
+            col={colors.textMuted}
+            fos={fontSize.label}
+            fow={fontWeight.medium}
+            numberOfLines={1}
+          >
             {item.label}
           </Text>
 

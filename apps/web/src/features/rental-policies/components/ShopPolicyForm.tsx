@@ -1,9 +1,10 @@
 'use client';
 
-import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App, Button } from 'antd';
+import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
+import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { formToSaveInput, policyToForm } from '../form';
 import { policyFormSchema, type PolicyFormValues } from '../schema';
 import type { SaveRentalPolicyInput, ShopRentalPolicy } from '../types';
@@ -26,21 +27,26 @@ interface ShopPolicyFormProps {
  * (snapshot bất biến ở backend). Thanh cảnh báo thay đổi chưa lưu bám theo `isDirty`.
  */
 export function ShopPolicyForm({ initial, canEdit, submitting, onSubmit }: ShopPolicyFormProps) {
+  const t = useTranslations('Shop.policies');
   const { modal } = App.useApp();
+  const resolver = useValidationResolver<PolicyFormValues>(
+    policyFormSchema,
+    'Vehicles.pricing.validation',
+  );
   const { control, handleSubmit, reset, formState } = useForm<PolicyFormValues>({
-    resolver: yupResolver(policyFormSchema),
+    resolver,
     values: policyToForm(initial.policy),
   });
 
   const confirmThenSubmit = handleSubmit((values) => {
     modal.confirm({
-      title: 'Xác nhận thay đổi chính sách thuê?',
+      title: t('confirm.title'),
       content:
         initial.inheritingVehicles > 0
-          ? `Chính sách mới áp dụng ngay cho ${initial.inheritingVehicles} xe đang kế thừa, tính từ các lượt đặt xe mới. Các đơn thuê đã chốt trước đó vẫn giữ nguyên mức giá và tiền cọc cũ.`
-          : 'Chính sách mới áp dụng cho các lượt đặt xe mới. Các đơn thuê đã chốt trước đó vẫn giữ nguyên mức giá và tiền cọc cũ.',
-      okText: 'Xác nhận thay đổi',
-      cancelText: 'Hủy bỏ',
+          ? t('confirm.bodyInheriting', { count: initial.inheritingVehicles })
+          : t('confirm.body'),
+      okText: t('confirm.ok'),
+      cancelText: t('dirtyDiscard'),
       onOk: () => onSubmit(formToSaveInput(values)),
     });
   });
@@ -52,8 +58,8 @@ export function ShopPolicyForm({ initial, canEdit, submitting, onSubmit }: ShopP
           className={styles.introAlert}
           type="info"
           showIcon
-          title="Gian hàng chưa cấu hình chính sách thuê"
-          description="Khi chưa có chính sách, các lượt đặt mới không có tiền cọc, không hỗ trợ giao tận nơi và không có ưu đãi giảm giá. Điền cấu hình bên dưới rồi bấm Lưu chính sách."
+          title={t('emptyTitle')}
+          description={t('emptyBody')}
         />
       ) : null}
 
@@ -62,10 +68,10 @@ export function ShopPolicyForm({ initial, canEdit, submitting, onSubmit }: ShopP
           className={styles.dirtyBar}
           type="warning"
           showIcon
-          title="Bạn có các thay đổi chưa được áp dụng"
+          title={t('dirty')}
           action={
             <Button size="small" onClick={() => reset()} disabled={submitting}>
-              Hủy bỏ
+              {t('dirtyDiscard')}
             </Button>
           }
         />
@@ -78,14 +84,14 @@ export function ShopPolicyForm({ initial, canEdit, submitting, onSubmit }: ShopP
         legacyDiscountTiers={initial.policy?.legacyDiscountTiers}
         depositHint={
           initial.inheritingVehicles > 0
-            ? `${initial.inheritingVehicles} xe đang dùng mức cọc này`
+            ? t('depositHint', { count: initial.inheritingVehicles })
             : undefined
         }
       />
 
       <StickyFormActions
-        submitLabel="Lưu chính sách"
-        cancelLabel="Hoàn tác thay đổi"
+        submitLabel={t('submit')}
+        cancelLabel={t('reset')}
         onCancel={formState.isDirty ? () => reset() : undefined}
         submitting={submitting}
         disabled={!canEdit}
