@@ -78,7 +78,9 @@ Never reinvent logic that is already canonical in the monorepo:
   a DTO type or use a raw status string.
 * **Shared logic**: consume domain helpers (`rental-busy.ts`, `long-term.ts`, `money.ts`,
   `datetime.ts`) from `@xeprime/domain` or `@xeprime/types`.
-* **API client**: consume endpoints and TanStack Query keys from `@xeprime/api-client`.
+* **API client**: take the HTTP infrastructure and TanStack Query keys from `@xeprime/api-client`, and the
+  per-feature endpoint calls from the app's own layer at `apps/mobile/src/api/<feature>/` (ADR 0031 — web
+  keeps its own copy; changing a shared contract means editing BOTH).
 * **Design tokens**: `XP_TOKENS` in `@xeprime/ui` is the SINGLE source for colors, typography,
   radii, spacing and shadows across every client (ADR 0003). On native, consume them through
   `src/theme/tokens.ts` (`colors`, `space`, `radius`, `fontSize`, `fieldFontSize`, `fontWeight`,
@@ -295,7 +297,9 @@ The base already solves the three things every screen gets wrong — use them, d
   the app-wide SHARED header. Do not build a private `XStack` row for your screen: if a variant is
   missing, add it to that file. It adds the top safe-area inset itself, so the `<Screen>` beneath it
   must declare `edges={['left', 'right', 'bottom']}`. The header background does not use the brand
-  color — gold is reserved for actions; see the docblock in that file.
+  color — gold is reserved for actions; see the docblock in that file. The `context` slot puts a
+  small CONTROL on the subtitle line in place of `subtitle` — the manage portal's branch-scope
+  picker lives there rather than costing every screen a separate strip below the bar.
 * **Wrap every screen in [`<Screen>`](../../../apps/mobile/src/components/layout/Screen.tsx).** It
   gathers safe area, keyboard avoidance and `keyboardShouldPersistTaps` in one place; miss one and
   you get text under the notch, a keyboard covering the input, or taps that need two presses. Pass
@@ -321,6 +325,20 @@ only appears once a keyboard opens.
 on Android `adjustResize` does not apply there either. So every modal surface needs its OWN
 `KeyboardAvoidingView` inside the `Modal` — that is why [`<BottomSheet>`](../../../apps/mobile/src/components/ui/BottomSheet.tsx)
 carries one. It needs no `keyboardVerticalOffset` because it IS the window root.
+
+**Nothing scrolls the focused field into view.** The two causes above are about the container
+being lifted by the wrong amount; this one bites after the lift is correct. `KeyboardAvoidingView`
+only SHRINKS the visible area (so a `footer` stays clear of the keyboard) — the content inside the
+`ScrollView` does not move, so a field in the lower half of a long form is simply below the fold
+and the user types blind. React Native has no auto-scroll for this: `ScrollView` only exposes an
+imperative scroll, and `automaticallyAdjustKeyboardInsets` is iOS-only and double-counts against
+the KAV. On Android, `softwareKeyboardLayoutMode: "resize"` stopped covering for it once Expo went
+edge-to-edge (SDK 53+) — the window no longer resizes.
+
+`Screen` therefore does it: on `keyboardDidShow` it measures the focused input in WINDOW
+coordinates, compares against the keyboard's `screenY`, and scrolls the overlap away; and it
+reserves a tail of bottom padding while the keyboard is up, because the LAST field of a form has
+nothing below it to scroll into. Nothing to wire per screen.
 
 Corollary: content inside a `BottomSheet` never needs its own keyboard handling, and content
 inside a `Screen` never should either — if a field is still covered, the container is wrong, not
@@ -364,6 +382,11 @@ the field.
   default content size, while this app runs nearly three quarters of its text at 12px, so a field
   written against `fontSize.body` renders larger than its own label. One constant also means a
   future change to input text is one edit, not a sweep across every field.
+* **A round icon badge is [`<IconDisc>`](../../../apps/mobile/src/components/ui/IconDisc.tsx)**, never a
+  hand-rolled circular `YStack`. Two forms: `soft` (tinted fill, tone border, tone glyph) for a disc
+  that labels the content next to it — a stat row, a list row; `filled` (solid tone, white glyph) for
+  the head of a block, where the disc anchors the whole block. The glyph is always half the diameter,
+  so every disc in the app reads as the same family.
 * **Confirmations go through [`<AlertDialog>`](../../../apps/mobile/src/components/ui/AlertDialog.tsx),
   never `Alert.alert`.** The OS dialog ignores the design tokens, orders its buttons differently
   on iOS and Android (so the same array yields "Cancel | Delete" on one and the reverse on the
@@ -381,6 +404,12 @@ the field.
   a menu makes them open it just to learn what the question is. Three or more laid out flat starts
   eating the screen, and that is what the menu is for.
 
+  **A row inside a menu is [`<MenuOption>`](../../../apps/mobile/src/components/ui/MenuOption.tsx),
+  wrapped in `<MenuOptionList>`** — the list rules a hairline BETWEEN adjacent rows (never under
+  the last one, which reads as a list cut off mid-scroll) and owns the spacing, since
+  `BottomSheet` spaces its direct children by 16px and that much air defeats the rule. Do not
+  hand-draw a menu row: the three menus that did drifted apart in text size and selected colour.
+
   **Never `Chip` for a labelled choice.** `Chip` sets `numberOfLines={1}`, so a label that is a
   sentence — "Bình thường — xe không có dấu hiệu hư hại mới" — loses the clause that makes the
   choice decidable. Chips are for short segmented switches (service type, quick filters).
@@ -394,6 +423,12 @@ the field.
 
 Beyond that:
 
+* **Picking and uploading an image goes through
+  [`useImageUpload`](../../../apps/mobile/src/components/ui/use-image-upload.tsx)** — the
+  pick/compress/presign/PUT/toast chain, including the signed `Content-Length` trap in §3B.
+  `ImageUploadField` is that hook plus the standard field layout; reach for the hook directly only
+  when the surface genuinely has another shape (the shop identity header: full-bleed cover with a
+  round logo laid over it). Never re-derive the upload chain in a screen.
 * **Haptics**: use `expo-haptics` for consequential actions (confirming a booking, approving a
   request, submitting a handover) — not for ordinary navigation.
 * **Platform differences**: small ones use `Platform.select` inline; large ones (a different JSX
@@ -421,6 +456,7 @@ Skeletons live in [`src/components/ui/Skeleton.tsx`](../../../apps/mobile/src/co
 | `SkeletonText` | A paragraph: lines of uneven width, last one short |
 | `VehicleCardSkeleton` | A vehicle card, same photo ratio and line count as the real one |
 | `ListRowSkeleton` | A list row (province, shop) |
+| `MiniRowsSkeleton` | A dense two-line quick-look row with an amount + status column (dashboard panels) |
 | `ListingDetailSkeleton` | The vehicle detail page |
 | `ProfileSkeleton` | Account: avatar + identity + setting rows |
 

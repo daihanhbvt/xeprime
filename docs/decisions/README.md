@@ -45,6 +45,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0028](0028-marketplace-subscription-fees-and-custodied-funds.md) | Mô hình hiện hành: hai lựa chọn, phí minh bạch, hold/payout có gate | Accepted; giá pilot cụ thể hoá bởi 0029 |
 | [0029](0029-per-vehicle-flat-pricing-and-customer-side-fees.md) | Giá gói phẳng theo chỗ; phụ phí chuyến phía khách | **Accepted** |
 | [0030](0030-locked-identity-fields-instead-of-reapproval.md) | Khoá căn cước xe thay cho "sửa là duyệt lại" | **Accepted; ghi đè 0008 điều 2** |
+| [0031](0031-split-feature-api-per-app.md) | Tách tầng gọi API theo app; api-client chỉ còn hạ tầng HTTP | **Accepted; ghi đè 0007 phần tầng feature** |
 
 ## Quy tắc thêm ADR
 

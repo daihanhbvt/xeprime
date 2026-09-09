@@ -1,50 +1,181 @@
-// Side-effect import, KHÔNG xoá: nạp module này là lúc client mặc định của WEB được cấu hình.
-import '@/services/api-client';
-
 import {
   ApiClientError,
-  CUSTOMERS_DEFAULT_LIMIT,
-  CUSTOMER_HISTORY_DEFAULT_LIMIT,
-  customerFiltersToParams,
-  customersApi,
-  duplicateCustomerId,
+  apiDelete,
+  apiGet,
+  apiPatch,
+  apiPost,
+  fetchPage,
   type Paged,
-} from '@xeprime/api-client';
+  type QueryParams,
+} from '@/services/api-client';
 import { uploadToR2, validateDocumentFile } from '@/services/upload';
-import type { CustomerDocument, PresignCustomerDocumentInput } from './types';
+import type {
+  CreateCustomerNoteInput,
+  CreateTenantCustomerInput,
+  CustomerBooking,
+  CustomerDocument,
+  CustomerDocumentDownload,
+  CustomerDocumentPresign,
+  CustomerFilters,
+  CustomerNote,
+  DuplicatePhoneDetails,
+  PresignCustomerDocumentInput,
+  TenantCustomer,
+  TenantCustomerDetail,
+  TenantCustomerSummary,
+  UpdateCustomerRiskInput,
+  UpdateTenantCustomerInput,
+  VerifyCustomerDocumentInput,
+} from './types';
 
 /**
- * Lối vào API của sổ khách trên WEB — lớp vỏ mỏng quanh `@xeprime/api-client`.
+ * Lối vào API của sổ khách trên WEB.
  *
- * Toàn bộ phần gọi mạng đã ở package dùng chung để app native dùng lại đúng một bộ đường dẫn,
- * một bộ query params và một cách đọc `details` của lỗi 409. Ở lại đây đúng MỘT thứ: bước tải
- * tệp, vì nó dùng `File` + `XMLHttpRequest` — hai thứ Metro không đọc được, và cũng là lý do
- * `packages/*` cấm import chúng.
+ * ADR 0031: app native có bản riêng ở `apps/mobile/src/api/customers/api.ts`. Đường dẫn, query
+ * params và cách đọc `details` của lỗi 409 phải khớp nhau vì hai bên gọi cùng một backend —
+ * nhưng sửa một bên KHÔNG còn tự động sang bên kia.
  */
-export {
-  CUSTOMERS_DEFAULT_LIMIT,
-  CUSTOMER_HISTORY_DEFAULT_LIMIT,
-  customerFiltersToParams as filtersToParams,
-  duplicateCustomerId,
-  type Paged,
-};
+export type { Paged };
 
-export const fetchCustomers = customersApi.list;
-export const fetchCustomerSummary = customersApi.summary;
-export const fetchCustomer = customersApi.detail;
-export const createCustomer = customersApi.create;
-export const updateCustomer = customersApi.update;
-export const archiveCustomer = customersApi.archive;
-export const restoreCustomer = customersApi.restore;
-export const updateCustomerRisk = customersApi.updateRisk;
-export const fetchCustomerBookings = customersApi.bookings;
-export const fetchCustomerNotes = customersApi.notes;
-export const createCustomerNote = customersApi.addNote;
-export const deleteCustomerNote = customersApi.deleteNote;
-export const fetchCustomerDocuments = customersApi.documents;
-export const deleteCustomerDocument = customersApi.deleteDocument;
-export const verifyCustomerDocument = customersApi.verifyDocument;
-export const fetchCustomerDocumentDownload = customersApi.documentDownload;
+/** Cùng `CUSTOMER_DEFAULT_LIMIT` của DTO backend. */
+export const CUSTOMERS_DEFAULT_LIMIT = 20;
+/** Lịch sử thuê / ghi chú hiện trong MỘT tab hẹp — trang ngắn hơn danh sách chính. */
+export const CUSTOMER_HISTORY_DEFAULT_LIMIT = 10;
+
+export function filtersToParams(filters: CustomerFilters): QueryParams {
+  return {
+    q: filters.q ?? null,
+    relationship: filters.relationship ?? null,
+    sort: filters.sort ?? null,
+    page: filters.page ?? 1,
+    limit: filters.limit ?? CUSTOMERS_DEFAULT_LIMIT,
+  };
+}
+
+/** Id hồ sơ đang giữ SĐT trùng, nếu backend gửi kèm — để UI mở thẳng hồ sơ đang có. */
+export function duplicateCustomerId(error: unknown): string | null {
+  if (!(error instanceof ApiClientError)) return null;
+  const details = error.details as DuplicatePhoneDetails | undefined;
+  return details?.customerId ?? null;
+}
+
+const base = '/customers';
+const one = (id: string) => `${base}/${encodeURIComponent(id)}`;
+const docs = (id: string) => `${one(id)}/documents`;
+
+export function fetchCustomers(filters: CustomerFilters): Promise<Paged<TenantCustomer>> {
+  return fetchPage<TenantCustomer>(base, filtersToParams(filters), CUSTOMERS_DEFAULT_LIMIT);
+}
+
+export function fetchCustomerSummary(): Promise<TenantCustomerSummary> {
+  return apiGet<TenantCustomerSummary>(`${base}/summary`);
+}
+
+export function fetchCustomer(id: string): Promise<TenantCustomerDetail> {
+  return apiGet<TenantCustomerDetail>(one(id));
+}
+
+export function createCustomer(body: CreateTenantCustomerInput): Promise<TenantCustomerDetail> {
+  return apiPost<TenantCustomerDetail>(base, body);
+}
+
+export function updateCustomer(
+  id: string,
+  body: UpdateTenantCustomerInput,
+): Promise<TenantCustomerDetail> {
+  return apiPatch<TenantCustomerDetail>(one(id), body);
+}
+
+export function archiveCustomer(id: string): Promise<TenantCustomerDetail> {
+  return apiPost<TenantCustomerDetail>(`${one(id)}/archive`, {});
+}
+
+export function restoreCustomer(id: string): Promise<TenantCustomerDetail> {
+  return apiPost<TenantCustomerDetail>(`${one(id)}/restore`, {});
+}
+
+export function updateCustomerRisk(
+  id: string,
+  body: UpdateCustomerRiskInput,
+): Promise<TenantCustomerDetail> {
+  return apiPost<TenantCustomerDetail>(`${one(id)}/risk`, body);
+}
+
+export function fetchCustomerBookings(
+  id: string,
+  page: number,
+  limit = CUSTOMER_HISTORY_DEFAULT_LIMIT,
+): Promise<Paged<CustomerBooking>> {
+  return fetchPage<CustomerBooking>(`${one(id)}/bookings`, { page, limit }, limit);
+}
+
+export function fetchCustomerNotes(
+  id: string,
+  page: number,
+  limit = CUSTOMER_HISTORY_DEFAULT_LIMIT,
+): Promise<Paged<CustomerNote>> {
+  return fetchPage<CustomerNote>(`${one(id)}/notes`, { page, limit }, limit);
+}
+
+export function createCustomerNote(
+  id: string,
+  body: CreateCustomerNoteInput,
+): Promise<CustomerNote> {
+  return apiPost<CustomerNote>(`${one(id)}/notes`, body);
+}
+
+export function deleteCustomerNote(id: string, noteId: string): Promise<{ ok: true }> {
+  return apiDelete<{ ok: true }>(`${one(id)}/notes/${encodeURIComponent(noteId)}`);
+}
+
+export function fetchCustomerDocuments(id: string): Promise<CustomerDocument[]> {
+  return apiGet<CustomerDocument[]>(docs(id));
+}
+
+/** Bước 1 của luồng file riêng tư — tạo bản ghi `pending` + URL PUT ngắn hạn. */
+function presignCustomerDocument(
+  id: string,
+  body: PresignCustomerDocumentInput,
+): Promise<CustomerDocumentPresign> {
+  return apiPost<CustomerDocumentPresign>(`${docs(id)}/presign`, body);
+}
+
+/** Bước 3 — server HEAD + soi chữ ký byte đầu rồi mới chuyển `ready`. */
+function completeCustomerDocument(id: string, documentId: string): Promise<CustomerDocument> {
+  return apiPost<CustomerDocument>(`${docs(id)}/${encodeURIComponent(documentId)}/complete`, {});
+}
+
+/**
+ * URL ký NGẮN HẠN để mở giấy tờ — xin ngay lúc bấm, không bao giờ lưu vào state hay cache.
+ * Backend kiểm `customers.documents.view_files` và ghi một dòng audit cho mỗi lần gọi.
+ */
+export function fetchCustomerDocumentDownload(
+  id: string,
+  documentId: string,
+): Promise<CustomerDocumentDownload> {
+  return apiGet<CustomerDocumentDownload>(
+    `${docs(id)}/${encodeURIComponent(documentId)}/download`,
+  );
+}
+
+/**
+ * Ghi nhận ĐỐI CHIẾU giấy tờ — thao tác thủ công của nhân viên, backend ghi ai/lúc nào + audit.
+ * Hệ thống KHÔNG gọi API định danh quốc gia; đây là lời khai có truy vết.
+ */
+export function verifyCustomerDocument(
+  id: string,
+  documentId: string,
+  body: VerifyCustomerDocumentInput,
+): Promise<CustomerDocument> {
+  return apiPost<CustomerDocument>(
+    `${docs(id)}/${encodeURIComponent(documentId)}/verify`,
+    body,
+  );
+}
+
+export function deleteCustomerDocument(id: string, documentId: string): Promise<{ ok: true }> {
+  return apiDelete<{ ok: true }>(`${docs(id)}/${encodeURIComponent(documentId)}`);
+}
 
 export interface UploadCustomerDocumentInput {
   documentType: string;
@@ -76,7 +207,7 @@ export async function uploadCustomerDocument(
     });
   }
 
-  const ticket = await customersApi.presignDocument(id, {
+  const ticket = await presignCustomerDocument(id, {
     // Loại giấy tờ đến từ ô chọn (state `string`) và MIME đến từ chính tệp người dùng chọn —
     // cả hai chỉ thu hẹp được ở SERVER (`@IsIn`), nên thu hẹp kiểu ở đây thay vì bịa một lớp
     // kiểm thứ hai ở client rồi để nó trôi khỏi DTO.
@@ -88,5 +219,5 @@ export async function uploadCustomerDocument(
     fileSize: input.file.size,
   });
   await uploadToR2(ticket.uploadUrl, input.file, onProgress);
-  return customersApi.completeDocument(id, ticket.documentId);
+  return completeCustomerDocument(id, ticket.documentId);
 }

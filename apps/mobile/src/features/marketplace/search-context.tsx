@@ -73,6 +73,23 @@ export function useSearchExperience(): SearchExperienceValue {
   return value;
 }
 
+/** Không có ngữ cảnh tìm kiếm nào = không lọc gì. Tách riêng để không cấp phát object mỗi render. */
+const NO_FILTERS: MarketplaceFilters = {};
+
+/**
+ * Ngữ cảnh tìm kiếm ĐANG ÁP DỤNG, hoặc rỗng khi không có.
+ *
+ * Dành cho những thành phần chỉ cần biết "khách đang lọc dịch vụ nào" để chọn giá hiển thị —
+ * `VehicleCard` là chính. Thẻ xe xuất hiện ở cả những nơi KHÔNG có tìm kiếm nào (trang gian
+ * hàng công khai), và ở đó "không lọc" là một câu trả lời hợp lệ, không phải một lỗi cấu hình.
+ *
+ * Đừng dùng thay cho `useSearchExperience`: thứ gì cần `submit`, `setFilters` hay danh sách
+ * tỉnh thì THẬT SỰ phải nằm trong provider, và ném lỗi ở đó là đúng.
+ */
+export function useSearchFilters(): MarketplaceFilters {
+  return useContext(SearchExperienceContext)?.filters ?? NO_FILTERS;
+}
+
 export function SearchExperienceProvider({
   children,
   initial,

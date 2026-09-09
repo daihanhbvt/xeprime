@@ -1,16 +1,12 @@
 // Side-effect import, KHÔNG xoá: nạp module này là lúc client mặc định được cấu hình.
 import '@/lib/api-client';
 
-export {
-  vehiclesApi,
-  vehicleFiltersToParams,
-  branchesApi,
-  branchLabel,
-  VEHICLES_DEFAULT_LIMIT,
-} from '@xeprime/api-client';
+export { branchesApi, branchLabel } from '@/api/branches/api';
+export { uploadsApi } from '@/api/uploads/api';
+export { vehiclesApi, vehicleFiltersToParams, VEHICLES_DEFAULT_LIMIT } from '@/api/vehicles/api';
 
+export type { Branch } from '@/api/branches/api';
 export type {
-  Branch,
   CreateVehicleInput,
   FleetSummary,
   RentalPolicyValues,
@@ -35,4 +31,4 @@ export type {
   VehicleSourceContractFile,
   VehicleSourceDetail,
   VehicleStats,
-} from '@xeprime/api-client';
+} from '@/api/vehicles/api';

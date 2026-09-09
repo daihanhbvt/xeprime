@@ -8,7 +8,6 @@ import { useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import * as yup from 'yup';
-import { authApi } from '@xeprime/api-client';
 import { API_ERROR_CODE } from '@xeprime/types';
 import {
   PASSWORD_MIN,
@@ -23,7 +22,7 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { cx } from '@/lib/cx';
 import { getErrorCode } from '@/services/api-client';
-import { setPassword } from '@/services/auth.service';
+import { changePassword, setPassword } from '@/services/auth.service';
 import { queryKeys } from '@/services/query-keys';
 
 import { useAuthSchemaLabels } from '../hooks/use-auth-schema-labels';
@@ -92,10 +91,7 @@ export function ChangePasswordForm() {
   const save = useMutation({
     mutationFn: (values: ChangePasswordValues) =>
       hasPassword
-        ? authApi.changePassword({
-            currentPassword: values.currentPassword,
-            newPassword: values.newPassword,
-          })
+        ? changePassword(values.currentPassword, values.newPassword)
         : setPassword(values.newPassword),
     onSuccess: () => {
       message.success(hasPassword ? t('success') : t('successFirstTime'));

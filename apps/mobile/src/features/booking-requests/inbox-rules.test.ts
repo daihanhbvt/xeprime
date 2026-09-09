@@ -4,7 +4,10 @@ import {
   BOOKING_REQUEST_RESPOND_WINDOW_MINUTES,
   isBookingRequestPastDue,
 } from '@xeprime/types';
-import { bookingRequestFiltersToParams, BOOKING_REQUEST_STATUS_ALL } from '@xeprime/api-client';
+import {
+  bookingRequestFiltersToParams,
+  BOOKING_REQUEST_STATUS_ALL,
+} from '@/api/booking-requests/api';
 import {
   DEFAULT_REQUEST_TAB,
   REQUEST_INBOX_TABS,

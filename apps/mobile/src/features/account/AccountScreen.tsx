@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useForm, useWatch } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
@@ -13,7 +14,6 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
-import { DataRow } from '@/components/ui/DataRow';
 import { ProfileSkeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { TextField } from '@/components/ui/TextField';
@@ -25,7 +25,8 @@ import { ShopEntryCard } from '@/features/shell/ShopEntryCard';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { elevation } from '@/theme/elevation';
+import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { ROUTES } from '@/navigation/routes';
 import { useMyProfile, useUpdateMyProfile } from './hooks/use-account';
 import type { UserProfile } from './api';
@@ -166,18 +167,17 @@ function AccountBody({
     // Màn gốc của tab: thanh tab đã nuốt `insets.bottom` — xem ghi chú ở `TripsScreen`.
     <Screen edges={['left', 'right']} refreshing={refreshing} onRefresh={onRefresh}>
       <YStack gap={space.lg}>
-        <Card>
-          <YStack gap={space.md}>
-            <XStack ai="flex-start" gap={space.sm}>
+        <Card padded={false}>
+          <LinearGradient
+            colors={[colors.primaryLight, colors.surface]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={{ paddingHorizontal: space.md, paddingTop: space.md, paddingBottom: space.lg }}
+          >
+            <XStack ai="flex-start" jc="space-between" gap={space.sm}>
               <YStack f={1} minWidth={0} gap={2}>
-                <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
-                  {t('profile.eyebrow')}
-                </Text>
-                <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold} numberOfLines={2}>
-                  {t('profile.title')}
-                </Text>
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {t('profile.description')}
+                <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.semibold} numberOfLines={1} letterSpacing={0.4}>
+                  {t('profile.eyebrow').toLocaleUpperCase()}
                 </Text>
               </YStack>
               {!isEditing ? (
@@ -193,55 +193,86 @@ function AccountBody({
               ) : null}
             </XStack>
 
-            <XStack ai="center" gap={space.md}>
-              <Avatar
-                name={displayName || profile.displayName}
-                url={avatarUrl ?? null}
-                size={64}
-              />
-              <YStack f={1} minWidth={0} gap={2}>
-                <Text
-                  col={colors.text}
-                  fos={fontSize.h3}
-                  fow={fontWeight.bold}
-                  numberOfLines={2}
-                >
+            <YStack ai="center" gap={space.sm} mt={space.lg}>
+              <YStack
+                p={3}
+                br={radius.pill}
+                bg={colors.surface}
+                style={elevation.raised}
+              >
+                <Avatar
+                  name={displayName || profile.displayName}
+                  url={avatarUrl ?? null}
+                  size={72}
+                />
+              </YStack>
+              <YStack ai="center" gap={2}>
+                <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold} numberOfLines={2} ta="center">
                   {displayName || profile.displayName}
                 </Text>
                 <Text col={colors.textMuted} fos={fontSize.bodySm} numberOfLines={1}>
                   {t('profile.accountLabel')}
                 </Text>
               </YStack>
-            </XStack>
 
-            {roleLabel || tenant ? (
-              <XStack gap={space.xs} flexWrap="wrap">
-                {roleLabel ? <Chip label={roleLabel} icon="shield-checkmark-outline" /> : null}
-                {tenant ? <Chip label={tenant.name} icon="storefront-outline" /> : null}
-              </XStack>
-            ) : null}
+              {roleLabel || tenant ? (
+                <XStack gap={space.xs} flexWrap="wrap" jc="center" mt={2}>
+                  {roleLabel ? <Chip label={roleLabel} icon="shield-checkmark-outline" /> : null}
+                  {tenant ? <Chip label={tenant.name} icon="storefront-outline" /> : null}
+                </XStack>
+              ) : null}
+            </YStack>
+          </LinearGradient>
+
+          <YStack gap={space.lg} p={space.md}>
+            <Text col={colors.textMuted} fos={fontSize.bodySm}>
+              {t('profile.description')}
+            </Text>
 
             {/*
               Email và SĐT CHỈ ĐỌC: chúng là khoá nhận diện, đổi phải đi qua một luồng xác thực
               riêng (chưa có). Đưa chúng vào form là dựng một chức năng giả — cùng lý do web để
               read-only, và cùng lý do `UpdateMeDto` chỉ nhận hai trường.
             */}
-            <DataRow label={t('profile.email')} value={profile.email ?? t('noEmail')} />
-            <XStack ai="center" gap={space.sm}>
-              <YStack f={1} minWidth={0}>
-                <DataRow label={t('profile.phone')} value={profile.phone ?? t('noPhone')} />
-              </YStack>
-              {profile.phone ? (
-                <StatusBadge
-                  label={profile.phoneVerified ? t('verified') : t('profile.unverified')}
-                  color={profile.phoneVerified ? STATUS_COLOR.SUCCESS : STATUS_COLOR.WARNING}
-                  size="sm"
-                />
-              ) : null}
-            </XStack>
+            <YStack
+              br={radius.md}
+              bw={1}
+              bc={colors.borderSubtle}
+              ov="hidden"
+            >
+              <ContactRow icon="mail-outline" label={t('profile.email')} value={profile.email ?? t('noEmail')} />
+              <YStack height={1} bg={colors.borderSubtle} />
+              <ContactRow
+                icon="call-outline"
+                label={t('profile.phone')}
+                value={profile.phone ?? t('noPhone')}
+                badge={
+                  profile.phone ? (
+                    <StatusBadge
+                      label={profile.phoneVerified ? t('verified') : t('profile.unverified')}
+                      color={profile.phoneVerified ? STATUS_COLOR.SUCCESS : STATUS_COLOR.WARNING}
+                      size="sm"
+                    />
+                  ) : null
+                }
+              />
+            </YStack>
 
             {isEditing ? (
-              <YStack gap={space.md}>
+              <YStack
+                gap={space.md}
+                p={space.md}
+                br={radius.md}
+                bg={colors.surfaceMuted}
+                bw={1}
+                bc={colors.borderSubtle}
+              >
+                <XStack ai="center" gap={space.xs}>
+                  <Ionicons name="create-outline" size={iconSize.sm} color={colors.primary} />
+                  <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                    {t('profile.edit')}
+                  </Text>
+                </XStack>
                 <TextField
                   control={control}
                   name="displayName"
@@ -261,24 +292,50 @@ function AccountBody({
                   keyboardType="url"
                   editable={!update.isPending}
                 />
-                <Button
-                  label={tCommon('saveChanges')}
-                  loading={update.isPending}
-                  disabled={!formState.isDirty && !update.isPending}
-                  onPress={() => void submit()}
-                />
-                <Button
-                  label={tCommon('cancel')}
-                  variant="ghost"
-                  disabled={update.isPending}
-                  onPress={cancelEditing}
-                />
+                <XStack gap={space.sm}>
+                  <YStack f={1}>
+                    <Button
+                      label={tCommon('cancel')}
+                      variant="ghost"
+                      size="sm"
+                      disabled={update.isPending}
+                      onPress={cancelEditing}
+                    />
+                  </YStack>
+                  <YStack f={2}>
+                    <Button
+                      label={tCommon('saveChanges')}
+                      icon="checkmark-outline"
+                      size="sm"
+                      loading={update.isPending}
+                      disabled={!formState.isDirty && !update.isPending}
+                      onPress={() => void submit()}
+                    />
+                  </YStack>
+                </XStack>
               </YStack>
             ) : null}
 
             {/* Khối giải thích vì sao hai trường trên khoá — y hệt `securityNote` của web. */}
-            <XStack ai="flex-start" gap={space.sm}>
-              <Ionicons name="lock-closed-outline" size={iconSize.md} color={colors.textMuted} />
+            <XStack
+              ai="flex-start"
+              gap={space.sm}
+              p={space.sm}
+              br={radius.md}
+              bg={colors.surfaceMuted}
+              bw={1}
+              bc={colors.borderSubtle}
+            >
+              <YStack
+                w={28}
+                h={28}
+                br={radius.pill}
+                bg={colors.surface}
+                ai="center"
+                jc="center"
+              >
+                <Ionicons name="lock-closed-outline" size={iconSize.sm} color={colors.textMuted} />
+              </YStack>
               <YStack f={1} minWidth={0} gap={2}>
                 <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
                   {t('profile.securityTitle')}
@@ -294,11 +351,13 @@ function AccountBody({
         <ShopEntryCard />
 
         {/* Đổi ngôn ngữ là chức năng của VỎ app native — web đổi ở nơi khác, không phải mất mát. */}
-        <Card lift="flat" padded={false}>
-          <XStack ai="center" jc="space-between" gap={space.sm} p={space.md}>
+        <Card lift="flat">
+          <XStack ai="center" jc="space-between" gap={space.sm}>
             <XStack ai="center" gap={space.sm} f={1} minWidth={0}>
-              <Ionicons name="language-outline" size={iconSize.sm} color={colors.textMuted} />
-              <Text col={colors.text} fos={fontSize.body} numberOfLines={1}>
+              <YStack w={32} h={32} br={radius.pill} bg={colors.surfaceMuted} ai="center" jc="center">
+                <Ionicons name="language-outline" size={iconSize.sm} color={colors.textMuted} />
+              </YStack>
+              <Text col={colors.text} fos={fontSize.body} fow={fontWeight.medium} numberOfLines={1}>
                 {t('title')}
               </Text>
             </XStack>
@@ -332,5 +391,41 @@ function AccountBody({
         }
       />
     </Screen>
+  );
+}
+
+/**
+ * Một dòng liên hệ chỉ-đọc: hình tròn + nhãn NẰM TRÊN giá trị.
+ *
+ * Không dùng bố cục nhãn-trái/giá-trị-phải của `DataRow` ở đây: cột nhãn hẹp (30%) làm "Số điện
+ * thoại" vỡ xuống hai dòng và đẩy lệch cả hàng. Nhãn xếp trên giá trị thì không còn cột nào phải
+ * co lại nữa.
+ */
+function ContactRow({
+  icon,
+  label,
+  value,
+  badge,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  badge?: ReactNode;
+}) {
+  return (
+    <XStack ai="center" gap={space.sm} p={space.md}>
+      <YStack w={32} h={32} br={radius.pill} bg={colors.surfaceMuted} ai="center" jc="center">
+        <Ionicons name={icon} size={iconSize.sm} color={colors.textMuted} />
+      </YStack>
+      <YStack f={1} minWidth={0} gap={1}>
+        <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+          {label}
+        </Text>
+        <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium} numberOfLines={1}>
+          {value}
+        </Text>
+      </YStack>
+      {badge}
+    </XStack>
   );
 }

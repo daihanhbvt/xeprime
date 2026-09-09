@@ -1,6 +1,5 @@
 'use client';
 
-import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App, Button, Switch } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -18,6 +17,10 @@ import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
 import { ROUTES } from '@/constants/routes';
 import { discountedPriceVnd } from '@/features/vehicles/pricing';
+import type { DomainLabel } from '@/i18n/domain';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { formToSaveInput, policyToForm } from '../form';
 import { vehiclePricingFormSchema, type VehiclePricingFormValues } from '../schema';
 import type { RentalPolicyValues, SaveVehiclePricingInput, VehiclePricing } from '../types';
@@ -26,9 +29,6 @@ import { PolicyInfoTip } from './PolicyInfoTip';
 import { PolicySections } from './PolicySections';
 
 import styles from './VehiclePricingWorkspace.module.css';
-import { useAppFormat } from '@/i18n/use-app-format';
-import type { DomainLabel } from '@/i18n/domain';
-import { useDomainLabel } from '@/i18n/use-domain-label';
 
 interface VehiclePricingWorkspaceProps {
   vehicleName: string;
@@ -98,14 +98,19 @@ export function VehiclePricingWorkspace({
   policyMode = 'full',
   calendarHref,
 }: VehiclePricingWorkspaceProps) {
-  const t = useTranslations('RentalPolicies.workspace');
+  const t = useTranslations('Vehicles.pricing');
+  const tActions = useTranslations('Common.actions');
   const tManage = useTranslations('VehicleManage.pricing');
   const { modal } = App.useApp();
+
   const overriding = pricing.source === POLICY_SOURCE.VEHICLE;
   // Bật form ghi đè trước khi lưu lần đầu — state cục bộ, chỉ commit khi bấm Lưu.
   const [editingOverride, setEditingOverride] = useState(false);
   const editMode = overriding || editingOverride;
   const showPolicy = policyMode === 'full';
+
+  /** Tên xe kèm biển số — tham số `{vehicle}` của mọi hộp xác nhận trên màn này. */
+  const vehicleLabel = `${vehicleName}${vehiclePlate ? ` (${vehiclePlate})` : ''}`;
 
   // Nhóm giá hiện theo NĂNG LỰC dịch vụ của xe — không trộn mọi ô giá thành một danh sách.
   const services = pricing.serviceTypes ?? [];
@@ -117,10 +122,13 @@ export function VehiclePricingWorkspace({
   const showSelfDrive = isVisible(SERVICE_TYPE.SELF_DRIVE);
   const showLongTerm = isVisible(SERVICE_TYPE.LONG_TERM);
   const showWithDriver = isVisible(SERVICE_TYPE.WITH_DRIVER);
-  const vehicleLabel = `${vehicleName}${vehiclePlate ? ` (${vehiclePlate})` : ''}`;
 
+  const resolver = useValidationResolver<VehiclePricingFormValues>(
+    vehiclePricingFormSchema,
+    'Vehicles.pricing.validation',
+  );
   const { control, handleSubmit, reset, setValue, formState } = useForm<VehiclePricingFormValues>({
-    resolver: yupResolver(vehiclePricingFormSchema),
+    resolver,
     /*
      * Giá ngày thường chỉ bắt buộc khi xe đăng tự lái (schema đọc `$serviceTypes` từ context).
      *
@@ -145,11 +153,11 @@ export function VehiclePricingWorkspace({
 
   function confirmReset() {
     modal.confirm({
-      title: t('resetTitle'),
-      content: t('resetBody'),
-      okText: t('resetOk'),
+      title: t('source.resetTitle'),
+      content: t('source.resetBody'),
+      okText: t('source.resetOk'),
       okButtonProps: { danger: true },
-      cancelText: t('resetCancel'),
+      cancelText: t('source.resetCancel'),
       onOk: () => {
         setEditingOverride(false);
         onSave({ source: POLICY_SOURCE.SHOP });
@@ -200,17 +208,18 @@ export function VehiclePricingWorkspace({
      * 09/09/2026: đổi giá của xe ĐANG công khai có hiệu lực NGAY ngoài chợ — không còn hạ xe về
      * chờ duyệt lại, nên cũng không còn hộp cảnh báo về việc đó. Hộp xác nhận chung bên dưới
      * vẫn giữ: nó nói đúng thứ sắp được ghi.
+     *
+     * Nói đúng thứ sắp được lưu: ở chế độ kế thừa KHÔNG có chính sách riêng nào được ghi, nên
+     * hộp thoại không được hứa điều đó (giá và chính sách đã là hai trục tách rời từ 20/08).
      */
-    // Nói đúng thứ sắp được lưu: ở chế độ kế thừa KHÔNG có chính sách riêng nào được ghi, nên
-    // hộp thoại không được hứa điều đó (giá và chính sách đã là hai trục tách rời từ 20/08).
     modal.confirm({
-      title: sendPolicy && showPolicy ? t('confirmSaveOverrideTitle') : t('confirmSavePriceTitle'),
+      title: sendPolicy && showPolicy ? t('confirm.overrideTitle') : t('confirm.inheritTitle'),
       content:
         sendPolicy && showPolicy
-          ? t('confirmSaveOverrideBody', { vehicle: vehicleName })
-          : t('confirmSavePriceBody', { vehicle: vehicleName }),
-      okText: t('confirmSaveOk'),
-      cancelText: t('cancel'),
+          ? t('confirm.overrideBody', { vehicle: vehicleName })
+          : t('confirm.inheritBody', { vehicle: vehicleName }),
+      okText: t('confirm.ok'),
+      cancelText: t('confirm.cancel'),
       onOk: () => onSave(body),
     });
   });
@@ -219,15 +228,15 @@ export function VehiclePricingWorkspace({
     <div className={styles.stack}>
       {showPolicy ? (
         /* Nguồn chính sách — Figma `policy-toggle-card`. */
-        <section className={styles.card} aria-label={t('sourceTitle')}>
-          <PricingTitle infoLabel={t('sourceInfoLabel')} info={t('sourceInfo')}>
-            {t('sourceTitle')}
+        <section className={styles.card} aria-label={t('source.title')}>
+          <PricingTitle infoLabel={t('source.tipLabel')} info={t('source.info')}>
+            {t('source.title')}
           </PricingTitle>
           <label className={styles.sourceRow}>
             <Switch
               // Trang này có nhiều switch (khuyến mãi, giao nhận, ưu đãi) từ khi khối giá luôn
               // hiện — cái này cần tên riêng để đọc màn hình và test gọi đúng tên nó.
-              aria-label={t('useShopPolicy')}
+              aria-label={t('source.useShop')}
               checked={!editMode}
               disabled={!canEdit || submitting}
               onChange={(useShop) => {
@@ -243,16 +252,20 @@ export function VehiclePricingWorkspace({
                 }
               }}
             />
-            <span className={styles.sourceLabel}>{t('useShopPolicy')}</span>
-            {editMode ? <span className={styles.sourceCustom}>{t('customBadge')}</span> : null}
+            <span className={styles.sourceLabel}>{t('source.useShop')}</span>
+            {editMode ? <span className={styles.sourceCustom}>● {t('source.custom')}</span> : null}
           </label>
           {editMode ? (
-            <Alert type="warning" showIcon title={t('customizingTitle', { vehicle: vehicleLabel })} />
+            <Alert
+              type="warning"
+              showIcon
+              title={t('source.customBanner', { vehicle: vehicleLabel })}
+            />
           ) : (
             <div className={styles.inheritBanner}>
-              <span>{t('inheritBanner')}</span>
+              <span>{t('source.inheritBanner')}</span>
               <Link href={ROUTES.MANAGE.SHOP_POLICIES} className={styles.inheritLink}>
-                {t('viewShopPolicy')}
+                {t('source.viewShopPolicy')}
               </Link>
             </div>
           )}
@@ -269,7 +282,7 @@ export function VehiclePricingWorkspace({
           {showPolicy && overriding && canEdit ? (
             <div className={styles.resetRow}>
               <Button danger type="link" onClick={confirmReset} disabled={submitting}>
-                {t('resetLink')}
+                {t('source.reset')}
               </Button>
             </div>
           ) : null}
@@ -278,10 +291,10 @@ export function VehiclePricingWorkspace({
             <Alert
               type="warning"
               showIcon
-              title={t('unsavedTitle')}
+              title={t('dirty')}
               action={
                 <Button size="small" onClick={() => reset()} disabled={submitting}>
-                  {t('cancel')}
+                  {t('discard')}
                 </Button>
               }
             />
@@ -289,59 +302,79 @@ export function VehiclePricingWorkspace({
 
           {/* Nhóm giá theo TỪNG DỊCH VỤ xe đăng (17/08) — không trộn thành một danh sách. */}
           {showSelfDrive ? (
-            <section className={styles.card} aria-label={t('selfDriveTitle')}>
-              <PricingTitle infoLabel={t('selfDriveInfoLabel')} info={t('selfDriveInfo')}>
-                {t('selfDriveTitle')}
+            <section className={styles.card} aria-label={t('selfDrive.title')}>
+              <PricingTitle infoLabel={t('selfDrive.tipLabel')} info={t('selfDrive.info')}>
+                {t('selfDrive.title')}
               </PricingTitle>
               <div className={styles.priceRow}>
                 <NumberField
                   control={control}
                   name="weekdayPrice"
-                  label={t('weekday')}
-                  labelAccessory={<PolicyInfoTip label={t('weekdayInfoLabel')}>{t('weekdayInfo')}</PolicyInfoTip>}
+                  label={t('selfDrive.weekday')}
+                  labelAccessory={
+                    <PolicyInfoTip label={t('selfDrive.weekdayTipLabel')}>
+                      {t('selfDrive.weekdayHint')}
+                    </PolicyInfoTip>
+                  }
                   money
-                  addonAfter={t('perDay')}
+                  addonAfter={t('unitPerDay')}
                   required
                 />
                 <NumberField
                   control={control}
                   name="weekendPrice"
-                  label={t('weekend')}
-                  labelAccessory={<PolicyInfoTip label={t('weekendInfoLabel')}>{t('weekendInfo')}</PolicyInfoTip>}
+                  label={t('selfDrive.weekend')}
+                  labelAccessory={
+                    <PolicyInfoTip label={t('selfDrive.weekendTipLabel')}>
+                      {t('selfDrive.weekendHint')}
+                    </PolicyInfoTip>
+                  }
                   money
-                  addonAfter={t('perDay')}
+                  addonAfter={t('unitPerDay')}
                 />
                 <NumberField
                   control={control}
                   name="hourlyPrice"
-                  label={t('hourly')}
-                  labelAccessory={<PolicyInfoTip label={t('hourlyInfoLabel')}>{t('hourlyInfo')}</PolicyInfoTip>}
+                  label={t('selfDrive.hourly')}
+                  labelAccessory={
+                    <PolicyInfoTip label={t('selfDrive.hourlyTipLabel')}>
+                      {t('selfDrive.hourlyHint')}
+                    </PolicyInfoTip>
+                  }
                   money
-                  addonAfter={t('perHour')}
+                  addonAfter={t('unitPerHour')}
                 />
               </div>
               <DirectDiscountEditor control={control} setValue={setValue} />
-              {calendarHref ? <CalendarPriceLink href={calendarHref} hint={tManage('calendarHint')} label={tManage('calendarLink')} /> : null}
+              {calendarHref ? (
+                <CalendarPriceLink
+                  href={calendarHref}
+                  hint={tManage('calendarHint')}
+                  label={tManage('calendarLink')}
+                />
+              ) : null}
             </section>
           ) : null}
 
           {showLongTerm ? (
-            <section className={styles.card} aria-label={t('longTermTitle')}>
-              <PricingTitle infoLabel={t('longTermInfoLabel')} info={t('longTermInfo')}>
-                {t('longTermTitle')}
+            <section className={styles.card} aria-label={t('longTerm.title')}>
+              <PricingTitle infoLabel={t('longTerm.tipLabel')} info={t('longTerm.info')}>
+                {t('longTerm.title')}
               </PricingTitle>
               <div className={styles.priceRow}>
                 <NumberField
                   control={control}
                   name="monthlyPrice"
-                  label={t('monthly')}
+                  label={t('longTerm.monthly')}
                   labelAccessory={
-                    <PolicyInfoTip label={t('monthlyInfoLabel')}>
-                      {t('monthlyInfo', { packages: LONG_TERM_PACKAGE_MONTHS.join(', ') })}
+                    <PolicyInfoTip label={t('longTerm.monthlyTipLabel')}>
+                      {t('longTerm.monthlyHint', {
+                        packages: LONG_TERM_PACKAGE_MONTHS.join(', '),
+                      })}
                     </PolicyInfoTip>
                   }
                   money
-                  addonAfter={t('perMonth')}
+                  addonAfter={t('unitPerMonth')}
                 />
               </div>
               {/* Gợi ý sống theo GIÁ ĐANG NHẬP — chủ xe thấy ngay giá từng gói khách sẽ trả. */}
@@ -350,37 +383,55 @@ export function VehiclePricingWorkspace({
           ) : null}
 
           {showWithDriver ? (
-            <section className={styles.card} aria-label={t('withDriverTitle')}>
-              <PricingTitle infoLabel={t('withDriverInfoLabel')} info={t('withDriverInfo')}>
-                {t('withDriverTitle')}
+            <section className={styles.card} aria-label={t('withDriver.title')}>
+              <PricingTitle infoLabel={t('withDriver.tipLabel')} info={t('withDriver.info')}>
+                {t('withDriver.title')}
               </PricingTitle>
               <div className={styles.priceRow}>
                 <NumberField
                   control={control}
                   name="withDriverDailyPrice"
-                  label={t('inCity')}
-                  labelAccessory={<PolicyInfoTip label={t('inCityInfoLabel')}>{t('inCityInfo')}</PolicyInfoTip>}
+                  label={t('withDriver.daily')}
+                  labelAccessory={
+                    <PolicyInfoTip label={t('withDriver.dailyTipLabel')}>
+                      {t('withDriver.dailyHint')}
+                    </PolicyInfoTip>
+                  }
                   money
-                  addonAfter={t('perDay')}
+                  addonAfter={t('unitPerDay')}
                 />
                 <NumberField
                   control={control}
                   name="withDriverInterCityPrice"
-                  label={t('interCity')}
-                  labelAccessory={<PolicyInfoTip label={t('interCityInfoLabel')}>{t('interCityInfo')}</PolicyInfoTip>}
+                  label={t('withDriver.interCity')}
+                  labelAccessory={
+                    <PolicyInfoTip label={t('withDriver.interCityTipLabel')}>
+                      {t('withDriver.interCityHint')}
+                    </PolicyInfoTip>
+                  }
                   money
-                  addonAfter={t('perDay')}
+                  addonAfter={t('unitPerDay')}
                 />
                 <NumberField
                   control={control}
                   name="withDriverOneWayPrice"
-                  label={t('oneWay')}
-                  labelAccessory={<PolicyInfoTip label={t('oneWayInfoLabel')}>{t('oneWayInfo')}</PolicyInfoTip>}
+                  label={t('withDriver.oneWay')}
+                  labelAccessory={
+                    <PolicyInfoTip label={t('withDriver.oneWayTipLabel')}>
+                      {t('withDriver.oneWayHint')}
+                    </PolicyInfoTip>
+                  }
                   money
-                  addonAfter={t('perDay')}
+                  addonAfter={t('unitPerDay')}
                 />
               </div>
-              {calendarHref ? <CalendarPriceLink href={calendarHref} hint={tManage('calendarHint')} label={tManage('calendarLink')} /> : null}
+              {calendarHref ? (
+                <CalendarPriceLink
+                  href={calendarHref}
+                  hint={tManage('calendarHint')}
+                  label={tManage('calendarLink')}
+                />
+              ) : null}
             </section>
           ) : null}
 
@@ -403,8 +454,8 @@ export function VehiclePricingWorkspace({
           ) : null}
 
           <StickyFormActions
-            submitLabel={t('confirmSaveOk')}
-            cancelLabel={t('cancel')}
+            submitLabel={tActions('saveChanges')}
+            cancelLabel={t('discard')}
             onCancel={formState.isDirty ? () => reset() : undefined}
             submitting={submitting}
             disabled={!canEdit}
@@ -437,7 +488,7 @@ function DirectDiscountEditor({
   control: Control<VehiclePricingFormValues>;
   setValue: UseFormSetValue<VehiclePricingFormValues>;
 }) {
-  const t = useTranslations('RentalPolicies.workspace');
+  const t = useTranslations('Vehicles.pricing.discount');
   const fmt = useAppFormat();
 
   const weekdayPrice = useWatch({ control, name: 'weekdayPrice' });
@@ -464,15 +515,15 @@ function DirectDiscountEditor({
         <div className={styles.promoHeadingRow}>
           <div>
             <div className={styles.promoTitleRow}>
-              <h3 className={styles.promoTitle}>{t('promoTitle')}</h3>
-              <PolicyInfoTip label={t('promoInfoLabel')}>{t('promoInfo')}</PolicyInfoTip>
+              <h3 className={styles.promoTitle}>{t('title')}</h3>
+              <PolicyInfoTip label={t('tipLabel')}>{t('info')}</PolicyInfoTip>
             </div>
           </div>
           <Switch
-            aria-label={t('promoToggle')}
+            aria-label={t('toggle')}
             checked={enabled}
-            checkedChildren={t('promoOn')}
-            unCheckedChildren={t('promoOff')}
+            checkedChildren={t('on')}
+            unCheckedChildren={t('off')}
             onChange={(checked) =>
               setValue('discountPercent', checked ? 10 : null, {
                 shouldDirty: true,
@@ -487,9 +538,9 @@ function DirectDiscountEditor({
             <NumberField
               control={control}
               name="discountPercent"
-              label={t('promoPercent')}
+              label={t('percent')}
               labelAccessory={
-                <PolicyInfoTip label={t('promoPercentInfoLabel')}>{t('promoPercentInfo')}</PolicyInfoTip>
+                <PolicyInfoTip label={t('percentTipLabel')}>{t('percentInfo')}</PolicyInfoTip>
               }
               percent
               min={1}
@@ -498,13 +549,13 @@ function DirectDiscountEditor({
             />
           </div>
         ) : (
-          <p className={styles.promoOffHint}>{t('promoOffHint')}</p>
+          <p className={styles.promoOffHint}>{t('offHint')}</p>
         )}
       </div>
 
-      <aside className={styles.pricePreview} aria-live="polite" aria-label={t('previewLabel')}>
+      <aside className={styles.pricePreview} aria-live="polite" aria-label={t('previewAria')}>
         <span className={styles.previewEyebrow}>{t('previewEyebrow')}</span>
-        <span className={styles.previewLabel}>{t('previewPrice')}</span>
+        <span className={styles.previewLabel}>{t('previewLabel')}</span>
         {weekdayPrice != null ? (
           enabled && discountedWeekday ? (
             <>
@@ -513,17 +564,17 @@ function DirectDiscountEditor({
                 <DiscountTag percent={discountPercent} />
               </div>
               <div className={styles.previewFinalPrice}>
-                {fmt.money(discountedWeekday)} <small>{t('perDayShort')}</small>
+                {fmt.money(discountedWeekday)} <small>{t('perDay')}</small>
               </div>
               {saving != null ? (
                 <span className={styles.previewSaving}>
-                  {t('previewSaving', { amount: fmt.money(String(saving)) })}
+                  {t('saving', { amount: fmt.money(String(saving)) })}
                 </span>
               ) : null}
             </>
           ) : (
             <div className={styles.previewFinalPrice}>
-              {fmt.money(String(weekdayPrice))} <small>{t('perDayShort')}</small>
+              {fmt.money(String(weekdayPrice))} <small>{t('perDay')}</small>
             </div>
           )
         ) : (
@@ -532,19 +583,19 @@ function DirectDiscountEditor({
 
         {enabled && discountedWeekend ? (
           <div className={styles.previewSecondary}>
-            <span>{t('previewWeekend')}</span>
+            <span>{t('weekendAfter')}</span>
             <strong>
               {fmt.money(discountedWeekend)}
-              {t('perDayShort')}
+              {t('perDay')}
             </strong>
           </div>
         ) : null}
         {hourlyPrice != null ? (
           <div className={styles.previewSecondary}>
-            <span>{t('previewHourly')}</span>
+            <span>{t('hourlyNoDiscount')}</span>
             <strong>
               {fmt.money(String(hourlyPrice))}
-              {t('perHourShort')}
+              {t('perHour')}
             </strong>
           </div>
         ) : null}
@@ -588,55 +639,61 @@ function InheritedPolicyCard({
   canEdit: boolean;
   onEdit: () => void;
 }) {
-  const t = useTranslations('RentalPolicies.workspace');
+  const t = useTranslations('Vehicles.pricing.inherited');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
 
   return (
-    <section className={styles.card} aria-label={t('inheritedTitle')}>
+    <section className={styles.card} aria-label={t('title')}>
       <div className={styles.cardHeader}>
         <div>
-          <h2 className={styles.cardTitle}>{t('inheritedTitle')}</h2>
-          <p className={styles.desc}>{policy ? t('inheritedDescPolicy') : t('inheritedDescNone')}</p>
+          <h2 className={styles.cardTitle}>{t('heading')}</h2>
+          <p className={styles.desc}>{policy ? t('subtitle') : t('subtitleEmpty')}</p>
         </div>
         <div className={styles.summaryActions}>
           <span className={policy ? styles.inheritBadge : styles.missingPolicyBadge}>
-            {policy ? t('inheritingBadge') : t('missingBadge')}
+            {policy ? t('badge') : t('badgeEmpty')}
           </span>
-          {canEdit ? <Button onClick={onEdit}>{t('customize')}</Button> : null}
+          {canEdit ? <Button onClick={onEdit}>{t('edit')}</Button> : null}
         </div>
       </div>
 
       {policy ? (
         <dl className={styles.summaryList}>
           <div className={styles.summaryRow}>
-            <dt>{t('sumCollateral')}</dt>
-            <dd>{collateralSummary(policy, fmt.money, domainLabel, t('collateralNoType'))}</dd>
+            <dt>{t('collateral')}</dt>
+            <dd>
+              {collateralSummary(policy, {
+                money: fmt.money,
+                label: domainLabel,
+                noAssetTypes: t('assetNone'),
+              })}
+            </dd>
           </div>
           <div className={styles.summaryRow}>
-            <dt>{t('sumDelivery')}</dt>
+            <dt>{t('delivery')}</dt>
             <dd className={policy.deliveryEnabled ? styles.summaryOn : undefined}>
               {policy.deliveryEnabled
-                ? t('sumDeliveryOn', { count: policy.deliveryTiers.length })
-                : t('sumOff')}
+                ? t('deliveryOn', { count: policy.deliveryTiers.length })
+                : t('deliveryOff')}
             </dd>
           </div>
           <div className={styles.summaryRow}>
-            <dt>{t('sumOvertime')}</dt>
+            <dt>{t('overtime')}</dt>
             <dd>
               {policy.overtimeFeePerHour
-                ? t('sumOvertimeValue', { amount: fmt.money(policy.overtimeFeePerHour) })
-                : t('sumNeedsConfig')}
+                ? t('overtimeValue', { fee: fmt.money(policy.overtimeFeePerHour) })
+                : t('overtimeMissing')}
             </dd>
           </div>
           <div className={styles.summaryRow}>
-            <dt>{t('sumDiscount')}</dt>
+            <dt>{t('discount')}</dt>
             <dd>
               {policy.discountEnabled && policy.discountTiers.length > 0
-                ? t('sumDiscountMax', {
+                ? t('discountMax', {
                     percent: Math.max(...policy.discountTiers.map((tier) => tier.percent)),
                   })
-                : t('sumOff')}
+                : t('discountOff')}
             </dd>
           </div>
         </dl>
@@ -644,9 +701,9 @@ function InheritedPolicyCard({
         <Alert
           type="info"
           showIcon
-          title={t('noPolicyTitle')}
-          description={t.rich('noPolicyBody', {
-            link: () => <Link href={ROUTES.MANAGE.SHOP_POLICIES}>{t('noPolicyLink')}</Link>,
+          title={t('empty')}
+          description={t.rich('emptyBody', {
+            policies: (chunks) => <Link href={ROUTES.MANAGE.SHOP_POLICIES}>{chunks}</Link>,
           })}
         />
       )}
@@ -659,23 +716,28 @@ function InheritedPolicyCard({
  *
  * Ba chế độ đọc ra ba câu khác hẳn nhau, nên không thể chỉ in số tiền như trước: "0đ" ở chế độ
  * `asset` sẽ khiến người đọc tưởng xe không yêu cầu gì, trong khi gian hàng đang giữ cà vẹt.
- * Nhãn đi qua `Domain` (ADR 0012) — nơi gọi truyền `domainLabel` của request.
+ *
+ * Hàm THUẦN: nhận bộ định dạng tiền, hàm tra nhãn nghiệp vụ và câu "chưa chọn loại" từ ngoài
+ * vào thay vì tự gọi hook. Nhờ vậy nó vẫn dùng được ở chỗ chỉ có chuỗi (bảng, tooltip, test)
+ * mà không kéo theo cả một React context.
  */
 export function collateralSummary(
   policy: Pick<RentalPolicyValues, 'collateralMode' | 'collateralAssetTypes' | 'depositAmount'>,
-  money: (value: string) => string,
-  domainLabel: DomainLabel,
-  noTypeLabel: string,
+  {
+    money,
+    label,
+    noAssetTypes,
+  }: { money: (value: string) => string; label: DomainLabel; noAssetTypes: string },
 ): string {
-  const modeLabel = domainLabel('collateralMode', policy.collateralMode);
+  const modeLabel = label('collateralMode', policy.collateralMode);
   if (policy.collateralMode === COLLATERAL_MODE.CASH) {
     return `${modeLabel} · ${money(policy.depositAmount)}`;
   }
   if (policy.collateralMode === COLLATERAL_MODE.ASSET) {
     const types = policy.collateralAssetTypes
-      .map((type) => domainLabel('collateralAssetType', type))
+      .map((type) => label('collateralAssetType', type))
       .join(', ');
-    return `${modeLabel} · ${types || noTypeLabel}`;
+    return `${modeLabel} · ${types || noAssetTypes}`;
   }
   return modeLabel;
 }

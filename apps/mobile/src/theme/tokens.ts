@@ -164,6 +164,18 @@ export const fontSize = {
   body: px('font-size-body'),
   bodySm: px('font-size-body-sm'),
   label: px('font-size-label'),
+  /**
+   * 11px — bậc CUỐI của thang, dành cho dòng SIÊU PHỤ nằm dưới một dòng chính.
+   *
+   * Dùng cho meta gộp nhiều mẩu bằng dấu ` · ` trong danh sách dày ("Toyota Vios · 08/09 14:00 →
+   * 10/09 14:00", "PT0012 · BK001 · 14:30"): ở 12px những dòng đó bị cắt bằng "…" trên máy 360dp,
+   * và cắt một dòng meta là bỏ đi đúng mẩu cuối — thường là cái giờ.
+   *
+   * KHÔNG dùng cho chữ đứng một mình. Nó đọc được vì luôn có một dòng 12px ngay trên làm mốc; tách
+   * ra khỏi cặp đó thì đây chỉ là chữ nhỏ khó đọc. Web đặt tên token này là `overline` (section
+   * kicker) — cùng một bậc trên thang, khác vai ở native, và đó là lý do nó có tên riêng ở đây.
+   */
+  meta: px('font-size-overline'),
 } as const;
 
 /**

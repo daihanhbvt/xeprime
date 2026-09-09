@@ -4,12 +4,11 @@ import '@/lib/api-client';
 export {
   bookingRequestsApi,
   bookingRequestFiltersToParams,
-  publicQuote,
-  deliveryDistance,
   BOOKING_REQUESTS_DEFAULT_LIMIT,
   BOOKING_REQUEST_STATUS_ALL,
   BUSY_DAYS_LOOKAHEAD,
-} from '@xeprime/api-client';
+} from '@/api/booking-requests/api';
+export { publicQuote, deliveryDistance } from '@/api/marketplace/api';
 
 export type {
   ApproveBookingRequestInput,
@@ -20,8 +19,6 @@ export type {
   BookingRequestReceipt,
   CheckAvailabilityResult,
   CreateBookingRequestInput,
-  PublicQuote,
-  PublicQuoteParams,
-  DeliveryDistance,
   VehicleBusyDays,
-} from '@xeprime/api-client';
+} from '@/api/booking-requests/api';
+export type { PublicQuote, PublicQuoteParams, DeliveryDistance } from '@/api/marketplace/api';

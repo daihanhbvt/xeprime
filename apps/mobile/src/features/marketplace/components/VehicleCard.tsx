@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { memo } from 'react';
+import { Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { SERVICE_TYPE, VEHICLE_TYPE_LABEL, type VehicleType } from '@xeprime/types';
@@ -8,19 +8,22 @@ import { applyDiscountPercent } from '@xeprime/domain';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
 import { DetailArrow } from '@/components/ui/DetailArrow';
+import { RemoteImage } from '@/components/ui/RemoteImage';
 import type { IconName } from '@/components/ui/Chip';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useDomainLabel } from '@/i18n/domain';
+import { ROUTES } from '@/navigation/routes';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
-import { useSearchExperience } from '../search-context';
+import { useSearchFilters } from '../search-context';
 import type { PublicListing } from '../api';
 
 /** Ảnh 16:10 — đủ cao để nhận ra chiếc xe, đủ thấp để thẻ sau lộ ra ở cuối màn. */
 const PHOTO_RATIO = 16 / 10;
 
-/** Không phụ thuộc prop/state — dựng MỘT lần ở module scope, không phải mỗi lần render. */
-const FILL_STYLE = { width: '100%', height: '100%' } as const;
+/** Đích chạm gian hàng chỉ chiếm phần chữ, không kéo sang cột giá bên phải. */
+const styles = StyleSheet.create({ shopLink: { flex: 1 } });
 
 interface VehicleCardProps {
   listing: PublicListing;
@@ -37,8 +40,9 @@ interface VehicleCardProps {
 function VehicleCardImpl({ listing, onPress }: VehicleCardProps) {
   const t = useTranslations('Listings.card');
   const domainLabel = useDomainLabel();
+  const navigateOnce = useNavigateOnce();
   const fmt = useAppFormat();
-  const { filters } = useSearchExperience();
+  const filters = useSearchFilters();
   // Thẻ xe lưu KEY hãng/nhiên liệu — nhãn tra từ danh mục chung với web, không dịch tại chỗ.
   const { brandLabel, fuelTypeLabel } = useCatalogLabels();
 
@@ -98,21 +102,13 @@ function VehicleCardImpl({ listing, onPress }: VehicleCardProps) {
         ? { onPress: open, accessibilityLabel: t('viewDetail', { name: listing.name }) }
         : {})}
     >
-      <YStack bg={colors.surfaceMuted} aspectRatio={PHOTO_RATIO}>
-        {listing.mainImageUrl ? (
-          <Image
-            source={{ uri: listing.mainImageUrl }}
-            style={FILL_STYLE}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            transition={150}
-            accessibilityLabel={listing.name}
-          />
-        ) : (
-          <YStack f={1} ai="center" jc="center">
-            <Ionicons name="car-sport-outline" size={40} color={colors.border} />
-          </YStack>
-        )}
+      <YStack aspectRatio={PHOTO_RATIO}>
+        <RemoteImage
+          uri={listing.mainImageUrl}
+          recyclingKey={listing.id}
+          accessibilityLabel={listing.name}
+          fallback={<Ionicons name="car-sport-outline" size={40} color={colors.border} />}
+        />
 
         {/*
           Mũi tên GIỮ NGUYÊN chỗ cũ: đè lên ảnh, góc trên-phải. `inset` DƯƠNG vì ảnh không có
@@ -187,22 +183,36 @@ function VehicleCardImpl({ listing, onPress }: VehicleCardProps) {
         <YStack h={1} bg={colors.borderSubtle} />
 
         <XStack ai="center" jc="space-between" gap={space.sm}>
-          <XStack ai="center" gap={space.xs} f={1}>
-            <Avatar name={listing.shopName} url={listing.shopLogoUrl} size={30} />
-            <YStack f={1} gap={0}>
-              <Text col={colors.placeholder} fos={fontSize.label}>
-                {t('owner')}
-              </Text>
-              <Text
-                col={colors.text}
-                fos={fontSize.bodySm}
-                fow={fontWeight.semibold}
-                numberOfLines={1}
-              >
-                {listing.shopName}
-              </Text>
-            </YStack>
-          </XStack>
+          {/*
+            Hàng gian hàng là một đích chạm RIÊNG, lồng trong thẻ — đúng như web lồng một
+            `<Link>` sang `/shops/[slug]` ở chính chỗ này.
+
+            `py` nâng chiều cao vùng chạm: hàng chữ chỉ cao 30dp, mà một đích chạm nằm lọt
+            trong một đích chạm khác thì thiếu vài dp là bấm trượt sang trang xe.
+          */}
+          <Pressable
+            onPress={() => navigateOnce(ROUTES.explore.shopDetail(listing.shopSlug))}
+            accessibilityRole="button"
+            accessibilityLabel={listing.shopName}
+            style={styles.shopLink}
+          >
+            <XStack ai="center" gap={space.xs} py={space.xs}>
+              <Avatar name={listing.shopName} url={listing.shopLogoUrl} size={30} />
+              <YStack f={1} gap={0}>
+                <Text col={colors.placeholder} fos={fontSize.label}>
+                  {t('owner')}
+                </Text>
+                <Text
+                  col={colors.text}
+                  fos={fontSize.bodySm}
+                  fow={fontWeight.semibold}
+                  numberOfLines={1}
+                >
+                  {listing.shopName}
+                </Text>
+              </YStack>
+            </XStack>
+          </Pressable>
 
           <YStack ai="flex-end">
             {selfDrive && discount > 0 && listing.weekdayPrice ? (

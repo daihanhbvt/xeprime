@@ -227,6 +227,7 @@ const SHOP_NAV: readonly ManageNavSection[] = [
         labelKey: 'manage.shop',
         icon: 'storefront-outline',
         permission: PERMISSION.TENANT_VIEW,
+        href: ROUTES.manage.shop(),
       },
     ],
   },
@@ -239,24 +240,31 @@ const SHOP_NAV: readonly ManageNavSection[] = [
         labelKey: 'manage.shopPolicies',
         icon: 'shield-checkmark-outline',
         permission: PERMISSION.TENANT_VIEW,
+        href: ROUTES.manage.shopPolicies(),
       },
       {
         key: 'shop-branches',
         labelKey: 'manage.shopBranches',
         icon: 'git-network-outline',
         permission: PERMISSION.BRANCH_VIEW,
+        feature: PLAN_FEATURE.BRANCHES,
+        href: ROUTES.manage.shopBranches(),
       },
       {
         key: 'drivers',
         labelKey: 'manage.drivers',
         icon: 'id-card-outline',
         permission: PERMISSION.DRIVER_VIEW,
+        feature: PLAN_FEATURE.DRIVERS,
+        href: ROUTES.manage.drivers(),
       },
       {
         key: 'members',
         labelKey: 'manage.members',
         icon: 'person-add-outline',
         permission: PERMISSION.MEMBER_VIEW,
+        feature: PLAN_FEATURE.MEMBERS,
+        href: ROUTES.manage.members(),
       },
     ],
   },
@@ -368,4 +376,42 @@ const PLATFORM_NAV: readonly ManageNavSection[] = [
 /** Chọn cây menu theo scope — cùng luật với `navForScope` của web. */
 export function manageNavForScope(isPlatform: boolean): readonly ManageNavSection[] {
   return isPlatform ? PLATFORM_NAV : SHOP_NAV;
+}
+
+/** Trải phẳng mọi mục lá của một cây menu — cùng vai trò `flattenLeaves` của web. */
+export function flattenManageLeaves(
+  sections: readonly ManageNavSection[],
+): readonly ManageNavLeaf[] {
+  return sections.flatMap((section) =>
+    section.children.flatMap((node) => (isManageNavBranch(node) ? [...node.children] : [node])),
+  );
+}
+
+/**
+ * `href` của ĐÚNG MỘT mục đang mở: mục có href là tiền tố DÀI NHẤT của đường dẫn hiện tại —
+ * bản native của `matchSelectedKey` bên web.
+ *
+ * Không so từng mục độc lập bằng `startsWith`: `/manage/shop/branches` bắt đầu bằng cả
+ * `/manage/shop`, nên cách đó làm "Cửa hàng" sáng cùng lúc với "Chi nhánh" và người dùng không
+ * còn biết mình đang ở đâu. Nhưng vẫn phải so tiền tố, vì trang CON không có mục menu riêng
+ * (`/manage/vehicles/new`) phải sáng mục cha gần nhất của nó ("Danh sách xe").
+ *
+ * Tổng quan (`/manage`) chỉ khớp TUYỆT ĐỐI — nó là tiền tố của mọi trang trong khu quản lý, để
+ * so tiền tố thì trang nào cũng làm nó sáng.
+ */
+export function matchActiveHref(
+  pathname: string,
+  leaves: readonly ManageNavLeaf[],
+  homeHref: string,
+): string | null {
+  let best: string | null = null;
+
+  for (const leaf of leaves) {
+    if (!leaf.href) continue;
+    const target = String(leaf.href);
+    const matches =
+      pathname === target || (target !== homeHref && pathname.startsWith(`${target}/`));
+    if (matches && (best === null || target.length > best.length)) best = target;
+  }
+  return best;
 }

@@ -15,11 +15,11 @@
 | Module | Dòng | Đã dựng | Còn lại | Ghi chú |
 | --- | --- | --- | --- | --- |
 | Authentication | 7 | **7** | 0 | Xong trọn, kể cả Bearer + refresh xoay vòng (ADR 0017) |
-| Marketplace | 6 | 5 | 1 | Thiếu **MKT-05** trang gian hàng công khai |
+| Marketplace | 6 | 6 | 0 | Đủ — **MKT-05** dựng 09/09/2026 |
 | Booking / Rental | 16 | **16** | 0 (1 phần) | **BKG-14** xem được, chưa in/xuất PDF |
 | Vehicle | 13 | 11 | 2 | **VEH-08** bỏ · **VEH-13** hoãn |
 | Customer | 4 | **4** | 0 | Xong trọn (07/09) — `docs/mobile-customer-module-status.md` |
-| Shop | 9 | 1 | 8 | Chỉ có SHP-07 (tổng quan gian hàng) |
+| Shop | 9 | **7** | 2 | SHP-01→07 xong (08/09) — `docs/mobile-shop-module-status.md`. SHP-08/09 web chưa có bản để clone |
 | Finance | 6 | **6** | 0 | Xong trọn (07/09) — `docs/mobile-finance-module-status.md` |
 | Calendar | 3 | 0 | 3 | CAL-03 là ràng buộc CSDL, không phải màn |
 | Communication | 7 | 0 | 7 | COM-01 mới là màn rỗng |
@@ -45,8 +45,17 @@ và Finance (6) — cộng lại 37/97 dòng, và là toàn bộ phần nghiệp
 Có: `/explore` (MKT-01) · `/search` (MKT-02, 03) · `/listings/[id]` (MKT-04) · máy báo giá dùng
 trong wizard đặt xe (MKT-06).
 
-**Thiếu MKT-05 — trang gian hàng công khai.** Không có route `/shops/[slug]`; app đang không có
-đường nào để khách xem hồ sơ một gian hàng. Web có.
+**MKT-05 — trang gian hàng công khai (xong 09/09/2026).** Route `/shops/[slug]`, trùng địa chỉ
+với web nên một liên kết chia sẻ mở được ở cả hai nơi. Hai khối như web: hồ sơ gian hàng rồi
+danh sách xe đang cho thuê (native cuộn tải dần thay cho bộ phân trang số trang).
+
+Năm lối vào, đúng năm chỗ web có liên kết: gian hàng nổi bật ở trang chủ · chân mỗi thẻ xe ·
+thẻ gian hàng ở trang chi tiết xe · khối gian hàng ở chi tiết chuyến của khách · hàng gian hàng
+trong wizard gửi yêu cầu. Thêm một lối chỉ app có, thay cho `target="_blank"` của web: nút
+"Xem gian hàng" ở hồ sơ gian hàng trong khu quản lý.
+
+Ảnh bìa và logo dùng `components/ui/ShopCover.tsx` — CÙNG hiện thực với khối danh tính bên khu
+quản lý, vì khối đó là bản xem trước của chính trang này.
 
 ### 2.3 Booking / Rental — 16/16, một phần chưa trọn
 
@@ -81,13 +90,20 @@ bên web.
 Đi kèm: dựng `/manage/receipts` ở dạng **sổ Thu-Chi đã lọc sẵn** để hai lối đi từ hồ sơ khách
 không thành nút chết. Đó chưa phải FIN-02 — xem §2.7.
 
-### 2.6 Shop — 1/9
+### 2.6 Shop — 7/9 ✅
 
-Có SHP-07 (`ManageHomeScreen`). Tám mục còn lại chưa có `href`: đăng ký gian hàng, hồ sơ gian
-hàng, chi nhánh, **chính sách thuê mặc định (SHP-04)**, nhân sự, tài xế, khu vực nhận xe, thùng rác.
+Đủ SHP-01→07 (08/09/2026). Route: `/manage/onboarding` · `/manage/shop` ·
+`/manage/shop/branches` · `/manage/shop/policies` · `/manage/members` · `/manage/drivers` ·
+`/manage`. Năm mục Shop trong `manage-nav.ts` đã có `href` + cờ gói.
 
-⚠️ **SHP-04 liên đới trực tiếp tới VEH-05**: màn Giá & chính sách của xe cho phép "đặt lại theo
-chính sách gian hàng", nhưng app chưa có màn để XEM/SỬA chính sách gian hàng đó.
+Kèm theo đợt này: **bộ chọn phạm vi chi nhánh** trên thanh trên của cả cổng quản lý
+(`BranchScopePill` ở dòng phụ của thanh trên), ghép `branchId` vào đội xe · đơn thuê · yêu cầu
+thuê · huy hiệu chờ duyệt.
+
+⚠️ **SHP-08 (khu vực nhận xe) và SHP-09 (thùng rác) KHÔNG làm**: cột "Có tương đương web" của
+tracking là `Không` — không có golden master để clone, dựng trước web là tự đặt ra nghiệp vụ.
+
+Chi tiết, ma trận quyền/gói và phần còn nợ: `docs/mobile-shop-module-status.md`.
 
 ### 2.7 Finance — 6/6 ✅
 
@@ -191,7 +207,7 @@ Xếp theo **cái gì đang chặn cái gì**, không theo độ khó.
    cao do chip trạng thái xuống dòng, bảng thông số 17 dòng phần lớn rỗng và nhãn wrap, tiêu đề
    thẻ không nhất quán.
 4. **Communication COM-01/04/07** — chat thật + thông báo + push.
-5. MKT-05 và Admin. *(Customer xong 07/09; Finance xong 07/09.)*
+5. Admin. *(Customer xong 07/09; Finance xong 07/09; Shop xong 08/09; MKT-05 xong 09/09.)*
 
 ---
 

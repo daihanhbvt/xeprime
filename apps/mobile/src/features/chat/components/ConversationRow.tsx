@@ -1,4 +1,4 @@
-import type { ConversationSummary } from '@xeprime/api-client';
+import type { ConversationSummary } from '@/api/chat/api';
 import { memo } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';

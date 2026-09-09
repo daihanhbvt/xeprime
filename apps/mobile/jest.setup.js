@@ -27,3 +27,22 @@ afterEach(() => {
   // token thì tự gọi `resetAuthSessionForTest()`.
   jest.requireMock('expo-secure-store').__reset();
 });
+
+/**
+ * Ngưỡng chờ mặc định của `waitFor`/`findBy*` — 1s của RNTL hợp với một component trần, không
+ * hợp với suite này.
+ *
+ * Mỗi test ở đây dựng cả cây provider (Redux + React Query + intl) rồi chờ 2–3 truy vấn giả
+ * lắng xuống; jest chạy song song nhiều worker nên một worker đang tải nặng có thể vượt 1s và
+ * biến một màn hình ĐÚNG thành một test đỏ ngẫu nhiên. Nới ở MỘT chỗ thay vì rắc `{ timeout }`
+ * vào từng chỗ chờ.
+ *
+ * Đây là biên an toàn, KHÔNG phải cách chữa một test đỏ: `waitFor` trả về ngay khi điều kiện
+ * đúng, nên test xanh không chậm đi một mili-giây nào — nhưng một test chờ nhầm thứ (chờ tiêu
+ * đề khối trong khi cần chờ HÀNG dữ liệu) thì chờ bao lâu cũng vẫn sai. Gặp đỏ ngẫu nhiên thì
+ * soi lại chỗ neo trước, đừng tăng số này.
+ *
+ * Và đừng chạm ngưỡng 5s mặc định của jest: bằng nhau thì jest hết giờ TRƯỚC, nuốt mất câu
+ * "Unable to find …" và để lại đúng một dòng "Exceeded timeout" không nói được gì.
+ */
+require('@testing-library/react-native').configure({ asyncUtilTimeout: 3000 });

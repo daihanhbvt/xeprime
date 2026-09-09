@@ -57,3 +57,27 @@ ${keys.map((k) => `  ${k},`).join('\n')}
 writeFileSync(join(here, '../src/features/catalog/brand-art.ts'), module);
 
 console.log(`${keys.length} logo → ${DENSITIES.length} mật độ`);
+
+/*
+ * Minh hoạ hero — cùng nguồn SVG với web, đổ ra PNG vì bundle native không có `react-native-svg`
+ * (xem ghi chú ở `BrandMark`: một native module vắng mặt trong dev build là lỗi lúc CHẠY).
+ *
+ * Bề rộng bám mốc mobile của web (`max-width: 320px`), nhân theo mật độ màn.
+ */
+const illustrationSource = join(here, '../../web/public/illustrations');
+const illustrationTarget = join(here, '../assets/images');
+const ILLUSTRATIONS = ['shop-onboarding'];
+
+for (const key of ILLUSTRATIONS) {
+  const svg = readFileSync(join(illustrationSource, `${key}.svg`));
+  for (const { suffix, width } of [
+    { suffix: '', width: 320 },
+    { suffix: '@2x', width: 640 },
+    { suffix: '@3x', width: 960 },
+  ]) {
+    const png = new Resvg(svg, { fitTo: { mode: 'width', value: width } }).render().asPng();
+    writeFileSync(join(illustrationTarget, `${key}${suffix}.png`), png);
+  }
+}
+
+console.log(`${ILLUSTRATIONS.length} minh hoạ → 3 mật độ`);

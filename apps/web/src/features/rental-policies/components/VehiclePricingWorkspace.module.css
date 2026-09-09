@@ -210,6 +210,9 @@
   font-size: 11px;
   font-weight: var(--xp-font-weight-bold);
   letter-spacing: 0.06em;
+  /* Viết hoa là KIỂU TRÌNH BÀY, không phải nội dung: message giữ dạng câu thường để tiếng Anh
+     (và bản đọc màn hình) không bị hét lên, còn chỗ này lo phần nhìn. */
+  text-transform: uppercase;
 }
 
 .previewLabel,

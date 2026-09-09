@@ -17,7 +17,7 @@ export {
   customerRevenueParams,
   debtFiltersToParams,
   RECEIPTS_DEFAULT_LIMIT,
-} from '@xeprime/api-client';
+} from '@/api/finance/api';
 
 export type {
   CreateCategoryInput,
@@ -40,7 +40,6 @@ export type {
   ReceiptFilters,
   ReceiptSummary,
   ReceiptVehicleOption,
-  UploadMeta,
-  UploadPresign,
   VehicleProfit,
-} from '@xeprime/api-client';
+} from '@/api/finance/api';
+export type { UploadMeta, UploadPresign } from '@/api/vehicles/api';

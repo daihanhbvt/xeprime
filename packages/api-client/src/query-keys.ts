@@ -316,8 +316,13 @@ export const queryKeys = {
     listing: (vehicleId: string) => ['marketplace', 'listing', vehicleId] as const,
     reviews: (vehicleId: string, params: QueryParams) =>
       ['marketplace', 'reviews', vehicleId, params] as const,
+    /** Hồ sơ gian hàng công khai. Web render server-side cho SEO; app fetch như mọi màn khác. */
+    shop: (slug: string) => ['marketplace', 'shop', slug] as const,
     shopListings: (slug: string, params: QueryParams) =>
       ['marketplace', 'shop-listings', slug, params] as const,
+    /** Bản tải VÔ HẠN của danh sách trên — key KHÔNG chứa page (page là pageParam của TanStack). */
+    shopListingsInfinite: (slug: string, params: QueryParams) =>
+      ['marketplace', 'shop-listings-infinite', slug, params] as const,
     /** Báo giá công khai theo khoảng ngày — nguồn PricingService, FE không tự cộng trừ. */
     quote: (vehicleId: string, params: QueryParams) =>
       ['marketplace', 'quote', vehicleId, params] as const,

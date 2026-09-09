@@ -69,7 +69,8 @@ Skill tự kích hoạt theo mô tả; nếu quên thì gọi tay. `navigator` �
 | Auth (web) | Mật khẩu + OTP tự làm; Google/Facebook đi qua **OAuth do backend chủ trì** (`GET /auth/social/:provider`, authorization code + PKCE ở server — ADR 0019). Mọi đường đều kết thúc bằng **httpOnly session cookie** do NestJS phát — ADR 0002 |
 | Firebase | **CHỈ** chat realtime (custom token + Firestore projection — ADR 0009) và `apps/worker`. KHÔNG còn nằm trên đường đăng nhập |
 | Auth (native) | `Authorization: Bearer <accessToken>` — access token JWT 15 phút, refresh token opaque xoay vòng, phiên thu hồi được theo thiết bị. Endpoint `/auth/mobile/*` — ADR 0017 |
-| Client HTTP | `@xeprime/api-client` — MỘT client cho web và native; hai app khác nhau đúng một chỗ: `AuthTransport` (web `credentials: 'include'`, native header Bearer). Web cấu hình ở `apps/web/src/services/api-client.ts` |
+| Client HTTP | `@xeprime/api-client` = **hạ tầng HTTP dùng chung** (client, phong bì `{data,meta}`, phân trang, `ApiClientError`, `AuthTransport`, `queryKeys`) — KHÔNG còn lời gọi theo nghiệp vụ. Web `credentials: 'include'`, native header Bearer; cấu hình ở `apps/web/src/services/api-client.ts` và `apps/mobile/src/lib/api-client.ts` |
+| Tầng gọi API theo nghiệp vụ | **Mỗi app một bản, ADR 0031**: native ở `apps/mobile/src/api/<feature>/` (đủ 25 feature); web viết trong chính file api của feature (`apps/web/src/features/<feature>/api.ts`, `services/auth.service.ts`). Sửa một contract dùng chung ⇒ **sửa CẢ HAI bản**, không còn tự đồng bộ |
 | Logic nghiệp vụ dùng chung | `@xeprime/domain` — tiền trên chuỗi · múi giờ + thời lượng thuê · lịch bận · nguyện vọng nhận xe. Framework-free, Metro đọc được; `apps/web/src/lib/*` là re-export shim |
 | API type | FE import từ `packages/types/src/api.generated.ts` sinh bằng `openapi-typescript` — ADR 0007 |
 | RBAC | Role/permission lưu DB, **guard backend là nguồn bảo vệ chính** |
@@ -121,7 +122,9 @@ Bổ sung ngoài tài liệu, đã thống nhất đưa vào base:
 - ❌ Nhét quyền/tenant/PII vào access token native — claim chỉ có `sub`/`sid`/`typ`/`aud`/`iat`/`exp` (ADR 0017)
 - ❌ Lưu token ở `localStorage`/`AsyncStorage` — refresh token native CHỈ ở Keychain/Keystore (ADR 0017)
 - ❌ Ghi refresh token thô vào DB/log/message lỗi — chỉ SHA-256 của nó (ADR 0017)
-- ❌ Import `next/*`, `antd`, DOM API, `File`, `XMLHttpRequest`, CSS, hay React UI vào `packages/api-client` / `packages/domain` — Metro không đọc được, và đó là lý do hai package đó tồn tại
+- ❌ Import `next/*`, `antd`, DOM API, `File`, `XMLHttpRequest`, CSS, hay React UI vào `packages/api-client` / `packages/domain` / `apps/mobile/src/api` — Metro không đọc được, và đó là lý do hai package đó tồn tại
+- ❌ Đưa lời gọi theo nghiệp vụ (đường dẫn endpoint, serialize bộ lọc, alias DTO) trở lại `packages/api-client` — nó chỉ còn hạ tầng HTTP (ADR 0031)
+- ❌ Sửa một feature ở `apps/mobile/src/api/` rồi coi là xong khi web cũng có bản của feature đó — hai bản KHÔNG tự đồng bộ (ADR 0031)
 - ❌ Đọc `process.env` trong package dùng chung — app truyền cấu hình vào (`configureApiClient({ baseUrl })`)
 - ❌ Client tự set `approved_public` / `tenant.status` / quyết định lịch trống
 - ❌ Module khác `ListingsService` ghi vào `public_listings` (ADR 0008)

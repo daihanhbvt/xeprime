@@ -2,7 +2,7 @@
 // `marketplaceApi` bên dưới dùng chính client đó.
 import '@/lib/api-client';
 
-export { marketplaceApi, toListingQueryParams, DEFAULT_LISTING_LIMIT } from '@xeprime/api-client';
+export { marketplaceApi, toListingQueryParams, DEFAULT_LISTING_LIMIT } from '@/api/marketplace/api';
 
 // Kiểu marketplace ở `@xeprime/types` (sinh từ OpenAPI — ADR 0007), không phải ở client HTTP.
 export type {
@@ -12,5 +12,6 @@ export type {
   PublicListing,
   PublicListingDetail,
   PublicListingFacets,
+  PublicShop,
   PublicShopSummary,
 } from '@xeprime/types';

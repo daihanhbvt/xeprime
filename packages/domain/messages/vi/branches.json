@@ -74,7 +74,8 @@
     "frameTitle": "Bản đồ vị trí chi nhánh",
     "hint": "Hệ thống tự xác định vị trí từ địa chỉ ở trên. Vị trí này là điểm xuất phát để tính phí giao xe tận nơi — nếu ghim sai chỗ, hãy ghi địa chỉ chi tiết hơn rồi lưu lại.",
     "pending": "Chưa xác định được vị trí từ địa chỉ này. Ghi rõ số nhà, tên đường và phường/xã rồi lưu lại để hệ thống thử lại.",
-    "addressFirst": "Nhập địa chỉ rồi lưu để hệ thống xác định vị trí trên bản đồ."
+    "addressFirst": "Nhập địa chỉ rồi lưu để hệ thống xác định vị trí trên bản đồ.",
+    "open": "Mở bản đồ"
   },
   "scope": {
     "all": "Tất cả chi nhánh",

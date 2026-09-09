@@ -1,7 +1,8 @@
 'use client';
 
 import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { chatApi, type ConversationListResult } from '@xeprime/api-client';
+import { chatApi } from '../api';
+import type { ConversationListResult } from '../types';
 import type { ChatSide } from '@xeprime/types';
 import { queryKeys } from '@/services/query-keys';
 import { useChatRealtime } from '../context/ChatRealtimeContext';

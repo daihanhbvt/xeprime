@@ -22,7 +22,7 @@ import {
   type MaintenanceType,
 } from '@xeprime/types';
 import type { PaginationMeta } from '@xeprime/types';
-import { LIST_SEPARATOR } from '@xeprime/domain';
+import { LIST_SEPARATOR, maintenanceCyclePercent } from '@xeprime/domain';
 import { actionColumn, DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { EntityIdentity } from '@/components/data-display/EntityIdentity';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
@@ -64,16 +64,7 @@ function DueCell({ row }: { row: MaintenanceBoardItem }) {
   if (status === MAINTENANCE_DUE_STATUS.UNKNOWN) {
     return <span className={styles.muted}>{tCommon('labels.insufficientData')}</span>;
   }
-  const percent =
-    row.oilChangeIntervalKm && row.remainingKm != null
-      ? Math.min(
-          100,
-          Math.max(
-            0,
-            ((row.oilChangeIntervalKm - row.remainingKm) / row.oilChangeIntervalKm) * 100,
-          ),
-        )
-      : null;
+  const percent = maintenanceCyclePercent(row.oilChangeIntervalKm, row.remainingKm);
   return (
     <div className={styles.dueCell}>
       <span className={status === MAINTENANCE_DUE_STATUS.OVERDUE ? styles.overdue : styles.dueText}>

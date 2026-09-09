@@ -54,8 +54,6 @@ export const MESSAGE_NAMESPACES = [
   { file: 'vehicles', namespace: 'Vehicles' },
   // Không gian "Quản lý xe" của chủ xe (08/09/2026) — dùng chung với tab Vận hành ở /manage.
   { file: 'vehicle-manage', namespace: 'VehicleManage' },
-  // Giá & chính sách theo xe / gian hàng — chuyển đợt 08/09/2026 cùng không gian quản lý xe.
-  { file: 'rental-policies', namespace: 'RentalPolicies' },
   { file: 'branches', namespace: 'Branches' },
   { file: 'customers', namespace: 'Customers' },
   // Mới có màn Công nợ; sổ Thu-Chi vẫn còn chuỗi thô — xem `i18n:audit`.

@@ -1,5 +1,4 @@
 import { COLLATERAL_MODE, type LongTermPackageMonths } from '@xeprime/types';
-import { LIST_SEPARATOR } from '@xeprime/domain';
 import type { PolicyFormValues, VehiclePricingFormValues } from './schema';
 import type { RentalPolicyValues, SaveRentalPolicyInput } from './types';
 
@@ -87,32 +86,5 @@ export function vehicleFormToPolicyInput(values: VehiclePricingFormValues): Save
   return formToSaveInput(values);
 }
 
-/**
- * Tóm tắt cấu hình giao nhận hiển thị với khách đặt — đúng dòng preview của thiết kế.
- *
- * Hai nhãn chữ do nơi gọi truyền (đã dịch qua `t()`): hàm này thuần, không biết ngôn ngữ của
- * request (ADR 0012).
- */
-export function deliverySummaryText(
-  values: {
-    deliveryTiers: { toKm: number | null | undefined; fee: number | null | undefined }[];
-    deliveryMaxRadiusKm: number | null | undefined;
-  },
-  labels: { free: string; manualBeyond: string },
-): string {
-  const parts: string[] = [];
-  let from = 0;
-  for (const tier of values.deliveryTiers) {
-    if (tier.toKm == null) continue;
-    const fee =
-      !tier.fee || tier.fee === 0
-        ? labels.free
-        : `${new Intl.NumberFormat('vi-VN').format(tier.fee)}đ`;
-    parts.push(`${from === 0 ? '0' : `>${from}`}–${tier.toKm} km: ${fee}`);
-    from = tier.toKm;
-  }
-  if (values.deliveryMaxRadiusKm != null) {
-    parts.push(`>${values.deliveryMaxRadiusKm} km: ${labels.manualBeyond}`);
-  }
-  return parts.join(LIST_SEPARATOR);
-}
+/** Câu tóm tắt giao nhận nay ở `@xeprime/domain` — app native đọc ra đúng một câu với web. */
+export { deliverySummaryText } from '@xeprime/domain';

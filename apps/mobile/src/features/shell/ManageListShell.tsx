@@ -33,7 +33,12 @@ const styles = StyleSheet.create({
      */
     backgroundColor: colors.background,
   },
-  /** Cùng chiều cao và cùng bán kính với ô tìm kiếm bên cạnh — cả hàng là MỘT cụm điều khiển. */
+  /*
+    Bo tròn HẾT CỠ (`radius.pill`), giống hệt nút Thêm đứng ngay cạnh (`IconButton` luôn
+    `radius.pill`) — trước đây nút này bo `radius.md` (góc vuông hơn) trong khi nút Thêm là một
+    hình tròn đặc, nên dù đứng sát nhau và cùng chiều cao, mắt vẫn đọc ra hai điều khiển RIÊNG LẺ
+    thay vì MỘT cụm hành động của hàng tiêu đề.
+  */
   filterButton: {
     /*
       KHÔNG co lại. Nút đứng cùng hàng với tiêu đề, mà tiêu đề là `f={1}` — thiếu dòng này thì
@@ -41,7 +46,7 @@ const styles = StyleSheet.create({
     */
     flexShrink: 0,
     height: sizing.touchTarget,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -291,46 +296,56 @@ export function ManageListShell({
                 </Text>
               ) : null}
             </YStack>
-            {action}
-
             {/*
-              Nút lọc nằm ĐỐI DIỆN tiêu đề chứ không phải một hàng riêng: hàng tiêu đề vốn bỏ
-              trống cột phải ở hầu hết các màn, nên đưa nút về đó tiết kiệm trọn một hàng mà
-              không mất gì — khối đầu trang càng cao thì càng lâu mới thấy bản ghi đầu tiên.
+              Thêm + Lọc đi CHUNG một cụm (`gap={space.xs}`, hẹp hơn khoảng cách với tiêu đề) —
+              hai nút cùng bo `radius.pill`, cùng chiều cao `sizing.touchTarget`, nên đọc ra là
+              MỘT nhóm hành động của hàng tiêu đề thay vì hai nút rời rạc trôi nổi cạnh nhau.
 
-              Nút có NHÃN CHỮ, không chỉ biểu tượng — web ghi rõ "Bộ lọc" kèm phễu, và một từ ở
-              đây bỏ hẳn được phần đoán. Con số bộ lọc đang bật nằm trên chính nút: thiếu nó thì
-              người dùng phải mở tấm trượt mới biết vì sao danh sách ngắn bất thường.
+              `flexShrink={0}` trên cả cụm: tiêu đề bên trái là `f={1}`, thiếu dòng này thì màn
+              hẹp + tiêu đề dài sẽ bóp cả cụm lại.
             */}
-            <Pressable
-              onPress={openFilters}
-              accessibilityRole="button"
-              accessibilityLabel={
-                count > 0 ? `${t('title')}, ${t('activeCount', { count })}` : t('open')
-              }
-              style={({ pressed }) => [
-                styles.filterButton,
-                {
-                  backgroundColor: count > 0 ? colors.primaryLight : colors.surface,
-                  borderColor: count > 0 ? colors.primary : colors.borderInput,
-                  opacity: pressed ? 0.7 : 1,
-                },
-              ]}
-            >
-              <Ionicons
-                name="funnel-outline"
-                size={iconSize.sm}
-                color={count > 0 ? colors.primaryActive : colors.textMuted}
-              />
-              <Text
-                col={count > 0 ? colors.primaryActive : colors.text}
-                fos={fontSize.bodySm}
-                fow={fontWeight.medium}
+            <XStack ai="center" gap={space.xs} flexShrink={0}>
+              {action}
+
+              {/*
+                Nút lọc nằm ĐỐI DIỆN tiêu đề chứ không phải một hàng riêng: hàng tiêu đề vốn bỏ
+                trống cột phải ở hầu hết các màn, nên đưa nút về đó tiết kiệm trọn một hàng mà
+                không mất gì — khối đầu trang càng cao thì càng lâu mới thấy bản ghi đầu tiên.
+
+                Nút có NHÃN CHỮ, không chỉ biểu tượng — web ghi rõ "Bộ lọc" kèm phễu, và một từ ở
+                đây bỏ hẳn được phần đoán. Con số bộ lọc đang bật nằm trên chính nút: thiếu nó thì
+                người dùng phải mở tấm trượt mới biết vì sao danh sách ngắn bất thường.
+              */}
+              <Pressable
+                onPress={openFilters}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  count > 0 ? `${t('title')}, ${t('activeCount', { count })}` : t('open')
+                }
+                style={({ pressed }) => [
+                  styles.filterButton,
+                  {
+                    backgroundColor: count > 0 ? colors.primaryLight : colors.surface,
+                    borderColor: count > 0 ? colors.primary : colors.borderInput,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
               >
-                {t('title')}
-              </Text>
-              {count > 0 ? <CountBadge count={count} /> : null}
-            </Pressable>
+                <Ionicons
+                  name="funnel-outline"
+                  size={iconSize.sm}
+                  color={count > 0 ? colors.primaryActive : colors.textMuted}
+                />
+                <Text
+                  col={count > 0 ? colors.primaryActive : colors.text}
+                  fos={fontSize.bodySm}
+                  fow={fontWeight.medium}
+                >
+                  {t('title')}
+                </Text>
+                {count > 0 ? <CountBadge count={count} /> : null}
+              </Pressable>
+            </XStack>
           </XStack>
 
           {summary}

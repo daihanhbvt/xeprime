@@ -62,17 +62,25 @@ async function renderScreen(profile: UserProfile = PROFILE) {
  * sung: nguồn dữ liệu RIÊNG (`/users/me`), chế độ sửa, khoá hai trường nhận diện, và việc lưu
  * xong phải đồng bộ CẢ HAI cache.
  */
+/**
+ * Mốc neo "thẻ hồ sơ đã hiện" — dùng MÔ TẢ của thẻ.
+ *
+ * KHÔNG dùng `Account.profile.title`: màn không render khoá đó (tiêu đề trên thẻ là
+ * `profile.eyebrow` viết hoa). Test cũ neo vào nó nên đỏ mà không phải vì màn sai.
+ */
+const PROFILE_CARD_TEXT = 'Cập nhật tên hiển thị và ảnh đại diện của bạn.';
+
 describe('AccountScreen — hồ sơ (CUS-04)', () => {
   it('đọc hồ sơ từ `GET /users/me`, KHÔNG lấy từ `/auth/me`', async () => {
     const view = await renderScreen();
 
-    expect(await view.findByText('Thông tin tài khoản')).toBeTruthy();
+    expect(await view.findByText(PROFILE_CARD_TEXT)).toBeTruthy();
     expect(view.meSpy).toHaveBeenCalledTimes(1);
   });
 
   it('hiện email + SĐT ở chế độ CHỈ ĐỌC kèm huy hiệu đã xác thực', async () => {
     const view = await renderScreen();
-    await view.findByText('Thông tin tài khoản');
+    await view.findByText(PROFILE_CARD_TEXT);
 
     expect(view.getByText('an@xeprime.test')).toBeTruthy();
     expect(view.getByText('0901234567')).toBeTruthy();
@@ -83,13 +91,13 @@ describe('AccountScreen — hồ sơ (CUS-04)', () => {
 
   it('SĐT chưa xác thực: huy hiệu đổi sang "Chưa xác thực"', async () => {
     const view = await renderScreen({ ...PROFILE, phoneVerified: false });
-    await view.findByText('Thông tin tài khoản');
+    await view.findByText(PROFILE_CARD_TEXT);
     expect(view.getByText('Chưa xác thực')).toBeTruthy();
   });
 
   it('không có email/SĐT: nói rõ chưa có, không để ô trống', async () => {
     const view = await renderScreen({ ...PROFILE, email: null, phone: null });
-    await view.findByText('Thông tin tài khoản');
+    await view.findByText(PROFILE_CARD_TEXT);
 
     expect(view.getByText('Chưa có email')).toBeTruthy();
     expect(view.getByText('Chưa có số điện thoại')).toBeTruthy();
@@ -99,7 +107,7 @@ describe('AccountScreen — hồ sơ (CUS-04)', () => {
 
   it('luôn giải thích vì sao email và SĐT không sửa được ở đây', async () => {
     const view = await renderScreen();
-    await view.findByText('Thông tin tài khoản');
+    await view.findByText(PROFILE_CARD_TEXT);
     expect(view.getByText('Thông tin đăng nhập')).toBeTruthy();
   });
 
@@ -118,14 +126,14 @@ describe('AccountScreen — hồ sơ (CUS-04)', () => {
     );
 
     expect(await view.findByRole('button', { name: 'Thử lại' })).toBeTruthy();
-    expect(view.queryByText('Thông tin tài khoản')).toBeNull();
+    expect(view.queryByText(PROFILE_CARD_TEXT)).toBeNull();
   });
 });
 
 describe('AccountScreen — chỉnh sửa hồ sơ', () => {
   it('mở chế độ sửa thì hiện ĐÚNG hai trường backend nhận', async () => {
     const view = await renderScreen();
-    await view.findByText('Thông tin tài khoản');
+    await view.findByText(PROFILE_CARD_TEXT);
 
     await fireEvent.press(view.getByRole('button', { name: new RegExp('Chỉnh sửa hồ sơ$') }));
 
@@ -135,7 +143,7 @@ describe('AccountScreen — chỉnh sửa hồ sơ', () => {
 
   it('huỷ chỉnh sửa TRẢ LẠI dữ liệu gốc, không giữ thứ vừa gõ dở', async () => {
     const view = await renderScreen();
-    await view.findByText('Thông tin tài khoản');
+    await view.findByText(PROFILE_CARD_TEXT);
     await fireEvent.press(view.getByRole('button', { name: new RegExp('Chỉnh sửa hồ sơ$') }));
 
     await fireEvent.changeText(await view.findByDisplayValue('Nguyễn Văn An'), 'Tên gõ dở');
@@ -150,7 +158,7 @@ describe('AccountScreen — chỉnh sửa hồ sơ', () => {
   it('tên rỗng bị chặn NGAY ở client — không gửi request', async () => {
     const update = jest.spyOn(accountApi, 'updateMe');
     const view = await renderScreen();
-    await view.findByText('Thông tin tài khoản');
+    await view.findByText(PROFILE_CARD_TEXT);
     await fireEvent.press(view.getByRole('button', { name: new RegExp('Chỉnh sửa hồ sơ$') }));
 
     await fireEvent.changeText(await view.findByDisplayValue('Nguyễn Văn An'), '   ');
@@ -165,7 +173,7 @@ describe('AccountScreen — chỉnh sửa hồ sơ', () => {
     const update = jest.spyOn(accountApi, 'updateMe').mockResolvedValue(saved);
 
     const view = await renderScreen();
-    await view.findByText('Thông tin tài khoản');
+    await view.findByText(PROFILE_CARD_TEXT);
     const invalidate = jest.spyOn(view.queryClient, 'invalidateQueries');
 
     await fireEvent.press(view.getByRole('button', { name: new RegExp('Chỉnh sửa hồ sơ$') }));

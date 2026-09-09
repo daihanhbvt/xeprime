@@ -262,6 +262,7 @@ function OdometerCard({ vehicleId, profile }: { vehicleId: string; profile: Main
         {has(PERMISSION.VEHICLE_ODOMETER_CORRECT) ? (
           <Button
             label={t('correct')}
+            icon="speedometer-outline"
             variant="secondary"
             size="sm"
             onPress={() => setCorrecting(true)}
@@ -508,6 +509,7 @@ function OilCard({ vehicleId, profile }: { vehicleId: string; profile: Maintenan
         {canManage ? (
           <Button
             label={tActions('saveChanges')}
+            icon="save-outline"
             loading={save.isPending}
             disabled={!formState.isDirty}
             onPress={submit}
@@ -559,7 +561,13 @@ function RecordsCard({
           /* Tải hỏng KHÔNG được đọc thành "chưa có phiếu nào" — hai câu trả lời khác hẳn nhau. */
           <YStack gap={space.sm}>
             <Callout tone="danger" title={t('loadError')} />
-            <Button label={tActions('retry')} variant="secondary" size="sm" onPress={onRetry} />
+            <Button
+              label={tActions('retry')}
+              icon="refresh-outline"
+              variant="secondary"
+              size="sm"
+              onPress={onRetry}
+            />
           </YStack>
         ) : records.length === 0 ? (
           <YStack gap={space.xs}>
@@ -591,6 +599,7 @@ function RecordsCard({
         {actionable && canManage ? (
           <Button
             label={t('add')}
+            icon="add-outline"
             variant="secondary"
             size="sm"
             onPress={() => onOpenSheet({ mode: 'create' })}
@@ -682,6 +691,7 @@ function RecordRow({
           <YStack w="48%">
             <Button
               label={t('complete')}
+              icon="checkmark-outline"
               size="sm"
               onPress={() => onOpenSheet({ mode: 'complete', record })}
             />
@@ -689,6 +699,7 @@ function RecordRow({
           <YStack w="48%">
             <Button
               label={t('edit')}
+              icon="create-outline"
               variant="secondary"
               size="sm"
               onPress={() => onOpenSheet({ mode: 'edit', record })}

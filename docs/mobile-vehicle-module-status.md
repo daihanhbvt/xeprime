@@ -99,16 +99,24 @@ trước tiên, vì chúng là luật nghiệp vụ chứ không phải trình b
 
 ### 3.4 Thông báo lỗi của yup là tiếng Việt cứng
 
-`@xeprime/validators` gắn cứng câu lỗi tiếng Việt ("Tên xe là bắt buộc"…). Người đang xem tiếng
-Anh vẫn thấy tiếng Việt ở lỗi form. **Web y hệt** — đây là nợ chung của cả hai client, không
-phải lỗi riêng của app. Sửa thì phải sửa ở package và đổi cả hai bên cùng lúc.
+`@xeprime/validators` còn gắn cứng câu lỗi tiếng Việt ở nhiều schema ("Tên xe là bắt buộc"…).
+Người đang xem tiếng Anh vẫn thấy tiếng Việt ở lỗi form. **Web y hệt** — nợ chung của cả hai
+client, sửa thì sửa ở package và đổi hai bên cùng lúc.
+
+Đã chuyển xong theo đợt: `branchFormSchema`, `shopProfileSchema`, `registerShopSchema`,
+`inviteMemberSchema`, `driverFormSchema`, và **`policyFormSchema`/`vehiclePricingFormSchema`**
+(08/09/2026) — nhóm cuối là bộ đầu tiên có câu lỗi mang THAM SỐ, nên `useValidationResolver` ở
+cả hai client nay hiểu dạng `mã::{json}`. Còn lại nhiều nhất là `vehicleFormSchema`.
 
 ### 3.5 Ba khu web vẫn còn chuỗi thô
 
-`VehiclePricingWorkspace`, `VehicleDocumentsWorkspace`, `VehicleMaintenanceWorkspace` +
-`/manage/maintenance` của **web** vẫn hardcode tiếng Việt. App đã dùng `t()` với bộ khoá mới, và
-bản `vi` chép nguyên văn từ chính các component đó — nên chuyển web sang sau này chỉ là **thay
-chuỗi bằng `t()`**, không phải dịch lại. Quyết định §7.3.
+`VehicleDocumentsWorkspace`, `VehicleMaintenanceWorkspace` + `/manage/maintenance` của **web**
+vẫn hardcode tiếng Việt. App đã dùng `t()` với bộ khoá mới, và bản `vi` chép nguyên văn từ chính
+các component đó — nên chuyển web sang sau này chỉ là **thay chuỗi bằng `t()`**, không phải dịch
+lại. Quyết định §7.3.
+
+`VehiclePricingWorkspace` (và `PolicySections`) đã ra khỏi danh sách này ngày 08/09/2026: web
+dùng đúng bộ khoá `Vehicles.pricing.*` mà app đang dùng.
 
 ### 3.6 Bẫy hạ tầng — `.expo/types/router.d.ts` sinh SAI
 

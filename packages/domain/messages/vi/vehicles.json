@@ -278,9 +278,6 @@
       "features": "Tiện ích trên xe",
       "description": "Mô tả",
       "descriptionPlaceholder": "Mô tả tình trạng, trang bị, điều kiện thuê…",
-      "takePhoto": "Chụp ảnh",
-      "chooseFromLibrary": "Chọn từ thư viện",
-      "changeImage": "Đổi ảnh",
       "addMainImage": "Thêm ảnh đại diện"
     },
     "pricingStep": {
@@ -428,6 +425,7 @@
       "withDriverPrice": "Giá/ngày có tài xế",
       "mainImage": "Ảnh đại diện",
       "plateNumber": "Biển số",
+      "description": "Mô tả xe",
       "photos": "Tối thiểu 4 ảnh xe",
       "identity": "Hãng, mẫu, năm sản xuất và số chỗ",
       "energySpec": "Thông số của nguồn năng lượng"
@@ -796,7 +794,9 @@
       "resetBody": "Đặt lại về chính sách gian hàng: toàn bộ tùy chỉnh riêng của xe này sẽ bị xóa và xe quay về kế thừa cấu hình chung.",
       "resetOk": "Đặt lại",
       "resetCancel": "Giữ tùy chỉnh",
-      "viewShopPolicy": "Xem chính sách gian hàng →"
+      "viewShopPolicy": "Xem chính sách gian hàng →",
+      "tipLabel": "Giải thích nguồn chính sách",
+      "info": "Xe có thể kế thừa cọc, giao nhận và ưu đãi từ gian hàng hoặc lưu một bộ chính sách riêng."
     },
     "dirty": "Bạn có các thay đổi chưa được áp dụng",
     "selfDrive": {
@@ -806,7 +806,12 @@
       "weekend": "Giá cuối tuần (tuỳ chọn)",
       "weekendHint": "Bỏ trống để dùng giá ngày thường cho cả cuối tuần.",
       "hourly": "Giá theo giờ (tuỳ chọn)",
-      "hourlyHint": "Bỏ trống nếu xe không cung cấp hình thức thuê theo giờ."
+      "hourlyHint": "Bỏ trống nếu xe không cung cấp hình thức thuê theo giờ.",
+      "tipLabel": "Giải thích giá tự lái",
+      "info": "Giá cơ sở áp dụng cho dịch vụ tự lái; giá cuối tuần và giá theo giờ là tùy chọn.",
+      "weekdayTipLabel": "Giải thích giá ngày thường",
+      "weekendTipLabel": "Giải thích giá cuối tuần",
+      "hourlyTipLabel": "Giải thích giá theo giờ"
     },
     "discount": {
       "title": "Khuyến mãi trực tiếp",
@@ -820,12 +825,22 @@
       "perDay": "/ngày",
       "saving": "Khách tiết kiệm {amount} mỗi ngày",
       "weekendAfter": "Cuối tuần sau giảm",
-      "hourlyNoDiscount": "Thuê theo giờ (không giảm)"
+      "hourlyNoDiscount": "Thuê theo giờ (không giảm)",
+      "tipLabel": "Giải thích khuyến mãi trực tiếp",
+      "percentTipLabel": "Giải thích mức giảm trực tiếp",
+      "toggle": "Bật khuyến mãi trực tiếp",
+      "on": "Bật",
+      "off": "Tắt",
+      "previewAria": "Xem trước giá trên sàn",
+      "perHour": "/giờ"
     },
     "longTerm": {
       "title": "Thuê dài hạn",
       "monthly": "Giá dài hạn cơ sở (một tháng)",
-      "monthlyHint": "Giá của một tháng. Khách chọn gói {packages} tháng; thiếu giá này thì xe không đủ điều kiện công khai dịch vụ thuê dài hạn."
+      "monthlyHint": "Giá của một tháng. Khách chọn gói {packages} tháng; thiếu giá này thì xe không đủ điều kiện công khai dịch vụ thuê dài hạn.",
+      "tipLabel": "Giải thích giá thuê dài hạn",
+      "info": "Giá gói được tính từ giá cơ sở một tháng nhân số tháng rồi trừ ưu đãi cam kết.",
+      "monthlyTipLabel": "Giải thích giá dài hạn cơ sở"
     },
     "withDriver": {
       "title": "Xe có tài xế",
@@ -834,13 +849,18 @@
       "interCity": "Liên tỉnh — khứ hồi (tuỳ chọn)",
       "interCityHint": "Bỏ trống để tạm tính theo giá nội thành; phụ phí được xác nhận khi duyệt.",
       "oneWay": "Liên tỉnh — 1 chiều (tuỳ chọn)",
-      "oneWayHint": "Bỏ trống để tạm tính theo bậc gần nhất: liên tỉnh rồi đến nội thành."
+      "oneWayHint": "Bỏ trống để tạm tính theo bậc gần nhất: liên tỉnh rồi đến nội thành.",
+      "tipLabel": "Giải thích giá xe có tài xế",
+      "info": "Các mức dưới đây đã gồm tài xế; giá nội thành là mức cơ sở để hệ thống dự phòng khi thiếu giá khác.",
+      "dailyTipLabel": "Giải thích giá nội thành có tài xế",
+      "interCityTipLabel": "Giải thích giá liên tỉnh khứ hồi",
+      "oneWayTipLabel": "Giải thích giá liên tỉnh một chiều"
     },
     "deposit": {
       "title": "Yêu cầu bảo đảm (thế chấp)",
       "mode": "Hình thức bảo đảm",
       "amount": "Số tiền cọc mặc định",
-      "amountHint": "Mức tiền cố định bằng VND, thu riêng với giá thuê, không chịu chiết khấu và chỉ áp dụng cho lượt đặt mới.",
+      "amountHint": "Mức tiền cố định bằng VND, thu riêng với giá thuê, không chịu chiết khấu và chỉ áp dụng cho lượt đặt mới. Booking đã chốt giữ nguyên mức cọc cũ.",
       "assetTypes": "Loại tài sản nhận thế chấp",
       "assetTypesHint": "Khách chỉ cần đáp ứng MỘT trong các hình thức đã chọn.",
       "noneTitle": "Không thu cọc và không giữ tài sản",
@@ -848,7 +868,9 @@
       "hint": "Bảo đảm là thứ gian hàng giữ để phòng rủi ro: tiền cọc, tài sản/giấy tờ, hoặc không yêu cầu gì. Đây là việc RIÊNG với đối chiếu giấy tờ tuỳ thân — đối chiếu thì lượt thuê nào cũng cần.",
       "modeCash": "Khách đặt một khoản tiền, hoàn lại khi bàn giao xe xong.",
       "modeAsset": "Khách để lại giấy tờ hoặc tài sản thay cho tiền — gian hàng không giữ tiền.",
-      "modeNone": "Không yêu cầu bảo đảm. Xe sẽ mang nhãn \"Miễn thế chấp\" trên sàn."
+      "modeNone": "Không yêu cầu bảo đảm. Xe sẽ mang nhãn \"Miễn thế chấp\" trên sàn.",
+      "tipLabel": "Giải thích yêu cầu bảo đảm",
+      "amountTipLabel": "Giải thích số tiền cọc mặc định"
     },
     "delivery": {
       "title": "Dịch vụ giao nhận xe tận nơi",
@@ -868,7 +890,25 @@
       "previewTitle": "Tiền tối thiểu hiển thị với khách đặt:",
       "disabledNote": "Đang tắt — khách không thể yêu cầu giao xe tận nơi khi đặt.",
       "tierName": "Bậc {index}",
-      "tierRange": "Từ {from} km"
+      "tierRange": "Từ {from} km",
+      "tipLabel": "Giải thích phí giao nhận",
+      "fromKmLabel": "Khoảng cách từ (km)",
+      "fromKmTipLabel": "Giải thích khoảng cách bắt đầu",
+      "fromKmTip": "Mốc bắt đầu tự động lấy từ điểm kết thúc của bậc trước để không tạo khoảng trống.",
+      "toKmLabel": "Khoảng cách đến (km)",
+      "toKmTipLabel": "Giải thích khoảng cách kết thúc",
+      "toKmTip": "Nhập giới hạn trên của bậc phí này. Các mốc phải tăng dần.",
+      "feeLabel": "Phí áp dụng (VND)",
+      "feeTipLabel": "Giải thích phí giao nhận áp dụng",
+      "feeTip": "Nhập 0 nếu gian hàng miễn phí giao nhận trong khoảng cách này.",
+      "headDistance": "Khoảng cách",
+      "headFee": "Phí áp dụng",
+      "tierToLabel": "Mốc đến của bậc {index} (km)",
+      "tierFeeLabel": "Phí của bậc {index}",
+      "removeTierAt": "Xoá bậc {index}",
+      "maxRadiusTipLabel": "Giải thích bán kính hỗ trợ tối đa",
+      "unitKm": "km",
+      "summaryQuote": "Báo giá thủ công theo thỏa thuận"
     },
     "overtime": {
       "title": "Phí trả xe quá giờ thỏa thuận",
@@ -882,7 +922,13 @@
       "placeholder": "Cần cấu hình",
       "formulaTitle": "Công thức tính phí phạt trễ hạn tự động:",
       "formula": "Phí quá giờ = (số giờ trễ thực tế) × {fee}. Tính ở bước bàn trả xe.",
-      "formulaNone": "Chưa cấu hình phí mỗi giờ — phí quá giờ sẽ thoả thuận thủ công ở bước bàn trả xe."
+      "formulaNone": "Chưa cấu hình phí mỗi giờ — phí quá giờ sẽ thoả thuận thủ công ở bước bàn trả xe.",
+      "tipLabel": "Giải thích phí quá giờ",
+      "feePerHourTipLabel": "Giải thích phí mỗi giờ phát sinh",
+      "graceMinutesTipLabel": "Giải thích thời gian miễn phí tối đa",
+      "roundingMinutesTipLabel": "Giải thích đơn vị làm tròn tối thiểu",
+      "unitPerHour": "đ / giờ",
+      "unitMinutes": "phút"
     },
     "longTermDiscount": {
       "title": "Ưu đãi cam kết thời hạn (thuê dài hạn)",
@@ -898,10 +944,27 @@
       "selectPackage": "Chọn gói",
       "formulaTitle": "Công thức tính giá gói:",
       "formula": "giá_gói = giá_tháng × số_tháng − (giá_tháng × số_tháng × phần_trăm_giảm)",
-      "disabledNote": "Đang tắt — mọi lượt đặt tính nguyên giá thuê cơ bản."
+      "disabledNote": "Đang tắt — mọi lượt đặt tính nguyên giá thuê cơ bản.",
+      "legacyTitle": "{count, plural, other {# mốc ưu đãi cũ}} theo NGÀY chưa quy đổi được sang gói",
+      "legacyTier": "từ {days} ngày giảm {percent}%",
+      "legacyBody": "Các mốc này không còn được tính giá. Chọn lại mốc theo gói rồi lưu; hệ thống không tự quy đổi để tránh thay đổi giá ngoài ý muốn.",
+      "tipLabel": "Giải thích ưu đãi thuê dài hạn",
+      "packageLabel": "Gói thuê từ",
+      "packageTipLabel": "Giải thích gói thuê áp dụng ưu đãi",
+      "packageTip": "Chỉ chọn trong các gói cố định 1, 2, 3, 6, 9 hoặc 12 tháng.",
+      "percentLabel": "Mức giảm (%)",
+      "percentTipLabel": "Giải thích mức giảm",
+      "percentTip": "Phần trăm được trừ trên giá gốc của toàn bộ gói thuê dài hạn.",
+      "noteTipLabel": "Giải thích ghi chú ưu đãi",
+      "noteTip": "Nội dung ngắn giúp gian hàng nhận biết mục đích của mốc ưu đãi.",
+      "tierMonthsLabel": "Mốc gói của bậc {index}",
+      "tierPercentLabel": "Mức giảm của mốc {index}",
+      "tierNoteLabel": "Ghi chú mốc {index}",
+      "removeTierAt": "Xoá mốc ưu đãi {index}"
     },
     "inherited": {
       "title": "Chính sách kế thừa đang áp dụng",
+      "heading": "Chính sách đang áp dụng",
       "empty": "Gian hàng chưa cấu hình chính sách thuê",
       "edit": "Tùy chỉnh riêng cho xe này",
       "collateral": "Yêu cầu bảo đảm",
@@ -919,7 +982,7 @@
       "discountMax": "Mức giảm tối đa {percent}%",
       "discountOff": "Tắt",
       "assetNone": "chưa chọn loại",
-      "emptyBody": "Xe này chưa có yêu cầu bảo đảm, giao nhận hay ưu đãi. Cấu hình tại Chính sách thuê của gian hàng hoặc chuyển sang tùy chỉnh riêng cho xe."
+      "emptyBody": "Xe này chưa có yêu cầu bảo đảm, giao nhận hay ưu đãi. Cấu hình tại <policies>Chính sách thuê của gian hàng</policies> hoặc chuyển sang tùy chỉnh riêng cho xe."
     },
     "confirm": {
       "publicTitle": "Xác nhận thay đổi chính sách & giá thuê?",
@@ -929,7 +992,8 @@
       "overrideBody": "Thay đổi chỉ áp dụng cho {vehicle}, tính từ các lượt đặt mới — không ảnh hưởng các xe khác và các đơn đã chốt.",
       "inheritTitle": "Lưu giá thuê cho xe này?",
       "inheritBody": "Giá mới chỉ áp dụng cho {vehicle}, tính từ các lượt đặt mới. Xe vẫn kế thừa chính sách chung của gian hàng.",
-      "ok": "Lưu thay đổi"
+      "ok": "Lưu thay đổi",
+      "cancel": "Hủy bỏ"
     },
     "longTermHint": {
       "suggestion": "Gợi ý {min} – {max}/tháng — thuê theo ngày cả tháng đã là {reference}, giá dài hạn nên thấp hơn để khách có lý do cam kết.",
@@ -939,6 +1003,44 @@
       "base": "Giá dài hạn cơ sở {monthly}/tháng",
       "packagesLead": "Khách sẽ thấy các gói sau (đã gồm ưu đãi cam kết thời hạn):",
       "perMonth": "{amount}/tháng"
+    },
+    "unitPerDay": "đ / ngày",
+    "unitPerHour": "đ / giờ",
+    "unitPerMonth": "đ / tháng",
+    "discard": "Hủy bỏ",
+    "validation": {
+      "moneyInteger": "Số tiền phải là số nguyên VND",
+      "moneyNegative": "Số tiền không được âm",
+      "tierToRequired": "Nhập mốc \"đến\" (km)",
+      "tierToPositive": "Mốc khoảng cách phải lớn hơn 0",
+      "kmMax": "Tối đa 500 km",
+      "kmDecimals": "Khoảng cách chỉ nhận tối đa 1 chữ số thập phân",
+      "assetTypesRequired": "Chọn ít nhất một loại tài sản nhận thế chấp",
+      "depositRequired": "Nhập số tiền cọc mặc định",
+      "depositPositive": "Chọn \"Cọc tiền\" thì số tiền cọc phải lớn hơn 0",
+      "radiusPositive": "Giá trị bán kính không thể âm",
+      "radiusRequired": "Nhập bán kính hỗ trợ tối đa",
+      "tiersRequired": "Bật giao nhận thì phải có ít nhất một bậc khoảng cách",
+      "tiersAscending": "Các mốc khoảng cách phải tăng dần",
+      "tiersGap": "Có khoảng trống cấu hình giữa mốc {last} km và {radius} km",
+      "tiersOverRadius": "Bậc {last} km vượt quá bán kính hỗ trợ {radius} km",
+      "minutesInteger": "Số phút phải là số nguyên",
+      "minutesNegative": "Không được âm",
+      "minutesMin": "Ít nhất 1 phút",
+      "minutesMax": "Tối đa 1440 phút",
+      "packageRequired": "Chọn mốc gói thuê",
+      "packageOneOf": "Mốc ưu đãi phải là gói 1, 2, 3, 6, 9, 12 tháng",
+      "percentRequired": "Nhập mức giảm (%)",
+      "percentInteger": "Mức giảm phải là số nguyên",
+      "percentNegative": "Mức giảm không được âm",
+      "percentMin": "Ít nhất 1%",
+      "percentMax": "Tối đa 100%",
+      "discountTiersRequired": "Bật ưu đãi thì phải có ít nhất một mốc giảm giá",
+      "discountTiersMax": "Tối đa 6 mốc ưu đãi",
+      "discountDuplicate": "Trùng mốc ưu đãi \"{months} tháng\"",
+      "discountAscending": "Các mốc ưu đãi phải theo số tháng tăng dần",
+      "discountNotLower": "Ưu đãi {months} tháng không được thấp hơn mốc {prev} tháng",
+      "weekdayRequired": "Nhập giá thuê theo ngày"
     }
   },
   "documents": {

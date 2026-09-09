@@ -17,6 +17,7 @@ export function SelectField<T extends FieldValues>({
   hint,
   required = false,
   placeholder,
+  disabled = false,
 }: {
   control: Control<T>;
   name: Path<T>;
@@ -25,6 +26,7 @@ export function SelectField<T extends FieldValues>({
   hint?: string;
   required?: boolean;
   placeholder?: string;
+  disabled?: boolean;
 }) {
   const { field, fieldState } = useController({ control, name });
 
@@ -35,6 +37,7 @@ export function SelectField<T extends FieldValues>({
       options={options}
       onChange={field.onChange}
       required={required}
+      disabled={disabled}
       {...(hint === undefined ? {} : { hint })}
       {...(placeholder === undefined ? {} : { placeholder })}
       {...(fieldState.error?.message === undefined ? {} : { error: fieldState.error.message })}

@@ -185,5 +185,32 @@
     "ownerEmailInvalid": "Email không hợp lệ",
     "logoUrlInvalid": "Đường dẫn logo không hợp lệ",
     "coverUrlInvalid": "Đường dẫn ảnh bìa không hợp lệ"
+  },
+  "policies": {
+    "title": "Chính sách thuê mặc định",
+    "subtitle": "Thiết lập các quy định và chi phí áp dụng mặc định cho mọi đơn thuê.",
+    "applied": "Đã áp dụng cho {count} {vehicle}",
+    "overridden": "{count, plural, other {# xe}} đang dùng chính sách riêng nên không kế thừa bộ chính sách mặc định này.",
+    "loadError": "Không tải được chính sách thuê",
+    "forbidden": {
+      "title": "Không có quyền truy cập",
+      "description": "Bạn cần quyền dưới đây để xem chính sách thuê của gian hàng."
+    },
+    "emptyTitle": "Gian hàng chưa cấu hình chính sách thuê",
+    "emptyBody": "Khi chưa có chính sách, các lượt đặt mới không có tiền cọc, không hỗ trợ giao tận nơi và không có ưu đãi giảm giá. Điền cấu hình bên dưới rồi bấm Lưu chính sách.",
+    "readOnly": "Bạn chỉ có quyền xem chính sách thuê của gian hàng.",
+    "dirty": "Bạn có các thay đổi chưa được áp dụng",
+    "depositHint": "{count, plural, other {# xe}} đang dùng mức cọc này",
+    "submit": "Lưu chính sách",
+    "reset": "Hoàn tác thay đổi",
+    "saved": "Đã lưu chính sách thuê cho {vehicle}",
+    "confirm": {
+      "title": "Xác nhận thay đổi chính sách thuê?",
+      "body": "Chính sách mới áp dụng cho các lượt đặt xe mới. Các đơn thuê đã chốt trước đó vẫn giữ nguyên mức giá và tiền cọc cũ.",
+      "bodyInheriting": "Chính sách mới áp dụng ngay cho {count, plural, other {# xe}} đang kế thừa, tính từ các lượt đặt xe mới. Các đơn thuê đã chốt trước đó vẫn giữ nguyên mức giá và tiền cọc cũ.",
+      "ok": "Xác nhận thay đổi"
+    },
+    "appliedTipLabel": "Giải thích phạm vi áp dụng chính sách",
+    "dirtyDiscard": "Hủy bỏ"
   }
 }

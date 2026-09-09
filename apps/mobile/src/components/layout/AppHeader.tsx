@@ -30,6 +30,18 @@ interface AppHeaderProps {
    * ra được, còn "Từ chối phục…" thì mất đúng phần nói ra hệ quả.
    */
   badge?: ReactNode;
+  /**
+   * Điều khiển NGỮ CẢNH đứng ở DÒNG PHỤ, thay chỗ `subtitle`.
+   *
+   * Có khe này vì khu quản lý cần một bộ chọn phạm vi (chi nhánh đang xem) luôn nhìn thấy được:
+   * nó từng là một DẢI RIÊNG dưới thanh trên, tức mọi màn quản lý mất thêm một hàng ~34dp cộng
+   * một nét kẻ cho đúng một mẩu chữ. Dòng phụ vốn đã ở đó và chỉ chở một lời chào — đổi lời chào
+   * lấy thứ người dùng thật sự thao tác là lãi hai lần.
+   *
+   * KHÔNG dùng để nhét nút bấm chung chung: hành động thuộc về `right`. Đây là chỗ cho thứ trả
+   * lời câu "tôi đang xem phạm vi nào", và nó phải tự co lại trong bề ngang còn thừa.
+   */
+  context?: ReactNode;
   /** Khu bên phải — nên là `IconButton` để giữ đúng vùng chạm. */
   right?: ReactNode;
   /**
@@ -67,6 +79,7 @@ export function AppHeader({
   title,
   subtitle,
   badge,
+  context,
   right,
   variant = 'solid',
   tone = 'surface',
@@ -138,11 +151,12 @@ export function AppHeader({
               </Text>
               {badge}
             </XStack>
-            {subtitle ? (
-              <Text col={fgMuted} fos={fontSize.label} numberOfLines={1}>
-                {subtitle}
-              </Text>
-            ) : null}
+            {context ??
+              (subtitle ? (
+                <Text col={fgMuted} fos={fontSize.label} numberOfLines={1}>
+                  {subtitle}
+                </Text>
+              ) : null)}
           </>
         ) : null}
       </YStack>

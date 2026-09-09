@@ -1,4 +1,4 @@
-import type { ConversationSummary } from '@xeprime/api-client';
+import type { ConversationSummary } from '@/api/chat/api';
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
 import { XStack, YStack } from 'tamagui';

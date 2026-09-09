@@ -1,4 +1,17 @@
-import { ApiClientError, anonymousAuthTransport, createApiClient, getErrorCode, mobileAuthApi, type CurrentUser, type MobileLoginInput, type MobileRegisterInput, type MobileSession, type MobileTokenPair } from '@xeprime/api-client';
+import {
+  ApiClientError,
+  anonymousAuthTransport,
+  createApiClient,
+  getErrorCode,
+} from '@xeprime/api-client';
+import { mobileAuthApi } from '@/api/auth/api';
+import {
+  type CurrentUser,
+  type MobileLoginInput,
+  type MobileRegisterInput,
+  type MobileSession,
+  type MobileTokenPair,
+} from '@/api/auth/types';
 import { API_ERROR_CODE, type AuthProvider } from '@xeprime/types';
 import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';

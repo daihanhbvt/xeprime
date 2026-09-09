@@ -26,7 +26,7 @@ import { DetailChevron } from '@/components/ui/DetailArrow';
 import { IconButton } from '@/components/ui/IconButton';
 import { ProfileSkeleton } from '@/components/ui/Skeleton';
 import { StatGrid, type StatCell } from '@/components/ui/StatGrid';
-import { StatusBadge } from '@/components/ui/StatusBadge';
+import { StatusBadge, badgeLineHeight } from '@/components/ui/StatusBadge';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
@@ -763,11 +763,16 @@ function CustomerProfile({
                           Mã đơn thành một viên nhãn vàng: nó là ĐỊNH DANH, không phải một dòng
                           chữ trong câu. Ở dạng chữ trần nó dính vào tên xe ngay bên cạnh và cả
                           hàng đọc ra thành một chuỗi liền.
+
+                          Đệm dọc và `lh` lấy đúng luật của `StatusBadge`: thiếu `lh` thì Tamagui
+                          rơi về hộp dòng của cỡ mặc định (24pt) và viên nhãn cao gần gấp đôi khối
+                          hai dòng chữ nó đứng cạnh.
                         */}
-                        <XStack bg={colors.primaryLight} br={radius.pill} px={space.sm} py={2}>
+                        <XStack bg={colors.primaryLight} br={radius.pill} px={space.sm} py={0}>
                           <Text
                             col={colors.primaryActive}
                             fos={fontSize.label}
+                            lh={badgeLineHeight(fontSize.label)}
                             fow={fontWeight.semibold}
                             numberOfLines={1}
                           >

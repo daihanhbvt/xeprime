@@ -18,7 +18,6 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
-import { useRenderTrace, useTracedRenderItem } from '@/dev/list-trace';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { scrollThrottle } from '@/theme/motion';
@@ -48,9 +47,6 @@ const keyOf = (debt: DebtItem) => debt.bookingId;
  * hai: hai đường ghi tiền là hai bộ luật sẽ trôi khỏi nhau.
  */
 export function DebtListScreen() {
-  // Dev-only: đếm số lần màn render lại. Xem `src/dev/list-trace.ts`.
-  useRenderTrace('Debts');
-
   const t = useTranslations('Finance.debts');
   const tCommon = useTranslations('Common.labels');
   const tActions = useTranslations('Common.actions');
@@ -129,9 +125,6 @@ export function DebtListScreen() {
     ),
     [canViewBooking, canRecord, openBooking],
   );
-
-  // Dev-only: đo thời gian dựng từng thẻ, in gộp mỗi giây.
-  const tracedRenderItem = useTracedRenderItem('Debts', renderItem);
 
   const filtered = group !== FILTER_ALL || trimmedSearch.length > 0;
 
@@ -223,7 +216,7 @@ export function DebtListScreen() {
                 data={items}
                 keyExtractor={keyOf}
                 {...LIST_TUNING}
-                renderItem={tracedRenderItem}
+                renderItem={renderItem}
                 contentContainerStyle={contentContainerStyle}
                 onScroll={onScroll}
                 scrollEventThrottle={scrollThrottle.frame}

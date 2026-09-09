@@ -355,12 +355,19 @@ describe('ReceiptListScreen — rỗng và không có kết quả', () => {
     expect((await findAllByText('Xoá bộ lọc')).length).toBeGreaterThan(0);
   });
 
-  it('rỗng + có quyền tạo: mở lối tạo phiếu đầu tiên', async () => {
-    const { findByText } = await renderScreen(
+  /*
+   * Sổ rỗng KHÔNG mọc thêm một nút tạo phiếu: nút đó đã nằm ở hàng tiêu đề, và danh sách rỗng thì
+   * không có gì để cuộn nên hàng đó đứng nguyên trên màn — hai nút cùng một việc trong cùng một
+   * khung hình. Test khoá đúng điều đó: lối tạo CÓ, và chỉ có MỘT.
+   */
+  it('rỗng + có quyền tạo: lối tạo nằm ở hàng tiêu đề, khối rỗng không nhân bản nó', async () => {
+    const { findByLabelText, queryByText } = await renderScreen(
       [PERMISSION.FINANCE_VIEW, PERMISSION.RECEIPT_CREATE],
       { items: [], total: 0 },
     );
-    expect(await findByText('Tạo phiếu đầu tiên')).toBeTruthy();
+
+    expect(await findByLabelText('Tạo phiếu')).toBeTruthy();
+    expect(queryByText('Tạo phiếu đầu tiên')).toBeNull();
   });
 });
 

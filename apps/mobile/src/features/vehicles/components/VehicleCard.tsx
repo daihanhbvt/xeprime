@@ -1,59 +1,52 @@
 import { memo, useCallback, type ReactNode } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import { StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
+  SERVICE_TYPE,
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS_META,
   type VehicleOperationStatus,
   type VehiclePublicStatus,
 } from '@xeprime/types';
 import { absoluteMoney, isNegativeMoney, subtractMoney, LIST_SEPARATOR } from '@xeprime/domain';
-import { Button } from '@/components/ui/Button';
+import { BadgeRows, type BadgeRowItem } from '@/components/ui/BadgeRows';
 import { Card } from '@/components/ui/Card';
+import { CardActionBar, type CardAction } from '@/components/ui/CardActionBar';
+import { Divider } from '@/components/ui/DataRow';
+import { RemoteImage } from '@/components/ui/RemoteImage';
+import { DiscountTag } from '@/components/ui/DiscountTag';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import type { IconName } from '@/components/ui/Chip';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
-import { VehicleAlertChips } from './VehicleAlertChips';
+import { discountedPriceVnd } from '../pricing';
+import { useVehicleAlertBadges } from './vehicle-alert-badges';
 import type { VehicleAlertGroup, VehicleListItem, VehicleStats } from '../api';
 
 /**
- * Ô ảnh xe: VUÔNG, cao xấp xỉ cột chữ đứng cạnh nó (ba dòng định danh + dải chip ≈ 100pt).
+ * Tỉ lệ khung ảnh — 2:1.
  *
- * Hai bản trước sai theo hai hướng ngược nhau. Ảnh cao cố định cạnh một cột chữ cao hơn để lại
- * khoảng chết ngay dưới ảnh; cho ảnh giãn hết chiều cao thẻ thì thành một dải dọc hẹp — càng
- * xấu, vì ảnh xe vốn NGANG, kéo cao lên chỉ cắt mất hai bên.
+ * Ảnh chạy TRỌN bề ngang thẻ thay vì một ô vuông nhỏ bên trái: thứ chủ xe nhận ra một chiếc xe
+ * bằng, trước cả biển số, là chính tấm ảnh.
  *
- * Con số này ĐI CÙNG quyết định để dải chip nằm trong cột chữ: bỏ chip xuống dưới thì cột chữ
- * chỉ còn ~56pt và 96 lại thừa ra 40pt trống.
+ * Dẹt hơn 16:9 một chút vì trên MỘT màn 844pt, mỗi 20pt chiều cao thẻ là một phần mười chiếc xe
+ * bị đẩy khỏi tầm nhìn. 2:1 vẫn đủ cao để thấy dáng xe, mà cắt bớt phần trời/mặt đường — hai
+ * thứ chiếm nhiều nhất trong một tấm ảnh chụp xe ngoài đường.
  */
-const THUMB_SIZE = 96;
+const IMAGE_RATIO = 2;
 
 /**
- * Số chip cảnh báo hiện trên THẺ; phần dư gộp thành `+N`.
+ * Số viên "việc cần làm" hiện trên THẺ; phần dư gộp thành `+N`.
  *
- * Hai, không phải ba: ở 390px mỗi chip chiếm gần trọn một dòng, nên chip thứ ba đẩy thẻ cao
- * thêm một dòng nữa mà không nói thêm được việc gì gấp hơn — server đã sắp theo ưu tiên.
+ * Hai, không phải ba: server đã sắp theo ưu tiên, nên hai viên đầu luôn là hai việc gấp nhất.
  */
 const ALERT_CHIP_LIMIT = 2;
 
-/* `Image` của React Native cần style phẳng — Tamagui không có primitive ảnh thay thế. */
-const styles = StyleSheet.create({
-  thumb: {
-    width: THUMB_SIZE,
-    height: THUMB_SIZE,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceMuted,
-    /* Ảnh xe nền trắng (ảnh studio, ảnh chụp tường) chảy thẳng vào nền thẻ nếu không có viền. */
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-  },
-});
+/** Mảng rỗng ở module scope: `[]` viết tại chỗ gọi là một tham chiếu mới mỗi lần render. */
+const NO_ALERTS: readonly [] = [];
 
 interface VehicleCardProps {
   vehicle: VehicleListItem;
@@ -77,6 +70,20 @@ interface VehicleCardProps {
   alertsFailed: boolean;
 }
 
+/**
+ * Một chiếc xe trong đội xe — thẻ ẢNH LỚN.
+ *
+ * Bốn tầng, mỗi tầng trả lời một câu hỏi: **xe nào và đang ở trạng thái gì** (ảnh + nhãn đè lên
+ * nó) · **giá bao nhiêu** (viên giá ở góc ảnh) · **đang chạy ra sao** (ba dòng chỉ số) · **làm gì
+ * với nó** (thanh thao tác ở chân thẻ).
+ *
+ * Giá thuê nằm TRÊN ảnh chứ không trong phần chữ: nó là con số chủ xe tra nhiều nhất khi lướt đội
+ * xe, và ở góc ảnh nó đọc được trước cả khi mắt xuống tới phần chữ.
+ *
+ * Nửa dưới cố ý CHẬT: chữ ở hai bậc nhỏ nhất, đệm một bậc `sm`, và chỉ số là ba dòng có hình dẫn
+ * thay vì một lưới ô có nhãn riêng. Thẻ này nằm trong danh sách người ta cuộn hàng chục xe, nên
+ * chiều cao phải trả giá cho từng điểm một.
+ */
 function VehicleCardImpl({
   vehicle,
   onPress,
@@ -92,6 +99,8 @@ function VehicleCardImpl({
   const t = useTranslations('Vehicles.list');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
+  /* Hook nên gọi VÔ ĐIỀU KIỆN — `alerts` vắng mặt khi chưa tải xong hoặc tải hỏng. */
+  const alertBadges = useVehicleAlertBadges(alerts?.alerts ?? NO_ALERTS, ALERT_CHIP_LIMIT);
 
   const operationStatus = vehicle.operationStatus as VehicleOperationStatus;
   const publicStatus = vehicle.publicStatus as VehiclePublicStatus;
@@ -99,15 +108,26 @@ function VehicleCardImpl({
   const publicMeta = VEHICLE_PUBLIC_STATUS_META[publicStatus];
 
   /*
-   * Hai dòng định danh, GHÉP CHUỖI đúng như `VehicleListRow` của web — không phải bốn dòng
-   * `Nhãn: giá trị`.
-   *
-   * Web dồn cả bốn mẩu vào MỘT dòng (`mã · biển số · loại / dịch vụ`) và cắt bằng "…" khi hết
-   * chỗ; ở bề ngang native, một dòng như thế cắt mất luôn phần dịch vụ. Cắt làm hai dòng theo
-   * đúng ranh giới đó là chỗ khác web duy nhất, và không mẩu nào bị mất.
+   * Một dòng định danh, GHÉP CHUỖI đúng như `VehicleListRow` của web: mã · biển số · loại/dịch vụ.
+   * Ở bố cục này nó có trọn bề ngang thẻ, nên không phải cắt làm hai dòng như bản ô ảnh vuông.
    */
-  const identity = [vehicle.code, vehicle.plateNumber].filter(Boolean).join(LIST_SEPARATOR);
-  const typeAndService = `${domainLabel('vehicleType', vehicle.vehicleType)} / ${fmt.serviceTypes(vehicle.serviceTypes)}`;
+  const identity = [
+    vehicle.code,
+    vehicle.plateNumber,
+    `${domainLabel('vehicleType', vehicle.vehicleType)} / ${fmt.serviceTypes(vehicle.serviceTypes)}`,
+  ]
+    .filter(Boolean)
+    .join(LIST_SEPARATOR);
+
+  /*
+   * Khuyến mãi CHỈ áp cho tự lái (ADR 0011), nên viên "-N%" chỉ hiện khi xe có bán dịch vụ đó —
+   * và giá hiện ra là giá đã giảm, dựng bằng đúng hàm mà form giá và trang chi tiết sàn dùng.
+   */
+  const selfDrive = vehicle.serviceTypes.includes(SERVICE_TYPE.SELF_DRIVE);
+  const discountPercent = selfDrive ? (vehicle.discountPercent ?? 0) : 0;
+  const price =
+    (discountPercent > 0 ? discountedPriceVnd(vehicle.weekdayPrice, discountPercent) : null) ??
+    vehicle.weekdayPrice;
 
   // Lãi/lỗ chỉ tính khi CẢ HAI vế cùng có mặt — hai trường này vắng khi thiếu quyền `finance.view`.
   const hasFinance = stats?.totalIncome != null && stats?.totalExpense != null;
@@ -121,94 +141,163 @@ function VehicleCardImpl({
    */
   const open = useCallback(() => onPress(vehicle), [onPress, vehicle]);
 
+  /*
+   * Dải viên nhãn dưới phần chữ: trạng thái CÔNG KHAI và việc cần làm.
+   *
+   * Trạng thái VẬN HÀNH không nằm ở đây mà đè lên ảnh — nó là thuộc tính của chính chiếc xe
+   * trong ảnh ("đang có khách thuê"), và đưa lên đó thì dải dưới còn chỗ cho việc cần làm.
+   */
+  const badges: BadgeRowItem[] = [
+    {
+      key: 'public',
+      label: domainLabel('vehiclePublicStatus', publicStatus, publicMeta.label),
+      node: (
+        <StatusBadge
+          label={domainLabel('vehiclePublicStatus', publicStatus, publicMeta.label)}
+          color={publicMeta.color}
+          size="sm"
+        />
+      ),
+    },
+    ...(alertsFailed ? [] : alertBadges),
+  ];
+
+  /*
+   * Ba thao tác của web (`useVehicleRowActions`): Xem · Sửa · Lịch — cùng thứ tự, cùng luật ẩn.
+   *
+   * "Xem" thay luôn vai mũi tên `>`: giữ cả hai là ba lối vào cùng một màn (thân thẻ, mũi tên,
+   * nút) trên một bề mặt chỉ rộng 390pt.
+   */
+  const actions: CardAction[] = [
+    { key: 'view', label: t('actions.viewShort'), icon: 'eye-outline' as IconName, onPress: open },
+    ...(onEdit
+      ? [
+          {
+            key: 'edit',
+            label: t('actions.edit'),
+            icon: 'create-outline' as IconName,
+            onPress: () => onEdit(vehicle),
+          },
+        ]
+      : []),
+    {
+      key: 'schedule',
+      label: t('actions.schedule'),
+      icon: 'calendar-outline' as IconName,
+      onPress: () => onSchedule(vehicle),
+    },
+  ];
+
   return (
-    <Card onPress={open} accessibilityLabel={vehicle.name}>
-      <YStack gap={space.sm}>
+    <Card onPress={open} accessibilityLabel={vehicle.name} padded={false}>
+      {/*
+        TẦNG 1 — ẢNH, chạy sát ba mép thẻ. `Card` đã `overflow: hidden` nên hai góc trên tự bo
+        theo thẻ; không cần bo góc riêng cho ảnh, và bo riêng thì hở một nét nền ở hai góc.
+      */}
+      <YStack aspectRatio={IMAGE_RATIO}>
         {/*
-          TẦNG TRÊN — ảnh xe, khối định danh, và dải chip.
-
-          Chip nằm TRONG cột chữ chứ không phải một hàng riêng bên dưới: ô ảnh cao 96 mà khối
-          định danh chỉ ba dòng (~56pt), để chip xuống dưới thì bên phải ảnh hụt gần 40pt trống.
-          Kéo chip lên đây thì hai cột cao xấp xỉ nhau và thẻ ngắn đi đúng một hàng.
+          Ảnh đi qua `RemoteImage` để có đủ ba trạng thái. Xe demo trong seed hotlink ảnh từ một
+          máy chủ ngoài: có tấm về, có tấm bị chặn tần suất — không có nhánh HỎNG thì những tấm
+          đó ở lại thành ô rỗng và đọc ra như "thẻ trắng".
         */}
-        <XStack gap={space.sm} ai="flex-start">
-          <YStack w={THUMB_SIZE} h={THUMB_SIZE}>
-            {vehicle.mainImageUrl ? (
-              /*
-                `cover` chứ không `contain`: ảnh xe vốn NGANG còn ô đựng nó VUÔNG, nên `contain`
-                sẽ để lại hai dải trắng trên–dưới.
-              */
-              <Image
-                source={{ uri: vehicle.mainImageUrl }}
-                style={styles.thumb}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-                transition={150}
-                accessible={false}
-              />
-            ) : (
-              <YStack f={1} br={radius.sm} bg={colors.surfaceMuted} ai="center" jc="center">
-                <Ionicons name="car-outline" size={iconSize.lg} color={colors.textMuted} />
-              </YStack>
-            )}
-          </YStack>
+        <RemoteImage
+          uri={vehicle.mainImageUrl}
+          recyclingKey={vehicle.id}
+          fallback={
+            <Ionicons name="car-outline" size={iconSize.lg * 2} color={colors.placeholder} />
+          }
+        />
 
-          <YStack f={1} gap={space.xs}>
-            <YStack gap={2}>
-              <Text
-                col={colors.text}
-                fos={fontSize.body}
-                fow={fontWeight.bold}
-                numberOfLines={2}
-              >
-                {vehicle.name}
-              </Text>
-              <Metric>{identity}</Metric>
-              <Metric>{typeAndService}</Metric>
-            </YStack>
+        {/*
+          Nhãn trạng thái vận hành ở góc TRÁI TRÊN, viên "-N%" ở góc phải — hai đầu một hàng, nên
+          một nhãn dài ("Ngừng khai thác" / "Under maintenance") không đẩy viên kia ra khỏi ảnh.
 
-            {/*
-              Ba loại chip cùng MỘT dải, theo thứ tự khẩn: vận hành → công khai → việc cần làm.
-
-              Trạng thái vận hành nằm ở đây chứ không đè lên ảnh: nhãn dài nhất
-              ("Ngừng khai thác" / "Under maintenance") rộng hơn tấm ảnh, đè lên là phải cắt bằng
-              "…" — mà một trạng thái vận hành bị cắt cụt thì đọc ra nghĩa khác hẳn.
-            */}
-            {alertsLoading ? (
-              <Skeleton width="70%" height={18} />
-            ) : (
-              <XStack flexWrap="wrap" ai="center" gap={space.xs}>
-                <StatusBadge
-                  label={domainLabel('vehicleOperationStatus', operationStatus, operationMeta.label)}
-                  color={operationMeta.color}
-                  size="sm"
-                />
-                <StatusBadge
-                  label={domainLabel('vehiclePublicStatus', publicStatus, publicMeta.label)}
-                  color={publicMeta.color}
-                  size="sm"
-                />
-                {alertsFailed ? (
-                  <Muted>{t('card.alertsUnavailable')}</Muted>
-                ) : alerts ? (
-                  <VehicleAlertChips alerts={alerts.alerts} max={ALERT_CHIP_LIMIT} />
-                ) : null}
-              </XStack>
-            )}
-          </YStack>
+          Cả hai viên đều có nền ĐẶC: một nhãn chữ trần đặt lên ảnh chụp thì đọc được hay không
+          là tuỳ tấm ảnh, và ảnh xe nào cũng có mảng sáng lẫn mảng tối.
+        */}
+        <XStack
+          pos="absolute"
+          top={space.sm}
+          left={space.sm}
+          right={space.sm}
+          ai="flex-start"
+          jc="space-between"
+          gap={space.xs}
+        >
+          <StatusBadge
+            label={domainLabel('vehicleOperationStatus', operationStatus, operationMeta.label)}
+            color={operationMeta.color}
+            size="sm"
+          />
+          {discountPercent > 0 ? <DiscountTag percent={discountPercent} size="sm" /> : null}
         </XStack>
 
+        {/* Giá ở góc PHẢI DƯỚI — nơi mắt rơi xuống sau khi đã nhìn xe, ngay trước phần chữ. */}
+        {price ? (
+          <XStack
+            pos="absolute"
+            bottom={space.sm}
+            right={space.sm}
+            maxWidth="80%"
+            bg={colors.surface}
+            bw={1}
+            bc={colors.border}
+            br={radius.pill}
+            px={space.sm}
+            py={2}
+          >
+            <Text
+              col={colors.price}
+              fos={fontSize.bodySm}
+              fow={fontWeight.bold}
+              numberOfLines={1}
+            >
+              {fmt.pricePerDay(price)}
+            </Text>
+          </XStack>
+        ) : null}
+      </YStack>
+
+      <YStack p={space.sm} gap={space.xs}>
+        {/* TẦNG 2 — định danh. Một dòng tên, một dòng mã · biển số · loại/dịch vụ. */}
+        <YStack gap={2}>
+          <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold} numberOfLines={1}>
+            {vehicle.name}
+          </Text>
+          <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+            {identity}
+          </Text>
+        </YStack>
+
+        {/* TẦNG 3 — trạng thái công khai và việc cần làm, xếp hàng cho khít bằng `BadgeRows`. */}
+        {alertsLoading ? (
+          <Skeleton width="70%" height={18} />
+        ) : (
+          <YStack gap={space.xs}>
+            <BadgeRows items={badges} />
+            {/* Cảnh báo tải hỏng là một CÂU, không phải viên nhãn — nó không vào phép xếp hàng. */}
+            {alertsFailed ? (
+              <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                {t('card.alertsUnavailable')}
+              </Text>
+            ) : null}
+          </YStack>
+        )}
+
         {/*
-          TẦNG DƯỚI — CHỈ SỐ, đặt trên một MẶT PHẲNG RIÊNG nền mờ.
+          TẦNG 4 — CHỈ SỐ, ba dòng chữ nhỏ có hình dẫn đầu, tách khỏi phần trên bằng kẻ mảnh.
 
-          Trước đây chỉ có một đường kẻ, và thẻ vẫn là một tấm phẳng lì: tám dòng chữ cùng cỡ,
-          cùng màu mờ, mắt không có chỗ bám. Cho khối số một nền riêng thì thẻ có hai tầng độ
-          sâu, và ba con số vận hành đọc ra là một CỤM chứ không phải ba dòng chữ rời.
+          Không phải lưới ô có nhãn riêng: lưới hai cột × hai hàng cao gần gấp đôi mà nói đúng
+          bấy nhiêu thứ, và trên một danh sách cuộn dài thì mỗi thẻ dôi ra 40pt là bớt gần một
+          thẻ mỗi màn. Ở đây nhãn đi LIỀN con số trong cùng một câu ("KM hiện tại: 42.500 km"),
+          nên vẫn không con số nào phải đoán.
 
-          Mỗi dòng một biểu tượng dẫn đầu: ở cỡ 12px, hình vẽ nhận ra nhanh hơn chữ, nên mắt
-          nhảy thẳng tới dòng cần đọc thay vì dò từ đầu nhãn.
+          Hình dẫn đầu mang màu NGỮ NGHĨA của chính con số nó dẫn (đơn = `info`, lãi/lỗ =
+          `success`/`danger`): ở cỡ 12px, hình nhận ra nhanh hơn chữ, nên mắt nhảy thẳng tới dòng
+          cần đọc. Chữ vẫn mờ — tô cả ba dòng theo màu thì không dòng nào nổi lên nữa.
         */}
-        <YStack gap={space.xs} bg={colors.surfaceMuted} br={radius.sm} p={space.sm}>
+        <Divider />
+        <YStack gap={2}>
           {alertsLoading ? (
             <Skeleton width="45%" height={14} />
           ) : alertsFailed || !alerts ? null : (
@@ -223,7 +312,7 @@ function VehicleCardImpl({
               <Skeleton width="40%" height={14} />
             </>
           ) : statsFailed || !stats ? (
-            <Muted>{t('card.statsUnavailable')}</Muted>
+            <Stat icon="alert-circle-outline">{t('card.statsUnavailable')}</Stat>
           ) : (
             <>
               <Stat icon="documents-outline" tone={colors.info}>
@@ -237,7 +326,7 @@ function VehicleCardImpl({
                 Thu và lãi/lỗ ĐI CHUNG một dòng — hai vế của cùng một phép tính, đọc rời nhau thì
                 phải nhớ số dòng trên. Chỉ có khi người xem có quyền `finance.view`.
               */}
-              {hasFinance ? (
+              {profit != null ? (
                 <Stat icon="wallet-outline" tone={atLoss ? colors.danger : colors.success}>
                   {t.rich('row.income', {
                     value: fmt.moneyCompact(stats.totalIncome),
@@ -255,61 +344,9 @@ function VehicleCardImpl({
             </>
           )}
         </YStack>
-
-        {/*
-          Ba nút của web: Xem · Sửa · Lịch (`useVehicleRowActions`).
-
-          "Xem" thay luôn vai mũi tên `>` ở góc — giữ cả hai là ba lối vào cùng một màn (thẻ
-          bấm được, mũi tên, nút) trên một bề mặt chỉ rộng 390pt.
-
-          CẢ BA cùng `accent` (nền vàng nhạt, viền và chữ vàng đậm), không phải một vàng hai
-          trắng: ba nút này ngang hàng nhau, đều là lối vào một màn khác. Không dùng `primary`
-          (nền vàng ĐẶC) vì đó là của hành động chính duy nhất của màn — nút "Thêm xe".
-
-          `shape="square"` để bo góc 10px đúng như `RowActions` của web; pill làm ba viên thuốc
-          con nằm cạnh nhau thay vì một nhóm thao tác.
-
-          Mỗi nút bọc trong một `YStack f={1}` để BA CỘT BẰNG NHAU, chữ tự nằm giữa cột của nó.
-          Không đặt `f={1}` thẳng lên `Button` được: bề rộng do `Pressable` bọc ngoài quyết định,
-          còn `block` của `Button` chỉ tác động lên trục DỌC khi cha là một hàng ngang. Để chúng
-          rộng theo chữ thì ba nút so le nhau ("Xem" ngắn hơn "Lịch") và hàng nút đọc ra như bị
-          bỏ dở giữa chừng. Ẩn "Sửa" thì hai nút còn lại tự chia đôi.
-        */}
-        <XStack gap={space.xs}>
-          <YStack f={1}>
-            <Button
-              label={t('actions.viewShort')}
-              icon="eye-outline"
-              variant="accent"
-              size="sm"
-              shape="square"
-              onPress={open}
-            />
-          </YStack>
-          {onEdit ? (
-            <YStack f={1}>
-              <Button
-                label={t('actions.edit')}
-                icon="create-outline"
-                variant="accent"
-                size="sm"
-                shape="square"
-                onPress={() => onEdit(vehicle)}
-              />
-            </YStack>
-          ) : null}
-          <YStack f={1}>
-            <Button
-              label={t('actions.schedule')}
-              icon="calendar-outline"
-              variant="accent"
-              size="sm"
-              shape="square"
-              onPress={() => onSchedule(vehicle)}
-            />
-          </YStack>
-        </XStack>
       </YStack>
+
+      <CardActionBar actions={actions} />
     </Card>
   );
 }
@@ -318,42 +355,19 @@ function VehicleCardImpl({
  * Bộ dựng phần `<n>` dùng chung cho mọi dòng có nhãn.
  *
  * Khai ở module scope, không phải trong thân component: viết `(chunks) => <Strong>…` ngay tại
- * chỗ gọi là tám closure mới mỗi lần render, mà thẻ này nằm trong một danh sách dài.
+ * chỗ gọi là mấy closure mới mỗi lần render, mà thẻ này nằm trong một danh sách dài.
  */
 const strong = (chunks: ReactNode) => <Strong>{chunks}</Strong>;
 
-/**
- * Một dòng trong khối chỉ số: biểu tượng dẫn đầu + chữ.
- *
- * Biểu tượng lấy màu NGỮ NGHĨA của chính con số nó dẫn (đơn = `info`, lãi/lỗ = `success`/
- * `danger`), nên trạng thái tài chính đọc được từ khoé mắt mà không cần đọc chữ. Chữ vẫn mờ:
- * tô cả dòng theo màu thì ba dòng thành ba màu và không dòng nào nổi lên nữa.
- */
+/** Một dòng chỉ số: hình dẫn đầu + chữ, cả dòng ở bậc chữ nhỏ nhất của thẻ. */
 function Stat({ icon, tone, children }: { icon: IconName; tone?: string; children: ReactNode }) {
   return (
     <XStack ai="center" gap={space.xs}>
       <Ionicons name={icon} size={iconSize.sm} color={tone ?? colors.textMuted} />
-      <Text f={1} col={colors.textMuted} fos={fontSize.bodySm} numberOfLines={1}>
+      <Text f={1} col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
         {children}
       </Text>
     </XStack>
-  );
-}
-
-/** Một dòng chỉ số ở tầng dưới của thẻ. Cùng cỡ chữ với nhau để bốn dòng đọc thành một khối. */
-function Metric({ children }: { children: ReactNode }) {
-  return (
-    <Text col={colors.textMuted} fos={fontSize.bodySm} numberOfLines={1}>
-      {children}
-    </Text>
-  );
-}
-
-function Muted({ children }: { children: string }) {
-  return (
-    <Text col={colors.textMuted} fos={fontSize.bodySm}>
-      {children}
-    </Text>
   );
 }
 

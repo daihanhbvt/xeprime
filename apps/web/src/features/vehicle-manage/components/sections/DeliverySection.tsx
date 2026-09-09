@@ -63,7 +63,7 @@ function DeliveryForm({
   canEdit: boolean;
 }) {
   const t = useTranslations('VehicleManage.delivery');
-  const tPolicies = useTranslations('RentalPolicies.sections');
+  const tPolicies = useTranslations('Vehicles.pricing.delivery');
   const tActions = useTranslations('Common.actions');
   const errorMessage = useErrorMessage();
   const { message } = App.useApp();
@@ -96,14 +96,29 @@ function DeliveryForm({
       <form noValidate onSubmit={submit} className={styles.form}>
         <SectionCard headingLevel={1} title={t('title')} subtitle={t('subtitle')}>
           {!pricing.shopPolicy && !pricing.policy ? (
-            <Alert type="info" showIcon message={t('noShopPolicyTitle')} description={t('noShopPolicyBody')} />
+            <Alert
+              type="info"
+              showIcon
+              message={t('noShopPolicyTitle')}
+              description={t('noShopPolicyBody')}
+            />
           ) : overriding ? (
-            <Alert type="info" showIcon message={t('overriddenTitle')} description={t('overriddenBody')} />
+            <Alert
+              type="info"
+              showIcon
+              message={t('overriddenTitle')}
+              description={t('overriddenBody')}
+            />
           ) : (
-            <Alert type="warning" showIcon message={t('inheritedTitle')} description={t('inheritedBody')} />
+            <Alert
+              type="warning"
+              showIcon
+              message={t('inheritedTitle')}
+              description={t('inheritedBody')}
+            />
           )}
 
-          <DeliveryPolicySection control={control} title={tPolicies('deliveryTitle')} disabled={!canEdit} />
+          <DeliveryPolicySection control={control} title={tPolicies('title')} disabled={!canEdit} />
 
           {enabled ? (
             <div className={styles.summary}>

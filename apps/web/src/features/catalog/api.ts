@@ -1,3 +1,4 @@
+import type { components } from '@xeprime/types';
 import { REVALIDATE_CATALOG_SECONDS } from '@/constants/cache';
 import { apiGet, getApiBaseUrl } from '@/services/api-client';
 import { EMPTY_CATALOG, groupCatalog, type CatalogItem, type CatalogMap } from './types';
@@ -32,3 +33,25 @@ export async function fetchCatalogServer(): Promise<CatalogMap> {
     return EMPTY_CATALOG;
   }
 }
+
+/** Mẫu xe của danh mục — bảng riêng, nên có API riêng (xem `CatalogModelDto` ở backend). */
+export type CatalogModel = components['schemas']['CatalogModelDto'];
+
+export interface CatalogModelQuery {
+  vehicleType: string;
+  brandKey?: string;
+  search?: string;
+  /** Mẫu đang gắn với xe đang sửa — luôn có mặt trong kết quả kể cả khi đã tắt. */
+  includeId?: string;
+}
+
+export const catalogModelApi = {
+  async list(query: CatalogModelQuery): Promise<CatalogModel[]> {
+    return apiGet<CatalogModel[]>('/catalog/models', {
+      vehicleType: query.vehicleType,
+      ...(query.brandKey ? { brandKey: query.brandKey } : {}),
+      ...(query.search ? { search: query.search } : {}),
+      ...(query.includeId ? { includeId: query.includeId } : {}),
+    });
+  },
+};

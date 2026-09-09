@@ -15,7 +15,7 @@ import {
   VEHICLE_TYPE,
   type VehicleType,
 } from '@xeprime/types';
-import { catalogLabel } from '@xeprime/api-client';
+import { catalogLabel } from '@/api/catalog';
 import { serviceTypesFor, serviceUsesRentalRange, LIST_SEPARATOR } from '@xeprime/domain';
 import { type MarketplaceFilters, type PublicListing } from '@xeprime/types';
 import { dayjs, rentalDurationParts } from '@xeprime/domain';

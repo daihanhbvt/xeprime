@@ -124,7 +124,12 @@
     "assignSuccess": "Đã gán tài xế cho đơn",
     "unassignSuccess": "Đã bỏ gán tài xế",
     "call": "Gọi",
-    "noneWithDriver": "Đơn có tài xế — chưa phân công"
+    "noneWithDriver": "Đơn có tài xế — chưa phân công",
+    "routePickup": "Đón: {address}",
+    "routeDestination": "→ {address}",
+    "searchLabel": "Tìm tài xế",
+    "searchPlaceholder": "Tên hoặc số điện thoại",
+    "searchEmpty": "Không có tài xế nào khớp “{query}”"
   },
   "deliveryFee": {
     "title": "Phí giao nhận",

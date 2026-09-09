@@ -3,16 +3,17 @@ import { useTranslations } from 'use-intl';
 import type { Control } from 'react-hook-form';
 import { VEHICLE_TYPE } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
-import { useAppToast } from '@/components/feedback/use-app-toast';
 import { BlockTitle } from '@/components/ui/BlockTitle';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { DiscountTag } from '@/components/ui/DiscountTag';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
-import { useShopPolicy } from '../hooks/use-vehicle';
+import { useShopPolicy } from '@/features/rental-policies/hooks/use-shop-policy';
 import { PricingStep } from './VehicleFormSteps';
 import type { RentalPolicyValues } from '../api';
 
@@ -31,15 +32,13 @@ export function CreateVehiclePricingStep({
   isCar: boolean;
 }) {
   const t = useTranslations('Vehicles.form.pricingStep');
-  const tStates = useTranslations('Common.states');
-  const toast = useAppToast();
+  const navigateOnce = useNavigateOnce();
 
   // Chính sách kế thừa theo ĐÚNG loại xe đang tạo — ô tô/xe máy hai bộ riêng.
   const policy = useShopPolicy(isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE);
   const values = policy.data?.policy ?? null;
 
-  /* Màn "Chính sách gian hàng" chưa có bản native — báo đang phát triển thay vì một link chết. */
-  const openShopPolicies = () => toast.showInfo(tStates('featureComingSoon'));
+  const openShopPolicies = () => navigateOnce(ROUTES.manage.shopPolicies());
 
   return (
     <YStack gap={layout.section}>

@@ -26,6 +26,11 @@ export const ROUTES = {
       serviceType
         ? { pathname: '/listings/[id]', params: { id: vehicleId, serviceType } }
         : { pathname: '/listings/[id]', params: { id: vehicleId } },
+    /**
+     * Trang gian hàng công khai (MKT-05). Khoá là SLUG chứ không phải id — cùng địa chỉ với
+     * `/shops/[slug]` bên web, nên một liên kết chia sẻ mở được ở cả hai nơi.
+     */
+    shopDetail: (slug: string): Href => ({ pathname: '/shops/[slug]', params: { slug } }),
   },
 
   /** Chuyến của khách — yêu cầu thuê và đơn thuê là HAI GIAI ĐOẠN của cùng một chuyến. */
@@ -172,6 +177,29 @@ export const ROUTES = {
       params: { id: customerId },
     }),
 
+    /**
+     * Đăng ký gian hàng (SHP-01) — lối đi DUY NHẤT tới form tạo gian hàng.
+     *
+     * Nằm dưới `manage/` như web (`/manage/onboarding`) để deep link ánh xạ 1-1, nhưng nó là
+     * màn của người CHƯA có gian hàng: `ScopeGuard` cho qua đúng route này, xem `app/manage/_layout.tsx`.
+     */
+    onboarding: (): Href => '/manage/onboarding',
+
+    /** Hồ sơ gian hàng + gửi duyệt (SHP-02). */
+    shop: (): Href => '/manage/shop',
+
+    /** Chi nhánh gian hàng (SHP-03) — nơi xe thực sự nằm. */
+    shopBranches: (): Href => '/manage/shop/branches',
+
+    /** Chính sách thuê mặc định theo loại xe (SHP-04). */
+    shopPolicies: (): Href => '/manage/shop/policies',
+
+    /** Nhân sự gian hàng + lời mời (SHP-05). */
+    members: (): Href => '/manage/members',
+
+    /** Tài xế của gian hàng (SHP-06). */
+    drivers: (): Href => '/manage/drivers',
+
     /** Tổng quan doanh thu (FIN-01) — ba lớp tiền của một kỳ + hai bảng xếp hạng. */
     finance: (): Href => '/manage/finance',
 
@@ -200,6 +228,7 @@ export const ROUTES = {
       pathname: '/manage/vehicles/[id]/pricing',
       params: { id: vehicleId },
     }),
+
   },
 
   /** Gốc app — chỉ dùng cho fallback khi không có màn nào để lui về. */

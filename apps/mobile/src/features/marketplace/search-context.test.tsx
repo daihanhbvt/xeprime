@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { toListingQueryParams } from '@xeprime/api-client';
+import { toListingQueryParams } from '@/api/marketplace/api';
 import { VEHICLE_TYPE } from '@xeprime/types';
 import { withIntl } from '@/i18n/test-utils';
 import { SearchExperienceProvider, useSearchExperience } from './search-context';

@@ -22,7 +22,6 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
-import { useRenderTrace, useTracedRenderItem } from '@/dev/list-trace';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
@@ -66,9 +65,6 @@ const tabKeyOf = (tab: { value: string }) => tab.value;
  * Lọc và phân trang đều ở SERVER. Không có chỗ nào kéo cả kho về rồi cắt tại chỗ.
  */
 export function BookingRequestInboxScreen() {
-  // Dev-only: đếm số lần màn render lại. Xem `src/dev/list-trace.ts`.
-  useRenderTrace('Requests');
-
   const t = useTranslations('BookingRequests');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
@@ -197,9 +193,6 @@ export function BookingRequestInboxScreen() {
     ),
     [openDetail],
   );
-
-  // Dev-only: đo thời gian dựng từng thẻ, in gộp mỗi giây.
-  const tracedRenderItem = useTracedRenderItem('Requests', renderItem);
 
   function confirmApprove(body?: Parameters<typeof approve.mutate>[0]['body']) {
     if (!approving) return;
@@ -382,7 +375,7 @@ export function BookingRequestInboxScreen() {
                 data={items}
                 keyExtractor={keyOf}
                 {...LIST_TUNING}
-                renderItem={tracedRenderItem}
+                renderItem={renderItem}
                 contentContainerStyle={contentContainerStyle}
                 onScroll={onScroll}
                 scrollEventThrottle={scrollThrottle.frame}

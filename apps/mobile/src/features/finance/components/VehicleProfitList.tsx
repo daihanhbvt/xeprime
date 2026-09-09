@@ -5,12 +5,14 @@ import { useTranslations } from 'use-intl';
 import {
   DEFAULT_VEHICLE_PROFIT_SORT,
   PERMISSION,
+  STATUS_COLOR,
   VEHICLE_PROFIT_SORT_VALUES,
   type PaginationMeta,
 } from '@xeprime/types';
 import { isNegativeMoney, isZeroMoney } from '@xeprime/domain';
 import { BlockTitle } from '@/components/ui/BlockTitle';
 import { Card } from '@/components/ui/Card';
+import { CardAccent } from '@/components/ui/CardAccent';
 import { DetailChevron } from '@/components/ui/DetailArrow';
 import { Pagination } from '@/components/ui/Pagination';
 import { SelectControl } from '@/components/ui/SelectControl';
@@ -108,6 +110,7 @@ export function VehicleProfitList({
             return (
               <Card
                 key={row.vehicleId}
+                padded={false}
                 {...(canOpenVehicle
                   ? {
                       onPress: () => navigateOnce(ROUTES.manage.vehicleDetail(row.vehicleId)),
@@ -116,98 +119,112 @@ export function VehicleProfitList({
                   : {})}
               >
                 {/*
-                  HAI DÒNG, đúng thẻ web ở bề rộng điện thoại: danh tính bên trái, LỢI NHUẬN bên
-                  phải; dòng dưới là biển số và một câu tóm tắt mờ.
+                  Vạch mép trái mang ĐÚNG dấu của lợi nhuận — cùng màu với con số bên phải, không
+                  phải một quy ước thứ hai.
 
-                  Bản trước tách thu/chi/chuyến thành ba hàng riêng có huy hiệu — mỗi thẻ cao gần
-                  gấp đôi, mà một dải XẾP HẠNG thì việc chính là lướt qua hai mươi xe để tìm xe
-                  đang lỗ, không phải đọc kỹ từng xe. Xe nào đáng đọc kỹ thì chạm vào là mở hồ sơ.
-
-                  Ba số phụ dùng dạng RÚT GỌN (`Thu 902k`) — cũng là lựa chọn của web ở chính chỗ
-                  này. Chúng chia nhau phần bề ngang còn lại sau biển số, viết đủ thì chắc chắn bị
-                  cắt; mà con số quan trọng nhất — lợi nhuận — vẫn viết đủ từng đồng ở dòng trên.
+                  Dải này tồn tại để lướt hai mươi xe tìm xe đang LỖ (xem chú thích bố cục bên
+                  dưới), mà con số lỗ nằm ở mép phải và chỉ khác con số lãi ở màu chữ. Một mép màu
+                  liền mạch cho thấy ngay cụm đỏ nằm ở đâu trong bảng xếp hạng.
                 */}
-                <XStack ai="center" gap={space.sm}>
-                  {/*
-                    HÌNH XE, không phải chữ cái đầu tên xe: "Toyota Vios" và "Toyota Innova" cho
-                    ra cùng một chữ T, nên chữ cái ở đây không phân biệt được gì — nó chỉ là một
-                    ô chữ ngẫu nhiên cạnh tên xe đã nằm ngay bên phải. Một hình xe thì nói ngay
-                    hàng này là một CHIẾC XE, và cả dải đọc ra là dải xe.
-                  */}
-                  <YStack
-                    w={TILE_SIZE}
-                    h={TILE_SIZE}
-                    br={radius.md}
-                    ai="center"
-                    jc="center"
-                    bg={colors.primaryLight}
-                  >
-                    <Ionicons
-                      name="car-sport-outline"
-                      size={iconSize.md}
-                      color={colors.primaryActive}
-                    />
-                  </YStack>
+                <XStack>
+                  <CardAccent color={loss ? STATUS_COLOR.DANGER : STATUS_COLOR.SUCCESS} />
 
-                  <YStack f={1} minWidth={0} gap={2}>
-                    <XStack ai="center" gap={space.sm}>
-                      <Text
-                        f={1}
-                        minWidth={0}
-                        col={colors.text}
-                        fos={fontSize.bodySm}
-                        fow={fontWeight.semibold}
-                        numberOfLines={1}
-                      >
-                        {row.vehicleName}
-                      </Text>
-                      {/*
-                        Số tiền KHÔNG co: hết chỗ thì tên xe cắt bớt, không phải con số.
-
-                        `fontSize.body` — CÙNG bậc với con số của dải "Doanh thu theo khách" ngay
-                        dưới. Hai dải xếp hạng đứng liền nhau trên một màn mà số của dải này nhỏ
-                        hơn dải kia thì đọc ra như dải trên kém quan trọng hơn, trong khi chúng
-                        ngang vai.
-                      */}
-                      <Text
-                        flexShrink={0}
-                        col={profitTone}
-                        fos={fontSize.body}
-                        fow={fontWeight.bold}
-                        numberOfLines={1}
-                      >
-                        {fmt.money(row.profit)}
-                      </Text>
-                    </XStack>
-
-                    <Text
-                      col={colors.textMuted}
-                      fos={fontSize.label}
-                      letterSpacing={PLATE_TRACKING}
-                      numberOfLines={1}
-                    >
-                      {row.plateNumber ?? tLabels('emptyValue')}
-                    </Text>
-
+                  <YStack f={1} minWidth={0} p={space.md}>
                     {/*
-                      Dòng thứ ba đứng RIÊNG, không chen cạnh biển số — và vì đứng riêng nên nó có
-                      đủ bề ngang để viết SỐ ĐẦY ĐỦ.
+                      HAI DÒNG, đúng thẻ web ở bề rộng điện thoại: danh tính bên trái, LỢI NHUẬN bên
+                      phải; dòng dưới là biển số và một câu tóm tắt mờ.
 
-                      Ép nó chung hàng với biển số thì mỗi bên còn chưa tới 140dp, và `Thu
-                      82.500.000 ₫ · Chi 19.300.000 ₫ · 7 chuyến` chỉ còn cách rút gọn — mà rút
-                      gọn ở đây là mất thông tin thật: `902k` không nói được 902.000 hay 902.400.
-                      Cho phép xuống hai dòng thay vì cắt: một số tiền cụt là con số sai.
+                      Bản trước tách thu/chi/chuyến thành ba hàng riêng có huy hiệu — mỗi thẻ cao gần
+                      gấp đôi, mà một dải XẾP HẠNG thì việc chính là lướt qua hai mươi xe để tìm xe
+                      đang lỗ, không phải đọc kỹ từng xe. Xe nào đáng đọc kỹ thì chạm vào là mở hồ sơ.
+
+                      Ba số phụ dùng dạng RÚT GỌN (`Thu 902k`) — cũng là lựa chọn của web ở chính chỗ
+                      này. Chúng chia nhau phần bề ngang còn lại sau biển số, viết đủ thì chắc chắn bị
+                      cắt; mà con số quan trọng nhất — lợi nhuận — vẫn viết đủ từng đồng ở dòng trên.
                     */}
-                    <Text col={colors.placeholder} fos={fontSize.label} numberOfLines={2}>
-                      {t('cardLine', {
-                        revenue: fmt.money(row.revenue),
-                        cost: fmt.money(row.cost),
-                        trips: row.trips,
-                      })}
-                    </Text>
-                  </YStack>
+                    <XStack ai="center" gap={space.sm}>
+                      {/*
+                        HÌNH XE, không phải chữ cái đầu tên xe: "Toyota Vios" và "Toyota Innova" cho
+                        ra cùng một chữ T, nên chữ cái ở đây không phân biệt được gì — nó chỉ là một
+                        ô chữ ngẫu nhiên cạnh tên xe đã nằm ngay bên phải. Một hình xe thì nói ngay
+                        hàng này là một CHIẾC XE, và cả dải đọc ra là dải xe.
+                      */}
+                      <YStack
+                        w={TILE_SIZE}
+                        h={TILE_SIZE}
+                        br={radius.md}
+                        ai="center"
+                        jc="center"
+                        bg={colors.primaryLight}
+                      >
+                        <Ionicons
+                          name="car-sport-outline"
+                          size={iconSize.md}
+                          color={colors.primaryActive}
+                        />
+                      </YStack>
 
-                  {canOpenVehicle ? <DetailChevron /> : null}
+                      <YStack f={1} minWidth={0} gap={2}>
+                        <XStack ai="center" gap={space.sm}>
+                          <Text
+                            f={1}
+                            minWidth={0}
+                            col={colors.text}
+                            fos={fontSize.bodySm}
+                            fow={fontWeight.semibold}
+                            numberOfLines={1}
+                          >
+                            {row.vehicleName}
+                          </Text>
+                          {/*
+                            Số tiền KHÔNG co: hết chỗ thì tên xe cắt bớt, không phải con số.
+
+                            `fontSize.body` — CÙNG bậc với con số của dải "Doanh thu theo khách" ngay
+                            dưới. Hai dải xếp hạng đứng liền nhau trên một màn mà số của dải này nhỏ
+                            hơn dải kia thì đọc ra như dải trên kém quan trọng hơn, trong khi chúng
+                            ngang vai.
+                          */}
+                          <Text
+                            flexShrink={0}
+                            col={profitTone}
+                            fos={fontSize.body}
+                            fow={fontWeight.bold}
+                            numberOfLines={1}
+                          >
+                            {fmt.money(row.profit)}
+                          </Text>
+                        </XStack>
+
+                        <Text
+                          col={colors.textMuted}
+                          fos={fontSize.label}
+                          letterSpacing={PLATE_TRACKING}
+                          numberOfLines={1}
+                        >
+                          {row.plateNumber ?? tLabels('emptyValue')}
+                        </Text>
+
+                        {/*
+                          Dòng thứ ba đứng RIÊNG, không chen cạnh biển số — và vì đứng riêng nên nó có
+                          đủ bề ngang để viết SỐ ĐẦY ĐỦ.
+
+                          Ép nó chung hàng với biển số thì mỗi bên còn chưa tới 140dp, và `Thu
+                          82.500.000 ₫ · Chi 19.300.000 ₫ · 7 chuyến` chỉ còn cách rút gọn — mà rút
+                          gọn ở đây là mất thông tin thật: `902k` không nói được 902.000 hay 902.400.
+                          Cho phép xuống hai dòng thay vì cắt: một số tiền cụt là con số sai.
+                        */}
+                        <Text col={colors.placeholder} fos={fontSize.label} numberOfLines={2}>
+                          {t('cardLine', {
+                            revenue: fmt.money(row.revenue),
+                            cost: fmt.money(row.cost),
+                            trips: row.trips,
+                          })}
+                        </Text>
+                      </YStack>
+
+                      {canOpenVehicle ? <DetailChevron /> : null}
+                    </XStack>
+                  </YStack>
                 </XStack>
               </Card>
             );

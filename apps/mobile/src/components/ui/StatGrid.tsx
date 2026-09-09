@@ -2,9 +2,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { Fragment, type ReactNode } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { Divider } from './DataRow';
 import { DetailChevron } from './DetailArrow';
+import { IconDisc } from './IconDisc';
 import type { IconName } from './Chip';
 
 /**
@@ -107,6 +108,7 @@ export function StatGrid({
   columns = 2,
   variant = 'grid',
   total,
+  emphasis = 'value',
 }: {
   cells: readonly StatCell[];
   columns?: number;
@@ -133,6 +135,23 @@ export function StatGrid({
    * trần — **không** bằng cỡ chữ. Xem {@link TotalRow}.
    */
   total?: StatCell;
+  /**
+   * Ai là chính trên một dòng — chỉ có tác dụng ở biến thể `list`.
+   *
+   * `value` (mặc định): con số to hơn một bậc (14) và ăn mực đen, nhãn nhỏ (12) và mờ. Dùng khi
+   * bảng số đã có một `BlockTitle` ngay trên ("KINH DOANH", "TIỀN MẶT" ở màn Tài chính): tiêu đề
+   * đó nói bảng này về cái gì, nên từng nhãn chỉ còn là phụ chú cho con số bên phải.
+   *
+   * `even`: NHÃN và SỐ cùng bậc chữ (12), nhãn ăn mực đen + semibold, số vẫn đậm hơn. Dùng khi
+   * dải chỉ số đứng MỘT MÌNH dưới tiêu đề trang (màn Tổng quan): không có tiêu đề khối nào để
+   * bám, nên "Xe sẵn sàng" / "Quá hạn trả" chính là thứ người ta quét mắt qua — ở bậc mặc định
+   * chúng bị con số 14 nuốt mất, và cả dải đọc ra như một cột số không có tên.
+   *
+   * Ở `even` thì hàng tổng KHÔNG còn phân biệt bằng mực nữa — nó vẫn còn vạch đậm, dải nền và cột
+   * hình để trần. Bảng nào vừa cần `even` vừa cần một hàng tổng thì cân nhắc lại: nhiều khả năng
+   * nó thuộc nhóm CÓ tiêu đề khối, tức thuộc `value`.
+   */
+  emphasis?: 'value' | 'even';
 }) {
   if (cells.length === 0 && !total) return null;
 
@@ -158,7 +177,7 @@ export function StatGrid({
         ? cells.map((cell, index) => (
             <Fragment key={cell.key}>
               {index > 0 ? <HRule /> : null}
-              <ListRow cell={cell} chevronSlot={chevronSlot} />
+              <ListRow cell={cell} chevronSlot={chevronSlot} emphasis={emphasis} />
             </Fragment>
           ))
         : rows.map((row, rowIndex) => (
@@ -283,7 +302,17 @@ const pressedRow = { backgroundColor: colors.surfaceMuted } as const;
  * Con số căn phải để cả cột số thẳng hàng — mắt dò dọc theo mép phải nhanh hơn nhiều so với dò
  * những con số bắt đầu ở bảy vị trí khác nhau.
  */
-function ListRow({ cell, chevronSlot }: { cell: StatCell; chevronSlot: boolean }) {
+function ListRow({
+  cell,
+  chevronSlot,
+  emphasis,
+}: {
+  cell: StatCell;
+  chevronSlot: boolean;
+  emphasis: 'value' | 'even';
+}) {
+  const even = emphasis === 'even';
+
   const body = (
     <YStack
       px={space.md}
@@ -294,27 +323,28 @@ function ListRow({ cell, chevronSlot }: { cell: StatCell; chevronSlot: boolean }
       accessibilityLabel={`${cell.fullLabel ?? cell.label}: ${cell.value}`}
     >
       <XStack ai="center" gap={space.sm}>
-      <YStack
-        w={BADGE_SIZE}
-        h={BADGE_SIZE}
-        br={radius.pill}
-        bg={cell.surface ?? colors.surfaceMuted}
-        bw={1}
-        bc={cell.tone}
-        ai="center"
-        jc="center"
-      >
-        <Ionicons name={cell.icon} size={iconSize.sm} color={cell.tone} />
-      </YStack>
+      <IconDisc
+        icon={cell.icon}
+        tone={cell.tone}
+        {...(cell.surface ? { surface: cell.surface } : {})}
+        size={BADGE_SIZE}
+      />
 
-      <Text f={1} minWidth={0} col={colors.textMuted} fos={fontSize.bodySm} numberOfLines={2}>
+      <Text
+        f={1}
+        minWidth={0}
+        col={even ? colors.text : colors.textMuted}
+        fos={fontSize.bodySm}
+        {...(even ? { fow: fontWeight.semibold } : {})}
+        numberOfLines={2}
+      >
         {cell.label}
       </Text>
 
       <Text
         flexShrink={0}
         col={cell.valueTone ?? colors.text}
-        fos={fontSize.body}
+        fos={even ? fontSize.bodySm : fontSize.body}
         fow={fontWeight.bold}
         ta="right"
         numberOfLines={1}

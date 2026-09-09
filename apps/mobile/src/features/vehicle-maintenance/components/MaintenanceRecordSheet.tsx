@@ -181,13 +181,15 @@ export function MaintenanceRecordSheet({
     : record
       ? t('form.submitEdit')
       : t('form.submitCreate');
+  /* Ba việc khác nhau, ba hình: đóng phiếu · lưu sửa đổi · đặt một mốc lịch mới. */
+  const submitIcon = completing ? 'checkmark-outline' : record ? 'save-outline' : 'calendar-outline';
 
   return (
     <BottomSheet
       open
       onClose={onClose}
       title={title}
-      footer={<Button label={submitLabel} loading={pending} onPress={submit} />}
+      footer={<Button label={submitLabel} icon={submitIcon} loading={pending} onPress={submit} />}
     >
       <YStack gap={space.sm}>
         {conflicts.length > 0 ? (

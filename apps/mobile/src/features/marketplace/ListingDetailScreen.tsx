@@ -21,7 +21,7 @@ import {
   type ServiceType,
 } from '@xeprime/types';
 import { applyDiscountPercent, LIST_SEPARATOR } from '@xeprime/domain';
-import { catalogLabel } from '@xeprime/api-client';
+import { catalogLabel } from '@/api/catalog';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ListingDetailSkeleton } from '@/components/ui/Skeleton';
@@ -219,6 +219,7 @@ function DetailBody({
   const tCard = useTranslations('Listings.card');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
+  const navigateOnce = useNavigateOnce();
   const { catalog } = useCatalog();
   const insets = useSafeAreaInsets();
 
@@ -481,7 +482,16 @@ function DetailBody({
           </XStack>
         ) : null}
 
-        <Card lift="flat">
+        {/*
+          CẢ THẺ mở trang gian hàng, không phải riêng cái tên như web: một dòng chữ 14px là đích
+          chạm quá nhỏ, và ở đây không có gì khác để bấm nên mở rộng vùng chạm không cướp thao
+          tác nào.
+        */}
+        <Card
+          lift="flat"
+          onPress={() => navigateOnce(ROUTES.explore.shopDetail(listing.shopSlug))}
+          accessibilityLabel={listing.shopName}
+        >
           <XStack ai="center" gap={space.md}>
             <Avatar name={listing.shopName} url={listing.shopLogoUrl} size={44} />
             <YStack f={1} gap={2}>

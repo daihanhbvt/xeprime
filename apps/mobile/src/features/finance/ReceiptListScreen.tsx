@@ -29,7 +29,6 @@ import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useDomainLabel } from '@/i18n/domain';
 import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
-import { useRenderTrace, useTracedRenderItem } from '@/dev/list-trace';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { scrollThrottle } from '@/theme/motion';
@@ -65,9 +64,6 @@ const keyOf = (receipt: Receipt) => receipt.id;
  * khoá của nó KHÔNG mang `page` — sang trang không làm bốn con số nháy.
  */
 export function ReceiptListScreen() {
-  // Dev-only: đếm số lần màn render lại. Xem `src/dev/list-trace.ts`.
-  useRenderTrace('Receipts');
-
   const params = useLocalSearchParams<{
     type?: string;
     status?: string;
@@ -433,9 +429,6 @@ export function ReceiptListScreen() {
     [],
   );
 
-  // Dev-only: đo thời gian dựng từng thẻ, in gộp mỗi giây.
-  const tracedRenderItem = useTracedRenderItem('Receipts', renderItem);
-
   /* Đếm ĐỦ mọi chiều, kể cả chiều chỉ đến từ đường dẫn — cùng vị từ với `hasReceiptFilters`. */
   const filtered = hasReceiptFilters(filters);
 
@@ -631,16 +624,12 @@ export function ReceiptListScreen() {
                     onAction={clearAll}
                   />
                 ) : (
-                  <ScreenMessage
-                    icon="receipt-outline"
-                    title={t('table.empty.title')}
-                    {...(canCreate && finance.canWrite
-                      ? {
-                          actionLabel: t('actions.createFirst'),
-                          onAction: () => setFormOpen(true),
-                        }
-                      : {})}
-                  />
+                  /*
+                    KHÔNG có nút "thêm" ở đây: nó đã nằm ở hàng tiêu đề (`ManageListShell action`),
+                    và danh sách rỗng thì không có gì để cuộn nên hàng đó đứng nguyên trên màn —
+                    hai nút cùng một việc trong cùng một khung hình.
+                  */
+                  <ScreenMessage icon="receipt-outline" title={t('table.empty.title')} />
                 ),
               )
             ) : (
@@ -649,7 +638,7 @@ export function ReceiptListScreen() {
                 data={items}
                 keyExtractor={keyOf}
                 {...LIST_TUNING}
-                renderItem={tracedRenderItem}
+                renderItem={renderItem}
                 contentContainerStyle={contentContainerStyle}
                 onScroll={onScroll}
                 scrollEventThrottle={scrollThrottle.frame}
