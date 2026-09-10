@@ -187,7 +187,7 @@ function PolicyWorkspace({
           ) : undefined
         }
       >
-        <ManagePageTitle title={t('title')} total={t('subtitle')} />
+        <ManagePageTitle title={t('title')} subtitle={t('subtitle')} />
 
         <YStack px={layout.screenX} gap={layout.section} pb={layout.section}>
           <YStack gap={layout.inline}>

@@ -22,14 +22,13 @@ export { APP_TIME_ZONE } from '@/lib/datetime';
 export {
   SUPPORTED_LOCALES,
   DEFAULT_LOCALE,
+  LOCALE_COOKIE_NAME,
   isAppLocale,
   resolveAppLocale,
   type AppLocale,
 } from '@xeprime/types';
 
 import type { AppLocale } from '@xeprime/types';
-
-export const LOCALE_COOKIE_NAME = 'XP_LOCALE';
 
 /** 365 ngày. Ngôn ngữ là tuỳ chọn dài hạn, không phải trạng thái phiên. */
 export const LOCALE_COOKIE_MAX_AGE = 31_536_000;

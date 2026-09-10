@@ -6,8 +6,9 @@
  * Google/Facebook — màn đó do PROVIDER render, nên nếu API không nói ngôn ngữ ra thì khách đang
  * đọc tiếng Anh sẽ nhảy sang một popup tiếng Việt ngay giữa luồng đăng nhập.
  *
- * Chỉ những thứ KHÔNG phụ thuộc môi trường nằm ở đây. Tên cookie, thuộc tính cookie và bản đồ
- * `Intl` vẫn ở `apps/web/src/i18n/config.ts`: chúng là chuyện của trình duyệt và của Next.
+ * Chỉ những thứ KHÔNG phụ thuộc môi trường nằm ở đây. THUỘC TÍNH cookie (`httpOnly`, `secure`,
+ * `maxAge`) và bản đồ `Intl` vẫn ở `apps/web/src/i18n/config.ts`: chúng là chuyện của trình
+ * duyệt và của Next.
  */
 
 /** Thứ tự ở đây cũng là thứ tự hiện trong bộ chuyển ngôn ngữ. */
@@ -30,3 +31,13 @@ export function isAppLocale(value: unknown): value is AppLocale {
 export function resolveAppLocale(value: unknown): AppLocale {
   return isAppLocale(value) ? value : DEFAULT_LOCALE;
 }
+
+/**
+ * Tên cookie chở lựa chọn ngôn ngữ (ADR 0012).
+ *
+ * Ở CHUNG từ 10/09/2026: app native mở trang pháp lý của web trong WebView và phải gửi kèm
+ * cookie này ở request đầu, nếu không người đang dùng app tiếng Anh nhận về một trang điều
+ * khoản tiếng Việt (web đọc locale ở phía server, và ADR 0012 cấm `?lang=`). Chỉ TÊN nằm ở
+ * đây — thuộc tính cookie vẫn thuộc về phía đặt nó, tức web.
+ */
+export const LOCALE_COOKIE_NAME = 'XP_LOCALE';

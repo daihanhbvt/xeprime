@@ -12,9 +12,11 @@
     },
     "dayRange": "{count, plural, one {# day} other {# days}}",
     "today": "Today",
-    "pagerAriaLabel": "Move the visible range",
+    "vehicleTypeLabel": "Vehicle type",
+    "rangeLength": "Range length",
     "previousRange": "Back {count, plural, one {# day} other {# days}}",
-    "nextRange": "Forward {count, plural, one {# day} other {# days}}"
+    "nextRange": "Forward {count, plural, one {# day} other {# days}}",
+    "pagerAriaLabel": "Move the visible range"
   },
   "grid": {
     "ariaLabel": "Vehicle rental calendar by day",
@@ -59,7 +61,8 @@
     "dailyPrice": "Daily rate",
     "hourlyPrice": "Hourly rate",
     "operationStatus": "Operation",
-    "pricePerDay": "{price}/day"
+    "pricePerDay": "{price}/day",
+    "openVehicle": "Open vehicle profile"
   },
   "eventCard": {
     "bookingHeading": "Booking at a glance",
@@ -71,10 +74,6 @@
     "duration": "Duration",
     "openHint": "Click the bar to open full details",
     "barAriaRange": "from {start} to {end}"
-  },
-  "holidayCard": {
-    "headerAriaLabel": "Holiday: {name}, on {date}",
-    "type": "Category"
   },
   "cellActions": {
     "menuAriaLabel": "Choose an action for this calendar cell",
@@ -243,11 +242,14 @@
     "colBase": "Listed rate",
     "colNext": "New price",
     "skipped": "Skipped",
+    "rowAria": "{vehicle}, base price {base}, new price {next}",
+    "rowAriaNoBase": "no price yet",
     "submit": "Set price for {count, plural, one {# vehicle} other {# vehicles}}",
     "done": "Priced {vehicles, plural, one {# vehicle} other {# vehicles}} · {days, plural, one {# vehicle-day} other {# vehicle-days}}",
     "restore": "Restore default prices",
     "confirmRestoreTitle": "Restore default prices?",
     "confirmRestoreContent": "This removes the custom price for {count, plural, one {# vehicle} other {# vehicles}} between {from} and {to}. The weekday/weekend rate applies again.",
-    "restored": "Restored {count, plural, one {# vehicle-day} other {# vehicle-days}}"
+    "restored": "Restored {count, plural, one {# vehicle-day} other {# vehicle-days}}",
+    "tableMore": "…and {count, plural, one {# more vehicle} other {# more vehicles}}"
   }
 }

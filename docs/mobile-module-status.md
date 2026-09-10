@@ -17,15 +17,15 @@
 | Authentication | 7 | **7** | 0 | Xong trọn, kể cả Bearer + refresh xoay vòng (ADR 0017) |
 | Marketplace | 6 | 6 | 0 | Đủ — **MKT-05** dựng 09/09/2026 |
 | Booking / Rental | 16 | **16** | 0 (1 phần) | **BKG-14** xem được, chưa in/xuất PDF |
-| Vehicle | 13 | 11 | 2 | **VEH-08** bỏ · **VEH-13** hoãn |
+| Vehicle | 13 | **12** | 1 | **VEH-08** bỏ · **VEH-13** xong 10/09 cùng Calendar |
 | Customer | 4 | **4** | 0 | Xong trọn (07/09) — `docs/mobile-customer-module-status.md` |
 | Shop | 9 | **7** | 2 | SHP-01→07 xong (08/09) — `docs/mobile-shop-module-status.md`. SHP-08/09 web chưa có bản để clone |
 | Finance | 6 | **6** | 0 | Xong trọn (07/09) — `docs/mobile-finance-module-status.md` |
-| Calendar | 3 | 0 | 3 | CAL-03 là ràng buộc CSDL, không phải màn |
+| Calendar | 3 | **3** | 0 | CAL-01→03 xong (10/09) — CAL-03 là ràng buộc CSDL, app chỉ kiểm chứng |
 | Communication | 7 | 0 | 7 | COM-01 mới là màn rỗng |
 | Payment | 4 | 0 | 4 | **Không làm ở giai đoạn này** — ADR 0013 |
 | Admin / Management | 13 | 0 | 13 | Toàn bộ P3 |
-| System | 9 | 4 | 5 | i18n · hợp đồng API · R2 · test (một phần) |
+| System | 9 | **5** | 4 | i18n · hợp đồng API · R2 · test (một phần) · **SYS-05 xong 10/09** |
 
 **Đã đóng trọn bốn module lớn nhất**: Booking/Rental (16 dòng), Vehicle (11/13), Customer (4)
 và Finance (6) — cộng lại 37/97 dòng, và là toàn bộ phần nghiệp vụ nặng của cổng quản lý.
@@ -67,14 +67,14 @@ chính xác**: `features/contracts/ContractScreen.tsx` đã dựng và XEM đư�
 `snapshot`, không đọc lại đơn). Phần thật sự còn thiếu là **in / xuất PDF khổ A4** — cần một
 endpoint xuất PDF ở server.
 
-### 2.4 Vehicle — 11/13
+### 2.4 Vehicle — 12/13
 
 Chi tiết ở `docs/mobile-vehicle-module-status.md`. Tóm tắt:
 
 - **VEH-08 (OCR giấy tờ) — BỎ.** Tracking đánh `Blocked` + "Có tương đương web = FALSE": web
   chưa có bản để clone.
-- **VEH-13 (giá theo ngày) — HOÃN.** Lối vào duy nhất trên web là ô ngày ở `/manage/calendar`,
-  mà app chưa có màn lịch. **Chặn bởi CAL-01.**
+- **VEH-13 (giá theo ngày) — XONG 10/09** cùng module Calendar. Lối vào giống hệt web: ô ngày
+  trên lưới lịch → "Đặt giá" (`src/features/calendar/components/DailyPriceSheet.tsx`).
 
 ### 2.5 Customer — 4/4 ✅
 
@@ -118,12 +118,50 @@ Hai khối dùng chung mở khoá theo: Hồ sơ 360 của xe **giờ CÓ** kh�
 (`FinanceEntityPanel`, cùng component với tab "Thu chi" của hồ sơ khách), và mọi `ReceiptCard`
 đều mở CÙNG một màn chi tiết phiếu.
 
-### 2.8 Calendar — 0/3 ⛔ chặn hai thứ khác
+### 2.8 Calendar — 3/3 ✅ (10/09/2026)
 
-CAL-01 (lịch xe) và CAL-02 (chặn xe) đều chưa dựng. CAL-03 là ràng buộc `EXCLUDE USING gist` ở
-CSDL — không phải màn hình, không có việc cho app.
+`src/features/calendar/` — bản native của `apps/web/src/features/calendar/`, cùng endpoint, cùng
+quyền, cùng thông điệp.
 
-**CAL-01 đang chặn:** VEH-13 (giá theo ngày) và nút "Xem lịch" ở Hồ sơ 360.
+- **CAL-01 lịch xe.** Resource timeline thật: cột xe GHIM, dải ngày cuộn ngang, hàng "Xe còn
+  trống" ghim đáy, hàng xe ảo hoá. Cột xe nằm NGOÀI vùng cuộn ngang nên vuốt trái phải nó không
+  dịch một pixel nào. Trục dọc thì React Native chỉ cho một bộ cuộn native, nên cột xe phải theo
+  bằng tay — và ba cách đi qua `FlatList` đều sai, đã ghi lại ngay tại chỗ trong
+  `CalendarTimeline`: `scrollTo` của worklet làm cột TRẮNG TRƠN (ảo hoá sống ở luồng JS, không
+  biết mình đã bị cuộn); đưa cột vào trong vùng cuộn ngang rồi dịch ngược theo `scrollX` thì RUNG
+  khi vuốt ngang (transform luôn áp sau bộ cuộn native một khung hình); `scrollToOffset` từ
+  `onScroll` của JS thì ĐUỔI THEO sau vài trăm ms vì luồng JS đang bận dựng hàng. Bản hiện tại
+  TÁCH chuyển động khỏi cửa sổ dựng: cột xe không phải `FlatList` mà là một `Animated.View` dịch
+  theo `useScrollViewOffset` trên luồng UI, còn cửa sổ hàng là state React chỉ được
+  `useAnimatedReaction` đánh thức mỗi khi vượt qua một hàng. KHÔNG có chế độ xem riêng một xe —
+  web không có.
+- **CAL-02 khoá xe.** Tạo/sửa/gỡ khoá đủ năm lý do, pre-check trùng lịch, `expectedRowVersion`,
+  xác nhận trước khi gỡ. Kèm hai thao tác cả-đội-xe của thẻ ngày (khoá nhanh + đặt giá hàng loạt).
+- **CAL-03 chống trùng lịch.** Không có màn riêng và app KHÔNG tự kiểm: nó gọi
+  `POST /calendar/check-conflict` để cảnh báo sớm, còn quyết định cuối là `EXCLUDE USING gist`
+  → `23P01` → `BOOKING_SCHEDULE_CONFLICT`/409, hiển thị bằng thông điệp nghiệp vụ tại chỗ.
+
+**KHÔNG có kéo-thả** — web đã bỏ có chủ đích (docblock `CalendarScheduler`): đổi giờ đi qua form
+sửa đơn/khoá/bảo dưỡng, nơi có xác nhận và backend quyết. App bám đúng quyết định đó.
+
+**Chạm thanh event vào THẲNG chi tiết**, đúng vai cú click bên web. Bản đầu dựng một thẻ xem
+nhanh làm tầng trung gian — dịch từ thẻ hover của web — và thành ra chạm hai lần cho một việc:
+web mở thẻ đó bằng `trigger={['hover', 'focus']}` chứ không bằng click, mà cảm ứng thì không có
+hover để dịch. Không mất thông tin: mọi thứ thẻ đó chở đều nằm sẵn trong màn chi tiết.
+
+**Khác web ở đúng MỘT chỗ, và là chỗ web thiếu:** `booking_request` (yêu cầu đã duyệt đang giữ
+chỗ) có vẽ trên lưới nhưng web KHÔNG xử lý cú bấm — `CalendarScheduler.tsx:367-383` chỉ phân
+nhánh ba loại. App dẫn về hộp thư yêu cầu, nơi duy nhất xử lý được nó.
+
+**Khu chủ xe `/account/calendar` của web KHÔNG có bản native, và đó là thiết kế.** Web dựng hai
+vỏ quanh cùng một `CalendarScheduler` (`/manage/calendar` và `/account/calendar` cho Owner Lite);
+app chỉ có một cửa vì ADR 0014 gộp "chủ xe" và "chủ gian hàng" thành MỘT vai, và
+`15_MOBILE_DUAL_NAVIGATOR.md` cho chủ xe vào thẳng Navigator B. Cả `OWNER_NAV` (7 mục: xe · lịch
+· cẩm nang · chuyến · khai thuế · hợp đồng · dữ liệu) đều chưa có ở app — đó là phạm vi của module
+Account, không phải của Calendar.
+
+**Đã mở khoá:** VEH-13 (giá theo ngày, `DailyPriceSheet`) và nút "Xem lịch" ở Hồ sơ 360, thẻ đội
+xe và thẻ yêu cầu thuê.
 
 ### 2.9 Communication — 0/7
 
@@ -140,13 +178,46 @@ ADR 0013: **không làm thanh toán trực tuyến ở giai đoạn này**. Cộ
 
 Toàn bộ P3, chưa bắt đầu. 12 mục có API sẵn; ADM-13 (ticket hỗ trợ) chưa có API.
 
-### 2.12 System — 4/9
+### 2.12 System — 5/9
 
 Có: SYS-01 đa ngữ vi/en trên gốc message dùng chung · SYS-03 hợp đồng OpenAPI → type dùng chung ·
-SYS-04 R2 (ảnh xe, ảnh bàn giao, tài liệu riêng tư) · SYS-07 bộ test (một phần — xem §3).
+SYS-04 R2 (ảnh xe, ảnh bàn giao, tài liệu riêng tư) · SYS-07 bộ test (một phần — xem §3) ·
+**SYS-05 trung tâm hỗ trợ (10/09/2026)**.
 
-Thiếu: SYS-05 trung tâm hỗ trợ · SYS-09 tìm kiếm toàn cục · và ba dòng N/A với app
-(SYS-02 responsive web, SYS-06 worker, SYS-08 audit log — đều là chuyện của web/server).
+Thiếu: SYS-09 tìm kiếm toàn cục · và ba dòng N/A với app (SYS-02 responsive web, SYS-06 worker,
+SYS-08 audit log — đều là chuyện của web/server).
+
+**SYS-05 — trung tâm hỗ trợ (xong 10/09/2026).** `/manage/support`, cùng địa chỉ với web. Bốn
+khối và cùng bó message `ManageCommon.support.*` với `SupportCenter` bên web: bắt đầu nhanh · câu
+hỏi thường gặp · văn bản pháp lý · liên hệ.
+
+Khác web đúng hai chỗ, cả hai có lý do:
+
+1. **Thẻ hướng dẫn lọc theo CẢ cờ gói**, không chỉ quyền (ADR 0027 điều 2). Web chỉ lọc quyền nên
+   gian hàng chưa mua gói Tài chính vẫn thấy thẻ "Ghi thu chi" dù menu đã giấu mục đó — đúng cái
+   "dẫn tới một màn hình 403" mà docblock bên web nói phải tránh. Nợ này giờ thuộc về web.
+2. **Nút "Mở yêu cầu hỗ trợ" báo *đang phát triển*** thay vì dẫn tới `/manage/support/cases` —
+   app chưa dựng màn support cases (dòng tracking riêng, không thuộc SYS-05).
+
+**Văn bản pháp lý — WebView, không phải màn native.** `app/legal/[doc].tsx` mở
+`EXPO_PUBLIC_WEB_URL + /legal/<slug>` trong `react-native-webview`, cùng địa chỉ với web nên một
+liên kết chia sẻ mở được ở cả hai nơi. Nội dung (`Legal.docs.*`) đã có sẵn trong bundle nhưng cố ý
+KHÔNG dùng để render: văn bản pháp lý phải sửa được ngay khi luật đổi, còn một màn native chỉ đổi
+được qua một bản app mới và một vòng duyệt store (ADR 0028 điều 9). Ngôn ngữ đi bằng cookie
+`XP_LOCALE` trên header của request đầu — web đọc locale ở phía server và ADR 0012 cấm `?lang=`.
+
+Kèm theo, ba chỗ cam kết nay có liên kết THẬT thay vì chữ in đậm: đăng nhập, đăng ký và tạo gian
+hàng. Riêng màn ĐĂNG KÝ dùng **ô tick** (`LegalConsentCheckbox`) chứ không phải câu luôn hiện —
+đó là lúc người dùng giao kết lần đầu và cả hai chợ ứng dụng đòi một hành vi đồng ý tường minh
+(App Store review guideline 5.1.1). Đây là chỗ app CỐ Ý lệch web: web bỏ ô tick từ 20/08 vì ở
+luồng đặt xe nó chặn nút gửi bằng một thao tác không ai đọc.
+
+Ô tick chặn CẢ HAI đường tạo tài khoản — nút "Tạo tài khoản" và hai nút mạng xã hội — nên nó sống
+ở MÀN, không trong `RegisterForm`; đặt trong form thì Google/Facebook ngay dưới là một đường vòng.
+Nó cũng không vào `registerSchema` (`@xeprime/validators` dùng chung với web). Khoá lại bằng
+`apps/mobile/src/features/auth/register-consent.test.tsx`.
+
+⚠️ `react-native-webview` là NATIVE module — kéo nhánh này về phải build lại dev client.
 
 ---
 
@@ -163,7 +234,6 @@ Thiếu: SYS-05 trung tâm hỗ trợ · SYS-09 tìm kiếm toàn cục · và b
 
 | Nợ | Mức | Ghi chú |
 | --- | --- | --- |
-| **VEH-13** giá theo ngày | Chặn bởi CAL-01 | ~150 dòng khi có lịch; i18n + query key đã sẵn |
 | Đính kèm chứng từ ở **trung tâm** bảo dưỡng | Trung bình | Đã có ở màn từng xe, chưa có ở bảng đội xe |
 | **Chưa có test nào** cho module | Cao | Ba chỗ ưu tiên: `publication.ts`, `sensitive-changes.ts`, nhánh `source` của màn giá |
 | Ba khu web còn chuỗi thô | Thấp | App đã `t()`; chuyển web sau chỉ là thay chuỗi |
@@ -199,15 +269,14 @@ Bốn khoản nợ dưới đây đã đóng; giữ lại bảng để người 
 
 Xếp theo **cái gì đang chặn cái gì**, không theo độ khó.
 
-1. **CAL-01 + CAL-02 (Calendar)** — mở khoá VEH-13 và nút "Xem lịch" của Hồ sơ 360. Đang là nút
-   thắt duy nhất còn lại của hai module đã xong.
-2. **SHP-04 (chính sách thuê mặc định)** — VEH-05 đang cho "đặt lại theo chính sách gian hàng"
+1. **SHP-04 (chính sách thuê mặc định)** — VEH-05 đang cho "đặt lại theo chính sách gian hàng"
    mà không có màn nào để xem chính sách đó.
-3. **Làm mịn UI/UX màn danh sách xe + Hồ sơ 360** — đã có phản hồi thực tế (03/09): thẻ xe quá
+2. **Làm mịn UI/UX màn danh sách xe + Hồ sơ 360** — đã có phản hồi thực tế (03/09): thẻ xe quá
    cao do chip trạng thái xuống dòng, bảng thông số 17 dòng phần lớn rỗng và nhãn wrap, tiêu đề
    thẻ không nhất quán.
-4. **Communication COM-01/04/07** — chat thật + thông báo + push.
-5. Admin. *(Customer xong 07/09; Finance xong 07/09; Shop xong 08/09; MKT-05 xong 09/09.)*
+3. **Communication COM-01/04/07** — chat thật + thông báo + push.
+4. Admin. *(Customer xong 07/09; Finance xong 07/09; Shop xong 08/09; MKT-05 xong 09/09;
+   Calendar + VEH-13 xong 10/09.)*
 
 ---
 

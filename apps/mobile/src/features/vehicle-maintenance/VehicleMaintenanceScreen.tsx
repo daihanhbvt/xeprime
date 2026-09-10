@@ -195,6 +195,7 @@ export function VehicleMaintenanceScreen({ vehicleId }: { vehicleId: string }) {
         <MaintenanceRecordSheet
           vehicleId={vehicleId}
           state={sheet}
+          canViewFiles={has(PERMISSION.VEHICLE_MAINTENANCE_FILE_VIEW)}
           onClose={() => setSheet(null)}
         />
       ) : null}

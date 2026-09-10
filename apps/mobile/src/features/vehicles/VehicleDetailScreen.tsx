@@ -51,6 +51,7 @@ import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/t
 import { FinanceEntityPanel } from '@/features/finance/components/FinanceEntityPanel';
 import { VehicleAlertList } from './components/VehicleAlertList';
 import { VehiclePublishCard } from './components/VehiclePublishCard';
+import { vehicleSchedulePath } from './calendar-link';
 import { discountedPriceVnd } from './pricing';
 import {
   useDeleteVehicle,
@@ -149,7 +150,6 @@ function VehicleDetailBody({ vehicle, onBack }: { vehicle: VehicleDetail; onBack
   const router = useRouter();
   const navigateOnce = useNavigateOnce();
   const toast = useAppToast();
-  const tStates = useTranslations('Common.states');
   const errorMessage = useErrorMessage();
   const { has } = usePermissions();
 
@@ -293,7 +293,9 @@ function VehicleDetailBody({ vehicle, onBack }: { vehicle: VehicleDetail; onBack
                 label={t('scheduleMobile')}
                 variant="secondary"
                 size="sm"
-                onPress={() => toast.showInfo(tStates('featureComingSoon'))}
+                /* Cùng đích với viên "Lịch xe" ở mục lục và với nút Lịch ở thẻ đội xe —
+                   `onSchedule` của web cũng dẫn tới đúng màn lịch đã lọc theo chính xe này. */
+                onPress={() => navigateOnce(vehicleSchedulePath(vehicle, { back: true }))}
               />
             </YStack>
           </XStack>
@@ -592,9 +594,9 @@ function ScheduleCard({
 /**
  * Dải LIÊN KẾT NHANH tới các mục con của xe — bản native của `ModuleLinks` bên web.
  *
- * Cùng danh sách, cùng thứ tự, cùng điều kiện quyền. Còn ĐÚNG MỘT mục chưa có đích ở app —
- * `calendar` (màn lịch CAL-01 chưa làm): nó vẫn hiện đúng chỗ và chạm vào báo "đang phát triển",
- * đúng quy ước `comingSoon`. Danh sách này là nơi duy nhất phải sửa khi màn đó có mặt.
+ * Cùng danh sách, cùng thứ tự, cùng điều kiện quyền, và từ CAL-01 thì mọi mục đều có đích thật.
+ * `href` vẫn được phép vắng: mục nào web có mà app chưa dựng thì hiện đúng chỗ và chạm vào báo
+ * "đang phát triển", đúng quy ước `comingSoon`.
  *
  * Chip chứ không phải danh sách dọc: chín lối đi mà mỗi lối một hàng thì khối này dài hơn cả
  * phần nội dung nó dẫn tới.
@@ -671,8 +673,14 @@ function ModuleLinks({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
     );
   }
   if (has(PERMISSION.CALENDAR_VIEW)) {
-    // Màn lịch (CAL-01) chưa có ở app — hiện mục, chạm vào báo đang phát triển.
-    links.push({ key: 'calendar', label: t('calendar'), icon: 'calendar-outline' });
+    // Lịch ĐÃ LỌC SẴN theo chính chiếc xe này — cùng cách `vehicleSchedulePath` bên web dựng
+    // đường đi (`?q=<biển số || tên>`); màn lịch dùng chung, không có route lịch-một-xe.
+    links.push({
+      key: 'calendar',
+      label: t('calendar'),
+      icon: 'calendar-outline',
+      href: vehicleSchedulePath(vehicle, { back: true }),
+    });
   }
   if (has(PERMISSION.BOOKING_VIEW)) {
     // Kèm `vehicleId` như web: bấm từ hồ sơ xe thì ra đơn CỦA XE NÀY, không phải cả gian hàng.

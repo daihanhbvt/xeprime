@@ -17,6 +17,7 @@ export const formats = {
     /** Ngày có tên tháng, cho tiêu đề và câu văn. */
     long: { day: 'numeric', month: 'long', year: 'numeric' },
     /** Ngày đầy đủ kèm THỨ. */
+    weekdayLong: { weekday: 'long' },
     fullDate: { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' },
     /**
      * `hour12: false`: 24 giờ là quy ước đã chốt của sản phẩm. Để CLDR quyết thì màn tiếng Anh

@@ -1,4 +1,5 @@
 import type { Href } from 'expo-router';
+import type { LegalDoc } from '@xeprime/domain';
 import { VEHICLE_EDIT_TAB, type VehicleEditTab } from './vehicle-edit-tab';
 
 /**
@@ -84,21 +85,23 @@ export const ROUTES = {
         : '/manage/bookings',
     /**
      * Tạo đơn tại quầy. `prefill` mang tên + SĐT của một khách đã có trong sổ — cùng vai với
-     * `?customerName=&customerPhone=` mà web đặt lên URL khi bấm "Tạo đơn thuê" ở hồ sơ khách.
+     * `?customerName=&customerPhone=` mà web đặt lên URL khi bấm "Tạo đơn thuê" ở hồ sơ khách —
+     * và có thể mang sẵn XE + KHOẢNG THUÊ khi vào từ một ô trên lịch.
      *
      * Điền sẵn chứ KHÔNG dựng form thứ hai: một form tạo đơn nữa là hai bộ luật giá/lịch sẽ trôi
-     * khỏi nhau.
+     * khỏi nhau. Web giải cùng bài này bằng `StaffBookingDialog` nhận thẳng `vehicleId`/
+     * `pickupAt`/`returnAt`; app không có dialog nên nó đi qua route params.
+     *
+     * `pickupAt`/`returnAt` là ISO-8601 **UTC** — mốc tuyệt đối, không phải mặt đồng hồ.
      */
-    bookingCreate: (prefill?: { customerName?: string; customerPhone?: string }): Href =>
-      prefill?.customerName || prefill?.customerPhone
-        ? {
-            pathname: '/manage/bookings/new',
-            params: {
-              ...(prefill.customerName ? { customerName: prefill.customerName } : {}),
-              ...(prefill.customerPhone ? { customerPhone: prefill.customerPhone } : {}),
-            },
-          }
-        : '/manage/bookings/new',
+    bookingCreate: (prefill?: BookingCreatePrefill): Href => {
+      const params = Object.fromEntries(
+        Object.entries(prefill ?? {}).filter(([, value]) => Boolean(value)),
+      ) as Record<string, string>;
+      return Object.keys(params).length > 0
+        ? { pathname: '/manage/bookings/new', params }
+        : '/manage/bookings/new';
+    },
     bookingDetail: (bookingId: string): Href => ({
       pathname: '/manage/bookings/[id]',
       params: { id: bookingId },
@@ -165,6 +168,38 @@ export const ROUTES = {
     },
     maintenance: (): Href => '/manage/maintenance',
 
+    /**
+     * Lịch xe (CAL-01) — cùng địa chỉ với web (`/manage/calendar`) và cùng tham số.
+     *
+     * `q` là bộ lọc tên/biển số, KHÔNG phải một route riêng theo `vehicleId`: web cũng vậy
+     * (`vehicleSchedulePath`), vì màn lịch dùng chung nhận `q` và không có route lịch-một-xe.
+     * Bịa một route mới ở đây là làm "Xem lịch" dẫn tới hai kết quả khác nhau trên hai client.
+     */
+    calendar: (filters?: {
+      q?: string;
+      from?: string;
+      days?: number;
+      /**
+       * Đã tới đây TỪ một màn khác ⇒ thanh công cụ bày nút quay lại.
+       *
+       * Web mang cả ĐƯỜNG DẪN quay lại (`?back=/manage/vehicles`) vì trình duyệt có thể mở
+       * thẳng một URL bất kỳ. Ở app thì ngăn xếp điều hướng đã giữ sẵn lịch sử, nên chỉ cần biết
+       * CÓ hay KHÔNG — mang thêm một đường dẫn là mở lại đúng lỗ open-redirect mà web phải chống
+       * bằng `isSafeNextPath`.
+       */
+      back?: boolean;
+    }): Href => {
+      const params = Object.fromEntries(
+        Object.entries(filters ?? {})
+          .filter(([, value]) => Boolean(value))
+          // `back` là một CỜ: hoá thành `'1'`, đúng quy ước `create` của sổ Thu-Chi.
+          .map(([key, value]) => [key, value === true ? '1' : String(value)]),
+      ) as Record<string, string>;
+      return Object.keys(params).length > 0
+        ? { pathname: '/manage/calendar', params }
+        : '/manage/calendar';
+    },
+
     /** Sổ khách của gian hàng (CUS-01) — mục `customers` của menu quản lý. */
     customers: (): Href => '/manage/customers',
     /**
@@ -229,6 +264,25 @@ export const ROUTES = {
       params: { id: vehicleId },
     }),
 
+    /**
+     * Trung tâm hỗ trợ của cổng quản lý (SYS-05) — cùng địa chỉ với web (`/manage/support`).
+     *
+     * KHÔNG phải nơi mở yêu cầu hỗ trợ: kênh đó có mã theo dõi và sống ở `/manage/support/cases`
+     * (web đã có, app chưa dựng). Ở đây chỉ có hướng dẫn nhanh, câu hỏi thường gặp và đường tới
+     * văn bản pháp lý.
+     */
+    support: (): Href => '/manage/support',
+  },
+
+  /**
+   * Văn bản pháp lý — CÔNG KHAI, không cần phiên.
+   *
+   * Cùng địa chỉ với web (`/legal/<slug>`) để một liên kết dán từ web mở thẳng được trong app.
+   * Màn đích là WebView đọc chính trang đó: bản web là bản CÓ HIỆU LỰC và sửa được mà không chờ
+   * một bản app mới qua vòng duyệt store (ADR 0028 điều 9 — xem `LegalDocScreen`).
+   */
+  legal: {
+    doc: (doc: LegalDoc): Href => ({ pathname: '/legal/[doc]', params: { doc } }),
   },
 
   /** Gốc app — chỉ dùng cho fallback khi không có màn nào để lui về. */
@@ -243,6 +297,30 @@ export const ROUTES = {
  * `create` là ý định giao diện, không phải bộ lọc: nó không xuống API và không tính vào "đang
  * lọc". Kiểu `boolean` ở đây, hoá thành cờ `'1'` trên đường dẫn (đúng quy ước web).
  */
+/**
+ * Dữ liệu điền sẵn cho form tạo đơn tại quầy.
+ *
+ * Hai nguồn, hai tập trường: hồ sơ khách gửi tên + SĐT; một ô trên LỊCH gửi xe + khoảng thuê.
+ * Gộp vào một kiểu vì đích đến là MỘT form — tách đôi sẽ có ngày ai đó dựng form thứ hai.
+ */
+export type BookingCreatePrefill = {
+  customerName?: string;
+  customerPhone?: string;
+  vehicleId?: string;
+  /**
+   * Tên xe mang THEO, không để màn đích tự đi hỏi lại.
+   *
+   * Ô lịch đã có sẵn tên; bắt màn tạo đơn nạp lại qua `GET /vehicles/:id` là thêm một điểm hỏng
+   * trên đường đi — endpoint đó đòi `vehicles.view`, một quyền mà `bookings.create` không bao
+   * hàm. Thiếu nó thì bước THỜI GIAN hiện một thẻ xe rỗng và nút Tiếp tục im lặng.
+   */
+  vehicleName?: string;
+  /** ISO-8601 UTC. */
+  pickupAt?: string;
+  /** ISO-8601 UTC. */
+  returnAt?: string;
+};
+
 export type ReceiptRouteFilters = {
   type?: string;
   status?: string;

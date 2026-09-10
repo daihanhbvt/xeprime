@@ -135,6 +135,7 @@ const SHOP_NAV: readonly ManageNavSection[] = [
         labelKey: 'manage.calendar',
         icon: 'calendar-outline',
         permission: PERMISSION.CALENDAR_VIEW,
+        href: ROUTES.manage.calendar(),
       },
       {
         type: 'branch',
@@ -278,6 +279,7 @@ const SHOP_NAV: readonly ManageNavSection[] = [
         labelKey: 'manage.support',
         icon: 'help-circle-outline',
         permission: PERMISSION.TENANT_VIEW,
+        href: ROUTES.manage.support(),
       },
     ],
   },

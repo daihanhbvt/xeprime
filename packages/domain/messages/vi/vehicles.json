@@ -1041,7 +1041,9 @@
       "discountAscending": "Các mốc ưu đãi phải theo số tháng tăng dần",
       "discountNotLower": "Ưu đãi {months} tháng không được thấp hơn mốc {prev} tháng",
       "weekdayRequired": "Nhập giá thuê theo ngày"
-    }
+    },
+    "calendarLink": "Tuỳ chỉnh giá theo lịch",
+    "calendarHint": "Giá riêng theo ngày (lễ, cuối tuần, mùa cao điểm) đặt trực tiếp trên lịch xe — một nguồn giá, không có bảng giá mùa vụ thứ hai."
   },
   "documents": {
     "noPermissionTitle": "Không có quyền xem giấy tờ",

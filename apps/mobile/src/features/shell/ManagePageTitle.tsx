@@ -20,10 +20,20 @@ export function ManagePageTitle({
    * vận hành cần biết trước khi cuộn ("142 đơn" quyết định họ tìm bằng cuộn hay bằng bộ lọc).
    * Bỏ nó đi là mất thông tin web đang có, chứ không phải giản lược cho gọn.
    */
+  subtitle,
   total,
   action,
 }: {
   title: string;
+  /**
+   * Câu MÔ TẢ trang — vai của `subtitle` trên `ManagePageHeader` bên web.
+   *
+   * Tách khỏi {@link total} chứ không dùng chung một khe: `total` là con số nên nó cắt ở một
+   * dòng, còn đây là một câu và phải xuống dòng đủ. Trước khi có prop này, màn Chính sách thuê
+   * đẩy câu giải thích qua khe `total` và người dùng đọc được đúng bốn chữ rồi tới "…" — cùng
+   * cái bẫy `ShopIdentityCard` đã ghi lại.
+   */
+  subtitle?: string;
   total?: string;
   action?: ReactNode;
 }) {
@@ -33,6 +43,11 @@ export function ManagePageTitle({
         <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold} numberOfLines={1}>
           {title}
         </Text>
+        {subtitle ? (
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            {subtitle}
+          </Text>
+        ) : null}
         {total ? (
           <Text col={colors.textMuted} fos={fontSize.bodySm} numberOfLines={1}>
             {total}

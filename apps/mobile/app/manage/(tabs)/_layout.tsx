@@ -36,6 +36,7 @@ export default function ManageTabsLayout() {
         <Tabs.Screen name="bookings" />
         <Tabs.Screen name="vehicles" />
         <Tabs.Screen name="maintenance" />
+        <Tabs.Screen name="calendar" />
         <Tabs.Screen name="customers" />
         <Tabs.Screen name="finance" />
         <Tabs.Screen name="receipts" />
@@ -51,6 +52,7 @@ export default function ManageTabsLayout() {
         <Tabs.Screen name="shop/policies" />
         <Tabs.Screen name="members" />
         <Tabs.Screen name="drivers" />
+        <Tabs.Screen name="support" />
         <Tabs.Screen name="more" />
       </Tabs>
     </ManageDrawerHost>
