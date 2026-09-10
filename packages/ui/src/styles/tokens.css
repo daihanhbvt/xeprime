@@ -59,6 +59,9 @@
   --xp-color-error-bg: #fef2f2;
   --xp-color-info: #2563eb;
   --xp-color-info-bg: #eff6ff;
+  /* Bậc "đang chạy" (STATUS_COLOR.PROCESSING) — lý do chọn màu ở XP_TOKENS. */
+  --xp-color-processing: #0e7490;
+  --xp-color-processing-bg: #ecfeff;
   --xp-color-neutral: #6b6560;
   --xp-color-neutral-bg: #f5f3ef;
 

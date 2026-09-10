@@ -276,6 +276,7 @@
   },
   "occupancySourceType": {
     "booking": "Đơn thuê",
+    "booking_request": "Chờ giữ chỗ",
     "blocked_range": "Xe bị khóa",
     "maintenance": "Bảo dưỡng"
   },

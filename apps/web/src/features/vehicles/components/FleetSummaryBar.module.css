@@ -42,6 +42,7 @@
   color: var(--xp-color-success);
 }
 
+/* `renting` là PROCESSING trong VEHICLE_OPERATION_STATUS_META, không phải INFO. */
 .renting {
-  color: var(--xp-color-info);
+  color: var(--xp-color-processing);
 }

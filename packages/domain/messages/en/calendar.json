@@ -48,10 +48,6 @@
   },
   "legend": {
     "ariaLabel": "Calendar legend",
-    "booking": "Booking",
-    "active": "On rental",
-    "maintenance": "Maintenance",
-    "blocked": "Blocked",
     "customPrice": "Custom price",
     "holiday": "Holiday"
   },

@@ -15,6 +15,7 @@ import {
   MAINTENANCE_TYPES_RESET_OIL_CHANGE,
   MAINTENANCE_TYPE_LABEL,
   OCCUPANCY_SOURCE_TYPE,
+  OCCUPANCY_SOURCE_TYPE_META,
   ODOMETER_SOURCE,
   PAYMENT_METHOD,
   PRIVATE_FILE_PURPOSE,
@@ -27,6 +28,7 @@ import {
   type MaintenanceDueStatus,
   type MaintenanceStatus,
   type MaintenanceType,
+  type OccupancySourceType,
   type PaginationMeta,
 } from '@xeprime/types';
 import { AuditService } from '../../audit/audit.service';
@@ -1058,7 +1060,11 @@ export class MaintenanceService {
           ? `Đơn thuê ${codeById.get(row.sourceId) ?? ''}`.trim()
           : row.sourceType === OCCUPANCY_SOURCE_TYPE.MAINTENANCE
             ? 'Lịch bảo dưỡng khác'
-            : 'Xe bị khóa',
+            : // Nhãn của mọi nguồn còn lại lấy từ META, KHÔNG rơi hết về "Xe bị khóa": một khoản
+              // giữ chỗ (`booking_request`) không phải là một lệnh khoá xe, và nói sai ở đây thì
+              // người xếp lịch bảo dưỡng đi tìm nhầm chỗ để gỡ.
+              (OCCUPANCY_SOURCE_TYPE_META[row.sourceType as OccupancySourceType]?.label ??
+              OCCUPANCY_SOURCE_TYPE_META[OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE].label),
     }));
   }
 

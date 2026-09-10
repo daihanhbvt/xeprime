@@ -15,14 +15,13 @@
   background: var(--xp-color-bg-container);
   overflow: hidden;
 
-  /* Ba giá trị DẪN XUẤT từ token — không hex tự chế (ADR 0003). */
+  /* Giá trị DẪN XUẤT từ token — không hex tự chế (ADR 0003). */
   --xp-cal-line: var(--xp-color-border);
   --xp-cal-weekend-bg: color-mix(
     in srgb,
     var(--xp-color-bg-muted) 60%,
     var(--xp-color-bg-container)
   );
-  --xp-cal-zebra-bg: color-mix(in srgb, var(--xp-color-bg-muted) 45%, var(--xp-color-bg-container));
 
   /*
    * Nền cột ngày lễ. Đỏ ngữ nghĩa vì lịch Việt Nam đọc ngày nghỉ bằng màu đỏ — nhưng PHA RẤT
@@ -251,6 +250,14 @@
   position: relative;
 }
 
+/*
+ * Mọi hàng CÙNG một nền — cố ý không có zebra.
+ *
+ * Sọc xám của bản trước trùng đúng tông với nền cuối tuần, nên hai thông tin khác hẳn nhau
+ * ("hàng thứ chẵn" và "Thứ 7/CN") nói bằng cùng một màu, và mắt không đọc được cái nào ra cái
+ * nào. Lưới đã có đường kẻ đủ cả hàng lẫn cột để dò theo, nên nền được để trống cho thứ thật
+ * sự cần màu: thanh event, cột hôm nay, cột ngày lễ.
+ */
 .row {
   position: absolute;
   top: 0;
@@ -259,11 +266,6 @@
   width: var(--xp-canvas-width);
   border-bottom: 1px solid var(--xp-cal-line);
   background: var(--xp-color-bg-container);
-}
-
-/* Zebra theo HÀNG XE (không theo cột — cột đã có ranh giới + nền hôm nay/cuối tuần). */
-.rowZebra {
-  background: var(--xp-cal-zebra-bg);
 }
 
 /* ── Cột xe (sticky trái) ──────────────────────────────────────────────── */
@@ -281,10 +283,6 @@
   /* Sticky phải ĐỤC — kế thừa từ nền hàng bằng inherit thì thành trong suốt khi cuộn. */
   background: var(--xp-color-bg-container);
   border-right: 1px solid var(--xp-color-border);
-}
-
-.rowZebra .resourceCell {
-  background: var(--xp-cal-zebra-bg);
 }
 
 /* Thu gọn: chỉ còn ảnh, canh giữa — thông tin đầy đủ nằm ở popover của chính ô. */
@@ -465,6 +463,17 @@
   border-color: color-mix(in srgb, var(--xp-color-info) 35%, var(--xp-color-info-bg));
 }
 
+/*
+ * `STATUS_COLOR.PROCESSING` — đơn ĐANG THUÊ. Phải khác hẳn `.toneBlue` (đã xác nhận): trên một
+ * màn điều phối, "xe đang ở ngoài đường" và "xe đã nhận đơn nhưng còn ở bãi" là hai việc khác
+ * nhau, tô cùng màu là xoá mất khác biệt đó.
+ */
+.toneCyan {
+  background: var(--xp-color-processing-bg);
+  color: var(--xp-color-processing);
+  border-color: color-mix(in srgb, var(--xp-color-processing) 35%, var(--xp-color-processing-bg));
+}
+
 .toneGreen {
   background: var(--xp-color-success-bg);
   color: var(--xp-color-success);
@@ -525,8 +534,11 @@
   z-index: 2;
 }
 
-/* Khoá xe: nét đứt — loại event không chỉ phân biệt bằng màu. */
-.eventBlocked {
+/*
+ * Nét đứt = chỗ bị giữ mà chưa phải chuyến đang chạy (xe bị khoá, khoản giữ chỗ chờ tiền).
+ * Loại event không chỉ phân biệt bằng màu — chú giải dùng lại đúng nét này (`.legendDashed`).
+ */
+.eventDashed {
   border-style: dashed;
 }
 
@@ -735,45 +747,33 @@
   gap: 6px;
 }
 
+/*
+ * Ô màu mẫu KHÔNG có bảng màu riêng: nó nhận đúng class `.tone*` mà thanh event dùng (xem
+ * `statusColorToneClass`). Bản trước có bộ `.legendBooking/.legendActive` chép tay và đã trôi
+ * khỏi lưới — chú giải nói "Đang thuê màu xanh lá" trong khi thanh thật màu xanh dương.
+ *
+ * Vì vậy chỉ khai `border-width`/`border-style`, KHÔNG khai `border` rút gọn: quy tắc này nằm
+ * SAU các `.tone*` trong file, một shorthand ở đây sẽ ghi đè `border-color` của tone.
+ */
 .legendSwatch {
   width: 12px;
   height: 12px;
   border-radius: 3px;
-  border: 1px solid transparent;
+  border-width: 1px;
+  border-style: solid;
+  border-color: transparent;
 }
 
-.legendBooking {
-  background: var(--xp-color-info-bg);
-  border-color: color-mix(in srgb, var(--xp-color-info) 35%, var(--xp-color-info-bg));
-}
-
-.legendActive {
-  background: var(--xp-color-success-bg);
-  border-color: color-mix(in srgb, var(--xp-color-success) 35%, var(--xp-color-success-bg));
-}
-
-.legendMaintenance {
-  background: color-mix(
-    in srgb,
-    var(--xp-color-event-maintenance) 10%,
-    var(--xp-color-bg-container)
-  );
-  border-color: color-mix(
-    in srgb,
-    var(--xp-color-event-maintenance) 35%,
-    var(--xp-color-bg-container)
-  );
-}
-
-.legendBlocked {
-  background: var(--xp-color-neutral-bg);
-  border-color: var(--xp-color-border);
+/* Nét đứt, giống hệt thanh event (`.eventDashed`) — màu không phải tín hiệu duy nhất. */
+.legendDashed {
   border-style: dashed;
 }
 
+/* Chấm giá riêng — cùng hình tròn gold với `.priceMarker` trong ô. */
 .legendPrice {
   border-radius: 50%;
   background: var(--xp-color-primary);
+  border-color: var(--xp-color-primary);
 }
 
 /* Cùng nền với cột thật + viền đỏ để ô mẫu 12px không biến mất trên nền trắng. */

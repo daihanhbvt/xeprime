@@ -48,10 +48,6 @@
   },
   "legend": {
     "ariaLabel": "Chú giải lịch",
-    "booking": "Đơn thuê",
-    "active": "Đang thuê",
-    "maintenance": "Bảo dưỡng",
-    "blocked": "Xe bị khóa",
     "customPrice": "Giá riêng",
     "holiday": "Ngày lễ"
   },
