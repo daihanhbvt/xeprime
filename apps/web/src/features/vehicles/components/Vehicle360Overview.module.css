@@ -427,6 +427,11 @@
   color: var(--xp-color-info);
 }
 
+/* "Đang thuê" là bậc PROCESSING trong BOOKING_STATUS_META — không phải info (đã xác nhận). */
+.iconProcessing {
+  color: var(--xp-color-processing);
+}
+
 .iconError {
   color: var(--xp-color-error);
 }

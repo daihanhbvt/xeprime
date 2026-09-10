@@ -276,6 +276,7 @@
   },
   "occupancySourceType": {
     "booking": "Booking",
+    "booking_request": "Pending hold",
     "blocked_range": "Vehicle blocked",
     "maintenance": "Maintenance"
   },

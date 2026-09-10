@@ -9,7 +9,14 @@ import {
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Prisma } from '@xeprime/prisma';
-import { API_ERROR_CODE, OCCUPANCY_SOURCE_TYPE, PERMISSION, SERVICE_TYPE } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  OCCUPANCY_SOURCE_TYPE,
+  OCCUPANCY_SOURCE_TYPE_META,
+  PERMISSION,
+  SERVICE_TYPE,
+  type OccupancySourceType,
+} from '@xeprime/types';
 import { CurrentTenant, RequirePermissions, TenantScoped } from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -444,6 +451,17 @@ export class CalendarController {
   }
 }
 
+/**
+ * Nhãn của một occupancy KHÔNG phải đơn thuê.
+ *
+ * Lấy từ META của loại nguồn thay vì if/else hai nhánh: nhánh else cũ dán "Xe bị khóa" lên
+ * MỌI loại chưa liệt kê — nên một khoản giữ chỗ (`booking_request`, sinh khi gian hàng duyệt
+ * yêu cầu ở tuyến hoa hồng) hiện lên lịch như một lệnh khoá xe, trong khi thẻ xem nhanh của
+ * chính nó lại ghi "Chờ giữ chỗ".
+ */
 function nonBookingTitle(sourceType: string): string {
-  return sourceType === OCCUPANCY_SOURCE_TYPE.MAINTENANCE ? 'Bảo dưỡng' : 'Xe bị khóa';
+  return (
+    OCCUPANCY_SOURCE_TYPE_META[sourceType as OccupancySourceType]?.label ??
+    OCCUPANCY_SOURCE_TYPE_META[OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE].label
+  );
 }

@@ -12,6 +12,7 @@
 | [`09_PRODUCT_FLOWS_AND_BUSINESS_RULES.md`](09_PRODUCT_FLOWS_AND_BUSINESS_RULES.md) | Quy tắc nghiệp vụ mới nhất cho sitemap, user flow, tiền/cọc, hủy và giao nhận |
 | [`11_FIGJAM_MASTER_PROMPT.md`](11_FIGJAM_MASTER_PROMPT.md) | Prompt tự chứa toàn bộ sitemap, role, flow, state, tiền và gap để dán vào FigJam AI |
 | [`XePrime_Design_Handoff_2026-09-09.xlsx`](XePrime_Design_Handoff_2026-09-09.xlsx) | Workbook có thể lọc: route/màn hình, flow, permission, trạng thái, tiền, vehicle matrix và gap |
+| [`12_DESIGNER_STAGING_ACCESS.md`](12_DESIGNER_STAGING_ACCESS.md) | Giới thiệu ngắn, đường dẫn và tài khoản staging theo từng vai trò dành cho designer |
 
 ## Chuyên đề còn dùng
 

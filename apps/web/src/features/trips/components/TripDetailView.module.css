@@ -98,15 +98,22 @@
   color: var(--xp-color-text-secondary);
 }
 
-/* Khối "đang diễn ra": nền nhấn để mắt rơi vào đúng thứ đang cần theo dõi. */
+/*
+ * Khối "đang diễn ra": nền nhấn để mắt rơi vào đúng thứ đang cần theo dõi.
+ *
+ * Màu là bậc PROCESSING, KHÔNG phải success: khối này chỉ hiện khi chặng của khách là `active`,
+ * mà chip trạng thái ngay trên đầu trang lấy màu từ `CUSTOMER_TRIP_STAGE_META` (PROCESSING).
+ * Dùng xanh lá ở đây là một màn hình nói "Đang thuê" bằng hai màu khác nhau — và xanh lá đã có
+ * nghĩa riêng là "hoàn thành".
+ */
 .highlight {
   display: flex;
   flex-direction: column;
   gap: var(--xp-space-xs);
   padding: var(--xp-space-md);
-  border: 1px solid var(--xp-color-success);
+  border: 1px solid var(--xp-color-processing);
   border-radius: var(--xp-border-radius);
-  background: var(--xp-color-success-bg);
+  background: var(--xp-color-processing-bg);
   min-width: 0;
 }
 
@@ -116,7 +123,7 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--xp-color-success);
+  color: var(--xp-color-processing);
 }
 
 .highlightLead {

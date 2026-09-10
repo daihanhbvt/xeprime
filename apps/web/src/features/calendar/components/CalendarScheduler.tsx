@@ -5,6 +5,7 @@ import { Alert, App, Button, Popover, Skeleton, Switch, Tag } from 'antd';
 import {
   CalendarOutlined,
   CarOutlined,
+  ClockCircleOutlined,
   CloseOutlined,
   DollarOutlined,
   FlagFilled,
@@ -16,11 +17,14 @@ import {
 import { useLayoutEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
+  BOOKING_STATUS,
   BOOKING_STATUS_META,
+  BOOKING_STATUS_OCCUPYING,
   HOLIDAY_EVENT_TYPE_META,
   OCCUPANCY_SOURCE_TYPE,
   OCCUPANCY_SOURCE_TYPE_META,
   PERMISSION,
+  STATUS_COLOR,
   VEHICLE_BLOCK_REASON,
   VEHICLE_BLOCK_REASON_META,
   VEHICLE_OPERATION_STATUS,
@@ -28,6 +32,7 @@ import {
   type BookingStatus,
   type HolidayEventType,
   type OccupancySourceType,
+  type StatusColor,
   type VehicleBlockReason,
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
@@ -522,12 +527,11 @@ export function CalendarScheduler() {
                 const resource = resources[virtualRow.index];
                 if (!resource) return null;
                 const events = eventsByResource.get(resource.id) ?? [];
-                const zebra = virtualRow.index % 2 === 1;
 
                 return (
                   <div
                     key={resource.id}
-                    className={[styles.row, zebra ? styles.rowZebra : ''].filter(Boolean).join(' ')}
+                    className={styles.row}
                     style={{
                       height: rowHeight,
                       transform: `translateY(${virtualRow.start - HEADER_H}px)`,
@@ -1304,6 +1308,9 @@ function EventBar({
       <ToolOutlined className={styles.eventIcon} aria-hidden />
     ) : event.type === OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE ? (
       <LockOutlined className={styles.eventIcon} aria-hidden />
+    ) : event.type === OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST ? (
+      // Chỗ đang giữ chờ tiền — cùng tông gold với `reserved`, phân biệt bằng đồng hồ + nét đứt.
+      <ClockCircleOutlined className={styles.eventIcon} aria-hidden />
     ) : null;
 
   return (
@@ -1322,7 +1329,7 @@ function EventBar({
         className={[
           styles.eventBar,
           toneClass,
-          event.type === OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE ? styles.eventBlocked : '',
+          isDashedEvent(event.type) ? styles.eventDashed : '',
           clippedStart ? styles.clippedStart : '',
           clippedEnd ? styles.clippedEnd : '',
         ]
@@ -1351,28 +1358,67 @@ function EventBar({
   );
 }
 
-/** Chú giải gọn — cùng META màu với thanh event, để lưới không cần tooltip mới hiểu được. */
+/**
+ * Trạng thái đơn ĐƯỢC CHÚ GIẢI: `BOOKING_STATUS_OCCUPYING` trừ `confirmed`.
+ *
+ * `confirmed` bị loại vì trong sản phẩm KHÔNG có đường nào để một đơn dừng lại ở đó: web và
+ * native chỉ chuyển đơn sang `cancelled`/`no_show`, còn luồng bàn giao đi `reserved → confirmed
+ * → active` trong CÙNG một transaction (`silent`) — commit xong đơn đã là `active`, không ai
+ * đọc thấy chặng giữa. Chú giải một trạng thái không xảy ra chỉ làm hàng chú giải dài thêm.
+ *
+ * Suy ra từ danh sách chiếm lịch thay vì gõ tay hai mã: thêm/bớt một trạng thái chiếm lịch ở
+ * `@xeprime/types` là chú giải tự đi theo. `eventToneClass` KHÔNG lọc gì — dữ liệu cũ còn đơn
+ * `confirmed` (seed demo) vẫn được vẽ đúng màu của nó.
+ */
+const LEGEND_BOOKING_STATUSES = BOOKING_STATUS_OCCUPYING.filter(
+  (status) => status !== BOOKING_STATUS.CONFIRMED,
+);
+
+/**
+ * Chú giải — SINH RA TỪ chính dữ liệu mà lưới vẽ, không phải một danh sách chép tay.
+ *
+ * Trạng thái đơn lấy từ `LEGEND_BOOKING_STATUSES`, nhãn lấy từ `Domain.bookingStatus` — cùng
+ * nguồn với thẻ trạng thái trong thẻ xem nhanh, nên chú giải và nhãn không thể gọi tên khác
+ * nhau. Bản trước liệt kê "Đơn thuê" (không phải trạng thái nào) và "Đang thuê" màu xanh lá,
+ * trong khi lưới vẽ `active` màu xanh dương và không hề có chú giải cho `reserved`.
+ */
 function CalendarLegend() {
   const t = useTranslations('Calendar');
+  const domainLabel = useDomainLabel();
+
+  const sourceItem = (type: OccupancySourceType) => (
+    <span key={type} className={styles.legendItem}>
+      <i
+        className={[
+          styles.legendSwatch,
+          sourceToneClass(type),
+          isDashedEvent(type) ? styles.legendDashed : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        aria-hidden
+      />
+      {domainLabel('occupancySourceType', type, OCCUPANCY_SOURCE_TYPE_META[type]?.label)}
+    </span>
+  );
 
   return (
     <div className={styles.legend} aria-label={t('legend.ariaLabel')}>
-      <span className={styles.legendItem}>
-        <i className={[styles.legendSwatch, styles.legendBooking].join(' ')} aria-hidden />
-        {t('legend.booking')}
-      </span>
-      <span className={styles.legendItem}>
-        <i className={[styles.legendSwatch, styles.legendActive].join(' ')} aria-hidden />
-        {t('legend.active')}
-      </span>
-      <span className={styles.legendItem}>
-        <i className={[styles.legendSwatch, styles.legendMaintenance].join(' ')} aria-hidden />
-        {t('legend.maintenance')}
-      </span>
-      <span className={styles.legendItem}>
-        <i className={[styles.legendSwatch, styles.legendBlocked].join(' ')} aria-hidden />
-        {t('legend.blocked')}
-      </span>
+      {LEGEND_BOOKING_STATUSES.map((status) => (
+        <span key={status} className={styles.legendItem}>
+          <i
+            className={[
+              styles.legendSwatch,
+              statusColorToneClass(BOOKING_STATUS_META[status].color),
+            ].join(' ')}
+            aria-hidden
+          />
+          {domainLabel('bookingStatus', status, BOOKING_STATUS_META[status].label)}
+        </span>
+      ))}
+      {sourceItem(OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST)}
+      {sourceItem(OCCUPANCY_SOURCE_TYPE.MAINTENANCE)}
+      {sourceItem(OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE)}
       <span className={styles.legendItem}>
         <i className={[styles.legendSwatch, styles.legendPrice].join(' ')} aria-hidden />
         {t('legend.customPrice')}
@@ -1386,28 +1432,61 @@ function CalendarLegend() {
 }
 
 /**
- * Tông màu theo loại/trạng thái — QUYẾT ĐỊNH nằm ở `BOOKING_STATUS_META`/`OCCUPANCY_SOURCE_TYPE`
- * của @xeprime/types (CLAUDE.md mục 5 cấm hard code status trong component); ở đây chỉ dịch
- * `StatusColor` sang class dùng token ngữ nghĩa (info/success/warning/error/event-*).
+ * `StatusColor` (bảng màu ngữ nghĩa dùng chung của @xeprime/types) → class tông của lịch.
+ *
+ * Đây là chỗ DUY NHẤT dịch màu sang class: thanh event và ô màu mẫu của chú giải cùng gọi nó,
+ * nên chú giải không thể nói một màu khác với lưới nữa (lỗi cũ: "Đang thuê" có ô xanh lá trong
+ * khi thanh thật màu xanh dương). Quyết định màu vẫn nằm ở `*_META` — CLAUDE.md mục 5.
  */
-function eventToneClass(event: CalendarEvent): string {
-  if (event.type === OCCUPANCY_SOURCE_TYPE.MAINTENANCE) return styles.toneMaintenance!;
-  if (event.type === OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE) return styles.toneBlocked!;
-
-  const meta = event.status ? BOOKING_STATUS_META[event.status as BookingStatus] : undefined;
-  switch (meta?.color) {
-    case 'green':
+function statusColorToneClass(color: StatusColor | undefined): string {
+  switch (color) {
+    case STATUS_COLOR.SUCCESS:
       return styles.toneGreen!;
-    case 'gold':
+    case STATUS_COLOR.WAITING:
       return styles.toneGold!;
-    case 'orange':
+    case STATUS_COLOR.WARNING:
       return styles.toneOrange!;
-    case 'red':
+    case STATUS_COLOR.DANGER:
       return styles.toneRed!;
-    case 'blue':
-    case 'cyan':
+    case STATUS_COLOR.INFO:
       return styles.toneBlue!;
+    // `PROCESSING` KHÔNG gộp vào `INFO` nữa: `confirmed` và `active` là hai việc khác nhau của
+    // cùng một chiếc xe, gộp màu là xoá mất khác biệt duy nhất nhìn thấy được trên lưới.
+    case STATUS_COLOR.PROCESSING:
+      return styles.toneCyan!;
     default:
       return styles.toneNeutral!;
   }
+}
+
+/**
+ * Tông của một nguồn chiếm lịch KHÔNG phải đơn thuê.
+ *
+ * Bảo dưỡng và khoá xe có màu riêng của lịch (`--xp-color-event-*`, không thuộc bảng trạng
+ * thái); các nguồn còn lại — hiện là khoản giữ chỗ `booking_request` — lấy màu từ META của
+ * chính loại nguồn thay vì một hằng chép tay ở đây.
+ */
+function sourceToneClass(type: OccupancySourceType): string {
+  if (type === OCCUPANCY_SOURCE_TYPE.MAINTENANCE) return styles.toneMaintenance!;
+  if (type === OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE) return styles.toneBlocked!;
+  return statusColorToneClass(OCCUPANCY_SOURCE_TYPE_META[type]?.color);
+}
+
+/** Tông của một thanh event: LOẠI nguồn trước, rồi tới trạng thái đơn. */
+function eventToneClass(event: CalendarEvent): string {
+  const type = event.type as OccupancySourceType;
+  if (type !== OCCUPANCY_SOURCE_TYPE.BOOKING) return sourceToneClass(type);
+  return statusColorToneClass(
+    event.status ? BOOKING_STATUS_META[event.status as BookingStatus]?.color : undefined,
+  );
+}
+
+/**
+ * Event vẽ nét ĐỨT: chỗ bị giữ mà chưa phải một chuyến đang chạy — xe bị khoá thủ công và
+ * khoản giữ chỗ chờ tiền. Nét đứt là tín hiệu KHÔNG dựa vào màu (chú giải dùng lại đúng nó).
+ */
+function isDashedEvent(type: string): boolean {
+  return (
+    type === OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE || type === OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST
+  );
 }
