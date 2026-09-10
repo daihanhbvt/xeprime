@@ -87,8 +87,29 @@ export const colors = {
   warningSurface: resolve('color-warning-bg'),
   info: resolve('color-info'),
   infoSurface: resolve('color-info-bg'),
+  /**
+   * Bậc "đang chạy" — TÁCH khỏi `info`, không phải một sắc thái của nó.
+   *
+   * `STATUS_COLOR.PROCESSING` (đơn `active`) và `INFO` (đơn `confirmed`) là hai việc khác nhau
+   * của cùng một chiếc xe. Bảng `statusTone()` của viên nhãn từng gộp cả hai vào xanh dương vì
+   * nền sáng chưa có bậc thứ năm; nay `@xeprime/ui` đã có, và trên lưới lịch thì khác biệt đó là
+   * thứ DUY NHẤT nhìn thấy được giữa "đã chốt lịch" và "khách đang cầm xe đi".
+   */
+  processing: resolve('color-processing'),
+  processingSurface: resolve('color-processing-bg'),
   /** Giá thuê có token riêng — web tô giá bằng chính màu này, không phải màu chữ thường. */
   price: resolve('color-price'),
+  /**
+   * Hai vai màu của LỊCH — không phải màu trạng thái, và cố ý không mượn màu trạng thái.
+   *
+   * Bảo dưỡng mang `STATUS_COLOR.SPECIAL` và khoá xe mang `NEUTRAL` trong `@xeprime/types`; nếu
+   * lưới đọc thẳng hai vai đó qua `statusTone()` thì bảo dưỡng ra GOLD (bản native chưa có token
+   * tím nên `SPECIAL` rơi về nhấn thương hiệu) và trùng luôn với nền cột hôm nay, còn khoá xe ra
+   * xám phẳng. Web không làm vậy: nó có hai token riêng cho đúng hai loại này, và đó là lý do một
+   * thanh bảo dưỡng trên web tím còn trên app thì vàng.
+   */
+  eventMaintenance: resolve('color-event-maintenance'),
+  eventBlocked: resolve('color-event-blocked'),
   discount: resolve('color-discount'),
   onDiscount: resolve('color-discount-contrast'),
 } as const;

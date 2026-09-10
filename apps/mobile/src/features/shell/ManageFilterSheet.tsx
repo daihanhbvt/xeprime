@@ -185,9 +185,7 @@ export const ManageFilterSheet = memo(function ManageFilterSheet({
     const from = draft[group.fromKey] ?? group.from;
     const to = draft[group.toKey] ?? group.to;
     if (from && to) return tUnits('range', { from: fmt.dateKey(from), to: fmt.dateKey(to) });
-    return from
-      ? `${tLabels('from')} ${fmt.dateKey(from)}`
-      : `${tLabels('to')} ${fmt.dateKey(to)}`;
+    return from ? `${tLabels('from')} ${fmt.dateKey(from)}` : `${tLabels('to')} ${fmt.dateKey(to)}`;
   };
 
   /** Gỡ chip: khoảng ngày phải xoá CẢ HAI đầu — bỏ sót một đầu là bộ lọc vẫn còn mà chip đã biến mất. */

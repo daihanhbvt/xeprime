@@ -100,7 +100,6 @@ export function VehiclePricingWorkspace({
 }: VehiclePricingWorkspaceProps) {
   const t = useTranslations('Vehicles.pricing');
   const tActions = useTranslations('Common.actions');
-  const tManage = useTranslations('VehicleManage.pricing');
   const { modal } = App.useApp();
 
   const overriding = pricing.source === POLICY_SOURCE.VEHICLE;
@@ -349,8 +348,8 @@ export function VehiclePricingWorkspace({
               {calendarHref ? (
                 <CalendarPriceLink
                   href={calendarHref}
-                  hint={tManage('calendarHint')}
-                  label={tManage('calendarLink')}
+                  hint={t('calendarHint')}
+                  label={t('calendarLink')}
                 />
               ) : null}
             </section>
@@ -428,8 +427,8 @@ export function VehiclePricingWorkspace({
               {calendarHref ? (
                 <CalendarPriceLink
                   href={calendarHref}
-                  hint={tManage('calendarHint')}
-                  label={tManage('calendarLink')}
+                  hint={t('calendarHint')}
+                  label={t('calendarLink')}
                 />
               ) : null}
             </section>

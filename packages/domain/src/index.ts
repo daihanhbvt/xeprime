@@ -197,3 +197,19 @@ export {
   type ThreadMessage,
   type ThreadMessageLike,
 } from './chat-thread';
+
+/**
+ * Bốn văn bản pháp lý công khai của sàn — slug, ngày hiệu lực, thứ tự điều khoản.
+ *
+ * Dùng chung vì cả hai client viện dẫn cùng bộ văn bản: web render tại `/legal/<slug>`, app
+ * native mở đúng địa chỉ đó trong trình duyệt trong-app (ADR 0028 điều 9).
+ */
+export {
+  LEGAL_DOC,
+  LEGAL_DOC_VALUES,
+  LEGAL_EFFECTIVE_FROM,
+  LEGAL_SECTIONS,
+  isLegalDoc,
+  legalPath,
+  type LegalDoc,
+} from './legal';

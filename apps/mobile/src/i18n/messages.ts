@@ -15,6 +15,7 @@ import enNavigation from '@xeprime/domain/messages/en/navigation.json';
 import enManageCommon from '@xeprime/domain/messages/en/manage-common.json';
 import enVehicles from '@xeprime/domain/messages/en/vehicles.json';
 import enBranches from '@xeprime/domain/messages/en/branches.json';
+import enCalendar from '@xeprime/domain/messages/en/calendar.json';
 import enCustomers from '@xeprime/domain/messages/en/customers.json';
 import enFinance from '@xeprime/domain/messages/en/finance.json';
 import enMaintenance from '@xeprime/domain/messages/en/maintenance.json';
@@ -42,6 +43,7 @@ import viNavigation from '@xeprime/domain/messages/vi/navigation.json';
 import viManageCommon from '@xeprime/domain/messages/vi/manage-common.json';
 import viVehicles from '@xeprime/domain/messages/vi/vehicles.json';
 import viBranches from '@xeprime/domain/messages/vi/branches.json';
+import viCalendar from '@xeprime/domain/messages/vi/calendar.json';
 import viCustomers from '@xeprime/domain/messages/vi/customers.json';
 import viFinance from '@xeprime/domain/messages/vi/finance.json';
 import viMaintenance from '@xeprime/domain/messages/vi/maintenance.json';
@@ -89,6 +91,7 @@ export const MESSAGES = {
     ManageCommon: viManageCommon,
     Vehicles: viVehicles,
     Branches: viBranches,
+    Calendar: viCalendar,
     Customers: viCustomers,
     Finance: viFinance,
     Maintenance: viMaintenance,
@@ -118,6 +121,7 @@ export const MESSAGES = {
     ManageCommon: enManageCommon,
     Vehicles: enVehicles,
     Branches: enBranches,
+    Calendar: enCalendar,
     Customers: enCustomers,
     Finance: enFinance,
     Maintenance: enMaintenance,

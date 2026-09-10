@@ -5,6 +5,7 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { type CurrentUser } from '@/features/auth/api';
 import { LOGIN_METHOD, type LoginMethod } from './post-login-destination';
 import { Screen } from '@/components/layout/Screen';
+import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { APP_NAME } from '@/lib/app-name';
 import { colors, fontSize, space } from '@/theme/tokens';
 import { AUTH_METHOD, AuthMethodTabs, type AuthMethod } from './components/AuthMethodTabs';
@@ -82,6 +83,13 @@ export function LoginScreen({
           </YStack>
 
           <SocialButtons onSuccess={(user) => onSuccess(user, LOGIN_METHOD.SOCIAL)} />
+
+          {/*
+            Cam kết pháp lý đứng NGAY dưới bộ nút đăng nhập, đúng chỗ web đặt nó trong
+            `AuthPanel`: app không có chân trang marketplace, nên thiếu dòng này thì cả hai
+            đường vào tài khoản không hề dẫn tới điều khoản hay chính sách bảo mật nào.
+          */}
+          <LegalConsentNote place="auth" />
 
           <AuthSwitchLink
             prompt={t('switchMode.noAccount')}

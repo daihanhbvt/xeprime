@@ -10,7 +10,6 @@ import {
   VEHICLE_PUBLIC_STATUS_VALUES,
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
-import { useAppToast } from '@/components/feedback/use-app-toast';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
@@ -25,6 +24,7 @@ import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
+import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
@@ -73,9 +73,7 @@ function vehicleKeyExtractor(vehicle: VehicleListItem): string {
 export function VehicleListScreen() {
   const t = useTranslations('Vehicles.list');
   const tLabels = useTranslations('Common.labels');
-  const tStates = useTranslations('Common.states');
   const tActions = useTranslations('Common.actions');
-  const toast = useAppToast();
   const navigateOnce = useNavigateOnce();
   const permissions = usePermissions();
   const domainLabel = useDomainLabel();
@@ -196,15 +194,15 @@ export function VehicleListScreen() {
   );
 
   /*
-   * "Lịch" là nút THỨ BA của web, nhưng màn lịch (CAL-01) chưa có ở app.
+   * "Lịch" là nút THỨ BA của web, và nó dẫn tới màn lịch ĐÃ LỌC SẴN theo chiếc xe vừa chạm —
+   * cùng cách `vehicleSchedulePath` bên web dựng đường đi (`?q=<biển số || tên>`).
    *
-   * Vẫn dựng nút và trả lời bằng một câu, không ẩn đi: ẩn thì người dùng đang quen web sẽ đi
-   * tìm, còn hiện mà im lặng khi chạm thì họ tưởng máy treo và bấm tiếp.
+   * Ưu tiên biển số vì nó phân biệt tốt hơn tên xe trùng lặp; không có biển thì rơi về tên.
    */
-  const openSchedule = useCallback(() => toast.showInfo(tStates('featureComingSoon')), [
-    toast,
-    tStates,
-  ]);
+  const openSchedule = useCallback(
+    (vehicle: VehicleListItem) => navigateOnce(vehicleSchedulePath(vehicle, { back: true })),
+    [navigateOnce],
+  );
 
   const canEdit = permissions.has(PERMISSION.VEHICLE_UPDATE);
 

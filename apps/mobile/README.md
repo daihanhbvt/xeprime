@@ -204,6 +204,7 @@ apps/mobile/
 │   ├── listings/[id].tsx         #   chi tiết xe
 │   ├── listings/[id]/request.tsx #   BKG-01 — wizard gửi yêu cầu thuê (CÔNG KHAI)
 │   ├── trips/[id].tsx            #   BKG-15/16 — chi tiết chuyến của khách
+│   ├── legal/[doc].tsx           #   4 văn bản pháp lý — WebView đọc bản web, CÔNG KHAI
 │   └── manage/                   #   NAVIGATOR B — khu quản lý gian hàng (segment THẬT, trùng web)
 │       ├── _layout.tsx           #     <Tabs> riêng + <ScopeGuard>
 │       ├── index.tsx             #     "/manage"          — tổng quan + trạng thái gian hàng
@@ -666,6 +667,9 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
   kích thước giữ nguyên bố cục nên trang không nhảy khi dữ liệu về. Thẻ danh sách có THANH THAO
   TÁC ở chân (chi nhánh, tài xế, người dùng) dùng `ActionCardSkeleton`, không phải
   `RecordCardSkeleton` — hai khung lệch nhau gần 100pt, tức danh sách nhảy đúng lúc dữ liệu về.
+  Màn LỊCH dùng `CalendarGridSkeleton` — nó vẽ cả cột xe lẫn dải ngày với đúng bề rộng và chiều
+  cao hàng của `CalendarTimeline`; một khối chữ chung chung ở bề mặt cao nhất app sẽ đẩy nội dung
+  nhảy trọn màn hình khi dữ liệu về. Đổi hằng bên lưới thì đổi cả ở khung chờ.
 - Style còn lại bằng `StyleSheet.create`. Màu/khoảng cách/bo góc/cỡ chữ lấy từ
   [src/theme/tokens.ts](src/theme/tokens.ts) — file này **không giữ giá trị nào**, nó đọc
   `XP_TOKENS` của [`@xeprime/ui`](../../packages/ui), đúng nguồn web dựng `tokens.css` và AntD
@@ -754,8 +758,7 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
 
 **Chưa có:** iOS chưa build lần nào, `app.config.ts` tách dev/staging/prod, App Links /
 Universal Links (liên kết đặt lại mật khẩu trong email vì thế mở ở trình duyệt), refetch theo
-`AppState`/NetInfo, push notification, chat thật, và các module Shop · Calendar · Admin của cổng
-quản lý (bốn module đã xong liệt kê ngay dưới). Lộ trình chung: `docs/completion-roadmap.md`;
+`AppState`/NetInfo, push notification, chat thật, và module Admin của cổng quản lý. Lộ trình chung: `docs/completion-roadmap.md`;
 trạng thái từng module của app: `docs/mobile-module-status.md`.
 
 ---
@@ -803,7 +806,7 @@ sẵn theo SDK.
 | P2 sửa xe + ảnh + giá | VEH-04, 06, 05 | `VehicleEditHubScreen` + `VehicleEditFormScreen` · `src/lib/r2-image-upload.ts` · `src/features/vehicle-pricing/` |
 | P3 nguồn xe + bảo dưỡng + giấy tờ | VEH-11, 09, 10, 07 | `VehicleSourceScreen` · `src/features/vehicle-maintenance/` · `src/features/vehicle-documents/` |
 | VEH-08 OCR giấy tờ | — | ⛔ **BỎ** — tracking đánh `Blocked`, web chưa có bản tương đương để clone |
-| VEH-13 giá theo ngày | — | ⏸ **HOÃN** sang module Calendar — lối vào duy nhất trên web là ô lịch |
+| VEH-13 giá theo ngày | — | ✅ Xong 10/09 cùng Calendar — lối vào là ô lịch, y như web (`src/features/calendar/components/DailyPriceSheet.tsx`) |
 
 **Hub sửa xe là SÁU ROUTE, không phải sáu tab**: ở 390px sáu tab chữ không vừa một hàng. Giá trị
 đoạn đường dẫn lấy từ `src/navigation/vehicle-edit-tab.ts` — cùng bộ chuỗi mà `?tab=` của web
@@ -933,6 +936,88 @@ Phần LOGIC của ô ảnh (chọn/chụp → tải lên R2 → toast lỗi quy
 `Content-Length` đã ký của presign.
 
 Chi tiết, ma trận quyền/gói và phần còn nợ: `docs/mobile-shop-module-status.md`.
+
+### Module Calendar (10/09/2026)
+
+Lịch đội xe đã chạy trên app: xem lưới theo ngày → mở chi tiết một đơn/khoá/phiếu bảo dưỡng →
+tạo lịch từ một ô trống → khoá xe → đặt giá riêng, lẻ hoặc cả đội.
+
+| CAL | Nội dung | Ở đâu |
+| --- | --- | --- |
+| 01 | Lịch xe (resource timeline) | `app/manage/(tabs)/calendar.tsx` · `src/features/calendar/CalendarScreen.tsx` · `components/CalendarTimeline.tsx` · `calendar-tone.ts` |
+| 02 | Khoá xe (bảo dưỡng · xe nghỉ · lý do khác) | `components/VehicleBlockSheet.tsx` · `components/VehicleBlockDetailSheet.tsx` · `components/BulkDayBlockSheet.tsx` |
+| 03 | Chống trùng lịch | Không có màn — app gọi `POST /calendar/check-conflict` để cảnh báo sớm và ánh xạ 409 `BOOKING_SCHEDULE_CONFLICT` |
+
+**Cột xe ghim được là nhờ HAI danh sách, không phải một.** React Native không có
+`position: sticky`, nên cột xe phải nằm NGOÀI vùng cuộn ngang: một `FlatList` riêng,
+`scrollEnabled={false}`, đi theo `onScroll` của danh sách dải ngày qua `scrollToOffset`
+(`animated: false`). Đồng bộ chạy đúng MỘT chiều nên không có vòng lặp A↔B. Cả hai dùng hàng cao
+cố định + `getItemLayout`, nên đội 1.000 xe chỉ dựng khoảng mười hàng đang nhìn thấy.
+
+**KHÔNG có kéo-thả, và đó là parity chứ không phải thiếu sót.** Web đã bỏ kéo-thả có chủ đích
+(docblock `CalendarScheduler`): đổi giờ đi qua form sửa đơn/khoá/bảo dưỡng — nơi có xác nhận và
+backend quyết theo ADR 0006. `@dnd-kit` bên web chỉ dùng cho việc sắp lại ảnh xe.
+
+**Chạm thanh event vào THẲNG chi tiết**, đúng vai cú click bên web. Từng có một thẻ xem nhanh
+làm tầng trung gian, dịch từ thẻ hover của web — nhưng web mở thẻ đó bằng
+`trigger={['hover', 'focus']}` chứ không bằng click, và cảm ứng không có hover để dịch, nên thứ
+duy nhất còn lại của cú chạm là vai của cú click. Hai lần chạm cho một việc, không đổi lại được
+gì: mọi thứ thẻ đó chở đều nằm sẵn trong màn chi tiết.
+
+**Bảy lối vào**, tất cả mang `?q=<biển số>` và cờ `back` như `vehicleSchedulePath` của web: menu
+Lịch · thẻ đội xe · hồ sơ 360 (viên mục lục + nút cuối trang) · màn Giá & chính sách (hai khối
+giá) · thẻ yêu cầu thuê · chi tiết yêu cầu thuê.
+
+**Chế độ MỘT XE là câu trả lời cho màn dọc**, không phải bản rút gọn: cùng bộ event, cùng thao
+tác, cùng quyền — chỉ khác cách bày. Lưới trả lời "cả đội hôm nay thế nào", màn này trả lời
+"chiếc xe này bận ngày nào", và câu thứ hai đọc được trong một cột mà không phải cuộn hai chiều.
+
+**Phép tính vị trí thanh event là BẢN SAO có chủ đích** của
+`apps/web/src/features/calendar/utils/` (`computeEventPosition`, `assignPixelLanes`, thang hiển
+thị 12 giờ, sàn bề rộng). Chưa rút lên `@xeprime/domain` vì đợt này không được sửa `apps/web`
+ngoài i18n; khi rút thì cả hai bên cùng đổi import trong một lần.
+
+Chi tiết và phần còn nợ: `docs/mobile-module-status.md` §2.8.
+
+### Trung tâm hỗ trợ + văn bản pháp lý (10/09/2026)
+
+| Dòng | Nội dung | Ở đâu |
+| --- | --- | --- |
+| SYS-05 | Trung tâm hỗ trợ trong cổng quản lý | `app/manage/(tabs)/support.tsx` · `src/features/support/SupportCenterScreen.tsx` · `components/FaqList.tsx` |
+| — | Bốn văn bản pháp lý (WebView) | `app/legal/[doc].tsx` · `src/features/legal/` (`LegalDocScreen` · `components/LegalDocLinks` · `components/LegalConsentNote`) |
+
+Bốn khối y như `SupportCenter` bên web, cùng bó message `ManageCommon.support.*`: bắt đầu nhanh ·
+câu hỏi thường gặp · văn bản pháp lý · liên hệ. Nút "Mở yêu cầu hỗ trợ" báo *đang phát triển* —
+kênh thật (`support_cases`) sống ở `/manage/support/cases`, app chưa dựng màn đó.
+
+**Khác web một điểm, và là một sửa lỗi:** thẻ hướng dẫn lọc theo CẢ cờ gói (ADR 0027 điều 2),
+không chỉ theo quyền. Web chỉ lọc quyền, nên gian hàng chưa mua gói Tài chính vẫn thấy thẻ "Ghi
+thu chi" dù menu đã giấu mục đó — đúng cái "dẫn tới màn 403" mà docblock bên web nói phải tránh.
+
+**Văn bản pháp lý là WEBVIEW, không phải màn native** — dù nội dung (`Legal.docs.*`) đã nằm sẵn
+trong bundle. Văn bản pháp lý phải sửa được ngay khi luật đổi, còn một màn native chỉ đổi được
+qua một bản app mới và một vòng duyệt store. Địa chỉ lấy từ `EXPO_PUBLIC_WEB_URL`
+(`src/lib/web-base-url.ts`); ngôn ngữ đi bằng cookie `XP_LOCALE` trên header của request đầu, vì
+web đọc locale ở phía server và ADR 0012 cấm `?lang=`.
+
+⚠️ `react-native-webview` là NATIVE module: sau khi kéo nhánh này phải `expo run:android` /
+`expo run:ios` lại, dev client cũ không có nó.
+
+**Cam kết pháp lý nay có ở cả hai đường vào tài khoản.** Trước đợt này chúng không dẫn tới điều
+khoản hay chính sách bảo mật nào — App Store review guideline 5.1.1 đòi hỏi điều ngược lại.
+
+| Màn | Hình thức | Vì sao khác nhau |
+| --- | --- | --- |
+| Đăng nhập | câu luôn hiện (`LegalConsentNote place="auth"`) | đúng như web — đăng nhập không phải lúc giao kết |
+| Đăng ký | **ô tick** (`LegalConsentCheckbox`) chặn cả nút "Tạo tài khoản" LẪN hai nút mạng xã hội | tạo tài khoản là lúc giao kết lần đầu; chợ ứng dụng đòi hành vi đồng ý tường minh |
+| Tạo gian hàng | câu luôn hiện (`place="shop"`) | thay khối tự vẽ cũ trong `ShopOnboardingScreen` |
+
+Ô tick sống ở MÀN chứ không trong `RegisterForm`, và đó là chủ đích: đăng nhập mạng xã hội lần
+đầu cũng tạo tài khoản, nên để ô tick bên trong form thì hai nút Google/Facebook ngay dưới là một
+đường vòng tạo tài khoản mà không đồng ý gì cả. Nó cũng KHÔNG vào `registerSchema` — schema dùng
+chung với web, mà web cố ý không có ô tick. Khoá lại bằng `src/features/auth/register-consent.test.tsx`.
+
+Chi tiết: `docs/mobile-module-status.md` §2.12.
 
 ## 11. Đánh giá kiến trúc — **8.5 / 10**
 

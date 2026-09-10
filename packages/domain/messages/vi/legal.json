@@ -24,6 +24,8 @@
   },
   "consent": {
     "auth": "Tiếp tục tức là bạn đồng ý với <terms>Điều khoản sử dụng</terms> và <privacy>Chính sách bảo mật</privacy> của XePrime.",
+    "authCheck": "Tôi đã đọc và đồng ý với <terms>Điều khoản sử dụng</terms> và <privacy>Chính sách bảo mật</privacy> của XePrime.",
+    "authCheckPlain": "Tôi đã đọc và đồng ý với Điều khoản sử dụng và Chính sách bảo mật của XePrime.",
     "booking": "Gửi yêu cầu tức là bạn đồng ý với <terms>Điều khoản sử dụng</terms> và <cancellation>Chính sách huỷ và hoàn tiền</cancellation>.",
     "subscription": "Mua gói tức là bạn đồng ý với <terms>Điều khoản sử dụng</terms> và <rules>Quy chế hoạt động sàn</rules>.",
     "shop": "Tạo gian hàng tức là bạn đồng ý với <rules>Quy chế hoạt động sàn</rules> và <terms>Điều khoản sử dụng</terms>."

@@ -138,8 +138,6 @@
     "selfDriveSubtitle": "The default price applies to any day without a custom price.",
     "withDriverTitle": "Chauffeured service price list",
     "withDriverSubtitle": "Prices include the driver's pay but exclude fuel and toll surcharges (if any).",
-    "calendarLink": "Custom prices by calendar",
-    "calendarHint": "Per-day prices (holidays, weekends, peak season) are set directly on the vehicle calendar — one price source, no second seasonal table.",
     "withDriverEstimateHint": "Route types without a price are estimated from the nearest tier; you confirm the final price when approving.",
     "loadError": "Could not load pricing & policy"
   },

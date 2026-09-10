@@ -4,6 +4,7 @@ import { useTranslations } from 'use-intl';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { type CurrentUser } from '@/features/auth/api';
+import { LegalConsentCheckbox } from '@/features/legal/components/LegalConsentCheckbox';
 import { APP_NAME } from '@/lib/app-name';
 import { colors, fontSize, space } from '@/theme/tokens';
 import { AuthSwitchLink } from './components/AuthSwitchLink';
@@ -16,6 +17,11 @@ import { SocialButtons } from './components/SocialButtons';
  *
  * Nghiệp vụ y hệt nhánh `mode === REGISTER` của `AuthPanel` bên web: cùng bốn ô, cùng
  * `registerSchema`, cùng hai nút mạng xã hội, và cùng bước "tạo xong thì chọn đi đâu".
+ *
+ * **Khác web một điểm, có chủ đích:** ô tick đồng ý điều khoản chặn CẢ hai đường tạo tài khoản.
+ * Web dùng một câu luôn hiện, không ô tick (`LegalConsentNote`) — đúng cho một trang có chân
+ * trang dẫn tới văn bản pháp lý. App thì không có chân trang đó, và đây là lúc người dùng giao
+ * kết lần đầu: cả App Store (guideline 5.1.1) lẫn Play đều đòi một hành vi đồng ý tường minh.
  *
  * Trạng thái "đã tạo xong" là state TRONG màn này, không phải route mới — giống web
  * (`AuthModal` giữ `registered` trong cùng dialog). Phiên đã được cấp ở bước trước, nên nút lui
@@ -38,6 +44,7 @@ export function RegisterScreen({
 }) {
   const t = useTranslations('Auth');
   const [registered, setRegistered] = useState(false);
+  const [consented, setConsented] = useState(false);
 
   return (
     <>
@@ -57,9 +64,26 @@ export function RegisterScreen({
               </Text>
             </YStack>
 
-            <RegisterForm onSuccess={() => setRegistered(true)} />
+            {/*
+              Ô tick HIỆN ngay trên nút "Tạo tài khoản" (khe `consent` của form) nhưng STATE thì
+              thuộc về màn này — vì nó chặn CẢ hai đường tạo tài khoản.
 
-            <SocialButtons onSuccess={onAuthenticated} />
+              Đăng nhập mạng xã hội lần đầu cũng tạo tài khoản. Nếu ô tick thuộc hẳn về
+              `RegisterForm` thì hai nút Google/Facebook ngay dưới nó là một đường vòng: tài khoản
+              vẫn được tạo mà không ai đồng ý gì cả.
+            */}
+            <RegisterForm
+              onSuccess={() => setRegistered(true)}
+              blocked={!consented}
+              consent={
+                <LegalConsentCheckbox
+                  checked={consented}
+                  onToggle={() => setConsented((agreed) => !agreed)}
+                />
+              }
+            />
+
+            <SocialButtons onSuccess={onAuthenticated} blocked={!consented} />
 
             <AuthSwitchLink
               prompt={t('switchMode.hasAccount')}

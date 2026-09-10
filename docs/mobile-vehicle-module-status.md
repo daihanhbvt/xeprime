@@ -63,21 +63,17 @@ web test 1802/1802 pass.
 
 Xếp theo mức cản trở. Mục 3.1–3.2 là **thiếu tính năng**; 3.3–3.6 là **nợ chất lượng**.
 
-### 3.1 VEH-13 — giá theo ngày (CHẶN bởi module Calendar)
+### 3.1 VEH-13 — giá theo ngày ✅ XONG (10/09/2026, cùng module Calendar)
 
-Chưa dựng. Lối vào duy nhất trên web là **bấm một ô ngày** ở `/manage/calendar`
-(`CalendarScheduler.tsx:350`), và app chưa có màn lịch (CAL-01).
+Lối vào giống hệt web: **bấm một ô ngày** trên lưới lịch → "Đặt giá"
+(`apps/mobile/src/features/calendar/components/DailyPriceSheet.tsx`). Ba endpoint đọc/lưu/xoá ở
+`apps/mobile/src/api/calendar/api.ts`; namespace `Calendar` đã vào bảng gom.
 
-Phần chuẩn bị đã xong, khi CAL-01 tới chỉ còn ~150 dòng:
-
-- 24 khoá `Calendar.dailyPrice.*` đã có vi+en;
-- `queryKeys.calendar.vehicleDailyPrices` đã có;
-- `MonthGrid` · `BottomSheet` · `MoneyField` đã có;
-- **còn thiếu**: 3 endpoint (`GET /vehicles/:id/daily-prices?from&to`, lưu, xoá) trong
-  `packages/api-client`, và thêm namespace `Calendar` vào `apps/mobile/src/i18n/messages.ts`.
-
-⚠️ **Đừng chế lối vào từ màn Giá & chính sách.** Web không có, và khi CAL-01 tới sẽ thành hai
-lối vào cho một việc.
+> ⚠️ **Sửa 10/09:** bản trước ghi *"Đừng chế lối vào từ màn Giá & chính sách — web không có"*.
+> **Sai.** Web CÓ lối đó: `VehiclePricingWorkspace.tsx` dựng `CalendarPriceLink` ở CẢ hai khối
+> giá (tự lái · có tài xế), dẫn sang lịch đã lọc theo chính chiếc xe. App nay có đúng hai chỗ
+> đó. Nó không phải "lối vào thứ hai cho một việc" mà là một CHỈ ĐƯỜNG: màn giá cố ý không có
+> bảng giá mùa vụ riêng, nên nó phải nói cho người dùng biết giá lễ/cuối tuần đặt ở đâu.
 
 ### 3.2 Bảo dưỡng — hai chỗ chưa nối
 
@@ -151,4 +147,3 @@ xong → **rồi mới** chạy typecheck. Đã ghi vào `apps/mobile/README.md`
    kỹ thuật 17 dòng phần lớn rỗng, tiêu đề thẻ không nhất quán (`VehiclePublishCard` dùng chữ
    thường trong khi các thẻ khác viết hoa nhỏ).
 2. Viết ba bộ test ở §3.3.
-3. CAL-01 (module Calendar) → mở khoá VEH-13.

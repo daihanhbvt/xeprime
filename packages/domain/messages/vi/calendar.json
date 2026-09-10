@@ -12,9 +12,11 @@
     },
     "dayRange": "{count, plural, other {# ngày}}",
     "today": "Hôm nay",
-    "pagerAriaLabel": "Điều hướng khoảng xem",
+    "vehicleTypeLabel": "Loại xe",
+    "rangeLength": "Khoảng xem",
     "previousRange": "Lùi {count, plural, other {# ngày}}",
-    "nextRange": "Tiến {count, plural, other {# ngày}}"
+    "nextRange": "Tiến {count, plural, other {# ngày}}",
+    "pagerAriaLabel": "Điều hướng khoảng xem"
   },
   "grid": {
     "ariaLabel": "Lịch thuê xe theo ngày",
@@ -59,7 +61,8 @@
     "dailyPrice": "Giá ngày",
     "hourlyPrice": "Giá giờ",
     "operationStatus": "Vận hành",
-    "pricePerDay": "{price}/ngày"
+    "pricePerDay": "{price}/ngày",
+    "openVehicle": "Mở hồ sơ xe"
   },
   "eventCard": {
     "bookingHeading": "Chi tiết nhanh đơn đặt",
@@ -71,10 +74,6 @@
     "duration": "Thời lượng",
     "openHint": "Bấm vào thanh lịch để xem chi tiết",
     "barAriaRange": "từ {start} đến {end}"
-  },
-  "holidayCard": {
-    "headerAriaLabel": "Ngày lễ: {name}, ngày {date}",
-    "type": "Phân loại"
   },
   "cellActions": {
     "menuAriaLabel": "Chọn thao tác cho ô lịch",
@@ -243,11 +242,14 @@
     "colBase": "Giá gốc",
     "colNext": "Giá mới",
     "skipped": "Bỏ qua",
+    "rowAria": "{vehicle}, giá gốc {base}, giá mới {next}",
+    "rowAriaNoBase": "chưa có giá",
     "submit": "Đặt giá {count, plural, other {# xe}}",
     "done": "Đã đặt giá {vehicles, plural, other {# xe}} · {days, plural, other {# lượt ngày}}",
     "restore": "Khôi phục giá mặc định",
     "confirmRestoreTitle": "Khôi phục giá mặc định?",
     "confirmRestoreContent": "Xoá giá riêng của {count, plural, other {# xe}} trong khoảng {from} – {to}. Giá thường/cuối tuần sẽ áp trở lại.",
-    "restored": "Đã khôi phục {count, plural, other {# lượt ngày}}"
+    "restored": "Đã khôi phục {count, plural, other {# lượt ngày}}",
+    "tableMore": "…và {count, plural, other {# xe khác}}"
   }
 }

@@ -1041,7 +1041,9 @@
       "discountAscending": "Discount tiers must follow increasing months",
       "discountNotLower": "The {months}-month discount cannot be lower than the {prev}-month tier",
       "weekdayRequired": "Enter the daily rental price"
-    }
+    },
+    "calendarLink": "Custom prices by calendar",
+    "calendarHint": "Per-day prices (holidays, weekends, peak season) are set directly on the vehicle calendar — one price source, no second seasonal table."
   },
   "documents": {
     "noPermissionTitle": "No permission to view documents",

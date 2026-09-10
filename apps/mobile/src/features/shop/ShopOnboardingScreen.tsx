@@ -20,6 +20,7 @@ import { ScreenLoading } from '@/components/state/ScreenLoading';
 import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
+import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
 import { useDomainLabel } from '@/i18n/domain';
@@ -60,7 +61,6 @@ const GUIDE_STEPS = ['create', 'complete', 'prepare', 'publish'] as const;
  */
 export function ShopOnboardingScreen() {
   const t = useTranslations('ShopOnboarding');
-  const tLegal = useTranslations('Legal');
   const tActions = useTranslations('Common.actions');
   const [guideOpen, setGuideOpen] = useState(false);
   const router = useRouter();
@@ -379,16 +379,8 @@ export function ShopOnboardingScreen() {
                 {/*
                 Quy chế sàn ràng buộc NGƯỜI BÁN kể từ khoảnh khắc này (ADR 0028 điều 9), nên câu
                 này phải đứng cạnh nút — không phải ở một chân trang mà cổng quản lý không có.
-
-                Tên văn bản in đậm nhưng KHÔNG phải liên kết: app chưa có màn văn bản pháp lý
-                (`Legal.docs`), và một liên kết dẫn tới màn không tồn tại tệ hơn một câu chữ đúng.
               */}
-                <Text col={colors.textMuted} fos={fontSize.label}>
-                  {tLegal.rich('consent.shop', {
-                    rules: (chunks) => <Text fow={fontWeight.semibold}>{chunks}</Text>,
-                    terms: (chunks) => <Text fow={fontWeight.semibold}>{chunks}</Text>,
-                  })}
-                </Text>
+                <LegalConsentNote place="shop" />
               </YStack>
             </Card>
 

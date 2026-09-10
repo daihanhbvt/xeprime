@@ -36,8 +36,9 @@ const NAMESPACES_FILE = path.join(WEB_ROOT, 'src/i18n/namespaces.ts');
 const CONFIG_FILE = path.join(WEB_ROOT, 'src/i18n/config.ts');
 /**
  * Danh sách locale sống ở `@xeprime/types` từ ADR 0019 — `apps/api` cũng cần nó để chuyển tiếp
- * ngôn ngữ cho màn đồng ý của Google/Facebook. `src/i18n/config.ts` chỉ re-export, nên đọc bản
- * gốc ở đây; phần cookie (chuyện của trình duyệt) vẫn kiểm trên file web.
+ * ngôn ngữ cho màn đồng ý của Google/Facebook. TÊN COOKIE cũng chuyển về đó ngày 10/09/2026: app
+ * native gửi kèm nó khi mở trang pháp lý của web trong WebView. `src/i18n/config.ts` chỉ
+ * re-export cả hai, nên đọc bản gốc ở đây; THUỘC TÍNH cookie vẫn là chuyện của web.
  */
 const LOCALE_SOURCE_FILE = path.resolve(WEB_ROOT, '../../packages/types/src/locale.ts');
 /** Bảng gom của app native — client thứ hai đọc cùng gốc message. */
@@ -71,8 +72,15 @@ if (!/DEFAULT_LOCALE: AppLocale = 'vi'/.test(localeSource ?? '')) {
 if (!/SUPPORTED_LOCALES,[\s\S]*?\} from '@xeprime\/types'/.test(configSource ?? '')) {
   fail('config', `${rel(CONFIG_FILE)} phải re-export SUPPORTED_LOCALES từ '@xeprime/types'.`);
 }
-if (!/LOCALE_COOKIE_NAME = 'XP_LOCALE'/.test(configSource ?? '')) {
+if (!/LOCALE_COOKIE_NAME = 'XP_LOCALE'/.test(localeSource ?? '')) {
   fail('config', "LOCALE_COOKIE_NAME phải là 'XP_LOCALE'.");
+}
+/*
+ * Và web phải re-export nó, không khai lại: tên cookie là hợp đồng giữa app native (gửi header)
+ * với server web (đọc cookie) — hai bản khai rời nhau thì đổi một bên là bên kia im lặng sai.
+ */
+if (!/LOCALE_COOKIE_NAME,[\s\S]*?\} from '@xeprime\/types'/.test(configSource ?? '')) {
+  fail('config', `${rel(CONFIG_FILE)} phải re-export LOCALE_COOKIE_NAME từ '@xeprime/types'.`);
 }
 
 // ── 2. Danh sách namespace ────────────────────────────────────────────────────

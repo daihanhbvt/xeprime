@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { YStack } from 'tamagui';
 import { buildRegisterSchema, type RegisterValues } from '@xeprime/validators';
@@ -20,7 +20,33 @@ import { space } from '@/theme/tokens';
  * `confirmPassword` KHÔNG được gửi lên: nó là ràng buộc của form, không phải của API. Web cũng
  * cắt nó ở đúng chỗ này.
  */
-export function RegisterForm({ onSuccess }: { onSuccess: (user: CurrentUser) => void }) {
+export function RegisterForm({
+  onSuccess,
+  consent,
+  blocked = false,
+}: {
+  onSuccess: (user: CurrentUser) => void;
+  /**
+   * Khối cam kết đặt NGAY TRÊN nút gửi — màn đăng ký nhét ô tick điều khoản vào đây.
+   *
+   * Là một khe nhận nội dung chứ không phải một ô tick dựng sẵn: state của nó thuộc về MÀN, vì
+   * cùng cái tick đó còn chặn hai nút mạng xã hội nằm ngoài form (xem {@link blocked}). Form chỉ
+   * biết chỗ ĐẶT nó — sát nút bấm, nơi người dùng nhìn khi tự hỏi vì sao nút chưa sáng.
+   */
+  consent?: ReactNode;
+  /**
+   * Chặn gửi vì một điều kiện NGOÀI form — hiện có đúng một: chưa tick đồng ý điều khoản.
+   *
+   * Ô tick sống ở MÀN chứ không ở đây, và đó là chủ đích: nó chặn cả đăng ký bằng mạng xã hội,
+   * thứ cũng tạo tài khoản. Để ô tick bên trong form thì hai nút Google/Facebook ngay dưới thành
+   * một đường vòng tạo tài khoản mà không đồng ý gì cả.
+   *
+   * KHÔNG đưa vào `registerSchema`: schema là hợp đồng dùng chung với web
+   * (`@xeprime/validators`), mà web cố ý không có ô tick — nhét vào đó một trường chỉ app mới có
+   * là bắt web mang theo một luật nó không dùng.
+   */
+  blocked?: boolean;
+}) {
   const t = useTranslations('Auth');
   const errorMessage = useErrorMessage();
   const toast = useAppToast();
@@ -109,11 +135,13 @@ export function RegisterForm({ onSuccess }: { onSuccess: (user: CurrentUser) => 
         editable={!register.isPending}
       />
 
+      {consent}
+
       <Button
         label={t('register.submit')}
         onPress={onSubmit}
         loading={register.isPending}
-        disabled={!isValid}
+        disabled={!isValid || blocked}
       />
     </YStack>
   );
