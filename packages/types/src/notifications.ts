@@ -79,6 +79,15 @@ export const NOTIFICATION_TYPE = {
 
   // Support case (R3)
   SUPPORT_CASE_UPDATED: 'support_case_updated',
+
+  /**
+   * Tin nhắn mới trong một hội thoại — gửi cho PHÍA ĐỐI DIỆN, không bao giờ cho người gửi.
+   *
+   * Có loại riêng vì đây là loại DUY NHẤT mà nội dung thật không được nằm trong tin: chat là
+   * riêng tư, còn thông báo thì hiện ở màn khoá và đi qua log của OS. Câu chữ dừng ở "bạn có
+   * tin nhắn mới"; muốn đọc thì phải mở app (ADR 0009).
+   */
+  CHAT_MESSAGE_RECEIVED: 'chat_message_received',
 } as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPE)[keyof typeof NOTIFICATION_TYPE];
@@ -89,7 +98,14 @@ export function isNotificationType(value: unknown): value is NotificationType {
   return typeof value === 'string' && (NOTIFICATION_TYPE_VALUES as string[]).includes(value);
 }
 
-/** Kênh gửi. MVP chỉ in-app; `push`/`email` mở sau (giữ union để không hard-code string). */
+/**
+ * Kênh gửi — mô tả LOẠI BẢN GHI, không phải đường giao vận.
+ *
+ * Push KHÔNG phải một giá trị ở đây, và đó là một quyết định: một sự kiện sinh ra ĐÚNG MỘT
+ * `Notification` (bản ghi hộp thư, có `readAt` của riêng từng người), còn việc đẩy nó tới từng
+ * thiết bị nằm ở `push_deliveries` (`packages/types/src/push.ts`). Thêm `channel: 'push'` nghĩa
+ * là mỗi sự kiện đẻ hai dòng, và người dùng thấy mọi thứ hai lần trong chuông.
+ */
 export const NOTIFICATION_CHANNEL = {
   IN_APP: 'in_app',
 } as const;
@@ -108,6 +124,8 @@ export const NOTIFICATION_TARGET_TYPE = {
   TENANT: 'tenant',
   VEHICLE: 'vehicle',
   SUPPORT_CASE: 'support_case',
+  /** Hội thoại chat — `targetId` là `conversations.id` (ADR 0009). */
+  CONVERSATION: 'conversation',
 } as const;
 
 export type NotificationTargetType =
@@ -209,4 +227,14 @@ export const NOTIFICATION_TYPE_META: Readonly<Record<NotificationType, Notificat
     label: 'Cập nhật yêu cầu hỗ trợ',
     color: STATUS_COLOR.INFO,
   },
+  [NOTIFICATION_TYPE.CHAT_MESSAGE_RECEIVED]: {
+    label: 'Tin nhắn mới',
+    color: STATUS_COLOR.PROCESSING,
+  },
 };
+
+/** Tiêu đề/nội dung mặc định của thông báo tin nhắn — cố ý KHÔNG chứa nội dung tin (ADR 0009). */
+export const CHAT_NOTIFICATION_COPY = {
+  TITLE: 'Bạn có tin nhắn mới',
+  BODY: 'Mở XePrime để xem tin nhắn',
+} as const;

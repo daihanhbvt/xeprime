@@ -2,6 +2,16 @@
 
 Ngày: 29/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md)** · Giữ nguyên nguyên tắc tách quỹ/ledger; SLA và phạm vi thu hộ đã đổi.
 
+> ⚠️ **[ADR 0033](0033-money-ledger-and-deposit-allocation.md) ghi đè điều 1–4 (10/09/2026).**
+> Với công thức `D + S + IV + IP` của [ADR 0032](0032-booking-deposit-insurance-and-owner-lite.md),
+> một hold chứa tiền của **nhiều người cùng lúc** (XePrime giữ `S`; `D` là của chủ xe; `IV + IP`
+> giữ hộ hãng bảo hiểm), nên **`purpose` không còn trả lời được câu "tiền này của ai"**. Tách quỹ
+> nay đọc từ **bốn cột số tiền** trên `booking_holds`, không đọc `purpose`; `purpose` chỉ còn phân
+> biệt nguồn sinh hold và ràng buộc outcome. **Điều 3** cũng đổi: mức cọc do **nền tảng** đặt trong
+> `fee_policies` (gian hàng chỉ có công tắc bật/tắt thu cọc), vì cọc nay là một phần giá thuê chứ
+> không phải công cụ chống bỏ chuyến riêng của shop. Nguyên tắc điều 4 (*"không bao giờ giữ lại một
+> đồng tiền của người khác"*) giữ nguyên nhưng áp cho **từng dòng tiền**. Điều 5–8 giữ nguyên.
+
 ## Bối cảnh
 
 [ADR 0021](0021-booking-hold-is-the-commission.md) mua được một sự đơn giản lớn bằng một mẹo:

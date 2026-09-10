@@ -272,7 +272,8 @@
     "subscription_lapsed": "Switched to per-trip commission",
     "free_trips_exhausted": "Free trips used up",
     "subscription_activated": "Plan activated",
-    "booking_auto_accepted": "Auto-accepted booking"
+    "booking_auto_accepted": "Auto-accepted booking",
+    "chat_message_received": "New message"
   },
   "occupancySourceType": {
     "booking": "Booking",

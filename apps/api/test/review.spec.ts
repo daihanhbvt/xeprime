@@ -11,7 +11,7 @@ import {
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
 } from '@xeprime/types';
-import { NotificationService } from '../src/modules/notification/notification.service';
+import { makeNotificationService } from './helpers/service-factory';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { ReviewService } from '../src/modules/review/review.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
@@ -25,7 +25,7 @@ import type { PrismaService } from '../src/prisma/prisma.service';
  */
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
-const notifications = new NotificationService(asService);
+const notifications = makeNotificationService(asService);
 const listings = new ListingsService(asService);
 const reviews = new ReviewService(asService, notifications, listings);
 

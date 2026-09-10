@@ -1,5 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { newId, Prisma } from '@xeprime/prisma';
+import { enqueuePushDeliveries, newId, Prisma } from '@xeprime/prisma';
+import {
+  NOTIFICATION_AUDIENCE,
+  notificationDeepLink,
+  type NotificationAudience,
+} from '@xeprime/domain';
 import {
   API_ERROR_CODE,
   MEMBERSHIP_STATUS,
@@ -9,6 +14,7 @@ import {
   type PaginationMeta,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
+import { FirebaseAppService } from '../firebase/firebase-app.service';
 import {
   NOTIFICATION_DEFAULT_LIMIT,
   NOTIFICATION_MAX_LIMIT,
@@ -28,6 +34,19 @@ export interface NotifyPayload {
   targetId?: string | null;
   /** Dữ liệu phụ (vd mã đơn) — lưu ở data_json, chưa expose ra API. */
   data?: Record<string, unknown> | null;
+  /**
+   * Người nhận đang đứng ở BỀ MẶT nào — quyết định đường dẫn của thông báo đẩy.
+   *
+   * Mặc định suy từ chính phương thức: `emitToTenantMembers` là khu quản lý, `emitToUser` là
+   * khu khách. Chỉ khai tường minh khi mặc định đó SAI — ví dụ nền tảng duyệt xe/gian hàng rồi
+   * báo cho chủ sở hữu qua `emitToUser`: người nhận là chủ shop, và đích là màn quản lý.
+   */
+  audience?: NotificationAudience;
+  /**
+   * Hạn CHÓT đẩy. Quá mốc này worker bỏ dòng giao vận thay vì rung máy muộn — dùng cho tin có
+   * đồng hồ đếm ngược ("yêu cầu sắp hết hạn"). Không ảnh hưởng bản ghi in-app.
+   */
+  pushExpiresAt?: Date | null;
 }
 
 const SELECT = {
@@ -42,22 +61,53 @@ const SELECT = {
 } satisfies Prisma.NotificationSelect;
 
 /**
- * Thông báo in-app (Phase 5). Nhận `tx` tuỳ chọn giống AuditService: khi thông báo đi kèm một
- * thay đổi dữ liệu, truyền transaction để hai thứ cùng sống cùng chết (thông báo về việc chưa
- * từng xảy ra là sai). Fan-out PER-USER nên trạng thái đã đọc đúng theo từng người.
+ * Thông báo in-app (Phase 5) + hàng đợi ĐẨY (10/09/2026). Nhận `tx` tuỳ chọn giống AuditService:
+ * khi thông báo đi kèm một thay đổi dữ liệu, truyền transaction để hai thứ cùng sống cùng chết
+ * (thông báo về việc chưa từng xảy ra là sai). Fan-out PER-USER nên trạng thái đã đọc đúng theo
+ * từng người.
+ *
+ * Push KHÔNG đẻ ra bản ghi thông báo thứ hai: mỗi sự kiện vẫn đúng một dòng `notifications` cho
+ * mỗi người, còn `push_deliveries` chỉ ghi "dòng đó đã tới máy nào". Việc GỬI nằm ở worker, sau
+ * khi transaction nghiệp vụ đã commit — một lời gọi mạng tới Google bên trong transaction đặt
+ * xe là cách biến sự cố của Firebase thành sự cố đặt xe.
  */
 @Injectable()
 export class NotificationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly firebase: FirebaseAppService,
+  ) {}
 
-  /** Gửi thông báo cho một user cụ thể. */
+  /** Gửi thông báo cho một user cụ thể. Mặc định bề mặt KHÁCH. */
   async emitToUser(
     userId: string,
     payload: NotifyPayload,
     tx?: Prisma.TransactionClient,
   ): Promise<void> {
+    await this.emitToUsers([userId], payload, tx);
+  }
+
+  /**
+   * Gửi cho một DANH SÁCH người nhận đã xác định — mỗi người một dòng, một trạng thái đã đọc.
+   *
+   * Tồn tại vì có nơi gọi tự giải người nhận theo luật riêng của mình (chat: thành viên gian
+   * hàng TRỪ chính người gửi VÀ trừ người đang là khách của thread đó). Ép chúng đi qua
+   * `emitToTenantMembers` sẽ phải nhét luật của từng feature vào tham số của hàm này.
+   */
+  async emitToUsers(
+    userIds: readonly string[],
+    payload: NotifyPayload,
+    tx?: Prisma.TransactionClient,
+  ): Promise<void> {
+    const recipients = [...new Set(userIds)];
+    if (recipients.length === 0) return;
+
     const client = tx ?? this.prisma;
-    await client.notification.create({ data: buildData(userId, payload) });
+    const audience = payload.audience ?? NOTIFICATION_AUDIENCE.CUSTOMER;
+    const rows = recipients.map((userId) => buildData(userId, payload, audience));
+
+    await client.notification.createMany({ data: rows });
+    await this.enqueuePush(client, rows, payload);
   }
 
   /**
@@ -69,23 +119,39 @@ export class NotificationService {
     tenantId: string,
     payload: NotifyPayload,
     tx?: Prisma.TransactionClient,
-    opts?: { excludeUserId?: string | null; roleKeys?: string[] },
+    opts?: {
+      excludeUserId?: string | null;
+      /** Loại trừ NHIỀU người — vd chủ shop đang đóng vai KHÁCH trong chính thread chat đó. */
+      excludeUserIds?: readonly (string | null | undefined)[];
+      roleKeys?: string[];
+    },
   ): Promise<void> {
     const client = tx ?? this.prisma;
+    const excluded = [
+      ...new Set(
+        [opts?.excludeUserId, ...(opts?.excludeUserIds ?? [])].filter(
+          (id): id is string => typeof id === 'string' && id.length > 0,
+        ),
+      ),
+    ];
+
     const members = await client.tenantMembership.findMany({
       where: {
         tenantId,
         status: MEMBERSHIP_STATUS.ACTIVE,
         ...(opts?.roleKeys ? { roleKey: { in: opts.roleKeys } } : {}),
-        ...(opts?.excludeUserId ? { userId: { not: opts.excludeUserId } } : {}),
+        ...(excluded.length ? { userId: { notIn: excluded } } : {}),
       },
       select: { userId: true },
     });
     if (members.length === 0) return;
 
-    await client.notification.createMany({
-      data: members.map((m) => buildData(m.userId, { ...payload, tenantId })),
-    });
+    // Thành viên của gian hàng đứng ở KHU QUẢN LÝ — trừ khi nơi gọi nói khác.
+    const audience = payload.audience ?? NOTIFICATION_AUDIENCE.MANAGE;
+    const rows = members.map((m) => buildData(m.userId, { ...payload, tenantId }, audience));
+
+    await client.notification.createMany({ data: rows });
+    await this.enqueuePush(client, rows, payload);
   }
 
   async list(
@@ -147,9 +213,56 @@ export class NotificationService {
     });
     return { updated: res.count };
   }
+
+  /**
+   * Xếp hàng đẩy cho các dòng vừa ghi — trong CÙNG client (và cùng transaction) với chúng.
+   *
+   * `PUSH_ENABLED=false` ⇒ không tạo dòng nào. Cố ý: nếu vẫn ghi, ngày bật cờ lên sẽ là ngày
+   * người dùng nhận một trận thông báo tồn đọng của mấy tuần trước.
+   */
+  private async enqueuePush(
+    client: Prisma.TransactionClient | PrismaService,
+    rows: readonly Prisma.NotificationCreateManyInput[],
+    payload: NotifyPayload,
+  ): Promise<void> {
+    if (!this.firebase.pushEnabled) return;
+
+    await enqueuePushDeliveries(
+      client,
+      rows.flatMap((row) =>
+        row.userId ? [{ notificationId: row.id as string, userId: row.userId }] : [],
+      ),
+      { expiresAt: payload.pushExpiresAt ?? null },
+    );
+  }
 }
 
-function buildData(userId: string, payload: NotifyPayload): Prisma.NotificationCreateManyInput {
+function buildData(
+  userId: string,
+  payload: NotifyPayload,
+  audience: NotificationAudience,
+): Prisma.NotificationCreateManyInput {
+  /*
+   * Đích được giải NGAY LÚC PHÁT và đóng băng vào `data_json`, không giải lại lúc gửi.
+   *
+   * Bề mặt (khách hay quản lý) chỉ nơi phát mới biết: `targetType: booking` dẫn tới `/trips/:id`
+   * khi người nhận là khách và `/manage/bookings/:id` khi là nhân viên gian hàng. Worker chỉ
+   * thấy hàng trong DB, nên nó không thể suy lại được điều đó.
+   */
+  const url = notificationDeepLink(
+    { targetType: payload.targetType, targetId: payload.targetId },
+    audience,
+  );
+
+  /*
+   * `url` là trường TÍNH RA, không phải trường nơi gọi khai. Bỏ nó khỏi `payload.data` trước khi
+   * trộn: nếu không, một emitter truyền `data: { url: … }` cho loại target không có đích sẽ ghi
+   * thẳng giá trị đó vào payload FCM và đi vòng qua resolver. Allowlist bên app chặn được, nhưng
+   * đó là lớp phòng thủ thứ hai — lớp thứ nhất là không cho giả mạo ngay từ đây.
+   */
+  const { url: _ignored, ...extra } = payload.data ?? {};
+  const data = { ...extra, ...(url ? { url } : {}) };
+
   return {
     id: newId(),
     userId,
@@ -160,7 +273,7 @@ function buildData(userId: string, payload: NotifyPayload): Prisma.NotificationC
     body: payload.body ?? null,
     targetType: payload.targetType ?? null,
     targetId: payload.targetId ?? null,
-    ...(payload.data ? { dataJson: payload.data as Prisma.InputJsonValue } : {}),
+    ...(Object.keys(data).length ? { dataJson: data as Prisma.InputJsonValue } : {}),
   };
 }
 

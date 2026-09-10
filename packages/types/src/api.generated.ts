@@ -2782,6 +2782,30 @@ export interface paths {
         patch: operations["NotificationController_markRead"];
         trace?: never;
     };
+    "/notifications/device-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Đăng ký thiết bị nhận thông báo đẩy (idempotent)
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         */
+        post: operations["NotificationController_registerDevice"];
+        /**
+         * Ngừng nhận thông báo đẩy trên thiết bị này
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         */
+        delete: operations["NotificationController_unregisterDevice"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/notifications/mark-all-read": {
         parameters: {
             query?: never;
@@ -8847,6 +8871,13 @@ export interface components {
             /** @description Optimistic concurrency — nộp lại khi điều chỉnh */
             rowVersion: number;
         };
+        DisabledCountDto: {
+            /**
+             * @description Số thiết bị vừa ngừng nhận thông báo đẩy.
+             * @example 1
+             */
+            disabled: number;
+        };
         DiscountTierDto: {
             /**
              * @description Số tháng cam kết tối thiểu — phải là một gói thuê hợp lệ
@@ -9697,7 +9728,7 @@ export interface components {
         NotificationDto: {
             id: string;
             /** @enum {string} */
-            type: "booking_created" | "booking_status_changed" | "booking_request_submitted" | "booking_request_approved" | "booking_request_rejected" | "booking_request_cancelled" | "booking_request_expiring" | "booking_request_expired" | "booking_auto_accepted" | "shop_approved" | "shop_rejected" | "vehicle_approved" | "vehicle_rejected" | "review_received" | "subscription_expiring" | "subscription_expired" | "subscription_lapsed" | "free_trips_exhausted" | "subscription_activated" | "hold_requested" | "hold_paid" | "hold_expired" | "hold_refund_paid" | "seller_profile_verified" | "seller_profile_changes_requested" | "seller_profile_rejected" | "support_case_updated";
+            type: "booking_created" | "booking_status_changed" | "booking_request_submitted" | "booking_request_approved" | "booking_request_rejected" | "booking_request_cancelled" | "booking_request_expiring" | "booking_request_expired" | "booking_auto_accepted" | "shop_approved" | "shop_rejected" | "vehicle_approved" | "vehicle_rejected" | "review_received" | "subscription_expiring" | "subscription_expired" | "subscription_lapsed" | "free_trips_exhausted" | "subscription_activated" | "hold_requested" | "hold_paid" | "hold_expired" | "hold_refund_paid" | "seller_profile_verified" | "seller_profile_changes_requested" | "seller_profile_rejected" | "support_case_updated" | "chat_message_received";
             title: string;
             body?: string | null;
             /** @description Loại đối tượng để dựng link */
@@ -10715,6 +10746,20 @@ export interface components {
             /** @description Bỏ trống = đúng số chỗ gồm sẵn */
             slots?: components["schemas"]["PlanSlotsDto"];
         };
+        PushDeviceDto: {
+            id: string;
+            /** @enum {string} */
+            provider: "fcm";
+            /** @enum {string} */
+            platform: "android" | "ios";
+            /** @description Thiết bị có đang nhận thông báo đẩy không */
+            enabled: boolean;
+            deviceName?: string | null;
+            /** @description ISO-8601 UTC */
+            lastSeenAt: string;
+            /** @description Cờ `PUSH_ENABLED` của server. `false` = thiết bị đã ghi nhận nhưng chưa có thông báo nào được đẩy. */
+            pushEnabled: boolean;
+        };
         QuoteBreakdownDto: {
             /** @description Số ngày tính tiền — null với báo giá theo GÓI dài hạn (không tính theo ngày) */
             days?: number | null;
@@ -10904,6 +10949,21 @@ export interface components {
             displayName: string;
             /** @example 0901234567 */
             phone: string;
+        };
+        RegisterPushDeviceDto: {
+            /**
+             * @description Nhà cung cấp push. Bỏ trống = `fcm`.
+             * @enum {string}
+             */
+            provider?: "fcm";
+            /** @description Registration token do FCM cấp cho bản cài app. KHÔNG bao giờ được trả lại trong response hay ghi ra log. */
+            token: string;
+            /** @enum {string} */
+            platform: "android" | "ios";
+            /** @example 0.1.0 */
+            appVersion?: string;
+            /** @description Tên máy do client tự khai — chỉ để người dùng nhận ra thiết bị. */
+            deviceName?: string;
         };
         RegisterShopDto: {
             /** @example Cho thuê xe Bình Minh */
@@ -11709,6 +11769,10 @@ export interface components {
             /** @enum {string} */
             status: "open" | "in_progress" | "waiting_party" | "resolved" | "closed";
             note?: string | null;
+        };
+        UnregisterPushDeviceDto: {
+            /** @description Token cần tắt. Bỏ trống = mọi thiết bị của phiên này. */
+            token?: string;
         };
         UpdateBannerDto: {
             title?: string;
@@ -32243,6 +32307,268 @@ export interface operations {
                      *       "error": {
                      *         "code": "NOT_FOUND",
                      *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    NotificationController_registerDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterPushDeviceDto"];
+            };
+        };
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PushDeviceDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    NotificationController_unregisterDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnregisterPushDeviceDto"];
+            };
+        };
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["DisabledCountDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
                      *       }
                      *     }
                      */

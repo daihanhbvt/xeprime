@@ -22,7 +22,7 @@
 | Shop | 9 | **7** | 2 | SHP-01→07 xong (08/09) — `docs/mobile-shop-module-status.md`. SHP-08/09 web chưa có bản để clone |
 | Finance | 6 | **6** | 0 | Xong trọn (07/09) — `docs/mobile-finance-module-status.md` |
 | Calendar | 3 | **3** | 0 | CAL-01→03 xong (10/09) — CAL-03 là ràng buộc CSDL, app chỉ kiểm chứng |
-| Communication | 7 | 0 | 7 | COM-01 mới là màn rỗng |
+| Communication | 7 | 1 | 6 | COM-07 (push) xong phần nhận — 10/09. COM-04 (trung tâm thông báo) chưa |
 | Payment | 4 | 0 | 4 | **Không làm ở giai đoạn này** — ADR 0013 |
 | Admin / Management | 13 | 0 | 13 | Toàn bộ P3 |
 | System | 9 | **5** | 4 | i18n · hợp đồng API · R2 · test (một phần) · **SYS-05 xong 10/09** |
@@ -163,11 +163,25 @@ Account, không phải của Calendar.
 **Đã mở khoá:** VEH-13 (giá theo ngày, `DailyPriceSheet`) và nút "Xem lịch" ở Hồ sơ 360, thẻ đội
 xe và thẻ yêu cầu thuê.
 
-### 2.9 Communication — 0/7
+### 2.9 Communication — COM-07 xong phần NHẬN (10/09/2026)
 
-COM-01 mới chỉ có màn rỗng (`app/(tabs)/chat.tsx` render `ScreenMessage`). Chưa có danh sách hội
-thoại, chưa có tin nhắn, chưa có đính kèm. COM-04 (thông báo trong app) và **COM-07 (push
-notification, P0)** chưa bắt đầu.
+**COM-07 — thông báo đẩy.** Hạ tầng backend đã đủ: `push_devices` + `push_deliveries`, API xếp
+hàng trong cùng transaction nghiệp vụ, worker gửi qua FCM (`docs/push-notifications.md`). Phía app
+làm ở mức TỐI THIỂU và có chủ đích:
+
+- xin quyền (Android 13+ `POST_NOTIFICATIONS`, iOS APNs), đúng một lần mỗi phiên chạy;
+- đăng ký token **sau khi đăng nhập**, đăng ký lại khi FCM xoay token;
+- nhận ở cả ba trạng thái: đang mở → `AppToast`; ở nền / đã tắt hẳn → hệ điều hành hiện;
+- bấm thông báo → mở đúng màn theo `data.url`, qua allowlist
+  (`src/features/notifications/deep-link.ts`). Chưa đăng nhập thì URL được cất vào
+  `pendingDeepLink` và tiêu thụ sau khi đăng nhập.
+
+Chưa làm, cố ý — thuộc **COM-04**: trung tâm thông báo, badge chưa đọc, màn cài đặt bật/tắt từng
+loại, refetch hộp thư khi nhận push, màn giải thích trước khi xin quyền, đo đếm nhận/mở, và tạo
+kênh Android thật (`docs/push-notifications.md` §6, §9).
+
+**Cần để chạy thật:** development build — Expo Go KHÔNG nhận được push — cộng hai file credential
+Firebase không nằm trong repo.
 
 ### 2.10 Payment — 0/4, KHÔNG làm
 
@@ -261,7 +275,8 @@ Bốn khoản nợ dưới đây đã đóng; giữ lại bảng để người 
 | `app.config.ts` chưa tách dev/staging/prod | Trung bình | |
 | Chưa có App Links / Universal Links | Trung bình | Link đặt lại mật khẩu trong email mở ở trình duyệt |
 | Chưa refetch theo `AppState` / NetInfo | Trung bình | |
-| **Push notification (COM-07, P0)** chưa bắt đầu | Cao | Cần cả FCM/APNs lẫn `POST /notifications/device-token` |
+| Push notification: **chưa thử trên máy thật** | Cao | Code đã đủ hai đầu; còn thiếu `google-services.json` / `GoogleService-Info.plist` + khoá APNs. Quy trình: `docs/push-notifications.md` §2, §8 |
+| Kênh thông báo Android chưa được TẠO | Thấp | Thông báo vẫn hiện (SDK rơi về kênh dự phòng), chỉ chưa tách âm báo chat ↔ đơn. Cần `@notifee/react-native`, KHÔNG dùng `expo-notifications` |
 
 ---
 
@@ -274,9 +289,9 @@ Xếp theo **cái gì đang chặn cái gì**, không theo độ khó.
 2. **Làm mịn UI/UX màn danh sách xe + Hồ sơ 360** — đã có phản hồi thực tế (03/09): thẻ xe quá
    cao do chip trạng thái xuống dòng, bảng thông số 17 dòng phần lớn rỗng và nhãn wrap, tiêu đề
    thẻ không nhất quán.
-3. **Communication COM-01/04/07** — chat thật + thông báo + push.
+3. **Communication COM-04** — trung tâm thông báo + badge, nối vào push đã chạy (COM-07).
 4. Admin. *(Customer xong 07/09; Finance xong 07/09; Shop xong 08/09; MKT-05 xong 09/09;
-   Calendar + VEH-13 xong 10/09.)*
+   Calendar + VEH-13 + push COM-07 xong 10/09.)*
 
 ---
 

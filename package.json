@@ -27,6 +27,7 @@
     "db:studio": "pnpm --filter @xeprime/prisma run studio",
     "db:reset": "pnpm --filter @xeprime/prisma run migrate:reset",
     "api:openapi": "pnpm --filter @xeprime/api run openapi",
+    "push:smoke": "pnpm --filter @xeprime/worker run push:smoke",
     "types:gen": "pnpm --filter @xeprime/types run generate",
     "contract": "pnpm run api:openapi && pnpm run types:gen",
     "test:rules": "firebase emulators:exec --only firestore \"node --test firebase/rules.test.mjs\"",

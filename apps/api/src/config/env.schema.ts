@@ -129,15 +129,31 @@ export const envSchema = z
     API_PUBLIC_URL: z.string().default('http://localhost:4000'),
 
     /*
-     * --- Firebase Admin: CHỈ còn phục vụ chat realtime (ADR 0009) ---
+     * --- Firebase Admin: chat realtime (ADR 0009) + thông báo đẩy (FCM) ---
      *
-     * Từ ADR 0019, Firebase KHÔNG còn nằm trên đường đăng nhập. Ba biến này chỉ được đọc bởi
-     * `FirebaseAppService` (mint custom token cho Firestore) và bởi `apps/worker` (đẩy projection).
-     * Chúng bắt buộc khi và chỉ khi `FIRESTORE_ENABLED=true`.
+     * Từ ADR 0019, Firebase KHÔNG còn nằm trên đường đăng nhập. Nó phục vụ HAI tính năng, và
+     * chúng bật/tắt độc lập:
+     *   • `FIRESTORE_ENABLED` — projection chat realtime (`FirebaseAppService.createCustomToken`
+     *     ở API, outbox pump ở worker);
+     *   • `PUSH_ENABLED`      — thông báo đẩy qua FCM (API xếp hàng, worker gửi).
+     *
+     * MỘT bộ credential cho cả hai: cùng một Firebase project, cùng service account. Cấp thêm
+     * một service account chỉ để gửi FCM là thêm một bí mật phải xoay mà không mua lại được gì.
+     * Ba biến dưới bắt buộc khi BẤT KỲ cái nào trong hai cờ đó bật.
      */
     FIREBASE_PROJECT_ID: z.string().optional(),
     FIREBASE_CLIENT_EMAIL: z.string().optional(),
     FIREBASE_PRIVATE_KEY: z.string().optional(),
+
+    /*
+     * Thông báo đẩy (FCM). Tắt (mặc định) thì:
+     *   • `POST /notifications/device-token` VẪN nhận đăng ký — thiết bị đăng ký trước, bật sau,
+     *     không phải đợi người dùng mở lại app;
+     *   • KHÔNG có `push_deliveries` nào được tạo, nên bật lên không làm nổ ra một trận thông báo
+     *     tồn đọng của mấy tuần trước;
+     *   • hộp thư in-app hoạt động y như cũ — push là một LỚP GIAO VẬN, không phải nguồn tin.
+     */
+    PUSH_ENABLED: booleanish.default(false),
 
     // --- Xác thực SĐT / OTP (Phase 4) ---
     // mock -> sinh mã 6 số, KHÔNG gửi SMS: in ra log + trả `devCode` ở dev (tự động điền/test).
@@ -304,12 +320,32 @@ export const envSchema = z
       }
     }
 
-    // Bật chat realtime → cần credential Firebase Admin (đẩy Firestore) + R2 (đính kèm).
-    if (env.FIRESTORE_ENABLED) {
-      const required = [
+    /*
+     * Credential Firebase Admin: bắt buộc khi BẤT KỲ tính năng nào dùng nó được bật.
+     *
+     * Tách khỏi khối `FIRESTORE_ENABLED` bên dưới vì hai cờ độc lập: một triển khai có thể bật
+     * push mà tắt chat realtime (đúng cấu hình của giai đoạn này), và khi đó nhóm `R2_*` của
+     * đính kèm chat không liên quan gì.
+     */
+    if (env.FIRESTORE_ENABLED || env.PUSH_ENABLED) {
+      for (const key of [
         'FIREBASE_PROJECT_ID',
         'FIREBASE_CLIENT_EMAIL',
         'FIREBASE_PRIVATE_KEY',
+      ] as const) {
+        if (!env[key]) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [key],
+            message: `${key} là bắt buộc khi FIRESTORE_ENABLED=true hoặc PUSH_ENABLED=true`,
+          });
+        }
+      }
+    }
+
+    // Bật chat realtime → thêm R2 (đính kèm) ngoài credential Firebase ở trên.
+    if (env.FIRESTORE_ENABLED) {
+      const required = [
         'R2_ACCOUNT_ID',
         'R2_ACCESS_KEY_ID',
         'R2_SECRET_ACCESS_KEY',

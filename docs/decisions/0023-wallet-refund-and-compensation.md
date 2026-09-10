@@ -10,6 +10,15 @@ Ngày: 28/08/2026 · Trạng thái: **Superseded bởi [ADR 0025](0025-shop-escr
 > Điều 3–8 (append-only, chống cộng đôi bằng constraint, không nạp/không thanh toán bằng ví)
 > **giữ nguyên**.
 
+> ⚠️ **[ADR 0033](0033-money-ledger-and-deposit-allocation.md) ghi đè thêm hai chỗ (10/09/2026):**
+> **Ràng buộc 1** (*"đừng gọi nó là ví tiền"*) — chủ sản phẩm chốt tên hiển thị là **"Ví điểm"**,
+> 1 điểm = 1đ; bản chất (không nạp/không chuyển/không thanh toán/**không hết hạn**/**không thu
+> hồi**) bị khoá cứng và ràng buộc 2 giữ nguyên.
+> **Điều 5** — khoá chống cộng đôi thành `@@unique([wallet_id, kind, source_type, source_ref_id])`
+> (thêm `kind`), vì khoá ba cột chặn nhầm hai ca đúng: `withdrawal` + `withdrawal_reversal` trên
+> cùng một yêu cầu rút, và hoàn-theo-kết-cục + hoàn-chuyển-thừa trên cùng một hold.
+> Mọi điều còn lại giữ nguyên.
+
 ## Bối cảnh
 
 [ADR 0021](0021-booking-hold-is-the-commission.md) thiết kế luồng thuận lợi **không cần chuyển

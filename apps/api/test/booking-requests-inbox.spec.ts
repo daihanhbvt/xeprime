@@ -18,10 +18,9 @@ import type { AuthService } from '../src/modules/auth/auth.service';
 import { ChatService } from '../src/modules/chat/chat.service';
 import { CustomersService } from '../src/modules/customers/customers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import { NotificationService } from '../src/modules/notification/notification.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingRequestsService, makeBookingsService, makePricingService } from './helpers/service-factory';
+import { makeNotificationService, makeBookingRequestsService, makeBookingsService, makePricingService } from './helpers/service-factory';
 
 /**
  * Hộp thư yêu cầu thuê của gian hàng, trên PostgreSQL THẬT.
@@ -39,7 +38,7 @@ import { makeBookingRequestsService, makeBookingsService, makePricingService } f
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
-const notifications = new NotificationService(asService);
+const notifications = makeNotificationService(asService);
 const pricing = makePricingService(asService);
 const occupancy = new OccupancyService(asService);
 const customers = new CustomersService(asService, audit);
@@ -69,7 +68,11 @@ const requests = makeBookingRequestsService(asService, {
 });
 
 // ChatService chỉ đụng ConfigService cho R2 (đính kèm) — spec này không gửi tin nào.
-const chat = new ChatService(asService, { get: () => undefined } as unknown as ConfigService);
+const chat = new ChatService(
+  asService,
+  { get: () => undefined } as unknown as ConfigService,
+  notifications,
+);
 
 let dbAvailable = false;
 let ownerId: string;

@@ -19816,6 +19816,256 @@
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002)."
       }
     },
+    "/notifications/device-token": {
+      "post": {
+        "operationId": "NotificationController_registerDevice",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterPushDeviceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PushDeviceDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đăng ký thiết bị nhận thông báo đẩy (idempotent)",
+        "tags": [
+          "notifications"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002)."
+      },
+      "delete": {
+        "operationId": "NotificationController_unregisterDevice",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnregisterPushDeviceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/DisabledCountDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ngừng nhận thông báo đẩy trên thiết bị này",
+        "tags": [
+          "notifications"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002)."
+      }
+    },
     "/notifications/mark-all-read": {
       "post": {
         "operationId": "NotificationController_markAllRead",
@@ -48800,7 +49050,7 @@
     },
     {
       "name": "notifications",
-      "description": "Thông báo trong ứng dụng và trạng thái đã đọc."
+      "description": "Thông báo trong ứng dụng, trạng thái đã đọc, và đăng ký thiết bị nhận thông báo đẩy (FCM)."
     },
     {
       "name": "customer-support",
@@ -55457,6 +55707,19 @@
           "rowVersion"
         ]
       },
+      "DisabledCountDto": {
+        "type": "object",
+        "properties": {
+          "disabled": {
+            "type": "number",
+            "example": 1,
+            "description": "Số thiết bị vừa ngừng nhận thông báo đẩy."
+          }
+        },
+        "required": [
+          "disabled"
+        ]
+      },
       "DiscountTierDto": {
         "type": "object",
         "properties": {
@@ -58349,7 +58612,8 @@
               "seller_profile_verified",
               "seller_profile_changes_requested",
               "seller_profile_rejected",
-              "support_case_updated"
+              "support_case_updated",
+              "chat_message_received"
             ]
           },
           "title": {
@@ -61798,6 +62062,51 @@
           "termMonths"
         ]
       },
+      "PushDeviceDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "fcm"
+            ]
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "android",
+              "ios"
+            ]
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Thiết bị có đang nhận thông báo đẩy không"
+          },
+          "deviceName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "pushEnabled": {
+            "type": "boolean",
+            "description": "Cờ `PUSH_ENABLED` của server. `false` = thiết bị đã ghi nhận nhưng chưa có thông báo nào được đẩy."
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "platform",
+          "enabled",
+          "lastSeenAt",
+          "pushEnabled"
+        ]
+      },
       "QuoteBreakdownDto": {
         "type": "object",
         "properties": {
@@ -62420,6 +62729,43 @@
           "password",
           "displayName",
           "phone"
+        ]
+      },
+      "RegisterPushDeviceDto": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "fcm"
+            ],
+            "description": "Nhà cung cấp push. Bỏ trống = `fcm`."
+          },
+          "token": {
+            "type": "string",
+            "description": "Registration token do FCM cấp cho bản cài app. KHÔNG bao giờ được trả lại trong response hay ghi ra log."
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "android",
+              "ios"
+            ]
+          },
+          "appVersion": {
+            "type": "string",
+            "maxLength": 30,
+            "example": "0.1.0"
+          },
+          "deviceName": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "Tên máy do client tự khai — chỉ để người dùng nhận ra thiết bị."
+          }
+        },
+        "required": [
+          "token",
+          "platform"
         ]
       },
       "RegisterShopDto": {
@@ -65029,6 +65375,15 @@
         "required": [
           "status"
         ]
+      },
+      "UnregisterPushDeviceDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Token cần tắt. Bỏ trống = mọi thiết bị của phiên này."
+          }
+        }
       },
       "UpdateBannerDto": {
         "type": "object",

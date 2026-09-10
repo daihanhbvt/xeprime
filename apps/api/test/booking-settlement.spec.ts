@@ -24,9 +24,8 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { BookingSettlementController } from '../src/modules/bookings/settlement/booking-settlement.controller';
 import { SettlementService } from '../src/modules/bookings/settlement/settlement.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
-import { NotificationService } from '../src/modules/notification/notification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makePricingService } from './helpers/service-factory';
+import { makeNotificationService, makePricingService } from './helpers/service-factory';
 
 /**
  * Wave 10 — Phát sinh cuối chuyến & hoàn cọc thủ công, trên PostgreSQL THẬT.
@@ -42,7 +41,7 @@ const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const pricing = makePricingService(asService);
-const notifications = new NotificationService(asService);
+const notifications = makeNotificationService(asService);
 const receipts = new ReceiptsService(asService, audit);
 const settlement = new SettlementService(asService, audit, pricing, notifications, receipts);
 

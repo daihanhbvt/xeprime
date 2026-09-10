@@ -115,6 +115,12 @@ async function remind(prisma: PrismaClient, now: Date, stage: ReminderStage): Pr
       body: req.vehicle.name,
       targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
       targetId: req.id,
+      /*
+       * Tin này có ĐỒNG HỒ ĐẾM NGƯỢC, nên nó cũng có hạn dùng. Máy tắt nguồn cả buổi rồi bật
+       * lên mà nhận "còn 15 phút để trả lời" cho một yêu cầu đã đóng từ lâu là một thông báo
+       * SAI — người trực mở ra và không hiểu mình phải làm gì.
+       */
+      pushExpiresAt: req.respondBy,
     });
     sent += 1;
   }

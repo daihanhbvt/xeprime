@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
+import { NOTIFICATION_AUDIENCE } from '@xeprime/domain';
 import {
   APPROVAL_ACTION,
   APPROVAL_STATUS,
@@ -346,6 +347,9 @@ export class PlatformApprovalService {
             tenantId,
             targetType: NOTIFICATION_TARGET_TYPE.TENANT,
             targetId: tenantId,
+            // Người nhận là CHỦ gian hàng, nên đích là khu quản lý — không phải mặc định
+            // "khu khách" của `emitToUser`.
+            audience: NOTIFICATION_AUDIENCE.MANAGE,
           },
           tx,
         );
@@ -408,6 +412,7 @@ export class PlatformApprovalService {
               tenantId: vehicle.tenantId,
               targetType: NOTIFICATION_TARGET_TYPE.VEHICLE,
               targetId: vehicle.id,
+              audience: NOTIFICATION_AUDIENCE.MANAGE,
             },
             tx,
           );

@@ -16,12 +16,11 @@ import {
 import { AuditService } from '../src/modules/audit/audit.service';
 import { CustomersService } from '../src/modules/customers/customers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import { NotificationService } from '../src/modules/notification/notification.service';
 import type { SaveRentalPolicyDto } from '../src/modules/pricing/dto/pricing.dto';
 import type { AuthService } from '../src/modules/auth/auth.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingRequestsService, makeBookingsService, makePricingService, makeVehiclesService, vehicleCreator } from './helpers/service-factory';
+import { makeNotificationService, makeBookingRequestsService, makeBookingsService, makePricingService, makeVehiclesService, vehicleCreator } from './helpers/service-factory';
 
 /**
  * Wave 2 (B2 — Pricing & Rental Policies), chạy trên PostgreSQL THẬT.
@@ -41,7 +40,7 @@ const createVehicle = vehicleCreator(vehicles, asService);
 const bookings = makeBookingsService(asService, {
   occupancy: new OccupancyService(asService),
   audit: audit,
-  notifications: new NotificationService(asService),
+  notifications: makeNotificationService(asService),
   customers: new CustomersService(asService, audit),
 });
 // Nhánh test chỉ đi qua inbox shop (quote/approve) — không đụng OTP/đăng nhập khách, nên hai
@@ -49,7 +48,7 @@ const bookings = makeBookingsService(asService, {
 const requests = makeBookingRequestsService(asService, {
   bookings: bookings,
   audit: audit,
-  notifications: new NotificationService(asService),
+  notifications: makeNotificationService(asService),
   phoneVerification: undefined as unknown as PhoneVerificationService,
   auth: undefined as unknown as AuthService,
   pricing: pricing,

@@ -181,7 +181,11 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
   {
     title: 'Tương tác',
     tags: [
-      { name: 'notifications', description: 'Thông báo trong ứng dụng và trạng thái đã đọc.' },
+      {
+        name: 'notifications',
+        description:
+          'Thông báo trong ứng dụng, trạng thái đã đọc, và đăng ký thiết bị nhận thông báo đẩy (FCM).',
+      },
       {
         name: 'customer-support',
         description: 'Yêu cầu hỗ trợ của khách thuê; tranh chấp phải gắn chuyến của chính họ.',

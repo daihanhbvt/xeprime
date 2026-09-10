@@ -272,7 +272,8 @@
     "subscription_lapsed": "Đã chuyển sang tính hoa hồng",
     "free_trips_exhausted": "Hết lượt miễn phí",
     "subscription_activated": "Gói đã kích hoạt",
-    "booking_auto_accepted": "Tự động nhận chuyến"
+    "booking_auto_accepted": "Tự động nhận chuyến",
+    "chat_message_received": "Tin nhắn mới"
   },
   "occupancySourceType": {
     "booking": "Đơn thuê",

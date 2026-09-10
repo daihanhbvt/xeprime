@@ -1,6 +1,6 @@
 # XePrime — Completion Roadmap
 
-> Cập nhật: 07/09/2026
+> Cập nhật: 10/09/2026
 > Trạng thái: **Canonical — tiến độ và thứ tự thực hiện**
 > Tầm nhìn: [`design/02_PRODUCT_VISION.md`](design/02_PRODUCT_VISION.md)
 > Khoảng trống chi tiết: [`design/03_PRODUCT_GAP_ANALYSIS.md`](design/03_PRODUCT_GAP_ANALYSIS.md)
@@ -21,10 +21,10 @@ Trạng thái dưới đây phân biệt rõ **đã có trong source/feature bra
 | Shop management web     | Khá đầy đủ; R1 đang đóng gate                | Xe, lịch, booking, giao nhận, khách, tài chính, maintenance, members/branches/drivers; dashboard thật, invitation và legal/email flow đã được bổ sung trên code hiện tại |
 | Platform admin core     | Đã có                                        | Approval, tenants, vehicles, bookings, customers, staff, plans, content, audit                                                                                           |
 | Slot subscription W1–W3 | Đã có trong code                             | Gói/slot, subscription UI/invoice, feature guard                                                                                                                         |
-| SePay subscription W4   | Đã có trên feature branch; chưa vượt Gate R2 | Có VietQR, webhook, bank matching, xử lý thiếu/thừa/trùng và admin match tay; còn cần merge, cấu hình môi trường thật và UAT gate                                        |
-| Marketplace money       | Chưa có                                      | Hold/payment/refund/owner balance/withdrawal/reconciliation chưa thành module thật                                                                                       |
+| SePay subscription W4   | **Đã merge vào `develop`**; chưa vượt Gate R2 | Có VietQR, webhook, bank matching, xử lý thiếu/thừa/trùng và admin match tay; còn cần cấu hình môi trường thật và UAT gate                                              |
+| Marketplace money       | **Một phần**                                 | ĐÃ CÓ: `booking_holds`, `hold_refunds`, `fee_policies` versioned, `/platform/money` (hold/refund/đối chiếu ngày). CHƯA CÓ: ví/sổ công nợ, rút tiền, bảo hiểm, thuế, đối chiếu 3 vế — kế hoạch ở `plans/`, quy tắc ở ADR 0033 |
 | Basic-owner experience  | Chưa tách hoàn chỉnh                         | Capability có nền móng; cần Owner Lite UX và luồng tiền                                                                                                                  |
-| Mobile customer         | Một phần                                     | Auth + discovery + gửi yêu cầu thuê + chuyến của tôi + đánh giá; thiếu payment, chat và push                                                                             |
+| Mobile customer         | Một phần                                     | Auth + discovery + gửi yêu cầu thuê + chuyến của tôi + đánh giá + chat; thông báo đẩy có hạ tầng đủ hai đầu (`docs/push-notifications.md`) nhưng **chưa thử trên máy thật** — thiếu credential Firebase + khoá APNs. Thiếu payment và trung tâm thông báo |
 | Mobile manage           | Một phần                                     | Hộp thư yêu cầu, đơn thuê, biên bản giao/nhận, quyết toán, thu tiền — xem ghi chú ở R6                                                                                   |
 | Production readiness    | Chưa đạt                                     | Chưa có đủ E2E, monitoring, legal/compliance gate và bằng chứng vận hành thật                                                                                            |
 
@@ -82,7 +82,7 @@ Trạng thái: **Đang đóng gate**. Code hiện tại đã bổ sung dashboard
 
 Mục tiêu: nguồn doanh thu đơn giản nhất hoạt động trước.
 
-Trạng thái: **Đã có lát cắt W4 trên nhánh `feature/web-subscription-payments`, chưa vượt Gate R2**. Việc tiếp theo là review/merge, cấu hình SePay-ngân hàng thật, kiểm chứng migration và chạy UAT; không xây lại webhook hoặc bank matching nếu audit xác nhận chúng đã đúng.
+Trạng thái: **Lát cắt W4 đã merge vào `develop`, chưa vượt Gate R2**. Việc tiếp theo là cấu hình SePay-ngân hàng thật, kiểm chứng migration và chạy UAT; **không xây lại webhook hoặc bank matching** — chúng đã chạy và có test (`apps/api/test/sepay-webhook.spec.ts`).
 
 - Review và hoàn thiện lát cắt SePay/VietQR cho subscription invoice đã có trên feature branch.
 - Đối soát idempotent: đúng/thiếu/thừa/sai mã/trùng webhook.
@@ -110,11 +110,22 @@ Mục tiêu: cộng phí dịch vụ theo chuyến vào giá khách một cách 
 
 Ở release đầu, ưu tiên **khách trả phần còn lại trực tiếp cho chủ xe**. XePrime chỉ thu khoản giữ chỗ và các dòng được policy phân bổ vào khoản đó; ADR 0029 không đồng nghĩa XePrime phải thu toàn bộ tiền thuê. Cách này giảm tiền phải giữ hộ nhưng vẫn cho XePrime kiểm chứng marketplace và phí dịch vụ phía khách.
 
+> ⚠️ **Cập nhật 10/09/2026 theo ADR 0032/0033.** Ba câu ở trên đã đổi nội hàm:
+> khoản khách trả online là `D + S + IV + IP` (cọc là **một phần giá thuê**, không phải phí thêm),
+> nên **cả hai tuyến** đều sinh khoản XePrime phải trả chủ xe (`D − T`). Hệ quả: **ví/sổ công nợ và
+> rút tiền không còn là việc của R4** — chúng là điều kiện để R3 chạy được. Bảo hiểm do **khách**
+> trả (không phải chủ xe) và chỉ phát hành ở mốc bàn giao; thuế do chủ xe chịu, khấu trừ khỏi khoản
+> phải trả. Kế hoạch thực thi: `docs/plans/`.
+
 **Gate R3:** tiền vào–hoàn–giữ của mọi case UAT khớp sổ; không có bút toán mồ côi hoặc cộng đôi.
 
-### R4 — Thu hộ đầy đủ và Số dư chủ xe
+### R4 — Thu hộ đầy đủ (phần còn lại của tiền thuê)
 
-Mục tiêu: cho khách trả phần còn lại trên nền tảng và chủ xe rút tiền.
+Mục tiêu: cho khách trả **phần `B − D` còn lại** trên nền tảng, thay vì trả trực tiếp chủ xe.
+
+> ⚠️ **Cập nhật 10/09/2026.** Sổ công nợ, số dư chủ xe và rút tiền đã **chuyển xuống R3** (xem ghi
+> chú ở R3): với ADR 0032, mỗi chuyến hoàn thành đều sinh khoản phải trả chủ xe, nên không có ví
+> thì tiền cọc vào rồi mắc kẹt. R4 nay chỉ còn phần **thu hộ toàn bộ tiền thuê**.
 
 Chỉ bắt đầu sau khi có:
 
@@ -150,7 +161,7 @@ Mục tiêu: kiểm chứng cung, cầu và economics.
 
 Mục tiêu: app native phục vụ trọn luồng người thuê, đồng thời duy trì ổn định lát cắt quản lý đã có.
 
-- Booking, hold/payment, trips, chat và push.
+- Booking, hold/payment, trips, chat và push. **Push: phần NHẬN đã dựng (10/09)** — còn trung tâm thông báo, badge, cài đặt, và một lượt kiểm trên máy thật với credential Firebase thật.
 - Deep links/App Links, environment profiles, iOS build và CI release.
 - Crash/error reporting và analytics đồng nhất web/mobile.
 - Duy trì và sửa lỗi cho lát cắt Mobile Manage hiện có: inbox yêu cầu, booking, giao/nhận, quyết toán và thu tiền.

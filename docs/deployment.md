@@ -682,6 +682,7 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `SMTP_FROM` | `XePrime STG <no-reply@stg.xeprime.vn>` | tên miền **con**, không phải `xeprime.vn` — uy tín gửi thư tính theo tên miền, test hỏng không được kéo thư của khách vào Junk |
 | `SEPAY_BANK_CODE` · `SEPAY_ACCOUNT_NUMBER` · `SEPAY_ACCOUNT_NAME` | trống | in vào mã VietQR ⇒ công khai theo bản chất. Đi cùng `SEPAY_API_KEY` (Secret) — bốn cái khai cùng nhau hoặc cùng để trống, khai lẻ thì API từ chối boot |
 | `FIRESTORE_ENABLED` | `false` | |
+| `PUSH_ENABLED` | `false` | thông báo đẩy FCM — ĐỘC LẬP với `FIRESTORE_ENABLED`, dùng chung bộ `FIREBASE_*`. Bật thì worker gửi thật (`docs/push-notifications.md`) |
 | `FIREBASE_PROJECT_ID` · `FIREBASE_CLIENT_EMAIL` | trống | là ĐỊNH DANH, không phải bí mật |
 | `GOOGLE_OAUTH_CLIENT_ID` · `FACEBOOK_APP_ID` | trống hoặc thật | client id đi trong URL authorize ⇒ công khai theo thiết kế |
 | `R2_ACCOUNT_ID` · `R2_ENDPOINT` · `R2_BUCKET` · `R2_PRIVATE_BUCKET` · `R2_PUBLIC_BASE_URL` | bucket RIÊNG cho staging | URL `r2.dev` là đủ |

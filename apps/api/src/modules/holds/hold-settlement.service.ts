@@ -327,8 +327,17 @@ export class HoldSettlementService {
             title: 'Đã hoàn khoản giữ chỗ',
             body: `XePrime đã chuyển trả ${refund.amount.toFixed(0)}đ (mã ${refund.hold.code}).`,
             tenantId: refund.tenantId,
-            targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
-            targetId: refund.hold.bookingId ?? refund.hold.id,
+            /*
+             * KHÔNG lùi về `hold.id` khi chưa có đơn: từ 10/09 thông báo có đích bấm được, và
+             * `targetType: booking` + id của một hold dựng ra `/trips/<holdId>` — một chuyến
+             * không tồn tại. Không có đơn thì tin này không có đích, đúng như vậy.
+             */
+            ...(refund.hold.bookingId
+              ? {
+                  targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+                  targetId: refund.hold.bookingId,
+                }
+              : {}),
           },
           tx,
         );

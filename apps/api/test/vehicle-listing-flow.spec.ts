@@ -18,10 +18,9 @@ import {
 } from '@xeprime/types';
 import { SettlementService } from '../src/modules/bookings/settlement/settlement.service';
 import { AuditService } from '../src/modules/audit/audit.service';
-import { NotificationService } from '../src/modules/notification/notification.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makePricingService, makeVehiclesService, seedBranch } from './helpers/service-factory';
+import { makeNotificationService, makePricingService, makeVehiclesService, seedBranch } from './helpers/service-factory';
 
 /**
  * LUỒNG ĐĂNG XE NHANH — luật ở SERVER, trên PostgreSQL THẬT (09/09/2026).
@@ -44,7 +43,7 @@ const asService = prisma as unknown as PrismaService;
 const vehicles = makeVehiclesService(asService);
 const pricing = makePricingService(asService);
 const audit = new AuditService(asService);
-const notifications = new NotificationService(asService);
+const notifications = makeNotificationService(asService);
 const settlement = new SettlementService(
   asService,
   audit,
