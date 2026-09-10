@@ -292,11 +292,22 @@ Worker đồng bộ mỗi ngày một lần và tự che key khỏi log lỗi.
 
 ---
 
-## 6. Firebase — chat realtime
+## 6. Firebase — chat realtime + thông báo đẩy
 
-Firebase ở XePrime **chỉ còn đúng một vai**: đẩy tin nhắn realtime. Đăng nhập đã tự làm hoàn toàn
-từ ADR 0019. **PostgreSQL là nguồn sự thật** của mọi tin nhắn; Firestore chỉ giữ ~50 tin gần nhất
-mỗi hội thoại để client nhận tức thì (ADR 0009).
+Đăng nhập đã tự làm hoàn toàn từ ADR 0019, nên Firebase còn đúng **hai vai**, bật/tắt độc lập
+bằng hai biến riêng nhưng dùng CHUNG một project và một service account:
+
+| Vai | Cờ | Ai đọc credential |
+| --- | --- | --- |
+| Đẩy tin nhắn realtime (Firestore projection) | `FIRESTORE_ENABLED` | API (mint custom token) + worker (đẩy projection) |
+| Thông báo đẩy (FCM) | `PUSH_ENABLED` | worker (gửi). API chỉ xếp hàng, không gọi Firebase |
+
+**PostgreSQL là nguồn sự thật** của mọi tin nhắn; Firestore chỉ giữ ~50 tin gần nhất mỗi hội
+thoại để client nhận tức thì (ADR 0009).
+
+Thông báo đẩy có tài liệu riêng cho toàn bộ luồng (bao gồm `google-services.json`,
+`GoogleService-Info.plist` và khoá APNs): **`docs/push-notifications.md`**. Phần dưới đây chỉ nói
+về bộ credential dùng chung.
 
 > ⚠️ Bật `FIRESTORE_ENABLED=true` khiến **toàn bộ biến R2 thành bắt buộc lúc boot** (chat có đính
 > kèm). Làm §1 trước.
@@ -355,11 +366,27 @@ npx firebase-tools deploy --only firestore:rules --project xeprime-staging
 
 ### 6.5 Bật
 
-| Loại | Tên | Giá trị |
-| --- | --- | --- |
-| Variable | `FIRESTORE_ENABLED` | `true` |
+| Loại | Tên | Giá trị | Bật cái gì |
+| --- | --- | --- | --- |
+| Variable | `FIRESTORE_ENABLED` | `true` | chat realtime |
+| Variable | `PUSH_ENABLED` | `true` | thông báo đẩy (FCM) |
 
-Đặt `false` bất cứ lúc nào để tắt — chat lập tức quay về chạy trên PostgreSQL, không mất tin nào.
+Hai cờ ĐỘC LẬP — bật push mà tắt chat realtime là cấu hình hợp lệ. Đặt `false` bất cứ lúc nào để
+tắt: chat quay về chạy trên PostgreSQL (không mất tin nào), còn thông báo quay về chỉ có hộp thư
+in-app.
+
+### 6.6 Thêm cho thông báo đẩy
+
+Ba việc, chi tiết ở `docs/push-notifications.md` §2:
+
+1. bật **Firebase Cloud Messaging API** trên Google Cloud Console;
+2. cấp cho service account vai trò **Firebase Cloud Messaging API Admin**;
+3. tải `google-services.json` (Android) + `GoogleService-Info.plist` (iOS) cho app native, và
+   upload **khoá APNs `.p8`** vào Firebase Console. Package/bundle id phải trùng từng ký tự với
+   `apps/mobile/app.json` (`vn.xeprime.mobile`).
+
+> ⚠️ Hai file credential của app native **không nằm trong repo** và không được commit. Private key
+> của service account (`FIREBASE_PRIVATE_KEY`) chỉ ở backend/worker — không bao giờ vào app.
 
 ---
 

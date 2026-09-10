@@ -71,6 +71,24 @@ export {
 
 export { isSafeNextPath, safeNextPath } from './safe-path';
 
+/**
+ * Thông báo đẩy: một thông báo dẫn đi đâu, gộp với tin nào, ồn tới mức nào.
+ *
+ * Ở domain vì server ĐÓNG GÓI đường dẫn vào payload còn app native ĐIỀU HƯỚNG theo nó — hai
+ * bảng route khác nhau một dấu gạch chéo là một thông báo mở ra màn trắng.
+ */
+export {
+  NOTIFICATION_AUDIENCE,
+  androidChannelFor,
+  notificationDeepLink,
+  pushCollapseKey,
+  pushDataPayload,
+  pushPriority,
+  type NotificationAudience,
+  type NotificationTargetRef,
+  type PushDataInput,
+} from './notification-delivery';
+
 export { TEL_SCHEME, ZALO_PROFILE_BASE_URL, telHref, zaloHref } from './contact';
 
 export {

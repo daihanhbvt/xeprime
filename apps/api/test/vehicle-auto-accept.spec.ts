@@ -26,11 +26,10 @@ import {
 import { AuditService } from '../src/modules/audit/audit.service';
 import type { AuthService } from '../src/modules/auth/auth.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import { NotificationService } from '../src/modules/notification/notification.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingRequestsService } from './helpers/service-factory';
+import { makeNotificationService, makeBookingRequestsService } from './helpers/service-factory';
 
 /**
  * TỰ ĐỘNG NHẬN CHUYẾN — đường đi thật của một yêu cầu công khai, trên PostgreSQL THẬT.
@@ -52,7 +51,7 @@ const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 
 const audit = new AuditService(asService);
-const notifications = new NotificationService(asService);
+const notifications = makeNotificationService(asService);
 const occupancy = new OccupancyService(asService);
 const settings = new VehicleSettingsService(asService, audit, occupancy);
 

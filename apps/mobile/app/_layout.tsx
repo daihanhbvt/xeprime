@@ -15,6 +15,8 @@ import 'react-native-reanimated';
 import { AppErrorScreen } from '@/components/state/AppErrorScreen';
 import { AppToastProvider } from '@/components/feedback/AppToast';
 import { SessionBoundary } from '@/features/auth/SessionBoundary';
+import { registerPushBackgroundHandler } from '@/features/notifications/messaging';
+import { PushBootstrap } from '@/features/notifications/PushBootstrap';
 import { I18nProvider } from '@/i18n/I18nProvider';
 import { queryClient } from '@/queries/query-client';
 import { store } from '@/store';
@@ -24,6 +26,13 @@ import { tamaguiConfig } from '@/theme/tamagui.config';
 import { duration } from '@/theme/motion';
 
 patchDayjsTimezone();
+
+/*
+ * Ở phạm vi MODULE, ngoài mọi component: khi hệ điều hành đánh thức app bằng một headless task
+ * để giao thông báo, không có cây React nào được dựng. No-op nếu bản build không có module
+ * Firebase Messaging (Expo Go, bản web, bản build chưa có credential).
+ */
+registerPushBackgroundHandler();
 
 /**
  * expo-router bắt lỗi render của cả cây qua export TÊN `ErrorBoundary` ở layout gốc. Nó nằm
@@ -52,6 +61,7 @@ export default function RootLayout() {
                 nằm trong màn hình thì nó bị tháo cùng màn đó và người dùng không kịp đọc gì.
               */}
               <AppToastProvider>
+                <PushBootstrap />
               <SessionBoundary>
                 <Stack
                   screenOptions={{

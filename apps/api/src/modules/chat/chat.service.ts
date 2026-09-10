@@ -8,10 +8,13 @@ import { ConfigService } from '@nestjs/config';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  CHAT_NOTIFICATION_COPY,
   CHAT_SIDE,
   CONVERSATION_STATUS,
   MEMBERSHIP_STATUS,
   MESSAGE_TYPE,
+  NOTIFICATION_TARGET_TYPE,
+  NOTIFICATION_TYPE,
   OUTBOX_STATUS,
   SENDER_TYPE,
   TENANT_STATUS,
@@ -21,6 +24,7 @@ import {
   type SenderType,
 } from '@xeprime/types';
 // CONVERSATION_STATUS.OPEN (misc.ts) — hội thoại mới mặc định "open".
+import { NotificationService } from '../notification/notification.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   ConversationListQueryDto,
@@ -77,6 +81,7 @@ export class ChatService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly notifications: NotificationService,
   ) {}
 
   /**
@@ -423,6 +428,8 @@ export class ChatService {
           });
         }
 
+        await this.notifyOtherSide(tx, conversation, side, userId);
+
         return message;
       });
     } catch (error) {
@@ -545,6 +552,50 @@ export class ChatService {
         ? { OR: [{ customer: { displayName: search } }, { vehicle: { name: search } }] }
         : {}),
     };
+  }
+
+  /**
+   * Báo cho PHÍA ĐỐI DIỆN có tin nhắn mới — trong cùng transaction với chính tin nhắn đó.
+   *
+   * Ba luật, và cả ba đều đã có người vi phạm ở nơi khác:
+   *
+   *  1. **Không bao giờ báo cho người gửi.** Hiển nhiên, nhưng `emitToTenantMembers` fan-out cho
+   *     MỌI thành viên, và nhân viên gian hàng vừa gõ xong câu trả lời cũng là một thành viên.
+   *  2. **Không báo cho người đang là KHÁCH của chính thread này**, kể cả khi họ là thành viên
+   *     gian hàng. Chủ shop nhắn hỏi thuê xe của shop khác là việc riêng của họ; hộp thư gian
+   *     hàng không liệt kê thread đó (`inboxWhere`), nên thông báo dẫn tới nó cũng vô nghĩa.
+   *  3. **Nội dung tin KHÔNG vào thông báo.** Chat là riêng tư, còn thông báo thì hiện ở màn
+   *     khoá và đi qua log của OS (ADR 0009). Câu chữ dừng ở "bạn có tin nhắn mới".
+   *
+   * Chỉ chạy trên nhánh tin THẬT SỰ MỚI: `sendMessage` trả về sớm ở cả hai nhánh phát lại theo
+   * `clientMessageId` (đường tắt và nhánh bắt P2002), nên một lần retry của client không đẻ
+   * thêm thông báo — bất biến đó nằm ở chỗ hàm này được gọi bên TRONG transaction tạo tin.
+   */
+  private async notifyOtherSide(
+    tx: Prisma.TransactionClient,
+    conversation: { id: string; tenantId: string; customerUserId: string | null },
+    senderSide: ChatSide,
+    senderUserId: string,
+  ): Promise<void> {
+    const payload = {
+      type: NOTIFICATION_TYPE.CHAT_MESSAGE_RECEIVED,
+      title: CHAT_NOTIFICATION_COPY.TITLE,
+      body: CHAT_NOTIFICATION_COPY.BODY,
+      tenantId: conversation.tenantId,
+      targetType: NOTIFICATION_TARGET_TYPE.CONVERSATION,
+      targetId: conversation.id,
+    } as const;
+
+    if (senderSide === CHAT_SIDE.CUSTOMER) {
+      await this.notifications.emitToTenantMembers(conversation.tenantId, payload, tx, {
+        excludeUserIds: [senderUserId, conversation.customerUserId],
+      });
+      return;
+    }
+
+    // Khách vãng lai (không có tài khoản) không có ai để báo — gian hàng liên hệ qua điện thoại.
+    if (!conversation.customerUserId) return;
+    await this.notifications.emitToUser(conversation.customerUserId, payload, tx);
   }
 
   /** Tenant mà user đang là thành viên active — dùng để scope hội thoại phía shop. */

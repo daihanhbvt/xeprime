@@ -51,5 +51,8 @@
     "title": "Thêm",
     "switchScope": "Chuyển sang chế độ khách hàng",
     "comingSoon": "Các mục quản lý khác sẽ mở dần ở những đợt sau."
+  },
+  "push": {
+    "fallback": "Bạn có thông báo mới"
   }
 }

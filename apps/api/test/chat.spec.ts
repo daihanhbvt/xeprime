@@ -1,8 +1,11 @@
 import type { ConfigService } from '@nestjs/config';
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  CHAT_NOTIFICATION_COPY,
   CHAT_SIDE,
   MEMBERSHIP_STATUS,
+  NOTIFICATION_TARGET_TYPE,
+  NOTIFICATION_TYPE,
   OUTBOX_STATUS,
   SENDER_TYPE,
   TENANT_ROLE,
@@ -12,6 +15,7 @@ import {
 } from '@xeprime/types';
 import { ChatService } from '../src/modules/chat/chat.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makeNotificationService } from './helpers/service-factory';
 
 /**
  * Chat chạy trên PostgreSQL THẬT (source of truth, ADR 0009). Kiểm chứng: getOrCreate idempotent
@@ -22,7 +26,11 @@ import type { PrismaService } from '../src/prisma/prisma.service';
 const prisma = createPrismaClient();
 // ChatService chỉ dùng ConfigService cho R2_PUBLIC_BASE_URL (đính kèm) — test tin text nên trả undefined.
 const fakeConfig = { get: () => undefined } as unknown as ConfigService;
-const chat = new ChatService(prisma as unknown as PrismaService, fakeConfig);
+const asService = prisma as unknown as PrismaService;
+// Thông báo dùng bản THẬT (nó ghi vào `notifications`, và chính hàng đó là thứ spec kiểm);
+// push tắt — hàng đợi đẩy có spec riêng ở `push-notifications.spec.ts`.
+const notifications = makeNotificationService(asService);
+const chat = new ChatService(asService, fakeConfig, notifications);
 
 let dbAvailable = false;
 let customerId: string;
@@ -459,5 +467,93 @@ describe('ChatService — tách hai hộp thư', () => {
     // Người chưa thuộc gian hàng nào: đếm phía shop là 0, không phải lỗi.
     const noTenant = await chat.unreadCount(customerId, CHAT_SIDE.SHOP);
     expect(noTenant.count).toBe(0);
+  });
+});
+
+/**
+ * Thông báo tin nhắn mới (10/09/2026) — phần in-app; hàng đợi ĐẨY có spec riêng
+ * (`push-notifications.spec.ts`) và việc gửi FCM nằm ở worker.
+ *
+ * Điều được khoá: người gửi không tự nhận thông báo, phía đối diện thì có, một lần retry của
+ * client không sinh tin thứ hai, và nội dung riêng tư không rò ra khỏi hội thoại.
+ */
+describe('ChatService — thông báo cho phía đối diện', () => {
+  const chatNotifications = (userId: string) =>
+    prisma.notification.findMany({
+      where: { userId, type: NOTIFICATION_TYPE.CHAT_MESSAGE_RECEIVED, targetId: conversationId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+  maybe('khách nhắn → mọi thành viên gian hàng nhận, người gửi thì không', async () => {
+    const ownerBefore = (await chatNotifications(ownerId)).length;
+    const staffBefore = (await chatNotifications(staffId)).length;
+    // Khách đã nhận thông báo từ các tin shop gửi ở những case trước — đo ĐỘ LỆCH, không đo tổng.
+    const customerBefore = (await chatNotifications(customerId)).length;
+
+    await chat.sendMessage(customerId, conversationId, { text: 'Xe còn trống không shop?' });
+
+    expect((await chatNotifications(ownerId)).length).toBe(ownerBefore + 1);
+    expect((await chatNotifications(staffId)).length).toBe(staffBefore + 1);
+    // Người gửi là khách — họ không được nhận tin về chính câu mình vừa gõ.
+    expect((await chatNotifications(customerId)).length).toBe(customerBefore);
+  });
+
+  maybe('shop trả lời → khách nhận, nhân viên vừa gõ thì không', async () => {
+    const staffBefore = (await chatNotifications(staffId)).length;
+    const customerBefore = (await chatNotifications(customerId)).length;
+
+    await chat.sendMessage(staffId, conversationId, { text: 'Còn bạn nhé' });
+
+    expect((await chatNotifications(customerId)).length).toBe(customerBefore + 1);
+    expect((await chatNotifications(staffId)).length).toBe(staffBefore);
+  });
+
+  maybe('nội dung tin KHÔNG lọt vào thông báo, và đích là đúng hội thoại', async () => {
+    const secret = `Số tài khoản của tôi là ${newId()}`;
+    await chat.sendMessage(customerId, conversationId, { text: secret });
+
+    const latest = (await chatNotifications(ownerId)).at(-1);
+    expect(latest?.title).toBe(CHAT_NOTIFICATION_COPY.TITLE);
+    expect(latest?.body).toBe(CHAT_NOTIFICATION_COPY.BODY);
+    expect(latest?.body).not.toContain(secret);
+    expect(latest?.targetType).toBe(NOTIFICATION_TARGET_TYPE.CONVERSATION);
+    expect(latest?.targetId).toBe(conversationId);
+    expect((latest?.dataJson as { url: string }).url).toBe(`/chat/${conversationId}`);
+  });
+
+  maybe('gửi lại cùng clientMessageId KHÔNG tạo thông báo lần hai', async () => {
+    const clientMessageId = newId();
+    await chat.sendMessage(customerId, conversationId, { text: 'Một lần thôi', clientMessageId });
+    const after = (await chatNotifications(ownerId)).length;
+
+    await chat.sendMessage(customerId, conversationId, { text: 'Một lần thôi', clientMessageId });
+    await Promise.all(
+      Array.from({ length: 4 }, () =>
+        chat.sendMessage(customerId, conversationId, { text: 'Một lần thôi', clientMessageId }),
+      ),
+    );
+
+    expect((await chatNotifications(ownerId)).length).toBe(after);
+  });
+
+  /**
+   * Chủ shop nhắn hỏi thuê xe của CHÍNH shop mình sẽ là khách của thread đó. Hộp thư gian hàng
+   * không liệt kê thread ấy (`inboxWhere`), nên một thông báo dẫn tới nó là một ngõ cụt.
+   */
+  maybe('thành viên đang là KHÁCH của chính thread đó không nhận thông báo phía shop', async () => {
+    const selfConv = await chat.getOrCreateConversation(ownerId, { vehicleId });
+    const before = await prisma.notification.count({
+      where: { userId: ownerId, targetId: selfConv.id },
+    });
+
+    await chat.sendMessage(ownerId, selfConv.id, { text: 'Tự hỏi mình' });
+
+    expect(
+      await prisma.notification.count({ where: { userId: ownerId, targetId: selfConv.id } }),
+    ).toBe(before);
+    // Nhân viên vẫn nhận — thread này là việc của gian hàng, chỉ người gửi bị loại.
+    expect(
+      await prisma.notification.count({ where: { userId: staffId, targetId: selfConv.id } }),
+    ).toBeGreaterThan(0);
   });
 });

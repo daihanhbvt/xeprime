@@ -5,6 +5,7 @@ import {
   GOOGLE_HOLIDAY_API_KEY,
   GOOGLE_HOLIDAY_CALENDAR_ID,
   HOLIDAY_SYNC_ENABLED,
+  PUSH_ENABLED,
   assertWorkerEnv,
 } from './lib/env';
 import { withAdvisoryLock } from './lib/advisory-lock';
@@ -14,12 +15,13 @@ import { sweepBookingRequestDeadlines } from './jobs/booking-request-deadlines';
 import { sweepSubscriptionLifecycle } from './jobs/subscription-lifecycle';
 import { sweepBookingHoldExpiry } from './jobs/booking-hold-expiry';
 import { purgeExpiredOauthStates } from './jobs/oauth-state-cleanup';
+import { dispatchPushDeliveries } from './jobs/push-dispatch';
 import { HOLIDAY_INTERVAL_MS, shouldRunHolidaySync, syncHolidays } from './jobs/holiday-sync';
 
 /**
  * Worker XePrime — mọi việc chạy theo ĐỒNG HỒ, không theo request của người dùng.
  *
- * Bốn nhóm việc, và chúng độc lập với nhau:
+ * Năm nhóm việc, và chúng độc lập với nhau:
  *
  *  1. **Hạn phản hồi yêu cầu thuê** (25/08) — nhắc gian hàng ở phút 20/45 và đóng yêu cầu ở
  *     phút 60. Đây là việc NGHIỆP VỤ LÕI: nó chạy ở mọi cấu hình, kể cả khi chat Firestore tắt.
@@ -28,7 +30,10 @@ import { HOLIDAY_INTERVAL_MS, shouldRunHolidaySync, syncHolidays } from './jobs/
  *     thiếu key thì vòng lặp đơn giản không được đăng ký.
  *  3. **Dọn phiên OAuth dở dang** (26/08, ADR 0019) — mỗi giờ một lần, xoá `oauth_states` và
  *     `native_auth_codes` đã hết hạn. Cũng chạy ở mọi cấu hình.
- *  4. **Đồng bộ chat Postgres → Firestore** (Phase 5, ADR 0009) — chỉ khi `FIRESTORE_ENABLED`.
+ *  4. **Đẩy thông báo qua FCM** (10/09) — chỉ khi `PUSH_ENABLED`. API xếp hàng vào
+ *     `push_deliveries` trong cùng transaction với nghiệp vụ; ở đây mới gọi ra Google. Đó là
+ *     lý do đặt xe không hỏng khi Firebase hỏng.
+ *  5. **Đồng bộ chat Postgres → Firestore** (Phase 5, ADR 0009) — chỉ khi `FIRESTORE_ENABLED`.
  *
  * Ràng buộc chung: idempotent + `pg_try_advisory_lock` chống hai instance chạy chồng nhau.
  * Chạy polling loop (không kéo cả Nest runtime vào worker).
@@ -61,6 +66,14 @@ const LOCK_SUBSCRIPTION_LIFECYCLE = 4_206;
 const LOCK_HOLD_EXPIRY = 4_207;
 /** Hold hết hạn theo phút; một phút một nhịp là đủ mịn và job chạy lại ra 0 dòng. */
 const HOLD_EXPIRY_INTERVAL_MS = 60_000;
+
+const LOCK_PUSH = 4_208;
+/**
+ * Nhịp đẩy thông báo. Năm giây là độ trễ tối đa giữa "tin nhắn tới server" và "máy rung" — chậm
+ * hơn thì chat không còn giống realtime, nhanh hơn thì đây thành một vòng lặp bận trên một bảng
+ * mà phần lớn thời gian rỗng (index một phần lo phần còn lại).
+ */
+const PUSH_INTERVAL_MS = 5_000;
 
 const prisma = createPrismaClient();
 let stopping = false;
@@ -135,6 +148,33 @@ async function main(): Promise<void> {
       }
     }),
   ];
+
+  /*
+   * Thông báo đẩy (10/09/2026) — ĐỘC LẬP với `FIRESTORE_ENABLED`: hai tính năng dùng chung một
+   * Firebase project nhưng bật/tắt riêng, và cấu hình của giai đoạn này là push bật còn chat
+   * realtime tắt.
+   *
+   * Tắt ⇒ KHÔNG đăng ký vòng lặp, và nói ra đúng một dòng lúc boot. Đăng ký rồi bỏ qua trong im
+   * lặng nghĩa là `push_deliveries` chất đống mà không ai biết vì sao máy không rung.
+   */
+  if (PUSH_ENABLED) {
+    jobs.push(
+      loop('đẩy thông báo', LOCK_PUSH, PUSH_INTERVAL_MS, async () => {
+        const result = await dispatchPushDeliveries(prisma);
+        // Chỉ log khi có việc — một dòng "0/0/0" mỗi 5 giây sẽ chôn mọi dòng đáng đọc khác.
+        if (result.sent || result.retried || result.failed || result.expired) {
+          console.log(
+            `push: gửi ${result.sent}, thử lại ${result.retried}, hỏng ${result.failed}, ` +
+              `quá hạn ${result.expired}, tắt ${result.devicesDisabled} thiết bị`,
+          );
+        }
+      }),
+    );
+  } else {
+    console.log(
+      'XePrime worker: PUSH_ENABLED=false → không gửi thông báo đẩy. Hộp thư in-app chạy bình thường.',
+    );
+  }
 
   /*
    * Ngày lễ là việc NGHIỆP VỤ, không phải tuỳ chọn của chat — nó chạy độc lập với

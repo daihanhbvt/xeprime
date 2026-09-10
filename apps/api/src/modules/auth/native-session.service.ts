@@ -221,7 +221,13 @@ export class NativeSessionService {
     await this.revokeSession(found.sessionId, NATIVE_REVOKE_REASON.LOGOUT);
   }
 
-  /** Thu hồi phiên + mọi refresh token còn sống của nó. Idempotent. */
+  /**
+   * Thu hồi phiên + mọi refresh token còn sống của nó + mọi THIẾT BỊ ĐẨY của nó. Idempotent.
+   *
+   * Thiết bị đi cùng transaction, không phải một bước dọn dẹp sau: một phiên đã chết mà máy vẫn
+   * rung thông báo về đơn hàng là đúng thứ mà việc thu hồi tồn tại để ngăn — và nó tệ nhất ở
+   * đúng nhánh `refresh_reuse`, nơi máy đang cầm token có thể là của kẻ trộm.
+   */
   async revokeSession(sessionId: string, reason: NativeRevokeReason): Promise<void> {
     const now = new Date();
     await this.prisma.$transaction([
@@ -232,6 +238,10 @@ export class NativeSessionService {
       this.prisma.nativeRefreshToken.updateMany({
         where: { sessionId, revokedAt: null },
         data: { revokedAt: now },
+      }),
+      this.prisma.pushDevice.updateMany({
+        where: { nativeAuthSessionId: sessionId, enabled: true },
+        data: { enabled: false, disabledAt: now },
       }),
     ]);
   }

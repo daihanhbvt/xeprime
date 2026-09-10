@@ -17,9 +17,8 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { TransitionBookingDto } from '../src/modules/bookings/dto/booking.dto';
 import { CustomersService } from '../src/modules/customers/customers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import { NotificationService } from '../src/modules/notification/notification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingsService } from './helpers/service-factory';
+import { makeNotificationService, makeBookingsService } from './helpers/service-factory';
 
 /**
  * Quyết định trạng thái của gian hàng trên một đơn: xác nhận · hủy · ghi nhận khách không đến.
@@ -41,7 +40,7 @@ const occupancy = new OccupancyService(asService);
 const bookings = makeBookingsService(asService, {
   occupancy: occupancy,
   audit: audit,
-  notifications: new NotificationService(asService),
+  notifications: makeNotificationService(asService),
   customers: new CustomersService(asService, audit),
 });
 

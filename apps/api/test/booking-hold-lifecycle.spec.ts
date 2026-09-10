@@ -23,9 +23,8 @@ import {
 import { SepayService } from '../src/modules/sepay/sepay.service';
 import { HoldSettlementService } from '../src/modules/holds/hold-settlement.service';
 import { AuditService } from '../src/modules/audit/audit.service';
-import { NotificationService } from '../src/modules/notification/notification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import {
+import { makeNotificationService,
   makeBillingService,
   makeBookingHoldsService,
   makeBookingsService,
@@ -50,7 +49,7 @@ const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 
 const audit = new AuditService(asService);
-const notifications = new NotificationService(asService);
+const notifications = makeNotificationService(asService);
 const holds = makeBookingHoldsService(asService);
 const bookings = makeBookingsService(asService);
 const settlement = new HoldSettlementService(asService, audit, notifications);

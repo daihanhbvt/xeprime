@@ -72,6 +72,7 @@ model User {
   approvalLogs               ApprovalLog[]
   adminNotes                 AdminNote[]
   notifications              Notification[]            @relation("notification_recipient")
+  pushDevices                PushDevice[]              @relation("push_device_user")
   reviews                    Review[]                  @relation("review_customer")
   customerBookingRequests    BookingRequest[]          @relation("request_customer")
   customerConversations      Conversation[]            @relation("conversation_customer")
@@ -477,6 +478,7 @@ model NativeAuthSession {
 
   user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   refreshTokens NativeRefreshToken[]
+  pushDevices   PushDevice[]
 
   @@index([userId])
   /// Dọn phiên hết hạn theo lô (job sau này), và tra phiên còn sống của một user.
@@ -2468,13 +2470,109 @@ model Notification {
   readAt     DateTime? @map("read_at") @db.Timestamptz(3)
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  tenant    Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  recipient User?   @relation("notification_recipient", fields: [userId], references: [id], onDelete: Cascade)
+  tenant          Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  recipient       User?          @relation("notification_recipient", fields: [userId], references: [id], onDelete: Cascade)
+  pushDeliveries  PushDelivery[]
 
   /// Phục vụ list "thông báo của tôi" (order createdAt desc) và đếm chưa đọc (read_at null).
   @@index([userId, readAt, createdAt])
   @@index([tenantId, createdAt])
   @@map("notifications")
+}
+
+/// Một THIẾT BỊ đã đăng ký nhận thông báo đẩy (FCM).
+///
+/// `provider_token` là registration token của FCM — bí mật ở mức "ai có nó thì gửi được thông
+/// báo tới máy đó". Nó KHÔNG bao giờ được log, không quay lại trong response, và không in ra ở
+/// script vận hành (chỉ 6 ký tự đuôi để đối chiếu).
+///
+/// Unique trên `(provider, provider_token)` chứ không phải trên `(user, device)`: FCM cấp token
+/// cho một BẢN CÀI, và cùng một máy đăng nhập tài khoản khác sẽ mang lại đúng token cũ. Có
+/// unique đó thì việc "gán lại chủ" là một câu `upsert` nguyên tử — không có nó, người dùng
+/// trước tiếp tục nhận thông báo trên máy của người sau.
+model PushDevice {
+  id     String @id @db.Char(26)
+  userId String @map("user_id") @db.Char(26)
+
+  /// Phiên native đã đăng ký thiết bị này. NULL khi lời gọi đến từ một phiên web (id phiên web
+  /// là ULID ký trong JWT, không có hàng nào trong `native_auth_sessions` để tham chiếu).
+  /// Có giá trị thì đăng xuất/thu hồi phiên sẽ TẮT thiết bị — xem NativeSessionService.
+  nativeAuthSessionId String? @map("native_auth_session_id") @db.Char(26)
+
+  /// @xeprime/types → PushProvider
+  provider String @default("fcm") @db.VarChar(20)
+  /// Registration token FCM. Text vì độ dài không có trần công bố và đã đổi vài lần.
+  providerToken String @map("provider_token") @db.Text
+  /// @xeprime/types → PushPlatform
+  platform   String  @db.VarChar(20)
+  appVersion String? @map("app_version") @db.VarChar(30)
+  /// Tên máy do client tự khai — chỉ để người dùng nhận ra thiết bị, không dùng cho bảo mật.
+  deviceName String? @map("device_name") @db.VarChar(120)
+
+  /// Tắt thay vì xoá: `push_deliveries` còn trỏ tới đây, và lịch sử "vì sao tin này không tới"
+  /// là thứ duy nhất trả lời được khiếu nại của người dùng.
+  enabled    Boolean   @default(true)
+  lastSeenAt DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  disabledAt DateTime? @map("disabled_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user       User               @relation("push_device_user", fields: [userId], references: [id], onDelete: Cascade)
+  session    NativeAuthSession? @relation(fields: [nativeAuthSessionId], references: [id], onDelete: SetNull)
+  deliveries PushDelivery[]
+
+  @@unique([provider, providerToken], map: "push_devices_provider_token_key")
+  /// Truy vấn nóng: thiết bị ĐANG BẬT của một người, mỗi lần phát thông báo.
+  @@index([userId, enabled])
+  /// Tắt hàng loạt khi một phiên bị thu hồi.
+  @@index([nativeAuthSessionId])
+  @@map("push_devices")
+}
+
+/// Trạng thái giao MỘT `Notification` tới MỘT thiết bị.
+///
+/// Không phải một thông báo thứ hai: hộp thư vẫn chỉ có một dòng cho một sự kiện, còn bảng này
+/// trả lời "đã đẩy tới máy nào, lần thứ mấy, hỏng vì gì". Người có ba máy sinh ba dòng ở đây và
+/// vẫn đúng một dòng trong chuông.
+///
+/// ⚠️ Index hàng đợi của worker là index MỘT PHẦN (`push_deliveries_queue_idx`, `WHERE status
+/// IN ('pending','retry')`) — viết tay trong migration vì Prisma không mô tả được, nên nó KHÔNG
+/// xuất hiện ở đây. Đừng thay bằng `@@index([status, nextAttemptAt])`: gần như mọi hàng cuối
+/// cùng đều là `sent`, nên index đầy đủ lớn dần theo TỔNG số thông báo đã từng gửi trong khi
+/// truy vấn của worker chỉ quan tâm hàng đợi.
+model PushDelivery {
+  id             String @id @db.Char(26)
+  notificationId String @map("notification_id") @db.Char(26)
+  pushDeviceId   String @map("push_device_id") @db.Char(26)
+
+  /// @xeprime/types → PushDeliveryStatus
+  status        String   @default("pending") @db.VarChar(20)
+  attempts      Int      @default(0)
+  nextAttemptAt DateTime @default(now()) @map("next_attempt_at") @db.Timestamptz(3)
+
+  sentAt            DateTime? @map("sent_at") @db.Timestamptz(3)
+  /// `name` của message FCM đã nhận — dấu vết duy nhất đối chiếu được với console của Firebase.
+  providerMessageId String?   @map("provider_message_id") @db.VarChar(255)
+  /// @xeprime/types → PushErrorCode. Lưu MÃ, không lưu message của provider: message của FCM có
+  /// nhánh chứa nguyên registration token trong đó.
+  lastErrorCode     String?   @map("last_error_code") @db.VarChar(40)
+  lastErrorAt       DateTime? @map("last_error_at") @db.Timestamptz(3)
+
+  /// Sau mốc này thì KHÔNG gửi nữa. "Yêu cầu thuê sắp hết hạn" nảy lên sau khi yêu cầu đã đóng
+  /// là một thông báo sai, không phải một thông báo trễ.
+  expiresAt DateTime? @map("expires_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  device       PushDevice   @relation(fields: [pushDeviceId], references: [id], onDelete: Cascade)
+
+  /// Chống gửi TRÙNG ở tầng DB: nghiệp vụ thử lại (retry một transaction) không được biến thành
+  /// hai lần rung máy. Đây là người gác thật — `skipDuplicates` ở tầng app chỉ là đường tắt.
+  @@unique([notificationId, pushDeviceId])
+  @@index([pushDeviceId, status])
+  @@map("push_deliveries")
 }
 
 // ---------------------------------------------------------------------------

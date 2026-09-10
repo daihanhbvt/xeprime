@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "dotenv -e ../../.env -- node --import tsx --test \"test/**/*.test.ts\"",
-    "holidays:sync": "dotenv -e ../../.env -- tsx src/scripts/sync-holidays.ts"
+    "holidays:sync": "dotenv -e ../../.env -- tsx src/scripts/sync-holidays.ts",
+    "push:smoke": "dotenv -e ../../.env -- tsx src/scripts/push-smoke.ts"
   },
   "dependencies": {
     "@xeprime/domain": "workspace:*",

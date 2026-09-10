@@ -14,10 +14,9 @@ import type { AuthService } from '../src/modules/auth/auth.service';
 import { CustomersService } from '../src/modules/customers/customers.service';
 import { ContractsService } from '../src/modules/contracts/contracts.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import { NotificationService } from '../src/modules/notification/notification.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingRequestsService, makeBookingsService, makePricingService } from './helpers/service-factory';
+import { makeNotificationService, makeBookingRequestsService, makeBookingsService, makePricingService } from './helpers/service-factory';
 
 /**
  * Hành trình chuyến CÓ TÀI XẾ đi trọn vòng đời (đợt hoàn thiện 17/08), trên PostgreSQL THẬT:
@@ -33,7 +32,7 @@ import { makeBookingRequestsService, makeBookingsService, makePricingService } f
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
-const notifications = new NotificationService(asService);
+const notifications = makeNotificationService(asService);
 const pricing = makePricingService(asService);
 const bookings = makeBookingsService(asService, {
   occupancy: new OccupancyService(asService),

@@ -21,10 +21,9 @@ import { CustomerDocumentsService } from '../src/modules/customers/customer-docu
 import { CustomersController } from '../src/modules/customers/customers.controller';
 import { CustomerDocumentsController } from '../src/modules/customers/customer-documents.controller';
 import { CustomersService } from '../src/modules/customers/customers.service';
-import { NotificationService } from '../src/modules/notification/notification.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingsService } from './helpers/service-factory';
+import { makeNotificationService, makeBookingsService } from './helpers/service-factory';
 
 /**
  * Sổ khách của GIAN HÀNG (gap S-01), chạy trên PostgreSQL THẬT:
@@ -47,7 +46,7 @@ const customers = new CustomersService(asService, audit);
 const bookings = makeBookingsService(asService, {
   occupancy: new OccupancyService(asService),
   audit: audit,
-  notifications: new NotificationService(asService),
+  notifications: makeNotificationService(asService),
   customers: customers,
 });
 

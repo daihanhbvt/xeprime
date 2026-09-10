@@ -22,7 +22,6 @@ import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import { CustomersService } from '../src/modules/customers/customers.service';
 import { HandoversService } from '../src/modules/bookings/handovers/handovers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import { NotificationService } from '../src/modules/notification/notification.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import { MaintenanceService } from '../src/modules/vehicles/maintenance/maintenance.service';
 import { OdometerService } from '../src/modules/vehicles/maintenance/odometer.service';
@@ -32,7 +31,7 @@ import {
 } from '../src/modules/vehicles/vehicle-alerts.service';
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingsService, makeVehiclesService, vehicleCreator } from './helpers/service-factory';
+import { makeNotificationService, makeBookingsService, makeVehiclesService, vehicleCreator } from './helpers/service-factory';
 
 /**
  * Wave 8 — Tổng hợp việc cần làm của xe + hàng đợi "Thiếu KM trả", trên PostgreSQL THẬT.
@@ -68,7 +67,7 @@ const fakeR2 = {
 
 const audit = new AuditService(asService);
 const occupancy = new OccupancyService(asService);
-const notifications = new NotificationService(asService);
+const notifications = makeNotificationService(asService);
 const vehicles = makeVehiclesService(asService);
 const createVehicleWithBranch = vehicleCreator(vehicles, asService);
 const files = new VehicleContractsService(asService, fakeR2 as unknown as R2Service, audit);
