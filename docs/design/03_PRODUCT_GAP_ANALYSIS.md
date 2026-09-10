@@ -1,6 +1,6 @@
 # 03 — Product Gap Analysis
 
-> Cập nhật: 03/09/2026
+> Cập nhật: 09/09/2026
 > Trạng thái: **Canonical — backlog sản phẩm theo hiện trạng source**
 > Không phải cam kết ngày phát hành; thứ tự thực thi nằm ở [`../completion-roadmap.md`](../completion-roadmap.md).
 
@@ -18,12 +18,12 @@ XePrime đã ở mức **functional alpha / web pilot-ready có kiểm soát**. 
 
 | Khu vực | Đã có trong source | Khoảng trống quan trọng |
 | --- | --- | --- |
-| Marketplace | Tìm kiếm/lọc, chi tiết xe/shop, lịch bận, báo giá, booking request, review, chat | Giữ chỗ có tiền, breakdown phí/thuế/bảo hiểm, thanh toán, hoàn tiền, support/dispute |
-| Customer | Auth mật khẩu/OTP/social, profile, trips, trip detail, cancel | Phương thức thanh toán, địa chỉ/tài liệu, thông báo, hỗ trợ, xóa tài khoản/dữ liệu |
-| Manage | Xe, lịch, yêu cầu, booking, bàn giao/trả, khách, thu chi, công nợ, tài chính, hợp đồng, bảo trì, thành viên, chi nhánh, tài xế, gói | Dashboard tiền thật, trải nghiệm basic owner, số dư/rút tiền, payment/reconciliation, invitation thật |
-| Platform admin | Dashboard, approval, tenant, vehicle, booking, customer, staff, plan, banner, catalog, location, audit | Finance operations, KYC/tax/bank, withdrawal, reconciliation, refunds, disputes, fee policy versioning, ranking operations |
+| Marketplace | Tìm kiếm/lọc, chi tiết xe/shop, lịch bận, báo giá, booking request, review, chat | Checkout đúng breakdown mới, QR Pay 2 giờ, hoàn tiền theo snapshot, insurance-at-handover, support/dispute |
+| Customer/User | Auth mật khẩu/OTP/social, profile, trips, account shell, đổi mật khẩu, xóa tài khoản, khu Owner Lite và quản lý xe cơ bản | Chọn đúng tuyến “hoa hồng/gian hàng”, số dư/rút tiền, trạng thái bảo hiểm, hỗ trợ gắn booking, dọn placeholder |
+| Manage | Xe, lịch, yêu cầu, booking, bàn giao/trả, khách, thu chi, công nợ, tài chính, hợp đồng, bảo trì, thành viên, chi nhánh, tài xế, gói | Dashboard tiền thật, số dư/rút tiền, QR payment/reconciliation, invitation thật, optional handover rõ ràng |
+| Platform admin | Dashboard, approval, tenant, vehicle, booking, customer, staff, plan, bank transaction, banner, catalog, location, audit, seller, fee policy, money, support | Nhóm lại IA, KYC/tax/bank, withdrawal/refund queues, reconciliation, disputes, ranking ops, “vào Manage của gian hàng” có audit |
 | Billing | Gói theo slot, invoice, feature guard, trang subscription | SePay end-to-end, QR/thông tin nhận tiền hoàn chỉnh, kích hoạt tự động, grace/downgrade production |
-| Mobile | Auth và marketplace discovery/listing detail | Booking, payment, trips thật, chat, push, release pipeline; chưa cần portal gian hàng native |
+| Mobile | Source đã có customer tabs và một nhánh Manage khá rộng: request, booking, xe, khách, finance, receipts, debts, maintenance, member, driver, branch, shop | Xác nhận chiến lược mobile: giữ Manage native hay chỉ customer parity; đồng bộ flow tiền mới, push, release pipeline và tránh hai IA khác nhau |
 | Production | CI, Docker/CD/backup docs, health endpoint, structured log | Deploy proof, browser E2E, error tracking, uptime monitor, product analytics, compliance/UAT |
 
 ## 3. Platform Admin — nên làm tiếp
@@ -104,8 +104,8 @@ Số dư ngân hàng
 1. Dashboard phải có doanh thu, tiền cọc/giữ chỗ, việc cần làm và cảnh báo thật; không để KPI `—`.
 2. Màn gói cần so sánh rõ basic với gian hàng, chi phí theo số xe/kỳ hạn, ngày hiệu lực và quyền lợi khi hết hạn.
 3. Luồng mua gói phải có VietQR/thông tin nhận tiền, trạng thái đối soát và hóa đơn rõ ràng.
-4. Nếu gian hàng nhận cọc trực tiếp, booking cần lưu `paymentMethod`, người xác nhận, thời điểm và chứng từ; không chỉ là ghi chú tự do.
-5. Nếu gian hàng dùng luồng qua XePrime, phải dùng chung hold/refund/ledger với chủ xe cơ bản, không xây hệ tài chính thứ hai.
+4. Booking chính thức của cả hai tuyến trong giai đoạn đầu phải cọc qua QR Pay XePrime; không thiết kế nhánh cọc trực tiếp cho gian hàng.
+5. Cả hai tuyến dùng chung hold/refund/ledger, tax snapshot và insurance-at-handover; không xây hệ tài chính thứ hai.
 6. “Mời thành viên” hiện chỉ thêm người đã có tài khoản. Hoặc đổi đúng tên, hoặc làm invitation token + hết hạn + accept/decline.
 7. Tài khoản có cả platform role và tenant membership cần scope switch rõ; trước mắt có thể quy định dùng tài khoản tách biệt.
 
@@ -113,18 +113,17 @@ Số dư ngân hàng
 
 Không clone source của portal. Tạo một capability profile `owner_basic` và dựng vỏ điều hướng nhẹ trên cùng feature/API.
 
-### Menu đề xuất
+### Menu đã hình thành và cần dùng làm cơ sở redesign
 
 | Nhóm | Màn |
 | --- | --- |
-| Tổng quan | Việc cần làm, lịch hôm nay, số tiền dự kiến nhận |
-| Xe của tôi | Danh sách xe, hồ sơ tối thiểu, ảnh/giấy tờ, giá và lịch trống |
-| Yêu cầu & chuyến | Yêu cầu thuê, booking, bàn giao, nhận lại |
-| Tiền của tôi | Breakdown từng chuyến, số dư phải trả, lịch sử và yêu cầu rút |
-| Tin nhắn | Chat với người thuê |
-| Tài khoản chủ xe | Danh tính, thuế, tài khoản ngân hàng, điều khoản |
+| Xe của tôi | Danh sách xe; hồ sơ, ảnh/giấy tờ, giá, lịch, tự lái/có tài xế và trạng thái listing |
+| Lịch & chuyến | Lịch xe dùng lại từ Manage, chuyến của tôi và lịch sử theo xe |
+| Hướng dẫn & pháp lý | Cẩm nang chủ xe, thông tin khai thuế, hợp đồng/chứng từ, bảo vệ dữ liệu |
+| Tiền của tôi | Breakdown từng chuyến, khoản XePrime phải trả, lịch sử và yêu cầu rút |
+| Tài khoản | Hồ sơ, đổi mật khẩu, xóa tài khoản và đăng xuất |
 | Nâng cấp gian hàng | So sánh chi phí và công cụ được mở thêm |
-| Hỗ trợ | Ticket/tranh chấp |
+| Hỗ trợ | Ticket/tranh chấp; chat theo booking khi đã đủ điều kiện mở liên hệ |
 
 ### Không hiện cho basic owner
 
@@ -135,15 +134,17 @@ Không clone source của portal. Tạo một capability profile `owner_basic` v
 - Trung tâm bảo trì nâng cao.
 - Hợp đồng mẫu và các cấu hình dành cho đội xe.
 
-Không được khóa các thao tác tối thiểu để hoàn thành một booking hoặc rút số tiền thuộc về chủ xe.
+Không bắt buộc Owner Lite dùng biên bản, ảnh tình trạng, odometer hay nhiên liệu/pin. Trạng thái có thể tự chuyển theo lịch; chủ xe chỉ cập nhật khi thực tế thay đổi. Không được khóa các thao tác tối thiểu để hoàn thành booking hoặc rút số tiền thuộc về chủ xe.
 
 ## 6. Customer — khoảng trống để khép giao dịch
 
 ### P0
 
-- Báo giá cuối có breakdown: giá thuê, giao xe/phụ phí, khoản giữ chỗ, phí dịch vụ, thuế, bảo hiểm và số còn lại.
+- Báo giá cuối có breakdown: giá thuê, giao xe/phụ phí, cọc đặt chuyến, phí nền tảng, bảo hiểm bắt buộc/tùy chọn, thanh toán ngay và số trả trực tiếp khi nhận xe. Thuế là dòng phía chủ xe, không cộng vào tổng khách.
 - Giải thích ai thu từng khoản và hoàn trong trường hợp nào.
-- Bảo vệ xe được thể hiện là bắt buộc khi policy áp dụng và phí nằm trong net earning của chủ xe; bảo hiểm chuyến đi chỉ cộng vào tổng của người thuê khi giữ lựa chọn, có thể bỏ chọn rõ ràng, không cản trở checkout và phải lưu consent/opt-out.
+- Bảo hiểm xe/chuyến bắt buộc và bảo hiểm tai nạn con người tùy chọn đều do khách trả thêm. Khoản phí được thu/giữ tại QR Pay nhưng chỉ mua/phát hành khi bàn giao/bắt đầu chuyến; mọi hủy trước mốc đó hoàn 100% bảo hiểm.
+- Cửa sổ thanh toán tối đa 2 giờ với hai countdown 60 phút; cửa sổ hủy miễn phí 4 giờ cùng bắt đầu tại `acceptedAt` khi chủ xe duyệt hoặc hệ thống tự nhận chuyến.
+- Hủy muộn trước chuyến: hoàn toàn bộ bảo hiểm, chia `cọc đặt chuyến + phí nền tảng` 50/50 cho chủ xe/gian hàng và XePrime; không tính thuế.
 - Thanh toán giữ chỗ, trạng thái chờ/thiếu/thừa/hết hạn.
 - Chính sách hủy và số tiền hoàn được tính từ snapshot server.
 - Trang chi tiết bảo hiểm: nhà cung cấp, phạm vi, loại trừ và cách yêu cầu bồi thường.
@@ -155,7 +156,7 @@ Không được khóa các thao tác tối thiểu để hoàn thành một book
 - Favorites, địa chỉ nhận xe và tài liệu người thuê.
 - Notification center và tùy chọn nhận thông báo.
 - Luồng đổi/xác minh lại email, SĐT và tài khoản.
-- Xóa tài khoản/yêu cầu dữ liệu.
+- Hoàn thiện thay đổi/xác minh thông tin liên hệ và quản lý dữ liệu; luồng yêu cầu xóa tài khoản đã có màn nhưng cần xác nhận API/retention end-to-end.
 
 Các mục P1 chưa làm không nên xuất hiện như menu hoạt động trong pilot.
 
@@ -163,7 +164,7 @@ Các mục P1 chưa làm không nên xuất hiện như menu hoạt động tron
 
 - Mục nav placeholder `pickup-areas`, `trash` và các mục account `comingSoon`: ẩn khỏi menu cho tới khi có luồng thật.
 - Custom role builder: bốn role tenant cố định đủ cho pilot.
-- Native manage portal: ưu tiên web responsive; app native tập trung khách thuê.
+- Mobile Manage đang tồn tại trong source: không mở rộng tiếp cho tới khi product quyết định giữ hay thu gọn; ưu tiên đồng bộ customer flow và web responsive.
 - OCR nâng cao, e-signature, PDF server, dark mode và command palette: chỉ làm khi có nhu cầu đo được.
 - Ví có nạp/chuyển/thanh toán nội bộ: ngoài phạm vi.
 - Chi trả tự động: hoãn đến khi luồng thủ công có volume và đã chọn đối tác phù hợp.

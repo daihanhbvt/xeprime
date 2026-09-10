@@ -1,8 +1,8 @@
 # 10 — Implementation Constraints
 
-> Ngày: 04/08/2026 · Cập nhật phạm vi: 03/09/2026 · Chủ sở hữu: Product Director (viết cho người thiết kế)
+> Ngày: 04/08/2026 · Cập nhật phạm vi: 09/09/2026 · Chủ sở hữu: Product Director (viết cho người thiết kế)
 > Mục đích: để một bản thiết kế **không** đề xuất thứ mà kiến trúc đã chốt là không làm. Đây không phải danh sách lý do từ chối — nó là bản đồ chi phí, để cùng một ý tưởng được diễn đạt theo cách rẻ hơn 10 lần.
-> Nguồn: `CLAUDE.md` · `docs/decisions/` (ADR 0001–0028). Product Vision/ADR mới hơn thắng các ví dụ cũ trong file này.
+> Nguồn: `CLAUDE.md` · `docs/decisions/` (ADR 0001–0032). Product Vision/ADR mới hơn thắng các ví dụ cũ trong file này.
 
 ---
 
@@ -38,6 +38,10 @@
 | Type FE sinh từ OpenAPI | 0007 | Thiết kế đòi trường mới ⇒ cần đổi DTO backend, không phải "FE tự thêm" |
 | PII che mặc định, bỏ che ghi audit | Hiện hành | Không thiết kế bảng hiện SĐT đầy đủ sẵn; thao tác nhạy cảm phải có lý do/case |
 | Chat: PostgreSQL là nguồn sự thật, Firestore là projection | 0009 | Không thiết kế tính năng chat phụ thuộc vào tính năng riêng của Firestore |
+| Cọc QR bắt buộc, phần còn lại trả trực tiếp | 0032 | Checkout phải tách `tổng chuyến`, `trả ngay` và `trả khi nhận`; không vẽ luồng XePrime thu hộ phần còn lại |
+| Bảo hiểm chỉ mua/phát hành tại bàn giao/bắt đầu chuyến | 0032 | UI phải tách khoản phí đã thu/giữ khỏi certificate đã phát hành; mọi hủy trước chuyến hoàn 100% phí bảo hiểm |
+| Owner Lite không bắt buộc bằng chứng giao nhận | 0032 | Không đưa checklist/ảnh/odo/fuel bắt buộc vào flow chủ xe 1–3 xe; các công cụ này chỉ là tùy chọn nâng cao của gian hàng |
+| Admin vào Manage của gian hàng có ngữ cảnh | 0032 | Dùng cùng Manage shell, hiện banner tên gian hàng và audit actor admin; không thiết kế một bản Manage riêng cho admin |
 
 ---
 
@@ -90,8 +94,9 @@ Thiết kế đòi những thứ dưới đây ⇒ báo trước, vì chúng thu
 | Chính sách huỷ/thế chấp chuẩn hoá (C-04) | Trường/bảng mới |
 | Lưu xe yêu thích (C-05) | Bảng mới |
 | Tìm theo bản đồ (C-07) | Toạ độ + index không gian |
-| Bàn giao xe có bằng chứng (S-03) | Bảng handover + ảnh |
-| Thanh toán/giữ chỗ/thu hộ ([ADR 0028](../decisions/0028-marketplace-subscription-fees-and-custodied-funds.md)) | Bank transaction, hold/payment, fee allocation, ledger, refund, withdrawal và reconciliation |
+| Bàn giao xe có bằng chứng (chỉ gian hàng, tùy chọn) | Đã có bảng handover + ảnh; không bắt Owner Lite tạo bản ghi nếu bỏ qua flow |
+| Thanh toán/giữ chỗ ([ADR 0032](../decisions/0032-booking-deposit-insurance-and-owner-lite.md)) | Bank transaction, hold/payment, money-line allocation `D/S/IV/IP/T`, ledger, refund, withdrawal và reconciliation |
+| Bảo hiểm tại bàn giao | Cần tách trạng thái khoản phí reserved khỏi policy/certificate issued; job phát hành idempotent và retry được |
 | Nhiều chi nhánh (S-09) | Đã có mô hình; feature mới phải tiếp tục giữ tenant/branch scope đúng |
 | Ticket hỗ trợ (G-01) | Bảng mới |
 
