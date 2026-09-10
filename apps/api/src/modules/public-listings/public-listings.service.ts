@@ -10,11 +10,14 @@ import {
   SERVICE_TYPE,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
+  hasVehicleServiceSettings,
   type PaginationMeta,
   type SeatBucket,
+  type ServiceType,
 } from '@xeprime/types';
 import { ProvincesService } from '../locations/provinces.service';
 import { PricingService } from '../pricing/pricing.service';
+import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import type {
   FacetBucketDto,
@@ -22,6 +25,7 @@ import type {
   ListingFacetsQueryDto,
   PublicDestinationDto,
   PublicDestinationQueryDto,
+  ListingRentalTermsDto,
   PublicListingDetailDto,
   PublicListingDto,
   PublicListingQueryDto,
@@ -83,6 +87,7 @@ const LISTING_CARD_SELECT = {
   seatCount: true,
   fuelType: true,
   bodyType: true,
+  motorbikeCategory: true,
   mainImageUrl: true,
   weekdayPrice: true,
   weekendPrice: true,
@@ -127,6 +132,7 @@ function toListingCard(l: ListingCardRow, completedTripCount: number): PublicLis
     seatCount: l.seatCount,
     fuelType: l.fuelType,
     bodyType: l.bodyType,
+    motorbikeCategory: l.motorbikeCategory,
     mainImageUrl: l.mainImageUrl,
     weekdayPrice: l.weekdayPrice as unknown as string | null,
     weekendPrice: l.weekendPrice as unknown as string | null,
@@ -191,6 +197,7 @@ export class PublicListingsService {
     private readonly prisma: PrismaService,
     private readonly provinces: ProvincesService,
     private readonly pricing: PricingService,
+    private readonly settings: VehicleSettingsService,
   ) {}
 
   /**
@@ -275,6 +282,7 @@ export class PublicListingsService {
       total,
       priceAgg,
       bodyTypeRows,
+      motorbikeCategoryRows,
       brandRows,
       seatRows,
       fuelRows,
@@ -293,6 +301,14 @@ export class PublicListingsService {
       this.prisma.publicListing.groupBy({
         by: ['bodyType'],
         where: buildListingWhere(query, 'bodyType'),
+        _count: { _all: true },
+      }),
+      // Phân khúc xe máy — chiều đối xứng với kiểu dáng ô tô. Đếm luôn cả khi khách đang xem ô
+      // tô: kết quả sẽ rỗng (xe máy mới có giá trị), và một mảng rỗng đúng thì rẻ hơn một nhánh
+      // if ở đây rồi lại một nhánh if nữa ở web.
+      this.prisma.publicListing.groupBy({
+        by: ['motorbikeCategory'],
+        where: buildListingWhere(query, 'motorbikeCategory'),
         _count: { _all: true },
       }),
       this.prisma.publicListing.groupBy({
@@ -344,6 +360,9 @@ export class PublicListingsService {
       bodyType: bodyTypeRows
         .filter((r): r is typeof r & { bodyType: string } => r.bodyType != null)
         .map((r) => ({ key: r.bodyType, count: r._count._all })),
+      motorbikeCategory: motorbikeCategoryRows
+        .filter((r): r is typeof r & { motorbikeCategory: string } => r.motorbikeCategory != null)
+        .map((r) => ({ key: r.motorbikeCategory, count: r._count._all })),
       brand: brandRows
         .filter((r): r is typeof r & { brand: string } => r.brand != null)
         .map((r) => ({ key: r.brand, count: r._count._all }))
@@ -662,6 +681,7 @@ export class PublicListingsService {
         seatCount: true,
         fuelType: true,
         bodyType: true,
+        motorbikeCategory: true,
         mainImageUrl: true,
         weekdayPrice: true,
         weekendPrice: true,
@@ -676,6 +696,13 @@ export class PublicListingsService {
         description: true,
         color: true,
         manufactureYear: true,
+        // Thông số NĂNG LƯỢNG khách hỏi trước khi đặt (09/09/2026) — xe xăng đọc lít/100km,
+        // xe điện đọc quãng đường mỗi lần sạc; trang xe chỉ hiện cái có nghĩa với loại xe đó.
+        transmission: true,
+        fuelConsumptionCombined: true,
+        electricRangeKm: true,
+        batteryCapacityKwh: true,
+        electricConsumptionKwhPer100Km: true,
         tenant: {
           select: {
             name: true,
@@ -700,13 +727,38 @@ export class PublicListingsService {
      * DUY NHẤT trả lời được "xe này có đặt giao tận nơi được không" — cùng giá trị mà
      * `BookingRequestsService` dùng để chấp nhận/từ chối `deliveryRequested`.
      */
-    const [rating, completedTripCount, policy] = await Promise.all([
-      this.ratingsByVehicle([v.id]).then((ratings) => ratings.get(v.id)),
-      this.prisma.booking.count({
-        where: { vehicleId: v.id, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
-      }),
-      this.pricing.effectivePolicy(v.tenantId, v.id),
-    ]);
+    const [rating, completedTripCount, policy, handover, surchargeRules, rentalTerms] =
+      await Promise.all([
+        this.ratingsByVehicle([v.id]).then((ratings) => ratings.get(v.id)),
+        this.prisma.booking.count({
+          where: { vehicleId: v.id, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
+        }),
+        this.pricing.effectivePolicy(v.tenantId, v.id),
+        this.settings.handoverWindowsFor(this.prisma, v.id),
+        // Chỉ chuyến có tài xế mới có phụ phí mặc định; chỉ khoản đang bật mới công bố.
+        v.serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER)
+          ? this.settings.surchargeRulesFor(this.prisma, v.id)
+          : Promise.resolve([]),
+        Promise.all(
+          v.serviceTypes
+            .filter((s) => hasVehicleServiceSettings(s))
+            .map(async (s): Promise<ListingRentalTermsDto> => {
+              const setting = await this.settings.serviceSettingFor(this.prisma, v.id, s as ServiceType);
+              return {
+                serviceType: s,
+                requiredDocuments: setting.effectiveRequiredDocuments,
+                identityVerifyMethod: setting.identityVerifyMethod,
+                termsText: setting.termsText,
+                requireTermsAcceptance: setting.requireTermsAcceptance,
+                depositMode: s === SERVICE_TYPE.WITH_DRIVER ? setting.depositMode : null,
+                instantBookEnabled: setting.autoAcceptEnabled,
+                autoAcceptMinLeadMinutes: setting.autoAcceptMinLeadMinutes,
+                autoAcceptMaxLeadMinutes: setting.autoAcceptMaxLeadMinutes,
+                minRentalMinutes: setting.minRentalMinutes,
+              };
+            }),
+        ),
+      ]);
 
     /*
      * Giá SÁU gói thuê dài hạn (ADR 0011): bảng chọn gói phải hiện TIỀN THẬT ngay khi mở, nên
@@ -756,6 +808,7 @@ export class PublicListingsService {
       seatCount: v.seatCount,
       fuelType: v.fuelType,
       bodyType: v.bodyType,
+      motorbikeCategory: v.motorbikeCategory,
       mainImageUrl: v.mainImageUrl,
       weekdayPrice: v.weekdayPrice as unknown as string | null,
       weekendPrice: v.weekendPrice as unknown as string | null,
@@ -795,6 +848,24 @@ export class PublicListingsService {
             depositAmount: policy.values.depositAmount,
           }
         : null,
+      rentalTerms,
+      handover: { pickupWindows: handover.pickup, returnWindows: handover.return },
+      driverSurchargeRules: surchargeRules
+        .filter((r) => r.enabled)
+        .map((r) => ({ kind: r.kind, unit: r.unit, amount: r.amount, thresholdValue: r.thresholdValue })),
+      mileagePolicy:
+        policy?.values.includedDistanceKmPerDay != null &&
+        policy.values.excessDistanceFeePerKm != null
+          ? {
+              includedKmPerDay: policy.values.includedDistanceKmPerDay,
+              excessFeePerKm: policy.values.excessDistanceFeePerKm,
+            }
+          : null,
+      fuelConsumptionCombined: v.fuelConsumptionCombined?.toFixed(2) ?? null,
+      electricRangeKm: v.electricRangeKm,
+      batteryCapacityKwh: v.batteryCapacityKwh?.toFixed(2) ?? null,
+      electricConsumptionKwhPer100Km: v.electricConsumptionKwhPer100Km?.toFixed(2) ?? null,
+      transmission: v.transmission,
     };
   }
 }

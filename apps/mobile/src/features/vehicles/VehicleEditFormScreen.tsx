@@ -1,10 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import { useForm, useWatch } from 'react-hook-form';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { PERMISSION, VEHICLE_PUBLIC_STATUS, VEHICLE_TYPE, isVehicleFuelTypeAllowed } from '@xeprime/types';
+import {
+  PERMISSION,
+  VEHICLE_PUBLIC_STATUS,
+  VEHICLE_TYPE,
+  isVehicleFuelTypeAllowed,
+} from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -19,16 +23,14 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
-import { useAppFormat } from '@/i18n/use-app-format';
 import { useFormRefresh } from '@/hooks/use-form-refresh';
-import { useDomainLabel } from '@/i18n/domain';
+import { useActiveBranches } from '@/features/branches/hooks/use-branches';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { useLeaveGuard } from '@/hooks/use-leave-guard';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
-import { queryKeys } from '@/queries/query-keys';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 import {
@@ -40,14 +42,12 @@ import {
   StatusSection,
 } from './components/VehicleFormSteps';
 import { informationValuesToInput, mediaValuesToInput, vehicleToFormValues } from './mappers';
-import { sensitiveChanges } from './sensitive-changes';
 import { useUpdateVehicle, useVehicle } from './hooks/use-vehicle';
-import { branchLabel, branchesApi, type UpdateVehicleInput, type VehicleDetail } from './api';
+import { branchLabel, type UpdateVehicleInput, type VehicleDetail } from './api';
 
 /** Hai màn con của hub sửa xe dùng chung khung này — khác nhau ở PAYLOAD và ở khối hiển thị. */
 export type VehicleEditFormTab =
-  | typeof VEHICLE_EDIT_TAB.INFORMATION
-  | typeof VEHICLE_EDIT_TAB.MEDIA;
+  typeof VEHICLE_EDIT_TAB.INFORMATION | typeof VEHICLE_EDIT_TAB.MEDIA;
 
 /**
  * Trường thuộc từng màn — dùng để validate RIÊNG màn đang mở và để đếm lỗi.
@@ -91,9 +91,12 @@ const FIELDS: Record<VehicleEditFormTab, ReadonlyArray<keyof VehicleFormValues>>
  * Payload tách riêng theo màn — `informationValuesToInput` không mang media, `mediaValuesToInput`
  * không mang giá: hai màn ghi đè dữ liệu của nhau là cách chắc chắn để mất ảnh khi sửa biển số.
  *
- * Xe đang CÔNG KHAI mà đổi một trường nhạy cảm (giá, biển số, loại xe, dịch vụ, ảnh đại diện…)
- * sẽ bị đưa về chờ duyệt lại — hộp xác nhận liệt kê đúng những gì đổi, so bằng `sensitiveChanges`
- * (cùng công thức với `hasSensitiveChange` ở backend, nên FE và BE không bao giờ bất đồng).
+ * Xe đang CÔNG KHAI (09/09/2026 — thay cho luồng "xác nhận rồi chờ duyệt lại" trước đó): mọi
+ * thay đổi có hiệu lực NGAY, kể cả giá — CHỈ năm trường định danh (`vehicleType`/`plateNumber`/
+ * `transmission`/`fuelType`/`manufactureYear`) bị KHOÁ lại, đúng `VEHICLE_LOCKED_AFTER_APPROVAL_FIELDS`
+ * mà `assertNoLockedFieldChange` chặn ở backend (409 `VEHICLE_FIELD_LOCKED`). Khoá field bằng
+ * `disabled` + đổi dòng gợi ý (`lockedNotice`), không phải ẩn đi hay hỏi lại lúc lưu — gỡ xe khỏi
+ * chợ trước nếu cần đổi.
  */
 export function VehicleEditFormScreen({
   vehicleId,
@@ -174,17 +177,13 @@ function EditForm({
   onRefetch: () => void;
 }) {
   const t = useTranslations('Vehicles.edit');
-  const tSensitive = useTranslations('Vehicles.publish.sensitive');
   const tActions = useTranslations('Common.actions');
   const tBranches = useTranslations('Branches');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
-  const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
   const update = useUpdateVehicle(vehicle.id);
 
   const initialValues = useMemo(() => vehicleToFormValues(vehicle), [vehicle]);
-  const [confirmSensitive, setConfirmSensitive] = useState(false);
   const resolver = useValidationResolver<VehicleFormValues>(
     vehicleFormSchema,
     'Vehicles.form.validation',
@@ -233,11 +232,7 @@ function EditForm({
    * ngừng), nhưng phải BỔ SUNG chi nhánh hiện tại của xe nếu nó vừa bị ngừng — thiếu bước này thì
    * mở form sửa sẽ thấy ô chi nhánh trống và người dùng tưởng xe mất vị trí.
    */
-  const branches = useQuery({
-    queryKey: queryKeys.branches.list({ status: 'active' }),
-    queryFn: () => branchesApi.list('active'),
-    enabled: tab === VEHICLE_EDIT_TAB.INFORMATION,
-  });
+  const branches = useActiveBranches(tab === VEHICLE_EDIT_TAB.INFORMATION);
   const noProvince = tBranches('labels.noProvince');
   const branchOptions = useMemo(() => {
     const options = (branches.data?.items ?? []).map((b) => ({
@@ -258,42 +253,25 @@ function EditForm({
   const activeFields = FIELDS[tab];
   const activeErrors = activeFields.filter((field) => errors[field]).length;
   const isMediaTab = tab === VEHICLE_EDIT_TAB.MEDIA;
-
-  /** Gọi ở HAI chỗ (chặn lưu và liệt kê trong hộp xác nhận) — gói một lần thay vì truyền 5 tham số. */
-  const changesOf = (values: VehicleFormValues) =>
-    sensitiveChanges(initialValues, values, fmt, domainLabel, {
-      field: (field) => tSensitive(`fields.${field}`),
-      empty: tSensitive('empty'),
-      imageSet: tSensitive('imageSet'),
-      percent: (value) => tSensitive('percent', { value }),
-    });
+  /** Chỉ định nghĩa khi thật sự khoá — `Boolean(lockedNotice)` là điều kiện `disabled` ở mọi ô. */
+  const lockedNotice = isPublic ? t('lockedField') : undefined;
 
   async function save() {
     const valid = await trigger([...activeFields]);
     if (!valid) return;
     const values = getValues();
-    if (isPublic && changesOf(values).length > 0) {
-      setConfirmSensitive(true);
-      return;
-    }
-    await submit(values);
-  }
-
-  async function submit(values: VehicleFormValues) {
     const body: UpdateVehicleInput = isMediaTab
       ? mediaValuesToInput(values)
       : informationValuesToInput(values);
     try {
       const updated = await update.mutateAsync(body);
       reset(vehicleToFormValues(updated));
-      setConfirmSensitive(false);
       /*
         Câu báo KẾT QUẢ, không phải nhãn nút. Trước đây toast in ra `tActions('saveChanges')` —
         đúng chữ trên nút vừa bấm ("Lưu thay đổi"), nên nó không nói được là đã lưu xong hay chưa.
       */
       toast.showSuccess(t(isMediaTab ? 'saved.media' : 'saved.information'));
     } catch (error) {
-      setConfirmSensitive(false);
       toast.showError(errorMessage(error));
     }
   }
@@ -326,8 +304,8 @@ function EditForm({
             </Text>
           ) : null}
 
-          {/* `showIcon` như mọi `<Alert>` của web — xem `Notice`. */}
-          {isPublic ? <Notice tone="warning" title={t('publicWarning')} /> : null}
+          {/* `showIcon` như mọi `<Alert>` của web — xem `Notice`. Tông info, đúng web (không phải warning: đây là trạng thái bình thường của một xe đang bán chạy, không phải một cảnh báo). */}
+          {isPublic ? <Notice tone="info" title={t('lockedNotice')} /> : null}
 
           {!isMediaTab ? (
             <>
@@ -345,6 +323,7 @@ function EditForm({
                 branchOptions={branchOptions}
                 branchLoading={branches.isPending}
                 codeReadOnly
+                lockedNotice={lockedNotice}
               />
               <Card>
                 <YStack gap={space.sm}>
@@ -355,7 +334,7 @@ function EditForm({
               <Card>
                 <YStack gap={space.sm}>
                   <BlockTitle>{t('cards.specs')}</BlockTitle>
-                  <SpecsSection control={control} isCar={isCar} />
+                  <SpecsSection control={control} isCar={isCar} lockedNotice={lockedNotice} />
                 </YStack>
               </Card>
               <Card>
@@ -364,7 +343,7 @@ function EditForm({
                   <Text col={colors.textMuted} fos={fontSize.bodySm}>
                     {t('advanced.hint')}
                   </Text>
-                  <AdvancedSpecsSection control={control} />
+                  <AdvancedSpecsSection control={control} lockedNotice={lockedNotice} />
                 </YStack>
               </Card>
             </>
@@ -386,30 +365,6 @@ function EditForm({
           leave.confirm();
         }}
         onCancel={leave.cancel}
-      />
-
-      <AlertDialog
-        open={confirmSensitive}
-        title={t('sensitive.title')}
-        // Chỉ tính khi hộp thoại THẬT SỰ mở — mỗi thay đổi qua `fmt.money`/`domainLabel` cho cả
-        // chục trường nhạy cảm, không đáng làm lại ở những render không liên quan (đổi loại xe,
-        // mở hộp thoại bỏ thay đổi, branches refetch…).
-        message={
-          confirmSensitive
-            ? [
-                t('sensitive.body'),
-                ...changesOf(getValues()).map(
-                  (change) =>
-                    `${t('sensitive.change', { label: change.label })} ${change.before} → ${change.after}`,
-                ),
-              ].join('\n')
-            : ''
-        }
-        confirmLabel={t('sensitive.ok')}
-        cancelLabel={tActions('cancel')}
-        loading={update.isPending}
-        onConfirm={() => void submit(getValues())}
-        onCancel={() => setConfirmSensitive(false)}
       />
     </>
   );

@@ -1,6 +1,8 @@
+import * as DocumentPicker from 'expo-document-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
-import type { UploadMeta, UploadPresign } from '@xeprime/api-client';
+import { validateDocumentUpload, type UploadRejection } from '@xeprime/types';
+import type { UploadMeta, UploadPresign } from '@/api/vehicles/api';
 
 /**
  * Bề rộng tối đa sau khi nén — cùng con số với ảnh bàn giao.
@@ -103,6 +105,19 @@ async function compress(asset: ImagePicker.ImagePickerAsset): Promise<PickedImag
   };
 }
 
+/**
+ * Tệp bị TỪ CHỐI ngay tại máy, trước khi presign.
+ *
+ * Mang theo MÃ lý do chứ không mang câu: hàm ném ra không biết người dùng đang đọc ngôn ngữ nào.
+ * Nơi gọi đổi mã thành chữ qua `Errors.upload.*` — xem `useUploadRejectionMessage`.
+ */
+export class UploadRejectedError extends Error {
+  constructor(readonly rejection: UploadRejection) {
+    super(`Upload rejected: ${rejection.reason}`);
+    this.name = 'UploadRejectedError';
+  }
+}
+
 /** Bước nào của luồng tải ảnh đã ngã — đi kèm mọi lỗi ném ra từ đây. */
 export type ImageUploadStage = 'presign' | 'upload';
 
@@ -185,15 +200,91 @@ export async function uploadPrivateImageToR2(
   image: PickedImage,
   presign: (meta: UploadMeta) => Promise<{ uploadUrl: string; fileId: string }>,
 ): Promise<string> {
-  const body = await (await fetch(image.uri)).blob();
+  const ticket = await uploadPrivateFileToR2(image, presign);
+  return ticket.fileId;
+}
+
+/**
+ * Một TỆP đã chọn, sẵn sàng tải lên. `PickedImage` là trường hợp riêng của nó.
+ *
+ * KHÔNG có `fileSize`, cùng lý do với `PickedImage`: số byte thật chỉ đọc được bằng cách mở file
+ * ra, và bước tải lên phải mở nó ra rồi.
+ */
+export interface PickedFile {
+  uri: string;
+  fileName: string;
+  contentType: string;
+}
+
+/** Chỉ nhận PDF ở đường này — ảnh đã có `pickImages` (nén tại máy trước khi gửi). */
+const PDF_MIME = 'application/pdf';
+
+/**
+ * Chọn một tệp PDF từ kho tài liệu của máy.
+ *
+ * Trả `null` khi người dùng HUỶ — huỷ không phải lỗi, và ném ở đây buộc mọi nơi gọi phải bọc
+ * try/catch cho một thao tác bình thường (cùng quy ước với `pickImages`).
+ *
+ * Không có lớp lỗi "từ chối quyền" như ảnh: trình chọn tài liệu của cả hai nền tảng chạy ngoài
+ * tiến trình app và không đòi quyền runtime nào.
+ */
+export async function pickPdfFile(): Promise<PickedFile | null> {
+  const result = await DocumentPicker.getDocumentAsync({
+    type: PDF_MIME,
+    multiple: false,
+    // Bắt buộc: `uri` của provider ngoài (Drive, Files) không đọc lại được bằng `fetch` nếu
+    // không được sao vào cache của app trước.
+    copyToCacheDirectory: true,
+  });
+
+  if (result.canceled) return null;
+  const asset = result.assets[0];
+  if (!asset) return null;
+
+  return {
+    uri: asset.uri,
+    // Tên file chỉ để người vận hành nhận ra tài liệu trong kho — server không tin nó.
+    fileName: asset.name || `document-${Date.now()}.pdf`,
+    contentType: asset.mimeType || PDF_MIME,
+  };
+}
+
+/**
+ * Tải MỘT tệp lên kho RIÊNG TƯ và trả về NGUYÊN VẸN vé presign.
+ *
+ * Khác `uploadPrivateImageToR2` đúng ở chỗ đó: mỗi hồ sơ đặt tên cho thứ nó nhận về khác nhau —
+ * giấy tờ xe gọi là `fileId`, giấy tờ khách gọi là `documentId` — nên hàm này không đoán, nó
+ * trả cả vé và nơi gọi tự đọc trường của mình.
+ *
+ * Cùng cái bẫy `Content-Length` của `uploadImageToR2`: server ký số byte VÀO URL, nên phải mở
+ * file ra TRƯỚC rồi mới presign theo đúng số byte sắp gửi. Lệch là R2 trả **403** — chữ ký không
+ * khớp, không phải CORS, không phải hết hạn phiên.
+ *
+ * Bước "hoàn tất" nằm ở nơi gọi nhưng là BẮT BUỘC: file chưa hoàn tất thì server chưa xác minh
+ * nội dung và chưa cho dùng.
+ */
+export async function uploadPrivateFileToR2<TTicket extends { uploadUrl: string }>(
+  file: PickedFile,
+  presign: (meta: UploadMeta) => Promise<TTicket>,
+): Promise<TTicket> {
+  const body = await (await fetch(file.uri)).blob();
+
+  /*
+   * Kiểm MIME + dung lượng NGAY sau khi đọc số byte thật, TRƯỚC khi presign — cùng lớp chặn sớm
+   * web có ở `validateDocumentFile`. Ảnh đi qua đây đã được `compress()` bó lại, nhưng PDF thì
+   * không: một bản scan 30MB mà không chặn ở đây sẽ đi trọn vòng presign rồi mới bị DTO từ chối,
+   * và người dùng chỉ nhận được một lỗi chung chung sau vài giây chờ.
+   */
+  const rejection = validateDocumentUpload({ type: file.contentType, size: body.size });
+  if (rejection) throw new UploadRejectedError(rejection);
 
   const meta: UploadMeta = {
-    fileName: image.fileName,
-    contentType: image.contentType,
+    fileName: file.fileName,
+    contentType: file.contentType,
     fileSize: body.size,
   };
 
-  let ticket: { uploadUrl: string; fileId: string };
+  let ticket: TTicket;
   try {
     ticket = await presign(meta);
   } catch (error) {
@@ -203,7 +294,7 @@ export async function uploadPrivateImageToR2(
   try {
     const response = await fetch(ticket.uploadUrl, {
       method: 'PUT',
-      headers: { 'Content-Type': image.contentType },
+      headers: { 'Content-Type': file.contentType },
       body,
     });
     if (!response.ok) {
@@ -213,5 +304,57 @@ export async function uploadPrivateImageToR2(
     throw new ImageUploadError('upload', error);
   }
 
-  return ticket.fileId;
+  return ticket;
+}
+
+/**
+ * Tải MỘT tệp lên kho CÔNG KHAI và trả URL công khai của nó.
+ *
+ * Song sinh của {@link uploadPrivateFileToR2}, khác đúng ở kho đích và thứ nhận về: chứng từ
+ * phiếu thu/chi (hoá đơn xăng, rửa xe, biên lai chuyển khoản) không mang giấy tờ tuỳ thân, nên
+ * nó nằm cùng mức phơi bày với ảnh xe và được nhắc tới bằng URL chứ không bằng id.
+ *
+ * `uploadImageToR2` đã lo phần ẢNH (nó nén trước khi gửi). Hàm này là đường cho những tệp KHÔNG
+ * nén được — PDF — nên nó phải kiểm MIME + dung lượng ngay sau khi đo số byte thật: một bản scan
+ * 30MB mà không chặn ở đây sẽ đi trọn vòng presign rồi mới bị DTO từ chối.
+ *
+ * Cùng cái bẫy `Content-Length`: server ký số byte VÀO URL, nên mở file ra TRƯỚC rồi mới presign
+ * theo đúng số byte sắp gửi. Lệch là R2 trả **403**.
+ */
+export async function uploadPublicFileToR2(
+  file: PickedFile,
+  presign: (meta: UploadMeta) => Promise<UploadPresign>,
+): Promise<string> {
+  const body = await (await fetch(file.uri)).blob();
+
+  const rejection = validateDocumentUpload({ type: file.contentType, size: body.size });
+  if (rejection) throw new UploadRejectedError(rejection);
+
+  const meta: UploadMeta = {
+    fileName: file.fileName,
+    contentType: file.contentType,
+    fileSize: body.size,
+  };
+
+  let ticket: UploadPresign;
+  try {
+    ticket = await presign(meta);
+  } catch (error) {
+    throw new ImageUploadError('presign', error);
+  }
+
+  try {
+    const response = await fetch(ticket.uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.contentType },
+      body,
+    });
+    if (!response.ok) {
+      throw new Error(`R2 PUT ${response.status} ${response.statusText}`);
+    }
+  } catch (error) {
+    throw new ImageUploadError('upload', error);
+  }
+
+  return ticket.publicUrl;
 }

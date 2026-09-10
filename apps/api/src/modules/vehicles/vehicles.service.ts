@@ -13,14 +13,20 @@ import {
   BOOKING_STATUS,
   POLICY_SOURCE,
   RECEIPT_TYPE,
+  REVIEW_STATUS,
   SERVICE_TYPE,
+  vehicleImageTypeOf,
   TENANT_STATUS,
   isVehicleFuelTypeAllowed,
   VEHICLE_OPERATION_STATUS,
-  VEHICLE_PUBLIC_SENSITIVE_FIELDS,
+  VEHICLE_LOCKED_AFTER_APPROVAL_FIELDS,
+  VEHICLE_PUBLIC_MIN_IMAGES,
+  isMotorbikeCategory,
+  isTransmissionAllowedFor,
+  vehicleFeatureAppliesTo,
+  vehicleFieldPolicy,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_SUBMITTABLE,
-  VEHICLE_TYPE,
   type PaginationMeta,
   type VehiclePublicStatus,
   type VehicleType,
@@ -28,6 +34,7 @@ import {
 import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
 import { BranchesService } from '../branches/branches.service';
+import { CatalogModelService } from '../catalog/catalog-model.service';
 import { CatalogService } from '../catalog/catalog.service';
 import { policyData, PricingService } from '../pricing/pricing.service';
 import { SaveVehiclePricingDto, VehiclePricingDto } from '../pricing/dto/pricing.dto';
@@ -45,6 +52,7 @@ import {
   VehicleDetailDto,
   VehicleListItemDto,
   VehicleListQueryDto,
+  VehicleMediaItemDto,
   VehicleStatsDto,
   VehiclePublicReviewDto,
 } from './dto/vehicle.dto';
@@ -64,6 +72,8 @@ const LIST_SELECT = {
   manufactureYear: true,
   seatCount: true,
   bodyType: true,
+  motorbikeCategory: true,
+  vehicleCatalogModelId: true,
   discountPercent: true,
   operationStatus: true,
   publicStatus: true,
@@ -91,6 +101,9 @@ const DETAIL_SELECT = {
   fuelConsumptionCity: true,
   fuelConsumptionHighway: true,
   fuelConsumptionCombined: true,
+  electricRangeKm: true,
+  batteryCapacityKwh: true,
+  electricConsumptionKwhPer100Km: true,
   hourlyPrice: true,
   monthlyPrice: true,
   withDriverDailyPrice: true,
@@ -118,9 +131,14 @@ const SENSITIVE_SELECT = {
   plateNumber: true,
   vehicleType: true,
   fuelType: true,
+  transmission: true,
+  manufactureYear: true,
   bodyType: true,
+  motorbikeCategory: true,
+  seatCount: true,
   serviceTypes: true,
   mainImageUrl: true,
+  deliveryEnabled: true,
 } satisfies Prisma.VehicleSelect;
 
 @Injectable()
@@ -132,6 +150,7 @@ export class VehiclesService {
     private readonly branches: BranchesService,
     private readonly billing: BillingService,
     private readonly catalog: CatalogService,
+    private readonly catalogModels: CatalogModelService,
     private readonly pricing: PricingService,
   ) {}
 
@@ -157,13 +176,20 @@ export class VehiclesService {
 
     const bookingScope = { tenantId, vehicleId: { in: ids }, deletedAt: null };
 
-    const [bookingGroups, receiptGroups] = await Promise.all([
+    const [bookingGroups, ratingGroups, receiptGroups] = await Promise.all([
       this.prisma.booking.groupBy({
         by: ['vehicleId', 'status'],
         where: {
           ...bookingScope,
           status: { in: [BOOKING_STATUS.ACTIVE, BOOKING_STATUS.COMPLETED] },
         },
+        _count: { _all: true },
+      }),
+      // Điểm đánh giá của xe — cùng vị từ với thẻ chợ (`ratingsByVehicle`): review published.
+      this.prisma.review.groupBy({
+        by: ['vehicleId'],
+        where: { tenantId, vehicleId: { in: ids }, status: REVIEW_STATUS.PUBLISHED },
+        _avg: { rating: true },
         _count: { _all: true },
       }),
       // Không có quyền tài chính thì KHÔNG chạy truy vấn — số liệu không được rời khỏi DB.
@@ -188,10 +214,16 @@ export class VehiclesService {
         receiptGroups.find((g) => g.vehicleId === vehicleId && g.type === type)?._sum.amount ??
         null;
 
+      const rating = ratingGroups.find((g) => g.vehicleId === vehicleId);
       const stats: VehicleStatsDto = {
         vehicleId,
         activeBookings: bookingsOf(BOOKING_STATUS.ACTIVE),
         completedBookings: bookingsOf(BOOKING_STATUS.COMPLETED),
+        ratingAvg:
+          rating && rating._count._all > 0 && rating._avg.rating != null
+            ? (Math.round(Number(rating._avg.rating) * 10) / 10).toFixed(1)
+            : null,
+        ratingCount: rating?._count._all ?? 0,
       };
 
       if (canViewFinance) {
@@ -253,7 +285,13 @@ export class VehiclesService {
     const [statsRow] = await this.stats(tenantId, [id], opts.canViewFinance);
     // `stats()` luôn trả một dòng cho mỗi id truyền vào; fallback chỉ để thoả type index-access.
     const result: Vehicle360SummaryDto = {
-      stats: statsRow ?? { vehicleId: id, activeBookings: 0, completedBookings: 0 },
+      stats: statsRow ?? {
+        vehicleId: id,
+        activeBookings: 0,
+        completedBookings: 0,
+        ratingAvg: null,
+        ratingCount: 0,
+      },
     };
 
     if (!opts.canViewBookings) return result;
@@ -365,7 +403,7 @@ export class VehiclesService {
       this.prisma.vehicleImage.findMany({
         where: { vehicleId: id },
         orderBy: { sortOrder: 'asc' },
-        select: { imageUrl: true },
+        select: { imageUrl: true, imageType: true, sortOrder: true },
       }),
       this.prisma.vehicleFeature.findMany({
         where: { vehicleId: id },
@@ -384,7 +422,12 @@ export class VehiclesService {
     return toDetail(
       row,
       review,
-      images.map((i) => i.imageUrl),
+      images.map((i) => ({
+        url: i.imageUrl,
+        // Ảnh cũ chưa gán loại → `other` khi ĐỌC; DB giữ nguyên tới khi chủ xe bấm lưu.
+        type: vehicleImageTypeOf(i.imageType),
+        sortOrder: i.sortOrder,
+      })),
       features.map((f) => f.featureKey),
     );
   }
@@ -395,8 +438,21 @@ export class VehiclesService {
     const id = newId();
     const code = dto.code?.trim() || `XP-${id.slice(-8).toUpperCase()}`;
     await this.assertCodeFree(tenantId, code);
-    await this.catalog.assertVehicleValues(dto);
-    assertVehicleClassification(dto.vehicleType, dto.fuelType, dto.bodyType);
+    /*
+     * Cặp (hãng, mẫu) do SERVER quyết, không phải client.
+     *
+     * Client gửi `vehicleCatalogModelId`; backend đọc mẫu trong danh mục rồi tự chép nhãn hãng
+     * và tên mẫu xuống. Vì thế không tồn tại đường nào tạo ra một chiếc `motorbike` mang
+     * `brand='toyota'`, `model='Vios'` — cặp đó không còn là thứ client nói ra được.
+     */
+    const canonical = await this.catalogModels.resolveForVehicle(
+      dto.vehicleCatalogModelId,
+      dto.vehicleType,
+    );
+    const input = applyCatalogModel(dto, canonical);
+
+    await this.catalog.assertVehicleValues({ ...input, vehicleType: dto.vehicleType });
+    assertVehicleProfile(dto.vehicleType, input.fuelType, input);
 
     await this.prisma.$transaction(async (tx) => {
       // Chi nhánh kiểm TRONG transaction: nó phải thuộc đúng gian hàng và đang hoạt động ngay
@@ -411,12 +467,18 @@ export class VehiclesService {
           code,
           name: dto.name,
           vehicleType: dto.vehicleType,
-          ...writableFields(dto),
+          ...writableFields(input),
           // Giá chuyên biệt của dịch vụ không đăng bị loại ngay từ lúc tạo — không có giá mồ côi.
           ...orphanPriceClears(dto.serviceTypes ?? [SERVICE_TYPE.SELF_DRIVE]),
+          // Trường không có nghĩa với loại xe này bị dọn ngay từ lúc tạo, không đợi tới lần sửa
+          // đầu tiên: một chiếc xe máy "4 chỗ" ra tới chợ là đã sai rồi.
+          ...clearIncompatibleProfileFields(
+            { vehicleType: dto.vehicleType, fuelType: null, transmission: null },
+            { vehicleType: dto.vehicleType, fuelType: input.fuelType ?? null, transmission: input.transmission ?? null },
+          ),
         },
       });
-      await this.replaceMedia(tx, id, tenantId, dto);
+      await this.replaceMedia(tx, id, tenantId, input, dto.vehicleType);
     });
     return this.getOne(tenantId, id);
   }
@@ -451,11 +513,28 @@ export class VehiclesService {
       select: SENSITIVE_SELECT,
     });
     if (!current) throw notFound();
-    await this.catalog.assertVehicleValues(dto);
-    assertVehicleClassification(
-      dto.vehicleType ?? current.vehicleType,
-      dto.fuelType !== undefined ? dto.fuelType : current.fuelType,
-      dto.bodyType !== undefined ? dto.bodyType : current.bodyType,
+    const vehicleType = dto.vehicleType ?? current.vehicleType;
+    // Chỉ tra lại danh mục khi lệnh ghi ĐỘNG tới mẫu xe — sửa giá không phải là lý do để đi
+    // một round-trip vào bảng danh mục.
+    const canonical =
+      dto.vehicleCatalogModelId !== undefined
+        ? await this.catalogModels.resolveForVehicle(dto.vehicleCatalogModelId, vehicleType)
+        : null;
+    const input =
+      dto.vehicleCatalogModelId !== undefined ? applyCatalogModel(dto, canonical) : dto;
+
+    await this.catalog.assertVehicleValues({ ...input, vehicleType });
+    assertVehicleProfile(
+      vehicleType,
+      input.fuelType !== undefined ? input.fuelType : current.fuelType,
+      // Chỉ phần request tự khai. Giá trị giữ lại từ bản ghi cũ do `clearFieldsNotInProfile` dọn.
+      {
+        ...(input.bodyType !== undefined ? { bodyType: input.bodyType } : {}),
+        ...(input.motorbikeCategory !== undefined
+          ? { motorbikeCategory: input.motorbikeCategory }
+          : {}),
+        ...(input.seatCount !== undefined ? { seatCount: input.seatCount } : {}),
+      },
     );
 
     // Đổi mã thì mã mới phải còn trống trong gian hàng (unique DB là chốt chặn cuối).
@@ -463,11 +542,14 @@ export class VehiclesService {
       await this.assertCodeFree(tenantId, dto.code, tx);
     }
 
-    // ADR 0008: xe đang công khai mà sửa trường nhạy cảm (giá/biển số/loại/ảnh…) phải hạ về
-    // chờ duyệt lại, không để thông tin đã đổi hiển thị ngoài chợ khi chưa qua kiểm duyệt.
-    const knockBack =
-      current.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC &&
-      hasSensitiveChange(current, dto);
+    /*
+     * 09/09/2026 (ghi đè ADR 0008): xe ĐÃ DUYỆT thì căn cước của nó bị KHOÁ — biển số, loại xe,
+     * hộp số, nhiên liệu, năm sản xuất. Sửa những trường đó là biến listing đã kiểm duyệt thành
+     * một chiếc xe khác, nên server từ chối thẳng thay vì âm thầm hạ xe về chờ duyệt lại.
+     *
+     * Mọi trường còn lại — kể cả GIÁ và ảnh — sửa tự do và hiệu lực ngay ngoài chợ.
+     */
+    assertNoLockedFieldChange(current, dto);
 
     // Chuyển xe sang chi nhánh khác = đổi VỊ TRÍ CÔNG KHAI của nó. Kiểm quyền sở hữu + trạng
     // thái ngay đây, và ghi audit riêng: "xe này chuyển từ đâu sang đâu" là câu hỏi có thật khi
@@ -486,29 +568,16 @@ export class VehiclesService {
       ...(branchChanged
         ? { branch: { connect: { id_tenantId: { id: dto.branchId!, tenantId } } } }
         : {}),
-      ...writableFields(dto),
+      ...writableFields(input),
       // Bỏ một dịch vụ → giá chuyên biệt của nó bị xoá theo (FE đã cảnh báo trước khi lưu).
       ...(dto.serviceTypes !== undefined ? orphanPriceClears(dto.serviceTypes) : {}),
-      ...(knockBack ? { publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW } : {}),
+      // Đổi loại xe/nguồn năng lượng → dọn mọi trường không còn nghĩa (server không tin form đã ẩn).
+      ...clearIncompatibleProfileFields(current, input),
     };
 
-    const updated = await tx.vehicle.update({
-      where: { id: current.id },
-      data,
-      select: DETAIL_SELECT,
-    });
-    await this.replaceMedia(tx, current.id, tenantId, dto);
-    if (knockBack) {
-      await this.createVehicleApprovalTask(tx, {
-        vehicleId: current.id,
-        tenantId,
-        actorUserId: userId,
-        fromStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
-        snapshot: updated,
-        action: 'resubmit',
-      });
-    }
-    // Mọi sửa xe → đồng bộ snapshot public_listings; nhạy cảm đổi → pending → listing ẩn (ADR 0008).
+    await tx.vehicle.update({ where: { id: current.id }, data });
+    await this.replaceMedia(tx, current.id, tenantId, input, vehicleType);
+    // Mọi sửa xe → đồng bộ snapshot public_listings ngay, để chợ không trưng thông tin cũ.
     await this.listings.syncFromVehicle(current.id, tx);
 
     if (branchChanged) {
@@ -654,9 +723,17 @@ export class VehiclesService {
         : {}),
       ...(dto.discountPercent !== undefined ? { discountPercent: dto.discountPercent } : {}),
     };
-    const priceChanged = hasSensitiveChange(current, priceDto);
-    const knockBack =
-      current.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC && priceChanged;
+
+    /*
+     * Cờ `vehicles.delivery_enabled` (chip tiện ích trên thẻ) đi THEO chính sách hiệu lực sau lần
+     * lưu này (08/09/2026): ghi đè thì theo bộ chính sách riêng, đặt lại thì theo mặc định gian
+     * hàng. Không có lần lưu nào để hai nguồn lệch nhau nữa. `null` = gian hàng chưa có chính
+     * sách ⇒ giữ nguyên cờ.
+     */
+    const deliverySync = overriding
+      ? dto.policy!.deliveryEnabled
+      : ((await this.pricing.shopPolicyValues(tenantId, current.vehicleType))?.deliveryEnabled ??
+        null);
 
     await this.prisma.$transaction(async (tx) => {
       const existingOverride = await tx.rentalPolicy.findUnique({
@@ -678,25 +755,15 @@ export class VehiclesService {
         policyChanged = true;
       }
 
-      if (Object.keys(priceDto).length > 0) {
-        const updated = await tx.vehicle.update({
-          where: { id: current.id },
-          data: {
-            ...writableFields(priceDto),
-            ...(knockBack ? { publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW } : {}),
-          },
-          select: DETAIL_SELECT,
-        });
-        if (knockBack) {
-          await this.createVehicleApprovalTask(tx, {
-            vehicleId: current.id,
-            tenantId,
-            actorUserId: userId,
-            fromStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
-            snapshot: updated,
-            action: 'resubmit',
-          });
-        }
+      const vehicleData: Prisma.VehicleUpdateInput = {
+        // Giá đổi là hiệu lực NGAY ngoài chợ (09/09/2026) — không hạ xe về chờ duyệt lại nữa.
+        ...writableFields(priceDto),
+        ...(deliverySync != null && deliverySync !== current.deliveryEnabled
+          ? { deliveryEnabled: deliverySync }
+          : {}),
+      };
+      if (Object.keys(vehicleData).length > 0) {
+        await tx.vehicle.update({ where: { id: current.id }, data: vehicleData });
       }
 
       /*
@@ -704,7 +771,7 @@ export class VehiclesService {
        * chấp" trên sàn nay suy từ chính sách hiệu lực, nên bật/tắt ghi đè cũng làm nó đổi dù
        * không đụng đồng nào tiền giá. Chạy sau nhánh giá để đọc được giá vừa ghi.
        */
-      if (Object.keys(priceDto).length > 0 || policyChanged) {
+      if (Object.keys(vehicleData).length > 0 || policyChanged) {
         await this.listings.syncFromVehicle(current.id, tx);
       }
 
@@ -751,7 +818,6 @@ export class VehiclesService {
               : {}),
             ...(dto.discountPercent !== undefined ? { discountPercent: dto.discountPercent } : {}),
             policy: overriding ? (dto.policy as unknown as Prisma.InputJsonValue) : null,
-            knockBack,
           },
         },
         tx,
@@ -770,30 +836,64 @@ export class VehiclesService {
     vehicleId: string,
     tenantId: string,
     dto: CreateVehicleDto | UpdateVehicleDto,
+    vehicleType: string,
   ): Promise<void> {
-    if (dto.images !== undefined) {
+    /*
+     * Hai hình thái đầu vào, MỘT bảng (08/09/2026):
+     *  - `media` (màn thư viện theo ô): URL + loại, thứ tự mảng = sortOrder; URL trùng bị khử để
+     *    không lưu một file hai lần.
+     *  - `images` (client cũ, app native): chỉ URL. Loại đã gán của URL còn giữ lại được BẢO TOÀN
+     *    — một lần lưu từ form cũ không được xoá sạch vị trí ảnh chủ xe đã sắp ở màn mới.
+     */
+    const media =
+      dto.media !== undefined
+        ? dedupeByUrl(dto.media.map((m) => ({ url: m.url.trim(), type: m.type ?? null })))
+        : dto.images !== undefined
+          ? await this.preserveImageTypes(tx, vehicleId, dto.images)
+          : null;
+    if (media) {
       await tx.vehicleImage.deleteMany({ where: { vehicleId } });
-      if (dto.images.length > 0) {
+      if (media.length > 0) {
         await tx.vehicleImage.createMany({
-          data: dto.images.map((imageUrl, index) => ({
+          data: media.map((item, index) => ({
             id: newId(),
             vehicleId,
             tenantId,
-            imageUrl,
+            imageUrl: item.url,
+            imageType: item.type,
             sortOrder: index,
           })),
         });
       }
     }
     if (dto.features !== undefined) {
-      await tx.vehicleFeature.deleteMany({ where: { vehicleId } });
       const unique = [...new Set(dto.features)];
+      // Tiện ích phải dùng được cho LOẠI XE này. Danh mục đã chặn "không tồn tại"; đây chặn
+      // "tồn tại nhưng không dành cho nó" — ẩn ở form mà không chặn ở đây thì client cũ vẫn ghi.
+      assertFeaturesForVehicleType(vehicleType, unique);
+      await tx.vehicleFeature.deleteMany({ where: { vehicleId } });
       if (unique.length > 0) {
         await tx.vehicleFeature.createMany({
           data: unique.map((featureKey) => ({ id: newId(), vehicleId, featureKey })),
         });
       }
     }
+  }
+
+  /** Loại ảnh hiện có theo URL — để `images: string[]` cũ không xoá mất vị trí đã gán. */
+  private async preserveImageTypes(
+    tx: Prisma.TransactionClient,
+    vehicleId: string,
+    urls: string[],
+  ): Promise<Array<{ url: string; type: string | null }>> {
+    const existing = await tx.vehicleImage.findMany({
+      where: { vehicleId },
+      select: { imageUrl: true, imageType: true },
+    });
+    const typeOf = new Map(existing.map((i) => [i.imageUrl, i.imageType]));
+    return dedupeByUrl(
+      urls.map((u) => u.trim()).filter(Boolean).map((url) => ({ url, type: typeOf.get(url) ?? null })),
+    );
   }
 
   /**
@@ -846,7 +946,8 @@ export class VehiclesService {
       });
     }
 
-    const missing = missingPublicFields(vehicle);
+    const imageCount = await countDistinctImages(this.prisma, vehicle.id, vehicle.mainImageUrl);
+    const missing = missingPublicFields(vehicle, imageCount);
     if (missing.length > 0) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
@@ -1010,6 +1111,9 @@ function orderByOf(sort: VehicleListQueryDto['sort']): Prisma.VehicleOrderByWith
   }
 }
 
+/** Payload ghi được của cả create lẫn update — `applyCatalogModel` nhận và trả lại đúng kiểu vào. */
+type VehicleWritableInput = CreateVehicleDto | UpdateVehicleDto;
+
 /** Các trường scalar tuỳ chọn — kiểu thuần nên assign được cho cả `create` lẫn `update`. */
 interface VehicleWritableFields {
   serviceTypes?: string[];
@@ -1022,6 +1126,10 @@ interface VehicleWritableFields {
   seatCount?: number | null;
   fuelType?: string | null;
   bodyType?: string | null;
+  /** @xeprime/types → MotorbikeCategory — chỉ xe máy. */
+  motorbikeCategory?: string | null;
+  /** Liên kết mẫu xe chuẩn; null = xe khai tay. */
+  vehicleCatalogModelId?: string | null;
   lengthMm?: number | null;
   widthMm?: number | null;
   heightMm?: number | null;
@@ -1032,6 +1140,9 @@ interface VehicleWritableFields {
   fuelConsumptionCity?: number | null;
   fuelConsumptionHighway?: number | null;
   fuelConsumptionCombined?: number | null;
+  electricRangeKm?: number | null;
+  batteryCapacityKwh?: number | null;
+  electricConsumptionKwhPer100Km?: number | null;
   operationStatus?: string;
   description?: string | null;
   mainImageUrl?: string | null;
@@ -1067,6 +1178,10 @@ function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritab
     ...(dto.seatCount !== undefined ? { seatCount: dto.seatCount } : {}),
     ...(dto.fuelType !== undefined ? { fuelType: dto.fuelType } : {}),
     ...(dto.bodyType !== undefined ? { bodyType: dto.bodyType } : {}),
+    ...(dto.motorbikeCategory !== undefined ? { motorbikeCategory: dto.motorbikeCategory } : {}),
+    ...(dto.vehicleCatalogModelId !== undefined
+      ? { vehicleCatalogModelId: dto.vehicleCatalogModelId }
+      : {}),
     ...(dto.lengthMm !== undefined ? { lengthMm: dto.lengthMm } : {}),
     ...(dto.widthMm !== undefined ? { widthMm: dto.widthMm } : {}),
     ...(dto.heightMm !== undefined ? { heightMm: dto.heightMm } : {}),
@@ -1084,6 +1199,13 @@ function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritab
       : {}),
     ...(dto.fuelConsumptionCombined !== undefined
       ? { fuelConsumptionCombined: dto.fuelConsumptionCombined }
+      : {}),
+    ...(dto.electricRangeKm !== undefined ? { electricRangeKm: dto.electricRangeKm } : {}),
+    ...(dto.batteryCapacityKwh !== undefined
+      ? { batteryCapacityKwh: dto.batteryCapacityKwh }
+      : {}),
+    ...(dto.electricConsumptionKwhPer100Km !== undefined
+      ? { electricConsumptionKwhPer100Km: dto.electricConsumptionKwhPer100Km }
       : {}),
     ...(dto.operationStatus !== undefined ? { operationStatus: dto.operationStatus } : {}),
     ...(dto.description !== undefined ? { description: dto.description } : {}),
@@ -1124,21 +1246,88 @@ function orphanPriceClears(serviceTypes: string[]): Partial<VehicleWritableField
   };
 }
 
-function assertVehicleClassification(
+/**
+ * Chép cặp (hãng, mẫu) CANONICAL từ danh mục đè lên payload của client.
+ *
+ * Đây là chỗ luật "client không tự đặt hãng/mẫu" thành hiện thực. Không gắn mẫu (`null`) thì
+ * xoá luôn liên kết cũ nhưng GIỮ chữ mà chủ xe đã gõ: xe khai tay vẫn phải hiển thị được tên
+ * của nó, chỉ mất khả năng lọc theo mẫu chuẩn.
+ */
+function applyCatalogModel<T extends VehicleWritableInput>(
+  dto: T,
+  canonical: { id: string; brand: string; model: string; motorbikeCategory: string | null } | null,
+): T {
+  if (!canonical) return { ...dto, vehicleCatalogModelId: null };
+  return {
+    ...dto,
+    vehicleCatalogModelId: canonical.id,
+    brand: canonical.brand,
+    model: canonical.model,
+    // Phân khúc từ danh mục là mặc định, KHÔNG phải áp đặt: chủ xe vẫn tự chọn được (mẫu trong
+    // danh mục có thể chưa gắn phân khúc, hoặc chiếc xe đã độ khác đi).
+    motorbikeCategory: dto.motorbikeCategory ?? canonical.motorbikeCategory,
+  };
+}
+
+/**
+ * Ma trận hồ sơ xe ở đường GHI — cùng `vehicleFieldPolicy` mà form dùng để ẩn ô.
+ *
+ * Chỉ xét những gì REQUEST NÓI RA, không xét giá trị được giữ lại từ bản ghi cũ.
+ *
+ * Đó là quy ước sẵn có của module này ("client gửi metric SAI LOẠI: server dọn, không lưu số vô
+ * nghĩa"): một chiếc ô tô xăng đổi sang chạy điện thì hộp số "tự động" cũ không còn nghĩa —
+ * server DỌN nó, chứ không từ chối cả lệnh sửa mà người dùng chỉ đổi mỗi nguồn năng lượng. Từ
+ * chối những giá trị người dùng không hề gửi cũng chính là cách một client cũ (app native chưa
+ * cập nhật bộ mã hộp số mới) bị khoá cứng khỏi mọi thao tác sửa xe.
+ *
+ * Cái BỊ TỪ CHỐI là mâu thuẫn do request tự khai: nguồn năng lượng không có ở loại xe đó, hay
+ * gửi thẳng một chiều phân loại của loại xe khác. `clearFieldsNotInProfile` lo phần còn lại,
+ * và DB giữ vế cuối bằng CHECK.
+ */
+function assertVehicleProfile(
   vehicleType: string,
+  /** Nguồn năng lượng SAU lệnh ghi — luật của mọi trường khác phụ thuộc nó. */
   fuelType: string | null | undefined,
-  bodyType: string | null | undefined,
+  /** Chỉ những trường request THỰC SỰ gửi (`undefined` = không gửi). */
+  sent: {
+    bodyType?: string | null;
+    motorbikeCategory?: string | null;
+    seatCount?: number | null;
+  },
 ): void {
+  const fail = (message: string): never => {
+    throw new BadRequestException({ code: API_ERROR_CODE.VALIDATION_FAILED, message });
+  };
+
   if (!isVehicleFuelTypeAllowed(vehicleType, fuelType)) {
-    throw new BadRequestException({
-      code: API_ERROR_CODE.VALIDATION_FAILED,
-      message: 'Nguồn năng lượng không phù hợp với loại phương tiện đã chọn',
-    });
+    fail('Nguồn năng lượng không phù hợp với loại phương tiện đã chọn');
   }
-  if (vehicleType !== VEHICLE_TYPE.CAR && bodyType != null) {
+  if (sent.motorbikeCategory != null && !isMotorbikeCategory(sent.motorbikeCategory)) {
+    fail('Phân khúc xe máy không hợp lệ');
+  }
+
+  const policy = vehicleFieldPolicy(vehicleType, fuelType);
+  if (policy.bodyType === 'hidden' && sent.bodyType != null) {
+    fail('Kiểu dáng thân xe chỉ áp dụng cho ô tô');
+  }
+  if (policy.motorbikeCategory === 'hidden' && sent.motorbikeCategory != null) {
+    fail('Phân khúc xe máy chỉ áp dụng cho xe máy');
+  }
+}
+
+/**
+ * Tiện nghi gửi lên phải DÙNG ĐƯỢC cho loại xe này.
+ *
+ * Danh mục đã chặn "không tồn tại"; đây chặn "tồn tại nhưng không dành cho nó" — ô tô gắn "kèm
+ * mũ bảo hiểm", xe máy gắn "lốp dự phòng". Cùng bảng `VEHICLE_FEATURE_VEHICLE_TYPES` mà form
+ * dùng để ẩn, nên hai bên không thể nói khác nhau.
+ */
+function assertFeaturesForVehicleType(vehicleType: string, features: readonly string[]): void {
+  const wrong = features.filter((key) => !vehicleFeatureAppliesTo(key, vehicleType));
+  if (wrong.length > 0) {
     throw new BadRequestException({
       code: API_ERROR_CODE.VALIDATION_FAILED,
-      message: 'Kiểu dáng thân xe chỉ áp dụng cho ô tô',
+      message: `Tiện ích không dùng được cho loại xe này: ${wrong.join(', ')}`,
     });
   }
 }
@@ -1170,6 +1359,8 @@ function toListItem(
     manufactureYear: v.manufactureYear,
     seatCount: v.seatCount,
     bodyType: v.bodyType,
+    motorbikeCategory: v.motorbikeCategory,
+    vehicleCatalogModelId: v.vehicleCatalogModelId,
     discountPercent: v.discountPercent,
     operationStatus: v.operationStatus,
     publicStatus: v.publicStatus,
@@ -1180,10 +1371,20 @@ function toListItem(
   };
 }
 
+/** Giữ lần xuất hiện ĐẦU của mỗi URL — thứ tự người dùng sắp không đổi. */
+function dedupeByUrl<T extends { url: string }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (!item.url || seen.has(item.url)) return false;
+    seen.add(item.url);
+    return true;
+  });
+}
+
 function toDetail(
   v: VehicleRow,
   latestPublicReview: VehiclePublicReviewDto | null = null,
-  images: string[] = [],
+  media: VehicleMediaItemDto[] = [],
   features: string[] = [],
 ): VehicleDetailDto {
   return {
@@ -1200,6 +1401,9 @@ function toDetail(
     fuelConsumptionCity: v.fuelConsumptionCity as unknown as string | null,
     fuelConsumptionHighway: v.fuelConsumptionHighway as unknown as string | null,
     fuelConsumptionCombined: v.fuelConsumptionCombined as unknown as string | null,
+    electricRangeKm: v.electricRangeKm,
+    batteryCapacityKwh: v.batteryCapacityKwh as unknown as string | null,
+    electricConsumptionKwhPer100Km: v.electricConsumptionKwhPer100Km as unknown as string | null,
     hourlyPrice: v.hourlyPrice as unknown as string | null,
     monthlyPrice: v.monthlyPrice as unknown as string | null,
     withDriverDailyPrice: v.withDriverDailyPrice as unknown as string | null,
@@ -1208,7 +1412,8 @@ function toDetail(
     deliveryEnabled: v.deliveryEnabled,
     description: v.description,
     createdAt: v.createdAt as unknown as string,
-    images,
+    images: media.map((m) => m.url),
+    media,
     features,
     latestPublicReview,
   };
@@ -1216,24 +1421,101 @@ function toDetail(
 
 type SensitiveRow = Prisma.VehicleGetPayload<{ select: typeof SENSITIVE_SELECT }>;
 
-/**
- * Khoá so sánh trường nhạy cảm — MẢNG canonicalize (dedupe + sort + join) để đổi THỨ TỰ chọn
- * dịch vụ không bị tính là thay đổi. Công thức này có bản đối xứng ở FE
- * (`apps/web/features/vehicles/sensitive-changes.ts`) — sửa một bên phải sửa cả hai.
- */
-function sensitiveKey(value: unknown): string | null {
-  if (value == null) return null;
-  if (Array.isArray(value)) return [...new Set(value)].sort().join(',');
+/** Khoá so sánh — `null` và chuỗi rỗng là một, để "chưa khai" không bị tính là đổi. */
+function fieldKey(value: unknown): string | null {
+  if (value == null || value === '') return null;
   return String(value);
 }
 
-/** Có trường nhạy cảm nào được sửa sang giá trị khác hiện tại không (ADR 0008). */
-function hasSensitiveChange(current: SensitiveRow, dto: UpdateVehicleDto): boolean {
-  return VEHICLE_PUBLIC_SENSITIVE_FIELDS.some((field) => {
+/**
+ * Chặn sửa CĂN CƯỚC của một chiếc xe đang công khai (09/09/2026).
+ *
+ * Trả về danh sách trường vi phạm trong `details.fields` để FE chỉ đúng ô bị khoá; xe chưa
+ * duyệt (nháp, chờ duyệt, đã gỡ) thì sửa thoải mái.
+ */
+function assertNoLockedFieldChange(current: SensitiveRow, dto: UpdateVehicleDto): void {
+  if (current.publicStatus !== VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC) return;
+  const locked = VEHICLE_LOCKED_AFTER_APPROVAL_FIELDS.filter((field) => {
     const next = dto[field];
     if (next === undefined) return false; // không đụng tới trường này
-    return sensitiveKey(current[field]) !== sensitiveKey(next);
+    return fieldKey(current[field]) !== fieldKey(next);
   });
+  if (locked.length === 0) return;
+  throw new ConflictException({
+    code: API_ERROR_CODE.VEHICLE_FIELD_LOCKED,
+    message:
+      'Xe đang hiển thị trên chợ nên không đổi được biển số, loại xe, hộp số, nhiên liệu hay năm sản xuất. Gỡ xe khỏi chợ trước nếu cần sửa.',
+    details: { fields: locked },
+  });
+}
+
+/**
+ * Xoá các thông số KHÔNG CÒN NGHĨA sau khi đổi loại xe / nguồn năng lượng.
+ *
+ * Backend không tin việc form đã ẩn ô: một client cũ (hoặc app native chưa cập nhật) vẫn gửi
+ * được `fuelConsumptionCombined` cho xe điện, và để lại con số đó nghĩa là trang xe công khai
+ * khoe "7.5 L/100km" trên một chiếc xe chạy pin.
+ *
+ * Chỉ xoá khi lệnh ghi thật sự ĐỘNG tới loại xe hoặc nguồn năng lượng — sửa mô tả không được
+ * âm thầm dọn thông số của xe.
+ */
+function clearIncompatibleProfileFields(
+  current: { vehicleType: string; fuelType: string | null; transmission: string | null },
+  dto: { vehicleType?: string; fuelType?: string | null; transmission?: string | null },
+): Partial<VehicleWritableFields> {
+  if (dto.vehicleType === undefined && dto.fuelType === undefined) return {};
+  const vehicleType = dto.vehicleType ?? current.vehicleType;
+  const fuelType = dto.fuelType !== undefined ? dto.fuelType : current.fuelType;
+
+  /*
+   * Hộp số GIỮ LẠI mà không còn hợp lệ thì bỏ.
+   *
+   * Ô tô xăng "số tự động" đổi sang chạy điện: xe điện truyền động một cấp, nên giữ nguyên chữ
+   * "số tự động" là mô tả sai chiếc xe cho người sắp thuê nó. Ma trận không đánh `hidden` cho
+   * hộp số ở xe điện (nó vẫn hỏi được), nên phần dọn này phải xét GIÁ TRỊ chứ không chỉ xét ô.
+   */
+  const transmission = dto.transmission !== undefined ? dto.transmission : current.transmission;
+  const staleTransmission = !isTransmissionAllowedFor(vehicleType, fuelType, transmission);
+
+  return {
+    ...clearFieldsNotInProfile(vehicleType, fuelType),
+    ...(staleTransmission ? { transmission: null } : {}),
+  };
+}
+
+/**
+ * Dọn mọi ô `hidden` theo ma trận hồ sơ xe.
+ *
+ * Một chiếc ô tô đổi thành xe máy phải mất số chỗ và kiểu dáng, y như nó mất lít/100km khi đổi
+ * sang chạy điện — cả hai là cùng một luật, nên chỉ có một hàm.
+ *
+ * NHƯNG "ẩn vì chưa biết" khác "ẩn vì không áp dụng". Chưa chọn nguồn năng lượng thì ma trận trả
+ * `hidden` cho toàn bộ thông số năng lượng — đơn giản vì câu hỏi chưa được trả lời. Xoá dựa trên
+ * đó là xoá chính con số người dùng vừa gõ (một chiếc xe khai 6.5 L/100km mà chưa kịp chọn "Xăng"
+ * sẽ mất luôn số đó). Nên khi `fuelType` còn trống, chỉ dọn phần mà LOẠI XE một mình đã quyết
+ * được: số chỗ, kiểu dáng, phân khúc.
+ */
+function clearFieldsNotInProfile(
+  vehicleType: string,
+  fuelType: string | null,
+): Partial<VehicleWritableFields> {
+  const policy = vehicleFieldPolicy(vehicleType, fuelType);
+  const fuelKnown = Boolean(fuelType);
+  const hidden = (field: keyof typeof policy) => policy[field] === 'hidden';
+  const hiddenByFuel = (field: keyof typeof policy) => fuelKnown && hidden(field);
+  return {
+    ...(hiddenByFuel('fuelConsumption')
+      ? { fuelConsumptionCity: null, fuelConsumptionHighway: null, fuelConsumptionCombined: null }
+      : {}),
+    ...(hiddenByFuel('electricRangeKm') ? { electricRangeKm: null } : {}),
+    ...(hiddenByFuel('batteryCapacityKwh') ? { batteryCapacityKwh: null } : {}),
+    ...(hiddenByFuel('electricConsumption') ? { electricConsumptionKwhPer100Km: null } : {}),
+    ...(hiddenByFuel('engineDisplacementCc') ? { engineDisplacementCc: null } : {}),
+    ...(hiddenByFuel('transmission') ? { transmission: null } : {}),
+    ...(hidden('seatCount') ? { seatCount: null } : {}),
+    ...(hidden('bodyType') ? { bodyType: null } : {}),
+    ...(hidden('motorbikeCategory') ? { motorbikeCategory: null } : {}),
+  };
 }
 
 /**
@@ -1243,7 +1525,7 @@ function hasSensitiveChange(current: SensitiveRow, dto: UpdateVehicleDto): boole
  * của dịch vụ đó — không âm thầm lấy giá tự lái trưng như tổng giá có tài xế/dài hạn. Bản đối
  * xứng ở FE: `apps/web/features/vehicles/publication.ts` — sửa một bên phải sửa cả hai.
  */
-function missingPublicFields(v: VehicleRow): string[] {
+function missingPublicFields(v: VehicleRow, imageCount: number): string[] {
   const missing: string[] = [];
   if (v.serviceTypes.includes(SERVICE_TYPE.SELF_DRIVE) && v.weekdayPrice == null) {
     missing.push('giá thuê tự lái (ngày thường)');
@@ -1255,9 +1537,63 @@ function missingPublicFields(v: VehicleRow): string[] {
     missing.push('giá/ngày có tài xế');
   }
   if (!v.mainImageUrl) missing.push('ảnh đại diện');
+  /*
+   * Bốn ảnh khác nhau (09/09/2026): khách không đặt một chiếc xe chỉ có một tấm ảnh chụp xa.
+   * Đếm trên tập URL đã khử trùng và có cả ảnh đại diện — cùng một tấm dùng làm ảnh đại diện
+   * lẫn ảnh thư viện chỉ tính MỘT.
+   */
+  if (imageCount < VEHICLE_PUBLIC_MIN_IMAGES) {
+    missing.push(`ít nhất ${VEHICLE_PUBLIC_MIN_IMAGES} ảnh xe (hiện có ${imageCount})`);
+  }
   if (!v.plateNumber) missing.push('biển số');
-  if (!v.description) missing.push('mô tả xe');
+  if (!v.brand) missing.push('hãng xe');
+  if (!v.model) missing.push('mẫu xe');
+  if (v.manufactureYear == null) missing.push('năm sản xuất');
+  if (!v.fuelType) missing.push('nguồn năng lượng');
+  // Mô tả KHÔNG bắt buộc (09/09/2026): ảnh + thông số + giá đã đủ để khách quyết định, và một
+  // ô mô tả bắt buộc chỉ đẻ ra những dòng "xe đẹp, máy êm" viết cho có.
+
+  /*
+   * Thông số năng lượng hỏi ĐÚNG thứ có nghĩa với chiếc xe này: xe xăng khai lít/100km, xe điện
+   * khai quãng đường mỗi lần sạc, hybrid chỉ bắt phần xăng (enum chưa tách HEV/PHEV).
+   */
+  const policy = vehicleFieldPolicy(v.vehicleType, v.fuelType);
+  if (policy.seatCount === 'required' && v.seatCount == null) missing.push('số chỗ ngồi');
+  // Phân khúc xe máy là chiều khách LỌC ngoài chợ — thiếu nó thì chiếc xe gần như không ai thấy.
+  if (policy.motorbikeCategory === 'required' && !v.motorbikeCategory) {
+    missing.push('phân khúc xe máy');
+  }
+  if (policy.fuelConsumption === 'required' && v.fuelConsumptionCombined == null) {
+    missing.push('mức tiêu thụ nhiên liệu');
+  }
+  if (policy.engineDisplacementCc === 'required' && v.engineDisplacementCc == null) {
+    missing.push('dung tích xi-lanh');
+  }
+  if (policy.electricRangeKm === 'required' && v.electricRangeKm == null) {
+    missing.push('quãng đường mỗi lần sạc đầy');
+  }
+  if (policy.transmission === 'required' && !v.transmission) missing.push('hộp số');
   return missing;
+}
+
+/**
+ * Số ảnh THẬT của một chiếc xe: ảnh đại diện ∪ thư viện, khử trùng theo URL.
+ *
+ * Đếm hai nguồn riêng rồi cộng lại sẽ tính đôi tấm ảnh vừa làm đại diện vừa nằm trong thư viện —
+ * và checklist báo "đủ 4" trong khi khách chỉ thấy 3 tấm khác nhau.
+ */
+async function countDistinctImages(
+  db: Prisma.TransactionClient | PrismaService,
+  vehicleId: string,
+  mainImageUrl: string | null,
+): Promise<number> {
+  const rows = await db.vehicleImage.findMany({
+    where: { vehicleId },
+    select: { imageUrl: true },
+  });
+  const urls = new Set(rows.map((row) => row.imageUrl));
+  if (mainImageUrl) urls.add(mainImageUrl);
+  return urls.size;
 }
 
 /** Ảnh chụp hồ sơ xe lúc gửi duyệt — reviewer thấy đúng thứ đã gửi (Decimal → string). */

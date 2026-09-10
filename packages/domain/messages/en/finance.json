@@ -126,7 +126,10 @@
         "remove": "Remove {name}",
         "retry": "Retry {name}",
         "uploading": "Uploading {name}",
-        "tooMany": "At most {max} files"
+        "tooMany": "At most {max} files",
+        "sourceCamera": "Take a photo",
+        "sourceLibrary": "Choose from library",
+        "sourcePdf": "Choose a PDF file"
       },
       "submit": {
         "income": "Create income entry",
@@ -171,6 +174,7 @@
       "income": "Total in",
       "expense": "Total out",
       "balance": "Net (in − out)",
+      "title": "Summary",
       "approvedCount": "Approved entries",
       "cash": "Cash {value}",
       "transfer": "Bank transfer {value}",
@@ -183,7 +187,14 @@
       "namePlaceholder": "New category name",
       "added": "Category added",
       "system": "System",
-      "delete": "Delete category"
+      "custom": "Custom",
+      "delete": "Delete category",
+      "nameLabel": "Category name"
+    },
+    "uncategorized": "Uncategorised",
+    "booking": {
+      "title": "Entries in the cash book",
+      "error": "Could not load this booking's receipts"
     }
   },
   "debts": {
@@ -288,7 +299,8 @@
         "day": "Daily",
         "week": "Weekly",
         "month": "Monthly"
-      }
+      },
+      "tapHint": "Tap a point on the chart to see it in detail."
     },
     "categories": {
       "incomeTitle": "Revenue by category",

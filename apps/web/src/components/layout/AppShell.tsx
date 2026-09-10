@@ -41,8 +41,13 @@ const BARE_PORTAL_PATHS: readonly string[] = [ROUTES.MANAGE.LOGIN, ROUTES.MANAGE
  * không phải của body. Shell khoá chiều cao = 100dvh và tắt cuộn ở `.content`; đồng thời ẨN
  * thanh bottom-nav mobile CHỈ ở các route này — lịch cần đáy màn hình cho hàng "Xe còn trống",
  * các trang khác vẫn giữ điều hướng như cũ.
+ *
+ * Tin nhắn thuộc cùng nhóm này và vì đúng cái lý do đó: khung chat tự quản vùng cuộn của nó
+ * (danh sách hội thoại một bên, dòng tin nhắn một bên). Để body cuộn thêm một lớp nữa nghĩa là
+ * ô soạn tin có thể nằm dưới mép màn hình — và khi ô đang có con trỏ nằm ngoài khung nhìn thì
+ * TRÌNH DUYỆT tự cuộn trang để kéo nó vào, đúng cú nhảy mà khu khách đã phải sửa.
  */
-const VIEWPORT_PORTAL_PATHS: readonly string[] = [ROUTES.MANAGE.CALENDAR];
+const VIEWPORT_PORTAL_PATHS: readonly string[] = [ROUTES.MANAGE.CALENDAR, ROUTES.MANAGE.CHAT];
 
 /**
  * Khung của Management Portal.

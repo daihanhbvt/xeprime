@@ -26,6 +26,7 @@ import type { PublicListingQueryDto } from './dto/public-listing.dto';
  */
 export type FacetDimension =
   | 'bodyType'
+  | 'motorbikeCategory'
   | 'brand'
   | 'seats'
   | 'fuelType'
@@ -149,6 +150,9 @@ export function buildListingWhere(
   if (exclude !== 'bodyType' && query.bodyType?.length) {
     and.push({ bodyType: { in: query.bodyType } });
   }
+  if (exclude !== 'motorbikeCategory' && query.motorbikeCategory?.length) {
+    and.push({ motorbikeCategory: { in: query.motorbikeCategory } });
+  }
   // Hãng khớp đúng tên đã lưu (facet trả về giá trị thật từ DB); insensitive đỡ lệch hoa thường.
   if (exclude !== 'brand' && query.brand?.length) {
     and.push({ brand: { in: query.brand, mode: 'insensitive' } });
@@ -243,6 +247,9 @@ export function buildListingWhereSql(
 
   if (exclude !== 'bodyType' && query.bodyType?.length) {
     and.push(Prisma.sql`pl."body_type" IN (${Prisma.join(query.bodyType)})`);
+  }
+  if (exclude !== 'motorbikeCategory' && query.motorbikeCategory?.length) {
+    and.push(Prisma.sql`pl."motorbike_category" IN (${Prisma.join(query.motorbikeCategory)})`);
   }
   if (exclude !== 'brand' && query.brand?.length) {
     // `in` + insensitive: so khớp theo bản thường hoá, không phải ILIKE — tên hãng không chứa ký

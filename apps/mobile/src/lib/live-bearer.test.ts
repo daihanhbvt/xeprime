@@ -1,4 +1,5 @@
-import type { CurrentUser, FetchInit, FetchResponse } from '@xeprime/api-client';
+import type { FetchInit, FetchResponse } from '@xeprime/api-client';
+import type { CurrentUser } from '@/api/auth/types';
 import { API_ERROR_CODE } from '@xeprime/types';
 import { apiGet, getErrorCode } from './api-client';
 import {

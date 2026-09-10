@@ -7,16 +7,33 @@
  */
 import * as yup from 'yup';
 import {
+  ASSIGNABLE_TENANT_ROLES,
   BODY_TYPE_VALUES,
+  COLLATERAL_ASSET_TYPE_VALUES,
+  COLLATERAL_MODE,
+  COLLATERAL_MODE_VALUES,
+  DRIVER_TYPE,
+  DRIVER_TYPE_VALUES,
+  type DriverType,
   FUEL_TYPE_VALUES,
+  MOTORBIKE_CATEGORY_VALUES,
   isVehicleFuelTypeAllowed,
   MAINTENANCE_TYPE_VALUES,
+  LONG_TERM_PACKAGE_MONTHS,
   ODOMETER_CORRECTION_REASON_VALUES,
   ODOMETER_MAX_KM,
   SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
   SOURCE_CONTRACT_MAX_FILES,
+  TENANT_CUSTOMER_FIELD_MAX,
+  TENANT_CUSTOMER_NOTE_TYPE,
+  TENANT_CUSTOMER_NOTE_TYPE_VALUES,
+  TENANT_CUSTOMER_RISK_LEVEL,
+  TENANT_CUSTOMER_RISK_LEVEL_VALUES,
+  TENANT_ROLE,
   TENANT_TYPE_VALUES,
+  type TenantCustomerNoteType,
+  type TenantCustomerRiskLevel,
   TRANSMISSION_TYPE_VALUES,
   VEHICLE_DOCUMENT_PRESET_VALUES,
   VEHICLE_DOCUMENT_TYPE,
@@ -163,8 +180,16 @@ export const vehicleFormSchema = yup.object({
     .oneOf(VEHICLE_OPERATION_STATUS_VALUES)
     .required('operationStatusRequired'),
   plateNumber: optionalText(50),
+  /**
+   * Hãng và mẫu xe: hai ô này KHÔNG còn do người dùng gõ.
+   *
+   * Form gửi `vehicleCatalogModelId`, backend chép nhãn hãng/tên mẫu từ danh mục xuống. Schema
+   * vẫn giữ hai trường vì màn hình đọc lại giá trị canonical để hiển thị, và vì xe khai tay (mẫu
+   * chưa có trong danh mục) vẫn được giữ nguyên chữ đã có.
+   */
   brand: optionalText(100),
   model: optionalText(100),
+  vehicleCatalogModelId: yup.string().nullable().default(null),
   color: optionalText(80),
   fuelType: yup
     .string()
@@ -173,6 +198,18 @@ export const vehicleFormSchema = yup.object({
     .default(null)
     .test('vehicle-fuel-compatible', 'fuelTypeIncompatible', function compatibleFuel(value) {
       return isVehicleFuelTypeAllowed(String(this.parent.vehicleType ?? ''), value);
+    }),
+  /**
+   * Phân khúc xe máy — chiều đối xứng với `bodyType` của ô tô, và là chiều khách lọc ngoài chợ.
+   * Cùng luật mà DB giữ bằng CHECK và backend kiểm bằng `vehicleFieldPolicy`.
+   */
+  motorbikeCategory: yup
+    .string()
+    .oneOf(MOTORBIKE_CATEGORY_VALUES)
+    .nullable()
+    .default(null)
+    .test('motorbike-only', 'motorbikeCategoryMotorbikeOnly', function motorbikeOnly(value) {
+      return this.parent.vehicleType === VEHICLE_TYPE.MOTORBIKE || value == null;
     }),
   /** Kiểu dáng thân xe — chỉ có nghĩa với ô tô; đổi sang xe máy thì form tự xoá. */
   bodyType: yup
@@ -201,7 +238,12 @@ export const vehicleFormSchema = yup.object({
     .min(1, 'seatCountMin')
     .max(64, 'seatCountMax')
     .nullable()
-    .default(null),
+    .default(null)
+    // Số chỗ ngồi là chiều của Ô TÔ. Một chiếc xe máy "2 chỗ" nghe có vẻ vô hại, nhưng nó đi
+    // thẳng vào bộ lọc "4/5/7 chỗ" ngoài chợ và làm bẩn kết quả của cả nhóm ô tô.
+    .test('seat-count-car-only', 'seatCountCarOnly', function carSeatsOnly(value) {
+      return this.parent.vehicleType === VEHICLE_TYPE.CAR || value == null;
+    }),
   lengthMm: optionalPositiveInt('lengthMm', 30000),
   widthMm: optionalPositiveInt('widthMm', 10000),
   heightMm: optionalPositiveInt('heightMm', 10000),
@@ -209,6 +251,12 @@ export const vehicleFormSchema = yup.object({
   engineDisplacementCc: optionalPositiveInt('engineDisplacementCc', 30000),
   horsepowerHp: optionalPositiveInt('horsepowerHp', 5000),
   transmission: yup.string().oneOf(TRANSMISSION_TYPE_VALUES).nullable().default(null),
+  /** Xe ĐIỆN: km mỗi lần sạc đầy — số nguyên, cùng trần 2000 với CHECK ở DB. */
+  electricRangeKm: optionalPositiveInt('electricRangeKm', 2000),
+  /** Xe ĐIỆN: dung lượng pin (kWh) — tuỳ chọn, hai chữ số thập phân như các thông số đo được. */
+  batteryCapacityKwh: optionalMetric('batteryCapacityKwh'),
+  /** Xe ĐIỆN: tiêu thụ điện (kWh/100km) — tuỳ chọn. */
+  electricConsumptionKwhPer100Km: optionalMetric('electricConsumptionKwhPer100Km'),
   fuelConsumptionCity: optionalMetric('fuelConsumptionCity'),
   fuelConsumptionHighway: optionalMetric('fuelConsumptionHighway'),
   fuelConsumptionCombined: optionalMetric('fuelConsumptionCombined'),
@@ -473,8 +521,7 @@ export const vehicleDocumentCreateSchema = yup.object({
     .max(160, 'customTypeNameMax')
     .when('preset', {
       is: VEHICLE_DOCUMENT_TYPE.OTHER,
-      then: (s) =>
-        s.test('required', 'customTypeNameRequired', (value) => Boolean(value?.trim())),
+      then: (s) => s.test('required', 'customTypeNameRequired', (value) => Boolean(value?.trim())),
     }),
 });
 
@@ -525,12 +572,7 @@ export type MaintenanceProfileFormValues = yup.InferType<typeof maintenanceProfi
 export const odometerCorrectionFormSchema = yup.object({
   odometerKm: odometerKmSchema.required('odometerRequired'),
   reasonCode: yup.string().oneOf(ODOMETER_CORRECTION_REASON_VALUES).required('reasonCodeRequired'),
-  reason: yup
-    .string()
-    .trim()
-    .required('reasonRequired')
-    .min(3, 'reasonMin')
-    .max(1000, 'reasonMax'),
+  reason: yup.string().trim().required('reasonRequired').min(3, 'reasonMin').max(1000, 'reasonMax'),
 });
 
 export type OdometerCorrectionFormValues = yup.InferType<typeof odometerCorrectionFormSchema>;
@@ -541,7 +583,11 @@ export type OdometerCorrectionFormValues = yup.InferType<typeof odometerCorrecti
  * KHÔNG đổi `moneySchema` (export ở trên): nó còn được `apps/web/src/features/bookings/schema.ts`
  * dùng, màn đó chưa có `useValidationResolver`.
  */
-const maintenanceCostSchema = yup.number().typeError('costTypeError').integer('costInteger').min(0, 'costMin');
+const maintenanceCostSchema = yup
+  .number()
+  .typeError('costTypeError')
+  .integer('costInteger')
+  .min(0, 'costMin');
 
 /**
  * Các mảnh dùng chung của form phiếu bảo dưỡng.
@@ -741,3 +787,369 @@ export const accountProfileSchema = yup.object({
 export type AccountProfileValues = yup.InferType<typeof accountProfileSchema>;
 
 export * from './auth';
+
+/**
+ * SỔ KHÁCH của gian hàng (S-01) — ba form dùng ở CẢ web và app native.
+ *
+ * Message là MÃ, `useValidationResolver` tra `Customers.validation.*` (cùng quy ước với
+ * `vehicleSourceFormSchema`). Chép schema sang app native là dựng bản thứ hai của cùng một luật,
+ * và bản thứ hai luôn trôi khỏi bản đầu — mà luật ở đây trùng với `class-validator` của DTO
+ * backend và với CHECK ở DB, nên lệch một chỗ là lệch ba lớp.
+ *
+ * Yup báo lỗi SỚM cho người dùng; lớp chặn thật vẫn là backend (CLAUDE.md mục 4).
+ */
+export const customerFormSchema = yup.object({
+  fullName: yup
+    .string()
+    .trim()
+    .required('fullNameRequired')
+    .max(TENANT_CUSTOMER_FIELD_MAX.FULL_NAME, 'fullNameMax'),
+  phone: yup.string().trim().required('phoneRequired').matches(VN_PHONE_PATTERN, 'phoneInvalid'),
+  email: yup
+    .string()
+    .trim()
+    .max(TENANT_CUSTOMER_FIELD_MAX.EMAIL, 'emailMax')
+    .default('')
+    // `yup.email()` từ chối chuỗi rỗng, mà email là KHÔNG BẮT BUỘC — nên tự kiểm, bỏ qua rỗng.
+    .test('email', 'emailInvalid', (value) => !value || yup.string().email().isValidSync(value)),
+  address: yup.string().trim().max(TENANT_CUSTOMER_FIELD_MAX.ADDRESS, 'addressMax').default(''),
+});
+
+export type CustomerFormValues = yup.InferType<typeof customerFormSchema>;
+
+/**
+ * Đổi mức rủi ro. Lý do BẮT BUỘC khi khác `normal` — cùng luật với DTO backend và với CHECK
+ * `tenant_customers_risk_reason_required_check` ở DB, nên ba lớp không thể lệch nhau.
+ */
+export const customerRiskSchema = yup.object({
+  riskLevel: yup
+    .mixed<TenantCustomerRiskLevel>()
+    .oneOf(TENANT_CUSTOMER_RISK_LEVEL_VALUES)
+    .required()
+    .default(TENANT_CUSTOMER_RISK_LEVEL.NORMAL),
+  reason: yup
+    .string()
+    .trim()
+    .max(TENANT_CUSTOMER_FIELD_MAX.RISK_REASON, 'reasonMax')
+    .default('')
+    .when('riskLevel', {
+      is: (value: TenantCustomerRiskLevel) => value !== TENANT_CUSTOMER_RISK_LEVEL.NORMAL,
+      then: (schema) => schema.required('reasonRequired'),
+    }),
+});
+
+export type CustomerRiskFormValues = yup.InferType<typeof customerRiskSchema>;
+
+export const customerNoteSchema = yup.object({
+  noteType: yup
+    .mixed<TenantCustomerNoteType>()
+    .oneOf(TENANT_CUSTOMER_NOTE_TYPE_VALUES)
+    .required()
+    .default(TENANT_CUSTOMER_NOTE_TYPE.GENERAL),
+  body: yup
+    .string()
+    .trim()
+    .required('noteBodyRequired')
+    .max(TENANT_CUSTOMER_FIELD_MAX.NOTE_BODY, 'noteBodyMax'),
+});
+
+export type CustomerNoteFormValues = yup.InferType<typeof customerNoteSchema>;
+
+// ---------------------------------------------------------------------------
+// Gian hàng: nhân sự (SHP-05) và tài xế (SHP-06)
+// ---------------------------------------------------------------------------
+
+/**
+ * Gửi LỜI MỜI vào gian hàng.
+ *
+ * `roleKey` cố ý KHÔNG nhận `shop_owner`: một gian hàng có đúng một chủ, và mời thêm chủ thứ hai
+ * là đường tự nâng quyền. Backend từ chối nốt — đây chỉ là lớp báo sớm.
+ *
+ * Message là MÃ — `useValidationResolver` tra `Members.form.errors.*`, đúng bộ khoá mà web dùng
+ * cho cùng form này.
+ */
+export const inviteMemberSchema = yup.object({
+  email: yup.string().trim().required('emailRequired').email('emailInvalid'),
+  roleKey: yup
+    .string()
+    .oneOf([...ASSIGNABLE_TENANT_ROLES])
+    .required('roleRequired')
+    .default(TENANT_ROLE.SHOP_STAFF),
+});
+
+export type InviteMemberValues = yup.InferType<typeof inviteMemberSchema>;
+
+/**
+ * Hồ sơ tài xế — MỘT schema cho cả thêm lẫn sửa, vì hai màn nhập đúng cùng một bộ trường.
+ *
+ * Đổi trạng thái hoạt động và xoá đi bằng ENDPOINT riêng, không phải input của form: nhét chúng
+ * vào đây là để một lần bấm Lưu vô tình bật lại một tài xế vừa bị ngừng.
+ *
+ * `licenseExpiresAt` là NGÀY LỊCH `YYYY-MM-DD` (cột `@db.Date`), không phải mốc thời gian — hết
+ * hạn thì server chặn gán vào đơn mới.
+ *
+ * Message là MÃ — `useValidationResolver` tra `Drivers.form.errors.*`.
+ */
+export const driverFormSchema = yup.object({
+  name: yup.string().trim().required('nameRequired').max(255),
+  phone: yup.string().trim().required('phoneRequired').matches(VN_PHONE_PATTERN, 'phoneInvalid'),
+  driverType: yup
+    .mixed<DriverType>()
+    .oneOf(DRIVER_TYPE_VALUES)
+    .required()
+    .default(DRIVER_TYPE.STAFF),
+  licenseNo: yup.string().trim().max(50).default(''),
+  licenseExpiresAt: yup.string().nullable().defined().default(null),
+  idNo: yup.string().trim().max(50).default(''),
+  note: yup.string().trim().max(2000).default(''),
+});
+
+export type DriverFormValues = yup.InferType<typeof driverFormSchema>;
+
+// ---------------------------------------------------------------------------
+// Chính sách thuê + giá theo xe (SHP-04 · VEH-05)
+// ---------------------------------------------------------------------------
+
+/**
+ * Schema form chính sách thuê — validate thật vẫn ở BE (`PricingService.validatePolicy` +
+ * class-validator); đây là lớp báo lỗi sớm ngay trên ô nhập.
+ *
+ * Giá trị số là `number | null` theo quy ước `NumberField`: bắt buộc khai bằng `.test('required')`
+ * để GIỮ kiểu `| null` — `.required()` của yup làm `InferType` lệch với RHF.
+ *
+ * Message là MÃ — `useValidationResolver` tra `Vehicles.pricing.validation.*`. Bốn câu phụ thuộc
+ * dữ liệu người dùng gõ mang thêm tham số dạng `mã::{json}` (xem `codeWithParams`).
+ *
+ * Ở đây chứ không phải trong từng app: web và app native trước đó giữ HAI bản chép tay giống
+ * nhau đến từng dòng, nghĩa là mỗi lần sửa một luật là hai lần sửa và một lần quên.
+ */
+
+/** Gắn tham số vào MÃ lỗi: `useValidationResolver` tách ở `::` rồi truyền vào `t(code, values)`. */
+const codeWithParams = (code: string, values: Record<string, number>): string =>
+  `${code}::${JSON.stringify(values)}`;
+
+const optionalPolicyMoney = () =>
+  yup.number().nullable().defined().default(null).integer('moneyInteger').min(0, 'moneyNegative');
+
+const requiredPolicyNumber = (code: string) =>
+  yup
+    .number()
+    .nullable()
+    .defined()
+    .default(null)
+    .test('required', code, (value) => value != null);
+
+/**
+ * Khoảng cách giao nhận nhận TỐI ĐA 1 chữ số thập phân — khớp
+ * `@IsNumber({ maxDecimalPlaces: 1 })` của `DeliveryTierDto`/`deliveryMaxRadiusKm` bên backend.
+ * Thiếu luật này thì `1.25` km lọt xuống server và quay về thành một toast chung chung — đúng
+ * lớp lỗi mà validate phía client sinh ra để chặn.
+ */
+const KM_DECIMALS = 1;
+const KM_MAX = 500;
+/*
+ * Hai con số trên được VIẾT THẲNG trong câu dịch (`kmMax`, `kmDecimals` ở
+ * `Vehicles.pricing.validation`) thay vì truyền làm tham số: chúng là hằng, và một câu ICU có
+ * tham số chỉ để nhắc lại một hằng số thì mỗi bản dịch phải mang thêm một chỗ hỏng. Đổi hằng ở
+ * đây thì sửa luôn hai khoá đó.
+ */
+
+export const deliveryTierSchema = yup.object({
+  toKm: requiredPolicyNumber('tierToRequired')
+    .moreThan(0, 'tierToPositive')
+    .max(KM_MAX, 'kmMax')
+    .test(maxDecimalsTest(KM_DECIMALS, 'kmDecimals')),
+  fee: optionalPolicyMoney(),
+});
+
+/**
+ * Mốc ưu đãi cấu hình theo GÓI THÁNG (ADR 0011) — form nhập tháng, `form.ts` quy ra `minDays`
+ * khi lưu. Ưu đãi này CHỈ áp cho dịch vụ Thuê dài hạn (luật ở `PricingService.buildQuote`).
+ */
+export const discountTierSchema = yup.object({
+  // Mốc là một GÓI thuê hợp lệ, không phải số tháng tự do — form dùng Select, schema chặn nốt.
+  minMonths: requiredPolicyNumber('packageRequired').oneOf(
+    [...LONG_TERM_PACKAGE_MONTHS],
+    'packageOneOf',
+  ),
+  percent: requiredPolicyNumber('percentRequired')
+    .integer('percentInteger')
+    .min(1, 'percentMin')
+    .max(100, 'percentMax'),
+  note: yup.string().trim().max(255).defined().default(''),
+});
+
+export const policyFormSchema = yup.object({
+  /*
+   * Ba chế độ bảo đảm LOẠI TRỪ nhau — cùng luật với CHECK `rental_policies_collateral_scope_check`
+   * và `PricingService.validatePolicy`. Ba lớp nói cùng một điều để người dùng không gặp hai
+   * kiểu thông báo khác nhau cho cùng một sai sót.
+   */
+  collateralMode: yup
+    .string()
+    .oneOf([...COLLATERAL_MODE_VALUES])
+    .defined()
+    .default(COLLATERAL_MODE.CASH),
+  collateralAssetTypes: yup
+    .array()
+    .of(
+      yup
+        .string()
+        .oneOf([...COLLATERAL_ASSET_TYPE_VALUES])
+        .defined(),
+    )
+    .defined()
+    .default([])
+    .when(['collateralMode', '$policyEditable'], {
+      is: (mode: string, editable?: boolean) =>
+        mode === COLLATERAL_MODE.ASSET && editable !== false,
+      then: (s) => s.min(1, 'assetTypesRequired'),
+    }),
+  // Chỉ bắt buộc ở chế độ "Cọc tiền"; hai chế độ kia không thu tiền nên ô này biến mất khỏi form.
+  depositAmount: optionalPolicyMoney().when(['collateralMode', '$policyEditable'], {
+    is: (mode: string, editable?: boolean) => mode === COLLATERAL_MODE.CASH && editable !== false,
+    then: (s) =>
+      s
+        .test('required', 'depositRequired', (value) => value != null)
+        .moreThan(0, 'depositPositive'),
+  }),
+  deliveryEnabled: yup.boolean().defined().default(false),
+  deliveryMaxRadiusKm: yup
+    .number()
+    .nullable()
+    .defined()
+    .default(null)
+    .max(KM_MAX, 'kmMax')
+    .moreThan(0, 'radiusPositive')
+    .test(maxDecimalsTest(KM_DECIMALS, 'kmDecimals'))
+    .when(['deliveryEnabled', '$policyEditable'], {
+      is: (enabled: boolean, editable?: boolean) => enabled && editable !== false,
+      then: (s) => s.test('required', 'radiusRequired', (value) => value != null),
+    }),
+  deliveryTiers: yup
+    .array()
+    .of(deliveryTierSchema)
+    .defined()
+    .default([])
+    .when(['deliveryEnabled', '$policyEditable'], {
+      is: (enabled: boolean, editable?: boolean) => enabled && editable !== false,
+      then: (s) => s.min(1, 'tiersRequired'),
+    })
+    .test('ascending', 'tiersAscending', (tiers) => {
+      if (!tiers) return true;
+      for (let i = 1; i < tiers.length; i++) {
+        const prev = tiers[i - 1]?.toKm;
+        const curr = tiers[i]?.toKm;
+        if (prev != null && curr != null && curr <= prev) return false;
+      }
+      return true;
+    })
+    .test('covers-radius', '', function coversRadius(tiers) {
+      const { deliveryEnabled, deliveryMaxRadiusKm } = this.parent as {
+        deliveryEnabled: boolean;
+        deliveryMaxRadiusKm: number | null;
+      };
+      if (!deliveryEnabled || !tiers?.length || deliveryMaxRadiusKm == null) return true;
+      const last = tiers[tiers.length - 1]?.toKm;
+      if (last == null || last === deliveryMaxRadiusKm) return true;
+      return this.createError({
+        message: codeWithParams(deliveryMaxRadiusKm > last ? 'tiersGap' : 'tiersOverRadius', {
+          last,
+          radius: deliveryMaxRadiusKm,
+        }),
+      });
+    }),
+  overtimeFeePerHour: optionalPolicyMoney(),
+  overtimeGraceMinutes: yup
+    .number()
+    .nullable()
+    .defined()
+    .default(null)
+    .integer('minutesInteger')
+    .min(0, 'minutesNegative')
+    .max(1440, 'minutesMax'),
+  overtimeRoundingMinutes: yup
+    .number()
+    .nullable()
+    .defined()
+    .default(null)
+    .integer('minutesInteger')
+    .min(1, 'minutesMin')
+    .max(1440, 'minutesMax'),
+  discountEnabled: yup.boolean().defined().default(false),
+  discountTiers: yup
+    .array()
+    .of(discountTierSchema)
+    .defined()
+    .default([])
+    .when(['discountEnabled', '$policyEditable'], {
+      is: (enabled: boolean, editable?: boolean) => enabled && editable !== false,
+      then: (s) => s.min(1, 'discountTiersRequired'),
+    })
+    .max(LONG_TERM_PACKAGE_MONTHS.length, 'discountTiersMax')
+    /*
+     * Hai luật đi cùng nhau (cùng luật với PricingService.validatePolicy):
+     *   - mốc tăng dần, không trùng;
+     *   - % KHÔNG được giảm khi thời hạn tăng — cam kết dài hơn mà ưu đãi thấp hơn là nghịch lý
+     *     với khách, và vì mốc lấy theo "cao nhất đạt tới" nên nó tạo ra giá thuê lâu = đắt hơn.
+     */
+    .test('ascending-months', '', function ascendingMonths(tiers) {
+      if (!tiers) return true;
+      for (let i = 1; i < tiers.length; i++) {
+        const prev = tiers[i - 1];
+        const curr = tiers[i];
+        if (prev?.minMonths == null || curr?.minMonths == null) continue;
+        if (curr.minMonths <= prev.minMonths) {
+          return this.createError({
+            message:
+              curr.minMonths === prev.minMonths
+                ? codeWithParams('discountDuplicate', { months: curr.minMonths })
+                : 'discountAscending',
+          });
+        }
+        if (curr.percent != null && prev.percent != null && curr.percent < prev.percent) {
+          return this.createError({
+            message: codeWithParams('discountNotLower', {
+              months: curr.minMonths,
+              prev: prev.minMonths,
+            }),
+          });
+        }
+      }
+      return true;
+    }),
+});
+
+export type PolicyFormValues = yup.InferType<typeof policyFormSchema>;
+
+/**
+ * Form giá theo xe = giá ĐỦ các dịch vụ xe đăng + toàn bộ chính sách (khi ghi đè).
+ *
+ * Giá ngày thường chỉ bắt buộc khi xe đăng TỰ LÁI (`$serviceTypes` truyền qua context của
+ * `useForm`) — xe chỉ chạy có tài xế/dài hạn không bị ép nhập giá tự lái. Giá chuyên biệt còn
+ * lại là tuỳ chọn ở đây; điều kiện "đủ giá mới được gửi duyệt public" nằm ở
+ * `features/vehicles/publication.ts` (đối xứng backend `missingPublicFields`).
+ */
+export const vehiclePricingFormSchema = policyFormSchema.shape({
+  weekdayPrice: optionalPolicyMoney().when('$serviceTypes', {
+    is: (services: readonly string[] | undefined) =>
+      !services || services.includes(SERVICE_TYPE.SELF_DRIVE),
+    then: (s) => s.test('required', 'weekdayRequired', (value) => value != null),
+  }),
+  weekendPrice: optionalPolicyMoney(),
+  hourlyPrice: optionalPolicyMoney(),
+  discountPercent: yup
+    .number()
+    .nullable()
+    .defined()
+    .default(null)
+    .integer('percentInteger')
+    .min(0, 'percentNegative')
+    .max(100, 'percentMax'),
+  monthlyPrice: optionalPolicyMoney(),
+  withDriverDailyPrice: optionalPolicyMoney(),
+  withDriverInterCityPrice: optionalPolicyMoney(),
+  withDriverOneWayPrice: optionalPolicyMoney(),
+});
+
+export type VehiclePricingFormValues = yup.InferType<typeof vehiclePricingFormSchema>;

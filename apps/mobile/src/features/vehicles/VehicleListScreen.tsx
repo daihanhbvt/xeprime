@@ -14,7 +14,7 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
-import { RecordCardSkeleton } from '@/components/ui/Skeleton';
+import { FleetVehicleCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -27,7 +27,7 @@ import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
-import { LIST_TUNING } from '@/theme/list-tuning';
+import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
 import { colors } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
 import { FleetSummaryBar } from './components/FleetSummaryBar';
@@ -310,7 +310,7 @@ export function VehicleListScreen() {
               inStateScroll(
                 <YStack px={layout.screenX} gap={layout.inline}>
                   {Array.from({ length: SKELETON_ROWS }, (_, i) => (
-                    <RecordCardSkeleton key={i} />
+                    <FleetVehicleCardSkeleton key={i} />
                   ))}
                 </YStack>,
               )
@@ -335,16 +335,15 @@ export function VehicleListScreen() {
                     description={t('grid.noResultsBody')}
                   />
                 ) : (
+                  /*
+                    KHÔNG có nút "thêm" ở đây: nó đã nằm ở hàng tiêu đề (`ManageListShell action`),
+                    và danh sách rỗng thì không có gì để cuộn nên hàng đó đứng nguyên trên màn —
+                    hai nút cùng một việc trong cùng một khung hình.
+                  */
                   <ScreenMessage
                     icon="car-outline"
                     title={t('grid.emptyTitle')}
                     description={t('grid.emptyBody')}
-                    {...(permissions.has(PERMISSION.VEHICLE_CREATE)
-                      ? {
-                          actionLabel: t('page.addFirstVehicle'),
-                          onAction: () => navigateOnce(ROUTES.manage.vehicleNew()),
-                        }
-                      : {})}
                   />
                 ),
               )
@@ -356,7 +355,7 @@ export function VehicleListScreen() {
                 contentContainerStyle={contentContainerStyle}
                 onScroll={onScroll}
                 scrollEventThrottle={scrollThrottle.frame}
-                {...LIST_TUNING}
+                {...MEDIA_LIST_TUNING}
                 onEndReached={query.fetchNextPage}
                 ListFooterComponent={
                   <ListFooter

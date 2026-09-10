@@ -7,6 +7,7 @@ import {
   DEFAULT_LISTING_SORT,
   FUEL_TYPE_VALUES,
   LISTING_SORT_VALUES,
+  MOTORBIKE_CATEGORY_VALUES,
   SEAT_BUCKET_VALUES,
   SERVICE_TYPE_VALUES,
   VEHICLE_FEATURE_KEYS,
@@ -81,6 +82,17 @@ export class PublicListingQueryDto {
   @IsArray()
   @IsIn(BODY_TYPE_VALUES, { each: true })
   bodyType?: string[];
+
+  @ApiPropertyOptional({
+    type: [String],
+    enum: MOTORBIKE_CATEGORY_VALUES,
+    description: 'Phân khúc xe máy — chiều lọc đối xứng với bodyType của ô tô',
+  })
+  @IsOptional()
+  @Transform(splitCsv)
+  @IsArray()
+  @IsIn(MOTORBIKE_CATEGORY_VALUES, { each: true })
+  motorbikeCategory?: string[];
 
   @ApiPropertyOptional({ type: String, description: 'Bucket số chỗ — CSV (4,5,7,8plus)' })
   @IsOptional()
@@ -238,6 +250,14 @@ export class PublicListingDto {
   @ApiPropertyOptional({ type: String, nullable: true }) fuelType!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Kiểu dáng (BODY_TYPE)' })
   bodyType!: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    enum: MOTORBIKE_CATEGORY_VALUES,
+    description: 'Phân khúc — chỉ xe máy',
+  })
+  motorbikeCategory!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) mainImageUrl!: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Tiền dạng string — ADR 0007' })
@@ -362,6 +382,54 @@ export class ListingCollateralDto {
   @ApiProperty({ description: 'VND string — chỉ khác 0 khi mode = cash' }) depositAmount!: string;
 }
 
+/**
+ * Điều kiện thuê CÔNG BỐ cho khách theo từng dịch vụ (08/09/2026) — giấy tờ phải xuất trình,
+ * cách đối chiếu (luôn thủ công), điều khoản, cọc giữ chuyến có tài xế và "đặt nhanh".
+ * Mã đi trên dây, FE dịch nhãn (ADR 0012). KHÔNG có dữ liệu nội bộ nào ở đây.
+ */
+export class ListingRentalTermsDto {
+  @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
+  @ApiProperty({ type: [String], description: 'CUSTOMER_DOCUMENT_TYPE — bộ HIỆU LỰC' })
+  requiredDocuments!: string[];
+  @ApiProperty({ description: 'IDENTITY_VERIFY_METHOD — đối chiếu TAY, kể cả qua app VNeID của khách' })
+  identityVerifyMethod!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) termsText!: string | null;
+  @ApiProperty() requireTermsAcceptance!: boolean;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'DRIVER_DEPOSIT_MODE — chỉ with_driver' })
+  depositMode!: string | null;
+  @ApiProperty({ description: 'Xe bật tự động nhận cho dịch vụ này (điều kiện cụ thể do báo giá trả)' })
+  instantBookEnabled!: boolean;
+  @ApiProperty() autoAcceptMinLeadMinutes!: number;
+  @ApiProperty() autoAcceptMaxLeadMinutes!: number;
+  @ApiPropertyOptional({ type: Number, nullable: true }) minRentalMinutes!: number | null;
+}
+
+export class ListingHandoverWindowDto {
+  @ApiProperty({ example: '06:00' }) start!: string;
+  @ApiProperty({ example: '22:00' }) end!: string;
+}
+
+/** Khung giờ giao/nhận của xe — rỗng = mọi giờ. Server vẫn kiểm lại lúc gửi yêu cầu. */
+export class ListingHandoverDto {
+  @ApiProperty({ type: [ListingHandoverWindowDto] }) pickupWindows!: ListingHandoverWindowDto[];
+  @ApiProperty({ type: [ListingHandoverWindowDto] }) returnWindows!: ListingHandoverWindowDto[];
+}
+
+/** Một khoản phụ phí MẶC ĐỊNH đang bật của chuyến có tài xế — công bố trước, ghi nhận sau. */
+export class ListingDriverSurchargeRuleDto {
+  @ApiProperty({ description: 'DRIVER_SURCHARGE_KIND' }) kind!: string;
+  @ApiProperty({ description: 'DRIVER_SURCHARGE_UNIT' }) unit!: string;
+  @ApiProperty({ description: 'VND string — ADR 0007' }) amount!: string;
+  @ApiPropertyOptional({ type: Number, nullable: true }) thresholdValue!: number | null;
+}
+
+/** Hạn mức km/ngày đã công bố + tiền mỗi km vượt (ADR 0007: tiền là chuỗi). */
+export class ListingMileagePolicyDto {
+  @ApiProperty({ description: 'Số km/ngày đã nằm trong giá thuê' }) includedKmPerDay!: number;
+  @ApiProperty({ description: 'VND mỗi km vượt — ghi nhận lúc quyết toán, không cộng vào báo giá' })
+  excessFeePerKm!: string;
+}
+
 export class PublicListingDetailDto extends PublicListingDto {
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) color!: string | null;
@@ -407,6 +475,36 @@ export class PublicListingDetailDto extends PublicListingDto {
    */
   @ApiPropertyOptional({ type: ListingCollateralDto, nullable: true })
   collateral!: ListingCollateralDto | null;
+
+  /** Một mục cho mỗi dịch vụ xe đăng có thiết lập riêng (tự lái, có tài xế) — 08/09/2026. */
+  @ApiProperty({ type: [ListingRentalTermsDto] })
+  rentalTerms!: ListingRentalTermsDto[];
+
+  @ApiProperty({ type: ListingHandoverDto })
+  handover!: ListingHandoverDto;
+
+  /** Chỉ khoản ĐANG BẬT; rỗng khi xe không có dịch vụ có tài xế hoặc chưa cấu hình. */
+  @ApiProperty({ type: [ListingDriverSurchargeRuleDto] })
+  driverSurchargeRules!: ListingDriverSurchargeRuleDto[];
+
+  /**
+   * Hạn mức quãng đường của chuyến tự lái (09/09/2026) — null = không giới hạn. Khách phải thấy
+   * TRƯỚC khi đặt: phí vượt km chỉ xuất hiện lúc quyết toán, nên nó phải được công bố từ đây.
+   */
+  @ApiPropertyOptional({ type: ListingMileagePolicyDto, nullable: true })
+  mileagePolicy!: ListingMileagePolicyDto | null;
+
+  /** Thông số NĂNG LƯỢNG đúng theo loại xe: lít/100km với xe xăng, km mỗi lần sạc với xe điện. */
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'L/100km (xăng/dầu/hybrid)' })
+  fuelConsumptionCombined!: string | null;
+  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Km mỗi lần sạc đầy (xe điện)' })
+  electricRangeKm!: number | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Dung lượng pin (kWh)' })
+  batteryCapacityKwh!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'kWh/100km' })
+  electricConsumptionKwhPer100Km!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: '@xeprime/types → TransmissionType' })
+  transmission!: string | null;
 }
 
 export class PublicListingPageMetaDto {
@@ -460,6 +558,9 @@ export class ListingFacetsDto {
   @ApiProperty({ type: PriceBoundsDto }) price!: PriceBoundsDto;
   @ApiProperty({ type: [FacetBucketDto], description: 'Theo kiểu dáng (BODY_TYPE key)' })
   bodyType!: FacetBucketDto[];
+
+  @ApiProperty({ type: [FacetBucketDto], description: 'Phân khúc xe máy (rỗng khi lọc ô tô)' })
+  motorbikeCategory!: FacetBucketDto[];
   @ApiProperty({ type: [FacetBucketDto], description: 'Theo hãng xe (tên hãng như đã lưu)' })
   brand!: FacetBucketDto[];
   @ApiProperty({ type: [FacetBucketDto], description: 'Theo bucket số chỗ (SEAT_BUCKET key)' })

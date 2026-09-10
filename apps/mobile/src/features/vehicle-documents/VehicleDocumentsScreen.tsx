@@ -44,7 +44,7 @@ import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { VehicleEditTabs } from '@/features/vehicles/components/VehicleEditTabs';
-import { DateField } from '@/features/vehicles/components/DateField';
+import { DateField } from '@/components/ui/DateField';
 import { useVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { ApiClientError, getErrorCode } from '@/lib/api-client';
 import {
@@ -575,7 +575,7 @@ function DocumentRow({
 }) {
   const t = useTranslations('Vehicles.documents');
   const tCommon = useTranslations('Common');
-  const tMedia = useTranslations('Vehicles.form.media');
+  const tImage = useTranslations('Common.image');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
 
@@ -851,7 +851,7 @@ function DocumentRow({
             đâu, vì máy ảnh và thư viện là hai quyền hệ thống khác nhau.
           */}
           <Button
-            label={tMedia('takePhoto')}
+            label={tImage('takePhoto')}
             icon="camera-outline"
             variant="secondary"
             size="sm"
@@ -862,7 +862,7 @@ function DocumentRow({
             }}
           />
           <Button
-            label={tMedia('chooseFromLibrary')}
+            label={tImage('chooseFromLibrary')}
             icon="images-outline"
             variant="secondary"
             size="sm"
@@ -943,7 +943,7 @@ function AddDocumentSheet({
 }) {
   const t = useTranslations('Vehicles.documents');
   const tCommon = useTranslations('Common');
-  const tMedia = useTranslations('Vehicles.form.media');
+  const tImage = useTranslations('Common.image');
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
   const errorMessage = useImageErrorMessage(useErrorMessage());
@@ -1080,7 +1080,7 @@ function AddDocumentSheet({
               <Pressable
                 onPress={() => setImage(null)}
                 accessibilityRole="button"
-                accessibilityLabel={tMedia('changeImage')}
+                accessibilityLabel={tImage('changeImage')}
                 hitSlop={space.xs}
               >
                 <Ionicons name="trash-outline" size={iconSize.sm} color={colors.danger} />
@@ -1092,7 +1092,7 @@ function AddDocumentSheet({
             <XStack gap={space.xs}>
               <YStack f={1}>
                 <Button
-                  label={tMedia('takePhoto')}
+                  label={tImage('takePhoto')}
                   icon="camera-outline"
                   variant="secondary"
                   size="sm"
@@ -1103,7 +1103,7 @@ function AddDocumentSheet({
               </YStack>
               <YStack f={1}>
                 <Button
-                  label={tMedia('chooseFromLibrary')}
+                  label={tImage('chooseFromLibrary')}
                   icon="images-outline"
                   variant="secondary"
                   size="sm"

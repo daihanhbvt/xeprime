@@ -1,0 +1,85 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.card {
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.heading {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.heading + .heading {
+  margin-top: var(--xp-space-xl);
+}
+
+.body {
+  margin: var(--xp-space-xs) 0 var(--xp-space-md);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.templates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+  margin-bottom: var(--xp-space-xl);
+  padding-bottom: var(--xp-space-lg);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+}
+
+/* Nút chính dạng link — cùng tông với `Button type="primary"` nhưng là <a> mở tab mới. */
+.templateButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  min-height: 40px;
+  padding: 0 var(--xp-space-md);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  text-decoration: none;
+}
+
+.templateButton:hover {
+  background: var(--xp-color-primary-active);
+  color: var(--xp-color-primary-contrast);
+}
+
+.templateButton:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.templates + .heading {
+  margin-top: 0;
+  margin-bottom: var(--xp-space-md);
+}
+
+.note {
+  margin: var(--xp-space-lg) 0 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: var(--xp-space-md);
+  }
+
+  .templateButton {
+    width: 100%;
+    justify-content: center;
+  }
+}

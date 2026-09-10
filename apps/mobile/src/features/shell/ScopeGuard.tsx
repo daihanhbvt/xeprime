@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import { APP_SCOPE } from './app-scope';
 import { useTranslations } from 'use-intl';
 import { Screen } from '@/components/layout/Screen';
@@ -47,10 +47,23 @@ export function ScopeGuard({ children }: { children: ReactNode }) {
   const { status, error, retry } = useSessionGate();
   const { tenant } = useTenantScope();
   const { data: user } = useCurrentUser();
+  const pathname = usePathname();
+
+  /**
+   * ĐĂNG KÝ GIAN HÀNG là ngoại lệ có chủ đích của cổng này.
+   *
+   * `/manage/onboarding` nằm dưới `manage/` để deep link ánh xạ 1-1 với web, nhưng nó là màn của
+   * người CHƯA có gian hàng — đá họ về khu khách ngay khi mở chính là đóng cửa duy nhất dẫn tới
+   * việc mở gian hàng. Web giải cùng bài này bằng cách liệt kê route đó là "bare" trong `AppShell`.
+   *
+   * So bằng CHÍNH giá trị trong bản đồ route, không gõ lại chuỗi: đổi đường dẫn ở `routes.ts` mà
+   * quên chỗ này thì cổng lại chặn nhầm, và đó là lỗi im lặng.
+   */
+  const onOnboarding = pathname === String(ROUTES.manage.onboarding());
 
   const ready = status === SESSION_STATUS.READY;
   // "Không còn gì để quản lý" = mất CẢ hai lối: không gian hàng và không vai nền tảng.
-  const evicted = ready && tenant === null && !user?.platformRole;
+  const evicted = ready && tenant === null && !user?.platformRole && !onOnboarding;
 
   // Toast chỉ bắn MỘT lần cho mỗi lần bị đá: effect chạy lại theo nhịp refetch, và bốn bản sao
   // của cùng một câu đọc như app đang hỏng chứ không như một lời giải thích.

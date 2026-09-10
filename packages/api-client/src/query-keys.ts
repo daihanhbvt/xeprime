@@ -99,6 +99,9 @@ export const queryKeys = {
     all: ['catalog'] as const,
     list: () => ['catalog', 'list'] as const,
     admin: (params: QueryParams) => ['catalog', 'admin', params] as const,
+    /** Mẫu xe: khoá theo (loại xe, hãng) — đổi hãng là một cache khác, không hiện nhầm. */
+    models: (vehicleType: string, brandKey: string, includeId: string) =>
+      ['catalog', 'models', vehicleType, brandKey, includeId] as const,
   },
   vehicles: {
     all: ['vehicles'] as const,
@@ -137,6 +140,18 @@ export const queryKeys = {
     maintenanceRecords: (id: string) => ['vehicles', 'maintenance', id, 'records'] as const,
     odometerHistory: (id: string, page: number) =>
       ['vehicles', 'maintenance', id, 'odometer', page] as const,
+    /** Thiết lập vận hành theo xe (08/09/2026) — khung giờ giao nhận + thời gian chết. */
+    operationSettings: (id: string) => ['vehicles', 'operation-settings', id] as const,
+    /** Thiết lập theo dịch vụ (tự động nhận, giấy tờ, điều khoản, cọc giữ chuyến). */
+    serviceSettings: (id: string) => ['vehicles', 'service-settings', id] as const,
+    /** Phụ phí mặc định có tài xế. */
+    driverSurchargeRules: (id: string) => ['vehicles', 'driver-surcharge-rules', id] as const,
+    /**
+     * Lịch sử chuyến của MỘT xe — đơn + yêu cầu trộn ở server. Dưới nhánh `vehicles` để mọi
+     * mutation của xe làm mới; duyệt/từ chối yêu cầu cũng phải invalidate nhánh này.
+     */
+    tripHistory: (id: string, params: QueryParams) =>
+      ['vehicles', 'trip-history', id, params] as const,
   },
   /** Trung tâm bảo dưỡng toàn đội xe (Wave 6) — domain riêng vì không thuộc một xe nào. */
   maintenance: {
@@ -301,8 +316,13 @@ export const queryKeys = {
     listing: (vehicleId: string) => ['marketplace', 'listing', vehicleId] as const,
     reviews: (vehicleId: string, params: QueryParams) =>
       ['marketplace', 'reviews', vehicleId, params] as const,
+    /** Hồ sơ gian hàng công khai. Web render server-side cho SEO; app fetch như mọi màn khác. */
+    shop: (slug: string) => ['marketplace', 'shop', slug] as const,
     shopListings: (slug: string, params: QueryParams) =>
       ['marketplace', 'shop-listings', slug, params] as const,
+    /** Bản tải VÔ HẠN của danh sách trên — key KHÔNG chứa page (page là pageParam của TanStack). */
+    shopListingsInfinite: (slug: string, params: QueryParams) =>
+      ['marketplace', 'shop-listings-infinite', slug, params] as const,
     /** Báo giá công khai theo khoảng ngày — nguồn PricingService, FE không tự cộng trừ. */
     quote: (vehicleId: string, params: QueryParams) =>
       ['marketplace', 'quote', vehicleId, params] as const,
@@ -341,10 +361,21 @@ export const queryKeys = {
     handoverPhotos: (id: string, slots: readonly string[]) =>
       ['trips', 'detail', id, 'handover-photos', slots] as const,
   },
+  /**
+   * `side` nằm TRONG khoá, không phải ngoài lề: hộp thư khách và inbox gian hàng là hai tập dữ
+   * liệu khác nhau, và một khoá chung nghĩa là mở `/manage/chat` sẽ ghi đè cache của `/chat` —
+   * người dùng quay lại thấy danh sách của vai kia trong lúc request mới đang bay.
+   */
   chat: {
     all: ['chat'] as const,
-    conversations: () => ['chat', 'conversations'] as const,
-    unreadCount: () => ['chat', 'unread-count'] as const,
+    conversations: (side: string, params?: QueryParams) =>
+      params
+        ? (['chat', 'conversations', side, params] as const)
+        : (['chat', 'conversations', side] as const),
+    conversation: (side: string, id: string) => ['chat', 'conversation', side, id] as const,
+    unreadCount: (side: string) => ['chat', 'unread-count', side] as const,
+    /** Chưa đọc CẢ HAI vai — badge biểu tượng chat, không thuộc bề mặt nào. */
+    unreadSummary: () => ['chat', 'unread-summary'] as const,
   },
   /** Hồ sơ người bán do CHÍNH gian hàng khai (R3 — ADR 0028 release gate 1). */
   sellerProfile: {

@@ -6,6 +6,27 @@
  * `CONVERSATION_STATUS` (open/closed/flagged/archived) nằm ở `misc.ts` — dùng lại, không lặp.
  */
 
+/**
+ * BỀ MẶT chat mà người xem đang đứng — trục phân tách hai hộp thư, không phải một bộ lọc giao diện.
+ *
+ * Một tài khoản có thể vừa là KHÁCH thuê xe của shop khác, vừa là nhân viên của shop mình. Hai
+ * vai đó là hai hộp thư khác nhau (`/chat` và `/manage/chat`) và trộn chúng là để chủ shop đọc
+ * thấy hội thoại riêng của chính họ nằm lẫn trong inbox công việc. Giá trị này đi TRONG query của
+ * `GET /conversations` và là BẮT BUỘC: không có đường nào ở server sinh ra một danh sách trộn.
+ */
+export const CHAT_SIDE = {
+  CUSTOMER: 'customer',
+  SHOP: 'shop',
+} as const;
+
+export type ChatSide = (typeof CHAT_SIDE)[keyof typeof CHAT_SIDE];
+
+export const CHAT_SIDE_VALUES = Object.values(CHAT_SIDE) as ChatSide[];
+
+export function isChatSide(value: unknown): value is ChatSide {
+  return typeof value === 'string' && (CHAT_SIDE_VALUES as string[]).includes(value);
+}
+
 /** Vai trò một thành viên trong hội thoại (docs §15.3). MVP dùng customer + shop_member. */
 export const PARTICIPANT_TYPE = {
   CUSTOMER: 'customer',

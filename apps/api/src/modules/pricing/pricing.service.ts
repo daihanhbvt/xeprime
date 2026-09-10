@@ -57,6 +57,8 @@ const POLICY_SELECT = {
   overtimeRoundingMinutes: true,
   discountEnabled: true,
   discountTiers: true,
+  includedDistanceKmPerDay: true,
+  excessDistanceFeePerKm: true,
   updatedAt: true,
 } satisfies Prisma.RentalPolicySelect;
 
@@ -369,6 +371,21 @@ export class PricingService {
             `${longTermPackageLabel(prev.minMonths)} (${prev.percent}%)`,
         );
       }
+    }
+
+    /*
+     * Hạn mức quãng đường đi CẶP. Một hạn mức không kèm giá vượt là lời hứa không thực thi được
+     * lúc quyết toán; một giá vượt không kèm hạn mức thì không biết vượt từ đâu. CHECK ở DB chặn
+     * cả hai, nhưng người dùng phải nhận được câu nói rõ chỗ sai chứ không phải lỗi ràng buộc thô.
+     */
+    const hasLimit = dto.includedDistanceKmPerDay != null;
+    const hasExcessFee = dto.excessDistanceFeePerKm != null;
+    if (hasLimit !== hasExcessFee) {
+      throw invalid(
+        hasLimit
+          ? 'Đặt hạn mức km/ngày thì phải khai phí cho mỗi km vượt'
+          : 'Có phí vượt km thì phải đặt hạn mức km/ngày',
+      );
     }
   }
 
@@ -927,6 +944,9 @@ export class PricingService {
             // Đóng băng ĐỦ mốc đang lưu (canonical + legacy chưa dọn) — snapshot phải giải
             // thích được cấu hình tại thời điểm chốt, kể cả phần máy giá đã bỏ qua.
             discountTiers: [...policy.values.discountTiers, ...policy.values.legacyDiscountTiers],
+            // Hạn mức km là ĐIỀU KHOẢN: đóng băng để lúc quyết toán tính đúng luật đã hứa.
+            includedDistanceKmPerDay: policy.values.includedDistanceKmPerDay,
+            excessDistanceFeePerKm: policy.values.excessDistanceFeePerKm,
           }
         : null,
     };
@@ -942,6 +962,96 @@ export class PricingService {
    * Dài hạn đi nhánh GÓI: chỉ cần `packageMonths`, KHÔNG cần (và không tin) ngày trả do client
    * gửi lên. Dịch vụ khác giữ nguyên hợp đồng ngày nhận–ngày trả.
    */
+  /**
+   * Bảng kê giá cho một yêu cầu thuê CHƯA được duyệt — giá thuê + phụ phí phía khách
+   * (ADR 0029: phí dịch vụ · thuế · bảo hiểm, mỗi dòng chỉ bật khi có căn cứ thật).
+   *
+   * Vì sao cần: yêu cầu chưa duyệt thì chưa có đơn, mà giá lại chỉ được đóng băng vào đơn
+   * (ADR 0024). Trước đợt này màn "Chuyến của tôi" vì thế hiện "Chờ báo giá" cho đúng thứ mà
+   * khách VỪA XEM GIÁ rồi mới bấm gửi — con số biến mất ngay sau khi họ đồng ý với nó.
+   *
+   * Đây là số TẠM TÍNH và caller phải nói rõ điều đó: nó tính theo chính sách ĐANG hiệu lực,
+   * nên gian hàng đổi giá giữa chừng là nó đổi theo. Con số chốt vẫn chỉ sinh ra lúc duyệt,
+   * bằng CHÍNH hai hàm dựng báo giá dưới đây — hai bên không thể lệch nhau về cách tính.
+   *
+   * Nhận giá xe đã nạp sẵn thay vì tự truy vấn: caller đang duyệt một trang danh sách và đã có
+   * chúng trong tay; thêm một lượt đọc bảng xe cho mỗi dòng là N+1 không cần thiết.
+   */
+  async estimateQuote(input: {
+    tenantId: string;
+    vehicleId: string;
+    serviceType: string;
+    routeType: string | null;
+    pickupAt: Date | null;
+    returnAt: Date | null;
+    longTermPackageMonths: number | null;
+    vehicle: {
+      weekdayPrice: Prisma.Decimal | null;
+      weekendPrice: Prisma.Decimal | null;
+      monthlyPrice: Prisma.Decimal | null;
+      withDriverDailyPrice: Prisma.Decimal | null;
+      withDriverInterCityPrice: Prisma.Decimal | null;
+      withDriverOneWayPrice: Prisma.Decimal | null;
+      discountPercent: number | null;
+    };
+  }): Promise<{ breakdown: QuoteBreakdownDto; fees: CustomerFeeBreakdown | null } | null> {
+    const { vehicle } = input;
+    const money = (value: Prisma.Decimal | null) => value?.toFixed(0) ?? null;
+
+    try {
+      const policy = await this.effectivePolicy(input.tenantId, input.vehicleId);
+
+      const breakdown =
+        input.serviceType === SERVICE_TYPE.LONG_TERM
+          ? input.longTermPackageMonths == null
+            ? null
+            : this.buildLongTermPackageQuote({
+                monthlyPrice: money(vehicle.monthlyPrice),
+                packageMonths: input.longTermPackageMonths,
+                policy,
+                delivery: null,
+              })
+          : input.pickupAt && input.returnAt
+            ? this.buildDailyQuote({
+                weekdayPrice: money(vehicle.weekdayPrice),
+                weekendPrice: money(vehicle.weekendPrice),
+                pickupAt: input.pickupAt,
+                returnAt: input.returnAt,
+                policy,
+                delivery: null,
+                dailyOverrides: await this.dailyOverridesFor(
+                  input.vehicleId,
+                  input.pickupAt,
+                  input.returnAt,
+                ),
+                serviceType: input.serviceType,
+                routeType: input.routeType,
+                withDriverDailyPrice: money(vehicle.withDriverDailyPrice),
+                withDriverInterCityPrice: money(vehicle.withDriverInterCityPrice),
+                withDriverOneWayPrice: money(vehicle.withDriverOneWayPrice),
+                discountPercent: vehicle.discountPercent,
+              })
+            : null;
+
+      if (!breakdown) return null;
+
+      /*
+       * `quoteIsEstimate = true` LUÔN LUÔN ở đây: chuyến chưa duyệt nên chưa có khoản giữ chỗ nào
+       * được chốt, và ADR 0029 cấm thu phần trăm trên một báo giá chưa chốt. Cờ này chỉ ảnh
+       * hưởng `holdAmount`; các dòng phụ phí vẫn được cộng vào tổng khách nhìn thấy.
+       */
+      const fees = await this.customerFeesFor(input.tenantId, breakdown.totalAmount, true);
+      return { breakdown, fees };
+    } catch {
+      /*
+       * Báo giá hỏng KHÔNG được làm hỏng danh sách chuyến. Xe thiếu giá, gói dài hạn sai mốc,
+       * chính sách lỗi — ở đây tất cả chỉ là một con số bổ sung cho một dòng đã đọc xong. Trả
+       * null và màn hình quay về "Chờ báo giá", đúng hành vi trước đợt này.
+       */
+      return null;
+    }
+  }
+
   async publicQuote(
     vehicleId: string,
     query: {
@@ -1081,6 +1191,10 @@ function toValues(row: PolicyRow): RentalPolicyValuesDto {
     legacyDiscountTiers: storedTiers(row.discountTiers)
       .map(legacyDiscountTierFromStored)
       .filter((t): t is LegacyDiscountTier => t !== null),
+    includedDistanceKmPerDay: row.includedDistanceKmPerDay,
+    excessDistanceFeePerKm: row.excessDistanceFeePerKm
+      ? row.excessDistanceFeePerKm.toFixed(0)
+      : null,
     updatedAt: row.updatedAt.toISOString(),
   };
 }
@@ -1103,6 +1217,11 @@ export function policyData(dto: SaveRentalPolicyDto) {
     overtimeRoundingMinutes: dto.overtimeRoundingMinutes ?? null,
     discountEnabled: dto.discountEnabled,
     discountTiers: dto.discountTiers as unknown as Prisma.InputJsonValue,
+    // Hạn mức km: giữ CẶP hoặc bỏ cả cặp — nửa vời bị CHECK ở DB chặn, và `validatePolicy`
+    // đã nói trước bằng câu người đọc được.
+    includedDistanceKmPerDay: dto.includedDistanceKmPerDay ?? null,
+    excessDistanceFeePerKm:
+      dto.excessDistanceFeePerKm != null ? new Prisma.Decimal(dto.excessDistanceFeePerKm) : null,
   };
 }
 

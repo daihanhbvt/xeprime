@@ -4,16 +4,24 @@ import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
   BOOKING_REQUEST_STATUS,
+  BOOKING_REQUEST_STATUS_VALUES,
   BOOKING_STATUS,
+  BOOKING_STATUS_VALUES,
   CUSTOMER_TRIP_FILTER,
+  CUSTOMER_TRIP_FILTER_DEFAULT,
+  CUSTOMER_TRIP_FILTER_STAGES,
+  CUSTOMER_TRIP_FILTER_VALUES,
   HANDOVER_PHOTO_SLOT_VALUES,
   HANDOVER_STATUS,
   HANDOVER_TYPE,
+  MEMBERSHIP_STATUS,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   PAYMENT_KIND,
   PAYMENT_STATUS,
   PRIVATE_FILE_PURPOSE,
+  TENANT_ROLE,
+  TRIP_ROLE,
   canCustomerCancelTrip,
   customerTripStage,
   handoverOccurredAt,
@@ -26,13 +34,16 @@ import {
   type HandoverPhotoSlot,
   type HandoverType,
   type PaginationMeta,
+  type TripRole,
 } from '@xeprime/types';
 import { fromDateOnly } from '../../common/date-only';
+import { currentSubscriptionWhere } from '../../common/plan/feature-state';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { BookingsService } from '../bookings/bookings.service';
 import { BookingHoldsService } from '../holds/booking-holds.service';
 import { NotificationService } from '../notification/notification.service';
+import { PricingService } from '../pricing/pricing.service';
 import { SettlementService } from '../bookings/settlement/settlement.service';
 import { SourceContractDownloadDto } from '../vehicles/dto/vehicle-source.dto';
 import { VehicleContractsService } from '../vehicles/vehicle-contracts.service';
@@ -45,6 +56,7 @@ import {
   CUSTOMER_TRIP_MAX_LIMIT,
   CustomerTripCountsDto,
   CustomerTripDetailDto,
+  CustomerTripEstimateDto,
   CustomerTripFinanceDto,
   CustomerTripListItemDto,
   CustomerTripListQueryDto,
@@ -53,6 +65,23 @@ import {
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 
 const ZERO = new Prisma.Decimal(0);
+
+/**
+ * Người đang xem "Chuyến của tôi", và HAI phía họ có thể đứng.
+ *
+ * `hostTenantId` chỉ khác null khi người này là **chủ** một gian hàng đang hoạt động. Quản lý và
+ * nhân viên KHÔNG có mặt ở đây có chủ đích: họ vận hành đội xe ở `/manage`, còn màn này là
+ * "chuyến của TÔI" — của một con người, không phải của một chỗ làm.
+ */
+interface TripViewerScope {
+  readonly userId: string;
+  readonly hostTenantId: string | null;
+  /**
+   * Gian hàng THUÊ BAO được liên hệ khách ngay từ lúc có yêu cầu (ADR 0028 điều 9 — họ đã trả
+   * cước và được phép chốt trực tiếp). Tuyến hoa hồng thì không: xem `canContactOn`.
+   */
+  readonly hostSubscribed: boolean;
+}
 
 /**
  * Vòng đời một chuyến ĐỨNG TỪ PHÍA KHÁCH — chỉ đọc.
@@ -76,6 +105,8 @@ export class CustomerTripsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly settlement: SettlementService,
+    /** Báo giá TẠM TÍNH cho yêu cầu chưa duyệt — cùng phép tính với lúc duyệt (ADR 0029). */
+    private readonly pricing: PricingService,
     private readonly bookings: BookingsService,
     /** R3: huỷ khi đang chờ chuyển giữ chỗ phải nhả lịch + đóng hold. */
     private readonly holds: BookingHoldsService,
@@ -90,15 +121,16 @@ export class CustomerTripsService {
   ) {}
 
   async list(
-    customerUserId: string,
+    viewerUserId: string,
     query: CustomerTripListQueryDto,
   ): Promise<CustomerTripPageDto> {
     const paging = resolvePaging(query, CUSTOMER_TRIP_DEFAULT_LIMIT, CUSTOMER_TRIP_MAX_LIMIT);
     const filter: CustomerTripFilter = isCustomerTripFilter(query.filter)
       ? query.filter
-      : CUSTOMER_TRIP_FILTER.ALL;
+      : CUSTOMER_TRIP_FILTER_DEFAULT;
 
-    const where = this.whereFor(customerUserId, filter);
+    const scope = await this.resolveScope(viewerUserId);
+    const where = this.whereFor(scope, filter);
 
     const [total, rows, counts] = await Promise.all([
       this.prisma.bookingRequest.count({ where }),
@@ -109,13 +141,93 @@ export class CustomerTripsService {
         take: paging.take,
         select: LIST_SELECT,
       }),
-      this.counts(customerUserId),
+      this.counts(scope),
     ]);
 
-    const surchargeTotals = await this.surchargeTotals(rows.map((row) => row.bookingId));
+    const [surchargeTotals, estimates] = await Promise.all([
+      this.surchargeTotals(rows.map((row) => row.bookingId)),
+      this.estimateQuotes(rows),
+    ]);
 
     const meta: PaginationMeta = paginationMeta(paging, total);
-    return { data: rows.map((row) => toListItem(row, surchargeTotals)), meta, counts };
+    return {
+      data: rows.map((row) => toListItem(row, surchargeTotals, scope, estimates)),
+      meta,
+      counts,
+    };
+  }
+
+  /**
+   * Người xem là ai, và họ có phải chủ một gian hàng không.
+   *
+   * MỘT truy vấn cho cả hai câu hỏi: vai chủ gian hàng và gói hiện hành của gian hàng đó. Gói
+   * quyết định đúng một chuyện ở màn này — được liên hệ khách trước khi duyệt hay không.
+   */
+  private async resolveScope(userId: string): Promise<TripViewerScope> {
+    const membership = await this.prisma.tenantMembership.findFirst({
+      where: {
+        userId,
+        status: MEMBERSHIP_STATUS.ACTIVE,
+        roleKey: TENANT_ROLE.SHOP_OWNER,
+      },
+      select: {
+        tenantId: true,
+        tenant: {
+          select: {
+            subscriptions: {
+              where: currentSubscriptionWhere(new Date()),
+              take: 1,
+              select: { id: true },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return {
+      userId,
+      hostTenantId: membership?.tenantId ?? null,
+      hostSubscribed: (membership?.tenant.subscriptions.length ?? 0) > 0,
+    };
+  }
+
+  /**
+   * Tổng TẠM TÍNH cho những dòng CHƯA có đơn — số tiền khách sẽ phải trả nếu chuyến đi tiếp.
+   *
+   * Chỉ chạy cho dòng chưa có đơn: có đơn rồi thì giá đã đóng băng ở đó (ADR 0024) và đọc lại
+   * chính sách là mở đường cho hai màn hiện hai con số.
+   *
+   * Chi phí: vài truy vấn nhẹ cho MỖI dòng chưa có đơn, chạy song song, tối đa bằng cỡ trang
+   * (10). Chấp nhận được vì yêu cầu chờ duyệt hết hạn nhanh nên số dòng như vậy luôn nhỏ.
+   * Muốn về 0 truy vấn thì phải LƯU báo giá lúc khách gửi yêu cầu — việc đó cần một cột mới
+   * và không giúp gì cho dữ liệu đã có, nên chưa làm.
+   */
+  private async estimateQuotes(
+    rows: Prisma.BookingRequestGetPayload<{ select: typeof LIST_SELECT }>[],
+  ): Promise<Map<string, TripEstimate>> {
+    const pending = rows.filter((row) => row.booking === null);
+    if (pending.length === 0) return new Map();
+
+    const quotes = await Promise.all(
+      pending.map(async (row) => {
+        const quote = await this.pricing.estimateQuote({
+          tenantId: row.tenantId,
+          vehicleId: row.vehicle.id,
+          serviceType: row.serviceType,
+          routeType: row.routeType,
+          pickupAt: row.pickupAt,
+          returnAt: row.returnAt,
+          longTermPackageMonths: row.longTermPackageMonths,
+          vehicle: row.vehicle,
+        });
+        return [row.id, quote] as const;
+      }),
+    );
+
+    return new Map(
+      quotes.filter((entry): entry is readonly [string, TripEstimate] => entry[1] !== null),
+    );
   }
 
   /**
@@ -146,18 +258,24 @@ export class CustomerTripsService {
    * Một chuyến. `id` là id yêu cầu HOẶC id đơn — thông báo của Wave 5/9/10 trỏ vào cả hai loại,
    * và bắt khách phải biết mình đang cầm loại id nào là một yêu cầu vô lý.
    */
-  async detail(customerUserId: string, id: string): Promise<CustomerTripDetailDto> {
+  async detail(viewerUserId: string, id: string): Promise<CustomerTripDetailDto> {
+    const scope = await this.resolveScope(viewerUserId);
     const row = await this.prisma.bookingRequest.findFirst({
       where: {
-        customerUserId,
-        OR: [{ id }, { bookingId: id }],
+        // Quyền sở hữu nằm TRONG truy vấn, cả hai phía: chuyến tôi đi thuê, hoặc chuyến trên xe
+        // của gian hàng tôi làm chủ. Không phải của tôi ⇒ đơn giản là không tồn tại.
+        AND: [scopeWhere(scope), { OR: [{ id }, { bookingId: id }] }],
       },
       select: DETAIL_SELECT,
     });
     if (!row) throw tripNotFound();
 
     const booking = row.booking;
-    const base = toListItem(row, await this.surchargeTotals([row.bookingId]));
+    const [surcharges, estimates] = await Promise.all([
+      this.surchargeTotals([row.bookingId]),
+      this.estimateQuotes([row]),
+    ]);
+    const base = toListItem(row, surcharges, scope, estimates);
 
     return {
       ...base,
@@ -166,8 +284,21 @@ export class CustomerTripsService {
       actualPickupAt: booking?.actualPickupAt?.toISOString() ?? null,
       actualReturnAt: booking?.actualReturnAt?.toISOString() ?? null,
       finance: booking ? await this.finance(booking) : null,
-      // Khoản giữ chỗ của CHÍNH chuyến này — service tự khoá theo `customerUserId`.
-      hold: await this.holds.findForTrip(row.id, customerUserId),
+      /*
+       * Loại trừ với `finance`: có đơn thì tiền đã đóng băng ở đó. Chưa có đơn thì trưng bảng
+       * kê tạm tính — khách vừa xem đúng những dòng này trước khi bấm gửi yêu cầu.
+       */
+      estimate: booking ? null : toEstimate(estimates.get(row.id)),
+      /*
+       * Khoản giữ chỗ là tiền của KHÁCH, nên chỉ khách nhìn thấy nó — service tự khoá thêm một
+       * lần theo `customerUserId`. Chủ xe xem cùng chuyến này thì `null`: cọc và tiền thuê giữa
+       * hai bên không đi qua nền tảng ở tuyến cơ bản (ADR 0028 điều 7A), và bày một ô tiền mà
+       * họ không thu được là mời họ hiểu nhầm rằng nền tảng đang giữ hộ.
+       */
+      hold:
+        base.role === TRIP_ROLE.RENTER
+          ? await this.holds.findForTrip(row.id, viewerUserId)
+          : null,
       review: booking?.review
         ? {
             id: booking.review.id,
@@ -469,67 +600,90 @@ export class CustomerTripsService {
    * Điều kiện lọc theo TAB. Chặng của khách là giá trị suy ra chứ không phải cột, nên mỗi tab
    * dịch ngược thành một vị từ trên hai cột trạng thái thật — vẫn lọc và phân trang ở DB, không
    * bao giờ kéo cả danh sách về rồi lọc trong Node.
+   *
+   * Danh sách trạng thái lấy từ `FILTER_STATUSES` (suy ngược bằng chính `customerTripStage`),
+   * không viết tay: bản trước liệt kê tay và đã bỏ sót `awaiting_hold`, `hold_expired` cùng các
+   * yêu cầu đã duyệt mà chưa có đơn — những chuyến đó không nằm trong tab nào và biến mất khỏi
+   * màn hình của khách.
    */
   private whereFor(
-    customerUserId: string,
+    scope: TripViewerScope,
     filter: CustomerTripFilter,
   ): Prisma.BookingRequestWhereInput {
-    const mine: Prisma.BookingRequestWhereInput = { customerUserId };
+    const { bookingStatuses, requestStatuses } = FILTER_STATUSES[filter];
 
-    switch (filter) {
-      case CUSTOMER_TRIP_FILTER.PENDING:
-        return {
-          ...mine,
-          bookingId: null,
-          status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
-        };
-      case CUSTOMER_TRIP_FILTER.UPCOMING:
-        return {
-          ...mine,
-          booking: { status: { in: [BOOKING_STATUS.RESERVED, BOOKING_STATUS.CONFIRMED] } },
-        };
-      case CUSTOMER_TRIP_FILTER.ACTIVE:
-        return { ...mine, booking: { status: BOOKING_STATUS.ACTIVE } };
-      case CUSTOMER_TRIP_FILTER.COMPLETED:
-        return { ...mine, booking: { status: BOOKING_STATUS.COMPLETED } };
-      case CUSTOMER_TRIP_FILTER.CANCELLED:
-        return {
-          ...mine,
+    /*
+     * HAI mệnh đề `OR` độc lập, nên chúng phải nằm trong `AND` chứ không gộp làm một: một
+     * object Prisma chỉ có MỘT khoá `OR`, và gộp "chuyến của ai" với "chuyến ở chặng nào" cho
+     * ra "chuyến của tôi HOẶC chuyến đang chạy" — tức là lộ chuyến của người khác.
+     */
+    return {
+      AND: [
+        scopeWhere(scope),
+        {
+          // Có đơn thuê thì đơn nói; chưa có đơn thì trạng thái yêu cầu nói — đúng thứ tự ưu
+          // tiên của `customerTripStage`, nên hai nhánh không bao giờ nhận cùng một dòng.
           OR: [
-            {
-              bookingId: null,
-              status: {
-                in: [
-                  BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
-                  BOOKING_REQUEST_STATUS.EXPIRED,
-                  BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER,
-                ],
-              },
-            },
-            { booking: { status: { in: [BOOKING_STATUS.CANCELLED, BOOKING_STATUS.NO_SHOW] } } },
+            { booking: { is: { status: { in: bookingStatuses } } } },
+            { booking: { is: null }, status: { in: requestStatuses } },
           ],
-        };
-      default:
-        return mine;
-    }
+        },
+      ],
+    };
   }
 
   /** Đếm cho từng tab bằng CHÍNH vị từ của tab đó — con số trên tab và danh sách không lệch. */
-  private async counts(customerUserId: string): Promise<CustomerTripCountsDto> {
+  private async counts(scope: TripViewerScope): Promise<CustomerTripCountsDto> {
     const count = (filter: CustomerTripFilter) =>
-      this.prisma.bookingRequest.count({ where: this.whereFor(customerUserId, filter) });
+      this.prisma.bookingRequest.count({ where: this.whereFor(scope, filter) });
 
-    const [all, pending, upcoming, active, completed, cancelled] = await Promise.all([
-      count(CUSTOMER_TRIP_FILTER.ALL),
-      count(CUSTOMER_TRIP_FILTER.PENDING),
-      count(CUSTOMER_TRIP_FILTER.UPCOMING),
-      count(CUSTOMER_TRIP_FILTER.ACTIVE),
-      count(CUSTOMER_TRIP_FILTER.COMPLETED),
-      count(CUSTOMER_TRIP_FILTER.CANCELLED),
+    const [current, history] = await Promise.all([
+      count(CUSTOMER_TRIP_FILTER.CURRENT),
+      count(CUSTOMER_TRIP_FILTER.HISTORY),
     ]);
-    return { all, pending, upcoming, active, completed, cancelled };
+    return { current, history };
   }
 }
+
+/**
+ * Tab → hai tập trạng thái THẬT ở DB, suy ngược bằng chính phép chiếu `customerTripStage`.
+ *
+ * Đây là chỗ duy nhất biết tab nào ứng với trạng thái nào, và nó không liệt kê gì cả: mỗi
+ * trạng thái vận hành được đem chiếu ra chặng rồi hỏi xem chặng đó thuộc tab nào. Thêm một
+ * trạng thái vào `BOOKING_STATUS`/`BOOKING_REQUEST_STATUS` là nó tự vào đúng tab — không có
+ * đường nào để một chuyến rơi ra ngoài mọi tab rồi biến mất khỏi màn hình khách.
+ */
+type FilterStatuses = Readonly<
+  Record<
+    CustomerTripFilter,
+    { bookingStatuses: BookingStatus[]; requestStatuses: BookingRequestStatus[] }
+  >
+>;
+
+const FILTER_STATUSES: FilterStatuses = Object.fromEntries(
+  CUSTOMER_TRIP_FILTER_VALUES.map((filter) => {
+    const stages: readonly CustomerTripStage[] = CUSTOMER_TRIP_FILTER_STAGES[filter];
+    return [
+      filter,
+      {
+        bookingStatuses: BOOKING_STATUS_VALUES.filter((status) =>
+          stages.includes(
+            customerTripStage({
+              // Yêu cầu đã sinh đơn thì trạng thái của nó chỉ còn là lịch sử — phép chiếu bỏ qua.
+              requestStatus: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
+              bookingStatus: status,
+            }),
+          ),
+        ),
+        requestStatuses: BOOKING_REQUEST_STATUS_VALUES.filter((status) =>
+          stages.includes(customerTripStage({ requestStatus: status, bookingStatus: null })),
+        ),
+      },
+    ];
+  }),
+  // `Object.fromEntries` trả `{ [k: string]: … }`; ép về đúng bản đồ theo tab. An toàn vì khoá
+  // đi thẳng từ `CUSTOMER_TRIP_FILTER_VALUES` nên không thiếu tab nào.
+) as FilterStatuses;
 
 // ── Truy vấn ─────────────────────────────────────────────────────────────────
 
@@ -574,14 +728,30 @@ const LIST_SELECT = {
   deliveryAddress: true,
   createdAt: true,
   bookingId: true,
+  tenantId: true,
+  // Ba trường dưới đây phục vụ PHÍA CHỦ XE: ai đang thuê, và còn bao lâu phải trả lời.
+  customerUserId: true,
+  customerName: true,
+  customerPhone: true,
+  respondBy: true,
   vehicle: {
     select: {
       id: true,
       name: true,
+      plateNumber: true,
       mainImageUrl: true,
       seatCount: true,
       transmission: true,
       fuelType: true,
+      // Bảng giá của xe — để báo giá TẠM TÍNH cho yêu cầu chưa duyệt không phải đọc lại
+      // bảng xe một lượt cho mỗi dòng (xem `PricingService.estimateCustomerTotal`).
+      weekdayPrice: true,
+      weekendPrice: true,
+      monthlyPrice: true,
+      withDriverDailyPrice: true,
+      withDriverInterCityPrice: true,
+      withDriverOneWayPrice: true,
+      discountPercent: true,
     },
   },
   tenant: { select: { name: true, slug: true, ratingAvg: true, ratingCount: true, phone: true } },
@@ -600,6 +770,8 @@ type BookingRow = NonNullable<TripRow['booking']>;
 function toListItem(
   row: TripRow | Prisma.BookingRequestGetPayload<{ select: typeof LIST_SELECT }>,
   surchargeTotals: Map<string, Prisma.Decimal>,
+  scope: TripViewerScope,
+  estimates: Map<string, TripEstimate>,
 ) {
   const booking = row.booking;
   const stage = customerTripStage({
@@ -607,12 +779,31 @@ function toListItem(
     bookingStatus: (booking?.status as BookingStatus | undefined) ?? null,
   });
   const engaged = isEngagedTrip(row.status as BookingRequestStatus, Boolean(booking));
+  /*
+   * Tôi đi thuê hay tôi cho thuê. So `customerUserId` chứ không so tenant: một chủ gian hàng
+   * thuê xe của chính mình vẫn đang ở vai KHÁCH trên chuyến đó, và màn hình phải nói đúng vai
+   * để họ không thấy nút "Duyệt" trên yêu cầu do chính mình gửi.
+   */
+  const role: TripRole =
+    row.customerUserId === scope.userId ? TRIP_ROLE.RENTER : TRIP_ROLE.HOST;
+  const canContact = canContactOn(engaged, role, scope);
 
   const item: CustomerTripListItemDto = {
     id: row.id,
     bookingId: booking?.id ?? null,
     code: booking?.code ?? null,
     stage,
+    role,
+    renter:
+      role === TRIP_ROLE.HOST
+        ? { name: row.customerName, phone: canContact ? row.customerPhone : null }
+        : null,
+    // Hạn trả lời chỉ còn nghĩa khi yêu cầu ĐANG chờ chủ xe; qua bước đó nó là một mốc đã chết.
+    respondBy:
+      row.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL
+        ? row.respondBy.toISOString()
+        : null,
+    canContact,
     vehicle: {
       id: row.vehicle.id,
       name: row.vehicle.name,
@@ -620,14 +811,24 @@ function toListItem(
       seatCount: row.vehicle.seatCount,
       transmission: row.vehicle.transmission,
       fuelType: row.vehicle.fuelType,
-      plateNumber: engaged ? (booking?.vehicle.plateNumber ?? null) : null,
+      /*
+       * Biển số chỉ giấu với NGƯỜI ĐI THUÊ trước khi chuyến gắn kết — đó là dữ liệu của gian
+       * hàng. Chủ xe nhìn chính chiếc xe của mình thì không có gì để giấu, và thiếu biển số họ
+       * không phân biệt nổi hai chiếc cùng đời trong danh sách.
+       */
+      plateNumber:
+        role === TRIP_ROLE.HOST
+          ? (booking?.vehicle.plateNumber ?? row.vehicle.plateNumber)
+          : engaged
+            ? (booking?.vehicle.plateNumber ?? null)
+            : null,
     },
     shop: {
       name: row.tenant.name,
       slug: row.tenant.slug,
       ratingAvg: Number(row.tenant.ratingAvg),
       ratingCount: row.tenant.ratingCount,
-      phone: engaged ? row.tenant.phone : null,
+      phone: canContact ? row.tenant.phone : null,
     },
     // Giờ trên ĐƠN thắng giờ trên yêu cầu: shop dời lịch thì đơn mới là cái đang có hiệu lực.
     // Yêu cầu dài hạn chờ duyệt chưa có lịch nào — trả null, KHÔNG suy ra ngày từ nguyện vọng.
@@ -652,9 +853,15 @@ function toListItem(
      * hai số. Cọc KHÔNG nằm trong đây, và phần phát sinh khấu trừ vào cọc cũng không bị cộng
      * thêm lần nữa — nó chỉ là cách khách đã trả cho phần phát sinh này.
      */
+    /*
+     * Có đơn thì đọc số ĐÃ ĐÓNG BĂNG; chưa có đơn thì báo giá tạm tính (gồm phụ phí phía
+     * khách — ADR 0029). Hai nguồn loại trừ nhau theo đúng thứ tự đó, nên không có chuyến
+     * nào đọc ra hai con số.
+     */
     totalAmount: booking
       ? booking.totalAmount.plus(surchargeTotals.get(booking.id) ?? ZERO).toFixed(2)
-      : null,
+      : (customerTotalOf(estimates.get(row.id)) ?? null),
+    totalIsEstimate: !booking && estimates.has(row.id),
     canReview: booking?.status === BOOKING_STATUS.COMPLETED && !booking.review,
     hasReview: Boolean(booking?.review),
     createdAt: row.createdAt.toISOString(),
@@ -670,6 +877,56 @@ function toListItem(
  * tự huỷ ngay là đủ để moi số điện thoại của mọi gian hàng trên sàn. Thêm một trạng thái kết
  * thúc mới trong tương lai cũng sẽ tự động rơi vào phía AN TOÀN thay vì tự động lộ.
  */
+/**
+ * Phạm vi ĐỌC của một người trên bảng `booking_requests` — trả về mảnh `where`, không phải một
+ * câu `if` sau khi đọc.
+ *
+ * Chủ gian hàng thấy CẢ chuyến mình đi thuê lẫn chuyến trên xe của gian hàng mình; người khác
+ * chỉ thấy chuyến của chính họ. `customerUserId` có thể null (đơn do nhân viên nhập tay), nên
+ * nhánh khách phải so bằng giá trị thật chứ không dựa vào một mặc định.
+ */
+/** Bảng kê tạm tính của một chuyến chưa có đơn — trả nguyên từ `PricingService`. */
+type TripEstimate = NonNullable<Awaited<ReturnType<PricingService['estimateQuote']>>>;
+
+/** Số KHÁCH TRẢ cả chuyến. Không có chính sách phí ⇒ đúng bằng giá thuê, không cộng gì thêm. */
+function customerTotalOf(estimate: TripEstimate | undefined): string | null {
+  if (!estimate) return null;
+  return estimate.fees?.customerTotalAmount ?? estimate.breakdown.totalAmount;
+}
+
+function toEstimate(estimate: TripEstimate | undefined): CustomerTripEstimateDto | null {
+  if (!estimate) return null;
+  return {
+    rows: estimate.breakdown.rows,
+    rentalTotal: estimate.breakdown.totalAmount,
+    depositAmount: estimate.breakdown.depositAmount,
+    fees: estimate.fees,
+  };
+}
+
+function scopeWhere(scope: TripViewerScope): Prisma.BookingRequestWhereInput {
+  if (!scope.hostTenantId) return { customerUserId: scope.userId };
+  return {
+    OR: [{ customerUserId: scope.userId }, { tenantId: scope.hostTenantId }],
+  };
+}
+
+/**
+ * Hai bên được liên hệ trực tiếp chưa — MỘT cổng cho cả SĐT khách lẫn SĐT gian hàng.
+ *
+ * Mặc định là "chỉ khi chuyến đã thành quan hệ thật" (`isEngagedTrip`): nền tảng không dẫn hai
+ * người ra ngoài trước khi có một chuyến, vì một yêu cầu gửi rồi tự huỷ sẽ thành cách moi số
+ * điện thoại (ADR 0028 điều 9).
+ *
+ * Ngoại lệ đúng MỘT chỗ: gian hàng THUÊ BAO nhìn yêu cầu gửi tới xe của họ. Họ đã trả cước, và
+ * ADR 0028 điều 1 cho phép họ liên hệ và chốt trực tiếp — chặn ở đó là lấy đi thứ họ vừa mua.
+ * Ngoại lệ này KHÔNG áp cho chiều ngược lại: khách vẫn chưa thấy SĐT gian hàng trước khi duyệt.
+ */
+function canContactOn(engaged: boolean, role: TripRole, scope: TripViewerScope): boolean {
+  if (engaged) return true;
+  return role === TRIP_ROLE.HOST && scope.hostSubscribed;
+}
+
 function isEngagedTrip(requestStatus: BookingRequestStatus, hasBooking: boolean): boolean {
   if (hasBooking) return true;
   return (

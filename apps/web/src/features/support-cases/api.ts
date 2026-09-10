@@ -2,6 +2,7 @@ import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
 import { apiGet, apiPost, fetchPage, type Paged, type QueryParams } from '@/services/api-client';
 import {
   SUPPORT_BASE_PATH,
+  SUPPORT_SURFACE,
   type OpenSupportCaseInput,
   type PostSupportEventInput,
   type ResolveSupportCaseInput,
@@ -60,6 +61,13 @@ export const transitionSupportCase = (
   body: TransitionSupportCaseInput,
 ): Promise<SupportCaseDetail> =>
   apiPost<SupportCaseDetail>(`${SUPPORT_BASE_PATH[surface]}/${id}/transition`, body);
+
+/**
+ * Rút yêu cầu xoá tài khoản — CHỈ bề mặt khách, CHỈ case `account_deletion` do chính mình mở.
+ * Server từ chối mọi loại case khác; đây không phải một nút "đóng case" chung.
+ */
+export const withdrawAccountDeletionCase = (id: string): Promise<SupportCaseDetail> =>
+  apiPost<SupportCaseDetail>(`${SUPPORT_BASE_PATH[SUPPORT_SURFACE.CUSTOMER]}/${id}/withdraw`);
 
 export const resolveSupportCase = (
   id: string,

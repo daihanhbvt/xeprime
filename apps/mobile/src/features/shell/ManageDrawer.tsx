@@ -21,6 +21,7 @@ import { colors, fontSize, fontWeight, iconSize, radius, sidebar, space } from '
 import {
   isManageNavBranch,
   manageNavForScope,
+  matchActiveHref,
   type ManageNavBadge,
   type ManageNavBranch,
   type ManageNavLeaf,
@@ -125,6 +126,18 @@ export function ManageDrawer() {
   const sections = useMemo(
     () => resolveSections(Boolean(user.platformRole), permissions.has, featureStates, badges),
     [user.platformRole, permissions, featureStates, badges],
+  );
+
+  const activeHref = useMemo(
+    () =>
+      matchActiveHref(
+        pathname,
+        sections.flatMap(({ nodes }) =>
+          nodes.flatMap((node) => (node.kind === 'leaf' ? [node.leaf] : node.children.map((c) => c.leaf))),
+        ),
+        String(ROUTES.manage.home()),
+      ),
+    [pathname, sections],
   );
 
   const [collapsedSections, setCollapsedSections] = useState<Readonly<Record<string, boolean>>>({});
@@ -233,7 +246,7 @@ export function ManageDrawer() {
                         label={labelOf(node.leaf)}
                         a11yLabel={a11yLabelOf(node.leaf, node.badge)}
                         badge={node.badge}
-                        active={isLeafActive(node.leaf, pathname)}
+                        active={isLeafActive(node.leaf, activeHref)}
                         indent={0}
                         leaf={node.leaf}
                         onPress={go}
@@ -242,8 +255,8 @@ export function ManageDrawer() {
                       <Branch
                         key={node.branch.key}
                         node={node}
-                        pathname={pathname}
-                        open={branchOverrides[node.branch.key] ?? branchHasActive(node, pathname)}
+                        activeHref={activeHref}
+                        open={branchOverrides[node.branch.key] ?? branchHasActive(node, activeHref)}
                         labelOf={labelOf}
                         a11yLabelOf={a11yLabelOf}
                         onToggle={toggleBranch}
@@ -327,17 +340,13 @@ function initialOf(name: string): string {
  * phải sáng, đúng như breadcrumb của web. `/manage` là ngoại lệ phải so bằng nhau, nếu không nó
  * sáng ở mọi trang con của khu quản lý.
  */
-function isLeafActive(leaf: ManageNavLeaf, pathname: string): boolean {
-  if (!leaf.href) return false;
-  const target = String(leaf.href);
-  return target === String(ROUTES.manage.home())
-    ? pathname === target
-    : pathname.startsWith(target);
+function isLeafActive(leaf: ManageNavLeaf, activeHref: string | null): boolean {
+  return leaf.href != null && String(leaf.href) === activeHref;
 }
 
 /** Nhánh có chứa trang đang mở không — dùng để BUNG SẴN nhánh đó, y như `submenu-selected`. */
-function branchHasActive(node: ResolvedBranch, pathname: string): boolean {
-  return node.children.some((child) => isLeafActive(child.leaf, pathname));
+function branchHasActive(node: ResolvedBranch, activeHref: string | null): boolean {
+  return node.children.some((child) => isLeafActive(child.leaf, activeHref));
 }
 
 function resolveSections(
@@ -452,7 +461,7 @@ const SectionHeader = memo(function SectionHeader({
  */
 function Branch({
   node,
-  pathname,
+  activeHref,
   open,
   labelOf,
   a11yLabelOf,
@@ -460,7 +469,7 @@ function Branch({
   onSelect,
 }: {
   node: ResolvedBranch;
-  pathname: string;
+  activeHref: string | null;
   open: boolean;
   labelOf: (node: { labelKey: string }) => string;
   a11yLabelOf: (leaf: ManageNavLeaf, badge: number) => string;
@@ -468,7 +477,7 @@ function Branch({
   onSelect: (leaf: ManageNavLeaf) => void;
 }) {
   const label = labelOf(node.branch);
-  const holdsActive = branchHasActive(node, pathname);
+  const holdsActive = branchHasActive(node, activeHref);
 
   return (
     <>
@@ -515,7 +524,7 @@ function Branch({
               label={labelOf(leaf)}
               a11yLabel={a11yLabelOf(leaf, badge)}
               badge={badge}
-              active={isLeafActive(leaf, pathname)}
+              active={isLeafActive(leaf, activeHref)}
               indent={CHILD_INDENT}
               leaf={leaf}
               onPress={onSelect}

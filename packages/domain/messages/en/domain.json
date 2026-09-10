@@ -61,7 +61,8 @@
     "vehicle_brand": "Vehicle brand",
     "body_type": "Body type",
     "fuel_type": "Fuel type",
-    "vehicle_feature": "Vehicle feature"
+    "vehicle_feature": "Vehicle feature",
+    "vehicle_model": "Vehicle model"
   },
   "contractStatus": {
     "draft": "Draft",
@@ -98,15 +99,12 @@
   "customerDocumentType": {
     "citizen_id": "Citizen ID",
     "driver_licence": "Driver's licence",
-    "other": "Other document"
+    "other": "Other document",
+    "passport": "Passport"
   },
   "customerTripFilter": {
-    "all": "All",
-    "pending": "Awaiting confirmation",
-    "upcoming": "Upcoming",
-    "active": "On rent",
-    "completed": "Completed",
-    "cancelled": "Cancelled"
+    "current": "Current trips",
+    "history": "Trip history"
   },
   "customerTripStage": {
     "pending_approval": "Awaiting confirmation",
@@ -273,7 +271,8 @@
     "subscription_expired": "Plan expired",
     "subscription_lapsed": "Switched to per-trip commission",
     "free_trips_exhausted": "Free trips used up",
-    "subscription_activated": "Plan activated"
+    "subscription_activated": "Plan activated",
+    "booking_auto_accepted": "Auto-accepted booking"
   },
   "occupancySourceType": {
     "booking": "Booking",
@@ -405,7 +404,10 @@
     "overtime": "Late return",
     "cleaning": "Cleaning",
     "damage": "Damage / compensation",
-    "other": "Other"
+    "other": "Other",
+    "waiting": "Waiting fee",
+    "long_distance": "Long-distance surcharge",
+    "overnight": "Driver overnight stay"
   },
   "tenantCustomerNoteType": {
     "general": "General note",
@@ -457,10 +459,16 @@
     "business": "Business"
   },
   "transmissionType": {
-    "automatic": "Automatic",
-    "manual": "Manual",
+    "automatic": "Automatic (AT)",
+    "manual": "Manual (MT)",
     "cvt": "CVT",
+    "e_cvt": "e-CVT (hybrid)",
     "dct": "Dual-clutch (DCT)",
+    "amt": "Automated manual (AMT)",
+    "direct_drive": "Single-speed",
+    "automatic_cvt": "Twist-and-go",
+    "semi_automatic": "Semi-automatic",
+    "manual_clutch": "Manual clutch",
     "other": "Other"
   },
   "userStatus": {
@@ -641,6 +649,7 @@
     "incident": "Trip incident",
     "payment": "Payment / refund",
     "account": "Account",
+    "account_deletion": "Account deletion request",
     "other": "Other"
   },
   "supportCaseParty": {
@@ -653,5 +662,92 @@
     "normal": "Normal",
     "high": "High",
     "urgent": "Urgent"
+  },
+  "receiptSourceGroup": {
+    "business": "Shop money",
+    "held_funds": "Held funds"
+  },
+  "vehicleImageType": {
+    "front": "Front view",
+    "rear": "Rear view",
+    "left": "Left side",
+    "right": "Right side",
+    "interior": "Interior",
+    "other": "Other photos",
+    "dashboard": "Odometer photo"
+  },
+  "handoverWindowKind": {
+    "pickup": "Handover hours",
+    "return": "Return hours"
+  },
+  "driverSurchargeKind": {
+    "overtime": "After-hours surcharge",
+    "waiting": "Waiting fee",
+    "long_distance": "Long-distance surcharge",
+    "overnight": "Driver overnight stay"
+  },
+  "driverSurchargeUnit": {
+    "per_hour": "₫ / hour",
+    "per_30_minutes": "₫ / 30 min",
+    "per_km": "₫ / km",
+    "per_night": "₫ / night"
+  },
+  "driverDepositMode": {
+    "none": "No deposit required (pay after the trip)",
+    "percent_30": "Require a 30% trip deposit to hold the driver",
+    "percent_50": "Require a 50% deposit before the trip"
+  },
+  "autoAcceptBlocker": {
+    "disabled": "Instant booking is off for this vehicle",
+    "service_not_supported": "This service does not support instant booking",
+    "lead_too_short": "Pickup is sooner than the minimum notice",
+    "lead_too_long": "Pickup is later than the maximum notice",
+    "outside_handover_window": "Pickup or return falls outside the host’s hours",
+    "below_min_duration": "Rental is shorter than the minimum duration",
+    "quote_estimate": "The price is still an estimate; the host must confirm",
+    "schedule_busy": "The vehicle is busy in this period",
+    "no_driver": "No driver is available for this window",
+    "hold_required_with_driver": "Chauffeured trips need host confirmation before a hold",
+    "terms_not_accepted": "The renter has not accepted the rental terms"
+  },
+  "bookingRequestDecisionSource": {
+    "host": "Decided by host",
+    "system": "Auto-accepted"
+  },
+  "vehicleTripHistoryKind": {
+    "booking": "Booking",
+    "request": "Rental request"
+  },
+  "vehicleTripHistoryFilter": {
+    "all": "All",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+  "driverSurchargeThresholdKind": {
+    "minute_of_day": "after the hour",
+    "grace_minutes": "after the free waiting minutes",
+    "km_per_day": "distance beyond the daily allowance"
+  },
+  "motorbikeCategory": {
+    "scooter": "Scooter",
+    "underbone": "Underbone",
+    "naked": "Naked bike",
+    "sport": "Sport bike",
+    "cruiser": "Cruiser",
+    "adventure": "Adventure",
+    "touring": "Touring",
+    "offroad": "Off-road",
+    "other": "Other"
+  },
+  "catalogMarketStatus": {
+    "current": "Currently sold",
+    "legacy": "Earlier model"
+  },
+  "catalogTypeHint": {
+    "vehicle_brand": "Shown in the \"Brand\" field when adding a vehicle, and in marketplace filters.",
+    "body_type": "Shown as picture cards when adding a vehicle, and in the marketplace \"Type\" filter.",
+    "fuel_type": "Shown in the \"Energy source\" field when adding a vehicle, and in filters.",
+    "vehicle_feature": "Shown under \"Features\" when adding a vehicle, and in marketplace filters.",
+    "vehicle_model": "Shown in the \"Model\" field once a brand is picked. Each model belongs to one brand and one vehicle type."
   }
 }

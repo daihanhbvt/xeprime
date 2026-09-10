@@ -4,6 +4,10 @@ import {
   COLLATERAL_ASSET_TYPE_LABEL,
   COLLATERAL_MODE,
   CUSTOMER_DOCUMENT_TYPE_LABEL,
+  DRIVER_DEPOSIT_MODE,
+  DRIVER_SURCHARGE_KIND_SPEC,
+  type CustomerDocumentType,
+  type DriverSurchargeKind,
   requiredIdentityDocuments,
   SERVICE_TYPE,
 } from '@xeprime/types';
@@ -119,6 +123,21 @@ export async function ListingDetailView({
       : services.includes(SERVICE_TYPE.SELF_DRIVE)
         ? SERVICE_TYPE.SELF_DRIVE
         : (services[0] ?? SERVICE_TYPE.SELF_DRIVE);
+
+  /*
+   * Web và API deploy riêng: một bản web mới có thể đọc payload của API cũ trong vài phút chuyển
+   * tiếp. Ba khối dưới đây thiếu thì phần còn lại của trang xe vẫn phải dựng được — mất một mục
+   * thông tin còn hơn trắng cả trang.
+   */
+  const activeTerms =
+    listing.rentalTerms?.find((term) => term.serviceType === activeService) ?? null;
+  /** Ngưỡng của một loại phụ phí là tri thức miền (`DRIVER_SURCHARGE_KIND_SPEC`), không đi trên dây. */
+  const thresholdKindOf = (kind: string) =>
+    DRIVER_SURCHARGE_KIND_SPEC[kind as DriverSurchargeKind]?.threshold ?? null;
+  const windowLabels = (windows: ReadonlyArray<{ start: string; end: string }>) =>
+    windows.map((window) => `${window.start}–${window.end}`);
+  const pickupWindows = windowLabels(listing.handover?.pickupWindows ?? []);
+  const returnWindows = windowLabels(listing.handover?.returnWindows ?? []);
 
   // Preview cùng công thức với PricingService; báo giá server vẫn là nguồn chốt.
   const discount = listing.discountPercent ?? 0;
@@ -238,6 +257,99 @@ export async function ListingDetailView({
                     .join(', '),
                 })}
               </p>
+            </section>
+          ) : null}
+
+          {/*
+            Thủ tục & điều kiện thuê do CHỦ XE cấu hình cho dịch vụ đang xem (08/09/2026): giấy tờ
+            hiệu lực (luật + cấu hình), cách đối chiếu, cọc giữ chuyến có tài xế, đặt ngay, và
+            điều khoản riêng. Server đã tính `requiredDocuments` hiệu lực — client chỉ hiển thị.
+          */}
+          {activeTerms ? (
+            <section className={styles.collateral} aria-label={t('terms.title')}>
+              <h2 className={styles.collateralTitle}>{t('terms.title')}</h2>
+              {activeTerms.instantBookEnabled ? (
+                <p className={styles.collateralLine}>
+                  <span className={styles.amenityBadge}>{t('terms.instantBook')}</span>{' '}
+                  {t('terms.instantBookHint')}
+                </p>
+              ) : null}
+              <p className={styles.collateralLine}>
+                {t('terms.documents', {
+                  documents: activeTerms.requiredDocuments
+                    .map((doc) =>
+                      domainLabel(
+                        'customerDocumentType',
+                        doc,
+                        CUSTOMER_DOCUMENT_TYPE_LABEL[doc as CustomerDocumentType],
+                      ),
+                    )
+                    .join(', '),
+                })}
+              </p>
+              <p className={styles.collateralLine}>
+                {t('terms.verify', {
+                  method: domainLabel('identityVerifyMethod', activeTerms.identityVerifyMethod),
+                })}
+              </p>
+              {activeService === SERVICE_TYPE.WITH_DRIVER ? (
+                <p className={styles.collateralLine}>
+                  {!activeTerms.depositMode || activeTerms.depositMode === DRIVER_DEPOSIT_MODE.NONE
+                    ? t('terms.driverDepositNone')
+                    : t('terms.driverDeposit', {
+                        mode: domainLabel('driverDepositMode', activeTerms.depositMode),
+                      })}
+                </p>
+              ) : null}
+              {activeTerms.termsText ? (
+                <p className={`${styles.collateralLine} ${styles.termsText}`}>
+                  {activeTerms.termsText}
+                </p>
+              ) : null}
+              {activeTerms.requireTermsAcceptance ? (
+                <p className={styles.collateralLine}>{t('terms.acceptanceRequired')}</p>
+              ) : null}
+            </section>
+          ) : null}
+
+          {pickupWindows.length > 0 || returnWindows.length > 0 ? (
+            <section className={styles.collateral} aria-label={t('handover.title')}>
+              <h2 className={styles.collateralTitle}>{t('handover.title')}</h2>
+              {pickupWindows.length > 0 ? (
+                <p className={styles.collateralLine}>
+                  {t('handover.pickup', { windows: pickupWindows.join(', ') })}
+                </p>
+              ) : null}
+              {returnWindows.length > 0 ? (
+                <p className={styles.collateralLine}>
+                  {t('handover.return', { windows: returnWindows.join(', ') })}
+                </p>
+              ) : null}
+            </section>
+          ) : null}
+
+          {activeService === SERVICE_TYPE.WITH_DRIVER &&
+          (listing.driverSurchargeRules?.length ?? 0) > 0 ? (
+            <section className={styles.collateral} aria-label={t('surcharges.title')}>
+              <h2 className={styles.collateralTitle}>{t('surcharges.title')}</h2>
+              <ul className={styles.surchargeList}>
+                {(listing.driverSurchargeRules ?? []).map((rule) => (
+                  <li key={rule.kind} className={styles.collateralLine}>
+                    {t('surcharges.rule', {
+                      kind: domainLabel('driverSurchargeKind', rule.kind),
+                      amount: fmt.money(rule.amount),
+                      unit: domainLabel('driverSurchargeUnit', rule.unit),
+                    })}
+                    {rule.thresholdValue != null && thresholdKindOf(rule.kind)
+                      ? ` · ${t('surcharges.threshold', {
+                          kind: domainLabel('driverSurchargeThresholdKind', thresholdKindOf(rule.kind) ?? ''),
+                          value: rule.thresholdValue,
+                        })}`
+                      : ''}
+                  </li>
+                ))}
+              </ul>
+              <p className={styles.collateralLine}>{t('surcharges.note')}</p>
             </section>
           ) : null}
 

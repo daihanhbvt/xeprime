@@ -17,9 +17,7 @@
   "identityLockedTitle": "Email and phone number can't be changed here",
   "identityLockedBody": "Both are used to sign in, so changing them needs a separate verification flow. Contact support if you need to change them.",
   "sidebar": {
-    "personal": "Personal",
-    "rental": "Rentals",
-    "preferences": "Settings"
+    "userCard": "Signed in as"
   },
   "profile": {
     "eyebrow": "Personal profile",
@@ -59,5 +57,172 @@
     "displayNameRequired": "Please enter your full name",
     "displayNameMax": "Full name is limited to 255 characters",
     "avatarUrlInvalid": "Invalid image URL"
+  },
+  "ownerGate": {
+    "title": "Hosts only",
+    "body": "This section is for shop owner accounts. List a vehicle to manage your vehicles, calendar and paperwork right here.",
+    "bodyMember": "You are a member of {shop}. Vehicle and calendar management for the shop lives in the management portal.",
+    "becomeOwner": "Become a host",
+    "openManage": "Open management portal",
+    "backToAccount": "Back to my account"
+  },
+  "vehicles": {
+    "title": "My vehicles",
+    "subtitle": "Your vehicles on XePrime — operating status, pricing and things to do.",
+    "loading": "Loading vehicles…",
+    "serviceFilterLabel": "Filter by service",
+    "statusFilterLabel": "Filter by operating status",
+    "statusAll": "All statuses",
+    "manage": "Manage vehicle",
+    "viewDetail": "View details",
+    "addVehicle": "Add vehicle",
+    "tips": {
+      "guideTitle": "Host guide",
+      "guideBody": "Handover and return procedure, plus the paperwork to prepare.",
+      "documentsTitle": "Contract & document templates",
+      "documentsBody": "Rental contract, handover record and tax document templates to download."
+    },
+    "detail": {
+      "title": "Vehicle details",
+      "back": "Back to my vehicles"
+    }
+  },
+  "calendar": {
+    "title": "Vehicle calendar",
+    "subtitle": "Bookings, blocked dates and day-specific prices for each vehicle.",
+    "back": "Exit full screen"
+  },
+  "hostGuide": {
+    "title": "Host guide",
+    "subtitle": "Guides and templates to rent your vehicle out safely and by the book.",
+    "policyHeading": "Policy updates",
+    "policyBody": "The marketplace rules and terms in force since {date}."
+  },
+  "resources": {
+    "pdfBadge": "PDF",
+    "open": "Open {title} (PDF, new tab)",
+    "items": {
+      "safeRentalProcess": {
+        "title": "Safe rental procedure",
+        "description": "Step-by-step handover, return and the paperwork to prepare."
+      },
+      "taxSettlementGuide": {
+        "title": "Income tax settlement guide",
+        "description": "How to declare and settle tax on rental income transparently."
+      },
+      "rentalContractTemplate": {
+        "title": "Rental contract",
+        "description": "Template rental contract between host and renter."
+      },
+      "handoverRecordTemplate": {
+        "title": "Vehicle handover record",
+        "description": "Template record of the vehicle condition at handover and return."
+      },
+      "pitSettlementDocument": {
+        "title": "Personal income tax settlement document",
+        "description": "Template document used when settling personal income tax on rental income."
+      },
+      "taxRefundRequest": {
+        "title": "Tax refund request to the tax authority",
+        "description": "Template request letter for a refund of overpaid tax."
+      }
+    }
+  },
+  "contracts": {
+    "title": "Contracts & documents",
+    "subtitle": "Shared templates for vehicle handover and tax settlement.",
+    "templatesHeading": "Contract templates",
+    "templatesBody": "Pick the template you want to view or download for a vehicle handover.",
+    "documentsHeading": "Tax settlement documents",
+    "note": "These are generic templates. Contracts for individual bookings are created in the management portal."
+  },
+  "tax": {
+    "title": "Tax information",
+    "subtitle": "Seller identity so XePrime can declare tax correctly when required.",
+    "entityType": "Business type",
+    "entityHint": "Whether and how XePrime withholds or remits tax depends on the seller type and on tax advice. Any rate will be announced before it takes effect; nothing is preset here.",
+    "residencyTitle": "Residency",
+    "residencyBody": "XePrime doesn't store residency yet. If a resident / non-resident classification becomes necessary for tax filing, the platform will ask separately when real tax settings are configured.",
+    "legalName": "Full name",
+    "legalNameBusiness": "Business name",
+    "idNumber": "National ID number",
+    "idNumberHint": "ID number of the person the profile is registered to.",
+    "taxId": "Tax code",
+    "save": "Save",
+    "saved": "Tax information saved.",
+    "fullProfile": "Bank account and full identity documents are declared in the seller profile.",
+    "openFullProfile": "Open seller profile",
+    "loadError": "Couldn't load tax information.",
+    "viewOnly": "You can only view this information."
+  },
+  "dataProtection": {
+    "title": "Data protection",
+    "badge": "Data protection",
+    "heading": "Peace of mind with XePrime",
+    "intro": "A summary of what XePrime does with your data, per the Privacy Policy in force.",
+    "points": {
+      "location": "Location data is only used to find vehicles near you and to compute delivery distance.",
+      "bank": "Bank account details are only used for payouts and refunds, as required by law.",
+      "masking": "Phone numbers and identity documents are masked on every screen that does not need them.",
+      "rights": "You can view, correct and request deletion of your data."
+    },
+    "commitment": "XePrime is committed to protecting and using personal data transparently, securely and in line with the law.",
+    "consentNote": "This summary is read-only. Per-item consent toggles will arrive once the platform can store your choices — it cannot yet.",
+    "lastUpdated": "Version in force since {date}",
+    "readPolicy": "Read the full policy"
+  },
+  "changePassword": {
+    "title": "Security update",
+    "subtitle": "Update your password to keep your account safe.",
+    "firstTimeTitle": "Set a password for the first time",
+    "firstTimeBody": "This account signs in with OTP or a social login, so it has no password yet. Set one to sign in faster next time — no current password needed.",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "submit": "Update password",
+    "submitFirstTime": "Set password",
+    "success": "Password updated.",
+    "successFirstTime": "Password set. You can sign in with it next time.",
+    "requirementsTitle": "Password requirements",
+    "requirements": {
+      "passwordTooShort": "At least {min} characters",
+      "passwordNeedsLetter": "At least 1 letter",
+      "passwordNeedsDigit": "At least 1 digit (0-9)"
+    },
+    "requirementMet": "Met",
+    "requirementUnmet": "Not met"
+  },
+  "deleteAccount": {
+    "title": "Request account deletion",
+    "subtitle": "Send a request for XePrime to delete your account.",
+    "warningTitle": "This is a request, handled manually by XePrime",
+    "warningBody": "After sending it you can keep signing in as usual until XePrime confirms and completes the deletion. You can withdraw the request while it is pending.",
+    "confirmTitle": "Confirm your deletion request",
+    "confirmBody": "Once the request is accepted, the following will be handled per the Privacy Policy and applicable retention obligations:",
+    "items": {
+      "profile": "Personal details & seller profile",
+      "vehicles": "Listed vehicles",
+      "trips": "Trip history & reviews",
+      "billing": "Invoice data & payment history"
+    },
+    "retentionNote": "Some data (invoices, tax documents, transaction logs) may have to be kept for a legally required period before it is fully deleted.",
+    "acknowledge": "I understand this is a deletion request and XePrime will contact me and process it according to its procedure.",
+    "confirmPhraseLabel": "Confirm by typing the phrase below",
+    "confirmPhrase": "DELETE ACCOUNT",
+    "confirmPhrasePlaceholder": "Type {phrase} to confirm",
+    "confirmPhraseMismatch": "The phrase doesn't match.",
+    "acknowledgeRequired": "Please confirm you understand.",
+    "submit": "Send deletion request",
+    "reset": "Cancel",
+    "submitted": "Deletion request sent.",
+    "caseSubject": "Account deletion request",
+    "caseDescription": "The user submitted an account deletion request from the account area.",
+    "pendingTitle": "Your request is being processed",
+    "pendingBody": "Request {code}. XePrime will reach out via the email or phone number on your account if further verification is needed.",
+    "sentAt": "Sent {date}",
+    "withdraw": "Withdraw deletion request",
+    "withdrawConfirm": "Withdraw this request? Your account stays as it is.",
+    "withdrawn": "Deletion request withdrawn.",
+    "loadError": "Couldn't check for an existing request."
   }
 }

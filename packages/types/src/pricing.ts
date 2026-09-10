@@ -39,6 +39,24 @@ export const POLICY_SOURCE_META: Readonly<Record<PolicySource, StatusMeta>> = {
  *   - `asset` ⇒ deposit_amount = 0  và có ít nhất một loại tài sản;
  *   - `none`  ⇒ deposit_amount = 0  và không có loại tài sản nào.
  */
+/**
+ * Hạn mức quãng đường của chuyến TỰ LÁI (09/09/2026) — hai trường đi CẶP trong `RentalPolicy`:
+ * `includedDistanceKmPerDay` (km/ngày trong giá) và `excessDistanceFeePerKm` (đ mỗi km vượt).
+ *
+ * Cả hai NULL = không giới hạn, và đó là mặc định của mọi xe cũ. Bật giới hạn thì phải có cả
+ * hai: một hạn mức không kèm giá vượt là một lời hứa không thể thực thi lúc quyết toán.
+ *
+ * Phí vượt KHÔNG cộng vào báo giá lúc đặt — lúc đó chưa ai biết khách sẽ chạy bao xa. Nó chỉ
+ * thành một khoản ĐỀ XUẤT khi quyết toán, dựa trên đồng hồ km lúc giao và lúc nhận lại xe.
+ */
+export const MILEAGE_LIMIT = {
+  /** Ít hơn 50 km/ngày thì hạn mức thành cái bẫy, không phải chính sách. */
+  minKmPerDay: 50,
+  maxKmPerDay: 2000,
+  /** Trần phí mỗi km vượt (VND) — chặn nhầm một số 0 thừa. */
+  maxFeePerKm: 100_000,
+} as const;
+
 export const COLLATERAL_MODE = {
   /** Khách đặt cọc TIỀN — số tiền nằm ở `depositAmount`, chảy vào sổ thu-chi. */
   CASH: 'cash',
@@ -294,5 +312,12 @@ export interface BookingPriceSnapshot {
      * (`minDays`), đơn mới ghi mốc theo tháng (`minMonths`). Snapshot lịch sử KHÔNG migrate.
      */
     discountTiers: (DiscountTier | LegacyDiscountTier)[];
+    /**
+     * Hạn mức quãng đường ĐÃ CÔNG BỐ với khách lúc chốt đơn (09/09/2026). Đơn cũ không có hai
+     * trường này — `undefined` nghĩa là "không có hạn mức", không được suy ra từ chính sách
+     * hiện tại: chủ xe đặt hạn mức sau đó không được viết lại điều khoản của chuyến đã đi.
+     */
+    includedDistanceKmPerDay?: number | null;
+    excessDistanceFeePerKm?: string | null;
   } | null;
 }

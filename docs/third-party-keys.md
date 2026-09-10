@@ -231,6 +231,7 @@ Dùng lại project `XePrime` ở §2.1.
 | **Geocoding API** | server | `maps.googleapis.com/maps/api/geocode/json` — đổi địa chỉ thành toạ độ |
 | **Routes API** | server | `routes.googleapis.com/directions/v2:computeRoutes` — quãng đường đường bộ |
 | **Maps Embed API** | nhúng | `google.com/maps/embed/v1/place` và `/directions` |
+| **Maps Static API** | app native | `maps.googleapis.com/maps/api/staticmap` — ảnh bản đồ có ghim |
 
 Không cần Places API, không cần Distance Matrix — code không gọi.
 
@@ -246,10 +247,19 @@ Không cần Places API, không cần Distance Matrix — code không gọi.
 - Application restrictions: **HTTP referrers** → `https://stg.xeprime.vn/*`
 - API restrictions: **Restrict key** → chỉ chọn *Maps Embed API*
 
+**Key C — app native** (`EXPO_PUBLIC_GOOGLE_MAPS_STATIC_KEY`, ở `apps/mobile/.env`)
+- Application restrictions: **None** — app native không có HTTP referrer để khoá, và hạn chế
+  theo package name chỉ áp cho *Maps SDK*, không áp cho Static API. Thay chỗ đó bằng **Quotas**:
+  đặt trần request/ngày cho *Maps Static API* để một key bị moi ra khỏi bundle không thành hoá
+  đơn.
+- API restrictions: **Restrict key** → chỉ chọn *Maps Static API*
+- KHÔNG dùng lại Key B: nó khoá theo referrer nên app native gọi sẽ bị từ chối.
+
 | Loại | Tên |
 | --- | --- |
 | **Secret** | `GOOGLE_MAPS_SERVER_KEY` |
 | Variable | `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY` — nằm trong bundle JS ⇒ **không bao giờ** là Secret |
+| Variable | `EXPO_PUBLIC_GOOGLE_MAPS_STATIC_KEY` — nằm trong bundle app ⇒ **không bao giờ** là Secret |
 
 ### 4.3 Tiền
 

@@ -45,6 +45,11 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     fuelType: values.fuelType ?? undefined,
     // Các trường nullable mới gửi null tường minh để XOÁ được giá trị khi sửa (backend nhận null).
     bodyType: values.vehicleType === VEHICLE_TYPE.CAR ? (values.bodyType ?? null) : null,
+    motorbikeCategory:
+      values.vehicleType === VEHICLE_TYPE.MOTORBIKE ? (values.motorbikeCategory ?? null) : null,
+    // Backend chép `brand`/`model` từ mẫu này xuống — app native chưa có ô chọn mẫu xe, nên nó
+    // gửi lại đúng liên kết đang có thay vì âm thầm gỡ ra.
+    vehicleCatalogModelId: values.vehicleCatalogModelId ?? null,
     manufactureYear: values.manufactureYear ?? undefined,
     seatCount: values.seatCount ?? undefined,
     lengthMm: values.lengthMm ?? undefined,
@@ -57,6 +62,7 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     fuelConsumptionCity: values.fuelConsumptionCity ?? undefined,
     fuelConsumptionHighway: values.fuelConsumptionHighway ?? undefined,
     fuelConsumptionCombined: values.fuelConsumptionCombined ?? undefined,
+    electricRangeKm: values.electricRangeKm ?? undefined,
     weekdayPrice: values.weekdayPrice == null ? undefined : String(values.weekdayPrice),
     weekendPrice: values.weekendPrice == null ? undefined : String(values.weekendPrice),
     hourlyPrice: values.hourlyPrice == null ? null : String(values.hourlyPrice),
@@ -98,6 +104,8 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
     color: v.color ?? '',
     fuelType: (v.fuelType ?? null) as FuelType | null,
     bodyType: (v.bodyType ?? null) as BodyType | null,
+    motorbikeCategory: (v.motorbikeCategory ?? null) as VehicleFormValues['motorbikeCategory'],
+    vehicleCatalogModelId: v.vehicleCatalogModelId ?? null,
     manufactureYear: v.manufactureYear ?? null,
     seatCount: v.seatCount ?? null,
     lengthMm: v.lengthMm ?? null,
@@ -112,6 +120,10 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
       v.fuelConsumptionHighway == null ? null : Number(v.fuelConsumptionHighway),
     fuelConsumptionCombined:
       v.fuelConsumptionCombined == null ? null : Number(v.fuelConsumptionCombined),
+    electricRangeKm: v.electricRangeKm ?? null,
+    batteryCapacityKwh: v.batteryCapacityKwh == null ? null : Number(v.batteryCapacityKwh),
+    electricConsumptionKwhPer100Km:
+      v.electricConsumptionKwhPer100Km == null ? null : Number(v.electricConsumptionKwhPer100Km),
     weekdayPrice: v.weekdayPrice == null ? null : Number(v.weekdayPrice),
     weekendPrice: v.weekendPrice == null ? null : Number(v.weekendPrice),
     hourlyPrice: v.hourlyPrice == null ? null : Number(v.hourlyPrice),
@@ -119,8 +131,7 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
     withDriverDailyPrice: v.withDriverDailyPrice == null ? null : Number(v.withDriverDailyPrice),
     withDriverInterCityPrice:
       v.withDriverInterCityPrice == null ? null : Number(v.withDriverInterCityPrice),
-    withDriverOneWayPrice:
-      v.withDriverOneWayPrice == null ? null : Number(v.withDriverOneWayPrice),
+    withDriverOneWayPrice: v.withDriverOneWayPrice == null ? null : Number(v.withDriverOneWayPrice),
     deliveryEnabled: v.deliveryEnabled,
     discountPercent: v.discountPercent ?? null,
     description: v.description ?? '',
@@ -161,6 +172,7 @@ export function informationValuesToInput(values: VehicleFormValues): UpdateVehic
     fuelConsumptionCity: values.fuelConsumptionCity,
     fuelConsumptionHighway: values.fuelConsumptionHighway,
     fuelConsumptionCombined: values.fuelConsumptionCombined,
+    electricRangeKm: values.electricRangeKm,
   };
 }
 

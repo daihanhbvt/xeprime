@@ -45,6 +45,10 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     fuelType: values.fuelType ?? undefined,
     // Các trường nullable mới gửi null tường minh để XOÁ được giá trị khi sửa (backend nhận null).
     bodyType: values.vehicleType === VEHICLE_TYPE.CAR ? (values.bodyType ?? null) : null,
+    motorbikeCategory:
+      values.vehicleType === VEHICLE_TYPE.MOTORBIKE ? (values.motorbikeCategory ?? null) : null,
+    // Backend chép `brand`/`model` từ mẫu này xuống — hai ô chữ ở trên chỉ còn là bản đọc lại.
+    vehicleCatalogModelId: values.vehicleCatalogModelId ?? null,
     manufactureYear: values.manufactureYear ?? undefined,
     seatCount: values.seatCount ?? undefined,
     lengthMm: values.lengthMm ?? undefined,
@@ -57,6 +61,9 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     fuelConsumptionCity: values.fuelConsumptionCity ?? undefined,
     fuelConsumptionHighway: values.fuelConsumptionHighway ?? undefined,
     fuelConsumptionCombined: values.fuelConsumptionCombined ?? undefined,
+    electricRangeKm: values.electricRangeKm ?? undefined,
+    batteryCapacityKwh: values.batteryCapacityKwh ?? undefined,
+    electricConsumptionKwhPer100Km: values.electricConsumptionKwhPer100Km ?? undefined,
     weekdayPrice: values.weekdayPrice == null ? undefined : String(values.weekdayPrice),
     weekendPrice: values.weekendPrice == null ? undefined : String(values.weekendPrice),
     hourlyPrice: values.hourlyPrice == null ? null : String(values.hourlyPrice),
@@ -98,6 +105,8 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
     color: v.color ?? '',
     fuelType: (v.fuelType ?? null) as FuelType | null,
     bodyType: (v.bodyType ?? null) as BodyType | null,
+    motorbikeCategory: (v.motorbikeCategory ?? null) as VehicleFormValues['motorbikeCategory'],
+    vehicleCatalogModelId: v.vehicleCatalogModelId ?? null,
     manufactureYear: v.manufactureYear ?? null,
     seatCount: v.seatCount ?? null,
     lengthMm: v.lengthMm ?? null,
@@ -112,6 +121,10 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
       v.fuelConsumptionHighway == null ? null : Number(v.fuelConsumptionHighway),
     fuelConsumptionCombined:
       v.fuelConsumptionCombined == null ? null : Number(v.fuelConsumptionCombined),
+    electricRangeKm: v.electricRangeKm ?? null,
+    batteryCapacityKwh: v.batteryCapacityKwh == null ? null : Number(v.batteryCapacityKwh),
+    electricConsumptionKwhPer100Km:
+      v.electricConsumptionKwhPer100Km == null ? null : Number(v.electricConsumptionKwhPer100Km),
     weekdayPrice: v.weekdayPrice == null ? null : Number(v.weekdayPrice),
     weekendPrice: v.weekendPrice == null ? null : Number(v.weekendPrice),
     hourlyPrice: v.hourlyPrice == null ? null : Number(v.hourlyPrice),
@@ -149,6 +162,10 @@ export function informationValuesToInput(values: VehicleFormValues): UpdateVehic
     color: textOrNull(values.color),
     fuelType: values.fuelType,
     bodyType: values.vehicleType === VEHICLE_TYPE.CAR ? (values.bodyType ?? null) : null,
+    motorbikeCategory:
+      values.vehicleType === VEHICLE_TYPE.MOTORBIKE ? (values.motorbikeCategory ?? null) : null,
+    // Backend chép `brand`/`model` từ mẫu này xuống — hai ô chữ ở trên chỉ còn là bản đọc lại.
+    vehicleCatalogModelId: values.vehicleCatalogModelId ?? null,
     manufactureYear: values.manufactureYear,
     seatCount: values.seatCount,
     lengthMm: values.lengthMm,
@@ -161,6 +178,9 @@ export function informationValuesToInput(values: VehicleFormValues): UpdateVehic
     fuelConsumptionCity: values.fuelConsumptionCity,
     fuelConsumptionHighway: values.fuelConsumptionHighway,
     fuelConsumptionCombined: values.fuelConsumptionCombined,
+    electricRangeKm: values.electricRangeKm,
+    batteryCapacityKwh: values.batteryCapacityKwh,
+    electricConsumptionKwhPer100Km: values.electricConsumptionKwhPer100Km,
   };
 }
 
@@ -172,5 +192,39 @@ export function mediaValuesToInput(values: VehicleFormValues): UpdateVehicleInpu
     features: values.features ?? [],
     // Chuỗi rỗng là thao tác xoá mô tả có chủ đích; không đổi thành undefined.
     description: textOrNull(values.description),
+  };
+}
+
+/**
+ * Payload của mục "Thông tin xe" trong không gian quản lý xe (08/09/2026) — CHỈ những trường
+ * màn đó hiện: biển số, thông số cơ bản, mô tả, tiện ích. Tên/loại xe/dịch vụ/chi nhánh/giá/ảnh
+ * không đi qua đây nên không thể bị ghi đè bởi một màn không hiển thị chúng.
+ */
+export function manageInformationValuesToInput(values: VehicleFormValues): UpdateVehicleInput {
+  return {
+    plateNumber: textOrNull(values.plateNumber),
+    brand: textOrNull(values.brand),
+    model: textOrNull(values.model),
+    color: textOrNull(values.color),
+    fuelType: values.fuelType,
+    bodyType: values.vehicleType === VEHICLE_TYPE.CAR ? (values.bodyType ?? null) : null,
+    motorbikeCategory:
+      values.vehicleType === VEHICLE_TYPE.MOTORBIKE ? (values.motorbikeCategory ?? null) : null,
+    // Backend chép `brand`/`model` từ mẫu này xuống — hai ô chữ ở trên chỉ còn là bản đọc lại.
+    vehicleCatalogModelId: values.vehicleCatalogModelId ?? null,
+    manufactureYear: values.manufactureYear,
+    seatCount: values.seatCount,
+    transmission: values.transmission,
+    fuelConsumptionCity: values.fuelConsumptionCity,
+    fuelConsumptionHighway: values.fuelConsumptionHighway,
+    fuelConsumptionCombined: values.fuelConsumptionCombined,
+    // Xe điện đo bằng km/lần sạc; xe xăng đo bằng lít/100km — form chỉ hiện đúng một ô, nhưng
+    // gửi cả bộ để ô không còn nghĩa được XOÁ khi chủ xe đổi nguồn năng lượng (server dọn lại).
+    electricRangeKm: values.electricRangeKm,
+    batteryCapacityKwh: values.batteryCapacityKwh,
+    electricConsumptionKwhPer100Km: values.electricConsumptionKwhPer100Km,
+    engineDisplacementCc: values.engineDisplacementCc,
+    description: textOrNull(values.description),
+    features: values.features ?? [],
   };
 }

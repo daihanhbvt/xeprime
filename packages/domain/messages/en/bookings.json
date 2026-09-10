@@ -124,7 +124,12 @@
     "assignSuccess": "Driver assigned",
     "unassignSuccess": "Driver unassigned",
     "call": "Call",
-    "noneWithDriver": "Chauffeured booking — no driver assigned yet"
+    "noneWithDriver": "Chauffeured booking — no driver assigned yet",
+    "routePickup": "Pickup: {address}",
+    "routeDestination": "→ {address}",
+    "searchLabel": "Search drivers",
+    "searchPlaceholder": "Name or phone number",
+    "searchEmpty": "No driver matches “{query}”"
   },
   "deliveryFee": {
     "title": "Delivery fee",
@@ -253,7 +258,16 @@
       "addSuccess": "Surcharge recorded",
       "removeSuccess": "Surcharge removed",
       "recordedBy": "{name} · {time}",
-      "removeReason": "Removed from settlement"
+      "removeReason": "Removed from settlement",
+      "amountRequired": "Enter an amount greater than 0.",
+      "reasonRequired": "Enter a reason — this is deducted from the customer's deposit.",
+      "removeAria": "Remove {category}",
+      "overtimeSuggestion": "Suggested by the overtime policy: {amount}",
+      "ruleSuggestion": "Published surcharge table: {kind} {amount} {unit}",
+      "ruleThreshold": "Applies beyond the threshold of {value}, per the rule the owner published at booking time.",
+      "ruleHint": "Rule published by the owner at booking time — enter the actual amount for this trip.",
+      "addButton": "Add surcharge",
+      "operationalNote": "These figures are operational records. The system creates no bank transaction and does not ask the customer to confirm."
     },
     "overtime": {
       "title": "Late-return fee suggestion",

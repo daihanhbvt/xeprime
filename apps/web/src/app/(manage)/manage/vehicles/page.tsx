@@ -1,13 +1,18 @@
 'use client';
 
-import { PlusOutlined } from '@ant-design/icons';
-import { Button } from 'antd';
+import { DownOutlined, PlusOutlined } from '@ant-design/icons';
+import { Button, Dropdown, Space } from 'antd';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Suspense } from 'react';
 import { useTranslations } from 'next-intl';
 import { PERMISSION } from '@xeprime/types';
-import { ROUTES, vehiclePath } from '@/constants/routes';
+import {
+  ROUTES,
+  VEHICLE_REGISTRATION_SOURCE,
+  listYourVehicleRegisterPath,
+  vehiclePath,
+} from '@/constants/routes';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
 import { LoadingState } from '@/components/feedback/LoadingState';
@@ -105,13 +110,41 @@ function VehiclesView() {
         title={t('title')}
         extra={
           canCreate ? (
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push(ROUTES.MANAGE.VEHICLE_NEW)}
-            >
-              {t('addVehicle')}
-            </Button>
+            /*
+             * Hai lối thêm xe (09/09/2026): "đăng nhanh" cho chiếc xe tự lái thông thường, và
+             * wizard nâng cao của gian hàng cho xe nhiều dịch vụ / có nguồn xe / nhiều chi
+             * nhánh. Không bỏ lối nào — gian hàng vẫn cần đủ trường ở wizard cũ.
+             */
+            <Space.Compact>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() =>
+                  router.push(listYourVehicleRegisterPath(VEHICLE_REGISTRATION_SOURCE.MANAGE))
+                }
+              >
+                {t('addVehicleQuick')}
+              </Button>
+              {/*
+                Tự dựng cặp nút thay vì `Dropdown.Button`: nút mở menu ở đó chỉ có icon và trình
+                đọc màn hình đọc ra "down". Ở đây nó là một `Button` thật, có `aria-label` nói
+                đúng việc nó làm.
+              */}
+              <Dropdown
+                trigger={['click']}
+                menu={{
+                  items: [
+                    {
+                      key: 'advanced',
+                      label: t('addVehicleAdvanced'),
+                      onClick: () => router.push(ROUTES.MANAGE.VEHICLE_NEW),
+                    },
+                  ],
+                }}
+              >
+                <Button type="primary" icon={<DownOutlined />} aria-label={t('addVehicleMore')} />
+              </Dropdown>
+            </Space.Compact>
           ) : null
         }
       />

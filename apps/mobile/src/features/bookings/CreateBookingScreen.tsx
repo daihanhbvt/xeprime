@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -145,6 +145,15 @@ export function CreateBookingScreen() {
   const tCreate = useTranslations('Bookings.create');
   const router = useRouter();
   const permissions = usePermissions();
+  /*
+   * Điền sẵn khách khi vào từ hồ sơ một khách đã có trong sổ — cùng tham số web đặt lên URL
+   * (`?customerName=&customerPhone=`), nên một deep link sinh ở bên nào cũng tới đúng chỗ.
+   */
+  const { customerName, customerPhone } = useLocalSearchParams<{
+    customerName?: string;
+    customerPhone?: string;
+  }>();
+  const prefill: StaffBookingPrefill = { customerName, customerPhone };
 
   const back = () => goBackOr(router, ROUTES.manage.bookings());
 
@@ -159,10 +168,28 @@ export function CreateBookingScreen() {
     );
   }
 
-  return <StaffBookingFlow onBack={back} />;
+  return <StaffBookingFlow onBack={back} prefill={prefill} />;
 }
 
-function StaffBookingFlow({ onBack }: { onBack: () => void }) {
+/**
+ * Tên + SĐT điền sẵn khi vào từ hồ sơ một khách đã có trong sổ (CUS-02 "Tạo đơn thuê").
+ *
+ * Chỉ ĐIỀN SẴN, không khoá: nhân viên vẫn sửa được, và luật gộp khách vẫn là SĐT đã chuẩn hoá ở
+ * server. Đây cũng là lý do màn này KHÔNG nhận `tenantCustomerId` — client không chọn hồ sơ
+ * khách nào được gắn vào đơn, `resolveWithinTx` của backend làm việc đó trong cùng transaction.
+ */
+export interface StaffBookingPrefill {
+  customerName?: string | undefined;
+  customerPhone?: string | undefined;
+}
+
+function StaffBookingFlow({
+  onBack,
+  prefill,
+}: {
+  onBack: () => void;
+  prefill: StaffBookingPrefill;
+}) {
   const t = useTranslations('Bookings.staffBooking');
   const tCreate = useTranslations('Bookings.create');
   const fmt = useAppFormat();
@@ -201,8 +228,8 @@ function StaffBookingFlow({ onBack }: { onBack: () => void }) {
     resolver: yupResolver(schema),
     context: { serviceType },
     defaultValues: {
-      customerName: '',
-      customerPhone: '',
+      customerName: prefill.customerName ?? '',
+      customerPhone: prefill.customerPhone ?? '',
       pickupMethod: PICKUP_SELF,
       deliveryAddress: '',
       routeType: ROUTE_TYPE.IN_CITY,

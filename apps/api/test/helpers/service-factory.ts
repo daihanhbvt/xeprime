@@ -13,6 +13,7 @@ import { HoldSettlementService } from '../../src/modules/holds/hold-settlement.s
 import { NotificationService } from '../../src/modules/notification/notification.service';
 import { BillingService } from '../../src/modules/billing/billing.service';
 import { BranchesService } from '../../src/modules/branches/branches.service';
+import { CatalogModelService } from '../../src/modules/catalog/catalog-model.service';
 import { CatalogService } from '../../src/modules/catalog/catalog.service';
 import { GeoNotConfiguredProvider } from '../../src/modules/geo/geo-provider';
 import { GeoService } from '../../src/modules/geo/geo.service';
@@ -21,6 +22,7 @@ import { ListingsService } from '../../src/modules/public-listings/listings.serv
 import { PublicListingsService } from '../../src/modules/public-listings/public-listings.service';
 import { PricingService } from '../../src/modules/pricing/pricing.service';
 import { TenantsService } from '../../src/modules/tenants/tenants.service';
+import { VehicleSettingsService } from '../../src/modules/vehicle-settings/vehicle-settings.service';
 import { VehiclesService } from '../../src/modules/vehicles/vehicles.service';
 import type { PrismaService } from '../../src/prisma/prisma.service';
 
@@ -31,6 +33,16 @@ import type { PrismaService } from '../../src/prisma/prisma.service';
  * lần thêm một dependency là sửa hơn mười file — lần này là `BranchesService`. Một factory dùng
  * chung khiến thay đổi đó thành MỘT dòng, và không spec nào bị bỏ sót một cách âm thầm.
  */
+/**
+ * `VehicleSettingsService` (08/09/2026) — thiết lập vận hành theo xe: khung giờ giao nhận, thời
+ * gian chết, tự động nhận chuyến, điều khoản. Bốn service khác đã phụ thuộc vào nó, nên nó nằm
+ * đây thay vì được dựng lại ở từng spec. Dùng bản THẬT: nó chỉ cần prisma + audit + occupancy,
+ * và chính hành vi của nó là thứ các spec giữ chỗ/yêu cầu thuê đang kiểm.
+ */
+export function makeVehicleSettingsService(prisma: PrismaService): VehicleSettingsService {
+  return new VehicleSettingsService(prisma, new AuditService(prisma), new OccupancyService(prisma));
+}
+
 export function makeBranchesService(prisma: PrismaService): BranchesService {
   const audit = new AuditService(prisma);
   return new BranchesService(
@@ -86,6 +98,7 @@ export function makeBookingHoldsService(prisma: PrismaService): BookingHoldsServ
     prisma,
     makeBookingsService(prisma),
     new OccupancyService(prisma),
+    makeVehicleSettingsService(prisma),
     new HoldSettlementService(prisma, audit, notifications),
     makeBillingService(prisma),
     audit,
@@ -109,6 +122,7 @@ export function makeBookingRequestsService(
     occupancy?: OccupancyService;
     pricing?: PricingService;
     customers?: CustomersService;
+    settings?: VehicleSettingsService;
   },
 ): BookingRequestsService {
   const audit = stubs.audit ?? new AuditService(prisma);
@@ -124,6 +138,7 @@ export function makeBookingRequestsService(
     stubs.pricing ?? makePricingService(prisma),
     stubs.customers ?? new CustomersService(prisma, audit),
     makeBookingHoldsService(prisma),
+    stubs.settings ?? makeVehicleSettingsService(prisma),
   );
 }
 
@@ -159,6 +174,7 @@ export function makeBookingsService(
     audit?: AuditService;
     notifications?: NotificationService;
     customers?: CustomersService;
+    settings?: VehicleSettingsService;
   } = {},
 ): BookingsService {
   const audit = overrides.audit ?? new AuditService(prisma);
@@ -171,6 +187,7 @@ export function makeBookingsService(
     new DriversService(prisma, audit),
     overrides.customers ?? new CustomersService(prisma, audit),
     new HoldSettlementService(prisma, audit, notifications),
+    overrides.settings ?? makeVehicleSettingsService(prisma),
   );
 }
 
@@ -186,6 +203,7 @@ export function makeVehiclesService(
     makeBranchesService(prisma),
     makeBillingService(prisma),
     new CatalogService(prisma, audit),
+    new CatalogModelService(prisma, audit),
     makePricingService(prisma),
   );
 }
@@ -211,6 +229,7 @@ export function makePublicListingsService(prisma: PrismaService): PublicListings
     prisma,
     new ProvincesService(prisma, audit),
     makePricingService(prisma),
+    makeVehicleSettingsService(prisma),
   );
 }
 

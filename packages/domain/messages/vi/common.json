@@ -18,6 +18,7 @@
     "search": "Tìm kiếm",
     "filter": "Bộ lọc",
     "reset": "Đặt lại",
+    "undo": "Hoàn tác",
     "clear": "Xoá bộ lọc",
     "back": "Quay lại",
     "next": "Tiếp tục",
@@ -28,6 +29,8 @@
     "viewDetail": "Xem chi tiết",
     "viewAll": "Xem tất cả",
     "viewMore": "Xem thêm",
+    "collapse": "Thu gọn",
+    "expand": "Mở rộng",
     "copy": "Sao chép",
     "copied": "Đã sao chép",
     "download": "Tải xuống",
@@ -88,7 +91,9 @@
     "updatedAt": "Cập nhật",
     "comingSoon": "Sắp có",
     "emptyValue": "—",
-    "selectDate": "Chọn ngày"
+    "selectDate": "Chọn ngày",
+    "enabled": "Đang bật",
+    "disabled": "Đang tắt"
   },
   "units": {
     "day": "{count, plural, other {# ngày}}",
@@ -247,5 +252,12 @@
   "permissions": {
     "cameraDenied": "Chưa có quyền dùng máy ảnh. Vào Cài đặt → XePrime để bật quyền Máy ảnh.",
     "libraryDenied": "Chưa có quyền đọc thư viện ảnh. Vào Cài đặt → XePrime để bật quyền Ảnh."
+  },
+  "image": {
+    "takePhoto": "Chụp ảnh",
+    "chooseFromLibrary": "Chọn từ thư viện",
+    "changeImage": "Đổi ảnh",
+    "addImage": "Thêm ảnh",
+    "removeImage": "Xoá ảnh"
   }
 }

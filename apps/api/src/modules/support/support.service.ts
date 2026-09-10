@@ -94,6 +94,9 @@ export class SupportService {
     actor: { userId: string; scope: SupportParty; tenantId: string | null },
     dto: OpenSupportCaseDto,
   ): Promise<SupportCaseDetailDto> {
+    if (dto.category === SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION) {
+      return this.openAccountDeletion(actor, dto);
+    }
     if (dto.category === SUPPORT_CASE_CATEGORY.DISPUTE && !dto.bookingId) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
@@ -178,6 +181,159 @@ export class SupportService {
       return created;
     });
     return this.detail(row.id, actor);
+  }
+
+  /**
+   * YÊU CẦU xoá tài khoản — một case do CHÍNH chủ tài khoản mở, nền tảng xử lý tay.
+   *
+   * Không xoá gì ở đây, có chủ đích: người dùng còn đơn thuê, hoá đơn, phiếu thu và audit mà
+   * repo chưa có chính sách lưu trữ/ẩn danh hoá để xoá cứng. Case đưa yêu cầu vào hàng đợi
+   * platform admin cùng SLA và dòng thời gian như mọi case khác.
+   *
+   * Idempotent: mỗi người chỉ có TỐI ĐA MỘT case loại này còn mở. Kiểm tra trước để trả về case
+   * đang mở (bấm gửi hai lần không tạo hai yêu cầu), và partial unique index
+   * `support_cases_open_account_deletion_key` gác race giữa hai request song song — P2002 thì
+   * đọc lại case vừa được người kia tạo, không ném 500.
+   */
+  private async openAccountDeletion(
+    actor: { userId: string; scope: SupportParty; tenantId: string | null },
+    dto: OpenSupportCaseDto,
+  ): Promise<SupportCaseDetailDto> {
+    // Chỉ chủ tài khoản, ở vai CON NGƯỜI. Gian hàng không "xoá hộ" nhân viên, và nền tảng không mở
+    // hộ ai; case cũng không gắn đơn thuê — nó nói về tài khoản, không về một chuyến.
+    if (actor.scope !== SUPPORT_PARTY.CUSTOMER) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.SUPPORT_CASE_CATEGORY_NOT_ALLOWED,
+        message: 'Yêu cầu xoá tài khoản chỉ do chính chủ tài khoản gửi',
+      });
+    }
+
+    const existing = await this.findOpenAccountDeletion(actor.userId);
+    if (existing) return this.detail(existing.id, actor);
+
+    const id = newId();
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const created = await tx.supportCase.create({
+          data: {
+            id,
+            code: `SC${id.slice(-6).toUpperCase()}`,
+            tenantId: null,
+            bookingId: null,
+            bookingRequestId: null,
+            openedByUserId: actor.userId,
+            openedByScope: SUPPORT_PARTY.CUSTOMER,
+            category: SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION,
+            status: SUPPORT_CASE_STATUS.OPEN,
+            subject: dto.subject.trim(),
+            description: dto.description.trim(),
+          },
+          select: { code: true },
+        });
+        // Audit chỉ mang mã case — không chép mô tả (có thể chứa lý do cá nhân) vào nhật ký.
+        await this.audit.record(
+          {
+            tenantId: null,
+            actorUserId: actor.userId,
+            actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
+            action: 'support_case.open',
+            targetType: 'support_case',
+            targetId: id,
+            after: { code: created.code, category: SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION },
+          },
+          tx,
+        );
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        const raced = await this.findOpenAccountDeletion(actor.userId);
+        if (raced) return this.detail(raced.id, actor);
+      }
+      throw err;
+    }
+    return this.detail(id, actor);
+  }
+
+  private findOpenAccountDeletion(userId: string): Promise<{ id: string } | null> {
+    return this.prisma.supportCase.findFirst({
+      where: {
+        openedByUserId: userId,
+        category: SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION,
+        status: { in: [...SUPPORT_CASE_STATUS_OPEN] },
+      },
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  /**
+   * Rút yêu cầu xoá tài khoản — CHỈ case `account_deletion` còn mở do chính người này mở.
+   *
+   * Cố ý hẹp hơn `transition`: khách không có endpoint đổi trạng thái chung, và mở nó ra chỉ để
+   * rút một loại case là mở luôn cửa đóng tranh chấp/sự cố mà nền tảng đang xử lý.
+   */
+  async withdrawAccountDeletion(id: string, userId: string): Promise<SupportCaseDetailDto> {
+    const actor = { userId, scope: SUPPORT_PARTY.CUSTOMER, tenantId: null } as const;
+    const row = await this.prisma.supportCase.findFirst({
+      where: { id, openedByUserId: userId },
+      select: SELECT,
+    });
+    if (!row) throw notFound();
+    if (row.category !== SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION) {
+      throw new ForbiddenException({
+        code: API_ERROR_CODE.SUPPORT_CASE_CATEGORY_NOT_ALLOWED,
+        message: 'Chỉ rút được yêu cầu xoá tài khoản',
+      });
+    }
+    if (!isSupportCaseOpen(row.status as SupportCaseStatus)) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.SUPPORT_CASE_CLOSED,
+        message: 'Yêu cầu này đã được xử lý xong',
+        details: { status: row.status },
+      });
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      // Điều kiện `status` trong WHERE: hai lần bấm rút song song, hoặc admin vừa đóng — chỉ
+      // một bên thắng, bên kia nhận CONFLICT thay vì ghi hai sự kiện đóng.
+      const claimed = await tx.supportCase.updateMany({
+        where: { id, status: { in: [...SUPPORT_CASE_STATUS_OPEN] } },
+        data: { status: SUPPORT_CASE_STATUS.CLOSED, closedAt: new Date() },
+      });
+      if (claimed.count === 0) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.CONFLICT,
+          message: 'Yêu cầu vừa được cập nhật',
+        });
+      }
+      await tx.supportCaseEvent.create({
+        data: {
+          id: newId(),
+          caseId: id,
+          actorUserId: userId,
+          actorScope: SUPPORT_PARTY.CUSTOMER,
+          kind: SUPPORT_CASE_EVENT_KIND.STATUS_CHANGE,
+          visibility: SUPPORT_EVENT_VISIBILITY.PUBLIC,
+          body: null,
+          fromStatus: row.status,
+          toStatus: SUPPORT_CASE_STATUS.CLOSED,
+        },
+      });
+      await this.audit.record(
+        {
+          tenantId: null,
+          actorUserId: userId,
+          actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
+          action: 'support_case.withdraw',
+          targetType: 'support_case',
+          targetId: id,
+          before: { status: row.status },
+          after: { status: SUPPORT_CASE_STATUS.CLOSED },
+        },
+        tx,
+      );
+    });
+    return this.detail(id, actor);
   }
 
   // ── Đọc ───────────────────────────────────────────────────────────────────

@@ -128,7 +128,7 @@ describe('/manage/shop/policies — dữ liệu và null-policy', () => {
     expect(screen.getByText('Không có khoảng trống hoặc chồng lấn')).toBeTruthy();
     expect(
       screen.getByText(
-        '0–3 km: Miễn phí · >3–5 km: 30.000đ · >5–10 km: 50.000đ · >10 km: Báo giá thủ công theo thỏa thuận',
+        '0–3 km: Miễn phí · >3–5 km: 30.000 ₫ · >5–10 km: 50.000 ₫ · >10 km: Báo giá thủ công theo thỏa thuận',
       ),
     ).toBeTruthy();
     expect((screen.getByLabelText('Phí mỗi giờ phát sinh') as HTMLInputElement).value).toBe(
@@ -267,6 +267,6 @@ describe('/manage/shop/policies — sửa, validate, xác nhận lưu', () => {
   it('bảng mobile có nhãn gộp khoảng cách và nút xoá vẫn có tên truy cập', () => {
     renderPage();
     expect(screen.getByText('Khoảng cách')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Xóa bậc 1' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Xoá bậc 1' })).toBeTruthy();
   });
 });

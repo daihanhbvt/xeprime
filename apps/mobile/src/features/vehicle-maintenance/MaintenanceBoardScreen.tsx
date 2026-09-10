@@ -1,26 +1,11 @@
-import { memo, useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { RefreshControl, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { Text, XStack, YStack } from 'tamagui';
+import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import {
-  MAINTENANCE_BOARD_FILTER,
-  MAINTENANCE_DUE_STATUS_META,
-  MAINTENANCE_STATUS_META,
-  MAINTENANCE_TYPE_VALUES,
-  PERMISSION,
-  STATUS_COLOR,
-  type MaintenanceDueStatus,
-  type MaintenanceStatus,
-} from '@xeprime/types';
-import { LIST_SEPARATOR } from '@xeprime/domain';
+import { MAINTENANCE_BOARD_FILTER, MAINTENANCE_TYPE_VALUES, PERMISSION } from '@xeprime/types';
 import { Screen } from '@/components/layout/Screen';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import type { IconName } from '@/components/ui/Chip';
-import { DetailChevron } from '@/components/ui/DetailArrow';
 import { RecordCardSkeleton } from '@/components/ui/Skeleton';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -33,16 +18,16 @@ import { ManageListShell } from '@/features/shell/ManageListShell';
 import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
 import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
-import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
 import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
-import { LIST_TUNING } from '@/theme/list-tuning';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { LIST_TUNING, MEDIA_LIST_TUNING } from '@/theme/list-tuning';
+import { colors } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
 import { BoardActionSheets, type BoardAction } from './components/BoardActionSheets';
+import { MaintenanceBoardCard } from './components/MaintenanceBoardCard';
 import { useMaintenanceBoard } from './hooks/use-maintenance';
 import type { MaintenanceBoardItem } from './api';
 
@@ -137,7 +122,10 @@ export function MaintenanceBoardScreen() {
     },
     canView && !isQueue,
   );
-  const queue = useMissingOdometerQueue({ page, ...(searchTerm ? { q: searchTerm } : {}) }, isQueue);
+  const queue = useMissingOdometerQueue(
+    { page, ...(searchTerm ? { q: searchTerm } : {}) },
+    isQueue,
+  );
 
   /** Truy vấn ĐANG cầm lái màn hình — hai nhóm việc, hai endpoint, chung một khung trạng thái. */
   const active = isQueue ? queue : query;
@@ -226,7 +214,7 @@ export function MaintenanceBoardScreen() {
 
   const renderItem = useCallback<ListRenderItem<MaintenanceBoardItem>>(
     ({ item }) => (
-      <BoardRow
+      <MaintenanceBoardCard
         item={item}
         canManage={canManage}
         canCorrectOdometer={canCorrectOdometer}
@@ -280,7 +268,7 @@ export function MaintenanceBoardScreen() {
           {...(meta === undefined ? {} : { meta })}
           onPageChange={setPage}
         >
-          {({ onScroll, headerHeight, contentContainerStyle }) => {
+          {({ onScroll, headerHeight, contentContainerStyle, bindList }) => {
             // Là HÀM trả JSX chứ không phải component khai trong render — component mới mỗi lần
             // render là React tháo vùng cuộn ra gắn lại đúng lúc `isRefetching` đổi.
             const inStateScroll = (children: ReactNode) => (
@@ -337,6 +325,7 @@ export function MaintenanceBoardScreen() {
               )
             ) : isQueue ? (
               <Animated.FlatList
+                ref={bindList}
                 data={queueItems}
                 keyExtractor={queueKeyOf}
                 {...LIST_TUNING}
@@ -355,9 +344,10 @@ export function MaintenanceBoardScreen() {
               />
             ) : (
               <Animated.FlatList
+                ref={bindList}
                 data={items}
                 keyExtractor={keyOf}
-                {...LIST_TUNING}
+                {...MEDIA_LIST_TUNING}
                 renderItem={renderItem}
                 contentContainerStyle={contentContainerStyle}
                 onScroll={onScroll}
@@ -396,216 +386,6 @@ export function MaintenanceBoardScreen() {
       ) : null}
     </>
   );
-}
-
-/** Một thao tác trên dòng — dựng thành mảng để luật ẩn/hiện đọc thẳng ra được. */
-interface RowAction {
-  readonly key: string;
-  readonly label: string;
-  readonly icon: IconName;
-  readonly danger?: boolean;
-  readonly onPress: () => void;
-}
-
-/**
- * `memo` như `VehicleCard`/`BookingCard`: dòng này nằm trong một danh sách dài, và không có nó thì
- * mỗi lần màn render (đổi trang, kéo-làm-mới, mở tấm tác vụ) là mọi dòng đang hiện vẽ lại dù dữ
- * liệu không đổi.
- */
-const BoardRow = memo(function BoardRow({
-  item,
-  canManage,
-  canCorrectOdometer,
-  onPress,
-  onAction,
-}: {
-  item: MaintenanceBoardItem;
-  canManage: boolean;
-  canCorrectOdometer: boolean;
-  onPress: (item: MaintenanceBoardItem) => void;
-  onAction: (action: BoardAction) => void;
-}) {
-  const tTable = useTranslations('Maintenance.table');
-  const tActions = useTranslations('Maintenance.actions');
-  const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
-
-  const dueStatus = item.dueStatus as MaintenanceDueStatus;
-  const open = useCallback(() => onPress(item), [onPress, item]);
-
-  /*
-   * ĐÚNG bốn thao tác của `MaintenanceBoardTable`, cùng thứ tự và cùng luật ẩn hiện:
-   *
-   * - "Cập nhật ODO" đọc `vehicles.odometer.correct` — quyền RIÊNG, không nằm trong quyền quản lý
-   *   bảo dưỡng: người ghi số KM hằng ngày không phải người được đổi lịch xưởng.
-   * - "Lên lịch" ↔ "Sửa lịch" cùng một nút, nhãn đổi theo phiếu đang mở.
-   * - "Hoàn tất" và "Hủy lịch" chỉ có nghĩa khi CÓ phiếu đang mở.
-   *
-   * "Chi tiết" của web không nằm ở đây: cả thẻ đã bắt chạm và có mũi tên `>` — thêm một nút nữa là
-   * lối vào thứ ba cho cùng một màn.
-   */
-  const actions: RowAction[] = [
-    ...(canCorrectOdometer
-      ? [
-          {
-            key: 'odometer',
-            label: tActions('updateOdometer'),
-            icon: 'speedometer-outline' as IconName,
-            onPress: () => onAction({ kind: 'odometer', row: item }),
-          },
-        ]
-      : []),
-    ...(canManage
-      ? [
-          {
-            key: 'schedule',
-            label: item.activeRecord ? tActions('editSchedule') : tActions('schedule'),
-            icon: 'calendar-outline' as IconName,
-            onPress: () => onAction({ kind: 'schedule', row: item }),
-          },
-        ]
-      : []),
-    ...(canManage && item.activeRecord
-      ? [
-          {
-            key: 'complete',
-            label: tActions('complete'),
-            icon: 'checkmark-outline' as IconName,
-            onPress: () => onAction({ kind: 'complete', row: item }),
-          },
-          {
-            key: 'cancel',
-            label: tActions('cancelSchedule'),
-            icon: 'stop-circle-outline' as IconName,
-            danger: true,
-            onPress: () => onAction({ kind: 'cancel', row: item }),
-          },
-        ]
-      : []),
-  ];
-
-  return (
-    <Card onPress={open} accessibilityLabel={item.vehicleName}>
-      {/*
-        Mũi tên `>` ở mép phải, canh giữa theo cả hàng — DẤU HIỆU thẻ mở ra được. Cả thẻ đã bắt
-        chạm, nên một nút "Xem chi tiết" ở chân thẻ chỉ là lối vào thứ hai cho cùng một việc.
-      */}
-      <XStack ai="center" gap={space.sm}>
-        <YStack f={1} gap={space.xs}>
-          <XStack ai="center" jc="space-between" gap={space.sm}>
-            <Text f={1} col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-              {item.vehicleName}
-            </Text>
-            <StatusBadge
-              label={domainLabel(
-                'maintenanceDueStatus',
-                dueStatus,
-                MAINTENANCE_DUE_STATUS_META[dueStatus].label,
-              )}
-              color={MAINTENANCE_DUE_STATUS_META[dueStatus].color}
-              size="sm"
-            />
-          </XStack>
-
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {[item.plateNumber, item.vehicleCode].filter(Boolean).join(LIST_SEPARATOR)}
-          </Text>
-
-          {item.remainingKm != null ? (
-            /* Câu "còn / quá hạn bao nhiêu" dựng ở MỘT chỗ (`fmt.remainingKm`) — web dùng đúng
-               hàm đó, nên bảng này và tab bảo dưỡng không thể nói khác nhau về cùng một chiếc xe. */
-            <Text
-              col={item.remainingKm <= 0 ? colors.danger : colors.textMuted}
-              fos={fontSize.bodySm}
-              fow={fontWeight.medium}
-            >
-              {fmt.remainingKm(item.remainingKm)}
-              {/*
-                Chu kỳ đi LIỀN sau số còn lại — "Còn 4.100 km" một mình không nói được nhiều
-                hay ít; 4.100 trên chu kỳ 5.000 là vừa thay, trên chu kỳ 20.000 là sắp tới hạn.
-                Cùng khoá `Maintenance.table.cycle` với web, kể cả khoảng trắng và dấu ngoặc.
-              */}
-              {item.oilChangeIntervalKm
-                ? tTable('cycle', { value: fmt.km(item.oilChangeIntervalKm) })
-                : ''}
-            </Text>
-          ) : null}
-
-          {/*
-            LỊCH ĐANG MỞ — cột `openSchedule` của web: nhãn trạng thái phiếu + hạng mục + ngày
-            dự kiến. Thiếu nó thì hai xe cùng "Trong chu kỳ" trông y hệt nhau, dù một chiếc đã
-            có thợ hẹn và một chiếc thì chưa ai đụng tới.
-          */}
-          {item.activeRecord ? (
-            <XStack ai="center" flexWrap="wrap" gap={space.xs}>
-              <StatusBadge
-                label={domainLabel(
-                  'maintenanceStatus',
-                  item.activeRecord.status,
-                  MAINTENANCE_STATUS_META[item.activeRecord.status as MaintenanceStatus]?.label,
-                )}
-                color={
-                  MAINTENANCE_STATUS_META[item.activeRecord.status as MaintenanceStatus]?.color ??
-                  STATUS_COLOR.NEUTRAL
-                }
-                size="sm"
-              />
-              <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                {[
-                  domainLabel('maintenanceType', item.activeRecord.type),
-                  item.activeRecord.plannedStartAt
-                    ? fmt.date(item.activeRecord.plannedStartAt)
-                    : null,
-                ]
-                  .filter(Boolean)
-                  .join(LIST_SEPARATOR)}
-              </Text>
-            </XStack>
-          ) : null}
-        </YStack>
-
-        <DetailChevron />
-      </XStack>
-
-      {/*
-        Hàng thao tác xếp HAI CỘT, không phải một hàng ngang bốn nút.
-
-        Bốn nhãn ở đây dài ngắn rất khác nhau ("Cập nhật ODO" gấp đôi "Hoàn tất"); nhét cả bốn lên
-        một hàng 390pt thì mỗi nút còn chưa tới 80pt và chữ dài nhất xuống dòng hoặc bị cắt. Hai
-        cột giữ nguyên nhãn của web mà vẫn đọc được, và khi chỉ còn một thao tác thì `f={1}` cho
-        nó chiếm trọn hàng — không để lại nửa hàng trống.
-      */}
-      {actions.length > 0 ? (
-        <YStack gap={space.xs} mt={space.sm}>
-          {actionRows(actions).map((row) => (
-            <XStack key={row.map((action) => action.key).join('-')} gap={space.xs}>
-              {row.map((action) => (
-                <YStack key={action.key} f={1}>
-                  <Button
-                    label={action.label}
-                    icon={action.icon}
-                    variant={action.danger ? 'danger' : 'accent'}
-                    size="sm"
-                    shape="square"
-                    onPress={action.onPress}
-                  />
-                </YStack>
-              ))}
-            </XStack>
-          ))}
-        </YStack>
-      ) : null}
-    </Card>
-  );
-});
-
-/** Cắt danh sách thao tác thành từng cặp — hàng cuối lẻ thì nút của nó tự chiếm trọn bề ngang. */
-function actionRows(actions: readonly RowAction[]): RowAction[][] {
-  const rows: RowAction[][] = [];
-  for (let index = 0; index < actions.length; index += 2) {
-    rows.push(actions.slice(index, index + 2));
-  }
-  return rows;
 }
 
 /** Liệt kê tường minh — khoá i18n ghép động lọt qua typecheck của `use-intl`. */

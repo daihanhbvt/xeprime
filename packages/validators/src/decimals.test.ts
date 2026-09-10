@@ -24,7 +24,13 @@ describe('maxDecimalsTest', () => {
 });
 
 describe('mức tiêu thụ nhiên liệu trên form xe', () => {
-  /** Cột `Decimal(6, 2)` + `@IsNumber({ maxDecimalPlaces: 2 })` — yup phải chặn TRƯỚC server. */
+  /**
+   * Cột `Decimal(6, 2)` + `@IsNumber({ maxDecimalPlaces: 2 })` — yup phải chặn TRƯỚC server.
+   *
+   * Kỳ vọng là MÃ chứ không phải câu tiếng Việt: message của `vehicleFormSchema` đã chuyển sang
+   * mã để `useValidationResolver` dịch (ADR 0012). So chuỗi tiếng Việt ở đây là buộc bài test vào
+   * một bản dịch — đúng thứ i18n vừa gỡ đi.
+   */
   async function fuelError(value: number): Promise<string | undefined> {
     try {
       await vehicleFormSchema.validateAt('fuelConsumptionCity', {
@@ -38,11 +44,11 @@ describe('mức tiêu thụ nhiên liệu trên form xe', () => {
 
   it('1.23 hợp lệ, 1.233 báo lỗi ngay tại ô thay vì rơi xuống server', async () => {
     expect(await fuelError(1.23)).toBeUndefined();
-    expect(await fuelError(1.233)).toContain('2 chữ số thập phân');
+    expect(await fuelError(1.233)).toBe('fuelConsumptionCityDecimals');
   });
 
   it('giữ nguyên các ràng buộc cũ (âm, vượt trần)', async () => {
-    expect(await fuelError(-1)).toContain('không được âm');
-    expect(await fuelError(1000)).toContain('vượt quá giới hạn');
+    expect(await fuelError(-1)).toBe('fuelConsumptionCityMin');
+    expect(await fuelError(1000)).toBe('fuelConsumptionCityMax');
   });
 });

@@ -35,6 +35,27 @@ export const ROUTES = {
    */
   ACCOUNT: {
     ROOT: '/account',
+    /*
+     * Khu CHỦ XE trong /account (08/09/2026): bản rút gọn cho người có ít xe — cùng feature, cùng
+     * API với `/manage`, chỉ khác vỏ điều hướng (ADR 0027/0028: Owner Lite dùng chung source).
+     * Chỉ hiện với `tenant.roleKey === shop_owner`; nhân viên gian hàng dùng `/manage`.
+     */
+    /** Danh sách xe của chủ xe — cùng `features/vehicles` với `/manage/vehicles`. */
+    VEHICLES: '/account/vehicles',
+    /** Lịch xe — import thẳng `CalendarScheduler`, không có lịch thứ hai. */
+    CALENDAR: '/account/calendar',
+    /** Cẩm nang cho thuê xe — tài liệu PDF ở `public/owner-resources/` (xem `owner-resources.ts`). */
+    HOST_GUIDE: '/account/host-guide',
+    /** Thông tin khai thuế — bản compact của hồ sơ người bán (`/seller-profile`). */
+    TAX: '/account/tax',
+    /** Hợp đồng & chứng từ MẪU (thư viện PDF) — không phải hợp đồng theo đơn thuê. */
+    CONTRACTS_DOCUMENTS: '/account/contracts-documents',
+    /** Chính sách bảo vệ dữ liệu — dẫn tới văn bản thật ở `/legal/privacy`. */
+    DATA_PROTECTION: '/account/data-protection',
+    /** Đổi mật khẩu (có mật khẩu hiện tại) hoặc đặt lần đầu (tài khoản OTP/social). */
+    CHANGE_PASSWORD: '/account/change-password',
+    /** YÊU CẦU xoá tài khoản — mở support case `account_deletion`, nền tảng xử lý tay. */
+    DELETE_ACCOUNT: '/account/delete-account',
     /** Tiền của các chuyến đã thuê — đọc từ `payments`, không phải ví. */
     PAYMENTS: '/account/payments',
     FAVORITES: '/account/favorites',
@@ -45,6 +66,19 @@ export const ROUTES = {
     SUPPORT: '/account/support',
     SETTINGS: '/account/settings',
   },
+  /**
+   * Đăng xe cho thuê — CỬA VÀO công khai của chủ xe mới (09/09/2026).
+   *
+   * Nằm ngoài `/manage` có chủ đích: người chưa có gian hàng không nên gặp cổng quản lý trước
+   * khi biết mình sẽ được gì. Landing xem không cần đăng nhập; bấm CTA mới đi qua auth →
+   * onboarding → wizard.
+   */
+  LIST_YOUR_VEHICLE: {
+    ROOT: '/list-your-vehicle',
+    /** Wizard đăng xe nhanh 3 bước — cần đăng nhập + có gian hàng (guard ở trang). */
+    REGISTER: '/list-your-vehicle/register',
+  },
+
   MANAGE: {
     ROOT: '/manage',
     /** Đăng nhập cổng quản lý (chủ xe / nhân viên / quản trị nền tảng). Route CÔNG KHAI. */
@@ -111,7 +145,115 @@ export const ROUTES = {
 
 export type ManageRoute = (typeof ROUTES.MANAGE)[keyof typeof ROUTES.MANAGE];
 
+/**
+ * Chi tiết một xe nhìn từ KHU TÀI KHOẢN của chủ xe — cùng `VehicleDetailContent` với
+ * `/manage/vehicles/[id]`, chỉ khác vỏ và đường quay lại.
+ */
+export const accountVehiclePath = {
+  detail: (id: string): string => `${ROUTES.ACCOUNT.VEHICLES}/${id}`,
+  /** Không gian "Quản lý xe" của chủ xe (08/09/2026) — gốc tự chuyển tới mục đầu tiên. */
+  manage: (id: string): string => `${ROUTES.ACCOUNT.VEHICLES}/${id}/manage`,
+};
+
+/**
+ * Các mục của không gian "Quản lý xe" (`/account/vehicles/[id]/manage/<mục>`) — GIÁ TRỊ đường
+ * dẫn, không phải nhãn. Menu trái, trang con và `VehicleEditWorkspace` ở `/manage` cùng đọc.
+ *
+ * Nhóm "có tài xế" KHÔNG có mục "Tiện ích bổ sung": mockup có nó nhưng nghiệp vụ không — phụ phí
+ * mặc định đã nằm ở `WITH_DRIVER_SURCHARGES`.
+ */
+export const VEHICLE_MANAGE_SECTION = {
+  INFORMATION: 'information',
+  IMAGES: 'images',
+  DOCUMENTS: 'documents',
+  TRIP_HISTORY: 'trip-history',
+  SELF_DRIVE_PRICING: 'self-drive/pricing',
+  SELF_DRIVE_OPTIMIZATION: 'self-drive/optimization',
+  SELF_DRIVE_DELIVERY: 'self-drive/delivery',
+  SELF_DRIVE_HANDOVER_TIME: 'self-drive/handover-time',
+  SELF_DRIVE_TERMS: 'self-drive/terms',
+  WITH_DRIVER_PRICING: 'with-driver/pricing',
+  WITH_DRIVER_OPTIMIZATION: 'with-driver/optimization',
+  WITH_DRIVER_SURCHARGES: 'with-driver/surcharges',
+  WITH_DRIVER_TERMS: 'with-driver/terms',
+} as const;
+
+export type VehicleManageSection =
+  (typeof VEHICLE_MANAGE_SECTION)[keyof typeof VEHICLE_MANAGE_SECTION];
+export const VEHICLE_MANAGE_SECTION_VALUES = Object.values(
+  VEHICLE_MANAGE_SECTION,
+) as VehicleManageSection[];
+
+/** Mục mở mặc định khi vào gốc `/manage` của một xe. */
+export const VEHICLE_MANAGE_DEFAULT_SECTION: VehicleManageSection = VEHICLE_MANAGE_SECTION.INFORMATION;
+
+export const accountVehicleManagePath = {
+  section: (id: string, section: VehicleManageSection): string =>
+    `${accountVehiclePath.manage(id)}/${section}`,
+};
+
+/**
+ * Đường dẫn có thuộc không gian quản lý xe không — `AccountShell` dùng để chuyển sang bố cục
+ * trọn bề ngang cho CẢ tiền tố (mọi mục con), khác lịch xe chỉ khớp tuyệt đối.
+ */
+export function isAccountVehicleManagePath(pathname: string): boolean {
+  return /^\/account\/vehicles\/[^/]+\/manage(\/|$)/.test(pathname);
+}
+
+/** Mục đang mở suy từ đường dẫn — `null` khi đang ở gốc hoặc một mục lạ. */
+export function vehicleManageSectionOf(pathname: string): VehicleManageSection | null {
+  const match = /^\/account\/vehicles\/[^/]+\/manage\/(.+?)\/?$/.exec(pathname);
+  const candidate = match?.[1];
+  return candidate && (VEHICLE_MANAGE_SECTION_VALUES as string[]).includes(candidate)
+    ? (candidate as VehicleManageSection)
+    : null;
+}
+
 /** Đường dẫn động của xe — hàm để không rải template `/manage/vehicles/${id}` khắp component. */
+/**
+ * Nơi người dùng bấm vào wizard đăng xe nhanh — quyết định nút "Quay lại" và đích sau khi lưu.
+ *
+ * Là một ENUM đóng, không phải URL tự do trong query: nhận URL từ query rồi redirect tới đó là
+ * cách tự mở một lỗ open-redirect trên chính luồng đăng xe.
+ */
+export const VEHICLE_REGISTRATION_SOURCE = {
+  /** Từ chợ / landing công khai. */
+  MARKETPLACE: 'marketplace',
+  /** Từ khu tài khoản của chủ xe (`/account/vehicles`). */
+  ACCOUNT: 'account',
+  /** Từ cổng gian hàng (`/manage/vehicles`). */
+  MANAGE: 'manage',
+} as const;
+
+export type VehicleRegistrationSource =
+  (typeof VEHICLE_REGISTRATION_SOURCE)[keyof typeof VEHICLE_REGISTRATION_SOURCE];
+export const VEHICLE_REGISTRATION_SOURCE_VALUES = Object.values(
+  VEHICLE_REGISTRATION_SOURCE,
+) as VehicleRegistrationSource[];
+
+export function isVehicleRegistrationSource(
+  value: string | null | undefined,
+): value is VehicleRegistrationSource {
+  return (VEHICLE_REGISTRATION_SOURCE_VALUES as string[]).includes(value ?? '');
+}
+
+/** Trang danh sách xe tương ứng với nơi người dùng đi vào — dùng cho nút quay lại và sau khi lưu. */
+export function vehicleListPathFor(source: VehicleRegistrationSource): string {
+  switch (source) {
+    case VEHICLE_REGISTRATION_SOURCE.MANAGE:
+      return ROUTES.MANAGE.VEHICLES;
+    case VEHICLE_REGISTRATION_SOURCE.ACCOUNT:
+      return ROUTES.ACCOUNT.VEHICLES;
+    default:
+      return ROUTES.LIST_YOUR_VEHICLE.ROOT;
+  }
+}
+
+/** Wizard đăng xe nhanh, mang theo ngữ cảnh mở. */
+export function listYourVehicleRegisterPath(source: VehicleRegistrationSource): string {
+  return `${ROUTES.LIST_YOUR_VEHICLE.REGISTER}?from=${source}`;
+}
+
 export const vehiclePath = {
   detail: (id: string): string => `/manage/vehicles/${id}`,
   edit: (id: string): string => `/manage/vehicles/${id}/edit`,
@@ -134,6 +276,8 @@ export const VEHICLE_EDIT_TAB = {
   SOURCE: 'source',
   DOCUMENTS: 'documents',
   MAINTENANCE: 'maintenance',
+  /** Vận hành & điều kiện thuê (08/09/2026) — cùng các khối với không gian quản lý xe ở /account. */
+  OPERATIONS: 'operations',
 } as const;
 
 export type VehicleEditTab = (typeof VEHICLE_EDIT_TAB)[keyof typeof VEHICLE_EDIT_TAB];

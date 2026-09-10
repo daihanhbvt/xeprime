@@ -43,7 +43,7 @@ import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
-import { DateField } from './components/DateField';
+import { DateField } from '@/components/ui/DateField';
 import { SourceContractFiles } from './components/SourceContractFiles';
 import { emptySourceFormValues, sourceDetailToFormValues, sourceFormValuesToInput } from './source-mappers';
 import { useSaveVehicleSource, useVehicle, useVehicleSource } from './hooks/use-vehicle';
@@ -163,6 +163,8 @@ function SourceForm({
 }) {
   const t = useTranslations('Vehicles.source');
   const tActions = useTranslations('Common.actions');
+  /* Câu "bỏ thay đổi chưa lưu" là của TAB SỬA XE nói chung — ba tab hỏi cùng một câu. */
+  const tEditTab = useTranslations('Vehicles.edit');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
   const domainLabel = useDomainLabel();
@@ -418,6 +420,26 @@ function SourceForm({
         loading={save.isPending}
         onConfirm={() => confirmValues && persist(confirmValues)}
         onCancel={() => setConfirmValues(null)}
+      />
+
+      {/*
+        Hộp "bỏ thay đổi chưa lưu?" — `useLeaveGuard` chỉ CHẶN, nó không tự vẽ gì.
+
+        Thiếu khối này thì `leave.guard` cất ý định rời màn rồi bật một cờ không ai đọc: bấm Lui
+        hay đổi tab đều không có phản ứng nào. Cùng bộ chữ với hai tab sửa xe còn lại.
+      */}
+      <AlertDialog
+        open={leave.open}
+        title={tEditTab('discard.title')}
+        message={tEditTab('discard.body')}
+        confirmLabel={tEditTab('discard.ok')}
+        cancelLabel={tEditTab('discard.cancel')}
+        destructive
+        onConfirm={() => {
+          reset(initialValues);
+          leave.confirm();
+        }}
+        onCancel={leave.cancel}
       />
     </>
   );

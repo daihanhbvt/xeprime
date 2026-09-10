@@ -254,8 +254,8 @@ describe('Khuyến mãi trực tiếp + xem trước giá trên sàn', () => {
   });
 });
 
-describe('State D — thay đổi nhạy cảm trên xe công khai', () => {
-  it('đổi giá xe đang công khai: hộp xác nhận nói đúng hệ quả knockback (ADR 0008)', async () => {
+describe('Đổi giá xe đang công khai (ADR 0030)', () => {
+  it('không còn hứa "chờ duyệt lại": xác nhận xong là gửi thẳng, giá hiệu lực ngay', async () => {
     renderWorkspace(pricingFixture({ isPublic: true }));
     fireEvent.click(screen.getByRole('switch', { name: 'Dùng chính sách chung của gian hàng' }));
     fireEvent.change(await screen.findByLabelText('Giá ngày thường'), {
@@ -263,11 +263,17 @@ describe('State D — thay đổi nhạy cảm trên xe công khai', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
 
+    // Tắt "dùng chính sách chung" = chuyển sang GHI ĐÈ, nên hộp xác nhận nói về chính sách riêng.
     expect(
-      (await screen.findAllByText('Xác nhận thay đổi chính sách & giá thuê?')).length,
+      (await screen.findAllByText('Lưu chính sách riêng cho xe này?')).length,
     ).toBeGreaterThan(0);
-    expect(screen.getAllByText(/chờ duyệt lại và tạm ẩn khỏi sàn/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/vẫn giữ nguyên mốc giá cũ/).length).toBeGreaterThan(0);
+    // Luật cũ (ẩn khỏi sàn + duyệt lại) đã bỏ — chữ hứa điều đó cũng phải biến mất.
+    expect(screen.queryByText(/chờ duyệt lại và tạm ẩn khỏi sàn/)).toBeNull();
+
+    const okButtons = screen.getAllByRole('button', { name: /Lưu|Xác nhận/ });
+    fireEvent.click(okButtons[okButtons.length - 1]!);
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0]![0].weekdayPrice).toBe('950000');
   });
 });
 

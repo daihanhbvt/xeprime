@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CatalogType } from '@xeprime/types';
+import type { CatalogItemType } from '@xeprime/types';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
 import type { CatalogItem, CatalogItemAdmin } from './types';
@@ -10,11 +10,13 @@ export interface CatalogItemInput {
   label: string;
   description?: string | null;
   iconUrl?: string | null;
+  /** Loại xe mục này áp dụng — rỗng = mọi loại. */
+  vehicleTypes?: string[];
   active?: boolean;
 }
 
 /** Danh mục đầy đủ của MỘT chiều, kèm mục đã tắt và số xe đang dùng. */
-export function useAdminCatalog(type: CatalogType) {
+export function useAdminCatalog(type: CatalogItemType) {
   return useQuery({
     queryKey: queryKeys.catalog.admin({ type }),
     queryFn: () => apiGet<CatalogItemAdmin[]>('/platform/catalog', { type }),
@@ -34,7 +36,7 @@ function useCatalogMutation<TVars>(fn: (vars: TVars) => Promise<unknown>) {
 }
 
 export function useCreateCatalogItem() {
-  return useCatalogMutation((body: CatalogItemInput & { type: CatalogType; key: string }) =>
+  return useCatalogMutation((body: CatalogItemInput & { type: CatalogItemType; key: string }) =>
     apiPost<CatalogItem>('/platform/catalog', body),
   );
 }
@@ -51,7 +53,7 @@ export function useDeleteCatalogItem() {
 
 /** Đổi thứ tự: gửi trọn danh sách id của một chiều, backend ghi lại trong một transaction. */
 export function useReorderCatalog() {
-  return useCatalogMutation((vars: { type: CatalogType; ids: string[] }) =>
+  return useCatalogMutation((vars: { type: CatalogItemType; ids: string[] }) =>
     apiPost<CatalogItemAdmin[]>('/platform/catalog/reorder', vars),
   );
 }

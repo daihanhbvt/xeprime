@@ -1,7 +1,7 @@
 // Side-effect import, KHÔNG xoá: nạp module này là lúc client mặc định được cấu hình.
 import '@/lib/api-client';
 
-export { handoversApi } from '@xeprime/api-client';
+export { handoversApi } from '@/api/handovers/api';
 
 export type {
   ConfirmHandoverInput,
@@ -15,4 +15,4 @@ export type {
   MissingOdometerItem,
   ResolveOdometerInput,
   SaveHandoverInput,
-} from '@xeprime/api-client';
+} from '@/api/handovers/api';

@@ -666,3 +666,20 @@
   gap: var(--xp-space-xs) var(--xp-space-sm);
   justify-content: flex-end;
 }
+
+/* Điều khoản chủ xe + ô đồng ý ở bước Xác nhận (08/09/2026). */
+.termsBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-layout);
+}
+
+.termsText {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  white-space: pre-wrap;
+}

@@ -87,7 +87,10 @@
       "title": "Vehicles",
       "loading": "Loading the vehicle list…",
       "addVehicle": "Add vehicle",
-      "addFirstVehicle": "Add the first vehicle"
+      "addFirstVehicle": "Add the first vehicle",
+      "addVehicleQuick": "Quick self-drive listing",
+      "addVehicleAdvanced": "Advanced setup",
+      "addVehicleMore": "More ways to add a vehicle"
     }
   },
   "alerts": {
@@ -201,7 +204,19 @@
       "consumptionHighwayPlaceholder": "e.g. 5.2",
       "consumptionCombined": "Combined",
       "consumptionCombinedPlaceholder": "e.g. 6.5",
-      "hint": "Technical specifications make the vehicle easier to find; you can fill them in later."
+      "hint": "Technical specifications make the vehicle easier to find; you can fill them in later.",
+      "consumption": "Fuel consumption",
+      "consumptionPlaceholder": "7.5",
+      "consumptionHelp": "Litres of fuel per 100 km",
+      "electricRange": "Range per full charge",
+      "electricRangePlaceholder": "350",
+      "electricRangeHelp": "Kilometres the vehicle covers on one full charge",
+      "batteryCapacity": "Battery capacity",
+      "batteryCapacityPlaceholder": "42",
+      "batteryCapacityHelp": "kWh — leave empty if you are unsure",
+      "electricConsumption": "Electric consumption",
+      "electricConsumptionPlaceholder": "15",
+      "electricConsumptionHelp": "kWh per 100 km — optional"
     },
     "specs": {
       "plateNumber": "Licence plate",
@@ -210,7 +225,7 @@
       "brand": "Make",
       "brandPlaceholder": "Select a make",
       "model": "Model",
-      "modelPlaceholder": "e.g. Vios",
+      "modelPlaceholder": "Select a model",
       "manufactureYear": "Year of manufacture",
       "seatCount": "Seats",
       "seatPlaceholder": "e.g. 5",
@@ -220,7 +235,13 @@
       "color": "Colour",
       "colorPlaceholder": "e.g. White",
       "bodyType": "Body type",
-      "bodyTypeHint": "Helps customers filter vehicles on the marketplace. Click again to deselect."
+      "bodyTypeHint": "Helps customers filter vehicles on the marketplace. Click again to deselect.",
+      "modelHelp": "Pick the exact model so your vehicle appears when guests filter by model.",
+      "modelPickBrandFirst": "Select a brand first to load its models.",
+      "modelEmpty": "No models listed for this brand yet.",
+      "motorbikeCategory": "Category",
+      "motorbikeCategoryPlaceholder": "Select a category",
+      "motorbikeCategoryHelp": "Guests filter motorbikes by category — the wrong one makes your bike hard to find."
     },
     "prices": {
       "weekday": "Weekday price",
@@ -257,9 +278,6 @@
       "features": "Vehicle features",
       "description": "Description",
       "descriptionPlaceholder": "Describe the condition, equipment and rental terms…",
-      "takePhoto": "Take photo",
-      "chooseFromLibrary": "Choose from library",
-      "changeImage": "Change photo",
       "addMainImage": "Add cover photo"
     },
     "pricingStep": {
@@ -395,7 +413,9 @@
       "discountPercentMax": "Maximum 100%",
       "mainImageUrlInvalid": "Invalid image URL",
       "imageUrlInvalid": "Invalid image URL",
-      "imagesMax": "Maximum 20 photos"
+      "imagesMax": "Maximum 20 photos",
+      "seatCountCarOnly": "Seat count applies to cars only",
+      "motorbikeCategoryMotorbikeOnly": "Category applies to motorbikes only"
     }
   },
   "publish": {
@@ -405,7 +425,10 @@
       "withDriverPrice": "With-driver day rate",
       "mainImage": "Cover photo",
       "plateNumber": "Licence plate",
-      "description": "Vehicle description"
+      "description": "Vehicle description",
+      "photos": "At least 4 vehicle photos",
+      "identity": "Brand, model, year and seats",
+      "energySpec": "Specs for the energy source"
     },
     "status": {
       "pending": {
@@ -577,10 +600,10 @@
       "pricing": "Pricing & policies",
       "source": "Ownership & finance",
       "documents": "Documents",
-      "maintenance": "Maintenance & odometer"
+      "maintenance": "Maintenance & odometer",
+      "operations": "Operations & rental terms"
     },
     "errors": "{count, plural, one {# error} other {# errors}} to fix before saving",
-    "publicWarning": "This vehicle is live. Changing sensitive information sends it back for review and temporarily hides it from the marketplace.",
     "cards": {
       "basic": "Basic information",
       "status": "Status management",
@@ -598,12 +621,6 @@
       "body": "The changes you made on this tab have not been saved.",
       "ok": "Discard changes",
       "cancel": "Keep editing"
-    },
-    "sensitive": {
-      "title": "Confirm sensitive changes",
-      "body": "The vehicle will go back to pending review and be temporarily hidden from the marketplace.",
-      "ok": "Confirm & save",
-      "change": "{label}:"
     },
     "pricingTab": {
       "loadError": "Could not load the pricing & policies",
@@ -625,7 +642,9 @@
     "saved": {
       "information": "Vehicle details saved",
       "media": "Photos and features saved"
-    }
+    },
+    "lockedNotice": "This vehicle is live on the marketplace: plate number, transmission, fuel type and manufacture year are locked. Everything else — pricing included — takes effect immediately.",
+    "lockedField": "Locked while the vehicle is on the marketplace. Remove it from the marketplace to change this."
   },
   "source": {
     "noPermission": "You do not have permission to view this vehicle's financial information. Contact the shop owner or a system administrator to request access.",
@@ -775,7 +794,9 @@
       "resetBody": "Resetting to the shop policy deletes every customisation for this vehicle and returns it to the shared configuration.",
       "resetOk": "Reset",
       "resetCancel": "Keep customisation",
-      "viewShopPolicy": "View shop policy →"
+      "viewShopPolicy": "View shop policy →",
+      "tipLabel": "About the policy source",
+      "info": "A vehicle can inherit the deposit, delivery and discounts from the shop, or keep its own policy."
     },
     "dirty": "You have unsaved changes",
     "selfDrive": {
@@ -785,7 +806,12 @@
       "weekend": "Weekend price (optional)",
       "weekendHint": "Leave empty to use the weekday price on weekends too.",
       "hourly": "Hourly price (optional)",
-      "hourlyHint": "Leave empty if this vehicle is not rented by the hour."
+      "hourlyHint": "Leave empty if this vehicle is not rented by the hour.",
+      "tipLabel": "About self-drive prices",
+      "info": "The base rate for self-drive; weekend and hourly rates are optional.",
+      "weekdayTipLabel": "About the weekday rate",
+      "weekendTipLabel": "About the weekend rate",
+      "hourlyTipLabel": "About the hourly rate"
     },
     "discount": {
       "title": "Instant discount",
@@ -799,12 +825,22 @@
       "perDay": "/day",
       "saving": "Guests save {amount} per day",
       "weekendAfter": "Weekend after the discount",
-      "hourlyNoDiscount": "Hourly rental (not discounted)"
+      "hourlyNoDiscount": "Hourly rental (not discounted)",
+      "tipLabel": "About the direct promotion",
+      "percentTipLabel": "About the direct discount rate",
+      "toggle": "Enable direct promotion",
+      "on": "On",
+      "off": "Off",
+      "previewAria": "Marketplace price preview",
+      "perHour": "/hour"
     },
     "longTerm": {
       "title": "Long-term rental",
       "monthly": "Base long-term price (one month)",
-      "monthlyHint": "The price of a single month. Customers pick a {packages} month package; without this price the vehicle cannot be published for long-term rental."
+      "monthlyHint": "The price of a single month. Customers pick a {packages} month package; without this price the vehicle cannot be published for long-term rental.",
+      "tipLabel": "About long-term prices",
+      "info": "A package price is the one-month base rate times the months, minus the commitment discount.",
+      "monthlyTipLabel": "About the long-term base rate"
     },
     "withDriver": {
       "title": "With driver",
@@ -813,13 +849,18 @@
       "interCity": "Inter-city — round trip (optional)",
       "interCityHint": "Leave empty to estimate from the in-city price; surcharges are confirmed on approval.",
       "oneWay": "Inter-city — one way (optional)",
-      "oneWayHint": "Leave empty to fall back to the nearest tier: inter-city, then in-city."
+      "oneWayHint": "Leave empty to fall back to the nearest tier: inter-city, then in-city.",
+      "tipLabel": "About with-driver prices",
+      "info": "These rates already include the driver; the in-city rate is the base the system falls back to when another rate is missing.",
+      "dailyTipLabel": "About the in-city with-driver rate",
+      "interCityTipLabel": "About the intercity round-trip rate",
+      "oneWayTipLabel": "About the intercity one-way rate"
     },
     "deposit": {
       "title": "Security requirement (collateral)",
       "mode": "Security type",
       "amount": "Default deposit amount",
-      "amountHint": "A fixed VND amount collected separately from the rental price. Not discounted, and applied to new bookings only.",
+      "amountHint": "A fixed VND amount collected separately from the rental price. Not discounted, and applied to new bookings only. Bookings already confirmed keep their original deposit.",
       "assetTypes": "Accepted collateral",
       "assetTypesHint": "The customer only needs to meet ONE of the selected options.",
       "noneTitle": "No deposit and no collateral",
@@ -827,7 +868,9 @@
       "hint": "Collateral is what the shop holds against risk: a cash deposit, an asset or document, or nothing at all. This is SEPARATE from checking the renter’s ID — that happens on every rental.",
       "modeCash": "The renter leaves a sum of money, refunded once handover is complete.",
       "modeAsset": "The renter leaves a document or asset instead of money — the shop holds no cash.",
-      "modeNone": "No collateral required. The vehicle carries a \"No collateral\" tag on the marketplace."
+      "modeNone": "No collateral required. The vehicle carries a \"No collateral\" tag on the marketplace.",
+      "tipLabel": "About the security requirement",
+      "amountTipLabel": "About the default deposit amount"
     },
     "delivery": {
       "title": "Door-to-door delivery",
@@ -847,7 +890,25 @@
       "previewTitle": "Minimum amount shown to renters:",
       "disabledNote": "Off — renters cannot request delivery when booking.",
       "tierName": "Band {index}",
-      "tierRange": "From {from} km"
+      "tierRange": "From {from} km",
+      "tipLabel": "About delivery fees",
+      "fromKmLabel": "Distance from (km)",
+      "fromKmTipLabel": "About the starting distance",
+      "fromKmTip": "The start is taken from where the previous band ends, so no gap can appear.",
+      "toKmLabel": "Distance up to (km)",
+      "toKmTipLabel": "About the ending distance",
+      "toKmTip": "Enter the upper bound of this band. Bounds must increase.",
+      "feeLabel": "Fee applied (VND)",
+      "feeTipLabel": "About the delivery fee applied",
+      "feeTip": "Enter 0 if the shop delivers free of charge within this distance.",
+      "headDistance": "Distance",
+      "headFee": "Fee applied",
+      "tierToLabel": "Upper bound of band {index} (km)",
+      "tierFeeLabel": "Fee of band {index}",
+      "removeTierAt": "Remove band {index}",
+      "maxRadiusTipLabel": "About the maximum supported radius",
+      "unitKm": "km",
+      "summaryQuote": "Quoted manually by agreement"
     },
     "overtime": {
       "title": "Agreed late-return fee",
@@ -861,7 +922,13 @@
       "placeholder": "Needs configuring",
       "formulaTitle": "Automatic late-fee formula:",
       "formula": "Late fee = (actual hours late) × {fee}. Computed at handover.",
-      "formulaNone": "No hourly fee set — the late fee will be agreed manually at handover."
+      "formulaNone": "No hourly fee set — the late fee will be agreed manually at handover.",
+      "tipLabel": "About the late-return fee",
+      "feePerHourTipLabel": "About the fee per extra hour",
+      "graceMinutesTipLabel": "About the maximum grace period",
+      "roundingMinutesTipLabel": "About the minimum rounding unit",
+      "unitPerHour": "đ / hour",
+      "unitMinutes": "minutes"
     },
     "longTermDiscount": {
       "title": "Duration commitment discount (long-term)",
@@ -877,10 +944,27 @@
       "selectPackage": "Pick a package",
       "formulaTitle": "Package price formula:",
       "formula": "package = monthly × months − (monthly × months × discount)",
-      "disabledNote": "Off — every booking is charged the base rate."
+      "disabledNote": "Off — every booking is charged the base rate.",
+      "legacyTitle": "{count, plural, other {# legacy discount tier(s)}} still measured in DAYS",
+      "legacyTier": "from {days} days, {percent}% off",
+      "legacyBody": "These tiers no longer affect pricing. Pick package-based tiers and save; the system will not convert them automatically so prices never change behind your back.",
+      "tipLabel": "About long-term discounts",
+      "packageLabel": "Package from",
+      "packageTipLabel": "About the packages a discount applies to",
+      "packageTip": "Only the fixed 1, 2, 3, 6, 9 or 12-month packages can be picked.",
+      "percentLabel": "Discount (%)",
+      "percentTipLabel": "About the discount rate",
+      "percentTip": "The percentage taken off the base price of the whole long-term package.",
+      "noteTipLabel": "About the discount note",
+      "noteTip": "A short line helping the shop recognise what this tier is for.",
+      "tierMonthsLabel": "Package of tier {index}",
+      "tierPercentLabel": "Discount of tier {index}",
+      "tierNoteLabel": "Note of tier {index}",
+      "removeTierAt": "Remove discount tier {index}"
     },
     "inherited": {
       "title": "Inherited policy in effect",
+      "heading": "Current policy",
       "empty": "The shop has not configured a rental policy yet",
       "edit": "Customise for this vehicle",
       "collateral": "Security requirement",
@@ -898,7 +982,7 @@
       "discountMax": "Up to {percent}% off",
       "discountOff": "Off",
       "assetNone": "no type picked",
-      "emptyBody": "This vehicle has no collateral, delivery or discount rules. Set them in the shop rental policy, or switch to a per-vehicle override."
+      "emptyBody": "This vehicle has no security requirement, delivery or discounts yet. Set them up in <policies>the shop rental policy</policies>, or switch to a per-vehicle policy."
     },
     "confirm": {
       "publicTitle": "Confirm pricing & policy change?",
@@ -908,7 +992,8 @@
       "overrideBody": "Changes apply to {vehicle} only, from new bookings onward — other vehicles and confirmed bookings are unaffected.",
       "inheritTitle": "Save pricing for this vehicle?",
       "inheritBody": "The new price applies to {vehicle} only, from new bookings onward. The vehicle still inherits the shop-wide policy.",
-      "ok": "Save changes"
+      "ok": "Save changes",
+      "cancel": "Discard"
     },
     "longTermHint": {
       "suggestion": "Suggested {min} – {max}/month — a full month of daily rentals already costs {reference}, so the long-term price should sit below that to give renters a reason to commit.",
@@ -918,6 +1003,44 @@
       "base": "Base long-term price {monthly}/month",
       "packagesLead": "Renters will see these packages (duration discounts included):",
       "perMonth": "{amount}/month"
+    },
+    "unitPerDay": "đ / day",
+    "unitPerHour": "đ / hour",
+    "unitPerMonth": "đ / month",
+    "discard": "Discard",
+    "validation": {
+      "moneyInteger": "The amount must be a whole number of VND",
+      "moneyNegative": "The amount cannot be negative",
+      "tierToRequired": "Enter the \"up to\" distance (km)",
+      "tierToPositive": "The distance bound must be greater than 0",
+      "kmMax": "At most 500 km",
+      "kmDecimals": "A distance takes at most 1 decimal place",
+      "assetTypesRequired": "Pick at least one accepted collateral type",
+      "depositRequired": "Enter the default deposit amount",
+      "depositPositive": "With \"Cash deposit\" the amount must be greater than 0",
+      "radiusPositive": "The radius cannot be negative",
+      "radiusRequired": "Enter the maximum supported radius",
+      "tiersRequired": "With delivery on, there must be at least one distance band",
+      "tiersAscending": "Distance bounds must increase",
+      "tiersGap": "There is a gap between the {last} km band and {radius} km",
+      "tiersOverRadius": "The {last} km band goes beyond the {radius} km supported radius",
+      "minutesInteger": "Minutes must be a whole number",
+      "minutesNegative": "Cannot be negative",
+      "minutesMin": "At least 1 minute",
+      "minutesMax": "At most 1440 minutes",
+      "packageRequired": "Pick a rental package",
+      "packageOneOf": "A discount tier must be a 1, 2, 3, 6, 9 or 12-month package",
+      "percentRequired": "Enter the discount (%)",
+      "percentInteger": "The discount must be a whole number",
+      "percentNegative": "The discount cannot be negative",
+      "percentMin": "At least 1%",
+      "percentMax": "At most 100%",
+      "discountTiersRequired": "With discounts on, there must be at least one tier",
+      "discountTiersMax": "At most 6 discount tiers",
+      "discountDuplicate": "Duplicate discount tier \"{months} months\"",
+      "discountAscending": "Discount tiers must follow increasing months",
+      "discountNotLower": "The {months}-month discount cannot be lower than the {prev}-month tier",
+      "weekdayRequired": "Enter the daily rental price"
     }
   },
   "documents": {

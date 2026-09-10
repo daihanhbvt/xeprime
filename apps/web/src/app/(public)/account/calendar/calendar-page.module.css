@@ -1,0 +1,30 @@
+/*
+ * Lịch cần một chiều cao XÁC ĐỊNH để vùng cuộn dọc nằm TRONG lưới (xem docblock
+ * `CalendarScheduler`). Vỏ `/account` không khoá viewport như `AppShell` (các trang khác trong
+ * khu vẫn cuộn bình thường), nên trang này tự trừ header marketplace và lề của vỏ ra khỏi
+ * `100dvh`. `min-height` giữ lưới dùng được ở màn thấp; khi đó trang cuộn, lưới không bị bóp.
+ */
+.page {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: calc(100dvh - var(--xp-market-header-height) - 2 * var(--xp-space-md));
+  min-height: 560px;
+}
+
+.scheduler {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Mobile: thanh tab cố định dưới đáy (MobileTabBar, 58px + vùng an toàn) chiếm thêm chỗ. */
+@media (max-width: 760px) {
+  .page {
+    height: calc(
+      100dvh - var(--xp-market-header-height) - 2 * var(--xp-space-md) - 58px -
+        env(safe-area-inset-bottom, 0px)
+    );
+  }
+}

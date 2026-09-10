@@ -1,16 +1,21 @@
 'use client';
 
-import { yupResolver } from '@hookform/resolvers/yup';
 import { DeleteOutlined } from '@ant-design/icons';
 import { App, Button, Empty, Pagination, Popconfirm, Result, Skeleton, Tag } from 'antd';
-import { useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
-  TENANT_CUSTOMER_NOTE_TYPE, TENANT_CUSTOMER_NOTE_TYPE_META, type TenantCustomerNoteType, } from '@xeprime/types';
+  TENANT_CUSTOMER_NOTE_TYPE,
+  TENANT_CUSTOMER_NOTE_TYPE_META,
+  type TenantCustomerNoteType,
+} from '@xeprime/types';
 import { SelectField } from '@/components/form/SelectField';
 import { TextAreaField } from '@/components/form/TextAreaField';
-import { getErrorMessage } from '@/services/api-client';
-import { CUSTOMER_HINTS, NOTE_TYPE_OPTIONS } from '../constants';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useErrorMessage } from '@/i18n/use-error-message';
+import { useValidationResolver } from '@/i18n/use-validation-resolver';
+import { NOTE_TYPE_VALUES } from '../constants';
 import {
   useAddCustomerNote,
   useCustomerNotes,
@@ -41,7 +46,11 @@ export function CustomerNotesPanel({
   /** Hồ sơ đang lưu trữ — đọc được, không ghi thêm được (backend cũng chặn). */
   disabled?: boolean;
 }) {
+  const t = useTranslations('Customers');
+  const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
+  const errorMessage = useErrorMessage();
 
   const { message } = App.useApp();
   const [page, setPage] = useState(1);
@@ -49,21 +58,34 @@ export function CustomerNotesPanel({
   const add = useAddCustomerNote();
   const remove = useDeleteCustomerNote();
 
+  const resolver = useValidationResolver<CustomerNoteFormValues>(
+    customerNoteSchema,
+    'Customers.validation',
+  );
   const { control, handleSubmit, reset } = useForm<CustomerNoteFormValues>({
-    resolver: yupResolver(customerNoteSchema),
+    resolver,
     defaultValues: EMPTY,
   });
+
+  const typeOptions = useMemo(
+    () =>
+      NOTE_TYPE_VALUES.map((value) => ({
+        value,
+        label: domainLabel('tenantCustomerNoteType', value),
+      })),
+    [domainLabel],
+  );
 
   const submit = handleSubmit((values) => {
     add.mutate(
       { id: customerId, body: { noteType: values.noteType, body: values.body.trim() } },
       {
         onSuccess: () => {
-          message.success('Đã thêm ghi chú');
+          message.success(t('notes.added'));
           reset(EMPTY);
           setPage(1);
         },
-        onError: (err) => message.error(getErrorMessage(err)),
+        onError: (err) => message.error(errorMessage(err)),
       },
     );
   });
@@ -84,21 +106,21 @@ export function CustomerNotesPanel({
           <SelectField
             control={control}
             name="noteType"
-            label="Loại ghi chú"
-            options={NOTE_TYPE_OPTIONS}
+            label={t('notes.type')}
+            options={typeOptions}
           />
           <TextAreaField
             control={control}
             name="body"
-            label="Nội dung"
+            label={t('notes.body')}
             rows={3}
             maxLength={2000}
-            placeholder="Ví dụ: khách quen, luôn trả xe đúng giờ; thích xe số sàn."
+            placeholder={t('notes.bodyPlaceholder')}
           />
-          <p className={styles.hint}>{CUSTOMER_HINTS.notes}</p>
+          <p className={styles.hint}>{t('hints.notes')}</p>
           <div className={styles.composerActions}>
             <Button type="primary" htmlType="submit" loading={add.isPending}>
-              Thêm ghi chú
+              {t('notes.add')}
             </Button>
           </div>
         </form>
@@ -109,20 +131,17 @@ export function CustomerNotesPanel({
       {isError && !data ? (
         <Result
           status="warning"
-          title="Không tải được ghi chú"
+          title={t('notes.errorTitle')}
           extra={
             <Button onClick={() => void refetch()} loading={isFetching}>
-              Thử lại
+              {tCommon('actions.retry')}
             </Button>
           }
         />
       ) : null}
 
       {!isLoading && !isError && items.length === 0 ? (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="Chưa có ghi chú nào về khách này"
-        />
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('notes.emptyTitle')} />
       ) : null}
 
       {items.length > 0 ? (
@@ -135,23 +154,22 @@ export function CustomerNotesPanel({
                     TENANT_CUSTOMER_NOTE_TYPE_META[note.noteType as TenantCustomerNoteType]?.color
                   }
                 >
-                  {TENANT_CUSTOMER_NOTE_TYPE_META[note.noteType as TenantCustomerNoteType]?.label ??
-                    note.noteType}
+                  {domainLabel('tenantCustomerNoteType', note.noteType)}
                 </Tag>
                 <span className={styles.itemMeta}>
-                  {note.authorName ?? 'Người dùng đã xoá'} · {fmt.dateTime(note.createdAt)}
+                  {note.authorName ?? t('notes.deletedAuthor')} · {fmt.dateTime(note.createdAt)}
                 </span>
                 {canManage ? (
                   <Popconfirm
-                    title="Gỡ ghi chú này?"
-                    okText="Gỡ"
-                    cancelText="Đóng"
+                    title={t('notes.removeTitle')}
+                    okText={t('notes.removeOk')}
+                    cancelText={tCommon('actions.close')}
                     onConfirm={() =>
                       remove.mutate(
                         { id: customerId, noteId: note.id },
                         {
-                          onSuccess: () => message.success('Đã gỡ ghi chú'),
-                          onError: (err) => message.error(getErrorMessage(err)),
+                          onSuccess: () => message.success(t('notes.removed')),
+                          onError: (err) => message.error(errorMessage(err)),
                         },
                       )
                     }
@@ -160,7 +178,7 @@ export function CustomerNotesPanel({
                       type="text"
                       size="small"
                       icon={<DeleteOutlined />}
-                      aria-label={`Gỡ ghi chú ngày ${fmt.dateTime(note.createdAt)}`}
+                      aria-label={t('notes.removeLabel', { date: fmt.dateTime(note.createdAt) })}
                       className={styles.itemRemove}
                     />
                   </Popconfirm>

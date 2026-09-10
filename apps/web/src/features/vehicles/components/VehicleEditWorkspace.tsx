@@ -28,8 +28,6 @@ import {
   useVehiclePricing,
 } from '@/features/rental-policies/hooks/use-vehicle-pricing';
 import { informationValuesToInput, mediaValuesToInput, vehicleToFormValues } from '../mappers';
-import { useSensitiveChangeLabels } from '../hooks/use-publication-labels';
-import { sensitiveChanges } from '../sensitive-changes';
 import type { UpdateVehicleInput, VehicleDetail } from '../types';
 import {
   AdvancedSpecsSection,
@@ -43,13 +41,12 @@ import {
 import { VehicleDocumentsWorkspace } from '@/features/vehicle-documents/components/VehicleDocumentsWorkspace';
 import { VehicleMaintenanceWorkspace } from '@/features/vehicle-maintenance/components/VehicleMaintenanceWorkspace';
 import { VehicleSourceWorkspace } from './VehicleSourceWorkspace';
+import { VehicleOperationsPanel } from '@/features/vehicle-manage/components/VehicleOperationsPanel';
 import { useActiveBranches } from '@/features/branches/hooks/use-branches';
 import { branchLabel } from '@/features/branches/branch-label';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import { usePermissions } from '@/hooks/use-permissions';
 import styles from './VehicleEditWorkspace.module.css';
-import { useAppFormat } from '@/i18n/use-app-format';
-import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 
 type EditableTab = 'information' | 'media';
@@ -121,16 +118,12 @@ export function VehicleEditWorkspace({
   const t = useTranslations('Vehicles.edit');
   const tActions = useTranslations('Common.actions');
   const tBranches = useTranslations('Branches');
-  const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
-  const sensitiveLabels = useSensitiveChangeLabels();
   const applyApiFieldErrors = useApiFieldErrors();
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialValues = useMemo(() => vehicleToFormValues(vehicle), [vehicle]);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>(() => parseTab(searchParams.get('tab')));
   const [pendingTab, setPendingTab] = useState<WorkspaceTab | null>(null);
-  const [confirmSensitive, setConfirmSensitive] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   /**
    * Tab Nguồn xe có form RIÊNG (không chung RHF với info/media) — nó tự báo dirty lên đây
@@ -187,11 +180,11 @@ export function VehicleEditWorkspace({
 
   const isPublic = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
   /**
-   * Danh sách thay đổi nhạy cảm — gọi ở HAI chỗ (chặn lưu và liệt kê trong hộp xác nhận), nên
-   * gói lại một lần thay vì truyền năm tham số ở cả hai nơi.
+   * Xe đang trên chợ: bốn ô căn cước bị KHOÁ (biển số · hộp số · nhiên liệu · năm sản xuất) —
+   * 09/09/2026, ghi đè luật "sửa là duyệt lại" của ADR 0008. Server chặn lại bằng
+   * `VEHICLE_FIELD_LOCKED` nên đây chỉ là lớp trải nghiệm.
    */
-  const changesOf = (values: VehicleFormValues) =>
-    sensitiveChanges(initialValues, values, fmt, domainLabel, sensitiveLabels);
+  const lockedNotice = isPublic ? t('lockedField') : undefined;
   const activeFields = activeTab === 'media' ? MEDIA_FIELDS : INFORMATION_FIELDS;
   const activeErrors = activeFields.filter((field) => errors[field]).length;
 
@@ -237,12 +230,7 @@ export function VehicleEditWorkspace({
       }
       return;
     }
-    const values = getValues();
-    if (isPublic && changesOf(values).length > 0) {
-      setConfirmSensitive(true);
-      return;
-    }
-    await submitCurrent(values);
+    await submitCurrent(getValues());
   }
 
   async function submitCurrent(values: VehicleFormValues) {
@@ -252,7 +240,6 @@ export function VehicleEditWorkspace({
       const updated = await onSave(body);
       reset(vehicleToFormValues(updated));
       setAdvancedOpen(false);
-      setConfirmSensitive(false);
     } catch (err) {
       /*
        * Server bắt được thứ yup bỏ lọt → gắn lỗi vào ĐÚNG ô thay vì để lại mỗi toast chung.
@@ -262,7 +249,6 @@ export function VehicleEditWorkspace({
        */
       const applied = applyApiFieldErrors(err, setError, { fields: activeFields });
       if (applied.length > 0) {
-        setConfirmSensitive(false);
         // Lỗi không được nằm khuất sau vùng thu gọn đang đóng — cùng luật với nhánh lỗi yup.
         const advanced = new Set<string>(ADVANCED_SPEC_FIELDS);
         if (applied.some((field) => advanced.has(field))) setAdvancedOpen(true);
@@ -289,6 +275,12 @@ export function VehicleEditWorkspace({
           onDirtyChange={setSourceDirty}
         />
       ),
+    },
+    {
+      key: VEHICLE_EDIT_TAB.OPERATIONS,
+      label: t('tabs.operations'),
+      // Cùng section với không gian quản lý xe của Owner Lite — một mã nguồn cho hai tuyến.
+      children: <VehicleOperationsPanel vehicle={vehicle} canEdit={canUpdate} />,
     },
     {
       key: 'documents',
@@ -347,9 +339,9 @@ export function VehicleEditWorkspace({
             {isPublic ? (
               <Alert
                 className={styles.formAlert}
-                type="warning"
+                type="info"
                 showIcon
-                message={t('publicWarning')}
+                message={t('lockedNotice')}
               />
             ) : null}
 
@@ -369,7 +361,11 @@ export function VehicleEditWorkspace({
                   <StatusSection control={control} />
                 </Card>
                 <Card title={t('cards.specs')} className={styles.formCard}>
-                  <SpecsSection control={control} isCar={vehicleType === VEHICLE_TYPE.CAR} />
+                  <SpecsSection
+                    control={control}
+                    isCar={vehicleType === VEHICLE_TYPE.CAR}
+                    lockedNotice={lockedNotice}
+                  />
                 </Card>
                 <Collapse
                   accordion
@@ -440,26 +436,6 @@ export function VehicleEditWorkspace({
         {t('discard.body')}
       </ResponsiveDialog>
 
-      <ResponsiveDialog
-        open={confirmSensitive}
-        title={t('sensitive.title')}
-        size="sm"
-        confirmLoading={submitting}
-        onClose={() => setConfirmSensitive(false)}
-        onOk={() => void submitCurrent(getValues())}
-        okText={t('sensitive.ok')}
-        cancelText={tActions('cancel')}
-      >
-        <p>{t('sensitive.body')}</p>
-        <ul className={styles.changeList}>
-          {changesOf(getValues()).map((change) => (
-            <li key={change.field}>
-              <strong>{t('sensitive.change', { label: change.label })}</strong> {change.before} →{' '}
-              {change.after}
-            </li>
-          ))}
-        </ul>
-      </ResponsiveDialog>
     </div>
   );
 }

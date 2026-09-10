@@ -61,7 +61,8 @@
     "vehicle_brand": "Hãng xe",
     "body_type": "Kiểu dáng xe",
     "fuel_type": "Nguồn năng lượng",
-    "vehicle_feature": "Tiện ích xe"
+    "vehicle_feature": "Tiện ích xe",
+    "vehicle_model": "Mẫu xe"
   },
   "contractStatus": {
     "draft": "Nháp",
@@ -98,15 +99,12 @@
   "customerDocumentType": {
     "citizen_id": "CCCD / CMND",
     "driver_licence": "Giấy phép lái xe",
-    "other": "Giấy tờ khác"
+    "other": "Giấy tờ khác",
+    "passport": "Hộ chiếu"
   },
   "customerTripFilter": {
-    "all": "Tất cả",
-    "pending": "Chờ xác nhận",
-    "upcoming": "Sắp tới",
-    "active": "Đang thuê",
-    "completed": "Hoàn thành",
-    "cancelled": "Đã hủy"
+    "current": "Chuyến hiện tại",
+    "history": "Lịch sử chuyến"
   },
   "customerTripStage": {
     "pending_approval": "Chờ xác nhận",
@@ -273,7 +271,8 @@
     "subscription_expired": "Gói đã hết hạn",
     "subscription_lapsed": "Đã chuyển sang tính hoa hồng",
     "free_trips_exhausted": "Hết lượt miễn phí",
-    "subscription_activated": "Gói đã kích hoạt"
+    "subscription_activated": "Gói đã kích hoạt",
+    "booking_auto_accepted": "Tự động nhận chuyến"
   },
   "occupancySourceType": {
     "booking": "Đơn thuê",
@@ -405,7 +404,10 @@
     "overtime": "Quá giờ",
     "cleaning": "Vệ sinh",
     "damage": "Hư hại / bồi thường",
-    "other": "Khác"
+    "other": "Khác",
+    "waiting": "Phí chờ",
+    "long_distance": "Phụ phí đường dài",
+    "overnight": "Tài xế lưu trú qua đêm"
   },
   "tenantCustomerNoteType": {
     "general": "Ghi chú chung",
@@ -457,10 +459,16 @@
     "business": "Doanh nghiệp"
   },
   "transmissionType": {
-    "automatic": "Tự động",
-    "manual": "Số sàn",
+    "automatic": "Số tự động (AT)",
+    "manual": "Số sàn (MT)",
     "cvt": "CVT",
+    "e_cvt": "E-CVT (hybrid)",
     "dct": "Ly hợp kép (DCT)",
+    "amt": "Số sàn tự động (AMT)",
+    "direct_drive": "Truyền động một cấp",
+    "automatic_cvt": "Tay ga",
+    "semi_automatic": "Xe số",
+    "manual_clutch": "Côn tay",
     "other": "Khác"
   },
   "userStatus": {
@@ -641,6 +649,7 @@
     "incident": "Sự cố trong chuyến",
     "payment": "Thanh toán / hoàn tiền",
     "account": "Tài khoản",
+    "account_deletion": "Yêu cầu xoá tài khoản",
     "other": "Khác"
   },
   "supportCaseParty": {
@@ -653,5 +662,92 @@
     "normal": "Bình thường",
     "high": "Cao",
     "urgent": "Khẩn cấp"
+  },
+  "receiptSourceGroup": {
+    "business": "Tiền của gian hàng",
+    "held_funds": "Tiền giữ hộ"
+  },
+  "vehicleImageType": {
+    "front": "Ảnh mặt trước",
+    "rear": "Ảnh mặt sau",
+    "left": "Ảnh bên trái",
+    "right": "Ảnh bên phải",
+    "interior": "Ảnh nội thất",
+    "other": "Ảnh khác",
+    "dashboard": "Ảnh đồng hồ (ODO)"
+  },
+  "handoverWindowKind": {
+    "pickup": "Thời gian giao xe",
+    "return": "Thời gian nhận xe"
+  },
+  "driverSurchargeKind": {
+    "overtime": "Phụ phí ngoài giờ",
+    "waiting": "Phụ phí chờ đợi",
+    "long_distance": "Phụ phí xe đi đường dài",
+    "overnight": "Phụ phí tài xế lưu trú qua đêm"
+  },
+  "driverSurchargeUnit": {
+    "per_hour": "đ / giờ",
+    "per_30_minutes": "đ / 30 phút",
+    "per_km": "đ / km",
+    "per_night": "đ / đêm"
+  },
+  "driverDepositMode": {
+    "none": "Không yêu cầu đặt cọc trước (thanh toán sau chuyến đi)",
+    "percent_30": "Yêu cầu đặt cọc 30% tổng chi phí chuyến đi để giữ lịch tài xế",
+    "percent_50": "Yêu cầu đặt cọc 50% trước chuyến đi"
+  },
+  "autoAcceptBlocker": {
+    "disabled": "Xe chưa bật tự động nhận chuyến",
+    "service_not_supported": "Dịch vụ này không hỗ trợ tự động nhận",
+    "lead_too_short": "Giờ nhận xe quá gần so với mức đặt trước tối thiểu",
+    "lead_too_long": "Giờ nhận xe quá xa so với mức đặt trước tối đa",
+    "outside_handover_window": "Giờ giao/nhận nằm ngoài khung giờ chủ xe phục vụ",
+    "below_min_duration": "Thời lượng thuê ngắn hơn mức tối thiểu",
+    "quote_estimate": "Giá còn tạm tính, chủ xe cần xác nhận",
+    "schedule_busy": "Xe bận trong khoảng thời gian này",
+    "no_driver": "Không có tài xế rảnh cho khung giờ này",
+    "hold_required_with_driver": "Chuyến có tài xế cần chủ xe xác nhận trước khi giữ chỗ",
+    "terms_not_accepted": "Khách chưa đồng ý điều khoản thuê"
+  },
+  "bookingRequestDecisionSource": {
+    "host": "Chủ xe quyết định",
+    "system": "Hệ thống tự động nhận"
+  },
+  "vehicleTripHistoryKind": {
+    "booking": "Đơn thuê",
+    "request": "Yêu cầu thuê"
+  },
+  "vehicleTripHistoryFilter": {
+    "all": "Tất cả",
+    "completed": "Hoàn thành",
+    "cancelled": "Đã hủy"
+  },
+  "driverSurchargeThresholdKind": {
+    "minute_of_day": "sau giờ",
+    "grace_minutes": "sau số phút chờ miễn phí",
+    "km_per_day": "quãng đường vượt mỗi ngày"
+  },
+  "motorbikeCategory": {
+    "scooter": "Xe tay ga",
+    "underbone": "Xe số",
+    "naked": "Naked bike",
+    "sport": "Sport bike",
+    "cruiser": "Cruiser",
+    "adventure": "Adventure",
+    "touring": "Touring",
+    "offroad": "Off-road",
+    "other": "Khác"
+  },
+  "catalogMarketStatus": {
+    "current": "Đang phân phối",
+    "legacy": "Mẫu xe đời trước"
+  },
+  "catalogTypeHint": {
+    "vehicle_brand": "Hiện ở ô \"Hãng xe\" khi tạo/sửa xe và ở bộ lọc ngoài chợ.",
+    "body_type": "Hiện thành thẻ có ảnh khi tạo/sửa xe và ở bộ lọc \"Loại xe\" ngoài chợ.",
+    "fuel_type": "Hiện ở ô \"Nguồn năng lượng\" khi tạo/sửa xe và ở bộ lọc ngoài chợ.",
+    "vehicle_feature": "Hiện ở phần \"Tiện ích\" khi tạo/sửa xe và ở bộ lọc ngoài chợ.",
+    "vehicle_model": "Hiện ở ô \"Mẫu xe\" sau khi chọn hãng. Mỗi mẫu thuộc một hãng và một loại xe."
   }
 }

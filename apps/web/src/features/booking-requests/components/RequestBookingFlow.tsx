@@ -13,6 +13,7 @@ import {
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Radio, Segmented } from 'antd';
+import { CheckboxField } from '@/components/form/CheckboxField';
 
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -22,6 +23,7 @@ import {
   addDateKeyDays,
   API_ERROR_CODE,
   DELIVERY_DISTANCE_STATUS,
+  BOOKING_REQUEST_STATUS,
   LONG_TERM_PACKAGE_MONTHS,
   longTermReturnAt,
   PICKUP_PREFERENCE,
@@ -38,6 +40,7 @@ import {
   type ServiceType,
 } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
+import type { BookingRequestReceipt } from '../types';
 import { LongTermPackageStep } from './LongTermPackageStep';
 import {
   RentalDateTimeRangeField,
@@ -183,6 +186,8 @@ export function RequestBookingFlow({
   /** Người đã đăng nhập bấm "Đổi" ở bước xác nhận → hiện lại ô nhập liên hệ ở bước Chuyến đi. */
   const [editingContact, setEditingContact] = useState(false);
   const [requestCode, setRequestCode] = useState<string | null>(null);
+  /** Kết quả nhận yêu cầu — biết đơn đã được XÁC NHẬN NGAY (auto-accept) hay còn chờ chủ xe. */
+  const [receipt, setReceipt] = useState<BookingRequestReceipt | null>(null);
   /**
    * Bảng chi tiết giá đang mở hay không.
    *
@@ -248,6 +253,13 @@ export function RequestBookingFlow({
   const isWithDriver = watchedService === SERVICE_TYPE.WITH_DRIVER;
   // Có tài xế thì xe ĐẾN ĐÓN khách — "giao xe tận nơi" không có nghĩa với chuyến này.
   const isDelivery = !isWithDriver && pickupMethod === PICKUP_METHOD.DELIVERY;
+  /**
+   * Điều khoản chủ xe công bố cho ĐÚNG dịch vụ đang chọn (08/09/2026) — server đã tính giấy tờ
+   * hiệu lực và cờ bắt đồng ý; client chỉ hiển thị và bắt tick khi được yêu cầu.
+   */
+  const activeTerms =
+    listing?.rentalTerms?.find((term) => term.serviceType === watchedService) ?? null;
+  const requiresTermsAcceptance = Boolean(activeTerms?.requireTermsAcceptance);
 
   /**
    * Giao tận nơi có ĐẶT ĐƯỢC không — theo CHÍNH SÁCH hiệu lực, không phải chip tiện ích trên
@@ -464,10 +476,12 @@ export function RequestBookingFlow({
         ...(!withDriver && v.pickupMethod === PICKUP_METHOD.DELIVERY
           ? { deliveryRequested: true, deliveryAddress: v.deliveryAddress.trim() }
           : {}),
+        ...(v.acceptedTerms ? { acceptedTerms: true } : {}),
       });
     },
     onSuccess: async (receipt) => {
       setRequestCode(receipt.id ?? null);
+      setReceipt(receipt);
       // Có thể vừa được cấp phiên mới (passwordless) → làm mới toàn bộ cache để cả app biết.
       await queryClient.invalidateQueries();
       goToStep('done');
@@ -602,6 +616,10 @@ export function RequestBookingFlow({
 
   function submitRequest() {
     setStepError(null);
+    if (requiresTermsAcceptance && !getValues('acceptedTerms')) {
+      setStepError(t('review.termsRequired'));
+      return;
+    }
     submitM.mutate(getValues('customerPhone').trim());
   }
 
@@ -791,13 +809,30 @@ export function RequestBookingFlow({
             ) : null}
           </dl>
 
-          {/* Nói rõ đây MỚI là yêu cầu — xe chưa bị giữ chỗ (pending không chiếm lịch). */}
-          <Alert
-            type="warning"
-            showIcon
-            className={styles.doneNote}
-            message={t('done.notReserved')}
-          />
+          {/*
+            Nói rõ đây MỚI là yêu cầu — xe chưa bị giữ chỗ (pending không chiếm lịch). Ngoại lệ
+            08/09/2026: chủ xe bật Đặt ngay và server đã tự xác nhận → đơn ĐÃ giữ lịch (hoặc đang
+            chờ khách giữ chỗ nếu chính sách yêu cầu) — câu chữ phải nói đúng điều đó.
+          */}
+          {receipt?.autoAccepted ? (
+            <Alert
+              type="success"
+              showIcon
+              className={styles.doneNote}
+              message={
+                receipt.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD
+                  ? t('done.autoAcceptedHold')
+                  : t('done.autoAccepted')
+              }
+            />
+          ) : (
+            <Alert
+              type="warning"
+              showIcon
+              className={styles.doneNote}
+              message={t('done.notReserved')}
+            />
+          )}
 
           <div className={cx(styles.doneActions, styles.doneActionsRow)}>
             <Button
@@ -1361,6 +1396,30 @@ export function RequestBookingFlow({
                 </div>
               ) : null}
             </dl>
+
+            {/* Đặt ngay: server xem trước (`quote.autoAccept`) — chỉ NÓI khi không có blocker. */}
+            {quoteQ.data?.autoAccept?.eligible ? (
+              <Alert
+                type="success"
+                showIcon
+                className={styles.err}
+                message={t('review.instantBook')}
+                description={t('review.instantBookHint')}
+              />
+            ) : null}
+
+            {activeTerms?.termsText || requiresTermsAcceptance ? (
+              <div className={styles.termsBox}>
+                {activeTerms?.termsText ? (
+                  <p className={styles.termsText}>{activeTerms.termsText}</p>
+                ) : null}
+                {requiresTermsAcceptance ? (
+                  <CheckboxField control={control} name="acceptedTerms">
+                    {t('review.termsCheckbox')}
+                  </CheckboxField>
+                ) : null}
+              </div>
+            ) : null}
 
             {stepError ? (
               <Alert

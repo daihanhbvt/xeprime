@@ -16,6 +16,7 @@ import {
   CUSTOMER_TRIP_STAGE,
   CUSTOMER_TRIP_STAGE_META,
   SERVICE_TYPE,
+  TRIP_ROLE,
   canCustomerCancelTrip,
   customerTripTimeline,
   isCustomerTripClosed,
@@ -39,8 +40,10 @@ import { useTrip } from '../hooks';
 import type { CustomerTripDetail } from '../types';
 import { CancelTripDialog } from './CancelTripDialog';
 import { CustomerTripTimeline } from './CustomerTripTimeline';
+import { TripEstimateCard } from './TripEstimateCard';
 import { TripFinanceCard } from './TripFinanceCard';
 import { TripHoldPanel } from './TripHoldPanel';
+import { TripHostDecisions } from './TripHostDecisions';
 import { TripHandoverEvidence } from './TripHandoverEvidence';
 import styles from './TripDetailView.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -54,6 +57,12 @@ import { useTranslations } from 'next-intl';
  * phải sửa ba nơi, và chúng sẽ trôi khỏi nhau.
  *
  * Phân nhánh dựa trên `stage` (view-model từ `@xeprime/types`), không đọc thẳng trạng thái đơn.
+ *
+ * **Hai phía, một màn** (08/09/2026): chủ gian hàng mở được chi tiết chuyến trên xe của mình.
+ * Phần MÔ TẢ chuyến giống hệt nhau — cùng xe, cùng lịch, cùng giá — nên không có màn thứ hai.
+ * Khác biệt nằm ở HÀNH ĐỘNG, và mỗi hành động chỉ thuộc về đúng một phía: khách huỷ chuyến,
+ * đánh giá và liên hệ gian hàng; chủ xe duyệt hoặc từ chối yêu cầu. Bày nhầm phía nghĩa là bày
+ * một nút mà server chắc chắn từ chối.
  */
 export function TripDetailView({ tripId }: { tripId: string }) {
   const t = useTranslations('Trips');
@@ -132,6 +141,8 @@ export function TripDetailView({ tripId }: { tripId: string }) {
   const stage = data.stage as CustomerTripStage;
   const timeline = customerTripTimeline(stage);
   const closed = isCustomerTripClosed(stage);
+  /** Người đang xem là CHỦ XE của chuyến này — server đã quyết, client không suy lại. */
+  const isHost = data.role === TRIP_ROLE.HOST;
 
   return (
     <div className={styles.page}>
@@ -364,15 +375,20 @@ export function TripDetailView({ tripId }: { tripId: string }) {
             việc duy nhất khách cần làm, và nó không được nằm dưới một bảng số liệu.
           */}
           {data.hold ? <TripHoldPanel hold={data.hold} /> : null}
+          {/*
+            Ba nguồn tiền, loại trừ nhau theo đúng thứ tự này:
+              · có đơn      → số ĐÃ ĐÓNG BĂNG (ADR 0024);
+              · chưa có đơn → bảng kê TẠM TÍNH, đúng những dòng khách đã đọc lúc đặt;
+              · không báo giá được (xe thiếu giá, dài hạn chưa chọn gói) → nói thẳng là chưa có.
+            Không bao giờ có hai khối cùng lúc, nên không ai phải chọn giữa hai con số.
+          */}
           {data.finance ? (
             <TripFinanceCard finance={data.finance} closed={closed} />
+          ) : data.estimate ? (
+            <TripEstimateCard estimate={data.estimate} isHost={isHost} />
           ) : (
             <section className={styles.block}>
               <h2 className={styles.blockTitle}>{t('detail.priceBlock')}</h2>
-              {/*
-                Chưa có đơn thì chưa có giá chốt. Dựng một bảng "dự kiến" ở đây là hứa hẹn thay
-                chủ xe — con số có thể khác hẳn sau khi họ xác nhận.
-              */}
               <p className={styles.note}>{t('detail.priceEmpty')}</p>
             </section>
           )}
@@ -385,8 +401,27 @@ export function TripDetailView({ tripId }: { tripId: string }) {
             hằng ngày. Giờ: nhắn tin là nút chính, gọi và đánh giá là hai ô phụ chia đôi hàng
             dưới, số điện thoại xuống dòng phụ để nhãn nút luôn ngắn.
           */}
+          {/*
+            Cụm quyết định của chủ xe là component RIÊNG: nó cầm mutation và bốn hộp thoại, mà
+            người đi thuê thì không có gì để quyết định ở đây.
+          */}
+          {isHost && data.respondBy ? <TripHostDecisions trip={data} /> : null}
+
+          {/*
+            Cụm hỗ trợ là của KHÁCH: nhắn tin với gian hàng, gọi gian hàng, đánh giá gian hàng.
+            Chủ xe nhìn vào đó sẽ thấy ba lối liên hệ với chính mình.
+          */}
+          {isHost ? null : (
           <section className={styles.support}>
             <h2 className={styles.supportTitle}>{t('actions.title')}</h2>
+            {/*
+              Chưa duyệt thì CHƯA mở kênh liên hệ — trên tuyến hoa hồng, một yêu cầu gửi rồi tự
+              huỷ không được phép trở thành cách lấy số của gian hàng rồi chốt ngoài sàn
+              (ADR 0028 điều 9). Server quyết định bằng `canContact`; ở đây chỉ nói lý do, vì
+              một nút biến mất không giải thích gì trông như lỗi.
+            */}
+            {data.canContact ? (
+              <>
             <ChatWithShopButton
               vehicleId={data.vehicle.id}
               type="primary"
@@ -414,15 +449,24 @@ export function TripDetailView({ tripId }: { tripId: string }) {
                 </button>
               ) : null}
             </div>
+              </>
+            ) : (
+              <p className={styles.hostHint}>{t('actions.contactLocked')}</p>
+            )}
           </section>
+          )}
 
           <div className={styles.actions}>
             {/*
               Huỷ đứng CUỐI và không phải nút chính: nó là lối thoát, không phải việc khách vào
               đây để làm. Chỉ hiện tới trước lúc giao xe — sau đó xe đã ở ngoài đường và việc cần
               làm là gọi chủ xe, nên một nút "Huỷ" ở đó chỉ là lời hứa hão.
+
+              Chỉ phía KHÁCH: `POST /trips/:id/cancel` khoá theo `customerUserId`, nên nút này ở
+              phía chủ xe sẽ luôn nhận 404. Chủ xe huỷ đơn ở chi tiết đơn thuê, nơi máy trạng
+              thái quyết định (`BookingStatusActions`).
             */}
-            {canCustomerCancelTrip(data.stage) ? (
+            {!isHost && canCustomerCancelTrip(data.stage) ? (
               <Button block danger onClick={() => setCancelOpen(true)}>
                 {t('actions.cancel')}
               </Button>
@@ -448,6 +492,7 @@ export function TripDetailView({ tripId }: { tripId: string }) {
       {cancelOpen ? (
         <CancelTripDialog trip={data} open onClose={() => setCancelOpen(false)} />
       ) : null}
+
     </div>
   );
 }

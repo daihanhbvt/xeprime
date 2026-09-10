@@ -63,6 +63,10 @@ export function MoneyField<T extends FieldValues>({
         onPress={() => inputRef.current?.focus()}
       >
         <TextInput
+          // A11Y-LABEL: nhãn nằm ở `FieldLabel` BÊN CẠNH ô, không nằm trong ô — trình đọc
+          // màn hình vì thế đọc ra một ô nhập vô danh. Gắn tên ô vào chính input là chỗ duy
+          // nhất sửa được cho cả app (và là cách test tìm đúng ô, thay vì dò placeholder).
+          accessibilityLabel={label}
           ref={inputRef}
           value={formatMoneyInput(field.value as number | null)}
           onChangeText={(text) => field.onChange(parseMoneyInput(text))}

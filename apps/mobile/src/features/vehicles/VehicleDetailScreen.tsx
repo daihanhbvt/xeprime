@@ -48,6 +48,7 @@ import { VEHICLE_EDIT_TAB, type VehicleEditTab } from '@/navigation/vehicle-edit
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { FinanceEntityPanel } from '@/features/finance/components/FinanceEntityPanel';
 import { VehicleAlertList } from './components/VehicleAlertList';
 import { VehiclePublishCard } from './components/VehiclePublishCard';
 import { discountedPriceVnd } from './pricing';
@@ -80,8 +81,9 @@ const styles = StyleSheet.create({
  * lịch thuê sắp tới · hiệu suất → giá & chính sách → giấy tờ (chỉ ĐẾM) → thông số → nguồn xe →
  * thư viện ảnh → gửi duyệt → hoạt động gần đây.
  *
- * Khối tiền theo kỳ (`FinanceEntityPanel` của web) KHÔNG có ở đây: nó thuộc module Finance,
- * chưa có bản native. Bịa một khối tiền rỗng còn tệ hơn là không có nó.
+ * Khối TIỀN THEO KỲ (`FinanceEntityPanel`) đứng ngay sau dải liên kết nhanh, đúng vị trí web —
+ * và là ĐÚNG component mà hồ sơ khách dùng, chỉ khác mệnh đề thu hẹp. Hai bề mặt là cùng một
+ * câu truy vấn nên con số của chúng không thể lệch nhau.
  */
 export function VehicleDetailScreen({ vehicleId }: { vehicleId: string }) {
   const t = useTranslations('Vehicles.detail');
@@ -217,6 +219,22 @@ function VehicleDetailBody({ vehicle, onBack }: { vehicle: VehicleDetail; onBack
           />
 
           <ModuleLinks vehicle={vehicle} canEdit={canEdit} />
+
+          {/*
+            Tiền của riêng chiếc xe này, THEO KỲ — đúng vị trí web đặt nó (ngay sau dải liên kết).
+            Trước đây hồ sơ xe chỉ có một con số luỹ kế và không trả lời được "tháng này xe có
+            nuôi nổi nó không".
+
+            Gác `finance.view` ở đây là gác HIỂN THỊ; chặn thật vẫn là guard backend, và khi thiếu
+            quyền thì truy vấn cũng không được bắn đi.
+          */}
+          {has(PERMISSION.FINANCE_VIEW) ? (
+            <FinanceEntityPanel
+              scope={{ vehicleId: vehicle.id }}
+              kind="vehicle"
+              canCreateReceipt={has(PERMISSION.RECEIPT_CREATE)}
+            />
+          ) : null}
 
           <PricingCard vehicle={vehicle} canEdit={canEdit} />
 
@@ -574,10 +592,9 @@ function ScheduleCard({
 /**
  * Dải LIÊN KẾT NHANH tới các mục con của xe — bản native của `ModuleLinks` bên web.
  *
- * Cùng danh sách, cùng thứ tự, cùng điều kiện quyền. Hai mục của web không có đích ở app và
- * KHÔNG dựng ra ở đây thay vì dựng một nút chết: `calendar` (màn lịch CAL-01 chưa làm) và
- * `receipts` (sổ thu chi của xe — module tài chính chưa mở ở app). Chúng sẽ tự xuất hiện khi hai
- * màn đó có mặt; danh sách này là nơi duy nhất phải sửa.
+ * Cùng danh sách, cùng thứ tự, cùng điều kiện quyền. Còn ĐÚNG MỘT mục chưa có đích ở app —
+ * `calendar` (màn lịch CAL-01 chưa làm): nó vẫn hiện đúng chỗ và chạm vào báo "đang phát triển",
+ * đúng quy ước `comingSoon`. Danh sách này là nơi duy nhất phải sửa khi màn đó có mặt.
  *
  * Chip chứ không phải danh sách dọc: chín lối đi mà mỗi lối một hàng thì khối này dài hơn cả
  * phần nội dung nó dẫn tới.
@@ -667,8 +684,13 @@ function ModuleLinks({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
     });
   }
   if (has(PERMISSION.FINANCE_VIEW)) {
-    // Sổ thu chi của riêng xe — module tài chính chưa mở ở app.
-    links.push({ key: 'receipts', label: t('receipts'), icon: 'cash-outline' });
+    // Sổ Thu-Chi ĐÃ LỌC theo chính chiếc xe này — cùng tham số `?vehicleId=` web đặt trên URL.
+    links.push({
+      key: 'receipts',
+      label: t('receipts'),
+      icon: 'cash-outline',
+      href: ROUTES.manage.receipts({ vehicleId: vehicle.id }),
+    });
   }
 
   if (links.length === 0) return null;

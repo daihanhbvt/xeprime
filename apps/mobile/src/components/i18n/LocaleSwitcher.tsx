@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 
+import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
 import { LOCALES } from '@/i18n/config';
 import { useAppLocale } from '@/i18n/I18nProvider';
 import { appStyles } from '@/theme/styles';
@@ -70,53 +71,23 @@ export function LocaleSwitcher() {
             >
               <YStack w={40} h={4} br={radius.pill} bg={colors.border} alignSelf="center" mb={space.sm} />
 
-              {LOCALES.map((option) => (
-                <LocaleRow
-                  key={option}
-                  label={t(option)}
-                  selected={option === locale}
-                  onPress={() => {
-                    setLocale(option);
-                    setOpen(false);
-                  }}
-                />
-              ))}
+              <MenuOptionList>
+                {LOCALES.map((option) => (
+                  <MenuOption
+                    key={option}
+                    label={t(option)}
+                    selected={option === locale}
+                    onPress={() => {
+                      setLocale(option);
+                      setOpen(false);
+                    }}
+                  />
+                ))}
+              </MenuOptionList>
             </YStack>
           </Pressable>
         </Pressable>
       </Modal>
     </>
-  );
-}
-
-function LocaleRow({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} accessibilityRole="radio" accessibilityState={{ selected }}>
-      <XStack
-        ai="center"
-        jc="space-between"
-        px={space.md}
-        minHeight={sizing.touchTarget}
-        br={radius.md}
-        bg={selected ? colors.surfaceSelected : 'transparent'}
-      >
-        <Text
-          col={selected ? colors.primaryActive : colors.text}
-          fos={fontSize.body}
-          fow={selected ? fontWeight.semibold : fontWeight.regular}
-        >
-          {label}
-        </Text>
-        {selected ? <Ionicons name="checkmark" size={18} color={colors.primaryActive} /> : null}
-      </XStack>
-    </Pressable>
   );
 }

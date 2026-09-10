@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  BOOKING_REQUEST_DECISION_SOURCE_VALUES,
   BOOKING_REQUEST_STATUS_VALUES,
   LONG_TERM_PACKAGE_MONTHS_VALUES,
   PICKUP_PREFERENCE,
@@ -167,6 +168,15 @@ export class CreateBookingRequestDto {
   @IsString()
   @MaxLength(500)
   deliveryAddress?: string;
+
+  /**
+   * Khách đã đọc và đồng ý điều khoản thuê của chủ xe (08/09/2026). BẮT BUỘC `true` khi thiết lập
+   * dịch vụ của xe đòi hỏi — server kiểm, và thời điểm đồng ý được đóng băng vào yêu cầu.
+   */
+  @ApiPropertyOptional({ description: 'Đồng ý điều khoản thuê của chủ xe' })
+  @IsOptional()
+  @IsBoolean()
+  acceptedTerms?: boolean;
 }
 
 /** Khách kiểm tra nhanh khung giờ của một xe có trống không (preview — ADR 0006). */
@@ -434,6 +444,14 @@ export class BookingRequestDto {
     description: 'ISO-8601 UTC — thời điểm gian hàng duyệt/từ chối; null khi còn chờ',
   })
   decidedAt!: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    enum: BOOKING_REQUEST_DECISION_SOURCE_VALUES,
+    description: 'Ai quyết định — chủ xe hay hệ thống tự nhận (08/09/2026); null khi chưa quyết',
+  })
+  decisionSource!: string | null;
 }
 
 /**
@@ -487,4 +505,14 @@ export class BookingRequestReceiptDto {
    */
   @ApiPropertyOptional({ type: MobileSessionDto })
   session?: MobileSessionDto;
+
+  /**
+   * HỆ THỐNG đã tự nhận yêu cầu này theo thiết lập của chủ xe (08/09/2026). `status` khi đó là
+   * `converted_to_booking` (đã có đơn) hoặc `awaiting_hold` (chờ khách chuyển giữ chỗ). FE đọc
+   * cờ này để không nói "xe chưa được giữ chỗ" với một chuyến đã được nhận.
+   */
+  @ApiProperty() autoAccepted!: boolean;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Đơn vừa tạo khi tự nhận (không hold)' })
+  bookingId!: string | null;
 }

@@ -48,7 +48,11 @@ export function ChatWithShopButton({
     start.mutate(vehicleId, {
       onSuccess: (conversation) => {
         onNavigate?.();
-        router.push(`${ROUTES.CHAT}?c=${conversation.id}`);
+        //  = xe đang xem: hội thoại thuộc về GIAN HÀNG, nên chiếc xe phải đi kèm riêng để
+        // ô soạn tin gắn được thẻ ngữ cảnh vào câu đầu tiên.
+        // `v` = xe đang xem. Hội thoại thuộc về GIAN HÀNG (một thread cho mọi xe của shop), nên
+        // chiếc xe phải đi kèm riêng để ô soạn tin gắn được thẻ ngữ cảnh vào câu đầu tiên.
+        router.push(`${ROUTES.CHAT}?c=${conversation.id}&v=${vehicleId}`);
       },
       onError: (err) => {
         if (isUnauthenticated(err)) {

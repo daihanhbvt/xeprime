@@ -2,18 +2,20 @@
 
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Spin } from 'antd';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { Suspense, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { PERMISSION } from '@xeprime/types';
 import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { customerPath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { CUSTOMERS_DEFAULT_LIMIT } from '@/features/customers/api';
 import { CustomerFormModal } from '@/features/customers/components/CustomerFormModal';
 import { CustomerSummaryCards } from '@/features/customers/components/CustomerSummaryCards';
 import { CustomerTable } from '@/features/customers/components/CustomerTable';
-import { CUSTOMER_HINTS, relationshipOptions, sortOptions } from '@/features/customers/constants';
+import { relationshipValues, sortValues } from '@/features/customers/constants';
 import { useCustomerFilters } from '@/features/customers/hooks/use-customer-filters';
 import { useCustomerSummary, useCustomers } from '@/features/customers/hooks/use-customers';
 import type { CustomerFilters } from '@/features/customers/types';
@@ -36,6 +38,8 @@ export default function CustomersPage() {
  * điều đó (`tenantId` lấy từ membership, không bao giờ từ URL).
  */
 function CustomersView() {
+  const t = useTranslations('Customers');
+  const domainLabel = useDomainLabel();
   const router = useRouter();
   const { has } = usePermissions();
 
@@ -58,28 +62,37 @@ function CustomersView() {
     hasNext: false,
   };
 
-  const filterFields: readonly FilterField[] = [
-    {
-      kind: 'search',
-      key: 'q',
-      label: 'Tìm khách hàng',
-      placeholder: 'Tìm theo tên, số điện thoại hoặc email',
-    },
-    {
-      kind: 'select',
-      key: 'relationship',
-      label: 'Nhóm khách',
-      allowClear: false,
-      options: relationshipOptions(canViewFinance),
-    },
-    {
-      kind: 'select',
-      key: 'sort',
-      label: 'Sắp xếp',
-      allowClear: false,
-      options: sortOptions(canViewFinance),
-    },
-  ];
+  const filterFields = useMemo<readonly FilterField[]>(
+    () => [
+      {
+        kind: 'search',
+        key: 'q',
+        label: t('filters.search'),
+        placeholder: t('filters.searchPlaceholder'),
+      },
+      {
+        kind: 'select',
+        key: 'relationship',
+        label: t('filters.relationship'),
+        allowClear: false,
+        options: relationshipValues(canViewFinance).map((value) => ({
+          value,
+          label: domainLabel('tenantCustomerRelationship', value),
+        })),
+      },
+      {
+        kind: 'select',
+        key: 'sort',
+        label: t('filters.sort'),
+        allowClear: false,
+        options: sortValues(canViewFinance).map((value) => ({
+          value,
+          label: domainLabel('tenantCustomerSort', value),
+        })),
+      },
+    ],
+    [t, domainLabel, canViewFinance],
+  );
 
   function changeFilters(patch: FilterValues) {
     const next: Partial<CustomerFilters> = {};
@@ -91,17 +104,13 @@ function CustomersView() {
 
   const addButton = canManage ? (
     <Button type="primary" icon={<PlusOutlined />} onClick={() => setFormOpen(true)}>
-      Thêm khách hàng
+      {t('page.add')}
     </Button>
   ) : null;
 
   return (
     <div className={styles.page}>
-      <ManagePageHeader
-        title="Khách hàng"
-        subtitle="Sổ khách của gian hàng: lịch sử thuê, công nợ, ghi chú và giấy tờ — chỉ gian hàng của bạn nhìn thấy."
-        extra={addButton}
-      />
+      <ManagePageHeader title={t('page.title')} subtitle={t('page.subtitle')} extra={addButton} />
 
       {canView ? (
         <CustomerSummaryCards
@@ -119,7 +128,7 @@ function CustomersView() {
         searchDebounceMs={300}
       />
 
-      <p className={styles.hint}>{CUSTOMER_HINTS.relationship}</p>
+      <p className={styles.hint}>{t('hints.relationship')}</p>
 
       <CustomerTable
         items={items}

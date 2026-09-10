@@ -4,11 +4,11 @@ import { Alert, Input, Modal, Tag } from 'antd';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { REJECT_REASON_MAX_LENGTH, REJECT_REASON_PRESETS } from '../constants';
-import type { BookingRequestItem } from '../types';
+import type { BookingRequestDecisionTarget } from '../types';
 import styles from './RejectBookingRequestDialog.module.css';
 
 interface Props {
-  request: BookingRequestItem | null;
+  request: BookingRequestDecisionTarget | null;
   submitting: boolean;
   /** Lỗi của lần gửi vừa rồi — hộp thoại Ở LẠI để sửa, không đóng và nuốt mất chữ đã gõ. */
   error: string | null;
@@ -29,7 +29,7 @@ interface Props {
  * Mẫu có sẵn là để bấm-rồi-sửa, không phải để khoá: chọn xong vẫn gõ lại được, vì hoàn cảnh
  * thật luôn có chi tiết mà bốn câu mẫu không nói hết.
  */
-function RejectForm({ request, submitting, error, onCancel, onConfirm }: Props & { request: BookingRequestItem }) {
+function RejectForm({ request, submitting, error, onCancel, onConfirm }: Props & { request: BookingRequestDecisionTarget }) {
   const t = useTranslations('BookingRequests');
   const tCommon = useTranslations('Common');
 

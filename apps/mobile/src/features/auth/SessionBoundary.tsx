@@ -1,10 +1,12 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, type ReactNode } from 'react';
 import { AppState } from 'react-native';
+import { branchScopeReset } from '@/features/branches/branch-scope.slice';
 import { subscribeSessionEnded } from '@/lib/auth-session';
 import { logger } from '@/lib/logger';
 import { queryKeys } from '@/queries/query-keys';
 import { resetSessionScopedCache } from '@/queries/reset-session-cache';
+import { useAppDispatch } from '@/store/hooks';
 
 /**
  * Tầng DUY NHẤT phản ứng khi phiên kết thúc.
@@ -19,14 +21,21 @@ import { resetSessionScopedCache } from '@/queries/reset-session-cache';
  */
 export function SessionBoundary({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const dispatch = useAppDispatch();
 
+  /*
+   * Cache của TanStack Query không phải chỗ duy nhất mang dấu vết phiên cũ: scope chi nhánh là
+   * một lựa chọn UI nằm ở Redux, và một id chi nhánh của gian hàng trước sẽ lọc rỗng mọi danh
+   * sách của người đăng nhập kế tiếp.
+   */
   useEffect(
     () =>
       subscribeSessionEnded(() => {
         logger.warn('Phiên kết thúc — dọn dữ liệu của phiên');
         resetSessionScopedCache(queryClient);
+        dispatch(branchScopeReset());
       }),
-    [queryClient],
+    [dispatch, queryClient],
   );
 
   /**

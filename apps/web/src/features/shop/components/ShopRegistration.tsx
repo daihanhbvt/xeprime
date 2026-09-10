@@ -32,11 +32,35 @@ import styles from './ShopRegistration.module.css';
  * Bố cục hai khoang theo mẫu UI: khoang trái GIỚI THIỆU (đang làm gì, lưu ý gì), khoang phải là
  * form. Trên mobile hai khoang xếp dọc — phần giới thiệu đọc trước rồi mới tới ô nhập.
  */
-export function ShopRegistration() {
+interface ShopRegistrationProps {
+  /**
+   * Đích sau khi tạo hồ sơ thành công — đường dẫn NỘI BỘ do nơi gọi quyết định (trang onboarding
+   * đã lọc `?next=` qua `safeNextPath`). Không truyền: giữ hành vi cũ (điều hướng do trang lo).
+   */
+  onCreated?: () => void;
+  /**
+   * `shop` (mặc định) — chữ dành cho gian hàng cho thuê xe.
+   * `owner` — chữ dành cho CHỦ XE cá nhân đăng chiếc xe đầu tiên: cùng một API, cùng một form,
+   * chỉ khác cách nói. Người có một chiếc xe không tự nhận mình đang "mở gian hàng".
+   */
+  variant?: 'shop' | 'owner';
+  /**
+   * Giá trị điền sẵn từ tài khoản đang đăng nhập — nơi gọi truyền vào. Form KHÔNG tự gọi API
+   * lấy user: nó là một form, không phải một màn hình.
+   */
+  prefill?: { name?: string | null; phone?: string | null; email?: string | null };
+}
+
+export function ShopRegistration({
+  onCreated,
+  variant = 'shop',
+  prefill,
+}: ShopRegistrationProps = {}) {
   const t = useTranslations('ShopOnboarding');
   const tCommon = useTranslations('Common');
   const domainLabel = useDomainLabel();
   const register = useRegisterShop();
+  const isOwnerVariant = variant === 'owner';
 
   const provinces = useProvinceOptions();
 
@@ -59,19 +83,33 @@ export function ShopRegistration() {
       phone: '',
       email: '',
     },
+    values: prefill
+      ? {
+          name: prefill.name ?? '',
+          tenantType: TENANT_TYPE.INDIVIDUAL,
+          provinceCode: '',
+          address: '',
+          phone: prefill.phone ?? '',
+          email: prefill.email ?? '',
+        }
+      : undefined,
   });
 
   // `handleSubmit` giữ nguyên giá trị đã nhập khi mutation lỗi — RHF không reset form, nên người
   // dùng không phải gõ lại từ đầu (chỉ cần đọc thông báo lỗi rồi bấm lại).
   const onSubmit = handleSubmit((values) => {
-    register.mutate({
+    register.mutate(
+      {
       name: values.name,
       tenantType: values.tenantType,
       provinceCode: values.provinceCode,
-      address: values.address || undefined,
-      phone: values.phone || undefined,
-      email: values.email || undefined,
-    });
+        address: values.address || undefined,
+        phone: values.phone || undefined,
+        email: values.email || undefined,
+      },
+      // Quay lại đúng chỗ người dùng đang làm dở (wizard đăng xe) thay vì thả họ ở hồ sơ shop.
+      { onSuccess: () => onCreated?.() },
+    );
   });
 
   return (
@@ -80,8 +118,12 @@ export function ShopRegistration() {
         <span className={styles.introIcon} aria-hidden="true">
           <ShopOutlined />
         </span>
-        <h2 className={styles.introTitle}>{t('form.title')}</h2>
-        <p className={styles.introText}>{t('form.intro')}</p>
+        <h2 className={styles.introTitle}>
+          {isOwnerVariant ? t('ownerVariant.title') : t('form.title')}
+        </h2>
+        <p className={styles.introText}>
+          {isOwnerVariant ? t('ownerVariant.intro') : t('form.intro')}
+        </p>
 
         <div className={styles.tips}>
           <p className={styles.tipsTitle}>

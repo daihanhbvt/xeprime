@@ -1,6 +1,6 @@
 # Architecture Decision Records — XePrime
 
-> Cập nhật: 03/09/2026
+> Cập nhật: 09/09/2026
 
 ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted mới hơn thắng trong đúng phạm vi phần **Quan hệ với ADR cũ**; không suy rằng toàn bộ ADR cũ mất hiệu lực.
 
@@ -22,13 +22,13 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0005](0005-status-enums.md) | Status enum tập trung | Accepted |
 | [0006](0006-booking-concurrency.md) | DB constraint chống trùng lịch | Accepted |
 | [0007](0007-api-type-contract.md) | Client type sinh từ OpenAPI | Accepted |
-| [0008](0008-public-listings-sync.md) | Đồng bộ public listing qua một writer | Accepted |
+| [0008](0008-public-listings-sync.md) | Đồng bộ public listing qua một writer | Accepted; **điều 2 bị 0030 ghi đè** |
 | [0009](0009-chat-firestore-projection.md) | PostgreSQL là nguồn thật của chat, Firestore là projection | Accepted |
 | [0010](0010-billing-plans-subscriptions.md) | Subscription append-only | Accepted; pricing được 0015/0028 sửa |
 | [0011](0011-long-term-fixed-packages.md) | Thuê dài hạn theo tháng lịch | Accepted |
 | [0012](0012-i18n-shared-url-cookie-locale.md) | i18n vi/en dùng chung URL và message source | Accepted |
 | [0013](0013-no-online-payment-mvp.md) | Không online payment ở MVP cũ | **Superseded bởi 0028** |
-| [0014](0014-owner-and-shop-single-role.md) | Một role owner/shop, capability từ gói | **Partially superseded bởi 0020/0028** |
+| [0014](0014-owner-and-shop-single-role.md) | Một role owner/shop, capability từ gói | **Partially superseded bởi 0020/0028/0032** |
 | [0015](0015-vehicle-slot-billing.md) | Gói trả trước theo chỗ xe | **Partially superseded bởi 0020/0028** |
 | [0016](0016-sepay-bank-reconciliation.md) | SePay đối soát tiền gói | Accepted; phạm vi mở rộng bởi 0022/0028 |
 | [0017](0017-native-bearer-auth.md) | Bearer auth cho native | Accepted |
@@ -39,11 +39,14 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0022](0022-sepay-customer-money.md) | Một sổ giao dịch ngân hàng cho các khoản vào | Accepted; mở rộng bởi 0028 |
 | [0023](0023-wallet-refund-and-compensation.md) | Ví hoàn/bồi thường cũ | **Superseded bởi 0025/0028** |
 | [0024](0024-billing-mode-from-plan-frozen-on-booking.md) | Billing mode đóng băng vào booking | Accepted; breakdown mở rộng bởi 0028 |
-| [0025](0025-shop-escrow-hold-and-payout.md) | Tách tiền giữ hộ và payout | **Partially superseded bởi 0028** |
+| [0025](0025-shop-escrow-hold-and-payout.md) | Tách tiền giữ hộ và payout | **Partially superseded bởi 0028/0032** |
 | [0026](0026-first-trips-free-then-commission.md) | Hai chuyến đầu miễn phí | **Superseded bởi 0028** |
-| [0027](0027-feature-tiers-basic-owner-vs-shop.md) | Basic Owner và Full Shop capability | Accepted; làm rõ bởi 0028 |
-| [0028](0028-marketplace-subscription-fees-and-custodied-funds.md) | Mô hình hiện hành: hai lựa chọn, phí minh bạch, hold/payout có gate | Accepted; giá pilot cụ thể hoá bởi 0029 |
-| [0029](0029-per-vehicle-flat-pricing-and-customer-side-fees.md) | Giá gói phẳng theo chỗ; phụ phí chuyến phía khách | **Accepted** |
+| [0027](0027-feature-tiers-basic-owner-vs-shop.md) | Basic Owner và Full Shop capability | **Partially superseded bởi 0032** |
+| [0028](0028-marketplace-subscription-fees-and-custodied-funds.md) | Hai lựa chọn, phí minh bạch, hold/payout có gate | **Partially superseded bởi 0032** |
+| [0029](0029-per-vehicle-flat-pricing-and-customer-side-fees.md) | Giá gói phẳng theo chỗ; phụ phí chuyến phía khách | **Partially superseded/làm rõ bởi 0032** |
+| [0030](0030-locked-identity-fields-instead-of-reapproval.md) | Khoá căn cước xe thay cho "sửa là duyệt lại" | **Accepted; ghi đè 0008 điều 2** |
+| [0031](0031-split-feature-api-per-app.md) | Tách tầng gọi API theo app; api-client chỉ còn hạ tầng HTTP | **Accepted; ghi đè 0007 phần tầng feature** |
+| [0032](0032-booking-deposit-insurance-and-owner-lite.md) | Cọc booking bắt buộc, bảo hiểm tại bàn giao và ranh giới Owner Lite | **Accepted; ghi đè một phần 0014/0025/0027/0028/0029** |
 
 ## Quy tắc thêm ADR
 

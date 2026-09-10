@@ -23,7 +23,8 @@
   },
   "dependencies": {
     "@xeprime/types": "workspace:*",
-    "dayjs": "1.11.21"
+    "dayjs": "1.11.21",
+    "ulid": "3.0.2"
   },
   "devDependencies": {
     "typescript": "5.9.3",

@@ -13,6 +13,7 @@ Design, không CSS, không `next/*`, không `File`/`XMLHttpRequest`, không đ�
 | `datetime.ts`    | Múi giờ `Asia/Ho_Chi_Minh`, mẫu tham số URL, đếm thời lượng thuê. Chỗ **duy nhất** extend dayjs                            |
 | `rental-busy.ts` | Lịch bận của xe: ngày bận trọn / bận một phần, và khoảng thuê có đụng không                                                |
 | `long-term.ts`   | Phân loại nguyện vọng nhận xe của khách thuê dài hạn (ADR 0011)                                                            |
+| `rental-policy.ts` | Câu tóm tắt bậc phí giao nhận mà khách đặt sẽ đọc (`deliverySummaryText`) — chữ và bộ định dạng tiền đi vào từ ngoài     |
 
 ## Vì sao gom lại
 

@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { CATALOG_TYPE } from '@xeprime/types';
-import { catalogApi, catalogLabel, type CatalogMap, EMPTY_CATALOG, STALE_TIME } from '@xeprime/api-client';
+import { STALE_TIME } from '@xeprime/api-client';
+import { catalogApi, catalogLabel, type CatalogMap, EMPTY_CATALOG } from '@/api/catalog';
 import { queryKeys } from '@/queries/query-keys';
 // Side-effect import, KHÔNG xoá: nạp module này là lúc client mặc định được cấu hình.
 import '@/lib/api-client';

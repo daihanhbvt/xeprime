@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useBranchScopeParams } from '@/features/branches/hooks/use-branch-scope';
 import { keepPageData } from '@/queries/keep-page-data';
 import { queryKeys } from '@/queries/query-keys';
 import {
@@ -27,11 +28,17 @@ import {
  * mới có nội dung, và chiều cao nhảy theo. Nhưng KHÔNG giữ khi đổi bộ lọc: xem `keepPageData`.
  */
 export function useBookingsPage(filters: BookingFilters) {
-  const params = bookingFiltersToParams(filters);
+  /*
+   * Scope chi nhánh ở thanh trên ghép vào đây, đúng chỗ web ghép (`useBookings`): `branchId` vào
+   * query key nên đổi chi nhánh là tự tải lại, và màn hình không phải nhớ gửi tham số.
+   */
+  const branchScope = useBranchScopeParams();
+  const scoped = { ...filters, ...branchScope };
+  const params = bookingFiltersToParams(scoped);
 
   return useQuery({
     queryKey: queryKeys.bookings.list(params),
-    queryFn: () => bookingsApi.list(filters),
+    queryFn: () => bookingsApi.list(scoped),
     placeholderData: keepPageData<Awaited<ReturnType<typeof bookingsApi.list>>>(params),
   });
 }

@@ -5,7 +5,7 @@ import type { IconName } from '@/components/ui/Chip';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /**
- * Biểu tượng cho 14 tiện ích của `VEHICLE_FEATURE_LABEL`.
+ * Biểu tượng cho mọi tiện ích của `VEHICLE_FEATURE_LABEL` (14 của ô tô + 8 của xe máy).
  *
  * Toàn bộ dùng bản `-outline`: bản đặc ở cỡ nhỏ bị bết thành một khối, đọc ra hình thù thì
  * chậm hơn đọc chữ bên cạnh — tức là biểu tượng phản tác dụng.
@@ -27,6 +27,15 @@ const FEATURE_ICON: Record<VehicleFeatureKey, IconName> = {
   screen: 'tv-outline',
   map: 'map-outline',
   child_seat: 'happy-outline',
+  // Xe máy (09/09/2026) — bộ tiện ích của `VEHICLE_FEATURE_LABEL` đã có thêm phần của xe máy.
+  abs: 'disc-outline',
+  traction_control: 'git-compare-outline',
+  smart_key: 'key-outline',
+  phone_holder: 'phone-portrait-outline',
+  top_box: 'cube-outline',
+  helmet_included: 'shield-outline',
+  raincoat_included: 'rainy-outline',
+  anti_theft: 'lock-closed-outline',
 };
 
 /**

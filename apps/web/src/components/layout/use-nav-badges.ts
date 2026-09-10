@@ -1,6 +1,6 @@
 'use client';
 
-import { PERMISSION } from '@xeprime/types';
+import { CHAT_SIDE, PERMISSION } from '@xeprime/types';
 import { NAV_BADGE, type NavBadgeKey } from '@/constants/nav';
 import { useChatUnreadCount } from '@/features/chat/hooks/use-chat-unread-count';
 import { usePendingBookingRequestCount } from '@/features/booking-requests/hooks/use-pending-booking-request-count';
@@ -27,7 +27,7 @@ export function useNavBadges(): NavBadgeCounts {
   const { has } = usePermissions();
 
   const isShopScope = Boolean(user) && !user?.platformRole;
-  const { data: chatUnread } = useChatUnreadCount(isShopScope && has(PERMISSION.TENANT_VIEW));
+  const { data: chatUnread } = useChatUnreadCount(CHAT_SIDE.SHOP, isShopScope && has(PERMISSION.TENANT_VIEW));
   const { data: pendingRequests } = usePendingBookingRequestCount(
     isShopScope && has(PERMISSION.BOOKING_REQUEST_VIEW),
   );

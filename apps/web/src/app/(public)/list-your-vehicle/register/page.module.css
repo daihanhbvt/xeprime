@@ -1,0 +1,5 @@
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--xp-space-lg) var(--xp-space-md) var(--xp-space-2xl);
+}

@@ -4,17 +4,25 @@ import { BankOutlined, HomeOutlined, KeyOutlined, TeamOutlined } from '@ant-desi
 import { Alert, Checkbox, Col, Radio, Row, Skeleton } from 'antd';
 import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { Controller, useFormState, useWatch, type Control } from 'react-hook-form';
+import {
+  Controller,
+  useFormState,
+  useWatch,
+  type Control,
+  type UseFormSetValue,
+} from 'react-hook-form';
 import {
   CATALOG_TYPE,
   SERVICE_TYPE,
-  TRANSMISSION_TYPE_VALUES,
+  vehicleFeatureAppliesTo,
+  vehicleTransmissionTypesFor,
   VEHICLE_TYPE,
   VEHICLE_SOURCE_TYPE,
   VEHICLE_SOURCE_TYPE_VALUES,
   vehicleFuelTypesFor,
   type VehicleSourceType,
 } from '@xeprime/types';
+import type { ReactNode } from 'react';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { CatalogCardPicker } from '@/features/catalog/components/CatalogCardPicker';
 import { LongTermPriceHint } from '@/features/rental-policies/components/LongTermPriceHint';
@@ -30,6 +38,15 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { presignVehicleImage } from '@/services/upload';
 import { useVehicleOptions } from '../hooks/use-vehicle-options';
 import { PublishRequiredLabel } from './VehicleCompleteness';
+/*
+ * Import VÒNG có chủ đích: `VehicleEnergyFields` dùng `FuelTypeSelect` của file này, còn file
+ * này dùng lại khối đó ở `SpecsSection`. ESM giải quyết được vì cả hai chỉ tham chiếu nhau lúc
+ * RENDER, không phải lúc khởi tạo module. Tách `FuelTypeSelect` ra file riêng sẽ sạch hơn, nhưng
+ * đó là một lần đổi import ở chín nơi — để lại đây một ghi chú thay vì một refactor lén.
+ */
+import { VehicleClassificationFields } from './VehicleClassificationFields';
+import { VehicleEnergyFields } from './VehicleEnergyFields';
+import { VehicleIdentityFields } from './VehicleIdentityFields';
 import styles from './VehicleForm.module.css';
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -80,9 +97,7 @@ export const VEHICLE_SECTIONS: ReadonlyArray<{
       'widthMm',
       'heightMm',
       'curbWeightKg',
-      'engineDisplacementCc',
       'horsepowerHp',
-      'transmission',
       'fuelConsumptionCity',
       'fuelConsumptionHighway',
       'fuelConsumptionCombined',
@@ -180,6 +195,22 @@ export interface SectionProps {
   branchOptions?: readonly { value: string; label: string }[];
   branchLoading?: boolean;
   branchDisabled?: boolean;
+  /**
+   * Lý do bốn ô CĂN CƯỚC của xe bị khoá (biển số · hộp số · nhiên liệu · năm sản xuất) —
+   * truyền khi xe đang công khai. `undefined` = mở bình thường.
+   *
+   * Nơi gọi truyền CHỮ chứ component không tự đoán: cùng luật nhưng hai màn nói khác nhau
+   * (cổng gian hàng vs khu tài khoản của chủ xe), và luật thật vẫn nằm ở server.
+   */
+  lockedNotice?: ReactNode;
+  /**
+   * `setValue` của form.
+   *
+   * Các khối phụ thuộc lẫn nhau (mẫu xe theo hãng, số chỗ/phân khúc theo loại xe, thông số theo
+   * nguồn năng lượng) phải DỌN ô không còn nghĩa ngay tại form. Không dọn thì người dùng nhìn
+   * thấy một giá trị mà server sắp xoá — và tưởng mình vừa lưu nó.
+   */
+  setValue?: UseFormSetValue<VehicleFormValues>;
 }
 
 export function BasicSection({
@@ -427,12 +458,6 @@ export function SourceTypeSection({ control }: Pick<SectionProps, 'control'>) {
 export function AdvancedSpecsSection({ control }: Pick<SectionProps, 'control'>) {
   const t = useTranslations('Vehicles.form.advanced');
   const tCommon = useTranslations('Common.labels');
-  const domainLabel = useDomainLabel();
-
-  const transmissionOptions = TRANSMISSION_TYPE_VALUES.map((value) => ({
-    value,
-    label: domainLabel('transmissionType', value),
-  }));
 
   return (
     <div className={styles.advancedStack}>
@@ -479,17 +504,13 @@ export function AdvancedSpecsSection({ control }: Pick<SectionProps, 'control'>)
         </Row>
       </section>
       <section className={styles.subSection}>
+        {/*
+          Dung tích động cơ nằm ở khối NĂNG LƯỢNG (chỉ có nghĩa với xe đốt trong) — ở đây chỉ còn
+          công suất, thứ mọi loại xe đều có. Hai ô cùng tên trên một form là hai nguồn cho cùng
+          một giá trị, và người dùng không biết ô nào đang được lưu.
+        */}
         <h3 className={styles.subSectionTitle}>{t('engineTitle')}</h3>
         <Row gutter={16}>
-          <Col xs={24} sm={12}>
-            <NumberField
-              control={control}
-              name="engineDisplacementCc"
-              label={t('engineDisplacementCc')}
-              placeholder={t('enginePlaceholder')}
-              min={1}
-            />
-          </Col>
           <Col xs={24} sm={12}>
             <NumberField
               control={control}
@@ -497,16 +518,6 @@ export function AdvancedSpecsSection({ control }: Pick<SectionProps, 'control'>)
               label={t('horsepowerHp')}
               placeholder={t('horsepowerPlaceholder')}
               min={1}
-            />
-          </Col>
-          <Col xs={24} sm={12}>
-            <SelectField
-              control={control}
-              name="transmission"
-              label={t('transmission')}
-              options={transmissionOptions}
-              allowClear
-              placeholder={t('transmissionPlaceholder')}
             />
           </Col>
         </Row>
@@ -548,8 +559,11 @@ export function AdvancedSpecsSection({ control }: Pick<SectionProps, 'control'>)
   );
 }
 
-export function SpecsSection({ control, isCar }: SectionProps) {
+export function SpecsSection({ control, isCar, lockedNotice, setValue }: SectionProps) {
   const t = useTranslations('Vehicles.form.specs');
+  const vehicleType = isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE;
+  const fuelType = useWatch({ control, name: 'fuelType' });
+  const transmissionOptions = useTransmissionOptions(vehicleType, fuelType);
 
   return (
     <Row gutter={16}>
@@ -559,18 +573,22 @@ export function SpecsSection({ control, isCar }: SectionProps) {
           name="plateNumber"
           label={<PublishRequiredLabel label={t('plateNumber')} />}
           placeholder={t('platePlaceholder')}
-          help={t('plateHelp')}
+          help={lockedNotice ?? t('plateHelp')}
+          disabled={Boolean(lockedNotice)}
         />
       </Col>
-      <Col xs={24} sm={12}>
-        <BrandSelect control={control} />
-      </Col>
-      <Col xs={24} sm={12}>
-        <TextField
+      {/*
+        Hãng → Mẫu xe: cặp chọn phụ thuộc dùng chung với wizard đăng nhanh và Owner Lite. Client
+        gửi `vehicleCatalogModelId`, backend chép nhãn hãng/mẫu xuống — nên không có đường nào
+        lưu được một chiếc xe máy hiệu Toyota.
+      */}
+      <Col xs={24}>
+        <VehicleIdentityFields
           control={control}
-          name="model"
-          label={t('model')}
-          placeholder={t('modelPlaceholder')}
+          vehicleType={vehicleType}
+          lockedNotice={lockedNotice}
+          disabled={Boolean(lockedNotice)}
+          setValue={setValue}
         />
       </Col>
       <Col xs={24} sm={12}>
@@ -581,22 +599,8 @@ export function SpecsSection({ control, isCar }: SectionProps) {
           placeholder={String(CURRENT_YEAR)}
           min={1980}
           max={CURRENT_YEAR + 1}
-        />
-      </Col>
-      <Col xs={24} sm={12}>
-        <NumberField
-          control={control}
-          name="seatCount"
-          label={t('seatCount')}
-          placeholder={t('seatPlaceholder')}
-          min={1}
-          max={64}
-        />
-      </Col>
-      <Col xs={24} sm={12}>
-        <FuelTypeSelect
-          control={control}
-          vehicleType={isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE}
+          help={lockedNotice}
+          disabled={Boolean(lockedNotice)}
         />
       </Col>
       <Col xs={24} sm={12}>
@@ -607,42 +611,68 @@ export function SpecsSection({ control, isCar }: SectionProps) {
           placeholder={t('colorPlaceholder')}
         />
       </Col>
-      {isCar ? (
-        <Col xs={24}>
-          <BodyTypePicker control={control} />
-        </Col>
-      ) : null}
+      {/*
+        Phân loại: ô tô có số chỗ + kiểu dáng thân xe, xe máy có phân khúc. Hai chiều đối xứng
+        và loại trừ nhau — ma trận `vehicleFieldPolicy` quyết định, không phải cờ `isCar` rải rác.
+      */}
+      <Col xs={24}>
+        <VehicleClassificationFields
+          control={control}
+          vehicleType={vehicleType}
+          bodyTypePicker={<BodyTypePicker control={control} />}
+          disabled={Boolean(lockedNotice)}
+          setValue={setValue}
+        />
+      </Col>
+      {/*
+        Nguồn năng lượng + thông số của nó dùng CHUNG một khối với wizard đăng xe nhanh
+        (`VehicleEnergyFields`): xe xăng hỏi lít/100km, xe điện hỏi km mỗi lần sạc, và ma trận
+        quyết định là `vehicleEnergySpecPolicy` ở `@xeprime/types` — cùng hàm backend dùng.
+      */}
+      <Col xs={24}>
+        <VehicleEnergyFields
+          control={control}
+          vehicleType={vehicleType}
+          transmissionOptions={transmissionOptions}
+          lockedNotice={lockedNotice}
+          disabled={Boolean(lockedNotice)}
+          setValue={setValue}
+        />
+      </Col>
     </Row>
   );
 }
 
 /**
- * Hãng xe — chọn trong danh mục do quản trị nền tảng cấu hình, KHÔNG còn nhập tự do.
+ * Lựa chọn truyền động HỢP LỆ của chiếc xe đang khai.
  *
- * Trước đây đây là ô AutoComplete gõ gì cũng lưu, nên bộ lọc ngoài chợ mọc ra "Toyota",
- * "toyota " và "TOYOTA" thành ba hãng khác nhau. Giá trị lưu xuống là `key` của danh mục.
+ * Xe máy tay ga/xe số/côn tay, ô tô MT/AT/CVT/DCT/AMT, xe điện truyền động một cấp — ba bộ khác
+ * hẳn nhau. Nguồn là `vehicleTransmissionTypesFor` ở `@xeprime/types`, cùng hàm backend dùng để
+ * từ chối giá trị sai, nên form không đưa ra một lựa chọn mà server sẽ chặn.
  */
-function BrandSelect({ control }: Pick<SectionProps, 'control'>) {
-  const t = useTranslations('Vehicles.form.specs');
-  const current = useWatch({ control, name: 'brand' });
-  const options = useCatalogOptions(CATALOG_TYPE.VEHICLE_BRAND, current);
-  return (
-    <SelectField
-      control={control}
-      name="brand"
-      label={t('brand')}
-      options={options}
-      placeholder={t('brandPlaceholder')}
-      allowClear
-      showSearch
-    />
+export function useTransmissionOptions(vehicleType: string, fuelType: string | null | undefined) {
+  const domainLabel = useDomainLabel();
+  return useMemo(
+    () =>
+      vehicleTransmissionTypesFor(vehicleType, fuelType).map((value) => ({
+        value,
+        label: domainLabel('transmissionType', value),
+      })),
+    [domainLabel, vehicleType, fuelType],
   );
 }
 
-function FuelTypeSelect({
+export function FuelTypeSelect({
   control,
   vehicleType,
-}: Pick<SectionProps, 'control'> & { vehicleType: string }) {
+  help,
+  disabled,
+}: Pick<SectionProps, 'control'> & {
+  vehicleType: string;
+  /** Lý do ô bị khoá (xe đang trên chợ) — nơi gọi truyền chữ, component không tự đoán. */
+  help?: ReactNode;
+  disabled?: boolean;
+}) {
   const t = useTranslations('Vehicles.form.specs');
   const current = useWatch({ control, name: 'fuelType' });
   const allOptions = useCatalogOptions(CATALOG_TYPE.FUEL_TYPE, current);
@@ -657,17 +687,31 @@ function FuelTypeSelect({
       placeholder={
         vehicleType === VEHICLE_TYPE.CAR ? t('fuelPlaceholderCar') : t('fuelPlaceholderMotorbike')
       }
+      help={help}
+      disabled={disabled}
       allowClear
     />
   );
 }
 
-/** Tiện ích — cùng danh mục `vehicle_feature` mà bộ lọc ngoài chợ dùng. */
-function FeaturesSelect({ control }: Pick<SectionProps, 'control'>) {
+/**
+ * Tiện ích — cùng danh mục `vehicle_feature` mà bộ lọc ngoài chợ dùng, đã LỌC theo loại xe.
+ *
+ * Bộ tiện ích cũ thiên hẳn về ô tô (camera 360, túi khí, lốp dự phòng, ghế trẻ em) và vẫn hiện
+ * nguyên cho xe máy. Nguồn lọc là `vehicleFeatureAppliesTo` ở `@xeprime/types` — cùng hàm backend
+ * dùng để TỪ CHỐI, nên ẩn ở đây không phải trang trí.
+ */
+export function FeaturesSelect({
+  control,
+  vehicleType,
+}: Pick<SectionProps, 'control'> & { vehicleType: string }) {
   const { items } = useCatalogItems(CATALOG_TYPE.VEHICLE_FEATURE);
   const options = useMemo(
-    () => items.map((item) => ({ value: item.key, label: item.label })),
-    [items],
+    () =>
+      items
+        .filter((item) => vehicleFeatureAppliesTo(item.key, vehicleType))
+        .map((item) => ({ value: item.key, label: item.label })),
+    [items, vehicleType],
   );
   return (
     <Controller
@@ -922,7 +966,7 @@ export function ImagesSection({ control }: SectionProps) {
   );
 }
 
-export function FeaturesDescriptionSection({ control }: SectionProps) {
+export function FeaturesDescriptionSection({ control, isCar }: SectionProps) {
   const t = useTranslations('Vehicles.form.media');
 
   return (
@@ -931,14 +975,17 @@ export function FeaturesDescriptionSection({ control }: SectionProps) {
         <div className={styles.fieldLabel} id="vehicle-features-label">
           {t('features')}
         </div>
-        <FeaturesSelect control={control} />
+        <FeaturesSelect
+          control={control}
+          vehicleType={isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE}
+        />
       </div>
 
       <div className={styles.descBlock}>
         <TextAreaField
           control={control}
           name="description"
-          label={<PublishRequiredLabel label={t('description')} />}
+          label={t('description')}
           placeholder={t('descriptionPlaceholder')}
           maxLength={4000}
           rows={5}

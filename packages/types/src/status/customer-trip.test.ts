@@ -3,7 +3,9 @@ import { BOOKING_STATUS, BOOKING_STATUS_VALUES } from './booking';
 import { BOOKING_REQUEST_STATUS, BOOKING_REQUEST_STATUS_VALUES } from './booking-request';
 import {
   CUSTOMER_TRIP_FILTER,
+  CUSTOMER_TRIP_FILTER_DEFAULT,
   CUSTOMER_TRIP_FILTER_STAGES,
+  CUSTOMER_TRIP_FILTER_VALUES,
   CUSTOMER_TRIP_STAGE,
   CUSTOMER_TRIP_STAGE_VALUES,
   customerTripStage,
@@ -130,14 +132,35 @@ describe('customerTripTimeline', () => {
 });
 
 describe('bộ lọc', () => {
-  it('mỗi chặng thuộc đúng một tab (ngoài tab Tất cả)', () => {
-    const buckets = Object.entries(CUSTOMER_TRIP_FILTER_STAGES).filter(
-      ([key]) => key !== CUSTOMER_TRIP_FILTER.ALL,
-    );
+  it('đúng hai tab — không mọc lại một tab cho mỗi chặng', () => {
+    expect(CUSTOMER_TRIP_FILTER_VALUES).toEqual([
+      CUSTOMER_TRIP_FILTER.CURRENT,
+      CUSTOMER_TRIP_FILTER.HISTORY,
+    ]);
+  });
+
+  it('hai tab phủ kín mọi chặng và không giao nhau', () => {
+    // Không còn tab `Tất cả` để hứng phần rơi rớt: chặng nào không thuộc đúng một tab là một
+    // chuyến biến mất khỏi màn hình của khách.
     for (const stage of CUSTOMER_TRIP_STAGE_VALUES) {
-      const hits = buckets.filter(([, stages]) => stages.includes(stage));
+      const hits = Object.values(CUSTOMER_TRIP_FILTER_STAGES).filter((stages) =>
+        stages.includes(stage),
+      );
       expect(hits).toHaveLength(1);
     }
+  });
+
+  it('`Lịch sử chuyến` đúng bằng tập chặng đã khép', () => {
+    expect([...CUSTOMER_TRIP_FILTER_STAGES[CUSTOMER_TRIP_FILTER.HISTORY]].sort()).toEqual(
+      CUSTOMER_TRIP_STAGE_VALUES.filter(isCustomerTripClosed).sort(),
+    );
+    expect(CUSTOMER_TRIP_FILTER_STAGES[CUSTOMER_TRIP_FILTER.CURRENT]).toContain(
+      CUSTOMER_TRIP_STAGE.AWAITING_HOLD,
+    );
+  });
+
+  it('mở màn ở tab chuyến hiện tại', () => {
+    expect(CUSTOMER_TRIP_FILTER_DEFAULT).toBe(CUSTOMER_TRIP_FILTER.CURRENT);
   });
 
   it('isCustomerTripClosed đúng với các kết cục cuối', () => {

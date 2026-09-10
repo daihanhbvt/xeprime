@@ -15,7 +15,7 @@ import {
   vehicleFuelTypesFor,
   type ListingSort,
 } from '@xeprime/types';
-import { catalogLabel } from '@xeprime/api-client';
+import { catalogLabel } from '@/api/catalog';
 import { type MarketplaceFilters } from '@xeprime/types';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';

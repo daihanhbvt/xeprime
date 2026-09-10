@@ -15,20 +15,20 @@
 | Module | Dòng | Đã dựng | Còn lại | Ghi chú |
 | --- | --- | --- | --- | --- |
 | Authentication | 7 | **7** | 0 | Xong trọn, kể cả Bearer + refresh xoay vòng (ADR 0017) |
-| Marketplace | 6 | 5 | 1 | Thiếu **MKT-05** trang gian hàng công khai |
+| Marketplace | 6 | 6 | 0 | Đủ — **MKT-05** dựng 09/09/2026 |
 | Booking / Rental | 16 | **16** | 0 (1 phần) | **BKG-14** xem được, chưa in/xuất PDF |
 | Vehicle | 13 | 11 | 2 | **VEH-08** bỏ · **VEH-13** hoãn |
-| Customer | 4 | 1 | 3 | Chỉ có CUS-04 (hồ sơ tài khoản khách) |
-| Shop | 9 | 1 | 8 | Chỉ có SHP-07 (tổng quan gian hàng) |
-| Finance | 6 | 2 | 4 | Chỉ có FIN-05/06 (tiền của MỘT đơn) |
+| Customer | 4 | **4** | 0 | Xong trọn (07/09) — `docs/mobile-customer-module-status.md` |
+| Shop | 9 | **7** | 2 | SHP-01→07 xong (08/09) — `docs/mobile-shop-module-status.md`. SHP-08/09 web chưa có bản để clone |
+| Finance | 6 | **6** | 0 | Xong trọn (07/09) — `docs/mobile-finance-module-status.md` |
 | Calendar | 3 | 0 | 3 | CAL-03 là ràng buộc CSDL, không phải màn |
 | Communication | 7 | 0 | 7 | COM-01 mới là màn rỗng |
 | Payment | 4 | 0 | 4 | **Không làm ở giai đoạn này** — ADR 0013 |
 | Admin / Management | 13 | 0 | 13 | Toàn bộ P3 |
 | System | 9 | 4 | 5 | i18n · hợp đồng API · R2 · test (một phần) |
 
-**Đã đóng gần trọn hai module lớn nhất**: Booking/Rental (16 dòng) và Vehicle (13 dòng) — cộng
-lại 29/97 dòng, và là phần nghiệp vụ nặng nhất của cổng quản lý.
+**Đã đóng trọn bốn module lớn nhất**: Booking/Rental (16 dòng), Vehicle (11/13), Customer (4)
+và Finance (6) — cộng lại 37/97 dòng, và là toàn bộ phần nghiệp vụ nặng của cổng quản lý.
 
 ---
 
@@ -45,8 +45,17 @@ lại 29/97 dòng, và là phần nghiệp vụ nặng nhất của cổng quả
 Có: `/explore` (MKT-01) · `/search` (MKT-02, 03) · `/listings/[id]` (MKT-04) · máy báo giá dùng
 trong wizard đặt xe (MKT-06).
 
-**Thiếu MKT-05 — trang gian hàng công khai.** Không có route `/shops/[slug]`; app đang không có
-đường nào để khách xem hồ sơ một gian hàng. Web có.
+**MKT-05 — trang gian hàng công khai (xong 09/09/2026).** Route `/shops/[slug]`, trùng địa chỉ
+với web nên một liên kết chia sẻ mở được ở cả hai nơi. Hai khối như web: hồ sơ gian hàng rồi
+danh sách xe đang cho thuê (native cuộn tải dần thay cho bộ phân trang số trang).
+
+Năm lối vào, đúng năm chỗ web có liên kết: gian hàng nổi bật ở trang chủ · chân mỗi thẻ xe ·
+thẻ gian hàng ở trang chi tiết xe · khối gian hàng ở chi tiết chuyến của khách · hàng gian hàng
+trong wizard gửi yêu cầu. Thêm một lối chỉ app có, thay cho `target="_blank"` của web: nút
+"Xem gian hàng" ở hồ sơ gian hàng trong khu quản lý.
+
+Ảnh bìa và logo dùng `components/ui/ShopCover.tsx` — CÙNG hiện thực với khối danh tính bên khu
+quản lý, vì khối đó là bản xem trước của chính trang này.
 
 ### 2.3 Booking / Rental — 16/16, một phần chưa trọn
 
@@ -67,28 +76,47 @@ Chi tiết ở `docs/mobile-vehicle-module-status.md`. Tóm tắt:
 - **VEH-13 (giá theo ngày) — HOÃN.** Lối vào duy nhất trên web là ô ngày ở `/manage/calendar`,
   mà app chưa có màn lịch. **Chặn bởi CAL-01.**
 
-### 2.5 Customer — 1/4
+### 2.5 Customer — 4/4 ✅
 
-Có CUS-04 (`/(tabs)/account`). Thiếu sổ khách, hồ sơ khách, đánh giá rủi ro — mục `customers`
-trong `manage-nav.ts` vẫn chưa có `href`.
+Đủ CUS-01→04 (07/09/2026). Route: `/manage/customers` · `/manage/customers/[id]` · `/account`.
+Mục `customers` trong `manage-nav.ts` đã có `href`. Chi tiết, ma trận quyền và phần còn nợ:
+`docs/mobile-customer-module-status.md`.
 
-### 2.6 Shop — 1/9
+⚠️ **Sửa mô tả cũ về CUS-04.** Bản 03/09 tính CUS-04 là "đã có" vì tab Tài khoản tồn tại; code
+thật lúc đó chỉ hiện avatar + tên từ `/auth/me`, **không** có hồ sơ (`/users/me`), không sửa
+được tên/ảnh, không có trạng thái xác thực SĐT. Đợt này mới thật sự parity với `AccountView`
+bên web.
 
-Có SHP-07 (`ManageHomeScreen`). Tám mục còn lại chưa có `href`: đăng ký gian hàng, hồ sơ gian
-hàng, chi nhánh, **chính sách thuê mặc định (SHP-04)**, nhân sự, tài xế, khu vực nhận xe, thùng rác.
+Đi kèm: dựng `/manage/receipts` ở dạng **sổ Thu-Chi đã lọc sẵn** để hai lối đi từ hồ sơ khách
+không thành nút chết. Đó chưa phải FIN-02 — xem §2.7.
 
-⚠️ **SHP-04 liên đới trực tiếp tới VEH-05**: màn Giá & chính sách của xe cho phép "đặt lại theo
-chính sách gian hàng", nhưng app chưa có màn để XEM/SỬA chính sách gian hàng đó.
+### 2.6 Shop — 7/9 ✅
 
-### 2.7 Finance — 2/6
+Đủ SHP-01→07 (08/09/2026). Route: `/manage/onboarding` · `/manage/shop` ·
+`/manage/shop/branches` · `/manage/shop/policies` · `/manage/members` · `/manage/drivers` ·
+`/manage`. Năm mục Shop trong `manage-nav.ts` đã có `href` + cờ gói.
 
-Có FIN-05 (ghi nhận thu tiền của đơn) và FIN-06 (thu/hoàn cọc) — cả hai gắn với MỘT đơn cụ thể,
-dựng trong module Booking.
+Kèm theo đợt này: **bộ chọn phạm vi chi nhánh** trên thanh trên của cả cổng quản lý
+(`BranchScopePill` ở dòng phụ của thanh trên), ghép `branchId` vào đội xe · đơn thuê · yêu cầu
+thuê · huy hiệu chờ duyệt.
 
-Thiếu bốn màn SỔ SÁCH: tổng quan tài chính, sổ thu-chi, danh mục thu chi, công nợ.
+⚠️ **SHP-08 (khu vực nhận xe) và SHP-09 (thùng rác) KHÔNG làm**: cột "Có tương đương web" của
+tracking là `Không` — không có golden master để clone, dựng trước web là tự đặt ra nghiệp vụ.
 
-⚠️ Đây là lý do Hồ sơ 360 của xe **không có** khối tiền theo kỳ (`FinanceEntityPanel` bên web) —
-xem `mobile-vehicle-module-status.md` §2.
+Chi tiết, ma trận quyền/gói và phần còn nợ: `docs/mobile-shop-module-status.md`.
+
+### 2.7 Finance — 6/6 ✅
+
+Đủ FIN-01→06 (07/09/2026). Route: `/manage/finance` · `/manage/receipts` · `/manage/debts`;
+danh mục thu chi là tấm trượt mở từ sổ Thu-Chi; FIN-05/06 vẫn ở màn đơn thuê. Ba mục
+`finance-overview` · `receipts` · `debts` trong `manage-nav.ts` đã có `href` + cờ gói.
+
+Chi tiết, ma trận quyền, bốn luật tiền và phần audit FIN-05/06:
+`docs/mobile-finance-module-status.md`.
+
+Hai khối dùng chung mở khoá theo: Hồ sơ 360 của xe **giờ CÓ** khối tiền theo kỳ
+(`FinanceEntityPanel`, cùng component với tab "Thu chi" của hồ sơ khách), và mọi `ReceiptCard`
+đều mở CÙNG một màn chi tiết phiếu.
 
 ### 2.8 Calendar — 0/3 ⛔ chặn hai thứ khác
 
@@ -140,11 +168,23 @@ Thiếu: SYS-05 trung tâm hỗ trợ · SYS-09 tìm kiếm toàn cục · và b
 | **Chưa có test nào** cho module | Cao | Ba chỗ ưu tiên: `publication.ts`, `sensitive-changes.ts`, nhánh `source` của màn giá |
 | Ba khu web còn chuỗi thô | Thấp | App đã `t()`; chuyển web sau chỉ là thay chuỗi |
 
-### 3.3 Nợ chung của app (không thuộc module nào)
+### 3.3 Customer — nợ tab "Thu chi" đã ĐÓNG (07/09, đợt Finance)
+
+Bốn khoản nợ dưới đây đã đóng; giữ lại bảng để người đọc sau biết chúng được giải thế nào.
+
+| Nợ | Đóng thế nào |
+| --- | --- |
+| **Phiếu trong tab chỉ ĐỌC** | `ReceiptCard` nhận `onPress` + mọc `DetailChevron`, mở `ReceiptDetailSheet` — CÙNG implementation với sổ Thu-Chi |
+| **Không tạo / duyệt / huỷ phiếu từ hồ sơ khách** | Giữ nguyên như web: panel không có ba hành động đó. Thao tác đi qua chi tiết phiếu hoặc sổ Thu-Chi |
+| **"Xem tất cả N phiếu" dẫn tới màn còn dở** | `/manage/receipts` giờ là FIN-02 đầy đủ; lối vào giữ `tenantCustomerId` và màn đích hiện một viên phạm vi nói rõ đang lọc theo ai |
+| Mục `receipts` trong menu chưa có `href` | Đã gắn, cùng `finance-overview` và `debts` |
+| Biểu đồ xu hướng dựng bằng `View` | Vẫn vậy — đủ cho hai series cùng thang. Thêm đường lợi nhuận thì lúc đó mới cân nhắc `react-native-svg` |
+
+### 3.4 Nợ chung của app (không thuộc module nào)
 
 | Nợ | Mức | Ghi chú |
 | --- | --- | --- |
-| **Lỗi yup là tiếng Việt cứng** | Trung bình | `@xeprime/validators` gắn chết câu lỗi. Người xem tiếng Anh vẫn thấy tiếng Việt ở lỗi form. **Web y hệt** — sửa phải sửa ở package và đổi cả hai client |
+| **Lỗi yup là tiếng Việt cứng** | Trung bình (đang giảm dần) | `@xeprime/validators` gắn chết câu lỗi ở phần lớn schema. Schema nào đã đổi message thành MÃ (`vehicleSourceFormSchema`, `accountProfileSchema`, ba schema Customer từ 07/09) thì đi qua `useValidationResolver` và dịch được ở CẢ HAI client. Phần còn lại vẫn tiếng Việt cứng |
 | **Message rich (`<b>`, `<n>`) gọi bằng `t()` trần → in ra NGUYÊN KHOÁ** | Cao | Đã dính hai lần (`overview.odometer`, `source.confirmType.body`). Còn 6 khoá cần soi: `list.row.{bookings,income,profit,loss}`, `overview.plate`, `source.partnership.shopShare` |
 | `.expo/types/router.d.ts` sinh SAI khi có Metro khác chạy | Trung bình | `rm -rf .expo/types` → khởi động lại Expo → **rồi mới** typecheck. Đã ghi ở `apps/mobile/README.md` §10 |
 | iOS chưa build lần nào | Cao (trước phát hành) | `apps/mobile/README.md` §10 |
@@ -166,9 +206,8 @@ Xếp theo **cái gì đang chặn cái gì**, không theo độ khó.
 3. **Làm mịn UI/UX màn danh sách xe + Hồ sơ 360** — đã có phản hồi thực tế (03/09): thẻ xe quá
    cao do chip trạng thái xuống dòng, bảng thông số 17 dòng phần lớn rỗng và nhãn wrap, tiêu đề
    thẻ không nhất quán.
-4. **Finance FIN-01→04** — mở khoá khối tiền theo kỳ ở Hồ sơ 360.
-5. **Communication COM-01/04/07** — chat thật + thông báo + push.
-6. MKT-05, Customer, Admin.
+4. **Communication COM-01/04/07** — chat thật + thông báo + push.
+5. Admin. *(Customer xong 07/09; Finance xong 07/09; Shop xong 08/09; MKT-05 xong 09/09.)*
 
 ---
 

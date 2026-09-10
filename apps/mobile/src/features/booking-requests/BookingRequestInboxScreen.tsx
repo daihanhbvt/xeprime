@@ -307,7 +307,7 @@ export function BookingRequestInboxScreen() {
           {...(meta === undefined ? {} : { meta })}
           onPageChange={setPage}
         >
-          {({ onScroll, headerHeight, contentContainerStyle }) => {
+          {({ onScroll, headerHeight, contentContainerStyle, bindList }) => {
             // Khung xương, lỗi và rỗng đều đi qua MỘT vùng cuộn có kéo-làm-mới: đúng lúc cần làm
             // mới nhất (rỗng, hoặc vừa mất sóng) mà là khối tĩnh thì không kéo được gì.
             // Là HÀM trả JSX chứ không phải component khai trong render — component mới mỗi lần
@@ -371,6 +371,7 @@ export function BookingRequestInboxScreen() {
               )
             ) : (
               <Animated.FlatList
+                ref={bindList}
                 data={items}
                 keyExtractor={keyOf}
                 {...LIST_TUNING}

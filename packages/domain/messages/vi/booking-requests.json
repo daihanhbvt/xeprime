@@ -220,7 +220,11 @@
       "expectedReturnValue": "{date} · giờ chốt khi gian hàng duyệt",
       "driverPickupAddress": "Địa chỉ đón",
       "destination": "Điểm đến",
-      "deliveryAddress": "Địa chỉ giao"
+      "deliveryAddress": "Địa chỉ giao",
+      "termsCheckbox": "Tôi đã đọc và đồng ý điều khoản của chủ xe",
+      "termsRequired": "Bạn cần đồng ý điều khoản của chủ xe trước khi gửi yêu cầu.",
+      "instantBook": "Xe này hỗ trợ Đặt ngay",
+      "instantBookHint": "Yêu cầu của bạn sẽ được xác nhận tự động ngay sau khi gửi."
     },
     "price": {
       "estimateTitle": "Tạm tính cho khoảng thời gian đã chọn",
@@ -260,7 +264,9 @@
       "notReserved": "Xe chưa được giữ chỗ. Yêu cầu cần được chủ xe chấp thuận trước.",
       "myTrips": "Chuyến của tôi",
       "chatShop": "Nhắn chủ xe",
-      "close": "Quay lại"
+      "close": "Quay lại",
+      "autoAccepted": "Đơn đã được xác nhận tự động — lịch xe đã giữ cho bạn.",
+      "autoAcceptedHold": "Đơn đã được xác nhận tự động — hoàn tất giữ chỗ để giữ lịch xe."
     },
     "duplicate": {
       "title": "Yêu cầu trùng lặp",

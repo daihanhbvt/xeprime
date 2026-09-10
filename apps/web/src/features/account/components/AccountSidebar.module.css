@@ -1,22 +1,39 @@
+/*
+ * Menu trái của khu tài khoản — mockup 08/09/2026: một thẻ trắng, mục đang mở có vạch gold bên
+ * trái trên nền gold nhạt, nhóm "Tài khoản" tách bằng gạch ngang + tiêu đề nhỏ in hoa, Đăng xuất
+ * màu lỗi, thẻ người dùng ở chân.
+ */
 .nav {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-md);
+  gap: var(--xp-space-lg);
+  min-height: 520px;
+  padding: var(--xp-space-sm) 0;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
 }
 
 .groups {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  gap: var(--xp-space-md);
+  gap: var(--xp-space-sm);
 }
 
 .group {
   min-width: 0;
 }
 
+.groupDivided {
+  margin-top: var(--xp-space-xs);
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
 .groupTitle {
   margin: 0 0 var(--xp-space-xs);
-  padding: 0 var(--xp-space-sm);
+  padding: 0 var(--xp-space-md);
   color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-overline);
   font-weight: var(--xp-font-weight-semibold);
@@ -38,8 +55,9 @@
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 10px 12px;
-  border-radius: var(--xp-border-radius);
+  padding: 10px var(--xp-space-md);
+  /* Vạch trái luôn có để mục không nhảy ngang khi được chọn — chỉ đổi màu. */
+  border-left: 3px solid transparent;
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size);
   font-weight: var(--xp-font-weight-medium);
@@ -57,16 +75,10 @@
 
 .active,
 .active:hover {
+  border-left-color: var(--xp-color-primary);
   background: var(--xp-color-bg-selected);
   color: var(--xp-color-primary-active);
   font-weight: var(--xp-font-weight-semibold);
-}
-
-.disabled,
-.disabled:hover {
-  background: none;
-  color: var(--xp-color-text-tertiary);
-  cursor: not-allowed;
 }
 
 .icon {
@@ -79,25 +91,15 @@
   min-width: 0;
 }
 
-.soonTag {
-  flex: none;
-  margin: 0;
-  background: var(--xp-color-bg-muted);
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-overline);
-  line-height: 1.6;
-}
-
 .logout {
   display: flex;
   align-items: center;
   gap: 12px;
   width: 100%;
-  margin-top: 0;
-  padding: 10px 12px;
+  margin-top: var(--xp-space-xs);
+  padding: 10px var(--xp-space-md);
   border: 0;
-  border-top: 1px solid var(--xp-color-border-subtle);
-  border-radius: 0 0 var(--xp-border-radius) var(--xp-border-radius);
+  border-left: 3px solid transparent;
   background: none;
   color: var(--xp-color-error);
   font-family: inherit;
@@ -111,6 +113,45 @@
   background: var(--xp-color-error-bg);
 }
 
+/* ── Thẻ người dùng ở chân menu ───────────────────────────────────────── */
+
+.userCard {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md) var(--xp-space-md) var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+.avatar {
+  flex: none;
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+.userText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.userName {
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userRole {
+  overflow: hidden;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /*
  * Mobile: dải cuộn ngang. Menu vẫn là MỘT cây dữ liệu — chỉ đổi cách bày.
  * `scroll-snap` giữ mục dừng gọn ở mép, không cắt ngang chữ.
@@ -118,10 +159,17 @@
 @media (max-width: 900px) {
   .nav {
     gap: 0;
+    min-height: 0;
+    padding: 0 0 var(--xp-space-xs);
+    border: 0;
+    border-bottom: 1px solid var(--xp-color-border);
+    border-radius: 0;
+    background: none;
   }
 
   .groups {
     flex-direction: row;
+    gap: var(--xp-space-xs);
     overflow-x: auto;
     padding-bottom: var(--xp-space-xs);
     scroll-snap-type: x proximity;
@@ -130,6 +178,13 @@
 
   .groups::-webkit-scrollbar {
     display: none;
+  }
+
+  .group,
+  .groupDivided {
+    margin: 0;
+    padding: 0;
+    border: 0;
   }
 
   .groupTitle {
@@ -159,14 +214,18 @@
     flex: none;
   }
 
-  /* Nhãn "Sắp có" tốn hết bề ngang trên dải ngang — mục mờ đã đủ nói lên điều đó. */
-  .soonTag {
-    display: none;
+  .logout {
+    flex: none;
+    width: auto;
+    margin: 0;
+    padding: 8px 14px;
+    border: 1px solid var(--xp-color-error);
+    border-radius: var(--xp-border-radius-pill);
+    white-space: nowrap;
   }
 
-  .logout {
-    margin-top: 0;
-    border-top: 1px solid var(--xp-color-border-subtle);
-    border-radius: 0;
+  /* Header marketplace đã hiện avatar/tên — thẻ người dùng ở đây chỉ chiếm chỗ. */
+  .userCard {
+    display: none;
   }
 }

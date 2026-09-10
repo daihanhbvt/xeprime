@@ -39,6 +39,7 @@ import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/t
 import { CancelTripSheet } from './components/CancelTripSheet';
 import { ReviewSheet } from './components/ReviewSheet';
 import { TripFinanceCard } from './components/TripFinanceCard';
+import { TripHoldPanel } from './components/TripHoldPanel';
 import { TripHandoverEvidence } from './components/TripHandoverEvidence';
 import { TripTimeline } from './components/TripTimeline';
 import { useCancelTrip, useTrip } from './hooks/use-trips';
@@ -269,6 +270,13 @@ function TripDetailBody({ trip }: { trip: CustomerTripDetail }) {
             </Card>
           ) : null}
 
+          {/*
+            Khoản GIỮ CHỖ đứng TRƯỚC khối tiền của chuyến, đúng thứ tự web đặt: khi chuyến đang
+            chờ tiền thì đây là việc DUY NHẤT khách cần làm, và nó không được nằm dưới một bảng
+            số liệu mà họ chưa có lý do để đọc.
+          */}
+          {trip.hold ? <TripHoldPanel hold={trip.hold} /> : null}
+
           {trip.finance ? (
             <TripFinanceCard finance={trip.finance} closed={closed} />
           ) : (
@@ -434,16 +442,21 @@ function VehicleBlock({ trip }: { trip: CustomerTripDetail }) {
  * Chỉ hiện SAO khi có đánh giá thật; `ratingAvg` là 0 lúc chưa ai đánh giá, và vẽ năm sao rỗng
  * cạnh "0.0" đọc ra như một gian hàng bị chấm điểm kém.
  *
- * KHÔNG có nút "Xem gian hàng" như web: trang gian hàng (MKT-05) chưa dựng ở app, nên nút đó
- * không có chỗ nào để tới. Khoá `detail.viewShop` giữ nguyên, gắn vào đây ngay khi trang có mặt.
+ * CẢ THẺ mở trang gian hàng thay cho liên kết "Xem gian hàng →" của web — cùng đích, nhưng
+ * đích chạm là cả khối chứ không phải một dòng chữ 12px. Mũi tên ở mép phải giữ lại lời hứa
+ * "bấm được" mà một liên kết gạch chân trên web nói bằng màu.
  */
 function ShopBlock({ trip }: { trip: CustomerTripDetail }) {
   const t = useTranslations('Trips.detail');
   const fmt = useAppFormat();
+  const navigateOnce = useNavigateOnce();
   const { shop } = trip;
 
   return (
-    <Card>
+    <Card
+      onPress={() => navigateOnce(ROUTES.explore.shopDetail(shop.slug))}
+      accessibilityLabel={t('viewShop')}
+    >
       <XStack ai="center" gap={space.sm}>
         <Avatar name={shop.name} size={40} />
         <YStack f={1} gap={2}>
@@ -463,6 +476,7 @@ function ShopBlock({ trip }: { trip: CustomerTripDetail }) {
             </Text>
           )}
         </YStack>
+        <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.placeholder} />
       </XStack>
     </Card>
   );

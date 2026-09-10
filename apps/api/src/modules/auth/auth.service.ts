@@ -155,6 +155,59 @@ export class AuthService {
     await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
   }
 
+  /**
+   * Đổi mật khẩu khi ĐÃ đăng nhập.
+   *
+   * Ba điều cố ý:
+   *  - Tài khoản chưa có mật khẩu → `PASSWORD_NOT_SET` (409), không phải tự động đặt: đặt lần đầu
+   *    là `setPassword`, và trộn hai luồng nghĩa là một phiên bị chiếm có thể GÁN mật khẩu cho
+   *    tài khoản OTP mà chủ nhân chưa từng đặt.
+   *  - Sai mật khẩu hiện tại → 400 `CURRENT_PASSWORD_INCORRECT`, KHÔNG phải 401: người dùng vẫn
+   *    đang đăng nhập hợp lệ, web không được coi đây là phiên hỏng.
+   *  - Không ghi mật khẩu hay hash vào log/exception — chỉ có mã lỗi.
+   */
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: { id: true, passwordHash: true },
+    });
+    if (!user) {
+      throw new UnauthorizedException({
+        code: API_ERROR_CODE.UNAUTHENTICATED,
+        message: 'Phiên không còn hợp lệ',
+      });
+    }
+    if (!user.passwordHash) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.PASSWORD_NOT_SET,
+        message: 'Tài khoản chưa có mật khẩu — hãy đặt mật khẩu lần đầu',
+      });
+    }
+    const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!ok) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.CURRENT_PASSWORD_INCORRECT,
+        message: 'Mật khẩu hiện tại không đúng',
+      });
+    }
+    if (await bcrypt.compare(newPassword, user.passwordHash)) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.PASSWORD_UNCHANGED,
+        message: 'Mật khẩu mới phải khác mật khẩu hiện tại',
+      });
+    }
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: user.id }, data: { passwordHash } });
+      // Link "quên mật khẩu" đang lơ lửng (nếu có) mất hiệu lực: mật khẩu vừa được chủ nhân
+      // xác nhận, không còn lý do để một email cũ ghi đè nó.
+      await tx.passwordResetToken.updateMany({
+        where: { userId: user.id, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+    });
+  }
+
   // ---- Quên / đặt lại mật khẩu ----------------------------------------------
 
   private hashToken(token: string): string {

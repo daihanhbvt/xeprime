@@ -1,7 +1,7 @@
 // Side-effect import, KHÔNG xoá: nạp module này là lúc client mặc định được cấu hình.
 import '@/lib/api-client';
 
-export { vehicleDocumentsApi } from '@xeprime/api-client';
+export { vehicleDocumentsApi } from '@/api/vehicle-documents/api';
 
 export type {
   ApplyOcrFieldsInput,
@@ -12,4 +12,4 @@ export type {
   VehicleDocumentOcrJob,
   VehicleDocumentSummary,
   VehicleDocumentVersion,
-} from '@xeprime/api-client';
+} from '@/api/vehicle-documents/api';

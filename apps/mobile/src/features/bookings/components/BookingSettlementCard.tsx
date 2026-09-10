@@ -88,7 +88,8 @@ export function BookingSettlementCard({ bookingId }: { bookingId: string }) {
     status === DEPOSIT_STATUS.REFUNDED ||
     status === DEPOSIT_STATUS.PARTIALLY_REFUNDED;
 
-  const needsMore = Number(data.additionalDue) > 0;
+  /* So sánh trên CHUỖI tiền, không `Number` — ADR 0007 (web còn dùng `Number` ở chỗ này). */
+  const needsMore = !isZeroMoney(data.additionalDue) && !isNegativeMoney(data.additionalDue);
 
   /*
    * Cọc còn THIẾU so với cấu hình trên đơn — phép trừ trên CHUỖI tiền, không `Number` (ADR 0007).

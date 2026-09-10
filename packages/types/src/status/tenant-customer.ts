@@ -103,6 +103,11 @@ export const TENANT_CUSTOMER_NOTE_TYPE_META: Readonly<Record<TenantCustomerNoteT
 export const CUSTOMER_DOCUMENT_TYPE = {
   CITIZEN_ID: 'citizen_id',
   DRIVER_LICENCE: 'driver_licence',
+  /**
+   * Hộ chiếu — khách nước ngoài không có CCCD (08/09/2026). Chủ xe chọn nó THAY CCCD ở thiết lập
+   * thủ tục cho thuê; đối chiếu là XUẤT TRÌNH/đối chiếu, không bao giờ "giữ bản gốc".
+   */
+  PASSPORT: 'passport',
   OTHER: 'other',
 } as const;
 
@@ -115,6 +120,7 @@ export const CUSTOMER_DOCUMENT_TYPE_VALUES = Object.values(
 export const CUSTOMER_DOCUMENT_TYPE_LABEL: Readonly<Record<CustomerDocumentType, string>> = {
   [CUSTOMER_DOCUMENT_TYPE.CITIZEN_ID]: 'CCCD / CMND',
   [CUSTOMER_DOCUMENT_TYPE.DRIVER_LICENCE]: 'Giấy phép lái xe',
+  [CUSTOMER_DOCUMENT_TYPE.PASSPORT]: 'Hộ chiếu',
   [CUSTOMER_DOCUMENT_TYPE.OTHER]: 'Giấy tờ khác',
 };
 
@@ -262,3 +268,73 @@ export function requiredIdentityDocuments(serviceType: string): CustomerDocument
     ? [CUSTOMER_DOCUMENT_TYPE.CITIZEN_ID]
     : [CUSTOMER_DOCUMENT_TYPE.CITIZEN_ID, CUSTOMER_DOCUMENT_TYPE.DRIVER_LICENCE];
 }
+
+/**
+ * Nhóm quan hệ được phép CHỌN với bộ quyền hiện tại.
+ *
+ * Bỏ các nhóm TÀI CHÍNH khi người dùng không có `finance.view` — backend từ chối chúng bằng 403,
+ * nên bày ra một lựa chọn chắc chắn lỗi là bẫy người dùng.
+ *
+ * Ở `@xeprime/types` chứ không ở từng client: web và app native phải lọc theo ĐÚNG một danh sách,
+ * và danh sách đó nằm ngay cạnh `TENANT_CUSTOMER_FINANCE_RELATIONSHIPS` mà nó đọc. Trả về GIÁ TRỊ
+ * chứ không phải `{value,label}` — nhãn là chữ hiện cho người dùng nên phải đi qua namespace
+ * `Domain` (ADR 0012), thứ một hằng ở tầng module không đọc được.
+ */
+export function relationshipValues(canViewFinance: boolean): readonly TenantCustomerRelationship[] {
+  return TENANT_CUSTOMER_RELATIONSHIP_VALUES.filter(
+    (value) => canViewFinance || !TENANT_CUSTOMER_FINANCE_RELATIONSHIPS.includes(value),
+  );
+}
+
+export function sortValues(canViewFinance: boolean): readonly TenantCustomerSort[] {
+  return TENANT_CUSTOMER_SORT_VALUES.filter(
+    (value) => canViewFinance || !TENANT_CUSTOMER_FINANCE_SORTS.includes(value),
+  );
+}
+
+/**
+ * Giá trị lọc/sắp xếp có hợp lệ với quyền hiện tại không — dùng để rơi về mặc định an toàn khi
+ * giá trị đến từ một nguồn không kiểm soát được (URL dán tay bên web, deep link bên app).
+ */
+export function isAllowedRelationship(
+  value: string | undefined,
+  canViewFinance: boolean,
+): value is TenantCustomerRelationship {
+  if (!value) return false;
+  if (!(TENANT_CUSTOMER_RELATIONSHIP_VALUES as readonly string[]).includes(value)) return false;
+  return (
+    canViewFinance ||
+    !TENANT_CUSTOMER_FINANCE_RELATIONSHIPS.includes(value as TenantCustomerRelationship)
+  );
+}
+
+export function isAllowedSort(
+  value: string | undefined,
+  canViewFinance: boolean,
+): value is TenantCustomerSort {
+  if (!value) return false;
+  if (!(TENANT_CUSTOMER_SORT_VALUES as readonly string[]).includes(value)) return false;
+  return canViewFinance || !TENANT_CUSTOMER_FINANCE_SORTS.includes(value as TenantCustomerSort);
+}
+
+/**
+ * Trần độ dài các ô nhập của sổ khách — MỘT nguồn cho cả ba lớp.
+ *
+ * `@IsIn`/`@MaxLength` của DTO backend, `customer*Schema` ở `@xeprime/validators`, và thuộc tính
+ * `maxLength` của ô nhập trên web/app native đều đọc từ đây. Trước đó cùng một con số được gõ
+ * lại ở từng nơi, và ba bản đó chỉ cần lệch một lần là người dùng gõ đủ ô nhập cho phép rồi bị
+ * server từ chối mà không hiểu tại sao.
+ *
+ * Đây là trần Ô NHẬP, không phải lớp chặn: lớp chặn thật vẫn là DTO + cột DB.
+ */
+export const TENANT_CUSTOMER_FIELD_MAX = {
+  FULL_NAME: 255,
+  EMAIL: 255,
+  ADDRESS: 500,
+  /** Lý do đánh dấu rủi ro — người sau đọc để hiểu vì sao có đánh dấu này. */
+  RISK_REASON: 1000,
+  /** Nội dung một ghi chú nội bộ. */
+  NOTE_BODY: 2000,
+  /** Nhãn tự đặt của giấy tờ loại "khác". */
+  DOCUMENT_CUSTOM_TYPE_NAME: 160,
+} as const;

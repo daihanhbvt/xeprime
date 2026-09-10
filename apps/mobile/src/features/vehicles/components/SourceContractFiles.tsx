@@ -63,7 +63,7 @@ export function SourceContractFiles<T extends FieldValues>({
 }) {
   const t = useTranslations('Common.components.fileList');
   const tActions = useTranslations('Common.actions');
-  const tMedia = useTranslations('Vehicles.form.media');
+  const tImage = useTranslations('Common.image');
   const toast = useAppToast();
   /* Thiếu quyền máy ảnh/thư viện có câu riêng — xem `useImageErrorMessage`. */
   const errorMessage = useImageErrorMessage(useErrorMessage());
@@ -253,13 +253,13 @@ export function SourceContractFiles<T extends FieldValues>({
       <BottomSheet open={choosing} onClose={() => setChoosing(false)} title={label}>
         <YStack gap={space.sm}>
           <Button
-            label={tMedia('takePhoto')}
+            label={tImage('takePhoto')}
             icon="camera-outline"
             variant="secondary"
             onPress={() => void add(IMAGE_SOURCE.CAMERA)}
           />
           <Button
-            label={tMedia('chooseFromLibrary')}
+            label={tImage('chooseFromLibrary')}
             icon="images-outline"
             variant="secondary"
             onPress={() => void add(IMAGE_SOURCE.LIBRARY)}

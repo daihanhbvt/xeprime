@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
 import { useForm, useWatch } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -22,6 +21,7 @@ import { DataRow } from '@/components/ui/DataRow';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { useActiveBranches } from '@/features/branches/hooks/use-branches';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
@@ -29,7 +29,6 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
-import { queryKeys } from '@/queries/query-keys';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 import {
@@ -43,7 +42,7 @@ import { VehicleWizardBar, type WizardStep } from './components/VehicleWizardBar
 import { VehicleCreateSuccess } from './components/VehicleCreateSuccess';
 import { formValuesToInput } from './mappers';
 import { useCreateVehicle } from './hooks/use-vehicle';
-import { branchLabel, branchesApi, vehiclesApi, type VehicleDetail } from './api';
+import { branchLabel, vehiclesApi, type VehicleDetail } from './api';
 
 /** Mặc định khi tạo mới: chọn sẵn giá trị hợp lệ để các ô bắt buộc không rỗng. */
 const EMPTY_DEFAULTS: VehicleFormValues = {
@@ -65,6 +64,8 @@ const EMPTY_DEFAULTS: VehicleFormValues = {
   color: '',
   fuelType: null,
   bodyType: null,
+  motorbikeCategory: null,
+  vehicleCatalogModelId: null,
   manufactureYear: null,
   seatCount: null,
   lengthMm: null,
@@ -77,6 +78,9 @@ const EMPTY_DEFAULTS: VehicleFormValues = {
   fuelConsumptionCity: null,
   fuelConsumptionHighway: null,
   fuelConsumptionCombined: null,
+  electricRangeKm: null,
+  batteryCapacityKwh: null,
+  electricConsumptionKwhPer100Km: null,
   weekdayPrice: null,
   weekendPrice: null,
   hourlyPrice: null,
@@ -185,10 +189,7 @@ export function CreateVehicleScreen() {
    * Chi nhánh: chọn sẵn cái MẶC ĐỊNH để thao tác vẫn một bước, nhưng vẫn là một trường thật trên
    * form — người dùng thấy xe sẽ nằm ở đâu và đổi được ngay tại đây.
    */
-  const branches = useQuery({
-    queryKey: queryKeys.branches.list({ status: 'active' }),
-    queryFn: () => branchesApi.list('active'),
-  });
+  const branches = useActiveBranches();
   const branchId = useWatch({ control, name: 'branchId' });
   const noProvince = tBranches('labels.noProvince');
   const branchOptions = useMemo(

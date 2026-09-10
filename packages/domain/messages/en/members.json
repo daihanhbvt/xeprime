@@ -4,7 +4,11 @@
     "tableLabel": "Member list",
     "loadError": "Could not load the member list",
     "empty": "No members yet",
-    "total": "{count, plural, one {# member} other {# members}}"
+    "total": "{count, plural, one {# member} other {# members}}",
+    "forbidden": {
+      "title": "No access",
+      "description": "You need permission to view shop members. Ask the shop owner to grant it."
+    }
   },
   "filters": {
     "search": "Find a member",
@@ -22,7 +26,8 @@
   "actions": {
     "invite": "Invite a member",
     "remove": "Remove member",
-    "removeConfirm": "Remove this member?"
+    "removeConfirm": "Remove this member?",
+    "changeRole": "Change role"
   },
   "toast": {
     "roleChanged": "Role updated",
@@ -57,7 +62,11 @@
       "createdBy": "Invited by"
     },
     "revoke": "Revoke",
-    "revokeConfirm": "Revoke this invitation? The link in the email stops working immediately."
+    "revokeConfirm": "Revoke this invitation? The link in the email stops working immediately.",
+    "invitedBy": "Invited by {name}",
+    "expiresAtLine": "Expires {at}",
+    "expiresIn": "{days, plural, one {# day} other {# days}} left",
+    "expiresToday": "Expires today"
   },
   "invitePage": {
     "title": "Shop invitation",

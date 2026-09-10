@@ -1,62 +1,183 @@
-import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
-import { apiGet, apiPost, apiRequest, fetchPage, type Paged } from '@/services/api-client';
+import { CHAT_ATTACHMENT_MAX_BYTES, CHAT_ATTACHMENT_MIME_TYPES } from '@xeprime/types';
+import { ApiClientError, apiGet, apiPost, apiRequest, fetchPage } from '@/services/api-client';
+import { uploadToR2 } from '@/services/upload';
 import type {
+  ChatAttachmentPresign,
   ChatMessage,
+  ChatUnreadSummary,
+  ConversationFilters,
+  ConversationListResult,
   ConversationSummary,
   FirebaseChatToken,
-  PresignResult,
+  MessageCursor,
+  MessagePage,
   SendMessageInput,
 } from './types';
 
-export const CONVERSATIONS_LIMIT = DEFAULT_PAGE_SIZE;
+/**
+ * Lối gọi API chat của WEB.
+ *
+ * ADR 0031: app native có bản riêng ở `apps/mobile/src/api/chat/api.ts`. Đường dẫn, tham số và
+ * cách bóc phong bì phải khớp nhau — chúng gọi cùng một backend — nhưng sửa một bên KHÔNG còn
+ * tự động sang bên kia.
+ *
+ * `side` là tham số BẮT BUỘC của mọi lời gọi đọc danh sách, và đó là chủ đích: một tài khoản có
+ * thể vừa thuê xe của gian hàng khác vừa là nhân viên gian hàng mình, nên "hội thoại của tôi"
+ * không phải một khái niệm — nó là hai hộp thư. Bắt buộc ở chữ ký hàm nghĩa là không có nơi gọi
+ * nào quên nó và nhận về một danh sách trộn.
+ */
+const CONVERSATIONS_DEFAULT_LIMIT = 20;
+const MESSAGES_DEFAULT_LIMIT = 30;
 
-export type ConversationListResult = Paged<ConversationSummary>;
-
-export const fetchConversations = (page = 1): Promise<ConversationListResult> =>
-  fetchPage<ConversationSummary>(
-    '/conversations',
-    { page, limit: CONVERSATIONS_LIMIT },
-    CONVERSATIONS_LIMIT,
-  );
-
-export const startConversation = (vehicleId: string): Promise<ConversationSummary> =>
-  apiPost<ConversationSummary>('/conversations', { vehicleId });
-
-export const fetchChatUnreadCount = (): Promise<{ count: number }> =>
-  apiGet<{ count: number }>('/conversations/unread-count');
-
-export interface MessagePage {
+interface MessageEnvelope {
   data: ChatMessage[];
-  nextBefore: string | null;
+  nextBefore?: string | null;
+  nextBeforeId?: string | null;
 }
 
-/** Endpoint trả `{ data, nextBefore }` (không bọc thêm lớp data — ResponseInterceptor). */
-export async function fetchMessages(conversationId: string, before?: string): Promise<MessagePage> {
-  const res = await apiRequest<ChatMessage[]>(`/conversations/${conversationId}/messages`, {
-    query: before ? { before } : undefined,
+export const chatApi = {
+  list(filters: ConversationFilters, page: number): Promise<ConversationListResult> {
+    return fetchPage<ConversationSummary>(
+      '/conversations',
+      {
+        side: filters.side,
+        page,
+        limit: CONVERSATIONS_DEFAULT_LIMIT,
+        ...(filters.q?.trim() ? { q: filters.q.trim() } : {}),
+        ...(filters.unreadOnly ? { unreadOnly: true } : {}),
+      },
+      CONVERSATIONS_DEFAULT_LIMIT,
+    );
+  },
+
+  /**
+   * Một hội thoại theo id — đường vào của deep link.
+   *
+   * Không suy từ danh sách: một thread im lặng ba tuần nằm ở trang 4, và `?c=` trong email hay
+   * thông báo đẩy phải mở được nó mà không phải tải hết các trang trước.
+   */
+  detail(id: string, side: string): Promise<ConversationSummary> {
+    return apiGet<ConversationSummary>(`/conversations/${encodeURIComponent(id)}`, { side });
+  },
+
+  /** Khách mở/lấy hội thoại với shop về một xe. Idempotent ở DB — bấm nhiều lần vẫn một thread. */
+  start(vehicleId: string): Promise<ConversationSummary> {
+    return apiPost<ConversationSummary>('/conversations', { vehicleId });
+  },
+
+  unreadCount(side: string): Promise<{ count: number }> {
+    return apiGet<{ count: number }>('/conversations/unread-count', { side });
+  },
+
+  /**
+   * Chưa đọc của CẢ HAI vai — cho biểu tượng chat trên thanh trên cùng.
+   *
+   * Khác `unreadCount(side)`: cái kia đếm cho MỘT hộp thư (mục menu trỏ thẳng vào hộp thư đó
+   * phải hiện đúng số của nó). Cái này trả lời "có gì đang đợi tôi ở bất kỳ đâu", nên chủ gian
+   * hàng đang lướt chợ xe vẫn thấy khách nhắn vào shop.
+   */
+  unreadSummary(): Promise<ChatUnreadSummary> {
+    return apiGet<ChatUnreadSummary>('/conversations/unread-summary');
+  },
+
+  async messages(conversationId: string, cursor?: MessageCursor | null): Promise<MessagePage> {
+    const res = (await apiRequest<ChatMessage[]>(
+      `/conversations/${encodeURIComponent(conversationId)}/messages`,
+      {
+        query: {
+          limit: MESSAGES_DEFAULT_LIMIT,
+          ...(cursor
+            ? { before: cursor.before, ...(cursor.beforeId ? { beforeId: cursor.beforeId } : {}) }
+            : {}),
+        },
+      },
+    )) as MessageEnvelope;
+
+    return {
+      data: res.data,
+      next: res.nextBefore ? { before: res.nextBefore, beforeId: res.nextBeforeId ?? null } : null,
+    };
+  },
+
+  send(conversationId: string, body: SendMessageInput): Promise<ChatMessage> {
+    return apiPost<ChatMessage>(
+      `/conversations/${encodeURIComponent(conversationId)}/messages`,
+      body,
+    );
+  },
+
+  markRead(conversationId: string): Promise<{ conversationId: string; unread: number }> {
+    return apiPost<{ conversationId: string; unread: number }>(
+      `/conversations/${encodeURIComponent(conversationId)}/read`,
+    );
+  },
+
+  firebaseToken(): Promise<FirebaseChatToken> {
+    return apiPost<FirebaseChatToken>('/chat/firebase-token');
+  },
+
+  presignAttachment(meta: {
+    fileName: string;
+    contentType: string;
+    fileSize: number;
+  }): Promise<ChatAttachmentPresign> {
+    return apiPost<ChatAttachmentPresign>('/chat/attachments/presign', meta);
+  },
+};
+
+/** `accept` của `<input type="file">` — dựng từ chính bộ MIME dùng chung, không gõ lại chuỗi. */
+export const CHAT_ATTACHMENT_ACCEPT = CHAT_ATTACHMENT_MIME_TYPES.join(',');
+
+export type ChatAttachmentRejection = 'type' | 'tooLarge';
+
+/**
+ * Chặn tệp sai TRƯỚC khi presign — báo ngay thay vì để người dùng chờ hết một vòng upload rồi
+ * mới nhận 400. Trần thật vẫn ở backend; đây là phép lịch sự, không phải lớp bảo vệ.
+ */
+export function validateChatAttachment(file: File): ChatAttachmentRejection | null {
+  if (!(CHAT_ATTACHMENT_MIME_TYPES as readonly string[]).includes(file.type)) return 'type';
+  if (file.size > CHAT_ATTACHMENT_MAX_BYTES) return 'tooLarge';
+  return null;
+}
+
+export interface UploadedChatAttachment {
+  url: string;
+  fileType: string;
+  fileName: string;
+  fileSize: number;
+}
+
+/**
+ * Presign → PUT thẳng R2 → trả metadata để gắn vào tin nhắn (ADR 0009 §5).
+ *
+ * `onProgress` đi tới `uploadToR2`, nơi đã có nhánh `XMLHttpRequest` cho phần trăm thật — một
+ * thanh tiến trình giả (nhảy 0 → 100) nói dối đúng lúc người dùng cần biết còn bao lâu.
+ */
+export async function uploadChatAttachment(
+  file: File,
+  onProgress?: (percent: number) => void,
+): Promise<UploadedChatAttachment> {
+  const rejection = validateChatAttachment(file);
+  if (rejection) {
+    throw new ApiClientError({
+      code: `CHAT_ATTACHMENT_${rejection}`,
+      message: `Chat attachment rejected: ${rejection}`,
+      status: 0,
+    });
+  }
+
+  const contentType = file.type || 'application/octet-stream';
+  const ticket: ChatAttachmentPresign = await chatApi.presignAttachment({
+    fileName: file.name,
+    contentType,
+    fileSize: file.size,
   });
-  const nextBefore = (res as { nextBefore?: string | null }).nextBefore ?? null;
-  return { data: res.data, nextBefore };
+  await uploadToR2(ticket.uploadUrl, file, onProgress);
+
+  return {
+    url: ticket.publicUrl,
+    fileType: contentType,
+    fileName: file.name,
+    fileSize: file.size,
+  };
 }
-
-export const sendChatMessage = (
-  conversationId: string,
-  body: SendMessageInput,
-): Promise<ChatMessage> => apiPost<ChatMessage>(`/conversations/${conversationId}/messages`, body);
-
-export const markConversationRead = (
-  conversationId: string,
-): Promise<{ conversationId: string; unread: number }> =>
-  apiPost(`/conversations/${conversationId}/read`);
-
-export const fetchFirebaseChatToken = (): Promise<FirebaseChatToken> =>
-  apiPost<FirebaseChatToken>('/chat/firebase-token');
-
-export const presignChatAttachment = (
-  fileName: string,
-  contentType: string,
-): Promise<PresignResult> =>
-  apiPost<PresignResult>('/chat/attachments/presign', { fileName, contentType });
-
-/** Upload R2 dùng chung toàn app — chuyển về services/upload (skill shared-code). */
-export { uploadToR2 } from '@/services/upload';

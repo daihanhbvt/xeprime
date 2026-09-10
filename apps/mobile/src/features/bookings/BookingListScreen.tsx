@@ -185,7 +185,7 @@ export function BookingListScreen({ vehicleId }: { vehicleId?: string }) {
           {...(meta === undefined ? {} : { meta })}
           onPageChange={setPage}
         >
-          {({ onScroll, headerHeight, contentContainerStyle }) => {
+          {({ onScroll, headerHeight, contentContainerStyle, bindList }) => {
             /*
               Khung xương, lỗi và rỗng đều đi qua MỘT vùng cuộn có kéo-làm-mới. Trước đây chúng
               là khối tĩnh, nên đúng lúc cần làm mới nhất — danh sách rỗng, hoặc vừa mất sóng —
@@ -243,6 +243,7 @@ export function BookingListScreen({ vehicleId }: { vehicleId?: string }) {
               )
             ) : (
               <Animated.FlatList
+                ref={bindList}
                 data={items}
                 keyExtractor={keyOf}
                 {...LIST_TUNING}

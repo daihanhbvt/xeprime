@@ -18,6 +18,18 @@ export const SURCHARGE_CATEGORY = {
   OVERTIME: 'overtime',
   CLEANING: 'cleaning',
   DAMAGE: 'damage',
+  /**
+   * Ba khoản của chuyến CÓ TÀI XẾ (08/09/2026) — phí chờ, quãng đường vượt mức, lưu trú qua đêm.
+   * Mức mặc định công bố trước ở `vehicle_driver_surcharge_rules`; khoản THẬT vẫn ghi ở đây.
+   */
+  WAITING: 'waiting',
+  LONG_DISTANCE: 'long_distance',
+  OVERNIGHT: 'overnight',
+  /**
+   * Vượt hạn mức km/ngày của chuyến TỰ LÁI (khác `long_distance` của chuyến có tài xế: bên kia
+   * trả cho công sức tài xế đi xa, bên này trả cho hao mòn xe chạy quá hạn mức đã công bố).
+   */
+  EXCESS_MILEAGE: 'excess_mileage',
   OTHER: 'other',
 } as const;
 
@@ -31,6 +43,10 @@ export const SURCHARGE_CATEGORY_META: Readonly<Record<SurchargeCategory, StatusM
     label: 'Hư hại / bồi thường',
     color: STATUS_COLOR.DANGER,
   },
+  [SURCHARGE_CATEGORY.WAITING]: { label: 'Phí chờ', color: STATUS_COLOR.WAITING },
+  [SURCHARGE_CATEGORY.LONG_DISTANCE]: { label: 'Đường dài', color: STATUS_COLOR.INFO },
+  [SURCHARGE_CATEGORY.OVERNIGHT]: { label: 'Lưu trú qua đêm', color: STATUS_COLOR.INFO },
+  [SURCHARGE_CATEGORY.EXCESS_MILEAGE]: { label: 'Vượt số km', color: STATUS_COLOR.WAITING },
   [SURCHARGE_CATEGORY.OTHER]: { label: 'Khác', color: STATUS_COLOR.NEUTRAL },
 };
 
@@ -38,6 +54,10 @@ export const SURCHARGE_CATEGORY_LABEL: Readonly<Record<SurchargeCategory, string
   [SURCHARGE_CATEGORY.OVERTIME]: 'Quá giờ',
   [SURCHARGE_CATEGORY.CLEANING]: 'Vệ sinh',
   [SURCHARGE_CATEGORY.DAMAGE]: 'Hư hại / bồi thường',
+  [SURCHARGE_CATEGORY.WAITING]: 'Phí chờ',
+  [SURCHARGE_CATEGORY.LONG_DISTANCE]: 'Phụ phí đường dài',
+  [SURCHARGE_CATEGORY.OVERNIGHT]: 'Tài xế lưu trú qua đêm',
+  [SURCHARGE_CATEGORY.EXCESS_MILEAGE]: 'Vượt số km cho phép',
   [SURCHARGE_CATEGORY.OTHER]: 'Khác',
 };
 

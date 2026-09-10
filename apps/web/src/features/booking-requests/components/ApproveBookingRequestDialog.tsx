@@ -4,11 +4,11 @@ import { Alert, Modal } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { toAppTz } from '@/lib/datetime';
-import type { BookingRequestItem } from '../types';
+import type { BookingRequestDecisionTarget } from '../types';
 import styles from './ApproveBookingRequestDialog.module.css';
 
 interface Props {
-  request: BookingRequestItem | null;
+  request: BookingRequestDecisionTarget | null;
   submitting: boolean;
   /** Lỗi lần duyệt vừa rồi (vd trùng lịch 409) — hộp thoại ở lại để đọc và quyết định tiếp. */
   error: string | null;
@@ -27,7 +27,7 @@ interface Props {
  * Trùng lịch trả 409: hộp thoại KHÔNG đóng — constraint DB mới là chỗ quyết định (ADR 0006),
  * và người trực cần thấy vì sao mình vừa không duyệt được.
  */
-function ApproveForm({ request, submitting, error, onCancel, onConfirm }: Props & { request: BookingRequestItem }) {
+function ApproveForm({ request, submitting, error, onCancel, onConfirm }: Props & { request: BookingRequestDecisionTarget }) {
   const t = useTranslations('BookingRequests');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();

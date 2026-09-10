@@ -1,0 +1,33 @@
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+/* Số CHỦ XE thực nhận — con số quan trọng nhất với họ, nên nó nổi hơn dòng chú thích. */
+.net {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  margin: 0;
+}
+
+.netLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.netValue {
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-bold);
+  white-space: nowrap;
+}
+
+.note {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}

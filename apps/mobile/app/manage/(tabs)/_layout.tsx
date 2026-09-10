@@ -36,6 +36,21 @@ export default function ManageTabsLayout() {
         <Tabs.Screen name="bookings" />
         <Tabs.Screen name="vehicles" />
         <Tabs.Screen name="maintenance" />
+        <Tabs.Screen name="customers" />
+        <Tabs.Screen name="finance" />
+        <Tabs.Screen name="receipts" />
+        <Tabs.Screen name="debts" />
+        {/*
+          Nhóm Gian hàng: `shop/` KHÔNG có `_layout` riêng, nên ba màn của nó là ba SCREEN phẳng
+          của chính bộ tab này (`shop/index`, `shop/branches`, `shop/policies`) — không phải một
+          navigator lồng. Nhờ vậy đi từ Chi nhánh sang Chính sách là ĐỔI mục, không chồng thêm
+          một nấc lui; còn URL vẫn là `/manage/shop/branches`, trùng web để deep link ánh xạ 1-1.
+        */}
+        <Tabs.Screen name="shop/index" />
+        <Tabs.Screen name="shop/branches" />
+        <Tabs.Screen name="shop/policies" />
+        <Tabs.Screen name="members" />
+        <Tabs.Screen name="drivers" />
         <Tabs.Screen name="more" />
       </Tabs>
     </ManageDrawerHost>

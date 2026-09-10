@@ -593,7 +593,7 @@ describe('OCR (Wave 5) — provider giả trong test, mặc định production l
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
   });
 
-  maybe('áp biển số vào XE public: đi qua luật sửa nhạy cảm → về chờ duyệt lại (ADR 0008)', async () => {
+  maybe('áp biển số vào XE public: bị TỪ CHỐI vì biển số đã khoá (09/09/2026)', async () => {
     const v = await createVehicle('OCR-PLATE');
     const doc = await createDocument(v.id);
     await attachFile(v.id, doc.id);
@@ -608,6 +608,39 @@ describe('OCR (Wave 5) — provider giả trong test, mặc định production l
       fields: { plateNumber: { value: '51A-999.99' } },
     };
     const job = await documents.requestOcr(tenantId, v.id, ownerId, doc.id);
+    /*
+     * Biển số là CĂN CƯỚC của xe đang trên chợ: khoá cả khi lệnh ghi đến từ OCR. Áp tự động
+     * một biển số khác lên listing đã kiểm duyệt là đúng thứ luật 09/09/2026 chặn — muốn đổi
+     * thì gỡ xe khỏi chợ rồi sửa tay.
+     */
+    await expect(
+      documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, {
+        fields: ['plateNumber'],
+        applyPlateToVehicle: true,
+      }),
+    ).rejects.toMatchObject({
+      status: 409,
+      response: { code: API_ERROR_CODE.VEHICLE_FIELD_LOCKED },
+    });
+
+    const vehicleRow = await prisma.vehicle.findUnique({
+      where: { id: v.id },
+      select: { plateNumber: true, publicStatus: true },
+    });
+    expect(vehicleRow?.plateNumber).not.toBe('51A-999.99');
+    expect(vehicleRow?.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC);
+  });
+
+  maybe('áp biển số vào xe CHƯA công khai vẫn chạy như cũ', async () => {
+    const v = await createVehicle('OCR-PLATE-DRAFT');
+    const doc = await createDocument(v.id);
+    await attachFile(v.id, doc.id);
+
+    fakeOcr.result = {
+      status: 'needs_review',
+      fields: { plateNumber: { value: '51A-123.45' } },
+    };
+    const job = await documents.requestOcr(tenantId, v.id, ownerId, doc.id);
     await documents.applyOcr(tenantId, v.id, ownerId, doc.id, job.id, {
       fields: ['plateNumber'],
       applyPlateToVehicle: true,
@@ -615,11 +648,9 @@ describe('OCR (Wave 5) — provider giả trong test, mặc định production l
 
     const vehicleRow = await prisma.vehicle.findUnique({
       where: { id: v.id },
-      select: { plateNumber: true, publicStatus: true },
+      select: { plateNumber: true },
     });
-    expect(vehicleRow?.plateNumber).toBe('51A-999.99');
-    // Sửa trường nhạy cảm của xe public → knockback chờ duyệt lại, không ở lại approved.
-    expect(vehicleRow?.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW);
+    expect(vehicleRow?.plateNumber).toBe('51A-123.45');
   });
 
   maybe('không đọc được → unreadable + mã lỗi; ngày OCR không hợp lệ khi áp → 400', async () => {

@@ -220,7 +220,11 @@
       "expectedReturnValue": "{date} · exact time confirmed on approval",
       "driverPickupAddress": "Pick-up address",
       "destination": "Destination",
-      "deliveryAddress": "Delivery address"
+      "deliveryAddress": "Delivery address",
+      "termsCheckbox": "I have read and agree to the owner's terms",
+      "termsRequired": "Please agree to the owner's terms before sending the request.",
+      "instantBook": "This vehicle supports Instant book",
+      "instantBookHint": "Your request will be confirmed automatically right after sending."
     },
     "price": {
       "estimateTitle": "Estimate for the selected period",
@@ -260,7 +264,9 @@
       "notReserved": "The car is not held yet. Your request needs the host's approval first.",
       "myTrips": "My trips",
       "chatShop": "Message the host",
-      "close": "Back"
+      "close": "Back",
+      "autoAccepted": "Your booking was confirmed automatically — the vehicle is reserved for you.",
+      "autoAcceptedHold": "Your booking was confirmed automatically — complete the hold to keep the reservation."
     },
     "duplicate": {
       "title": "Duplicate request",

@@ -1,3 +1,3 @@
-export { contractsApi } from '@xeprime/api-client';
+export { contractsApi } from '@/api/contracts/api';
 
-export type { Contract, ContractSnapshot } from '@xeprime/api-client';
+export type { Contract, ContractSnapshot } from '@/api/contracts/api';

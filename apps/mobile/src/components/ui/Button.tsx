@@ -99,6 +99,13 @@ export function Button({
       onPress={press}
       disabled={blocked}
       accessibilityRole="button"
+      /*
+        TÊN của nút đặt tường minh, không để trình đọc tự gom từ chữ bên trong: chữ nằm trong
+        `<Text>` của Tamagui, và cây khả truy cập không phải lúc nào cũng nhặt được nó lên nút —
+        khi ấy nút đọc ra là một "button" không tên. Đây cũng là điều làm nút tìm được bằng VAI
+        trong test, thay vì bằng chuỗi (mà chuỗi thì trùng với tiêu đề thẻ ngay cạnh).
+      */
+      accessibilityLabel={label}
       accessibilityState={{ busy: loading, disabled: blocked }}
       style={({ pressed }) => [
         block ? { alignSelf: 'stretch' } : { alignSelf: 'flex-start' },

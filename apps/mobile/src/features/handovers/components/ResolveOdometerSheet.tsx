@@ -148,7 +148,12 @@ export function ResolveOdometerSheet({
       /* Tiêu đề theo VIỆC, như web: bổ sung một số còn thiếu khác với sửa một số đã ghi. */
       title={handover.odometerMissing ? t('openMissing') : t('openCorrect')}
       footer={
-        <Button label={t('confirm')} loading={resolve.isPending} onPress={() => submit()} />
+        <Button
+          label={t('confirm')}
+          icon="speedometer-outline"
+          loading={resolve.isPending}
+          onPress={() => submit()}
+        />
       }
     >
       <YStack gap={space.sm}>
@@ -178,6 +183,8 @@ export function ResolveOdometerSheet({
         {decrease?.canConfirm ? (
           <Button
             label={t('decreaseOverride')}
+            /* Cảnh báo, không phải dấu tích: đây là đường ghi ĐÈ một số đo đã bị chặn một lần. */
+            icon="warning-outline"
             variant="danger"
             loading={resolve.isPending}
             onPress={() => submit(true)}

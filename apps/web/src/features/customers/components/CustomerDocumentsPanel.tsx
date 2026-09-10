@@ -22,24 +22,23 @@ import {
   Tag,
   Upload,
 } from 'antd';
-import { useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { useMemo, useState } from 'react';
 import {
   API_ERROR_CODE,
   CUSTOMER_DOCUMENT_EXPIRY_META,
   CUSTOMER_DOCUMENT_TYPE,
-  CUSTOMER_DOCUMENT_TYPE_LABEL,
   DOCUMENT_UPLOAD_MIME_TYPES,
   IDENTITY_VERIFY_METHOD_LABEL,
   IDENTITY_VERIFY_METHOD_VALUES,
   type CustomerDocumentExpiry,
-  type CustomerDocumentType,
   type IdentityVerifyMethod,
 } from '@xeprime/types';
 import { PreviewImage, PreviewImageGroup } from '@/components/data-display/PreviewImage';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DAY_PARAM_FORMAT, dayjs } from '@/lib/datetime';
 import { fetchCustomerDocumentDownload } from '../api';
-import { CUSTOMER_HINTS, DOCUMENT_TYPE_OPTIONS, isPreviewableImage } from '../constants';
+import { DOCUMENT_TYPE_VALUES, isPreviewableImage } from '../constants';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import {
   useCustomerDocumentPreviews,
@@ -52,6 +51,7 @@ import type { CustomerDocument } from '../types';
 import styles from './CustomerDocumentsPanel.module.css';
 import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useErrorMessage } from '@/i18n/use-error-message';
 
 const ACCEPT = DOCUMENT_UPLOAD_MIME_TYPES.join(',');
 
@@ -77,8 +77,11 @@ export function CustomerDocumentsPanel({
   canViewFiles: boolean;
   disabled?: boolean;
 }) {
+  const t = useTranslations('Customers');
+  const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
+  const errorMessage = useErrorMessage();
   const datePattern = useDatePickerPattern();
 
   const { message } = App.useApp();
@@ -94,6 +97,15 @@ export function CustomerDocumentsPanel({
 
   const isOtherType = documentType === CUSTOMER_DOCUMENT_TYPE.OTHER;
 
+  const typeOptions = useMemo(
+    () =>
+      DOCUMENT_TYPE_VALUES.map((value) => ({
+        value,
+        label: domainLabel('customerDocumentType', value),
+      })),
+    [domainLabel],
+  );
+
   async function handleUpload(file: File) {
     try {
       await upload.mutateAsync({
@@ -106,13 +118,18 @@ export function CustomerDocumentsPanel({
           file,
         },
       });
-      message.success('Đã tải giấy tờ lên kho riêng tư');
+      message.success(t('documents.uploaded'));
       setExpiresAt(null);
       setCustomTypeName('');
     } catch (err) {
+      /*
+       * Nhánh chung giữ `getErrorMessage`: hỏng ở bước PUT lên R2 ném một `Error` THƯỜNG (không
+       * mã), và câu của nó là thứ duy nhất nói được đã ngã ở đâu. Dịch theo mã ở đây biến mọi sự
+       * cố tải tệp thành một câu chung chung. Nhánh có MÃ thì vẫn dịch, như luật.
+       */
       message.error(
         getErrorCode(err) === API_ERROR_CODE.UPLOADS_NOT_CONFIGURED
-          ? 'Kho tài liệu riêng tư chưa được cấu hình — liên hệ quản trị hệ thống'
+          ? t('documents.uploadsNotConfigured')
           : getErrorMessage(err),
       );
     }
@@ -125,7 +142,7 @@ export function CustomerDocumentsPanel({
       const ticket = await fetchCustomerDocumentDownload(customerId, document.id);
       window.open(ticket.downloadUrl, '_blank', 'noopener,noreferrer');
     } catch (err) {
-      message.error(getErrorMessage(err));
+      message.error(errorMessage(err));
     } finally {
       setOpening(null);
     }
@@ -138,16 +155,16 @@ export function CustomerDocumentsPanel({
 
   return (
     <section className={styles.panel}>
-      <p className={styles.hint}>{CUSTOMER_HINTS.documents}</p>
+      <p className={styles.hint}>{t('hints.documents')}</p>
 
       {canManage && !disabled ? (
         <div className={styles.uploader}>
           <Select
             className={styles.typeSelect}
             value={documentType}
-            options={DOCUMENT_TYPE_OPTIONS}
+            options={typeOptions}
             onChange={setDocumentType}
-            aria-label="Loại giấy tờ"
+            aria-label={t('documents.type')}
           />
           {isOtherType ? (
             <Input
@@ -155,14 +172,14 @@ export function CustomerDocumentsPanel({
               value={customTypeName}
               onChange={(event) => setCustomTypeName(event.target.value)}
               maxLength={160}
-              placeholder="Tên giấy tờ (ví dụ: Hộ chiếu)"
-              aria-label="Tên giấy tờ khác"
+              placeholder={t('documents.customNamePlaceholder')}
+              aria-label={t('documents.customName')}
             />
           ) : null}
           <DatePicker
             className={styles.expiry}
             format={datePattern.date}
-            placeholder="Hạn giấy tờ (không bắt buộc)"
+            placeholder={t('documents.expiresAt')}
             value={expiresAt ? dayjs(expiresAt, DAY_PARAM_FORMAT) : null}
             onChange={(value) => setExpiresAt(value ? value.format(DAY_PARAM_FORMAT) : null)}
           />
@@ -175,7 +192,7 @@ export function CustomerDocumentsPanel({
             }}
           >
             <Button icon={<UploadOutlined />} loading={upload.isPending}>
-              Tải giấy tờ lên
+              {t('documents.upload')}
             </Button>
           </Upload>
         </div>
@@ -186,20 +203,17 @@ export function CustomerDocumentsPanel({
       {isError && !data ? (
         <Result
           status="warning"
-          title="Không tải được danh sách giấy tờ"
+          title={t('documents.errorTitle')}
           extra={
             <Button onClick={() => void refetch()} loading={isFetching}>
-              Thử lại
+              {tCommon('actions.retry')}
             </Button>
           }
         />
       ) : null}
 
       {!isLoading && !isError && items.length === 0 ? (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="Chưa có giấy tờ nào của khách này"
-        />
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('documents.emptyTitle')} />
       ) : null}
 
       {items.length > 0 ? (
@@ -231,12 +245,11 @@ export function CustomerDocumentsPanel({
                     {document.documentType === CUSTOMER_DOCUMENT_TYPE.OTHER &&
                     document.customTypeName
                       ? document.customTypeName
-                      : (CUSTOMER_DOCUMENT_TYPE_LABEL[
-                          document.documentType as CustomerDocumentType
-                        ] ?? document.documentType)}
+                      : domainLabel('customerDocumentType', document.documentType)}
                   </div>
                   <div className={styles.itemMeta}>
-                    {document.originalName} · {document.uploadedByName ?? 'Không rõ người tải'} ·{' '}
+                    {document.originalName} ·{' '}
+                    {document.uploadedByName ?? t('documents.unknownUploader')} ·{' '}
                     {fmt.date(document.createdAt)}
                   </div>
                 </div>
@@ -246,17 +259,19 @@ export function CustomerDocumentsPanel({
                     meta={CUSTOMER_DOCUMENT_EXPIRY_META}
                     group="customerDocumentExpiry"
                   />
-                  {document.expiresAt ? <Tag>Hạn {fmt.date(document.expiresAt)}</Tag> : null}
+                  {document.expiresAt ? (
+                    <Tag>{t('documents.expiresTag', { date: fmt.date(document.expiresAt) })}</Tag>
+                  ) : null}
                   {/*
                     Đối chiếu là việc RIÊNG với hạn giấy tờ: một CCCD còn hạn mà chưa ai soi vẫn
                     là rủi ro. Hiện cả hai trạng thái, không gộp thành một dấu "ổn".
                   */}
                   {document.verifiedAt ? (
                     <Tag color="green" icon={<SafetyCertificateOutlined />}>
-                      Đã đối chiếu · {fmt.date(document.verifiedAt)}
+                      {t('documents.verified', { date: fmt.date(document.verifiedAt) })}
                     </Tag>
                   ) : (
-                    <Tag>Chưa đối chiếu</Tag>
+                    <Tag>{t('documents.notVerified')}</Tag>
                   )}
                 </div>
                 <div className={styles.itemActions}>
@@ -271,7 +286,7 @@ export function CustomerDocumentsPanel({
                       loading={opening === document.id}
                       onClick={() => void openDocument(document)}
                     >
-                      Mở tệp
+                      {t('documents.openFile')}
                     </Button>
                   ) : null}
                   {/*
@@ -304,28 +319,30 @@ export function CustomerDocumentsPanel({
                               input: { verifyMethod: key as IdentityVerifyMethod },
                             },
                             {
-                              onSuccess: () => message.success('Đã ghi nhận đối chiếu'),
-                              onError: (err) => message.error(getErrorMessage(err)),
+                              onSuccess: () => message.success(t('documents.verifyRecorded')),
+                              onError: (err) => message.error(errorMessage(err)),
                             },
                           ),
                       }}
                     >
                       <Button size="small" icon={<SafetyCertificateOutlined />}>
-                        {document.verifiedAt ? 'Đối chiếu lại' : 'Đã đối chiếu'}
+                        {document.verifiedAt
+                          ? t('documents.verifyAgain')
+                          : t('documents.verify')}
                       </Button>
                     </Dropdown>
                   ) : null}
                   {canManage && !disabled ? (
                     <Popconfirm
-                      title="Gỡ giấy tờ này khỏi hồ sơ khách?"
-                      okText="Gỡ"
-                      cancelText="Đóng"
+                      title={t('documents.removeTitle')}
+                      okText={t('documents.removeOk')}
+                      cancelText={tCommon('actions.close')}
                       onConfirm={() =>
                         remove.mutate(
                           { id: customerId, documentId: document.id },
                           {
-                            onSuccess: () => message.success('Đã gỡ giấy tờ'),
-                            onError: (err) => message.error(getErrorMessage(err)),
+                            onSuccess: () => message.success(t('documents.removed')),
+                            onError: (err) => message.error(errorMessage(err)),
                           },
                         )
                       }
@@ -334,7 +351,7 @@ export function CustomerDocumentsPanel({
                         size="small"
                         danger
                         icon={<DeleteOutlined />}
-                        aria-label={`Gỡ ${document.originalName}`}
+                        aria-label={t('documents.removeLabel', { name: document.originalName })}
                       />
                     </Popconfirm>
                   ) : null}

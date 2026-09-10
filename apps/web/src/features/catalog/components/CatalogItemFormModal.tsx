@@ -1,18 +1,22 @@
 'use client';
 
 import { App } from 'antd';
-import { yupResolver } from '@hookform/resolvers/yup';
+import { useTranslations } from 'next-intl';
+import { useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import * as yup from 'yup';
 import {
   CATALOG_KEY_PATTERN,
   CATALOG_TYPES_WITH_ICON,
-  CATALOG_TYPE_LABEL,
-  type CatalogType,
+  VEHICLE_TYPE_VALUES,
+  type CatalogItemType,
 } from '@xeprime/types';
 import { DialogForm } from '@/components/form/DialogForm';
+import { SelectField } from '@/components/form/SelectField';
 import { SwitchField } from '@/components/form/SwitchField';
 import { TextField } from '@/components/form/TextField';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { getErrorMessage } from '@/services/api-client';
 import { useCreateCatalogItem, useUpdateCatalogItem } from '../use-admin-catalog';
@@ -21,14 +25,12 @@ import { PreviewImage } from '@/components/data-display/PreviewImage';
 import styles from './CatalogItemFormModal.module.css';
 
 const schema = yup.object({
-  key: yup
-    .string()
-    .trim()
-    .required('Nhập mã')
-    .matches(CATALOG_KEY_PATTERN, 'Chỉ chữ thường không dấu, số, gạch ngang hoặc gạch dưới'),
-  label: yup.string().trim().required('Nhập tên hiển thị').max(120),
+  key: yup.string().trim().required('keyRequired').matches(CATALOG_KEY_PATTERN, 'keyPattern'),
+  label: yup.string().trim().required('labelRequired').max(120),
   description: yup.string().trim().max(255).default(''),
   iconUrl: yup.string().trim().max(2000).default(''),
+  /** Rỗng = áp dụng cho MỌI loại xe — xem `catalog_items.vehicle_types` trong schema. */
+  vehicleTypes: yup.array(yup.string().oneOf(VEHICLE_TYPE_VALUES).required()).default([]),
   active: yup.boolean().default(true),
 });
 
@@ -47,11 +49,14 @@ export function CatalogItemFormModal({
   onClose,
 }: {
   open: boolean;
-  type: CatalogType;
+  type: CatalogItemType;
   /** null = thêm mới. */
   item: CatalogItemAdmin | null;
   onClose: () => void;
 }) {
+  const t = useTranslations('AdminCatalog.form');
+  const domainLabel = useDomainLabel();
+  const resolver = useValidationResolver<FormValues>(schema, 'AdminCatalog.form');
   const { message } = App.useApp();
   const create = useCreateCatalogItem();
   const update = useUpdateCatalogItem();
@@ -60,17 +65,30 @@ export function CatalogItemFormModal({
   const withIcon = CATALOG_TYPES_WITH_ICON.includes(type);
 
   const { control, handleSubmit } = useForm<FormValues>({
-    resolver: yupResolver(schema),
+    resolver,
     defaultValues: item
       ? {
           key: item.key,
           label: item.label,
           description: item.description ?? '',
           iconUrl: item.iconUrl ?? '',
+          vehicleTypes: item.vehicleTypes as FormValues['vehicleTypes'],
           active: item.active,
         }
-      : { key: '', label: '', description: '', iconUrl: '', active: true },
+      : {
+          key: '',
+          label: '',
+          description: '',
+          iconUrl: '',
+          vehicleTypes: [],
+          active: true,
+        },
   });
+  const vehicleTypeOptions = useMemo(
+    () =>
+      VEHICLE_TYPE_VALUES.map((value) => ({ value, label: domainLabel('vehicleType', value) })),
+    [domainLabel],
+  );
   const iconUrl = useWatch({ control, name: 'iconUrl' });
 
   const onSubmit = handleSubmit((values) => {
@@ -78,11 +96,12 @@ export function CatalogItemFormModal({
       label: values.label.trim(),
       description: values.description?.trim() || null,
       iconUrl: withIcon ? values.iconUrl?.trim() || null : null,
+      vehicleTypes: values.vehicleTypes ?? [],
       active: values.active,
     };
     const done = {
       onSuccess: () => {
-        message.success(isEdit ? 'Đã cập nhật mục' : 'Đã thêm mục');
+        message.success(isEdit ? t('updated') : t('created'));
         onClose();
       },
       onError: (err: unknown) => message.error(getErrorMessage(err)),
@@ -93,10 +112,14 @@ export function CatalogItemFormModal({
 
   return (
     <ResponsiveDialog
-      title={isEdit ? `Sửa: ${item?.label}` : `Thêm vào ${CATALOG_TYPE_LABEL[type]}`}
+      title={
+        isEdit
+          ? t('editTitle', { label: item?.label ?? '' })
+          : t('createTitle', { type: domainLabel('catalogType', type) })
+      }
       open={open}
       onClose={onClose}
-      okText={isEdit ? 'Lưu' : 'Thêm'}
+      okText={isEdit ? t('save') : t('add')}
       onOk={() => void onSubmit()}
       confirmLoading={pending}
     >
@@ -104,35 +127,49 @@ export function CatalogItemFormModal({
         <TextField
           control={control}
           name="key"
-          label="Mã"
-          placeholder="vd: coupe"
+          label={t('key')}
+          placeholder={t('keyPlaceholder')}
           disabled={isEdit}
-          help={
-            isEdit
-              ? 'Không đổi được — xe đã lưu đang trỏ vào mã này.'
-              : 'Chữ thường không dấu. Đây là giá trị lưu xuống xe và đi vào link bộ lọc.'
-          }
+          help={isEdit ? t('keyLocked') : t('keyHelp')}
         />
-        <TextField control={control} name="label" label="Tên hiển thị" placeholder="vd: Coupe" />
+        <TextField
+          control={control}
+          name="label"
+          label={t('label')}
+          placeholder={t('labelPlaceholder')}
+        />
         <TextField
           control={control}
           name="description"
-          label="Dòng mô tả phụ"
-          placeholder="vd: 2 chỗ · thể thao"
-          help="Hiện nhỏ dưới tên ở thẻ chọn và bộ lọc. Bỏ trống cũng được."
+          label={t('description')}
+          placeholder={t('descriptionPlaceholder')}
+          help={t('descriptionHelp')}
+        />
+        {/*
+          Chiều áp dụng: hãng chỉ bán xe máy, tiện nghi chỉ có ở ô tô… Bỏ trống = mọi loại xe,
+          nên ô này KHÔNG bắt buộc — nhưng để trống một hãng xe máy là lý do form ô tô hiện ra
+          những hãng không bán ô tô.
+        */}
+        <SelectField
+          control={control}
+          name="vehicleTypes"
+          label={t('vehicleTypes')}
+          options={vehicleTypeOptions}
+          help={t('vehicleTypesHelp')}
+          mode="multiple"
         />
         {withIcon ? (
           <>
             <TextField
               control={control}
               name="iconUrl"
-              label="Đường dẫn ảnh"
-              placeholder="/body-types/coupe.png"
-              help="Ảnh đặt trong thư mục public của web, hoặc URL đầy đủ."
+              label={t('iconUrl')}
+              placeholder={t('iconUrlPlaceholder')}
+              help={t('iconUrlHelp')}
             />
             {iconUrl ? (
               <div className={styles.preview}>
-                <span className={styles.previewLabel}>Xem trước</span>
+                <span className={styles.previewLabel}>{t('preview')}</span>
                 <PreviewImage src={iconUrl} alt="" className={styles.previewImage} />
               </div>
             ) : null}
@@ -141,8 +178,8 @@ export function CatalogItemFormModal({
         <SwitchField
           control={control}
           name="active"
-          label="Đang bật"
-          description="Tắt thì mục biến khỏi form tạo xe và bộ lọc; xe cũ vẫn hiển thị đúng tên."
+          label={t('active')}
+          description={t('activeHelp')}
         />
       </DialogForm>
     </ResponsiveDialog>

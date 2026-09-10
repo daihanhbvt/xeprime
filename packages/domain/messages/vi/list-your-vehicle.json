@@ -1,0 +1,171 @@
+{
+  "landing": {
+    "title": "Đăng ký xe",
+    "back": "Quay lại",
+    "cta": "Đăng ký xe tự lái",
+    "subtitle": "Gia tăng thu nhập hằng tháng cùng XePrime",
+    "policyLink": "Quy định sử dụng chợ xe",
+    "steps": {
+      "title": "Thủ tục đăng ký đơn giản & nhanh chóng",
+      "info": {
+        "title": "Điền thông tin xe",
+        "desc": "Hãng xe, mẫu xe, truyền động và các thông số cơ bản."
+      },
+      "images": {
+        "title": "Đăng tải hình ảnh xe",
+        "desc": "Tối thiểu 4 ảnh rõ nét: trước, sau, bên hông và nội thất."
+      },
+      "review": {
+        "title": "XePrime duyệt hồ sơ",
+        "desc": "Đội ngũ kiểm tra thông tin và kích hoạt hiển thị trên chợ."
+      },
+      "rent": {
+        "title": "Bắt đầu cho thuê",
+        "desc": "Nhận yêu cầu thuê xe từ khách hàng tiềm năng trên hệ thống."
+      }
+    }
+  },
+  "wizard": {
+    "loading": "Đang tải…",
+    "exit": "Thoát",
+    "backToList": "Về danh sách xe",
+    "saveDraft": "Lưu nháp",
+    "finish": "Lưu & gửi duyệt",
+    "savedDraft": "Đã lưu xe ở dạng nháp",
+    "savedAndSubmitted": "Đã lưu và gửi xe đi duyệt",
+    "draftExists": "Xe đã được lưu — bấm lại sẽ tiếp tục trên chính chiếc xe đó, không tạo xe mới.",
+    "manageVehicle": "Quản lý xe",
+    "signInTitle": "Đăng nhập để đăng xe",
+    "signInBody": "Đăng xe cho thuê cần một tài khoản để chúng tôi liên hệ và chuyển tiền thuê.",
+    "signInCta": "Đăng nhập",
+    "needTenantTitle": "Tạo hồ sơ chủ xe trước",
+    "needTenantBody": "Hồ sơ chủ xe giữ thông tin liên hệ và địa chỉ nhận xe của bạn.",
+    "needTenantCta": "Tạo hồ sơ chủ xe",
+    "forbiddenTitle": "Không có quyền thêm xe",
+    "forbiddenBody": "Tài khoản của bạn chưa được cấp quyền thêm xe trong gian hàng này.",
+    "steps": {
+      "info": {
+        "title": "Thông tin xe",
+        "short": "Thông tin",
+        "heading": "1. Thông tin xe"
+      },
+      "rental": {
+        "title": "Cho thuê",
+        "short": "Cho thuê",
+        "heading": "2. Thiết lập cho thuê"
+      },
+      "images": {
+        "title": "Hình ảnh xe",
+        "short": "Hình ảnh",
+        "heading": "3. Hình ảnh xe"
+      }
+    },
+    "errors": {
+      "energyRequired": "Vui lòng khai đủ thông số của nguồn năng lượng đã chọn."
+    }
+  },
+  "info": {
+    "typeTitle": "Loại phương tiện",
+    "typeLabel": "Bạn cho thuê loại xe nào?",
+    "plateTitle": "Biển số xe",
+    "plateHint": "Biển số dùng để đối chiếu giấy tờ xe khi duyệt hồ sơ.",
+    "basicTitle": "Thông tin cơ bản",
+    "energyTitle": "Nguồn năng lượng",
+    "nameLabel": "Tên hiển thị của xe",
+    "namePlaceholder": "Ví dụ: Toyota Vios 2023",
+    "nameHelp": "Đây là tên khách nhìn thấy trên chợ.",
+    "nameSuggestion": "Dùng gợi ý: {name}",
+    "descriptionTitle": "Mô tả xe",
+    "descriptionHelp": "Không bắt buộc, nhưng mô tả rõ giúp khách quyết định nhanh hơn.",
+    "featuresTitle": "Tiện nghi"
+  },
+  "rental": {
+    "priceTitle": "Đơn giá thuê",
+    "priceHint": "Đơn giá áp dụng cho tất cả các ngày. Bạn chỉnh giá riêng theo ngày ở lịch xe sau khi đăng ký.",
+    "priceLabel": "Giá thuê mỗi ngày (đ)",
+    "pricePreview": "Giá khách thấy sau giảm: {price}",
+    "discountTitle": "Giảm giá",
+    "discountHint": "Giảm theo phần trăm trên đơn giá ngày.",
+    "discountAria": "Mức giảm giá theo phần trăm",
+    "discountValue": "Giảm {percent}%",
+    "autoAcceptTitle": "Tối ưu nhận chuyến",
+    "autoAcceptHint": "Tự động xác nhận yêu cầu hợp lệ. Bạn tùy chỉnh chi tiết trong phần quản lý xe.",
+    "addressTitle": "Địa chỉ xe",
+    "addressHint": "Địa chỉ mặc định để giao nhận xe, lấy từ chi nhánh đang giữ xe.",
+    "addressLabel": "Chi nhánh giữ xe",
+    "addressLoadError": "Không tải được danh sách chi nhánh. Thử lại sau ít phút.",
+    "addressManageLink": "Quản lý chi nhánh và địa chỉ",
+    "deliveryTitle": "Giao xe tận nơi",
+    "deliveryHint": "Giao xe tới chỗ khách trong bán kính bạn chọn.",
+    "deliveryFreeLabel": "Miễn phí giao trong vòng (km)",
+    "deliveryFreeHelp": "Để trống nếu bạn thu phí ngay từ km đầu tiên.",
+    "deliveryRadiusLabel": "Quãng đường giao xe tối đa (km)",
+    "deliveryRadiusHelp": "Ngoài bán kính này, bạn và khách tự thỏa thuận.",
+    "deliveryFeeLabel": "Phí giao xe (đ)",
+    "deliveryFeeHelp": "Phí cố định cho một lượt giao trong bán kính trên.",
+    "mileageTitle": "Giới hạn số km",
+    "mileageHint": "Đặt hạn mức km mỗi ngày; phần vượt được ghi nhận khi quyết toán chuyến.",
+    "mileageIncludedLabel": "Số km tối đa trong một ngày",
+    "mileageIncludedHelp": "Đã bao gồm trong giá thuê.",
+    "mileageExcessLabel": "Phí vượt giới hạn (đ mỗi km)",
+    "mileageExcessHelp": "Chỉ đề xuất khi trả xe — bạn xác nhận mới ghi vào chuyến.",
+    "termsTitle": "Điều khoản thuê xe",
+    "termsHint": "Ghi rõ các yêu cầu của bạn với khách thuê xe. Khách đọc được trước khi đặt.",
+    "termsLabel": "Điều khoản của bạn",
+    "termsPlaceholder": "Ví dụ: không hút thuốc trong xe; trả xe đúng giờ đã thỏa thuận."
+  },
+  "images": {
+    "title": "Hình ảnh xe",
+    "intro": "Đăng nhiều ảnh ở các góc độ khác nhau để tăng độ tin cậy. Ảnh rõ nét giúp tăng tỉ lệ được thuê.",
+    "mainImageHelp": "Ảnh này đại diện cho xe trên chợ và trong danh sách.",
+    "counter": "Đã có {count}/{min} ảnh",
+    "counterAria": "Tiến độ số ảnh tối thiểu",
+    "missing": "Cần thêm {count, plural, other {# ảnh}} nữa để gửi duyệt. Bạn vẫn lưu nháp được ngay bây giờ.",
+    "enough": "Đã đủ ảnh để gửi duyệt.",
+    "anglesTitle": "Gợi ý các góc chụp chuẩn",
+    "angles": {
+      "front": "Góc trước: thấy rõ đầu xe và biển số",
+      "rear": "Góc sau xe",
+      "side": "Góc bên hông, lấy trọn thân xe",
+      "interior": "Nội thất: hàng ghế và khu vực điều khiển"
+    }
+  },
+  "success": {
+    "submittedTitle": "Đã gửi xe đi duyệt",
+    "submittedBody": "Nền tảng sẽ kiểm tra hồ sơ và bật hiển thị xe trên chợ.",
+    "draftTitle": "Đã lưu xe ở dạng nháp",
+    "draftBody": "Xe chưa hiển thị trên chợ. Bạn bổ sung nốt rồi gửi duyệt bất cứ lúc nào.",
+    "partialTitle": "Xe đã được lưu, còn một phần chưa xong",
+    "partialBody": "Chiếc xe đã tồn tại trong danh sách của bạn — đừng tạo lại. Mở phần quản lý xe để lưu nốt phần còn thiếu.",
+    "shopPendingTitle": "Hồ sơ chủ xe cần được duyệt trước",
+    "shopPendingBody": "Xe chỉ lên chợ được sau khi hồ sơ chủ xe của bạn được nền tảng duyệt.",
+    "shopPendingCta": "Hoàn tất hồ sơ",
+    "manageCta": "Quản lý xe này",
+    "addAnotherCta": "Đăng thêm xe",
+    "listCta": "Về danh sách xe"
+  },
+  "validation": {
+    "weekdayPriceRequired": "Nhập giá thuê mỗi ngày",
+    "priceTypeError": "Giá thuê phải là số",
+    "priceInteger": "Giá thuê phải là số nguyên",
+    "priceMin": "Giá thuê không được âm",
+    "deliveryRadiusRequired": "Nhập quãng đường giao xe tối đa",
+    "deliveryRadiusMin": "Quãng đường giao xe phải lớn hơn 0",
+    "deliveryRadiusMax": "Tối đa 500 km",
+    "deliveryFreeMin": "Quãng đường miễn phí không được âm",
+    "deliveryFeeRequired": "Nhập phí giao xe",
+    "deliveryFeeTypeError": "Phí giao xe phải là số",
+    "deliveryFeeInteger": "Phí giao xe phải là số nguyên",
+    "deliveryFeeMin": "Phí giao xe không được âm",
+    "mileageRequired": "Nhập số km tối đa trong một ngày",
+    "mileageInteger": "Số km phải là số nguyên",
+    "mileageMin": "Hạn mức tối thiểu là 50 km/ngày",
+    "mileageMax": "Hạn mức tối đa là 2000 km/ngày",
+    "excessFeeRequired": "Nhập phí cho mỗi km vượt",
+    "excessFeeTypeError": "Phí vượt km phải là số",
+    "excessFeeInteger": "Phí vượt km phải là số nguyên",
+    "excessFeeMin": "Phí vượt km không được âm",
+    "excessFeeMax": "Phí vượt km quá lớn",
+    "termsTooLong": "Điều khoản quá dài"
+  }
+}

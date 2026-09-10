@@ -117,7 +117,8 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
               <SafetyCertificateOutlined aria-hidden />
               {t('profile.eyebrow')}
             </span>
-            <h2 className={styles.title}>{t('profile.title')}</h2>
+            {/* h1 của trang: vỏ `AccountShell` không còn tiêu đề chung, mỗi trang tự mang một h1. */}
+            <h1 className={styles.title}>{t('profile.title')}</h1>
             <p className={styles.description}>{t('profile.description')}</p>
           </div>
           <Button

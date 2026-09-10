@@ -1,27 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { CATALOG_TYPE, SERVICE_TYPE, type PublicListingDetail } from '@xeprime/types';
 import { applyDiscountPercent, LIST_SEPARATOR } from '@xeprime/domain';
-import { catalogLabel } from '@xeprime/api-client';
+import { catalogLabel } from '@/api/catalog';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
+import { RemoteImage } from '@/components/ui/RemoteImage';
 import { useCatalog } from '@/features/catalog/use-catalog';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { ROUTES } from '@/navigation/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 /** Thumbnail ngang giữ mốc nhận diện xe nhưng vẫn để step và trường đầu tiên nằm gần màn đầu. */
 const VEHICLE_THUMB = { width: 112, height: 84 } as const;
-
-/** Không phụ thuộc prop/state — dựng MỘT lần ở module scope, không phải mỗi lần render. */
-const VEHICLE_THUMB_IMAGE_STYLE = {
-  width: VEHICLE_THUMB.width,
-  height: VEHICLE_THUMB.height,
-  borderRadius: radius.md,
-  backgroundColor: colors.surfaceMuted,
-};
 
 /**
  * Hồ sơ xe ở đầu luồng gửi yêu cầu — bản native của `VehicleSummaryPanel`.
@@ -45,6 +40,7 @@ export function VehicleSummaryCard({
   const t = useTranslations('BookingRequests.flow');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
+  const navigateOnce = useNavigateOnce();
   const { catalog } = useCatalog();
 
   const isLongTerm = serviceType === SERVICE_TYPE.LONG_TERM;
@@ -101,26 +97,14 @@ export function VehicleSummaryCard({
     <Card>
       <YStack gap={space.md}>
         <XStack gap={space.md} ai="flex-start">
-          {listing.mainImageUrl ? (
-            <Image
-              source={{ uri: listing.mainImageUrl }}
-              style={VEHICLE_THUMB_IMAGE_STYLE}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-              transition={150}
+          <YStack w={VEHICLE_THUMB.width} h={VEHICLE_THUMB.height} br={radius.md} ov="hidden">
+            <RemoteImage
+              uri={listing.mainImageUrl}
+              recyclingKey={listing.id}
+              radius={radius.md}
+              fallback={<Ionicons name="car-outline" size={space.lg} color={colors.placeholder} />}
             />
-          ) : (
-            <YStack
-              w={VEHICLE_THUMB.width}
-              h={VEHICLE_THUMB.height}
-              br={radius.md}
-              bg={colors.surfaceMuted}
-              ai="center"
-              jc="center"
-            >
-              <Ionicons name="car-outline" size={space.lg} color={colors.placeholder} />
-            </YStack>
-          )}
+          </YStack>
 
           <YStack f={1} gap={space.xs}>
             <XStack ai="center" gap={space.xs} flexWrap="wrap">
@@ -199,37 +183,49 @@ export function VehicleSummaryCard({
           </XStack>
         ) : null}
 
-        <XStack
-          ai="center"
-          gap={space.sm}
-          pt={space.md}
-          borderTopWidth={1}
-          borderColor={colors.borderSubtle}
+        {/*
+          Hàng gian hàng mở trang gian hàng công khai — web có liên kết "Xem gian hàng" ở đúng
+          chỗ này. Web mở TAB MỚI để không đánh mất wizard; native đẩy màn lên trên, và wizard
+          vẫn nằm nguyên trong stack nên lui về là về đúng bước đang dở.
+        */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('panel.viewShop')}
+          onPress={() => navigateOnce(ROUTES.explore.shopDetail(listing.shopSlug))}
         >
-          <Avatar name={listing.shopName} url={listing.shopLogoUrl} size={36} />
-          <YStack f={1} gap={2}>
-            <Text
-              col={colors.text}
-              fos={fontSize.bodySm}
-              fow={fontWeight.semibold}
-              numberOfLines={1}
-            >
-              {listing.shopName}
-            </Text>
-            {/* Chỉ hiện đánh giá khi CÓ số thật — không dựng "0.0 · 0 đánh giá" giả. */}
-            {hasRating ? (
-              <XStack ai="center" gap={space.xs}>
-                <Ionicons name="star" size={12} color={colors.primary} />
-                <Text col={colors.textMuted} fos={fontSize.label}>
-                  {t('panel.ratingSummary', {
-                    avg: fmt.rating(rating),
-                    count: listing.ratingCount,
-                  })}
-                </Text>
-              </XStack>
-            ) : null}
-          </YStack>
-        </XStack>
+          <XStack
+            ai="center"
+            gap={space.sm}
+            pt={space.md}
+            borderTopWidth={1}
+            borderColor={colors.borderSubtle}
+          >
+            <Avatar name={listing.shopName} url={listing.shopLogoUrl} size={36} />
+            <YStack f={1} gap={2}>
+              <Text
+                col={colors.text}
+                fos={fontSize.bodySm}
+                fow={fontWeight.semibold}
+                numberOfLines={1}
+              >
+                {listing.shopName}
+              </Text>
+              {/* Chỉ hiện đánh giá khi CÓ số thật — không dựng "0.0 · 0 đánh giá" giả. */}
+              {hasRating ? (
+                <XStack ai="center" gap={space.xs}>
+                  <Ionicons name="star" size={12} color={colors.primary} />
+                  <Text col={colors.textMuted} fos={fontSize.label}>
+                    {t('panel.ratingSummary', {
+                      avg: fmt.rating(rating),
+                      count: listing.ratingCount,
+                    })}
+                  </Text>
+                </XStack>
+              ) : null}
+            </YStack>
+            <Ionicons name="chevron-forward" size={iconSize.xs} color={colors.placeholder} />
+          </XStack>
+        </Pressable>
       </YStack>
     </Card>
   );

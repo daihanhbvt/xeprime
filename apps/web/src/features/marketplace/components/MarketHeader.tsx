@@ -18,7 +18,8 @@ import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components
 import { useMarketLogout } from '@/features/auth/hooks/use-market-logout';
 import { AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
-import { useChatUnreadCount } from '@/features/chat/hooks/use-chat-unread-count';
+import { CHAT_SIDE } from '@xeprime/types';
+import { useChatBadge } from '@/features/chat/hooks/use-chat-badge';
 import { useCurrentUser, type CurrentUser } from '@/hooks/use-current-user';
 import styles from './MarketHeader.module.css';
 
@@ -32,7 +33,7 @@ const NAV = [
 export function MarketHeader() {
   const t = useTranslations('Navigation.public');
   const { data: user } = useCurrentUser();
-  const { data: chatUnread } = useChatUnreadCount(!!user);
+  const chatBadge = useChatBadge(CHAT_SIDE.CUSTOMER, !!user);
   const { open } = useAuthModal();
   const logout = useMarketLogout();
   const nextFromHere = useNextFromCurrentPath();
@@ -65,13 +66,13 @@ export function MarketHeader() {
           <LocaleSwitcher />
           {user ? (
             <>
-              <Badge count={chatUnread?.count ?? 0} size="small" overflowCount={99}>
+              <Badge count={chatBadge.count} size="small" overflowCount={99}>
                 {/*
                   MỘT bề mặt tương tác: liên kết được tạo dáng như nút tròn, KHÔNG phải `<Button>`
                   lồng trong `<Link>`. Lồng hai phần tử tương tác cho trình đọc màn hình hai đích
                   cho cùng một hành động, và bàn phím phải Tab hai lần để đi qua một biểu tượng.
                 */}
-                <Link href={ROUTES.CHAT} aria-label={t('chat')} className={styles.iconBtn}>
+                <Link href={chatBadge.href} aria-label={t('chat')} className={styles.iconBtn}>
                   <MessageOutlined aria-hidden="true" />
                 </Link>
               </Badge>

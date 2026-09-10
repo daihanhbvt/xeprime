@@ -230,6 +230,8 @@ apps/mobile/
     │   ├── shell/                #   VỎ app: khu Khách ↔ Quản lý (slice · ScopeGuard · switcher)
     │   ├── booking-requests/     #   BKG-01→05 — wizard gửi yêu cầu + hộp thư duyệt
     │   ├── bookings/             #   BKG-06→08, 12, 13 — danh sách · chi tiết · tạo tay
+    │   ├── chat/                 #   ADR 0009 — hộp thư KHÁCH + thread (FlatList `inverted`)
+    │   │                         #     luật gộp tin dùng chung ở @xeprime/domain/chat-thread
     │   ├── handovers/            #   BKG-09 — biên bản giao/nhận + ảnh hiện trạng (camera)
     │   ├── settlement/           #   BKG-10/11 + FIN-05/06 — quyết toán · phụ phí · thu tiền
     │   └── trips/                #   BKG-15/16 — chuyến của khách + đánh giá
@@ -562,12 +564,67 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
   trộn vào là kích thước loạn.
 - Màn hình KHÔNG dựng thẻ/viên/nút từ `XStack` trần: dùng `src/components/ui/` (`Card`, `Chip`,
   `Button`, `IconButton`, `Avatar`, `TextField`, `NumberField`, `MoneyField`, `Skeleton`,
-  `StatusIcon`, `Callout`, `RadioField`, `ProgressBar`). Đó là chỗ độ nổi, bo góc và vùng
-  chạm được quyết định MỘT lần — dựng tay ở từng màn là mỗi màn một kiểu.
+  `StatusIcon`, `IconDisc`, `Callout`, `RadioField`, `ProgressBar`, `CardActionBar`, `CardAccent`,
+  `IconLine`, `ShopCover`). Đó là chỗ độ nổi, bo góc
+  và vùng chạm được quyết định MỘT lần — dựng tay ở từng màn là mỗi màn một kiểu.
+- [`ShopCover`](src/components/ui/ShopCover.tsx) (ảnh bìa + logo tròn của gian hàng) nằm ở
+  `components/ui/` chứ không trong một feature vì nó phục vụ HAI bề mặt: hồ sơ gian hàng ở khu
+  quản lý và trang gian hàng công khai `/shops/[slug]`. Khu quản lý là bản XEM TRƯỚC của trang
+  công khai — lệch tỉ lệ khung hay cỡ logo thì chủ shop căn ảnh vừa khít ở một nơi rồi thấy nó
+  bị xén khác ở nơi kia. Hai khung chờ trong `Skeleton.tsx` cũng đọc hằng từ đúng file này.
+- **Thẻ trong một DANH SÁCH chạy ở đệm `space.sm` (8) / khe `space.xs` (4)** — nhịp của
+  [`VehicleCard`](src/features/vehicles/components/VehicleCard.tsx), thẻ chật nhất app. `space.md`
+  (16) / `space.sm` (8) là nhịp của một KHỐI trên màn chi tiết, không phải của một hàng danh
+  sách: dùng nó cho thẻ thì mỗi thẻ dôi ra 60–80pt và màn hình bớt gần một nửa số bản ghi thấy
+  được. Mấy mẩu định danh ngắn (mã · tỉnh · số xe · điện thoại) gộp thành MỘT dòng `fontSize.meta`
+  nối bằng `LIST_SEPARATOR` thay vì một khối `FactRow` hai cột — `FactRow` dành cho con số CẦN
+  nhãn riêng (KM hiện tại, mốc tiếp theo), còn "4 xe" thì đã tự xưng tên.
+- **Vạch trạng thái ở mép trái thẻ đi qua [`<CardAccent>`](src/components/ui/CardAccent.tsx)** —
+  4pt, đặt làm con đầu của một `<XStack>` trong `<Card padded={false}>` nên tự cao bằng thẻ. Nó là
+  lối vào NHANH khi lướt, không thay được viên nhãn: màu một mình thì trình đọc màn hình không đọc
+  ra và người mù màu không phân biệt được, nên trạng thái vẫn phải có mặt dưới dạng chữ.
+- **Dòng có hình dẫn đầu đi qua [`<IconLine>`](src/components/ui/IconLine.tsx)** — hai vai, phân
+  biệt bằng `strong`: dòng NỀN (chữ mờ) cho ngữ cảnh (địa chỉ, giấy tờ, lý do một nút đang khoá),
+  và dòng GIÁ TRỊ (`strong` — chữ đậm màu chữ chính) cho mẩu dữ liệu người ta mở màn ra để lấy
+  (số xe, số điện thoại). Ở bậc 12px thì cái phân biệt hai vai là ĐỘ ĐẬM, không phải cỡ chữ: nâng
+  cỡ lên là nó cạnh tranh với chính cái tên ở trên.
+  `iconTone` tô RIÊNG hình chứ không tô chữ — ở cỡ này hình nhận ra nhanh hơn chữ nên nó là thứ
+  đáng mang màu, còn tô cả dòng thì hai dòng cạnh nhau thành hai mảng màu và không dòng nào nổi
+  lên nữa. Màu vẫn phải có NGHĨA: `info` cho một con số đếm (đúng vai dải chỉ số của `VehicleCard`),
+  `success` cho số điện thoại vì đó là màu nút gọi trên cả hai nền tảng.
 - **Thanh tiến độ đi qua [`<ProgressBar>`](src/components/ui/ProgressBar.tsx)** — bản native của
-  `<Progress>` (AntD), ba tông `active`/`success`/`exception`. Nó KẸP `percent` về 0–100 ngay
-  trong component: nguồn thường là một phép chia dữ liệu thật (KM đã đi / chu kỳ thay nhớt) và
-  vượt 100 là chuyện bình thường khi xe quá hạn — không kẹp thì thanh tô tràn ra ngoài thẻ.
+  `<Progress>` (AntD), ba tông `active`/`success`/`exception` và hai bề dày `md` (8pt, thanh đứng
+  cạnh số liệu) / `sm` (4pt, thanh trong thẻ danh sách). Nó KẸP `percent` về 0–100 ngay trong
+  component: nguồn thường là một phép chia dữ liệu thật (KM đã đi / chu kỳ thay nhớt) và vượt 100
+  là chuyện bình thường khi xe quá hạn — không kẹp thì thanh tô tràn ra ngoài thẻ.
+- **Đĩa tròn mang biểu tượng đi qua [`<IconDisc>`](src/components/ui/IconDisc.tsx)** — thứ phân
+  loại một con số / một dòng trước khi mắt kịp đọc chữ. Hai dạng: `soft` (nền tô nhạt + viền cùng
+  tông + glyph mang tông) cho đĩa đứng cạnh nội dung của chính nó — huy hiệu của `<StatGrid
+  variant="list">`, dòng đơn và dòng phiếu ở Tổng quan; `filled` (nền đặc + glyph trắng) cho đầu
+  một KHỐI, nơi đĩa là mỏ neo của cả khối. Glyph luôn bằng nửa đường kính: đặt số riêng ở từng nơi
+  gọi thì hai cái đĩa cùng bề rộng đọc ra như hai component khác nhau. Đừng dựng lại bằng một
+  `YStack` tròn — năm chỗ từng làm thế và lệch nhau cả viền lẫn cỡ glyph.
+- **Dải chỉ số gọn trong một thẻ đi qua [`<FactRow>`](src/components/ui/FactRow.tsx)** — giá trị
+  trước, nhãn xuống dưới, các ô chia đều và ngăn nhau bằng kẻ dọc. Khác `<StatGrid>` ở CHỖ DÙNG:
+  `StatGrid` là bảng chỉ số của một MÀN (số cỡ `h4`, đệm 16, huy hiệu tròn) và đặt nó vào thẻ danh
+  sách thì bảng số giành mất vai chính của chính bản ghi.
+- **Dải viên nhãn nhiều hơn hai cái đi qua [`<BadgeRows>`](src/components/ui/BadgeRows.tsx)** —
+  `flexWrap` trần ngắt dòng theo thứ tự nên hay bỏ trống cuối hàng; component này đo bề rộng bằng
+  `onLayout`, ước lượng bề rộng từng viên ([`text-fit.ts`](src/components/ui/text-fit.ts)) rồi xếp
+  cho khít mà vẫn GIỮ thứ tự ưu tiên.
+- **Hàng thao tác ở chân một thẻ danh sách đi qua
+  [`<CardActionBar>`](src/components/ui/CardActionBar.tsx)** — thanh PHẲNG chạy sát hai mép thẻ,
+  chia ô bằng kẻ dọc; đặt NGOÀI phần thân có đệm, trong `<Card padded={false}>`.
+  Không dựng lại bằng một lưới `<Button variant="accent">`: ba–bốn viên nút tô nền là mảng màu thứ
+  ba của thẻ (sau nhãn trạng thái và khối chỉ số) và một danh sách cuộn dài đọc ra như bảng nút;
+  `Button` cũng không co lại được, nên một hàng nhãn tiếng Việt ("Sửa · Đặt làm mặc định · Ngừng
+  hoạt động") tràn thẳng ra ngoài mép thẻ. Màu chỉ dùng cho KẾT QUẢ — `success` cho thao tác đóng
+  việc lại, `danger` cho thao tác phá đi.
+  Hình nằm CẠNH chữ khi còn chỗ và TRÊN chữ (nhãn hai dòng) khi không: thanh tự đo bề rộng bằng
+  `onLayout` rồi ước lượng bề rộng nhãn qua [`text-fit.ts`](src/components/ui/text-fit.ts), vì thứ
+  quyết định không phải SỐ ô mà là độ dài nhãn — và nhãn đổi theo ngôn ngữ ("Cập nhật ODO" vừa ba
+  ô, "Update odometer" thì không. Mỗi ô nhận `disabled` (luật nghiệp vụ chặn — lý do do thẻ nói
+  ngay dưới thanh, không ẩn ô đi) và `loading` (chỉ ô đang chạy đổi hình thành con quay).
 - **Khối thông báo trong luồng đọc đi qua [`<Callout>`](src/components/ui/Callout.tsx)** — bản
   native của `<Alert showIcon>` bên web, bốn tông `info`/`warning`/`success`/`danger`. Trước
   đó mỗi màn tự vẽ một `YStack bg={colors.infoSurface}`, và chúng khác nhau ở viền, lề và cỡ
@@ -581,6 +638,15 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
 - **Nhóm lựa chọn của form: 2 lựa chọn → [`<RadioField>`](src/components/ui/RadioField.tsx),
   từ 3 → [`<SelectField>`](src/components/ui/SelectField.tsx).** Cả hai nối RHF sẵn; `RadioOption`
   là viên rời cho lựa chọn KHÔNG sống trong form.
+- **Dòng trong menu xổ từ đáy đi qua [`<MenuOption>`](src/components/ui/MenuOption.tsx), gói
+  trong `<MenuOptionList>`** — danh sách kẻ GẠCH GOLD (`colors.primary` hạ độ mờ; thang gold
+  không có bậc trung gian nào giữa nó và `primaryLight` — thứ là màu NỀN, kẻ 1px thì mất hẳn)
+  giữa hai dòng kề nhau — không phải thẻ viền, đây là một danh sách chứ không phải mấy thẻ rời.
+  Gạch ở list chứ không ở row vì dòng CUỐI không
+  được có gạch — nét kẻ dưới mục cuối trông như còn mục nữa bị cắt mất. List cũng gom luôn khoảng
+  cách: `BottomSheet` giãn con trực tiếp 16px, đủ để thổi bay tác dụng gom nhóm của nét kẻ, nên
+  cả danh sách bọc thành MỘT con. Trước đó ba menu tự vẽ lấy dòng của mình và lệch nhau cả cỡ chữ
+  lẫn màu khi chọn.
 - **Mọi lịch tháng đi qua [`<MonthGrid>`](src/components/ui/MonthGrid.tsx)**, dựng trên
   `react-native-calendars`. Thư viện lo cơ học lịch (trang tháng, ngày của tháng kề, bố cục
   tuần); tiêu đề · nhãn thứ · cách vẽ một ô là của mình — đúng như web bọc `react-day-picker` và
@@ -589,13 +655,17 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
 - **Thanh trên của mọi màn đi qua [`<AppHeader>`](src/components/layout/AppHeader.tsx)**, không
   dựng `XStack` riêng. Hai biến thể: `solid` (nền đặc, kẻ dưới) và `overlay` (nổi trên ảnh tràn
   viền). Thiếu thứ bạn cần thì **thêm biến thể vào chính file đó**, đừng rẽ nhánh ở màn hình.
+  Khe `context` đặt một ĐIỀU KHIỂN nhỏ vào dòng phụ thay cho `subtitle` — khu quản lý dùng nó
+  cho bộ chọn chi nhánh, thay vì lấy thêm một dải riêng dưới thanh cho đúng một mẩu chữ.
   Header TỰ cộng safe-area trên ⇒ `<Screen>` đặt dưới nó phải khai
   `edges={['left', 'right', 'bottom']}`, nếu không phần trên đệm hai lần.
 - **Nền header KHÔNG dùng màu thương hiệu.** Gold là màu HÀNH ĐỘNG (nút chính, chip đang chọn,
   giá thuê); tô nó lên dải rộng nhất màn hình thì mọi CTA gold bên dưới mất sức nặng. Header nhận
   diện bằng thương hiệu + thứ bậc chữ. `tone="brand"` có sẵn nhưng là NGOẠI LỆ.
 - Chỗ đã biết trước hình dạng nội dung dùng `Skeleton` thay `ActivityIndicator`: khung xám đúng
-  kích thước giữ nguyên bố cục nên trang không nhảy khi dữ liệu về.
+  kích thước giữ nguyên bố cục nên trang không nhảy khi dữ liệu về. Thẻ danh sách có THANH THAO
+  TÁC ở chân (chi nhánh, tài xế, người dùng) dùng `ActionCardSkeleton`, không phải
+  `RecordCardSkeleton` — hai khung lệch nhau gần 100pt, tức danh sách nhảy đúng lúc dữ liệu về.
 - Style còn lại bằng `StyleSheet.create`. Màu/khoảng cách/bo góc/cỡ chữ lấy từ
   [src/theme/tokens.ts](src/theme/tokens.ts) — file này **không giữ giá trị nào**, nó đọc
   `XP_TOKENS` của [`@xeprime/ui`](../../packages/ui), đúng nguồn web dựng `tokens.css` và AntD
@@ -606,6 +676,9 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
   `linear-gradient`) mà RN không hiểu.
   Palette hiện **chỉ có bản sáng**, nên `app.json` khoá `userInterfaceStyle: "light"` — mở
   `"automatic"` cùng lúc với việc bổ sung palette tối *ở `@xeprime/ui`*, không sớm hơn.
+- Dòng META gộp nhiều mẩu bằng ` · ` trong danh sách dày (dải xem nhanh của Tổng quan) dùng
+  `fontSize.meta` (11px, token `font-size-overline`) — bậc cuối của thang, và CHỈ dùng khi có một
+  dòng 12px ngay trên làm mốc. Đứng một mình thì nó chỉ là chữ nhỏ khó đọc.
 - Chữ BÊN TRONG một ô nhập lấy từ `fieldFontSize` (`value` · `label` · `message` · `affix`),
   không phải `fontSize` trực tiếp. `fontSize` là thang của WEB: bậc `body` 14px là cỡ nội dung
   mặc định của desktop, còn app này chạy gần ba phần tư chữ ở 12px — ô viết theo `fontSize.body`
@@ -613,6 +686,13 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
 - Mọi màn bọc bằng [`<Screen>`](src/components/layout/Screen.tsx) — safe area, tránh bàn phím,
   `keyboardShouldPersistTaps` gom một chỗ. Màn danh sách tràn viền đặt `padded={false}` để giữ
   phần cấu trúc mà bỏ lề trang.
+- **`Screen` tự CUỘN ô đang gõ lên trên bàn phím** — đừng tự xử lý ở màn.
+  `KeyboardAvoidingView` chỉ CO vùng nhìn thấy (để `footer` không bị che), nội dung trong
+  `ScrollView` đứng yên, nên ô ở nửa dưới một form dài vẫn nằm dưới bàn phím. React Native không
+  có auto-scroll cho việc này, và từ khi Expo chạy edge-to-edge thì
+  `softwareKeyboardLayoutMode: "resize"` bên Android cũng không còn đỡ. `Screen` đo ô đang gõ
+  bằng toạ độ CỬA SỔ lúc `keyboardDidShow` rồi cuộn đúng phần chồng lấn, kèm một đoạn đệm đuôi
+  để ô CUỐI trang có chỗ mà cuộn lên.
 - Đổ bóng dùng `elevation.card` / `.raised` / `.overlay`
   ([src/theme/elevation.ts](src/theme/elevation.ts)); iOS và Android dùng hai bộ thuộc tính
   khác nhau, viết tay ở từng component là quên một bên. Giá trị parse từ token `shadow-*` của
@@ -670,12 +750,13 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
 - Hạ tầng: timeout + retry policy, SecureStore, logger, đa ngữ vi/en type-safe trên **gốc
   message dùng chung với web**, bộ component trạng thái/UI + skeleton, hệ toast một mối.
 
-22 test suite / 162 case (+ suite live-bearer chỉ chạy khi có `XP_LIVE_API=1`).
+52 test suite (+ suite live-bearer chỉ chạy khi có `XP_LIVE_API=1`).
 
 **Chưa có:** iOS chưa build lần nào, `app.config.ts` tách dev/staging/prod, App Links /
 Universal Links (liên kết đặt lại mật khẩu trong email vì thế mở ở trình duyệt), refetch theo
-`AppState`/NetInfo, push notification, chat thật, đặt xe, và toàn bộ cổng quản lý. Lộ trình
-chung: `docs/completion-roadmap.md`.
+`AppState`/NetInfo, push notification, chat thật, và các module Shop · Calendar · Admin của cổng
+quản lý (bốn module đã xong liệt kê ngay dưới). Lộ trình chung: `docs/completion-roadmap.md`;
+trạng thái từng module của app: `docs/mobile-module-status.md`.
 
 ---
 
@@ -733,6 +814,125 @@ file rồi typecheck sẽ báo `Type '"/manage/vehicles/[id]/edit"' is not assig
 `.../edit/index` như một đoạn tĩnh. Nguyên nhân là dev server đang chạy tự cập nhật file đó theo
 kiểu tăng dần và ra danh sách thiếu. Cách chữa: `rm -rf .expo/types` rồi khởi động lại Expo (một
 cổng còn trống) để nó sinh lại từ đầu, **rồi mới** chạy typecheck.
+
+### Module Customer (07/09/2026)
+
+Sổ khách của gian hàng đã chạy trọn: xem sổ → mở hồ sơ → lịch sử thuê · tiền · ghi chú · giấy tờ
+→ đánh dấu rủi ro → lập đơn cho khách. Kèm màn Tài khoản của khách được đưa về đúng parity web.
+
+| Chặng | Dòng tracking | Ở đâu |
+| --- | --- | --- |
+| Sổ khách + thêm khách | CUS-01 | `src/features/customers/CustomerListScreen.tsx` · `components/CustomerCard` · `CustomerSummaryBar` · `CustomerFormSheet` |
+| Hồ sơ khách (5 khu) | CUS-02 | `CustomerDetailScreen.tsx` · `components/CustomerBookingHistory` · `CustomerFinancePanel` · `CustomerNotesPanel` · `CustomerDocumentsPanel` |
+| Mức rủi ro / từ chối phục vụ | CUS-03 | `components/CustomerRiskSheet.tsx` |
+| Hồ sơ tài khoản của khách | CUS-04 | `src/features/account/AccountScreen.tsx` · `hooks/use-account.ts` |
+| Sổ Thu-Chi đã lọc sẵn (phụ thuộc) | — | `src/features/finance/ReceiptListScreen.tsx` — **chưa phải FIN-02**, chỉ để "Xem tất cả N phiếu" có đích thật |
+
+**Cần dựng lại dev client**: đợt này thêm hai native module — `expo-document-picker` (chọn tệp
+PDF cho giấy tờ khách) và `expo-clipboard` (chép SĐT/email ở hồ sơ khách). Đã khai plugin
+`expo-document-picker` trong `app.json`. Bản dev client cũ sẽ nổ ở tab Giấy tờ và ở nút chép —
+`pnpm --filter @xeprime/mobile android` (hoặc `ios`) để dựng lại.
+
+**Năm tab của web thành một dải tab CUỘN NGANG.** Năm nhãn tiếng Việt không vừa 390dp; bóp lại
+thì "Ghi chú nội bộ" bị cắt. Nội dung, quyền và thứ tự các khu giữ nguyên. Cùng lý do, năm hành
+động của header web đi vào một tấm trượt "Thao tác khác".
+
+**Biểu đồ doanh thu ĐÃ CHUYỂN sang `react-native-gifted-charts` (đợt Finance, 07/09).** Bản
+đầu dựng bằng `View` trần với lý do "một biểu đồ cột đơn thang chỉ cần hình chữ nhật" — lý do đó
+hết đúng khi FIN-01 cần đủ hình của web: trục Y tiền, lưới ngang, mốc 0 cho kỳ lỗ, và **đường lợi
+nhuận**. Chi tiết ở mục "Biểu đồ" của module Finance bên dưới. Native không có hover nên tooltip
+của web vẫn là một dòng chi tiết hiện khi chạm vào cột — phần đó giữ nguyên.
+
+**Ba luật CUS-03 phải giữ**: `watchlist` chỉ CẢNH BÁO (không chặn gì), `blocked` chặn đơn và yêu
+cầu MỚI ở đúng gian hàng đó (`CustomersService.resolveWithinTx` cũng ném 409 — ẩn nút không phải
+lớp bảo vệ), và lý do BẮT BUỘC khi khác `normal`. Chi tiết + ma trận quyền:
+`docs/mobile-customer-module-status.md`.
+
+### Module Finance (07/09/2026)
+
+Sổ sách tiền của gian hàng đã chạy trọn: tổng quan tài chính → sổ Thu-Chi → danh mục thu chi →
+công nợ, cộng phần tiền của TỪNG đơn vốn đã có từ module Booking.
+
+| FIN | Nội dung | Ở đâu |
+| --- | --- | --- |
+| 01 | Tổng quan tài chính — ba lớp tiền, biểu đồ, cơ cấu danh mục, hai dải xếp hạng | `src/features/finance/FinanceOverviewScreen.tsx` |
+| 02 | Sổ Thu-Chi — lọc, tổng theo bộ lọc, chi tiết phiếu, tạo/duyệt/huỷ | `ReceiptListScreen.tsx` + `components/Receipt*` |
+| 03 | Danh mục thu chi | `components/CategoryManagerSheet.tsx` (tấm trượt trong FIN-02) |
+| 04 | Công nợ | `DebtListScreen.tsx` · `components/DebtCard.tsx` |
+| 05 · 06 | Thu tiền · huỷ phiếu thu · thu/hoàn cọc | `src/features/settlement/` — đã có từ module Booking, đợt này **audit + vá parity** |
+
+**BA LỚP TIỀN không được trộn.** "Doanh thu" là của một KỲ và đã loại cọc; "Tiền vào" là dòng
+tiền quỹ và CÓ cọc; "Cọc đang giữ"/"Công nợ" là số TẠI THỜI ĐIỂM NÀY, không đổi khi chọn kỳ
+khác. Mỗi ô tổng dẫn tới đúng tập phiếu sinh ra nó (`sourceGroup` + `status=approved`) — thiếu
+một tham số là thẻ nói một số còn danh sách nó mở ra nói số khác.
+
+**MỘT màn chi tiết phiếu cho mọi lối vào** (`ReceiptDetailSheet`) và **MỘT khối tiền theo kỳ**
+(`FinanceEntityPanel`, dùng ở cả hồ sơ xe lẫn hồ sơ khách). Đừng dựng bản thứ hai cho một bề
+mặt mới — đó là cách hai con số cùng tên bắt đầu lệch nhau.
+
+**Biểu đồ: `react-native-gifted-charts` 1.4.78** (`BarChart` + `showLine`) — bản native của
+`recharts` `<ComposedChart>` bên web. Cùng một hình: hai cột cùng thang cho doanh thu/chi phí,
+một đường cho lợi nhuận, một trục Y tiền rút gọn, lưới ngang, mốc 0 khi có lỗ.
+
+`BarChart` không có khái niệm "nhóm" — cặp cột được tạo bằng một dải cột xen kẽ hai độ rộng khe,
+và **đường lợi nhuận phải tự căn vào tâm cặp**. Phép căn đó nằm ở
+[`revenue-trend-layout.ts`](src/features/finance/components/revenue-trend-layout.ts), tách khỏi
+component và có test riêng: đường lệch nửa nhóm vẫn render bình thường, chỉ người dùng mới thấy
+nó chỉ vào sai cột — không có test số học thì không ai bắt được.
+
+⚠️ **Ba dependency đi liền nhau, thiếu một là màn Tổng quan doanh thu TRẮNG** khi có dữ liệu:
+`react-native-gifted-charts` · `react-native-svg` · **`expo-linear-gradient`**. Cái thứ ba trông
+như không liên quan (mình không dùng gradient nào), nhưng `BarChart` import tĩnh
+`Components/common/LinearGradient`, và module đó `require` gói gradient rồi **ném lỗi** nếu không
+tìm thấy. `RevenueTrendChart.test.tsx` dựng biểu đồ thật để chặn đúng ca này.
+
+**PHẢI dựng lại dev client**: đợt này thêm hai native module — `react-native-svg` và
+`expo-linear-gradient`. Chạy `pnpm --filter @xeprime/mobile android` (hoặc `ios`); bản dev client
+cũ sẽ nổ ở màn Tổng quan doanh thu và ở khối tiền của hồ sơ xe/khách.
+
+Chi tiết, ma trận quyền, bốn luật tiền, phần audit FIN-05/06 và ba vấn đề phát hiện ở web:
+`docs/mobile-finance-module-status.md`.
+
+
+### Module Shop (08/09/2026)
+
+Gian hàng đã tự vận hành được trọn trên app: mở gian hàng → hoàn thiện hồ sơ → gửi duyệt → khai
+chi nhánh → đặt chính sách thuê mặc định → mời nhân sự → quản tài xế → xem tổng quan.
+
+| SHP | Nội dung | Ở đâu |
+| --- | --- | --- |
+| 01 | Đăng ký gian hàng | `app/manage/onboarding.tsx` · `src/features/shop/ShopOnboardingScreen.tsx` |
+| 02 | Hồ sơ + gửi duyệt | `src/features/shop/ShopProfileScreen.tsx` + `ShopStatusBanner`/`ShopProfileChecklist` |
+| 03 | Chi nhánh + phạm vi chi nhánh | `src/features/branches/` — `BranchListScreen` · `BranchScopePill` · `branch-scope.slice` |
+| 04 | Chính sách thuê mặc định | `src/features/rental-policies/ShopPolicyScreen.tsx` |
+| 05 | Nhân sự + lời mời | `src/features/members/MemberListScreen.tsx` |
+| 06 | Tài xế | `src/features/drivers/DriverListScreen.tsx` |
+| 07 | Tổng quan gian hàng | `src/features/dashboard/ShopDashboardScreen.tsx` |
+
+**Bộ chọn chi nhánh là thứ dùng chung của CẢ CỔNG**, không của một màn: nó sống ở DÒNG PHỤ của
+`ManageHeader` (`BranchScopePill`, khe `context` của `AppHeader`) — trước đó là một dải riêng
+dưới thanh trên, tức mọi màn quản lý mất thêm ~34dp cộng một nét kẻ kể cả những màn không lọc
+theo chi nhánh. Lựa chọn nằm ở Redux (`branchScope`), và `useBranchScopeParams()` ghép
+`branchId` vào query của đội xe · đơn thuê · yêu cầu thuê · huy hiệu chờ duyệt. Không ghép vào
+Tổng quan/Tài chính/Sổ khách — web cũng không, và hai endpoint sau không có ngữ nghĩa chi nhánh.
+
+**Chính sách thuê ĐÃ DỜI khỏi feature Xe.** `schema.ts`, `form.ts`, `PolicySections`,
+`LongTermPriceHint` và `useShopPolicy` nay ở `src/features/rental-policies/` — gương của
+`apps/web/src/features/rental-policies/`. Màn Giá & chính sách của xe là NGƯỜI TIÊU THỤ, không
+phải chủ sở hữu: để luật ở feature con thì màn chính sách gian hàng phải import ngược, và bản
+thứ hai của cùng một business rule sẽ mọc ra ở lần cần đọc tiếp theo.
+
+**Ô ảnh của form là `components/ui/ImageUploadField`**, không còn là `VehicleImagePicker`. Nó
+nhận `presign` làm THAM SỐ vì mỗi loại ảnh có endpoint và QUYỀN riêng ở backend (ảnh xe cần
+`vehicles.update`, logo/ảnh bìa gian hàng cần `tenant.update`).
+
+Phần LOGIC của ô ảnh (chọn/chụp → tải lên R2 → toast lỗi quyền) nằm ở hook
+`components/ui/use-image-upload.tsx`, dùng chung với khối danh tính gian hàng
+(`features/shop/components/ShopIdentityCard.tsx`) — nơi ảnh bìa và logo mang hình hài riêng
+(bìa tràn viền + logo tròn đè lên) nhưng vẫn phải là đúng chuỗi thao tác đó, kèm bẫy
+`Content-Length` đã ký của presign.
+
+Chi tiết, ma trận quyền/gói và phần còn nợ: `docs/mobile-shop-module-status.md`.
 
 ## 11. Đánh giá kiến trúc — **8.5 / 10**
 

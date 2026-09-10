@@ -4,7 +4,11 @@
     "tableLabel": "Danh sách thành viên",
     "loadError": "Không tải được danh sách thành viên",
     "empty": "Chưa có thành viên nào",
-    "total": "{count, plural, other {# thành viên}}"
+    "total": "{count, plural, other {# thành viên}}",
+    "forbidden": {
+      "title": "Không có quyền truy cập",
+      "description": "Bạn cần quyền xem nhân sự của gian hàng. Liên hệ chủ gian hàng để được cấp quyền."
+    }
   },
   "filters": {
     "search": "Tìm thành viên",
@@ -22,7 +26,8 @@
   "actions": {
     "invite": "Mời thành viên",
     "remove": "Gỡ thành viên",
-    "removeConfirm": "Gỡ thành viên này?"
+    "removeConfirm": "Gỡ thành viên này?",
+    "changeRole": "Đổi vai trò"
   },
   "toast": {
     "roleChanged": "Đã đổi vai trò",
@@ -57,7 +62,11 @@
       "createdBy": "Người mời"
     },
     "revoke": "Thu hồi",
-    "revokeConfirm": "Thu hồi lời mời này? Liên kết trong email sẽ hết giá trị ngay."
+    "revokeConfirm": "Thu hồi lời mời này? Liên kết trong email sẽ hết giá trị ngay.",
+    "invitedBy": "Mời bởi {name}",
+    "expiresAtLine": "Hết hạn {at}",
+    "expiresIn": "Còn {days, plural, other {# ngày}}",
+    "expiresToday": "Hết hạn hôm nay"
   },
   "invitePage": {
     "title": "Lời mời tham gia gian hàng",

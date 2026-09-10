@@ -75,6 +75,32 @@ export class OvertimeSuggestionDto {
   formula!: string | null;
 }
 
+/**
+ * Đề xuất phí VƯỢT KM của chuyến tự lái (09/09/2026).
+ *
+ * Chỉ là ĐỀ XUẤT: chủ xe bấm ghi mới thành phụ phí thật. Hệ thống không tự trừ tiền khách vì
+ * quãng đường thực tế còn phụ thuộc những thứ nó không biết (khách báo trước, chủ xe đồng ý cho
+ * chạy thêm, đồng hồ km hỏng…).
+ *
+ * `available: false` khi thiếu bất kỳ dữ kiện nào — hạn mức, số km lúc giao hoặc lúc nhận lại.
+ * Nói rõ là chưa đủ dữ liệu, KHÔNG dựng một số 0 trông như "không vượt".
+ */
+export class ExcessMileageSuggestionDto {
+  @ApiProperty({ description: 'Có đủ dữ kiện (hạn mức + hai chỉ số đồng hồ) để đề xuất không' })
+  available!: boolean;
+  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Km/ngày trong giá theo snapshot của đơn' })
+  includedKmPerDay!: number | null;
+  @ApiProperty({ description: 'Số ngày tính phí của chuyến' }) chargedDays!: number;
+  @ApiProperty({ description: 'Hạn mức tổng = số ngày × km mỗi ngày' }) allowedKm!: number;
+  @ApiProperty({ description: 'Km thực tế đã chạy (đồng hồ trả − đồng hồ giao)' }) actualKm!: number;
+  @ApiProperty({ description: 'Km vượt hạn mức (không âm)' }) excessKm!: number;
+  @ApiPropertyOptional({ type: String, nullable: true }) feePerKm!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tiền đề xuất' })
+  amount!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Diễn giải công thức' })
+  formula!: string | null;
+}
+
 // ── Hoàn cọc ────────────────────────────────────────────────────────────────
 
 export class DepositRefundDto {
@@ -95,6 +121,15 @@ export class DepositRefundDto {
  * (số cấu hình) mà là tổng khoản `payments.kind = 'deposit'` đã thu — không có bằng chứng đã
  * thu tiền thì không có việc hoàn tiền.
  */
+/** Quy tắc phụ phí MẶC ĐỊNH đã đóng băng trên đơn (chuyến có tài xế) — để gợi ý khoản thật. */
+export class SettlementSurchargeRuleDto {
+  @ApiProperty({ description: 'DRIVER_SURCHARGE_KIND' }) kind!: string;
+  @ApiProperty({ description: 'SURCHARGE_CATEGORY tương ứng khi ghi khoản thật' }) category!: string;
+  @ApiProperty({ description: 'DRIVER_SURCHARGE_UNIT' }) unit!: string;
+  @ApiProperty({ description: 'VND string — ADR 0007' }) amount!: string;
+  @ApiPropertyOptional({ type: Number, nullable: true }) thresholdValue!: number | null;
+}
+
 export class BookingSettlementDto {
   @ApiProperty() bookingId!: string;
   @ApiProperty({ description: 'Cọc theo cấu hình đơn — CHƯA chắc đã thu' })
@@ -108,6 +143,17 @@ export class BookingSettlementDto {
   depositStatus!: string;
   @ApiPropertyOptional({ type: DepositRefundDto, nullable: true }) refund!: DepositRefundDto | null;
   @ApiProperty({ type: OvertimeSuggestionDto }) overtime!: OvertimeSuggestionDto;
+
+  /**
+   * Mức phụ phí đã công bố với khách LÚC ĐẶT (snapshot trên đơn, 08/09/2026) — gợi ý số tiền và
+   * lý do khi ghi khoản thật; không tự cộng vào đơn. Rỗng với đơn tự lái/đơn cũ.
+   */
+  @ApiProperty({ type: [SettlementSurchargeRuleDto] })
+  surchargeRules!: SettlementSurchargeRuleDto[];
+
+  /** Đề xuất phí vượt km — chủ xe xác nhận mới thành khoản thật. */
+  @ApiProperty({ type: ExcessMileageSuggestionDto })
+  excessMileage!: ExcessMileageSuggestionDto;
 }
 
 export class RecordDepositRefundDto {

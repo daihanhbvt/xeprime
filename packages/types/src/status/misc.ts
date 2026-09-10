@@ -185,6 +185,20 @@ export type MembershipStatus = (typeof MEMBERSHIP_STATUS)[keyof typeof MEMBERSHI
 export const MEMBERSHIP_STATUS_VALUES = Object.values(MEMBERSHIP_STATUS) as MembershipStatus[];
 
 /**
+ * Nhãn + màu cho nhãn trạng thái dùng chung.
+ *
+ * Ở đây chứ không ở từng app: web và app native cùng vẽ nhãn này trên màn Nhân sự, và hai bảng
+ * màu riêng là hai sản phẩm nói khác nhau về cùng một trạng thái. `label` chỉ là chuỗi dự phòng —
+ * chữ hiện ra đi qua `Domain.membershipStatus` (ADR 0012).
+ */
+export const MEMBERSHIP_STATUS_META: Readonly<Record<MembershipStatus, StatusMeta>> = {
+  [MEMBERSHIP_STATUS.ACTIVE]: { label: 'Đang hoạt động', color: STATUS_COLOR.SUCCESS },
+  [MEMBERSHIP_STATUS.INVITED]: { label: 'Đã mời', color: STATUS_COLOR.WAITING },
+  [MEMBERSHIP_STATUS.LOCKED]: { label: 'Bị khoá', color: STATUS_COLOR.DANGER },
+  [MEMBERSHIP_STATUS.REMOVED]: { label: 'Đã gỡ', color: STATUS_COLOR.NEUTRAL },
+};
+
+/**
  * Phạm vi người thao tác trong `audit_logs` (AuditEntry.actorScope).
  *
  * `CUSTOMER` tách riêng khỏi `TENANT` vì khách thuê KHÔNG thuộc gian hàng nào: ghi một cú khách

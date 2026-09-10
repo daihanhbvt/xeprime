@@ -54,8 +54,25 @@ export interface AppFormat {
   ) => string;
   /** Ngày `YYYY-MM-DD` (không kèm giờ) — nguyện vọng nhận xe, hạn giấy tờ. */
   dateKey: (value: string | null | undefined) => string;
+  /**
+   * Ngày `YYYY-MM-DD` bỏ NĂM — `08/09` (vi) / `09/08` (en).
+   *
+   * Cho những chỗ bề ngang là tài nguyên khan hiếm nhất: nhãn trục X của biểu đồ ở 390dp. Thứ tự
+   * ngày/tháng vẫn theo ngôn ngữ (`DATE_PATTERN`), không gõ cứng `DD/MM`.
+   */
+  dayMonth: (value: string | null | undefined) => string;
   fullDate: (value: Dayjs) => string;
   monthYear: (value: Date) => string;
+  /**
+   * Tháng ở dạng NGẮN — `09/2026`.
+   *
+   * Cùng lý do với {@link dayMonth}: nhãn trục X của biểu đồ chỉ có vài chục dp, mà bản đầy đủ
+   * (`Tháng 9 năm 2026`) dài gấp ba lần chỗ đó và bị cắt thành `Tháng…` — một nhãn không nói ra
+   * nó là tháng mấy thì thà không có. Bản đầy đủ vẫn hiện ở thẻ chi tiết khi chạm vào mốc.
+   *
+   * Không theo `DATE_PATTERN` của ngôn ngữ vì `MM/YYYY` không có thứ tự nào để nhầm.
+   */
+  monthYearShort: (value: Date) => string;
   weekdayShort: (value: Dayjs) => string;
   rentalPoint: (value: Dayjs, opts?: { withTime?: boolean }) => string;
   rentalDuration: (from: Dayjs, to: Dayjs) => string;
@@ -83,10 +100,18 @@ export interface AppFormat {
  * KHÔNG dùng cho tham số API: `DAY_PARAM_FORMAT`/`MONTH_PARAM_FORMAT` là dữ liệu, luôn ISO.
  */
 export const DATE_PATTERN: Readonly<
-  Record<AppLocale, { readonly date: string; readonly dateTime: string; readonly dayMonth: string }>
+  Record<
+    AppLocale,
+    {
+      readonly date: string;
+      readonly dateTime: string;
+      readonly dayMonth: string;
+      readonly monthYear: string;
+    }
+  >
 > = {
-  vi: { date: 'DD/MM/YYYY', dateTime: 'DD/MM/YYYY HH:mm', dayMonth: 'DD/MM' },
-  en: { date: 'MM/DD/YYYY', dateTime: 'MM/DD/YYYY HH:mm', dayMonth: 'MM/DD' },
+  vi: { date: 'DD/MM/YYYY', dateTime: 'DD/MM/YYYY HH:mm', dayMonth: 'DD/MM', monthYear: 'MM/YYYY' },
+  en: { date: 'MM/DD/YYYY', dateTime: 'MM/DD/YYYY HH:mm', dayMonth: 'MM/DD', monthYear: 'MM/YYYY' },
 };
 
 /** Hoa chữ cái đầu theo luật của chính chuỗi đó — `toLocaleUpperCase` an toàn với tiếng Việt. */
@@ -184,10 +209,12 @@ export function createAppFormat(
     dateTimeRange: (from, to) => t('units.range', { from: stamp(from), to: stamp(to) }),
     fullDate: (value) => format.dateTime(value.toDate(), 'fullDate'),
     monthYear: (value) => capitalizeFirst(format.dateTime(value, 'monthYear')),
+    monthYearShort: (value) => toAppTz(value).format(pattern.monthYear),
     shortDateTime: shortStamp,
     shortDateTimeRange: (from, to) =>
       t('units.range', { from: shortStamp(from), to: shortStamp(to) }),
     dateKey: (value) => (value ? format.dateTime(asCalendarDate(value), 'short') : empty),
+    dayMonth: (value) => (value ? toAppTz(asCalendarDate(value)).format(pattern.dayMonth) : empty),
 
     weekdayShort: (value) => weekday(value),
     rentalPoint: (value, opts) => {

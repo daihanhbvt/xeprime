@@ -31,6 +31,8 @@ interface VehicleListRowProps {
   alertsLoading?: boolean;
   alertsFailed?: boolean;
   actions: RowAction[];
+  /** Đích của tên xe — mặc định Hồ sơ 360 ở `/manage`; xem `VehicleCardGrid`. */
+  detailHref?: (id: string) => string;
 }
 
 /**
@@ -49,6 +51,7 @@ export function VehicleListRow({
   alertsLoading = false,
   alertsFailed = false,
   actions,
+  detailHref = vehiclePath.detail,
 }: VehicleListRowProps) {
   const t = useTranslations('Vehicles.list');
   const fmt = useAppFormat();
@@ -81,7 +84,7 @@ export function VehicleListRow({
 
       <div className={styles.content}>
         <div className={styles.titleRow}>
-          <Link href={vehiclePath.detail(vehicle.id)} className={styles.name}>
+          <Link href={detailHref(vehicle.id)} className={styles.name}>
             {vehicle.name}
           </Link>
           <StatusTag

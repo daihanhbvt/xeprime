@@ -5,27 +5,9 @@
     calc(var(--xp-space-xl) + env(safe-area-inset-bottom));
 }
 
-.head {
-  max-width: 640px;
-  margin-bottom: var(--xp-space-xl);
-}
-
-.title {
-  margin: 0;
-  color: var(--xp-color-text);
-  font-size: var(--xp-font-size-h1);
-  font-weight: var(--xp-font-weight-bold);
-}
-
-.subtitle {
-  margin: var(--xp-space-xs) 0 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body);
-}
-
 .body {
   display: grid;
-  grid-template-columns: 232px minmax(0, 1fr);
+  grid-template-columns: 256px minmax(0, 1fr);
   align-items: start;
   gap: var(--xp-space-lg);
 }
@@ -34,12 +16,23 @@
   position: sticky;
   /* Header marketplace dính trên cùng — menu phải dừng dưới nó, không chui xuống gầm. */
   top: 84px;
-  padding: var(--xp-space-sm) 0;
-  border-right: 1px solid var(--xp-color-border);
+  min-width: 0;
 }
 
 .content {
   min-width: 0;
+}
+
+/*
+ * Route chiếm trọn bề ngang (lịch xe): không giới hạn 1220px, không menu, lề mỏng. Vẫn là một
+ * cột dọc `min-height: 0` để lưới bên trong sở hữu vùng cuộn của chính nó.
+ */
+.fullWidth {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--xp-space-md) var(--xp-space-md)
+    calc(var(--xp-space-md) + env(safe-area-inset-bottom));
 }
 
 .center {
@@ -52,6 +45,10 @@
 }
 
 @media (max-width: 900px) {
+  .wrap {
+    padding-top: var(--xp-space-md);
+  }
+
   .body {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--xp-space-md);
@@ -59,8 +56,5 @@
 
   .aside {
     position: static;
-    padding: 0 0 var(--xp-space-sm);
-    border-right: 0;
-    border-bottom: 1px solid var(--xp-color-border);
   }
 }

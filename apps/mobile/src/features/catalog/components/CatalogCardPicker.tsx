@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image, Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
-import type { CatalogItem } from '@xeprime/api-client';
+import type { CatalogItem } from '@/api/catalog';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { BODY_TYPE_ART } from '../body-type-art';

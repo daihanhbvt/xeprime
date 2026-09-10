@@ -60,6 +60,15 @@ export const VEHICLE_FEATURE_LABEL = {
   screen: 'Màn hình giải trí',
   map: 'Bản đồ',
   child_seat: 'Ghế trẻ em',
+  // Xe máy (09/09/2026) — trước đó form xe máy vẫn hiện nguyên bộ tiện nghi ô tô.
+  abs: 'Phanh ABS',
+  traction_control: 'Kiểm soát lực kéo',
+  smart_key: 'Khoá thông minh',
+  phone_holder: 'Giá đỡ điện thoại',
+  top_box: 'Thùng sau (top box)',
+  helmet_included: 'Kèm mũ bảo hiểm',
+  raincoat_included: 'Kèm áo mưa',
+  anti_theft: 'Khoá chống trộm',
 } as const;
 
 export type VehicleFeatureKey = keyof typeof VEHICLE_FEATURE_LABEL;
@@ -69,6 +78,31 @@ export function vehicleFeatureLabel(key: string): string {
   return (VEHICLE_FEATURE_LABEL as Record<string, string>)[key] ?? key;
 }
 
+/**
+ * Trường KHOÁ khi xe đã được duyệt lên chợ (09/09/2026 — ghi đè luật "sửa là duyệt lại" của
+ * ADR 0008).
+ *
+ * Đây là căn cước của chiếc xe: đổi nó sau khi duyệt tức là biến listing đã kiểm duyệt thành
+ * một chiếc xe khác — khách đặt xe số này lại nhận xe số khác. Muốn đổi thì gỡ xe khỏi chợ.
+ *
+ * Mọi thứ còn lại (giá, ảnh, mô tả, tiện ích, dịch vụ, màu…) sửa TỰ DO và hiệu lực ngay: chúng
+ * mô tả cùng một chiếc xe, và bắt chủ xe chờ duyệt lại chỉ để đổi giá là lý do khiến giá ngoài
+ * chợ luôn cũ.
+ */
+export const VEHICLE_LOCKED_AFTER_APPROVAL_FIELDS = [
+  'plateNumber',
+  'vehicleType',
+  'transmission',
+  'fuelType',
+  'manufactureYear',
+] as const;
+export type VehicleLockedField = (typeof VEHICLE_LOCKED_AFTER_APPROVAL_FIELDS)[number];
+
+/**
+ * @deprecated Luật "sửa trường này thì xe về chờ duyệt lại" đã bỏ từ 09/09/2026 — dùng
+ * `VEHICLE_LOCKED_AFTER_APPROVAL_FIELDS`. Hằng cũ còn ở đây vì `apps/mobile` chưa chuyển;
+ * xoá khi màn sửa xe của app native cập nhật theo.
+ */
 export const VEHICLE_PUBLIC_SENSITIVE_FIELDS = [
   'weekdayPrice',
   'weekendPrice',
@@ -284,6 +318,16 @@ export const SERVICE_TYPE = {
 export type ServiceType = (typeof SERVICE_TYPE)[keyof typeof SERVICE_TYPE];
 export const SERVICE_TYPE_VALUES = Object.values(SERVICE_TYPE) as ServiceType[];
 
+/**
+ * Thu hẹp một chuỗi bất kỳ về mã dịch vụ thật — cùng idiom với `isRouteType`.
+ *
+ * Cần vì `serviceTypes` đi trên dây là `string[]` (OpenAPI), còn mọi tính toán trong app dùng
+ * union `ServiceType`: không có guard thì mỗi nơi đọc lại ép kiểu một kiểu.
+ */
+export function isServiceType(value: unknown): value is ServiceType {
+  return typeof value === 'string' && (SERVICE_TYPE_VALUES as string[]).includes(value);
+}
+
 export const SERVICE_TYPE_LABEL: Readonly<Record<ServiceType, string>> = {
   [SERVICE_TYPE.SELF_DRIVE]: 'Tự lái',
   [SERVICE_TYPE.WITH_DRIVER]: 'Có tài xế',
@@ -380,7 +424,9 @@ export const FUEL_TYPE_LABEL: Readonly<Record<FuelType, string>> = {
  */
 export const VEHICLE_FUEL_TYPES: Readonly<Record<VehicleType, readonly FuelType[]>> = {
   [VEHICLE_TYPE.CAR]: [FUEL_TYPE.GASOLINE, FUEL_TYPE.DIESEL, FUEL_TYPE.ELECTRIC, FUEL_TYPE.HYBRID],
-  [VEHICLE_TYPE.MOTORBIKE]: [FUEL_TYPE.GASOLINE, FUEL_TYPE.ELECTRIC],
+  // Xe máy hybrid đã bán tại VN (Yamaha GEAR 125 Hybrid, Janus/Grande bản hybrid) — ma trận cũ
+  // chỉ có xăng/điện nên những xe đó không khai đúng được nguồn năng lượng của chính nó.
+  [VEHICLE_TYPE.MOTORBIKE]: [FUEL_TYPE.GASOLINE, FUEL_TYPE.ELECTRIC, FUEL_TYPE.HYBRID],
 };
 
 export function vehicleFuelTypesFor(vehicleType: string): readonly FuelType[] {
@@ -393,6 +439,32 @@ export function isVehicleFuelTypeAllowed(
 ): boolean {
   return fuelType == null || vehicleFuelTypesFor(vehicleType).includes(fuelType as FuelType);
 }
+
+/*
+ * Ma trận "trường nào có nghĩa với xe nào" (`vehicleFieldPolicy`, `vehicleEnergySpecPolicy`,
+ * `VehicleFieldApplicability`) đã chuyển sang `./vehicle-profile` từ 09/09/2026: nó không còn
+ * chỉ nói về năng lượng mà quyết định cả số chỗ, kiểu dáng và phân khúc xe máy. Cả hai vẫn
+ * xuất ra từ `@xeprime/types`, nơi gọi không phải đổi import.
+ */
+
+/** Trần giá trị của các thông số năng lượng — dùng chung cho yup, class-validator và CHECK ở DB. */
+export const VEHICLE_ENERGY_LIMITS = {
+  /** Km mỗi lần sạc đầy. */
+  electricRangeKm: { min: 1, max: 2000 },
+  /** Dung lượng pin (kWh). */
+  batteryCapacityKwh: { min: 1, max: 500 },
+  /** Tiêu thụ điện (kWh/100km). */
+  electricConsumptionKwhPer100Km: { min: 1, max: 200 },
+} as const;
+
+/**
+ * Số ảnh TỐI THIỂU để một chiếc xe được gửi lên chợ.
+ *
+ * Bốn góc (trước · sau · bên · nội thất) là mức tối thiểu để khách tin đây là xe thật. Con số
+ * sống ở đây vì cả form, checklist và `submit-public` ở server cùng đọc — ba bản sao của nó là
+ * ba cơ hội để giao diện nói "đủ" trong khi server nói "chưa".
+ */
+export const VEHICLE_PUBLIC_MIN_IMAGES = 4;
 
 /**
  * Kiểu dáng thân xe (body type) — thuộc tính dữ liệu như nhiên liệu, chỉ áp dụng cho ô tô

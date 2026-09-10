@@ -22,6 +22,7 @@ import {
 } from './seed/context';
 import { buildShop } from './seed/shop';
 import { SHOP_SPECS } from './seed/shops';
+import { seedVehicleCatalog } from './seed/catalog-sync';
 import { seedSystemData } from './seed/system';
 
 /**
@@ -84,6 +85,9 @@ async function main(): Promise<void> {
 
   log('Dữ liệu nền:');
   const system = await seedSystemData();
+  // Danh mục hãng/mẫu xe: dữ liệu nền như quyền và gói dịch vụ — chủ xe không đăng nổi một
+  // chiếc xe nếu ô "Mẫu xe" rỗng.
+  await seedVehicleCatalog();
 
   if (SEED_MODE === 'system') {
     log('\nXong: dữ liệu nền đã sẵn sàng. Không đổ dữ liệu demo ở chế độ này.');

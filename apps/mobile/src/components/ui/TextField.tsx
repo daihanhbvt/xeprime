@@ -55,9 +55,6 @@ interface TextFieldProps<T extends FieldValues> {
   onSubmitEditing?: TextInputProps['onSubmitEditing'];
 }
 
-/** Chữ trong ô chỉ đọc: mờ như nhãn phụ, để mắt không đọc nó thành một ô đang chờ nhập. */
-const READ_ONLY_TEXT = { color: colors.textMuted };
-
 /** Form state ở React Hook Form, không Redux (ADR 0004). */
 export function TextField<T extends FieldValues>({
   control,
@@ -72,7 +69,18 @@ export function TextField<T extends FieldValues>({
   maxLength,
   ...inputProps
 }: TextFieldProps<T>) {
-  /* `editable={false}` là cách React Native khai "chỉ đọc"; vỏ ô cần biết để đổi hình. */
+  /*
+   * `editable={false}` là cách React Native khai "chỉ đọc"; vỏ ô cần biết để đổi hình.
+   *
+   * Chỉ VỎ đổi — nền chìm và viền nhạt của `FieldShell`. Giá trị bên trong giữ nguyên màu chữ
+   * chính: nó là DỮ LIỆU của người dùng, và làm mờ nó là làm mờ đúng thứ họ mở màn ra để đọc.
+   * Trên một hồ sơ khoá toàn phần (gian hàng đang chờ duyệt, hoặc tài khoản không có
+   * `tenant.update`) thì mười mấy ô cùng mờ cả khung lẫn chữ đọc ra như màn hình hỏng, không
+   * ra "đang chờ duyệt nên tạm khoá" — mà câu giải thích thì đã nằm ở `Callout` đầu trang rồi.
+   *
+   * Đây cũng là cách MỌI ô khác trong bộ đang làm (`TextControl`, `DateField`, `FieldBox`):
+   * chỉ ô này lệch, nên form nào nhiều `TextField` thì xám hơn hẳn form bên cạnh.
+   */
   const readOnly = inputProps.editable === false;
   const { field, fieldState } = useController({ control, name });
   const inputRef = useRef<TextInput>(null);
@@ -119,6 +127,10 @@ export function TextField<T extends FieldValues>({
         {icon ? <Ionicons name={icon} size={iconSize.sm} color={colors.textMuted} /> : null}
 
         <TextInput
+          // A11Y-LABEL: nhãn nằm ở `FieldLabel` BÊN CẠNH ô, không nằm trong ô — trình đọc
+          // màn hình vì thế đọc ra một ô nhập vô danh. Gắn tên ô vào chính input là chỗ duy
+          // nhất sửa được cho cả app (và là cách test tìm đúng ô, thay vì dò placeholder).
+          accessibilityLabel={label}
           ref={inputRef}
           value={String(field.value ?? '')}
           onChangeText={field.onChange}
@@ -132,7 +144,7 @@ export function TextField<T extends FieldValues>({
           {...(maxLength === undefined ? {} : { maxLength })}
           textAlignVertical={multiline ? 'top' : 'center'}
           placeholderTextColor={colors.placeholder}
-          style={readOnly ? [inputStyle, READ_ONLY_TEXT] : inputStyle}
+          style={inputStyle}
           {...inputProps}
         />
 

@@ -32,6 +32,7 @@ import { FirebaseModule } from './modules/firebase/firebase.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
 import { PublicListingsModule } from './modules/public-listings/public-listings.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
+import { VehicleSettingsModule } from './modules/vehicle-settings/vehicle-settings.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { BookingRequestsModule } from './modules/booking-requests/booking-requests.module';
 import { CustomerTripsModule } from './modules/customer-trips/customer-trips.module';
@@ -108,6 +109,7 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
     CalendarModule,
     PublicListingsModule,
     VehiclesModule,
+    VehicleSettingsModule,
     BookingsModule,
     BookingRequestsModule,
     CustomerTripsModule,

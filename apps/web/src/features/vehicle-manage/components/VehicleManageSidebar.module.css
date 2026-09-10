@@ -1,0 +1,235 @@
+/*
+ * Menu trái của không gian quản lý xe — thẻ trắng, mục đang mở có vạch cam bên trái trên nền
+ * cam nhạt (cùng ngôn ngữ với `AccountSidebar`), tiêu đề nhóm in hoa nhỏ kèm công tắc dịch vụ.
+ */
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-height: 560px;
+  padding: var(--xp-space-md) 0 var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  padding: 0 var(--xp-space-md) var(--xp-space-sm);
+}
+
+.brandMark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.brandText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.brandName {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.brandPortal {
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.groups {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.group {
+  min-width: 0;
+}
+
+.groupHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-xs);
+  margin: 0 0 var(--xp-space-xs);
+  padding: 0 var(--xp-space-md);
+}
+
+.groupTitle {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Nhóm dịch vụ đang tắt: mờ đi nhưng vẫn bấm được — trang con nói lý do và có nút bật. */
+.listOff .item:not(.active) {
+  opacity: var(--xp-disabled-opacity);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px var(--xp-space-md);
+  border-left: 3px solid transparent;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 1.35;
+  text-decoration: none;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.item:hover {
+  background: var(--xp-color-bg-hover);
+  color: var(--xp-color-text);
+}
+
+.active,
+.active:hover {
+  border-left-color: var(--xp-color-primary);
+  background: var(--xp-color-bg-selected);
+  color: var(--xp-color-primary-active);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.icon {
+  flex: none;
+  font-size: 16px;
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+}
+
+.userCard {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md) var(--xp-space-md) var(--xp-space-xs);
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+.avatar {
+  flex: none;
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+.userText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.userName {
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userRole {
+  overflow: hidden;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .nav {
+    gap: 0;
+    min-height: 0;
+    padding: 0 0 var(--xp-space-xs);
+    border: 0;
+    border-bottom: 1px solid var(--xp-color-border);
+    border-radius: 0;
+    background: none;
+  }
+
+  .brand,
+  .userCard {
+    display: none;
+  }
+
+  .groups {
+    flex-direction: row;
+    gap: var(--xp-space-sm);
+    overflow-x: auto;
+    padding-bottom: var(--xp-space-xs);
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .groups::-webkit-scrollbar {
+    display: none;
+  }
+
+  .group {
+    flex: none;
+  }
+
+  .groupHead {
+    padding: 0 var(--xp-space-xs);
+  }
+
+  .list {
+    flex-direction: row;
+    gap: var(--xp-space-xs);
+  }
+
+  .item {
+    width: auto;
+    padding: 8px 12px;
+    border: 1px solid var(--xp-color-border);
+    border-radius: var(--xp-border-radius-pill);
+    white-space: nowrap;
+    scroll-snap-align: start;
+  }
+
+  .active,
+  .active:hover {
+    border-color: var(--xp-color-primary);
+  }
+
+  .label {
+    flex: none;
+  }
+}

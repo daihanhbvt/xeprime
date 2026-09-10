@@ -43,6 +43,7 @@ export const MESSAGE_NAMESPACES = [
   { file: 'support', namespace: 'Support' },
 
   // — Cổng quản lý —
+  { file: 'list-your-vehicle', namespace: 'ListYourVehicle' },
   { file: 'manage-common', namespace: 'ManageCommon' },
   { file: 'dashboard', namespace: 'Dashboard' },
   { file: 'shop-onboarding', namespace: 'ShopOnboarding' },
@@ -51,11 +52,14 @@ export const MESSAGE_NAMESPACES = [
   { file: 'bookings', namespace: 'Bookings' },
   { file: 'calendar', namespace: 'Calendar' },
   { file: 'vehicles', namespace: 'Vehicles' },
+  // Không gian "Quản lý xe" của chủ xe (08/09/2026) — dùng chung với tab Vận hành ở /manage.
+  { file: 'vehicle-manage', namespace: 'VehicleManage' },
   { file: 'branches', namespace: 'Branches' },
   { file: 'customers', namespace: 'Customers' },
   // Mới có màn Công nợ; sổ Thu-Chi vẫn còn chuỗi thô — xem `i18n:audit`.
   { file: 'finance', namespace: 'Finance' },
   // Quản trị gói dịch vụ (admin nền tảng) — chuyển đợt W1 (ADR 0015/0020).
+  { file: 'admin-catalog', namespace: 'AdminCatalog' },
   { file: 'admin-plans', namespace: 'AdminPlans' },
   // Hàng đợi đối soát tiền vào của admin nền tảng (R2 — ADR 0022).
   { file: 'bank-transactions', namespace: 'BankTransactions' },
