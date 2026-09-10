@@ -1,8 +1,8 @@
 # 02 — Product Vision
 
-> Cập nhật: 03/09/2026
+> Cập nhật: 09/09/2026
 > Trạng thái: **Canonical — định hướng sản phẩm hiện hành**
-> Quyết định chi tiết về gói, tiền và cách gọi phí: [ADR 0028](../decisions/0028-marketplace-subscription-fees-and-custodied-funds.md).
+> Quyết định chi tiết mới nhất về hai tuyến, cọc, thuế, bảo hiểm và hủy: [ADR 0032](../decisions/0032-booking-deposit-insurance-and-owner-lite.md).
 
 ## 1. XePrime là gì
 
@@ -13,7 +13,7 @@ XePrime là **chợ đăng và thuê xe** đồng thời là **giải pháp qu�
 - Chủ xe chuyên nghiệp hoặc đơn vị cho thuê có thể nâng cấp thành gian hàng, trả thuê bao cố định để dùng toàn bộ công cụ quản lý và không chịu hoa hồng nền tảng theo chuyến.
 - Xe của mọi nhóm cùng xuất hiện trên một marketplace; không tách thành hai chợ.
 
-Giá trị cốt lõi là một vòng kín: **nguồn xe thật → lịch thật → đặt xe thật → giao nhận có bằng chứng → tiền và trách nhiệm giải thích được**.
+Giá trị cốt lõi là một vòng kín: **nguồn xe thật → lịch thật → đặt xe thật → giao nhận phù hợp từng mô hình → tiền và trách nhiệm giải thích được**.
 
 ## 2. Những người XePrime phục vụ
 
@@ -28,7 +28,7 @@ Thường có 1–3 xe, chưa cần một hệ thống vận hành dày. Họ c�
 - Đăng và quản lý xe.
 - Mở/khóa lịch.
 - Nhận và xử lý yêu cầu/đơn thuê.
-- Bàn giao, nhận lại xe và lưu bằng chứng.
+- Theo dõi chuyến; trạng thái có thể tự chuyển theo lịch và chủ xe chỉ điều chỉnh khi thực tế thay đổi.
 - Biết từng khoản khấu trừ, số tiền thực nhận và trạng thái chuyển tiền.
 - Chat và xử lý hỗ trợ/tranh chấp.
 
@@ -46,7 +46,7 @@ Có thể là một cá nhân muốn vận hành chuyên nghiệp hoặc doanh n
 - Quyền lợi hiển thị/nhận diện gian hàng theo chính sách xếp hạng minh bạch.
 - Không chịu hoa hồng nền tảng theo từng chuyến trong thời gian gói còn hiệu lực.
 
-Một chủ xe có thể nâng cấp hoặc hạ cấp mà không đổi tài khoản, role hay tạo lại dữ liệu.
+Một chủ xe có thể nâng cấp mà không đổi tài khoản, role hay tạo lại dữ liệu. Booking đã tạo giữ nguyên snapshot thương mại cũ; quy tắc hạ cấp chưa được chốt.
 
 ### 2.4 Nhân sự nền tảng
 
@@ -60,17 +60,17 @@ Một chủ xe có thể nâng cấp hoặc hạ cấp mà không đổi tài kh
 
 | Nội dung | Chủ xe cơ bản — theo chuyến | Gian hàng — thuê bao |
 | --- | --- | --- |
-| Phí cố định | 0đ | Theo số chỗ xe và kỳ hạn |
+| Phí cố định | 0đ; tối đa 3 xe | Theo gói gian hàng; giới hạn cụ thể theo policy |
 | Giá pilot | Không áp dụng | 100.000đ/ô tô/tháng; 40.000đ/xe máy/tháng; tối thiểu 3 tháng; **chưa phải giá production** |
-| Hoa hồng XePrime | Giả thuyết 10% doanh thu chuyến, admin cấu hình chung và có hiệu lực theo phiên bản | 0% trong thời gian gói hiệu lực |
-| Thuế | Khấu trừ/nộp thay đúng nghĩa vụ thực tế khi pháp luật yêu cầu | Nghĩa vụ thuế vẫn tồn tại; XePrime có thể tài trợ chi phí như ưu đãi thương mại nhưng không được gọi sai hoặc xóa dấu vết kế toán |
-| Bảo hiểm/bảo vệ | Bảo vệ xe bắt buộc do chủ xe chịu/khấu trừ; bảo hiểm chuyến đi chỉ do người thuê trả khi giữ lựa chọn | Tương tự; gói thuê bao không tự làm nghĩa vụ hoặc phí bảo hiểm thực tế biến mất |
-| Giữ chỗ | Bắt buộc với booking đủ điều kiện | Khách có thể cọc trực tiếp với gian hàng hoặc dùng luồng nền tảng nếu gian hàng bật |
-| Tiền còn lại | Trả trực tiếp chủ xe hoặc thanh toán qua nền tảng khi luồng thu hộ đã đủ điều kiện mở | Có thể giao dịch trực tiếp; nếu qua nền tảng thì áp dụng cùng chuẩn đối soát/hoàn tiền |
+| Phí nền tảng/chuyến | 10% giá thuê gốc, cộng thêm vào tổng tiền khách trả | 0% trong thời gian gói hiệu lực |
+| Thuế | Khấu trừ từ tiền chủ xe nhận khi chuyến bắt đầu; working example 7% giá thuê gốc | Khấu trừ từ tiền gian hàng nhận khi chuyến bắt đầu; không được gộp vào phí gói |
+| Bảo hiểm theo chuyến | Bảo hiểm xe/chuyến bắt buộc và bảo hiểm thân thể tùy chọn đều do khách trả thêm | Tương tự; gói thuê bao không làm bảo hiểm biến mất |
+| Cọc đặt chuyến | Bắt buộc qua QR Pay XePrime | Bắt buộc qua QR Pay XePrime trong giai đoạn đầu |
+| Tiền thuê còn lại | Khách trả trực tiếp chủ xe khi nhận xe | Khách trả trực tiếp gian hàng; XePrime không thu hộ phần còn lại |
 | Công cụ quản lý | Rút gọn | Đầy đủ |
 | Hiển thị | Theo chất lượng, giá, lịch trống và độ phù hợp | Có quyền lợi ưu tiên hợp lý; mọi vị trí trả phí/tài trợ phải có nhãn rõ |
 
-Tỷ lệ phí dịch vụ khoảng 10% và giá gói theo loại xe là **policy pilot**, không được hard-code thành sự thật pháp lý hoặc mức giá vĩnh viễn. Admin phải cấu hình chính sách theo loại xe, ngày hiệu lực và booking phải lưu snapshot chính sách lúc tạo.
+Tỷ lệ phí nền tảng 10%, working tax rate 7% và giá gói theo loại xe là **policy pilot**, không được hard-code thành sự thật pháp lý hoặc mức giá vĩnh viễn. Admin phải cấu hình chính sách theo loại xe/loại chủ thể, ngày hiệu lực và booking phải lưu snapshot chính sách lúc tạo.
 
 ## 4. Nguyên tắc giá, thuế và bảo hiểm
 
@@ -94,8 +94,9 @@ Không dùng một tỷ lệ chung cho mọi chủ thể. Doanh nghiệp, hộ k
 
 Định hướng đối tác đầu tiên là **PVI**, nhưng đây chưa phải tuyên bố rằng XePrime và PVI đã ký hợp đồng hay phát hành sản phẩm. Mô hình sản phẩm mong muốn gồm:
 
-- **Bảo vệ xe cho chủ xe:** bắt buộc đối với xe tham gia booking thuộc phạm vi áp dụng; phí do chủ xe chịu hoặc được khấu trừ minh bạch vào khoản phải trả. Chủ xe phải thấy rõ quyền lợi, phí, thời hạn và loại trừ.
-- **Bảo hiểm chuyến đi cho người thuê:** tùy chọn và chỉ cộng vào tổng tiền người thuê khi họ giữ lựa chọn; UI có thể chọn sẵn theo định hướng kinh doanh nhưng phải hiển thị riêng giá/quyền lợi và cho khách bỏ chọn dễ dàng trước khi thanh toán. Cách lấy sự đồng ý phải được rà soát pháp lý và UX trước production.
+- **Bảo hiểm xe/chuyến:** bắt buộc với mọi booking ở cả hai tuyến và do người thuê trả thêm ngoài giá thuê gốc.
+- **Bảo hiểm tai nạn con người:** tùy chọn, do người thuê trả nếu chọn; phải hiển thị riêng giá/quyền lợi và cho khách bỏ chọn dễ dàng trước khi thanh toán.
+- QR Pay thu/giữ khoản phí dự kiến lúc đặt xe nhưng chỉ chính thức mua/phát hành bảo hiểm khi bàn giao hoặc bắt đầu chuyến. Mọi booking hủy trước mốc đó được hoàn 100% phí bảo hiểm bắt buộc và tùy chọn.
 
 Chỉ bật dòng “bảo hiểm” sau khi có tối thiểu:
 
@@ -113,13 +114,10 @@ Nếu chưa có các điều kiện trên, khoản 5–8% không được gọi 
 
 ```text
 Khách xác nhận booking
-→ thanh toán khoản giữ chỗ
-→ hệ thống phân bổ theo snapshot:
-   phí dịch vụ XePrime + thuế nộp thay + bảo hiểm thực tế + phải trả chủ xe
-→ phần còn lại:
-   (A) khách trả trực tiếp chủ xe, hoặc
-   (B) nền tảng thu hộ khi luồng này đã được phép mở
-→ chuyến hoàn thành/hủy
+→ thanh toán QR Pay: cọc đặt chuyến + phí nền tảng + khoản bảo hiểm dự kiến
+→ booking được xác nhận; phần còn lại khách sẽ trả trực tiếp chủ xe
+→ đến mốc bàn giao/bắt đầu chuyến: mua/phát hành bảo hiểm và ghi nhận thuế
+→ chuyến hoàn thành hoặc bị hủy
 → quyết toán, hoàn tiền hoặc ghi số dư phải trả
 → chủ xe yêu cầu rút về tài khoản ngân hàng
 ```
@@ -129,13 +127,22 @@ Khách xác nhận booking
 ```text
 Gian hàng trả phí thuê bao theo số chỗ xe
 → được mở toàn bộ công cụ và 0% hoa hồng nền tảng/chuyến
-→ khách có thể gửi yêu cầu, liên hệ và cọc trực tiếp
-→ nếu chọn cọc/thanh toán qua XePrime thì tiền vẫn phải đi qua quy trình đối soát, thuế, bảo hiểm và hoàn tiền tương ứng
+→ khách có thể trao đổi trước với gian hàng
+→ booking chính thức vẫn thanh toán cọc và khoản bảo hiểm dự kiến qua QR Pay XePrime
+→ tiền thuê còn lại trả trực tiếp gian hàng; thuế và bảo hiểm xử lý theo cùng chuẩn booking
 ```
 
-Giao dịch trực tiếp ngoài nền tảng được phép để tăng cơ hội chốt xe, nhưng phải cảnh báo rõ: XePrime không thể bảo đảm đối soát, hoàn tiền hoặc giải quyết phần giao dịch không được ghi nhận trên hệ thống.
+Thông tin liên hệ gian hàng có thể công khai để tăng cơ hội chốt xe, nhưng giao dịch không tạo booking trên XePrime không được nhận bảo hiểm/chính sách hủy của nền tảng.
 
-### 5.3 “Số dư chủ xe”, không phải ví điện tử
+### 5.3 Giữ lịch, hủy và hoàn tiền trước chuyến
+
+- Sau khi chủ xe chấp nhận hoặc hệ thống tự động nhận chuyến (`acceptedAt`), booking được coi là “đặt xe thành công”; khách có tối đa 2 giờ để thanh toán QR Pay, hiển thị bằng hai countdown 60 phút. Hết thời gian, booking tự hủy và mở lại lịch.
+- Cửa sổ hủy miễn phí 4 giờ cũng bắt đầu từ `acceptedAt`, không khởi động lại khi QR Pay thành công. Nếu đã thanh toán rồi hủy trong cửa sổ này, khách được hoàn toàn bộ tiền online: cọc, phí nền tảng và các khoản bảo hiểm dự kiến.
+- Khách hủy sau cửa sổ miễn phí nhưng trước bàn giao: hoàn 100% bảo hiểm; phần `cọc đặt chuyến + phí nền tảng` được chia 50% cho chủ xe/gian hàng và 50% cho XePrime.
+- Chủ xe/gian hàng hủy trước chuyến: khách được hoàn toàn bộ tiền đã thanh toán online; chưa phạt tiền, nhưng hệ thống cần tracking tần suất hủy.
+- Không tính thuế và không mua/phát hành bảo hiểm cho booking hủy trước khi chuyến bắt đầu.
+
+### 5.4 “Số dư chủ xe”, không phải ví điện tử
 
 Tên hiển thị là **Số dư chủ xe** hoặc **Khoản XePrime phải trả**. Đây là sổ cái nội bộ:
 

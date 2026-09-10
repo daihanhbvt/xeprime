@@ -1,6 +1,6 @@
 # 07 — Information Architecture
 
-> Cập nhật: 03/09/2026
+> Cập nhật: 09/09/2026
 > Trạng thái: **Canonical — cấu trúc trải nghiệm mục tiêu**
 
 ## 1. Bốn bề mặt, một hệ thống
@@ -9,9 +9,11 @@
 Marketplace công khai
 └─ Customer account
 
-Owner workspace
-├─ Owner Lite — gói cơ bản
-└─ Manage — gian hàng thuê bao
+User Portal
+├─ Tài khoản và chuyến của người thuê
+└─ Owner Lite — chủ xe tuyến hoa hồng, tối đa 3 xe
+
+Manage — chỉ gian hàng tuyến gói
 
 Platform Admin
 ```
@@ -41,22 +43,24 @@ Các bề mặt dùng chung tài khoản, API, vehicle, calendar và booking. Kh
 
 Mục chưa có luồng thật phải ẩn khỏi navigation; không dùng menu như backlog.
 
+Checkout phải tách rõ `tổng giá chuyến`, `thanh toán QR Pay ngay` và `trả trực tiếp khi nhận xe`. QR Pay giữ cọc, phí nền tảng nếu có và khoản bảo hiểm dự kiến; bảo hiểm chỉ được mua/phát hành tại bàn giao/bắt đầu chuyến nên mọi hủy trước mốc đó hoàn 100% bảo hiểm.
+
 ## 3. Owner Lite — chủ xe cơ bản
 
-Owner Lite là một vỏ đơn giản của `/manage`, lọc theo capability của gói. Không dựng một bộ route/API song sinh.
+Owner Lite nằm trong `/account`, là vỏ điều hướng thân thiện cho cá nhân có tối đa 3 xe. Nó dùng lại component, domain, API, lịch và booking từ Manage; không clone logic nghiệp vụ.
 
 | Thứ tự | Nhóm | Nội dung |
 | --- | --- | --- |
-| 1 | Tổng quan | Việc cần làm, chuyến sắp tới, thu nhập ròng dự kiến |
-| 2 | Xe của tôi | Hồ sơ xe, ảnh/giấy tờ, giá, lịch và trạng thái listing |
-| 3 | Yêu cầu & chuyến | Request, booking, bàn giao, nhận lại, hủy |
-| 4 | Tiền của tôi | Breakdown, số dư, lịch sử, yêu cầu rút |
-| 5 | Tin nhắn | Chat với khách |
-| 6 | Tài khoản chủ xe | Danh tính, thuế, ngân hàng, điều khoản |
-| 7 | Nâng cấp | So sánh và mua gói gian hàng |
+| 1 | Xe của tôi | Danh sách, đăng xe, hồ sơ, ảnh/giấy tờ, giá, lịch và trạng thái listing |
+| 2 | Lịch & chuyến | Lịch dùng lại từ Manage, chuyến của tôi và lịch sử từng xe |
+| 3 | Hướng dẫn & pháp lý | Cẩm nang, khai thuế, hợp đồng/chứng từ và bảo vệ dữ liệu |
+| 4 | Tiền của tôi | Breakdown, khoản XePrime phải trả, lịch sử và yêu cầu rút |
+| 5 | Tin nhắn | Chat với khách sau khi đủ điều kiện mở liên hệ |
+| 6 | Tài khoản | Hồ sơ, đổi mật khẩu, xóa tài khoản và đăng xuất |
+| 7 | Nâng cấp | So sánh và đăng ký gian hàng |
 | 8 | Hỗ trợ | Ticket/tranh chấp |
 
-Nguyên tắc: chủ xe cơ bản phải hoàn thành được một chuyến từ đầu tới cuối. Feature gating không được chặn nhận tiền, rút tiền, xem lịch sử hoặc cung cấp bằng chứng.
+Nguyên tắc: chủ xe cơ bản phải hoàn thành được một chuyến từ đầu tới cuối nhưng không bị ép dùng quy trình đội xe. Biên bản, ảnh tình trạng, odometer và nhiên liệu/pin không bắt buộc; hệ thống có thể tự chuyển trạng thái theo lịch và chủ xe điều chỉnh khi thực tế thay đổi. Feature gating không được chặn nhận tiền, rút tiền hoặc xem lịch sử.
 
 ## 4. Manage — gian hàng thuê bao
 
@@ -86,7 +90,7 @@ Menu hiện tại cần được nhóm lại theo công việc, thay vì một d
 | Marketplace | Banners, catalog, locations | Ranking/featured policy, sponsored label, performance |
 | Con người | Platform staff | Scope switch, least privilege, case-linked PII reveal |
 | Kiểm soát | Audit | Risk flags, incident trail, maker–checker |
-| Hỗ trợ | Chưa có | Tickets, queues, SLA, templates |
+| Hỗ trợ | Đã có route support cơ bản | Tickets, queues, SLA, templates và liên kết case–booking |
 
 ### Navigation mục tiêu
 
@@ -130,11 +134,11 @@ Vận hành
 | Persona | Scope | Nguồn quyết định |
 | --- | --- | --- |
 | Customer | Dữ liệu cá nhân/chuyến của mình | Quyền sở hữu resource |
-| Basic owner | Tenant của mình, bộ năng lực tối thiểu | Membership + permission + plan capability |
+| Basic owner | Xe/chuyến/số dư của chính mình, bộ năng lực Owner Lite | Ownership + business mode + policy giới hạn 3 xe |
 | Subscription shop | Tenant của mình, bộ năng lực đầy đủ | Membership + permission + plan capability |
 | Platform staff | Toàn sàn trong phạm vi role | Platform role + permission |
 
-Role không biểu diễn gói. `shop_owner` ở basic và subscription vẫn là cùng role; khác biệt đến từ plan capability.
+Business mode không phải permission. Tài khoản chỉ thuộc một trong hai mô hình `commission_owner` hoặc `subscription_shop`; role tenant (`shop_owner`, `shop_manager`, `shop_staff`, `shop_viewer`) chỉ áp dụng bên trong gian hàng. Tài xế là bản ghi để phân công, không có account/app.
 
 Nếu một user vừa có platform role vừa có tenant membership, shell phải cho chọn scope. Trước khi có scope switch, quy định vận hành là dùng tài khoản platform riêng.
 
@@ -142,7 +146,7 @@ Nếu một user vừa có platform role vừa có tenant membership, shell ph�
 
 | Loại | XePrime ghi nhận | Bảo vệ có thể cam kết |
 | --- | --- | --- |
-| On-platform | Quote, booking, tiền, bằng chứng, hủy/hoàn | Theo policy và dữ liệu hệ thống |
+| On-platform | Quote, booking, QR Pay, hủy/hoàn; bằng chứng nếu gian hàng dùng | Theo policy và dữ liệu hệ thống |
 | Liên hệ trên XePrime, trả tiền trực tiếp | Booking và giao nhận nếu hai bên vẫn cập nhật | Không bảo đảm đối soát khoản thanh toán ngoài hệ thống |
 | Hai bên tự giao dịch hoàn toàn bên ngoài | Chỉ có lead/contact event | Không cam kết hoàn tiền hoặc phân xử phần không có chứng cứ |
 
@@ -155,5 +159,5 @@ Trước khi mở thông tin liên hệ, UI phải cho khách hiểu sự khác 
 3. Feature ít dùng nằm trong Cấu hình hoặc contextual link.
 4. Mỗi trang có loading/rỗng/lỗi/forbidden rõ ràng.
 5. 403 nói thiếu quyền/capability nào và ai có thể giải quyết.
-6. Platform Admin và tenant Manage không tự động thay thế nhau; người có hai scope phải chủ động chuyển.
-7. Web responsive là bề mặt Owner/Manage chính. App native trước mắt chỉ cần Customer parity.
+6. Platform Admin có thể mở Manage của một gian hàng với toàn quyền tương đương chủ gian hàng. Shell phải hiện banner “Bạn đang quản lý gian hàng: {Tên}” và mọi thay đổi phải có audit.
+7. Web responsive là bề mặt Owner/Manage chính. Source mobile hiện có cả nhánh Manage; cần quyết định giữ hay thu gọn trước redesign, không mặc định coi mobile là customer-only.
