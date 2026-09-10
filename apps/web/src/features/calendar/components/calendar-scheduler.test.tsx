@@ -464,11 +464,76 @@ describe('CalendarScheduler — lớp ngày lễ', () => {
     ).toBeTruthy();
   });
 
-  it('chú giải có mục Ngày lễ', () => {
+  /**
+   * Chú giải phải NÓI ĐÚNG những gì lưới vẽ. Bản trước liệt kê "Đơn thuê" (không tương ứng
+   * trạng thái nào) và thiếu hẳn `reserved` — nên một thanh gold trên lịch không tra được ra
+   * nghĩa. `Đã xác nhận` thì ngược lại: nó là chặng đi qua trong một transaction, không đơn nào
+   * dừng lại ở đó, nên chú giải KHÔNG liệt kê.
+   */
+  it('chú giải liệt kê đúng hai trạng thái đơn xảy ra thật, không có "Đơn thuê"/"Đã xác nhận"', () => {
     renderScheduler();
 
     const legend = screen.getByLabelText('Chú giải lịch');
-    expect(within(legend).getByText('Ngày lễ')).toBeTruthy();
+    for (const label of ['Đã giữ xe', 'Đang thuê']) {
+      expect(within(legend).getByText(label), label).toBeTruthy();
+    }
+    expect(within(legend).queryByText('Đơn thuê')).toBeNull();
+    expect(within(legend).queryByText('Đã xác nhận')).toBeNull();
+  });
+
+  it('chú giải có đủ các lớp còn lại: giữ chỗ, bảo dưỡng, khóa xe, giá riêng, ngày lễ', () => {
+    renderScheduler();
+
+    const legend = screen.getByLabelText('Chú giải lịch');
+    for (const label of ['Chờ giữ chỗ', 'Bảo dưỡng', 'Xe bị khóa', 'Giá riêng', 'Ngày lễ']) {
+      expect(within(legend).getByText(label), label).toBeTruthy();
+    }
+  });
+
+  /**
+   * Màu của ô mẫu và màu của thanh event phải là CÙNG MỘT class — đây là thứ hỏng ở bản cũ
+   * ("Đang thuê" ô xanh lá, thanh xanh dương). Khẳng định trên class chứ không trên màu tính
+   * ra: CSS Module không load trong jsdom, nhưng danh tính class thì vẫn so được (tên bị băm
+   * thành `_toneCyan_ab12`, nên so bằng `includes`).
+   */
+  it('ô mẫu của một trạng thái dùng đúng class tông của thanh event trạng thái đó', () => {
+    data.eventsByResource = new Map([['veh-1', [event({ status: 'active' })]]]);
+    renderScheduler();
+
+    const bar = screen.getByRole('button', { name: /Đơn thuê, DH9912/ });
+    const legend = screen.getByLabelText('Chú giải lịch');
+    const swatch = within(legend).getByText('Đang thuê').querySelector('i');
+
+    const toneOf = (el: Element | null) =>
+      [...(el?.classList ?? [])].filter((cls) => cls.includes('tone'));
+
+    expect(toneOf(swatch)).not.toHaveLength(0);
+    expect(toneOf(swatch)).toEqual(toneOf(bar));
+  });
+
+  /**
+   * `confirmed` không có trong chú giải nhưng dữ liệu cũ vẫn còn (seed demo), nên thanh của nó
+   * vẫn phải vẽ ra và phải KHÁC màu `active` — trước đây cả hai cùng rơi vào `.toneBlue`.
+   */
+  it('thanh ĐANG THUÊ và thanh ĐÃ XÁC NHẬN không dùng chung tông', () => {
+    data.eventsByResource = new Map([
+      [
+        'veh-1',
+        [
+          event({ id: 'occ-a', status: 'active', title: 'DH0001 · A' }),
+          event({ id: 'occ-b', status: 'confirmed', title: 'DH0002 · B' }),
+        ],
+      ],
+    ]);
+    renderScheduler();
+
+    const toneOf = (code: string) =>
+      [...screen.getByRole('button', { name: new RegExp(`Đơn thuê, ${code}`) }).classList].filter(
+        (cls) => cls.includes('tone'),
+      );
+
+    expect(toneOf('DH0001')).not.toHaveLength(0);
+    expect(toneOf('DH0001')).not.toEqual(toneOf('DH0002'));
   });
 });
 
@@ -615,10 +680,13 @@ describe('CalendarScheduler — bản tiếng Anh', () => {
 
     expect(screen.getByLabelText('Vehicle rental calendar by day')).toBeTruthy();
     const legend = screen.getByLabelText('Calendar legend');
-    expect(within(legend).getByText('Booking')).toBeTruthy();
+    // Nhãn trạng thái ở chú giải đi qua `Domain.bookingStatus` — cùng nguồn với thẻ trạng thái,
+    // nên khoá tiếng Anh ở đây cũng chứng minh hai chỗ không thể gọi tên khác nhau.
+    expect(within(legend).getByText('Vehicle held')).toBeTruthy();
+    expect(within(legend).getByText('On rent')).toBeTruthy();
     expect(within(legend).getByText('Holiday')).toBeTruthy();
 
-    // Khoá chưa dịch sẽ hiện nguyên dạng `Calendar.legend.booking` — chặn đúng lỗi đó.
+    // Khoá chưa dịch sẽ hiện nguyên dạng `Calendar.legend.holiday` — chặn đúng lỗi đó.
     expect(document.body.textContent).not.toMatch(/Calendar\.[a-z]/i);
   });
 

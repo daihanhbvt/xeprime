@@ -200,6 +200,9 @@ describe('design token', () => {
       ['text-secondary trên nền trang', 'color-bg', 'color-text-secondary', 4.5],
       ['text-secondary trên container', 'color-bg-container', 'color-text-secondary', 4.5],
       ['chữ trên nút primary', 'color-primary', 'color-primary-contrast', 4.5],
+      // Chữ 12px trên thanh event của lịch — bậc này sinh ra sau Foundations nên KHÔNG được
+      // phép trượt như bộ success/warning cũ: chọn tông đậm ngay từ đầu để qua AA.
+      ['processing trên processing-bg', 'color-processing-bg', 'color-processing', 4.5],
       ['chữ trên sidebar tối', 'shell-sidebar-bg', 'shell-sidebar-text', 4.5],
       ['mục active trên sidebar tối', 'shell-sidebar-bg', 'shell-sidebar-active', 4.5],
     ] as const)('%s đạt AA', (_label, bg, fg, min) => {

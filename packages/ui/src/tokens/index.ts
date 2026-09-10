@@ -86,6 +86,17 @@ export const XP_TOKENS = {
   'color-error-bg': '#fef2f2', // 14:79
   'color-info': '#2563eb', // 14:83
   'color-info-bg': '#eff6ff', // 14:87
+  /*
+   * "Đang chạy" — bậc thứ năm, cho `STATUS_COLOR.PROCESSING` (đơn `active`, phiếu đang xử lý).
+   *
+   * KHÔNG có trong Foundations, và vẫn phải tồn tại: bảng màu ngữ nghĩa của `@xeprime/types`
+   * phân biệt `INFO` (đã xác nhận) với `PROCESSING` (đang diễn ra), nhưng nền sáng chỉ có
+   * `color-info` — nên hai trạng thái KHÁC NHAU của cùng một đơn thuê từng tô cùng một màu
+   * xanh dương trên lịch. Chọn tông lam ngọc đậm (không phải cyan tươi) để đạt 5.1:1 trên nền
+   * của chính nó: chữ 12px trên thanh event phải đọc được.
+   */
+  'color-processing': '#0e7490',
+  'color-processing-bg': '#ecfeff',
   'color-neutral': '#6b6560',
   'color-neutral-bg': '#f5f3ef',
   // Cam san hô dành riêng cho tag khuyến mãi — giảm giá không mang nghĩa error/warning.

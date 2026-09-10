@@ -892,7 +892,7 @@ function activityIcon(status: string) {
     case BOOKING_STATUS.COMPLETED:
       return <CheckCircleFilled className={styles.iconSuccess} />;
     case BOOKING_STATUS.ACTIVE:
-      return <CarOutlined className={styles.iconInfo} />;
+      return <CarOutlined className={styles.iconProcessing} />;
     case BOOKING_STATUS.CANCELLED:
     case BOOKING_STATUS.NO_SHOW:
       return <CloseCircleOutlined className={styles.iconError} />;
