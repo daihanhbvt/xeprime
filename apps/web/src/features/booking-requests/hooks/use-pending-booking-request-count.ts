@@ -1,6 +1,8 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useBadgeRealtime } from '@/features/badges/BadgeRealtimeProvider';
+import { useOnBadgeChange } from '@/features/badges/hooks/use-on-badge-change';
 import { BOOKING_REQUEST_STATUS } from '@xeprime/types';
 import { useBranchScopeParams } from '@/features/branches/hooks/use-branch-scope';
 import { queryKeys } from '@/services/query-keys';
@@ -21,6 +23,23 @@ import { fetchBookingRequests, filtersToParams } from '../api';
  */
 export function usePendingBookingRequestCount(enabled = true) {
   const branchScope = useBranchScopeParams();
+  const { counts, live } = useBadgeRealtime();
+  const queryClient = useQueryClient();
+
+  /*
+   * Yêu cầu thuê mới LUÔN đi kèm một thông báo cho thành viên gian hàng, nên `notificationsUnread`
+   * đổi là tín hiệu đủ tốt để tải lại con số này ngay — thay vì đợi hết nhịp một phút.
+   *
+   * Vì sao không đưa thẳng con số này vào bản chiếu huy hiệu: nó bị THU HẸP theo chi nhánh đang
+   * chọn, một trạng thái chỉ tồn tại ở client (ADR 0034 điều 2). Một con số toàn tài khoản sẽ nói
+   * khác danh sách mà người dùng mở ra. Nên bản chiếu chỉ làm TÍN HIỆU, còn con số vẫn đến từ
+   * query đúng scope.
+   *
+   * Invalidate cả nhánh `bookingRequests`: hộp thư yêu cầu cũng cần nhảy theo, không riêng huy hiệu.
+   */
+  useOnBadgeChange(counts.notificationsUnread, () => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all });
+  });
   const filters = {
     status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
     limit: 1,
@@ -32,9 +51,9 @@ export function usePendingBookingRequestCount(enabled = true) {
     queryKey: queryKeys.bookingRequests.list(filtersToParams(filters)),
     queryFn: async () => (await fetchBookingRequests(filters)).meta.total,
     enabled,
-    // Yêu cầu mới tới bất cứ lúc nào, nhưng đây là con số phụ trợ: nhịp thưa và làm mới khi
-    // người dùng quay lại tab là đủ, không cần poll dày như tin nhắn.
-    refetchInterval: 60_000,
+    // Nghe được bản chiếu thì nhịp này chỉ còn là LƯỚI AN TOÀN — tín hiệu ở trên đã lo phần
+    // "nhảy số ngay". Không nghe được thì giữ nhịp một phút như trước.
+    refetchInterval: live ? 180_000 : 60_000,
     refetchOnWindowFocus: true,
   });
 }

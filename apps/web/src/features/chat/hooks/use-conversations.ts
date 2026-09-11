@@ -1,12 +1,12 @@
 'use client';
 
 import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
 import { chatApi } from '../api';
 import type { ConversationListResult } from '../types';
 import { CHAT_SIDE, type ChatSide } from '@xeprime/types';
 import { queryKeys } from '@/services/query-keys';
 import { useBadgeRealtime } from '@/features/badges/BadgeRealtimeProvider';
+import { useOnBadgeChange } from '@/features/badges/hooks/use-on-badge-change';
 
 /**
  * Nhịp làm mới danh sách — chỉ còn là LƯỚI AN TOÀN.
@@ -47,19 +47,10 @@ export function useConversationsInfinite(side: ChatSide, filters: ConversationLi
    * Con số chưa đọc của CHÍNH bề mặt này đổi ⇒ có gì đó vừa xảy ra ở một hội thoại nào đó ⇒ tải
    * lại danh sách. Đây là cầu nối mà trước đây thiếu: bản chiếu huy hiệu biết mọi hội thoại, còn
    * listener của thread chỉ biết một.
-   *
-   * Chỉ khi con số ĐỔI, và bỏ qua lần chạy đầu — nếu không mỗi lần mount sẽ tự tạo thêm một
-   * request ngay sau lượt tải đầu tiên.
    */
-  const unread = side === CHAT_SIDE.CUSTOMER ? counts.chatCustomer : counts.chatShop;
-  const lastUnread = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (lastUnread.current !== null && lastUnread.current !== unread) {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.chat.conversations(side) });
-    }
-    lastUnread.current = unread;
-  }, [unread, side, queryClient]);
+  useOnBadgeChange(side === CHAT_SIDE.CUSTOMER ? counts.chatCustomer : counts.chatShop, () => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.chat.conversations(side) });
+  });
 
   return useInfiniteQuery({
     queryKey: queryKeys.chat.conversations(side, params),
