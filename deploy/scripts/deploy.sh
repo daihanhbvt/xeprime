@@ -109,13 +109,36 @@ log 'Khởi động lại api / web / worker / caddy'
 "${COMPOSE[@]}" up -d --remove-orphans api web worker caddy
 
 # --- Kiểm tra ---------------------------------------------------------------
-log 'Chờ health check'
-for _ in $(seq 1 30); do
+#
+# Ba service PHẢI báo `healthy`, không phải "không unhealthy".
+#
+# Khác biệt đó là một lỗi có thật: trước 11/09/2026 `worker` không khai `healthcheck` nào, nên cột
+# Health của nó RỖNG — vòng chờ dưới đây không bao giờ đợi nó, và câu kiểm `unhealthy` ở cuối
+# không bao giờ bắt được nó. Một worker chết ngay lúc boot vẫn cho ra một lần deploy "thành công",
+# và hậu quả là hạn phản hồi yêu cầu thuê không chạy, chat không lên realtime, huy hiệu đứng im.
+# Yêu cầu đích danh `healthy` làm cho việc một service MẤT healthcheck trở thành lỗi deploy, thay
+# vì một khoảng mù im lặng.
+REQUIRED_HEALTHY=(api web worker)
+
+healthy_all() {
+  local status service
   status="$("${COMPOSE[@]}" ps --format '{{.Service}} {{.Health}}' 2>/dev/null || true)"
-  if ! grep -qE '(starting|unhealthy)' <<<"$status"; then break; fi
+  for service in "${REQUIRED_HEALTHY[@]}"; do
+    grep -qE "^${service}[[:space:]]+healthy$" <<<"$status" || return 1
+  done
+  return 0
+}
+
+log 'Chờ health check (api, web, worker)'
+for _ in $(seq 1 30); do
+  if healthy_all; then break; fi
   sleep 5
 done
 "${COMPOSE[@]}" ps
+
+if ! healthy_all; then
+  fail "api/web/worker chưa báo healthy sau 150s. Xem: docker compose -p xeprime-$XP_ENV -f docker-compose.prod.yml logs --tail 100"
+fi
 
 # --- Dọn image cũ -----------------------------------------------------------
 # `docker image prune -f` CHỈ xoá layer mồ côi (dangling). Khi còn build tại chỗ thì mỗi lần

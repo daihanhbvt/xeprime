@@ -62,6 +62,10 @@
       "taxLabelRequired": "Nhập tên loại thuế",
       "percentRequired": "Nhập tỷ lệ",
       "partnerRequired": "Nhập tên đối tác bảo hiểm"
-    }
+    },
+    "sectionDeposit": "Cọc đặt chuyến",
+    "depositPercent": "% cọc trên giá thuê",
+    "depositMinAmount": "Cọc tối thiểu",
+    "depositMaxPercent": "Trần % cọc"
   }
 }

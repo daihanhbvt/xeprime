@@ -25,6 +25,8 @@ export * from './pricing';
 export * from './shop-profile';
 export * from './rbac';
 export * from './notifications';
+export * from './push';
+export * from './badges';
 export * from './api';
 export * from './province';
 export * from './session';

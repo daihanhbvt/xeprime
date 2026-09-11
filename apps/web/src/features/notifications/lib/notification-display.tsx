@@ -50,6 +50,7 @@ const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   // Khoản giữ chỗ (R3, ADR 0028): cùng họ icon TIỀN, phân biệt bằng chặng của nó.
   [NOTIFICATION_TYPE.HOLD_REQUESTED]: <DollarOutlined />,
   [NOTIFICATION_TYPE.HOLD_PAID]: <CheckCircleOutlined />,
+  [NOTIFICATION_TYPE.HOLD_EXPIRING]: <HourglassOutlined />,
   [NOTIFICATION_TYPE.HOLD_EXPIRED]: <HourglassOutlined />,
   [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: <RollbackOutlined />,
   // Hồ sơ người bán — dùng icon chứng nhận, không phải icon gian hàng: đây là danh tính pháp lý.
@@ -57,6 +58,7 @@ const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   [NOTIFICATION_TYPE.SELLER_PROFILE_CHANGES_REQUESTED]: <SafetyCertificateOutlined />,
   [NOTIFICATION_TYPE.SELLER_PROFILE_REJECTED]: <SafetyCertificateOutlined />,
   [NOTIFICATION_TYPE.SUPPORT_CASE_UPDATED]: <MessageOutlined />,
+  [NOTIFICATION_TYPE.CHAT_MESSAGE_RECEIVED]: <MessageOutlined />,
 };
 
 export function notificationIcon(type: string): ReactNode {
@@ -77,6 +79,17 @@ export function notificationHref(
   context: NotificationContext,
 ): string | null {
   const target = notification.targetType;
+
+  // Hội thoại mở ở ĐÚNG hộp thư của bề mặt đang xem — `?c=` mở sẵn thread kể cả khi nó không
+  // nằm ở trang đầu danh sách. Hai hộp thư là hai trang khác nhau (ADR 0009), nên không có
+  // "một địa chỉ dùng chung" như bên app native.
+  if (target === NOTIFICATION_TARGET_TYPE.CONVERSATION) {
+    const base = context === 'customer' ? ROUTES.CHAT : ROUTES.MANAGE.CHAT;
+    return notification.targetId
+      ? `${base}?c=${encodeURIComponent(notification.targetId)}`
+      : base;
+  }
+
   if (context === 'customer') {
     switch (target) {
       case NOTIFICATION_TARGET_TYPE.BOOKING:

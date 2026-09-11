@@ -25,6 +25,14 @@ service cloud.firestore {
       }
     }
 
+    // Huy hiệu của MỘT người — bản chiếu số chưa đọc để client nghe thay vì hỏi lại API mỗi vài
+    // chục giây. Chỉ chính chủ đọc được: doc id LÀ user id, nên luật là một phép so sánh, không
+    // phải một lượt `get()` sang doc khác.
+    match /user_badges/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
     // Mặc định: từ chối mọi thứ khác.
     match /{document=**} {
       allow read, write: if false;

@@ -80,7 +80,11 @@
     "HANDOVER_WINDOW_VIOLATION": "Pickup or return time is outside the host’s handover hours. Pick another time.",
     "RENTAL_TERMS_ACCEPTANCE_REQUIRED": "You need to accept the host’s rental terms before sending.",
     "MIN_RENTAL_DURATION": "The rental is shorter than the host’s minimum duration.",
-    "VEHICLE_FIELD_LOCKED": "This vehicle is live on the marketplace, so its plate number, vehicle type, transmission, fuel type and manufacture year cannot be changed. Remove it from the marketplace first."
+    "VEHICLE_FIELD_LOCKED": "This vehicle is live on the marketplace, so its plate number, vehicle type, transmission, fuel type and manufacture year cannot be changed. Remove it from the marketplace first.",
+    "BANK_ACCOUNT_DUPLICATE": "This bank account is already in your list.",
+    "INSUFFICIENT_BALANCE": "Not enough available balance.",
+    "WITHDRAWAL_BELOW_MINIMUM": "Amount is below the minimum withdrawal.",
+    "WITHDRAWAL_ALREADY_HANDLED": "This withdrawal request has already been handled."
   },
   "upload": {
     "imageType": "Only JPG, PNG or WebP images are accepted",

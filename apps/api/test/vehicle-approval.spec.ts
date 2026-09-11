@@ -14,10 +14,9 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
-import { NotificationService } from '../src/modules/notification/notification.service';
 import { PlatformApprovalService } from '../src/modules/platform-admin/platform-approval.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeVehiclesService, seedBranch } from './helpers/service-factory';
+import { makeNotificationService, makeVehiclesService, seedBranch } from './helpers/service-factory';
 
 /**
  * WS0 — vòng đăng xe → duyệt → công khai (ADR 0008) chạy trên PostgreSQL THẬT. Kiểm chứng:
@@ -30,7 +29,7 @@ import { makeVehiclesService, seedBranch } from './helpers/service-factory';
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
-const notifications = new NotificationService(asService);
+const notifications = makeNotificationService(asService);
 const listings = new ListingsService(asService);
 const vehicles = makeVehiclesService(asService);
 const approvals = new PlatformApprovalService(asService, audit, notifications, listings);

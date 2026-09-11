@@ -3,6 +3,16 @@ import { GOOGLE_HOLIDAY_CALENDAR_ID_DEFAULT } from '@xeprime/types';
 /** Đọc env cho worker (được nạp qua dotenv-cli ở dev; production set qua process manager). */
 export const FIRESTORE_ENABLED = (process.env.FIRESTORE_ENABLED ?? '').toLowerCase() === 'true';
 
+/**
+ * Thông báo đẩy (FCM). ĐỘC LẬP với `FIRESTORE_ENABLED`: hai tính năng dùng chung một Firebase
+ * project và một service account, nhưng bật/tắt riêng — cấu hình của giai đoạn này là push bật
+ * còn chat realtime tắt.
+ *
+ * Tắt ⇒ vòng lặp gửi push không được đăng ký. Nó KHÔNG được đăng ký rồi bỏ qua trong im lặng:
+ * `push_deliveries` sẽ chất đống mà không ai biết vì sao không có tin nào tới.
+ */
+export const PUSH_ENABLED = (process.env.PUSH_ENABLED ?? '').toLowerCase() === 'true';
+
 /** Số tin gần nhất giữ lại trên Firestore mỗi hội thoại (retention). Postgres vẫn giữ đủ. */
 export const CHAT_FIRESTORE_KEEP = parsePositiveInt(process.env.CHAT_FIRESTORE_KEEP, 50);
 
@@ -53,7 +63,8 @@ export function assertWorkerEnv(): void {
   if (!process.env.DATABASE_URL) {
     throw new Error('DATABASE_URL chưa được đặt cho worker');
   }
-  if (!FIRESTORE_ENABLED) return;
+  // Một bộ credential Firebase cho CẢ HAI tính năng — bắt buộc khi bất kỳ cái nào bật.
+  if (!FIRESTORE_ENABLED && !PUSH_ENABLED) return;
   for (const key of ['FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY']) {
     requireEnv(key);
   }

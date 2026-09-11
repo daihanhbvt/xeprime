@@ -19,8 +19,16 @@ import {
   type BookingHoldPurpose,
   type BookingStatus,
   type HoldRefundReason,
+  REFUND_SETTLEMENT_MODE,
+  WALLET_ENTRY_KIND,
+  WALLET_ENTRY_SOURCE,
+  WALLET_OWNER_TYPE,
+  ALLOCATION_TARGET,
+  resolveHoldAllocation,
+  type HoldSettlementKind,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
+import { WalletService } from '../wallet/wallet.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
 
@@ -53,6 +61,8 @@ export class HoldSettlementService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly notifications: NotificationService,
+    /** Sổ công nợ phải trả — writer duy nhất của ví (ADR 0023 ràng buộc 3). */
+    private readonly wallet: WalletService,
   ) {}
 
   /**
@@ -182,11 +192,21 @@ export class HoldSettlementService {
   }
 
   /**
-   * Ghi một yêu cầu hoàn — dùng cho cả kết cục `refunded` lẫn CHUYỂN THỪA (ADR 0022 điều 5:
+   * Ghi một khoản hoàn — dùng cho cả kết cục `refunded` lẫn CHUYỂN THỪA (ADR 0022 điều 5:
    * khoản giữ chỗ không có "kỳ sau" để ghi có).
    *
-   * Unique `hold_id` ở DB: một hold chỉ có MỘT yêu cầu hoàn. Chuyển thừa rồi lại huỷ sớm là ca
-   * hiếm — khi đó tăng số tiền của yêu cầu đang `pending` thay vì tạo cái thứ hai.
+   * HAI ĐƯỜNG RA, chọn theo việc khách có tài khoản hay không (ADR 0033 điều 5):
+   *
+   *   có `customerUserId`  → GHI CÓ VÍ ĐIỂM ngay, trạng thái cuối `credited`. Tiền dùng được
+   *                           lập tức, không cần khách nhập số tài khoản, không có SLA để lỡ.
+   *   khách vãng lai        → giữ `pending` + `bank_transfer`, admin chuyển tay. XePrime cho đặt
+   *                           xe không cần đăng ký, nên đường này là VĨNH VIỄN.
+   *
+   * Unique `hold_id` ở DB: một hold chỉ có MỘT khoản hoàn. Chuyển thừa rồi lại huỷ sớm là ca
+   * hiếm — khi đó tăng số tiền của khoản đang `pending` thay vì tạo cái thứ hai.
+   *
+   * Chống hoàn hai lần không nằm ở đây mà ở `wallet_entries` unique 4 cột: worker chạy lại hay
+   * admin bấm hai lần đều ra cùng một số dư.
    */
   async upsertRefundWithinTx(
     tx: Prisma.TransactionClient,
@@ -218,6 +238,26 @@ export class HoldSettlementService {
       });
       return { id: existing.id, created: false };
     }
+    /*
+     * Khách CÓ tài khoản ⇒ ghi có ví điểm ngay trong chính transaction này. Không tách ra một
+     * bước sau: khoản hoàn và bút toán sinh ra nó phải cùng sống hoặc cùng chết, nếu không sẽ có
+     * lúc sổ nói một đằng và trạng thái khoản hoàn nói một nẻo.
+     */
+    const credited = input.customerUserId
+      ? await this.wallet.creditWithinTx(tx, {
+          owner: { type: WALLET_OWNER_TYPE.USER, userId: input.customerUserId },
+          kind:
+            input.reason === HOLD_REFUND_REASON.OVERPAID
+              ? WALLET_ENTRY_KIND.HOLD_OVERPAY
+              : WALLET_ENTRY_KIND.HOLD_REFUND,
+          sourceType: WALLET_ENTRY_SOURCE.BOOKING_HOLD,
+          sourceRefId: input.holdId,
+          amount: input.amount,
+          holdId: input.holdId,
+          note: input.note,
+        })
+      : null;
+
     const created = await tx.holdRefund.create({
       data: {
         id: newId(),
@@ -225,7 +265,11 @@ export class HoldSettlementService {
         tenantId: input.tenantId,
         customerUserId: input.customerUserId,
         amount: input.amount,
-        status: HOLD_REFUND_STATUS.PENDING,
+        status: credited ? HOLD_REFUND_STATUS.CREDITED : HOLD_REFUND_STATUS.PENDING,
+        settlementMode: credited
+          ? REFUND_SETTLEMENT_MODE.BALANCE
+          : REFUND_SETTLEMENT_MODE.BANK_TRANSFER,
+        walletEntryId: credited?.entryId ?? null,
         reason: input.reason,
         note: input.note,
       },
@@ -275,11 +319,18 @@ export class HoldSettlementService {
           tenantId: true,
           customerUserId: true,
           amount: true,
+          settlementMode: true,
           bankAccountNumber: true,
           hold: { select: { id: true, code: true, bookingId: true } },
         },
       });
       if (!refund) throw notFound('Không tìm thấy khoản hoàn');
+      if (refund.settlementMode === REFUND_SETTLEMENT_MODE.BALANCE) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.REFUND_ALREADY_HANDLED,
+          message: 'Khoản này đã vào ví điểm của khách — không chuyển khoản lần nữa',
+        });
+      }
       if (!refund.bankAccountNumber) {
         throw new ConflictException({
           code: API_ERROR_CODE.REFUND_ACCOUNT_REQUIRED,
@@ -327,8 +378,17 @@ export class HoldSettlementService {
             title: 'Đã hoàn khoản giữ chỗ',
             body: `XePrime đã chuyển trả ${refund.amount.toFixed(0)}đ (mã ${refund.hold.code}).`,
             tenantId: refund.tenantId,
-            targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
-            targetId: refund.hold.bookingId ?? refund.hold.id,
+            /*
+             * KHÔNG lùi về `hold.id` khi chưa có đơn: từ 10/09 thông báo có đích bấm được, và
+             * `targetType: booking` + id của một hold dựng ra `/trips/<holdId>` — một chuyến
+             * không tồn tại. Không có đơn thì tin này không có đích, đúng như vậy.
+             */
+            ...(refund.hold.bookingId
+              ? {
+                  targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+                  targetId: refund.hold.bookingId,
+                }
+              : {}),
           },
           tx,
         );
@@ -370,6 +430,109 @@ export class HoldSettlementService {
 
   // ── Nội bộ ────────────────────────────────────────────────────────────────
 
+  /**
+   * Chia khoản giữ chỗ về đúng người hưởng — ADR 0032 điều 5, ADR 0033 điều 3.
+   *
+   * Trước ADR 0032 việc này là một phép gán: toàn bộ về một phía. Nay một hold chứa tiền của
+   * nhiều người cùng lúc (`D` chủ xe · `S` XePrime · `IV + IP` giữ hộ hãng bảo hiểm), nên kết
+   * cục là một PHÂN BỔ, không phải một giá trị.
+   *
+   * Đọc bốn CỘT TIỀN chứ không suy từ `purpose` — `purpose` không còn trả lời được "phần nào là
+   * tiền giữ hộ" (ADR 0033 điều 4, và có test khoá bất biến này).
+   *
+   * Trả về id khoản hoàn nếu có, để audit ghi lại.
+   */
+  private async allocateWithinTx(
+    tx: Prisma.TransactionClient,
+    input: {
+      holdId: string;
+      tenantId: string;
+      paidAmount: Prisma.Decimal;
+      customerUserId: string | null;
+      outcome: BookingHoldOutcome;
+      refundReason: HoldRefundReason | null;
+      note: string | null;
+    },
+  ): Promise<string | null> {
+    if (input.paidAmount.lte(0)) return null;
+
+    const kind = settlementKindFor(input.outcome);
+    if (!kind) {
+      /*
+       * `kept` (đơn trước ADR 0032) và `released_to_shop`: giữ nguyên hành vi cũ — nền tảng giữ,
+       * không sinh dòng nào. Không diễn giải lại kết cục của một đơn đã chốt theo luật mới.
+       */
+      return null;
+    }
+
+    const hold = await tx.bookingHold.findUniqueOrThrow({
+      where: { id: input.holdId },
+      select: {
+        depositAmount: true,
+        serviceFeeAmount: true,
+        vehicleInsuranceAmount: true,
+        personalInsuranceAmount: true,
+        priceSnapshotJson: true,
+      },
+    });
+
+    /*
+     * Thuế chỉ phát sinh khi chuyến ĐÃ BẮT ĐẦU (ADR 0032 điều 3) — hai nhánh huỷ không bao giờ
+     * có thuế, kể cả huỷ muộn.
+     */
+    const taxAmount =
+      input.outcome === BOOKING_HOLD_OUTCOME.SETTLED ? taxFromSnapshot(hold.priceSnapshotJson) : '0';
+
+    const allocation = resolveHoldAllocation(
+      {
+        deposit: hold.depositAmount.toFixed(0),
+        serviceFee: hold.serviceFeeAmount.toFixed(0),
+        vehicleInsurance: hold.vehicleInsuranceAmount.toFixed(0),
+        personalInsurance: hold.personalInsuranceAmount.toFixed(0),
+      },
+      kind,
+      taxAmount,
+    );
+
+    let refundId: string | null = null;
+
+    const toCustomer = sumFor(allocation, ALLOCATION_TARGET.CUSTOMER_BALANCE);
+    if (toCustomer.gt(0)) {
+      const refund = await this.upsertRefundWithinTx(tx, {
+        holdId: input.holdId,
+        tenantId: input.tenantId,
+        customerUserId: input.customerUserId,
+        amount: toCustomer,
+        reason: input.refundReason ?? HOLD_REFUND_REASON.ADMIN_DECISION,
+        note: input.note,
+      });
+      refundId = refund.id;
+    }
+
+    const toOwner = sumFor(allocation, ALLOCATION_TARGET.OWNER_BALANCE);
+    if (toOwner.gt(0)) {
+      await this.wallet.creditWithinTx(tx, {
+        owner: { type: WALLET_OWNER_TYPE.TENANT, tenantId: input.tenantId },
+        kind:
+          input.outcome === BOOKING_HOLD_OUTCOME.SETTLED
+            ? WALLET_ENTRY_KIND.HOLD_RELEASE
+            : WALLET_ENTRY_KIND.HOLD_FORFEIT,
+        sourceType: WALLET_ENTRY_SOURCE.BOOKING_HOLD,
+        sourceRefId: input.holdId,
+        amount: toOwner,
+        holdId: input.holdId,
+        note: input.note,
+      });
+    }
+
+    /*
+     * Phần của XePrime (`platform_revenue`) KHÔNG đi qua ví: nền tảng không có ví, và doanh thu
+     * được suy lúc đọc từ cột `service_fee_amount` của hold đã chốt (ADR 0033 điều 3). Phần trả
+     * hãng bảo hiểm cũng vậy — nó sống ở `booking_insurance_policies` (Phase 7).
+     */
+    return refundId;
+  }
+
   private async applyOutcomeWithinTx(
     tx: Prisma.TransactionClient,
     input: {
@@ -400,18 +563,7 @@ export class HoldSettlementService {
     // Đã có ai chốt xen vào — idempotent, không ghi đè.
     if (claimed.count === 0) return;
 
-    let refundId: string | null = null;
-    if (input.outcome === BOOKING_HOLD_OUTCOME.REFUNDED && input.paidAmount.gt(0)) {
-      const refund = await this.upsertRefundWithinTx(tx, {
-        holdId: input.holdId,
-        tenantId: input.tenantId,
-        customerUserId: input.customerUserId,
-        amount: input.paidAmount,
-        reason: input.refundReason ?? HOLD_REFUND_REASON.ADMIN_DECISION,
-        note: input.note,
-      });
-      refundId = refund.id;
-    }
+    const refundId = await this.allocateWithinTx(tx, input);
 
     await this.audit.record(
       {
@@ -457,20 +609,59 @@ export function decideOutcome(input: {
 }): { outcome: BookingHoldOutcome; refundReason: HoldRefundReason | null } | null {
   switch (input.to) {
     case BOOKING_STATUS.COMPLETED:
-      return { outcome: BOOKING_HOLD_OUTCOME.KEPT, refundReason: null };
+      return { outcome: BOOKING_HOLD_OUTCOME.SETTLED, refundReason: null };
     case BOOKING_STATUS.NO_SHOW:
-      return { outcome: BOOKING_HOLD_OUTCOME.FORFEITED, refundReason: null };
+      /*
+       * No-show xử lý NHƯ HUỶ MUỘN (ADR 0033 điều 3): hai tình huống gây cùng một thiệt hại —
+       * xe bị giữ trống — nên hai kết cục khác nhau sẽ tạo động cơ méo: khách sắp lỡ hẹn sẽ
+       * chọn im lặng nếu im lặng rẻ hơn. Bằng nhau thì không có gì để tối ưu.
+       */
+      return {
+        outcome: BOOKING_HOLD_OUTCOME.SPLIT_LATE_CANCEL,
+        refundReason: HOLD_REFUND_REASON.ADMIN_DECISION,
+      };
     case BOOKING_STATUS.CANCELLED:
       if (input.actorScope === AUDIT_ACTOR_SCOPE.CUSTOMER) {
         return isWithinFreeCancel(input.freeCancelUntil, input.now)
           ? { outcome: BOOKING_HOLD_OUTCOME.REFUNDED, refundReason: HOLD_REFUND_REASON.EARLY_CANCEL }
-          : { outcome: BOOKING_HOLD_OUTCOME.FORFEITED, refundReason: null };
+          : {
+              // Huỷ muộn: D + S chia đôi, IV + IP hoàn 100% (bảo hiểm chưa mua).
+              outcome: BOOKING_HOLD_OUTCOME.SPLIT_LATE_CANCEL,
+              refundReason: HOLD_REFUND_REASON.ADMIN_DECISION,
+            };
       }
       // Gian hàng, nền tảng hay hệ thống huỷ — khách không có lỗi.
       return { outcome: BOOKING_HOLD_OUTCOME.REFUNDED, refundReason: HOLD_REFUND_REASON.OWNER_CANCEL };
     default:
       return null;
   }
+}
+
+/** Kết cục nào cần phân bổ, và theo luật nào. `null` = giữ nguyên hành vi cũ, không sinh dòng. */
+function settlementKindFor(outcome: BookingHoldOutcome): HoldSettlementKind | null {
+  if (outcome === BOOKING_HOLD_OUTCOME.REFUNDED) return 'refund_all';
+  if (outcome === BOOKING_HOLD_OUTCOME.SPLIT_LATE_CANCEL) return 'split_late_cancel';
+  if (outcome === BOOKING_HOLD_OUTCOME.SETTLED) return 'settled';
+  return null;
+}
+
+function sumFor(
+  allocation: ReturnType<typeof resolveHoldAllocation>,
+  target: (typeof ALLOCATION_TARGET)[keyof typeof ALLOCATION_TARGET],
+): Prisma.Decimal {
+  return allocation
+    .filter((line) => line.target === target)
+    .reduce((total, line) => total.add(new Prisma.Decimal(line.amount)), new Prisma.Decimal(0));
+}
+
+/**
+ * Thuế đã đóng băng trên snapshot của hold. `'0'` khi cổng thuế chưa mở — và đó là trạng thái
+ * hiện tại, nên nhánh này là đường chạy thật chứ không phải một lối dự phòng.
+ */
+function taxFromSnapshot(snapshot: unknown): string {
+  const fees = (snapshot as { fees?: { taxAmount?: unknown } } | null)?.fees;
+  const raw = fees?.taxAmount;
+  return typeof raw === 'string' && Number.isFinite(Number(raw)) ? raw : '0';
 }
 
 function notFound(message: string): NotFoundException {

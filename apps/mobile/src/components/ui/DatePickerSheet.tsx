@@ -68,7 +68,7 @@ export function DatePickerSheet({
   /** Tham chiếu phải ĐỨNG YÊN, và ô chỉ được vẽ từ đối số — xem docblock `MonthGrid`. */
   const renderDay = useCallback(
     ({ day, mark, onPress }: { day: Dayjs; mark: DayMark | undefined; onPress: () => void }) => (
-      <DayCell day={day} mark={mark} onPress={onPress} />
+      <DayCell day={day} mark={mark} onPress={onPress} testID={`day-${day.format(DAY_PARAM_FORMAT)}`} />
     ),
     [],
   );

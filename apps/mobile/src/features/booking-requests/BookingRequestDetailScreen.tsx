@@ -27,6 +27,7 @@ import { DataRow } from '@/components/ui/DataRow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ROUTES } from '@/navigation/routes';
+import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
@@ -171,6 +172,28 @@ export function BookingRequestDetailScreen({
                       />
                     ) : null}
                     <Chip label={domainLabel('serviceType', request.serviceType)} size="sm" />
+                    {/*
+                      Lịch của CHÍNH chiếc xe này — web có lối này ở CẢ thẻ lẫn chi tiết
+                      (`BookingRequestDetailDialog`), và chi tiết mới là nơi quyết định duyệt hay
+                      từ chối được đưa ra. Bỏ nó ở đây là bỏ đúng chỗ nó cần nhất.
+                    */}
+                    {canViewVehicle ? (
+                      <Chip
+                        label={t('vehicle.viewSchedule')}
+                        icon="calendar-outline"
+                        tone="accent"
+                        role="button"
+                        size="sm"
+                        onPress={() =>
+                          navigateOnce(
+                            vehicleSchedulePath(
+                              { name: request.vehicleName, plateNumber: request.vehiclePlate },
+                              { back: true },
+                            ),
+                          )
+                        }
+                      />
+                    ) : null}
                   </XStack>
                 </YStack>
                 {canViewVehicle ? <DetailChevron /> : null}

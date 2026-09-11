@@ -11,7 +11,8 @@
   "tabs": {
     "holds": "Booking holds",
     "refunds": "Refunds",
-    "reconciliation": "Daily reconciliation"
+    "reconciliation": "Daily reconciliation",
+    "withdrawals": "Withdrawals"
   },
   "filters": {
     "search": "Search",

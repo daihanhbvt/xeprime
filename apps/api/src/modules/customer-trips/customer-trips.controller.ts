@@ -1,4 +1,4 @@
-import { Controller, Get, Header, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Header, Param, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
@@ -10,6 +10,7 @@ import {
   CustomerTripDetailDto,
   CustomerTripListQueryDto,
   CustomerTripPageDto,
+  ProvideRefundAccountDto,
 } from './dto/customer-trip.dto';
 
 /**
@@ -118,5 +119,22 @@ export class CustomerTripsController {
     @Param('id') id: string,
   ): Promise<CustomerTripDetailDto> {
     return this.trips.cancel(user.id, id);
+  }
+
+  @Post(':id/refund-account')
+  @ApiOperation({
+    summary: 'Khách khai tài khoản nhận hoàn khoản giữ chỗ',
+    description:
+      'Bắt buộc trước khi admin chuyển được: `markRefundPaid` từ chối một lệnh chuyển không ' +
+      'có đích. Chọn một tài khoản đã lưu bằng `bankAccountId`, hoặc khai ba ô — khai mới thì ' +
+      'tài khoản được LƯU LẠI để lần sau không phải gõ. Trả về chính chuyến đó sau khi khai.',
+  })
+  @ApiOkResponse({ type: CustomerTripDetailDto })
+  provideRefundAccount(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: ProvideRefundAccountDto,
+  ): Promise<CustomerTripDetailDto> {
+    return this.trips.provideRefundAccount(user.id, id, dto);
   }
 }

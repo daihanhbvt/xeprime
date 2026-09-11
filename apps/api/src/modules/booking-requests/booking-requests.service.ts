@@ -1111,6 +1111,13 @@ export class BookingRequestsService {
     holdAmount: string,
   ): Promise<BookingRequestRow> {
     const isSystem = actor.source === BOOKING_REQUEST_DECISION_SOURCE.SYSTEM;
+    /*
+     * MỘT mốc "đặt xe thành công" cho cả ba thứ: `decided_at` của yêu cầu, hạn trả cọc và mốc
+     * huỷ miễn phí (ADR 0032 điều 2). Gọi `new Date()` hai lần trong cùng transaction sinh ra
+     * hai mốc lệch nhau vài mili-giây — đủ để màn hình đếm ngược và bản ghi audit nói hai con
+     * số khác nhau về cùng một chuyến.
+     */
+    const acceptedAt = new Date();
     return this.prisma.$transaction(async (tx) => {
       await this.holds.createForApprovedRequestWithinTx(tx, {
         tenantId,
@@ -1124,6 +1131,7 @@ export class BookingRequestsService {
           packageMonths: schedule.packageMonths,
         },
         snapshot,
+        acceptedAt,
         actorUserId: actor.userId,
       });
 
@@ -1133,7 +1141,7 @@ export class BookingRequestsService {
         returnAt: schedule.returnAt,
         longTermPackageMonths: schedule.packageMonths,
         decidedBy: actor.userId,
-        decidedAt: new Date(),
+        decidedAt: acceptedAt,
         decisionSource: actor.source,
       });
 

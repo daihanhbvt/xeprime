@@ -1,0 +1,31 @@
+/** Xác nhận đã chuyển khoản — thông tin lệnh ở trên, ô nhập bằng chứng ở dưới. */
+
+.info {
+  margin-bottom: var(--xp-space-md);
+}
+
+.field {
+  display: block;
+  margin-bottom: var(--xp-space-md);
+}
+
+.label {
+  display: block;
+  margin: 0 0 var(--xp-space-xs);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.input {
+  width: 100%;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-md);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 1px;
+}

@@ -72,6 +72,7 @@ model User {
   approvalLogs               ApprovalLog[]
   adminNotes                 AdminNote[]
   notifications              Notification[]            @relation("notification_recipient")
+  pushDevices                PushDevice[]              @relation("push_device_user")
   reviews                    Review[]                  @relation("review_customer")
   customerBookingRequests    BookingRequest[]          @relation("request_customer")
   customerConversations      Conversation[]            @relation("conversation_customer")
@@ -87,6 +88,10 @@ model User {
   openedSupportCases         SupportCase[]             @relation("case_opener")
   assignedSupportCases       SupportCase[]             @relation("case_assignee")
   supportCaseEvents          SupportCaseEvent[]
+  badgeSignal                UserBadgeSignal?          @relation("badge_signal_user")
+  bankAccounts               BankAccount[]             @relation("bank_account_user")
+  wallet                     Wallet?                   @relation("wallet_user")
+  requestedWithdrawals       WithdrawalRequest[]       @relation("withdrawal_requester")
 
   @@index([status])
   @@index([createdAt])
@@ -200,6 +205,8 @@ model Tenant {
   tenantCustomerDocuments       TenantCustomerDocument[]
   bookingHolds                  BookingHold[]
   holdRefunds                   HoldRefund[]
+  bankAccounts                  BankAccount[]
+  wallet                        Wallet?
   sellerProfile                 SellerProfile?
   supportCases                  SupportCase[]
 
@@ -477,6 +484,7 @@ model NativeAuthSession {
 
   user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   refreshTokens NativeRefreshToken[]
+  pushDevices   PushDevice[]
 
   @@index([userId])
   /// Dọn phiên hết hạn theo lô (job sau này), và tra phiên còn sống của một user.
@@ -1363,6 +1371,17 @@ model Booking {
   serviceFeeAmount      Decimal   @default(0) @map("service_fee_amount") @db.Decimal(14, 2)
   /// Tổng KHÁCH TRẢ = total_amount + Σ phụ phí phía khách. NULL khi không có phí (như billing_mode).
   customerTotalAmount   Decimal?  @map("customer_total_amount") @db.Decimal(14, 2)
+  /// ── Cọc / thuế / khoản phải trả chủ xe — ADR 0032 điều 2–3, ADR 0033. Đóng băng lúc tạo. ──
+  /// `D` — cọc khách đã trả online cho XePrime. NULL với đơn không đi qua khoản giữ chỗ.
+  depositAmountOnline   Decimal?  @map("deposit_amount_online") @db.Decimal(14, 2)
+  /// `D − T` — khoản XePrime phải trả chủ xe khi chuyến hoàn thành (ADR 0033 điều 2).
+  ownerPayableAmount    Decimal?  @map("owner_payable_amount") @db.Decimal(14, 2)
+  /// `T` — thuế khấu trừ khỏi tiền chủ xe, KHÔNG cộng vào tổng khách (ADR 0032 điều 3).
+  /// 0 khi cổng thuế chưa mở; chỉ phát sinh khi chuyến BẮT ĐẦU.
+  taxAmount             Decimal   @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  /// @xeprime/types → DepositCollectionMode (platform | direct | none). ĐÓNG BĂNG lúc tạo:
+  /// gian hàng bật/tắt thu cọc sau đó KHÔNG đổi cách hiểu một đơn đã chạy (ADR 0025 ràng buộc 4).
+  depositCollectionMode String?   @map("deposit_collection_mode") @db.VarChar(20)
   /// Phiên bản chính sách phí đã áp — để đọc lại snapshot mà không phải suy từ ngày.
   feePolicyId           String?   @map("fee_policy_id") @db.Char(26)
   note                  String?   @db.Text
@@ -2468,13 +2487,114 @@ model Notification {
   readAt     DateTime? @map("read_at") @db.Timestamptz(3)
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  tenant    Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  recipient User?   @relation("notification_recipient", fields: [userId], references: [id], onDelete: Cascade)
+  tenant          Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  recipient       User?          @relation("notification_recipient", fields: [userId], references: [id], onDelete: Cascade)
+  pushDeliveries  PushDelivery[]
 
-  /// Phục vụ list "thông báo của tôi" (order createdAt desc) và đếm chưa đọc (read_at null).
+  /// Phục vụ list "thông báo của tôi" (order createdAt desc).
+  ///
+  /// ⚠ Việc ĐẾM chưa đọc KHÔNG dùng index này mà dùng `notifications_user_unread_idx`
+  /// (`(user_id) WHERE read_at IS NULL`) — index một phần, viết tay ở migration
+  /// `20260911170000_badge_projection` vì Prisma không diễn đạt được mệnh đề `WHERE`.
+  /// `prisma migrate dev` lần sau sẽ sinh lệnh DROP nó; giữ lại phần viết tay (ADR 0034 điều 5).
   @@index([userId, readAt, createdAt])
   @@index([tenantId, createdAt])
   @@map("notifications")
+}
+
+/// Một THIẾT BỊ đã đăng ký nhận thông báo đẩy (FCM).
+///
+/// `provider_token` là registration token của FCM — bí mật ở mức "ai có nó thì gửi được thông
+/// báo tới máy đó". Nó KHÔNG bao giờ được log, không quay lại trong response, và không in ra ở
+/// script vận hành (chỉ 6 ký tự đuôi để đối chiếu).
+///
+/// Unique trên `(provider, provider_token)` chứ không phải trên `(user, device)`: FCM cấp token
+/// cho một BẢN CÀI, và cùng một máy đăng nhập tài khoản khác sẽ mang lại đúng token cũ. Có
+/// unique đó thì việc "gán lại chủ" là một câu `upsert` nguyên tử — không có nó, người dùng
+/// trước tiếp tục nhận thông báo trên máy của người sau.
+model PushDevice {
+  id     String @id @db.Char(26)
+  userId String @map("user_id") @db.Char(26)
+
+  /// Phiên native đã đăng ký thiết bị này. NULL khi lời gọi đến từ một phiên web (id phiên web
+  /// là ULID ký trong JWT, không có hàng nào trong `native_auth_sessions` để tham chiếu).
+  /// Có giá trị thì đăng xuất/thu hồi phiên sẽ TẮT thiết bị — xem NativeSessionService.
+  nativeAuthSessionId String? @map("native_auth_session_id") @db.Char(26)
+
+  /// @xeprime/types → PushProvider
+  provider String @default("fcm") @db.VarChar(20)
+  /// Registration token FCM. Text vì độ dài không có trần công bố và đã đổi vài lần.
+  providerToken String @map("provider_token") @db.Text
+  /// @xeprime/types → PushPlatform
+  platform   String  @db.VarChar(20)
+  appVersion String? @map("app_version") @db.VarChar(30)
+  /// Tên máy do client tự khai — chỉ để người dùng nhận ra thiết bị, không dùng cho bảo mật.
+  deviceName String? @map("device_name") @db.VarChar(120)
+
+  /// Tắt thay vì xoá: `push_deliveries` còn trỏ tới đây, và lịch sử "vì sao tin này không tới"
+  /// là thứ duy nhất trả lời được khiếu nại của người dùng.
+  enabled    Boolean   @default(true)
+  lastSeenAt DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  disabledAt DateTime? @map("disabled_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user       User               @relation("push_device_user", fields: [userId], references: [id], onDelete: Cascade)
+  session    NativeAuthSession? @relation(fields: [nativeAuthSessionId], references: [id], onDelete: SetNull)
+  deliveries PushDelivery[]
+
+  @@unique([provider, providerToken], map: "push_devices_provider_token_key")
+  /// Truy vấn nóng: thiết bị ĐANG BẬT của một người, mỗi lần phát thông báo.
+  @@index([userId, enabled])
+  /// Tắt hàng loạt khi một phiên bị thu hồi.
+  @@index([nativeAuthSessionId])
+  @@map("push_devices")
+}
+
+/// Trạng thái giao MỘT `Notification` tới MỘT thiết bị.
+///
+/// Không phải một thông báo thứ hai: hộp thư vẫn chỉ có một dòng cho một sự kiện, còn bảng này
+/// trả lời "đã đẩy tới máy nào, lần thứ mấy, hỏng vì gì". Người có ba máy sinh ba dòng ở đây và
+/// vẫn đúng một dòng trong chuông.
+///
+/// ⚠️ Index hàng đợi của worker là index MỘT PHẦN (`push_deliveries_queue_idx`, `WHERE status
+/// IN ('pending','retry')`) — viết tay trong migration vì Prisma không mô tả được, nên nó KHÔNG
+/// xuất hiện ở đây. Đừng thay bằng `@@index([status, nextAttemptAt])`: gần như mọi hàng cuối
+/// cùng đều là `sent`, nên index đầy đủ lớn dần theo TỔNG số thông báo đã từng gửi trong khi
+/// truy vấn của worker chỉ quan tâm hàng đợi.
+model PushDelivery {
+  id             String @id @db.Char(26)
+  notificationId String @map("notification_id") @db.Char(26)
+  pushDeviceId   String @map("push_device_id") @db.Char(26)
+
+  /// @xeprime/types → PushDeliveryStatus
+  status        String   @default("pending") @db.VarChar(20)
+  attempts      Int      @default(0)
+  nextAttemptAt DateTime @default(now()) @map("next_attempt_at") @db.Timestamptz(3)
+
+  sentAt            DateTime? @map("sent_at") @db.Timestamptz(3)
+  /// `name` của message FCM đã nhận — dấu vết duy nhất đối chiếu được với console của Firebase.
+  providerMessageId String?   @map("provider_message_id") @db.VarChar(255)
+  /// @xeprime/types → PushErrorCode. Lưu MÃ, không lưu message của provider: message của FCM có
+  /// nhánh chứa nguyên registration token trong đó.
+  lastErrorCode     String?   @map("last_error_code") @db.VarChar(40)
+  lastErrorAt       DateTime? @map("last_error_at") @db.Timestamptz(3)
+
+  /// Sau mốc này thì KHÔNG gửi nữa. "Yêu cầu thuê sắp hết hạn" nảy lên sau khi yêu cầu đã đóng
+  /// là một thông báo sai, không phải một thông báo trễ.
+  expiresAt DateTime? @map("expires_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  device       PushDevice   @relation(fields: [pushDeviceId], references: [id], onDelete: Cascade)
+
+  /// Chống gửi TRÙNG ở tầng DB: nghiệp vụ thử lại (retry một transaction) không được biến thành
+  /// hai lần rung máy. Đây là người gác thật — `skipDuplicates` ở tầng app chỉ là đường tắt.
+  @@unique([notificationId, pushDeviceId])
+  @@index([pushDeviceId, status])
+  @@map("push_deliveries")
 }
 
 // ---------------------------------------------------------------------------
@@ -2567,6 +2687,11 @@ model Conversation {
   /// Ở Postgres NULL không đụng NULL, nên hội thoại chưa có `customer_user_id` (khách vãng lai)
   /// không bị ràng buộc này gom nhầm lại với nhau.
   @@unique([customerUserId, tenantId], map: "conversations_customer_tenant_key")
+  /// ⚠ Hai index nữa KHÔNG khai được ở đây mà sống trong migration
+  /// `20260911170000_badge_projection`: `conversations_tenant_unread_idx` và
+  /// `conversations_customer_unread_idx` — có `WHERE unread_* > 0` + `INCLUDE` để phép đếm huy
+  /// hiệu chạy index-only scan. Mất chúng thì badge quay về đọc heap từng hội thoại của gian
+  /// hàng. `prisma migrate dev` sẽ sinh lệnh DROP; giữ lại phần viết tay (ADR 0034 điều 5).
   @@index([tenantId, lastMessageAt])
   @@index([customerUserId, lastMessageAt])
   @@index([bookingId])
@@ -2667,6 +2792,34 @@ model ChatAttachment {
 
   @@index([messageId])
   @@map("chat_attachments")
+}
+
+/// Tín hiệu "huy hiệu của người này vừa đổi" — hàng đợi để worker chiếu badge sang Firestore.
+///
+/// Vì sao là một BẢNG chứ không gọi thẳng Firestore từ API: ADR 0009 đặt worker làm writer DUY
+/// NHẤT của projection, và một lời gọi mạng tới Google bên trong transaction gửi tin nhắn là cách
+/// biến sự cố của Firebase thành sự cố của chat. API chỉ ghi một dòng trong CÙNG transaction với
+/// sự kiện gốc; đẩy đi là việc của đồng hồ.
+///
+/// Một dòng / người (user_id là khoá chính): mười sự kiện trong một giây chỉ tạo đúng một lượt
+/// chiếu. Đó là cả mục đích — chi phí bám theo SỐ NGƯỜI đang có việc, không theo số sự kiện và
+/// càng không theo số tab đang mở.
+model UserBadgeSignal {
+  userId   String   @id @map("user_id") @db.Char(26)
+  /// Mốc bẩn gần nhất. CHỈ dùng để xếp thứ tự (ai đợi lâu nhất chiếu trước) và đo độ trễ hàng
+  /// đợi cho health check — KHÔNG dùng để so khớp khi xoá: `timestamptz(3)` chỉ mịn tới
+  /// mili-giây, và hai sự kiện trùng mili-giây sẽ trông như một.
+  dirtyAt  DateTime @default(now()) @map("dirty_at") @db.Timestamptz(3)
+  /// Số hiệu TĂNG ĐƠN ĐIỆU theo từng người, do chính câu upsert tăng. Worker chỉ xoá tín hiệu khi
+  /// số hiệu còn đúng bản nó đã lấy — đó là toàn bộ cơ chế "sự kiện đến trong lúc đang chiếu thì
+  /// không bị nuốt mất".
+  revision BigInt   @default(1)
+
+  user User @relation("badge_signal_user", fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Worker lấy hàng cũ nhất trước.
+  @@index([dirtyAt])
+  @@map("user_badge_signals")
 }
 
 // ---------------------------------------------------------------------------
@@ -3208,8 +3361,17 @@ model FeePolicy {
   /// % phí dịch vụ áp cho TUYẾN HOA HỒNG. Tuyến gói luôn 0 (quy tắc trong code, không có cột).
   serviceFeePercent        Decimal @map("service_fee_percent") @db.Decimal(5, 2)
   holdMinAmount            Decimal @default(20000) @map("hold_min_amount") @db.Decimal(14, 2)
-  holdPaymentWindowMinutes Int     @default(1440) @map("hold_payment_window_minutes")
+  /// Cửa sổ trả cọc — 2 GIỜ (ADR 0032 điều 2). Bản chính sách cũ giữ nguyên số của nó.
+  holdPaymentWindowMinutes Int     @default(120) @map("hold_payment_window_minutes")
   freeCancelHours          Int     @default(4) @map("free_cancel_hours")
+
+  /// `D` — % CỌC trên giá thuê gốc. NỀN TẢNG đặt, không phải gian hàng (ADR 0033 điều 7).
+  /// Mặc định 0 để chính sách cũ giữ nguyên hành vi; admin tạo version mới để bật.
+  depositPercent    Decimal @default(0) @map("deposit_percent") @db.Decimal(5, 2)
+  /// Sàn tiền cọc (VND) — cọc quá nhỏ thì công đối soát vượt giá trị giữ chỗ.
+  depositMinAmount  Decimal @default(0) @map("deposit_min_amount") @db.Decimal(14, 2)
+  /// Trần % cọc của CHÍNH SÁCH này. Trần cứng của code là `DEPOSIT_PERCENT_MAX` (ADR 0025 điều 3).
+  depositMaxPercent Decimal @default(30) @map("deposit_max_percent") @db.Decimal(5, 2)
 
   taxEnabled Boolean  @default(false) @map("tax_enabled")
   taxPercent Decimal? @map("tax_percent") @db.Decimal(5, 2)
@@ -3266,6 +3428,19 @@ model BookingHold {
   outcome           String?   @db.VarChar(30)
   amount            Decimal   @db.Decimal(14, 2)
   paidAmount        Decimal   @default(0) @map("paid_amount") @db.Decimal(14, 2)
+
+  /// BỐN DÒNG TIỀN của khoản giữ chỗ — `D + S + IV + IP`, CHECK tổng đúng bằng `amount`.
+  ///
+  /// Vì sao là CỘT chứ không chỉ `allocation_json`: một hold nay chứa tiền của NHIỀU người
+  /// (`S` của XePrime, `D` của chủ xe, `IV`/`IP` giữ hộ hãng bảo hiểm), nên `purpose` không còn
+  /// trả lời được "phần nào là tiền giữ hộ" (ADR 0033 điều 4). Đối chiếu quỹ hằng ngày phải
+  /// `SUM()` các phần đó trên toàn sổ — không aggregate jsonb cho một phép cộng chạy mỗi ngày.
+  /// `allocation_json` vẫn giữ để GIẢI THÍCH từng dòng (người hưởng, người chịu, tỷ lệ).
+  depositAmount           Decimal @default(0) @map("deposit_amount") @db.Decimal(14, 2)
+  serviceFeeAmount        Decimal @default(0) @map("service_fee_amount") @db.Decimal(14, 2)
+  vehicleInsuranceAmount  Decimal @default(0) @map("vehicle_insurance_amount") @db.Decimal(14, 2)
+  personalInsuranceAmount Decimal @default(0) @map("personal_insurance_amount") @db.Decimal(14, 2)
+
   feePolicyId       String    @map("fee_policy_id") @db.Char(26)
   /// [{ key, beneficiary, bearer, amount }] — chỗ tiền này đi đâu khi chốt.
   allocationJson    Json      @map("allocation_json") @db.JsonB
@@ -3277,6 +3452,10 @@ model BookingHold {
   freeCancelUntil   DateTime  @map("free_cancel_until") @db.Timestamptz(3)
   expiresAt         DateTime  @map("expires_at") @db.Timestamptz(3)
   paidAt            DateTime? @map("paid_at") @db.Timestamptz(3)
+  /// Đã bắn nhắc hạn giữa chừng chưa (mốc T+`HOLD_COUNTDOWN_SEGMENT_MINUTES`).
+  /// Cột CLAIM, không phải nhật ký: worker chỉ nhắc khi nó còn NULL, nên chạy lại bao nhiêu
+  /// lần cũng đúng một lần nhắc — cùng kỷ luật `booking_requests.first_reminded_at`.
+  paymentRemindedAt DateTime? @map("payment_reminded_at") @db.Timestamptz(3)
   releasedAt        DateTime? @map("released_at") @db.Timestamptz(3)
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -3315,6 +3494,12 @@ model HoldRefund {
   bankCode          String?   @map("bank_code") @db.VarChar(20)
   bankAccountNumber String?   @map("bank_account_number") @db.VarChar(40)
   bankAccountName   String?   @map("bank_account_name") @db.VarChar(160)
+  /// @xeprime/types → RefundSettlementMode. `balance` = ghi có ví điểm (khách có tài khoản);
+  /// `bank_transfer` = admin chuyển tay (khách vãng lai). Đóng băng lúc tạo yêu cầu.
+  settlementMode    String    @default("bank_transfer") @map("settlement_mode") @db.VarChar(20)
+  /// Bút toán ví đã ghi có — chỉ có khi `settlement_mode = balance`. Unique: một khoản hoàn
+  /// không bao giờ sinh hai bút toán.
+  walletEntryId     String?   @unique @map("wallet_entry_id") @db.Char(26)
   paidBy            String?   @map("paid_by") @db.Char(26)
   paidAt            DateTime? @map("paid_at") @db.Timestamptz(3)
   /// Mã giao dịch ngân hàng chiều RA — bằng chứng đã chuyển (ADR 0022 hoãn đối soát chiều ra).
@@ -3330,6 +3515,207 @@ model HoldRefund {
 
   @@index([status, createdAt])
   @@map("hold_refunds")
+}
+
+/// SỔ CÔNG NỢ PHẢI TRẢ — hiển thị là "Ví điểm", 1 điểm = 1đ (ADR 0033 điều 1).
+///
+/// Số dư là **nghĩa vụ của nền tảng với chủ ví**, không phải tiền của họ do nền tảng cất hộ.
+/// Tiền vật lý nằm trong tài khoản ngân hàng của XePrime; bảng này nói XePrime đang nợ ai bao
+/// nhiêu. Không nạp, không chuyển ngang, không thanh toán nội bộ, không trả lãi, **không hết
+/// hạn, không thu hồi**.
+///
+/// Bốn nguồn ghi có, không có nguồn thứ năm (ADR 0033 điều 2): hoàn cọc · bồi thường huỷ muộn ·
+/// chuyển thừa · khoản phải trả chủ xe.
+///
+/// ⚠️ `balance` là phần KHẢ DỤNG, KHÔNG phải tổng nghĩa vụ. Tổng = `balance + pending_withdraw_amount`,
+/// tính lúc đọc. Đây là chỗ dễ hiểu nhầm nhất của mô hình, và nó có lý do kỹ thuật cứng: phép
+/// rút phải là MỘT câu lệnh có điều kiện (`where: { balance: { gte: amount } }`) để hai request
+/// rút song song không cùng thắng. Prisma không so được hai cột trong `where`, nên nếu `balance`
+/// là tổng thì guard `balance - pending >= amount` buộc phải viết raw SQL — ở đúng chỗ nguy hiểm
+/// nhất của hệ thống.
+///
+/// Ràng buộc thật nằm ở migration: CHECK owner XOR, CHECK hai cột tiền không âm, partial unique
+/// một ví mỗi chủ. Writer duy nhất: `WalletService` (ADR 0023 ràng buộc 3).
+model Wallet {
+  id            String  @id @db.Char(26)
+  /// @xeprime/types → WalletOwnerType. MỘT bộ bảng cho cả khách và gian hàng (ADR 0023 điều 7).
+  ownerType     String  @map("owner_type") @db.VarChar(20)
+  /// Unique (nullable): mỗi người đúng MỘT ví. Postgres cho nhiều NULL nên cột kia không vướng.
+  ownerUserId   String? @unique @map("owner_user_id") @db.Char(26)
+  ownerTenantId String? @unique @map("owner_tenant_id") @db.Char(26)
+
+  /// KHẢ DỤNG — rút được ngay. Xem cảnh báo ở docblock model.
+  balance               Decimal @default(0) @db.Decimal(14, 2)
+  /// Đang bị khoá bởi yêu cầu rút `pending`/`approved` — đã trừ khỏi `balance`, chưa rời ngân hàng.
+  pendingWithdrawAmount Decimal @default(0) @map("pending_withdraw_amount") @db.Decimal(14, 2)
+
+  /// @xeprime/types → WalletStatus (active | frozen). Đóng băng KHÔNG xoá nghĩa vụ, chỉ dừng đường ra.
+  status String @default("active") @db.VarChar(20)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  ownerUser   User?               @relation("wallet_user", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  ownerTenant Tenant?             @relation(fields: [ownerTenantId], references: [id], onDelete: Cascade)
+  entries     WalletEntry[]
+  withdrawals WithdrawalRequest[]
+
+  @@map("wallets")
+}
+
+/// SỔ CÁI CHỈ GHI THÊM — ADR 0023 điều 4, giữ nguyên bởi ADR 0033.
+///
+/// Sửa sai bằng **dòng đảo** (`reversal_of_entry_id`), không update, không delete. Một dòng đã
+/// ghi là một sự kiện đã xảy ra; xoá nó là xoá câu trả lời cho "vì sao số dư ra con số này".
+///
+/// Chống cộng tiền hai lần bằng `@@unique([walletId, kind, sourceType, sourceRefId])` — ràng
+/// buộc DB, không phải check ở tầng app (ADR 0033 điều 6). Worker chạy lại, webhook gửi lại,
+/// admin bấm hai lần: cùng một kết quả.
+model WalletEntry {
+  id       String @id @db.Char(26)
+  walletId String @map("wallet_id") @db.Char(26)
+
+  /// @xeprime/types → WalletEntryKind; DB canh CHECK.
+  kind        String @db.VarChar(30)
+  /// @xeprime/types → WalletEntrySource; DB canh CHECK.
+  sourceType  String @map("source_type") @db.VarChar(30)
+  /// Id của nguồn (hold, yêu cầu rút…). KHÔNG có khoá ngoại: nhiều loại đích, cùng lý do với
+  /// `bank_transactions.matched_ref_id` (ADR 0022 điều 2).
+  sourceRefId String @map("source_ref_id") @db.Char(26)
+
+  /// DƯƠNG = vào ví, ÂM = ra khỏi ví.
+  amount       Decimal @db.Decimal(14, 2)
+  /// Ảnh chụp số dư khả dụng SAU bút toán — để đối chiếu phát hiện lệch, KHÔNG phải nguồn sự thật.
+  balanceAfter Decimal @map("balance_after") @db.Decimal(14, 2)
+
+  /// Truy vết cho báo cáo; không tham gia khoá chống cộng đôi.
+  bookingId String? @map("booking_id") @db.Char(26)
+  holdId    String? @map("hold_id") @db.Char(26)
+
+  /// Dòng này ĐẢO dòng nào. Unique: một dòng chỉ bị đảo tối đa một lần.
+  reversalOfEntryId String? @unique @map("reversal_of_entry_id") @db.Char(26)
+
+  note            String? @db.Text
+  createdByUserId String? @map("created_by_user_id") @db.Char(26)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  wallet     Wallet       @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  reversalOf WalletEntry? @relation("entry_reversal", fields: [reversalOfEntryId], references: [id], onDelete: SetNull)
+  reversedBy WalletEntry? @relation("entry_reversal")
+
+  @@unique([walletId, kind, sourceType, sourceRefId])
+  @@index([walletId, createdAt])
+  @@map("wallet_entries")
+}
+
+/// YÊU CẦU RÚT TIỀN — chuyển khoản admin THỦ CÔNG (ADR 0023 điều 3, ADR 0033).
+///
+/// Chuyển khoản ở VN là đẩy: nền tảng không có API nào tự trả tiền về tài khoản người nhận, nên
+/// mỗi lệnh là một con người mở app ngân hàng. Vì vậy phải có cam kết thời gian hiện ra TRƯỚC
+/// khi người dùng bấm rút (`WITHDRAWAL_TERMS`) — đó là QUY TẮC, con số là dữ liệu.
+///
+/// `approved` tách khỏi `paid` vì duyệt và chuyển tiền là hai việc, đôi khi hai người, và khoảng
+/// giữa chúng là lúc tiền đã bị khoá khỏi số dư nhưng chưa rời tài khoản nền tảng.
+///
+/// Thông tin ngân hàng là SNAPSHOT tại thời điểm yêu cầu (ADR 0023 điều 8): người dùng đổi số
+/// tài khoản sau đó không được làm đổi lệnh chuyển admin đang cầm trên tay.
+model WithdrawalRequest {
+  id       String @id @db.Char(26)
+  /// Mã `XPW` + 8 — CÙNG không gian tên với `XPG`/`XPH` để đối soát chiều RA sau này khớp được.
+  code     String @unique @db.VarChar(20)
+  walletId String @map("wallet_id") @db.Char(26)
+
+  amount Decimal @db.Decimal(14, 2)
+  /// @xeprime/types → WithdrawalStatus; DB canh CHECK.
+  status String  @default("pending") @db.VarChar(20)
+
+  /// Snapshot đích chuyển — KHÔNG đọc lại từ `bank_accounts` lúc chi.
+  bankCode          String  @map("bank_code") @db.VarChar(20)
+  bankAccountNumber String  @map("bank_account_number") @db.VarChar(40)
+  bankAccountName   String  @map("bank_account_name") @db.VarChar(160)
+  /// Truy vết về sổ tài khoản; `SetNull` vì tài khoản có thể bị lưu trữ sau đó.
+  bankAccountId     String? @map("bank_account_id") @db.Char(26)
+
+  requestedByUserId String    @map("requested_by_user_id") @db.Char(26)
+  reviewedBy        String?   @map("reviewed_by") @db.Char(26)
+  reviewedAt        DateTime? @map("reviewed_at") @db.Timestamptz(3)
+  rejectReason      String?   @map("reject_reason") @db.Text
+
+  paidBy        String?   @map("paid_by") @db.Char(26)
+  paidAt        DateTime? @map("paid_at") @db.Timestamptz(3)
+  /// Mã giao dịch ngân hàng chiều RA — bằng chứng đã chuyển. CHECK: `paid` phải có cột này.
+  bankReference String?   @map("bank_reference") @db.VarChar(100)
+
+  /// Hạn cam kết chuyển, tính từ lúc duyệt theo `WITHDRAWAL_TERMS` — hàng đợi admin sắp theo nó.
+  dueBy DateTime? @map("due_by") @db.Timestamptz(3)
+
+  /// Optimistic concurrency — hai admin không cùng đánh dấu một lệnh là đã chuyển.
+  rowVersion Int @default(0) @map("row_version")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  wallet      Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  requestedBy User   @relation("withdrawal_requester", fields: [requestedByUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([status, createdAt])
+  @@index([walletId, createdAt])
+  @@map("withdrawal_requests")
+}
+
+/// TÀI KHOẢN NGÂN HÀNG NHẬN TIỀN — ADR 0033 (Phase 3).
+///
+/// Gom đúng HAI trong bốn chỗ đang lưu số tài khoản, vì bốn chỗ đó là ba khái niệm khác nhau:
+///
+///   `seller_profiles.bank_*`      tài khoản NHẬN của gian hàng   → gom vào đây
+///   `hold_refunds.bank_*`         tài khoản NHẬN của khách       → gom vào đây
+///   `tenant_profiles.bank_*`      tài khoản THU của shop (hiện lên QR cho khách) → GIỮ NGUYÊN
+///   `vehicle_source_details.bank_name`  tên ngân hàng cho vay    → GIỮ NGUYÊN (nhãn text)
+///
+/// Hai cột đầu vẫn ở lại chỗ cũ và không bị xoá: `hold_refunds.bank_*` là SNAPSHOT của lệnh
+/// chuyển đã thực hiện — đổi tài khoản sau đó không được làm đổi bằng chứng của một lần chi đã
+/// xảy ra (ADR 0023 điều 8).
+///
+/// Ràng buộc thật nằm ở migration, Prisma không mô tả được:
+///   - CHECK owner XOR: đúng một trong `owner_user_id` / `owner_tenant_id` khác NULL.
+///   - Partial unique `(chủ, bank_code, account_number) WHERE status = 'active'` — cùng một số
+///     tài khoản khai hai lần là hai lựa chọn giống hệt nhau trong ô chọn lúc rút tiền.
+///   - Partial unique một `is_default` mỗi chủ.
+///
+/// Writer duy nhất: `BankAccountsService`.
+model BankAccount {
+  id            String  @id @db.Char(26)
+  /// @xeprime/types → WalletOwnerType (user | tenant). Một bộ bảng cho cả hai phía (ADR 0023 điều 7).
+  ownerType     String  @map("owner_type") @db.VarChar(20)
+  ownerUserId   String? @map("owner_user_id") @db.Char(26)
+  ownerTenantId String? @map("owner_tenant_id") @db.Char(26)
+
+  /// Mã ngân hàng theo bảng VietQR (BIN/short name) — cùng bộ mã với `sepay` và QR.
+  bankCode      String  @map("bank_code") @db.VarChar(20)
+  accountNumber String  @map("account_number") @db.VarChar(40)
+  accountName   String  @map("account_name") @db.VarChar(160)
+  /// Tên gợi nhớ do người dùng đặt ("Vietcombank của tôi") — trống thì UI hiện tên ngân hàng.
+  label         String? @db.VarChar(60)
+  isDefault     Boolean @default(false) @map("is_default")
+  /// @xeprime/types → BankAccountStatus (active | archived). KHÔNG xoá cứng: một tài khoản đã
+  /// từng nhận tiền còn bị tham chiếu từ lệnh rút cũ.
+  status        String  @default("active") @db.VarChar(20)
+
+  /// Đã đối chiếu với một khoản tiền thật chưa. NULL = người dùng tự khai, chưa ai xác minh.
+  verifiedAt DateTime? @map("verified_at") @db.Timestamptz(3)
+  verifiedBy String?   @map("verified_by") @db.Char(26)
+  /// Lần đổi số tài khoản gần nhất — nguồn của cooldown trước khi rút (ADR 0028 điều 8).
+  changedAt  DateTime? @map("changed_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  ownerUser   User?   @relation("bank_account_user", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  ownerTenant Tenant? @relation(fields: [ownerTenantId], references: [id], onDelete: Cascade)
+
+  @@index([ownerUserId, status])
+  @@index([ownerTenantId, status])
+  @@map("bank_accounts")
 }
 
 /// Hồ sơ NGƯỜI BÁN — ADR 0028 release gate 1 (R3).

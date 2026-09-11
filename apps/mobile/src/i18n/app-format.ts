@@ -74,6 +74,8 @@ export interface AppFormat {
    */
   monthYearShort: (value: Date) => string;
   weekdayShort: (value: Dayjs) => string;
+  /** Thứ viết ĐẦY ĐỦ: `Chủ Nhật` · `Sunday` — tiêu đề thẻ một ngày trên lịch, y như web. */
+  weekdayLong: (value: Dayjs) => string;
   rentalPoint: (value: Dayjs, opts?: { withTime?: boolean }) => string;
   rentalDuration: (from: Dayjs, to: Dayjs) => string;
 
@@ -217,6 +219,7 @@ export function createAppFormat(
     dayMonth: (value) => (value ? toAppTz(asCalendarDate(value)).format(pattern.dayMonth) : empty),
 
     weekdayShort: (value) => weekday(value),
+    weekdayLong: (value) => format.dateTime(value.toDate(), 'weekdayLong'),
     rentalPoint: (value, opts) => {
       const base = t('units.rentalPoint', {
         weekday: weekday(value),

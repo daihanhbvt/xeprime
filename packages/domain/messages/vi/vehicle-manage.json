@@ -138,8 +138,6 @@
     "selfDriveSubtitle": "Đơn giá thuê mặc định được áp dụng nếu ngày đó không có tuỳ chỉnh khác về giá.",
     "withDriverTitle": "Thiết lập bảng giá dịch vụ có tài xế",
     "withDriverSubtitle": "Đơn giá đã bao gồm lương tài xế, chưa bao gồm các phụ phí xăng dầu và phí cầu đường (nếu có).",
-    "calendarLink": "Tuỳ chỉnh giá theo lịch",
-    "calendarHint": "Giá riêng theo ngày (lễ, cuối tuần, mùa cao điểm) đặt trực tiếp trên lịch xe — một nguồn giá, không có bảng giá mùa vụ thứ hai.",
     "withDriverEstimateHint": "Loại hành trình chưa có giá sẽ tạm tính theo bậc gần nhất và bạn xác nhận giá chốt khi duyệt.",
     "loadError": "Không tải được giá & chính sách"
   },

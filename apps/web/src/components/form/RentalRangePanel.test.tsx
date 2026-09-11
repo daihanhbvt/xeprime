@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { appWallClockToIso, toAppTz, type Dayjs } from '@/lib/datetime';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { buildBusyDayIndex } from '@/lib/rental-busy';
 
@@ -145,6 +145,23 @@ describe('RentalRangePanel — thuê theo ngày', () => {
  */
 describe('RentalRangePanel — lịch bận của xe', () => {
   const isoVn = (local: string) => `${local}:00.000+07:00`;
+
+  /**
+   * GHIM "hôm nay" — khối này nói về những ngày cố định của tháng 9/2026, còn lịch thì khoá mọi
+   * ngày trong quá khứ. Không ghim thì test xanh cho tới khi đồng hồ thật đi qua 10/09/2026 rồi
+   * đỏ mãi mãi, và người đọc log sẽ đi tìm một lỗi không tồn tại trong component.
+   *
+   * `shouldAdvanceTime`: react-day-picker và Testing Library có hẹn giờ nội bộ; đóng băng hoàn
+   * toàn đồng hồ làm chúng treo.
+   */
+  beforeAll(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-09-01T03:00:00.000Z'));
+  });
+
+  afterAll(() => {
+    vi.useRealTimers();
+  });
 
   /** Tháng 9/2026 quanh mốc `PICKUP`: 11 bận trọn ngày, 10 bận 08:00–12:00. */
   const BUSY = buildBusyDayIndex([

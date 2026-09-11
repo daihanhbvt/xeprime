@@ -21,7 +21,7 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { getErrorCode } from '@/lib/api-client';
-import { colors, fieldFontSize, iconSize, space } from '@/theme/tokens';
+import { colors, fieldFontSize, fontSize, iconSize, space } from '@/theme/tokens';
 import { maintenanceRecordFormSchema, type MaintenanceRecordFormValues } from '../schema';
 import { useSaveMaintenanceRecord, useTransitionMaintenanceRecord } from '../hooks/use-maintenance';
 import type { MaintenanceRecord } from '../api';
@@ -57,13 +57,23 @@ interface ScheduleConflict {
 export function MaintenanceRecordSheet({
   vehicleId,
   state,
+  canViewFiles = false,
   onClose,
 }: {
   vehicleId: string;
   state: RecordSheetMode;
+  /**
+   * `vehicles.maintenance.file.view` — quyền RIÊNG cho chứng từ, không suy từ `manage`.
+   *
+   * Web truyền đúng cờ này vào `MaintenanceRecordDialog` từ CẢ hai lối vào (tab bảo dưỡng của xe
+   * và tấm bảo dưỡng trên lịch). Thiếu nó thì người có quyền xem chứng từ vẫn không thấy chúng.
+   */
+  canViewFiles?: boolean;
   onClose: () => void;
 }) {
   const t = useTranslations('Vehicles.maintenance.records');
+  /* Dòng chứng từ dùng CHUNG khoá với web, và khoá đó sống ở namespace `Maintenance`. */
+  const tMaintenance = useTranslations('Maintenance');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
@@ -279,6 +289,17 @@ export function MaintenanceRecordSheet({
         />
 
         {completing ? <Callout tone="info" title={t('form.completeHint')} /> : null}
+
+        {/*
+          Số chứng từ đính kèm — đúng dòng web đặt ở cuối hộp (`MaintenanceRecordDialog`:321).
+          Gác bằng quyền RIÊNG `vehicles.maintenance.file.view`, không suy từ `manage`: người
+          sửa được phiếu chưa chắc được xem chứng từ của nó.
+        */}
+        {record && canViewFiles && record.attachmentCount > 0 ? (
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            {tMaintenance('record.attachments', { count: record.attachmentCount })}
+          </Text>
+        ) : null}
       </YStack>
     </BottomSheet>
   );

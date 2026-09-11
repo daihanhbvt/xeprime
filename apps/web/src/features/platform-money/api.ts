@@ -9,6 +9,9 @@ import type {
   RefundFilters,
   RejectRefundInput,
   SettleHoldInput,
+  MarkWithdrawalPaidInput,
+  PlatformWithdrawalPage,
+  WithdrawalFilters,
 } from './types';
 
 export const MONEY_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
@@ -53,3 +56,33 @@ export const rejectRefund = (id: string, body: RejectRefundInput): Promise<void>
 
 export const fetchDailyReconciliation = (date: string): Promise<DailyReconciliation> =>
   apiGet<DailyReconciliation>(`/platform/money/reconciliation/daily?date=${date}`);
+
+// ── Hàng đợi rút tiền (ADR 0033 — Phase 5) ──────────────────────────────────
+
+export function withdrawalFiltersToParams(filters: WithdrawalFilters): QueryParams {
+  return {
+    status: filters.status ?? null,
+    // Backend đọc `'true' | 'false'` (query string), không phải boolean.
+    overdue: filters.overdue ? 'true' : null,
+    page: filters.page ?? 1,
+    limit: MONEY_DEFAULT_LIMIT,
+  };
+}
+
+export function fetchWithdrawalQueue(
+  params: QueryParams,
+): Promise<PlatformWithdrawalPage> {
+  return apiGet<PlatformWithdrawalPage>('/platform/money/withdrawals', params);
+}
+
+export const approveWithdrawal = (id: string): Promise<void> =>
+  apiPost<void>(`/platform/money/withdrawals/${id}/approve`);
+
+export const markWithdrawalPaid = (id: string, body: MarkWithdrawalPaidInput): Promise<void> =>
+  apiPost<void>(`/platform/money/withdrawals/${id}/paid`, body);
+
+export const rejectWithdrawal = (id: string, body: { reason: string }): Promise<void> =>
+  apiPost<void>(`/platform/money/withdrawals/${id}/reject`, body);
+
+export const reverseWithdrawal = (id: string, body: { reason: string }): Promise<void> =>
+  apiPost<void>(`/platform/money/withdrawals/${id}/reverse`, body);

@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { colors, fieldFontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { CheckMark } from './CheckMark';
 import type { IconName } from './Chip';
 
 /**
@@ -156,26 +157,11 @@ export function CheckOption({
       disabled={disabled}
       role="checkbox"
       onPress={onPress}
-      indicator={
-        <XStack
-          width={RING}
-          height={RING}
-          ai="center"
-          jc="center"
-          br={radius.sm}
-          bw={1}
-          bc={checked ? colors.primary : colors.borderInput}
-          bg={checked ? colors.primary : colors.surface}
-        >
-          {checked ? <Ionicons name="checkmark" size={TICK} color={colors.onPrimary} /> : null}
-        </XStack>
-      }
+      indicator={<CheckMark checked={checked} />}
     />
   );
 }
 
-/** Cỡ dấu tick — nhỏ hơn ô vuông đủ để còn thấy viền quanh nó. */
-const TICK = 14;
 
 export function RadioOption({
   label,

@@ -23,3 +23,15 @@ export interface RefundFilters {
   page?: number;
   limit?: number;
 }
+
+/** Một lệnh rút nhìn từ ADMIN — số tài khoản ĐẦY ĐỦ, vì họ phải gõ nó vào app ngân hàng. */
+export type PlatformWithdrawal = Schemas['PlatformWithdrawalDto'];
+export type PlatformWithdrawalPage = Schemas['PlatformWithdrawalPageDto'];
+export type MarkWithdrawalPaidInput = Schemas['MarkWithdrawalPaidDto'];
+
+/** Bộ lọc hàng đợi rút. Bỏ trống `status` = VIỆC CẦN LÀM (chờ duyệt + đã duyệt chưa chuyển). */
+export interface WithdrawalFilters {
+  status?: string | null;
+  overdue?: boolean;
+  page?: number;
+}

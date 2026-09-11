@@ -36,6 +36,13 @@ interface ChipProps {
    * đổi tại chỗ.
    */
   role?: 'tab' | 'button';
+  /**
+   * Tên đọc ra cho trình đọc màn hình khi NHÃN thôi chưa đủ ngữ cảnh.
+   *
+   * Nhãn trên viên bị giới hạn bởi bề ngang ("Xem lịch"), còn người nghe cần biết lịch của xe
+   * nào. Bỏ trống thì tên đọc ra chính là nhãn — mặc định đúng cho gần hết mọi viên.
+   */
+  accessibilityLabel?: string;
 }
 
 /**
@@ -64,6 +71,7 @@ export function Chip({
   variant = 'filled',
   tone = 'default',
   role = 'tab',
+  accessibilityLabel,
 }: ChipProps) {
   const segmented = variant === 'segmented';
   const accent = tone === 'accent';
@@ -129,6 +137,7 @@ export function Chip({
     <Pressable
       onPress={onPress}
       accessibilityRole={role}
+      {...(accessibilityLabel ? { accessibilityLabel } : {})}
       {...(role === 'tab' ? { accessibilityState: { selected } } : {})}
       hitSlop={{ top: slop, bottom: slop }}
       style={grow ? { flex: 1 } : undefined}

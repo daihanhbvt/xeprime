@@ -3,6 +3,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
@@ -23,7 +24,7 @@ import {
   type ServiceType,
 } from '@xeprime/types';
 import { STALE_TIME } from '@xeprime/api-client';
-import { dayjs, type Dayjs, type RentalMode, LIST_SEPARATOR } from '@xeprime/domain';
+import { dayjs, toAppTz, type Dayjs, type RentalMode, LIST_SEPARATOR } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
@@ -42,6 +43,7 @@ import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { RentalRangeSheet } from '@/features/marketplace/components/RentalRangeSheet';
+import { useVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { getErrorCode } from '@/lib/api-client';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
@@ -50,7 +52,15 @@ import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { queryKeys } from '@/queries/query-keys';
 import { layout } from '@/theme/layout';
-import { colors, fieldFontSize, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import {
+  colors,
+  fieldFontSize,
+  fontSize,
+  fontWeight,
+  iconSize,
+  radius,
+  space,
+} from '@/theme/tokens';
 import { VehiclePickerSheet } from './components/VehiclePickerSheet';
 import { useListing } from '@/features/marketplace/hooks/use-marketplace-data';
 import { useCheckConflict, useCreateBooking } from './hooks/use-bookings';
@@ -149,11 +159,23 @@ export function CreateBookingScreen() {
    * Điền sẵn khách khi vào từ hồ sơ một khách đã có trong sổ — cùng tham số web đặt lên URL
    * (`?customerName=&customerPhone=`), nên một deep link sinh ở bên nào cũng tới đúng chỗ.
    */
-  const { customerName, customerPhone } = useLocalSearchParams<{
-    customerName?: string;
-    customerPhone?: string;
-  }>();
-  const prefill: StaffBookingPrefill = { customerName, customerPhone };
+  const { customerName, customerPhone, vehicleId, vehicleName, pickupAt, returnAt } =
+    useLocalSearchParams<{
+      customerName?: string;
+      customerPhone?: string;
+      vehicleId?: string;
+      vehicleName?: string;
+      pickupAt?: string;
+      returnAt?: string;
+    }>();
+  const prefill: StaffBookingPrefill = {
+    customerName,
+    customerPhone,
+    vehicleId,
+    vehicleName,
+    pickupAt,
+    returnAt,
+  };
 
   const back = () => goBackOr(router, ROUTES.manage.bookings());
 
@@ -181,7 +203,24 @@ export function CreateBookingScreen() {
 export interface StaffBookingPrefill {
   customerName?: string | undefined;
   customerPhone?: string | undefined;
+  /**
+   * Xe + khoảng thuê điền sẵn khi vào từ một Ô TRÊN LỊCH ("Đặt xe" của `CalendarScreen`).
+   *
+   * Web giải cùng bài này bằng `StaffBookingDialog` nhận thẳng ba giá trị đó, nên luồng bắt đầu ở
+   * bước THỜI GIAN chứ không phải bước chọn xe — người dùng đã chọn xe bằng chính cú chạm vào ô.
+   *
+   * `pickupAt`/`returnAt` là ISO-8601 **UTC**: mốc tuyệt đối dựng từ ngày lịch của ô, không phải
+   * một mặt đồng hồ người dùng gõ.
+   */
+  vehicleId?: string | undefined;
+  /** Tên xe đi CÙNG id — xem `BookingCreatePrefill` ở `navigation/routes.ts`. */
+  vehicleName?: string | undefined;
+  pickupAt?: string | undefined;
+  returnAt?: string | undefined;
 }
+
+/** Ô lịch chỉ biết `vehicleId`; luồng này chỉ đọc `id` + `name`, nên đó là tất cả những gì cần. */
+type PickedVehicle = Pick<VehicleListItem, 'id' | 'name'>;
 
 function StaffBookingFlow({
   onBack,
@@ -198,8 +237,12 @@ function StaffBookingFlow({
   const errorMessage = useErrorMessage();
   const router = useRouter();
 
-  const [step, setStep] = useState<Step>(STEP.VEHICLE);
-  const [vehicle, setVehicle] = useState<VehicleListItem | null>(null);
+  /*
+   * Vào từ một ô lịch thì XE đã được chọn bằng chính cú chạm đó — bắt đầu ở bước THỜI GIAN, y như
+   * `StaffBookingDialog` bên web mở thẳng vào form với xe đã cố định.
+   */
+  const [step, setStep] = useState<Step>(prefill.vehicleId ? STEP.TIME : STEP.VEHICLE);
+  const [vehicle, setVehicle] = useState<PickedVehicle | null>(null);
   const [picking, setPicking] = useState(false);
   const [scheduling, setScheduling] = useState(false);
   /** Tấm chọn MỘT MỐC — chỉ dùng cho đơn dài hạn, nơi không có ngày trả để chọn. */
@@ -207,12 +250,45 @@ function StaffBookingFlow({
   const [rentalMode, setRentalMode] = useState<RentalMode>('daily');
   const [serviceType, setServiceType] = useState<ServiceType>(SERVICE_TYPE.SELF_DRIVE);
   const [packageMonths, setPackageMonths] = useState<LongTermPackageMonths | null>(null);
-  const [range, setRange] = useState<{ pickupAt: Dayjs | null; returnAt: Dayjs | null }>({
-    pickupAt: null,
-    returnAt: null,
-  });
+  const [range, setRange] = useState<{ pickupAt: Dayjs | null; returnAt: Dayjs | null }>(() => ({
+    // Mốc UTC từ ô lịch → giờ VIỆT NAM cho hộp chọn khoảng (CLAUDE.md §9).
+    pickupAt: prefill.pickupAt ? toAppTz(prefill.pickupAt) : null,
+    returnAt: prefill.returnAt ? toAppTz(prefill.returnAt) : null,
+  }));
   const [stepError, setStepError] = useState<string | null>(null);
   const [created, setCreated] = useState<{ id: string; code: string } | null>(null);
+
+  /*
+   * Xe điền sẵn dựng từ CHÍNH tham số route, không chờ một request nào.
+   *
+   * Lối vào (ô lịch) đã biết cả id lẫn tên, và `GET /vehicles/:id` đòi `vehicles.view` — một
+   * quyền mà `bookings.create` KHÔNG bao hàm. Bắt màn này chờ nó là dựng một trạng thái chết:
+   * thẻ xe rỗng ở bước THỜI GIAN và nút Tiếp tục không phản ứng, không câu nào giải thích.
+   *
+   * Đặt vào state NGAY TRONG RENDER (mẫu "derived state" mà React khuyến nghị) thay vì qua
+   * `useEffect`: qua effect thì màn vẽ một nhịp với `vehicle = null`, đủ để một cú chạm nhanh
+   * rơi vào trạng thái sai.
+   */
+  if (prefill.vehicleId && prefill.vehicleName && !vehicle) {
+    setVehicle({ id: prefill.vehicleId, name: prefill.vehicleName });
+  }
+
+  /*
+   * Nạp lại chỉ để LÀM MỊN tên (lối vào cũ hoặc deep link không mang tên) — không phải điều kiện
+   * để luồng chạy. `enabled` tắt hẳn khi tên đã có: không đòi một quyền mình không cần.
+   */
+  const needsVehicleLookup = Boolean(prefill.vehicleId) && !prefill.vehicleName;
+  const prefillVehicle = useVehicle(prefill.vehicleId, needsVehicleLookup);
+  if (needsVehicleLookup && !vehicle && prefillVehicle.data) {
+    setVehicle({ id: prefillVehicle.data.id, name: prefillVehicle.data.name });
+  }
+  /*
+   * Không tra được tên và cũng không được mang tên sang ⇒ QUAY VỀ bước chọn xe.
+   * Đứng lại ở bước THỜI GIAN với `vehicle = null` là một ngõ cụt im lặng.
+   */
+  if (needsVehicleLookup && !vehicle && prefillVehicle.isError && step === STEP.TIME) {
+    setStep(STEP.VEHICLE);
+  }
 
   const schema = useMemo(
     () =>
@@ -956,31 +1032,91 @@ function rowAmount(
   return quote?.rows.find((row) => row.key === key)?.amount ?? null;
 }
 
+/** Đường kính chấm số — bậc `mobile` của `.dot` bên web (18px), không phải bậc desktop 22px. */
+const STEP_DOT = 18;
+
+/**
+ * Thanh bước — bản native của `BookingSteps` bên web.
+ *
+ * ## Vì sao bỏ cách vẽ cũ
+ *
+ * Bản trước là ba cột, mỗi cột một nét gạch 2dp ở trên và một dòng chữ nhỏ ở dưới. Nó nói được
+ * "đang ở đâu" nhưng không nói được hai thứ quan trọng hơn: bước này là bước THỨ MẤY, và những
+ * bước trước đã XONG hay chỉ là đã đi qua. Trên màn hẹp, ba nét gạch xám nhạt còn đọc ra như
+ * một cái gạch chân bị lỗi hơn là một thanh tiến trình.
+ *
+ * Web giải bằng chấm SỐ: ① ② ③, bước xong đổi thành dấu tích xanh, bước đang làm tô gold đặc.
+ * Đây là bản dịch đúng của nó — cùng thứ tự, cùng ba trạng thái, cùng cỡ chấm 18dp mà web dùng
+ * ở nhánh `max-width: 640px`.
+ *
+ * Bước ĐÃ XONG cố ý để nền TRONG SUỐT, chỉ còn dấu tích: nếu nó cũng tô đặc thì hai ba chấm gold
+ * nằm cạnh nhau và bước đang làm không còn nổi lên nữa.
+ *
+ * Nhãn trạng thái cho trình đọc màn hình đi kèm từng bước, vì màu và dấu tích là tín hiệu THỊ
+ * GIÁC — web cũng gắn đúng chuỗi đó bằng một `span` ẩn.
+ */
 function StepBar({ step }: { step: Step }) {
   const t = useTranslations('Bookings.staffBooking.steps');
+  const tFlow = useTranslations('BookingRequests.flow');
   const order: readonly Step[] = [STEP.TIME, STEP.CONTACT, STEP.REVIEW];
   const current = order.indexOf(step);
 
   return (
-    <XStack gap={space.xs}>
-      {order.map((key, index) => (
-        <YStack
-          key={key}
-          f={1}
-          gap={2}
-          py={space.xs}
-          borderTopWidth={2}
-          borderColor={index <= current ? colors.primary : colors.borderSubtle}
-        >
-          <Text
-            col={index <= current ? colors.primaryActive : colors.textMuted}
-            fos={fontSize.label}
-            fow={index === current ? fontWeight.semibold : fontWeight.regular}
+    <XStack
+      ai="center"
+      gap={space.xs}
+      pb={space.md}
+      borderBottomWidth={1}
+      borderColor={colors.border}
+      accessibilityLabel={tFlow('stepsLabel')}
+    >
+      {order.map((key, index) => {
+        const done = index < current;
+        const active = index === current;
+        const label = t(key === STEP.TIME ? 'time' : key === STEP.CONTACT ? 'contact' : 'review');
+
+        return (
+          <XStack
+            key={key}
+            f={1}
+            minWidth={0}
+            ai="center"
+            gap={4}
+            accessibilityLabel={done ? `${label} ${tFlow('stepDone')}` : label}
+            accessibilityState={{ selected: active }}
           >
-            {t(key === STEP.TIME ? 'time' : key === STEP.CONTACT ? 'contact' : 'review')}
-          </Text>
-        </YStack>
-      ))}
+            <XStack
+              w={STEP_DOT}
+              h={STEP_DOT}
+              ai="center"
+              jc="center"
+              br={radius.pill}
+              bg={active ? colors.primary : done ? 'transparent' : colors.surfaceMuted}
+            >
+              {done ? (
+                <Ionicons name="checkmark-circle" size={iconSize.sm} color={colors.success} />
+              ) : (
+                <Text
+                  col={active ? colors.onPrimary : colors.textMuted}
+                  fos={fontSize.meta}
+                  fow={fontWeight.medium}
+                >
+                  {index + 1}
+                </Text>
+              )}
+            </XStack>
+            <Text
+              f={1}
+              col={active ? colors.text : colors.textMuted}
+              fos={fontSize.bodySm}
+              fow={active ? fontWeight.medium : fontWeight.regular}
+              numberOfLines={1}
+            >
+              {label}
+            </Text>
+          </XStack>
+        );
+      })}
     </XStack>
   );
 }

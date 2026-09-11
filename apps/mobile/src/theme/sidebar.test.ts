@@ -1,3 +1,4 @@
+import { mixHex } from './color-mix';
 import { sidebar } from './tokens';
 
 /**
@@ -11,16 +12,6 @@ type Rgb = readonly [number, number, number];
 
 function toRgb(hex: string): Rgb {
   return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as unknown as Rgb;
-}
-
-/** `color-mix(in srgb, <a> <ratio>%, <b>)` — trộn tuyến tính trong không gian sRGB. */
-function mix(a: string, b: string, ratio: number): string {
-  const [ra, ga, ba] = toRgb(a);
-  const [rb, gb, bb] = toRgb(b);
-  const channel = (x: number, y: number) => Math.round(x * ratio + y * (1 - ratio));
-  return `#${[channel(ra, rb), channel(ga, gb), channel(ba, bb)]
-    .map((v) => v.toString(16).padStart(2, '0'))
-    .join('')}`;
 }
 
 function luminance(hex: string): number {
@@ -43,10 +34,10 @@ describe('bảng màu sidebar khu quản lý', () => {
   });
 
   it('bốn màu dẫn xuất khớp đúng công thức `color-mix` của web', () => {
-    expect(sidebar.hover).toBe(mix(sidebar.text, sidebar.bg, 0.08));
-    expect(sidebar.selectedBg).toBe(mix(sidebar.active, sidebar.bg, 0.14));
-    expect(sidebar.muted).toBe(mix(sidebar.text, sidebar.bg, 0.62));
-    expect(sidebar.border).toBe(mix(sidebar.text, sidebar.bg, 0.14));
+    expect(sidebar.hover).toBe(mixHex(sidebar.text, sidebar.bg, 0.08));
+    expect(sidebar.selectedBg).toBe(mixHex(sidebar.active, sidebar.bg, 0.14));
+    expect(sidebar.muted).toBe(mixHex(sidebar.text, sidebar.bg, 0.62));
+    expect(sidebar.border).toBe(mixHex(sidebar.text, sidebar.bg, 0.14));
   });
 
   /*

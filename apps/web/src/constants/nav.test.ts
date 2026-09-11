@@ -58,7 +58,7 @@ function hrefsOf(sections: typeof SHOP_NAV): string[] {
 }
 
 describe('nav — cấu trúc khối', () => {
-  it('gian hàng: 6 khối theo hành trình chủ xe, tổng 20 mục lá', () => {
+  it('gian hàng: 6 khối theo hành trình chủ xe, tổng 21 mục lá', () => {
     expect(SHOP_NAV.map((section) => section.key)).toEqual([
       'overview',
       'operations',
@@ -69,8 +69,9 @@ describe('nav — cấu trúc khối', () => {
     ]);
     // 20 từ W2 (thêm "Gói của tôi"), rồi 18 từ 03/09/2026: gỡ hai mục placeholder
     // "Khu vực nhận xe" và "Thùng rác" (R1 — ẩn menu chưa có luồng). Lại 20 ở R3: "Hồ sơ
-    // người bán" và "Yêu cầu hỗ trợ" — cả hai thuộc bộ CƠ BẢN, không mục nào gắn cờ tính năng.
-    expect(flattenLeaves(SHOP_NAV)).toHaveLength(20);
+    // người bán" và "Yêu cầu hỗ trợ". 21 từ ADR 0033: "Ví điểm" — khoản XePrime phải trả gian
+    // hàng, thuộc bộ CƠ BẢN vì đó là tiền của chính họ, gói hết hạn vẫn phải rút được.
+    expect(flattenLeaves(SHOP_NAV)).toHaveLength(21);
   });
 
   it('Tổng quan và Hỗ trợ luôn hiện (`pinned`), bốn khối giữa gập được', () => {
@@ -130,10 +131,23 @@ describe('nav — cấu trúc khối', () => {
     const business = SHOP_NAV.find((section) => section.key === 'business')!;
     const finance = business.children.filter(isNavBranch).find((node) => node.key === 'finance')!;
     expect(finance.children.map((leaf) => leaf.href)).toEqual([
+      // Ví điểm đứng ĐẦU nhóm Tài chính: nó là tiền THẬT của gian hàng và có hành động (rút),
+      // còn ba mục sau là sổ sách để đọc.
+      ROUTES.MANAGE.BALANCE,
       ROUTES.MANAGE.FINANCE,
       ROUTES.MANAGE.RECEIPTS,
       ROUTES.MANAGE.DEBTS,
     ]);
+  });
+
+  /**
+   * Ví KHÔNG gắn `feature`: số dư là tiền của chính gian hàng. Gói hết hạn là `read_only` chứ
+   * không `hidden` (ADR 0027 điều 3), và tiền thì không thuộc về gói — ẩn nó đi nghĩa là giữ
+   * tiền của người khác mà không cho họ thấy.
+   */
+  it('Ví điểm KHÔNG bị gác bằng cờ tính năng — tiền của gian hàng không thuộc về gói', () => {
+    const balance = flattenLeaves(SHOP_NAV).find((leaf) => leaf.href === ROUTES.MANAGE.BALANCE)!;
+    expect(balance.feature).toBeUndefined();
   });
 
   it('Đơn đặt xe giữ nguyên route riêng, đứng dưới Đơn thuê', () => {
@@ -209,16 +223,16 @@ describe('nav — ranh giới gian hàng ↔ nền tảng', () => {
 });
 
 describe('nav — vai trò gian hàng nhìn thấy gì', () => {
-  it('shop_owner thấy đủ 20 mục', () => {
+  it('shop_owner thấy đủ 21 mục', () => {
     expect(
       visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_OWNER], false),
-    ).toHaveLength(20);
+    ).toHaveLength(21);
   });
 
-  it('shop_manager cũng thấy đủ 20 mục (có MEMBER_VIEW, FINANCE_VIEW và SUBSCRIPTION_VIEW)', () => {
+  it('shop_manager cũng thấy đủ 21 mục (có MEMBER_VIEW, FINANCE_VIEW và SUBSCRIPTION_VIEW)', () => {
     expect(
       visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_MANAGER], false),
-    ).toHaveLength(20);
+    ).toHaveLength(21);
   });
 
   it('shop_staff KHÔNG thấy tài chính và người dùng', () => {

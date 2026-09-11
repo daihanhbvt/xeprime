@@ -5,14 +5,7 @@ import { colors, radius, sizing } from '@/theme/tokens';
 import type { IconName } from './Chip';
 
 type Tone =
-  | 'plain'
-  | 'surface'
-  | 'primary'
-  | 'danger'
-  | 'dangerSurface'
-  | 'accent'
-  | 'success'
-  | 'info';
+  'plain' | 'surface' | 'primary' | 'danger' | 'dangerSurface' | 'accent' | 'success' | 'info';
 
 const TONE: Record<Tone, { bg: string; fg: string; border: string }> = {
   plain: { bg: 'transparent', fg: colors.text, border: 'transparent' },
@@ -52,6 +45,14 @@ const TONE: Record<Tone, { bg: string; fg: string; border: string }> = {
   dangerSurface: { bg: colors.dangerSurface, fg: colors.danger, border: colors.danger },
 };
 
+/**
+ * Cỡ VẼ RA của biến thể gọn — bằng đúng chiều cao `Chip` cỡ `sm` (32dp).
+ *
+ * Bằng nhau không phải trùng hợp: hai thứ này đứng cạnh nhau trên cùng một hàng điều khiển, và
+ * lệch vài dp là hàng đó trông như xếp nhầm.
+ */
+const COMPACT_BOX = 32;
+
 interface IconButtonProps {
   icon: IconName;
   /** Bắt buộc: nút chỉ có biểu tượng thì đây là thứ DUY NHẤT trình đọc màn hình đọc được. */
@@ -62,6 +63,18 @@ interface IconButtonProps {
   disabled?: boolean;
   /** Thay hình bằng vòng xoay và khoá chạm — cho một mutation bắn thẳng từ nút này, không qua sheet/dialog. */
   loading?: boolean;
+  /**
+   * Vẽ NHỎ lại, vùng chạm giữ nguyên — cùng khuôn với `Chip` cỡ `sm`.
+   *
+   * Dành cho hàng điều khiển CHẬT, nơi nút phải chia chỗ với một nhãn không được cắt: thanh công
+   * cụ lịch có hai mũi tên, nút Hôm nay và nút Lọc đứng cạnh một nhãn khoảng ngày phải đọc trọn
+   * cả năm. Ở 48dp thì bốn nút đó ăn hết chỗ của nhãn; ở 32dp thì vừa, và `hitSlop` bù đúng phần
+   * thiếu nên ngón tay vẫn có đủ 44pt.
+   *
+   * KHÔNG dùng để "cho gọn" ở một hàng còn rộng — nút nhỏ hơn thì khó nhắm hơn, và đây là đánh
+   * đổi chỉ đáng khi bề ngang thật sự không đủ.
+   */
+  compact?: boolean;
 }
 
 /** Nút chỉ có biểu tượng, luôn đủ 44pt/48dp vùng chạm dù biểu tượng nhỏ tới đâu. */
@@ -73,9 +86,12 @@ export function IconButton({
   size = 20,
   disabled = false,
   loading = false,
+  compact = false,
 }: IconButtonProps) {
   const skin = TONE[tone];
   const blocked = disabled || loading;
+  const box = compact ? COMPACT_BOX : sizing.touchTarget;
+  const slop = Math.ceil((sizing.touchTarget - box) / 2);
 
   return (
     <Pressable
@@ -84,11 +100,12 @@ export function IconButton({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: blocked, busy: loading }}
+      hitSlop={slop}
       style={({ pressed }) => (pressed ? { opacity: 0.7 } : null)}
     >
       <XStack
-        w={sizing.touchTarget}
-        h={sizing.touchTarget}
+        w={box}
+        h={box}
         br={radius.pill}
         bg={skin.bg}
         bw={skin.border === 'transparent' ? 0 : 1}

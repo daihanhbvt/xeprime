@@ -10,6 +10,8 @@ import { CustomersService } from '../../src/modules/customers/customers.service'
 import { DriversService } from '../../src/modules/drivers/drivers.service';
 import { FeePoliciesService } from '../../src/modules/fee-policies/fee-policies.service';
 import { HoldSettlementService } from '../../src/modules/holds/hold-settlement.service';
+import { WalletService } from '../../src/modules/wallet/wallet.service';
+import { FirebaseAppService } from '../../src/modules/firebase/firebase-app.service';
 import { NotificationService } from '../../src/modules/notification/notification.service';
 import { BillingService } from '../../src/modules/billing/billing.service';
 import { BranchesService } from '../../src/modules/branches/branches.service';
@@ -41,6 +43,21 @@ import type { PrismaService } from '../../src/prisma/prisma.service';
  */
 export function makeVehicleSettingsService(prisma: PrismaService): VehicleSettingsService {
   return new VehicleSettingsService(prisma, new AuditService(prisma), new OccupancyService(prisma));
+}
+
+/**
+ * `NotificationService` (10/09/2026) — mọc thêm `FirebaseAppService` để biết `PUSH_ENABLED`.
+ *
+ * Không dựng `FirebaseAppService` thật: nó đọc `ConfigService`, và spec nào cũng sẽ phải nhớ
+ * đặt biến env chỉ để một cờ boolean trả về `false`. Ở đây cờ đó là một THAM SỐ tường minh, nên
+ * spec bật push chỉ khi nó thật sự đang kiểm chuyện đẩy — mọi spec còn lại chạy như trước.
+ */
+export function makeNotificationService(
+  prisma: PrismaService,
+  opts: { pushEnabled?: boolean } = {},
+): NotificationService {
+  const firebase = { pushEnabled: opts.pushEnabled ?? false } as FirebaseAppService;
+  return new NotificationService(prisma, firebase);
 }
 
 export function makeBranchesService(prisma: PrismaService): BranchesService {
@@ -79,7 +96,7 @@ export function makeBillingService(prisma: PrismaService): BillingService {
   return new BillingService(
     prisma,
     new AuditService(prisma),
-    new NotificationService(prisma),
+    makeNotificationService(prisma),
     // R3: gán/huỷ gói kéo theo đồng bộ chế độ thu phí lên listing (ADR 0024 ràng buộc 2).
     new ListingsService(prisma),
     // ConfigService trần đọc process.env — spec không đặt SEPAY_* nên paymentInfo trả "chưa cấu hình", đúng mặc định dev.
@@ -93,13 +110,13 @@ export function makeBillingService(prisma: PrismaService): BillingService {
  */
 export function makeBookingHoldsService(prisma: PrismaService): BookingHoldsService {
   const audit = new AuditService(prisma);
-  const notifications = new NotificationService(prisma);
+  const notifications = makeNotificationService(prisma);
   return new BookingHoldsService(
     prisma,
     makeBookingsService(prisma),
     new OccupancyService(prisma),
     makeVehicleSettingsService(prisma),
-    new HoldSettlementService(prisma, audit, notifications),
+    new HoldSettlementService(prisma, audit, notifications, new WalletService(prisma)),
     makeBillingService(prisma),
     audit,
     notifications,
@@ -126,7 +143,7 @@ export function makeBookingRequestsService(
   },
 ): BookingRequestsService {
   const audit = stubs.audit ?? new AuditService(prisma);
-  const notifications = stubs.notifications ?? new NotificationService(prisma);
+  const notifications = stubs.notifications ?? makeNotificationService(prisma);
   return new BookingRequestsService(
     prisma,
     stubs.bookings ?? makeBookingsService(prisma),
@@ -178,7 +195,7 @@ export function makeBookingsService(
   } = {},
 ): BookingsService {
   const audit = overrides.audit ?? new AuditService(prisma);
-  const notifications = overrides.notifications ?? new NotificationService(prisma);
+  const notifications = overrides.notifications ?? makeNotificationService(prisma);
   return new BookingsService(
     prisma,
     overrides.occupancy ?? new OccupancyService(prisma),
@@ -186,7 +203,7 @@ export function makeBookingsService(
     notifications,
     new DriversService(prisma, audit),
     overrides.customers ?? new CustomersService(prisma, audit),
-    new HoldSettlementService(prisma, audit, notifications),
+    new HoldSettlementService(prisma, audit, notifications, new WalletService(prisma)),
     overrides.settings ?? makeVehicleSettingsService(prisma),
   );
 }

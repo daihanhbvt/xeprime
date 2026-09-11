@@ -254,6 +254,18 @@ export const API_ERROR_CODE = {
   /** Chưa có tài khoản nhận hoàn — khách phải khai trước khi hoàn được ghi nhận. */
   REFUND_ACCOUNT_REQUIRED: 'REFUND_ACCOUNT_REQUIRED',
 
+  // Tài khoản ngân hàng nhận tiền (ADR 0033)
+  /** Số tài khoản này đã có trong danh sách đang dùng của chính chủ đó. */
+  BANK_ACCOUNT_DUPLICATE: 'BANK_ACCOUNT_DUPLICATE',
+
+  // Rút tiền (ADR 0033)
+  /** Số dư khả dụng không đủ, hoặc ví đang tạm khoá. */
+  INSUFFICIENT_BALANCE: 'INSUFFICIENT_BALANCE',
+  /** Dưới mức rút tối thiểu — `details.minAmount` mang con số để FE nói đúng số. */
+  WITHDRAWAL_BELOW_MINIMUM: 'WITHDRAWAL_BELOW_MINIMUM',
+  /** Yêu cầu rút đã được duyệt/chi/từ chối — không đổi được nữa. */
+  WITHDRAWAL_ALREADY_HANDLED: 'WITHDRAWAL_ALREADY_HANDLED',
+
   // Hồ sơ người bán (R3)
   /** Hồ sơ ở trạng thái không cho sửa/gửi (đang chờ xác minh). `details` mang `{ status }`. */
   SELLER_PROFILE_NOT_EDITABLE: 'SELLER_PROFILE_NOT_EDITABLE',

@@ -29,3 +29,6 @@ export type CustomerTripHandoverEvidence = Schemas['CustomerTripHandoverEvidence
 export type CustomerTripHandoverEvidencePhoto = Schemas['CustomerTripHandoverEvidencePhotoDto'];
 /** Vé xem ảnh riêng tư: URL ký + hạn dùng. Dùng chung shape với kho tài liệu (Wave 4.1). */
 export type PrivateFileTicket = Schemas['SourceContractDownloadDto'];
+
+/** Thân request khai tài khoản nhận hoàn — chọn cái đã lưu, hoặc khai ba ô. */
+export type ProvideRefundAccountInput = Schemas['ProvideRefundAccountDto'];

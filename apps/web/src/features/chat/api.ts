@@ -4,7 +4,6 @@ import { uploadToR2 } from '@/services/upload';
 import type {
   ChatAttachmentPresign,
   ChatMessage,
-  ChatUnreadSummary,
   ConversationFilters,
   ConversationListResult,
   ConversationSummary,
@@ -63,21 +62,6 @@ export const chatApi = {
   /** Khách mở/lấy hội thoại với shop về một xe. Idempotent ở DB — bấm nhiều lần vẫn một thread. */
   start(vehicleId: string): Promise<ConversationSummary> {
     return apiPost<ConversationSummary>('/conversations', { vehicleId });
-  },
-
-  unreadCount(side: string): Promise<{ count: number }> {
-    return apiGet<{ count: number }>('/conversations/unread-count', { side });
-  },
-
-  /**
-   * Chưa đọc của CẢ HAI vai — cho biểu tượng chat trên thanh trên cùng.
-   *
-   * Khác `unreadCount(side)`: cái kia đếm cho MỘT hộp thư (mục menu trỏ thẳng vào hộp thư đó
-   * phải hiện đúng số của nó). Cái này trả lời "có gì đang đợi tôi ở bất kỳ đâu", nên chủ gian
-   * hàng đang lướt chợ xe vẫn thấy khách nhắn vào shop.
-   */
-  unreadSummary(): Promise<ChatUnreadSummary> {
-    return apiGet<ChatUnreadSummary>('/conversations/unread-summary');
   },
 
   async messages(conversationId: string, cursor?: MessageCursor | null): Promise<MessagePage> {

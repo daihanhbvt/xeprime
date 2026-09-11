@@ -1,6 +1,6 @@
 # Architecture Decision Records — XePrime
 
-> Cập nhật: 09/09/2026
+> Cập nhật: 10/09/2026
 
 ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted mới hơn thắng trong đúng phạm vi phần **Quan hệ với ADR cũ**; không suy rằng toàn bộ ADR cũ mất hiệu lực.
 
@@ -37,16 +37,18 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0020](0020-two-revenue-tracks-one-marketplace.md) | Hai tuyến doanh thu trên một chợ | **Partially superseded bởi 0028; điều 2 + kiểm điểm giao bởi 0029** |
 | [0021](0021-booking-hold-is-the-commission.md) | Hold bằng commission | **Superseded bởi 0028** |
 | [0022](0022-sepay-customer-money.md) | Một sổ giao dịch ngân hàng cho các khoản vào | Accepted; mở rộng bởi 0028 |
-| [0023](0023-wallet-refund-and-compensation.md) | Ví hoàn/bồi thường cũ | **Superseded bởi 0025/0028** |
+| [0023](0023-wallet-refund-and-compensation.md) | Ví hoàn/bồi thường cũ | **Superseded bởi 0025/0028; ràng buộc 1 + điều 5 bị 0033 ghi đè** |
 | [0024](0024-billing-mode-from-plan-frozen-on-booking.md) | Billing mode đóng băng vào booking | Accepted; breakdown mở rộng bởi 0028 |
-| [0025](0025-shop-escrow-hold-and-payout.md) | Tách tiền giữ hộ và payout | **Partially superseded bởi 0028/0032** |
+| [0025](0025-shop-escrow-hold-and-payout.md) | Tách tiền giữ hộ và payout | **Partially superseded bởi 0028/0032; điều 1–4 bị 0033 ghi đè** |
 | [0026](0026-first-trips-free-then-commission.md) | Hai chuyến đầu miễn phí | **Superseded bởi 0028** |
 | [0027](0027-feature-tiers-basic-owner-vs-shop.md) | Basic Owner và Full Shop capability | **Partially superseded bởi 0032** |
-| [0028](0028-marketplace-subscription-fees-and-custodied-funds.md) | Hai lựa chọn, phí minh bạch, hold/payout có gate | **Partially superseded bởi 0032** |
+| [0028](0028-marketplace-subscription-fees-and-custodied-funds.md) | Hai lựa chọn, phí minh bạch, hold/payout có gate | **Partially superseded bởi 0032; điều 6 + tên gọi ở điều 8 bị 0033 ghi đè** |
 | [0029](0029-per-vehicle-flat-pricing-and-customer-side-fees.md) | Giá gói phẳng theo chỗ; phụ phí chuyến phía khách | **Partially superseded/làm rõ bởi 0032** |
 | [0030](0030-locked-identity-fields-instead-of-reapproval.md) | Khoá căn cước xe thay cho "sửa là duyệt lại" | **Accepted; ghi đè 0008 điều 2** |
 | [0031](0031-split-feature-api-per-app.md) | Tách tầng gọi API theo app; api-client chỉ còn hạ tầng HTTP | **Accepted; ghi đè 0007 phần tầng feature** |
 | [0032](0032-booking-deposit-insurance-and-owner-lite.md) | Cọc booking bắt buộc, bảo hiểm tại bàn giao và ranh giới Owner Lite | **Accepted; ghi đè một phần 0014/0025/0027/0028/0029** |
+| [0033](0033-money-ledger-and-deposit-allocation.md) | Sổ công nợ "Ví điểm", phân bổ cọc nhiều dòng, định tuyến kết cục | **Accepted; ghi đè một phần 0023/0025/0028** |
+| [0034](0034-badge-delivery-by-projection.md) | Huy hiệu đi bằng bản chiếu, không bằng nhịp hỏi lại | **Accepted; mở rộng 0009 sang projection thứ hai** |
 
 ## Quy tắc thêm ADR
 

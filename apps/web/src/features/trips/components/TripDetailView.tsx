@@ -374,7 +374,7 @@ export function TripDetailView({ tripId }: { tripId: string }) {
             Khoản giữ chỗ đứng TRƯỚC khối tiền của chuyến: khi chuyến đang chờ tiền thì đây là
             việc duy nhất khách cần làm, và nó không được nằm dưới một bảng số liệu.
           */}
-          {data.hold ? <TripHoldPanel hold={data.hold} /> : null}
+          {data.hold ? <TripHoldPanel hold={data.hold} tripId={data.id} /> : null}
           {/*
             Ba nguồn tiền, loại trừ nhau theo đúng thứ tự này:
               · có đơn      → số ĐÃ ĐÓNG BĂNG (ADR 0024);

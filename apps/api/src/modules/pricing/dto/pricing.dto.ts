@@ -569,6 +569,9 @@ export class FeePolicySnapshotDto {
   @ApiProperty() vehicleProtectionEnabled!: boolean;
   @ApiPropertyOptional({ type: Number, nullable: true }) vehicleProtectionPercent!: number | null;
   @ApiPropertyOptional({ type: String, nullable: true }) insurancePartnerName!: string | null;
+  @ApiProperty({ description: 'D — % cọc trên giá thuê gốc' }) depositPercent!: number;
+  @ApiProperty({ description: 'Sàn tiền cọc (VND)' }) depositMinAmount!: string;
+  @ApiProperty({ description: 'Trần % cọc của chính sách này' }) depositMaxPercent!: number;
 }
 
 /** Cùng shape `CustomerFeeBreakdown` ở @xeprime/types — snapshot vào `price_snapshot_json.fees`. */
@@ -578,8 +581,18 @@ export class CustomerFeeBreakdownDto {
   @ApiProperty({ description: 'Mẫu số = tổng bảng kê giá thuê' }) baseAmount!: string;
   @ApiProperty({ type: [FeeLineDto] }) lines!: FeeLineDto[];
   @ApiProperty({ description: 'Tổng phụ phí KHÁCH gánh' }) customerFeeTotal!: string;
-  @ApiProperty({ description: 'Số KHÁCH TRẢ cả chuyến (chưa gồm cọc)' }) customerTotalAmount!: string;
-  @ApiProperty({ description: 'Chủ xe THỰC NHẬN' }) ownerNetAmount!: string;
+  @ApiProperty({ description: 'Số KHÁCH TRẢ cả chuyến (chưa gồm cọc thế chấp)' })
+  customerTotalAmount!: string;
+  @ApiProperty({ description: 'D — cọc trả online cho XePrime; "0" khi chuyến không thu cọc' })
+  depositAmount!: string;
+  @ApiProperty({ description: 'D + S + IV + IP — số quét QR trả ngay' }) onlineAmount!: string;
+  @ApiProperty({ description: 'B − D — khách trả TRỰC TIẾP chủ xe lúc nhận xe' })
+  payAtPickupAmount!: string;
+  @ApiProperty({ description: 'T — thuế khấu trừ khỏi tiền chủ xe, KHÔNG cộng vào tổng khách' })
+  taxAmount!: string;
+  @ApiProperty({ description: 'D − T — khoản XePrime phải trả chủ xe khi chuyến hoàn thành' })
+  ownerPayableAmount!: string;
+  @ApiProperty({ description: 'Chủ xe THỰC NHẬN cả chuyến = B − T' }) ownerNetAmount!: string;
   @ApiPropertyOptional({
     type: String,
     nullable: true,

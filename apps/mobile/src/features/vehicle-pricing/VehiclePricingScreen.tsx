@@ -25,6 +25,7 @@ import { MoneyField } from '@/components/ui/MoneyField';
 import { LongTermPriceHint } from '@/features/rental-policies/components/LongTermPriceHint';
 import type { PolicyFormValues } from '@/features/rental-policies/schema';
 import { NumberField } from '@/components/ui/NumberField';
+import { InlineAction } from '@/components/ui/InlineAction';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
@@ -41,6 +42,7 @@ import { goBackOr } from '@/navigation/go-back-or';
 import { useLeaveGuard } from '@/hooks/use-leave-guard';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
+import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
@@ -433,6 +435,7 @@ function VehiclePricingForm({
                   hint={t('selfDrive.hourlyHint')}
                   editable={canEdit}
                 />
+                <CalendarPriceLink vehicleName={vehicleName} vehiclePlate={vehiclePlate} />
                 <DirectDiscount control={control} setValue={setValue} canEdit={canEdit} />
               </YStack>
             </Card>
@@ -494,6 +497,7 @@ function VehiclePricingForm({
                   hint={t('withDriver.oneWayHint')}
                   editable={canEdit}
                 />
+                <CalendarPriceLink vehicleName={vehicleName} vehiclePlate={vehiclePlate} />
               </YStack>
             </Card>
           ) : null}
@@ -851,5 +855,41 @@ function InheritedPolicyCard({
         {canEdit ? <Button label={t('edit')} variant="secondary" onPress={onEdit} /> : null}
       </YStack>
     </Card>
+  );
+}
+
+/**
+ * Lối sang lịch xe để đặt giá riêng theo ngày — bản native của `CalendarPriceLink` bên web.
+ *
+ * Ở CẢ hai khối giá (tự lái · có tài xế), đúng hai chỗ web đặt nó. Lý do nó tồn tại quan trọng
+ * hơn chỗ đặt: giá lễ/cuối tuần/mùa cao điểm chỉ có MỘT nguồn là lịch xe, nên màn này phải chỉ
+ * đường sang đó thay vì mọc thêm một bảng giá mùa vụ thứ hai.
+ *
+ * Lọc theo biển số như mọi lối "Xem lịch" khác (`vehicleSchedulePath` của web).
+ */
+function CalendarPriceLink({
+  vehicleName,
+  vehiclePlate,
+}: {
+  vehicleName: string;
+  vehiclePlate: string | null;
+}) {
+  const t = useTranslations('Vehicles.pricing');
+  const navigateOnce = useNavigateOnce();
+
+  return (
+    <YStack gap={space.xs}>
+      <InlineAction
+        label={t('calendarLink')}
+        onPress={() =>
+          navigateOnce(
+            vehicleSchedulePath({ name: vehicleName, plateNumber: vehiclePlate }, { back: true }),
+          )
+        }
+      />
+      <Text col={colors.textMuted} fos={fontSize.bodySm}>
+        {t('calendarHint')}
+      </Text>
+    </YStack>
   );
 }

@@ -51,5 +51,8 @@
     "title": "More",
     "switchScope": "Switch to customer mode",
     "comingSoon": "More management sections open up in later waves."
+  },
+  "push": {
+    "fallback": "You have a new notification"
   }
 }

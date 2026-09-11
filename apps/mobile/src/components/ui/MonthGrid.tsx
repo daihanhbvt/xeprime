@@ -202,10 +202,13 @@ export function DayCell({
   day,
   mark,
   onPress,
+  testID,
 }: {
   day: Dayjs;
   mark: DayMark | undefined;
   onPress: () => void;
+  /** Ổn định theo `YYYY-MM-DD` ở nơi gọi — không suy từ nhãn a11y (đổi theo ngôn ngữ/định dạng). */
+  testID?: string;
 }) {
   const label = useDayAccessibilityLabel();
   const selected = mark?.selected ?? false;
@@ -219,6 +222,7 @@ export function DayCell({
       accessibilityRole="button"
       accessibilityLabel={label(day)}
       accessibilityState={{ selected, disabled }}
+      testID={testID}
     >
       <YStack
         h={sizing.touchTarget}

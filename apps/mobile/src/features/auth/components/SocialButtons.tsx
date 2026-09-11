@@ -30,13 +30,24 @@ const PROVIDER_ICON: Readonly<Record<AuthProvider, { name: IconName; size: numbe
 
 const PROVIDERS = [AUTH_PROVIDER.GOOGLE, AUTH_PROVIDER.FACEBOOK] as const;
 
-export function SocialButtons({ onSuccess }: { onSuccess: (user: CurrentUser) => void }) {
+export function SocialButtons({
+  onSuccess,
+  blocked = false,
+}: {
+  onSuccess: (user: CurrentUser) => void;
+  /**
+   * Chặn vì một điều kiện NGOÀI hai nút — màn đăng ký truyền vào khi chưa tick đồng ý điều
+   * khoản. Đăng nhập mạng xã hội LẦN ĐẦU cũng là tạo tài khoản, nên nó phải qua đúng cửa đó.
+   */
+  blocked?: boolean;
+}) {
   const t = useTranslations('Auth');
   const locale = useLocale();
   const errorMessage = useErrorMessage();
   const toast = useAppToast();
   const socialLogin = useSocialLogin();
   const [pending, setPending] = useState<AuthProvider | null>(null);
+  const stopped = pending !== null || blocked;
 
   function signIn(provider: AuthProvider) {
     setPending(provider);
@@ -62,14 +73,25 @@ export function SocialButtons({ onSuccess }: { onSuccess: (user: CurrentUser) =>
 
       {PROVIDERS.map((provider) => {
         const busy = pending === provider;
+        const label = t('social.continueWith', { provider: AUTH_PROVIDER_LABEL[provider] });
         return (
           <Pressable
             key={provider}
             onPress={() => signIn(provider)}
-            disabled={pending !== null}
+            disabled={stopped}
             accessibilityRole="button"
-            accessibilityState={{ busy, disabled: pending !== null }}
-            style={({ pressed }) => [styles.button, pressed ? styles.pressed : null]}
+            /*
+             * Nhãn khai TƯỜNG MINH, không để trình đọc màn hình tự suy từ chữ bên trong: lúc
+             * đang gọi, chữ đứng cạnh một `ActivityIndicator` không có nhãn, và tên khả truy cập
+             * suy ra được thì đổi theo trạng thái. Cùng cách `Button` của bộ UI làm.
+             */
+            accessibilityLabel={label}
+            accessibilityState={{ busy, disabled: stopped }}
+            style={({ pressed }) => [
+              styles.button,
+              pressed ? styles.pressed : null,
+              blocked ? styles.blocked : null,
+            ]}
           >
             {busy ? (
               <XStack w={ICON_BOX} h={ICON_BOX} ai="center" jc="center">
@@ -80,13 +102,11 @@ export function SocialButtons({ onSuccess }: { onSuccess: (user: CurrentUser) =>
                 <Ionicons
                   name={PROVIDER_ICON[provider].name}
                   size={PROVIDER_ICON[provider].size}
-                  color={pending ? colors.textDisabled : AUTH_PROVIDER_BRAND_COLOR[provider]}
+                  color={stopped ? colors.textDisabled : AUTH_PROVIDER_BRAND_COLOR[provider]}
                 />
               </XStack>
             )}
-            <RNText style={[styles.label, pending ? styles.labelDisabled : null]}>
-              {t('social.continueWith', { provider: AUTH_PROVIDER_LABEL[provider] })}
-            </RNText>
+            <RNText style={[styles.label, stopped ? styles.labelDisabled : null]}>{label}</RNText>
           </Pressable>
         );
       })}
@@ -108,6 +128,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
   },
   pressed: { opacity: 0.85 },
+  /*
+   * Chưa tick thì nút phải TRÔNG như không bấm được. `disabled` một mình chỉ nuốt cú chạm, và
+   * một nút im lặng khi bấm đọc ra là máy treo chứ không phải "còn thiếu một bước ở trên".
+   */
+  blocked: { borderColor: colors.border, opacity: 0.55 },
   label: {
     color: colors.text,
     fontSize: fontSize.body,

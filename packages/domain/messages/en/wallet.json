@@ -1,0 +1,92 @@
+{
+  "title": {
+    "user": "My points wallet",
+    "tenant": "Shop points wallet"
+  },
+  "unit": "points",
+  "legalNote": "1 point = 1đ · withdraw to your bank account · never expires",
+  "balance": {
+    "available": "Available now",
+    "pending": "Being transferred",
+    "total": "Total XePrime owes you",
+    "frozen": "This wallet is on hold. Contact support to find out why."
+  },
+  "empty": "No points yet. Points arrive when a deposit is refunded or a trip completes.",
+  "loadError": "Could not load your balance.",
+  "entries": {
+    "title": "Points history",
+    "empty": "No transactions yet.",
+    "balanceAfter": "{amount} left",
+    "loadMore": "Show more"
+  },
+  "withdraw": {
+    "action": "Withdraw to bank",
+    "title": "Withdraw points to your bank account",
+    "amount": "Points to withdraw",
+    "amountHint": "Minimum {min}. You have {available} available now.",
+    "account": "Destination account",
+    "accountEmpty": "You have no payout account yet. Add one before withdrawing.",
+    "addAccount": "Add payout account",
+    "commitment": "XePrime transfers within {days} business days of approval.",
+    "submit": "Request withdrawal",
+    "created": "Withdrawal requested. XePrime will transfer within the committed time.",
+    "cancelled": "Withdrawal request cancelled."
+  },
+  "requests": {
+    "title": "Withdrawal requests",
+    "empty": "No withdrawal requests yet.",
+    "dueBy": "Due by {time}",
+    "paidAt": "Transferred {time}",
+    "rejected": "Rejected: {reason}",
+    "cancel": "Cancel request",
+    "cancelConfirm": "Cancel this withdrawal request?",
+    "cancelHint": "The points return to your available balance."
+  },
+  "admin": {
+    "title": "Withdrawal requests",
+    "subtitle": "Manual bank transfers. Oldest first; requests past their commitment are flagged.",
+    "overdueBanner": "{count} request(s) past the committed time.",
+    "empty": "Nothing to process.",
+    "columns": {
+      "code": "Code",
+      "owner": "Wallet owner",
+      "amount": "Amount",
+      "account": "Destination account",
+      "age": "Waiting {hours}h",
+      "dueBy": "Due by",
+      "status": "Status"
+    },
+    "ownerType": {
+      "user": "Individual",
+      "tenant": "Shop"
+    },
+    "actions": {
+      "approve": "Approve",
+      "approved": "Approved — the commitment clock starts now.",
+      "markPaid": "Mark as transferred",
+      "reject": "Reject",
+      "reverse": "Transfer failed / wrong account"
+    },
+    "paid": {
+      "title": "Confirm bank transfer",
+      "bankReference": "Bank transaction reference",
+      "bankReferenceHint": "Proof of transfer — required, used for reconciliation later.",
+      "submit": "Confirm transfer",
+      "done": "Transfer recorded."
+    },
+    "reject": {
+      "title": "Reject withdrawal request",
+      "reason": "Reason",
+      "reasonHint": "The wallet owner will read this.",
+      "submit": "Reject",
+      "done": "Rejected. Points returned to the owner's balance."
+    },
+    "reverse": {
+      "title": "Reverse a completed transfer",
+      "reason": "Why the money came back",
+      "reasonHint": "Transfer failed, wrong account number, bank returned it…",
+      "submit": "Reverse entry",
+      "done": "Reversed. Points are back in the wallet, and both entries stay on the ledger."
+    }
+  }
+}

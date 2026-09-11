@@ -15,7 +15,6 @@ export type MessageAttachment = Schemas['MessageAttachmentDto'];
 export type SendMessageInput = Schemas['SendMessageDto'];
 export type ChatAttachmentPresign = Schemas['PresignResultDto'];
 export type FirebaseChatToken = Schemas['FirebaseTokenDto'];
-export type ChatUnreadSummary = Schemas['ChatUnreadSummaryDto'];
 
 export type ConversationListResult = Paged<ConversationSummary>;
 

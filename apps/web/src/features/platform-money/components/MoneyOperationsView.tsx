@@ -32,6 +32,7 @@ import {
 } from '../hooks/use-platform-money';
 import type { HoldFilters, PlatformHold, PlatformHoldRefund, RefundFilters } from '../types';
 import { RefundPaidModal } from './RefundPaidModal';
+import { WithdrawalQueue } from './WithdrawalQueue';
 import { SettleHoldModal } from './SettleHoldModal';
 import styles from './MoneyOperationsView.module.css';
 
@@ -40,9 +41,9 @@ const MIN_TABLE_WIDTH = 1080;
 /**
  * MONEY OPERATIONS của nền tảng — Gap Analysis §3.B, ADR 0028 release gate 6–7 (R3).
  *
- * Ba tab là ba câu hỏi khác nhau và cố ý KHÔNG gộp: "khoản nào đang chờ chốt", "khoản nào phải
- * chuyển trả", "hôm nay tiền vào có khớp sổ không". Gộp lại thành một bảng là mất câu thứ ba —
- * đối chiếu là phép cộng trên CẢ ngày, không phải một dòng.
+ * Bốn tab là bốn câu hỏi khác nhau và cố ý KHÔNG gộp: "khoản nào đang chờ chốt", "khoản nào phải
+ * chuyển trả", "ai đang chờ rút tiền", "hôm nay tiền vào có khớp sổ không". Gộp lại là mất câu
+ * cuối — đối chiếu là phép cộng trên CẢ ngày, không phải một dòng.
  */
 export function MoneyOperationsView() {
   const t = useTranslations('PlatformMoney');
@@ -54,6 +55,7 @@ export function MoneyOperationsView() {
         items={[
           { key: 'holds', label: t('tabs.holds'), children: <HoldsPanel /> },
           { key: 'refunds', label: t('tabs.refunds'), children: <RefundsPanel /> },
+          { key: 'withdrawals', label: t('tabs.withdrawals'), children: <WithdrawalQueue /> },
           { key: 'reconciliation', label: t('tabs.reconciliation'), children: <ReconciliationPanel /> },
         ]}
       />

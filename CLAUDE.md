@@ -22,7 +22,7 @@ Nguồn sống (đọc trước, luôn đúng hiện tại):
 1. `docs/design/02_PRODUCT_VISION.md` — **sản phẩm, persona và mô hình doanh thu hiện hành**.
 2. `docs/completion-roadmap.md` — **đang ở đâu, release gate và việc tiếp theo**.
 3. `docs/design/03_PRODUCT_GAP_ANALYSIS.md` — backlog User/Admin/Manage theo hiện trạng source.
-4. `docs/decisions/` — **28 ADR (0001–0028)**; ADR Accepted mới hơn thắng trong đúng phạm vi ghi đè.
+4. `docs/decisions/` — **34 ADR (0001–0034)**; ADR Accepted mới hơn thắng trong đúng phạm vi ghi đè.
 5. `docs/CODEMAP.md` — chỉ mục "cái gì nằm ở đâu".
 6. File này (CLAUDE.md).
 7. `docs/deployment.md`, `docs/backup-and-restore.md`, `docs/third-party-keys.md` — vận hành và dịch vụ ngoài.
@@ -76,8 +76,9 @@ Skill tự kích hoạt theo mô tả; nếu quên thì gọi tay. `navigator` �
 | RBAC | Role/permission lưu DB, **guard backend là nguồn bảo vệ chính** |
 | Thuê dài hạn | **Gói cố định** 1/2/3/6/9/12 tháng; ngày trả = ngày nhận + N **tháng lịch** (server tính, client không gửi); khách nêu nguyện vọng ngày nhận, gian hàng chốt lịch khi duyệt; ưu đãi cam kết thời hạn theo THÁNG, không cộng dồn — ADR 0011 |
 | Doanh thu | **Hai tuyến trên MỘT chợ** — ADR 0028. Basic Owner: không thuê bao, phí dịch vụ theo chuyến (giả thuyết 10%) + Owner Lite. Gian hàng: gói theo chỗ/kỳ hạn, 0% hoa hồng XePrime/chuyến + Full Manage. Thuế, bảo hiểm và phí dịch vụ là ba dòng riêng; mode/policy đóng băng vào booking |
-| Tiền vào nền tảng | **Mô hình mục tiêu, chưa triển khai W4:** SePay đối soát các khoản vào qua MỘT bảng `bank_transactions`, phân loại đích bằng mã. Webhook công khai không session phải có khoá time-safe, idempotent bằng unique DB và trả 200 khi nhận lại giao dịch — ADR 0022/0028 |
-| Số dư | Mô hình mục tiêu `wallets`/`wallet_entries`/`withdrawal_requests` là **sổ công nợ phải trả**, không phải ví điện tử: không nạp/chuyển/thanh toán nội bộ; ledger append-only; rút về tài khoản ngân hàng qua admin — ADR 0028. Chưa được coi là module đã triển khai |
+| Tiền vào nền tảng | **ĐÃ triển khai trên `develop`** (PR #57): SePay đối soát các khoản vào qua MỘT bảng `bank_transactions`, phân loại đích bằng tiền tố mã (`XPG…` gói · `XPH…` giữ chỗ). Webhook công khai không session có khoá time-safe, idempotent bằng unique DB và trả 200 khi nhận lại giao dịch — ADR 0022/0028. Writer duy nhất: `SepayService` |
+| Cọc booking | Khách trả online `D + S + IV + IP` (cọc · phí nền tảng phía khách · bảo hiểm xe · bảo hiểm người); `B − D` trả TRỰC TIẾP chủ xe lúc nhận xe, XePrime không thu hộ. Thuế `T` khấu trừ khỏi tiền chủ xe, KHÔNG cộng vào tổng khách. Cửa sổ trả cọc 2h + hủy miễn phí 4h, **cả hai tính từ `acceptedAt`** — ADR 0032. Mức cọc do nền tảng đặt ở `fee_policies`; gian hàng chỉ có công tắc bật/tắt thu cọc — ADR 0033 |
+| Số dư | `wallets`/`wallet_entries`/`withdrawal_requests` là **sổ công nợ phải trả**, hiển thị là **"Ví điểm"** (1 điểm = 1đ): không nạp/chuyển/thanh toán nội bộ, **không hết hạn, không thu hồi**; ledger append-only (sửa bằng dòng đảo); rút về tài khoản ngân hàng qua admin chuyển tay — ADR 0033. `balance` = KHẢ DỤNG, phần đang rút nằm ở `pending_withdraw_amount` |
 | Đa ngữ | `next-intl` KHÔNG locale routing; hai ngôn ngữ `vi`/`en` dùng CHUNG url; locale ở cookie `XP_LOCALE` (httpOnly) đọc phía server; tiền luôn VND, múi giờ luôn `Asia/Ho_Chi_Minh` — ADR 0012 |
 | Chat | **PostgreSQL là source of truth** (mọi tin/thành viên/đính kèm/đã đọc); Firestore chỉ là projection realtime ~30–50 tin gần nhất; đồng bộ outbox/retry; attachment ở Cloudflare R2 — ADR 0009 |
 | Deploy MVP | 1 VPS mỗi môi trường (staging 6GB, production ≥8GB) — `docs/deployment.md` §1 |
@@ -135,6 +136,13 @@ Bổ sung ngoài tài liệu, đã thống nhất đưa vào base:
 - ❌ Gọi phí dịch vụ XePrime là thuế/bảo hiểm, hoặc thu bảo hiểm khi chưa có partner + policy + chứng nhận thật — ADR 0028
 - ❌ Dùng một `commissionPercent` để đại diện cả phí dịch vụ, thuế, bảo hiểm và tiền phải trả chủ xe — từng dòng có chủ sở hữu và snapshot riêng (ADR 0028)
 - ❌ Đồng nhất `hold_amount` với `platform_service_fee` — chúng có thể bằng nhau ở một policy nhưng không phải quy tắc (ADR 0028)
+- ❌ Đọc `booking_holds.purpose` để quyết định phần tiền GIỮ HỘ — một hold chứa tiền của nhiều người (`S` của XePrime, `D` của chủ xe, `IV`/`IP` của hãng bảo hiểm). Tách quỹ đọc từ BỐN CỘT số tiền (ADR 0033 điều 4)
+- ❌ Ghi dòng sổ ví ngoài `WalletService` — module khác gọi `creditWithinTx(...)` trong transaction của chính mình (ADR 0023 ràng buộc 3)
+- ❌ Cho điểm hết hạn, thu hồi điểm, hay cộng điểm khuyến mãi vào `wallets.balance` — đó là sổ công nợ phải trả, khuyến mãi (nếu có) là bảng KHÁC (ADR 0033 điều 1)
+- ❌ Hiểu `wallets.balance` là tổng nghĩa vụ — nó là phần KHẢ DỤNG; tổng = `balance + pending_withdraw_amount` (ADR 0033 điều 6)
+- ❌ Cộng `IV`/`IP`/thuế vào sai phía: `IV` và `IP` do KHÁCH trả, thuế `T` do CHỦ XE chịu và không bao giờ cộng vào tổng khách (ADR 0032 điều 2–4)
+- ❌ Tính `freeCancelUntil` ngược từ `pickupAt`, hay đặt cửa sổ trả cọc khác 2h — cả hai mốc tính XUÔI từ `acceptedAt` (ADR 0032 điều 2)
+- ❌ Mua/phát hành bảo hiểm lúc đặt xe, hay gọi HTTP đối tác bảo hiểm bên trong transaction DB — phát hành ở mốc bàn giao, qua job idempotent có retry (ADR 0032 điều 4)
 - ❌ Ghi khoản giữ chỗ/tiền giữ hộ vào doanh thu tenant hoặc XePrime trước khi outcome được chốt; dùng bảng/ledger riêng (ADR 0028)
 - ❌ Gọi số dư phải trả là "ví điện tử", cho nạp/chuyển/thanh toán nội bộ — ADR 0028
 - ❌ Thêm trạng thái "chờ thanh toán" vào `BOOKING_STATUS` — trạng thái chờ tiền sống ở payment/hold/request, không phải vòng đời vận hành xe

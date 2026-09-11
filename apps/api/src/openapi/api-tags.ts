@@ -181,12 +181,36 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
   {
     title: 'Tương tác',
     tags: [
-      { name: 'notifications', description: 'Thông báo trong ứng dụng và trạng thái đã đọc.' },
+      {
+        name: 'badges',
+        description:
+          'Huy hiệu của khung ứng dụng (chuông + chat) gộp trong MỘT request — con số hiện ở mọi ' +
+          'trang nên tách thành nhiều endpoint là nhân số lần xác thực cho vài chục byte dữ liệu.',
+      },
+      {
+        name: 'notifications',
+        description:
+          'Thông báo trong ứng dụng, trạng thái đã đọc, và đăng ký thiết bị nhận thông báo đẩy (FCM).',
+      },
       {
         name: 'customer-support',
         description: 'Yêu cầu hỗ trợ của khách thuê; tranh chấp phải gắn chuyến của chính họ.',
       },
       { name: 'reviews', description: 'Đánh giá gian hàng nhận được và phản hồi của chủ xe.' },
+      {
+        name: 'wallet',
+        description:
+          'Sổ công nợ phải trả — hiển thị là "Ví điểm" (ADR 0033). Số dư là NGHĨA VỤ của ' +
+          'XePrime với chủ ví, không phải ví điện tử: không nạp, không chuyển giữa người dùng, ' +
+          'không thanh toán nội bộ, không hết hạn. Rút về ngân hàng do admin chuyển thủ công.',
+      },
+      {
+        name: 'bank-accounts',
+        description:
+          'Tài khoản ngân hàng NHẬN tiền của khách và của gian hàng (ADR 0033). Một bộ cho cả ' +
+          'hai phía; số tài khoản trả ra màn hình luôn ở dạng che. Khác tài khoản THU của ' +
+          'gian hàng ở hồ sơ shop — chiều ngược lại, quyền xem khác.',
+      },
       {
         name: 'seller-profile',
         description:

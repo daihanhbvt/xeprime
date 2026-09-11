@@ -1,8 +1,11 @@
 import type { ConfigService } from '@nestjs/config';
-import { createPrismaClient, newId } from '@xeprime/prisma';
+import { computeUserBadges, createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  CHAT_NOTIFICATION_COPY,
   CHAT_SIDE,
   MEMBERSHIP_STATUS,
+  NOTIFICATION_TARGET_TYPE,
+  NOTIFICATION_TYPE,
   OUTBOX_STATUS,
   SENDER_TYPE,
   TENANT_ROLE,
@@ -12,6 +15,7 @@ import {
 } from '@xeprime/types';
 import { ChatService } from '../src/modules/chat/chat.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makeNotificationService } from './helpers/service-factory';
 
 /**
  * Chat chạy trên PostgreSQL THẬT (source of truth, ADR 0009). Kiểm chứng: getOrCreate idempotent
@@ -22,7 +26,11 @@ import type { PrismaService } from '../src/prisma/prisma.service';
 const prisma = createPrismaClient();
 // ChatService chỉ dùng ConfigService cho R2_PUBLIC_BASE_URL (đính kèm) — test tin text nên trả undefined.
 const fakeConfig = { get: () => undefined } as unknown as ConfigService;
-const chat = new ChatService(prisma as unknown as PrismaService, fakeConfig);
+const asService = prisma as unknown as PrismaService;
+// Thông báo dùng bản THẬT (nó ghi vào `notifications`, và chính hàng đó là thứ spec kiểm);
+// push tắt — hàng đợi đẩy có spec riêng ở `push-notifications.spec.ts`.
+const notifications = makeNotificationService(asService);
+const chat = new ChatService(asService, fakeConfig, notifications);
 
 let dbAvailable = false;
 let customerId: string;
@@ -459,5 +467,200 @@ describe('ChatService — tách hai hộp thư', () => {
     // Người chưa thuộc gian hàng nào: đếm phía shop là 0, không phải lỗi.
     const noTenant = await chat.unreadCount(customerId, CHAT_SIDE.SHOP);
     expect(noTenant.count).toBe(0);
+  });
+});
+
+/**
+ * Thông báo tin nhắn mới (10/09/2026) — phần in-app; hàng đợi ĐẨY có spec riêng
+ * (`push-notifications.spec.ts`) và việc gửi FCM nằm ở worker.
+ *
+ * Điều được khoá: người gửi không tự nhận thông báo, phía đối diện thì có, một lần retry của
+ * client không sinh tin thứ hai, và nội dung riêng tư không rò ra khỏi hội thoại.
+ */
+describe('ChatService — thông báo cho phía đối diện', () => {
+  const chatNotifications = (userId: string) =>
+    prisma.notification.findMany({
+      where: { userId, type: NOTIFICATION_TYPE.CHAT_MESSAGE_RECEIVED, targetId: conversationId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+  maybe('khách nhắn → mọi thành viên gian hàng nhận, người gửi thì không', async () => {
+    const ownerBefore = (await chatNotifications(ownerId)).length;
+    const staffBefore = (await chatNotifications(staffId)).length;
+    // Khách đã nhận thông báo từ các tin shop gửi ở những case trước — đo ĐỘ LỆCH, không đo tổng.
+    const customerBefore = (await chatNotifications(customerId)).length;
+
+    await chat.sendMessage(customerId, conversationId, { text: 'Xe còn trống không shop?' });
+
+    expect((await chatNotifications(ownerId)).length).toBe(ownerBefore + 1);
+    expect((await chatNotifications(staffId)).length).toBe(staffBefore + 1);
+    // Người gửi là khách — họ không được nhận tin về chính câu mình vừa gõ.
+    expect((await chatNotifications(customerId)).length).toBe(customerBefore);
+  });
+
+  maybe('shop trả lời → khách nhận, nhân viên vừa gõ thì không', async () => {
+    const staffBefore = (await chatNotifications(staffId)).length;
+    const customerBefore = (await chatNotifications(customerId)).length;
+
+    await chat.sendMessage(staffId, conversationId, { text: 'Còn bạn nhé' });
+
+    expect((await chatNotifications(customerId)).length).toBe(customerBefore + 1);
+    expect((await chatNotifications(staffId)).length).toBe(staffBefore);
+  });
+
+  maybe('nội dung tin KHÔNG lọt vào thông báo, và đích là đúng hội thoại', async () => {
+    const secret = `Số tài khoản của tôi là ${newId()}`;
+    await chat.sendMessage(customerId, conversationId, { text: secret });
+
+    const latest = (await chatNotifications(ownerId)).at(-1);
+    expect(latest?.title).toBe(CHAT_NOTIFICATION_COPY.TITLE);
+    expect(latest?.body).toBe(CHAT_NOTIFICATION_COPY.BODY);
+    expect(latest?.body).not.toContain(secret);
+    expect(latest?.targetType).toBe(NOTIFICATION_TARGET_TYPE.CONVERSATION);
+    expect(latest?.targetId).toBe(conversationId);
+    expect((latest?.dataJson as { url: string }).url).toBe(`/chat/${conversationId}`);
+  });
+
+  maybe('gửi lại cùng clientMessageId KHÔNG tạo thông báo lần hai', async () => {
+    const clientMessageId = newId();
+    await chat.sendMessage(customerId, conversationId, { text: 'Một lần thôi', clientMessageId });
+    const after = (await chatNotifications(ownerId)).length;
+
+    await chat.sendMessage(customerId, conversationId, { text: 'Một lần thôi', clientMessageId });
+    await Promise.all(
+      Array.from({ length: 4 }, () =>
+        chat.sendMessage(customerId, conversationId, { text: 'Một lần thôi', clientMessageId }),
+      ),
+    );
+
+    expect((await chatNotifications(ownerId)).length).toBe(after);
+  });
+
+  /**
+   * Chủ shop nhắn hỏi thuê xe của CHÍNH shop mình sẽ là khách của thread đó. Hộp thư gian hàng
+   * không liệt kê thread ấy (`inboxWhere`), nên một thông báo dẫn tới nó là một ngõ cụt.
+   */
+  maybe('thành viên đang là KHÁCH của chính thread đó không nhận thông báo phía shop', async () => {
+    const selfConv = await chat.getOrCreateConversation(ownerId, { vehicleId });
+    const before = await prisma.notification.count({
+      where: { userId: ownerId, targetId: selfConv.id },
+    });
+
+    await chat.sendMessage(ownerId, selfConv.id, { text: 'Tự hỏi mình' });
+
+    expect(
+      await prisma.notification.count({ where: { userId: ownerId, targetId: selfConv.id } }),
+    ).toBe(before);
+    // Nhân viên vẫn nhận — thread này là việc của gian hàng, chỉ người gửi bị loại.
+    expect(
+      await prisma.notification.count({ where: { userId: staffId, targetId: selfConv.id } }),
+    ).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * Tín hiệu chiếu huy hiệu — thứ quyết định badge có cập nhật hay không.
+ *
+ * Đây là đoạn dây dễ đứt âm thầm nhất của cả tính năng: phép đếm và job chiếu đều có spec riêng,
+ * nhưng nếu KHÔNG ai đánh dấu thì cả hai chạy đúng trên một hàng đợi vĩnh viễn rỗng, và badge
+ * đứng im cho tới nhịp poll — không có test nào đỏ.
+ */
+describe('ChatService — tín hiệu huy hiệu', () => {
+  const dirtyAtOf = async (userId: string): Promise<Date | null> =>
+    (await prisma.userBadgeSignal.findUnique({ where: { userId } }))?.dirtyAt ?? null;
+
+  const clearSignals = () =>
+    prisma.userBadgeSignal.deleteMany({
+      where: { userId: { in: [customerId, ownerId, staffId] } },
+    });
+
+  maybe('gửi tin đánh dấu CẢ HAI phía — người nhận và chính người gửi', async () => {
+    await clearSignals();
+
+    await chat.sendMessage(customerId, conversationId, { text: 'Cho hỏi giá thuê' });
+
+    // Phía gian hàng: +1 chưa đọc cho TOÀN ĐỘI, vì `unread_tenant_count` là bộ đếm dùng chung.
+    expect(await dirtyAtOf(ownerId)).not.toBeNull();
+    expect(await dirtyAtOf(staffId)).not.toBeNull();
+    // Người gửi: phía họ vừa về 0, nên con số của họ cũng đổi.
+    expect(await dirtyAtOf(customerId)).not.toBeNull();
+  });
+
+  maybe('đọc ở phía gian hàng đánh dấu cả đội, không riêng người vừa đọc', async () => {
+    await chat.sendMessage(customerId, conversationId, { text: 'Còn xe không shop' });
+    await clearSignals();
+
+    await chat.markRead(staffId, conversationId);
+
+    expect(await dirtyAtOf(staffId)).not.toBeNull();
+    expect(await dirtyAtOf(ownerId)).not.toBeNull();
+  });
+
+  /**
+   * Chiều ngược lại, và đây mới là chỗ tốn kém nếu làm sai: khách mở thread chỉ chạm bộ đếm CỦA
+   * HỌ. Đánh dấu cả gian hàng ở đây nghĩa là một lần đọc ở shop 30 người sinh 31 lượt chiếu cho
+   * một thay đổi ảnh hưởng đúng một người — đúng thứ mà cả thiết kế badge này muốn tránh.
+   */
+  maybe('khách đọc thì KHÔNG đánh dấu gian hàng — bộ đếm bên kia không hề đổi', async () => {
+    await chat.sendMessage(staffId, conversationId, { text: 'Còn bạn nhé' });
+    await clearSignals();
+
+    await chat.markRead(customerId, conversationId);
+
+    expect(await dirtyAtOf(customerId)).not.toBeNull();
+    expect(await dirtyAtOf(ownerId)).toBeNull();
+    expect(await dirtyAtOf(staffId)).toBeNull();
+  });
+
+  maybe('sự kiện thứ hai đẩy mốc lên, không sinh dòng thứ hai', async () => {
+    await clearSignals();
+
+    await chat.sendMessage(customerId, conversationId, { text: 'Tin một' });
+    const first = await dirtyAtOf(ownerId);
+    await chat.sendMessage(customerId, conversationId, { text: 'Tin hai' });
+    const second = await dirtyAtOf(ownerId);
+
+    expect(first).not.toBeNull();
+    expect(second!.getTime()).toBeGreaterThanOrEqual(first!.getTime());
+    expect(await prisma.userBadgeSignal.count({ where: { userId: ownerId } })).toBe(1);
+  });
+});
+
+/**
+ * Tin nhắn chat KHÔNG hiện ở chuông.
+ *
+ * Biểu tượng chat đã mang số chưa đọc và mở ra là thấy đúng hội thoại; một dòng "Bạn có tin nhắn
+ * mới" trong chuông không thêm thông tin gì, lại đẩy những thứ THẬT SỰ cần xử lý (yêu cầu thuê
+ * sắp hết hạn, giữ chỗ quá hạn) xuống dưới.
+ *
+ * Nhưng bản ghi `notifications` vẫn phải TỒN TẠI: `push_deliveries` tham chiếu tới nó, nên xoá nó
+ * đi là tắt luôn thông báo đẩy của chat trên app native. Đó là ranh giới mà spec này khoá.
+ */
+describe('ChatService — thông báo chat không vào chuông', () => {
+  maybe('gửi tin: có bản ghi thông báo, nhưng chuông KHÔNG thấy nó', async () => {
+    const before = await notifications.unreadCount(ownerId);
+
+    await chat.sendMessage(customerId, conversationId, { text: 'Còn xe không shop' });
+
+    // Bản ghi vẫn được tạo — đây là thứ thông báo đẩy dựa vào.
+    const rows = await prisma.notification.count({
+      where: { userId: ownerId, type: NOTIFICATION_TYPE.CHAT_MESSAGE_RECEIVED },
+    });
+    expect(rows).toBeGreaterThan(0);
+
+    // Nhưng chuông không đếm nó, và danh sách chuông không liệt kê nó.
+    expect((await notifications.unreadCount(ownerId)).count).toBe(before.count);
+
+    const page = await notifications.list(ownerId, { page: 1, limit: 50 });
+    expect(page.data.some((n) => n.type === NOTIFICATION_TYPE.CHAT_MESSAGE_RECEIVED)).toBe(false);
+  });
+
+  maybe('huy hiệu và chuông đếm GIỐNG nhau — lệch là con số không bao giờ về 0', async () => {
+    await chat.sendMessage(customerId, conversationId, { text: 'Thêm một tin nữa' });
+
+    const bell = await notifications.unreadCount(ownerId);
+    const badges = await computeUserBadges(prisma, ownerId);
+
+    expect(badges.notificationsUnread).toBe(bell.count);
   });
 });

@@ -7,7 +7,6 @@
  *
  * Chạy `pnpm db:generate` trước khi build lần đầu, nếu không thư mục generated chưa tồn tại.
  */
-import { ulid } from 'ulid';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../generated/client';
 
@@ -31,12 +30,35 @@ export function createPrismaClient(connectionString?: string): PrismaClient {
   return new PrismaClient({ adapter });
 }
 
+export { newId } from './id';
+
 /**
- * Sinh ID cho mọi bảng — char(26) ULID (ADR 0001, database_design §2.3).
- *
- * Dùng ULID thay UUID vì nó sắp xếp theo thời gian: index trên khoá chính không bị phân
- * mảnh khi insert, và `ORDER BY id` xấp xỉ `ORDER BY created_at`.
+ * Huy hiệu người dùng (chuông + chat) — phép đếm và hàng đợi chiếu badge. Dùng chung cho API
+ * (GET /me/badges) và worker (chiếu document user_badges/{uid} sang Firestore). Xem docblock
+ * của `badges.ts` để biết vì sao nó ở đây chứ không ở `apps/api`.
  */
-export function newId(): string {
-  return ulid();
-}
+export {
+  activeMemberIdsOf,
+  activeTenantIdsOf,
+  backfillBadgeSignals,
+  chatInboxScope,
+  chatUnreadOf,
+  clearBadgeSignal,
+  computeChatUnread,
+  computeUserBadges,
+  deferBadgeSignal,
+  markBadgesDirty,
+  oldestBadgeSignalAgeMs,
+  takeBadgeSignals,
+  type BadgeSignal,
+} from './badges';
+
+/**
+ * Hàng đợi đẩy thông báo — dùng chung cho API và worker, hai tiến trình cùng phát thông báo.
+ * Xem docblock của `push-outbox.ts` để biết vì sao nó ở đây chứ không ở `apps/api`.
+ */
+export {
+  enqueuePushDeliveries,
+  type EnqueuePushOptions,
+  type PushRecipientNotification,
+} from './push-outbox';

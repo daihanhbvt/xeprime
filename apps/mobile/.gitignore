@@ -18,3 +18,11 @@ expo-env.d.ts
 .metro-health-check*
 
 /docs/
+
+# Credential Firebase cho thông báo đẩy — KHÔNG commit.
+# Chúng khai project Firebase nào, và mỗi môi trường là một project khác nhau: một bản trong
+# repo nghĩa là mọi bản build đều bắn thông báo vào cùng một nơi. Tải từ Firebase Console và
+# đặt vào `credentials/` (xem docs/push-notifications.md §2).
+/credentials/
+google-services.json
+GoogleService-Info.plist

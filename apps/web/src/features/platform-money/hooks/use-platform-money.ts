@@ -3,14 +3,20 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
 import {
+  approveWithdrawal,
   fetchDailyReconciliation,
   fetchHolds,
   fetchRefunds,
+  fetchWithdrawalQueue,
   holdFiltersToParams,
   markRefundPaid,
+  markWithdrawalPaid,
   refundFiltersToParams,
   rejectRefund,
+  rejectWithdrawal,
+  reverseWithdrawal,
   settleHold,
+  withdrawalFiltersToParams,
 } from '../api';
 import type {
   HoldFilters,
@@ -18,6 +24,8 @@ import type {
   RefundFilters,
   RejectRefundInput,
   SettleHoldInput,
+  MarkWithdrawalPaidInput,
+  WithdrawalFilters,
 } from '../types';
 
 export function useHolds(filters: HoldFilters) {
@@ -81,6 +89,60 @@ export function useRejectRefund() {
   const invalidate = useInvalidateMoney();
   return useMutation({
     mutationFn: ({ id, ...body }: { id: string } & RejectRefundInput) => rejectRefund(id, body),
+    onSuccess: invalidate,
+  });
+}
+
+// ── Hàng đợi rút tiền (ADR 0033 — Phase 5) ──────────────────────────────────
+
+export function useWithdrawalQueue(filters: WithdrawalFilters) {
+  const params = withdrawalFiltersToParams(filters);
+  return useQuery({
+    queryKey: queryKeys.platformWithdrawals.list(params),
+    queryFn: () => fetchWithdrawalQueue(params),
+    // Giữ trang cũ trong lúc tải trang mới — hàng đợi việc tay nhấp nháy trắng là khó thao tác.
+    placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * Mọi hành động đều đổi trạng thái một dòng VÀ số lệnh quá hạn ở đầu màn, nên làm mới cả nhánh
+ * thay vì vá một dòng trong cache. Ví của chủ sở hữu cũng đổi (số dư, sổ) — nhưng đó là cache
+ * của người khác, admin không giữ nó.
+ */
+function useInvalidateQueue() {
+  const queryClient = useQueryClient();
+  return () => void queryClient.invalidateQueries({ queryKey: queryKeys.platformWithdrawals.all });
+}
+
+export function useApproveWithdrawal() {
+  const invalidate = useInvalidateQueue();
+  return useMutation({ mutationFn: (id: string) => approveWithdrawal(id), onSuccess: invalidate });
+}
+
+export function useMarkWithdrawalPaid() {
+  const invalidate = useInvalidateQueue();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: MarkWithdrawalPaidInput }) =>
+      markWithdrawalPaid(id, body),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRejectWithdrawal() {
+  const invalidate = useInvalidateQueue();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      rejectWithdrawal(id, { reason }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useReverseWithdrawal() {
+  const invalidate = useInvalidateQueue();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      reverseWithdrawal(id, { reason }),
     onSuccess: invalidate,
   });
 }

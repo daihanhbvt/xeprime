@@ -336,6 +336,17 @@ export const queryKeys = {
     destinations: (params: QueryParams) => ['marketplace', 'destinations', params] as const,
     shops: (params: QueryParams) => ['marketplace', 'shops', params] as const,
   },
+  /**
+   * Huy hiệu của khung ứng dụng (chuông + hai hộp thư chat) — MỘT khoá cho MỘT request.
+   *
+   * Cố ý KHÔNG nằm dưới `notifications` hay `chat`: nó là dữ liệu của cả hai, và đặt nó dưới
+   * một trong hai nghĩa là mọi lần invalidate nhánh đó kéo theo cả con số của nhánh kia. Đây
+   * cũng là nơi bản chiếu realtime ghi thẳng vào cache (`setQueryData`), nên khoá phải ổn định.
+   */
+  badges: {
+    all: ['badges'] as const,
+    me: () => ['badges', 'me'] as const,
+  },
   notifications: {
     all: ['notifications'] as const,
     list: (params: QueryParams) => ['notifications', 'list', params] as const,
@@ -381,6 +392,29 @@ export const queryKeys = {
   sellerProfile: {
     all: ['seller-profile'] as const,
     me: () => ['seller-profile', 'me'] as const,
+  },
+  /**
+   * Tài khoản ngân hàng NHẬN TIỀN (ADR 0033). Khoá mang `scope` vì một chủ gian hàng có HAI
+   * danh sách — của cá nhân họ và của gian hàng — và hai danh sách đó không được trộn cache.
+   */
+  /**
+   * Ví điểm (ADR 0033). Khoá mang `scope` vì một chủ gian hàng có HAI ví — cá nhân và gian
+   * hàng — và hai số dư đó không bao giờ được trộn cache.
+   */
+  wallet: {
+    all: ['wallet'] as const,
+    summary: (scope: string) => ['wallet', scope, 'summary'] as const,
+    entries: (scope: string, params: QueryParams) => ['wallet', scope, 'entries', params] as const,
+    withdrawals: (scope: string) => ['wallet', scope, 'withdrawals'] as const,
+  },
+  /** Hàng đợi rút tiền của nền tảng — tách khỏi `wallet` (phạm vi khác, quyền khác). */
+  platformWithdrawals: {
+    all: ['platform-withdrawals'] as const,
+    list: (params: QueryParams) => ['platform-withdrawals', 'list', params] as const,
+  },
+  bankAccounts: {
+    all: ['bank-accounts'] as const,
+    list: (scope: string) => ['bank-accounts', scope] as const,
   },
   /** Hàng đợi xác minh người bán của nền tảng — tách khỏi `sellerProfile` (phạm vi tenant). */
   platformSellers: {

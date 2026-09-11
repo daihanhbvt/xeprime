@@ -26,6 +26,8 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { telHref, toAppTz, zaloHref, LIST_SEPARATOR } from '@xeprime/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { useDomainLabel } from '@/i18n/domain';
 import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { RespondDeadline } from './RespondDeadline';
@@ -78,11 +80,14 @@ function BookingRequestCardImpl({
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const permissions = usePermissions();
+  const navigateOnce = useNavigateOnce();
 
   const status = request.status as BookingRequestStatus;
   const meta = BOOKING_REQUEST_STATUS_META[status];
   const pending = status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL;
   const canDecide = permissions.has(PERMISSION.BOOKING_REQUEST_APPROVE);
+  /** Lối "Xem lịch" gác bằng ĐÚNG quyền web gác nó (`canViewVehicle` = `vehicles.view`). */
+  const canViewVehicle = permissions.has(PERMISSION.VEHICLE_VIEW);
 
   /*
    * Có ĐƠN để mở hay không quyết định CHỮ trên lối đi ("Xem đơn" vs "Xem chi tiết"), không
@@ -173,6 +178,33 @@ function BookingRequestCardImpl({
                 ) : null}
                 <Chip label={domainLabel('serviceType', request.serviceType)} size="sm" />
               </XStack>
+
+              {/*
+                Lịch của CHÍNH chiếc xe này — câu hỏi đầu tiên trước khi duyệt là "xe có rảnh khung
+                đó không". Là một lối đi THẬT sang màn lịch (đã lọc sẵn theo biển số), không phải
+                một tấm trượt: xem lịch cần cả màn hình và người ta ở lại đó một lúc. Web đặt đúng
+                liên kết này ở cùng chỗ.
+              */}
+              {canViewVehicle ? (
+                <Chip
+                  label={t('vehicle.viewSchedule')}
+                  accessibilityLabel={t('vehicle.viewScheduleFor', {
+                    vehicle: request.vehicleName,
+                  })}
+                  icon="calendar-outline"
+                  tone="accent"
+                  role="button"
+                  size="sm"
+                  onPress={() =>
+                    navigateOnce(
+                      vehicleSchedulePath(
+                        { name: request.vehicleName, plateNumber: request.vehiclePlate },
+                        { back: true },
+                      ),
+                    )
+                  }
+                />
+              ) : null}
             </YStack>
           </XStack>
 
