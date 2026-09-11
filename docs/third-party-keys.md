@@ -354,15 +354,33 @@ Repo đã có `firestore.rules`, và nó là thứ duy nhất chặn người d�
 
 - `allow write: if false` ở mọi nơi — chỉ Admin SDK ghi được (Admin SDK bỏ qua rules)
 - Đọc `/conversations/{id}` chỉ khi `request.auth.uid` nằm trong `memberUids` của tài liệu đó
+- Đọc `/user_badges/{uid}` chỉ khi `uid` LÀ chính mình — bản chiếu huy hiệu, ADR 0034
 - Bắt-tất-cả `/{document=**}` chặn cả đọc lẫn ghi
 
 Firestore mặc định ở "Production mode" đã chặn hết, nhưng phải đẩy rules của repo lên để phần
 đọc hợp lệ hoạt động:
 
 ```bash
-npx firebase-tools login
-npx firebase-tools deploy --only firestore:rules --project xeprime-staging
+npx firebase-tools@latest login
+npx firebase-tools@latest deploy --only firestore:rules --project <project-id của môi trường đó>
 ```
+
+> **Staging và production KHÔNG cần bước này nữa** (11/09/2026): `deploy.yml` tự đẩy rules trước
+> khi rollout app, và release dừng nếu đẩy thất bại — xem `docs/deployment.md` §9.3. Phần dưới
+> đây chỉ còn dành cho **máy dev** và cho tình huống chữa cháy bằng tay.
+
+Hai ghi chú từ lần làm tay 11/09/2026:
+
+- **Bản CLI trong repo đã được nâng lên `15.30.0`.** Bản cũ `13.29.1` crash ngay lúc khởi động
+  trên Node 24 (`ENOENT … templates/hosting/init.js`) — không liên quan gì tới rules, nhưng nó
+  làm mọi lệnh firebase chết trước khi kịp chạy. Dùng `pnpm exec firebase` để luôn chạy đúng bản
+  đã ghim thay vì một bản global bất kỳ.
+- **Máy dev thì `firebase login` (tương tác); CI thì service account.** CLI vẫn hỗ trợ đường
+  không-tương-tác qua `GOOGLE_APPLICATION_CREDENTIALS` (Application Default Credentials) — chính
+  nó in cảnh báo deprecated cho `--token`/`FIREBASE_TOKEN` và trỏ sang đây. Nhưng tài khoản
+  `firebase-adminsdk-*` mà backend dùng lúc chạy **không** đẩy được rules: nó không có quyền quản
+  trị rules, và cũng không nên được cấp. Vì vậy workflow dùng một service account RIÊNG
+  (`FIREBASE_DEPLOY_CREDENTIALS_JSON`).
 
 ### 6.5 Bật
 

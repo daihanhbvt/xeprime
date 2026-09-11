@@ -27,6 +27,9 @@ export const MESSAGE_NAMESPACES = [
   { file: 'domain', namespace: 'Domain' },
   { file: 'errors', namespace: 'Errors' },
   { file: 'navigation', namespace: 'Navigation' },
+  // Chuông thông báo xuất hiện ở CẢ HAI khung (chợ xe và cổng quản lý) nên nằm ở nhóm dùng
+  // chung, không thuộc khu nào.
+  { file: 'notifications', namespace: 'Notifications' },
 
   // — Khu công khai / khách hàng —
   { file: 'auth', namespace: 'Auth' },
@@ -70,6 +73,10 @@ export const MESSAGE_NAMESPACES = [
   { file: 'subscription', namespace: 'Subscription' },
   // Hồ sơ người bán do gian hàng khai (R3 — ADR 0028 release gate 1).
   { file: 'seller-profile', namespace: 'SellerProfile' },
+  // Sổ tài khoản ngân hàng NHẬN TIỀN — dùng chung khách và gian hàng (ADR 0033).
+  { file: 'bank-accounts', namespace: 'BankAccounts' },
+  // Ví điểm — sổ công nợ phải trả, dùng chung khách + gian hàng + admin (ADR 0033).
+  { file: 'wallet', namespace: 'Wallet' },
   // Case hỗ trợ/tranh chấp — dùng chung ba bề mặt khách/gian hàng/nền tảng (R3).
   { file: 'support-cases', namespace: 'SupportCases' },
   // Quản trị chính sách phí có phiên bản (R3 — ADR 0028 điều 2–3).

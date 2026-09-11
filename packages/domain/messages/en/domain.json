@@ -751,5 +751,21 @@
     "fuel_type": "Shown in the \"Energy source\" field when adding a vehicle, and in filters.",
     "vehicle_feature": "Shown under \"Features\" when adding a vehicle, and in marketplace filters.",
     "vehicle_model": "Shown in the \"Model\" field once a brand is picked. Each model belongs to one brand and one vehicle type."
+  },
+  "walletEntryKind": {
+    "hold_forfeit": "Late-cancellation compensation",
+    "hold_release": "Completed trip payout",
+    "hold_refund": "Deposit refund",
+    "hold_overpay": "Overpayment refund",
+    "withdrawal": "Bank withdrawal",
+    "withdrawal_reversal": "Returned — transfer failed",
+    "adjustment": "Adjustment"
+  },
+  "withdrawalStatus": {
+    "pending": "Awaiting review",
+    "approved": "Approved, transfer pending",
+    "paid": "Transferred",
+    "rejected": "Rejected",
+    "cancelled": "Cancelled"
   }
 }

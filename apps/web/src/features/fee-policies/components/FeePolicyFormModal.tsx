@@ -6,7 +6,14 @@ import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import * as yup from 'yup';
-import { SERVICE_FEE_PERCENT_MAX, SERVICE_FEE_PERCENT_MIN } from '@xeprime/types';
+import {
+  DEPOSIT_PERCENT_MAX,
+  DEPOSIT_PERCENT_MIN,
+  HOLD_FREE_CANCEL_HOURS,
+  HOLD_PAYMENT_WINDOW_MINUTES,
+  SERVICE_FEE_PERCENT_MAX,
+  SERVICE_FEE_PERCENT_MIN,
+} from '@xeprime/types';
 import { DialogForm } from '@/components/form/DialogForm';
 import { NumberField } from '@/components/form/NumberField';
 import { SwitchField } from '@/components/form/SwitchField';
@@ -67,6 +74,17 @@ export function FeePolicyFormModal({
         .integer(t('form.validation.integer'))
         .min(0)
         .max(24 * 30),
+      depositPercent: yup
+        .number()
+        .required()
+        .min(DEPOSIT_PERCENT_MIN, t('form.validation.range'))
+        .max(DEPOSIT_PERCENT_MAX, t('form.validation.range')),
+      depositMinAmount: yup.number().required().min(0, t('form.validation.nonNegative')),
+      depositMaxPercent: yup
+        .number()
+        .required()
+        .min(DEPOSIT_PERCENT_MIN, t('form.validation.range'))
+        .max(DEPOSIT_PERCENT_MAX, t('form.validation.range')),
       taxEnabled: yup.boolean().required(),
       taxPercent: yup
         .number()
@@ -135,6 +153,9 @@ export function FeePolicyFormModal({
           serviceFeePercent: policy.serviceFeePercent,
           holdMinAmount: Number(policy.holdMinAmount),
           holdPaymentWindowMinutes: policy.holdPaymentWindowMinutes,
+          depositPercent: policy.depositPercent,
+          depositMinAmount: Number(policy.depositMinAmount),
+          depositMaxPercent: policy.depositMaxPercent,
           freeCancelHours: policy.freeCancelHours,
           taxEnabled: policy.taxEnabled,
           taxPercent: policy.taxPercent,
@@ -150,8 +171,11 @@ export function FeePolicyFormModal({
           note: '',
           serviceFeePercent: 10,
           holdMinAmount: 20_000,
-          holdPaymentWindowMinutes: 24 * 60,
-          freeCancelHours: 4,
+          holdPaymentWindowMinutes: HOLD_PAYMENT_WINDOW_MINUTES,
+          freeCancelHours: HOLD_FREE_CANCEL_HOURS,
+          depositPercent: 20,
+          depositMinAmount: 50_000,
+          depositMaxPercent: 30,
           taxEnabled: false,
           taxPercent: null,
           taxLabel: '',
@@ -177,6 +201,9 @@ export function FeePolicyFormModal({
       holdPaymentWindowMinutes: values.holdPaymentWindowMinutes,
       freeCancelHours: values.freeCancelHours,
       taxEnabled: values.taxEnabled,
+      depositPercent: values.depositPercent,
+      depositMinAmount: String(values.depositMinAmount),
+      depositMaxPercent: values.depositMaxPercent,
       taxPercent: values.taxEnabled ? values.taxPercent : null,
       taxLabel: values.taxEnabled ? values.taxLabel?.trim() || null : null,
       tripInsuranceEnabled: values.tripInsuranceEnabled,
@@ -239,6 +266,33 @@ export function FeePolicyFormModal({
           label={t('form.freeCancelHours')}
           min={0}
           addonAfter={t('form.hoursUnit')}
+        />
+
+        <Divider plain>{t('form.sectionDeposit')}</Divider>
+        <NumberField
+          control={control}
+          name="depositPercent"
+          label={t('form.depositPercent')}
+          percent
+          min={DEPOSIT_PERCENT_MIN}
+          max={DEPOSIT_PERCENT_MAX}
+          precision={2}
+        />
+        <NumberField
+          control={control}
+          name="depositMinAmount"
+          label={t('form.depositMinAmount')}
+          money
+          min={0}
+        />
+        <NumberField
+          control={control}
+          name="depositMaxPercent"
+          label={t('form.depositMaxPercent')}
+          percent
+          min={DEPOSIT_PERCENT_MIN}
+          max={DEPOSIT_PERCENT_MAX}
+          precision={2}
         />
 
         <Divider plain>{t('form.sectionTax')}</Divider>

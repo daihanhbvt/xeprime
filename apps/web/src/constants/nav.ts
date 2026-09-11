@@ -244,6 +244,15 @@ export const SHOP_NAV: readonly NavSection[] = [
         icon: WalletOutlined,
         children: [
           {
+            // KHÔNG gác bằng `feature`: ví là tiền của chính gian hàng, gói hết hạn vẫn phải
+            // xem và rút được (ADR 0027 điều 3, ADR 0033).
+            key: 'balance',
+            labelKey: 'manage.balance',
+            href: ROUTES.MANAGE.BALANCE,
+            permission: PERMISSION.SELLER_PROFILE_VIEW,
+            icon: WalletOutlined,
+          },
+          {
             key: 'finance-overview',
             labelKey: 'manage.financeOverview',
             href: ROUTES.MANAGE.FINANCE,

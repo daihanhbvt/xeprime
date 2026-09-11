@@ -290,6 +290,7 @@ Xếp theo **cái gì đang chặn cái gì**, không theo độ khó.
    cao do chip trạng thái xuống dòng, bảng thông số 17 dòng phần lớn rỗng và nhãn wrap, tiêu đề
    thẻ không nhất quán.
 3. **Communication COM-04** — trung tâm thông báo + badge, nối vào push đã chạy (COM-07).
+   Hợp đồng API, kiến trúc đích và checklist: `docs/mobile-badges-notifications-migration.md`.
 4. Admin. *(Customer xong 07/09; Finance xong 07/09; Shop xong 08/09; MKT-05 xong 09/09;
    Calendar + VEH-13 + push COM-07 xong 10/09.)*
 

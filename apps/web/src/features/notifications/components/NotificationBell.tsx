@@ -3,6 +3,7 @@
 import { BellOutlined } from '@ant-design/icons';
 import { Badge, Button, Empty, Popover, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { cx } from '@/lib/cx';
 import { getErrorMessage } from '@/services/api-client';
@@ -24,17 +25,16 @@ import { useAppFormat } from '@/i18n/use-app-format';
  * khác nhau theo ngữ cảnh.
  */
 export function NotificationBell({ context }: { context: NotificationContext }) {
+  const t = useTranslations('Notifications');
   const fmt = useAppFormat();
 
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
-  const { data: unread } = useUnreadCount();
+  const unreadCount = useUnreadCount();
   const list = useNotifications({ limit: 15 }, open);
   const markRead = useMarkRead();
   const markAll = useMarkAllRead();
-
-  const unreadCount = unread?.count ?? 0;
 
   const handleItem = (n: NotificationItem) => {
     if (!n.readAt) markRead.mutate(n.id);
@@ -46,14 +46,14 @@ export function NotificationBell({ context }: { context: NotificationContext }) 
   const content = (
     <div className={styles.panel}>
       <div className={styles.head}>
-        <span className={styles.title}>Thông báo</span>
+        <span className={styles.title}>{t('title')}</span>
         <Button
           type="link"
           size="small"
           disabled={unreadCount === 0 || markAll.isPending}
           onClick={() => markAll.mutate()}
         >
-          Đánh dấu tất cả đã đọc
+          {t('markAllRead')}
         </Button>
       </div>
 
@@ -69,7 +69,7 @@ export function NotificationBell({ context }: { context: NotificationContext }) 
         ) : !list.data || list.data.items.length === 0 ? (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="Chưa có thông báo"
+            description={t('empty')}
             className={styles.empty}
           />
         ) : (
@@ -89,7 +89,7 @@ export function NotificationBell({ context }: { context: NotificationContext }) 
                     {n.body ? <span className={styles.itemText}>{n.body}</span> : null}
                     <span className={styles.itemTime}>{fmt.dateTime(n.createdAt)}</span>
                   </span>
-                  {!n.readAt ? <span className={styles.dot} aria-label="Chưa đọc" /> : null}
+                  {!n.readAt ? <span className={styles.dot} aria-label={t('unreadMark')} /> : null}
                 </button>
               </li>
             ))}
@@ -109,7 +109,7 @@ export function NotificationBell({ context }: { context: NotificationContext }) 
       styles={{ content: { padding: 0 } }}
     >
       <Badge count={unreadCount} size="small" overflowCount={99}>
-        <Button type="text" shape="circle" icon={<BellOutlined />} aria-label="Thông báo" />
+        <Button type="text" shape="circle" icon={<BellOutlined />} aria-label={t('title')} />
       </Badge>
     </Popover>
   );

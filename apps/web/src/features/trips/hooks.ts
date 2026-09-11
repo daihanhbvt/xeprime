@@ -10,9 +10,10 @@ import {
   fetchTripHandoverEvidence,
   fetchTripHandoverPhotoUrl,
   fetchTrips,
+  provideRefundAccount,
   tripsToParams,
 } from './api';
-import type { CustomerTripHandoverEvidence } from './types';
+import type { CustomerTripHandoverEvidence, ProvideRefundAccountInput } from './types';
 
 /** Danh sách chuyến của khách. Lọc + phân trang ở server; `filter` sống trên URL (ADR 0004). */
 export function useTrips(filter: string, page: number) {
@@ -125,6 +126,24 @@ export function useCancelTrip(id: string) {
       if (getErrorCode(error) === API_ERROR_CODE.TRIP_CANCEL_NOT_ALLOWED) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
       }
+    },
+  });
+}
+
+/**
+ * Khách khai tài khoản nhận tiền hoàn — ADR 0033.
+ *
+ * Cùng khuôn với `useCancelTrip`: server trả về chính chuyến đã đổi nên ghi thẳng vào cache chi
+ * tiết, màn hình đổi từ "chờ khai tài khoản" sang "đang chờ chuyển" ngay mà không nháy qua trạng
+ * thái cũ.
+ */
+export function useProvideRefundAccount(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: ProvideRefundAccountInput) => provideRefundAccount(id, body),
+    onSuccess: (trip) => {
+      queryClient.setQueryData(queryKeys.trips.detail(id), trip);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
     },
   });
 }

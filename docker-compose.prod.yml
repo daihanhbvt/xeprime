@@ -201,6 +201,22 @@ services:
       db: { condition: service_healthy }
     mem_limit: 512m
     networks: [internal]
+    healthcheck:
+      # Worker không phục vụ request nào, nên `restart: unless-stopped` chỉ bắt được trường hợp
+      # tiến trình CHẾT. Một vòng lặp kẹt (kết nối DB treo, advisory lock không nhả, một lời gọi
+      # mạng không timeout) để lại một container "đang chạy" mà không đẩy tin nhắn, không chiếu
+      # huy hiệu — và không ai biết cho tới khi người dùng phàn nàn.
+      #
+      # `/health` trả 503 khi một vòng lặp quan trọng im lặng quá ngưỡng của chính nó, hoặc khi
+      # hàng đợi chiếu huy hiệu trễ quá một phút (apps/worker/src/lib/health.ts). Cổng 4100 chỉ
+      # nghe loopback trong container — không publish, không cần xác thực.
+      test: ['CMD', 'curl', '-fsS', '-o', '/dev/null', 'http://127.0.0.1:4100/health']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      # Rộng hơn api/web: worker chạy backfill huy hiệu ngay lúc boot, và lượt đầu của các vòng
+      # lặp theo giờ có thể mất vài giây trước khi có "lần thành công đầu tiên".
+      start_period: 60s
 
   # -------------------------------------------------------------------------
   # Caddy — reverse proxy + TLS tự động. Là tiến trình DUY NHẤT publish cổng ra Internet.

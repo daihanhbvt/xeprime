@@ -113,6 +113,23 @@ export const BOOKING_HOLD_OUTCOME = {
    * `CHECK` ở migration chứ không bằng quy ước trong code (ADR 0025 điều 4).
    */
   KEPT: 'kept',
+  /**
+   * Chuyến HOÀN THÀNH — mỗi dòng tiền về đúng người hưởng (ADR 0033 điều 3).
+   *
+   * Thay `kept` cho hold sinh từ ADR 0032 trở đi: `kept` mang nghĩa "nền tảng giữ toàn bộ,
+   * không sinh dòng ví nào", điều không còn đúng khi hold chứa `D` — một phần giá thuê, tức
+   * tiền của chủ xe. Phân bổ cụ thể do `resolveHoldAllocation` quyết.
+   */
+  SETTLED: 'settled',
+  /**
+   * Khách huỷ MUỘN hoặc không đến — `D + S` chia đôi chủ xe/XePrime, `IV + IP` hoàn 100%
+   * (ADR 0032 điều 5, ADR 0033 điều 3).
+   *
+   * Không dùng `forfeited` vì nó nói "toàn bộ khoản giữ chỗ về gian hàng" — sai ở hai chỗ: phần
+   * bảo hiểm phải trả lại khách (hợp đồng chưa mua), và phần còn lại chia đôi chứ không về hết
+   * một phía.
+   */
+  SPLIT_LATE_CANCEL: 'split_late_cancel',
   /** Huỷ trước mốc miễn phí, hoặc chủ xe huỷ, hoặc khách chuyển thừa — ghi có VÍ KHÁCH. */
   REFUNDED: 'refunded',
   /** Huỷ muộn hoặc khách không đến — ghi có VÍ GIAN HÀNG làm bồi thường. */
@@ -139,6 +156,11 @@ export function isBookingHoldOutcome(value: unknown): value is BookingHoldOutcom
 
 export const BOOKING_HOLD_OUTCOME_META: Readonly<Record<BookingHoldOutcome, StatusMeta>> = {
   [BOOKING_HOLD_OUTCOME.KEPT]: { label: 'Đã dùng cho chuyến', color: STATUS_COLOR.SUCCESS },
+  [BOOKING_HOLD_OUTCOME.SETTLED]: { label: 'Đã quyết toán', color: STATUS_COLOR.SUCCESS },
+  [BOOKING_HOLD_OUTCOME.SPLIT_LATE_CANCEL]: {
+    label: 'Huỷ muộn — chia đôi',
+    color: STATUS_COLOR.WARNING,
+  },
   [BOOKING_HOLD_OUTCOME.REFUNDED]: { label: 'Đã hoàn khách', color: STATUS_COLOR.INFO },
   [BOOKING_HOLD_OUTCOME.FORFEITED]: { label: 'Bồi thường chủ xe', color: STATUS_COLOR.WARNING },
   [BOOKING_HOLD_OUTCOME.RELEASED_TO_SHOP]: {
@@ -158,6 +180,17 @@ export function isOutcomeAllowed(
   purpose: BookingHoldPurpose,
   outcome: BookingHoldOutcome,
 ): boolean {
+  /*
+   * `settled` và `split_late_cancel` hợp lệ với CẢ HAI mục đích: từ ADR 0032, hold của cả hai
+   * tuyến đều chứa tiền của nhiều người, nên phân bổ — chứ không phải `purpose` — mới là thứ
+   * quyết định tiền đi đâu (ADR 0033 điều 4).
+   */
+  if (
+    outcome === BOOKING_HOLD_OUTCOME.SETTLED ||
+    outcome === BOOKING_HOLD_OUTCOME.SPLIT_LATE_CANCEL
+  ) {
+    return true;
+  }
   if (purpose === BOOKING_HOLD_PURPOSE.ESCROW) return outcome !== BOOKING_HOLD_OUTCOME.KEPT;
   return outcome !== BOOKING_HOLD_OUTCOME.RELEASED_TO_SHOP;
 }
@@ -166,6 +199,8 @@ export function isOutcomeAllowed(
 export function creditsShopWallet(outcome: BookingHoldOutcome): boolean {
   return (
     outcome === BOOKING_HOLD_OUTCOME.FORFEITED ||
-    outcome === BOOKING_HOLD_OUTCOME.RELEASED_TO_SHOP
+    outcome === BOOKING_HOLD_OUTCOME.RELEASED_TO_SHOP ||
+    outcome === BOOKING_HOLD_OUTCOME.SETTLED ||
+    outcome === BOOKING_HOLD_OUTCOME.SPLIT_LATE_CANCEL
   );
 }

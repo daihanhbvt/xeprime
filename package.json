@@ -30,7 +30,7 @@
     "push:smoke": "pnpm --filter @xeprime/worker run push:smoke",
     "types:gen": "pnpm --filter @xeprime/types run generate",
     "contract": "pnpm run api:openapi && pnpm run types:gen",
-    "test:rules": "firebase emulators:exec --only firestore \"node --test firebase/rules.test.mjs\"",
+    "test:rules": "pnpm exec firebase emulators:exec --project demo-xeprime-rules --only firestore \"node --test firebase/rules.test.mjs\"",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -45,7 +45,7 @@
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-react-hooks": "7.1.1",
     "firebase": "11.1.0",
-    "firebase-tools": "13.29.1",
+    "firebase-tools": "15.30.0",
     "husky": "9.1.7",
     "lint-staged": "17.1.1",
     "prettier": "3.9.6",

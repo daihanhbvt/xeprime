@@ -1,3 +1,4 @@
+import { USER_BADGES_COLLECTION, type UserBadgeDoc } from '@xeprime/types';
 import { requireEnv } from './env';
 
 /**
@@ -82,3 +83,23 @@ export async function trimMessages(convId: string, keep: number): Promise<number
   await batch.commit();
   return snap.size;
 }
+
+/**
+ * Bản chiếu HUY HIỆU của một người — document `user_badges/{uid}` (ADR 0009 mở rộng cho badge).
+ *
+ * Cùng đường ống, cùng writer, cùng lý do: Postgres là source of truth, Firestore chỉ là bản
+ * chiếu để client NGHE thay vì HỎI. Khác chat ở một điểm — mỗi người đúng một document, ghi đè
+ * toàn bộ, không có lịch sử. Con số hôm qua không có giá trị gì.
+ */
+export async function writeUserBadges(uid: string, doc: UserBadgeDoc): Promise<void> {
+  const db = await getDb();
+  await db.collection(USER_BADGES_COLLECTION).doc(uid).set(doc);
+}
+
+/** Phần ghi mà job chiếu badge cần — tách interface để test bằng fake, không cần Firestore thật. */
+export interface BadgeWriter {
+  writeUserBadges(uid: string, doc: UserBadgeDoc): Promise<void>;
+}
+
+/** Writer thật (Firestore Admin) — mặc định của job chiếu badge ở production. */
+export const firestoreBadgeWriter: BadgeWriter = { writeUserBadges };

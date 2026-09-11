@@ -5,7 +5,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { newId, Prisma } from '@xeprime/prisma';
+import {
+  activeMemberIdsOf,
+  activeTenantIdsOf,
+  chatInboxScope,
+  chatUnreadOf,
+  computeChatUnread,
+  markBadgesDirty,
+  newId,
+  Prisma,
+} from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   CHAT_NOTIFICATION_COPY,
@@ -430,6 +439,16 @@ export class ChatService {
 
         await this.notifyOtherSide(tx, conversation, side, userId);
 
+        /*
+         * Badge đổi cho CẢ HAI phía: phía đối diện +1, phía người gửi về 0. Ghi một dòng tín hiệu
+         * trong CÙNG transaction với tin nhắn — đẩy sang Firestore là việc của worker, vì một lời
+         * gọi mạng tới Google ở đây biến sự cố của Firebase thành sự cố của chat (ADR 0009).
+         */
+        await markBadgesDirty(
+          tx,
+          await this.badgeAudience(tx, conversation, [CHAT_SIDE.CUSTOMER, CHAT_SIDE.SHOP]),
+        );
+
         return message;
       });
     } catch (error) {
@@ -449,7 +468,7 @@ export class ChatService {
     userId: string,
     conversationId: string,
   ): Promise<{ conversationId: string; unread: number }> {
-    const { side } = await this.resolveAccess(userId, conversationId);
+    const { conversation, side } = await this.resolveAccess(userId, conversationId);
     const now = new Date();
 
     await this.prisma.$transaction(async (tx) => {
@@ -465,26 +484,25 @@ export class ChatService {
           data: { lastReadAt: now },
         });
       }
+
+      // Chỉ bề mặt vừa đọc — bộ đếm bên kia không hề đổi. Phía gian hàng thì là cả đội, vì
+      // bộ đếm ấy dùng chung.
+      await markBadgesDirty(tx, await this.badgeAudience(tx, conversation, [side]));
     });
 
     return { conversationId, unread: 0 };
   }
 
-  /** Tổng tin chưa đọc của MỘT bề mặt, gộp mọi hội thoại — cho badge icon chat. */
+  /**
+   * Tổng tin chưa đọc của MỘT bề mặt, gộp mọi hội thoại — cho badge icon chat.
+   *
+   * Phép đếm nằm ở `@xeprime/prisma` chứ không ở đây: worker cần đúng nó để chiếu badge sang
+   * Firestore, và hai bản sao của một phép đếm là hai con số sẽ lệch nhau.
+   */
   async unreadCount(userId: string, side: ChatSide): Promise<{ count: number }> {
-    const where = await this.inboxWhere(userId, side, {});
-    if (where === null) return { count: 0 };
-
-    const sum = await this.prisma.conversation.aggregate({
-      where,
-      _sum: { unreadCustomerCount: true, unreadTenantCount: true },
-    });
-
-    const count =
-      side === CHAT_SIDE.CUSTOMER
-        ? (sum._sum.unreadCustomerCount ?? 0)
-        : (sum._sum.unreadTenantCount ?? 0);
-    return { count };
+    const tenantIds =
+      side === CHAT_SIDE.SHOP ? await activeTenantIdsOf(this.prisma, userId) : [];
+    return { count: await chatUnreadOf(this.prisma, userId, side, tenantIds) };
   }
 
   /**
@@ -502,15 +520,8 @@ export class ChatService {
   async unreadSummary(
     userId: string,
   ): Promise<{ customer: number; shop: number; total: number }> {
-    const [customer, shop] = await Promise.all([
-      this.unreadCount(userId, CHAT_SIDE.CUSTOMER),
-      this.unreadCount(userId, CHAT_SIDE.SHOP),
-    ]);
-    return {
-      customer: customer.count,
-      shop: shop.count,
-      total: customer.count + shop.count,
-    };
+    const chat = await computeChatUnread(this.prisma, userId);
+    return { customer: chat.customer, shop: chat.shop, total: chat.customer + chat.shop };
   }
 
   // --- helpers -------------------------------------------------------------
@@ -530,28 +541,26 @@ export class ChatService {
   ): Promise<Prisma.ConversationWhereInput | null> {
     const q = filters.q?.trim();
     const search = q ? { contains: q, mode: Prisma.QueryMode.insensitive } : undefined;
+    const isCustomer = side === CHAT_SIDE.CUSTOMER;
 
-    if (side === CHAT_SIDE.CUSTOMER) {
-      return {
-        customerUserId: userId,
-        ...(filters.unreadOnly ? { unreadCustomerCount: { gt: 0 } } : {}),
-        ...(search
-          ? { OR: [{ tenant: { name: search } }, { vehicle: { name: search } }] }
-          : {}),
-      };
+    const tenantIds = isCustomer ? [] : await activeTenantIdsOf(this.prisma, userId);
+    if (!isCustomer && tenantIds.length === 0) return null;
+
+    const where: Prisma.ConversationWhereInput = chatInboxScope(side, userId, tenantIds);
+
+    if (filters.unreadOnly) {
+      Object.assign(
+        where,
+        isCustomer ? { unreadCustomerCount: { gt: 0 } } : { unreadTenantCount: { gt: 0 } },
+      );
+    }
+    if (search) {
+      where.OR = isCustomer
+        ? [{ tenant: { name: search } }, { vehicle: { name: search } }]
+        : [{ customer: { displayName: search } }, { vehicle: { name: search } }];
     }
 
-    const tenantIds = await this.activeTenantIds(userId);
-    if (tenantIds.length === 0) return null;
-
-    return {
-      tenantId: { in: tenantIds },
-      NOT: { customerUserId: userId },
-      ...(filters.unreadOnly ? { unreadTenantCount: { gt: 0 } } : {}),
-      ...(search
-        ? { OR: [{ customer: { displayName: search } }, { vehicle: { name: search } }] }
-        : {}),
-    };
+    return where;
   }
 
   /**
@@ -598,13 +607,30 @@ export class ChatService {
     await this.notifications.emitToUser(conversation.customerUserId, payload, tx);
   }
 
-  /** Tenant mà user đang là thành viên active — dùng để scope hội thoại phía shop. */
-  private async activeTenantIds(userId: string): Promise<string[]> {
-    const rows = await this.prisma.tenantMembership.findMany({
-      where: { userId, status: MEMBERSHIP_STATUS.ACTIVE },
-      select: { tenantId: true },
-    });
-    return rows.map((r) => r.tenantId);
+  /**
+   * Ai nhìn thấy con số chưa đọc của hội thoại này đổi — và vì thế phải được chiếu lại badge.
+   *
+   * Nhận DANH SÁCH bề mặt vì hai tình huống khác nhau hẳn:
+   *
+   *  - `markRead` chỉ chạm MỘT bộ đếm. Khách mở thread thì con số của gian hàng không đổi, và
+   *    đánh dấu cả đội ở đó nghĩa là một lần mở hội thoại ở shop 30 người sinh 31 lượt chiếu cho
+   *    một thay đổi ảnh hưởng đúng một người — đúng thứ mà cả thiết kế này muốn tránh.
+   *  - `sendMessage` chạm CẢ HAI: phía đối diện +1, phía người gửi về 0.
+   *
+   * Phía gian hàng luôn là TOÀN ĐỘI, vì `unread_tenant_count` là bộ đếm dùng chung: một nhân
+   * viên đọc thì con số của mọi người cùng về 0.
+   */
+  private async badgeAudience(
+    tx: Prisma.TransactionClient,
+    conversation: { tenantId: string; customerUserId: string | null },
+    sides: readonly ChatSide[],
+  ): Promise<string[]> {
+    const audience: (string | null)[] = [];
+    if (sides.includes(CHAT_SIDE.CUSTOMER)) audience.push(conversation.customerUserId);
+    if (sides.includes(CHAT_SIDE.SHOP)) {
+      audience.push(...(await activeMemberIdsOf(tx, conversation.tenantId)));
+    }
+    return audience.filter((id): id is string => typeof id === 'string');
   }
 
   private async findByClientId(

@@ -1,0 +1,44 @@
+{
+  "title": "Payout accounts",
+  "subtitle": "XePrime sends refunds and amounts owed to you to this account.",
+  "empty": "No account yet. Add one to receive money.",
+  "loadError": "Could not load your accounts.",
+  "defaultTag": "Default",
+  "verifiedTag": "Verified",
+  "actions": {
+    "add": "Add account",
+    "setDefault": "Make default",
+    "archive": "Remove",
+    "archiveConfirm": "Remove this account?",
+    "archiveHint": "Transfers already made keep their original details."
+  },
+  "form": {
+    "title": "Add payout account",
+    "bankCode": "Bank",
+    "bankCodePlaceholder": "VCB, ACB, TCB…",
+    "accountNumber": "Account number",
+    "accountName": "Account holder name",
+    "accountNameHint": "Type it exactly as registered with your bank — a wrong name gets the transfer bounced.",
+    "label": "Nickname",
+    "labelPlaceholder": "Optional",
+    "isDefault": "Make this my default payout account",
+    "submit": "Save account",
+    "created": "Payout account added.",
+    "defaultChanged": "Default account changed.",
+    "archived": "Account removed.",
+    "validation": {
+      "bankRequired": "Choose a bank",
+      "numberRequired": "Enter the account number",
+      "numberDigits": "Account number must be digits only",
+      "nameRequired": "Enter the account holder name"
+    }
+  },
+  "refund": {
+    "title": "Refund destination",
+    "intro": "Tell us where to send your {amount} refund.",
+    "pickSaved": "Use a saved account",
+    "useNew": "Use a different account",
+    "submit": "Confirm account",
+    "saved": "Account saved. XePrime will transfer within the committed time."
+  }
+}

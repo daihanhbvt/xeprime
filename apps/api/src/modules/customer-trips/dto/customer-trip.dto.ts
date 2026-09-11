@@ -9,7 +9,18 @@ import {
   SURCHARGE_CATEGORY_VALUES,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
 import { CustomerHoldDto } from '../../holds/dto/hold.dto';
 import { CustomerFeeBreakdownDto, PriceBreakdownRowDto } from '../../pricing/dto/pricing.dto';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
@@ -325,4 +336,41 @@ export class CustomerTripDetailDto extends CustomerTripListItemDto {
 
   @ApiPropertyOptional({ type: CustomerTripReviewDto, nullable: true })
   review!: CustomerTripReviewDto | null;
+}
+
+/**
+ * Khách khai tài khoản nhận hoàn — ADR 0033 (Phase 3).
+ *
+ * Hai đường vào cùng một kết quả, và đó là chủ đích: người có tài khoản đã lưu chỉ chọn một
+ * dòng (`bankAccountId`), người chưa có gõ ba ô rồi hệ thống lưu lại để lần sau không phải gõ
+ * nữa. Bắt mọi khách gõ lại số tài khoản ở mỗi lần hoàn là cách chắc chắn nhất để có một chữ số
+ * sai trong một lệnh chuyển tiền.
+ */
+export class ProvideRefundAccountDto {
+  @ApiPropertyOptional({
+    description: 'Chọn một tài khoản đã lưu. Bỏ trống thì phải khai đủ ba ô bên dưới.',
+  })
+  @IsOptional()
+  @IsString()
+  bankAccountId?: string;
+
+  @ApiPropertyOptional({ description: 'Mã ngân hàng theo bảng VietQR', example: 'VCB' })
+  @ValidateIf((o: ProvideRefundAccountDto) => !o.bankAccountId)
+  @IsString()
+  @MinLength(2)
+  @MaxLength(20)
+  bankCode?: string;
+
+  @ApiPropertyOptional({ description: 'Số tài khoản — chỉ chữ số' })
+  @ValidateIf((o: ProvideRefundAccountDto) => !o.bankAccountId)
+  @IsString()
+  @Matches(/^[0-9\s]{4,40}$/, { message: 'Số tài khoản chỉ gồm chữ số' })
+  accountNumber?: string;
+
+  @ApiPropertyOptional({ description: 'Tên chủ tài khoản, đúng như đăng ký ở ngân hàng' })
+  @ValidateIf((o: ProvideRefundAccountDto) => !o.bankAccountId)
+  @IsString()
+  @MinLength(2)
+  @MaxLength(160)
+  accountName?: string;
 }

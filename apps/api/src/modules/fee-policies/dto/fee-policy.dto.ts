@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  DEPOSIT_PERCENT_MAX,
+  DEPOSIT_PERCENT_MIN,
   FEE_POLICY_STATUS_VALUES,
   SERVICE_FEE_PERCENT_MAX,
   SERVICE_FEE_PERCENT_MIN,
@@ -50,17 +52,39 @@ export class UpsertFeePolicyDto {
   @IsNumberString()
   holdMinAmount!: string;
 
-  @ApiProperty({ description: 'Phút khách có để chuyển giữ chỗ sau khi được duyệt', example: 1440 })
+  @ApiProperty({
+    description: 'Phút khách có để chuyển cọc, tính từ lúc chủ xe duyệt (ADR 0032 điều 2)',
+    example: 120,
+  })
   @IsInt()
   @Min(5)
   @Max(7 * 24 * 60)
   holdPaymentWindowMinutes!: number;
 
-  @ApiProperty({ description: 'Huỷ trước giờ nhận bấy nhiêu giờ thì hoàn toàn bộ', example: 4 })
+  @ApiProperty({
+    description: 'Huỷ trong bấy nhiêu giờ KỂ TỪ khi duyệt thì hoàn 100% (ADR 0032 điều 5)',
+    example: 4,
+  })
   @IsInt()
   @Min(0)
   @Max(24 * 30)
   freeCancelHours!: number;
+
+  @ApiProperty({ description: 'D — % cọc trên giá thuê gốc', example: 20 })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(DEPOSIT_PERCENT_MIN)
+  @Max(DEPOSIT_PERCENT_MAX)
+  depositPercent!: number;
+
+  @ApiProperty({ description: 'Sàn tiền cọc (VND string)', example: '50000' })
+  @IsNumberString()
+  depositMinAmount!: string;
+
+  @ApiProperty({ description: 'Trần % cọc của chính sách này', example: 30 })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(DEPOSIT_PERCENT_MIN)
+  @Max(DEPOSIT_PERCENT_MAX)
+  depositMaxPercent!: number;
 
   @ApiProperty() @IsBoolean() taxEnabled!: boolean;
   @ApiPropertyOptional({ type: Number, nullable: true })
@@ -112,6 +136,9 @@ export class FeePolicyDto {
   @ApiProperty() holdMinAmount!: string;
   @ApiProperty() holdPaymentWindowMinutes!: number;
   @ApiProperty() freeCancelHours!: number;
+  @ApiProperty() depositPercent!: number;
+  @ApiProperty() depositMinAmount!: string;
+  @ApiProperty() depositMaxPercent!: number;
   @ApiProperty() taxEnabled!: boolean;
   @ApiPropertyOptional({ type: Number, nullable: true }) taxPercent!: number | null;
   @ApiPropertyOptional({ type: String, nullable: true }) taxLabel!: string | null;

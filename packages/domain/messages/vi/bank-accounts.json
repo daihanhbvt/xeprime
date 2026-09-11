@@ -1,0 +1,44 @@
+{
+  "title": "Tài khoản nhận tiền",
+  "subtitle": "XePrime chuyển tiền hoàn và các khoản phải trả bạn về tài khoản này.",
+  "empty": "Chưa có tài khoản nào. Thêm một tài khoản để nhận tiền.",
+  "loadError": "Không tải được danh sách tài khoản.",
+  "defaultTag": "Mặc định",
+  "verifiedTag": "Đã đối chiếu",
+  "actions": {
+    "add": "Thêm tài khoản",
+    "setDefault": "Đặt làm mặc định",
+    "archive": "Bỏ dùng",
+    "archiveConfirm": "Bỏ dùng tài khoản này?",
+    "archiveHint": "Lệnh chuyển tiền đã thực hiện vẫn giữ nguyên thông tin cũ."
+  },
+  "form": {
+    "title": "Thêm tài khoản nhận tiền",
+    "bankCode": "Ngân hàng",
+    "bankCodePlaceholder": "VCB, ACB, TCB…",
+    "accountNumber": "Số tài khoản",
+    "accountName": "Tên chủ tài khoản",
+    "accountNameHint": "Gõ đúng như đăng ký ở ngân hàng — sai tên là lệnh chuyển bị trả về.",
+    "label": "Tên gợi nhớ",
+    "labelPlaceholder": "Không bắt buộc",
+    "isDefault": "Đặt làm tài khoản nhận tiền mặc định",
+    "submit": "Lưu tài khoản",
+    "created": "Đã thêm tài khoản nhận tiền.",
+    "defaultChanged": "Đã đổi tài khoản mặc định.",
+    "archived": "Đã bỏ dùng tài khoản.",
+    "validation": {
+      "bankRequired": "Chọn ngân hàng",
+      "numberRequired": "Nhập số tài khoản",
+      "numberDigits": "Số tài khoản chỉ gồm chữ số",
+      "nameRequired": "Nhập tên chủ tài khoản"
+    }
+  },
+  "refund": {
+    "title": "Tài khoản nhận tiền hoàn",
+    "intro": "Khai tài khoản để XePrime chuyển {amount} về cho bạn.",
+    "pickSaved": "Dùng tài khoản đã lưu",
+    "useNew": "Khai tài khoản khác",
+    "submit": "Xác nhận tài khoản nhận",
+    "saved": "Đã ghi nhận tài khoản. XePrime sẽ chuyển trong thời gian cam kết."
+  }
+}

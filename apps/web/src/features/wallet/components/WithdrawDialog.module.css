@@ -1,0 +1,90 @@
+/** Ô nhập số điểm + chọn tài khoản nhận. */
+
+.field {
+  display: block;
+  margin-bottom: var(--xp-space-md);
+}
+
+.label {
+  display: block;
+  margin: 0 0 var(--xp-space-xs);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/*
+ * Ô nhập thô thay vì `NumberField` của RHF: dialog này không dùng react-hook-form (hai trường,
+ * một trong hai là radio), và mượn một form runtime chỉ để có một ô số là đắt hơn giá trị.
+ */
+.input {
+  width: 100%;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-md);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 1px;
+}
+
+.hint {
+  display: block;
+  margin-top: var(--xp-space-xxs);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-caption);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  width: 100%;
+}
+
+.option {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-lg);
+}
+
+.option :global(.ant-radio + *) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bank {
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.number {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.link {
+  margin-top: var(--xp-space-sm);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-body-sm);
+  cursor: pointer;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+/* Cam kết thời gian phải nằm ngay trên nút gửi — đọc được TRƯỚC khi bấm, không phải sau. */
+.commitment {
+  margin-top: var(--xp-space-md);
+}

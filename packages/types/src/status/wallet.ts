@@ -60,8 +60,17 @@ export const WALLET_ENTRY_KIND = {
    * khách của họ có đáng tin hay không.
    */
   HOLD_RELEASE: 'hold_release',
-  /** + Hoàn khoản giữ chỗ cho khách: huỷ trước mốc miễn phí, chủ xe huỷ, hoặc chuyển thừa. */
+  /** + Hoàn khoản giữ chỗ cho khách: huỷ trước mốc miễn phí, hoặc chủ xe huỷ. */
   HOLD_REFUND: 'hold_refund',
+  /**
+   * + Hoàn phần khách chuyển THỪA (ADR 0022 điều 5).
+   *
+   * Tách khỏi `HOLD_REFUND` dù cùng nguồn là một hold và cùng vào ví khách: hai thứ này trả lời
+   * hai câu khác nhau — "chuyến hỏng nên trả lại tiền" và "khách chuyển dư nên trả lại phần dư".
+   * Và quan trọng hơn: một hold có thể sinh CẢ HAI dòng, nên chúng phải khác `kind` thì khoá
+   * chống cộng đôi mới không chặn nhầm dòng thứ hai (ADR 0033 điều 6).
+   */
+  HOLD_OVERPAY: 'hold_overpay',
   /** − Đã chi theo một yêu cầu rút. */
   WITHDRAWAL: 'withdrawal',
   /** + Đảo một dòng rút bị từ chối hoặc chuyển hụt. */
@@ -81,15 +90,23 @@ export const WALLET_ENTRY_KIND_LABEL: Readonly<Record<WalletEntryKind, string>> 
   [WALLET_ENTRY_KIND.HOLD_FORFEIT]: 'Bồi thường huỷ chuyến',
   [WALLET_ENTRY_KIND.HOLD_RELEASE]: 'Tiền giữ chỗ của chuyến',
   [WALLET_ENTRY_KIND.HOLD_REFUND]: 'Hoàn tiền giữ chỗ',
+  [WALLET_ENTRY_KIND.HOLD_OVERPAY]: 'Hoàn phần chuyển thừa',
   [WALLET_ENTRY_KIND.WITHDRAWAL]: 'Rút về ngân hàng',
   [WALLET_ENTRY_KIND.WITHDRAWAL_REVERSAL]: 'Hoàn lại do rút không thành',
   [WALLET_ENTRY_KIND.ADJUSTMENT]: 'Điều chỉnh',
 };
 
 /**
- * Nguồn sinh ra một dòng sổ cái. Cùng với `sourceRefId` nó tạo nên khoá chống cộng tiền hai lần
- * `@@unique([wallet_id, source_type, source_ref_id])` — **ràng buộc DB**, không phải check ở tầng
- * app (ADR 0023 điều 5). Worker chạy lại, webhook gửi lại, admin bấm hai lần: cùng một kết quả.
+ * Nguồn sinh ra một dòng sổ cái. Cùng với `kind` và `sourceRefId` nó tạo nên khoá chống cộng
+ * tiền hai lần `@@unique([wallet_id, kind, source_type, source_ref_id])` — **ràng buộc DB**,
+ * không phải check ở tầng app. Worker chạy lại, webhook gửi lại, admin bấm hai lần: cùng một
+ * kết quả.
+ *
+ * ⚠️ Khoá có `kind`, khác ADR 0023 điều 5 (ba cột) — ADR 0033 điều 6 ghi đè. Lý do: một nguồn
+ * sinh được NHIỀU dòng hợp lệ khác loại (một yêu cầu rút sinh `withdrawal` rồi
+ * `withdrawal_reversal` khi chuyển hụt; một hold sinh `hold_refund` và `hold_overpay`), và
+ * khoá ba cột sẽ chặn nhầm dòng thứ hai. Bảo đảm gốc không đổi: **một sự kiện nguồn → đúng một
+ * dòng**.
  */
 export const WALLET_ENTRY_SOURCE = {
   BOOKING_HOLD: 'booking_hold',
@@ -101,6 +118,25 @@ export type WalletEntrySource = (typeof WALLET_ENTRY_SOURCE)[keyof typeof WALLET
 export const WALLET_ENTRY_SOURCE_VALUES = Object.values(
   WALLET_ENTRY_SOURCE,
 ) as WalletEntrySource[];
+
+// ── Trạng thái ví ───────────────────────────────────────────────────────────
+
+/**
+ * Ví bị đóng băng thì không ghi thêm và không rút được — dùng khi nghi gian lận hoặc đang tranh
+ * chấp. KHÔNG phải cách xoá một ví: số dư vẫn là nghĩa vụ của nền tảng, đóng băng chỉ tạm dừng
+ * đường ra trong lúc con người xem xét.
+ */
+export const WALLET_STATUS = {
+  ACTIVE: 'active',
+  FROZEN: 'frozen',
+} as const;
+
+export type WalletStatus = (typeof WALLET_STATUS)[keyof typeof WALLET_STATUS];
+export const WALLET_STATUS_VALUES = Object.values(WALLET_STATUS) as WalletStatus[];
+
+export function isWalletStatus(value: unknown): value is WalletStatus {
+  return typeof value === 'string' && (WALLET_STATUS_VALUES as string[]).includes(value);
+}
 
 // ── Yêu cầu rút ─────────────────────────────────────────────────────────────
 
@@ -139,3 +175,26 @@ export const WITHDRAWAL_STATUS_HOLDING_FUNDS: readonly WithdrawalStatus[] = [
   WITHDRAWAL_STATUS.PENDING,
   WITHDRAWAL_STATUS.APPROVED,
 ];
+
+// ── Tài khoản ngân hàng nhận tiền ───────────────────────────────────────────
+
+/**
+ * Vòng đời một tài khoản nhận tiền — ADR 0033 (Phase 3).
+ *
+ * KHÔNG xoá cứng: một tài khoản đã từng nhận tiền còn bị tham chiếu từ lệnh rút cũ, và xoá nó
+ * làm mất khả năng trả lời "khoản đó đã chuyển vào đâu".
+ */
+export const BANK_ACCOUNT_STATUS = {
+  ACTIVE: 'active',
+  /** Người dùng đã bỏ dùng — không hiện trong ô chọn, nhưng lịch sử vẫn đọc được. */
+  ARCHIVED: 'archived',
+} as const;
+
+export type BankAccountStatus = (typeof BANK_ACCOUNT_STATUS)[keyof typeof BANK_ACCOUNT_STATUS];
+export const BANK_ACCOUNT_STATUS_VALUES = Object.values(
+  BANK_ACCOUNT_STATUS,
+) as BankAccountStatus[];
+
+export function isBankAccountStatus(value: unknown): value is BankAccountStatus {
+  return typeof value === 'string' && (BANK_ACCOUNT_STATUS_VALUES as string[]).includes(value);
+}

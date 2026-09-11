@@ -50,6 +50,7 @@ const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   // Khoản giữ chỗ (R3, ADR 0028): cùng họ icon TIỀN, phân biệt bằng chặng của nó.
   [NOTIFICATION_TYPE.HOLD_REQUESTED]: <DollarOutlined />,
   [NOTIFICATION_TYPE.HOLD_PAID]: <CheckCircleOutlined />,
+  [NOTIFICATION_TYPE.HOLD_EXPIRING]: <HourglassOutlined />,
   [NOTIFICATION_TYPE.HOLD_EXPIRED]: <HourglassOutlined />,
   [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: <RollbackOutlined />,
   // Hồ sơ người bán — dùng icon chứng nhận, không phải icon gian hàng: đây là danh tính pháp lý.

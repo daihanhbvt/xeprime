@@ -28,6 +28,7 @@ import {
   type PlanLimitsJson,
   type SystemFinanceCategoryKey,
 } from '@xeprime/types';
+import { Prisma } from '../index';
 import { log, photo, prisma, seedId } from './context';
 
 export type PermissionIds = Map<Permission, string>;
@@ -395,8 +396,22 @@ async function seedPlans(): Promise<PlanIds> {
       billingMode: plan.billingMode,
       commissionPercent: plan.commissionPercent,
       basePriceMonthly: plan.basePriceMonthly,
-      assumedMonthlyGmvJson: plan.assumedMonthlyGmv ?? undefined,
-      limitsJson: plan.limits,
+      /*
+       * Spread có điều kiện thay vì `?? undefined`: `exactOptionalPropertyTypes` không cho
+       * `undefined` lọt vào một khoá jsonb. Không dùng `DbNull` ở đây vì nó GHI ĐÈ cột thành
+       * NULL ở nhánh update — gói chưa khai GMV giả định phải để nguyên giá trị đang có, không
+       * bị seed xoá mất.
+       */
+      ...(plan.assumedMonthlyGmv
+        ? { assumedMonthlyGmvJson: plan.assumedMonthlyGmv as unknown as Prisma.InputJsonObject }
+        : {}),
+      /*
+       * Cast sang `InputJsonObject`: `PlanLimitsJson` là một interface CÓ HÌNH DẠNG (đó là
+       * điểm mạnh của nó — `parsePlanLimits` đọc lại đúng các khoá), còn Prisma đòi một kiểu
+       * có index signature. Hai yêu cầu loại trừ nhau trong TypeScript; giữ hình dạng ở tầng
+       * types và cast ở đúng một điểm ghi là đánh đổi rẻ hơn nới lỏng kiểu.
+       */
+      limitsJson: plan.limits as unknown as Prisma.InputJsonObject,
       price: plan.price,
       durationDays: plan.durationDays,
       maxVehicles: plan.maxVehicles,

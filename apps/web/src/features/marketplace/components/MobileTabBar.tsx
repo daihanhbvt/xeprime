@@ -44,7 +44,7 @@ export function MobileTabBar() {
   const t = useTranslations('Navigation.public');
   const pathname = usePathname();
   const { data: user } = useCurrentUser();
-  const { data: chatUnread } = useChatUnreadCount(CHAT_SIDE.CUSTOMER, !!user);
+  const chatUnread = useChatUnreadCount(CHAT_SIDE.CUSTOMER);
   const { open } = useAuthModal();
   const nextFromHere = useNextFromCurrentPath();
 
@@ -90,8 +90,8 @@ export function MobileTabBar() {
         const inner = (
           <>
             <span className={styles.icon}>
-              {tab.badge && chatUnread?.count ? (
-                <Badge count={chatUnread.count} size="small" overflowCount={9}>
+              {tab.badge && chatUnread ? (
+                <Badge count={chatUnread} size="small" overflowCount={9}>
                   {icon}
                 </Badge>
               ) : (

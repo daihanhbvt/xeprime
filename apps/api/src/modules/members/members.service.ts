@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@xeprime/prisma';
+import { markBadgesDirty, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   MEMBERSHIP_STATUS,
@@ -150,6 +150,13 @@ export class MembersService {
         where: { tenantId_userId: { tenantId, userId: targetUserId } },
         data: { status: MEMBERSHIP_STATUS.REMOVED },
       });
+
+      /*
+       * Chiều nguy hiểm hơn chiều vào: không đánh dấu thì người vừa bị gỡ vẫn thấy con số chưa
+       * đọc của một gian hàng họ không còn quyền mở. Badge nói có 5 tin, bấm vào thì hộp thư
+       * rỗng — và bản chiếu cũ trên Firestore sẽ giữ nguyên con số đó vô thời hạn.
+       */
+      await markBadgesDirty(tx, [targetUserId]);
       await this.audit.record(
         {
           tenantId,

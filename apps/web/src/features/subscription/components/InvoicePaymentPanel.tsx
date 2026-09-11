@@ -5,12 +5,12 @@
 
 import { Alert } from 'antd';
 import { useTranslations } from 'next-intl';
-import { subtractMoney } from '@xeprime/domain';
+import { buildVietQrUrl, subtractMoney } from '@xeprime/domain';
 import { SUBSCRIPTION_INVOICE_STATUS } from '@xeprime/types';
 import { CopyButton } from '@/components/data-display/CopyButton';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { usePaymentInfo } from '../hooks/use-subscription';
-import type { PaymentInfo, SubscriptionInvoice } from '../types';
+import type { SubscriptionInvoice } from '../types';
 import styles from './InvoicePaymentPanel.module.css';
 
 /**
@@ -37,7 +37,7 @@ export function InvoicePaymentPanel({ invoice }: { invoice: SubscriptionInvoice 
       : invoice.totalAmount;
 
   const info = paymentInfo.data;
-  const qrUrl = info?.configured ? buildVietQrUrl(info, remaining, invoice.code) : null;
+  const qrUrl = info ? buildVietQrUrl(info, remaining, invoice.code) : null;
 
   return (
     <div className={styles.panel}>
@@ -108,17 +108,4 @@ export function InvoicePaymentPanel({ invoice }: { invoice: SubscriptionInvoice 
       <p className={styles.note}>{t('autoActivateNote')}</p>
     </div>
   );
-}
-
-/**
- * Ảnh VietQR quicklink — dịch vụ công khai của VietQR, dựng từ thông tin tài khoản + số tiền +
- * nội dung. `compact2` = khung có logo ngân hàng + số tiền in sẵn, vừa khung 220px.
- */
-function buildVietQrUrl(info: PaymentInfo, amount: string, code: string): string {
-  const params = new URLSearchParams({
-    amount,
-    addInfo: code,
-    ...(info.accountName ? { accountName: info.accountName } : {}),
-  });
-  return `https://img.vietqr.io/image/${info.bankCode}-${info.accountNumber}-compact2.png?${params.toString()}`;
 }

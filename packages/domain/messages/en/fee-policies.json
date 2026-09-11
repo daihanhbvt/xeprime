@@ -62,6 +62,10 @@
       "taxLabelRequired": "Enter the tax name",
       "percentRequired": "Enter the rate",
       "partnerRequired": "Enter the insurance partner name"
-    }
+    },
+    "sectionDeposit": "Booking deposit",
+    "depositPercent": "Deposit % of rental",
+    "depositMinAmount": "Minimum deposit",
+    "depositMaxPercent": "Deposit cap %"
   }
 }

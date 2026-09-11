@@ -14,7 +14,13 @@ const MS_PER_MINUTE = 60_000;
 const MS_PER_HOUR = 3_600_000;
 
 /**
- * Khách huỷ trước mốc này thì được hoàn toàn bộ khoản giữ chỗ (ADR 0021 điều 7).
+ * Khách huỷ trong bấy nhiêu giờ **kể từ `acceptedAt`** thì được hoàn 100% số đã thanh toán
+ * online (ADR 0032 điều 5).
+ *
+ * ⚠️ Mốc tính XUÔI từ lúc chủ xe duyệt, **không** tính ngược từ giờ nhận xe. Trước ADR 0032 nó
+ * là `pickupAt − 4h`, nghĩa là người đặt trước một tháng có tới một tháng để đổi ý miễn phí,
+ * còn người đặt sát giờ thì không có phút nào — cùng một "chính sách 4 giờ" mà hai khách nhận
+ * hai thứ hoàn toàn khác nhau. Tính từ `acceptedAt` cho mọi khách đúng một cửa sổ như nhau.
  *
  * Đổi con số này **không** sửa quyền của đơn đã đặt: `free_cancel_until` là một CỘT lưu trong
  * database, chốt một lần lúc tạo hold. Hằng số ở đây chỉ dùng để tính mốc cho hold MỚI.
@@ -24,12 +30,26 @@ export const HOLD_FREE_CANCEL_HOURS = 4;
 /**
  * Khách có bấy nhiêu phút để chuyển khoản trước khi hold hết hạn và nhả lịch.
  *
- * Mặc định 24 giờ (R3, ADR 0028): giữ chỗ được tạo SAU KHI CHỦ XE DUYỆT, khách không ngồi chờ
- * trên màn hình — họ nhận thông báo rồi quay lại chuyển tiền. Cửa sổ ngắn kiểu đặt-ngay (15 phút
- * của ADR 0021 cũ) sẽ giết phần lớn chuyến thật. Con số thật của từng hold lấy từ chính sách phí
- * hiện hành (`FeePolicyValues.holdPaymentWindowMinutes`); hằng này là mặc định khi seed policy.
+ * **2 giờ** (ADR 0032 điều 2), giảm từ 24 giờ của R3. Đánh đổi được chốt ở cấp sản phẩm: một
+ * chỗ bị giữ mà chưa có tiền là một chỗ khách khác không đặt được, và giữ nó cả ngày làm hỏng
+ * chính cái lịch mà nền tảng bán. Bù lại phải có nhắc hạn giữa chừng
+ * (`HOLD_COUNTDOWN_SEGMENT_MINUTES`) — cửa sổ ngắn mà im lặng thì chỉ giỏi huỷ đơn của khách
+ * thật.
+ *
+ * Con số thật của từng hold lấy từ chính sách phí hiện hành
+ * (`FeePolicyValues.holdPaymentWindowMinutes`); hằng này là mặc định khi seed policy.
  */
-export const HOLD_PAYMENT_WINDOW_MINUTES = 24 * 60;
+export const HOLD_PAYMENT_WINDOW_MINUTES = 2 * 60;
+
+/**
+ * Cửa sổ thanh toán được chia thành các chặng bấy nhiêu phút — hai đồng hồ 60 phút thay vì một
+ * đồng hồ 120 phút (ADR 0032 điều 2).
+ *
+ * Không phải chuyện trang trí: hết chặng đầu là mốc hệ thống **nhắc** khách, và một cửa sổ dài
+ * hiện thành một con số lớn ("còn 118 phút") không tạo được cảm giác cần hành động. Worker đọc
+ * đúng hằng này để biết khi nào bắn nhắc.
+ */
+export const HOLD_COUNTDOWN_SEGMENT_MINUTES = 60;
 
 /**
  * Sàn số tiền giữ chỗ. Dưới mức này thì phí chuyển khoản và công đối soát vượt khoản thu.
@@ -87,19 +107,36 @@ export const WITHDRAWAL_TERMS = {
   MIN_AMOUNT: 50_000,
   /** Giờ cắt trong ngày làm việc (giờ Việt Nam). Trước mốc này thì chuyển ngay trong ngày. */
   CUTOFF_HOUR_VN: 16,
-  /** Cam kết tối đa, tính bằng NGÀY LÀM VIỆC kể từ khi duyệt. */
-  MAX_BUSINESS_DAYS: 3,
+  /**
+   * Cam kết tối đa, tính bằng NGÀY LÀM VIỆC kể từ khi duyệt.
+   *
+   * 2 ngày — ADR 0028 điều 8 hạ từ 3 của ADR 0025 điều 7.
+   */
+  MAX_BUSINESS_DAYS: 2,
 } as const;
 
 /**
- * Mốc huỷ miễn phí của một chuyến nhận xe lúc `pickupAt`.
+ * Mốc huỷ miễn phí — tính XUÔI từ `acceptedAt` (ADR 0032 điều 5).
+ *
+ * Kẹp trên bằng `pickupAt`: quyền huỷ miễn phí không thể sống qua thời điểm khách đã cầm xe.
+ * Với chuyến đặt sát giờ (nhận xe sau chưa tới 4 tiếng) cửa sổ bị cắt ngắn theo — đó là lý do
+ * ADR 0032 điều 5 bắt **cảnh báo chính sách huỷ sát giờ trước khi khách trả tiền**, chứ không
+ * phải để họ phát hiện ra sau.
  *
  * SERVER tính và LƯU vào cột — client không gửi, và client cũng **không tự tính lại lúc đọc**:
  * lệch đồng hồ máy khách sẽ rơi đúng vào lúc tiền phụ thuộc vào nó. Web/mobile đọc
  * `freeCancelUntil` từ API rồi so với `Date.now()`.
+ *
+ * QR Pay thành công **không** khởi động lại mốc này (ADR 0032 điều 5) — nó được chốt một lần
+ * lúc duyệt và không đường nào tính lại.
  */
-export function holdFreeCancelUntil(pickupAt: Date, hours: number = HOLD_FREE_CANCEL_HOURS): Date {
-  return new Date(pickupAt.getTime() - hours * MS_PER_HOUR);
+export function holdFreeCancelUntil(
+  acceptedAt: Date,
+  hours: number = HOLD_FREE_CANCEL_HOURS,
+  pickupAt?: Date,
+): Date {
+  const until = acceptedAt.getTime() + hours * MS_PER_HOUR;
+  return new Date(pickupAt ? Math.min(until, pickupAt.getTime()) : until);
 }
 
 /** Hạn chuyển khoản của một hold tạo lúc `from`. SERVER tính. */
@@ -111,10 +148,11 @@ export function holdExpiresAt(
 }
 
 /**
- * Còn được huỷ miễn phí không — so MỐC ĐÃ LƯU, không tính lại từ `pickupAt`.
+ * Còn được huỷ miễn phí không — so MỐC ĐÃ LƯU, không bao giờ tính lại.
  *
- * Gian hàng dời giờ nhận xe **không** được nới hay xoá quyền khách đã có (ADR 0021 điều 7), nên
- * hàm này cố ý chỉ nhận `freeCancelUntil` chứ không nhận `pickupAt`.
+ * Gian hàng dời giờ nhận xe **không** được nới hay xoá quyền khách đã có, và một lần chuyển
+ * khoản thành công cũng không (ADR 0032 điều 5). Vì vậy hàm này cố ý chỉ nhận `freeCancelUntil`
+ * — không nhận `pickupAt`, không nhận `acceptedAt`, không có đường nào tính lại.
  */
 export function isWithinFreeCancel(
   freeCancelUntil: Date | string | null | undefined,

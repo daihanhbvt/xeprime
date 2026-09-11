@@ -1,5 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { enqueuePushDeliveries, newId, Prisma } from '@xeprime/prisma';
+import {
+  activeMemberIdsOf,
+  enqueuePushDeliveries,
+  markBadgesDirty,
+  newId,
+  Prisma,
+} from '@xeprime/prisma';
 import {
   NOTIFICATION_AUDIENCE,
   notificationDeepLink,
@@ -7,7 +13,7 @@ import {
 } from '@xeprime/domain';
 import {
   API_ERROR_CODE,
-  MEMBERSHIP_STATUS,
+  BELL_HIDDEN_NOTIFICATION_TYPES,
   NOTIFICATION_CHANNEL,
   type NotificationTargetType,
   type NotificationType,
@@ -108,6 +114,8 @@ export class NotificationService {
 
     await client.notification.createMany({ data: rows });
     await this.enqueuePush(client, rows, payload);
+    // Câu CUỐI của transaction — xem lý do ở `emitToTenantMembers`.
+    await markBadgesDirty(client, recipients);
   }
 
   /**
@@ -135,23 +143,27 @@ export class NotificationService {
       ),
     ];
 
-    const members = await client.tenantMembership.findMany({
-      where: {
-        tenantId,
-        status: MEMBERSHIP_STATUS.ACTIVE,
-        ...(opts?.roleKeys ? { roleKey: { in: opts.roleKeys } } : {}),
-        ...(excluded.length ? { userId: { notIn: excluded } } : {}),
-      },
-      select: { userId: true },
+    // Giải người nhận qua helper dùng chung (`@xeprime/prisma`): bản sao thứ hai của câu
+    // "thành viên active của gian hàng" là chỗ một bên quên lọc `status` và người đã rời gian
+    // hàng vẫn nhận thông báo công việc của nó.
+    const memberIds = await activeMemberIdsOf(client, tenantId, {
+      exclude: excluded,
+      roleKeys: opts?.roleKeys,
     });
-    if (members.length === 0) return;
+    if (memberIds.length === 0) return;
 
     // Thành viên của gian hàng đứng ở KHU QUẢN LÝ — trừ khi nơi gọi nói khác.
     const audience = payload.audience ?? NOTIFICATION_AUDIENCE.MANAGE;
-    const rows = members.map((m) => buildData(m.userId, { ...payload, tenantId }, audience));
+    const rows = memberIds.map((userId) => buildData(userId, { ...payload, tenantId }, audience));
 
     await client.notification.createMany({ data: rows });
     await this.enqueuePush(client, rows, payload);
+    /*
+     * Đánh dấu huy hiệu là câu CUỐI của transaction: nó khoá một dòng cho MỖI người nhận, và giữ
+     * những dòng đó trong lúc còn chèn `push_deliveries` là kéo dài cửa sổ va chạm với các
+     * transaction khác chạm cùng nhóm người mà không được gì.
+     */
+    await markBadgesDirty(client, memberIds);
   }
 
   async list(
@@ -162,6 +174,9 @@ export class NotificationService {
 
     const where: Prisma.NotificationWhereInput = {
       userId,
+      // Loại chat khỏi chuông — biểu tượng tin nhắn đã nói rõ hơn. Bản ghi vẫn tồn tại vì thông
+      // báo đẩy tham chiếu tới nó; xem `BELL_HIDDEN_NOTIFICATION_TYPES`.
+      type: { notIn: [...BELL_HIDDEN_NOTIFICATION_TYPES] },
       ...(query.unreadOnly ? { readAt: null } : {}),
     };
 
@@ -182,8 +197,14 @@ export class NotificationService {
     };
   }
 
+  /**
+   * Số chưa đọc của CHUÔNG — phải khớp đúng danh sách mà `list` trả về, nếu không chuông báo 3
+   * mà mở ra chỉ có 1.
+   */
   async unreadCount(userId: string): Promise<{ count: number }> {
-    const count = await this.prisma.notification.count({ where: { userId, readAt: null } });
+    const count = await this.prisma.notification.count({
+      where: { userId, readAt: null, type: { notIn: [...BELL_HIDDEN_NOTIFICATION_TYPES] } },
+    });
     return { count };
   }
 
@@ -201,15 +222,22 @@ export class NotificationService {
 
     const readAt = existing.readAt ?? new Date();
     if (!existing.readAt) {
-      await this.prisma.notification.update({ where: { id }, data: { readAt } });
+      await this.prisma.$transaction(async (tx) => {
+        await tx.notification.update({ where: { id }, data: { readAt } });
+        await markBadgesDirty(tx, [userId]);
+      });
     }
     return { id, readAt: readAt.toISOString() };
   }
 
   async markAllRead(userId: string): Promise<{ updated: number }> {
-    const res = await this.prisma.notification.updateMany({
-      where: { userId, readAt: null },
-      data: { readAt: new Date() },
+    const res = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.notification.updateMany({
+        where: { userId, readAt: null },
+        data: { readAt: new Date() },
+      });
+      if (updated.count > 0) await markBadgesDirty(tx, [userId]);
+      return updated;
     });
     return { updated: res.count };
   }

@@ -10,6 +10,7 @@ import { CustomersService } from '../../src/modules/customers/customers.service'
 import { DriversService } from '../../src/modules/drivers/drivers.service';
 import { FeePoliciesService } from '../../src/modules/fee-policies/fee-policies.service';
 import { HoldSettlementService } from '../../src/modules/holds/hold-settlement.service';
+import { WalletService } from '../../src/modules/wallet/wallet.service';
 import { FirebaseAppService } from '../../src/modules/firebase/firebase-app.service';
 import { NotificationService } from '../../src/modules/notification/notification.service';
 import { BillingService } from '../../src/modules/billing/billing.service';
@@ -115,7 +116,7 @@ export function makeBookingHoldsService(prisma: PrismaService): BookingHoldsServ
     makeBookingsService(prisma),
     new OccupancyService(prisma),
     makeVehicleSettingsService(prisma),
-    new HoldSettlementService(prisma, audit, notifications),
+    new HoldSettlementService(prisma, audit, notifications, new WalletService(prisma)),
     makeBillingService(prisma),
     audit,
     notifications,
@@ -202,7 +203,7 @@ export function makeBookingsService(
     notifications,
     new DriversService(prisma, audit),
     overrides.customers ?? new CustomersService(prisma, audit),
-    new HoldSettlementService(prisma, audit, notifications),
+    new HoldSettlementService(prisma, audit, notifications, new WalletService(prisma)),
     overrides.settings ?? makeVehicleSettingsService(prisma),
   );
 }

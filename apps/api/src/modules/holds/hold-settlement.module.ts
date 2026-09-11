@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { WalletModule } from '../wallet/wallet.module';
 import { HoldSettlementService } from './hold-settlement.service';
 
 /**
@@ -7,6 +8,8 @@ import { HoldSettlementService } from './hold-settlement.service';
  * với `HoldsModule` (vốn import `BookingsModule` để tạo đơn lúc tiền về).
  */
 @Module({
+  // `WalletModule` không có controller và không import ai — thêm nó KHÔNG tạo vòng.
+  imports: [WalletModule],
   providers: [HoldSettlementService],
   exports: [HoldSettlementService],
 })

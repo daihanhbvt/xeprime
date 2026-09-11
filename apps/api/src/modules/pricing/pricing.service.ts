@@ -118,11 +118,29 @@ export class PricingService {
     tenantId: string,
     baseAmount: string,
     quoteIsEstimate: boolean,
+    opts: {
+      /**
+       * Chuyến này có thu cọc qua XePrime không. Bỏ trống ⇒ suy từ tuyến: hoa hồng luôn thu
+       * (ADR 0032 điều 2), gói thì không. Công tắc của gian hàng nối vào đây ở Phase 6.
+       */
+      depositRequired?: boolean;
+      /** Khách có GIỮ lựa chọn bảo hiểm tai nạn người không (`IP` — tuỳ chọn). */
+      personalAccidentSelected?: boolean;
+    } = {},
   ): Promise<CustomerFeeBreakdown | null> {
     const policy = await this.feePolicies.findEffective();
     if (!policy) return null;
     const billingMode = await this.billing.billingModeFor(tenantId);
-    return computeCustomerFees({ billingMode, policy, baseAmount, quoteIsEstimate });
+    return computeCustomerFees({
+      billingMode,
+      policy,
+      baseAmount,
+      quoteIsEstimate,
+      ...(opts.depositRequired === undefined ? {} : { depositRequired: opts.depositRequired }),
+      ...(opts.personalAccidentSelected === undefined
+        ? {}
+        : { personalAccidentSelected: opts.personalAccidentSelected }),
+    });
   }
 
   // -------------------------------------------------------------------------
