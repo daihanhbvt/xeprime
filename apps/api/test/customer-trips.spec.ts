@@ -34,6 +34,9 @@ import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { CustomerTripsService } from '../src/modules/customer-trips/customer-trips.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import { SettlementService } from '../src/modules/bookings/settlement/settlement.service';
+import { BankAccountsService } from '../src/modules/bank-accounts/bank-accounts.service';
+import { HoldSettlementService } from '../src/modules/holds/hold-settlement.service';
+import { WalletService } from '../src/modules/wallet/wallet.service';
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
@@ -88,6 +91,8 @@ const trips = new CustomerTripsService(
   bookings,
   makeBookingHoldsService(asService),
   files,
+  new HoldSettlementService(asService, audit, notifications, new WalletService(asService)),
+  new BankAccountsService(asService),
   notifications,
   audit,
 );

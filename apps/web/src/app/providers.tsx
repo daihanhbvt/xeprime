@@ -13,6 +13,7 @@ import { useLocale } from 'next-intl';
 import { useState, type ReactNode } from 'react';
 import { Provider as ReduxProvider } from 'react-redux';
 import { ChatRealtimeProvider } from '@/features/chat/context/ChatRealtimeContext';
+import { BadgeRealtimeProvider } from '@/features/badges/BadgeRealtimeProvider';
 import type { AppLocale } from '@/i18n/config';
 import type { NavPreferences } from '@/lib/ui-preferences';
 import { getErrorCode } from '@/services/api-client';
@@ -115,7 +116,13 @@ export function Providers({ children, navPreferences }: ProvidersProps) {
         <ReduxProvider store={store}>
           <QueryClientProvider client={queryClient}>
             <AntdApp>
-              <ChatRealtimeProvider>{children}</ChatRealtimeProvider>
+              {/*
+                BadgeRealtimeProvider nằm TRONG ChatRealtimeProvider: nó nghe Firestore bằng chính
+                phiên Firebase mà chat đã mở, nên phải có context đó trước.
+              */}
+              <ChatRealtimeProvider>
+                <BadgeRealtimeProvider>{children}</BadgeRealtimeProvider>
+              </ChatRealtimeProvider>
             </AntdApp>
           </QueryClientProvider>
         </ReduxProvider>

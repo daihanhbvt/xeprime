@@ -13,6 +13,11 @@ import { collection, limit as fbLimit, onSnapshot, orderBy, query } from 'fireba
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { queryKeys } from '@/services/query-keys';
+import { useRefreshBadges } from '@/features/badges/hooks/use-badges';
+import {
+  REALTIME_STATE,
+  useRealtimeSubscription,
+} from '@/hooks/use-realtime-subscription';
 import { chatApi } from '../api';
 import { useChatRealtime } from '../context/ChatRealtimeContext';
 import type { ChatMessage, MessageCursor, SendMessageInput } from '../types';
@@ -55,6 +60,12 @@ export interface ThreadState {
  * thứ đó độc lập — worker outbox không chạy (hoặc `FIRESTORE_ENABLED=false` ở worker, hoặc rules
  * chặn) thì `onSnapshot` im lặng vĩnh viễn, và tắt poll nghĩa là thread không bao giờ tự làm mới:
  * bên A nhắn, bên B phải F5. Đúng lỗi đã gặp.
+ *
+ * Bản sau đó vẫn còn một nửa của chính lỗi ấy: poll không tắt hẳn nhưng nhịp THƯA được chọn theo
+ * `db && ready` — cũng chỉ là "đã đăng nhập Firebase". Rules chưa đẩy thì listener bị từ chối
+ * ngay từ đầu, client không biết, và người nhận đợi trọn 25 giây. Giờ nhịp thưa CHỈ áp dụng khi
+ * `useRealtimeSubscription` báo `live`, tức là listener của CHÍNH thread này đã nhận một snapshot
+ * từ server (ADR 0034).
  *
  * Nhịp thưa khi có realtime là lưới an toàn, không phải đường chính — nên nó không kéo theo chi
  * phí đáng kể, mà vẫn bảo đảm hộp thư KHÔNG BAO GIỜ đứng im quá nửa phút dù tầng nào hỏng.
@@ -153,10 +164,18 @@ export function useThread(conversationId: string | null): ThreadState {
     [],
   );
 
+  const refreshBadges = useRefreshBadges();
+
   const invalidateInbox = useCallback(() => {
     // Không biết người xem đang ở bề mặt nào, và không cần biết: tiền tố `chat` phủ cả hai.
     void queryClient.invalidateQueries({ queryKey: queryKeys.chat.all });
-  }, [queryClient]);
+    /*
+     * Huy hiệu KHÔNG nằm dưới nhánh `chat` (nó gộp cả chuông thông báo), nên nó phải được gọi
+     * tên riêng. Thiếu dòng này thì mở một hội thoại ra đọc mà con số trên biểu tượng chat vẫn
+     * đứng nguyên cho tới nhịp làm mới kế tiếp — đúng thứ người dùng để ý đầu tiên.
+     */
+    refreshBadges();
+  }, [queryClient, refreshBadges]);
 
   const markRead = useCallback(
     (id: string) => {
@@ -203,9 +222,44 @@ export function useThread(conversationId: string | null): ThreadState {
    * Nạp lại trang MỚI NHẤT và gộp vào. Không thay thế danh sách: người dùng có thể đã cuộn lên
    * và tải năm trang lịch sử — thay thế là ném hết công đó đi và giật màn hình về đáy.
    */
+  /**
+   * Trạng thái gộp refresh, mang theo hội thoại nó thuộc về.
+   *
+   * `forKey` là phần bắt buộc: đổi A → B trong lúc lượt refresh của A đang bay, mà chỉ nhìn "có
+   * đang bay không", thì lượt của B sẽ dùng chung promise của A — B không bao giờ được tải, còn
+   * A thì tải lại một lần nữa rồi bị `applyIfCurrent` vứt đi. Sai hai lần cho một thao tác.
+   */
+  const refresh = useRef<{ forKey: string; inFlight: Promise<void> | null; queued: boolean }>({
+    forKey: '',
+    inFlight: null,
+    queued: false,
+  });
+
   const refreshLatest = useCallback(async () => {
     if (!conversationId) return;
-    try {
+
+    // Đổi thread ⇒ vứt trạng thái gộp của thread cũ. Kiểm ở ĐÂY (lúc gọi) chứ không lúc render:
+    // React Compiler cấm chạm ref trong thân render, và đúng là không cần.
+    if (refresh.current.forKey !== key) {
+      refresh.current = { forKey: key, inFlight: null, queued: false };
+    }
+
+    /*
+     * GỘP các lượt làm mới: snapshot và đồng hồ có thể bắn gần như cùng lúc, và một trận vài tin
+     * nhắn liên tiếp sẽ sinh một snapshot mỗi tin. Không gộp thì mỗi tin là một lượt `GET
+     * /messages` — đúng cái "bão request" mà kiến trúc snapshot-báo-hiệu-rồi-đọc-REST phải tránh.
+     *
+     * Đang có lượt chạy ⇒ chỉ ghi nhận "cần chạy thêm một lượt nữa" và dùng chung promise đang
+     * bay. Nhờ vậy N tín hiệu trong một khoảng chỉ tốn tối đa HAI request: lượt đang chạy, và
+     * một lượt chốt sau nó để chắc chắn không bỏ sót tin đến muộn.
+     */
+    const state = refresh.current;
+    if (state.inFlight) {
+      state.queued = true;
+      return state.inFlight;
+    }
+
+    const runOnce = async (): Promise<void> => {
       const page = await chatApi.messages(conversationId);
 
       /*
@@ -226,9 +280,24 @@ export function useThread(conversationId: string | null): ThreadState {
       }));
 
       if (hasNew) markRead(conversationId);
-    } catch {
-      // Im lặng — đây là lượt làm mới nền, lỗi mạng thoáng qua không nên hiện lên màn hình.
-    }
+    };
+
+    const promise = (async () => {
+      try {
+        do {
+          state.queued = false;
+          await runOnce();
+          // Đổi hội thoại giữa chừng: lượt chốt thuộc về thread CŨ, không chạy nữa.
+        } while (state.queued && refresh.current === state);
+      } catch {
+        // Im lặng — đây là lượt làm mới nền, lỗi mạng thoáng qua không nên hiện lên màn hình.
+      } finally {
+        state.inFlight = null;
+      }
+    })();
+
+    state.inFlight = promise;
+    return promise;
   }, [conversationId, key, applyIfCurrent, markRead]);
 
   /*
@@ -238,40 +307,69 @@ export function useThread(conversationId: string | null): ThreadState {
    * (`mergeThreadMessages`) nên hai nguồn cùng mang về một tin là chuyện vô hại — đó chính là
    * điều kiện để dám chạy song song. Snapshot lo độ trễ (tức thì khi đường ống sống), đồng hồ lo
    * độ tin cậy (vẫn về tin khi đường ống chết).
+   *
+   * Cái ĐÃ SỬA (11/09/2026): nhịp thưa trước đây được chọn theo `db && ready`, tức là chỉ dựa
+   * vào việc đăng nhập Firebase thành công. Rules chưa đẩy hay subscription chết thì client vẫn
+   * tin mình đang realtime và đợi trọn 25 giây — đúng triệu chứng "người nhận thấy tin rất muộn".
+   * Giờ nhịp thưa chỉ được dùng khi CHÍNH listener này đã nhận một snapshot từ server.
    */
-  useEffect(() => {
-    if (!conversationId) return undefined;
+  const listenerState = useRealtimeSubscription({
+    enabled: Boolean(db && ready && conversationId),
+    key: conversationId ?? '',
+    label: 'chat thread',
+    subscribe: ({ live, failed }) => {
+      // `enabled` đã bảo đảm hai giá trị này tồn tại; nhánh này chỉ để hợp kiểu.
+      if (!db || !conversationId) return () => undefined;
 
-    const live = Boolean(db && ready);
-    let unsubscribe: () => void = () => undefined;
-
-    if (live && db) {
       const q = query(
         collection(db, `conversations/${conversationId}/messages`),
         orderBy('sentAt', 'desc'),
         fbLimit(30),
       );
-      unsubscribe = onSnapshot(
+      return onSnapshot(
         q,
-        () => {
+        (snapshot) => {
+          /*
+           * Snapshot phát lại TỪ CACHE không chứng minh đường ống còn sống — nó chỉ chứng minh
+           * trình duyệt còn nhớ dữ liệu cũ. Tin nó là quay lại đúng cái bẫy vừa gỡ.
+           */
+          if (!snapshot.metadata.fromCache) live();
           void refreshLatest();
         },
-        () => undefined,
+        failed,
       );
-    }
+    },
+  });
 
-    const timer = setInterval(
-      () => {
-        void refreshLatest();
-      },
-      live ? POLL_LIVE_MS : POLL_FALLBACK_MS,
-    );
+  const listenerLive = listenerState === REALTIME_STATE.LIVE;
+
+  useEffect(() => {
+    if (!conversationId) return undefined;
+
+    /*
+     * Tab bị ẩn thì KHÔNG hỏi.
+     *
+     * `setInterval` trần vẫn chạy khi người dùng chuyển sang tab khác, nên một hội thoại để quên
+     * ở nền vẫn gọi API mỗi `POLL_FALLBACK_MS` cho tới khi đóng trình duyệt — và không ai đang
+     * nhìn màn hình đó. (Các query TanStack ở app đã tự có luật này; `setInterval` thì không.)
+     * Quay lại tab là làm mới NGAY, nên không mất tin nào.
+     */
+    const tick = () => {
+      if (document.visibilityState === 'hidden') return;
+      void refreshLatest();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void refreshLatest();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    const timer = setInterval(tick, listenerLive ? POLL_LIVE_MS : POLL_FALLBACK_MS);
 
     return () => {
-      unsubscribe();
       clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [conversationId, db, ready, refreshLatest]);
+  }, [conversationId, listenerLive, refreshLatest]);
 
   const loadOlder = useCallback(async () => {
     const cursor = data.cursor;

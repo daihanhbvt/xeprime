@@ -33,6 +33,27 @@ export function createPrismaClient(connectionString?: string): PrismaClient {
 export { newId } from './id';
 
 /**
+ * Huy hiệu người dùng (chuông + chat) — phép đếm và hàng đợi chiếu badge. Dùng chung cho API
+ * (GET /me/badges) và worker (chiếu document user_badges/{uid} sang Firestore). Xem docblock
+ * của `badges.ts` để biết vì sao nó ở đây chứ không ở `apps/api`.
+ */
+export {
+  activeMemberIdsOf,
+  activeTenantIdsOf,
+  backfillBadgeSignals,
+  chatInboxScope,
+  chatUnreadOf,
+  clearBadgeSignal,
+  computeChatUnread,
+  computeUserBadges,
+  deferBadgeSignal,
+  markBadgesDirty,
+  oldestBadgeSignalAgeMs,
+  takeBadgeSignals,
+  type BadgeSignal,
+} from './badges';
+
+/**
  * Hàng đợi đẩy thông báo — dùng chung cho API và worker, hai tiến trình cùng phát thông báo.
  * Xem docblock của `push-outbox.ts` để biết vì sao nó ở đây chứ không ở `apps/api`.
  */

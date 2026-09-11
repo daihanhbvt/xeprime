@@ -1,15 +1,13 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { queryKeys } from '@/services/query-keys';
-import { fetchUnreadCount } from '../api';
+import { useBadges } from '@/features/badges/hooks/use-badges';
 
-/** Đếm chưa đọc cho badge chuông — poll nhẹ để cập nhật gần thời gian thực mà không cần realtime. */
-export function useUnreadCount() {
-  return useQuery({
-    queryKey: queryKeys.notifications.unreadCount(),
-    queryFn: fetchUnreadCount,
-    refetchInterval: 60_000,
-    refetchOnWindowFocus: true,
-  });
+/**
+ * Số thông báo chưa đọc cho badge chuông.
+ *
+ * Không còn query riêng: con số đi chung `useBadges` với hai hộp thư chat — một request cho cả
+ * khung ứng dụng, và bản chiếu Firestore cập nhật cả ba cùng lúc.
+ */
+export function useUnreadCount(): number {
+  return useBadges().notificationsUnread;
 }

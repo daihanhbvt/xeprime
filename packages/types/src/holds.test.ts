@@ -6,6 +6,7 @@ import {
   FREE_TRIP_ALLOWANCE,
   HOLD_FREE_CANCEL_HOURS,
   HOLD_MIN_AMOUNT,
+  HOLD_COUNTDOWN_SEGMENT_MINUTES,
   HOLD_PAYMENT_WINDOW_MINUTES,
   WITHDRAWAL_TERMS,
   holdExpiresAt,
@@ -44,42 +45,68 @@ import {
 import { PERMISSION } from './rbac';
 
 /**
- * Đây là các mốc TIỀN phụ thuộc vào (ADR 0021): api tính, worker dọn, web/mobile đếm ngược.
- * Sai một mốc là hoặc thu tiền của người đáng được hoàn, hoặc hoàn tiền cho người không đáng.
+ * Đây là các mốc TIỀN phụ thuộc vào (ADR 0032 điều 2 và 5): api tính, worker dọn, web/mobile
+ * đếm ngược. Sai một mốc là hoặc thu tiền của người đáng được hoàn, hoặc hoàn tiền cho người
+ * không đáng.
  */
 describe('mốc thời gian của khoản giữ chỗ', () => {
-  const pickup = new Date('2026-09-01T10:00:00.000Z');
+  const accepted = new Date('2026-09-01T10:00:00.000Z');
 
-  it('mốc huỷ miễn phí là đúng 4 giờ trước giờ nhận', () => {
-    expect(holdFreeCancelUntil(pickup).toISOString()).toBe('2026-09-01T06:00:00.000Z');
+  it('mốc huỷ miễn phí là đúng 4 giờ SAU khi chủ xe duyệt, không phải trước giờ nhận', () => {
+    expect(holdFreeCancelUntil(accepted).toISOString()).toBe('2026-09-01T14:00:00.000Z');
     expect(HOLD_FREE_CANCEL_HOURS).toBe(4);
   });
 
-  it('hạn chuyển khoản nhận cửa sổ từ CHÍNH SÁCH; mặc định 24 giờ (R3 — giữ chỗ SAU khi duyệt)', () => {
-    const created = new Date('2026-08-28T03:00:00.000Z');
-    // Cửa sổ do chính sách phí hiện hành đặt — hold thật luôn đi qua tham số này.
-    expect(holdExpiresAt(created, 15).toISOString()).toBe('2026-08-28T03:15:00.000Z');
-    expect(holdExpiresAt(created, 24 * 60).toISOString()).toBe('2026-08-29T03:00:00.000Z');
+  /**
+   * Ca này là lý do ADR 0032 đổi cách tính. Với công thức cũ (`pickupAt − 4h`), khách đặt trước
+   * một tháng có cả tháng để đổi ý miễn phí. Cùng một "chính sách 4 giờ" mà hai khách nhận hai
+   * thứ khác hẳn nhau.
+   */
+  it('đặt trước một tháng KHÔNG cho khách một tháng huỷ miễn phí', () => {
+    const pickup = new Date('2026-10-01T10:00:00.000Z');
+    const until = holdFreeCancelUntil(accepted, HOLD_FREE_CANCEL_HOURS, pickup);
+    expect(until.toISOString()).toBe('2026-09-01T14:00:00.000Z');
   });
 
-  it('mặc định (không truyền cửa sổ) là 24 giờ', () => {
+  it('chuyến SÁT GIỜ: cửa sổ bị kẹp về giờ nhận, không sống qua lúc khách cầm xe', () => {
+    const pickupSoon = new Date('2026-09-01T11:30:00.000Z'); // chỉ 1,5 giờ sau khi duyệt
+    const until = holdFreeCancelUntil(accepted, HOLD_FREE_CANCEL_HOURS, pickupSoon);
+    expect(until.toISOString()).toBe('2026-09-01T11:30:00.000Z');
+  });
+
+  it('không truyền pickupAt thì không kẹp — caller quyết định có kẹp hay không', () => {
+    expect(holdFreeCancelUntil(accepted, 4).toISOString()).toBe('2026-09-01T14:00:00.000Z');
+  });
+
+  it('hạn chuyển khoản nhận cửa sổ từ CHÍNH SÁCH', () => {
     const created = new Date('2026-08-28T03:00:00.000Z');
-    expect(holdExpiresAt(created).toISOString()).toBe('2026-08-29T03:00:00.000Z');
-    expect(HOLD_PAYMENT_WINDOW_MINUTES).toBe(24 * 60);
+    expect(holdExpiresAt(created, 15).toISOString()).toBe('2026-08-28T03:15:00.000Z');
+    expect(holdExpiresAt(created, 120).toISOString()).toBe('2026-08-28T05:00:00.000Z');
+  });
+
+  it('mặc định (không truyền cửa sổ) là 2 GIỜ — ADR 0032 điều 2, giảm từ 24 giờ của R3', () => {
+    const created = new Date('2026-08-28T03:00:00.000Z');
+    expect(holdExpiresAt(created).toISOString()).toBe('2026-08-28T05:00:00.000Z');
+    expect(HOLD_PAYMENT_WINDOW_MINUTES).toBe(120);
+  });
+
+  it('cửa sổ chia đúng hai chặng 60 phút — mốc nhắc hạn của worker nằm ở giữa', () => {
+    expect(HOLD_COUNTDOWN_SEGMENT_MINUTES).toBe(60);
+    expect(HOLD_PAYMENT_WINDOW_MINUTES / HOLD_COUNTDOWN_SEGMENT_MINUTES).toBe(2);
   });
 
   /**
    * Mốc là một thời điểm TUYỆT ĐỐI, không phải một giờ địa phương. Nếu ai đó nhập máy móc múi
-   * giờ VN vào `holds.ts`, phép trừ sẽ lệch và test này đỏ.
+   * giờ VN vào `holds.ts`, phép cộng sẽ lệch và test này đỏ.
    */
   it('không phụ thuộc múi giờ: cùng một mốc dù biểu diễn khác nhau', () => {
     const asVnLocal = new Date('2026-09-01T17:00:00.000+07:00'); // = 10:00Z
-    expect(holdFreeCancelUntil(asVnLocal).getTime()).toBe(holdFreeCancelUntil(pickup).getTime());
+    expect(holdFreeCancelUntil(asVnLocal).getTime()).toBe(holdFreeCancelUntil(accepted).getTime());
   });
 
   it('qua nửa đêm vẫn đúng — không có bước "về đầu ngày"', () => {
-    const earlyMorning = new Date('2026-09-02T02:00:00.000Z');
-    expect(holdFreeCancelUntil(earlyMorning).toISOString()).toBe('2026-09-01T22:00:00.000Z');
+    const lateEvening = new Date('2026-09-01T22:00:00.000Z');
+    expect(holdFreeCancelUntil(lateEvening).toISOString()).toBe('2026-09-02T02:00:00.000Z');
   });
 });
 
@@ -215,14 +242,41 @@ describe('trạng thái và kết cục của hold', () => {
     expect(isAwaitingPayment(BOOKING_HOLD_STATUS.EXPIRED)).toBe(false);
   });
 
-  it('bốn kết cục sau khi ADR 0025 thêm đường trả về gian hàng', () => {
+  /**
+   * Sáu kết cục: bốn cũ + hai của ADR 0032/0033.
+   *
+   * `kept` và `forfeited` thành CHỈ-ĐỌC cho đơn đã chốt — chúng mang nghĩa "một phía lấy tất",
+   * đúng khi khoản giữ chỗ bằng đúng phí dịch vụ (ADR 0021) nhưng sai từ khi hold chứa `D`, một
+   * phần giá thuê. Giữ lại để không diễn giải lại kết cục của một chuyến đã xong theo luật ra
+   * đời sau nó.
+   */
+  it('sáu kết cục — hai giá trị mới là PHÂN BỔ, không phải "một phía lấy tất"', () => {
     expect([...BOOKING_HOLD_OUTCOME_VALUES].sort()).toEqual([
       'forfeited',
       'kept',
       'refunded',
       'released_to_shop',
+      'settled',
+      'split_late_cancel',
     ]);
-    expect(BOOKING_HOLD_OUTCOME.KEPT).toBe('kept');
+    expect(BOOKING_HOLD_OUTCOME.SETTLED).toBe('settled');
+    expect(BOOKING_HOLD_OUTCOME.SPLIT_LATE_CANCEL).toBe('split_late_cancel');
+  });
+
+  /**
+   * Hai kết cục mới hợp lệ với CẢ HAI mục đích: từ ADR 0032, hold của cả hai tuyến đều chứa tiền
+   * của nhiều người, nên phân bổ — chứ không phải `purpose` — quyết định tiền đi đâu.
+   */
+  it('settled / split_late_cancel hợp lệ với cả commission lẫn escrow', () => {
+    for (const purpose of [BOOKING_HOLD_PURPOSE.COMMISSION, BOOKING_HOLD_PURPOSE.ESCROW]) {
+      expect(isOutcomeAllowed(purpose, BOOKING_HOLD_OUTCOME.SETTLED)).toBe(true);
+      expect(isOutcomeAllowed(purpose, BOOKING_HOLD_OUTCOME.SPLIT_LATE_CANCEL)).toBe(true);
+    }
+    // Ràng buộc cũ giữ nguyên cho hai giá trị cũ.
+    expect(isOutcomeAllowed(BOOKING_HOLD_PURPOSE.ESCROW, BOOKING_HOLD_OUTCOME.KEPT)).toBe(false);
+    expect(
+      isOutcomeAllowed(BOOKING_HOLD_PURPOSE.COMMISSION, BOOKING_HOLD_OUTCOME.RELEASED_TO_SHOP),
+    ).toBe(false);
   });
 });
 

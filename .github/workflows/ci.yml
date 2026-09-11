@@ -103,6 +103,60 @@ jobs:
       - run: pnpm --filter @xeprime/api typecheck
       - run: pnpm --filter @xeprime/api lint
 
+      # Worker chạy TRONG job này chứ không phải một job riêng: test của nó cần PostgreSQL thật
+      # (advisory lock trên kết nối riêng, hàng đợi chiếu huy hiệu, outbox pump), và job này là
+      # job duy nhất có service `postgres` + migration đã áp. Dựng thêm một service nữa chỉ để
+      # tách cho đẹp là trả tiền hai lần cho cùng một database.
+      #
+      # Trước 11/09/2026 worker KHÔNG được CI chạy gì cả — không test, không typecheck, không
+      # lint. Nó là tiến trình giữ hạn phản hồi yêu cầu thuê và chiếu huy hiệu.
+      - name: Test worker — PostgreSQL thật
+        run: pnpm --filter @xeprime/worker test
+      - run: pnpm --filter @xeprime/worker typecheck
+      - run: pnpm --filter @xeprime/worker lint
+
+  # ---------------------------------------------------------------------------
+  # Firestore Security Rules — lớp bảo vệ DUY NHẤT của đường đọc realtime.
+  #
+  # Client nói chuyện THẲNG với Firestore, không qua NestJS, nên guard của backend không che
+  # được đường đó: rules là thứ duy nhất chặn một người đọc hội thoại hoặc huy hiệu của người
+  # khác. Bộ test này có từ ADR 0009 nhưng chưa bao giờ chạy ở CI — tức là một rule viết sai
+  # vẫn merge được, và chỉ lộ ra khi có người đi tìm.
+  #
+  # Emulator Firestore là một JAR nên runner phải có JRE; không cài Java thì lệnh chết ngay.
+  # ---------------------------------------------------------------------------
+  rules:
+    name: Firestore Rules (emulator)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: corepack enable
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # `pnpm test:rules` gọi `pnpm exec firebase` — bản ghim trong devDependencies, KHÔNG phải
+      # CLI global hay `@latest`. Cùng một phiên bản trên máy dev và trên CI.
+      #
+      # `--project demo-xeprime-rules`: emulator BẮT BUỘC có project đang hoạt động, mà runner
+      # sạch thì không có `firebase use` nào từ trước và repo không có `.firebaserc`. Tiền tố
+      # `demo-` giữ emulator hoàn toàn offline, và id này phải KHỚP `projectId` trong
+      # `firebase/rules.test.mjs` vì `firebase.json` bật `singleProjectMode`.
+      - run: pnpm test:rules
+
   web:
     name: Web
     runs-on: ubuntu-latest

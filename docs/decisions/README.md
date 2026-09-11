@@ -48,6 +48,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0031](0031-split-feature-api-per-app.md) | Tách tầng gọi API theo app; api-client chỉ còn hạ tầng HTTP | **Accepted; ghi đè 0007 phần tầng feature** |
 | [0032](0032-booking-deposit-insurance-and-owner-lite.md) | Cọc booking bắt buộc, bảo hiểm tại bàn giao và ranh giới Owner Lite | **Accepted; ghi đè một phần 0014/0025/0027/0028/0029** |
 | [0033](0033-money-ledger-and-deposit-allocation.md) | Sổ công nợ "Ví điểm", phân bổ cọc nhiều dòng, định tuyến kết cục | **Accepted; ghi đè một phần 0023/0025/0028** |
+| [0034](0034-badge-delivery-by-projection.md) | Huy hiệu đi bằng bản chiếu, không bằng nhịp hỏi lại | **Accepted; mở rộng 0009 sang projection thứ hai** |
 
 ## Quy tắc thêm ADR
 

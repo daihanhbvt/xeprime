@@ -34,7 +34,9 @@
     "contractsDocuments": "Contracts & documents",
     "dataProtection": "Data protection",
     "changePassword": "Change password",
-    "deleteAccount": "Request account deletion"
+    "deleteAccount": "Request account deletion",
+    "bankAccounts": "Payout accounts",
+    "balance": "Points wallet"
   },
   "manage": {
     "home": "Home",
@@ -67,7 +69,8 @@
     "support": "Help centre",
     "supportCases": "Support requests",
     "openMenu": "Open menu",
-    "fullMenu": "Full menu"
+    "fullMenu": "Full menu",
+    "balance": "Points wallet"
   },
   "manageGroups": {
     "overview": "Overview",

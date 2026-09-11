@@ -14,6 +14,7 @@
  */
 import common from '@xeprime/domain/messages/en/common.json';
 import navigation from '@xeprime/domain/messages/en/navigation.json';
+import notifications from '@xeprime/domain/messages/en/notifications.json';
 import domain from '@xeprime/domain/messages/en/domain.json';
 import errors from '@xeprime/domain/messages/en/errors.json';
 import auth from '@xeprime/domain/messages/en/auth.json';
@@ -46,6 +47,8 @@ import subscription from '@xeprime/domain/messages/en/subscription.json';
 import members from '@xeprime/domain/messages/en/members.json';
 import drivers from '@xeprime/domain/messages/en/drivers.json';
 import maintenance from '@xeprime/domain/messages/en/maintenance.json';
+import bankAccounts from '@xeprime/domain/messages/en/bank-accounts.json';
+import wallet from '@xeprime/domain/messages/en/wallet.json';
 import sellerProfile from '@xeprime/domain/messages/en/seller-profile.json';
 import supportCases from '@xeprime/domain/messages/en/support-cases.json';
 import feePolicies from '@xeprime/domain/messages/en/fee-policies.json';
@@ -55,6 +58,7 @@ import platformSellers from '@xeprime/domain/messages/en/platform-sellers.json';
 const messages = {
   Common: common,
   Navigation: navigation,
+  Notifications: notifications,
   Domain: domain,
   Errors: errors,
   Auth: auth,
@@ -87,6 +91,8 @@ const messages = {
   Members: members,
   Drivers: drivers,
   Maintenance: maintenance,
+  BankAccounts: bankAccounts,
+  Wallet: wallet,
   SellerProfile: sellerProfile,
   SupportCases: supportCases,
   FeePolicies: feePolicies,

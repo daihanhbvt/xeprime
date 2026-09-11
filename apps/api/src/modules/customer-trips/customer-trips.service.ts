@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
@@ -8,6 +8,7 @@ import {
   BOOKING_STATUS,
   BOOKING_STATUS_VALUES,
   CUSTOMER_TRIP_FILTER,
+  WALLET_OWNER_TYPE,
   CUSTOMER_TRIP_FILTER_DEFAULT,
   CUSTOMER_TRIP_FILTER_STAGES,
   CUSTOMER_TRIP_FILTER_VALUES,
@@ -41,7 +42,9 @@ import { currentSubscriptionWhere } from '../../common/plan/feature-state';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { BookingsService } from '../bookings/bookings.service';
+import { BankAccountsService } from '../bank-accounts/bank-accounts.service';
 import { BookingHoldsService } from '../holds/booking-holds.service';
+import { HoldSettlementService } from '../holds/hold-settlement.service';
 import { NotificationService } from '../notification/notification.service';
 import { PricingService } from '../pricing/pricing.service';
 import { SettlementService } from '../bookings/settlement/settlement.service';
@@ -61,6 +64,7 @@ import {
   CustomerTripListItemDto,
   CustomerTripListQueryDto,
   CustomerTripPageDto,
+  ProvideRefundAccountDto,
 } from './dto/customer-trip.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 
@@ -102,6 +106,8 @@ interface TripViewerScope {
  */
 @Injectable()
 export class CustomerTripsService {
+  private readonly logger = new Logger(CustomerTripsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly settlement: SettlementService,
@@ -116,6 +122,13 @@ export class CustomerTripsService {
      * đường phát URL thứ hai ở đây chỉ là cơ hội để quên mất một trong bốn điều kiện đó.
      */
     private readonly files: VehicleContractsService,
+    /**
+     * Chốt kết cục và chuyển trả khoản GIỮ CHỖ — khác `settlement` ở trên, thứ lo cọc thế chấp
+     * giữa khách và gian hàng. Hai loại tiền, hai sổ, hai service.
+     */
+    private readonly holdSettlement: HoldSettlementService,
+    /** Sổ tài khoản nhận tiền của khách — writer duy nhất của `bank_accounts` (ADR 0033). */
+    private readonly bankAccounts: BankAccountsService,
     private readonly notifications: NotificationService,
     private readonly audit: AuditService,
   ) {}
@@ -415,6 +428,74 @@ export class CustomerTripsService {
         tx,
       );
     });
+
+    return this.detail(customerUserId, id);
+  }
+
+  // ── Tài khoản nhận hoàn ───────────────────────────────────────────────────
+
+  /**
+   * Khách khai tài khoản nhận hoàn khoản giữ chỗ — ADR 0033 (Phase 3).
+   *
+   * Đây là mảnh còn thiếu của luồng hoàn tiền: `HoldSettlementService.provideRefundAccount` đã
+   * có từ R3 nhưng không controller nào gọi, trong khi `markRefundPaid` từ chối chuyển khi
+   * thiếu số tài khoản — nên mọi khoản hoàn nằm mãi ở `pending` và admin không bấm được nút nào.
+   *
+   * Khai MỚI thì tài khoản được lưu vào sổ tài khoản của khách luôn: bắt họ gõ lại số tài khoản
+   * ở mỗi lần hoàn là cách chắc chắn nhất để có một chữ số sai trong một lệnh chuyển tiền. Lưu
+   * hỏng (trùng số) KHÔNG được làm hỏng việc khai — khoản hoàn vẫn phải nhận được đích của nó.
+   */
+  async provideRefundAccount(
+    customerUserId: string,
+    id: string,
+    dto: ProvideRefundAccountDto,
+  ): Promise<CustomerTripDetailDto> {
+    /*
+     * Khoản hoàn gắn với HOLD, không với yêu cầu — nên phải đi qua `hold` để lấy đúng id.
+     * Điều kiện `customerUserId` nằm trong CHÍNH câu truy vấn: khách chỉ khai được tài khoản
+     * cho chuyến của mình, và đó là thứ chặn người lạ đổi đích của một lệnh chuyển tiền.
+     */
+    const row = await this.prisma.bookingRequest.findFirst({
+      where: { customerUserId, OR: [{ id }, { bookingId: id }] },
+      select: { hold: { select: { id: true } } },
+    });
+    if (!row?.hold) throw tripNotFound();
+
+    const ownerRef = { type: WALLET_OWNER_TYPE.USER, userId: customerUserId } as const;
+    const saved = dto.bankAccountId
+      ? await this.bankAccounts.resolveForPayout(ownerRef, dto.bankAccountId)
+      : null;
+    if (dto.bankAccountId && !saved) {
+      throw new NotFoundException({
+        code: API_ERROR_CODE.NOT_FOUND,
+        message: 'Không tìm thấy tài khoản ngân hàng đã chọn',
+      });
+    }
+
+    const bankCode = saved?.bankCode ?? dto.bankCode!;
+    const accountNumber = saved?.accountNumber ?? dto.accountNumber!;
+    const accountName = saved?.accountName ?? dto.accountName!;
+
+    await this.holdSettlement.provideRefundAccount(row.hold.id, customerUserId, {
+      bankCode,
+      bankAccountNumber: accountNumber,
+      bankAccountName: accountName,
+    });
+
+    /*
+     * Lưu lại cho lần sau — nhưng KHÔNG để nó làm hỏng việc chính. Trùng số tài khoản (khách
+     * khai lại đúng cái đã có) là chuyện thường và không phải lỗi của họ; khoản hoàn đã có đích
+     * rồi, đó mới là thứ phải thành công.
+     */
+    if (!dto.bankAccountId) {
+      try {
+        await this.bankAccounts.create(ownerRef, { bankCode, accountNumber, accountName });
+      } catch (err) {
+        this.logger.warn(
+          `Không lưu được tài khoản nhận của khách ${customerUserId}: ${String(err)}`,
+        );
+      }
+    }
 
     return this.detail(customerUserId, id);
   }

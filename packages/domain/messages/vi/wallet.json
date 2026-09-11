@@ -1,0 +1,92 @@
+{
+  "title": {
+    "user": "Ví điểm của tôi",
+    "tenant": "Ví điểm gian hàng"
+  },
+  "unit": "điểm",
+  "legalNote": "1 điểm = 1đ · rút về tài khoản ngân hàng · không hết hạn",
+  "balance": {
+    "available": "Rút được ngay",
+    "pending": "Đang chờ chuyển",
+    "total": "Tổng XePrime phải trả",
+    "frozen": "Ví đang tạm khoá. Liên hệ hỗ trợ để biết lý do."
+  },
+  "empty": "Chưa có điểm nào. Điểm vào ví khi bạn được hoàn cọc hoặc khi chuyến hoàn tất.",
+  "loadError": "Không tải được số dư.",
+  "entries": {
+    "title": "Lịch sử điểm",
+    "empty": "Chưa có giao dịch nào.",
+    "balanceAfter": "Còn lại {amount}",
+    "loadMore": "Xem thêm"
+  },
+  "withdraw": {
+    "action": "Rút về ngân hàng",
+    "title": "Rút điểm về tài khoản ngân hàng",
+    "amount": "Số điểm muốn rút",
+    "amountHint": "Rút tối thiểu {min}. Bạn đang có {available} rút được ngay.",
+    "account": "Tài khoản nhận",
+    "accountEmpty": "Bạn chưa có tài khoản nhận tiền. Thêm một tài khoản trước khi rút.",
+    "addAccount": "Thêm tài khoản nhận",
+    "commitment": "XePrime chuyển trong tối đa {days} ngày làm việc kể từ khi duyệt.",
+    "submit": "Gửi yêu cầu rút",
+    "created": "Đã gửi yêu cầu rút. XePrime sẽ chuyển trong thời gian cam kết.",
+    "cancelled": "Đã huỷ yêu cầu rút."
+  },
+  "requests": {
+    "title": "Yêu cầu rút",
+    "empty": "Chưa có yêu cầu rút nào.",
+    "dueBy": "Hạn chuyển: {time}",
+    "paidAt": "Đã chuyển {time}",
+    "rejected": "Bị từ chối: {reason}",
+    "cancel": "Huỷ yêu cầu",
+    "cancelConfirm": "Huỷ yêu cầu rút này?",
+    "cancelHint": "Điểm quay lại số dư rút được ngay."
+  },
+  "admin": {
+    "title": "Yêu cầu rút tiền",
+    "subtitle": "Chuyển khoản thủ công. Cũ nhất lên đầu; lệnh quá hạn cam kết được đánh dấu.",
+    "overdueBanner": "{count} lệnh đã quá hạn cam kết.",
+    "empty": "Không có yêu cầu nào cần xử lý.",
+    "columns": {
+      "code": "Mã",
+      "owner": "Chủ ví",
+      "amount": "Số tiền",
+      "account": "Tài khoản nhận",
+      "age": "Chờ {hours} giờ",
+      "dueBy": "Hạn chuyển",
+      "status": "Trạng thái"
+    },
+    "ownerType": {
+      "user": "Cá nhân",
+      "tenant": "Gian hàng"
+    },
+    "actions": {
+      "approve": "Duyệt",
+      "approved": "Đã duyệt — bắt đầu đếm hạn chuyển.",
+      "markPaid": "Đã chuyển khoản",
+      "reject": "Từ chối",
+      "reverse": "Chuyển hụt / sai tài khoản"
+    },
+    "paid": {
+      "title": "Xác nhận đã chuyển khoản",
+      "bankReference": "Mã giao dịch ngân hàng",
+      "bankReferenceHint": "Bằng chứng đã chuyển — bắt buộc, dùng để đối chiếu về sau.",
+      "submit": "Xác nhận đã chuyển",
+      "done": "Đã ghi nhận chuyển khoản."
+    },
+    "reject": {
+      "title": "Từ chối yêu cầu rút",
+      "reason": "Lý do",
+      "reasonHint": "Chủ ví đọc được câu này.",
+      "submit": "Từ chối",
+      "done": "Đã từ chối. Điểm quay lại số dư của chủ ví."
+    },
+    "reverse": {
+      "title": "Đảo lệnh đã chuyển",
+      "reason": "Vì sao tiền quay lại",
+      "reasonHint": "Chuyển hụt, sai số tài khoản, ngân hàng trả về…",
+      "submit": "Đảo bút toán",
+      "done": "Đã đảo. Điểm quay lại ví chủ ví, cả hai bút toán đều còn trên sổ."
+    }
+  }
+}

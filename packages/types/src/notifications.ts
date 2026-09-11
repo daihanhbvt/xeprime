@@ -67,6 +67,13 @@ export const NOTIFICATION_TYPE = {
   HOLD_REQUESTED: 'hold_requested',
   /** Tiền giữ chỗ đã về, đơn đã tạo — cả hai bên. Webhook phát. */
   HOLD_PAID: 'hold_paid',
+  /**
+   * Sắp hết hạn chuyển giữ chỗ — KHÁCH. Worker phát một lần ở giữa cửa sổ.
+   *
+   * Có loại riêng vì cửa sổ chỉ còn 2 giờ (ADR 0032 điều 2): rút ngắn hạn mà không gọi khách
+   * là biến một luồng "quay lại lúc rảnh" thành một cái bẫy huỷ đơn.
+   */
+  HOLD_EXPIRING: 'hold_expiring',
   /** Quá hạn chuyển giữ chỗ, chỗ đã nhả — cả hai bên. Worker phát. */
   HOLD_EXPIRED: 'hold_expired',
   /** Admin đã chuyển trả khoản giữ chỗ — khách. */
@@ -207,6 +214,10 @@ export const NOTIFICATION_TYPE_META: Readonly<Record<NotificationType, Notificat
   // R3 — khoản giữ chỗ
   [NOTIFICATION_TYPE.HOLD_REQUESTED]: { label: 'Cần chuyển giữ chỗ', color: STATUS_COLOR.WAITING },
   [NOTIFICATION_TYPE.HOLD_PAID]: { label: 'Đã giữ chỗ', color: STATUS_COLOR.SUCCESS },
+  [NOTIFICATION_TYPE.HOLD_EXPIRING]: {
+    label: 'Sắp hết hạn giữ chỗ',
+    color: STATUS_COLOR.WARNING,
+  },
   [NOTIFICATION_TYPE.HOLD_EXPIRED]: { label: 'Hết hạn giữ chỗ', color: STATUS_COLOR.NEUTRAL },
   [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: { label: 'Đã hoàn giữ chỗ', color: STATUS_COLOR.SUCCESS },
   // R3 — hồ sơ người bán
@@ -238,3 +249,17 @@ export const CHAT_NOTIFICATION_COPY = {
   TITLE: 'Bạn có tin nhắn mới',
   BODY: 'Mở XePrime để xem tin nhắn',
 } as const;
+
+/**
+ * Loại thông báo KHÔNG hiện ở chuông — vì đã có một bề mặt khác nói rõ hơn.
+ *
+ * Tin nhắn chat là trường hợp đầu tiên và điển hình: biểu tượng chat đã mang số chưa đọc, và mở
+ * ra là thấy đúng hội thoại nào. Một dòng "Bạn có tin nhắn mới" trong chuông không thêm thông tin
+ * gì, lại đẩy những thông báo THẬT SỰ cần xử lý (yêu cầu thuê sắp hết hạn, giữ chỗ quá hạn) xuống
+ * dưới — chuông đầy tin vô nghĩa là chuông không ai đọc nữa.
+ *
+ * Bản ghi `notifications` VẪN được tạo, có chủ đích: nó là bản ghi chuẩn mà `push_deliveries`
+ * tham chiếu tới, nên tắt nó đi sẽ tắt luôn thông báo đẩy của chat trên app native. Danh sách này
+ * chỉ lọc ở khâu ĐỌC — danh sách chuông và phép đếm chưa đọc.
+ */
+export const BELL_HIDDEN_NOTIFICATION_TYPES = [NOTIFICATION_TYPE.CHAT_MESSAGE_RECEIVED] as const;

@@ -751,5 +751,21 @@
     "fuel_type": "Hiện ở ô \"Nguồn năng lượng\" khi tạo/sửa xe và ở bộ lọc ngoài chợ.",
     "vehicle_feature": "Hiện ở phần \"Tiện ích\" khi tạo/sửa xe và ở bộ lọc ngoài chợ.",
     "vehicle_model": "Hiện ở ô \"Mẫu xe\" sau khi chọn hãng. Mỗi mẫu thuộc một hãng và một loại xe."
+  },
+  "walletEntryKind": {
+    "hold_forfeit": "Bồi thường huỷ chuyến",
+    "hold_release": "Tiền chuyến hoàn tất",
+    "hold_refund": "Hoàn tiền giữ chỗ",
+    "hold_overpay": "Hoàn phần chuyển thừa",
+    "withdrawal": "Rút về ngân hàng",
+    "withdrawal_reversal": "Hoàn lại do rút không thành",
+    "adjustment": "Điều chỉnh"
+  },
+  "withdrawalStatus": {
+    "pending": "Chờ duyệt",
+    "approved": "Đã duyệt, chờ chuyển",
+    "paid": "Đã chuyển",
+    "rejected": "Bị từ chối",
+    "cancelled": "Đã huỷ"
   }
 }

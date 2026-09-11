@@ -1,4 +1,6 @@
 import {
+  BankOutlined,
+  WalletOutlined,
   BookOutlined,
   CalendarOutlined,
   CarOutlined,
@@ -74,6 +76,20 @@ const TRIPS: AccountNavItem = {
   external: true,
 };
 
+const BALANCE: AccountNavItem = {
+  key: 'balance',
+  labelKey: 'account.balance',
+  href: ROUTES.ACCOUNT.BALANCE,
+  icon: WalletOutlined,
+};
+
+const BANK_ACCOUNTS: AccountNavItem = {
+  key: 'bankAccounts',
+  labelKey: 'account.bankAccounts',
+  href: ROUTES.ACCOUNT.BANK_ACCOUNTS,
+  icon: BankOutlined,
+};
+
 const CHANGE_PASSWORD: AccountNavItem = {
   key: 'changePassword',
   labelKey: 'account.changePassword',
@@ -138,12 +154,16 @@ export const OWNER_NAV: readonly AccountNavItem[] = [
  * Ba mục trong mockup 21/08 KHÔNG có ở đây, có chủ đích:
  * - **"Quản lý đơn thuê"** → đã là `/manage/bookings`; thẻ "Gian hàng của tôi" ở đầu trang hồ
  *   sơ (`ShopEntryCard`) dẫn sang.
- * - **"Ví & Ưu đãi"** → bỏ. Số dư chủ xe là sổ công nợ, không phải ví (ADR 0028 điều 8).
+ * - **"Ví & Ưu đãi"** → bỏ. Số dư là sổ công nợ, không phải ví điện tử (ADR 0028 điều 8,
+ *   ADR 0033 điều 1). "Tài khoản nhận tiền" KHÁC hẳn: nó chỉ là nơi khai số tài khoản ngân
+ *   hàng để XePrime chuyển tiền hoàn về, không phải một nơi giữ tiền.
  * - **"Tỉ lệ phản hồi / 5★"** → chỉ số của GIAN HÀNG, thuộc `/manage` và `/shops/[slug]`.
  */
 export const ACCOUNT_NAV: readonly AccountNavItem[] = [
   PROFILE,
   TRIPS,
+  BALANCE,
+  BANK_ACCOUNTS,
   CHANGE_PASSWORD,
   DELETE_ACCOUNT,
 ];

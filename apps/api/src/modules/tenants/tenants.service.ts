@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { newId, Prisma } from '@xeprime/prisma';
+import { markBadgesDirty, newId, Prisma } from '@xeprime/prisma';
 import {
   APPROVAL_ACTION,
   APPROVAL_STATUS,
@@ -104,6 +104,8 @@ export class TenantsService {
           joinedAt: new Date(),
         },
       });
+      // Từ giây này người dùng có thêm một hộp thư công việc — huy hiệu phải biết (ADR 0034).
+      await markBadgesDirty(tx, [userId]);
       await tx.tenantProfile.create({
         data: {
           tenantId: id,

@@ -705,7 +705,8 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `SMTP_PASS` | API key SMTP — **key riêng cho staging**, không dùng chung với production (thu hồi một bên không kéo bên kia) |
 | `SEPAY_API_KEY` | khoá **webhook** trong bảng điều khiển SePay (≥16 ký tự). Trống ⇒ `/sepay/webhook` trả 503 `SEPAY_NOT_CONFIGURED` — fail closed, không giả vờ đã nhận tiền |
 | `R2_ACCESS_KEY_ID` · `R2_SECRET_ACCESS_KEY` | trống ⇒ endpoint upload trả 503, phần còn lại vẫn chạy |
-| `FIREBASE_PRIVATE_KEY` | một dòng, xuống dòng viết `\n` |
+| `FIREBASE_PRIVATE_KEY` | một dòng, xuống dòng viết `\n`. Đây là credential **lúc chạy** (ký custom token, ghi bản chiếu) — không dùng để đẩy rules |
+| `FIREBASE_DEPLOY_CREDENTIALS_JSON` | **Bắt buộc khi `FIRESTORE_ENABLED=true`.** Nguyên file JSON của một service account RIÊNG có quyền quản trị Firestore rules (`roles/firebaserules.admin`). Workflow dùng nó ở step "Đẩy Firestore rules" và **không bao giờ** ghi nó vào `.env` của môi trường. Tách khỏi credential runtime để một lần rò rỉ `.env` không kèm theo quyền sửa rules |
 | `GOOGLE_MAPS_SERVER_KEY` · `GOOGLE_HOLIDAY_API_KEY` | key **server** ⇒ Secret, khác hẳn key embed ở bảng trên |
 | `VPS_HOST` | IP VPS — Secret cho đỡ bị quét, không phải vì nó bí mật thật |
 | `VPS_SSH_KEY` | private key cặp khoá deploy (§3.2) |
@@ -721,6 +722,29 @@ Ngoài ra khai **thêm một bản `NEXT_PUBLIC_*` ở cấp repository** (Setti
 variables → Actions → Variables). Job `build` của `ci.yml` chạy trên PR, nơi không có
 Environment nào — cùng giá trị thì layer cache khớp với lần build thật và tiết kiệm gần trọn
 thời gian build web. Variables của Environment đè lên Variables của repository.
+
+### 9.2b Firestore rules được đẩy TỰ ĐỘNG, trước khi rollout app
+
+Khi `FIRESTORE_ENABLED=true`, job deploy chạy step **"Đẩy Firestore rules"** ngay trước bước SSH
+vào VPS. Thất bại ⇒ **dừng cả lần release**, chưa có container nào bị đổi.
+
+Vì sao nó phải nằm trong workflow: rules là lớp bảo vệ DUY NHẤT của đường đọc realtime — trình
+duyệt nói thẳng với Firestore, không đi qua NestJS. Một bước tay ở cuối quy trình là một bước sẽ
+bị quên, và **khi quên thì không có gì đổ vỡ**: chat và huy hiệu lặng lẽ tụt về REST, chậm hơn
+nhiều, không lỗi nào hiện lên. Đó là lý do nó sống sót lâu như vậy.
+
+Thứ tự có chủ đích — rules lên TRƯỚC image. Rules mới luôn tương thích ngược với app cũ (chúng chỉ
+mở thêm quyền đọc cho collection mà bản cũ không đụng tới); chiều ngược lại thì không.
+
+Ba thứ workflow tự kiểm khi `FIRESTORE_ENABLED=true`, và thiếu thì dừng ngay ở bước dựng env:
+
+1. đủ bộ `FIREBASE_*` phía server và `NEXT_PUBLIC_FIREBASE_*` phía trình duyệt;
+2. `FIREBASE_PROJECT_ID` **khớp** `NEXT_PUBLIC_FIREBASE_PROJECT_ID` — lệch nhau thì trình duyệt
+   nghe project này còn worker ghi vào project kia, mọi tầng đều "chạy" mà không snapshot nào tới;
+3. có `FIREBASE_DEPLOY_CREDENTIALS_JSON`.
+
+Rollback (`workflow_dispatch` + `image_tag`) cũng đẩy rules — rules trong repo ở commit đang
+release là nguồn duy nhất, nên một lần rollback không để lại rules của bản mới hơn.
 
 ### 9.3 Image mang nhãn môi trường — không dùng chéo
 

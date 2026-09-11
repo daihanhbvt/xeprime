@@ -27,13 +27,15 @@ export function useNavBadges(): NavBadgeCounts {
   const { has } = usePermissions();
 
   const isShopScope = Boolean(user) && !user?.platformRole;
-  const { data: chatUnread } = useChatUnreadCount(CHAT_SIDE.SHOP, isShopScope && has(PERMISSION.TENANT_VIEW));
+  // Huy hiệu chat đọc từ `useBadges` — không phát sinh request nào, và cũng không cần gác quyền:
+  // backend suy phạm vi từ membership, người không thuộc gian hàng nào luôn nhận 0.
+  const chatUnread = useChatUnreadCount(CHAT_SIDE.SHOP);
   const { data: pendingRequests } = usePendingBookingRequestCount(
     isShopScope && has(PERMISSION.BOOKING_REQUEST_VIEW),
   );
 
   return {
     [NAV_BADGE.BOOKING_REQUESTS_PENDING]: pendingRequests ?? 0,
-    [NAV_BADGE.CHAT_UNREAD]: chatUnread?.count ?? 0,
+    [NAV_BADGE.CHAT_UNREAD]: isShopScope ? chatUnread : 0,
   };
 }

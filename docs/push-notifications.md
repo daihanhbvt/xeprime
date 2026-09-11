@@ -318,3 +318,6 @@ PHẦN nên truy vấn nóng không chậm đi), nhưng cần một lượt dọ
 - `docs/third-party-keys.md` §6 — lấy credential Firebase.
 - `docs/deployment.md` §9.2 — khai biến ở GitHub Environment.
 - `docs/mobile-module-status.md` — COM-07 và phần còn lại của module Communication.
+- `docs/mobile-badges-notifications-migration.md` — **COM-04**: hợp đồng API và kiến trúc đích
+  cho trung tâm thông báo + huy hiệu trên app native (viết 11/09/2026 sau khi web chuyển sang
+  `GET /me/badges` và bản chiếu `user_badges/{uid}`).

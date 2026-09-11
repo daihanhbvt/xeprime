@@ -25,8 +25,11 @@ import { EmailModule } from './modules/email/email.module';
 import { SepayModule } from './modules/sepay/sepay.module';
 import { FeePoliciesModule } from './modules/fee-policies/fee-policies.module';
 import { HoldsModule } from './modules/holds/holds.module';
+import { BankAccountsModule } from './modules/bank-accounts/bank-accounts.module';
+import { WalletModule } from './modules/wallet/wallet.module';
 import { SellerProfileModule } from './modules/seller-profile/seller-profile.module';
 import { SupportModule } from './modules/support/support.module';
+import { BadgesModule } from './modules/badges/badges.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { FirebaseModule } from './modules/firebase/firebase.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
@@ -99,6 +102,7 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
     EmailModule,
     SepayModule,
     NotificationModule,
+    BadgesModule,
     FirebaseModule,
 
     HealthModule,
@@ -133,6 +137,8 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
     // giữa, giữ diff của contract đọc được.
     FeePoliciesModule,
     HoldsModule,
+    BankAccountsModule,
+    WalletModule,
     SellerProfileModule,
     SupportModule,
   ],

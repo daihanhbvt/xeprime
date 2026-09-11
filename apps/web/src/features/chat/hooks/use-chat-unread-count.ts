@@ -1,10 +1,7 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import type { ChatSide } from '@xeprime/types';
-import { queryKeys } from '@/services/query-keys';
-import { chatApi } from '../api';
-import { useChatRealtime } from '../context/ChatRealtimeContext';
+import { CHAT_SIDE, type ChatSide } from '@xeprime/types';
+import { useBadges } from '@/features/badges/hooks/use-badges';
 
 /**
  * Tổng tin chưa đọc cho badge icon chat — THEO BỀ MẶT.
@@ -13,15 +10,11 @@ import { useChatRealtime } from '../context/ChatRealtimeContext';
  * thư khách, badge sidebar khu quản lý phải đếm inbox gian hàng. Cộng gộp cả hai là bảo chủ shop
  * rằng có 3 tin chưa đọc, họ mở inbox công việc ra và không thấy tin nào.
  *
- * `enabled=false` (vd khu công khai khi chưa đăng nhập) để không gọi API gây 401.
+ * KHÔNG còn request riêng: con số lấy từ `useBadges`, cùng một query mà chuông và biểu tượng chat
+ * đã dùng. Trước đây hook này gọi `/conversations/unread-count?side=…` song song với
+ * `/conversations/unread-summary` — hai request cho một con số vốn đã nằm sẵn trong response kia.
  */
-export function useChatUnreadCount(side: ChatSide, enabled = true) {
-  const { ready } = useChatRealtime();
-  return useQuery({
-    queryKey: queryKeys.chat.unreadCount(side),
-    queryFn: () => chatApi.unreadCount(side),
-    enabled,
-    refetchInterval: ready ? 30_000 : 8_000,
-    refetchOnWindowFocus: true,
-  });
+export function useChatUnreadCount(side: ChatSide): number {
+  const badges = useBadges();
+  return side === CHAT_SIDE.CUSTOMER ? badges.chatCustomer : badges.chatShop;
 }

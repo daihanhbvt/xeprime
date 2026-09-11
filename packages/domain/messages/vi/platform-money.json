@@ -11,7 +11,8 @@
   "tabs": {
     "holds": "Khoản giữ chỗ",
     "refunds": "Chuyển trả",
-    "reconciliation": "Đối chiếu ngày"
+    "reconciliation": "Đối chiếu ngày",
+    "withdrawals": "Yêu cầu rút"
   },
   "filters": {
     "search": "Tìm kiếm",

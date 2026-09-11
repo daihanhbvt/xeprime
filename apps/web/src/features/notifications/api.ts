@@ -1,5 +1,4 @@
 import {
-  apiGet,
   apiPatch,
   apiPost,
   fetchPage,
@@ -32,9 +31,6 @@ export const fetchNotifications = (
     filtersToParams(filters),
     NOTIFICATIONS_DEFAULT_LIMIT,
   );
-
-export const fetchUnreadCount = (): Promise<{ count: number }> =>
-  apiGet<{ count: number }>('/notifications/unread-count');
 
 export const markNotificationRead = (id: string): Promise<{ id: string; readAt: string }> =>
   apiPatch<{ id: string; readAt: string }>(`/notifications/${id}/read`);

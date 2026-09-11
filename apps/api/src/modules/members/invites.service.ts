@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash, randomBytes } from 'node:crypto';
-import { newId, Prisma } from '@xeprime/prisma';
+import { markBadgesDirty, newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   INVITE_STATUS,
@@ -332,6 +332,13 @@ export class InvitesService {
         create: { id: newId(), tenantId: invite.tenantId, userId, ...data },
         update: data,
       });
+
+      /*
+       * Vào gian hàng là ĐỔI PHẠM VI hộp thư công việc của người này: mọi hội thoại chưa đọc sẵn
+       * có của gian hàng lập tức thuộc về họ. Không đánh dấu ở đây thì badge của họ đứng ở 0 cho
+       * tới sự kiện chat kế tiếp — có thể là vài ngày (ADR 0034 điều 4).
+       */
+      await markBadgesDirty(tx, [userId]);
 
       await this.audit.record(
         {

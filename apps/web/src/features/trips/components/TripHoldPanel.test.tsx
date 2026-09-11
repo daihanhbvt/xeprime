@@ -44,7 +44,7 @@ const BASE: Hold = {
 function renderPanel(hold: Hold) {
   return render(
     <NextIntlClientProvider locale="vi" messages={viMessages} timeZone="Asia/Ho_Chi_Minh">
-      <TripHoldPanel hold={hold} />
+      <TripHoldPanel hold={hold} tripId="01TRIPTEST" />
     </NextIntlClientProvider>,
   );
 }
@@ -109,7 +109,7 @@ describe('TripHoldPanel — đã chốt', () => {
     expect(screen.getByText(/mở lại/)).toBeTruthy();
   });
 
-  it('có khoản hoàn ĐANG CHỜ tài khoản ⇒ chỉ đường liên hệ, không im lặng', () => {
+  it('có khoản hoàn ĐANG CHỜ tài khoản ⇒ mời khai NGAY tại chỗ, không đẩy đi hỗ trợ', () => {
     renderPanel({
       ...BASE,
       status: BOOKING_HOLD_STATUS.RELEASED,
@@ -126,6 +126,8 @@ describe('TripHoldPanel — đã chốt', () => {
       },
     });
     expect(screen.getByText(/chờ hoàn/)).toBeTruthy();
+    // Trước ADR 0033 chỗ này chỉ nói "liên hệ hỗ trợ" và luồng hoàn tiền tắc ở đúng đây.
+    expect(screen.getByRole('button', { name: /tài khoản nhận/i })).toBeTruthy();
   });
 
   it('hoàn ĐÃ CHUYỂN ⇒ báo đã hoàn kèm số tiền', () => {

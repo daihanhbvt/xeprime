@@ -201,13 +201,17 @@
     "copyAmount": "Sao chép số tiền",
     "copyCode": "Sao chép nội dung",
     "expires": "Hạn chuyển: {time}. Quá hạn, xe được mở lại cho khách khác.",
-    "freeCancel": "Huỷ trước {time} được hoàn toàn bộ khoản giữ chỗ.",
+    "freeCancel": "Huỷ trước {time} được hoàn 100% số đã thanh toán.",
     "restAtHandover": "Phần tiền thuê còn lại trả trực tiếp chủ xe khi nhận xe.",
     "paid": "Đã giữ chỗ {amount}. Chuyến của bạn đã được chốt.",
     "expired": "Hết hạn chuyển khoản giữ chỗ nên xe đã được mở lại. Bạn có thể đặt lại chuyến khác.",
     "refundPaid": "XePrime đã hoàn {amount} về tài khoản bạn khai.",
     "refundPending": "Đang chờ XePrime chuyển trả {amount}.",
-    "refundNeedsAccount": "Có {amount} chờ hoàn — liên hệ hỗ trợ để cung cấp tài khoản nhận."
+    "refundNeedsAccount": "Có {amount} chờ hoàn — khai tài khoản nhận để XePrime chuyển trả.",
+    "countdownRemaining": "Còn lại để chuyển khoản:",
+    "countdownSegment": "lượt {index}/{total}",
+    "countdownExpired": "Đã hết hạn chuyển khoản",
+    "freeCancelSoon": "Chuyến này nhận xe sát giờ nên cửa sổ huỷ miễn phí ngắn hơn thường lệ — hết {time} là không hoàn nữa."
   },
   "sides": {
     "ariaLabel": "Chọn phía của chuyến",

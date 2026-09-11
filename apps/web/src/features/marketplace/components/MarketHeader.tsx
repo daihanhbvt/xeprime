@@ -33,7 +33,7 @@ const NAV = [
 export function MarketHeader() {
   const t = useTranslations('Navigation.public');
   const { data: user } = useCurrentUser();
-  const chatBadge = useChatBadge(CHAT_SIDE.CUSTOMER, !!user);
+  const chatBadge = useChatBadge(CHAT_SIDE.CUSTOMER);
   const { open } = useAuthModal();
   const logout = useMarketLogout();
   const nextFromHere = useNextFromCurrentPath();

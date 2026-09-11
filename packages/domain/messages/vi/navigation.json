@@ -34,7 +34,9 @@
     "contractsDocuments": "Hợp đồng & Chứng từ",
     "dataProtection": "Chính sách bảo vệ dữ liệu",
     "changePassword": "Đổi mật khẩu",
-    "deleteAccount": "Yêu cầu xoá tài khoản"
+    "deleteAccount": "Yêu cầu xoá tài khoản",
+    "bankAccounts": "Tài khoản nhận tiền",
+    "balance": "Ví điểm"
   },
   "manage": {
     "home": "Trang chủ",
@@ -67,7 +69,8 @@
     "support": "Trung tâm hỗ trợ",
     "supportCases": "Yêu cầu hỗ trợ",
     "openMenu": "Mở menu",
-    "fullMenu": "Menu đầy đủ"
+    "fullMenu": "Menu đầy đủ",
+    "balance": "Ví điểm"
   },
   "manageGroups": {
     "overview": "Tổng quan",

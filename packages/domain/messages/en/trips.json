@@ -201,13 +201,17 @@
     "copyAmount": "Copy amount",
     "copyCode": "Copy reference",
     "expires": "Pay before {time}. After that the car is released to other guests.",
-    "freeCancel": "Cancel before {time} for a full refund of the reservation payment.",
+    "freeCancel": "Cancel before {time} for a full refund of what you paid online.",
     "restAtHandover": "The remaining rental is paid directly to the host at pickup.",
     "paid": "Reserved with {amount}. Your trip is confirmed.",
     "expired": "The payment window closed and the car was released. You can book another trip.",
     "refundPaid": "XePrime refunded {amount} to the account you provided.",
     "refundPending": "Waiting for XePrime to transfer {amount} back to you.",
-    "refundNeedsAccount": "{amount} is waiting to be refunded — contact support with your bank account."
+    "refundNeedsAccount": "{amount} is waiting to be refunded — tell us where to send it.",
+    "countdownRemaining": "Time left to pay:",
+    "countdownSegment": "round {index}/{total}",
+    "countdownExpired": "Payment window closed",
+    "freeCancelSoon": "This trip starts soon, so the free-cancellation window is shorter than usual — no refund after {time}."
   },
   "sides": {
     "ariaLabel": "Choose trip side",

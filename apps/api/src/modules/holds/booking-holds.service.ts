@@ -25,6 +25,7 @@ import {
   maskAccountNumber,
   type AuditActorScope,
   type BookingPriceSnapshot,
+  type FeeLineKey,
   type RentalTermsSnapshot,
   type PaginationMeta,
 } from '@xeprime/types';
@@ -160,6 +161,14 @@ export class BookingHoldsService {
       customerUserId: string | null;
       schedule: HoldSchedule;
       snapshot: BookingPriceSnapshot;
+      /**
+       * Mốc "đặt xe thành công" — lúc chủ xe duyệt, hoặc lúc hệ thống tự nhận (ADR 0032 điều 2).
+       *
+       * CẢ HAI cửa sổ (trả tiền 2 giờ, huỷ miễn phí 4 giờ) đếm xuôi từ đây, nên caller phải
+       * truyền ĐÚNG mốc đã ghi vào `booking_requests.decided_at` — hai mốc lệch nhau là hai
+       * đồng hồ khác nhau cho cùng một chuyến.
+       */
+      acceptedAt: Date;
       /** `null` khi hệ thống tự động nhận chuyến — audit ghi `actorScope: system`. */
       actorUserId: string | null;
     },
@@ -171,7 +180,7 @@ export class BookingHoldsService {
     }
 
     const now = new Date();
-    const windowEnd = holdExpiresAt(now, fees.policy.holdPaymentWindowMinutes);
+    const windowEnd = holdExpiresAt(input.acceptedAt, fees.policy.holdPaymentWindowMinutes);
     /*
      * Hạn chuyển KHÔNG được vượt quá giờ nhận xe: một hold còn "chờ tiền" sau khi xe đáng lẽ đã
      * giao là một chỗ bị khoá vô nghĩa. Kẹp về giờ nhận; nếu giờ nhận đã quá sát (dưới 15 phút)
@@ -186,25 +195,69 @@ export class BookingHoldsService {
         details: { pickupAt: input.schedule.pickupAt.toISOString() },
       });
     }
+    /*
+     * Huỷ miễn phí đếm XUÔI từ `acceptedAt`, kẹp trên bằng giờ nhận xe (ADR 0032 điều 5).
+     * Chuyến sát giờ vì thế có cửa sổ ngắn hơn 4 tiếng — UI phải cảnh báo điều đó TRƯỚC khi
+     * khách trả tiền, không để họ phát hiện ra sau.
+     */
     const freeCancelUntil = holdFreeCancelUntil(
-      input.schedule.pickupAt,
+      input.acceptedAt,
       fees.policy.freeCancelHours,
+      input.schedule.pickupAt,
     );
 
-    const serviceFee = fees.lines.find((l) => l.key === FEE_LINE.SERVICE_FEE);
+    /*
+     * BỐN DÒNG TIỀN của khoản giữ chỗ — `D + S + IV + IP` (ADR 0032 điều 2).
+     *
+     * Một hold nay chứa tiền của NHIỀU người, nên mỗi dòng phải mang tên người hưởng của nó.
+     * Phần chênh do SÀN (`holdMinAmount` nâng tổng lên) được cộng vào dòng CỌC, không vào phí
+     * dịch vụ: sàn tồn tại để một lần chuyển khoản đáng công đối soát, và phần chênh đó vẫn là
+     * tiền thuê của chủ xe chứ không phải doanh thu XePrime (ADR 0033 điều 4).
+     */
+    const lineAmount = (key: FeeLineKey): string =>
+      fees.lines.find((l) => l.key === key)?.amount ?? '0';
+    const serviceFeeAmount = lineAmount(FEE_LINE.SERVICE_FEE);
+    const vehicleInsuranceAmount = lineAmount(FEE_LINE.VEHICLE_PROTECTION);
+    const personalInsuranceAmount = lineAmount(FEE_LINE.TRIP_INSURANCE);
+    const depositAmount = String(
+      Number(fees.holdAmount) -
+        Number(serviceFeeAmount) -
+        Number(vehicleInsuranceAmount) -
+        Number(personalInsuranceAmount),
+    );
+    if (Number(depositAmount) < 0) {
+      // CHECK ở DB cũng chặn; nói rõ ở đây để lỗi không hiện thành một P2010 khó đọc.
+      throw new Error(
+        `createForApprovedRequestWithinTx: bốn dòng tiền vượt quá holdAmount (${fees.holdAmount})`,
+      );
+    }
+
     const allocation = [
+      {
+        key: FEE_LINE.DEPOSIT,
+        beneficiary: FEE_BENEFICIARY.OWNER,
+        bearer: FEE_BEARER.CUSTOMER,
+        amount: depositAmount,
+      },
       {
         key: FEE_LINE.SERVICE_FEE,
         beneficiary: FEE_BENEFICIARY.PLATFORM,
         bearer: FEE_BEARER.CUSTOMER,
-        // Toàn bộ khoản giữ chỗ là phí dịch vụ (R3). Phần chênh do SÀN (nếu có) vẫn là tiền
-        // XePrime — ghi rõ ở đây để đối soát không phải suy.
-        amount: fees.holdAmount,
-        ...(serviceFee && serviceFee.amount !== fees.holdAmount
-          ? { computedFee: serviceFee.amount }
-          : {}),
+        amount: serviceFeeAmount,
       },
-    ];
+      {
+        key: FEE_LINE.VEHICLE_PROTECTION,
+        beneficiary: FEE_BENEFICIARY.INSURER,
+        bearer: FEE_BEARER.CUSTOMER,
+        amount: vehicleInsuranceAmount,
+      },
+      {
+        key: FEE_LINE.TRIP_INSURANCE,
+        beneficiary: FEE_BENEFICIARY.INSURER,
+        bearer: FEE_BEARER.CUSTOMER,
+        amount: personalInsuranceAmount,
+      },
+    ].filter((line) => Number(line.amount) > 0);
 
     const id = newId();
     const code = await this.uniqueCode(tx);
@@ -219,6 +272,10 @@ export class BookingHoldsService {
         purpose: BOOKING_HOLD_PURPOSE.COMMISSION,
         status: BOOKING_HOLD_STATUS.PENDING,
         amount: new Prisma.Decimal(fees.holdAmount),
+        depositAmount: new Prisma.Decimal(depositAmount),
+        serviceFeeAmount: new Prisma.Decimal(serviceFeeAmount),
+        vehicleInsuranceAmount: new Prisma.Decimal(vehicleInsuranceAmount),
+        personalInsuranceAmount: new Prisma.Decimal(personalInsuranceAmount),
         feePolicyId: fees.policy.policyId,
         allocationJson: allocation as unknown as Prisma.InputJsonValue,
         priceSnapshotJson: input.snapshot as unknown as Prisma.InputJsonValue,

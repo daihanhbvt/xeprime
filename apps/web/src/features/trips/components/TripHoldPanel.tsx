@@ -3,11 +3,19 @@
 /* eslint-disable @next/next/no-img-element -- ảnh QR sinh động theo số tiền + mã, không phải
  * asset tĩnh để đi qua next/image; kích thước cố định nên không gây layout shift. */
 
-import { Alert } from 'antd';
+import { Alert, Button } from 'antd';
 import { useTranslations } from 'next-intl';
-import { BOOKING_HOLD_STATUS, HOLD_REFUND_STATUS } from '@xeprime/types';
+import { useState } from 'react';
+import {
+  BOOKING_HOLD_STATUS,
+  HOLD_COUNTDOWN_SEGMENT_MINUTES,
+  HOLD_REFUND_STATUS,
+} from '@xeprime/types';
+import { buildVietQrUrl } from '@xeprime/domain';
+import { Countdown } from '@/components/data-display/Countdown';
 import { CopyButton } from '@/components/data-display/CopyButton';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { RefundAccountDialog } from './RefundAccountDialog';
 import type { CustomerTripDetail } from '../types';
 import styles from './TripHoldPanel.module.css';
 
@@ -28,17 +36,24 @@ type Hold = NonNullable<CustomerTripDetail['hold']>;
  * Mọi mốc đọc từ server (`expiresAt`, `freeCancelUntil`) — không tính lại ở client, vì lệch đồng
  * hồ máy khách sẽ rơi đúng vào lúc tiền phụ thuộc vào nó.
  */
-export function TripHoldPanel({ hold }: { hold: Hold }) {
+export function TripHoldPanel({ hold, tripId }: { hold: Hold; tripId: string }) {
   const t = useTranslations('Trips.hold');
   const fmt = useAppFormat();
 
   const awaiting =
     hold.status === BOOKING_HOLD_STATUS.PENDING || hold.status === BOOKING_HOLD_STATUS.UNDERPAID;
 
-  if (!awaiting) return <HoldOutcome hold={hold} />;
+  /*
+   * Cửa sổ huỷ miễn phí hẹp hơn cửa sổ trả tiền nghĩa là nó đã bị kẹp bởi giờ nhận xe — chuyến
+   * sát giờ. So hai MỐC ĐÃ LƯU của server, không tính lại từ giờ máy khách.
+   */
+  const freeCancelIsShort =
+    new Date(hold.freeCancelUntil).getTime() <= new Date(hold.expiresAt).getTime();
+
+  if (!awaiting) return <HoldOutcome hold={hold} tripId={tripId} />;
 
   const info = hold.paymentInfo;
-  const qrUrl = info.configured ? buildVietQrUrl(info, hold.remainingAmount, hold.code) : null;
+  const qrUrl = buildVietQrUrl(info, hold.remainingAmount, hold.code);
 
   return (
     <section className={styles.panel} aria-label={t('title')}>
@@ -96,8 +111,32 @@ export function TripHoldPanel({ hold }: { hold: Hold }) {
         </dl>
       </div>
 
+      {/*
+        * Đồng hồ chạy, không phải một dòng "hạn lúc 14:35": cửa sổ chỉ còn 2 giờ (ADR 0032 điều
+        * 2), và một mốc giờ tuyệt đối bắt khách tự trừ nhẩm đúng lúc họ cần hành động nhanh.
+        * Chia hai chặng 60 phút — mốc giao giữa hai chặng đúng là lúc worker bắn nhắc.
+        */}
+      <Countdown
+        deadline={hold.expiresAt}
+        urgentMs={HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000}
+        segmentMs={HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000}
+        labels={{
+          remaining: t('countdownRemaining'),
+          expired: t('countdownExpired'),
+          segment: (index, total) => t('countdownSegment', { index, total }),
+        }}
+      />
       <p className={styles.expires}>{t('expires', { time: fmt.dateTime(hold.expiresAt) })}</p>
-      <p className={styles.note}>{t('freeCancel', { time: fmt.dateTime(hold.freeCancelUntil) })}</p>
+      {/*
+        * Huỷ miễn phí đếm xuôi từ lúc chủ xe duyệt và bị kẹp bởi giờ nhận xe, nên chuyến sát giờ
+        * có cửa sổ ngắn hơn 4 tiếng. ADR 0032 điều 5 bắt cảnh báo điều đó TRƯỚC khi khách trả
+        * tiền — không để họ phát hiện ra sau.
+        */}
+      <p className={styles.note}>
+        {t(freeCancelIsShort ? 'freeCancelSoon' : 'freeCancel', {
+          time: fmt.dateTime(hold.freeCancelUntil),
+        })}
+      </p>
       <p className={styles.note}>{t('restAtHandover')}</p>
     </section>
   );
@@ -109,25 +148,54 @@ export function TripHoldPanel({ hold }: { hold: Hold }) {
  * Không im lặng ở bất kỳ trạng thái nào: một khoản tiền đã chuyển mà màn hình không nhắc tới là
  * lý do đầu tiên khách gọi hỗ trợ.
  */
-function HoldOutcome({ hold }: { hold: Hold }) {
+function HoldOutcome({ hold, tripId }: { hold: Hold; tripId: string }) {
   const t = useTranslations('Trips.hold');
+  const tRefund = useTranslations('BankAccounts.refund');
   const fmt = useAppFormat();
+  const [accountOpen, setAccountOpen] = useState(false);
   const refund = hold.refund;
 
   if (refund) {
     const paid = refund.status === HOLD_REFUND_STATUS.PAID;
+    /*
+     * Chưa khai tài khoản thì phải có Ô ĐỂ KHAI ngay tại đây, không phải một dòng bảo khách đi
+     * liên hệ hỗ trợ. Đây chính là chỗ luồng hoàn tiền tắc trước ADR 0033: admin không bấm được
+     * "đã chuyển" vì lệnh chuyển không có đích, mà khách thì không có đường nào cung cấp đích.
+     */
+    const needsAccount = !paid && !refund.hasAccount;
     return (
-      <Alert
-        type={paid ? 'success' : 'info'}
-        showIcon
-        message={
-          paid
-            ? t('refundPaid', { amount: fmt.money(refund.amount) })
-            : refund.hasAccount
-              ? t('refundPending', { amount: fmt.money(refund.amount) })
-              : t('refundNeedsAccount', { amount: fmt.money(refund.amount) })
-        }
-      />
+      <>
+        <Alert
+          type={paid ? 'success' : needsAccount ? 'warning' : 'info'}
+          showIcon
+          message={
+            paid
+              ? t('refundPaid', { amount: fmt.money(refund.amount) })
+              : refund.hasAccount
+                ? t('refundPending', { amount: fmt.money(refund.amount) })
+                : t('refundNeedsAccount', { amount: fmt.money(refund.amount) })
+          }
+          action={
+            needsAccount ? (
+              <Button size="small" type="primary" onClick={() => setAccountOpen(true)}>
+                {tRefund('submit')}
+              </Button>
+            ) : null
+          }
+        />
+        {/*
+          * Chỉ mount khi ĐÃ MỞ: dialog đọc danh sách tài khoản của khách, và một màn chuyến
+          * bất kỳ có khoản hoàn không nên kéo thêm một lượt gọi API mà người dùng chưa xin.
+          */}
+        {needsAccount && accountOpen ? (
+          <RefundAccountDialog
+            tripId={tripId}
+            amount={fmt.money(refund.amount)}
+            open={accountOpen}
+            onClose={() => setAccountOpen(false)}
+          />
+        ) : null}
+      </>
     );
   }
 
@@ -140,22 +208,4 @@ function HoldOutcome({ hold }: { hold: Hold }) {
   return (
     <Alert type="success" showIcon message={t('paid', { amount: fmt.money(hold.paidAmount) })} />
   );
-}
-
-/**
- * Ảnh VietQR quicklink — dịch vụ công khai của VietQR, dựng từ tài khoản + số tiền + nội dung.
- * Cùng cách dựng với màn mua gói (`InvoicePaymentPanel`); giữ một công thức để hai màn không
- * sinh ra hai kiểu QR khác nhau.
- */
-function buildVietQrUrl(
-  info: Hold['paymentInfo'],
-  amount: string,
-  code: string,
-): string {
-  const params = new URLSearchParams({
-    amount,
-    addInfo: code,
-    ...(info.accountName ? { accountName: info.accountName } : {}),
-  });
-  return `https://img.vietqr.io/image/${info.bankCode}-${info.accountNumber}-compact2.png?${params.toString()}`;
 }

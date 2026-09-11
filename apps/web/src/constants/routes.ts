@@ -58,6 +58,10 @@ export const ROUTES = {
     DELETE_ACCOUNT: '/account/delete-account',
     /** Tiền của các chuyến đã thuê — đọc từ `payments`, không phải ví. */
     PAYMENTS: '/account/payments',
+    /** Tài khoản ngân hàng NHẬN tiền hoàn và khoản phải trả (ADR 0033). */
+    BANK_ACCOUNTS: '/account/bank-accounts',
+    /** Ví điểm — sổ công nợ XePrime phải trả, KHÔNG phải ví điện tử (ADR 0033 điều 1). */
+    BALANCE: '/account/balance',
     FAVORITES: '/account/favorites',
     ADDRESSES: '/account/addresses',
     /** Kho giấy tờ tuỳ thân của khách (GPLX/CCCD) — ADR 0014: gian hàng đối chiếu tay. */
@@ -96,6 +100,8 @@ export const ROUTES = {
     BOOKING_REQUESTS: '/manage/booking-requests',
     CUSTOMERS: '/manage/customers',
     FINANCE: '/manage/finance',
+    /** Ví điểm gian hàng — khoản XePrime phải trả (ADR 0033). KHÔNG gác bằng gói. */
+    BALANCE: '/manage/balance',
     RECEIPTS: '/manage/receipts',
     DEBTS: '/manage/debts',
 

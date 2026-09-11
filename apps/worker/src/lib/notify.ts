@@ -1,4 +1,10 @@
-import { enqueuePushDeliveries, newId, type Prisma, type PrismaClient } from '@xeprime/prisma';
+import {
+  enqueuePushDeliveries,
+  markBadgesDirty,
+  newId,
+  type Prisma,
+  type PrismaClient,
+} from '@xeprime/prisma';
 import {
   NOTIFICATION_AUDIENCE,
   notificationDeepLink,
@@ -98,6 +104,7 @@ export async function notifyUser(
   // với `NotificationService.emitToUser`.
   const rows = [row(userId, payload, NOTIFICATION_AUDIENCE.CUSTOMER)];
   await db.notification.createMany({ data: rows });
+  await markBadgesDirty(db, [userId]);
   await enqueue(db, rows, payload);
 }
 
@@ -117,6 +124,10 @@ export async function notifyTenantMembers(
     row(m.userId, { ...payload, tenantId }, NOTIFICATION_AUDIENCE.MANAGE),
   );
   await db.notification.createMany({ data: rows });
+  await markBadgesDirty(
+    db,
+    members.map((m) => m.userId),
+  );
   await enqueue(db, rows, payload);
 }
 
