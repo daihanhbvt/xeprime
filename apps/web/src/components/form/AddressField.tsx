@@ -3,7 +3,7 @@
 import { EnvironmentOutlined } from '@ant-design/icons';
 import { Alert, AutoComplete, Button, Form, Spin } from 'antd';
 import { useTranslations } from 'next-intl';
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import {
   useController,
   type Control,
@@ -126,23 +126,26 @@ export function AddressField<T extends FieldValues>({
   const wards = useWardOptions(provinceCode, wardSearch);
 
   /**
-   * Đổi tỉnh ⇒ mã xã cũ chắc chắn sai. Xoá nó ngay thay vì để backend từ chối lúc lưu: FK tổ hợp
-   * `(ward_code, province_code)` sẽ chặn, nhưng người dùng nhận một lỗi không giải thích được.
+   * Người dùng vừa đổi tỉnh ⇒ mã xã cũ chắc chắn sai, và cái ghim cũ nằm ở tỉnh khác.
    *
-   * Ref chứ không phải state: mốc so sánh khởi tạo bằng CHÍNH giá trị đầu tiên, nên form mở ở
-   * chế độ sửa (đã có sẵn tỉnh + xã) không bị coi là "vừa đổi tỉnh" và không xoá mất xã đã lưu.
+   * Dọn trong TRÌNH XỬ LÝ SỰ KIỆN, không phải trong effect nhìn `provinceCode` đổi: effect
+   * không phân biệt được "người dùng vừa đổi tỉnh" với "form vừa mở ở chế độ sửa và đã có sẵn
+   * tỉnh + xã", nên bản trước phải thêm một `useRef` đọc ngay lúc render để nhớ mốc cũ. Sự kiện
+   * thì biết chắc, và không tạo vòng render phụ nào.
+   *
+   * Xoá xã ngay thay vì để backend từ chối lúc lưu: FK tổ hợp `(ward_code, province_code)` sẽ
+   * chặn, nhưng người dùng nhận một lỗi không giải thích được.
+   *
+   * `pinResetKey` nhích lên để dựng lại phần ghim: state cục bộ của nó (địa chỉ đã đọc ngược,
+   * cảnh báo lệch tỉnh) sạch theo, và nó tự dọn bốn trường ghim trong form. Khởi đầu là `0` nên
+   * lần mở đầu tiên KHÔNG dọn gì — đúng thứ form ở chế độ sửa cần.
    */
-  const lastProvinceRef = useRef(provinceCode);
-  const provinceChanged = lastProvinceRef.current !== provinceCode;
-  useEffect(() => {
-    if (!provinceChanged) return;
-    lastProvinceRef.current = provinceCode;
+  const [pinResetKey, setPinResetKey] = useState(0);
+  const onProvinceChange = () => {
     ward.field.onChange('' as PathValue<T, Path<T>>);
     setWardSearch('');
-    // `ward.field` đổi định danh mỗi lần render — phụ thuộc vào nó sẽ chạy lại effect ở mọi lần
-    // gõ và xoá mất ô xã người dùng vừa chọn.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [provinceChanged, provinceCode]);
+    setPinResetKey((n) => n + 1);
+  };
 
   /** Tên xã + tên tỉnh ĐANG CHỌN — dùng làm ngữ cảnh khi hỏi bản đồ. */
   const locationContext = useMemo(() => {
@@ -179,6 +182,7 @@ export function AddressField<T extends FieldValues>({
         name={names.provinceCode}
         label={t('provinceLabel')}
         required={required}
+        onAfterChange={onProvinceChange}
         showSearch
         options={provinces.options}
         loading={provinces.isLoading}
@@ -221,6 +225,8 @@ export function AddressField<T extends FieldValues>({
 
       {pin ? (
         <AddressLocationSection
+          key={pinResetKey}
+          clearPin={pinResetKey > 0}
           control={control}
           addressLineName={names.addressLine}
           pin={pin}
@@ -254,6 +260,7 @@ function AddressLocationSection<T extends FieldValues>({
   pin,
   provinceCode,
   locationContext,
+  clearPin,
   required,
   disabled,
 }: {
@@ -262,6 +269,8 @@ function AddressLocationSection<T extends FieldValues>({
   pin: AddressPinNames<T>;
   provinceCode: string;
   locationContext: string;
+  /** Lần dựng này đến từ một cú ĐỔI TỈNH — xem `pinResetKey` ở `AddressField`. */
+  clearPin: boolean;
   required?: boolean;
   disabled?: boolean;
 }) {
@@ -345,19 +354,22 @@ function AddressLocationSection<T extends FieldValues>({
       .catch(() => setPinAddress(null));
   };
 
-  /** Đổi tỉnh ⇒ ghim cũ nằm ở tỉnh khác. Bỏ nó thay vì mang theo một toạ độ chắc chắn sai. */
-  const lastProvinceRef = useRef(provinceCode);
-  const provinceChanged = lastProvinceRef.current !== provinceCode;
+  /*
+   * Đổi tỉnh ⇒ ghim cũ nằm ở tỉnh khác. Bỏ nó thay vì mang theo một toạ độ chắc chắn sai.
+   *
+   * `key` ở nơi gọi đã dựng lại component này, nên state CỤC BỘ (`pinAddress`,
+   * `provinceMismatch`) sạch sẵn — ở đây chỉ còn bốn trường ghim trong FORM, thứ sống ngoài
+   * vòng đời component và không được remount dọn hộ. Effect chạy đúng một lần lúc dựng và
+   * không đụng state React nào, nên nó không tạo thêm vòng render.
+   */
   useEffect(() => {
-    if (!provinceChanged) return;
-    lastProvinceRef.current = provinceCode;
+    if (!clearPin) return;
     setPoint(null, null);
     placeId.field.onChange(null as PathValue<T, Path<T>>);
-    setPinAddress(null);
-    setProvinceMismatch(false);
-    // Các `field` của RHF đổi định danh mỗi render; xem ghi chú cùng loại ở `AddressField`.
+    // Chạy MỘT LẦN cho mỗi lần dựng: `clearPin` cố định trong suốt vòng đời của instance này,
+    // và các `field` của RHF đổi định danh mỗi render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [provinceChanged, provinceCode]);
+  }, []);
 
   const source = locationSource.field.value as string | null;
   const needsPinCheck = point != null && source !== LOCATION_SOURCE.MAP_PIN;

@@ -8,12 +8,18 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react';
 import { PROVINCE_CODES, type RouteType, type ServiceType, type VehicleType } from '@xeprime/types';
 import type { RentalMode, RentalRange } from '@/components/form/RentalDateTimeRangeField';
 import { ROUTES } from '@/constants/routes';
-import { readRememberedRentalRange, rememberRentalRange } from '@/lib/rental-range-memory';
+import {
+  rememberRentalRange,
+  rememberedRentalRangeSnapshot,
+  serverRememberedRentalRangeSnapshot,
+  subscribeRememberedRentalRange,
+} from '@/lib/rental-range-memory';
 import { XP_TOKENS } from '@/styles/theme';
 import { applyFilterPatch } from '../filter-params';
 import { useDestinations } from '../hooks/use-destinations';
@@ -135,29 +141,39 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
   /*
    * Lựa chọn thời gian khách đã TỰ CHỌN ở lượt trước → điền vào nháp, khi URL không nói gì.
    *
-   * Chạy trong effect chứ không lúc dựng state ban đầu, và đó là điều kiện bắt buộc: nguồn là
-   * `sessionStorage`/`localStorage`, hai thứ không tồn tại trên server — đọc chúng lúc render
-   * sẽ cho HTML server dựng khác với lần render đầu ở client (lỗi hydration).
+   * Nguồn là `sessionStorage`/`localStorage`, hai thứ không tồn tại trên server, nên đọc thẳng
+   * lúc render sẽ cho HTML server dựng khác lần render đầu ở client (lỗi hydration).
+   * `useSyncExternalStore` được làm ra cho đúng tình huống này: ảnh chụp phía server trả `null`
+   * nên lần render đầu KHỚP, rồi React đọc lại kho thật ngay sau hydration và render thêm một
+   * lần với giá trị đúng. Bản trước làm việc đó bằng một `setState` đồng bộ trong thân effect —
+   * thứ `react-hooks/set-state-in-effect` chặn, vì nó là một vòng render xếp tầng sau khi thẻ
+   * tìm kiếm đã hiện ra với ô trống.
+   */
+  const remembered = useSyncExternalStore(
+    subscribeRememberedRentalRange,
+    rememberedRentalRangeSnapshot,
+    serverRememberedRentalRangeSnapshot,
+  );
+
+  /*
+   * Điền vào nháp NGAY TRONG RENDER — cùng kiểu "điều chỉnh state khi đầu vào đổi" với khối
+   * "URL → nháp" phía trên, nên không có khung hình nào hiện ra mang ô trống rồi mới nhảy số.
    *
-   * Ba guard, mỗi cái chặn một cách làm hỏng ý định của người dùng:
+   * Hai guard:
    *   - `filters.pickupAt && filters.returnAt` ⇒ URL đang nói, và URL luôn thắng (link chia sẻ
    *     phải mở ra đúng thứ người gửi thấy, không bị lựa chọn cũ của người nhận đè lên);
-   *   - `userEditedRef` ⇒ khách đã chạm vào thẻ trong lượt này, đừng ghi đè thứ họ vừa gõ;
-   *   - chỉ chạy MỘT lần (`restoredRef`) ⇒ không giật lại ô mỗi lần URL đổi vì lý do khác.
+   *   - `restoredRemembered` ⇒ đúng MỘT lần, để không giật lại ô sau khi khách đã tự sửa.
+   *
+   * Không cần kiểm `userEditedRef` như bản trước: lần chạy duy nhất của khối này là lần render
+   * ngay sau hydration, lúc khách chưa kịp chạm vào thẻ.
    *
    * Cố ý KHÔNG bật `userEditedRef`: đây là điền sẵn, không phải một thao tác mới. Bật lên là
    * khoảng ngày này bị đóng dấu lên URL trang chủ và trở thành một bộ lọc ẩn mà khách chưa hề
    * bấm "Tìm xe" để xác nhận.
    */
-  const restoredRef = useRef(false);
-  useEffect(() => {
-    if (restoredRef.current) return;
-    restoredRef.current = true;
-    if (userEditedRef.current) return;
-    if (filters.pickupAt && filters.returnAt) return;
-
-    const remembered = readRememberedRentalRange();
-    if (!remembered) return;
+  const [restoredRemembered, setRestoredRemembered] = useState(false);
+  if (!restoredRemembered && remembered && !(filters.pickupAt && filters.returnAt)) {
+    setRestoredRemembered(true);
     setDraft((prev) => ({
       ...prev,
       rental: {
@@ -166,8 +182,7 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
         mode: remembered.mode,
       },
     }));
-    // Chỉ chạy sau lần mount đầu tiên; `filters` đọc qua ref của chính lần chạy đó là đủ.
-  }, [filters.pickupAt, filters.returnAt]);
+  }
 
   /*
    * Nháp → URL, **chỉ khi chính người dùng chạm vào thẻ tìm kiếm**.

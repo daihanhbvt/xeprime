@@ -67,15 +67,29 @@ export function MapPinPicker({
    * đóng gói giá trị của lần render đầu.
    */
   const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+  /*
+   * Gán trong effect chứ không lúc render: ghi vào ref giữa chừng một lần render làm hàm render
+   * hết thuần tuý — React 19 có quyền bỏ dở và dựng lại lần render đó, và `react-hooks/refs-in-render`
+   * chặn đúng chỗ đó. Không có mảng phụ thuộc: chạy sau MỌI lần render, nên listener luôn đọc
+   * được `onChange` của lần render gần nhất.
+   */
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
 
-  const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'unavailable'>('idle');
+  /*
+   * Khởi tạo thẳng ở `loading` thay vì `idle` rồi `setStatus('loading')` ngay đầu effect (thứ
+   * `react-hooks/set-state-in-effect` chặn, vì nó thêm một vòng render trước cả khi bản đồ kịp
+   * bắt đầu tải). Hai trạng thái đó vốn hiện RA cùng một thứ — phần dưới chỉ phân biệt `ready`
+   * và `unavailable` — nên gộp chúng không đổi gì trên màn hình, kể cả nhánh `disabled` (effect
+   * dừng sớm, ô ở nguyên spinner đúng như trước).
+   */
+  const [status, setStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading');
   const interactive = isInteractiveMapConfigured();
 
   useEffect(() => {
     if (!interactive || disabled) return;
     let cancelled = false;
-    setStatus('loading');
 
     void loadGoogleMaps().then((api) => {
       if (cancelled) return;

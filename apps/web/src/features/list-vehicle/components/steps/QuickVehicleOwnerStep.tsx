@@ -347,12 +347,14 @@ export function QuickVehicleOwnerStep({ steps, source, onCreated }: QuickVehicle
         ghi `users.phone` sau khi xác thực xong. Viết bản thứ hai ở đây là hai luồng OTP khác
         nhau cho cùng một việc. Hộp render qua portal nên nằm ngoài `<form>` là đúng chỗ.
       */}
-      <ContactVerifyModal
-        channel={CONTACT_CHANNEL.PHONE}
-        open={verifyOpen}
-        onClose={() => setVerifyOpen(false)}
-        current={phone}
-      />
+      {verifyOpen ? (
+        <ContactVerifyModal
+          channel={CONTACT_CHANNEL.PHONE}
+          open
+          onClose={() => setVerifyOpen(false)}
+          current={phone}
+        />
+      ) : null}
     </div>
   );
 }
