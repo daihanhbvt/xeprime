@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { appWallClockToIso, toAppTz, type Dayjs } from '@/lib/datetime';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildBusyDayIndex } from '@/lib/rental-busy';
 
@@ -275,7 +275,25 @@ describe('RentalRangePanel — độc lập với múi giờ máy', () => {
   const HOST_TIME_ZONES = ['Asia/Ho_Chi_Minh', 'UTC', 'America/New_York'] as const;
   const ORIGINAL_TZ = process.env.TZ;
 
+  /**
+   * GHIM đồng hồ, đừng để test chạy theo ngày thật.
+   *
+   * Panel vô hiệu hoá mọi ngày trước hôm nay (`disabled: { before: nowInAppTz().startOf('day') }`).
+   * Ba test dưới đây dùng mốc cứng 05/09 và 12/09 năm 2026, nên tới 13/09 chúng tự đỏ mà không ai
+   * sửa gì: ô lịch bị khoá, `fireEvent.click` không làm gì, `onChange` không bao giờ chạy và
+   * `lastChange` đọc `[0]` của `undefined`. Đã xảy ra thật, chặn mọi PR mở trong ngày 14/09/2026.
+   *
+   * Ghim chứ không đổi sang ngày tương đối: bài test này kiểm MÚI GIỜ, và một mốc cố định mới là
+   * thứ nó cần — ngày tương đối sẽ đổi cả tháng/năm theo lúc chạy và làm phép so chuỗi ISO ở cuối
+   * mất luôn ý nghĩa.
+   */
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-09-01T00:00:00+07:00'));
+  });
+
   afterEach(() => {
+    vi.useRealTimers();
     process.env.TZ = ORIGINAL_TZ;
   });
 

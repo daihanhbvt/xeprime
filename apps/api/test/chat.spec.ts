@@ -1,7 +1,6 @@
 import type { ConfigService } from '@nestjs/config';
 import { computeUserBadges, createPrismaClient, newId } from '@xeprime/prisma';
 import {
-  CHAT_NOTIFICATION_COPY,
   CHAT_SIDE,
   MEMBERSHIP_STATUS,
   NOTIFICATION_TARGET_TYPE,
@@ -508,16 +507,38 @@ describe('ChatService — thông báo cho phía đối diện', () => {
     expect((await chatNotifications(staffId)).length).toBe(staffBefore);
   });
 
-  maybe('nội dung tin KHÔNG lọt vào thông báo, và đích là đúng hội thoại', async () => {
-    const secret = `Số tài khoản của tôi là ${newId()}`;
-    await chat.sendMessage(customerId, conversationId, { text: secret });
+  /**
+   * Từ 14/09/2026 thông báo MANG nội dung tin và lấy TÊN phía gửi làm tiêu đề (quyết định sản
+   * phẩm — `docs/push-notifications.md` §5). Trước đó cả hai trường đều là câu chung.
+   */
+  maybe('tiêu đề là tên phía gửi, nội dung là câu tin, đích là đúng hội thoại', async () => {
+    const text = 'Giá 30k 1 ngày';
+    await chat.sendMessage(customerId, conversationId, { text });
 
     const latest = (await chatNotifications(ownerId)).at(-1);
-    expect(latest?.title).toBe(CHAT_NOTIFICATION_COPY.TITLE);
-    expect(latest?.body).toBe(CHAT_NOTIFICATION_COPY.BODY);
-    expect(latest?.body).not.toContain(secret);
+    // Khách gửi ⇒ gian hàng thấy TÊN KHÁCH, không phải tên gian hàng của chính mình.
+    expect(latest?.title).toBe('Khách');
+    expect(latest?.body).toBe(text);
     expect(latest?.targetType).toBe(NOTIFICATION_TARGET_TYPE.CONVERSATION);
     expect(latest?.targetId).toBe(conversationId);
+    /*
+     * Người nhận ở đây là CHỦ SHOP, nên đích phải là inbox gian hàng.
+     *
+     * Không phải chuyện thẩm mỹ: `resolveAccess(userId, id, 'customer')` bỏ qua nhánh membership
+     * khi `expected === CUSTOMER`, nên một đích `/chat/:id` sẽ mở ra "Bạn không có quyền truy cập
+     * hội thoại này" cho đúng nửa số người nhận. Cùng `targetId`, hai địa chỉ — và `audience` là
+     * thứ phân biệt (`emitToTenantMembers` → MANAGE, `emitToUser` → CUSTOMER).
+     */
+    expect((latest?.dataJson as { url: string }).url).toBe(`/manage/chat/${conversationId}`);
+  });
+
+  /** Nửa còn lại của cặp trên: cùng hội thoại, nhưng KHÁCH nhận thì đích là hộp thư khách. */
+  maybe('shop trả lời → đích của khách là /chat/:id, không phải inbox gian hàng', async () => {
+    await chat.sendMessage(staffId, conversationId, { text: 'Dạ đúng rồi ạ' });
+
+    const latest = (await chatNotifications(customerId)).at(-1);
+    // Shop gửi ⇒ khách thấy TÊN GIAN HÀNG, không phải tên nhân viên trực chat.
+    expect(latest?.title).toBe('Shop chat');
     expect((latest?.dataJson as { url: string }).url).toBe(`/chat/${conversationId}`);
   });
 

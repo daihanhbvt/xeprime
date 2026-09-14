@@ -49,6 +49,7 @@ import {
   PlatformHoldRefundDto,
   PlatformHoldRefundListQueryDto,
 } from './dto/hold.dto';
+import { formatMoneyVndVi } from '@xeprime/domain';
 
 /** Lịch đã chốt lúc duyệt — snapshot lên hold để lúc tiền về tạo đơn bằng đúng con số này. */
 export interface HoldSchedule {
@@ -326,7 +327,7 @@ export class BookingHoldsService {
         {
           type: NOTIFICATION_TYPE.HOLD_REQUESTED,
           title: 'Chủ xe đã duyệt — chuyển khoản giữ chỗ để chốt chuyến',
-          body: `${input.vehicleName} · giữ chỗ ${Number(fees.holdAmount).toLocaleString('vi-VN')}đ · nội dung ${code}`,
+          body: `${input.vehicleName} · giữ chỗ ${formatMoneyVndVi(fees.holdAmount.toString())} · nội dung ${code}`,
           tenantId: input.tenantId,
           targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
           targetId: input.requestId,

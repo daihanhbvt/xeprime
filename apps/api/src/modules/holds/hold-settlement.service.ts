@@ -31,6 +31,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { WalletService } from '../wallet/wallet.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
+import { formatMoneyVndVi } from '@xeprime/domain';
 
 /**
  * CHỐT KẾT CỤC của một khoản giữ chỗ và ghi nhận HOÀN — ADR 0028 điều 6 và 8 (R3).
@@ -376,7 +377,7 @@ export class HoldSettlementService {
           {
             type: NOTIFICATION_TYPE.HOLD_REFUND_PAID,
             title: 'Đã hoàn khoản giữ chỗ',
-            body: `XePrime đã chuyển trả ${refund.amount.toFixed(0)}đ (mã ${refund.hold.code}).`,
+            body: `XePrime đã chuyển trả ${formatMoneyVndVi(refund.amount.toString())} (mã ${refund.hold.code}).`,
             tenantId: refund.tenantId,
             /*
              * KHÔNG lùi về `hold.id` khi chưa có đơn: từ 10/09 thông báo có đích bấm được, và
