@@ -9,6 +9,7 @@ import {
 import {
   NOTIFICATION_AUDIENCE,
   androidChannelFor,
+  chatNotificationCopy,
   notificationDeepLink,
   pushCollapseKey,
   pushDataPayload,
@@ -46,15 +47,41 @@ describe('notificationDeepLink', () => {
     ).toBe('/manage/requests');
   });
 
-  it('hội thoại có MỘT địa chỉ cho cả hai bề mặt', () => {
-    for (const audience of [NOTIFICATION_AUDIENCE.CUSTOMER, NOTIFICATION_AUDIENCE.MANAGE]) {
-      expect(
-        notificationDeepLink(
-          { targetType: NOTIFICATION_TARGET_TYPE.CONVERSATION, targetId: 'CV1' },
-          audience,
-        ),
-      ).toBe('/chat/CV1');
-    }
+  /**
+   * Hội thoại có HAI địa chỉ, và đó là chuyện sống còn chứ không phải thẩm mỹ:
+   * `resolveAccess(userId, id, 'customer')` từ chối thẳng một nhân viên gian hàng, nên một đích
+   * dùng chung sẽ mở ra màn "không có quyền" cho đúng nửa số người nhận.
+   */
+  it('hội thoại dẫn về ĐÚNG hộp thư của từng bề mặt', () => {
+    expect(
+      notificationDeepLink(
+        { targetType: NOTIFICATION_TARGET_TYPE.CONVERSATION, targetId: 'CV1' },
+        NOTIFICATION_AUDIENCE.CUSTOMER,
+      ),
+    ).toBe('/chat/CV1');
+
+    expect(
+      notificationDeepLink(
+        { targetType: NOTIFICATION_TARGET_TYPE.CONVERSATION, targetId: 'CV1' },
+        NOTIFICATION_AUDIENCE.MANAGE,
+      ),
+    ).toBe('/manage/chat/CV1');
+  });
+
+  it('hội thoại thiếu id thì lùi về đúng hộp thư của bề mặt đó', () => {
+    expect(
+      notificationDeepLink(
+        { targetType: NOTIFICATION_TARGET_TYPE.CONVERSATION, targetId: null },
+        NOTIFICATION_AUDIENCE.CUSTOMER,
+      ),
+    ).toBe('/chat');
+
+    expect(
+      notificationDeepLink(
+        { targetType: NOTIFICATION_TARGET_TYPE.CONVERSATION, targetId: null },
+        NOTIFICATION_AUDIENCE.MANAGE,
+      ),
+    ).toBe('/manage/chat');
   });
 
   it('thiếu targetId thì lùi về danh sách, không dựng "/trips/undefined"', () => {
@@ -199,5 +226,56 @@ describe('pushDataPayload', () => {
       url: null,
     });
     expect(PUSH_DATA_KEY.URL in data).toBe(false);
+  });
+});
+
+describe('chatNotificationCopy', () => {
+  const base = { senderName: 'Đà Nẵng Prime', text: 'Giá 30k 1 ngày', attachmentCount: 0, messageType: 'text' };
+
+  it('tiêu đề là TÊN phía gửi, nội dung là chính câu tin', () => {
+    expect(chatNotificationCopy(base)).toEqual({
+      title: 'Đà Nẵng Prime',
+      body: 'Giá 30k 1 ngày',
+    });
+  });
+
+  /**
+   * Tên rỗng KHÔNG được biến thành một tiêu đề trống hay `undefined` trên khay — lùi về câu
+   * chung, thứ vẫn nói đúng việc đã xảy ra.
+   */
+  it('không có tên thì lùi về câu chung, nội dung vẫn giữ', () => {
+    expect(chatNotificationCopy({ ...base, senderName: '   ' })).toEqual({
+      title: 'Bạn có tin nhắn mới',
+      body: 'Giá 30k 1 ngày',
+    });
+  });
+
+  it('tin dài bị cắt ở ranh giới từ, có dấu lược', () => {
+    const long = 'xe '.repeat(80).trim();
+    const { body } = chatNotificationCopy({ ...base, text: long });
+    expect(body.length).toBeLessThanOrEqual(141);
+    expect(body.endsWith('…')).toBe(true);
+    // Cắt giữa từ đọc như lỗi hiển thị: ký tự trước dấu lược không được là một từ dở dang.
+    expect(body).not.toMatch(/x…$/);
+  });
+
+  it('tin chỉ có đính kèm mô tả theo LOẠI và SỐ LƯỢNG', () => {
+    expect(chatNotificationCopy({ ...base, text: null, attachmentCount: 1, messageType: 'image' }).body).toBe(
+      'Đã gửi một ảnh',
+    );
+    expect(chatNotificationCopy({ ...base, text: null, attachmentCount: 3, messageType: 'image' }).body).toBe(
+      'Đã gửi 3 ảnh',
+    );
+    expect(chatNotificationCopy({ ...base, text: null, attachmentCount: 1, messageType: 'file' }).body).toBe(
+      'Đã gửi một tệp',
+    );
+  });
+
+  /** Khoảng trắng thừa ở hai đầu là chuyện thường của ô nhập — không để nó thành nội dung. */
+  it('bỏ khoảng trắng thừa; chuỗi toàn khoảng trắng tính là KHÔNG có chữ', () => {
+    expect(chatNotificationCopy({ ...base, text: '  ok bạn  ' }).body).toBe('ok bạn');
+    expect(
+      chatNotificationCopy({ ...base, text: '   ', attachmentCount: 1, messageType: 'image' }).body,
+    ).toBe('Đã gửi một ảnh');
   });
 });

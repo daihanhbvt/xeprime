@@ -17,7 +17,6 @@ import {
 } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
-  CHAT_NOTIFICATION_COPY,
   CHAT_SIDE,
   CONVERSATION_STATUS,
   MEMBERSHIP_STATUS,
@@ -32,6 +31,7 @@ import {
   type PaginationMeta,
   type SenderType,
 } from '@xeprime/types';
+import { chatNotificationCopy } from '@xeprime/domain';
 // CONVERSATION_STATUS.OPEN (misc.ts) — hội thoại mới mặc định "open".
 import { NotificationService } from '../notification/notification.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -437,7 +437,11 @@ export class ChatService {
           });
         }
 
-        await this.notifyOtherSide(tx, conversation, side, userId);
+        await this.notifyOtherSide(tx, conversation, side, userId, {
+          text,
+          attachmentCount: attachments.length,
+          messageType,
+        });
 
         /*
          * Badge đổi cho CẢ HAI phía: phía đối diện +1, phía người gửi về 0. Ghi một dòng tín hiệu
@@ -582,14 +586,30 @@ export class ChatService {
    */
   private async notifyOtherSide(
     tx: Prisma.TransactionClient,
-    conversation: { id: string; tenantId: string; customerUserId: string | null },
+    conversation: ConversationAccessRow,
     senderSide: ChatSide,
     senderUserId: string,
+    message: { text: string | null; attachmentCount: number; messageType: string },
   ): Promise<void> {
+    /*
+     * Tiêu đề là tên PHÍA GỬI, không phải tên người gửi cụ thể: khách thấy tên gian hàng, gian
+     * hàng thấy tên khách. Người trực chat đổi ca là chuyện nội bộ của gian hàng — khách không
+     * nên thấy một cái tên lạ mỗi lần, và danh tính từng nhân viên không cần rời khỏi hệ thống.
+     */
+    const copy = chatNotificationCopy({
+      senderName:
+        senderSide === CHAT_SIDE.CUSTOMER
+          ? (conversation.customer?.displayName ?? null)
+          : (conversation.tenant?.name ?? null),
+      text: message.text,
+      attachmentCount: message.attachmentCount,
+      messageType: message.messageType,
+    });
+
     const payload = {
       type: NOTIFICATION_TYPE.CHAT_MESSAGE_RECEIVED,
-      title: CHAT_NOTIFICATION_COPY.TITLE,
-      body: CHAT_NOTIFICATION_COPY.BODY,
+      title: copy.title,
+      body: copy.body,
       tenantId: conversation.tenantId,
       targetType: NOTIFICATION_TARGET_TYPE.CONVERSATION,
       targetId: conversation.id,
@@ -655,13 +675,22 @@ export class ChatService {
     userId: string,
     conversationId: string,
     expected?: ChatSide,
-  ): Promise<{
-    conversation: { id: string; tenantId: string; customerUserId: string | null };
-    side: ChatSide;
-  }> {
+  ): Promise<{ conversation: ConversationAccessRow; side: ChatSide }> {
+    /*
+     * Tên hai phía đi kèm luôn: thông báo tin nhắn lấy TÊN NGƯỜI GỬI làm tiêu đề
+     * (`chatNotificationCopy`), và nạp chúng ở đây thì `sendMessage` không phải bắn thêm một
+     * truy vấn nữa BÊN TRONG transaction ghi tin — chỗ mà mọi mili giây đều nằm trên đường
+     * giữ khoá.
+     */
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
-      select: { id: true, tenantId: true, customerUserId: true },
+      select: {
+        id: true,
+        tenantId: true,
+        customerUserId: true,
+        tenant: { select: { name: true } },
+        customer: { select: { displayName: true } },
+      },
     });
     if (!conversation) {
       throw new NotFoundException({
@@ -729,6 +758,21 @@ export class ChatService {
     }
   }
 }
+
+/**
+ * Hội thoại ở dạng tối thiểu cho kiểm quyền — cộng TÊN hai phía.
+ *
+ * Tên có mặt vì một lý do duy nhất: dựng tiêu đề thông báo tin nhắn. Khai tường minh thay vì
+ * `ConversationGetPayload` của `CONVERSATION_SELECT` (bản đầy đủ, có logo/ảnh xe/đếm chưa đọc)
+ * để không ai vô tình dựa vào một trường mà truy vấn này không nạp.
+ */
+type ConversationAccessRow = {
+  id: string;
+  tenantId: string;
+  customerUserId: string | null;
+  tenant: { name: string } | null;
+  customer: { displayName: string | null } | null;
+};
 
 type ConversationRow = Prisma.ConversationGetPayload<{ select: typeof CONVERSATION_SELECT }>;
 type MessageRow = Prisma.MessageGetPayload<{ select: typeof MESSAGE_SELECT }>;

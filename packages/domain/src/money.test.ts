@@ -3,6 +3,7 @@ import {
   absoluteMoney,
   compactMoneyParts,
   formatMoneyVnd,
+  formatMoneyVndVi,
   formatNumberInput,
   normalizeNumberInput,
   parseNumberInput,
@@ -206,5 +207,29 @@ describe('parseNumberInput', () => {
 
   it('đi qua normalize rồi parse thì không mất chữ số nào', () => {
     expect(parseNumberInput(normalizeNumberInput('2.8'))).toBe(2.8);
+  });
+});
+
+/**
+ * Câu chữ do SERVER sinh (thông báo đẩy, email) — nơi không có ngữ cảnh locale của người đọc.
+ *
+ * Có bài test riêng vì trước đây mỗi nơi phát thông báo tự xoay xở: ba chỗ dùng
+ * `Number(x).toLocaleString('vi-VN')`, chỗ thứ tư dùng `x.toFixed(0)` và in ra `500000đ` không
+ * dấu phân cách. Cột mốc ở đây là để một con số KHÔNG dấu phân cách không lọt lại lần nữa.
+ */
+describe('formatMoneyVndVi — tiền trong câu chữ server sinh', () => {
+  it('luôn có dấu phân cách nghìn kiểu Việt', () => {
+    expect(formatMoneyVndVi('500000')).toBe('500.000 ₫');
+    expect(formatMoneyVndVi('1234567')).toBe('1.234.567 ₫');
+  });
+
+  it('nhận thẳng chuỗi của Decimal, bỏ phần lẻ bằng 0', () => {
+    expect(formatMoneyVndVi('500000.00')).toBe('500.000 ₫');
+    expect(formatMoneyVndVi('1234.50')).toBe('1.234,50 ₫');
+  });
+
+  it('rỗng/null ra chuỗi rỗng — câu chữ tự lo phần còn lại', () => {
+    expect(formatMoneyVndVi(null)).toBe('');
+    expect(formatMoneyVndVi(undefined)).toBe('');
   });
 });
