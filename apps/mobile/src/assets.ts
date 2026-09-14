@@ -1,11 +1,24 @@
-import logo from '../assets/images/logo.jpg';
+import logo from '../assets/images/xeprime-logo.png';
+import logoMark from '../assets/images/xeprime-mark.png';
 // SINH TỰ ĐỘNG từ `apps/web/public/illustrations/*.svg` — xem `scripts/sync-brand-art.mjs`.
 import shopOnboarding from '../assets/images/shop-onboarding.png';
 
 /**
  * Ảnh tĩnh gom một chỗ vì Metro nội suy đường dẫn lúc build — không dựng động được.
  *
- * KHÔNG nằm trong `theme/`: đây là tài nguyên, không phải design token. Icon/splash của app
- * khai ở `app.json` và phải là PNG vuông (logo hiện tại là JPG 1024×768, chỉ dùng trong UI).
+ * KHÔNG nằm trong `theme/`: đây là tài nguyên, không phải design token.
+ *
+ * Hai file logo, hai vai trò khác nhau chứ không phải hai kích thước của một thứ — giống hệt
+ * `apps/web/src/components/brand/Logo.tsx`, cùng artwork, cùng tên file:
+ * - `xeprime-logo.png` — lockup ngang (biểu tượng + chữ "xe prime"), dùng ở chỗ có bề ngang.
+ *   Nó ĐÃ chứa tên thương hiệu, nên đừng đặt thêm `APP_NAME` cạnh nó.
+ * - `xeprime-mark.png` — biểu tượng vuông, dùng khi cạnh logo còn chữ khác (tên gian hàng ở
+ *   `ManageDrawer`) hoặc khi nền không hợp với lockup.
  */
-export const images = { logo, shopOnboarding } as const;
+export const images = { logo, logoMark, shopOnboarding } as const;
+
+/** Tỉ lệ THẬT của file (rộng ÷ cao) — sai số ở đây là logo bị bóp méo. */
+export const LOGO_RATIO = 1024 / 331;
+
+/** Bề ngang của lockup ở một chiều cao cho trước. Dùng thay cho việc gõ tay hai con số. */
+export const logoWidth = (height: number): number => Math.round(height * LOGO_RATIO);

@@ -1,7 +1,12 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
-import { validateDocumentUpload, type UploadRejection } from '@xeprime/types';
+import {
+  validateChatAttachment,
+  validateDocumentUpload,
+  type ChatAttachmentRejection,
+  type UploadRejection,
+} from '@xeprime/types';
 import type { UploadMeta, UploadPresign } from '@/api/vehicles/api';
 
 /**
@@ -118,6 +123,20 @@ export class UploadRejectedError extends Error {
   }
 }
 
+/**
+ * Đính kèm chat bị TỪ CHỐI tại máy, trước khi presign.
+ *
+ * Lớp riêng chứ không dùng `UploadRejectedError`: chat có bộ hằng và bộ CÂU riêng
+ * (`Chat.attachmentType` / `Chat.attachmentTooLarge`), còn `UploadRejectedError` mang mã của
+ * `Errors.upload.*`. Trộn hai bộ là ánh xạ chéo mã sang câu, và đó là chỗ chữ đi lạc.
+ */
+export class ChatAttachmentRejectedError extends Error {
+  constructor(readonly rejection: ChatAttachmentRejection) {
+    super(`Chat attachment rejected: ${rejection}`);
+    this.name = 'ChatAttachmentRejectedError';
+  }
+}
+
 /** Bước nào của luồng tải ảnh đã ngã — đi kèm mọi lỗi ném ra từ đây. */
 export type ImageUploadStage = 'presign' | 'upload';
 
@@ -132,6 +151,28 @@ export class ImageUploadError extends Error {
 }
 
 /**
+ * PUT một blob đã đo lên URL presign của R2.
+ *
+ * `fetch` TRẦN chứ không phải client của app: `uploadUrl` là host của R2, gửi kèm
+ * `Authorization` của XePrime tới đó là rò token sang một bên thứ ba. Không log `uploadUrl` —
+ * nó là URL đã ký, tức một giấy phép ghi có hiệu lực vài phút.
+ */
+async function putObject(uploadUrl: string, body: Blob, contentType: string): Promise<void> {
+  try {
+    const response = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': contentType },
+      body,
+    });
+    if (!response.ok) {
+      throw new Error(`R2 PUT ${response.status} ${response.statusText}`);
+    }
+  } catch (error) {
+    throw new ImageUploadError('upload', error);
+  }
+}
+
+/**
  * Tải MỘT ảnh lên R2 — hai bước, đúng thứ tự.
  *
  * ```
@@ -139,9 +180,8 @@ export class ImageUploadError extends Error {
  * PUT  <uploadUrl>             ảnh lên R2, KHÔNG qua API
  * ```
  *
- * Bước PUT đi THẲNG tới bucket: đẩy ảnh qua API nghĩa là mỗi tấm chiếm một tiến trình Node
- * trong vài giây. `fetch` trần chứ không phải client của app — `uploadUrl` là URL của R2, gửi
- * kèm `Authorization` của XePrime tới đó là rò token sang một host khác.
+ * Bước PUT đi THẲNG tới bucket ({@link putObject}): đẩy ảnh qua API nghĩa là mỗi tấm chiếm một
+ * tiến trình Node trong vài giây.
  *
  * ⚠️ **Mở file RA TRƯỚC, rồi mới xin URL** — theo đúng số byte vừa đọc được. Server ký
  * `Content-Length` VÀO URL (`content-length` nằm trong `X-Amz-SignedHeaders`), nên số khai lúc
@@ -169,18 +209,7 @@ export async function uploadImageToR2(
     throw new ImageUploadError('presign', error);
   }
 
-  try {
-    const response = await fetch(ticket.uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': image.contentType },
-      body,
-    });
-    if (!response.ok) {
-      throw new Error(`R2 PUT ${response.status} ${response.statusText}`);
-    }
-  } catch (error) {
-    throw new ImageUploadError('upload', error);
-  }
+  await putObject(ticket.uploadUrl, body, image.contentType);
 
   return ticket.publicUrl;
 }
@@ -291,18 +320,7 @@ export async function uploadPrivateFileToR2<TTicket extends { uploadUrl: string 
     throw new ImageUploadError('presign', error);
   }
 
-  try {
-    const response = await fetch(ticket.uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': file.contentType },
-      body,
-    });
-    if (!response.ok) {
-      throw new Error(`R2 PUT ${response.status} ${response.statusText}`);
-    }
-  } catch (error) {
-    throw new ImageUploadError('upload', error);
-  }
+  await putObject(ticket.uploadUrl, body, file.contentType);
 
   return ticket;
 }
@@ -343,18 +361,64 @@ export async function uploadPublicFileToR2(
     throw new ImageUploadError('presign', error);
   }
 
-  try {
-    const response = await fetch(ticket.uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': file.contentType },
-      body,
-    });
-    if (!response.ok) {
-      throw new Error(`R2 PUT ${response.status} ${response.statusText}`);
-    }
-  } catch (error) {
-    throw new ImageUploadError('upload', error);
-  }
+  await putObject(ticket.uploadUrl, body, file.contentType);
 
   return ticket.publicUrl;
+}
+
+/**
+ * Metadata ĐẦY ĐỦ của một tệp vừa lên R2 — đúng bộ trường `AttachmentInputDto` của chat cần.
+ *
+ * Ba hàm ở trên cố ý chỉ trả URL/id vì nơi gọi của chúng không cần gì hơn. Đính kèm chat thì
+ * cần: `fileType` quyết định bong bóng vẽ ảnh hay vẽ dòng tệp, `fileName` là thứ người nhận
+ * bấm để tải, và `fileSize` là số byte THẬT — bản trước gửi `fileSize: 0` cho mọi ảnh, nên
+ * metadata trong DB nói mọi đính kèm đều rỗng.
+ */
+export interface UploadedAttachment {
+  url: string;
+  fileType: string;
+  fileName: string;
+  fileSize: number;
+}
+
+/**
+ * Tải MỘT đính kèm chat lên R2 và trả về metadata của nó (ADR 0009 §5).
+ *
+ * Kiểm MIME + dung lượng bằng `validateChatAttachment` — cùng bộ hằng `CHAT_ATTACHMENT_*` mà DTO
+ * backend dùng, nên client không bao giờ mời người dùng gửi thứ server sẽ từ chối.
+ *
+ * Cùng cái bẫy `Content-Length` của {@link uploadImageToR2}: mở file ra TRƯỚC, presign theo đúng
+ * số byte sắp gửi, PUT chính blob đó. Ảnh đi qua đây đã được `pickImages` nén, nên số byte lúc
+ * chọn và lúc gửi khác nhau — đó chính là chỗ `fileSize` từng sai.
+ */
+export async function uploadAttachmentToR2(
+  file: PickedFile,
+  presign: (meta: UploadMeta) => Promise<UploadPresign>,
+): Promise<UploadedAttachment> {
+  const body = await (await fetch(file.uri)).blob();
+
+  const rejection = validateChatAttachment({ type: file.contentType, size: body.size });
+  if (rejection) throw new ChatAttachmentRejectedError(rejection);
+
+  const meta: UploadMeta = {
+    fileName: file.fileName,
+    contentType: file.contentType,
+    fileSize: body.size,
+  };
+
+  let ticket: UploadPresign;
+  try {
+    ticket = await presign(meta);
+  } catch (error) {
+    throw new ImageUploadError('presign', error);
+  }
+
+  await putObject(ticket.uploadUrl, body, file.contentType);
+
+  return {
+    url: ticket.publicUrl,
+    fileType: file.contentType,
+    fileName: file.fileName,
+    fileSize: body.size,
+  };
 }

@@ -3,7 +3,7 @@ import { Image, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { images } from '@/assets';
+import { images, logoWidth } from '@/assets';
 import { IconButton } from '@/components/ui/IconButton';
 import { APP_NAME } from '@/lib/app-name';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
@@ -42,6 +42,16 @@ interface AppHeaderProps {
    * lời câu "tôi đang xem phạm vi nào", và nó phải tự co lại trong bề ngang còn thừa.
    */
   context?: ReactNode;
+  /**
+   * Ảnh nhận diện đứng NGAY TRƯỚC tiêu đề — mặt gian hàng ở màn trò chuyện.
+   *
+   * Khác `left`: `left` THAY nút lui, còn khe này đứng cùng lúc với nó. Một màn trò chuyện cần
+   * cả hai — lui về hộp thư, và biết mình đang nói với ai mà không phải đọc chữ.
+   *
+   * Không co lại (`flexShrink` mặc định 0 trong React Native): tên dài thì tên tự cắt, ảnh giữ
+   * nguyên. Một avatar bị bóp méo còn khó nhận ra hơn là không có.
+   */
+  avatar?: ReactNode;
   /** Khu bên phải — nên là `IconButton` để giữ đúng vùng chạm. */
   right?: ReactNode;
   /**
@@ -80,6 +90,7 @@ export function AppHeader({
   subtitle,
   badge,
   context,
+  avatar,
   right,
   variant = 'solid',
   tone = 'surface',
@@ -129,37 +140,41 @@ export function AppHeader({
         (left ?? null)
       )}
 
-      <YStack f={1} gap={0}>
-        {showBrandMark ? (
-          <BrandMark tone={tone} />
-        ) : showTitle && title ? (
-          <>
-            <XStack ai="center" gap={space.xs}>
-              {/*
-                `flexShrink` phải khai TƯỜNG MINH: trong React Native nó mặc định là 0, không
-                phải 1 như CSS. Thiếu nó thì một tên dài giữ nguyên bề rộng tự nhiên và đẩy nhãn
-                tràn khỏi thanh thay vì tự cắt.
-              */}
-              <Text
-                flexShrink={1}
-                col={fg}
-                fos={fontSize.body}
-                fow={fontWeight.semibold}
-                numberOfLines={1}
-              >
-                {title}
-              </Text>
-              {badge}
-            </XStack>
-            {context ??
-              (subtitle ? (
-                <Text col={fgMuted} fos={fontSize.label} numberOfLines={1}>
-                  {subtitle}
+      <XStack f={1} ai="center" gap={space.xs}>
+        {avatar}
+
+        <YStack f={1} gap={0}>
+          {showBrandMark ? (
+            <BrandMark tone={tone} />
+          ) : showTitle && title ? (
+            <>
+              <XStack ai="center" gap={space.xs}>
+                {/*
+                  `flexShrink` phải khai TƯỜNG MINH: trong React Native nó mặc định là 0, không
+                  phải 1 như CSS. Thiếu nó thì một tên dài giữ nguyên bề rộng tự nhiên và đẩy
+                  nhãn tràn khỏi thanh thay vì tự cắt.
+                */}
+                <Text
+                  flexShrink={1}
+                  col={fg}
+                  fos={fontSize.body}
+                  fow={fontWeight.semibold}
+                  numberOfLines={1}
+                >
+                  {title}
                 </Text>
-              ) : null)}
-          </>
-        ) : null}
-      </YStack>
+                {badge}
+              </XStack>
+              {context ??
+                (subtitle ? (
+                  <Text col={fgMuted} fos={fontSize.label} numberOfLines={1}>
+                    {subtitle}
+                  </Text>
+                ) : null)}
+            </>
+          ) : null}
+        </YStack>
+      </XStack>
 
       {right}
     </XStack>
@@ -177,26 +192,41 @@ export function AppHeader({
   );
 }
 
-/** Ô logo cạnh tên thương hiệu — cao xấp xỉ một dòng chữ `body` để hai thứ cùng đường chân. */
-const BRAND_LOGO = 26;
+/** Cao xấp xỉ một dòng chữ `body` để logo và tiêu đề cùng đường chân. */
+const BRAND_LOGO = 24;
 
 const styles = StyleSheet.create({
-  logo: { width: BRAND_LOGO, height: BRAND_LOGO, borderRadius: radius.sm },
+  lockup: { width: logoWidth(BRAND_LOGO), height: BRAND_LOGO },
+  mark: { width: BRAND_LOGO, height: BRAND_LOGO, borderRadius: radius.sm },
 });
 
-/** Logo + tên. Ở biến thể nổi trên ảnh thì ẩn — ảnh xe đã là nhân vật chính ở đó. */
+/**
+ * Logo thương hiệu. Ở biến thể nổi trên ảnh thì ẩn — ảnh xe đã là nhân vật chính ở đó.
+ *
+ * Nền sáng dùng LOCKUP: artwork đã chứa sẵn chữ "xe prime", nên không kèm `APP_NAME` nữa.
+ * Nền vàng `brand` thì không dùng được — chữ "xe" trong lockup cũng màu vàng và sẽ chìm mất;
+ * ở đó là biểu tượng vuông cộng tên viết bằng `onPrimary`.
+ */
 function BrandMark({ tone }: { tone: Tone }) {
+  if (tone === 'brand') {
+    return (
+      <XStack ai="center" gap={space.xs}>
+        <Image source={images.logoMark} style={styles.mark} resizeMode="contain" />
+        {/* Một `Text`, một style: tên đọc từ env nên không cắt được thành hai nửa cố định. */}
+        <Text col={colors.onPrimary} fos={fontSize.body} fow={fontWeight.bold}>
+          {APP_NAME}
+        </Text>
+      </XStack>
+    );
+  }
+
   return (
-    <XStack ai="center" gap={space.xs}>
-      <Image source={images.logo} style={styles.logo} resizeMode="contain" />
-      {/* Một `Text`, một style: tên đọc từ env nên không cắt được thành hai nửa cố định. */}
-      <Text
-        col={tone === 'brand' ? colors.onPrimary : colors.text}
-        fos={fontSize.body}
-        fow={fontWeight.bold}
-      >
-        {APP_NAME}
-      </Text>
-    </XStack>
+    <Image
+      source={images.logo}
+      style={styles.lockup}
+      resizeMode="contain"
+      accessibilityRole="image"
+      accessibilityLabel={APP_NAME}
+    />
   );
 }

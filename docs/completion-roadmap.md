@@ -24,7 +24,7 @@ Trạng thái dưới đây phân biệt rõ **đã có trong source/feature bra
 | SePay subscription W4   | **Đã merge vào `develop`**; chưa vượt Gate R2 | Có VietQR, webhook, bank matching, xử lý thiếu/thừa/trùng và admin match tay; còn cần cấu hình môi trường thật và UAT gate                                              |
 | Marketplace money       | **Một phần**                                 | ĐÃ CÓ: `booking_holds`, `hold_refunds`, `fee_policies` versioned, `/platform/money` (hold/refund/đối chiếu ngày). CHƯA CÓ: ví/sổ công nợ, rút tiền, bảo hiểm, thuế, đối chiếu 3 vế — kế hoạch ở `plans/`, quy tắc ở ADR 0033 |
 | Basic-owner experience  | Chưa tách hoàn chỉnh                         | Capability có nền móng; cần Owner Lite UX và luồng tiền                                                                                                                  |
-| Mobile customer         | Một phần                                     | Auth + discovery + gửi yêu cầu thuê + chuyến của tôi + đánh giá + chat; thông báo đẩy có hạ tầng đủ hai đầu (`docs/push-notifications.md`) nhưng **chưa thử trên máy thật** — thiếu credential Firebase + khoá APNs. Thiếu payment và trung tâm thông báo |
+| Mobile customer         | Một phần                                     | Auth + discovery + gửi yêu cầu thuê + chuyến của tôi + đánh giá + chat và thông báo in-app (COM-01→04) + thông báo đẩy (COM-07) — tất cả 10/09. Push đủ hai đầu nhưng **chưa thử trên máy thật** (thiếu credential Firebase + khoá APNs). Thiếu payment |
 | Mobile manage           | Một phần                                     | Hộp thư yêu cầu, đơn thuê, biên bản giao/nhận, quyết toán, thu tiền — xem ghi chú ở R6                                                                                   |
 | Production readiness    | Chưa đạt                                     | Chưa có đủ E2E, monitoring, legal/compliance gate và bằng chứng vận hành thật                                                                                            |
 
@@ -161,7 +161,7 @@ Mục tiêu: kiểm chứng cung, cầu và economics.
 
 Mục tiêu: app native phục vụ trọn luồng người thuê, đồng thời duy trì ổn định lát cắt quản lý đã có.
 
-- Booking, hold/payment, trips, chat và push. **Push: phần NHẬN đã dựng (10/09)** — còn trung tâm thông báo, badge, cài đặt, và một lượt kiểm trên máy thật với credential Firebase thật.
+- Booking, hold/payment và trips. *Chat, thông báo in-app và thông báo đẩy xong 10/09/2026 (COM-01→04 + COM-07) — chi tiết ở `mobile-module-status.md` §2.9 và `push-notifications.md`. Còn lại: một lượt kiểm push trên máy thật, và màn cài đặt bật/tắt từng loại thông báo.*
 - Deep links/App Links, environment profiles, iOS build và CI release.
 - Crash/error reporting và analytics đồng nhất web/mobile.
 - Duy trì và sửa lỗi cho lát cắt Mobile Manage hiện có: inbox yêu cầu, booking, giao/nhận, quyết toán và thu tiền.

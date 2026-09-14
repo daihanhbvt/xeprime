@@ -38,6 +38,7 @@ export default function ManageTabsLayout() {
         <Tabs.Screen name="maintenance" />
         <Tabs.Screen name="calendar" />
         <Tabs.Screen name="customers" />
+        <Tabs.Screen name="chat" />
         <Tabs.Screen name="finance" />
         <Tabs.Screen name="receipts" />
         <Tabs.Screen name="debts" />

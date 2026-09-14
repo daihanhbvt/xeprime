@@ -4,6 +4,7 @@ import { TextInput } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { CURRENCY_SUFFIX, formatMoneyInput, parseMoneyInput } from '@xeprime/domain';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
+import { FONT_FAMILY } from '@/theme/fonts';
 import { colors, fieldFontSize, fontWeight, sizing, space } from '@/theme/tokens';
 
 /** Không phụ thuộc prop/state nào — dựng MỘT lần ở module scope, không phải mỗi lần render. */
@@ -11,6 +12,7 @@ const INPUT_STYLE = {
   flex: 1,
   color: colors.text,
   fontSize: fieldFontSize.value,
+  fontFamily: FONT_FAMILY.body,
   minHeight: sizing.touchTarget,
   paddingVertical: 0,
 } as const;

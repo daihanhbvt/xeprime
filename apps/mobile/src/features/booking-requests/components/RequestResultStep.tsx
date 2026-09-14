@@ -17,6 +17,7 @@ import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { usePublicQuote } from '../hooks/use-booking-request-flow';
 import { toQuoteParams } from '../quote-params';
 import type { BookingRequestReceipt } from '../api';
@@ -214,16 +215,19 @@ function DoneResult({
           </XStack>
 
           {/*
-            MỘT lối đi duy nhất, sang Chuyến của tôi: nút "Quay lại" của web đưa ngược về trang chi
-            tiết chiếc xe vừa gửi yêu cầu, và nút "Nhắn chủ xe" cần chat realtime (ADR 0009) chưa có
-            ở app — khoá `done.chatShop` vẫn còn để gắn vào đây khi màn chat có mặt.
+            Hai lối đi, đúng cặp web bày ở đây: sang Chuyến của tôi, hoặc nhắn thẳng chủ xe.
+
+            Hỏi thêm chủ xe (giao xe ở đâu, có giao sớm hơn được không) là việc RẤT hay xảy ra
+            ngay sau khi gửi. Nút "Quay lại" thứ ba của web đưa ngược về trang chi tiết chiếc xe
+            vừa gửi yêu cầu — ở app thì cử chỉ lui và nút lui của Android đã làm đúng việc đó.
           */}
-          <YStack alignSelf="stretch">
+          <YStack alignSelf="stretch" gap={space.sm}>
             <Button
               label={t('done.myTrips')}
               size="lg"
               onPress={() => router.replace(ROUTES.booking.list())}
             />
+            <ChatWithShopButton vehicleId={listing.id} label={t('done.chatShop')} size="lg" />
           </YStack>
         </YStack>
       </Screen>

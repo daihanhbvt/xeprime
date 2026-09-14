@@ -203,18 +203,21 @@ apps/mobile/
 │   ├── search.tsx                #   kết quả tìm xe
 │   ├── listings/[id].tsx         #   chi tiết xe
 │   ├── listings/[id]/request.tsx #   BKG-01 — wizard gửi yêu cầu thuê (CÔNG KHAI)
+│   ├── chat/[id].tsx             #   COM-01 — một hội thoại phía KHÁCH (?v= = ngữ cảnh xe)
 │   ├── trips/[id].tsx            #   BKG-15/16 — chi tiết chuyến của khách
 │   ├── legal/[doc].tsx           #   4 văn bản pháp lý — WebView đọc bản web, CÔNG KHAI
 │   └── manage/                   #   NAVIGATOR B — khu quản lý gian hàng (segment THẬT, trùng web)
 │       ├── _layout.tsx           #     <Tabs> riêng + <ScopeGuard>
 │       ├── index.tsx             #     "/manage"          — tổng quan + trạng thái gian hàng
 │       ├── requests.tsx          #     BKG-02→05 — hộp thư yêu cầu
+│       ├── chat.tsx              #     COM-01 — inbox GIAN HÀNG (side=shop, trùng /manage/chat của web)
+│       ├── chat/[id].tsx         #     COM-01 — một hội thoại phía gian hàng
 │       ├── bookings/             #     Stack trong tab: danh sách → chi tiết → biên bản/tiền
 │       │   ├── index.tsx         #       BKG-07 — danh sách đơn
 │       │   ├── new.tsx           #       BKG-06 — tạo đơn tại quầy
 │       │   └── [id]/             #       BKG-08/12/13 · BKG-09 · BKG-10/11 · FIN-05/06
 │       └── more.tsx              #     "/manage/more" — đổi khu, ngôn ngữ
-├── assets/images/                # ảnh tĩnh (icon/splash khai ở app.json, phải là PNG vuông)
+├── assets/images/                # ảnh tĩnh — BỐN file thương hiệu, bốn vai trò, xem §"Nhận diện"
 ├── docs/trackingProject/*.html   # bảng theo dõi task (nguồn ưu tiên P0→P3 của app)
 └── src/
     ├── assets.ts                 # registry ảnh — Metro cần đường dẫn HẰNG
@@ -231,18 +234,22 @@ apps/mobile/
     │   ├── shell/                #   VỎ app: khu Khách ↔ Quản lý (slice · ScopeGuard · switcher)
     │   ├── booking-requests/     #   BKG-01→05 — wizard gửi yêu cầu + hộp thư duyệt
     │   ├── bookings/             #   BKG-06→08, 12, 13 — danh sách · chi tiết · tạo tay
-    │   ├── chat/                 #   ADR 0009 — hộp thư KHÁCH + thread (FlatList `inverted`)
+    │   ├── chat/                 #   COM-01→03 — HAI hộp thư (khách + gian hàng) + thread
+    │   │                         #     realtime/: phiên Firebase + listener Firestore (ADR 0009)
     │   │                         #     luật gộp tin dùng chung ở @xeprime/domain/chat-thread
     │   ├── handovers/            #   BKG-09 — biên bản giao/nhận + ảnh hiện trạng (camera)
-    │   ├── notifications/        #   COM-07 — thông báo ĐẨY (FCM): xin quyền · đăng ký token ·
-    │   │                         #     điều hướng theo `data.url` qua ALLOWLIST (deep-link.ts).
-    │   │                         #     Chưa có trung tâm thông báo — docs/push-notifications.md
+    │   ├── notifications/        #   COM-04 chuông in-app (badge · tấm trượt · đánh dấu đã đọc)
+    │   │                         #     + COM-07 thông báo ĐẨY: xin quyền · đăng ký token ·
+    │   │                         #     điều hướng theo `data.url` qua ALLOWLIST (deep-link.ts)
+    │   │                         #     — docs/push-notifications.md
     │   ├── settlement/           #   BKG-10/11 + FIN-05/06 — quyết toán · phụ phí · thu tiền
     │   └── trips/                #   BKG-15/16 — chuyến của khách + đánh giá
     ├── hooks/                    # hook dùng chung không thuộc miền nào
     ├── i18n/                     # config · formats · provider · messages · intl-polyfill
     │                             #   app-format/domain: BẢN SAO của apps/web (xem §7)
     ├── lib/                      # api-client · auth-session · pkce · fetch-with-timeout · secure-storage · logger
+    │                             #   firebase-config/firebase-client: CHỈ chat realtime (ADR 0009)
+    │                             #   chat-debug: log chẩn đoán Communication, đã vệ sinh (xem §5c)
     ├── navigation/               # routes.ts (bản đồ đường đi) · go-back-or.ts
     ├── queries/                  # queryClient · queryKeys · reset-session-cache
     ├── store/                    # Redux Toolkit — chỉ ĐĂNG KÝ reducer, slice thuộc về feature
@@ -488,6 +495,43 @@ Luật:
 6. **`native={false}`** — toast dựng bằng JS để iOS/Android/web giống nhau theo hệ thiết kế.
    Toast native (`burnt`) mỗi nền tảng một kiểu và không nhận token màu của app.
 
+## 5c. Chat realtime — Firestore là PROJECTION, không phải nguồn (ADR 0009)
+
+PostgreSQL là nguồn sự thật của mọi tin nhắn. Firestore chỉ giữ ~30 tin gần nhất để client biết
+"có gì đó vừa đổi"; **nội dung luôn đọc lại bằng REST**. Gửi tin thì luôn qua `POST
+/conversations/:id/messages` — không có đường nào ghi thẳng Firestore (Rules chặn, và backend
+Admin SDK là writer duy nhất).
+
+```
+POST /chat/firebase-token ──► custom token ──► signInWithCustomToken (persistence: inMemory)
+                                                        │
+     onSnapshot(conversations/<id>/messages,            │  Rules: uid ∈ memberUids
+                orderBy sentAt desc, limit 30) ◄────────┘
+                          │
+                          └─► chỉ gọi refreshLatest() ──► GET /conversations/:id/messages
+                                                          └─► mergeThreadMessages (@xeprime/domain)
+```
+
+Bốn điều dễ làm sai, và cả bốn đã được khoá bằng test:
+
+1. **Realtime hỏng KHÔNG được làm hỏng chat.** Thiếu `EXPO_PUBLIC_FIREBASE_*`,
+   `FIRESTORE_ENABLED=false`, mint token lỗi, Rules từ chối — tất cả chỉ dẫn tới `ready: false`.
+2. **Poll KHÔNG bao giờ tắt hẳn**, chỉ thưa đi (25s khi realtime sống, 5s khi chết). Mint được
+   token chỉ chứng minh CREDENTIAL tồn tại, không chứng minh worker outbox còn đẩy.
+3. **Poll và listener dừng khi app xuống nền** (`useAppActive`), và hỏi ngay một lượt khi quay lại.
+4. **Đăng xuất / đổi user ⇒ `signOut` Firebase.** Bỏ bước này thì uid cũ còn trong tiến trình và
+   người kế tiếp nghe Firestore bằng danh tính của người trước.
+
+Persistence của Firebase Auth là **inMemory** có chủ đích: app xin custom token mới ở mỗi phiên,
+nên ghi credential vào AsyncStorage vừa thừa vừa trái ADR 0017.
+
+Gỡ lỗi bật bằng `EXPO_PUBLIC_CHAT_DEBUG=true` (chỉ có tác dụng ở bản dev). Log đi qua
+[src/lib/chat-debug.ts](src/lib/chat-debug.ts) và **chỉ** mang event · nguồn · thời lượng · số
+lượng · mã lỗi đã chuẩn hoá; id rút còn tiền tố. Không token, không nội dung tin, không email/SĐT,
+không URL đã ký — có test nhồi bí mật vào mọi khe rồi khẳng định log sạch.
+
+---
+
 ## 6. Ranh giới trạng thái (giống `apps/web`, ADR 0004)
 
 | Loại            | Công cụ                                           | Ở đâu                                                                                           |
@@ -713,6 +757,23 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
 - Ảnh tĩnh khai trong [src/assets.ts](src/assets.ts): Metro nội suy đường dẫn lúc build nên nó
   phải là hằng, không dựng động được. Kiểu của `import ảnh` khai ở [global.d.ts](global.d.ts)
   vì `expo/types` chỉ khai báo module cho CSS.
+
+#### Nhận diện: bốn file, bốn vai trò — KHÔNG thay thế lẫn nhau
+
+Cùng một artwork với `apps/web/public/brand/`, cùng tên file. Khác nhau ở LỀ, và lề mới là thứ
+quyết định — dùng nhầm file thì icon bị cắt góc hoặc bị teo lại giữa một khung trống.
+
+| File | Dùng ở | Lề | Vì sao phải riêng |
+| --- | --- | --- | --- |
+| `xeprime-logo.png` (1024×331) | `images.logo` — `AppTopBar`, `AppHeader` | — | Lockup ngang, ĐÃ chứa chữ "xe prime". Đặt `APP_NAME` cạnh nó là in tên hai lần |
+| `xeprime-mark.png` (512×512) | `images.logoMark` — `ManageDrawer`, splash | tràn viền | Trong app không có mặt nạ nào cắt, nên tràn viền là đúng |
+| `xeprime-icon.png` (1024×1024) | `icon` ở `app.json` (iOS + Android legacy) | ~2% | ĐỤC hoàn toàn, không kênh alpha — App Store TỪ CHỐI icon có alpha, và `xeprime-mark.png` thì góc trong suốt |
+| `xeprime-icon-foreground.png` (432×432) | `android.adaptiveIcon.foregroundImage` | artwork chiếm 63.7% | Mặt nạ adaptive của Android cắt phần ngoài vùng an toàn **66%**. Đưa bản tràn viền vào đây là mất bốn góc squircle |
+
+Sinh lại bộ icon: dựng từ `xeprime-mark.png` ở easyappicon.com rồi lấy ĐÚNG hai file
+`ios/iTunesArtwork@2x.png` → `xeprime-icon.png` và `android/mipmap-xxxhdpi/ic_launcher_foreground.png`
+→ `xeprime-icon-foreground.png`. Phần còn lại của gói (`mipmap-*`, `AppIcon.appiconset`) là cho
+project native dựng tay — Expo tự sinh mọi density từ hai file trên, chép chúng vào là rác.
 - Tải tệp lên R2 đi qua [src/lib/r2-image-upload.ts](src/lib/r2-image-upload.ts):
   `uploadImageToR2` cho ảnh CÔNG KHAI (trả `publicUrl`), `uploadPrivateImageToR2` cho tài liệu
   RIÊNG TƯ (trả `fileId`, nơi gọi tự đính vào hồ sơ). Đừng viết lại hai bước presign → PUT ở
@@ -761,8 +822,10 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
 
 **Chưa có:** iOS chưa build lần nào, `app.config.ts` tách dev/staging/prod, App Links /
 Universal Links (liên kết đặt lại mật khẩu trong email vì thế mở ở trình duyệt), refetch theo
-`AppState`/NetInfo, push notification, chat thật, và module Admin của cổng quản lý. Lộ trình chung: `docs/completion-roadmap.md`;
-trạng thái từng module của app: `docs/mobile-module-status.md`.
+`AppState`/NetInfo ở các miền NGOÀI chat và thông báo (hai miền đó đã có — `src/hooks/use-app-active.ts`),
+và module Admin của cổng quản lý. Thông báo đẩy đủ code hai đầu nhưng **chưa thử trên máy thật**.
+Lộ trình chung: `docs/completion-roadmap.md`; trạng thái từng module của app:
+`docs/mobile-module-status.md`.
 
 ---
 
@@ -1022,6 +1085,76 @@ chung với web, mà web cố ý không có ô tick. Khoá lại bằng `src/fea
 
 Chi tiết: `docs/mobile-module-status.md` §2.12.
 
+### Module Communication — COM-01→04 + COM-07 (10/09/2026)
+
+**HAI hộp thư, không phải một danh sách có bộ lọc.** `side` là prop bắt buộc của
+`ChatListScreen`/`ChatThreadScreen` và đi vào cả query string lẫn queryKey — một tài khoản vừa
+thuê xe của gian hàng khác vừa là nhân viên gian hàng mình có hai hộp thư khác nhau. Khách ở
+`/chat`, gian hàng ở `/manage/chat`, cùng địa chỉ với web.
+
+**COM-02 — realtime.** Firebase JS SDK (`firebase` **12.17.1**) chỉ để NGHE:
+
+> ⚠️ Bản KHÁC web (web đang 11.1.0), và đó là bắt buộc: `@react-native-firebase/app@26.4.0`
+> ghim cứng `firebase@12.17.1`. Để mobile ở 11.1.0 thì bundle có HAI bản `@firebase/app`, mỗi
+> bản một sổ đăng ký component riêng — `initializeAuth` ném
+> `Component auth has not been registered yet` và realtime chết hẳn, im lặng rơi về polling.
+> Hai app đóng gói riêng nên hai bản không bao giờ gặp nhau; project Firebase vẫn dùng CHUNG.
+
+`POST /chat/firebase-token` → `signInWithCustomToken` → `onSnapshot` trên
+`conversations/<id>/messages`. Snapshot không bao giờ vẽ ra màn hình, nó chỉ kích hoạt một lượt
+đọc REST rồi gộp bằng `mergeThreadMessages` của `@xeprime/domain` — luật gộp dùng chung với web.
+Cơ chế đầy đủ và bốn cái bẫy ở §5c.
+
+**COM-03 — đính kèm.** Web có một hộp thoại tệp với `accept` gồm ảnh + PDF; native không có hộp
+thoại chung đó, nên nút "Đính kèm" mở một tấm chọn hai mục: **Ảnh** (qua trình chọn ảnh, NÉN
+trước khi gửi — một tấm 12MP vượt trần 10MB) và **Tệp PDF** (qua trình chọn tài liệu). Hai mục
+phủ đúng `CHAT_ATTACHMENT_MIME_TYPES`, không hơn không kém.
+Sửa một lỗi thật: bản trước gửi `fileSize: 0` cho mọi đính kèm, nên metadata trong DB nói mọi
+tệp đều rỗng. Giờ số byte lấy từ chính blob sắp PUT (`uploadAttachmentToR2`) — cùng con số được
+ký vào `Content-Length` lúc presign, nên không có giá trị thứ hai để lệch.
+
+**COM-04 — chuông thông báo in-app.** Popover của web thành `BottomSheet` (một popover neo vào
+icon trên màn 360dp thì hoặc che hết màn hoặc rộng 200px), và danh sách nối trang khi cuộn thay
+vì dừng ở trang đầu — tấm trượt cuộn được nên không có lý do vứt phần còn lại. Đích click-through
+theo `targetType` giữ nguyên bảng phân nhánh của web, khác nhau theo ngữ cảnh khách/quản lý.
+**Chỉ in-app**: COM-07 (device token + FCM/APNs) chưa làm ở cả hai đầu, không có chỗ nào đăng ký
+token đẩy.
+
+**Badge chia vai đúng như web.** `ChatBadgeButton` có mặt ở CẢ HAI thanh trên (khu khách và khu
+quản lý, đúng như web đặt cùng khối ở `MarketHeader` và `Topbar`): nó đếm TỔNG cả hai vai và dẫn
+tới hộp thư thật sự có tin (`useChatBadge`) — chủ gian hàng đang lướt chợ xe vẫn thấy khách nhắn
+vào shop, và ngược lại. Huy hiệu trên tab "Tin nhắn" và trên mục "Trò chuyện" của drawer thì đếm
+theo ĐÚNG bề mặt mà chúng mở (`useChatUnreadCount(side)`) — một con số gộp ở đó sẽ báo 3 rồi mở
+ra không có tin nào. Đó là cùng cách web chia giữa `MarketHeader`/`Topbar`, `MobileTabBar` và
+`useNavBadges`.
+
+**Sửa thêm hai chỗ lệch web đã có sẵn ở app:** dải ngày trong thread từng vẽ SAU bong bóng (trong
+`FlatList inverted`, ô được đảo thứ tự nhưng nội dung BÊN TRONG một ô thì không, nên nó rơi xuống
+dưới tin đầu tiên của ngày); và màn chi tiết chuyến từng hiện cụm liên hệ bất kể `canContact` —
+trên tuyến hoa hồng, một yêu cầu gửi rồi tự huỷ không được thành cách lấy số của gian hàng rồi
+chốt ngoài sàn (ADR 0028 điều 9).
+
+**COM-07 — thông báo đẩy** về cùng thư mục `notifications/` với COM-04, và hai đợt gặp nhau ở
+đúng một chỗ: **nhận push khi app đang mở ⇒ làm mới hộp thư và badge**. Không có bước đó thì
+chuông vẫn hiện số cũ tới nhịp poll kế tiếp — app tự mâu thuẫn với chính thông báo nó vừa bắn.
+
+Một lỗi ở chỗ giáp ranh đã được sửa: `notificationDeepLink` trả `/chat/:id` cho CẢ HAI vai, với
+lý do "server tự giải `side`". Điều đó không đúng — `resolveAccess(userId, id, 'customer')` bỏ
+qua nhánh membership và trả **403** cho nhân viên gian hàng. Giờ nó phân nhánh theo `audience`
+(vốn đã đúng theo từng người nhận), và allowlist deep-link của app nhận thêm `manage/chat`.
+
+Vòng đời push có dấu vết đầy đủ qua `chat-debug.ts` — sẵn có · quyền · token · đăng ký · ba
+trạng thái nhận (`foreground`/`background`/`coldStart`) · điều hướng · làm mới hộp thư. Log
+KHÔNG mang registration token, chữ của thông báo, hay `data.url` thô: đích chỉ lộ KHUNG route
+(`/manage/chat/:id`). Bật bằng `EXPO_PUBLIC_CHAT_DEBUG=true`; bảng tra ở
+`docs/push-notifications.md` §7.
+
+⚠️ **Cần dựng lại dev client**: thêm `firebase` (JS SDK, đọc Firestore) và
+`@react-native-firebase/*` (module native, nhận FCM). Hai thư viện khác nhau cùng trỏ một
+project, không thay nhau được. Bản dev client cũ vẫn chạy nhưng realtime im lặng và không có push.
+
+Chi tiết: `docs/mobile-module-status.md` §2.9 · `docs/push-notifications.md`.
+
 ## 11. Đánh giá kiến trúc — **8.5 / 10**
 
 Chấm trên tiêu chí "base này có đỡ nổi roadmap nghiệp vụ hiện hành không", **không** phải "đã đủ tính
@@ -1039,7 +1172,7 @@ năng chưa". Cập nhật sau đợt xử lý vòng đời phiên.
 | Kiểm thử             | 8.5  | 162 case đặt đúng chỗ rủi ro, không có test trang trí. Trừ vì chưa có test cho `Screen` và cho luồng điều hướng                                                                                                           |
 | Điều hướng           | 8.5  | Bản đồ route tập trung (`navigation/routes.ts`, một namespace mỗi miền) + cổng phiên một mối (`RequireSession`). Trừ vì cổng chưa nhớ đích đến và `login`/`register` chưa chặn người đã đăng nhập                          |     |
 | Cấu hình môi trường  | 5.0  | Một biến `EXPO_PUBLIC_API_URL`. `app.json` tĩnh nên chưa tách được dev/staging/prod                                                                                                                                       |
-| Sẵn sàng phát hành   | 4.5  | Chưa có `icon` / `splash` / `adaptiveIcon`, chưa có EAS profile, chưa có CI build, chưa có `expo-updates`. **iOS chưa build lần nào**                                                                                     |
+| Sẵn sàng phát hành   | 5.5  | Đã có `icon` / `adaptiveIcon` / `splash` (xem §"Nhận diện"). Còn thiếu EAS profile, CI build, `expo-updates`. **iOS chưa build lần nào**                                                                                  |
 
 ### Đọc con số này thế nào
 

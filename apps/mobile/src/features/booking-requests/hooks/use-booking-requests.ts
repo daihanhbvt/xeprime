@@ -59,6 +59,15 @@ export function useBookingRequestsPage(filters: BookingRequestFilters) {
   const scoped = { ...filters, ...branchScope };
   const params = bookingRequestFiltersToParams(scoped);
 
+  /*
+   * KHÔNG poll màn này — cố ý, và giống web.
+   *
+   * Bản web (`useBookingRequests`) không khai `refetchInterval` lẫn `refetchOnWindowFocus`:
+   * thứ theo dõi "có yêu cầu mới chưa" là HUY HIỆU trên menu (`usePendingBookingRequestCount`,
+   * nhịp 60s), còn danh sách chỉ nạp lại khi người dùng mở màn hoặc tự kéo làm mới. Cho màn này
+   * một nhịp poll riêng là hai client đọc ra hai sản phẩm khác nhau — và là một lượt gọi API
+   * mỗi phút cho dữ liệu đã có huy hiệu canh hộ.
+   */
   return useQuery({
     queryKey: queryKeys.bookingRequests.list(params),
     queryFn: () => bookingRequestsApi.list(scoped),

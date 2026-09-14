@@ -6,13 +6,18 @@
     "orientation": "portrait",
     "scheme": "xeprime",
     "userInterfaceStyle": "light",
+    "icon": "./assets/images/xeprime-icon.png",
     "ios": {
       "bundleIdentifier": "vn.xeprime.mobile",
       "supportsTablet": false
     },
     "android": {
       "package": "vn.xeprime.mobile",
-      "softwareKeyboardLayoutMode": "resize"
+      "softwareKeyboardLayoutMode": "resize",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/xeprime-icon-foreground.png",
+        "backgroundColor": "#FFFFFF"
+      }
     },
     "web": {
       "bundler": "metro",
@@ -20,6 +25,15 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/xeprime-mark.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#faf9f7"
+        }
+      ],
       "expo-localization",
       "expo-web-browser",
       "expo-font",

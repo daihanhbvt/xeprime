@@ -12,6 +12,8 @@ import { queryKeys } from '@/services/query-keys';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useChatRealtime } from '@/features/chat/context/ChatRealtimeContext';
 import { REALTIME_STATE, useRealtimeSubscription } from '@/hooks/use-realtime-subscription';
+import { useOnBadgeChange } from './hooks/use-on-badge-change';
+import { refreshNotificationAffected } from './notification-refresh';
 import { fetchBadges, type BadgesSnapshot } from './api';
 
 /**
@@ -154,6 +156,20 @@ export function BadgeRealtimeProvider({ children }: { children: ReactNode }) {
    * TanStack Query), và `EMPTY` là hằng số module — nên `counts` đủ ổn định để làm dependency.
    */
   const counts = data ?? EMPTY;
+
+  /*
+   * Thông báo mới ⇒ làm mới thứ nó có thể vừa làm đổi.
+   *
+   * Ở ĐÂY chứ không trong từng hook danh sách: mọi nhánh trong `notification-refresh.ts` đều
+   * phản ứng với cùng một tín hiệu `notificationsUnread`, nên rải ra là N bản sao của cùng một
+   * quyết định — và nhánh nào bị quên thì chỉ lộ ra ở đúng màn đó, thường là lúc người dùng đã
+   * tin vào một danh sách cũ. Hộp thư chat và danh sách thông báo là ngoại lệ có chủ ý: chúng
+   * nghe tín hiệu RIÊNG, chính xác hơn, ở hook của chính chúng.
+   */
+  useOnBadgeChange(counts.notificationsUnread, () => {
+    refreshNotificationAffected(queryClient);
+  });
+
   const value = useMemo<BadgeRealtime>(() => ({ counts, live }), [counts, live]);
 
   return <BadgeRealtimeCtx.Provider value={value}>{children}</BadgeRealtimeCtx.Provider>;

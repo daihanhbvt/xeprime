@@ -206,6 +206,7 @@ export {
   groupThreadMessages,
   isOwnSideMessage,
   newClientMessageId,
+  ownSenderType,
   markThreadMessageFailed,
   mergeThreadMessages,
   removeThreadMessage,

@@ -1,14 +1,27 @@
 import { Ionicons } from '@expo/vector-icons';
+import { CHAT_SIDE } from '@xeprime/types';
 import { Pressable } from 'react-native';
 import { Text, XStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
 import { Avatar } from '@/components/ui/Avatar';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
+import { ChatBadgeButton } from '@/features/chat/components/ChatBadgeButton';
+import { NotificationBell } from '@/features/notifications/components/NotificationBell';
+import { NOTIFICATION_CONTEXT } from '@/features/notifications/notification-display';
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 
+/**
+ * Khu bên phải thanh trên của khu KHÁCH — cùng thứ tự với `MarketHeader` của web:
+ * ngôn ngữ · tin nhắn · thông báo · danh tính.
+ *
+ * Biểu tượng tin nhắn KHÔNG thừa dù đã có tab "Tin nhắn": nó đếm TỔNG cả hai vai và dẫn tới hộp
+ * thư thật sự có tin, nên chủ gian hàng đang lướt chợ xe vẫn thấy khách vừa nhắn vào shop. Tab
+ * chỉ mở được hộp thư khách. Web dựng đúng cặp này ở khổ mobile (`MarketHeader` + `MobileTabBar`)
+ * và vì đúng lý do đó.
+ */
 export function HeaderActions() {
   const t = useTranslations('Navigation.public');
   const navigateOnce = useNavigateOnce();
@@ -19,13 +32,18 @@ export function HeaderActions() {
       <LocaleSwitcher />
 
       {user ? (
-        <Pressable
-          onPress={() => navigateOnce(ROUTES.account.home())}
-          accessibilityRole="button"
-          accessibilityLabel={t('account')}
-        >
-          <Avatar name={user.displayName} url={user.avatarUrl} size={sizing.touchTarget} />
-        </Pressable>
+        <>
+          <ChatBadgeButton surface={CHAT_SIDE.CUSTOMER} />
+          <NotificationBell context={NOTIFICATION_CONTEXT.CUSTOMER} />
+
+          <Pressable
+            onPress={() => navigateOnce(ROUTES.account.home())}
+            accessibilityRole="button"
+            accessibilityLabel={t('account')}
+          >
+            <Avatar name={user.displayName} url={user.avatarUrl} size={sizing.touchTarget} />
+          </Pressable>
+        </>
       ) : (
         <Pressable
           onPress={() => navigateOnce(ROUTES.account.login())}

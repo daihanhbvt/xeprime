@@ -101,7 +101,7 @@ describe('ConversationList', () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText('Tìm tin nhắn, tên xe…'), {
+    fireEvent.change(screen.getByLabelText('Tìm tên gian hàng, tên khách, tên xe…'), {
       target: { value: 'kia' },
     });
     expect(onSearchChange).toHaveBeenCalledWith('kia');

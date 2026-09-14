@@ -247,4 +247,18 @@ export const sizing = {
    * `control-height-lg` (40px) của web nhỏ hơn ngón tay.
    */
   touchTarget: Math.max(px('touch-target-min'), 48),
+
+  /**
+   * Cỡ VẼ RA của biến thể GỌN — nút icon trên một thanh trên chật.
+   *
+   * Nhỏ hơn `touchTarget` là CÓ CHỦ ĐÍCH, và không vi phạm sàn chạm: nơi dùng bù lại bằng
+   * `hitSlop`, nên vùng chạm vẫn đủ 48dp còn chỗ CHIẾM trên màn chỉ 32. Thanh trên khu quản lý
+   * phải chứa nút menu, tên gian hàng, chuông, biểu tượng chat và nút đổi khu trên 320dp —
+   * năm ô 48dp không vừa.
+   *
+   * Ở đây chứ không khai lại ở từng component: đã có ba bản chép tay (`IconButton`,
+   * `ChatBadgeButton`, `NotificationBell`), mỗi bản một docblock trỏ sang bản kia. Ba lần là lúc
+   * nó thôi còn là trùng hợp.
+   */
+  compactBox: 32,
 } as const;

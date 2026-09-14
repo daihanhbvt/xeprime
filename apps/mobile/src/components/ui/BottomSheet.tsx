@@ -60,6 +60,19 @@ interface BottomSheetProps {
   maxRatio?: number;
   padded?: boolean;
   dismissable?: boolean;
+  /**
+   * Nội dung TỰ cuộn lấy — tắt vùng cuộn của tấm trượt.
+   *
+   * Mặc định tấm trượt bọc `children` trong một `ScrollView`, đúng cho phần lớn nội dung
+   * (biểu mẫu, menu chọn). Nhưng lồng một danh sách ảo hoá (`FlatList`) vào đó thì React Native
+   * cảnh báo "VirtualizedList should never be nested inside plain ScrollViews" và cảnh báo ấy
+   * nói đúng: hai vùng cuộn dọc chồng nhau làm ảo hoá mất tác dụng (danh sách bị đo là cao vô
+   * hạn nên dựng HẾT mọi dòng), `onEndReached` không bao giờ bắn, và không trục nào cuộn ra hồn.
+   *
+   * Đặt `scroll={false}` khi con của tấm trượt là một danh sách như vậy — nó sẽ nhận đúng chiều
+   * cao còn lại của tấm và tự cuộn.
+   */
+  scroll?: boolean;
 }
 
 export function BottomSheet({
@@ -72,6 +85,7 @@ export function BottomSheet({
   maxRatio = 0.9,
   padded = true,
   dismissable = true,
+  scroll = true,
 }: BottomSheetProps) {
   const t = useTranslations('Common.actions');
   const insets = useSafeAreaInsets();
@@ -85,6 +99,7 @@ export function BottomSheet({
   */
   const lifted = keyboardHeight > 0;
   const available = height - keyboardHeight;
+  const ceiling = available * maxRatio;
 
   return (
     <Modal
@@ -110,7 +125,20 @@ export function BottomSheet({
           accessibilityLabel={t('close')}
         />
         <YStack
-          maxHeight={available * maxRatio}
+          maxHeight={ceiling}
+          /*
+            Chế độ `scroll={false}`: tấm trượt phải có chiều cao XÁC ĐỊNH, không phải `maxHeight`.
+
+            Ở chế độ cuộn, chiều cao tấm = chiều cao nội dung (bị chặn trên bởi `maxHeight`) và
+            mọi thứ ổn. Nhưng khi con là một danh sách `f={1}`, chiều cao của nó lại đi HỎI chính
+            tấm trượt — mà tấm trượt đang chờ con đo xong mới biết mình cao bao nhiêu. Yoga cắt
+            vòng đó bằng cách cho `flex: 1` trong một khung cao tự-động ra 0, nên vùng nội dung
+            sập xuống 0dp: người dùng thấy tay nắm và tiêu đề, còn danh sách thì "không tải được".
+
+            Chốt luôn bằng trần: một tấm trượt chứa danh sách thì vốn dĩ muốn cao hết mức nó được
+            phép, và `maxRatio` chính là con số đó.
+          */
+          {...(scroll ? {} : { height: ceiling })}
           bg={colors.surface}
           borderTopLeftRadius={radius.lg}
           borderTopRightRadius={radius.lg}
@@ -149,15 +177,25 @@ export function BottomSheet({
             </XStack>
           ) : null}
 
-          <ScrollView
-            contentContainerStyle={{
-              padding: padded ? layout.screenX : 0,
-              gap: padded ? space.md : 0,
-            }}
-            keyboardShouldPersistTaps="handled"
-          >
-            {children}
-          </ScrollView>
+          {scroll ? (
+            <ScrollView
+              contentContainerStyle={{
+                padding: padded ? layout.screenX : 0,
+                gap: padded ? space.md : 0,
+              }}
+              keyboardShouldPersistTaps="handled"
+            >
+              {children}
+            </ScrollView>
+          ) : (
+            /*
+              `f={1}` chứ không để nội dung tự cao: danh sách bên trong cần một chiều cao CÓ TRẦN
+              để ảo hoá và để biết khi nào chạm đáy. Trần đến từ `maxHeight` của tấm trượt ở trên.
+            */
+            <YStack f={1} {...(padded ? { p: layout.screenX, gap: space.md } : {})}>
+              {children}
+            </YStack>
+          )}
 
           {footer ? (
             <YStack

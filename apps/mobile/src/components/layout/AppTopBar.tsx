@@ -1,14 +1,15 @@
 import { Image, StyleSheet } from 'react-native';
-import { Text, XStack } from 'tamagui';
-import { images } from '@/assets';
+import { XStack } from 'tamagui';
+import { images, logoWidth } from '@/assets';
 import { HeaderActions } from './HeaderActions';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { APP_NAME } from '@/lib/app-name';
+import { colors, space } from '@/theme/tokens';
 
-/** Logo thanh gốc của app, lớn hơn logo header màn con (`AppHeader` dùng 26). */
+/** Logo thanh gốc của app, lớn hơn logo header màn con (`AppHeader` dùng 24). */
 const BRAND_LOGO = 30;
 
 const styles = StyleSheet.create({
-  logo: { width: BRAND_LOGO, height: BRAND_LOGO, borderRadius: radius.sm },
+  logo: { width: logoWidth(BRAND_LOGO), height: BRAND_LOGO },
 });
 
 export function AppTopBar() {
@@ -21,17 +22,17 @@ export function AppTopBar() {
       py={space.sm}
       bg={colors.background}
     >
-      <XStack ai="center" gap={space.xs}>
-        <Image source={images.logo} style={styles.logo} resizeMode="contain" />
-        <XStack ai="baseline">
-          <Text col={colors.primaryActive} fos={fontSize.bodyLg} fow={fontWeight.bold}>
-            xe
-          </Text>
-          <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.regular}>
-            prime
-          </Text>
-        </XStack>
-      </XStack>
+      {/*
+       * Chỉ mỗi lockup: nó đã có sẵn chữ "xe prime" trong artwork. Bản trước ghép biểu tượng
+       * với hai `Text` tô màu tay — nay đặt cạnh lockup sẽ thành tên thương hiệu in hai lần.
+       */}
+      <Image
+        source={images.logo}
+        style={styles.logo}
+        resizeMode="contain"
+        accessibilityRole="image"
+        accessibilityLabel={APP_NAME}
+      />
 
       <HeaderActions />
     </XStack>

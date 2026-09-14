@@ -52,6 +52,28 @@ module.exports = {
 
   transform: {
     ...expoPreset.transform,
+    /*
+     * `.mjs` KHÔNG nằm trong pattern của jest-expo (chỉ `.ts/.tsx/.js/.jsx`) — phải khai riêng.
+     *
+     * `transformIgnorePatterns: []` ở trên chỉ quyết định cái gì được PHÉP transform; cái gì
+     * THẬT SỰ được transform lại do `transform` quyết. File không khớp pattern nào thì Jest nạp
+     * thô, và một package ESM-only ném `SyntaxError: Unexpected token export` từ trong lòng
+     * thư viện.
+     *
+     * Gặp thật khi mobile chuyển sang `firebase@12`: `@firebase/util` ship thêm
+     * `dist/postinstall.mjs`. Metro không dính vì nó đi đường transform riêng — chỉ Jest.
+     */
+    ['\\.mjs$']: [
+      transformerPath,
+      {
+        ...transformerOptions,
+        ...babelConfig,
+        plugins: [...(babelConfig.plugins ?? []), ...nodeModulesSyntaxPlugins],
+        root: workspaceRoot,
+        configFile: false,
+        babelrc: false,
+      },
+    ],
     [scriptPattern]: [
       transformerPath,
       {

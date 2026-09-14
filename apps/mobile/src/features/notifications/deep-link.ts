@@ -57,6 +57,12 @@ const ALLOWED: { prefix: string; resolve: Resolver }[] = [
     resolve: listOrDetail(ROUTES.manage.vehicles, ROUTES.manage.vehicleDetail),
   },
   { prefix: 'manage/shop', resolve: exact(ROUTES.manage.shop) },
+  // Đứng TRƯỚC `chat` không quan trọng (prefix khác hẳn), nhưng phải có: hội thoại của nhân viên
+  // gian hàng nằm ở inbox gian hàng, và `side=customer` của `/chat/:id` sẽ bị server trả 403.
+  {
+    prefix: 'manage/chat',
+    resolve: listOrDetail(ROUTES.manage.chat, ROUTES.manage.chatThread),
+  },
   { prefix: 'trips', resolve: listOrDetail(ROUTES.booking.list, ROUTES.booking.detail) },
   { prefix: 'chat', resolve: listOrDetail(ROUTES.chat.list, ROUTES.chat.thread) },
 ];

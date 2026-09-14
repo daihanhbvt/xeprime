@@ -36,6 +36,12 @@ const VARIANT: Record<Variant, { bg: string; fg: string; border: string }> = {
   accent: { bg: colors.primaryLight, fg: colors.primaryActive, border: colors.primary },
 };
 
+const ALIGN_SELF = {
+  start: 'flex-start',
+  center: 'center',
+  end: 'flex-end',
+} as const;
+
 interface ButtonProps {
   label: string;
   onPress: () => void;
@@ -47,6 +53,15 @@ interface ButtonProps {
   shape?: Shape;
   /** Mặc định chiếm trọn bề ngang — nút hành động chính trên mobile hầu như luôn full width. */
   block?: boolean;
+  /**
+   * Vị trí của nút trên trục NGANG khi `block={false}`.
+   *
+   * Nút co vừa chữ buộc phải tự đặt `alignSelf`, mà `alignSelf` GHI ĐÈ `alignItems` của khối cha
+   * — nên một nút `block={false}` thả vào khối căn giữa (trạng thái rỗng, trạng thái lỗi, chân
+   * danh sách) vẫn dạt về mép trái dù cha đã bảo căn giữa. Đặt `align="center"` ở những chỗ đó,
+   * thay vì bọc thêm một lớp View chỉ để sửa lề. Không có tác dụng khi `block`.
+   */
+  align?: 'start' | 'center' | 'end';
 }
 
 export function Button({
@@ -59,6 +74,7 @@ export function Button({
   loading = false,
   disabled = false,
   block = true,
+  align = 'start',
 }: ButtonProps) {
   const blocked = disabled || loading;
 
@@ -108,7 +124,7 @@ export function Button({
       accessibilityLabel={label}
       accessibilityState={{ busy: loading, disabled: blocked }}
       style={({ pressed }) => [
-        block ? { alignSelf: 'stretch' } : { alignSelf: 'flex-start' },
+        block ? { alignSelf: 'stretch' } : { alignSelf: ALIGN_SELF[align] },
         pressed ? { opacity: 0.85 } : null,
       ]}
     >

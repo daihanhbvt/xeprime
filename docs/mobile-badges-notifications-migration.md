@@ -273,7 +273,34 @@ trên icon (OS) **không nằm trong phạm vi** tài liệu này và chưa có 
 
 1. **Backend** thêm `/me/badges` + bản chiếu, **giữ nguyên** endpoint cũ. ✅ xong 11/09/2026
 2. **Web** chuyển sang nguồn mới. ✅ xong 11/09/2026
-3. **Mobile** thêm Auth/Firestore native, `/me/badges`, trung tâm thông báo. ⬜
+3. **Mobile** — ✅ `/me/badges` + bản chiếu `user_badges/{uid}` + trung tâm thông báo (11/09/2026).
+   ⬜ CÒN LẠI: chuyển Firebase JS SDK → `@react-native-firebase/auth` + `firestore` (§C.1).
+
+> ### Trạng thái mobile sau đợt này (cập nhật 11/09/2026)
+>
+> Tài liệu trên viết khi `apps/mobile/` chưa có màn chat/thông báo nào. Đợt Communication
+> (COM-01→04) đã dựng xong trước khi bản migration này được áp, nên vài mô tả ở §D/§E đã lạc hậu:
+> trung tâm thông báo, hộp thư hai bề mặt và listener thread **đã có**. Bảng dưới là trạng thái
+> thật.
+>
+> | Việc | Trạng thái |
+> | --- | --- |
+> | `GET /me/badges` + `useBadges` | ✅ `src/api/badges/api.ts`, `src/features/badges/` |
+> | Listener `user_badges/{uid}`, MỘT cho toàn app | ✅ `BadgeRealtimeProvider` |
+> | Luật `asOf` (§C.4 điều 4) | ✅ cả hai chiều đua, có test |
+> | Máy trạng thái listener (§C.4 điều 1–3) | ✅ `src/hooks/use-realtime-subscription.ts` |
+> | Thread chat chọn nhịp theo listener, không theo `ready` | ✅ đã sửa — trước đó mắc đúng lỗi web gỡ ngày 11/09 |
+> | `fromCache` không tính là "khoẻ" | ✅ có test |
+> | Badge chat khách / gian hàng / chuông | ✅ đều đọc `useBadges()` |
+> | `/conversations/unread-count` · `unread-summary` | ✅ app **ngừng gọi**; backend giữ nguyên |
+> | Trung tâm thông báo (list, mark read, mark all) | ✅ có từ COM-04 |
+> | i18n namespace `Notifications` | ✅ có từ COM-04 |
+> | **Firebase native module (§C.1)** | ⬜ **chưa** — vẫn dùng `firebase` JS SDK |
+>
+> **Vì sao JS SDK vẫn còn:** `@react-native-firebase/app@26.4.0` ghim cứng `firebase@12.17.1`,
+> nên mobile đã phải nâng lên đúng bản đó để bundle chỉ còn MỘT `@firebase/app` (hai bản làm
+> `initializeAuth` ném `Component auth has not been registered yet`). Chuyển sang native module
+> cần một dev build mới và phải kiểm trên máy thật — đúng như §0 dặn là chưa làm trong đợt này.
 4. **Theo dõi** phiên bản mobile còn gọi `/conversations/unread-*` (log truy cập theo
    `User-Agent`/app version).
 5. Chỉ khi không còn phiên bản được hỗ trợ nào gọi chúng ⇒ mới bàn tới việc gỡ.

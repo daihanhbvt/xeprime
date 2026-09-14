@@ -176,10 +176,17 @@ App native **không cần gọi endpoint này khi đăng xuất**: `/auth/mobile
 | Gian hàng được duyệt / từ chối | chủ gian hàng | `tenant` | — | `/manage/shop` |
 | Vòng đời gói (sắp hết hạn, hết hạn, chuyển tuyến…) | thành viên gian hàng | — | — | (không có đích) |
 | Đánh giá mới | thành viên gian hàng | `review` | `/trips` | — |
-| **Tin nhắn mới** | phía đối diện (không bao giờ người gửi) | `conversation` | `/chat/:id` | `/chat/:id` |
+| **Tin nhắn mới** | phía đối diện (không bao giờ người gửi) | `conversation` | `/chat/:id` | `/manage/chat/:id` |
 
 Sự kiện nào cũng chỉ đi qua `NotificationService` / `apps/worker/src/lib/notify.ts` — **không có
 API riêng cho từng loại thông báo**.
+
+Hội thoại là loại DUY NHẤT có đích khác nhau ở hai bề mặt mà vẫn cùng một `targetId`, và điều
+đó là bắt buộc chứ không phải trang trí: `ChatService.resolveAccess(userId, id, 'customer')`
+từ chối thẳng một nhân viên gian hàng (nhánh membership bị bỏ qua khi `expected === customer`),
+nên một đích dùng chung sẽ mở ra "Bạn không có quyền truy cập hội thoại này" cho đúng nửa số
+người nhận. `audience` đã đúng theo từng người (`emitToTenantMembers` → MANAGE, `emitToUser` →
+CUSTOMER), nên `notificationDeepLink` chỉ việc đọc nó.
 
 Chat có ba luật riêng vì nội dung là riêng tư:
 - không bao giờ báo cho người gửi;
@@ -223,7 +230,30 @@ với cập nhật trạng thái), và `android.notification.channelId` theo `an
 - app đang mở → toast; app ở nền/đã tắt → hệ điều hành hiện thông báo;
 - bấm thông báo → điều hướng theo `data.url`, qua allowlist
   (`src/features/notifications/deep-link.ts`). Chưa đăng nhập thì URL được cất vào
-  `pendingDeepLink` và tiêu thụ sau khi đăng nhập.
+  `pendingDeepLink` và tiêu thụ sau khi đăng nhập;
+- **nhận push khi app đang mở ⇒ làm mới hộp thư và badge** (`notifications` + `chat`). Không có
+  bước này thì chuông vẫn hiện số cũ tới nhịp poll kế tiếp — app tự mâu thuẫn với chính thông
+  báo nó vừa bắn.
+
+### Log trạng thái khi gỡ lỗi
+
+Bật `EXPO_PUBLIC_CHAT_DEBUG=true` trong `apps/mobile/.env` (chỉ có tác dụng ở bản dev). Toàn bộ
+vòng đời đi qua `src/lib/chat-debug.ts` và in ra với tiền tố `[comm] push.*`:
+
+| Dòng | Nghĩa khi nó KHÔNG xuất hiện |
+| --- | --- |
+| `push.available {flag:true}` | bản build không có module FCM native — Expo Go, hoặc thiếu credential |
+| `push.permission {flag:true}` | người dùng từ chối, hoặc Android đã tự chặn sau hai lần từ chối |
+| `push.token.missing` | *(là cảnh báo)* FCM không cấp token — sai project trong credential, Play Services lỗi |
+| `push.register.ok {durationMs}` | API từ chối đăng ký; xem `push.register.failed {code}` |
+| `push.token.refreshed` | (chỉ khi FCM xoay token — không phải mỗi phiên) |
+| `push.received {trigger}` | thông báo không tới: `foreground` · `background` · `coldStart` là ba đường khác nhau, hỏng riêng lẻ được |
+| `push.routed {route}` | bấm vào không mở đúng màn; xem `push.route.rejected` (đích ngoài allowlist) hoặc `push.route.pending` (chưa đăng nhập) |
+| `push.inbox.refreshed` | chuông không cập nhật sau khi nhận |
+
+Log **không** mang registration token, tiêu đề/thân thông báo, hay `data.url` thô: đích chỉ lộ
+KHUNG route (`/manage/chat/:id`), không lộ id. Có test khoá lại điều đó
+(`src/lib/chat-debug.push.test.ts`).
 
 **Thông báo đẩy thật KHÔNG chạy trong Expo Go.** Phải là development build:
 
@@ -287,12 +317,10 @@ SELECT status, last_error_code, count(*)
 
 ## 9. Còn lại cho đợt sau (app native)
 
-Cố ý **không** làm trong đợt này:
+Trung tâm thông báo, badge chưa đọc và refetch hộp thư khi nhận push **đã có** — chúng là COM-04,
+làm trong cùng ngày (`docs/mobile-module-status.md` §2.9). Còn lại, cố ý chưa làm:
 
-- trung tâm thông báo (danh sách, đánh dấu đã đọc, lọc) — COM-04;
-- badge số chưa đọc;
 - màn cài đặt bật/tắt từng loại thông báo;
-- refetch hộp thư khi nhận push;
 - UX xin quyền (màn giải thích trước khi hiện hộp thoại hệ thống);
 - đo đếm tỉ lệ nhận/mở;
 - tạo kênh Android thật (§6);
@@ -300,8 +328,8 @@ Cố ý **không** làm trong đợt này:
   `GET /notifications` vẫn là một dòng mỗi tin nhắn: một hội thoại 30 tin là 30 dòng "Bạn có tin
   nhắn mới" giống hệt nhau cho mỗi thành viên gian hàng. Cố ý chưa xử lý ở đợt này vì cách sửa
   rẻ nhất — tái dùng một hàng `notifications` chưa đọc — lại đụng unique
-  `(notification_id, push_device_id)` và làm tắt luôn push cho các tin sau. Việc này thuộc về
-  COM-04, nơi có UI hộp thư để quyết định đúng.
+  `(notification_id, push_device_id)` và làm tắt luôn push cho các tin sau. COM-04 nay đã có UI
+  hộp thư để quyết định đúng, nhưng phần gộp thì vẫn còn nguyên — hộp thư hiện mỗi tin một dòng.
 
 Phía backend còn **một** việc chưa làm, và nó là việc của thời gian chứ không của tính năng:
 `push_deliveries` sinh một dòng cho mỗi (thông báo × thiết bị) và **không có job dọn**. Bảng sẽ
