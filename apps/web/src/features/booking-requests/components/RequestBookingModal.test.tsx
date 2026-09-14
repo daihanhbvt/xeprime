@@ -1040,9 +1040,20 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(screen.getByText('2 ngày')).toBeTruthy();
     });
 
-    it('chưa có khoảng thuê → nói rõ phải bấm vào ô để mở lịch', () => {
+    /*
+     * Mở thẳng một chiếc xe (không đi qua bộ lọc có ngày) KHÔNG còn cho ra ô thời gian rỗng: flow
+     * điền sẵn khoảng gợi ý từ `rememberedOrDefaultRentalRange`, nên khách thấy ngay một mức giá
+     * để so thay vì một ô trống chưa biết bấm vào đâu.
+     *
+     * Khẳng định HÌNH DẠNG, không phải giá trị: khoảng gợi ý tính từ "bây giờ" nên nó đổi theo
+     * ngày chạy test và theo múi giờ của máy chạy.
+     */
+    it('không có ngày từ bộ lọc → vẫn mở ra với khoảng thuê gợi ý sẵn', () => {
       renderModalWithoutPrefill();
-      expect(screen.getByText('Bấm vào ô trên để mở lịch và chọn khoảng thuê.')).toBeTruthy();
+      const point = new RegExp('^(CN|T[2-7]), [0-9]{2}/[0-9]{2} · [0-9]{2}:[0-9]{2}$');
+      expect(screen.getAllByText(point)).toHaveLength(2);
+      expect(screen.getByText(/Thuê theo ngày · bấm vào ô để đổi/)).toBeTruthy();
+      expect(screen.queryByText('Bấm vào ô trên để mở lịch và chọn khoảng thuê.')).toBeNull();
     });
 
     it('đã có khoảng thuê → dòng gợi ý nói chế độ tính và cách đổi', () => {

@@ -3,7 +3,7 @@ import { App } from 'antd';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LONG_TERM_PACKAGE_MONTHS } from '@xeprime/types';
+import { LONG_TERM_PACKAGE_MONTHS, SERVICE_TYPE } from '@xeprime/types';
 import { RequestBookingModal } from './RequestBookingModal';
 
 /**
@@ -410,8 +410,22 @@ describe('Thuê dài hạn — nguyện vọng nhận xe', () => {
     expect(checked).toHaveLength(1);
     expect(checked[0]!.textContent).toContain('1 tháng');
 
-    // Và báo giá của gói mặc định được hỏi ngay, không đợi khách bấm.
-    await waitFor(() => expect(quoteCalls.length).toBeGreaterThan(0));
-    expect(quoteCalls[0]).toEqual({ serviceType: 'long_term', packageMonths: 1 });
+    /*
+     * Và báo giá của gói mặc định được hỏi ngay, không đợi khách bấm.
+     *
+     * Lọc theo `serviceType` thay vì lấy `quoteCalls[0]`: modal mở ra ở tab TỰ LÁI, và tab đó nay
+     * điền sẵn một khoảng thuê gợi ý, nên nó đã hỏi giá ngày của chính nó TRƯỚC khi ta bấm sang
+     * tab dài hạn. Thứ cần khoá ở đây là gói mặc định được hỏi giá mà khách không phải thao tác
+     * gì — không phải thứ tự của nó so với báo giá của tab khác.
+     */
+    const longTermQuotes = () =>
+      quoteCalls.filter(
+        (params) => (params as { serviceType?: string }).serviceType === SERVICE_TYPE.LONG_TERM,
+      );
+    await waitFor(() => expect(longTermQuotes().length).toBeGreaterThan(0));
+    expect(longTermQuotes()[0]).toEqual({
+      serviceType: SERVICE_TYPE.LONG_TERM,
+      packageMonths: 1,
+    });
   });
 });

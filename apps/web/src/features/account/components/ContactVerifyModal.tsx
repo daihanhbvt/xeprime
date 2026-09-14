@@ -53,20 +53,18 @@ export function ContactVerifyModal({ channel, open, onClose, current }: ContactV
     isPhone ? accountPhoneChangeSchema : accountEmailChangeSchema,
     'Account.validation',
   );
-  const { control, handleSubmit, reset } = useForm<AccountContactValues>({
+  const { control, handleSubmit } = useForm<AccountContactValues>({
     resolver,
     defaultValues: { identifier: '' },
   });
 
-  // Mỗi lần mở là một lượt mới: mã cũ, lỗi cũ và định danh gõ dở của lượt trước không được
-  // sống sót sang lượt sau — người dùng sẽ tưởng mình đang ở giữa một luồng đã bỏ dở.
-  useEffect(() => {
-    if (!open) return;
-    flow.reset();
-    reset({ identifier: '' });
-    setCode('');
-    // `flow.reset`/`reset` ổn định theo `useCallback`; chỉ lần MỞ mới được kích hoạt lượt mới.
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  /*
+   * KHÔNG reset bằng effect: cả hai nơi gọi đều render hộp này CÓ ĐIỀU KIỆN (`AccountView`,
+   * `QuickVehicleOwnerStep`), nên mỗi lần mở đã là một instance mới với state khởi tạo sạch —
+   * mã cũ, lỗi cũ và định danh gõ dở của lượt trước không có đường sống sót sang lượt sau.
+   * Reset trong effect vừa thừa vừa tạo một vòng render phụ, đúng thứ `react-hooks/set-state-in-effect`
+   * chặn. Thêm nơi gọi thứ ba thì nó cũng phải render có điều kiện.
+   */
 
   useEffect(() => {
     if (!flow.verified) return;
