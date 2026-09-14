@@ -26,7 +26,6 @@ import { PERMISSIONS_KEY } from '../src/common/decorators';
 import { ConfirmHandoverDto } from '../src/modules/bookings/handovers/dto/handover.dto';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
-import { CustomersService } from '../src/modules/customers/customers.service';
 import { BookingHandoversController } from '../src/modules/bookings/handovers/booking-handovers.controller';
 import { HandoversService } from '../src/modules/bookings/handovers/handovers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
@@ -35,7 +34,7 @@ import { MaintenanceService } from '../src/modules/vehicles/maintenance/maintena
 import { OdometerService } from '../src/modules/vehicles/maintenance/odometer.service';
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeNotificationService, makeBookingsService, makeVehiclesService, vehicleCreator } from './helpers/service-factory';
+import { makeBookingsService, makeCustomersService, makeNotificationService, makeVehiclesService, vehicleCreator } from './helpers/service-factory';
 
 /**
  * Wave 7 — Bàn giao xe & đồng bộ KM, chạy trên PostgreSQL THẬT (R2 giả lập trong bộ nhớ).
@@ -84,7 +83,7 @@ const bookings = makeBookingsService(asService, {
   occupancy: occupancy,
   audit: audit,
   notifications: notifications,
-  customers: new CustomersService(asService, audit),
+  customers: makeCustomersService(asService, audit),
 });
 const handovers = new HandoversService(asService, bookings, odometer, maintenance, files, audit);
 

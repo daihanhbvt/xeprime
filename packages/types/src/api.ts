@@ -236,6 +236,14 @@ export const API_ERROR_CODE = {
   HOLD_NOT_PENDING: 'HOLD_NOT_PENDING',
   /** Khoản giữ chỗ đang bị TẠM GIỮ vì có tranh chấp mở — không chốt kết cục được (R3). */
   HOLD_LOCKED_BY_DISPUTE: 'HOLD_LOCKED_BY_DISPUTE',
+  /**
+   * Gian hàng ở tuyến HOA HỒNG — cọc là bắt buộc và không có công tắc để tắt (ADR 0032 điều 2).
+   *
+   * Trả **403** cho `PATCH /shop/payment-settings`. Màn hình vẫn HIỆN công tắc ở trạng thái bật
+   * + khoá kèm giải thích (ADR 0027 điều 4: ẩn nút chỉ là trang trí), nên mã này là thứ chặn
+   * thật khi có ai gọi thẳng API.
+   */
+  DEPOSIT_ALWAYS_REQUIRED: 'DEPOSIT_ALWAYS_REQUIRED',
 
   // Chính sách phí (R3 — ADR 0028/0029)
   /** Không có chính sách phí nào đang hiệu lực — lỗi CẤU HÌNH, chặn tạo hold. */

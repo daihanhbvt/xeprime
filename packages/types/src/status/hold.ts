@@ -50,6 +50,69 @@ export function isHeldForSomeoneElse(purpose: BookingHoldPurpose): boolean {
   return purpose === BOOKING_HOLD_PURPOSE.ESCROW;
 }
 
+// ── Ai thu cọc của chuyến này ───────────────────────────────────────────────
+
+/**
+ * AI thu khoản cọc `D` của một đơn — cột `bookings.deposit_collection_mode`.
+ *
+ * ⚠️ **ĐÓNG BĂNG lúc tạo đơn** (ADR 0025 ràng buộc 4). Gian hàng bật/tắt công tắc thu cọc về
+ * sau KHÔNG được đổi cách hiểu một đơn đã chạy: hỏi lại công tắc lúc đọc là cách để một đơn
+ * đang tranh chấp đổi câu trả lời về việc XePrime có giữ tiền của khách hay không.
+ *
+ * `null` = đơn gian hàng TỰ LẬP, ngoài luồng chợ (ADR 0028 điều 9) — cùng ngữ nghĩa với
+ * `bookings.billing_mode` null. Ba giá trị dưới đây chỉ dành cho đơn sinh từ một yêu cầu thuê.
+ */
+export const DEPOSIT_COLLECTION_MODE = {
+  /** XePrime giữ `D` qua `booking_holds`. Đơn chỉ ra đời khi tiền đã về. */
+  PLATFORM: 'platform',
+  /**
+   * Chính sách CÓ cọc nhưng XePrime không thu — gian hàng tự thoả thuận trực tiếp với khách
+   * (tuyến gói tắt công tắc). XePrime không thu hộ và không đối soát khoản này.
+   */
+  DIRECT: 'direct',
+  /**
+   * KHÔNG có cọc ở bất kỳ đâu: báo giá còn tạm tính lúc duyệt, hoặc chưa có chính sách phí
+   * hiệu lực. Khác `direct` ở chỗ không có khoản nào để gian hàng đi thoả thuận.
+   */
+  NONE: 'none',
+} as const;
+
+export type DepositCollectionMode =
+  (typeof DEPOSIT_COLLECTION_MODE)[keyof typeof DEPOSIT_COLLECTION_MODE];
+
+export const DEPOSIT_COLLECTION_MODE_VALUES = Object.values(
+  DEPOSIT_COLLECTION_MODE,
+) as DepositCollectionMode[];
+
+export function isDepositCollectionMode(value: unknown): value is DepositCollectionMode {
+  return typeof value === 'string' && (DEPOSIT_COLLECTION_MODE_VALUES as string[]).includes(value);
+}
+
+/**
+ * VÌ SAO chuyến này thu (hoặc không thu) cọc — kết quả của `DepositPolicyService`.
+ *
+ * Trả lý do chứ không chỉ trả boolean vì giao diện phải nói được câu khác nhau cho hai tình
+ * huống trông giống hệt nhau từ phía khách: "gian hàng chọn không thu qua sàn" và "gói của
+ * gian hàng chưa có năng lực này". Gộp thành một chữ "không" là bắt người dùng đoán.
+ */
+export const DEPOSIT_POLICY_REASON = {
+  /** Tuyến hoa hồng — BẮT BUỘC, không công tắc nào tắt được (ADR 0032 điều 2). */
+  COMMISSION_MANDATORY: 'commission_mandatory',
+  /** Tuyến gói: gói có `escrow_hold` và gian hàng đã bật công tắc. */
+  PACKAGE_ENABLED: 'package_enabled',
+  /** Tuyến gói: gói có năng lực nhưng gian hàng tắt công tắc. */
+  PACKAGE_DISABLED: 'package_disabled',
+  /** Tuyến gói: gói hiện hành không có `escrow_hold` — công tắc không bật được. */
+  PACKAGE_FEATURE_MISSING: 'package_feature_missing',
+} as const;
+
+export type DepositPolicyReason =
+  (typeof DEPOSIT_POLICY_REASON)[keyof typeof DEPOSIT_POLICY_REASON];
+
+export const DEPOSIT_POLICY_REASON_VALUES = Object.values(
+  DEPOSIT_POLICY_REASON,
+) as DepositPolicyReason[];
+
 // ── Trạng thái: tiền đã về chưa ─────────────────────────────────────────────
 
 export const BOOKING_HOLD_STATUS = {

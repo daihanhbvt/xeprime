@@ -4,6 +4,7 @@ import { BookingsModule } from '../bookings/bookings.module';
 import { CalendarModule } from '../calendar/calendar.module';
 import { BookingHoldsService } from './booking-holds.service';
 import { HoldSettlementModule } from './hold-settlement.module';
+import { InsuranceModule } from '../insurance/insurance.module';
 import { VehicleSettingsModule } from '../vehicle-settings/vehicle-settings.module';
 import { PlatformMoneyController } from './platform-money.controller';
 
@@ -16,7 +17,15 @@ import { PlatformMoneyController } from './platform-money.controller';
  */
 @Module({
   // BillingModule: đọc tài khoản nhận tiền cho VietQR của khoản giữ chỗ (chỉ đọc).
-  imports: [BillingModule, BookingsModule, CalendarModule, HoldSettlementModule, VehicleSettingsModule],
+  // InsuranceModule (Phase 7): đối soát ba vế cần phần phí bảo hiểm đang giữ hộ — chỉ ĐỌC.
+  imports: [
+    BillingModule,
+    BookingsModule,
+    CalendarModule,
+    HoldSettlementModule,
+    InsuranceModule,
+    VehicleSettingsModule,
+  ],
   controllers: [PlatformMoneyController],
   providers: [BookingHoldsService],
   // Re-export MODULE, không phải service: `HoldSettlementService` thuộc `HoldSettlementModule`,

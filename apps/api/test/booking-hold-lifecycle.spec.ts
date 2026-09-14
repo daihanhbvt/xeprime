@@ -7,6 +7,7 @@ import {
   BOOKING_HOLD_STATUS,
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
+  DEPOSIT_COLLECTION_MODE,
   FEE_POLICY_STATUS,
   HOLD_REFUND_REASON,
   HOLD_REFUND_STATUS,
@@ -434,6 +435,12 @@ describe('Tiền về — thiếu / đủ / thừa (ADR 0016 điều 6 · ADR 00
     expect(booking.serviceFeeAmount.toFixed(0)).toBe(HOLD_AMOUNT);
     expect(booking.customerTotalAmount?.toFixed(0)).toBe('1100000');
     expect(booking.billingMode).toBe(BILLING_MODE.COMMISSION);
+    /*
+     * Đơn này ra đời VÌ tiền cọc đã về tài khoản XePrime — `platform` đóng băng tại đây
+     * (Phase 6, ADR 0025 ràng buộc 4). Không có nhánh nào khác dẫn tới đường tạo đơn này, nên
+     * một giá trị khác ở đây nghĩa là có đường thứ hai mà không ai biết.
+     */
+    expect(booking.depositCollectionMode).toBe(DEPOSIT_COLLECTION_MODE.PLATFORM);
 
     const req = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } });
     expect(req.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
@@ -802,7 +809,13 @@ describe('Đối chiếu ngày — sổ phải khớp ngân hàng', () => {
 
     // Giao dịch của spec khác cũng nằm trong ngày, nên khẳng định vào BẤT BIẾN chứ không vào
     // con số tuyệt đối: mọi đồng vào đều thuộc đúng một nhóm, không có dòng mồ côi.
-    expect(rec.variance).toBe('0');
-    expect(Number(rec.matchedHolds)).toBeGreaterThanOrEqual(100_000);
+    expect(rec.inflow.variance).toBe('0');
+    expect(Number(rec.inflow.matchedHolds)).toBeGreaterThanOrEqual(100_000);
+    /*
+     * Hold vừa trả tiền nhưng CHƯA chốt kết cục ⇒ toàn bộ 100.000đ là tiền GIỮ HỘ, chưa đồng
+     * nào là doanh thu. Khách huỷ sớm là hoàn đủ cả phần phí dịch vụ (ADR 0032 điều 5), nên
+     * ghi nhận sớm một phần nào của nó đều là ghi nhận một khoản chưa chắc được giữ.
+     */
+    expect(Number(rec.custodied.holdsUnsettled)).toBeGreaterThanOrEqual(100_000);
   });
 });

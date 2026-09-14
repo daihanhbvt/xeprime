@@ -19,9 +19,15 @@ import { CatalogModelService } from '../../src/modules/catalog/catalog-model.ser
 import { CatalogService } from '../../src/modules/catalog/catalog.service';
 import { GeoNotConfiguredProvider } from '../../src/modules/geo/geo-provider';
 import { GeoService } from '../../src/modules/geo/geo.service';
+import { AddressService } from '../../src/modules/locations/address.service';
 import { ProvincesService } from '../../src/modules/locations/provinces.service';
+import { WardsService } from '../../src/modules/locations/wards.service';
 import { ListingsService } from '../../src/modules/public-listings/listings.service';
 import { PublicListingsService } from '../../src/modules/public-listings/public-listings.service';
+import { DepositPolicyService } from '../../src/modules/deposit-policy/deposit-policy.service';
+import { InsuranceReadService } from '../../src/modules/insurance/insurance-read.service';
+import { InsuranceService } from '../../src/modules/insurance/insurance.service';
+import { NoopInsurancePartner } from '../../src/modules/insurance/partner/noop-insurance.partner';
 import { PricingService } from '../../src/modules/pricing/pricing.service';
 import { TenantsService } from '../../src/modules/tenants/tenants.service';
 import { VehicleSettingsService } from '../../src/modules/vehicle-settings/vehicle-settings.service';
@@ -64,9 +70,30 @@ export function makeBranchesService(prisma: PrismaService): BranchesService {
   const audit = new AuditService(prisma);
   return new BranchesService(
     prisma,
-    new ProvincesService(prisma, audit),
     new ListingsService(prisma),
     audit,
+    makeAddressService(prisma),
+  );
+}
+
+/**
+ * `AddressService` THẬT trên danh mục THẬT — bảng `provinces`/`wards` do migration nạp nên spec
+ * nào cũng có đủ 34 tỉnh và 3.321 xã mà không phải seed gì thêm.
+ *
+ * Bản đồ thì TẮT (`makeDisabledGeoService`): kiểm luật "xã phải thuộc tỉnh" không liên quan gì
+ * tới việc Google có trả lời hay không, và một spec gọi ra Internet là một spec sẽ đỏ khi mất
+ * mạng.
+ */
+/** `WardsService` trên danh mục THẬT do migration nạp — không cần seed gì thêm. */
+export function makeWardsService(prisma: PrismaService): WardsService {
+  return new WardsService(prisma);
+}
+
+export function makeAddressService(prisma: PrismaService): AddressService {
+  const audit = new AuditService(prisma);
+  return new AddressService(
+    new ProvincesService(prisma, audit),
+    new WardsService(prisma),
     makeDisabledGeoService(prisma),
   );
 }
@@ -120,6 +147,7 @@ export function makeBookingHoldsService(prisma: PrismaService): BookingHoldsServ
     makeBillingService(prisma),
     audit,
     notifications,
+    new InsuranceReadService(prisma),
   );
 }
 
@@ -153,10 +181,21 @@ export function makeBookingRequestsService(
     stubs.auth,
     stubs.occupancy ?? new OccupancyService(prisma),
     stubs.pricing ?? makePricingService(prisma),
-    stubs.customers ?? new CustomersService(prisma, audit),
+    stubs.customers ?? makeCustomersService(prisma, audit),
     makeBookingHoldsService(prisma),
     stubs.settings ?? makeVehicleSettingsService(prisma),
+    makeDepositPolicyService(prisma),
+    makeAddressService(prisma),
   );
+}
+
+/**
+ * `DepositPolicyService` (Phase 6) — service THẬT, không stub: nó chỉ đọc `tenant_subscriptions`
+ * và `tenant_payment_settings`, và chính hai lượt đọc đó là thứ spec cần kiểm. Thay bằng stub là
+ * kiểm một chính sách cọc không tồn tại trong production.
+ */
+export function makeDepositPolicyService(prisma: PrismaService): DepositPolicyService {
+  return new DepositPolicyService(prisma, makeBillingService(prisma), new AuditService(prisma));
 }
 
 /**
@@ -174,7 +213,7 @@ export function makePricingService(
     prisma,
     new AuditService(prisma),
     overrides.listings ?? new ListingsService(prisma),
-    makeBillingService(prisma),
+    makeDepositPolicyService(prisma),
     new FeePoliciesService(prisma, new AuditService(prisma)),
   );
 }
@@ -192,6 +231,7 @@ export function makeBookingsService(
     notifications?: NotificationService;
     customers?: CustomersService;
     settings?: VehicleSettingsService;
+    insurance?: InsuranceService;
   } = {},
 ): BookingsService {
   const audit = overrides.audit ?? new AuditService(prisma);
@@ -202,10 +242,29 @@ export function makeBookingsService(
     audit,
     notifications,
     new DriversService(prisma, audit),
-    overrides.customers ?? new CustomersService(prisma, audit),
+    overrides.customers ?? makeCustomersService(prisma, audit),
     new HoldSettlementService(prisma, audit, notifications, new WalletService(prisma)),
     overrides.settings ?? makeVehicleSettingsService(prisma),
+    overrides.insurance ?? makeInsuranceService(prisma),
+    makeAddressService(prisma),
   );
+}
+
+/**
+ * `InsuranceService` với adapter NOOP — đúng bản chạy ở production hiện tại.
+ *
+ * Spec nào cần một đối tác "thành công" thì truyền fake riêng của nó (`overrides.insurance`).
+ * Mặc định phải là noop: nếu mặc định là fake-thành-công thì mọi spec sẽ chạy trên một thế giới
+ * có bảo hiểm hoạt động, trong khi production thì không — và cái khác nhau đó chính là thứ cần
+ * được nhìn thấy.
+ */
+export function makeInsuranceService(prisma: PrismaService): InsuranceService {
+  return new InsuranceService(prisma, new AuditService(prisma), new NoopInsurancePartner());
+}
+
+/** `CustomersService` — mọc thêm `AddressService` khi địa chỉ khách có cấu trúc (14/09/2026). */
+export function makeCustomersService(prisma: PrismaService, audit: AuditService): CustomersService {
+  return new CustomersService(prisma, audit, makeAddressService(prisma));
 }
 
 export function makeVehiclesService(
@@ -234,7 +293,7 @@ export function makeTenantsService(prisma: PrismaService): TenantsService {
   return new TenantsService(
     prisma,
     audit,
-    new ProvincesService(prisma, audit),
+    makeAddressService(prisma),
     makeBranchesService(prisma),
     makeBillingService(prisma),
   );

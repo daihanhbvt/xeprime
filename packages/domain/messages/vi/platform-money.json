@@ -12,7 +12,8 @@
     "holds": "Khoản giữ chỗ",
     "refunds": "Chuyển trả",
     "reconciliation": "Đối chiếu ngày",
-    "withdrawals": "Yêu cầu rút"
+    "withdrawals": "Yêu cầu rút",
+    "insurance": "Bảo hiểm"
   },
   "filters": {
     "search": "Tìm kiếm",
@@ -66,20 +67,78 @@
     "success": "Đã từ chối khoản hoàn."
   },
   "reconciliation": {
-    "date": "Ngày đối chiếu",
+    "date": "Ngày đối soát",
     "retry": "Thử lại",
-    "balanced": "Khớp — không có dòng tiền nào ngoài nhóm.",
+    "balanced": "Khớp — số dư ngân hàng đúng bằng tiền của nền tảng cộng tiền giữ hộ.",
     "varianceWarning": "Lệch {amount}",
-    "varianceHint": "Có dòng tiền vào không thuộc nhóm nào. Kiểm tra hàng đợi đối soát tiền vào.",
-    "amountWithCount": "{amount} · {count} giao dịch",
+    "varianceHint": "Số dư ngân hàng không khớp tổng hai vế. Kiểm tra hàng đợi tiền vào chưa khớp, các lệnh chuyển tay chưa ghi nhận, và số dư vừa nhập.",
+    "balanceMissing": "Chưa nhập số dư ngân hàng cuối ngày",
+    "balanceMissingHint": "Chưa có số dư thì chưa tính được chênh lệch — hai vế bên dưới vẫn đúng, nhưng không có gì bên ngoài để đối chiếu. Nhập số dư đọc từ ứng dụng ngân hàng.",
+    "walletDriftWarning": "Lệch sổ ví ở {count, plural, other {# ví}} · tổng {amount}",
+    "walletDriftHint": "Tổng bút toán của ví không khớp số dư đang lưu. Đây là dấu hiệu có đường ghi số dư không đi qua sổ — dừng mọi lệnh rút và tra trước khi chi thêm.",
+    "bankBalanceEod": "Số dư ngân hàng cuối ngày",
+    "notEntered": "chưa nhập",
+    "balancePlaceholder": "Nhập số dư (VND)",
+    "saveBalance": "Lưu số dư",
+    "balanceSaved": "Đã lưu số dư cuối ngày",
+    "platformTitle": "Tiền của XePrime",
+    "serviceFeeRecognized": "Phí dịch vụ đã ghi nhận",
+    "subscriptionsCollected": "Tiền gói đã thu",
+    "custodiedTitle": "Tiền giữ hộ — nghĩa vụ phải trả",
+    "holdsUnsettled": "Giữ chỗ chưa chốt kết cục",
+    "walletTotal": "Ví điểm",
+    "walletSplit": "{total} · rút được {available} · đang chuyển {pending}",
+    "refundsPending": "Hoàn đang chờ chuyển tay",
+    "unmatchedIn": "Tiền vào chưa khớp",
+    "insuranceReserved": "Phí bảo hiểm chưa quyết toán",
+    "taxAccrued": "Thuế đã khấu trừ chưa nộp",
+    "outflowTitle": "Đã chi trong ngày",
+    "withdrawalsPaid": "Rút đã chuyển",
+    "refundsPaid": "Hoàn đã chuyển",
+    "inflowTitle": "Tiền vào trong ngày",
     "bankIn": "Tiền vào ngân hàng",
     "matchedSubscriptions": "Đã khớp hoá đơn gói",
     "matchedHolds": "Đã khớp khoản giữ chỗ",
     "unmatched": "Chưa khớp",
     "ignored": "Bỏ qua",
-    "refundsPaid": "Hoàn đã chuyển trong ngày",
-    "refundsPending": "Hoàn đang chờ",
-    "holdsUnsettled": "Giữ chỗ chưa chốt kết cục",
-    "variance": "Chênh lệch"
+    "inflowVariance": "Dòng chưa xếp nhóm",
+    "amountWithCount": "{amount} · {count} giao dịch"
+  },
+  "insurance": {
+    "title": "Hàng đợi bảo hiểm",
+    "loadError": "Không tải được hàng đợi bảo hiểm",
+    "total": "{count, plural, other {# hợp đồng}}",
+    "noCertificate": "chưa có",
+    "noAutoRetry": "không tự thử lại",
+    "attemptCount": "{count, plural, other {# lần}}",
+    "partnerMissing": {
+      "title": "Chưa cấu hình đối tác bảo hiểm",
+      "body": "Phí bảo hiểm đang được thu và giữ hộ, nhưng chưa có hãng nào cấp chứng nhận — khách CHƯA thực sự có bảo hiểm. Bấm thử lại sẽ không đổi được gì cho tới khi cắm đối tác thật. Đây là việc cấu hình của nền tảng, không phải sự cố của từng chuyến."
+    },
+    "columns": {
+      "booking": "Chuyến",
+      "tenant": "Gian hàng",
+      "product": "Sản phẩm",
+      "premium": "Phí đã thu",
+      "status": "Trạng thái",
+      "certificate": "Số chứng nhận",
+      "attempts": "Đã thử / lần tới"
+    },
+    "actions": {
+      "retry": "Thử lại",
+      "retryQueued": "Đã xếp lịch thử lại — worker sẽ chạy trong vòng một phút",
+      "void": "Thu hồi"
+    },
+    "empty": {
+      "title": "Không có hợp đồng nào đang lỗi",
+      "description": "Mọi phí bảo hiểm đã thu đều đã được xử lý."
+    },
+    "voidModal": {
+      "title": "Thu hồi hợp đồng bảo hiểm",
+      "hint": "Thu hồi là quyết định tiền và đi vào audit. Nếu hợp đồng đã được cấp, nhớ làm việc với đối tác trước — thu hồi ở đây chỉ đóng sổ phía XePrime.",
+      "reasonLabel": "Lý do thu hồi",
+      "reasonPlaceholder": "Vì sao thu hồi hợp đồng này",
+      "done": "Đã thu hồi hợp đồng"
+    }
   }
 }

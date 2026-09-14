@@ -85,6 +85,24 @@ class FakeGeoProvider implements GeoProvider {
     // 1.2 km: rơi vào bậc đầu (0–3 km, miễn phí) của chính sách demo bên dưới.
     return Promise.resolve(1.2);
   }
+
+  /*
+   * Ba khả năng của ô nhập ĐỊA CHỈ (tìm địa điểm, chi tiết địa điểm, tra ngược từ ghim) không
+   * tham gia vào phép tính khoảng cách giao xe — thứ spec này kiểm. Trả rỗng/null thay vì ném:
+   * `GeoService` nuốt lỗi thành `null` ở mọi nhánh, nên một provider giả biết ném sẽ che mất
+   * sự khác nhau giữa "không có kết quả" và "hỏi không được".
+   */
+  searchPlaces(): Promise<[]> {
+    return Promise.resolve([]);
+  }
+
+  placeDetails(): Promise<null> {
+    return Promise.resolve(null);
+  }
+
+  reverseGeocode(): Promise<null> {
+    return Promise.resolve(null);
+  }
 }
 
 let dbAvailable = false;

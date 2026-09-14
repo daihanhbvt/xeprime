@@ -1,10 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query';
+import type { ChatSide } from '@xeprime/types';
 import {
   chatApi,
   type ChatMessage,
   type MessageCursor,
   type SendMessageInput,
-} from '@/api/chat/api';
+} from '@/features/chat/api';
 import {
   CHAT_SEND_STATE,
   markThreadMessageFailed,
@@ -12,28 +13,37 @@ import {
   newClientMessageId,
   removeThreadMessage,
   type ThreadMessage,
+  ownSenderType,
 } from '@xeprime/domain';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState } from 'react-native';
+import { CHAT_DEBUG_SOURCE, chatDebug, type ChatDebugSource } from '@/lib/chat-debug';
+import { useAppActive, useRefetchOnForeground } from '@/hooks/use-app-active';
+import type { UploadedAttachment } from '@/lib/r2-image-upload';
 import { queryKeys } from '@/queries/query-keys';
+import { REALTIME_STATE } from '@/hooks/use-realtime-subscription';
+import { useThreadRealtime } from '../realtime/use-thread-realtime';
 
 export type ThreadEntry = ThreadMessage<ChatMessage>;
 
-export interface SendAttachment {
-  url: string;
-  fileType: string;
-  fileName: string;
-  fileSize: number;
-}
+/**
+ * Đính kèm đã sẵn sàng gắn vào một tin nhắn.
+ *
+ * Là ALIAS của thứ `uploadAttachmentToR2` trả về, không phải một khai báo thứ hai cùng hình dạng:
+ * ô soạn tin đưa thẳng kết quả tải lên vào `send()`, nên hai kiểu đó buộc phải khớp nhau, và hai
+ * bản khai báo là hai chỗ để chúng trôi khỏi nhau.
+ */
+export type SendAttachment = UploadedAttachment;
 
 /**
- * Nhịp hỏi tin mới khi app đang ở TIỀN CẢNH.
+ * Nhịp hỏi tin mới. Realtime chỉ làm nó THƯA ĐI, không bao giờ tắt hẳn — cùng hai con số web dùng.
  *
- * App native của khách chưa cắm Firestore (ADR 0009 mới chỉ hiện thực đường realtime ở web), nên
- * đây là đường duy nhất — và nó phải DỪNG khi app xuống nền: một `setInterval` chạy trong nền là
- * pin và dữ liệu di động tiêu cho một màn không ai nhìn.
+ * Mint được custom token chỉ chứng minh CREDENTIAL tồn tại, không chứng minh đường ống projection
+ * còn sống. Hai thứ đó độc lập: worker outbox không chạy (hoặc `FIRESTORE_ENABLED=false` ở worker,
+ * hoặc rules chặn) thì `onSnapshot` im lặng vĩnh viễn, và tắt poll nghĩa là bên A nhắn, bên B
+ * phải kéo xuống làm mới. Nhịp thưa khi có realtime là lưới an toàn, không phải đường chính.
  */
-const POLL_INTERVAL_MS = 6_000;
+const POLL_LIVE_MS = 25_000;
+const POLL_FALLBACK_MS = 5_000;
 
 interface ThreadData {
   key: string;
@@ -75,15 +85,25 @@ export interface ThreadState {
  * Thread chat trên native — CÙNG luật hoà giải với web.
  *
  * Việc gộp/khử trùng/sắp xếp KHÔNG viết lại ở đây: nó nằm ở `@xeprime/domain`
- * (`mergeThreadMessages`), đúng chỗ mà web cũng gọi. Chép lại luật đó sang native là mở đường
- * cho hai client bất đồng về việc "tin nào là trùng" — và cái sai đó chỉ lộ ra khi một người
- * dùng mở app và web cùng lúc.
+ * (`mergeThreadMessages`), đúng chỗ mà web cũng gọi. Chép lại luật đó sang native là mở đường cho
+ * hai client bất đồng về việc "tin nào là trùng" — và cái sai đó chỉ lộ ra khi một người dùng mở
+ * app và web cùng lúc.
  *
- * Phần KHÁC web đúng hai chỗ, và cả hai là chuyện của nền tảng chứ không phải của nghiệp vụ:
- * không có Firestore (poll REST), và poll phải tắt khi app xuống nền.
+ * Ba nguồn tin chạy SONG SONG và đều đổ về đúng một hàm `refreshLatest`:
+ *   1. lượt REST đầu tiên khi mở thread;
+ *   2. `onSnapshot` của Firestore (ADR 0009 — chỉ báo "có gì đó đổi", không vẽ ra màn hình);
+ *   3. đồng hồ poll.
+ *
+ * Dám chạy song song vì mọi lượt đều đi qua `mergeThreadMessages`: hai nguồn cùng mang về một tin
+ * là chuyện vô hại. Snapshot lo ĐỘ TRỄ, đồng hồ lo ĐỘ TIN CẬY.
+ *
+ * Khác web đúng một chỗ, và là chuyện của nền tảng: poll phải TẮT khi app xuống nền, và hỏi ngay
+ * một lượt lúc quay lại.
  */
-export function useThread(conversationId: string): ThreadState {
+export function useThread(conversationId: string, viewerSide: ChatSide): ThreadState {
   const queryClient = useQueryClient();
+  const appActive = useAppActive();
+
   const [reloadNonce, setReloadNonce] = useState(0);
   const key = `${conversationId}#${reloadNonce}`;
   const [data, setData] = useState<ThreadData>(() => emptyThread(key));
@@ -114,6 +134,7 @@ export function useThread(conversationId: string): ThreadState {
   );
 
   const invalidateInbox = useCallback(() => {
+    // Không biết người xem đang ở bề mặt nào, và không cần biết: tiền tố `chat` phủ cả hai.
     void queryClient.invalidateQueries({ queryKey: queryKeys.chat.all });
   }, [queryClient]);
 
@@ -126,10 +147,18 @@ export function useThread(conversationId: string): ThreadState {
 
   useEffect(() => {
     let cancelled = false;
+    const startedAt = Date.now();
+
     chatApi
       .messages(conversationId)
       .then((page) => {
         if (cancelled) return;
+        chatDebug.refreshOk(
+          conversationId,
+          CHAT_DEBUG_SOURCE.REST,
+          page.data.length,
+          Date.now() - startedAt,
+        );
         applyIfCurrent(key, (prev) => ({
           ...prev,
           entries: mergeThreadMessages(prev.entries, page.data),
@@ -140,6 +169,12 @@ export function useThread(conversationId: string): ThreadState {
       })
       .catch((error: unknown) => {
         if (cancelled) return;
+        chatDebug.refreshFailed(
+          conversationId,
+          CHAT_DEBUG_SOURCE.REST,
+          error,
+          Date.now() - startedAt,
+        );
         applyIfCurrent(key, (prev) => ({ ...prev, loading: false, error }));
       });
 
@@ -148,61 +183,87 @@ export function useThread(conversationId: string): ThreadState {
     };
   }, [conversationId, key, applyIfCurrent, markRead]);
 
-  const refreshLatest = useCallback(async () => {
-    try {
-      const page = await chatApi.messages(conversationId);
+  /**
+   * Nạp lại trang MỚI NHẤT và gộp vào — helper DÙNG CHUNG cho cả snapshot lẫn đồng hồ.
+   *
+   * Không thay thế danh sách: người dùng có thể đã cuộn lên và tải năm trang lịch sử; thay thế là
+   * ném hết công đó đi và giật màn hình về đáy.
+   */
+  const refreshLatest = useCallback(
+    async (source: ChatDebugSource) => {
+      const startedAt = Date.now();
+      try {
+        const page = await chatApi.messages(conversationId);
 
-      /*
-       * "Có tin mới không" đọc từ REF, không từ bên trong hàm cập nhật state: React gọi updater
-       * lúc RENDER chứ không phải lúc `setData` trả về, nên một biến gán trong đó vẫn còn giá trị
-       * cũ ở dòng sau — và `markRead` gần như không bao giờ chạy.
-       */
-      const known = new Set(entriesRef.current.map((e) => e.message.id));
-      const hasNew = page.data.some((m) => !known.has(m.id));
+        /*
+         * "Có tin mới không" đọc từ REF, không từ bên trong hàm cập nhật state: React gọi updater
+         * lúc RENDER chứ không phải lúc `setData` trả về, nên một biến gán trong đó vẫn còn giá
+         * trị cũ ở dòng sau — và `markRead` gần như không bao giờ chạy.
+         */
+        const known = new Set(entriesRef.current.map((e) => e.message.id));
+        const fresh = page.data.filter((m) => !known.has(m.id));
 
-      applyIfCurrent(key, (prev) => ({
-        ...prev,
-        entries: mergeThreadMessages(prev.entries, page.data),
-      }));
+        chatDebug.refreshOk(conversationId, source, fresh.length, Date.now() - startedAt);
 
-      if (hasNew) markRead();
-    } catch {
-      // Lượt làm mới nền — mất sóng thoáng qua không nên biến màn đang đọc thành màn lỗi.
-    }
-  }, [conversationId, key, applyIfCurrent, markRead]);
+        applyIfCurrent(key, (prev) => ({
+          ...prev,
+          entries: mergeThreadMessages(prev.entries, page.data),
+        }));
+
+        if (fresh.length > 0) markRead();
+      } catch (error) {
+        // Lượt làm mới NỀN — mất sóng thoáng qua không được biến màn đang đọc thành màn lỗi.
+        chatDebug.refreshFailed(conversationId, source, error, Date.now() - startedAt);
+      }
+    },
+    [conversationId, key, applyIfCurrent, markRead],
+  );
 
   /*
-   * Poll CHỈ khi app ở tiền cảnh, và hỏi ngay một lượt lúc quay lại.
-   *
+   * Snapshot chỉ KÍCH HOẠT một lượt đọc REST — nó không mang nội dung vào danh sách (ADR 0009).
+   * Danh tính hàm phải ổn định, nếu không listener bị tháo/gắn lại theo mỗi lần render.
+   */
+  const onRealtimeChange = useCallback(() => {
+    void refreshLatest(CHAT_DEBUG_SOURCE.REALTIME);
+  }, [refreshLatest]);
+
+  /*
+   * Trạng thái của CHÍNH listener này quyết định nhịp poll — không phải `ready` của phiên
+   * Firebase. Đăng nhập được Firebase và LẮNG NGHE được là hai chuyện khác nhau: rules chưa
+   * đẩy hay subscription chết giữa chừng đều để `ready = true` trong khi không snapshot nào
+   * bao giờ tới, và người nhận đợi trọn 25 giây.
+   */
+  const listenerState = useThreadRealtime(appActive ? conversationId : null, onRealtimeChange);
+  const listenerLive = listenerState === REALTIME_STATE.LIVE;
+
+  /*
    * Quay lại app sau mười phút mà đợi hết một nhịp mới thấy tin là mười phút im lặng nhìn thấy
-   * được. Và vì mọi lượt đều đi qua `mergeThreadMessages`, lượt hỏi thêm này không thể nhân đôi
-   * tin — đó là cả lý do việc gộp theo danh tính nằm ở domain chứ không phải "nối vào đuôi".
+   * được — nên hỏi ngay một lượt ở đúng lúc CHUYỂN TIẾP nền → tiền cảnh.
+   *
+   * Không gọi thẳng trong effect dựng đồng hồ bên dưới: ở đó nó sẽ chạy cả lúc MỞ màn, ngay sau
+   * lượt REST đầu tiên — một request thừa cho cùng một trang tin.
+   */
+  useRefetchOnForeground(
+    useCallback(() => void refreshLatest(CHAT_DEBUG_SOURCE.POLL), [refreshLatest]),
+  );
+
+  /*
+   * Đồng hồ chạy SONG SONG với snapshot, và DỪNG khi app xuống nền: một `setInterval` chạy trong
+   * nền là pin và dữ liệu di động tiêu cho một màn không ai nhìn.
    */
   useEffect(() => {
-    let timer: ReturnType<typeof setInterval> | null = null;
+    if (!appActive) return undefined;
 
-    const start = () => {
-      if (timer) return;
-      void refreshLatest();
-      timer = setInterval(() => void refreshLatest(), POLL_INTERVAL_MS);
-    };
-    const stop = () => {
-      if (!timer) return;
-      clearInterval(timer);
-      timer = null;
-    };
+    const intervalMs = listenerLive ? POLL_LIVE_MS : POLL_FALLBACK_MS;
+    chatDebug.threadTransport(
+      conversationId,
+      listenerLive ? CHAT_DEBUG_SOURCE.REALTIME : CHAT_DEBUG_SOURCE.POLL,
+      intervalMs,
+    );
 
-    if (AppState.currentState === 'active') start();
-    const subscription = AppState.addEventListener('change', (next) => {
-      if (next === 'active') start();
-      else stop();
-    });
-
-    return () => {
-      stop();
-      subscription.remove();
-    };
-  }, [refreshLatest]);
+    const timer = setInterval(() => void refreshLatest(CHAT_DEBUG_SOURCE.POLL), intervalMs);
+    return () => clearInterval(timer);
+  }, [appActive, listenerLive, conversationId, refreshLatest]);
 
   const loadOlder = useCallback(() => {
     const cursor = data.cursor;
@@ -228,6 +289,7 @@ export function useThread(conversationId: string): ThreadState {
   const dispatchSend = useCallback(
     async (body: SendMessageInput, optimistic: ChatMessage) => {
       const clientMessageId = optimistic.clientMessageId;
+      const startedAt = Date.now();
 
       applyIfCurrent(key, (prev) => ({
         ...prev,
@@ -236,12 +298,14 @@ export function useThread(conversationId: string): ThreadState {
 
       try {
         const saved = await chatApi.send(conversationId, body);
+        chatDebug.sendOk(conversationId, Date.now() - startedAt, body.attachments?.length ?? 0);
         applyIfCurrent(key, (prev) => ({
           ...prev,
           entries: mergeThreadMessages(prev.entries, [saved]),
         }));
         invalidateInbox();
       } catch (error) {
+        chatDebug.sendFailed(conversationId, error, Date.now() - startedAt);
         if (clientMessageId) {
           applyIfCurrent(key, (prev) => ({
             ...prev,
@@ -271,7 +335,12 @@ export function useThread(conversationId: string): ThreadState {
           conversationId,
           senderUserId: null,
           senderName: null,
-          senderType: '',
+          /*
+           * KHÔNG để trống. Bong bóng trái/phải quyết bằng `isOwnSideMessage(senderType, side)`,
+           * và chuỗi rỗng rơi vào nhánh "không thuộc phía nào" — tin mình vừa gõ hiện ở phía ĐỐI
+           * PHƯƠNG rồi mới nhảy sang phải khi lượt REST kế tiếp về.
+           */
+          senderType: ownSenderType(viewerSide),
           messageType: '',
           text: input.text ?? null,
           clientMessageId,
@@ -285,7 +354,7 @@ export function useThread(conversationId: string): ThreadState {
         },
       );
     },
-    [conversationId, dispatchSend],
+    [conversationId, dispatchSend, viewerSide],
   );
 
   const retry = useCallback(

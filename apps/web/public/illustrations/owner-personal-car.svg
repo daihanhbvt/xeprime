@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" width="640" height="420" fill="none" role="img" aria-label="Xe SUV trang">
+  <!--
+    Minh hoa the "Dang xe ca nhan" tren /list-your-vehicle.
+    SUV trang goc 3/4 truoc, dat tren nen kem voi bong do am — cung ngon ngu phang voi
+    owner-shop-showroom.svg. Bang mau bam token thuong hieu (gold #d6a02c + sac kem).
+    Anh trang tri thuan tuy: khong chua chu nao can dich.
+
+    Hinh hoc can giu:
+    - Hai cung hoc banh trong duong bao than xe di PHAI -> TRAI nen dung sweep-flag 0 de
+      vong LEN om lay banh (cho de ve nguoc nhat). Net vien hoc banh ve rieng di TRAI ->
+      PHAI nen dung sweep-flag 1 cho cung huong.
+    - Moi cung la mot nua duong tron (chord = 2r) de dinh cung phu vua du mep tren lop.
+    - Than xe dung MOT mang mau lien. Tach dau xe thanh mang sang rieng co ranh gioi doc
+      se doc ra thanh "cai hop roi khoi than xe" — da thu va bo.
+    - Den pha vuot nguoc ve ta-vi de noi dau xe voi suon xe. KHONG ve net vien hoc banh:
+      mot net day vong qua lop doc ra thanh cai vanh, khong phai cai tai xe.
+  -->
+  <defs>
+    <radialGradient id="xp-car-ground" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#e9dcc0" />
+      <stop offset="100%" stop-color="#e9dcc0" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="xp-car-body" x1="0.1" y1="0" x2="0.25" y2="1">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="48%" stop-color="#f6f3ec" />
+      <stop offset="100%" stop-color="#e2dccb" />
+    </linearGradient>
+    <linearGradient id="xp-car-glass" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0%" stop-color="#e9f0f6" />
+      <stop offset="100%" stop-color="#c6d5e2" />
+    </linearGradient>
+  </defs>
+
+  <!-- Nen kem + bong do mem duoi gam xe -->
+  <ellipse cx="340" cy="344" rx="298" ry="88" fill="url(#xp-car-ground)" />
+  <ellipse cx="350" cy="374" rx="246" ry="22" fill="#e8d6b2" opacity="0.5" />
+  <ellipse cx="338" cy="380" rx="184" ry="11" fill="#d9c396" opacity="0.45" />
+
+  <!-- Than xe — mot mang lien -->
+  <path
+    d="M122 338
+       C106 335 98 324 98 308
+       L98 258
+       C98 240 106 229 120 226
+       L178 213
+       L268 192
+       L332 122
+       C338 116 346 113 354 113
+       L488 122
+       C500 123 510 129 516 139
+       L554 188
+       L592 195
+       C605 197 612 206 612 218
+       L612 292
+       C612 306 604 316 592 320
+       L566 330
+       A 58 58 0 0 0 450 330
+       L304 342
+       A 64 64 0 0 0 176 342
+       Z"
+    fill="url(#xp-car-body)"
+  />
+
+  <!-- Dai toi sat gam -->
+  <path d="M304 342 L450 330 L451 321 L305 333 Z" fill="#d9d1be" opacity="0.85" />
+  <path d="M566 330 L592 320 C600 317 606 311 609 304 L567 320 Z" fill="#d9d1be" opacity="0.85" />
+
+  <!-- Kinh chan gio -->
+  <path d="M278 190 L338 122 C342 117 348 115 354 115 L374 116 L356 192 Z" fill="url(#xp-car-glass)" />
+  <!-- Kinh cua truoc / cua sau / kinh goc sau -->
+  <path d="M384 117 L440 120 L436 194 L370 194 Z" fill="url(#xp-car-glass)" />
+  <path d="M450 121 L488 124 L484 196 L446 196 Z" fill="url(#xp-car-glass)" />
+  <path d="M498 125 C506 127 512 131 516 137 L542 180 L494 180 Z" fill="url(#xp-car-glass)" />
+
+  <!-- Duong cat cua, tay nam, guong chieu hau -->
+  <path d="M370 198 L366 316" stroke="#e3ded0" stroke-width="4" stroke-linecap="round" />
+  <path d="M442 198 L440 310" stroke="#e3ded0" stroke-width="4" stroke-linecap="round" />
+  <rect x="380" y="218" width="38" height="9" rx="4.5" fill="#d6cdb9" />
+  <rect x="450" y="219" width="32" height="9" rx="4.5" fill="#d6cdb9" />
+  <path d="M276 196 L250 202 C244 203 242 210 246 214 L274 210 Z" fill="#eeeade" />
+
+  <!-- Duong gan chay doc suon xe + net nap capo -->
+  <path d="M196 256 L604 240" stroke="#eae5d6" stroke-width="4" stroke-linecap="round" opacity="0.9" />
+  <path d="M126 230 L266 196" stroke="#f3f0e7" stroke-width="4" stroke-linecap="round" />
+
+  <!-- Den pha vuot nguoc ve ta-vi -->
+  <path
+    d="M102 250 C102 240 110 232 122 229 L174 216 L180 236 L114 262 C106 262 102 257 102 250 Z"
+    fill="#f1dba4"
+  />
+  <path d="M110 248 C110 242 115 238 122 236 L166 224 L169 233 L114 254 Z" fill="#fcf3dc" />
+
+  <!-- Luoi tan nhiet + hoc gio duoi + vach gold -->
+  <path d="M99 276 L166 264 L169 284 L100 294 Z" fill="#8d8778" />
+  <path d="M99 276 L166 264 L167 272 L99 283 Z" fill="#aaa393" />
+  <path d="M105 310 L170 300 L172 317 L108 326 Z" fill="#c4bdab" />
+  <path d="M108 330 L176 320" stroke="#d6a02c" stroke-width="6" stroke-linecap="round" opacity="0.5" />
+
+  <!-- Banh xe -->
+  <g>
+    <circle cx="240" cy="320" r="56" fill="#3a342c" />
+    <circle cx="240" cy="320" r="30" fill="#eae6dd" />
+    <circle cx="240" cy="320" r="12" fill="#cbc4b5" />
+  </g>
+  <g>
+    <circle cx="508" cy="316" r="52" fill="#3a342c" />
+    <circle cx="508" cy="316" r="27" fill="#eae6dd" />
+    <circle cx="508" cy="316" r="11" fill="#cbc4b5" />
+  </g>
+
+</svg>

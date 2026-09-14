@@ -38,6 +38,7 @@ export async function ListingDetailView({
   returnAt,
   serviceType,
   routeType,
+  searchProvinceCode,
 }: {
   listing: PublicListingDetail;
   /** Danh mục lọc — trang server không gọi được `useCatalog`, page truyền xuống. */
@@ -47,6 +48,8 @@ export async function ListingDetailView({
   /** Ngữ cảnh dịch vụ/lộ trình từ tab tìm kiếm — prefill luồng đặt (17/08). */
   serviceType?: string;
   routeType?: string;
+  /** Tỉnh đang lọc ở trang tìm xe — prefill ô địa chỉ giao xe của luồng đặt (ADR 0035). */
+  searchProvinceCode?: string;
 }) {
   const [fmt, t, tCard, tDomain] = await Promise.all([
     getAppFormat(),
@@ -404,6 +407,12 @@ export async function ListingDetailView({
               // Cùng activeService với selector + khối giá — popup mở đúng dịch vụ đang xem.
               serviceType={activeService}
               routeType={routeType}
+              /*
+               * Tỉnh cho ô địa chỉ giao xe: tỉnh khách đang LỌC nếu có, không thì tỉnh của chính
+               * chiếc xe. Giao tận nơi có bán kính vài chục km nên hai giá trị này gần như luôn
+               * trùng — và khi không có gì để đoán thì tỉnh của xe vẫn đúng hơn là để trống.
+               */
+              deliveryProvinceCode={searchProvinceCode ?? listing.provinceCode ?? undefined}
               size="large"
               className={styles.cta}
             />

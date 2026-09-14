@@ -1,152 +1,336 @@
-/* Landing đăng xe — nền cát sáng, thẻ trắng, một cột hẹp căn giữa (mockup 09/09/2026). */
+/*
+ * Landing "Đăng xe cho thuê" — hai tuyến doanh thu xếp DỌC, mỗi tuyến một thẻ rộng.
+ *
+ * Bố cục thẻ là grid ba vùng `main | art | offer`. Xếp dọc chứ không cạnh nhau vì hai lựa
+ * chọn KHÔNG cân nhau: tuyến cá nhân là lối vào mặc định, tuyến gian hàng là bước sau. Hai
+ * cột ngang sẽ nói ngược điều đó.
+ */
 .page {
-  min-height: 100vh;
-  background: var(--xp-color-bg-layout);
+  max-width: var(--xp-container-max-width);
+  margin: 0 auto;
+  padding: var(--xp-space-md) var(--xp-space-md) var(--xp-space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
 }
 
-.topbar {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: var(--xp-space-sm);
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  background: var(--xp-color-bg-container);
-  border-bottom: 1px solid var(--xp-color-border-subtle);
+.backRow {
+  display: flex;
 }
 
 .back {
-  justify-self: start;
+  padding-inline: 0;
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.intro {
+  text-align: center;
+  max-width: 1180px;
+  margin: 0 auto var(--xp-space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
 }
 
 .title {
   margin: 0;
-  font-size: var(--xp-font-size-h4);
+  font-size: var(--xp-font-size-display);
+  line-height: var(--xp-line-height-display);
   font-weight: var(--xp-font-weight-bold);
-  text-align: center;
-}
-
-.spacer {
-  display: block;
-}
-
-.main {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--xp-space-md);
-  max-width: 720px;
-  margin: 0 auto;
-  padding: var(--xp-space-xl) var(--xp-space-md) var(--xp-space-2xl);
-  text-align: center;
-}
-
-.hero {
-  width: 100%;
-  max-width: 480px;
-  padding: var(--xp-space-lg);
-  border-radius: var(--xp-border-radius-lg);
-  background: var(--xp-color-bg-container);
-}
-
-.heroArt {
-  width: 100%;
-  height: auto;
-}
-
-.ctaLink {
-  display: inline-block;
-}
-
-.cta {
-  min-width: 240px;
-  border-radius: var(--xp-border-radius-pill);
-  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
 }
 
 .subtitle {
+  margin: 0 auto;
+  max-width: 780px;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+/* ── Thẻ một tuyến ──────────────────────────────────────────────────────── */
+.card {
+  display: grid;
+  grid-template-areas: 'main art offer';
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr) 300px;
+  gap: var(--xp-space-lg);
+  align-items: center;
+  padding: var(--xp-space-xl);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+  border: 1px solid var(--xp-color-border);
+}
+
+/*
+ * Tuyến được gợi ý trước: viền gold nhạt + nền kem rất mỏng. Nền pha từ token thay vì gõ
+ * một mã hex mới — đổi `--xp-color-primary-light` là chỗ này đi theo.
+ */
+.cardFeatured {
+  border: 2px solid var(--xp-gold-soft);
+  background: color-mix(in srgb, var(--xp-color-primary-light) 45%, var(--xp-color-bg-container));
+}
+
+.cardMain {
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.badge {
+  align-self: flex-start;
+  padding: 4px var(--xp-space-md);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.cardFeatured .badge {
+  background: var(--xp-gold-soft);
+  color: var(--xp-gold-deep);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-h2);
+  line-height: var(--xp-line-height-h2);
+  font-weight: var(--xp-font-weight-bold);
+  color: var(--xp-color-text);
+}
+
+.tagline {
   margin: 0;
   color: var(--xp-color-text);
   font-weight: var(--xp-font-weight-semibold);
 }
 
-.stepsCard {
-  width: 100%;
-  padding: var(--xp-space-lg);
-  border-radius: var(--xp-border-radius-lg);
-  background: var(--xp-color-bg-container);
-  border: 1px solid var(--xp-color-border-subtle);
-  text-align: left;
-}
-
-.stepsTitle {
-  margin: 0 0 var(--xp-space-md);
-  font-size: var(--xp-font-size-body);
-  font-weight: var(--xp-font-weight-bold);
-}
-
-.steps {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-md);
+.cardBody {
   margin: 0;
+  color: var(--xp-color-text-secondary);
+  line-height: 1.7;
+}
+
+.cardBody strong {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/*
+ * Ba điểm nhấn đứng thành MỘT hàng ba cột bằng nhau. Dùng grid thay cho flex-wrap để
+ * nhãn hai dòng không đẩy ô thứ ba xuống hàng dưới — bậc thang lệch đó phá nhịp của thẻ.
+ */
+.features {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--xp-space-md);
+  margin: var(--xp-space-sm) 0 0;
   padding: 0;
   list-style: none;
-  counter-reset: none;
 }
 
-.step {
+.feature {
   display: flex;
+  align-items: center;
   gap: var(--xp-space-sm);
-  align-items: flex-start;
 }
 
-.stepIndex {
+.featureIcon {
   flex: none;
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--xp-border-radius-circle);
-  background: var(--xp-color-primary-bg);
-  color: var(--xp-color-primary);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-bold);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-gold-deep);
+  font-size: 18px;
 }
 
-.stepBody {
+.featureLabel {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/* ── Hình minh hoạ ──────────────────────────────────────────────────────── */
+.cardArt {
+  grid-area: art;
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.artImage {
+  width: 100%;
+  max-width: 460px;
+  height: auto;
+  margin-inline: auto;
+}
+
+/*
+ * Chú thích nổi trên hình. Là CHỮ THẬT của giao diện (đi qua i18n), không vẽ vào SVG —
+ * chữ nằm trong ảnh thì không dịch được và không đọc được bằng trình đọc màn hình.
+ */
+.artNote {
+  position: absolute;
+  top: 6%;
+  right: 0;
+  max-width: 190px;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  border: 1px solid var(--xp-color-border);
+  box-shadow: var(--xp-shadow-card);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* ── Ô ưu đãi + CTA ─────────────────────────────────────────────────────── */
+.offer {
+  grid-area: offer;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-muted);
 }
 
-.stepTitle {
+.cardFeatured .offer {
+  background: var(--xp-color-primary-light);
+}
+
+.offerHead {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.offerIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-gold-deep);
+  font-size: 18px;
+}
+
+.offerTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-h4);
+  line-height: var(--xp-line-height-h4);
+  font-weight: var(--xp-font-weight-bold);
+  color: var(--xp-color-text);
+}
+
+.offerBody {
+  margin: 0 0 var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 1.6;
+}
+
+.offerBody strong {
   color: var(--xp-color-text);
   font-weight: var(--xp-font-weight-semibold);
 }
 
-.stepDesc {
+.ctaLink {
+  display: block;
+  margin-top: auto;
+}
+
+/* ── Dải "nâng cấp sau" ─────────────────────────────────────────────────── */
+.upgrade {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-md) var(--xp-space-lg);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-primary-light);
+}
+
+.upgradeIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-gold-deep);
+  font-size: 18px;
+}
+
+.upgradeTitle {
+  margin: 0 0 var(--xp-space-xs);
+  font-size: var(--xp-font-size-h4);
+  line-height: var(--xp-line-height-h4);
+  font-weight: var(--xp-font-weight-bold);
+  color: var(--xp-color-text);
+}
+
+.upgradeBody {
+  margin: 0;
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
+  line-height: 1.6;
 }
 
 .policyLink {
+  align-self: center;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--xp-color-primary);
+  color: var(--xp-gold-deep);
   font-size: var(--xp-font-size-body-sm);
 }
 
-@media (max-width: 575px) {
-  .topbar {
-    grid-template-columns: auto 1fr;
+/* ── Thu hẹp dần ────────────────────────────────────────────────────────── */
+@media (max-width: 1180px) {
+  .card {
+    grid-template-areas:
+      'main main'
+      'art offer';
+    grid-template-columns: minmax(0, 1fr) 300px;
+    align-items: center;
   }
 
-  .spacer {
-    display: none;
+  .cardMain {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 760px) {
+  .card {
+    grid-template-areas:
+      'main'
+      'art'
+      'offer';
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .title {
-    text-align: left;
+  .features {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--xp-space-sm);
+  }
+
+  .artNote {
+    position: static;
+    max-width: none;
+    margin-top: var(--xp-space-sm);
+  }
+
+  .cardArt {
+    flex-direction: column;
+    align-items: center;
   }
 }

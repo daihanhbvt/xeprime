@@ -1,33 +1,47 @@
 'use client';
 
-import { Alert, Button } from 'antd';
+import { Alert } from 'antd';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
+import { guessAddressLine } from '@xeprime/domain';
 import { branchFormSchema, type BranchFormValues } from '@xeprime/validators';
-import { EmbedMap } from '@/components/data-display/EmbedMap';
-import { SelectField } from '@/components/form/SelectField';
+import { AddressField } from '@/components/form/AddressField';
 import { TextField } from '@/components/form/TextField';
 import { DialogForm } from '@/components/form/DialogForm';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { mapPlaceUrl, toGeoPoint } from '@/lib/map-embed';
 import { useCreateBranch, useUpdateBranch } from '../hooks/use-branches';
 import type { Branch } from '../types';
 import styles from './BranchFormDialog.module.css';
 
 /**
+ * Tên bảy trường địa chỉ trong `branchFormSchema`. Hằng số ngoài component: định danh ổn định
+ * giữa các lần render, nên `AddressField` không dựng lại bản đồ mỗi khi form re-render.
+ */
+const ADDRESS_FIELD_NAMES = {
+  provinceCode: 'provinceCode',
+  wardCode: 'wardCode',
+  addressLine: 'addressLine',
+} as const;
+
+/** Bốn trường GHIM — tách riêng vì không phải form nào cũng lưu toạ độ (xem `AddressPinNames`). */
+const ADDRESS_PIN_NAMES = {
+  placeId: 'placeId',
+  latitude: 'latitude',
+  longitude: 'longitude',
+  locationSource: 'locationSource',
+} as const;
+
+/**
  * Thêm/sửa chi nhánh — dùng `ResponsiveDialog` chung (modal ở desktop, drawer đáy ở mobile), nên
  * không có một hộp thoại thứ hai trong repo làm cùng việc.
  *
- * Tỉnh/thành là trường BẮT BUỘC và lấy từ API danh mục, không hardcode: đây là thứ quyết định xe
- * của chi nhánh hiện ở đâu trên marketplace.
- *
- * **Toạ độ không có ô nhập.** Backend tự tra từ địa chỉ khi lưu (best-effort), và bản đồ dưới
- * đây là chỗ chủ shop KIỂM lại kết quả đó. Việc kiểm này không phải trang trí: toạ độ chi nhánh
- * là điểm xuất phát của mọi phép tính phí giao xe tận nơi, nên một cái ghim lệch vài km là mọi
- * đơn giao của chi nhánh đó sai tiền.
+ * Địa chỉ đi qua `AddressField` — tỉnh/thành và xã/phường chọn từ DANH MỤC NHÀ NƯỚC (mô hình
+ * hai cấp từ 01/07/2025), số nhà và đường thì gõ, rồi xác nhận ghim trên bản đồ. Cả ba phần đều
+ * bắt buộc ở đây vì chi nhánh là ĐỊA ĐIỂM VẬN HÀNH THẬT: xe nằm ở đó, khách tới đó nhận xe, và
+ * toạ độ của nó là điểm xuất phát của mọi phép tính phí giao xe tận nơi — một cái ghim lệch vài
+ * km là mọi đơn giao của chi nhánh đó sai tiền.
  */
 export function BranchFormDialog({
   open,
@@ -46,8 +60,8 @@ export function BranchFormDialog({
   notice?: ReactNode;
 }) {
   const t = useTranslations('Branches');
+  const tAddr = useTranslations('Address');
   const tc = useTranslations('Common');
-  const provinces = useProvinceOptions();
   const create = useCreateBranch();
   const update = useUpdateBranch();
   const submitting = create.isPending || update.isPending;
@@ -61,7 +75,17 @@ export function BranchFormDialog({
     defaultValues: {
       name: branch?.name ?? '',
       provinceCode: branch?.provinceCode ?? '',
-      address: branch?.address ?? '',
+      wardCode: branch?.wardCode ?? '',
+      /*
+       * Chi nhánh CŨ chưa có `addressLine`: đoán phần "số nhà, đường" từ chuỗi hiển thị bằng
+       * cách cắt các cụm trông như đơn vị hành chính. Chỉ là GỢI Ý cho ô nhập — người dùng nhìn
+       * và sửa trước khi lưu, và đó chính là lý do form này bắt họ xác nhận lại địa chỉ.
+       */
+      addressLine: branch?.addressLine ?? guessAddressLine(branch?.address),
+      placeId: branch?.placeId ?? null,
+      latitude: branch?.latitude == null ? null : Number(branch.latitude),
+      longitude: branch?.longitude == null ? null : Number(branch.longitude),
+      locationSource: branch?.locationSource ?? null,
       phone: branch?.phone ?? '',
     },
   });
@@ -70,7 +94,12 @@ export function BranchFormDialog({
     const payload = {
       name: values.name,
       provinceCode: values.provinceCode,
-      address: values.address || undefined,
+      wardCode: values.wardCode,
+      addressLine: values.addressLine || undefined,
+      placeId: values.placeId ?? undefined,
+      latitude: values.latitude ?? undefined,
+      longitude: values.longitude ?? undefined,
+      locationSource: values.locationSource ?? undefined,
       phone: values.phone || undefined,
     };
     // `mutateAsync` + try/catch: đóng hộp thoại CHỈ khi lưu thành công. Đóng trước rồi báo lỗi
@@ -83,15 +112,6 @@ export function BranchFormDialog({
       // Thông báo lỗi do hook mutation hiển thị; giữ nguyên form để sửa và gửi lại.
     }
   });
-
-  // API trả toạ độ dạng CHUỖI (Decimal → string, ADR 0007) — parse ở đây, một chỗ.
-  const point = branch
-    ? toGeoPoint(
-        branch.latitude == null ? null : Number(branch.latitude),
-        branch.longitude == null ? null : Number(branch.longitude),
-      )
-    : null;
-  const mapUrl = mapPlaceUrl(point);
 
   return (
     <ResponsiveDialog
@@ -107,30 +127,16 @@ export function BranchFormDialog({
           type="warning"
           showIcon
           className={styles.notice}
-          message={t('form.noProvinceTitle')}
+          message={tAddr('review.title')}
           description={
             branch.legacyProvinceValue
-              ? t('form.noProvinceLegacy', { value: branch.legacyProvinceValue })
-              : t('form.noProvinceHint')
+              ? `${tAddr('review.hint')} ${tAddr('review.legacyValue', { value: branch.legacyProvinceValue })}`
+              : tAddr('review.hint')
           }
         />
       ) : null}
 
       {notice}
-
-      {provinces.isError ? (
-        <Alert
-          type="warning"
-          showIcon
-          className={styles.notice}
-          message={t('form.provincesLoadError')}
-          action={
-            <Button size="small" onClick={provinces.refetch}>
-              {tc('actions.retry')}
-            </Button>
-          }
-        />
-      ) : null}
 
       <DialogForm onSubmit={onSubmit} labelWidth="md">
         <TextField
@@ -140,24 +146,11 @@ export function BranchFormDialog({
           placeholder={t('form.namePlaceholder')}
           autoFocus
         />
-        <SelectField
+        <AddressField
           control={control}
-          name="provinceCode"
-          label={t('form.provinceLabel')}
+          names={ADDRESS_FIELD_NAMES}
+          pin={ADDRESS_PIN_NAMES}
           required
-          showSearch
-          options={provinces.options}
-          disabled={provinces.isLoading || provinces.isError}
-          placeholder={
-            provinces.isLoading ? t('form.provinceLoading') : t('form.provincePlaceholder')
-          }
-          help={t('form.provinceHelp')}
-        />
-        <TextField
-          control={control}
-          name="address"
-          label={t('form.addressLabel')}
-          placeholder={t('form.addressPlaceholder')}
         />
         <TextField
           control={control}
@@ -166,27 +159,6 @@ export function BranchFormDialog({
           placeholder={t('form.phonePlaceholder')}
         />
       </DialogForm>
-
-      {/*
-        Chỉ hiện khi SỬA: chi nhánh mới chưa có địa chỉ nào để tra, một khối bản đồ rỗng ở form
-        tạo chỉ là chỗ trống gây khó hiểu. Ba nhánh dưới đây là ba sự thật khác nhau và phải nói
-        khác nhau — có vị trí / có địa chỉ nhưng tra không ra / chưa nhập địa chỉ.
-      */}
-      {branch ? (
-        <section className={styles.mapBlock} aria-label={t('map.title')}>
-          <h3 className={styles.mapTitle}>{t('map.title')}</h3>
-          {mapUrl ? (
-            <>
-              <EmbedMap src={mapUrl} title={t('map.frameTitle')} height={200} />
-              <p className={styles.mapHint}>{t('map.hint')}</p>
-            </>
-          ) : (
-            <p className={styles.mapHint}>
-              {branch.address ? t('map.pending') : t('map.addressFirst')}
-            </p>
-          )}
-        </section>
-      ) : null}
     </ResponsiveDialog>
   );
 }

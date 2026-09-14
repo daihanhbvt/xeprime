@@ -93,6 +93,29 @@
   --ant-cmp-steps-item-solid-line-color: var(--xp-color-border-subtle);
 }
 
+/*
+ * Chỉ có khi bước đó truyền `aside`. Cột phụ rộng cố định để thẻ nội dung co giãn; dưới
+ * 1024px nó xuống dưới form thay vì bóp form xuống còn một nửa màn hình.
+ */
+.contentRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--xp-space-md);
+  align-items: start;
+}
+
+.aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+@media (max-width: 1024px) {
+  .contentRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .contentCard {
   padding: 8px;
 }

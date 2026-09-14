@@ -6,6 +6,8 @@ import {
   approveWithdrawal,
   fetchDailyReconciliation,
   fetchHolds,
+  fetchInsuranceQueue,
+  insuranceFiltersToParams,
   fetchRefunds,
   fetchWithdrawalQueue,
   holdFiltersToParams,
@@ -14,8 +16,11 @@ import {
   refundFiltersToParams,
   rejectRefund,
   rejectWithdrawal,
+  retryInsurance,
   reverseWithdrawal,
+  saveBankBalance,
   settleHold,
+  voidInsurance,
   withdrawalFiltersToParams,
 } from '../api';
 import type {
@@ -23,9 +28,11 @@ import type {
   MarkRefundPaidInput,
   RefundFilters,
   RejectRefundInput,
+  SaveBankBalanceInput,
   SettleHoldInput,
   MarkWithdrawalPaidInput,
   WithdrawalFilters,
+  InsuranceFilters,
 } from '../types';
 
 export function useHolds(filters: HoldFilters) {
@@ -54,6 +61,23 @@ export function useDailyReconciliation(date: string) {
     queryKey: queryKeys.platformMoney.reconciliation(date),
     queryFn: () => fetchDailyReconciliation(date),
     staleTime: 0,
+  });
+}
+
+/**
+ * Nhập số dư ngân hàng cuối ngày.
+ *
+ * Nạp thẳng kết quả vào cache của ĐÚNG ngày vừa nhập: response đã là bản đối soát tính lại với
+ * số dư mới, nên fetch lại một lần nữa chỉ để thấy cùng con số là một vòng chờ thừa ngay lúc
+ * người dùng đang nhìn một chênh lệch và muốn biết nó biến mất chưa.
+ */
+export function useSaveBankBalance() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SaveBankBalanceInput) => saveBankBalance(body),
+    onSuccess: (recon, body) => {
+      queryClient.setQueryData(queryKeys.platformMoney.reconciliation(body.date), recon);
+    },
   });
 }
 
@@ -143,6 +167,42 @@ export function useReverseWithdrawal() {
   return useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       reverseWithdrawal(id, { reason }),
+    onSuccess: invalidate,
+  });
+}
+
+// ── Hàng đợi bảo hiểm (ADR 0032 điều 4 — Phase 7) ───────────────────────────
+
+export function useInsuranceQueue(filters: InsuranceFilters) {
+  const params = insuranceFiltersToParams(filters);
+  return useQuery({
+    queryKey: queryKeys.platformInsurance.list(params),
+    queryFn: () => fetchInsuranceQueue(params),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * Thử lại / thu hồi đều đổi trạng thái một dòng VÀ con số `insuranceReserved` của bảng đối soát
+ * — nên làm mới cả nhánh money, không chỉ nhánh bảo hiểm.
+ */
+function useInvalidateInsurance() {
+  const queryClient = useQueryClient();
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.platformInsurance.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.platformMoney.all });
+  };
+}
+
+export function useRetryInsurance() {
+  const invalidate = useInvalidateInsurance();
+  return useMutation({ mutationFn: (id: string) => retryInsurance(id), onSuccess: invalidate });
+}
+
+export function useVoidInsurance() {
+  const invalidate = useInvalidateInsurance();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => voidInsurance(id, { reason }),
     onSuccess: invalidate,
   });
 }

@@ -6,9 +6,13 @@ import { ShopRegistration } from './ShopRegistration';
 /**
  * Đăng ký gian hàng.
  *
- * Điều test này khoá: **tỉnh/thành là bắt buộc** và danh sách đến từ API chứ không phải một mảng
- * cứng trong React. Đăng ký tạo luôn chi nhánh mặc định, nên thiếu tỉnh nghĩa là gian hàng mở ra
- * mà không biết mình ở đâu — xe sẽ không lên chợ được.
+ * Điều test này khoá: **tỉnh/thành là bắt buộc** và form KHÔNG gọi API khi thiếu nó. Đăng ký tạo
+ * luôn chi nhánh mặc định, nên thiếu tỉnh nghĩa là gian hàng mở ra mà không biết mình ở đâu — xe
+ * sẽ không lên chợ được.
+ *
+ * Hành vi của chính ô địa chỉ (hai cấp danh mục, xoá xã khi đổi tỉnh, ba trạng thái của danh
+ * mục) nằm ở `components/form/AddressField.test.tsx`: nó là ô DÙNG CHUNG, kiểm lại ở đây là
+ * kiểm cùng một thứ ở năm màn hình và để chúng trôi khỏi nhau.
  *
  * `getByLabelText` dùng regex chứ không phải chuỗi khớp tuyệt đối: dấu bắt buộc `*` là một node
  * THẬT nằm sau nhãn (`trailingRequiredMark`), nên textContent của label là "Tên gian hàng*".
@@ -23,8 +27,8 @@ vi.mock('../hooks/use-shop', () => ({ useRegisterShop: () => mutation }));
 
 const provinces = vi.hoisted(() => ({
   options: [
-    { value: '79', label: 'Hồ Chí Minh' },
-    { value: '48', label: 'Đà Nẵng' },
+    { value: '79', label: 'TP Hồ Chí Minh' },
+    { value: '48', label: 'TP Đà Nẵng' },
   ] as { value: string; label: string }[],
   isLoading: false,
   isError: false,
@@ -32,6 +36,29 @@ const provinces = vi.hoisted(() => ({
 vi.mock('@/features/locations/hooks/use-provinces', () => ({
   useProvinceOptions: () => ({ ...provinces, error: null, refetch: vi.fn() }),
 }));
+
+/*
+ * Danh mục cấp xã và bản đồ: stub RỖNG. Màn này không kiểm chúng, và để chúng gọi thật thì mỗi
+ * lần render sẽ đòi một QueryClientProvider cộng một khoá bản đồ — hai thứ không liên quan gì
+ * tới việc "thiếu tỉnh thì không gọi API".
+ */
+vi.mock('@/features/locations/hooks/use-wards', () => ({
+  useWardOptions: () => ({
+    options: [],
+    items: [],
+    total: 0,
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+}));
+vi.mock('@/features/locations/hooks/use-places', () => ({
+  PLACE_SEARCH_MIN_LENGTH: 3,
+  usePlaceSearch: () => ({ data: { items: [], available: false }, isFetching: false }),
+  usePlaceDetail: () => ({ mutateAsync: vi.fn() }),
+  useReverseGeocode: () => ({ mutateAsync: vi.fn() }),
+}));
+vi.mock('@/components/form/MapPinPicker', () => ({ MapPinPicker: () => null }));
 
 function renderForm() {
   return render(
@@ -45,8 +72,8 @@ beforeEach(() => {
   mutation.mutate.mockReset();
   mutation.isError = false;
   provinces.options = [
-    { value: '79', label: 'Hồ Chí Minh' },
-    { value: '48', label: 'Đà Nẵng' },
+    { value: '79', label: 'TP Hồ Chí Minh' },
+    { value: '48', label: 'TP Đà Nẵng' },
   ];
   provinces.isLoading = false;
   provinces.isError = false;
@@ -70,32 +97,5 @@ describe('ShopRegistration', () => {
 
     await waitFor(() => expect(screen.getByText('Chọn tỉnh/thành nơi đặt gian hàng')).toBeTruthy());
     expect(mutation.mutate).not.toHaveBeenCalled();
-  });
-
-  it('đang tải danh mục: ô chọn bị khoá và nói rõ đang tải', () => {
-    provinces.options = [];
-    provinces.isLoading = true;
-    // AntD tách placeholder ra node riêng nên `getByText` không khớp — đọc textContent của cả cây.
-    const { container } = renderForm();
-
-    expect(container.textContent).toContain('Đang tải tỉnh/thành');
-    expect(container.querySelector('.ant-select-disabled')).not.toBeNull();
-  });
-
-  it('API danh mục lỗi: cảnh báo + nút thử lại, không im lặng để form không dùng được', () => {
-    provinces.options = [];
-    provinces.isError = true;
-    renderForm();
-
-    expect(screen.getByText('Không tải được danh sách tỉnh/thành')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Thử lại' })).toBeTruthy();
-  });
-
-  it('danh mục rỗng: khoá ô và nói rõ lý do thay vì một dropdown trống vô nghĩa', () => {
-    provinces.options = [];
-    const { container } = renderForm();
-
-    expect(container.textContent).toContain('Chưa có tỉnh/thành nào mở đăng ký');
-    expect(container.querySelector('.ant-select-disabled')).not.toBeNull();
   });
 });

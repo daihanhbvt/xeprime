@@ -1,0 +1,35 @@
+{
+  "sectionTitle": "Địa chỉ",
+  "provinceLabel": "Tỉnh/thành phố",
+  "provincePlaceholder": "Chọn tỉnh/thành",
+  "provinceLoading": "Đang tải tỉnh/thành…",
+  "provinceEmpty": "Chưa có tỉnh/thành nào mở đăng ký.",
+  "provinceLoadError": "Không tải được danh mục tỉnh/thành.",
+  "wardLabel": "Xã/phường",
+  "wardPlaceholder": "Chọn hoặc gõ để tìm",
+  "wardNeedsProvince": "Chọn tỉnh/thành trước",
+  "wardEmpty": "Không tìm thấy xã/phường nào khớp",
+  "wardLoadError": "Không tải được danh mục xã/phường.",
+  "addressLineLabel": "Số nhà, đường",
+  "addressLinePlaceholder": "Ví dụ: 12 Nguyễn Thái Học",
+  "placeEmpty": "Không tìm thấy địa điểm nào",
+  "provinceMismatchTitle": "Địa điểm này có vẻ không thuộc tỉnh/thành bạn chọn",
+  "provinceMismatchHint": "Bản đồ có thể đang dùng tên đơn vị hành chính cũ. Hãy kiểm lại tỉnh/thành và xã/phường, hoặc chỉnh ghim cho đúng.",
+  "pinNeedsCheck": "Vị trí này do hệ thống tra tự động. Hãy xem lại ghim trên bản đồ và chỉnh nếu chưa đúng.",
+  "pinAt": "Ghim đang ở: {address}",
+  "noPinYet": "Chưa có vị trí trên bản đồ. Chọn một gợi ý địa điểm hoặc bấm lên bản đồ để đặt ghim.",
+  "mapLabel": "Bản đồ vị trí",
+  "map": {
+    "pickHint": "Bấm lên bản đồ để đặt ghim.",
+    "adjustHint": "Kéo ghim hoặc bấm lên bản đồ để chỉnh lại vị trí.",
+    "readOnlyHint": "Bản đồ chỉ để xem. Chọn một gợi ý địa điểm khác nếu ghim chưa đúng.",
+    "unavailable": "Chưa hiện được bản đồ. Địa chỉ vẫn lưu bình thường.",
+    "openInMaps": "Mở trong Google Maps"
+  },
+  "review": {
+    "badge": "Cần cập nhật địa chỉ",
+    "title": "Địa chỉ chưa khớp danh mục hành chính hiện hành",
+    "hint": "Từ 01/07/2025 Việt Nam dùng mô hình hai cấp: tỉnh/thành → xã/phường/đặc khu. Hãy mở ra chọn lại xã/phường và xác nhận vị trí trên bản đồ.",
+    "legacyValue": "Dữ liệu cũ ghi: {value}"
+  }
+}

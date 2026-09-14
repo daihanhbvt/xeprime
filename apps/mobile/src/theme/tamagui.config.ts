@@ -108,13 +108,47 @@ const displayFont = createFont({
   weight: { true: fontWeight.bold },
 });
 
+/**
+ * Font mặc định cho MỌI component chữ của Tamagui.
+ *
+ * `settings.defaultFont` chỉ quyết định thang CỠ chữ (`getFontSize` đọc nó); không chỗ nào
+ * trong Tamagui v2 dùng nó để suy ra `fontFamily`. Một `<Text>` không được truyền `fontFamily`
+ * sẽ rơi về font HỆ ĐIỀU HÀNH (Roboto trên Android) trong khi năm file `.ttf` Be Vietnam Pro
+ * vẫn nạp đầy đủ. Lỗi chỉ lộ ra khi đặt cạnh một chỗ khai tường minh: ô nhập tin nhắn là Be
+ * Vietnam Pro, bong bóng ngay trên nó là Roboto.
+ *
+ * Khoá `'Text'` là tên `getDefaultProps` dùng cho mọi component có `staticConfig.isText`, nên
+ * một dòng ở đây phủ toàn app — thay vì rải `fontFamily="$body"` khắp nơi rồi quên một chỗ.
+ *
+ * Kiểu khai RỘNG có chủ đích: để nguyên cho TS suy thì `'$body'` được đối chiếu ngược với chính
+ * config đang được tạo ra từ nó, và TS báo "circularly references itself".
+ */
+const TEXT_DEFAULTS: Record<string, Record<string, unknown>> = {
+  Text: { fontFamily: '$body' },
+};
+
 export const tamaguiConfig = createTamagui({
   animations,
   tokens,
   themes: { light, dark: light },
   fonts: { body: bodyFont, heading: displayFont },
-  defaultFont: 'body',
-  defaultTheme: 'light',
+  /*
+   * `defaultFont` PHẢI nằm trong `settings` — Tamagui v2 đổi chỗ nó.
+   *
+   * `createTamagui` v2 đọc `configIn.settings?.defaultFont`; khoá cùng tên ở cấp NGOÀI bị bỏ
+   * qua IM LẶNG, không cảnh báo, không lỗi kiểu. Hệ quả: `config.defaultFont` là `undefined`,
+   * mọi `<Text>` của Tamagui không nhận `fontFamily` nào, và cả app chạy font HỆ ĐIỀU HÀNH
+   * (Roboto trên Android) trong khi năm file `.ttf` Be Vietnam Pro vẫn được nạp đầy đủ.
+   *
+   * Lỗi này chỉ lộ ra khi đặt cạnh một chỗ có khai `fontFamily` tường minh — ô nhập tin nhắn
+   * dùng Be Vietnam Pro, bong bóng ngay trên nó dùng Roboto, hai họ chữ trong một màn.
+   *
+   * `defaultTheme` cũng không còn được đọc ở đây; chủ đề mặc định đi qua prop của
+   * `TamaguiProvider` ở `app/_layout.tsx`, nơi nó đã được truyền đúng.
+   */
+  settings: { defaultFont: 'body' },
+  /** Font mặc định cho mọi component chữ — xem docblock của {@link TEXT_DEFAULTS}. */
+  defaultProps: TEXT_DEFAULTS,
   shorthands: {
     bg: 'backgroundColor',
     br: 'borderRadius',

@@ -3,22 +3,35 @@ import { Linking, Pressable, StyleSheet } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { guessAddressLine } from '@xeprime/domain';
 import { branchFormSchema, type BranchFormValues } from '@xeprime/validators';
+import { AddressFields } from '@/components/form/AddressFields';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { FieldLabel } from '@/components/ui/Field';
 import { RemoteImage } from '@/components/ui/RemoteImage';
-import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
-import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { MAP_PREVIEW_RATIO, mapAppUrl, mapPreviewUrl, toGeoPoint } from '@/lib/map-static';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { Branch } from '../api';
 import { useCreateBranch, useUpdateBranch } from '../hooks/use-branches';
+
+/** Tên trường địa chỉ trong `branchFormSchema` — hằng ngoài component để định danh ổn định. */
+const ADDRESS_FIELD_NAMES = {
+  provinceCode: 'provinceCode',
+  wardCode: 'wardCode',
+  addressLine: 'addressLine',
+} as const;
+const ADDRESS_PIN_NAMES = {
+  placeId: 'placeId',
+  latitude: 'latitude',
+  longitude: 'longitude',
+  locationSource: 'locationSource',
+} as const;
 
 /**
  * Thêm/sửa chi nhánh — MỘT tấm trượt cho cả hai, đúng như web dùng chung một `BranchFormDialog`:
@@ -27,8 +40,10 @@ import { useCreateBranch, useUpdateBranch } from '../hooks/use-branches';
  * Thân form chỉ render khi mở và remount theo `key`, nên mỗi lần mở là state sạch mà không cần
  * một effect nào đồng bộ lại.
  *
- * **Không có ô toạ độ.** Backend tự tra từ địa chỉ khi lưu; phần KIỂM lại cái ghim nằm ở
- * `BranchLocation` cuối file.
+ * Địa chỉ đi qua `AddressFields` — tỉnh/thành và xã/phường chọn từ DANH MỤC NHÀ NƯỚC (mô hình
+ * hai cấp từ 01/07/2025), số nhà và đường thì gõ kèm gợi ý địa điểm, rồi KIỂM lại cái ghim trên
+ * ảnh bản đồ. Cả ba phần đều bắt buộc vì chi nhánh là địa điểm vận hành thật: xe nằm ở đó, khách
+ * tới đó nhận xe, và toạ độ của nó là điểm xuất phát của mọi phép tính phí giao xe tận nơi.
  */
 export function BranchFormSheet({
   open,
@@ -56,11 +71,10 @@ export function BranchFormSheet({
 function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => void }) {
   const t = useTranslations('Branches');
   const tForm = useTranslations('Branches.form');
+  const tAddr = useTranslations('Address');
   const tActions = useTranslations('Common.actions');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
-  const provinces = useProvinceOptions();
-
   const create = useCreateBranch();
   const update = useUpdateBranch();
   const saving = create.isPending || update.isPending;
@@ -74,7 +88,17 @@ function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => v
     defaultValues: {
       name: branch?.name ?? '',
       provinceCode: branch?.provinceCode ?? '',
-      address: branch?.address ?? '',
+      wardCode: branch?.wardCode ?? '',
+      /*
+       * Chi nhánh CŨ chưa có `addressLine`: đoán phần "số nhà, đường" từ chuỗi hiển thị bằng
+       * cách cắt các cụm trông như đơn vị hành chính. GỢI Ý cho ô nhập, không phải dữ liệu tự
+       * lưu — chủ shop nhìn và sửa trước khi lưu.
+       */
+      addressLine: branch?.addressLine ?? guessAddressLine(branch?.address),
+      placeId: branch?.placeId ?? null,
+      latitude: branch?.latitude == null ? null : Number(branch.latitude),
+      longitude: branch?.longitude == null ? null : Number(branch.longitude),
+      locationSource: branch?.locationSource ?? null,
       phone: branch?.phone ?? '',
     },
   });
@@ -83,7 +107,12 @@ function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => v
     const body = {
       name: values.name.trim(),
       provinceCode: values.provinceCode,
-      address: values.address.trim() || undefined,
+      wardCode: values.wardCode,
+      addressLine: values.addressLine.trim() || undefined,
+      placeId: values.placeId ?? undefined,
+      latitude: values.latitude ?? undefined,
+      longitude: values.longitude ?? undefined,
+      locationSource: values.locationSource ?? undefined,
       phone: values.phone.trim() || undefined,
     };
     const done = {
@@ -103,16 +132,10 @@ function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => v
   return (
     <YStack gap={space.md}>
       {branch?.needsLocationReview ? (
-        <Callout tone="warning" title={tForm('noProvinceTitle')}>
+        <Callout tone="warning" title={tAddr('review.title')}>
           {branch.legacyProvinceValue
-            ? tForm('noProvinceLegacy', { value: branch.legacyProvinceValue })
-            : tForm('noProvinceHint')}
-        </Callout>
-      ) : null}
-
-      {provinces.isError ? (
-        <Callout tone="warning" title={tForm('provincesLoadError')}>
-          {errorMessage(provinces.error)}
+            ? `${tAddr('review.hint')} ${tAddr('review.legacyValue', { value: branch.legacyProvinceValue })}`
+            : tAddr('review.hint')}
         </Callout>
       ) : null}
 
@@ -123,20 +146,11 @@ function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => v
         placeholder={tForm('namePlaceholder')}
         required
       />
-      <SelectField
+      <AddressFields
         control={control}
-        name="provinceCode"
-        label={tForm('provinceLabel')}
-        options={provinces.options}
+        names={ADDRESS_FIELD_NAMES}
+        pin={ADDRESS_PIN_NAMES}
         required
-        placeholder={provinces.isLoading ? tForm('provinceLoading') : tForm('provincePlaceholder')}
-        hint={tForm('provinceHelp')}
-      />
-      <TextField
-        control={control}
-        name="address"
-        label={tForm('addressLabel')}
-        placeholder={tForm('addressPlaceholder')}
       />
       <TextField
         control={control}
@@ -146,113 +160,12 @@ function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => v
         keyboardType="phone-pad"
       />
 
-      {/*
-        Chỉ hiện khi SỬA: chi nhánh mới chưa có địa chỉ nào để tra, một khối bản đồ rỗng ở form
-        tạo chỉ là chỗ trống gây khó hiểu. Ba nhánh dưới đây là ba SỰ THẬT khác nhau và phải nói
-        khác nhau — có vị trí / có địa chỉ nhưng tra không ra / chưa nhập địa chỉ.
-      */}
-      {branch ? <BranchLocation branch={branch} /> : null}
-
       <Button
         label={branch ? tActions('save') : tForm('createOk')}
         loading={saving}
         onPress={() => void submit()}
       />
       <Button label={tActions('close')} variant="ghost" disabled={saving} onPress={onDone} />
-    </YStack>
-  );
-}
-
-/** Nền tối mờ dưới chữ trắng — đủ tương phản trên cả nền bản đồ sáng lẫn mảng cây xanh đậm. */
-const SCRIM = 'rgba(0,0,0,0.55)';
-
-const styles = StyleSheet.create({
-  map: { width: '100%', aspectRatio: MAP_PREVIEW_RATIO },
-});
-
-/**
- * Vị trí chi nhánh trên bản đồ — bản native của khối `EmbedMap` bên web.
- *
- * **Toạ độ không có ô nhập.** Backend tự tra từ địa chỉ khi lưu (best-effort), và khối này là chỗ
- * chủ shop KIỂM lại kết quả đó. Việc kiểm không phải trang trí: toạ độ chi nhánh là điểm xuất
- * phát của mọi phép tính phí giao xe tận nơi, nên một cái ghim lệch vài km là mọi đơn giao của
- * chi nhánh đó sai tiền — mà một cái NÚT thì không kiểm được gì, phải mở app khác rồi quay lại.
- *
- * Web nhúng `<iframe>` Maps Embed; native hiện ẢNH bản đồ có ghim (Maps Static API) và chạm vào
- * thì mở bản đồ thật của hệ điều hành. Khác biệt NĂNG LỰC NỀN TẢNG, không phải nghiệp vụ: cùng
- * một việc (nhìn cái ghim), và bản đồ hệ điều hành còn cho zoom/chỉ đường thật. Lý do chọn ảnh
- * tĩnh thay vì `react-native-maps`: `lib/map-static.ts`.
- *
- * Chưa khai key thì lùi về đúng cái nút cũ — mất phần xem trước, không mất lối đi.
- */
-function BranchLocation({ branch }: { branch: Branch }) {
-  const t = useTranslations('Branches.map');
-  const tStates = useTranslations('Common.states');
-
-  const point = toGeoPoint(branch.latitude, branch.longitude);
-  const preview = mapPreviewUrl(point);
-
-  if (!point) {
-    return (
-      <YStack gap={space.xs}>
-        <FieldLabel label={t('title')} />
-        <Text col={colors.textMuted} fos={fontSize.label}>
-          {branch.address ? t('pending') : t('addressFirst')}
-        </Text>
-      </YStack>
-    );
-  }
-
-  const openMap = () => void Linking.openURL(mapAppUrl(point));
-
-  return (
-    <YStack gap={space.xs}>
-      <FieldLabel label={t('title')} />
-
-      {preview ? (
-        <Pressable onPress={openMap} accessibilityRole="imagebutton" accessibilityLabel={t('open')}>
-          <YStack style={styles.map} br={radius.md} bw={1} bc={colors.border} ov="hidden">
-            <RemoteImage
-              uri={preview}
-              radius={radius.md}
-              fallback={
-                <Text col={colors.textMuted} fos={fontSize.label}>
-                  {tStates('imageUnavailable')}
-                </Text>
-              }
-            />
-
-            {/*
-              Viên "Mở bản đồ" ở GÓC, không phải giữa khung như viên máy ảnh của ô ảnh: giữa
-              khung là chỗ cái GHIM đứng, mà ghim mới là thứ người dùng mở khối này ra để nhìn.
-              Đây cũng đúng chỗ Google đặt "View larger map" trên khung nhúng của họ.
-            */}
-            <XStack
-              pos="absolute"
-              right={space.xs}
-              bottom={space.xs}
-              ai="center"
-              gap={space.xs}
-              bg={SCRIM}
-              br={radius.pill}
-              px={space.xs}
-              py={2}
-              pointerEvents="none"
-            >
-              <Ionicons name="open-outline" size={iconSize.xs} color={colors.textInverse} />
-              <Text col={colors.textInverse} fos={fontSize.label} fow={fontWeight.medium}>
-                {t('open')}
-              </Text>
-            </XStack>
-          </YStack>
-        </Pressable>
-      ) : (
-        <Button label={t('open')} variant="secondary" icon="map-outline" onPress={openMap} />
-      )}
-
-      <Text col={colors.textMuted} fos={fontSize.label}>
-        {t('hint')}
-      </Text>
     </YStack>
   );
 }

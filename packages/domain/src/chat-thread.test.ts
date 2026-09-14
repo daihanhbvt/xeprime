@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import { CHAT_SIDE } from '@xeprime/types';
 import {
   CHAT_SEND_STATE,
   compareMessages,
   groupThreadMessages,
+  isOwnSideMessage,
   markThreadMessageFailed,
   mergeThreadMessages,
+  ownSenderType,
   removeThreadMessage,
   type ThreadMessage,
 } from './chat-thread';
@@ -225,5 +228,24 @@ describe('groupThreadMessages', () => {
 
   it('danh sách rỗng trả về không nhóm nào', () => {
     expect(groupThreadMessages([], options)).toEqual([]);
+  });
+});
+
+/**
+ * Tin LẠC QUAN phải nằm đúng phía ngay từ khung hình đầu.
+ *
+ * Bug thật: tin lạc quan để `senderType: ''`, `isOwnSideMessage` trả `false`, và câu mình vừa gõ
+ * hiện ở phía ĐỐI PHƯƠNG cho tới khi lượt REST kế tiếp về rồi mới nhảy sang phải.
+ */
+describe('ownSenderType', () => {
+  it('là nghịch đảo của `isOwnSideMessage` ở CẢ HAI bề mặt', () => {
+    for (const side of [CHAT_SIDE.CUSTOMER, CHAT_SIDE.SHOP]) {
+      expect(isOwnSideMessage(ownSenderType(side), side)).toBe(true);
+    }
+  });
+
+  it('và KHÔNG phải của phía bên kia', () => {
+    expect(isOwnSideMessage(ownSenderType(CHAT_SIDE.CUSTOMER), CHAT_SIDE.SHOP)).toBe(false);
+    expect(isOwnSideMessage(ownSenderType(CHAT_SIDE.SHOP), CHAT_SIDE.CUSTOMER)).toBe(false);
   });
 });

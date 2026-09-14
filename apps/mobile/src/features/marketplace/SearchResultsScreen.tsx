@@ -566,6 +566,7 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
                     label={t('loadMore')}
                     variant="secondary"
                     block={false}
+                    align="center"
                     onPress={results.retryNextPage}
                   />
                 </YStack>

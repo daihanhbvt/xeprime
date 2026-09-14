@@ -15,6 +15,18 @@ export interface BranchSpec {
   name: string;
   /** Mã tỉnh chính thức — phải có trong danh mục `provinces` do migration nạp. */
   provinceCode: string;
+  /**
+   * Mã xã/phường/đặc khu chính thức — phải THUỘC `provinceCode` ở trên, và FK tổ hợp
+   * `(ward_code, province_code)` ở DB sẽ từ chối seed nếu sai. Mô hình hành chính hai cấp
+   * (từ 01/07/2025): không có cấp huyện nào giữa hai mã này.
+   */
+  wardCode: string;
+  /** Phần "số nhà, đường" — server ghép chuỗi hiển thị từ đây + tên xã + tên tỉnh. */
+  addressLine: string;
+  /**
+   * Địa chỉ HIỂN THỊ đầy đủ. Giữ trong spec (thay vì để seed tự ghép) vì dữ liệu demo mô phỏng
+   * cả những bản ghi có từ TRƯỚC danh mục cấp xã — và chúng viết theo địa danh cũ.
+   */
   address: string;
   phone: string;
   /**
@@ -138,6 +150,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
         name: 'Chi nhánh Quận 5',
         provinceCode: '79',
         address: '123 Nguyễn Văn Cừ, Quận 5, TP. Hồ Chí Minh',
+        wardCode: '27301',
+        addressLine: '123 Nguyễn Văn Cừ',
         phone: '02839001234',
         latitude: 10.7595,
         longitude: 106.682,
@@ -148,6 +162,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
         name: 'Chi nhánh Cầu Giấy',
         provinceCode: '01',
         address: '88 Trần Thái Tông, Cầu Giấy, Hà Nội',
+        wardCode: '00166',
+        addressLine: '88 Trần Thái Tông',
         phone: '02439001234',
         latitude: 21.0313,
         longitude: 105.7873,
@@ -157,6 +173,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
         name: 'Chi nhánh Hải Châu',
         provinceCode: '48',
         address: '215 Nguyễn Văn Linh, Hải Châu, Đà Nẵng',
+        wardCode: '20242',
+        addressLine: '215 Nguyễn Văn Linh',
         phone: '02363001234',
         latitude: 16.0605,
         longitude: 108.2145,
@@ -166,6 +184,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
         name: 'Chi nhánh Ninh Kiều',
         provinceCode: '92',
         address: '45 đường 30/4, Ninh Kiều, Cần Thơ',
+        wardCode: '31135',
+        addressLine: '45 đường 30/4',
         phone: '02923001234',
         latitude: 10.0299,
         longitude: 105.77,
@@ -255,6 +275,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
         name: 'Chi nhánh Thanh Xuân',
         provinceCode: '01',
         address: '12 Lê Văn Lương, Thanh Xuân, Hà Nội',
+        wardCode: '00367',
+        addressLine: '12 Lê Văn Lương',
         phone: '02438887777',
         latitude: 21.0027,
         longitude: 105.802,
@@ -265,6 +287,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
         name: 'Chi nhánh Lê Chân',
         provinceCode: '31',
         address: '77 Tô Hiệu, Lê Chân, Hải Phòng',
+        wardCode: '11383',
+        addressLine: '77 Tô Hiệu',
         phone: '02258887777',
         latitude: 20.843,
         longitude: 106.672,
@@ -322,6 +346,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
         name: 'Đà Nẵng',
         provinceCode: '48',
         address: '30 Nguyễn Chí Thanh, Hải Châu, Đà Nẵng',
+        wardCode: '20242',
+        addressLine: '30 Nguyễn Chí Thanh',
         phone: '0904000001',
         latitude: 16.0715,
         longitude: 108.22,
@@ -371,6 +397,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
         name: 'Cần Thơ',
         provinceCode: '92',
         address: 'Ninh Kiều, Cần Thơ',
+        wardCode: '31135',
+        addressLine: '',
         phone: '0905000001',
         latitude: 10.034,
         longitude: 105.783,
@@ -413,6 +441,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
         name: 'Huế',
         provinceCode: '46',
         address: '5 Lê Lợi, TP. Huế',
+        wardCode: '19789',
+        addressLine: '5 Lê Lợi',
         phone: '0906000001',
         latitude: 16.464,
         longitude: 107.593,

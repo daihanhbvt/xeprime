@@ -84,7 +84,8 @@
     "BANK_ACCOUNT_DUPLICATE": "This bank account is already in your list.",
     "INSUFFICIENT_BALANCE": "Not enough available balance.",
     "WITHDRAWAL_BELOW_MINIMUM": "Amount is below the minimum withdrawal.",
-    "WITHDRAWAL_ALREADY_HANDLED": "This withdrawal request has already been handled."
+    "WITHDRAWAL_ALREADY_HANDLED": "This withdrawal request has already been handled.",
+    "DEPOSIT_ALWAYS_REQUIRED": "Shops on the commission track always collect deposits through XePrime — this switch cannot be turned off."
   },
   "upload": {
     "imageType": "Only JPG, PNG or WebP images are accepted",

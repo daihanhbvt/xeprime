@@ -4,7 +4,9 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslations } from 'use-intl';
 import { AppTopBar } from '@/components/layout/AppTopBar';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { useBadges } from '@/features/badges/hooks/use-badges';
+import { FONT_FAMILY } from '@/theme/fonts';
+import { colors, fontSize, iconSize, space } from '@/theme/tokens';
 
 /**
  * Thanh tab dưới đáy — chỉ tồn tại khi ĐÃ đăng nhập.
@@ -23,11 +25,35 @@ import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
  */
 
 /**
+ * Hộp dòng của nhãn tab — khai TƯỜNG MINH, không để hệ điều hành tự suy.
+ *
+ * 12px × 1.5 chứ không × 1.3: tiếng Việt xếp CHỒNG dấu ("ế" = e + mũ + sắc), và chiều cao mặc
+ * định mà Android suy từ metric của font không chừa đủ chỗ cho tầng dấu trên cùng. Không khai
+ * thì chữ bị cắt ngang ở mép dưới thanh, ngay chỗ thanh điều hướng bắt đầu — đúng cái "bị che"
+ * nhìn thấy trên máy.
+ *
+ * Con số này đi CẶP với `TAB_BAR_HEIGHT`: đổi một cái phải tính lại cái kia.
+ */
+const TAB_LABEL_LINE_HEIGHT = 18;
+
+/**
  * Chiều cao phần NHÌN THẤY của thanh, CHƯA gồm safe area.
  *
- * Vẫn trên sàn chạm 48dp: 4 (đệm trên) + 20 (icon) + 16 (nhãn 12px × 1.3) + đệm dưới.
+ * Vẫn trên sàn chạm 48dp: 4 (đệm trên) + 20 (icon) + 18 (hộp dòng nhãn) + khoảng hở
+ * react-navigation tự chèn giữa icon và nhãn + 4 (đệm dưới).
+ *
+ * 60 chứ không 56: Be Vietnam Pro có hộp dòng cao hơn Roboto ở cùng cỡ chữ, nên ngân sách cũ —
+ * vốn tính cho font hệ điều hành — hụt đúng phần dấu tiếng Việt sau khi app chuyển sang dùng
+ * chung font với web.
  */
-const TAB_BAR_HEIGHT = 56;
+const TAB_BAR_HEIGHT = 60;
+
+/**
+ * Trần hiện trên huy hiệu tab — cùng `overflowCount` mà `MobileTabBar` của web dùng.
+ *
+ * 9 chứ không 99: huy hiệu tab nằm trên một biểu tượng 20dp, và "127" ở đó rộng hơn cả icon.
+ */
+const TAB_BADGE_MAX = 9;
 
 export default function TabsLayout() {
   const t = useTranslations('Navigation.public');
@@ -36,6 +62,19 @@ export default function TabsLayout() {
 
   /** Màn của khách chưa đăng nhập: ẩn khỏi thanh tab cho tới khi có phiên. */
   const authOnly = user ? {} : { href: null };
+
+  /*
+   * Huy hiệu tab đếm hộp thư KHÁCH, không phải tổng hai vai — tab này mở đúng hộp thư đó.
+   * Tổng cả hai vai nằm ở biểu tượng tin nhắn trên thanh trên (`HeaderActions`), nơi đích đến
+   * đi theo con số. Web chia đúng hai vai trò này cho `MobileTabBar` và `MarketHeader`.
+   *
+   * Con số lấy từ `useBadges().chatCustomer` — cùng MỘT query `/me/badges` với chuông và huy
+   * hiệu menu, không còn một lời gọi `/conversations/unread-count?side=customer` riêng.
+   */
+  const { chatCustomer } = useBadges();
+  const chatBadge = chatCustomer
+    ? { tabBarBadge: chatCustomer > TAB_BADGE_MAX ? `${TAB_BADGE_MAX}+` : chatCustomer }
+    : {};
 
   return (
     <SafeAreaView edges={['top']} style={{ backgroundColor: colors.background, flex: 1 }}>
@@ -69,8 +108,17 @@ export default function TabsLayout() {
             : // Guest chỉ có một màn — một thanh tab đúng một mục là thanh trang trí chiếm chỗ.
               { display: 'none' },
           tabBarLabelStyle: {
+            /*
+             * `fontFamily` PHẢI khai: nhãn tab do react-navigation vẽ bằng `Text` của RN, nằm
+             * NGOÀI cây Tamagui nên không nhận `defaultProps` font của `tamagui.config`.
+             *
+             * Và phải chọn ĐÚNG FILE cho nét đậm: Android bỏ qua `fontWeight` khi đã có
+             * `fontFamily` tuỳ biến — để `fontWeight: '500'` một mình thì nhãn vừa sai font vừa
+             * không đậm lên.
+             */
+            fontFamily: FONT_FAMILY.medium,
             fontSize: fontSize.label,
-            fontWeight: fontWeight.medium,
+            lineHeight: TAB_LABEL_LINE_HEIGHT,
           },
           /*
            * KHÔNG đệm dọc ở đây nữa. Nó cộng dồn với `paddingTop`/`paddingBottom` của thanh, đẩy
@@ -93,6 +141,7 @@ export default function TabsLayout() {
           name="chat"
           options={{
             ...authOnly,
+            ...chatBadge,
             title: t('chat'),
             tabBarIcon: ({ color }) => (
               <Ionicons name="chatbubble-ellipses-outline" color={color} size={iconSize.lg} />

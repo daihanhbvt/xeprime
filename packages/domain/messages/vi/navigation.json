@@ -70,7 +70,8 @@
     "supportCases": "Yêu cầu hỗ trợ",
     "openMenu": "Mở menu",
     "fullMenu": "Menu đầy đủ",
-    "balance": "Ví điểm"
+    "balance": "Ví điểm",
+    "shopPaymentSettings": "Thu cọc qua XePrime"
   },
   "manageGroups": {
     "overview": "Tổng quan",

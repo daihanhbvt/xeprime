@@ -2,7 +2,6 @@
 
 import {
   CheckOutlined,
-  EnvironmentOutlined,
   InfoCircleOutlined,
   MailOutlined,
   PhoneOutlined,
@@ -15,16 +14,31 @@ import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { TENANT_TYPE, TENANT_TYPE_VALUES } from '@xeprime/types';
 import { registerShopSchema, type RegisterShopValues } from '@xeprime/validators';
+import { AddressField } from '@/components/form/AddressField';
 import { trailingRequiredMark } from '@/components/form/required-mark';
 import { SelectField } from '@/components/form/SelectField';
 import { TextField } from '@/components/form/TextField';
 import { getErrorMessage } from '@/services/api-client';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
-import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useRegisterShop } from '../hooks/use-shop';
 import styles from './ShopRegistration.module.css';
+
+/** Tên bảy trường địa chỉ trong `registerShopSchema` — hằng số ngoài component để định danh ổn định. */
+const ADDRESS_FIELD_NAMES = {
+  provinceCode: 'provinceCode',
+  wardCode: 'wardCode',
+  addressLine: 'addressLine',
+} as const;
+
+/** Bốn trường GHIM — tách riêng vì không phải form nào cũng lưu toạ độ (xem `AddressPinNames`). */
+const ADDRESS_PIN_NAMES = {
+  placeId: 'placeId',
+  latitude: 'latitude',
+  longitude: 'longitude',
+  locationSource: 'locationSource',
+} as const;
 
 /**
  * Màn tạo gian hàng cho user chưa thuộc gian hàng nào. Đăng ký xong AppShell tự vào portal.
@@ -62,8 +76,6 @@ export function ShopRegistration({
   const register = useRegisterShop();
   const isOwnerVariant = variant === 'owner';
 
-  const provinces = useProvinceOptions();
-
   const typeOptions = useMemo(
     () => TENANT_TYPE_VALUES.map((value) => ({ value, label: domainLabel('tenantType', value) })),
     [domainLabel],
@@ -79,7 +91,12 @@ export function ShopRegistration({
       name: '',
       tenantType: TENANT_TYPE.INDIVIDUAL,
       provinceCode: '',
-      address: '',
+      wardCode: '',
+      addressLine: '',
+      placeId: null,
+      latitude: null,
+      longitude: null,
+      locationSource: null,
       phone: '',
       email: '',
     },
@@ -88,7 +105,12 @@ export function ShopRegistration({
           name: prefill.name ?? '',
           tenantType: TENANT_TYPE.INDIVIDUAL,
           provinceCode: '',
-          address: '',
+          wardCode: '',
+          addressLine: '',
+          placeId: null,
+          latitude: null,
+          longitude: null,
+          locationSource: null,
           phone: prefill.phone ?? '',
           email: prefill.email ?? '',
         }
@@ -100,10 +122,15 @@ export function ShopRegistration({
   const onSubmit = handleSubmit((values) => {
     register.mutate(
       {
-      name: values.name,
-      tenantType: values.tenantType,
-      provinceCode: values.provinceCode,
-        address: values.address || undefined,
+        name: values.name,
+        tenantType: values.tenantType,
+        provinceCode: values.provinceCode,
+        wardCode: values.wardCode || undefined,
+        addressLine: values.addressLine || undefined,
+        placeId: values.placeId ?? undefined,
+        latitude: values.latitude ?? undefined,
+        longitude: values.longitude ?? undefined,
+        locationSource: values.locationSource ?? undefined,
         phone: values.phone || undefined,
         email: values.email || undefined,
       },
@@ -169,21 +196,6 @@ export function ShopRegistration({
             />
           ) : null}
 
-          {provinces.isError ? (
-            <Alert
-              type="warning"
-              showIcon
-              className={styles.alert}
-              message={t('form.fields.province.loadError')}
-              description={getErrorMessage(provinces.error)}
-              action={
-                <Button size="small" onClick={provinces.refetch}>
-                  {tCommon('actions.retry')}
-                </Button>
-              }
-            />
-          ) : null}
-
           <div className={styles.grid}>
             <TextField
               control={control}
@@ -202,35 +214,12 @@ export function ShopRegistration({
               required
             />
             {/*
-              Tỉnh/thành BẮT BUỘC: đăng ký tạo luôn chi nhánh mặc định, và đó là nơi xe của gian
-              hàng hiển thị trên marketplace. Danh sách lấy từ API (`GET /provinces`), không hardcode.
+              Địa chỉ BẮT BUỘC có tỉnh/thành: đăng ký tạo luôn chi nhánh mặc định, và đó là nơi
+              xe của gian hàng hiển thị trên marketplace. Xã/phường thì KHÔNG bắt buộc ở bước này
+              — người mở gian hàng thường chưa có địa chỉ chính xác, và chặn ở đây là chặn luôn
+              việc họ bắt đầu; chi nhánh sinh ra mang cờ chờ bổ sung.
             */}
-            <SelectField
-              control={control}
-              name="provinceCode"
-              label={t('form.fields.province.label')}
-              required
-              showSearch
-              options={provinces.options}
-              loading={provinces.isLoading}
-              // Danh mục rỗng cũng khoá ô: một dropdown mở ra không có gì để chọn là điều khiển chết.
-              disabled={provinces.isLoading || provinces.isError || provinces.options.length === 0}
-              placeholder={t('form.fields.province.placeholder')}
-              help={
-                provinces.isLoading
-                  ? t('form.fields.province.loading')
-                  : provinces.options.length === 0 && !provinces.isError
-                    ? t('form.fields.province.empty')
-                    : t('form.fields.province.help')
-              }
-            />
-            <TextField
-              control={control}
-              name="address"
-              label={t('form.fields.address.label')}
-              placeholder={t('form.fields.address.placeholder')}
-              prefix={<EnvironmentOutlined />}
-            />
+            <AddressField control={control} names={ADDRESS_FIELD_NAMES} pin={ADDRESS_PIN_NAMES} />
             <TextField
               control={control}
               name="phone"

@@ -15,6 +15,7 @@ import {
   BOOKING_REQUEST_STATUS,
   BOOKING_REQUEST_STATUS_VALUES,
   bookingRequestRespondBy,
+  DEPOSIT_COLLECTION_MODE,
   isBookingRequestPastDue,
   isLongTermPackageMonths,
   vnDateKey,
@@ -40,7 +41,9 @@ import {
 import { fromDateOnly, toDateOnly } from '../../common/date-only';
 import { normalizePhone, phoneLookupVariants } from '../../common/phone';
 import { normalizeRouteContext } from '../../common/route-context';
+import { addressViewOf, pinOf } from '../../common/address-view';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AddressService } from '../locations/address.service';
 import { AuditService } from '../audit/audit.service';
 import { AuthService } from '../auth/auth.service';
 import { OccupancyService } from '../calendar/occupancy.service';
@@ -48,6 +51,10 @@ import { NotificationService } from '../notification/notification.service';
 import { BookingsService } from '../bookings/bookings.service';
 import { BookingHoldsService } from '../holds/booking-holds.service';
 import { CustomersService } from '../customers/customers.service';
+import {
+  DepositPolicyService,
+  type DepositPolicyResolution,
+} from '../deposit-policy/deposit-policy.service';
 import { PhoneVerificationService } from '../phone-verification/phone-verification.service';
 import { PricingService } from '../pricing/pricing.service';
 import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
@@ -87,10 +94,25 @@ const SELECT = {
   pickupWindowEndDate: true,
   routeType: true,
   pickupAddress: true,
+  pickupAddressLine: true,
+  pickupProvinceCode: true,
+  pickupWardCode: true,
+  pickupPlaceId: true,
+  pickupLatitude: true,
+  pickupLongitude: true,
   destination: true,
+  destinationPlaceId: true,
+  destinationLatitude: true,
+  destinationLongitude: true,
   note: true,
   deliveryRequested: true,
   deliveryAddress: true,
+  deliveryAddressLine: true,
+  deliveryProvinceCode: true,
+  deliveryWardCode: true,
+  deliveryPlaceId: true,
+  deliveryLatitude: true,
+  deliveryLongitude: true,
   deliveryQuote: true,
   rejectReason: true,
   bookingId: true,
@@ -163,6 +185,10 @@ export class BookingRequestsService {
     private readonly holds: BookingHoldsService,
     /** Khung giờ giao nhận, điều khoản, tự động nhận chuyến theo xe (08/09/2026). */
     private readonly settings: VehicleSettingsService,
+    /** Phase 6: chuyến này có thu cọc qua XePrime không, và vì sao (ADR 0032 điều 2). */
+    private readonly depositPolicy: DepositPolicyService,
+    /** Địa chỉ đón/giao xe có cấu trúc (14/09/2026) — kiểm danh mục + ghép chuỗi hiển thị. */
+    private readonly address: AddressService,
   ) {}
 
   private readonly logger = new Logger(BookingRequestsService.name);
@@ -378,6 +404,44 @@ export class BookingRequestsService {
     }
 
     /*
+     * Phần CÓ CẤU TRÚC của hai địa chỉ vật lý trong yêu cầu (điểm đón, địa chỉ giao xe).
+     *
+     * Chạy TRƯỚC transaction: bên trong có thể có một lượt hỏi bản đồ, và giữ transaction mở
+     * trong lúc chờ Internet là cách để một sự cố bên ngoài thành hàng đợi khoá bên trong.
+     *
+     * `resolveOptional` trả `null` khi client chưa gửi mã hành chính — khi đó chuỗi khách gõ
+     * được giữ nguyên và bản ghi đơn giản là không có mã. Không chặn: một khách đặt xe từ bản
+     * app cũ không được phép mất khả năng gửi yêu cầu vì hệ thống vừa có thêm một danh mục.
+     */
+    const pickupLocation = route.pickupAddress
+      ? await this.address.resolveOptional(
+          {
+            provinceCode: dto.pickupProvinceCode,
+            wardCode: dto.pickupWardCode,
+            addressLine: dto.pickupAddressLine ?? route.pickupAddress,
+            placeId: dto.pickupPlaceId,
+            latitude: dto.pickupLatitude,
+            longitude: dto.pickupLongitude,
+          },
+          { requireSelectable: false },
+        )
+      : null;
+
+    const deliveryLocation = deliveryRequested
+      ? await this.address.resolveOptional(
+          {
+            provinceCode: dto.deliveryProvinceCode,
+            wardCode: dto.deliveryWardCode,
+            addressLine: dto.deliveryAddressLine ?? dto.deliveryAddress,
+            placeId: dto.deliveryPlaceId,
+            latitude: dto.deliveryLatitude,
+            longitude: dto.deliveryLongitude,
+          },
+          { requireSelectable: false },
+        )
+      : null;
+
+    /*
      * Thiết lập THEO XE (08/09/2026) — kiểm ở SERVER, giao diện chỉ là preview:
      *   - giờ nhận/trả phải rơi vào khung giờ giao nhận chủ xe đặt (dài hạn: kiểm lúc duyệt);
      *   - thời lượng tối thiểu của chuyến có tài xế;
@@ -476,11 +540,33 @@ export class BookingRequestsService {
             pickupWindowStartDate: longTerm?.windowStart ?? null,
             pickupWindowEndDate: longTerm?.windowEnd ?? null,
             routeType: route.routeType,
-            pickupAddress: route.pickupAddress,
+            // Chuỗi hiển thị do SERVER ghép khi có mã hành chính — một địa chỉ chỉ có một cách
+            // viết. Không có mã thì giữ nguyên chuỗi khách đã gõ.
+            pickupAddress: pickupLocation?.displayAddress ?? route.pickupAddress,
+            pickupAddressLine: pickupLocation?.addressLine ?? null,
+            pickupProvinceCode: pickupLocation?.provinceCode ?? null,
+            pickupWardCode: pickupLocation?.wardCode ?? null,
+            pickupPlaceId: pickupLocation?.placeId ?? null,
+            pickupLatitude: pickupLocation?.latitude ?? null,
+            pickupLongitude: pickupLocation?.longitude ?? null,
             destination: route.destination,
+            // Điểm đến chỉ có ghim, không có mã hành chính — nó là một địa điểm, không phải
+            // một địa chỉ giao nhận. Ghim chỉ lưu khi CÒN điểm đến (nội thành thì route đã
+            // normalize điểm đến về null, và một cái ghim mồ côi là dữ liệu rác).
+            destinationPlaceId: route.destination ? (dto.destinationPlaceId ?? null) : null,
+            destinationLatitude: route.destination ? (dto.destinationLatitude ?? null) : null,
+            destinationLongitude: route.destination ? (dto.destinationLongitude ?? null) : null,
             note: dto.note ?? null,
             deliveryRequested,
-            deliveryAddress: deliveryRequested ? dto.deliveryAddress!.trim() : null,
+            deliveryAddress: deliveryRequested
+              ? (deliveryLocation?.displayAddress ?? dto.deliveryAddress!.trim())
+              : null,
+            deliveryAddressLine: deliveryLocation?.addressLine ?? null,
+            deliveryProvinceCode: deliveryLocation?.provinceCode ?? null,
+            deliveryWardCode: deliveryLocation?.wardCode ?? null,
+            deliveryPlaceId: deliveryLocation?.placeId ?? null,
+            deliveryLatitude: deliveryLocation?.latitude ?? null,
+            deliveryLongitude: deliveryLocation?.longitude ?? null,
             /*
              * Hạn phản hồi do SERVER đặt, luôn luôn. DTO không có trường này nên client không
              * gửi được, và không có nhánh nào đọc một giá trị từ ngoài vào: một khách tự nới
@@ -559,10 +645,17 @@ export class BookingRequestsService {
       ]);
       const schedule = this.resolveApprovalSchedule(req, {});
       const breakdown = await this.quoteFor(req, schedule, policy);
+      /*
+       * Chính sách cọc giải MỘT lần ở đây rồi đi cùng quyết định tới cuối (Phase 6). Tự nhận
+       * chuyến đi qua ĐÚNG đường của duyệt tay: gian hàng tuyến gói tắt công tắc thì cả hai
+       * đường đều tạo đơn ngay, và cả hai đều đóng băng cùng một `deposit_collection_mode`.
+       */
+      const deposit = await this.depositPolicy.resolveForTenant(tenantId);
       const fees = await this.pricing.customerFeesFor(
         tenantId,
         breakdown.totalAmount,
         breakdown.estimateNote != null,
+        { depositRequired: deposit.required },
       );
       const terms = req.rentalTerms as unknown as RentalTermsSnapshot | null;
       const blocker = this.settings.evaluateAutoAccept(setting, windows, {
@@ -600,6 +693,7 @@ export class BookingRequestsService {
         schedule,
         snapshot,
         fees,
+        deposit,
         { driverId },
       );
       return { status: row.status, bookingId: row.bookingId };
@@ -934,10 +1028,12 @@ export class BookingRequestsService {
      * hàng, rồi ĐÓNG BĂNG vào snapshot (ADR 0024). Báo giá còn tạm tính (`estimateNote`) thì
      * `holdAmount` là null: không thu % trên một con số chưa chốt.
      */
+    const deposit = await this.depositPolicy.resolveForTenant(tenantId);
     const fees = await this.pricing.customerFeesFor(
       tenantId,
       breakdown.totalAmount,
       breakdown.estimateNote != null,
+      { depositRequired: deposit.required },
     );
     const snapshot = this.pricing.buildSnapshot(breakdown, policy, fees);
 
@@ -949,6 +1045,7 @@ export class BookingRequestsService {
       schedule,
       snapshot,
       fees,
+      deposit,
       {},
     );
     return toDto(row);
@@ -974,12 +1071,33 @@ export class BookingRequestsService {
     schedule: ApprovalSchedule,
     snapshot: BookingPriceSnapshot,
     fees: CustomerFeeBreakdown | null,
+    deposit: DepositPolicyResolution,
     opts: { driverId?: string | null },
   ): Promise<BookingRequestRow> {
     if (fees?.holdAmount) {
       return this.approveWithHold(tenantId, actor, id, req, schedule, snapshot, fees.holdAmount);
     }
     const isSystem = actor.source === BOOKING_REQUEST_DECISION_SOURCE.SYSTEM;
+
+    /*
+     * ĐÓNG BĂNG "ai thu cọc" lúc tạo đơn — ADR 0025 ràng buộc 4. Một đơn đang tranh chấp phải
+     * đọc lại được lý do của CHÍNH NÓ, không phải trạng thái công tắc của hôm nay.
+     *
+     * Tới được nhánh này nghĩa là KHÔNG có hold, và hai lý do dẫn tới đó khác hẳn nhau:
+     *
+     *   - `deposit.required === false` → chính sách cọc bị TẮT cho gian hàng này (tuyến gói tắt
+     *     công tắc, hoặc gói không còn cờ `escrow_hold`). Khoản cọc vẫn tồn tại trong thoả thuận
+     *     giữa hai bên, chỉ là XePrime không thu hộ và không đối soát nó ⇒ `direct`
+     *     (ADR 0028 điều 9).
+     *
+     *   - `deposit.required === true` mà vẫn không có hold → không có SỐ TIỀN nào để thu: báo
+     *     giá còn tạm tính lúc duyệt (không lấy % của một con số chưa chốt), hoặc chưa có chính
+     *     sách phí hiệu lực ⇒ `none`. Ghi `direct` ở đây là nói với khách rằng gian hàng sẽ liên
+     *     hệ thu một khoản mà không ai từng tính ra.
+     */
+    const depositCollectionMode = deposit.required
+      ? DEPOSIT_COLLECTION_MODE.NONE
+      : DEPOSIT_COLLECTION_MODE.DIRECT;
 
     return this.prisma.$transaction(async (tx) => {
       const booking = await this.bookings.createWithinTx(
@@ -1001,7 +1119,21 @@ export class BookingRequestsService {
           // đều nhìn thấy, không phải quay lại yêu cầu gốc.
           routeType: req.routeType ?? undefined,
           pickupAddress: req.pickupAddress ?? undefined,
+          // Địa chỉ đón đi nguyên cả cụm sang đơn — mã hành chính, phần chi tiết và ghim. Copy
+          // mỗi chuỗi hiển thị là để đơn mất khả năng lọc theo khu vực và mất điểm tính khoảng
+          // cách, trong khi yêu cầu gốc vẫn có đủ.
+          pickupProvinceCode: req.pickupProvinceCode ?? undefined,
+          pickupWardCode: req.pickupWardCode ?? undefined,
+          pickupAddressLine: req.pickupAddressLine ?? undefined,
+          pickupPlaceId: req.pickupPlaceId ?? undefined,
+          pickupLatitude: req.pickupLatitude == null ? undefined : Number(req.pickupLatitude),
+          pickupLongitude: req.pickupLongitude == null ? undefined : Number(req.pickupLongitude),
           destination: req.destination ?? undefined,
+          destinationPlaceId: req.destinationPlaceId ?? undefined,
+          destinationLatitude:
+            req.destinationLatitude == null ? undefined : Number(req.destinationLatitude),
+          destinationLongitude:
+            req.destinationLongitude == null ? undefined : Number(req.destinationLongitude),
           baseAmount: rowAmount(snapshot.rows, 'base'),
           discountAmount: rowAmountAbs(snapshot.rows, 'discount'),
           deliveryFee: rowAmount(snapshot.rows, 'delivery'),
@@ -1017,6 +1149,7 @@ export class BookingRequestsService {
           driverId: opts.driverId ?? null,
           // Điều kiện thuê đã đóng băng lúc khách gửi — đi nguyên sang đơn.
           rentalTerms: (req.rentalTerms as unknown as RentalTermsSnapshot | null) ?? null,
+          depositCollectionMode,
         },
       );
 
@@ -1404,7 +1537,16 @@ const PENDING_SELECT = {
   pickupWindowEndDate: true,
   routeType: true,
   pickupAddress: true,
+  pickupAddressLine: true,
+  pickupProvinceCode: true,
+  pickupWardCode: true,
+  pickupPlaceId: true,
+  pickupLatitude: true,
+  pickupLongitude: true,
   destination: true,
+  destinationPlaceId: true,
+  destinationLatitude: true,
+  destinationLongitude: true,
   deliveryRequested: true,
   deliveryQuote: true,
   /// Điều kiện thuê đã đóng băng lúc khách gửi — copy sang đơn khi duyệt (08/09/2026).
@@ -1462,10 +1604,29 @@ function toDto(r: BookingRequestRow): BookingRequestDto {
     pickupWindowEndDate: fromDateOnly(r.pickupWindowEndDate),
     routeType: r.routeType,
     pickupAddress: r.pickupAddress,
+    pickupLocation: addressViewOf({
+      displayAddress: r.pickupAddress,
+      addressLine: r.pickupAddressLine,
+      provinceCode: r.pickupProvinceCode,
+      wardCode: r.pickupWardCode,
+      placeId: r.pickupPlaceId,
+      latitude: r.pickupLatitude,
+      longitude: r.pickupLongitude,
+    }),
     destination: r.destination,
+    destinationPin: pinOf(r.destinationLatitude, r.destinationLongitude, r.destinationPlaceId),
     note: r.note,
     deliveryRequested: r.deliveryRequested,
     deliveryAddress: r.deliveryAddress,
+    deliveryLocation: addressViewOf({
+      displayAddress: r.deliveryAddress,
+      addressLine: r.deliveryAddressLine,
+      provinceCode: r.deliveryProvinceCode,
+      wardCode: r.deliveryWardCode,
+      placeId: r.deliveryPlaceId,
+      latitude: r.deliveryLatitude,
+      longitude: r.deliveryLongitude,
+    }),
     deliveryQuote: quote
       ? {
           distanceKm: quote.distanceKm,

@@ -1,0 +1,55 @@
+.block {
+  margin-bottom: var(--xp-space-md);
+}
+
+/*
+ * Bọc riêng để lớp "đang tải" phủ đúng khung bản đồ.
+ *
+ * `position: relative` ở đây chứ không ở `.map`: Google ghi đè style của chính phần tử nó dựng
+ * bản đồ vào, nên mọi thứ của mình phải nằm ở lớp ngoài.
+ */
+.mapWrap {
+  position: relative;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  overflow: hidden;
+}
+
+.map {
+  /*
+   * Chiều cao cố định thay vì tỉ lệ khung hình: ô này nằm giữa một form, và một khối co giãn
+   * theo bề ngang sẽ đẩy các trường bên dưới nhảy chỗ mỗi lần cửa sổ đổi kích thước.
+   */
+  height: 240px;
+  width: 100%;
+  background: var(--xp-color-bg-muted);
+}
+
+.loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--xp-color-bg-container);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  flex-wrap: wrap;
+}
+
+.hint {
+  margin: var(--xp-space-xs) 0 0;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+@media (max-width: 576px) {
+  .map {
+    height: 200px;
+  }
+}

@@ -60,27 +60,18 @@
   gap: 12px;
 }
 
-.iconBtn {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  border: none;
-  background: var(--xp-color-bg-container);
-  color: var(--xp-color-text-secondary);
-  display: grid;
-  place-items: center;
-  font-size: 17px;
-  cursor: pointer;
-  box-shadow: var(--xp-shadow-sm);
-}
-.iconBtn:hover {
-  color: var(--xp-color-primary);
-}
-
 .avatarTrigger {
   display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  padding: 2px;
   cursor: pointer;
-  border-radius: 50%;
+  border-radius: var(--xp-border-radius-pill);
+}
+
+.avatarTrigger:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
 }
 
 .avatar {
@@ -89,4 +80,17 @@
   font-weight: 700;
   cursor: pointer;
   flex: none;
+}
+
+/*
+ * Mũi tên nhỏ cạnh avatar: từ khi đổi ngôn ngữ dọn vào menu tài khoản, avatar không còn chỉ là
+ * ảnh đại diện mà là lối vào duy nhất tới một nhóm cài đặt — phải nhìn ra được là nó bấm được.
+ */
+.avatarCaret {
+  font-size: 10px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.avatarTrigger:hover .avatarCaret {
+  color: var(--xp-color-primary);
 }

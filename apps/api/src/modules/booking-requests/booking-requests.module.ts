@@ -3,7 +3,9 @@ import { BookingsModule } from '../bookings/bookings.module';
 import { CalendarModule } from '../calendar/calendar.module';
 import { ChatModule } from '../chat/chat.module';
 import { CustomersModule } from '../customers/customers.module';
+import { DepositPolicyModule } from '../deposit-policy/deposit-policy.module';
 import { HoldsModule } from '../holds/holds.module';
+import { LocationsModule } from '../locations/locations.module';
 import { PhoneVerificationModule } from '../phone-verification/phone-verification.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { VehicleSettingsModule } from '../vehicle-settings/vehicle-settings.module';
@@ -28,7 +30,11 @@ import { BookingRequestsService } from './booking-requests.service';
     CalendarModule,
     ChatModule,
     CustomersModule,
+    // Phase 6: công tắc thu cọc của gian hàng quyết định duyệt xong sinh hold hay tạo đơn ngay.
+    DepositPolicyModule,
     HoldsModule,
+    // Địa chỉ đón/giao xe có cấu trúc (14/09/2026) — kiểm danh mục hành chính ở MỘT chỗ.
+    LocationsModule,
     PhoneVerificationModule,
     PricingModule,
     // Khung giờ giao nhận, điều khoản và tự động nhận chuyến (08/09/2026).

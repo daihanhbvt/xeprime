@@ -28,6 +28,7 @@ export * from './handover';
 export * from './settlement';
 export * from './hold';
 export * from './hold-refund';
+export * from './insurance';
 export * from './wallet';
 export * from './seller';
 export * from './support';

@@ -7,6 +7,7 @@ import {
   DEFAULT_LISTING_SORT, LISTING_AMENITY_LABEL, LISTING_AMENITY_VALUES, LISTING_SORT_LABEL, LISTING_SORT_VALUES, ROUTE_TYPE_LABEL, SEAT_BUCKET_LABEL, SERVICE_TYPE, SERVICE_TYPE_LABEL, VEHICLE_TYPE, VEHICLE_TYPE_LABEL, VEHICLE_TYPE_VALUES, vehicleFuelTypesFor, type ListingSort, type RouteType, type SeatBucket, type ServiceType, type VehicleType, } from '@xeprime/types';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { cx } from '@/lib/cx';
+import { toAppTz } from '@/lib/datetime';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { SERVICE_CHIPS } from '../constants';
 import { FACET_FILTER_KEYS } from '../filter-params';
@@ -149,16 +150,6 @@ export function MarketplaceResults() {
   );
 
   // --- Thanh ngữ cảnh tìm kiếm (Figma: "Ô tô · TP. Hồ Chí Minh · 09/08 – 12/08" + Chỉnh sửa) --
-  const days =
-    filters.pickupAt && filters.returnAt
-      ? Math.max(
-          1,
-          Math.ceil(
-            (new Date(filters.returnAt).getTime() - new Date(filters.pickupAt).getTime()) /
-              86_400_000,
-          ),
-        )
-      : null;
   const contextSummary = [
     filters.vehicleType
       ? domainLabel('vehicleType', filters.vehicleType, VEHICLE_TYPE_LABEL[filters.vehicleType as VehicleType])
@@ -175,14 +166,17 @@ export function MarketplaceResults() {
     // cũ không còn khả dụng thì nói thẳng, KHÔNG âm thầm hiện "Toàn quốc" trong khi vẫn đang lọc.
     provinceLabelOf(destinations, filters.provinceCode) ??
       (filters.provinceCode || filters.province ? tLocation('unavailable') : tLocation('nationwide')),
+    /*
+     * NGÀY + GIỜ của cả hai đầu, viết y hệt ô thời gian thuê (`fmt.rentalPointCompact`):
+     * `14/09 17:00 → 15/09 17:00 (1 ngày)`.
+     *
+     * Bản trước chỉ in hai NGÀY LỊCH và đếm ngày bằng phép trừ hai mốc rồi `ceil` — nên một
+     * chuyến 17:00 → 17:00 hôm sau hiện ra "15/09/2026 – 16/09/2026 (1 ngày)" mà không nói giờ
+     * nhận, còn một chuyến 09:00 → 23:00 cùng ngày thì cũng "1 ngày" với đúng hai ngày khác
+     * nhau. Giờ nhận là thứ quyết định số ngày tính tiền, nên nó phải nằm ngay trong dòng này.
+     */
     filters.pickupAt && filters.returnAt
-      ? days
-        ? t('dateRangeWithDays', {
-            from: fmt.date(filters.pickupAt),
-            to: fmt.date(filters.returnAt),
-            days,
-          })
-        : t('dateRange', { from: fmt.date(filters.pickupAt), to: fmt.date(filters.returnAt) })
+      ? fmt.rentalRangeSummary(toAppTz(filters.pickupAt), toAppTz(filters.returnAt))
       : null,
   ]
     .filter(Boolean)

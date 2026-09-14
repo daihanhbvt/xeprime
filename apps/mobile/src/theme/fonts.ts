@@ -1,4 +1,5 @@
 import { useFonts } from 'expo-font';
+import { Platform } from 'react-native';
 
 // `import` chứ không `require`: cùng quy ước với `src/assets.ts`, và Metro vẫn nội suy được
 // đường dẫn lúc build. Kiểu khai ở `global.d.ts`.
@@ -27,6 +28,18 @@ export const FONT_FAMILY = {
   semibold: 'BeVietnamPro_600SemiBold',
   bold: 'BeVietnamPro_700Bold',
   display: 'PlayfairDisplay_700Bold',
+  /**
+   * Font MẶC ĐỊNH CỦA MÁY — không phải một file `.ttf` nào trong repo.
+   *
+   * Tên họ chữ khác nhau theo nền tảng và không có tên chung: iOS nhận bí danh `'System'`
+   * (San Francisco), còn Android thì `'System'` KHÔNG phải một họ đã đăng ký — tên thật của
+   * mặt chữ mặc định là `'sans-serif'` (Roboto). Gõ một trong hai ở chỗ dùng là đúng ở một máy
+   * và rơi về mặc định ngầm ở máy kia.
+   *
+   * Có khe này để chỗ cần font hệ thống gọi tên nó, thay vì rải chuỗi trần kèm `Platform.select`
+   * ở từng component.
+   */
+  system: Platform.select({ ios: 'System', default: 'sans-serif' }),
 } as const;
 
 /**

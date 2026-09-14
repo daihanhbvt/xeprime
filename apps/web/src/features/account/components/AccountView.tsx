@@ -1,23 +1,27 @@
 'use client';
 
 import {
-  CheckCircleFilled,
+  CheckOutlined,
   EditOutlined,
-  LockOutlined,
+  ExclamationCircleFilled,
   MailOutlined,
   PhoneOutlined,
+  PlusOutlined,
   SafetyCertificateOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Alert, App, Avatar, Button, Card, Spin, Tag } from 'antd';
-import { useEffect, useState } from 'react';
+import { Alert, App, Avatar, Button, Card, Spin, Tag, Tooltip } from 'antd';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { STATUS_COLOR } from '@xeprime/types';
 import { accountProfileSchema, type AccountProfileValues } from '@xeprime/validators';
+import { ImageUploadField } from '@/components/form/ImageUploadField';
 import { TextField } from '@/components/form/TextField';
 import { getErrorMessage } from '@/services/api-client';
+import { presignAvatar } from '@/services/upload';
 import { useMyProfile, useUpdateMyProfile } from '../hooks/use-account';
-import type { UserProfile } from '../types';
+import { CONTACT_CHANNEL, type ContactChannel, type UserProfile } from '../types';
+import { ContactVerifyModal } from './ContactVerifyModal';
 import { ShopEntryCard } from './ShopEntryCard';
 import styles from './AccountView.module.css';
 import { useTranslations } from 'next-intl';
@@ -66,6 +70,8 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
   const { message } = App.useApp();
   const update = useUpdateMyProfile();
   const [isEditing, setIsEditing] = useState(false);
+  /** Kênh liên lạc đang được đổi — `null` là không có modal nào mở. */
+  const [editingContact, setEditingContact] = useState<ContactChannel | null>(null);
 
   const resolver = useValidationResolver<AccountProfileValues>(
     accountProfileSchema,
@@ -92,7 +98,9 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
 
   const onSubmit = handleSubmit((values) => {
     update.mutate(
-      { displayName: values.displayName, avatarUrl: values.avatarUrl ?? undefined },
+      // `null` (không phải `undefined`) khi người dùng gỡ ảnh: `undefined` nghĩa là "không đụng
+      // tới", nên gửi nó đi thì nút Xoá ảnh im lặng không làm gì.
+      { displayName: values.displayName, avatarUrl: values.avatarUrl ?? null },
       {
         onSuccess: () => {
           message.success(t('saved'));
@@ -140,31 +148,22 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
           </section>
 
           <dl className={styles.details}>
-            <div className={styles.detailRow}>
-              <dt>
-                <MailOutlined aria-hidden />
-                {t('profile.email')}
-              </dt>
-              <dd>{profile.email ?? t('noEmail')}</dd>
-            </div>
-            <div className={styles.detailRow}>
-              <dt>
-                <PhoneOutlined aria-hidden />
-                {t('profile.phone')}
-              </dt>
-              <dd>
-                {profile.phone ?? t('noPhone')}
-                {profile.phone ? (
-                  <Tag
-                    color={profile.phoneVerified ? STATUS_COLOR.SUCCESS : STATUS_COLOR.WARNING}
-                    className={styles.verified}
-                  >
-                    {profile.phoneVerified ? <CheckCircleFilled /> : null}
-                    {profile.phoneVerified ? t('verified') : t('profile.unverified')}
-                  </Tag>
-                ) : null}
-              </dd>
-            </div>
+            <ContactRow
+              icon={<MailOutlined aria-hidden />}
+              label={t('profile.email')}
+              value={profile.email}
+              emptyLabel={t('noEmail')}
+              verified={profile.emailVerified}
+              onEdit={() => setEditingContact(CONTACT_CHANNEL.EMAIL)}
+            />
+            <ContactRow
+              icon={<PhoneOutlined aria-hidden />}
+              label={t('profile.phone')}
+              value={profile.phone}
+              emptyLabel={t('noPhone')}
+              verified={profile.phoneVerified}
+              onEdit={() => setEditingContact(CONTACT_CHANNEL.PHONE)}
+            />
           </dl>
         </div>
 
@@ -180,12 +179,18 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
                 prefix={<UserOutlined />}
                 disabled={update.isPending}
               />
-              <TextField
+              {/*
+                Ảnh đại diện đi ĐÚNG đường của mọi ảnh khác trong sản phẩm: chọn file → presign →
+                PUT thẳng lên R2 → field nhận URL công khai. Ô dán URL trước đây bắt người dùng
+                tự tìm một chỗ host ảnh, thứ gần như không ai làm — nên trên thực tế ảnh đại diện
+                là một trường chết.
+              */}
+              <ImageUploadField
                 control={control}
                 name="avatarUrl"
                 label={t('avatarUrl')}
-                placeholder={t('avatarUrlPlaceholder')}
-                disabled={update.isPending}
+                presign={presignAvatar}
+                help={t('avatarHelp')}
               />
             </div>
             <div className={styles.formActions}>
@@ -205,14 +210,98 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
         ) : null}
 
         <div className={styles.securityNote}>
-          <LockOutlined className={styles.securityIcon} aria-hidden />
+          <SafetyCertificateOutlined className={styles.securityIcon} aria-hidden />
           <div>
             <h3 className={styles.securityTitle}>{t('profile.securityTitle')}</h3>
             <p className={styles.securityDescription}>{t('profile.securityDescription')}</p>
           </div>
         </div>
       </div>
+
+      {/*
+        `key` theo kênh: modal giữ state của riêng nó (bước, mã đã gửi, đếm ngược), nên mở email
+        ngay sau khi vừa đóng SĐT phải là một component mới chứ không phải cùng một cái đổi prop.
+      */}
+      {editingContact ? (
+        <ContactVerifyModal
+          key={editingContact}
+          channel={editingContact}
+          open
+          onClose={() => setEditingContact(null)}
+          current={editingContact === CONTACT_CHANNEL.EMAIL ? profile.email : profile.phone}
+        />
+      ) : null}
     </Card>
+  );
+}
+
+/**
+ * Một dòng liên lạc: giá trị + tình trạng xác thực + lối vào để đổi.
+ *
+ * Tình trạng xác thực luôn hiện khi đã có giá trị, kể cả khi CHƯA xác thực: một tài khoản tạo
+ * bằng email/mật khẩu có email nhưng chưa ai chứng minh hộp thư đó tồn tại, và người dùng cần
+ * thấy khoảng cách đó để biết còn việc phải làm — không thấy thì họ tưởng mình đã xong.
+ */
+function ContactRow({
+  icon,
+  label,
+  value,
+  emptyLabel,
+  verified,
+  onEdit,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string | null;
+  emptyLabel: string;
+  verified: boolean;
+  onEdit: () => void;
+}) {
+  const t = useTranslations('Account');
+
+  return (
+    <div className={styles.detailRow}>
+      <dt>
+        {icon}
+        {label}
+      </dt>
+      <dd>
+        <span className={value ? styles.contactValue : styles.contactEmpty}>
+          {value ?? emptyLabel}
+        </span>
+        {value && verified ? (
+          <Tooltip title={t('verified')}>
+            {/*
+              Huy hiệu tự vẽ chứ không phải `CheckCircleFilled` tô màu: biểu tượng của AntD nhận
+              màu bằng `color`, mà `color` là thuộc tính KẾ THỪA — nó nằm cùng chỗ với màu chữ
+              của cả hàng, nên chỉ cần một quy tắc nào đó trúng phần tử trước là dấu tích lặng lẽ
+              đen trở lại. Ở đây màu xanh nằm ở `background`, thứ không kế thừa từ đâu cả.
+            */}
+            <span className={styles.verifiedMark} role="img" aria-label={t('verified')}>
+              <CheckOutlined aria-hidden />
+            </span>
+          </Tooltip>
+        ) : null}
+        {value && !verified ? (
+          <Tag
+            color={STATUS_COLOR.WARNING}
+            className={styles.verified}
+            icon={<ExclamationCircleFilled />}
+          >
+            {t('profile.unverified')}
+          </Tag>
+        ) : null}
+        <Button
+          size="small"
+          type="link"
+          icon={value ? <EditOutlined /> : <PlusOutlined />}
+          onClick={onEdit}
+          aria-label={value ? t('contact.changeAria', { field: label }) : t('contact.addAria', { field: label })}
+        >
+          {value ? t('contact.change') : t('contact.add')}
+        </Button>
+      </dd>
+    </div>
   );
 }
 

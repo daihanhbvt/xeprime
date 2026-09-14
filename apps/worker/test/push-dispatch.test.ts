@@ -134,7 +134,8 @@ maybe('tin nhắn chat: ưu tiên cao, kênh riêng, gộp theo hội thoại', 
   const { targetId } = await seedDelivery({
     type: NOTIFICATION_TYPE.CHAT_MESSAGE_RECEIVED,
     targetType: NOTIFICATION_TARGET_TYPE.CONVERSATION,
-    url: '/chat/CV1',
+    // Đích do `notificationDeepLink` giải theo AUDIENCE, không theo bề mặt người nhận đang mở.
+    url: '/manage/chat/CV1',
   });
   const { sender, sent } = fakeSender();
 

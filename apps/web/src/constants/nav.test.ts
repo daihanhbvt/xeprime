@@ -58,7 +58,7 @@ function hrefsOf(sections: typeof SHOP_NAV): string[] {
 }
 
 describe('nav — cấu trúc khối', () => {
-  it('gian hàng: 6 khối theo hành trình chủ xe, tổng 21 mục lá', () => {
+  it('gian hàng: 6 khối theo hành trình chủ xe, tổng 22 mục lá', () => {
     expect(SHOP_NAV.map((section) => section.key)).toEqual([
       'overview',
       'operations',
@@ -71,7 +71,10 @@ describe('nav — cấu trúc khối', () => {
     // "Khu vực nhận xe" và "Thùng rác" (R1 — ẩn menu chưa có luồng). Lại 20 ở R3: "Hồ sơ
     // người bán" và "Yêu cầu hỗ trợ". 21 từ ADR 0033: "Ví điểm" — khoản XePrime phải trả gian
     // hàng, thuộc bộ CƠ BẢN vì đó là tiền của chính họ, gói hết hạn vẫn phải rút được.
-    expect(flattenLeaves(SHOP_NAV)).toHaveLength(21);
+    // 22 từ Phase 6: "Thu cọc qua XePrime" — KHÔNG gắn `feature` dù đường GHI cần
+    // `escrow_hold`, vì gian hàng thiếu cờ phải vào được để hiểu tính năng thuộc gói nào, và
+    // tuyến hoa hồng phải thấy công tắc bật + khoá (ADR 0027 điều 4).
+    expect(flattenLeaves(SHOP_NAV)).toHaveLength(22);
   });
 
   it('Tổng quan và Hỗ trợ luôn hiện (`pinned`), bốn khối giữa gập được', () => {
@@ -223,16 +226,16 @@ describe('nav — ranh giới gian hàng ↔ nền tảng', () => {
 });
 
 describe('nav — vai trò gian hàng nhìn thấy gì', () => {
-  it('shop_owner thấy đủ 21 mục', () => {
+  it('shop_owner thấy đủ 22 mục', () => {
     expect(
       visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_OWNER], false),
-    ).toHaveLength(21);
+    ).toHaveLength(22);
   });
 
-  it('shop_manager cũng thấy đủ 21 mục (có MEMBER_VIEW, FINANCE_VIEW và SUBSCRIPTION_VIEW)', () => {
+  it('shop_manager cũng thấy đủ 22 mục (có MEMBER_VIEW, FINANCE_VIEW và SUBSCRIPTION_VIEW)', () => {
     expect(
       visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_MANAGER], false),
-    ).toHaveLength(21);
+    ).toHaveLength(22);
   });
 
   it('shop_staff KHÔNG thấy tài chính và người dùng', () => {

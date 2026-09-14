@@ -9,10 +9,9 @@ import {
 import type { AuthService } from '../src/modules/auth/auth.service';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import { CustomersService } from '../src/modules/customers/customers.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeNotificationService, makeBookingRequestsService, makeBookingsService, makePricingService } from './helpers/service-factory';
+import { makeBookingRequestsService, makeBookingsService, makeCustomersService, makeNotificationService, makePricingService } from './helpers/service-factory';
 
 /**
  * `GET /public/booking-requests/busy-days` — lịch bận mà hộp chọn thời gian thuê dùng để KHOÁ
@@ -30,7 +29,7 @@ const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const notifications = makeNotificationService(asService);
 const occupancy = new OccupancyService(asService);
-const customers = new CustomersService(asService, audit);
+const customers = makeCustomersService(asService, audit);
 const pricing = makePricingService(asService);
 const bookings = makeBookingsService(asService, {
   occupancy: occupancy,

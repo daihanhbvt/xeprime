@@ -15,6 +15,7 @@
 import common from '@xeprime/domain/messages/vi/common.json';
 import navigation from '@xeprime/domain/messages/vi/navigation.json';
 import notifications from '@xeprime/domain/messages/vi/notifications.json';
+import address from '@xeprime/domain/messages/vi/address.json';
 import domain from '@xeprime/domain/messages/vi/domain.json';
 import errors from '@xeprime/domain/messages/vi/errors.json';
 import auth from '@xeprime/domain/messages/vi/auth.json';
@@ -59,6 +60,7 @@ const messages = {
   Common: common,
   Navigation: navigation,
   Notifications: notifications,
+  Address: address,
   Domain: domain,
   Errors: errors,
   Auth: auth,

@@ -76,6 +76,7 @@ export function ScreenMessage({
           variant="secondary"
           size="sm"
           block={false}
+          align="center"
           {...(actionIcon ? { icon: actionIcon } : {})}
           onPress={onAction}
         />

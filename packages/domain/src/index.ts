@@ -103,6 +103,20 @@ export {
   type GeoPoint,
 } from './geo';
 
+/**
+ * Ghép địa chỉ vật lý Việt Nam (số nhà → xã/phường → tỉnh/thành).
+ *
+ * Ở domain vì thứ tự thành phần là nghiệp vụ: server lưu chuỗi đã ghép, web và app native hiện
+ * lại chính chuỗi đó. Ghép lại ở từng client là cách để một chi nhánh có ba cách viết địa chỉ.
+ */
+export {
+  addressGeocodeQuery,
+  formatAddress,
+  guessAddressLine,
+  provinceSelectLabel,
+  type AddressParts,
+} from './address';
+
 export {
   HOLIDAY_MAX_SPAN_DAYS,
   HOLIDAY_SYNC_YEARS_AFTER,
@@ -171,6 +185,9 @@ export {
  * Nằm ở domain vì nó là NGHIỆP VỤ (ADR 0011 nằm trong đó), không phải chuyện gọi HTTP.
  */
 export {
+  DEFAULT_PICKUP_HOURS,
+  DEFAULT_PICKUP_LEAD_HOURS,
+  DEFAULT_RENTAL_HOURS,
   SEARCH_OWNED_KEYS,
   defaultRentalRange,
   draftFromFilters,
@@ -210,6 +227,7 @@ export {
   groupThreadMessages,
   isOwnSideMessage,
   newClientMessageId,
+  ownSenderType,
   markThreadMessageFailed,
   mergeThreadMessages,
   removeThreadMessage,

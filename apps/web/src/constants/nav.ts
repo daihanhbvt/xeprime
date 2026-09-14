@@ -330,6 +330,19 @@ export const SHOP_NAV: readonly NavSection[] = [
         feature: PLAN_FEATURE.DRIVERS,
       },
       {
+        /*
+         * Công tắc thu cọc (Phase 6). KHÔNG gắn `feature` dù đường GHI cần `escrow_hold`: gian
+         * hàng thiếu cờ phải vào được để hiểu tính năng thuộc gói nào, và tuyến hoa hồng phải
+         * thấy công tắc bật + khoá kèm giải thích (ADR 0027 điều 4). Ẩn menu ở đây chỉ giấu mất
+         * câu trả lời cho câu hỏi "vì sao khách của tôi phải chuyển tiền trước".
+         */
+        key: 'shop-payment-settings',
+        labelKey: 'manage.shopPaymentSettings',
+        href: ROUTES.MANAGE.SHOP_PAYMENT_SETTINGS,
+        permission: PERMISSION.SELLER_PROFILE_VIEW,
+        icon: BankOutlined,
+      },
+      {
         // Bộ CƠ BẢN (ADR 0027 điều 1): chủ xe cơ bản cũng phải khai được danh tính và tài khoản
         // nhận tiền — không gắn `feature`.
         key: 'seller-profile',

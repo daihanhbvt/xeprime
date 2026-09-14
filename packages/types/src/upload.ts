@@ -39,6 +39,12 @@ export const CHAT_ATTACHMENT_MAX_BYTES = DOCUMENT_UPLOAD_MAX_BYTES;
 export const CHAT_ATTACHMENT_MAX_COUNT = 6;
 
 /**
+ * Lý do một tệp đính kèm chat bị từ chối NGAY tại client. Mã chứ không phải câu (ADR 0012) —
+ * mỗi mã có một khoá ở `Chat.attachmentType` / `Chat.attachmentTooLarge`.
+ */
+export type ChatAttachmentRejection = 'type' | 'tooLarge';
+
+/**
  * Tài liệu riêng tư gắn với xe (Wave 4.1) — hợp đồng nguồn xe; Wave 5 tái dùng cho giấy tờ.
  * Nhị phân ở bucket R2 riêng tư, metadata do server sở hữu (`vehicle_private_files`).
  */
@@ -143,5 +149,33 @@ export function validateDocumentUpload(file: UploadCandidate): UploadRejection |
   if (file.size > DOCUMENT_UPLOAD_MAX_BYTES) {
     return { reason: 'documentTooLarge', maxMb: toMb(DOCUMENT_UPLOAD_MAX_BYTES) };
   }
+  return null;
+}
+
+/**
+ * Đính kèm chat — chặn tệp sai TRƯỚC khi presign, đúng luật `CHAT_ATTACHMENT_*` ở trên.
+ *
+ * Riêng khỏi `validateDocumentUpload` vì hai bộ hằng có thể tách nhau (chat nới PDF hay siết
+ * dung lượng mà không kéo theo hợp đồng nguồn xe), và vì câu báo lỗi của chat nằm ở namespace
+ * `Chat` chứ không ở `Errors.upload.*` — trả về mã của chat để nơi gọi không phải ánh xạ chéo.
+ *
+ * ⚠️ CÒN MỘT BẢN CHÉP TAY: `apps/web/src/features/chat/api.ts` → `validateChatAttachment(file: File)`.
+ *
+ * Nó có TRƯỚC hàm này và chưa chuyển sang gọi ở đây (nhánh dựng hàm này bị giới hạn "apps/web chỉ
+ * được sửa i18n", nên việc chuyển phải đi ở một PR riêng).
+ *
+ * Rủi ro drift HẸP hơn vẻ ngoài: cả hai bản đọc CÙNG `CHAT_ATTACHMENT_MIME_TYPES` và
+ * `CHAT_ATTACHMENT_MAX_BYTES` của package này, nên nới MIME hay đổi trần dung lượng sẽ tự động
+ * áp cho cả hai. Thứ THẬT SỰ lệch được là chính LUẬT: thêm một điều kiện thứ ba ở đây (ví dụ chặn
+ * theo số khung hình của ảnh động, hay một mã từ chối mới) sẽ KHÔNG tới web, và web nhận một tệp
+ * mà app từ chối.
+ *
+ * Khi chuyển web sang gọi hàm này: xoá bản ở `api.ts:137`, giữ nguyên kiểu trả về
+ * (`ChatAttachmentRejection`) vì `MessageComposer` đang ánh xạ mã đó sang câu báo lỗi, rồi xoá
+ * luôn đoạn cảnh báo này.
+ */
+export function validateChatAttachment(file: UploadCandidate): ChatAttachmentRejection | null {
+  if (!(CHAT_ATTACHMENT_MIME_TYPES as readonly string[]).includes(file.type)) return 'type';
+  if (file.size > CHAT_ATTACHMENT_MAX_BYTES) return 'tooLarge';
   return null;
 }

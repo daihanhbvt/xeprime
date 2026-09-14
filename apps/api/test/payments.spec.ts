@@ -15,12 +15,11 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import { CustomersService } from '../src/modules/customers/customers.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import { FinanceOverviewService } from '../src/modules/finance/finance-overview.service';
 import { PaymentsService } from '../src/modules/payments/payments.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeNotificationService, makeBookingsService } from './helpers/service-factory';
+import { makeBookingsService, makeCustomersService, makeNotificationService } from './helpers/service-factory';
 
 /**
  * S2 — Ghi nhận thanh toán (writer duy nhất của paid_amount), chạy trên PostgreSQL THẬT. Kiểm
@@ -34,7 +33,7 @@ const bookings = makeBookingsService(asService, {
   occupancy: new OccupancyService(asService),
   audit: audit,
   notifications: makeNotificationService(asService),
-  customers: new CustomersService(asService, audit),
+  customers: makeCustomersService(asService, audit),
 });
 const payments = new PaymentsService(
   asService,

@@ -16,11 +16,10 @@ import {
 import { AuditService } from '../src/modules/audit/audit.service';
 import type { AuthService } from '../src/modules/auth/auth.service';
 import { ChatService } from '../src/modules/chat/chat.service';
-import { CustomersService } from '../src/modules/customers/customers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeNotificationService, makeBookingRequestsService, makeBookingsService, makePricingService } from './helpers/service-factory';
+import { makeBookingRequestsService, makeBookingsService, makeCustomersService, makeNotificationService, makePricingService } from './helpers/service-factory';
 
 /**
  * Hộp thư yêu cầu thuê của gian hàng, trên PostgreSQL THẬT.
@@ -41,7 +40,7 @@ const audit = new AuditService(asService);
 const notifications = makeNotificationService(asService);
 const pricing = makePricingService(asService);
 const occupancy = new OccupancyService(asService);
-const customers = new CustomersService(asService, audit);
+const customers = makeCustomersService(asService, audit);
 const bookings = makeBookingsService(asService, {
   occupancy: occupancy,
   audit: audit,

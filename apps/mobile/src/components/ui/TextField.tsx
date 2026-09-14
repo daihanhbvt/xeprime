@@ -4,6 +4,7 @@ import { useController, type Control, type FieldValues, type Path } from 'react-
 import { Pressable, TextInput, type TextInputProps } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
+import { FONT_FAMILY } from '@/theme/fonts';
 import { colors, fieldFontSize, iconSize, sizing, space } from '@/theme/tokens';
 import type { IconName } from './Chip';
 
@@ -98,6 +99,7 @@ export function TextField<T extends FieldValues>({
       flex: 1,
       color: colors.text,
       fontSize: fieldFontSize.value,
+      fontFamily: FONT_FAMILY.body,
       minHeight: multiline ? rows * LINE_HEIGHT : sizing.touchTarget,
       paddingVertical: multiline ? space.sm : 0,
     }),

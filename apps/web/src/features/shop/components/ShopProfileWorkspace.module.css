@@ -238,3 +238,15 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/*
+ * Ghi chú đặt trên khối địa chỉ — nhắc rằng đổi ở đây là đổi chi nhánh mặc định.
+ *
+ * Nằm ở đây chứ không trong `AddressField`: đó là một ô dùng chung, còn hệ quả "dời vị trí công
+ * khai của mọi xe" chỉ đúng ở màn hồ sơ gian hàng.
+ */
+.addressNotice {
+  margin: 0 0 var(--xp-space-md);
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}

@@ -32,6 +32,8 @@ import {
 } from '../../common/booking-money';
 import { normalizePhone, toLocalPhone } from '../../common/phone';
 import { resolvePaging, paginationMeta } from '../../common/pagination';
+import { addressViewOf } from '../../common/address-view';
+import { AddressService } from '../locations/address.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import {
@@ -124,6 +126,8 @@ export class CustomersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    /** Địa chỉ khách có cấu trúc (14/09/2026) — kiểm danh mục + ghép chuỗi hiển thị. */
+    private readonly address: AddressService,
   ) {}
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -239,6 +243,21 @@ export class CustomersService {
     await this.assertPhoneFree(tenantId, normalizedPhone, null);
 
     const id = newId();
+    /*
+     * Địa chỉ giải TRƯỚC transaction: `AddressService` có thể phải hỏi bản đồ, và giữ transaction
+     * mở trong lúc chờ Internet là cách để một sự cố bên ngoài thành hàng đợi khoá bên trong.
+     *
+     * `resolveOptional` trả null khi client chưa gửi mã hành chính — chuỗi gõ tay giữ nguyên.
+     */
+    const location = await this.address.resolveOptional(
+      {
+        provinceCode: dto.provinceCode,
+        wardCode: dto.wardCode,
+        addressLine: dto.addressLine ?? dto.address,
+      },
+      { requireSelectable: false },
+    );
+
     try {
       await this.prisma.$transaction(async (tx) => {
         await tx.tenantCustomer.create({
@@ -249,7 +268,12 @@ export class CustomersService {
             phone: toLocalPhone(dto.phone),
             normalizedPhone,
             email: dto.email?.trim() || null,
-            address: dto.address?.trim() || null,
+            // Chuỗi hiển thị do SERVER ghép khi có mã hành chính; không có mã thì giữ nguyên
+            // chuỗi nhân viên đã gõ.
+            address: location?.displayAddress ?? dto.address?.trim() ?? null,
+            addressLine: location?.addressLine ?? null,
+            provinceCode: location?.provinceCode ?? null,
+            wardCode: location?.wardCode ?? null,
             source: TENANT_CUSTOMER_SOURCE.MANUAL,
             createdBy: userId,
           },
@@ -294,6 +318,12 @@ export class CustomersService {
       normalizedPhone: customer.normalizedPhone,
       email: customer.email,
       address: customer.address,
+      location: addressViewOf({
+        displayAddress: customer.address,
+        addressLine: customer.addressLine,
+        provinceCode: customer.provinceCode,
+        wardCode: customer.wardCode,
+      }),
       source: customer.source,
       riskLevel: customer.riskLevel,
       riskReason: customer.riskReason,
@@ -327,6 +357,26 @@ export class CustomersService {
       await this.assertPhoneFree(tenantId, normalizedPhone, id);
     }
 
+    /*
+     * Địa chỉ dựng LẠI CẢ CỤM khi một mảnh của nó đổi, từ (giá trị mới ?? giá trị cũ): chuỗi
+     * hiển thị và mã hành chính phải luôn nói cùng một chuyện.
+     */
+    const addressTouched =
+      dto.address !== undefined ||
+      dto.addressLine !== undefined ||
+      dto.provinceCode !== undefined ||
+      dto.wardCode !== undefined;
+    const nextLocation = addressTouched
+      ? await this.address.resolveOptional(
+          {
+            provinceCode: dto.provinceCode ?? current.provinceCode,
+            wardCode: dto.wardCode ?? current.wardCode,
+            addressLine: dto.addressLine ?? dto.address ?? current.addressLine,
+          },
+          { requireSelectable: false },
+        )
+      : null;
+
     try {
       await this.prisma.$transaction(async (tx) => {
         await tx.tenantCustomer.update({
@@ -335,7 +385,14 @@ export class CustomersService {
             ...(dto.fullName !== undefined ? { fullName: dto.fullName.trim() } : {}),
             ...(dto.phone !== undefined ? { phone: toLocalPhone(dto.phone), normalizedPhone } : {}),
             ...(dto.email !== undefined ? { email: dto.email?.trim() || null } : {}),
-            ...(dto.address !== undefined ? { address: dto.address?.trim() || null } : {}),
+            ...(addressTouched
+              ? {
+                  address: nextLocation?.displayAddress ?? dto.address?.trim() ?? null,
+                  addressLine: nextLocation?.addressLine ?? null,
+                  provinceCode: nextLocation?.provinceCode ?? null,
+                  wardCode: nextLocation?.wardCode ?? null,
+                }
+              : {}),
           },
         });
         await this.audit.record(
@@ -687,6 +744,9 @@ export class CustomersService {
         normalizedPhone: true,
         email: true,
         address: true,
+        addressLine: true,
+        provinceCode: true,
+        wardCode: true,
         source: true,
         riskLevel: true,
         riskReason: true,

@@ -3,11 +3,13 @@ import { useForm } from 'react-hook-form';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { API_ERROR_CODE } from '@xeprime/types';
+import { guessAddressLine } from '@xeprime/domain';
 import { customerFormSchema, type CustomerFormValues } from '@xeprime/validators';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { DataRow } from '@/components/ui/DataRow';
+import { AddressFields } from '@/components/form/AddressFields';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { getErrorCode } from '@/lib/api-client';
@@ -18,7 +20,14 @@ import { space } from '@/theme/tokens';
 import { duplicateCustomerId, type TenantCustomerDetail } from '../api';
 import { useCreateCustomer, useUpdateCustomer } from '../hooks/use-customers';
 
-const EMPTY: CustomerFormValues = { fullName: '', phone: '', email: '', address: '' };
+const EMPTY: CustomerFormValues = {
+  fullName: '',
+  phone: '',
+  email: '',
+  provinceCode: '',
+  wardCode: '',
+  addressLine: '',
+};
 
 function toValues(customer: TenantCustomerDetail | null): CustomerFormValues {
   if (!customer) return EMPTY;
@@ -26,9 +35,25 @@ function toValues(customer: TenantCustomerDetail | null): CustomerFormValues {
     fullName: customer.fullName,
     phone: customer.phone,
     email: customer.email ?? '',
-    address: customer.address ?? '',
+    provinceCode: customer.location?.provinceCode ?? '',
+    wardCode: customer.location?.wardCode ?? '',
+    /*
+     * Hồ sơ CŨ chỉ có chuỗi địa chỉ tự do: đoán phần "số nhà, đường" bằng cách cắt các cụm trông
+     * như đơn vị hành chính. GỢI Ý cho ô nhập, không phải dữ liệu tự lưu — nhân viên nhìn và sửa.
+     */
+    addressLine: customer.location?.addressLine ?? guessAddressLine(customer.address),
   };
 }
+
+/**
+ * Tên ba trường địa chỉ. KHÔNG truyền ghim: địa chỉ khách ở sổ khách là để LIÊN HỆ, hệ thống
+ * không tính khoảng cách hay điều xe tới nó, và mỗi lượt tra bản đồ là một request có tính tiền.
+ */
+const ADDRESS_FIELD_NAMES = {
+  provinceCode: 'provinceCode',
+  wardCode: 'wardCode',
+  addressLine: 'addressLine',
+} as const;
 
 /**
  * Hồ sơ khách — MỘT tấm trượt cho cả thêm lẫn sửa (bản native của `CustomerFormModal`).
@@ -113,7 +138,10 @@ function CustomerForm({
       fullName: values.fullName.trim(),
       phone: values.phone.trim(),
       email: values.email.trim() || null,
-      address: values.address.trim() || null,
+      // Chuỗi hiển thị do SERVER ghép từ ba mảnh — client không gửi `address` lên nữa.
+      ...(values.provinceCode ? { provinceCode: values.provinceCode } : {}),
+      ...(values.wardCode ? { wardCode: values.wardCode } : {}),
+      addressLine: values.addressLine.trim() || undefined,
     };
     const done = {
       onSuccess: () => {
@@ -159,7 +187,11 @@ function CustomerForm({
         autoCapitalize="none"
         autoComplete="email"
       />
-      <TextField control={control} name="address" label={t('address')} multiline rows={2} />
+      {/*
+        Địa chỉ khách KHÔNG bắt buộc: sổ khách hay được điền nhanh lúc lập đơn và địa chỉ ở đó
+        chủ yếu để liên hệ — bắt chọn hai cấp hành chính cho một ô phụ là cản trở việc chính.
+      */}
+      <AddressFields control={control} names={ADDRESS_FIELD_NAMES} title={t('address')} />
 
       {customer ? (
         <DataRow

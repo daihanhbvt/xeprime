@@ -85,9 +85,17 @@
   margin: 0;
 }
 
+/*
+ * Cột nhãn rộng ĐÚNG bằng nhãn dài nhất ("Số điện thoại"), không phải một tỉ lệ của hàng.
+ *
+ * Bản trước chia `0.8fr / 1.2fr`, nên nhãn — một chuỗi cố định dài ~110px — chiếm 40% chiều
+ * rộng hàng và ép giá trị vào phần còn lại: một địa chỉ gmail bình thường bị ngắt làm hai dòng
+ * giữa chừng. Con số cứng giữ hai hàng thẳng cột với nhau (mỗi `.detailRow` là một grid riêng
+ * nên `max-content` sẽ cho hai hàng hai bề rộng khác nhau).
+ */
 .detailRow {
   display: grid;
-  grid-template-columns: minmax(132px, 0.8fr) minmax(0, 1.2fr);
+  grid-template-columns: 128px minmax(0, 1fr);
   align-items: center;
   gap: var(--xp-space-md);
   padding: var(--xp-space-md);
@@ -119,6 +127,24 @@
 .verified {
   flex: none;
   margin: 0;
+}
+
+/*
+ * ĐÃ xác thực chỉ còn dấu tích, KHÔNG kèm chữ: đó là trạng thái bình thường, và một cái nhãn
+ * đầy đủ cho mọi hàng đúng thì hút mất chỗ của chính dữ liệu (email dài bị ngắt hai dòng). Hàng
+ * CHƯA xác thực thì ngược lại — nó là việc còn phải làm nên vẫn giữ nguyên nhãn có chữ.
+ * Tên đọc được vẫn còn qua `aria-label` + tooltip, nên trình đọc màn hình không mất gì.
+ */
+.detailRow dd .verifiedMark {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--xp-color-success);
+  color: #fff;
+  font-size: 10px;
 }
 
 .form {
@@ -223,4 +249,25 @@
   .formActions > :global(.ant-btn) {
     width: 100%;
   }
+}
+
+/*
+ * Giá trị liên lạc và nhãn "chưa có" nằm cùng một chỗ trong hàng, nhưng không cùng sức nặng:
+ * một địa chỉ thật là dữ liệu, còn "Chưa có email" là một khoảng trống cần lấp.
+ */
+.contactValue {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.contactEmpty {
+  color: var(--xp-color-text-tertiary);
+  font-weight: var(--xp-font-weight-regular);
+  font-style: italic;
+}
+
+/* Nút "Đổi"/"Thêm" là hành động phụ trong hàng — sát lề phải, không chiếm chỗ của giá trị. */
+.detailRow dd > :global(.ant-btn-link) {
+  flex: none;
+  padding-inline: 0;
 }

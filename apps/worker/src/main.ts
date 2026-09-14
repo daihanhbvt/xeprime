@@ -22,6 +22,7 @@ import { runRetention } from './jobs/retention';
 import { sweepBookingRequestDeadlines } from './jobs/booking-request-deadlines';
 import { sweepSubscriptionLifecycle } from './jobs/subscription-lifecycle';
 import { sweepBookingHoldExpiry } from './jobs/booking-hold-expiry';
+import { sweepInsuranceIssue } from './jobs/insurance-issue';
 import { purgeExpiredOauthStates } from './jobs/oauth-state-cleanup';
 import { dispatchPushDeliveries } from './jobs/push-dispatch';
 import { HOLIDAY_INTERVAL_MS, shouldRunHolidaySync, syncHolidays } from './jobs/holiday-sync';
@@ -77,6 +78,9 @@ const LOCK_HOLIDAYS = 4_204;
 const LOCK_OAUTH_STATES = 4_205;
 const LOCK_SUBSCRIPTION_LIFECYCLE = 4_206;
 const LOCK_HOLD_EXPIRY = 4_207;
+/** Phase 7 — phát hành bảo hiểm chuyến. Lock RIÊNG: nó gọi ra ngoài, không được chặn việc khác. */
+const LOCK_INSURANCE_ISSUE = 4_210;
+const INSURANCE_ISSUE_INTERVAL_MS = 60_000;
 /** Hold hết hạn theo phút; một phút một nhịp là đủ mịn và job chạy lại ra 0 dòng. */
 const HOLD_EXPIRY_INTERVAL_MS = 60_000;
 
@@ -252,6 +256,21 @@ async function main(): Promise<void> {
       },
       { critical: true },
     ),
+    /*
+     * Phát hành bảo hiểm chuyến (Phase 7 — ADR 0032 điều 4). Nhịp 60 giây: chuyến vừa bàn giao
+     * thì hợp đồng nên có trong vòng một phút, và nhanh hơn nữa cũng không giúp gì vì mốc phát
+     * hành là lúc bàn giao chứ không phải lúc đặt.
+     *
+     * KHÔNG `critical`: chưa cắm đối tác nên lượt nào cũng ra `failed`, và một job "hỏng theo
+     * thiết kế" mà bị đánh dấu critical sẽ làm health check của worker đỏ vĩnh viễn — rồi không
+     * ai tin nó nữa.
+     */
+    loop('phát hành bảo hiểm', LOCK_INSURANCE_ISSUE, INSURANCE_ISSUE_INTERVAL_MS, async () => {
+      const result = await sweepInsuranceIssue(prisma);
+      if (result.claimed) {
+        console.log(`bảo hiểm: xử lý ${result.claimed}, lỗi ${result.failed}`);
+      }
+    }),
     loop('dọn phiên OAuth dở dang', LOCK_OAUTH_STATES, OAUTH_STATE_INTERVAL_MS, async () => {
       const purged = await purgeExpiredOauthStates(prisma);
       // Chỉ log khi có việc — mỗi giờ một dòng "0/0" là nhiễu, không phải dấu hiệu sống.

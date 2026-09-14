@@ -87,20 +87,7 @@ export const chatApi = {
     return getApiClient().post<ConversationSummary>('/conversations', { vehicleId });
   },
 
-  unreadCount(side: string): Promise<{ count: number }> {
-    return getApiClient().get<{ count: number }>('/conversations/unread-count', { side });
-  },
 
-  /**
-   * Chưa đọc của CẢ HAI vai — cho biểu tượng chat trên thanh trên cùng.
-   *
-   * Khác `unreadCount(side)`: cái kia đếm cho MỘT hộp thư (mục menu trỏ thẳng vào hộp thư đó
-   * phải hiện đúng số của nó). Cái này trả lời "có gì đang đợi tôi ở bất kỳ đâu", nên chủ gian
-   * hàng đang lướt chợ xe vẫn thấy khách nhắn vào shop.
-   */
-  unreadSummary(): Promise<ChatUnreadSummary> {
-    return getApiClient().get<ChatUnreadSummary>('/conversations/unread-summary');
-  },
 
   async messages(conversationId: string, cursor?: MessageCursor | null): Promise<MessagePage> {
     const res = (await getApiClient().request<ChatMessage[]>(

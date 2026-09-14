@@ -8,6 +8,17 @@ export type DailyReconciliation = Schemas['DailyReconciliationDto'];
 export type SettleHoldInput = Schemas['SettleHoldDto'];
 export type MarkRefundPaidInput = Schemas['MarkRefundPaidDto'];
 export type RejectRefundInput = Schemas['RejectRefundDto'];
+export type SaveBankBalanceInput = Schemas['SaveBankBalanceDto'];
+
+/** Hợp đồng bảo hiểm nhìn từ ADMIN — Phase 7. */
+export type PlatformInsurancePolicy = Schemas['PlatformInsurancePolicyDto'];
+export type PlatformInsurancePage = Schemas['PlatformInsurancePageDto'];
+
+/** Bỏ trống `status` = hàng đợi VIỆC CẦN LÀM (đang lỗi). */
+export interface InsuranceFilters {
+  status?: string | null;
+  page?: number;
+}
 
 export interface HoldFilters {
   status?: string;

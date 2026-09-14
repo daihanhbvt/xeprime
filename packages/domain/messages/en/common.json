@@ -116,6 +116,8 @@
     "shortDateTime": "{time} · {date}",
     "rentalPoint": "{weekday}, {date}",
     "rentalPointWithTime": "{point} · {time}",
+    "rentalPointCompact": "{date} {time}",
+    "rentalRangeSummary": "{from} → {to} ({duration})",
     "kmRemaining": "{value} km left",
     "kmOverdue": "{value} km overdue",
     "pickupWishDate": "{label}: {date}",

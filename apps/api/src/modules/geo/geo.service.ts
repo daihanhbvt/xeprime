@@ -8,7 +8,13 @@ import {
   type GeoPoint,
 } from '@xeprime/domain';
 import { PrismaService } from '../../prisma/prisma.service';
-import { GEO_PROVIDER, type GeocodeResult, type GeoProvider } from './geo-provider';
+import {
+  GEO_PROVIDER,
+  type GeocodeResult,
+  type GeoProvider,
+  type PlaceDetail,
+  type PlaceSuggestion,
+} from './geo-provider';
 
 /**
  * Bao lâu thì coi một bản ghi cache là cũ.
@@ -126,6 +132,95 @@ export class GeoService {
       // Cache hỏng không được làm hỏng câu trả lời đã có trong tay.
       this.logger.warn(`Không ghi được geocode_cache: ${String(err)}`);
     }
+  }
+
+  /**
+   * Gợi ý địa điểm cho ô nhập địa chỉ. Lỗi/chưa cấu hình → mảng RỖNG.
+   *
+   * KHÔNG cache: gợi ý phụ thuộc từng ký tự người dùng vừa gõ, nên tỉ lệ trúng cache gần bằng
+   * không trong khi mỗi dòng cache là một bản ghi rác. Chỗ tiết kiệm thật nằm ở client —
+   * debounce và độ dài tối thiểu trước khi hỏi.
+   */
+  async searchPlaces(query: string, biasPoint?: GeoPoint | null): Promise<PlaceSuggestion[]> {
+    const q = query.trim();
+    if (!q || !this.provider.enabled) return [];
+    try {
+      return await this.provider.searchPlaces(q, biasPoint ?? null);
+    } catch (err) {
+      this.logger.warn(`Tìm địa điểm thất bại (${this.provider.name}): ${String(err)}`);
+      return [];
+    }
+  }
+
+  /**
+   * Chi tiết một địa điểm đã chọn. `null` = không tra được HOẶC không còn tồn tại.
+   *
+   * Ghi vào `geocode_cache` dưới khoá `place:<id>` — mã địa điểm là khoá ỔN ĐỊNH (khác chuỗi
+   * địa chỉ gõ tay), nên đây là chỗ cache thật sự có ích: mở lại form sửa chi nhánh không phải
+   * hỏi lại Google về cùng một địa điểm.
+   */
+  async placeDetails(placeId: string): Promise<PlaceDetail | null> {
+    const id = placeId.trim();
+    if (!id || !this.provider.enabled) return null;
+
+    const hash = sha256(`${this.provider.name}\nplace:${id}`);
+    const cached = await this.prisma.geocodeCache.findUnique({ where: { addressHash: hash } });
+    if (cached && this.isFresh(cached.fetchedAt) && cached.latitude != null && cached.longitude != null) {
+      return {
+        placeId: id,
+        point: { lat: Number(cached.latitude), lng: Number(cached.longitude) },
+        formattedAddress: cached.formattedAddress,
+        // Thành phần hành chính KHÔNG cache: chúng chỉ dùng để gợi ý bộ chọn nhảy tới đúng tỉnh
+        // ở ngay lần chọn đó, và thêm hai cột vào bảng cache cho một gợi ý là không đáng.
+        administrativeArea: null,
+        locality: null,
+      };
+    }
+
+    let detail: PlaceDetail | null;
+    try {
+      detail = await this.provider.placeDetails(id);
+    } catch (err) {
+      this.logger.warn(`Tra chi tiết địa điểm thất bại (${this.provider.name}): ${String(err)}`);
+      return null;
+    }
+
+    await this.writeGeocodeCache(
+      hash,
+      `place:${id}`,
+      detail ? { point: detail.point, formattedAddress: detail.formattedAddress, placeId: id } : null,
+    );
+    return detail;
+  }
+
+  /** Toạ độ → địa chỉ chữ, để người dùng đọc lại cái ghim vừa kéo. Lỗi → `null`. */
+  async reverseGeocode(point: GeoPoint): Promise<ResolvedAddress | null> {
+    if (!this.provider.enabled || !isValidGeoPoint(point)) return null;
+
+    const key = `${roundCoord(point.lat, ROUTE_KEY_DECIMALS)},${roundCoord(point.lng, ROUTE_KEY_DECIMALS)}`;
+    const hash = sha256(`${this.provider.name}\nreverse:${key}`);
+
+    const cached = await this.prisma.geocodeCache.findUnique({ where: { addressHash: hash } });
+    if (cached && this.isFresh(cached.fetchedAt)) {
+      if (cached.formattedAddress == null) return null;
+      return {
+        point,
+        formattedAddress: cached.formattedAddress,
+        placeId: cached.placeId,
+        cached: true,
+      };
+    }
+
+    let result: GeocodeResult | null;
+    try {
+      result = await this.provider.reverseGeocode(point);
+    } catch (err) {
+      this.logger.warn(`Reverse geocode thất bại (${this.provider.name}): ${String(err)}`);
+      return null;
+    }
+
+    await this.writeGeocodeCache(hash, `reverse:${key}`, result);
+    return result ? { ...result, cached: false } : null;
   }
 
   /**

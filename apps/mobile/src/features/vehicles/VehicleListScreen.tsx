@@ -408,7 +408,14 @@ function ListFooter({
   if (error) {
     return (
       <YStack py={layout.section} ai="center">
-        <Button label={retryLabel} variant="secondary" size="sm" block={false} onPress={onRetry} />
+        <Button
+          label={retryLabel}
+          variant="secondary"
+          size="sm"
+          block={false}
+          align="center"
+          onPress={onRetry}
+        />
       </YStack>
     );
   }

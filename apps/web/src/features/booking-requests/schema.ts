@@ -15,6 +15,25 @@ import type { Dayjs } from 'dayjs';
 import * as yup from 'yup';
 
 /**
+ * Phần CÓ CẤU TRÚC của một địa chỉ vật lý trong luồng đặt xe, có TIỀN TỐ.
+ *
+ * Yêu cầu thuê mang tới ba địa điểm (điểm đón, điểm đến, địa chỉ giao xe) nên các trường phải
+ * có tiền tố; hàm này sinh ra đúng bộ bảy trường cho một tiền tố để ba chỗ không lệch nhau.
+ *
+ * Bắt buộc hay không thì do `.when()` ở ngoài quyết định — cùng cách mà `pickupAddress` và
+ * `deliveryAddress` đang làm: chỉ đòi khi luồng thật sự cần địa chỉ đó.
+ */
+const addressFields = () => ({
+  provinceCode: yup.string().trim().default(''),
+  wardCode: yup.string().trim().default(''),
+  addressLine: yup.string().trim().max(255, 'Tối đa 255 ký tự').default(''),
+  placeId: yup.string().trim().nullable().default(null),
+  latitude: yup.number().nullable().default(null),
+  longitude: yup.number().nullable().default(null),
+  locationSource: yup.string().nullable().default(null),
+});
+
+/**
  * Schema form "Yêu cầu thuê" trên marketplace (yup — báo lỗi sớm; validate thật ở BE).
  * Ngày là `Dayjs` (AntD DatePicker); bắt buộc qua `.test()` để giữ type `Dayjs | null`.
  */
@@ -41,17 +60,35 @@ export const requestFormSchema = yup.object({
   serviceType: yup.mixed<ServiceType>().oneOf(SERVICE_TYPE_VALUES).default(SERVICE_TYPE.SELF_DRIVE),
   /** Lộ trình — bắt buộc khi chuyến CÓ TÀI XẾ. */
   routeType: yup.mixed<RouteType>().oneOf(ROUTE_TYPE_VALUES).default(ROUTE_TYPE.IN_CITY),
-  /** Địa chỉ đón khách — bắt buộc khi có tài xế (xe đến đón, khác giao xe tận nơi). */
-  pickupAddress: yup
-    .string()
-    .trim()
-    .max(500, 'Tối đa 500 ký tự')
-    .default('')
-    .when('serviceType', {
-      is: SERVICE_TYPE.WITH_DRIVER,
-      then: (s) => s.required('Nhập địa chỉ đón'),
-    }),
-  /** Điểm đến — bắt buộc khi lộ trình liên tỉnh (khứ hồi hoặc 1 chiều). */
+  /**
+   * Địa chỉ đón khách — bắt buộc khi có tài xế (xe đến đón, khác giao xe tận nơi).
+   *
+   * Chuỗi hiển thị do SERVER ghép từ mã tỉnh + mã xã + phần chi tiết, nên form KHÔNG còn một ô
+   * `pickupAddress` nào cả; điều kiện bắt buộc chuyển sang `pickupAddressLine`.
+   */
+  pickupProvinceCode: addressFields().provinceCode.when('serviceType', {
+    is: SERVICE_TYPE.WITH_DRIVER,
+    then: (s) => s.required('Chọn tỉnh/thành nơi đón'),
+  }),
+  pickupWardCode: addressFields().wardCode.when('serviceType', {
+    is: SERVICE_TYPE.WITH_DRIVER,
+    then: (s) => s.required('Chọn xã/phường nơi đón'),
+  }),
+  pickupAddressLine: addressFields().addressLine.when('serviceType', {
+    is: SERVICE_TYPE.WITH_DRIVER,
+    then: (s) => s.required('Nhập số nhà, đường nơi đón'),
+  }),
+  pickupPlaceId: addressFields().placeId,
+  pickupLatitude: addressFields().latitude,
+  pickupLongitude: addressFields().longitude,
+  pickupLocationSource: addressFields().locationSource,
+  /**
+   * Điểm đến — bắt buộc khi lộ trình liên tỉnh (khứ hồi hoặc 1 chiều).
+   *
+   * VẪN là chuỗi tự do và KHÔNG có mã hành chính: điểm đến là một ĐỊA ĐIỂM ("Sân bay Nội Bài",
+   * "Đà Lạt"), không phải một địa chỉ giao nhận. Bắt khách chọn xã/phường cho nó là hỏi một thứ
+   * họ không biết và hệ thống không dùng tới.
+   */
   destination: yup
     .string()
     .trim()
@@ -121,15 +158,27 @@ export const requestFormSchema = yup.object({
     .mixed<PickupMethod>()
     .oneOf([PICKUP_METHOD.SELF, PICKUP_METHOD.DELIVERY])
     .default(PICKUP_METHOD.SELF),
-  deliveryAddress: yup
-    .string()
-    .trim()
-    .max(500, 'Tối đa 500 ký tự')
-    .default('')
-    .when('pickupMethod', {
-      is: PICKUP_METHOD.DELIVERY,
-      then: (s) => s.required('Nhập địa chỉ giao xe'),
-    }),
+  /**
+   * Địa chỉ giao xe. Đây là địa chỉ SINH RA TIỀN (phí giao theo km từ chi nhánh tới đúng cái
+   * ghim), nên cả ba phần đều bắt buộc khi khách chọn giao tận nơi — khác hẳn những ô địa chỉ
+   * chỉ để liên hệ.
+   */
+  deliveryProvinceCode: addressFields().provinceCode.when('pickupMethod', {
+    is: PICKUP_METHOD.DELIVERY,
+    then: (s) => s.required('Chọn tỉnh/thành nơi giao xe'),
+  }),
+  deliveryWardCode: addressFields().wardCode.when('pickupMethod', {
+    is: PICKUP_METHOD.DELIVERY,
+    then: (s) => s.required('Chọn xã/phường nơi giao xe'),
+  }),
+  deliveryAddressLine: addressFields().addressLine.when('pickupMethod', {
+    is: PICKUP_METHOD.DELIVERY,
+    then: (s) => s.required('Nhập số nhà, đường nơi giao xe'),
+  }),
+  deliveryPlaceId: addressFields().placeId,
+  deliveryLatitude: addressFields().latitude,
+  deliveryLongitude: addressFields().longitude,
+  deliveryLocationSource: addressFields().locationSource,
   /**
    * Khách đồng ý điều khoản riêng của chủ xe (08/09/2026). Bắt buộc hay không phụ thuộc vào
    * `rentalTerms.requireTermsAcceptance` của xe — dữ liệu server, nên luồng kiểm ở bước Xác nhận

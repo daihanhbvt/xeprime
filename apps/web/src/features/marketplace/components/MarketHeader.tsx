@@ -1,17 +1,18 @@
 'use client';
 
 import {
+  DownOutlined,
   LogoutOutlined,
-  MessageOutlined,
   SafetyCertificateOutlined,
   ShopOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Avatar, Badge, Button, Dropdown, type MenuProps } from 'antd';
+import { Avatar, Button, Dropdown, type MenuProps } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Logo } from '@/components/brand/Logo';
 import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
+import { useLocaleMenuGroup } from '@/components/i18n/locale-menu';
 import { APP_NAME } from '@/constants/app-name';
 import { ROUTES } from '@/constants/routes';
 import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
@@ -19,7 +20,7 @@ import { useMarketLogout } from '@/features/auth/hooks/use-market-logout';
 import { AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { CHAT_SIDE } from '@xeprime/types';
-import { useChatBadge } from '@/features/chat/hooks/use-chat-badge';
+import { ChatMenu } from '@/features/chat/components/ChatMenu';
 import { useCurrentUser, type CurrentUser } from '@/hooks/use-current-user';
 import styles from './MarketHeader.module.css';
 
@@ -33,10 +34,10 @@ const NAV = [
 export function MarketHeader() {
   const t = useTranslations('Navigation.public');
   const { data: user } = useCurrentUser();
-  const chatBadge = useChatBadge(CHAT_SIDE.CUSTOMER);
   const { open } = useAuthModal();
   const logout = useMarketLogout();
   const nextFromHere = useNextFromCurrentPath();
+  const localeGroup = useLocaleMenuGroup();
 
   return (
     <header className={styles.header}>
@@ -58,26 +59,20 @@ export function MarketHeader() {
         </nav>
 
         <div className={styles.right}>
-          {/*
-            Bộ đổi ngôn ngữ đứng TRƯỚC tin nhắn/thông báo/tài khoản, và có mặt cả khi CHƯA đăng
-            nhập: chọn ngôn ngữ là việc người ta làm trước khi làm bất cứ việc gì khác, nên nó
-            không được nằm trong menu tài khoản của người đã đăng nhập.
-          */}
-          <LocaleSwitcher />
           {user ? (
             <>
-              <Badge count={chatBadge.count} size="small" overflowCount={99}>
-                {/*
-                  MỘT bề mặt tương tác: liên kết được tạo dáng như nút tròn, KHÔNG phải `<Button>`
-                  lồng trong `<Link>`. Lồng hai phần tử tương tác cho trình đọc màn hình hai đích
-                  cho cùng một hành động, và bàn phím phải Tab hai lần để đi qua một biểu tượng.
-                */}
-                <Link href={chatBadge.href} aria-label={t('chat')} className={styles.iconBtn}>
-                  <MessageOutlined aria-hidden="true" />
-                </Link>
-              </Badge>
+              <ChatMenu side={CHAT_SIDE.CUSTOMER} />
               <NotificationBell context="customer" />
-              <Dropdown trigger={['click']} menu={{ items: accountMenu(user, logout, t) }}>
+              {/*
+                Đổi ngôn ngữ nằm TRONG menu tài khoản (nhóm cuối), không phải một nút riêng trên
+                thanh: nó là việc làm một lần rồi thôi, còn chỗ trên thanh thì dành cho những thứ
+                người ta bấm hằng ngày. Khách CHƯA đăng nhập không có menu này nên vẫn được một
+                nút riêng ở nhánh dưới — chọn ngôn ngữ không được nằm sau một cổng đăng nhập.
+              */}
+              <Dropdown
+                trigger={['click']}
+                menu={{ items: accountMenu(user, logout, t, localeGroup) }}
+              >
                 <span
                   className={styles.avatarTrigger}
                   role="button"
@@ -87,18 +82,22 @@ export function MarketHeader() {
                   <Avatar className={styles.avatar} size={34} src={user.avatarUrl ?? undefined}>
                     {initial(user.displayName)}
                   </Avatar>
+                  <DownOutlined className={styles.avatarCaret} aria-hidden="true" />
                 </span>
               </Dropdown>
             </>
           ) : (
-            // Đăng nhập của KHÁCH mở modal ngay tại trang đang xem — không rời marketplace.
-            <Button
-              type="primary"
-              icon={<UserOutlined />}
-              onClick={() => open({ mode: AUTH_MODE.LOGIN, next: nextFromHere() })}
-            >
-              {t('login')}
-            </Button>
+            <>
+              <LocaleSwitcher />
+              {/* Đăng nhập của KHÁCH mở modal ngay tại trang đang xem — không rời marketplace. */}
+              <Button
+                type="primary"
+                icon={<UserOutlined />}
+                onClick={() => open({ mode: AUTH_MODE.LOGIN, next: nextFromHere() })}
+              >
+                {t('login')}
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -114,6 +113,7 @@ function accountMenu(
   user: CurrentUser,
   onLogout: () => void,
   t: ReturnType<typeof useTranslations<'Navigation.public'>>,
+  localeGroup: NonNullable<MenuProps['items']>[number],
 ): MenuProps['items'] {
   return [
     { key: 'name', label: user.displayName, disabled: true },
@@ -142,6 +142,8 @@ function accountMenu(
           },
         ]
       : []),
+    { type: 'divider' },
+    localeGroup,
     { type: 'divider' },
     { key: 'logout', icon: <LogoutOutlined />, label: t('logout'), onClick: onLogout },
   ];

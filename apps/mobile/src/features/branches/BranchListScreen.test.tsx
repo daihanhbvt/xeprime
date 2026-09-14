@@ -105,6 +105,22 @@ async function renderScreen(
     .mockResolvedValue([
       { code: '48', name: 'Đà Nẵng', administrativeType: 'municipality', slug: 'da-nang' },
     ]);
+  /*
+   * Cấp XÃ là cấp thứ hai bắt buộc của địa chỉ chi nhánh (ADR 0035): địa điểm vận hành phải khai
+   * đủ hai cấp, nên không có danh mục này thì form không gửi được.
+   */
+  jest.spyOn(locationsApi, 'wards').mockResolvedValue({
+    items: [
+      {
+        code: '20242',
+        provinceCode: '48',
+        name: 'Phường Hải Châu',
+        shortName: 'Hải Châu',
+        administrativeType: 'ward',
+      },
+    ],
+    total: 1,
+  });
   const listSpy = jest.spyOn(branchesApi, 'list').mockResolvedValue(list(items));
   const createSpy = jest.spyOn(branchesApi, 'create').mockResolvedValue(SECOND);
   const actionSpy = jest.spyOn(branchesApi, 'action').mockResolvedValue(SECOND);
@@ -252,21 +268,29 @@ describe('BranchListScreen — thao tác vòng đời', () => {
     expect(view.createSpy).not.toHaveBeenCalled();
   });
 
-  it('tạo chi nhánh đủ trường: gửi MÃ tỉnh, không gửi tên tỉnh', async () => {
+  it('tạo chi nhánh đủ trường: gửi MÃ hai cấp, không gửi tên và không gửi chuỗi hiển thị', async () => {
     const view = await renderScreen([PERMISSION.BRANCH_VIEW, PERMISSION.BRANCH_MANAGE]);
 
     await fireEvent.press(await view.findByLabelText('Thêm chi nhánh'));
     await fireEvent.changeText(await view.findByLabelText('Tên chi nhánh'), 'Chi nhánh mới');
     await fireEvent.press(view.getByLabelText('Tỉnh/thành'));
     await fireEvent.press(await view.findByText('Đà Nẵng'));
+    await fireEvent.press(view.getByLabelText('Xã/phường/đặc khu'));
+    await fireEvent.press(await view.findByText('Phường Hải Châu'));
+    await fireEvent.changeText(view.getByLabelText('Số nhà, đường'), '215 Nguyễn Văn Linh');
     await fireEvent.press(view.getByText('Tạo chi nhánh'));
 
     await waitFor(() => expect(view.createSpy).toHaveBeenCalled());
-    expect(view.createSpy.mock.calls[0]?.[0]).toMatchObject({
+    const body = view.createSpy.mock.calls[0]?.[0];
+    expect(body).toMatchObject({
       name: 'Chi nhánh mới',
       provinceCode: '48',
+      wardCode: '20242',
+      addressLine: '215 Nguyễn Văn Linh',
     });
-    expect(view.createSpy.mock.calls[0]?.[0]).not.toHaveProperty('provinceName');
+    // Tên tỉnh/xã và chuỗi hiển thị do SERVER tra và ghép (ADR 0035 điều 3).
+    expect(body).not.toHaveProperty('provinceName');
+    expect(body).not.toHaveProperty('address');
   });
 });
 

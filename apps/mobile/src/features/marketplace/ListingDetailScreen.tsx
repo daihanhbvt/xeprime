@@ -27,6 +27,7 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ListingDetailSkeleton } from '@/components/ui/Skeleton';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { Card } from '@/components/ui/Card';
 import { Stars } from '@/components/ui/Stars';
 import type { IconName } from '@/components/ui/Chip';
@@ -164,6 +165,7 @@ export function ListingDetailScreen({
         serviceType={
           chosenService ?? defaultServiceOf(listing.data.serviceTypes ?? [], initialServiceType)
         }
+        {...(listing.data.provinceCode ? { provinceCode: listing.data.provinceCode } : {})}
       />
     </YStack>
   );
@@ -175,7 +177,16 @@ export function ListingDetailScreen({
  * Mang theo dịch vụ đang chọn để wizard mở ra đúng loại khách vừa xem giá — mở mặc định "tự
  * lái" sau khi khách vừa xem giá "có tài xế" là bắt họ chọn lại thứ đã chọn.
  */
-function RequestBar({ vehicleId, serviceType }: { vehicleId: string; serviceType?: string }) {
+function RequestBar({
+  vehicleId,
+  serviceType,
+  provinceCode,
+}: {
+  vehicleId: string;
+  serviceType?: string;
+  /** Tỉnh của chính chiếc xe — điền sẵn ô địa chỉ giao xe (ADR 0035). */
+  provinceCode?: string;
+}) {
   const t = useTranslations('BookingRequests.flow');
   const navigateOnce = useNavigateOnce();
   const insets = useSafeAreaInsets();
@@ -185,6 +196,7 @@ function RequestBar({ vehicleId, serviceType }: { vehicleId: string; serviceType
       px={layout.screenX}
       pt={space.sm}
       pb={insets.bottom + space.sm}
+      gap={space.sm}
       bg={colors.surface}
       borderTopWidth={1}
       borderColor={colors.borderSubtle}
@@ -192,9 +204,23 @@ function RequestBar({ vehicleId, serviceType }: { vehicleId: string; serviceType
     >
       <Button
         label={t('cta')}
+        icon="car-sport-outline"
         size="lg"
-        onPress={() => navigateOnce(ROUTES.booking.request(vehicleId, serviceType))}
+        onPress={() =>
+          navigateOnce(
+            ROUTES.booking.request(vehicleId, {
+              ...(serviceType ? { serviceType } : {}),
+              ...(provinceCode ? { provinceCode } : {}),
+            }),
+          )
+        }
       />
+      {/*
+        "Nhắn shop" đứng NGAY DƯỚI nút đặt xe, đúng cặp mà web bày cạnh nhau ở cột phải. Hỏi
+        trước khi đặt (giao xe ở đâu, có xe khác không) là việc rất hay xảy ra, và bắt khách quay
+        ra tab Tin nhắn rồi tự tìm gian hàng là đánh mất chính chiếc xe họ đang xem.
+      */}
+      <ChatWithShopButton vehicleId={vehicleId} />
     </YStack>
   );
 }

@@ -27,6 +27,8 @@ import { FeePoliciesModule } from './modules/fee-policies/fee-policies.module';
 import { HoldsModule } from './modules/holds/holds.module';
 import { BankAccountsModule } from './modules/bank-accounts/bank-accounts.module';
 import { WalletModule } from './modules/wallet/wallet.module';
+import { DepositPolicyModule } from './modules/deposit-policy/deposit-policy.module';
+import { InsuranceModule } from './modules/insurance/insurance.module';
 import { SellerProfileModule } from './modules/seller-profile/seller-profile.module';
 import { SupportModule } from './modules/support/support.module';
 import { BadgesModule } from './modules/badges/badges.module';
@@ -139,6 +141,10 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
     HoldsModule,
     BankAccountsModule,
     WalletModule,
+    // Phase 6 — công tắc thu cọc của gian hàng (ADR 0032 điều 2).
+    DepositPolicyModule,
+    // Phase 7 — bảo hiểm chuyến IV/IP (ADR 0032 điều 4).
+    InsuranceModule,
     SellerProfileModule,
     SupportModule,
   ],

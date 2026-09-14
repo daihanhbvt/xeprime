@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { TextInput, type TextInputProps } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
+import { FONT_FAMILY } from '@/theme/fonts';
 import { colors, fieldFontSize, sizing, space } from '@/theme/tokens';
 
 /**
@@ -54,6 +55,7 @@ export function TextControl({
       flex: 1,
       color: colors.text,
       fontSize: fieldFontSize.value,
+      fontFamily: FONT_FAMILY.body,
       minHeight: multiline ? rows * lineHeight : sizing.touchTarget,
       paddingVertical: multiline ? space.sm : 0,
     }),

@@ -42,20 +42,45 @@ export const ROUTES = {
      * cùng một chuyến — không phải đoán loại id trước khi điều hướng.
      */
     detail: (tripId: string): Href => ({ pathname: '/trips/[id]', params: { id: tripId } }),
-    /** Wizard gửi yêu cầu thuê một chiếc xe (BKG-01) — CÔNG KHAI, khách vãng lai vào được. */
-    request: (vehicleId: string, serviceType?: string): Href =>
-      serviceType
-        ? { pathname: '/listings/[id]/request', params: { id: vehicleId, serviceType } }
-        : { pathname: '/listings/[id]/request', params: { id: vehicleId } },
+    /**
+     * Wizard gửi yêu cầu thuê một chiếc xe (BKG-01) — CÔNG KHAI, khách vãng lai vào được.
+     *
+     * `provinceCode` là tỉnh khách đang LỌC ở màn tìm xe — điền sẵn ô địa chỉ giao xe (ADR 0035).
+     * Native không có URL để mang ngữ cảnh, nên nó đi qua tham số điều hướng, đúng cách
+     * `serviceType` đang đi.
+     */
+    request: (
+      vehicleId: string,
+      context?: { serviceType?: string; provinceCode?: string },
+    ): Href => {
+      const params: Record<string, string> = { id: vehicleId };
+      if (context?.serviceType) params.serviceType = context.serviceType;
+      if (context?.provinceCode) params.provinceCode = context.provinceCode;
+      return { pathname: '/listings/[id]/request', params };
+    },
   },
 
-  /** Trò chuyện với gian hàng. */
+  /**
+   * Hộp thư KHÁCH — `side = customer`. Inbox gian hàng là một bề mặt KHÁC, ở `manage.chat`.
+   *
+   * Hai namespace chứ không một hàm nhận `side`: web cũng có hai địa chỉ (`/chat` và
+   * `/manage/chat`) vì đó là hai tập dữ liệu khác nhau, và một tài khoản vừa thuê xe vừa làm chủ
+   * gian hàng có cả hai. Gộp thành một route nhận tham số là mở đường cho một màn quên truyền
+   * `side` và nhận về danh sách trộn.
+   */
   chat: {
     list: (): Href => '/chat',
-    /** Một cuộc trò chuyện. Nhận id nên deep link và thông báo đẩy mở thẳng được. */
-    thread: (conversationId: string): Href => ({
+    /**
+     * Một cuộc trò chuyện. Nhận id nên deep link và thông báo đẩy mở thẳng được.
+     *
+     * `vehicleId` là NGỮ CẢNH ĐANG CHỜ, không phải bộ lọc: nó đi kèm đúng câu nhắn ĐẦU TIÊN sau
+     * khi khách bấm "Nhắn shop" từ một tin đăng, rồi biến mất. Cùng vai với `?v=` mà web đặt lên
+     * URL — hội thoại thuộc về GIAN HÀNG (một thread cho mọi xe của shop), nên chiếc xe phải đi
+     * kèm riêng.
+     */
+    thread: (conversationId: string, vehicleId?: string): Href => ({
       pathname: '/chat/[id]',
-      params: { id: conversationId },
+      params: vehicleId ? { id: conversationId, v: vehicleId } : { id: conversationId },
     }),
   },
 
@@ -234,6 +259,19 @@ export const ROUTES = {
 
     /** Tài xế của gian hàng (SHP-06). */
     drivers: (): Href => '/manage/drivers',
+
+    /**
+     * Inbox GIAN HÀNG (`side = shop`) — cùng địa chỉ với web (`/manage/chat`).
+     *
+     * KHÔNG dùng chung với `chat.list()`: đó là hộp thư của khách. Chủ gian hàng mở khu quản lý
+     * mà thấy hội thoại riêng của mình lẫn vào là lỗi đã có thật ở web trước khi `side` thành
+     * tham số bắt buộc.
+     */
+    chat: (): Href => '/manage/chat',
+    chatThread: (conversationId: string): Href => ({
+      pathname: '/manage/chat/[id]',
+      params: { id: conversationId },
+    }),
 
     /** Tổng quan doanh thu (FIN-01) — ba lớp tiền của một kỳ + hai bảng xếp hạng. */
     finance: (): Href => '/manage/finance',

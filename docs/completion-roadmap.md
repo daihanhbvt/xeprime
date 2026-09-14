@@ -24,7 +24,7 @@ Trạng thái dưới đây phân biệt rõ **đã có trong source/feature bra
 | SePay subscription W4   | **Đã merge vào `develop`**; chưa vượt Gate R2 | Có VietQR, webhook, bank matching, xử lý thiếu/thừa/trùng và admin match tay; còn cần cấu hình môi trường thật và UAT gate                                              |
 | Marketplace money       | **Một phần**                                 | ĐÃ CÓ: `booking_holds`, `hold_refunds`, `fee_policies` versioned, `/platform/money` (hold/refund/đối chiếu ngày). CHƯA CÓ: ví/sổ công nợ, rút tiền, bảo hiểm, thuế, đối chiếu 3 vế — kế hoạch ở `plans/`, quy tắc ở ADR 0033 |
 | Basic-owner experience  | Chưa tách hoàn chỉnh                         | Capability có nền móng; cần Owner Lite UX và luồng tiền                                                                                                                  |
-| Mobile customer         | Một phần                                     | Auth + discovery + gửi yêu cầu thuê + chuyến của tôi + đánh giá + chat; thông báo đẩy có hạ tầng đủ hai đầu (`docs/push-notifications.md`) nhưng **chưa thử trên máy thật** — thiếu credential Firebase + khoá APNs. Thiếu payment và trung tâm thông báo |
+| Mobile customer         | Một phần                                     | Auth + discovery + gửi yêu cầu thuê + chuyến của tôi + đánh giá + chat và thông báo in-app (COM-01→04) + thông báo đẩy (COM-07) — tất cả 10/09. Push đủ hai đầu nhưng **chưa thử trên máy thật** (thiếu credential Firebase + khoá APNs). Thiếu payment |
 | Mobile manage           | Một phần                                     | Hộp thư yêu cầu, đơn thuê, biên bản giao/nhận, quyết toán, thu tiền — xem ghi chú ở R6                                                                                   |
 | Production readiness    | Chưa đạt                                     | Chưa có đủ E2E, monitoring, legal/compliance gate và bằng chứng vận hành thật                                                                                            |
 
@@ -75,6 +75,14 @@ Trạng thái: **Đang đóng gate**. Code hiện tại đã bổ sung dashboard
 - Cắm production OTP/email/R2/chat; thêm error tracking, uptime monitoring và product events.
 - Rà CSRF, PII reveal, rate limit và audit của hành động nhạy cảm.
 - UAT happy path theo role × desktop/mobile web.
+- ~~Địa chỉ còn là ô chữ tự do, không lọc được và đã lệch mô hình hành chính hai cấp.~~
+  **Xong 14/09/2026 (ADR 0035).** Bảng `wards` (3.321 đơn vị, nạp bằng migration từ danh mục
+  QĐ 19/2025/QĐ-TTg), `AddressService` là nơi duy nhất kiểm danh mục + ghép chuỗi hiển thị +
+  chốt toạ độ, FK tổ hợp `(ward_code, province_code)` giữ luật "xã thuộc tỉnh" ở DB, và ô nhập
+  địa chỉ dùng chung cho web + app native (chọn tỉnh → chọn xã có tìm → gõ số nhà có gợi ý →
+  xác nhận ghim). **Việc còn lại là VẬN HÀNH, không phải code:** mọi chi nhánh đang mang cờ
+  "cần cập nhật địa chỉ" và phải được chủ shop mở ra xác nhận — migration KHÔNG đoán mã xã cho
+  dữ liệu cũ (ADR 0035 điều 7).
 
 **Gate R1:** 3–5 shop có thể chạy booking request → giao → trả → quyết toán mà không cần sửa dữ liệu trực tiếp.
 
@@ -161,7 +169,7 @@ Mục tiêu: kiểm chứng cung, cầu và economics.
 
 Mục tiêu: app native phục vụ trọn luồng người thuê, đồng thời duy trì ổn định lát cắt quản lý đã có.
 
-- Booking, hold/payment, trips, chat và push. **Push: phần NHẬN đã dựng (10/09)** — còn trung tâm thông báo, badge, cài đặt, và một lượt kiểm trên máy thật với credential Firebase thật.
+- Booking, hold/payment và trips. *Chat, thông báo in-app và thông báo đẩy xong 10/09/2026 (COM-01→04 + COM-07) — chi tiết ở `mobile-module-status.md` §2.9 và `push-notifications.md`. Còn lại: một lượt kiểm push trên máy thật, và màn cài đặt bật/tắt từng loại thông báo.*
 - Deep links/App Links, environment profiles, iOS build và CI release.
 - Crash/error reporting và analytics đồng nhất web/mobile.
 - Duy trì và sửa lỗi cho lát cắt Mobile Manage hiện có: inbox yêu cầu, booking, giao/nhận, quyết toán và thu tiền.
@@ -198,6 +206,9 @@ Backlog/acceptance criteria đầy đủ: [`design/03_PRODUCT_GAP_ANALYSIS.md`](
 - Chưa có bằng chứng trong repo về một lần triển khai production hoàn chỉnh và restore drill thành công.
 - Chưa có external monitoring/error tracking/product analytics đủ cho pilot.
 - Cloudflare R2 object storage chưa có chính sách backup/versioning hoàn chỉnh.
+- Toàn bộ chi nhánh đang chờ chủ shop xác nhận lại địa chỉ theo danh mục hành chính hai cấp
+  (ADR 0035 điều 7). Đây là nợ DỮ LIỆU có chủ đích — không backfill tự động — nên cần một đợt
+  nhắc chủ động và một chỉ số theo dõi tỉ lệ còn cờ `needs_location_review`.
 - Product Vision, Gap Analysis, CLAUDE.md, mobile README và kế hoạch mobile ngày 27/08 còn các câu mô tả trước ADR 0029 hoặc trước khi mobile booking được merge; ADR Accepted mới nhất và roadmap này được ưu tiên cho tới khi các tài liệu đó được đồng bộ.
 - ~~Một số DatePicker còn nợ xử lý timezone thống nhất.~~ **Xong 03/09/2026.** Hai chiều quy
   đổi đi qua `packages/domain/src/datetime.ts`: `toAppTz` (mốc UTC từ API → giờ hiển thị) và

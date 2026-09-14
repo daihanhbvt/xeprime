@@ -12,7 +12,8 @@
     "holds": "Booking holds",
     "refunds": "Refunds",
     "reconciliation": "Daily reconciliation",
-    "withdrawals": "Withdrawals"
+    "withdrawals": "Withdrawals",
+    "insurance": "Insurance"
   },
   "filters": {
     "search": "Search",
@@ -68,18 +69,76 @@
   "reconciliation": {
     "date": "Reconciliation date",
     "retry": "Retry",
-    "balanced": "Balanced — every incoming payment is accounted for.",
+    "balanced": "Balanced — the bank balance equals XePrime's own money plus money held for others.",
     "varianceWarning": "Off by {amount}",
-    "varianceHint": "Some incoming payments fall outside every bucket. Check the payment reconciliation queue.",
-    "amountWithCount": "{amount} · {count} transactions",
-    "bankIn": "Bank inflow",
-    "matchedSubscriptions": "Matched to plan invoices",
-    "matchedHolds": "Matched to booking holds",
+    "varianceHint": "The bank balance does not match the two sides. Check the unmatched incoming queue, manual transfers not yet recorded, and the balance you entered.",
+    "balanceMissing": "End-of-day bank balance not entered",
+    "balanceMissingHint": "Without the balance there is nothing to reconcile against — the two sides below are still correct, but nothing external confirms them. Enter the balance from your banking app.",
+    "walletDriftWarning": "Ledger drift in {count, plural, one {# wallet} other {# wallets}} · {amount} total",
+    "walletDriftHint": "Wallet ledger entries do not add up to the stored balance. That means something writes balances outside the ledger — stop payouts and investigate before spending further.",
+    "bankBalanceEod": "End-of-day bank balance",
+    "notEntered": "not entered",
+    "balancePlaceholder": "Enter balance (VND)",
+    "saveBalance": "Save balance",
+    "balanceSaved": "End-of-day balance saved",
+    "platformTitle": "XePrime's own money",
+    "serviceFeeRecognized": "Service fees recognised",
+    "subscriptionsCollected": "Subscription payments collected",
+    "custodiedTitle": "Money held for others — liabilities",
+    "holdsUnsettled": "Holds not yet settled",
+    "walletTotal": "Points wallets",
+    "walletSplit": "{total} · {available} withdrawable · {pending} in transit",
+    "refundsPending": "Refunds awaiting manual transfer",
+    "unmatchedIn": "Unmatched incoming",
+    "insuranceReserved": "Insurance premiums not yet settled",
+    "taxAccrued": "Tax withheld, not yet remitted",
+    "outflowTitle": "Paid out today",
+    "withdrawalsPaid": "Withdrawals transferred",
+    "refundsPaid": "Refunds transferred",
+    "inflowTitle": "Incoming today",
+    "bankIn": "Into the bank account",
+    "matchedSubscriptions": "Matched to subscription invoices",
+    "matchedHolds": "Matched to holds",
     "unmatched": "Unmatched",
     "ignored": "Ignored",
-    "refundsPaid": "Refunds transferred today",
-    "refundsPending": "Refunds pending",
-    "holdsUnsettled": "Holds awaiting settlement",
-    "variance": "Variance"
+    "inflowVariance": "Rows in no group",
+    "amountWithCount": "{amount} · {count} transactions"
+  },
+  "insurance": {
+    "title": "Insurance queue",
+    "loadError": "Could not load the insurance queue",
+    "total": "{count, plural, one {# policy} other {# policies}}",
+    "noCertificate": "none yet",
+    "noAutoRetry": "no automatic retry",
+    "attemptCount": "{count, plural, one {# attempt} other {# attempts}}",
+    "partnerMissing": {
+      "title": "No insurance partner configured",
+      "body": "Premiums are being collected and held, but no insurer is issuing certificates — customers do NOT actually have cover. Retrying changes nothing until a real partner is connected. This is a platform configuration task, not a per-trip incident."
+    },
+    "columns": {
+      "booking": "Trip",
+      "tenant": "Shop",
+      "product": "Product",
+      "premium": "Premium collected",
+      "status": "Status",
+      "certificate": "Certificate no.",
+      "attempts": "Attempts / next"
+    },
+    "actions": {
+      "retry": "Retry",
+      "retryQueued": "Retry queued — the worker picks it up within a minute",
+      "void": "Void"
+    },
+    "empty": {
+      "title": "No failing policies",
+      "description": "Every premium collected has been dealt with."
+    },
+    "voidModal": {
+      "title": "Void insurance policy",
+      "hint": "Voiding is a money decision and goes into the audit log. If the certificate was already issued, settle it with the partner first — voiding here only closes the XePrime side.",
+      "reasonLabel": "Reason for voiding",
+      "reasonPlaceholder": "Why this policy is being voided",
+      "done": "Policy voided"
+    }
   }
 }

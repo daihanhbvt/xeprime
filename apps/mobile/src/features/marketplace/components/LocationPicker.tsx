@@ -11,6 +11,7 @@ import { Chip } from '@/components/ui/Chip';
 import { IconButton } from '@/components/ui/IconButton';
 import { layout } from '@/theme/layout';
 import { appStyles } from '@/theme/styles';
+import { FONT_FAMILY } from '@/theme/fonts';
 import {
   colors,
   fieldFontSize,
@@ -165,6 +166,7 @@ export function LocationPicker({ open, onClose, onSelect }: LocationPickerProps)
                     flex: 1,
                     color: colors.text,
                     fontSize: fieldFontSize.value,
+                    fontFamily: FONT_FAMILY.body,
                     minHeight: sizing.touchTarget,
                   }}
                 />

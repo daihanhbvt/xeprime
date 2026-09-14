@@ -1,5 +1,6 @@
 import * as yup from 'yup';
 import {
+  ADDRESS_LINE_MAX_LENGTH,
   LONG_TERM_PACKAGE_MONTHS,
   PICKUP_PREFERENCE,
   PICKUP_PREFERENCE_VALUES,
@@ -16,6 +17,8 @@ import {
  */
 export const NAME_MAX = 255;
 const ADDRESS_MAX = 500;
+/** Phần "số nhà, đường" — khớp `ADDRESS_LINE_MAX_LENGTH` của `@xeprime/types` và cột DB. */
+const ADDRESS_LINE_MAX = ADDRESS_LINE_MAX_LENGTH;
 export const NOTE_MAX = 2000;
 
 /** Câu lỗi đã dịch, do màn hình truyền vào — xem chú thích ở `buildBookingRequestSchema`. */
@@ -32,8 +35,12 @@ export interface BookingRequestSchemaLabels {
   pickupPreferenceRequired: string;
   requestedPickupDateRequired: string;
   routeRequired: string;
+  pickupProvinceRequired: string;
+  pickupWardRequired: string;
   pickupAddressRequired: string;
   destinationRequired: string;
+  deliveryProvinceRequired: string;
+  deliveryWardRequired: string;
   deliveryAddressRequired: string;
   noteTooLong: string;
 }
@@ -116,15 +123,40 @@ export function buildBookingRequestSchema(labels: BookingRequestSchemaLabels) {
         is: SERVICE_TYPE.WITH_DRIVER,
         then: (s) => s.required(labels.routeRequired),
       }),
-    pickupAddress: yup
+    /*
+     * Điểm đón đi theo mô hình hành chính HAI CẤP (ADR 0035): mã tỉnh + mã xã chọn từ danh mục,
+     * phần "số nhà, đường" thì gõ. Chuỗi hiển thị do SERVER ghép nên form KHÔNG còn ô nào chứa
+     * nó — bắt buộc chuyển sang ba trường dưới đây.
+     */
+    pickupProvinceCode: yup
       .string()
       .trim()
-      .max(ADDRESS_MAX)
+      .default('')
+      .when('serviceType', {
+        is: SERVICE_TYPE.WITH_DRIVER,
+        then: (s) => s.required(labels.pickupProvinceRequired),
+      }),
+    pickupWardCode: yup
+      .string()
+      .trim()
+      .default('')
+      .when('serviceType', {
+        is: SERVICE_TYPE.WITH_DRIVER,
+        then: (s) => s.required(labels.pickupWardRequired),
+      }),
+    pickupAddressLine: yup
+      .string()
+      .trim()
+      .max(ADDRESS_LINE_MAX)
       .default('')
       .when('serviceType', {
         is: SERVICE_TYPE.WITH_DRIVER,
         then: (s) => s.required(labels.pickupAddressRequired),
       }),
+    pickupPlaceId: yup.string().trim().nullable().default(null),
+    pickupLatitude: yup.number().nullable().default(null),
+    pickupLongitude: yup.number().nullable().default(null),
+    pickupLocationSource: yup.string().nullable().default(null),
     /** Điểm đến bắt buộc với lộ trình LIÊN TỈNH — nội thành thì lộ trình tự do. */
     destination: yup
       .string()
@@ -138,15 +170,39 @@ export function buildBookingRequestSchema(labels: BookingRequestSchemaLabels) {
       }),
 
     deliveryRequested: yup.boolean().default(false),
-    deliveryAddress: yup
+    /*
+     * Địa chỉ giao xe là địa chỉ SINH RA TIỀN (phí giao theo km từ chi nhánh tới ghim), nên cả
+     * ba phần đều bắt buộc khi khách chọn giao tận nơi.
+     */
+    deliveryProvinceCode: yup
       .string()
       .trim()
-      .max(ADDRESS_MAX)
+      .default('')
+      .when('deliveryRequested', {
+        is: true,
+        then: (s) => s.required(labels.deliveryProvinceRequired),
+      }),
+    deliveryWardCode: yup
+      .string()
+      .trim()
+      .default('')
+      .when('deliveryRequested', {
+        is: true,
+        then: (s) => s.required(labels.deliveryWardRequired),
+      }),
+    deliveryAddressLine: yup
+      .string()
+      .trim()
+      .max(ADDRESS_LINE_MAX)
       .default('')
       .when('deliveryRequested', {
         is: true,
         then: (s) => s.required(labels.deliveryAddressRequired),
       }),
+    deliveryPlaceId: yup.string().trim().nullable().default(null),
+    deliveryLatitude: yup.number().nullable().default(null),
+    deliveryLongitude: yup.number().nullable().default(null),
+    deliveryLocationSource: yup.string().nullable().default(null),
 
     note: yup.string().trim().max(NOTE_MAX, labels.noteTooLong).default(''),
   });

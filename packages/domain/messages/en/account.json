@@ -12,10 +12,42 @@
   "verified": "Verified",
   "displayName": "Display name",
   "displayNamePlaceholder": "Jane Doe",
-  "avatarUrl": "Avatar image URL",
+  "avatarUrl": "Profile photo",
   "avatarUrlPlaceholder": "https://…",
-  "identityLockedTitle": "Email and phone number can't be changed here",
-  "identityLockedBody": "Both are used to sign in, so changing them needs a separate verification flow. Contact support if you need to change them.",
+  "avatarHelp": "Square image, JPG or PNG, up to 5MB.",
+  "contact": {
+    "add": "Add",
+    "change": "Change",
+    "addAria": "Add {field}",
+    "changeAria": "Change {field}",
+    "addEmailTitle": "Add email",
+    "changeEmailTitle": "Change email",
+    "addPhoneTitle": "Add phone number",
+    "changePhoneTitle": "Change phone number",
+    "currentValue": "Currently:",
+    "emailLabel": "New email",
+    "phoneLabel": "New phone number",
+    "emailPlaceholder": "you@example.com",
+    "phonePlaceholder": "0901234567",
+    "emailHint": "We will send a verification code to this address.",
+    "phoneHint": "We will send a verification code by SMS to this number.",
+    "sendCode": "Send verification code",
+    "codeSentTo": "We sent a 6-digit code to",
+    "confirmCode": "Confirm",
+    "resend": "Send another code",
+    "resendIn": "Resend in {seconds}s",
+    "editEmail": "Edit email",
+    "editPhone": "Edit number",
+    "devCode": "Test code: {code} — shown outside production only.",
+    "emailUpdated": "Email updated",
+    "phoneUpdated": "Phone number updated",
+    "phoneLead": "Enter your phone number to receive a verification code by SMS.",
+    "emailLead": "Enter your email address to receive a verification code.",
+    "securePhoneTitle": "Your phone number is kept private",
+    "securePhoneBody": "Used only to verify your account, reach you when needed, and send notices about your rentals.",
+    "secureEmailTitle": "Your email is kept private",
+    "secureEmailBody": "Used only to verify your account and send notices about your bookings."
+  },
   "sidebar": {
     "userCard": "Signed in as"
   },
@@ -28,7 +60,7 @@
     "phone": "Phone number",
     "unverified": "Not verified",
     "securityTitle": "Sign-in details",
-    "securityDescription": "Your email and phone number identify your account. Changing either needs a separate verification flow to keep your account secure.",
+    "securityDescription": "Your email and phone number identify your account, so changing either takes a 6-digit code sent to the NEW address or number. When you change your email we also notify the old address, so you'll know if someone else made the change.",
     "edit": "Edit profile"
   },
   "comingSoon": {
@@ -56,7 +88,12 @@
   "validation": {
     "displayNameRequired": "Please enter your full name",
     "displayNameMax": "Full name is limited to 255 characters",
-    "avatarUrlInvalid": "Invalid image URL"
+    "avatarUrlInvalid": "Invalid image URL",
+    "phoneRequired": "Enter a phone number",
+    "phoneInvalid": "That phone number isn't valid",
+    "emailRequired": "Enter an email address",
+    "emailInvalid": "That email address isn't valid",
+    "emailMax": "Email must be 255 characters or fewer"
   },
   "ownerGate": {
     "title": "Hosts only",

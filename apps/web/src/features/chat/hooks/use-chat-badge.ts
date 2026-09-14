@@ -9,10 +9,15 @@ export interface ChatBadge {
   count: number;
   /** Hộp thư nên mở khi bấm vào biểu tượng. */
   href: string;
+  /**
+   * Vai của hộp thư `href` trỏ tới. Popup xem nhanh phải liệt kê ĐÚNG hộp thư mà biểu tượng sẽ
+   * mở — nếu không thì con số, danh sách và màn hình mở ra nói ba điều khác nhau.
+   */
+  side: ChatSide;
 }
 
 /**
- * Biểu tượng chat trên thanh trên cùng — con số và đích đến.
+ * Biểu tượng chat trên thanh trên cùng — con số, đích đến và hộp thư tương ứng.
  *
  * Bài toán nó giải: một chủ gian hàng đang lướt chợ xe KHÔNG hề biết khách vừa nhắn vào shop,
  * vì badge ở khu khách chỉ đếm hộp thư khách. Người dùng chỉ có một khái niệm "tin nhắn chưa
@@ -30,12 +35,15 @@ export function useChatBadge(surface: ChatSide): ChatBadge {
 
   const here = surface === CHAT_SIDE.CUSTOMER ? chatCustomer : chatShop;
   const there = surface === CHAT_SIDE.CUSTOMER ? chatShop : chatCustomer;
+  const elsewhere = here === 0 && there > 0;
 
   const stay = surface === CHAT_SIDE.CUSTOMER ? ROUTES.CHAT : ROUTES.MANAGE.CHAT;
   const away = surface === CHAT_SIDE.CUSTOMER ? ROUTES.MANAGE.CHAT : ROUTES.CHAT;
+  const other = surface === CHAT_SIDE.CUSTOMER ? CHAT_SIDE.SHOP : CHAT_SIDE.CUSTOMER;
 
   return {
     count: chatCustomer + chatShop,
-    href: here === 0 && there > 0 ? away : stay,
+    href: elsewhere ? away : stay,
+    side: elsewhere ? other : surface,
   };
 }

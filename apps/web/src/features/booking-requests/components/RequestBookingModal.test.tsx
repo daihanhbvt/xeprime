@@ -44,6 +44,51 @@ const media = vi.hoisted(() => ({ isMobile: false }));
 const me = vi.hoisted(() => ({ data: undefined as unknown }));
 vi.mock('@/hooks/use-current-user', () => ({ useCurrentUser: () => me }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: nav.push }) }));
+/*
+ * Danh mục hành chính + bản đồ: stub cố định.
+ *
+ * Màn này kiểm LUỒNG đặt xe (giao tận nơi, OTP, payload), không kiểm ô địa chỉ — hành vi hai
+ * cấp danh mục nằm ở `components/form/AddressField.test.tsx`. Để chúng gọi thật thì mỗi lần
+ * render sẽ đòi một QueryClientProvider cộng một khoá bản đồ, hai thứ không liên quan gì tới
+ * thứ đang test.
+ */
+const PROVINCE = { code: '48', name: 'Đà Nẵng', administrativeType: 'municipality', slug: 'da-nang' };
+const WARD = { code: '20242', provinceCode: '48', name: 'Phường Hải Châu', shortName: 'Hải Châu', administrativeType: 'ward' };
+
+/*
+ * Cả `useProvinces`/`useWards` (dạng thô) lẫn hai hook `*Options` đều phải có mặt: ô nhập dùng
+ * bản Options, còn chuỗi xem trước ở bước Xác nhận (`useAddressPreview`) đọc bản thô để ghép
+ * bằng chính `formatAddress` mà server dùng.
+ */
+vi.mock('@/features/locations/hooks/use-provinces', () => ({
+  useProvinces: () => ({ data: [PROVINCE] }),
+  useProvinceOptions: () => ({
+    options: [{ value: '48', label: 'TP Đà Nẵng' }],
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+}));
+vi.mock('@/features/locations/hooks/use-wards', () => ({
+  useWards: () => ({ data: { items: [WARD], total: 1 } }),
+  useWardOptions: () => ({
+    options: [{ value: '20242', label: 'Phường Hải Châu' }],
+    items: [WARD],
+    total: 1,
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+}));
+vi.mock('@/features/locations/hooks/use-places', () => ({
+  PLACE_SEARCH_MIN_LENGTH: 3,
+  usePlaceSearch: () => ({ data: { items: [], available: false }, isFetching: false }),
+  usePlaceDetail: () => ({ mutateAsync: vi.fn() }),
+  useReverseGeocode: () => ({ mutateAsync: vi.fn() }),
+}));
+vi.mock('@/components/form/MapPinPicker', () => ({ MapPinPicker: () => null }));
+
 vi.mock('@/hooks/use-media-query', () => ({
   useIsMobile: () => media.isMobile,
   useIsTablet: () => false,
@@ -548,9 +593,27 @@ describe('RequestBookingModal — luồng đặt xe', () => {
    * cho phép.
    */
   describe('giao xe tận nơi', () => {
+    /**
+     * Chọn "giao tận nơi" rồi chờ ô ĐỊA CHỈ dựng xong.
+     *
+     * Mốc chờ là ô "Số nhà, đường" chứ không phải nhãn "Địa chỉ giao xe": từ ADR 0035 nhãn đó là
+     * TIÊU ĐỀ của cả khối (tỉnh → xã/phường → số nhà → ghim), còn ô gõ được là ô cuối.
+     */
     async function chooseDelivery() {
       fireEvent.click(await screen.findByRole('radio', { name: /Giao xe tận nơi/ }));
-      await screen.findByLabelText('Địa chỉ giao xe');
+      await screen.findByLabelText(/Số nhà, đường/);
+    }
+
+    /** Chọn một giá trị trong `Select` của AntD — nó là combobox dựng bằng div, không phải <select>. */
+    async function pickOption(label: RegExp, optionTitle: string) {
+      fireEvent.mouseDown(screen.getByLabelText(label));
+      fireEvent.click(await screen.findByTitle(optionTitle));
+    }
+
+    /** Khai đủ phần hành chính của địa chỉ giao xe — hai cấp, đúng thứ tự phụ thuộc. */
+    async function fillDeliveryAdministrative() {
+      await pickOption(/Tỉnh\/thành/, 'TP Đà Nẵng');
+      await pickOption(/Xã\/phường/, 'Phường Hải Châu');
     }
 
     beforeEach(() => {
@@ -560,7 +623,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
     it('mặc định là nhận tại điểm hẹn — KHÔNG hỏi địa chỉ', async () => {
       renderModal();
       await screen.findByRole('radio', { name: /Nhận tại điểm hẹn/ });
-      expect(screen.queryByLabelText('Địa chỉ giao xe')).toBeNull();
+      expect(screen.queryByLabelText(/Số nhà, đường/)).toBeNull();
     });
 
     /**
@@ -583,7 +646,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       renderModal();
       await chooseDelivery();
 
-      fireEvent.change(screen.getByLabelText('Địa chỉ giao xe'), { target: { value: '12 Ng' } });
+      fireEvent.change(screen.getByLabelText(/Số nhà, đường/), { target: { value: '12 Ng' } });
       await new Promise((r) => setTimeout(r, 1100));
 
       expect(deliveryDistance.fn).not.toHaveBeenCalled();
@@ -603,7 +666,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
 
       renderModal();
       await chooseDelivery();
-      fireEvent.change(screen.getByLabelText('Địa chỉ giao xe'), {
+      fireEvent.change(screen.getByLabelText(/Số nhà, đường/), {
         target: { value: '12 Nguyễn Huệ, Quận 1, TP.HCM' },
       });
 
@@ -627,7 +690,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
 
       renderModal();
       await chooseDelivery();
-      fireEvent.change(screen.getByLabelText('Địa chỉ giao xe'), {
+      fireEvent.change(screen.getByLabelText(/Số nhà, đường/), {
         target: { value: 'Khu công nghiệp Sóng Thần, Dĩ An, Bình Dương' },
       });
 
@@ -649,15 +712,17 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       fillContact();
       fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
 
-      expect(await screen.findByText('Nhập địa chỉ giao xe')).toBeTruthy();
+      // Ô đầu tiên còn thiếu là TỈNH — mô hình hai cấp bắt đầu từ đó (ADR 0035 điều 3).
+      expect(await screen.findByText('Chọn tỉnh/thành nơi giao xe')).toBeTruthy();
       expect(api.sendAsync).not.toHaveBeenCalled();
     });
 
     it('gửi kèm địa chỉ và deliveryRequested — KHÔNG kèm bất kỳ số phí nào', async () => {
       renderModal();
       await chooseDelivery();
-      fireEvent.change(screen.getByLabelText('Địa chỉ giao xe'), {
-        target: { value: '  123 Nguyễn Văn Linh, Đà Nẵng  ' },
+      await fillDeliveryAdministrative();
+      fireEvent.change(screen.getByLabelText(/Số nhà, đường/), {
+        target: { value: '  123 Nguyễn Văn Linh  ' },
       });
       await advanceToOtp();
       await advanceToReview();
@@ -668,7 +733,12 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       await waitFor(() => expect(api.submitBookingRequest).toHaveBeenCalledTimes(1));
       const payload = api.submitBookingRequest.mock.calls[0]![0];
       expect(payload.deliveryRequested).toBe(true);
-      expect(payload.deliveryAddress).toBe('123 Nguyễn Văn Linh, Đà Nẵng');
+      // Client gửi MÃ + phần chi tiết; chuỗi hiển thị do server ghép (ADR 0035 điều 3), nên
+      // `deliveryAddress` KHÔNG còn nằm trong payload.
+      expect(payload.deliveryProvinceCode).toBe('48');
+      expect(payload.deliveryWardCode).toBe('20242');
+      expect(payload.deliveryAddressLine).toBe('123 Nguyễn Văn Linh');
+      expect(payload).not.toHaveProperty('deliveryAddress');
       expect(payload).not.toHaveProperty('deliveryFee');
       expect(payload).not.toHaveProperty('distanceKm');
     });
@@ -684,7 +754,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
 
       await screen.findByText('Gian hàng Demo XePrime');
       expect(screen.queryByRole('radio', { name: /Giao xe tận nơi/ })).toBeNull();
-      expect(screen.queryByLabelText('Địa chỉ giao xe')).toBeNull();
+      expect(screen.queryByLabelText(/Số nhà, đường/)).toBeNull();
       expect(screen.getByText('Nhận tại điểm hẹn')).toBeTruthy();
     });
 

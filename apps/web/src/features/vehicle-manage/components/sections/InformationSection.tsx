@@ -240,7 +240,6 @@ export function InformationSection() {
 function AddressCard({ canEdit }: { canEdit: boolean }) {
   const { vehicle } = useManagedVehicle();
   const t = useTranslations('VehicleManage.information');
-  const tBranches = useTranslations('Branches');
   const branches = useBranches();
   const [editing, setEditing] = useState(false);
 
@@ -296,7 +295,7 @@ function AddressCard({ canEdit }: { canEdit: boolean }) {
                 description={t('addressSharedBody')}
               />
             ) : (
-              <Alert type="info" showIcon message={tBranches('form.provinceHelp')} />
+              <Alert type="info" showIcon message={t('addressBranchHint')} />
             )
           }
         />

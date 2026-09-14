@@ -53,5 +53,13 @@ export const fetchPublicQuote = (
 export const fetchDeliveryDistance = (
   vehicleId: string,
   address: string,
+  /**
+   * Ghim khách ĐÃ XÁC NHẬN trên bản đồ. Có nó thì server dùng thẳng và bỏ qua bước tra địa chỉ —
+   * vừa rẻ hơn một request có tính tiền, vừa cho con số khớp với đúng điểm khách đang nhìn thấy.
+   */
+  pin?: { lat: number; lng: number } | null,
 ): Promise<DeliveryDistance> =>
-  apiGet<DeliveryDistance>(`/public/listings/${vehicleId}/delivery-distance`, { address });
+  apiGet<DeliveryDistance>(`/public/listings/${vehicleId}/delivery-distance`, {
+    address,
+    ...(pin ? { lat: pin.lat, lng: pin.lng } : {}),
+  });

@@ -1,4 +1,5 @@
-import type { ConversationSummary } from '@/api/chat/api';
+import type { ConversationSummary } from '@/features/chat/api';
+import { CHAT_SIDE, type ChatSide } from '@xeprime/types';
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
 import { XStack, YStack } from 'tamagui';
@@ -10,6 +11,8 @@ import { SearchInput } from '@/components/ui/SearchInput';
 import { ListRowSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
+import { ManageHeader } from '@/features/shell/ManageHeader';
+import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
@@ -21,6 +24,9 @@ import { useConversationsInfinite } from './hooks/use-chat';
 
 const SKELETON_ROWS = 6;
 
+/** Lọc chạy ở server nên mỗi ký tự là một request — chờ người dùng ngừng gõ đã. Cùng số với web. */
+const SEARCH_DEBOUNCE_MS = 350;
+
 /*
  * Hàm ở TẦM MODULE: đổi danh tính của `keyExtractor` buộc `VirtualizedList` dựng lại mọi ô đang
  * gắn — thấy rõ thành nháy mỗi nhịp poll.
@@ -28,25 +34,32 @@ const SKELETON_ROWS = 6;
 const conversationKey = (conversation: ConversationSummary) => conversation.id;
 
 /**
- * Tab "Tin nhắn" — hộp thư PHÍA KHÁCH.
+ * Hộp thư — MỘT màn cho CẢ HAI bề mặt, đúng như web dựng `ChatView` một lần rồi truyền `side`.
  *
- * Phân trang là tải-thêm-khi-cuộn thay cho bộ số trang của web (một hàng nút trang trên điện
- * thoại chiếm chỗ đúng một cuộc trò chuyện), nhưng việc CẮT TRANG và LỌC vẫn ở server — không có
- * chỗ nào kéo cả hộp thư về rồi lọc tại chỗ.
+ * `side` là prop BẮT BUỘC, không suy từ đường dẫn: `/chat` là hộp thư khách, `/manage/chat` là
+ * inbox gian hàng, và một tài khoản vừa thuê xe vừa làm chủ shop có cả hai. Server trả hai tập
+ * khác nhau và `side` là thứ nói cho nó biết tập nào.
+ *
+ * Khác web ở TRÌNH BÀY, không ở dữ liệu: web là hai cột (danh sách + thread) trên một trang,
+ * native là hai màn (danh sách → `chat/[id]`) vì 390dp không đủ cho hai cột. Và phân trang là
+ * tải-thêm-khi-cuộn thay cho bộ số trang — một hàng nút trang trên điện thoại chiếm chỗ đúng một
+ * cuộc trò chuyện. Việc CẮT TRANG và LỌC vẫn ở server.
  *
  * Bộ lọc giữ ở state màn hình, không ở Redux: native không có URL để chia sẻ và bộ lọc này chết
  * theo màn (ADR 0004, mục "Screen filters").
  */
-export function ChatListScreen() {
+export function ChatListScreen({ side }: { side: ChatSide }) {
   const t = useTranslations('Chat');
+  const tNav = useTranslations('Navigation.manage');
   const navigateOnce = useNavigateOnce();
+
+  const shop = side === CHAT_SIDE.SHOP;
 
   const [search, setSearch] = useState('');
   const [unreadOnly, setUnreadOnly] = useState(false);
-  // Lọc chạy ở server nên mỗi ký tự là một request — chờ người dùng ngừng gõ đã.
-  const debouncedSearch = useDebouncedValue(search, 350);
+  const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
 
-  const query = useConversationsInfinite({
+  const query = useConversationsInfinite(side, {
     ...(debouncedSearch.trim() ? { q: debouncedSearch.trim() } : {}),
     ...(unreadOnly ? { unreadOnly: true } : {}),
   });
@@ -54,9 +67,13 @@ export function ChatListScreen() {
   const items = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data]);
 
   const openConversation = useCallback(
-    (conversation: ConversationSummary) => navigateOnce(ROUTES.chat.thread(conversation.id)),
-    [navigateOnce],
+    (conversation: ConversationSummary) =>
+      navigateOnce(
+        shop ? ROUTES.manage.chatThread(conversation.id) : ROUTES.chat.thread(conversation.id),
+      ),
+    [navigateOnce, shop],
   );
+
 
   /*
    * Phụ thuộc vào ĐÚNG ba thứ nó đọc, không phải cả object `query`: object đó là bản mới ở mọi
@@ -81,16 +98,22 @@ export function ChatListScreen() {
 
   const renderRow = useCallback(
     ({ item }: ListRenderItemInfo<ConversationSummary>) => (
-      <ConversationRow conversation={item} onPress={openConversation} />
+      <ConversationRow
+        conversation={item}
+        onPress={openConversation}
+      />
     ),
     [openConversation],
   );
 
   const filtering = unreadOnly || debouncedSearch.trim().length > 0;
 
-  return (
-    // KHÔNG có cạnh 'bottom': đây là màn gốc của một tab và thanh tab đã tự cộng `insets.bottom`.
-    <Screen edges={['left', 'right']} scroll={false} padded={false}>
+  const body = (
+    // Tab gốc KHÔNG có cạnh 'bottom' (thanh tab đã cộng `insets.bottom`); khu quản lý thì có,
+    // vì ở đó màn nằm trong một stack không có thanh tab nào chừa chỗ.
+    <Screen edges={shop ? ['left', 'right', 'bottom'] : ['left', 'right']} scroll={false} padded={false}>
+      {shop ? <ManagePageTitle title={tNav('chat')} /> : null}
+
       <YStack gap={space.sm} px={layout.screenX} pt={space.sm} pb={space.sm}>
         <SearchInput
           value={search}
@@ -145,6 +168,15 @@ export function ChatListScreen() {
         />
       )}
     </Screen>
+  );
+
+  if (!shop) return body;
+
+  return (
+    <>
+      <ManageHeader />
+      {body}
+    </>
   );
 }
 

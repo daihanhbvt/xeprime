@@ -178,6 +178,7 @@ const SHOP_NAV: readonly ManageNavSection[] = [
         labelKey: 'manage.chat',
         icon: 'chatbubble-ellipses-outline',
         permission: PERMISSION.TENANT_VIEW,
+        href: ROUTES.manage.chat(),
         badge: MANAGE_NAV_BADGE.CHAT_UNREAD,
       },
       {
