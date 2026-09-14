@@ -24,6 +24,27 @@ jest.mock('expo-router', () => ({
   usePathname: () => '/manage',
 }));
 
+/*
+ * Huy hiệu chat nay đọc từ `useBadges` (`BadgeRealtimeProvider` sở hữu query). Bài test này
+ * chỉ kiểm SCOPE CHI NHÁNH của huy hiệu "chờ duyệt" — con số chat không liên quan, nên mock ở
+ * tầng hook thay vì dựng cả provider kèm Firestore và phiên đăng nhập.
+ */
+jest.mock('@/features/badges/hooks/use-badges', () => ({
+  useBadges: jest.fn(() => ({ chatCustomer: 0, chatShop: 0, notificationsUnread: 0 })),
+}));
+
+/*
+ * Các hook danh sách nay nghe TÍN HIỆU từ bản chiếu huy hiệu (`useOnBadgeChange`): con số đổi
+ * ⇒ tải lại danh sách. Mock provider thay vì dựng nó — dựng thật sẽ kéo Firestore và phiên
+ * đăng nhập vào những bài test không kiểm realtime.
+ */
+jest.mock('@/features/badges/BadgeRealtimeProvider', () => ({
+  useBadgeRealtime: jest.fn(() => ({
+    counts: { chatCustomer: 0, chatShop: 0, notificationsUnread: 0 },
+    live: false,
+  })),
+}));
+
 function currentUser(permissions: Permission[]): authApi.CurrentUser {
   return {
     id: '01JQZX0000000000000000000U',

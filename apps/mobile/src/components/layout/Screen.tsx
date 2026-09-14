@@ -29,6 +29,42 @@ const KEYBOARD_TAIL = space.xl;
  */
 const SCROLL_REPORT_MS = 100;
 
+/**
+ * Lệch dưới ngần này (dp) thì coi như đã khớp — đo trên thiết bị luôn có phần lẻ.
+ */
+const LIFT_EPSILON = 1;
+
+/**
+ * Số lần đo lại tối đa cho MỖI lần bàn phím mở.
+ *
+ * Vòng đo là "đo → nâng → đo lại", và nó hội tụ sau một hoặc hai vòng. Cái chặn này để một phép
+ * đo bất thường (khung đang chuyển động) không kéo thành vòng lặp render vô tận.
+ */
+const LIFT_MAX_PASSES = 4;
+
+/** Trần nâng (dp). Đo ra số lớn hơn ngần này thì gần như chắc chắn là đo sai, không phải bị che. */
+const LIFT_MAX = 160;
+
+/**
+ * Giá trị nâng KẾ TIẾP, từ giá trị hiện tại và phần chênh đo được giữa đáy `footer` và mép trên
+ * bàn phím. Dương = đang bị che (nâng thêm); ÂM = đang nâng dư (hạ bớt).
+ *
+ * Phép bù phải đi được CẢ HAI CHIỀU. Chỉ-nâng làm giá trị này thành một cái chốt một chiều: hình
+ * dạng bàn phím đổi trong lúc vẫn đang mở — đính kèm một tấm ảnh làm thanh soạn tin cao lên, bàn
+ * phím Samsung bật/tắt dải công cụ, đổi sang bàn phím số — thì phần nâng của lần trước thành dư,
+ * và không có đường nào trả nó về. Đó là dải trống to đúng một thanh công cụ nằm giữa ô nhập và
+ * bàn phím. Hạ chỉ gỡ lại phần CHÍNH NÓ đã nâng: sàn là 0, không màn nào bị kéo xuống dưới chỗ
+ * `KeyboardAvoidingView` đặt.
+ *
+ * Tách ra khỏi component để kiểm được bằng test: phần đo đạc (`measureInWindow`, sự kiện bàn
+ * phím) chỉ chạy thật trên máy, nhưng luật số học ở đây thì không cần máy nào — ngưỡng bỏ qua,
+ * cộng dồn qua từng vòng, sàn 0 và cái trần chặn đo sai.
+ */
+export function nextFooterLift(current: number, hidden: number): number {
+  if (!Number.isFinite(hidden) || Math.abs(hidden) <= LIFT_EPSILON) return current;
+  return Math.min(Math.max(current + hidden, 0), LIFT_MAX);
+}
+
 interface ScreenProps {
   children: ReactNode;
   scroll?: boolean;
@@ -42,6 +78,14 @@ interface ScreenProps {
    * `Screen` — và mất theo cả safe area lẫn xử lý bàn phím.
    */
   padded?: boolean;
+  /**
+   * Thanh cố định dưới đáy, NGOÀI vùng cuộn và trong lớp tránh bàn phím.
+   *
+   * ⚠️ Đệm dọc của khung này (`styles.footer`) KHÔNG phải thứ trang trí thừa: nó là biên an
+   * toàn cho sai số của `KeyboardAvoidingView` trên Android edge-to-edge. Đã thử bỏ nó cho thanh
+   * soạn tin nhắn — bàn phím Samsung (có thanh công cụ emoji phía trên) liền che mất hai phần ba
+   * ô nhập. Nội dung footer muốn gọn hơn thì bỏ đệm CỦA CHÍNH NÓ, đừng bỏ đệm ở đây.
+   */
   footer?: ReactNode;
   /**
    * Kéo-xuống-làm-mới. Truyền cả hai thì màn có thao tác này, thiếu một là không.
@@ -114,6 +158,50 @@ export function Screen({
   const scroller = useRef<ScrollView>(null);
   const scrollY = useRef(0);
 
+  /**
+   * Bù phần bàn phím CHE thanh `footer` mà `KeyboardAvoidingView` tính hụt.
+   *
+   * `KeyboardAvoidingView` dựng phần đệm từ `endCoordinates.screenY` của sự kiện bàn phím. Trên
+   * Android edge-to-edge con số đó không phải lúc nào cũng khớp với thứ thật sự phủ lên màn: bàn
+   * phím Samsung còn có một dải công cụ riêng (emoji, dịch, cài đặt) nằm TRÊN bàn phím, và phần
+   * hụt đó ăn thẳng vào ô nhập của thanh soạn tin.
+   *
+   * ĐO thay vì đoán: sau khi khung đã áp phần đệm của nó, hỏi vị trí thật của `footer` trong cửa
+   * sổ, so với mép trên bàn phím, rồi nâng đúng bằng phần chênh. Đo lại một vòng nữa để xác nhận.
+   * Màn nào `KeyboardAvoidingView` vốn đã đúng thì phần chênh ≤ 0 và giá trị nâng đứng yên ở 0 —
+   * không màn nào bị đẩy thêm một pixel nào vì cơ chế này.
+   */
+  const footerBox = useRef<View>(null);
+  const keyboardTop = useRef<number | null>(null);
+  const liftPasses = useRef(0);
+  const [footerLift, setFooterLift] = useState(0);
+
+  const correctFooterLift = useCallback(() => {
+    const top = keyboardTop.current;
+    if (top === null || liftPasses.current >= LIFT_MAX_PASSES) return;
+
+    footerBox.current?.measureInWindow((_x, y, _width, height) => {
+      const hidden = y + height - top;
+      if (Math.abs(hidden) <= LIFT_EPSILON) return;
+      liftPasses.current += 1;
+      setFooterLift((prev) => nextFooterLift(prev, hidden));
+    });
+  }, []);
+
+  /**
+   * Thanh `footer` ĐỔI CHIỀU CAO trong lúc bàn phím đang mở — đính kèm một tấm ảnh vào tin nhắn
+   * là đúng trường hợp đó: thẻ tệp chèn thêm một dòng vào ô soạn tin.
+   *
+   * Không đo lại ở đây thì phần nâng tính cho chiều cao CŨ nằm nguyên, và thanh trôi lên cách bàn
+   * phím đúng bằng dòng vừa thêm. Cho `liftPasses` chạy lại từ đầu vì đây là một hình dạng mới,
+   * không phải vòng xác nhận của lần đo trước.
+   */
+  const handleFooterLayout = useCallback(() => {
+    if (keyboardTop.current === null) return;
+    liftPasses.current = 0;
+    requestAnimationFrame(correctFooterLift);
+  }, [correctFooterLift]);
+
   const revealFocusedInput = useCallback((keyboardTop: number) => {
     const input = TextInput.State.currentlyFocusedInput();
     if (!input || !scroller.current) return;
@@ -139,13 +227,33 @@ export function Screen({
       measureFrame();
       setKeyboardTail(KEYBOARD_TAIL);
       revealFocusedInput(event.endCoordinates.screenY);
+
+      keyboardTop.current = event.endCoordinates.screenY;
+      liftPasses.current = 0;
+      // Đợi một khung hình: `KeyboardAvoidingView` chưa áp phần đệm của nó thì đo ra số vô nghĩa.
+      requestAnimationFrame(correctFooterLift);
     });
-    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardTail(0));
+    const hide = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardTail(0);
+      keyboardTop.current = null;
+      liftPasses.current = 0;
+      setFooterLift(0);
+    });
     return () => {
       show.remove();
       hide.remove();
     };
-  }, [measureFrame, revealFocusedInput]);
+  }, [correctFooterLift, measureFrame, revealFocusedInput]);
+
+  /*
+   * Vòng xác nhận: mỗi lần nâng xong thì đo lại. Hội tụ sau một tới hai vòng — `setFooterLift`
+   * với CÙNG giá trị không render lại, nên vòng tự dừng khi đã khớp.
+   */
+  useEffect(() => {
+    if (keyboardTop.current === null) return;
+    const frameId = requestAnimationFrame(correctFooterLift);
+    return () => cancelAnimationFrame(frameId);
+  }, [correctFooterLift, footerLift]);
 
   const contentStyle = [
     styles.content,
@@ -206,8 +314,19 @@ export function Screen({
         keyboardVerticalOffset={keyboardOffset}
         style={styles.flex}
       >
-        {body}
-        {footer ? <View style={styles.footer}>{footer}</View> : null}
+        {/*
+          Lớp bọc chỉ để mang phần NÂNG. Không đặt được lên chính `KeyboardAvoidingView`: nó tự
+          ghi `paddingBottom` của mình đè lên style truyền vào. Nâng ở đây kéo cả thân lẫn thanh
+          dưới lên, và dải trống sinh ra nằm SAU bàn phím nên không ai nhìn thấy.
+        */}
+        <View style={[styles.flex, footerLift > 0 ? { paddingBottom: footerLift } : null]}>
+          {body}
+          {footer ? (
+            <View ref={footerBox} style={styles.footer} onLayout={handleFooterLayout}>
+              {footer}
+            </View>
+          ) : null}
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

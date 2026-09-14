@@ -7,6 +7,7 @@ import enAuth from '@xeprime/domain/messages/en/auth.json';
 import enCommon from '@xeprime/domain/messages/en/common.json';
 import enDomain from '@xeprime/domain/messages/en/domain.json';
 import enErrors from '@xeprime/domain/messages/en/errors.json';
+import enNotifications from '@xeprime/domain/messages/en/notifications.json';
 import enHomeSearch from '@xeprime/domain/messages/en/home-search.json';
 import enListings from '@xeprime/domain/messages/en/listings.json';
 import enMarketplace from '@xeprime/domain/messages/en/marketplace.json';
@@ -35,6 +36,7 @@ import viAuth from '@xeprime/domain/messages/vi/auth.json';
 import viCommon from '@xeprime/domain/messages/vi/common.json';
 import viDomain from '@xeprime/domain/messages/vi/domain.json';
 import viErrors from '@xeprime/domain/messages/vi/errors.json';
+import viNotifications from '@xeprime/domain/messages/vi/notifications.json';
 import viHomeSearch from '@xeprime/domain/messages/vi/home-search.json';
 import viListings from '@xeprime/domain/messages/vi/listings.json';
 import viMarketplace from '@xeprime/domain/messages/vi/marketplace.json';
@@ -79,6 +81,7 @@ export const MESSAGES = {
     Domain: viDomain,
     Auth: viAuth,
     Errors: viErrors,
+    Notifications: viNotifications,
     Navigation: viNavigation,
     Account: viAccount,
     Trips: viTrips,
@@ -109,6 +112,7 @@ export const MESSAGES = {
     Domain: enDomain,
     Auth: enAuth,
     Errors: enErrors,
+    Notifications: enNotifications,
     Navigation: enNavigation,
     Account: enAccount,
     Trips: enTrips,

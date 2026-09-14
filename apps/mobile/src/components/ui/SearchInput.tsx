@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, TextInput } from 'react-native';
 import { XStack } from 'tamagui';
+import { FONT_FAMILY } from '@/theme/fonts';
 import { colors, fieldFontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 /**
@@ -53,7 +54,17 @@ export function SearchInput({
         placeholderTextColor={colors.placeholder}
         accessibilityLabel={label}
         returnKeyType="search"
-        style={{ flex: 1, color: colors.text, fontSize: fieldFontSize.value }}
+        /*
+         * `fontFamily` PHẢI khai tường minh: `TextInput` của React Native không thừa kế font từ
+         * Tamagui và không có font kế thừa như CSS. Bỏ trống thì ô tìm kiếm chạy font hệ điều
+         * hành trong khi mọi chữ quanh nó là Be Vietnam Pro.
+         */
+        style={{
+          flex: 1,
+          color: colors.text,
+          fontFamily: FONT_FAMILY.body,
+          fontSize: fieldFontSize.value,
+        }}
       />
       {value ? (
         <Pressable

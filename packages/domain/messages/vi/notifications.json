@@ -1,5 +1,6 @@
 {
   "title": "Thông báo",
+  "bellWithCount": "Thông báo, {count, plural, other {# chưa đọc}}",
   "markAllRead": "Đánh dấu tất cả đã đọc",
   "empty": "Chưa có thông báo",
   "unreadMark": "Chưa đọc"

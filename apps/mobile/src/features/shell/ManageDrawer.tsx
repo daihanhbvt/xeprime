@@ -8,6 +8,7 @@ import { useTranslations } from 'use-intl';
 import { FEATURE_STATE, isFeatureVisible, type FeatureState, type PlanFeature } from '@xeprime/types';
 import { images } from '@/assets';
 import { useAppToast } from '@/components/feedback/use-app-toast';
+import { CountBadge } from '@/components/ui/CountBadge';
 import { APP_NAME } from '@/lib/app-name';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useFeatureStates } from '@/features/auth/hooks/use-feature';
@@ -31,11 +32,6 @@ import {
 import { useManageDrawer } from './ManageDrawerHost';
 import { useManageNavBadges, type ManageNavBadgeCounts } from './use-manage-nav-badges';
 
-const BADGE_MAX = 99;
-/** Cùng số đo `.badge` của web: rộng tối thiểu 20, cao 18. */
-const BADGE_MIN_WIDTH = 20;
-const BADGE_HEIGHT = 18;
-
 /** Ba số đo của thang điều hướng, khai một chỗ — cùng giá trị `--xp-nav-*` của web. */
 const NAV_ITEM_HEIGHT = 40;
 const NAV_ICON = 18;
@@ -58,6 +54,10 @@ const CHILD_INDENT = NAV_ICON + space.sm;
 const ACTIVE_BAR = 3;
 
 const AVATAR = 36;
+/*
+ * Khối này dùng BIỂU TƯỢNG VUÔNG chứ không phải lockup ngang: cạnh nó đã có tên gian hàng và
+ * `APP_NAME` xếp hai dòng, thêm một lockup có sẵn chữ "xe prime" là tên thương hiệu in hai lần.
+ */
 const BRAND_LOGO = 32;
 
 const styles = StyleSheet.create({
@@ -77,6 +77,20 @@ interface ResolvedBranch {
   readonly kind: 'branch';
   readonly branch: ManageNavBranch;
   readonly children: readonly ResolvedLeaf[];
+  /**
+   * Tổng huy hiệu của các mục CON — chỉ hiện khi nhánh đang GẬP.
+   *
+   * Gương của `hiddenCount` trong `use-manage-nav.tsx` của web, cùng luật và cùng lý do: nhánh
+   * gập lại thì mục con biến mất và con số của chúng biến mất theo — gập "Đơn thuê" xong là
+   * không còn dấu hiệu nào cho biết có yêu cầu đang chờ, trong khi hạn phản hồi vẫn chạy.
+   *
+   * Bung ra thì ẩn đi (web đặt thẳng `hiddenCount = 0` khi mở): mục con đã tự mang số, để cả
+   * hai là đếm MỘT thứ hai lần ngay cạnh nhau.
+   *
+   * Chỉ cộng mục con NGƯỜI DÙNG XEM ĐƯỢC — `children` ở đây đã lọc quyền, đúng như web lọc
+   * bằng `.filter(canSeeLeaf)`. Cộng cả mục bị chặn là báo một việc không ai mở được.
+   */
+  readonly badge: number;
 }
 
 interface ResolvedLeaf {
@@ -172,10 +186,15 @@ export function ManageDrawer() {
   const labelOf = useCallback((node: { labelKey: string }) => t(node.labelKey as never), [t]);
 
   /** Nhãn cho trình đọc màn hình — mang luôn con số, vì huy hiệu bị ẩn khỏi cây truy cập. */
+  const needsActionLabel = useCallback(
+    (count: number) => tShell('needsAction', { count }),
+    [tShell],
+  );
+
   const a11yLabelOf = useCallback(
     (leaf: ManageNavLeaf, badge: number) =>
-      badge > 0 ? `${labelOf(leaf)}, ${tShell('needsAction', { count: badge })}` : labelOf(leaf),
-    [labelOf, tShell],
+      badge > 0 ? `${labelOf(leaf)}, ${needsActionLabel(badge)}` : labelOf(leaf),
+    [labelOf, needsActionLabel],
   );
 
   const roleLabel = user.platformRole
@@ -200,7 +219,7 @@ export function ManageDrawer() {
         borderBottomWidth={1}
         bc={sidebar.border}
       >
-        <Image source={images.logo} style={styles.logo} resizeMode="contain" />
+        <Image source={images.logoMark} style={styles.logo} resizeMode="contain" />
         <YStack f={1} gap={1}>
           <Text col={sidebar.text} fos={fontSize.body} fow={fontWeight.bold} numberOfLines={1}>
             {APP_NAME}
@@ -259,6 +278,7 @@ export function ManageDrawer() {
                         open={branchOverrides[node.branch.key] ?? branchHasActive(node, activeHref)}
                         labelOf={labelOf}
                         a11yLabelOf={a11yLabelOf}
+                        needsActionLabel={needsActionLabel}
                         onToggle={toggleBranch}
                         onSelect={go}
                       />
@@ -349,7 +369,8 @@ function branchHasActive(node: ResolvedBranch, activeHref: string | null): boole
   return node.children.some((child) => isLeafActive(child.leaf, activeHref));
 }
 
-function resolveSections(
+/** Xuất ra để kiểm được phép DỒN SỐ lên mục cha mà không phải dựng cả ngăn kéo. */
+export function resolveSections(
   isPlatform: boolean,
   has: (permission: ManageNavLeaf['permission']) => boolean,
   featureStates: Partial<Record<PlanFeature, FeatureState>>,
@@ -382,7 +403,13 @@ function resolveSections(
       .filter(canSeeLeaf)
       .map<ResolvedLeaf>((child) => ({ kind: 'leaf', leaf: child, badge: badgeOf(child.badge) }));
 
-    return children.length > 0 ? { kind: 'branch', branch: node, children } : null;
+    if (children.length === 0) return null;
+    return {
+      kind: 'branch',
+      branch: node,
+      children,
+      badge: children.reduce((sum, child) => sum + child.badge, 0),
+    };
   };
 
   return manageNavForScope(isPlatform)
@@ -465,6 +492,7 @@ function Branch({
   open,
   labelOf,
   a11yLabelOf,
+  needsActionLabel,
   onToggle,
   onSelect,
 }: {
@@ -473,11 +501,15 @@ function Branch({
   open: boolean;
   labelOf: (node: { labelKey: string }) => string;
   a11yLabelOf: (leaf: ManageNavLeaf, badge: number) => string;
+  needsActionLabel: (count: number) => string;
   onToggle: (key: string) => void;
   onSelect: (leaf: ManageNavLeaf) => void;
 }) {
   const label = labelOf(node.branch);
   const holdsActive = branchHasActive(node, activeHref);
+  /* Huy hiệu bị ẩn khỏi cây truy cập, nên con số phải nằm trong NHÃN mới có người đọc màn hình. */
+  const branchA11yLabel =
+    !open && node.badge > 0 ? `${label}, ${needsActionLabel(node.badge)}` : label;
 
   return (
     <>
@@ -485,7 +517,7 @@ function Branch({
         onPress={() => onToggle(node.branch.key)}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        accessibilityLabel={label}
+        accessibilityLabel={branchA11yLabel}
         style={({ pressed }) => [
           styles.item,
           { backgroundColor: pressed ? sidebar.hover : 'transparent' },
@@ -508,6 +540,8 @@ function Branch({
           >
             {label}
           </Text>
+          {/* Gập ⇒ mang số của mục con; bung ⇒ nhường số lại cho chính mục con đó. */}
+          {!open && node.badge > 0 ? <NavBadge count={node.badge} /> : null}
           <Ionicons
             name={open ? 'chevron-up' : 'chevron-down'}
             size={iconSize.sm}
@@ -625,36 +659,15 @@ const DrawerItem = memo(function DrawerItem({
  * Ẩn khỏi cây truy cập: tên của mục đã mang sẵn "…, 3 việc cần xử lý", để huy hiệu tự đọc "3"
  * nữa thì trình đọc màn hình nói con số hai lần, lần sau không có ngữ cảnh.
  *
- * Trần 99+ vì quá ba chữ số thì viên huy hiệu dài hơn cả nhãn.
+ * HÌNH thì dùng lại `CountBadge` — đúng viên số mà danh sách trò chuyện đang dùng. Bản tự vẽ
+ * trước đây lệch cỡ (cao 18 thay vì 20) và tự căn chữ theo cách riêng, nên cùng một con số ra hai
+ * hình khác nhau ở hai màn. Tông gold của `CountBadge` (`tone="primary"`) trùng đúng
+ * `sidebar.active`, và trần 99+ cũng đã nằm sẵn trong đó.
  */
 function NavBadge({ count }: { count: number }) {
   return (
-    <YStack
-      minWidth={BADGE_MIN_WIDTH}
-      h={BADGE_HEIGHT}
-      px={6}
-      br={radius.pill}
-      bg={sidebar.active}
-      ai="center"
-      jc="center"
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-    >
-      {/*
-        `lineHeight` khai TƯỜNG MINH bằng chiều cao viên huy hiệu.
-        Mặc định hộp dòng của font cao hơn con số và chừa chỗ cho phần đuôi chữ (g, y) mà chữ số
-        không có, nên "1" bị đẩy xuống dưới tâm dù cha đã `jc="center"`. Web né bằng
-        `line-height: 1`; RN phải cho số cụ thể.
-      */}
-      <Text
-        col={colors.onPrimary}
-        fos={fontSize.label}
-        fow={fontWeight.bold}
-        lh={BADGE_HEIGHT}
-        ta="center"
-      >
-        {count > BADGE_MAX ? `${BADGE_MAX}+` : count}
-      </Text>
+    <YStack accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <CountBadge count={count} />
     </YStack>
   );
 }

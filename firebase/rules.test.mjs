@@ -5,7 +5,18 @@ import {
   assertSucceeds,
   initializeTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  setDoc,
+  updateDoc,
+} from 'firebase/firestore';
 
 /**
  * Kiểm chứng Firestore Security Rules trên emulator — không cần cloud creds.
@@ -41,6 +52,12 @@ before(async () => {
       text: 'chào shop',
       senderType: 'customer',
       sentAt: 1,
+    });
+    // Tin thứ hai: truy vấn `orderBy + limit` bên dưới chỉ có nghĩa khi có nhiều hơn một tin.
+    await setDoc(doc(db, 'conversations/conv1/messages/m2'), {
+      text: 'còn xe nhé',
+      senderType: 'shop_member',
+      sentAt: 2,
     });
     await setDoc(doc(db, 'user_badges/alice'), {
       chatCustomer: 2,
@@ -126,4 +143,30 @@ test('huy hiệu: client KHÔNG ghi được document của CHÍNH MÌNH (create
       updatedAt: 3,
     }),
   );
+});
+
+/**
+ * Client KHÔNG đọc từng doc mà chạy một TRUY VẤN: `orderBy(sentAt desc) + limit` — đúng truy vấn
+ * mà cả web (`use-thread.ts`) lẫn app native (`use-thread-realtime.ts`) gắn listener bằng.
+ *
+ * Đây là phép `list`, không phải `get`, và rules đánh giá nó KHÁC hẳn: điều kiện phải quyết được
+ * mà không cần `resource` của từng doc. Bốn test trên chỉ chứng minh `get`, nên nếu chỉ có chúng
+ * thì một thay đổi rules làm hỏng đường realtime vẫn xanh hết.
+ */
+const recentMessages = (db) =>
+  query(collection(db, 'conversations/conv1/messages'), orderBy('sentAt', 'desc'), limit(30));
+
+test('thành viên chạy được truy vấn tin gần nhất (orderBy + limit)', async () => {
+  const alice = testEnv.authenticatedContext('alice').firestore();
+  await assertSucceeds(getDocs(recentMessages(alice)));
+});
+
+test('non-member KHÔNG chạy được truy vấn đó', async () => {
+  const bob = testEnv.authenticatedContext('bob').firestore();
+  await assertFails(getDocs(recentMessages(bob)));
+});
+
+test('chưa đăng nhập KHÔNG chạy được truy vấn đó', async () => {
+  const anon = testEnv.unauthenticatedContext().firestore();
+  await assertFails(getDocs(recentMessages(anon)));
 });

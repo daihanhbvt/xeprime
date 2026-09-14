@@ -145,6 +145,22 @@ export function isOwnSideMessage(
     : senderType === SENDER_TYPE.SHOP_MEMBER;
 }
 
+/**
+ * `senderType` mà MỘT TIN DO CHÍNH NGƯỜI ĐANG XEM GỬI sẽ mang — nghịch đảo của
+ * {@link isOwnSideMessage}.
+ *
+ * Tồn tại vì tin LẠC QUAN: tin vẽ ra trước khi server trả lời chưa có `senderType` nào cả, mà
+ * bong bóng trái/phải lại quyết bằng đúng trường đó. Để trống thì `isOwnSideMessage` trả
+ * `false` và tin của chính mình hiện ở phía ĐỐI PHƯƠNG cho tới khi lượt REST kế tiếp về —
+ * người dùng thấy mình vừa gửi một câu rồi câu đó nhảy sang bên kia.
+ *
+ * Ở đây chứ không ở mỗi app: nó và `isOwnSideMessage` là hai nửa của MỘT luật. Tách ra hai nơi
+ * là mở đường cho một nửa đổi mà nửa kia không đổi theo.
+ */
+export function ownSenderType(viewerSide: string): string {
+  return viewerSide === CHAT_SIDE.CUSTOMER ? SENDER_TYPE.CUSTOMER : SENDER_TYPE.SHOP_MEMBER;
+}
+
 /** Một nhóm tin liên tiếp cùng người gửi trong cùng một ngày — đơn vị hiển thị của bong bóng chat. */
 export interface ThreadGroup<T extends ThreadMessageLike> {
   key: string;

@@ -1,8 +1,7 @@
 'use client';
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useBadgeRealtime } from '@/features/badges/BadgeRealtimeProvider';
-import { useOnBadgeChange } from '@/features/badges/hooks/use-on-badge-change';
 import { BOOKING_REQUEST_STATUS } from '@xeprime/types';
 import { useBranchScopeParams } from '@/features/branches/hooks/use-branch-scope';
 import { queryKeys } from '@/services/query-keys';
@@ -23,23 +22,19 @@ import { fetchBookingRequests, filtersToParams } from '../api';
  */
 export function usePendingBookingRequestCount(enabled = true) {
   const branchScope = useBranchScopeParams();
-  const { counts, live } = useBadgeRealtime();
-  const queryClient = useQueryClient();
+  const { live } = useBadgeRealtime();
 
   /*
-   * Yêu cầu thuê mới LUÔN đi kèm một thông báo cho thành viên gian hàng, nên `notificationsUnread`
-   * đổi là tín hiệu đủ tốt để tải lại con số này ngay — thay vì đợi hết nhịp một phút.
-   *
    * Vì sao không đưa thẳng con số này vào bản chiếu huy hiệu: nó bị THU HẸP theo chi nhánh đang
    * chọn, một trạng thái chỉ tồn tại ở client (ADR 0034 điều 2). Một con số toàn tài khoản sẽ nói
    * khác danh sách mà người dùng mở ra. Nên bản chiếu chỉ làm TÍN HIỆU, còn con số vẫn đến từ
    * query đúng scope.
    *
-   * Invalidate cả nhánh `bookingRequests`: hộp thư yêu cầu cũng cần nhảy theo, không riêng huy hiệu.
+   * Việc nghe tín hiệu đó nằm ở `BadgeRealtimeProvider`, KHÔNG ở đây: nhánh `bookingRequests`
+   * là một trong những nhánh `notification-refresh.ts` làm mới, và con số này đọc từ chính
+   * nhánh đó nên nó tự nhảy theo. Giữ thêm một lệnh invalidate ở đây là hai chỗ cùng quyết định
+   * một việc.
    */
-  useOnBadgeChange(counts.notificationsUnread, () => {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all });
-  });
   const filters = {
     status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
     limit: 1,

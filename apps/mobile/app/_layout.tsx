@@ -2,6 +2,8 @@
 // Hermes trên Android thiếu `Intl.PluralRules` và bảng múi giờ. Xem `src/i18n/intl-polyfill.ts`.
 import '@/i18n/intl-polyfill';
 
+import '@/lib/crypto-polyfill';
+
 import { patchDayjsTimezone } from '@/i18n/dayjs-timezone-fix';
 
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -15,6 +17,8 @@ import 'react-native-reanimated';
 import { AppErrorScreen } from '@/components/state/AppErrorScreen';
 import { AppToastProvider } from '@/components/feedback/AppToast';
 import { SessionBoundary } from '@/features/auth/SessionBoundary';
+import { BadgeRealtimeProvider } from '@/features/badges/BadgeRealtimeProvider';
+import { ChatRealtimeProvider } from '@/features/chat/realtime/ChatRealtimeProvider';
 import { registerPushBackgroundHandler } from '@/features/notifications/messaging';
 import { PushBootstrap } from '@/features/notifications/PushBootstrap';
 import { I18nProvider } from '@/i18n/I18nProvider';
@@ -26,6 +30,18 @@ import { tamaguiConfig } from '@/theme/tamagui.config';
 import { duration } from '@/theme/motion';
 
 patchDayjsTimezone();
+
+/*
+ * KHÔNG gọi `SplashScreen.preventAutoHideAsync()` ở đây — và đừng thêm vào sau.
+ *
+ * Splash được khai ở `app.json` (`expo-splash-screen`) để lấp đúng một khoảng: từ lúc hệ điều
+ * hành mở process tới khi khung hình React đầu tiên vẽ xong. Hết khoảng đó nó tự ẩn.
+ *
+ * Giữ nó lâu hơn để chờ font hoặc chờ phiên là đổi một nhấp nháy ngắn lấy một màn chờ dài, đúng
+ * cái đánh đổi mà `src/theme/fonts.ts` đã từ chối: font chưa về thì chữ hiện bằng font hệ thống
+ * rồi đổi mặt, còn phiên thì `SessionBoundary` không chặn render bao giờ. Màu nền splash đặt
+ * bằng `colors.background` (#faf9f7) nên cú bàn giao sang app không có bước nhảy màu.
+ */
 
 /*
  * Ở phạm vi MODULE, ngoài mọi component: khi hệ điều hành đánh thức app bằng một headless task
@@ -63,6 +79,21 @@ export default function RootLayout() {
               <AppToastProvider>
                 <PushBootstrap />
               <SessionBoundary>
+                {/*
+                  BÊN TRONG `SessionBoundary`: nó cần phiên (custom token xin bằng chính phiên
+                  đó) và phải nghe được lúc phiên đổi. Bọc cả `Stack` để listener Firestore sống
+                  qua điều hướng — gắn nó ở một màn thì rời màn là mất realtime.
+                */}
+                <ChatRealtimeProvider>
+                {/*
+                  BÊN TRONG `ChatRealtimeProvider`: nó dùng lại ĐÚNG phiên Firebase của chat để nghe
+                  `user_badges/{uid}`. Mở phiên thứ hai chỉ để nghe một document là trả tiền hai
+                  lần cho đúng một kết nối.
+
+                  Và bọc cả `Stack`: chuông, biểu tượng chat và huy hiệu menu đều đọc con số
+                  này, nên nó phải sống qua điều hướng — gắn ở một màn thì rời màn là mất.
+                */}
+                <BadgeRealtimeProvider>
                 <Stack
                   screenOptions={{
                     headerShown: false,
@@ -104,6 +135,8 @@ export default function RootLayout() {
                   */}
                   <Stack.Screen name="manage" options={{ animation: 'fade' }} />
                 </Stack>
+                </BadgeRealtimeProvider>
+                </ChatRealtimeProvider>
               </SessionBoundary>
               </AppToastProvider>
             </QueryClientProvider>

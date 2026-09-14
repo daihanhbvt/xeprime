@@ -36,6 +36,20 @@ describe('notificationHref — đích hợp lệ', () => {
     expect(notificationHref('/manage/shop')).toBe('/manage/shop');
   });
 
+  /**
+   * Hai hộp thư chat là HAI đích, không thay nhau được: mở một hội thoại của gian hàng bằng
+   * `/chat/:id` sẽ hỏi server với `side=customer`, và `resolveAccess` trả 403. Server đã phân
+   * nhánh theo `audience` (`notificationDeepLink`); allowlist ở đây phải nhận được cả hai.
+   */
+  it('nhận CẢ HAI hộp thư chat', () => {
+    expect(notificationHref('/chat')).toBe('/chat');
+    expect(notificationHref('/manage/chat')).toBe('/manage/chat');
+    expect(notificationHref(`/manage/chat/${ID}`)).toEqual({
+      pathname: '/manage/chat/[id]',
+      params: { id: ID },
+    });
+  });
+
   it('bỏ query/hash — đích của thông báo không mang tham số', () => {
     expect(notificationHref('/trips?utm=x#frag')).toBe('/trips');
   });

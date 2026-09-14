@@ -1,15 +1,19 @@
+import { CHAT_SIDE } from '@xeprime/types';
 import { ListRowSkeleton } from '@/components/ui/Skeleton';
 import { RequireSession } from '@/features/auth/RequireSession';
 import { ChatListScreen } from '@/features/chat/ChatListScreen';
 
 /**
- * Tab "Tin nhắn". Cổng phiên ở đây chứ không trong màn: một deep link `xeprime://chat` hay một
- * thông báo đẩy mở thẳng màn này, và ẩn tab không phải chặn nó.
+ * Tab "Tin nhắn" — hộp thư KHÁCH (`side = customer`). Inbox gian hàng là một bề mặt khác, ở
+ * `/manage/chat`.
+ *
+ * Cổng phiên ở đây chứ không trong màn: một deep link `xeprime://chat` mở thẳng màn này, và ẩn
+ * tab không phải chặn nó.
  */
 export default function ChatRoute() {
   return (
     <RequireSession fallback={<ChatListFallback />}>
-      <ChatListScreen />
+      <ChatListScreen side={CHAT_SIDE.CUSTOMER} />
     </RequireSession>
   );
 }

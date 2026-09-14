@@ -10,6 +10,11 @@ import type { ReactNode } from 'react';
  * trạng thái chỉ tồn tại ở client (ADR 0034 điều 2), nên một con số toàn tài khoản sẽ nói khác
  * danh sách mà người dùng mở ra. Bản chiếu vì vậy chỉ làm TÍN HIỆU — còn con số vẫn đến từ query
  * đúng scope. Bài test này khoá đúng ranh giới đó.
+ *
+ * Việc NGHE tín hiệu đã chuyển lên `BadgeRealtimeProvider` (`notification-refresh.ts`): nhánh
+ * `bookingRequests` là một trong những nhánh nó làm mới, nên con số này tự nhảy theo mà không
+ * cần một lệnh invalidate thứ hai ở đây. Test vì thế kích hoạt đúng seam đó thay vì lật con số
+ * huy hiệu — lật con số chỉ chứng minh hook tự làm việc của provider.
  */
 const requestsApi = vi.hoisted(() => ({
   fetchBookingRequests: vi.fn(),
@@ -26,6 +31,7 @@ vi.mock('@/features/branches/hooks/use-branch-scope', () => ({
   useBranchScopeParams: () => ({}),
 }));
 
+import { refreshNotificationAffected } from '@/features/badges/notification-refresh';
 import { usePendingBookingRequestCount } from './use-pending-booking-request-count';
 
 function Probe() {
@@ -54,18 +60,19 @@ afterEach(cleanup);
 
 describe('usePendingBookingRequestCount', () => {
   it('có thông báo mới → tải lại con số ngay, không đợi nhịp poll', async () => {
-    const view = render(wrapper(<Probe />));
+    render(wrapper(<Probe />));
     await waitFor(() => expect(requestsApi.fetchBookingRequests).toHaveBeenCalledTimes(1));
 
-    // Yêu cầu thuê mới luôn kèm một thông báo cho thành viên gian hàng.
-    badges.counts = { ...badges.counts, notificationsUnread: 1 };
-    view.rerender(wrapper(<Probe />));
+    // Yêu cầu thuê mới luôn kèm một thông báo cho thành viên gian hàng — và provider phản ứng
+    // với thông báo đó bằng đúng lời gọi này.
+    refreshNotificationAffected(queryClient);
 
     await waitFor(() =>
       expect(requestsApi.fetchBookingRequests.mock.calls.length).toBeGreaterThan(1),
     );
   });
 
+  /** Hộp thư chat nghe `chatCustomer`/`chatShop` ở hook của nó — không đi qua đường này. */
   it('chỉ có tin nhắn chat tới thì KHÔNG tải lại — đó là việc của hộp thư', async () => {
     const view = render(wrapper(<Probe />));
     await waitFor(() => expect(requestsApi.fetchBookingRequests).toHaveBeenCalledTimes(1));

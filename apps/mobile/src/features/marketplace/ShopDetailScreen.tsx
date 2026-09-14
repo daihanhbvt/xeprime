@@ -158,6 +158,7 @@ export function ShopDetailScreen({ slug, onBack }: { slug: string; onBack: () =>
                 label={tResults('loadMore')}
                 variant="secondary"
                 block={false}
+                align="center"
                 onPress={listings.retryNextPage}
               />
             </YStack>

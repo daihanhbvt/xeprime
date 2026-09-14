@@ -19,6 +19,7 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
+import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { DataRow } from '@/components/ui/DataRow';
 import { Stars } from '@/components/ui/Stars';
@@ -38,6 +39,7 @@ import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { CancelTripSheet } from './components/CancelTripSheet';
 import { ReviewSheet } from './components/ReviewSheet';
+import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { TripFinanceCard } from './components/TripFinanceCard';
 import { TripHoldPanel } from './components/TripHoldPanel';
 import { TripHandoverEvidence } from './components/TripHandoverEvidence';
@@ -535,8 +537,6 @@ function TripActions({
   onReview: () => void;
 }) {
   const t = useTranslations('Trips.actions');
-  const tStates = useTranslations('Common.states');
-  const toast = useAppToast();
   const phone = trip.shop.phone;
 
   const canCancel = canCustomerCancelTrip(stage);
@@ -548,28 +548,31 @@ function TripActions({
           {t('title')}
         </Text>
         {/*
-          Nhắn tin cho gian hàng: nút DỰNG SẴN đúng chỗ web đặt nó, nhưng chat realtime
-          (ADR 0009) chưa có ở app nên bấm vào chỉ báo "đang phát triển".
+          Kênh liên hệ chỉ mở SAU khi chủ xe duyệt — server quyết bằng `canContact`.
 
-          Vẫn hiện chứ không ẩn: đây là việc khách hay cần nhất ngay sau khi gửi yêu cầu, và một
-          nút nói thật rằng nó chưa có vẫn tốt hơn một khoảng trống không giải thích gì.
+          Trên tuyến hoa hồng, một yêu cầu gửi rồi tự huỷ không được phép trở thành cách lấy số
+          của gian hàng rồi chốt ngoài sàn (ADR 0028 điều 9). Chưa duyệt thì NÓI RA lý do chứ
+          không giấu nút đi: một khối biến mất không giải thích gì trông như lỗi. Cùng cách web
+          dựng khối này.
         */}
-        <Button
-          label={t('contactShop')}
-          icon="chatbubble-ellipses-outline"
-          onPress={() => toast.showInfo(tStates('featureComingSoon'))}
-        />
-        {phone ? (
-          <Button
-            label={t('call')}
-            variant="secondary"
-            icon="call-outline"
-            onPress={() => void Linking.openURL(`tel:${phone}`)}
-          />
-        ) : null}
-        {trip.canReview ? (
-          <Button label={t('review')} icon="star-outline" onPress={onReview} />
-        ) : null}
+        {trip.canContact ? (
+          <>
+            <ChatWithShopButton vehicleId={trip.vehicle.id} label={t('contactShop')} />
+            {phone ? (
+              <Button
+                label={t('call')}
+                variant="secondary"
+                icon="call-outline"
+                onPress={() => void Linking.openURL(`tel:${phone}`)}
+              />
+            ) : null}
+            {trip.canReview ? (
+              <Button label={t('review')} icon="star-outline" onPress={onReview} />
+            ) : null}
+          </>
+        ) : (
+          <Callout>{t('contactLocked')}</Callout>
+        )}
         {canCancel ? (
           <Button
             label={t('cancel')}

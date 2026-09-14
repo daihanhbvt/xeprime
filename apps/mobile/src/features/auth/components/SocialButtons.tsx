@@ -14,7 +14,8 @@ import { type CurrentUser } from '@/features/auth/api';
 import { useSocialLogin } from '@/features/auth/hooks/use-auth';
 import type { IconName } from '@/components/ui/Chip';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { FONT_FAMILY } from '@/theme/fonts';
+import { colors, fontSize, radius, sizing, space } from '@/theme/tokens';
 
 /** Ô cố định để nhãn hai nút thẳng hàng bất kể glyph rộng hẹp thế nào. */
 const ICON_BOX = 20;
@@ -135,8 +136,10 @@ const styles = StyleSheet.create({
   blocked: { borderColor: colors.border, opacity: 0.55 },
   label: {
     color: colors.text,
+    // `RNText` (không phải `Text` của Tamagui) ⇒ không nhận font mặc định; khai tường minh.
+    // Mặt chữ đậm lấy bằng FILE, không bằng `fontWeight` — Android bỏ qua nó khi có font riêng.
+    fontFamily: FONT_FAMILY.semibold,
     fontSize: fontSize.body,
-    fontWeight: fontWeight.semibold,
   },
   labelDisabled: { color: colors.textDisabled },
 });

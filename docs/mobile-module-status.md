@@ -22,10 +22,12 @@
 | Shop | 9 | **7** | 2 | SHP-01→07 xong (08/09) — `docs/mobile-shop-module-status.md`. SHP-08/09 web chưa có bản để clone |
 | Finance | 6 | **6** | 0 | Xong trọn (07/09) — `docs/mobile-finance-module-status.md` |
 | Calendar | 3 | **3** | 0 | CAL-01→03 xong (10/09) — CAL-03 là ràng buộc CSDL, app chỉ kiểm chứng |
-| Communication | 7 | 1 | 6 | COM-07 (push) xong phần nhận — 10/09. COM-04 (trung tâm thông báo) chưa |
+| Communication | 7 | **5** | 2 | COM-01→04 + COM-07 xong (10/09). Còn COM-05 (email) · COM-06 (SMS) — hạ tầng server, chưa cấu hình SMTP/eSMS |
 | Payment | 4 | 0 | 4 | **Không làm ở giai đoạn này** — ADR 0013 |
 | Admin / Management | 13 | 0 | 13 | Toàn bộ P3 |
 | System | 9 | **5** | 4 | i18n · hợp đồng API · R2 · test (một phần) · **SYS-05 xong 10/09** |
+
+**Communication COM-01→04 đóng ngày 10/09/2026** — xem §2.9.
 
 **Đã đóng trọn bốn module lớn nhất**: Booking/Rental (16 dòng), Vehicle (11/13), Customer (4)
 và Finance (6) — cộng lại 37/97 dòng, và là toàn bộ phần nghiệp vụ nặng của cổng quản lý.
@@ -163,25 +165,67 @@ Account, không phải của Calendar.
 **Đã mở khoá:** VEH-13 (giá theo ngày, `DailyPriceSheet`) và nút "Xem lịch" ở Hồ sơ 360, thẻ đội
 xe và thẻ yêu cầu thuê.
 
-### 2.9 Communication — COM-07 xong phần NHẬN (10/09/2026)
+### 2.9 Communication — 5/7 (10/09/2026)
 
-**COM-07 — thông báo đẩy.** Hạ tầng backend đã đủ: `push_devices` + `push_deliveries`, API xếp
-hàng trong cùng transaction nghiệp vụ, worker gửi qua FCM (`docs/push-notifications.md`). Phía app
-làm ở mức TỐI THIỂU và có chủ đích:
+**COM-01 — chat khách ↔ gian hàng.** HAI hộp thư, không phải một danh sách có bộ lọc: `side` là
+prop bắt buộc của `ChatListScreen`/`ChatThreadScreen` và đi vào cả query string lẫn queryKey.
+Khách ở `/chat`, gian hàng ở `/manage/chat` — cùng địa chỉ với web. Tìm kiếm, lọc "chưa đọc" và
+cắt trang đều ở SERVER; phân trang là tải-thêm-khi-cuộn thay cho bộ số trang của web.
+Lối vào có đủ ba chỗ web có: trang chi tiết xe, màn "đã gửi yêu cầu", và cụm hỗ trợ ở chi tiết
+chuyến — chỗ cuối nay tôn trọng `canContact` như web (ADR 0028 điều 9).
+
+**COM-02 — realtime.** Firebase JS SDK (`firebase` **12.17.1**) chỉ để NGHE:
+
+> ⚠️ Bản KHÁC web (web đang 11.1.0), và đó là bắt buộc: `@react-native-firebase/app@26.4.0`
+> ghim cứng `firebase@12.17.1`. Để mobile ở 11.1.0 thì bundle có HAI bản `@firebase/app`, mỗi
+> bản một sổ đăng ký component riêng — `initializeAuth` ném
+> `Component auth has not been registered yet` và realtime chết hẳn, im lặng rơi về polling.
+> Hai app đóng gói riêng nên hai bản không bao giờ gặp nhau; project Firebase vẫn dùng CHUNG.
+
+`POST /chat/firebase-token` → `signInWithCustomToken` (persistence trong bộ nhớ) →
+`onSnapshot(conversations/<id>/messages, orderBy sentAt desc, limit 30)`. Snapshot **không bao giờ
+vẽ ra màn hình** — nó chỉ kích hoạt một lượt đọc REST rồi gộp bằng `mergeThreadMessages` của
+`@xeprime/domain` (ADR 0009 điều 1–2). Realtime hỏng ở bất kỳ bước nào cũng chỉ dẫn tới
+`ready: false` và chat chạy trọn vẹn trên REST; poll chỉ THƯA ĐI (25s ↔ 5s), không bao giờ tắt.
+Poll và listener dừng khi app xuống nền, hỏi lại ngay khi quay lại. Đăng xuất/đổi user thì
+`signOut` Firebase.
+
+> `firebase` (JS SDK, đọc Firestore) và `@react-native-firebase/*` (module native, nhận FCM) là
+> HAI thư viện khác nhau cùng trỏ tới một project. Chúng không thay thế được cho nhau: JS SDK
+> không nhận được push, còn RNFirebase Messaging không đọc Firestore. Đó là lý do cả hai cùng
+> nằm trong `package.json`.
+
+**COM-03 — đính kèm.** Ảnh (nén tại máy) và PDF, dùng chung `CHAT_ATTACHMENT_MIME_TYPES` /
+`_MAX_BYTES` / `_MAX_COUNT` với DTO backend. Đã sửa một lỗi thật: bản trước gửi `fileSize: 0` cho
+mọi tệp; giờ số byte lấy từ chính blob sắp PUT — cùng con số được ký vào `Content-Length`.
+
+**COM-04 — chuông thông báo in-app.** Badge chưa đọc, tấm trượt danh sách có nối trang, đánh dấu
+một/tất cả đã đọc, làm mới khi app về tiền cảnh, và điều hướng theo `targetType`/`targetId` với
+đúng bảng phân nhánh của web (khác nhau theo ngữ cảnh khách/quản lý).
+
+**COM-07 — thông báo đẩy.** Hạ tầng backend đủ: `push_devices` + `push_deliveries`, API xếp hàng
+trong cùng transaction nghiệp vụ, worker gửi qua FCM (`docs/push-notifications.md`). Phía app:
 
 - xin quyền (Android 13+ `POST_NOTIFICATIONS`, iOS APNs), đúng một lần mỗi phiên chạy;
 - đăng ký token **sau khi đăng nhập**, đăng ký lại khi FCM xoay token;
 - nhận ở cả ba trạng thái: đang mở → `AppToast`; ở nền / đã tắt hẳn → hệ điều hành hiện;
 - bấm thông báo → mở đúng màn theo `data.url`, qua allowlist
   (`src/features/notifications/deep-link.ts`). Chưa đăng nhập thì URL được cất vào
-  `pendingDeepLink` và tiêu thụ sau khi đăng nhập.
+  `pendingDeepLink` và tiêu thụ sau khi đăng nhập;
+- **nhận push thì làm mới luôn hộp thư và badge** — hai đợt gặp nhau ở đây: COM-07 mang tin tới,
+  COM-04 là nơi tin đó phải xuất hiện.
 
-Chưa làm, cố ý — thuộc **COM-04**: trung tâm thông báo, badge chưa đọc, màn cài đặt bật/tắt từng
-loại, refetch hộp thư khi nhận push, màn giải thích trước khi xin quyền, đo đếm nhận/mở, và tạo
-kênh Android thật (`docs/push-notifications.md` §6, §9).
+Toàn bộ vòng đời push có dấu vết qua `chat-debug.ts` (bật bằng `EXPO_PUBLIC_CHAT_DEBUG=true`,
+chỉ ở bản dev): sẵn có/không, quyền cho/từ chối, đăng ký token OK/hỏng, token xoay, nhận tin ở
+tiền cảnh, bấm mở từ nền, mở từ trạng thái tắt hẳn, đích được chấp nhận/bị chặn, và URL cất lại
+chờ đăng nhập. Log **không** mang token, nội dung tin hay `data.url` đầy đủ.
 
-**Cần để chạy thật:** development build — Expo Go KHÔNG nhận được push — cộng hai file credential
-Firebase không nằm trong repo.
+**Còn lại:** COM-05 (email) và COM-06 (SMS) là hạ tầng server, app không dựng gì — cả hai còn
+chờ cấu hình SMTP/eSMS.
+
+**Cần để chạy push thật:** development build — Expo Go KHÔNG nhận được push — cộng hai file
+credential Firebase không nằm trong repo (`apps/mobile/credentials/`, xem
+`docs/push-notifications.md` §2).
 
 ### 2.10 Payment — 0/4, KHÔNG làm
 
@@ -274,8 +318,8 @@ Bốn khoản nợ dưới đây đã đóng; giữ lại bảng để người 
 | iOS chưa build lần nào | Cao (trước phát hành) | `apps/mobile/README.md` §10 |
 | `app.config.ts` chưa tách dev/staging/prod | Trung bình | |
 | Chưa có App Links / Universal Links | Trung bình | Link đặt lại mật khẩu trong email mở ở trình duyệt |
-| Chưa refetch theo `AppState` / NetInfo | Trung bình | |
-| Push notification: **chưa thử trên máy thật** | Cao | Code đã đủ hai đầu; còn thiếu `google-services.json` / `GoogleService-Info.plist` + khoá APNs. Quy trình: `docs/push-notifications.md` §2, §8 |
+| Chưa refetch theo `AppState` / NetInfo — TRỪ chat và thông báo | Thấp | `src/hooks/use-app-active.ts` đã có; các miền còn lại chưa cắm |
+| Push notification: **chưa thử trên máy thật** | Cao | Code đã đủ hai đầu; cần dev build + khoá APNs cho iOS. Quy trình: `docs/push-notifications.md` §2, §8 |
 | Kênh thông báo Android chưa được TẠO | Thấp | Thông báo vẫn hiện (SDK rơi về kênh dự phòng), chỉ chưa tách âm báo chat ↔ đơn. Cần `@notifee/react-native`, KHÔNG dùng `expo-notifications` |
 
 ---
@@ -289,10 +333,12 @@ Xếp theo **cái gì đang chặn cái gì**, không theo độ khó.
 2. **Làm mịn UI/UX màn danh sách xe + Hồ sơ 360** — đã có phản hồi thực tế (03/09): thẻ xe quá
    cao do chip trạng thái xuống dòng, bảng thông số 17 dòng phần lớn rỗng và nhãn wrap, tiêu đề
    thẻ không nhất quán.
-3. **Communication COM-04** — trung tâm thông báo + badge, nối vào push đã chạy (COM-07).
-   Hợp đồng API, kiến trúc đích và checklist: `docs/mobile-badges-notifications-migration.md`.
+3. **Thử push trên MÁY THẬT** — code đã đủ hai đầu và hộp thư in-app đã có chỗ để tin hiện ra,
+   nhưng chưa lần nào chạy qua FCM thật. Cần dev build + credential Firebase + khoá APNs
+   (`docs/push-notifications.md` §2, §8). Đây là việc chặn cả hạn phản hồi 60 phút của hộp thư
+   yêu cầu.
 4. Admin. *(Customer xong 07/09; Finance xong 07/09; Shop xong 08/09; MKT-05 xong 09/09;
-   Calendar + VEH-13 + push COM-07 xong 10/09.)*
+   Calendar + VEH-13 xong 10/09; Communication COM-01→04 + COM-07 xong 10/09.)*
 
 ---
 

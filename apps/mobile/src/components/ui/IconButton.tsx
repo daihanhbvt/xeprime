@@ -51,7 +51,6 @@ const TONE: Record<Tone, { bg: string; fg: string; border: string }> = {
  * Bằng nhau không phải trùng hợp: hai thứ này đứng cạnh nhau trên cùng một hàng điều khiển, và
  * lệch vài dp là hàng đó trông như xếp nhầm.
  */
-const COMPACT_BOX = 32;
 
 interface IconButtonProps {
   icon: IconName;
@@ -90,7 +89,7 @@ export function IconButton({
 }: IconButtonProps) {
   const skin = TONE[tone];
   const blocked = disabled || loading;
-  const box = compact ? COMPACT_BOX : sizing.touchTarget;
+  const box = compact ? sizing.compactBox : sizing.touchTarget;
   const slop = Math.ceil((sizing.touchTarget - box) / 2);
 
   return (

@@ -27,6 +27,7 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ListingDetailSkeleton } from '@/components/ui/Skeleton';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { Card } from '@/components/ui/Card';
 import { Stars } from '@/components/ui/Stars';
 import type { IconName } from '@/components/ui/Chip';
@@ -185,6 +186,7 @@ function RequestBar({ vehicleId, serviceType }: { vehicleId: string; serviceType
       px={layout.screenX}
       pt={space.sm}
       pb={insets.bottom + space.sm}
+      gap={space.sm}
       bg={colors.surface}
       borderTopWidth={1}
       borderColor={colors.borderSubtle}
@@ -192,9 +194,16 @@ function RequestBar({ vehicleId, serviceType }: { vehicleId: string; serviceType
     >
       <Button
         label={t('cta')}
+        icon="car-sport-outline"
         size="lg"
         onPress={() => navigateOnce(ROUTES.booking.request(vehicleId, serviceType))}
       />
+      {/*
+        "Nhắn shop" đứng NGAY DƯỚI nút đặt xe, đúng cặp mà web bày cạnh nhau ở cột phải. Hỏi
+        trước khi đặt (giao xe ở đâu, có xe khác không) là việc rất hay xảy ra, và bắt khách quay
+        ra tab Tin nhắn rồi tự tìm gian hàng là đánh mất chính chiếc xe họ đang xem.
+      */}
+      <ChatWithShopButton vehicleId={vehicleId} />
     </YStack>
   );
 }
