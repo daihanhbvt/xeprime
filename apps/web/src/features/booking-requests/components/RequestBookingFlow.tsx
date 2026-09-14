@@ -216,7 +216,37 @@ export function RequestBookingFlow({
   const router = useRouter();
   const queryClient = useQueryClient();
   const [step, setStep] = useState<BookingStepKey>('trip');
-  const [rentalMode, setRentalMode] = useState<RentalMode>('daily');
+  /** Dịch vụ mở đầu — từ ngữ cảnh tìm kiếm; đối chiếu với năng lực xe ở effect phía dưới. */
+  const initialServiceType =
+    serviceTypeContext && (SERVICE_TYPE_VALUES as string[]).includes(serviceTypeContext)
+      ? (serviceTypeContext as ServiceType)
+      : SERVICE_TYPE.SELF_DRIVE;
+
+  /*
+   * Mở THẲNG trang chi tiết (không qua `/search`, nên URL không mang ngày giờ) → điền khoảng
+   * khách đã tự chọn trước đó, hoặc gợi ý mặc định. Không có bước này thì ô thời gian trống
+   * trơn, và khách phải chọn lại đúng thứ họ vừa chọn ở trang trước.
+   *
+   * Tính MỘT LẦN lúc dựng chứ không trong effect. Đọc bộ nhớ trình duyệt lúc render chỉ sai khi
+   * có một lần render trên SERVER để lệch với nó — mà ở đây không có: `RequestBookingModal` chỉ
+   * dựng flow khi đã mở (`{open ? … : null}`), và `open` khởi tạo bằng `false` ở phía client.
+   * Đổi lại, phiên bản effect phải kèm một `setState` đồng bộ (thứ `react-hooks/set-state-in-effect`
+   * chặn, vì nó tạo thêm một vòng render sau khi ô đã hiện ra trống) và một `useRef` đọc ngay
+   * lúc render để nhớ đã điền hay chưa.
+   *
+   * Đây chỉ là ĐIỀN SẴN. Nó không nói gì về việc chiếc xe này có rảnh trong khoảng đó không:
+   * lịch bận (`busyDays`) và giờ giao nhận của chủ xe vẫn được kiểm trước khi cho gửi yêu cầu,
+   * và chốt cuối vẫn là constraint chống trùng ở DB (ADR 0006).
+   */
+  const [seededRange] = useState(() => {
+    // Mốc từ URL luôn THẮNG: một link chia sẻ phải mở ra đúng thứ người gửi nhìn thấy.
+    if (pickupAt && returnAt) return null;
+    // Dài hạn KHÔNG có khoảng nhận–trả ở bước này (ADR 0011) — khách chọn GÓI, không chọn lịch.
+    if (initialServiceType === SERVICE_TYPE.LONG_TERM) return null;
+    return rememberedOrDefaultRentalRange();
+  });
+
+  const [rentalMode, setRentalMode] = useState<RentalMode>(seededRange?.mode ?? 'daily');
   const [otpPhone, setOtpPhone] = useState('');
   const [code, setCode] = useState('');
   const [stepError, setStepError] = useState<string | null>(null);
@@ -260,10 +290,7 @@ export function RequestBookingFlow({
       customerName: '',
       customerPhone: '',
       // Dịch vụ/lộ trình prefill từ ngữ cảnh tìm kiếm; đối chiếu với năng lực xe ở effect dưới.
-      serviceType:
-        serviceTypeContext && (SERVICE_TYPE_VALUES as string[]).includes(serviceTypeContext)
-          ? (serviceTypeContext as ServiceType)
-          : SERVICE_TYPE.SELF_DRIVE,
+      serviceType: initialServiceType,
       routeType: isRouteType(routeTypeContext) ? routeTypeContext : ROUTE_TYPE.IN_CITY,
       pickupProvinceCode: '',
       pickupWardCode: '',
@@ -274,8 +301,8 @@ export function RequestBookingFlow({
       pickupLocationSource: null,
       destination: '',
       // Mốc từ URL là UTC; ô chọn phải hiện GIỜ VIỆT NAM (CLAUDE.md §9).
-      pickupAt: pickupAt ? toAppTz(pickupAt) : null,
-      returnAt: returnAt ? toAppTz(returnAt) : null,
+      pickupAt: pickupAt ? toAppTz(pickupAt) : (seededRange?.pickupAt ?? null),
+      returnAt: returnAt ? toAppTz(returnAt) : (seededRange?.returnAt ?? null),
       // Thuê dài hạn: chọn sẵn gói NHỎ NHẤT và nguyện vọng linh hoạt nhất — khách thấy ngay
       // một mức giá thật để so, thay vì một bảng trống phải bấm mới có số.
       longTermPackageMonths: LONG_TERM_PACKAGE_MONTHS[0],
@@ -291,33 +318,6 @@ export function RequestBookingFlow({
       deliveryLocationSource: null,
     },
   });
-
-  /*
-   * Mở THẲNG trang chi tiết (không qua `/search`, nên URL không mang ngày giờ) → điền khoảng
-   * khách đã tự chọn trước đó, hoặc gợi ý mặc định. Không có bước này thì ô thời gian trống
-   * trơn, và khách phải chọn lại đúng thứ họ vừa chọn ở trang trước.
-   *
-   * Chạy trong effect, KHÔNG ở `defaultValues`: nguồn là bộ nhớ trình duyệt, thứ không tồn tại
-   * lúc Next dựng HTML trên server — đọc nó lúc render là một lỗi hydration.
-   *
-   * Đây chỉ là ĐIỀN SẴN. Nó không nói gì về việc chiếc xe này có rảnh trong khoảng đó không:
-   * lịch bận (`busyDays`) và giờ giao nhận của chủ xe vẫn được kiểm trước khi cho gửi yêu cầu,
-   * và chốt cuối vẫn là constraint chống trùng ở DB (ADR 0006).
-   */
-  const prefilledRef = useRef(false);
-  useEffect(() => {
-    if (prefilledRef.current) return;
-    prefilledRef.current = true;
-    if (pickupAt && returnAt) return;
-    // Dài hạn KHÔNG có khoảng nhận–trả ở bước này (ADR 0011) — khách chọn GÓI, không chọn lịch.
-    if (getValues('serviceType') === SERVICE_TYPE.LONG_TERM) return;
-    if (getValues('pickupAt') && getValues('returnAt')) return;
-
-    const range = rememberedOrDefaultRentalRange();
-    setValue('pickupAt', range.pickupAt);
-    setValue('returnAt', range.returnAt);
-    setRentalMode(range.mode);
-  }, [pickupAt, returnAt, getValues, setValue]);
 
   const watchedPickup = useWatch({ control, name: 'pickupAt' });
   const watchedReturn = useWatch({ control, name: 'returnAt' });

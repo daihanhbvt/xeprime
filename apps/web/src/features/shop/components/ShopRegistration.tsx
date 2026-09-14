@@ -71,7 +71,6 @@ export function ShopRegistration({
   prefill,
 }: ShopRegistrationProps = {}) {
   const t = useTranslations('ShopOnboarding');
-  const tCommon = useTranslations('Common');
   const domainLabel = useDomainLabel();
   const register = useRegisterShop();
   const isOwnerVariant = variant === 'owner';

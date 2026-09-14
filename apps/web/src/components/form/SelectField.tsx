@@ -57,6 +57,15 @@ interface SelectFieldProps<T extends FieldValues> {
    * chính kết quả vừa tìm được.
    */
   onSearch?: (value: string) => void;
+  /**
+   * Hệ quả của chính CÚ ĐỔI, chạy ngay sau khi field nhận giá trị mới.
+   *
+   * Dùng cho những ô mà đổi giá trị làm ô KHÁC hết đúng — đổi tỉnh thì mã xã cũ chắc chắn sai.
+   * Dọn ở đây, trong trình xử lý sự kiện, thay vì ở effect nhìn giá trị đổi: effect không phân
+   * biệt được "người dùng vừa đổi tỉnh" với "form vừa mở ở chế độ sửa và đã có sẵn tỉnh", nên
+   * nó cần thêm một ref đọc lúc render để nhớ mốc cũ — hai thứ `react-hooks` chặn đúng chỗ.
+   */
+  onAfterChange?: () => void;
 }
 
 /**
@@ -78,6 +87,7 @@ export function SelectField<T extends FieldValues>({
   loading,
   mode,
   onSearch,
+  onAfterChange,
   notFoundContent,
 }: SelectFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
@@ -102,9 +112,10 @@ export function SelectField<T extends FieldValues>({
         mode={mode}
         value={(field.value as string | string[] | null | undefined) ?? undefined}
         // multiple: bỏ hết lựa chọn trả mảng RỖNG (schema .min(1) báo lỗi) chứ không phải null.
-        onChange={(value: string | string[] | undefined) =>
-          field.onChange(value ?? (mode === 'multiple' ? [] : null))
-        }
+        onChange={(value: string | string[] | undefined) => {
+          field.onChange(value ?? (mode === 'multiple' ? [] : null));
+          onAfterChange?.();
+        }}
         onBlur={field.onBlur}
         options={
           (optionGroups ?? options) as React.ComponentProps<typeof Select>['options']
