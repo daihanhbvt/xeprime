@@ -424,3 +424,8 @@
   font-size: var(--xp-font-size-body-sm);
   line-height: var(--xp-line-height-body-sm);
 }
+
+/* Cảnh báo "cọc thoả thuận trực tiếp" đứng cùng nhịp dọc với các khối khác của cột phải. */
+.directDeposit {
+  margin-bottom: var(--xp-space-md);
+}

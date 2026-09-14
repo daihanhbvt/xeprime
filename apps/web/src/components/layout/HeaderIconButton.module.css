@@ -1,0 +1,74 @@
+/**
+ * Biểu tượng tròn ở thanh trên cùng. Một hình dáng duy nhất cho tin nhắn và thông báo, ở cả khu
+ * khách lẫn cổng quản lý — xem docblock của `HeaderIconButton.tsx`.
+ */
+.badge {
+  display: inline-flex;
+}
+
+.chip {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: var(--xp-shadow-card);
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.chip:hover {
+  color: var(--xp-color-primary);
+  border-color: var(--xp-color-primary);
+}
+
+.chip:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Popup của chính nút đang mở — người dùng phải thấy được cái gì đang mở cái gì. */
+.chipActive,
+.chip[aria-expanded='true'] {
+  color: var(--xp-color-primary-active);
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+}
+
+/*
+ * Cỡ biểu tượng đặt ở lớp trong: `place-items` của `.chip` canh vùng 40px, còn `font-size` ở
+ * đây quyết định nét vẽ — tách ra thì đổi cỡ nút không kéo theo đổi cỡ hình.
+ */
+.glyph {
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  line-height: 1;
+}
+
+/*
+ * Huy hiệu đỏ đặt trên một nút có viền, nên nó cần vành trắng để không dính vào viền đó — thiếu
+ * vành thì con số và đường viền chồng lên nhau đúng ở chỗ mắt nhìn vào đầu tiên.
+ */
+.indicator {
+  box-shadow: 0 0 0 2px var(--xp-color-bg-container);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/*
+ * Mobile: vùng chạm lên đủ 44px (WCAG 2.5.5) — trên desktop con trỏ chuột chính xác hơn ngón
+ * tay nên 40px là đủ và hàng biểu tượng gọn hơn.
+ */
+@media (max-width: 640px) {
+  .chip {
+    width: var(--xp-touch-target-min);
+    height: var(--xp-touch-target-min);
+  }
+}

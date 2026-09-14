@@ -59,6 +59,7 @@ function makeShop(profile: Partial<MyShop['profile']> = {}): MyShop {
       name: 'Chi nhánh',
       provinceCode: '79',
       provinceName: 'Hồ Chí Minh',
+    needsLocationReview: false,
     },
     profile: {
       displayName: 'Demo',

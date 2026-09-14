@@ -14,6 +14,7 @@ import { DataRow } from '@/components/ui/DataRow';
 import { StatusIcon, STATUS_TONE } from '@/components/ui/StatusIcon';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
+import { useAddressPreview } from '@/features/locations/hooks/use-address-preview';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
@@ -105,6 +106,12 @@ function DoneResult({
   const withDriver = values.serviceType === SERVICE_TYPE.WITH_DRIVER;
   const quote = usePublicQuote(listing.id, toQuoteParams(values));
   const breakdown = quote.data?.breakdown ?? null;
+  // Ghép bằng CHÍNH hàm server dùng để dựng chuỗi lưu xuống DB — xem `useAddressPreview`.
+  const pickupAddress = useAddressPreview(
+    values.pickupProvinceCode,
+    values.pickupWardCode,
+    values.pickupAddressLine,
+  );
 
   return (
     <>
@@ -178,7 +185,7 @@ function DoneResult({
                   label={t('done.pickupMethod')}
                   value={
                     withDriver
-                      ? t('done.driverPickup', { address: values.pickupAddress || '—' })
+                      ? t('done.driverPickup', { address: pickupAddress ?? '—' })
                       : values.deliveryRequested
                         ? t('pickup.delivery')
                         : t('pickup.self')

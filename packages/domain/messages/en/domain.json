@@ -767,5 +767,18 @@
     "paid": "Transferred",
     "rejected": "Rejected",
     "cancelled": "Cancelled"
+  },
+  "insurancePolicyStatus": {
+    "reserved": "Premium collected, awaiting handover",
+    "issuing": "Issuing certificate",
+    "issued": "Certificate issued",
+    "failed": "Issuing failed",
+    "cancelled": "Cancelled before trip",
+    "voided": "Voided",
+    "claim": "Claim in progress"
+  },
+  "insuranceProductKind": {
+    "vehicle_trip": "Vehicle trip cover",
+    "personal_accident": "Passenger accident cover"
   }
 }

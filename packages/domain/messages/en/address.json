@@ -1,0 +1,35 @@
+{
+  "sectionTitle": "Address",
+  "provinceLabel": "Province / city",
+  "provincePlaceholder": "Select a province or city",
+  "provinceLoading": "Loading provinces…",
+  "provinceEmpty": "No province is open for registration yet.",
+  "provinceLoadError": "Could not load the province list.",
+  "wardLabel": "Ward / commune",
+  "wardPlaceholder": "Select, or type to search",
+  "wardNeedsProvince": "Select a province first",
+  "wardEmpty": "No ward matches that search",
+  "wardLoadError": "Could not load the ward list.",
+  "addressLineLabel": "House number and street",
+  "addressLinePlaceholder": "For example: 12 Nguyen Thai Hoc",
+  "placeEmpty": "No matching place found",
+  "provinceMismatchTitle": "This place looks like it is outside the province you selected",
+  "provinceMismatchHint": "The map may still be using the old administrative names. Check the province and ward, or move the pin to the right spot.",
+  "pinNeedsCheck": "This location was looked up automatically. Please check the pin on the map and adjust it if it is off.",
+  "pinAt": "Pin is at: {address}",
+  "noPinYet": "No location on the map yet. Pick a suggested place, or tap the map to drop a pin.",
+  "mapLabel": "Location map",
+  "map": {
+    "pickHint": "Tap the map to drop a pin.",
+    "adjustHint": "Drag the pin or tap the map to move it.",
+    "readOnlyHint": "This map is view-only. Pick a different suggested place if the pin is wrong.",
+    "unavailable": "The map could not be shown. The address still saves normally.",
+    "openInMaps": "Open in Google Maps"
+  },
+  "review": {
+    "badge": "Address needs updating",
+    "title": "This address does not match the current administrative catalogue",
+    "hint": "Since 1 July 2025 Vietnam uses a two-tier model: province/city → ward/commune/special zone. Open the form, pick the ward again, and confirm the location on the map.",
+    "legacyValue": "The old data says: {value}"
+  }
+}

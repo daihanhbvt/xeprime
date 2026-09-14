@@ -54,6 +54,7 @@ vi.mock('../hooks/use-platform-money', () => ({
   useSettleHold: () => ({ mutate: vi.fn(), isPending: false }),
   useMarkRefundPaid: () => ({ mutate: vi.fn(), isPending: false }),
   useRejectRefund: () => ({ mutate: vi.fn(), isPending: false }),
+  useSaveBankBalance: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock('@/hooks/use-media-query', () => ({
@@ -113,21 +114,46 @@ function refund(over: Partial<PlatformHoldRefund> = {}): PlatformHoldRefund {
 
 function reconciled(over: Partial<DailyReconciliation> = {}): DailyReconciliation {
   return {
-    date: '2026-09-07',
-    bankIn: '1000000',
-    bankInCount: 3,
-    matchedSubscriptions: '600000',
-    matchedHolds: '400000',
-    unmatched: '0',
-    unmatchedCount: 0,
-    ignored: '0',
-    refundsPaid: '0',
-    refundsPaidCount: 0,
-    refundsPending: '0',
-    refundsPendingCount: 0,
-    holdsUnsettled: '0',
-    holdsUnsettledCount: 0,
+    date: '2026-09-14',
+    platform: {
+      serviceFeeRecognized: '400000',
+      subscriptionsCollected: '600000',
+      total: '1000000',
+    },
+    custodied: {
+      holdsUnsettled: '0',
+      holdsUnsettledCount: 0,
+      walletTotal: '0',
+      walletAvailable: '0',
+      walletPending: '0',
+      refundsPending: '0',
+      refundsPendingCount: 0,
+      unmatchedIn: '0',
+      unmatchedInCount: 0,
+      insuranceReserved: '0',
+      taxAccrued: '0',
+      total: '0',
+    },
+    outflow: {
+      withdrawalsPaid: '0',
+      withdrawalsPaidCount: 0,
+      refundsPaid: '0',
+      refundsPaidCount: 0,
+      total: '0',
+    },
+    inflow: {
+      bankIn: '1000000',
+      bankInCount: 3,
+      matchedSubscriptions: '600000',
+      matchedHolds: '400000',
+      unmatched: '0',
+      unmatchedCount: 0,
+      ignored: '0',
+      variance: '0',
+    },
+    bankBalanceEod: '1000000',
     variance: '0',
+    walletDrift: { wallets: 0, amount: '0' },
     ...over,
   } as DailyReconciliation;
 }
@@ -186,21 +212,58 @@ describe('Money operations — hàng đợi giữ chỗ', () => {
   });
 });
 
-describe('Money operations — đối chiếu ngày', () => {
-  it('khớp: nói rõ không có dòng nào ngoài nhóm', () => {
+describe('Money operations — đối soát ba vế', () => {
+  it('khớp: nói rõ số dư ngân hàng bằng tổng hai vế', () => {
     renderView();
     openTab('Đối chiếu ngày');
 
-    expect(screen.getByText('Khớp — không có dòng tiền nào ngoài nhóm.')).toBeTruthy();
+    expect(screen.getByText(/Khớp — số dư ngân hàng/)).toBeTruthy();
   });
 
-  it('lệch: cảnh báo kèm số tiền lệch, không lẫn vào bảng', () => {
-    reconciliation.data = reconciled({ variance: '50000', unmatched: '50000', unmatchedCount: 1 });
+  it('lệch: cảnh báo ĐỎ kèm số tiền, không lẫn vào bảng', () => {
+    reconciliation.data = reconciled({ variance: '50000' });
     renderView();
     openTab('Đối chiếu ngày');
 
-    const alert = document.querySelector('.ant-alert-warning') as HTMLElement;
+    /*
+     * Chênh lệch là LỖI, không phải cảnh báo nhẹ: nó nghĩa là tiền trong tài khoản không khớp
+     * sổ, và người trực phải dừng chi trước khi tra ra nguyên nhân.
+     */
+    const alert = document.querySelector('.ant-alert-error') as HTMLElement;
     expect(alert).not.toBeNull();
     expect(within(alert).getByText(/Lệch/)).toBeTruthy();
+  });
+
+  /**
+   * Ca quan trọng nhất của màn này: CHƯA NHẬP số dư thì chênh lệch **chưa tính được**.
+   *
+   * Hiện 0 ở đây là nói dối hai lần — vừa khẳng định tài khoản rỗng, vừa khẳng định mọi thứ
+   * khớp. Người trực sẽ ký vào một bảng đối soát chưa từng được đối soát với cái gì.
+   */
+  it('chưa nhập số dư: nói "chưa nhập", KHÔNG hiện 0 và KHÔNG báo khớp', () => {
+    reconciliation.data = reconciled({ bankBalanceEod: null, variance: null });
+    renderView();
+    openTab('Đối chiếu ngày');
+
+    expect(screen.getByText('Chưa nhập số dư ngân hàng cuối ngày')).toBeTruthy();
+    expect(screen.getByText('chưa nhập')).toBeTruthy();
+    expect(screen.queryByText(/Khớp — số dư ngân hàng/)).toBeNull();
+  });
+
+  it('lệch sổ ví: cảnh báo riêng, kèm số ví và tổng lệch', () => {
+    reconciliation.data = reconciled({ walletDrift: { wallets: 2, amount: '12345' } });
+    renderView();
+    openTab('Đối chiếu ngày');
+
+    expect(screen.getByText(/Lệch sổ ví ở 2 ví/)).toBeTruthy();
+  });
+
+  it('ba khối đứng riêng — tiền của XePrime không trộn với tiền giữ hộ', () => {
+    renderView();
+    openTab('Đối chiếu ngày');
+
+    expect(screen.getByText('Tiền của XePrime')).toBeTruthy();
+    expect(screen.getByText('Tiền giữ hộ — nghĩa vụ phải trả')).toBeTruthy();
+    expect(screen.getByText('Đã chi trong ngày')).toBeTruthy();
   });
 });

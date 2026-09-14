@@ -149,6 +149,8 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
     // trí thật là `tenant_branches`.
     provinceCode: defaultBranch.provinceCode,
     provinceName: null as string | null,
+    wardCode: defaultBranch.wardCode,
+    wardName: null as string | null,
     taxCode: spec.profile.taxCode,
     businessLicenseNo: spec.profile.businessLicenseNo,
     bankName: spec.profile.bank?.name ?? null,
@@ -158,11 +160,15 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
     ownerPhone: spec.owner.phone,
     ownerEmail: spec.owner.email,
   };
-  const province = await prisma.province.findUnique({
-    where: { code: defaultBranch.provinceCode },
-    select: { name: true },
-  });
+  const [province, ward] = await Promise.all([
+    prisma.province.findUnique({
+      where: { code: defaultBranch.provinceCode },
+      select: { name: true },
+    }),
+    prisma.ward.findUnique({ where: { code: defaultBranch.wardCode }, select: { name: true } }),
+  ]);
   profileFields.provinceName = province?.name ?? null;
+  profileFields.wardName = ward?.name ?? null;
 
   await prisma.tenantProfile.upsert({
     where: { tenantId },
@@ -176,8 +182,13 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
     const fields = {
       name: branch.name,
       provinceCode: branch.provinceCode,
+      wardCode: branch.wardCode,
       address: branch.address,
+      addressLine: branch.addressLine || null,
       phone: branch.phone,
+      // Địa chỉ demo khai ĐỦ hai cấp hành chính nên không có gì để rà soát — cờ này chỉ bật cho
+      // dữ liệu có từ trước danh mục cấp xã.
+      needsLocationReview: false,
       // Toạ độ khai TRONG seed thay vì để geocode lúc chạy: seed phải chạy được offline, tất
       // định, và không tốn hạn mức bản đồ mỗi lần ai đó dựng lại dữ liệu demo (ADR 0018).
       latitude: branch.latitude,

@@ -123,9 +123,13 @@ export function RentalDateTimeRangeField({
    *
    * `compactPoint` bỏ thứ cho ô hẹp; GIỜ thì không bao giờ bỏ — cắt mất giờ nhận là cắt đúng
    * thông tin quyết định số ngày tính tiền.
+   *
+   * Bản gọn đi qua `fmt.rentalPointCompact` chứ không phải `format('DD/MM HH:mm')` gõ tay: mẫu
+   * ngày đổi theo ngôn ngữ (`MM/DD` ở tiếng Anh), và dòng tóm tắt ở trang kết quả dựng từ CÙNG
+   * hàm đó — hai bề mặt nói về một khoảng thì phải viết nó giống hệt nhau.
    */
   const pointText = (d: Dayjs | null, fallback: string) =>
-    d ? (compactPoint ? d.format('DD/MM HH:mm') : fmt.rentalPoint(d)) : fallback;
+    d ? (compactPoint ? fmt.rentalPointCompact(d) : fmt.rentalPoint(d)) : fallback;
 
   const complete = Boolean(value.pickupAt && value.returnAt);
   const notSelected = t('components.rentalRange.notSelected');

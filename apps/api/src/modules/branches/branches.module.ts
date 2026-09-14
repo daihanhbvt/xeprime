@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { GeoModule } from '../geo/geo.module';
 import { LocationsModule } from '../locations/locations.module';
 import { PublicListingsModule } from '../public-listings/public-listings.module';
 import { BranchesController } from './branches.controller';
@@ -11,9 +10,9 @@ import { BranchesService } from './branches.service';
  * chi nhánh gắn được cho xe).
  */
 @Module({
-  // GeoModule: lưu chi nhánh tự tra toạ độ từ địa chỉ (best-effort) để phí giao xe tận nơi có
-  // điểm đi. Thiếu key bản đồ thì chi nhánh vẫn lưu bình thường, chỉ không có toạ độ.
-  imports: [LocationsModule, PublicListingsModule, GeoModule],
+  // LocationsModule cấp `AddressService` — nơi DUY NHẤT kiểm danh mục hành chính, ghép chuỗi
+  // hiển thị và chốt toạ độ. Chi nhánh không tự gọi bản đồ nữa.
+  imports: [LocationsModule, PublicListingsModule],
   controllers: [BranchesController],
   providers: [BranchesService],
   exports: [BranchesService],

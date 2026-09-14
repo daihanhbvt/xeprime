@@ -16,10 +16,22 @@ function values(overrides: Partial<BookingRequestFormValues> = {}): BookingReque
     pickupPreference: null,
     requestedPickupDate: '',
     routeType: null,
-    pickupAddress: '',
+    pickupProvinceCode: '',
+    pickupWardCode: '',
+    pickupAddressLine: '',
+    pickupPlaceId: null,
+    pickupLatitude: null,
+    pickupLongitude: null,
+    pickupLocationSource: null,
     destination: '',
     deliveryRequested: false,
-    deliveryAddress: '',
+    deliveryProvinceCode: '',
+    deliveryWardCode: '',
+    deliveryAddressLine: '',
+    deliveryPlaceId: null,
+    deliveryLatitude: null,
+    deliveryLongitude: null,
+    deliveryLocationSource: null,
     note: '',
     ...overrides,
   } as BookingRequestFormValues;
@@ -102,12 +114,18 @@ describe('toRequestBody', () => {
         values({
           serviceType: SERVICE_TYPE.WITH_DRIVER,
           routeType: ROUTE_TYPE.IN_CITY,
-          pickupAddress: '12 Nguyễn Huệ',
+          pickupProvinceCode: '79',
+          pickupWardCode: '27301',
+          pickupAddressLine: '12 Nguyễn Huệ',
           destination: 'Đà Lạt',
         }),
         DEVICE,
       );
-      expect(body.pickupAddress).toBe('12 Nguyễn Huệ');
+      // Gửi MÃ + phần chi tiết; chuỗi hiển thị do server ghép (ADR 0035 điều 3).
+      expect(body.pickupProvinceCode).toBe('79');
+      expect(body.pickupWardCode).toBe('27301');
+      expect(body.pickupAddressLine).toBe('12 Nguyễn Huệ');
+      expect(body).not.toHaveProperty('pickupAddress');
       expect(body).not.toHaveProperty('destination');
     });
 
@@ -116,7 +134,9 @@ describe('toRequestBody', () => {
         values({
           serviceType: SERVICE_TYPE.WITH_DRIVER,
           routeType: ROUTE_TYPE.INTER_CITY,
-          pickupAddress: '12 Nguyễn Huệ',
+          pickupProvinceCode: '79',
+          pickupWardCode: '27301',
+          pickupAddressLine: '12 Nguyễn Huệ',
           destination: 'Đà Lạt',
         }),
         DEVICE,
@@ -129,14 +149,19 @@ describe('toRequestBody', () => {
         values({
           serviceType: SERVICE_TYPE.WITH_DRIVER,
           routeType: ROUTE_TYPE.IN_CITY,
-          pickupAddress: '12 Nguyễn Huệ',
+          pickupProvinceCode: '79',
+          pickupWardCode: '27301',
+          pickupAddressLine: '12 Nguyễn Huệ',
           deliveryRequested: true,
-          deliveryAddress: '5 Lê Lợi',
+          deliveryProvinceCode: '46',
+          deliveryWardCode: '19789',
+          deliveryAddressLine: '5 Lê Lợi',
         }),
         DEVICE,
       );
       expect(body).not.toHaveProperty('deliveryRequested');
-      expect(body).not.toHaveProperty('deliveryAddress');
+      expect(body).not.toHaveProperty('deliveryProvinceCode');
+      expect(body).not.toHaveProperty('deliveryAddressLine');
     });
   });
 
@@ -144,11 +169,19 @@ describe('toRequestBody', () => {
     expect(toRequestBody(values(), DEVICE)).not.toHaveProperty('deliveryRequested');
 
     const body = toRequestBody(
-      values({ deliveryRequested: true, deliveryAddress: '5 Lê Lợi' }),
+      values({
+        deliveryRequested: true,
+        deliveryProvinceCode: '46',
+        deliveryWardCode: '19789',
+        deliveryAddressLine: '5 Lê Lợi',
+      }),
       DEVICE,
     );
     expect(body.deliveryRequested).toBe(true);
-    expect(body.deliveryAddress).toBe('5 Lê Lợi');
+    expect(body.deliveryProvinceCode).toBe('46');
+    expect(body.deliveryWardCode).toBe('19789');
+    expect(body.deliveryAddressLine).toBe('5 Lê Lợi');
+    expect(body).not.toHaveProperty('deliveryAddress');
   });
 
   it('trường rỗng không đi lên dây', () => {

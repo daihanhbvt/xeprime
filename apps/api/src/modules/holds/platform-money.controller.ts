@@ -12,6 +12,7 @@ import {
   PlatformHoldRefundListQueryDto,
   PlatformHoldRefundPageDto,
   RejectRefundDto,
+  SaveBankBalanceDto,
   SettleHoldDto,
 } from './dto/hold.dto';
 import { HoldSettlementService } from './hold-settlement.service';
@@ -92,10 +93,31 @@ export class PlatformMoneyController {
   }
 
   @Get('reconciliation/daily')
-  @ApiOperation({ summary: 'Đối chiếu một ngày (giờ VN): tiền vào ngân hàng ↔ sổ gói / giữ chỗ / hoàn' })
-  @ApiQuery({ name: 'date', example: '2026-09-07', description: 'YYYY-MM-DD, giờ Việt Nam' })
+  @ApiOperation({
+    summary: 'Đối soát BA VẾ một ngày (giờ VN)',
+    description:
+      'Số dư ngân hàng cuối ngày = tiền CỦA NỀN TẢNG + tiền GIỮ HỘ + chênh lệch (ADR 0025 ' +
+      'điều 6). Chưa nhập số dư ⇒ `bankBalanceEod` và `variance` trả `null` — chênh lệch CHƯA ' +
+      'TÍNH ĐƯỢC, không phải bằng 0.',
+  })
+  @ApiQuery({ name: 'date', example: '2026-09-14', description: 'YYYY-MM-DD, giờ Việt Nam' })
   @ApiOkResponse({ type: DailyReconciliationDto })
   daily(@Query('date') date: string): Promise<DailyReconciliationDto> {
     return this.holds.dailyReconciliation(date);
+  }
+
+  @Post('reconciliation/bank-balance')
+  @ApiOperation({
+    summary: 'Nhập số dư ngân hàng cuối ngày',
+    description:
+      'SePay gửi từng giao dịch nhưng KHÔNG gửi số dư tài khoản, nên vế trái của phép đối soát ' +
+      'phải nhập tay. Nhập lại cùng ngày là SỬA con số của ngày đó. Trả về bản đối soát đã tính lại.',
+  })
+  @ApiOkResponse({ type: DailyReconciliationDto })
+  saveBankBalance(
+    @Body() dto: SaveBankBalanceDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<DailyReconciliationDto> {
+    return this.holds.saveBankBalance(dto, user.id);
   }
 }

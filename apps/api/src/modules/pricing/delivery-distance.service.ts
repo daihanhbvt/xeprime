@@ -44,8 +44,19 @@ export class DeliveryDistanceService {
     private readonly geo: GeoService,
   ) {}
 
-  async forListing(vehicleId: string, rawAddress: string): Promise<DeliveryDistanceDto> {
+  /**
+   * `pinnedPoint` = toạ độ khách đã tự xác nhận trên bản đồ. Có nó thì KHÔNG tra lại địa chỉ:
+   * cái ghim là chỗ khách chỉ tay vào, còn geocode lại từ chuỗi chữ là để máy đoán thêm một lần
+   * và có thể ra một điểm khác với điểm khách vừa nhìn thấy — rồi hiện ra một con số phí không
+   * khớp với bản đồ ngay bên cạnh nó.
+   */
+  async forListing(
+    vehicleId: string,
+    rawAddress: string,
+    pinnedPoint?: GeoPoint | null,
+  ): Promise<DeliveryDistanceDto> {
     const address = rawAddress.trim();
+    const pinned = pinnedPoint && isValidGeoPoint(pinnedPoint) ? pinnedPoint : null;
 
     const vehicle = await this.prisma.vehicle.findFirst({
       // Cùng cổng vào với `publicQuote`: chỉ xe ĐÃ DUYỆT của gian hàng ĐANG HOẠT ĐỘNG. Không có
@@ -82,9 +93,12 @@ export class DeliveryDistanceService {
     };
     // Chi nhánh chưa có toạ độ (dữ liệu cũ, hoặc địa chỉ không geocode được lúc lưu) → không
     // đoán tâm tỉnh: một điểm đi sai vài km là một con số phí sai, tệ hơn hẳn không có số nào.
-    if (!isValidGeoPoint(origin) || !this.geo.enabled || !address) return UNAVAILABLE;
+    if (!isValidGeoPoint(origin) || !this.geo.enabled) return UNAVAILABLE;
+    if (!pinned && !address) return UNAVAILABLE;
 
-    const resolved = await this.geo.geocode(address);
+    const resolved = pinned
+      ? { point: pinned, formattedAddress: address || null }
+      : await this.geo.geocode(address);
     if (!resolved) {
       // Phân biệt hai ca giống hệt nhau ở bề ngoài nhưng khác hẳn ở lối đi tiếp: nhà cung cấp
       // còn sống nghĩa là địa chỉ thật sự không tra được → khách sửa được. Nhà cung cấp hỏng

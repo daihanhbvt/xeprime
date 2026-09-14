@@ -51,6 +51,7 @@ model User {
 
   identities                 UserIdentity[]
   phoneVerifications         PhoneVerification[]
+  emailVerifications         EmailVerification[]
   passwordResets             PasswordResetToken[]
   nativeAuthSessions         NativeAuthSession[]
   nativeAuthCodes            NativeAuthCode[]
@@ -92,6 +93,8 @@ model User {
   bankAccounts               BankAccount[]             @relation("bank_account_user")
   wallet                     Wallet?                   @relation("wallet_user")
   requestedWithdrawals       WithdrawalRequest[]       @relation("withdrawal_requester")
+  updatedTenantPaymentSettings TenantPaymentSettings[] @relation("tenant_payment_settings_updated_by")
+  enteredBankBalances        PlatformBankBalance[]     @relation("platform_bank_balance_entered_by")
 
   @@index([status])
   @@index([createdAt])
@@ -208,6 +211,8 @@ model Tenant {
   bankAccounts                  BankAccount[]
   wallet                        Wallet?
   sellerProfile                 SellerProfile?
+  paymentSettings               TenantPaymentSettings?
+  insurancePolicies             BookingInsurancePolicy[]
   supportCases                  SupportCase[]
 
   @@index([status])
@@ -349,6 +354,38 @@ model PhoneVerification {
   @@index([userId])
   @@index([status, expiresAt])
   @@map("phone_verifications")
+}
+
+/// Xác thực địa chỉ EMAIL bằng mã 6 số (14/09/2026).
+///
+/// Bảng riêng chứ không mở rộng `phone_verifications`: cột `phone` là `VARCHAR(30)` không chứa
+/// nổi một địa chỉ email, và cách chuẩn hoá / giới hạn gửi / nhà cung cấp của hai kênh không
+/// liên quan gì tới nhau. Ngược lại VÒNG ĐỜI của một mã thì giống hệt, nên `status` dùng CHUNG
+/// đúng bộ giá trị của SĐT thay vì đẻ ra bộ thứ hai để hai bên trôi khác nhau.
+model EmailVerification {
+  id           String    @id @db.Char(26)
+  userId       String?   @map("user_id") @db.Char(26)
+  email        String    @db.VarChar(255)
+  /// @xeprime/types → PhoneVerificationPurpose (dùng chung bộ mục đích với SĐT)
+  purpose      String    @db.VarChar(50)
+  otpHash      String?   @map("otp_hash") @db.VarChar(255)
+  /// @xeprime/types → PhoneVerificationStatus (pending · verified · expired · failed)
+  status       String    @default("pending") @db.VarChar(50)
+  sentCount    Int       @default(0) @map("sent_count")
+  /// Số lần nhập SAI mã — chạm trần thì khoá mã, chống brute-force.
+  attemptCount Int       @default(0) @map("attempt_count")
+  expiresAt    DateTime  @map("expires_at") @db.Timestamptz(3)
+  verifiedAt   DateTime? @map("verified_at") @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  /// SET NULL: xoá tài khoản không kéo theo lịch sử xác thực — thứ còn dùng để điều tra khi có
+  /// tranh chấp chiếm tài khoản.
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([email], map: "email_verifications_email_idx")
+  @@index([userId], map: "email_verifications_user_id_idx")
+  @@index([status, expiresAt], map: "email_verifications_status_expires_at_idx")
+  @@map("email_verifications")
 }
 
 /// Token đặt lại mật khẩu gửi qua email.
@@ -547,6 +584,7 @@ model Province {
   updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   aliases        ProvinceAlias[]
+  wards          Ward[]
   branches       TenantBranch[]
   /// Snapshot marketplace tham chiếu tỉnh trực tiếp để scope công khai lọc `isPublicVisible`
   /// bằng MỘT câu query — ẩn một tỉnh là nó biến mất khỏi chợ ngay, không đợi job đồng bộ.
@@ -578,6 +616,44 @@ model ProvinceAlias {
   @@map("province_aliases")
 }
 
+/// Đơn vị hành chính CẤP XÃ — xã / phường / đặc khu (Quyết định 19/2025/QĐ-TTg, 01/07/2025).
+///
+/// Từ 01/07/2025 mô hình hành chính là HAI CẤP: tỉnh/thành → xã/phường/đặc khu. Cấp huyện/quận
+/// đã bỏ, nên bảng này KHÔNG có cột huyện và hệ thống không được dựng lại danh mục đó.
+///
+/// 3.321 dòng, nạp bằng MIGRATION (không phải seed demo) để mọi môi trường có danh mục ngay sau
+/// deploy. Bản soạn: `prisma/data/ward-catalog.json`, tải từ nguồn nhà nước bằng
+/// `prisma/scripts/fetch-ward-catalog.ts`; SQL sinh bằng `prisma/scripts/gen-ward-sql.ts`.
+model Ward {
+  /// Mã hành chính chính thức 5 chữ số. BẤT BIẾN khi đã có dữ liệu tham chiếu.
+  code               String   @id @db.Char(5)
+  provinceCode       String   @map("province_code") @db.Char(2)
+  /// Tên đầy đủ kèm tiền tố loại: "Phường Ba Đình", "Xã Tân Hội", "Đặc khu Phú Quốc".
+  name               String   @db.VarChar(150)
+  /// Tên trần không tiền tố — dùng khi ghép địa chỉ hiển thị đã có ngữ cảnh.
+  shortName          String   @map("short_name") @db.VarChar(150)
+  /// @xeprime/types → WardAdministrativeType (ward | commune | special_zone)
+  administrativeType String   @map("administrative_type") @db.VarChar(20)
+  /// Khoá tìm kiếm đã bỏ dấu + bỏ tiền tố loại (`normalizeWardName`). Người gõ "ba dinh" phải
+  /// ra "Phường Ba Đình" mà không cần extension `unaccent` trên VPS.
+  normalizedName     String   @map("normalized_name") @db.VarChar(200)
+  /// Cho phép CHỌN MỚI. Tắt KHÔNG xoá dữ liệu đang trỏ tới — địa chỉ cũ vẫn hiển thị đúng.
+  isEnabled          Boolean  @default(true) @map("is_enabled")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  province Province       @relation(fields: [provinceCode], references: [code], onDelete: Restrict, onUpdate: Cascade)
+  branches TenantBranch[]
+
+  /// Đích cho FK TỔ HỢP `(ward_code, province_code)` của mọi bảng lưu địa chỉ: DB tự bác bỏ một
+  /// cặp xã-không-thuộc-tỉnh, thay vì trông vào việc mọi service đều nhớ kiểm (kỷ luật
+  /// constraint-first, cùng tinh thần ADR 0006).
+  @@unique([code, provinceCode])
+  @@index([provinceCode, name])
+  @@index([provinceCode, normalizedName])
+  @@map("wards")
+}
+
 /// Chi nhánh của một gian hàng — đơn vị VẬN HÀNH thật (xe nằm ở đâu, khách nhận xe ở đâu).
 ///
 /// Trước đây vị trí xe suy từ `tenant_profiles.province_name`, nên một shop chỉ có thể ở đúng
@@ -594,15 +670,31 @@ model TenantBranch {
   code                String    @db.VarChar(50)
   name                String    @db.VarChar(255)
   provinceCode        String?   @map("province_code") @db.Char(2)
+  /// Xã/phường/đặc khu (mô hình 2 cấp từ 01/07/2025). NULL ở chi nhánh có từ trước khi có danh
+  /// mục cấp xã — cùng lý do `provinceCode` nullable: migration KHÔNG đoán hộ.
+  wardCode            String?   @map("ward_code") @db.Char(5)
+  /// Địa chỉ HIỂN THỊ đã ghép sẵn (chi tiết + xã + tỉnh) — ghi bởi service, không phải client
+  /// gửi lên. Giữ nguyên tên cột cũ nên dữ liệu tự do cũ vẫn đọc/tìm được như trước.
   address             String?   @db.Text
+  /// Số nhà, đường, toà nhà — phần KHÔNG có danh mục nào phát hành nên luôn là chữ người gõ.
+  addressLine         String?   @map("address_line") @db.VarChar(255)
   phone               String?   @db.VarChar(30)
   latitude            Decimal?  @db.Decimal(10, 7)
   longitude           Decimal?  @db.Decimal(10, 7)
+  /// Mã địa điểm Google khi chủ shop chọn từ gợi ý — ổn định hơn toạ độ khi lưu lâu.
+  placeId             String?   @map("place_id") @db.VarChar(255)
+  /// @xeprime/types → LocationSource (google_place | map_pin | geocoded | manual). Phân biệt
+  /// "người tự ghim" với "máy đoán" — chỉ cái sau mới cần nhắc chủ shop kiểm lại.
+  locationSource      String?   @map("location_source") @db.VarChar(20)
   /// Đúng MỘT chi nhánh mặc định còn sống mỗi tenant — partial unique index ở migration.
   isDefault           Boolean   @default(false) @map("is_default")
   /// @xeprime/types → BranchStatus (active | inactive)
   status              String    @default("active") @db.VarChar(20)
-  /// Chi nhánh sinh ra từ migration mà KHÔNG quy được tỉnh — chờ chủ shop/admin bổ sung.
+  /// Địa chỉ chưa khớp danh mục hành chính HIỆN HÀNH — chờ chủ shop/admin xác nhận.
+  ///
+  /// Từ 14/09/2026 cờ này rộng hơn lúc mới có: nó bật cho cả chi nhánh thiếu tỉnh LẪN chi nhánh
+  /// có tỉnh nhưng chưa có xã/phường (toàn bộ dữ liệu trước khi có bảng `wards`). Một cờ chứ
+  /// không phải hai vì việc cần làm là MỘT: mở form ra, chọn lại địa chỉ, xác nhận ghim.
   needsLocationReview Boolean   @default(false) @map("needs_location_review")
   /// Chuỗi tỉnh tự do gốc, giữ nguyên để người sửa biết dữ liệu cũ ghi gì. Không dùng để lọc.
   legacyProvinceValue String?   @map("legacy_province_value") @db.VarChar(150)
@@ -614,6 +706,9 @@ model TenantBranch {
   tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   /// Restrict: tỉnh đang được chi nhánh tham chiếu thì KHÔNG xoá cứng được (admin ẩn/tắt).
   province       Province?       @relation(fields: [provinceCode], references: [code], onDelete: Restrict, onUpdate: Cascade)
+  /// FK TỔ HỢP tới `wards(code, province_code)`: DB tự bác bỏ xã không thuộc tỉnh đã chọn, nên
+  /// không service nào có thể quên kiểm.
+  ward           Ward?           @relation(fields: [wardCode, provinceCode], references: [code, provinceCode], onDelete: Restrict, onUpdate: Cascade)
   creator        User?           @relation("branch_creator", fields: [createdBy], references: [id])
   vehicles       Vehicle[]
   publicListings PublicListing[]
@@ -625,6 +720,7 @@ model TenantBranch {
   @@index([tenantId, status])
   @@index([provinceCode])
   @@index([tenantId, isDefault])
+  @@index([wardCode])
   @@map("tenant_branches")
 }
 
@@ -640,9 +736,15 @@ model TenantProfile {
   bio               String?  @db.Text
   logoUrl           String?  @map("logo_url") @db.Text
   coverUrl          String?  @map("cover_url") @db.Text
+  /// Địa chỉ HIỂN THỊ đã ghép — mirror của chi nhánh mặc định, ghi bởi
+  /// `BranchesService.syncProfileFromDefaultBranch` và KHÔNG có nơi ghi thứ hai.
   address           String?  @db.Text
   provinceCode      String?  @map("province_code") @db.VarChar(50)
   provinceName      String?  @map("province_name") @db.VarChar(100)
+  /// Xã/phường/đặc khu của chi nhánh mặc định. Cùng kiểu "mirror để hiển thị" như hai cột tỉnh
+  /// ngay trên: KHÔNG có FK và KHÔNG dùng để lọc — nguồn sự thật vận hành là `tenant_branches`.
+  wardCode          String?  @map("ward_code") @db.VarChar(10)
+  wardName          String?  @map("ward_name") @db.VarChar(150)
   taxCode           String?  @map("tax_code") @db.VarChar(50)
   businessLicenseNo String?  @map("business_license_no") @db.VarChar(100)
   bankName          String?  @map("bank_name") @db.VarChar(100)
@@ -663,6 +765,32 @@ model TenantProfile {
 
   @@index([provinceCode])
   @@map("tenant_profiles")
+}
+
+/// Cấu hình THU TIỀN của gian hàng — công tắc bật/tắt thu cọc qua sàn (Phase 6, 14/09/2026).
+///
+/// Tách khỏi `tenant_profiles.settings_json` có chủ đích: đây là cấu hình quyết định XePrime có
+/// nhận tiền của khách hay không, nên phải là cột có kiểu, có mặc định do DB bảo đảm và có dấu
+/// vết người sửa — ba thứ một khoá jsonb không cho.
+///
+/// Vắng dòng = TẮT. Chỉ có nghĩa với tuyến GÓI: tuyến hoa hồng thu cọc bắt buộc theo ADR 0032
+/// điều 2 và `DepositPolicyService` trả `required = true` mà không đọc bảng này.
+///
+/// Đổi công tắc KHÔNG đụng đơn đã tạo — `bookings.deposit_collection_mode` đóng băng lúc tạo
+/// (ADR 0025 ràng buộc 4).
+model TenantPaymentSettings {
+  tenantId                 String   @id @map("tenant_id") @db.Char(26)
+  /// Gian hàng muốn XePrime thu cọc `D` hộ mình. Mặc định false — bật là hành động có chủ ý.
+  depositCollectionEnabled Boolean  @default(false) @map("deposit_collection_enabled")
+  /// Người bấm lần cuối. NULL = chưa ai từng lưu.
+  updatedBy                String?  @map("updated_by") @db.Char(26)
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant        Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser User?  @relation("tenant_payment_settings_updated_by", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@map("tenant_payment_settings")
 }
 
 /// Giấy tờ mở gian hàng (CCCD, GPKD, hợp đồng). Duyệt qua approval_tasks (target_type=tenant_document).
@@ -1337,10 +1465,24 @@ model Booking {
   /// nhập tay khi shop tự lập đơn). CHECK DB: cả ba trường hành trình chỉ khác NULL khi
   /// service_type = with_driver.
   routeType             String?   @map("route_type") @db.VarChar(30)
-  /// Địa chỉ đón khách (with_driver — xe đến đón, khác luồng giao xe tự lái).
+  /// Địa chỉ đón khách (with_driver — xe đến đón, khác luồng giao xe tự lái). Chuỗi HIỂN THỊ
+  /// đã ghép; các mảnh có cấu trúc nằm ở `pickup_*` ngay dưới. Là SNAPSHOT của đơn: danh mục
+  /// hành chính đổi về sau KHÔNG viết lại chuỗi này.
   pickupAddress         String?   @map("pickup_address") @db.Text
-  /// Điểm đến (with_driver liên tỉnh).
+  pickupAddressLine     String?   @map("pickup_address_line") @db.VarChar(255)
+  pickupProvinceCode    String?   @map("pickup_province_code") @db.Char(2)
+  /// FK TỔ HỢP `(pickup_ward_code, pickup_province_code)` → `wards` viết tay ở migration —
+  /// Prisma không mô tả được ba quan hệ tổ hợp tới cùng một model trong một bảng.
+  pickupWardCode        String?   @map("pickup_ward_code") @db.Char(5)
+  pickupPlaceId         String?   @map("pickup_place_id") @db.VarChar(255)
+  pickupLatitude        Decimal?  @map("pickup_latitude") @db.Decimal(10, 7)
+  pickupLongitude       Decimal?  @map("pickup_longitude") @db.Decimal(10, 7)
+  /// Điểm đến (with_driver liên tỉnh). Là một ĐỊA ĐIỂM ("Sân bay Nội Bài", "Đà Lạt"), không
+  /// phải địa chỉ giao nhận — nên chỉ ghim được toạ độ, KHÔNG ép chọn xã/phường.
   destination           String?   @db.Text
+  destinationPlaceId    String?   @map("destination_place_id") @db.VarChar(255)
+  destinationLatitude   Decimal?  @map("destination_latitude") @db.Decimal(10, 7)
+  destinationLongitude  Decimal?  @map("destination_longitude") @db.Decimal(10, 7)
   /// Gói thuê dài hạn đã chốt (tháng lịch: 1|2|3|6|9|12 — CHECK ở migration, nguồn giá trị là
   /// LONG_TERM_PACKAGE_MONTHS). Chỉ khác NULL khi service_type = 'long_term'; đơn dài hạn
   /// LỊCH SỬ không khớp gói nào giữ NULL và giữ nguyên ngày cũ.
@@ -1418,6 +1560,7 @@ model Booking {
   depositSettlement BookingDepositSettlement?
   feePolicy         FeePolicy?                @relation(fields: [feePolicyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   hold              BookingHold?
+  insurancePolicies BookingInsurancePolicy[]
   supportCases      SupportCase[]
 
   @@unique([tenantId, code])
@@ -1462,9 +1605,21 @@ model BookingRequest {
   /// @xeprime/types → RouteType — chỉ có nghĩa với with_driver (CHECK ở migration).
   routeType             String?   @map("route_type") @db.VarChar(30)
   /// Địa chỉ đón khách (with_driver — xe đến đón, khác delivery_address của luồng giao xe).
+  /// Chuỗi HIỂN THỊ đã ghép; các mảnh có cấu trúc nằm ở `pickup_*` ngay dưới.
   pickupAddress         String?   @map("pickup_address") @db.Text
-  /// Điểm đến (with_driver liên tỉnh).
+  pickupAddressLine     String?   @map("pickup_address_line") @db.VarChar(255)
+  pickupProvinceCode    String?   @map("pickup_province_code") @db.Char(2)
+  /// FK TỔ HỢP với `pickup_province_code` → `wards`, viết tay ở migration.
+  pickupWardCode        String?   @map("pickup_ward_code") @db.Char(5)
+  pickupPlaceId         String?   @map("pickup_place_id") @db.VarChar(255)
+  pickupLatitude        Decimal?  @map("pickup_latitude") @db.Decimal(10, 7)
+  pickupLongitude       Decimal?  @map("pickup_longitude") @db.Decimal(10, 7)
+  /// Điểm đến (with_driver liên tỉnh) — một ĐỊA ĐIỂM, không phải địa chỉ giao nhận: chỉ ghim
+  /// toạ độ, KHÔNG ép chọn xã/phường.
   destination           String?   @db.Text
+  destinationPlaceId    String?   @map("destination_place_id") @db.VarChar(255)
+  destinationLatitude   Decimal?  @map("destination_latitude") @db.Decimal(10, 7)
+  destinationLongitude  Decimal?  @map("destination_longitude") @db.Decimal(10, 7)
   /// Gói thuê dài hạn khách chọn (tháng lịch 1|2|3|6|9|12). BẮT BUỘC với yêu cầu dài hạn mới;
   /// NULL ở bản ghi dài hạn LEGACY (khách từng tự chọn khoảng ngày) — luồng duyệt bắt gian
   /// hàng chọn gói khi xử lý, migration KHÔNG làm tròn ngầm.
@@ -1485,7 +1640,16 @@ model BookingRequest {
   returnAt              DateTime? @map("return_at") @db.Timestamptz(3)
   /// Khách yêu cầu giao xe tận nơi (chỉ nhận khi chính sách giao nhận đang bật).
   deliveryRequested     Boolean   @default(false) @map("delivery_requested")
+  /// Chuỗi HIỂN THỊ đã ghép. Đây là địa chỉ SINH RA TIỀN (phí giao theo km tính từ chi nhánh
+  /// tới đúng toạ độ dưới), nên nó là địa chỉ được yêu cầu ghim kỹ nhất trong hệ thống.
   deliveryAddress       String?   @map("delivery_address") @db.Text
+  deliveryAddressLine   String?   @map("delivery_address_line") @db.VarChar(255)
+  deliveryProvinceCode  String?   @map("delivery_province_code") @db.Char(2)
+  /// FK TỔ HỢP với `delivery_province_code` → `wards`, viết tay ở migration.
+  deliveryWardCode      String?   @map("delivery_ward_code") @db.Char(5)
+  deliveryPlaceId       String?   @map("delivery_place_id") @db.VarChar(255)
+  deliveryLatitude      Decimal?  @map("delivery_latitude") @db.Decimal(10, 7)
+  deliveryLongitude     Decimal?  @map("delivery_longitude") @db.Decimal(10, 7)
   /// Báo giá giao nhận của shop (Wave 2): { distanceKm, fee, source: auto|manual, note?,
   /// quotedBy, quotedAt, policyUpdatedAt }. Ghi DUY NHẤT qua BookingRequestsService.
   deliveryQuote         Json?     @map("delivery_quote_json") @db.JsonB
@@ -1608,7 +1772,12 @@ model TenantCustomer {
   /// Dạng CHUẨN HOÁ (`84901234567`) — cột định danh, mọi tra cứu và ràng buộc unique đi qua nó.
   normalizedPhone String    @map("normalized_phone") @db.VarChar(30)
   email           String?   @db.VarChar(255)
+  /// Địa chỉ HIỂN THỊ đã ghép. Giữ nguyên tên cột nên sổ khách cũ đọc/tìm được y như trước.
   address         String?   @db.Text
+  addressLine     String?   @map("address_line") @db.VarChar(255)
+  provinceCode    String?   @map("province_code") @db.Char(2)
+  /// FK TỔ HỢP `(ward_code, province_code)` → `wards`, viết tay ở migration.
+  wardCode        String?   @map("ward_code") @db.Char(5)
   /// @xeprime/types → TenantCustomerSource (manual | booking | marketplace)
   source          String    @default("manual") @db.VarChar(30)
   /// @xeprime/types → TenantCustomerRiskLevel. `blocked` chặn đơn/yêu cầu mới Ở GIAN HÀNG NÀY;
@@ -1642,6 +1811,7 @@ model TenantCustomer {
   @@index([tenantId, archivedAt])
   /// Sắp xếp "Tên A → Z" của danh sách (tìm gần đúng theo tên dùng index trigram ở migration).
   @@index([tenantId, fullName])
+  @@index([tenantId, provinceCode])
   @@index([customerUserId])
   /// Ô tìm kiếm chạy ILIKE '%q%' trên tên — btree không dùng được cho vị từ đó.
   @@index([fullName(ops: raw("gin_trgm_ops"))], map: "tenant_customers_full_name_trgm_idx", type: Gin)
@@ -3160,7 +3330,13 @@ model BankTransaction {
   provider      String    @default("sepay") @db.VarChar(30)
   /// Mã giao dịch phía nhà cung cấp — cùng `provider` là CHỐT CHỐNG GHI ĐÔI (ADR 0016 điều 4).
   providerTxId  String    @map("provider_tx_id") @db.VarChar(100)
+  /// @xeprime/types → BankDirection (in | out); DB canh CHECK. Mặc định `in`: toàn bộ lịch sử
+  /// trước 14/09/2026 là tiền vào, và SePay chưa mở webhook chiều ra.
+  direction     String    @default("in") @db.VarChar(10)
+  /// Tiền VÀO. 0 ở dòng chiều ra — CHECK canh đúng MỘT chiều mang số, không có cột nào âm.
   amountIn      Decimal   @map("amount_in") @db.Decimal(14, 2)
+  /// Tiền RA (chuyển trả lệnh rút, hoàn cho khách vãng lai). 0 ở dòng chiều vào.
+  amountOut     Decimal   @default(0) @map("amount_out") @db.Decimal(14, 2)
   /// Nội dung chuyển khoản NGUYÊN VĂN — bằng chứng khi tranh cãi, không bao giờ sửa.
   content       String    @db.Text
   /// Mã đối soát rút được từ `content` (`XPG…`/`XPH…`) — NULL khi ngân hàng cắt nội dung.
@@ -3185,7 +3361,33 @@ model BankTransaction {
   @@unique([provider, providerTxId])
   @@index([matchStatus, createdAt])
   @@index([referenceCode])
+  @@index([direction, bankTime])
   @@map("bank_transactions")
+}
+
+/// Số dư tài khoản ngân hàng CUỐI NGÀY — vế trái của phép đối soát ba vế (Phase 9).
+///
+/// SePay gửi từng giao dịch, KHÔNG gửi số dư tài khoản. Thiếu con số này thì "đối soát" chỉ còn
+/// là cộng các con số của chính mình lại rồi gật đầu — không có gì bên ngoài để đối chiếu.
+///
+/// Vắng dòng cho một ngày ⇒ API trả `null` cho `bankBalanceEod` và KHÔNG tính `variance`.
+/// Thay bằng 0 là biến một khoảng trống thành một khẳng định (tài khoản rỗng), và khẳng định đó
+/// sẽ làm mọi con số chênh lệch trông như một vụ thất thoát.
+model PlatformBankBalance {
+  /// Ngày theo GIỜ VIỆT NAM. `@db.Date` chứ không phải timestamp: số dư cuối ngày thuộc về một
+  /// NGÀY LỊCH, lưu dưới dạng mốc thời gian là mời hai múi giờ cãi nhau về nó.
+  date      DateTime @id @db.Date
+  balance   Decimal  @db.Decimal(14, 2)
+  /// Lấy ở đâu — `manual` (admin đọc app ngân hàng). Sau này: `statement` | `api`.
+  source    String   @default("manual") @db.VarChar(30)
+  enteredBy String?  @map("entered_by") @db.Char(26)
+  note      String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  enteredByUser User? @relation("platform_bank_balance_entered_by", fields: [enteredBy], references: [id], onDelete: SetNull)
+
+  @@map("platform_bank_balances")
 }
 
 // ---------------------------------------------------------------------------
@@ -3441,6 +3643,22 @@ model BookingHold {
   vehicleInsuranceAmount  Decimal @default(0) @map("vehicle_insurance_amount") @db.Decimal(14, 2)
   personalInsuranceAmount Decimal @default(0) @map("personal_insurance_amount") @db.Decimal(14, 2)
 
+  /// PHÂN BỔ ĐÃ CHỐT — đóng băng lúc `allocateWithinTx` chạy, KHÔNG suy lại lúc đọc (Phase 9).
+  ///
+  /// Vì sao là cột: doanh thu nền tảng KHÔNG bằng `service_fee_amount` ở nhánh huỷ muộn —
+  /// `resolveHoldAllocation` chia `D + S` đôi, nên một hold tuyến GÓI (S = 0) vẫn sinh doanh thu
+  /// cho nền tảng. Suy lại lúc đọc còn diễn giải một đơn đã chốt theo luật của hôm nay, điều
+  /// ADR 0024 cấm.
+  ///
+  /// Bất biến (CHECK ở migration): tổng năm cột = `D + S + IV + IP` = `amount`, trừ ba kết cục
+  /// LEGACY (`kept` / `forfeited` / `released_to_shop`) không đi qua phân bổ.
+  settledCustomerAmount Decimal @default(0) @map("settled_customer_amount") @db.Decimal(14, 2)
+  settledOwnerAmount    Decimal @default(0) @map("settled_owner_amount") @db.Decimal(14, 2)
+  /// Phần XePrime giữ lại — nguồn DUY NHẤT của `platform.serviceFeeRecognized` khi đối soát.
+  settledPlatformAmount Decimal @default(0) @map("settled_platform_amount") @db.Decimal(14, 2)
+  settledInsurerAmount  Decimal @default(0) @map("settled_insurer_amount") @db.Decimal(14, 2)
+  settledTaxAmount      Decimal @default(0) @map("settled_tax_amount") @db.Decimal(14, 2)
+
   feePolicyId       String    @map("fee_policy_id") @db.Char(26)
   /// [{ key, beneficiary, bearer, amount }] — chỗ tiền này đi đâu khi chốt.
   allocationJson    Json      @map("allocation_json") @db.JsonB
@@ -3467,12 +3685,89 @@ model BookingHold {
   vehicle        Vehicle        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   feePolicy      FeePolicy      @relation(fields: [feePolicyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   refund         HoldRefund?
+  insurancePolicies BookingInsurancePolicy[]
 
   /// Worker quét hold quá hạn; admin xem hàng đợi theo trạng thái.
   @@index([status, expiresAt])
   @@index([tenantId, createdAt])
   @@index([customerUserId, status])
+  /// Đối soát: "đã chốt tới hết ngày D" và "có tiền nhưng chưa chốt" — hai phép quét chạy mỗi
+  /// ngày trên toàn sổ. Partial index khai ở migration (Prisma không tả được mệnh đề `WHERE`).
+  @@index([releasedAt], map: "booking_holds_released_idx")
+  @@index([paidAt], map: "booking_holds_unsettled_amount_idx")
   @@map("booking_holds")
+}
+
+/// Hợp đồng bảo hiểm của MỘT chuyến — ADR 0032 điều 4, ADR 0028 điều 5 (Phase 7).
+///
+/// Tối đa hai dòng mỗi chuyến: `vehicle_trip` (IV, bắt buộc) và `personal_accident` (IP, tuỳ chọn).
+/// Cả hai do KHÁCH trả, nên phí nằm trong khoản chuyển online và là tiền GIỮ HỘ cho tới khi
+/// quyết toán với đối tác.
+///
+/// ⚠️ Trạng thái là VÒNG ĐỜI, không phải boolean (ADR 0032 điều 4): "chưa tới lúc phát hành",
+/// "đang gọi đối tác", "đối tác từ chối" và "đã thu hồi sau khi cấp" đòi bốn hành động khác nhau.
+///
+/// KHÔNG BAO GIỜ gọi HTTP đối tác bên trong transaction DB. `transitionWithinTx` chỉ đặt
+/// `next_attempt_at`; worker `insurance-issue` mới là nơi gọi ra ngoài.
+model BookingInsurancePolicy {
+  id        String  @id @db.Char(26)
+  bookingId String  @map("booking_id") @db.Char(26)
+  tenantId  String  @map("tenant_id") @db.Char(26)
+  /// Khoản giữ chỗ đã thu phí. NULL với đơn không đi qua hold của XePrime.
+  holdId    String? @map("hold_id") @db.Char(26)
+
+  /// @xeprime/types → InsuranceProductKind; DB canh CHECK.
+  productKind   String  @map("product_kind") @db.VarChar(30)
+  /// @xeprime/types → InsurancePolicyStatus; DB canh CHECK.
+  status        String  @default("reserved") @db.VarChar(20)
+  /// Phí đã thu cho ĐÚNG sản phẩm này — snapshot, không join lại lúc đọc. CHECK > 0.
+  premiumAmount Decimal @map("premium_amount") @db.Decimal(14, 2)
+
+  /// Đối tác + sản phẩm, SNAPSHOT lúc thu phí. Đổi đối tác không viết lại hợp đồng cũ.
+  partnerName        String    @map("partner_name") @db.VarChar(255)
+  partnerProductCode String?   @map("partner_product_code") @db.VarChar(100)
+  /// CHECK: `issued` bắt buộc có số này — không có đường đánh dấu đã cấp mà không cầm bằng chứng.
+  certificateNumber  String?   @map("certificate_number") @db.VarChar(100)
+  certificateUrl     String?   @map("certificate_url") @db.Text
+  coverageFrom       DateTime? @map("coverage_from") @db.Timestamptz(3)
+  coverageTo         DateTime? @map("coverage_to") @db.Timestamptz(3)
+
+  issueAttempts    Int       @default(0) @map("issue_attempts")
+  lastAttemptAt    DateTime? @map("last_attempt_at") @db.Timestamptz(3)
+  /// @xeprime/types → InsuranceIssueError
+  lastErrorCode    String?   @map("last_error_code") @db.VarChar(50)
+  lastErrorMessage String?   @map("last_error_message") @db.Text
+  /// Worker chỉ nhặt dòng đã TỚI mốc này. NULL = chuyến chưa bắt đầu, chưa tới lúc phát hành.
+  nextAttemptAt    DateTime? @map("next_attempt_at") @db.Timestamptz(3)
+
+  issuedAt    DateTime? @map("issued_at") @db.Timestamptz(3)
+  cancelledAt DateTime? @map("cancelled_at") @db.Timestamptz(3)
+  voidedAt    DateTime? @map("voided_at") @db.Timestamptz(3)
+
+  /// Bằng chứng hai chiều với đối tác — nguyên trạng, không bao giờ sửa.
+  requestPayloadJson  Json? @map("request_payload_json") @db.JsonB
+  responsePayloadJson Json? @map("response_payload_json") @db.JsonB
+
+  /// Bằng chứng khách CHỌN `IP` (ADR 0028 điều 5). NULL với `IV` — nó bắt buộc, không phải chọn.
+  consentAt     DateTime? @map("consent_at") @db.Timestamptz(3)
+  /// @xeprime/types → InsuranceConsentSource
+  consentSource String?   @map("consent_source") @db.VarChar(50)
+
+  /// Chống mua đôi ở phía ĐỐI TÁC — sinh MỘT lần lúc tạo, không đổi qua các lần thử lại.
+  idempotencyKey String @unique(map: "booking_insurance_policies_idempotency_key") @map("idempotency_key") @db.VarChar(100)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  booking Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  hold    BookingHold? @relation(fields: [holdId], references: [id], onDelete: SetNull)
+
+  @@unique([bookingId, productKind], map: "booking_insurance_policies_booking_product_key")
+  @@index([nextAttemptAt], map: "booking_insurance_policies_due_idx")
+  @@index([status, createdAt], map: "booking_insurance_policies_status_created_idx")
+  @@index([tenantId, createdAt], map: "booking_insurance_policies_tenant_idx")
+  @@map("booking_insurance_policies")
 }
 
 /// Yêu cầu CHUYỂN TRẢ khoản giữ chỗ — ADR 0028 điều 8 (R3).

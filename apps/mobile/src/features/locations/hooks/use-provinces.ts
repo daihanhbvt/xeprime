@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { STALE_TIME } from '@xeprime/api-client';
+import { provinceSelectLabel } from '@xeprime/domain';
 import type { SelectControlOption } from '@/components/ui/SelectControl';
 import { queryKeys } from '@/queries/query-keys';
 import { locationsApi } from '../api';
@@ -33,11 +34,20 @@ export interface ProvinceOptions {
   refetch: () => void;
 }
 
-/** Options cho `SelectField`: giá trị là MÃ, nhãn là tên chuẩn tiếng Việt (mã ≠ chữ, ADR 0012). */
+/**
+ * Options cho `SelectField`: giá trị là MÃ, nhãn là tên KÈM TIỀN TỐ LOẠI ("TP Hà Nội").
+ *
+ * Mã ≠ chữ (ADR 0012): chỉ NHÃN mang tiền tố, giá trị đi trên dây vẫn là mã hai chữ số. Thứ tự
+ * do server quyết định — client không sắp lại.
+ */
 export function useProvinceOptions(): ProvinceOptions {
   const query = useProvinces();
   const options = useMemo<readonly SelectControlOption[]>(
-    () => (query.data ?? []).map((province) => ({ value: province.code, label: province.name })),
+    () =>
+      (query.data ?? []).map((province) => ({
+        value: province.code,
+        label: provinceSelectLabel(province.name, province.administrativeType),
+      })),
     [query.data],
   );
 

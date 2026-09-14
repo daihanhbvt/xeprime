@@ -232,8 +232,10 @@ Dùng lại project `XePrime` ở §2.1.
 | **Routes API** | server | `routes.googleapis.com/directions/v2:computeRoutes` — quãng đường đường bộ |
 | **Maps Embed API** | nhúng | `google.com/maps/embed/v1/place` và `/directions` |
 | **Maps Static API** | app native | `maps.googleapis.com/maps/api/staticmap` — ảnh bản đồ có ghim |
+| **Places API (New)** | server | `places.googleapis.com/v1/places:autocomplete` và `/v1/places/{id}` — gợi ý địa điểm cho ô nhập địa chỉ (ADR 0035) |
+| **Maps JavaScript API** | trình duyệt | bản đồ TƯƠNG TÁC để kéo ghim ở ô nhập địa chỉ — **tuỳ chọn**, thiếu thì web lùi về bản đồ nhúng chỉ-xem |
 
-Không cần Places API, không cần Distance Matrix — code không gọi.
+Không cần Distance Matrix — code không gọi.
 
 ### 4.2 Tạo key và **khoá chúng lại**
 
@@ -247,6 +249,16 @@ Không cần Places API, không cần Distance Matrix — code không gọi.
 - Application restrictions: **HTTP referrers** → `https://stg.xeprime.vn/*`
 - API restrictions: **Restrict key** → chỉ chọn *Maps Embed API*
 
+**Key B2 — bản đồ tương tác của web** (`NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY`) — **tuỳ chọn**
+- Chỉ cần khi muốn người dùng KÉO ĐƯỢC GHIM ở ô nhập địa chỉ (ADR 0035 điều 6). Bỏ trống thì ô
+  địa chỉ vẫn đủ dùng — chọn địa điểm từ gợi ý và soi lại trên bản đồ nhúng chỉ-xem.
+- Application restrictions: **HTTP referrers** → `https://stg.xeprime.vn/*`
+- API restrictions: **Restrict key** → chỉ chọn *Maps JavaScript API*
+- Dùng CHUNG được với Key B nếu key đó bật cả hai API; vẫn KHÔNG BAO GIỜ dùng chung với Key A.
+- ⚠️ Maps JavaScript API tính phí theo **lượt tải bản đồ** (khác Embed API, miễn phí). Đặt
+  **Quotas** trần/ngày cho nó — script chỉ nạp khi người dùng mở ô địa chỉ, nhưng trần là thứ
+  duy nhất chặn được một key bị moi ra khỏi bundle.
+
 **Key C — app native** (`EXPO_PUBLIC_GOOGLE_MAPS_STATIC_KEY`, ở `apps/mobile/.env`)
 - Application restrictions: **None** — app native không có HTTP referrer để khoá, và hạn chế
   theo package name chỉ áp cho *Maps SDK*, không áp cho Static API. Thay chỗ đó bằng **Quotas**:
@@ -259,6 +271,7 @@ Không cần Places API, không cần Distance Matrix — code không gọi.
 | --- | --- |
 | **Secret** | `GOOGLE_MAPS_SERVER_KEY` |
 | Variable | `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY` — nằm trong bundle JS ⇒ **không bao giờ** là Secret |
+| Variable | `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY` — cũng trong bundle JS; tuỳ chọn |
 | Variable | `EXPO_PUBLIC_GOOGLE_MAPS_STATIC_KEY` — nằm trong bundle app ⇒ **không bao giờ** là Secret |
 
 ### 4.3 Tiền
@@ -268,6 +281,15 @@ Routes API tính phí theo lượt gọi. Hai thứ giữ hoá đơn ở mức t
 - Code khai `X-Goog-FieldMask: routes.distanceMeters` — **cố ý** chỉ xin đúng một trường, để nằm
   trong bậc rẻ nhất (Essentials). Đừng "cải tiến" nó thành xin thêm trường.
 - Kết quả được **cache trong database** (`geo_route_cache`), nên cùng một cặp điểm không gọi lại.
+
+Places API cũng tính phí theo lượt gọi, và nó chạy theo từng phím người dùng gõ. Bốn lớp chặn:
+
+- **Ngưỡng 3 ký tự** + **debounce 400ms** ở client, và chỉ hỏi khi đã chọn tỉnh — một lần gõ địa
+  chỉ tốn đúng vài request, không phải một request cho mỗi ký tự.
+- `@Throttle` 30 req/phút trên `/places/*`: trần cứng cho phần lưu lượng không thật.
+- `X-Goog-FieldMask` hẹp nhất có thể (chỉ `placeId` + hai dòng chữ) — cùng lý do với Routes API.
+- Chi tiết địa điểm cache trong `geocode_cache` dưới khoá `place:<id>`: mã địa điểm là khoá ỔN
+  ĐỊNH, nên mở lại form sửa không hỏi lại Google về cùng một chỗ.
 
 Vẫn nên đặt **Budget alert** trong Billing.
 

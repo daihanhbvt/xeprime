@@ -615,6 +615,12 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
   `StatusIcon`, `IconDisc`, `Callout`, `RadioField`, `ProgressBar`, `CardActionBar`, `CardAccent`,
   `IconLine`, `ShopCover`). Đó là chỗ độ nổi, bo góc
   và vùng chạm được quyết định MỘT lần — dựng tay ở từng màn là mỗi màn một kiểu.
+- **Ô nhập ĐỊA CHỈ đi qua [`<AddressFields>`](src/components/form/AddressFields.tsx)** — ba bước
+  của mô hình hành chính HAI CẤP (ADR 0035): chọn tỉnh → chọn xã/phường (có ô tìm, lọc ở server
+  theo khoá bỏ dấu) → gõ số nhà kèm gợi ý địa điểm, rồi KIỂM cái ghim trên ảnh bản đồ tĩnh. Nằm
+  ở `components/form/` chứ không trong một feature vì bốn màn dùng nó: chi nhánh, đăng ký gian
+  hàng, hồ sơ gian hàng, sổ khách. Bỏ prop `pin` cho địa chỉ chỉ dùng để LIÊN HỆ (sổ khách) —
+  mỗi lượt tra bản đồ là một request có tính tiền.
 - [`ShopCover`](src/components/ui/ShopCover.tsx) (ảnh bìa + logo tròn của gian hàng) nằm ở
   `components/ui/` chứ không trong một feature vì nó phục vụ HAI bề mặt: hồ sơ gian hàng ở khu
   quản lý và trang gian hàng công khai `/shops/[slug]`. Khu quản lý là bản XEM TRƯỚC của trang

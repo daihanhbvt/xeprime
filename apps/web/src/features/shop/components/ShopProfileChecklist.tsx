@@ -40,8 +40,14 @@ export function ShopProfileChecklist({ control }: { control: Control<ShopProfile
   const t = useTranslations('Shop.checklist');
   const values = useWatch({ control }) as Partial<ShopProfileValues>;
 
-  const missingRequired = new Set<string>(missingShopProfileRequirements(values));
-  const missingSuggested = new Set<string>(missingShopProfileSuggestions(values));
+  /*
+   * Mục "địa chỉ" của checklist chấm phần CHI TIẾT người dùng gõ (`addressLine`), không chấm
+   * chuỗi hiển thị: chuỗi đó do server ghép và luôn có ít nhất tên tỉnh, nên chấm theo nó là
+   * mục này không bao giờ thiếu — một dòng checklist luôn xanh không nói lên điều gì.
+   */
+  const completeness = { ...values, address: values.addressLine };
+  const missingRequired = new Set<string>(missingShopProfileRequirements(completeness));
+  const missingSuggested = new Set<string>(missingShopProfileSuggestions(completeness));
 
   const total = SHOP_PROFILE_REQUIREMENT_VALUES.length + SHOP_PROFILE_SUGGESTION_VALUES.length;
   const done = total - missingRequired.size - missingSuggested.size;

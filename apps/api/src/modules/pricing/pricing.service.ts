@@ -26,7 +26,7 @@ import {
 } from '@xeprime/types';
 import { computeCustomerFees, type CustomerFeeBreakdown } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
-import { BillingService } from '../billing/billing.service';
+import { DepositPolicyService } from '../deposit-policy/deposit-policy.service';
 import { FeePoliciesService } from '../fee-policies/fee-policies.service';
 import { ListingsService } from '../public-listings/listings.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -97,7 +97,7 @@ export class PricingService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly listings: ListingsService,
-    private readonly billing: BillingService,
+    private readonly depositPolicy: DepositPolicyService,
     private readonly feePolicies: FeePoliciesService,
   ) {}
 
@@ -120,8 +120,11 @@ export class PricingService {
     quoteIsEstimate: boolean,
     opts: {
       /**
-       * Chuyến này có thu cọc qua XePrime không. Bỏ trống ⇒ suy từ tuyến: hoa hồng luôn thu
-       * (ADR 0032 điều 2), gói thì không. Công tắc của gian hàng nối vào đây ở Phase 6.
+       * Chuyến này có thu cọc qua XePrime không.
+       *
+       * Bỏ trống ⇒ service tự hỏi `DepositPolicyService` (Phase 6). Caller chỉ truyền tường minh
+       * khi nó ĐÃ giải chính sách rồi và không muốn hỏi lần thứ hai — `BookingRequestsService`
+       * làm vậy vì nó còn cần `reason` để đóng băng `deposit_collection_mode`.
        */
       depositRequired?: boolean;
       /** Khách có GIỮ lựa chọn bảo hiểm tai nạn người không (`IP` — tuỳ chọn). */
@@ -130,13 +133,21 @@ export class PricingService {
   ): Promise<CustomerFeeBreakdown | null> {
     const policy = await this.feePolicies.findEffective();
     if (!policy) return null;
-    const billingMode = await this.billing.billingModeFor(tenantId);
+    /*
+     * MỘT nguồn cho cả `billingMode` lẫn "có thu cọc không" (Phase 6).
+     *
+     * Trước đợt này chỗ này chỉ hỏi `billingModeFor` và để `computeCustomerFees` tự suy cọc theo
+     * tuyến — nghĩa là một gian hàng tuyến GÓI bật công tắc sẽ thấy báo giá công khai nói "trả
+     * online 0đ" rồi bị thu cọc thật lúc duyệt. Hỏi cùng một service ở cả hai đường là thứ giữ
+     * hai con số bằng nhau.
+     */
+    const deposit = await this.depositPolicy.resolveForTenant(tenantId);
     return computeCustomerFees({
-      billingMode,
+      billingMode: deposit.billingMode,
       policy,
       baseAmount,
       quoteIsEstimate,
-      ...(opts.depositRequired === undefined ? {} : { depositRequired: opts.depositRequired }),
+      depositRequired: opts.depositRequired ?? deposit.required,
       ...(opts.personalAccidentSelected === undefined
         ? {}
         : { personalAccidentSelected: opts.personalAccidentSelected }),

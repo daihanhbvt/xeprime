@@ -13,6 +13,7 @@ import {
 import { PROVINCE_CODES, type RouteType, type ServiceType, type VehicleType } from '@xeprime/types';
 import type { RentalMode, RentalRange } from '@/components/form/RentalDateTimeRangeField';
 import { ROUTES } from '@/constants/routes';
+import { readRememberedRentalRange, rememberRentalRange } from '@/lib/rental-range-memory';
 import { XP_TOKENS } from '@/styles/theme';
 import { applyFilterPatch } from '../filter-params';
 import { useDestinations } from '../hooks/use-destinations';
@@ -128,6 +129,46 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
     }
   }
 
+  /** Cờ Ý ĐỊNH của người dùng — xem docblock ở effect "Nháp → URL" bên dưới, nơi nó quyết định. */
+  const userEditedRef = useRef(false);
+
+  /*
+   * Lựa chọn thời gian khách đã TỰ CHỌN ở lượt trước → điền vào nháp, khi URL không nói gì.
+   *
+   * Chạy trong effect chứ không lúc dựng state ban đầu, và đó là điều kiện bắt buộc: nguồn là
+   * `sessionStorage`/`localStorage`, hai thứ không tồn tại trên server — đọc chúng lúc render
+   * sẽ cho HTML server dựng khác với lần render đầu ở client (lỗi hydration).
+   *
+   * Ba guard, mỗi cái chặn một cách làm hỏng ý định của người dùng:
+   *   - `filters.pickupAt && filters.returnAt` ⇒ URL đang nói, và URL luôn thắng (link chia sẻ
+   *     phải mở ra đúng thứ người gửi thấy, không bị lựa chọn cũ của người nhận đè lên);
+   *   - `userEditedRef` ⇒ khách đã chạm vào thẻ trong lượt này, đừng ghi đè thứ họ vừa gõ;
+   *   - chỉ chạy MỘT lần (`restoredRef`) ⇒ không giật lại ô mỗi lần URL đổi vì lý do khác.
+   *
+   * Cố ý KHÔNG bật `userEditedRef`: đây là điền sẵn, không phải một thao tác mới. Bật lên là
+   * khoảng ngày này bị đóng dấu lên URL trang chủ và trở thành một bộ lọc ẩn mà khách chưa hề
+   * bấm "Tìm xe" để xác nhận.
+   */
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    if (userEditedRef.current) return;
+    if (filters.pickupAt && filters.returnAt) return;
+
+    const remembered = readRememberedRentalRange();
+    if (!remembered) return;
+    setDraft((prev) => ({
+      ...prev,
+      rental: {
+        pickupAt: remembered.pickupAt,
+        returnAt: remembered.returnAt,
+        mode: remembered.mode,
+      },
+    }));
+    // Chỉ chạy sau lần mount đầu tiên; `filters` đọc qua ref của chính lần chạy đó là đủ.
+  }, [filters.pickupAt, filters.returnAt]);
+
   /*
    * Nháp → URL, **chỉ khi chính người dùng chạm vào thẻ tìm kiếm**.
    *
@@ -142,7 +183,6 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
    *     cũng kích hoạt ghi, một khách chưa hề chạm vào thẻ sẽ bị đóng dấu khoảng thuê MẶC ĐỊNH
    *     lên URL, và "Xe khả dụng" âm thầm lọc theo một khoảng ngày khách không hề chọn.
    */
-  const userEditedRef = useRef(false);
   useEffect(() => {
     if (!userEditedRef.current) return;
 
@@ -190,12 +230,23 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
       setServiceType: (serviceType) => edit((prev) => ({ ...prev, serviceType })),
       setProvinceCode: (provinceCode) => edit((prev) => ({ ...prev, provinceCode })),
       setRouteType: (routeType) => edit((prev) => ({ ...prev, routeType })),
-      setRentalRange: (range) =>
+      /*
+       * Đây là chỗ DUY NHẤT ghi khoảng thuê vào bộ nhớ trình duyệt, và nó nằm đúng ở hàm xử lý
+       * thao tác của người dùng — không phải trong một effect theo dõi `draft`. Khác biệt là
+       * toàn bộ điểm của việc ghi nhớ: `draft` còn đổi vì URL và vì gợi ý tự sinh, nên một
+       * effect sẽ lưu cả những khoảng ngày khách chưa bao giờ chọn.
+       */
+      setRentalRange: (range) => {
+        rememberRentalRange({ ...range, mode: draft.rental.mode });
         edit((prev) => ({
           ...prev,
           rental: { ...prev.rental, pickupAt: range.pickupAt, returnAt: range.returnAt },
-        })),
-      setRentalMode: (mode) => edit((prev) => ({ ...prev, rental: { ...prev.rental, mode } })),
+        }));
+      },
+      setRentalMode: (mode) => {
+        rememberRentalRange({ ...draft.rental, mode });
+        edit((prev) => ({ ...prev, rental: { ...prev.rental, mode } }));
+      },
       /*
        * Trang kết quả đã lọc sống theo từng thay đổi, nên "Tìm xe" ở đó chỉ cần đảm bảo URL
        * khớp nháp (trường hợp người dùng chưa đổi gì thì đây là lần ghi đầu tiên).

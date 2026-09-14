@@ -82,7 +82,8 @@
     "addressSharedBody": "Sửa địa chỉ chi nhánh sẽ đổi vị trí công khai của tất cả các xe đó. Muốn đặt xe ở nơi khác, hãy tạo/chọn chi nhánh khác ở cổng quản lý.",
     "saved": "Đã lưu thông tin xe",
     "lockedNotice": "Xe đang hiển thị trên chợ: biển số, hộp số, nhiên liệu và năm sản xuất đã khoá. Mọi thông tin khác — gồm cả giá — sửa là có hiệu lực ngay.",
-    "lockedField": "Đã khoá vì xe đang trên chợ. Gỡ xe khỏi chợ nếu cần đổi."
+    "lockedField": "Đã khoá vì xe đang trên chợ. Gỡ xe khỏi chợ nếu cần đổi.",
+    "addressBranchHint": "Địa chỉ chi nhánh quyết định xe này hiển thị ở khu vực nào trên chợ, và là điểm xuất phát để tính phí giao xe tận nơi."
   },
   "images": {
     "reorderToggle": "Cho phép kéo thả để sắp xếp thứ tự hình ảnh.",

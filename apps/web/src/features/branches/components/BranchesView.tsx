@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import { Alert, Button, Tag } from 'antd';
 import { useTranslations } from 'next-intl';
+import { LIST_SEPARATOR } from '@xeprime/domain';
 import { useMemo, useState } from 'react';
 import {
   BRANCH_STATUS,
@@ -46,6 +47,7 @@ import styles from './BranchesView.module.css';
 export function BranchesView() {
   const t = useTranslations('Branches');
   const tc = useTranslations('Common');
+  const tAddr = useTranslations('Address');
   const fmt = useAppFormat();
   const errorMessage = useErrorMessage();
   // Chỉ ẩn/hiện UI — guard backend mới là lớp chặn thật (CLAUDE.md mục 6).
@@ -153,10 +155,22 @@ export function BranchesView() {
     {
       title: t('columns.province'),
       dataIndex: 'provinceName',
-      width: 180,
+      width: 200,
+      /*
+       * Hai dòng: tỉnh ở trên, xã/phường ở dưới. Mô hình hành chính hai cấp (từ 01/07/2025)
+       * nên xã/phường là cấp thứ hai thật sự chứ không phải chi tiết phụ — chi nhánh thiếu nó
+       * là chi nhánh chưa khai đủ địa chỉ, và cột này phải nói ra điều đó.
+       */
       render: (_v, row) =>
         row.provinceName ? (
-          <span>{row.provinceName}</span>
+          <div className={styles.stackedCell}>
+            <span>{row.provinceName}</span>
+            {row.wardName ? (
+              <span className={styles.cellSub}>{row.wardName}</span>
+            ) : (
+              <Tag color={STATUS_COLOR.WARNING}>{tAddr('review.badge')}</Tag>
+            )}
+          </div>
         ) : (
           <Tag color={STATUS_COLOR.WARNING}>{t('labels.noProvince')}</Tag>
         ),
@@ -319,9 +333,15 @@ export function BranchesView() {
             </div>
             <div className={styles.cardMeta}>
               <EnvironmentOutlined />
-              <span>{row.provinceName ?? t('labels.noProvince')}</span>
+              <span>
+                {[row.wardName, row.provinceName].filter(Boolean).join(LIST_SEPARATOR) ||
+                  t('labels.noProvince')}
+              </span>
             </div>
             {row.address ? <div className={styles.cardMeta}>{row.address}</div> : null}
+            {row.needsLocationReview ? (
+              <Tag color={STATUS_COLOR.WARNING}>{tAddr('review.badge')}</Tag>
+            ) : null}
             <div className={styles.cardMeta}>
               {t('labels.vehicles', { count: row.vehicleCount })}
             </div>

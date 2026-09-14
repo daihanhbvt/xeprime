@@ -1444,6 +1444,23 @@ export class BillingService {
     return (current.billingMode as BillingMode | null) ?? BILLING_MODE.PACKAGE;
   }
 
+  /**
+   * `plans.limits_json` của gói HIỆN HÀNH — nguồn duy nhất của cờ năng lực (ADR 0027 điều 4).
+   *
+   * `null` khi không có gói hiện hành, và `planFeatureFlags` biến nó thành tập rỗng. Trả jsonb
+   * thô thay vì tự giải cờ ở đây: `planFeatureFlags`/`featureStatesFrom` trong
+   * `common/plan/feature-state.ts` đã là nơi duy nhất diễn giải nó cho guard và `me()`, và một
+   * bản diễn giải thứ hai trong service là đúng thứ ADR 0027 cảnh báo.
+   */
+  async currentPlanLimitsFor(
+    tenantId: string,
+    now: Date = new Date(),
+    tx?: Prisma.TransactionClient,
+  ): Promise<unknown> {
+    const current = await this.findCurrent(tenantId, now, tx);
+    return current?.plan.limitsJson ?? null;
+  }
+
   private findCurrent(tenantId: string, now: Date, tx?: Prisma.TransactionClient) {
     const client = tx ?? this.prisma;
     return client.tenantSubscription.findFirst({

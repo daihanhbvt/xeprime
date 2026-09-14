@@ -13,6 +13,8 @@ interface PageProps {
     /** Ngữ cảnh dịch vụ/lộ trình từ tab tìm kiếm — prefill luồng đặt (17/08). */
     serviceType?: string;
     routeType?: string;
+    /** Tỉnh đang lọc ở trang tìm xe — prefill ô địa chỉ giao xe (ADR 0035). */
+    provinceCode?: string;
   }>;
 }
 
@@ -32,7 +34,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ListingDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
-  const { pickupAt, returnAt, serviceType, routeType } = await searchParams;
+  const { pickupAt, returnAt, serviceType, routeType, provinceCode } = await searchParams;
   // Trang này render trên server cho SEO nên không dùng được `useCatalog`; danh mục lấy song
   // song với chi tiết xe để tra nhãn hãng/kiểu dáng/nhiên liệu/tiện ích từ key đã lưu.
   const [listing, catalog] = await Promise.all([fetchListingDetail(id), fetchCatalogServer()]);
@@ -45,6 +47,7 @@ export default async function ListingDetailPage({ params, searchParams }: PagePr
       returnAt={returnAt}
       serviceType={serviceType}
       routeType={routeType}
+      searchProvinceCode={provinceCode}
     />
   );
 }

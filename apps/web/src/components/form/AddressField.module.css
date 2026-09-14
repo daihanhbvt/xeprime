@@ -1,0 +1,57 @@
+.block {
+  display: block;
+}
+
+.title {
+  margin: 0 0 var(--xp-space-sm);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+.alert {
+  margin-bottom: var(--xp-space-md);
+}
+
+/* Một dòng gợi ý: biểu tượng ghim + hai dòng chữ (tên đậm, phần còn lại nhạt). */
+.suggestion {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-xs) 0;
+}
+
+.suggestionIcon {
+  margin-top: 2px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.suggestionText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/*
+ * Tên địa điểm có thể dài hơn hẳn bề ngang dropdown ("Trung tâm Thương mại ... Tầng 3 ...").
+ * Cắt bằng dấu ba chấm thay vì cho xuống dòng: một gợi ý cao ba dòng đẩy các gợi ý còn lại ra
+ * khỏi tầm nhìn, mà phần nhận ra địa điểm nằm ở đầu chuỗi.
+ */
+.suggestionText strong,
+.suggestionText em {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suggestionText em {
+  font-style: normal;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.pinAddress {
+  margin: 0 0 var(--xp-space-md);
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}

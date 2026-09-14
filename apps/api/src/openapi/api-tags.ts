@@ -72,7 +72,18 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
         name: 'catalog',
         description: 'Danh mục hãng/dòng xe dùng chung khi đăng xe và khi lọc tìm kiếm.',
       },
-      { name: 'locations', description: 'Tỉnh/thành và khu vực dùng cho địa chỉ và bộ lọc.' },
+      {
+        name: 'locations',
+        description:
+          'Danh mục hành chính HAI CẤP (tỉnh/thành → xã/phường/đặc khu, hiệu lực 01/07/2025) dùng cho ' +
+          'mọi ô nhập địa chỉ và bộ lọc theo khu vực. Không có cấp quận/huyện.',
+      },
+      {
+        name: 'places',
+        description:
+          'Gợi ý địa điểm, chi tiết địa điểm và tra địa chỉ ngược từ toạ độ — proxy qua backend để ' +
+          'khoá bản đồ không bao giờ rời khỏi server (ADR 0018).',
+      },
       {
         name: 'holidays',
         description:
@@ -210,6 +221,20 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
           'Tài khoản ngân hàng NHẬN tiền của khách và của gian hàng (ADR 0033). Một bộ cho cả ' +
           'hai phía; số tài khoản trả ra màn hình luôn ở dạng che. Khác tài khoản THU của ' +
           'gian hàng ở hồ sơ shop — chiều ngược lại, quyền xem khác.',
+      },
+      {
+        name: 'platform-insurance',
+        description:
+          'Hàng đợi hợp đồng bảo hiểm chuyến `IV`/`IP` (ADR 0032 điều 4). Mỗi dòng đang lỗi là ' +
+          'một khoản phí khách đã trả mà chưa có chứng nhận nào được cấp — phí đó nằm ở vế GIỮ ' +
+          'HỘ của đối soát ba vế cho tới khi quyết toán với đối tác.',
+      },
+      {
+        name: 'shop-payment-settings',
+        description:
+          'Công tắc thu cọc của gian hàng (ADR 0032 điều 2). Tuyến hoa hồng luôn thu và không ' +
+          'tắt được — `GET` vẫn trả về để màn hình hiện công tắc ở trạng thái bật + khoá kèm ' +
+          'giải thích, `PATCH` trả 403. Tuyến gói cần cờ `escrow_hold` trong gói hiện hành.',
       },
       {
         name: 'seller-profile',

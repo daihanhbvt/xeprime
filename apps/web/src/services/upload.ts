@@ -128,6 +128,15 @@ export const presignShopMedia = (file: File): Promise<UploadPresign> =>
   apiPost<UploadPresign>('/uploads/shop-media/presign', presignBody(file));
 
 /**
+ * Presign ảnh đại diện của CHÍNH người đang đăng nhập — chỉ cần đăng nhập, không cần gian hàng.
+ *
+ * Khác mọi presign còn lại ở đúng chỗ đó: chúng đều đòi một quyền trong một gian hàng, còn ảnh
+ * đại diện thuộc về một con người, và khách thuê xe không thuộc gian hàng nào.
+ */
+export const presignAvatar = (file: File): Promise<UploadPresign> =>
+  apiPost<UploadPresign>('/uploads/avatar/presign', presignBody(file));
+
+/**
  * Presign ảnh minh chứng phiếu thu/chi (bill, hoá đơn xăng, biên lai CK) — cần `receipts.create`.
  *
  * Bucket CÔNG KHAI như ảnh xe, không phải kho riêng tư của hợp đồng: đây là chứng từ chi tiêu,

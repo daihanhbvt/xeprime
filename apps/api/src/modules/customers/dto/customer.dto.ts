@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ADDRESS_LINE_MAX_LENGTH,
   BOOKING_STATUS_VALUES,
   CUSTOMER_DOCUMENT_TYPE_VALUES,
   IDENTITY_VERIFY_METHOD_VALUES,
@@ -27,6 +28,7 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
+import { AddressViewDto } from '../../locations/dto/address.dto';
 import { DATE_ONLY_PATTERN } from '../../../common/date-only';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 
@@ -184,11 +186,38 @@ export class CreateTenantCustomerDto {
   @MaxLength(255)
   email?: string | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Địa chỉ HIỂN THỊ. Có mã tỉnh + mã xã thì server ghép lại và bỏ qua chuỗi này.',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(500)
   address?: string | null;
+
+  /**
+   * Phần CÓ CẤU TRÚC của địa chỉ khách. Tuỳ chọn: sổ khách thường được điền nhanh lúc lập đơn
+   * và địa chỉ ở đó chủ yếu để liên hệ. Gửi mã thì server dựng lại chuỗi hiển thị và hồ sơ lọc
+   * được theo khu vực; không gửi thì chuỗi gõ tay giữ nguyên.
+   */
+  @ApiPropertyOptional({ description: 'Mã tỉnh/thành 2 chữ số (GET /provinces)' })
+  @IsOptional()
+  @IsString()
+  @Length(2, 2)
+  provinceCode?: string;
+
+  @ApiPropertyOptional({ description: 'Mã xã/phường/đặc khu 5 chữ số' })
+  @IsOptional()
+  @IsString()
+  @Length(5, 5)
+  wardCode?: string;
+
+  @ApiPropertyOptional({ description: 'Số nhà, đường, toà nhà' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(ADDRESS_LINE_MAX_LENGTH)
+  addressLine?: string;
 }
 
 /** Sửa hồ sơ. Mọi trường optional; trường không gửi giữ nguyên (không bị null hoá). */
@@ -214,11 +243,38 @@ export class UpdateTenantCustomerDto {
   @MaxLength(255)
   email?: string | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Địa chỉ HIỂN THỊ. Có mã tỉnh + mã xã thì server ghép lại và bỏ qua chuỗi này.',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(500)
   address?: string | null;
+
+  /**
+   * Phần CÓ CẤU TRÚC của địa chỉ khách. Tuỳ chọn: sổ khách thường được điền nhanh lúc lập đơn
+   * và địa chỉ ở đó chủ yếu để liên hệ. Gửi mã thì server dựng lại chuỗi hiển thị và hồ sơ lọc
+   * được theo khu vực; không gửi thì chuỗi gõ tay giữ nguyên.
+   */
+  @ApiPropertyOptional({ description: 'Mã tỉnh/thành 2 chữ số (GET /provinces)' })
+  @IsOptional()
+  @IsString()
+  @Length(2, 2)
+  provinceCode?: string;
+
+  @ApiPropertyOptional({ description: 'Mã xã/phường/đặc khu 5 chữ số' })
+  @IsOptional()
+  @IsString()
+  @Length(5, 5)
+  wardCode?: string;
+
+  @ApiPropertyOptional({ description: 'Số nhà, đường, toà nhà' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(ADDRESS_LINE_MAX_LENGTH)
+  addressLine?: string;
 }
 
 /** Đổi mức rủi ro. `watchlist`/`blocked` BẮT BUỘC kèm lý do (DB cũng có CHECK). */
@@ -286,7 +342,18 @@ export class TenantCustomerDetailDto extends TenantCustomerStatsDto {
   @ApiProperty({ description: 'Dạng chuẩn hoá — định danh khách trong gian hàng này' })
   normalizedPhone!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) email!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) address!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Địa chỉ HIỂN THỊ đã ghép sẵn — dùng thẳng, đừng ghép lại ở client',
+  })
+  address!: string | null;
+  @ApiPropertyOptional({
+    type: AddressViewDto,
+    nullable: true,
+    description: 'Địa chỉ có cấu trúc. null = khách chưa khai địa chỉ.',
+  })
+  location!: AddressViewDto | null;
   @ApiProperty({ enum: TENANT_CUSTOMER_SOURCE_VALUES }) source!: string;
   @ApiProperty({ enum: TENANT_CUSTOMER_RISK_LEVEL_VALUES }) riskLevel!: string;
   @ApiPropertyOptional({

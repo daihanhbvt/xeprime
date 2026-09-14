@@ -8,10 +8,13 @@ import type {
   PlatformHoldRefund,
   RefundFilters,
   RejectRefundInput,
+  SaveBankBalanceInput,
   SettleHoldInput,
   MarkWithdrawalPaidInput,
   PlatformWithdrawalPage,
   WithdrawalFilters,
+  InsuranceFilters,
+  PlatformInsurancePage,
 } from './types';
 
 export const MONEY_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
@@ -57,6 +60,10 @@ export const rejectRefund = (id: string, body: RejectRefundInput): Promise<void>
 export const fetchDailyReconciliation = (date: string): Promise<DailyReconciliation> =>
   apiGet<DailyReconciliation>(`/platform/money/reconciliation/daily?date=${date}`);
 
+/** Nhập số dư ngân hàng cuối ngày — trả về bản đối soát ĐÃ TÍNH LẠI, không phải chỉ con số vừa lưu. */
+export const saveBankBalance = (body: SaveBankBalanceInput): Promise<DailyReconciliation> =>
+  apiPost<DailyReconciliation>('/platform/money/reconciliation/bank-balance', body);
+
 // ── Hàng đợi rút tiền (ADR 0033 — Phase 5) ──────────────────────────────────
 
 export function withdrawalFiltersToParams(filters: WithdrawalFilters): QueryParams {
@@ -86,3 +93,22 @@ export const rejectWithdrawal = (id: string, body: { reason: string }): Promise<
 
 export const reverseWithdrawal = (id: string, body: { reason: string }): Promise<void> =>
   apiPost<void>(`/platform/money/withdrawals/${id}/reverse`, body);
+
+// ── Hàng đợi bảo hiểm (ADR 0032 điều 4 — Phase 7) ───────────────────────────
+
+export function insuranceFiltersToParams(filters: InsuranceFilters): QueryParams {
+  return {
+    status: filters.status ?? null,
+    page: filters.page ?? 1,
+    limit: MONEY_DEFAULT_LIMIT,
+  };
+}
+
+export const fetchInsuranceQueue = (params: QueryParams): Promise<PlatformInsurancePage> =>
+  apiGet<PlatformInsurancePage>('/platform/money/insurance', params);
+
+export const retryInsurance = (id: string): Promise<void> =>
+  apiPost<void>(`/platform/money/insurance/${id}/retry`);
+
+export const voidInsurance = (id: string, body: { reason: string }): Promise<void> =>
+  apiPost<void>(`/platform/money/insurance/${id}/void`, body);

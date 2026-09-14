@@ -12,10 +12,42 @@
   "verified": "Đã xác thực",
   "displayName": "Họ tên hiển thị",
   "displayNamePlaceholder": "Nguyễn Văn A",
-  "avatarUrl": "Ảnh đại diện (đường dẫn)",
+  "avatarUrl": "Ảnh đại diện",
   "avatarUrlPlaceholder": "https://…",
-  "identityLockedTitle": "Email và số điện thoại chưa đổi được",
-  "identityLockedBody": "Hai thông tin này dùng để đăng nhập nên cần một luồng xác thực riêng. Liên hệ hỗ trợ nếu bạn cần đổi.",
+  "avatarHelp": "Ảnh vuông, JPG hoặc PNG, tối đa 5MB.",
+  "contact": {
+    "add": "Thêm",
+    "change": "Đổi",
+    "addAria": "Thêm {field}",
+    "changeAria": "Đổi {field}",
+    "addEmailTitle": "Thêm email",
+    "changeEmailTitle": "Đổi email",
+    "addPhoneTitle": "Thêm số điện thoại",
+    "changePhoneTitle": "Đổi số điện thoại",
+    "currentValue": "Đang dùng:",
+    "emailLabel": "Email mới",
+    "phoneLabel": "Số điện thoại mới",
+    "emailPlaceholder": "ten@vidu.com",
+    "phonePlaceholder": "0901234567",
+    "emailHint": "Chúng tôi sẽ gửi mã xác thực tới địa chỉ này.",
+    "phoneHint": "Chúng tôi sẽ gửi mã xác thực qua SMS tới số này.",
+    "sendCode": "Gửi mã xác thực",
+    "codeSentTo": "Đã gửi mã 6 số tới",
+    "confirmCode": "Xác nhận",
+    "resend": "Gửi lại mã",
+    "resendIn": "Gửi lại sau {seconds}s",
+    "editEmail": "Sửa email",
+    "editPhone": "Sửa số",
+    "devCode": "Mã thử nghiệm: {code} — chỉ hiện ở môi trường không phải production.",
+    "emailUpdated": "Đã cập nhật email",
+    "phoneUpdated": "Đã cập nhật số điện thoại",
+    "phoneLead": "Nhập số điện thoại của bạn để nhận mã xác thực qua SMS.",
+    "emailLead": "Nhập email của bạn để nhận mã xác thực.",
+    "securePhoneTitle": "Số điện thoại của bạn được bảo mật",
+    "securePhoneBody": "Chỉ dùng để xác thực tài khoản, hỗ trợ liên hệ và thông báo liên quan đến việc cho thuê xe.",
+    "secureEmailTitle": "Email của bạn được bảo mật",
+    "secureEmailBody": "Chỉ dùng để xác thực tài khoản và gửi thông báo về đơn thuê của bạn."
+  },
   "sidebar": {
     "userCard": "Người đang đăng nhập"
   },
@@ -28,7 +60,7 @@
     "phone": "Số điện thoại",
     "unverified": "Chưa xác thực",
     "securityTitle": "Thông tin đăng nhập",
-    "securityDescription": "Email và số điện thoại là thông tin nhận diện. Việc thay đổi cần một luồng xác thực riêng để giữ an toàn cho tài khoản.",
+    "securityDescription": "Email và số điện thoại là thông tin nhận diện, nên mỗi lần đổi đều cần một mã 6 số gửi tới địa chỉ hoặc số MỚI. Khi đổi email, chúng tôi báo cho địa chỉ cũ để bạn biết nếu có ai đó không phải bạn thực hiện.",
     "edit": "Chỉnh sửa hồ sơ"
   },
   "comingSoon": {
@@ -56,7 +88,12 @@
   "validation": {
     "displayNameRequired": "Vui lòng nhập họ tên",
     "displayNameMax": "Họ tên tối đa 255 ký tự",
-    "avatarUrlInvalid": "Đường dẫn ảnh không hợp lệ"
+    "avatarUrlInvalid": "Đường dẫn ảnh không hợp lệ",
+    "phoneRequired": "Vui lòng nhập số điện thoại",
+    "phoneInvalid": "Số điện thoại không hợp lệ",
+    "emailRequired": "Vui lòng nhập email",
+    "emailInvalid": "Địa chỉ email không hợp lệ",
+    "emailMax": "Email tối đa 255 ký tự"
   },
   "ownerGate": {
     "title": "Khu vực dành cho chủ xe",

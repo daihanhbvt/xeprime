@@ -4,6 +4,8 @@ import { CustomersModule } from '../customers/customers.module';
 import { DriversModule } from '../drivers/drivers.module';
 import { FinanceModule } from '../finance/finance.module';
 import { HoldSettlementModule } from '../holds/hold-settlement.module';
+import { InsuranceModule } from '../insurance/insurance.module';
+import { LocationsModule } from '../locations/locations.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { VehiclesModule } from '../vehicles/vehicles.module';
 import { VehicleSettingsModule } from '../vehicle-settings/vehicle-settings.module';
@@ -45,6 +47,12 @@ import { SettlementService } from './settlement/settlement.service';
     FinanceModule,
     // `HoldSettlementModule` (R3): chốt kết cục khoản giữ chỗ khi đơn kết thúc — module lá, không vòng.
     HoldSettlementModule,
+    // Phase 7: giữ chỗ hợp đồng bảo hiểm lúc tạo đơn, đặt mốc phát hành lúc bàn giao. Module
+    // lá (chỉ phụ thuộc Prisma + Audit@Global + một port) nên không tạo vòng.
+    InsuranceModule,
+    // Địa chỉ đón có cấu trúc (14/09/2026): kiểm danh mục hành chính + ghép chuỗi hiển thị ở
+    // MỘT chỗ. LocationsModule là module lá (Prisma + Geo), không tạo vòng.
+    LocationsModule,
   ],
   controllers: [
     BookingsController,

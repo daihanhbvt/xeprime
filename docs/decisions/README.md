@@ -49,6 +49,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0032](0032-booking-deposit-insurance-and-owner-lite.md) | Cọc booking bắt buộc, bảo hiểm tại bàn giao và ranh giới Owner Lite | **Accepted; ghi đè một phần 0014/0025/0027/0028/0029** |
 | [0033](0033-money-ledger-and-deposit-allocation.md) | Sổ công nợ "Ví điểm", phân bổ cọc nhiều dòng, định tuyến kết cục | **Accepted; ghi đè một phần 0023/0025/0028** |
 | [0034](0034-badge-delivery-by-projection.md) | Huy hiệu đi bằng bản chiếu, không bằng nhịp hỏi lại | **Accepted; mở rộng 0009 sang projection thứ hai** |
+| [0035](0035-two-tier-administrative-address.md) | Địa chỉ vật lý theo danh mục hành chính hai cấp (tỉnh → xã/phường/đặc khu) | **Accepted; mở rộng 0018 sang gợi ý địa điểm + ghim có xác nhận** |
 
 ## Quy tắc thêm ADR
 

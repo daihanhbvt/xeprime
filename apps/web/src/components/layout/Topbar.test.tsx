@@ -20,10 +20,9 @@ import { Topbar } from './Topbar';
 const push = vi.hoisted(() => vi.fn());
 const logout = vi.hoisted(() => vi.fn(async () => undefined));
 const nav = vi.hoisted(() => ({ pathname: '/manage/vehicles' }));
-const chat = vi.hoisted(() => ({ count: 0, href: '/manage/chat' }));
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push, replace: vi.fn() }),
+  useRouter: () => ({ push, replace: vi.fn(), refresh: vi.fn() }),
   usePathname: () => nav.pathname,
 }));
 
@@ -31,9 +30,12 @@ vi.mock('@/features/auth/hooks/use-portal-logout', () => ({
   usePortalLogout: () => logout,
 }));
 
-vi.mock('@/features/chat/hooks/use-chat-badge', () => ({
-  useChatBadge: () => chat,
+// Biểu tượng tin nhắn có test riêng (ChatMenu.test.tsx) — ở đây nó chỉ cần là một nút có tên.
+vi.mock('@/features/chat/components/ChatMenu', () => ({
+  ChatMenu: () => <button type="button" aria-label="Tin nhắn" />,
 }));
+
+vi.mock('@/i18n/actions', () => ({ setLocale: vi.fn().mockResolvedValue({ ok: true }) }));
 
 vi.mock('@/features/notifications/components/NotificationBell', () => ({
   NotificationBell: () => <button type="button" aria-label="Thông báo" />,
@@ -113,7 +115,6 @@ beforeEach(() => {
   push.mockReset();
   logout.mockReset();
   nav.pathname = '/manage/vehicles';
-  chat.count = 0;
   perms.granted = new Set<string>(['tenant.view', 'vehicles.view']);
   branchScope.value = {
     branchId: null,
@@ -230,7 +231,7 @@ describe('Topbar — mọi nút icon đều có tên', () => {
   it('nút chat, chuông, hamburger và avatar đều gọi tên được', () => {
     renderTopbar();
 
-    expect(screen.getByRole('button', { name: 'Trò chuyện' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Tin nhắn' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Thông báo' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Mở menu' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Tài khoản' })).toBeTruthy();
@@ -244,21 +245,6 @@ describe('Topbar — hành động người dùng', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Mở menu' }));
 
     expect(store.getState().app.mobileNavOpen).toBe(true);
-  });
-
-  it('nút chat điều hướng sang trang trò chuyện của cổng quản lý', () => {
-    renderTopbar();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Trò chuyện' }));
-
-    expect(push).toHaveBeenCalledWith('/manage/chat');
-  });
-
-  it('huy hiệu chat hiện số tin chưa đọc', () => {
-    chat.count = 7;
-    renderTopbar();
-
-    expect(screen.getByText('7')).toBeTruthy();
   });
 
   it('đăng xuất đi qua luồng DÙNG CHUNG, không phải bản sao riêng của topbar', async () => {

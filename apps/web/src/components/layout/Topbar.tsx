@@ -1,14 +1,13 @@
 'use client';
 
-import { MenuOutlined, MessageOutlined, UserOutlined } from '@ant-design/icons';
-import { Avatar, Badge, Button, Dropdown } from 'antd';
-import { useRouter } from 'next/navigation';
+import { DownOutlined, MenuOutlined, UserOutlined } from '@ant-design/icons';
+import { Avatar, Button, Dropdown } from 'antd';
 import { useTranslations } from 'next-intl';
-import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
+import { useLocaleMenuGroup } from '@/components/i18n/locale-menu';
 import { BranchScopeSelector } from '@/features/branches/components/BranchScopeSelector';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { CHAT_SIDE } from '@xeprime/types';
-import { useChatBadge } from '@/features/chat/hooks/use-chat-badge';
+import { ChatMenu } from '@/features/chat/components/ChatMenu';
 import { usePortalLogout } from '@/features/auth/hooks/use-portal-logout';
 import { initialOf } from '@/lib/initials';
 import { useAppDispatch } from '@/store/hooks';
@@ -30,10 +29,9 @@ import styles from './Topbar.module.css';
  */
 export function Topbar({ user }: { user: CurrentUser }) {
   const t = useTranslations('Navigation');
-  const router = useRouter();
   const dispatch = useAppDispatch();
   const logout = usePortalLogout();
-  const chatBadge = useChatBadge(CHAT_SIDE.SHOP);
+  const localeGroup = useLocaleMenuGroup();
 
   const tenantName = user.tenant?.name;
 
@@ -51,17 +49,7 @@ export function Topbar({ user }: { user: CurrentUser }) {
       </div>
 
       <div className={styles.right}>
-        {/* Đứng TRƯỚC tin nhắn/thông báo, đúng vị trí như ở header marketplace. */}
-        <LocaleSwitcher />
-        <Badge count={chatBadge.count} size="small" overflowCount={99}>
-          <Button
-            type="text"
-            shape="circle"
-            icon={<MessageOutlined aria-hidden />}
-            aria-label={t('manage.chat')}
-            onClick={() => router.push(chatBadge.href)}
-          />
-        </Badge>
+        <ChatMenu side={CHAT_SIDE.SHOP} />
         <NotificationBell context="manage" />
 
         {tenantName ? (
@@ -86,11 +74,17 @@ export function Topbar({ user }: { user: CurrentUser }) {
           </>
         ) : null}
 
+        {/*
+          Đổi ngôn ngữ nằm trong menu tài khoản, giống hệt header khu khách — thanh trên cùng chỉ
+          giữ những thứ bấm hằng ngày, còn cài đặt cá nhân đi cùng một chỗ với chúng.
+        */}
         <Dropdown
           trigger={['click']}
           menu={{
             items: [
               { key: 'name', label: user.displayName, disabled: true },
+              { type: 'divider' },
+              localeGroup,
               { type: 'divider' },
               { key: 'logout', label: t('public.logout'), onClick: () => void logout() },
             ],
@@ -104,6 +98,7 @@ export function Topbar({ user }: { user: CurrentUser }) {
             >
               {user.avatarUrl ? null : initialOf(user.displayName || user.email)}
             </Avatar>
+            <DownOutlined className={styles.avatarCaret} aria-hidden />
           </button>
         </Dropdown>
       </div>

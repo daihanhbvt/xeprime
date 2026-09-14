@@ -24,7 +24,7 @@ describe('bậc năng lực — Owner Lite vs Full Manage (ADR 0027 điều 1)',
     expect(OWNER_LITE_FEATURES).toEqual([]);
   });
 
-  it('Full Manage mở đủ 7 tính năng của cột phải trong ADR 0027 điều 1', () => {
+  it('Full Manage mở đủ 8 tính năng của cột phải trong ADR 0027 điều 1', () => {
     // So bằng TẬP đầy đủ chứ không đếm: đổi tên một cờ thì test chỉ ra ngay cờ nào lệch.
     expect([...FULL_MANAGE_FEATURES].sort()).toEqual(
       [
@@ -32,6 +32,7 @@ describe('bậc năng lực — Owner Lite vs Full Manage (ADR 0027 điều 1)',
         PLAN_FEATURE.CONTRACTS,
         PLAN_FEATURE.DEBTS,
         PLAN_FEATURE.DRIVERS,
+        PLAN_FEATURE.ESCROW_HOLD,
         PLAN_FEATURE.FINANCE,
         PLAN_FEATURE.MAINTENANCE,
         PLAN_FEATURE.MEMBERS,
@@ -44,10 +45,15 @@ describe('bậc năng lực — Owner Lite vs Full Manage (ADR 0027 điều 1)',
     expect(FULL_MANAGE_FEATURES.length).toBeGreaterThan(OWNER_LITE_FEATURES.length);
   });
 
-  it('`escrow_hold` KHÔNG nằm trong bậc nào — ADR 0025 chưa thi công', () => {
-    // Cấp cờ cho một tính năng chưa có endpoint nào là hứa một thứ không bấm được, và tạo sẵn
-    // một trạng thái `read_only` không có gì để đọc.
-    expect(FULL_MANAGE_FEATURES).not.toContain(PLAN_FEATURE.ESCROW_HOLD);
+  it('`escrow_hold` là năng lực của bậc GÓI, không của Owner Lite (Phase 6 — 14/09/2026)', () => {
+    /*
+     * Trước 14/09 cờ này không nằm ở bậc nào vì chưa endpoint nào ghi dữ liệu escrow. Nay
+     * `PATCH /shop/payment-settings` + `DepositPolicyService` đã thi công, nên cấp cờ cho bậc
+     * gói là đúng — nhưng KHÔNG cho Owner Lite: tuyến hoa hồng thu cọc theo quy tắc nền tảng
+     * (ADR 0032 điều 2), không qua trục năng lực gói, nên cấp cờ ở đó chỉ gây hiểu nhầm là
+     * chủ xe cơ bản có công tắc để tắt.
+     */
+    expect(FULL_MANAGE_FEATURES).toContain(PLAN_FEATURE.ESCROW_HOLD);
     expect(OWNER_LITE_FEATURES).not.toContain(PLAN_FEATURE.ESCROW_HOLD);
   });
 

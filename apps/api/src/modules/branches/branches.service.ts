@@ -7,9 +7,8 @@ import {
   type BranchStatus,
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
-import { ProvincesService } from '../locations/provinces.service';
+import { AddressService, type ResolvedAddress } from '../locations/address.service';
 import { ListingsService } from '../public-listings/listings.service';
-import { GeoService } from '../geo/geo.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   BranchDto,
@@ -24,10 +23,14 @@ const BRANCH_SELECT = {
   code: true,
   name: true,
   provinceCode: true,
+  wardCode: true,
   address: true,
+  addressLine: true,
   phone: true,
   latitude: true,
   longitude: true,
+  placeId: true,
+  locationSource: true,
   isDefault: true,
   status: true,
   needsLocationReview: true,
@@ -35,6 +38,7 @@ const BRANCH_SELECT = {
   createdAt: true,
   updatedAt: true,
   province: { select: { name: true } },
+  ward: { select: { name: true, administrativeType: true } },
 } satisfies Prisma.TenantBranchSelect;
 
 type BranchRow = Prisma.TenantBranchGetPayload<{ select: typeof BRANCH_SELECT }>;
@@ -55,33 +59,10 @@ type BranchRow = Prisma.TenantBranchGetPayload<{ select: typeof BRANCH_SELECT }>
 export class BranchesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly provinces: ProvincesService,
     private readonly listings: ListingsService,
     private readonly audit: AuditService,
-    private readonly geo: GeoService,
+    private readonly address: AddressService,
   ) {}
-
-  /**
-   * Toạ độ cho một chi nhánh — tra từ địa chỉ, best-effort.
-   *
-   * Toạ độ do người dùng gửi lên THẮNG (họ vừa nhìn bản đồ và chỉnh); chỉ khi không có mới đi
-   * hỏi. Địa chỉ ghép thêm tên tỉnh vì địa chỉ chi nhánh hay được gõ cụt ("12 Nguyễn Huệ") và
-   * tên đường đó tồn tại ở hàng chục tỉnh.
-   *
-   * Không tra được thì trả null và LƯU BÌNH THƯỜNG. Chặn lưu chi nhánh vì bản đồ không hiểu
-   * một cái hẻm là lấy một tiện ích ước lượng ra làm điều kiện của một thao tác quản trị.
-   */
-  private async resolveCoords(
-    address: string | null | undefined,
-    provinceName: string | null,
-  ): Promise<{ latitude: number; longitude: number } | null> {
-    const trimmed = address?.trim();
-    if (!trimmed || !this.geo.enabled) return null;
-    const query =
-      provinceName && !trimmed.includes(provinceName) ? `${trimmed}, ${provinceName}` : trimmed;
-    const resolved = await this.geo.geocode(query);
-    return resolved ? { latitude: resolved.point.lat, longitude: resolved.point.lng } : null;
-  }
 
   async list(tenantId: string, query: BranchListQueryDto): Promise<BranchListDto> {
     const where: Prisma.TenantBranchWhereInput = {
@@ -89,12 +70,14 @@ export class BranchesService {
       deletedAt: null,
       ...(query.status ? { status: query.status } : {}),
       ...(query.provinceCode ? { provinceCode: query.provinceCode } : {}),
+      ...(query.wardCode ? { wardCode: query.wardCode } : {}),
       ...(query.q
         ? {
             OR: [
               { name: { contains: query.q, mode: 'insensitive' } },
               { code: { contains: query.q, mode: 'insensitive' } },
               { address: { contains: query.q, mode: 'insensitive' } },
+              { addressLine: { contains: query.q, mode: 'insensitive' } },
             ],
           }
         : {}),
@@ -139,15 +122,12 @@ export class BranchesService {
   }
 
   async create(tenantId: string, userId: string, dto: CreateBranchDto): Promise<BranchDto> {
-    const province = await this.provinces.assertSelectable(dto.provinceCode);
-
-    // Tra toạ độ TRƯỚC transaction: đây là một lượt gọi mạng có timeout, và giữ một transaction
-    // Postgres mở trong lúc chờ Internet là cách chắc chắn để một sự cố bên ngoài thành một
-    // hàng đợi khoá bên trong.
-    const geocoded =
-      dto.latitude == null || dto.longitude == null
-        ? await this.resolveCoords(dto.address, province.name)
-        : null;
+    /*
+     * Kiểm danh mục + ghép chuỗi hiển thị + tra toạ độ TRƯỚC transaction: bên trong có một lượt
+     * gọi mạng có timeout, và giữ một transaction Postgres mở trong lúc chờ Internet là cách
+     * chắc chắn để một sự cố bên ngoài thành một hàng đợi khoá bên trong.
+     */
+    const address = await this.address.resolve(addressInputOf(dto));
 
     const branch = await this.prisma.$transaction(async (tx) => {
       const code = await nextBranchCode(tx, tenantId);
@@ -163,11 +143,8 @@ export class BranchesService {
           tenantId,
           code,
           name: dto.name,
-          provinceCode: province.code,
-          address: dto.address ?? null,
+          ...addressColumns(address),
           phone: dto.phone ?? null,
-          latitude: dto.latitude ?? geocoded?.latitude ?? null,
-          longitude: dto.longitude ?? geocoded?.longitude ?? null,
           isDefault: hasDefault === 0,
           status: BRANCH_STATUS.ACTIVE,
           createdBy: userId,
@@ -200,53 +177,66 @@ export class BranchesService {
     dto: UpdateBranchDto,
   ): Promise<BranchDto> {
     const before = await this.findOwned(tenantId, id);
-    const provinceChanged =
-      dto.provinceCode !== undefined && dto.provinceCode !== before.provinceCode;
-    const nextProvince = provinceChanged
-      ? await this.provinces.assertSelectable(dto.provinceCode!)
-      : null;
 
     /*
-     * Tra lại toạ độ chỉ khi VỊ TRÍ thật sự đổi — đổi tên hay số điện thoại chi nhánh thì không.
-     * Tra lại mọi lần lưu là tự đốt hạn mức bản đồ bằng những lần sửa không liên quan.
+     * Địa chỉ được chạm tới khi client gửi BẤT KỲ mảnh nào của nó. Khi đó địa chỉ được dựng
+     * LẠI TOÀN BỘ từ (giá trị mới ?? giá trị cũ) — không vá từng cột.
      *
-     * Ca thứ hai (địa chỉ không đổi nhưng chưa có toạ độ) là đường vá dữ liệu cũ: chi nhánh
-     * tạo từ trước khi có bản đồ chỉ cần chủ shop mở ra bấm Lưu một lần là có vị trí.
+     * Vì sao dựng lại cả cụm: chuỗi hiển thị, mã xã và toạ độ phải luôn nói cùng một chuyện.
+     * Vá riêng `wardCode` mà giữ nguyên chuỗi hiển thị cũ là cách để một chi nhánh hiện "Phường
+     * Bến Nghé" trong khi mã của nó trỏ Phường Sài Gòn.
+     *
+     * Đổi tên hay số điện thoại thì KHÔNG chạm vào đây — tra lại bản đồ ở mọi lần lưu là tự
+     * đốt hạn mức bằng những lần sửa không liên quan.
      */
-    const addressChanged = dto.address !== undefined && dto.address !== before.address;
-    const missingCoords = before.latitude == null || before.longitude == null;
-    const geocoded =
-      (dto.latitude == null || dto.longitude == null) &&
-      (addressChanged || provinceChanged || missingCoords)
-        ? await this.resolveCoords(
-            dto.address ?? before.address,
-            nextProvince?.name ?? before.province?.name ?? null,
-          )
-        : null;
+    const addressTouched =
+      dto.provinceCode !== undefined ||
+      dto.wardCode !== undefined ||
+      dto.addressLine !== undefined ||
+      dto.address !== undefined ||
+      dto.latitude !== undefined ||
+      dto.longitude !== undefined ||
+      dto.placeId !== undefined;
+
+    const nextAddress = addressTouched
+      ? await this.address.resolve({
+          provinceCode: dto.provinceCode ?? before.provinceCode,
+          wardCode: dto.wardCode ?? before.wardCode,
+          addressLine: dto.addressLine ?? dto.address ?? before.addressLine,
+          placeId: dto.placeId ?? before.placeId,
+          /*
+           * Toạ độ cũ KHÔNG được mang theo khi địa chỉ hành chính đổi: một cái ghim ở Hà Nội
+           * gắn vào địa chỉ vừa đổi sang Cần Thơ còn tệ hơn là không có ghim nào. Đổi địa chỉ
+           * mà không gửi ghim mới ⇒ để `AddressService` tra lại từ đầu.
+           */
+          latitude: dto.latitude ?? keepPin(dto, before)?.lat,
+          longitude: dto.longitude ?? keepPin(dto, before)?.lng,
+          locationSource: dto.locationSource ?? before.locationSource,
+        })
+      : null;
+
+    const provinceChanged = Boolean(
+      nextAddress && nextAddress.provinceCode !== before.provinceCode,
+    );
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const row = await tx.tenantBranch.update({
         where: { id },
         data: {
           ...(dto.name !== undefined ? { name: dto.name } : {}),
-          ...(dto.provinceCode !== undefined
-            ? // Bổ sung được tỉnh thì cờ "cần rà soát vị trí" tắt luôn — đó chính là việc cần làm.
-              { provinceCode: dto.provinceCode, needsLocationReview: false }
-            : {}),
-          ...(dto.address !== undefined ? { address: dto.address } : {}),
+          ...(nextAddress ? addressColumns(nextAddress) : {}),
           ...(dto.phone !== undefined ? { phone: dto.phone } : {}),
-          ...(dto.latitude !== undefined ? { latitude: dto.latitude } : {}),
-          ...(dto.longitude !== undefined ? { longitude: dto.longitude } : {}),
-          // Chỉ ghi khi tra ĐƯỢC. Tra hụt mà ghi null sẽ xoá mất toạ độ đang đúng chỉ vì lần
-          // này bản đồ trả lời chậm — im lặng giữ nguyên là hành vi đúng.
-          ...(geocoded ? { latitude: geocoded.latitude, longitude: geocoded.longitude } : {}),
         },
         select: BRANCH_SELECT,
       });
 
       if (provinceChanged) {
         await this.listings.syncBranchLocation(id, tx);
-        if (row.isDefault) await this.syncProfileFromDefaultBranch(tx, tenantId);
+      }
+      // Chi nhánh MẶC ĐỊNH đổi địa chỉ (kể cả chỉ đổi xã) thì hồ sơ gian hàng phải theo — hai
+      // cột mirror ở `tenant_profiles` là thứ trang gian hàng công khai đang đọc.
+      if (nextAddress && row.isDefault) {
+        await this.syncProfileFromDefaultBranch(tx, tenantId);
       }
       return row;
     });
@@ -258,8 +248,18 @@ export class BranchesService {
       action: 'branch.update',
       targetType: 'tenant_branch',
       targetId: id,
-      before: { name: before.name, provinceCode: before.provinceCode, address: before.address },
-      after: { name: updated.name, provinceCode: updated.provinceCode, address: updated.address },
+      before: {
+        name: before.name,
+        provinceCode: before.provinceCode,
+        wardCode: before.wardCode,
+        address: before.address,
+      },
+      after: {
+        name: updated.name,
+        provinceCode: updated.provinceCode,
+        wardCode: updated.wardCode,
+        address: updated.address,
+      },
     });
 
     const counts = await this.vehicleCounts(tenantId, [id]);
@@ -407,10 +407,9 @@ export class BranchesService {
     input: {
       tenantId: string;
       userId: string;
-      provinceCode: string;
-      provinceName: string;
+      /** Địa chỉ ĐÃ kiểm bởi `AddressService` — đăng ký gian hàng gọi nó trước khi mở transaction. */
+      address: ResolvedAddress;
       phone?: string | null;
-      address?: string | null;
     },
   ): Promise<{ id: string; code: string; name: string }> {
     const branch = await tx.tenantBranch.create({
@@ -418,9 +417,8 @@ export class BranchesService {
         id: newId(),
         tenantId: input.tenantId,
         code: 'CN01',
-        name: `Chi nhánh ${input.provinceName}`,
-        provinceCode: input.provinceCode,
-        address: input.address ?? null,
+        name: `Chi nhánh ${input.address.provinceName}`,
+        ...addressColumns(input.address),
         phone: input.phone ?? null,
         isDefault: true,
         status: BRANCH_STATUS.ACTIVE,
@@ -444,7 +442,13 @@ export class BranchesService {
   ): Promise<void> {
     const branch = await tx.tenantBranch.findFirst({
       where: { tenantId, isDefault: true, deletedAt: null },
-      select: { provinceCode: true, address: true, province: { select: { name: true } } },
+      select: {
+        provinceCode: true,
+        wardCode: true,
+        address: true,
+        province: { select: { name: true } },
+        ward: { select: { name: true } },
+      },
     });
     if (!branch) return;
 
@@ -453,6 +457,11 @@ export class BranchesService {
       data: {
         provinceCode: branch.provinceCode,
         provinceName: branch.province?.name ?? null,
+        wardCode: branch.wardCode,
+        wardName: branch.ward?.name ?? null,
+        // Địa chỉ hiển thị cũng là mirror: trang gian hàng công khai đọc `tenant_profiles`, và
+        // để nó tụt lại sau chi nhánh nghĩa là khách nhìn thấy một địa chỉ không còn đúng.
+        address: branch.address,
       },
     });
   }
@@ -532,6 +541,59 @@ async function nextBranchCode(tx: Prisma.TransactionClient, tenantId: string): P
   return `CN${String(max + 1).padStart(2, '0')}`;
 }
 
+/**
+ * Ghim CŨ có được giữ lại khi sửa địa chỉ không.
+ *
+ * Không, nếu phần hành chính đổi: một cái ghim ở Hà Nội gắn vào địa chỉ vừa đổi sang Cần Thơ
+ * sai nghiêm trọng hơn là không có ghim nào — nó trông như dữ liệu thật và sẽ đi thẳng vào phép
+ * tính phí giao xe. Đổi tỉnh/xã mà không gửi ghim mới ⇒ bỏ ghim cũ, để server tra lại.
+ */
+function keepPin(
+  dto: UpdateBranchDto,
+  before: BranchRow,
+): { lat: number; lng: number } | null {
+  const adminChanged =
+    (dto.provinceCode !== undefined && dto.provinceCode !== before.provinceCode) ||
+    (dto.wardCode !== undefined && dto.wardCode !== before.wardCode) ||
+    (dto.addressLine !== undefined && dto.addressLine !== before.addressLine);
+  if (adminChanged) return null;
+  if (before.latitude == null || before.longitude == null) return null;
+  return { lat: Number(before.latitude), lng: Number(before.longitude) };
+}
+
+/** Trường địa chỉ từ DTO tạo mới (kèm bí danh `address` đã bỏ) → đầu vào của `AddressService`. */
+function addressInputOf(dto: CreateBranchDto) {
+  return {
+    provinceCode: dto.provinceCode,
+    wardCode: dto.wardCode,
+    addressLine: dto.addressLine ?? dto.address,
+    placeId: dto.placeId,
+    latitude: dto.latitude,
+    longitude: dto.longitude,
+    locationSource: dto.locationSource,
+  };
+}
+
+/**
+ * Địa chỉ đã kiểm → bộ cột của `tenant_branches`.
+ *
+ * MỘT chỗ ánh xạ cho cả tạo, sửa và tạo-chi-nhánh-mặc-định: ba đường ghi cùng một bộ cột, và
+ * ba bản sao của phép gán này là ba cơ hội để một đường quên cập nhật `needsLocationReview`.
+ */
+function addressColumns(address: ResolvedAddress) {
+  return {
+    provinceCode: address.provinceCode,
+    wardCode: address.wardCode,
+    address: address.displayAddress,
+    addressLine: address.addressLine,
+    latitude: address.latitude,
+    longitude: address.longitude,
+    placeId: address.placeId,
+    locationSource: address.locationSource,
+    needsLocationReview: address.needsReview,
+  };
+}
+
 function toDto(row: BranchRow, vehicleCount: number): BranchDto {
   return {
     id: row.id,
@@ -539,10 +601,16 @@ function toDto(row: BranchRow, vehicleCount: number): BranchDto {
     name: row.name,
     provinceCode: row.provinceCode,
     provinceName: row.province?.name ?? null,
+    wardCode: row.wardCode,
+    wardName: row.ward?.name ?? null,
+    wardAdministrativeType: row.ward?.administrativeType ?? null,
     address: row.address,
+    addressLine: row.addressLine,
     phone: row.phone,
     latitude: row.latitude?.toString() ?? null,
     longitude: row.longitude?.toString() ?? null,
+    placeId: row.placeId,
+    locationSource: row.locationSource,
     isDefault: row.isDefault,
     status: row.status as BranchStatus,
     vehicleCount,

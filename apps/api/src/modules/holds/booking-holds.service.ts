@@ -3,22 +3,26 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
+  BANK_DIRECTION,
   BANK_MATCH_STATUS,
   BANK_MATCH_TARGET_TYPE,
   BOOKING_HOLD_PURPOSE,
   BOOKING_HOLD_STATUS,
   BOOKING_REQUEST_STATUS,
+  DEPOSIT_COLLECTION_MODE,
   FEE_BEARER,
   FEE_BENEFICIARY,
   FEE_LINE,
   HOLD_REFUND_REASON,
   HOLD_REFUND_STATUS,
+  INSURANCE_POLICY_STATUS,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   OCCUPANCY_SOURCE_TYPE,
   PRICE_ROW,
   SUPPORT_CASE_CATEGORY,
   SUPPORT_CASE_STATUS_OPEN,
+  WITHDRAWAL_STATUS,
   holdExpiresAt,
   holdFreeCancelUntil,
   isHoldPastDue,
@@ -38,6 +42,7 @@ import { BookingsService } from '../bookings/bookings.service';
 import { OccupancyService } from '../calendar/occupancy.service';
 import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
 import { NotificationService } from '../notification/notification.service';
+import { InsuranceReadService } from '../insurance/insurance-read.service';
 import { HoldSettlementService } from './hold-settlement.service';
 import {
   CustomerHoldDto,
@@ -48,6 +53,7 @@ import {
   PlatformHoldListQueryDto,
   PlatformHoldRefundDto,
   PlatformHoldRefundListQueryDto,
+  SaveBankBalanceDto,
 } from './dto/hold.dto';
 import { formatMoneyVndVi } from '@xeprime/domain';
 
@@ -148,6 +154,8 @@ export class BookingHoldsService {
     private readonly billing: BillingService,
     private readonly audit: AuditService,
     private readonly notifications: NotificationService,
+    /** Phase 7: phần phí bảo hiểm đang giữ hộ, cho vế `custodied` của đối soát ba vế. */
+    private readonly insurance: InsuranceReadService,
   ) {}
 
   // ── Tạo ──────────────────────────────────────────────────────────────────
@@ -548,8 +556,22 @@ export class BookingHoldsService {
       'from_request',
       snapshot,
       req.tenantCustomerId,
-      // Điều kiện thuê đã đóng băng trên yêu cầu — copy nguyên sang đơn (08/09/2026).
-      { rentalTerms: (req.rentalTerms as unknown as RentalTermsSnapshot | null) ?? null },
+      {
+        // Điều kiện thuê đã đóng băng trên yêu cầu — copy nguyên sang đơn (08/09/2026).
+        rentalTerms: (req.rentalTerms as unknown as RentalTermsSnapshot | null) ?? null,
+        /*
+         * Đơn này ra đời VÌ tiền cọc đã về tài khoản XePrime — không có nhánh nào khác dẫn tới
+         * đây. `platform` đóng băng tại đây, và công tắc của gian hàng đổi sau đó không viết lại
+         * (ADR 0025 ràng buộc 4).
+         */
+        depositCollectionMode: DEPOSIT_COLLECTION_MODE.PLATFORM,
+        /*
+         * Hợp đồng bảo hiểm truy ngược về CHÍNH khoản giữ chỗ đã thu phí của nó (Phase 7). Khi
+         * quyết toán với đối tác, câu hỏi đầu tiên là "tiền này vào bằng giao dịch nào" — không
+         * có cột này thì phải đi vòng qua đơn rồi đoán.
+         */
+        holdId,
+      },
     );
 
     const claimed = await tx.bookingRequest.updateMany({
@@ -813,16 +835,48 @@ export class BookingHoldsService {
   }
 
   /**
-   * Đối chiếu MỘT NGÀY theo giờ Việt Nam. Toàn bộ là phép cộng trên sổ đã có — không denormalize
-   * cột nào, tính lúc đọc (đúng doctrine "tránh drift" của tài chính gian hàng).
+   * ĐỐI SOÁT BA VẾ của một ngày (giờ Việt Nam) — ADR 0025 điều 6.
    *
-   * `bankIn` gom theo `bank_time` (giờ ngân hàng), rơi về `created_at` khi SePay không gửi giờ.
+   * ## Phương trình
+   *
+   * ```text
+   *   Số dư ngân hàng cuối ngày D
+   *     = Tiền CỦA NỀN TẢNG (lũy kế tới hết D)
+   *     + Tiền GIỮ HỘ       (nghĩa vụ tại cuối D)
+   *     + Chênh lệch chưa đối soát
+   * ```
+   *
+   * ## Hai cái bẫy, và cách né
+   *
+   * 1. **Không trộn LƯU LƯỢNG với SỐ DƯ.** Số dư ngân hàng là con số LŨY KẾ từ ngày đầu tiên;
+   *    tiền vào/ra trong ngày là lưu lượng. Vì vậy `platform` và `custodied` đều tính lũy kế tới
+   *    mốc cuối ngày, còn `inflow`/`outflow` là lưu lượng trong ngày và **không** nằm trong
+   *    phương trình — chúng chỉ giải thích vì sao số dư đổi so với hôm qua.
+   *
+   * 2. **Không cộng đôi khoản đã chuyển từ hold sang ví.** Một hold chốt xong thì tiền của nó
+   *    rời `booking_holds` và xuất hiện ở `wallet_entries`. Nên `holdsUnsettled` chỉ đếm hold
+   *    **chưa chốt** (`outcome IS NULL`), còn phần đã chốt nằm ở ví hoặc ở `platform`. Đếm cả
+   *    hai là nhân đôi toàn bộ nghĩa vụ.
+   *
+   * ## Vì sao `platform` đọc `settled_platform_amount`
+   *
+   * Không đọc `service_fee_amount`: ở nhánh huỷ muộn, `resolveHoldAllocation` chia `D + S` đôi,
+   * nên phần nền tảng khác `S` (và tuyến GÓI có `S = 0` nhưng vẫn sinh doanh thu). Cột
+   * `settled_platform_amount` được đóng băng lúc chốt nên đọc nó là đọc đúng con số đã quyết,
+   * không phải diễn giải lại. **Không hàm nào ở đây đọc `purpose`** — CLAUDE.md cấm, vì một hold
+   * nay chứa tiền của nhiều người (ADR 0033 điều 4).
+   *
+   * ## Vì sao ví tính bằng `SUM(wallet_entries)` chứ không đọc `wallets.balance`
+   *
+   * `balance` là trạng thái HIỆN TẠI, không có lịch sử — hỏi lại ngày hôm qua sẽ ra số của hôm
+   * nay. `wallet_entries` là sổ chỉ-ghi-thêm có `created_at`, nên nó dựng lại được nghĩa vụ tại
+   * bất kỳ mốc nào. Hai con số phải bằng nhau ở hiện tại; chỗ chúng lệch chính là `walletDrift`.
    */
   async dailyReconciliation(date: string): Promise<DailyReconciliationDto> {
     const { start, end } = vnDayRange(date);
     const inWindow = Prisma.sql`COALESCE(bank_time, created_at) >= ${start} AND COALESCE(bank_time, created_at) < ${end}`;
 
-    const [bank] = await this.prisma.$queryRaw<
+    const [inflowRow] = await this.prisma.$queryRaw<
       Array<{
         total: Prisma.Decimal;
         count: bigint;
@@ -842,60 +896,283 @@ export class BookingHoldsService {
         COUNT(*) FILTER (WHERE match_status = ${BANK_MATCH_STATUS.UNMATCHED}) AS "unmatchedCount",
         COALESCE(SUM(amount_in) FILTER (WHERE match_status = ${BANK_MATCH_STATUS.IGNORED}), 0) AS ignored
       FROM bank_transactions
-      WHERE ${inWindow}
+      WHERE direction = ${BANK_DIRECTION.IN} AND ${inWindow}
     `;
 
-    const [refundsPaid, refundsPending, unsettled] = await Promise.all([
+    const [
+      platformRow,
+      subsRow,
+      custodiedHolds,
+      walletRow,
+      refundsPendingRow,
+      unmatchedCumRow,
+      withdrawalsPaid,
+      refundsPaid,
+      driftRow,
+      bankBalance,
+    ] = await Promise.all([
+      /*
+       * Doanh thu nền tảng LŨY KẾ tới hết ngày D: hold đã chốt (`released_at < end`) cộng phần
+       * đã đóng băng vào `settled_platform_amount`.
+       */
+      this.prisma.bookingHold.aggregate({
+        where: { outcome: { not: null }, releasedAt: { lt: end } },
+        _sum: { settledPlatformAmount: true },
+      }),
+      // Tiền gói đã THU (không phải đã phát hành) — chỉ phần `paid_amount` mới là tiền thật về.
+      this.prisma.subscriptionInvoice.aggregate({
+        where: { paidAt: { lt: end } },
+        _sum: { paidAmount: true },
+      }),
+      /*
+       * Hold CHƯA CHỐT nhưng đã có tiền. Lấy TOÀN BỘ `paid_amount`: trước khi chốt, kể cả phần
+       * phí dịch vụ cũng có thể phải hoàn khách (huỷ sớm hoàn 100%), nên chưa đồng nào của hold
+       * này là của nền tảng.
+       */
+      this.prisma.bookingHold.aggregate({
+        where: { outcome: null, paidAmount: { gt: 0 }, paidAt: { lt: end } },
+        _sum: { paidAmount: true },
+        _count: { _all: true },
+      }),
+      /*
+       * Nghĩa vụ ví tại cuối ngày D — dựng lại từ SỔ, không đọc `wallets.balance` (xem docblock).
+       * `available`/`pending` là số HIỆN TẠI, trả kèm để màn hình nói được phần nào đang bị khoá.
+       */
+      this.prisma.$queryRaw<Array<{ total: Prisma.Decimal }>>`
+        SELECT COALESCE(SUM(amount), 0) AS total
+          FROM wallet_entries
+         WHERE created_at < ${end}
+      `,
+      // Khách VÃNG LAI không có ví — đường chuyển khoản tay là vĩnh viễn (ADR 0033 điều 3).
+      this.prisma.holdRefund.aggregate({
+        where: { status: HOLD_REFUND_STATUS.PENDING, createdAt: { lt: end } },
+        _sum: { amount: true },
+        _count: { _all: true },
+      }),
+      // Tiền vào chưa khớp LŨY KẾ — vẫn trong tài khoản, vẫn là tiền của một ai đó.
+      this.prisma.$queryRaw<Array<{ total: Prisma.Decimal; count: bigint }>>`
+        SELECT COALESCE(SUM(amount_in), 0) AS total, COUNT(*) AS count
+          FROM bank_transactions
+         WHERE direction = ${BANK_DIRECTION.IN}
+           AND match_status = ${BANK_MATCH_STATUS.UNMATCHED}
+           AND COALESCE(bank_time, created_at) < ${end}
+      `,
+      // Chiều RA trong NGÀY — lưu lượng, không phải nghĩa vụ.
+      this.prisma.withdrawalRequest.aggregate({
+        where: { status: WITHDRAWAL_STATUS.PAID, paidAt: { gte: start, lt: end } },
+        _sum: { amount: true },
+        _count: { _all: true },
+      }),
       this.prisma.holdRefund.aggregate({
         where: { status: HOLD_REFUND_STATUS.PAID, paidAt: { gte: start, lt: end } },
         _sum: { amount: true },
         _count: { _all: true },
       }),
-      this.prisma.holdRefund.aggregate({
-        where: { status: HOLD_REFUND_STATUS.PENDING },
-        _sum: { amount: true },
-        _count: { _all: true },
-      }),
-      this.prisma.bookingHold.aggregate({
-        where: { status: BOOKING_HOLD_STATUS.PAID, outcome: null },
-        _sum: { paidAmount: true },
-        _count: { _all: true },
-      }),
+      /*
+       * LỆCH SỔ VÍ — ADR 0023 điều 6. So `Σ bút toán` với `balance + pending` của TỪNG ví.
+       * Bằng nhau là bất biến: `creditWithinTx` và `recordWithdrawalPaidWithinTx` luôn ghi cả
+       * hai vế trong cùng transaction, còn khoá/nhả tiền rút chỉ chuyển giữa hai cột. Lệch nghĩa
+       * là có đường ghi thứ hai ngoài `WalletService` — thứ duy nhất phép này tồn tại để bắt.
+       */
+      this.prisma.$queryRaw<Array<{ wallets: bigint; amount: Prisma.Decimal }>>`
+        SELECT COUNT(*) AS wallets, COALESCE(SUM(ABS(diff)), 0) AS amount
+          FROM (
+                SELECT w.id,
+                       COALESCE(e.total, 0) - (w.balance + w.pending_withdraw_amount) AS diff
+                  FROM wallets w
+                  LEFT JOIN (
+                        SELECT wallet_id, SUM(amount) AS total
+                          FROM wallet_entries
+                         GROUP BY wallet_id
+                       ) e ON e.wallet_id = w.id
+               ) d
+         WHERE diff <> 0
+      `,
+      this.prisma.platformBankBalance.findUnique({ where: { date: new Date(`${date}T00:00:00Z`) } }),
     ]);
 
-    const b = bank ?? {
-      total: new Prisma.Decimal(0),
+    const zero = new Prisma.Decimal(0);
+    const inflow = inflowRow ?? {
+      total: zero,
       count: 0n,
-      subs: new Prisma.Decimal(0),
-      holds: new Prisma.Decimal(0),
-      unmatched: new Prisma.Decimal(0),
+      subs: zero,
+      holds: zero,
+      unmatched: zero,
       unmatchedCount: 0n,
-      ignored: new Prisma.Decimal(0),
+      ignored: zero,
     };
-    const variance = new Prisma.Decimal(b.total)
-      .sub(b.subs)
-      .sub(b.holds)
-      .sub(b.unmatched)
-      .sub(b.ignored);
+
+    const walletTotal = walletRow[0]?.total ?? zero;
+    const walletLive = await this.prisma.wallet.aggregate({
+      _sum: { balance: true, pendingWithdrawAmount: true },
+    });
+    const unmatchedCum = unmatchedCumRow[0] ?? { total: zero, count: 0n };
+
+    const serviceFeeRecognized = platformRow._sum.settledPlatformAmount ?? zero;
+    const subscriptionsCollected = subsRow._sum.paidAmount ?? zero;
+    const platformTotal = serviceFeeRecognized.add(subscriptionsCollected);
+
+    const holdsUnsettled = custodiedHolds._sum.paidAmount ?? zero;
+    const refundsPendingAmount = refundsPendingRow._sum.amount ?? zero;
+    /*
+     * BẢO HIỂM (Phase 7): phí đã thu của khách cho `IV`/`IP` là tiền GIỮ HỘ ở mọi trạng thái trừ
+     * hai trạng thái cuối. Chưa phát hành ⇒ vẫn là tiền của khách; đã phát hành ⇒ thành khoản
+     * phải trả hãng bảo hiểm. Cả hai đều là tiền XePrime đang cầm mà không sở hữu — chỉ khác ở
+     * chỗ đang nợ AI, và phép đối soát này không hỏi câu đó.
+     *
+     * ⚠️ KHÔNG trừ phần này ra khỏi `holdsUnsettled`: hold CHƯA chốt được tính trọn `paid_amount`
+     * (gồm cả `IV`/`IP`), còn hợp đồng bảo hiểm chỉ tồn tại sau khi ĐƠN đã được tạo — tức là sau
+     * khi hold đã `paid` và có `booking_id`. Hai tập hợp rời nhau theo thời gian, nên cộng cả hai
+     * KHÔNG phải cộng đôi. Ca duy nhất chồng lấn là hold đã trả nhưng chưa chốt outcome VÀ đơn đã
+     * tạo — và ở đó phần `IV`/`IP` nằm trong `paid_amount` của hold lẫn trong `premium_amount`
+     * của hợp đồng. Đó chính là lý do dòng dưới trừ lại phần trùng.
+     */
+    const insuranceGross = await this.insurance.custodiedPremiumAsOf(end);
+    const insuranceInOpenHolds = await this.premiumInsideUnsettledHolds(end);
+    const insuranceReserved = insuranceGross.sub(insuranceInOpenHolds);
+    // Thuế: cổng Phase 8 chưa nối vào đây — giữ 0 và một dòng tường minh thay vì vắng mặt.
+    const taxAccrued = zero;
+    const custodiedTotal = holdsUnsettled
+      .add(walletTotal)
+      .add(refundsPendingAmount)
+      .add(unmatchedCum.total)
+      .add(insuranceReserved)
+      .add(taxAccrued);
+
+    /*
+     * CHƯA NHẬP số dư ⇒ `null` cho cả hai, không phải 0. Số 0 là một khẳng định ("tài khoản
+     * rỗng") và nó sẽ biến mọi nghĩa vụ đang có thành một khoản thất thoát trên màn hình.
+     */
+    const bankBalanceEod = bankBalance ? bankBalance.balance.toFixed(0) : null;
+    const variance = bankBalance
+      ? bankBalance.balance.sub(platformTotal).sub(custodiedTotal).toFixed(0)
+      : null;
+
+    const inflowVariance = new Prisma.Decimal(inflow.total)
+      .sub(inflow.subs)
+      .sub(inflow.holds)
+      .sub(inflow.unmatched)
+      .sub(inflow.ignored);
+
+    const drift = driftRow[0] ?? { wallets: 0n, amount: zero };
+    const withdrawalsPaidAmount = withdrawalsPaid._sum.amount ?? zero;
+    const refundsPaidAmount = refundsPaid._sum.amount ?? zero;
 
     return {
       date,
-      bankIn: new Prisma.Decimal(b.total).toFixed(0),
-      bankInCount: Number(b.count),
-      matchedSubscriptions: new Prisma.Decimal(b.subs).toFixed(0),
-      matchedHolds: new Prisma.Decimal(b.holds).toFixed(0),
-      unmatched: new Prisma.Decimal(b.unmatched).toFixed(0),
-      unmatchedCount: Number(b.unmatchedCount),
-      ignored: new Prisma.Decimal(b.ignored).toFixed(0),
-      refundsPaid: (refundsPaid._sum.amount ?? new Prisma.Decimal(0)).toFixed(0),
-      refundsPaidCount: refundsPaid._count._all,
-      refundsPending: (refundsPending._sum.amount ?? new Prisma.Decimal(0)).toFixed(0),
-      refundsPendingCount: refundsPending._count._all,
-      holdsUnsettled: (unsettled._sum.paidAmount ?? new Prisma.Decimal(0)).toFixed(0),
-      holdsUnsettledCount: unsettled._count._all,
-      variance: variance.toFixed(0),
+      platform: {
+        serviceFeeRecognized: serviceFeeRecognized.toFixed(0),
+        subscriptionsCollected: subscriptionsCollected.toFixed(0),
+        total: platformTotal.toFixed(0),
+      },
+      custodied: {
+        holdsUnsettled: holdsUnsettled.toFixed(0),
+        holdsUnsettledCount: custodiedHolds._count._all,
+        walletTotal: walletTotal.toFixed(0),
+        walletAvailable: (walletLive._sum.balance ?? zero).toFixed(0),
+        walletPending: (walletLive._sum.pendingWithdrawAmount ?? zero).toFixed(0),
+        refundsPending: refundsPendingAmount.toFixed(0),
+        refundsPendingCount: refundsPendingRow._count._all,
+        unmatchedIn: new Prisma.Decimal(unmatchedCum.total).toFixed(0),
+        unmatchedInCount: Number(unmatchedCum.count),
+        insuranceReserved: insuranceReserved.toFixed(0),
+        taxAccrued: taxAccrued.toFixed(0),
+        total: custodiedTotal.toFixed(0),
+      },
+      outflow: {
+        withdrawalsPaid: withdrawalsPaidAmount.toFixed(0),
+        withdrawalsPaidCount: withdrawalsPaid._count._all,
+        refundsPaid: refundsPaidAmount.toFixed(0),
+        refundsPaidCount: refundsPaid._count._all,
+        total: withdrawalsPaidAmount.add(refundsPaidAmount).toFixed(0),
+      },
+      inflow: {
+        bankIn: new Prisma.Decimal(inflow.total).toFixed(0),
+        bankInCount: Number(inflow.count),
+        matchedSubscriptions: new Prisma.Decimal(inflow.subs).toFixed(0),
+        matchedHolds: new Prisma.Decimal(inflow.holds).toFixed(0),
+        unmatched: new Prisma.Decimal(inflow.unmatched).toFixed(0),
+        unmatchedCount: Number(inflow.unmatchedCount),
+        ignored: new Prisma.Decimal(inflow.ignored).toFixed(0),
+        variance: inflowVariance.toFixed(0),
+      },
+      bankBalanceEod,
+      variance,
+      walletDrift: {
+        wallets: Number(drift.wallets),
+        amount: new Prisma.Decimal(drift.amount).toFixed(0),
+      },
     };
   }
+
+  /**
+   * Phí bảo hiểm nằm TRONG các hold chưa chốt — phần bị đếm hai lần nếu không trừ ra.
+   *
+   * Một hold `paid` chưa chốt outcome được tính TRỌN `paid_amount` ở vế giữ hộ, và `paid_amount`
+   * đã gồm `IV + IP`. Nếu đơn của hold đó đã được tạo thì hợp đồng bảo hiểm cũng tồn tại với
+   * đúng số tiền ấy. Cộng cả hai là nhân đôi phần bảo hiểm của những chuyến đang chạy — và nó sẽ
+   * hiện ra thành một chênh lệch dương đúng bằng tổng phí bảo hiểm của các chuyến chưa kết thúc.
+   */
+  private async premiumInsideUnsettledHolds(end: Date): Promise<Prisma.Decimal> {
+    const agg = await this.prisma.bookingInsurancePolicy.aggregate({
+      where: {
+        createdAt: { lt: end },
+        status: { notIn: [INSURANCE_POLICY_STATUS.CANCELLED, INSURANCE_POLICY_STATUS.VOIDED] },
+        hold: { outcome: null, paidAmount: { gt: 0 }, paidAt: { lt: end } },
+      },
+      _sum: { premiumAmount: true },
+    });
+    return agg._sum.premiumAmount ?? new Prisma.Decimal(0);
+  }
+
+  /**
+   * Admin ghi số dư ngân hàng cuối ngày — vế trái của phép đối soát.
+   *
+   * `upsert` theo ngày: nhập lại là SỬA con số của ngày đó, không phải thêm một con số thứ hai.
+   * Ghi audit vì đây là một khẳng định của con người mà mọi báo động chênh lệch sau đó dựa vào.
+   */
+  async saveBankBalance(
+    input: SaveBankBalanceDto,
+    actorUserId: string,
+  ): Promise<DailyReconciliationDto> {
+    // Cùng hàm kiểm định dạng với đường đọc — hai cách hiểu "ngày" là hai kết quả đối soát.
+    vnDayRange(input.date);
+    const date = new Date(`${input.date}T00:00:00Z`);
+    const balance = new Prisma.Decimal(input.balance);
+
+    const before = await this.prisma.platformBankBalance.findUnique({ where: { date } });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.platformBankBalance.upsert({
+        where: { date },
+        create: {
+          date,
+          balance,
+          enteredBy: actorUserId,
+          ...(input.note === undefined ? {} : { note: input.note }),
+        },
+        update: {
+          balance,
+          enteredBy: actorUserId,
+          ...(input.note === undefined ? {} : { note: input.note }),
+        },
+      });
+      await this.audit.record(
+        {
+          actorUserId,
+          actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+          action: 'platform_bank_balance.save',
+          targetType: 'platform_bank_balance',
+          targetId: input.date,
+          before: before ? { balance: before.balance.toFixed(0) } : null,
+          after: { balance: balance.toFixed(0), ...(input.note ? { note: input.note } : {}) },
+        },
+        tx,
+      );
+    });
+
+    return this.dailyReconciliation(input.date);
+  }
+
 
   // ── Nội bộ ────────────────────────────────────────────────────────────────
 

@@ -1,0 +1,162 @@
+/**
+ * Popup xem nhanh tin nhắn ở thanh trên cùng. Cùng khổ và cùng nhịp với popover thông báo
+ * (`NotificationBell.module.css`) — hai biểu tượng cạnh nhau mở ra hai tấm khác cỡ thì cả góc
+ * phải trông như ghép từ hai sản phẩm.
+ */
+.panel {
+  width: 340px;
+  max-width: 92vw;
+  display: flex;
+  flex-direction: column;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--xp-color-border);
+}
+
+.title {
+  font-weight: var(--xp-font-weight-bold);
+  font-size: var(--xp-font-size);
+  color: var(--xp-color-text);
+}
+
+.body {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.center {
+  display: grid;
+  justify-items: center;
+  gap: var(--xp-space-sm);
+  padding: 28px 12px;
+}
+
+.error {
+  color: var(--xp-color-error);
+  font-size: 13px;
+}
+
+.empty {
+  padding: 22px 12px;
+}
+
+.skeleton {
+  display: grid;
+  gap: var(--xp-space-md);
+  padding: 12px;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+  color: inherit;
+  transition: background 0.12s ease;
+}
+
+.item:hover {
+  background: var(--xp-color-bg-hover);
+  color: inherit;
+}
+
+.itemUnread {
+  background: var(--xp-color-primary-light);
+}
+
+.itemAvatar {
+  flex: none;
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+}
+
+.itemBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* Không có `min-width: 0` thì dòng chữ dài đẩy phình cả popup thay vì bị cắt bằng "…". */
+  min-width: 0;
+  flex: 1;
+}
+
+.itemTop {
+  display: flex;
+  align-items: baseline;
+  gap: var(--xp-space-sm);
+}
+
+.itemName {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemNameUnread {
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.itemTime {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--xp-color-text-tertiary);
+  white-space: nowrap;
+}
+
+.itemBottom {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.itemPreview {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--xp-color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemPreviewUnread {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/* Lối ra khỏi popup — dính đáy để vẫn thấy được khi danh sách đã cuộn. */
+.viewAll {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  padding: 11px 12px;
+  border-top: 1px solid var(--xp-color-border);
+  font-size: 13px;
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-primary-active);
+  background: var(--xp-color-bg-container);
+  border-radius: 0 0 var(--xp-border-radius) var(--xp-border-radius);
+}
+
+.viewAll:hover {
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+}

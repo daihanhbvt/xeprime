@@ -24,6 +24,7 @@ import {
   WALLET_ENTRY_SOURCE,
   WALLET_OWNER_TYPE,
   ALLOCATION_TARGET,
+  allocationTotals,
   resolveHoldAllocation,
   type HoldSettlementKind,
 } from '@xeprime/types';
@@ -443,18 +444,20 @@ export class HoldSettlementService {
    *
    * Trả về id khoản hoàn nếu có, để audit ghi lại.
    */
-  private async allocateWithinTx(
+  /**
+   * Phân bổ của một hold — hàm ĐỌC, không ghi gì.
+   *
+   * Tách khỏi `allocateWithinTx` vì kết quả phải có TRƯỚC lúc chốt outcome: CHECK
+   * `booking_holds_settled_allocation_check` đòi outcome và năm cột phân bổ khớp nhau, và
+   * Postgres kiểm CHECK theo từng câu lệnh. Ghi outcome trước rồi ghi phân bổ sau nghĩa là có
+   * một câu lệnh ở giữa mà hàng đang vi phạm — constraint nổ đúng ở đó.
+   *
+   * `null` = không có gì để phân bổ (chưa có tiền, hoặc kết cục LEGACY không đi qua luật mới).
+   */
+  private async computeAllocationWithinTx(
     tx: Prisma.TransactionClient,
-    input: {
-      holdId: string;
-      tenantId: string;
-      paidAmount: Prisma.Decimal;
-      customerUserId: string | null;
-      outcome: BookingHoldOutcome;
-      refundReason: HoldRefundReason | null;
-      note: string | null;
-    },
-  ): Promise<string | null> {
+    input: { holdId: string; paidAmount: Prisma.Decimal; outcome: BookingHoldOutcome },
+  ): Promise<ReturnType<typeof resolveHoldAllocation> | null> {
     if (input.paidAmount.lte(0)) return null;
 
     const kind = settlementKindFor(input.outcome);
@@ -484,7 +487,7 @@ export class HoldSettlementService {
     const taxAmount =
       input.outcome === BOOKING_HOLD_OUTCOME.SETTLED ? taxFromSnapshot(hold.priceSnapshotJson) : '0';
 
-    const allocation = resolveHoldAllocation(
+    return resolveHoldAllocation(
       {
         deposit: hold.depositAmount.toFixed(0),
         serviceFee: hold.serviceFeeAmount.toFixed(0),
@@ -494,7 +497,22 @@ export class HoldSettlementService {
       kind,
       taxAmount,
     );
+  }
 
+  private async allocateWithinTx(
+    tx: Prisma.TransactionClient,
+    input: {
+      holdId: string;
+      tenantId: string;
+      paidAmount: Prisma.Decimal;
+      customerUserId: string | null;
+      outcome: BookingHoldOutcome;
+      refundReason: HoldRefundReason | null;
+      note: string | null;
+    },
+    /** Phân bổ đã tính ở `applyOutcomeWithinTx` — không tính lại để hai nơi không ra hai số. */
+    allocation: ReturnType<typeof resolveHoldAllocation>,
+  ): Promise<string | null> {
     let refundId: string | null = null;
 
     const toCustomer = sumFor(allocation, ALLOCATION_TARGET.CUSTOMER_BALANCE);
@@ -527,9 +545,10 @@ export class HoldSettlementService {
     }
 
     /*
-     * Phần của XePrime (`platform_revenue`) KHÔNG đi qua ví: nền tảng không có ví, và doanh thu
-     * được suy lúc đọc từ cột `service_fee_amount` của hold đã chốt (ADR 0033 điều 3). Phần trả
-     * hãng bảo hiểm cũng vậy — nó sống ở `booking_insurance_policies` (Phase 7).
+     * Phần của XePrime (`platform_revenue`) KHÔNG đi qua ví: nền tảng không có ví. Nó được đóng
+     * băng thành cột `settled_platform_amount` ở `applyOutcomeWithinTx` — cùng câu lệnh với
+     * việc chốt outcome — chứ không suy lúc đọc. Phần trả hãng bảo hiểm cũng vậy; nó còn có
+     * thêm một sổ riêng ở `booking_insurance_policies` (Phase 7).
      */
     return refundId;
   }
@@ -553,18 +572,43 @@ export class HoldSettlementService {
       // CHECK ở DB cũng chặn; nói rõ ở đây để lỗi không hiện ra thành một P2xxx khó đọc.
       throw new Error(`Kết cục ${input.outcome} không hợp mục đích ${input.purpose}`);
     }
+    /*
+     * Tính phân bổ TRƯỚC khi chốt, rồi ghi cả hai trong MỘT câu lệnh.
+     *
+     * CHECK `booking_holds_settled_allocation_check` đòi outcome và năm cột phân bổ khớp nhau,
+     * và Postgres kiểm CHECK theo từng câu lệnh chứ không hoãn tới cuối transaction. Ghi outcome
+     * trước rồi ghi phân bổ sau sẽ để lại một câu lệnh ở giữa mà hàng đang vi phạm — constraint
+     * nổ ngay ở đó. Gộp làm một cũng đúng hơn về bản chất: "chốt kết cục" và "tiền chia thế nào"
+     * là MỘT quyết định, không phải hai bước có thể đứt ở giữa.
+     */
+    const allocation = await this.computeAllocationWithinTx(tx, {
+      holdId: input.holdId,
+      paidAmount: input.paidAmount,
+      outcome: input.outcome,
+    });
+    const totals = allocation ? allocationTotals(allocation) : null;
+
     const claimed = await tx.bookingHold.updateMany({
       where: { id: input.holdId, status: BOOKING_HOLD_STATUS.PAID, outcome: null },
       data: {
         outcome: input.outcome,
         status: BOOKING_HOLD_STATUS.RELEASED,
         releasedAt: new Date(),
+        ...(totals
+          ? {
+              settledCustomerAmount: new Prisma.Decimal(totals[ALLOCATION_TARGET.CUSTOMER_BALANCE]),
+              settledOwnerAmount: new Prisma.Decimal(totals[ALLOCATION_TARGET.OWNER_BALANCE]),
+              settledPlatformAmount: new Prisma.Decimal(totals[ALLOCATION_TARGET.PLATFORM_REVENUE]),
+              settledInsurerAmount: new Prisma.Decimal(totals[ALLOCATION_TARGET.INSURER_PAYABLE]),
+              settledTaxAmount: new Prisma.Decimal(totals[ALLOCATION_TARGET.TAX_LEDGER]),
+            }
+          : {}),
       },
     });
     // Đã có ai chốt xen vào — idempotent, không ghi đè.
     if (claimed.count === 0) return;
 
-    const refundId = await this.allocateWithinTx(tx, input);
+    const refundId = allocation ? await this.allocateWithinTx(tx, input, allocation) : null;
 
     await this.audit.record(
       {

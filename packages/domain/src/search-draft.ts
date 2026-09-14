@@ -90,20 +90,59 @@ export function serviceUsesRentalRange(serviceType: ServiceType): boolean {
 }
 
 /**
- * Khoảng thuê mặc định khi chưa có lịch: mai 10:00 → 3 ngày sau, cùng giờ.
+ * Các mốc giờ nhận xe được GỢI Ý, theo giờ Việt Nam.
  *
- * "Mai 10:00" là 10:00 **giờ Việt Nam** — mốc mặc định phải giống nhau cho mọi khách, kể cả
- * khách đang ngồi ở múi giờ khác. Đó là lý do `now` mặc định là {@link nowInAppTz}, không phải
- * `dayjs()` (giờ máy).
+ * Bốn mốc chứ không phải "giờ tròn kế tiếp": một gợi ý rơi vào 11:00 hay 15:00 trông như một
+ * con số máy tính vừa tính ra, còn sáng/trưa/chiều/tối là cách người ta thật sự hẹn nhau đi
+ * nhận xe. Ít mốc cũng nghĩa là hai khách mở trang cách nhau mười phút thường thấy CÙNG một gợi
+ * ý, nên ảnh chụp màn hình và lời chỉ dẫn qua điện thoại không lệch nhau.
+ */
+export const DEFAULT_PICKUP_HOURS = [9, 13, 17, 21] as const;
+
+/**
+ * Khoảng đệm tối thiểu giữa "bây giờ" và giờ nhận được gợi ý.
+ *
+ * ⚠️ Đây là tham số SINH MẶC ĐỊNH, **không** phải luật nghiệp vụ: nó không thay validation của
+ * form đặt xe và cũng không phải chính sách giờ nhận của từng chủ xe (thứ sống ở `rental-policy`
+ * và ở lịch bận của chính chiếc xe). Ý nghĩa duy nhất của nó là: đừng gợi ý một giờ nhận mà
+ * chủ xe gần như chắc chắn không kịp chuẩn bị, để khách không phải sửa lại ngay ô vừa được điền.
+ */
+export const DEFAULT_PICKUP_LEAD_HOURS = 4;
+
+/** Thuê MỘT ngày = đúng 24 giờ, không phải "hôm nay tới mai". */
+export const DEFAULT_RENTAL_HOURS = 24;
+
+/**
+ * Khoảng thuê GỢI Ý khi chưa có lịch nào hợp lệ: một ngày tròn 24 giờ, bắt đầu ở mốc giờ đẹp
+ * gần nhất còn cách hiện tại ít nhất {@link DEFAULT_PICKUP_LEAD_HOURS} giờ.
+ *
+ * Ví dụ (giờ Việt Nam): 14/09 lúc 10:30 → nhận 14/09 17:00, trả 15/09 17:00. Lúc 18:00 → mốc
+ * 21:00 chỉ còn cách 3 giờ nên bị bỏ qua, rơi sang 15/09 09:00 → trả 16/09 09:00.
+ *
+ * Mọi phép tính đi qua `Dayjs` **đã gắn múi giờ Việt Nam** nên qua nửa đêm, sang tháng và sang
+ * năm đều là cộng ngày bình thường, không có nhánh riêng nào để quên. Đó cũng là lý do `now`
+ * mặc định là {@link nowInAppTz} chứ không phải `dayjs()` (giờ máy): mốc gợi ý phải giống nhau
+ * cho mọi khách, kể cả khách đang ngồi ở múi giờ khác.
+ *
+ * Trả về 24 giờ chứ không phải 3 ngày như bản trước: phần lớn chuyến trên sàn là thuê ngắn, và
+ * một gợi ý dài hơn nhu cầu thật khiến bảng giá hiện ra một con số lớn hơn cái khách sắp trả.
  */
 export function defaultRentalRange(now: Dayjs = nowInAppTz()): {
   pickupAt: Dayjs;
   returnAt: Dayjs;
 } {
-  return {
-    pickupAt: now.add(1, 'day').hour(10).startOf('hour'),
-    returnAt: now.add(4, 'day').hour(10).startOf('hour'),
-  };
+  const earliest = now.add(DEFAULT_PICKUP_LEAD_HOURS, 'hour');
+  const day = earliest.startOf('day');
+
+  // `!isBefore` chứ không phải `isAfter`: đúng 05:00 + 4 giờ = 09:00 thì mốc 09:00 vẫn dùng được
+  // — nó thoả "cách ít nhất 4 giờ", và loại nó ra sẽ đẩy gợi ý trôi thêm 4 tiếng không lý do.
+  const hour = DEFAULT_PICKUP_HOURS.find((value) => !day.hour(value).isBefore(earliest));
+
+  // Hết mốc trong ngày (đã quá 21:00 kể cả sau khi cộng đệm) → mốc đầu tiên của ngày kế tiếp.
+  const pickupAt =
+    hour === undefined ? day.add(1, 'day').hour(DEFAULT_PICKUP_HOURS[0]) : day.hour(hour);
+
+  return { pickupAt, returnAt: pickupAt.add(DEFAULT_RENTAL_HOURS, 'hour') };
 }
 
 function isVehicleType(value: unknown): value is VehicleType {

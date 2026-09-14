@@ -5,6 +5,7 @@ import {
   FEE_LINE,
   computeCustomerFees,
   feePolicyActivationBlockers,
+  allocationTotals,
   resolveHoldAllocation,
   type FeePolicySnapshot,
 } from './fee-policy';
@@ -304,6 +305,50 @@ describe('resolveHoldAllocation — ADR 0033 điều 3', () => {
     expect(Number(out.find((e) => e.target === ALLOCATION_TARGET.INSURER_PAYABLE)!.amount)).toBe(
       130000,
     );
+    // Thuế có ĐÍCH RIÊNG, không tan biến khỏi phân bổ (14/09/2026).
+    expect(Number(out.find((e) => e.target === ALLOCATION_TARGET.TAX_LEDGER)!.amount)).toBe(49000);
+  });
+
+  /**
+   * BẤT BIẾN NỀN của đối soát ba vế: **tổng phân bổ luôn bằng số tiền đã nhận**.
+   *
+   * Trước 14/09/2026 nhánh `settled` có thuế làm vỡ bất biến này — phần `T` bị trừ khỏi dòng về
+   * ví chủ xe rồi không được đẩy đi đâu, nên `Σ allocation = amount − T`. Với thuế đang tắt thì
+   * không ai thấy; ngày bật thuế thì đối soát hằng ngày sẽ báo một chênh lệch đúng bằng tổng
+   * tiền thuế và không ai truy được nguồn. Test này khoá cả bốn nhánh, gồm ca thuế bật.
+   */
+  it('BẤT BIẾN: tổng phân bổ = D + S + IV + IP ở MỌI nhánh, kể cả khi bật thuế', () => {
+    const cases: Array<[Parameters<typeof resolveHoldAllocation>[1], string]> = [
+      ['refund_all', '0'],
+      ['split_late_cancel', '0'],
+      ['settled', '0'],
+      ['settled', '49000'],
+    ];
+    const total =
+      Number(lines.deposit) +
+      Number(lines.serviceFee) +
+      Number(lines.vehicleInsurance) +
+      Number(lines.personalInsurance);
+
+    for (const [kind, tax] of cases) {
+      const out = resolveHoldAllocation(lines, kind, tax);
+      expect({ kind, tax, sum: sum(out) }).toEqual({ kind, tax, sum: total });
+
+      // `allocationTotals` là thứ được đóng băng lên cột — nó phải cộng ra đúng con số đó.
+      const totals = allocationTotals(out);
+      expect(Object.values(totals).reduce((t, v) => t + Number(v), 0)).toBe(total);
+    }
+  });
+
+  it('thuế lớn hơn cọc bị KẸP — bất biến không được phụ thuộc CHECK của bảng khác', () => {
+    const out = resolveHoldAllocation(
+      { deposit: '100000', serviceFee: '0', vehicleInsurance: '0', personalInsurance: '0' },
+      'settled',
+      '150000',
+    );
+    expect(Number(allocationTotals(out)[ALLOCATION_TARGET.TAX_LEDGER])).toBe(100000);
+    expect(Number(allocationTotals(out)[ALLOCATION_TARGET.OWNER_BALANCE])).toBe(0);
+    expect(sum(out)).toBe(100000);
   });
 
   it('không bao giờ sinh dòng 0đ — sổ cái không chứa bút toán rỗng', () => {

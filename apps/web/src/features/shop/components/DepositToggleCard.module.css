@@ -1,0 +1,60 @@
+.card {
+  max-width: 760px;
+}
+
+.cardTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.switchWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.lock {
+  margin-bottom: var(--xp-space-md);
+}
+
+/* Bỏ lề đáy mặc định của Paragraph để nút CTA dính vào đoạn giải thích của chính nó. */
+.lockBody {
+  margin-bottom: var(--xp-space-sm) !important;
+}
+
+.mode {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.modeTitle {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+.modeBody {
+  margin-bottom: 0 !important;
+  color: var(--xp-color-text-secondary);
+}
+
+.frozen {
+  display: block;
+  margin-top: var(--xp-space-md);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+@media (max-width: 480px) {
+  /* Nhãn dài + Tag + Switch không đủ chỗ trên một hàng ở máy hẹp — cho phần extra xuống hàng. */
+  .switchWrap {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}

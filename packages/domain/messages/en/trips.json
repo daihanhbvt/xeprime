@@ -77,7 +77,11 @@
     "reviewBlock": "Your review",
     "priceBlock": "Price details",
     "priceEmpty": "The final price appears as soon as the host accepts your request.",
-    "destination": "Destination"
+    "destination": "Destination",
+    "directDeposit": {
+      "title": "Deposit arranged directly with the shop",
+      "body": "The shop will contact you to arrange the deposit directly. XePrime neither collects nor reconciles it, so if a dispute over the deposit arises XePrime has no record to support you."
+    }
   },
   "evidence": {
     "title": "Handover records",

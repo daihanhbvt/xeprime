@@ -434,7 +434,13 @@ describe('Đăng ký gian hàng tạo chi nhánh mặc định', () => {
     const rows = await prisma.tenantBranch.findMany({ where: { tenantId: shop.id } });
     expect(rows).toHaveLength(1);
     expect(rows[0]?.isDefault).toBe(true);
-    expect(rows[0]?.address).toBe('12 Bạch Đằng');
+    /*
+     * `address` là chuỗi HIỂN THỊ do server ghép từ (số nhà, đường) + xã/phường + tỉnh — ADR 0035
+     * điều 3. Đăng ký này không khai xã/phường nên chuỗi chỉ có hai mảnh; phần người dùng gõ nằm
+     * nguyên ở `address_line`.
+     */
+    expect(rows[0]?.address).toBe('12 Bạch Đằng, Đà Nẵng');
+    expect(rows[0]?.addressLine).toBe('12 Bạch Đằng');
 
     await prisma.tenantSubscription.deleteMany({ where: { tenantId: shop.id } });
     await prisma.tenantBranch.deleteMany({ where: { tenantId: shop.id } });
@@ -546,10 +552,26 @@ describe('Chi nhánh phải có tỉnh mới lên chợ được', () => {
       response: { code: API_ERROR_CODE.BRANCH_LOCATION_REQUIRED },
     });
 
-    // Bổ sung tỉnh → cờ rà soát tắt và xe gửi duyệt được.
-    const fixed = await branches.update(tenantId, legacyId, ownerId, { provinceCode: HCM });
-    expect(fixed.needsLocationReview).toBe(false);
+    /*
+     * Bổ sung TỈNH là đủ để xe lên chợ — cổng đó chỉ hỏi "chi nhánh ở tỉnh nào".
+     *
+     * Nhưng cờ rà soát vẫn BẬT: từ ADR 0035 điều 7 nó có nghĩa rộng hơn — "địa chỉ chưa khớp
+     * danh mục hành chính hiện hành", mà mô hình hai cấp đòi cả xã/phường. Hai thứ khác nhau và
+     * test này khoá đúng sự khác nhau đó.
+     */
+    const withProvince = await branches.update(tenantId, legacyId, ownerId, { provinceCode: HCM });
+    expect(withProvince.needsLocationReview).toBe(true);
     await expect(vehicles.submitForPublicReview(tenantId, v.id, ownerId)).resolves.toBeTruthy();
+
+    // Khai nốt xã/phường → địa chỉ khớp danh mục hiện hành, cờ tắt.
+    const hcmWard = await prisma.ward.findFirst({
+      where: { provinceCode: HCM },
+      select: { code: true },
+    });
+    const fixed = await branches.update(tenantId, legacyId, ownerId, {
+      wardCode: hcmWard!.code,
+    });
+    expect(fixed.needsLocationReview).toBe(false);
 
     const tasks = await prisma.approvalTask.findMany({
       where: { targetId: v.id },

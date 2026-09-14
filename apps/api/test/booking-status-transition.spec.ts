@@ -15,10 +15,9 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { TransitionBookingDto } from '../src/modules/bookings/dto/booking.dto';
-import { CustomersService } from '../src/modules/customers/customers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeNotificationService, makeBookingsService } from './helpers/service-factory';
+import { makeBookingsService, makeCustomersService, makeNotificationService } from './helpers/service-factory';
 
 /**
  * Quyết định trạng thái của gian hàng trên một đơn: xác nhận · hủy · ghi nhận khách không đến.
@@ -41,7 +40,7 @@ const bookings = makeBookingsService(asService, {
   occupancy: occupancy,
   audit: audit,
   notifications: makeNotificationService(asService),
-  customers: new CustomersService(asService, audit),
+  customers: makeCustomersService(asService, audit),
 });
 
 let dbAvailable = false;

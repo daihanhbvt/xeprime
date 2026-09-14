@@ -18,6 +18,9 @@ export function SelectField<T extends FieldValues>({
   required = false,
   placeholder,
   disabled = false,
+  onSearch,
+  searchPlaceholder,
+  emptyText,
 }: {
   control: Control<T>;
   name: Path<T>;
@@ -27,6 +30,10 @@ export function SelectField<T extends FieldValues>({
   required?: boolean;
   placeholder?: string;
   disabled?: boolean;
+  /** Bật ô tìm trong tấm chọn — xem `SelectControl`. */
+  onSearch?: (value: string) => void;
+  searchPlaceholder?: string;
+  emptyText?: string;
 }) {
   const { field, fieldState } = useController({ control, name });
 
@@ -40,6 +47,9 @@ export function SelectField<T extends FieldValues>({
       disabled={disabled}
       {...(hint === undefined ? {} : { hint })}
       {...(placeholder === undefined ? {} : { placeholder })}
+      {...(onSearch === undefined ? {} : { onSearch })}
+      {...(searchPlaceholder === undefined ? {} : { searchPlaceholder })}
+      {...(emptyText === undefined ? {} : { emptyText })}
       {...(fieldState.error?.message === undefined ? {} : { error: fieldState.error.message })}
     />
   );

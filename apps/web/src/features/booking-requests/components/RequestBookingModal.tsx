@@ -17,6 +17,8 @@ interface RequestBookingModalProps {
   /** Ngữ cảnh dịch vụ/lộ trình từ tab tìm kiếm — prefill luồng đặt (17/08). */
   serviceType?: string | null;
   routeType?: string | null;
+  /** Tỉnh gợi ý cho ô địa chỉ giao xe — địa chỉ khách đã nhớ vẫn THẮNG nó (ADR 0035). */
+  deliveryProvinceCode?: string | null;
   open: boolean;
   onClose: () => void;
 }
@@ -43,6 +45,7 @@ export function RequestBookingModal({
   returnAt,
   serviceType,
   routeType,
+  deliveryProvinceCode,
   open,
   onClose,
 }: RequestBookingModalProps) {
@@ -84,6 +87,7 @@ export function RequestBookingModal({
           returnAt={returnAt}
           serviceType={serviceType}
           routeType={routeType}
+          deliveryProvinceCode={deliveryProvinceCode}
           onClose={onClose}
           onBusyChange={setBusy}
           onResultChange={setIsResult}

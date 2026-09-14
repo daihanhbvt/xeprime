@@ -5,6 +5,31 @@ import { API_ERROR_CODE } from '@xeprime/types';
 import { ApiClientError } from '@/services/api-client';
 import { CustomerFormModal } from './CustomerFormModal';
 
+/*
+ * Danh mục hành chính: stub RỖNG. Màn này kiểm luồng trùng SĐT, không kiểm ô địa chỉ — hành vi
+ * của ô đó nằm ở `components/form/AddressField.test.tsx`. Để nó gọi thật thì mỗi lần render sẽ
+ * đòi một QueryClientProvider, thứ không liên quan gì tới thứ đang test.
+ */
+vi.mock('@/features/locations/hooks/use-provinces', () => ({
+  useProvinceOptions: () => ({
+    options: [{ value: '79', label: 'Hồ Chí Minh' }],
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+}));
+vi.mock('@/features/locations/hooks/use-wards', () => ({
+  useWardOptions: () => ({
+    options: [],
+    items: [],
+    total: 0,
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+}));
+
 vi.mock('@/hooks/use-media-query', () => ({
   useIsMobile: () => false,
   useIsTablet: () => false,

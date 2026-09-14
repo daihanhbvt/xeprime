@@ -79,7 +79,9 @@
 
 .avatarButton {
   display: inline-flex;
-  padding: 0;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  padding: 2px;
   border: none;
   background: none;
   cursor: pointer;
@@ -89,6 +91,19 @@
 .avatarButton:focus-visible {
   outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
   outline-offset: 2px;
+}
+
+/*
+ * Mũi tên nhỏ cạnh avatar: menu tài khoản giờ chứa cả bộ đổi ngôn ngữ, nên nó phải nhìn ra
+ * được là một menu chứ không chỉ là ảnh đại diện.
+ */
+.avatarCaret {
+  font-size: 10px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.avatarButton:hover .avatarCaret {
+  color: var(--xp-color-primary);
 }
 
 /* `.header .avatar`: nền của `.ant-avatar` cũng là (0,1,0) — xem ghi chú ở `.hamburger`. */

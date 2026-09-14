@@ -8,3 +8,43 @@
   gap: var(--xp-space-md);
   max-width: 720px;
 }
+
+/*
+ * Ô nhập số dư ngân hàng cuối ngày — vế TRÁI của phép đối soát.
+ *
+ * Đứng thành một hàng riêng ngay dưới phần cảnh báo, không nằm trong bảng: nó là thứ DUY NHẤT
+ * trên màn này người dùng phải nhập, và chôn nó giữa hai chục con số chỉ-đọc là cách để nó
+ * không bao giờ được nhập.
+ */
+.balanceRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-sm);
+}
+
+.balanceLabel {
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.balanceValue {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--xp-color-text-secondary);
+}
+
+.balanceRow :global(.ant-input) {
+  flex: 0 1 180px;
+}
+
+@media (max-width: 640px) {
+  /* Nhãn + giá trị một hàng, ô nhập + nút một hàng — không bóp ô nhập còn vài ký tự. */
+  .balanceRow :global(.ant-input),
+  .balanceRow :global(.ant-btn) {
+    flex: 1 1 100%;
+  }
+}

@@ -44,6 +44,14 @@ const PER_ROUTE: Readonly<Record<string, Readonly<Record<string, PlanFeature>>>>
     byVehicle: PLAN_FEATURE.FINANCE,
     byCustomer: PLAN_FEATURE.FINANCE,
   },
+  /*
+   * Công tắc thu cọc (Phase 6): chỉ đường GHI đi qua cờ. `GET` cố ý KHÔNG gắn — mọi gian hàng
+   * phải đọc được trạng thái của mình, và đúng lúc gói THIẾU cờ mới là lúc màn hình cần nói
+   * "tính năng này thuộc gói nào".
+   */
+  ShopPaymentSettingsController: {
+    update: PLAN_FEATURE.ESCROW_HOLD,
+  },
   BranchesController: {
     create: PLAN_FEATURE.BRANCHES,
     setDefault: PLAN_FEATURE.BRANCHES,
@@ -178,8 +186,14 @@ describe('phủ cổng chặn năng lực — bất biến chung', () => {
     }
   });
 
-  it('escrow_hold CHƯA gác gì — ADR 0025 chưa thi công', () => {
-    const escrow = [...access.values()].filter((r) => r.feature === PLAN_FEATURE.ESCROW_HOLD);
-    expect(escrow).toEqual([]);
+  it('escrow_hold chỉ gác đường GHI công tắc thu cọc — đường ĐỌC luôn mở (Phase 6)', () => {
+    /*
+     * Gác cả `GET` sẽ làm gian hàng thiếu cờ không đọc nổi trạng thái của chính mình, và màn
+     * hình mất luôn chỗ để giải thích tính năng này thuộc gói nào (ADR 0027 điều 4).
+     */
+    const escrow = [...access.values()]
+      .filter((r) => r.feature === PLAN_FEATURE.ESCROW_HOLD)
+      .map((r) => `${r.controller}.${r.handler}`);
+    expect(escrow).toEqual(['ShopPaymentSettingsController.update']);
   });
 });

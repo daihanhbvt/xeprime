@@ -46,6 +46,7 @@ import {
   RentalDateTimeRangeField,
   type RentalMode,
 } from '@/components/form/RentalDateTimeRangeField';
+import { AddressField } from '@/components/form/AddressField';
 import { TextField } from '@/components/form/TextField';
 import { ROUTES } from '@/constants/routes';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
@@ -56,6 +57,7 @@ import { verifyOtp } from '@/features/phone-verification/api';
 import { OtpCodeInput } from '@/features/phone-verification/components/OtpCodeInput';
 import { usePhoneVerify } from '@/features/phone-verification/hooks/use-phone-verify';
 import { maskPhone } from '@/features/phone-verification/mask';
+import { useAddressPreview } from '@/features/locations/hooks/use-address-preview';
 import { fetchDeliveryDistance, fetchPublicQuote } from '@/features/rental-policies/api';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
@@ -74,6 +76,11 @@ import {
 import { isZeroMoney } from '@/lib/money';
 import { mapDirectionsUrl } from '@/lib/map-embed';
 import { buildBusyDayIndex } from '@/lib/rental-busy';
+import {
+  readDeliveryAddress,
+  rememberDeliveryAddress,
+} from '@/lib/delivery-address-memory';
+import { rememberedOrDefaultRentalRange } from '@/lib/rental-range-memory';
 import { getErrorCode } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
 import {
@@ -97,6 +104,30 @@ import styles from './RequestBookingFlow.module.css';
  */
 const MIN_DELIVERY_ADDRESS_LENGTH = 12;
 
+/** Tên trường của hai địa chỉ vật lý trong form — xem `AddressField`. */
+const PICKUP_ADDRESS_NAMES = {
+  provinceCode: 'pickupProvinceCode',
+  wardCode: 'pickupWardCode',
+  addressLine: 'pickupAddressLine',
+} as const;
+const PICKUP_PIN_NAMES = {
+  placeId: 'pickupPlaceId',
+  latitude: 'pickupLatitude',
+  longitude: 'pickupLongitude',
+  locationSource: 'pickupLocationSource',
+} as const;
+const DELIVERY_ADDRESS_NAMES = {
+  provinceCode: 'deliveryProvinceCode',
+  wardCode: 'deliveryWardCode',
+  addressLine: 'deliveryAddressLine',
+} as const;
+const DELIVERY_PIN_NAMES = {
+  placeId: 'deliveryPlaceId',
+  latitude: 'deliveryLatitude',
+  longitude: 'deliveryLongitude',
+  locationSource: 'deliveryLocationSource',
+} as const;
+
 interface RequestBookingFlowProps {
   vehicleId: string;
   vehicleName: string;
@@ -109,6 +140,13 @@ interface RequestBookingFlowProps {
   /** Ngữ cảnh dịch vụ/lộ trình từ tab tìm kiếm (URL) — prefill, khách vẫn đổi được. */
   serviceType?: string | null;
   routeType?: string | null;
+  /**
+   * Tỉnh GỢI Ý cho ô địa chỉ giao xe — tỉnh khách đang lọc, hoặc tỉnh của chính chiếc xe.
+   *
+   * Địa chỉ khách đã dùng lần trước THẮNG giá trị này: một địa chỉ đầy đủ do chính họ gõ đáng
+   * tin hơn một cái tỉnh suy từ bộ lọc.
+   */
+  deliveryProvinceCode?: string | null;
   onClose: () => void;
   /**
    * Báo cho vỏ biết đang có request "không được bỏ dở" (xác minh OTP / gửi yêu cầu) để nó
@@ -165,6 +203,7 @@ export function RequestBookingFlow({
   returnAt,
   serviceType: serviceTypeContext,
   routeType: routeTypeContext,
+  deliveryProvinceCode,
   onClose,
   onBusyChange,
   onResultChange,
@@ -226,7 +265,13 @@ export function RequestBookingFlow({
           ? (serviceTypeContext as ServiceType)
           : SERVICE_TYPE.SELF_DRIVE,
       routeType: isRouteType(routeTypeContext) ? routeTypeContext : ROUTE_TYPE.IN_CITY,
-      pickupAddress: '',
+      pickupProvinceCode: '',
+      pickupWardCode: '',
+      pickupAddressLine: '',
+      pickupPlaceId: null,
+      pickupLatitude: null,
+      pickupLongitude: null,
+      pickupLocationSource: null,
       destination: '',
       // Mốc từ URL là UTC; ô chọn phải hiện GIỜ VIỆT NAM (CLAUDE.md §9).
       pickupAt: pickupAt ? toAppTz(pickupAt) : null,
@@ -237,9 +282,42 @@ export function RequestBookingFlow({
       pickupPreference: PICKUP_PREFERENCE.WITHIN_7_DAYS,
       requestedPickupDate: null,
       pickupMethod: PICKUP_METHOD.SELF,
-      deliveryAddress: '',
+      deliveryProvinceCode: '',
+      deliveryWardCode: '',
+      deliveryAddressLine: '',
+      deliveryPlaceId: null,
+      deliveryLatitude: null,
+      deliveryLongitude: null,
+      deliveryLocationSource: null,
     },
   });
+
+  /*
+   * Mở THẲNG trang chi tiết (không qua `/search`, nên URL không mang ngày giờ) → điền khoảng
+   * khách đã tự chọn trước đó, hoặc gợi ý mặc định. Không có bước này thì ô thời gian trống
+   * trơn, và khách phải chọn lại đúng thứ họ vừa chọn ở trang trước.
+   *
+   * Chạy trong effect, KHÔNG ở `defaultValues`: nguồn là bộ nhớ trình duyệt, thứ không tồn tại
+   * lúc Next dựng HTML trên server — đọc nó lúc render là một lỗi hydration.
+   *
+   * Đây chỉ là ĐIỀN SẴN. Nó không nói gì về việc chiếc xe này có rảnh trong khoảng đó không:
+   * lịch bận (`busyDays`) và giờ giao nhận của chủ xe vẫn được kiểm trước khi cho gửi yêu cầu,
+   * và chốt cuối vẫn là constraint chống trùng ở DB (ADR 0006).
+   */
+  const prefilledRef = useRef(false);
+  useEffect(() => {
+    if (prefilledRef.current) return;
+    prefilledRef.current = true;
+    if (pickupAt && returnAt) return;
+    // Dài hạn KHÔNG có khoảng nhận–trả ở bước này (ADR 0011) — khách chọn GÓI, không chọn lịch.
+    if (getValues('serviceType') === SERVICE_TYPE.LONG_TERM) return;
+    if (getValues('pickupAt') && getValues('returnAt')) return;
+
+    const range = rememberedOrDefaultRentalRange();
+    setValue('pickupAt', range.pickupAt);
+    setValue('returnAt', range.returnAt);
+    setRentalMode(range.mode);
+  }, [pickupAt, returnAt, getValues, setValue]);
 
   const watchedPickup = useWatch({ control, name: 'pickupAt' });
   const watchedReturn = useWatch({ control, name: 'returnAt' });
@@ -358,15 +436,50 @@ export function RequestBookingFlow({
    * Query KHÔNG bao giờ ném: mọi ngả không tra được về dưới dạng `status`, nên không có nhánh
    * lỗi nào chặn khách bấm gửi yêu cầu.
    */
-  const watchedDeliveryAddress = useWatch({ control, name: 'deliveryAddress' });
-  const debouncedDeliveryAddress = useDebouncedValue(watchedDeliveryAddress?.trim() ?? '', 900);
+  const watchedDeliveryLine = useWatch({ control, name: 'deliveryAddressLine' });
+  const watchedDeliveryLat = useWatch({ control, name: 'deliveryLatitude' });
+  const watchedDeliveryLng = useWatch({ control, name: 'deliveryLongitude' });
+  const debouncedDeliveryAddress = useDebouncedValue(watchedDeliveryLine?.trim() ?? '', 900);
+  /*
+   * Ghim khách ĐÃ XÁC NHẬN thắng chuỗi chữ: gửi toạ độ lên thì server dùng thẳng và bỏ qua bước
+   * tra địa chỉ — vừa rẻ hơn một request có tính tiền, vừa cho con số khớp với đúng cái điểm
+   * khách đang nhìn thấy trên bản đồ ngay bên cạnh.
+   */
+  const deliveryPin =
+    watchedDeliveryLat != null && watchedDeliveryLng != null
+      ? { lat: watchedDeliveryLat, lng: watchedDeliveryLng }
+      : null;
+  const watchedPickupProvince = useWatch({ control, name: 'pickupProvinceCode' });
+  const watchedPickupWard = useWatch({ control, name: 'pickupWardCode' });
+  const watchedPickupLine = useWatch({ control, name: 'pickupAddressLine' });
+  const watchedDeliveryProvince = useWatch({ control, name: 'deliveryProvinceCode' });
+  const watchedDeliveryWard = useWatch({ control, name: 'deliveryWardCode' });
+  /*
+   * Chuỗi địa chỉ để XEM TRƯỚC ở bước Xác nhận. Server mới là nơi ghép chuỗi lưu xuống DB, nhưng
+   * hook này gọi đúng `formatAddress` của `@xeprime/domain` — cùng một hàm — nên thứ khách đọc
+   * lúc soát lại là đúng thứ sẽ được lưu.
+   */
+  const pickupAddressPreview = useAddressPreview(
+    watchedPickupProvince,
+    watchedPickupWard,
+    watchedPickupLine,
+  );
+  const deliveryAddressPreview = useAddressPreview(
+    watchedDeliveryProvince,
+    watchedDeliveryWard,
+    watchedDeliveryLine,
+  );
+
   const deliveryQ = useQuery({
-    queryKey: queryKeys.marketplace.deliveryDistance(vehicleId, debouncedDeliveryAddress),
-    queryFn: () => fetchDeliveryDistance(vehicleId, debouncedDeliveryAddress),
+    queryKey: queryKeys.marketplace.deliveryDistance(
+      vehicleId,
+      deliveryPin ? `${deliveryPin.lat},${deliveryPin.lng}` : debouncedDeliveryAddress,
+    ),
+    queryFn: () => fetchDeliveryDistance(vehicleId, debouncedDeliveryAddress, deliveryPin),
     enabled:
       isDelivery &&
       deliveryAvailable &&
-      debouncedDeliveryAddress.length >= MIN_DELIVERY_ADDRESS_LENGTH,
+      (deliveryPin != null || debouncedDeliveryAddress.length >= MIN_DELIVERY_ADDRESS_LENGTH),
     // Vị trí một địa chỉ không đổi trong một phiên đặt xe — không có lý do gì hỏi lại.
     staleTime: 10 * 60_000,
     retry: false,
@@ -438,6 +551,44 @@ export function RequestBookingFlow({
     onError: (e) => setStepError(errorMessage(e)),
   });
 
+  /**
+   * Điền sẵn ĐỊA CHỈ GIAO XE — chạy MỘT LẦN sau khi mount.
+   *
+   * Thứ tự ưu tiên, và mỗi bậc là một loại bằng chứng khác nhau về ý định của khách:
+   *   1. **Địa chỉ lần trước** (`localStorage`) — chính họ đã gõ và xác nhận ghim. Điền cả cụm,
+   *      kể cả toạ độ, để họ không phải ghim lại chỗ cũ.
+   *   2. **Tỉnh đang lọc / tỉnh của xe** (`deliveryProvinceCode`) — chỉ điền được mã tỉnh.
+   *
+   * Trong effect chứ không trong `defaultValues`: `localStorage` không tồn tại trên server, nên
+   * đọc nó lúc render sẽ cho hai kết quả khác nhau giữa HTML server dựng và lần render đầu ở
+   * client (cùng bẫy mà `rental-range-memory` đã ghi).
+   *
+   * `shouldDirty: false`: đây là GỢI Ý, không phải thao tác của người dùng. Đánh dấu form bẩn ở
+   * đây sẽ làm mọi cảnh báo "còn thay đổi chưa lưu" bật lên khi khách mới chỉ mở hộp thoại.
+   */
+  const deliveryPrefilled = useRef(false);
+  useEffect(() => {
+    if (deliveryPrefilled.current) return;
+    deliveryPrefilled.current = true;
+
+    const remembered = readDeliveryAddress();
+    if (remembered) {
+      setValue('deliveryProvinceCode', remembered.provinceCode, { shouldDirty: false });
+      setValue('deliveryWardCode', remembered.wardCode, { shouldDirty: false });
+      setValue('deliveryAddressLine', remembered.addressLine, { shouldDirty: false });
+      setValue('deliveryPlaceId', remembered.placeId, { shouldDirty: false });
+      setValue('deliveryLatitude', remembered.latitude, { shouldDirty: false });
+      setValue('deliveryLongitude', remembered.longitude, { shouldDirty: false });
+      setValue('deliveryLocationSource', remembered.locationSource, { shouldDirty: false });
+      return;
+    }
+    if (deliveryProvinceCode) {
+      setValue('deliveryProvinceCode', deliveryProvinceCode, { shouldDirty: false });
+    }
+    // Chạy một lần cho vòng đời của flow; `setValue` ổn định theo RHF.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const submitM = useMutation({
     mutationFn: (phone: string) => {
       const v = getValues();
@@ -467,14 +618,33 @@ export function RequestBookingFlow({
         ...(withDriver
           ? {
               routeType: v.routeType,
-              pickupAddress: v.pickupAddress.trim(),
+              // Chuỗi hiển thị do SERVER ghép từ ba mảnh dưới — client không gửi lên.
+              pickupProvinceCode: v.pickupProvinceCode,
+              pickupWardCode: v.pickupWardCode,
+              pickupAddressLine: v.pickupAddressLine.trim(),
+              ...(v.pickupPlaceId ? { pickupPlaceId: v.pickupPlaceId } : {}),
+              ...(v.pickupLatitude != null && v.pickupLongitude != null
+                ? { pickupLatitude: v.pickupLatitude, pickupLongitude: v.pickupLongitude }
+                : {}),
               ...(v.routeType !== ROUTE_TYPE.IN_CITY && v.destination.trim()
                 ? { destination: v.destination.trim() }
                 : {}),
             }
           : {}),
         ...(!withDriver && v.pickupMethod === PICKUP_METHOD.DELIVERY
-          ? { deliveryRequested: true, deliveryAddress: v.deliveryAddress.trim() }
+          ? {
+              deliveryRequested: true,
+              deliveryProvinceCode: v.deliveryProvinceCode,
+              deliveryWardCode: v.deliveryWardCode,
+              deliveryAddressLine: v.deliveryAddressLine.trim(),
+              ...(v.deliveryPlaceId ? { deliveryPlaceId: v.deliveryPlaceId } : {}),
+              ...(v.deliveryLatitude != null && v.deliveryLongitude != null
+                ? {
+                    deliveryLatitude: v.deliveryLatitude,
+                    deliveryLongitude: v.deliveryLongitude,
+                  }
+                : {}),
+            }
           : {}),
         ...(v.acceptedTerms ? { acceptedTerms: true } : {}),
       });
@@ -482,6 +652,24 @@ export function RequestBookingFlow({
     onSuccess: async (receipt) => {
       setRequestCode(receipt.id ?? null);
       setReceipt(receipt);
+      /*
+       * Nhớ địa chỉ giao xe CHỈ khi đã gửi thành công.
+       *
+       * Ghi lúc đang gõ dở sẽ đóng dấu một địa chỉ chưa hoàn chỉnh lên mọi lần đặt sau; ghi khi
+       * gửi hỏng thì nhớ đúng cái địa chỉ vừa bị từ chối.
+       */
+      const v = getValues();
+      if (v.pickupMethod === PICKUP_METHOD.DELIVERY && v.deliveryProvinceCode) {
+        rememberDeliveryAddress({
+          provinceCode: v.deliveryProvinceCode,
+          wardCode: v.deliveryWardCode,
+          addressLine: v.deliveryAddressLine,
+          latitude: v.deliveryLatitude,
+          longitude: v.deliveryLongitude,
+          placeId: v.deliveryPlaceId,
+          locationSource: v.deliveryLocationSource,
+        });
+      }
       // Có thể vừa được cấp phiên mới (passwordless) → làm mới toàn bộ cache để cả app biết.
       await queryClient.invalidateQueries();
       goToStep('done');
@@ -569,7 +757,15 @@ export function RequestBookingFlow({
       ? ['longTermPackageMonths', 'pickupPreference', 'requestedPickupDate']
       : ['pickupAt', 'returnAt'];
     // Địa chỉ giao/đón và liên hệ nằm CÙNG bước này — schema tự bỏ qua trường không liên quan.
-    fields.push('deliveryAddress', 'pickupAddress', 'destination');
+    fields.push(
+      'deliveryProvinceCode',
+      'deliveryWardCode',
+      'deliveryAddressLine',
+      'pickupProvinceCode',
+      'pickupWardCode',
+      'pickupAddressLine',
+      'destination',
+    );
     if (!contactKnown) fields.push('customerName', 'customerPhone');
 
     if (!(await trigger(fields))) return;
@@ -791,7 +987,7 @@ export function RequestBookingFlow({
               <dt>{t('done.pickupMethod')}</dt>
               <dd>
                 {v.serviceType === SERVICE_TYPE.WITH_DRIVER
-                  ? t('done.driverPickup', { address: v.pickupAddress || '—' })
+                  ? t('done.driverPickup', { address: pickupAddressPreview ?? '—' })
                   : isDelivery
                     ? t('pickup.delivery')
                     : t('pickup.self')}
@@ -1011,12 +1207,12 @@ export function RequestBookingFlow({
                    không có khái niệm "giao xe tận nơi". ─────────────────────── */}
             {isWithDriver ? (
               <div className={styles.deliveryBlock}>
-                <TextField
+                <AddressField
                   control={control}
-                  name="pickupAddress"
-                  label={t('driver.pickupAddressLabel')}
-                  placeholder={t('driver.pickupAddressPlaceholder')}
-                  autoComplete="street-address"
+                  names={PICKUP_ADDRESS_NAMES}
+                  pin={PICKUP_PIN_NAMES}
+                  title={t('driver.pickupAddressLabel')}
+                  required
                 />
                 {watchedRoute !== ROUTE_TYPE.IN_CITY ? (
                   <TextField
@@ -1107,12 +1303,12 @@ export function RequestBookingFlow({
 
             {isDelivery ? (
               <div className={styles.deliveryBlock}>
-                <TextField
+                <AddressField
                   control={control}
-                  name="deliveryAddress"
-                  label={t('pickup.addressLabel')}
-                  placeholder={t('pickup.addressPlaceholder')}
-                  autoComplete="street-address"
+                  names={DELIVERY_ADDRESS_NAMES}
+                  pin={DELIVERY_PIN_NAMES}
+                  title={t('pickup.addressLabel')}
+                  required
                 />
                 {/*
                   Quãng đường + phí DỰ KIẾN. Chủ xe vẫn là người chốt (ADR 0014), nên mọi nhãn ở
@@ -1379,7 +1575,7 @@ export function RequestBookingFlow({
                 <>
                   <div className={styles.reviewRow}>
                     <dt>{t('review.driverPickupAddress')}</dt>
-                    <dd>{getValues('pickupAddress') || '—'}</dd>
+                    <dd>{pickupAddressPreview ?? '—'}</dd>
                   </div>
                   {watchedRoute !== ROUTE_TYPE.IN_CITY ? (
                     <div className={styles.reviewRow}>
@@ -1392,7 +1588,7 @@ export function RequestBookingFlow({
               {isDelivery ? (
                 <div className={styles.reviewRow}>
                   <dt>{t('review.deliveryAddress')}</dt>
-                  <dd>{getValues('deliveryAddress') || '—'}</dd>
+                  <dd>{deliveryAddressPreview ?? '—'}</dd>
                 </div>
               ) : null}
             </dl>

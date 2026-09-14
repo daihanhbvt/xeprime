@@ -86,6 +86,7 @@ function shop(overrides: Partial<MyShop> = {}, profile: Partial<MyShop['profile'
       name: 'Chi nhánh chính',
       provinceCode: '48',
       provinceName: 'Đà Nẵng',
+    needsLocationReview: false,
     },
     ...overrides,
   };
@@ -295,6 +296,7 @@ describe('ShopProfileScreen — tỉnh của gian hàng', () => {
             name: 'Chi nhánh chính',
             provinceCode: '48',
             provinceName: 'Đà Nẵng',
+    needsLocationReview: false,
           },
         },
         // Bản sao CŨ trên hồ sơ trỏ tỉnh khác — nó KHÔNG được thắng.

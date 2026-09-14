@@ -22,6 +22,7 @@ const PROFILE: UserProfile = {
   phone: '0901234567',
   avatarUrl: null,
   phoneVerified: true,
+  emailVerified: false,
 };
 
 const SESSION: authApi.CurrentUser = {

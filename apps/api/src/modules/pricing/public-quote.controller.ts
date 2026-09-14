@@ -76,6 +76,10 @@ export class PublicQuoteController {
     @Param('id') id: string,
     @Query() query: DeliveryDistanceQueryDto,
   ): Promise<DeliveryDistanceDto> {
-    return this.distance.forListing(id, query.address);
+    return this.distance.forListing(
+      id,
+      query.address,
+      query.lat != null && query.lng != null ? { lat: query.lat, lng: query.lng } : null,
+    );
   }
 }

@@ -47,6 +47,29 @@ export class ProvincesService {
   }
 
   /**
+   * Xác nhận một mã tỉnh CÓ THẬT — không hỏi nó có đang mở đăng ký hay không.
+   *
+   * Khác {@link assertSelectable} ở đúng chỗ quan trọng: `isEnabled` nghĩa là "được phép mở gian
+   * hàng/chi nhánh mới ở đây", KHÔNG phải "được phép tồn tại ở đây". Một địa chỉ giao xe, một
+   * điểm đón khách hay một dòng địa chỉ trong sổ khách nằm ở tỉnh đang tạm đóng đăng ký vẫn là
+   * một địa chỉ hợp lệ — chặn nó là từ chối một chuyến đi có thật vì một cái công tắc vận hành.
+   */
+  async assertExists(code: string): Promise<ProvinceDto> {
+    const province = await this.prisma.province.findUnique({
+      where: { code },
+      select: PROVINCE_SELECT,
+    });
+    if (!province) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Tỉnh/thành không hợp lệ',
+        details: { field: 'provinceCode' },
+      });
+    }
+    return province;
+  }
+
+  /**
    * Xác nhận một mã tỉnh dùng được để GẮN VÀO dữ liệu mới.
    *
    * Trả về bản ghi (để caller lấy tên chuẩn) thay vì boolean: gần như mọi caller cần tên ngay

@@ -89,7 +89,13 @@ export const PLAN_FEATURE = {
   DRIVERS: 'drivers',
   /** Sinh và quản lý hợp đồng thuê. */
   CONTRACTS: 'contracts',
-  /** Thu khoản giữ chỗ của khách qua sàn — ADR 0025 điều 2. */
+  /**
+   * Được phép BẬT công tắc thu cọc của khách qua sàn — ADR 0025 điều 2, ADR 0032 điều 2.
+   *
+   * Chỉ có nghĩa với tuyến GÓI: tuyến hoa hồng luôn thu cọc theo quy tắc nền tảng và không đi
+   * qua cờ này. Cờ mở QUYỀN bật, không tự bật — công tắc thật nằm ở `tenant_payment_settings`
+   * và mặc định tắt.
+   */
   ESCROW_HOLD: 'escrow_hold',
 } as const;
 
@@ -113,8 +119,13 @@ export const PLAN_FEATURE_VALUES = Object.values(PLAN_FEATURE) as PlanFeature[];
 /**
  * Gian hàng thuê bao — mở toàn bộ bộ quản lý (cột phải của bảng ở ADR 0027 điều 1).
  *
- * KHÔNG gồm `escrow_hold`: ADR 0025 chưa thi công, chưa endpoint nào ghi dữ liệu escrow. Cấp một
- * cờ cho tính năng chưa tồn tại là hứa một thứ không bấm được.
+ * `escrow_hold` nằm ở đây từ 14/09/2026: công tắc thu cọc của gian hàng
+ * (`PATCH /shop/payment-settings`) và `DepositPolicyService` đã thi công, nên cờ này không còn
+ * là lời hứa suông. Nó là **năng lực**, không phải quyết định — bật cờ mới chỉ cho gian hàng
+ * QUYỀN bật công tắc; công tắc mặc định vẫn TẮT (`tenant_payment_settings`).
+ *
+ * Tuyến hoa hồng KHÔNG cần cờ này: ở đó cọc là bắt buộc theo ADR 0032 điều 2, không đi qua trục
+ * năng lực gói. Hai trục độc lập, kiểm nối tiếp (ADR 0027 điều 2).
  */
 export const FULL_MANAGE_FEATURES: readonly PlanFeature[] = [
   PLAN_FEATURE.FINANCE,
@@ -124,6 +135,7 @@ export const FULL_MANAGE_FEATURES: readonly PlanFeature[] = [
   PLAN_FEATURE.BRANCHES,
   PLAN_FEATURE.DRIVERS,
   PLAN_FEATURE.CONTRACTS,
+  PLAN_FEATURE.ESCROW_HOLD,
 ];
 
 /**
@@ -269,10 +281,18 @@ export const BANK_MATCH_STATUS_META: Readonly<Record<BankMatchStatus, StatusMeta
   [BANK_MATCH_STATUS.IGNORED]: { label: 'Bỏ qua', color: STATUS_COLOR.NEUTRAL },
 };
 
-/** Một giao dịch tiền vào khớp vào loại đối tượng nào. */
+/**
+ * Một giao dịch ngân hàng khớp vào loại đối tượng nào.
+ *
+ * Hai đích đầu là chiều VÀO (tiền khách chuyển tới XePrime); `withdrawal_request` là chiều RA
+ * (XePrime chuyển đi). Cùng một bảng `bank_transactions` và cùng một không gian tên mã
+ * (`REFERENCE_CODE_PREFIX`) cho cả hai chiều — tách sổ theo chiều là mời hai bản đối soát trôi
+ * khỏi nhau đúng ở chỗ chúng phải khớp nhau.
+ */
 export const BANK_MATCH_TARGET_TYPE = {
   SUBSCRIPTION_INVOICE: 'subscription_invoice',
   BOOKING_HOLD: 'booking_hold',
+  WITHDRAWAL_REQUEST: 'withdrawal_request',
 } as const;
 
 export type BankMatchTargetType =
@@ -294,7 +314,35 @@ export const BANK_MATCH_TARGET_TYPE_VALUES = Object.values(
 export const REFERENCE_CODE_PREFIX = {
   [BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE]: 'XPG',
   [BANK_MATCH_TARGET_TYPE.BOOKING_HOLD]: 'XPH',
+  /**
+   * Lệnh RÚT TIỀN — chiều ra. `WithdrawalService` đã sinh mã `XPW…` từ Phase 5 nhưng bằng một
+   * hằng cục bộ và một bảng chữ cái chép lại; đưa về đây để mã chiều ra nằm CÙNG không gian tên
+   * với chiều vào (ADR 0022 điều 3) và `referenceCodeTarget` nhận ra nó khi SePay mở webhook
+   * chiều ra.
+   */
+  [BANK_MATCH_TARGET_TYPE.WITHDRAWAL_REQUEST]: 'XPW',
 } as const;
+
+/**
+ * CHIỀU của một giao dịch ngân hàng.
+ *
+ * Tồn tại vì `bank_transactions` chỉ có `amount_in`: ở chiều ra (chuyển trả người rút, hoàn cho
+ * khách vãng lai) một cột duy nhất buộc phải mang số âm, và một cột tiền có thể âm là thứ mọi
+ * phép `SUM()` sau này phải nhớ xử lý. Hai cột + một CHECK thì không ai phải nhớ gì.
+ */
+export const BANK_DIRECTION = {
+  /** Tiền VÀO tài khoản XePrime — `amount_in > 0`, `amount_out = 0`. */
+  IN: 'in',
+  /** Tiền RA khỏi tài khoản XePrime — `amount_out > 0`, `amount_in = 0`. */
+  OUT: 'out',
+} as const;
+
+export type BankDirection = (typeof BANK_DIRECTION)[keyof typeof BANK_DIRECTION];
+export const BANK_DIRECTION_VALUES = Object.values(BANK_DIRECTION) as BankDirection[];
+
+export function isBankDirection(value: unknown): value is BankDirection {
+  return typeof value === 'string' && (BANK_DIRECTION_VALUES as string[]).includes(value);
+}
 
 /**
  * Bảng chữ cái sinh mã — ADR 0016 điều 5: không dấu, **bỏ `0`/`O` và `1`/`I`** vì người đọc lại

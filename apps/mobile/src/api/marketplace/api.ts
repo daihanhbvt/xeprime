@@ -189,9 +189,18 @@ export type DeliveryDistance = components['schemas']['DeliveryDistanceDto'];
  * Con số trả về là ƯỚC LƯỢNG, một chiều theo đường bộ; chủ xe vẫn chốt phí trên đơn (ADR 0014).
  * Đừng cộng nó vào tổng tiền hiển thị như một khoản đã chốt.
  */
-export function deliveryDistance(vehicleId: string, address: string): Promise<DeliveryDistance> {
+export function deliveryDistance(
+  vehicleId: string,
+  address: string,
+  /**
+   * Ghim khách ĐÃ XÁC NHẬN trên bản đồ. Có nó thì server dùng thẳng và bỏ qua bước tra địa chỉ —
+   * vừa rẻ hơn một request có tính tiền, vừa cho con số khớp đúng điểm khách đang nhìn thấy
+   * (ADR 0035).
+   */
+  pin?: { lat: number; lng: number } | null,
+): Promise<DeliveryDistance> {
   return getApiClient().get<DeliveryDistance>(
     `/public/listings/${encodeURIComponent(vehicleId)}/delivery-distance`,
-    { address },
+    { address, ...(pin ? { lat: pin.lat, lng: pin.lng } : {}) },
   );
 }

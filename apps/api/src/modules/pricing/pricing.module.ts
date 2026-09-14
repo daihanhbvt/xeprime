@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { BillingModule } from '../billing/billing.module';
+import { DepositPolicyModule } from '../deposit-policy/deposit-policy.module';
 import { FeePoliciesModule } from '../fee-policies/fee-policies.module';
 import { GeoModule } from '../geo/geo.module';
 import { ListingsSyncModule } from '../public-listings/listings-sync.module';
@@ -22,10 +22,18 @@ import { VehicleDailyPricesController } from './vehicle-daily-prices.controller'
   // cho các xe đang kế thừa — ghi qua writer duy nhất của public_listings (ADR 0008).
   // GeoModule: khoảng cách giao xe hỏi bản đồ ở `DeliveryDistanceService` — PricingService
   // vẫn không biết Internet tồn tại.
-  // BillingModule + FeePoliciesModule (R3): báo giá công khai gắn phụ phí phía khách theo chế độ
-  // thu phí của tenant và chính sách phí hiện hành (ADR 0029) — đọc, không ghi.
+  // DepositPolicyModule + FeePoliciesModule (R3): báo giá công khai gắn phụ phí phía khách theo
+  // chế độ thu phí của tenant, chính sách phí hiện hành (ADR 0029) và công tắc thu cọc của gian
+  // hàng (Phase 6) — đọc, không ghi. Thay cho BillingModule: `DepositPolicyService` trả cả
+  // `billingMode` lẫn "có thu cọc không" trong một lượt, nên hỏi hai nơi là mời hai câu trả lời.
   // VehicleSettingsModule: báo giá công khai nói luôn "có tự nhận được không" (08/09/2026).
-  imports: [ListingsSyncModule, GeoModule, BillingModule, FeePoliciesModule, VehicleSettingsModule],
+  imports: [
+    ListingsSyncModule,
+    GeoModule,
+    DepositPolicyModule,
+    FeePoliciesModule,
+    VehicleSettingsModule,
+  ],
   // `VehicleDailyPricesController`: giá riêng theo ngày — writer là chính PricingService,
   // để mọi báo giá và bản ghi đè cùng một chủ (không lặp lại writer thứ hai ở VehiclesService).
   controllers: [ShopPoliciesController, PublicQuoteController, VehicleDailyPricesController],
