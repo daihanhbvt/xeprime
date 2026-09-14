@@ -24,6 +24,7 @@ import type {
   ReverseWithdrawalDto,
 } from './dto/platform-withdrawal.dto';
 import { WalletService } from './wallet.service';
+import { formatMoneyVndVi } from '@xeprime/domain';
 
 const SELECT = {
   id: true,
@@ -193,7 +194,7 @@ export class PlatformWithdrawalService {
           {
             type: NOTIFICATION_TYPE.HOLD_REFUND_PAID,
             title: 'Đã chuyển tiền rút',
-            body: `${Number(row.amount).toLocaleString('vi-VN')}đ · mã ${row.code}`,
+            body: `${formatMoneyVndVi(row.amount.toString())} · mã ${row.code}`,
             /*
              * Không có đích "ví" trong `NOTIFICATION_TARGET_TYPE`, và không nên thêm chỉ để
              * thông báo này có chỗ trỏ: nó là tin BÁO, người dùng mở chuông rồi vào màn số dư.

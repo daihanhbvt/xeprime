@@ -185,8 +185,16 @@ Chat có ba luật riêng vì nội dung là riêng tư:
 - không bao giờ báo cho người gửi;
 - không báo cho thành viên gian hàng đang là KHÁCH của chính thread đó (hộp thư gian hàng không
   liệt kê thread ấy, nên thông báo dẫn tới nó là một ngõ cụt);
-- tiêu đề/nội dung dừng ở "Bạn có tin nhắn mới" / "Mở XePrime để xem tin nhắn" — thông báo hiện ở
-  màn khoá và đi qua log của hệ điều hành.
+- tiêu đề là **tên phía gửi** (tên gian hàng với khách, tên khách với gian hàng — không phải tên
+  nhân viên trực chat), nội dung là **chính câu tin**, cắt ở 140 ký tự; tin chỉ có đính kèm hiện
+  "Đã gửi một ảnh"/"Đã gửi N ảnh". Một bản dựng duy nhất: `chatNotificationCopy` ở `@xeprime/domain`.
+
+> **Đổi ngày 14/09/2026.** Trước đó câu chữ dừng ở "Bạn có tin nhắn mới" / "Mở XePrime để xem tin
+> nhắn" để nội dung chat không hiện ở màn khoá. Quyết định sản phẩm đã đổi: thông báo phải đọc
+> được như Messenger/Zalo, và **đánh đổi được chấp nhận có chủ đích** — nội dung tin hiện trên màn
+> khoá và đi qua log của hệ điều hành. Hai giới hạn cũ vẫn giữ nguyên: không bao giờ báo cho người
+> gửi, và khối `data` của FCM tuyệt đối không mang nội dung (chỉ `notificationId`/`type`/`url`),
+> vì `data` là thứ Ở LẠI trên máy và trong bản sao lưu.
 
 ---
 

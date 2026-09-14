@@ -1,5 +1,7 @@
 import {
   ANDROID_NOTIFICATION_CHANNEL,
+  CHAT_NOTIFICATION_COPY,
+  MESSAGE_TYPE,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   PUSH_DATA_KEY,
@@ -69,10 +71,21 @@ export function notificationDeepLink(
 ): string | null {
   const id = idOrNull(target.targetId);
 
-  // Chat KHÔNG phụ thuộc bề mặt: một hội thoại có đúng một địa chỉ, và app mở nó ở đúng vai của
-  // người đang đăng nhập (`side` giải ở server, xem ChatService.resolveAccess).
+  /*
+   * Chat CÓ hai địa chỉ, một cho mỗi bề mặt — `/chat` là hộp thư KHÁCH, `/manage/chat` là inbox
+   * GIAN HÀNG.
+   *
+   * Trước đây ở đây trả một địa chỉ duy nhất, với lý do "server tự giải `side`". Điều đó KHÔNG
+   * đúng: `ChatService.resolveAccess(userId, id, 'customer')` từ chối thẳng một nhân viên gian
+   * hàng — `expected === CUSTOMER` nên nhánh membership bị bỏ qua — nên nhân viên bấm thông báo
+   * tin nhắn sẽ mở ra "Bạn không có quyền truy cập hội thoại này".
+   *
+   * `audience` đã đúng theo từng người nhận (`emitToTenantMembers` → MANAGE, `emitToUser` →
+   * CUSTOMER), nên nó là thứ duy nhất cần dùng ở đây.
+   */
   if (target.targetType === NOTIFICATION_TARGET_TYPE.CONVERSATION) {
-    return id ? `/chat/${id}` : '/chat';
+    const inbox = audience === NOTIFICATION_AUDIENCE.MANAGE ? '/manage/chat' : '/chat';
+    return id ? `${inbox}/${id}` : inbox;
   }
 
   if (audience === NOTIFICATION_AUDIENCE.CUSTOMER) {
@@ -191,4 +204,70 @@ export function pushDataPayload(input: PushDataInput): Record<string, string> {
     [PUSH_DATA_KEY.TYPE]: input.type,
     ...(input.url ? { [PUSH_DATA_KEY.URL]: input.url } : {}),
   };
+}
+
+/* --- Câu chữ thông báo tin nhắn ------------------------------------------------------------ */
+
+/**
+ * Độ dài tối đa của phần nội dung tin trong thông báo.
+ *
+ * Android cắt body ở khoảng 40–50 ký tự khi thu gọn và ~240 khi mở rộng; iOS tương tự. Cắt ở
+ * server thay vì để OS cắt là để KIỂM SOÁT được lượng nội dung rời khỏi hệ thống: một tin dài
+ * 2000 ký tự không có lý do gì đi hết qua hạ tầng của Google rồi nằm lại trong log của máy.
+ */
+const CHAT_BODY_MAX = 140;
+
+export interface ChatNotificationCopyInput {
+  /** Tên hiển thị của phía GỬI — tên gian hàng, hoặc tên khách. `null` ⇒ lùi về câu chung. */
+  senderName: string | null;
+  /** Nội dung tin, `null` khi tin chỉ có đính kèm. */
+  text: string | null;
+  attachmentCount: number;
+  /** `image` ⇒ "đã gửi ảnh"; còn lại ⇒ "đã gửi tệp". */
+  messageType: string;
+}
+
+/**
+ * Tiêu đề + nội dung cho thông báo `chat_message_received`.
+ *
+ * Dựng ở đây chứ không ở service để **web, app native và test dùng CHUNG một bản** — và để cái
+ * quyết định "bao nhiêu nội dung được rời khỏi hệ thống" nằm ở đúng một chỗ đọc được.
+ *
+ * ⚠️ Từ 14/09/2026 thông báo MANG nội dung tin (quyết định sản phẩm, thay cho câu chung trước
+ * đây). Đánh đổi đã biết và đã chấp nhận: nội dung chat hiện trên MÀN KHOÁ và đi qua log của hệ
+ * điều hành — giống Messenger/Zalo. `docs/push-notifications.md` §5.
+ *
+ * Vẫn giữ hai giới hạn cũ: không bao giờ báo cho người gửi, và `data` của FCM tuyệt đối không
+ * mang nội dung (xem `pushDataPayload`) — nội dung chỉ nằm ở `title`/`body`, thứ người dùng nhìn
+ * rồi vuốt đi, không phải thứ Ở LẠI trên máy.
+ */
+export function chatNotificationCopy(input: ChatNotificationCopyInput): {
+  title: string;
+  body: string;
+} {
+  const body = chatNotificationBody(input);
+  // Không có tên ⇒ lùi về câu chung. Một thông báo "(không rõ) · Giá 30k" tệ hơn hẳn câu cũ.
+  if (!input.senderName?.trim()) {
+    return { title: CHAT_NOTIFICATION_COPY.TITLE, body };
+  }
+  return { title: input.senderName.trim(), body };
+}
+
+function chatNotificationBody(input: ChatNotificationCopyInput): string {
+  const text = input.text?.trim();
+  if (text) return truncate(text, CHAT_BODY_MAX);
+
+  // Tin chỉ có đính kèm. Đếm số lượng vì "Đã gửi 3 ảnh" nói đúng việc đã xảy ra hơn số ít.
+  const isImage = input.messageType === MESSAGE_TYPE.IMAGE;
+  const count = Math.max(1, input.attachmentCount);
+  if (count === 1) return isImage ? 'Đã gửi một ảnh' : 'Đã gửi một tệp';
+  return isImage ? `Đã gửi ${count} ảnh` : `Đã gửi ${count} tệp`;
+}
+
+/** Cắt ở RANH GIỚI TỪ khi có thể — cắt giữa từ đọc như một lỗi hiển thị, không như một tin dài. */
+function truncate(value: string, max: number): string {
+  if (value.length <= max) return value;
+  const cut = value.slice(0, max);
+  const lastSpace = cut.lastIndexOf(' ');
+  return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
 }

@@ -278,6 +278,27 @@ export function parseMoneyInput(value: string | null | undefined): number | null
 export const NUMBER_GROUP_SEPARATOR = '.';
 export const NUMBER_DECIMAL_SEPARATOR = ',';
 
+/** Dấu phân cách của tiếng Việt — `1.234.567,89`. */
+export const VI_MONEY_SEPARATORS: MoneySeparators = {
+  group: NUMBER_GROUP_SEPARATOR,
+  decimal: NUMBER_DECIMAL_SEPARATOR,
+};
+
+/**
+ * Tiền trong một câu chữ do SERVER sinh — thông báo, email, tin nhắn hệ thống.
+ *
+ * Tồn tại vì server không có ngữ cảnh locale của người đọc như web/native (`useAppFormat`), mà
+ * vẫn phải viết ra một con số đọc được. Trước đây mỗi nơi phát thông báo tự xoay xở:
+ * `Number(x).toLocaleString('vi-VN')` ở ba chỗ và `x.toFixed(0)` ở chỗ thứ tư — chỗ cuối in ra
+ * `500000đ` không dấu phân cách, giữa những thông báo khác in `500.000đ`.
+ *
+ * Đi qua `formatMoneyVnd` nên KHÔNG bao giờ ép tiền sang `number` (ADR 0007): `Decimal` chỉ cần
+ * `.toString()`, phần chèn dấu làm trên chuỗi, từng chữ số giữ nguyên.
+ */
+export function formatMoneyVndVi(value: MoneyString | null | undefined): string {
+  return formatMoneyVnd(value, VI_MONEY_SEPARATORS, '');
+}
+
 /**
  * Chuỗi hiển thị của một SỐ ĐO trong ô nhập — `12.500`, `2,8`, `2019`.
  *

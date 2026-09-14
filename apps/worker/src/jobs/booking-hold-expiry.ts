@@ -14,6 +14,7 @@ import {
   WALLET_OWNER_TYPE,
 } from '@xeprime/types';
 import { notifyTenantMembers, notifyUser, recordSystemAudit } from '../lib/notify';
+import { formatMoneyVndVi } from '@xeprime/domain';
 
 const BATCH = 200;
 
@@ -172,12 +173,13 @@ async function remindExpiringHolds(prisma: PrismaClient, now: Date): Promise<num
       if (claimed.count === 0) return false;
       if (!hold.customerUserId) return true;
 
-      const remaining = Number(hold.amount) - Number(hold.paidAmount);
+      // Trừ trên `Decimal`, không đổi sang `number` — tiền không bao giờ đi qua float (ADR 0007).
+      const remaining = hold.amount.sub(hold.paidAmount);
       await notifyUser(tx, hold.customerUserId, {
         type: NOTIFICATION_TYPE.HOLD_EXPIRING,
         title: 'Sắp hết hạn giữ chỗ',
         body:
-          `${hold.vehicle.name} · còn ${Number(remaining).toLocaleString('vi-VN')}đ · ` +
+          `${hold.vehicle.name} · còn ${formatMoneyVndVi(remaining.toString())} · ` +
           `nội dung ${hold.code}`,
         tenantId: hold.tenantId,
         targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
