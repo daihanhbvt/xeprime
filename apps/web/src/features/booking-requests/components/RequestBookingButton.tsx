@@ -30,6 +30,7 @@ export function RequestBookingButton({
   returnAt,
   serviceType,
   routeType,
+  deliveryProvinceCode,
   block,
   size,
   className,
@@ -43,6 +44,8 @@ export function RequestBookingButton({
   /** Ngữ cảnh dịch vụ/lộ trình từ tab tìm kiếm — prefill luồng đặt (17/08). */
   serviceType?: string | null;
   routeType?: string | null;
+  /** Tỉnh gợi ý cho ô địa chỉ giao xe — địa chỉ khách đã nhớ vẫn THẮNG nó (ADR 0035). */
+  deliveryProvinceCode?: string | null;
   block?: boolean;
   size?: 'small' | 'middle' | 'large';
   className?: string;
@@ -69,6 +72,7 @@ export function RequestBookingButton({
         returnAt={returnAt}
         serviceType={serviceType}
         routeType={routeType}
+        deliveryProvinceCode={deliveryProvinceCode}
         open={open}
         onClose={() => setOpen(false)}
       />

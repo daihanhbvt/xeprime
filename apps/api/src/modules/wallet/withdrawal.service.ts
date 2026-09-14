@@ -2,11 +2,13 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  BANK_MATCH_TARGET_TYPE,
   WITHDRAWAL_STATUS,
   WITHDRAWAL_TERMS,
   maskAccountNumber,
   type WithdrawalStatus,
 } from '@xeprime/types';
+import { newReferenceCode } from '../../common/reference-code';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AUDIT_ACTOR_SCOPE } from '@xeprime/types';
@@ -204,10 +206,14 @@ export class WithdrawalService {
    *
    * Chiều RA chưa có đối soát tự động, nhưng mã nằm sẵn trong cùng không gian tên để khi SePay
    * mở webhook chiều ra thì không phải migrate lại toàn bộ lệnh đã chi.
+   *
+   * Từ Phase 9 mã sinh bằng `newReferenceCode` dùng chung thay vì một tiền tố và một bảng chữ
+   * cái chép lại tại chỗ: `referenceCodeTarget('XPW…')` nay nhận ra đích, và bảng chữ cái bỏ
+   * `0/O`, `1/I` chỉ còn MỘT bản để sửa nếu ADR 0016 điều 5 đổi.
    */
   private async uniqueCode(tx: Prisma.TransactionClient): Promise<string> {
     for (let attempt = 0; attempt < 5; attempt += 1) {
-      const code = `XPW${randomBody()}`;
+      const code = newReferenceCode(BANK_MATCH_TARGET_TYPE.WITHDRAWAL_REQUEST);
       const taken = await tx.withdrawalRequest.findUnique({ where: { code }, select: { id: true } });
       if (!taken) return code;
     }
@@ -216,17 +222,6 @@ export class WithdrawalService {
 }
 
 // ── Nội bộ ──────────────────────────────────────────────────────────────────
-
-/** Bảng chữ bỏ `0/O` và `1/I` — người đọc mã qua điện thoại không nhầm (ADR 0016 điều 5). */
-const ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-
-function randomBody(): string {
-  let out = '';
-  for (let i = 0; i < 8; i += 1) {
-    out += ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
-  }
-  return out;
-}
 
 function toDto(row: Prisma.WithdrawalRequestGetPayload<{ select: typeof SELECT }>): WithdrawalRequestDto {
   return {

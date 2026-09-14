@@ -1,5 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { BRANCH_STATUS_VALUES } from '@xeprime/types';
+import {
+  ADDRESS_LINE_MAX_LENGTH,
+  BRANCH_STATUS_VALUES,
+  LOCATION_SOURCE_VALUES,
+  WARD_ADMINISTRATIVE_TYPE_VALUES,
+} from '@xeprime/types';
 import { Transform } from 'class-transformer';
 import {
   IsIn,
@@ -22,16 +27,38 @@ export class BranchDto {
   @ApiProperty({ example: 'Chi nhánh Đà Nẵng' }) name!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) provinceCode!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) provinceName!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) address!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, example: '00004' })
+  wardCode!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, example: 'Phường Ba Đình' })
+  wardName!: string | null;
+  @ApiPropertyOptional({ enum: WARD_ADMINISTRATIVE_TYPE_VALUES, nullable: true })
+  wardAdministrativeType!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Địa chỉ HIỂN THỊ đã ghép sẵn (số nhà, xã/phường, tỉnh) — dùng thẳng, đừng ghép lại',
+  })
+  address!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Số nhà, đường, toà nhà' })
+  addressLine!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) phone!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Chuỗi thập phân' })
   latitude!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) longitude!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) placeId!: string | null;
+  @ApiPropertyOptional({
+    enum: LOCATION_SOURCE_VALUES,
+    nullable: true,
+    description: 'Ghim đến từ đâu — `geocoded` là máy đoán, giao diện nhắc chủ shop kiểm lại',
+  })
+  locationSource!: string | null;
   @ApiProperty() isDefault!: boolean;
   @ApiProperty({ enum: BRANCH_STATUS_VALUES }) status!: string;
   @ApiProperty({ description: 'Số xe (chưa xoá) đang thuộc chi nhánh' }) vehicleCount!: number;
   @ApiProperty({
-    description: 'Chi nhánh sinh từ migration mà chưa quy được tỉnh — chủ shop cần bổ sung',
+    description:
+      'Địa chỉ chưa khớp danh mục hành chính hiện hành (thiếu tỉnh hoặc thiếu xã/phường) — chủ ' +
+      'shop cần mở form ra chọn lại và xác nhận ghim',
   })
   needsLocationReview!: boolean;
   @ApiPropertyOptional({
@@ -48,7 +75,8 @@ export class BranchListDto {
   @ApiProperty({ type: [BranchDto] }) items!: BranchDto[];
   @ApiProperty({ description: 'Tổng số chi nhánh (mọi trạng thái)' }) total!: number;
   @ApiProperty({ description: 'Số chi nhánh đang hoạt động' }) activeCount!: number;
-  @ApiProperty({ description: 'Số chi nhánh còn thiếu tỉnh' }) needsReviewCount!: number;
+  @ApiProperty({ description: 'Số chi nhánh có địa chỉ chưa khớp danh mục hiện hành' })
+  needsReviewCount!: number;
 }
 
 export class BranchListQueryDto {
@@ -70,8 +98,23 @@ export class BranchListQueryDto {
   @IsString()
   @Length(2, 2)
   provinceCode?: string;
+
+  @ApiPropertyOptional({ description: 'Lọc theo mã xã/phường/đặc khu' })
+  @IsOptional()
+  @Transform(trimmed)
+  @IsString()
+  @Length(5, 5)
+  wardCode?: string;
 }
 
+/**
+ * Tạo chi nhánh.
+ *
+ * Địa chỉ là các trường PHẲNG, không phải một object lồng — xem `AddressViewDto` ở
+ * `modules/locations/dto/address.dto.ts` để biết vì sao. `wardCode` tuỳ chọn ở tầng DTO nhưng
+ * giao diện luôn hỏi: client cũ chưa có bộ chọn cấp xã vẫn tạo được chi nhánh, bản ghi chỉ mang
+ * `needsLocationReview = true` và được mời bổ sung.
+ */
 export class CreateBranchDto {
   @ApiProperty({ example: 'Chi nhánh Đà Nẵng' })
   @Transform(trimmed)
@@ -85,7 +128,39 @@ export class CreateBranchDto {
   @Length(2, 2)
   provinceCode!: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    example: '00004',
+    description: 'Mã xã/phường/đặc khu 5 chữ số — lấy từ `GET /provinces/:code/wards`',
+  })
+  @IsOptional()
+  @Transform(trimmed)
+  @IsString()
+  @Length(5, 5)
+  wardCode?: string;
+
+  @ApiPropertyOptional({
+    example: '12 Nguyễn Thái Học',
+    description: 'Số nhà, đường, toà nhà. Server ghép chuỗi hiển thị từ đây + xã/phường + tỉnh.',
+  })
+  @IsOptional()
+  @Transform(trimmed)
+  @IsString()
+  @MaxLength(ADDRESS_LINE_MAX_LENGTH)
+  addressLine?: string;
+
+  @ApiPropertyOptional({ description: 'Mã địa điểm Google khi chủ shop chọn từ gợi ý' })
+  @IsOptional()
+  @Transform(trimmed)
+  @IsString()
+  @MaxLength(255)
+  placeId?: string;
+
+  /**
+   * @deprecated Dùng `addressLine`. Giữ lại vì `ValidationPipe` chạy `forbidNonWhitelisted`:
+   * bỏ hẳn trường này khiến mọi bản client đang chạy nhận 400 ngay lần lưu tiếp theo. Server
+   * coi nó là `addressLine` khi `addressLine` vắng mặt, rồi tự ghép lại chuỗi hiển thị.
+   */
+  @ApiPropertyOptional({ deprecated: true, description: 'Cũ — dùng `addressLine`' })
   @IsOptional()
   @Transform(trimmed)
   @IsString()
@@ -98,7 +173,9 @@ export class CreateBranchDto {
   @Matches(/^(0|\+84)\d{9}$/, { message: 'Số điện thoại không hợp lệ' })
   phone?: string;
 
-  @ApiPropertyOptional({ description: 'Toạ độ tuỳ chọn — hiện chỉ lưu, chưa dùng để tính bán kính' })
+  @ApiPropertyOptional({
+    description: 'Vĩ độ của ghim chủ shop đã xác nhận — THẮNG toạ độ server tự tra',
+  })
   @IsOptional()
   @IsLatitude()
   latitude?: number;
@@ -107,6 +184,14 @@ export class CreateBranchDto {
   @IsOptional()
   @IsLongitude()
   longitude?: number;
+
+  @ApiPropertyOptional({
+    enum: LOCATION_SOURCE_VALUES,
+    description: 'Ghim đến từ đâu. Server ghi đè khi tự tra — client không tự phong "đã xác nhận".',
+  })
+  @IsOptional()
+  @IsIn(LOCATION_SOURCE_VALUES)
+  locationSource?: string;
 }
 
 /** Sửa chi nhánh: gửi trường nào đổi trường đó. Trạng thái/mặc định có endpoint riêng. */
@@ -125,7 +210,29 @@ export class UpdateBranchDto {
   @Length(2, 2)
   provinceCode?: string;
 
+  @ApiPropertyOptional({ description: 'Mã xã/phường/đặc khu 5 chữ số' })
+  @IsOptional()
+  @Transform(trimmed)
+  @IsString()
+  @Length(5, 5)
+  wardCode?: string;
+
+  @ApiPropertyOptional({ description: 'Số nhà, đường, toà nhà' })
+  @IsOptional()
+  @Transform(trimmed)
+  @IsString()
+  @MaxLength(ADDRESS_LINE_MAX_LENGTH)
+  addressLine?: string;
+
   @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(trimmed)
+  @IsString()
+  @MaxLength(255)
+  placeId?: string;
+
+  /** @deprecated Dùng `addressLine` — xem ghi chú ở `CreateBranchDto.address`. */
+  @ApiPropertyOptional({ deprecated: true, description: 'Cũ — dùng `addressLine`' })
   @IsOptional()
   @Transform(trimmed)
   @IsString()
@@ -147,4 +254,9 @@ export class UpdateBranchDto {
   @IsOptional()
   @IsLongitude()
   longitude?: number;
+
+  @ApiPropertyOptional({ enum: LOCATION_SOURCE_VALUES })
+  @IsOptional()
+  @IsIn(LOCATION_SOURCE_VALUES)
+  locationSource?: string;
 }

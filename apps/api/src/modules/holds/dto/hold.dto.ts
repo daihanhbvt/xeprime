@@ -245,24 +245,146 @@ export class RejectRefundDto {
  *
  * Ba con số của ngân hàng phải khớp ba con số của sổ; chênh lệch là việc admin phải nhìn.
  */
-export class DailyReconciliationDto {
-  @ApiProperty({ example: '2026-09-07' }) date!: string;
-  @ApiProperty({ description: 'Tổng tiền VÀO ngân hàng trong ngày (bank_transactions.amount_in)' })
-  bankIn!: string;
+/** Vế TIỀN CỦA NỀN TẢNG — lũy kế tới hết ngày hỏi. Số này XePrime được phép tiêu. */
+export class ReconciliationPlatformDto {
+  @ApiProperty({
+    description:
+      'Phần XePrime giữ lại từ các hold ĐÃ CHỐT — đọc cột `settled_platform_amount` đã đóng ' +
+      'băng. KHÔNG bằng tổng `service_fee_amount`: huỷ muộn chia đôi `D + S`.',
+  })
+  serviceFeeRecognized!: string;
+  @ApiProperty({ description: 'Tiền gói đã thu (subscription_invoices.paid_amount)' })
+  subscriptionsCollected!: string;
+  @ApiProperty({ description: 'Tổng hai dòng trên' }) total!: string;
+}
+
+/**
+ * Vế TIỀN GIỮ HỘ — nghĩa vụ phải trả người khác tại cuối ngày hỏi.
+ *
+ * Đây là con số ADR 0025 điều 6 gọi là *"không tách được nghĩa là không biết mình đang tiêu tiền
+ * của ai"*. Mọi dòng ở đây là tiền XePrime đang giữ nhưng KHÔNG sở hữu.
+ */
+export class ReconciliationCustodiedDto {
+  @ApiProperty({
+    description:
+      'TOÀN BỘ số đã nhận của hold chưa chốt kết cục. Không tách riêng phần `D+IV+IP`: trước ' +
+      'khi chốt thì cả `S` cũng có thể phải hoàn khách (huỷ sớm), nên chưa đồng nào là của nền tảng.',
+  })
+  holdsUnsettled!: string;
+  @ApiProperty() holdsUnsettledCount!: number;
+  @ApiProperty({ description: 'Tổng nghĩa vụ ví tại cuối ngày = Σ wallet_entries tới mốc đó' })
+  walletTotal!: string;
+  @ApiProperty({ description: 'Phần khả dụng của ví (hiện tại)' }) walletAvailable!: string;
+  @ApiProperty({ description: 'Phần đang bị khoá bởi lệnh rút chờ xử lý (hiện tại)' })
+  walletPending!: string;
+  @ApiProperty({
+    description: 'Hoàn cho khách VÃNG LAI còn chờ chuyển tay — nghĩa vụ chưa vào ví được',
+  })
+  refundsPending!: string;
+  @ApiProperty() refundsPendingCount!: number;
+  @ApiProperty({
+    description:
+      'Tiền vào CHƯA KHỚP được đích — vẫn nằm trong tài khoản và vẫn là tiền của một ai đó. ' +
+      'Xếp vào giữ hộ chứ không vào chênh lệch: nó có chủ, chỉ là chưa biết ai.',
+  })
+  unmatchedIn!: string;
+  @ApiProperty() unmatchedInCount!: number;
+  @ApiProperty({
+    description: 'Phí bảo hiểm đã thu chưa quyết toán với hãng. 0 khi cổng bảo hiểm chưa mở (Phase 7).',
+  })
+  insuranceReserved!: string;
+  @ApiProperty({
+    description: 'Thuế đã khấu trừ chưa nộp. 0 khi cổng thuế chưa mở (Phase 8).',
+  })
+  taxAccrued!: string;
+  @ApiProperty({ description: 'Tổng nghĩa vụ' }) total!: string;
+}
+
+/** Chiều RA đã thực hiện TRONG NGÀY — không phải nghĩa vụ, chỉ là dòng tiền đã đi. */
+export class ReconciliationOutflowDto {
+  @ApiProperty({ description: 'Lệnh rút đã đánh dấu đã chuyển trong ngày' })
+  withdrawalsPaid!: string;
+  @ApiProperty() withdrawalsPaidCount!: number;
+  @ApiProperty({ description: 'Khoản hoàn đã chuyển tay trong ngày' }) refundsPaid!: string;
+  @ApiProperty() refundsPaidCount!: number;
+  @ApiProperty({ description: 'Tổng đã chi trong ngày' }) total!: string;
+}
+
+/** Tiền VÀO trong ngày, theo đích đã khớp — giữ nguyên bốn con số của bản một vế. */
+export class ReconciliationInflowDto {
+  @ApiProperty({ description: 'Tổng tiền VÀO ngân hàng trong ngày' }) bankIn!: string;
   @ApiProperty() bankInCount!: number;
   @ApiProperty({ description: 'Phần đã khớp hoá đơn gói' }) matchedSubscriptions!: string;
   @ApiProperty({ description: 'Phần đã khớp khoản giữ chỗ' }) matchedHolds!: string;
   @ApiProperty({ description: 'Chưa khớp — hàng đợi admin' }) unmatched!: string;
   @ApiProperty() unmatchedCount!: number;
   @ApiProperty({ description: 'Bị bỏ qua (chuyển nhầm…)' }) ignored!: string;
-  @ApiProperty({ description: 'Hoàn ĐÃ CHUYỂN trong ngày (chiều ra, ghi tay)' }) refundsPaid!: string;
-  @ApiProperty() refundsPaidCount!: number;
-  @ApiProperty({ description: 'Hoàn ĐANG CHỜ tại thời điểm hỏi — nợ phải trả khách' }) refundsPending!: string;
-  @ApiProperty() refundsPendingCount!: number;
-  @ApiProperty({ description: 'Hold đã trả nhưng chưa chốt kết cục — tiền đang chờ' }) holdsUnsettled!: string;
-  @ApiProperty() holdsUnsettledCount!: number;
   @ApiProperty({
-    description: 'bankIn − matchedSubscriptions − matchedHolds − unmatched − ignored. Khác 0 là có dòng không thuộc nhóm nào.',
+    description: 'bankIn − (gói + giữ chỗ + chưa khớp + bỏ qua). Khác 0 là có dòng lạc nhóm.',
   })
   variance!: string;
+}
+
+/**
+ * LỆCH SỔ VÍ — phép kiểm ADR 0023 điều 6 đòi.
+ *
+ * `wallets.balance` được lưu sẵn để có một câu `updateMany` nguyên tử lúc rút; cái giá là nó có
+ * thể trôi khỏi sổ cái nếu có ai ghi ngoài `WalletService`. Bút toán ví cộng lại phải đúng bằng
+ * `balance + pending_withdraw_amount` — lệch một đồng là có đường ghi thứ hai.
+ */
+export class WalletDriftDto {
+  @ApiProperty({ description: 'Số ví có Σ bút toán ≠ balance + pending' }) wallets!: number;
+  @ApiProperty({ description: 'Tổng trị tuyệt đối phần lệch' }) amount!: string;
+}
+
+export class DailyReconciliationDto {
+  @ApiProperty({ example: '2026-09-14' }) date!: string;
+
+  @ApiProperty({ type: ReconciliationPlatformDto }) platform!: ReconciliationPlatformDto;
+  @ApiProperty({ type: ReconciliationCustodiedDto }) custodied!: ReconciliationCustodiedDto;
+  @ApiProperty({ type: ReconciliationOutflowDto }) outflow!: ReconciliationOutflowDto;
+  @ApiProperty({ type: ReconciliationInflowDto }) inflow!: ReconciliationInflowDto;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Số dư ngân hàng cuối ngày, NHẬP TAY (SePay không gửi số dư). `null` = chưa nhập — giao ' +
+      'diện phải nói rõ, KHÔNG hiển thị 0.',
+  })
+  bankBalanceEod!: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'bankBalanceEod − (platform.total + custodied.total). `null` khi chưa nhập số dư — ' +
+      'chênh lệch CHƯA TÍNH ĐƯỢC, không phải bằng 0.',
+  })
+  variance!: string | null;
+
+  @ApiProperty({ type: WalletDriftDto }) walletDrift!: WalletDriftDto;
+}
+
+/**
+ * Admin nhập số dư ngân hàng cuối ngày.
+ *
+ * Tiền là CHUỖI trên dây (ADR 0007) và được validate bằng regex chứ không `@IsNumber`: một số
+ * thực JavaScript không giữ nổi VND lớn mà không mất chính xác, và đây là vế trái của phép đối
+ * soát — sai một đồng ở đây là báo động giả mỗi ngày.
+ */
+export class SaveBankBalanceDto {
+  @ApiProperty({ example: '2026-09-14', description: 'Ngày theo giờ Việt Nam (YYYY-MM-DD)' })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Ngày phải theo dạng YYYY-MM-DD' })
+  date!: string;
+
+  @ApiProperty({ example: '125000000', description: 'Số dư cuối ngày, VND nguyên, không âm' })
+  @Matches(/^\d{1,12}$/, { message: 'Số dư phải là số nguyên không âm' })
+  balance!: string;
+
+  @ApiPropertyOptional({ description: 'Ghi chú — vì sao con số này, đọc ở đâu' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  note?: string;
 }

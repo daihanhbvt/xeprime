@@ -28,6 +28,7 @@ import { FieldMessage } from '@/components/ui/Field';
 import { FieldBox } from '@/components/ui/FieldBox';
 import { RangeFieldBox } from '@/components/ui/RangeFieldBox';
 import { FormSection } from '@/components/ui/FormSection';
+import { AddressFields } from '@/components/form/AddressFields';
 import { TextField } from '@/components/ui/TextField';
 import { RentalRangeSheet } from '@/features/marketplace/components/RentalRangeSheet';
 import { ServiceSelector } from '@/features/marketplace/components/ServiceSelector';
@@ -41,6 +42,30 @@ import type { RequestForm } from '../RequestBookingScreen';
 
 /** Một gói dài hạn kèm giá và mốc ưu đãi — server tính, shape từ OpenAPI (ADR 0007). */
 type LongTermPackageOption = components['schemas']['LongTermPackageOptionDto'];
+
+/** Tên trường của hai địa chỉ vật lý trong form — xem `AddressFields`. */
+const PICKUP_ADDRESS_NAMES = {
+  provinceCode: 'pickupProvinceCode',
+  wardCode: 'pickupWardCode',
+  addressLine: 'pickupAddressLine',
+} as const;
+const PICKUP_PIN_NAMES = {
+  placeId: 'pickupPlaceId',
+  latitude: 'pickupLatitude',
+  longitude: 'pickupLongitude',
+  locationSource: 'pickupLocationSource',
+} as const;
+const DELIVERY_ADDRESS_NAMES = {
+  provinceCode: 'deliveryProvinceCode',
+  wardCode: 'deliveryWardCode',
+  addressLine: 'deliveryAddressLine',
+} as const;
+const DELIVERY_PIN_NAMES = {
+  placeId: 'deliveryPlaceId',
+  latitude: 'deliveryLatitude',
+  longitude: 'deliveryLongitude',
+  locationSource: 'deliveryLocationSource',
+} as const;
 
 /**
  * Bước "Chuyến đi" — gộp thời gian, lộ trình, nơi nhận và liên hệ vào MỘT bước.
@@ -143,11 +168,11 @@ export function RequestTripStep({
               </YStack>
             )}
           />
-          <TextField
+          <AddressFields
             control={form.control}
-            name="pickupAddress"
-            label={t('driver.pickupAddressLabel')}
-            placeholder={t('driver.pickupAddressPlaceholder')}
+            names={PICKUP_ADDRESS_NAMES}
+            pin={PICKUP_PIN_NAMES}
+            title={t('driver.pickupAddressLabel')}
             required
           />
           {interCity ? (
@@ -221,11 +246,11 @@ export function RequestTripStep({
           {deliveryRequested ? (
             <Card>
               <YStack gap={space.sm}>
-                <TextField
+                <AddressFields
                   control={form.control}
-                  name="deliveryAddress"
-                  label={t('pickup.addressLabel')}
-                  placeholder={t('pickup.addressPlaceholder')}
+                  names={DELIVERY_ADDRESS_NAMES}
+                  pin={DELIVERY_PIN_NAMES}
+                  title={t('pickup.addressLabel')}
                   required
                 />
                 <DeliveryEstimate form={form} vehicleId={listing.id} />
@@ -393,9 +418,13 @@ function DeliveryEstimate({ form, vehicleId }: { form: RequestForm; vehicleId: s
   const t = useTranslations('BookingRequests.flow');
   const fmt = useAppFormat();
 
-  const address = useWatch({ control: form.control, name: 'deliveryAddress' });
+  const address = useWatch({ control: form.control, name: 'deliveryAddressLine' });
+  const lat = useWatch({ control: form.control, name: 'deliveryLatitude' });
+  const lng = useWatch({ control: form.control, name: 'deliveryLongitude' });
   const debounced = useDebouncedValue(address ?? '', ADDRESS_DEBOUNCE_MS);
-  const query = useDeliveryDistance(vehicleId, debounced.trim());
+  // Ghim khách đã xác nhận THẮNG chuỗi chữ — xem `deliveryDistance` ở tầng api.
+  const pin = lat != null && lng != null ? { lat, lng } : null;
+  const query = useDeliveryDistance(vehicleId, debounced.trim(), pin);
 
   if (query.isFetching) {
     return (

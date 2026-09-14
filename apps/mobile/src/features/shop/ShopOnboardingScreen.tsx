@@ -18,11 +18,11 @@ import { Card } from '@/components/ui/Card';
 import { IconButton } from '@/components/ui/IconButton';
 import { ScreenLoading } from '@/components/state/ScreenLoading';
 import { SelectField } from '@/components/ui/SelectField';
+import { AddressFields } from '@/components/form/AddressFields';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
-import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
@@ -59,6 +59,19 @@ const GUIDE_STEPS = ['create', 'complete', 'prepare', 'publish'] as const;
  *
  * Trạng thái duyệt do BACKEND quyết định: client không gửi `status`, không tự đặt `active`.
  */
+/** Tên trường địa chỉ trong `registerShopSchema` — hằng ngoài component, định danh ổn định. */
+const ADDRESS_FIELD_NAMES = {
+  provinceCode: 'provinceCode',
+  wardCode: 'wardCode',
+  addressLine: 'addressLine',
+} as const;
+const ADDRESS_PIN_NAMES = {
+  placeId: 'placeId',
+  latitude: 'latitude',
+  longitude: 'longitude',
+  locationSource: 'locationSource',
+} as const;
+
 export function ShopOnboardingScreen() {
   const t = useTranslations('ShopOnboarding');
   const tActions = useTranslations('Common.actions');
@@ -68,7 +81,6 @@ export function ShopOnboardingScreen() {
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
   const domainLabel = useDomainLabel();
-  const provinces = useProvinceOptions();
   const register = useRegisterShop();
 
   const { data: user, isLoading } = useCurrentUser();
@@ -92,7 +104,12 @@ export function ShopOnboardingScreen() {
       name: '',
       tenantType: TENANT_TYPE.INDIVIDUAL,
       provinceCode: '',
-      address: '',
+      wardCode: '',
+      addressLine: '',
+      placeId: null,
+      latitude: null,
+      longitude: null,
+      locationSource: null,
       phone: '',
       email: '',
     },
@@ -109,7 +126,13 @@ export function ShopOnboardingScreen() {
         name: values.name.trim(),
         tenantType: values.tenantType,
         provinceCode: values.provinceCode,
-        ...(values.address.trim() ? { address: values.address.trim() } : {}),
+        ...(values.wardCode ? { wardCode: values.wardCode } : {}),
+        ...(values.addressLine.trim() ? { addressLine: values.addressLine.trim() } : {}),
+        ...(values.placeId ? { placeId: values.placeId } : {}),
+        ...(values.latitude != null && values.longitude != null
+          ? { latitude: values.latitude, longitude: values.longitude }
+          : {}),
+        ...(values.locationSource ? { locationSource: values.locationSource } : {}),
         ...(values.phone.trim() ? { phone: values.phone.trim() } : {}),
         ...(values.email.trim() ? { email: values.email.trim() } : {}),
       },
@@ -246,21 +269,6 @@ export function ShopOnboardingScreen() {
                   ))}
                 </YStack>
 
-                {provinces.isError ? (
-                  <Callout tone="warning" title={t('form.fields.province.loadError')}>
-                    <YStack gap={space.sm}>
-                      <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                        {errorMessage(provinces.error)}
-                      </Text>
-                      <Button
-                        label={tActions('retry')}
-                        variant="secondary"
-                        onPress={provinces.refetch}
-                      />
-                    </YStack>
-                  </Callout>
-                ) : null}
-
                 <TextField
                   control={control}
                   name="name"
@@ -276,35 +284,15 @@ export function ShopOnboardingScreen() {
                   required
                 />
                 {/*
-                Tỉnh/thành BẮT BUỘC: đăng ký tạo luôn chi nhánh mặc định, và đó là nơi xe của gian
-                hàng hiển thị trên marketplace. Danh sách lấy từ API, không hardcode.
-              */}
-                <SelectField
+                  Địa chỉ BẮT BUỘC có tỉnh/thành: đăng ký tạo luôn chi nhánh mặc định, và đó là
+                  nơi xe của gian hàng hiển thị trên chợ. Xã/phường KHÔNG bắt buộc ở bước này —
+                  người mở gian hàng thường chưa có địa chỉ chính xác, và chặn ở đây là chặn luôn
+                  việc họ bắt đầu.
+                */}
+                <AddressFields
                   control={control}
-                  name="provinceCode"
-                  label={t('form.fields.province.label')}
-                  options={provinces.options}
-                  required
-                  /* Đang tải / lỗi / rỗng đều là điều khiển CHẾT — không mở tấm chọn không có gì để chọn. */
-                  disabled={
-                    provinces.isLoading || provinces.isError || provinces.options.length === 0
-                  }
-                  placeholder={
-                    provinces.isLoading
-                      ? t('form.fields.province.loading')
-                      : t('form.fields.province.placeholder')
-                  }
-                  hint={
-                    provinces.options.length === 0 && !provinces.isLoading && !provinces.isError
-                      ? t('form.fields.province.empty')
-                      : t('form.fields.province.help')
-                  }
-                />
-                <TextField
-                  control={control}
-                  name="address"
-                  label={t('form.fields.address.label')}
-                  placeholder={t('form.fields.address.placeholder')}
+                  names={ADDRESS_FIELD_NAMES}
+                  pin={ADDRESS_PIN_NAMES}
                 />
                 <TextField
                   control={control}

@@ -42,6 +42,35 @@ vi.mock('@/hooks/use-permissions', () => ({
   }),
 }));
 
+/*
+ * Phụ thuộc của BƯỚC HỒ SƠ CHỦ XE — chỉ user chưa có gian hàng mới chạm tới.
+ *
+ * `AddressField` là ô địa chỉ DÙNG CHUNG (tỉnh → xã/phường → số nhà + ghim bản đồ): nó tự gọi
+ * danh mục hành chính và dịch vụ bản đồ, và đã có test của riêng nó. Ở đây thay bằng một chốt
+ * giả — test này hỏi "bước hồ sơ có hiện không", không hỏi "ô địa chỉ chạy thế nào".
+ */
+vi.mock('@/components/form/AddressField', () => ({
+  AddressField: ({ title }: { title?: string }) => <div data-testid="address-field">{title}</div>,
+}));
+
+const registerShop = vi.hoisted(() => ({
+  mutate: vi.fn(),
+  mutateAsync: vi.fn(),
+  isPending: false,
+  isError: false,
+  error: null,
+}));
+const updateShopProfile = vi.hoisted(() => ({ mutateAsync: vi.fn(), isPending: false }));
+vi.mock('@/features/shop/hooks/use-shop', () => ({
+  useRegisterShop: () => registerShop,
+  useUpdateShopProfile: () => updateShopProfile,
+}));
+
+/* Hộp xác thực OTP có luồng API riêng và đã được test ở feature tài khoản. */
+vi.mock('@/features/account/components/ContactVerifyModal', () => ({
+  ContactVerifyModal: () => null,
+}));
+
 vi.mock('@/features/branches/hooks/use-branches', () => ({
   useActiveBranches: () => ({
     data: {
@@ -138,6 +167,8 @@ async function fillToLastStep() {
 
 beforeEach(() => {
   permissions.granted = new Set([PERMISSION.VEHICLE_CREATE]);
+  registerShop.mutate.mockReset();
+  registerShop.mutateAsync.mockReset();
   currentUser.data = {
     id: 'u1',
     displayName: 'Chủ xe',
@@ -166,11 +197,33 @@ describe('Cửa vào', () => {
     expect(screen.queryByLabelText(/Biển số xe/)).toBeNull();
   });
 
-  it('chưa có gian hàng: mời tạo hồ sơ chủ xe, KHÔNG tự tạo giúp', () => {
-    currentUser.data = { id: 'u1', tenant: null };
+  /*
+   * Chưa có hồ sơ chủ xe: hỏi NGAY TẠI ĐÂY. Trước đây chỗ này đẩy sang `/manage/onboarding` —
+   * rời trang, mất nháp, và hiện form đăng ký gian hàng cho người chỉ có một chiếc xe.
+   */
+  it('chưa có hồ sơ chủ xe: hỏi ngay trong wizard, không rời trang và không tự tạo xe', () => {
+    currentUser.data = { id: 'u1', displayName: 'Chủ xe', tenant: null, phone: '0901234567', phoneVerified: true };
     render();
-    expect(screen.getByText('Tạo hồ sơ chủ xe trước')).toBeTruthy();
+
+    expect(screen.getByText('1. Hồ sơ chủ xe')).toBeTruthy();
+    // Thanh bước có 4 mục: hồ sơ đứng trước ba bước xe.
+    expect(screen.getAllByText('Hồ sơ chủ xe').length).toBeGreaterThan(0);
+    expect(screen.getByText('Thông tin xe')).toBeTruthy();
+    // Không còn lối nào dẫn sang form đăng ký gian hàng.
+    const toOnboarding = screen
+      .queryAllByRole('link')
+      .filter((a) => a.getAttribute('href')?.includes('/manage/onboarding'));
+    expect(toOnboarding).toHaveLength(0);
     expect(api.createVehicle).not.toHaveBeenCalled();
+  });
+
+  it('chưa xác thực SĐT: khoá nút đi tiếp cho tới khi xác thực xong', () => {
+    currentUser.data = { id: 'u1', displayName: 'Chủ xe', tenant: null, phone: null, phoneVerified: false };
+    render();
+
+    expect(screen.getByText('Tài khoản chưa có số điện thoại')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Tiếp tục/ }).hasAttribute('disabled')).toBe(true);
+    expect(registerShop.mutateAsync).not.toHaveBeenCalled();
   });
 
   it('thiếu quyền thêm xe: forbidden state, không có form', () => {

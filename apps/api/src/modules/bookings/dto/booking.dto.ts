@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ADDRESS_LINE_MAX_LENGTH,
   BOOKING_STATUS,
   BOOKING_STATUS_VALUES,
   ROUTE_TYPE_VALUES,
@@ -12,6 +13,8 @@ import {
   IsDateString,
   IsIn,
   IsInt,
+  IsLatitude,
+  IsLongitude,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -23,6 +26,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
+import { AddressViewDto, GeoPinDto } from '../../locations/dto/address.dto';
 import { BookingDriverSummaryDto } from '../../drivers/dto/driver.dto';
 import { BookingPriceSnapshotDto } from '../../pricing/dto/pricing.dto';
 
@@ -159,7 +163,15 @@ export class BookingDetailDto extends BookingListItemDto {
   @ApiPropertyOptional({ enum: ROUTE_TYPE_VALUES, type: String, nullable: true })
   routeType!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) pickupAddress!: string | null;
+  @ApiPropertyOptional({
+    type: AddressViewDto,
+    nullable: true,
+    description: 'Điểm đón có cấu trúc — SNAPSHOT của đơn, không viết lại khi danh mục đổi',
+  })
+  pickupLocation!: AddressViewDto | null;
   @ApiPropertyOptional({ type: String, nullable: true }) destination!: string | null;
+  @ApiPropertyOptional({ type: GeoPinDto, nullable: true, description: 'Ghim của điểm đến' })
+  destinationPin!: GeoPinDto | null;
   @ApiProperty() baseAmount!: string;
   @ApiProperty() deliveryFee!: string;
   @ApiProperty() discountAmount!: string;
@@ -224,6 +236,62 @@ export class CreateBookingDto {
   @IsString()
   @MaxLength(500)
   destination?: string;
+
+  /**
+   * Phần CÓ CẤU TRÚC của địa chỉ đón. Tuỳ chọn: đơn gian hàng lập tay cho khách quen thường chỉ
+   * có một dòng địa chỉ, và bắt chọn xã/phường ở đó là cản trở việc lập đơn nhanh. Có mã thì
+   * server dựng lại chuỗi hiển thị; không có thì chuỗi gõ tay được giữ nguyên.
+   */
+  @ApiPropertyOptional({ description: 'Mã tỉnh/thành của điểm đón (GET /provinces)' })
+  @IsOptional()
+  @IsString()
+  @Length(2, 2)
+  pickupProvinceCode?: string;
+
+  @ApiPropertyOptional({ description: 'Mã xã/phường/đặc khu của điểm đón' })
+  @IsOptional()
+  @IsString()
+  @Length(5, 5)
+  pickupWardCode?: string;
+
+  @ApiPropertyOptional({ description: 'Số nhà, đường của điểm đón' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(ADDRESS_LINE_MAX_LENGTH)
+  pickupAddressLine?: string;
+
+  @ApiPropertyOptional({ description: 'Mã địa điểm Google của điểm đón' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  pickupPlaceId?: string;
+
+  @ApiPropertyOptional({ description: 'Vĩ độ ghim điểm đón' })
+  @IsOptional()
+  @IsLatitude()
+  pickupLatitude?: number;
+
+  @ApiPropertyOptional({ description: 'Kinh độ ghim điểm đón' })
+  @IsOptional()
+  @IsLongitude()
+  pickupLongitude?: number;
+
+  @ApiPropertyOptional({ description: 'Mã địa điểm Google của điểm đến' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  destinationPlaceId?: string;
+
+  @ApiPropertyOptional({ description: 'Vĩ độ ghim điểm đến' })
+  @IsOptional()
+  @IsLatitude()
+  destinationLatitude?: number;
+
+  @ApiPropertyOptional({ description: 'Kinh độ ghim điểm đến' })
+  @IsOptional()
+  @IsLongitude()
+  destinationLongitude?: number;
+
 
   @ApiProperty({ description: 'Nhận xe (ISO-8601)' })
   @IsDateString()
@@ -314,6 +382,62 @@ export class UpdateBookingDto {
   @IsString()
   @MaxLength(500)
   destination?: string;
+
+  /**
+   * Phần CÓ CẤU TRÚC của địa chỉ đón. Tuỳ chọn: đơn gian hàng lập tay cho khách quen thường chỉ
+   * có một dòng địa chỉ, và bắt chọn xã/phường ở đó là cản trở việc lập đơn nhanh. Có mã thì
+   * server dựng lại chuỗi hiển thị; không có thì chuỗi gõ tay được giữ nguyên.
+   */
+  @ApiPropertyOptional({ description: 'Mã tỉnh/thành của điểm đón (GET /provinces)' })
+  @IsOptional()
+  @IsString()
+  @Length(2, 2)
+  pickupProvinceCode?: string;
+
+  @ApiPropertyOptional({ description: 'Mã xã/phường/đặc khu của điểm đón' })
+  @IsOptional()
+  @IsString()
+  @Length(5, 5)
+  pickupWardCode?: string;
+
+  @ApiPropertyOptional({ description: 'Số nhà, đường của điểm đón' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(ADDRESS_LINE_MAX_LENGTH)
+  pickupAddressLine?: string;
+
+  @ApiPropertyOptional({ description: 'Mã địa điểm Google của điểm đón' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  pickupPlaceId?: string;
+
+  @ApiPropertyOptional({ description: 'Vĩ độ ghim điểm đón' })
+  @IsOptional()
+  @IsLatitude()
+  pickupLatitude?: number;
+
+  @ApiPropertyOptional({ description: 'Kinh độ ghim điểm đón' })
+  @IsOptional()
+  @IsLongitude()
+  pickupLongitude?: number;
+
+  @ApiPropertyOptional({ description: 'Mã địa điểm Google của điểm đến' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  destinationPlaceId?: string;
+
+  @ApiPropertyOptional({ description: 'Vĩ độ ghim điểm đến' })
+  @IsOptional()
+  @IsLatitude()
+  destinationLatitude?: number;
+
+  @ApiPropertyOptional({ description: 'Kinh độ ghim điểm đến' })
+  @IsOptional()
+  @IsLongitude()
+  destinationLongitude?: number;
+
 
   @ApiPropertyOptional({ description: 'Nhận xe (ISO-8601)' })
   @IsOptional()

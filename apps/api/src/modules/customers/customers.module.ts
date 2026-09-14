@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
+import { LocationsModule } from '../locations/locations.module';
 import { StorageModule } from '../storage/storage.module';
 import { CustomerDocumentsController } from './customer-documents.controller';
 import { CustomerDocumentsService } from './customer-documents.service';
@@ -14,7 +15,8 @@ import { CustomersService } from './customers.service';
  * nơi duy nhất quyết định khách bị từ chối phục vụ thì chuyện gì xảy ra.
  */
 @Module({
-  imports: [AuditModule, StorageModule],
+  // LocationsModule: địa chỉ khách có cấu trúc đi qua `AddressService` — module lá, không vòng.
+  imports: [AuditModule, StorageModule, LocationsModule],
   controllers: [CustomersController, CustomerDocumentsController],
   providers: [CustomersService, CustomerDocumentsService],
   exports: [CustomersService],

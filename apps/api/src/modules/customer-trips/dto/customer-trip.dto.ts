@@ -4,9 +4,11 @@ import {
   CUSTOMER_TRIP_FILTER_VALUES,
   CUSTOMER_TRIP_STAGE_VALUES,
   TRIP_ROLE_VALUES,
+  DEPOSIT_COLLECTION_MODE_VALUES,
   DEPOSIT_STATUS_VALUES,
   REFUND_METHOD_VALUES,
   SURCHARGE_CATEGORY_VALUES,
+  type DepositCollectionMode,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
@@ -333,6 +335,18 @@ export class CustomerTripDetailDto extends CustomerTripListItemDto {
    */
   @ApiPropertyOptional({ type: CustomerHoldDto, nullable: true })
   hold!: CustomerHoldDto | null;
+
+  /**
+   * AI thu cọc của chuyến này — ĐÓNG BĂNG lúc tạo đơn (Phase 6, ADR 0025 ràng buộc 4).
+   *
+   * Khách cần con số này để biết mình sẽ được liên hệ về khoản cọc hay không. `direct` là ca
+   * duy nhất màn hình phải nói thêm một câu: gian hàng tự thoả thuận, XePrime không thu hộ và
+   * không đối soát khoản đó (ADR 0028 điều 9).
+   *
+   * `null` = chuyến chưa có đơn, hoặc đơn gian hàng tự lập ngoài luồng chợ.
+   */
+  @ApiPropertyOptional({ enum: DEPOSIT_COLLECTION_MODE_VALUES, nullable: true })
+  depositCollectionMode!: DepositCollectionMode | null;
 
   @ApiPropertyOptional({ type: CustomerTripReviewDto, nullable: true })
   review!: CustomerTripReviewDto | null;

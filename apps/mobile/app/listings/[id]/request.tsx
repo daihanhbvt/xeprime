@@ -9,12 +9,18 @@ import { RequestBookingScreen } from '@/features/booking-requests/RequestBooking
  * nhóm khách đông nhất.
  */
 export default function RequestBookingRoute() {
-  const { id, serviceType } = useLocalSearchParams<{ id: string; serviceType?: string }>();
+  const { id, serviceType, provinceCode } = useLocalSearchParams<{
+    id: string;
+    serviceType?: string;
+    /** Tỉnh đang lọc ở màn tìm xe — điền sẵn ô địa chỉ giao xe (ADR 0035). */
+    provinceCode?: string;
+  }>();
 
   return (
     <RequestBookingScreen
       vehicleId={id}
       {...(serviceType ? { initialServiceType: serviceType } : {})}
+      {...(provinceCode ? { deliveryProvinceCode: provinceCode } : {})}
     />
   );
 }

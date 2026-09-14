@@ -339,10 +339,14 @@
       "pickupPreferenceRequired": "Pick when you would like the car",
       "requestedPickupDateRequired": "Pick your preferred pickup date",
       "routeRequired": "Pick a route type",
-      "pickupAddressRequired": "Enter the pickup address",
+      "pickupAddressRequired": "Enter the pickup house number and street",
       "destinationRequired": "Enter the destination",
-      "deliveryAddressRequired": "Enter the delivery address",
-      "noteTooLong": "Note can be at most {max} characters"
+      "deliveryAddressRequired": "Enter the delivery house number and street",
+      "noteTooLong": "Note can be at most {max} characters",
+      "pickupProvinceRequired": "Select the pickup province or city",
+      "pickupWardRequired": "Select the pickup ward",
+      "deliveryProvinceRequired": "Select the delivery province or city",
+      "deliveryWardRequired": "Select the delivery ward"
     }
   },
   "approved": {

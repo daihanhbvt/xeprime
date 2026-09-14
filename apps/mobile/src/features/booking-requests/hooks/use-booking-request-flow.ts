@@ -91,11 +91,20 @@ export function usePublicQuote(vehicleId: string, params: PublicQuoteParams | nu
  * Không `retry`: "không tra được" đến dưới dạng `status`, không phải lỗi, nên thử lại chỉ đốt
  * hạn mức cho cùng một câu trả lời.
  */
-export function useDeliveryDistance(vehicleId: string, address: string) {
+/**
+ * `pin` = toạ độ khách ĐÃ XÁC NHẬN. Có nó thì server dùng thẳng và bỏ qua bước tra địa chỉ —
+ * vừa rẻ hơn một request có tính tiền, vừa cho con số khớp đúng điểm khách đang nhìn (ADR 0035).
+ */
+export function useDeliveryDistance(
+  vehicleId: string,
+  address: string,
+  pin?: { lat: number; lng: number } | null,
+) {
+  const key = pin ? `${pin.lat},${pin.lng}` : address;
   return useQuery({
-    queryKey: queryKeys.marketplace.deliveryDistance(vehicleId, address),
-    queryFn: () => deliveryDistance(vehicleId, address),
-    enabled: Boolean(vehicleId) && address.trim().length > 0,
+    queryKey: queryKeys.marketplace.deliveryDistance(vehicleId, key),
+    queryFn: () => deliveryDistance(vehicleId, address, pin ?? null),
+    enabled: Boolean(vehicleId) && (pin != null || address.trim().length > 0),
     retry: false,
     staleTime: STALE_TIME.REFERENCE,
   });

@@ -30,6 +30,9 @@ export const MESSAGE_NAMESPACES = [
   // Chuông thông báo xuất hiện ở CẢ HAI khung (chợ xe và cổng quản lý) nên nằm ở nhóm dùng
   // chung, không thuộc khu nào.
   { file: 'notifications', namespace: 'Notifications' },
+  // Ô nhập ĐỊA CHỈ VẬT LÝ — dùng ở cả khu công khai (địa chỉ giao xe) lẫn cổng quản lý (chi
+  // nhánh, gian hàng, sổ khách), nên nó là chuỗi dùng chung chứ không thuộc tính năng nào.
+  { file: 'address', namespace: 'Address' },
 
   // — Khu công khai / khách hàng —
   { file: 'auth', namespace: 'Auth' },

@@ -14,11 +14,10 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import type { AuthService } from '../src/modules/auth/auth.service';
-import { CustomersService } from '../src/modules/customers/customers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeNotificationService, makeBookingRequestsService, makeBookingsService, makePricingService } from './helpers/service-factory';
+import { makeBookingRequestsService, makeBookingsService, makeCustomersService, makeNotificationService, makePricingService } from './helpers/service-factory';
 
 /**
  * Thuê dài hạn theo GÓI cố định (ADR 0011), trên PostgreSQL THẬT — vòng đời đầy đủ:
@@ -41,7 +40,7 @@ const bookings = makeBookingsService(asService, {
   occupancy: occupancy,
   audit: audit,
   notifications: notifications,
-  customers: new CustomersService(asService, audit),
+  customers: makeCustomersService(asService, audit),
 });
 
 const phoneVerification = {
@@ -61,7 +60,7 @@ const requests = makeBookingRequestsService(asService, {
   auth: auth,
   occupancy: occupancy,
   pricing: pricing,
-  customers: new CustomersService(asService, audit),
+  customers: makeCustomersService(asService, audit),
 });
 
 let dbAvailable = false;

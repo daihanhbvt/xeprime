@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ADDRESS_LINE_MAX_LENGTH,
   APPROVAL_STATUS_VALUES,
+  LOCATION_SOURCE_VALUES,
   normalizeVnPhone,
   TENANT_STATUS_VALUES,
   TENANT_TYPE,
@@ -10,6 +12,8 @@ import { Transform } from 'class-transformer';
 import {
   IsEmail,
   IsIn,
+  IsLatitude,
+  IsLongitude,
   IsOptional,
   IsString,
   Length,
@@ -54,7 +58,54 @@ export class RegisterShopDto {
   @Length(2, 2)
   provinceCode!: string;
 
-  @ApiPropertyOptional({ description: 'Địa chỉ chi nhánh đầu tiên' })
+
+  @ApiPropertyOptional({
+    example: '00004',
+    description: 'Mã xã/phường/đặc khu 5 chữ số (GET /provinces/:code/wards)',
+  })
+  @IsOptional()
+  @Transform(trimmed)
+  @IsString()
+  @Length(5, 5)
+  wardCode?: string;
+
+  @ApiPropertyOptional({
+    example: '12 Nguyễn Thái Học',
+    description: 'Số nhà, đường, toà nhà. Server ghép chuỗi hiển thị từ đây + xã/phường + tỉnh.',
+  })
+  @IsOptional()
+  @Transform(trimmed)
+  @IsString()
+  @MaxLength(ADDRESS_LINE_MAX_LENGTH)
+  addressLine?: string;
+
+  @ApiPropertyOptional({ description: 'Mã địa điểm Google khi chọn từ gợi ý' })
+  @IsOptional()
+  @Transform(trimmed)
+  @IsString()
+  @MaxLength(255)
+  placeId?: string;
+
+  @ApiPropertyOptional({ description: 'Vĩ độ ghim đã xác nhận — thắng toạ độ server tự tra' })
+  @IsOptional()
+  @IsLatitude()
+  latitude?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsLongitude()
+  longitude?: number;
+
+  @ApiPropertyOptional({ enum: LOCATION_SOURCE_VALUES })
+  @IsOptional()
+  @IsIn(LOCATION_SOURCE_VALUES)
+  locationSource?: string;
+
+  /**
+   * @deprecated Dùng `addressLine`. Giữ lại vì `ValidationPipe` chạy `forbidNonWhitelisted`:
+   * bỏ hẳn khiến mọi bản client đang chạy nhận 400 ngay lần đăng ký tiếp theo.
+   */
+  @ApiPropertyOptional({ deprecated: true, description: 'Cũ — dùng `addressLine`' })
   @IsOptional()
   @Transform(trimmed)
   @IsString()
@@ -106,19 +157,27 @@ export class UpdateTenantProfileDto {
   @MaxLength(2000)
   coverUrl?: string;
 
-  @ApiPropertyOptional()
+  /** @deprecated Dùng `addressLine` — xem ghi chú ở `RegisterShopDto.address`. */
+  @ApiPropertyOptional({ deprecated: true, description: 'Cũ — dùng `addressLine`' })
   @IsOptional()
   @IsString()
   @MaxLength(500)
   address?: string;
 
+  @ApiPropertyOptional({ description: 'Số nhà, đường, toà nhà của chi nhánh mặc định' })
+  @IsOptional()
+  @Transform(trimmed)
+  @IsString()
+  @MaxLength(ADDRESS_LINE_MAX_LENGTH)
+  addressLine?: string;
+
   /**
-   * Tỉnh/thành của gian hàng = tỉnh của CHI NHÁNH MẶC ĐỊNH, nên gửi mã lên đây là yêu cầu ĐỔI
+   * Địa chỉ của gian hàng = địa chỉ của CHI NHÁNH MẶC ĐỊNH, nên gửi mã lên đây là yêu cầu ĐỔI
    * chi nhánh đó — service chuyển tiếp cho `BranchesService` (writer duy nhất) chứ không tự ghi
-   * hai cột sao chép trên `tenant_profiles`.
+   * bốn cột sao chép trên `tenant_profiles`.
    *
-   * `provinceName` KHÔNG còn nhận từ client: tên do server tra từ mã. Client gửi tên lên là dữ
-   * liệu không kiểm soát được, và trước đây nó ghi đè bản sao rồi lệch hẳn với `provinceCode`.
+   * `provinceName`/`wardName` KHÔNG nhận từ client: tên do server tra từ mã. Client gửi tên lên
+   * là dữ liệu không kiểm soát được, và trước đây nó ghi đè bản sao rồi lệch hẳn với mã.
    */
   @ApiPropertyOptional({ description: 'Mã tỉnh/thành 2 ký tự (GET /provinces)' })
   @IsOptional()
@@ -126,6 +185,13 @@ export class UpdateTenantProfileDto {
   @IsString()
   @Length(2, 2)
   provinceCode?: string;
+
+  @ApiPropertyOptional({ description: 'Mã xã/phường/đặc khu 5 chữ số' })
+  @IsOptional()
+  @Transform(trimmed)
+  @IsString()
+  @Length(5, 5)
+  wardCode?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -193,9 +259,16 @@ export class TenantProfileDto {
   @ApiPropertyOptional({ type: String, nullable: true }) bio!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) logoUrl!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) coverUrl!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) address!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Địa chỉ HIỂN THỊ đã ghép — bản sao của chi nhánh mặc định',
+  })
+  address!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) provinceCode!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) provinceName!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) wardCode!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) wardName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) taxCode!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) businessLicenseNo!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) bankName!: string | null;
@@ -225,6 +298,16 @@ export class DefaultBranchDto {
   @ApiProperty() name!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) provinceCode!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) provinceName!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) wardCode!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) wardName!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Địa chỉ hiển thị đã ghép của chi nhánh mặc định',
+  })
+  address!: string | null;
+  @ApiProperty({ description: 'Địa chỉ chưa khớp danh mục hành chính hiện hành — cần bổ sung' })
+  needsLocationReview!: boolean;
 }
 
 /** Gian hàng của tôi: thông tin tenant + hồ sơ + trạng thái duyệt gần nhất. */

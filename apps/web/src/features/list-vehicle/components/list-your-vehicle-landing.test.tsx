@@ -1,4 +1,4 @@
-import { cleanup, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithIntl } from '@/i18n/test-utils';
@@ -6,11 +6,13 @@ import { renderWithIntl } from '@/i18n/test-utils';
 import { ListYourVehicleLanding } from './ListYourVehicleLanding';
 
 /**
- * Landing "Đăng ký xe" — cửa vào công khai của chủ xe.
+ * Landing "Đăng xe cho thuê" — cửa vào công khai của chủ xe, HAI tuyến doanh thu (ADR 0028).
  *
- * Bất biến quan trọng nhất: **không ai bị tạo gian hàng vì đi ngang qua đây.** Trang đọc được
- * khi chưa đăng nhập, và CTA rẽ theo trạng thái thật — mọi đích đều là đường dẫn NỘI BỘ dựng từ
- * hằng số, không lấy từ query, nên không có bề mặt open-redirect.
+ * Hai bất biến quan trọng nhất:
+ *  1. **Không ai bị tạo gian hàng vì đi ngang qua đây.** Nút tuyến cá nhân luôn trỏ wizard
+ *     đăng xe, không bao giờ biến thành form tạo gian hàng.
+ *  2. Chưa đăng nhập thì mở auth modal mang theo ĐÚNG đích vừa chọn — mọi đích đều là đường
+ *     dẫn NỘI BỘ dựng từ hằng số, không lấy từ query, nên không có bề mặt open-redirect.
  */
 const nav = vi.hoisted(() => ({ back: vi.fn() }));
 vi.mock('next/navigation', () => ({
@@ -22,73 +24,108 @@ vi.mock('next/navigation', () => ({
 const currentUser = vi.hoisted(() => ({ data: undefined as unknown, isLoading: false }));
 vi.mock('@/hooks/use-current-user', () => ({ useCurrentUser: () => currentUser }));
 
-function ctaHref(): string | null {
-  const cta = screen.getByRole('link', { name: /Đăng ký xe tự lái/ });
-  return cta.getAttribute('href');
+const authModal = vi.hoisted(() => ({ open: vi.fn() }));
+vi.mock('@/features/auth/components/AuthModalProvider', () => ({
+  useAuthModal: () => authModal,
+}));
+
+const PERSONAL_HREF = '/list-your-vehicle/register?from=marketplace';
+const SHOP_HREF = '/manage/onboarding';
+
+function personalCta(): HTMLElement {
+  return screen.getByRole('link', { name: /Đăng xe đầu tiên/ });
+}
+
+function shopCta(): HTMLElement {
+  return screen.getByRole('link', { name: /Tìm hiểu và tạo gian hàng/ });
 }
 
 beforeEach(() => {
   currentUser.data = undefined;
   currentUser.isLoading = false;
   nav.back.mockReset();
+  authModal.open.mockReset();
 });
 
 afterEach(cleanup);
 
-describe('CTA rẽ theo trạng thái đăng nhập', () => {
-  it('chưa đăng nhập: đi qua đăng nhập, mang theo owner intent và đích là WIZARD', () => {
+describe('Hai tuyến là hai lựa chọn độc lập', () => {
+  it.each([
+    ['chưa đăng nhập', undefined],
+    ['đã đăng nhập, chưa có gian hàng', { id: 'u1', tenant: null }],
+    ['đã có gian hàng', { id: 'u1', tenant: { id: 't1' } }],
+  ])('%s: mỗi nút giữ nguyên đích của tuyến mình', (_label, user) => {
+    currentUser.data = user;
     renderWithIntl(<ListYourVehicleLanding />);
 
-    const href = ctaHref()!;
-    expect(href.startsWith('/manage/login?')).toBe(true);
-    expect(href).toContain('intent=owner');
-    // `next` là wizard đăng xe, KHÔNG phải form tạo gian hàng — người dùng chưa đồng ý mở shop.
-    expect(decodeURIComponent(href)).toContain('/list-your-vehicle/register?from=marketplace');
-  });
-
-  it('đã đăng nhập nhưng chưa có gian hàng: qua onboarding rồi quay lại wizard', () => {
-    currentUser.data = { id: 'u1', tenant: null };
-    renderWithIntl(<ListYourVehicleLanding />);
-
-    const href = ctaHref()!;
-    expect(href.startsWith('/manage/onboarding?next=')).toBe(true);
-    expect(decodeURIComponent(href)).toContain('/list-your-vehicle/register?from=marketplace');
-  });
-
-  it('đã có gian hàng: vào thẳng wizard, không hỏi tạo gian hàng lần hai', () => {
-    currentUser.data = { id: 'u1', tenant: { id: 't1' } };
-    renderWithIntl(<ListYourVehicleLanding />);
-
-    expect(ctaHref()).toBe('/list-your-vehicle/register?from=marketplace');
+    expect(personalCta().getAttribute('href')).toBe(PERSONAL_HREF);
+    expect(shopCta().getAttribute('href')).toBe(SHOP_HREF);
   });
 
   it('mọi đích đều là đường dẫn nội bộ — không có URL tuyệt đối nào', () => {
-    for (const user of [undefined, { id: 'u1', tenant: null }, { id: 'u1', tenant: { id: 't1' } }]) {
-      cleanup();
-      currentUser.data = user;
-      renderWithIntl(<ListYourVehicleLanding />);
-      const href = ctaHref()!;
-      expect(href.startsWith('/')).toBe(true);
+    renderWithIntl(<ListYourVehicleLanding />);
+
+    for (const href of [personalCta().getAttribute('href'), shopCta().getAttribute('href')]) {
+      expect(href?.startsWith('/')).toBe(true);
       expect(href).not.toMatch(/^https?:|^\/\//);
     }
   });
 });
 
-describe('Nội dung landing', () => {
-  it('nói rõ bốn bước và dẫn tới văn bản pháp lý CÓ THẬT', () => {
+describe('Chưa đăng nhập: đăng nhập tại chỗ rồi quay lại đúng đích', () => {
+  it('tuyến cá nhân mở auth modal với next là WIZARD, không phải tạo gian hàng', () => {
     renderWithIntl(<ListYourVehicleLanding />);
 
-    expect(screen.getByText('Điền thông tin xe')).toBeTruthy();
-    expect(screen.getByText('Đăng tải hình ảnh xe')).toBeTruthy();
-    expect(screen.getByText('XePrime duyệt hồ sơ')).toBeTruthy();
-    expect(screen.getByText('Bắt đầu cho thuê')).toBeTruthy();
+    fireEvent.click(personalCta());
+
+    expect(authModal.open).toHaveBeenCalledTimes(1);
+    expect(authModal.open.mock.calls[0]![0]).toMatchObject({ next: PERSONAL_HREF });
+  });
+
+  it('tuyến gian hàng mở auth modal với next là onboarding', () => {
+    renderWithIntl(<ListYourVehicleLanding />);
+
+    fireEvent.click(shopCta());
+
+    expect(authModal.open).toHaveBeenCalledTimes(1);
+    expect(authModal.open.mock.calls[0]![0]).toMatchObject({ next: SHOP_HREF });
+  });
+
+  it('đã đăng nhập thì không chặn — để link đi thẳng tới đích', () => {
+    currentUser.data = { id: 'u1', tenant: null };
+    renderWithIntl(<ListYourVehicleLanding />);
+
+    fireEvent.click(personalCta());
+    fireEvent.click(shopCta());
+
+    expect(authModal.open).not.toHaveBeenCalled();
+  });
+});
+
+describe('Nội dung landing', () => {
+  it('nói rõ hai tuyến, mức phí thí điểm và khả năng nâng cấp sau', () => {
+    renderWithIntl(<ListYourVehicleLanding />);
+
+    expect(screen.getByRole('heading', { name: 'Đăng xe cá nhân' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Mở gian hàng cho thuê' })).toBeTruthy();
+    expect(screen.getByText(/10% giá thuê/)).toBeTruthy();
+    expect(screen.getByText('Tối đa 3 xe')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Linh hoạt nâng cấp khi cần' })).toBeTruthy();
+  });
+
+  it('mỗi thẻ có hình minh hoạ RIÊNG — không dùng chung một file', () => {
+    const { container } = renderWithIntl(<ListYourVehicleLanding />);
+
+    const sources = [...container.querySelectorAll('img')].map((img) => img.getAttribute('src'));
+    expect(sources.some((src) => src?.includes('owner-personal-car'))).toBe(true);
+    expect(sources.some((src) => src?.includes('owner-shop-showroom'))).toBe(true);
+  });
+
+  it('dẫn tới văn bản pháp lý CÓ THẬT và không hứa con số thu nhập', () => {
+    renderWithIntl(<ListYourVehicleLanding />);
 
     const policy = screen.getByRole('link', { name: /Quy định sử dụng chợ xe/ });
     expect(policy.getAttribute('href')).toBe('/legal/marketplace-rules');
-  });
-
-  it('không hứa con số thu nhập hay cam kết pháp lý tự nghĩ ra', () => {
-    renderWithIntl(<ListYourVehicleLanding />);
     expect(screen.queryByText(/phạt nguội/i)).toBeNull();
     expect(screen.queryByText(/\d+\s*(triệu|tr)\/tháng/i)).toBeNull();
   });

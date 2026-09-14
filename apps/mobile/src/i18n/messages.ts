@@ -2,6 +2,7 @@ import enBookingRequests from '@xeprime/domain/messages/en/booking-requests.json
 import enBookings from '@xeprime/domain/messages/en/bookings.json';
 import enChat from '@xeprime/domain/messages/en/chat.json';
 import enTrips from '@xeprime/domain/messages/en/trips.json';
+import enAddress from '@xeprime/domain/messages/en/address.json';
 import enAccount from '@xeprime/domain/messages/en/account.json';
 import enAuth from '@xeprime/domain/messages/en/auth.json';
 import enCommon from '@xeprime/domain/messages/en/common.json';
@@ -31,6 +32,7 @@ import viBookingRequests from '@xeprime/domain/messages/vi/booking-requests.json
 import viBookings from '@xeprime/domain/messages/vi/bookings.json';
 import viChat from '@xeprime/domain/messages/vi/chat.json';
 import viTrips from '@xeprime/domain/messages/vi/trips.json';
+import viAddress from '@xeprime/domain/messages/vi/address.json';
 import viAccount from '@xeprime/domain/messages/vi/account.json';
 import viAuth from '@xeprime/domain/messages/vi/auth.json';
 import viCommon from '@xeprime/domain/messages/vi/common.json';
@@ -84,6 +86,7 @@ export const MESSAGES = {
     Notifications: viNotifications,
     Navigation: viNavigation,
     Account: viAccount,
+    Address: viAddress,
     Trips: viTrips,
     BookingRequests: viBookingRequests,
     Bookings: viBookings,
@@ -115,6 +118,7 @@ export const MESSAGES = {
     Notifications: enNotifications,
     Navigation: enNavigation,
     Account: enAccount,
+    Address: enAddress,
     Trips: enTrips,
     BookingRequests: enBookingRequests,
     Bookings: enBookings,

@@ -1,6 +1,7 @@
 'use client';
 
 import { Input, type InputRef } from 'antd';
+import { useTranslations } from 'next-intl';
 import { useEffect, useRef } from 'react';
 
 const OTP_LEN = 6;
@@ -26,6 +27,7 @@ export function OtpCodeInput({
   disabled,
   autoFocus,
 }: OtpCodeInputProps) {
+  const t = useTranslations('Auth.otp');
   const ref = useRef<InputRef>(null);
 
   useEffect(() => {
@@ -46,9 +48,9 @@ export function OtpCodeInput({
       inputMode="numeric"
       autoComplete="one-time-code"
       maxLength={OTP_LEN}
-      placeholder="Nhập mã 6 số"
+      placeholder={t('codePlaceholder')}
       disabled={disabled}
-      aria-label="Mã xác thực gồm 6 số"
+      aria-label={t('codeAria')}
       onChange={(e) => handle(e.target.value)}
     />
   );

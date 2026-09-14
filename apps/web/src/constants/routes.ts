@@ -111,6 +111,13 @@ export const ROUTES = {
     SHOP_BRANCHES: '/manage/shop/branches',
     /** Chính sách thuê mặc định của gian hàng (Wave 2 — cọc/giao nhận/quá giờ/ưu đãi). */
     SHOP_POLICIES: '/manage/shop/policies',
+    /**
+     * Công tắc thu cọc qua XePrime (Phase 6 — ADR 0032 điều 2).
+     *
+     * Khác `SHOP_POLICIES`: ở đó là **cọc/thế chấp giữa gian hàng và khách** (tài sản, giấy tờ),
+     * ở đây là **khoản `D` XePrime thu hộ trước chuyến**. Hai khái niệm tiền khác nhau, hai màn.
+     */
+    SHOP_PAYMENT_SETTINGS: '/manage/shop/payment-settings',
     /** Hồ sơ người bán do gian hàng khai — điều kiện trước khi nhận tiền khách thật (ADR 0028 gate 1). */
     SELLER_PROFILE: '/manage/shop/seller-profile',
     MEMBERS: '/manage/members',

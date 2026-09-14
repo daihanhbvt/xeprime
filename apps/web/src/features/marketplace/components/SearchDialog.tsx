@@ -22,7 +22,10 @@ import {
 } from '@/components/form/RentalDateTimeRangeField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { buildProvinceOptions } from '../province-options';
-import { defaultRentalRange } from '../search/search-draft';
+import {
+  rememberRentalRange,
+  rememberedOrDefaultRentalRange,
+} from '@/lib/rental-range-memory';
 import { useDestinations } from '../hooks/use-destinations';
 import type { MarketplaceFilters } from '../types';
 import styles from './SearchDialog.module.css';
@@ -81,9 +84,15 @@ export function SearchDialog({
   );
   const [mode, setMode] = useState<RentalMode>(initial.hourly ? 'hourly' : 'daily');
   const [range, setRange] = useState<RentalRange>(() => {
-    // Khoảng mặc định là LUẬT dùng chung (`@xeprime/domain`), không phải hai dòng chép lại ở
-    // đây; và mốc từ URL đọc theo giờ VN như mọi bề mặt khác (CLAUDE.md §9).
-    const fallback = defaultRentalRange();
+    /*
+     * Thứ tự y hệt mọi bề mặt khác: URL trước, rồi lựa chọn khách đã tự chọn trước đó, cuối
+     * cùng mới tới gợi ý sinh ra (`rememberedOrDefaultRentalRange`). Mốc từ URL đọc theo giờ VN
+     * như mọi nơi (CLAUDE.md §9).
+     *
+     * Đọc bộ nhớ trình duyệt trong initializer ở đây là AN TOÀN vì hộp này chỉ được dựng sau
+     * khi người dùng bấm "Chỉnh sửa" — nó không tồn tại trong HTML server dựng.
+     */
+    const fallback = rememberedOrDefaultRentalRange();
     return {
       pickupAt: initial.pickupAt ? toAppTz(initial.pickupAt) : fallback.pickupAt,
       returnAt: initial.returnAt ? toAppTz(initial.returnAt) : fallback.returnAt,
@@ -100,6 +109,10 @@ export function SearchDialog({
   );
 
   function submit() {
+    // Bấm "Áp dụng" là một LỰA CHỌN CHỦ ĐỘNG — ghi nhớ để trang sau và lần mở sau khỏi hỏi lại.
+    // Dài hạn không có khoảng nhận–trả (ADR 0011) nên không có gì để nhớ.
+    if (!longTerm) rememberRentalRange({ ...range, mode });
+
     onSubmit({
       vehicleType,
       provinceCode: province || undefined,

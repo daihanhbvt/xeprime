@@ -21,6 +21,7 @@
   "filterLabel": "Filter conversations",
   "filterUnread": "Unread",
   "imageAlt": "Image",
+  "inboxTitle": "Messages",
   "inputPlaceholder": "Write a message…",
   "loadError": "Couldn't load conversations",
   "messageShop": "Message shop",
@@ -42,6 +43,7 @@
   "unreadCount": "{count, plural, one {# unread message} other {# unread messages}}",
   "uploadFailed": "Upload failed",
   "uploading": "Uploading…",
+  "viewAll": "View all messages",
   "viewListing": "View listing",
   "welcomeTitle": "Welcome to XePrime Messages",
   "yesterday": "Yesterday"

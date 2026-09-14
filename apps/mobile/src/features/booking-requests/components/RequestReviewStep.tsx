@@ -14,6 +14,7 @@ import { FormSection } from '@/components/ui/FormSection';
 import { DataRow } from '@/components/ui/DataRow';
 import { PriceBreakdown } from '@/components/ui/PriceBreakdown';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { useAddressPreview } from '@/features/locations/hooks/use-address-preview';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
@@ -52,6 +53,21 @@ export function RequestReviewStep({
 
   const longTerm = values.serviceType === SERVICE_TYPE.LONG_TERM;
   const withDriver = values.serviceType === SERVICE_TYPE.WITH_DRIVER;
+
+  /*
+   * Hai chuỗi địa chỉ để soát lại. Ghép bằng CHÍNH hàm server dùng (`formatAddress`), nên thứ
+   * khách đọc ở đây là đúng thứ sẽ được lưu (ADR 0035 điều 3).
+   */
+  const pickupAddress = useAddressPreview(
+    values.pickupProvinceCode,
+    values.pickupWardCode,
+    values.pickupAddressLine,
+  );
+  const deliveryAddress = useAddressPreview(
+    values.deliveryProvinceCode,
+    values.deliveryWardCode,
+    values.deliveryAddressLine,
+  );
   const quote = usePublicQuote(listing.id, toQuoteParams(values));
 
   /**
@@ -165,7 +181,7 @@ export function RequestReviewStep({
               <DataRow
                 block
                 label={t('review.driverPickupAddress')}
-                value={values.pickupAddress || '—'}
+                value={pickupAddress ?? '—'}
               />
               {values.routeType !== ROUTE_TYPE.IN_CITY ? (
                 <DataRow block label={t('review.destination')} value={values.destination || '—'} />
@@ -174,11 +190,7 @@ export function RequestReviewStep({
           ) : null}
 
           {values.deliveryRequested ? (
-            <DataRow
-              block
-              label={t('review.deliveryAddress')}
-              value={values.deliveryAddress || '—'}
-            />
+            <DataRow block label={t('review.deliveryAddress')} value={deliveryAddress ?? '—'} />
           ) : null}
         </YStack>
       </FormSection>

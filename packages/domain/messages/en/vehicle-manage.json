@@ -82,7 +82,8 @@
     "addressSharedBody": "Editing the branch address changes the public location of all of them. To place this vehicle elsewhere, create or pick another branch in the management portal.",
     "saved": "Vehicle details saved",
     "lockedNotice": "This vehicle is live on the marketplace: plate number, transmission, fuel type and manufacture year are locked. Everything else — pricing included — takes effect immediately.",
-    "lockedField": "Locked while the vehicle is on the marketplace. Remove it from the marketplace to change this."
+    "lockedField": "Locked while the vehicle is on the marketplace. Remove it from the marketplace to change this.",
+    "addressBranchHint": "The branch address decides where this vehicle appears on the marketplace, and is the starting point for delivery fee calculation."
   },
   "images": {
     "reorderToggle": "Allow drag and drop to reorder photos.",

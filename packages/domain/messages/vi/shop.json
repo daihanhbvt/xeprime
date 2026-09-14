@@ -212,5 +212,39 @@
     },
     "appliedTipLabel": "Giải thích phạm vi áp dụng chính sách",
     "dirtyDiscard": "Hủy bỏ"
+  },
+  "paymentSettings": {
+    "title": "Thu cọc qua XePrime",
+    "subtitle": "Quyết định XePrime có giữ khoản cọc của khách trước chuyến hay không. Khác với cọc/thế chấp bạn nhận trực tiếp tại quầy — cái đó nằm ở Chính sách thuê.",
+    "loadError": "Không tải được cấu hình thu cọc",
+    "forbidden": {
+      "title": "Không có quyền truy cập",
+      "description": "Bạn cần quyền dưới đây để xem cấu hình thu cọc của gian hàng."
+    },
+    "toggle": {
+      "label": "XePrime thu cọc hộ tôi",
+      "on": "Đang thu",
+      "off": "Không thu",
+      "saved": "Đã lưu cấu hình thu cọc"
+    },
+    "mode": {
+      "onTitle": "Khách chuyển cọc trước khi có đơn",
+      "onBody": "Khách quét VietQR chuyển cọc cho XePrime trong vòng 2 giờ kể từ khi bạn duyệt. Đơn thuê chỉ ra đời khi tiền đã về, nên chỗ xe không bị giữ bởi một yêu cầu không có thật. Phần tiền thuê còn lại khách trả trực tiếp cho bạn khi nhận xe.",
+      "offTitle": "Bạn tự thoả thuận cọc với khách",
+      "offBody": "Duyệt xong là có đơn ngay, không chờ tiền. Bạn liên hệ khách để thoả thuận cọc trực tiếp — XePrime không thu hộ và không đối soát khoản này, nên nếu có tranh chấp về tiền cọc thì XePrime không có bằng chứng để hỗ trợ."
+    },
+    "locked": {
+      "commission": {
+        "title": "Gian hàng của bạn luôn thu cọc qua XePrime",
+        "body": "Bạn đang ở tuyến hoa hồng: không trả phí thuê bao, và XePrime thu phí dịch vụ theo từng chuyến ở phía khách. Khoản cọc là điều kiện của tuyến này nên công tắc bị khoá. Chuyển sang gói thuê bao nếu bạn muốn tự quyết.",
+        "cta": "Xem gói thuê bao"
+      },
+      "featureMissing": {
+        "title": "Gói hiện tại chưa có tính năng này",
+        "body": "Thu cọc qua XePrime thuộc gói thuê bao. Trong lúc chưa có, bạn vẫn nhận đơn bình thường và tự thoả thuận cọc trực tiếp với khách.",
+        "cta": "Nâng cấp gói"
+      }
+    },
+    "frozen": "Đổi công tắc chỉ áp dụng cho yêu cầu thuê được duyệt từ lúc này trở đi. Đơn đã tạo giữ nguyên cách thu cọc đã chốt lúc đó."
   }
 }

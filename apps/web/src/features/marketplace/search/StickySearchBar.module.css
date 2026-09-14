@@ -46,12 +46,32 @@
 
 .chip {
   composes: chip from './search-chip.module.css';
+  /*
+   * Viên ngữ cảnh KHÔNG co lại. `.chip` mang `min-width: 0` (đúng cho một ô co giãn), nên nếu
+   * còn cho phép co thì mọi phần thiếu chỗ của hàng đổ hết vào đây — nhãn "Ô tô · Tự lái" bị cắt
+   * thành "Ô…" và viên mất sạch ý nghĩa, trong khi hai ô bên cạnh vẫn rộng rãi vì chúng có sàn
+   * `min-width`. Đây chính là lỗi đã thấy ngày 14/09: `.dateChip` kế thừa `width: 100%` từ
+   * `RentalDateTimeRangeField` nên đòi trọn bề ngang thanh, và viên ngữ cảnh là thứ duy nhất
+   * nhường được.
+   */
+  flex: none;
 }
 
 /* Viên ngữ cảnh chính đậm hơn — nó là thứ nói "bạn đang tìm gì". */
 .modeChip {
   border-color: var(--xp-color-border-strong);
   font-weight: var(--xp-font-weight-semibold);
+}
+
+/*
+ * Lộ trình chỉ còn ở màn RỘNG. Từ 1024px trở xuống, thêm một viên nữa đẩy hàng vượt bề ngang và
+ * ô thời gian (thứ người ta thật sự chỉnh khi đang đọc danh sách) bị ép xuống dưới sàn đọc được.
+ * Cùng lý do mobile đã bỏ hẳn cụm ngữ cảnh — lộ trình vẫn đổi được ở thẻ tìm kiếm và panel Bộ lọc.
+ */
+@media (max-width: 1024px) {
+  .routeChip {
+    display: none;
+  }
 }
 
 /* Vạch ngăn ngữ cảnh KẾ THỪA với các ô đang thực sự chỉnh ở đây. */
@@ -93,6 +113,15 @@
  * là hai đầu bị cắt thành `…` và ô mất hết ý nghĩa.
  */
 .dateChip {
+  /*
+   * `width: auto` GHI ĐÈ `width: 100%` của `RentalDateTimeRangeField.trigger`.
+   *
+   * Bề rộng 100% là đúng ở chỗ ô này là control chính chiếm trọn một ô lưới (thẻ hero, form đặt
+   * xe). Ở đây nó là MỘT trong bốn thứ trên cùng một hàng flex, và `flex-basis: auto` đọc thẳng
+   * từ `width` — nên `100%` biến cơ sở co giãn của ô thành trọn bề ngang thanh, hàng tràn, và
+   * phần thiếu bị đùn sang viên ngữ cảnh bên trái (xem ghi chú ở `.chip`).
+   */
+  width: auto;
   min-width: 250px;
   flex: 1 1 auto;
   min-height: 38px;
@@ -136,6 +165,27 @@
   margin: 0;
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-sm);
+}
+
+/*
+ * Tablet (641–1024px): cùng ba ô như desktop nhưng ít chỗ hơn hẳn. Hạ SÀN của hai ô co giãn và
+ * thu khoảng đệm, để viên ngữ cảnh giữ nguyên nhãn đầy đủ mà hàng vẫn không tràn.
+ * `250px` cho ô thời gian là bề rộng thoải mái của `15/09 10:00 → 18/09 10:00`; `228px` là bề
+ * rộng VỪA ĐỦ của cùng chuỗi đó — hạ thêm nữa là hai đầu bắt đầu bị cắt.
+ */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .inner {
+    padding: var(--xp-space-sm) var(--xp-space-sm);
+    gap: 6px;
+  }
+
+  .location {
+    min-width: 120px;
+  }
+
+  .dateChip {
+    min-width: 228px;
+  }
 }
 
 /*

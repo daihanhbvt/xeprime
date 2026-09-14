@@ -23,19 +23,18 @@ import {
   toLocalVnPhone,
   type TenantStatus,
 } from '@xeprime/types';
+import { guessAddressLine } from '@xeprime/domain';
 import { shopProfileSchema, type ShopProfileValues } from '@xeprime/validators';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { ImageUploadField } from '@/components/form/ImageUploadField';
-import { SelectField } from '@/components/form/SelectField';
+import { AddressField } from '@/components/form/AddressField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { trailingRequiredMark } from '@/components/form/required-mark';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ROUTES, shopPath } from '@/constants/routes';
 import { cx } from '@/lib/cx';
-import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { getErrorMessage } from '@/services/api-client';
 import { presignShopMedia } from '@/services/upload';
 import type { MyShop, UpdateProfileInput } from '../types';
 import { ShopProfileChecklist } from './ShopProfileChecklist';
@@ -64,14 +63,31 @@ interface ShopProfileWorkspaceProps {
   onSubmitReview: (pendingChanges: UpdateProfileInput | null) => void;
 }
 
+/** Tên bảy trường địa chỉ trong `shopProfileSchema` — hằng số ngoài component, định danh ổn định. */
+const ADDRESS_FIELD_NAMES = {
+  provinceCode: 'provinceCode',
+  wardCode: 'wardCode',
+  addressLine: 'addressLine',
+} as const;
+
+/** Bốn trường GHIM — tách riêng vì không phải form nào cũng lưu toạ độ (xem `AddressPinNames`). */
+const ADDRESS_PIN_NAMES = {
+  placeId: 'placeId',
+  latitude: 'latitude',
+  longitude: 'longitude',
+  locationSource: 'locationSource',
+} as const;
+
 /** Giá trị form → thân request. Dùng cho CẢ hai đường ra: lưu, và lưu-rồi-gửi-duyệt. */
 function toBody(v: ShopProfileValues): UpdateProfileInput {
   return {
     displayName: v.displayName,
     bio: v.bio,
-    address: v.address,
-    // Chỉ gửi MÃ tỉnh — tên do server tra ra. Backend chuyển tiếp cho chi nhánh mặc định.
+    // Chỉ gửi MÃ + phần chi tiết — tên tỉnh/xã và chuỗi hiển thị do server ghép. Backend
+    // chuyển tiếp cả cụm cho chi nhánh mặc định (writer duy nhất của địa chỉ vận hành).
     provinceCode: v.provinceCode,
+    wardCode: v.wardCode,
+    addressLine: v.addressLine,
     taxCode: v.taxCode,
     businessLicenseNo: v.businessLicenseNo,
     bankName: v.bankName,
@@ -99,8 +115,17 @@ function toValues(shop: MyShop): ShopProfileValues {
   return {
     displayName: p.displayName ?? '',
     bio: p.bio ?? '',
-    address: p.address ?? '',
     provinceCode: shop.defaultBranch?.provinceCode ?? p.provinceCode ?? '',
+    wardCode: shop.defaultBranch?.wardCode ?? p.wardCode ?? '',
+    /*
+     * Hồ sơ CŨ chưa có phần "số nhà, đường" tách riêng: đoán từ chuỗi hiển thị bằng cách cắt
+     * các cụm trông như đơn vị hành chính. Chỉ là GỢI Ý — chủ shop nhìn và sửa trước khi lưu.
+     */
+    addressLine: guessAddressLine(shop.defaultBranch?.address ?? p.address),
+    placeId: null,
+    latitude: null,
+    longitude: null,
+    locationSource: null,
     taxCode: p.taxCode ?? '',
     businessLicenseNo: p.businessLicenseNo ?? '',
     bankName: p.bankName ?? '',
@@ -138,7 +163,6 @@ export function ShopProfileWorkspace({
   const t = useTranslations('Shop');
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
-  const provinces = useProvinceOptions();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const resolver = useValidationResolver<ShopProfileValues>(shopProfileSchema, 'Shop.validation');
@@ -295,25 +319,11 @@ export function ShopProfileWorkspace({
         {readOnlyReason ? (
           <Alert type="info" showIcon className={styles.alert} title={readOnlyReason} />
         ) : null}
-        {provinces.isError ? (
-          <Alert
-            type="warning"
-            showIcon
-            className={styles.alert}
-            title={t('form.address.province.loadError')}
-            description={getErrorMessage(provinces.error)}
-            action={
-              <Button size="small" onClick={provinces.refetch}>
-                {tCommon('actions.retry')}
-              </Button>
-            }
-          />
-        ) : null}
-
         {/*
           `fieldset[disabled]` khoá mọi ô nhập/nút NATIVE bên trong bằng chính cơ chế của trình
-          duyệt. `SelectField` vẫn phải nhận `disabled` tường minh: nó là combobox dựng bằng div,
-          fieldset không với tới được và dropdown vẫn mở ra như thường.
+          duyệt. Các ô CHỌN (tỉnh/thành, xã/phường trong `AddressField`) vẫn phải nhận `disabled`
+          tường minh: chúng là combobox dựng bằng div, fieldset không với tới được và dropdown vẫn
+          mở ra như thường.
         */}
         <fieldset disabled={readOnly || saving} className={styles.fieldset}>
           <div className={styles.grid}>
@@ -401,37 +411,26 @@ export function ShopProfileWorkspace({
               icon={<EnvironmentOutlined />}
               title={t('form.address.title')}
             >
-              <div className={styles.pairRow}>
-                <TextField
-                  control={control}
-                  name="address"
-                  label={t('form.address.address.label')}
-                  placeholder={t('form.address.address.placeholder')}
-                />
-                <SelectField
-                  control={control}
-                  name="provinceCode"
-                  label={t('form.address.province.label')}
-                  required
-                  showSearch
-                  options={provinces.options}
-                  loading={provinces.isLoading}
-                  disabled={readOnly || provinces.isLoading || provinces.isError}
-                  placeholder={
-                    provinces.isLoading
-                      ? t('form.address.province.loading')
-                      : t('form.address.province.placeholder')
-                  }
-                  help={
-                    <>
-                      {t('form.address.province.help')}{' '}
-                      <Link href={ROUTES.MANAGE.SHOP_BRANCHES} className={styles.helpLink}>
-                        {t('form.address.province.branchLink')}
-                      </Link>
-                    </>
-                  }
-                />
-              </div>
+              {/*
+                Đổi địa chỉ ở đây là đổi địa chỉ của CHI NHÁNH MẶC ĐỊNH — tức là dời vị trí công
+                khai của mọi xe thuộc chi nhánh đó trên marketplace.
+              */}
+              <AddressField
+                control={control}
+                names={ADDRESS_FIELD_NAMES}
+                pin={ADDRESS_PIN_NAMES}
+                required
+                wardRequired={false}
+                disabled={readOnly}
+                notice={
+                  <p className={styles.addressNotice}>
+                    {t('form.address.province.help')}{' '}
+                    <Link href={ROUTES.MANAGE.SHOP_BRANCHES} className={styles.helpLink}>
+                      {t('form.address.province.branchLink')}
+                    </Link>
+                  </p>
+                }
+              />
               <div className={styles.pairRow}>
                 <TextField
                   control={control}

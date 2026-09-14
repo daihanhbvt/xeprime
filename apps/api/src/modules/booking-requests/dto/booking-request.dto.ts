@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ADDRESS_LINE_MAX_LENGTH,
   BOOKING_REQUEST_DECISION_SOURCE_VALUES,
   BOOKING_REQUEST_STATUS_VALUES,
   LONG_TERM_PACKAGE_MONTHS_VALUES,
@@ -11,13 +12,15 @@ import {
   TENANT_CUSTOMER_RISK_LEVEL_VALUES,
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
   IsEmail,
   IsIn,
   IsInt,
+  IsLatitude,
+  IsLongitude,
   IsOptional,
   IsString,
   Length,
@@ -30,8 +33,12 @@ import {
 
 import { DATE_ONLY_PATTERN } from '../../../common/date-only';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
+import { AddressViewDto, GeoPinDto } from '../../locations/dto/address.dto';
 import { BookingRequestDeliveryQuoteDto } from '../../pricing/dto/pricing.dto';
 import { MobileDeviceDto, MobileSessionDto } from '../../auth/dto/mobile-auth.dto';
+
+const trimmedText = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? value.trim() : value;
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -136,19 +143,88 @@ export class CreateBookingRequestDto {
   @IsIn(ROUTE_TYPE_VALUES)
   routeType?: string;
 
-  /** Địa chỉ đón khách — BẮT BUỘC khi with_driver (xe đến đón, khác giao xe tận nơi). */
+  /**
+   * Địa chỉ đón khách — BẮT BUỘC khi with_driver (xe đến đón, khác giao xe tận nơi).
+   *
+   * Vẫn là CHUỖI: đây là địa chỉ hiển thị. Khi client gửi kèm `pickupProvinceCode` +
+   * `pickupWardCode`, server DỰNG LẠI chuỗi này từ danh mục và bỏ qua giá trị gửi lên — một địa
+   * chỉ chỉ có một cách viết. Client chưa cập nhật gửi mỗi chuỗi thì chuỗi được giữ nguyên và
+   * bản ghi đơn giản là không có mã hành chính.
+   */
   @ApiPropertyOptional({ description: 'Địa chỉ đón khách (with_driver)' })
   @IsOptional()
   @IsString()
   @MaxLength(500)
   pickupAddress?: string;
 
-  /** Điểm đến — BẮT BUỘC khi lộ trình liên tỉnh (inter_city / inter_city_one_way). */
+  @ApiPropertyOptional({ description: 'Mã tỉnh/thành của điểm đón (GET /provinces)' })
+  @IsOptional()
+  @Transform(trimmedText)
+  @IsString()
+  @Length(2, 2)
+  pickupProvinceCode?: string;
+
+  @ApiPropertyOptional({ description: 'Mã xã/phường/đặc khu của điểm đón' })
+  @IsOptional()
+  @Transform(trimmedText)
+  @IsString()
+  @Length(5, 5)
+  pickupWardCode?: string;
+
+  @ApiPropertyOptional({ description: 'Số nhà, đường của điểm đón' })
+  @IsOptional()
+  @Transform(trimmedText)
+  @IsString()
+  @MaxLength(ADDRESS_LINE_MAX_LENGTH)
+  pickupAddressLine?: string;
+
+  @ApiPropertyOptional({ description: 'Mã địa điểm Google của điểm đón' })
+  @IsOptional()
+  @Transform(trimmedText)
+  @IsString()
+  @MaxLength(255)
+  pickupPlaceId?: string;
+
+  @ApiPropertyOptional({ description: 'Vĩ độ ghim điểm đón' })
+  @IsOptional()
+  @IsLatitude()
+  pickupLatitude?: number;
+
+  @ApiPropertyOptional({ description: 'Kinh độ ghim điểm đón' })
+  @IsOptional()
+  @IsLongitude()
+  pickupLongitude?: number;
+
+  /**
+   * Điểm đến — BẮT BUỘC khi lộ trình liên tỉnh (inter_city / inter_city_one_way).
+   *
+   * KHÔNG có mã xã/phường đi kèm, có chủ đích: điểm đến là một ĐỊA ĐIỂM ("Sân bay Nội Bài",
+   * "Đà Lạt"), không phải một địa chỉ giao nhận. Bắt khách chọn xã/phường cho nó là hỏi một thứ
+   * họ không biết và không cần biết. Ghim toạ độ thì có ích (ước lượng quãng đường), nên chỉ có
+   * ghim.
+   */
   @ApiPropertyOptional({ description: 'Điểm đến (with_driver liên tỉnh)' })
   @IsOptional()
   @IsString()
   @MaxLength(500)
   destination?: string;
+
+  @ApiPropertyOptional({ description: 'Mã địa điểm Google của điểm đến' })
+  @IsOptional()
+  @Transform(trimmedText)
+  @IsString()
+  @MaxLength(255)
+  destinationPlaceId?: string;
+
+  @ApiPropertyOptional({ description: 'Vĩ độ ghim điểm đến' })
+  @IsOptional()
+  @IsLatitude()
+  destinationLatitude?: number;
+
+  @ApiPropertyOptional({ description: 'Kinh độ ghim điểm đến' })
+  @IsOptional()
+  @IsLongitude()
+  destinationLongitude?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -163,11 +239,56 @@ export class CreateBookingRequestDto {
   @IsBoolean()
   deliveryRequested?: boolean;
 
+  /**
+   * Địa điểm giao xe — bắt buộc khi yêu cầu giao tận nơi.
+   *
+   * Đây là địa chỉ SINH RA TIỀN (phí giao tính theo km từ chi nhánh tới đúng cái ghim dưới),
+   * nên nó được hỏi kỹ nhất trong hệ thống: giao diện đòi chọn tỉnh + xã/phường và xác nhận
+   * ghim trước khi gửi.
+   */
   @ApiPropertyOptional({ description: 'Địa điểm giao xe — bắt buộc khi yêu cầu giao tận nơi' })
   @IsOptional()
   @IsString()
   @MaxLength(500)
   deliveryAddress?: string;
+
+  @ApiPropertyOptional({ description: 'Mã tỉnh/thành của địa chỉ giao xe (GET /provinces)' })
+  @IsOptional()
+  @Transform(trimmedText)
+  @IsString()
+  @Length(2, 2)
+  deliveryProvinceCode?: string;
+
+  @ApiPropertyOptional({ description: 'Mã xã/phường/đặc khu của địa chỉ giao xe' })
+  @IsOptional()
+  @Transform(trimmedText)
+  @IsString()
+  @Length(5, 5)
+  deliveryWardCode?: string;
+
+  @ApiPropertyOptional({ description: 'Số nhà, đường của địa chỉ giao xe' })
+  @IsOptional()
+  @Transform(trimmedText)
+  @IsString()
+  @MaxLength(ADDRESS_LINE_MAX_LENGTH)
+  deliveryAddressLine?: string;
+
+  @ApiPropertyOptional({ description: 'Mã địa điểm Google của địa chỉ giao xe' })
+  @IsOptional()
+  @Transform(trimmedText)
+  @IsString()
+  @MaxLength(255)
+  deliveryPlaceId?: string;
+
+  @ApiPropertyOptional({ description: 'Vĩ độ ghim địa chỉ giao xe' })
+  @IsOptional()
+  @IsLatitude()
+  deliveryLatitude?: number;
+
+  @ApiPropertyOptional({ description: 'Kinh độ ghim địa chỉ giao xe' })
+  @IsOptional()
+  @IsLongitude()
+  deliveryLongitude?: number;
 
   /**
    * Khách đã đọc và đồng ý điều khoản thuê của chủ xe (08/09/2026). BẮT BUỘC `true` khi thiết lập
@@ -412,10 +533,28 @@ export class BookingRequestDto {
   @ApiPropertyOptional({ type: String, nullable: true, enum: ROUTE_TYPE_VALUES })
   routeType!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) pickupAddress!: string | null;
+  @ApiPropertyOptional({
+    type: AddressViewDto,
+    nullable: true,
+    description: 'Điểm đón có cấu trúc — null với yêu cầu không có điểm đón',
+  })
+  pickupLocation!: AddressViewDto | null;
   @ApiPropertyOptional({ type: String, nullable: true }) destination!: string | null;
+  @ApiPropertyOptional({
+    type: GeoPinDto,
+    nullable: true,
+    description: 'Ghim toạ độ của điểm đến — điểm đến không có mã hành chính',
+  })
+  destinationPin!: GeoPinDto | null;
   @ApiPropertyOptional({ type: String, nullable: true }) note!: string | null;
   @ApiProperty({ description: 'Khách yêu cầu giao xe tận nơi' }) deliveryRequested!: boolean;
   @ApiPropertyOptional({ type: String, nullable: true }) deliveryAddress!: string | null;
+  @ApiPropertyOptional({
+    type: AddressViewDto,
+    nullable: true,
+    description: 'Địa chỉ giao xe có cấu trúc — null khi khách tự tới lấy',
+  })
+  deliveryLocation!: AddressViewDto | null;
   @ApiPropertyOptional({
     type: BookingRequestDeliveryQuoteDto,
     nullable: true,

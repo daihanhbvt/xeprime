@@ -34,6 +34,14 @@ interface VehicleWizardProps {
   children: ReactNode;
   /** Hàng nút cuối thẻ; wizard KHÔNG tự quyết nhãn nút vì tạo và sửa khác nhau. */
   footer: ReactNode;
+  /**
+   * Cột phụ bên phải thẻ nội dung (trấn an, quyền lợi, trợ giúp). Không truyền = thẻ nội
+   * dung chiếm trọn bề ngang như trước.
+   *
+   * Là một SLOT chứ không phải danh sách dữ liệu: mỗi bước cần trấn an một chuyện khác nhau,
+   * và vỏ wizard không nên biết nội dung đó là gì.
+   */
+  aside?: ReactNode;
 }
 
 /**
@@ -54,6 +62,7 @@ export function VehicleWizard({
   notice,
   children,
   footer,
+  aside,
   navigation = 'sequential',
 }: VehicleWizardProps) {
   const isMobile = useIsMobile();
@@ -97,13 +106,16 @@ export function VehicleWizard({
         />
       </Card>
 
-      <Card className={styles.contentCard}>
-        <h2 className={styles.heading}>{heading}</h2>
-        {description ? <p className={styles.description}>{description}</p> : null}
-        {notice}
-        <div className={styles.body}>{children}</div>
-        <div className={styles.footer}>{footer}</div>
-      </Card>
+      <div className={aside ? styles.contentRow : undefined}>
+        <Card className={styles.contentCard}>
+          <h2 className={styles.heading}>{heading}</h2>
+          {description ? <p className={styles.description}>{description}</p> : null}
+          {notice}
+          <div className={styles.body}>{children}</div>
+          <div className={styles.footer}>{footer}</div>
+        </Card>
+        {aside ? <aside className={styles.aside}>{aside}</aside> : null}
+      </div>
     </div>
   );
 }

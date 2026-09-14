@@ -1,28 +1,119 @@
 {
   "landing": {
-    "title": "Đăng ký xe",
+    "metaTitle": "Đăng xe cho thuê",
+    "title": "Bắt đầu cho thuê xe theo cách phù hợp với bạn",
     "back": "Quay lại",
-    "cta": "Đăng ký xe tự lái",
-    "subtitle": "Gia tăng thu nhập hằng tháng cùng XePrime",
+    "subtitle": "Đăng chiếc xe đầu tiên thật đơn giản; khi cần quản lý quy mô lớn hơn, bạn có thể nâng cấp lên gian hàng mà vẫn giữ tài khoản và xe.",
     "policyLink": "Quy định sử dụng chợ xe",
-    "steps": {
-      "title": "Thủ tục đăng ký đơn giản & nhanh chóng",
-      "info": {
-        "title": "Điền thông tin xe",
-        "desc": "Hãng xe, mẫu xe, truyền động và các thông số cơ bản."
+    "personal": {
+      "badge": "Phù hợp khi bắt đầu",
+      "title": "Đăng xe cá nhân",
+      "tagline": "Tuyến hoa hồng · phù hợp khi bắt đầu",
+      "body": "Dành cho chủ xe muốn cho thuê xe cá nhân một cách đơn giản, nhanh chóng. Không phí đăng ký, tối đa {maxVehicles} xe, quản lý xe và chuyến trong Tài khoản.",
+      "features": {
+        "noFee": "Không phí đăng ký",
+        "vehicleCap": "Tối đa {maxVehicles} xe",
+        "simple": "Quản lý đơn giản trong Tài khoản"
       },
-      "images": {
-        "title": "Đăng tải hình ảnh xe",
-        "desc": "Tối thiểu 4 ảnh rõ nét: trước, sau, bên hông và nội thất."
+      "art": "Chia sẻ xe của bạn đến hàng nghìn khách hàng",
+      "offerTitle": "Phí nền tảng theo chuyến",
+      "offerBody": "Phí nền tảng được cộng vào tổng giá khách trả. Mức thí điểm hiện tại là <strong>{percent}% giá thuê</strong>.",
+      "cta": "Đăng xe đầu tiên"
+    },
+    "shop": {
+      "badge": "Dành cho người muốn vận hành chuyên nghiệp",
+      "title": "Mở gian hàng cho thuê",
+      "tagline": "Tuyến gói · dành cho người muốn vận hành chuyên nghiệp",
+      "body": "Phù hợp cho cá nhân, doanh nghiệp có nhiều xe. Trả phí gói theo quy mô xe, <strong>0% phí nền tảng</strong> theo chuyến khi gói có hiệu lực. Đầy đủ công cụ quản lý nhiều xe, lịch, nhân viên, chi nhánh, tài chính và báo cáo.",
+      "features": {
+        "fleet": "Quản lý nhiều xe và chi nhánh",
+        "operations": "Quản lý lịch, nhân viên",
+        "reports": "Báo cáo doanh thu và hiệu suất"
       },
-      "review": {
-        "title": "XePrime duyệt hồ sơ",
-        "desc": "Đội ngũ kiểm tra thông tin và kích hoạt hiển thị trên chợ."
+      "offerTitle": "0% phí nền tảng theo chuyến",
+      "offerBody": "Khi gói có hiệu lực. Nhiều công cụ hỗ trợ vận hành chuyên nghiệp, phù hợp với quy mô lớn.",
+      "cta": "Tìm hiểu và tạo gian hàng"
+    },
+    "upgrade": {
+      "title": "Linh hoạt nâng cấp khi cần",
+      "body": "Bạn có thể bắt đầu với đăng xe cá nhân và nâng cấp lên gian hàng sau này. Tài khoản và dữ liệu xe của bạn vẫn được giữ nguyên."
+    }
+  },
+  "ownerProfile": {
+    "step": {
+      "title": "Hồ sơ chủ xe",
+      "short": "Hồ sơ"
+    },
+    "back": "Quay lại",
+    "pageTitle": "Đăng xe cho thuê",
+    "pageSubtitle": "Chỉ vài bước đơn giản để đưa chiếc xe của bạn lên XePrime.",
+    "tagline": "Chia sẻ chiếc xe, kết nối những hành trình",
+    "heading": "1. Hồ sơ chủ xe",
+    "intro": "Vài thông tin để khách biết ai đang cho thuê và tới đâu nhận xe. Bạn chỉ khai một lần cho mọi chiếc xe sau này.",
+    "publicNote": "Các thông tin này sẽ hiển thị một phần công khai trên XePrime.",
+    "editableLater": "Các thông tin này sửa lại được bất cứ lúc nào trong phần quản lý xe của bạn.",
+    "fields": {
+      "name": {
+        "label": "Họ tên chủ xe",
+        "placeholder": "Ví dụ: Nguyễn Văn A",
+        "help": "Tên này hiện cho khách thuê xe của bạn."
       },
-      "rent": {
-        "title": "Bắt đầu cho thuê",
-        "desc": "Nhận yêu cầu thuê xe từ khách hàng tiềm năng trên hệ thống."
+      "phone": {
+        "label": "Số điện thoại liên hệ",
+        "verified": "Đã xác thực",
+        "change": "Đổi số",
+        "unverifiedTitle": "Số điện thoại chưa được xác thực",
+        "unverifiedBody": "Khách gọi vào số này khi giao và nhận xe, nên nó phải là số thật của bạn. Xác thực mất chưa tới một phút.",
+        "verifyCta": "Xác thực số điện thoại",
+        "missingTitle": "Tài khoản chưa có số điện thoại",
+        "missingBody": "Khách cần một số để gọi khi giao và nhận xe. Thêm số rồi nhập mã gửi về máy bạn.",
+        "addCta": "Thêm số điện thoại"
+      },
+      "email": {
+        "label": "Email (tuỳ chọn)",
+        "placeholder": "ban@example.com",
+        "help": "Dùng để nhận thông báo. Không hiển thị công khai."
+      },
+      "bio": {
+        "label": "Giới thiệu ngắn (tuỳ chọn)",
+        "placeholder": "Vài nét về bạn hoặc dịch vụ",
+        "help": "Ví dụ: Nhiệt tình, hỗ trợ 24/7, xe luôn sạch sẽ."
+      },
+      "address": {
+        "title": "Địa chỉ nhận xe"
       }
+    },
+    "aside": {
+      "title": "Bạn sắp đưa xe lên chợ XePrime",
+      "trust": {
+        "title": "An toàn & minh bạch",
+        "desc": "Thông tin rõ ràng, tăng độ tin cậy với khách thuê."
+      },
+      "reach": {
+        "title": "Tiếp cận nhiều khách hàng",
+        "desc": "Hiển thị trên chợ toàn quốc."
+      },
+      "manage": {
+        "title": "Quản lý dễ dàng",
+        "desc": "Tất cả trong một tài khoản."
+      },
+      "support": {
+        "title": "Cần hỗ trợ?",
+        "desc": "Đội ngũ XePrime luôn sẵn sàng hỗ trợ bạn.",
+        "cta": "Liên hệ hỗ trợ"
+      }
+    },
+    "validation": {
+      "nameRequired": "Nhập họ tên chủ xe",
+      "nameMin": "Họ tên quá ngắn",
+      "provinceRequired": "Chọn tỉnh/thành",
+      "provinceInvalid": "Tỉnh/thành không hợp lệ",
+      "wardRequired": "Chọn phường/xã",
+      "wardInvalid": "Phường/xã không hợp lệ",
+      "addressLineRequired": "Nhập số nhà và tên đường",
+      "addressLineMax": "Địa chỉ quá dài",
+      "emailInvalid": "Email không hợp lệ",
+      "bioMax": "Giới thiệu tối đa 200 ký tự"
     }
   },
   "wizard": {
@@ -38,9 +129,6 @@
     "signInTitle": "Đăng nhập để đăng xe",
     "signInBody": "Đăng xe cho thuê cần một tài khoản để chúng tôi liên hệ và chuyển tiền thuê.",
     "signInCta": "Đăng nhập",
-    "needTenantTitle": "Tạo hồ sơ chủ xe trước",
-    "needTenantBody": "Hồ sơ chủ xe giữ thông tin liên hệ và địa chỉ nhận xe của bạn.",
-    "needTenantCta": "Tạo hồ sơ chủ xe",
     "forbiddenTitle": "Không có quyền thêm xe",
     "forbiddenBody": "Tài khoản của bạn chưa được cấp quyền thêm xe trong gian hàng này.",
     "steps": {

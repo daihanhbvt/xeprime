@@ -70,7 +70,8 @@
     "supportCases": "Support requests",
     "openMenu": "Open menu",
     "fullMenu": "Full menu",
-    "balance": "Points wallet"
+    "balance": "Points wallet",
+    "shopPaymentSettings": "Deposit collection"
   },
   "manageGroups": {
     "overview": "Overview",

@@ -116,6 +116,8 @@
     "shortDateTime": "{time} · {date}",
     "rentalPoint": "{weekday}, {date}",
     "rentalPointWithTime": "{point} · {time}",
+    "rentalPointCompact": "{date} {time}",
+    "rentalRangeSummary": "{from} → {to} ({duration})",
     "kmRemaining": "Còn {value} km",
     "kmOverdue": "Quá hạn {value} km",
     "pickupWishDate": "{label}: {date}",

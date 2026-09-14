@@ -64,9 +64,15 @@ export type RequestForm = ReturnType<typeof useForm<BookingRequestFormValues>>;
 export function RequestBookingScreen({
   vehicleId,
   initialServiceType,
+  deliveryProvinceCode,
 }: {
   vehicleId: string;
   initialServiceType?: string;
+  /**
+   * Tỉnh GỢI Ý cho ô địa chỉ giao xe — tỉnh khách đang lọc, hoặc tỉnh của chính chiếc xe.
+   * Native không có URL để mang ngữ cảnh nên nó đi qua tham số điều hướng (ADR 0035).
+   */
+  deliveryProvinceCode?: string;
 }) {
   const t = useTranslations('BookingRequests.flow');
   const router = useRouter();
@@ -98,6 +104,7 @@ export function RequestBookingScreen({
     <RequestBookingBody
       listing={listing.data}
       {...(initialServiceType ? { initialServiceType } : {})}
+      {...(deliveryProvinceCode ? { deliveryProvinceCode } : {})}
     />
   );
 }
@@ -105,9 +112,11 @@ export function RequestBookingScreen({
 function RequestBookingBody({
   listing,
   initialServiceType,
+  deliveryProvinceCode,
 }: {
   listing: PublicListingDetail;
   initialServiceType?: string;
+  deliveryProvinceCode?: string;
 }) {
   const t = useTranslations('BookingRequests.flow');
   const tCommon = useTranslations('Common.actions');
@@ -178,8 +187,12 @@ function RequestBookingBody({
         pickupPreferenceRequired: t('validation.pickupPreferenceRequired'),
         requestedPickupDateRequired: t('validation.requestedPickupDateRequired'),
         routeRequired: t('validation.routeRequired'),
+        pickupProvinceRequired: t('validation.pickupProvinceRequired'),
+        pickupWardRequired: t('validation.pickupWardRequired'),
         pickupAddressRequired: t('validation.pickupAddressRequired'),
         destinationRequired: t('validation.destinationRequired'),
+        deliveryProvinceRequired: t('validation.deliveryProvinceRequired'),
+        deliveryWardRequired: t('validation.deliveryWardRequired'),
         deliveryAddressRequired: t('validation.deliveryAddressRequired'),
         noteTooLong: t('validation.noteTooLong', { max: NOTE_MAX }),
       }),
@@ -200,10 +213,22 @@ function RequestBookingBody({
       pickupPreference: null,
       requestedPickupDate: '',
       routeType: null,
-      pickupAddress: '',
+      pickupProvinceCode: '',
+      pickupWardCode: '',
+      pickupAddressLine: '',
+      pickupPlaceId: null,
+      pickupLatitude: null,
+      pickupLongitude: null,
+      pickupLocationSource: null,
       destination: '',
       deliveryRequested: false,
-      deliveryAddress: '',
+      deliveryProvinceCode: '',
+      deliveryWardCode: '',
+      deliveryAddressLine: '',
+      deliveryPlaceId: null,
+      deliveryLatitude: null,
+      deliveryLongitude: null,
+      deliveryLocationSource: null,
       note: '',
     },
   });
@@ -222,6 +247,22 @@ function RequestBookingBody({
       form.setValue('customerPhone', accountPhone);
     }
   }, [accountName, accountPhone, form]);
+
+  /*
+   * Điền sẵn TỈNH của ô địa chỉ giao xe từ ngữ cảnh điều hướng.
+   *
+   * Chỉ điền khi ô còn RỖNG: đè lên thứ khách vừa chọn là lấy một gợi ý làm quyết định.
+   *
+   * Native chưa nhớ được ĐỊA CHỈ ĐẦY ĐỦ của lần trước như web (`delivery-address-memory`):
+   * lưu nó cần một kho dữ liệu thường mà app chưa có, và thêm một native module chỉ để nhớ một
+   * địa chỉ thì phải dựng lại dev build cho mọi máy. Chỗ đúng của địa chỉ đã lưu là HỒ SƠ NGƯỜI
+   * DÙNG ở server — khi có, cả hai client dùng chung và không client nào phải tự nhớ.
+   */
+  useEffect(() => {
+    if (deliveryProvinceCode && !form.getValues('deliveryProvinceCode')) {
+      form.setValue('deliveryProvinceCode', deliveryProvinceCode);
+    }
+  }, [deliveryProvinceCode, form]);
 
   const [rentalMode, setRentalMode] = useState<RentalMode>('daily');
   /*
@@ -283,7 +324,17 @@ function RequestBookingBody({
     const fields: Array<keyof BookingRequestFormValues> = isLongTerm
       ? ['longTermPackageMonths', 'pickupPreference', 'requestedPickupDate']
       : ['pickupAt', 'returnAt'];
-    fields.push('deliveryAddress', 'pickupAddress', 'destination', 'customerName', 'customerPhone');
+    fields.push(
+      'deliveryProvinceCode',
+      'deliveryWardCode',
+      'deliveryAddressLine',
+      'pickupProvinceCode',
+      'pickupWardCode',
+      'pickupAddressLine',
+      'destination',
+      'customerName',
+      'customerPhone',
+    );
 
     if (!(await form.trigger(fields))) return;
 

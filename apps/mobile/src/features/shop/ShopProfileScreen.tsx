@@ -9,6 +9,7 @@ import {
   toLocalVnPhone,
   type TenantStatus,
 } from '@xeprime/types';
+import { guessAddressLine } from '@xeprime/domain';
 import { shopProfileSchema, type ShopProfileValues } from '@xeprime/validators';
 import { Screen } from '@/components/layout/Screen';
 import { AlertDialog } from '@/components/ui/AlertDialog';
@@ -16,7 +17,7 @@ import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { FormSection } from '@/components/ui/FormSection';
 import { InlineAction } from '@/components/ui/InlineAction';
-import { SelectField } from '@/components/ui/SelectField';
+import { AddressFields } from '@/components/form/AddressFields';
 import { ShopProfileSkeleton } from '@/components/ui/Skeleton';
 import { TextField } from '@/components/ui/TextField';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -24,7 +25,6 @@ import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
-import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
@@ -38,14 +38,29 @@ import { ShopProfileChecklist } from './components/ShopProfileChecklist';
 import { ShopStatusBanner } from './components/ShopStatusBanner';
 import { useMyShop, useSubmitShopReview, useUpdateShopProfile } from './hooks/use-shop';
 
+/** Tên trường địa chỉ trong `shopProfileSchema` — hằng ngoài component, định danh ổn định. */
+const ADDRESS_FIELD_NAMES = {
+  provinceCode: 'provinceCode',
+  wardCode: 'wardCode',
+  addressLine: 'addressLine',
+} as const;
+const ADDRESS_PIN_NAMES = {
+  placeId: 'placeId',
+  latitude: 'latitude',
+  longitude: 'longitude',
+  locationSource: 'locationSource',
+} as const;
+
 /** Giá trị form → thân request. Dùng cho CẢ hai đường ra: lưu, và lưu-rồi-gửi-duyệt. */
 function toBody(v: ShopProfileValues): UpdateShopProfileInput {
   return {
     displayName: v.displayName,
     bio: v.bio,
-    address: v.address,
-    // Chỉ gửi MÃ tỉnh — tên do server tra ra, và nó chuyển tiếp cho chi nhánh mặc định.
+    // Chỉ gửi MÃ + phần chi tiết — tên tỉnh/xã và chuỗi hiển thị do server ghép, rồi chuyển tiếp
+    // cho chi nhánh mặc định (writer duy nhất của địa chỉ vận hành).
     provinceCode: v.provinceCode,
+    wardCode: v.wardCode,
+    addressLine: v.addressLine,
     taxCode: v.taxCode,
     businessLicenseNo: v.businessLicenseNo,
     bankName: v.bankName,
@@ -73,8 +88,17 @@ function toValues(shop: MyShop): ShopProfileValues {
   return {
     displayName: p.displayName ?? '',
     bio: p.bio ?? '',
-    address: p.address ?? '',
     provinceCode: shop.defaultBranch?.provinceCode ?? p.provinceCode ?? '',
+    wardCode: shop.defaultBranch?.wardCode ?? p.wardCode ?? '',
+    /*
+     * Hồ sơ CŨ chưa tách phần "số nhà, đường": đoán từ chuỗi hiển thị bằng cách cắt các cụm trông
+     * như đơn vị hành chính. GỢI Ý cho ô nhập — chủ shop nhìn và sửa trước khi lưu.
+     */
+    addressLine: guessAddressLine(shop.defaultBranch?.address ?? p.address),
+    placeId: null,
+    latitude: null,
+    longitude: null,
+    locationSource: null,
     taxCode: p.taxCode ?? '',
     businessLicenseNo: p.businessLicenseNo ?? '',
     bankName: p.bankName ?? '',
@@ -196,7 +220,6 @@ function ProfileForm({
   const tActions = useTranslations('Common.actions');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
-  const provinces = useProvinceOptions();
   const navigateOnce = useNavigateOnce();
 
   const updateProfile = useUpdateShopProfile();
@@ -342,16 +365,6 @@ function ProfileForm({
 
           {readOnlyReason ? <Callout tone="info">{readOnlyReason}</Callout> : null}
 
-          {provinces.isError ? (
-            <Callout tone="warning" title={t('form.address.province.loadError')}>
-              <YStack gap={space.sm}>
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {errorMessage(provinces.error)}
-                </Text>
-                <Button label={tActions('retry')} variant="secondary" onPress={provinces.refetch} />
-              </YStack>
-            </Callout>
-          ) : null}
 
           {/* Khối CÔNG KHAI — thứ khách nhìn thấy trên marketplace. */}
           <FormSection title={t('form.display.title')} icon="storefront-outline">
@@ -412,42 +425,17 @@ function ProfileForm({
           </FormSection>
 
           <FormSection title={t('form.address.title')} icon="location-outline">
-            <TextField
-              control={control}
-              name="address"
-              label={t('form.address.address.label')}
-              placeholder={t('form.address.address.placeholder')}
-              editable={editable}
-            />
             {/*
-              Tỉnh/thành ở đây là tỉnh của CHI NHÁNH MẶC ĐỊNH: đổi nó là backend dời chi nhánh đó
-              và đồng bộ lại vị trí công khai của mọi xe thuộc nó. Không có nguồn tỉnh thứ hai
+              Địa chỉ ở đây là địa chỉ của CHI NHÁNH MẶC ĐỊNH: đổi nó là backend dời chi nhánh đó
+              và đồng bộ lại vị trí công khai của mọi xe thuộc nó. Không có nguồn địa chỉ thứ hai
               nào ở client.
             */}
-            <SelectField
+            <AddressFields
               control={control}
-              name="provinceCode"
-              label={t('form.address.province.label')}
-              options={provinces.options}
+              names={ADDRESS_FIELD_NAMES}
+              pin={ADDRESS_PIN_NAMES}
               required
-              /*
-               * Ô chọn ĐANG chờ tải, đang lỗi, hay rỗng thì đều là điều khiển CHẾT — cho phép mở
-               * ra không có gì để chọn hay chọn nhầm ngay lúc bàn giao dữ liệu. Cả ba nhánh này
-               * VÀ chế độ chỉ-xem (`!editable`) chung một chỗ chặn, không tách ra `editable={}`
-               * mà `SelectField` không có.
-               */
-              disabled={
-                !editable ||
-                provinces.isLoading ||
-                provinces.isError ||
-                provinces.options.length === 0
-              }
-              placeholder={
-                provinces.isLoading
-                  ? t('form.address.province.loading')
-                  : t('form.address.province.placeholder')
-              }
-              hint={t('form.address.province.help')}
+              disabled={!editable}
             />
             {/*
               Lối sang màn Chi nhánh là một LIÊN KẾT CHỮ, không phải nút.

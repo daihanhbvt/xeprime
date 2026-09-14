@@ -11,6 +11,7 @@ import {
   BOOKING_NO_SHOW_GRACE_MINUTES,
   BOOKING_STATUS,
   BOOKING_STATUS_META,
+  FEE_LINE,
   HANDOVER_TYPE,
   isNoShowGracePassed,
   NOTIFICATION_TARGET_TYPE,
@@ -26,18 +27,23 @@ import {
   TENANT_CUSTOMER_SOURCE,
   type AuditActorScope,
   type BookingPriceSnapshot,
+  type DepositCollectionMode,
+  type InsuranceConsentSource,
   type RentalTermsSnapshot,
   type BookingStatus,
   type PaginationMeta,
 } from '@xeprime/types';
 import { bookingMoney, emptyMoneySides, loadBookingMoneySides } from '../../common/booking-money';
 import { bookingDebt } from '../../common/money';
+import { addressViewOf, pinOf } from '../../common/address-view';
 import { normalizeRouteContext } from '../../common/route-context';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
 import { OccupancyService } from '../calendar/occupancy.service';
 import { CustomersService } from '../customers/customers.service';
+import { InsuranceService } from '../insurance/insurance.service';
+import { AddressService } from '../locations/address.service';
 import { DriversService } from '../drivers/drivers.service';
 import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
 import { HoldSettlementService } from '../holds/hold-settlement.service';
@@ -89,7 +95,16 @@ const DETAIL_SELECT = {
   priceSnapshot: true,
   routeType: true,
   pickupAddress: true,
+  pickupAddressLine: true,
+  pickupProvinceCode: true,
+  pickupWardCode: true,
+  pickupPlaceId: true,
+  pickupLatitude: true,
+  pickupLongitude: true,
   destination: true,
+  destinationPlaceId: true,
+  destinationLatitude: true,
+  destinationLongitude: true,
   actualPickupAt: true,
   actualReturnAt: true,
   note: true,
@@ -109,6 +124,25 @@ export type BookingCreateSource = 'direct' | 'from_request';
 export interface BookingCreateExtras {
   driverId?: string | null;
   rentalTerms?: RentalTermsSnapshot | null;
+  /**
+   * AI thu cọc `D` của đơn này — ĐÓNG BĂNG lúc tạo (ADR 0025 ràng buộc 4, Phase 6).
+   *
+   * Bỏ trống ⇒ NULL: đơn gian hàng TỰ LẬP, ngoài luồng chợ (ADR 0028 điều 9), cùng ngữ nghĩa
+   * với `billing_mode` NULL. Luồng duyệt yêu cầu luôn truyền tường minh.
+   */
+  depositCollectionMode?: DepositCollectionMode | null;
+  /**
+   * Khoản giữ chỗ đã thu phí bảo hiểm — đi vào `booking_insurance_policies.hold_id` để truy được
+   * tiền của hợp đồng đến từ giao dịch nào (Phase 7). NULL với đơn không đi qua hold.
+   */
+  holdId?: string | null;
+  /**
+   * Bằng chứng khách CHỌN bảo hiểm tai nạn người (`IP`) — ADR 0028 điều 5 đòi lưu.
+   *
+   * Chỉ có nghĩa với `IP`; `IV` bắt buộc nên không có gì để đồng ý. Vắng ⇒ hợp đồng `IP` vẫn
+   * được tạo (phí đã thu rồi) nhưng không có bằng chứng, và đó là thứ hàng đợi admin phải thấy.
+   */
+  insuranceConsent?: { at: Date; source: InsuranceConsentSource } | null;
 }
 
 @Injectable()
@@ -124,6 +158,10 @@ export class BookingsService {
     private readonly holdSettlement: HoldSettlementService,
     /** Thời gian chết + snapshot điều kiện thuê theo xe (08/09/2026). */
     private readonly settings: VehicleSettingsService,
+    /** Phase 7: hợp đồng bảo hiểm của chuyến — giữ chỗ lúc tạo, tới hạn lúc bàn giao. */
+    private readonly insurance: InsuranceService,
+    /** Kiểm danh mục hành chính + ghép chuỗi hiển thị cho địa chỉ đón (14/09/2026). */
+    private readonly address: AddressService,
   ) {}
 
   async list(
@@ -292,6 +330,25 @@ export class BookingsService {
       destination: dto.destination,
     });
 
+    /*
+     * Phần CÓ CẤU TRÚC của điểm đón. `skipGeocode` vì hàm này chạy TRONG transaction do bên gọi
+     * mở — một lượt gọi bản đồ ở đây sẽ giữ transaction mở suốt thời gian chờ mạng. Đơn không
+     * có ghim vẫn hợp lệ; ghim là thứ để tính khoảng cách, không phải điều kiện tạo đơn.
+     */
+    const pickupLocation = route.pickupAddress
+      ? await this.address.resolveOptional(
+          {
+            provinceCode: dto.pickupProvinceCode,
+            wardCode: dto.pickupWardCode,
+            addressLine: dto.pickupAddressLine ?? route.pickupAddress,
+            placeId: dto.pickupPlaceId,
+            latitude: dto.pickupLatitude,
+            longitude: dto.pickupLongitude,
+          },
+          { skipGeocode: true, requireSelectable: false },
+        )
+      : null;
+
     const base = money(dto.baseAmount);
     const delivery = money(dto.deliveryFee);
     const discount = money(dto.discountAmount);
@@ -355,8 +412,20 @@ export class BookingsService {
         serviceType,
         longTermPackageMonths,
         routeType: route.routeType,
-        pickupAddress: route.pickupAddress,
+        // Chuỗi hiển thị do SERVER ghép khi có mã hành chính — một địa chỉ chỉ có một cách viết.
+        pickupAddress: pickupLocation?.displayAddress ?? route.pickupAddress,
+        pickupAddressLine: pickupLocation?.addressLine ?? null,
+        pickupProvinceCode: pickupLocation?.provinceCode ?? null,
+        pickupWardCode: pickupLocation?.wardCode ?? null,
+        pickupPlaceId: pickupLocation?.placeId ?? null,
+        pickupLatitude: pickupLocation?.latitude ?? null,
+        pickupLongitude: pickupLocation?.longitude ?? null,
         destination: route.destination,
+        // Ghim điểm đến chỉ sống khi CÒN điểm đến — chuyến nội thành không có điểm đến, và một
+        // cái ghim mồ côi là dữ liệu rác.
+        destinationPlaceId: route.destination ? (dto.destinationPlaceId ?? null) : null,
+        destinationLatitude: route.destination ? (dto.destinationLatitude ?? null) : null,
+        destinationLongitude: route.destination ? (dto.destinationLongitude ?? null) : null,
         pickupAt,
         returnAt,
         baseAmount: base,
@@ -371,12 +440,28 @@ export class BookingsService {
          * chợ, ADR 0028 điều 9) ⇒ NULL/0.
          */
         ...feeColumns(priceSnapshot),
+        depositCollectionMode: extras.depositCollectionMode ?? null,
         rentalTerms: rentalTerms as unknown as Prisma.InputJsonValue,
         driverId: driver?.id ?? null,
         note: dto.note ?? null,
         createdBy: userId,
       },
       select: DETAIL_SELECT,
+    });
+
+    /*
+     * GIỮ CHỖ hợp đồng bảo hiểm (Phase 7) — phí `IV`/`IP` đã nằm trong khoản khách chuyển online,
+     * nên từ giây này XePrime đang giữ tiền của hãng bảo hiểm và phải kế toán nó như vậy. Chưa
+     * mua gì cả: `reserved` với `next_attempt_at = NULL`, tới mốc bàn giao mới phát hành.
+     *
+     * Đọc phí từ chính `priceSnapshot` đã đóng băng, không tính lại theo chính sách hiện hành.
+     */
+    await this.insurance.reserveForBookingWithinTx(tx, {
+      bookingId: id,
+      tenantId,
+      holdId: extras.holdId ?? null,
+      snapshot: priceSnapshot,
+      consent: extras.insuranceConsent ?? null,
     });
 
     await this.occupancy.reserve(tx, {
@@ -445,6 +530,12 @@ export class BookingsService {
         longTermPackageMonths: true,
         routeType: true,
         pickupAddress: true,
+        pickupAddressLine: true,
+        pickupProvinceCode: true,
+        pickupWardCode: true,
+        pickupPlaceId: true,
+        pickupLatitude: true,
+        pickupLongitude: true,
         destination: true,
         pickupAt: true,
         returnAt: true,
@@ -466,7 +557,16 @@ export class BookingsService {
       dto.serviceType !== undefined ||
       dto.routeType !== undefined ||
       dto.pickupAddress !== undefined ||
-      dto.destination !== undefined;
+      dto.pickupAddressLine !== undefined ||
+      dto.pickupProvinceCode !== undefined ||
+      dto.pickupWardCode !== undefined ||
+      dto.pickupLatitude !== undefined ||
+      dto.pickupLongitude !== undefined ||
+      dto.pickupPlaceId !== undefined ||
+      dto.destination !== undefined ||
+      dto.destinationLatitude !== undefined ||
+      dto.destinationLongitude !== undefined ||
+      dto.destinationPlaceId !== undefined;
     const route = routeTouched
       ? normalizeRouteContext({
           serviceType: nextServiceType,
@@ -476,6 +576,31 @@ export class BookingsService {
           destination: dto.destination !== undefined ? dto.destination : current.destination,
         })
       : null;
+
+    /*
+     * Địa chỉ đón dựng LẠI CẢ CỤM từ (giá trị mới ?? giá trị cũ), không vá từng cột: chuỗi hiển
+     * thị, mã xã và ghim phải luôn nói cùng một chuyện. `route` trả `pickupAddress = null` khi
+     * đơn rời khỏi dịch vụ có tài xế — khi đó cả cụm bị xoá theo, không để lại một mã xã mồ côi.
+     *
+     * `skipGeocode`: hàm update chạy ngoài transaction ở chỗ này, nhưng tra bản đồ cho một lần
+     * sửa đơn hành chính là đốt hạn mức mà không ai đang nhìn bản đồ — giữ ghim cũ hoặc ghim
+     * người dùng vừa gửi.
+     */
+    const pickupLocation =
+      route && route.pickupAddress
+        ? await this.address.resolveOptional(
+            {
+              provinceCode: dto.pickupProvinceCode ?? current.pickupProvinceCode,
+              wardCode: dto.pickupWardCode ?? current.pickupWardCode,
+              addressLine:
+                dto.pickupAddressLine ?? dto.pickupAddress ?? current.pickupAddressLine,
+              placeId: dto.pickupPlaceId ?? current.pickupPlaceId,
+              latitude: dto.pickupLatitude ?? numberOrNull(current.pickupLatitude),
+              longitude: dto.pickupLongitude ?? numberOrNull(current.pickupLongitude),
+            },
+            { skipGeocode: true, requireSelectable: false },
+          )
+        : null;
 
     /*
      * Đơn THUÊ DÀI HẠN có độ dài cố định bằng gói: dời giờ nhận thì giờ trả dịch theo bằng
@@ -518,8 +643,23 @@ export class BookingsService {
           ...(route
             ? {
                 routeType: route.routeType,
-                pickupAddress: route.pickupAddress,
+                pickupAddress: pickupLocation?.displayAddress ?? route.pickupAddress,
+                pickupAddressLine: pickupLocation?.addressLine ?? null,
+                pickupProvinceCode: pickupLocation?.provinceCode ?? null,
+                pickupWardCode: pickupLocation?.wardCode ?? null,
+                pickupPlaceId: pickupLocation?.placeId ?? null,
+                pickupLatitude: pickupLocation?.latitude ?? null,
+                pickupLongitude: pickupLocation?.longitude ?? null,
                 destination: route.destination,
+                destinationPlaceId: route.destination
+                  ? (dto.destinationPlaceId ?? undefined)
+                  : null,
+                destinationLatitude: route.destination
+                  ? (dto.destinationLatitude ?? undefined)
+                  : null,
+                destinationLongitude: route.destination
+                  ? (dto.destinationLongitude ?? undefined)
+                  : null,
               }
             : {}),
           ...(dto.pickupAt ? { pickupAt } : {}),
@@ -849,6 +989,25 @@ export class BookingsService {
       actorUserId: userId,
     });
 
+    /*
+     * BẢO HIỂM (Phase 7 — ADR 0032 điều 4). Hai mốc, và cả hai chỉ ĐỔI CỘT:
+     *
+     *  - Chuyến BẮT ĐẦU → đánh dấu tới hạn phát hành. **Không gọi HTTP đối tác ở đây**: một
+     *    request treo 30 giây bên trong transaction này đang giữ khoá trên `bookings` và
+     *    `vehicle_occupancies` — sự cố của đối tác sẽ thành sự cố của cả sàn. Worker
+     *    `insurance-issue` mới là nơi đi ra ngoài.
+     *
+     *  - Chuyến KẾT THÚC SỚM (huỷ / no-show) → huỷ hợp đồng chưa phát hành, trong CÙNG
+     *    transaction với phân bổ hold ở trên. `resolveHoldAllocation` vừa hoàn 100% `IV + IP` về
+     *    ví khách; nếu hai việc này tách nhau thì có khách được hoàn tiền trên một hợp đồng vẫn
+     *    đang nằm chờ worker mua.
+     */
+    if (to === BOOKING_STATUS.ACTIVE) {
+      await this.insurance.markDueWithinTx(tx, id);
+    } else if (isBookingFinal(to) && to !== BOOKING_STATUS.COMPLETED) {
+      await this.insurance.cancelForBookingWithinTx(tx, id);
+    }
+
     await this.audit.record(
       {
         tenantId,
@@ -1094,9 +1253,19 @@ function feeColumns(snapshot: BookingPriceSnapshot) {
     billingMode: fees.billingMode,
     serviceFeePercent: fees.policy.serviceFeePercent,
     serviceFeeAmount: new Prisma.Decimal(
-      fees.lines.find((l) => l.key === 'service_fee')?.amount ?? '0',
+      fees.lines.find((l) => l.key === FEE_LINE.SERVICE_FEE)?.amount ?? '0',
     ),
     customerTotalAmount: new Prisma.Decimal(fees.customerTotalAmount),
+    /*
+     * `D` và `D − T` đọc từ CHÍNH snapshot (ADR 0032 điều 2, ADR 0033 điều 2) — một nguồn, không
+     * có đường nào đặt cột lệch khỏi snapshot. Cột tồn tại từ migration 20260911090000 nhưng
+     * chưa ai ghi; báo cáo tiền phải trả chủ xe đọc chúng thay vì giải lại jsonb của từng đơn.
+     *
+     * `taxAmount` cố ý KHÔNG ghi ở đây: thuế chỉ phát sinh khi chuyến BẮT ĐẦU (ADR 0032 điều 3),
+     * nên ghi lúc tạo đơn là ghi một nghĩa vụ chưa tồn tại. Cột giữ mặc định 0 tới Phase 8.
+     */
+    depositAmountOnline: new Prisma.Decimal(fees.depositAmount),
+    ownerPayableAmount: new Prisma.Decimal(fees.ownerPayableAmount),
     feePolicyId: fees.policy.policyId,
   };
 }
@@ -1141,7 +1310,17 @@ function toDetail(b: BookingDetailRow): BookingDetailDto {
     priceSnapshot: (b.priceSnapshot as unknown as BookingDetailDto['priceSnapshot']) ?? null,
     routeType: b.routeType,
     pickupAddress: b.pickupAddress,
+    pickupLocation: addressViewOf({
+      displayAddress: b.pickupAddress,
+      addressLine: b.pickupAddressLine,
+      provinceCode: b.pickupProvinceCode,
+      wardCode: b.pickupWardCode,
+      placeId: b.pickupPlaceId,
+      latitude: b.pickupLatitude,
+      longitude: b.pickupLongitude,
+    }),
     destination: b.destination,
+    destinationPin: pinOf(b.destinationLatitude, b.destinationLongitude, b.destinationPlaceId),
     vehicleImageUrl: b.vehicle.mainImageUrl,
     actualPickupAt: b.actualPickupAt as unknown as string | null,
     actualReturnAt: b.actualReturnAt as unknown as string | null,
@@ -1173,4 +1352,14 @@ function assertMutable(status: BookingStatus): void {
     code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
     message: `Đơn đã ở trạng thái "${BOOKING_STATUS_META[status].label}" nên không sửa được nữa`,
   });
+}
+
+/**
+ * `Decimal | null` đọc lên từ Prisma → `number | undefined` để ghép vào đầu vào địa chỉ.
+ *
+ * `undefined` chứ không `null`: ở `AddressInput`, `null` nghĩa là "bỏ ghim" còn `undefined`
+ * nghĩa là "không có gì để nói" — và hai câu đó dẫn tới hai kết quả khác nhau.
+ */
+function numberOrNull(value: Prisma.Decimal | null): number | undefined {
+  return value == null ? undefined : Number(value);
 }

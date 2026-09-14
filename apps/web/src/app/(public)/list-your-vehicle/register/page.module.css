@@ -1,5 +1,13 @@
+/*
+ * Khung trang wizard đăng xe.
+ *
+ * Bề ngang dùng `--xp-shell-form-max-width` (1216px) chứ không phải 900px như bản đầu: bước
+ * "Hồ sơ chủ xe" có thêm CỘT PHỤ 300px bên phải, và ở 900px thì cột nội dung chỉ còn ~570px —
+ * đủ hẹp để khối cảnh báo SĐT tràn ngang. Tràn ngang không chỉ xấu: nó đẻ ra thanh cuộn ngang
+ * và làm header dính (`position: sticky`) hết dính, nên header trôi đi để lại một khoảng hở.
+ */
 .page {
-  max-width: 900px;
+  max-width: var(--xp-shell-form-max-width);
   margin: 0 auto;
-  padding: var(--xp-space-lg) var(--xp-space-md) var(--xp-space-2xl);
+  padding: var(--xp-space-lg) var(--xp-space-md) var(--xp-space-xl);
 }

@@ -29,7 +29,6 @@ import {
   type CustomerTripStage,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
-import { CustomersService } from '../src/modules/customers/customers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { CustomerTripsService } from '../src/modules/customer-trips/customer-trips.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
@@ -40,9 +39,11 @@ import { WalletService } from '../src/modules/wallet/wallet.service';
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeNotificationService,
+import {
   makeBookingHoldsService,
   makeBookingsService,
+  makeCustomersService,
+  makeNotificationService,
   makePricingService,
 } from './helpers/service-factory';
 
@@ -69,7 +70,7 @@ const bookings = makeBookingsService(asService, {
   occupancy: occupancy,
   audit: audit,
   notifications: notifications,
-  customers: new CustomersService(asService, audit),
+  customers: makeCustomersService(asService, audit),
 });
 /**
  * R2 giả — chỉ cần đủ để `downloadFor` ký được một vé. Bài kiểm ở đây là ĐIỀU KIỆN nào cho

@@ -77,3 +77,16 @@
     max-width: 100%;
   }
 }
+
+/* Ô hai dòng: tỉnh ở trên, xã/phường ở dưới (mô hình hành chính hai cấp). */
+.stackedCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+}
+
+.cellSub {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}

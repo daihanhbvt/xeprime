@@ -2,8 +2,15 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
-import { fetchMyShop, registerShop, submitShopReview, updateShopProfile } from '../api';
-import type { RegisterShopInput, UpdateProfileInput } from '../types';
+import {
+  fetchMyShop,
+  fetchPaymentSettings,
+  registerShop,
+  submitShopReview,
+  updatePaymentSettings,
+  updateShopProfile,
+} from '../api';
+import type { RegisterShopInput, UpdatePaymentSettingsInput, UpdateProfileInput } from '../types';
 
 /** Hồ sơ gian hàng của tôi. Chỉ gọi khi user đã thuộc một gian hàng. */
 export function useMyShop(enabled: boolean) {
@@ -65,6 +72,38 @@ export function useSubmitShopReview() {
       queryClient.setQueryData(queryKeys.shop.current(), shop);
       void queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.tenants.all });
+    },
+  });
+}
+
+/**
+ * Công tắc thu cọc của gian hàng (Phase 6).
+ *
+ * Gọi ở MỌI gian hàng — kể cả tuyến hoa hồng (công tắc bật + khoá) và gói thiếu `escrow_hold`
+ * (khoá kèm lời mời nâng gói). Ẩn màn hình theo gói là đúng thứ ADR 0027 điều 4 gọi là trang trí:
+ * người dùng mất luôn chỗ để hiểu vì sao khách của họ phải chuyển tiền.
+ */
+export function usePaymentSettings(enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.shop.paymentSettings(),
+    queryFn: fetchPaymentSettings,
+    enabled,
+  });
+}
+
+/**
+ * Bật/tắt thu cọc.
+ *
+ * Không đụng `booking-requests`/`bookings` trong cache: công tắc CHỈ ảnh hưởng yêu cầu được
+ * duyệt TỪ GIỜ TRỞ ĐI — đơn đã tạo đóng băng `depositCollectionMode` lúc tạo (ADR 0025 ràng
+ * buộc 4). Làm mới chúng ở đây là gợi ý sai rằng dữ liệu cũ vừa đổi.
+ */
+export function useUpdatePaymentSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: UpdatePaymentSettingsInput) => updatePaymentSettings(body),
+    onSuccess: (settings) => {
+      queryClient.setQueryData(queryKeys.shop.paymentSettings(), settings);
     },
   });
 }

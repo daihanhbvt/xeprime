@@ -27,6 +27,7 @@ import {
   customerTripStage,
   handoverOccurredAt,
   isCustomerTripFilter,
+  isDepositCollectionMode,
   isHandoverPhotoAddedAfterConfirmation,
   type BookingRequestStatus,
   type BookingStatus,
@@ -312,6 +313,13 @@ export class CustomerTripsService {
         base.role === TRIP_ROLE.RENTER
           ? await this.holds.findForTrip(row.id, viewerUserId)
           : null,
+      /*
+       * Cột ĐÃ ĐÓNG BĂNG trên đơn, không suy từ công tắc hiện tại của gian hàng: khách mở lại
+       * một chuyến cũ phải đọc đúng cách thu cọc đã áp cho CHÍNH chuyến đó (ADR 0025 ràng buộc 4).
+       */
+      depositCollectionMode: isDepositCollectionMode(booking?.depositCollectionMode)
+        ? booking.depositCollectionMode
+        : null,
       review: booking?.review
         ? {
             id: booking.review.id,
@@ -787,6 +795,7 @@ const BOOKING_SELECT = {
   deliveryFee: true,
   totalAmount: true,
   priceSnapshot: true,
+  depositCollectionMode: true,
   vehicle: { select: { plateNumber: true } },
   review: { select: { id: true, rating: true, comment: true, createdAt: true } },
 } satisfies Prisma.BookingSelect;

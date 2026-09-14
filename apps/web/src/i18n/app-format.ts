@@ -1,7 +1,7 @@
 import type { useFormatter, useTranslations } from 'next-intl';
 import { PICKUP_PREFERENCE, type IsoDateTimeString, type MoneyString } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
-import { rentalDurationParts, toAppTz, type Dayjs } from '@/lib/datetime';
+import { nowInAppTz, rentalDurationParts, toAppTz, type Dayjs } from '@/lib/datetime';
 import { pickupWishParts, type PickupWish } from '@/lib/long-term';
 import { compactMoneyParts, formatMoneyVnd, wholeUnits, type MoneySeparators } from '@/lib/money';
 import { remainingKm as remainingKmParts } from '@/lib/odometer';
@@ -72,8 +72,29 @@ export interface AppFormat {
    * nhiễu; còn THỨ mấy lại là thứ người ta nghĩ tới đầu tiên khi xếp lịch ("trả xe chủ nhật").
    */
   rentalPoint: (value: Dayjs, opts?: { withTime?: boolean }) => string;
+  /**
+   * Mốc thuê xe ở dạng NGẮN NHẤT còn đọc được: `14/09 17:00` (vi) · `09/14 17:00` (en).
+   *
+   * Bỏ THỨ so với {@link rentalPoint} — dành cho chỗ rất hẹp, nơi bản đầy đủ bị cắt thành
+   * `T4, 19/08 · 10:…`. Giờ thì không bao giờ bỏ: nó quyết định số ngày tính tiền.
+   *
+   * `withYear` chỉ bật khi năm thật sự phân biệt được điều gì (chuyến vắt qua năm) — mặc định
+   * tắt, vì "2026" trong một ô hẹp là nhiễu chiếm chỗ của thông tin.
+   */
+  rentalPointCompact: (value: Dayjs, opts?: { withYear?: boolean }) => string;
   /** Thời lượng thuê dạng chữ: `3 ngày` · `2 ngày 4 giờ` · `5 hours`. */
   rentalDuration: (from: Dayjs, to: Dayjs) => string;
+  /**
+   * Cả khoảng thuê trên MỘT dòng: `14/09 17:00 → 15/09 17:00 (1 ngày)`.
+   *
+   * Dùng ở dòng tóm tắt `/search`, và cố ý ghép từ đúng những mảnh mà ô chọn thời gian đang
+   * hiện ({@link rentalPointCompact}): hai bề mặt nói về CÙNG một khoảng thì phải viết nó giống
+   * nhau, nếu không người dùng sẽ đi kiểm tra xem mình có bấm nhầm gì không.
+   *
+   * Thời lượng đếm từ khoảng THỰC TẾ chứ không từ hai ngày lịch: 17:00 hôm nay → 17:00 mai là
+   * "1 ngày", không phải "2 ngày".
+   */
+  rentalRangeSummary: (from: Dayjs, to: Dayjs) => string;
 
   /** `45.230 km`; thiếu số ⇒ "Chưa có" (không phải `0 km`). */
   km: (value: number | null | undefined) => string;
@@ -208,6 +229,24 @@ export function createAppFormat(
         })
       : empty;
 
+  /**
+   * `14/09 17:00` — mẫu ngày theo NGÔN NGỮ (`DD/MM` ở vi, `MM/DD` ở en), giờ luôn 24h.
+   *
+   * Một hàm dựng cho cả ô chọn thời gian lẫn dòng tóm tắt kết quả: đó là cách duy nhất để hai
+   * bề mặt nói về cùng một khoảng mà không viết nó theo hai kiểu.
+   */
+  const compactPoint = (value: Dayjs, withYear: boolean) =>
+    t('units.rentalPointCompact', {
+      date: value.format(withYear ? pattern.date : pattern.dayMonth),
+      time: value.format('HH:mm'),
+    });
+
+  const duration = (from: Dayjs, to: Dayjs) => {
+    const { days, hours } = rentalDurationParts(from, to);
+    if (days <= 0) return t('units.hour', { count: hours });
+    return hours > 0 ? t('units.dayAndHour', { days, hours }) : t('units.day', { count: days });
+  };
+
   const shortStamp = (value: IsoDateTimeString | null | undefined) => {
     if (!value) return empty;
     return t('units.shortDateTime', {
@@ -250,10 +289,21 @@ export function createAppFormat(
         ? base
         : t('units.rentalPointWithTime', { point: base, time: value.format('HH:mm') });
     },
-    rentalDuration: (from, to) => {
-      const { days, hours } = rentalDurationParts(from, to);
-      if (days <= 0) return t('units.hour', { count: hours });
-      return hours > 0 ? t('units.dayAndHour', { days, hours }) : t('units.day', { count: days });
+    rentalPointCompact: (value, opts) => compactPoint(value, opts?.withYear === true),
+    rentalDuration: duration,
+    rentalRangeSummary: (from, to) => {
+      /*
+       * Năm chỉ xuất hiện khi nó PHÂN BIỆT được điều gì: khoảng thuê không nằm trọn trong năm
+       * hiện tại (chuyến đón giao thừa, hoặc một link cũ mở lại sang năm sau). Mọi chuyến còn
+       * lại — gần như toàn bộ — giữ dòng ngắn.
+       */
+      const thisYear = nowInAppTz().year();
+      const withYear = from.year() !== thisYear || to.year() !== thisYear;
+      return t('units.rentalRangeSummary', {
+        from: compactPoint(from, withYear),
+        to: compactPoint(to, withYear),
+        duration: duration(from, to),
+      });
     },
 
     km: (value) =>

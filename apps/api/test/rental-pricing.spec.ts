@@ -14,13 +14,12 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
-import { CustomersService } from '../src/modules/customers/customers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import type { SaveRentalPolicyDto } from '../src/modules/pricing/dto/pricing.dto';
 import type { AuthService } from '../src/modules/auth/auth.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeNotificationService, makeBookingRequestsService, makeBookingsService, makePricingService, makeVehiclesService, vehicleCreator } from './helpers/service-factory';
+import { makeBookingRequestsService, makeBookingsService, makeCustomersService, makeNotificationService, makePricingService, makeVehiclesService, vehicleCreator } from './helpers/service-factory';
 
 /**
  * Wave 2 (B2 — Pricing & Rental Policies), chạy trên PostgreSQL THẬT.
@@ -41,7 +40,7 @@ const bookings = makeBookingsService(asService, {
   occupancy: new OccupancyService(asService),
   audit: audit,
   notifications: makeNotificationService(asService),
-  customers: new CustomersService(asService, audit),
+  customers: makeCustomersService(asService, audit),
 });
 // Nhánh test chỉ đi qua inbox shop (quote/approve) — không đụng OTP/đăng nhập khách, nên hai
 // dependency đó stub rỗng thay vì dựng cả cây AuthService/Firebase.
@@ -52,7 +51,7 @@ const requests = makeBookingRequestsService(asService, {
   phoneVerification: undefined as unknown as PhoneVerificationService,
   auth: undefined as unknown as AuthService,
   pricing: pricing,
-  customers: new CustomersService(asService, audit),
+  customers: makeCustomersService(asService, audit),
 });
 
 let dbAvailable = false;

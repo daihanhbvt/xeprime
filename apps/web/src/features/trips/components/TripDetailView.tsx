@@ -15,6 +15,7 @@ import {
   API_ERROR_CODE,
   CUSTOMER_TRIP_STAGE,
   CUSTOMER_TRIP_STAGE_META,
+  DEPOSIT_COLLECTION_MODE,
   SERVICE_TYPE,
   TRIP_ROLE,
   canCustomerCancelTrip,
@@ -375,6 +376,20 @@ export function TripDetailView({ tripId }: { tripId: string }) {
             việc duy nhất khách cần làm, và nó không được nằm dưới một bảng số liệu.
           */}
           {data.hold ? <TripHoldPanel hold={data.hold} tripId={data.id} /> : null}
+          {/*
+            Đơn KHÔNG đi qua khoản giữ chỗ của XePrime (tuyến gói tắt công tắc thu cọc — Phase 6).
+            Khách phải được nói thẳng giới hạn bảo vệ trước khi họ chuyển tiền cho ai đó ngoài
+            nền tảng (ADR 0028 điều 9), chứ không phát hiện ra lúc có tranh chấp.
+          */}
+          {data.depositCollectionMode === DEPOSIT_COLLECTION_MODE.DIRECT ? (
+            <Alert
+              className={styles.directDeposit}
+              type="info"
+              showIcon
+              message={t('detail.directDeposit.title')}
+              description={t('detail.directDeposit.body')}
+            />
+          ) : null}
           {/*
             Ba nguồn tiền, loại trừ nhau theo đúng thứ tự này:
               · có đơn      → số ĐÃ ĐÓNG BĂNG (ADR 0024);

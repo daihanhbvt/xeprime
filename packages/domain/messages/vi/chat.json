@@ -21,6 +21,7 @@
   "filterLabel": "Lọc hội thoại",
   "filterUnread": "Chưa đọc",
   "imageAlt": "Ảnh",
+  "inboxTitle": "Tin nhắn",
   "inputPlaceholder": "Nhập tin nhắn của bạn…",
   "loadError": "Không tải được hội thoại",
   "messageShop": "Nhắn shop",
@@ -42,6 +43,7 @@
   "unreadCount": "{count, plural, other {# tin chưa đọc}}",
   "uploadFailed": "Tải lên lỗi",
   "uploading": "Đang tải lên…",
+  "viewAll": "Xem tất cả tin nhắn",
   "viewListing": "Xem tin đăng",
   "welcomeTitle": "Chào mừng đến với Tin nhắn XePrime",
   "yesterday": "Hôm qua"

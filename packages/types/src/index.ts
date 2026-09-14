@@ -29,6 +29,8 @@ export * from './push';
 export * from './badges';
 export * from './api';
 export * from './province';
+export * from './ward';
+export * from './address';
 export * from './session';
 export * from './upload';
 

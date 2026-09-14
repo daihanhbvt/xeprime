@@ -33,17 +33,40 @@ export function toRequestBody(
             : {}),
         }
       : { pickupAt: values.pickupAt, returnAt: values.returnAt }),
-    // Có tài xế: lộ trình + địa chỉ đón; điểm đến CHỈ khi liên tỉnh (nội thành lộ trình tự do).
+    /*
+     * Có tài xế: lộ trình + địa chỉ đón; điểm đến CHỈ khi liên tỉnh (nội thành lộ trình tự do).
+     *
+     * Địa chỉ gửi đi dạng MÃ + phần chi tiết; chuỗi hiển thị do SERVER ghép (ADR 0035 điều 3),
+     * nên không có trường `pickupAddress` nào trong thân request nữa.
+     */
     ...(withDriver
       ? {
           routeType: values.routeType as CreateBookingRequestInput['routeType'],
-          pickupAddress: values.pickupAddress,
+          pickupProvinceCode: values.pickupProvinceCode,
+          pickupWardCode: values.pickupWardCode,
+          pickupAddressLine: values.pickupAddressLine,
+          ...(values.pickupPlaceId ? { pickupPlaceId: values.pickupPlaceId } : {}),
+          ...(values.pickupLatitude != null && values.pickupLongitude != null
+            ? { pickupLatitude: values.pickupLatitude, pickupLongitude: values.pickupLongitude }
+            : {}),
           ...(interCity && values.destination ? { destination: values.destination } : {}),
         }
       : {}),
     // Giao tận nơi loại trừ với có tài xế — xe đã đến đón thì không có khái niệm giao xe.
     ...(!withDriver && values.deliveryRequested
-      ? { deliveryRequested: true, deliveryAddress: values.deliveryAddress }
+      ? {
+          deliveryRequested: true,
+          deliveryProvinceCode: values.deliveryProvinceCode,
+          deliveryWardCode: values.deliveryWardCode,
+          deliveryAddressLine: values.deliveryAddressLine,
+          ...(values.deliveryPlaceId ? { deliveryPlaceId: values.deliveryPlaceId } : {}),
+          ...(values.deliveryLatitude != null && values.deliveryLongitude != null
+            ? {
+                deliveryLatitude: values.deliveryLatitude,
+                deliveryLongitude: values.deliveryLongitude,
+              }
+            : {}),
+        }
       : {}),
     ...(values.note ? { note: values.note } : {}),
   };

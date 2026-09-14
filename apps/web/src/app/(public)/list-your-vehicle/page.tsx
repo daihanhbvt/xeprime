@@ -5,7 +5,7 @@ import { ListYourVehicleLanding } from '@/features/list-vehicle/components/ListY
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('ListYourVehicle.landing');
-  return { title: t('title'), description: t('subtitle') };
+  return { title: t('metaTitle'), description: t('subtitle') };
 }
 
 /**

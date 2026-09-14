@@ -42,11 +42,22 @@ export const ROUTES = {
      * cùng một chuyến — không phải đoán loại id trước khi điều hướng.
      */
     detail: (tripId: string): Href => ({ pathname: '/trips/[id]', params: { id: tripId } }),
-    /** Wizard gửi yêu cầu thuê một chiếc xe (BKG-01) — CÔNG KHAI, khách vãng lai vào được. */
-    request: (vehicleId: string, serviceType?: string): Href =>
-      serviceType
-        ? { pathname: '/listings/[id]/request', params: { id: vehicleId, serviceType } }
-        : { pathname: '/listings/[id]/request', params: { id: vehicleId } },
+    /**
+     * Wizard gửi yêu cầu thuê một chiếc xe (BKG-01) — CÔNG KHAI, khách vãng lai vào được.
+     *
+     * `provinceCode` là tỉnh khách đang LỌC ở màn tìm xe — điền sẵn ô địa chỉ giao xe (ADR 0035).
+     * Native không có URL để mang ngữ cảnh, nên nó đi qua tham số điều hướng, đúng cách
+     * `serviceType` đang đi.
+     */
+    request: (
+      vehicleId: string,
+      context?: { serviceType?: string; provinceCode?: string },
+    ): Href => {
+      const params: Record<string, string> = { id: vehicleId };
+      if (context?.serviceType) params.serviceType = context.serviceType;
+      if (context?.provinceCode) params.provinceCode = context.provinceCode;
+      return { pathname: '/listings/[id]/request', params };
+    },
   },
 
   /**

@@ -17,7 +17,7 @@ import {
   SERVICE_TYPE_VALUES,
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { AutoAcceptPreviewDto } from '../../vehicle-settings/dto/vehicle-settings.dto';
 import {
   ArrayMaxSize,
@@ -26,6 +26,8 @@ import {
   IsIn,
   IsInt,
   IsISO8601,
+  IsLatitude,
+  IsLongitude,
   IsNumber,
   IsOptional,
   IsString,
@@ -716,11 +718,29 @@ export class GeoPointDto {
 export class DeliveryDistanceQueryDto {
   @ApiProperty({
     description: 'Địa chỉ khách muốn nhận xe — chuỗi tự do, server tự tra toạ độ',
-    example: '12 Nguyễn Huệ, Quận 1, TP.HCM',
+    example: '12 Nguyễn Huệ, Phường Sài Gòn, Hồ Chí Minh',
   })
   @IsString()
   @MaxLength(300)
   address!: string;
+
+  /**
+   * Toạ độ khách ĐÃ XÁC NHẬN trên bản đồ. Gửi lên thì server DÙNG THẲNG và bỏ qua bước tra
+   * địa chỉ — vừa rẻ hơn một request có tính tiền, vừa chính xác hơn hẳn: cái ghim là chỗ
+   * khách chỉ tay vào, còn tra lại từ chuỗi chữ là để máy đoán lần nữa và có thể ra chỗ khác
+   * với con số phí mà khách vừa nhìn thấy.
+   */
+  @ApiPropertyOptional({ description: 'Vĩ độ ghim khách đã xác nhận' })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (value === undefined || value === '' ? undefined : Number(value)))
+  @IsLatitude()
+  lat?: number;
+
+  @ApiPropertyOptional({ description: 'Kinh độ đi kèm `lat`' })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (value === undefined || value === '' ? undefined : Number(value)))
+  @IsLongitude()
+  lng?: number;
 }
 
 /**

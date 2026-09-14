@@ -67,6 +67,7 @@ const SHOP: MyShop = {
     name: 'Chi nhánh chính',
     provinceCode: '48',
     provinceName: 'Đà Nẵng',
+  needsLocationReview: false,
   },
 };
 

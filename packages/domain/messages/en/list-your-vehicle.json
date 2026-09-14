@@ -1,28 +1,119 @@
 {
   "landing": {
-    "title": "List your vehicle",
+    "metaTitle": "List your vehicle",
+    "title": "Start renting out your car the way that fits you",
     "back": "Back",
-    "cta": "List a self-drive vehicle",
-    "subtitle": "Earn more every month with XePrime",
+    "subtitle": "Listing your first car is simple; when you need to run at a larger scale, you can upgrade to a shop and keep the same account and vehicles.",
     "policyLink": "Marketplace rules",
-    "steps": {
-      "title": "Simple and quick to get listed",
-      "info": {
-        "title": "Enter vehicle details",
-        "desc": "Brand, model, transmission and the basic specs."
+    "personal": {
+      "badge": "A good place to start",
+      "title": "List a personal vehicle",
+      "tagline": "Commission track · a good place to start",
+      "body": "For owners who want to rent out a personal car simply and quickly. No sign-up fee, up to {maxVehicles} vehicles, and you manage cars and trips from your Account.",
+      "features": {
+        "noFee": "No sign-up fee",
+        "vehicleCap": "Up to {maxVehicles} vehicles",
+        "simple": "Simple management in Account"
       },
-      "images": {
-        "title": "Upload vehicle photos",
-        "desc": "At least 4 clear photos: front, rear, side and interior."
+      "art": "Share your car with thousands of renters",
+      "offerTitle": "Per-trip platform fee",
+      "offerBody": "The platform fee is added to the total the renter pays. The current pilot rate is <strong>{percent}% of the rental price</strong>.",
+      "cta": "List your first vehicle"
+    },
+    "shop": {
+      "badge": "For a professional operation",
+      "title": "Open a rental shop",
+      "tagline": "Plan track · for a professional operation",
+      "body": "Suited to individuals and businesses with several vehicles. You pay a plan based on fleet size and <strong>0% platform fee</strong> per trip while the plan is active. Full tooling for vehicles, calendar, staff, branches, finance and reports.",
+      "features": {
+        "fleet": "Manage many vehicles and branches",
+        "operations": "Manage calendar and staff",
+        "reports": "Revenue and performance reports"
       },
-      "review": {
-        "title": "XePrime reviews your listing",
-        "desc": "Our team checks the details and switches the listing on."
+      "offerTitle": "0% per-trip platform fee",
+      "offerBody": "While the plan is active. Plenty of tooling for a professional operation, built for larger fleets.",
+      "cta": "Learn more and create a shop"
+    },
+    "upgrade": {
+      "title": "Upgrade whenever you need to",
+      "body": "You can start by listing a personal vehicle and upgrade to a shop later. Your account and vehicle data stay exactly as they are."
+    }
+  },
+  "ownerProfile": {
+    "step": {
+      "title": "Owner profile",
+      "short": "Profile"
+    },
+    "back": "Back",
+    "pageTitle": "List your car for rent",
+    "pageSubtitle": "A few simple steps to get your car onto XePrime.",
+    "tagline": "Share your car, connect journeys",
+    "heading": "1. Owner profile",
+    "intro": "A few details so renters know who is renting out the car and where to collect it. You fill this in once, for every car you list later.",
+    "publicNote": "Some of these details are shown publicly on XePrime.",
+    "editableLater": "You can change any of this later from your vehicle management area.",
+    "fields": {
+      "name": {
+        "label": "Owner name",
+        "placeholder": "e.g. Nguyen Van A",
+        "help": "This is the name renters see on your car."
       },
-      "rent": {
-        "title": "Start renting out",
-        "desc": "Receive booking requests from renters on the marketplace."
+      "phone": {
+        "label": "Contact phone number",
+        "verified": "Verified",
+        "change": "Change number",
+        "unverifiedTitle": "This phone number is not verified yet",
+        "unverifiedBody": "Renters call this number at handover, so it has to be a number you actually answer. Verifying takes less than a minute.",
+        "verifyCta": "Verify phone number",
+        "missingTitle": "Your account has no phone number",
+        "missingBody": "Renters need a number to call at handover. Add one and enter the code we send you.",
+        "addCta": "Add phone number"
+      },
+      "email": {
+        "label": "Email (optional)",
+        "placeholder": "you@example.com",
+        "help": "Used for notifications. Not shown publicly."
+      },
+      "bio": {
+        "label": "Short introduction (optional)",
+        "placeholder": "A little about you or your service",
+        "help": "For example: responsive, available 24/7, cars always clean."
+      },
+      "address": {
+        "title": "Pick-up address"
       }
+    },
+    "aside": {
+      "title": "You are about to list on the XePrime marketplace",
+      "trust": {
+        "title": "Safe and transparent",
+        "desc": "Clear details build trust with renters."
+      },
+      "reach": {
+        "title": "Reach more renters",
+        "desc": "Listed on the nationwide marketplace."
+      },
+      "manage": {
+        "title": "Easy to manage",
+        "desc": "Everything in one account."
+      },
+      "support": {
+        "title": "Need a hand?",
+        "desc": "The XePrime team is here to help.",
+        "cta": "Contact support"
+      }
+    },
+    "validation": {
+      "nameRequired": "Enter the owner name",
+      "nameMin": "That name is too short",
+      "provinceRequired": "Select a province or city",
+      "provinceInvalid": "That province is not valid",
+      "wardRequired": "Select a ward or commune",
+      "wardInvalid": "That ward is not valid",
+      "addressLineRequired": "Enter the house number and street",
+      "addressLineMax": "That address is too long",
+      "emailInvalid": "That email is not valid",
+      "bioMax": "Introduction is limited to 200 characters"
     }
   },
   "wizard": {
@@ -38,9 +129,6 @@
     "signInTitle": "Sign in to list a vehicle",
     "signInBody": "Listing a vehicle needs an account so we can reach you and pay out rentals.",
     "signInCta": "Sign in",
-    "needTenantTitle": "Create your host profile first",
-    "needTenantBody": "The host profile holds your contact details and pick-up address.",
-    "needTenantCta": "Create host profile",
     "forbiddenTitle": "No permission to add vehicles",
     "forbiddenBody": "Your account is not allowed to add vehicles in this shop.",
     "steps": {

@@ -84,7 +84,8 @@
     "BANK_ACCOUNT_DUPLICATE": "Tài khoản ngân hàng này đã có trong danh sách của bạn.",
     "INSUFFICIENT_BALANCE": "Số dư khả dụng không đủ.",
     "WITHDRAWAL_BELOW_MINIMUM": "Số tiền rút thấp hơn mức tối thiểu.",
-    "WITHDRAWAL_ALREADY_HANDLED": "Yêu cầu rút này đã được xử lý."
+    "WITHDRAWAL_ALREADY_HANDLED": "Yêu cầu rút này đã được xử lý.",
+    "DEPOSIT_ALWAYS_REQUIRED": "Gian hàng tuyến hoa hồng luôn thu cọc qua XePrime — không tắt được công tắc này."
   },
   "upload": {
     "imageType": "Chỉ nhận ảnh JPG, PNG hoặc WebP",

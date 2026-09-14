@@ -33,6 +33,29 @@ const provinces = vi.hoisted(() => ({
 vi.mock('@/features/locations/hooks/use-provinces', () => ({
   useProvinceOptions: () => ({ ...provinces, error: null, refetch: vi.fn() }),
 }));
+/*
+ * Danh mục cấp xã và bản đồ: stub RỖNG. Màn này kiểm luồng gửi duyệt và dải trạng thái, không
+ * kiểm ô địa chỉ — hành vi của ô đó nằm ở `components/form/AddressField.test.tsx`. Để chúng gọi
+ * thật thì mỗi lần render sẽ đòi một QueryClientProvider và một khoá bản đồ.
+ */
+vi.mock('@/features/locations/hooks/use-wards', () => ({
+  useWardOptions: () => ({
+    options: [],
+    items: [],
+    total: 0,
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+}));
+vi.mock('@/features/locations/hooks/use-places', () => ({
+  PLACE_SEARCH_MIN_LENGTH: 3,
+  usePlaceSearch: () => ({ data: { items: [], available: false }, isFetching: false }),
+  usePlaceDetail: () => ({ mutateAsync: vi.fn() }),
+  useReverseGeocode: () => ({ mutateAsync: vi.fn() }),
+}));
+vi.mock('@/components/form/MapPinPicker', () => ({ MapPinPicker: () => null }));
+
 
 function makeShop(overrides: Partial<MyShop['profile']> = {}): MyShop {
   return {
@@ -51,6 +74,7 @@ function makeShop(overrides: Partial<MyShop['profile']> = {}): MyShop {
       name: 'Chi nhánh Hồ Chí Minh',
       provinceCode: '79',
       provinceName: 'Hồ Chí Minh',
+    needsLocationReview: false,
     },
     profile: {
       displayName: 'Demo XePrime',

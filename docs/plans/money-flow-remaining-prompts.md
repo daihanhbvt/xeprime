@@ -21,56 +21,6 @@
 
 ---
 
-## PROMPT 0 — Commit chọn lọc (làm TRƯỚC mọi thứ)
-
-```
-Working tree của repo XePrime đang có hai khối công việc TRỘN LẪN và tôi cần tách chúng ra
-trước khi làm tiếp.
-
-Khối của tôi (luồng tiền, Phase 1–5 theo docs/plans/hi-n-t-i-c-n-ho-n-logical-dusk.md):
-- packages/types/src/fee-policy.ts, holds.ts, status/hold.ts, status/wallet.ts,
-  status/hold-refund.ts, status/billing.ts, api.ts, holds.test.ts, fee-policy.test.ts
-- prisma/schema.prisma + 6 migration 20260911*
-- apps/api/src/modules/{wallet,bank-accounts}/ (mới), holds/, booking-requests/,
-  fee-policies/, pricing/, customer-trips/, openapi/api-tags.ts, app.module.ts
-- apps/api/test/{wallet-ledger,withdrawal-flow,bank-accounts}.spec.ts + các spec đã sửa
-- apps/worker/src/jobs/booking-hold-expiry.ts, src/main.ts
-- apps/web/src/features/{wallet,bank-accounts}/ (mới), trips/, platform-money/,
-  subscription/, fee-policies/, notifications/
-- apps/web/src/components/data-display/Countdown.*
-- apps/web/src/app/(public)/account/{balance,bank-accounts}/,
-  apps/web/src/app/(manage)/manage/balance/
-- apps/web/src/constants/{routes,nav,account-nav}.ts + test tương ứng
-- packages/domain/messages/{vi,en}/{wallet,bank-accounts,trips,fee-policies,domain,errors,
-  navigation,platform-money}.json
-- packages/api-client/src/query-keys.ts
-- apps/web/src/i18n/namespaces.ts, apps/web/messages/{vi,en}/index.ts
-- docs/decisions/0033-*.md + README.md + 0023/0025 (banner ghi đè), CLAUDE.md,
-  docs/completion-roadmap.md, docs/plans/*
-
-Khối của NGƯỜI KHÁC (module badges — chuông/chat realtime), TUYỆT ĐỐI KHÔNG đụng:
-- apps/api/src/modules/badges/, apps/web/src/features/badges/,
-  apps/worker/src/jobs/badge-projection.ts, apps/worker/test/badge-projection.test.ts,
-  packages/types/src/badges.ts, prisma/src/badges.ts
-- và phần liên quan badges trong packages/types/src/index.ts, prisma/schema.prisma
-
-Việc cần làm:
-1. Liệt kê `git status` và phân loại TỪNG file vào một trong hai khối. File nào không chắc
-   thì HỎI tôi, đừng đoán.
-2. Với packages/types/src/index.ts và prisma/schema.prisma — hai file cả hai khối cùng sửa —
-   kiểm tra diff và cho tôi biết phần nào của ai.
-3. Tạo branch từ develop và commit CHỈ khối của tôi, chia theo phase nếu hợp lý
-   (feat(api): money ledger / feat(web): wallet UI / docs: ADR 0033...).
-4. TUYỆT ĐỐI KHÔNG dùng `git add -A` hay `git add .` — Phase 0 của tôi đã từng bị cuốn nhầm
-   vào commit push-notification của người khác vì đúng lý do đó.
-5. Không merge, không force, không đụng git stash (có 2 stash của tôi phải giữ nguyên).
-
-Sau khi commit, chạy `pnpm --filter @xeprime/api test` và `pnpm --filter @xeprime/web test`
-để xác nhận branch mới vẫn xanh.
-```
-
----
-
 ## PROMPT 1 — Phase 6: công tắc cọc của gian hàng
 
 ```

@@ -16,7 +16,7 @@ import {
 import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
 import { BranchesService } from '../branches/branches.service';
-import { ProvincesService } from '../locations/provinces.service';
+import { AddressService } from '../locations/address.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   DefaultBranchDto,
@@ -34,6 +34,8 @@ const PROFILE_SELECT = {
   address: true,
   provinceCode: true,
   provinceName: true,
+  wardCode: true,
+  wardName: true,
   taxCode: true,
   businessLicenseNo: true,
   bankName: true,
@@ -50,7 +52,7 @@ export class TenantsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-    private readonly provinces: ProvincesService,
+    private readonly address: AddressService,
     private readonly branches: BranchesService,
     private readonly billing: BillingService,
   ) {}
@@ -77,7 +79,24 @@ export class TenantsService {
       });
     }
 
-    const province = await this.provinces.assertSelectable(dto.provinceCode);
+    /*
+     * Kiểm danh mục + ghép chuỗi hiển thị + tra toạ độ TRƯỚC transaction: `AddressService` có
+     * thể phải hỏi bản đồ, và giữ transaction mở trong lúc chờ Internet là cách để một sự cố
+     * bên ngoài thành một hàng đợi khoá bên trong.
+     *
+     * `requireWard: false` — đăng ký gian hàng là bước đầu tiên và người đăng ký thường chưa có
+     * địa chỉ chính xác. Thiếu xã/phường thì chi nhánh mặc định mang cờ chờ bổ sung, và cổng
+     * `submitForReview` mới là chỗ đòi địa chỉ đủ.
+     */
+    const address = await this.address.resolve({
+      provinceCode: dto.provinceCode,
+      wardCode: dto.wardCode,
+      addressLine: dto.addressLine ?? dto.address,
+      placeId: dto.placeId,
+      latitude: dto.latitude,
+      longitude: dto.longitude,
+      locationSource: dto.locationSource,
+    });
 
     const id = newId();
     const tenantId = await this.prisma.$transaction(async (tx) => {
@@ -110,20 +129,20 @@ export class TenantsService {
         data: {
           tenantId: id,
           displayName: dto.name,
-          address: dto.address ?? null,
-          // Hai cột này là bản SAO tương thích ngược của chi nhánh mặc định; nguồn sự thật vận
+          // Bốn cột dưới là bản SAO tương thích ngược của chi nhánh mặc định; nguồn sự thật vận
           // hành là `tenant_branches`. Đồng bộ về sau đi qua `syncProfileFromDefaultBranch`.
-          provinceCode: province.code,
-          provinceName: province.name,
+          address: address.displayAddress,
+          provinceCode: address.provinceCode,
+          provinceName: address.provinceName,
+          wardCode: address.wardCode,
+          wardName: address.wardName,
         },
       });
       await this.branches.createDefaultBranch(tx, {
         tenantId: id,
         userId,
-        provinceCode: province.code,
-        provinceName: province.name,
+        address,
         phone: dto.phone ?? null,
-        address: dto.address ?? null,
       });
       /*
        * Gói mặc định trong CÙNG transaction (ADR 0015 điều 9) — cùng lý do với chi nhánh và
@@ -171,7 +190,11 @@ export class TenantsService {
           code: true,
           name: true,
           provinceCode: true,
+          wardCode: true,
+          address: true,
+          needsLocationReview: true,
           province: { select: { name: true } },
+          ward: { select: { name: true } },
         },
       }),
     ]);
@@ -201,6 +224,10 @@ export class TenantsService {
             name: defaultBranch.name,
             provinceCode: defaultBranch.provinceCode,
             provinceName: defaultBranch.province?.name ?? null,
+            wardCode: defaultBranch.wardCode,
+            wardName: defaultBranch.ward?.name ?? null,
+            address: defaultBranch.address,
+            needsLocationReview: defaultBranch.needsLocationReview,
           } satisfies DefaultBranchDto)
         : null,
     };
@@ -236,8 +263,25 @@ export class TenantsService {
       });
     }
 
-    const { provinceCode, ...profile } = dto;
-    if (provinceCode !== undefined) await this.moveDefaultBranch(tenantId, userId, provinceCode);
+    /*
+     * MỌI mảnh địa chỉ đi qua chi nhánh mặc định, không chỉ mã tỉnh như trước. Bốn cột địa chỉ
+     * trên `tenant_profiles` là BẢN SAO (`syncProfileFromDefaultBranch`) — ghi thẳng vào chúng
+     * sẽ đúng cho tới lần chạm chi nhánh kế tiếp rồi âm thầm bị ghi đè, trong khi xe vẫn hiển
+     * thị ở địa chỉ cũ trên marketplace vì `public_listings` không hề biết có thay đổi.
+     */
+    const { provinceCode, wardCode, addressLine, address, ...profile } = dto;
+    if (
+      provinceCode !== undefined ||
+      wardCode !== undefined ||
+      addressLine !== undefined ||
+      address !== undefined
+    ) {
+      await this.moveDefaultBranch(tenantId, userId, {
+        provinceCode,
+        wardCode,
+        addressLine: addressLine ?? address,
+      });
+    }
 
     const data = normalizeProfileWrite(profile);
     // upsert: tenant tạo qua đường khác có thể chưa có hồ sơ.
@@ -256,16 +300,23 @@ export class TenantsService {
   private async moveDefaultBranch(
     tenantId: string,
     userId: string,
-    provinceCode: string,
+    patch: { provinceCode?: string; wardCode?: string; addressLine?: string },
   ): Promise<void> {
     const branch = await this.prisma.tenantBranch.findFirst({
       where: { tenantId, isDefault: true, deletedAt: null },
-      select: { id: true, provinceCode: true },
+      select: { id: true, provinceCode: true, wardCode: true, addressLine: true },
     });
-    // Dữ liệu cũ chưa qua migration chi nhánh: không có gì để dời, và tuyệt đối không tự ghi hai
+    // Dữ liệu cũ chưa qua migration chi nhánh: không có gì để dời, và tuyệt đối không tự ghi các
     // cột sao chép — làm vậy là tạo ra đúng cái lệch mà hàm này sinh ra để tránh.
-    if (!branch || branch.provinceCode === provinceCode) return;
-    await this.branches.update(tenantId, branch.id, userId, { provinceCode });
+    if (!branch) return;
+
+    const unchanged =
+      (patch.provinceCode === undefined || patch.provinceCode === branch.provinceCode) &&
+      (patch.wardCode === undefined || patch.wardCode === branch.wardCode) &&
+      (patch.addressLine === undefined || patch.addressLine === branch.addressLine);
+    if (unchanged) return;
+
+    await this.branches.update(tenantId, branch.id, userId, patch);
   }
 
   /**
@@ -425,6 +476,8 @@ function emptyProfileIfNull(
     address: profile?.address ?? null,
     provinceCode: profile?.provinceCode ?? null,
     provinceName: profile?.provinceName ?? null,
+    wardCode: profile?.wardCode ?? null,
+    wardName: profile?.wardName ?? null,
     taxCode: profile?.taxCode ?? null,
     businessLicenseNo: profile?.businessLicenseNo ?? null,
     bankName: profile?.bankName ?? null,

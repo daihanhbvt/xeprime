@@ -5,8 +5,9 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { API_ERROR_CODE } from '@xeprime/types';
+import { guessAddressLine } from '@xeprime/domain';
+import { AddressField } from '@/components/form/AddressField';
 import { DialogForm } from '@/components/form/DialogForm';
-import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -19,7 +20,14 @@ import { customerFormSchema, type CustomerFormValues } from '../schema';
 import type { TenantCustomerDetail } from '../types';
 import styles from './CustomerFormModal.module.css';
 
-const EMPTY: CustomerFormValues = { fullName: '', phone: '', email: '', address: '' };
+const EMPTY: CustomerFormValues = {
+  fullName: '',
+  phone: '',
+  email: '',
+  provinceCode: '',
+  wardCode: '',
+  addressLine: '',
+};
 
 function toValues(customer: TenantCustomerDetail | null): CustomerFormValues {
   if (!customer) return EMPTY;
@@ -27,9 +35,28 @@ function toValues(customer: TenantCustomerDetail | null): CustomerFormValues {
     fullName: customer.fullName,
     phone: customer.phone,
     email: customer.email ?? '',
-    address: customer.address ?? '',
+    provinceCode: customer.location?.provinceCode ?? '',
+    wardCode: customer.location?.wardCode ?? '',
+    /*
+     * Hồ sơ CŨ chỉ có chuỗi địa chỉ tự do: đoán phần "số nhà, đường" bằng cách cắt các cụm trông
+     * như đơn vị hành chính. GỢI Ý cho ô nhập, không phải dữ liệu tự lưu — nhân viên nhìn và sửa.
+     */
+    addressLine: customer.location?.addressLine ?? guessAddressLine(customer.address),
   };
 }
+
+/**
+ * Tên ba trường địa chỉ trong `customerFormSchema`.
+ *
+ * KHÔNG truyền `pin`: địa chỉ khách ở sổ khách là để LIÊN HỆ, hệ thống không tính khoảng cách
+ * hay điều xe tới nó. Bắt nhân viên xác nhận một cái ghim mà không ai dùng là thêm một bước vô
+ * nghĩa, và mỗi lượt tra bản đồ là một request có tính tiền.
+ */
+const ADDRESS_FIELD_NAMES = {
+  provinceCode: 'provinceCode',
+  wardCode: 'wardCode',
+  addressLine: 'addressLine',
+} as const;
 
 /**
  * Hồ sơ khách — MỘT dialog cho cả thêm lẫn sửa.
@@ -116,7 +143,10 @@ function CustomerForm({
       fullName: values.fullName.trim(),
       phone: values.phone.trim(),
       email: values.email.trim() || null,
-      address: values.address.trim() || null,
+      // Chuỗi hiển thị do SERVER ghép từ ba mảnh — client không gửi `address` lên nữa.
+      provinceCode: values.provinceCode || undefined,
+      wardCode: values.wardCode || undefined,
+      addressLine: values.addressLine.trim() || undefined,
     };
     const done = {
       onSuccess: () => {
@@ -161,7 +191,11 @@ function CustomerForm({
         help={t('phoneHelp')}
       />
       <TextField control={control} name="email" label={t('email')} type="email" />
-      <TextAreaField control={control} name="address" label={t('address')} rows={2} />
+      {/*
+        Địa chỉ khách KHÔNG bắt buộc: sổ khách hay được điền nhanh lúc lập đơn và địa chỉ ở đó
+        chủ yếu để liên hệ — bắt chọn hai cấp hành chính cho một ô phụ là cản trở việc chính.
+      */}
+      <AddressField control={control} names={ADDRESS_FIELD_NAMES} title={t('address')} />
 
       {customer ? (
         <div className={styles.readonlyRow}>

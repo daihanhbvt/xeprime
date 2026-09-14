@@ -1,10 +1,11 @@
 'use client';
 
 import { BellOutlined } from '@ant-design/icons';
-import { Badge, Button, Empty, Popover, Spin } from 'antd';
+import { Button, Empty, Popover, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { HeaderIconButton } from '@/components/layout/HeaderIconButton';
 import { cx } from '@/lib/cx';
 import { getErrorMessage } from '@/services/api-client';
 import { useNotifications } from '../hooks/use-notifications';
@@ -108,9 +109,12 @@ export function NotificationBell({ context }: { context: NotificationContext }) 
       placement="bottomRight"
       styles={{ content: { padding: 0 } }}
     >
-      <Badge count={unreadCount} size="small" overflowCount={99}>
-        <Button type="text" shape="circle" icon={<BellOutlined />} aria-label={t('title')} />
-      </Badge>
+      <HeaderIconButton
+        icon={<BellOutlined />}
+        label={t('title')}
+        count={unreadCount}
+        active={open}
+      />
     </Popover>
   );
 }

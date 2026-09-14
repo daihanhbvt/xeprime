@@ -165,6 +165,7 @@ export function ListingDetailScreen({
         serviceType={
           chosenService ?? defaultServiceOf(listing.data.serviceTypes ?? [], initialServiceType)
         }
+        {...(listing.data.provinceCode ? { provinceCode: listing.data.provinceCode } : {})}
       />
     </YStack>
   );
@@ -176,7 +177,16 @@ export function ListingDetailScreen({
  * Mang theo dịch vụ đang chọn để wizard mở ra đúng loại khách vừa xem giá — mở mặc định "tự
  * lái" sau khi khách vừa xem giá "có tài xế" là bắt họ chọn lại thứ đã chọn.
  */
-function RequestBar({ vehicleId, serviceType }: { vehicleId: string; serviceType?: string }) {
+function RequestBar({
+  vehicleId,
+  serviceType,
+  provinceCode,
+}: {
+  vehicleId: string;
+  serviceType?: string;
+  /** Tỉnh của chính chiếc xe — điền sẵn ô địa chỉ giao xe (ADR 0035). */
+  provinceCode?: string;
+}) {
   const t = useTranslations('BookingRequests.flow');
   const navigateOnce = useNavigateOnce();
   const insets = useSafeAreaInsets();
@@ -196,7 +206,14 @@ function RequestBar({ vehicleId, serviceType }: { vehicleId: string; serviceType
         label={t('cta')}
         icon="car-sport-outline"
         size="lg"
-        onPress={() => navigateOnce(ROUTES.booking.request(vehicleId, serviceType))}
+        onPress={() =>
+          navigateOnce(
+            ROUTES.booking.request(vehicleId, {
+              ...(serviceType ? { serviceType } : {}),
+              ...(provinceCode ? { provinceCode } : {}),
+            }),
+          )
+        }
       />
       {/*
         "Nhắn shop" đứng NGAY DƯỚI nút đặt xe, đúng cặp mà web bày cạnh nhau ở cột phải. Hỏi

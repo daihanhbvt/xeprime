@@ -77,7 +77,11 @@
     "reviewBlock": "Đánh giá của bạn",
     "priceBlock": "Chi tiết giá",
     "priceEmpty": "Giá chính thức sẽ hiển thị ngay khi chủ xe xác nhận yêu cầu của bạn.",
-    "destination": "Điểm đến"
+    "destination": "Điểm đến",
+    "directDeposit": {
+      "title": "Cọc thoả thuận trực tiếp với gian hàng",
+      "body": "Gian hàng sẽ liên hệ để thoả thuận cọc trực tiếp. XePrime không thu hộ và không đối soát khoản này, nên nếu có tranh chấp về tiền cọc thì XePrime không có bằng chứng để hỗ trợ bạn."
+    }
   },
   "evidence": {
     "title": "Biên bản bàn giao",

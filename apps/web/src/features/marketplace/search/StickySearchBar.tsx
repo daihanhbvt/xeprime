@@ -181,7 +181,7 @@ function RoutePicker({ popupContainer }: { popupContainer: () => HTMLElement }) 
       panelSize="sm"
       popupContainer={popupContainer}
       triggerLabel={t('route.triggerLabel', { value: routeLabel })}
-      triggerClassName={styles.chip}
+      triggerClassName={cx(styles.chip, styles.routeChip)}
       trigger={
         <>
           <span className={styles.chipValue}>{routeLabel}</span>

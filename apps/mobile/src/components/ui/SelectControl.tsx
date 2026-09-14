@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable } from 'react-native';
-import { Text, YStack } from 'tamagui';
+import { Pressable, TextInput } from 'react-native';
+import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { BottomSheet } from './BottomSheet';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
 import { MenuOption, MenuOptionList } from './MenuOption';
-import { colors, fieldFontSize, iconSize, space } from '@/theme/tokens';
+import { colors, fieldFontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 export interface SelectControlOption {
   readonly value: string;
@@ -38,6 +38,9 @@ export function SelectControl({
   required = false,
   placeholder,
   disabled = false,
+  onSearch,
+  searchPlaceholder,
+  emptyText,
 }: {
   label: string;
   value: string | null;
@@ -54,9 +57,21 @@ export function SelectControl({
    * — thiếu dòng này thì ô "trông khoá" nhưng vẫn đổi được giá trị.
    */
   disabled?: boolean;
+  /**
+   * Bật ô TÌM trong tấm chọn, và đẩy chữ đang gõ ra ngoài cho nơi gọi tự lọc.
+   *
+   * Cần khi danh mục dài hơn thứ cuộn nổi bằng ngón tay — xã/phường có tới 168 đơn vị trong một
+   * tỉnh. Lọc ở NGOÀI chứ không lọc tại chỗ vì phép tìm của danh mục hành chính chạy ở server
+   * (bỏ dấu, bỏ tiền tố loại): gõ "ba dinh" phải ra "Phường Ba Đình", mà chuỗi con thuần thì không.
+   */
+  onSearch?: (value: string) => void;
+  searchPlaceholder?: string;
+  /** Chữ khi danh sách rỗng sau khi tìm. Bỏ trống thì không hiện gì. */
+  emptyText?: string;
 }) {
   const t = useTranslations('Common.actions');
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
 
   const current = options.find((option) => option.value === value);
 
@@ -96,7 +111,48 @@ export function SelectControl({
 
       <FieldMessage error={error} hint={hint} />
 
-      <BottomSheet open={open} onClose={() => setOpen(false)} title={label}>
+      <BottomSheet
+        open={open}
+        onClose={() => {
+          setOpen(false);
+          // Đóng là xoá chữ tìm: mở lại mà còn nguyên bộ lọc cũ trông như danh mục bị mất dòng.
+          setSearch('');
+          onSearch?.('');
+        }}
+        title={label}
+      >
+        {onSearch ? (
+          <XStack
+            ai="center"
+            gap={space.sm}
+            px={space.md}
+            h={sizing.touchTarget}
+            br={radius.md}
+            bw={1}
+            bc={colors.border}
+          >
+            <Ionicons name="search" size={iconSize.sm} color={colors.textMuted} />
+            <TextInput
+              style={{ flex: 1, fontSize: fieldFontSize.value, color: colors.text }}
+              value={search}
+              onChangeText={(next) => {
+                setSearch(next);
+                onSearch(next);
+              }}
+              placeholder={searchPlaceholder ?? t('search')}
+              placeholderTextColor={colors.placeholder}
+              autoCorrect={false}
+              accessibilityLabel={searchPlaceholder ?? t('search')}
+            />
+          </XStack>
+        ) : null}
+
+        {options.length === 0 && emptyText ? (
+          <Text col={colors.textMuted} fos={fieldFontSize.message}>
+            {emptyText}
+          </Text>
+        ) : null}
+
         <MenuOptionList>
           {options.map((option) => (
             <MenuOption
@@ -107,6 +163,8 @@ export function SelectControl({
               onPress={() => {
                 onChange(option.value);
                 setOpen(false);
+                setSearch('');
+                onSearch?.('');
               }}
             />
           ))}

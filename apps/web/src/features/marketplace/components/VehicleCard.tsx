@@ -94,6 +94,8 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
   // Mang ngữ cảnh sang trang chi tiết để prefill luồng đặt xe: ngày giờ + dịch vụ đang active
   // + lộ trình có tài xế — card và detail không bao giờ nói hai dịch vụ khác nhau.
   const dateQs = new URLSearchParams();
+  // Tỉnh đang lọc đi cùng: khách tìm xe ở Đà Nẵng thì ô địa chỉ giao xe mở ra đã ở Đà Nẵng.
+  if (filters.provinceCode) dateQs.set('provinceCode', filters.provinceCode);
   if (filters.pickupAt) dateQs.set('pickupAt', filters.pickupAt);
   if (filters.returnAt) dateQs.set('returnAt', filters.returnAt);
   if (activeService) {

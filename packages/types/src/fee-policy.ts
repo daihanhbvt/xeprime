@@ -478,6 +478,14 @@ export const ALLOCATION_TARGET = {
   PLATFORM_REVENUE: 'platform_revenue',
   /** Phải trả doanh nghiệp bảo hiểm cho hợp đồng đã phát hành. */
   INSURER_PAYABLE: 'insurer_payable',
+  /**
+   * Thuế khấu trừ của chủ xe — nền tảng giữ để nộp thay, KHÔNG phải doanh thu của nó.
+   *
+   * Trước 14/09/2026 phần thuế chỉ bị TRỪ khỏi dòng về ví chủ xe rồi không được đẩy đi đâu, nên
+   * tổng phân bổ nhỏ hơn số tiền đã nhận đúng bằng tiền thuế — và phép đối soát ba vế sẽ báo
+   * một chênh lệch không ai giải thích được. Có đích riêng thì tổng phân bổ luôn bằng `amount`.
+   */
+  TAX_LEDGER: 'tax_ledger',
 } as const;
 
 export type AllocationTarget = (typeof ALLOCATION_TARGET)[keyof typeof ALLOCATION_TARGET];
@@ -550,10 +558,39 @@ export function resolveHoldAllocation(
   }
 
   // settled — chuyến hoàn thành.
-  const tax = Number(taxAmount);
-  push(FEE_LINE.DEPOSIT, ALLOCATION_TARGET.OWNER_BALANCE, Math.max(0, d - tax));
+  const tax = Math.min(d, Number(taxAmount));
+  push(FEE_LINE.DEPOSIT, ALLOCATION_TARGET.OWNER_BALANCE, d - tax);
+  /*
+   * Thuế đi về đích RIÊNG, không tan biến. Kẹp `min(d, tax)` vì phần vượt quá cọc không nằm
+   * trong số tiền nền tảng đang giữ — CHECK `fee_policies_deposit_covers_tax_check` đã chặn
+   * cấu hình sinh ra ca đó, nhưng bất biến "tổng phân bổ = số đã nhận" không được phép phụ
+   * thuộc vào một CHECK ở bảng khác.
+   */
+  push(FEE_LINE.TAX, ALLOCATION_TARGET.TAX_LEDGER, tax);
   push(FEE_LINE.SERVICE_FEE, ALLOCATION_TARGET.PLATFORM_REVENUE, s);
   push(FEE_LINE.VEHICLE_PROTECTION, ALLOCATION_TARGET.INSURER_PAYABLE, iv);
   push(FEE_LINE.TRIP_INSURANCE, ALLOCATION_TARGET.INSURER_PAYABLE, ip);
   return out;
+}
+
+/**
+ * Tổng phân bổ theo TỪNG đích — đúng thứ đối soát ba vế cần đóng băng lên `booking_holds`.
+ *
+ * Bất biến: tổng năm đích LUÔN bằng `D + S + IV + IP`. Không có đường nào cho một đồng biến mất
+ * giữa chừng, và đó là điều khiến phép đối soát có nghĩa.
+ */
+export function allocationTotals(
+  allocation: AllocationEntry[],
+): Record<AllocationTarget, string> {
+  const totals: Record<AllocationTarget, number> = {
+    [ALLOCATION_TARGET.CUSTOMER_BALANCE]: 0,
+    [ALLOCATION_TARGET.OWNER_BALANCE]: 0,
+    [ALLOCATION_TARGET.PLATFORM_REVENUE]: 0,
+    [ALLOCATION_TARGET.INSURER_PAYABLE]: 0,
+    [ALLOCATION_TARGET.TAX_LEDGER]: 0,
+  };
+  for (const line of allocation) totals[line.target] += Number(line.amount);
+  return Object.fromEntries(
+    Object.entries(totals).map(([target, amount]) => [target, String(amount)]),
+  ) as Record<AllocationTarget, string>;
 }

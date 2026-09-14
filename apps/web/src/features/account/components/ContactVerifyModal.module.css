@@ -1,0 +1,132 @@
+/**
+ * Modal đổi/thêm email — số điện thoại. Một cột hẹp, mỗi bước đúng một việc; xem docblock của
+ * `ContactVerifyModal.tsx`.
+ *
+ * Hành động nằm ở FOOTER của hộp thoại, không phải ba nút `block` xếp chồng trong thân như bản
+ * đầu: xếp chồng làm hộp thoại trông như một danh sách nút, và trong khổ hẹp thì câu gợi ý dài
+ * bị ngắt dòng lởm chởm ngay giữa các nút đó.
+ */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+/* Câu dẫn ngay dưới tiêu đề: nói người dùng sắp phải làm gì, trước khi họ nhìn xuống ô nhập. */
+.lead {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 1.6;
+}
+
+.current {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 1.6;
+}
+
+.strong {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+  /* Email dài không được đẩy rộng modal — cắt ở ký tự bất kỳ thay vì tràn ngang. */
+  word-break: break-all;
+  font-variant-numeric: tabular-nums;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+/*
+ * `Form.Item` mặc định chừa 16px dưới mỗi field cho khoảng cách giữa các field. Trong modal
+ * này chỉ có ĐÚNG MỘT field, và khoảng trống đó đẩy hộp "được bảo mật" rơi khỏi nhịp.
+ */
+.step :global(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+/* Mã dev chỉ có ở môi trường không phải production; nói rõ điều đó ngay trong chữ. */
+.devCode {
+  margin: 0;
+  padding: var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body-sm);
+  text-align: center;
+}
+
+.altActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  flex-wrap: wrap;
+}
+
+.error {
+  margin: 0;
+}
+
+/* ── Khối trấn an ───────────────────────────────────────────────────────── */
+.secure {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-primary-light);
+}
+
+.secureIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-gold-deep);
+  font-size: 15px;
+}
+
+.secureBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.secureTitle {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.secureDesc {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 1.5;
+}
+
+/* ── Hàng hành động ─────────────────────────────────────────────────────── */
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+}
+
+/*
+ * Sheet đáy trên mobile: hai nút chia đôi bề ngang thay vì nép phải, vì ngón cái với tới mép
+ * phải của một màn 390px là một thao tác, không phải một cú chạm.
+ */
+@media (max-width: 640px) {
+  .footer > button {
+    flex: 1;
+  }
+}

@@ -23,6 +23,8 @@ export const queryKeys = {
   shop: {
     all: ['shop'] as const,
     current: () => ['shop', 'current'] as const,
+    /** Công tắc thu cọc của gian hàng — `GET /shop/payment-settings` (Phase 6). */
+    paymentSettings: () => ['shop', 'payment-settings'] as const,
   },
   approvals: {
     all: ['approvals'] as const,
@@ -72,7 +74,30 @@ export const queryKeys = {
   locations: {
     all: ['locations'] as const,
     provinces: () => ['locations', 'provinces'] as const,
+    /**
+     * Xã/phường/đặc khu của MỘT tỉnh, kèm chữ đang tìm.
+     *
+     * `q` nằm trong khoá vì tìm kiếm chạy ở SERVER (bỏ dấu, bỏ tiền tố loại đơn vị) — gộp mọi
+     * lần gõ vào một khoá là để kết quả của lần gõ trước đè lên lần sau.
+     */
+    wards: (provinceCode: string, q?: string) =>
+      ['locations', 'wards', provinceCode, q ?? ''] as const,
+    /** Tra NHÃN theo danh sách mã đã lưu — màn hiển thị dùng, không phải bộ chọn. */
+    wardLookup: (codes: readonly string[]) => ['locations', 'ward-lookup', [...codes].sort()] as const,
     admin: (params: QueryParams) => ['locations', 'admin', params] as const,
+  },
+  /**
+   * Gợi ý địa điểm / tra địa chỉ ngược — proxy qua backend để khoá bản đồ không rời server.
+   *
+   * Tách khỏi `locations` vì vòng đời khác hẳn: danh mục hành chính gần như bất động (cache 30
+   * phút), còn gợi ý địa điểm đổi theo từng ký tự và chỉ sống vài giây.
+   */
+  places: {
+    all: ['places'] as const,
+    search: (q: string, bias?: { lat: number; lng: number } | null) =>
+      ['places', 'search', q, bias ? `${bias.lat},${bias.lng}` : ''] as const,
+    detail: (placeId: string) => ['places', 'detail', placeId] as const,
+    reverse: (lat: number, lng: number) => ['places', 'reverse', lat, lng] as const,
   },
   /** Tài xế của gian hàng (17/08) — danh sách CRUD + bộ chọn gán vào đơn đọc chung. */
   drivers: {
@@ -411,6 +436,11 @@ export const queryKeys = {
   platformWithdrawals: {
     all: ['platform-withdrawals'] as const,
     list: (params: QueryParams) => ['platform-withdrawals', 'list', params] as const,
+  },
+  /** Hàng đợi hợp đồng bảo hiểm của nền tảng — Phase 7. */
+  platformInsurance: {
+    all: ['platform-insurance'] as const,
+    list: (params: QueryParams) => ['platform-insurance', 'list', params] as const,
   },
   bankAccounts: {
     all: ['bank-accounts'] as const,

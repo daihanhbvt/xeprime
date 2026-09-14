@@ -138,6 +138,59 @@ export class EmailService implements OnModuleDestroy {
     await this.send(to, subject, html, `Link lời mời: ${inviteUrl}`);
   }
 
+  /**
+   * Mã xác thực địa chỉ email (6 số) — dùng khi khách đổi/thêm email trong trang tài khoản.
+   *
+   * Mã nằm THẲNG trong thư chứ không phải sau một liên kết: người nhận đang đứng ở màn hình có
+   * sẵn ô nhập, và một cú bấm link mở tab mới ở đây chỉ làm mất ngữ cảnh họ đang có. Thư cũng
+   * nói rõ ai đang yêu cầu và phải làm gì nếu không phải họ — đây là bước cuối trước khi một
+   * địa chỉ trở thành định danh đăng nhập của một tài khoản.
+   */
+  async sendVerificationCode(
+    to: string,
+    displayName: string,
+    code: string,
+    ttlMinutes: number,
+  ): Promise<void> {
+    const subject = `${code} là mã xác thực email XePrime của bạn`;
+    const html = `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;color:#2a2318">
+        <h2 style="color:#a9761a">Xác thực địa chỉ email</h2>
+        <p>Chào ${escapeHtml(displayName)},</p>
+        <p>Nhập mã dưới đây vào trang tài khoản XePrime để xác nhận địa chỉ email này là của bạn.</p>
+        <p style="text-align:center;margin:28px 0">
+          <span style="display:inline-block;background:#fdf6e3;border:1px solid #d6a02c;border-radius:10px;padding:14px 28px;font-size:30px;font-weight:700;letter-spacing:8px;color:#a9761a">${escapeHtml(code)}</span>
+        </p>
+        <p style="color:#6f6450;font-size:13px">Mã hết hạn sau ${ttlMinutes} phút và chỉ dùng được một lần.</p>
+        <p style="color:#6f6450;font-size:13px">Nếu bạn không yêu cầu, hãy bỏ qua email này — tài khoản của bạn không thay đổi gì.</p>
+      </div>`;
+    await this.send(to, subject, html, `Mã xác thực email: ${code}`);
+  }
+
+  /**
+   * Báo cho địa chỉ CŨ biết email đăng nhập vừa bị đổi.
+   *
+   * Đây là lớp bảo vệ thật sự của luồng đổi email: mã 6 số chỉ chứng minh người đổi kiểm soát
+   * địa chỉ MỚI, nó không chứng minh họ là chủ tài khoản. Nếu một phiên bị chiếm, thư này là
+   * thứ duy nhất tới được chủ thật — nên nó gửi tới địa chỉ cũ, sau khi đã đổi, và nói rõ phải
+   * liên hệ ai.
+   */
+  async sendEmailChangedNotice(
+    to: string,
+    displayName: string,
+    newEmail: string,
+  ): Promise<void> {
+    const subject = 'Email đăng nhập XePrime của bạn vừa được thay đổi';
+    const html = `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;color:#2a2318">
+        <h2 style="color:#a9761a">Email đăng nhập đã thay đổi</h2>
+        <p>Chào ${escapeHtml(displayName)},</p>
+        <p>Email đăng nhập của tài khoản XePrime này vừa được đổi sang <strong>${escapeHtml(newEmail)}</strong>. Từ giờ hãy dùng địa chỉ mới để đăng nhập.</p>
+        <p style="color:#6f6450;font-size:13px">Nếu KHÔNG phải bạn thực hiện, hãy liên hệ hỗ trợ XePrime ngay — tài khoản của bạn có thể đang bị người khác truy cập.</p>
+      </div>`;
+    await this.send(to, subject, html, `Email đăng nhập đổi sang: ${newEmail}`);
+  }
+
   onModuleDestroy(): void {
     this.transporter?.close();
   }

@@ -767,5 +767,18 @@
     "paid": "Đã chuyển",
     "rejected": "Bị từ chối",
     "cancelled": "Đã huỷ"
+  },
+  "insurancePolicyStatus": {
+    "reserved": "Đã thu phí, chờ bàn giao",
+    "issuing": "Đang cấp chứng nhận",
+    "issued": "Đã cấp chứng nhận",
+    "failed": "Cấp thất bại",
+    "cancelled": "Đã huỷ trước chuyến",
+    "voided": "Đã thu hồi",
+    "claim": "Đang bồi thường"
+  },
+  "insuranceProductKind": {
+    "vehicle_trip": "Bảo hiểm xe cho chuyến",
+    "personal_accident": "Tai nạn người ngồi trên xe"
   }
 }

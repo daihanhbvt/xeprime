@@ -9,10 +9,9 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
-import { CustomersService } from '../src/modules/customers/customers.service';
 import { DriversService } from '../src/modules/drivers/drivers.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingsService } from './helpers/service-factory';
+import { makeBookingsService, makeCustomersService } from './helpers/service-factory';
 
 /**
  * Lịch bận tài xế (17/08), trên PostgreSQL THẬT:
@@ -31,7 +30,7 @@ const audit = new AuditService(asService);
 const drivers = new DriversService(asService, audit);
 const bookings = makeBookingsService(asService, {
   audit,
-  customers: new CustomersService(asService, audit),
+  customers: makeCustomersService(asService, audit),
 });
 
 let dbAvailable = false;

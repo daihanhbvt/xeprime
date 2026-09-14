@@ -37,15 +37,17 @@ function queryOf(draft: SearchDraft): URLSearchParams {
 }
 
 describe('draftFromFilters — URL → bản nháp', () => {
-  it('URL rỗng cho mặc định dùng được ngay: ô tô, tự lái, toàn quốc, khoảng thuê mai → 3 ngày', () => {
+  it('URL rỗng cho mặc định dùng được ngay: ô tô, tự lái, toàn quốc, thuê 1 ngày tròn', () => {
     const draft = draftFromFilters({}, NOW);
 
     expect(draft.vehicleType).toBe(VEHICLE_TYPE.CAR);
     expect(draft.serviceType).toBe(SERVICE_TYPE.SELF_DRIVE);
     expect(draft.provinceCode).toBe('');
     expect(draft.rental.mode).toBe('daily');
-    expect(draft.rental.pickupAt?.format('DD/MM HH:mm')).toBe('19/08 10:00');
-    expect(draft.rental.returnAt?.format('DD/MM HH:mm')).toBe('22/08 10:00');
+    // 09:00 + đệm 4 giờ = 13:00, đúng một mốc gợi ý ⇒ nhận 13:00 hôm nay, trả 13:00 ngày mai.
+    // Công thức đầy đủ và các ranh giới ở `packages/domain/src/search-draft.test.ts`.
+    expect(draft.rental.pickupAt?.format('DD/MM HH:mm')).toBe('18/08 13:00');
+    expect(draft.rental.returnAt?.format('DD/MM HH:mm')).toBe('19/08 13:00');
   });
 
   it('nạp lại đủ ngữ cảnh từ link chia sẻ (F5/back-forward đọc lại đúng URL đó)', () => {

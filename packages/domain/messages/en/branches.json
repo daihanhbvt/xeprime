@@ -54,28 +54,10 @@
     "createTitle": "Add branch",
     "editTitle": "Edit {name}",
     "createOk": "Create branch",
-    "noProvinceTitle": "This branch has no province yet",
-    "noProvinceLegacy": "The old data recorded \"{value}\" — pick the matching province so this branch's vehicles appear on the marketplace again.",
-    "noProvinceHint": "Pick a province so this branch's vehicles appear on the marketplace.",
-    "provincesLoadError": "Could not load the list of provinces",
     "nameLabel": "Branch name",
     "namePlaceholder": "e.g. Da Nang branch",
-    "provinceLabel": "Province",
-    "provinceLoading": "Loading provinces…",
-    "provincePlaceholder": "Select a province",
-    "provinceHelp": "Decides which province this branch's vehicles appear in on the marketplace.",
-    "addressLabel": "Address",
-    "addressPlaceholder": "Street number, street, ward",
     "phoneLabel": "Phone number",
     "phonePlaceholder": "0901234567"
-  },
-  "map": {
-    "title": "Location on the map",
-    "frameTitle": "Map of the branch location",
-    "hint": "The location is derived automatically from the address above. It is the starting point for delivery fees — if the pin is in the wrong place, write a more detailed address and save again.",
-    "pending": "We could not derive a location from this address. Add the street number, street name and ward, then save again so the system can retry.",
-    "addressFirst": "Enter an address and save so the system can place this branch on the map.",
-    "open": "Open in Maps"
   },
   "scope": {
     "all": "All branches",

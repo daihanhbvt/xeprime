@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { provinceSelectLabel } from '@xeprime/domain';
 import type { SelectFieldOption } from '@/components/form/SelectField';
 import { apiRequest } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
@@ -29,7 +30,15 @@ export function useProvinces() {
   });
 }
 
-/** Options cho `SelectField`: giá trị là MÃ, nhãn là tên chuẩn tiếng Việt. */
+/**
+ * Options cho `SelectField`: giá trị là MÃ, nhãn là tên KÈM TIỀN TỐ LOẠI ("TP Hà Nội").
+ *
+ * Tiền tố chỉ có ở đây, không có trong chuỗi địa chỉ đã lưu: danh sách trộn 6 thành phố với 28
+ * tỉnh, và tiền tố là thứ duy nhất cho biết "Huế" là thành phố trực thuộc trung ương.
+ *
+ * Thứ tự do SERVER quyết định (`provinces.sort_order`: sáu thành phố lên đầu, rồi tỉnh theo
+ * bảng chữ cái) — client KHÔNG sắp lại, nếu không admin đổi thứ tự ở màn danh mục sẽ vô nghĩa.
+ */
 export function useProvinceOptions(): {
   options: SelectFieldOption[];
   isLoading: boolean;
@@ -39,7 +48,11 @@ export function useProvinceOptions(): {
 } {
   const query = useProvinces();
   const options = useMemo(
-    () => (query.data ?? []).map((p) => ({ value: p.code, label: p.name })),
+    () =>
+      (query.data ?? []).map((p) => ({
+        value: p.code,
+        label: provinceSelectLabel(p.name, p.administrativeType),
+      })),
     [query.data],
   );
   return {

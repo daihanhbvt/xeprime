@@ -212,5 +212,39 @@
     },
     "appliedTipLabel": "How this policy applies",
     "dirtyDiscard": "Discard"
+  },
+  "paymentSettings": {
+    "title": "Deposit collection",
+    "subtitle": "Decide whether XePrime holds the customer deposit before the trip. This is not the same as the security deposit you take at the counter — that one lives in Rental policies.",
+    "loadError": "Could not load deposit settings",
+    "forbidden": {
+      "title": "Access denied",
+      "description": "You need the permission below to view this shop deposit settings."
+    },
+    "toggle": {
+      "label": "Let XePrime collect the deposit for me",
+      "on": "Collecting",
+      "off": "Not collecting",
+      "saved": "Deposit settings saved"
+    },
+    "mode": {
+      "onTitle": "Customers pay the deposit before the booking exists",
+      "onBody": "The customer scans a VietQR code and transfers the deposit to XePrime within 2 hours of your approval. The booking is only created once the money arrives, so no slot is held by a request that never materialises. The customer pays you the rest of the rent directly at pickup.",
+      "offTitle": "You arrange the deposit with the customer yourself",
+      "offBody": "Approving creates the booking straight away, with no wait for money. You contact the customer to arrange the deposit directly — XePrime neither collects nor reconciles it, so if a dispute over the deposit arises XePrime has no record to support you."
+    },
+    "locked": {
+      "commission": {
+        "title": "Your shop always collects deposits through XePrime",
+        "body": "You are on the commission track: no subscription fee, and XePrime charges a per-trip service fee on the customer side. The deposit is a condition of this track, so the switch is locked. Move to a subscription plan if you want to decide for yourself.",
+        "cta": "View subscription plans"
+      },
+      "featureMissing": {
+        "title": "Your current plan does not include this",
+        "body": "Deposit collection through XePrime is part of the subscription plan. Until then you still take bookings as usual and arrange deposits with customers directly.",
+        "cta": "Upgrade plan"
+      }
+    },
+    "frozen": "Changing this switch only affects rental requests approved from now on. Existing bookings keep the deposit arrangement frozen when they were created."
   }
 }

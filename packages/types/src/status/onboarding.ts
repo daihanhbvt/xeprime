@@ -31,12 +31,37 @@ export const PHONE_VERIFICATION_PURPOSE = {
   SHOP_REGISTER: 'shop_register',
   VEHICLE_PUBLIC: 'vehicle_public',
   PASSWORD_RESET: 'password_reset',
+  /**
+   * Đổi/thêm SĐT trong trang tài khoản. Tách khỏi `login` vì hệ quả khác hẳn: `login` cấp phiên
+   * cho người CHƯA đăng nhập, còn `profile` ghi đè SĐT của một tài khoản ĐANG đăng nhập — dùng
+   * chéo được nghĩa là một mã xin để đăng nhập cũng đổi được số điện thoại của tài khoản khác.
+   */
+  PROFILE: 'profile',
 } as const;
 export type PhoneVerificationPurpose =
   (typeof PHONE_VERIFICATION_PURPOSE)[keyof typeof PHONE_VERIFICATION_PURPOSE];
 export const PHONE_VERIFICATION_PURPOSE_VALUES = Object.values(
   PHONE_VERIFICATION_PURPOSE,
 ) as PhoneVerificationPurpose[];
+
+/**
+ * Xác thực ĐỊA CHỈ EMAIL bằng mã 6 số — bảng `email_verifications`.
+ *
+ * Dùng lại nguyên bộ trạng thái của SĐT (`PHONE_VERIFICATION_STATUS`): vòng đời của một mã là
+ * như nhau ở cả hai kênh (pending → verified/expired/failed), và hai bộ hằng song song chỉ tạo
+ * chỗ để chúng trôi khác nhau.
+ *
+ * Chỉ có `profile` vì đó là chỗ DUY NHẤT hiện đòi chứng minh sở hữu một địa chỉ email: đăng ký
+ * và quên mật khẩu đã có cơ chế riêng (mật khẩu, token đặt lại).
+ */
+export const EMAIL_VERIFICATION_PURPOSE = {
+  PROFILE: 'profile',
+} as const;
+export type EmailVerificationPurpose =
+  (typeof EMAIL_VERIFICATION_PURPOSE)[keyof typeof EMAIL_VERIFICATION_PURPOSE];
+export const EMAIL_VERIFICATION_PURPOSE_VALUES = Object.values(
+  EMAIL_VERIFICATION_PURPOSE,
+) as EmailVerificationPurpose[];
 
 // --- tenant_documents (§5.3) ---
 export const DOCUMENT_STATUS = {

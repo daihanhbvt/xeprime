@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 420" width="720" height="420" fill="none" role="img" aria-label="Gian hang cho thue xe XePrime voi ba chiec xe">
+  <!--
+    Minh hoa the "Mo gian hang cho thue" tren /list-your-vehicle: mot showroom XePrime
+    voi BA chiec xe dau ngoai — doi lap co chu y voi the "Dang xe ca nhan" (mot chiec xe).
+
+    Chiec xe la mot <g id> dung lai ba lan qua <use>, mau than xe di qua `currentColor`
+    nen moi ban chi khac mot thuoc tinh `color`. Sua dang xe mot cho la ca ba doi theo.
+    Ba ban dat theo ba bac chieu sau: xe cang gan cang to va cang thap.
+
+    Chu duy nhat trong hinh la "xe prime" — ten thuong hieu, khong bao gio dich (ADR 0012).
+    Bang mau bam token thuong hieu (gold #d6a02c + cac sac kem).
+  -->
+  <defs>
+    <radialGradient id="xp-sr-ground" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#e9dcc0" />
+      <stop offset="100%" stop-color="#e9dcc0" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="xp-sr-glass" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#eaf1f7" />
+      <stop offset="100%" stop-color="#cfdde9" />
+    </linearGradient>
+
+    <g id="xp-sr-car">
+      <!-- Than xe: mau lay tu `color` cua tung <use> -->
+      <path
+        d="M14 112
+           C8 110 4 104 4 96
+           L4 76
+           C4 66 9 60 17 58
+           L52 50
+           L98 36
+           L134 8
+           C138 4 143 2 149 2
+           L222 6
+           C230 7 236 10 240 16
+           L262 40
+           L282 44
+           C290 46 294 51 294 58
+           L294 92
+           C294 100 290 105 282 107
+           L268 112
+           A 27 27 0 0 0 214 112
+           L142 118
+           A 31 31 0 0 0 80 118
+           Z"
+        fill="currentColor"
+        stroke="#e0d7c2"
+        stroke-width="2"
+      />
+      <path d="M106 34 L136 6 C139 3 143 2 147 2 L158 3 L148 36 Z" fill="url(#xp-sr-glass)" />
+      <path d="M164 3 L196 5 L194 38 L160 38 Z" fill="url(#xp-sr-glass)" />
+      <path d="M202 6 L224 7 L222 39 L200 39 Z" fill="url(#xp-sr-glass)" />
+      <path d="M230 8 C235 9 238 11 240 15 L254 36 L228 36 Z" fill="url(#xp-sr-glass)" />
+      <path d="M10 72 C10 67 14 63 20 62 L48 55 L51 66 L18 78 C13 78 10 76 10 72 Z" fill="#f1dba4" />
+      <path d="M8 86 L44 79 L46 90 L9 96 Z" fill="#8d8778" opacity="0.7" />
+      <circle cx="111" cy="112" r="29" fill="#3a342c" />
+      <circle cx="111" cy="112" r="16" fill="#eae6dd" />
+      <circle cx="241" cy="108" r="26" fill="#3a342c" />
+      <circle cx="241" cy="108" r="14" fill="#eae6dd" />
+    </g>
+  </defs>
+
+  <!-- Nen kem -->
+  <ellipse cx="364" cy="332" rx="344" ry="80" fill="url(#xp-sr-ground)" />
+
+  <!-- ── Showroom ─────────────────────────────────────────────────────── -->
+  <rect x="264" y="116" width="424" height="216" rx="10" fill="#fdf8ec" />
+  <rect x="264" y="116" width="424" height="216" rx="10" stroke="#e4d2a8" stroke-width="3" />
+  <!-- Vach tuong am mot chut de mat tien khong chim vao nen trang -->
+  <rect x="264" y="292" width="424" height="40" fill="#f5ebd5" />
+  <path d="M266 292 H686" stroke="#e4d2a8" stroke-width="3" />
+
+  <!-- Diem mai + bien hieu -->
+  <rect x="248" y="92" width="456" height="30" rx="8" fill="#f3e7cf" />
+  <rect x="400" y="44" width="198" height="48" rx="12" fill="#d6a02c" />
+  <text
+    x="499"
+    y="76"
+    text-anchor="middle"
+    font-family="'Be Vietnam Pro', 'Segoe UI', system-ui, sans-serif"
+    font-size="25"
+    font-weight="600"
+    fill="#ffffff"
+  >xe prime</text>
+  <rect x="482" y="92" width="34" height="22" fill="#e8d9b6" />
+
+  <!-- Mai hien soc tren o kinh -->
+  <path d="M292 150 h172 l14 32 H278 z" fill="#f9f2e2" />
+  <g fill="#d6a02c">
+    <path d="M304 150 h20 l-6 32 h-22 z" />
+    <path d="M344 150 h20 l-2 32 h-22 z" />
+    <path d="M384 150 h20 l2 32 h-22 z" />
+    <path d="M424 150 h20 l6 32 h-22 z" />
+  </g>
+
+  <!-- O kinh mat tien -->
+  <rect x="288" y="196" width="184" height="94" rx="6" fill="url(#xp-sr-glass)" />
+  <path d="M380 196 v94" stroke="#ffffff" stroke-width="5" />
+  <path d="M300 206 l30 -0 -34 40 z" fill="#f5f9fc" opacity="0.8" />
+  <rect x="288" y="196" width="184" height="94" rx="6" stroke="#e3d3b2" stroke-width="3" />
+
+  <!-- Cua chinh -->
+  <rect x="530" y="176" width="102" height="156" rx="8" fill="#f1dba4" />
+  <rect x="530" y="176" width="102" height="156" rx="8" stroke="#dcbc6c" stroke-width="3" />
+  <path d="M581 178 v152" stroke="#d6a02c" stroke-width="4" />
+  <circle cx="571" cy="258" r="5" fill="#a9761a" />
+  <circle cx="591" cy="258" r="5" fill="#a9761a" />
+
+  <!-- Chau cay canh cua -->
+  <circle cx="662" cy="268" r="22" fill="#cfd9b4" />
+  <circle cx="650" cy="282" r="14" fill="#dde4c6" />
+  <path d="M644 294 h38 l-6 38 h-26 z" fill="#e8cf9b" />
+
+  <!-- ── Ba chiec xe (xa -> gan) ──────────────────────────────────────── -->
+  <ellipse cx="492" cy="310" rx="96" ry="12" fill="#e0cda6" opacity="0.55" />
+  <use href="#xp-sr-car" transform="translate(396 222) scale(0.62)" color="#cfc8b8" />
+
+  <ellipse cx="324" cy="350" rx="112" ry="14" fill="#e0cda6" opacity="0.6" />
+  <use href="#xp-sr-car" transform="translate(212 244) scale(0.74)" color="#f1dba4" />
+
+  <ellipse cx="154" cy="384" rx="130" ry="16" fill="#d9c396" opacity="0.55" />
+  <use href="#xp-sr-car" transform="translate(24 262) scale(0.86)" color="#ffffff" />
+</svg>

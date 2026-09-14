@@ -1,0 +1,314 @@
+/*
+ * Bước "Hồ sơ chủ xe" — trang có đầu trang riêng (tiêu đề + hình xe), thanh bước, rồi thẻ
+ * form hai cột kèm cột phụ trấn an bên phải.
+ *
+ * Chỉ bước NÀY có đầu trang và cột phụ: đây là lần đầu người dùng giao tên, số điện thoại và
+ * địa chỉ nhà mình. Ba bước sau là khai chiếc xe, và ở đó màn hình càng gọn càng tốt.
+ */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.backRow {
+  display: flex;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.back:hover {
+  color: var(--xp-color-text);
+}
+
+/* ── Đầu trang ──────────────────────────────────────────────────────────── */
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-lg);
+}
+
+.heroText {
+  min-width: 0;
+}
+
+.heroTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-h2);
+  line-height: var(--xp-line-height-h2);
+  font-weight: var(--xp-font-weight-bold);
+  color: var(--xp-color-text);
+}
+
+.heroSubtitle {
+  margin: var(--xp-space-xs) 0 0;
+  color: var(--xp-color-text-secondary);
+}
+
+.heroArt {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.heroTagline {
+  margin: 0;
+  max-width: 130px;
+  text-align: right;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 1.5;
+  /* Gạch chân gold mảnh dưới dòng chữ — nhắc thương hiệu mà không thêm một khối màu nữa. */
+  padding-bottom: var(--xp-space-xs);
+  border-bottom: 2px solid var(--xp-gold-soft);
+}
+
+.heroImage {
+  width: 260px;
+  height: auto;
+}
+
+/* ── Nội dung form ──────────────────────────────────────────────────────── */
+.publicNote {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  margin: 0 0 var(--xp-space-md);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.publicNote svg {
+  color: var(--xp-color-success);
+}
+
+.alert {
+  margin-bottom: var(--xp-space-md);
+}
+
+/*
+ * Hai cột: bên trái là thứ BẮT BUỘC (danh tính + địa chỉ nhận xe), bên phải là thứ tuỳ chọn.
+ * Tách theo mức bắt buộc chứ không chia đều số ô — người vội chỉ cần đọc hết cột trái.
+ */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-md) var(--xp-space-lg);
+  align-items: start;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+/* Khối SĐT đã xác thực: trông như một trường của form nhưng là giá trị đọc từ tài khoản. */
+.phoneBox {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs) var(--xp-space-sm);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+}
+
+.phoneLabel {
+  flex: 1 1 100%;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.phoneValue {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.phoneOk {
+  color: var(--xp-color-success);
+}
+
+.phoneBadge {
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.phoneAction {
+  margin-inline-start: auto;
+  padding-inline: 0;
+}
+
+/*
+ * Cảnh báo SĐT — tự dựng thay cho `Alert action={...}` của AntD.
+ *
+ * Điểm mấu chốt: nút nằm ở HÀNG RIÊNG bên dưới chữ, và `min-width: 0` trên phần thân cho phép
+ * chữ xuống dòng bình thường. Bản trước dùng prop `action` — nút bị ghim cùng hàng, đẩy bề
+ * rộng tối thiểu của khối vượt quá cột, và cả trang sinh thanh cuộn ngang.
+ */
+.phoneAlert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-warning-bg);
+  border: 1px solid var(--xp-color-warning);
+}
+
+.phoneAlertIcon {
+  flex: none;
+  color: var(--xp-color-warning);
+  font-size: 16px;
+  line-height: var(--xp-line-height-body);
+}
+
+.phoneAlertBody {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.phoneAlertTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.phoneAlertDesc {
+  margin: 0 0 var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 1.5;
+}
+
+/*
+ * Bộ đếm ký tự của AntD nằm ngoài ô nhập, định vị tuyệt đối dưới góc phải — trùng chỗ với
+ * dòng gợi ý của `Form.Item`. Lùi dòng gợi ý ra và chừa thêm đáy cho khối.
+ */
+.bioField :global(.ant-form-item-explain) {
+  padding-inline-end: 76px;
+}
+
+.bioField :global(.ant-form-item) {
+  margin-bottom: var(--xp-space-lg);
+}
+
+.note {
+  margin: var(--xp-space-md) 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 1.6;
+}
+
+/* ── Cột phụ ────────────────────────────────────────────────────────────── */
+.asideCard {
+  padding: var(--xp-space-md);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+  border: 1px solid var(--xp-color-border);
+}
+
+.asideTitle {
+  margin: 0 0 var(--xp-space-md);
+  font-size: var(--xp-font-size-h4);
+  line-height: var(--xp-line-height-h4);
+  font-weight: var(--xp-font-weight-bold);
+  color: var(--xp-color-text);
+}
+
+.asideList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.asideItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+}
+
+.asideIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-gold-deep);
+  font-size: 16px;
+}
+
+.asideBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.asideItemTitle {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.asideItemDesc {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 1.5;
+}
+
+.asideCta {
+  display: block;
+  margin-top: var(--xp-space-md);
+}
+
+/* ── Thu hẹp dần ────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  /* Hình xe là trang trí — ở khổ hẹp nó ăn mất chiều cao của phần thật sự phải đọc. */
+  .heroArt {
+    display: none;
+  }
+}
+
+/*
+ * Ô địa chỉ dùng chung trải ngang cả hai cột — nó đã có tiêu đề và bố cục riêng, ở đây chỉ
+ * cần tách nó khỏi lưới hai cột phía trên.
+ */
+.addressBlock {
+  margin-top: var(--xp-space-lg);
+}
