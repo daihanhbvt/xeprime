@@ -315,7 +315,7 @@ importers:
         specifier: ~15.0.8
         version: 15.0.8(expo@54.0.37)
       expo-splash-screen:
-        specifier: ~31.0.13
+        specifier: 31.0.13
         version: 31.0.13(expo@54.0.37)(typescript@5.9.3)
       expo-web-browser:
         specifier: ~15.0.11
