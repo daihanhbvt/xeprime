@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { useBranchScopeParams } from '@/features/branches/hooks/use-branch-scope';
 import { keepPageData } from '@/queries/keep-page-data';
@@ -126,36 +126,97 @@ export function useVehiclesPage(filters: VehicleFilters) {
 }
 
 /**
- * Chỉ số của các xe ĐANG HIỆN trên trang — một truy vấn riêng, gọi sau khi có danh sách.
+ * Chia danh sách id đang hiện thành các LÔ CỐ ĐỊNH để mỗi lô là một mục cache riêng.
+ *
+ * Vì sao không khoá theo cả danh sách: `items` của cuộn vô hạn là danh sách CỘNG DỒN, nên nối
+ * thêm một trang là đổi khoá — TanStack coi đó là một truy vấn hoàn toàn mới, trạng thái chờ bật
+ * lên cho MỌI thẻ đang nhìn thấy (chúng nháy về khung xương giữa lúc ngón tay đang cuộn), và
+ * request mới hỏi lại chỉ số của cả những xe vừa trả lời xong. Lưu lượng tăng theo bình phương
+ * số trang, và cú khựng rơi đúng vào lúc người dùng chạm đáy.
+ *
+ * Chia lô theo đúng `VEHICLES_PAGE_SIZE` thì ranh giới lô trùng ranh giới trang: trang đã tải
+ * xong có khoá bất biến và không bao giờ bị hỏi lại, nối trang chỉ sinh THÊM một truy vấn cho
+ * đúng 10 xe mới. Thẻ cũ giữ nguyên dữ liệu, `memo` của `VehicleCard` so props thấy không đổi
+ * nên không dựng lại.
+ *
+ * Lô cuối có thể còn dở (trang cuối chưa đủ 10) và sẽ đổi khoá một lần khi trang kế về — một
+ * truy vấn thừa cho tối đa 9 xe, đổi lấy phép chia không cần trạng thái.
+ */
+function chunkIds(ids: readonly string[]): string[][] {
+  const out: string[][] = [];
+  for (let i = 0; i < ids.length; i += VEHICLES_PAGE_SIZE) {
+    out.push(ids.slice(i, i + VEHICLES_PAGE_SIZE));
+  }
+  return out;
+}
+
+/**
+ * Kết quả gộp của một bộ truy vấn theo lô, phẳng về đúng hình dạng mà thẻ xe cần.
+ *
+ * `pendingIds` là ĐANG CHỜ theo TỪNG XE, không phải một cờ chung: chỉ thẻ chưa có chỉ số mới
+ * dựng khung xương. Một cờ chung sẽ kéo cả danh sách đã có dữ liệu về khung xương mỗi lần nối
+ * trang — chính lỗi mà cách chia lô này sinh ra để tránh.
+ */
+interface FacetResult<T> {
+  byId: Map<string, T>;
+  pendingIds: Set<string>;
+  isError: boolean;
+}
+
+/**
+ * Bộ truy vấn theo lô dùng chung cho chỉ số và cảnh báo.
+ *
+ * `combine` của `useQueries` ghi nhớ kết quả theo danh tính của từng truy vấn con, nên `byId`
+ * giữ NGUYÊN THAM CHIẾU chừng nào chưa lô nào đổi dữ liệu — điều kiện để `renderItem` của màn
+ * danh sách không đổi danh tính giữa lúc cuộn.
+ */
+function useVehicleFacet<T>(
+  ids: readonly string[],
+  queryKeyFor: (chunk: readonly string[]) => readonly unknown[],
+  fetcher: (chunk: readonly string[]) => Promise<T[]>,
+  idOf: (row: T) => string,
+): FacetResult<T> {
+  const chunks = chunkIds(ids);
+
+  return useQueries({
+    queries: chunks.map((chunk) => ({
+      queryKey: queryKeyFor(chunk),
+      queryFn: () => fetcher(chunk),
+      enabled: chunk.length > 0,
+    })),
+    combine: (results): FacetResult<T> => {
+      const byId = new Map<string, T>();
+      const pendingIds = new Set<string>();
+      let isError = false;
+
+      results.forEach((result, index) => {
+        const chunk = chunks[index] ?? [];
+        if (result.isError) isError = true;
+        if (result.isPending) {
+          for (const id of chunk) pendingIds.add(id);
+          return;
+        }
+        for (const row of result.data ?? []) byId.set(idOf(row), row);
+      });
+
+      return { byId, pendingIds, isError };
+    },
+  });
+}
+
+/**
+ * Chỉ số của các xe ĐANG HIỆN trên trang — truy vấn riêng, gọi sau khi có danh sách.
  *
  * Tách khỏi `useVehiclesPage` vì tổng hợp thu/chi chậm hơn truy vấn xe: gộp chung là bắt cả
  * trang chờ theo phần chậm nhất, và một lỗi thống kê sẽ kéo sập cả danh sách.
- *
- * Khoá ôm danh sách id ĐÃ SẮP XẾP: đổi trang hay đổi bộ lọc là một mục cache khác, còn quay lại
- * trang cũ thì dùng lại cache thay vì gọi lại.
  */
 export function useVehicleStats(ids: readonly string[]) {
-  const key = [...ids].sort();
-
-  const query = useQuery({
-    queryKey: queryKeys.vehicles.stats(key),
-    queryFn: () => vehiclesApi.stats(key),
-    enabled: key.length > 0,
-  });
-
-  // Cùng THAM CHIẾU khi dữ liệu chưa đổi — `renderItem` của màn xe phụ thuộc vào map này, và
-  // một map mới mỗi render là một `renderItem` mới, tức FlatList dựng lại cả danh sách con.
-  const byId = useMemo(() => {
-    const map = new Map<string, VehicleStats>();
-    for (const row of query.data ?? []) map.set(row.vehicleId, row);
-    return map;
-  }, [query.data]);
-
-  return {
-    byId,
-    isLoading: query.isLoading && key.length > 0,
-    isError: query.isError,
-  };
+  return useVehicleFacet<VehicleStats>(
+    ids,
+    (chunk) => queryKeys.vehicles.stats(chunk),
+    (chunk) => vehiclesApi.stats(chunk),
+    (row) => row.vehicleId,
+  );
 }
 
 /**
@@ -166,29 +227,24 @@ export function useVehicleStats(ids: readonly string[]) {
  * lặng nguy hiểm nhất.
  */
 export function useVehicleAlerts(ids: readonly string[]) {
-  const key = [...ids].sort();
+  const facet = useVehicleFacet<VehicleAlertGroup>(
+    ids,
+    (chunk) => queryKeys.vehicles.alerts(chunk),
+    (chunk) => vehiclesApi.alerts(chunk),
+    (row) => row.vehicleId,
+  );
 
-  const query = useQuery({
-    queryKey: queryKeys.vehicles.alerts(key),
-    queryFn: () => vehiclesApi.alerts(key),
-    enabled: key.length > 0,
-  });
+  /*
+   * Thử lại là thử lại MỌI lô, không riêng lô hỏng: nút này nằm ở đầu danh sách và nói về cả
+   * danh sách. Vô hiệu hoá theo TIỀN TỐ khoá thay vì giữ tham chiếu `refetch` của từng lô — số
+   * lô đổi theo số trang đã cuộn, một danh sách hàm thì không giữ nổi tham chiếu ổn định.
+   */
+  const queryClient = useQueryClient();
+  const refetch = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.alertsAll() });
+  }, [queryClient]);
 
-  const byId = useMemo(() => {
-    const map = new Map<string, VehicleAlertGroup>();
-    for (const row of query.data ?? []) map.set(row.vehicleId, row);
-    return map;
-  }, [query.data]);
-
-  const { refetch: refetchAlerts } = query;
-  const refetch = useCallback(() => void refetchAlerts(), [refetchAlerts]);
-
-  return {
-    byId,
-    isLoading: query.isLoading && key.length > 0,
-    isError: query.isError,
-    refetch,
-  };
+  return { ...facet, refetch };
 }
 
 /**

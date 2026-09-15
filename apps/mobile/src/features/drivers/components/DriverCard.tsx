@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { DRIVER_STATUS, DRIVER_STATUS_META, STATUS_COLOR, type StatusColor } from '@xeprime/types';
@@ -71,7 +72,7 @@ function useLicenseState(licenseExpiresAt: string | null): {
  * hạn ≤30 ngày (vàng), còn hạn dài thì chỉ in ngày ở dòng giấy tờ. Chưa khai hạn thì KHÔNG bịa
  * nhãn nào.
  */
-export function DriverCard({
+function DriverCardImpl({
   driver,
   canManage,
   readOnly = false,
@@ -210,3 +211,10 @@ export function DriverCard({
     </Card>
   );
 }
+
+/**
+ * Bọc `memo`: đây là HÀNG trong một danh sách dài, và màn chứa nó dựng lại vì đủ thứ không liên
+ * quan tới một bản ghi cụ thể (gõ ô tìm kiếm, đo chiều cao khối lọc, nối thêm trang). Không có
+ * lớp chắn này thì mỗi lần như vậy là vẽ lại toàn bộ hàng đang hiển thị giữa lúc đang cuộn.
+ */
+export const DriverCard = memo(DriverCardImpl);

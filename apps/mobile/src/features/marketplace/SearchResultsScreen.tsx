@@ -31,7 +31,7 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { layout } from '@/theme/layout';
-import { LIST_TUNING } from '@/theme/list-tuning';
+import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
 import { appStyles } from '@/theme/styles';
 import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
@@ -539,7 +539,7 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
           <Animated.FlatList
             data={results.listings}
             keyExtractor={keyExtractor}
-            {...LIST_TUNING}
+            {...MEDIA_LIST_TUNING}
             onScroll={onScroll}
             scrollEventThrottle={scrollThrottle.frame}
             contentContainerStyle={listPadding}
