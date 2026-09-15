@@ -162,6 +162,7 @@ function ResetPasswordForm({
 
           <Button
             label={t('resetPassword.submit')}
+            icon="checkmark-outline"
             onPress={onSubmit}
             loading={reset.isPending}
             disabled={!isValid}

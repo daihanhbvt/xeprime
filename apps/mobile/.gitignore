@@ -3,6 +3,10 @@
 dist/
 web-build/
 expo-env.d.ts
+# Khai báo route sinh tự động. Bản THẬT nằm ở `.expo/types/router.d.ts` (đã bỏ qua ở trên);
+# gọi `regenerateDeclarations()` với sai thư mục gốc sẽ đẻ thêm một bản ở đây, mà tsconfig lại
+# quét `**/*.ts` nên bản cũ đó âm thầm tham gia biên dịch.
+/router.d.ts
 
 # Native — sinh bởi `expo prebuild`, không commit
 /android

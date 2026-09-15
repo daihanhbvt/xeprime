@@ -1,6 +1,11 @@
 import type { Href } from 'expo-router';
 import type { LegalDoc } from '@xeprime/domain';
 import { VEHICLE_EDIT_TAB, type VehicleEditTab } from './vehicle-edit-tab';
+import {
+  VEHICLE_REGISTRATION_SOURCE,
+  type VehicleRegistrationSource,
+} from './vehicle-registration-source';
+import { VEHICLE_MANAGE_SECTION, type VehicleManageSection } from './vehicle-manage-section';
 
 /**
  * BẢN ĐỒ ROUTE CỦA APP — nguồn duy nhất cho mọi lối đi giữa các màn.
@@ -17,6 +22,32 @@ import { VEHICLE_EDIT_TAB, type VehicleEditTab } from './vehicle-edit-tab';
  * Mỗi entry là một hàm trả `Href`: tham số đi qua chữ ký hàm nên không thể quên, và query string
  * được dựng ở đúng một chỗ.
  */
+/**
+ * Đoạn đường dẫn của từng mục "quản lý xe" — MỘT bảng, không phải 13 nhánh `switch` cùng lặp lại
+ * tiền tố `/account/vehicles/[id]/manage/`. Bảng là `Record` đầy đủ nên thêm một mục vào
+ * `VEHICLE_MANAGE_SECTION` mà quên đường dẫn sẽ đỏ ngay ở đây, thay vì âm thầm rơi vào nhánh
+ * `default`.
+ */
+const VEHICLE_MANAGE_SECTION_PATHNAME = {
+  [VEHICLE_MANAGE_SECTION.INFORMATION]: '/account/vehicles/[id]/manage/information',
+  [VEHICLE_MANAGE_SECTION.IMAGES]: '/account/vehicles/[id]/manage/images',
+  [VEHICLE_MANAGE_SECTION.DOCUMENTS]: '/account/vehicles/[id]/manage/documents',
+  [VEHICLE_MANAGE_SECTION.TRIP_HISTORY]: '/account/vehicles/[id]/manage/trip-history',
+  [VEHICLE_MANAGE_SECTION.SELF_DRIVE_PRICING]: '/account/vehicles/[id]/manage/self-drive/pricing',
+  [VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION]:
+    '/account/vehicles/[id]/manage/self-drive/optimization',
+  [VEHICLE_MANAGE_SECTION.SELF_DRIVE_DELIVERY]: '/account/vehicles/[id]/manage/self-drive/delivery',
+  [VEHICLE_MANAGE_SECTION.SELF_DRIVE_HANDOVER_TIME]:
+    '/account/vehicles/[id]/manage/self-drive/handover-time',
+  [VEHICLE_MANAGE_SECTION.SELF_DRIVE_TERMS]: '/account/vehicles/[id]/manage/self-drive/terms',
+  [VEHICLE_MANAGE_SECTION.WITH_DRIVER_PRICING]: '/account/vehicles/[id]/manage/with-driver/pricing',
+  [VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION]:
+    '/account/vehicles/[id]/manage/with-driver/optimization',
+  [VEHICLE_MANAGE_SECTION.WITH_DRIVER_SURCHARGES]:
+    '/account/vehicles/[id]/manage/with-driver/surcharges',
+  [VEHICLE_MANAGE_SECTION.WITH_DRIVER_TERMS]: '/account/vehicles/[id]/manage/with-driver/terms',
+} as const satisfies Record<VehicleManageSection, string>;
+
 export const ROUTES = {
   /** Chợ xe: trang khám phá, tìm kiếm, chi tiết xe. */
   explore: {
@@ -52,12 +83,19 @@ export const ROUTES = {
     request: (
       vehicleId: string,
       context?: { serviceType?: string; provinceCode?: string },
-    ): Href => {
-      const params: Record<string, string> = { id: vehicleId };
-      if (context?.serviceType) params.serviceType = context.serviceType;
-      if (context?.provinceCode) params.provinceCode = context.provinceCode;
-      return { pathname: '/listings/[id]/request', params };
-    },
+    ): Href => ({
+      pathname: '/listings/[id]/request',
+      /*
+       * `id` khai TƯỜNG MINH trong object, không gom vào một `Record<string, string>` dựng dần:
+       * route có tham số động nên `Href` đòi `params.id`, và `Record` không chứng minh được là
+       * nó có mặt — typecheck của app đỏ (CI hiện không chạy typecheck cho `apps/mobile`).
+       */
+      params: {
+        id: vehicleId,
+        ...(context?.serviceType ? { serviceType: context.serviceType } : {}),
+        ...(context?.provinceCode ? { provinceCode: context.provinceCode } : {}),
+      },
+    }),
   },
 
   /**
@@ -87,12 +125,95 @@ export const ROUTES = {
   /** Tài khoản, đăng nhập, hồ sơ. */
   account: {
     home: (): Href => '/account',
+    /**
+     * Khu CHỦ XE trong tài khoản — gương của `ROUTES.ACCOUNT.*` bên web (08/09/2026).
+     *
+     * Tám màn, nằm ở STACK NGOÀI bộ tab (`app/account/*.tsx`, không phải `app/(tabs)/`) vì mỗi
+     * màn là một nấc sâu mở ra từ menu tài khoản và phải lui được về đúng chỗ vừa rời — mục của
+     * thanh tab thì không.
+     *
+     * `vehicles` và `calendar` chỉ đổi VỎ điều hướng quanh đúng feature của `/manage` (ADR 0027 —
+     * Owner Lite dùng chung source): cùng API, cùng hook, cùng thẻ xe, cùng lưới lịch. Chi tiết xe
+     * và hub sửa xe thì KHÔNG nhân bản — chúng là màn chen ngang nằm ngoài bộ tab quản lý
+     * (`app/manage/vehicles/[id]/…`), nên mở từ đây vẫn lui về đúng danh sách này.
+     */
+    vehicles: (): Href => '/account/vehicles',
+    calendar: (): Href => '/account/calendar',
+    /** Hồ sơ 360 của một xe — cùng màn với `/manage`, mở từ danh sách xe của khu tài khoản. */
+    vehicleDetail: (vehicleId: string): Href => ({
+      pathname: '/account/vehicles/[id]',
+      params: { id: vehicleId },
+    }),
+    /**
+     * Không gian "QUẢN LÝ XE" của một chiếc xe — 13 mục, ba nhóm (web: menu trái; app: một màn
+     * mục lục rồi mỗi mục một màn).
+     *
+     * Gốc là MỤC LỤC chứ không tự chuyển sang mục đầu tiên như web: web có menu trái luôn hiện
+     * nên "gốc" của nó không cần tồn tại, còn trên điện thoại mục lục CHÍNH LÀ menu.
+     */
+    vehicleManage: (vehicleId: string): Href => ({
+      pathname: '/account/vehicles/[id]/manage',
+      params: { id: vehicleId },
+    }),
+    /**
+     * Một mục của không gian quản lý xe. `section` là `VEHICLE_MANAGE_SECTION.*` — cùng bộ giá
+     * trị web đặt trên URL, nên một liên kết sâu ánh xạ 1-1 giữa hai client.
+     */
+    vehicleManageSection: (vehicleId: string, section: VehicleManageSection): Href =>
+      ({
+        pathname: VEHICLE_MANAGE_SECTION_PATHNAME[section],
+        params: { id: vehicleId },
+      }) as Href,
+    hostGuide: (): Href => '/account/host-guide',
+    contractsDocuments: (): Href => '/account/contracts-documents',
+    dataProtection: (): Href => '/account/data-protection',
+    /** Thông tin khai thuế — bản compact của hồ sơ người bán, cùng `PUT /seller-profile`. */
+    tax: (): Href => '/account/tax',
+    /** Đổi mật khẩu, hoặc ĐẶT lần đầu với tài khoản OTP/mạng xã hội (`hasPassword === false`). */
+    changePassword: (): Href => '/account/change-password',
+    /** YÊU CẦU xoá tài khoản — mở support case `account_deletion`, nền tảng xử lý tay. */
+    deleteAccount: (): Href => '/account/delete-account',
+    /**
+     * Ví điểm — sổ công nợ XePrime phải trả, KHÔNG phải ví điện tử (ADR 0033 điều 1).
+     *
+     * Không gác bằng `OwnerGate`: khách thuê cũng có số dư (tiền hoàn cọc) và họ là phần đông.
+     */
+    balance: (): Href => '/account/balance',
+    /** Tài khoản NHẬN tiền hoàn và khoản phải trả — cũng không gác theo vai chủ xe. */
+    bankAccounts: (): Href => '/account/bank-accounts',
+    /** Yêu cầu hỗ trợ của CHÍNH người dùng — khác `/support` công khai của chợ xe. */
+    support: (): Href => '/account/support',
+    /** Một yêu cầu hỗ trợ — dòng thời gian, trả lời, đóng yêu cầu. */
+    supportCase: (id: string): Href => ({ pathname: '/account/support/[id]', params: { id } }),
     login: (): Href => '/login',
     register: (): Href => '/register',
     setPassword: (): Href => '/set-password',
     forgotPassword: (): Href => '/forgot-password',
     resetPassword: (token?: string): Href =>
       token ? { pathname: '/reset-password', params: { token } } : '/reset-password',
+  },
+
+  /**
+   * Đăng xe cho thuê — CỬA VÀO công khai của chủ xe mới, cùng địa chỉ với web.
+   *
+   * Nằm NGOÀI `manage` có chủ đích: người chưa có gian hàng không nên gặp form hỏi tên gian hàng
+   * và mã số thuế trước khi biết mình sẽ được gì. Landing xem không cần đăng nhập; bấm CTA mới rẽ
+   * theo trạng thái thật (đăng nhập → tạo hồ sơ chủ xe → đăng xe).
+   */
+  listYourVehicle: {
+    root: (): Href => '/list-your-vehicle',
+    /**
+     * Wizard đăng xe nhanh — cửa của TUYẾN HOA HỒNG (ADR 0028).
+     *
+     * Nằm ở khu KHÁCH có chủ đích: chủ xe cá nhân đăng xe mà không cần gian hàng, nên nó không
+     * được đứng sau `ScopeGuard`. `from` chỉ nhận một trong ba mã đã biết và chỉ dùng để chọn
+     * đường lui — KHÔNG bao giờ nhận một URL để chuyển hướng: đó là cách tự mở một lỗ
+     * open-redirect trên chính luồng đăng xe.
+     */
+    register: (from: VehicleRegistrationSource): Href => ({
+      pathname: '/list-your-vehicle/register',
+      params: { from },
+    }),
   },
 
   /** Khu vận hành gian hàng — sau `ScopeGuard`, chỉ thành viên có quyền vào được. */
@@ -254,6 +375,22 @@ export const ROUTES = {
     /** Chính sách thuê mặc định theo loại xe (SHP-04). */
     shopPolicies: (): Href => '/manage/shop/policies',
 
+    /**
+     * Công tắc thu cọc qua XePrime (Phase 6 — ADR 0032 điều 2).
+     *
+     * Khác `shopPolicies`: ở đó là CỌC/THẾ CHẤP giữa gian hàng và khách (tài sản, giấy tờ), ở đây
+     * là khoản `D` XePrime THU HỘ trước chuyến. Hai khái niệm tiền khác nhau, hai màn.
+     */
+    shopPaymentSettings: (): Href => '/manage/shop/payment-settings',
+
+    /**
+     * Hồ sơ người bán (ADR 0028 release gate 1) — danh tính pháp lý + tài khoản NHẬN TIỀN.
+     *
+     * Cùng địa chỉ với web (`/manage/shop/seller-profile`). Bản COMPACT bốn trường ở khu tài
+     * khoản (`ROUTES.account.tax()`) ghi vào CÙNG một hồ sơ — đây là bản đầy đủ của nó.
+     */
+    sellerProfile: (): Href => '/manage/shop/seller-profile',
+
     /** Nhân sự gian hàng + lời mời (SHP-05). */
     members: (): Href => '/manage/members',
 
@@ -274,6 +411,10 @@ export const ROUTES = {
     }),
 
     /** Tổng quan doanh thu (FIN-01) — ba lớp tiền của một kỳ + hai bảng xếp hạng. */
+    /** Ví điểm của GIAN HÀNG — khoản XePrime phải trả sau mỗi chuyến (ADR 0033 điều 2). */
+    /** Gói thuê bao của gian hàng — mua/gia hạn, hoá đơn, mức dùng chỗ (ADR 0015/0026). */
+    subscription: (): Href => '/manage/subscription',
+    balance: (): Href => '/manage/balance',
     finance: (): Href => '/manage/finance',
 
     /** Công nợ (FIN-04) — các đơn còn nợ, lọc và phân trang ở server. */
@@ -310,6 +451,9 @@ export const ROUTES = {
      * văn bản pháp lý.
      */
     support: (): Href => '/manage/support',
+    /** Yêu cầu hỗ trợ của GIAN HÀNG — tranh chấp, sự cố. Bề mặt khác hẳn khu khách. */
+    supportCases: (): Href => '/manage/support/cases',
+    supportCase: (id: string): Href => ({ pathname: '/manage/support/cases/[id]', params: { id } }),
   },
 
   /**
@@ -388,3 +532,21 @@ export type ExploreSearchParams = {
   returnAt?: string;
   hourly?: string;
 };
+
+/**
+ * Danh sách xe TƯƠNG ỨNG với nơi người dùng đi vào wizard đăng xe nhanh — dùng cho nút quay lại
+ * và đích sau khi lưu. Bản native của `vehicleListPathFor` bên web.
+ *
+ * Vào từ khu tài khoản thì lui về danh sách xe của khu tài khoản, vào từ cổng quản lý thì lui về
+ * đội xe ở đó; vào từ chợ xe thì chưa chắc đã có danh sách nào để về, nên lui về trang giới thiệu.
+ */
+export function vehicleListPathFor(source: VehicleRegistrationSource): Href {
+  switch (source) {
+    case VEHICLE_REGISTRATION_SOURCE.MANAGE:
+      return ROUTES.manage.vehicles();
+    case VEHICLE_REGISTRATION_SOURCE.ACCOUNT:
+      return ROUTES.account.vehicles();
+    default:
+      return ROUTES.listYourVehicle.root();
+  }
+}

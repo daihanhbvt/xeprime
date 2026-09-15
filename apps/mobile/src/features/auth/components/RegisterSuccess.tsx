@@ -38,7 +38,7 @@ export function RegisterSuccess({
       </YStack>
 
       <YStack gap={space.sm} w="100%">
-        <Button label={t('modal.continueLabel')} onPress={onContinue} />
+        <Button label={t('modal.continueLabel')} icon="arrow-forward" onPress={onContinue} />
         <Button
           label={t('registered.openAccount')}
           variant="secondary"

@@ -195,7 +195,23 @@ function isForbidden(error: unknown): boolean {
  * `<input type="file">` nên chọn được cả PDF, native chụp ảnh hoặc lấy từ thư viện ảnh. Cùng
  * endpoint, cùng trần tệp, cùng thứ được lưu — và PDF do web tải lên vẫn mở được ở đây.
  */
-export function VehicleDocumentsScreen({ vehicleId }: { vehicleId: string }) {
+export function VehicleDocumentsScreen({
+  vehicleId,
+  customerScope = false,
+}: {
+  vehicleId: string;
+  /**
+   * Mở từ KHÔNG GIAN QUẢN LÝ XE của khu tài khoản (`/account/vehicles/:id/manage/documents").
+   *
+   * Nội dung giấy tờ là MỘT, dùng chung cho cả hai khu — đúng như web bọc cùng một
+   * `VehicleDocumentsWorkspace` vào hai vỏ khác nhau. Chỉ VỎ đổi:
+   *
+   *  - ẩn dải 6 tab của form sửa xe ở cổng quản lý (khu tài khoản có menu riêng của nó);
+   *  - lui về mục lục quản lý xe, không lui về `/manage/vehicles/:id/edit` — chủ xe tuyến hoa
+   *    hồng không vào được khu đó, bấm lui là rơi thẳng vào màn "không có quyền".
+   */
+  customerScope?: boolean;
+}) {
   const t = useTranslations('Vehicles.documents');
   const tEdit = useTranslations('Vehicles.edit');
   const router = useRouter();
@@ -210,7 +226,13 @@ export function VehicleDocumentsScreen({ vehicleId }: { vehicleId: string }) {
   const canViewFiles = has(PERMISSION.VEHICLE_DOCUMENT_FILE_VIEW);
   const canManage = has(PERMISSION.VEHICLE_DOCUMENT_MANAGE);
 
-  const back = () => goBackOr(router, ROUTES.manage.vehicleEdit(vehicleId));
+  const back = () =>
+    goBackOr(
+      router,
+      customerScope
+        ? ROUTES.account.vehicleManage(vehicleId)
+        : ROUTES.manage.vehicleEdit(vehicleId),
+    );
   const title = tEdit('tabs.documents');
 
   const vehicle = useVehicle(vehicleId, has(PERMISSION.VEHICLE_VIEW));
@@ -387,7 +409,9 @@ export function VehicleDocumentsScreen({ vehicleId }: { vehicleId: string }) {
           : {})}
         onBack={back}
       />
-      <VehicleEditTabs vehicleId={vehicleId} active={VEHICLE_EDIT_TAB.DOCUMENTS} />
+      {customerScope ? null : (
+        <VehicleEditTabs vehicleId={vehicleId} active={VEHICLE_EDIT_TAB.DOCUMENTS} />
+      )}
       <Screen
         edges={['left', 'right', 'bottom']}
         refreshing={documents.isRefetching}
@@ -479,7 +503,9 @@ export function VehicleDocumentsScreen({ vehicleId }: { vehicleId: string }) {
           )}
           canManage={canManage}
           canViewDetails={canViewDetails}
-          onModeChange={(mode) => setDetailFor((current) => (current ? { ...current, mode } : null))}
+          onModeChange={(mode) =>
+            setDetailFor((current) => (current ? { ...current, mode } : null))
+          }
           onClose={() => setDetailFor(null)}
           onSaved={() => {
             setDetailFor(null);
@@ -742,7 +768,9 @@ function DocumentRow({
             style={({ pressed }) => (pressed ? styles.pressed : null)}
             accessibilityRole="button"
             accessibilityLabel={
-              tileMode === 'upload' ? t('row.uploadFor', { title }) : t('row.downloadFor', { title })
+              tileMode === 'upload'
+                ? t('row.uploadFor', { title })
+                : t('row.downloadFor', { title })
             }
           >
             {tile}
@@ -809,7 +837,7 @@ function DocumentRow({
       {uploading?.error !== undefined ? (
         <Callout tone="danger" title={t('upload.failed', { message: uploading.error })}>
           <XStack gap={space.xs}>
-            <YStack f={1}>
+            <YStack flexShrink={0}>
               <Button
                 label={tCommon('actions.cancel')}
                 variant="secondary"
@@ -819,7 +847,13 @@ function DocumentRow({
               />
             </YStack>
             <YStack f={1}>
-              <Button label={tCommon('actions.retry')} size="sm" shape="square" onPress={onRetry} />
+              <Button
+                label={tCommon('actions.retry')}
+                icon="refresh-outline"
+                size="sm"
+                shape="square"
+                onPress={onRetry}
+              />
             </YStack>
           </XStack>
         </Callout>
@@ -918,7 +952,6 @@ function DocumentRow({
     </YStack>
   );
 }
-
 
 // ── Thêm loại giấy tờ ───────────────────────────────────────────────────────
 
@@ -1032,19 +1065,27 @@ function AddDocumentSheet({
       onClose={onClose}
       title={t('add.title')}
       footer={
-        <YStack gap={space.sm}>
-          <Button
-            label={t('add.submit')}
-            loading={saving}
-            onPress={() => void handleSubmit(submit)()}
-          />
-          <Button
-            label={tCommon('actions.cancel')}
-            variant="secondary"
-            disabled={saving}
-            onPress={onClose}
-          />
-        </YStack>
+        <XStack gap={space.sm}>
+          {/*
+            Hai hành động NGẮN nằm một hàng: lối thoát bên trái, hành động chính bên phải — xếp
+            dọc thì hàng dưới đọc ra là bước tiếp theo chứ không phải một lựa chọn thay thế.
+          */}
+          <YStack flexShrink={0}>
+            <Button
+              label={tCommon('actions.cancel')}
+              variant="secondary"
+              disabled={saving}
+              onPress={onClose}
+            />
+          </YStack>
+          <YStack f={1}>
+            <Button
+              label={t('add.submit')}
+              loading={saving}
+              onPress={() => void handleSubmit(submit)()}
+            />
+          </YStack>
+        </XStack>
       }
     >
       <YStack gap={space.md}>
@@ -1332,19 +1373,24 @@ function DocumentDetailSheet({
       title={editing ? t('metadata.editTitle', { title }) : t('detail.dialogTitle', { title })}
       footer={
         editing && !blocked && !loading ? (
-          <YStack gap={space.sm}>
-            <Button
-              label={t('metadata.save')}
-              loading={save.isPending}
-              onPress={() => void handleSubmit(submit)()}
-            />
-            <Button
-              label={tCommon('actions.cancel')}
-              variant="secondary"
-              disabled={save.isPending}
-              onPress={onClose}
-            />
-          </YStack>
+          <XStack gap={space.sm}>
+            {/* Lối thoát bên trái, hành động chính bên phải. */}
+            <YStack flexShrink={0}>
+              <Button
+                label={tCommon('actions.cancel')}
+                variant="secondary"
+                disabled={save.isPending}
+                onPress={onClose}
+              />
+            </YStack>
+            <YStack f={1}>
+              <Button
+                label={t('metadata.save')}
+                loading={save.isPending}
+                onPress={() => void handleSubmit(submit)()}
+              />
+            </YStack>
+          </XStack>
         ) : (
           /* Xem là bề mặt CHỈ ĐỌC — chỉ một đường ra, không kèm một nút "Huỷ" nói cùng việc. */
           <Button label={tCommon('actions.close')} variant="secondary" onPress={onClose} />
@@ -1470,12 +1516,7 @@ function DocumentDetailSheet({
           />
 
           {/* Bản file đang dùng — `activeVersion` chỉ có mặt khi người xem đủ quyền mở file. */}
-          <YStack
-            gap={2}
-            pt={space.sm}
-            borderTopWidth={1}
-            borderTopColor={colors.borderSubtle}
-          >
+          <YStack gap={2} pt={space.sm} borderTopWidth={1} borderTopColor={colors.borderSubtle}>
             <Text col={colors.textMuted} fos={fontSize.bodySm}>
               {t('detail.fileTitle')}
             </Text>
@@ -1703,24 +1744,31 @@ function OcrReviewSheet({
       onClose={onClose}
       title={t('title')}
       footer={
-        <YStack gap={space.sm}>
+        <XStack gap={space.sm}>
           {/*
+            Lối thoát bên trái, hành động chính bên phải.
+
             "Cập nhật đã chọn" là hành động chính nhưng KHÔNG mặc định chọn gì — không có "ghi đè
-            tất cả": người dùng phải tự tick từng trường.
+            tất cả": người dùng phải tự tick từng trường. Nó cũng là nhãn mang SỐ nên dài nhất
+            hàng, vì vậy nhận `f={2}`.
           */}
-          <Button
-            label={selected.size > 0 ? t('applyCount', { count: selected.size }) : t('apply')}
-            disabled={selected.size === 0}
-            loading={apply.isPending}
-            onPress={() => run([...selected])}
-          />
-          <Button
-            label={tCommon('actions.close')}
-            variant="secondary"
-            disabled={apply.isPending}
-            onPress={onClose}
-          />
-        </YStack>
+          <YStack flexShrink={0}>
+            <Button
+              label={tCommon('actions.close')}
+              variant="secondary"
+              disabled={apply.isPending}
+              onPress={onClose}
+            />
+          </YStack>
+          <YStack f={1}>
+            <Button
+              label={selected.size > 0 ? t('applyCount', { count: selected.size }) : t('apply')}
+              disabled={selected.size === 0}
+              loading={apply.isPending}
+              onPress={() => run([...selected])}
+            />
+          </YStack>
+        </XStack>
       }
     >
       <YStack gap={space.sm}>

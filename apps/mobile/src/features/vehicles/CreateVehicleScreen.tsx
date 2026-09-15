@@ -303,8 +303,20 @@ export function CreateVehicleScreen() {
         edges={['left', 'right', 'bottom']}
         footer={
           <XStack gap={space.sm}>
-            {step > 0 ? (
-              <YStack f={1}>
+            {/*
+              Nút lùi bước CHỈ hiện khi footer còn hai ô. Ở bước cuối nó biến mất, vì ba nút cỡ `md`
+              không thể vừa một hàng: riêng đệm ngang đã ăn 144dp trong 304dp khả dụng của máy
+              360dp, chỉ còn ~160dp chia cho ba nhãn — nhãn nào cũng bị cắt.
+
+              Bỏ được mà không mất lối đi: `VehicleWizardBar` ngay trên nội dung cho bấm về BẤT KỲ
+              bước đã qua, nên ở bước cuối nút này là lối thứ hai tới cùng một chỗ.
+
+              Và nó KHÔNG mang icon: ở f={1} cạnh một nút f={2} nó chỉ rộng ~104dp, trừ 48dp đệm
+              còn 56dp — vừa đúng cho chữ "Quay lại", không còn chỗ cho 22dp icon. Icon dành cho
+              nút CHÍNH của hàng, nơi có dư bề ngang.
+            */}
+            {step > 0 && step < lastStep ? (
+              <YStack flexShrink={0}>
                 <Button
                   label={tCommon('back')}
                   variant="secondary"
@@ -313,12 +325,20 @@ export function CreateVehicleScreen() {
               </YStack>
             ) : null}
             {step < lastStep ? (
-              <YStack f={2}>
-                <Button label={tCommon('next')} onPress={() => void goNext()} />
+              <YStack f={1}>
+                <Button
+                  label={tCommon('next')}
+                  icon="arrow-forward"
+                  onPress={() => void goNext()}
+                />
               </YStack>
             ) : (
               <>
-                <YStack f={1}>
+                {/*
+                  "Lưu nháp" là hành động PHỤ nên co vừa chữ; "Lưu & Gửi duyệt" lấy phần còn lại.
+                  Nó cũng bỏ icon — nút chính cạnh nó giữ icon, đủ để hàng đọc ra đâu là việc chính.
+                */}
+                <YStack flexShrink={0}>
                   <Button
                     label={t('wizard.saveDraft')}
                     variant="secondary"
@@ -329,6 +349,7 @@ export function CreateVehicleScreen() {
                 <YStack f={1}>
                   <Button
                     label={t('wizard.saveAndSubmit')}
+                    icon="send-outline"
                     loading={create.isPending}
                     onPress={() => submitNow(true)}
                   />
@@ -358,7 +379,7 @@ export function CreateVehicleScreen() {
                 branchOptions={branchOptions}
                 branchLoading={branches.isPending}
               />
-              <SpecsSection control={control} isCar={isCar} />
+              <SpecsSection control={control} isCar={isCar} setValue={setValue} />
               <SourceTypeSection control={control} />
             </>
           ) : stepKey === 'pricing' ? (

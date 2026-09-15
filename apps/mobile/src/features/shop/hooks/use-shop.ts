@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/queries/query-keys';
-import { tenantsApi, type RegisterShopInput, type UpdateShopProfileInput } from '../api';
+import {
+  tenantsApi,
+  type RegisterShopInput,
+  type UpdatePaymentSettingsInput,
+  type UpdateShopProfileInput,
+} from '../api';
 
 /**
  * Hồ sơ gian hàng của tôi (SHP-02). `enabled` để không gọi khi chưa có membership hoặc thiếu
@@ -67,6 +72,31 @@ export function useSubmitShopReview() {
       queryClient.setQueryData(queryKeys.shop.current(), shop);
       void queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.tenants.all });
+    },
+  });
+}
+
+export function usePaymentSettings(enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.shop.paymentSettings(),
+    queryFn: () => tenantsApi.paymentSettings(),
+    enabled,
+  });
+}
+
+/**
+ * Bật/tắt thu cọc.
+ *
+ * KHÔNG đụng `booking-requests`/`bookings` trong cache: công tắc chỉ ảnh hưởng yêu cầu được duyệt
+ * TỪ GIỜ TRỞ ĐI — đơn đã tạo đóng băng `depositCollectionMode` lúc tạo (ADR 0025 ràng buộc 4).
+ * Làm mới chúng ở đây là gợi ý sai rằng dữ liệu cũ vừa đổi.
+ */
+export function useUpdatePaymentSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: UpdatePaymentSettingsInput) => tenantsApi.updatePaymentSettings(body),
+    onSuccess: (settings) => {
+      queryClient.setQueryData(queryKeys.shop.paymentSettings(), settings);
     },
   });
 }

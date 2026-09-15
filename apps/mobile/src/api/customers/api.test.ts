@@ -7,11 +7,7 @@ import {
   sortValues,
 } from '@xeprime/types';
 import { ApiClientError } from '@xeprime/api-client';
-import {
-  CUSTOMERS_DEFAULT_LIMIT,
-  customerFiltersToParams,
-  duplicateCustomerId,
-} from './api';
+import { CUSTOMERS_DEFAULT_LIMIT, customerFiltersToParams, duplicateCustomerId } from './api';
 
 /**
  * Bộ lọc sổ khách được serialize bằng ĐÚNG một hàm cho cả web lẫn app native.
@@ -98,7 +94,11 @@ describe('duplicateCustomerId', () => {
   });
 
   it('409 KHÔNG kèm id: trả `null` — nơi gọi vẫn giải thích, chỉ không có lối mở nhanh', () => {
-    const error = new ApiClientError({ code: 'CUSTOMER_PHONE_DUPLICATE', message: 'x', status: 409 });
+    const error = new ApiClientError({
+      code: 'CUSTOMER_PHONE_DUPLICATE',
+      message: 'x',
+      status: 409,
+    });
     expect(duplicateCustomerId(error)).toBeNull();
   });
 

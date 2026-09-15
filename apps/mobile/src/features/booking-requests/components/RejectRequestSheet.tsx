@@ -67,6 +67,7 @@ export function RejectRequestSheet({
       footer={
         <Button
           label={t('confirm')}
+          icon="close-circle-outline"
           variant="danger"
           loading={loading}
           onPress={() => void submit()}

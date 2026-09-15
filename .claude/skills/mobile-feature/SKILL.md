@@ -202,6 +202,11 @@ Certain web patterns must be re-architected for touchscreens and small viewports
 * **Mobile**: native camera with instant preview, corner guides for exterior angles (front, rear,
   left, right, interior, odometer), client-side JPEG compression, and direct upload to Cloudflare
   R2 via presigned URLs.
+* **⚠️ CHỤP đi qua `captureInAppPhoto()` (`src/features/camera/`), NEVER `ImagePicker.launchCameraAsync`.**
+  The system camera Intent backgrounds XePrime, and Android kills it there to reclaim RAM — the app
+  relaunches to a white screen at the root route and the photo is gone (`getPendingResultAsync()`
+  returns `null`). Measured on a Galaxy A23: `am_kill` in logcat and a changed PID. Picking from the
+  LIBRARY still uses `ImagePicker` — that picker runs inside the calling process.
 * **⚠️ The presigned PUT signs `Content-Length` — measure the bytes you are ABOUT TO SEND.**
 
   The API passes `ContentLength` to `PutObjectCommand`, and `content-length` is a signable header,
@@ -339,6 +344,15 @@ edge-to-edge (SDK 53+) — the window no longer resizes.
 coordinates, compares against the keyboard's `screenY`, and scrolls the overlap away; and it
 reserves a tail of bottom padding while the keyboard is up, because the LAST field of a form has
 nothing below it to scroll into. Nothing to wire per screen.
+
+**Nobody tells the container that focus MOVED.** The three causes above all fire off
+`keyboardDidShow` — which the OS only sends when the keyboard comes UP. Tap from one field to the
+next while it is already open and Android sends nothing at all (iOS only when the keyboard's shape
+changes), so the reveal never runs and the field you just tapped — reliably the LAST one in the
+form — sits under the keyboard. `Screen` and `BottomSheet` therefore publish their scroller's
+reveal through [`FocusRevealProvider`](../../../apps/mobile/src/components/layout/focus-reveal.tsx),
+and every shared input calls `useRevealOnFocus()` in its `onFocus`. **A new input component must
+do the same** — one that does not is the next "the keyboard covers it" bug.
 
 Corollary: content inside a `BottomSheet` never needs its own keyboard handling, and content
 inside a `Screen` never should either — if a field is still covered, the container is wrong, not

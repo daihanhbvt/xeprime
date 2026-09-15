@@ -14,7 +14,8 @@ import {
 import { LIST_SEPARATOR } from '@xeprime/domain';
 
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { listingPath } from '@/constants/routes';
+import { BackButton } from '@/components/navigation/BackButton';
+import { ROUTES, listingPath } from '@/constants/routes';
 import type { VehicleDetail, VehicleStats } from '@/features/vehicles/types';
 import { useAppFormat } from '@/i18n/use-app-format';
 
@@ -35,11 +36,17 @@ interface Props {
  */
 export function VehicleManageHeader({ vehicle, stats }: Props) {
   const t = useTranslations('VehicleManage.header');
+  const tRoot = useTranslations('VehicleManage');
   const fmt = useAppFormat();
   const isPublic = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
 
   return (
     <header className={styles.header}>
+      <BackButton
+        href={ROUTES.ACCOUNT.VEHICLES}
+        label={tRoot('backToList')}
+        className={styles.back}
+      />
       {vehicle.mainImageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- ảnh R2, host theo môi trường
         <img src={vehicle.mainImageUrl} alt="" className={styles.image} />

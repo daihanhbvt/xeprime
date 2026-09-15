@@ -261,5 +261,14 @@
     "changeImage": "Đổi ảnh",
     "addImage": "Thêm ảnh",
     "removeImage": "Xoá ảnh"
+  },
+  "camera": {
+    "close": "Đóng",
+    "shutter": "Chụp ảnh",
+    "flip": "Đổi camera trước/sau",
+    "flash": "Đèn flash",
+    "retake": "Chụp lại",
+    "usePhoto": "Dùng ảnh này",
+    "permissionBlocked": "Chưa có quyền dùng máy ảnh. Vào Cài đặt → XePrime để bật quyền Máy ảnh."
   }
 }

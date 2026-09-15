@@ -70,6 +70,7 @@ export function ApproveRequestSheet({
       footer={
         <Button
           label={t('approve.confirm')}
+          icon="checkmark-circle-outline"
           loading={loading}
           disabled={!ready}
           onPress={confirm}

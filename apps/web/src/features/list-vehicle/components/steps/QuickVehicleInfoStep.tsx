@@ -190,10 +190,7 @@ export function QuickVehicleInfoStep({ control, setValue, vehicleType }: Props) 
 
       <section className={styles.block}>
         <h3 className={styles.blockTitle}>{t('featuresTitle')}</h3>
-        <FeaturesSelect
-          control={control as never}
-          vehicleType={vehicleType || VEHICLE_TYPE.CAR}
-        />
+        <FeaturesSelect control={control as never} vehicleType={vehicleType || VEHICLE_TYPE.CAR} />
       </section>
     </div>
   );

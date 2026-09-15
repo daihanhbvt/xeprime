@@ -6,7 +6,8 @@ import type { UseFormGetValues, UseFormSetValue } from 'react-hook-form';
 import type { QuickVehicleValues } from './schema';
 
 /** Khoá theo NGƯỜI + GIAN HÀNG: bản nháp của tài khoản này không hiện ở tài khoản khác. */
-const draftKey = (userId: string, tenantId: string) => `xp.list-vehicle.draft.${userId}.${tenantId}`;
+const draftKey = (userId: string, tenantId: string) =>
+  `xp.list-vehicle.draft.${userId}.${tenantId}`;
 
 /** Trường KHÔNG bao giờ ghi vào bộ nhớ trình duyệt — ảnh đã tải nằm ở R2, key có thời hạn. */
 const OMITTED = ['mainImageUrl', 'images'] as const;

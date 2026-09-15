@@ -156,6 +156,7 @@ export function ShopDetailScreen({ slug, onBack }: { slug: string; onBack: () =>
               </Text>
               <Button
                 label={tResults('loadMore')}
+                icon="chevron-down-outline"
                 variant="secondary"
                 block={false}
                 align="center"
@@ -163,7 +164,11 @@ export function ShopDetailScreen({ slug, onBack }: { slug: string; onBack: () =>
               />
             </YStack>
           ) : listings.isFetchingNextPage ? (
-            <YStack pt={layout.block} px={layout.screenX} accessibilityLabel={tResults('loadingMore')}>
+            <YStack
+              pt={layout.block}
+              px={layout.screenX}
+              accessibilityLabel={tResults('loadingMore')}
+            >
               <VehicleCardSkeleton />
             </YStack>
           ) : !listings.hasNextPage && listings.total > 0 ? (

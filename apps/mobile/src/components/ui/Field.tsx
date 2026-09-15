@@ -1,9 +1,30 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
 import { Text, XStack } from 'tamagui';
+import { useTranslations } from 'use-intl';
 import { colors, fieldFontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 
-export function FieldLabel({ label, required = false }: { label: string; required?: boolean }) {
+export function FieldLabel({
+  label,
+  required = false,
+  publishRequired = false,
+}: {
+  label: string;
+  required?: boolean;
+  /**
+   * Dấu `●` "cần bổ sung trước khi gửi duyệt công khai" — KHÁC hẳn `*` bắt buộc-để-lưu.
+   *
+   * Hai giai đoạn, hai dấu (`PublishRequiredMark` bên web): xe lưu được vào kho nội bộ mà chưa
+   * có biển số hay ảnh đại diện, nhưng không lên chợ được nếu thiếu. Gộp chúng thành một `*` đỏ
+   * là nói dối ở cả hai chiều — chặn người dùng lưu một bản nháp, hoặc để họ bấm gửi duyệt rồi
+   * mới biết thiếu.
+   *
+   * Dấu tự nó không mang nghĩa với trình đọc màn hình nên phần chữ đi kèm mới là thứ đọc được.
+   */
+  publishRequired?: boolean;
+}) {
+  const tMark = useTranslations('Vehicles.completeness');
+
   /*
     Nhãn dùng màu CHỮ CHÍNH, không phải `textMuted`.
 
@@ -15,6 +36,11 @@ export function FieldLabel({ label, required = false }: { label: string; require
     <Text col={colors.text} fos={fieldFontSize.label} fow={fontWeight.semibold}>
       {label}
       {required ? <Text col={colors.danger}> *</Text> : null}
+      {publishRequired ? (
+        <Text col={colors.warning} accessibilityLabel={tMark('publishRequiredSr')}>
+          {' ●'}
+        </Text>
+      ) : null}
     </Text>
   );
 }

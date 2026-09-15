@@ -116,6 +116,7 @@ export function SetPasswordScreen({ onDone }: { onDone: () => void }) {
           <YStack gap={space.sm}>
             <Button
               label={tSet('submit')}
+              icon="checkmark-outline"
               onPress={onSubmit}
               loading={save.isPending}
               disabled={!isValid}

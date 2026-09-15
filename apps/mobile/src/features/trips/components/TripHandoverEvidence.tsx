@@ -291,10 +291,20 @@ function PhotoViewer({ url, onClose }: { url: string | null; onClose: () => void
 function Line({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
   return (
     <XStack ai="center" jc="space-between" gap={space.sm}>
-      <Text col={colors.textMuted} fos={fontSize.bodySm}>
+      <Text col={colors.textMuted} fos={fontSize.bodySm} flexShrink={0}>
         {label}
       </Text>
-      <Text col={muted ? colors.textMuted : colors.text} fos={fontSize.bodySm}>
+      {/*
+        `f={1}` + canh phải, không để chữ tự co: giá trị "chưa ghi nhận" dài hơn hẳn một số đo
+        (`Chưa ghi nhận chỉ số Odo` cạnh nhãn `Số Odo`) và ở màn hẹp nó bị cắt mất ký tự cuối.
+        Dạng vắng số đo dùng cỡ nhỏ hơn — nó là chú thích, không phải dữ kiện.
+      */}
+      <Text
+        f={1}
+        ta="right"
+        col={muted ? colors.textMuted : colors.text}
+        fos={muted ? fontSize.label : fontSize.bodySm}
+      >
         {value}
       </Text>
     </XStack>

@@ -123,9 +123,8 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
     // thuộc namespace của form xe — không có vế này thì chúng lọt ra giao diện ở dạng thô.
     'Vehicles.form.validation',
   );
-  const { control, getValues, setValue, setError, trigger, formState } = useForm<QuickVehicleValues>(
-    { resolver, defaultValues: QUICK_VEHICLE_DEFAULTS },
-  );
+  const { control, getValues, setValue, setError, trigger, formState } =
+    useForm<QuickVehicleValues>({ resolver, defaultValues: QUICK_VEHICLE_DEFAULTS });
 
   const [step, setStep] = useState<StepKey>('info');
   /*
@@ -282,9 +281,7 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
     if (!valid || energyMissing.length > 0) {
       // Đưa người dùng về đúng bước chứa lỗi — không để họ đứng ở bước ảnh với một toast chung.
       const target = steps.find((s) =>
-        s.fields.some(
-          (field) => formState.errors[field] || energyMissing.includes(field as never),
-        ),
+        s.fields.some((field) => formState.errors[field] || energyMissing.includes(field as never)),
       );
       if (target) setStep(target.key);
       if (energyMissing.length > 0) setStepError(t('errors.energyRequired'));

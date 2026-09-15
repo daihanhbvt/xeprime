@@ -9,7 +9,9 @@ export type {
   RegisterShopInput,
   ShopDefaultBranch,
   ShopLatestApproval,
+  PaymentSettings,
   ShopProfile,
+  UpdatePaymentSettingsInput,
   UpdateShopProfileInput,
 } from '@/api/tenants/api';
 export type { UploadMeta, UploadPresign } from '@/api/vehicles/api';

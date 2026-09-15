@@ -2,6 +2,7 @@ import type { VehicleFormValues } from '@xeprime/validators';
 import {
   VEHICLE_TYPE,
   VEHICLE_SOURCE_TYPE,
+  vehicleFeatureAppliesTo,
   type BodyType,
   type FuelType,
   type ServiceType,
@@ -27,6 +28,22 @@ function textOrNull(value: string): string | null {
  * Giá trị form → payload API (create/update dùng chung; update là Partial nên thừa trường vẫn hợp lệ).
  * Tiền hoá string tại đây (ADR 0007): form giữ number, JSON đi string.
  */
+/**
+ * Tiện ích gửi lên: CHỈ những khoá dùng được cho loại xe đang chọn.
+ *
+ * Form đã ẩn khoá không hợp (`vehicleFeatureAppliesTo`), nhưng ẩn không đồng nghĩa với XOÁ: một
+ * chiếc xe máy còn giữ `spare_tire` trong dữ liệu cũ — hoặc vừa được đổi từ ô tô sang xe máy —
+ * thì giá trị đó vẫn nằm trong form, không hiện ra để bỏ chọn, và `assertFeaturesForVehicleType`
+ * ở server trả 400 "Tiện ích không dùng được cho loại xe này".
+ *
+ * Lọc ở ĐÂY, ngay trước khi lên dây, thay vì trông vào hành vi của widget: `Checkbox.Group` của
+ * AntD tình cờ tự rụng khoá ẩn ngay khi người dùng chạm vào một ô bất kỳ, còn dải chip của app
+ * native thì giữ nguyên — nên cùng một thao tác, web lưu được mà app báo lỗi.
+ */
+function applicableFeatures(values: VehicleFormValues): string[] {
+  return (values.features ?? []).filter((key) => vehicleFeatureAppliesTo(key, values.vehicleType));
+}
+
 export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput {
   return {
     code: textOrUndefined(values.code),
@@ -79,7 +96,7 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     mainImageUrl: values.mainImageUrl ?? undefined,
     // Gửi mảng để backend replace-set; lọc URL rỗng phòng dữ liệu cũ có dòng trống.
     images: (values.images ?? []).map((u) => u.trim()).filter(Boolean),
-    features: values.features ?? [],
+    features: applicableFeatures(values),
   };
 }
 
@@ -176,12 +193,54 @@ export function informationValuesToInput(values: VehicleFormValues): UpdateVehic
   };
 }
 
+/**
+ * Payload của mục "Thông tin xe" trong không gian QUẢN LÝ XE (khu tài khoản) — bản native của
+ * `manageInformationValuesToInput` bên web.
+ *
+ * Khác `informationValuesToInput` ở trên, và khác có chủ đích: tab Thông tin của cổng quản lý
+ * sở hữu cả `name`, `branchId`, `vehicleType`, `serviceTypes`, `operationStatus` và bộ kích
+ * thước/công suất. Mục quản lý xe KHÔNG hỏi những thứ đó, nên gửi kèm chúng là ghi đè giá trị
+ * người dùng chưa từng nhìn thấy.
+ *
+ * `brand`/`model` vẫn đi theo payload dù backend tự chép từ `vehicleCatalogModelId`: xe khai tay
+ * (không gắn mẫu chuẩn) không có nguồn nào khác cho cặp chữ đó.
+ */
+export function manageInformationValuesToInput(values: VehicleFormValues): UpdateVehicleInput {
+  return {
+    plateNumber: textOrNull(values.plateNumber),
+    brand: textOrNull(values.brand),
+    model: textOrNull(values.model),
+    color: textOrNull(values.color),
+    fuelType: values.fuelType,
+    bodyType: values.vehicleType === VEHICLE_TYPE.CAR ? (values.bodyType ?? null) : null,
+    motorbikeCategory:
+      values.vehicleType === VEHICLE_TYPE.MOTORBIKE ? (values.motorbikeCategory ?? null) : null,
+    vehicleCatalogModelId: values.vehicleCatalogModelId ?? null,
+    manufactureYear: values.manufactureYear,
+    seatCount: values.seatCount,
+    transmission: values.transmission,
+    fuelConsumptionCity: values.fuelConsumptionCity,
+    fuelConsumptionHighway: values.fuelConsumptionHighway,
+    fuelConsumptionCombined: values.fuelConsumptionCombined,
+    /*
+     * Gửi CẢ BỘ thông số năng lượng dù form chỉ hiện đúng một nhánh: đổi xe từ xăng sang điện thì
+     * mức tiêu thụ lít/100km cũ phải được XOÁ, mà một ô đã ẩn thì không tự gửi null được.
+     */
+    electricRangeKm: values.electricRangeKm,
+    batteryCapacityKwh: values.batteryCapacityKwh,
+    electricConsumptionKwhPer100Km: values.electricConsumptionKwhPer100Km,
+    engineDisplacementCc: values.engineDisplacementCc,
+    description: textOrNull(values.description),
+    features: applicableFeatures(values),
+  };
+}
+
 /** Payload riêng của tab Hình ảnh — replace-set có chủ đích cho gallery/features. */
 export function mediaValuesToInput(values: VehicleFormValues): UpdateVehicleInput {
   return {
     mainImageUrl: values.mainImageUrl,
     images: (values.images ?? []).map((url) => url.trim()).filter(Boolean),
-    features: values.features ?? [],
+    features: applicableFeatures(values),
     // Chuỗi rỗng là thao tác xoá mô tả có chủ đích; không đổi thành undefined.
     description: textOrNull(values.description),
   };

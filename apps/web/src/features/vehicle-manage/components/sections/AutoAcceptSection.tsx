@@ -41,13 +41,19 @@ const WEEK = 7 * DAY;
 
 const schema = yup.object({
   autoAcceptEnabled: yup.boolean().defined(),
-  autoAcceptMinLeadMinutes: yup.number().integer().min(0).defined(),
+  // Giá trị giữ dạng CHUỖI vì `options` của ô chọn (web + native) khoá `value: string`; số thô
+  // không khớp option nào nên ô hiện ra số phút trần ("60") hoặc bỏ trống. Quy về số lúc gửi đi.
+  autoAcceptMinLeadMinutes: yup.string().defined().required(),
   autoAcceptMaxLeadMinutes: yup
-    .number()
-    .integer()
+    .string()
     .defined()
-    .test('min-max', 'minMax', (max, ctx) => max >= Number(ctx.parent.autoAcceptMinLeadMinutes)),
-  minRentalMinutes: yup.number().integer().nullable().defined(),
+    .required()
+    .test(
+      'min-max',
+      'minMax',
+      (max, ctx) => Number(max) >= Number(ctx.parent.autoAcceptMinLeadMinutes),
+    ),
+  minRentalMinutes: yup.string().nullable().defined(),
   preferredRouteTypes: yup.array().of(yup.string().defined()).defined(),
 });
 type FormValues = yup.InferType<typeof schema>;
@@ -112,9 +118,9 @@ function AutoAcceptForm({
   const values = useMemo<FormValues>(
     () => ({
       autoAcceptEnabled: setting.autoAcceptEnabled,
-      autoAcceptMinLeadMinutes: setting.autoAcceptMinLeadMinutes,
-      autoAcceptMaxLeadMinutes: setting.autoAcceptMaxLeadMinutes,
-      minRentalMinutes: setting.minRentalMinutes ?? null,
+      autoAcceptMinLeadMinutes: String(setting.autoAcceptMinLeadMinutes),
+      autoAcceptMaxLeadMinutes: String(setting.autoAcceptMaxLeadMinutes),
+      minRentalMinutes: setting.minRentalMinutes == null ? null : String(setting.minRentalMinutes),
       preferredRouteTypes: setting.preferredRouteTypes,
     }),
     [setting],
@@ -134,11 +140,12 @@ function AutoAcceptForm({
             : t('common.minutes', { count: minutes });
     return t('autoAccept.leadValue', { value: text });
   };
-  const minLeadOptions = (withDriver
-    ? AUTO_ACCEPT_MIN_LEAD_OPTIONS_MINUTES.filter(
-        (m) => m >= MIN_BOOKING_LEAD_MINUTES_RANGE.min && m <= MIN_BOOKING_LEAD_MINUTES_RANGE.max,
-      )
-    : AUTO_ACCEPT_MIN_LEAD_OPTIONS_MINUTES
+  const minLeadOptions = (
+    withDriver
+      ? AUTO_ACCEPT_MIN_LEAD_OPTIONS_MINUTES.filter(
+          (m) => m >= MIN_BOOKING_LEAD_MINUTES_RANGE.min && m <= MIN_BOOKING_LEAD_MINUTES_RANGE.max,
+        )
+      : AUTO_ACCEPT_MIN_LEAD_OPTIONS_MINUTES
   ).map((m) => ({ value: String(m), label: leadLabel(m) }));
   const maxLeadOptions = AUTO_ACCEPT_MAX_LEAD_OPTIONS_MINUTES.map((m) => ({
     value: String(m),
@@ -161,7 +168,8 @@ function AutoAcceptForm({
         autoAcceptMaxLeadMinutes: Number(next.autoAcceptMaxLeadMinutes),
         ...(withDriver
           ? {
-              minRentalMinutes: next.minRentalMinutes == null ? null : Number(next.minRentalMinutes),
+              minRentalMinutes:
+                next.minRentalMinutes == null ? null : Number(next.minRentalMinutes),
               // Lọc qua `isRouteType` — form giữ string, dây chỉ nhận mã lộ trình thật.
               preferredRouteTypes: next.preferredRouteTypes.filter(isRouteType),
             }

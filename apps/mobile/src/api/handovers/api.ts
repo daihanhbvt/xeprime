@@ -102,11 +102,7 @@ export const handoversApi = {
     return getApiClient().post<Handover>(`${base(bookingId)}/${type}/photos`, { fileId, slot });
   },
 
-  removePhoto(
-    bookingId: string,
-    type: HandoverType,
-    slot: HandoverPhotoSlot,
-  ): Promise<Handover> {
+  removePhoto(bookingId: string, type: HandoverType, slot: HandoverPhotoSlot): Promise<Handover> {
     return getApiClient().delete<Handover>(`${base(bookingId)}/${type}/photos/${slot}`);
   },
 

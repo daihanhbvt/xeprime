@@ -188,6 +188,18 @@ const SHOP_NAV: readonly ManageNavSection[] = [
         icon: 'wallet-outline',
         children: [
           {
+            /*
+             * KHÔNG gác bằng `feature`: ví là TIỀN CỦA CHÍNH gian hàng, gói hết hạn vẫn phải xem
+             * và rút được (ADR 0027 điều 3 — hết hạn là `read_only`, không phải `hidden`; ADR
+             * 0033). Đây là mục duy nhất trong nhóm Tài chính không mang cờ gói, và đó là chủ ý.
+             */
+            key: 'balance',
+            labelKey: 'manage.balance',
+            icon: 'wallet-outline',
+            permission: PERMISSION.SELLER_PROFILE_VIEW,
+            href: ROUTES.manage.balance(),
+          },
+          {
             key: 'finance-overview',
             labelKey: 'manage.financeOverview',
             icon: 'stats-chart-outline',
@@ -245,6 +257,18 @@ const SHOP_NAV: readonly ManageNavSection[] = [
         href: ROUTES.manage.shopPolicies(),
       },
       {
+        /*
+         * XEM gói là `subscription.view`; MUA là `subscription.purchase` và chỉ backend kiểm —
+         * ẩn nút mua ở client không phải một lớp chặn (CLAUDE.md §6). Không gác cờ gói: đây
+         * CHÍNH LÀ màn bán gói, khoá nó sau một cờ gói là khoá cửa từ bên trong.
+         */
+        key: 'subscription',
+        labelKey: 'manage.subscription',
+        icon: 'card-outline',
+        permission: PERMISSION.SUBSCRIPTION_VIEW,
+        href: ROUTES.manage.subscription(),
+      },
+      {
         key: 'shop-branches',
         labelKey: 'manage.shopBranches',
         icon: 'git-network-outline',
@@ -259,6 +283,29 @@ const SHOP_NAV: readonly ManageNavSection[] = [
         permission: PERMISSION.DRIVER_VIEW,
         feature: PLAN_FEATURE.DRIVERS,
         href: ROUTES.manage.drivers(),
+      },
+      {
+        /*
+         * Công tắc thu cọc (Phase 6). KHÔNG gắn `feature` dù đường GHI cần `escrow_hold`: gian
+         * hàng thiếu cờ phải vào được để hiểu tính năng thuộc gói nào, và tuyến hoa hồng phải
+         * thấy công tắc bật + khoá kèm giải thích (ADR 0027 điều 4).
+         */
+        key: 'shop-payment-settings',
+        labelKey: 'manage.shopPaymentSettings',
+        icon: 'wallet-outline',
+        permission: PERMISSION.SELLER_PROFILE_VIEW,
+        href: ROUTES.manage.shopPaymentSettings(),
+      },
+      {
+        /*
+         * Bộ CƠ BẢN (ADR 0027 điều 1): chủ xe cơ bản cũng phải khai được danh tính và tài khoản
+         * nhận tiền — KHÔNG gắn `feature`, nếu không thì chính họ là người không nhận được tiền.
+         */
+        key: 'seller-profile',
+        labelKey: 'manage.sellerProfile',
+        icon: 'id-card-outline',
+        permission: PERMISSION.SELLER_PROFILE_VIEW,
+        href: ROUTES.manage.sellerProfile(),
       },
       {
         key: 'members',
@@ -281,6 +328,17 @@ const SHOP_NAV: readonly ManageNavSection[] = [
         icon: 'help-circle-outline',
         permission: PERMISSION.TENANT_VIEW,
         href: ROUTES.manage.support(),
+      },
+      {
+        /*
+         * Bộ CƠ BẢN (ADR 0027 điều 1): tranh chấp có hệ quả TIỀN — nó tạm giữ việc chốt khoản
+         * giữ chỗ của chuyến — nên KHÔNG được khoá sau một cờ gói. Chỉ gác bằng quyền.
+         */
+        key: 'support-cases',
+        labelKey: 'manage.supportCases',
+        icon: 'alert-circle-outline',
+        permission: PERMISSION.SUPPORT_VIEW,
+        href: ROUTES.manage.supportCases(),
       },
     ],
   },

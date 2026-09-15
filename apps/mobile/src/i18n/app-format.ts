@@ -3,6 +3,7 @@ import { PICKUP_PREFERENCE, type IsoDateTimeString, type MoneyString } from '@xe
 import {
   compactMoneyParts,
   formatMoneyVnd,
+  nowInAppTz,
   pickupWishParts,
   remainingKm as remainingKmParts,
   rentalDurationParts,
@@ -77,7 +78,25 @@ export interface AppFormat {
   /** Thứ viết ĐẦY ĐỦ: `Chủ Nhật` · `Sunday` — tiêu đề thẻ một ngày trên lịch, y như web. */
   weekdayLong: (value: Dayjs) => string;
   rentalPoint: (value: Dayjs, opts?: { withTime?: boolean }) => string;
+  /**
+   * MỐC thuê bản GỌN: NGÀY + GIỜ, mẫu ngày theo ngôn ngữ (DD/MM ở vi, MM/DD ở en), giờ luôn 24h.
+   *
+   * Khác {@link rentalPoint} ở chỗ bỏ THỨ và dùng dấu cách thay vì dấu chấm giữa — dành cho ô
+   * chọn thời gian thuê và dòng tóm tắt kết quả, nơi bề ngang không đủ cho "T4, 26/08 · 10:00".
+   * Một hàm dựng cho cả hai bề mặt: đó là cách duy nhất để chúng nói về CÙNG một khoảng mà không
+   * viết nó theo hai kiểu. Web có cùng hàm này trong `apps/web/src/i18n/app-format.ts`.
+   */
+  rentalPointCompact: (value: Dayjs, opts?: { withYear?: boolean }) => string;
   rentalDuration: (from: Dayjs, to: Dayjs) => string;
+  /**
+   * Dòng tóm tắt khoảng thuê: hai mốc gọn + thời lượng — `14/09 17:00 → 15/09 17:00 (1 ngày)`.
+   *
+   * Thay cho cách cũ là in hai NGÀY LỊCH rồi đếm ngày bằng phép trừ hai mốc: một chuyến 17:00
+   * hôm nay → 17:00 hôm sau hiện ra hai ngày khác nhau mà không nói giờ nhận, còn một chuyến
+   * 09:00 → 23:00 cùng ngày cũng "1 ngày" với đúng hai ngày khác nhau. GIỜ NHẬN là thứ quyết
+   * định số ngày tính tiền, nên nó phải nằm ngay trong dòng này. Web đổi cùng lúc, cùng hàm.
+   */
+  rentalRangeSummary: (from: Dayjs, to: Dayjs) => string;
 
   km: (value: number | null | undefined) => string;
   distanceKm: (value: number | null | undefined) => string;
@@ -185,6 +204,24 @@ export function createAppFormat(
         })
       : empty;
 
+  /**
+   * `14/09 17:00` — mẫu ngày theo NGÔN NGỮ (`DD/MM` ở vi, `MM/DD` ở en), giờ luôn 24h.
+   *
+   * Một hàm dựng cho cả ô chọn thời gian lẫn dòng tóm tắt kết quả: đó là cách duy nhất để hai bề
+   * mặt nói về cùng một khoảng mà không viết nó theo hai kiểu. Cùng hàm với web.
+   */
+  const compactPoint = (value: Dayjs, withYear: boolean) =>
+    t('units.rentalPointCompact', {
+      date: value.format(withYear ? pattern.date : pattern.dayMonth),
+      time: value.format('HH:mm'),
+    });
+
+  const duration = (from: Dayjs, to: Dayjs) => {
+    const { days, hours } = rentalDurationParts(from, to);
+    if (days <= 0) return t('units.hour', { count: hours });
+    return hours > 0 ? t('units.dayAndHour', { days, hours }) : t('units.day', { count: days });
+  };
+
   const shortStamp = (value: IsoDateTimeString | null | undefined) => {
     if (!value) return empty;
     return t('units.shortDateTime', {
@@ -229,10 +266,21 @@ export function createAppFormat(
         ? base
         : t('units.rentalPointWithTime', { point: base, time: value.format('HH:mm') });
     },
-    rentalDuration: (from, to) => {
-      const { days, hours } = rentalDurationParts(from, to);
-      if (days <= 0) return t('units.hour', { count: hours });
-      return hours > 0 ? t('units.dayAndHour', { days, hours }) : t('units.day', { count: days });
+    rentalPointCompact: (value, opts) => compactPoint(value, opts?.withYear === true),
+    rentalDuration: duration,
+    rentalRangeSummary: (from, to) => {
+      /*
+       * Năm chỉ xuất hiện khi nó PHÂN BIỆT được điều gì: khoảng thuê không nằm trọn trong năm
+       * hiện tại (chuyến đón giao thừa, hoặc một ngữ cảnh cũ mở lại sang năm sau). Mọi chuyến
+       * còn lại — gần như toàn bộ — giữ dòng ngắn.
+       */
+      const thisYear = nowInAppTz().year();
+      const withYear = from.year() !== thisYear || to.year() !== thisYear;
+      return t('units.rentalRangeSummary', {
+        from: compactPoint(from, withYear),
+        to: compactPoint(to, withYear),
+        duration: duration(from, to),
+      });
     },
 
     km: (value) =>

@@ -69,7 +69,7 @@ const SHOP: MyShop = {
     name: 'Chi nhánh chính',
     provinceCode: '48',
     provinceName: 'Đà Nẵng',
-  needsLocationReview: false,
+    needsLocationReview: false,
   },
 };
 
@@ -146,8 +146,8 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
       await view.findByLabelText('Tên gian hàng'),
       'Cho thuê xe Bình Minh',
     );
-    await fireEvent.press(view.getByLabelText('Tỉnh/thành'));
-    await fireEvent.press(await view.findByText('Đà Nẵng'));
+    await fireEvent.press(view.getByLabelText('Tỉnh/thành phố'));
+    await fireEvent.press(await view.findByText('TP Đà Nẵng'));
     await fireEvent.press(view.getByRole('button', { name: 'Tạo gian hàng' }));
 
     await waitFor(() => expect(registerSpy).toHaveBeenCalled());
@@ -161,27 +161,25 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
   });
 
   it('backend từ chối (đã có gian hàng): giữ nguyên dữ liệu đã nhập để gửi lại', async () => {
-    jest
-      .spyOn(tenantsApi, 'register')
-      .mockRejectedValue(
-        new ApiClientError({
-          status: 409,
-          code: API_ERROR_CODE.CONFLICT,
-          message: 'Bạn đã có gian hàng',
-        }),
-      );
+    jest.spyOn(tenantsApi, 'register').mockRejectedValue(
+      new ApiClientError({
+        status: 409,
+        code: API_ERROR_CODE.CONFLICT,
+        message: 'Bạn đã có gian hàng',
+      }),
+    );
     const view = await renderScreen();
 
     const nameField = await view.findByLabelText('Tên gian hàng');
     await fireEvent.changeText(nameField, 'Cho thuê xe Bình Minh');
-    await fireEvent.press(view.getByLabelText('Tỉnh/thành'));
-    await fireEvent.press(await view.findByText('Đà Nẵng'));
+    await fireEvent.press(view.getByLabelText('Tỉnh/thành phố'));
+    await fireEvent.press(await view.findByText('TP Đà Nẵng'));
     await fireEvent.press(view.getByRole('button', { name: 'Tạo gian hàng' }));
 
     // Form KHÔNG bị reset: người dùng chỉ cần đọc lỗi rồi bấm lại.
-    await waitFor(() => expect(view.getByLabelText('Tên gian hàng').props.value).toBe(
-      'Cho thuê xe Bình Minh',
-    ));
+    await waitFor(() =>
+      expect(view.getByLabelText('Tên gian hàng').props.value).toBe('Cho thuê xe Bình Minh'),
+    );
     expect(mockReplace).not.toHaveBeenCalled();
   });
 });

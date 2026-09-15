@@ -18,6 +18,7 @@ import { AppErrorScreen } from '@/components/state/AppErrorScreen';
 import { AppToastProvider } from '@/components/feedback/AppToast';
 import { SessionBoundary } from '@/features/auth/SessionBoundary';
 import { BadgeRealtimeProvider } from '@/features/badges/BadgeRealtimeProvider';
+import { InAppCameraProvider } from '@/features/camera/InAppCameraProvider';
 import { ChatRealtimeProvider } from '@/features/chat/realtime/ChatRealtimeProvider';
 import { registerPushBackgroundHandler } from '@/features/notifications/messaging';
 import { PushBootstrap } from '@/features/notifications/PushBootstrap';
@@ -78,6 +79,12 @@ export default function RootLayout() {
               */}
               <AppToastProvider>
                 <PushBootstrap />
+                {/*
+                  Máy ảnh TRONG app, mount một lần ở đây vì nơi gọi là `pickImages` — một hàm
+                  async trong `src/lib`, không phải component (xem `in-app-camera.ts`). Bọc cả
+                  `Stack` để khung ngắm sống qua điều hướng. Không vẽ gì khi chưa ai gọi.
+                */}
+                <InAppCameraProvider />
               <SessionBoundary>
                 {/*
                   BÊN TRONG `SessionBoundary`: nó cần phiên (custom token xin bằng chính phiên

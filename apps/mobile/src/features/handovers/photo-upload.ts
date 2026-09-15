@@ -2,6 +2,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import type { HandoverPhotoSlot, HandoverType } from '@xeprime/types';
 import { handoversApi, type Handover, type HandoverUploadMeta } from './api';
+import { captureInAppPhoto } from '@/features/camera/in-app-camera';
 
 /**
  * Bề rộng tối đa sau khi nén.
@@ -14,6 +15,7 @@ const MAX_WIDTH = 1600;
 
 /** Chất lượng JPEG. 0.7 là mốc mà mắt thường không phân biệt được với 1.0 trên ảnh chụp xe. */
 const JPEG_QUALITY = 0.7;
+
 
 export const PHOTO_SOURCE = {
   CAMERA: 'camera',
@@ -42,23 +44,14 @@ export interface PickedPhoto {
  * nơi gọi phải bọc try/catch cho một thao tác bình thường.
  */
 export async function pickHandoverPhoto(source: PhotoSource): Promise<PickedPhoto | null> {
-  const permission =
+  /*
+   * `null` cho MỌI ca không có ảnh, kể cả từ chối quyền — hợp đồng cũ của hàm này, và nơi gọi
+   * (`HandoverPhotoGrid`) dựa vào đó để không phải bọc try/catch cho một thao tác bình thường.
+   */
+  const asset =
     source === PHOTO_SOURCE.CAMERA
-      ? await ImagePicker.requestCameraPermissionsAsync()
-      : await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-  if (!permission.granted) return null;
-
-  const result =
-    source === PHOTO_SOURCE.CAMERA
-      ? await ImagePicker.launchCameraAsync({ quality: 1, exif: false })
-      : await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ['images'],
-          quality: 1,
-          exif: false,
-        });
-
-  const asset = result.canceled ? null : result.assets[0];
+      ? await captureInAppPhoto().catch(() => null)
+      : await pickFromLibrary();
   if (!asset) return null;
 
   /*
@@ -76,9 +69,22 @@ export async function pickHandoverPhoto(source: PhotoSource): Promise<PickedPhot
   return {
     uri: compressed.uri,
     // Tên file chỉ để người vận hành nhận ra ảnh trong kho — server không tin nó.
-    fileName: asset.fileName ?? `handover-${Date.now()}.jpg`,
+    fileName: `handover-${Date.now()}.jpg`,
     contentType: 'image/jpeg',
   };
+}
+
+async function pickFromLibrary(): Promise<ImagePicker.ImagePickerAsset | null> {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permission.granted) return null;
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    quality: 1,
+    exif: false,
+  });
+
+  return result.canceled ? null : (result.assets[0] ?? null);
 }
 
 /**

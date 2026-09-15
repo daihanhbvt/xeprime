@@ -257,9 +257,18 @@
   },
   "image": {
     "takePhoto": "Take a photo",
-    "chooseFromLibrary": "Choose from library",
+    "chooseFromLibrary": "Photo library",
     "changeImage": "Change photo",
     "addImage": "Add photo",
     "removeImage": "Remove photo"
+  },
+  "camera": {
+    "close": "Close",
+    "shutter": "Take photo",
+    "flip": "Switch front/back camera",
+    "flash": "Flash",
+    "retake": "Retake",
+    "usePhoto": "Use this photo",
+    "permissionBlocked": "Camera permission is off. Open Settings → XePrime to allow Camera."
   }
 }

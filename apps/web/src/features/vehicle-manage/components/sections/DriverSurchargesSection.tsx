@@ -50,8 +50,17 @@ const ruleSchema = yup.object({
     .max(DRIVER_SURCHARGE_THRESHOLD_MAX, 'thresholdRange'),
 });
 
+/**
+ * "Ngoài giờ" chọn MỐC GIỜ trong ngày bằng ô chọn, nên giá trị trong form phải là CHUỖI — đúng
+ * kiểu `value` của option. Để số thô ở đây thì không option nào khớp: web hiện ra số phút
+ * ("1320") còn native bỏ trống ô. Quy về số ở bước gửi đi.
+ */
+const overtimeRuleSchema = ruleSchema.shape({
+  thresholdValue: yup.string().nullable().defined(),
+});
+
 const schema = yup.object({
-  [DRIVER_SURCHARGE_KIND.OVERTIME]: ruleSchema,
+  [DRIVER_SURCHARGE_KIND.OVERTIME]: overtimeRuleSchema,
   [DRIVER_SURCHARGE_KIND.WAITING]: ruleSchema,
   [DRIVER_SURCHARGE_KIND.LONG_DISTANCE]: ruleSchema,
   [DRIVER_SURCHARGE_KIND.OVERNIGHT]: ruleSchema,
@@ -114,8 +123,12 @@ function SurchargesForm({
         thresholdValue: rule?.thresholdValue ?? null,
       };
     };
+    const overtime = of(DRIVER_SURCHARGE_KIND.OVERTIME);
     return {
-      [DRIVER_SURCHARGE_KIND.OVERTIME]: of(DRIVER_SURCHARGE_KIND.OVERTIME),
+      [DRIVER_SURCHARGE_KIND.OVERTIME]: {
+        ...overtime,
+        thresholdValue: overtime.thresholdValue == null ? null : String(overtime.thresholdValue),
+      },
       [DRIVER_SURCHARGE_KIND.WAITING]: of(DRIVER_SURCHARGE_KIND.WAITING),
       [DRIVER_SURCHARGE_KIND.LONG_DISTANCE]: of(DRIVER_SURCHARGE_KIND.LONG_DISTANCE),
       [DRIVER_SURCHARGE_KIND.OVERNIGHT]: of(DRIVER_SURCHARGE_KIND.OVERNIGHT),
@@ -134,7 +147,11 @@ function SurchargesForm({
             enabled: rule.enabled,
             amount: String(Math.round(rule.amount ?? 0)),
             thresholdValue:
-              spec.threshold === null ? null : rule.thresholdValue == null ? null : Number(rule.thresholdValue),
+              spec.threshold === null
+                ? null
+                : rule.thresholdValue == null
+                  ? null
+                  : Number(rule.thresholdValue),
           };
         }),
       );
@@ -147,7 +164,11 @@ function SurchargesForm({
   return (
     <Form component={false} layout="vertical" colon={false}>
       <form noValidate onSubmit={submit} className={styles.form}>
-        <SectionCard headingLevel={1} title={t('surcharges.title')} subtitle={t('surcharges.subtitle')}>
+        <SectionCard
+          headingLevel={1}
+          title={t('surcharges.title')}
+          subtitle={t('surcharges.subtitle')}
+        >
           <div className={styles.grid}>
             {DRIVER_SURCHARGE_KIND_VALUES.map((kind) => (
               <RuleCard key={kind} kind={kind} control={control} canEdit={canEdit} />
@@ -182,15 +203,18 @@ function RuleCard({
   const enabled = useWatch({ control, name: `${kind}.enabled` });
   const threshold = useWatch({ control, name: `${kind}.thresholdValue` });
 
+  // Ô "ngoài giờ" giữ chuỗi (xem `overtimeRuleSchema`), ba loại còn lại giữ số.
+  const thresholdNumber = threshold == null || threshold === '' ? null : Number(threshold);
+
   const description =
     spec.threshold === DRIVER_SURCHARGE_THRESHOLD_KIND.MINUTE_OF_DAY
       ? t('threshold.overtime', {
-          time: minuteToHandoverTime(threshold ?? handoverTimeToMinute('22:00') ?? 0),
+          time: minuteToHandoverTime(thresholdNumber ?? handoverTimeToMinute('22:00') ?? 0),
         })
       : spec.threshold === DRIVER_SURCHARGE_THRESHOLD_KIND.GRACE_MINUTES
-        ? t('threshold.waiting', { minutes: threshold ?? 0 })
+        ? t('threshold.waiting', { minutes: thresholdNumber ?? 0 })
         : spec.threshold === DRIVER_SURCHARGE_THRESHOLD_KIND.KM_PER_DAY
-          ? t('threshold.long_distance', { km: fmt.kmNumber(threshold ?? 0) })
+          ? t('threshold.long_distance', { km: fmt.kmNumber(thresholdNumber ?? 0) })
           : t('threshold.overnight');
 
   return (

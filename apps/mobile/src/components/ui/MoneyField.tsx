@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { TextInput } from 'react-native';
+import { useRevealOnFocus } from '@/components/layout/focus-reveal';
 import { Text, YStack } from 'tamagui';
 import { CURRENCY_SUFFIX, formatMoneyInput, parseMoneyInput } from '@xeprime/domain';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
@@ -38,25 +39,38 @@ export function MoneyField<T extends FieldValues>({
   hint,
   placeholder,
   required = false,
+  publishRequired = false,
   editable = true,
+  unit,
 }: {
   control: Control<T>;
   name: Path<T>;
   label: string;
   hint?: string;
   placeholder?: string;
+  /** Dấu `●` cần-cho-duyệt-công-khai — xem docblock ở `FieldLabel`. */
+  publishRequired?: boolean;
   required?: boolean;
   editable?: boolean;
+  /**
+   * Đơn vị ĐẦY ĐỦ thay cho mỗi ký hiệu tiền — "đ / ngày", "đ / giờ", "đ / tháng".
+   *
+   * Đúng `addonAfter` mà web đặt trên từng ô giá. Một ô chỉ ghi "₫" đứng cạnh ô khác cũng chỉ
+   * ghi "₫" thì hai con số rất khác nhau về bản chất (giá một ngày và giá một tháng) đọc ra như
+   * cùng một thang — và người dùng phải suy ra đơn vị từ cái nhãn ở trên.
+   */
+  unit?: string;
 }) {
   const { field, fieldState } = useController({ control, name });
   const inputRef = useRef<TextInput>(null);
+  const revealOnFocus = useRevealOnFocus();
   const [focused, setFocused] = useState(false);
 
   const error = fieldState.error?.message;
 
   return (
     <YStack gap={space.xs}>
-      <FieldLabel label={label} required={required} />
+      <FieldLabel label={label} required={required} publishRequired={publishRequired} />
 
       <FieldShell
         focused={focused}
@@ -76,7 +90,10 @@ export function MoneyField<T extends FieldValues>({
             setFocused(false);
             field.onBlur();
           }}
-          onFocus={() => setFocused(true)}
+          onFocus={() => {
+            setFocused(true);
+            revealOnFocus();
+          }}
           editable={editable}
           keyboardType="number-pad"
           {...(placeholder === undefined ? {} : { placeholder })}
@@ -86,7 +103,7 @@ export function MoneyField<T extends FieldValues>({
 
         {/* Đơn vị là TRANG TRÍ của ô, không nằm trong giá trị — đúng vai `suffix` bên web. */}
         <Text col={colors.textMuted} fos={fieldFontSize.affix} fow={fontWeight.medium}>
-          {CURRENCY_SUFFIX}
+          {unit ?? CURRENCY_SUFFIX}
         </Text>
       </FieldShell>
 

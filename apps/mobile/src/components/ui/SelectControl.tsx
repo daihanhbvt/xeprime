@@ -1,12 +1,29 @@
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, TextInput } from 'react-native';
+import { Pressable, StyleSheet, TextInput } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { BottomSheet } from './BottomSheet';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
 import { MenuOption, MenuOptionList } from './MenuOption';
+import { FONT_FAMILY } from '@/theme/fonts';
 import { colors, fieldFontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
+
+/**
+ * `fontFamily` PHẢI khai: `TextInput` là primitive của RN, nằm NGOÀI cây Tamagui nên không nhận
+ * font mặc định của `tamagui.config` — `font-coverage.test` canh chỗ này.
+ *
+ * Dựng MỘT lần ở module scope: ô tìm kiếm render lại theo từng ký tự người dùng gõ, và một object
+ * style mới mỗi lần gõ là một lần `TextInput` không thể bỏ qua việc cập nhật.
+ */
+const styles = StyleSheet.create({
+  searchInput: {
+    flex: 1,
+    fontSize: fieldFontSize.value,
+    fontFamily: FONT_FAMILY.body,
+    color: colors.text,
+  },
+});
 
 export interface SelectControlOption {
   readonly value: string;
@@ -36,6 +53,7 @@ export function SelectControl({
   hint,
   error,
   required = false,
+  publishRequired = false,
   placeholder,
   disabled = false,
   onSearch,
@@ -48,6 +66,8 @@ export function SelectControl({
   onChange: (next: string) => void;
   hint?: string;
   error?: string;
+  /** Dấu `●` cần-cho-duyệt-công-khai — xem docblock ở `FieldLabel`. */
+  publishRequired?: boolean;
   required?: boolean;
   /** Chữ mờ khi chưa chọn gì. Bỏ trống thì dùng "Chọn…" của `Common.actions`. */
   placeholder?: string;
@@ -77,7 +97,7 @@ export function SelectControl({
 
   return (
     <YStack gap={space.xs}>
-      <FieldLabel label={label} required={required} />
+      <FieldLabel label={label} required={required} publishRequired={publishRequired} />
 
       {/*
         Vỏ chạm là `Pressable`: vai "button" đặt trên stack Tamagui không nổi lên cây khả truy
@@ -133,7 +153,7 @@ export function SelectControl({
           >
             <Ionicons name="search" size={iconSize.sm} color={colors.textMuted} />
             <TextInput
-              style={{ flex: 1, fontSize: fieldFontSize.value, color: colors.text }}
+              style={styles.searchInput}
               value={search}
               onChangeText={(next) => {
                 setSearch(next);

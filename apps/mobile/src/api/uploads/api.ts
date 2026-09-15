@@ -34,4 +34,14 @@ export const uploadsApi = {
   shopMedia(meta: UploadMeta): Promise<UploadPresign> {
     return getApiClient().post<UploadPresign>('/uploads/shop-media/presign', meta);
   },
+
+  /**
+   * Ảnh đại diện của CHÍNH người đang đăng nhập — chỉ cần đăng nhập, không cần gian hàng.
+   *
+   * Khác mọi presign còn lại ở đúng chỗ đó: chúng đều đòi một quyền trong một gian hàng, còn ảnh
+   * đại diện thuộc về một CON NGƯỜI, và khách thuê xe không thuộc gian hàng nào.
+   */
+  avatar(meta: UploadMeta): Promise<UploadPresign> {
+    return getApiClient().post<UploadPresign>('/uploads/avatar/presign', meta);
+  },
 };

@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import { YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   TENANT_CUSTOMER_FIELD_MAX,
@@ -120,18 +120,32 @@ export function CustomerRiskSheet({
           placeholder={t('risk.reasonPlaceholder')}
           hint={t('risk.privacy')}
         />
-        <Button
-          label={tCommon('save')}
-          variant={blocked ? 'danger' : 'primary'}
-          loading={mutation.isPending}
-          onPress={() => void submit()}
-        />
-        <Button
-          label={tCommon('close')}
-          variant="ghost"
-          disabled={mutation.isPending}
-          onPress={onClose}
-        />
+        <XStack gap={space.sm}>
+          {/*
+            Lối thoát bên TRÁI, hành động chính bên PHẢI — xếp dọc thì hàng dưới đọc ra là một
+            bước tiếp theo chứ không phải một lựa chọn thay thế.
+          
+            "Đóng" co vừa chữ, nút chính lấy phần còn lại — xem luật ở `Button.tsx`. Chia đôi thì
+            nửa hàng bên trái bỏ trống quá nửa cho một từ bốn chữ, còn nút chính thiếu chỗ.
+          */}
+          <YStack flexShrink={0}>
+            <Button
+              label={tCommon('close')}
+              variant="ghost"
+              disabled={mutation.isPending}
+              onPress={onClose}
+            />
+          </YStack>
+          <YStack f={1}>
+            <Button
+              label={tCommon('save')}
+              icon="checkmark-outline"
+              variant={blocked ? 'danger' : 'primary'}
+              loading={mutation.isPending}
+              onPress={() => void submit()}
+            />
+          </YStack>
+        </XStack>
       </YStack>
     </BottomSheet>
   );

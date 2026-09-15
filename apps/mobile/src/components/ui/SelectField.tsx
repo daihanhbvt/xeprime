@@ -16,6 +16,7 @@ export function SelectField<T extends FieldValues>({
   options,
   hint,
   required = false,
+  publishRequired = false,
   placeholder,
   disabled = false,
   onSearch,
@@ -27,6 +28,8 @@ export function SelectField<T extends FieldValues>({
   label: string;
   options: readonly SelectControlOption[];
   hint?: string;
+  /** Dấu `●` cần-cho-duyệt-công-khai — xem docblock ở `FieldLabel`. */
+  publishRequired?: boolean;
   required?: boolean;
   placeholder?: string;
   disabled?: boolean;
@@ -44,6 +47,7 @@ export function SelectField<T extends FieldValues>({
       options={options}
       onChange={field.onChange}
       required={required}
+      publishRequired={publishRequired}
       disabled={disabled}
       {...(hint === undefined ? {} : { hint })}
       {...(placeholder === undefined ? {} : { placeholder })}

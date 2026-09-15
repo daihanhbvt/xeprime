@@ -273,3 +273,19 @@ export {
   type MarketPriceBasis,
   type MarketPriceSegment,
 } from './market-price';
+
+/**
+ * Thư viện PDF của chủ xe — cẩm nang, hợp đồng mẫu, chứng từ quyết toán.
+ *
+ * Dùng chung vì cả hai client trưng CÙNG bộ tài liệu: web phục vụ file tĩnh tại
+ * `/owner-resources/<file>`, app native mở đúng địa chỉ đó qua `resolveWebBaseUrl()`.
+ */
+export {
+  OWNER_RESOURCES,
+  OWNER_RESOURCE_BASE,
+  ownerResourcePath,
+  ownerResourcesOfKind,
+  type OwnerResource,
+  type OwnerResourceKey,
+  type OwnerResourceKind,
+} from './owner-resources';

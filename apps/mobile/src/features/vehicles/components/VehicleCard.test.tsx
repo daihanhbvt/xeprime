@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { SERVICE_TYPE, VEHICLE_OPERATION_STATUS, VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
 import { withIntl } from '@/i18n/test-utils';
 import { VehicleCard } from './VehicleCard';
@@ -35,13 +35,16 @@ const alerts: VehicleAlertGroup = {
   alerts: [],
 } as VehicleAlertGroup;
 
+/** Thẻ không tự dựng thao tác nữa — màn truyền vào. Ca kiểm ở đây là NỘI DUNG thẻ. */
+const NO_ACTIONS = () => [];
+
 async function renderCard(props: Partial<Parameters<typeof VehicleCard>[0]> = {}) {
   return await render(
     withIntl(
       <VehicleCard
         vehicle={vehicle}
         onPress={jest.fn()}
-        onSchedule={jest.fn()}
+        actions={NO_ACTIONS}
         stats={stats}
         statsLoading={false}
         statsFailed={false}
@@ -99,5 +102,39 @@ describe('VehicleCard', () => {
 
     expect(getByText('850.000 ₫/ngày')).toBeTruthy();
     expect(queryByText('-10%')).toBeNull();
+  });
+});
+
+/**
+ * Thanh thao tác đến TỪ MÀN, không từ thẻ.
+ *
+ * Ca này canh đúng chỗ khu tài khoản từng hỏng: thẻ tự dựng bộ Xem · Sửa · Lịch của cổng quản
+ * lý và áp nó lên mọi nơi, nên danh sách xe trong hồ sơ khách hàng không có "Quản lý xe" — thứ
+ * web đặt làm thao tác CHÍNH ở màn đó.
+ */
+describe('VehicleCard — thao tác do màn truyền vào', () => {
+  it('dựng đúng bộ thao tác của nơi gọi, không có bộ mặc định nào', async () => {
+    const onManage = jest.fn();
+
+    const { getByText, queryByText } = await renderCard({
+      actions: (v) => [
+        {
+          key: 'manage',
+          label: 'Quản lý xe',
+          icon: 'construct-outline',
+          onPress: () => onManage(v.id),
+        },
+        { key: 'view', label: 'Xem chi tiết', icon: 'eye-outline', onPress: jest.fn() },
+      ],
+    });
+
+    expect(getByText('Quản lý xe')).toBeTruthy();
+    expect(getByText('Xem chi tiết')).toBeTruthy();
+    // Bộ của cổng quản lý KHÔNG được rò sang.
+    expect(queryByText('Sửa')).toBeNull();
+    expect(queryByText('Lịch')).toBeNull();
+
+    fireEvent.press(getByText('Quản lý xe'));
+    expect(onManage).toHaveBeenCalledWith(vehicle.id);
   });
 });

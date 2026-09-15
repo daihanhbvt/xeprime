@@ -15,10 +15,7 @@ export type ContractSnapshot = Schemas['ContractSnapshotDto'];
 export const contractsApi = {
   /** Tạo (hoặc lấy) hợp đồng từ một đơn — idempotent ở server: bấm lại trả đúng bản cũ. */
   createForBooking(bookingId: string): Promise<Contract> {
-    return getApiClient().post<Contract>(
-      `/bookings/${encodeURIComponent(bookingId)}/contract`,
-      {},
-    );
+    return getApiClient().post<Contract>(`/bookings/${encodeURIComponent(bookingId)}/contract`, {});
   },
 
   /** Chi tiết một hợp đồng để xem/in. */

@@ -67,10 +67,7 @@ export const locationsApi = {
  * `available: false`, và ô nhập rơi về nhập tay.
  */
 export const placesApi = {
-  async search(
-    q: string,
-    bias?: { lat: number; lng: number } | null,
-  ): Promise<PlaceSearchResult> {
+  async search(q: string, bias?: { lat: number; lng: number } | null): Promise<PlaceSearchResult> {
     const params = new URLSearchParams({ q });
     if (bias) {
       params.set('lat', String(bias.lat));
