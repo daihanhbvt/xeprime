@@ -13,15 +13,7 @@ import {
   startOfAppDay,
   toAppTz,
 } from './datetime';
-<<<<<<< Updated upstream
 import { DEFAULT_PICKUP_HOURS, draftFromFilters, draftToFilterPatch } from './search-draft';
-=======
-import {
-  DEFAULT_PICKUP_HOURS,
-  draftFromFilters,
-  draftToFilterPatch,
-} from './search-draft';
->>>>>>> Stashed changes
 
 /**
  * Phần KHÔNG phụ thuộc ngôn ngữ của ngày giờ: quy đổi múi giờ và phép đếm thời lượng thuê.
@@ -273,31 +265,6 @@ describe('bản nháp tìm kiếm — link chia sẻ không mang múi giờ củ
   });
 
   /*
-<<<<<<< Updated upstream
-   * Gợi ý nay là mốc giờ ĐẸP gần nhất còn cách hiện tại `DEFAULT_PICKUP_LEAD_HOURS` giờ
-   * (`DEFAULT_PICKUP_HOURS`), không còn là hằng 10:00 như bản trước — nên ghim một con số ở đây
-   * chỉ chép lại chính sách cũ. Thứ test này canh thì không đổi: MÚI GIỜ CỦA MÁY chạy không được
-   * rò vào gợi ý, mốc phải là giờ đẹp tính theo giờ Việt Nam dù máy đặt ở đâu.
-   */
-  it.each(HOST_TIME_ZONES)('máy đặt ở %s: khoảng mặc định là giờ đẹp VN, không theo giờ máy', (hostTz) => {
-    onHost(hostTz, () => {
-      const draft = draftFromFilters({});
-      const vnHour = draft.rental.pickupAt?.hour();
-
-      expect(DEFAULT_PICKUP_HOURS as readonly number[]).toContain(vnHour);
-      expect(draft.rental.pickupAt?.minute()).toBe(0);
-      // Thuê một ngày TRÒN: giờ trả trùng giờ nhận.
-      expect(draft.rental.returnAt?.format('HH:mm')).toBe(draft.rental.pickupAt?.format('HH:mm'));
-
-      /*
-       * Và mốc đó là giờ VIỆT NAM: 09:00 VN phải lên dây thành 02:00Z dù máy đang ở New York.
-       * Suy từ chính giờ vừa đọc thay vì ghim số — mốc gợi ý đổi theo thời điểm chạy test, còn
-       * quy đổi VN→UTC (+7, không DST) thì không.
-       */
-      const utcHour = String((Number(vnHour) + 24 - 7) % 24).padStart(2, '0');
-      expect(draftToFilterPatch(draft).pickupAt?.slice(11, 19)).toBe(utcHour + ':00:00');
-    });
-=======
    * Khoảng mặc định phải GIỐNG NHAU ở mọi múi giờ máy — đó là toàn bộ ý nghĩa của khối test này.
    *
    * Đồng hồ được ĐÓNG BĂNG vì gợi ý phụ thuộc "bây giờ": nó chọn mốc đẹp đầu tiên còn cách hiện
@@ -360,7 +327,6 @@ describe('bản nháp tìm kiếm — link chia sẻ không mang múi giờ củ
         expect(DEFAULT_PICKUP_HOURS).toContain(draft.rental.pickupAt?.hour());
       });
     }
->>>>>>> Stashed changes
   });
 });
 
