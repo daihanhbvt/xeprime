@@ -413,7 +413,6 @@ describe('Thuê dài hạn — nguyện vọng nhận xe', () => {
     /*
      * Và báo giá của gói mặc định được hỏi ngay, không đợi khách bấm.
      *
-<<<<<<< Updated upstream
      * Lọc theo `serviceType` thay vì lấy `quoteCalls[0]`: modal mở ra ở tab TỰ LÁI, và tab đó nay
      * điền sẵn một khoảng thuê gợi ý, nên nó đã hỏi giá ngày của chính nó TRƯỚC khi ta bấm sang
      * tab dài hạn. Thứ cần khoá ở đây là gói mặc định được hỏi giá mà khách không phải thao tác
@@ -428,15 +427,5 @@ describe('Thuê dài hạn — nguyện vọng nhận xe', () => {
       serviceType: SERVICE_TYPE.LONG_TERM,
       packageMonths: 1,
     });
-=======
-     * Khẳng định vào lần gọi MỚI NHẤT, không phải `quoteCalls[0]`: từ khi overlay điền sẵn một
-     * khoảng thuê gợi ý (`rememberedOrDefaultRentalRange`), màn mở ra ở chế độ tự lái và đã hỏi
-     * giá một lần TRƯỚC khi khách chuyển sang dài hạn. Lần gọi đầu vì thế là `self_drive` — đúng
-     * hành vi, chỉ không còn là lần gọi mà test này nói tới.
-     */
-    await waitFor(() =>
-      expect(quoteCalls.at(-1)).toEqual({ serviceType: 'long_term', packageMonths: 1 }),
-    );
->>>>>>> Stashed changes
   });
 });
