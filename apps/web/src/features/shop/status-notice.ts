@@ -1,5 +1,11 @@
-import { isTenantStatus, TENANT_STATUS, type TenantStatus } from '@xeprime/types';
-import { ROUTES } from '@/constants/routes';
+import {
+  isTenantStatus,
+  SHOP_VERIFICATION,
+  TENANT_STATUS,
+  type ShopVerification,
+  type TenantStatus,
+} from '@xeprime/types';
+import type { WorkspacePaths } from '@/constants/routes';
 
 /**
  * Trạng thái gian hàng → thông báo hiển thị, ở MỘT nơi.
@@ -40,8 +46,15 @@ export interface ShopStatusNotice {
    * chỉ dạy người dùng bỏ qua vùng đó, và đúng lúc có tin xấu thì họ cũng không đọc nữa.
    */
   showInShell: boolean;
-  /** Nơi sửa được tình trạng này. `null` = không có việc gì để làm. */
-  action: { key: ShopNoticeAction; href: string } | null;
+  /**
+   * Nơi sửa được tình trạng này. `null` = không có việc gì để làm.
+   *
+   * `target` là MỘT KHOÁ trong bảng đường dẫn theo khu (`workspacePaths`), không phải một URL
+   * cứng: cùng một tình trạng dẫn tới `/manage/shop` với gian hàng có gói và `/account/registration`
+   * với chủ xe tuyến hoa hồng. Nhúng `/manage/...` vào bảng này nghĩa là dải trạng thái luôn mời
+   * tuyến hoa hồng đi vào đúng khu họ không vào được.
+   */
+  action: { key: ShopNoticeAction; target: keyof WorkspacePaths } | null;
 }
 
 const NOTICE: Readonly<Record<TenantStatus, ShopStatusNotice>> = {
@@ -49,25 +62,25 @@ const NOTICE: Readonly<Record<TenantStatus, ShopStatusNotice>> = {
     key: 'draft',
     tone: 'warning',
     showInShell: true,
-    action: { key: 'complete', href: ROUTES.MANAGE.SHOP },
+    action: { key: 'complete', target: 'ownerProfile' },
   },
   [TENANT_STATUS.PENDING_REVIEW]: {
     key: 'pending',
     tone: 'info',
     showInShell: true,
-    action: { key: 'view', href: ROUTES.MANAGE.SHOP },
+    action: { key: 'view', target: 'ownerProfile' },
   },
   [TENANT_STATUS.NEEDS_REVISION]: {
     key: 'needsRevision',
     tone: 'warning',
     showInShell: true,
-    action: { key: 'revise', href: ROUTES.MANAGE.SHOP },
+    action: { key: 'revise', target: 'ownerProfile' },
   },
   [TENANT_STATUS.REJECTED]: {
     key: 'rejected',
     tone: 'error',
     showInShell: true,
-    action: { key: 'reason', href: ROUTES.MANAGE.SHOP },
+    action: { key: 'reason', target: 'ownerProfile' },
   },
   [TENANT_STATUS.ACTIVE]: {
     key: 'active',
@@ -80,13 +93,13 @@ const NOTICE: Readonly<Record<TenantStatus, ShopStatusNotice>> = {
     key: 'suspended',
     tone: 'error',
     showInShell: true,
-    action: { key: 'support', href: ROUTES.MANAGE.SUPPORT },
+    action: { key: 'support', target: 'support' },
   },
   [TENANT_STATUS.EXPIRED]: {
     key: 'expired',
     tone: 'warning',
     showInShell: true,
-    action: { key: 'support', href: ROUTES.MANAGE.SUPPORT },
+    action: { key: 'support', target: 'support' },
   },
 };
 
@@ -98,4 +111,74 @@ const NOTICE: Readonly<Record<TenantStatus, ShopStatusNotice>> = {
  */
 export function shopStatusNotice(status: string): ShopStatusNotice {
   return NOTICE[isTenantStatus(status) ? status : TENANT_STATUS.DRAFT];
+}
+
+/**
+ * Trạng thái XÁC MINH gian hàng → thông báo hiển thị (ADR 0036).
+ *
+ * Bảng THỨ HAI, cạnh `NOTICE` ở trên, vì từ ADR 0036 có hai trục và chúng trả lời hai câu hỏi
+ * khác nhau:
+ *
+ *  - `tenants.status` — *gian hàng còn được hoạt động không?* Chỉ còn `active` ↔ `suspended`
+ *    (cộng vài giá trị cũ), và nó là thứ quyết định xe có nằm trên chợ hay không.
+ *  - `verification` — *nền tảng đã xem xét pháp nhân chưa?* Không chặn đăng xe; nó là cổng để
+ *    MUA GÓI thuê bao.
+ *
+ * Gộp hai bảng lại là quay về đúng chỗ cũ: một quyết định "cần bổ sung hồ sơ pháp nhân" lại
+ * hiện ra như "gian hàng của bạn chưa hoạt động", và chủ xe đi tìm xem xe mình biến đi đâu.
+ */
+export type ShopVerificationNoticeKey =
+  | 'unverified'
+  | 'pending'
+  | 'needsRevision'
+  | 'rejected'
+  | 'verified';
+
+export interface ShopVerificationNotice {
+  key: ShopVerificationNoticeKey;
+  tone: ShopNoticeTone;
+  /** Nút gửi (lại) hồ sơ xác minh có ý nghĩa ở trạng thái này không. */
+  canSubmit: boolean;
+  /** `true` = phần mô tả ghép thêm nguyên văn lý do người duyệt viết. */
+  useReason: boolean;
+}
+
+const VERIFICATION_NOTICE: Readonly<Record<ShopVerification, ShopVerificationNotice>> = {
+  [SHOP_VERIFICATION.UNVERIFIED]: {
+    key: 'unverified',
+    tone: 'info',
+    canSubmit: true,
+    useReason: false,
+  },
+  [SHOP_VERIFICATION.PENDING]: { key: 'pending', tone: 'info', canSubmit: false, useReason: false },
+  [SHOP_VERIFICATION.NEEDS_REVISION]: {
+    key: 'needsRevision',
+    tone: 'warning',
+    canSubmit: true,
+    useReason: true,
+  },
+  [SHOP_VERIFICATION.REJECTED]: {
+    key: 'rejected',
+    tone: 'error',
+    canSubmit: true,
+    useReason: true,
+  },
+  [SHOP_VERIFICATION.VERIFIED]: {
+    key: 'verified',
+    tone: 'success',
+    canSubmit: false,
+    useReason: false,
+  },
+};
+
+/**
+ * Giá trị lạ rơi về `unverified` — cùng lý do với `shopStatusNotice`: câu an toàn nhất khi không
+ * hiểu mã là "chưa xác minh", vì nó không hứa hẹn gì và không cấp gì.
+ */
+export function shopVerificationNotice(verification: string): ShopVerificationNotice {
+  return VERIFICATION_NOTICE[
+    (VERIFICATION_NOTICE as Record<string, ShopVerificationNotice | undefined>)[verification]
+      ? (verification as ShopVerification)
+      : SHOP_VERIFICATION.UNVERIFIED
+  ];
 }

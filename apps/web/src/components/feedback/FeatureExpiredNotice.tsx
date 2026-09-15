@@ -42,7 +42,7 @@ export function FeatureExpiredNotice({
       className={styles.notice}
       type="warning"
       showIcon
-      message={t('feature.expiredTitle', { feature: domainLabel('planFeature', feature) })}
+      title={t('feature.expiredTitle', { feature: domainLabel('planFeature', feature) })}
       description={
         planEndsAt
           ? t('feature.expiredBodyWithDate', { date: fmt.date(planEndsAt) })

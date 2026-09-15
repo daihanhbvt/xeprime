@@ -4,6 +4,7 @@ import {
   APPROVAL_STATUS_VALUES,
   LOCATION_SOURCE_VALUES,
   normalizeVnPhone,
+  SHOP_VERIFICATION_VALUES,
   TENANT_STATUS_VALUES,
   TENANT_TYPE,
   TENANT_TYPE_VALUES,
@@ -128,6 +129,22 @@ export class RegisterShopDto {
   @Transform(lowered)
   @IsEmail({}, { message: 'Email không hợp lệ' })
   email?: string;
+
+  /**
+   * Người CHỊU TRÁCH NHIỆM pháp lý của gian hàng — bắt buộc để gửi duyệt
+   * (`missingShopProfileRequirements`), nên nhận ngay tại bước đăng ký thay vì bắt người dùng
+   * quay lại một màn khác điền nốt.
+   *
+   * Vắng mặt thì server lấy `name` với gian hàng **cá nhân**: ở tuyến hoa hồng, tên gian hàng
+   * CHÍNH LÀ tên người cho thuê — hỏi lại lần nữa cùng một cái tên là ma sát không đổi lấy gì.
+   * Với gian hàng doanh nghiệp thì không suy diễn: tên công ty không phải tên người.
+   */
+  @ApiPropertyOptional({ description: 'Họ tên chủ gian hàng; bỏ trống ⇒ lấy `name` nếu là cá nhân' })
+  @IsOptional()
+  @Transform(trimmed)
+  @IsString()
+  @MaxLength(255)
+  ownerFullName?: string;
 }
 
 /** Cập nhật hồ sơ gian hàng — mọi trường tuỳ chọn, gửi cái nào cập nhật cái đó. */
@@ -318,6 +335,14 @@ export class MyShopDto {
   @ApiProperty() name!: string;
   @ApiProperty({ enum: TENANT_TYPE_VALUES }) tenantType!: string;
   @ApiProperty({ enum: TENANT_STATUS_VALUES }) status!: string;
+  /**
+   * Trục XÁC MINH — độc lập với `status` (ADR 0036).
+   *
+   * `status` trả lời "gian hàng còn được hoạt động không" (khoá/mở khoá của nền tảng);
+   * trường này trả lời "nền tảng đã xem xét pháp nhân chưa" và là điều kiện để MUA GÓI thuê
+   * bao. Đăng xe lên chợ KHÔNG đọc trường này — tuyến hoa hồng chỉ có cổng duyệt XE.
+   */
+  @ApiProperty({ enum: SHOP_VERIFICATION_VALUES }) verification!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) phone!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) email!: string | null;
   @ApiProperty({ type: TenantProfileDto }) profile!: TenantProfileDto;

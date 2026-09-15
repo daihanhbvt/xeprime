@@ -193,7 +193,7 @@ function AutoAcceptForm({
             <Alert
               type={capability.available ? 'success' : 'warning'}
               showIcon
-              message={
+              title={
                 capability.available
                   ? t('autoAccept.capabilityOk', { count: capability.activeDrivers })
                   : capability.driversFeatureEnabled

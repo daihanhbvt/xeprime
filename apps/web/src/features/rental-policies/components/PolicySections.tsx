@@ -226,7 +226,7 @@ export function CollateralPolicySection<T extends PolicyFormValues>({
       ) : null}
 
       {mode === COLLATERAL_MODE.NONE ? (
-        <Alert type="info" showIcon message={t('noneTitle')} description={t('noneBody')} />
+        <Alert type="info" showIcon title={t('noneTitle')} description={t('noneBody')} />
       ) : null}
     </section>
   );

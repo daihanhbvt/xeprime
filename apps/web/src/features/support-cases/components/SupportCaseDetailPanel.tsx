@@ -63,7 +63,7 @@ export function SupportCaseDetailPanel({
       <Alert
         type="error"
         showIcon
-        message={t('detail.loadError')}
+        title={t('detail.loadError')}
         action={
           <Button size="small" onClick={() => void detail.refetch()}>
             {tCommon('actions.retry')}
@@ -158,7 +158,7 @@ export function SupportCaseDetailPanel({
         <Alert
           type="success"
           showIcon
-          message={t('detail.resolution')}
+          title={t('detail.resolution')}
           description={row.resolution}
         />
       ) : null}
@@ -202,7 +202,7 @@ export function SupportCaseDetailPanel({
       </section>
 
       {closed ? (
-        <Alert type="info" showIcon message={t('detail.closedNotice')} />
+        <Alert type="info" showIcon title={t('detail.closedNotice')} />
       ) : (
         <section aria-labelledby="xp-support-reply" className={styles.reply}>
           <h3 id="xp-support-reply" className={styles.sectionTitle}>

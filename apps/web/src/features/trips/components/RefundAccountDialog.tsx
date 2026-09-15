@@ -69,7 +69,7 @@ export function RefundAccountDialog({
         confirmLoading={provide.isPending}
         size="sm"
       >
-        <Alert type="info" showIcon message={t('intro', { amount })} className={styles.intro} />
+        <Alert type="info" showIcon title={t('intro', { amount })} className={styles.intro} />
 
         {isPending ? <Skeleton active paragraph={{ rows: 2 }} /> : null}
 

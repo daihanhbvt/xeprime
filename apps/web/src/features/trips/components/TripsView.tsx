@@ -287,7 +287,7 @@ export function TripsView() {
 
       {/* Dữ liệu cũ vẫn hiển thị trong lúc nạp lại; chỉ báo nhẹ thay vì chớp sang skeleton. */}
       {!isLoading && isFetching ? (
-        <Alert type="info" showIcon message={t('list.refreshing')} className={styles.refreshing} />
+        <Alert type="info" showIcon title={t('list.refreshing')} className={styles.refreshing} />
       ) : null}
 
       {hostBookingId ? (

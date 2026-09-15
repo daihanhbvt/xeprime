@@ -262,7 +262,7 @@ function BookingForm({ editing, onDone }: { editing: BookingDetail | null; onDon
             type="error"
             showIcon
             className={styles.alert}
-            message="Xe đã bận trong khung giờ này"
+            title="Xe đã bận trong khung giờ này"
             description="Chọn xe khác hoặc đổi thời gian nhận/trả."
           />
         ) : previewConflict ? (
@@ -270,7 +270,7 @@ function BookingForm({ editing, onDone }: { editing: BookingDetail | null; onDon
             type="warning"
             showIcon
             className={styles.alert}
-            message="Xe có thể đã bận khung giờ này"
+            title="Xe có thể đã bận khung giờ này"
             description="Cảnh báo sớm — hệ thống vẫn kiểm tra lại khi lưu."
           />
         ) : null}

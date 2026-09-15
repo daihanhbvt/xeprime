@@ -190,7 +190,7 @@ export function VehicleDocumentsWorkspace({ vehicle }: { vehicle: VehicleDetail 
       <Alert
         type="error"
         showIcon
-        message={t('loadError')}
+        title={t('loadError')}
         description={
           <Button size="small" onClick={() => void documents.refetch()}>
             {tCommon('actions.retry')}
@@ -362,7 +362,7 @@ function DocumentsList({
 
   return (
     <div className={styles.stack}>
-      {!canManage ? <Alert type="info" showIcon message={t('readOnly')} /> : null}
+      {!canManage ? <Alert type="info" showIcon title={t('readOnly')} /> : null}
 
       <Card
         className={styles.card}
@@ -425,7 +425,7 @@ function DocumentsList({
         type="info"
         showIcon
         className={styles.ocrNote}
-        message={t('ocrNoteTitle')}
+        title={t('ocrNoteTitle')}
         description={t('ocrNoteBody')}
       />
 
@@ -668,7 +668,7 @@ function DocumentRow({
             className={styles.rowAlert}
             type="warning"
             showIcon
-            message={t('row.expiringSoon', { date: expiryDate })}
+            title={t('row.expiringSoon', { date: expiryDate })}
           />
         ) : null}
         {presentation === VEHICLE_DOCUMENT_PRESENTATION.EXPIRED && expiryDate ? (
@@ -676,7 +676,7 @@ function DocumentRow({
             className={styles.rowAlert}
             type="error"
             showIcon
-            message={t('row.expired', { date: expiryDate })}
+            title={t('row.expired', { date: expiryDate })}
           />
         ) : null}
         {uploading ? (
@@ -686,7 +686,7 @@ function DocumentRow({
               type="error"
               showIcon
               role="alert"
-              message={t('upload.failed', { message: uploading.error })}
+              title={t('upload.failed', { message: uploading.error })}
               action={
                 <span className={styles.uploadActions}>
                   <Button size="small" onClick={onCancelUpload}>
@@ -979,7 +979,7 @@ function DocumentDetailView({
         ) : null}
       </div>
 
-      {isEmpty ? <Alert type="info" showIcon message={t('detail.empty')} /> : null}
+      {isEmpty ? <Alert type="info" showIcon title={t('detail.empty')} /> : null}
 
       <div className={styles.detailGrid}>
         <DetailItem
@@ -1197,7 +1197,7 @@ function DocumentDetailDialog({
         <Alert
           type="warning"
           showIcon
-          message={t('metadata.noDetailTitle')}
+          title={t('metadata.noDetailTitle')}
           description={t('metadata.noDetailBody')}
         />
       ) : loading ? (
@@ -1338,14 +1338,14 @@ function DocumentHistoryDialog({
         <Alert
           type="warning"
           showIcon
-          message={t('history.noPermissionTitle')}
+          title={t('history.noPermissionTitle')}
           description={t('history.noPermissionBody')}
         />
       ) : (
         <>
           {versions.isLoading ? <Skeleton active paragraph={{ rows: 3 }} /> : null}
           {versions.isError ? (
-            <Alert type="error" showIcon message={t('history.loadError')} />
+            <Alert type="error" showIcon title={t('history.loadError')} />
           ) : null}
           {versions.data ? (
             <List
@@ -1481,15 +1481,15 @@ function OcrReviewDialog({
           <Alert
             type="success"
             showIcon
-            message={
+            title={
               job.confidence != null
                 ? t('review.successWithConfidence', { confidence: job.confidence })
                 : t('review.success')
             }
           />
-          <Alert type="warning" showIcon message={t('review.warning')} />
+          <Alert type="warning" showIcon title={t('review.warning')} />
           {job.fields.length === 0 ? (
-            <Alert type="info" showIcon message={t('review.empty')} />
+            <Alert type="info" showIcon title={t('review.empty')} />
           ) : (
             /* Bảng rộng cuộn TRONG khung — hộp thoại/trang không bao giờ cuộn ngang. */
             <div className={styles.reviewTableWrap}>

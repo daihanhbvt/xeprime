@@ -127,7 +127,7 @@ export function OpenCaseModal({
         <TextAreaField control={control} name="description" label={t('form.description')} rows={5} />
         {isDispute ? (
           <>
-            <Alert type="warning" showIcon message={t('form.disputeHint')} />
+            <Alert type="warning" showIcon title={t('form.disputeHint')} />
             <TextField control={control} name="bookingId" label={t('form.bookingId')} help={t('form.bookingIdHint')} />
           </>
         ) : null}

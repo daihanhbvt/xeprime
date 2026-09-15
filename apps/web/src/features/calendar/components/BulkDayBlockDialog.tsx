@@ -210,13 +210,13 @@ function BlockDialogInner({
         {preview.isLoading ? (
           <Skeleton active paragraph={{ rows: 2 }} />
         ) : preview.isError ? (
-          <Alert type="error" showIcon message={getErrorMessage(preview.error)} />
+          <Alert type="error" showIcon title={getErrorMessage(preview.error)} />
         ) : (
           <div className={styles.summary} role="status">
             <Alert
               type={blockable.length === 0 ? 'warning' : 'info'}
               showIcon
-              message={t('bulkBlock.summary', {
+              title={t('bulkBlock.summary', {
                 blockable: blockable.length,
                 total: vehicles.length,
                 days: dayCount,

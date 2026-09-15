@@ -5,6 +5,7 @@ import {
   APPROVAL_TARGET_TYPE,
   MEMBERSHIP_STATUS,
   FUEL_TYPE,
+  PUBLISH_REQUIREMENT,
   NOTIFICATION_TYPE,
   TENANT_ROLE,
   TENANT_STATUS,
@@ -135,7 +136,8 @@ beforeAll(async () => {
         code: `T-${draftTenantId.slice(-8)}`,
         slug: `t-${draftTenantId.toLowerCase().slice(-8)}`,
         name: 'Shop Draft',
-        status: TENANT_STATUS.DRAFT,
+        // ADR 0036: không còn tenant nào sinh ra ở `draft`; spec chạy trên trạng thái thật.
+        status: TENANT_STATUS.ACTIVE,
         ownerUserId: ownerId,
       },
     ],
@@ -198,10 +200,23 @@ describe('Vehicle public approval (WS0)', () => {
     expect((task.snapshot as Record<string, unknown>).weekdayPrice).toBe('600000');
   });
 
-  maybe('gửi lại khi đang chờ duyệt bị chặn', async () => {
-    await expect(vehicles.submitForPublicReview(tenantId, vehicleId, ownerId)).rejects.toThrow(
-      /chờ duyệt/,
-    );
+  /*
+   * ADR 0036 đổi hành vi ở đây một cách CÓ CHỦ Ý: bấm lại khi xe đã ở hàng đợi không còn là lỗi.
+   * Kết quả người dùng muốn đã đạt từ lần bấm trước, nên trả trạng thái hiện tại là câu trả lời
+   * đúng — và quan trọng hơn, KHÔNG có phiếu thứ hai nào được tạo.
+   */
+  maybe('gửi lại khi đang chờ duyệt: không lỗi, không phiếu thứ hai', async () => {
+    const again = await vehicles.submitForPublicReview(tenantId, vehicleId, ownerId);
+    expect(again.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW);
+    await expect(
+      prisma.approvalTask.count({
+        where: {
+          targetType: APPROVAL_TARGET_TYPE.VEHICLE,
+          targetId: vehicleId,
+          status: APPROVAL_STATUS.PENDING,
+        },
+      }),
+    ).resolves.toBe(1);
   });
 
   maybe('platform duyệt → xe approved_public + thông báo chủ shop', async () => {
@@ -310,16 +325,37 @@ describe('Vehicle public approval (WS0)', () => {
       weekendPrice: null,
       mainImageUrl: null,
     });
-    await expect(vehicles.submitForPublicReview(tenantId, bare, ownerId)).rejects.toThrow(
-      /bổ sung/,
-    );
+    await expect(vehicles.submitForPublicReview(tenantId, bare, ownerId)).rejects.toMatchObject({
+      response: {
+        code: API_ERROR_CODE.VEHICLE_PUBLISH_INCOMPLETE,
+        // MÃ, không phải câu tiếng Việt — web dựng nhãn theo ngôn ngữ đang dùng (ADR 0012).
+        details: {
+          missing: expect.arrayContaining([
+            PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE,
+            PUBLISH_REQUIREMENT.MAIN_IMAGE,
+          ]),
+        },
+      },
+    });
   });
 
-  maybe('gian hàng chưa active → chặn gửi duyệt', async () => {
+  /*
+   * ADR 0036: cổng này KHÔNG còn là "gian hàng đã được duyệt chưa" — tenant mở ra đã `active`.
+   * Nó chỉ còn bắt gian hàng bị KHOÁ, và lúc đó xe không được lên chợ là đúng.
+   */
+  maybe('gian hàng bị khoá → chặn gửi duyệt', async () => {
+    await prisma.tenant.update({
+      where: { id: draftTenantId },
+      data: { status: TENANT_STATUS.SUSPENDED },
+    });
     const v = await seedVehicle(draftTenantId);
-    await expect(vehicles.submitForPublicReview(draftTenantId, v, ownerId)).rejects.toThrow(
-      /hoạt động/,
-    );
+    await expect(
+      vehicles.submitForPublicReview(draftTenantId, v, ownerId),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.SHOP_NOT_ACTIVE } });
+    await prisma.tenant.update({
+      where: { id: draftTenantId },
+      data: { status: TENANT_STATUS.ACTIVE },
+    });
   });
 
   maybe('đăng dịch vụ nào phải có GIÁ CHUYÊN BIỆT của dịch vụ đó mới gửi duyệt được (17/08)', async () => {
@@ -327,15 +363,23 @@ describe('Vehicle public approval (WS0)', () => {
     const withDriver = await seedVehicle(tenantId, {
       serviceTypes: ['self_drive', 'with_driver'],
     });
-    await expect(vehicles.submitForPublicReview(tenantId, withDriver, ownerId)).rejects.toThrow(
-      /có tài xế/,
-    );
+    await expect(
+      vehicles.submitForPublicReview(tenantId, withDriver, ownerId),
+    ).rejects.toMatchObject({
+      response: {
+        details: { missing: expect.arrayContaining([PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE]) },
+      },
+    });
 
     // long_term không có giá tháng → chặn.
     const longTerm = await seedVehicle(tenantId, { serviceTypes: ['self_drive', 'long_term'] });
-    await expect(vehicles.submitForPublicReview(tenantId, longTerm, ownerId)).rejects.toThrow(
-      /giá tháng/,
-    );
+    await expect(
+      vehicles.submitForPublicReview(tenantId, longTerm, ownerId),
+    ).rejects.toMatchObject({
+      response: {
+        details: { missing: expect.arrayContaining([PUBLISH_REQUIREMENT.LONG_TERM_PRICE]) },
+      },
+    });
 
     // Đủ giá chuyên biệt → gửi duyệt trôi.
     const ready = await seedVehicle(tenantId, {
@@ -400,5 +444,53 @@ describe('Vehicle public approval (WS0)', () => {
         },
       }),
     ).rejects.toThrow(/thuê dài hạn/);
+  });
+});
+
+/**
+ * Duyệt XÁC MINH gian hàng KHÔNG đụng tới xe — ADR 0036.
+ *
+ * Bản trước của khối này kiểm điều NGƯỢC LẠI: duyệt hồ sơ gian hàng thì tự đẩy xe đủ điều kiện
+ * vào hàng đợi duyệt xe. Nó vá đúng triệu chứng (`submitForPublicReview` đòi tenant `active`)
+ * nhưng giữ nguyên nguyên nhân — hai vòng duyệt cho một người có một chiếc xe, và chủ xe phải
+ * chờ hết vòng thứ nhất mới biết chiếc xe của mình có vấn đề gì.
+ *
+ * Từ ADR 0036 gian hàng mở ra đã `active`, nên không còn gì để "mở cổng" — và một hiệu ứng phụ
+ * lên xe ở nhánh duyệt gian hàng bây giờ chỉ là một cách âm thầm đưa xe vào hàng đợi sau lưng
+ * chủ xe. Khối này khoá đúng điều đó: **không có hiệu ứng phụ nào.**
+ */
+describe('Duyệt xác minh gian hàng không đụng tới xe', () => {
+  maybe('xe nháp vẫn nguyên nháp, không phiếu duyệt xe nào tự mọc ra', async () => {
+    // Gian hàng ĐANG HOẠT ĐỘNG, xin xác minh để sau này mua gói (ADR 0036).
+    await prisma.tenant.update({
+      where: { id: draftTenantId },
+      data: { status: TENANT_STATUS.ACTIVE },
+    });
+    const draftVehicle = await seedVehicle(draftTenantId);
+
+    const tenantTaskId = newId();
+    await prisma.approvalTask.create({
+      data: {
+        id: tenantTaskId,
+        tenantId: draftTenantId,
+        targetType: APPROVAL_TARGET_TYPE.TENANT,
+        targetId: draftTenantId,
+        status: APPROVAL_STATUS.PENDING,
+        submittedBy: ownerId,
+      },
+    });
+
+    await approvals.approve(tenantTaskId, reviewerId);
+
+    const row = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: draftVehicle },
+      select: { publicStatus: true },
+    });
+    expect(row.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.DRAFT);
+    await expect(
+      prisma.approvalTask.count({
+        where: { targetType: APPROVAL_TARGET_TYPE.VEHICLE, targetId: draftVehicle },
+      }),
+    ).resolves.toBe(0);
   });
 });

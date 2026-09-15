@@ -265,6 +265,8 @@
     "shop_rejected": "Gian hàng bị từ chối",
     "vehicle_approved": "Xe được duyệt công khai",
     "vehicle_rejected": "Xe bị từ chối",
+    "shop_needs_revision": "Hồ sơ gian hàng cần bổ sung",
+    "vehicle_needs_revision": "Xe cần bổ sung",
     "review_received": "Đánh giá mới",
     "booking_request_cancelled": "Khách đã huỷ yêu cầu",
     "subscription_expiring": "Gói sắp hết hạn",
@@ -780,5 +782,11 @@
   "insuranceProductKind": {
     "vehicle_trip": "Bảo hiểm xe cho chuyến",
     "personal_accident": "Tai nạn người ngồi trên xe"
+  },
+  "taxWithholdingStatus": {
+    "accrued": "Đã khấu trừ, chờ kê khai",
+    "declared": "Đã kê khai",
+    "remitted": "Đã nộp",
+    "reversed": "Đã đảo"
   }
 }

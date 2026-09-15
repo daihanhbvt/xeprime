@@ -432,6 +432,30 @@ export const API_ERROR_CODE = {
    * chưa hợp lệ" rồi để người dùng tự đi tìm.
    */
   PROFILE_INCOMPLETE: 'PROFILE_INCOMPLETE',
+  /**
+   * Hồ sơ xác minh gian hàng đang nằm trong hàng đợi — không gửi thêm phiếu thứ hai.
+   *
+   * Mã riêng thay vì `CONFLICT` chung: nó là câu trả lời cho một thao tác HỢP LỆ bị bấm lại
+   * (tải lại trang, bấm hai lần, mạng chập), nên giao diện nói "đang chờ duyệt" chứ không nói
+   * "có lỗi".
+   */
+  SHOP_VERIFICATION_PENDING: 'SHOP_VERIFICATION_PENDING',
+  /**
+   * Thao tác này đòi gian hàng ĐÃ ĐƯỢC XÁC MINH — hiện chỉ áp cho việc mua gói thuê bao
+   * (ADR 0024/0027). `details` mang `{ verification }` để FE dẫn tới đúng bước tiếp theo.
+   *
+   * ⚠️ KHÔNG dùng mã này cho cổng duyệt XE: tuyến hoa hồng đăng xe mà không cần xác minh gian
+   * hàng, đó là toàn bộ điểm của ADR 0028 điều 1.
+   */
+  SHOP_VERIFICATION_REQUIRED: 'SHOP_VERIFICATION_REQUIRED',
+  /** Gian hàng đang bị khoá/chưa hoạt động nên xe không lên chợ được. */
+  SHOP_NOT_ACTIVE: 'SHOP_NOT_ACTIVE',
+  /**
+   * Xe chưa đủ điều kiện lên chợ. `details.missing[]` mang khoá `PUBLISH_REQUIREMENT` —
+   * MÃ, không phải câu tiếng Việt, nên giao diện chỉ đúng từng mục ở ngôn ngữ đang dùng
+   * (ADR 0012) thay vì hiện một dòng "dữ liệu chưa hợp lệ".
+   */
+  VEHICLE_PUBLISH_INCOMPLETE: 'VEHICLE_PUBLISH_INCOMPLETE',
 
   // Hạ tầng
   RATE_LIMITED: 'RATE_LIMITED',

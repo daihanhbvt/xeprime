@@ -72,7 +72,18 @@ export interface ShopSpec {
   slug: string;
   name: string;
   tenantType: 'individual' | 'business';
+  /**
+   * Trạng thái VẬN HÀNH (ADR 0036) — `active` hoặc `suspended`, không còn là máy trạng thái
+   * duyệt hồ sơ. Gian hàng mới mở ra đã `active`.
+   */
   status: string;
+  /**
+   * Hồ sơ XÁC MINH còn nằm trong hàng đợi duyệt (ADR 0036) — trục THỨ HAI, độc lập với `status`.
+   *
+   * Tách khỏi `status` vì từ ADR 0036 hai thứ này không còn suy ra được từ nhau: một gian hàng
+   * đang bán bình thường vẫn có thể đang chờ xác minh để mua gói. Mặc định `false` = đã xác minh.
+   */
+  verificationPending?: boolean;
   owner: { email: string; displayName: string; phone: string };
   staff: readonly StaffSpec[];
   profile: {
@@ -413,14 +424,21 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
     unapprovedEvery: 0,
   },
 
-  // ── 5. Gian hàng CHƯA DUYỆT, chưa có xe ──────────────────────────────────
+  /*
+   * ── 5. Gian hàng mới mở, CHƯA XÁC MINH, chưa có xe ────────────────────────
+   *
+   * ADR 0036: gian hàng mở ra là ĐANG HOẠT ĐỘNG ngay — họ đăng xe được luôn, chỉ chưa có xe nào.
+   * Cái còn nằm trong hàng đợi duyệt là hồ sơ XÁC MINH (điều kiện để mua gói), nên màn duyệt của
+   * nền tảng vẫn có một phiếu gian hàng thật để demo.
+   */
   {
     key: 'hue',
     code: 'HUE-NEW',
     slug: 'hue-rental-moi',
     name: 'Huế Rental',
     tenantType: 'individual',
-    status: TENANT_STATUS.PENDING_REVIEW,
+    status: TENANT_STATUS.ACTIVE,
+    verificationPending: true,
     owner: {
       email: 'owner.hue@xeprime.test',
       displayName: 'Nguyễn Thị Lan',
@@ -428,7 +446,7 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
     },
     staff: [],
     profile: {
-      bio: 'Gian hàng mới mở tại Huế, đang chờ duyệt hồ sơ.',
+      bio: 'Gian hàng mới mở tại Huế, hồ sơ đang chờ xác minh.',
       address: '5 Lê Lợi, TP. Huế',
       taxCode: null,
       businessLicenseNo: null,

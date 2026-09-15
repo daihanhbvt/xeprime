@@ -395,7 +395,7 @@ export function PlanFormModal({
             />
 
             <Divider plain>{t('form.sectionIncentive')}</Divider>
-            <Alert type="info" showIcon message={t('form.gmvReferenceNote')} />
+            <Alert type="info" showIcon title={t('form.gmvReferenceNote')} />
             <NumberField
               control={control}
               name="gmvPerCar"
@@ -441,7 +441,7 @@ export function PlanFormModal({
         />
         <NumberField control={control} name="sortOrder" label={t('form.sortOrder')} />
 
-        {incentiveError ? <Alert type="error" showIcon message={incentiveError} /> : null}
+        {incentiveError ? <Alert type="error" showIcon title={incentiveError} /> : null}
       </DialogForm>
     </ResponsiveDialog>
   );

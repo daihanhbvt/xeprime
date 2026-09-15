@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PERMISSION, TENANT_STATUS } from '@xeprime/types';
+import { PERMISSION, SHOP_VERIFICATION, TENANT_STATUS } from '@xeprime/types';
 import type { MyShop } from '@/features/shop/types';
 import { ShopOnboardingCard } from './ShopOnboardingCard';
 
@@ -16,6 +16,9 @@ import { ShopOnboardingCard } from './ShopOnboardingCard';
 // — giá trị thật do `beforeEach` đặt, và nhờ vậy không có string literal nghiệp vụ nào trong test.
 const state = vi.hoisted(() => ({
   tenantStatus: null as MyShop['status'] | null,
+  verification: null as MyShop['verification'] | null,
+  /** Số xe ĐANG trên chợ — mốc thẻ biến mất từ ADR 0036, thay cho `status === active`. */
+  publicVehicleCount: 0,
   shop: null as MyShop | null,
   permissions: [] as string[],
 }));
@@ -23,7 +26,14 @@ const state = vi.hoisted(() => ({
 vi.mock('@/hooks/use-tenant-scope', () => ({
   useTenantScope: () => ({
     tenant: state.tenantStatus
-      ? { id: 'T1', name: 'Shop', slug: 's', status: state.tenantStatus, roleKey: 'shop_owner' }
+      ? {
+          id: 'T1',
+          name: 'Shop',
+          slug: 's',
+          status: state.tenantStatus,
+          roleKey: 'shop_owner',
+          publicVehicleCount: state.publicVehicleCount,
+        }
       : null,
     hasNoTenant: state.tenantStatus === null,
     isLoading: false,
@@ -50,6 +60,7 @@ function makeShop(profile: Partial<MyShop['profile']> = {}): MyShop {
     name: 'Demo',
     tenantType: 'individual',
     status: state.tenantStatus ?? TENANT_STATUS.DRAFT,
+    verification: state.verification ?? SHOP_VERIFICATION.UNVERIFIED,
     phone: null,
     email: null,
     latestApproval: null,
@@ -83,7 +94,7 @@ function makeShop(profile: Partial<MyShop['profile']> = {}): MyShop {
   };
 }
 
-/** Ô hành động của một bước: "Xong" · "Đang chờ duyệt" · hoặc nút đi tới. */
+/** Ô hành động của một bước: "Xong" · "Đang chờ XePrime" · hoặc nút đi tới. */
 function stepRow(title: string): HTMLElement {
   const row = screen.getByText(title).closest('li');
   if (!row) throw new Error(`Không tìm thấy dòng cho bước "${title}"`);
@@ -91,7 +102,9 @@ function stepRow(title: string): HTMLElement {
 }
 
 beforeEach(() => {
-  state.tenantStatus = TENANT_STATUS.DRAFT;
+  // ADR 0036: gian hàng mở ra đã ĐANG HOẠT ĐỘNG; vòng duyệt duy nhất là duyệt XE.
+  state.tenantStatus = TENANT_STATUS.ACTIVE;
+  state.publicVehicleCount = 0;
   state.shop = null;
   state.permissions = [PERMISSION.TENANT_VIEW];
 });
@@ -107,22 +120,31 @@ describe('Thẻ ba bước — chấm theo dữ liệu thật', () => {
     expect(stepRow('Hoàn thiện hồ sơ gian hàng').textContent).not.toContain('Xong');
   });
 
-  it('hồ sơ đủ mục bắt buộc: bước hồ sơ xong, nhưng bước gửi duyệt thì chưa', () => {
+  it('hồ sơ đủ mục bắt buộc: bước hồ sơ xong, việc còn lại là thêm xe', () => {
     state.shop = makeShop();
     render(<ShopOnboardingCard vehicleCount={0} />);
 
     expect(stepRow('Hoàn thiện hồ sơ gian hàng').textContent).toContain('Xong');
-    expect(stepRow('Gửi hồ sơ cho XePrime duyệt').textContent).toContain('Gửi duyệt');
+    expect(stepRow('Thêm chiếc xe đầu tiên').textContent).toContain('Thêm xe');
   });
 
-  it('đang chờ duyệt: bước gửi duyệt chuyển sang trạng thái CHỜ, không phải một nút bấm lại', () => {
-    state.tenantStatus = TENANT_STATUS.PENDING_REVIEW;
+  /*
+   * Bước giữa KHÔNG còn là "gửi hồ sơ gian hàng cho XePrime duyệt" (ADR 0036) — vòng duyệt duy
+   * nhất là duyệt XE. Giữ nguyên bước cũ nghĩa là gửi người dùng đi chờ một cái gật đầu không
+   * còn tồn tại.
+   */
+  it('không còn bước "gửi hồ sơ gian hàng cho XePrime duyệt"', () => {
     state.shop = makeShop();
     render(<ShopOnboardingCard vehicleCount={0} />);
 
-    expect(stepRow('Gửi hồ sơ cho XePrime duyệt').textContent).toContain('Đang chờ duyệt');
-    // Và thêm xe vẫn làm được ngay trong lúc chờ — đó là điểm của bước thứ ba.
-    expect(stepRow('Thêm chiếc xe đầu tiên').textContent).toContain('Thêm xe');
+    expect(screen.queryByText('Gửi hồ sơ cho XePrime duyệt')).toBeNull();
+  });
+
+  it('đã khai xe nhưng chưa xe nào lên chợ: bước duyệt XE ở trạng thái CHỜ', () => {
+    state.shop = makeShop();
+    render(<ShopOnboardingCard vehicleCount={1} />);
+
+    expect(stepRow('XePrime duyệt xe').textContent).toContain('Đang chờ XePrime');
   });
 
   it('đã có xe: bước xe xong', () => {
@@ -132,21 +154,20 @@ describe('Thẻ ba bước — chấm theo dữ liệu thật', () => {
     expect(stepRow('Thêm chiếc xe đầu tiên').textContent).toContain('Xong');
   });
 
-  it('gian hàng đang hoạt động và đã có xe: thẻ biến mất hoàn toàn', () => {
-    state.tenantStatus = TENANT_STATUS.ACTIVE;
+  it('đã có xe TRÊN CHỢ: thẻ biến mất hoàn toàn', () => {
+    state.publicVehicleCount = 2;
     state.shop = makeShop();
     const { container } = render(<ShopOnboardingCard vehicleCount={2} />);
 
     expect(container.textContent).toBe('');
   });
 
-  it('đang hoạt động nhưng chưa có xe: thẻ vẫn ở lại cho bước cuối', () => {
-    state.tenantStatus = TENANT_STATUS.ACTIVE;
+  it('chưa xe nào lên chợ: thẻ vẫn ở lại, bước duyệt xe chưa xong', () => {
     state.shop = makeShop();
     render(<ShopOnboardingCard vehicleCount={0} />);
 
     expect(stepRow('Thêm chiếc xe đầu tiên').textContent).toContain('Thêm xe');
-    expect(stepRow('Gửi hồ sơ cho XePrime duyệt').textContent).toContain('Xong');
+    expect(stepRow('XePrime duyệt xe').textContent).not.toContain('Xong');
   });
 
   it('thiếu quyền `tenant.view`: vẫn thấy ba bước, chỉ là không chấm được bước hồ sơ', () => {

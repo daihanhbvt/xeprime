@@ -246,5 +246,30 @@
       }
     },
     "frozen": "Changing this switch only affects rental requests approved from now on. Existing bookings keep the deposit arrangement frozen when they were created."
+  },
+  "verification": {
+    "submit": "Request verification",
+    "resubmit": "Submit again",
+    "unverified": {
+      "title": "Shop not verified yet",
+      "body": "Your vehicles still list and go live as usual — verification is only needed when you want to buy a shop plan and unlock the full management suite."
+    },
+    "pending": {
+      "title": "Waiting for XePrime to verify your profile",
+      "body": "Nothing changes for your vehicles: approved ones stay on the marketplace and keep taking bookings.",
+      "submittedAt": "Submitted {at}."
+    },
+    "needsRevision": {
+      "title": "XePrime needs more details",
+      "body": "Update what was asked for and submit again. Your vehicles keep running in the meantime."
+    },
+    "rejected": {
+      "title": "Verification declined",
+      "body": "Fix the points below and submit again. This does not affect the vehicles you already have listed."
+    },
+    "verified": {
+      "title": "Shop verified",
+      "body": "You can now buy a shop plan to unlock the ledger, receivables, staff and reports."
+    }
   }
 }

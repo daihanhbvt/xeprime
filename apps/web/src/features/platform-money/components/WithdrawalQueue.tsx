@@ -172,7 +172,7 @@ export function WithdrawalQueue() {
         <Alert
           type="warning"
           showIcon
-          message={t('overdueBanner', { count: data!.overdueCount })}
+          title={t('overdueBanner', { count: data!.overdueCount })}
         />
       ) : null}
 

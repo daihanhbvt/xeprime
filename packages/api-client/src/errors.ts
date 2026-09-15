@@ -86,6 +86,26 @@ export function getErrorCode(error: unknown): ApiErrorCode | ClientErrorCode | s
   return error instanceof ApiClientError ? error.code : null;
 }
 
+/**
+ * `details` của một lỗi API, đã thu hẹp về object — `null` với mọi thứ khác.
+ *
+ * Backend gửi `details` như một phần của HỢP ĐỒNG lỗi, không phải phần trang trí: nó mang
+ * `missing[]` của `PROFILE_INCOMPLETE` / `VEHICLE_PUBLISH_INCOMPLETE`, `minAmount` của
+ * `WITHDRAWAL_BELOW_MINIMUM`, danh sách ô sai của `VALIDATION_FAILED`. Mỗi nơi tự ép kiểu
+ * `error.details as Something` là mỗi nơi tự chịu rủi ro `error` không phải `ApiClientError`
+ * hoặc `details` là `null` — và lỗi đó nổ ra đúng lúc người dùng đang gặp một lỗi khác.
+ *
+ * Cố ý trả `Record<string, unknown>` chứ không nhận generic: nội dung đến từ mạng, nên nơi gọi
+ * vẫn phải tự kiểm từng trường (`Array.isArray`, `typeof`) thay vì tin một lời hứa kiểu.
+ */
+export function getErrorDetails(error: unknown): Record<string, unknown> | null {
+  if (!(error instanceof ApiClientError)) return null;
+  const details = error.details;
+  return typeof details === 'object' && details !== null && !Array.isArray(details)
+    ? (details as Record<string, unknown>)
+    : null;
+}
+
 /** Phiên không còn hiệu lực — nơi gọi nên đá về đăng nhập, không phải hiện lỗi đỏ. */
 export function isUnauthenticated(error: unknown): boolean {
   const code = getErrorCode(error);

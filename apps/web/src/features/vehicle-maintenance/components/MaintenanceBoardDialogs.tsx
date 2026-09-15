@@ -81,7 +81,7 @@ function LoadingDialog({ onClose, loading }: { onClose: () => void; loading: boo
       {loading ? (
         <Skeleton active paragraph={{ rows: 3 }} />
       ) : (
-        <Alert type="error" showIcon message={t('dialog.loadError')} />
+        <Alert type="error" showIcon title={t('dialog.loadError')} />
       )}
     </ResponsiveDialog>
   );

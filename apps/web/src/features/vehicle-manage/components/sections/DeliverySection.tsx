@@ -99,21 +99,21 @@ function DeliveryForm({
             <Alert
               type="info"
               showIcon
-              message={t('noShopPolicyTitle')}
+              title={t('noShopPolicyTitle')}
               description={t('noShopPolicyBody')}
             />
           ) : overriding ? (
             <Alert
               type="info"
               showIcon
-              message={t('overriddenTitle')}
+              title={t('overriddenTitle')}
               description={t('overriddenBody')}
             />
           ) : (
             <Alert
               type="warning"
               showIcon
-              message={t('inheritedTitle')}
+              title={t('inheritedTitle')}
               description={t('inheritedBody')}
             />
           )}

@@ -404,6 +404,90 @@ describe('walletDrift — phép kiểm ADR 0023 điều 6', () => {
     const healed = await holds.dailyReconciliation(RECON_DAY);
     expect(healed.walletDrift.wallets).toBe(driftBefore);
   });
+
+  /**
+   * Bước 2c của `20260911190000_refund_to_wallet` KHÔNG idempotent, và phép kiểm này là thứ giữ
+   * cho bộ phát hiện của nó không hỏng lặng lẽ. Chi tiết + câu lệnh sửa:
+   * `docs/refund-to-wallet-backfill-runbook.md`.
+   *
+   * Migration cộng số dư bằng `balance = balance + (tổng bút toán có note X)`. Bước chèn bút
+   * toán có `ON CONFLICT DO NOTHING` nên chạy lại không đẻ dòng sổ thứ hai — nhưng câu cộng số
+   * dư thì không có gì chặn, nên lần chạy thứ hai cộng THÊM đúng số tiền đó lần nữa. Sổ vẫn
+   * đúng, số dư sai gấp đôi: đó chính là hình dạng lệch mà ADR 0023 điều 6 tồn tại để bắt.
+   *
+   * Spec chạy đúng hai câu SQL của migration và của runbook (có thêm `w.id = walletId` để không
+   * đụng ví của spec khác chạy song song), nên nếu ai đổi công thức `walletDrift` theo cách làm
+   * nó ngừng thấy lỗi này thì đỏ ở đây.
+   */
+  maybe('chạy lại bước cộng số dư của backfill thì đối soát BẮT ĐƯỢC số dư cộng đôi', async () => {
+    const BACKFILL_NOTE = 'Chuyển khoản hoàn đang chờ sang ví điểm (ADR 0033)';
+    const AMOUNT = 310_000;
+    const entryId = newId();
+
+    const before = await holds.dailyReconciliation(RECON_DAY);
+    const driftBefore = before.walletDrift.wallets;
+
+    // Kết quả của MỘT lần backfill đúng: một dòng sổ + số dư cộng đúng một lần.
+    const credited = await prisma.wallet.update({
+      where: { id: walletId },
+      data: { balance: { increment: AMOUNT } },
+    });
+    await prisma.walletEntry.create({
+      data: {
+        id: entryId,
+        walletId,
+        kind: WALLET_ENTRY_KIND.HOLD_REFUND,
+        sourceType: WALLET_ENTRY_SOURCE.BOOKING_HOLD,
+        sourceRefId: newId(),
+        amount: new Prisma.Decimal(AMOUNT),
+        balanceAfter: credited.balance,
+        note: BACKFILL_NOTE,
+        createdAt: AT,
+      },
+    });
+
+    const clean = await holds.dailyReconciliation(RECON_DAY);
+    expect(clean.walletDrift.wallets).toBe(driftBefore);
+
+    // Bước 2c, chạy lần thứ hai — sao y migration.
+    await prisma.$executeRaw`
+      UPDATE wallets w
+         SET balance = w.balance + agg.total
+        FROM (
+            SELECT e.wallet_id, SUM(e.amount) AS total
+              FROM wallet_entries e
+             WHERE e.note = ${BACKFILL_NOTE}
+             GROUP BY e.wallet_id
+        ) agg
+       WHERE w.id = agg.wallet_id AND w.id = ${walletId}`;
+
+    const doubled = await holds.dailyReconciliation(RECON_DAY);
+    expect(doubled.walletDrift.wallets).toBe(driftBefore + 1);
+    expect(Number(doubled.walletDrift.amount)).toBeGreaterThanOrEqual(AMOUNT);
+
+    // §5b của runbook: kéo `balance` về khớp sổ — KHÔNG chèn bút toán âm, vì sổ là bên đúng.
+    await prisma.$executeRaw`
+      UPDATE wallets w
+         SET balance = led.tong - w.pending_withdraw_amount
+        FROM (
+            SELECT e.wallet_id, COALESCE(SUM(e.amount), 0) AS tong
+              FROM wallet_entries e
+             GROUP BY e.wallet_id
+        ) led
+       WHERE led.wallet_id = w.id AND w.id = ${walletId}
+         AND w.balance + w.pending_withdraw_amount > led.tong`;
+
+    const fixed = await holds.dailyReconciliation(RECON_DAY);
+    expect(fixed.walletDrift.wallets).toBe(driftBefore);
+    const after = await prisma.wallet.findUniqueOrThrow({ where: { id: walletId } });
+    expect(after.balance.toFixed(0)).toBe(credited.balance.toFixed(0));
+
+    await prisma.walletEntry.delete({ where: { id: entryId } });
+    await prisma.wallet.update({
+      where: { id: walletId },
+      data: { balance: { decrement: AMOUNT } },
+    });
+  });
 });
 
 describe('Chiều RA: mã XPW nằm cùng không gian tên với XPG/XPH', () => {
@@ -488,5 +572,157 @@ describe('BẤT BIẾN: không nơi nào đọc `purpose` để tách quỹ (ADR
     // Và nó PHẢI đọc cột phân bổ đã đóng băng, không phải `service_fee_amount`.
     expect(body).toMatch(/settledPlatformAmount/);
     expect(body).not.toMatch(/serviceFeeAmount/);
+  });
+});
+
+/**
+ * BẢO HIỂM + THUẾ trong vế GIỮ HỘ — lượt quay lại Phase 9 sau khi Phase 7/8 xong.
+ *
+ * Hai nghĩa vụ này khó đúng vì chúng **giao nhau** với `holdsUnsettled` theo thời gian, không
+ * theo tập hợp:
+ *
+ *  - Phí `IV`/`IP` nằm trong `paid_amount` của hold NGAY từ lúc khách trả, nhưng hợp đồng bảo
+ *    hiểm chỉ tồn tại sau khi ĐƠN được tạo. Chồng lấn = hold đã trả, chưa chốt outcome, và đơn
+ *    đã tạo.
+ *  - Thuế `T` phát sinh khi chuyến BẮT ĐẦU, còn hold chỉ chốt khi chuyến KẾT THÚC. Chồng lấn =
+ *    mọi chuyến đang chạy.
+ *
+ * Cộng thẳng cả hai vào `custodied` sẽ làm tổng nghĩa vụ phình lên ở đúng những chuyến đang
+ * chạy — tức là sai nhiều nhất vào lúc hệ thống đông nhất, và sai theo chiều làm `variance`
+ * trông như thất thoát. Bốn phép kiểm dưới đây khoá cả hai chiều: nghĩa vụ NGOÀI hold phải được
+ * cộng, nghĩa vụ TRONG hold chưa chốt phải bị trừ lại.
+ */
+describe('Giữ hộ gồm bảo hiểm + thuế, và KHÔNG cộng đôi phần nằm trong hold chưa chốt', () => {
+  const d = (a: string, b: string) => Number(a) - Number(b);
+
+  /** Một đơn gắn vào hold (hoặc đứng một mình khi `holdId` là null). */
+  async function bookingFor(holdId: string | null): Promise<string> {
+    const bookingId = newId();
+    await prisma.booking.create({
+      data: {
+        id: bookingId,
+        tenantId,
+        vehicleId,
+        code: `DHR${RUN.slice(0, 4).toUpperCase()}${++txCounter}`,
+        customerName: 'Khách đối soát',
+        customerPhone: `0911${String(100000 + txCounter).slice(-6)}`,
+        status: 'reserved',
+        pickupAt: new Date(AT.getTime() + 5 * 86400_000),
+        returnAt: new Date(AT.getTime() + 7 * 86400_000),
+        baseAmount: new Prisma.Decimal(700_000),
+        totalAmount: new Prisma.Decimal(700_000),
+        feePolicyId: policyId,
+        createdAt: AT,
+      },
+    });
+    if (holdId) {
+      await prisma.bookingHold.update({ where: { id: holdId }, data: { bookingId } });
+    }
+    return bookingId;
+  }
+
+  async function insuranceOn(
+    bookingId: string,
+    holdId: string | null,
+    premium: number,
+    status = 'reserved',
+  ): Promise<void> {
+    await prisma.bookingInsurancePolicy.create({
+      data: {
+        id: newId(),
+        bookingId,
+        tenantId,
+        ...(holdId ? { holdId } : {}),
+        productKind: 'vehicle_trip',
+        status,
+        premiumAmount: new Prisma.Decimal(premium),
+        partnerName: 'Đối tác kiểm thử',
+        // Khoá chống phát hành hai lần — unique, nên mỗi fixture phải mang khoá riêng.
+        idempotencyKey: `recon-${RUN}-${++txCounter}:vehicle_trip`,
+        createdAt: AT,
+      },
+    });
+  }
+
+  async function taxOn(bookingId: string, amount: number): Promise<void> {
+    await prisma.taxWithholding.create({
+      data: {
+        id: newId(),
+        bookingId,
+        tenantId,
+        taxableBase: new Prisma.Decimal(amount * 10),
+        percent: new Prisma.Decimal(10),
+        label: 'VAT 5% + TNCN 5%',
+        amount: new Prisma.Decimal(amount),
+        feePolicyId: policyId,
+        status: 'accrued',
+        accruedAt: AT,
+        periodKey: '2019-06',
+      },
+    });
+  }
+
+  afterEach(async () => {
+    if (!dbAvailable) return;
+    await prisma.bookingInsurancePolicy.deleteMany({ where: { tenantId } });
+    await prisma.taxWithholding.deleteMany({ where: { tenantId } });
+    await prisma.bookingHold.updateMany({ where: { tenantId }, data: { bookingId: null } });
+    await prisma.booking.deleteMany({ where: { tenantId } });
+  });
+
+  maybe('phí bảo hiểm của đơn KHÔNG đi qua hold ⇒ cộng vào giữ hộ', async () => {
+    const before = await holds.dailyReconciliation(RECON_DAY);
+
+    // `holdId` null là ca thật của model: đơn không đi qua khoản giữ chỗ của XePrime.
+    await insuranceOn(await bookingFor(null), null, 28_000);
+
+    const after = await holds.dailyReconciliation(RECON_DAY);
+    expect(d(after.custodied.insuranceReserved, before.custodied.insuranceReserved)).toBe(28_000);
+    expect(d(after.custodied.total, before.custodied.total)).toBe(28_000);
+  });
+
+  maybe('phí bảo hiểm NẰM TRONG hold chưa chốt ⇒ KHÔNG cộng lần hai', async () => {
+    const before = await holds.dailyReconciliation(RECON_DAY);
+
+    // `IV` 28.000 đã nằm trong 248.000 mà khách trả cho hold này.
+    const holdId = await paidHold(200_000, 20_000);
+    await insuranceOn(await bookingFor(holdId), holdId, 28_000);
+
+    const after = await holds.dailyReconciliation(RECON_DAY);
+    // Nghĩa vụ bảo hiểm KHÔNG tăng: nó chưa rời khỏi hold.
+    expect(d(after.custodied.insuranceReserved, before.custodied.insuranceReserved)).toBe(0);
+    // Và tổng giữ hộ tăng ĐÚNG số tiền khách đã chuyển, không phải số đó cộng thêm phí bảo hiểm.
+    expect(d(after.custodied.holdsUnsettled, before.custodied.holdsUnsettled)).toBe(220_000);
+    expect(d(after.custodied.total, before.custodied.total)).toBe(220_000);
+  });
+
+  maybe('hợp đồng đã huỷ/vô hiệu ⇒ không còn là nghĩa vụ của ai', async () => {
+    const before = await holds.dailyReconciliation(RECON_DAY);
+
+    // Mỗi đơn chỉ có MỘT hợp đồng cho mỗi loại sản phẩm (unique DB), nên hai ca dùng hai đơn.
+    await insuranceOn(await bookingFor(null), null, 31_000, 'cancelled');
+    await insuranceOn(await bookingFor(null), null, 17_000, 'voided');
+
+    const after = await holds.dailyReconciliation(RECON_DAY);
+    expect(d(after.custodied.insuranceReserved, before.custodied.insuranceReserved)).toBe(0);
+    expect(d(after.custodied.total, before.custodied.total)).toBe(0);
+  });
+
+  maybe('thuế chưa nộp: cộng khi đơn KHÔNG có hold mở, trừ lại khi có', async () => {
+    const before = await holds.dailyReconciliation(RECON_DAY);
+
+    // Đơn không có hold nào ⇒ `T` không nằm trong `paid_amount` của ai.
+    await taxOn(await bookingFor(null), 70_000);
+
+    const standalone = await holds.dailyReconciliation(RECON_DAY);
+    expect(d(standalone.custodied.taxAccrued, before.custodied.taxAccrued)).toBe(70_000);
+
+    // Chuyến ĐANG CHẠY: thuế đã phát sinh nhưng hold chưa chốt ⇒ phần trùng bị trừ lại.
+    const holdId = await paidHold(200_000, 20_000);
+    await taxOn(await bookingFor(holdId), 70_000);
+
+    const running = await holds.dailyReconciliation(RECON_DAY);
+    expect(d(running.custodied.taxAccrued, standalone.custodied.taxAccrued)).toBe(0);
+    expect(d(running.custodied.total, standalone.custodied.total)).toBe(220_000);
   });
 });

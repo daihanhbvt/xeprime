@@ -397,7 +397,7 @@ export function CalendarScheduler() {
           type="error"
           showIcon
           className={styles.inlineAlert}
-          message={t('states.loadFailed')}
+          title={t('states.loadFailed')}
           description={getErrorMessage(error)}
           action={
             <Button size="small" onClick={refetch}>

@@ -327,13 +327,13 @@ export function VehicleEditWorkspace({
               void handleSubmit(() => saveCurrent())();
             }}
           >
-            {errorMessage ? <Alert type="error" showIcon message={errorMessage} /> : null}
+            {errorMessage ? <Alert type="error" showIcon title={errorMessage} /> : null}
             {activeErrors > 0 ? (
               <Alert
                 className={styles.formAlert}
                 type="error"
                 showIcon
-                message={t('errors', { count: activeErrors })}
+                title={t('errors', { count: activeErrors })}
               />
             ) : null}
             {isPublic ? (
@@ -341,7 +341,7 @@ export function VehicleEditWorkspace({
                 className={styles.formAlert}
                 type="info"
                 showIcon
-                message={t('lockedNotice')}
+                title={t('lockedNotice')}
               />
             ) : null}
 
@@ -454,7 +454,7 @@ function VehiclePricingTab({ vehicle }: { vehicle: VehicleDetail }) {
       <Alert
         type="error"
         showIcon
-        message={t('loadError')}
+        title={t('loadError')}
         description={
           <Button size="small" onClick={() => void pricing.refetch()}>
             {tActions('retry')}

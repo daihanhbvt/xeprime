@@ -29,6 +29,7 @@ import { BankAccountsModule } from './modules/bank-accounts/bank-accounts.module
 import { WalletModule } from './modules/wallet/wallet.module';
 import { DepositPolicyModule } from './modules/deposit-policy/deposit-policy.module';
 import { InsuranceModule } from './modules/insurance/insurance.module';
+import { TaxModule } from './modules/tax/tax.module';
 import { SellerProfileModule } from './modules/seller-profile/seller-profile.module';
 import { SupportModule } from './modules/support/support.module';
 import { BadgesModule } from './modules/badges/badges.module';
@@ -145,6 +146,8 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
     DepositPolicyModule,
     // Phase 7 — bảo hiểm chuyến IV/IP (ADR 0032 điều 4).
     InsuranceModule,
+    // Phase 8 — thuế khấu trừ của chủ xe (ADR 0032 điều 3).
+    TaxModule,
     SellerProfileModule,
     SupportModule,
   ],

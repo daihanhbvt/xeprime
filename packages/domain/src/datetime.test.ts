@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   APP_TIME_ZONE,
@@ -13,7 +13,15 @@ import {
   startOfAppDay,
   toAppTz,
 } from './datetime';
+<<<<<<< Updated upstream
 import { DEFAULT_PICKUP_HOURS, draftFromFilters, draftToFilterPatch } from './search-draft';
+=======
+import {
+  DEFAULT_PICKUP_HOURS,
+  draftFromFilters,
+  draftToFilterPatch,
+} from './search-draft';
+>>>>>>> Stashed changes
 
 /**
  * Phần KHÔNG phụ thuộc ngôn ngữ của ngày giờ: quy đổi múi giờ và phép đếm thời lượng thuê.
@@ -265,6 +273,7 @@ describe('bản nháp tìm kiếm — link chia sẻ không mang múi giờ củ
   });
 
   /*
+<<<<<<< Updated upstream
    * Gợi ý nay là mốc giờ ĐẸP gần nhất còn cách hiện tại `DEFAULT_PICKUP_LEAD_HOURS` giờ
    * (`DEFAULT_PICKUP_HOURS`), không còn là hằng 10:00 như bản trước — nên ghim một con số ở đây
    * chỉ chép lại chính sách cũ. Thứ test này canh thì không đổi: MÚI GIỜ CỦA MÁY chạy không được
@@ -288,6 +297,70 @@ describe('bản nháp tìm kiếm — link chia sẻ không mang múi giờ củ
       const utcHour = String((Number(vnHour) + 24 - 7) % 24).padStart(2, '0');
       expect(draftToFilterPatch(draft).pickupAt?.slice(11, 19)).toBe(utcHour + ':00:00');
     });
+=======
+   * Khoảng mặc định phải GIỐNG NHAU ở mọi múi giờ máy — đó là toàn bộ ý nghĩa của khối test này.
+   *
+   * Đồng hồ được ĐÓNG BĂNG vì gợi ý phụ thuộc "bây giờ": nó chọn mốc đẹp đầu tiên còn cách hiện
+   * tại ít nhất `DEFAULT_PICKUP_LEAD_HOURS`. Một khẳng định vào giờ cụ thể mà không ghim đồng hồ
+   * sẽ xanh lúc sáng và đỏ lúc chiều — bản trước của test này ghim cứng `10:00`, và nó đã đỏ
+   * đúng theo kiểu đó sau khi mặc định đổi sang bốn mốc `DEFAULT_PICKUP_HOURS`.
+   *
+   * Hai ca lấy thẳng từ ví dụ trong docblock của `defaultRentalRange`.
+   */
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const frozen = (isoUtc: string, fn: () => void) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(isoUtc));
+    try {
+      fn();
+    } finally {
+      vi.useRealTimers();
+    }
+  };
+
+  it.each(HOST_TIME_ZONES)(
+    'máy đặt ở %s: 14/09 10:30 giờ VN → nhận 17:00 cùng ngày, trả 17:00 hôm sau',
+    (hostTz) => {
+      // 10:30 VN = 03:30Z. Đệm 4 giờ ⇒ sớm nhất 14:30 ⇒ mốc 09:00 và 13:00 đã trôi qua, lấy 17:00.
+      frozen('2026-09-14T03:30:00.000Z', () => {
+        onHost(hostTz, () => {
+          const draft = draftFromFilters({});
+          expect(draft.rental.pickupAt?.format('YYYY-MM-DD HH:mm')).toBe('2026-09-14 17:00');
+          expect(draft.rental.returnAt?.format('YYYY-MM-DD HH:mm')).toBe('2026-09-15 17:00');
+          // 17:00 giờ VN = 10:00Z — mốc gửi lên API không mang múi giờ của máy gửi.
+          expect(draftToFilterPatch(draft).pickupAt).toBe('2026-09-14T10:00:00.000Z');
+        });
+      });
+    },
+  );
+
+  it.each(HOST_TIME_ZONES)(
+    'máy đặt ở %s: 14/09 18:00 giờ VN → hết mốc trong ngày, rơi sang 09:00 hôm sau',
+    (hostTz) => {
+      // 18:00 VN = 11:00Z. Sớm nhất 22:00 ⇒ mốc 21:00 cũng không đủ đệm ⇒ 15/09 09:00.
+      frozen('2026-09-14T11:00:00.000Z', () => {
+        onHost(hostTz, () => {
+          const draft = draftFromFilters({});
+          expect(draft.rental.pickupAt?.format('YYYY-MM-DD HH:mm')).toBe('2026-09-15 09:00');
+          expect(draft.rental.returnAt?.format('YYYY-MM-DD HH:mm')).toBe('2026-09-16 09:00');
+          expect(draftToFilterPatch(draft).pickupAt).toBe('2026-09-15T02:00:00.000Z');
+        });
+      });
+    },
+  );
+
+  it('giờ gợi ý luôn là một trong bốn mốc đã công bố, không phải "giờ tròn kế tiếp"', () => {
+    // Quét cả ngày: mốc gợi ý ở BẤT KỲ thời điểm nào cũng phải nằm trong bộ đã công bố.
+    for (let hour = 0; hour < 24; hour += 1) {
+      frozen(`2026-09-14T${String(hour).padStart(2, '0')}:00:00.000Z`, () => {
+        const draft = draftFromFilters({});
+        expect(DEFAULT_PICKUP_HOURS).toContain(draft.rental.pickupAt?.hour());
+      });
+    }
+>>>>>>> Stashed changes
   });
 });
 

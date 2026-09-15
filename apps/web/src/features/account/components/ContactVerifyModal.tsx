@@ -192,7 +192,7 @@ export function ContactVerifyModal({ channel, open, onClose, current }: ContactV
         )}
 
         {flow.error ? (
-          <Alert type="error" showIcon message={errorMessage(flow.error)} className={styles.error} />
+          <Alert type="error" showIcon title={errorMessage(flow.error)} className={styles.error} />
         ) : null}
 
         {/*

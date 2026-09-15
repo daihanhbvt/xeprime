@@ -36,7 +36,12 @@
     "changePassword": "Đổi mật khẩu",
     "deleteAccount": "Yêu cầu xoá tài khoản",
     "bankAccounts": "Tài khoản nhận tiền",
-    "balance": "Ví điểm"
+    "balance": "Ví điểm",
+    "earnings": "Tiền cho thuê xe",
+    "registration": "Hồ sơ đăng ký",
+    "ownerProfile": "Hồ sơ chủ xe",
+    "messages": "Tin nhắn với khách",
+    "subscription": "Gói dịch vụ"
   },
   "manage": {
     "home": "Trang chủ",

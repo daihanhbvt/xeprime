@@ -106,7 +106,7 @@ export function LongTermPackageStep({
         {packagesLoading ? (
           <Skeleton active paragraph={{ rows: 2 }} title={false} />
         ) : packages.length === 0 ? (
-          <Alert type="info" showIcon message={t('longTerm.noPrice')} />
+          <Alert type="info" showIcon title={t('longTerm.noPrice')} />
         ) : (
           <div className={styles.packages} role="radiogroup" aria-label={t('longTerm.groupLabel')}>
             {packages.map((pkg) => {

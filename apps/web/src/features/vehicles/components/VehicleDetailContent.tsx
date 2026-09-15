@@ -13,6 +13,7 @@ import { ROUTES, vehiclePath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import { vehicleSchedulePath } from '../calendar-link';
+import { useWorkspace } from '@/hooks/use-workspace';
 import { useVehicle } from '../hooks/use-vehicle';
 import { useVehicleSummary } from '../hooks/use-vehicle-summary';
 import { useDeleteVehicle } from '../hooks/use-vehicle-mutations';
@@ -39,6 +40,7 @@ interface Props {
  */
 export function VehicleDetailContent({ vehicleId, notFoundAction, onDeleted }: Props) {
   const router = useRouter();
+  const { paths } = useWorkspace();
   const { message } = App.useApp();
   const { has } = usePermissions();
   const t = useTranslations('Vehicles');
@@ -109,7 +111,7 @@ export function VehicleDetailContent({ vehicleId, notFoundAction, onDeleted }: P
       canDelete={has(PERMISSION.VEHICLE_DELETE)}
       deletePending={deleteVehicle.isPending}
       onEdit={() => router.push(vehiclePath.edit(vehicleId))}
-      onSchedule={() => router.push(vehicleSchedulePath(vehicle))}
+      onSchedule={() => router.push(vehicleSchedulePath(vehicle, { basePath: paths.calendar }))}
       onDelete={handleDelete}
     />
   );

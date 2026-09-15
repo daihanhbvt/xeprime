@@ -70,7 +70,9 @@ const DRIVER_POOL = [
 ] as const;
 
 export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<ShopBuildResult> {
+  /** ADR 0036: hai trục độc lập — vận hành (`status`) và xác minh (`verificationPending`). */
   const isActive = spec.status === TENANT_STATUS.ACTIVE;
+  const isVerified = !spec.verificationPending;
 
   // ── Tài khoản chủ và nhân viên ──────────────────────────────────────────
   const ownerUserId = await upsertPasswordUser({
@@ -311,7 +313,8 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
     `  ${spec.name}: ${result.vehicles} xe · ${spec.branches.length} chi nhánh · ` +
       `${result.listings} tin đăng · ${result.bookings} đơn · ${result.customers} khách · ` +
       `${result.receipts} phiếu · ${result.reviews} đánh giá` +
-      (isActive ? '' : ' · CHƯA DUYỆT'),
+      (isActive ? '' : ' · BỊ KHOÁ') +
+      (isVerified ? '' : ' · CHƯA XÁC MINH'),
   );
   if (result.vehicles !== fleetSize(spec)) {
     throw new Error(`Đội xe lệch bản khai: ${result.vehicles} ≠ ${fleetSize(spec)}`);
@@ -337,7 +340,12 @@ async function buildOnboarding(
   ownerUserId: string,
   platform: PlatformAccounts,
 ): Promise<void> {
-  const approved = spec.status === TENANT_STATUS.ACTIVE;
+  /*
+   * ADR 0036: "đã duyệt hồ sơ" KHÔNG còn suy ra được từ `tenants.status` — cột đó nay chỉ nói
+   * gian hàng còn hoạt động hay không. Trục xác minh đọc từ chính phiếu duyệt, nên spec khai
+   * tường minh bằng `verificationPending`.
+   */
+  const approved = !spec.verificationPending;
   const submittedAt = daysFromToday(-120, 2);
   const reviewedAt = daysFromToday(-118, 6);
 

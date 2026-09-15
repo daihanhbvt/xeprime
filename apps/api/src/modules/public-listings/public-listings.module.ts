@@ -6,6 +6,7 @@ import { PublicDestinationsController } from './public-destinations.controller';
 import { PublicShopsController } from './public-shops.controller';
 import { ListingsSyncModule } from './listings-sync.module';
 import { PublicListingsService } from './public-listings.service';
+import { MarketPriceService } from './market-price.service';
 import { VehicleSettingsModule } from '../vehicle-settings/vehicle-settings.module';
 
 /**
@@ -18,7 +19,7 @@ import { VehicleSettingsModule } from '../vehicle-settings/vehicle-settings.modu
   // VehicleSettingsModule: chi tiết xe công bố giấy tờ/điều khoản/khung giờ/phụ phí mặc định.
   imports: [LocationsModule, PricingModule, ListingsSyncModule, VehicleSettingsModule],
   controllers: [PublicListingsController, PublicDestinationsController, PublicShopsController],
-  providers: [PublicListingsService],
+  providers: [PublicListingsService, MarketPriceService],
   exports: [ListingsSyncModule],
 })
 export class PublicListingsModule {}

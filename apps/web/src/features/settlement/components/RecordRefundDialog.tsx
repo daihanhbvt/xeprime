@@ -198,9 +198,9 @@ export function RecordRefundDialog({
           </label>
         ) : null}
 
-        {error ? <Alert type="error" showIcon message={error} role="alert" /> : null}
+        {error ? <Alert type="error" showIcon title={error} role="alert" /> : null}
 
-        <Alert type="info" showIcon message={REFUND_DISCLAIMER} />
+        <Alert type="info" showIcon title={REFUND_DISCLAIMER} />
       </div>
     </ResponsiveDialog>
   );

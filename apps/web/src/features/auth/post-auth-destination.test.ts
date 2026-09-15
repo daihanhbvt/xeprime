@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import { BILLING_MODE, TENANT_ROLE, TENANT_STATUS } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
 import {
   AUTH_INTENT,
+  canUseManagePortal,
   resolveCustomerDestination,
   resolveOwnerCtaHref,
   resolvePortalDestination,
+  resolveWorkspaceHref,
   type AuthScope,
 } from './post-auth-destination';
 
@@ -122,5 +125,121 @@ describe('resolveOwnerCtaHref', () => {
 
   it('đã có gian hàng → vào thẳng cổng quản lý', () => {
     expect(resolveOwnerCtaHref(owner)).toBe(ROUTES.MANAGE.ROOT);
+  });
+});
+
+/**
+ * Cổng TUYẾN (14/09/2026 — ADR 0027 · ADR 0028 điều 1).
+ *
+ * Bất biến: chủ xe tuyến hoa hồng không bao giờ được điều hướng vào `/manage`, kể cả khi họ tự
+ * gõ URL hoặc một đường `?next=` cũ dẫn tới đó. Trước bản này `hasTenant → /manage` là toàn bộ
+ * luật, nên mọi chủ xe mới đăng ký đều rơi vào cổng quản lý ngay sau khi đăng nhập.
+ *
+ * `owner` ở trên KHÔNG dính vào nhóm này có chủ đích: nó không có `roleKey`, tức là mô hình hoá
+ * một NHÂN VIÊN gian hàng — họ vẫn dùng `/manage` bình thường.
+ */
+const commissionOwner: AuthScope = {
+  tenant: {
+    id: 'T2',
+    roleKey: TENANT_ROLE.SHOP_OWNER,
+    status: TENANT_STATUS.ACTIVE,
+    billingMode: BILLING_MODE.COMMISSION,
+    publicVehicleCount: 3,
+  },
+  platformRole: null,
+};
+const registeringOwner: AuthScope = {
+  tenant: {
+    id: 'T3',
+    roleKey: TENANT_ROLE.SHOP_OWNER,
+    status: TENANT_STATUS.DRAFT,
+    billingMode: BILLING_MODE.COMMISSION,
+    publicVehicleCount: 0,
+  },
+  platformRole: null,
+};
+const packageShop: AuthScope = {
+  tenant: {
+    id: 'T4',
+    roleKey: TENANT_ROLE.SHOP_OWNER,
+    status: TENANT_STATUS.ACTIVE,
+    billingMode: BILLING_MODE.PACKAGE,
+    publicVehicleCount: 12,
+  },
+  platformRole: null,
+};
+
+describe('resolveWorkspaceHref — hai tuyến, hai khu', () => {
+  it('không có gian hàng → null (nơi gọi tự chọn đích)', () => {
+    expect(resolveWorkspaceHref(customer)).toBeNull();
+    expect(resolveWorkspaceHref(null)).toBeNull();
+  });
+
+  it('chủ xe hoa hồng đã có xe trên chợ → danh sách xe ở khu tài khoản', () => {
+    expect(resolveWorkspaceHref(commissionOwner)).toBe(ROUTES.ACCOUNT.VEHICLES);
+  });
+
+  it('chủ xe hoa hồng đang đăng ký → màn tiến trình', () => {
+    expect(resolveWorkspaceHref(registeringOwner)).toBe(ROUTES.ACCOUNT.REGISTRATION);
+  });
+
+  it('gian hàng có gói → cổng quản lý', () => {
+    expect(resolveWorkspaceHref(packageShop)).toBe(ROUTES.MANAGE.ROOT);
+  });
+
+  it('nhân viên gian hàng (không phải chủ) → cổng quản lý, bất kể tuyến', () => {
+    expect(resolveWorkspaceHref(owner)).toBe(ROUTES.MANAGE.ROOT);
+  });
+});
+
+describe('canUseManagePortal', () => {
+  it('chỉ tuyến gói và nhân viên mới vào được cổng quản lý', () => {
+    expect(canUseManagePortal(packageShop)).toBe(true);
+    expect(canUseManagePortal(owner)).toBe(true);
+    expect(canUseManagePortal(commissionOwner)).toBe(false);
+    expect(canUseManagePortal(registeringOwner)).toBe(false);
+  });
+});
+
+describe('resolvePortalDestination — tuyến hoa hồng', () => {
+  it('không có next → về khu tài khoản, KHÔNG phải /manage', () => {
+    expect(resolvePortalDestination({ user: commissionOwner })).toBe(ROUTES.ACCOUNT.VEHICLES);
+    expect(resolvePortalDestination({ user: registeringOwner })).toBe(
+      ROUTES.ACCOUNT.REGISTRATION,
+    );
+  });
+
+  /**
+   * Quan trọng: `?next=` do proxy đặt khi chặn một route `/manage`. Tôn trọng nó với tuyến hoa
+   * hồng nghĩa là đăng nhập xong rơi vào `/manage` rồi bị `AppShell` đá ra — hai cú nhảy và một
+   * lần nháy màn hình. Chuyển hướng về đúng khu ngay tại đây.
+   */
+  it('next trỏ vào /manage → vẫn về khu tài khoản', () => {
+    expect(
+      resolvePortalDestination({ user: commissionOwner, next: ROUTES.MANAGE.VEHICLES }),
+    ).toBe(ROUTES.ACCOUNT.VEHICLES);
+    expect(resolvePortalDestination({ user: commissionOwner, next: ROUTES.MANAGE.SHOP })).toBe(
+      ROUTES.ACCOUNT.VEHICLES,
+    );
+  });
+
+  it('next trỏ ra ngoài /manage vẫn được tôn trọng', () => {
+    expect(resolvePortalDestination({ user: commissionOwner, next: ROUTES.TRIPS })).toBe(
+      ROUTES.TRIPS,
+    );
+  });
+
+  it('gian hàng có gói KHÔNG bị đổi hướng', () => {
+    expect(resolvePortalDestination({ user: packageShop, next: ROUTES.MANAGE.VEHICLES })).toBe(
+      ROUTES.MANAGE.VEHICLES,
+    );
+  });
+});
+
+describe('resolveOwnerCtaHref — theo tuyến', () => {
+  it('chủ xe hoa hồng → khu tài khoản; gian hàng có gói → cổng quản lý', () => {
+    expect(resolveOwnerCtaHref(commissionOwner)).toBe(ROUTES.ACCOUNT.VEHICLES);
+    expect(resolveOwnerCtaHref(registeringOwner)).toBe(ROUTES.ACCOUNT.REGISTRATION);
+    expect(resolveOwnerCtaHref(packageShop)).toBe(ROUTES.MANAGE.ROOT);
   });
 });

@@ -1,7 +1,8 @@
 {
   "page": {
     "title": "My plan",
-    "loadError": "Couldn't load your plan"
+    "loadError": "Couldn't load your plan",
+    "accountSubtitle": "Your current plan, slot limits, and what an upgrade unlocks."
   },
   "current": {
     "title": "Current plan",

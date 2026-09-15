@@ -96,7 +96,7 @@ export function WalletView({ scope }: { scope: WalletScope }) {
       <section className={styles.block} aria-label={t('entries.title')}>
         <h3 className={styles.heading}>{t('entries.title')}</h3>
         {entries.isPending ? <Skeleton active paragraph={{ rows: 3 }} /> : null}
-        {entries.isError ? <Alert type="error" showIcon message={t('loadError')} /> : null}
+        {entries.isError ? <Alert type="error" showIcon title={t('loadError')} /> : null}
         {!entries.isPending && (entries.data?.items.length ?? 0) === 0 ? (
           <Empty description={t('entries.empty')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : null}

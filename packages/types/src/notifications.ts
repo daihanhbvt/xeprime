@@ -40,8 +40,23 @@ export const NOTIFICATION_TYPE = {
   BOOKING_AUTO_ACCEPTED: 'booking_auto_accepted',
   SHOP_APPROVED: 'shop_approved',
   SHOP_REJECTED: 'shop_rejected',
+  /**
+   * Người duyệt yêu cầu BỔ SUNG hồ sơ gian hàng — khác hẳn "bị từ chối".
+   *
+   * Loại riêng vì việc phải làm khác nhau: bị từ chối là một cánh cửa đóng, còn cần bổ sung là
+   * một việc đang chờ chính họ. Trước 14/09/2026 nhánh này không gửi gì cả, nên chủ gian hàng
+   * chỉ biết mình cần sửa nếu tự mở lại đúng màn hồ sơ.
+   */
+  SHOP_NEEDS_REVISION: 'shop_needs_revision',
   VEHICLE_APPROVED: 'vehicle_approved',
   VEHICLE_REJECTED: 'vehicle_rejected',
+  /**
+   * Người duyệt yêu cầu BỔ SUNG hồ sơ xe — cùng lý do với `SHOP_NEEDS_REVISION`.
+   *
+   * Đây là tin quan trọng nhất của cả vòng đăng xe: xe rời hàng đợi, quay về tay chủ xe, và nếu
+   * không ai báo thì chiếc xe nằm im ở `needs_revision` vô thời hạn.
+   */
+  VEHICLE_NEEDS_REVISION: 'vehicle_needs_revision',
   REVIEW_RECEIVED: 'review_received',
 
   // Vòng đời gói (W2, ADR 0015/0020/0026) — job `subscription-lifecycle` phát.
@@ -185,11 +200,19 @@ export const NOTIFICATION_TYPE_META: Readonly<Record<NotificationType, Notificat
   },
   [NOTIFICATION_TYPE.SHOP_APPROVED]: { label: 'Gian hàng được duyệt', color: STATUS_COLOR.SUCCESS },
   [NOTIFICATION_TYPE.SHOP_REJECTED]: { label: 'Gian hàng bị từ chối', color: STATUS_COLOR.DANGER },
+  [NOTIFICATION_TYPE.SHOP_NEEDS_REVISION]: {
+    label: 'Hồ sơ gian hàng cần bổ sung',
+    color: STATUS_COLOR.WARNING,
+  },
   [NOTIFICATION_TYPE.VEHICLE_APPROVED]: {
     label: 'Xe được duyệt công khai',
     color: STATUS_COLOR.SUCCESS,
   },
   [NOTIFICATION_TYPE.VEHICLE_REJECTED]: { label: 'Xe bị từ chối', color: STATUS_COLOR.DANGER },
+  [NOTIFICATION_TYPE.VEHICLE_NEEDS_REVISION]: {
+    label: 'Xe cần bổ sung',
+    color: STATUS_COLOR.WARNING,
+  },
   [NOTIFICATION_TYPE.REVIEW_RECEIVED]: { label: 'Đánh giá mới', color: STATUS_COLOR.SPECIAL },
   [NOTIFICATION_TYPE.SUBSCRIPTION_EXPIRING]: {
     label: 'Gói sắp hết hạn',

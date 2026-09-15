@@ -220,17 +220,17 @@
   },
   "success": {
     "submittedTitle": "Submitted for review",
-    "submittedBody": "We will check the listing and switch it on for renters.",
+    "submittedBody": "XePrime will check the listing and switch it on for renters. This is the only review step — there is nothing else to wait for.",
     "draftTitle": "Saved as a draft",
     "draftBody": "The vehicle is not on the marketplace yet. Finish it and submit whenever you are ready.",
     "partialTitle": "Vehicle saved, one part did not finish",
     "partialBody": "The vehicle already exists in your list — do not create it again. Open vehicle management to save the rest.",
-    "shopPendingTitle": "Your host profile needs approval first",
-    "shopPendingBody": "Vehicles can only go live after the platform approves your host profile.",
-    "shopPendingCta": "Finish host profile",
     "manageCta": "Manage this vehicle",
     "addAnotherCta": "List another vehicle",
-    "listCta": "Back to vehicles"
+    "listCta": "Back to vehicles",
+    "incompleteTitle": "Not submitted yet",
+    "incompleteBody": "The vehicle is saved as a draft. Add the items below, then submit it again:",
+    "incompleteCta": "Add the missing details"
   },
   "validation": {
     "weekdayPriceRequired": "Enter the daily rental price",

@@ -30,22 +30,22 @@
     "title": "Bắt đầu bán xe trên XePrime",
     "subtitle": "Ba việc còn lại giữa gian hàng của bạn và đơn thuê đầu tiên.",
     "done": "Xong",
-    "waiting": "Đang chờ duyệt",
+    "waiting": "Đang chờ XePrime duyệt",
     "steps": {
       "profile": {
         "title": "Hoàn thiện hồ sơ gian hàng",
         "body": "Tên hiển thị, tỉnh/thành và thông tin liên hệ của chủ gian hàng.",
         "action": "Điền hồ sơ"
       },
-      "review": {
-        "title": "Gửi hồ sơ cho XePrime duyệt",
-        "body": "Xe chỉ hiển thị công khai sau khi hồ sơ gian hàng được duyệt.",
-        "action": "Gửi duyệt"
-      },
       "vehicle": {
         "title": "Thêm chiếc xe đầu tiên",
-        "body": "Khai báo được ngay từ bây giờ; xe lên marketplace khi gian hàng được duyệt.",
+        "body": "Khai đủ ảnh, giá và vị trí nhận xe, rồi bấm gửi duyệt ngay trên chiếc xe đó.",
         "action": "Thêm xe"
+      },
+      "review": {
+        "title": "XePrime duyệt xe",
+        "body": "Đây là bước duyệt duy nhất. Xe được duyệt là khách tìm thấy và đặt được ngay.",
+        "action": "Xem xe của tôi"
       }
     }
   }

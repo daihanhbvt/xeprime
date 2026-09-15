@@ -1,23 +1,19 @@
 'use client';
 
 import { Segmented, Select, Space, Spin } from 'antd';
+import { useTranslations } from 'next-intl';
 import { Suspense, useState } from 'react';
-import { APPROVAL_TARGET_TYPE } from '@xeprime/types';
+import { APPROVAL_TARGET_TYPE, APPROVAL_STATUS_VALUES, type ApprovalStatus } from '@xeprime/types';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ApprovalDetailDrawer } from '@/features/approvals/components/ApprovalDetailDrawer';
 import { ApprovalTable } from '@/features/approvals/components/ApprovalTable';
 import { APPROVALS_DEFAULT_LIMIT } from '@/features/approvals/api';
-import { APPROVAL_STATUS_OPTIONS } from '@/features/approvals/constants';
 import { useApprovalFilters } from '@/features/approvals/hooks/use-approval-filters';
 import { useApprovals } from '@/features/approvals/hooks/use-approvals';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import styles from './admin-page.module.css';
 
-const STATUS_OPTIONS = [{ value: 'all', label: 'Tất cả' }, ...APPROVAL_STATUS_OPTIONS];
-const TARGET_OPTIONS = [
-  { value: 'all', label: 'Tất cả' },
-  { value: APPROVAL_TARGET_TYPE.TENANT, label: 'Gian hàng' },
-  { value: APPROVAL_TARGET_TYPE.VEHICLE, label: 'Xe' },
-];
+const ALL = 'all';
 
 export default function AdminApprovalsPage() {
   return (
@@ -27,7 +23,17 @@ export default function AdminApprovalsPage() {
   );
 }
 
+/**
+ * Hàng đợi duyệt hồ sơ của nền tảng.
+ *
+ * Bộ lọc loại phiếu liệt kê ĐỦ các loại có mặt trong bảng, không chỉ hai loại duyệt được ở đây:
+ * phiếu `seller_profile` do `SellerProfileService` ghi vào cùng `approval_tasks` và vẫn hiện
+ * trong danh sách, nên giấu nó khỏi bộ lọc chỉ khiến reviewer không lọc nó ra được. Việc "duyệt
+ * ở đâu" do drawer nói (`Approvals.unsupported`).
+ */
 function AdminApprovalsView() {
+  const t = useTranslations('Approvals');
+  const domainLabel = useDomainLabel();
   const { filters, setFilters } = useApprovalFilters();
   const { data, isError, refetch, isFetching } = useApprovals(filters);
   const [selected, setSelected] = useState<string | null>(null);
@@ -35,24 +41,41 @@ function AdminApprovalsView() {
   const items = data?.items ?? [];
   const meta = data?.meta ?? { page: 1, limit: APPROVALS_DEFAULT_LIMIT, total: 0, hasNext: false };
 
+  const statusOptions = [
+    { value: ALL, label: t('filters.all') },
+    ...APPROVAL_STATUS_VALUES.map((value: ApprovalStatus) => ({
+      value,
+      label: domainLabel('approvalStatus', value, value),
+    })),
+  ];
+  const targetOptions = [
+    { value: ALL, label: t('filters.all') },
+    { value: APPROVAL_TARGET_TYPE.TENANT, label: t(`targetType.${APPROVAL_TARGET_TYPE.TENANT}`) },
+    { value: APPROVAL_TARGET_TYPE.VEHICLE, label: t(`targetType.${APPROVAL_TARGET_TYPE.VEHICLE}`) },
+    {
+      value: APPROVAL_TARGET_TYPE.SELLER_PROFILE,
+      label: t(`targetType.${APPROVAL_TARGET_TYPE.SELLER_PROFILE}`),
+    },
+  ];
+
   return (
     <div>
       <ManagePageHeader
-        title="Duyệt hồ sơ"
+        title={t('page.title')}
         extra={
           <Space wrap>
             <Segmented
-              value={filters.targetType ?? 'all'}
-              options={TARGET_OPTIONS}
+              value={filters.targetType ?? ALL}
+              options={targetOptions}
               onChange={(value) =>
-                setFilters({ targetType: value === 'all' ? undefined : String(value) })
+                setFilters({ targetType: value === ALL ? undefined : String(value) })
               }
             />
             <Select
               className={styles.statusSelect}
               size="large"
               value={filters.status ?? 'pending'}
-              options={STATUS_OPTIONS}
+              options={statusOptions}
               onChange={(value: string) => setFilters({ status: value })}
             />
           </Space>

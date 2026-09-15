@@ -25,7 +25,7 @@ export function AccountComingSoon({ labelKey }: { labelKey: AccountNavLabelKey }
     <Card className={styles.card}>
       <div className={styles.head}>
         <h2 className={styles.title}>{tNav(labelKey)}</h2>
-        <Tag bordered={false}>{t('badge')}</Tag>
+        <Tag variant="filled">{t('badge')}</Tag>
       </div>
       <Empty
         image={Empty.PRESENTED_IMAGE_SIMPLE}

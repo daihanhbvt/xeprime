@@ -39,7 +39,7 @@ export function FinanceOverviewCards({
   const fmt = useAppFormat();
 
   if (error && !data) {
-    return <Alert type="warning" showIcon message={t('error')} className={styles.alert} />;
+    return <Alert type="warning" showIcon title={t('error')} className={styles.alert} />;
   }
 
   const showSkeleton = loading && !data;

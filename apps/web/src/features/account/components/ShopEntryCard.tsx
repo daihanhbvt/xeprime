@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 
 import { ROUTES } from '@/constants/routes';
+import { resolveOwnerCtaHref } from '@/features/auth/post-auth-destination';
 import { useCurrentUser } from '@/hooks/use-current-user';
 
 import styles from './ShopEntryCard.module.css';
@@ -37,13 +38,18 @@ export function ShopEntryCard() {
       icon: <SafetyCertificateOutlined aria-hidden />,
       href: ROUTES.MANAGE.ADMIN,
     },
+    /*
+     * "Gian hàng của tôi" dẫn tới KHU LÀM VIỆC của người này, không phải `/manage` cứng: chủ xe
+     * tuyến hoa hồng làm việc ở `/account` (ADR 0027/0028). Đây là đường vào nhầm khu rõ nhất
+     * của bản cũ — thẻ nằm ngay đầu trang tài khoản của chính họ.
+     */
     hasShop: {
       icon: <ShopOutlined aria-hidden />,
-      href: ROUTES.MANAGE.ROOT,
+      href: resolveOwnerCtaHref(user),
     },
     noShop: {
       icon: <ShopOutlined aria-hidden />,
-      href: ROUTES.MANAGE.ONBOARDING,
+      href: ROUTES.LIST_YOUR_VEHICLE.ROOT,
     },
   }[variant];
 

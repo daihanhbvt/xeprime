@@ -18,6 +18,7 @@ import type { AppLocale } from '@/i18n/config';
 import type { NavPreferences } from '@/lib/ui-preferences';
 import { getErrorCode } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
+import { WorkspaceProvider } from '@/hooks/use-workspace';
 import { makeStore } from '@/store/make-store';
 import { antdTheme } from '@/styles/theme';
 
@@ -120,9 +121,16 @@ export function Providers({ children, navPreferences }: ProvidersProps) {
                 BadgeRealtimeProvider nằm TRONG ChatRealtimeProvider: nó nghe Firestore bằng chính
                 phiên Firebase mà chat đã mở, nên phải có context đó trước.
               */}
-              <ChatRealtimeProvider>
-                <BadgeRealtimeProvider>{children}</BadgeRealtimeProvider>
-              </ChatRealtimeProvider>
+              {/*
+                WorkspaceProvider nằm TRONG QueryClientProvider (nó đọc `/auth/me`) và NGOÀI cả
+                hai vỏ: `AppShell` vừa đọc khu làm việc vừa là cổng chặn của nó nên không tự cấp
+                được, còn `AccountShell` cũng cần đúng giá trị đó.
+              */}
+              <WorkspaceProvider>
+                <ChatRealtimeProvider>
+                  <BadgeRealtimeProvider>{children}</BadgeRealtimeProvider>
+                </ChatRealtimeProvider>
+              </WorkspaceProvider>
             </AntdApp>
           </QueryClientProvider>
         </ReduxProvider>

@@ -1,7 +1,8 @@
 {
   "page": {
     "title": "Gói của tôi",
-    "loadError": "Không tải được thông tin gói"
+    "loadError": "Không tải được thông tin gói",
+    "accountSubtitle": "Gói hiện hành, hạn mức chỗ và những gì mở thêm khi nâng cấp."
   },
   "current": {
     "title": "Gói hiện hành",

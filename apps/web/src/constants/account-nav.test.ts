@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { TENANT_ROLE } from '@xeprime/types';
+import { BILLING_MODE, TENANT_ROLE } from '@xeprime/types';
 
 import type { CurrentUser } from '@/hooks/use-current-user';
 
 import {
   ACCOUNT_NAV,
   OWNER_NAV,
+  OWNER_REGISTERING_NAV,
   flattenAccountNav,
   isCommissionOwner,
   isShopOwner,
@@ -49,8 +50,14 @@ function tenant(overrides: Partial<NonNullable<CurrentUser['tenant']>> = {}) {
     status: 'active',
     roleKey: TENANT_ROLE.SHOP_OWNER,
     features: [],
-    planCode: null,
+    /*
+     * Hình dạng THẬT của một chủ xe đã đi hết vòng đăng ký: có gói bậc `commission` (mọi tenant
+     * mới đều được gán — `assignDefaultPlanWithinTx`) và có xe trên chợ.
+     */
+    planCode: 'BASIC',
+    billingMode: BILLING_MODE.COMMISSION,
     planEndsAt: null,
+    publicVehicleCount: 2,
     ...overrides,
   } as NonNullable<CurrentUser['tenant']>;
 }
@@ -89,19 +96,24 @@ describe('ACCOUNT_NAV — thành phần', () => {
       ROUTES.ACCOUNT.CONTRACTS_DOCUMENTS,
       ROUTES.ACCOUNT.DATA_PROTECTION,
       ROUTES.ACCOUNT.BALANCE,
+      ROUTES.ACCOUNT.EARNINGS,
       ROUTES.ACCOUNT.BANK_ACCOUNTS,
+      ROUTES.ACCOUNT.PAYMENTS,
       ROUTES.ACCOUNT.CHANGE_PASSWORD,
       ROUTES.ACCOUNT.DELETE_ACCOUNT,
+      ROUTES.ACCOUNT.REGISTRATION,
+      ROUTES.ACCOUNT.MESSAGES,
+      ROUTES.ACCOUNT.SUBSCRIPTION,
       ROUTES.TRIPS,
     ]);
-    for (const item of [...ACCOUNT_NAV, ...OWNER_NAV]) {
+    for (const item of [...ACCOUNT_NAV, ...OWNER_NAV, ...OWNER_REGISTERING_NAV]) {
       expect(built.has(item.href)).toBe(true);
     }
   });
 
   it('mọi mục nằm trong /account đều là route đã khai báo ở ROUTES', () => {
     const declared = new Set<string>(Object.values(ROUTES.ACCOUNT));
-    for (const item of [...ACCOUNT_NAV, ...OWNER_NAV]) {
+    for (const item of [...ACCOUNT_NAV, ...OWNER_NAV, ...OWNER_REGISTERING_NAV]) {
       if (item.external) continue;
       expect(declared.has(item.href)).toBe(true);
     }
@@ -110,6 +122,7 @@ describe('ACCOUNT_NAV — thành phần', () => {
   it('khoá của các mục là duy nhất', () => {
     expect(new Set(ACCOUNT_NAV.map((i) => i.key)).size).toBe(ACCOUNT_NAV.length);
     expect(new Set(OWNER_NAV.map((i) => i.key)).size).toBe(OWNER_NAV.length);
+    expect(new Set(OWNER_REGISTERING_NAV.map((i) => i.key)).size).toBe(OWNER_REGISTERING_NAV.length);
   });
 });
 
@@ -121,9 +134,30 @@ describe('isShopOwner / isCommissionOwner', () => {
     expect(isShopOwner(user())).toBe(false);
   });
 
-  it('tuyến hoa hồng = chủ gian hàng CHƯA có gói (ADR 0028 điều 1)', () => {
-    expect(isCommissionOwner(user({ tenant: tenant({ planCode: null }) }))).toBe(true);
-    expect(isCommissionOwner(user({ tenant: tenant({ planCode: 'slot_flat' }) }))).toBe(false);
+  /**
+   * Sửa 14/09/2026 — đây là một BUG THẬT, không phải đổi ý.
+   *
+   * Bản cũ hỏi `planCode == null`, nhưng `BillingService.assignDefaultPlanWithinTx` gán cho MỌI
+   * gian hàng mới một gói bậc `commission` ngay trong transaction đăng ký. Nghĩa là `planCode`
+   * gần như không bao giờ rỗng, và 100% chủ xe tuyến hoa hồng bị xếp nhầm sang tuyến gói. Nguồn
+   * đúng là `billingMode` của gói hiện hành (ADR 0024 đóng băng nó trên dòng thuê bao).
+   */
+  it('tuyến hoa hồng đọc từ billingMode, KHÔNG suy từ planCode', () => {
+    // Có gói, nhưng gói đó là bậc hoa hồng ⇒ vẫn là Basic Owner.
+    expect(
+      isCommissionOwner(
+        user({ tenant: tenant({ planCode: 'BASIC', billingMode: BILLING_MODE.COMMISSION }) }),
+      ),
+    ).toBe(true);
+    expect(
+      isCommissionOwner(
+        user({ tenant: tenant({ planCode: 'slot_flat', billingMode: BILLING_MODE.PACKAGE }) }),
+      ),
+    ).toBe(false);
+    // Không có gói hiệu lực (hết hạn) ⇒ không có thuê bao ⇒ tuyến hoa hồng.
+    expect(
+      isCommissionOwner(user({ tenant: tenant({ planCode: null, billingMode: null }) })),
+    ).toBe(true);
     // Khách thuê không phải "chủ xe tuyến hoa hồng" chỉ vì họ chưa có gói.
     expect(isCommissionOwner(user())).toBe(false);
   });
@@ -136,14 +170,23 @@ describe('resolveAccountNav', () => {
     expect(groups[0]?.items.map((i) => i.key)).toEqual([
       'vehicles',
       'calendar',
-      'hostGuide',
       'trips',
+      'earnings',
+      'messages',
+      'ownerProfile',
+      'subscription',
+      'hostGuide',
       'tax',
       'contractsDocuments',
       'dataProtection',
     ]);
+    // `payments` nằm ở nhóm CÁ NHÂN, không nằm ở nhóm chủ xe: nó là tiền họ trả khi đi THUÊ xe
+    // của người khác, còn mọi mục nhóm chủ xe nói về tiền họ NHẬN.
     expect(groups[1]?.items.map((i) => i.key)).toEqual([
       'profile',
+      'payments',
+      'balance',
+      'bankAccounts',
       'changePassword',
       'deleteAccount',
     ]);
@@ -156,10 +199,15 @@ describe('resolveAccountNav', () => {
       'profile',
       'becomeOwner',
       'trips',
+      'payments',
+      'balance',
+      'bankAccounts',
       'changePassword',
       'deleteAccount',
     ]);
     expect(groups[0]?.items.some((i) => i.href === ROUTES.ACCOUNT.VEHICLES)).toBe(false);
+    // Ví gian hàng KHÔNG hiện cho người không có gian hàng — với họ sổ đó không tồn tại.
+    expect(groups[0]?.items.some((i) => i.href === ROUTES.ACCOUNT.EARNINGS)).toBe(false);
   });
 
   /**
@@ -205,9 +253,53 @@ describe('matchAccountNavKey', () => {
   it('gốc /account KHÔNG nuốt các trang con', () => {
     // Nếu khớp theo tiền tố thì mọi trang trong khu đều sáng "Tài khoản của tôi".
     expect(matchAccountNavKey(ROUTES.ACCOUNT.ROOT, ownerItems)).toBe('profile');
-    // `/account/payments` còn route nhưng KHÔNG còn trong menu ⇒ không mục nào sáng. Đó là
-    // đúng: làm sáng một mục người dùng không nhìn thấy còn khó hiểu hơn là không sáng gì.
-    expect(matchAccountNavKey(ROUTES.ACCOUNT.PAYMENTS, ownerItems)).toBeUndefined();
+    expect(matchAccountNavKey(ROUTES.ACCOUNT.TAX, ownerItems)).toBe('tax');
+  });
+
+  /*
+   * `/account/payments` từng bị bỏ khỏi menu khi nó còn là placeholder. Màn thật đã có
+   * (PROMPT 5), nên nó phải có đường vào — và phải có cho CẢ HAI loại người dùng, vì một chủ xe
+   * cũng đi thuê xe của người khác.
+   */
+  it('lịch sử thanh toán có đường vào và sáng đúng mục', () => {
+    expect(matchAccountNavKey(ROUTES.ACCOUNT.PAYMENTS, ownerItems)).toBe('payments');
+  });
+
+  /**
+   * BẤT BIẾN TIỀN — ADR 0033 điều 1.
+   *
+   * Ba sổ tiền phải LUÔN có đường vào từ menu, cho đúng loại người dùng:
+   *
+   *   · `balance`      ví điểm CÁ NHÂN (hoàn khoản giữ chỗ) — mọi người đăng nhập
+   *   · `bankAccounts` nơi khai số tài khoản để rút số dư đó — mọi người đăng nhập
+   *   · `earnings`     ví điểm GIAN HÀNG (`D − T` sau mỗi chuyến) — chủ xe
+   *
+   * Cả ba từng biến khỏi menu một lần trong đợt làm lại nav: route vẫn còn, màn vẫn chạy, nhưng
+   * không ai tới được. Với một sổ CÔNG NỢ thì ẩn đường vào tương đương không trả — điểm không
+   * hết hạn và không thu hồi (ADR 0033 điều 1) thì cũng không được vô hình. Test này là cái chốt
+   * để lần sau đỏ ngay thay vì im lặng.
+   */
+  it('BẤT BIẾN: cả ba sổ tiền đều có đường vào từ menu', () => {
+    const renterItems = flattenAccountNav(resolveAccountNav(user()));
+
+    for (const href of [ROUTES.ACCOUNT.BALANCE, ROUTES.ACCOUNT.BANK_ACCOUNTS]) {
+      expect(matchAccountNavKey(href, ownerItems)).toBeDefined();
+      expect(matchAccountNavKey(href, renterItems)).toBeDefined();
+    }
+
+    // Ví gian hàng là đường DUY NHẤT tới tiền của chủ xe tuyến hoa hồng — họ không vào `/manage`.
+    expect(matchAccountNavKey(ROUTES.ACCOUNT.EARNINGS, ownerItems)).toBe('earnings');
+    expect(matchAccountNavKey(ROUTES.ACCOUNT.EARNINGS, renterItems)).toBeUndefined();
+
+    /*
+     * Và cả ở bậc ĐANG ĐĂNG KÝ. Bậc đó không chỉ có người mới: một chủ xe từng cho thuê rồi tạm
+     * ẩn hết xe cũng tụt về đây (`publicVehicleCount = 0`), và tiền họ đã kiếm vẫn nằm trong sổ.
+     */
+    const registeringItems = flattenAccountNav(
+      resolveAccountNav(user({ tenant: tenant({ publicVehicleCount: 0 }) })),
+    );
+    expect(matchAccountNavKey(ROUTES.ACCOUNT.EARNINGS, registeringItems)).toBe('earnings');
+    expect(matchAccountNavKey(ROUTES.ACCOUNT.CALENDAR, registeringItems)).toBeUndefined();
   });
 
   it('đường dẫn ngoài khu thì không mục nào sáng', () => {

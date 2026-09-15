@@ -240,7 +240,7 @@ function TermsForm({
                 <Alert
                   type="info"
                   showIcon
-                  message={t('collateralInherited')}
+                  title={t('collateralInherited')}
                   action={
                     canEdit ? (
                       <Button size="small" onClick={() => setEditingCollateral(true)}>

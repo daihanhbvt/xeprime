@@ -72,7 +72,7 @@ export function CancelTripDialog({
           <Alert
             type="warning"
             showIcon
-            message={t('paidTitle')}
+            title={t('paidTitle')}
             description={
               <>
                 {trip.finance && !isZeroMoney(trip.finance.rentalPaid) ? (
@@ -91,7 +91,7 @@ export function CancelTripDialog({
         ) : null}
 
         {cancel.isError ? (
-          <Alert type="error" showIcon role="alert" message={errorMessage(cancel.error)} />
+          <Alert type="error" showIcon role="alert" title={errorMessage(cancel.error)} />
         ) : null}
       </div>
     </ResponsiveDialog>

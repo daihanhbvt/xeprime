@@ -40,8 +40,33 @@ export const ROUTES = {
      * API với `/manage`, chỉ khác vỏ điều hướng (ADR 0027/0028: Owner Lite dùng chung source).
      * Chỉ hiện với `tenant.roleKey === shop_owner`; nhân viên gian hàng dùng `/manage`.
      */
+    /**
+     * Tiến trình ĐĂNG KÝ chủ xe — hồ sơ và chiếc xe đầu tiên đang đi qua vòng duyệt nền tảng.
+     *
+     * Đây là toàn bộ khu chủ xe của bậc `registering` (`resolveOwnerStage`): một màn nói rõ đang
+     * chờ gì, thiếu gì, bị từ chối vì sao, và sửa được ngay tại chỗ. Nó thay cho đường vòng cũ
+     * — bắt chủ xe mới vào `/manage/shop` bấm "Gửi duyệt", tức là kéo tuyến hoa hồng vào đúng
+     * cổng quản lý mà họ không thuộc về (ADR 0027/0028).
+     */
+    REGISTRATION: '/account/registration',
     /** Danh sách xe của chủ xe — cùng `features/vehicles` với `/manage/vehicles`. */
     VEHICLES: '/account/vehicles',
+    /**
+     * Hộp thư phía CHỦ XE (`side=shop`) — khác `/chat` là hộp thư phía khách thuê.
+     *
+     * Một con người có cả hai vai (ADR 0014) nên có cả hai hộp thư; chủ xe tuyến hoa hồng không
+     * vào `/manage/chat` được nên hộp thư gian hàng của họ sống ở đây, dựng lại từ CÙNG
+     * `ChatView` chứ không phải một khung chat thứ hai.
+     */
+    MESSAGES: '/account/messages',
+    /**
+     * Gói dịch vụ của chủ xe — bản `/account` của `/manage/subscription`.
+     *
+     * Đây là phễu nâng cấp từ tuyến hoa hồng lên tuyến gian hàng (ADR 0028 điều 1). Chặn
+     * `/manage` mà không dời màn này sang đây nghĩa là cắt đứt chính đường mà người dùng đi để
+     * trả tiền.
+     */
+    SUBSCRIPTION: '/account/subscription',
     /** Lịch xe — import thẳng `CalendarScheduler`, không có lịch thứ hai. */
     CALENDAR: '/account/calendar',
     /** Cẩm nang cho thuê xe — tài liệu PDF ở `public/owner-resources/` (xem `owner-resources.ts`). */
@@ -62,6 +87,18 @@ export const ROUTES = {
     BANK_ACCOUNTS: '/account/bank-accounts',
     /** Ví điểm — sổ công nợ XePrime phải trả, KHÔNG phải ví điện tử (ADR 0033 điều 1). */
     BALANCE: '/account/balance',
+    /**
+     * Tiền cho thuê xe — ví điểm của GIAN HÀNG, bản `/account` của `/manage/balance`.
+     *
+     * Vì sao phải có hai đường vào cùng một sổ: chủ xe tuyến hoa hồng KHÔNG vào được `/manage`
+     * (`canUseManagePortal` = false), mà ADR 0032 khiến mỗi chuyến hoàn thành của họ đều sinh
+     * khoản XePrime phải trả `D − T`. Không có route này thì tiền vào sổ rồi nằm đó, chủ xe
+     * không thấy và không rút được — đúng thứ ADR 0033 điều 1 nói là không được phép.
+     *
+     * KHÁC `BALANCE`: `BALANCE` là ví của MỘT CON NGƯỜI (tiền hoàn khoản giữ chỗ khi họ đi
+     * thuê), đây là ví của gian hàng họ sở hữu. Hai loại tiền, hai sổ, không trộn.
+     */
+    EARNINGS: '/account/earnings',
     FAVORITES: '/account/favorites',
     ADDRESSES: '/account/addresses',
     /** Kho giấy tờ tuỳ thân của khách (GPLX/CCCD) — ADR 0014: gian hàng đối chiếu tay. */
@@ -266,6 +303,81 @@ export function vehicleListPathFor(source: VehicleRegistrationSource): string {
 export function listYourVehicleRegisterPath(source: VehicleRegistrationSource): string {
   return `${ROUTES.LIST_YOUR_VEHICLE.REGISTER}?from=${source}`;
 }
+
+/**
+ * Hai KHU LÀM VIỆC của người cho thuê xe — `/manage` (gian hàng có gói, nhân viên) và `/account`
+ * (chủ xe tuyến hoa hồng, Owner Lite). ADR 0027/0028: cùng tính năng, khác vỏ.
+ */
+export const WORKSPACE = {
+  MANAGE: 'manage',
+  ACCOUNT: 'account',
+} as const;
+
+export type Workspace = (typeof WORKSPACE)[keyof typeof WORKSPACE];
+
+/**
+ * Bảng đường dẫn theo khu — **nguồn DUY NHẤT** cho mọi link "về chỗ làm việc của tôi".
+ *
+ * Lý do tồn tại: trước bảng này, 19 chỗ trong khu công khai và khu tài khoản trỏ thẳng vào
+ * `/manage/...` — thẻ gian hàng, menu marketplace, màn kết thúc wizard đăng xe, deep link của
+ * thông báo, huy hiệu chat, dải trạng thái gian hàng, thậm chí link "mở hồ sơ đầy đủ" ngay trong
+ * `/account/tax`. Mỗi chỗ tự quyết định là mỗi chỗ một luật, và chủ xe tuyến hoa hồng rơi vào
+ * cổng quản lý qua bất kỳ cái nào trong 19 đường đó.
+ *
+ * Không phải mọi mục đều có bản `/account` một-đối-một, và chỗ khác nhau là chỗ có chủ đích:
+ *  - `bookings`/`bookingRequests` của Owner Lite là **"Chuyến của tôi"** — một danh sách gồm cả
+ *    hai phía, chủ xe duyệt/từ chối ngay trên thẻ (xem CODEMAP "Chuyến của tôi gồm CẢ HAI PHÍA").
+ *  - `branches` không có bản `/account`: chủ xe tuyến hoa hồng chỉ có chi nhánh mặc định, và địa
+ *    chỉ của nó sửa ngay trong hồ sơ chủ xe. Chi nhánh là tính năng của gói (ADR 0027 điều 1).
+ *  - `sellerProfile` về `/account/tax` — bản compact của cùng hồ sơ người bán.
+ */
+export function workspacePaths(workspace: Workspace): {
+  home: string;
+  vehicles: string;
+  vehicleNew: string;
+  calendar: string;
+  chat: string;
+  bookings: string;
+  bookingRequests: string;
+  ownerProfile: string;
+  branches: string;
+  subscription: string;
+  sellerProfile: string;
+  support: string;
+} {
+  if (workspace === WORKSPACE.MANAGE) {
+    return {
+      home: ROUTES.MANAGE.ROOT,
+      vehicles: ROUTES.MANAGE.VEHICLES,
+      vehicleNew: ROUTES.MANAGE.VEHICLE_NEW,
+      calendar: ROUTES.MANAGE.CALENDAR,
+      chat: ROUTES.MANAGE.CHAT,
+      bookings: ROUTES.MANAGE.BOOKINGS,
+      bookingRequests: ROUTES.MANAGE.BOOKING_REQUESTS,
+      ownerProfile: ROUTES.MANAGE.SHOP,
+      branches: ROUTES.MANAGE.SHOP_BRANCHES,
+      subscription: ROUTES.MANAGE.SUBSCRIPTION,
+      sellerProfile: ROUTES.MANAGE.SELLER_PROFILE,
+      support: ROUTES.MANAGE.SUPPORT,
+    };
+  }
+  return {
+    home: ROUTES.ACCOUNT.ROOT,
+    vehicles: ROUTES.ACCOUNT.VEHICLES,
+    vehicleNew: listYourVehicleRegisterPath(VEHICLE_REGISTRATION_SOURCE.ACCOUNT),
+    calendar: ROUTES.ACCOUNT.CALENDAR,
+    chat: ROUTES.ACCOUNT.MESSAGES,
+    bookings: ROUTES.TRIPS,
+    bookingRequests: ROUTES.TRIPS,
+    ownerProfile: ROUTES.ACCOUNT.REGISTRATION,
+    branches: ROUTES.ACCOUNT.REGISTRATION,
+    subscription: ROUTES.ACCOUNT.SUBSCRIPTION,
+    sellerProfile: ROUTES.ACCOUNT.TAX,
+    support: ROUTES.ACCOUNT.SUPPORT,
+  };
+}
+
+export type WorkspacePaths = ReturnType<typeof workspacePaths>;
 
 export const vehiclePath = {
   detail: (id: string): string => `/manage/vehicles/${id}`,

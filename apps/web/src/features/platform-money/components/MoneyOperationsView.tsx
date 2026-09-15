@@ -33,6 +33,7 @@ import {
 } from '../hooks/use-platform-money';
 import type { HoldFilters, PlatformHold, PlatformHoldRefund, RefundFilters } from '../types';
 import { RefundPaidModal } from './RefundPaidModal';
+import { TaxPeriodPanel } from '@/features/tax/components/TaxPeriodPanel';
 import { InsuranceQueue } from './InsuranceQueue';
 import { WithdrawalQueue } from './WithdrawalQueue';
 import { SettleHoldModal } from './SettleHoldModal';
@@ -43,7 +44,7 @@ const MIN_TABLE_WIDTH = 1080;
 /**
  * MONEY OPERATIONS của nền tảng — Gap Analysis §3.B, ADR 0028 release gate 6–7 (R3).
  *
- * Năm tab là năm câu hỏi khác nhau và cố ý KHÔNG gộp: "khoản nào đang chờ chốt", "khoản nào phải
+ * Sáu tab là sáu câu hỏi khác nhau và cố ý KHÔNG gộp: "khoản nào đang chờ chốt", "khoản nào phải
  * chuyển trả", "ai đang chờ rút tiền", "hợp đồng bảo hiểm nào chưa cấp được", "hôm nay sổ có khớp
  * ngân hàng không". Gộp lại là mất câu cuối — đối soát là phép cộng trên CẢ ngày, không phải một dòng.
  */
@@ -59,6 +60,7 @@ export function MoneyOperationsView() {
           { key: 'refunds', label: t('tabs.refunds'), children: <RefundsPanel /> },
           { key: 'withdrawals', label: t('tabs.withdrawals'), children: <WithdrawalQueue /> },
           { key: 'insurance', label: t('tabs.insurance'), children: <InsuranceQueue /> },
+          { key: 'tax', label: t('tabs.tax'), children: <TaxPeriodPanel /> },
           { key: 'reconciliation', label: t('tabs.reconciliation'), children: <ReconciliationPanel /> },
         ]}
       />
@@ -450,7 +452,7 @@ function ReconciliationPanel() {
         <Alert
           type="error"
           showIcon
-          message={t('page.loadError')}
+          title={t('page.loadError')}
           action={
             <Button size="small" onClick={() => void refetch()}>
               {t('reconciliation.retry')}
@@ -464,25 +466,25 @@ function ReconciliationPanel() {
             <Alert
               type="info"
               showIcon
-              message={t('reconciliation.balanceMissing')}
+              title={t('reconciliation.balanceMissing')}
               description={t('reconciliation.balanceMissingHint')}
             />
           ) : Number(data.variance) !== 0 ? (
             <Alert
               type="error"
               showIcon
-              message={t('reconciliation.varianceWarning', { amount: fmt.money(data.variance) })}
+              title={t('reconciliation.varianceWarning', { amount: fmt.money(data.variance) })}
               description={t('reconciliation.varianceHint')}
             />
           ) : (
-            <Alert type="success" showIcon message={t('reconciliation.balanced')} />
+            <Alert type="success" showIcon title={t('reconciliation.balanced')} />
           )}
 
           {data.walletDrift.wallets > 0 ? (
             <Alert
               type="error"
               showIcon
-              message={t('reconciliation.walletDriftWarning', {
+              title={t('reconciliation.walletDriftWarning', {
                 count: data.walletDrift.wallets,
                 amount: fmt.money(data.walletDrift.amount),
               })}

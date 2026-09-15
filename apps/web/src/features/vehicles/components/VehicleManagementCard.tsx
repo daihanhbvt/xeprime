@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import {
   VEHICLE_OPERATION_STATUS_META,
+  VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
   VEHICLE_SOURCE_TYPE,
   type VehicleOperationStatus,
@@ -22,6 +23,17 @@ import { isNegativeMoney, subtractMoney } from '@/lib/money';
 import type { VehicleAlertGroup, VehicleListItem, VehicleStats } from '../types';
 import { VehicleAlertChips } from './VehicleAlerts';
 import styles from './VehicleManagementCard.module.css';
+
+/**
+ * Xe đang nằm trong tay CHỦ XE chờ họ làm gì đó — hai trạng thái mà người duyệt đã trả xe về.
+ *
+ * `draft` không có ở đây dù cũng nằm trong tay chủ xe: xe nháp chưa từng được gửi nên không có
+ * lý do nào để hiện.
+ */
+const NEEDS_OWNER_ACTION: readonly VehiclePublicStatus[] = [
+  VEHICLE_PUBLIC_STATUS.NEEDS_REVISION,
+  VEHICLE_PUBLIC_STATUS.REJECTED,
+];
 
 interface VehicleManagementCardProps {
   vehicle: VehicleListItem;
@@ -130,6 +142,19 @@ export function VehicleManagementCard({
             />
           </span>
         </div>
+
+        {/*
+         * Lý do người duyệt trả xe về, ngay trên thẻ.
+         *
+         * Chip trạng thái nói "Bị từ chối" nhưng không nói VÌ SAO, và cái chủ xe cần để đi tiếp
+         * chính là vì sao. Bắt họ mở từng chiếc để tìm là biến một câu trả lời thành một cuộc đi
+         * tìm — đúng lúc họ đang bối rối nhất. Chỉ hiện ở hai trạng thái xe đang nằm trong tay
+         * chủ xe: `approved_public` kèm lý do cũ là một mẩu lịch sử, không phải việc phải làm.
+         */}
+        {NEEDS_OWNER_ACTION.includes(vehicle.publicStatus as VehiclePublicStatus) &&
+        vehicle.latestPublicReview?.reason ? (
+          <p className={styles.reviewReason}>{vehicle.latestPublicReview.reason}</p>
+        ) : null}
 
         {/*
          * Cảnh báo do server tính — cùng phép tính với Hồ sơ 360, không suy lại ở đây.

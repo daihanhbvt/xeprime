@@ -7,7 +7,13 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { newId, Prisma } from '@xeprime/prisma';
-import { API_ERROR_CODE, MEMBERSHIP_STATUS, USER_STATUS, type Permission } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  MEMBERSHIP_STATUS,
+  USER_STATUS,
+  VEHICLE_PUBLIC_STATUS,
+  type Permission,
+} from '@xeprime/types';
 import bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -499,7 +505,7 @@ export class AuthService {
                 where: currentSubscriptionWhere(new Date()),
                 orderBy: { endsAt: 'desc' },
                 take: 1,
-                select: { endsAt: true, plan: { select: { code: true, limitsJson: true } } },
+                select: { endsAt: true, billingMode: true, plan: { select: { code: true, limitsJson: true } } },
               },
             },
           },
@@ -512,13 +518,27 @@ export class AuthService {
       }),
     ]);
 
-    const tenantPermissions: readonly Permission[] = membership
-      ? await this.rbac.permissionsForTenantMember(
-          membership.roleKey as never,
-          membership.roleId,
-          membership.tenant.id,
-        )
-      : [];
+    /*
+     * Đếm xe đang trên chợ đi CÙNG lượt với quyền, không nối thêm một round-trip nữa: cả hai
+     * chỉ cần `membership` và cùng phải xong trước khi dựng response. Index
+     * `(tenant_id, public_status)` đã có sẵn nên đây là một index-only scan.
+     */
+    const [tenantPermissions, publicVehicleCount] = membership
+      ? await Promise.all([
+          this.rbac.permissionsForTenantMember(
+            membership.roleKey as never,
+            membership.roleId,
+            membership.tenant.id,
+          ),
+          this.prisma.vehicle.count({
+            where: {
+              tenantId: membership.tenant.id,
+              publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+              deletedAt: null,
+            },
+          }),
+        ])
+      : ([[], 0] as [readonly Permission[], number]);
 
     const platformPermissions: readonly Permission[] = platformMembership
       ? await this.rbac.permissionsForPlatformMember(
@@ -538,7 +558,7 @@ export class AuthService {
       phone: user.phone ? toLocalPhone(user.phone) : null,
       phoneVerified: user.phoneVerifiedAt !== null,
       hasPassword: user.passwordHash !== null,
-      tenant: membership ? toTenantSummary(membership) : null,
+      tenant: membership ? toTenantSummary(membership, publicVehicleCount) : null,
       platformRole: platformMembership?.roleKey ?? null,
       permissions: [...new Set([...tenantPermissions, ...platformPermissions])],
     };
@@ -551,17 +571,24 @@ export class AuthService {
  * `features` LUÔN đủ 8 cờ kể cả `hidden`: web dựng menu từ nó ở lần vẽ đầu, và một cờ vắng mặt
  * không phân biệt được với "backend cũ chưa biết cờ này".
  */
-function toTenantSummary(membership: {
-  roleKey: string;
-  tenant: {
-    id: string;
-    name: string;
-    slug: string;
-    status: string;
-    usedFeatures: string[];
-    subscriptions: { endsAt: Date; plan: { code: string; limitsJson: unknown } }[];
-  };
-}): CurrentTenantSummaryDto {
+function toTenantSummary(
+  membership: {
+    roleKey: string;
+    tenant: {
+      id: string;
+      name: string;
+      slug: string;
+      status: string;
+      usedFeatures: string[];
+      subscriptions: {
+        endsAt: Date;
+        billingMode: string | null;
+        plan: { code: string; limitsJson: unknown };
+      }[];
+    };
+  },
+  publicVehicleCount: number,
+): CurrentTenantSummaryDto {
   const plan = resolveTenantFeatures(
     membership.tenant.subscriptions[0] ?? null,
     membership.tenant.usedFeatures,
@@ -575,6 +602,8 @@ function toTenantSummary(membership: {
     features: Object.entries(plan.features).map(([feature, state]) => ({ feature, state })),
     planCode: plan.planCode,
     planEndsAt: plan.planEndsAt?.toISOString() ?? null,
+    billingMode: plan.billingMode,
+    publicVehicleCount,
   };
 }
 

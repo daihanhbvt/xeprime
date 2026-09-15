@@ -14,7 +14,7 @@ import { decorativeIcon } from '@/lib/decorative-icon';
 import { getErrorMessage } from '@/services/api-client';
 import { useSubmitVehiclePublic } from '../hooks/use-vehicle-mutations';
 import { usePublicationLabels } from '../hooks/use-publication-labels';
-import { applicablePublishRequirements } from '../publication';
+import { publishChecklist } from '../publication';
 import type { VehicleDetail } from '../types';
 import styles from './VehiclePublicReviewPanel.module.css';
 
@@ -37,10 +37,9 @@ export function VehiclePublicReviewPanel({ vehicle }: { vehicle: VehicleDetail }
   const canSubmit =
     has(PERMISSION.VEHICLE_SUBMIT_PUBLIC) && VEHICLE_PUBLIC_STATUS_SUBMITTABLE.includes(status);
   // Checklist chỉ gồm điều kiện ÁP DỤNG với xe này — giá kiểm theo dịch vụ xe đăng (17/08).
-  const checklist = applicablePublishRequirements(vehicle).map((item) => ({
-    key: item.key,
+  const checklist = publishChecklist(vehicle).map((item) => ({
+    ...item,
     label: requirement(item.key),
-    met: item.present(vehicle),
   }));
   const missingCount = checklist.filter((item) => !item.met).length;
   const isResubmit = status !== VEHICLE_PUBLIC_STATUS.DRAFT;
@@ -58,7 +57,7 @@ export function VehiclePublicReviewPanel({ vehicle }: { vehicle: VehicleDetail }
       <Alert
         type={presentation.type}
         showIcon
-        message={presentation.message}
+        title={presentation.message}
         description={presentation.description}
       />
 

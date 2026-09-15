@@ -1,6 +1,7 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  PUBLISH_REQUIREMENT,
   BOOKING_STATUS,
   BRANCH_STATUS,
   MEMBERSHIP_STATUS,
@@ -548,8 +549,17 @@ describe('Chi nhánh phải có tỉnh mới lên chợ được', () => {
       ],
     });
 
+    /*
+     * ADR 0036: "chi nhánh chưa có tỉnh" là MỘT MỤC trong danh sách điều kiện lên chợ, không
+     * còn là một mã lỗi rời. Trước đó nó bị kiểm ở một nhánh riêng nên checklist của web xanh
+     * hết mà server vẫn từ chối — chủ xe bấm một nút sáng và nhận một lỗi không có trong danh
+     * sách nào.
+     */
     await expect(vehicles.submitForPublicReview(tenantId, v.id, ownerId)).rejects.toMatchObject({
-      response: { code: API_ERROR_CODE.BRANCH_LOCATION_REQUIRED },
+      response: {
+        code: API_ERROR_CODE.VEHICLE_PUBLISH_INCOMPLETE,
+        details: { missing: [PUBLISH_REQUIREMENT.BRANCH_LOCATION] },
+      },
     });
 
     /*

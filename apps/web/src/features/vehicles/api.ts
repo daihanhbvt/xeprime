@@ -24,6 +24,8 @@ import type {
   VehicleSource,
   VehicleSourceContractFile,
   VehicleStats,
+  MarketPriceParams,
+  MarketPriceSuggestion,
 } from './types';
 
 export const VEHICLES_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
@@ -135,3 +137,20 @@ export const fetchSourceContractDownload = (
   fileId: string,
 ): Promise<SourceContractDownload> =>
   apiGet<SourceContractDownload>(`/vehicles/${vehicleId}/source/contracts/${fileId}/download`);
+
+/**
+ * Khoảng giá thuê/ngày tham khảo cho xe đang được khai — công khai, không cần chiếc xe tồn tại.
+ *
+ * Backend chọn tập dữ liệu (cùng phân khúc cùng tỉnh → toàn quốc → mức khởi điểm) và trả kèm
+ * `basis` + `sampleSize`; FE KHÔNG tự đoán độ tin cậy từ con số.
+ */
+export const fetchMarketPriceSuggestion = (
+  params: MarketPriceParams,
+): Promise<MarketPriceSuggestion> =>
+  apiGet<MarketPriceSuggestion>('/public/listings/price-suggestion', {
+    vehicleType: params.vehicleType,
+    bodyType: params.bodyType ?? null,
+    motorbikeCategory: params.motorbikeCategory ?? null,
+    seatCount: params.seatCount ?? null,
+    provinceCode: params.provinceCode ?? null,
+  });

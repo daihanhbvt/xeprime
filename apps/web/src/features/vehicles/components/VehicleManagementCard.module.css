@@ -238,3 +238,20 @@
 .actions > div > button:first-child {
   flex: 1 1 auto;
 }
+
+/*
+ * Lý do người duyệt trả xe về.
+ *
+ * Màu cảnh báo chứ không phải màu chữ phụ: đây là việc phải làm, không phải chú thích. Giới hạn
+ * hai dòng để một lý do dài không kéo một thẻ cao gấp đôi các thẻ bên cạnh và phá vỡ lưới.
+ */
+.reviewReason {
+  margin: 0;
+  color: var(--xp-color-warning-text, var(--xp-color-text-secondary));
+  font-size: var(--xp-font-size-sm);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}

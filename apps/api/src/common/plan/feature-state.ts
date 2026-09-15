@@ -70,6 +70,14 @@ export function featureStatesFrom(
 /** Hình dạng dòng gói hiện hành mà guard/`me()` cần — `select` khai ở nơi gọi phải khớp cái này. */
 export interface CurrentPlanFeatureRow {
   endsAt: Date;
+  /**
+   * Chế độ thu phí ĐÓNG BĂNG trên dòng thuê bao (ADR 0024), không đọc lại từ `plans`.
+   *
+   * Đây là nguồn duy nhất phân biệt hai TUYẾN của ADR 0028: `commission` = Basic Owner,
+   * `package` = gian hàng thuê bao. Suy từ `planCode == null` là SAI — `assignDefaultPlanWithinTx`
+   * gán cho mọi gian hàng mới một gói tuyến hoa hồng, nên `planCode` gần như không bao giờ rỗng.
+   */
+  billingMode?: string | null;
   plan: { code: string; limitsJson: unknown };
 }
 
@@ -86,6 +94,7 @@ export function resolveTenantFeatures(
   features: Record<PlanFeature, FeatureState>;
   planCode: string | null;
   planEndsAt: Date | null;
+  billingMode: string | null;
 } {
   return {
     features: featureStatesFrom(
@@ -94,5 +103,6 @@ export function resolveTenantFeatures(
     ),
     planCode: subscription?.plan.code ?? null,
     planEndsAt: subscription?.endsAt ?? null,
+    billingMode: subscription?.billingMode ?? null,
   };
 }

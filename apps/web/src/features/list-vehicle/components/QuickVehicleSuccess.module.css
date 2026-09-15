@@ -57,3 +57,14 @@
   justify-content: center;
   gap: var(--xp-space-sm);
 }
+
+/*
+ * Danh sách điều kiện còn thiếu bên trong `Alert`.
+ *
+ * `padding-inline-start` chứ không `padding-left`: khối này nằm trong vỏ có thể đảo chiều, và
+ * dấu chấm đầu dòng phải đi theo chiều đọc.
+ */
+.missingList {
+  margin: 0;
+  padding-inline-start: var(--xp-space-lg);
+}

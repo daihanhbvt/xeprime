@@ -39,6 +39,7 @@ export {
   fetchPage,
   getApiBaseUrl,
   getErrorCode,
+  getErrorDetails,
   isUnauthenticated,
   type ApiRequestOptions,
   type Paged,

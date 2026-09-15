@@ -13,7 +13,8 @@
     "refunds": "Refunds",
     "reconciliation": "Daily reconciliation",
     "withdrawals": "Withdrawals",
-    "insurance": "Insurance"
+    "insurance": "Insurance",
+    "tax": "Tax"
   },
   "filters": {
     "search": "Search",
@@ -139,6 +140,54 @@
       "reasonLabel": "Reason for voiding",
       "reasonPlaceholder": "Why this policy is being voided",
       "done": "Policy voided"
+    }
+  },
+  "tax": {
+    "title": "Tax ledger by period",
+    "period": "Declaration period",
+    "loadError": "Could not load the tax ledger",
+    "total": "{count, plural, one {# row} other {# rows}}",
+    "percentOf": "{percent}% of taxable value",
+    "unknownEntity": "Seller profile missing",
+    "stats": {
+      "total": "Period obligation",
+      "accrued": "Awaiting declaration",
+      "declared": "Declared",
+      "remitted": "Remitted"
+    },
+    "byEntity": {
+      "title": "By entity type",
+      "value": "{amount} · {count, plural, one {# row} other {# rows}}"
+    },
+    "unknownWarning": {
+      "title": "Some obligations belong to shops with no seller profile",
+      "body": "Without an entity type there is no way to know which return these rows belong to. Ask those shops to complete their profile before closing the period — do not fold them into the individual bucket, which would be guessing at a legal obligation on their behalf."
+    },
+    "columns": {
+      "booking": "Trip / shop",
+      "entity": "Entity type / tax ID",
+      "base": "Taxable value",
+      "amount": "Amount",
+      "status": "Status"
+    },
+    "actions": {
+      "export": "Export CSV",
+      "markDeclared": "Mark declared",
+      "declaredDone": "Whole period marked as declared",
+      "markRemitted": "Mark remitted",
+      "remittedDone": "Whole period marked as remitted",
+      "reverse": "Reverse"
+    },
+    "empty": {
+      "title": "No obligations in this period",
+      "description": "Tax only accrues once a trip has started — trips cancelled before pickup have no row."
+    },
+    "reverseModal": {
+      "title": "Reverse a tax row",
+      "hint": "Reversing writes a NEGATIVE row pointing at the original; it never edits the old figure. Afterwards the booking can record the correct obligation again. Remitted rows cannot be reversed — use an amended return.",
+      "reasonLabel": "Reason for reversing",
+      "reasonPlaceholder": "Why this row is wrong",
+      "done": "Tax row reversed"
     }
   }
 }

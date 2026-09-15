@@ -10,9 +10,12 @@ import { ConfigService } from '@nestjs/config';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  APPROVAL_TARGET_TYPE,
   AUDIT_ACTOR_SCOPE,
   BANK_MATCH_TARGET_TYPE,
   BILLING_MODE,
+  resolveShopVerification,
+  SHOP_VERIFICATION,
   type BillingMode,
   COMMISSION_TRACK_TERM_MONTHS,
   FREE_TRIP_ALLOWANCE,
@@ -23,6 +26,7 @@ import {
   SUBSCRIPTION_STATUS,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
+  VEHICLE_TYPE_VALUES,
   addCalendarMonthsVn,
   parsePlanAssumedGmv,
   parsePlanInvoiceSnapshot,
@@ -396,6 +400,7 @@ export class BillingService {
         message: 'Gói đã ngừng bán, không gán được',
       });
     }
+    await this.assertShopVerifiedForPlan(tenantId, plan.billingMode);
 
     const limits = parsePlanLimits(plan.limitsJson);
     const slots = this.resolvePurchaseSlots(limits, dto.slots);
@@ -859,6 +864,7 @@ export class BillingService {
         message: 'Gói đã ngừng bán',
       });
     }
+    await this.assertShopVerifiedForPlan(tenantId, plan.billingMode);
     const limits = parsePlanLimits(plan.limitsJson);
 
     /*
@@ -1282,6 +1288,58 @@ export class BillingService {
     }
   }
 
+  /**
+   * Số chỗ CHỢ còn trống theo từng loại xe — `null` = không giới hạn.
+   *
+   * Tồn tại riêng bên cạnh `assertVehicleQuota` vì hai câu hỏi khác nhau: cổng kia chấm MỘT
+   * chiếc xe với dữ liệu đã commit, còn hàm này phục vụ nơi gửi NHIỀU xe trong cùng một lượt
+   * (tự gửi duyệt sau khi hồ sơ gian hàng được duyệt). Gọi `assertVehicleQuota` trong vòng lặp
+   * sẽ đọc lại cùng một con số đã commit cho mọi chiếc và cho qua cả đàn vượt hạn mức — nơi gọi
+   * phải tự trừ dần trên số trả về ở đây.
+   *
+   * Miễn hạn mức giống hệt `assertVehicleQuota`: không gói (grandfather — ADR 0010) và tuyến hoa
+   * hồng (không bán chỗ — ADR 0020).
+   */
+  async remainingMarketplaceSlots(
+    tenantId: string,
+  ): Promise<Record<VehicleType, number | null>> {
+    const unlimited = { [VEHICLE_TYPE.CAR]: null, [VEHICLE_TYPE.MOTORBIKE]: null } as Record<
+      VehicleType,
+      number | null
+    >;
+    const current = await this.findCurrent(tenantId, new Date());
+    if (!current || current.billingMode === BILLING_MODE.COMMISSION) return unlimited;
+
+    const limits = parsePlanLimits(current.plan.limitsJson);
+    const slots = current.slotsJson === null ? null : parsePlanSlots(current.slotsJson);
+    const limitOf: Record<VehicleType, number | null> = {
+      [VEHICLE_TYPE.CAR]: slots ? slots.car : limits.maxCars,
+      [VEHICLE_TYPE.MOTORBIKE]: slots ? slots.motorbike : limits.maxMotorbikes,
+    };
+
+    const used = await this.prisma.vehicle.groupBy({
+      by: ['vehicleType'],
+      where: {
+        tenantId,
+        deletedAt: null,
+        publicStatus: {
+          in: [
+            VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW,
+            VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+          ],
+        },
+      },
+      _count: { _all: true },
+    });
+    const usedOf = new Map(used.map((row) => [row.vehicleType, row._count._all]));
+
+    return VEHICLE_TYPE_VALUES.reduce((acc, type) => {
+      const limit = limitOf[type];
+      acc[type] = limit == null ? null : Math.max(0, limit - (usedOf.get(type) ?? 0));
+      return acc;
+    }, {} as Record<VehicleType, number | null>);
+  }
+
   // -------------------------------------------------------------------------
 
   /**
@@ -1481,6 +1539,43 @@ export class BillingService {
       });
     }
     return plan;
+  }
+
+  /**
+   * Cổng XÁC MINH của tuyến thuê bao — ADR 0036.
+   *
+   * Từ ADR 0036, gian hàng mở ra đã `active` ngay và tuyến hoa hồng chỉ đi qua cổng duyệt XE.
+   * Nếu dừng ở đó thì việc "nâng cấp lên gian hàng thuê bao" cũng mất luôn cổng duyệt của nó —
+   * đúng thứ ADR 0014 điều 5 nói nền tảng vẫn phải kiểm. Cổng đó chuyển về đây, nơi nó thực sự
+   * có nghĩa: **muốn mua gói thì pháp nhân phải đã được xem xét.**
+   *
+   * Chỉ áp với gói `package`. Gói tuyến hoa hồng (kể cả gói mặc định gán lúc đăng ký) không đi
+   * qua đây — nếu không thì `assignDefaultPlanWithinTx` sẽ tự chặn chính việc đăng ký, và đó là
+   * đúng vòng lặp mà ADR 0036 vừa gỡ ra.
+   *
+   * Đọc trạng thái xác minh từ phiếu duyệt `tenant` mới nhất (`resolveShopVerification`) — cùng
+   * một nguồn mà `TenantsService.getMyShop` trả cho giao diện, nên nút ở web và cổng ở đây không
+   * thể nói hai điều khác nhau.
+   */
+  private async assertShopVerifiedForPlan(
+    tenantId: string,
+    billingMode: string | null,
+  ): Promise<void> {
+    if (billingMode !== BILLING_MODE.PACKAGE) return;
+
+    const latest = await this.prisma.approvalTask.findFirst({
+      where: { tenantId, targetType: APPROVAL_TARGET_TYPE.TENANT },
+      orderBy: { submittedAt: 'desc' },
+      select: { status: true },
+    });
+    const verification = resolveShopVerification(latest?.status);
+    if (verification === SHOP_VERIFICATION.VERIFIED) return;
+
+    throw new ConflictException({
+      code: API_ERROR_CODE.SHOP_VERIFICATION_REQUIRED,
+      message: 'Gian hàng phải được xác minh trước khi mua gói thuê bao.',
+      details: { verification },
+    });
   }
 
   private async assertTenant(tenantId: string) {

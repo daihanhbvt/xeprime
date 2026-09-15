@@ -1,5 +1,5 @@
 import { newId } from '@xeprime/prisma';
-import { BRANCH_STATUS } from '@xeprime/types';
+import { APPROVAL_STATUS, APPROVAL_TARGET_TYPE, BRANCH_STATUS } from '@xeprime/types';
 import { ConfigService } from '@nestjs/config';
 import { AuditService } from '../../src/modules/audit/audit.service';
 import { BookingHoldsService } from '../../src/modules/holds/booking-holds.service';
@@ -27,6 +27,8 @@ import { PublicListingsService } from '../../src/modules/public-listings/public-
 import { DepositPolicyService } from '../../src/modules/deposit-policy/deposit-policy.service';
 import { InsuranceReadService } from '../../src/modules/insurance/insurance-read.service';
 import { InsuranceService } from '../../src/modules/insurance/insurance.service';
+import { TaxReadService } from '../../src/modules/tax/tax-read.service';
+import { TaxService } from '../../src/modules/tax/tax.service';
 import { NoopInsurancePartner } from '../../src/modules/insurance/partner/noop-insurance.partner';
 import { PricingService } from '../../src/modules/pricing/pricing.service';
 import { TenantsService } from '../../src/modules/tenants/tenants.service';
@@ -148,6 +150,7 @@ export function makeBookingHoldsService(prisma: PrismaService): BookingHoldsServ
     audit,
     notifications,
     new InsuranceReadService(prisma),
+    new TaxReadService(prisma),
   );
 }
 
@@ -247,6 +250,7 @@ export function makeBookingsService(
     overrides.settings ?? makeVehicleSettingsService(prisma),
     overrides.insurance ?? makeInsuranceService(prisma),
     makeAddressService(prisma),
+    new TaxService(prisma, audit),
   );
 }
 
@@ -399,4 +403,35 @@ export async function seedBranch(
     },
   });
   return id;
+}
+
+/**
+ * Đánh dấu một gian hàng ĐÃ ĐƯỢC XÁC MINH — điều kiện để mua gói thuê bao (ADR 0036).
+ *
+ * Trục xác minh đọc từ phiếu `approval_tasks` loại `tenant` mới nhất (`resolveShopVerification`),
+ * không từ một cột, nên "gian hàng đã xác minh" trong fixture là MỘT PHIẾU ĐÃ DUYỆT — đúng thứ
+ * production có. Dựng tay ở đây thay vì chạy trọn vòng gửi-rồi-duyệt: những spec gọi hàm này
+ * đang kiểm chuyện TIỀN (đối soát ngân hàng, hoá đơn gói), và kéo cả vòng duyệt vào là buộc
+ * chúng hỏng mỗi lần quy trình duyệt đổi một chi tiết không liên quan.
+ *
+ * @param reviewerUserId Người duyệt. Cùng người gửi cũng được — cột này chỉ để hàng đợi có tên.
+ */
+export async function verifyShop(
+  prisma: PrismaService,
+  tenantId: string,
+  reviewerUserId: string,
+): Promise<void> {
+  const now = new Date();
+  await prisma.approvalTask.create({
+    data: {
+      id: newId(),
+      tenantId,
+      targetType: APPROVAL_TARGET_TYPE.TENANT,
+      targetId: tenantId,
+      status: APPROVAL_STATUS.APPROVED,
+      submittedBy: reviewerUserId,
+      reviewedBy: reviewerUserId,
+      reviewedAt: now,
+    },
+  });
 }

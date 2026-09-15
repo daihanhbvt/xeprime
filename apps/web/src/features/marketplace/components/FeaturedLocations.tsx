@@ -55,7 +55,7 @@ export function FeaturedLocations() {
         <Alert
           type="error"
           showIcon
-          message={t('loadError')}
+          title={t('loadError')}
           description={getErrorMessage(error)}
         />
       ) : isLoading ? (

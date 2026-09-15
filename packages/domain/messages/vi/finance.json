@@ -405,5 +405,25 @@
     "chartEmpty": "Kỳ này chưa có khoản nào",
     "chartEmptyHint": "Chọn kỳ khác, hoặc ghi phiếu ở sổ Thu-Chi.",
     "createReceipt": "Tạo phiếu thu/chi"
+  },
+  "taxWithheld": {
+    "title": "Thuế đã khấu trừ",
+    "period": "Kỳ",
+    "explainer": "Thuế do chủ xe chịu và được trừ khỏi khoản XePrime phải trả bạn, không cộng vào giá khách. Chỉ phát sinh khi chuyến đã bắt đầu — chuyến huỷ trước giờ nhận không bị trừ.",
+    "loadError": "Không tải được số liệu thuế",
+    "empty": "Kỳ này chưa có chuyến nào bị khấu trừ thuế.",
+    "percentOf": "{percent}% giá trị chịu thuế",
+    "stats": {
+      "total": "Tổng đã khấu trừ",
+      "base": "Giá trị chịu thuế",
+      "trips": "Số chuyến"
+    },
+    "columns": {
+      "booking": "Chuyến",
+      "base": "Giá trị chịu thuế",
+      "label": "Loại thuế",
+      "amount": "Đã khấu trừ",
+      "status": "Trạng thái"
+    }
   }
 }

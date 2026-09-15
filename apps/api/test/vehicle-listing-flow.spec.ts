@@ -1,5 +1,6 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  API_ERROR_CODE,
   BOOKING_STATUS,
   COLLATERAL_MODE,
   FUEL_TYPE,
@@ -7,6 +8,7 @@ import {
   HANDOVER_TYPE,
   MEMBERSHIP_STATUS,
   POLICY_SOURCE,
+  PUBLISH_REQUIREMENT,
   SERVICE_TYPE,
   TENANT_ROLE,
   TENANT_STATUS,
@@ -140,7 +142,8 @@ beforeAll(async () => {
   otherTenantId = other.tenant;
   otherBranchId = other.branch;
 
-  const draft = await seedTenant('draft', TENANT_STATUS.DRAFT);
+  // ADR 0036: gian hàng "không đăng xe được" nay là gian hàng bị KHOÁ, không phải gian hàng nháp.
+  const draft = await seedTenant('draft', TENANT_STATUS.SUSPENDED);
   draftTenantId = draft.tenant;
   draftBranchId = draft.branch;
 });
@@ -269,7 +272,7 @@ describe('Điều kiện lên chợ', () => {
     await expect(
       vehicles.submitForPublicReview(tenantId, created.id, ownerId),
     ).rejects.toMatchObject({
-      response: { details: { missing: expect.arrayContaining([expect.stringContaining('ảnh')]) } },
+      response: { details: { missing: expect.arrayContaining([PUBLISH_REQUIREMENT.PHOTOS]) } },
     });
   });
 
@@ -289,14 +292,18 @@ describe('Điều kiện lên chợ', () => {
     });
     await expect(
       vehicles.submitForPublicReview(tenantId, created.id, ownerId),
-    ).rejects.toThrow(/sạc/);
+    ).rejects.toMatchObject({
+      response: { details: { missing: [PUBLISH_REQUIREMENT.ENERGY_SPEC] } },
+    });
   });
 
   maybe('xe xăng thiếu mức tiêu thụ: chặn gửi duyệt', async () => {
     const created = await createListableVehicle({ fuelConsumptionCombined: undefined });
     await expect(
       vehicles.submitForPublicReview(tenantId, created.id, ownerId),
-    ).rejects.toThrow(/tiêu thụ/);
+    ).rejects.toMatchObject({
+      response: { details: { missing: [PUBLISH_REQUIREMENT.ENERGY_SPEC] } },
+    });
   });
 
   maybe('hybrid KHÔNG bị đòi quãng đường chạy điện', async () => {
@@ -314,9 +321,12 @@ describe('Điều kiện lên chợ', () => {
       vehicles.submitForPublicReview(tenantId, created.id, ownerId),
     ).rejects.toMatchObject({
       response: {
-        details: {
-          missing: expect.arrayContaining(['hãng xe', 'số chỗ ngồi']),
-        },
+        /*
+         * MÃ, không phải câu tiếng Việt (ADR 0036 + ADR 0012). Hãng xe và số chỗ gộp vào MỘT mã
+         * `identity`: chúng là cùng một việc phải làm — "khai đủ danh tính chiếc xe" — và tách
+         * thành hai dòng checklist chỉ khiến chủ xe phải đọc hai lần cùng một câu.
+         */
+        details: { missing: [PUBLISH_REQUIREMENT.IDENTITY] },
       },
     });
   });
@@ -327,7 +337,11 @@ describe('Điều kiện lên chợ', () => {
     expect(submitted.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW);
   });
 
-  maybe('gian hàng CHƯA duyệt hoạt động: chặn gửi xe lên chợ', async () => {
+  /*
+   * ADR 0036: cổng này KHÔNG còn là "gian hàng đã được duyệt chưa" — tenant mở ra đã `active`.
+   * Nó chỉ còn bắt gian hàng bị KHOÁ.
+   */
+  maybe('gian hàng bị khoá: chặn gửi xe lên chợ', async () => {
     seq += 1;
     const created = await vehicles.create(draftTenantId, ownerId, {
       name: 'Xe của gian hàng nháp',
@@ -348,7 +362,7 @@ describe('Điều kiện lên chợ', () => {
     } as never);
     await expect(
       vehicles.submitForPublicReview(draftTenantId, created.id, ownerId),
-    ).rejects.toThrow(/hoạt động/);
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.SHOP_NOT_ACTIVE } });
   });
 
   maybe('xe ĐANG công khai thiếu ảnh theo luật mới KHÔNG bị tự ẩn', async () => {
@@ -371,7 +385,9 @@ describe('Điều kiện lên chợ', () => {
     });
     await expect(
       vehicles.submitForPublicReview(tenantId, created.id, ownerId),
-    ).rejects.toThrow(/ảnh/);
+    ).rejects.toMatchObject({
+      response: { details: { missing: expect.arrayContaining([PUBLISH_REQUIREMENT.PHOTOS]) } },
+    });
   });
 });
 

@@ -123,12 +123,12 @@ export function ChangePasswordForm() {
               type="info"
               showIcon
               className={styles.alert}
-              message={t('firstTimeTitle')}
+              title={t('firstTimeTitle')}
               description={t('firstTimeBody')}
             />
           ) : null}
           {formError ? (
-            <Alert type="error" showIcon className={styles.alert} message={formError} />
+            <Alert type="error" showIcon className={styles.alert} title={formError} />
           ) : null}
 
           {hasPassword ? (

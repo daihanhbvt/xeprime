@@ -17,10 +17,12 @@ import { useTranslations } from 'next-intl';
 import { useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import {
+  canSubmitShopVerification,
+  SHOP_VERIFICATION,
   TENANT_STATUS,
   TENANT_STATUS_META,
-  TENANT_STATUS_SUBMITTABLE,
   toLocalVnPhone,
+  type ShopVerification,
   type TenantStatus,
 } from '@xeprime/types';
 import { guessAddressLine } from '@xeprime/domain';
@@ -32,7 +34,8 @@ import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { trailingRequiredMark } from '@/components/form/required-mark';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
-import { ROUTES, shopPath } from '@/constants/routes';
+import { shopPath } from '@/constants/routes';
+import { useWorkspace } from '@/hooks/use-workspace';
 import { cx } from '@/lib/cx';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { presignShopMedia } from '@/services/upload';
@@ -161,6 +164,7 @@ export function ShopProfileWorkspace({
   onSubmitReview,
 }: ShopProfileWorkspaceProps) {
   const t = useTranslations('Shop');
+  const { paths, isManage } = useWorkspace();
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -175,9 +179,14 @@ export function ShopProfileWorkspace({
     });
 
   const status = shop.status as TenantStatus;
-  // Backend cũng từ chối ghi khi đang chờ duyệt (`INVALID_STATUS_TRANSITION`). Khoá ở đây để
-  // người dùng biết TRƯỚC khi gõ, chứ không phải sau khi bấm Lưu.
-  const pendingReview = status === TENANT_STATUS.PENDING_REVIEW;
+  /*
+   * Backend cũng từ chối ghi khi đang chờ XÁC MINH (`SHOP_VERIFICATION_PENDING`). Khoá ở đây để
+   * người dùng biết TRƯỚC khi gõ, chứ không phải sau khi bấm Lưu.
+   *
+   * Điều kiện đọc từ trục xác minh, không từ `tenants.status`: từ ADR 0036 cột đó không còn mang
+   * nghĩa "đang chờ duyệt", nên hỏi nó là hỏi nhầm chỗ và ô nhập sẽ mở ra đúng lúc phải khoá.
+   */
+  const pendingReview = shop.verification === SHOP_VERIFICATION.PENDING;
   const readOnly = pendingReview || !canEdit;
   const readOnlyReason = pendingReview
     ? t('form.lockedWhilePending')
@@ -195,8 +204,8 @@ export function ShopProfileWorkspace({
    */
   const dirty = formState.isDirty && !readOnly;
 
-  /** Hồ sơ ở chặng "chưa gửi / bị trả về" — chỉ khi đó checklist và nút Gửi duyệt mới có nghĩa. */
-  const submittable = TENANT_STATUS_SUBMITTABLE.includes(status);
+  /** Hồ sơ ở chặng "chưa gửi / bị trả về" — chỉ khi đó checklist và nút Gửi xác minh mới có nghĩa. */
+  const submittable = canSubmitShopVerification(shop.verification as ShopVerification);
 
   const submit = handleSubmit((v) => onSave(toBody(v)));
 
@@ -424,10 +433,21 @@ export function ShopProfileWorkspace({
                 disabled={readOnly}
                 notice={
                   <p className={styles.addressNotice}>
-                    {t('form.address.province.help')}{' '}
-                    <Link href={ROUTES.MANAGE.SHOP_BRANCHES} className={styles.helpLink}>
-                      {t('form.address.province.branchLink')}
-                    </Link>
+                    {t('form.address.province.help')}
+                    {/*
+                      Link "quản lý chi nhánh" chỉ có nghĩa ở cổng gian hàng. Chủ xe tuyến hoa
+                      hồng chỉ có chi nhánh mặc định — chính cái đang sửa ngay tại ô này — và
+                      nhiều chi nhánh là tính năng của gói (ADR 0027 điều 1), nên đưa họ tới một
+                      màn họ không vào được là hứa suông.
+                    */}
+                    {isManage ? (
+                      <>
+                        {' '}
+                        <Link href={paths.branches} className={styles.helpLink}>
+                          {t('form.address.province.branchLink')}
+                        </Link>
+                      </>
+                    ) : null}
                   </p>
                 }
               />

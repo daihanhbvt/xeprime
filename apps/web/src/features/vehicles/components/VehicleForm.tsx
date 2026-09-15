@@ -190,7 +190,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
         type="info"
         showIcon
         className={styles.pricePreview}
-        message={t('wizard.pricePreview', { price: fmt.money(discounted) })}
+        title={t('wizard.pricePreview', { price: fmt.money(discounted) })}
       />
     ) : null;
 
@@ -361,14 +361,14 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
           notice={
             <>
               {errorMessage ? (
-                <Alert type="error" showIcon message={errorMessage} className={styles.alert} />
+                <Alert type="error" showIcon title={errorMessage} className={styles.alert} />
               ) : null}
               {stepErrors > 0 ? (
                 <Alert
                   type="error"
                   showIcon
                   className={styles.alert}
-                  message={t('wizard.stepErrors', { count: stepErrors })}
+                  title={t('wizard.stepErrors', { count: stepErrors })}
                 />
               ) : null}
             </>

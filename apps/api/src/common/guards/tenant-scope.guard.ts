@@ -67,7 +67,7 @@ export class TenantScopeGuard implements CanActivate {
               where: currentSubscriptionWhere(now),
               orderBy: { endsAt: 'desc' },
               take: 1,
-              select: { endsAt: true, plan: { select: { code: true, limitsJson: true } } },
+              select: { endsAt: true, billingMode: true, plan: { select: { code: true, limitsJson: true } } },
             },
           },
         },

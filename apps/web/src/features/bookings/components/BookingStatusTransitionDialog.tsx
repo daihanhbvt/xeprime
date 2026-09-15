@@ -161,7 +161,7 @@ export function BookingStatusTransitionDialog({
           <Alert
             type="warning"
             showIcon
-            message={t('paidTitle', { amount: fmt.money(booking.collectedAmount) })}
+            title={t('paidTitle', { amount: fmt.money(booking.collectedAmount) })}
             description={t('paidDescription')}
           />
         ) : null}
@@ -178,7 +178,7 @@ export function BookingStatusTransitionDialog({
         />
 
         {transition.isError ? (
-          <Alert type="error" showIcon role="alert" message={errorMessage(transition.error)} />
+          <Alert type="error" showIcon role="alert" title={errorMessage(transition.error)} />
         ) : null}
       </DialogForm>
     </ResponsiveDialog>

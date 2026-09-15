@@ -44,7 +44,7 @@ export function ShopVehicleGrid({ slug }: { slug: string }) {
         <Alert
           type="error"
           showIcon
-          message={t('loadError')}
+          title={t('loadError')}
           description={errorMessage(error)}
         />
       ) : isLoading ? (

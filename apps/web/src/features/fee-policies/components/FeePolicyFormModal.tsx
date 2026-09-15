@@ -305,7 +305,7 @@ export function FeePolicyFormModal({
         ) : null}
 
         <Divider plain>{t('form.sectionInsurance')}</Divider>
-        <Alert type="info" showIcon message={t('form.insuranceHint')} />
+        <Alert type="info" showIcon title={t('form.insuranceHint')} />
         <SwitchField
           control={control}
           name="tripInsuranceEnabled"
@@ -351,7 +351,7 @@ export function FeePolicyFormModal({
           <Alert
             type="warning"
             showIcon
-            message={t('form.activationBlocked')}
+            title={t('form.activationBlocked')}
             description={policy.activationBlockers
               .map((code) => domainLabel('feePolicyActivationBlocker', code))
               .join(' · ')}

@@ -246,5 +246,30 @@
       }
     },
     "frozen": "Đổi công tắc chỉ áp dụng cho yêu cầu thuê được duyệt từ lúc này trở đi. Đơn đã tạo giữ nguyên cách thu cọc đã chốt lúc đó."
+  },
+  "verification": {
+    "submit": "Gửi xác minh",
+    "resubmit": "Gửi lại xác minh",
+    "unverified": {
+      "title": "Gian hàng chưa được xác minh",
+      "body": "Xe của bạn vẫn đăng và lên chợ bình thường — xác minh chỉ cần khi bạn muốn mua gói gian hàng để mở bộ quản lý đầy đủ."
+    },
+    "pending": {
+      "title": "Hồ sơ đang chờ nền tảng xác minh",
+      "body": "Xe của bạn không bị ảnh hưởng: xe đã duyệt vẫn trên chợ và vẫn nhận đơn bình thường.",
+      "submittedAt": "Đã gửi lúc {at}."
+    },
+    "needsRevision": {
+      "title": "Nền tảng yêu cầu bổ sung hồ sơ",
+      "body": "Cập nhật theo yêu cầu rồi gửi lại. Trong lúc đó xe của bạn vẫn hoạt động bình thường."
+    },
+    "rejected": {
+      "title": "Hồ sơ xác minh bị từ chối",
+      "body": "Chỉnh lại theo lý do bên dưới rồi gửi lại. Việc này không ảnh hưởng tới xe đang bán của bạn."
+    },
+    "verified": {
+      "title": "Gian hàng đã được xác minh",
+      "body": "Bạn có thể mua gói gian hàng để mở sổ thu chi, công nợ, nhân viên và báo cáo."
+    }
   }
 }

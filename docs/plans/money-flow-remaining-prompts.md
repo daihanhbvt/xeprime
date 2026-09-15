@@ -6,6 +6,34 @@
 
 ---
 
+## ✅ HẾT VIỆC — cả năm prompt đã thực hiện (14/09/2026)
+
+**Đừng chạy lại bất kỳ PROMPT nào dưới đây.** Phase 6, 9, 7, 8 và PROMPT 5 đã xong; trạng thái
+THẬT và các gate còn lại nằm ở [`../completion-roadmap.md`](../completion-roadmap.md) mục 3 (R3)
+và mục 8 — đó là nguồn canonical, file này chỉ còn là lịch sử.
+
+| Prompt | Nội dung | Bằng chứng |
+| --- | --- | --- |
+| 1 (Phase 6) | Công tắc thu cọc của gian hàng; hoa hồng BẬT + KHOÁ (403 khi `PATCH`), gói theo cờ `ESCROW_HOLD`; `deposit_collection_mode` đóng băng vào booking | `apps/api/src/modules/deposit-policy/`, migration `20260914090000_tenant_payment_settings`, `deposit-policy.spec.ts` |
+| 2 (Phase 9) | Đối soát ba chiều + 5 cột `settled_*` + phát hiện lệch sổ ví; bảo hiểm/thuế đã được cộng vào vế giữ hộ và trừ phần trùng | `booking-holds.service.ts`, migration `20260914130000_reconciliation_three_way`, `reconciliation-three-way.spec.ts` (12 test) |
+| 3 (Phase 7) | Bảo hiểm `IV`/`IP`: 7 trạng thái, phát hành ở mốc bàn giao qua job có retry, adapter mặc định KHÔNG tạo chứng nhận giả | `apps/api/src/modules/insurance/`, `apps/worker/src/jobs/insurance-issue.ts`, `insurance-lifecycle.spec.ts` |
+| 4 (Phase 8) | Thuế `T`: sổ append-only, chỉ phát sinh khi chuyến BẮT ĐẦU, đảo bằng dòng âm, kỳ theo giờ VN | `apps/api/src/modules/tax/`, migration `20260914170000_tax_withholdings`, `tax-withholding.spec.ts` |
+| 5 | `/account/payments` đọc từ `payments` (+ có mục trong menu); runbook đối chiếu backfill; roadmap đã rà | `apps/api/src/modules/payments/account-payments.*`, `docs/refund-to-wallet-backfill-runbook.md` |
+
+**Hai điều chệch khỏi prompt gốc, có chủ đích:**
+
+1. Phase 7/8 viết "mặc định TẮT". Chủ dự án chỉ đạo ngày 14/09 **BẬT cả hai** bằng số tham khảo
+   thị trường (fee policy v4: thuế 10%, bảo vệ xe 2%, bảo hiểm chuyến 1%). Rủi ro đã ghi ở
+   roadmap mục 5; adapter bảo hiểm mặc định vẫn từ chối phát hành nên không có chứng nhận giả.
+2. PROMPT 5 việc 2 **chưa chạy trên staging** vì chưa có môi trường staging. Thay vào đó là
+   runbook có thể kiểm chứng, và nó phát hiện bước cộng số dư của backfill KHÔNG idempotent.
+
+**Trạng thái xanh 14/09/2026:** api 101 suite / 1381 test (DB thật, `REQUIRE_DB=1`) · types 207
+test · i18n 46 namespace / 6.414 khoá parity khớp · typecheck api/web/worker/types sạch ·
+`migrate diff` không drift trên bảng luồng tiền.
+
+---
+
 ## Đã xong (Phase 0–5) — để agent mới biết đừng làm lại
 
 | Phase | Nội dung | Bằng chứng |

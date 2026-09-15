@@ -268,6 +268,15 @@
       "withDriverOneWayPlaceholder": "VD: 2.200.000",
       "withDriverOneWayHelp": "Liên tỉnh một chiều; bỏ trống = tạm tính theo bậc gần nhất"
     },
+    "marketPrice": {
+      "range": "Giá tham khảo: {low} – {high}/ngày",
+      "basisProvinceSegment": "Trung vị của {count} xe cùng phân khúc đang cho thuê tại {province}",
+      "basisSegment": "Trung vị của {count} xe cùng phân khúc đang cho thuê trên cả nước",
+      "basisVehicleType": "Trung vị của {count} xe cùng loại đang cho thuê trên cả nước",
+      "basisBaseline": "Mức khởi điểm gợi ý — chợ chưa đủ xe tương tự để tính giá thị trường",
+      "apply": "Dùng giá {price}",
+      "applyBaseline": "Dùng mức khởi điểm {price}"
+    },
     "policies": {
       "delivery": "Giao xe tận nơi",
       "deliveryDescription": "Khách trên marketplace lọc được xe có hỗ trợ giao nhận"
@@ -360,6 +369,7 @@
       "sourceTypeRequired": "Chọn hình thức nguồn xe",
       "operationStatusRequired": "Chọn trạng thái vận hành",
       "fuelTypeIncompatible": "Nguồn năng lượng không phù hợp với loại phương tiện",
+      "transmissionIncompatible": "Kiểu truyền động không phù hợp với loại xe và nguồn năng lượng",
       "bodyTypeCarOnly": "Kiểu dáng thân xe chỉ áp dụng cho ô tô",
       "yearTypeError": "Đời xe phải là số",
       "yearInteger": "Đời xe phải là số nguyên",
@@ -428,7 +438,8 @@
       "description": "Mô tả xe",
       "photos": "Tối thiểu 4 ảnh xe",
       "identity": "Hãng, mẫu, năm sản xuất và số chỗ",
-      "energySpec": "Thông số của nguồn năng lượng"
+      "energySpec": "Thông số của nguồn năng lượng",
+      "branchLocation": "Chi nhánh có tỉnh/thành"
     },
     "status": {
       "pending": {

@@ -121,7 +121,7 @@ export function SellerProfileWorkspace() {
         <Alert
           type="error"
           showIcon
-          message={t('page.loadError')}
+          title={t('page.loadError')}
           action={
             <Button size="small" onClick={() => void profileQuery.refetch()}>
               {tCommon('actions.retry')}
@@ -197,7 +197,7 @@ export function SellerProfileWorkspace() {
             type="warning"
             showIcon
             className={styles.alert}
-            message={t('page.changesRequested')}
+            title={t('page.changesRequested')}
             description={profile.reviewNote}
           />
         ) : null}
@@ -206,19 +206,19 @@ export function SellerProfileWorkspace() {
             type="error"
             showIcon
             className={styles.alert}
-            message={t('page.rejected')}
+            title={t('page.rejected')}
             description={profile.reviewNote}
           />
         ) : null}
         {profile.status === SELLER_PROFILE_STATUS.SUBMITTED ? (
-          <Alert type="info" showIcon className={styles.alert} message={t('page.pendingReview')} />
+          <Alert type="info" showIcon className={styles.alert} title={t('page.pendingReview')} />
         ) : null}
         {profile.status === SELLER_PROFILE_STATUS.VERIFIED ? (
-          <Alert type="success" showIcon className={styles.alert} message={t('page.verified')} />
+          <Alert type="success" showIcon className={styles.alert} title={t('page.verified')} />
         ) : null}
 
         {readOnly ? (
-          <Alert type="info" showIcon className={styles.alert} message={t('page.readOnly')} />
+          <Alert type="info" showIcon className={styles.alert} title={t('page.readOnly')} />
         ) : null}
 
         <fieldset disabled={readOnly || save.isPending} className={styles.fieldset}>
@@ -252,7 +252,7 @@ export function SellerProfileWorkspace() {
             type="warning"
             showIcon
             className={styles.alert}
-            message={t('form.missingFields', { count: profile.missingFields.length })}
+            title={t('form.missingFields', { count: profile.missingFields.length })}
             description={profile.missingFields.map((field) => missingFieldLabel(t, field)).join(' · ')}
           />
         ) : null}

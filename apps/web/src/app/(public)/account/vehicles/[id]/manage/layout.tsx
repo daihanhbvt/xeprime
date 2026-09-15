@@ -1,3 +1,4 @@
+import { OWNER_STAGE } from '@xeprime/types';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
@@ -26,7 +27,7 @@ export default async function VehicleManageLayout({
 }) {
   const { id } = await params;
   return (
-    <OwnerGate>
+    <OwnerGate minStage={OWNER_STAGE.REGISTERING}>
       <VehicleManageWorkspace vehicleId={id}>{children}</VehicleManageWorkspace>
     </OwnerGate>
   );

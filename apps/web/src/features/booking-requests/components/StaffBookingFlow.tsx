@@ -713,13 +713,13 @@ export function StaffBookingFlow({
                   type="info"
                   showIcon
                   className={styles.err}
-                  message="Xe chưa cấu hình giá ngày — bạn sẽ nhập tiền thuê ở bước Xác nhận."
+                  title="Xe chưa cấu hình giá ngày — bạn sẽ nhập tiền thuê ở bước Xác nhận."
                 />
               )
             ) : null}
 
             {stepError ? (
-              <Alert type="warning" showIcon message={stepError} className={styles.err} />
+              <Alert type="warning" showIcon title={stepError} className={styles.err} />
             ) : null}
           </section>
         ) : null}
@@ -860,7 +860,7 @@ export function StaffBookingFlow({
               <Alert
                 type="error"
                 showIcon
-                message={stepError}
+                title={stepError}
                 className={styles.err}
                 role="alert"
               />
@@ -955,7 +955,7 @@ export function StaffBookingFlow({
                   type="warning"
                   showIcon
                   className={styles.err}
-                  message="Xe chưa cấu hình giá ngày — nhập tiền thuê thoả thuận với khách."
+                  title="Xe chưa cấu hình giá ngày — nhập tiền thuê thoả thuận với khách."
                 />
                 <NumberField
                   control={control}
@@ -978,7 +978,7 @@ export function StaffBookingFlow({
               <Alert
                 type="error"
                 showIcon
-                message={stepError}
+                title={stepError}
                 className={styles.err}
                 role="alert"
               />

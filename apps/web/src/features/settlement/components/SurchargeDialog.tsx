@@ -173,7 +173,7 @@ export function SurchargeDialog({
             <Alert
               type="warning"
               showIcon
-              message={t('surcharges.overtimeSuggestion', { amount: fmt.money(overtime.amount!) })}
+              title={t('surcharges.overtimeSuggestion', { amount: fmt.money(overtime.amount!) })}
               description={overtime.formula}
               action={
                 <Button size="small" onClick={() => setAmount(Number(overtime.amount))}>
@@ -187,7 +187,7 @@ export function SurchargeDialog({
             <Alert
               type="info"
               showIcon
-              message={t('surcharges.ruleSuggestion', {
+              title={t('surcharges.ruleSuggestion', {
                 kind: domainLabel('driverSurchargeKind', rule.kind),
                 amount: fmt.money(rule.amount),
                 unit: domainLabel('driverSurchargeUnit', rule.unit),
@@ -215,7 +215,7 @@ export function SurchargeDialog({
             />
           </label>
 
-          {error ? <Alert type="error" showIcon message={error} role="alert" /> : null}
+          {error ? <Alert type="error" showIcon title={error} role="alert" /> : null}
 
           <Button
             icon={<PlusOutlined />}

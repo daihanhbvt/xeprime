@@ -30,7 +30,7 @@ export function WalletSummaryCard({
   const { data, isPending, isError } = useWalletSummary(scope);
 
   if (isPending) return <Skeleton active paragraph={{ rows: 2 }} />;
-  if (isError) return <Alert type="error" showIcon message={t('loadError')} />;
+  if (isError) return <Alert type="error" showIcon title={t('loadError')} />;
 
   const frozen = data.status === 'frozen';
   const canWithdraw = !frozen && Number(data.available) >= Number(data.minWithdrawAmount);
@@ -48,7 +48,7 @@ export function WalletSummaryCard({
         ) : null}
       </header>
 
-      {frozen ? <Alert type="warning" showIcon message={t('balance.frozen')} /> : null}
+      {frozen ? <Alert type="warning" showIcon title={t('balance.frozen')} /> : null}
 
       <dl className={styles.figures}>
         <div className={styles.primary}>

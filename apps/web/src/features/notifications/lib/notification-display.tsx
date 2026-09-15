@@ -38,8 +38,10 @@ const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   [NOTIFICATION_TYPE.BOOKING_AUTO_ACCEPTED]: <ThunderboltOutlined />,
   [NOTIFICATION_TYPE.SHOP_APPROVED]: <ShopOutlined />,
   [NOTIFICATION_TYPE.SHOP_REJECTED]: <ShopOutlined />,
+  [NOTIFICATION_TYPE.SHOP_NEEDS_REVISION]: <ShopOutlined />,
   [NOTIFICATION_TYPE.VEHICLE_APPROVED]: <CarOutlined />,
   [NOTIFICATION_TYPE.VEHICLE_REJECTED]: <CarOutlined />,
+  [NOTIFICATION_TYPE.VEHICLE_NEEDS_REVISION]: <CarOutlined />,
   [NOTIFICATION_TYPE.REVIEW_RECEIVED]: <StarOutlined />,
   // Vòng đời gói (W2, ADR 0015/0026) — cùng icon thẻ với màn "Gói của tôi".
   [NOTIFICATION_TYPE.SUBSCRIPTION_EXPIRING]: <CreditCardOutlined />,
