@@ -3,6 +3,7 @@
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { Tooltip } from 'antd';
 import type { ReactNode } from 'react';
+import { subtractMoney } from '@xeprime/domain';
 import { FEE_BEARER, PRICE_ROW } from '@xeprime/types';
 import styles from './PriceBreakdown.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -196,9 +197,7 @@ export function PriceBreakdown({
                   {tCommon('components.price.payAtHandover')}
                 </span>
                 <span className={styles.depositAmount}>
-                  {fmt.money(
-                    String(Number(fees.customerTotalAmount) - Number(fees.holdAmount)),
-                  )}
+                  {fmt.money(subtractMoney(fees.customerTotalAmount, fees.holdAmount))}
                 </span>
               </div>
             </>

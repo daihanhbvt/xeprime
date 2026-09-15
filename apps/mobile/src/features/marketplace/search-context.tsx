@@ -1,4 +1,13 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import {
   draftFromFilters,
   draftToFilterPatch,
@@ -10,6 +19,7 @@ import { type MarketplaceFilters, type PublicDestination } from '@xeprime/types'
 import { PROVINCE_CODES, type RouteType, type ServiceType, type VehicleType } from '@xeprime/types';
 import type { Dayjs } from '@xeprime/domain';
 import { useTranslations } from 'use-intl';
+import { readRememberedRentalRange, rememberRentalRange } from '@/lib/rental-range-memory';
 import { useDestinations } from './hooks/use-marketplace-data';
 
 /**
@@ -104,6 +114,9 @@ export function SearchExperienceProvider({
 
   const [draft, setDraft] = useState<SearchDraft>(() => draftFromFilters(initial ?? {}));
 
+  /* Ngữ cảnh mang từ màn trước, chốt ở lần mount đầu — effect khôi phục bên dưới chỉ đọc nó một lần. */
+  const initialRef = useRef(initial);
+
   /**
    * Ngữ cảnh ĐÃ áp dụng — bắt đầu RỖNG, không phải bằng bản nháp.
    *
@@ -125,6 +138,42 @@ export function SearchExperienceProvider({
   } = useDestinations(PROVINCE_OPTIONS_LIMIT);
 
   /**
+   * Điền lại khoảng thuê khách đã chọn ở lượt trước — bản native của effect khôi phục trong
+   * `search/search-context.tsx`.
+   *
+   * Ba chốt chặn, mỗi cái chặn một cách làm hỏng ý định của người dùng:
+   *   - `initial?.pickupAt && initial?.returnAt` ⇒ màn trước đã nói (khách vừa lọc ở trang chủ
+   *     rồi sang màn kết quả), và ngữ cảnh mang sang luôn thắng — đúng vai URL bên web;
+   *   - `userEdited` ⇒ khách đã chạm vào thẻ trong lượt này, đừng ghi đè thứ họ vừa gõ;
+   *   - chỉ chạy MỘT lần (mảng phụ thuộc rỗng) ⇒ không giật lại ô vì một lý do khác.
+   *
+   * Cố ý KHÔNG đánh dấu là đã-sửa: đây là điền sẵn, không phải một thao tác mới. Đánh dấu lên là
+   * khoảng ngày này thành một bộ lọc ẩn mà khách chưa hề bấm "Tìm xe" để xác nhận — đúng cái bẫy
+   * `applied` ở trên đang tránh.
+   */
+  const userEditedRef = useRef(false);
+  useEffect(() => {
+    if (userEditedRef.current) return;
+    if (initialRef.current?.pickupAt && initialRef.current?.returnAt) return;
+
+    let alive = true;
+    void readRememberedRentalRange().then((remembered) => {
+      if (!alive || !remembered || userEditedRef.current) return;
+      setDraft((prev) => ({
+        ...prev,
+        rental: {
+          pickupAt: remembered.pickupAt,
+          returnAt: remembered.returnAt,
+          mode: remembered.mode,
+        },
+      }));
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  /**
    * Mọi lối sửa của NGƯỜI DÙNG đi qua đây — và chỉ từ đây ngữ cảnh mới được áp.
    *
    * Đổi loại xe / dịch vụ / địa điểm áp NGAY (web cũng ghi shallow lên URL ngay), nhưng lần áp
@@ -132,6 +181,7 @@ export function SearchExperienceProvider({
    * là đóng dấu cả ngữ cảnh lên URL.
    */
   const edit = useCallback((patch: (prev: SearchDraft) => SearchDraft) => {
+    userEditedRef.current = true;
     setDraft((prev) => {
       const next = patch(prev);
       setFiltersState(applied(next));
@@ -176,15 +226,29 @@ export function SearchExperienceProvider({
    * Không sợ nạp lại theo từng cú chạm lịch: khoảng CHƯA đủ hai đầu thì `draftToFilterPatch`
    * không phát `pickupAt`/`returnAt`, nên ngữ cảnh chỉ đổi đúng một lần — lúc khoảng đã trọn.
    */
+  /*
+   * Hai hàm dưới là chỗ DUY NHẤT ghi khoảng thuê vào bộ nhớ — và chúng nằm đúng ở trình xử lý
+   * thao tác của người dùng, không phải trong một effect theo dõi `draft`. Khác biệt đó là toàn
+   * bộ điểm của việc ghi nhớ: `draft` còn đổi vì tham số điều hướng và vì gợi ý tự sinh, nên một
+   * effect sẽ lưu cả những khoảng ngày khách chưa bao giờ chọn. Web ghi cùng luật này ở
+   * `search/search-context.tsx`.
+   */
+  const rentalDraft = draft.rental;
+
   const setRentalRange = useCallback(
-    (next: { pickupAt: Dayjs | null; returnAt: Dayjs | null }) =>
-      edit((prev) => ({ ...prev, rental: { ...prev.rental, ...next } })),
-    [edit],
+    (next: { pickupAt: Dayjs | null; returnAt: Dayjs | null }) => {
+      rememberRentalRange({ ...next, mode: rentalDraft.mode });
+      edit((prev) => ({ ...prev, rental: { ...prev.rental, ...next } }));
+    },
+    [edit, rentalDraft.mode],
   );
 
   const setRentalMode = useCallback(
-    (next: RentalMode) => edit((prev) => ({ ...prev, rental: { ...prev.rental, mode: next } })),
-    [edit],
+    (next: RentalMode) => {
+      rememberRentalRange({ ...rentalDraft, mode: next });
+      edit((prev) => ({ ...prev, rental: { ...prev.rental, mode: next } }));
+    },
+    [edit, rentalDraft],
   );
 
   /**

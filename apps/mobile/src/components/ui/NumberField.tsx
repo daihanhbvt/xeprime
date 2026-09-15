@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { TextInput } from 'react-native';
+import { useRevealOnFocus } from '@/components/layout/focus-reveal';
 import { Text, YStack } from 'tamagui';
 import { formatNumberInput, normalizeNumberInput, parseNumberInput } from '@xeprime/domain';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
@@ -55,6 +56,7 @@ export function NumberField<T extends FieldValues>({
   max,
   precision,
   required = false,
+  publishRequired = false,
   editable = true,
   integer = false,
   grouped = true,
@@ -71,6 +73,8 @@ export function NumberField<T extends FieldValues>({
   max?: number;
   /** Số chữ số thập phân giữ lại khi rời ô. `integer` là dạng rút gọn của `precision={0}`. */
   precision?: number;
+  /** Dấu `●` cần-cho-duyệt-công-khai — xem docblock ở `FieldLabel`. */
+  publishRequired?: boolean;
   required?: boolean;
   editable?: boolean;
   /** Chỉ nhận số nguyên — dùng cho ô phần trăm, đúng `precision={0}` của web. */
@@ -87,6 +91,7 @@ export function NumberField<T extends FieldValues>({
 
   const { field, fieldState } = useController({ control, name });
   const inputRef = useRef<TextInput>(null);
+  const revealOnFocus = useRevealOnFocus();
   const [focused, setFocused] = useState(false);
   /*
    * Bản NHÁP của chuỗi đang gõ, chỉ sống trong lúc ô đang được chọn.
@@ -105,7 +110,7 @@ export function NumberField<T extends FieldValues>({
 
   return (
     <YStack gap={space.xs}>
-      <FieldLabel label={label} required={required} />
+      <FieldLabel label={label} required={required} publishRequired={publishRequired} />
 
       <FieldShell
         focused={focused}
@@ -141,7 +146,10 @@ export function NumberField<T extends FieldValues>({
             if (clamped !== field.value) field.onChange(clamped);
             field.onBlur();
           }}
-          onFocus={() => setFocused(true)}
+          onFocus={() => {
+            setFocused(true);
+            revealOnFocus();
+          }}
           editable={editable}
           /*
             `decimal-pad` mở phím dấu thập phân; `number-pad` thì không có. Ô số nguyên dùng bàn

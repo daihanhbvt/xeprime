@@ -141,7 +141,12 @@ export function ToggleRow({
           </Text>
         ) : null}
       </YStack>
-      <PolicySwitch label={label} checked={checked} disabled={disabled ?? false} onToggle={onToggle} />
+      <PolicySwitch
+        label={label}
+        checked={checked}
+        disabled={disabled ?? false}
+        onToggle={onToggle}
+      />
     </XStack>
   );
 }
@@ -458,12 +463,17 @@ function DepositSection({
   disabled,
   step,
   hint,
+  title,
+  optionDescriptions,
 }: {
   control: PolicyControl;
   disabled: boolean;
   step: StepTitle;
   /** Phạm vi ảnh hưởng của mức cọc đang sửa — chỉ màn chính sách gian hàng truyền vào. */
   hint?: string;
+  /** Xem docblock ở `CollateralPolicySection`. */
+  title?: string;
+  optionDescriptions?: Partial<Record<string, string>>;
 }) {
   const t = useTranslations('Vehicles.pricing.deposit');
   const domainLabel = useDomainLabel();
@@ -472,7 +482,7 @@ function DepositSection({
   return (
     <Card>
       <YStack gap={space.md}>
-        <SectionHead tone={TONE.deposit} title={step(1, t('title'))} hint={t('hint')} />
+        <SectionHead tone={TONE.deposit} title={step(1, title ?? t('title'))} hint={t('hint')} />
 
         <Controller
           control={control}
@@ -492,7 +502,7 @@ function DepositSection({
                 <RadioOption
                   key={value}
                   label={domainLabel('collateralMode', value)}
-                  hint={t(MODE_HINT_KEY[value])}
+                  hint={optionDescriptions?.[value] ?? t(MODE_HINT_KEY[value])}
                   checked={field.value === value}
                   disabled={disabled}
                   onPress={() => field.onChange(value)}
@@ -884,9 +894,7 @@ function LongTermDiscountSection({
                         options={optionsFor(index)}
                         placeholder={t('selectPackage')}
                         required
-                        {...(fieldState.error?.message
-                          ? { error: fieldState.error.message }
-                          : {})}
+                        {...(fieldState.error?.message ? { error: fieldState.error.message } : {})}
                         onChange={(next) => {
                           if (disabled) return;
                           field.onChange(Number(next));
@@ -917,9 +925,7 @@ function LongTermDiscountSection({
                   label={t('addTier')}
                   tone={TONE.discount}
                   disabled={nextUnusedMonths == null}
-                  onPress={() =>
-                    append({ minMonths: nextUnusedMonths, percent: null, note: '' })
-                  }
+                  onPress={() => append({ minMonths: nextUnusedMonths, percent: null, note: '' })}
                 />
               )}
 
@@ -952,5 +958,72 @@ function LongTermDiscountSection({
         )}
       </YStack>
     </Card>
+  );
+}
+
+/**
+ * Hai khối của form chính sách dùng LẺ, ngoài bộ bốn khối của `PolicySections`.
+ *
+ * Không gian "Quản lý xe" tách chính sách thành hai màn riêng — "Giao xe tận nơi" và "Thủ tục cho
+ * thuê" — và cả hai ghi vào CÙNG `PUT /vehicles/:id/pricing`. Chúng dùng lại đúng khối ở đây thay
+ * vì dựng bảng bậc phí hay bộ chọn hình thức bảo đảm thứ hai: cùng luật, cùng câu chữ, cùng ràng
+ * buộc chéo. Web giải cùng bài này bằng `DeliveryPolicySection` / `CollateralPolicySection`.
+ *
+ * Không đánh số bước: đứng một mình trên màn riêng thì "2." không còn chỉ về cái gì.
+ */
+const PLAIN_STEP: StepTitle = (_index, title) => title;
+
+/**
+ * Form GỌI hai khối này có thể rộng hơn `PolicyFormValues` — màn "Thủ tục cho thuê" trộn chính
+ * sách với thiết lập dịch vụ trong cùng một `useForm`. `Control<T>` của React Hook Form bất biến
+ * theo `T` (nó vừa đọc vừa ghi), nên một siêu tập không gán được cho `Control<PolicyFormValues>`
+ * dù mọi trường cần thiết đều có mặt.
+ *
+ * Ràng buộc `T extends PolicyFormValues` ở chữ ký là thứ THẬT SỰ bảo đảm an toàn: form thiếu một
+ * trường chính sách sẽ đỏ ngay tại nơi gọi. Phép ép kiểu bên trong chỉ để qua chỗ bất biến đó, và
+ * nó nằm gọn ở một chỗ thay vì rải ở từng màn.
+ */
+type PolicyFormSuperset<T extends PolicyFormValues> = Control<T>;
+
+export function DeliveryPolicySection<T extends PolicyFormValues>({
+  control,
+  disabled,
+}: {
+  control: PolicyFormSuperset<T>;
+  disabled: boolean;
+}) {
+  return (
+    <DeliverySection
+      control={control as unknown as PolicyControl}
+      disabled={disabled}
+      step={PLAIN_STEP}
+    />
+  );
+}
+
+export function CollateralPolicySection<T extends PolicyFormValues>({
+  control,
+  disabled,
+  title,
+  optionDescriptions,
+}: {
+  control: PolicyFormSuperset<T>;
+  disabled: boolean;
+  /**
+   * Tiêu đề do NƠI GỌI đặt. Cùng khối này đứng ở hai ngữ cảnh: màn chính sách gian hàng gọi nó là
+   * "Tiền cọc / thế chấp", còn màn Thủ tục cho thuê của một xe gọi là "Tài sản thế chấp".
+   */
+  title?: string;
+  /** Mô tả từng chế độ do nơi gọi truyền để nói đúng ngữ cảnh (gian hàng vs một xe). */
+  optionDescriptions?: Partial<Record<string, string>>;
+}) {
+  return (
+    <DepositSection
+      control={control as unknown as PolicyControl}
+      disabled={disabled}
+      step={PLAIN_STEP}
+      {...(title === undefined ? {} : { title })}
+      {...(optionDescriptions === undefined ? {} : { optionDescriptions })}
+    />
   );
 }

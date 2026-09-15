@@ -1,18 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { Controller, useWatch, type Control } from 'react-hook-form';
+import { Controller, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 import {
   CATALOG_TYPE,
   SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
-  TRANSMISSION_TYPE_VALUES,
+  vehicleFeatureAppliesTo,
   VEHICLE_OPERATION_STATUS_VALUES,
   VEHICLE_SOURCE_TYPE_VALUES,
   VEHICLE_TYPE,
   VEHICLE_TYPE_VALUES,
-  vehicleFuelTypesFor,
   type VehicleSourceType,
 } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
@@ -28,7 +26,11 @@ import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
 import { LongTermPriceHint } from '@/features/rental-policies/components/LongTermPriceHint';
 import { ToggleRow } from '@/features/rental-policies/components/PolicySections';
+import { CatalogCardPicker } from '@/features/catalog/components/CatalogCardPicker';
 import { useCatalog } from '@/features/catalog/use-catalog';
+import { VehicleClassificationFields } from './VehicleClassificationFields';
+import { VehicleEnergyFields, useTransmissionOptions } from './VehicleEnergyFields';
+import { VehicleIdentityFields } from './VehicleIdentityFields';
 import { useDomainLabel } from '@/i18n/domain';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
@@ -183,30 +185,20 @@ export function SpecsSection({
   control,
   isCar,
   lockedNotice,
+  setValue,
 }: StepProps & {
   /** Xem docblock của `BasicStep` — cùng cơ chế khoá `plateNumber`/`manufactureYear`/`fuelType`. */
   lockedNotice?: string;
+  /**
+   * Dọn ô không còn nghĩa khi đổi loại xe / hãng / nguồn năng lượng — ba khối dùng chung bên
+   * dưới tự làm việc đó. Thiếu nó thì form giữ lại một mẫu xe hoặc một con số mà server sẽ xoá.
+   */
+  setValue?: UseFormSetValue<VehicleFormValues>;
 }) {
   const t = useTranslations('Vehicles.form');
-  const { catalog } = useCatalog();
-
-  const brandOptions = useMemo(
-    () =>
-      (catalog[CATALOG_TYPE.VEHICLE_BRAND] ?? []).map((item) => ({
-        value: item.key,
-        label: item.label,
-      })),
-    [catalog],
-  );
-
-  const bodyTypeOptions = useMemo(
-    () =>
-      (catalog[CATALOG_TYPE.BODY_TYPE] ?? []).map((item) => ({
-        value: item.key,
-        label: item.label,
-      })),
-    [catalog],
-  );
+  const vehicleType = isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE;
+  const fuelType = useWatch({ control, name: 'fuelType' });
+  const transmissionOptions = useTransmissionOptions(vehicleType, fuelType);
 
   return (
     <YStack gap={space.md}>
@@ -214,55 +206,104 @@ export function SpecsSection({
         control={control}
         name="plateNumber"
         label={t('specs.plateNumber')}
+        publishRequired
         placeholder={t('specs.platePlaceholder')}
         hint={lockedNotice ?? t('specs.plateHelp')}
+        autoCapitalize="characters"
         editable={!lockedNotice}
       />
-      <SelectField
+
+      {/*
+        Hãng → Mẫu xe: cặp chọn phụ thuộc dùng chung với wizard đăng nhanh. Client gửi
+        `vehicleCatalogModelId`, backend chép nhãn hãng/mẫu xuống — nên không có đường nào lưu
+        được một chiếc xe máy hiệu Toyota.
+      */}
+      <VehicleIdentityFields
         control={control}
-        name="brand"
-        label={t('specs.brand')}
-        options={brandOptions}
-        placeholder={t('specs.brandPlaceholder')}
+        vehicleType={vehicleType}
+        disabled={Boolean(lockedNotice)}
+        {...(lockedNotice ? { lockedNotice } : {})}
+        {...(setValue ? { setValue } : {})}
       />
-      <TextField
-        control={control}
-        name="model"
-        label={t('specs.model')}
-        placeholder={t('specs.modelPlaceholder')}
-      />
+
       <NumberField
         control={control}
         name="manufactureYear"
         grouped={false}
+        integer
         label={t('specs.manufactureYear')}
         placeholder={String(new Date().getFullYear())}
+        min={1980}
+        max={new Date().getFullYear() + 1}
         {...(lockedNotice ? { hint: lockedNotice } : {})}
         editable={!lockedNotice}
       />
-      <NumberField
-        control={control}
-        name="seatCount"
-        integer
-        label={t('specs.seatCount')}
-        placeholder={t('specs.seatPlaceholder')}
-      />
-      <FuelTypeField control={control} isCar={isCar} lockedNotice={lockedNotice} />
       <TextField
         control={control}
         name="color"
         label={t('specs.color')}
         placeholder={t('specs.colorPlaceholder')}
       />
-      {isCar ? (
-        <SelectField
-          control={control}
-          name="bodyType"
-          label={t('specs.bodyType')}
-          options={bodyTypeOptions}
-          hint={t('specs.bodyTypeHint')}
-        />
-      ) : null}
+
+      {/*
+        Phân loại: ô tô có số chỗ + kiểu dáng thân xe, xe máy có phân khúc. Hai chiều đối xứng và
+        loại trừ nhau — ma trận `vehicleFieldPolicy` quyết định, không phải cờ `isCar` rải rác.
+      */}
+      <VehicleClassificationFields
+        control={control}
+        vehicleType={vehicleType}
+        bodyTypePicker={<BodyTypePicker control={control} />}
+        disabled={Boolean(lockedNotice)}
+        {...(setValue ? { setValue } : {})}
+      />
+
+      {/*
+        Nguồn năng lượng + thông số của nó: xe xăng hỏi lít/100km, xe điện hỏi km mỗi lần sạc.
+        Cùng khối với wizard đăng xe nhanh, cùng ma trận `vehicleEnergySpecPolicy` mà backend dùng.
+      */}
+      <VehicleEnergyFields
+        control={control}
+        vehicleType={vehicleType}
+        transmissionOptions={transmissionOptions}
+        disabled={Boolean(lockedNotice)}
+        {...(lockedNotice ? { lockedNotice } : {})}
+        {...(setValue ? { setValue } : {})}
+      />
+    </YStack>
+  );
+}
+
+/**
+ * Kiểu dáng xe — thẻ có ảnh thay vì danh sách chữ.
+ *
+ * Đây chính là chiều "Loại xe" khách dùng để lọc ngoài chợ, nên chọn sai là xe không ai tìm
+ * thấy; ảnh minh hoạ làm việc chọn tường minh hơn hẳn một danh sách "CUV / SUV / MPV" bằng chữ.
+ * Cùng component với bộ lọc chợ xe (`CatalogCardPicker`) nên hai màn không thể lệch ảnh.
+ */
+function BodyTypePicker({ control }: { control: Control<VehicleFormValues> }) {
+  const t = useTranslations('Vehicles.form.specs');
+  const { catalog } = useCatalog();
+  const items = catalog[CATALOG_TYPE.BODY_TYPE] ?? [];
+
+  return (
+    <YStack gap={space.xs}>
+      <FieldLabel label={t('bodyType')} />
+      <Text col={colors.textMuted} fos={fontSize.label}>
+        {t('bodyTypeHint')}
+      </Text>
+      <Controller
+        control={control}
+        name="bodyType"
+        render={({ field }) => (
+          <CatalogCardPicker
+            ariaLabel={t('bodyType')}
+            items={items}
+            value={field.value ? [field.value] : []}
+            /* MỘT kiểu dáng cho một chiếc xe — bộ chọn là đa trị, ở đây chỉ lấy mục cuối. */
+            onChange={(next) => field.onChange(next[next.length - 1] ?? null)}
+          />
+        )}
+      />
     </YStack>
   );
 }
@@ -332,37 +373,6 @@ function ServiceTypesField({ control }: { control: Control<VehicleFormValues> })
           </YStack>
         );
       }}
-    />
-  );
-}
-
-/**
- * Nguồn năng lượng phụ thuộc LOẠI PHƯƠNG TIỆN: xe máy chỉ nhận xăng/điện, nên danh sách phải
- * lọc theo `vehicleFuelTypesFor` — cùng hàm backend dùng để từ chối tổ hợp không hợp lệ.
- */
-function FuelTypeField({ control, isCar, lockedNotice }: StepProps & { lockedNotice?: string }) {
-  const t = useTranslations('Vehicles.form.specs');
-  const { catalog } = useCatalog();
-  const vehicleType = isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE;
-  const allowed = vehicleFuelTypesFor(vehicleType);
-
-  const options = useMemo(
-    () =>
-      (catalog[CATALOG_TYPE.FUEL_TYPE] ?? [])
-        .filter((item) => allowed.some((value) => value === item.key))
-        .map((item) => ({ value: item.key, label: item.label })),
-    [catalog, allowed],
-  );
-
-  return (
-    <SelectField
-      control={control}
-      name="fuelType"
-      label={t('fuelType')}
-      options={options}
-      placeholder={isCar ? t('fuelPlaceholderCar') : t('fuelPlaceholderMotorbike')}
-      disabled={Boolean(lockedNotice)}
-      {...(lockedNotice ? { hint: lockedNotice } : {})}
     />
   );
 }
@@ -477,6 +487,7 @@ export function PricingStep({ control }: StepProps) {
         control={control}
         name="weekdayPrice"
         label={t('weekday')}
+        publishRequired
         placeholder={t('weekdayPlaceholder')}
         hint={t('weekdayHelp')}
       />
@@ -508,6 +519,7 @@ export function PricingStep({ control }: StepProps) {
             control={control}
             name="monthlyPrice"
             label={t('monthly')}
+            publishRequired
             placeholder={t('monthlyPlaceholder')}
             hint={t('monthlyHelp')}
           />
@@ -521,6 +533,7 @@ export function PricingStep({ control }: StepProps) {
             control={control}
             name="withDriverDailyPrice"
             label={t('withDriverDaily')}
+            publishRequired
             placeholder={t('withDriverDailyPlaceholder')}
             hint={t('withDriverDailyHelp')}
           />
@@ -562,8 +575,16 @@ export function MediaStep({ control }: StepProps) {
   const t = useTranslations('Vehicles.form.media');
   const tCards = useTranslations('Vehicles.edit.cards');
   const { catalog } = useCatalog();
+  const vehicleType = useWatch({ control, name: 'vehicleType' });
 
-  const features = catalog[CATALOG_TYPE.VEHICLE_FEATURE] ?? [];
+  /*
+   * LỌC theo loại xe. Bộ tiện ích nghiêng hẳn về ô tô (camera 360, túi khí, ghế trẻ em) và trước
+   * bản này hiện nguyên vẹn cho cả xe máy. Tiện ích là một chiều LỌC ngoài chợ, nên một chiếc
+   * Wave gắn "cửa sổ trời" không chỉ vô lý mà còn làm sai kết quả tìm kiếm của khách.
+   */
+  const features = (catalog[CATALOG_TYPE.VEHICLE_FEATURE] ?? []).filter((item) =>
+    vehicleFeatureAppliesTo(item.key, vehicleType),
+  );
 
   return (
     /*
@@ -587,7 +608,7 @@ export function MediaStep({ control }: StepProps) {
             label={t('mainImage')}
             emptyLabel={t('addMainImage')}
             presign={uploadsApi.vehicleImage}
-            required
+            publishRequired
           />
           <ImageUploadField
             control={control}
@@ -673,21 +694,13 @@ function FeaturesField({
 }
 
 /** Thông số kỹ thuật nâng cao — chỉ có ở màn SỬA, luồng tạo không hỏi (đúng như web). */
-export function AdvancedSpecsSection({
-  control,
-  lockedNotice,
-}: {
-  control: Control<VehicleFormValues>;
-  /** Xem docblock của `BasicStep` — cùng cơ chế khoá, áp cho `transmission`. */
-  lockedNotice?: string;
-}) {
+export function AdvancedSpecsSection({ control }: { control: Control<VehicleFormValues> }) {
+  /*
+   * KHÔNG nhận `lockedNotice` nữa: khối này chỉ còn kích thước, dung tích và công suất — không
+   * trường nào bị khoá khi xe lên chợ. Căn cước bị khoá (biển số, nhiên liệu, hộp số, năm SX)
+   * nằm ở khối trên và tự nhận cảnh báo của nó.
+   */
   const t = useTranslations('Vehicles.form.advanced');
-  const domainLabel = useDomainLabel();
-
-  const transmissionOptions = TRANSMISSION_TYPE_VALUES.map((value) => ({
-    value,
-    label: domainLabel('transmissionType', value),
-  }));
 
   return (
     <YStack gap={space.md}>
@@ -736,15 +749,13 @@ export function AdvancedSpecsSection({
         suffix="HP"
         placeholder={t('horsepowerPlaceholder')}
       />
-      <SelectField
-        control={control}
-        name="transmission"
-        label={t('transmission')}
-        options={transmissionOptions}
-        placeholder={t('transmissionPlaceholder')}
-        disabled={Boolean(lockedNotice)}
-        {...(lockedNotice ? { hint: lockedNotice } : {})}
-      />
+      {/*
+        KHÔNG có ô hộp số ở đây — nó sống trong `VehicleEnergyFields` phía trên, đúng như web.
+
+        Bản trước dựng ô thứ hai cho CÙNG một trường `transmission`, và liệt kê thẳng cả 8 giá
+        trị của union thay vì hỏi `vehicleTransmissionTypesFor`. Hệ quả: một chiếc xe máy được
+        mời chọn "CVT" và "DCT", còn hai ô cùng trường thì ô nào ghi đè ô nào là chuyện may rủi.
+      */}
 
       <GroupTitle>{t('consumptionTitle')}</GroupTitle>
       <NumberField

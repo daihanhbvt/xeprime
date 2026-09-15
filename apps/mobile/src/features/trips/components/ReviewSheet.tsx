@@ -99,6 +99,7 @@ export function ReviewSheet({
       footer={
         <Button
           label={t('submit')}
+          icon="send-outline"
           loading={createReview.isPending}
           onPress={() => void submit()}
         />

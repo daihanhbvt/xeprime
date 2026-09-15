@@ -45,7 +45,11 @@ import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { DateField } from '@/components/ui/DateField';
 import { SourceContractFiles } from './components/SourceContractFiles';
-import { emptySourceFormValues, sourceDetailToFormValues, sourceFormValuesToInput } from './source-mappers';
+import {
+  emptySourceFormValues,
+  sourceDetailToFormValues,
+  sourceFormValuesToInput,
+} from './source-mappers';
 import { useSaveVehicleSource, useVehicle, useVehicleSource } from './hooks/use-vehicle';
 import type { VehicleDetail, VehicleSource } from './api';
 
@@ -89,11 +93,7 @@ export function VehicleSourceScreen({ vehicleId }: { vehicleId: string }) {
       <>
         <AppHeader title={title} onBack={back} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
-          <ScreenMessage
-            icon="lock-closed-outline"
-            title={title}
-            description={t('noPermission')}
-          />
+          <ScreenMessage icon="lock-closed-outline" title={title} description={t('noPermission')} />
         </Screen>
       </>
     );
@@ -265,6 +265,7 @@ function SourceForm({
           canEdit ? (
             <Button
               label={tActions('saveChanges')}
+              icon="save-outline"
               loading={save.isPending}
               disabled={!isDirty}
               onPress={submit}
@@ -295,11 +296,7 @@ function SourceForm({
               br={radius.pill}
               bg={colors.primary}
             >
-              <Ionicons
-                name={SOURCE_ICON[savedType]}
-                size={iconSize.lg}
-                color={colors.onPrimary}
-              />
+              <Ionicons name={SOURCE_ICON[savedType]} size={iconSize.lg} color={colors.onPrimary} />
             </YStack>
             <YStack f={1} gap={space.xs}>
               <XStack ai="center" gap={space.xs} flexWrap="wrap">

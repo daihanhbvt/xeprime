@@ -75,21 +75,27 @@ export function VehicleInfoSheet({
       subtitle={t('vehicleCard.heading')}
       footer={
         resource ? (
-          <>
+          <XStack gap={space.sm}>
+            {/*
+              Lối thoát bên trái, hành động chính bên phải. Nút thoát bỏ icon vì ở `f={1}` nó
+              không còn chỗ cho cả chữ lẫn hình.
+
+              Khi thiếu quyền xem xe thì chỉ còn "Đóng"; nó vẫn hẹp ở `f={1}`, đúng vai một lối
+              thoát chứ không phải hành động chính của khay.
+            */}
+            <YStack flexShrink={0}>
+              <Button label={tCommon('close')} variant="ghost" onPress={onClose} />
+            </YStack>
             {has(PERMISSION.VEHICLE_VIEW) ? (
-              <Button
-                label={t('vehicleCard.openVehicle')}
-                icon="car-sport-outline"
-                onPress={() => onOpenVehicle(resource.vehicleId)}
-              />
+              <YStack f={1}>
+                <Button
+                  label={t('vehicleCard.openVehicle')}
+                  icon="car-sport-outline"
+                  onPress={() => onOpenVehicle(resource.vehicleId)}
+                />
+              </YStack>
             ) : null}
-            <Button
-              label={tCommon('close')}
-              icon="close-outline"
-              variant="ghost"
-              onPress={onClose}
-            />
-          </>
+          </XStack>
         ) : null
       }
     >

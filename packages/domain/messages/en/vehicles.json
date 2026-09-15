@@ -137,7 +137,7 @@
       "backToStep": "Back to the previous step",
       "cancel": "Discard",
       "saveDraft": "Save as draft",
-      "saveAndSubmit": "Save & submit for review",
+      "saveAndSubmit": "Save & submit",
       "stepErrors": "{count, plural, one {# error} other {# errors}} to fix before continuing",
       "pricePreview": "Price shown on the marketplace: {price}",
       "cancelWizard": {

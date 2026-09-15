@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { SERVICE_TYPE, type PublicListingDetail } from '@xeprime/types';
+import { readDeliveryAddress, rememberDeliveryAddress } from '@/lib/delivery-address-memory';
 import type { RentalMode } from '@xeprime/domain';
 import {
   buildBookingRequestSchema,
@@ -248,21 +249,52 @@ function RequestBookingBody({
     }
   }, [accountName, accountPhone, form]);
 
-  /*
-   * Điền sẵn TỈNH của ô địa chỉ giao xe từ ngữ cảnh điều hướng.
+  /**
+   * Điền sẵn ĐỊA CHỈ GIAO XE — chạy MỘT LẦN sau khi mount, cùng thứ tự ưu tiên với
+   * `RequestBookingFlow` của web.
    *
-   * Chỉ điền khi ô còn RỖNG: đè lên thứ khách vừa chọn là lấy một gợi ý làm quyết định.
+   * Mỗi bậc là một loại bằng chứng khác nhau về ý định của khách:
+   *   1. **Địa chỉ lần trước** (`delivery-address-memory`) — chính họ đã gõ và xác nhận ghim.
+   *      Điền cả cụm, kể cả toạ độ, để họ không phải ghim lại chỗ cũ.
+   *   2. **Tỉnh đang lọc / tỉnh của xe** (`deliveryProvinceCode` từ ngữ cảnh điều hướng) — chỉ
+   *      điền được mã tỉnh.
    *
-   * Native chưa nhớ được ĐỊA CHỈ ĐẦY ĐỦ của lần trước như web (`delivery-address-memory`):
-   * lưu nó cần một kho dữ liệu thường mà app chưa có, và thêm một native module chỉ để nhớ một
-   * địa chỉ thì phải dựng lại dev build cho mọi máy. Chỗ đúng của địa chỉ đã lưu là HỒ SƠ NGƯỜI
-   * DÙNG ở server — khi có, cả hai client dùng chung và không client nào phải tự nhớ.
+   * `shouldDirty: false`: đây là GỢI Ý, không phải thao tác của người dùng. Đánh dấu form bẩn ở
+   * đây sẽ làm cảnh báo "còn thay đổi chưa lưu" bật lên khi khách mới chỉ mở màn.
+   *
+   * Đọc là bất đồng bộ (`expo-secure-store`), nên có chốt `alive`: khách thoát màn trước khi
+   * Keystore trả lời thì không còn form nào để điền.
    */
+  const deliveryPrefilled = useRef(false);
   useEffect(() => {
-    if (deliveryProvinceCode && !form.getValues('deliveryProvinceCode')) {
-      form.setValue('deliveryProvinceCode', deliveryProvinceCode);
-    }
-  }, [deliveryProvinceCode, form]);
+    if (deliveryPrefilled.current) return;
+    deliveryPrefilled.current = true;
+
+    let alive = true;
+    void readDeliveryAddress().then((remembered) => {
+      if (!alive) return;
+      const quiet = { shouldDirty: false } as const;
+
+      if (remembered) {
+        form.setValue('deliveryProvinceCode', remembered.provinceCode, quiet);
+        form.setValue('deliveryWardCode', remembered.wardCode, quiet);
+        form.setValue('deliveryAddressLine', remembered.addressLine, quiet);
+        form.setValue('deliveryPlaceId', remembered.placeId, quiet);
+        form.setValue('deliveryLatitude', remembered.latitude, quiet);
+        form.setValue('deliveryLongitude', remembered.longitude, quiet);
+        form.setValue('deliveryLocationSource', remembered.locationSource, quiet);
+        return;
+      }
+      if (deliveryProvinceCode && !form.getValues('deliveryProvinceCode')) {
+        form.setValue('deliveryProvinceCode', deliveryProvinceCode, quiet);
+      }
+    });
+    return () => {
+      alive = false;
+    };
+    // Chạy một lần cho vòng đời của màn; `form` ổn định theo RHF.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [rentalMode, setRentalMode] = useState<RentalMode>('daily');
   /*
@@ -364,6 +396,27 @@ function RequestBookingBody({
   const submitRequest = useCallback(() => {
     setError(null);
     flow.submit.mutate(toRequestBody(form.getValues(), describeDevice()), {
+      /*
+       * Nhớ địa chỉ giao xe CHỈ khi đã gửi thành công — đúng chỗ web gọi
+       * `rememberDeliveryAddress`.
+       *
+       * Ghi lúc đang gõ dở sẽ đóng dấu một địa chỉ chưa hoàn chỉnh lên mọi lần đặt sau; ghi khi
+       * gửi hỏng thì nhớ đúng cái địa chỉ vừa bị từ chối.
+       */
+      onSuccess: () => {
+        const v = form.getValues();
+        if (v.deliveryRequested && v.deliveryProvinceCode) {
+          rememberDeliveryAddress({
+            provinceCode: v.deliveryProvinceCode,
+            wardCode: v.deliveryWardCode,
+            addressLine: v.deliveryAddressLine,
+            latitude: v.deliveryLatitude,
+            longitude: v.deliveryLongitude,
+            placeId: v.deliveryPlaceId,
+            locationSource: v.deliveryLocationSource,
+          });
+        }
+      },
       onError: (error) => {
         // Trùng yêu cầu là một NHÁNH riêng, không phải lỗi đỏ: khách đã gửi yêu cầu này rồi.
         if (flow.isDuplicate(error)) {
@@ -463,6 +516,7 @@ function RequestBookingBody({
         {state.step === REQUEST_STEP.TRIP ? (
           <Button
             label={flow.availability.isPending ? t('actions.checking') : t('actions.continue')}
+            icon="arrow-forward"
             size="lg"
             loading={flow.availability.isPending || otp.sending}
             onPress={() => void continueFromTrip()}
@@ -471,7 +525,12 @@ function RequestBookingBody({
 
         {state.step === REQUEST_STEP.REVIEW ? (
           <XStack gap={space.sm}>
-            <YStack f={1}>
+            {/*
+              KHÔNG gắn icon cho nút lùi này: nó chỉ được f={1} cạnh một nút f={2}, tức ~104dp; trừ 48dp
+              đệm ngang còn 56dp, vừa đúng cho chữ "Quay lại" và không còn chỗ cho 22dp icon + khe. Icon
+              đi cho nút CHÍNH của hàng, nơi có dư bề ngang — nút phụ hẹp thì chữ quan trọng hơn hình.
+            */}
+            <YStack flexShrink={0}>
               <Button
                 label={tCommon('back')}
                 variant="secondary"
@@ -479,9 +538,14 @@ function RequestBookingBody({
                 onPress={() => backToTrip()}
               />
             </YStack>
+            {/*
+              "Quay lại" co vừa chữ, nút gửi lấy phần còn lại. Ở cỡ `lg` (chữ 16px) mỗi ký tự
+              rộng hơn hẳn, nên "Gửi yêu cầu thuê" cần trọn phần còn lại của hàng.
+            */}
             <YStack f={1}>
               <Button
                 label={t('actions.submit')}
+                icon="send-outline"
                 size="lg"
                 loading={flow.submit.isPending}
                 onPress={submitRequest}
@@ -592,7 +656,14 @@ function StepIndicator({ current }: { current: number }) {
         return (
           <Fragment key={label}>
             {index > 0 ? (
-              <YStack f={1} h={2} br={radius.pill} bg={active ? colors.primary : colors.border} />
+              /* Vạch nối CHƯA qua dùng bậc viền đậm, cùng mức với `VehicleWizardBar` — nó nói
+                 còn mấy bước nữa nên phải liếc là thấy, không phải một đường ngăn cách. */
+              <YStack
+                f={1}
+                h={2}
+                br={radius.pill}
+                bg={active ? colors.primary : colors.borderInput}
+              />
             ) : null}
             <XStack ai="center" gap={space.xs}>
               <YStack

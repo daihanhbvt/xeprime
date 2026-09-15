@@ -1,4 +1,4 @@
-import { Text, YStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { CUSTOMER_TRIP_STAGE, type CustomerTripStage } from '@xeprime/types';
 import { isZeroMoney } from '@xeprime/domain';
@@ -45,10 +45,24 @@ export function CancelTripSheet({
       onClose={onClose}
       title={t('title')}
       footer={
-        <>
-          <Button label={t('confirm')} variant="danger" loading={loading} onPress={onConfirm} />
-          <Button label={t('keep')} variant="ghost" onPress={onClose} />
-        </>
+        <XStack gap={space.sm}>
+          {/*
+            Hai hành động NGẮN nằm một hàng: lối thoát bên trái, hành động chính bên phải. Ở đây
+            "Không huỷ" co vừa chữ, "Huỷ chuyến" lấy phần còn lại.
+          */}
+          <YStack flexShrink={0}>
+            <Button label={t('keep')} variant="ghost" onPress={onClose} />
+          </YStack>
+          <YStack f={1}>
+            <Button
+              label={t('confirm')}
+              icon="close-circle-outline"
+              variant="danger"
+              loading={loading}
+              onPress={onConfirm}
+            />
+          </YStack>
+        </XStack>
       }
     >
       <Text col={colors.text} fos={fontSize.body}>

@@ -78,7 +78,9 @@ export function VehiclePublishCard({ vehicle }: { vehicle: VehicleDetail }) {
           </Text>
           {/* `reason` là câu do người duyệt viết — đi qua nguyên văn, không dịch được. */}
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {presentation.useReason && reason ? reason : t(`status.${presentation.key}.description`)}
+            {presentation.useReason && reason
+              ? reason
+              : t(`status.${presentation.key}.description`)}
           </Text>
         </YStack>
 
@@ -109,6 +111,7 @@ export function VehiclePublishCard({ vehicle }: { vehicle: VehicleDetail }) {
 
             <Button
               label={isResubmit ? t('panel.resubmit') : t('panel.submit')}
+              icon="send-outline"
               onPress={onSubmit}
               loading={submit.isPending}
               disabled={missingCount > 0}

@@ -10,6 +10,7 @@ export type {
   CustomerTrip,
   CustomerTripCounts,
   CustomerTripDetail,
+  CustomerTripEstimate,
   CustomerTripFinance,
   CustomerTripHandoverEvidence,
   CustomerTripHandoverEvidencePhoto,

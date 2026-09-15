@@ -13,6 +13,7 @@ import {
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
+import type { CardAction } from '@/components/ui/CardActionBar';
 import { FleetVehicleCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
@@ -207,6 +208,42 @@ export function VehicleListScreen() {
   const canEdit = permissions.has(PERMISSION.VEHICLE_UPDATE);
 
   /*
+   * Ba thao tác của web ở CỔNG QUẢN LÝ (`useVehicleRowActions`): Xem · Sửa · Lịch — cùng thứ
+   * tự, cùng luật ẩn. Khu tài khoản dựng bộ KHÁC (`AccountVehiclesScreen`), đúng như web cho hai
+   * màn đó hai hàm `rowActions` riêng.
+   *
+   * "Xem" thay luôn vai mũi tên `>`: giữ cả hai là ba lối vào cùng một màn (thân thẻ, mũi tên,
+   * nút) trên một bề mặt chỉ rộng 390pt.
+   */
+  const rowActions = useCallback(
+    (vehicle: VehicleListItem): readonly CardAction[] => [
+      {
+        key: 'view',
+        label: t('actions.viewShort'),
+        icon: 'eye-outline',
+        onPress: () => openVehicle(vehicle),
+      },
+      ...(canEdit
+        ? [
+            {
+              key: 'edit',
+              label: t('actions.edit'),
+              icon: 'create-outline' as const,
+              onPress: () => editVehicle(vehicle),
+            },
+          ]
+        : []),
+      {
+        key: 'schedule',
+        label: t('actions.schedule'),
+        icon: 'calendar-outline',
+        onPress: () => openSchedule(vehicle),
+      },
+    ],
+    [t, canEdit, openVehicle, editVehicle, openSchedule],
+  );
+
+  /*
    * `renderItem` khai NGOÀI JSX, cùng lý do với `keyExtractor`: một hàm mới mỗi render là FlatList
    * dựng lại mọi ô đang hiện. Phụ thuộc là những thứ THẬT SỰ đổi nội dung thẻ — map chỉ số và
    * cảnh báo đã được `useMemo` ở hook nên chỉ đổi khi dữ liệu về.
@@ -216,8 +253,7 @@ export function VehicleListScreen() {
       <VehicleCard
         vehicle={item}
         onPress={openVehicle}
-        {...(canEdit ? { onEdit: editVehicle } : {})}
-        onSchedule={openSchedule}
+        actions={rowActions}
         stats={stats.byId.get(item.id)}
         statsLoading={stats.isLoading}
         statsFailed={stats.isError}
@@ -228,9 +264,7 @@ export function VehicleListScreen() {
     ),
     [
       openVehicle,
-      canEdit,
-      editVehicle,
-      openSchedule,
+      rowActions,
       stats.byId,
       stats.isLoading,
       stats.isError,
@@ -410,6 +444,7 @@ function ListFooter({
       <YStack py={layout.section} ai="center">
         <Button
           label={retryLabel}
+          icon="refresh-outline"
           variant="secondary"
           size="sm"
           block={false}

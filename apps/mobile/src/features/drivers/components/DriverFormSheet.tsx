@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import { YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { DRIVER_TYPE, DRIVER_TYPE_VALUES } from '@xeprime/types';
 import { driverFormSchema, type DriverFormValues } from '@xeprime/validators';
@@ -142,12 +142,26 @@ function DriverForm({ driver, onDone }: { driver: Driver | null; onDone: () => v
       <TextField control={control} name="idNo" label={tForm('idNo')} />
       <TextField control={control} name="note" label={tForm('note')} multiline rows={3} />
 
-      <Button
-        label={driver ? tActions('save') : tActions('add')}
-        loading={saving}
-        onPress={() => void submit()}
-      />
-      <Button label={tActions('close')} variant="ghost" disabled={saving} onPress={onDone} />
+      <XStack gap={space.sm}>
+        {/*
+          Lối thoát bên TRÁI, hành động chính bên PHẢI — xếp dọc thì hàng dưới đọc ra là một
+          bước tiếp theo chứ không phải một lựa chọn thay thế.
+        
+          "Đóng" co vừa chữ, nút chính lấy phần còn lại — xem luật ở `Button.tsx`. Chia đôi thì
+          nửa hàng bên trái bỏ trống quá nửa cho một từ bốn chữ, còn nút chính thiếu chỗ.
+        */}
+        <YStack flexShrink={0}>
+          <Button label={tActions('close')} variant="ghost" disabled={saving} onPress={onDone} />
+        </YStack>
+        <YStack f={1}>
+          <Button
+            label={driver ? tActions('save') : tActions('add')}
+            icon="checkmark-outline"
+            loading={saving}
+            onPress={() => void submit()}
+          />
+        </YStack>
+      </XStack>
     </YStack>
   );
 }

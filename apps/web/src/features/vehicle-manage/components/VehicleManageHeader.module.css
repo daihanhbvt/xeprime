@@ -8,6 +8,11 @@
   background: var(--xp-color-bg-container);
 }
 
+/* Nút quay lại đứng cùng hàng với ảnh + tên, canh giữa theo chiều cao của thanh. */
+.header > .back {
+  align-self: center;
+}
+
 .image,
 .imageFallback {
   flex: none;

@@ -1,8 +1,30 @@
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { PRICE_ROW } from '@xeprime/types';
+import { subtractMoney } from '@xeprime/domain';
+import { FEE_BEARER, PRICE_ROW } from '@xeprime/types';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useDomainLabel } from '@/i18n/domain';
+import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+
+/**
+ * PHỤ PHÍ PHÍA KHÁCH — ADR 0029 điều 1, cùng shape với `PriceBreakdownFees` bên web.
+ *
+ * Là khối RIÊNG chứ không nhét vào `rows`: `rows` là bảng kê giá THUÊ và `totalAmount = Σ rows`
+ * là doanh thu của gian hàng. Trộn phí của XePrime / ngân sách / hãng bảo hiểm vào đó là nói dối
+ * cả hai phía.
+ */
+export interface PriceBreakdownFeesInput {
+  lines: ReadonlyArray<{
+    key: string;
+    bearer: string;
+    percent: number;
+    amount: string;
+    partnerName?: string | null;
+  }>;
+  customerTotalAmount: string;
+  /** Khách chuyển online để giữ chỗ; null/undefined = chuyến này không cần giữ chỗ. */
+  holdAmount?: string | null;
+}
 
 /** Một dòng breakdown — cùng shape với `PriceBreakdownRowDto` của API/snapshot. */
 export interface PriceBreakdownRowInput {
@@ -34,7 +56,9 @@ export function PriceBreakdown({
   totalLabel,
   depositAmount,
   title,
+  badge,
   footer,
+  fees,
 }: {
   rows: readonly PriceBreakdownRowInput[];
   /** Tổng khách trả TRƯỚC cọc. */
@@ -43,16 +67,30 @@ export function PriceBreakdown({
   /** Cọc thế chấp — không nằm trong tổng; bỏ trống thì ẩn cả khối cọc. */
   depositAmount?: string | null;
   title?: string;
+  /** Chip cạnh tiêu đề (nguồn chính sách, "Tạm tính"…). */
+  badge?: string;
   footer?: React.ReactNode;
+  /** Có mặt ⇒ hiện thêm khối phụ phí phía khách rồi mới tới "Tổng bạn trả". */
+  fees?: PriceBreakdownFeesInput | null;
 }) {
   const tCommon = useTranslations('Common.components.price');
   const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
 
   return (
     <YStack gap={space.sm}>
-      <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
-        {title ?? tCommon('title')}
-      </Text>
+      <XStack ai="center" jc="space-between" gap={space.sm}>
+        <Text f={1} col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
+          {title ?? tCommon('title')}
+        </Text>
+        {badge ? (
+          <XStack bg={colors.surfaceSelected} br={radius.sm} px={space.xs} py={2}>
+            <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.semibold}>
+              {badge}
+            </Text>
+          </XStack>
+        ) : null}
+      </XStack>
 
       <YStack gap={space.sm} pt={space.sm} borderTopWidth={1} borderColor={colors.borderSubtle}>
         {rows.map((row, index) => {
@@ -125,6 +163,83 @@ export function PriceBreakdown({
           </>
         ) : null}
       </YStack>
+
+      {fees && fees.lines.length > 0 ? (
+        <YStack gap={space.sm} pt={space.sm} borderTopWidth={1} borderColor={colors.borderSubtle}>
+          <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+            {tCommon('feesTitle')}
+          </Text>
+
+          {fees.lines.map((line) => {
+            // Dòng do CHỦ XE chịu không cộng vào tổng khách — nói rõ ngay tại dòng, nếu không
+            // khách tự cộng vào rồi thấy tổng không khớp.
+            const ownerBorne = line.bearer === FEE_BEARER.OWNER;
+
+            return (
+              <XStack key={line.key} ai="flex-start" jc="space-between" gap={space.sm}>
+                <YStack f={1} gap={2}>
+                  <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                    {domainLabel('feeLine', line.key)}
+                  </Text>
+                  <Text col={colors.placeholder} fos={fontSize.label}>
+                    {(ownerBorne ? tCommon('ownerNet') : `${line.percent}%`) +
+                      (line.partnerName ? ` · ${line.partnerName}` : '')}
+                  </Text>
+                </YStack>
+                <Text
+                  col={ownerBorne ? colors.placeholder : colors.text}
+                  fos={fontSize.bodySm}
+                  fow={fontWeight.semibold}
+                >
+                  {fmt.money(line.amount)}
+                </Text>
+              </XStack>
+            );
+          })}
+
+          <XStack ai="baseline" jc="space-between" gap={space.sm}>
+            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.bold} letterSpacing={0.4}>
+              {tCommon('customerTotal').toLocaleUpperCase('vi')}
+            </Text>
+            <Text col={colors.price} fos={fontSize.h3} fow={fontWeight.bold}>
+              {fmt.money(fees.customerTotalAmount)}
+            </Text>
+          </XStack>
+
+          {/* Giữ chỗ: số khách chuyển ONLINE, phần còn lại trả tay chủ xe (ADR 0028 điều 7A). */}
+          {fees.holdAmount ? (
+            <>
+              <XStack ai="baseline" jc="space-between" gap={space.sm}>
+                <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
+                  {tCommon('holdAmount')}
+                </Text>
+                <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                  {fmt.money(fees.holdAmount)}
+                </Text>
+              </XStack>
+              <XStack ai="baseline" jc="space-between" gap={space.sm}>
+                <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
+                  {tCommon('payAtHandover')}
+                </Text>
+                <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                  {fmt.money(subtractMoney(fees.customerTotalAmount, fees.holdAmount))}
+                </Text>
+              </XStack>
+              {/*
+                Web treo `holdHint` trong tooltip cạnh nhãn. Native không có hover, nên câu giải
+                thích nằm thẳng dưới hai dòng tiền — cùng cách đã làm cho `depositHint`.
+              */}
+              <Text col={colors.placeholder} fos={fontSize.label}>
+                {tCommon('holdHint')}
+              </Text>
+            </>
+          ) : null}
+
+          <Text col={colors.placeholder} fos={fontSize.label}>
+            {tCommon('feesNote')}
+          </Text>
+        </YStack>
+      ) : null}
 
       {footer}
     </YStack>

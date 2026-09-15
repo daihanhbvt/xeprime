@@ -23,6 +23,9 @@ export type CurrentTenant = Schemas['CurrentTenantDto'];
  * Client KHÔNG bao giờ đặt `status`/`approved_public`: trạng thái duyệt do backend quyết định,
  * `submitReview` chỉ là yêu cầu chuyển trạng thái.
  */
+export type PaymentSettings = Schemas['PaymentSettingsDto'];
+export type UpdatePaymentSettingsInput = Schemas['UpdatePaymentSettingsDto'];
+
 export const tenantsApi = {
   register(body: RegisterShopInput): Promise<MyShop> {
     return getApiClient().post<MyShop>('/tenants', body);
@@ -42,5 +45,19 @@ export const tenantsApi = {
 
   submitReview(): Promise<MyShop> {
     return getApiClient().post<MyShop>('/tenants/current/submit-review', {});
+  },
+
+  /**
+   * Công tắc THU CỌC qua XePrime (Phase 6 — ADR 0032 điều 2).
+   *
+   * Khác chính sách thuê của gian hàng: ở đó là cọc/thế chấp GIỮA gian hàng và khách (tài sản,
+   * giấy tờ), ở đây là khoản `D` XePrime THU HỘ trước chuyến. Hai khái niệm tiền khác nhau.
+   */
+  paymentSettings(): Promise<PaymentSettings> {
+    return getApiClient().get<PaymentSettings>('/shop/payment-settings');
+  },
+
+  updatePaymentSettings(body: UpdatePaymentSettingsInput): Promise<PaymentSettings> {
+    return getApiClient().patch<PaymentSettings>('/shop/payment-settings', body);
   },
 };

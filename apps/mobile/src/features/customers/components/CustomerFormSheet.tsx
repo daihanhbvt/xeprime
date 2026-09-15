@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { API_ERROR_CODE } from '@xeprime/types';
 import { guessAddressLine } from '@xeprime/domain';
@@ -76,11 +76,7 @@ export function CustomerFormSheet({
   const t = useTranslations('Customers.form');
 
   return (
-    <BottomSheet
-      open={open}
-      onClose={onClose}
-      title={customer ? t('editTitle') : t('addTitle')}
-    >
+    <BottomSheet open={open} onClose={onClose} title={customer ? t('editTitle') : t('addTitle')}>
       {open ? (
         <CustomerForm
           key={customer?.id ?? 'new'}
@@ -218,12 +214,26 @@ function CustomerForm({
         </YStack>
       ) : null}
 
-      <Button
-        label={customer ? t('submitEdit') : t('submitAdd')}
-        loading={saving}
-        onPress={() => void submit()}
-      />
-      <Button label={tCommon('close')} variant="ghost" disabled={saving} onPress={onDone} />
+      <XStack gap={space.sm}>
+        {/*
+          Lối thoát bên TRÁI, hành động chính bên PHẢI — xếp dọc thì hàng dưới đọc ra là một
+          bước tiếp theo chứ không phải một lựa chọn thay thế.
+        
+          "Đóng" co vừa chữ, nút chính lấy phần còn lại — xem luật ở `Button.tsx`. Chia đôi thì
+          nửa hàng bên trái bỏ trống quá nửa cho một từ bốn chữ, còn nút chính thiếu chỗ.
+        */}
+        <YStack flexShrink={0}>
+          <Button label={tCommon('close')} variant="ghost" disabled={saving} onPress={onDone} />
+        </YStack>
+        <YStack f={1}>
+          <Button
+            label={customer ? t('submitEdit') : t('submitAdd')}
+            icon="checkmark-outline"
+            loading={saving}
+            onPress={() => void submit()}
+          />
+        </YStack>
+      </XStack>
     </YStack>
   );
 }

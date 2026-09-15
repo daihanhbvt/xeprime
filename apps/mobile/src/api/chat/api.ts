@@ -87,8 +87,6 @@ export const chatApi = {
     return getApiClient().post<ConversationSummary>('/conversations', { vehicleId });
   },
 
-
-
   async messages(conversationId: string, cursor?: MessageCursor | null): Promise<MessagePage> {
     const res = (await getApiClient().request<ChatMessage[]>(
       `/conversations/${encodeURIComponent(conversationId)}/messages`,
@@ -104,9 +102,7 @@ export const chatApi = {
 
     return {
       data: res.data,
-      next: res.nextBefore
-        ? { before: res.nextBefore, beforeId: res.nextBeforeId ?? null }
-        : null,
+      next: res.nextBefore ? { before: res.nextBefore, beforeId: res.nextBeforeId ?? null } : null,
     };
   },
 

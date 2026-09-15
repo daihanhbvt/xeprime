@@ -12,6 +12,14 @@ export const SECURE_KEY = {
   REFRESH_TOKEN: 'xp.refresh.token',
   LOCALE: 'xp.locale',
   SHELL_SCOPE: 'xp.shell.scope',
+  /**
+   * Hai khoá dưới đây KHÔNG phải bí mật — chúng là tiện ích ghi nhớ lựa chọn của khách, bản
+   * native của `localStorage` bên web. Chúng nằm ở đây vì app chỉ có MỘT kho dữ liệu bền
+   * (`expo-secure-store`); thêm `AsyncStorage`/`MMKV` chỉ để nhớ một khoảng ngày là bắt mọi máy
+   * dựng lại dev build. Bị mã hoá thừa không hại gì; không có chỗ lưu mới hại.
+   */
+  RENTAL_RANGE: 'xp.rentalRange',
+  DELIVERY_ADDRESS: 'xp.deliveryAddress',
 } as const;
 
 export type SecureKey = (typeof SECURE_KEY)[keyof typeof SECURE_KEY];

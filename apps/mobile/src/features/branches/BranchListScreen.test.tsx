@@ -273,9 +273,9 @@ describe('BranchListScreen — thao tác vòng đời', () => {
 
     await fireEvent.press(await view.findByLabelText('Thêm chi nhánh'));
     await fireEvent.changeText(await view.findByLabelText('Tên chi nhánh'), 'Chi nhánh mới');
-    await fireEvent.press(view.getByLabelText('Tỉnh/thành'));
-    await fireEvent.press(await view.findByText('Đà Nẵng'));
-    await fireEvent.press(view.getByLabelText('Xã/phường/đặc khu'));
+    await fireEvent.press(view.getByLabelText('Tỉnh/thành phố'));
+    await fireEvent.press(await view.findByText('TP Đà Nẵng'));
+    await fireEvent.press(view.getByLabelText('Xã/phường'));
     await fireEvent.press(await view.findByText('Phường Hải Châu'));
     await fireEvent.changeText(view.getByLabelText('Số nhà, đường'), '215 Nguyễn Văn Linh');
     await fireEvent.press(view.getByText('Tạo chi nhánh'));

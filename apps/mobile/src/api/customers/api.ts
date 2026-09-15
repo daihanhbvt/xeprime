@@ -115,11 +115,7 @@ export const customersApi = {
     page: number,
     limit = CUSTOMER_HISTORY_DEFAULT_LIMIT,
   ): Promise<Paged<CustomerBooking>> {
-    return getApiClient().fetchPage<CustomerBooking>(
-      `${one(id)}/bookings`,
-      { page, limit },
-      limit,
-    );
+    return getApiClient().fetchPage<CustomerBooking>(`${one(id)}/bookings`, { page, limit }, limit);
   },
 
   notes(
@@ -135,9 +131,7 @@ export const customersApi = {
   },
 
   deleteNote(id: string, noteId: string): Promise<{ ok: true }> {
-    return getApiClient().delete<{ ok: true }>(
-      `${one(id)}/notes/${encodeURIComponent(noteId)}`,
-    );
+    return getApiClient().delete<{ ok: true }>(`${one(id)}/notes/${encodeURIComponent(noteId)}`);
   },
 
   documents(id: string): Promise<CustomerDocument[]> {
@@ -186,8 +180,6 @@ export const customersApi = {
   },
 
   deleteDocument(id: string, documentId: string): Promise<{ ok: true }> {
-    return getApiClient().delete<{ ok: true }>(
-      `${docs(id)}/${encodeURIComponent(documentId)}`,
-    );
+    return getApiClient().delete<{ ok: true }>(`${docs(id)}/${encodeURIComponent(documentId)}`);
   },
 };

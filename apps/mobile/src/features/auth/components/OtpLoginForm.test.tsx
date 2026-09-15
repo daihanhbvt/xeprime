@@ -37,6 +37,9 @@ function stubSendOtp(devCode: string | null = null) {
     .mockResolvedValue({ expiresAt: '2026-08-26T10:00:00.000Z', devCode });
 }
 
+/** Nhãn khả truy cập của ô mã — nay lấy từ Auth.otp.codeAria, không còn chuỗi thô "OTP". */
+const OTP_ARIA = 'Mã xác thực gồm 6 số';
+
 describe('OtpLoginForm', () => {
   it('chặn gửi mã khi SĐT không hợp lệ', async () => {
     const sendOtp = stubSendOtp();
@@ -68,7 +71,7 @@ describe('OtpLoginForm', () => {
     );
 
     // Gõ đủ 6 số là đăng nhập luôn — không bắt bấm thêm nút sau khi đã gõ xong.
-    await fireEvent.changeText(await view.findByLabelText('OTP'), '123456');
+    await fireEvent.changeText(await view.findByLabelText(OTP_ARIA), '123456');
 
     await waitFor(() => expect(login).toHaveBeenCalledWith('0901000003', '123456'));
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
@@ -82,7 +85,7 @@ describe('OtpLoginForm', () => {
     await fireEvent.changeText(view.getByPlaceholderText('0901234567'), '0901000003');
     await fireEvent.press(view.getByRole('button', { name: 'Gửi mã xác thực' }));
 
-    await fireEvent.changeText(await view.findByLabelText('OTP'), '123-456');
+    await fireEvent.changeText(await view.findByLabelText(OTP_ARIA), '123-456');
 
     await waitFor(() => expect(login).toHaveBeenCalledWith('0901000003', '123456'));
   });
@@ -137,7 +140,7 @@ describe('OtpLoginForm', () => {
 
     await fireEvent.changeText(view.getByPlaceholderText('0901234567'), '0901000003');
     await fireEvent.press(view.getByRole('button', { name: 'Gửi mã xác thực' }));
-    await fireEvent.changeText(await view.findByLabelText('OTP'), '000000');
+    await fireEvent.changeText(await view.findByLabelText(OTP_ARIA), '000000');
 
     expect(await view.findByText('Mã xác minh không đúng')).toBeTruthy();
   });

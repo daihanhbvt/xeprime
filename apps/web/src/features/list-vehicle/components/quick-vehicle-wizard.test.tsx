@@ -75,9 +75,7 @@ vi.mock('@/features/account/components/ContactVerifyModal', () => ({
 vi.mock('@/features/branches/hooks/use-branches', () => ({
   useActiveBranches: () => ({
     data: {
-      items: [
-        { id: 'b1', name: 'Chi nhánh 1', provinceName: 'Hồ Chí Minh', isDefault: true },
-      ],
+      items: [{ id: 'b1', name: 'Chi nhánh 1', provinceName: 'Hồ Chí Minh', isDefault: true }],
     },
     isLoading: false,
     isError: false,
@@ -158,7 +156,9 @@ function render(source = VEHICLE_REGISTRATION_SOURCE.MARKETPLACE) {
 /** Điền tối thiểu để qua bước 1 và bước 2 rồi tới bước ảnh. */
 async function fillToLastStep() {
   fireEvent.change(screen.getByLabelText(/Biển số xe/), { target: { value: '51H-123.45' } });
-  fireEvent.change(screen.getByLabelText(/Tên hiển thị/), { target: { value: 'Toyota Vios 2023' } });
+  fireEvent.change(screen.getByLabelText(/Tên hiển thị/), {
+    target: { value: 'Toyota Vios 2023' },
+  });
   fireEvent.mouseDown(screen.getByLabelText(/Nguồn năng lượng|Nhiên liệu/));
   const gasoline = await screen.findByText('Xăng');
   fireEvent.click(gasoline);
@@ -213,7 +213,13 @@ describe('Cửa vào', () => {
    * rời trang, mất nháp, và hiện form đăng ký gian hàng cho người chỉ có một chiếc xe.
    */
   it('chưa có hồ sơ chủ xe: hỏi ngay trong wizard, không rời trang và không tự tạo xe', () => {
-    currentUser.data = { id: 'u1', displayName: 'Chủ xe', tenant: null, phone: '0901234567', phoneVerified: true };
+    currentUser.data = {
+      id: 'u1',
+      displayName: 'Chủ xe',
+      tenant: null,
+      phone: '0901234567',
+      phoneVerified: true,
+    };
     render();
 
     expect(screen.getByText('1. Hồ sơ chủ xe')).toBeTruthy();
@@ -229,7 +235,13 @@ describe('Cửa vào', () => {
   });
 
   it('chưa xác thực SĐT: khoá nút đi tiếp cho tới khi xác thực xong', () => {
-    currentUser.data = { id: 'u1', displayName: 'Chủ xe', tenant: null, phone: null, phoneVerified: false };
+    currentUser.data = {
+      id: 'u1',
+      displayName: 'Chủ xe',
+      tenant: null,
+      phone: null,
+      phoneVerified: false,
+    };
     render();
 
     expect(screen.getByText('Tài khoản chưa có số điện thoại')).toBeTruthy();

@@ -13,7 +13,6 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
-import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { IconButton } from '@/components/ui/IconButton';
 import { ScreenLoading } from '@/components/state/ScreenLoading';
@@ -74,7 +73,6 @@ const ADDRESS_PIN_NAMES = {
 
 export function ShopOnboardingScreen() {
   const t = useTranslations('ShopOnboarding');
-  const tActions = useTranslations('Common.actions');
   const [guideOpen, setGuideOpen] = useState(false);
   const router = useRouter();
   const navigateOnce = useNavigateOnce();

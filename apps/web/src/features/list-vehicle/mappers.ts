@@ -38,7 +38,8 @@ export function quickVehicleToCreateInput(values: QuickVehicleValues): CreateVeh
     manufactureYear: values.manufactureYear ?? undefined,
     // Số chỗ chỉ có nghĩa với ô tô, phân khúc chỉ có nghĩa với xe máy — gửi đúng vế của loại
     // xe đang khai, thay vì để server phải dọn hộ.
-    seatCount: values.vehicleType === VEHICLE_TYPE.CAR ? (values.seatCount ?? undefined) : undefined,
+    seatCount:
+      values.vehicleType === VEHICLE_TYPE.CAR ? (values.seatCount ?? undefined) : undefined,
     motorbikeCategory:
       values.vehicleType === VEHICLE_TYPE.MOTORBIKE ? (values.motorbikeCategory ?? null) : null,
     vehicleCatalogModelId: values.vehicleCatalogModelId ?? null,
@@ -80,9 +81,7 @@ export function quickVehicleToPolicyInput(
   const deliveryTiers =
     values.deliveryEnabled && radius != null && fee != null
       ? [
-          ...(freeKm != null && freeKm > 0 && freeKm < radius
-            ? [{ toKm: freeKm, fee: '0' }]
-            : []),
+          ...(freeKm != null && freeKm > 0 && freeKm < radius ? [{ toKm: freeKm, fee: '0' }] : []),
           { toKm: radius, fee: String(Math.round(fee)) },
         ]
       : [];

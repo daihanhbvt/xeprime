@@ -74,7 +74,9 @@ export function BookingRequestDetailScreen({
   const canApprove = permissions.has(PERMISSION.BOOKING_REQUEST_APPROVE);
   const canViewVehicle = permissions.has(PERMISSION.VEHICLE_VIEW);
 
-  const vehicleMeta = [request.vehicleCode, request.vehiclePlate].filter(Boolean).join(LIST_SEPARATOR);
+  const vehicleMeta = [request.vehicleCode, request.vehiclePlate]
+    .filter(Boolean)
+    .join(LIST_SEPARATOR);
 
   const riskLevel = request.customerRiskLevel as TenantCustomerRiskLevel | null;
   const showRisk = riskLevel != null && riskLevel !== TENANT_CUSTOMER_RISK_LEVEL.NORMAL;
@@ -408,9 +410,15 @@ export function BookingRequestDetailScreen({
 
           {isPending && canApprove ? (
             <YStack gap={space.sm}>
-              <Button label={t('actions.approve')} size="lg" onPress={() => onApprove(request)} />
+              <Button
+                label={t('actions.approve')}
+                icon="checkmark-circle-outline"
+                size="lg"
+                onPress={() => onApprove(request)}
+              />
               <Button
                 label={t('actions.reject')}
+                icon="close-circle-outline"
                 variant="secondary"
                 onPress={() => onReject(request)}
               />

@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { useRevealOnFocus } from '@/components/layout/focus-reveal';
 import { Text, XStack } from 'tamagui';
+import { useTranslations } from 'use-intl';
 import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 
 export const OTP_LENGTH = 6;
@@ -31,6 +33,13 @@ export function OtpCodeInput({
   autoFocus = false,
 }: OtpCodeInputProps) {
   const inputRef = useRef<TextInput>(null);
+  /*
+   * Ô nhập thật bị ẩn sau dải sáu viên, nên NHÃN KHẢ TRUY CẬP là thứ duy nhất trình đọc màn hình
+   * đọc ra. "OTP" gõ cứng vừa là chữ thô (CLAUDE.md §5) vừa không nói ra mã dài mấy — dùng đúng
+   * khoá web dùng cho ô tương ứng.
+   */
+  const t = useTranslations('Auth.otp');
+  const revealOnFocus = useRevealOnFocus();
   const [focused, setFocused] = useState(false);
 
   const digits = [...Array<undefined>(OTP_LENGTH)].map((_, i) => value[i] ?? '');
@@ -91,7 +100,10 @@ export function OtpCodeInput({
         ref={inputRef}
         value={value}
         onChangeText={handleChange}
-        onFocus={() => setFocused(true)}
+        onFocus={() => {
+          setFocused(true);
+          revealOnFocus();
+        }}
         onBlur={() => setFocused(false)}
         editable={!disabled}
         autoFocus={autoFocus}
@@ -100,7 +112,7 @@ export function OtpCodeInput({
         autoComplete="sms-otp"
         maxLength={OTP_LENGTH}
         caretHidden
-        accessibilityLabel="OTP"
+        accessibilityLabel={t('codeAria')}
         style={styles.hiddenInput}
       />
     </Pressable>

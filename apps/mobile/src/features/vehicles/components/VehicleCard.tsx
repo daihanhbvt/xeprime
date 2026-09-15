@@ -52,14 +52,19 @@ interface VehicleCardProps {
   vehicle: VehicleListItem;
   onPress: (vehicle: VehicleListItem) => void;
   /**
-   * Vắng mặt = ẩn nút "Sửa" — đúng `hidden: !canEdit` của web.
+   * Thanh thao tác ở chân thẻ, do MÀN quyết định — bản tương đương `rowActions` mà web truyền
+   * vào `VehicleCardGrid`.
+   *
+   * Không hardcode trong thẻ: cùng một chiếc xe có bộ thao tác KHÁC nhau tuỳ nơi nó xuất hiện.
+   * Đội xe ở cổng quản lý cho Xem · Sửa · Lịch; danh sách xe trong khu tài khoản cho đúng hai
+   * việc web cho ở đó — "Quản lý xe" và "Xem chi tiết". Trước khi tách, thẻ áp bộ của cổng quản
+   * lý lên cả hai, nên khu tài khoản mất hẳn lối vào không gian quản lý xe.
    *
    * Quyền đọc ở MÀN, không ở thẻ: thẻ nằm trong một danh sách dài và không nên gọi
    * `usePermissions()` một lần cho mỗi dòng. Và ẩn nút chỉ là trang trí — chặn thật là guard
    * backend (CLAUDE.md §6).
    */
-  onEdit?: ((vehicle: VehicleListItem) => void) | undefined;
-  onSchedule: (vehicle: VehicleListItem) => void;
+  actions: (vehicle: VehicleListItem) => readonly CardAction[];
   /** Chỉ số của xe này; `undefined` khi chưa tải xong HOẶC khi tải hỏng — hai cờ dưới nói rõ ca nào. */
   stats?: VehicleStats | undefined;
   statsLoading: boolean;
@@ -87,8 +92,7 @@ interface VehicleCardProps {
 function VehicleCardImpl({
   vehicle,
   onPress,
-  onEdit,
-  onSchedule,
+  actions,
   stats,
   statsLoading,
   statsFailed,
@@ -142,6 +146,13 @@ function VehicleCardImpl({
   const open = useCallback(() => onPress(vehicle), [onPress, vehicle]);
 
   /*
+   * Bộ thao tác dựng LÚC RENDER từ hàm của màn — đúng cách web gọi `rowActions(row)` cho từng
+   * dòng. Không `useMemo`: nó chỉ chạy khi `memo` đã cho thẻ render lại, và một bộ ba chuỗi +
+   * closure rẻ hơn cả ô nhớ để so sánh phụ thuộc.
+   */
+  const cardActions = actions(vehicle);
+
+  /*
    * Dải viên nhãn dưới phần chữ: trạng thái CÔNG KHAI và việc cần làm.
    *
    * Trạng thái VẬN HÀNH không nằm ở đây mà đè lên ảnh — nó là thuộc tính của chính chiếc xe
@@ -160,32 +171,6 @@ function VehicleCardImpl({
       ),
     },
     ...(alertsFailed ? [] : alertBadges),
-  ];
-
-  /*
-   * Ba thao tác của web (`useVehicleRowActions`): Xem · Sửa · Lịch — cùng thứ tự, cùng luật ẩn.
-   *
-   * "Xem" thay luôn vai mũi tên `>`: giữ cả hai là ba lối vào cùng một màn (thân thẻ, mũi tên,
-   * nút) trên một bề mặt chỉ rộng 390pt.
-   */
-  const actions: CardAction[] = [
-    { key: 'view', label: t('actions.viewShort'), icon: 'eye-outline' as IconName, onPress: open },
-    ...(onEdit
-      ? [
-          {
-            key: 'edit',
-            label: t('actions.edit'),
-            icon: 'create-outline' as IconName,
-            onPress: () => onEdit(vehicle),
-          },
-        ]
-      : []),
-    {
-      key: 'schedule',
-      label: t('actions.schedule'),
-      icon: 'calendar-outline' as IconName,
-      onPress: () => onSchedule(vehicle),
-    },
   ];
 
   return (
@@ -246,12 +231,7 @@ function VehicleCardImpl({
             px={space.sm}
             py={2}
           >
-            <Text
-              col={colors.price}
-              fos={fontSize.bodySm}
-              fow={fontWeight.bold}
-              numberOfLines={1}
-            >
+            <Text col={colors.price} fos={fontSize.bodySm} fow={fontWeight.bold} numberOfLines={1}>
               {fmt.pricePerDay(price)}
             </Text>
           </XStack>
@@ -346,7 +326,7 @@ function VehicleCardImpl({
         </YStack>
       </YStack>
 
-      <CardActionBar actions={actions} />
+      <CardActionBar actions={cardActions} />
     </Card>
   );
 }

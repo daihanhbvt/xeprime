@@ -379,6 +379,7 @@ export function FilterSheet({
                   // Số xe của bản NHÁP, không phải kết quả hiện tại — khách biết trước mình
                   // sắp thấy bao nhiêu xe trước khi đóng tấm.
                   label={facets ? t('applyWithCount', { count: facets.total }) : t('apply')}
+                  icon="funnel-outline"
                   onPress={() => {
                     onApply(draftToPatch(draft));
                     onClose();

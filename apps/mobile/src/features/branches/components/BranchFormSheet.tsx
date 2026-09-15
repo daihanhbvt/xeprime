@@ -1,7 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Linking, Pressable, StyleSheet } from 'react-native';
 import { useForm } from 'react-hook-form';
-import { Text, XStack, YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { guessAddressLine } from '@xeprime/domain';
 import { branchFormSchema, type BranchFormValues } from '@xeprime/validators';
@@ -9,14 +7,11 @@ import { AddressFields } from '@/components/form/AddressFields';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
-import { FieldLabel } from '@/components/ui/Field';
-import { RemoteImage } from '@/components/ui/RemoteImage';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { MAP_PREVIEW_RATIO, mapAppUrl, mapPreviewUrl, toGeoPoint } from '@/lib/map-static';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { space } from '@/theme/tokens';
 import type { Branch } from '../api';
 import { useCreateBranch, useUpdateBranch } from '../hooks/use-branches';
 
@@ -79,10 +74,7 @@ function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => v
   const update = useUpdateBranch();
   const saving = create.isPending || update.isPending;
 
-  const resolver = useValidationResolver<BranchFormValues>(
-    branchFormSchema,
-    'Branches.validation',
-  );
+  const resolver = useValidationResolver<BranchFormValues>(branchFormSchema, 'Branches.validation');
   const { control, handleSubmit } = useForm<BranchFormValues>({
     resolver,
     defaultValues: {
@@ -117,9 +109,7 @@ function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => v
     };
     const done = {
       onSuccess: () => {
-        toast.showSuccess(
-          branch ? t('toast.updated') : t('toast.created', { name: body.name }),
-        );
+        toast.showSuccess(branch ? t('toast.updated') : t('toast.created', { name: body.name }));
         onDone();
       },
       onError: (err: unknown) => toast.showError(errorMessage(err)),
@@ -160,12 +150,26 @@ function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => v
         keyboardType="phone-pad"
       />
 
-      <Button
-        label={branch ? tActions('save') : tForm('createOk')}
-        loading={saving}
-        onPress={() => void submit()}
-      />
-      <Button label={tActions('close')} variant="ghost" disabled={saving} onPress={onDone} />
+      <XStack gap={space.sm}>
+        {/*
+          Lối thoát bên TRÁI, hành động chính bên PHẢI — xếp dọc thì hàng dưới đọc ra là một
+          bước tiếp theo chứ không phải một lựa chọn thay thế.
+        
+          "Đóng" co vừa chữ, nút chính lấy phần còn lại — xem luật ở `Button.tsx`. Chia đôi thì
+          nửa hàng bên trái bỏ trống quá nửa cho một từ bốn chữ, còn nút chính thiếu chỗ.
+        */}
+        <YStack flexShrink={0}>
+          <Button label={tActions('close')} variant="ghost" disabled={saving} onPress={onDone} />
+        </YStack>
+        <YStack f={1}>
+          <Button
+            label={branch ? tActions('save') : tForm('createOk')}
+            icon="checkmark-outline"
+            loading={saving}
+            onPress={() => void submit()}
+          />
+        </YStack>
+      </XStack>
     </YStack>
   );
 }

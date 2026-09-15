@@ -597,7 +597,7 @@ export function RentalRangeSheet({
               ) : null}
 
               <XStack gap={space.sm}>
-                <YStack f={1}>
+                <YStack flexShrink={0}>
                   <Button
                     label={tCommon('actions.cancel')}
                     variant="secondary"
@@ -607,6 +607,7 @@ export function RentalRangeSheet({
                 <YStack f={1}>
                   <Button
                     label={tCommon('actions.apply')}
+                    icon="checkmark-outline"
                     onPress={onApply}
                     disabled={!meetsMin || conflict !== null}
                   />

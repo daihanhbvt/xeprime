@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react-native';
-import { dayjs, toAppTz } from '@xeprime/domain';
+import { dayjs, nowInAppTz, toAppTz } from '@xeprime/domain';
 import { withIntl } from './test-utils';
 import { useAppFormat } from './use-app-format';
 
@@ -64,5 +64,43 @@ describe('useAppFormat — nhãn mốc biểu đồ', () => {
   it('lấy trưa UTC nên mốc không rơi sang tháng khác vì lệch múi giờ', async () => {
     // 31/12 trưa UTC = 31/12 19:00 giờ VN — vẫn tháng 12, không nhảy sang tháng 1 năm sau.
     expect((await format()).monthYearShort(new Date('2026-12-31T12:00:00Z'))).toBe('12/2026');
+  });
+});
+
+/**
+ * Dòng tóm tắt khoảng thuê — canh đúng thứ web đổi: GIỜ NHẬN phải nằm trong dòng.
+ *
+ * Bản cũ in hai ngày lịch rồi đếm ngày bằng phép trừ, nên hai chuyến rất khác nhau đọc ra giống
+ * nhau. Giá trị kỳ vọng lấy từ chính web (`fmt.rentalRangeSummary`).
+ *
+ * Hai mốc dựng theo NĂM HIỆN TẠI, không gõ cứng: hàm chỉ in năm khi khoảng thuê nằm ngoài năm
+ * đang chạy, nên một cặp ngày gõ cứng 2026 sẽ tự đỏ vào ngày 01/01/2027 — đúng cái bẫy mà
+ * `rental-range-memory.test.ts` đã dính một lần.
+ */
+const YEAR = nowInAppTz().year();
+
+describe('useAppFormat — tóm tắt khoảng thuê', () => {
+  it('in NGÀY + GIỜ cả hai đầu kèm thời lượng', async () => {
+    const from = dayjs(`${YEAR}-09-14T17:00:00+07:00`);
+    const to = dayjs(`${YEAR}-09-15T17:00:00+07:00`);
+
+    expect((await format()).rentalRangeSummary(from, to)).toBe(
+      '14/09 17:00 → 15/09 17:00 (1 ngày)',
+    );
+  });
+
+  it('thuê trong CÙNG một ngày vẫn phân biệt được nhờ giờ', async () => {
+    const from = dayjs(`${YEAR}-09-14T09:00:00+07:00`);
+    const to = dayjs(`${YEAR}-09-14T23:00:00+07:00`);
+
+    expect((await format()).rentalRangeSummary(from, to)).toBe(
+      '14/09 09:00 → 14/09 23:00 (14 giờ)',
+    );
+  });
+
+  it('mốc gọn bỏ THỨ, khác rentalPoint', async () => {
+    const point = dayjs('2026-08-26T10:00:00+07:00');
+    expect((await format()).rentalPointCompact(point)).toBe('26/08 10:00');
+    expect((await format()).rentalPointCompact(point, { withYear: true })).toBe('26/08/2026 10:00');
   });
 });

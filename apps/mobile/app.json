@@ -41,8 +41,14 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "XePrime cần quyền truy cập thư viện ảnh để bạn chọn ảnh hiện trạng xe khi lập biên bản bàn giao.",
-          "cameraPermission": "XePrime cần quyền máy ảnh để bạn chụp ảnh hiện trạng xe khi giao và nhận lại xe."
+          "photosPermission": "XePrime cần quyền truy cập thư viện ảnh để bạn chọn ảnh hiện trạng xe khi lập biên bản bàn giao."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "XePrime cần quyền máy ảnh để bạn chụp ảnh hiện trạng xe ngay trong ứng dụng.",
+          "recordAudioAndroid": false
         }
       ]
     ],

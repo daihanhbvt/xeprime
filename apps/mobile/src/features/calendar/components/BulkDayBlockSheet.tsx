@@ -143,22 +143,32 @@ function BlockSheetInner({
         onClose={onClose}
         title={t('bulkBlock.title')}
         footer={
-          <>
-            <Button
-              label={t('bulkBlock.submit', { count: blockable.length })}
-              icon="lock-closed-outline"
-              onPress={submit}
-              loading={block.isPending}
-              disabled={preview.isPending || blockable.length === 0}
-            />
-            <Button
-              label={tCommon('cancel')}
-              icon="close-outline"
-              variant="secondary"
-              onPress={onClose}
-              disabled={block.isPending}
-            />
-          </>
+          <XStack gap={space.sm}>
+            {/*
+            Lối thoát bên trái, hành động chính bên phải — xếp dọc thì hàng dưới đọc ra là bước
+            tiếp theo chứ không phải một lựa chọn thay thế.
+
+            Nút thoát BỎ icon: ở `f={1}` nó chỉ rộng ~104dp, trừ 48dp đệm còn 56dp — vừa đủ chữ,
+            không còn chỗ cho 22dp icon. Icon dành cho nút chính, nơi có dư bề ngang.
+          */}
+            <YStack flexShrink={0}>
+              <Button
+                label={tCommon('cancel')}
+                variant="secondary"
+                onPress={onClose}
+                disabled={block.isPending}
+              />
+            </YStack>
+            <YStack f={1}>
+              <Button
+                label={t('bulkBlock.submit', { count: blockable.length })}
+                icon="lock-closed-outline"
+                onPress={submit}
+                loading={block.isPending}
+                disabled={preview.isPending || blockable.length === 0}
+              />
+            </YStack>
+          </XStack>
         }
       >
         <YStack gap={space.md}>

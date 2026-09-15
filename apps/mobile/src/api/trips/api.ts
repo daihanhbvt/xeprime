@@ -6,6 +6,8 @@ type Schemas = components['schemas'];
 export type CustomerTrip = Schemas['CustomerTripListItemDto'];
 export type CustomerTripDetail = Schemas['CustomerTripDetailDto'];
 export type CustomerTripFinance = Schemas['CustomerTripFinanceDto'];
+/** Bảng kê giá TẠM TÍNH của chuyến chưa có đơn — xem `CustomerTripEstimateDto`. */
+export type CustomerTripEstimate = Schemas['CustomerTripEstimateDto'];
 export type CustomerTripCounts = Schemas['CustomerTripCountsDto'];
 export type CustomerSurcharge = Schemas['CustomerSurchargeDto'];
 export type CustomerTripReview = Schemas['CustomerTripReviewDto'];

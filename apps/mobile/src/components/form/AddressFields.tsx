@@ -10,7 +10,6 @@ import {
 import { Linking, Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import type { GeoPoint } from '@xeprime/domain';
 import { LOCATION_SOURCE } from '@xeprime/types';
 import { Callout } from '@/components/ui/Callout';
 import { FieldLabel } from '@/components/ui/Field';
@@ -96,15 +95,16 @@ export function AddressFields<T extends FieldValues>({
    * bị coi là "vừa đổi tỉnh" và không xoá mất xã đã lưu.
    */
   const lastProvinceRef = useRef(provinceCode);
-  const provinceChanged = lastProvinceRef.current !== provinceCode;
   useEffect(() => {
-    if (!provinceChanged) return;
+    // So sánh BÊN TRONG effect: đọc `ref.current` giữa lượt render là thứ React Compiler chặn,
+    // và ở đây không cần — thứ quyết định có xoá hay không là lần chạy effect, không phải render.
+    if (lastProvinceRef.current === provinceCode) return;
     lastProvinceRef.current = provinceCode;
     ward.field.onChange('' as PathValue<T, Path<T>>);
     setWardSearch('');
     // `ward.field` đổi định danh mỗi lần render; phụ thuộc vào nó sẽ xoá ô xã ở mọi lần gõ.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [provinceChanged, provinceCode]);
+  }, [provinceCode]);
 
   const locationContext = useMemo(() => {
     const wardName = wards.items.find((w) => w.code === wardCode)?.name ?? '';
@@ -239,9 +239,9 @@ function AddressLocationSection<T extends FieldValues>({
 
   /** Đổi tỉnh ⇒ ghim cũ nằm ở tỉnh khác. Bỏ nó thay vì mang theo một toạ độ chắc chắn sai. */
   const lastProvinceRef = useRef(provinceCode);
-  const provinceChanged = lastProvinceRef.current !== provinceCode;
   useEffect(() => {
-    if (!provinceChanged) return;
+    // So sánh BÊN TRONG effect — xem ghi chú cùng loại ở `AddressFields`.
+    if (lastProvinceRef.current === provinceCode) return;
     lastProvinceRef.current = provinceCode;
     placeId.field.onChange(null as PathValue<T, Path<T>>);
     latitude.field.onChange(null as PathValue<T, Path<T>>);
@@ -251,7 +251,7 @@ function AddressLocationSection<T extends FieldValues>({
     setProvinceMismatch(false);
     // Các `field` của RHF đổi định danh mỗi render — xem ghi chú cùng loại ở `AddressFields`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [provinceChanged, provinceCode]);
+  }, [provinceCode]);
 
   /** Đọc lại địa chỉ chữ của ghim đang có (dữ liệu cũ mở ra lần đầu chưa có chú thích nào). */
   useEffect(() => {

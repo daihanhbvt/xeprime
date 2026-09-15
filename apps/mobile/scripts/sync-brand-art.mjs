@@ -66,7 +66,7 @@ console.log(`${keys.length} logo → ${DENSITIES.length} mật độ`);
  */
 const illustrationSource = join(here, '../../web/public/illustrations');
 const illustrationTarget = join(here, '../assets/images');
-const ILLUSTRATIONS = ['shop-onboarding'];
+const ILLUSTRATIONS = ['shop-onboarding', 'owner-personal-car', 'owner-shop-showroom'];
 
 for (const key of ILLUSTRATIONS) {
   const svg = readFileSync(join(illustrationSource, `${key}.svg`));

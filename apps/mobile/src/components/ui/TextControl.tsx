@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { TextInput, type TextInputProps } from 'react-native';
+import { useRevealOnFocus } from '@/components/layout/focus-reveal';
 import { Text, YStack } from 'tamagui';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
 import { FONT_FAMILY } from '@/theme/fonts';
@@ -45,6 +46,7 @@ export function TextControl({
   autoCapitalize?: TextInputProps['autoCapitalize'];
   keyboardType?: TextInputProps['keyboardType'];
 }) {
+  const revealOnFocus = useRevealOnFocus();
   const [focused, setFocused] = useState(false);
 
   /** Chiều cao một dòng — cùng nhịp 1.5 mà Tamagui dùng cho chữ trong ô (xem `TextField`). */
@@ -75,7 +77,10 @@ export function TextControl({
         <TextInput
           value={value}
           onChangeText={onChangeText}
-          onFocus={() => setFocused(true)}
+          onFocus={() => {
+            setFocused(true);
+            revealOnFocus();
+          }}
           onBlur={() => setFocused(false)}
           style={inputStyle}
           placeholder={placeholder ?? ''}
@@ -99,7 +104,10 @@ export function TextControl({
         </Text>
       ) : null}
 
-      <FieldMessage {...(error === undefined ? {} : { error })} {...(hint === undefined ? {} : { hint })} />
+      <FieldMessage
+        {...(error === undefined ? {} : { error })}
+        {...(hint === undefined ? {} : { hint })}
+      />
     </YStack>
   );
 }

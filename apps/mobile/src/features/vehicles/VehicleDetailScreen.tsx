@@ -45,6 +45,10 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_EDIT_TAB, type VehicleEditTab } from '@/navigation/vehicle-edit-tab';
+import {
+  VEHICLE_MANAGE_SECTION,
+  type VehicleManageSection,
+} from '@/navigation/vehicle-manage-section';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
@@ -60,6 +64,27 @@ import {
   useVehicleSummary,
 } from './hooks/use-vehicle';
 import type { Vehicle360Summary, VehicleBookingBrief, VehicleDetail } from './api';
+
+/**
+ * Tab của form sửa xe → mục tương ứng trong không gian QUẢN LÝ XE của khu tài khoản.
+ *
+ * Hai khu gọi cùng một nội dung bằng hai đường khác nhau: cổng quản lý mở form sửa theo `?tab=`,
+ * khu tài khoản có một màn riêng cho từng mục. Bản đồ này là chỗ DUY NHẤT biết cặp đôi đó, nên
+ * đổi tên một mục chỉ phải sửa ở đây.
+ */
+const EDIT_TAB_TO_SECTION: Readonly<Record<VehicleEditTab, VehicleManageSection>> = {
+  [VEHICLE_EDIT_TAB.INFORMATION]: VEHICLE_MANAGE_SECTION.INFORMATION,
+  [VEHICLE_EDIT_TAB.MEDIA]: VEHICLE_MANAGE_SECTION.IMAGES,
+  [VEHICLE_EDIT_TAB.DOCUMENTS]: VEHICLE_MANAGE_SECTION.DOCUMENTS,
+  [VEHICLE_EDIT_TAB.PRICING]: VEHICLE_MANAGE_SECTION.SELF_DRIVE_PRICING,
+  /*
+   * Bảo dưỡng và Nguồn xe KHÔNG có mục riêng trong không gian quản lý xe của khu tài khoản —
+   * chúng là việc của cổng quản lý. Trỏ về "Thông tin" để bản đồ không có ô trống; hai mục này
+   * đằng nào cũng bị ẩn ở khu khách (xem `ModuleLinks`), nên nhánh này không bao giờ chạy.
+   */
+  [VEHICLE_EDIT_TAB.MAINTENANCE]: VEHICLE_MANAGE_SECTION.INFORMATION,
+  [VEHICLE_EDIT_TAB.SOURCE]: VEHICLE_MANAGE_SECTION.INFORMATION,
+};
 
 const HERO_HEIGHT = 200;
 const GALLERY_THUMB = 96;
@@ -86,13 +111,37 @@ const styles = StyleSheet.create({
  * và là ĐÚNG component mà hồ sơ khách dùng, chỉ khác mệnh đề thu hẹp. Hai bề mặt là cùng một
  * câu truy vấn nên con số của chúng không thể lệch nhau.
  */
-export function VehicleDetailScreen({ vehicleId }: { vehicleId: string }) {
+interface VehicleDetailScreenProps {
+  vehicleId: string;
+  /**
+   * Danh sách xe để LUI VỀ, và là nơi hạ cánh sau khi xoá xe.
+   *
+   * Màn này mở được từ HAI khu: đội xe ở cổng quản lý và danh sách xe trong khu tài khoản. Bỏ
+   * trống thì về `/manage/vehicles` — mặc định đúng cho khu quản lý. Khu tài khoản PHẢI truyền
+   * `/account/vehicles`: không truyền thì xoá một chiếc xe từ hồ sơ cá nhân sẽ ném người dùng
+   * sang cổng quản lý, đổi luôn cả thanh tab dưới chân màn hình. Web giải cùng bài này bằng cách
+   * cho mỗi vỏ tự truyền `back` và `onDeleted` vào `VehicleDetailContent`.
+   */
+  backTo?: Href;
+  /**
+   * Mở từ KHU KHÁCH — ẩn mọi lối dẫn sang `/manage` và đổi đích của các mục còn lại sang không
+   * gian quản lý xe của chính khu tài khoản. Xem docblock của `ModuleLinks`.
+   */
+  customerScope?: boolean;
+}
+
+export function VehicleDetailScreen({
+  vehicleId,
+  backTo,
+  customerScope = false,
+}: VehicleDetailScreenProps) {
   const t = useTranslations('Vehicles.detail');
   const router = useRouter();
   const { has, isLoading: permissionsLoading } = usePermissions();
   const canView = has(PERMISSION.VEHICLE_VIEW);
 
-  const back = () => goBackOr(router, ROUTES.manage.vehicles());
+  const listHref = backTo ?? ROUTES.manage.vehicles();
+  const back = () => goBackOr(router, listHref);
   const query = useVehicle(vehicleId, canView);
 
   if (!permissionsLoading && !canView) {
@@ -140,10 +189,27 @@ export function VehicleDetailScreen({ vehicleId }: { vehicleId: string }) {
     );
   }
 
-  return <VehicleDetailBody vehicle={query.data} onBack={back} />;
+  return (
+    <VehicleDetailBody
+      vehicle={query.data}
+      onBack={back}
+      listHref={listHref}
+      customerScope={customerScope}
+    />
+  );
 }
 
-function VehicleDetailBody({ vehicle, onBack }: { vehicle: VehicleDetail; onBack: () => void }) {
+function VehicleDetailBody({
+  vehicle,
+  onBack,
+  listHref,
+  customerScope,
+}: {
+  vehicle: VehicleDetail;
+  onBack: () => void;
+  listHref: Href;
+  customerScope: boolean;
+}) {
   const t = useTranslations('Vehicles.overview');
   const tDetail = useTranslations('Vehicles.detail');
   const tActions = useTranslations('Common.actions');
@@ -165,7 +231,7 @@ function VehicleDetailBody({ vehicle, onBack }: { vehicle: VehicleDetail; onBack
       onSuccess: () => {
         toast.showSuccess(tDetail('deleted'));
         setConfirmingDelete(false);
-        router.replace(ROUTES.manage.vehicles());
+        router.replace(listHref);
       },
       onError: (error) => {
         setConfirmingDelete(false);
@@ -198,11 +264,7 @@ function VehicleDetailBody({ vehicle, onBack }: { vehicle: VehicleDetail; onBack
         <YStack gap={layout.section}>
           <ProfileCard vehicle={vehicle} summary={summary.data} />
 
-          <TodoCard
-            summary={summary.data}
-            loading={summary.isPending}
-            failed={summary.isError}
-          />
+          <TodoCard summary={summary.data} loading={summary.isPending} failed={summary.isError} />
 
           {has(PERMISSION.BOOKING_VIEW) ? (
             <ScheduleCard
@@ -218,7 +280,7 @@ function VehicleDetailBody({ vehicle, onBack }: { vehicle: VehicleDetail; onBack
             failed={summary.isError}
           />
 
-          <ModuleLinks vehicle={vehicle} canEdit={canEdit} />
+          <ModuleLinks vehicle={vehicle} canEdit={canEdit} customerScope={customerScope} />
 
           {/*
             Tiền của riêng chiếc xe này, THEO KỲ — đúng vị trí web đặt nó (ngay sau dải liên kết).
@@ -567,7 +629,11 @@ function ScheduleCard({
                 bg={colors.surfaceMuted}
               >
                 {/* Vạch màu theo trạng thái đơn — nhận ra lượt nào đang chạy mà không phải đọc. */}
-                <YStack w={3} br={radius.pill} bg={statusTone(BOOKING_STATUS_META[booking.status as BookingStatus].color).fg} />
+                <YStack
+                  w={3}
+                  br={radius.pill}
+                  bg={statusTone(BOOKING_STATUS_META[booking.status as BookingStatus].color).fg}
+                />
                 <YStack f={1} gap={2}>
                   <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
                     {t('schedules.item', {
@@ -601,7 +667,25 @@ function ScheduleCard({
  * Chip chứ không phải danh sách dọc: chín lối đi mà mỗi lối một hàng thì khối này dài hơn cả
  * phần nội dung nó dẫn tới.
  */
-function ModuleLinks({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
+function ModuleLinks({
+  vehicle,
+  canEdit,
+  customerScope,
+}: {
+  vehicle: VehicleDetail;
+  canEdit: boolean;
+  /**
+   * Mở từ KHU KHÁCH (hồ sơ cá nhân) hay từ cổng quản lý.
+   *
+   * Khu khách ẩn mọi lối dẫn sang `/manage`: chủ xe tuyến hoa hồng không có quyền vào đó, nên
+   * một mục như "Sổ Thu-Chi" hay "Đơn thuê của xe" chạm vào là ăn thẳng màn "Bạn không còn
+   * quyền truy cập gian hàng này". Bày một nút chắc chắn hỏng còn tệ hơn là không bày.
+   *
+   * Những mục CÒN LẠI (thông tin, ảnh, giấy tờ, giá) không biến mất — chúng đổi đích sang không
+   * gian quản lý xe của chính khu tài khoản, nơi chủ xe cá nhân vào được.
+   */
+  customerScope: boolean;
+}) {
   const t = useTranslations('Vehicles.overview.links');
   const tStates = useTranslations('Common.states');
   const { has } = usePermissions();
@@ -616,7 +700,11 @@ function ModuleLinks({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
    * dựng app quên mất còn nợ cái gì.
    */
   const links: { key: string; label: string; icon: IconName; href?: Href }[] = [];
-  const tab = (value: VehicleEditTab) => ROUTES.manage.vehicleEditTab(vehicle.id, value);
+  /* Cùng một mục, hai đích: khu khách đi vào không gian quản lý xe của chính nó. */
+  const tab = (value: VehicleEditTab) =>
+    customerScope
+      ? ROUTES.account.vehicleManageSection(vehicle.id, EDIT_TAB_TO_SECTION[value])
+      : ROUTES.manage.vehicleEditTab(vehicle.id, value);
 
   if (canEdit) {
     links.push(
@@ -636,10 +724,15 @@ function ModuleLinks({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
         key: 'pricing',
         label: t('pricing'),
         icon: 'pricetag-outline',
-        href: ROUTES.manage.vehiclePricing(vehicle.id),
+        href: customerScope
+          ? ROUTES.account.vehicleManageSection(
+              vehicle.id,
+              VEHICLE_MANAGE_SECTION.SELF_DRIVE_PRICING,
+            )
+          : ROUTES.manage.vehiclePricing(vehicle.id),
       },
     );
-    if (has(PERMISSION.FINANCE_VIEW)) {
+    if (has(PERMISSION.FINANCE_VIEW) && !customerScope) {
       links.push({
         key: 'source',
         label: t('source'),
@@ -664,12 +757,17 @@ function ModuleLinks({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
         icon: 'construct-outline',
         href: tab(VEHICLE_EDIT_TAB.MAINTENANCE),
       },
-      {
-        key: 'maintenanceCenter',
-        label: t('maintenanceCenter'),
-        icon: 'build-outline',
-        href: ROUTES.manage.maintenance(),
-      },
+      /* Trung tâm bảo dưỡng là màn TOÀN ĐỘI XE của cổng quản lý — không thuộc một chiếc xe. */
+      ...(customerScope
+        ? []
+        : [
+            {
+              key: 'maintenanceCenter',
+              label: t('maintenanceCenter'),
+              icon: 'build-outline' as IconName,
+              href: ROUTES.manage.maintenance(),
+            },
+          ]),
     );
   }
   if (has(PERMISSION.CALENDAR_VIEW)) {
@@ -682,7 +780,7 @@ function ModuleLinks({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
       href: vehicleSchedulePath(vehicle, { back: true }),
     });
   }
-  if (has(PERMISSION.BOOKING_VIEW)) {
+  if (has(PERMISSION.BOOKING_VIEW) && !customerScope) {
     // Kèm `vehicleId` như web: bấm từ hồ sơ xe thì ra đơn CỦA XE NÀY, không phải cả gian hàng.
     links.push({
       key: 'bookings',
@@ -691,7 +789,7 @@ function ModuleLinks({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
       href: ROUTES.manage.bookings({ vehicleId: vehicle.id }),
     });
   }
-  if (has(PERMISSION.FINANCE_VIEW)) {
+  if (has(PERMISSION.FINANCE_VIEW) && !customerScope) {
     // Sổ Thu-Chi ĐÃ LỌC theo chính chiếc xe này — cùng tham số `?vehicleId=` web đặt trên URL.
     links.push({
       key: 'receipts',
@@ -726,9 +824,7 @@ function ModuleLinks({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
             role="button"
             size="sm"
             onPress={() =>
-              link.href
-                ? navigateOnce(link.href)
-                : toast.showInfo(tStates('featureComingSoon'))
+              link.href ? navigateOnce(link.href) : toast.showInfo(tStates('featureComingSoon'))
             }
           />
         ))}
@@ -994,13 +1090,7 @@ function SpecsCard({ vehicle }: { vehicle: VehicleDetail }) {
         {vehicle.features.length > 0 ? (
           <XStack flexWrap="wrap" gap={space.xs}>
             {vehicle.features.map((key) => (
-              <YStack
-                key={key}
-                bg={colors.surfaceMuted}
-                br={radius.pill}
-                px={space.xs}
-                py={2}
-              >
+              <YStack key={key} bg={colors.surfaceMuted} br={radius.pill} px={space.xs} py={2}>
                 <Text col={colors.text} fos={fontSize.label}>
                   {featureLabel(key)}
                 </Text>
