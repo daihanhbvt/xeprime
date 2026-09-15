@@ -1,10 +1,9 @@
 import { useState, type ReactNode } from 'react';
 import { Image, type ImageContentFit } from 'expo-image';
 import { StyleSheet } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { YStack } from 'tamagui';
 import { colors } from '@/theme/tokens';
-import { duration, easing } from '@/theme/motion';
+import { duration } from '@/theme/motion';
 import { Skeleton } from './Skeleton';
 
 /** Ba trạng thái của MỘT tấm ảnh, tách hẳn khỏi trạng thái của truy vấn đã mang URL về. */
@@ -13,6 +12,20 @@ type Phase = 'pending' | 'ready' | 'failed';
 const styles = StyleSheet.create({
   fill: { ...StyleSheet.absoluteFillObject },
 });
+
+/**
+ * Hiện dần do CHÍNH `expo-image` chạy, không phải Reanimated.
+ *
+ * Bản trước bọc ảnh trong một `Animated.View` với `useAnimatedStyle` + `withTiming`. Trên một
+ * thẻ đứng yên thì hai cách nhìn giống nhau, nhưng trong DANH SÁCH CUỘN thì không: mỗi hàng
+ * đang sống là thêm một shared value và một mapper chạy mỗi khung hình trên luồng UI, và hàng
+ * mới thì dựng thêm một bộ nữa ĐÚNG LÚC đang cuộn — tức là đúng lúc luồng UI bận nhất. Với
+ * `windowSize: 7` con số đó là vài chục bộ cùng lúc.
+ *
+ * `transition` của `expo-image` làm cùng việc ấy ở tầng native, không đi qua JS và không đi qua
+ * Reanimated: không có gì để dựng khi hàng mới vào, không có gì phải gỡ khi hàng ra.
+ */
+const FADE_IN = { duration: duration.base, effect: 'cross-dissolve' } as const;
 
 /**
  * Ảnh tải từ mạng, có ĐỦ ba trạng thái: đang tải · xong · hỏng.
@@ -64,13 +77,6 @@ export function RemoteImage({
     setPhase('pending');
   }
 
-  const fade = useAnimatedStyle(() => ({
-    opacity: withTiming(phase === 'ready' ? 1 : 0, {
-      duration: duration.base,
-      easing: Easing.bezier(...easing.standard),
-    }),
-  }));
-
   if (!uri || phase === 'failed') {
     return (
       <YStack
@@ -95,18 +101,17 @@ export function RemoteImage({
       {/* Khung chờ nằm DƯỚI ảnh và tắt khi ảnh xong — không nhấp nháy giữa hai lớp. */}
       {phase === 'pending' ? <Skeleton fill /> : null}
 
-      <Animated.View style={[styles.fill, fade]}>
-        <Image
-          source={{ uri }}
-          style={styles.fill}
-          contentFit={contentFit}
-          cachePolicy="memory-disk"
-          {...(recyclingKey === undefined ? {} : { recyclingKey })}
-          {...(accessibilityLabel === undefined ? { accessible: false } : { accessibilityLabel })}
-          onLoad={() => setPhase('ready')}
-          onError={() => setPhase('failed')}
-        />
-      </Animated.View>
+      <Image
+        source={{ uri }}
+        style={styles.fill}
+        contentFit={contentFit}
+        cachePolicy="memory-disk"
+        transition={FADE_IN}
+        {...(recyclingKey === undefined ? {} : { recyclingKey })}
+        {...(accessibilityLabel === undefined ? { accessible: false } : { accessibilityLabel })}
+        onLoad={() => setPhase('ready')}
+        onError={() => setPhase('failed')}
+      />
     </YStack>
   );
 }

@@ -37,6 +37,18 @@ export const LIST_TUNING = {
    * ngược), mà lợi ích lại không đáng vì iOS vốn tái sử dụng cell tốt hơn.
    */
   removeClippedSubviews: Platform.OS === 'android',
+  /**
+   * Giãn việc dựng hàng ra NHIỀU khung hình thay vì dồn vào một.
+   *
+   * `maxToRenderPerBatch` nói dựng bao nhiêu mỗi nhịp, con số này nói các nhịp cách nhau bao lâu.
+   * Mặc định là 50ms nhưng `VirtualizedList` chỉ áp nó khi được khai — để trống thì một nhịp cuộn
+   * nhanh có thể gọi liên tiếp, và dựng 6 thẻ nặng trong cùng một khung hình là một khung hình bị
+   * rớt, thấy được bằng mắt.
+   *
+   * 50ms ≈ ba khung hình ở 60fps: đủ thưa để luồng JS kịp trả lời chính cú cuộn giữa hai nhịp,
+   * đủ dày để nội dung vẫn kịp có mặt trước khi người dùng cuộn tới.
+   */
+  updateCellsBatchingPeriod: 50,
 } as const;
 
 /**
@@ -54,4 +66,17 @@ export const LIST_TUNING = {
 export const MEDIA_LIST_TUNING = {
   ...LIST_TUNING,
   removeClippedSubviews: false,
+  /**
+   * Dựng THƯA hơn danh sách thường: 3 thay vì 6.
+   *
+   * Đây là những thẻ đắt nhất trong app — một thẻ xe là ảnh mạng, dăm viên nhãn, thanh thao tác
+   * và một hoạt cảnh nhấn, tức là hàng chục view native cộng một lượt đo layout. Sáu cái trong
+   * một nhịp vượt ngân sách 16ms của một khung hình, và cú rớt khung đó rơi đúng vào lúc ngón
+   * tay đang di chuyển.
+   *
+   * Ba cái mỗi 50ms vẫn là ~60 thẻ mỗi giây — nhanh hơn mọi tốc độ cuộn mà đọc được nội dung.
+   * Vuốt thật mạnh thì sẽ thấy khoảng trống chờ, và đó là đánh đổi ĐÚNG: khoảng trống trong lúc
+   * vuốt nhanh thì không ai đọc, còn khung hình rớt thì ai cũng cảm thấy.
+   */
+  maxToRenderPerBatch: 3,
 } as const;

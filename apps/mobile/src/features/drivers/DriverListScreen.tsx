@@ -229,6 +229,7 @@ export function DriverListScreen() {
           searchLabel={t('filters.search')}
           searchPlaceholder={t('filters.searchPlaceholder')}
           onSearchChange={changeSearch}
+          hasRows={items.length > 0}
           groups={groups}
           onFilterChange={changeFilter}
           {...(meta === undefined ? {} : { meta })}
