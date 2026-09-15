@@ -146,7 +146,7 @@ export function FinanceEntityPanel({
       </div>
 
       {summary.isError && !data ? (
-        <Alert type="warning" showIcon message={t('error')} />
+        <Alert type="warning" showIcon title={t('error')} />
       ) : (
         <div className={styles.stats}>
           <MoneyStat

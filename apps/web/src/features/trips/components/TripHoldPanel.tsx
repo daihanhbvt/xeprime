@@ -60,7 +60,7 @@ export function TripHoldPanel({ hold, tripId }: { hold: Hold; tripId: string }) 
       <Alert
         type={hold.status === BOOKING_HOLD_STATUS.UNDERPAID ? 'warning' : 'info'}
         showIcon
-        message={
+        title={
           hold.status === BOOKING_HOLD_STATUS.UNDERPAID
             ? t('partialIntro', { paid: fmt.money(hold.paidAmount) })
             : t('intro')
@@ -168,7 +168,7 @@ function HoldOutcome({ hold, tripId }: { hold: Hold; tripId: string }) {
         <Alert
           type={paid ? 'success' : needsAccount ? 'warning' : 'info'}
           showIcon
-          message={
+          title={
             paid
               ? t('refundPaid', { amount: fmt.money(refund.amount) })
               : refund.hasAccount
@@ -200,12 +200,12 @@ function HoldOutcome({ hold, tripId }: { hold: Hold; tripId: string }) {
   }
 
   if (hold.status === BOOKING_HOLD_STATUS.EXPIRED) {
-    return <Alert type="warning" showIcon message={t('expired')} />;
+    return <Alert type="warning" showIcon title={t('expired')} />;
   }
   if (hold.status === BOOKING_HOLD_STATUS.CANCELLED) return null;
 
   // `paid` / `released`: tiền đã về và chuyến đã có đơn — nói ngắn, chi tiết nằm ở khối tiền.
   return (
-    <Alert type="success" showIcon message={t('paid', { amount: fmt.money(hold.paidAmount) })} />
+    <Alert type="success" showIcon title={t('paid', { amount: fmt.money(hold.paidAmount) })} />
   );
 }

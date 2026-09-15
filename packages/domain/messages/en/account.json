@@ -101,7 +101,10 @@
     "bodyMember": "You are a member of {shop}. Vehicle and calendar management for the shop lives in the management portal.",
     "becomeOwner": "Become a host",
     "openManage": "Open management portal",
-    "backToAccount": "Back to my account"
+    "backToAccount": "Back to my account",
+    "registeringTitle": "Your host profile is still under review",
+    "registeringBody": "This section opens once you have at least one vehicle approved for the marketplace. Track your profile and vehicles on the registration screen.",
+    "openRegistration": "View registration status"
   },
   "vehicles": {
     "title": "My vehicles",
@@ -261,5 +264,35 @@
     "withdrawConfirm": "Withdraw this request? Your account stays as it is.",
     "withdrawn": "Deletion request withdrawn.",
     "loadError": "Couldn't check for an existing request."
+  },
+  "registration": {
+    "title": "Host profile",
+    "subtitle": "Track your profile and your first vehicle on their way to the marketplace.",
+    "saved": "Profile saved",
+    "submitted": "Profile submitted for verification",
+    "loadError": "Could not load your host profile",
+    "steps": {
+      "profile": {
+        "title": "Host profile",
+        "description": "Your name, a verified phone number and a pickup address. Filling these in completes this step — there is nobody to wait for."
+      },
+      "vehicle": {
+        "title": "Add a vehicle and submit it",
+        "description": "Add a vehicle with photos and pricing, then hit submit. One button, once.",
+        "addMore": "Add another vehicle"
+      },
+      "live": {
+        "title": "Live on the marketplace",
+        "description": "XePrime reviews the vehicle — this is the only review step. Once approved, guests can find and book it and all host tools unlock."
+      }
+    },
+    "noVehicle": {
+      "title": "Your first vehicle is still missing",
+      "body": "Add a vehicle with photos and pricing, then submit it. Once XePrime approves it, it goes live.",
+      "cta": "Add your first vehicle"
+    },
+    "queue": {
+      "title": "Your vehicles on their way to the marketplace"
+    }
   }
 }

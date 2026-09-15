@@ -5,6 +5,7 @@ import { DriversModule } from '../drivers/drivers.module';
 import { FinanceModule } from '../finance/finance.module';
 import { HoldSettlementModule } from '../holds/hold-settlement.module';
 import { InsuranceModule } from '../insurance/insurance.module';
+import { TaxModule } from '../tax/tax.module';
 import { LocationsModule } from '../locations/locations.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { VehiclesModule } from '../vehicles/vehicles.module';
@@ -53,6 +54,8 @@ import { SettlementService } from './settlement/settlement.service';
     // Địa chỉ đón có cấu trúc (14/09/2026): kiểm danh mục hành chính + ghép chuỗi hiển thị ở
     // MỘT chỗ. LocationsModule là module lá (Prisma + Geo), không tạo vòng.
     LocationsModule,
+    // Phase 8: ghi nghĩa vụ thuế khi chuyến bắt đầu. Module lá, không tạo vòng.
+    TaxModule,
   ],
   controllers: [
     BookingsController,

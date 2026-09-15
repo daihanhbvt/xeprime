@@ -37,7 +37,7 @@ export function BookingReceiptList({ bookingId }: { bookingId: string }) {
 
   if (isLoading) return <Skeleton active paragraph={{ rows: 2 }} title={false} />;
   if (isError) {
-    return <Alert type="warning" showIcon message={t('booking.error')} />;
+    return <Alert type="warning" showIcon title={t('booking.error')} />;
   }
   if (items.length === 0) return null;
 

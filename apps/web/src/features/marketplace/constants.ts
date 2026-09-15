@@ -60,7 +60,19 @@ export const RENTAL_STEPS: ReadonlyArray<{ no: string; key: 'search' | 'request'
 export const FOOTER_COLUMNS: ReadonlyArray<{
   key: string;
   titleKey: FooterKey;
-  links: ReadonlyArray<{ key: FooterKey; href: string }>;
+  links: ReadonlyArray<{
+    key: FooterKey;
+    href: string;
+    /**
+     * Mục dẫn về KHU LÀM VIỆC của người đang xem — chân trang tự thay `href` bằng
+     * `workspacePaths(...)[workspaceKey]` khi đã biết người đó là ai.
+     *
+     * `href` khai ở đây là đích cho người CHƯA đăng nhập (và cho bot đọc HTML tĩnh), nên nó luôn
+     * phải là một trang công khai. Trỏ thẳng `/manage/...` như bản cũ là mời cả khách vãng lai
+     * lẫn chủ xe tuyến hoa hồng vào một khu họ không vào được.
+     */
+    workspaceKey?: 'vehicles';
+  }>;
 }> = [
   {
     key: 'support',
@@ -84,10 +96,25 @@ export const FOOTER_COLUMNS: ReadonlyArray<{
     key: 'hosts',
     titleKey: 'columns.hosts.title',
     links: [
-      // Ý định làm chủ xe → onboarding (proxy sẽ chèn bước đăng nhập nếu cần), KHÔNG phải
-      // `/manage` — vào đó khi chưa có gian hàng chỉ gặp màn "Bạn chưa có gian hàng".
-      { key: 'columns.hosts.listVehicle', href: ROUTES.MANAGE.ONBOARDING },
-      { key: 'columns.hosts.manageVehicles', href: ROUTES.MANAGE.VEHICLES },
+      /*
+       * Cả hai mục đi qua LANDING công khai, không trỏ thẳng vào cổng quản lý.
+       *
+       * Chân trang hiển thị cho MỌI khách, kể cả người chưa đăng nhập, nên nó không biết người
+       * bấm thuộc tuyến nào — và hai đích cũ (`/manage/onboarding`, `/manage/vehicles`) đều là
+       * khu mà chủ xe tuyến hoa hồng không vào được (ADR 0027/0028). Landing là trang công khai
+       * đọc được không cần đăng nhập, và chính nó rẽ tiếp theo trạng thái thật của người bấm.
+       */
+      { key: 'columns.hosts.listVehicle', href: ROUTES.LIST_YOUR_VEHICLE.ROOT },
+      /*
+       * Người CHƯA đăng nhập bấm "Quản lý xe của tôi" thì việc đầu tiên là đăng nhập — cổng quản
+       * lý là route công khai và nó nhận cả chủ xe lẫn nhân viên. Người đã có gian hàng được
+       * `workspaceKey` thay bằng danh sách xe của đúng khu họ thuộc về.
+       */
+      {
+        key: 'columns.hosts.manageVehicles',
+        href: ROUTES.MANAGE.LOGIN,
+        workspaceKey: 'vehicles',
+      },
     ],
   },
 ];

@@ -41,7 +41,7 @@ export function OdometerHistoryDialog({
       footer={null}
     >
       {history.isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : null}
-      {history.isError ? <Alert type="error" showIcon message={t('history.loadError')} /> : null}
+      {history.isError ? <Alert type="error" showIcon title={t('history.loadError')} /> : null}
       {history.data ? (
         history.data.items.length === 0 ? (
           <p className={styles.emptyText}>{t('history.empty')}</p>

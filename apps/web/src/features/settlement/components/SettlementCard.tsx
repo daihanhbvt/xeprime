@@ -65,7 +65,7 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
         <Alert
           type="error"
           showIcon
-          message="Không tải được thông tin quyết toán"
+          title="Không tải được thông tin quyết toán"
           description={getErrorMessage(error)}
           action={
             <Button size="small" onClick={() => void refetch()}>
@@ -186,7 +186,7 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
             <Alert
               type="warning"
               showIcon
-              message={`Cần thu thêm ${fmt.money(data.additionalDue)}`}
+              title={`Cần thu thêm ${fmt.money(data.additionalDue)}`}
               description={tSettlement('additionalDueHint')}
             />
           ) : null}
@@ -195,7 +195,7 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
             <Alert
               type="info"
               showIcon
-              message="Chưa có ghi nhận thu cọc cho đơn này nên không có việc hoàn cọc. Ghi nhận khoản thu cọc ở mục Thanh toán nếu đã nhận tiền."
+              title="Chưa có ghi nhận thu cọc cho đơn này nên không có việc hoàn cọc. Ghi nhận khoản thu cọc ở mục Thanh toán nếu đã nhận tiền."
             />
           ) : null}
 
@@ -203,7 +203,7 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
             <Alert
               type="info"
               showIcon
-              message="Đang giữ tiền cọc của khách. Việc hoàn cọc mở ra sau khi nhận lại xe và chốt phát sinh."
+              title="Đang giữ tiền cọc của khách. Việc hoàn cọc mở ra sau khi nhận lại xe và chốt phát sinh."
             />
           ) : null}
 
@@ -211,7 +211,7 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
             <Alert
               type="info"
               showIcon
-              message="Phát sinh đã bù trọn phần cọc đã thu — không còn khoản nào phải hoàn lại cho khách."
+              title="Phát sinh đã bù trọn phần cọc đã thu — không còn khoản nào phải hoàn lại cho khách."
             />
           ) : null}
 

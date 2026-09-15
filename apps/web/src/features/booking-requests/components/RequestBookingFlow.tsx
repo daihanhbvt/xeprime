@@ -1015,7 +1015,7 @@ export function RequestBookingFlow({
               type="success"
               showIcon
               className={styles.doneNote}
-              message={
+              title={
                 receipt.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD
                   ? t('done.autoAcceptedHold')
                   : t('done.autoAccepted')
@@ -1026,7 +1026,7 @@ export function RequestBookingFlow({
               type="warning"
               showIcon
               className={styles.doneNote}
-              message={t('done.notReserved')}
+              title={t('done.notReserved')}
             />
           )}
 
@@ -1397,13 +1397,13 @@ export function RequestBookingFlow({
             )}
 
             {vp.error ? (
-              <Alert type="error" showIcon message={vp.error} className={styles.err} />
+              <Alert type="error" showIcon title={vp.error} className={styles.err} />
             ) : null}
             {stepError ? (
               <Alert
                 type="warning"
                 showIcon
-                message={stepError}
+                title={stepError}
                 className={styles.err}
                 role="alert"
               />
@@ -1439,7 +1439,7 @@ export function RequestBookingFlow({
               <Alert
                 type="error"
                 showIcon
-                message={stepError}
+                title={stepError}
                 className={styles.err}
                 role="alert"
               />
@@ -1599,7 +1599,7 @@ export function RequestBookingFlow({
                 type="success"
                 showIcon
                 className={styles.err}
-                message={t('review.instantBook')}
+                title={t('review.instantBook')}
                 description={t('review.instantBookHint')}
               />
             ) : null}
@@ -1621,7 +1621,7 @@ export function RequestBookingFlow({
               <Alert
                 type="error"
                 showIcon
-                message={stepError}
+                title={stepError}
                 className={styles.err}
                 role="alert"
               />

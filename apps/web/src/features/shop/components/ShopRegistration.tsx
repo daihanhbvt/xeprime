@@ -190,7 +190,7 @@ export function ShopRegistration({
             <Alert
               type="error"
               showIcon
-              message={getErrorMessage(register.error)}
+              title={getErrorMessage(register.error)}
               className={styles.alert}
             />
           ) : null}

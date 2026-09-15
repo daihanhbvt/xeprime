@@ -85,7 +85,11 @@
     "INSUFFICIENT_BALANCE": "Not enough available balance.",
     "WITHDRAWAL_BELOW_MINIMUM": "Amount is below the minimum withdrawal.",
     "WITHDRAWAL_ALREADY_HANDLED": "This withdrawal request has already been handled.",
-    "DEPOSIT_ALWAYS_REQUIRED": "Shops on the commission track always collect deposits through XePrime — this switch cannot be turned off."
+    "DEPOSIT_ALWAYS_REQUIRED": "Shops on the commission track always collect deposits through XePrime — this switch cannot be turned off.",
+    "SHOP_VERIFICATION_PENDING": "Your shop profile is already waiting to be verified.",
+    "SHOP_VERIFICATION_REQUIRED": "Your shop must be verified before you can buy a subscription plan.",
+    "SHOP_NOT_ACTIVE": "Your shop is locked, so this action is not available.",
+    "VEHICLE_PUBLISH_INCOMPLETE": "This vehicle is still missing required details, so it cannot be submitted."
   },
   "upload": {
     "imageType": "Only JPG, PNG or WebP images are accepted",

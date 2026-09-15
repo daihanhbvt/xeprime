@@ -101,6 +101,31 @@ vi.mock('@/hooks/use-media-query', () => ({
   useMediaQuery: () => false,
 }));
 
+/*
+ * Thẻ "Thuế đã khấu trừ" (Phase 8) là một đảo dữ liệu riêng trên màn này và nó đọc TanStack
+ * Query thật; harness của test trang không có `QueryClientProvider`, nên chặn ở tầng hook đúng
+ * như các nhóm việc khác trong repo. Vẫn giữ một phép kiểm là thẻ CÓ được gắn — mock để màn
+ * chạy được, không phải để thẻ biến mất khỏi phạm vi test.
+ */
+const tax = vi.hoisted(() => ({
+  period: undefined as string | undefined,
+  enabled: undefined as boolean | undefined,
+  data: {
+    period: '2026-09',
+    totalAmount: '1250000',
+    totalTaxableBase: '12500000',
+    rows: 2,
+    items: [],
+  } as unknown,
+}));
+vi.mock('@/features/tax/hooks/use-tax', () => ({
+  useShopTaxSummary: (period: string | undefined, enabled?: boolean) => {
+    tax.period = period;
+    tax.enabled = enabled;
+    return { data: tax.data, isLoading: false, isError: false, refetch: vi.fn() };
+  },
+}));
+
 /* ------------------------------------------------------------------ dữ liệu mẫu */
 
 function summary(over: Partial<FinanceSummary> = {}): FinanceSummary {
@@ -307,6 +332,29 @@ describe('/manage/finance — quyền', () => {
     expect(screen.getByText('Không có quyền xem số liệu tài chính')).toBeTruthy();
     expect(screen.queryByText('Kết quả kinh doanh')).toBeFalsy();
     expect(screen.queryByRole('region', { name: 'Hiệu quả theo xe' })).toBeFalsy();
+  });
+});
+
+describe('/manage/finance — thuế đã khấu trừ (ADR 0032 điều 3)', () => {
+  it('thẻ thuế đứng cùng sổ tài chính, và nói VÌ SAO trước khi nói bao nhiêu', () => {
+    render(<FinancePage />);
+
+    expect(screen.getByText('Thuế đã khấu trừ')).toBeTruthy();
+    expect(screen.getByText('1.250.000 ₫')).toBeTruthy();
+    // Câu giải thích là phần không được phép rụng: nó là lý do chủ xe nhận ít hơn cọc.
+    expect(screen.getByText(/trừ khỏi khoản XePrime phải trả bạn/)).toBeTruthy();
+  });
+
+  it('gác theo QUYỀN chứ không theo gian hàng đang chọn — server lấy tenant từ membership', () => {
+    render(<FinancePage />);
+    expect(tax.enabled).toBe(true);
+  });
+
+  it('thiếu finance.view ⇒ thẻ thuế cũng không hiện', () => {
+    perms.granted = new Set<string>();
+    render(<FinancePage />);
+
+    expect(screen.queryByText('Thuế đã khấu trừ')).toBeFalsy();
   });
 });
 

@@ -1,0 +1,56 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+/*
+ * Bốn con số của kỳ nằm trên một hàng ở desktop và tự xuống hàng ở máy hẹp. `auto-fit` thay vì
+ * số cột cố định: thêm/bớt một chỉ số về sau không phải sửa breakpoint.
+ */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-md);
+}
+
+.strong {
+  margin: 0;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.muted {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/*
+ * Bút toán ĐẢO mang số âm.
+ *
+ * Màu KHÔNG phải tín hiệu duy nhất: `fmt.money` đã in dấu trừ, và một con số đỏ lọt giữa các
+ * dòng đen vẫn đọc như dòng thường với người mù màu. Dấu trừ là thứ mang nghĩa; màu chỉ giúp
+ * tìm nhanh. Không thêm dấu ngoặc kế toán vì nó sẽ chồng lên dấu trừ đã có.
+ */
+.negative {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-error);
+}

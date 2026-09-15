@@ -43,6 +43,7 @@ import { NotificationService } from '../notification/notification.service';
 import { OccupancyService } from '../calendar/occupancy.service';
 import { CustomersService } from '../customers/customers.service';
 import { InsuranceService } from '../insurance/insurance.service';
+import { TaxService } from '../tax/tax.service';
 import { AddressService } from '../locations/address.service';
 import { DriversService } from '../drivers/drivers.service';
 import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
@@ -162,6 +163,8 @@ export class BookingsService {
     private readonly insurance: InsuranceService,
     /** Kiểm danh mục hành chính + ghép chuỗi hiển thị cho địa chỉ đón (14/09/2026). */
     private readonly address: AddressService,
+    /** Phase 8: nghĩa vụ thuế phát sinh khi chuyến BẮT ĐẦU (ADR 0032 điều 3). */
+    private readonly tax: TaxService,
   ) {}
 
   async list(
@@ -1004,8 +1007,28 @@ export class BookingsService {
      */
     if (to === BOOKING_STATUS.ACTIVE) {
       await this.insurance.markDueWithinTx(tx, id);
+      /*
+       * THUẾ phát sinh đúng tại đây — khi xe ra khỏi bãi, không phải khi khách đặt (ADR 0032
+       * điều 3). Huỷ trước chuyến ⇒ không dòng nào, và đó là lý do lời gọi này nằm trong nhánh
+       * `ACTIVE` chứ không ở `createWithinTx`.
+       *
+       * Cùng transaction với lượt chuyển: một chuyến đã chạy mà sổ thuế chưa có dòng là một
+       * khoản nền tảng đã khấu trừ của chủ xe nhưng không biết phải nộp cho ai. Idempotent bằng
+       * partial unique ở DB, nên chạy lại không sinh nghĩa vụ thứ hai.
+       */
+      await this.tax.accrueForBookingWithinTx(tx, {
+        bookingId: id,
+        tenantId,
+        actorUserId: userId,
+      });
     } else if (isBookingFinal(to) && to !== BOOKING_STATUS.COMPLETED) {
       await this.insurance.cancelForBookingWithinTx(tx, id);
+      /*
+       * KHÔNG đảo dòng thuế ở đây. Huỷ SAU khi chuyến đã bắt đầu vẫn là một chuyến đã phát sinh
+       * doanh thu chịu thuế — nghĩa vụ không biến mất vì chuyến kết thúc sớm. Nếu một ca cụ thể
+       * cần xoá nghĩa vụ thì đó là quyết định của người làm thuế, đi qua `reverse` (có lý do,
+       * có audit), không phải một hệ quả tự động của việc bấm huỷ.
+       */
     }
 
     await this.audit.record(
@@ -1260,12 +1283,17 @@ function feeColumns(snapshot: BookingPriceSnapshot) {
      * `D` và `D − T` đọc từ CHÍNH snapshot (ADR 0032 điều 2, ADR 0033 điều 2) — một nguồn, không
      * có đường nào đặt cột lệch khỏi snapshot. Cột tồn tại từ migration 20260911090000 nhưng
      * chưa ai ghi; báo cáo tiền phải trả chủ xe đọc chúng thay vì giải lại jsonb của từng đơn.
-     *
-     * `taxAmount` cố ý KHÔNG ghi ở đây: thuế chỉ phát sinh khi chuyến BẮT ĐẦU (ADR 0032 điều 3),
-     * nên ghi lúc tạo đơn là ghi một nghĩa vụ chưa tồn tại. Cột giữ mặc định 0 tới Phase 8.
      */
     depositAmountOnline: new Prisma.Decimal(fees.depositAmount),
     ownerPayableAmount: new Prisma.Decimal(fees.ownerPayableAmount),
+    /*
+     * `T` DỰ KIẾN của đơn (Phase 8) — một phần của bảng kê, đọc cùng lúc với mọi con số khác.
+     *
+     * ⚠️ Đây KHÔNG phải nghĩa vụ đã phát sinh. Nghĩa vụ thật sống ở `tax_withholdings` và chỉ ra
+     * đời khi chuyến BẮT ĐẦU (ADR 0032 điều 3) — một đơn huỷ trước giờ nhận vẫn có cột này khác
+     * 0 nhưng KHÔNG có dòng nào trong sổ thuế. Tờ khai theo kỳ đọc bảng, không bao giờ đọc cột.
+     */
+    taxAmount: new Prisma.Decimal(fees.taxAmount),
     feePolicyId: fees.policy.policyId,
   };
 }

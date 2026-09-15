@@ -125,7 +125,7 @@ export function WithdrawDialog({
           type="info"
           showIcon
           className={styles.commitment}
-          message={t('commitment', { days: summary.data?.maxBusinessDays ?? 2 })}
+          title={t('commitment', { days: summary.data?.maxBusinessDays ?? 2 })}
         />
       </ResponsiveDialog>
 

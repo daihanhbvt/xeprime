@@ -129,7 +129,7 @@ export function UpdateDeliveryFeeModal({
         <Alert
           type="info"
           showIcon
-          message="Khách không cần xác nhận lại. Tổng tiền của đơn được tính lại trên máy chủ, và khách sẽ nhận thông báo là số tiền đã thay đổi."
+          title="Khách không cần xác nhận lại. Tổng tiền của đơn được tính lại trên máy chủ, và khách sẽ nhận thông báo là số tiền đã thay đổi."
         />
 
         {Number(currentFee) !== nextFee ? (

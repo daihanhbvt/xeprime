@@ -28,7 +28,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0011](0011-long-term-fixed-packages.md) | Thuê dài hạn theo tháng lịch | Accepted |
 | [0012](0012-i18n-shared-url-cookie-locale.md) | i18n vi/en dùng chung URL và message source | Accepted |
 | [0013](0013-no-online-payment-mvp.md) | Không online payment ở MVP cũ | **Superseded bởi 0028** |
-| [0014](0014-owner-and-shop-single-role.md) | Một role owner/shop, capability từ gói | **Partially superseded bởi 0020/0028/0032** |
+| [0014](0014-owner-and-shop-single-role.md) | Một role owner/shop, capability từ gói | **Partially superseded bởi 0020/0028/0032/0036** |
 | [0015](0015-vehicle-slot-billing.md) | Gói trả trước theo chỗ xe | **Partially superseded bởi 0020/0028** |
 | [0016](0016-sepay-bank-reconciliation.md) | SePay đối soát tiền gói | Accepted; phạm vi mở rộng bởi 0022/0028 |
 | [0017](0017-native-bearer-auth.md) | Bearer auth cho native | Accepted |
@@ -50,6 +50,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0033](0033-money-ledger-and-deposit-allocation.md) | Sổ công nợ "Ví điểm", phân bổ cọc nhiều dòng, định tuyến kết cục | **Accepted; ghi đè một phần 0023/0025/0028** |
 | [0034](0034-badge-delivery-by-projection.md) | Huy hiệu đi bằng bản chiếu, không bằng nhịp hỏi lại | **Accepted; mở rộng 0009 sang projection thứ hai** |
 | [0035](0035-two-tier-administrative-address.md) | Địa chỉ vật lý theo danh mục hành chính hai cấp (tỉnh → xã/phường/đặc khu) | **Accepted; mở rộng 0018 sang gợi ý địa điểm + ghim có xác nhận** |
+| [0036](0036-single-approval-gate-for-commission-owners.md) | Tuyến hoa hồng chỉ có cổng duyệt XE; xác minh gian hàng là trục riêng và là cổng mua gói | **Accepted; ghi đè 0014 điều 5 trong phạm vi tuyến hoa hồng** |
 
 ## Quy tắc thêm ADR
 

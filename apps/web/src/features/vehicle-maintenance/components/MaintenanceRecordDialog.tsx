@@ -207,7 +207,7 @@ export function MaintenanceRecordDialog({
             showIcon
             role="alert"
             className={styles.conflictAlert}
-            message={t('record.conflictAlert')}
+            title={t('record.conflictAlert')}
             description={
               <List
                 size="small"
@@ -317,7 +317,7 @@ export function MaintenanceRecordDialog({
           </Row>
         </Form>
 
-        {completing ? <Alert type="info" showIcon message={t('record.completeHint')} /> : null}
+        {completing ? <Alert type="info" showIcon title={t('record.completeHint')} /> : null}
         {record && canViewFiles && record.attachmentCount > 0 ? (
           <p className={styles.attachmentNote}>
             {t('record.attachments', { count: record.attachmentCount })}

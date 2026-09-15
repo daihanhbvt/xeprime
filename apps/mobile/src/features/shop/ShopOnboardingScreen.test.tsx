@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Provider as ReduxProvider } from 'react-redux';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import { API_ERROR_CODE, TENANT_TYPE } from '@xeprime/types';
+import { API_ERROR_CODE, SHOP_VERIFICATION, TENANT_TYPE } from '@xeprime/types';
 import { ApiClientError } from '@xeprime/api-client';
 import * as authApi from '@/features/auth/api';
 import { locationsApi } from '@/features/locations/api';
@@ -40,6 +40,8 @@ const SHOP: MyShop = {
   name: 'Cho thuê xe Bình Minh',
   tenantType: TENANT_TYPE.INDIVIDUAL,
   status: 'draft',
+  // ADR 0036: trục XÁC MINH tách khỏi `status`. Fixture giữ nguyên `draft` (dữ liệu cũ).
+  verification: SHOP_VERIFICATION.UNVERIFIED,
   phone: null,
   email: null,
   profile: {

@@ -31,31 +31,6 @@
   gap: var(--xp-space-md);
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.label {
-  color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-sm);
-}
-
-.control {
-  width: 100%;
-}
-
-.help {
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-}
-
-.error {
-  color: var(--xp-color-error);
-  font-size: var(--xp-font-size-body-sm);
-}
-
 .preview {
   margin: 0;
   color: var(--xp-color-success);

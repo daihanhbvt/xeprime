@@ -93,7 +93,7 @@ export function WithdrawalPaidModal({
         id="withdrawal-reference-hint"
         type="info"
         showIcon
-        message={t('bankReferenceHint')}
+        title={t('bankReferenceHint')}
       />
     </ResponsiveDialog>
   );

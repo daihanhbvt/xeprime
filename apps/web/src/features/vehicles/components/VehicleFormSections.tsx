@@ -316,7 +316,7 @@ function VehicleTypePolicyWarning({ control }: Pick<SectionProps, 'control'>) {
     <Alert
       type="info"
       showIcon
-      message={t('typePolicyTitle', { label: domainLabel('vehicleType', vehicleType) })}
+      title={t('typePolicyTitle', { label: domainLabel('vehicleType', vehicleType) })}
       description={t('typePolicyBody')}
     />
   );
@@ -362,7 +362,7 @@ function ServicePriceRemovalWarning({ control }: Pick<SectionProps, 'control'>) 
     <Alert
       type="warning"
       showIcon
-      message={t('priceRemovalTitle', { losses: summary })}
+      title={t('priceRemovalTitle', { losses: summary })}
       description={t('priceRemovalBody')}
     />
   );
@@ -449,7 +449,7 @@ export function SourceTypeSection({ control }: Pick<SectionProps, 'control'>) {
           </>
         )}
       />
-      <Alert className={styles.sourceHint} type="info" showIcon message={t('hint')} />
+      <Alert className={styles.sourceHint} type="info" showIcon title={t('hint')} />
     </fieldset>
   );
 }
@@ -554,7 +554,7 @@ export function AdvancedSpecsSection({ control }: Pick<SectionProps, 'control'>)
           </Col>
         </Row>
       </section>
-      <Alert type="info" showIcon message={t('hint')} />
+      <Alert type="info" showIcon title={t('hint')} />
     </div>
   );
 }

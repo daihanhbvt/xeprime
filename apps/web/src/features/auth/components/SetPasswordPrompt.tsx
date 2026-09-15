@@ -55,7 +55,7 @@ export function SetPasswordPrompt({
         </div>
       </div>
 
-      {error ? <Alert type="error" showIcon message={error} className={styles.alert} /> : null}
+      {error ? <Alert type="error" showIcon title={error} className={styles.alert} /> : null}
 
       <form
         onSubmit={handleSubmit((values) => {

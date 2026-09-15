@@ -1,0 +1,110 @@
+{
+  "page": {
+    "title": "Duyệt hồ sơ"
+  },
+  "filters": {
+    "all": "Tất cả"
+  },
+  "targetType": {
+    "tenant": "Gian hàng",
+    "vehicle": "Xe",
+    "tenant_document": "Giấy tờ gian hàng",
+    "vehicle_document": "Giấy tờ xe",
+    "seller_profile": "Hồ sơ người bán"
+  },
+  "table": {
+    "tenant": "Gian hàng",
+    "targetType": "Loại",
+    "submittedBy": "Người gửi",
+    "submittedAt": "Gửi lúc",
+    "status": "Trạng thái",
+    "view": "Xem chi tiết",
+    "loadError": "Không tải được hàng đợi duyệt",
+    "empty": "Không có phiếu nào"
+  },
+  "drawer": {
+    "title": "Phiếu duyệt"
+  },
+  "unsupported": {
+    "title": "Loại phiếu này không duyệt ở đây",
+    "body": "Hàng đợi này chỉ xử lý hồ sơ gian hàng và xe. Hồ sơ người bán được duyệt ở màn xác minh người bán.",
+    "openSellers": "Mở xác minh người bán"
+  },
+  "tenant": {
+    "title": "Gian hàng",
+    "name": "Tên",
+    "code": "Mã",
+    "status": "Trạng thái",
+    "tenantType": "Loại hình",
+    "track": "Tuyến",
+    "noPlan": "Không có gói hiệu lực",
+    "publicVehicles": "{count, plural, =0 {chưa có xe trên chợ} other {# xe đang trên chợ}}",
+    "phone": "Điện thoại",
+    "email": "Email",
+    "targetType": "Loại phiếu"
+  },
+  "snapshot": {
+    "shopTitle": "Hồ sơ đã gửi",
+    "vehicleTitle": "Xe gửi duyệt",
+    "openShop": "Mở trang gian hàng",
+    "openVehicle": "Mở hồ sơ xe",
+    "imageAlt": "Ảnh xe {index}",
+    "empty": "Không có hồ sơ đính kèm",
+    "fields": {
+      "ownerFullName": "Họ tên chủ gian hàng",
+      "ownerPhone": "SĐT chủ gian hàng",
+      "ownerEmail": "Email chủ gian hàng",
+      "displayName": "Tên hiển thị",
+      "bio": "Giới thiệu",
+      "address": "Địa chỉ",
+      "wardName": "Xã/Phường",
+      "provinceName": "Tỉnh/Thành",
+      "taxCode": "Mã số thuế",
+      "businessLicenseNo": "Số giấy phép KD",
+      "bankName": "Ngân hàng",
+      "bankAccountNo": "Số tài khoản",
+      "bankAccountName": "Chủ tài khoản",
+      "logoUrl": "Logo",
+      "vehicleName": "Tên xe",
+      "vehicleCode": "Mã xe",
+      "plateNumber": "Biển số",
+      "branchName": "Chi nhánh giữ xe",
+      "vehicleType": "Loại xe",
+      "serviceType": "Dịch vụ",
+      "brand": "Hãng",
+      "model": "Dòng xe",
+      "manufactureYear": "Đời xe",
+      "seatCount": "Số chỗ",
+      "fuelType": "Nguồn năng lượng",
+      "bodyType": "Kiểu dáng",
+      "color": "Màu sắc",
+      "weekdayPrice": "Giá ngày thường",
+      "weekendPrice": "Giá cuối tuần",
+      "hourlyPrice": "Giá thuê giờ",
+      "monthlyPrice": "Giá tháng (dài hạn)",
+      "withDriverDailyPrice": "Giá/ngày có tài xế",
+      "discountPercent": "Giảm giá",
+      "description": "Mô tả"
+    }
+  },
+  "history": {
+    "title": "Lịch sử",
+    "system": "Hệ thống"
+  },
+  "review": {
+    "approve": "Duyệt",
+    "requestRevision": "Yêu cầu bổ sung",
+    "reject": "Từ chối",
+    "done": {
+      "approve": "Đã duyệt",
+      "request_revision": "Đã yêu cầu bổ sung",
+      "reject": "Đã từ chối"
+    }
+  },
+  "reason": {
+    "rejectTitle": "Từ chối hồ sơ",
+    "reviseTitle": "Yêu cầu bổ sung",
+    "hint": "Lý do sẽ được gửi cho chủ gian hàng.",
+    "placeholder": "Nhập lý do…"
+  }
+}

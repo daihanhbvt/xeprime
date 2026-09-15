@@ -35,6 +35,7 @@ export {
   ApiClientError,
   CLIENT_ERROR_CODE,
   getErrorCode,
+  getErrorDetails,
   isRetriableError,
   isUnauthenticated,
   toApiClientError,

@@ -12,6 +12,7 @@ import {
   RECEIPT_STATUS,
   RECEIPT_TYPE,
   SERVICE_TYPE,
+  SHOP_VERIFICATION,
   TENANT_STATUS,
   type Permission,
   type TenantStatus,
@@ -321,6 +322,8 @@ describe('ShopDashboardScreen — dải trạng thái và ba bước mở gian h
       name: 'Gian hàng Đà Nẵng',
       tenantType: 'individual',
       status: TENANT_STATUS.DRAFT,
+      // ADR 0036: trục XÁC MINH tách khỏi `status`.
+      verification: SHOP_VERIFICATION.UNVERIFIED,
       phone: null,
       email: null,
       profile: {

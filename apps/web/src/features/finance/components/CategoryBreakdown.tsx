@@ -68,7 +68,7 @@ export function CategoryBreakdown({
       <h2 className={styles.title}>{title}</h2>
 
       {error && !data ? (
-        <Alert type="warning" showIcon message={t('error')} />
+        <Alert type="warning" showIcon title={t('error')} />
       ) : loading && !data ? (
         <Skeleton active paragraph={{ rows: 4 }} title={false} />
       ) : !data || data.items.length === 0 ? (

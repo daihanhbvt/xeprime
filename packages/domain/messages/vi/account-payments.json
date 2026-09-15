@@ -1,0 +1,34 @@
+{
+  "title": "Tiền của các chuyến đã thuê",
+  "loadError": "Không tải được danh sách khoản đã trả",
+  "total": "{count, plural, other {# khoản}}",
+  "notPaidYet": "chưa ghi nhận",
+  "scope": {
+    "title": "Đây là tiền bạn đã trả cho gian hàng",
+    "body": "Khoản chuyển giữ chỗ cho XePrime nằm trong chi tiết từng chuyến. Tiền XePrime đang nợ bạn nằm ở",
+    "balanceLink": "Ví điểm"
+  },
+  "depositNote": "Tiền cọc trả gian hàng sẽ được hoàn khi bạn trả xe, sau khi trừ phát sinh (nếu có). Đây không phải khoản mất đi.",
+  "stats": {
+    "paidTotal": "Tổng đã trả",
+    "rental": "Tiền thuê",
+    "deposit": "Tiền cọc",
+    "trips": "Số chuyến"
+  },
+  "filters": {
+    "all": "Tất cả"
+  },
+  "columns": {
+    "trip": "Chuyến",
+    "shop": "Gian hàng",
+    "kind": "Loại",
+    "amount": "Số tiền",
+    "method": "Hình thức",
+    "status": "Trạng thái"
+  },
+  "empty": {
+    "all": "Bạn chưa có khoản nào được gian hàng ghi nhận.",
+    "rental": "Chưa có khoản tiền thuê nào được ghi nhận.",
+    "deposit": "Chưa có khoản cọc nào được ghi nhận."
+  }
+}

@@ -147,7 +147,7 @@ function LocationPanel({
         <Alert
           type="error"
           showIcon
-          message={t('loadError')}
+          title={t('loadError')}
           description={errorMessage(error)}
         />
       ) : loading ? (

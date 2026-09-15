@@ -22,6 +22,8 @@ allowed-tools: Bash(git status:*), Bash(git branch:*), Bash(git rev-parse:*), Ba
 - ✅ `git commit --amend` **chỉ khi** commit gần nhất chưa có trên remote nào (STEP 6). Amend một commit chưa push vẫn push fast-forward được — không có ngoại lệ nào cho force.
 - ❌ `git push --force` / `--force-with-lease` · push `main` / `master` / `develop` · `git merge` (ngoại lệ duy nhất: `git merge --ff-only origin/develop`) · `git rebase` · `git checkout main` · tạo Pull Request.
 - ❌ Sửa code, format, refactor, sửa bug ngoài phạm vi. **Chỉ thao tác Git.** Thấy vấn đề thì báo, không tự sửa.
+- ❌ `git add -A` khi cây làm việc đang DÙNG CHUNG với phiên/người khác (STEP 7a) — stage theo
+  đường dẫn. ❌ `git stash` để "dọn tạm" trên cây dùng chung: nó cất luôn việc của người kia.
 - ❌ Chạy build / lint / test / typecheck / install. ❌ Đọc source ngoài diff. ❌ Gọi subagent.
 - ❌ Commit khi người dùng chưa xác nhận.
 - ⏱️ Toàn bộ quy trình tối đa **~3 lệnh Bash**. Nhanh là yêu cầu bắt buộc, không phải mong muốn.
@@ -142,19 +144,50 @@ Hai ngoại lệ **KHÔNG gộp** dù điều kiện trên thoả:
 
 ## STEP 7 — add
 
-Một lệnh, chọn theo chế độ đã quyết ở STEP 6:
+### 7a. Cây làm việc này có CHUNG với ai không?
+
+Đọc thẳng `Trạng thái` ở đầu file, **không chạy lệnh**. Cây được coi là **DÙNG CHUNG** khi có
+thay đổi mà phiên hiện tại **không** tạo ra — dấu hiệu thường gặp:
+
+- file ở khu mình chưa hề đụng tới (`apps/mobile/**` trong khi mình làm web, `prisma/migrations/`
+  lạ, ADR mới không phải của mình…);
+- số file lớn hơn hẳn phạm vi việc vừa làm (vài chục file cho một sửa đổi nhỏ);
+- migration hoặc `packages/types` mang tên tính năng không nằm trong task này.
+
+> ⚠️ Repo XePrime CÓ hiện tượng này: nhiều phiên/nhiều người sửa **cùng một working tree**. Ngày
+> 14/09/2026 một commit tính năng địa chỉ đã cuốn trọn ba phase luồng tiền của phiên khác vào
+> trong nó, và không tách ra được nữa vì đã push. `git add -A` là cơ chế gây ra chuyện đó.
+
+### 7b. Stage
+
+| Cây | Lệnh |
+| --- | --- |
+| **Riêng** (mọi thay đổi đều của task này) | `git add -A` |
+| **DÙNG CHUNG** | `git add -- <từng đường dẫn của task này>` |
 
 ```bash
-# Commit mới
+# Cây riêng — commit mới
 git add -A && git --no-pager diff --cached --stat
 
-# GỘP — `--stat` phải tính trên TOÀN BỘ commit sau khi gộp, không riêng phần vừa thêm
-git add -A && git --no-pager diff --cached HEAD~1 --stat
+# Cây DÙNG CHUNG — chỉ stage phần của mình (liệt kê tường minh, không glob cả thư mục cha)
+git add -- apps/web/src/features/<feature> docs/<file>.md && git --no-pager diff --cached --stat
 ```
 
-Stage tất cả (sửa / thêm / xoá). Không phân biệt thay đổi đến từ prompt nào — tất cả là **một task**.
+Khi GỘP thì `--stat` phải tính trên TOÀN BỘ commit sau khi gộp:
+`git --no-pager diff --cached HEAD~1 --stat`.
 
-Nếu `git add -A` in cảnh báo `adding embedded git repository` (thư mục worktree/repo lồng nhau) → DỪNG, gỡ ra bằng `git rm --cached -r <dir>`, đề nghị thêm `<dir>` vào `.gitignore`, rồi mới đi tiếp.
+Cây riêng thì không phân biệt thay đổi đến từ prompt nào — tất cả là **một task**.
+
+### 7c. File bị TRỘN (cả hai phía cùng sửa một file)
+
+`git add <file>` stage **cả file**, nên một file mang cả thay đổi của mình lẫn của người khác sẽ
+kéo theo phần của họ. Không tự ý gộp và cũng **không** dùng `git stash` để né (stash trên cây dùng
+chung là cách làm mất việc của người khác). Xử lý: liệt kê đúng những file đó ở STEP 10, nói rõ
+chúng mang thay đổi của phiên khác, để người dùng quyết đưa vào hay để lại.
+
+Nếu `git add` in cảnh báo `adding embedded git repository` (thư mục worktree/repo lồng nhau) →
+DỪNG, gỡ ra bằng `git rm --cached -r <dir>`, đề nghị thêm `<dir>` vào `.gitignore`, rồi mới đi tiếp.
+
 
 ## STEP 8 — quét file nhạy cảm (chỉ theo TÊN, không mở file)
 
@@ -190,6 +223,14 @@ Mode:    Commit mới
 Changes: 8 files changed
 Commit:  feat(web): improve rental calendar
 Push:    origin/feature/web-rental-calendar
+```
+
+Cây DÙNG CHUNG (STEP 7a) thì thêm đúng hai dòng này — người dùng phải thấy thứ mình KHÔNG commit
+trước khi đồng ý:
+
+```
+Để lại:  37 file của phiên khác (không stage)
+Trộn:    apps/web/src/features/shop/ShopProfileWorkspace.tsx — mang cả thay đổi của phiên khác
 ```
 
 Khi GỘP thì dòng `Mode` nói rõ gộp vào đâu, và `Changes` là tổng SAU khi gộp:

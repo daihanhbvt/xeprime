@@ -4,6 +4,8 @@ import { PUBLIC_CACHE_SECONDS } from '@xeprime/types';
 import { Public } from '../../common/decorators';
 import { PublicCache } from '../../common/http-cache';
 import { PublicListingsService } from './public-listings.service';
+import { MarketPriceService } from './market-price.service';
+import { MarketPriceQueryDto, MarketPriceSuggestionDto } from './dto/market-price.dto';
 import {
   ListingFacetsDto,
   ListingFacetsQueryDto,
@@ -21,7 +23,10 @@ import {
 @ApiTags('public-listings')
 @Controller('public/listings')
 export class PublicListingsController {
-  constructor(private readonly listings: PublicListingsService) {}
+  constructor(
+    private readonly listings: PublicListingsService,
+    private readonly marketPrice: MarketPriceService,
+  ) {}
 
   @Public()
   @Get()
@@ -40,6 +45,20 @@ export class PublicListingsController {
   @ApiOkResponse({ type: ListingFacetsDto })
   facets(@Query() query: ListingFacetsQueryDto): Promise<ListingFacetsDto> {
     return this.listings.facets(query);
+  }
+
+  /**
+   * Giá tham khảo cho chủ xe đang đặt giá — công khai vì đầu vào lẫn đầu ra đều là mặt bằng của
+   * cả chợ, không chạm vào dữ liệu của một gian hàng nào (xem docblock `MarketPriceQueryDto`).
+   * Vẫn phải đứng TRƯỚC `:id`, cùng lý do với `facets`.
+   */
+  @Public()
+  @Get('price-suggestion')
+  @PublicCache(PUBLIC_CACHE_SECONDS.facets)
+  @ApiOperation({ summary: 'Khoảng giá thuê/ngày tham khảo theo phân khúc xe và tỉnh' })
+  @ApiOkResponse({ type: MarketPriceSuggestionDto })
+  priceSuggestion(@Query() query: MarketPriceQueryDto): Promise<MarketPriceSuggestionDto> {
+    return this.marketPrice.suggest(query);
   }
 
   @Public()

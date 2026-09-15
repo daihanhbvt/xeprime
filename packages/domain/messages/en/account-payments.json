@@ -1,0 +1,34 @@
+{
+  "title": "Payments for trips you rented",
+  "loadError": "Could not load your payments",
+  "total": "{count, plural, one {# payment} other {# payments}}",
+  "notPaidYet": "not recorded yet",
+  "scope": {
+    "title": "This is money you paid to the shop",
+    "body": "Reservation transfers to XePrime appear inside each trip. Money XePrime owes you is in your",
+    "balanceLink": "Points wallet"
+  },
+  "depositNote": "A security deposit paid to the shop is returned when you bring the vehicle back, less any charges. It is not money lost.",
+  "stats": {
+    "paidTotal": "Total paid",
+    "rental": "Rent",
+    "deposit": "Security deposit",
+    "trips": "Trips"
+  },
+  "filters": {
+    "all": "All"
+  },
+  "columns": {
+    "trip": "Trip",
+    "shop": "Shop",
+    "kind": "Type",
+    "amount": "Amount",
+    "method": "Method",
+    "status": "Status"
+  },
+  "empty": {
+    "all": "No payments have been recorded for you yet.",
+    "rental": "No rent payments recorded yet.",
+    "deposit": "No security deposits recorded yet."
+  }
+}

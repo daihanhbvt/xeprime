@@ -57,8 +57,10 @@ const ICONS: Readonly<Record<NotificationType, IconName>> = {
   [NOTIFICATION_TYPE.BOOKING_AUTO_ACCEPTED]: 'flash-outline',
   [NOTIFICATION_TYPE.SHOP_APPROVED]: 'storefront-outline',
   [NOTIFICATION_TYPE.SHOP_REJECTED]: 'storefront-outline',
+  [NOTIFICATION_TYPE.SHOP_NEEDS_REVISION]: 'storefront-outline',
   [NOTIFICATION_TYPE.VEHICLE_APPROVED]: 'car-outline',
   [NOTIFICATION_TYPE.VEHICLE_REJECTED]: 'car-outline',
+  [NOTIFICATION_TYPE.VEHICLE_NEEDS_REVISION]: 'car-outline',
   [NOTIFICATION_TYPE.REVIEW_RECEIVED]: 'star-outline',
   // Vòng đời gói (W2, ADR 0015/0026) — cùng icon thẻ với màn "Gói của tôi".
   [NOTIFICATION_TYPE.SUBSCRIPTION_EXPIRING]: 'card-outline',

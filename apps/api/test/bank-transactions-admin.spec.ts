@@ -13,7 +13,11 @@ import { BankTransactionsService } from '../src/modules/sepay/bank-transactions.
 import { SepayService } from '../src/modules/sepay/sepay.service';
 import type { BillingService } from '../src/modules/billing/billing.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBillingService, makeBookingHoldsService } from './helpers/service-factory';
+import {
+  makeBillingService,
+  makeBookingHoldsService,
+  verifyShop,
+} from './helpers/service-factory';
 
 /**
  * Hàng đợi đối soát + KHỚP TAY của admin (R2 mục 4, ADR 0022 điều 4) — PostgreSQL THẬT.
@@ -128,6 +132,9 @@ beforeAll(async () => {
       joinedAt: new Date(),
     },
   });
+  // Mua gói THUÊ BAO đòi gian hàng đã xác minh (ADR 0036) — spec này kiểm đường TIỀN, không
+  // kiểm cổng xác minh; cổng đó có spec riêng (`owner-single-gate`).
+  await verifyShop(asService, tenantId, ownerId);
   await prisma.plan.create({
     data: {
       id: planId,

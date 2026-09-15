@@ -120,7 +120,7 @@ export function InformationSection() {
           ở đầu màn để chủ xe không phải thử từng ô mới biết ô nào không bấm được.
         */}
         {isPublic ? (
-          <Alert type="info" showIcon message={t('information.lockedNotice')} />
+          <Alert type="info" showIcon title={t('information.lockedNotice')} />
         ) : null}
 
         <div className={styles.grid}>
@@ -267,7 +267,7 @@ function AddressCard({ canEdit }: { canEdit: boolean }) {
       }
     >
       {!vehicle.branch ? (
-        <Alert type="warning" showIcon message={t('addressMissing')} />
+        <Alert type="warning" showIcon title={t('addressMissing')} />
       ) : (
         <>
           <p className={styles.address}>
@@ -291,11 +291,11 @@ function AddressCard({ canEdit }: { canEdit: boolean }) {
               <Alert
                 type="warning"
                 showIcon
-                message={t('addressSharedTitle', { count: branch.vehicleCount })}
+                title={t('addressSharedTitle', { count: branch.vehicleCount })}
                 description={t('addressSharedBody')}
               />
             ) : (
-              <Alert type="info" showIcon message={t('addressBranchHint')} />
+              <Alert type="info" showIcon title={t('addressBranchHint')} />
             )
           }
         />

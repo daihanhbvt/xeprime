@@ -11,6 +11,7 @@ import { ROUTES } from '@/constants/routes';
 import { safeNextPath } from '@/features/auth/safe-next';
 import { ShopRegistration } from '@/features/shop/components/ShopRegistration';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { useWorkspace } from '@/hooks/use-workspace';
 import styles from './onboarding.module.css';
 
 /**
@@ -36,13 +37,17 @@ export default function OwnerOnboardingPage() {
   const router = useRouter();
   const params = useSearchParams();
   const { data: user, isLoading } = useCurrentUser();
+  const { paths } = useWorkspace();
   const hasTenant = Boolean(user?.tenant);
   /*
    * Đích sau khi tạo hồ sơ. `safeNextPath` chỉ nhận đường dẫn NỘI BỘ — tham số này đến từ URL,
-   * nên nó là bề mặt open-redirect nếu tin thẳng. Không có `next` hợp lệ thì về hồ sơ gian hàng
-   * như trước.
+   * nên nó là bề mặt open-redirect nếu tin thẳng.
+   *
+   * Mặc định là hồ sơ chủ xe của ĐÚNG KHU người này thuộc về, không phải `/manage/shop` cứng:
+   * tenant vừa tạo chưa có gói ⇒ tuyến hoa hồng ⇒ `/account/registration`. Trỏ cứng vào
+   * `/manage/shop` nghĩa là mọi người mới tạo hồ sơ đều bị `AppShell` đá ra ngay sau đó.
    */
-  const next = safeNextPath(params.get('next'), ROUTES.MANAGE.SHOP);
+  const next = safeNextPath(params.get('next'), paths.ownerProfile);
   /** Đến từ luồng đăng xe → dùng chữ dành cho chủ xe cá nhân, không phải chữ "mở gian hàng". */
   const fromListing = next.startsWith(ROUTES.LIST_YOUR_VEHICLE.ROOT);
 

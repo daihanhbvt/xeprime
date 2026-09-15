@@ -95,7 +95,7 @@ export function RefundPaidModal({
       ) : null}
 
       {!hasAccount ? (
-        <Alert type="warning" showIcon message={t('refundPaid.noAccount')} />
+        <Alert type="warning" showIcon title={t('refundPaid.noAccount')} />
       ) : null}
 
       <DialogForm onSubmit={onSubmit} labelWidth="lg">

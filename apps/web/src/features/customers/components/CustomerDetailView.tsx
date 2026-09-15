@@ -337,7 +337,7 @@ export function CustomerDetailView({
           className={styles.banner}
           type="info"
           showIcon
-          message={t('detail.archivedBannerTitle')}
+          title={t('detail.archivedBannerTitle')}
           description={t('detail.archivedBannerBody')}
         />
       ) : null}
@@ -347,7 +347,7 @@ export function CustomerDetailView({
           className={styles.banner}
           type={blocked ? 'error' : 'warning'}
           showIcon
-          message={
+          title={
             blocked ? t('detail.blockedBannerTitle') : t('detail.watchlistBannerTitle')
           }
           description={

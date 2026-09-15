@@ -119,6 +119,9 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
   const resolver = useValidationResolver<QuickVehicleValues>(
     quickVehicleSchema,
     'ListYourVehicle.validation',
+    // `quickVehicleSchema` pick phần lớn trường từ `vehicleFormSchema`, và mã lỗi của chúng
+    // thuộc namespace của form xe — không có vế này thì chúng lọt ra giao diện ở dạng thô.
+    'Vehicles.form.validation',
   );
   const { control, getValues, setValue, setError, trigger, formState } = useForm<QuickVehicleValues>(
     { resolver, defaultValues: QUICK_VEHICLE_DEFAULTS },
@@ -296,7 +299,12 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
       });
       draft.clear();
       setResult(outcome);
-      if (!outcome.partialError) {
+      /*
+       * Toast nói đúng cái VỪA xảy ra. "Còn thiếu điều kiện" cố ý không có toast: màn kết quả đã
+       * liệt kê từng mục ngay bên dưới, và một toast biến mất sau 3 giây là chỗ tệ nhất để đặt
+       * một danh sách việc phải làm.
+       */
+      if (!outcome.partialError && outcome.missingRequirements.length === 0) {
         message.success(outcome.submitted ? t('savedAndSubmitted') : t('savedDraft'));
       }
     } catch (err) {
@@ -380,7 +388,7 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
         >
           <div ref={headingRef} tabIndex={-1} className={styles.focusAnchor} />
           {stepError ? (
-            <Alert type="error" showIcon message={stepError} className={styles.alert} role="alert" />
+            <Alert type="error" showIcon title={stepError} className={styles.alert} role="alert" />
           ) : null}
 
           {step === 'info' ? (
@@ -389,6 +397,7 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
           {step === 'rental' ? (
             <QuickVehicleRentalStep
               control={control}
+              setValue={setValue}
               vehicleType={vehicleType}
               branches={branches}
             />
@@ -402,7 +411,7 @@ export function QuickVehicleWizard({ source }: { source: VehicleRegistrationSour
           type="warning"
           showIcon
           className={styles.alert}
-          message={t('draftExists')}
+          title={t('draftExists')}
           action={
             <Button
               size="small"

@@ -36,7 +36,12 @@
     "changePassword": "Change password",
     "deleteAccount": "Request account deletion",
     "bankAccounts": "Payout accounts",
-    "balance": "Points wallet"
+    "balance": "Points wallet",
+    "earnings": "Rental earnings",
+    "registration": "Registration status",
+    "ownerProfile": "Host profile",
+    "messages": "Guest messages",
+    "subscription": "Subscription"
   },
   "manage": {
     "home": "Home",

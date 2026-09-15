@@ -69,7 +69,7 @@ export function DepositToggleCard({ settings, canEdit, saving, onChange }: Props
           type="info"
           showIcon
           icon={<LockOutlined aria-hidden="true" />}
-          message={t(`locked.${locked}.title`)}
+          title={t(`locked.${locked}.title`)}
           description={
             <>
               <Paragraph className={styles.lockBody}>{t(`locked.${locked}.body`)}</Paragraph>

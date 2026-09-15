@@ -112,7 +112,7 @@ export function PhoneVerifyControl<T extends FieldValues>({
         </div>
       ) : null}
 
-      {vp.error ? <Alert type="error" showIcon message={vp.error} className={styles.err} /> : null}
+      {vp.error ? <Alert type="error" showIcon title={vp.error} className={styles.err} /> : null}
     </div>
   );
 }

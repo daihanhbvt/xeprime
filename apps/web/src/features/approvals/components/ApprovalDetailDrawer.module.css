@@ -1,8 +1,30 @@
+.notice {
+  margin-bottom: var(--xp-space-md);
+}
+
+.sourceLink {
+  margin: 0 0 var(--xp-space-sm);
+}
+
+/*
+ * Lưới ảnh thay cho MỘT tấm ảnh phủ ngang.
+ *
+ * Cổng gửi duyệt bắt buộc ≥4 ảnh khác nhau, nên reviewer phải thấy được cả bộ cùng lúc để đối
+ * chiếu (đúng xe không, đủ góc không, có ảnh nào là ảnh mạng không). Xếp dọc từng tấm cỡ lớn
+ * biến việc đó thành cuộn bốn màn hình.
+ */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--xp-space-sm);
+  margin-bottom: var(--xp-space-md);
+}
+
 .snapshotImage {
   display: block;
   width: 100%;
-  max-height: 240px;
+  aspect-ratio: 4 / 3;
+  max-width: 100%;
   object-fit: cover;
-  border-radius: 8px;
-  margin-bottom: 12px;
+  border-radius: var(--xp-border-radius-sm);
 }

@@ -22,6 +22,7 @@ import {
   PRICE_ROW,
   SUPPORT_CASE_CATEGORY,
   SUPPORT_CASE_STATUS_OPEN,
+  TAX_WITHHOLDING_STATUS_UNPAID,
   WITHDRAWAL_STATUS,
   holdExpiresAt,
   holdFreeCancelUntil,
@@ -43,6 +44,7 @@ import { OccupancyService } from '../calendar/occupancy.service';
 import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
 import { NotificationService } from '../notification/notification.service';
 import { InsuranceReadService } from '../insurance/insurance-read.service';
+import { TaxReadService } from '../tax/tax-read.service';
 import { HoldSettlementService } from './hold-settlement.service';
 import {
   CustomerHoldDto,
@@ -156,6 +158,8 @@ export class BookingHoldsService {
     private readonly notifications: NotificationService,
     /** Phase 7: phần phí bảo hiểm đang giữ hộ, cho vế `custodied` của đối soát ba vế. */
     private readonly insurance: InsuranceReadService,
+    /** Phase 8: phần thuế đã khấu trừ chưa nộp — cùng vế `custodied`. */
+    private readonly tax: TaxReadService,
   ) {}
 
   // ── Tạo ──────────────────────────────────────────────────────────────────
@@ -1030,8 +1034,19 @@ export class BookingHoldsService {
     const insuranceGross = await this.insurance.custodiedPremiumAsOf(end);
     const insuranceInOpenHolds = await this.premiumInsideUnsettledHolds(end);
     const insuranceReserved = insuranceGross.sub(insuranceInOpenHolds);
-    // Thuế: cổng Phase 8 chưa nối vào đây — giữ 0 và một dòng tường minh thay vì vắng mặt.
-    const taxAccrued = zero;
+    /*
+     * THUẾ (Phase 8): phần đã khấu trừ khỏi chủ xe nhưng CHƯA nộp cơ quan thuế —
+     * `accrued` + `declared`. Tiền đó đang nằm trong tài khoản XePrime và thuộc về cơ quan thuế,
+     * nên nó là nghĩa vụ giữ hộ đúng nghĩa.
+     *
+     * ⚠️ KHÔNG trừ khỏi `holdsUnsettled`: thuế chỉ phát sinh khi chuyến ĐÃ BẮT ĐẦU, mà hold chưa
+     * chốt thì chuyến chưa kết thúc — hai tập hợp giao nhau ở những chuyến đang chạy. Ở đó phần
+     * `T` nằm cả trong `paid_amount` của hold lẫn trong sổ thuế, nên dòng dưới trừ lại phần trùng
+     * y như cách làm với bảo hiểm.
+     */
+    const taxGross = await this.tax.unpaidAsOf(end);
+    const taxInOpenHolds = await this.taxInsideUnsettledHolds(end);
+    const taxAccrued = taxGross.sub(taxInOpenHolds);
     const custodiedTotal = holdsUnsettled
       .add(walletTotal)
       .add(refundsPendingAmount)
@@ -1123,6 +1138,26 @@ export class BookingHoldsService {
       _sum: { premiumAmount: true },
     });
     return agg._sum.premiumAmount ?? new Prisma.Decimal(0);
+  }
+
+  /**
+   * Thuế nằm TRONG các hold chưa chốt — phần bị đếm hai lần nếu không trừ ra (cùng lý do với
+   * `premiumInsideUnsettledHolds`).
+   *
+   * Giao nhau xảy ra ở chuyến ĐANG CHẠY: thuế đã phát sinh (`to = ACTIVE`) nhưng hold chưa chốt
+   * kết cục (chuyến chưa kết thúc). Ở đó `T` nằm cả trong `paid_amount` của hold lẫn trong sổ
+   * thuế, và cộng cả hai làm chênh lệch dương đúng bằng tổng thuế của các chuyến đang chạy.
+   */
+  private async taxInsideUnsettledHolds(end: Date): Promise<Prisma.Decimal> {
+    const agg = await this.prisma.taxWithholding.aggregate({
+      where: {
+        accruedAt: { lt: end },
+        status: { in: [...TAX_WITHHOLDING_STATUS_UNPAID] },
+        booking: { hold: { outcome: null, paidAmount: { gt: 0 }, paidAt: { lt: end } } },
+      },
+      _sum: { amount: true },
+    });
+    return agg._sum.amount ?? new Prisma.Decimal(0);
   }
 
   /**

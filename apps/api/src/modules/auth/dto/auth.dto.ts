@@ -112,8 +112,30 @@ export class CurrentTenantSummaryDto {
   @ApiProperty({ type: String, nullable: true, description: 'Mã gói hiện hành; null = không có' })
   planCode!: string | null;
 
+  /**
+   * Chế độ thu phí của gói HIỆN HÀNH — `commission` (Basic Owner) hay `package` (gian hàng
+   * thuê bao). Xem `BillingMode` trong @xeprime/types.
+   *
+   * Đây là thứ phân biệt HAI TUYẾN của ADR 0028, và nó phải đi trên dây vì web dùng nó để chọn
+   * khu làm việc. Suy từ `planCode == null` là SAI: `assignDefaultPlanWithinTx` gán cho mọi gian
+   * hàng mới một gói tuyến hoa hồng, nên `planCode` gần như không bao giờ rỗng.
+   */
+  @ApiProperty({ type: String, nullable: true, description: 'Xem BillingMode trong @xeprime/types' })
+  billingMode!: string | null;
+
   @ApiProperty({ type: String, nullable: true, description: 'ISO-8601 UTC — băng hết hạn đọc ngày này' })
   planEndsAt!: string | null;
+
+  /**
+   * Số xe ĐANG bán trên chợ (`approved_public`) — mốc phân biệt "đang đăng ký" với "chủ xe"
+   * (`resolveOwnerStage` ở `@xeprime/types`).
+   *
+   * Trả kèm `MeDto` chứ không để web tự đếm bằng một lần gọi `/vehicles`: menu đọc nó ở LẦN VẼ
+   * ĐẦU, và một request thứ hai nghĩa là menu nhấp nháy từ "đang đăng ký" sang "chủ xe" mỗi lần
+   * tải trang. Cùng lý do với `features` ngay trên.
+   */
+  @ApiProperty({ description: 'Số xe đang công khai trên marketplace' })
+  publicVehicleCount!: number;
 }
 
 export class MeDto {

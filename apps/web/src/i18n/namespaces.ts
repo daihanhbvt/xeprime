@@ -67,6 +67,8 @@ export const MESSAGE_NAMESPACES = [
   // Quản trị gói dịch vụ (admin nền tảng) — chuyển đợt W1 (ADR 0015/0020).
   { file: 'admin-catalog', namespace: 'AdminCatalog' },
   { file: 'admin-plans', namespace: 'AdminPlans' },
+  // Hàng đợi duyệt hồ sơ gian hàng/xe của admin nền tảng — chuyển sang t() ngày 14/09/2026.
+  { file: 'approvals', namespace: 'Approvals' },
   // Hàng đợi đối soát tiền vào của admin nền tảng (R2 — ADR 0022).
   { file: 'bank-transactions', namespace: 'BankTransactions' },
   { file: 'members', namespace: 'Members' },
@@ -79,6 +81,7 @@ export const MESSAGE_NAMESPACES = [
   // Sổ tài khoản ngân hàng NHẬN TIỀN — dùng chung khách và gian hàng (ADR 0033).
   { file: 'bank-accounts', namespace: 'BankAccounts' },
   // Ví điểm — sổ công nợ phải trả, dùng chung khách + gian hàng + admin (ADR 0033).
+  { file: 'account-payments', namespace: 'AccountPayments' },
   { file: 'wallet', namespace: 'Wallet' },
   // Case hỗ trợ/tranh chấp — dùng chung ba bề mặt khách/gian hàng/nền tảng (R3).
   { file: 'support-cases', namespace: 'SupportCases' },

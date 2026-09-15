@@ -43,10 +43,15 @@ import { VehicleMaintenanceCard } from '@/features/vehicle-maintenance/component
 import {
   ROUTES,
   VEHICLE_EDIT_TAB,
+  VEHICLE_MANAGE_SECTION,
+  accountVehicleManagePath,
   receiptsPath,
   vehiclePath,
   vehicleTabPath,
+  type VehicleEditTab,
+  type VehicleManageSection,
 } from '@/constants/routes';
+import { useWorkspace } from '@/hooks/use-workspace';
 import { decorativeIcon } from '@/lib/decorative-icon';
 import { toAppTz } from '@/lib/datetime';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
@@ -373,7 +378,7 @@ function ProfileHeader({
         <Alert
           type={banner.type}
           showIcon
-          message={banner.message}
+          title={banner.message}
           description={banner.description}
         />
       ) : null}
@@ -594,25 +599,51 @@ function ModuleLinks({
 }) {
   const t = useTranslations('Vehicles.overview.links');
   const { has } = usePermissions();
+  const { paths, isManage } = useWorkspace();
   const links: { href: string; label: string }[] = [];
+
+  /*
+   * Hồ sơ 360 hiện ở CẢ HAI khu, nhưng cùng một mục dẫn tới hai nơi khác nhau: ở cổng quản lý là
+   * tab của `/manage/vehicles/:id/edit`, ở khu tài khoản là mục trong không gian "Quản lý xe"
+   * `/account/vehicles/:id/manage/:section`. Trước đây dải này trỏ cứng vào `/manage`, nên chủ xe
+   * tuyến hoa hồng bấm "Thông tin" là bị đá ra khỏi khu của chính mình.
+   */
+  const editPath = (tab: VehicleEditTab, section: VehicleManageSection): string =>
+    isManage ? vehicleTabPath(vehicleId, tab) : accountVehicleManagePath.section(vehicleId, section);
 
   if (canEdit) {
     links.push(
-      { href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.INFORMATION), label: t('information') },
-      { href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.MEDIA), label: t('media') },
-      { href: vehiclePath.pricing(vehicleId), label: t('pricing') },
+      {
+        href: editPath(VEHICLE_EDIT_TAB.INFORMATION, VEHICLE_MANAGE_SECTION.INFORMATION),
+        label: t('information'),
+      },
+      {
+        href: editPath(VEHICLE_EDIT_TAB.MEDIA, VEHICLE_MANAGE_SECTION.IMAGES),
+        label: t('media'),
+      },
+      {
+        href: isManage
+          ? vehiclePath.pricing(vehicleId)
+          : accountVehicleManagePath.section(vehicleId, VEHICLE_MANAGE_SECTION.SELF_DRIVE_PRICING),
+        label: t('pricing'),
+      },
     );
-    if (has(PERMISSION.FINANCE_VIEW)) {
+    /*
+     * Nguồn xe (ký gửi/hợp tác) là sổ sách của gian hàng — thuộc nhóm `finance` và không có bản
+     * `/account`. Ẩn hẳn ở khu tài khoản thay vì hiện một mục dẫn ra ngoài khu.
+     */
+    if (isManage && has(PERMISSION.FINANCE_VIEW)) {
       links.push({ href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.SOURCE), label: t('source') });
     }
   }
   if (has(PERMISSION.VEHICLE_DOCUMENT_VIEW)) {
     links.push({
-      href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.DOCUMENTS),
+      href: editPath(VEHICLE_EDIT_TAB.DOCUMENTS, VEHICLE_MANAGE_SECTION.DOCUMENTS),
       label: t('documents'),
     });
   }
-  if (has(PERMISSION.VEHICLE_MAINTENANCE_VIEW)) {
+  // Bảo dưỡng là tính năng của GÓI (ADR 0027 điều 1) — không có ở bộ cơ bản, nên không có mục.
+  if (isManage && has(PERMISSION.VEHICLE_MAINTENANCE_VIEW)) {
     links.push(
       { href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.MAINTENANCE), label: t('maintenance') },
       { href: ROUTES.MANAGE.MAINTENANCE, label: t('maintenanceCenter') },
@@ -620,12 +651,23 @@ function ModuleLinks({
   }
   if (has(PERMISSION.CALENDAR_VIEW)) {
     // Cùng helper với nút "Xem lịch" và thẻ ở danh sách — một đường dẫn lịch duy nhất.
-    links.push({ href: vehicleSchedulePath(vehicle), label: t('calendar') });
+    links.push({
+      href: vehicleSchedulePath(vehicle, { basePath: paths.calendar }),
+      label: t('calendar'),
+    });
   }
   if (has(PERMISSION.BOOKING_VIEW)) {
-    links.push({ href: `${ROUTES.MANAGE.BOOKINGS}?vehicleId=${vehicleId}`, label: t('bookings') });
+    /*
+     * Ở khu tài khoản, "đơn của xe này" là "Chuyến của tôi" — một danh sách gồm cả hai phía, và
+     * nó KHÔNG lọc theo `vehicleId`. Dẫn thẳng tới đó thay vì gắn một tham số lọc mà trang bên
+     * kia không đọc, rồi người dùng tưởng bộ lọc hỏng.
+     */
+    links.push({
+      href: isManage ? `${ROUTES.MANAGE.BOOKINGS}?vehicleId=${vehicleId}` : paths.bookings,
+      label: t('bookings'),
+    });
   }
-  if (has(PERMISSION.FINANCE_VIEW)) {
+  if (isManage && has(PERMISSION.FINANCE_VIEW)) {
     // Doanh thu và chi phí của riêng xe này. Từ epic nối tiền, chi phí bảo dưỡng đã tự lên sổ
     // nên đây mới là chỗ trả lời được "xe này lãi thật bao nhiêu".
     links.push({ href: receiptsPath.filtered({ vehicleId }), label: t('receipts') });

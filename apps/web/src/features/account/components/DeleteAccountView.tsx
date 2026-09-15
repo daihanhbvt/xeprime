@@ -119,7 +119,7 @@ export function DeleteAccountView() {
         showIcon
         icon={<WarningFilled />}
         className={styles.warning}
-        message={t('warningTitle')}
+        title={t('warningTitle')}
         description={t('warningBody')}
       />
 

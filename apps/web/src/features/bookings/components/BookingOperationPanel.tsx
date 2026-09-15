@@ -56,7 +56,7 @@ export function BookingOperationPanel({
         <Alert
           type="error"
           showIcon
-          message="Không tải được thông tin bàn giao"
+          title="Không tải được thông tin bàn giao"
           description={getErrorMessage(error)}
           action={
             <Button size="small" onClick={() => void refetch()}>
@@ -90,7 +90,7 @@ export function BookingOperationPanel({
           <Alert
             type="info"
             showIcon
-            message="Đơn đã kết thúc sớm — lịch sử bàn giao chỉ để xem lại."
+            title="Đơn đã kết thúc sớm — lịch sử bàn giao chỉ để xem lại."
           />
         ) : next ? (
           <p className={styles.next}>{next}</p>
@@ -100,7 +100,7 @@ export function BookingOperationPanel({
           <Alert
             type="info"
             showIcon
-            message="Bạn không có quyền xác nhận bàn giao"
+            title="Bạn không có quyền xác nhận bàn giao"
             description="Cần quyền handovers.confirm để chốt việc giao/nhận xe."
           />
         ) : null}
@@ -131,7 +131,7 @@ function HandoverBanner({ handover, kind }: { handover: Handover; kind: 'pickup'
       type="success"
       showIcon
       icon={<CheckCircleFilled />}
-      message={`${verb} lúc ${when}`}
+      title={`${verb} lúc ${when}`}
       description={
         <>
           <div>{odo}</div>

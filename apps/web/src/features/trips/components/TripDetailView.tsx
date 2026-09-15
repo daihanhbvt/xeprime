@@ -386,7 +386,7 @@ export function TripDetailView({ tripId }: { tripId: string }) {
               className={styles.directDeposit}
               type="info"
               showIcon
-              message={t('detail.directDeposit.title')}
+              title={t('detail.directDeposit.title')}
               description={t('detail.directDeposit.body')}
             />
           ) : null}
@@ -521,7 +521,7 @@ function TerminalNotice({ trip, stage }: { trip: CustomerTripDetail; stage: Cust
 
   if (stage === CUSTOMER_TRIP_STAGE.PENDING_APPROVAL) {
     return (
-      <Alert type="warning" showIcon message={t('pendingTitle')} description={t('pendingBody')} />
+      <Alert type="warning" showIcon title={t('pendingTitle')} description={t('pendingBody')} />
     );
   }
 
@@ -530,7 +530,7 @@ function TerminalNotice({ trip, stage }: { trip: CustomerTripDetail; stage: Cust
       <Alert
         type="error"
         showIcon
-        message={t('rejectedTitle')}
+        title={t('rejectedTitle')}
         // Lý do do chủ xe tự gõ — giữ nguyên chữ của họ, không có bản dịch nào cho câu đó.
         description={trip.rejectReason ?? t('rejectedBody')}
       />
@@ -539,12 +539,12 @@ function TerminalNotice({ trip, stage }: { trip: CustomerTripDetail; stage: Cust
 
   if (stage === CUSTOMER_TRIP_STAGE.CANCELLED) {
     return (
-      <Alert type="info" showIcon message={t('cancelledTitle')} description={t('cancelledBody')} />
+      <Alert type="info" showIcon title={t('cancelledTitle')} description={t('cancelledBody')} />
     );
   }
 
   if (stage === CUSTOMER_TRIP_STAGE.NO_SHOW) {
-    return <Alert type="error" showIcon message={t('noShowTitle')} description={t('noShowBody')} />;
+    return <Alert type="error" showIcon title={t('noShowTitle')} description={t('noShowBody')} />;
   }
 
   return null;

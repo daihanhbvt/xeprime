@@ -44,7 +44,7 @@ export function InvoicePaymentPanel({ invoice }: { invoice: SubscriptionInvoice 
       <Alert
         type="info"
         showIcon
-        message={
+        title={
           invoice.status === SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID
             ? t('partialIntro', { paid: fmt.money(invoice.paidAmount) })
             : t('intro')

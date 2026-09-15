@@ -165,7 +165,7 @@ export function MapPinPicker({
     // Bản đồ không tải được KHÔNG phải lỗi của người đang điền form: nói một câu, giữ nguyên
     // toạ độ đang có, và để họ lưu bình thường.
     return (
-      <Alert type="info" showIcon className={styles.block} message={t('unavailable')} />
+      <Alert type="info" showIcon className={styles.block} title={t('unavailable')} />
     );
   }
 

@@ -164,7 +164,7 @@ export function AddressField<T extends FieldValues>({
           type="warning"
           showIcon
           className={styles.alert}
-          message={t('provinceLoadError')}
+          title={t('provinceLoadError')}
           action={
             <Button size="small" onClick={provinces.refetch}>
               {tc('actions.retry')}
@@ -423,13 +423,13 @@ function AddressLocationSection<T extends FieldValues>({
           type="warning"
           showIcon
           className={styles.alert}
-          message={t('provinceMismatchTitle')}
+          title={t('provinceMismatchTitle')}
           description={t('provinceMismatchHint')}
         />
       ) : null}
 
       {needsPinCheck ? (
-        <Alert type="info" showIcon className={styles.alert} message={t('pinNeedsCheck')} />
+        <Alert type="info" showIcon className={styles.alert} title={t('pinNeedsCheck')} />
       ) : null}
 
       <MapPinPicker value={point} onChange={onMovePin} label={t('mapLabel')} disabled={disabled} />

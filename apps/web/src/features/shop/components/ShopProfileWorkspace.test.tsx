@@ -1,7 +1,7 @@
 import { App } from 'antd';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { TENANT_STATUS } from '@xeprime/types';
+import { SHOP_VERIFICATION, TENANT_STATUS } from '@xeprime/types';
 import { ShopProfileWorkspace } from './ShopProfileWorkspace';
 import type { MyShop, UpdateProfileInput } from '../types';
 
@@ -64,7 +64,8 @@ function makeShop(overrides: Partial<MyShop['profile']> = {}): MyShop {
     slug: 'demo-xeprime',
     name: 'Demo XePrime',
     tenantType: 'individual',
-    status: 'draft',
+    status: TENANT_STATUS.ACTIVE,
+    verification: SHOP_VERIFICATION.UNVERIFIED,
     phone: null,
     email: null,
     latestApproval: null,
@@ -135,7 +136,7 @@ function renderWorkspace(
 const saveButton = () => screen.getByRole('button', { name: /Lưu thông tin/ });
 const phoneInput = () => screen.getByLabelText(/Số điện thoại/);
 /** Nút trên DẢI trạng thái, không phải nút OK trong hộp xác nhận (hai nút cùng chữ). */
-const submitReviewButton = () => screen.getAllByRole('button', { name: /^Gửi duyệt$/ })[0]!;
+const submitReviewButton = () => screen.getAllByRole('button', { name: /^Gửi xác minh$/ })[0]!;
 /** Thẻ checklist — nhãn mục ở đây TRÙNG nhãn ô trên form, nên mọi khẳng định phải khoanh vùng. */
 const checklist = () => within(screen.getByRole('region', { name: 'Hoàn thiện hồ sơ' }));
 
@@ -214,10 +215,10 @@ describe('Hai nút ở tiêu đề đi theo trạng thái chỉnh sửa', () => 
     expect(screen.getByText('Bạn chỉ có quyền xem hồ sơ gian hàng.')).toBeTruthy();
   });
 
-  it('hồ sơ đang chờ duyệt: khoá sửa và nói rõ vì sao', () => {
+  it('hồ sơ đang chờ xác minh: khoá sửa và nói rõ vì sao', () => {
     const { container } = renderWorkspace({
       ...makeShop(),
-      status: TENANT_STATUS.PENDING_REVIEW,
+      verification: SHOP_VERIFICATION.PENDING,
     });
 
     expect(container.querySelector('fieldset')).toHaveProperty('disabled', true);
@@ -301,8 +302,8 @@ describe('Checklist hồ sơ', () => {
     await waitFor(() => expect(checklist().getByText('Đã đủ điều kiện gửi duyệt')).toBeTruthy());
   });
 
-  it('hồ sơ đang chờ duyệt: không còn checklist — không có gì để sửa nữa', () => {
-    renderWorkspace({ ...makeShop(), status: TENANT_STATUS.PENDING_REVIEW });
+  it('hồ sơ đang chờ xác minh: không còn checklist — không có gì để sửa nữa', () => {
+    renderWorkspace({ ...makeShop(), verification: SHOP_VERIFICATION.PENDING });
 
     expect(screen.queryByRole('region', { name: 'Hoàn thiện hồ sơ' })).toBeNull();
   });
@@ -345,29 +346,34 @@ describe('Gửi duyệt', () => {
   it('thiếu quyền `tenant.submit_review` → không có nút Gửi duyệt', () => {
     renderWorkspace(makeShop(), { canSubmit: false });
 
-    expect(screen.queryByRole('button', { name: /^Gửi duyệt$/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Gửi xác minh$/ })).toBeNull();
   });
 
-  it('đang chờ duyệt: không còn nút gửi, thay bằng việc làm được ngay — thêm xe', () => {
-    renderWorkspace({ ...makeShop(), status: TENANT_STATUS.PENDING_REVIEW });
+  it('đang chờ xác minh: không còn nút gửi, thay bằng việc làm được ngay — thêm xe', () => {
+    renderWorkspace({ ...makeShop(), verification: SHOP_VERIFICATION.PENDING });
 
-    expect(screen.queryByRole('button', { name: /^Gửi duyệt$/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Gửi xác minh$/ })).toBeNull();
     expect(screen.getByRole('button', { name: /Thêm xe/ })).toBeTruthy();
   });
 });
 
 describe('Dải trạng thái nói đúng chặng đang đứng', () => {
-  it('nháp: "chưa được gửi duyệt", KHÔNG phải "đang chờ duyệt"', () => {
+  /*
+   * ADR 0036: dải này nói về trục XÁC MINH, không về `tenants.status`. Và nó tuyệt đối không
+   * được nói "xe chỉ lên chợ sau khi hồ sơ được duyệt" nữa — câu đó đúng trước ADR 0036 và sai
+   * sau nó, vì tuyến hoa hồng đăng xe thẳng qua cổng duyệt XE.
+   */
+  it('chưa xác minh: nói đúng rằng xe KHÔNG bị chặn vì chuyện này', () => {
     renderWorkspace(makeShop());
 
-    expect(screen.getByText('Hồ sơ chưa được gửi duyệt')).toBeTruthy();
-    expect(screen.queryByText('Hồ sơ đang chờ nền tảng duyệt')).toBeNull();
+    expect(screen.getByText('Gian hàng chưa được xác minh')).toBeTruthy();
+    expect(screen.queryByText('Hồ sơ đang chờ nền tảng xác minh')).toBeNull();
   });
 
   it('bị trả về: hiện NGUYÊN VĂN lý do đội duyệt viết', () => {
     renderWorkspace({
       ...makeShop(),
-      status: TENANT_STATUS.NEEDS_REVISION,
+      verification: SHOP_VERIFICATION.NEEDS_REVISION,
       latestApproval: {
         status: 'needs_revision',
         reason: 'Ảnh giấy phép kinh doanh bị mờ',
@@ -376,7 +382,7 @@ describe('Dải trạng thái nói đúng chặng đang đứng', () => {
       },
     });
 
-    expect(screen.getByText('Nền tảng yêu cầu bổ sung')).toBeTruthy();
+    expect(screen.getByText('Nền tảng yêu cầu bổ sung hồ sơ')).toBeTruthy();
     expect(screen.getByText(/Ảnh giấy phép kinh doanh bị mờ/)).toBeTruthy();
   });
 });

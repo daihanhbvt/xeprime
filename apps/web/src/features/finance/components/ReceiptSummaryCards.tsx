@@ -31,7 +31,7 @@ export function ReceiptSummaryCards({ data, loading, error, filtered }: ReceiptS
   const t = useTranslations('Finance.receipts.summary');
 
   if (error && !data) {
-    return <Alert className={styles.error} type="warning" showIcon message={t('error')} />;
+    return <Alert className={styles.error} type="warning" showIcon title={t('error')} />;
   }
 
   const showSkeleton = loading && !data;

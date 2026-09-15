@@ -101,7 +101,10 @@
     "bodyMember": "Bạn đang là thành viên của gian hàng {shop}. Các màn quản lý xe và lịch nằm ở cổng quản lý.",
     "becomeOwner": "Trở thành chủ xe",
     "openManage": "Vào cổng quản lý",
-    "backToAccount": "Về tài khoản của tôi"
+    "backToAccount": "Về tài khoản của tôi",
+    "registeringTitle": "Hồ sơ chủ xe đang trong quá trình duyệt",
+    "registeringBody": "Mục này mở khi bạn có ít nhất một xe đã được duyệt lên chợ. Xem tiến trình hồ sơ và xe của bạn ở màn Hồ sơ đăng ký.",
+    "openRegistration": "Xem tiến trình đăng ký"
   },
   "vehicles": {
     "title": "Danh sách xe",
@@ -261,5 +264,35 @@
     "withdrawConfirm": "Rút yêu cầu này? Tài khoản của bạn giữ nguyên.",
     "withdrawn": "Đã rút yêu cầu xoá tài khoản.",
     "loadError": "Không kiểm tra được yêu cầu hiện có."
+  },
+  "registration": {
+    "title": "Hồ sơ chủ xe",
+    "subtitle": "Theo dõi hồ sơ và chiếc xe đầu tiên của bạn trên đường lên chợ.",
+    "saved": "Đã lưu hồ sơ",
+    "submitted": "Đã gửi hồ sơ đi xác minh",
+    "loadError": "Không tải được hồ sơ chủ xe",
+    "steps": {
+      "profile": {
+        "title": "Hồ sơ chủ xe",
+        "description": "Họ tên, số điện thoại đã xác thực và địa chỉ nhận xe. Khai đủ là xong bước này — không phải chờ ai duyệt."
+      },
+      "vehicle": {
+        "title": "Đăng xe & gửi duyệt",
+        "description": "Khai xe với đủ ảnh và giá, rồi bấm gửi duyệt. Một nút, một lần.",
+        "addMore": "Đăng thêm xe"
+      },
+      "live": {
+        "title": "Lên chợ",
+        "description": "XePrime duyệt xe — đây là bước duyệt duy nhất. Xe được duyệt là khách tìm thấy và đặt được, và toàn bộ công cụ chủ xe mở ra."
+      }
+    },
+    "noVehicle": {
+      "title": "Còn thiếu chiếc xe đầu tiên",
+      "body": "Đăng một chiếc xe với đủ ảnh và giá rồi gửi duyệt. XePrime duyệt xong là xe lên chợ.",
+      "cta": "Đăng xe đầu tiên"
+    },
+    "queue": {
+      "title": "Xe của bạn đang trên đường lên chợ"
+    }
   }
 }

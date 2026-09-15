@@ -75,10 +75,10 @@ function ApproveForm({ request, submitting, error, onCancel, onConfirm }: Props 
         <p className={styles.effect}>{t('approve.effect')}</p>
 
         {request.deliveryRequested ? (
-          <Alert type="info" showIcon message={t('approve.deliveryNote')} />
+          <Alert type="info" showIcon title={t('approve.deliveryNote')} />
         ) : null}
 
-        {error ? <Alert type="error" showIcon message={error} /> : null}
+        {error ? <Alert type="error" showIcon title={error} /> : null}
       </div>
     </Modal>
   );

@@ -209,6 +209,13 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
       },
       { name: 'reviews', description: 'Đánh giá gian hàng nhận được và phản hồi của chủ xe.' },
       {
+        name: 'account-payments',
+        description:
+          'Tiền KHÁCH đã trả cho chuyến đã thuê — đọc từ `payments`. KHÔNG phải ví điểm ' +
+          '(`wallet`) và không phải khoản giữ chỗ chuyển cho XePrime (`customer-trips`): ba ' +
+          'bảng, ba chủ nợ, ba màn hình. Khoá theo `customerUserId`, không theo tenant.',
+      },
+      {
         name: 'wallet',
         description:
           'Sổ công nợ phải trả — hiển thị là "Ví điểm" (ADR 0033). Số dư là NGHĨA VỤ của ' +
@@ -223,11 +230,25 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
           'gian hàng ở hồ sơ shop — chiều ngược lại, quyền xem khác.',
       },
       {
+        name: 'platform-tax',
+        description:
+          'Sổ thuế khấu trừ và tờ khai theo kỳ (ADR 0032 điều 3). Thuế do CHỦ XE chịu — khấu trừ ' +
+          'khỏi khoản XePrime phải trả, KHÔNG cộng vào tổng khách. Sổ chỉ-ghi-thêm: sửa sai bằng ' +
+          'dòng đảo, không sửa số đã kê khai. Chuyển trạng thái theo KỲ vì cơ quan thuế làm việc ' +
+          'theo tờ khai tháng.',
+      },
+      {
         name: 'platform-insurance',
         description:
           'Hàng đợi hợp đồng bảo hiểm chuyến `IV`/`IP` (ADR 0032 điều 4). Mỗi dòng đang lỗi là ' +
           'một khoản phí khách đã trả mà chưa có chứng nhận nào được cấp — phí đó nằm ở vế GIỮ ' +
           'HỘ của đối soát ba vế cho tới khi quyết toán với đối tác.',
+      },
+      {
+        name: 'shop-tax',
+        description:
+          'Thuế đã khấu trừ của gian hàng theo kỳ. Bộ CƠ BẢN (ADR 0027 điều 1): chủ xe nào cũng ' +
+          'phải xem được mình bị trừ bao nhiêu, và gói hết hạn không lấy đi quyền đó.',
       },
       {
         name: 'shop-payment-settings',

@@ -17,7 +17,7 @@ import { APP_NAME } from '@/constants/app-name';
 import { ROUTES } from '@/constants/routes';
 import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
 import { useMarketLogout } from '@/features/auth/hooks/use-market-logout';
-import { AUTH_MODE } from '@/features/auth/post-auth-destination';
+import { AUTH_MODE, resolveOwnerCtaHref } from '@/features/auth/post-auth-destination';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { CHAT_SIDE } from '@xeprime/types';
 import { ChatMenu } from '@/features/chat/components/ChatMenu';
@@ -122,17 +122,20 @@ function accountMenu(
     { key: 'trips', label: <Link href={ROUTES.TRIPS}>{t('trips')}</Link> },
     { key: 'chat', label: <Link href={ROUTES.CHAT}>{t('chat')}</Link> },
     { type: 'divider' },
-    user.tenant
-      ? {
-          key: 'manage',
-          icon: <ShopOutlined />,
-          label: <Link href={ROUTES.MANAGE.ROOT}>{t('manageShop')}</Link>,
-        }
-      : {
-          key: 'become-owner',
-          icon: <ShopOutlined />,
-          label: <Link href={ROUTES.MANAGE.ONBOARDING}>{t('becomeOwner')}</Link>,
-        },
+    /*
+     * Khu làm việc, KHÔNG phải `/manage` cứng: chủ xe tuyến hoa hồng làm việc ở `/account`
+     * (ADR 0027/0028), và mục này từng là một trong 19 đường dẫn đưa họ vào nhầm cổng quản lý.
+     * `resolveOwnerCtaHref` trả về landing công khai cho người chưa có gian hàng.
+     */
+    {
+      key: user.tenant ? 'manage' : 'become-owner',
+      icon: <ShopOutlined />,
+      label: (
+        <Link href={resolveOwnerCtaHref(user)}>
+          {user.tenant ? t('manageShop') : t('becomeOwner')}
+        </Link>
+      ),
+    },
     ...(user.platformRole
       ? [
           {

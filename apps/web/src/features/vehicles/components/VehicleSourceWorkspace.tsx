@@ -119,7 +119,7 @@ export function VehicleSourceWorkspace({ vehicle, onDirtyChange }: VehicleSource
       <Alert
         type="error"
         showIcon
-        message={t('loadError')}
+        title={t('loadError')}
         description={
           <Button size="small" onClick={() => void source.refetch()}>
             {tActions('retry')}
@@ -293,19 +293,19 @@ function VehicleSourceForm({
             <Alert
               type="info"
               showIcon
-              message={t('readOnly')}
+              title={t('readOnly')}
             />
           ) : null}
 
           {errorCount > 0 ? (
-            <Alert type="error" showIcon message={t('errors', { count: errorCount })} />
+            <Alert type="error" showIcon title={t('errors', { count: errorCount })} />
           ) : null}
 
           {!source.detail ? (
             <Alert
               type="warning"
               showIcon
-              message={t('noDetailTitle')}
+              title={t('noDetailTitle')}
               description={t('noDetailBody')}
             />
           ) : null}
@@ -579,7 +579,7 @@ function FinancedSection({
           type="info"
           showIcon
           className={styles.totalPreview}
-          message={t('monthlyTotal', { amount: fmt.money(String(monthlyTotal)) })}
+          title={t('monthlyTotal', { amount: fmt.money(String(monthlyTotal)) })}
         />
       ) : null}
     </Card>
@@ -793,7 +793,7 @@ function PartnershipSection({
           type="info"
           showIcon
           className={styles.totalPreview}
-          message={t('formula')}
+          title={t('formula')}
         />
       </Card>
     </>

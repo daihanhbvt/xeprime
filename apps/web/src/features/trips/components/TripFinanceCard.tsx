@@ -54,7 +54,7 @@ export function TripFinanceCard({
         <Alert
           type="info"
           showIcon
-          message={t('legacy')}
+          title={t('legacy')}
         />
       ) : null}
 
@@ -118,7 +118,7 @@ export function TripFinanceCard({
         <Alert
           type="warning"
           showIcon
-          message={t('additionalDue', { amount: fmt.money(finance.additionalDue) })}
+          title={t('additionalDue', { amount: fmt.money(finance.additionalDue) })}
           description={t('additionalDueBody')}
         />
       ) : null}

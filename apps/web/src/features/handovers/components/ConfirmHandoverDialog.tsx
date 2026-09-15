@@ -315,11 +315,11 @@ export function ConfirmHandoverDialog({
           <Alert
             type="info"
             showIcon
-            message="Nếu không có phát sinh, hệ thống đề xuất hoàn đủ tiền cọc đã nhận. Việc hoàn tiền được chủ xe thực hiện bên ngoài và đánh dấu lại sau — không chặn hoàn tất chuyến."
+            title="Nếu không có phát sinh, hệ thống đề xuất hoàn đủ tiền cọc đã nhận. Việc hoàn tiền được chủ xe thực hiện bên ngoài và đánh dấu lại sau — không chặn hoàn tất chuyến."
           />
         ) : null}
 
-        {error ? <Alert type="error" showIcon message={error} role="alert" /> : null}
+        {error ? <Alert type="error" showIcon title={error} role="alert" /> : null}
       </div>
     </ResponsiveDialog>
   );

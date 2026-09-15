@@ -318,7 +318,7 @@ export function ReceiptFormDrawer({ open, onClose, initialVehicleId }: ReceiptFo
                   }
                 />
                 {bookingsError ? (
-                  <Alert type="warning" showIcon message={t('bookingError')} />
+                  <Alert type="warning" showIcon title={t('bookingError')} />
                 ) : null}
                 {selectedBooking ? <BookingLinkCard booking={selectedBooking} /> : null}
               </div>
@@ -344,9 +344,9 @@ export function ReceiptFormDrawer({ open, onClose, initialVehicleId }: ReceiptFo
                   }
                 />
                 {vehiclesError ? (
-                  <Alert type="warning" showIcon message={t('vehicleError')} />
+                  <Alert type="warning" showIcon title={t('vehicleError')} />
                 ) : null}
-                {vehicleMissing ? <Alert type="error" showIcon message={t('vehicleGone')} /> : null}
+                {vehicleMissing ? <Alert type="error" showIcon title={t('vehicleGone')} /> : null}
                 {selectedVehicle ? <VehicleLinkCard vehicle={selectedVehicle} /> : null}
               </div>
             ) : null}

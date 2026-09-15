@@ -53,7 +53,7 @@ export function PhoneLoginForm({
   return (
     <div className={styles.wrap}>
       {displayError ? (
-        <Alert type="error" showIcon message={displayError} className={styles.err} />
+        <Alert type="error" showIcon title={displayError} className={styles.err} />
       ) : null}
 
       <Form.Item

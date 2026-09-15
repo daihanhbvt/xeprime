@@ -165,6 +165,14 @@ export const PAYMENT_KIND = {
 export type PaymentKind = (typeof PAYMENT_KIND)[keyof typeof PAYMENT_KIND];
 export const PAYMENT_KIND_VALUES = Object.values(PAYMENT_KIND) as PaymentKind[];
 
+/**
+ * Bộ lọc `kind` đọc từ URL có hợp lệ không — mọi bộ lọc sống ở searchParams (ADR 0004), và một
+ * người gõ tay `?kind=xyz` không được làm màn hình gửi giá trị lạ lên API.
+ */
+export function isPaymentKind(value: unknown): value is PaymentKind {
+  return typeof value === 'string' && (PAYMENT_KIND_VALUES as string[]).includes(value);
+}
+
 export const PAYMENT_KIND_LABEL: Readonly<Record<PaymentKind, string>> = {
   [PAYMENT_KIND.RENTAL]: 'Tiền thuê',
   [PAYMENT_KIND.DEPOSIT]: 'Tiền cọc',

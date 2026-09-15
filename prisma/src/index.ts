@@ -32,6 +32,8 @@ export function createPrismaClient(connectionString?: string): PrismaClient {
 
 export { newId } from './id';
 
+export { isUniqueViolation } from './unique-violation';
+
 /**
  * Huy hiệu người dùng (chuông + chat) — phép đếm và hàng đợi chiếu badge. Dùng chung cho API
  * (GET /me/badges) và worker (chiếu document user_badges/{uid} sang Firestore). Xem docblock

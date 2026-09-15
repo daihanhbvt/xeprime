@@ -360,6 +360,11 @@ export const queryKeys = {
       ['marketplace', 'delivery-distance', vehicleId, address] as const,
     destinations: (params: QueryParams) => ['marketplace', 'destinations', params] as const,
     shops: (params: QueryParams) => ['marketplace', 'shops', params] as const,
+    /**
+     * Khoảng giá tham khảo khi chủ xe đặt giá. Nằm dưới `marketplace` vì nguồn của nó là mặt
+     * bằng giá CỦA CHỢ, không phải hồ sơ chiếc xe đang khai — và nó dùng chung cho web lẫn app.
+     */
+    priceSuggestion: (params: QueryParams) => ['marketplace', 'price-suggestion', params] as const,
   },
   /**
    * Huy hiệu của khung ứng dụng (chuông + hai hộp thư chat) — MỘT khoá cho MỘT request.
@@ -436,6 +441,18 @@ export const queryKeys = {
   platformWithdrawals: {
     all: ['platform-withdrawals'] as const,
     list: (params: QueryParams) => ['platform-withdrawals', 'list', params] as const,
+  },
+  /** Tiền KHÁCH đã trả cho chuyến đã thuê — `payments`, KHÔNG phải ví (PROMPT 5). */
+  accountPayments: {
+    all: ['account-payments'] as const,
+    list: (params: QueryParams) => ['account-payments', 'list', params] as const,
+  },
+  /** Sổ thuế của nền tảng + bản của gian hàng — Phase 8. Một nhánh để đảo một dòng làm mới cả hai. */
+  tax: {
+    all: ['tax'] as const,
+    periodSummary: (period: string) => ['tax', 'period-summary', period] as const,
+    rows: (params: QueryParams) => ['tax', 'rows', params] as const,
+    shopSummary: (period: string) => ['tax', 'shop-summary', period] as const,
   },
   /** Hàng đợi hợp đồng bảo hiểm của nền tảng — Phase 7. */
   platformInsurance: {

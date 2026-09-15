@@ -95,6 +95,7 @@ model User {
   requestedWithdrawals       WithdrawalRequest[]       @relation("withdrawal_requester")
   updatedTenantPaymentSettings TenantPaymentSettings[] @relation("tenant_payment_settings_updated_by")
   enteredBankBalances        PlatformBankBalance[]     @relation("platform_bank_balance_entered_by")
+  createdTaxWithholdings     TaxWithholding[]          @relation("tax_withholding_creator")
 
   @@index([status])
   @@index([createdAt])
@@ -213,6 +214,7 @@ model Tenant {
   sellerProfile                 SellerProfile?
   paymentSettings               TenantPaymentSettings?
   insurancePolicies             BookingInsurancePolicy[]
+  taxWithholdings               TaxWithholding[]
   supportCases                  SupportCase[]
 
   @@index([status])
@@ -873,6 +875,15 @@ model ApprovalTask {
   @@index([status, targetType])
   @@index([tenantId, status])
   @@index([targetType, targetId])
+  /// ⚠ MỘT phiếu CHỜ cho mỗi đối tượng — unique index MỘT PHẦN `approval_tasks_pending_target_uq`
+  /// (`(target_type, target_id) WHERE status = 'pending'`), viết tay ở migration
+  /// `20260914180000_single_gate_vehicle_approval` vì Prisma không diễn đạt được mệnh đề `WHERE`.
+  ///
+  /// Đây là cái chặn THẬT của việc bấm gửi duyệt hai lần / hai tab / lỗi mạng rồi thử lại —
+  /// kiểm tra ở tầng app chỉ thu hẹp cửa sổ chứ không đóng được nó (CLAUDE.md mục 6 lằn ranh 2).
+  /// Một đối tượng vẫn có bao nhiêu phiếu ĐÃ XỬ LÝ cũng được: lịch sử duyệt phải giữ nguyên.
+  ///
+  /// `prisma migrate dev` lần sau sẽ sinh lệnh DROP nó; giữ lại phần viết tay.
   @@map("approval_tasks")
 }
 
@@ -1561,6 +1572,7 @@ model Booking {
   feePolicy         FeePolicy?                @relation(fields: [feePolicyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   hold              BookingHold?
   insurancePolicies BookingInsurancePolicy[]
+  taxWithholdings   TaxWithholding[]
   supportCases      SupportCase[]
 
   @@unique([tenantId, code])
@@ -3600,6 +3612,8 @@ model FeePolicy {
   holds     BookingHold[]
 
   @@index([status])
+  taxWithholdings TaxWithholding[]
+
   @@map("fee_policies")
 }
 
@@ -3768,6 +3782,68 @@ model BookingInsurancePolicy {
   @@index([status, createdAt], map: "booking_insurance_policies_status_created_idx")
   @@index([tenantId, createdAt], map: "booking_insurance_policies_tenant_idx")
   @@map("booking_insurance_policies")
+}
+
+/// Sổ THUẾ KHẤU TRỪ của từng chuyến — ADR 0032 điều 3, ADR 0028 điều 3–4 (Phase 8).
+///
+/// Chỉ ra đời khi chuyến **BẮT ĐẦU**. Huỷ trước chuyến ⇒ đơn vẫn có `bookings.tax_amount` dự
+/// kiến, nhưng KHÔNG có dòng nào ở đây — và tờ khai đọc bảng này, không đọc cột kia.
+///
+/// Thuế do CHỦ XE chịu: khấu trừ khỏi khoản XePrime phải trả (`D − T`), KHÔNG BAO GIỜ cộng vào
+/// tổng khách. Bảng kê của khách không có dòng thuế.
+///
+/// ⚠️ Sổ CHỈ-GHI-THÊM: sửa sai bằng một dòng ÂM trỏ về dòng gốc (`reversalOfId`), không
+/// `UPDATE amount`. Bất biến do DB canh (partial unique): đúng MỘT nghĩa vụ còn hiệu lực mỗi đơn
+/// — đây cũng là chốt idempotent cho `accrueForBookingWithinTx`.
+///
+/// `percent`/`label`/`taxableBase`/`sellerProfileId` là SNAPSHOT: tỷ lệ phụ thuộc LOẠI CHỦ THỂ
+/// và sẽ đổi khi có tư vấn thuế, nên một kỳ đã khai không bao giờ bị diễn giải lại (ADR 0024).
+model TaxWithholding {
+  id       String @id @db.Char(26)
+  bookingId String @map("booking_id") @db.Char(26)
+  tenantId String @map("tenant_id") @db.Char(26)
+  /// Hồ sơ người bán tại thời điểm phát sinh — nguồn LOẠI CHỦ THỂ khi kê khai. NULL = chưa khai
+  /// hồ sơ, và tờ khai phải thấy được khoảng trống đó thay vì đoán.
+  sellerProfileId String? @map("seller_profile_id") @db.Char(26)
+
+  /// Giá trị thuê chịu thuế `B` — KHÔNG gồm bảo hiểm (ADR 0032 điều 3).
+  taxableBase Decimal @map("taxable_base") @db.Decimal(14, 2)
+  percent     Decimal @db.Decimal(5, 2)
+  /// Nhãn hiện trên bảng kê của chủ xe, ví dụ "VAT 5% + TNCN 5%".
+  label       String  @db.VarChar(100)
+  /// Dòng ĐẢO mang số ÂM (CHECK canh) — phép cộng một kỳ vì thế chỉ là `SUM(amount)`.
+  amount      Decimal @db.Decimal(14, 2)
+  feePolicyId String  @map("fee_policy_id") @db.Char(26)
+
+  /// @xeprime/types → TaxWithholdingStatus; DB canh CHECK.
+  status     String    @default("accrued") @db.VarChar(20)
+  accruedAt  DateTime  @default(now()) @map("accrued_at") @db.Timestamptz(3)
+  declaredAt DateTime? @map("declared_at") @db.Timestamptz(3)
+  remittedAt DateTime? @map("remitted_at") @db.Timestamptz(3)
+
+  /// Kỳ kê khai `YYYY-MM` theo GIỜ VIỆT NAM — CỘT chứ không suy từ `accruedAt` lúc đọc: mỗi
+  /// tháng có một khoảng bảy giờ mà giờ UTC và giờ VN thuộc hai kỳ khác nhau.
+  periodKey String @map("period_key") @db.VarChar(7)
+
+  /// Dòng gốc mà dòng này đảo. NULL = dòng gốc.
+  reversalOfId    String? @unique(map: "tax_withholdings_reversal_of_id_key") @map("reversal_of_id") @db.Char(26)
+  /// Lý do đảo — BẮT BUỘC khi có `reversalOfId` (CHECK canh).
+  reversalReason  String? @map("reversal_reason") @db.Text
+  createdBy       String? @map("created_by") @db.Char(26)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  booking       Booking         @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  sellerProfile SellerProfile?  @relation(fields: [sellerProfileId], references: [id], onDelete: SetNull)
+  feePolicy     FeePolicy       @relation(fields: [feePolicyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  reversalOf    TaxWithholding? @relation("tax_withholding_reversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversedBy    TaxWithholding? @relation("tax_withholding_reversal")
+  creator       User?           @relation("tax_withholding_creator", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([periodKey, status], map: "tax_withholdings_period_status_idx")
+  @@index([tenantId, periodKey], map: "tax_withholdings_tenant_period_idx")
+  @@map("tax_withholdings")
 }
 
 /// Yêu cầu CHUYỂN TRẢ khoản giữ chỗ — ADR 0028 điều 8 (R3).
@@ -4046,6 +4122,7 @@ model SellerProfile {
   updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  taxWithholdings TaxWithholding[]
   verifier User?  @relation("seller_verifier", fields: [verifiedBy], references: [id], onDelete: SetNull)
 
   @@index([status, submittedAt])

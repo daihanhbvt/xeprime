@@ -220,17 +220,17 @@
   },
   "success": {
     "submittedTitle": "Đã gửi xe đi duyệt",
-    "submittedBody": "Nền tảng sẽ kiểm tra hồ sơ và bật hiển thị xe trên chợ.",
+    "submittedBody": "XePrime sẽ kiểm tra hồ sơ xe và bật hiển thị trên chợ. Đây là bước duyệt duy nhất — bạn không phải chờ thêm vòng nào khác.",
     "draftTitle": "Đã lưu xe ở dạng nháp",
     "draftBody": "Xe chưa hiển thị trên chợ. Bạn bổ sung nốt rồi gửi duyệt bất cứ lúc nào.",
     "partialTitle": "Xe đã được lưu, còn một phần chưa xong",
     "partialBody": "Chiếc xe đã tồn tại trong danh sách của bạn — đừng tạo lại. Mở phần quản lý xe để lưu nốt phần còn thiếu.",
-    "shopPendingTitle": "Hồ sơ chủ xe cần được duyệt trước",
-    "shopPendingBody": "Xe chỉ lên chợ được sau khi hồ sơ chủ xe của bạn được nền tảng duyệt.",
-    "shopPendingCta": "Hoàn tất hồ sơ",
     "manageCta": "Quản lý xe này",
     "addAnotherCta": "Đăng thêm xe",
-    "listCta": "Về danh sách xe"
+    "listCta": "Về danh sách xe",
+    "incompleteTitle": "Xe chưa gửi duyệt được",
+    "incompleteBody": "Xe đã lưu ở dạng nháp. Bổ sung những mục dưới đây rồi gửi duyệt lại:",
+    "incompleteCta": "Bổ sung ngay"
   },
   "validation": {
     "weekdayPriceRequired": "Nhập giá thuê mỗi ngày",

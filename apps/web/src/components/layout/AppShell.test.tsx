@@ -57,21 +57,49 @@ vi.mock('./Topbar', () => ({ Topbar: () => <div data-testid="topbar" /> }));
 vi.mock('./MobileNav', () => ({ MobileNav: () => <div data-testid="mobile-nav" /> }));
 
 const CUSTOMER = { displayName: 'Khách A', tenant: null, platformRole: null };
+/**
+ * Gian hàng TUYẾN GÓI — `billingMode: 'package'` là thứ cho phép họ vào cổng quản lý.
+ *
+ * Từ 14/09/2026 chỉ `roleKey: 'shop_owner'` KHÔNG còn đủ: chủ xe tuyến hoa hồng cũng mang đúng
+ * vai đó và họ làm việc ở `/account` (ADR 0027/0028). Fixture của bộ test VỎ này phải là người
+ * thật sự thuộc về `/manage`, nếu không nó đang đo một màn hình mà người dùng đó không thấy.
+ */
 const OWNER = {
   displayName: 'Chủ shop',
-  tenant: { id: 'T1', name: 'Shop', slug: 's', status: 'active', roleKey: 'shop_owner' },
+  tenant: {
+    id: 'T1',
+    name: 'Shop',
+    slug: 's',
+    status: 'active',
+    roleKey: 'shop_owner',
+    billingMode: 'package',
+  },
   platformRole: null,
 };
 const ADMIN = { displayName: 'Admin', tenant: null, platformRole: 'platform_admin' };
 const PENDING_OWNER = {
   displayName: 'Chủ shop',
-  tenant: { id: 'T2', name: 'Shop', slug: 's', status: 'pending_review', roleKey: 'shop_owner' },
+  tenant: {
+    id: 'T2',
+    name: 'Shop',
+    slug: 's',
+    status: 'pending_review',
+    roleKey: 'shop_owner',
+    billingMode: 'package',
+  },
   platformRole: null,
 };
 /** Vừa là nhân sự nền tảng vừa thuộc một gian hàng — brief 00 B2. */
 const DUAL = {
   displayName: 'Vừa admin vừa chủ shop',
-  tenant: { id: 'T3', name: 'Shop', slug: 's', status: 'active', roleKey: 'shop_owner' },
+  tenant: {
+    id: 'T3',
+    name: 'Shop',
+    slug: 's',
+    status: 'active',
+    roleKey: 'shop_owner',
+    billingMode: 'package',
+  },
   platformRole: 'platform_admin',
 };
 
@@ -236,9 +264,18 @@ describe('AppShell — các vùng của khung', () => {
  * lại thì không có dải nào: gian hàng bị khoá chỉ biết qua việc xe biến mất khỏi marketplace.
  */
 describe('AppShell — dải trạng thái gian hàng', () => {
+  // Dải trạng thái chỉ hiện TRONG cổng quản lý, nên fixture phải là gian hàng tuyến GÓI —
+  // tuyến hoa hồng không render khung này (xem describe 'cổng tuyến').
   const withStatus = (status: string) => ({
     displayName: 'Chủ shop',
-    tenant: { id: 'T9', name: 'Shop', slug: 's', status, roleKey: 'shop_owner' },
+    tenant: {
+      id: 'T9',
+      name: 'Shop',
+      slug: 's',
+      status,
+      roleKey: 'shop_owner',
+      billingMode: 'package',
+    },
     platformRole: null,
   });
 
@@ -481,5 +518,71 @@ describe('AppShell — băng "gói hết hạn" của tính năng đang đọc (
     shellAt('/manage/receipts');
 
     expect(screen.queryByText(/đang ở chế độ chỉ xem/)).toBeNull();
+  });
+});
+
+/**
+ * CỔNG TUYẾN (14/09/2026 — ADR 0027 điều 4 · ADR 0028 điều 1).
+ *
+ * Bất biến: **chủ xe tuyến hoa hồng không bao giờ render được cổng quản lý.** Trước bản này chỉ
+ * cần CÓ tenant là vào, nên người vừa đăng ký một chiếc xe đứng ngay giữa bảng điều khiển của một
+ * đội xe — chi nhánh, nhân viên, tài xế, sổ thu chi, hợp đồng, không thứ nào thuộc về họ.
+ *
+ * Đây là lớp trải nghiệm; lớp chặn thật là `@RequiresFeature` ở backend. Nhưng lớp này phải đúng,
+ * nếu không người dùng vẫn nhìn thấy một khu họ không dùng được.
+ */
+describe('AppShell — cổng tuyến', () => {
+  const COMMISSION_OWNER = {
+    displayName: 'Chủ xe',
+    tenant: {
+      id: 'T9',
+      name: 'Xe của Minh',
+      slug: 'minh',
+      status: 'active',
+      roleKey: 'shop_owner',
+      billingMode: 'commission',
+      publicVehicleCount: 2,
+    },
+    platformRole: null,
+  };
+
+  it('chủ xe tuyến hoa hồng KHÔNG render khung portal, mà bị đưa về khu tài khoản', async () => {
+    state.user = COMMISSION_OWNER;
+    renderShell();
+
+    expect(screen.queryByTestId('sidebar')).toBeNull();
+    expect(screen.queryByTestId('page')).toBeNull();
+    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith('/account/vehicles'));
+  });
+
+  it('đang đăng ký → về màn tiến trình, không phải danh sách xe rỗng', async () => {
+    state.user = {
+      ...COMMISSION_OWNER,
+      tenant: { ...COMMISSION_OWNER.tenant, status: 'draft', publicVehicleCount: 0 },
+    };
+    renderShell();
+
+    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith('/account/registration'));
+  });
+
+  it('gian hàng có gói vẫn vào bình thường', () => {
+    state.user = OWNER;
+    renderShell();
+
+    expect(screen.getByTestId('sidebar')).toBeTruthy();
+    expect(nav.replace).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Một người vừa là chủ xe hoa hồng vừa là nhân sự nền tảng: khu quản trị vẫn phải mở. Chặn họ
+   * khỏi `/manage/admin` vì chiếc xe cá nhân của họ là cắt mất công cụ làm việc thật.
+   */
+  it('nhân sự nền tảng đi lối riêng — khu quản trị không bị cổng tuyến chặn', () => {
+    state.user = { ...COMMISSION_OWNER, platformRole: 'platform_admin' };
+    nav.pathname = '/manage/admin';
+    renderShell();
+
+    expect(screen.getByTestId('sidebar')).toBeTruthy();
+    expect(nav.replace).not.toHaveBeenCalled();
   });
 });

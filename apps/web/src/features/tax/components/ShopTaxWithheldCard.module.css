@@ -1,0 +1,33 @@
+.card {
+  margin-top: var(--xp-space-md);
+}
+
+.note {
+  margin-bottom: var(--xp-space-md);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin-bottom: var(--xp-space-md);
+  gap: var(--xp-space-md);
+}
+
+.value {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.muted {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* Bút toán đảo — dấu trừ mang nghĩa, màu chỉ giúp tìm nhanh (xem `TaxPeriodPanel.module.css`). */
+.negative {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-error);
+}

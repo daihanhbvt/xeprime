@@ -68,7 +68,7 @@ export function AccountShell({ children }: { children: ReactNode }) {
   if (isError && isUnauthenticated(error)) {
     return (
       <div className={styles.center}>
-        <Alert type="info" showIcon message={t('signInRequired')} />
+        <Alert type="info" showIcon title={t('signInRequired')} />
         <Button type="primary" onClick={() => open({ mode: AUTH_MODE.LOGIN, next: nextFromHere() })}>
           {t('signIn')}
         </Button>
@@ -79,7 +79,7 @@ export function AccountShell({ children }: { children: ReactNode }) {
   if (isError || !user) {
     return (
       <div className={styles.center}>
-        <Alert type="error" showIcon message={errorMessage(error)} />
+        <Alert type="error" showIcon title={errorMessage(error)} />
         <Button onClick={() => void refetch()}>{tCommon('actions.retry')}</Button>
       </div>
     );

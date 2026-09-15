@@ -5,13 +5,14 @@ import {
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
   API_ERROR_CODE,
+  canSubmitShopVerification,
   MEMBERSHIP_STATUS,
   missingShopProfileRequirements,
+  resolveShopVerification,
+  SHOP_VERIFICATION,
   TENANT_ROLE,
   TENANT_STATUS,
-  TENANT_STATUS_SUBMITTABLE,
   TENANT_TYPE,
-  type TenantStatus,
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
@@ -60,9 +61,26 @@ export class TenantsService {
   /**
    * Đăng ký gian hàng cho user chưa thuộc tenant nào.
    *
-   * MỘT transaction cho bốn thứ: tenant (draft) + membership chủ shop + hồ sơ + CHI NHÁNH MẶC
-   * ĐỊNH. Nửa vời là hỏng theo nhiều kiểu khác nhau — có tenant mà không có membership thì chủ
-   * shop không vào được; có tenant mà không có chi nhánh thì không tạo được xe nào.
+   * MỘT transaction cho bốn thứ: tenant + membership chủ shop + hồ sơ + CHI NHÁNH MẶC ĐỊNH.
+   * Nửa vời là hỏng theo nhiều kiểu khác nhau — có tenant mà không có membership thì chủ shop
+   * không vào được; có tenant mà không có chi nhánh thì không tạo được xe nào.
+   *
+   * ## Vì sao tenant mở thẳng ở `active` (14/09/2026)
+   *
+   * Trước đây tenant sinh ra ở `draft`, và `VehiclesService.submitForPublicReview` đòi tenant
+   * `active`. Ghép hai luật đó lại thì chủ xe CÁ NHÂN tuyến hoa hồng phải đi qua HAI cổng duyệt
+   * cho chiếc xe đầu tiên: duyệt gian hàng rồi mới duyệt xe. Cổng thứ nhất không hỏi thêm được
+   * gì mà cổng duyệt xe không hỏi (họ tên, SĐT, địa chỉ đều đã nằm trong chính phiếu duyệt xe),
+   * và nó là chỗ rơi rụng lớn nhất của phễu chủ xe — xem [ADR 0036].
+   *
+   * `active` ở đây KHÔNG có nghĩa "gian hàng đã được xác minh". Nó chỉ có nghĩa "chưa bị khoá":
+   * cột này là trục VẬN HÀNH (`TENANT_STATUS_PUBLISHABLE`, khoá/mở khoá của nền tảng), còn việc
+   * nền tảng đã xem xét pháp nhân hay chưa nằm ở trục THỨ HAI `SHOP_VERIFICATION`
+   * (`shop-verification.ts`), đọc từ phiếu duyệt và là điều kiện để MUA GÓI.
+   *
+   * Và nó KHÔNG tự công khai bất cứ thứ gì: xe vẫn sinh ra ở `draft`, vẫn phải qua
+   * `approval_tasks` loại `VEHICLE` mới lên chợ (ADR 0008). Cái được bỏ là cổng thứ hai, không
+   * phải cổng kiểm duyệt.
    *
    * Tỉnh kiểm TRƯỚC transaction: sai mã là lỗi nhập liệu của người dùng, không đáng để mở
    * transaction rồi rollback.
@@ -98,6 +116,16 @@ export class TenantsService {
       locationSource: dto.locationSource,
     });
 
+    const tenantType = dto.tenantType ?? TENANT_TYPE.INDIVIDUAL;
+    /*
+     * Tên gian hàng CÁ NHÂN chính là tên người cho thuê (tuyến hoa hồng của ADR 0028) — hỏi lại
+     * cùng một cái tên ở một ô thứ hai là ma sát không đổi lấy gì. Gian hàng doanh nghiệp thì
+     * KHÔNG suy diễn: tên công ty không phải tên người chịu trách nhiệm, và đoán sai ở đây nghĩa
+     * là reviewer duyệt một cái tên không ai khai.
+     */
+    const ownerFullName =
+      dto.ownerFullName ?? (tenantType === TENANT_TYPE.INDIVIDUAL ? dto.name : null);
+
     const id = newId();
     const tenantId = await this.prisma.$transaction(async (tx) => {
       await tx.tenant.create({
@@ -106,8 +134,8 @@ export class TenantsService {
           code: `SHOP-${id}`,
           slug: await this.uniqueSlug(tx, dto.name, id),
           name: dto.name,
-          tenantType: dto.tenantType ?? TENANT_TYPE.INDIVIDUAL,
-          status: TENANT_STATUS.DRAFT,
+          tenantType,
+          status: TENANT_STATUS.ACTIVE,
           ownerUserId: userId,
           phone: dto.phone ?? null,
           email: dto.email ?? null,
@@ -136,6 +164,17 @@ export class TenantsService {
           provinceName: address.provinceName,
           wardCode: address.wardCode,
           wardName: address.wardName,
+          /*
+           * Ba cột chủ gian hàng ghi NGAY tại đây, không để trống chờ một màn khác điền nốt.
+           *
+           * `missingShopProfileRequirements` đòi `ownerFullName` + `ownerPhone` mới cho gửi
+           * duyệt. Trước đây `registerShop` không ghi hai cột đó, nên MỌI hồ sơ mở từ luồng đăng
+           * xe công khai đều gửi duyệt thất bại với `PROFILE_INCOMPLETE`, và lối thoát duy nhất
+           * là vào cổng quản lý điền tay — đúng con đường mà tuyến hoa hồng không được đi.
+           */
+          ownerFullName,
+          ownerPhone: dto.phone ?? null,
+          ownerEmail: dto.email ?? null,
         },
       });
       await this.branches.createDefaultBranch(tx, {
@@ -208,6 +247,12 @@ export class TenantsService {
       status: tenant.status,
       phone: tenant.phone,
       email: tenant.email,
+      /*
+       * Trục THỨ HAI, độc lập với `status` — xem `shop-verification.ts`. `status` trả lời "còn
+       * được hoạt động không", trường này trả lời "nền tảng đã xem xét pháp nhân chưa", và chỉ
+       * trường này mới là cổng của việc mua gói thuê bao.
+       */
+      verification: resolveShopVerification(latest?.status),
       profile: emptyProfileIfNull(tenant.profile),
       latestApproval: latest
         ? {
@@ -238,9 +283,11 @@ export class TenantsService {
    *
    * Hai thứ KHÔNG phải là "ghi thẳng vào `tenant_profiles`" và được tách riêng ở đây:
    *
-   * 1. **Đang chờ duyệt thì khoá.** Frontend đã nói "tạm khoá chỉnh sửa" từ lâu nhưng backend
-   *    vẫn nhận — nghĩa là lời hứa đó chỉ là một thuộc tính `disabled`. Duyệt xong hồ sơ LIVE mới
-   *    là thứ lên marketplace, nên sửa trong lúc chờ là duyệt một đằng công khai một nẻo.
+   * 1. **Đang chờ XÁC MINH thì khoá.** Frontend đã nói "tạm khoá chỉnh sửa" từ lâu nhưng backend
+   *    vẫn nhận — nghĩa là lời hứa đó chỉ là một thuộc tính `disabled`. Reviewer duyệt hồ sơ
+   *    LIVE, nên sửa trong lúc chờ là duyệt một đằng công khai một nẻo. Điều kiện đọc từ PHIẾU
+   *    (`SHOP_VERIFICATION.PENDING`), không từ `tenants.status` — cột đó không còn mang nghĩa
+   *    "đang chờ duyệt" từ [ADR 0036].
    * 2. **Tỉnh/thành đi qua `BranchesService`.** Hai cột tỉnh trên hồ sơ là BẢN SAO của chi nhánh
    *    mặc định (xem `syncProfileFromDefaultBranch`); ghi thẳng vào chúng sẽ đúng cho tới lần
    *    chạm chi nhánh kế tiếp rồi âm thầm bị ghi đè, và trong lúc đó xe vẫn hiển thị ở tỉnh cũ
@@ -253,13 +300,21 @@ export class TenantsService {
   ): Promise<MyShopDto> {
     const tenant = await this.prisma.tenant.findFirst({
       where: { id: tenantId, deletedAt: null },
-      select: { status: true },
+      select: {
+        status: true,
+        approvalTasks: {
+          where: { targetType: APPROVAL_TARGET_TYPE.TENANT },
+          orderBy: { submittedAt: 'desc' },
+          select: { status: true },
+          take: 1,
+        },
+      },
     });
     if (!tenant) throw notFound();
-    if (tenant.status === TENANT_STATUS.PENDING_REVIEW) {
+    if (resolveShopVerification(tenant.approvalTasks[0]?.status) === SHOP_VERIFICATION.PENDING) {
       throw new ConflictException({
-        code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-        message: 'Hồ sơ đang chờ nền tảng duyệt nên không sửa được.',
+        code: API_ERROR_CODE.SHOP_VERIFICATION_PENDING,
+        message: 'Hồ sơ đang chờ nền tảng xác minh nên không sửa được.',
       });
     }
 
@@ -320,12 +375,26 @@ export class TenantsService {
   }
 
   /**
-   * Gửi (lại) duyệt. Chỉ cho phép khi tenant đang draft/needs_revision/rejected. Snapshot hồ sơ
-   * vào approval_task để reviewer thấy đúng thứ đã gửi. Ghi approval_log + audit cùng transaction.
+   * Gửi (lại) hồ sơ XÁC MINH gian hàng.
    *
-   * Hai cổng, không phải một: trạng thái ĐÚNG **và** hồ sơ ĐỦ. Cổng thứ hai từng không tồn tại —
-   * hàm này chỉ soi `status`, nên một hồ sơ trắng trơn vẫn vào được hàng đợi và reviewer nhận
-   * `{}` làm bằng chứng để duyệt. Nút mờ ở web là gợi ý; chặn thật nằm ở đây.
+   * ## Đây KHÔNG còn là cổng để đăng xe
+   *
+   * Từ 14/09/2026 ([ADR 0036]) tuyến hoa hồng chỉ có MỘT cổng kiểm duyệt: phiếu duyệt XE. Hàm
+   * này phục vụ tuyến THUÊ BAO — gian hàng muốn mua gói phải có pháp nhân đã được nền tảng xem
+   * xét (`BillingService.purchase`). Gọi nó không bắt buộc, và không gọi cũng không cản trở việc
+   * đưa xe lên chợ.
+   *
+   * ## Hai thay đổi so với bản cũ, và lý do
+   *
+   * 1. **Không hạ `tenants.status` nữa.** Bản cũ đặt tenant về `pending_review`, mà
+   *    `TENANT_STATUS_PUBLISHABLE` chỉ nhận `active` — nghĩa là một gian hàng đang bán tốt mà
+   *    xin xác minh để mua gói thì TOÀN BỘ xe của họ biến khỏi marketplace trong lúc chờ. Đó là
+   *    hình phạt cho việc muốn trả tiền. Hai trục tách ra thì việc này không xảy ra được nữa.
+   * 2. **Cổng chống trùng đọc từ PHIẾU, không từ `status`.** Nguồn sự thật của "đang chờ xác
+   *    minh" là phiếu `pending`; hỏi `status` là hỏi một bản sao.
+   *
+   * Vẫn giữ nguyên: cổng hồ sơ ĐỦ (`missingShopProfileRequirements`) — reviewer không được nhận
+   * một hồ sơ trắng làm bằng chứng để duyệt. Nút mờ ở web là gợi ý; chặn thật nằm ở đây.
    */
   async submitForReview(tenantId: string, userId: string): Promise<MyShopDto> {
     const tenant = await this.prisma.tenant.findFirst({
@@ -341,17 +410,34 @@ export class TenantsService {
           select: { provinceCode: true },
           take: 1,
         },
+        approvalTasks: {
+          where: { targetType: APPROVAL_TARGET_TYPE.TENANT },
+          orderBy: { submittedAt: 'desc' },
+          select: { status: true },
+          take: 1,
+        },
       },
     });
     if (!tenant) throw notFound();
 
-    if (!TENANT_STATUS_SUBMITTABLE.includes(tenant.status as TenantStatus)) {
+    /*
+     * Gian hàng bị khoá không được xin xác minh: quyết định khoá là của nền tảng và phải gỡ
+     * bằng chính đường mở khoá, không phải bằng cách gửi một phiếu mới vào hàng đợi.
+     */
+    if (tenant.status !== TENANT_STATUS.ACTIVE) {
       throw new ConflictException({
-        code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-        message:
-          tenant.status === TENANT_STATUS.PENDING_REVIEW
-            ? 'Gian hàng đang chờ duyệt.'
-            : 'Gian hàng đang hoạt động, không cần gửi duyệt.',
+        code: API_ERROR_CODE.SHOP_NOT_ACTIVE,
+        message: 'Gian hàng đang không hoạt động nên chưa gửi xác minh được.',
+        details: { status: tenant.status },
+      });
+    }
+
+    const verification = resolveShopVerification(tenant.approvalTasks[0]?.status);
+    if (!canSubmitShopVerification(verification)) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.SHOP_VERIFICATION_PENDING,
+        message: 'Hồ sơ gian hàng đang chờ nền tảng xác minh.',
+        details: { verification },
       });
     }
 
@@ -370,14 +456,13 @@ export class TenantsService {
       });
     }
 
-    const isResubmit = tenant.status !== TENANT_STATUS.DRAFT;
+    const isResubmit = verification !== SHOP_VERIFICATION.UNVERIFIED;
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.tenant.update({
-        where: { id: tenantId },
-        data: { status: TENANT_STATUS.PENDING_REVIEW },
-      });
-
+      /*
+       * KHÔNG đụng `tenants.status` — xem docblock của hàm. Xin xác minh không được phép gỡ xe
+       * của chính mình khỏi marketplace trong lúc chờ.
+       */
       const task = await tx.approvalTask.create({
         data: {
           id: newId(),
@@ -395,8 +480,9 @@ export class TenantsService {
           id: newId(),
           approvalTaskId: task.id,
           action: isResubmit ? APPROVAL_ACTION.RESUBMIT : APPROVAL_ACTION.SUBMIT,
-          fromStatus: tenant.status,
-          toStatus: TENANT_STATUS.PENDING_REVIEW,
+          // Hai cột này theo dõi trục XÁC MINH, không phải `tenants.status` — cột đó không đổi.
+          fromStatus: verification,
+          toStatus: SHOP_VERIFICATION.PENDING,
           actorUserId: userId,
         },
       });
@@ -409,8 +495,8 @@ export class TenantsService {
           action: 'tenant.submit_review',
           targetType: APPROVAL_TARGET_TYPE.TENANT,
           targetId: tenantId,
-          before: { status: tenant.status },
-          after: { status: TENANT_STATUS.PENDING_REVIEW },
+          before: { verification },
+          after: { verification: SHOP_VERIFICATION.PENDING },
         },
         tx,
       );

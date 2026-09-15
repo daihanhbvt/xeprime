@@ -85,7 +85,11 @@
     "INSUFFICIENT_BALANCE": "Số dư khả dụng không đủ.",
     "WITHDRAWAL_BELOW_MINIMUM": "Số tiền rút thấp hơn mức tối thiểu.",
     "WITHDRAWAL_ALREADY_HANDLED": "Yêu cầu rút này đã được xử lý.",
-    "DEPOSIT_ALWAYS_REQUIRED": "Gian hàng tuyến hoa hồng luôn thu cọc qua XePrime — không tắt được công tắc này."
+    "DEPOSIT_ALWAYS_REQUIRED": "Gian hàng tuyến hoa hồng luôn thu cọc qua XePrime — không tắt được công tắc này.",
+    "SHOP_VERIFICATION_PENDING": "Hồ sơ gian hàng đang chờ nền tảng xác minh.",
+    "SHOP_VERIFICATION_REQUIRED": "Gian hàng phải được xác minh trước khi mua gói thuê bao.",
+    "SHOP_NOT_ACTIVE": "Gian hàng đang bị khoá nên chưa thực hiện được thao tác này.",
+    "VEHICLE_PUBLISH_INCOMPLETE": "Xe còn thiếu thông tin bắt buộc nên chưa gửi duyệt được."
   },
   "upload": {
     "imageType": "Chỉ nhận ảnh JPG, PNG hoặc WebP",

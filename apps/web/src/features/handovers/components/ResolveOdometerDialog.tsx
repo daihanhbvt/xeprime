@@ -117,7 +117,7 @@ export function ResolveOdometerDialog({
             type="warning"
             showIcon
             className={styles.inlineAlert}
-            message="Biên bản này đang thiếu chỉ số KM"
+            title="Biên bản này đang thiếu chỉ số KM"
             description="KM hiện tại của xe chưa được cập nhật từ chuyến này. Nhập số đọc thực tế để đồng bộ lại hồ sơ xe và mốc bảo dưỡng."
           />
         ) : null}
@@ -141,7 +141,7 @@ export function ResolveOdometerDialog({
             showIcon
             role="alert"
             className={styles.inlineAlert}
-            message="Số KM mới thấp hơn KM hiện tại"
+            title="Số KM mới thấp hơn KM hiện tại"
             description={decreaseWarning}
             action={
               <button

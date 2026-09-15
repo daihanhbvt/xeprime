@@ -51,7 +51,7 @@ export function AccountView() {
         </div>
       ) : profile.isError ? (
         <div className={styles.center}>
-          <Alert type="error" showIcon message={errorMessage(profile.error)} />
+          <Alert type="error" showIcon title={errorMessage(profile.error)} />
           <Button onClick={() => void profile.refetch()}>{tCommon('actions.retry')}</Button>
         </div>
       ) : profile.data ? (

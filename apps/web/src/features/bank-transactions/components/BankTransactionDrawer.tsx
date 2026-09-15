@@ -131,7 +131,7 @@ export function BankTransactionDrawer({ id, onClose }: { id: string | null; onCl
         <Alert
           type="error"
           showIcon
-          message={t('detail.loadError')}
+          title={t('detail.loadError')}
           action={
             <Button size="small" onClick={() => void detail.refetch()}>
               {tCommon('actions.retry')}
@@ -181,7 +181,7 @@ export function BankTransactionDrawer({ id, onClose }: { id: string | null; onCl
               </h3>
               {/* Nói thẳng ra rằng hệ thống không tự khớp — người dùng phải biết trách nhiệm
                   chọn đúng hoá đơn là của họ, không phải của máy. */}
-              <Alert type="warning" showIcon message={t('suggestions.hint')} />
+              <Alert type="warning" showIcon title={t('suggestions.hint')} />
 
               {tx.suggestions.length === 0 ? (
                 <div className={styles.empty}>{t('suggestions.empty')}</div>
@@ -249,7 +249,7 @@ export function BankTransactionDrawer({ id, onClose }: { id: string | null; onCl
               </div>
             </section>
           ) : (
-            <Alert type="info" showIcon message={t('detail.handled')} />
+            <Alert type="info" showIcon title={t('detail.handled')} />
           )}
 
           <section aria-labelledby="xp-bank-raw">

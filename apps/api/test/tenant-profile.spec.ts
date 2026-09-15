@@ -3,6 +3,7 @@ import {
   API_ERROR_CODE,
   MEMBERSHIP_STATUS,
   SHOP_PROFILE_REQUIREMENT,
+  SHOP_VERIFICATION,
   TENANT_ROLE,
   TENANT_STATUS,
 } from '@xeprime/types';
@@ -17,7 +18,7 @@ import { makeBranchesService, makeTenantsService } from './helpers/service-facto
  * 1. **Tỉnh/thành đi qua chi nhánh mặc định.** Hai cột tỉnh trên `tenant_profiles` là bản SAO;
  *    ghi thẳng vào chúng đúng cho tới lần chạm chi nhánh kế tiếp rồi bị ghi đè, và trong lúc đó
  *    xe vẫn nằm ở tỉnh cũ trên marketplace.
- * 2. **Đang chờ duyệt là khoá ghi thật, không phải một thuộc tính `disabled` ở frontend.**
+ * 2. **Đang chờ XÁC MINH là khoá ghi thật, không phải một thuộc tính `disabled` ở frontend.**
  * 3. **Ô để trống = NULL**, không phải chuỗi rỗng — và SĐT chủ shop lưu ở DẠNG CHUẨN `84…`.
  */
 const prisma = createPrismaClient();
@@ -54,7 +55,8 @@ beforeAll(async () => {
       code: `T-${tenantId.slice(-8)}`,
       slug: `t-${tenantId.toLowerCase().slice(-10)}`,
       name: 'Shop hồ sơ',
-      status: TENANT_STATUS.DRAFT,
+      // ADR 0036: gian hàng mở ra là ĐANG HOẠT ĐỘNG ngay; vòng xác minh là trục riêng.
+      status: TENANT_STATUS.ACTIVE,
       ownerUserId: ownerId,
     },
   });
@@ -115,10 +117,16 @@ describe('Thông tin chủ gian hàng', () => {
     expect(row.taxCode).toBeNull();
   });
 
-  maybe('hồ sơ gửi duyệt mang theo thông tin chủ gian hàng cho người duyệt', async () => {
+  maybe('hồ sơ gửi xác minh mang theo thông tin chủ gian hàng cho người duyệt', async () => {
     await tenants.updateProfile(tenantId, ownerId, { ownerFullName: 'Nguyễn Văn A' });
     const shop = await tenants.submitForReview(tenantId, ownerId);
-    expect(shop.status).toBe(TENANT_STATUS.PENDING_REVIEW);
+    expect(shop.verification).toBe(SHOP_VERIFICATION.PENDING);
+    /*
+     * ADR 0036: xin xác minh KHÔNG được gỡ gian hàng khỏi trạng thái hoạt động. Bản trước đặt
+     * tenant về `pending_review`, mà `TENANT_STATUS_PUBLISHABLE` chỉ nhận `active` — nên xin xác
+     * minh để mua gói sẽ làm toàn bộ xe của chính mình biến khỏi marketplace trong lúc chờ.
+     */
+    expect(shop.status).toBe(TENANT_STATUS.ACTIVE);
 
     const task = await prisma.approvalTask.findFirstOrThrow({
       where: { tenantId },
@@ -128,11 +136,11 @@ describe('Thông tin chủ gian hàng', () => {
     expect((task.snapshot as Record<string, unknown>).ownerFullName).toBe('Nguyễn Văn A');
   });
 
-  maybe('đang chờ duyệt: mọi cập nhật hồ sơ bị từ chối ở BACKEND', async () => {
+  maybe('đang chờ xác minh: mọi cập nhật hồ sơ bị từ chối ở BACKEND', async () => {
     await expect(
       tenants.updateProfile(tenantId, ownerId, { displayName: 'Đổi lén khi đang chờ' }),
     ).rejects.toMatchObject({
-      response: { code: API_ERROR_CODE.INVALID_STATUS_TRANSITION },
+      response: { code: API_ERROR_CODE.SHOP_VERIFICATION_PENDING },
     });
 
     const row = await prisma.tenantProfile.findUniqueOrThrow({
@@ -140,11 +148,20 @@ describe('Thông tin chủ gian hàng', () => {
       select: { displayName: true },
     });
     expect(row.displayName).not.toBe('Đổi lén khi đang chờ');
+  });
 
-    // Trả về nháp để các test sau chạy trên trạng thái sửa được.
-    await prisma.tenant.update({
-      where: { id: tenantId },
-      data: { status: TENANT_STATUS.DRAFT },
+  maybe('gửi phiếu xác minh thứ hai khi phiếu cũ còn chờ bị chặn', async () => {
+    await expect(tenants.submitForReview(tenantId, ownerId)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.SHOP_VERIFICATION_PENDING },
+    });
+    expect(
+      await prisma.approvalTask.count({ where: { tenantId, status: 'pending' } }),
+    ).toBe(1);
+
+    // Người duyệt trả về để các test sau chạy trên hồ sơ sửa được.
+    await prisma.approvalTask.updateMany({
+      where: { tenantId, status: 'pending' },
+      data: { status: 'needs_revision', reviewedAt: new Date(), reason: 'Bổ sung giấy tờ.' },
     });
   });
 });
@@ -197,19 +214,19 @@ describe('Gửi duyệt đòi hồ sơ đủ thông tin bắt buộc', () => {
       },
     });
 
-    // Không nửa vời: trạng thái không nhúc nhích và hàng đợi duyệt không có gì mới.
+    // Không nửa vời: gian hàng vẫn hoạt động và hàng đợi duyệt không có gì mới.
     const row = await prisma.tenant.findUniqueOrThrow({
       where: { id: tenantId },
       select: { status: true },
     });
-    expect(row.status).toBe(TENANT_STATUS.DRAFT);
+    expect(row.status).toBe(TENANT_STATUS.ACTIVE);
     expect(await prisma.approvalTask.count({ where: { tenantId } })).toBe(tasksBefore);
   });
 
-  maybe('điền lại đủ → gửi duyệt đi qua', async () => {
+  maybe('điền lại đủ → gửi xác minh đi qua', async () => {
     await tenants.updateProfile(tenantId, ownerId, { ownerPhone: '0901234567' });
     const shop = await tenants.submitForReview(tenantId, ownerId);
 
-    expect(shop.status).toBe(TENANT_STATUS.PENDING_REVIEW);
+    expect(shop.verification).toBe(SHOP_VERIFICATION.PENDING);
   });
 });

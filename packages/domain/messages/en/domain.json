@@ -265,6 +265,8 @@
     "shop_rejected": "Shop declined",
     "vehicle_approved": "Vehicle listed publicly",
     "vehicle_rejected": "Vehicle declined",
+    "shop_needs_revision": "Shop profile needs more details",
+    "vehicle_needs_revision": "Vehicle needs more details",
     "review_received": "New review",
     "booking_request_cancelled": "Renter cancelled the request",
     "subscription_expiring": "Plan expiring soon",
@@ -780,5 +782,11 @@
   "insuranceProductKind": {
     "vehicle_trip": "Vehicle trip cover",
     "personal_accident": "Passenger accident cover"
+  },
+  "taxWithholdingStatus": {
+    "accrued": "Withheld, awaiting declaration",
+    "declared": "Declared",
+    "remitted": "Remitted",
+    "reversed": "Reversed"
   }
 }

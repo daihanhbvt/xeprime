@@ -75,6 +75,24 @@ export class ApprovalTenantSummaryDto {
   @ApiProperty() status!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) phone!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) email!: string | null;
+
+  /**
+   * TUYẾN của gian hàng — `commission` (Basic Owner) hay `package` (gian hàng thuê bao).
+   *
+   * Reviewer cần biết vì hai tuyến có mức soi khác nhau: gian hàng thuê bao đã qua một vòng
+   * thương mại, còn chủ xe tuyến hoa hồng vào miễn phí và đây là lần kiểm tra đầu tiên. Đọc từ
+   * `billingMode` của gói hiện hành, KHÔNG suy từ `tenantType` (ADR 0014 điều 2: nhãn hiển thị,
+   * không phải nguồn năng lực) và cũng không suy từ `planCode` (mọi tenant mới đều có gói).
+   */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Xem BillingMode trong @xeprime/types',
+  })
+  billingMode!: string | null;
+
+  /** Số xe đang bán trên chợ — reviewer thấy ngay đây là hồ sơ đầu tiên hay gian hàng đã chạy. */
+  @ApiProperty() publicVehicleCount!: number;
 }
 
 export class ApprovalTaskDetailDto extends ApprovalTaskListItemDto {

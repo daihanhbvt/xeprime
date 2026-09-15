@@ -18,6 +18,7 @@ import {
   type DriverType,
   FUEL_TYPE_VALUES,
   MOTORBIKE_CATEGORY_VALUES,
+  isTransmissionAllowedFor,
   isVehicleFuelTypeAllowed,
   MAINTENANCE_TYPE_VALUES,
   LOCATION_SOURCE_VALUES,
@@ -36,7 +37,7 @@ import {
   TENANT_TYPE_VALUES,
   type TenantCustomerNoteType,
   type TenantCustomerRiskLevel,
-  TRANSMISSION_TYPE_VALUES,
+  TRANSMISSION_TYPE_EXT_VALUES,
   VEHICLE_DOCUMENT_PRESET_VALUES,
   VEHICLE_DOCUMENT_TYPE,
   VEHICLE_DOCUMENT_TYPE_VALUES,
@@ -252,7 +253,31 @@ export const vehicleFormSchema = yup.object({
   curbWeightKg: optionalPositiveInt('curbWeightKg', 100000),
   engineDisplacementCc: optionalPositiveInt('engineDisplacementCc', 30000),
   horsepowerHp: optionalPositiveInt('horsepowerHp', 5000),
-  transmission: yup.string().oneOf(TRANSMISSION_TYPE_VALUES).nullable().default(null),
+  /**
+   * Truyền động — bộ MỞ RỘNG (`TRANSMISSION_TYPE_EXT_VALUES`), không phải năm mã cũ.
+   *
+   * Bộ cũ (`automatic`/`manual`/`cvt`/`dct`/`other`) không có truyền động một cấp của xe điện,
+   * cũng không có ba kiểu của xe máy — mà ô "Hộp số" trên form lại dựng options từ
+   * `vehicleTransmissionTypesFor`. Hai nguồn lệch nhau nghĩa là form mời người dùng chọn "Truyền
+   * động một cấp" cho một chiếc xe điện rồi tự chặn lại bằng câu lỗi mặc định của yup
+   * ("transmission must be one of the following values: automatic, manual, cvt, dct, other") —
+   * không dịch được, và không nói được người dùng phải làm gì.
+   *
+   * `.test` thứ hai giữ đúng ma trận mà backend dùng: chọn hộp số ô tô rồi đổi sang xe máy thì
+   * giá trị cũ bị bắt ngay tại form, thay vì đi tới server mới vỡ.
+   */
+  transmission: yup
+    .string()
+    .oneOf(TRANSMISSION_TYPE_EXT_VALUES)
+    .nullable()
+    .default(null)
+    .test('transmission-compatible', 'transmissionIncompatible', function compatibleGearbox(value) {
+      return isTransmissionAllowedFor(
+        String(this.parent.vehicleType ?? ''),
+        this.parent.fuelType as string | null | undefined,
+        value,
+      );
+    }),
   /** Xe ĐIỆN: km mỗi lần sạc đầy — số nguyên, cùng trần 2000 với CHECK ở DB. */
   electricRangeKm: optionalPositiveInt('electricRangeKm', 2000),
   /** Xe ĐIỆN: dung lượng pin (kWh) — tuỳ chọn, hai chữ số thập phân như các thông số đo được. */

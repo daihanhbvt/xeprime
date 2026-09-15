@@ -1040,6 +1040,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(screen.getByText('2 ngày')).toBeTruthy();
     });
 
+<<<<<<< Updated upstream
     /*
      * Mở thẳng một chiếc xe (không đi qua bộ lọc có ngày) KHÔNG còn cho ra ô thời gian rỗng: flow
      * điền sẵn khoảng gợi ý từ `rememberedOrDefaultRentalRange`, nên khách thấy ngay một mức giá
@@ -1054,6 +1055,28 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(screen.getAllByText(point)).toHaveLength(2);
       expect(screen.getByText(/Thuê theo ngày · bấm vào ô để đổi/)).toBeTruthy();
       expect(screen.queryByText('Bấm vào ô trên để mở lịch và chọn khoảng thuê.')).toBeNull();
+=======
+    /**
+     * Mở từ chỗ KHÔNG có sẵn ngày giờ vẫn ra một khoảng thuê — `rememberedOrDefaultRentalRange`.
+     *
+     * Bản trước của test này khẳng định ngược lại ("nói rõ phải bấm vào ô để mở lịch") vì hồi đó
+     * ô để trống. Sau khi có gợi ý mặc định thì trạng thái rỗng không còn tới được bằng đường
+     * này nữa, nên giữ nguyên khẳng định cũ chỉ là khoá một màn hình không ai thấy.
+     *
+     * Điều đáng khoá bây giờ là: khách mở overlay từ một thẻ xe chưa lọc theo thời gian thì thấy
+     * NGAY một khoảng hợp lệ và một bảng giá thật, không phải một ô rỗng phải tự điền.
+     */
+    it('không có ngày sẵn → vẫn có khoảng gợi ý, không phải ô rỗng', () => {
+      renderModalWithoutPrefill();
+
+      // Dòng gợi ý ở chế độ ĐÃ có khoảng, không phải câu hướng dẫn của ô rỗng.
+      expect(screen.getByText(/bấm vào ô để đổi/)).toBeTruthy();
+      expect(screen.queryByText('Bấm vào ô trên để mở lịch và chọn khoảng thuê.')).toBeNull();
+
+      // Và ô mang hai mốc thật (hình dạng, không ghim giá trị — nó phụ thuộc lúc chạy).
+      const point = /^(CN|T[2-7]), \d{2}\/\d{2} · \d{2}:\d{2}$/;
+      expect(screen.getAllByText(point)).toHaveLength(2);
+>>>>>>> Stashed changes
     });
 
     it('đã có khoảng thuê → dòng gợi ý nói chế độ tính và cách đổi', () => {
