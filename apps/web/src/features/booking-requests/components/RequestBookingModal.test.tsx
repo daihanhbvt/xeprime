@@ -52,8 +52,19 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push: nav.push }) }));
  * render sẽ đòi một QueryClientProvider cộng một khoá bản đồ, hai thứ không liên quan gì tới
  * thứ đang test.
  */
-const PROVINCE = { code: '48', name: 'Đà Nẵng', administrativeType: 'municipality', slug: 'da-nang' };
-const WARD = { code: '20242', provinceCode: '48', name: 'Phường Hải Châu', shortName: 'Hải Châu', administrativeType: 'ward' };
+const PROVINCE = {
+  code: '48',
+  name: 'Đà Nẵng',
+  administrativeType: 'municipality',
+  slug: 'da-nang',
+};
+const WARD = {
+  code: '20242',
+  provinceCode: '48',
+  name: 'Phường Hải Châu',
+  shortName: 'Hải Châu',
+  administrativeType: 'ward',
+};
 
 /*
  * Cả `useProvinces`/`useWards` (dạng thô) lẫn hai hook `*Options` đều phải có mặt: ô nhập dùng
@@ -891,9 +902,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /Đổi/ }));
       expect(screen.getByLabelText('Số điện thoại')).toBeTruthy();
-      expect((screen.getByLabelText('Số điện thoại') as HTMLInputElement).value).toBe(
-        '0901234567',
-      );
+      expect((screen.getByLabelText('Số điện thoại') as HTMLInputElement).value).toBe('0901234567');
     });
 
     it('dùng SĐT KHÁC số tài khoản → vẫn phải xác thực OTP', async () => {

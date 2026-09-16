@@ -28,6 +28,7 @@ Muốn theo dõi trực quan và lấy prompt triển khai cho Claude Code, mở
 | [`backup-and-restore.md`](backup-and-restore.md) | Backup/restore PostgreSQL |
 | [`third-party-keys.md`](third-party-keys.md) | OAuth, SMS, SMTP, R2, Maps, Firebase và SePay |
 | [`git-workflow.md`](git-workflow.md) | Quy ước branch/commit |
+| [`qa-accounts.md`](qa-accounts.md) | Hai tài khoản QA chuẩn cho ranh giới hai tuyến chủ xe (dev/staging) |
 | [`design-token-map.md`](design-token-map.md) | Hợp đồng design token dùng chung |
 | [`guest-booking-passwordless.md`](guest-booking-passwordless.md) | Quyết định chi tiết cho guest/passwordless booking |
 | [`../apps/mobile/README.md`](../apps/mobile/README.md) | Kiến trúc và trạng thái app native |

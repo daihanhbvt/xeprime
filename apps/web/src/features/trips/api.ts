@@ -19,8 +19,17 @@ export interface TripsResult {
 
 const EMPTY_COUNTS: CustomerTripCounts = { current: 0, history: 0 };
 
-export function tripsToParams(filter: string, page: number): QueryParams {
-  return { filter, page, limit: TRIPS_DEFAULT_LIMIT };
+/**
+ * Tham số truy vấn của `GET /trips`.
+ *
+ * `role` là chiều THỨ BA, thêm 15/09/2026: `renter` (tôi đi thuê) hoặc `host` (tôi cho thuê).
+ * Nó đi lên SERVER chứ không lọc ở client — lọc một trang kết quả sẽ cho ra những trang dài
+ * ngắn khác nhau và một con số tổng không khớp thứ người dùng đếm được trên màn hình.
+ *
+ * Bỏ trống ⇒ server trả cả hai vai, như trước.
+ */
+export function tripsToParams(filter: string, page: number, role?: string): QueryParams {
+  return { filter, page, limit: TRIPS_DEFAULT_LIMIT, ...(role ? { role } : {}) };
 }
 
 /**
@@ -34,9 +43,13 @@ interface TripsEnvelope {
   counts?: CustomerTripCounts;
 }
 
-export async function fetchTrips(filter: string, page: number): Promise<TripsResult> {
+export async function fetchTrips(
+  filter: string,
+  page: number,
+  role?: string,
+): Promise<TripsResult> {
   const res = (await apiRequest<CustomerTrip[]>('/trips', {
-    query: tripsToParams(filter, page),
+    query: tripsToParams(filter, page, role),
   })) as TripsEnvelope;
 
   return {

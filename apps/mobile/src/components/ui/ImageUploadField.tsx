@@ -45,6 +45,8 @@ interface Props<T extends FieldValues> {
   name: Path<T>;
   label: string;
   /** Nhãn mang dấu `*` đỏ — ảnh đại diện bắt buộc, thư viện thì không. */
+  /** Dấu `●` cần-cho-duyệt-công-khai — xem docblock ở `FieldLabel`. */
+  publishRequired?: boolean;
   required?: boolean;
   multiple?: boolean;
   max?: number;
@@ -82,6 +84,7 @@ export function ImageUploadField<T extends FieldValues>({
   name,
   label,
   required = false,
+  publishRequired = false,
   multiple = false,
   max = DEFAULT_MAX,
   disabled = false,
@@ -109,8 +112,7 @@ export function ImageUploadField<T extends FieldValues>({
     ...(hint ? { hint } : {}),
     presign,
     remaining: multiple ? max - urls.length : 1,
-    onUploaded: (uploaded) =>
-      field.onChange(multiple ? [...urls, ...uploaded] : uploaded[0]),
+    onUploaded: (uploaded) => field.onChange(multiple ? [...urls, ...uploaded] : uploaded[0]),
   });
   const busy = upload.busy;
 
@@ -122,7 +124,7 @@ export function ImageUploadField<T extends FieldValues>({
     <YStack gap={space.xs}>
       <XStack ai="center" jc="space-between">
         {/* Cùng `FieldLabel` với mọi ô nhập khác — khối ảnh không được có kiểu nhãn riêng. */}
-        <FieldLabel label={label} required={required} />
+        <FieldLabel label={label} required={required} publishRequired={publishRequired} />
         {multiple ? (
           <Text col={colors.textMuted} fos={fontSize.label}>
             {`${urls.length}/${max}`}
@@ -245,7 +247,7 @@ export function ImageUploadField<T extends FieldValues>({
                 )}
               </YStack>
             ))}
-  
+
             {disabled || full ? null : (
               <Pressable
                 onPress={upload.open}

@@ -167,7 +167,7 @@ function PriceForm({ state, onClose }: { state: DailyPriceDialogState; onClose: 
   return (
     <Form layout="vertical" onFinish={submit}>
       {formError ? (
-        <Alert type="error" showIcon className={styles.alert} message={formError} />
+        <Alert type="error" showIcon className={styles.alert} title={formError} />
       ) : null}
 
       <Descriptions

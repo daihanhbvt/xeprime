@@ -5,6 +5,7 @@ import { RbacService } from '../src/modules/rbac/rbac.service';
 import { AuthService } from '../src/modules/auth/auth.service';
 import { EmailService } from '../src/modules/email/email.service';
 import type { VerifiedIdentity } from '../src/modules/auth/social/identity';
+import type { FeePoliciesService } from '../src/modules/fee-policies/fee-policies.service';
 
 /**
  * Luật NỐI TÀI KHOẢN — phần nhạy cảm nhất của đăng nhập mạng xã hội.
@@ -60,6 +61,8 @@ describe('AuthService — nối tài khoản từ danh tính mạng xã hội', 
       {} as RbacService,
       {} as EmailService,
       {} as ConfigService,
+      // Spec này không gọi `me()`, nên chính sách phí không bao giờ được đọc tới.
+      {} as FeePoliciesService,
     );
   });
 

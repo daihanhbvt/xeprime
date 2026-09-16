@@ -211,7 +211,7 @@ export function QuickVehicleOwnerStep({ steps, source, onCreated }: QuickVehicle
                 showIcon
                 role="alert"
                 className={styles.alert}
-                message={errorMessage(register.error)}
+                title={errorMessage(register.error)}
               />
             ) : null}
 

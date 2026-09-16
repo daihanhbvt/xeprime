@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -9,6 +10,10 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   addDateKeyDays,
   API_ERROR_CODE,
+  BOOKING_BLOCK_REASON,
+  MEMBERSHIP_STATUS,
+  resolveBookingBlock,
+  resolveEffectiveBilling,
   AUDIT_ACTOR_SCOPE,
   AUTO_ACCEPT_BLOCKER,
   BOOKING_REQUEST_DECISION_SOURCE,
@@ -38,6 +43,10 @@ import {
   type RentalTermsSnapshot,
   type ServiceType,
 } from '@xeprime/types';
+import {
+  EFFECTIVE_SUBSCRIPTION_ARGS,
+  effectiveSubscriptionWhere,
+} from '../../common/plan/feature-state';
 import { fromDateOnly, toDateOnly } from '../../common/date-only';
 import { normalizePhone, phoneLookupVariants } from '../../common/phone';
 import { normalizeRouteContext } from '../../common/route-context';
@@ -496,6 +505,22 @@ export class BookingRequestsService {
       loginUserId = userId;
     }
 
+    /*
+     * CỔNG TÀI KHOẢN (15/09/2026) — đặt ở ĐÚNG đây, không sớm hơn và không muộn hơn.
+     *
+     * Muộn hơn thì đã có `booking_requests` hoặc đã cấp phiên. Sớm hơn thì chưa biết người đặt
+     * là ai: khách vãng lai chỉ khai SĐT, và danh tính chỉ xuất hiện SAU
+     * `resolveOrCreateUserByPhone` ngay trên. Vì `effectiveUserId` là điểm HỘI TỤ của cả hai
+     * đường (đang đăng nhập / vừa khớp lại tài khoản bằng OTP), một cổng ở đây phủ cả hai —
+     * gồm cả ca chủ gian hàng đăng xuất rồi đặt lại bằng chính số điện thoại của mình
+     * (`users.phone` là unique nên OTP tìm lại đúng tài khoản đó).
+     *
+     * Nằm SAU cửa OTP cũng là chủ đích, cùng lý do với `assertNotBlocked` ở trên: người gửi phải
+     * chứng minh sở hữu SĐT trước khi biết kết quả, nếu không đây thành một cách dò "số nào là
+     * tài khoản gian hàng".
+     */
+    await this.assertCanBook(effectiveUserId, vehicle.tenantId);
+
     await this.assertNoPendingDuplicate(
       vehicle.id,
       dto.customerPhone,
@@ -651,6 +676,14 @@ export class BookingRequestsService {
        * đường đều tạo đơn ngay, và cả hai đều đóng băng cùng một `deposit_collection_mode`.
        */
       const deposit = await this.depositPolicy.resolveForTenant(tenantId);
+      if (!deposit.billingMode) {
+        await this.recordAutoAcceptSkip(
+          tenantId,
+          id,
+          AUTO_ACCEPT_BLOCKER.BILLING_NOT_CONFIGURED,
+        );
+        return null;
+      }
       const fees = await this.pricing.customerFeesFor(
         tenantId,
         breakdown.totalAmount,
@@ -785,6 +818,89 @@ export class BookingRequestsService {
    * chặn cuối cho hai request chạy song song — kiểm trước là để báo lỗi đúng, không phải để
    * thay thế ràng buộc DB.
    */
+  /**
+   * Tài khoản này gửi được yêu cầu thuê cho chiếc xe này không (ADR 0032 điều 1).
+   *
+   * Hai luật, giải bằng hàm thuần `resolveBookingBlock` để web/app nói cùng một câu:
+   *
+   *   • thành viên hoạt động của một gian hàng TUYẾN GÓI ⇒ không đặt xe (bên bán không mua)
+   *   • bất kỳ ai ⇒ không đặt xe của CHÍNH gian hàng mình (hai vai trên một booking)
+   *
+   * Chủ xe tuyến HOA HỒNG không bị chặn: họ là cá nhân dùng Owner Lite và vẫn thuê xe của người
+   * khác như mọi người dùng.
+   *
+   * Tuyến của từng tenant giải bằng `resolveEffectiveBilling` — KHÔNG đọc `tenants.tenant_type`
+   * (ADR 0014 điều 2) và không suy từ `planCode`. Một truy vấn duy nhất lấy cả membership lẫn
+   * dòng thuê bao hiệu lực, cùng khuôn với `TenantScopeGuard`.
+   */
+  private async assertCanBook(userId: string | null, vehicleTenantId: string): Promise<void> {
+    if (!userId) return;
+
+    const now = new Date();
+    const memberships = await this.prisma.tenantMembership.findMany({
+      where: {
+        userId,
+        status: MEMBERSHIP_STATUS.ACTIVE,
+        tenant: { deletedAt: null },
+      },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        tenantId: true,
+        tenant: {
+          select: {
+            name: true,
+            subscriptions: {
+              where: effectiveSubscriptionWhere(now),
+              ...EFFECTIVE_SUBSCRIPTION_ARGS,
+            },
+          },
+        },
+      },
+    });
+    if (memberships.length === 0) return;
+
+    const block = resolveBookingBlock({
+      vehicleTenantId,
+      memberships: memberships.map((m) => ({
+        tenantId: m.tenantId,
+        tenantName: m.tenant.name,
+        billingMode: resolveEffectiveBilling(m.tenant.subscriptions[0] ?? null, now).billingMode,
+      })),
+    });
+    if (!block) return;
+
+    if (block.reason === BOOKING_BLOCK_REASON.OWN_TENANT_VEHICLE) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.CANNOT_BOOK_OWN_VEHICLE,
+        message: 'Đây là xe của chính gian hàng bạn — không đặt thuê được.',
+        details: { tenantId: block.tenantId },
+      });
+    }
+
+    throw new ForbiddenException({
+      code: API_ERROR_CODE.SHOP_ACCOUNT_CANNOT_BOOK,
+      message:
+        `Bạn đang dùng tài khoản của gian hàng ${block.tenantName ?? ''}`.trim() +
+        '. Để thuê xe, hãy đăng nhập bằng một tài khoản khách thuê với số điện thoại khác.',
+      details: { tenantId: block.tenantId, tenantName: block.tenantName },
+    });
+  }
+
+  /**
+   * Người quyết định không được là người gửi yêu cầu — cổng THỨ HAI, độc lập với `assertCanBook`.
+   *
+   * Vì sao cần cả hai: `assertCanBook` chặn lúc TẠO, nhưng dữ liệu có trước 15/09/2026 có thể đã
+   * chứa yêu cầu tự đặt, và chúng không được phép đi tiếp thành đơn. Một cổng ở lúc tạo không
+   * dọn được quá khứ.
+   */
+  private assertNotOwnRequest(customerUserId: string | null, actorUserId: string | null): void {
+    if (!customerUserId || !actorUserId || customerUserId !== actorUserId) return;
+    throw new ConflictException({
+      code: API_ERROR_CODE.CANNOT_DECIDE_OWN_REQUEST,
+      message: 'Bạn không thể tự duyệt hoặc tự từ chối yêu cầu do chính mình gửi.',
+    });
+  }
+
   private async assertNoPendingDuplicate(
     vehicleId: string,
     rawPhone: string,
@@ -988,6 +1104,9 @@ export class BookingRequestsService {
   ): Promise<BookingRequestDto> {
     const req = await this.loadPending(tenantId, id);
 
+    // Người quyết định KHÔNG được là người gửi — cổng thứ hai, dọn cả dữ liệu tự đặt có từ trước.
+    this.assertNotOwnRequest(req.customerUserId, userId);
+
     /*
      * Kiểm LẠI danh sách từ chối phục vụ ngay trước khi duyệt.
      *
@@ -1029,6 +1148,23 @@ export class BookingRequestsService {
      * `holdAmount` là null: không thu % trên một con số chưa chốt.
      */
     const deposit = await this.depositPolicy.resolveForTenant(tenantId);
+    /*
+     * CỔNG TIỀN của đường duyệt tay (15/09/2026).
+     *
+     * Duyệt là lúc giá, phí và chính sách bị ĐÓNG BĂNG vào đơn và không sửa được nữa (ADR 0024).
+     * Nếu không biết tenant thuộc tuyến nào thì mọi con số đóng băng ở đây đều là đoán — nên
+     * dừng hẳn, với một mã lỗi nói rõ phải sửa cấu hình, thay vì tạo một đơn `S = 0` không ai
+     * phát hiện ra cho tới lúc đối soát.
+     */
+    if (!deposit.billingMode) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.TENANT_BILLING_NOT_CONFIGURED,
+        message:
+          'Gian hàng chưa có gói dịch vụ hiệu lực nên chưa xác định được cách tính phí. ' +
+          'Liên hệ hỗ trợ XePrime trước khi duyệt đơn mới.',
+        details: { reason: deposit.reason },
+      });
+    }
     const fees = await this.pricing.customerFeesFor(
       tenantId,
       breakdown.totalAmount,
@@ -1405,6 +1541,8 @@ export class BookingRequestsService {
     reason?: string,
   ): Promise<BookingRequestDto> {
     const req = await this.loadPending(tenantId, id);
+    // Từ chối yêu cầu của chính mình cũng là tự quyết định — cùng cổng với `approve`.
+    this.assertNotOwnRequest(req.customerUserId, userId);
 
     const row = await this.prisma.$transaction(async (tx) => {
       // Cùng cửa chiếm quyền với `approve`: từ chối một yêu cầu đã quá hạn cũng sai như duyệt

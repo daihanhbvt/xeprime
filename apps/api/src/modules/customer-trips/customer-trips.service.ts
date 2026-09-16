@@ -4,9 +4,7 @@ import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
   BOOKING_REQUEST_STATUS,
-  BOOKING_REQUEST_STATUS_VALUES,
   BOOKING_STATUS,
-  BOOKING_STATUS_VALUES,
   CUSTOMER_TRIP_FILTER,
   WALLET_OWNER_TYPE,
   CUSTOMER_TRIP_FILTER_DEFAULT,
@@ -25,9 +23,12 @@ import {
   TRIP_ROLE,
   canCustomerCancelTrip,
   customerTripStage,
+  customerTripStatusesFor,
   handoverOccurredAt,
   isCustomerTripFilter,
+  isTripRole,
   isDepositCollectionMode,
+  resolveRefundWalletOwner,
   isHandoverPhotoAddedAfterConfirmation,
   type BookingRequestStatus,
   type BookingStatus,
@@ -43,7 +44,7 @@ import { currentSubscriptionWhere } from '../../common/plan/feature-state';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { BookingsService } from '../bookings/bookings.service';
-import { BankAccountsService } from '../bank-accounts/bank-accounts.service';
+import { BankAccountsService, type BankAccountOwner } from '../bank-accounts/bank-accounts.service';
 import { BookingHoldsService } from '../holds/booking-holds.service';
 import { HoldSettlementService } from '../holds/hold-settlement.service';
 import { NotificationService } from '../notification/notification.service';
@@ -144,7 +145,11 @@ export class CustomerTripsService {
       : CUSTOMER_TRIP_FILTER_DEFAULT;
 
     const scope = await this.resolveScope(viewerUserId);
-    const where = this.whereFor(scope, filter);
+    // Vai đi vào CHÍNH vị từ scope, nên lọc / đếm tổng / đếm từng tab / phân trang dùng chung
+    // một định nghĩa. Lọc ở client sẽ cho ra những trang dài ngắn khác nhau và một con số tổng
+    // không khớp thứ người dùng đếm được trên màn hình.
+    const role: TripRole | undefined = isTripRole(query.role) ? query.role : undefined;
+    const where = this.whereFor(scope, filter, role);
 
     const [total, rows, counts] = await Promise.all([
       this.prisma.bookingRequest.count({ where }),
@@ -155,7 +160,7 @@ export class CustomerTripsService {
         take: paging.take,
         select: LIST_SELECT,
       }),
-      this.counts(scope),
+      this.counts(scope, role),
     ]);
 
     const [surchargeTotals, estimates] = await Promise.all([
@@ -452,6 +457,20 @@ export class CustomerTripsService {
    * Khai MỚI thì tài khoản được lưu vào sổ tài khoản của khách luôn: bắt họ gõ lại số tài khoản
    * ở mỗi lần hoàn là cách chắc chắn nhất để có một chữ số sai trong một lệnh chuyển tiền. Lưu
    * hỏng (trùng số) KHÔNG được làm hỏng việc khai — khoản hoàn vẫn phải nhận được đích của nó.
+   *
+   * ## Sổ tài khoản nào (15/09/2026 — sửa lỗi tiền)
+   *
+   * Chủ sổ ĐI THEO chủ ví, qua `resolveRefundWalletOwner` — CÙNG hàm mà ví dùng (ADR 0038 điều
+   * 2). Bản trước đóng đinh `{ USER, customerUserId }`, và điều đó hỏng với chính người mà luồng
+   * này phục vụ: khi một người trở thành chủ gian hàng, migration hợp nhất ví chuyển luôn tài
+   * khoản ngân hàng ĐANG DÙNG của họ sang tenant. Sau đó sổ scope `user` RỖNG, nên `resolveFor
+   * Payout` không thấy gì, màn khai hiện danh sách trống, và mỗi lần hoàn lại đẻ thêm một bản
+   * ghi `user` mới — tách đôi đúng cái sổ vừa hợp nhất, và không bản nào trong đó hiện ở
+   * `/manage/balance`.
+   *
+   * Đây KHÔNG phải nới quyền: `resolveForPayout`/`create` vẫn bị buộc vào chủ sở hữu, và tenant
+   * ở đây là tenant mà CHÍNH người gọi là `shop_owner` (`resolveScope`) — cùng một luật chọn
+   * tenant với migration, nên hai bên không thể chỉ vào hai sổ khác nhau.
    */
   async provideRefundAccount(
     customerUserId: string,
@@ -469,7 +488,8 @@ export class CustomerTripsService {
     });
     if (!row?.hold) throw tripNotFound();
 
-    const ownerRef = { type: WALLET_OWNER_TYPE.USER, userId: customerUserId } as const;
+    const scope = await this.resolveScope(customerUserId);
+    const ownerRef = refundBankOwner(customerUserId, scope.hostTenantId);
     const saved = dto.bankAccountId
       ? await this.bankAccounts.resolveForPayout(ownerRef, dto.bankAccountId)
       : null;
@@ -698,6 +718,7 @@ export class CustomerTripsService {
   private whereFor(
     scope: TripViewerScope,
     filter: CustomerTripFilter,
+    role?: TripRole,
   ): Prisma.BookingRequestWhereInput {
     const { bookingStatuses, requestStatuses } = FILTER_STATUSES[filter];
 
@@ -708,7 +729,7 @@ export class CustomerTripsService {
      */
     return {
       AND: [
-        scopeWhere(scope),
+        scopeWhere(scope, role),
         {
           // Có đơn thuê thì đơn nói; chưa có đơn thì trạng thái yêu cầu nói — đúng thứ tự ưu
           // tiên của `customerTripStage`, nên hai nhánh không bao giờ nhận cùng một dòng.
@@ -722,9 +743,11 @@ export class CustomerTripsService {
   }
 
   /** Đếm cho từng tab bằng CHÍNH vị từ của tab đó — con số trên tab và danh sách không lệch. */
-  private async counts(scope: TripViewerScope): Promise<CustomerTripCountsDto> {
+  private async counts(scope: TripViewerScope, role?: TripRole): Promise<CustomerTripCountsDto> {
+    // Đếm bằng CHÍNH vị từ của tab đó VÀ cùng vai đang xem — con số trên tab và danh sách không
+    // bao giờ nói hai chuyện khác nhau.
     const count = (filter: CustomerTripFilter) =>
-      this.prisma.bookingRequest.count({ where: this.whereFor(scope, filter) });
+      this.prisma.bookingRequest.count({ where: this.whereFor(scope, filter, role) });
 
     const [current, history] = await Promise.all([
       count(CUSTOMER_TRIP_FILTER.CURRENT),
@@ -750,26 +773,12 @@ type FilterStatuses = Readonly<
 >;
 
 const FILTER_STATUSES: FilterStatuses = Object.fromEntries(
-  CUSTOMER_TRIP_FILTER_VALUES.map((filter) => {
-    const stages: readonly CustomerTripStage[] = CUSTOMER_TRIP_FILTER_STAGES[filter];
-    return [
-      filter,
-      {
-        bookingStatuses: BOOKING_STATUS_VALUES.filter((status) =>
-          stages.includes(
-            customerTripStage({
-              // Yêu cầu đã sinh đơn thì trạng thái của nó chỉ còn là lịch sử — phép chiếu bỏ qua.
-              requestStatus: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
-              bookingStatus: status,
-            }),
-          ),
-        ),
-        requestStatuses: BOOKING_REQUEST_STATUS_VALUES.filter((status) =>
-          stages.includes(customerTripStage({ requestStatus: status, bookingStatus: null })),
-        ),
-      },
-    ];
-  }),
+  CUSTOMER_TRIP_FILTER_VALUES.map((filter) => [
+    filter,
+    // Phép suy sống ở @xeprime/types (`customerTripStatusesFor`) vì `/auth/me` cũng cần nó để
+    // đếm chuyến CHƯA KHÉP. Hai bản chép tay sẽ lệch vào ngày thêm một trạng thái.
+    customerTripStatusesFor(CUSTOMER_TRIP_FILTER_STAGES[filter]),
+  ]),
   // `Object.fromEntries` trả `{ [k: string]: … }`; ép về đúng bản đồ theo tab. An toàn vì khoá
   // đi thẳng từ `CUSTOMER_TRIP_FILTER_VALUES` nên không thiếu tab nào.
 ) as FilterStatuses;
@@ -994,11 +1003,49 @@ function toEstimate(estimate: TripEstimate | undefined): CustomerTripEstimateDto
   };
 }
 
-function scopeWhere(scope: TripViewerScope): Prisma.BookingRequestWhereInput {
-  if (!scope.hostTenantId) return { customerUserId: scope.userId };
-  return {
-    OR: [{ customerUserId: scope.userId }, { tenantId: scope.hostTenantId }],
-  };
+/**
+ * "Chuyến nào là của người này" — và từ 15/09/2026, ở VAI nào.
+ *
+ * Trước đó hàm chỉ có nhánh `OR`: chuyến tôi đi thuê HOẶC chuyến của gian hàng tôi. Một chủ xe
+ * mở `/trips` thấy hai việc khác hẳn nhau nằm lẫn vào nhau, và số đếm trên tab cộng gộp cả hai.
+ *
+ * `role` thu hẹp chứ không mở rộng — không có giá trị nào cho thấy chuyến của người khác:
+ *
+ *   guest  → chỉ chuyến TÔI đi thuê      (`customerUserId = tôi`)
+ *   host   → chỉ chuyến của GIAN HÀNG tôi (`tenantId = gian hàng tôi`)
+ *   (rỗng) → cả hai, như cũ
+ *
+ * Vì nó nằm trong `scopeWhere`, cả `findMany`, `count` tổng lẫn `counts()` từng tab đều đi qua
+ * đúng một vị từ — lọc, đếm và phân trang không thể lệch nhau.
+ */
+/**
+ * Chủ SỔ TÀI KHOẢN NGÂN HÀNG cho một khoản hoàn — cùng chủ với ví của người đó.
+ *
+ * Chỉ là lớp đổi kiểu quanh `resolveRefundWalletOwner` của `@xeprime/types`: hàm dùng chung nói
+ * bằng chuỗi (`'tenant'`/`'user'`) để package không phải phụ thuộc vào hằng của API, còn
+ * `BankAccountsService` nhận `WALLET_OWNER_TYPE`. Viết lại phép chọn tenant ở đây thay vì gọi hàm
+ * chung là mở đường cho ví và sổ tài khoản trỏ vào hai chủ khác nhau.
+ */
+function refundBankOwner(userId: string, ownedTenantId: string | null): BankAccountOwner {
+  const owner = resolveRefundWalletOwner(userId, ownedTenantId);
+  return owner.type === 'tenant'
+    ? { type: WALLET_OWNER_TYPE.TENANT, tenantId: owner.tenantId }
+    : { type: WALLET_OWNER_TYPE.USER, userId: owner.userId };
+}
+function scopeWhere(scope: TripViewerScope, role?: TripRole): Prisma.BookingRequestWhereInput {
+  const mine: Prisma.BookingRequestWhereInput = { customerUserId: scope.userId };
+  if (!scope.hostTenantId) {
+    /*
+     * Không phải chủ gian hàng ⇒ không có chuyến vai `host` nào.
+     * `role = host` ở đây trả về tập RỖNG, không phải "bỏ qua bộ lọc": bỏ qua sẽ cho họ thấy
+     * chuyến mình đi thuê dưới một cái tab nói rằng đó là chuyến mình cho thuê.
+     */
+    return role === TRIP_ROLE.HOST ? { id: { in: [] } } : mine;
+  }
+  const hosted: Prisma.BookingRequestWhereInput = { tenantId: scope.hostTenantId };
+  if (role === TRIP_ROLE.RENTER) return mine;
+  if (role === TRIP_ROLE.HOST) return hosted;
+  return { OR: [mine, hosted] };
 }
 
 /**

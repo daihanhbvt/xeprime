@@ -61,9 +61,22 @@ export function ScopeGuard({ children }: { children: ReactNode }) {
    */
   const onOnboarding = pathname === String(ROUTES.manage.onboarding());
 
+  /**
+   * Còn ĐANG ĐỨNG trong khu quản lý hay không.
+   *
+   * `pathname` đổi TRƯỚC khi layout này unmount, nên ngay khi người dùng rời `/manage/onboarding`
+   * về chợ xe, vẫn còn một khung hình mà layout quản lý chưa tháo nhưng đường dẫn đã là
+   * `/explore`. Thiếu chốt này thì ở đúng khung đó `onOnboarding` hoá `false`, cổng tưởng người
+   * chưa có gian hàng đang cố mở khu quản lý, và bắn "Bạn không còn quyền truy cập gian hàng
+   * này" cho một người vừa bấm Quay lại — họ chưa từng mất gì cả.
+   *
+   * Đã rời khu thì cổng không còn gì để gác: để lượt điều hướng đang chạy đi tới nơi.
+   */
+  const insideManage = (pathname ?? '').startsWith(String(ROUTES.manage.home()));
+
   const ready = status === SESSION_STATUS.READY;
   // "Không còn gì để quản lý" = mất CẢ hai lối: không gian hàng và không vai nền tảng.
-  const evicted = ready && tenant === null && !user?.platformRole && !onOnboarding;
+  const evicted = ready && tenant === null && !user?.platformRole && insideManage && !onOnboarding;
 
   // Toast chỉ bắn MỘT lần cho mỗi lần bị đá: effect chạy lại theo nhịp refetch, và bốn bản sao
   // của cùng một câu đọc như app đang hỏng chứ không như một lời giải thích.

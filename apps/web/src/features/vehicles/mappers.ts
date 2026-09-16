@@ -2,6 +2,7 @@ import type { VehicleFormValues } from '@xeprime/validators';
 import {
   VEHICLE_TYPE,
   VEHICLE_SOURCE_TYPE,
+  vehicleFeatureAppliesTo,
   type BodyType,
   type FuelType,
   type ServiceType,
@@ -27,6 +28,22 @@ function textOrNull(value: string): string | null {
  * Giá trị form → payload API (create/update dùng chung; update là Partial nên thừa trường vẫn hợp lệ).
  * Tiền hoá string tại đây (ADR 0007): form giữ number, JSON đi string.
  */
+/**
+ * Tiện ích gửi lên: CHỈ những khoá dùng được cho loại xe đang chọn.
+ *
+ * Form đã ẩn khoá không hợp (`vehicleFeatureAppliesTo`), nhưng ẩn không đồng nghĩa với XOÁ: một
+ * chiếc xe máy còn giữ `spare_tire` trong dữ liệu cũ — hoặc vừa được đổi từ ô tô sang xe máy —
+ * thì giá trị đó vẫn nằm trong form, không hiện ra để bỏ chọn, và `assertFeaturesForVehicleType`
+ * ở server trả 400 "Tiện ích không dùng được cho loại xe này".
+ *
+ * Lọc ở ĐÂY, ngay trước khi lên dây, thay vì trông vào hành vi của widget: `Checkbox.Group` của
+ * AntD tình cờ tự rụng khoá ẩn ngay khi người dùng chạm vào một ô bất kỳ, còn dải chip của app
+ * native thì giữ nguyên — nên cùng một thao tác, web lưu được mà app báo lỗi.
+ */
+function applicableFeatures(values: VehicleFormValues): string[] {
+  return (values.features ?? []).filter((key) => vehicleFeatureAppliesTo(key, values.vehicleType));
+}
+
 export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput {
   return {
     code: textOrUndefined(values.code),
@@ -80,7 +97,7 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     mainImageUrl: values.mainImageUrl ?? undefined,
     // Gửi mảng để backend replace-set; lọc URL rỗng phòng dữ liệu cũ có dòng trống.
     images: (values.images ?? []).map((u) => u.trim()).filter(Boolean),
-    features: values.features ?? [],
+    features: applicableFeatures(values),
   };
 }
 
@@ -132,8 +149,7 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
     withDriverDailyPrice: v.withDriverDailyPrice == null ? null : Number(v.withDriverDailyPrice),
     withDriverInterCityPrice:
       v.withDriverInterCityPrice == null ? null : Number(v.withDriverInterCityPrice),
-    withDriverOneWayPrice:
-      v.withDriverOneWayPrice == null ? null : Number(v.withDriverOneWayPrice),
+    withDriverOneWayPrice: v.withDriverOneWayPrice == null ? null : Number(v.withDriverOneWayPrice),
     deliveryEnabled: v.deliveryEnabled,
     discountPercent: v.discountPercent ?? null,
     description: v.description ?? '',
@@ -189,7 +205,7 @@ export function mediaValuesToInput(values: VehicleFormValues): UpdateVehicleInpu
   return {
     mainImageUrl: values.mainImageUrl,
     images: (values.images ?? []).map((url) => url.trim()).filter(Boolean),
-    features: values.features ?? [],
+    features: applicableFeatures(values),
     // Chuỗi rỗng là thao tác xoá mô tả có chủ đích; không đổi thành undefined.
     description: textOrNull(values.description),
   };
@@ -225,6 +241,6 @@ export function manageInformationValuesToInput(values: VehicleFormValues): Updat
     electricConsumptionKwhPer100Km: values.electricConsumptionKwhPer100Km,
     engineDisplacementCc: values.engineDisplacementCc,
     description: textOrNull(values.description),
-    features: values.features ?? [],
+    features: applicableFeatures(values),
   };
 }

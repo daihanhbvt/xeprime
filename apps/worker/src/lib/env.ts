@@ -22,10 +22,9 @@ export const CHAT_FIRESTORE_KEEP = parsePositiveInt(process.env.CHAT_FIRESTORE_K
  * Key này CHỈ sống ở worker. Nó không đi qua API, không đi qua `NEXT_PUBLIC_*`, và không bao
  * giờ được ghi vào `holiday_sync_runs.error_message` — xem `redactSecrets` ở jobs/holiday-sync.
  *
- * Là key RIÊNG, không dùng lại `GOOGLE_MAPS_SERVER_KEY`: khác API được bật trên Cloud Console
- * (Calendar API vs Geocoding + Routes), khác hạn mức, và khác cả kiểu khoá — key bản đồ khoá
- * theo IP của API server, còn key này dùng từ máy chạy worker. Gộp hai cái làm một nghĩa là
- * bật thêm quyền cho một key đang được dùng ở chỗ khác.
+ * Là key RIÊNG, không dùng lại `GEOAPIFY_API_KEY` của bản đồ — và cũng không thể: từ ADR 0037
+ * bản đồ chạy trên Geoapify/OSM, còn lịch nghỉ lễ vẫn là Google Calendar API. Hai nhà cung cấp,
+ * hai hạn mức, hai kiểu khoá. Gộp lại nghĩa là bật thêm quyền cho một key đang dùng ở chỗ khác.
  */
 export const GOOGLE_HOLIDAY_API_KEY = process.env.GOOGLE_HOLIDAY_API_KEY?.trim() ?? '';
 
@@ -39,7 +38,7 @@ export const GOOGLE_HOLIDAY_CALENDAR_ID =
 /**
  * Thiếu key ⇒ tính năng VẮNG MẶT, không phải hỏng.
  *
- * Giống bộ `R2_*`, OCR và `GOOGLE_MAPS_SERVER_KEY`: worker vẫn boot, ba vòng lặp còn lại vẫn
+ * Giống bộ `R2_*`, OCR và `GEOAPIFY_API_KEY`: worker vẫn boot, ba vòng lặp còn lại vẫn
  * chạy, `GET /holidays` vẫn trả danh sách rỗng, và lịch xe hoạt động y như trước khi có tính
  * năng này. Ngày lễ chỉ là một lớp thông tin — nó không đáng để làm chết một tiến trình đang
  * giữ hạn phản hồi yêu cầu thuê.

@@ -9,6 +9,7 @@ import {
   PERMISSION,
   POLICY_SOURCE,
   SERVICE_TYPE,
+  type ServiceType,
   STATUS_COLOR,
 } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
@@ -18,6 +19,7 @@ import { AlertDialog } from '@/components/ui/AlertDialog';
 import { VehicleEditTabs } from '@/features/vehicles/components/VehicleEditTabs';
 import { Button } from '@/components/ui/Button';
 import { BlockLink, BlockTitle } from '@/components/ui/BlockTitle';
+import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { DataRow } from '@/components/ui/DataRow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -78,13 +80,53 @@ type Pending =
  * Xe đang công khai mà đổi GIÁ sẽ bị đưa về chờ duyệt lại và tạm ẩn khỏi sàn (ADR 0008) — hộp
  * xác nhận nói đúng hệ quả đó, không hứa "áp dụng ngay".
  */
-export function VehiclePricingScreen({ vehicleId }: { vehicleId: string }) {
+export function VehiclePricingScreen({
+  vehicleId,
+  visibleServices,
+  policyHidden = false,
+  customerScope = false,
+  sectionService,
+}: {
+  vehicleId: string;
+  /**
+   * Chỉ hiện nhóm giá của NHỮNG dịch vụ này. Bỏ trống = hiện theo năng lực thật của xe (màn Giá
+   * & chính sách đầy đủ ở cổng quản lý).
+   *
+   * Không dựng form thứ hai cho khu tài khoản: web thu hẹp CHÍNH workspace này bằng
+   * `visibleServices`, vì hai form cùng ghi vào `PUT /vehicles/:id/pricing` thì hai bộ ràng
+   * buộc giá sẽ trôi khỏi nhau.
+   */
+  visibleServices?: readonly string[];
+  /**
+   * Giấu khối CHÍNH SÁCH (cọc, quá giờ, giao xe, ưu đãi) — `policyMode="hidden"` của web.
+   *
+   * Trong không gian Quản lý xe, mỗi chính sách đã có màn riêng dễ đọc hơn (Giao xe tận nơi,
+   * Thủ tục cho thuê). Bày lại cả khối ở đây là hai lối sửa cùng một thứ.
+   */
+  policyHidden?: boolean;
+  /** Mở từ khu tài khoản — ẩn dải tab của cổng quản lý và lui về mục lục quản lý xe. */
+  customerScope?: boolean;
+  /**
+   * Mục này thuộc dịch vụ nào — `serviceType` mà `VehiclePricingSection` bên web nhận.
+   *
+   * Có nó thì màn mọc thêm tiêu đề + phụ đề riêng của mục ("Đơn giá thuê mặc định" · "Thiết lập
+   * bảng giá dịch vụ có tài xế") và, với dịch vụ có tài xế, cảnh báo về giá tạm tính. Bỏ trống ở
+   * màn Giá & chính sách đầy đủ của cổng quản lý — ở đó một màn ôm cả ba nhóm giá.
+   */
+  sectionService?: ServiceType;
+}) {
   const t = useTranslations('Vehicles.pricing');
   const router = useRouter();
   const { has, isLoading: permissionsLoading } = usePermissions();
   const canView = has(PERMISSION.VEHICLE_VIEW);
 
-  const back = () => goBackOr(router, ROUTES.manage.vehicleDetail(vehicleId));
+  const back = () =>
+    goBackOr(
+      router,
+      customerScope
+        ? ROUTES.account.vehicleManage(vehicleId)
+        : ROUTES.manage.vehicleDetail(vehicleId),
+    );
   const vehicle = useVehicle(vehicleId, canView);
   const pricing = useVehiclePricing(vehicleId, canView);
 
@@ -145,6 +187,10 @@ export function VehiclePricingScreen({ vehicleId }: { vehicleId: string }) {
         void vehicle.refetch();
         void pricing.refetch();
       }}
+      {...(visibleServices ? { visibleServices } : {})}
+      {...(sectionService ? { sectionService } : {})}
+      policyHidden={policyHidden}
+      customerScope={customerScope}
     />
   );
 }
@@ -158,6 +204,10 @@ function VehiclePricingForm({
   onBack,
   refreshing,
   onRefetch,
+  visibleServices,
+  policyHidden,
+  customerScope,
+  sectionService,
 }: {
   vehicleId: string;
   vehicleName: string;
@@ -167,7 +217,14 @@ function VehiclePricingForm({
   onBack: () => void;
   refreshing: boolean;
   onRefetch: () => void;
+  /** Xem docblock cùng tên ở `VehiclePricingScreen`. */
+  visibleServices?: readonly string[];
+  policyHidden: boolean;
+  customerScope: boolean;
+  /** Xem docblock cùng tên ở `VehiclePricingScreen`. */
+  sectionService?: ServiceType;
 }) {
+  const tSection = useTranslations('VehicleManage.pricing');
   const t = useTranslations('Vehicles.pricing');
   const tActions = useTranslations('Common.actions');
   /* Câu "bỏ thay đổi chưa lưu" là của TAB SỬA XE nói chung (`Vehicles.edit.discard`), không
@@ -186,9 +243,13 @@ function VehiclePricingForm({
 
   // Nhóm giá hiện theo NĂNG LỰC dịch vụ của xe — không trộn mọi ô giá thành một danh sách.
   const services = pricing.serviceTypes ?? [];
-  const hasSelfDrive = services.includes(SERVICE_TYPE.SELF_DRIVE);
-  const hasLongTerm = services.includes(SERVICE_TYPE.LONG_TERM);
-  const hasWithDriver = services.includes(SERVICE_TYPE.WITH_DRIVER);
+  /* Thu hẹp CHỒNG LÊN năng lực xe, không thay nó: xe không bán dịch vụ đó thì vẫn không có giá. */
+  const shown = (service: (typeof SERVICE_TYPE)[keyof typeof SERVICE_TYPE]) =>
+    (services as readonly string[]).includes(service) &&
+    (visibleServices ? visibleServices.includes(service) : true);
+  const hasSelfDrive = shown(SERVICE_TYPE.SELF_DRIVE);
+  const hasLongTerm = shown(SERVICE_TYPE.LONG_TERM);
+  const hasWithDriver = shown(SERVICE_TYPE.WITH_DRIVER);
 
   const label = vehiclePlate ? `${vehicleName} (${vehiclePlate})` : vehicleName;
 
@@ -203,8 +264,12 @@ function VehiclePricingForm({
      * khối CHÍNH SÁCH khi xe đang kế thừa: các ô đó không hiện ra để sửa nên không được phép chặn
      * nút Lưu — thiếu cờ này thì một gian hàng CHƯA cấu hình chính sách sẽ không bao giờ đặt nổi
      * giá cho xe, vì form đòi tiền cọc trên một ô vô hình.
+     *
+     * `!policyHidden` là vế THỨ HAI, đúng `editMode && showPolicy` của web: ở chế độ chỉ-giá,
+     * khối chính sách không hiện DÙ xe đang ghi đè — vẫn bắt nó qua ràng buộc là dựng lại đúng
+     * cái bẫy trên, chỉ khác là lần này nạn nhân là xe đã có chính sách riêng.
      */
-    context: { serviceTypes: services, policyEditable: editMode },
+    context: { serviceTypes: services, policyEditable: editMode && !policyHidden },
     /* Giữ ô đang gõ khi dữ liệu server đổi — cùng luật với hai màn form còn lại. */
     resetOptions: { keepDirtyValues: true },
     values: {
@@ -332,11 +397,13 @@ function VehiclePricingForm({
   return (
     <>
       <AppHeader title={t('title')} subtitle={label} onBack={() => leave.guard(onBack)} />
-      <VehicleEditTabs
-        vehicleId={vehicleId}
-        active={VEHICLE_EDIT_TAB.PRICING}
-        guard={leave.guard}
-      />
+      {customerScope ? null : (
+        <VehicleEditTabs
+          vehicleId={vehicleId}
+          active={VEHICLE_EDIT_TAB.PRICING}
+          guard={leave.guard}
+        />
+      )}
       <Screen
         edges={['left', 'right', 'bottom']}
         {...refresh}
@@ -344,6 +411,7 @@ function VehiclePricingForm({
           canEdit ? (
             <Button
               label={tActions('saveChanges')}
+              icon="save-outline"
               loading={save.isPending}
               /*
                * Chuyển từ kế thừa sang tự tuỳ chỉnh (hoặc ngược lại) là một thay đổi CẦN LƯU dù
@@ -359,47 +427,87 @@ function VehiclePricingForm({
         }
       >
         <YStack gap={layout.section}>
-          <Card>
-            <YStack gap={space.sm}>
-              <BlockTitle>{t('source.title')}</BlockTitle>
-              <ToggleRow
-                label={t('source.useShop')}
-                checked={!editMode}
-                disabled={!canEdit || save.isPending}
-                onToggle={() => {
-                  if (!editMode) {
-                    setEditingOverride(true);
-                    return;
-                  }
-                  // Đang ghi đè → về kế thừa. Bản ghi đè ĐÃ LƯU thì phải xác nhận xoá.
-                  if (overriding) {
-                    setPending({ kind: 'reset' });
-                    return;
-                  }
-                  setEditingOverride(false);
-                  reset();
-                }}
-              />
-              <Text col={editMode ? colors.warning : colors.textMuted} fos={fontSize.bodySm}>
-                {editMode
-                  ? t('source.customBanner', { vehicle: label })
-                  : t('source.inheritBanner')}
+          {/*
+            Tiêu đề + phụ đề CỦA MỤC — `SectionCard` bao quanh workspace bên web. Hai màn giá dùng
+            chung một form, nên nếu không nói ra thì "Giá cho thuê" và "Giá cho thuê (có tài xế)"
+            mở ra hai màn trông y hệt nhau.
+          */}
+          {sectionService ? (
+            <YStack gap={space.xs}>
+              <BlockTitle>
+                {tSection(
+                  sectionService === SERVICE_TYPE.WITH_DRIVER
+                    ? 'withDriverTitle'
+                    : 'selfDriveTitle',
+                )}
+              </BlockTitle>
+              <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                {tSection(
+                  sectionService === SERVICE_TYPE.WITH_DRIVER
+                    ? 'withDriverSubtitle'
+                    : 'selfDriveSubtitle',
+                )}
               </Text>
+            </YStack>
+          ) : null}
 
-              {/*
+          {/*
+            Giá có tài xế: loại hành trình chưa khai giá sẽ được TẠM TÍNH theo bậc gần nhất, và
+            chủ xe chốt lại lúc duyệt đơn. Không nói ra thì một ô để trống đọc thành "không nhận
+            loại chuyến đó".
+          */}
+          {sectionService === SERVICE_TYPE.WITH_DRIVER ? (
+            <Callout tone="warning">{tSection('withDriverEstimateHint')}</Callout>
+          ) : null}
+
+          {/*
+            Thẻ "Nguồn giá" là CỬA của khối chính sách (kế thừa gian hàng hay ghi đè theo xe), nên
+            nó ẩn cùng khối đó. Trong không gian Quản lý xe, mỗi chính sách đã có màn riêng dễ đọc
+            hơn — bày lại công tắc kế thừa ở đây là một lối sửa thứ hai cho cùng một thứ.
+          */}
+          {policyHidden ? null : (
+            <Card>
+              <YStack gap={space.sm}>
+                <BlockTitle>{t('source.title')}</BlockTitle>
+                <ToggleRow
+                  label={t('source.useShop')}
+                  checked={!editMode}
+                  disabled={!canEdit || save.isPending}
+                  onToggle={() => {
+                    if (!editMode) {
+                      setEditingOverride(true);
+                      return;
+                    }
+                    // Đang ghi đè → về kế thừa. Bản ghi đè ĐÃ LƯU thì phải xác nhận xoá.
+                    if (overriding) {
+                      setPending({ kind: 'reset' });
+                      return;
+                    }
+                    setEditingOverride(false);
+                    reset();
+                  }}
+                />
+                <Text col={editMode ? colors.warning : colors.textMuted} fos={fontSize.bodySm}>
+                  {editMode
+                    ? t('source.customBanner', { vehicle: label })
+                    : t('source.inheritBanner')}
+                </Text>
+
+                {/*
                 Link CHỈ hiện khi đang kế thừa — đúng như web đặt nó trong nhánh `inheritBanner`.
 
                 Đang tuỳ chỉnh riêng thì chính sách gian hàng không còn chi phối xe này, và một
                 đường dẫn sang đó chỉ khiến người dùng tưởng sửa bên kia là xe này đổi theo.
               */}
-              {editMode ? null : (
-                <BlockLink
-                  label={t('source.viewShopPolicy')}
-                  onPress={() => navigateOnce(ROUTES.manage.shopPolicies())}
-                />
-              )}
-            </YStack>
-          </Card>
+                {editMode ? null : (
+                  <BlockLink
+                    label={t('source.viewShopPolicy')}
+                    onPress={() => navigateOnce(ROUTES.manage.shopPolicies())}
+                  />
+                )}
+              </YStack>
+            </Card>
+          )}
 
           {formState.isDirty ? (
             <YStack bg={colors.warningSurface} br={radius.sm} p={space.sm}>
@@ -416,6 +524,7 @@ function VehiclePricingForm({
                 <MoneyField
                   control={control}
                   name="weekdayPrice"
+                  unit={t('unitPerDay')}
                   label={t('selfDrive.weekday')}
                   hint={t('selfDrive.weekdayHint')}
                   required
@@ -424,6 +533,7 @@ function VehiclePricingForm({
                 <MoneyField
                   control={control}
                   name="weekendPrice"
+                  unit={t('unitPerDay')}
                   label={t('selfDrive.weekend')}
                   hint={t('selfDrive.weekendHint')}
                   editable={canEdit}
@@ -431,6 +541,7 @@ function VehiclePricingForm({
                 <MoneyField
                   control={control}
                   name="hourlyPrice"
+                  unit={t('unitPerHour')}
                   label={t('selfDrive.hourly')}
                   hint={t('selfDrive.hourlyHint')}
                   editable={canEdit}
@@ -448,6 +559,7 @@ function VehiclePricingForm({
                 <MoneyField
                   control={control}
                   name="monthlyPrice"
+                  unit={t('unitPerMonth')}
                   label={t('longTerm.monthly')}
                   hint={t('longTerm.monthlyHint', {
                     packages: LONG_TERM_PACKAGE_MONTHS.join(', '),
@@ -479,6 +591,7 @@ function VehiclePricingForm({
                 <MoneyField
                   control={control}
                   name="withDriverDailyPrice"
+                  unit={t('unitPerDay')}
                   label={t('withDriver.daily')}
                   hint={t('withDriver.dailyHint')}
                   editable={canEdit}
@@ -486,6 +599,7 @@ function VehiclePricingForm({
                 <MoneyField
                   control={control}
                   name="withDriverInterCityPrice"
+                  unit={t('unitPerDay')}
                   label={t('withDriver.interCity')}
                   hint={t('withDriver.interCityHint')}
                   editable={canEdit}
@@ -493,6 +607,7 @@ function VehiclePricingForm({
                 <MoneyField
                   control={control}
                   name="withDriverOneWayPrice"
+                  unit={t('unitPerDay')}
                   label={t('withDriver.oneWay')}
                   hint={t('withDriver.oneWayHint')}
                   editable={canEdit}
@@ -502,7 +617,7 @@ function VehiclePricingForm({
             </Card>
           ) : null}
 
-          {editMode ? (
+          {policyHidden ? null : editMode ? (
             /*
              * Form giá xe là SUPERSET của `PolicyFormValues` — cấu trúc tương thích, nhưng TS
              * không thu hẹp generic của RHF nên cần một cast tường minh tại biên.
@@ -647,6 +762,7 @@ function DirectDiscount({
             name="discountPercent"
             percent
             label={t('percent')}
+            required
             editable={canEdit}
           />
           <Text col={colors.textMuted} fos={fontSize.label}>

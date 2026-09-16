@@ -97,6 +97,7 @@ export function RequestOtpStep({
         <YStack alignSelf="stretch">
           <Button
             label={tActions('verify')}
+            icon="checkmark-outline"
             size="lg"
             loading={otp.verifying}
             disabled={code.length !== OTP_LENGTH}

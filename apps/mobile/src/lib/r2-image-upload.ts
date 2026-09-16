@@ -8,6 +8,10 @@ import {
   type UploadRejection,
 } from '@xeprime/types';
 import type { UploadMeta, UploadPresign } from '@/api/vehicles/api';
+import {
+  CameraPermissionDeniedError,
+  captureInAppPhoto,
+} from '@/features/camera/in-app-camera';
 
 /**
  * Bề rộng tối đa sau khi nén — cùng con số với ảnh bàn giao.
@@ -19,6 +23,7 @@ const MAX_WIDTH = 1600;
 
 /** Chất lượng JPEG. 0.7 là mốc mắt thường không phân biệt được với 1.0 trên ảnh chụp xe. */
 const JPEG_QUALITY = 0.7;
+
 
 export const IMAGE_SOURCE = {
   CAMERA: 'camera',
@@ -66,30 +71,36 @@ export class ImagePermissionDeniedError extends Error {
  * `limit` chỉ có nghĩa với thư viện ảnh: máy ảnh mỗi lần một tấm.
  */
 export async function pickImages(source: ImageSource, limit = 1): Promise<PickedImage[]> {
-  const permission =
-    source === IMAGE_SOURCE.CAMERA
-      ? await ImagePicker.requestCameraPermissionsAsync()
-      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (source === IMAGE_SOURCE.CAMERA) {
+    // Một lớp lỗi cho cả hai nguồn, để `useImageErrorMessage` chỉ phải biết một cái tên.
+    const shot = await captureInAppPhoto().catch((error: unknown) => {
+      throw error instanceof CameraPermissionDeniedError
+        ? new ImagePermissionDeniedError(source)
+        : error;
+    });
+    return shot ? [await compress(shot, 'vehicle')] : [];
+  }
 
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) throw new ImagePermissionDeniedError(source);
 
-  const result =
-    source === IMAGE_SOURCE.CAMERA
-      ? await ImagePicker.launchCameraAsync({ quality: 1, exif: false })
-      : await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ['images'],
-          quality: 1,
-          exif: false,
-          allowsMultipleSelection: limit > 1,
-          selectionLimit: limit,
-        });
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    quality: 1,
+    exif: false,
+    allowsMultipleSelection: limit > 1,
+    selectionLimit: limit,
+  });
 
   if (result.canceled) return [];
 
-  return Promise.all(result.assets.map((asset) => compress(asset)));
+  return Promise.all(result.assets.map((asset) => compress(asset, 'vehicle')));
 }
 
-async function compress(asset: ImagePicker.ImagePickerAsset): Promise<PickedImage> {
+/** Đủ dùng cho cả ảnh từ thư viện (`ImagePickerAsset`) lẫn ảnh vừa chụp (`CapturedPhoto`). */
+type Compressable = Pick<ImagePicker.ImagePickerAsset, 'uri' | 'width'> & { fileName?: string | null };
+
+async function compress(asset: Compressable, prefix: string): Promise<PickedImage> {
   /*
    * Thu nhỏ CHỈ khi ảnh rộng hơn trần. `resize` không phải "giới hạn", nó là "đặt bằng": ảnh
    * 800px đưa qua `{ width: 1600 }` bị PHÓNG TO gấp đôi — nặng hơn, mờ hơn, ngược hẳn mục đích
@@ -105,7 +116,7 @@ async function compress(asset: ImagePicker.ImagePickerAsset): Promise<PickedImag
   return {
     uri: compressed.uri,
     // Tên file chỉ để người vận hành nhận ra ảnh trong kho — server không tin nó.
-    fileName: asset.fileName ?? `vehicle-${Date.now()}.jpg`,
+    fileName: asset.fileName ?? `${prefix}-${Date.now()}.jpg`,
     contentType: 'image/jpeg',
   };
 }

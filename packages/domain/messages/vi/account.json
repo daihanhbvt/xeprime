@@ -1,4 +1,17 @@
 {
+  "trackBadge": {
+    "commissionOwner": "Chủ xe cá nhân",
+    "commissionOwnerWithFee": "Chủ xe cá nhân · Hoa hồng {percent, number}%",
+    "shopOwner": "Chủ gian hàng",
+    "shopOwnerWithPlan": "Chủ gian hàng · Gói {plan}",
+    "shopManager": "Quản lý gian hàng",
+    "shopStaff": "Nhân viên gian hàng",
+    "shopViewer": "Người xem gian hàng",
+    "shopMember": "Thành viên gian hàng",
+    "unconfigured": "Chưa xác định gói",
+    "unconfiguredHint": "Gian hàng của bạn chưa có gói dịch vụ hiệu lực nên nền tảng chưa xác định được cách tính phí. Đây là lỗi cấu hình phía XePrime — liên hệ hỗ trợ trước khi nhận đơn mới.",
+    "verifiedHint": "Chủ gian hàng đã xác thực"
+  },
   "title": "Tài khoản của tôi",
   "subtitle": "Quản lý thông tin tài khoản và cài đặt của bạn",
   "memberSince": "Tham gia từ {date}",
@@ -101,7 +114,10 @@
     "bodyMember": "Bạn đang là thành viên của gian hàng {shop}. Các màn quản lý xe và lịch nằm ở cổng quản lý.",
     "becomeOwner": "Trở thành chủ xe",
     "openManage": "Vào cổng quản lý",
-    "backToAccount": "Về tài khoản của tôi"
+    "backToAccount": "Về tài khoản của tôi",
+    "registeringTitle": "Hồ sơ chủ xe đang trong quá trình duyệt",
+    "registeringBody": "Mục này mở khi bạn có ít nhất một xe đã được duyệt lên chợ. Xem tiến trình hồ sơ và xe của bạn ở màn Hồ sơ đăng ký.",
+    "openRegistration": "Xem tiến trình đăng ký"
   },
   "vehicles": {
     "title": "Danh sách xe",
@@ -244,10 +260,6 @@
     },
     "retentionNote": "Một số dữ liệu (hoá đơn, chứng từ thuế, nhật ký giao dịch) có thể phải lưu theo thời hạn pháp luật quy định trước khi xoá hẳn.",
     "acknowledge": "Tôi hiểu đây là yêu cầu xoá tài khoản và XePrime sẽ liên hệ, xử lý theo quy trình.",
-    "confirmPhraseLabel": "Xác nhận bằng cách nhập lại cụm từ sau",
-    "confirmPhrase": "XOÁ TÀI KHOẢN",
-    "confirmPhrasePlaceholder": "Nhập {phrase} để xác nhận",
-    "confirmPhraseMismatch": "Cụm từ chưa đúng.",
     "acknowledgeRequired": "Bạn cần xác nhận đã hiểu.",
     "submit": "Gửi yêu cầu xoá tài khoản",
     "reset": "Huỷ bỏ",
@@ -261,5 +273,55 @@
     "withdrawConfirm": "Rút yêu cầu này? Tài khoản của bạn giữ nguyên.",
     "withdrawn": "Đã rút yêu cầu xoá tài khoản.",
     "loadError": "Không kiểm tra được yêu cầu hiện có."
+  },
+  "registration": {
+    "title": "Hồ sơ chủ xe",
+    "subtitle": "Theo dõi hồ sơ và chiếc xe đầu tiên của bạn trên đường lên chợ.",
+    "saved": "Đã lưu hồ sơ",
+    "submitted": "Đã gửi hồ sơ đi xác minh",
+    "loadError": "Không tải được hồ sơ chủ xe",
+    "steps": {
+      "profile": {
+        "title": "Hồ sơ chủ xe",
+        "description": "Họ tên, số điện thoại đã xác thực và địa chỉ nhận xe. Khai đủ là xong bước này — không phải chờ ai duyệt."
+      },
+      "vehicle": {
+        "title": "Đăng xe & gửi duyệt",
+        "description": "Khai xe với đủ ảnh và giá, rồi bấm gửi duyệt. Một nút, một lần.",
+        "addMore": "Đăng thêm xe"
+      },
+      "live": {
+        "title": "Lên chợ",
+        "description": "XePrime duyệt xe — đây là bước duyệt duy nhất. Xe được duyệt là khách tìm thấy và đặt được, và toàn bộ công cụ chủ xe mở ra."
+      }
+    },
+    "noVehicle": {
+      "title": "Còn thiếu chiếc xe đầu tiên",
+      "body": "Đăng một chiếc xe với đủ ảnh và giá rồi gửi duyệt. XePrime duyệt xong là xe lên chợ.",
+      "cta": "Đăng xe đầu tiên"
+    },
+    "queue": {
+      "title": "Xe của bạn đang trên đường lên chợ"
+    }
+  },
+  "deletionImpact": {
+    "title": "Trước khi gửi yêu cầu, hãy xem phần này",
+    "body": "Tài khoản của bạn đang gắn với gian hàng {shop}. XePrime phải xử lý xong những khoản dưới đây rồi mới đóng được tài khoản; gửi yêu cầu không làm chúng tự biến mất.",
+    "loading": "Đang kiểm tra ảnh hưởng…",
+    "loadError": "Chưa kiểm tra được ảnh hưởng. Bạn vẫn gửi được yêu cầu, XePrime sẽ tự rà lại.",
+    "shop": "Gian hàng",
+    "ownerNote": "Bạn là chủ gian hàng. Đóng tài khoản chủ không tự đóng gian hàng, và xe đang bán vẫn phải có người chịu trách nhiệm.",
+    "memberNote": "Bạn là thành viên của gian hàng này, không phải chủ. Yêu cầu chỉ liên quan tới tài khoản cá nhân của bạn.",
+    "balance": "Số dư khả dụng",
+    "pending": "Đang chờ chuyển",
+    "withdrawals": "{count, plural, =0 {Không có yêu cầu rút nào đang treo} other {# yêu cầu rút đang treo}}",
+    "openTrips": "{count, plural, =0 {Không còn chuyến đi thuê nào chưa khép} other {# chuyến đi thuê chưa khép}}",
+    "settleFirst": "Rút hết số dư và chờ các lệnh chuyển xong trước khi gửi yêu cầu — sau khi đóng tài khoản, việc đối chiếu sẽ chậm hơn nhiều.",
+    "bodyPersonal": "Yêu cầu này chỉ liên quan tới tài khoản cá nhân của bạn. XePrime vẫn phải xử lý xong những khoản dưới đây trước khi đóng được tài khoản."
+  },
+  "trackNotice": {
+    "unconfiguredTitle": "Gian hàng chưa có gói dịch vụ hợp lệ",
+    "unconfiguredBody": "XePrime chưa xác định được cách tính phí cho gian hàng của bạn, nên các khoản tiền mới của chuyến sẽ không được ghi nhận cho tới khi xử lý xong. Dữ liệu, chuyến và số dư hiện có không bị ảnh hưởng.",
+    "contactSupport": "Liên hệ hỗ trợ"
   }
 }

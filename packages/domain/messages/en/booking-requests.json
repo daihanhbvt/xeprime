@@ -347,6 +347,18 @@
       "pickupWardRequired": "Select the pickup ward",
       "deliveryProvinceRequired": "Select the delivery province or city",
       "deliveryWardRequired": "Select the delivery ward"
+    },
+    "blocked": {
+      "close": "Close",
+      "shopAccount": {
+        "title": "Shop accounts cannot book vehicles",
+        "body": "You are signed in to a shop account. To rent a vehicle, sign in with a renter account using a DIFFERENT PHONE NUMBER — each phone number belongs to exactly one account.",
+        "manage": "Go to shop management"
+      },
+      "ownVehicle": {
+        "title": "This is your own vehicle",
+        "body": "This vehicle belongs to your own shop, so you cannot book it. To reserve it for personal use, block the dates in Vehicle calendar instead."
+      }
     }
   },
   "approved": {

@@ -3,6 +3,7 @@
 import { Avatar, Badge, Button, Empty, Input, Skeleton } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
+import { CHAT_SIDE } from '@xeprime/types';
 import { useEffect, useRef, type KeyboardEvent } from 'react';
 import { cx } from '@/lib/cx';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -14,6 +15,13 @@ export type ConversationFilterKey = 'all' | 'unread';
 
 interface ConversationListProps {
   items: ConversationSummary[];
+  /**
+   * Danh sách đang trộn HAI VAI (hộp thư hợp nhất) ⇒ mỗi dòng mang một nhãn vai.
+   *
+   * Prop chứ không suy từ dữ liệu: một hộp thư khách mà tình cờ chỉ có hội thoại khách vẫn là
+   * hộp thư một-vai, và ở đó nhãn là nhiễu vì mọi dòng mang cùng một chữ.
+   */
+  showRole: boolean;
   selectedId: string | null;
   onSelect: (conversation: ConversationSummary) => void;
   search: string;
@@ -37,6 +45,7 @@ interface ConversationListProps {
  */
 export function ConversationList({
   items,
+  showRole,
   selectedId,
   onSelect,
   search,
@@ -144,6 +153,7 @@ export function ConversationList({
                   conversation={c}
                   selected={c.id === selectedId}
                   onSelect={onSelect}
+                  showRole={showRole}
                 />
               ))}
             </ul>
@@ -164,10 +174,13 @@ function ConversationRow({
   conversation,
   selected,
   onSelect,
+  showRole,
 }: {
   conversation: ConversationSummary;
   selected: boolean;
   onSelect: (conversation: ConversationSummary) => void;
+  /** Danh sách đang trộn hai vai — xem `ConversationListProps.showRole`. */
+  showRole: boolean;
 }) {
   const t = useTranslations('Chat');
   const fmt = useAppFormat();
@@ -199,6 +212,20 @@ function ConversationRow({
         <span className={styles.convBody}>
           <span className={styles.convTop}>
             <span className={styles.convParty}>{conversation.partyName}</span>
+            {/*
+              Nhãn VAI, chỉ ở hộp thư hợp nhất.
+
+              Ở đó hai dòng cạnh nhau có thể là hai việc khác hẳn: một chủ xe mà tôi đang thuê,
+              và một khách đang hỏi xe của tôi. Tên phía bên kia không nói ra điều đó — cả hai đều
+              chỉ là một cái tên — nên người đọc phải tự nhớ, và họ sẽ trả lời nhầm giọng.
+
+              Ở hai hộp thư một-vai thì nhãn này là nhiễu: mọi dòng đều mang cùng một chữ.
+            */}
+            {showRole ? (
+              <span className={styles.convRole}>
+                {t(conversation.side === CHAT_SIDE.SHOP ? 'roleAsHost' : 'roleAsRenter')}
+              </span>
+            ) : null}
             {conversation.lastMessageAt ? (
               <time className={styles.convTime} dateTime={conversation.lastMessageAt}>
                 {fmt.dateTime(conversation.lastMessageAt)}

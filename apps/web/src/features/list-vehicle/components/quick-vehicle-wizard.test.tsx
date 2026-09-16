@@ -1,7 +1,8 @@
 import { App } from 'antd';
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PERMISSION, VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
+import { API_ERROR_CODE, PERMISSION, PUBLISH_REQUIREMENT, VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
+import { ApiClientError } from '@xeprime/api-client';
 
 import { VEHICLE_REGISTRATION_SOURCE } from '@/constants/routes';
 import { renderWithIntl } from '@/i18n/test-utils';
@@ -74,9 +75,7 @@ vi.mock('@/features/account/components/ContactVerifyModal', () => ({
 vi.mock('@/features/branches/hooks/use-branches', () => ({
   useActiveBranches: () => ({
     data: {
-      items: [
-        { id: 'b1', name: 'Chi nhánh 1', provinceName: 'Hồ Chí Minh', isDefault: true },
-      ],
+      items: [{ id: 'b1', name: 'Chi nhánh 1', provinceName: 'Hồ Chí Minh', isDefault: true }],
     },
     isLoading: false,
     isError: false,
@@ -125,6 +124,16 @@ vi.mock('@/features/vehicle-manage/api', async (importOriginal) => ({
   patchVehicleServiceSetting: (...args: unknown[]) => api.patchServiceSetting(...args),
 }));
 
+/*
+ * Gợi ý giá thị trường gọi một API công khai qua TanStack Query. Test này không dựng
+ * `QueryClientProvider` (nó chỉ mock `useQueryClient`), và câu hỏi của nó là luồng wizard chứ
+ * không phải khối gợi ý giá — nên chốt hook ở trạng thái "chưa có số liệu", đúng cách đã làm với
+ * danh mục và ô địa chỉ.
+ */
+vi.mock('@/features/vehicles/hooks/use-market-price', () => ({
+  useMarketPriceSuggestion: () => ({ data: undefined, isLoading: false }),
+}));
+
 vi.mock('@tanstack/react-query', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@tanstack/react-query')>()),
   useQueryClient: () => ({ invalidateQueries: vi.fn(), setQueryData: vi.fn() }),
@@ -147,7 +156,9 @@ function render(source = VEHICLE_REGISTRATION_SOURCE.MARKETPLACE) {
 /** Điền tối thiểu để qua bước 1 và bước 2 rồi tới bước ảnh. */
 async function fillToLastStep() {
   fireEvent.change(screen.getByLabelText(/Biển số xe/), { target: { value: '51H-123.45' } });
-  fireEvent.change(screen.getByLabelText(/Tên hiển thị/), { target: { value: 'Toyota Vios 2023' } });
+  fireEvent.change(screen.getByLabelText(/Tên hiển thị/), {
+    target: { value: 'Toyota Vios 2023' },
+  });
   fireEvent.mouseDown(screen.getByLabelText(/Nguồn năng lượng|Nhiên liệu/));
   const gasoline = await screen.findByText('Xăng');
   fireEvent.click(gasoline);
@@ -202,7 +213,13 @@ describe('Cửa vào', () => {
    * rời trang, mất nháp, và hiện form đăng ký gian hàng cho người chỉ có một chiếc xe.
    */
   it('chưa có hồ sơ chủ xe: hỏi ngay trong wizard, không rời trang và không tự tạo xe', () => {
-    currentUser.data = { id: 'u1', displayName: 'Chủ xe', tenant: null, phone: '0901234567', phoneVerified: true };
+    currentUser.data = {
+      id: 'u1',
+      displayName: 'Chủ xe',
+      tenant: null,
+      phone: '0901234567',
+      phoneVerified: true,
+    };
     render();
 
     expect(screen.getByText('1. Hồ sơ chủ xe')).toBeTruthy();
@@ -218,7 +235,13 @@ describe('Cửa vào', () => {
   });
 
   it('chưa xác thực SĐT: khoá nút đi tiếp cho tới khi xác thực xong', () => {
-    currentUser.data = { id: 'u1', displayName: 'Chủ xe', tenant: null, phone: null, phoneVerified: false };
+    currentUser.data = {
+      id: 'u1',
+      displayName: 'Chủ xe',
+      tenant: null,
+      phone: null,
+      phoneVerified: false,
+    };
     render();
 
     expect(screen.getByText('Tài khoản chưa có số điện thoại')).toBeTruthy();
@@ -369,5 +392,75 @@ describe('Dữ liệu gửi lên', () => {
     expect(policy.depositAmount).toBe('5000000');
     expect(policy.overtimeFeePerHour).toBe('100000');
     expect(policy.discountTiers).toHaveLength(1);
+  });
+});
+
+/**
+ * MỘT cổng duyệt cho tuyến hoa hồng — ADR 0036.
+ *
+ * Bản trước của wizard rẽ hai nhánh ở nút "Lưu & gửi duyệt": gian hàng chưa `active` thì gọi
+ * `submitShopReview` (gửi HỒ SƠ GIAN HÀNG), `active` rồi mới gọi `submitVehiclePublic`. Nó chạy
+ * được, nhưng vẫn là hai vòng duyệt cho một người có một chiếc xe — và chủ xe phải chờ hết vòng
+ * thứ nhất mới biết chiếc xe của mình có vấn đề gì không.
+ *
+ * Ba test dưới đây khoá ba mặt của "một cổng": gọi ĐÚNG một API, không đọc `tenant.status` để rẽ
+ * nhánh, và không bao giờ nói "đã gửi duyệt" khi chưa có phiếu thật.
+ */
+describe('Một cổng duyệt: gửi thẳng XE', () => {
+  it('bấm "Lưu & gửi duyệt" → gọi submit-public, KHÔNG gọi gửi duyệt gian hàng', async () => {
+    render();
+    await fillToLastStep();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu & gửi duyệt' }));
+
+    await waitFor(() => expect(api.submitVehiclePublic).toHaveBeenCalledTimes(1));
+    expect(api.submitVehiclePublic).toHaveBeenCalledWith('v1');
+    expect(await screen.findByRole('heading', { name: 'Đã gửi xe đi duyệt' })).toBeTruthy();
+  });
+
+  /*
+   * Gian hàng vừa mở (`tenant.status` bất kỳ) vẫn gửi THẲNG xe. Đây là chỗ luồng cũ rẽ sang gửi
+   * hồ sơ gian hàng, và đọc lại `tenant.status` ở đây chính là cách cổng thứ hai lẻn trở lại.
+   */
+  it('gian hàng vừa mở hồ sơ: vẫn gửi XE, không rẽ sang duyệt gian hàng', async () => {
+    currentUser.data = {
+      id: 'u1',
+      displayName: 'Chủ xe',
+      tenant: { id: 't1', status: 'draft' },
+    };
+    render();
+    await fillToLastStep();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu & gửi duyệt' }));
+
+    await waitFor(() => expect(api.submitVehiclePublic).toHaveBeenCalledTimes(1));
+    expect(await screen.findByRole('heading', { name: 'Đã gửi xe đi duyệt' })).toBeTruthy();
+  });
+
+  /*
+   * Server từ chối vì xe còn thiếu điều kiện: đó là DANH SÁCH VIỆC PHẢI LÀM, không phải một lỗi
+   * kỹ thuật. Màn kết quả phải liệt kê TỪNG mục bằng nhãn đã dịch (mã `PUBLISH_REQUIREMENT` →
+   * `Vehicles.publish.requirements.*`), và tuyệt đối không được nói "đã gửi duyệt".
+   */
+  it('thiếu điều kiện: liệt kê từng mục, xe ở lại nháp, KHÔNG nói "đã gửi duyệt"', async () => {
+    api.submitVehiclePublic = vi.fn(async () => {
+      throw new ApiClientError({
+        code: API_ERROR_CODE.VEHICLE_PUBLISH_INCOMPLETE,
+        message: 'Xe còn thiếu thông tin bắt buộc nên chưa gửi duyệt được.',
+        status: 400,
+        details: { missing: [PUBLISH_REQUIREMENT.PHOTOS, PUBLISH_REQUIREMENT.BRANCH_LOCATION] },
+      });
+    });
+    render();
+    await fillToLastStep();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu & gửi duyệt' }));
+
+    expect(await screen.findByRole('heading', { name: 'Xe chưa gửi duyệt được' })).toBeTruthy();
+    expect(screen.getByText('Tối thiểu 4 ảnh xe')).toBeTruthy();
+    expect(screen.getByText('Chi nhánh có tỉnh/thành')).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Đã gửi xe đi duyệt' })).toBeNull();
+    // Xe ĐÃ tồn tại — lối vào sửa phải có mặt để chủ xe bổ sung rồi gửi lại.
+    expect(screen.getByRole('button', { name: 'Bổ sung ngay' })).toBeTruthy();
   });
 });

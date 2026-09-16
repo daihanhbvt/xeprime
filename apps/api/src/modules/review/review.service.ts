@@ -8,6 +8,7 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   BOOKING_STATUS,
+  TENANT_STATUS,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   REVIEW_STATUS,
@@ -23,6 +24,7 @@ import {
   ReviewDto,
   ReviewListQueryDto,
   ReviewSummaryDto,
+  ShopReviewDto,
 } from './dto/review.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 
@@ -32,6 +34,12 @@ const PUBLIC_SELECT = {
   comment: true,
   createdAt: true,
   customer: { select: { displayName: true } },
+} satisfies Prisma.ReviewSelect;
+
+/** Như `PUBLIC_SELECT` + chiếc xe đã thuê — chỉ trang gian hàng cần biết đánh giá thuộc xe nào. */
+const SHOP_PUBLIC_SELECT = {
+  ...PUBLIC_SELECT,
+  vehicle: { select: { id: true, name: true } },
 } satisfies Prisma.ReviewSelect;
 
 @Injectable()
@@ -152,6 +160,61 @@ export class ReviewService {
         ratingCount: agg._count,
       },
       data: rows.map(toPublicDto),
+      meta: paginationMeta(paging, total),
+    };
+  }
+
+  /**
+   * Đánh giá công khai của MỘT GIAN HÀNG theo slug — gộp mọi xe của họ, mới nhất trước.
+   *
+   * ## Vì sao không đọc `tenants.rating_avg` cho phần `summary`
+   *
+   * Hai cột đó là số liệu dẫn xuất tính trên TOÀN BỘ review published của tenant, kể cả review
+   * của những chiếc xe đã gỡ khỏi chợ. Ở đây `summary` phải mô tả đúng danh sách ngay bên dưới
+   * nó, nên nó được tính từ chính `where` của danh sách — nếu không, "4.9 (156 đánh giá)" sẽ
+   * đứng trên một danh sách 140 mục và không ai giải thích được 16 cái còn lại ở đâu.
+   *
+   * Gian hàng không tồn tại / đã khoá ⇒ trang rỗng chứ không 404: trang `/shops/[slug]` đã 404
+   * từ `getShopBySlug` trước khi phần này kịp gọi, và một 404 thứ hai chỉ làm hỏng một khối
+   * trên trang vì lý do mà cả trang đã xử lý rồi.
+   */
+  async listForShop(
+    slug: string,
+    query: ReviewListQueryDto,
+  ): Promise<{ summary: ReviewSummaryDto; data: ShopReviewDto[]; meta: PaginationMeta }> {
+    const paging = resolvePaging(query, REVIEW_DEFAULT_LIMIT, REVIEW_MAX_LIMIT);
+
+    const where: Prisma.ReviewWhereInput = {
+      status: REVIEW_STATUS.PUBLISHED,
+      deletedAt: null,
+      tenant: { slug, status: TENANT_STATUS.ACTIVE, deletedAt: null },
+      // Đánh giá của một chiếc xe đã xoá mềm không còn chỗ nào để dẫn tới — thẻ đánh giá trên
+      // trang gian hàng là một liên kết về trang xe.
+      vehicle: { deletedAt: null },
+    };
+
+    const [total, rows, agg] = await this.prisma.$transaction([
+      this.prisma.review.count({ where }),
+      this.prisma.review.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: paging.skip,
+        take: paging.take,
+        select: SHOP_PUBLIC_SELECT,
+      }),
+      this.prisma.review.aggregate({ where, _avg: { rating: true }, _count: true }),
+    ]);
+
+    return {
+      summary: {
+        ratingAvg: round1(Number(agg._avg.rating ?? 0)),
+        ratingCount: agg._count,
+      },
+      data: rows.map((r) => ({
+        ...toPublicDto(r),
+        vehicleId: r.vehicle.id,
+        vehicleName: r.vehicle.name,
+      })),
       meta: paginationMeta(paging, total),
     };
   }

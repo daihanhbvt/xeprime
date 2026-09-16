@@ -11,7 +11,12 @@
 import {
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
+  BILLING_MODE,
   BRANCH_STATUS,
+  COMMISSION_TRACK_TERM_MONTHS,
+  addCalendarMonthsVn,
+  WALLET_OWNER_TYPE,
+  WALLET_STATUS,
   COLLATERAL_ASSET_TYPE,
   COLLATERAL_MODE,
   DOCUMENT_STATUS,
@@ -27,6 +32,7 @@ import {
 } from '@xeprime/types';
 import { upsertPasswordUser, type CustomerAccounts, type PlatformAccounts } from './accounts';
 import { VEHICLE_MODEL_BY_KEY } from './catalog';
+import { Prisma } from '../index';
 import { DEMO_PASSWORD, daysFromToday, log, prisma, seedId } from './context';
 import { syncListing } from './listing';
 import {
@@ -61,6 +67,15 @@ export interface ShopBuildResult {
   reviews: number;
 }
 
+/**
+ * Kỳ hạn của dòng thuê bao GÓI trong dữ liệu demo — kỳ NGẮN NHẤT đang được bán (ADR 0029).
+ *
+ * Dùng kỳ nhỏ nhất thay vì 12 tháng để màn 'Gói của tôi' của gian hàng demo có một ngày hết hạn
+ * gần, nhìn thấy được trên màn hình. Nó vẫn ở tương lai xa hơn mọi mốc demo khác nên không tự
+ * rơi vào ân hạn giữa hai lần seed.
+ */
+const PACKAGE_DEMO_TERM_MONTHS = 3;
+
 /** Tài xế mẫu — đủ ba loại hình, kèm một người đã nghỉ để thử lọc "chỉ tài xế đang làm". */
 const DRIVER_POOL = [
   { name: 'Nguyễn Văn Dũng', phone: '0921000001', type: DRIVER_TYPE.STAFF, licence: 'B2' },
@@ -70,7 +85,9 @@ const DRIVER_POOL = [
 ] as const;
 
 export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<ShopBuildResult> {
+  /** ADR 0036: hai trục độc lập — vận hành (`status`) và xác minh (`verificationPending`). */
   const isActive = spec.status === TENANT_STATUS.ACTIVE;
+  const isVerified = !spec.verificationPending;
 
   // ── Tài khoản chủ và nhân viên ──────────────────────────────────────────
   const ownerUserId = await upsertPasswordUser({
@@ -79,6 +96,7 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
     displayName: spec.owner.displayName,
     phone: spec.owner.phone,
     phoneVerified: true,
+    ...(spec.owner.avatarUrl ? { avatarUrl: spec.owner.avatarUrl } : {}),
   });
 
   // ── Gian hàng ───────────────────────────────────────────────────────────
@@ -145,6 +163,7 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
     displayName: spec.name,
     bio: spec.profile.bio,
     address: spec.profile.address,
+    coverUrl: spec.profile.coverUrl ?? null,
     // Hai cột tỉnh trên hồ sơ là BẢN SAO tương thích ngược của chi nhánh mặc định — nguồn vị
     // trí thật là `tenant_branches`.
     provinceCode: defaultBranch.provinceCode,
@@ -213,6 +232,7 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
 
   await buildOnboarding(spec, tenantId, ownerUserId, deps.platform);
   await buildSubscription(spec, tenantId, deps);
+  await buildWallet(spec, tenantId);
   await buildRentalPolicies(spec, tenantId);
 
   // ── Tài xế ──────────────────────────────────────────────────────────────
@@ -311,7 +331,8 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
     `  ${spec.name}: ${result.vehicles} xe · ${spec.branches.length} chi nhánh · ` +
       `${result.listings} tin đăng · ${result.bookings} đơn · ${result.customers} khách · ` +
       `${result.receipts} phiếu · ${result.reviews} đánh giá` +
-      (isActive ? '' : ' · CHƯA DUYỆT'),
+      (isActive ? '' : ' · BỊ KHOÁ') +
+      (isVerified ? '' : ' · CHƯA XÁC MINH'),
   );
   if (result.vehicles !== fleetSize(spec)) {
     throw new Error(`Đội xe lệch bản khai: ${result.vehicles} ≠ ${fleetSize(spec)}`);
@@ -337,7 +358,12 @@ async function buildOnboarding(
   ownerUserId: string,
   platform: PlatformAccounts,
 ): Promise<void> {
-  const approved = spec.status === TENANT_STATUS.ACTIVE;
+  /*
+   * ADR 0036: "đã duyệt hồ sơ" KHÔNG còn suy ra được từ `tenants.status` — cột đó nay chỉ nói
+   * gian hàng còn hoạt động hay không. Trục xác minh đọc từ chính phiếu duyệt, nên spec khai
+   * tường minh bằng `verificationPending`.
+   */
+  const approved = !spec.verificationPending;
   const submittedAt = daysFromToday(-120, 2);
   const reviewedAt = daysFromToday(-118, 6);
 
@@ -466,54 +492,138 @@ async function buildVehicleApprovals(
 // Thuê bao gói dịch vụ
 // ---------------------------------------------------------------------------
 
+/**
+ * Dòng thuê bao hiệu lực của gian hàng demo — MỘT dòng, hội tụ về bản khai ở mọi lần chạy.
+ *
+ * ## `update` KHÔNG rỗng, có lý do
+ *
+ * Bản trước dùng `update: {}`, nên seed chạy lại trên một DB đã có dữ liệu **không** sửa dòng
+ * cũ. Khi ADR 0029 đổi `planCode` của gian hàng demo từ `standard` sang `per-vehicle`, mọi máy
+ * dev đã seed trước đó giữ nguyên gói cũ — và đó chính là lý do bậc `standard` vẫn còn thuê bao
+ * trỏ tới sau khi nó đã bị archive. Seed là NGUỒN của dữ liệu demo; một seed không hội tụ là
+ * một seed nói dối về trạng thái nó tạo ra.
+ *
+ * ## Hai tuyến, hai kỳ hạn
+ *
+ * Tuyến gói: kỳ theo `spec.planSlots` (bán tối thiểu 3 tháng — ADR 0029 điều 3), tiền = chỗ ×
+ * đơn giá × tháng.
+ *
+ * Tuyến hoa hồng: `COMMISSION_TRACK_TERM_MONTHS` (12 tháng), 0đ, KHÔNG có `slots_json`. Kỳ 12
+ * tháng không phải chi tiết thẩm mỹ: tuyến hoa hồng không có ngày hết hạn trong sản phẩm, và
+ * dòng 12 tháng là cách kỹ thuật để điều đó đúng — job vòng đời nối dòng mới từ `ends_at` chứ
+ * không từ `now` (ADR 0038 điều 1). Bản trước đặt kỳ 1 tháng và `ends_at` sau 15 ngày, nên một
+ * tài khoản demo tuyến hoa hồng tự rơi vào pha `lapsed` nửa tháng sau khi seed.
+ *
+ * `endsAt` cộng THÁNG LỊCH (ADR 0011), không nhân 30 ngày.
+ */
 async function buildSubscription(
   spec: ShopSpec,
   tenantId: string,
   deps: ShopBuildDeps,
 ): Promise<void> {
-  if (!spec.planCode) return;
+  if (!spec.planCode) {
+    /*
+     * Bản khai nói "không gói" ⇒ database cũng phải nói vậy. Bỏ qua sớm mà không dọn sẽ để lại mọi
+     * dòng thuê bao lạc của lần seed trước — và một gian hàng lẽ ra ở pha `unconfigured` lại mang
+     * một tuyến từ đời trước.
+     */
+    await prisma.tenantSubscription.deleteMany({ where: { tenantId } });
+    return;
+  }
   const plan = deps.planIds.get(spec.planCode);
-  if (!plan) return;
+  if (!plan) {
+    throw new Error(
+      `Bản khai gian hàng "${spec.slug}" trỏ tới gói "${spec.planCode}" không có trong danh mục seed. ` +
+        'Sửa `planCode` trong shops.ts hoặc thêm bậc gói đó vào PLANS.',
+    );
+  }
 
-  /*
-   * ADR 0029 — gói giá phẳng theo chỗ: kỳ bán tối thiểu 3 THÁNG, số chỗ theo đội xe của từng
-   * gian hàng demo (spec.planSlots), tiền = chỗ × đơn giá × tháng. Gói tuyến hoa hồng (không
-   * planSlots) giữ nguyên đường cũ: 0đ, chỗ theo gói.
-   */
-  const slots = spec.planSlots ?? plan.slots;
-  const termMonths = spec.planSlots ? 3 : 1;
-  const price = spec.planSlots
-    ? (plan.basePriceMonthly +
-        slots.car * plan.perVehiclePrice.car +
-        slots.motorbike * plan.perVehiclePrice.motorbike) *
-      termMonths
-    : plan.price;
+  const isPackage = plan.billingMode === BILLING_MODE.PACKAGE;
+  const slots = isPackage ? (spec.planSlots ?? plan.slots) : null;
+  const termMonths = isPackage ? PACKAGE_DEMO_TERM_MONTHS : COMMISSION_TRACK_TERM_MONTHS;
+  const price =
+    isPackage && slots
+      ? (plan.basePriceMonthly +
+          slots.car * plan.perVehiclePrice.car +
+          slots.motorbike * plan.perVehiclePrice.motorbike) *
+        termMonths
+      : 0;
+
+  const startsAt = daysFromToday(-15, 0);
+  const fields = {
+    tenantId,
+    planId: plan.id,
+    status: SUBSCRIPTION_STATUS.ACTIVE,
+    // `price` là tiền CẢ KỲ — cùng ngữ nghĩa với `BillingService.assign` (pricing.total).
+    price,
+    termMonths,
+    // Snapshot chế độ thu phí từ gói (ADR 0015/0024) — cùng hình dạng dòng mà
+    // BillingService.assign ghi, để dữ liệu demo không khác dữ liệu thật.
+    // `JsonNull` chứ không phải `null`: cột jsonb nullable, và dòng tuyến hoa hồng phải GHI ĐÈ
+    // về NULL khi seed hội tụ một gian hàng từ tuyến gói về hoa hồng — bỏ khoá đi thì số chỗ cũ
+    // ở lại và trở thành hạn mức của một tenant không còn mua chỗ nào.
+    slotsJson: slots ?? Prisma.DbNull,
+    billingMode: plan.billingMode,
+    commissionPercent: plan.commissionPercent,
+    startsAt,
+    endsAt: addCalendarMonthsVn(startsAt, termMonths),
+    note: 'Gói đang hiệu lực (seed demo).',
+    createdBy: deps.platform.adminUserId,
+  };
 
   const id = seedId(`${spec.key}:subscription`);
   await prisma.tenantSubscription.upsert({
     where: { id },
-    update: {},
-    create: {
-      id,
-      tenantId,
-      planId: plan.id,
-      status: SUBSCRIPTION_STATUS.ACTIVE,
-      // `price` là tiền CẢ KỲ — cùng ngữ nghĩa với `BillingService.assign` (pricing.total).
-      price,
-      // Snapshot chế độ thu phí từ gói (ADR 0015/0024) — cùng hình dạng dòng mà
-      // BillingService.assign ghi, để dữ liệu demo không khác dữ liệu thật.
-      termMonths,
-      slotsJson: slots,
-      billingMode: plan.billingMode,
-      commissionPercent: plan.commissionPercent,
-      startsAt: daysFromToday(-15, 0),
-      endsAt: daysFromToday(15 + (termMonths - 1) * 30, 0),
-      note: 'Gói đang hiệu lực (seed demo).',
-      createdBy: deps.platform.adminUserId,
+    update: fields,
+    create: { id, ...fields },
+  });
+
+  /*
+   * Dọn dòng thuê bao LẠC: gian hàng demo chỉ được có đúng dòng ở trên.
+   *
+   * Nguồn của chúng là đời trước của chính seed này (`update: {}` để lại dòng cũ) và những lần
+   * bấm thử "mua gói"/"gán gói" trên máy dev. Nhiều dòng `active` cùng lúc phá đúng bất biến mà
+   * `findCurrent`/`resolveEffectiveBilling` dựa vào ("MỘT dòng hiệu lực tại một thời điểm"), và
+   * triệu chứng là tuyến của một tài khoản QA đổi theo dòng nào có `ends_at` lớn hơn.
+   *
+   * `deleteMany` chứ không lật `cancelled`: đây là dữ liệu demo do seed sở hữu, không phải lịch
+   * sử của một khách hàng thật. Hoá đơn gói KHÔNG trỏ FK sang `tenant_subscriptions` (ADR 0022
+   * điều 6 cấm nối FK đó), nên không có gì mồ côi.
+   */
+  await prisma.tenantSubscription.deleteMany({ where: { tenantId, id: { not: id } } });
+}
+
+// ---------------------------------------------------------------------------
+// Ví điểm của gian hàng
+// ---------------------------------------------------------------------------
+
+/**
+ * MỘT ví cho một người, và với chủ xe thì ví thuộc TENANT (ADR 0038 điều 2).
+ *
+ * Seed dựng sẵn vỏ ví với số dư 0 và KHÔNG một bút toán nào — đúng thứ mà
+ * `WalletService.ensureWalletWithinTx` sẽ tạo ở đồng tiền đầu tiên. Lý do dựng sẵn thay vì đợi:
+ * màn "Ví điểm" và "Tài khoản nhận tiền" của chủ xe phải mở được ngay trên tài khoản QA, và câu
+ * hỏi kiểm chứng là "người này có ĐÚNG MỘT ví, thuộc tenant" — một bảng rỗng không trả lời được
+ * câu đó.
+ *
+ * KHÔNG cộng điểm khuyến mãi: `wallets.balance` là sổ CÔNG NỢ PHẢI TRẢ (ADR 0033 điều 1), và
+ * một số dư seed không có bút toán đối ứng là tiền từ hư không trong một sổ phải đối soát được.
+ */
+async function buildWallet(spec: ShopSpec, tenantId: string): Promise<void> {
+  const existing = await prisma.wallet.findUnique({
+    where: { ownerTenantId: tenantId },
+    select: { id: true },
+  });
+  if (existing) return;
+  await prisma.wallet.create({
+    data: {
+      id: seedId(`${spec.key}:wallet`),
+      ownerType: WALLET_OWNER_TYPE.TENANT,
+      ownerTenantId: tenantId,
+      status: WALLET_STATUS.ACTIVE,
     },
   });
 }
-
 // ---------------------------------------------------------------------------
 // Chính sách thuê
 // ---------------------------------------------------------------------------

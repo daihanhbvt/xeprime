@@ -7,9 +7,13 @@ import {
   LISTING_STATUS,
   REVIEW_STATUS,
   VEHICLE_PUBLIC_STATUS,
+  resolveEffectiveBilling,
   type ListingStatus,
 } from '@xeprime/types';
-import { currentSubscriptionWhere } from '../../common/plan/feature-state';
+import {
+  EFFECTIVE_SUBSCRIPTION_ARGS,
+  effectiveSubscriptionWhere,
+} from '../../common/plan/feature-state';
 import { PrismaService } from '../../prisma/prisma.service';
 
 /**
@@ -266,18 +270,28 @@ async function resolveBilling(
   tx: Prisma.TransactionClient,
   tenantId: string,
 ): Promise<{ billingMode: string; serviceFeePercent: Prisma.Decimal | null }> {
+  const now = new Date();
   const [sub, policy] = await Promise.all([
     tx.tenantSubscription.findFirst({
-      where: { tenantId, ...currentSubscriptionWhere(new Date()) },
-      orderBy: { endsAt: 'desc' },
-      select: { billingMode: true },
+      where: { tenantId, ...effectiveSubscriptionWhere(now) },
+      ...EFFECTIVE_SUBSCRIPTION_ARGS,
     }),
     tx.feePolicy.findFirst({
       where: { status: FEE_POLICY_STATUS.ACTIVE },
       select: { serviceFeePercent: true },
     }),
   ]);
-  const billingMode = sub?.billingMode ?? BILLING_MODE.PACKAGE;
+  /*
+   * Cùng phép chấm pha với `BillingService.effectiveBillingFor` — nếu card chợ nói một tuyến
+   * còn báo giá tính theo tuyến kia thì khách thấy "chưa gồm phí dịch vụ 10%" trên một đơn
+   * không hề bị thu phí, hoặc tệ hơn là ngược lại.
+   *
+   * `unconfigured` giữ giá trị mặc định của cột (`package`): đây là snapshot HIỂN THỊ, và hiện
+   * một dòng phí cho một tenant chưa xác định được tuyến là hứa với khách một con số mà đường
+   * ghi tiền đang từ chối tạo đơn.
+   */
+  const billing = resolveEffectiveBilling(sub, now);
+  const billingMode = billing.billingMode ?? BILLING_MODE.PACKAGE;
   return {
     billingMode,
     serviceFeePercent:

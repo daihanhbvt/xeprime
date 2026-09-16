@@ -241,7 +241,7 @@ export function BranchesView() {
           showIcon
           className={styles.alert}
           icon={<EnvironmentOutlined />}
-          message={t('page.needsReview', { count: needsReview })}
+          title={t('page.needsReview', { count: needsReview })}
           description={t('page.needsReviewHint')}
         />
       ) : null}

@@ -202,25 +202,37 @@ function RequestBar({
       borderColor={colors.borderSubtle}
       style={elevation.raised}
     >
-      <Button
-        label={t('cta')}
-        icon="car-sport-outline"
-        size="lg"
-        onPress={() =>
-          navigateOnce(
-            ROUTES.booking.request(vehicleId, {
-              ...(serviceType ? { serviceType } : {}),
-              ...(provinceCode ? { provinceCode } : {}),
-            }),
-          )
-        }
-      />
       {/*
-        "Nhắn shop" đứng NGAY DƯỚI nút đặt xe, đúng cặp mà web bày cạnh nhau ở cột phải. Hỏi
-        trước khi đặt (giao xe ở đâu, có xe khác không) là việc rất hay xảy ra, và bắt khách quay
-        ra tab Tin nhắn rồi tự tìm gian hàng là đánh mất chính chiếc xe họ đang xem.
+        "Nhắn shop" nằm CẠNH nút đặt xe, đúng cặp mà web bày cạnh nhau ở cột phải. Hỏi trước khi
+        đặt (giao xe ở đâu, có xe khác không) là việc rất hay xảy ra, và bắt khách quay ra tab Tin
+        nhắn rồi tự tìm gian hàng là đánh mất chính chiếc xe họ đang xem.
+
+        Cỡ `md` chứ KHÔNG `lg`: `lg` dành cho hành động chính ĐƠN ĐỘC chiếm trọn bề ngang.
+        Thành một hàng hai nút thì mỗi nút chỉ còn ~160dp, mà riêng đệm ngang đã ăn 48dp —
+        ở `lg` (chữ 16px) nhãn tiếng Anh "Select this car" không còn chỗ.
+
+        Hai nút chia ĐỀU và phân biệt nhau bằng MÀU (vàng đặc so với viền), không bằng bề
+        ngang: đây là hai lối rẽ song song, không phải một hành động chính kèm một lối thoát.
       */}
-      <ChatWithShopButton vehicleId={vehicleId} />
+      <XStack gap={space.sm}>
+        <YStack f={1}>
+          <ChatWithShopButton vehicleId={vehicleId} />
+        </YStack>
+        <YStack f={1}>
+          <Button
+            label={t('cta')}
+            icon="car-sport-outline"
+            onPress={() =>
+              navigateOnce(
+                ROUTES.booking.request(vehicleId, {
+                  ...(serviceType ? { serviceType } : {}),
+                  ...(provinceCode ? { provinceCode } : {}),
+                }),
+              )
+            }
+          />
+        </YStack>
+      </XStack>
     </YStack>
   );
 }

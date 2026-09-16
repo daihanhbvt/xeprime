@@ -43,12 +43,14 @@ import customers from '@xeprime/domain/messages/vi/customers.json';
 import finance from '@xeprime/domain/messages/vi/finance.json';
 import adminCatalog from '@xeprime/domain/messages/vi/admin-catalog.json';
 import adminPlans from '@xeprime/domain/messages/vi/admin-plans.json';
+import approvals from '@xeprime/domain/messages/vi/approvals.json';
 import bankTransactions from '@xeprime/domain/messages/vi/bank-transactions.json';
 import subscription from '@xeprime/domain/messages/vi/subscription.json';
 import members from '@xeprime/domain/messages/vi/members.json';
 import drivers from '@xeprime/domain/messages/vi/drivers.json';
 import maintenance from '@xeprime/domain/messages/vi/maintenance.json';
 import bankAccounts from '@xeprime/domain/messages/vi/bank-accounts.json';
+import accountPayments from '@xeprime/domain/messages/vi/account-payments.json';
 import wallet from '@xeprime/domain/messages/vi/wallet.json';
 import sellerProfile from '@xeprime/domain/messages/vi/seller-profile.json';
 import supportCases from '@xeprime/domain/messages/vi/support-cases.json';
@@ -88,12 +90,14 @@ const messages = {
   Finance: finance,
   AdminCatalog: adminCatalog,
   AdminPlans: adminPlans,
+  Approvals: approvals,
   BankTransactions: bankTransactions,
   Subscription: subscription,
   Members: members,
   Drivers: drivers,
   Maintenance: maintenance,
   BankAccounts: bankAccounts,
+  AccountPayments: accountPayments,
   Wallet: wallet,
   SellerProfile: sellerProfile,
   SupportCases: supportCases,

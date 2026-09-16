@@ -334,7 +334,7 @@ function PriceDialogInner({
             type="info"
             showIcon
             className={styles.note}
-            message={t('bulkPrice.percentBaseNote')}
+            title={t('bulkPrice.percentBaseNote')}
           />
         ) : null}
 
@@ -343,7 +343,7 @@ function PriceDialogInner({
             type="warning"
             showIcon
             className={styles.note}
-            message={t('bulkPrice.spreadWarningTitle', { ratio: spread.toFixed(1) })}
+            title={t('bulkPrice.spreadWarningTitle', { ratio: spread.toFixed(1) })}
             description={t('bulkPrice.spreadWarningBody')}
           />
         ) : null}
@@ -353,14 +353,14 @@ function PriceDialogInner({
             type="warning"
             showIcon
             className={styles.note}
-            message={t('bulkPrice.missingBaseWarning', { count: withoutBase })}
+            title={t('bulkPrice.missingBaseWarning', { count: withoutBase })}
           />
         ) : null}
 
         {preview.isLoading ? (
           <Skeleton active paragraph={{ rows: 4 }} />
         ) : preview.isError ? (
-          <Alert type="error" showIcon message={getErrorMessage(preview.error)} />
+          <Alert type="error" showIcon title={getErrorMessage(preview.error)} />
         ) : (
           <Table
             size="small"

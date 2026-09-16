@@ -1,10 +1,12 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { ChatSide } from '@xeprime/types';
+import type { ChatInbox } from '@xeprime/types';
 import { CurrentUser } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import {
-  ChatSideQueryDto,
+  ChatEligibilityDto,
+  ChatEligibilityQueryDto,
+  ChatInboxQueryDto,
   ChatUnreadCountDto,
   ChatUnreadSummaryDto,
   ConversationListQueryDto,
@@ -23,9 +25,15 @@ import { ChatService } from './chat.service';
  * Hội thoại chat — PER-USER theo participant (không tenant-scoped): phục vụ cả shop lẫn khách,
  * quyền do ChatService kiểm (customer sở hữu / thành viên active của tenant). `userId` từ session.
  *
- * `side` là tham số BẮT BUỘC của mọi bề mặt đọc. Một tài khoản có thể vừa thuê xe của gian hàng
- * khác vừa là nhân viên gian hàng mình; hai vai đó là hai hộp thư, và tham số bắt buộc là cách
- * để không có đường nào ở server sinh ra một danh sách trộn cả hai.
+ * `side` là tham số BẮT BUỘC của mọi bề mặt đọc, và nhận ba giá trị (`CHAT_INBOX`). Một tài
+ * khoản có thể vừa thuê xe của gian hàng khác vừa là nhân viên gian hàng mình; hai vai đó là hai
+ * phạm vi, và tham số bắt buộc là cách để server không phải TỰ ĐOÁN phạm vi của một truy vấn về
+ * dữ liệu riêng tư.
+ *
+ * `unified` (16/09/2026) là HỢP của đúng hai phạm vi người gọi đã có — không mở thêm hội thoại
+ * nào, và quyền đọc từng hội thoại vẫn do `resolveAccess` quyết. Nó tồn tại cho chủ xe tuyến hoa
+ * hồng: họ không có cổng `/manage` để đặt hộp thư công việc, nên với họ "tin nhắn" là MỘT khái
+ * niệm (ADR 0038 điều 9).
  */
 @ApiTags('conversations')
 @Controller('conversations')
@@ -52,14 +60,28 @@ export class ConversationsController {
     return this.chat.getOrCreateConversation(user.id, dto);
   }
 
+  /**
+   * ĐỨNG TRƯỚC `@Get(':id')` — Nest khớp route theo thứ tự khai báo, nên đặt sau thì
+   * `eligibility` bị nuốt thành một id hội thoại.
+   */
+  @Get('eligibility')
+  @ApiOperation({ summary: 'Khách có nhắn được cho gian hàng này không (để ẩn/hiện nút)' })
+  @ApiOkResponse({ type: ChatEligibilityDto })
+  async eligibility(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ChatEligibilityQueryDto,
+  ): Promise<ChatEligibilityDto> {
+    return { canChat: await this.chat.chatEligibilityForShop(user.id, query.shopSlug) };
+  }
+
   @Get('unread-count')
   @ApiOperation({ summary: 'Tổng tin chưa đọc của một bề mặt (cho badge icon chat)' })
   @ApiOkResponse({ type: ChatUnreadCountDto })
   unreadCount(
     @CurrentUser() user: AuthenticatedUser,
-    @Query() query: ChatSideQueryDto,
+    @Query() query: ChatInboxQueryDto,
   ): Promise<ChatUnreadCountDto> {
-    return this.chat.unreadCount(user.id, query.side as ChatSide);
+    return this.chat.unreadCount(user.id, query.side as ChatInbox);
   }
 
   /**
@@ -79,9 +101,9 @@ export class ConversationsController {
   detail(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Query() query: ChatSideQueryDto,
+    @Query() query: ChatInboxQueryDto,
   ): Promise<ConversationSummaryDto> {
-    return this.chat.getConversation(user.id, id, query.side as ChatSide);
+    return this.chat.getConversation(user.id, id, query.side as ChatInbox);
   }
 
   @Get(':id/messages')

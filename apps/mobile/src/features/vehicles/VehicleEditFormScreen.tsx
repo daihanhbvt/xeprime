@@ -291,6 +291,7 @@ function EditForm({
         footer={
           <Button
             label={tActions('saveChanges')}
+            icon="save-outline"
             loading={update.isPending}
             disabled={!isDirty}
             onPress={() => void save()}
@@ -334,7 +335,12 @@ function EditForm({
               <Card>
                 <YStack gap={space.sm}>
                   <BlockTitle>{t('cards.specs')}</BlockTitle>
-                  <SpecsSection control={control} isCar={isCar} lockedNotice={lockedNotice} />
+                  <SpecsSection
+                    control={control}
+                    isCar={isCar}
+                    lockedNotice={lockedNotice}
+                    setValue={setValue}
+                  />
                 </YStack>
               </Card>
               <Card>
@@ -343,7 +349,7 @@ function EditForm({
                   <Text col={colors.textMuted} fos={fontSize.bodySm}>
                     {t('advanced.hint')}
                   </Text>
-                  <AdvancedSpecsSection control={control} lockedNotice={lockedNotice} />
+                  <AdvancedSpecsSection control={control} />
                 </YStack>
               </Card>
             </>

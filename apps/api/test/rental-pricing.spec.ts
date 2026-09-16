@@ -1,6 +1,8 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
+import { giveTenantPlan } from './helpers/billing-fixture';
 import {
   bookingRequestRespondBy,
+  BILLING_MODE,
   BOOKING_REQUEST_STATUS,
   MEMBERSHIP_STATUS,
   POLICY_SOURCE,
@@ -109,6 +111,7 @@ beforeAll(async () => {
       ownerUserId: ownerId,
     },
   });
+  await giveTenantPlan(prisma, tenantId, { billingMode: BILLING_MODE.PACKAGE });
   await prisma.tenantMembership.create({
     data: {
       id: newId(),

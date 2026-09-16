@@ -199,11 +199,12 @@ export function MomentPickerSheet({
       footer={
         <XStack gap={space.sm}>
           <YStack f={1}>
-            <Button label={t('now')} variant="secondary" onPress={jumpToNow} />
+            <Button label={t('now')} icon="time-outline" variant="secondary" onPress={jumpToNow} />
           </YStack>
           <YStack f={1}>
             <Button
               label={t('done')}
+              icon="checkmark-outline"
               onPress={() => {
                 onChange(draft);
                 onClose();

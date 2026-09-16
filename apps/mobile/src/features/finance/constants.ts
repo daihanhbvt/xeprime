@@ -82,5 +82,5 @@ export const RECEIPT_DESCRIPTION_MAX = 500;
 /** Trần số tệp đính kèm — khớp `ArrayMaxSize(10)` của `CreateReceiptDto`. */
 export const RECEIPT_ATTACHMENTS_MAX = 10;
 
-/** Sentinel "mọi giá trị" của giao diện — không endpoint nào nhận `status=all`. */
-export const FILTER_ALL = 'all';
+/** Giữ lối import cũ của khu Finance — nguồn nằm ở `@/constants/filters`. */
+export { FILTER_ALL } from '@/constants/filters';

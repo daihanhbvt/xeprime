@@ -1,66 +1,97 @@
 import {
-  APPROVAL_STATUS_META,
   APPROVAL_STATUS_VALUES,
   APPROVAL_TARGET_TYPE,
-  BODY_TYPE_LABEL,
-  FUEL_TYPE_LABEL,
-  VEHICLE_TYPE_LABEL,
-  serviceTypeLabel,
-  serviceTypesLabel,
-  type BodyType,
-  type FuelType,
-  type VehicleType,
+  type ApprovalTargetType,
 } from '@xeprime/types';
+import type { useTranslations } from 'next-intl';
 import type { AppFormat } from '@/i18n/use-app-format';
+import type { DomainLabel } from '@/i18n/domain';
 
-export const APPROVAL_STATUS_OPTIONS = APPROVAL_STATUS_VALUES.map((value) => ({
-  value,
-  label: APPROVAL_STATUS_META[value].label,
-}));
+/**
+ * Loại phiếu mà HÀNG ĐỢI NÀY duyệt được.
+ *
+ * `PlatformApprovalService.review()` chỉ điều phối hai nhánh `tenant` và `vehicle`; ba loại còn
+ * lại rơi vào `throw 'Loại phiếu này chưa được hỗ trợ duyệt'`. Nhưng phiếu `seller_profile` VẪN
+ * được `SellerProfileService` ghi vào cùng bảng `approval_tasks`, và hàng đợi không lọc theo
+ * `targetType` — nên trước bản này reviewer thấy một dòng nhãn thô `seller_profile`, bấm "Duyệt"
+ * và nhận 400.
+ *
+ * Danh sách này là nguồn để màn hình KHOÁ nút thay vì mời bấm rồi báo lỗi. Nơi duyệt thật của
+ * hồ sơ người bán là `/manage/admin/sellers`.
+ */
+export const REVIEWABLE_TARGET_TYPES: readonly ApprovalTargetType[] = [
+  APPROVAL_TARGET_TYPE.TENANT,
+  APPROVAL_TARGET_TYPE.VEHICLE,
+];
 
-const TARGET_LABELS: Record<string, string> = {
-  [APPROVAL_TARGET_TYPE.TENANT]: 'Gian hàng',
-  [APPROVAL_TARGET_TYPE.VEHICLE]: 'Xe',
-  [APPROVAL_TARGET_TYPE.TENANT_DOCUMENT]: 'Giấy tờ gian hàng',
-  [APPROVAL_TARGET_TYPE.VEHICLE_DOCUMENT]: 'Giấy tờ xe',
-};
+export function isReviewableTargetType(value: string): boolean {
+  return (REVIEWABLE_TARGET_TYPES as readonly string[]).includes(value);
+}
 
-export const targetTypeLabel = (value: string): string => TARGET_LABELS[value] ?? value;
+/**
+ * Khoá nhãn trong nhóm `Approvals.snapshot.fields` — union ĐÓNG lấy thẳng từ bó message, nên gõ
+ * sai là lỗi biên dịch chứ không phải một ô trống trên màn duyệt của production.
+ */
+export type SnapshotLabelKey = Parameters<
+  ReturnType<typeof useTranslations<'Approvals.snapshot.fields'>>
+>[0];
 
 export interface SnapshotField {
   key: string;
-  label: string;
+  /** Khoá nhãn dưới nhóm message ở trên. */
+  labelKey: SnapshotLabelKey;
   /**
    * Định dạng giá trị hiển thị (mã enum → nhãn, tiền → VND). Mặc định `String(value)`.
-   * Nhận `fmt` qua tham số vì bảng này ở module scope — nó không gọi hook được, và
-   * tiền/ngày thì phụ thuộc ngôn ngữ của request.
+   * Nhận `fmt`/`domainLabel` qua tham số vì bảng này ở module scope — nó không gọi hook được,
+   * và tiền/ngày/nhãn thì phụ thuộc ngôn ngữ của request.
    */
-  format?: (value: unknown, fmt: AppFormat) => string;
+  format?: (value: unknown, ctx: { fmt: AppFormat; domainLabel: DomainLabel }) => string;
 }
 
-/** Nhãn các trường trong snapshot hồ sơ gian hàng, theo thứ tự hiển thị. */
+/**
+ * Nhãn các trường trong snapshot hồ sơ gian hàng, theo thứ tự hiển thị.
+ *
+ * ⚠️ Bốn trường đầu là bổ sung 14/09/2026 và chúng KHÔNG phải trang trí: `ownerFullName` và
+ * `ownerPhone` nằm trong `missingShopProfileRequirements` — tức là **hai thứ bắt buộc phải có
+ * mới gửi duyệt được** — nhưng bảng cũ không khai chúng, nên reviewer đang duyệt danh tính một
+ * chủ xe mà không nhìn thấy tên và số điện thoại của người đó. Snapshot đã mang sẵn dữ liệu
+ * (`PROFILE_SELECT` ở backend chọn đủ), chỉ là màn hình không vẽ ra.
+ */
 export const SHOP_SNAPSHOT_FIELDS: readonly SnapshotField[] = [
-  { key: 'displayName', label: 'Tên hiển thị' },
-  { key: 'bio', label: 'Giới thiệu' },
-  { key: 'address', label: 'Địa chỉ' },
-  { key: 'provinceName', label: 'Tỉnh/Thành' },
-  { key: 'taxCode', label: 'Mã số thuế' },
-  { key: 'businessLicenseNo', label: 'Số giấy phép KD' },
-  { key: 'bankName', label: 'Ngân hàng' },
-  { key: 'bankAccountNo', label: 'Số tài khoản' },
-  { key: 'bankAccountName', label: 'Chủ tài khoản' },
-  { key: 'logoUrl', label: 'Logo' },
+  { key: 'ownerFullName', labelKey: 'ownerFullName' },
+  { key: 'ownerPhone', labelKey: 'ownerPhone' },
+  { key: 'ownerEmail', labelKey: 'ownerEmail' },
+  { key: 'displayName', labelKey: 'displayName' },
+  { key: 'bio', labelKey: 'bio' },
+  { key: 'address', labelKey: 'address' },
+  { key: 'wardName', labelKey: 'wardName' },
+  { key: 'provinceName', labelKey: 'provinceName' },
+  { key: 'taxCode', labelKey: 'taxCode' },
+  { key: 'businessLicenseNo', labelKey: 'businessLicenseNo' },
+  { key: 'bankName', labelKey: 'bankName' },
+  { key: 'bankAccountNo', labelKey: 'bankAccountNo' },
+  { key: 'bankAccountName', labelKey: 'bankAccountName' },
+  { key: 'logoUrl', labelKey: 'logoUrl' },
 ];
 
-/** Nhãn + định dạng các trường snapshot xe (không gồm `mainImageUrl` — hiển thị dạng ảnh riêng). */
+/**
+ * Nhãn + định dạng các trường snapshot xe.
+ *
+ * Không gồm `mainImageUrl` và `images` — chúng hiển thị dạng THƯ VIỆN ẢNH riêng. Cổng gửi duyệt
+ * bắt buộc ≥4 ảnh, nên duyệt bằng một tấm là duyệt thứ mình không thấy.
+ */
 export const VEHICLE_SNAPSHOT_FIELDS: readonly SnapshotField[] = [
-  { key: 'name', label: 'Tên xe' },
-  { key: 'code', label: 'Mã xe' },
-  { key: 'plateNumber', label: 'Biển số' },
+  { key: 'name', labelKey: 'vehicleName' },
+  { key: 'code', labelKey: 'vehicleCode' },
+  { key: 'plateNumber', labelKey: 'plateNumber' },
+  // Xe nằm ở đâu là điều kiện để nó lên chợ (`BRANCH_LOCATION_REQUIRED`) — và cũng là thứ
+  // reviewer cần để đối chiếu với hồ sơ gian hàng.
+  { key: 'branchName', labelKey: 'branchName' },
+  { key: 'provinceName', labelKey: 'provinceName' },
   {
     key: 'vehicleType',
-    label: 'Loại xe',
-    format: (v) => VEHICLE_TYPE_LABEL[v as VehicleType] ?? String(v),
+    labelKey: 'vehicleType',
+    format: (v, { domainLabel }) => domainLabel('vehicleType', String(v), String(v)),
   },
   /*
    * Snapshot là jsonb ĐÓNG BĂNG, không migrate: phiếu cũ mang key `serviceType` (string, có thể
@@ -69,40 +100,54 @@ export const VEHICLE_SNAPSHOT_FIELDS: readonly SnapshotField[] = [
    */
   {
     key: 'serviceType',
-    label: 'Dịch vụ',
-    format: (v) => serviceTypeLabel(String(v)),
+    labelKey: 'serviceType',
+    format: (v, { domainLabel }) => domainLabel('serviceType', String(v), String(v)),
   },
   {
     key: 'serviceTypes',
-    label: 'Dịch vụ',
-    format: (v) =>
-      Array.isArray(v) ? serviceTypesLabel(v as string[]) : serviceTypeLabel(String(v)),
+    labelKey: 'serviceType',
+    format: (v, { domainLabel }) =>
+      (Array.isArray(v) ? (v as string[]) : [String(v)])
+        .map((code) => domainLabel('serviceType', code, code))
+        .join(', '),
   },
-  { key: 'brand', label: 'Hãng' },
-  { key: 'model', label: 'Dòng xe' },
-  { key: 'manufactureYear', label: 'Đời xe' },
-  { key: 'seatCount', label: 'Số chỗ' },
+  { key: 'brand', labelKey: 'brand' },
+  { key: 'model', labelKey: 'model' },
+  { key: 'manufactureYear', labelKey: 'manufactureYear' },
+  { key: 'seatCount', labelKey: 'seatCount' },
   {
     key: 'fuelType',
-    label: 'Nguồn năng lượng',
-    format: (v) => FUEL_TYPE_LABEL[v as FuelType] ?? String(v),
+    labelKey: 'fuelType',
+    format: (v, { domainLabel }) => domainLabel('fuelType', String(v), String(v)),
   },
   {
     key: 'bodyType',
-    label: 'Kiểu dáng',
-    format: (v) => BODY_TYPE_LABEL[v as BodyType] ?? String(v),
+    labelKey: 'bodyType',
+    format: (v, { domainLabel }) => domainLabel('bodyType', String(v), String(v)),
   },
-  { key: 'color', label: 'Màu sắc' },
-  { key: 'weekdayPrice', label: 'Giá ngày thường', format: (v, fmt) => fmt.money(String(v)) },
-  { key: 'weekendPrice', label: 'Giá cuối tuần', format: (v, fmt) => fmt.money(String(v)) },
-  { key: 'hourlyPrice', label: 'Giá thuê giờ', format: (v, fmt) => fmt.money(String(v)) },
-  { key: 'monthlyPrice', label: 'Giá tháng (dài hạn)', format: (v, fmt) => fmt.money(String(v)) },
+  { key: 'color', labelKey: 'color' },
+  { key: 'weekdayPrice', labelKey: 'weekdayPrice', format: (v, { fmt }) => fmt.money(String(v)) },
+  { key: 'weekendPrice', labelKey: 'weekendPrice', format: (v, { fmt }) => fmt.money(String(v)) },
+  { key: 'hourlyPrice', labelKey: 'hourlyPrice', format: (v, { fmt }) => fmt.money(String(v)) },
+  { key: 'monthlyPrice', labelKey: 'monthlyPrice', format: (v, { fmt }) => fmt.money(String(v)) },
   {
     key: 'withDriverDailyPrice',
-    label: 'Giá/ngày có tài xế',
-    format: (v, fmt) => fmt.money(String(v)),
+    labelKey: 'withDriverDailyPrice',
+    format: (v, { fmt }) => fmt.money(String(v)),
   },
-  { key: 'discountPercent', label: 'Giảm giá', format: (v) => `${String(v)}%` },
-  { key: 'deliveryEnabled', label: 'Giao xe tận nơi', format: (v) => (v ? 'Có' : 'Không') },
-  { key: 'description', label: 'Mô tả' },
+  { key: 'discountPercent', labelKey: 'discountPercent', format: (v) => `${String(v)}%` },
+  { key: 'description', labelKey: 'description' },
 ];
+
+/** Ảnh trong snapshot xe — gộp `mainImageUrl` với thư viện và khử trùng. */
+export function snapshotImages(snapshot: Record<string, unknown>): string[] {
+  const gallery = Array.isArray(snapshot.images) ? (snapshot.images as unknown[]) : [];
+  const main = typeof snapshot.mainImageUrl === 'string' ? snapshot.mainImageUrl : null;
+  return [
+    ...new Set(
+      [main, ...gallery].filter((url): url is string => typeof url === 'string' && url !== ''),
+    ),
+  ];
+}
+
+export const APPROVAL_STATUS_FILTER_VALUES = APPROVAL_STATUS_VALUES;

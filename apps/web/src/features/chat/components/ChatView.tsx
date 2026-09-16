@@ -1,7 +1,9 @@
 'use client';
 
 import { Spin } from 'antd';
-import { CHAT_SIDE, type ChatSide } from '@xeprime/types';
+import { CHAT_INBOX, CHAT_SIDE, type ChatSide } from '@xeprime/types';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import { resolveChatInbox } from '../chat-inbox';
 import { useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -24,10 +26,17 @@ const VEHICLE_PARAM = 'v';
 /**
  * Màn chat hai cột (danh sách + thread), một cột trên màn hẹp.
  *
- * `side` là PROP BẮT BUỘC, không phải suy từ đường dẫn: `/chat` là hộp thư khách, `/manage/chat`
- * là inbox gian hàng, và một tài khoản vừa thuê xe vừa làm chủ shop có cả hai. Bản trước dựng
- * cùng một danh sách cho hai route nên chủ shop mở khu quản lý thấy lẫn cả hội thoại riêng của
- * mình — giờ chính server trả hai tập khác nhau, và `side` là thứ nói cho nó biết tập nào.
+ * `side` là BỀ MẶT — route nào đang dựng màn này — và nó là PROP BẮT BUỘC, không suy từ đường
+ * dẫn. Nó quyết định BỐ CỤC: khu khách nằm trong một trang cuộn được, khu quản lý nằm trong một
+ * vỏ đã khoá `100dvh`.
+ *
+ * DỮ LIỆU thì do `resolveChatInbox` quyết, và hai thứ đó KHÔNG phải một (16/09/2026). Chủ xe
+ * tuyến hoa hồng đứng ở bề mặt khách nhưng đọc hộp thư HỢP NHẤT: họ không có `/manage/chat` để
+ * đặt hộp thư công việc, nên với họ "tin nhắn" là một khái niệm chứ không phải hai.
+ *
+ * Bản trước dựng cùng một danh sách cho hai route nên chủ shop mở khu quản lý thấy lẫn cả hội
+ * thoại riêng của mình. Ranh giới đó vẫn còn: bề mặt `shop` không bao giờ hợp nhất, vì
+ * `/manage/chat` là bàn làm việc chung của cả gian hàng.
  */
 export function ChatView({
   side,
@@ -40,6 +49,14 @@ export function ChatView({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  const { data: user } = useCurrentUser();
+  /*
+   * Chưa biết mình là ai ⇒ `resolveChatInbox` trả hộp thư của bề mặt. Đó là phía AN TOÀN của
+   * phép đoán: hộp thư khách là tập con, nên lúc `/auth/me` trả về, danh sách chỉ RỘNG ra chứ
+   * không bao giờ phải thu lại một hội thoại đã hiện.
+   */
+  const inbox = resolveChatInbox(side, user);
 
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<ConversationFilterKey>('all');
@@ -55,7 +72,7 @@ export function ChatView({
   const selectedId = searchParams.get(CONVERSATION_PARAM) ?? initialConversationId ?? null;
   const pendingVehicleId = searchParams.get(VEHICLE_PARAM);
 
-  const listQuery = useConversationsInfinite(side, {
+  const listQuery = useConversationsInfinite(inbox, {
     ...(debouncedSearch.trim() ? { q: debouncedSearch.trim() } : {}),
     ...(filter === 'unread' ? { unreadOnly: true } : {}),
   });
@@ -78,7 +95,7 @@ export function ChatView({
    * danh sách đã tải xong mà vẫn không thấy id đó.
    */
   const detailQuery = useConversationById(
-    side,
+    inbox,
     selectedId,
     Boolean(selectedId) && !fromList && !listQuery.isPending,
   );
@@ -136,6 +153,7 @@ export function ChatView({
       >
         <ConversationList
           items={items}
+          showRole={inbox === CHAT_INBOX.UNIFIED}
           selectedId={selectedId}
           onSelect={(c) => setSelectedId(c.id)}
           search={search}

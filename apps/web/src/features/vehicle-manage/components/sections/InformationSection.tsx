@@ -7,7 +7,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
 
-import { EmbedMap } from '@/components/data-display/EmbedMap';
+import { StaticMap } from '@/components/data-display/StaticMap';
 import { NumberField } from '@/components/form/NumberField';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
 import { TextAreaField } from '@/components/form/TextAreaField';
@@ -27,7 +27,7 @@ import { manageInformationValuesToInput, vehicleToFormValues } from '@/features/
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
-import { mapPlaceUrl, toGeoPoint } from '@/lib/map-embed';
+import { mapPlaceUrl, toGeoPoint } from '@/lib/map-static';
 
 import { useManagedVehicle } from '../VehicleManageContext';
 import { SectionCard } from '../SectionCard';
@@ -120,7 +120,7 @@ export function InformationSection() {
           ở đầu màn để chủ xe không phải thử từng ô mới biết ô nào không bấm được.
         */}
         {isPublic ? (
-          <Alert type="info" showIcon message={t('information.lockedNotice')} />
+          <Alert type="info" showIcon title={t('information.lockedNotice')} />
         ) : null}
 
         <div className={styles.grid}>
@@ -234,7 +234,7 @@ export function InformationSection() {
 
 /**
  * Địa chỉ hiện tại của xe = chi nhánh giữ xe. Đọc từ danh sách chi nhánh (đã có toạ độ và số xe)
- * chứ không gọi endpoint riêng; bản đồ là `EmbedMap` với `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY` —
+ * chứ không gọi endpoint riêng; bản đồ là `StaticMap` với `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` —
  * thiếu key/toạ độ thì chỉ hiện chữ, không bao giờ chặn sửa.
  */
 function AddressCard({ canEdit }: { canEdit: boolean }) {
@@ -267,7 +267,7 @@ function AddressCard({ canEdit }: { canEdit: boolean }) {
       }
     >
       {!vehicle.branch ? (
-        <Alert type="warning" showIcon message={t('addressMissing')} />
+        <Alert type="warning" showIcon title={t('addressMissing')} />
       ) : (
         <>
           <p className={styles.address}>
@@ -275,7 +275,7 @@ function AddressCard({ canEdit }: { canEdit: boolean }) {
           </p>
           {branch?.name ? <p className={styles.branchName}>{branch.name}</p> : null}
           {mapUrl ? (
-            <EmbedMap src={mapUrl} title={t('addressMapTitle')} height={220} />
+            <StaticMap src={mapUrl} title={t('addressMapTitle')} height={220} />
           ) : branch?.address ? (
             <p className={styles.mapHint}>{t('addressMapPending')}</p>
           ) : null}
@@ -291,11 +291,11 @@ function AddressCard({ canEdit }: { canEdit: boolean }) {
               <Alert
                 type="warning"
                 showIcon
-                message={t('addressSharedTitle', { count: branch.vehicleCount })}
+                title={t('addressSharedTitle', { count: branch.vehicleCount })}
                 description={t('addressSharedBody')}
               />
             ) : (
-              <Alert type="info" showIcon message={t('addressBranchHint')} />
+              <Alert type="info" showIcon title={t('addressBranchHint')} />
             )
           }
         />

@@ -70,6 +70,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     plugins: [
       ...(config.plugins ?? []),
+      /*
+       * Phải nằm ở đây chứ không ở `app.json`: nó sửa thẳng AndroidManifest, và `app.json`
+       * chỉ khai được những khoá Expo đã định nghĩa sẵn. Xem chú thích trong file plugin.
+       */
+      './plugins/with-android-camera-memory',
       ...(pushConfigured
         ? ([
             '@react-native-firebase/app',

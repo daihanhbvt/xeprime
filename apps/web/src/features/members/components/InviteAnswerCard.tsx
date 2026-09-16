@@ -171,7 +171,7 @@ export function InviteAnswerCard({ token }: { token: string }) {
         </div>
       ) : (
         <>
-          <Alert type="info" showIcon message={t('signInPrompt')} className={styles.prompt} />
+          <Alert type="info" showIcon title={t('signInPrompt')} className={styles.prompt} />
           <div className={styles.actions}>
             <Button type="primary" size="large" onClick={() => auth.open({ next: nextFromHere() })}>
               {t('signIn')}

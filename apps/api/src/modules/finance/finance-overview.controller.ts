@@ -5,6 +5,7 @@ import {
   CurrentTenant,
   RequirePermissions,
   RequiresFeature,
+  SubscriptionTrackOnly,
   TenantScoped,
 } from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
@@ -33,6 +34,7 @@ import { FinanceOverviewService } from './finance-overview.service';
 @ApiTags('finance-overview')
 @Controller()
 @TenantScoped()
+@SubscriptionTrackOnly()
 export class FinanceOverviewController {
   constructor(private readonly overview: FinanceOverviewService) {}
 

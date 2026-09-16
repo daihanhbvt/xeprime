@@ -39,20 +39,31 @@ export function ApproveSuccessSheet({
       onClose={onClose}
       title={t('approved.title')}
       footer={
-        <>
+        <XStack gap={space.sm}>
+          {/*
+            "Đóng" co vừa chữ, "Xem chi tiết đơn" lấy phần còn lại — nhãn sau dài gấp bốn nhãn
+            trước, chia đôi là bỏ trống nửa trái và cắt đuôi nửa phải.
+
+            Khi không có `bookingId` thì chỉ còn "Đóng"; nó vẫn nằm trong `f={1}` nên hẹp, đúng
+            với vai một lối thoát chứ không phải hành động chính.
+          */}
+          <YStack flexShrink={0}>
+            <Button label={t('approved.close')} variant="ghost" onPress={onClose} />
+          </YStack>
           {/* `bookingId` luôn có (đơn tạo cùng transaction với việc duyệt); kiểm tra vì kiểu để nó tuỳ chọn. */}
           {bookingId ? (
-            <Button
-              label={t('approved.viewBooking')}
-              size="lg"
-              onPress={() => {
-                onClose();
-                navigateOnce(ROUTES.manage.bookingDetail(bookingId));
-              }}
-            />
+            <YStack f={1}>
+              <Button
+                label={t('approved.viewBooking')}
+                size="lg"
+                onPress={() => {
+                  onClose();
+                  navigateOnce(ROUTES.manage.bookingDetail(bookingId));
+                }}
+              />
+            </YStack>
           ) : null}
-          <Button label={t('approved.close')} variant="ghost" onPress={onClose} />
-        </>
+        </XStack>
       }
     >
       <XStack ai="center" gap={space.sm} p={space.md} br={radius.md} bg={colors.successSurface}>

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import { YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { ASSIGNABLE_TENANT_ROLES, TENANT_ROLE } from '@xeprime/types';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -102,13 +102,31 @@ function InviteForm({ onDone }: { onDone: () => void }) {
         required
       />
 
-      <Button label={tActions('send')} loading={invite.isPending} onPress={() => void submit()} />
-      <Button
-        label={tActions('close')}
-        variant="ghost"
-        disabled={invite.isPending}
-        onPress={onDone}
-      />
+      <XStack gap={space.sm}>
+        {/*
+          Lối thoát bên TRÁI, hành động chính bên PHẢI — xếp dọc thì hàng dưới đọc ra là một
+          bước tiếp theo chứ không phải một lựa chọn thay thế.
+        
+          "Đóng" co vừa chữ, nút chính lấy phần còn lại — xem luật ở `Button.tsx`. Chia đôi thì
+          nửa hàng bên trái bỏ trống quá nửa cho một từ bốn chữ, còn nút chính thiếu chỗ.
+        */}
+        <YStack flexShrink={0}>
+          <Button
+            label={tActions('close')}
+            variant="ghost"
+            disabled={invite.isPending}
+            onPress={onDone}
+          />
+        </YStack>
+        <YStack f={1}>
+          <Button
+            label={tActions('send')}
+            icon="send-outline"
+            loading={invite.isPending}
+            onPress={() => void submit()}
+          />
+        </YStack>
+      </XStack>
     </YStack>
   );
 }

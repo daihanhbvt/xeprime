@@ -127,7 +127,12 @@ export function CustomerNotesPanel({
               placeholder={t('notes.bodyPlaceholder')}
               hint={t('hints.notes')}
             />
-            <Button label={t('notes.add')} loading={add.isPending} onPress={() => void submit()} />
+            <Button
+              label={t('notes.add')}
+              icon="add-outline"
+              loading={add.isPending}
+              onPress={() => void submit()}
+            />
           </YStack>
         </Card>
       ) : null}

@@ -1,7 +1,8 @@
 'use client';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CHAT_SIDE, type ChatSide } from '@xeprime/types';
+import type { ChatInbox } from '@xeprime/types';
+import { unreadSignalOf } from './use-conversations';
 import { useBadgeRealtime } from '@/features/badges/BadgeRealtimeProvider';
 import { useOnBadgeChange } from '@/features/badges/hooks/use-on-badge-change';
 import { queryKeys } from '@/services/query-keys';
@@ -24,14 +25,14 @@ export const RECENT_CONVERSATIONS_LIMIT = 6;
  *  3. Khoá riêng (`preview`) — nó KHÔNG dùng chung cache với danh sách phân trang vô hạn của
  *     trang chat, vì hai bên có hình dạng dữ liệu khác nhau (`InfiniteData` vs một trang).
  */
-export function useRecentConversations(side: ChatSide, enabled: boolean) {
+export function useRecentConversations(side: ChatInbox, enabled: boolean) {
   const { counts } = useBadgeRealtime();
   const queryClient = useQueryClient();
 
   const key = queryKeys.chat.conversations(side, { preview: true });
 
   // Popup ĐANG mở mà có tin mới thì danh sách phải tự đổi, không phải đóng rồi mở lại.
-  useOnBadgeChange(side === CHAT_SIDE.CUSTOMER ? counts.chatCustomer : counts.chatShop, () => {
+  useOnBadgeChange(unreadSignalOf(side, counts), () => {
     void queryClient.invalidateQueries({ queryKey: key });
   });
 

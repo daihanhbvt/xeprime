@@ -4,7 +4,7 @@ import {
   REVALIDATE_SHOP_SECONDS,
 } from '@/constants/cache';
 import { apiGet, apiRequest, getApiBaseUrl } from '@/services/api-client';
-import type { PublicListingDetail, PublicShop, ReviewPage } from './types';
+import type { PublicListingDetail, PublicShop, ReviewPage, ShopReviewPage } from './types';
 
 /**
  * Cùng dữ liệu với `fetchListingDetail` nhưng gọi TỪ TRÌNH DUYỆT (qua `apiGet`, có cookie).
@@ -86,4 +86,27 @@ export async function fetchPublicShop(slug: string): Promise<PublicShop | null> 
   if (!res.ok) return null;
   const body = (await res.json()) as { data: PublicShop };
   return body.data;
+}
+
+/**
+ * Đánh giá công khai của một GIAN HÀNG (mọi xe) — gọi server-side cho trang `/shops/[slug]`.
+ *
+ * Cùng khuôn với `fetchListingReviews`: endpoint đã trả sẵn `{ summary, data, meta }` nên không
+ * bị `ResponseInterceptor` bọc thêm một lớp `data` nữa, và lỗi cho ra `null` để khối đánh giá
+ * tự ẩn thay vì làm hỏng cả trang gian hàng.
+ *
+ * Chỉ lấy trang đầu: đây là bằng chứng xã hội để khách quyết định, không phải một kho lưu trữ —
+ * ai muốn đọc hết thì đọc ở trang từng chiếc xe. Trang đầu render ở SERVER nên nội dung đánh
+ * giá vẫn được công cụ tìm kiếm index, đúng lý do `/shops` nằm trong route group `(public)`.
+ */
+export async function fetchShopReviews(
+  slug: string,
+  limit: number,
+): Promise<ShopReviewPage | null> {
+  const res = await fetch(
+    `${getApiBaseUrl()}/public/shops/${encodeURIComponent(slug)}/reviews?limit=${limit}`,
+    { cache: 'force-cache', next: { revalidate: REVALIDATE_REVIEWS_SECONDS } },
+  );
+  if (!res.ok) return null;
+  return (await res.json()) as ShopReviewPage;
 }

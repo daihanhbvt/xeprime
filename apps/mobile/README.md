@@ -224,6 +224,7 @@ apps/mobile/
     ├── components/
     │   ├── layout/AppHeader.tsx  #   ⚠️ HEADER DÙNG CHUNG — mọi màn reuse, đừng dựng riêng
     │   ├── layout/Screen.tsx     #   khung màn: safe area + bàn phím + cuộn
+    │   ├── layout/focus-reveal.tsx #  cuộn ô đang gõ ra khỏi bàn phím (Screen + BottomSheet)
     │   ├── feedback/             #   ⚠️ TOAST DÙNG CHUNG — AppToastProvider + useAppToast()
     │   ├── state/                #   ScreenLoading · ScreenError · ScreenMessage · AppErrorScreen
     │   ├── ui/                   #   Button · TextField · Card · Chip · IconButton · Avatar · Skeleton · StatusIcon
@@ -574,6 +575,12 @@ chủ đích, mở tính năng nào thì thêm namespace của tính năng đó.
 | Provider + `useAppLocale()`     | [src/i18n/I18nProvider.tsx](src/i18n/I18nProvider.tsx)         |
 | Trạng thái locale               | [src/i18n/locale.slice.ts](src/i18n/locale.slice.ts)           |
 | Lỗi API → chữ                   | [src/i18n/use-error-message.ts](src/i18n/use-error-message.ts) |
+| Lỗi API cấp TRƯỜNG → ô nhập     | [src/hooks/use-api-field-errors.ts](src/hooks/use-api-field-errors.ts) · [src/lib/api-field-errors.ts](src/lib/api-field-errors.ts) |
+
+Hai lớp validate (yup ở client, class-validator ở server) không trùng khít tuyệt đối. Khi server
+bắt được thứ yup bỏ lọt, `useApiFieldErrors` gắn lỗi vào ĐÚNG ô của react-hook-form và nơi gọi
+đưa người dùng về bước chứa nó — thay vì một dòng chung ở cuối một form ba chục ô. Chữ hiện lên
+là câu đã dịch theo MÃ, không phải `message` tiếng Việt của backend (ADR 0012).
 
 Khoá `t()` **được kiểm lúc biên dịch**: [src/i18n/use-intl.d.ts](src/i18n/use-intl.d.ts) gắn bó
 message vào `use-intl`, nên `t('Common.actions.rerty')` là lỗi typecheck chứ không phải chuỗi
@@ -750,6 +757,15 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
   `softwareKeyboardLayoutMode: "resize"` bên Android cũng không còn đỡ. `Screen` đo ô đang gõ
   bằng toạ độ CỬA SỔ lúc `keyboardDidShow` rồi cuộn đúng phần chồng lấn, kèm một đoạn đệm đuôi
   để ô CUỐI trang có chỗ mà cuộn lên.
+- **Chuyển tiêu điểm giữa hai ô KHÔNG bắn `keyboardDidShow`** (Android không bắn lại, iOS chỉ
+  bắn khi hình dạng bàn phím đổi) — nên riêng sự kiện bàn phím là không đủ: ô cuối form, thứ
+  người dùng chạm sau khi đã gõ ô trên, nằm im dưới bàn phím. `Screen` và `BottomSheet` vì thế
+  phát hàm cuộn của vùng cuộn mình xuống qua
+  [`FocusRevealProvider`](src/components/layout/focus-reveal.tsx), và mọi ô nhập dùng chung
+  (`TextField`, `TextControl`, `NumberField`, `MoneyField`, `OtpCodeInput`) gọi
+  `useRevealOnFocus()` trong `onFocus`. Ô nhập MỚI phải làm điều này — không thì nó lại là ô bị
+  che. Tấm trượt cung cấp bản của CHÍNH NÓ kể cả khi `scroll={false}`: thiếu, ô trong `Modal`
+  sẽ thấy context của `Screen` bên dưới và cuộn nhầm màn nền.
 - Đổ bóng dùng `elevation.card` / `.raised` / `.overlay`
   ([src/theme/elevation.ts](src/theme/elevation.ts)); iOS và Android dùng hai bộ thuộc tính
   khác nhau, viết tay ở từng component là quên một bên. Giá trị parse từ token `shadow-*` của
@@ -851,11 +867,27 @@ quyết toán → khách đánh giá.
 | P6 tạo đơn tại quầy | BKG-06 | `src/features/bookings/CreateBookingScreen.tsx` |
 | P7 hợp đồng | BKG-14 | `src/features/contracts/` — **XEM được** (đọc từ `snapshot`); còn thiếu **in/xuất PDF khổ A4**, cần endpoint ở server |
 
-**Cần dựng lại dev client**: P4 thêm `expo-image-picker` + `expo-image-manipulator` (camera
-cho ảnh hiện trạng), và khai plugin `expo-image-picker` trong `app.json` với hai chuỗi xin quyền.
-Plugin đó KHÔNG phải trang trí: thiếu nó thì iOS crash ngay lúc xin quyền (Info.plist không có
+**Cần dựng lại dev client**: ảnh hiện trạng dùng `expo-camera` + `expo-image-picker` +
+`expo-image-manipulator`, và cả hai plugin ảnh được khai trong `app.json` kèm chuỗi xin quyền.
+Plugin KHÔNG phải trang trí: thiếu nó thì iOS crash ngay lúc xin quyền (Info.plist không có
 `NSCameraUsageDescription`) và App Store từ chối bản build. Bản dev client cũ sẽ nổ ở màn biên
 bản bàn giao — `pnpm --filter @xeprime/mobile android` (hoặc `ios`) để dựng lại.
+
+**CHỤP ảnh đi qua máy ảnh TRONG app (`src/features/camera/`), không qua `ImagePicker`.**
+`launchCameraAsync` mở app Máy ảnh của hệ điều hành và đẩy XePrime xuống nền; máy ảnh là tiến
+trình ngốn RAM nhất trên máy, nên Android thu hồi bộ nhớ bằng cách giết activity — hoặc cả tiến
+trình — của app đang nằm ở nền. Bấm OK xong, app dựng lại từ đầu: màn hình trắng, rơi về route
+gốc, tấm ảnh mất trắng, và `ImagePicker.getPendingResultAsync()` trả `null` nên không có gì để
+hứng. Đo trên Galaxy A23 (SM-A235N): logcat có `am_kill` hàng loạt, PID của app đổi giữa hai
+lần log, và `android:largeHeap` chỉ giảm tần suất chứ không đóng được.
+
+| File | Vai trò |
+| --- | --- |
+| `src/features/camera/in-app-camera.ts` | `captureInAppPhoto()` — cầu nối promise. Một biến ở phạm vi module, KHÔNG phải context: nơi gọi là `pickImages` trong `src/lib/`, một hàm async chứ không phải component |
+| `src/features/camera/InAppCameraProvider.tsx` | Khung ngắm + xem lại + chụp lại. Mount MỘT lần ở `app/_layout.tsx`; `CameraView` chỉ tồn tại đúng lúc đang chụp |
+
+CHỌN từ thư viện vẫn là `ImagePicker.launchImageLibraryAsync` — trình chọn ảnh chạy trong tiến
+trình gọi nó, nên nó không có vấn đề trên.
 
 **`expo-image` là component `<Image>` DUY NHẤT cho ảnh MẠNG** (thẻ xe, thẻ chuyến, ảnh hồ sơ,
 xem ảnh phóng to…) — thay `Image` của `react-native` vì bộ nhớ đệm hai tầng (RAM + đĩa) và giải
@@ -879,6 +911,31 @@ sẵn theo SDK.
 | P3 nguồn xe + bảo dưỡng + giấy tờ | VEH-11, 09, 10, 07 | `VehicleSourceScreen` · `src/features/vehicle-maintenance/` · `src/features/vehicle-documents/` |
 | VEH-08 OCR giấy tờ | — | ⛔ **BỎ** — tracking đánh `Blocked`, web chưa có bản tương đương để clone |
 | VEH-13 giá theo ngày | — | ✅ Xong 10/09 cùng Calendar — lối vào là ô lịch, y như web (`src/features/calendar/components/DailyPriceSheet.tsx`) |
+
+### Không gian "Quản lý xe" (`/account/vehicles/[id]/manage/*`)
+
+13 mục / ba nhóm / hai công tắc dịch vụ — gương của `features/vehicle-manage/` bên web. Menu trái
+của web trở thành MÀN ĐẦU của không gian (`VehicleManageHubScreen`); mỗi mục là một route riêng,
+đường dẫn trùng web tới từng đoạn (`src/navigation/vehicle-manage-section.ts`).
+
+| Mục | Màn |
+| --- | --- |
+| Thông tin xe · Hình ảnh | `VehicleEditFormScreen` (dùng lại hub sửa xe) |
+| Giấy tờ xe | `src/features/vehicle-documents/` |
+| Lịch sử chuyến | `VehicleTripHistoryScreen` |
+| Giá cho thuê (cả hai dịch vụ) | `src/features/vehicle-pricing/VehiclePricingScreen` |
+| Tối ưu nhận chuyến | `VehicleAutoAcceptScreen` (một màn, hai dịch vụ) |
+| Giao xe tận nơi | `VehicleDeliveryScreen` |
+| Thời gian giao nhận | `VehicleHandoverTimeScreen` |
+| Thủ tục cho thuê | `VehicleTermsScreen` (một màn, hai dịch vụ) |
+| Phụ phí (có tài xế) | `VehicleSurchargesScreen` |
+
+Bốn nhóm endpoint đi qua `src/api/vehicle-settings/api.ts`: `operation-settings` (khung giờ + thời
+gian chết), `service-settings` (xe × dịch vụ), `driver-surcharge-rules`, `trip-history`.
+
+⚠️ **`manage.tsx` đứng CẠNH thư mục `manage/`, không phải `manage/index.tsx`** (và `[id].tsx` cạnh
+`[id]/`): trình sinh kiểu route của expo-router đặt tên một index file lồng là `/manage/index` thay
+vì `/manage`, và mọi lời gọi `ROUTES.account.vehicleManage()` sẽ đỏ.
 
 **Hub sửa xe là SÁU ROUTE, không phải sáu tab**: ở 390px sáu tab chữ không vừa một hàng. Giá trị
 đoạn đường dẫn lấy từ `src/navigation/vehicle-edit-tab.ts` — cùng bộ chuỗi mà `?tab=` của web
@@ -996,6 +1053,16 @@ Tổng quan/Tài chính/Sổ khách — web cũng không, và hai endpoint sau k
 `apps/web/src/features/rental-policies/`. Màn Giá & chính sách của xe là NGƯỜI TIÊU THỤ, không
 phải chủ sở hữu: để luật ở feature con thì màn chính sách gian hàng phải import ngược, và bản
 thứ hai của cùng một business rule sẽ mọc ra ở lần cần đọc tiếp theo.
+
+**Ba khối ô của form xe dùng CHUNG cho mọi màn khai xe** — `VehicleIdentityFields` (Hãng → Mẫu
+xe từ danh mục, ghi `vehicleCatalogModelId`), `VehicleClassificationFields` (số chỗ / phân khúc
+xe máy / kiểu dáng, theo `vehicleFieldPolicy`) và `VehicleEnergyFields` + `useTransmissionOptions`
+(nhiên liệu, hộp số, tiêu thụ / quãng đường điện / dung tích, theo `vehicleEnergySpecPolicy`), tất
+cả ở `src/features/vehicles/components/`. Wizard đăng xe nhanh (khu khách) và form tạo/sửa xe
+(cổng quản lý) đều gọi đúng ba khối này — gương của `apps/web/src/features/vehicles/components/`.
+Ba ma trận đó là CÙNG hàm backend dùng để chuẩn hoá lúc ghi và dựng checklist lên chợ, nên một
+màn tự ghép `SelectField` riêng sẽ nói "đủ" đúng lúc server nói "thiếu". Danh sách mẫu xe đến từ
+`src/features/catalog/use-catalog-models.ts`.
 
 **Ô ảnh của form là `components/ui/ImageUploadField`**, không còn là `VehicleImagePicker`. Nó
 nhận `presign` làm THAM SỐ vì mỗi loại ảnh có endpoint và QUYỀN riêng ở backend (ảnh xe cần

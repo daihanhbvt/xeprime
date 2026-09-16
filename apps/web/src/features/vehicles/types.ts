@@ -46,3 +46,18 @@ export type Vehicle360Summary = Schemas['Vehicle360SummaryDto'];
 export type VehicleAlertGroup = Schemas['VehicleAlertsDto'];
 export type VehicleAlertItem = Schemas['VehicleAlertDto'];
 export type VehicleBookingBrief = Schemas['VehicleBookingBriefDto'];
+
+/**
+ * Giá thuê tham khảo khi chủ xe đặt giá — contract sinh từ OpenAPI, `basis`/`sampleSize` là
+ * phần nói lên độ tin cậy (xem `MarketPriceSuggestionDto` ở backend).
+ */
+export type MarketPriceSuggestion = Schemas['MarketPriceSuggestionDto'];
+
+/** Chiều so sánh gửi lên — tất cả tuỳ chọn trừ loại xe; thiếu chiều nào thì backend nới rộng. */
+export interface MarketPriceParams {
+  vehicleType: string;
+  bodyType?: string | null;
+  motorbikeCategory?: string | null;
+  seatCount?: number | null;
+  provinceCode?: string | null;
+}

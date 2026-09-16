@@ -16,7 +16,6 @@ import {
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { CheckboxField } from '@/components/form/CheckboxField';
-import { TextField } from '@/components/form/TextField';
 import {
   useOpenSupportCase,
   useSupportCases,
@@ -31,7 +30,6 @@ import styles from './DeleteAccountView.module.css';
 
 interface DeleteAccountValues {
   acknowledged: boolean;
-  phrase: string;
 }
 
 const ITEMS = ['profile', 'vehicles', 'trips', 'billing'] as const;
@@ -62,7 +60,6 @@ export function DeleteAccountView() {
   const openCase = useOpenSupportCase(SUPPORT_SURFACE.CUSTOMER);
   const withdraw = useWithdrawAccountDeletion();
 
-  const phrase = t('confirmPhrase');
   const schema = useMemo(
     () =>
       yup.object({
@@ -71,23 +68,14 @@ export function DeleteAccountView() {
           .boolean()
           .required(t('acknowledgeRequired'))
           .test('acknowledged', t('acknowledgeRequired'), (value) => value === true),
-        phrase: yup
-          .string()
-          .required(t('confirmPhraseMismatch'))
-          .test(
-            'phrase',
-            t('confirmPhraseMismatch'),
-            (value) =>
-              (value ?? '').trim().toLocaleUpperCase('vi-VN') === phrase.toLocaleUpperCase('vi-VN'),
-          ),
       }),
-    [phrase, t],
+    [t],
   );
 
   const { control, handleSubmit, reset, formState } = useForm<DeleteAccountValues>({
     resolver: yupResolver(schema),
-    defaultValues: { acknowledged: false, phrase: '' },
-    // Nút gửi chỉ bật khi đủ hai điều kiện — phải kiểm ngay lúc gõ, không chờ tới lúc submit.
+    defaultValues: { acknowledged: false },
+    // Nút gửi chỉ bật khi đã tick xác nhận — phải kiểm ngay lúc tick, không chờ tới lúc submit.
     mode: 'onChange',
   });
 
@@ -119,7 +107,7 @@ export function DeleteAccountView() {
         showIcon
         icon={<WarningFilled />}
         className={styles.warning}
-        message={t('warningTitle')}
+        title={t('warningTitle')}
         description={t('warningBody')}
       />
 
@@ -182,14 +170,6 @@ export function DeleteAccountView() {
             <CheckboxField control={control} name="acknowledged" disabled={openCase.isPending}>
               {t('acknowledge')}
             </CheckboxField>
-            <TextField
-              control={control}
-              name="phrase"
-              label={t('confirmPhraseLabel')}
-              placeholder={t('confirmPhrasePlaceholder', { phrase })}
-              autoComplete="off"
-              disabled={openCase.isPending}
-            />
           </div>
 
           <div className={styles.actions}>

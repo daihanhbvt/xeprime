@@ -1,7 +1,8 @@
 {
   "page": {
     "title": "My plan",
-    "loadError": "Couldn't load your plan"
+    "loadError": "Couldn't load your plan",
+    "accountSubtitle": "Your current plan, slot limits, and what an upgrade unlocks."
   },
   "current": {
     "title": "Current plan",
@@ -15,6 +16,8 @@
     "renewButton": "Renew / change plan"
   },
   "usage": {
+    "fleetTotal": "Total vehicles",
+    "fleetTotalHint": "Individual hosts can list up to {limit} vehicles, cars and motorbikes combined. Buy a shop plan to add more.",
     "title": "Vehicle slots in use",
     "car": "Car slots",
     "motorbike": "Motorbike slots",
@@ -51,6 +54,14 @@
     "copyCode": "Copy reference code"
   },
   "purchase": {
+    "slotsTitle": "Vehicle slots to buy",
+    "termsTitle": "Choose a commitment term",
+    "unitPriceCar": "{amount} per car slot / month",
+    "unitPriceMotorbike": "{amount} per motorbike slot / month",
+    "termTotal": "{amount}",
+    "termPerMonth": "≈ {amount}/month",
+    "termDiscount": "{percent}% off",
+    "pickTerm": "Pick a term to see the total.",
     "title": "Buy / renew a plan",
     "planLabel": "Choose a plan",
     "planOption": "{name} — {price}/month",

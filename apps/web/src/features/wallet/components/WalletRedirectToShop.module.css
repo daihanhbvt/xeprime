@@ -1,0 +1,6 @@
+/* Khung chờ chiếm trọn vùng nội dung — cùng khuôn với các màn đang chuyển hướng khác. */
+.centered {
+  display: grid;
+  place-items: center;
+  min-height: 40vh;
+}

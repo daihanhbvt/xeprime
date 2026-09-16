@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
 import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, WALLET_OWNER_TYPE } from '@xeprime/types';
-import { CurrentTenant, RequirePermissions, TenantScoped } from '../../common/decorators';
+import { WALLET_OWNER_TYPE } from '@xeprime/types';
+import { CurrentTenant, ShopOwnerOnly, TenantScoped } from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
 import { BankAccountsService } from './bank-accounts.service';
 import { BankAccountDto, SaveBankAccountDto } from './dto/bank-account.dto';
@@ -13,18 +13,21 @@ import { BankAccountDto, SaveBankAccountDto } from './dto/bank-account.dto';
  * một API nhận chủ từ payload sẽ cho phép người lạ chuyển tiền của gian hàng khác về tài khoản
  * của mình.
  *
- * Quyền dùng chung với hồ sơ người bán: đổi tài khoản nhận tiền là quyết định tiền của chủ gian
- * hàng, không phải việc của nhân viên trực đơn. Không gắn `@RequiresFeature` — nhận được tiền
- * thuộc bộ CƠ BẢN (ADR 0027 điều 1); gian hàng hết hạn gói vẫn phải rút được tiền của họ.
+ * `@ShopOwnerOnly()` (15/09/2026): CHỈ chủ gian hàng. Đổi tài khoản nhận tiền là đổi ĐÍCH của
+ * lệnh chuyển kế tiếp — cùng mức hệ quả với việc bấm rút, nên cùng một cổng. Trước đó nhóm này
+ * gác bằng `seller_profile.*`, và `shop_manager` có khoá `view` mặc định.
+ *
+ * Không gắn `@RequiresFeature` — nhận được tiền thuộc bộ CƠ BẢN (ADR 0027 điều 1); gian hàng hết
+ * hạn gói vẫn phải rút được tiền của họ.
  */
 @ApiTags('bank-accounts')
 @Controller('shop/bank-accounts')
 @TenantScoped()
+@ShopOwnerOnly()
 export class ShopBankAccountsController {
   constructor(private readonly accounts: BankAccountsService) {}
 
   @Get()
-  @RequirePermissions(PERMISSION.SELLER_PROFILE_VIEW)
   @ApiOperation({ summary: 'Tài khoản nhận tiền của gian hàng — số đã che' })
   @ApiOkResponse({ type: [BankAccountDto] })
   list(@CurrentTenant() tenant: TenantContext): Promise<BankAccountDto[]> {
@@ -32,7 +35,6 @@ export class ShopBankAccountsController {
   }
 
   @Post()
-  @RequirePermissions(PERMISSION.SELLER_PROFILE_MANAGE)
   @ApiOperation({ summary: 'Thêm tài khoản nhận tiền cho gian hàng' })
   @ApiOkResponse({ type: BankAccountDto })
   create(
@@ -46,7 +48,6 @@ export class ShopBankAccountsController {
   }
 
   @Patch(':id/default')
-  @RequirePermissions(PERMISSION.SELLER_PROFILE_MANAGE)
   @ApiOperation({ summary: 'Đặt làm tài khoản nhận tiền mặc định của gian hàng' })
   @ApiOkResponse({ type: BankAccountDto })
   setDefault(
@@ -60,7 +61,6 @@ export class ShopBankAccountsController {
   }
 
   @Delete(':id')
-  @RequirePermissions(PERMISSION.SELLER_PROFILE_MANAGE)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Bỏ dùng một tài khoản của gian hàng (lưu trữ, không xoá)' })
   @ApiNoContentResponse()

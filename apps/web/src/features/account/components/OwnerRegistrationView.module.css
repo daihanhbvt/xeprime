@@ -1,0 +1,61 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+}
+
+/*
+ * Cột dọc ở mọi bề ngang, kể cả desktop: ba bước ở đây không phải một wizard người dùng bấm qua
+ * — chúng là tiến trình của ba bên khác nhau, và mô tả từng bước dài hơn một nhãn. Xếp ngang thì
+ * mô tả bị cắt đúng chỗ giải thích người dùng đang chờ ai.
+ */
+.steps {
+  padding: var(--xp-space-md);
+  background: var(--xp-color-bg-container);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius);
+}
+
+.notice {
+  margin: 0;
+}
+
+.queue {
+  padding: var(--xp-space-md);
+  background: var(--xp-color-bg-container);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius);
+}
+
+.queueTitle {
+  margin: 0 0 var(--xp-space-sm);
+  font-size: var(--xp-font-size-base);
+  font-weight: 600;
+}
+
+.queueList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.queueItem {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--xp-space-sm) 0;
+  border-bottom: 1px solid var(--xp-color-border-secondary);
+}
+
+.queueItem:last-child {
+  border-bottom: none;
+}
+
+.queueName {
+  font-weight: 500;
+}

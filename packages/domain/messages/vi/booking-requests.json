@@ -347,6 +347,18 @@
       "pickupWardRequired": "Chọn xã/phường nơi đón",
       "deliveryProvinceRequired": "Chọn tỉnh/thành phố nơi giao xe",
       "deliveryWardRequired": "Chọn xã/phường nơi giao xe"
+    },
+    "blocked": {
+      "close": "Đóng",
+      "shopAccount": {
+        "title": "Tài khoản gian hàng không đặt xe được",
+        "body": "Bạn đang đăng nhập bằng tài khoản của một gian hàng. Để thuê xe, hãy đăng nhập bằng một tài khoản khách thuê với SỐ ĐIỆN THOẠI KHÁC — mỗi số điện thoại chỉ gắn với một tài khoản.",
+        "manage": "Về Quản lý gian hàng"
+      },
+      "ownVehicle": {
+        "title": "Đây là xe của bạn",
+        "body": "Chiếc xe này thuộc chính gian hàng của bạn nên không đặt thuê được. Nếu muốn chặn lịch cho việc riêng, hãy dùng mục Lịch xe."
+      }
     }
   },
   "approved": {

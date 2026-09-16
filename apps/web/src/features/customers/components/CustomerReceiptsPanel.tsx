@@ -59,7 +59,7 @@ export function CustomerReceiptsPanel({ customerId }: { customerId: string }) {
           <Alert
             type="error"
             showIcon
-            message={t('list.error')}
+            title={t('list.error')}
             action={
               <Button size="small" onClick={() => void refetch()}>
                 {t('list.retry')}

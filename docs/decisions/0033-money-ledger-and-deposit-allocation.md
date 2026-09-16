@@ -1,6 +1,21 @@
 # ADR 0033 — Sổ công nợ "Ví điểm", phân bổ cọc nhiều dòng và định tuyến kết cục
 
-Ngày: 10/09/2026 · Trạng thái: Accepted · Ghi đè một phần: [0023](0023-wallet-refund-and-compensation.md) (ràng buộc 1, điều 5), [0025](0025-shop-escrow-hold-and-payout.md) (điều 1–4), [0028](0028-marketplace-subscription-fees-and-custodied-funds.md) (điều 6, điều 8 phần tên gọi) · Liên quan: 0016, 0022, 0024, 0027, 0032
+Ngày: 10/09/2026 · Trạng thái: **Accepted; điều 2 (cột chủ ví) bị [ADR 0038](0038-owner-track-split-and-unified-wallet.md) ghi đè** · Ghi đè một phần: [0023](0023-wallet-refund-and-compensation.md) (ràng buộc 1, điều 5), [0025](0025-shop-escrow-hold-and-payout.md) (điều 1–4), [0028](0028-marketplace-subscription-fees-and-custodied-funds.md) (điều 6, điều 8 phần tên gọi) · Liên quan: 0016, 0022, 0024, 0027, 0032
+
+> ⚠️ **Cột "Chủ ví" của điều 2 bị [ADR 0038](0038-owner-track-split-and-unified-wallet.md) ghi đè
+> (15/09/2026).**
+>
+> Bốn NGUỒN ghi có giữ nguyên — không có nguồn thứ năm. Thứ đổi là ĐÍCH: một người có đúng **một**
+> ví, và với chủ xe thì ví đó thuộc **tenant**. Ba nguồn hoàn (hoàn khoản đã thanh toán, hoàn phần
+> chuyển thừa, hoàn bảo hiểm chưa phát hành) vì thế chảy về ví tenant khi người nhận là chủ xe, và
+> về ví `user` khi họ chưa là chủ xe.
+>
+> Trước đó khoản hoàn luôn vào ví `user` còn khoản phải trả luôn vào ví `tenant`, nên một chủ xe
+> tuyến hoa hồng có hai số dư, hai danh sách tài khoản ngân hàng và hai hàng đợi chuyển tay cho
+> cùng một con người.
+>
+> Điều 6 (`balance` là phần KHẢ DỤNG) và ràng buộc 4 (`WalletService` là writer duy nhất) giữ
+> nguyên tuyệt đối.
 
 ## Bối cảnh
 

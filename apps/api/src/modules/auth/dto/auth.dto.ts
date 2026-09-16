@@ -112,8 +112,78 @@ export class CurrentTenantSummaryDto {
   @ApiProperty({ type: String, nullable: true, description: 'Mã gói hiện hành; null = không có' })
   planCode!: string | null;
 
+  /**
+   * TÊN hiển thị của gói hiện hành — nhãn tài khoản in thẳng nó ("Chủ gian hàng · Gói theo xe").
+   *
+   * Đi trên dây thay vì để web tra một bảng `planCode → nhãn`: tên gói là DỮ LIỆU admin sửa
+   * được ở màn quản trị (ADR 0029 điều 3), nên một bảng tra ở client sẽ nói sai kể từ lần đổi
+   * tên đầu tiên, và nói sai đúng ở chỗ người dùng dùng để nhận ra mình đang trả tiền cho gì.
+   */
+  @ApiProperty({ type: String, nullable: true, description: 'Tên gói hiện hành; null = không có' })
+  planName!: string | null;
+
+  /**
+   * % PHÍ DỊCH VỤ đang thật sự thu trên mỗi chuyến của tenant này — `null` khi tenant không ở
+   * tuyến hoa hồng (tuyến gói luôn 0đ/chuyến) hoặc chưa có chính sách phí nào hiệu lực.
+   *
+   * ⚠️ Nguồn là `fee_policies.service_fee_percent` bản `active`, **không** phải
+   * `tenant_subscriptions.commission_percent`. Hai số đó là hai thứ khác nhau và không có ràng
+   * buộc nào giữ chúng khớp: dòng thuê bao chụp lại % của BẬC GÓI lúc gán, còn tiền thì
+   * `computeCustomerFees` nhân từ chính sách phí (ADR 0029 điều 2). Nhãn tài khoản đọc số NÀY,
+   * vì một nhãn nói "Hoa hồng 10%" trong khi khách bị thu 12% là một lời hứa sai về tiền.
+   *
+   * `null` ⇒ nhãn rút gọn còn "Chủ xe cá nhân", không bịa số.
+   */
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    description: '% phí dịch vụ đang thu trên chuyến (từ chính sách phí hiệu lực); null = không áp',
+  })
+  serviceFeePercent!: number | null;
+
+  /**
+   * Chế độ thu phí của gói HIỆN HÀNH — `commission` (Basic Owner) hay `package` (gian hàng
+   * thuê bao). Xem `BillingMode` trong @xeprime/types.
+   *
+   * Đây là thứ phân biệt HAI TUYẾN của ADR 0028, và nó phải đi trên dây vì web dùng nó để chọn
+   * khu làm việc. Suy từ `planCode == null` là SAI: `assignDefaultPlanWithinTx` gán cho mọi gian
+   * hàng mới một gói tuyến hoa hồng, nên `planCode` gần như không bao giờ rỗng.
+   */
+  @ApiProperty({ type: String, nullable: true, description: 'Xem BillingMode trong @xeprime/types' })
+  billingMode!: string | null;
+
   @ApiProperty({ type: String, nullable: true, description: 'ISO-8601 UTC — băng hết hạn đọc ngày này' })
   planEndsAt!: string | null;
+
+  /**
+   * Tenant đang ở đâu trong vòng đời gói — `current` · `grace` · `lapsed` · `unconfigured`
+   * (xem `BillingPhase` trong @xeprime/types).
+   *
+   * Cần đi trên dây vì `planEndsAt` một mình không phân biệt được "vừa hết hạn, còn ân hạn" với
+   * "hết hẳn": hai trạng thái đó có cùng `planEndsAt` trong quá khứ nhưng khác nhau ở toàn bộ
+   * quyền dùng Manage. Trước 15/09/2026 web tự suy bằng cách so `planEndsAt` với đồng hồ MÁY
+   * KHÁCH — sai ngay khi máy khách lệch giờ, và không biết `graceDays` của gói là bao nhiêu.
+   */
+  @ApiProperty({ description: 'Xem BillingPhase trong @xeprime/types' })
+  billingPhase!: string;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'ISO-8601 UTC — hết ân hạn; null khi gói còn hạn hoặc chưa có gói',
+  })
+  graceEndsAt!: string | null;
+
+  /**
+   * Số xe ĐANG bán trên chợ (`approved_public`) — mốc phân biệt "đang đăng ký" với "chủ xe"
+   * (`resolveOwnerStage` ở `@xeprime/types`).
+   *
+   * Trả kèm `MeDto` chứ không để web tự đếm bằng một lần gọi `/vehicles`: menu đọc nó ở LẦN VẼ
+   * ĐẦU, và một request thứ hai nghĩa là menu nhấp nháy từ "đang đăng ký" sang "chủ xe" mỗi lần
+   * tải trang. Cùng lý do với `features` ngay trên.
+   */
+  @ApiProperty({ description: 'Số xe đang công khai trên marketplace' })
+  publicVehicleCount!: number;
 }
 
 export class MeDto {
@@ -143,6 +213,19 @@ export class MeDto {
 
   @ApiProperty({ type: CurrentTenantSummaryDto, nullable: true })
   tenant!: CurrentTenantSummaryDto | null;
+
+  /**
+   * Số chuyến ĐI THUÊ của chính người này còn CHƯA KHÉP (cùng vị từ với tab "đang diễn ra"
+   * của `/trips`).
+   *
+   * Khu `/account` của một tài khoản gian hàng ẩn menu Chuyến — nhưng không được giấu một chuyến
+   * đang chạy của chính họ. Ca thật: chủ xe tuyến hoa hồng đang đi thuê xe người khác thì nâng
+   * lên gói; chuyến chưa xong, tiền hoàn chưa về, chat với chủ xe kia vẫn mở.
+   *
+   * Trả kèm `MeDto` để menu vẽ đúng ngay LẦN ĐẦU — cùng lý do với `tenant.publicVehicleCount`.
+   */
+  @ApiProperty({ description: 'Số chuyến đi thuê chưa khép của chính người dùng' })
+  openRenterTripCount!: number;
 
   @ApiProperty({
     type: String,

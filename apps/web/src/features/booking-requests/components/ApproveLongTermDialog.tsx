@@ -231,11 +231,11 @@ function ApproveLongTermForm({
               })}
             />
           ) : (
-            <Alert type="warning" showIcon message={t('longTerm.quoteUnavailable')} />
+            <Alert type="warning" showIcon title={t('longTerm.quoteUnavailable')} />
           )
         ) : null}
 
-        {error ? <Alert type="error" showIcon message={error} /> : null}
+        {error ? <Alert type="error" showIcon title={error} /> : null}
       </div>
     </Modal>
   );

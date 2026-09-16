@@ -822,6 +822,7 @@ function StaffBookingFlow({
 
               <Button
                 label={checkConflict.isPending ? t('checking') : t('continue')}
+                icon="arrow-forward"
                 size="lg"
                 disabled={!hasRange || checkConflict.isPending}
                 onPress={continueFromTime}
@@ -929,8 +930,18 @@ function StaffBookingFlow({
 
               {stepError ? <ErrorNote>{stepError}</ErrorNote> : null}
 
-              <Button label={t('continue')} size="lg" onPress={() => void continueFromContact()} />
-              <Button label={t('back')} variant="ghost" onPress={() => setStep(STEP.TIME)} />
+              <Button
+                label={t('continue')}
+                icon="arrow-forward"
+                size="lg"
+                onPress={() => void continueFromContact()}
+              />
+              <Button
+                label={t('back')}
+                icon="arrow-back"
+                variant="ghost"
+                onPress={() => setStep(STEP.TIME)}
+              />
             </YStack>
           ) : null}
 
@@ -977,11 +988,17 @@ function StaffBookingFlow({
 
               <Button
                 label={t('submit')}
+                icon="checkmark-outline"
                 size="lg"
                 loading={create.isPending}
                 onPress={() => void submit()}
               />
-              <Button label={t('back')} variant="ghost" onPress={() => setStep(STEP.CONTACT)} />
+              <Button
+                label={t('back')}
+                icon="arrow-back"
+                variant="ghost"
+                onPress={() => setStep(STEP.CONTACT)}
+              />
             </YStack>
           ) : null}
         </YStack>

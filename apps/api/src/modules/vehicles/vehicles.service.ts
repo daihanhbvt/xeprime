@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { newId, Prisma } from '@xeprime/prisma';
+import { isUniqueViolation, newId, Prisma } from '@xeprime/prisma';
 import {
   APPROVAL_ACTION,
   APPROVAL_STATUS,
@@ -20,11 +20,12 @@ import {
   isVehicleFuelTypeAllowed,
   VEHICLE_OPERATION_STATUS,
   VEHICLE_LOCKED_AFTER_APPROVAL_FIELDS,
-  VEHICLE_PUBLIC_MIN_IMAGES,
   isMotorbikeCategory,
   isTransmissionAllowedFor,
+  missingPublishRequirements,
   vehicleFeatureAppliesTo,
   vehicleFieldPolicy,
+  type VehiclePublicationInput,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_SUBMITTABLE,
   type PaginationMeta,
@@ -140,6 +141,16 @@ const SENSITIVE_SELECT = {
   mainImageUrl: true,
   deliveryEnabled: true,
 } satisfies Prisma.VehicleSelect;
+
+/**
+ * Unique index MỘT PHẦN "mỗi đối tượng chỉ có một phiếu CHỜ", đặt ở migration
+ * `20260914180000_single_gate_vehicle_approval`.
+ *
+ * Tên nằm ở hằng chứ không viết thẳng vào chỗ bắt lỗi: đổi tên index ở migration mà quên chỗ kia
+ * thì nhánh phục hồi ngừng chạy trong im lặng — và triệu chứng là 500 cho người bấm gửi duyệt
+ * hai lần, một thứ không ai nghĩ tới khi đang đổi tên một index.
+ */
+const PENDING_APPROVAL_TASK_UQ = 'approval_tasks_pending_target_uq';
 
 @Injectable()
 export class VehiclesService {
@@ -380,10 +391,41 @@ export class VehiclesService {
       }),
     ]);
 
+    const reviews = await this.latestPublicReviews(rows.map((row) => row.id));
+
     return {
-      data: rows.map(toListItem),
+      data: rows.map((row) => toListItem(row, reviews.get(row.id) ?? null)),
       meta: paginationMeta(paging, total),
     };
+  }
+
+  /**
+   * Lần gửi duyệt gần nhất của NHIỀU xe — một truy vấn cho cả trang, không phải một truy vấn/xe.
+   *
+   * `distinct` + `orderBy [targetId, submittedAt desc]` cho ra `DISTINCT ON (target_id) … ORDER BY
+   * target_id, submitted_at DESC` ở Postgres: đúng "phiếu mới nhất mỗi xe", và index
+   * `(target_type, target_id)` phục vụ được nó.
+   *
+   * Thứ tự hai khoá trong `orderBy` là bắt buộc, không phải tuỳ chọn: `DISTINCT ON` đòi biểu
+   * thức distinct đứng đầu `ORDER BY`, và đảo lại thì Postgres từ chối câu lệnh.
+   */
+  private async latestPublicReviews(
+    vehicleIds: string[],
+  ): Promise<Map<string, VehiclePublicReviewDto>> {
+    if (vehicleIds.length === 0) return new Map();
+    const rows = await this.prisma.approvalTask.findMany({
+      where: { targetType: APPROVAL_TARGET_TYPE.VEHICLE, targetId: { in: vehicleIds } },
+      distinct: ['targetId'],
+      orderBy: [{ targetId: 'asc' }, { submittedAt: 'desc' }],
+      select: {
+        targetId: true,
+        status: true,
+        reason: true,
+        submittedAt: true,
+        reviewedAt: true,
+      },
+    });
+    return new Map(rows.map((row) => [row.targetId, toPublicReview(row)]));
   }
 
   async getOne(tenantId: string, id: string): Promise<VehicleDetailDto> {
@@ -410,14 +452,7 @@ export class VehiclesService {
         select: { featureKey: true },
       }),
     ]);
-    const review: VehiclePublicReviewDto | null = latest
-      ? {
-          status: latest.status,
-          reason: latest.reason,
-          submittedAt: latest.submittedAt.toISOString(),
-          reviewedAt: latest.reviewedAt?.toISOString() ?? null,
-        }
-      : null;
+    const review: VehiclePublicReviewDto | null = latest ? toPublicReview(latest) : null;
 
     return toDetail(
       row,
@@ -897,9 +932,26 @@ export class VehiclesService {
   }
 
   /**
-   * Gửi (lại) xe đi duyệt công khai. Chỉ cho phép khi xe đang draft/needs_revision/rejected/hidden
-   * và gian hàng đang active; bắt buộc đủ giá + ảnh + biển số + mô tả. Tạo phiếu duyệt + log +
-   * audit trong một transaction — client KHÔNG tự set `approved_public` (CLAUDE.md mục 5).
+   * Gửi (lại) xe đi duyệt công khai — **cổng kiểm duyệt DUY NHẤT của tuyến hoa hồng** (ADR 0036).
+   *
+   * Bốn cổng, theo thứ tự rẻ-trước-đắt-sau:
+   *
+   *  1. **Trạng thái xe** cho phép gửi (draft/needs_revision/rejected/hidden).
+   *  2. **Gian hàng không bị khoá.** Chú ý: đây KHÔNG phải "gian hàng đã được duyệt". Tenant mở
+   *     ra là `active` ngay (ADR 0036), nên cổng này chỉ còn bắt đúng trường hợp nền tảng đã
+   *     khoá gian hàng — và lúc đó xe không được lên chợ là đúng.
+   *  3. **Hồ sơ xe đủ điều kiện** — `missingPublishRequirements` ở `@xeprime/types`, CÙNG hàm mà
+   *     checklist của web chạy, nên không còn cảnh checklist xanh hết mà server từ chối.
+   *  4. **Hạn mức chỗ** của gói (ADR 0015 điều 7).
+   *
+   * Tạo phiếu duyệt + log + audit trong một transaction — client KHÔNG tự set `approved_public`
+   * (CLAUDE.md mục 5).
+   *
+   * **Bấm lại / tải lại trang / lỗi mạng không đẻ ra phiếu thứ hai.** Hai lớp: trạng thái xe
+   * chuyển sang `pending_public_review` nên lần gọi sau rơi vào cổng 1, và — với hai request
+   * chạy song song vượt qua cổng đó cùng lúc — unique index một phần
+   * `approval_tasks_pending_target_uq` ở DB chặn nốt. Đó là kỷ luật "chống trùng bằng constraint
+   * DB, không bằng check ở tầng app" của CLAUDE.md mục 6.
    */
   async submitForPublicReview(
     tenantId: string,
@@ -914,24 +966,15 @@ export class VehiclesService {
 
     const status = vehicle.publicStatus as VehiclePublicStatus;
     if (!VEHICLE_PUBLIC_STATUS_SUBMITTABLE.includes(status)) {
+      /*
+       * "Đang chờ duyệt" là kết quả người dùng MUỐN, chỉ là đã đạt từ lần bấm trước — trả về
+       * trạng thái hiện tại thay vì một lỗi đỏ. Đây chính là đường đi của việc bấm hai lần, mở
+       * hai tab, hay bấm lại sau khi mạng chập ở lần đầu.
+       */
+      if (status === VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW) return this.getOne(tenantId, id);
       throw new ConflictException({
         code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-        message:
-          status === VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW
-            ? 'Xe đang chờ duyệt công khai.'
-            : 'Xe đã ở trạng thái công khai.',
-      });
-    }
-
-    // Không có tỉnh hợp lệ thì marketplace không biết xếp xe vào đâu — và scope công khai sẽ
-    // loại nó ra. Chặn ngay ở bước GỬI DUYỆT với thông báo chỉ đúng việc phải làm, thay vì để
-    // xe được duyệt rồi không ai tìm thấy.
-    if (!vehicle.branchId || !vehicle.branch?.province?.code) {
-      throw new BadRequestException({
-        code: API_ERROR_CODE.BRANCH_LOCATION_REQUIRED,
-        message:
-          'Chi nhánh của xe chưa có tỉnh/thành. Hãy bổ sung tỉnh cho chi nhánh trước khi đăng xe lên chợ.',
-        details: { branchId: vehicle.branchId },
+        message: 'Xe đã ở trạng thái công khai.',
       });
     }
 
@@ -940,18 +983,20 @@ export class VehiclesService {
       select: { status: true },
     });
     if (tenant?.status !== TENANT_STATUS.ACTIVE) {
-      throw new BadRequestException({
-        code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Gian hàng phải được duyệt hoạt động trước khi đăng xe lên chợ.',
+      throw new ConflictException({
+        code: API_ERROR_CODE.SHOP_NOT_ACTIVE,
+        message: 'Gian hàng đang bị khoá nên chưa đăng xe lên chợ được.',
+        details: { status: tenant?.status ?? null },
       });
     }
 
     const imageCount = await countDistinctImages(this.prisma, vehicle.id, vehicle.mainImageUrl);
-    const missing = missingPublicFields(vehicle, imageCount);
+    const missing = missingPublishRequirements(publicationInput(vehicle), imageCount);
     if (missing.length > 0) {
       throw new BadRequestException({
-        code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: `Cần bổ sung trước khi gửi duyệt: ${missing.join(', ')}.`,
+        code: API_ERROR_CODE.VEHICLE_PUBLISH_INCOMPLETE,
+        message: 'Xe còn thiếu thông tin bắt buộc nên chưa gửi duyệt được.',
+        // MÃ, không phải câu tiếng Việt — web dựng nhãn theo ngôn ngữ đang dùng (ADR 0012).
         details: { missing },
       });
     }
@@ -966,22 +1011,34 @@ export class VehiclesService {
 
     const isResubmit = status !== VEHICLE_PUBLIC_STATUS.DRAFT;
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.vehicle.update({
-        where: { id },
-        data: { publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW },
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.vehicle.update({
+          where: { id },
+          data: { publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW },
+        });
+        await this.createVehicleApprovalTask(tx, {
+          vehicleId: id,
+          tenantId,
+          actorUserId: userId,
+          fromStatus: status,
+          snapshot: vehicle,
+          action: isResubmit ? 'resubmit' : 'submit',
+        });
+        // Gửi lại duyệt: nếu xe từng công khai thì listing về ẩn cho tới khi duyệt lại (ADR 0008).
+        await this.listings.syncFromVehicle(id, tx);
       });
-      await this.createVehicleApprovalTask(tx, {
-        vehicleId: id,
-        tenantId,
-        actorUserId: userId,
-        fromStatus: status,
-        snapshot: vehicle,
-        action: isResubmit ? 'resubmit' : 'submit',
-      });
-      // Gửi lại duyệt: nếu xe từng công khai thì listing về ẩn cho tới khi duyệt lại (ADR 0008).
-      await this.listings.syncFromVehicle(id, tx);
-    });
+    } catch (error) {
+      /*
+       * Thua cuộc đua với một request song song của CHÍNH thao tác này: phiếu kia đã tồn tại và
+       * xe đã ở hàng đợi, tức là kết quả người dùng muốn đã có. Trả trạng thái hiện tại.
+       *
+       * Chỉ nuốt ĐÚNG vi phạm unique của phiếu chờ — mọi lỗi khác vẫn nổi lên. `isUniqueViolation`
+       * ở `@xeprime/prisma` vì nhận diện nó KHÔNG hiển nhiên ở Prisma 7; xem docblock của nó.
+       */
+      if (isUniqueViolation(error, PENDING_APPROVAL_TASK_UQ)) return this.getOne(tenantId, id);
+      throw error;
+    }
 
     return this.getOne(tenantId, id);
   }
@@ -1001,6 +1058,24 @@ export class VehiclesService {
       action: 'submit' | 'resubmit';
     },
   ): Promise<void> {
+    /*
+     * Thư viện ảnh đọc trong CÙNG transaction với phiếu: chụp ở đây thay vì bắt hai nơi gọi tự
+     * truyền vào, để đường knock-back (sửa trường nhạy cảm khi xe đang công khai) cũng có ảnh —
+     * nó không hề chạy qua `countDistinctImages`.
+     */
+    const gallery = await tx.vehicleImage.findMany({
+      where: { vehicleId: args.vehicleId },
+      orderBy: { sortOrder: 'asc' },
+      select: { imageUrl: true },
+    });
+    const imageUrls = [
+      ...new Set(
+        [args.snapshot.mainImageUrl, ...gallery.map((image) => image.imageUrl)].filter(
+          (url): url is string => Boolean(url),
+        ),
+      ),
+    ];
+
     const task = await tx.approvalTask.create({
       data: {
         id: newId(),
@@ -1009,7 +1084,7 @@ export class VehiclesService {
         targetId: args.vehicleId,
         status: APPROVAL_STATUS.PENDING,
         submittedBy: args.actorUserId,
-        snapshot: vehicleSnapshot(args.snapshot) as Prisma.InputJsonValue,
+        snapshot: vehicleSnapshot(args.snapshot, imageUrls) as Prisma.InputJsonValue,
       },
     });
     await tx.approvalLog.create({
@@ -1335,10 +1410,27 @@ function assertFeaturesForVehicleType(vehicleType: string, features: readonly st
 /** Decimal → string do ResponseInterceptor lo (ADR 0007); ở đây giữ nguyên kiểu. */
 type VehicleRow = Prisma.VehicleGetPayload<{ select: typeof DETAIL_SELECT }>;
 
+/** Dòng `approval_tasks` → tóm tắt lần duyệt (Date → ISO). Dùng cho cả danh sách lẫn chi tiết. */
+function toPublicReview(task: {
+  status: string;
+  reason: string | null;
+  submittedAt: Date;
+  reviewedAt: Date | null;
+}): VehiclePublicReviewDto {
+  return {
+    status: task.status,
+    reason: task.reason,
+    submittedAt: task.submittedAt.toISOString(),
+    reviewedAt: task.reviewedAt?.toISOString() ?? null,
+  };
+}
+
 function toListItem(
   v: Prisma.VehicleGetPayload<{ select: typeof LIST_SELECT }>,
+  latestPublicReview: VehiclePublicReviewDto | null = null,
 ): VehicleListItemDto {
   return {
+    latestPublicReview,
     id: v.id,
     code: v.code,
     name: v.name,
@@ -1388,7 +1480,7 @@ function toDetail(
   features: string[] = [],
 ): VehicleDetailDto {
   return {
-    ...toListItem(v),
+    ...toListItem(v, latestPublicReview),
     color: v.color,
     fuelType: v.fuelType,
     lengthMm: v.lengthMm,
@@ -1415,7 +1507,6 @@ function toDetail(
     images: media.map((m) => m.url),
     media,
     features,
-    latestPublicReview,
   };
 }
 
@@ -1519,61 +1610,40 @@ function clearFieldsNotInProfile(
 }
 
 /**
- * Điều kiện tối thiểu để xe được lên chợ; trả danh sách còn thiếu (rỗng = đủ).
+ * Dòng `vehicles` → lát cắt mà luật lên chợ dùng chung cần (`@xeprime/types`).
  *
- * Giá kiểm THEO DỊCH VỤ xe đăng (17/08): đăng dịch vụ nào thì phải niêm yết giá chuyên biệt
- * của dịch vụ đó — không âm thầm lấy giá tự lái trưng như tổng giá có tài xế/dài hạn. Bản đối
- * xứng ở FE: `apps/web/features/vehicles/publication.ts` — sửa một bên phải sửa cả hai.
+ * Luật sống ở `packages/types/src/vehicle-publication.ts` chứ không ở đây, vì checklist của web
+ * chạy CÙNG hàm đó. Bản cũ ở file này trả về các câu tiếng Việt và tự ghi trong docblock rằng
+ * "sửa một bên phải sửa cả hai" — hai bản sao của một cổng chặn là hẹn ngày chúng lệch nhau, và
+ * lúc đó chủ xe thấy checklist xanh hết còn server vẫn trả 400.
+ *
+ * `branchProvinceCode` là lý do hàm adapter này tồn tại: nó nằm sau hai quan hệ
+ * (`vehicle → branch → province`), và luật dùng chung không biết gì về bảng nào.
  */
-function missingPublicFields(v: VehicleRow, imageCount: number): string[] {
-  const missing: string[] = [];
-  if (v.serviceTypes.includes(SERVICE_TYPE.SELF_DRIVE) && v.weekdayPrice == null) {
-    missing.push('giá thuê tự lái (ngày thường)');
-  }
-  if (v.serviceTypes.includes(SERVICE_TYPE.LONG_TERM) && v.monthlyPrice == null) {
-    missing.push('giá tháng thuê dài hạn');
-  }
-  if (v.serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER) && v.withDriverDailyPrice == null) {
-    missing.push('giá/ngày có tài xế');
-  }
-  if (!v.mainImageUrl) missing.push('ảnh đại diện');
-  /*
-   * Bốn ảnh khác nhau (09/09/2026): khách không đặt một chiếc xe chỉ có một tấm ảnh chụp xa.
-   * Đếm trên tập URL đã khử trùng và có cả ảnh đại diện — cùng một tấm dùng làm ảnh đại diện
-   * lẫn ảnh thư viện chỉ tính MỘT.
-   */
-  if (imageCount < VEHICLE_PUBLIC_MIN_IMAGES) {
-    missing.push(`ít nhất ${VEHICLE_PUBLIC_MIN_IMAGES} ảnh xe (hiện có ${imageCount})`);
-  }
-  if (!v.plateNumber) missing.push('biển số');
-  if (!v.brand) missing.push('hãng xe');
-  if (!v.model) missing.push('mẫu xe');
-  if (v.manufactureYear == null) missing.push('năm sản xuất');
-  if (!v.fuelType) missing.push('nguồn năng lượng');
-  // Mô tả KHÔNG bắt buộc (09/09/2026): ảnh + thông số + giá đã đủ để khách quyết định, và một
-  // ô mô tả bắt buộc chỉ đẻ ra những dòng "xe đẹp, máy êm" viết cho có.
-
-  /*
-   * Thông số năng lượng hỏi ĐÚNG thứ có nghĩa với chiếc xe này: xe xăng khai lít/100km, xe điện
-   * khai quãng đường mỗi lần sạc, hybrid chỉ bắt phần xăng (enum chưa tách HEV/PHEV).
-   */
-  const policy = vehicleFieldPolicy(v.vehicleType, v.fuelType);
-  if (policy.seatCount === 'required' && v.seatCount == null) missing.push('số chỗ ngồi');
-  // Phân khúc xe máy là chiều khách LỌC ngoài chợ — thiếu nó thì chiếc xe gần như không ai thấy.
-  if (policy.motorbikeCategory === 'required' && !v.motorbikeCategory) {
-    missing.push('phân khúc xe máy');
-  }
-  if (policy.fuelConsumption === 'required' && v.fuelConsumptionCombined == null) {
-    missing.push('mức tiêu thụ nhiên liệu');
-  }
-  if (policy.engineDisplacementCc === 'required' && v.engineDisplacementCc == null) {
-    missing.push('dung tích xi-lanh');
-  }
-  if (policy.electricRangeKm === 'required' && v.electricRangeKm == null) {
-    missing.push('quãng đường mỗi lần sạc đầy');
-  }
-  if (policy.transmission === 'required' && !v.transmission) missing.push('hộp số');
-  return missing;
+function publicationInput(v: VehicleRow): VehiclePublicationInput {
+  return {
+    vehicleType: v.vehicleType,
+    serviceTypes: v.serviceTypes,
+    weekdayPrice: v.weekdayPrice,
+    monthlyPrice: v.monthlyPrice,
+    withDriverDailyPrice: v.withDriverDailyPrice,
+    mainImageUrl: v.mainImageUrl,
+    plateNumber: v.plateNumber,
+    brand: v.brand,
+    model: v.model,
+    manufactureYear: v.manufactureYear,
+    fuelType: v.fuelType,
+    transmission: v.transmission,
+    seatCount: v.seatCount,
+    motorbikeCategory: v.motorbikeCategory,
+    // `Decimal(6,2)` ở DB nhưng `VehiclePublicationInput` nhận `number` — mức tiêu thụ không phải
+    // TIỀN nên `number` là đúng (ADR 0007 chỉ buộc tiền đi dạng chuỗi); chỉ cần chuyển tường minh.
+    fuelConsumptionCombined:
+      v.fuelConsumptionCombined == null ? null : Number(v.fuelConsumptionCombined),
+    engineDisplacementCc: v.engineDisplacementCc,
+    electricRangeKm: v.electricRangeKm,
+    branchProvinceCode: v.branchId ? (v.branch?.province?.code ?? null) : null,
+  };
 }
 
 /**
@@ -1596,9 +1666,22 @@ async function countDistinctImages(
   return urls.size;
 }
 
-/** Ảnh chụp hồ sơ xe lúc gửi duyệt — reviewer thấy đúng thứ đã gửi (Decimal → string). */
-function vehicleSnapshot(v: VehicleRow): Record<string, unknown> {
+/**
+ * Ảnh chụp hồ sơ xe lúc gửi duyệt — reviewer thấy đúng thứ đã gửi (Decimal → string).
+ *
+ * `images` và `branchName`/`provinceName` là hai thứ bổ sung 14/09/2026, và chúng không phải
+ * trang trí: cổng gửi duyệt bắt buộc **≥4 ảnh** và **chi nhánh phải có tỉnh**, nhưng snapshot cũ
+ * chỉ mang `mainImageUrl` — nghĩa là reviewer phải duyệt một chiếc xe lên chợ khi chỉ nhìn được
+ * một tấm ảnh và không biết nó nằm ở tỉnh nào. Không thể duyệt đúng thứ mình không thấy.
+ *
+ * Snapshot là jsonb ĐÓNG BĂNG, không migrate: phiếu cũ thiếu ba key này và màn duyệt chỉ hiện
+ * key có mặt, nên thêm vào đây là an toàn với mọi phiếu đã tồn tại.
+ */
+function vehicleSnapshot(v: VehicleRow, imageUrls: string[]): Record<string, unknown> {
   return {
+    images: imageUrls,
+    branchName: v.branch?.name ?? null,
+    provinceName: v.branch?.province?.name ?? null,
     name: v.name,
     code: v.code,
     plateNumber: v.plateNumber,

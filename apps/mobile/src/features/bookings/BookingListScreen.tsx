@@ -180,6 +180,7 @@ export function BookingListScreen({ vehicleId }: { vehicleId?: string }) {
           searchLabel={t('searchLabel')}
           searchPlaceholder={t('searchPlaceholder')}
           onSearchChange={changeSearch}
+          hasRows={items.length > 0}
           groups={groups}
           onFilterChange={changeFilter}
           {...(meta === undefined ? {} : { meta })}

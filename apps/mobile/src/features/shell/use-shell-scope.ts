@@ -31,8 +31,14 @@ export interface ShellScope {
   scope: AppScope;
   /** Có membership gian hàng — tín hiệu DUY NHẤT bật khu quản lý. */
   canManage: boolean;
-  /** Đổi khu: ghi đích đang dở, nhớ lựa chọn, rồi `replace` sang đích của khu kia. */
-  switchTo: (target: AppScope) => void;
+  /**
+   * Đổi khu: ghi đích đang dở, nhớ lựa chọn, rồi `replace` sang đích của khu kia.
+   *
+   * `destination` ghi đè đích mặc định (màn đang dở, hoặc màn đầu của khu) khi NƠI GỌI biết
+   * người dùng muốn tới đâu — menu tài khoản của chủ xe dẫn thẳng vào "Danh sách xe" và "Lịch
+   * xe" của khu quản lý. Thiếu nó thì bấm "Lịch xe" lại rơi về màn quản lý mở lần trước.
+   */
+  switchTo: (target: AppScope, destination?: Href) => void;
   /** Ghi đích đang dở của một khu — layout của khu đó gọi mỗi lần route đổi. */
   trackRoute: (scope: AppScope, route: string) => void;
 }
@@ -58,15 +64,21 @@ export function useShellScope(): ShellScope {
   );
 
   const switchTo = useCallback(
-    (target: AppScope) => {
-      if (target === scope) return;
+    (target: AppScope, destination?: Href) => {
+      /*
+       * Đích tường minh vẫn phải đi được KHI ĐÃ Ở ĐÚNG KHU: chủ xe mở menu tài khoản từ khu
+       * khách thì `target !== scope`, nhưng một người đang ở khu quản lý cũng tới được cùng menu
+       * đó — và với họ "Lịch xe" phải mở lịch, không phải không làm gì cả.
+       */
+      if (target === scope && !destination) return;
 
-      dispatch(scopeChanged(target));
-      fireAndForget(() => rememberScope(target), 'useShellScope.rememberScope');
+      if (target !== scope) {
+        dispatch(scopeChanged(target));
+        fireAndForget(() => rememberScope(target), 'useShellScope.rememberScope');
+      }
 
       // Đích đã nhớ là một chuỗi đường dẫn thật đã từng render — dùng thẳng làm `Href`.
-      const destination = (lastRoute[target] as Href | undefined) ?? scopeHome(target);
-      router.replace(destination);
+      router.replace(destination ?? (lastRoute[target] as Href | undefined) ?? scopeHome(target));
     },
     [dispatch, lastRoute, router, scope],
   );

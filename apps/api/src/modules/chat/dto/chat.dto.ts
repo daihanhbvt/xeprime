@@ -3,6 +3,7 @@ import {
   CHAT_ATTACHMENT_MAX_BYTES,
   CHAT_ATTACHMENT_MAX_COUNT,
   CHAT_ATTACHMENT_MIME_TYPES,
+  CHAT_INBOX_VALUES,
   CHAT_SIDE_VALUES,
   MESSAGE_TYPE_VALUES,
 } from '@xeprime/types';
@@ -19,6 +20,7 @@ import {
   Matches,
   MaxLength,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 
@@ -45,26 +47,77 @@ const toBoolean = () =>
     typeof value === 'string' ? value === 'true' || value === '1' : Boolean(value),
   );
 
-/** Khách mở/lấy hội thoại với shop về một xe. Backend suy tenant từ xe. */
+/**
+ * Khách mở/lấy hội thoại với một gian hàng. Backend suy `tenant_id` — client không gửi nó.
+ *
+ * HAI đường vào, vì khách bắt đầu cuộc trò chuyện từ hai chỗ khác nhau:
+ *
+ *  - `vehicleId` — nhắn từ một chiếc xe cụ thể (trang chi tiết, overlay đặt xe). Chiếc xe vừa
+ *    xác định gian hàng vừa trở thành ngữ cảnh của câu nhắn đầu tiên.
+ *  - `shopSlug` — nhắn từ trang gian hàng `/shops/[slug]`, nơi chưa có chiếc xe nào đang mở.
+ *
+ * Cả hai đổ về đúng một thread, vì danh tính hội thoại là (khách, GIAN HÀNG) chứ không phải
+ * chiếc xe — xem `@@unique` của model `Conversation`. Đưa `shopSlug` vào đây thay vì mở một
+ * endpoint thứ hai giữ lời hứa đó ở MỘT chỗ; hai endpoint là hai cơ hội để một trong hai quên
+ * mất tính idempotent và đẻ ra thread thứ hai.
+ *
+ * Đúng MỘT trong hai được gửi: thiếu cả hai thì không biết nhắn cho ai, gửi cả hai thì không có
+ * câu trả lời đúng cho trường hợp chúng chỉ tới hai gian hàng khác nhau.
+ */
 export class CreateConversationDto {
-  @ApiProperty({ description: 'ID xe (listing) muốn nhắn shop' })
+  @ApiPropertyOptional({ description: 'ID xe (listing) muốn nhắn shop — hoặc dùng `shopSlug`' })
+  @ValidateIf((dto: CreateConversationDto) => dto.shopSlug === undefined)
   @IsString()
-  vehicleId!: string;
+  vehicleId?: string;
+
+  @ApiPropertyOptional({ description: 'Slug gian hàng muốn nhắn — hoặc dùng `vehicleId`' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  shopSlug?: string;
+}
+
+/** Hỏi "tôi nhắn được cho gian hàng này chưa" theo slug trang `/shops/[slug]`. */
+export class ChatEligibilityQueryDto {
+  @ApiProperty({ description: 'Slug gian hàng đang xem' })
+  @IsString()
+  @MaxLength(120)
+  shopSlug!: string;
 }
 
 /**
- * Bề mặt chat mà người gọi đang đứng — BẮT BUỘC, không có mặc định.
+ * Câu trả lời cho GIAO DIỆN, không phải cho đường ghi.
  *
- * Một tài khoản vừa là khách vừa là nhân viên gian hàng có hai hộp thư khác nhau; một tham số
- * tuỳ chọn nghĩa là ai đó quên truyền và nhận về danh sách trộn của cả hai vai.
+ * Chỉ một cờ, cố ý không kèm lý do: lý do duy nhất hiện nay ("chưa gửi yêu cầu thuê") là thứ
+ * giao diện KHÔNG hiển thị — nút chỉ đơn giản không có mặt (quyết định sản phẩm 16/09/2026).
+ * Trả một mã lý do mà không nơi nào vẽ nó là mời người sau vẽ nó ra.
  */
-export class ChatSideQueryDto {
-  @ApiProperty({ enum: CHAT_SIDE_VALUES, description: 'customer = hộp thư khách · shop = inbox gian hàng' })
-  @IsIn(CHAT_SIDE_VALUES)
+export class ChatEligibilityDto {
+  @ApiProperty({ description: 'Khách đang đăng nhập nhắn được cho gian hàng này' })
+  canChat!: boolean;
+}
+
+/**
+ * HỘP THƯ mà người gọi đang mở — BẮT BUỘC, không có mặc định.
+ *
+ * Một tài khoản vừa là khách vừa là nhân viên gian hàng có hai phạm vi khác nhau; một tham số
+ * tuỳ chọn nghĩa là ai đó quên truyền và server phải TỰ ĐOÁN phạm vi của một truy vấn về dữ liệu
+ * riêng tư. Bắt buộc ở chữ ký là cách để không có đường nào rơi vào mặc định im lặng.
+ *
+ * Nhận ba giá trị (`CHAT_INBOX`): `customer`, `shop`, và `unified` — hợp của đúng hai cái trên,
+ * không phải một phạm vi thứ ba (16/09/2026, xem `chatInboxScope`). Tên thuộc tính vẫn là `side`
+ * để mọi URL và bookmark cũ giữ nguyên nghĩa.
+ */
+export class ChatInboxQueryDto {
+  @ApiProperty({
+    enum: CHAT_INBOX_VALUES,
+    description: 'customer = hộp thư khách · shop = inbox gian hàng · unified = cả hai',
+  })
+  @IsIn(CHAT_INBOX_VALUES)
   side!: string;
 }
 
-export class ConversationListQueryDto extends ChatSideQueryDto {
+export class ConversationListQueryDto extends ChatInboxQueryDto {
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
   @Type(() => Number)

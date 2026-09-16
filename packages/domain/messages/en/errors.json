@@ -59,6 +59,7 @@
     "CUSTOMER_ARCHIVED": "This customer has been archived.",
     "CUSTOMER_BLOCKED": "This customer is on your refused-service list.",
     "CHAT_CUSTOMER_UNAVAILABLE": "This guest has no XePrime account yet, so in-app messaging is unavailable — call them or reach out on Zalo.",
+    "CHAT_REQUIRES_BOOKING": "Individual hosts open messaging once you send a rental request. Pick a car and send a request first.",
     "BRANCH_HAS_DEPENDENCIES": "This branch still has related records, so it can't be deleted.",
     "BRANCH_DEFAULT_IMMUTABLE": "The default branch can't be edited or deleted.",
     "BRANCH_LOCATION_REQUIRED": "This branch needs an address before it can be used.",
@@ -85,7 +86,15 @@
     "INSUFFICIENT_BALANCE": "Not enough available balance.",
     "WITHDRAWAL_BELOW_MINIMUM": "Amount is below the minimum withdrawal.",
     "WITHDRAWAL_ALREADY_HANDLED": "This withdrawal request has already been handled.",
-    "DEPOSIT_ALWAYS_REQUIRED": "Shops on the commission track always collect deposits through XePrime — this switch cannot be turned off."
+    "DEPOSIT_ALWAYS_REQUIRED": "Shops on the commission track always collect deposits through XePrime — this switch cannot be turned off.",
+    "SHOP_VERIFICATION_PENDING": "Your shop profile is already waiting to be verified.",
+    "SHOP_VERIFICATION_REQUIRED": "Your shop must be verified before you can buy a subscription plan.",
+    "SHOP_NOT_ACTIVE": "Your shop is locked, so this action is not available.",
+    "TENANT_BILLING_NOT_CONFIGURED": "This shop has no active service plan, so fees cannot be calculated. Contact XePrime support before accepting new bookings.",
+    "VEHICLE_PUBLISH_INCOMPLETE": "This vehicle is still missing required details, so it cannot be submitted.",
+    "SHOP_ACCOUNT_CANNOT_BOOK": "You are signed in to a shop account. To rent a vehicle, sign in with a renter account using a different phone number.",
+    "CANNOT_BOOK_OWN_VEHICLE": "This vehicle belongs to your own shop, so you cannot book it.",
+    "CANNOT_DECIDE_OWN_REQUEST": "You cannot approve or decline a request you sent yourself."
   },
   "upload": {
     "imageType": "Only JPG, PNG or WebP images are accepted",

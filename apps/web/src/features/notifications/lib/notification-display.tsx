@@ -21,7 +21,16 @@ import { NOTIFICATION_TARGET_TYPE, NOTIFICATION_TYPE, type NotificationType } fr
 import { ROUTES, tripPath } from '@/constants/routes';
 
 /** Ngữ cảnh xem thông báo — quyết định link click-through (khu quản lý vs khu khách). */
-export type NotificationContext = 'manage' | 'customer';
+/**
+ * BỀ MẶT mà người dùng đang đứng khi bấm một thông báo — nó quyết định ĐÍCH, không quyết định
+ * nội dung.
+ *
+ * `owner` (16/09/2026) là chủ xe TUYẾN HOA HỒNG: họ nhận thông báo của cả hai vai — khách đặt xe
+ * của họ, và chuyến họ đi thuê — nhưng `/manage` là cánh cửa đóng với họ (ADR 0027/0028). Dùng
+ * `manage` cho họ là dẫn thẳng vào một trang 403; dùng `customer` thì mọi thông báo về XE và GIAN
+ * HÀNG của chính họ trở thành dòng không bấm được.
+ */
+export type NotificationContext = 'manage' | 'customer' | 'owner';
 
 const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   [NOTIFICATION_TYPE.BOOKING_CREATED]: <CalendarOutlined />,
@@ -38,8 +47,10 @@ const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   [NOTIFICATION_TYPE.BOOKING_AUTO_ACCEPTED]: <ThunderboltOutlined />,
   [NOTIFICATION_TYPE.SHOP_APPROVED]: <ShopOutlined />,
   [NOTIFICATION_TYPE.SHOP_REJECTED]: <ShopOutlined />,
+  [NOTIFICATION_TYPE.SHOP_NEEDS_REVISION]: <ShopOutlined />,
   [NOTIFICATION_TYPE.VEHICLE_APPROVED]: <CarOutlined />,
   [NOTIFICATION_TYPE.VEHICLE_REJECTED]: <CarOutlined />,
+  [NOTIFICATION_TYPE.VEHICLE_NEEDS_REVISION]: <CarOutlined />,
   [NOTIFICATION_TYPE.REVIEW_RECEIVED]: <StarOutlined />,
   // Vòng đời gói (W2, ADR 0015/0026) — cùng icon thẻ với màn "Gói của tôi".
   [NOTIFICATION_TYPE.SUBSCRIPTION_EXPIRING]: <CreditCardOutlined />,
@@ -84,19 +95,37 @@ export function notificationHref(
   // nằm ở trang đầu danh sách. Hai hộp thư là hai trang khác nhau (ADR 0009), nên không có
   // "một địa chỉ dùng chung" như bên app native.
   if (target === NOTIFICATION_TARGET_TYPE.CONVERSATION) {
-    const base = context === 'customer' ? ROUTES.CHAT : ROUTES.MANAGE.CHAT;
+    /*
+     * Chủ xe tuyến hoa hồng đi về `/chat` như khách thuê — nhưng ở đó `/chat` là hộp thư HỢP
+     * NHẤT (`resolveChatInbox`), nên một thông báo từ phía gian hàng vẫn mở đúng hội thoại. Trước
+     * đợt hợp nhất, cùng đường dẫn đó mở một hộp thư chỉ có vai khách và thread không tồn tại.
+     */
+    const base = context === 'manage' ? ROUTES.MANAGE.CHAT : ROUTES.CHAT;
     return notification.targetId
       ? `${base}?c=${encodeURIComponent(notification.targetId)}`
       : base;
   }
 
-  if (context === 'customer') {
+  if (context !== 'manage') {
     switch (target) {
+      /*
+       * `/trips/[id]` phục vụ CẢ HAI vai: `CustomerTripsService.detail` nhận chuyến mình đi thuê
+       * lẫn chuyến mình cho thuê. Nên chủ xe tuyến hoa hồng dùng đúng đường này, không cần bản
+       * riêng — và không bị đẩy sang `/manage/bookings`, nơi họ không vào được.
+       */
       case NOTIFICATION_TARGET_TYPE.BOOKING:
       case NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST:
         return notification.targetId ? tripPath.detail(notification.targetId) : ROUTES.TRIPS;
       case NOTIFICATION_TARGET_TYPE.REVIEW:
         return ROUTES.TRIPS;
+      /*
+       * Hai loại dưới chỉ tới được với người CÓ gian hàng, nên chúng chỉ có đích ở bề mặt `owner`.
+       * Khách thuê thuần không bao giờ nhận chúng; trả `null` ở đó là đúng, không phải thiếu sót.
+       */
+      case NOTIFICATION_TARGET_TYPE.TENANT:
+        return context === 'owner' ? ROUTES.ACCOUNT.REGISTRATION : null;
+      case NOTIFICATION_TARGET_TYPE.VEHICLE:
+        return context === 'owner' ? ROUTES.ACCOUNT.VEHICLES : null;
       default:
         return null;
     }

@@ -127,7 +127,7 @@ export function ReceiptDetailDrawer({
               className={styles.section}
               type="info"
               showIcon
-              message={t('auto.title')}
+              title={t('auto.title')}
               description={
                 <>
                   {t('auto.body', { source: domainLabel('receiptSource', data.source) })}

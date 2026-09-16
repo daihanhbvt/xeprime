@@ -65,6 +65,7 @@ export function ShopStatusBanner({
       {submittable && canSubmit ? (
         <Button
           label={status === TENANT_STATUS.DRAFT ? t('status.submit') : t('status.resubmit')}
+          icon="send-outline"
           loading={submitting}
           onPress={onSubmit}
         />

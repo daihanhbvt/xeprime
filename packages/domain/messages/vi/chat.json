@@ -46,5 +46,7 @@
   "viewAll": "Xem tất cả tin nhắn",
   "viewListing": "Xem tin đăng",
   "welcomeTitle": "Chào mừng đến với Tin nhắn XePrime",
-  "yesterday": "Hôm qua"
+  "yesterday": "Hôm qua",
+  "roleAsHost": "Tôi cho thuê",
+  "roleAsRenter": "Tôi đi thuê"
 }

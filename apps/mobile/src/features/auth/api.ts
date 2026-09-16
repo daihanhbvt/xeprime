@@ -41,6 +41,15 @@ export function setAccountPassword(password: string): Promise<void> {
   return authApi.setPassword({ password });
 }
 
+/**
+ * Đổi mật khẩu khi ĐÃ có mật khẩu — khác `setAccountPassword` (đặt lần đầu cho tài khoản
+ * OTP/mạng xã hội). Sai mật khẩu hiện tại trả 400 `CURRENT_PASSWORD_INCORRECT`, không phải 401:
+ * phiên vẫn còn nguyên, nên màn hiện lỗi TRÊN Ô chứ không đá người dùng ra đăng nhập lại.
+ */
+export function changeAccountPassword(currentPassword: string, newPassword: string): Promise<void> {
+  return authApi.changePassword({ currentPassword, newPassword });
+}
+
 export function requestPasswordReset(email: string): Promise<void> {
   return authApi.forgotPassword({ email });
 }

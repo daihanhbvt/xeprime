@@ -1,6 +1,6 @@
 # 07 — Information Architecture
 
-> Cập nhật: 09/09/2026
+> Cập nhật: 16/09/2026
 > Trạng thái: **Canonical — cấu trúc trải nghiệm mục tiêu**
 
 ## 1. Bốn bề mặt, một hệ thống
@@ -49,16 +49,27 @@ Checkout phải tách rõ `tổng giá chuyến`, `thanh toán QR Pay ngay` và 
 
 Owner Lite nằm trong `/account`, là vỏ điều hướng thân thiện cho cá nhân có tối đa 3 xe. Nó dùng lại component, domain, API, lịch và booking từ Manage; không clone logic nghiệp vụ.
 
-| Thứ tự | Nhóm | Nội dung |
+Sidebar có **chín mục, một nhóm phẳng** (ADR 0038 điều 9) — thứ tự này là nội dung, không phải gợi ý:
+
+| # | Mục | Nội dung |
 | --- | --- | --- |
-| 1 | Xe của tôi | Danh sách, đăng xe, hồ sơ, ảnh/giấy tờ, giá, lịch và trạng thái listing |
-| 2 | Lịch & chuyến | Lịch dùng lại từ Manage, chuyến của tôi và lịch sử từng xe |
-| 3 | Hướng dẫn & pháp lý | Cẩm nang, khai thuế, hợp đồng/chứng từ và bảo vệ dữ liệu |
-| 4 | Tiền của tôi | Breakdown, khoản XePrime phải trả, lịch sử và yêu cầu rút |
-| 5 | Tin nhắn | Chat với khách sau khi đủ điều kiện mở liên hệ |
-| 6 | Tài khoản | Hồ sơ, đổi mật khẩu, xóa tài khoản và đăng xuất |
-| 7 | Nâng cấp | So sánh và đăng ký gian hàng |
-| 8 | Hỗ trợ | Ticket/tranh chấp |
+| 1 | Danh sách xe | Danh sách, đăng xe, hồ sơ, ảnh/giấy tờ, giá, trạng thái listing |
+| 2 | Lịch xe | Lịch dùng lại từ Manage |
+| 3 | Cẩm nang cho thuê xe | Tài liệu hướng dẫn |
+| 4 | Chuyến của tôi | `/trips` — hai tab Hiện tại / Lịch sử, cả chuyến đi thuê lẫn cho thuê, nhãn vai trên từng thẻ |
+| 5 | Thông tin khai thuế | Hồ sơ thuế/KYC bản compact |
+| 6 | Hợp đồng & Chứng từ | Thư viện mẫu |
+| 7 | Chính sách bảo vệ dữ liệu | Dẫn tới văn bản pháp lý |
+| 8 | Tài khoản của tôi | Hồ sơ con người · **số dư MỘT ví** (khả dụng/đang chuyển/tổng) · tài khoản ngân hàng nhận tiền · yêu cầu xoá tài khoản |
+| 9 | Đổi mật khẩu | |
+
+Tiền có **một cửa**. Bấm vào số điểm mở sổ giao dịch, lệnh rút và yêu cầu rút về ngân hàng; rút là
+một YÊU CẦU có trạng thái, không phải lời hứa chuyển ngay. Biên lai và lịch sử thanh toán sống trong
+chi tiết chuyến (route `/account/payments` vẫn mở được để tra soát).
+
+Không có trong sidebar — và không mất đi: hộp thư (hợp nhất trên biểu tượng chat ở header), hồ sơ
+chủ xe (sửa tại ngữ cảnh cần nó), gói dịch vụ (thẻ "Gian hàng của tôi" đầu trang hồ sơ), đăng xuất
+(menu avatar trên header). Bảng đối chiếu đầy đủ: ADR 0038 điều 9.
 
 Nguyên tắc: chủ xe cơ bản phải hoàn thành được một chuyến từ đầu tới cuối nhưng không bị ép dùng quy trình đội xe. Biên bản, ảnh tình trạng, odometer và nhiên liệu/pin không bắt buộc; hệ thống có thể tự chuyển trạng thái theo lịch và chủ xe điều chỉnh khi thực tế thay đổi. Feature gating không được chặn nhận tiền, rút tiền hoặc xem lịch sử.
 
@@ -72,10 +83,13 @@ Nguyên tắc: chủ xe cơ bản phải hoàn thành được một chuyến t�
 | Tài chính | Doanh thu, thu chi, công nợ, số dư/đối soát nếu dùng tiền qua XePrime |
 | Mặt tiền | Hồ sơ gian hàng, listing, chất lượng và hiệu quả hiển thị |
 | Tổ chức | Chi nhánh, tài xế, thành viên/phân quyền |
+| Tài khoản | **Tài khoản & bảo mật** của NGƯỜI đăng nhập — tên, email/SĐT, đổi mật khẩu. Tách khỏi *Hồ sơ gian hàng* (pháp nhân) ở Mặt tiền |
 | Cấu hình | Chính sách thuê, nhận xe, gói dịch vụ, thanh toán |
 | Hỗ trợ | FAQ, ticket và trạng thái sự cố |
 
-`pickup-areas` và `trash` không ở nav cho tới khi có hành vi thật. Advanced feature ở trạng thái `read_only` vẫn cho xem dữ liệu đã tạo trước khi hết gói; tenant mới chưa có dữ liệu thì ẩn.
+`pickup-areas` và `trash` không ở nav cho tới khi có hành vi thật.
+
+Trạng thái `read_only` chỉ áp cho tenant **vẫn ở tuyến gói** mà hạ bậc, hoặc đang trong **ân hạn**. Tenant đã hết gói VÀ hết ân hạn về tuyến hoa hồng: Manage nâng cao `hidden` hoàn toàn, không có chế độ chỉ-xem (ADR 0038 điều 5). Thứ họ vẫn phải làm được — khép chuyến đang chạy, xem chứng từ, xem và rút tiền — không nằm sau cờ tính năng nào.
 
 ## 5. Platform Admin
 
@@ -141,6 +155,19 @@ Vận hành
 Business mode không phải permission. Tài khoản chỉ thuộc một trong hai mô hình `commission_owner` hoặc `subscription_shop`; role tenant (`shop_owner`, `shop_manager`, `shop_staff`, `shop_viewer`) chỉ áp dụng bên trong gian hàng. Tài xế là bản ghi để phân công, không có account/app.
 
 Nếu một user vừa có platform role vừa có tenant membership, shell phải cho chọn scope. Trước khi có scope switch, quy định vận hành là dùng tài khoản platform riêng.
+
+Khu user của **tài khoản gian hàng** (ADR 0038 điều 7): giữ marketplace, "Quản lý gian hàng" và "Hồ
+sơ gian hàng" — đúng hai mục. Ẩn chuyến, chat, thông báo phía khách và toàn bộ công cụ cho thuê; hồ
+sơ con người, đổi mật khẩu và yêu cầu xoá tài khoản chuyển sang `/manage/account`.
+
+Chặn ở **URL**, không chỉ ẩn menu: mọi đường dưới `/account` và `/trips` chuyển về màn tương đương
+trong Manage, `/trips/<id>` giữ nguyên id. Nghĩa vụ chuyển tiếp (chuyến ĐI THUÊ chưa khép từ trước
+khi nâng gói) đi qua `/manage/account/trips` — khoá vai `renter`, và lối vào là một thẻ theo NGỮ
+CẢNH trong "Tài khoản & bảo mật", không phải một mục menu bật/tắt theo dữ liệu.
+
+Chủ xe **tuyến hoa hồng** thì ngược lại: họ ở khu user, và có MỘT hộp thư hợp nhất trên biểu tượng
+chat ở header (ADR 0038 điều 10) — cả hội thoại họ là khách lẫn hội thoại họ là chủ, mỗi dòng mang
+nhãn vai. Chuông của họ cũng dẫn về route trong khu user, không vào `/manage`.
 
 ## 7. Giao dịch trong và ngoài nền tảng
 

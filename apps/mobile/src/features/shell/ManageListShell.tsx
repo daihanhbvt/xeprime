@@ -88,6 +88,7 @@ export function ManageListShell({
   onSearchChange,
   groups,
   onFilterChange,
+  hasRows,
   meta,
   onPageChange,
   children,
@@ -115,6 +116,20 @@ export function ManageListShell({
   onSearchChange: (next: string) => void;
   groups: readonly FilterGroup[];
   onFilterChange: (groupKey: string, value: string) => void;
+  /**
+   * Danh sách hiện có bản ghi nào không — thứ quyết định khối đầu trang được phép thu lại.
+   *
+   * BẮT BUỘC và tường minh, không suy từ `meta`. Bản trước suy `scrollable` từ
+   * `meta !== undefined && meta.total > 0`, mà `meta` là prop của phân trang — từ khi mọi màn
+   * quản lý chuyển sang cuộn vô hạn thì không màn nào truyền nó nữa, nên `scrollable` là
+   * `false` ở KHẮP NƠI và khối đầu trang không bao giờ thu lại. Toàn bộ cơ chế ẩn-khi-cuộn nằm
+   * chết trong khi mã của nó vẫn chạy đúng.
+   *
+   * Đây là bài học của việc lấy một prop TÙY CHỌN làm nguồn cho một hành vi BẮT BUỘC: bỏ trống
+   * nó không báo lỗi ở đâu cả, chỉ lặng lẽ tắt một tính năng. Prop bắt buộc thì màn mới không
+   * thể quên.
+   */
+  hasRows: boolean;
   meta?: { page: number; limit: number; total: number } | undefined;
   /**
    * Bỏ trống ở màn CUỘN VÔ HẠN — ở đó không có trang để đổi.
@@ -225,14 +240,6 @@ export function ManageListShell({
    */
   const count = activeFilterCount(groups) + (searchValue.trim() ? 1 : 0);
 
-  /**
-   * Danh sách CÓ gì để cuộn hay không.
-   *
-   * `meta` vắng nghĩa là đang tải hoặc vừa lỗi; `total === 0` nghĩa là không có bản ghi nào.
-   * Cả ba trạng thái đó đều không đủ dài để cuộn.
-   */
-  const scrollable = meta !== undefined && meta.total > 0;
-
   /*
    * Khối đầu trang MỞ LẠI khi không còn gì để cuộn — SUY ở đây, không ghi vào `progress`.
    *
@@ -250,7 +257,7 @@ export function ManageListShell({
    * người dùng đang đứng — không có cú nhảy nào.
    */
   const headStyle = useAnimatedStyle(() => {
-    const shown = scrollable ? progress.value : 1;
+    const shown = hasRows ? progress.value : 1;
 
     return {
       transform: [{ translateY: -headHeightSv.value * (1 - shown) }],
@@ -269,7 +276,7 @@ export function ManageListShell({
        */
       pointerEvents: shown > 0.01 ? ('box-none' as const) : ('none' as const),
     };
-  }, [scrollable]);
+  }, [hasRows]);
 
   return (
     /*

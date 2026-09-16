@@ -302,6 +302,7 @@ export function BookingRequestInboxScreen() {
           searchLabel={t('filters.searchLabel')}
           searchPlaceholder={t('filters.searchPlaceholder')}
           onSearchChange={changeSearch}
+          hasRows={items.length > 0}
           groups={groups}
           onFilterChange={changeFilter}
           {...(meta === undefined ? {} : { meta })}

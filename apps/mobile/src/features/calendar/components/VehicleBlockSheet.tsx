@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   API_ERROR_CODE,
@@ -206,21 +206,31 @@ function BlockForm({
         onClose={onClose}
         title={t(editing ? 'block.editTitle' : 'block.createTitle')}
         footer={
-          <>
-            <Button
-              label={t(editing ? 'block.submitEdit' : 'block.submitCreate')}
-              icon={editing ? 'save-outline' : 'lock-closed-outline'}
-              onPress={save}
-              loading={pending}
-            />
-            <Button
-              label={tCommon('cancel')}
-              icon="close-outline"
-              variant="secondary"
-              onPress={onClose}
-              disabled={pending}
-            />
-          </>
+          <XStack gap={space.sm}>
+            {/*
+            Lối thoát bên trái, hành động chính bên phải — xếp dọc thì hàng dưới đọc ra là bước
+            tiếp theo chứ không phải một lựa chọn thay thế.
+
+            Nút thoát BỎ icon: ở `f={1}` nó chỉ rộng ~104dp, trừ 48dp đệm còn 56dp — vừa đủ chữ,
+            không còn chỗ cho 22dp icon. Icon dành cho nút chính, nơi có dư bề ngang.
+          */}
+            <YStack flexShrink={0}>
+              <Button
+                label={tCommon('cancel')}
+                variant="secondary"
+                onPress={onClose}
+                disabled={pending}
+              />
+            </YStack>
+            <YStack f={1}>
+              <Button
+                label={t(editing ? 'block.submitEdit' : 'block.submitCreate')}
+                icon={editing ? 'save-outline' : 'lock-closed-outline'}
+                onPress={save}
+                loading={pending}
+              />
+            </YStack>
+          </XStack>
         }
       >
         {conflict ? (

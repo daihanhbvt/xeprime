@@ -39,21 +39,33 @@ export default function ManageTabsLayout() {
         <Tabs.Screen name="calendar" />
         <Tabs.Screen name="customers" />
         <Tabs.Screen name="chat" />
+        <Tabs.Screen name="subscription" />
+        <Tabs.Screen name="balance" />
         <Tabs.Screen name="finance" />
         <Tabs.Screen name="receipts" />
         <Tabs.Screen name="debts" />
         {/*
-          Nhóm Gian hàng: `shop/` KHÔNG có `_layout` riêng, nên ba màn của nó là ba SCREEN phẳng
-          của chính bộ tab này (`shop/index`, `shop/branches`, `shop/policies`) — không phải một
+          Nhóm Gian hàng: `shop/` KHÔNG có `_layout` riêng, nên năm màn của nó là năm SCREEN phẳng
+          của chính bộ tab này (`shop/index`, `shop/branches`, `shop/policies`,
+          `shop/payment-settings`, `shop/seller-profile`) — không phải một
           navigator lồng. Nhờ vậy đi từ Chi nhánh sang Chính sách là ĐỔI mục, không chồng thêm
           một nấc lui; còn URL vẫn là `/manage/shop/branches`, trùng web để deep link ánh xạ 1-1.
         */}
         <Tabs.Screen name="shop/index" />
         <Tabs.Screen name="shop/branches" />
         <Tabs.Screen name="shop/policies" />
+        <Tabs.Screen name="shop/payment-settings" />
+        <Tabs.Screen name="shop/seller-profile" />
         <Tabs.Screen name="members" />
         <Tabs.Screen name="drivers" />
         <Tabs.Screen name="support" />
+        {/*
+          `support/cases` và `support/cases/[id]` là SCREEN PHẲNG của chính bộ tab này (không có
+          `_layout` riêng dưới `support/`), cùng khuôn với nhóm `shop/` bên dưới: đi từ Trung tâm
+          hỗ trợ sang Yêu cầu hỗ trợ là ĐỔI mục, không chồng thêm một nấc lui.
+        */}
+        <Tabs.Screen name="support/cases" />
+        <Tabs.Screen name="support/cases/[id]" />
         <Tabs.Screen name="more" />
       </Tabs>
     </ManageDrawerHost>

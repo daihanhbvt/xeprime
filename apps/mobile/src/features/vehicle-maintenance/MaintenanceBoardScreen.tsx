@@ -131,6 +131,15 @@ export function MaintenanceBoardScreen() {
   const active = isQueue ? queue : query;
   const items = query.data?.items ?? [];
   const queueItems = queue.data?.items ?? [];
+
+  /**
+   * Hàng đang hiện — hàng chờ bàn giao hay bảng bảo dưỡng, tuỳ tab.
+   *
+   * Khai ở đây chứ không trong `children` của vỏ: `ManageListShell` cũng cần biết danh sách có
+   * rỗng hay không (`hasRows`) để quyết khối đầu trang có được thu lại hay không, và hai chỗ tự
+   * tính lấy là hai chỗ có thể trôi khỏi nhau.
+   */
+  const rows = isQueue ? queueItems : items;
   const meta = active.data?.meta;
 
   useClampedPage(meta, setPage);
@@ -263,6 +272,7 @@ export function MaintenanceBoardScreen() {
           searchLabel={isQueue ? tFilters('queueSearch') : t('searchLabel')}
           searchPlaceholder={isQueue ? tFilters('queueSearchPlaceholder') : t('searchPlaceholder')}
           onSearchChange={changeSearch}
+          hasRows={rows.length > 0}
           groups={groups}
           onFilterChange={changeFilter}
           {...(meta === undefined ? {} : { meta })}
@@ -281,8 +291,6 @@ export function MaintenanceBoardScreen() {
                 {children}
               </ManageStateScroll>
             );
-
-            const rows = isQueue ? queueItems : items;
 
             return active.isPending ? (
               inStateScroll(

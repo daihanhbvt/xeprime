@@ -1,0 +1,27 @@
+.figure {
+  /* `<figure>` mang margin mặc định của trình duyệt — bỏ, khối bao ngoài mới là chỗ định khoảng cách. */
+  margin: 0;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  /* `--xp-map-height` do nơi gọi truyền (giá trị chỉ biết lúc chạy — ngoại lệ ADR 0003). */
+  height: var(--xp-map-height, 220px);
+  /*
+   * Ảnh được gọi ở tỉ lệ 2:1 cố định, còn khung trên trang thì co theo bề ngang. `cover` cắt đều
+   * hai bên và giữ tâm — nơi `map-static.ts` đã cố ý đặt ghim vào.
+   */
+  object-fit: cover;
+  object-position: center;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  /* Nền trong lúc ảnh chưa về — tránh một mảng trắng nhấp nháy. */
+  background: var(--xp-color-bg-muted);
+}
+
+.attribution {
+  margin: var(--xp-space-xs) 0 0;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-tertiary);
+}

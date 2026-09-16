@@ -115,7 +115,9 @@ async function syncModels(): Promise<number> {
       fuelTypes: [...(m.fuelTypes ?? [])],
       transmissions: [...(m.transmissions ?? [])],
       sourceUrl: m.sourceUrl,
-      verifiedAt: CATALOG_VERIFIED_AT,
+      // Ngày đối chiếu của CHÍNH mẫu này. Một hằng cho cả file sẽ đóng dấu "vừa kiểm tra" lên
+      // những hãng không ai mở lại trang, và mốc đó là thứ duy nhất nói được dữ liệu cũ tới đâu.
+      verifiedAt: m.verifiedAt ?? CATALOG_VERIFIED_AT,
     };
 
     await prisma.vehicleCatalogModel.upsert({

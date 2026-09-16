@@ -1,6 +1,6 @@
 # XePrime — Completion Roadmap
 
-> Cập nhật: 10/09/2026
+> Cập nhật: 15/09/2026
 > Trạng thái: **Canonical — tiến độ và thứ tự thực hiện**
 > Tầm nhìn: [`design/02_PRODUCT_VISION.md`](design/02_PRODUCT_VISION.md)
 > Khoảng trống chi tiết: [`design/03_PRODUCT_GAP_ANALYSIS.md`](design/03_PRODUCT_GAP_ANALYSIS.md)
@@ -22,8 +22,8 @@ Trạng thái dưới đây phân biệt rõ **đã có trong source/feature bra
 | Platform admin core     | Đã có                                        | Approval, tenants, vehicles, bookings, customers, staff, plans, content, audit                                                                                           |
 | Slot subscription W1–W3 | Đã có trong code                             | Gói/slot, subscription UI/invoice, feature guard                                                                                                                         |
 | SePay subscription W4   | **Đã merge vào `develop`**; chưa vượt Gate R2 | Có VietQR, webhook, bank matching, xử lý thiếu/thừa/trùng và admin match tay; còn cần cấu hình môi trường thật và UAT gate                                              |
-| Marketplace money       | **Một phần**                                 | ĐÃ CÓ: `booking_holds`, `hold_refunds`, `fee_policies` versioned, `/platform/money` (hold/refund/đối chiếu ngày). CHƯA CÓ: ví/sổ công nợ, rút tiền, bảo hiểm, thuế, đối chiếu 3 vế — kế hoạch ở `plans/`, quy tắc ở ADR 0033 |
-| Basic-owner experience  | Chưa tách hoàn chỉnh                         | Capability có nền móng; cần Owner Lite UX và luồng tiền                                                                                                                  |
+| Marketplace money       | **Đủ mã, chưa vượt gate nào**                 | Mọi mảnh của luồng tiền ADR 0032/0033 đã có mã + test trên máy dev (chi tiết và bằng chứng ở R3). CHƯA CÓ: một lần chạy trên staging, đối tác bảo hiểm thật, ý kiến thuế, ý kiến pháp lý thu hộ. Bảo hiểm và thuế đang BẬT bằng **số tham khảo thị trường** theo chỉ đạo 14/09 — xem mục 5 quyết định 4 và 5 |
+| Basic-owner experience  | **Đã tách ở code (ADR 0038); chưa vượt gate** | Ranh giới hai tuyến chặn ở server, ví hợp nhất một tenant, cổng chặn đặt xe của tài khoản gian hàng, `/trips` tách vai. CHƯA CÓ: một lần chạy migration ví trên staging và smoke test bốn nhóm người dùng |
 | Mobile customer         | Một phần                                     | Auth + discovery + gửi yêu cầu thuê + chuyến của tôi + đánh giá + chat và thông báo in-app (COM-01→04) + thông báo đẩy (COM-07) — tất cả 10/09. Push đủ hai đầu nhưng **chưa thử trên máy thật** (thiếu credential Firebase + khoá APNs). Thiếu payment |
 | Mobile manage           | Một phần                                     | Hộp thư yêu cầu, đơn thuê, biên bản giao/nhận, quyết toán, thu tiền — xem ghi chú ở R6                                                                                   |
 | Production readiness    | Chưa đạt                                     | Chưa có đủ E2E, monitoring, legal/compliance gate và bằng chứng vận hành thật                                                                                            |
@@ -106,6 +106,24 @@ Trạng thái: **Lát cắt W4 đã merge vào `develop`, chưa vượt Gate R2*
 
 Mục tiêu: cộng phí dịch vụ theo chuyến vào giá khách một cách minh bạch, hoàn tất Owner Lite và vẫn giới hạn lượng tiền XePrime giữ.
 
+Trạng thái: **mã đã đủ trên máy dev, chưa vượt Gate R3.** Cập nhật 14/09/2026 sau khi khép năm
+mảnh cuối của luồng tiền. Bảng dưới là trạng thái THẬT đọc từ source, không phải từ kế hoạch:
+
+| Mảnh | Đã có ở đâu | Bằng chứng |
+| --- | --- | --- |
+| Công tắc thu cọc của gian hàng (tuyến hoa hồng BẬT + KHOÁ, tuyến gói theo cờ `ESCROW_HOLD`) · `deposit_collection_mode` đóng băng vào booking | `modules/deposit-policy/` · `booking_requests` duyệt tay VÀ tự nhận đều tính phí trước `commitDecision` | `deposit-policy.spec.ts` |
+| Bảo hiểm `IV`/`IP` — vòng đời 7 trạng thái, phát hành ở mốc bàn giao qua job có retry, adapter mặc định KHÔNG tạo chứng nhận giả | `modules/insurance/` · `apps/worker/src/jobs/insurance-issue.ts` | `insurance-lifecycle.spec.ts` |
+| Thuế `T` — sổ append-only, chỉ phát sinh khi chuyến BẮT ĐẦU, đảo bằng dòng âm, kỳ theo giờ VN | `modules/tax/` · `bookings.service.ts` khi `→ active` | `tax-withholding.spec.ts` · `packages/types/src/tax.test.ts` |
+| Đối chiếu BA CHIỀU (nền tảng ↔ giữ hộ ↔ số dư ngân hàng cuối ngày) · phân bổ đóng băng vào 5 cột `settled_*` · phát hiện lệch sổ ví | `modules/holds/booking-holds.service.ts` · `hold-settlement.service.ts` | `reconciliation-three-way.spec.ts` |
+| "Tiền của các chuyến đã thuê" cho khách — đọc `payments`, KHÔNG phải màn ví | `modules/payments/account-payments.*` · web `features/account-payments/` | `account-payments.spec.ts` |
+
+Bằng chứng test ngày 14/09/2026: **5 suite / 64 test xanh** trên PostgreSQL thật với `REQUIRE_DB=1`
+(thiếu DB là cả run đỏ, nên không có test nào bị bỏ qua lặng lẽ) · `packages/types` 207 test ·
+`openapi-contract` 19 test · `i18n:check` 46 namespace × 2 ngôn ngữ / 6.414 khoá · `migrate diff`
+**không có drift** trên các bảng của luồng tiền.
+
+Cái này KHÔNG phải bằng chứng vượt gate: tất cả đều là máy dev. Xem mục 8 để biết còn thiếu gì.
+
 - Owner Lite navigation và dashboard.
 - Xác minh người bán, loại chủ thể, thông tin thuế và tài khoản nhận tiền.
 - Versioned fee policy và booking snapshot, phân biệt phí dịch vụ XePrime, thuế thật, bảo vệ xe và bảo hiểm chuyến đi.
@@ -126,6 +144,12 @@ Mục tiêu: cộng phí dịch vụ theo chuyến vào giá khách một cách 
 > phải trả. Kế hoạch thực thi: `docs/plans/`.
 
 **Gate R3:** tiền vào–hoàn–giữ của mọi case UAT khớp sổ; không có bút toán mồ côi hoặc cộng đôi.
+
+> Phần "không cộng đôi" của gate này có một điểm đã biết là dễ vỡ: bước cộng số dư trong backfill
+> `20260911190000_refund_to_wallet` KHÔNG idempotent, nên chạy lại bằng tay sẽ nhân đôi số dư.
+> Đã chứng minh bằng số, có bộ phát hiện và câu lệnh sửa:
+> [`refund-to-wallet-backfill-runbook.md`](refund-to-wallet-backfill-runbook.md). Gate R3 không
+> được coi là vượt nếu chưa chạy §2/§3 của runbook đó quanh một lần deploy thật.
 
 ### R4 — Thu hộ đầy đủ (phần còn lại của tiền thuê)
 
@@ -194,15 +218,44 @@ Backlog/acceptance criteria đầy đủ: [`design/03_PRODUCT_GAP_ANALYSIS.md`](
 | 1   | Basic owner trả phần còn lại trực tiếp hay qua XePrime mặc định? | Trực tiếp trong R3; thu hộ tùy chọn ở R4                                                                                                                                                                             |
 | 2   | Ai trả phí dịch vụ XePrime theo chuyến?                          | Khách thuê trả qua phụ phí cộng vào báo giá ở tuyến Basic; không khấu trừ phí này khỏi tiền thuê của chủ xe. Pilot bắt đầu 10%; tuyến gói 0%                                                                         |
 | 3   | Mức gói và kỳ hạn?                                               | Giá phẳng 100.000đ/chỗ ô tô/tháng, 40.000đ/chỗ xe máy/tháng, tối thiểu 3 tháng; không phí nền/chỗ gồm sẵn/overage chéo; admin cấu hình động và đo trước khi chốt giá production                                      |
-| 4   | Bảo hiểm nào, ai cung cấp, ai trả?                               | Dự kiến PVI; bảo vệ xe bắt buộc do chủ xe chịu/khấu trừ, bảo hiểm chuyến đi mặc định được chọn và chỉ do người thuê trả khi giữ lựa chọn; chỉ thu khi hợp đồng, policy, biểu phí và luồng cấp chứng nhận đã sẵn sàng |
-| 5   | Thuế cho thuê xe được phân loại và nộp thay thế nào?             | Thuê tư vấn thuế; không hard-code con số tham khảo; admin cấu hình policy động theo loại chủ thể/giao dịch và ngày hiệu lực                                                                                          |
+| 4   | Bảo hiểm nào, ai cung cấp, ai trả?                               | Dự kiến PVI; **khách** trả `IV` + `IP` (ADR 0032 điều 2 ghi đè câu "chủ xe chịu" ở đây); phát hành ở mốc bàn giao. **ĐÃ BẬT 14/09/2026 bằng số tham khảo thị trường theo chỉ đạo** — xem ghi chú rủi ro dưới bảng |
+| 5   | Thuế cho thuê xe được phân loại và nộp thay thế nào?             | Thuế do **chủ xe** chịu, khấu trừ khỏi khoản phải trả, không cộng vào tổng khách. **ĐÃ BẬT 14/09/2026 ở 10% (5% VAT + 5% TNCN) bằng số tham khảo thị trường theo chỉ đạo**, chưa có tư vấn thuế — xem ghi chú rủi ro dưới bảng |
 | 6   | Giao dịch ngoài nền tảng được hưởng hỗ trợ tới đâu?              | Chỉ hỗ trợ thông tin/listing; không cam kết tiền/hoàn cho phần giao dịch không ghi nhận                                                                                                                              |
+
+> ⚠️ **Rủi ro đã được chấp nhận có chủ đích (quyết định 14/09/2026).** Hai dòng 4 và 5 trước đây
+> nói "chỉ bật khi có hợp đồng/tư vấn". Chủ dự án đã chỉ đạo bật cả hai ngay bằng số tham khảo thị
+> trường để luồng tiền chạy trọn vẹn được trên máy dev, và fee policy v4 hiện hành mang
+> `tax_percent = 10`, `tax_label = 'VAT 5% + TNCN 5%'`, `vehicle_protection 2%`, `trip_insurance 1%`.
+> Ghi lại đúng ba điều này để không ai đọc con số ở trên như một kết luận pháp lý:
+>
+> 1. **Các con số là giả thuyết thị trường, chưa qua tư vấn thuế và chưa có hợp đồng bảo hiểm.**
+>    Chúng là tham số cấu hình được (`fee_policies`, versioned), không phải hằng số trong mã —
+>    đổi chúng là archive bản cũ + insert bản mới, đơn đã tạo KHÔNG bị tính lại (ADR 0024).
+> 2. **Không thu tiền bảo hiểm thật khi chưa có đối tác.** Adapter mặc định
+>    (`noop-insurance.partner.ts`) từ chối phát hành và CHECK ở DB cấm đánh dấu `issued` mà thiếu
+>    số chứng nhận — nên phần `IV`/`IP` đã thu nằm trong quỹ giữ hộ dưới dạng `insurer_payable`
+>    chứ không biến thành doanh thu của ai. Bật thu tiền khách thật trước khi có partner là vi
+>    phạm ADR 0028, không phải một lựa chọn vận hành.
+> 3. **Hai gate ở mục 8 vẫn còn nguyên** — bật cờ trong mã không vượt được chúng.
 
 ## 6. Nợ chất lượng cần theo dõi
 
 - Kết quả test ghi trong tài liệu trước đây đã cũ so với code hiện tại; cần tạo baseline mới theo branch/commit và môi trường chạy.
-- Con số i18n audit khoảng 1.797 chuỗi là snapshot ngày 03/09; phải chạy lại trước khi dùng để lập kế hoạch.
+- i18n audit: **1.077 chuỗi trong 24 khu vực** (đo lại 14/09/2026; con số 1.797 của 03/09 đã cũ). Luôn chạy lại trước khi dùng để lập kế hoạch.
 - Chưa có browser/mobile E2E đủ cho giao dịch tiền.
+- **Backfill `20260911190000_refund_to_wallet` bước cộng số dư không idempotent** — chạy lại bằng
+  tay là nhân đôi số dư ví của khách. Không sửa được trong file migration (đã applied, đổi là đổi
+  checksum), nên nó tồn tại dưới dạng runbook + bộ phát hiện + câu lệnh sửa:
+  [`refund-to-wallet-backfill-runbook.md`](refund-to-wallet-backfill-runbook.md). Cùng migration
+  đó còn nối dữ liệu bằng chuỗi `note` — mọi đối chiếu về sau phải dùng khoá cấu trúc
+  `(wallet_id, kind, source_type, source_ref_id)` và số dư trước–sau.
+- **Lệch tên index giữa `schema.prisma` và DB** ở `wallet_entries`, `withdrawal_requests`,
+  `bank_accounts`, `vehicle_catalog_models`: `migrate diff` sinh 7 lệnh `ALTER INDEX … RENAME`.
+  Chỉ là tên (không mất dữ liệu, không mất ràng buộc) nhưng nó làm `migrate dev` đẻ migration rác
+  và làm mọi lần đọc drift phải bỏ qua tiếng ồn. Sửa bằng `map:` trên `@@index`/`@unique` của các
+  model đó. Ngoài ra `vehicle_catalog_models.brand_catalog_type` có trong DB mà chưa có trong
+  schema. Phần FK tổ hợp `(id, tenant_id)` trong cùng bản diff là drift ĐÃ BIẾT và có chủ đích
+  (header của migration baseline đã cảnh báo — Prisma không mô tả được chúng).
 - Chưa có bằng chứng trong repo về một lần triển khai production hoàn chỉnh và restore drill thành công.
 - Chưa có external monitoring/error tracking/product analytics đủ cho pilot.
 - Cloudflare R2 object storage chưa có chính sách backup/versioning hoàn chỉnh.
@@ -232,3 +285,61 @@ Backlog/acceptance criteria đầy đủ: [`design/03_PRODUCT_GAP_ANALYSIS.md`](
 | Operations   | Tỷ lệ auto-match, chênh lệch quỹ, withdrawal quá SLA, ticket quá SLA                                                          |
 
 Không mở thêm feature lớn nếu chưa đo được ít nhất funnel activation, booking completion và money reconciliation của release đang chạy.
+
+## 8. Gate còn lại của TOÀN dự án (rà 14/09/2026)
+
+Mục này trả lời một câu: *còn đúng những gì giữa hiện tại và một lần phát hành thật?* Nó gom
+các gate đang chặn, xếp theo thứ tự phải mở, và nói rõ **ai mở được** — vì phần lớn không phải
+việc của mã nguồn.
+
+### 8.1 Gate HẠ TẦNG — đang chặn mọi gate khác
+
+| # | Gate | Chặn ai | Ai mở |
+| --- | --- | --- | --- |
+| H1 | **Chưa có môi trường staging.** Không có VPS, domain, GitHub Environment, biến env staging. `deployment.md` §1.2 vẫn là danh sách cần mua với các ô chưa tick | R1, R2, R3, R5 — mọi gate có chữ "UAT" hoặc "bằng chứng vận hành" | Chủ dự án (mua hạ tầng) |
+| H2 | **CD chưa chạy lần nào.** Nhánh `staging` chưa từng nhận merge, nên quy trình build → GHCR → VPS chưa được kiểm chứng | H1 xong mới làm được | Kỹ thuật, sau H1 |
+| H3 | **Chưa có diễn tập restore.** `backup-and-restore.md` có quy trình, chưa có lần chạy nào có bằng chứng | R5 | Kỹ thuật, sau H1 |
+| H4 | **Chưa có error tracking / uptime / product analytics** ngoài repo | R1, R5 | Kỹ thuật + tài khoản dịch vụ |
+
+Hệ quả cần nói thẳng: **không có H1 thì không một gate nào từ R1 đến R5 đóng được**, bất kể mã
+đầy đủ tới đâu. Mọi bằng chứng hiện có trong repo đều là máy dev.
+
+### 8.2 Gate PHÁP LÝ · BẢO HIỂM · THUẾ — không mở được bằng mã
+
+| # | Gate | Chặn | Ai mở |
+| --- | --- | --- | --- |
+| L1 | **Ý kiến pháp lý về thu hộ/chi hộ**: XePrime giữ `D + S + IV + IP` của người khác và trả lại qua sổ công nợ. Cần biết mô hình này đòi giấy phép/đối tác gì | R3 (đang giữ tiền thật) và R4 | Luật sư |
+| L2 | **Hợp đồng đối tác bảo hiểm + sản phẩm + biểu phí + luồng cấp chứng nhận thật** (dự kiến PVI). Hiện adapter mặc định từ chối phát hành — đúng thiết kế, nhưng nghĩa là `IV`/`IP` thu vào mà chưa ai bảo hiểm gì | Bật thu `IV`/`IP` với khách THẬT | Chủ dự án + PVI |
+| L3 | **Tư vấn thuế**: phân loại (VAT/TNCN), ai là người khai, kỳ, hoá đơn. Con số 10% hiện tại là giả thuyết thị trường | Bật khấu trừ thuế với chủ xe THẬT | Đơn vị tư vấn thuế |
+| L4 | **Thoả thuận ngân hàng/đơn vị thanh toán** cho chiều chi (rút tiền) | R4 | Chủ dự án |
+| L5 | **Điều khoản người dùng cho ba dòng tiền mới** — cọc, bảo hiểm, thuế — trong Terms/quy chế marketplace | R3 | Chủ dự án + luật sư |
+
+### 8.3 Gate VẬN HÀNH — cần người, không cần mã
+
+| # | Gate | Ghi chú |
+| --- | --- | --- |
+| O1 | **Người trực đối chiếu hằng ngày** nhập số dư ngân hàng cuối ngày và xử lý lệch. Màn `/manage/platform/money` đã có; chưa có người và chưa có SLA | Thiếu người thì phần "khớp sổ hằng ngày" của Gate R3/R4 không có ai chứng minh |
+| O2 | **Support case cho bảo hiểm phát hành lỗi** — theo quyết định 14/09, phát hành lỗi KHÔNG chặn chuyến mà mở support case. Cần người nhận case và quy trình xử lý | Nếu không, case chỉ nằm đó |
+| O3 | **Maker–checker cho chi tiền** (rút tiền, hoàn tiền tay) | R4 |
+| O4 | **Đợt nhắc chủ shop xác nhận lại địa chỉ** theo danh mục hành chính hai cấp (ADR 0035 điều 7) | Mọi chi nhánh đang mang cờ `needs_location_review` |
+| O5 | **Chạy §2/§3 của `refund-to-wallet-backfill-runbook.md`** quanh lần deploy staging đầu tiên | Bằng chứng duy nhất chứng minh backfill không cộng đôi trên dữ liệu thật |
+
+### 8.4 Gate KỸ THUẬT còn lại
+
+| # | Gate | Ghi chú |
+| --- | --- | --- |
+| T1 | **E2E cho giao dịch tiền** (browser + native). Hiện chỉ có unit/integration trên DB thật | Gate R3/R5 |
+| T2 | **Kiểm push trên máy thật** (thiếu credential Firebase + khoá APNs) | Gate R6 |
+| T3 | **Owner Lite UX chưa tách hoàn chỉnh** cho tuyến Basic | Gate R3 |
+| T4 | **Mobile chưa có luồng tiền** (payment/hold) | Gate R6 |
+| T5 | **i18n audit: 1.077 chuỗi thô trong 24 khu vực** (đo 14/09/2026, khu nặng nhất là platform dashboard/ops; các màn của luồng tiền đã i18n hoá xong) | Không chặn gate nào, nhưng chặn bản tiếng Anh dùng được |
+| T6 | Dọn lệch tên index + `brand_catalog_type` ở mục 6 | Nhỏ, nhưng để lâu sẽ đẻ migration rác |
+
+### 8.5 Điều KHÔNG được kết luận từ tài liệu này
+
+Luồng tiền **chưa hoàn thành**. Mã đã đủ và có test trên máy dev; đó là điều kiện cần, không
+phải điều kiện đủ. Ba câu không được nói ra trước khi các gate trên có bằng chứng:
+
+- ❌ "Luồng tiền thật đã xong" — chưa chạy trên staging, chưa có L1.
+- ❌ "Đã có bảo hiểm" — chưa có L2; adapter mặc định cố ý không phát hành.
+- ❌ "Thuế đã đúng" — chưa có L3; 10% là số tham khảo thị trường.

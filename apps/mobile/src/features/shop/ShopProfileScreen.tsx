@@ -314,15 +314,16 @@ function ProfileForm({
         footer={
           !readOnly && dirty ? (
             <XStack gap={space.sm}>
-              <YStack f={1}>
+              <YStack flexShrink={0}>
                 <Button
                   label={t('form.reset')}
+                  icon="refresh-outline"
                   variant="secondary"
                   disabled={saving}
                   onPress={() => reset()}
                 />
               </YStack>
-              <YStack f={2}>
+              <YStack f={1}>
                 <Button
                   label={t('form.submit')}
                   icon="save-outline"
@@ -364,7 +365,6 @@ function ProfileForm({
           {submittable ? <ShopProfileChecklist control={control} /> : null}
 
           {readOnlyReason ? <Callout tone="info">{readOnlyReason}</Callout> : null}
-
 
           {/* Khối CÔNG KHAI — thứ khách nhìn thấy trên marketplace. */}
           <FormSection title={t('form.display.title')} icon="storefront-outline">

@@ -99,7 +99,7 @@ export function InviteMemberModal({ open, onClose }: { open: boolean; onClose: (
       confirmLoading={invite.isPending}
     >
       <DialogForm onSubmit={onSubmit} labelWidth="sm">
-        <Alert type="info" showIcon message={t('form.notice')} />
+        <Alert type="info" showIcon title={t('form.notice')} />
         <TextField
           control={control}
           name="email"

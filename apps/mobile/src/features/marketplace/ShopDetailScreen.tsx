@@ -10,7 +10,7 @@ import { ShopDetailSkeleton, VehicleCardSkeleton } from '@/components/ui/Skeleto
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { LIST_TUNING } from '@/theme/list-tuning';
+import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
 import { scrollThrottle } from '@/theme/motion';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 import type { PublicListing } from './api';
@@ -112,9 +112,15 @@ export function ShopDetailScreen({ slug, onBack }: { slug: string; onBack: () =>
       <FlatList
         data={listings.listings}
         keyExtractor={keyExtractor}
-        {...LIST_TUNING}
+        {...MEDIA_LIST_TUNING}
         onScroll={onScroll}
-        scrollEventThrottle={scrollThrottle.frame}
+        /*
+          `half` chứ không `frame`: bộ nhận ở đây chạy trên luồng JS (nó `setState`), và nó chỉ
+          dò MỘT ngưỡng — hiện hay chưa hiện tên gian hàng trên thanh trên. Đó không phải một
+          hoạt cảnh bám ngón tay, nên gọi 60 lần mỗi giây là trả giá đúng ở luồng đang phải dựng
+          các thẻ mới, để đổi lấy một cú lật trạng thái sớm hơn 16ms mà không ai thấy.
+        */
+        scrollEventThrottle={scrollThrottle.half}
         contentContainerStyle={listPadding}
         ItemSeparatorComponent={Separator}
         renderItem={renderItem}
@@ -156,6 +162,7 @@ export function ShopDetailScreen({ slug, onBack }: { slug: string; onBack: () =>
               </Text>
               <Button
                 label={tResults('loadMore')}
+                icon="chevron-down-outline"
                 variant="secondary"
                 block={false}
                 align="center"
@@ -163,7 +170,11 @@ export function ShopDetailScreen({ slug, onBack }: { slug: string; onBack: () =>
               />
             </YStack>
           ) : listings.isFetchingNextPage ? (
-            <YStack pt={layout.block} px={layout.screenX} accessibilityLabel={tResults('loadingMore')}>
+            <YStack
+              pt={layout.block}
+              px={layout.screenX}
+              accessibilityLabel={tResults('loadingMore')}
+            >
               <VehicleCardSkeleton />
             </YStack>
           ) : !listings.hasNextPage && listings.total > 0 ? (

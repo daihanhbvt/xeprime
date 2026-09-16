@@ -82,6 +82,7 @@ export function BookingStatusSheet({
         <>
           <Button
             label={cancelling ? t('cancelOk') : t('noShowOk')}
+            icon="close-circle-outline"
             variant="danger"
             loading={loading}
             onPress={() => void submit()}

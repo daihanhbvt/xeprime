@@ -86,7 +86,7 @@ function shop(overrides: Partial<MyShop> = {}, profile: Partial<MyShop['profile'
       name: 'Chi nhánh chính',
       provinceCode: '48',
       provinceName: 'Đà Nẵng',
-    needsLocationReview: false,
+      needsLocationReview: false,
     },
     ...overrides,
   };
@@ -249,10 +249,7 @@ describe('ShopProfileScreen — gửi duyệt', () => {
   ];
 
   it('hồ sơ THIẾU mục bắt buộc: chặn ngay, không mở hộp xác nhận và không gọi API', async () => {
-    const view = await renderScreen(
-      all,
-      shop({}, { ownerFullName: null, ownerPhone: null }),
-    );
+    const view = await renderScreen(all, shop({}, { ownerFullName: null, ownerPhone: null }));
 
     await fireEvent.press(await view.findByText('Gửi duyệt'));
 
@@ -296,7 +293,7 @@ describe('ShopProfileScreen — tỉnh của gian hàng', () => {
             name: 'Chi nhánh chính',
             provinceCode: '48',
             provinceName: 'Đà Nẵng',
-    needsLocationReview: false,
+            needsLocationReview: false,
           },
         },
         // Bản sao CŨ trên hồ sơ trỏ tỉnh khác — nó KHÔNG được thắng.
@@ -304,7 +301,7 @@ describe('ShopProfileScreen — tỉnh của gian hàng', () => {
       ),
     );
 
-    expect(await view.findByText('Đà Nẵng')).toBeTruthy();
+    expect(await view.findByText('TP Đà Nẵng')).toBeTruthy();
     expect(view.queryByText('Hồ Chí Minh')).toBeNull();
   });
 });

@@ -28,24 +28,24 @@
   },
   "onboarding": {
     "title": "Start renting on XePrime",
-    "subtitle": "Three things stand between your shop and its first booking.",
+    "subtitle": "Three things left between your shop and its first booking.",
     "done": "Done",
-    "waiting": "Under review",
+    "waiting": "Waiting for XePrime",
     "steps": {
       "profile": {
         "title": "Complete your shop profile",
-        "body": "Display name, province, and how we can reach the shop owner.",
+        "body": "Display name, province, and the owner contact details.",
         "action": "Fill in the profile"
-      },
-      "review": {
-        "title": "Submit the profile for review",
-        "body": "Vehicles only go public once your shop profile is approved.",
-        "action": "Submit for review"
       },
       "vehicle": {
         "title": "Add your first vehicle",
-        "body": "You can add it right now; it goes live as soon as the shop is approved.",
+        "body": "Add photos, pricing and a pickup location, then submit it for review from the vehicle itself.",
         "action": "Add a vehicle"
+      },
+      "review": {
+        "title": "XePrime reviews the vehicle",
+        "body": "This is the only review step. Once approved, guests can find and book it right away.",
+        "action": "View my vehicles"
       }
     }
   }

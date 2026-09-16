@@ -10,6 +10,7 @@ import {
   useVehiclePricing,
 } from '@/features/rental-policies/hooks/use-vehicle-pricing';
 import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
+import { useWorkspace } from '@/hooks/use-workspace';
 import { useErrorMessage } from '@/i18n/use-error-message';
 
 import { useManagedVehicle } from '../VehicleManageContext';
@@ -26,6 +27,7 @@ import { SectionCard } from '../SectionCard';
  */
 export function VehiclePricingSection({ serviceType }: { serviceType: ServiceType }) {
   const { vehicle, canEdit } = useManagedVehicle();
+  const { paths } = useWorkspace();
   const t = useTranslations('VehicleManage.pricing');
   const tEdit = useTranslations('Vehicles.edit.pricingTab');
   const tActions = useTranslations('Common.actions');
@@ -47,7 +49,7 @@ export function VehiclePricingSection({ serviceType }: { serviceType: ServiceTyp
         <Alert
           type="error"
           showIcon
-          message={t('loadError')}
+          title={t('loadError')}
           description={
             <Button size="small" onClick={() => void pricing.refetch()}>
               {tActions('retry')}
@@ -56,7 +58,7 @@ export function VehiclePricingSection({ serviceType }: { serviceType: ServiceTyp
         />
       ) : (
         <>
-          {withDriver ? <Alert type="warning" showIcon message={t('withDriverEstimateHint')} /> : null}
+          {withDriver ? <Alert type="warning" showIcon title={t('withDriverEstimateHint')} /> : null}
           <VehiclePricingWorkspace
             vehicleName={vehicle.name}
             vehiclePlate={vehicle.plateNumber ?? null}
@@ -65,7 +67,7 @@ export function VehiclePricingSection({ serviceType }: { serviceType: ServiceTyp
             submitting={save.isPending}
             visibleServices={[serviceType]}
             policyMode="hidden"
-            calendarHref={vehicleSchedulePath(vehicle)}
+            calendarHref={vehicleSchedulePath(vehicle, { basePath: paths.calendar })}
             onSave={(body) =>
               save.mutate(body, {
                 onSuccess: () => message.success(tEdit('saved')),

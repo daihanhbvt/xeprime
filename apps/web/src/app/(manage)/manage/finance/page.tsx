@@ -30,6 +30,7 @@ import {
 import { useFinanceOverviewFilters } from '@/features/finance/hooks/use-finance-overview-filters';
 import { useAppFormat } from '@/i18n/use-app-format';
 import type { FinanceOverviewFilters } from '@/features/finance/types';
+import { ShopTaxWithheldCard } from '@/features/tax/components/ShopTaxWithheldCard';
 import styles from './finance-page.module.css';
 
 export default function FinancePage() {
@@ -204,6 +205,12 @@ function FinanceOverviewView() {
         }
         onChange={setFilters}
       />
+
+      {/*
+        Thuế đã khấu trừ trong kỳ (Phase 8 — ADR 0032 điều 3). Đứng ở sổ tài chính vì nó là một
+        dòng làm GIẢM tiền chủ xe thực nhận, nên nó thuộc cùng câu hỏi với doanh thu và chi phí.
+      */}
+      <ShopTaxWithheldCard />
     </div>
   );
 }

@@ -46,6 +46,7 @@ import {
   makeNotificationService,
   makePricingService,
 } from './helpers/service-factory';
+import { releaseWalletObligations } from './helpers/wallet-cleanup';
 
 /**
  * Wave 11 — chuyến của KHÁCH, trên PostgreSQL THẬT.
@@ -243,6 +244,10 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (dbAvailable) {
+    await releaseWalletObligations(prisma, {
+      tenantIds: [tenantId],
+      userIds: [ownerId, customerId, strangerId],
+    });
     await prisma.tenant.deleteMany({ where: { id: tenantId } });
     await prisma.user.deleteMany({ where: { id: { in: [ownerId, customerId, strangerId] } } });
   }

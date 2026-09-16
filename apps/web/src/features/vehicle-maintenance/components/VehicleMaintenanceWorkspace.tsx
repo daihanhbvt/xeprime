@@ -72,7 +72,7 @@ export function VehicleMaintenanceWorkspace({ vehicle }: { vehicle: VehicleDetai
       <Alert
         type="error"
         showIcon
-        message={t('workspace.loadError')}
+        title={t('workspace.loadError')}
         description={
           <Button size="small" onClick={() => void profile.refetch()}>
             {tCommon('actions.retry')}
@@ -202,7 +202,7 @@ function MaintenanceTab({
         <Alert
           type="info"
           showIcon
-          message={t('workspace.readOnlyBanner')}
+          title={t('workspace.readOnlyBanner')}
         />
       ) : null}
 
@@ -249,7 +249,7 @@ function MaintenanceTab({
             className={styles.inlineAlert}
             type="warning"
             showIcon
-            message={t('workspace.noOdometer')}
+            title={t('workspace.noOdometer')}
             description={t('workspace.noOdometerHint')}
           />
         ) : null}
@@ -324,7 +324,7 @@ function MaintenanceTab({
             <Alert
               type="info"
               showIcon
-              message={tCommon('labels.insufficientData')}
+              title={tCommon('labels.insufficientData')}
               description={t('workspace.nextDueHint')}
             />
           )}
@@ -373,7 +373,7 @@ function MaintenanceTab({
           <Alert
             type="error"
             showIcon
-            message={t('workspace.recordsLoadError')}
+            title={t('workspace.recordsLoadError')}
             description={
               <Button size="small" onClick={onRetryRecords}>
                 {tCommon('actions.retry')}

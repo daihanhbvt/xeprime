@@ -1,5 +1,6 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { BILLING_MODE, TENANT_ROLE } from '@xeprime/types';
 
 import { ShopEntryCard } from './ShopEntryCard';
 
@@ -14,7 +15,13 @@ import { ShopEntryCard } from './ShopEntryCard';
 const user = vi.hoisted(() => ({
   value: null as null | {
     platformRole: string | null;
-    tenant: { name: string } | null;
+    tenant: {
+      name: string;
+      roleKey?: string;
+      status?: string;
+      billingMode?: string | null;
+      publicVehicleCount?: number;
+    } | null;
   },
   isLoading: false,
 }));
@@ -31,20 +38,69 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('ShopEntryCard', () => {
-  it('có gian hàng → mời vào cổng quản lý, hiện TÊN gian hàng', () => {
-    user.value = { platformRole: null, tenant: { name: 'Cho thuê xe Bình Minh' } };
+  it('gian hàng TUYẾN GÓI → cổng quản lý, hiện TÊN gian hàng', () => {
+    user.value = {
+      platformRole: null,
+      tenant: {
+        name: 'Cho thuê xe Bình Minh',
+        roleKey: TENANT_ROLE.SHOP_OWNER,
+        status: 'active',
+        billingMode: BILLING_MODE.PACKAGE,
+        publicVehicleCount: 3,
+      },
+    };
     render(<ShopEntryCard />);
 
     expect(screen.getByText('Cho thuê xe Bình Minh')).toBeTruthy();
     expect(screen.getByRole('link').getAttribute('href')).toBe('/manage');
   });
 
-  it('chưa có gian hàng → mời đăng xe, dẫn tới onboarding', () => {
+  /**
+   * Bất biến 14/09/2026: thẻ này KHÔNG được đưa tuyến hoa hồng vào cổng quản lý.
+   *
+   * Nó nằm ngay đầu trang tài khoản của chính họ và là đường vào nhầm khu rõ nhất của bản cũ —
+   * bản cũ chỉ hỏi "có tenant không" rồi trỏ thẳng `/manage`.
+   */
+  it('chủ xe TUYẾN HOA HỒNG → về khu tài khoản, KHÔNG vào /manage', () => {
+    user.value = {
+      platformRole: null,
+      tenant: {
+        name: 'Xe của Minh',
+        roleKey: TENANT_ROLE.SHOP_OWNER,
+        status: 'active',
+        billingMode: BILLING_MODE.COMMISSION,
+        publicVehicleCount: 2,
+      },
+    };
+    render(<ShopEntryCard />);
+
+    expect(screen.getByRole('link').getAttribute('href')).toBe('/account/vehicles');
+  });
+
+  it('chủ xe hoa hồng ĐANG đăng ký → về màn tiến trình', () => {
+    user.value = {
+      platformRole: null,
+      tenant: {
+        name: 'Xe của Minh',
+        roleKey: TENANT_ROLE.SHOP_OWNER,
+        status: 'draft',
+        billingMode: BILLING_MODE.COMMISSION,
+        publicVehicleCount: 0,
+      },
+    };
+    render(<ShopEntryCard />);
+
+    expect(screen.getByRole('link').getAttribute('href')).toBe('/account/registration');
+  });
+
+  it('chưa có gian hàng → mời đăng xe, dẫn tới LANDING công khai', () => {
     user.value = { platformRole: null, tenant: null };
     render(<ShopEntryCard />);
 
     expect(screen.getByText('Đăng xe cho thuê')).toBeTruthy();
-    expect(screen.getByRole('link').getAttribute('href')).toBe('/manage/onboarding');
+    // 09/09/2026: mọi CTA chủ xe dừng ở trang giới thiệu công khai, không ném thẳng vào form
+    // tạo gian hàng nằm trong cổng quản lý.
+    expect(screen.getByRole('link').getAttribute('href')).toBe('/list-your-vehicle');
   });
 
   it('nhân sự nền tảng → dẫn tới trang quản trị', () => {

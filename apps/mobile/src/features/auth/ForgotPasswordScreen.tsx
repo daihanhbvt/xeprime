@@ -126,6 +126,7 @@ export function ForgotPasswordScreen({ onBackToLogin }: { onBackToLogin: () => v
           <YStack gap={space.sm}>
             <Button
               label={t('forgotPassword.submit')}
+              icon="send-outline"
               onPress={onSubmit}
               loading={request.isPending}
               disabled={!isValid}

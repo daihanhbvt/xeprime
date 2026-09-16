@@ -129,7 +129,7 @@ function WorkspaceBody({
       </aside>
       <div className={styles.main}>
         <VehicleManageHeader vehicle={vehicle} stats={stats} />
-        {!canEdit ? <Alert type="info" showIcon message={t('readOnlyNotice')} /> : null}
+        {!canEdit ? <Alert type="info" showIcon title={t('readOnlyNotice')} /> : null}
         <VehicleManageProvider value={{ vehicle, canEdit }}>
           {serviceOff && service ? (
             <EmptyState

@@ -4,18 +4,26 @@ import {
   BookOutlined,
   CalendarOutlined,
   CarOutlined,
+  CreditCardOutlined,
   DeleteOutlined,
   FileProtectOutlined,
   FileTextOutlined,
   LockOutlined,
   SafetyOutlined,
   ShopOutlined,
+  SolutionOutlined,
   UnorderedListOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import type { ComponentType } from 'react';
 import type { useTranslations } from 'next-intl';
-import { TENANT_ROLE } from '@xeprime/types';
+import {
+  OWNER_STAGE,
+  TENANT_ROLE,
+  isCommissionTrack,
+  resolveOwnerStage,
+  tenantUsesManagePortal,
+} from '@xeprime/types';
 
 import { resolveOwnerCtaHref } from '@/features/auth/post-auth-destination';
 import type { CurrentUser } from '@/hooks/use-current-user';
@@ -76,6 +84,15 @@ const TRIPS: AccountNavItem = {
   external: true,
 };
 
+/**
+ * "Ví điểm" của MỘT CON NGƯỜI — tiền hoàn khoản giữ chỗ khi chính họ đi thuê xe (ADR 0033).
+ *
+ * Chỉ dành cho người CHƯA là chủ xe. Ví của họ thuộc `user`, và hoàn cọc chảy vào đó.
+ *
+ * Chủ xe KHÔNG có mục này: họ chỉ có MỘT ví, thuộc tenant (ADR 0038 điều 2), và số dư của nó
+ * hiện ngay trong "Tài khoản của tôi". Hai mục ví cho cùng một người là đúng thứ đợt hợp nhất
+ * ví xoá bỏ — và `/account/balance` cũng tự chuyển hướng họ sang đúng sổ.
+ */
 const BALANCE: AccountNavItem = {
   key: 'balance',
   labelKey: 'account.balance',
@@ -88,6 +105,24 @@ const BANK_ACCOUNTS: AccountNavItem = {
   labelKey: 'account.bankAccounts',
   href: ROUTES.ACCOUNT.BANK_ACCOUNTS,
   icon: BankOutlined,
+};
+
+/**
+ * "Lịch sử thanh toán" — tiền ĐÃ TRẢ CHO GIAN HÀNG của các chuyến mình thuê.
+ *
+ * Mục này từng bị bỏ khỏi menu vì `/account/payments` chỉ là placeholder; màn thật đã có
+ * (PROMPT 5, 14/09/2026) nên nó quay lại. Một màn có route mà không có đường vào là một màn
+ * không tồn tại với người dùng.
+ *
+ * KHÁC `BALANCE`: đây là tiền mình đã trả ĐI, `BALANCE` là tiền XePrime đang nợ mình. Hai thứ
+ * đi hai mục với hai icon khác nhau vì gộp lại là cách chắc chắn để một người tưởng mình đã
+ * được hoàn tiền khi thật ra chưa.
+ */
+const PAYMENTS: AccountNavItem = {
+  key: 'payments',
+  labelKey: 'account.payments',
+  href: ROUTES.ACCOUNT.PAYMENTS,
+  icon: CreditCardOutlined,
 };
 
 const CHANGE_PASSWORD: AccountNavItem = {
@@ -105,8 +140,49 @@ const DELETE_ACCOUNT: AccountNavItem = {
 };
 
 /**
- * Khu CHỦ XE — bản rút gọn của cổng quản lý cho người có ít xe (ADR 0027/0028: Owner Lite dùng
- * chung feature với `/manage`, chỉ khác vỏ). Thứ tự theo mockup 08/09/2026.
+ * Màn TIẾN TRÌNH ĐĂNG KÝ — toàn bộ khu chủ xe của bậc `registering`.
+ *
+ * Nó nằm ngoài `OWNER_NAV` có chủ đích: người đang đăng ký thấy ĐÚNG một mục này, không phải
+ * bảy mục rỗng. Khi hồ sơ được duyệt và chiếc xe đầu tiên lên chợ, mục này biến mất và bảy mục
+ * kia hiện ra — menu tự kể tiến trình mà không cần một băng thông báo nào.
+ */
+const REGISTRATION: AccountNavItem = {
+  key: 'registration',
+  labelKey: 'account.registration',
+  href: ROUTES.ACCOUNT.REGISTRATION,
+  icon: SolutionOutlined,
+};
+
+/**
+ * Khu CHỦ XE tuyến hoa hồng — Owner Lite (ADR 0027/0028: dùng chung feature với `/manage`,
+ * chỉ khác vỏ điều hướng).
+ *
+ * ## Chín mục, MỘT nhóm phẳng (16/09/2026)
+ *
+ * Bản trước có mười một mục chia hai nhóm, và ba trong số đó là ba màn TIỀN khác nhau ("Tiền
+ * cho thuê xe", "Lịch sử thanh toán", "Tài khoản nhận tiền") đứng cạnh nhau. Chủ xe mở menu để
+ * tìm tiền của mình thì gặp ba cánh cửa và không cánh nào tự nói mình chứa gì.
+ *
+ * Nay tiền có MỘT cửa: "Tài khoản của tôi" (`AccountView`) hiện số dư ví tenant duy nhất, và
+ * bấm vào số điểm mới mở sổ giao dịch + lệnh rút. Tài khoản ngân hàng nhận tiền và yêu cầu xoá
+ * tài khoản cũng nằm trong hồ sơ đó, vì cả hai là thao tác trên DANH TÍNH chứ không phải việc
+ * vận hành hằng ngày.
+ *
+ * ## Những mục đã RỜI KHỎI menu — và chúng đi đâu
+ *
+ * Đây là thay đổi ĐIỀU HƯỚNG. Không route nào bị xoá, không dữ liệu, sổ cái, biên lai hay
+ * quyền xử lý tiền nào mất đi; bookmark cũ vẫn mở được.
+ *
+ *   "Tiền cho thuê xe"     → số dư nằm trong "Tài khoản của tôi"; sổ đầy đủ ở `/account/earnings`
+ *   "Tài khoản nhận tiền"  → trong "Tài khoản của tôi" (và trong chính luồng rút tiền)
+ *   "Lịch sử thanh toán"   → chi tiết từng chuyến, và `/account/payments` vẫn mở được để tra soát
+ *   "Yêu cầu xoá tài khoản"→ trong "Tài khoản của tôi", cạnh danh tính mà nó đụng tới
+ *   "Tin nhắn với khách"   → MỘT hộp thư hợp nhất trên biểu tượng chat ở header (ADR 0038 điều 9)
+ *   "Hồ sơ chủ xe"         → sửa tại ngữ cảnh cần nó: hồ sơ thuế ở "Thông tin khai thuế", giấy tờ
+ *                            xe ở chính màn xe
+ *   "Gói dịch vụ"          → thẻ "Gian hàng của tôi" đầu trang hồ sơ (`ShopEntryCard`); nâng cấp là
+ *                            việc làm MỘT LẦN, không phải một mục thường trực
+ *   "Đăng xuất"            → menu avatar trên header (cả desktop lẫn mobile)
  */
 export const OWNER_NAV: readonly AccountNavItem[] = [
   {
@@ -146,8 +222,40 @@ export const OWNER_NAV: readonly AccountNavItem[] = [
     href: ROUTES.ACCOUNT.DATA_PROTECTION,
     icon: SafetyOutlined,
   },
+  // Danh tính và tiền đứng cuối: việc thỉnh thoảng, sau những việc hằng ngày.
+  PROFILE,
+  CHANGE_PASSWORD,
 ];
-
+/**
+ * Menu của người ĐANG ĐĂNG KÝ làm chủ xe.
+ *
+ * "Chuyến của tôi" vẫn có mặt vì họ vẫn là khách thuê; mọi màn vận hành (lịch, khai thuế, hợp
+ * đồng) thì không — chưa có xe nào trên chợ thì cả ba đều rỗng, và bày ra sáu màn trống là cách
+ * chắc chắn nhất để người dùng tin rằng mình đã làm sai bước nào đó.
+ *
+ * SỔ TIỀN không còn là một mục riêng ở đây (16/09/2026) và vẫn KHÔNG bị khoá: nó nằm trong "Tài
+ * khoản của tôi", mục cuối cùng của menu này. Điều đó quan trọng vì bậc `registering` không chỉ
+ * có người mới — một chủ xe từng cho thuê rồi TẠM ẨN hết xe cũng tụt về đây, và ADR 0033 điều 1
+ * nói điểm không hết hạn, không bị thu hồi, nên nó cũng không được vô hình.
+ */
+export const OWNER_REGISTERING_NAV: readonly AccountNavItem[] = [
+  REGISTRATION,
+  {
+    key: 'vehicles',
+    labelKey: 'account.vehicles',
+    href: ROUTES.ACCOUNT.VEHICLES,
+    icon: UnorderedListOutlined,
+  },
+  {
+    key: 'hostGuide',
+    labelKey: 'account.hostGuide',
+    href: ROUTES.ACCOUNT.HOST_GUIDE,
+    icon: BookOutlined,
+  },
+  TRIPS,
+  PROFILE,
+  CHANGE_PASSWORD,
+];
 /**
  * Menu TÀI KHOẢN CÁ NHÂN — phần mọi người đăng nhập đều có.
  *
@@ -162,6 +270,7 @@ export const OWNER_NAV: readonly AccountNavItem[] = [
 export const ACCOUNT_NAV: readonly AccountNavItem[] = [
   PROFILE,
   TRIPS,
+  PAYMENTS,
   BALANCE,
   BANK_ACCOUNTS,
   CHANGE_PASSWORD,
@@ -174,33 +283,100 @@ export function isShopOwner(user: Pick<CurrentUser, 'tenant'> | null | undefined
 }
 
 /**
- * Chủ xe TUYẾN HOA HỒNG — chủ gian hàng chưa mua gói (ADR 0028 điều 1: Basic owner). Menu chủ xe
- * hiện cho mọi `shop_owner`; cờ này chỉ để màn nào cần nói khác đi (nhắc nâng cấp) đọc chung
- * một định nghĩa.
+ * Chủ xe TUYẾN HOA HỒNG — chủ gian hàng chưa mua gói (ADR 0028 điều 1: Basic owner).
+ *
+ * Re-export của `isCommissionTrack` ở `@xeprime/types` để nơi gọi cũ không phải đổi import; luật
+ * chỉ có MỘT bản, ở package dùng chung với backend và app native.
  */
 export function isCommissionOwner(user: Pick<CurrentUser, 'tenant'> | null | undefined): boolean {
-  return isShopOwner(user) && user?.tenant?.planCode == null;
+  return isCommissionTrack(user?.tenant ?? null);
 }
 
 /**
- * Menu theo LOẠI người dùng.
+ * Menu theo LOẠI người dùng **và bậc chủ xe** (`resolveOwnerStage`).
  *
- * - Chủ gian hàng: nhóm chủ xe (7 mục) + nhóm "Tài khoản" (hồ sơ, đổi mật khẩu, xoá tài khoản).
+ * - Chủ xe đã xong vòng đăng ký: nhóm chủ xe đầy đủ + nhóm "Tài khoản".
+ * - Chủ xe ĐANG đăng ký: nhóm rút gọn đặt màn tiến trình lên đầu — không bày lịch rỗng, khai
+ *   thuế rỗng, hợp đồng rỗng cho người chưa có chiếc xe nào trên chợ.
  * - Còn lại — khách thuê, và cả quản lý/nhân viên/người xem của một gian hàng (họ dùng `/manage`
  *   để làm việc, ở đây họ là một CON NGƯỜI): hồ sơ, "Trở thành chủ xe", chuyến, mật khẩu, xoá.
  *
  * "Trở thành chủ xe" đi qua `resolveOwnerCtaHref` như mọi CTA chủ xe khác: chưa có gian hàng thì
- * vào onboarding; đã thuộc một gian hàng (nhân viên) thì về cổng quản lý — nhãn đổi theo đích
- * để nút không hứa "trở thành" với người đã ở trong một gian hàng.
+ * vào landing đăng xe; đã thuộc một gian hàng thì về đúng khu của họ — nhãn đổi theo đích để nút
+ * không hứa "trở thành" với người đã ở trong một gian hàng.
  */
 export function resolveAccountNav(user: CurrentUser | null | undefined): AccountNavGroup[] {
-  if (isShopOwner(user)) {
+  const tenant = user?.tenant ?? null;
+
+  /*
+   * ── TÀI KHOẢN GIAN HÀNG TRONG KHU USER (15/09/2026) ──────────────────────────────────────
+   *
+   * Họ VẪN được xem marketplace và vào `/account` — chỉ là khu này không còn công cụ nào của
+   * người đi thuê hay của Owner Lite. Ẩn: chuyến, chat, thông báo phía khách, xe/lịch/tiền cho
+   * thuê (tất cả đã ở `/manage`).
+   *
+   * Giữ đúng ba thứ: lối "Quản lý gian hàng", "Hồ sơ gian hàng" (KHÔNG gọi là "Tài khoản của
+   * tôi" — đó là hồ sơ của một PHÁP NHÂN, không phải của một con người), và phần tài khoản cá
+   * nhân của chính người đang đăng nhập.
+   *
+   * ⚠️ NGOẠI LỆ CHUYỂN TIẾP, và nó là điều quan trọng nhất ở đây: nếu người này còn CHUYẾN ĐI
+   * THUÊ chưa khép thì mục Chuyến VẪN hiện. Ca thật: một chủ xe tuyến hoa hồng đang đi thuê xe
+   * của người khác thì nâng lên gói — chuyến chưa xong, tiền hoàn chưa về, chat với chủ xe kia
+   * vẫn đang mở. Ẩn menu lúc đó là giấu mất chuyến, kênh liên hệ và khoản hoàn của chính họ.
+   * Khi chuyến khép, mục tự biến mất mà không ai phải làm gì.
+   */
+  if (tenantUsesManagePortal(tenant)) {
+    /*
+     * HAI mục, hai đích khác nhau — cố ý không gộp:
+     *   "Quản lý gian hàng" → cổng `/manage` (nơi làm việc)
+     *   "Hồ sơ gian hàng"   → `/manage/shop` (hồ sơ PHÁP NHÂN: tên, địa chỉ, mã số thuế)
+     *
+     * Và cả hai đều KHÁC `PROFILE` ("Tài khoản của tôi") ngay dưới, thứ trỏ về hồ sơ của một CON
+     * NGƯỜI. Gộp chúng lại là để một người sửa hồ sơ pháp nhân trong khi tưởng đang sửa hồ sơ
+     * của mình.
+     */
+    const manageShop: AccountNavItem = {
+      key: 'manageShop',
+      labelKey: 'public.manageShop',
+      href: ROUTES.MANAGE.ROOT,
+      icon: ShopOutlined,
+      external: true,
+    };
+    const shopProfile: AccountNavItem = {
+      key: 'shopProfile',
+      labelKey: 'account.shopProfile',
+      href: ROUTES.MANAGE.SHOP,
+      icon: SolutionOutlined,
+      external: true,
+    };
+    /*
+     * ĐÚNG HAI MỤC. Không có hồ sơ cá nhân, không đổi mật khẩu, không yêu cầu xoá tài khoản —
+     * cả ba sống ở "Tài khoản & bảo mật" trong Manage (`/manage/account`), nơi người của gian
+     * hàng thật sự làm việc.
+     *
+     * Cũng KHÔNG có mục Chuyến, kể cả khi họ còn chuyến đi thuê chưa khép: nghĩa vụ cũ đó đi qua
+     * một lối RIÊNG THEO NGỮ CẢNH trong Manage (`/manage/account` → "Chuyến tôi đi thuê"), không
+     * phải một mục menu phổ thông ở khu khách. Một mục "Chuyến của tôi" xuất hiện rồi biến mất
+     * theo dữ liệu là menu tự đổi hình dưới chân người dùng.
+     */
+    return [{ key: 'account', items: [manageShop, shopProfile] }];
+  }
+
+  const stage = resolveOwnerStage(tenant);
+  if (stage !== OWNER_STAGE.NONE) {
+    /*
+     * MỘT nhóm, không tiêu đề (16/09/2026).
+     *
+     * Bản trước chia hai nhóm "chủ xe" / "Tài khoản", và đường kẻ giữa chúng hứa một ranh giới
+     * không tồn tại: chủ xe tuyến hoa hồng KHÔNG chuyển vai khi bấm từ "Lịch xe" sang "Tài khoản
+     * của tôi" — họ vẫn là một con người làm một việc trong cùng một khu (ADR 0014).
+     *
+     * Danh tính và tiền đứng cuối danh sách; thứ tự đã nói đủ, không cần một tiêu đề nhóm.
+     */
     return [
-      { key: 'owner', items: OWNER_NAV },
       {
-        key: 'account',
-        labelKey: 'account.groupAccount',
-        items: [PROFILE, CHANGE_PASSWORD, DELETE_ACCOUNT],
+        key: 'owner',
+        items: stage === OWNER_STAGE.OWNER ? OWNER_NAV : OWNER_REGISTERING_NAV,
       },
     ];
   }
@@ -213,7 +389,21 @@ export function resolveAccountNav(user: CurrentUser | null | undefined): Account
     external: true,
   };
   return [
-    { key: 'account', items: [PROFILE, becomeOwner, TRIPS, CHANGE_PASSWORD, DELETE_ACCOUNT] },
+    {
+      key: 'account',
+      items: [
+        PROFILE,
+        becomeOwner,
+        TRIPS,
+        PAYMENTS,
+        // Khách thuê CÓ số dư: tiền hoàn khoản giữ chỗ chảy vào ví điểm của họ (ADR 0033 điều 5),
+        // và tài khoản nhận tiền là nơi khai số để rút nó ra.
+        BALANCE,
+        BANK_ACCOUNTS,
+        CHANGE_PASSWORD,
+        DELETE_ACCOUNT,
+      ],
+    },
   ];
 }
 

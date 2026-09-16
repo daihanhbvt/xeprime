@@ -7,14 +7,28 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { newId, Prisma } from '@xeprime/prisma';
-import { API_ERROR_CODE, MEMBERSHIP_STATUS, USER_STATUS, type Permission } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  BILLING_MODE,
+  MEMBERSHIP_STATUS,
+  USER_STATUS,
+  OPEN_CUSTOMER_TRIP_STATUSES,
+  VEHICLE_PUBLIC_STATUS,
+  type Permission,
+} from '@xeprime/types';
 import bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RbacService } from '../rbac/rbac.service';
 import { normalizePhone, toLocalPhone } from '../../common/phone';
-import { currentSubscriptionWhere, resolveTenantFeatures } from '../../common/plan/feature-state';
+import {
+  EFFECTIVE_SUBSCRIPTION_ARGS,
+  effectiveSubscriptionWhere,
+  resolveTenantFeatures,
+  type TenantPlanContext,
+} from '../../common/plan/feature-state';
 import { EmailService } from '../email/email.service';
+import { FeePoliciesService } from '../fee-policies/fee-policies.service';
 import type { CurrentTenantSummaryDto, MeDto } from './dto/auth.dto';
 import type { VerifiedIdentity } from './social/identity';
 
@@ -30,6 +44,8 @@ export class AuthService {
     private readonly rbac: RbacService,
     private readonly email: EmailService,
     private readonly config: ConfigService,
+    /** Chỉ dùng cho `/auth/me` — xem `CurrentTenantSummaryDto.serviceFeePercent`. */
+    private readonly feePolicies: FeePoliciesService,
   ) {}
 
   // ---- Đăng ký / đăng nhập bằng định danh + mật khẩu ------------------------
@@ -479,6 +495,7 @@ export class AuthService {
       },
     });
 
+    const now = new Date();
     const [membership, platformMembership] = await Promise.all([
       this.prisma.tenantMembership.findFirst({
         where: { userId, status: MEMBERSHIP_STATUS.ACTIVE },
@@ -496,10 +513,8 @@ export class AuthService {
               status: true,
               usedFeatures: true,
               subscriptions: {
-                where: currentSubscriptionWhere(new Date()),
-                orderBy: { endsAt: 'desc' },
-                take: 1,
-                select: { endsAt: true, plan: { select: { code: true, limitsJson: true } } },
+                where: effectiveSubscriptionWhere(now),
+                ...EFFECTIVE_SUBSCRIPTION_ARGS,
               },
             },
           },
@@ -512,13 +527,80 @@ export class AuthService {
       }),
     ]);
 
-    const tenantPermissions: readonly Permission[] = membership
-      ? await this.rbac.permissionsForTenantMember(
-          membership.roleKey as never,
-          membership.roleId,
-          membership.tenant.id,
-        )
-      : [];
+    /*
+     * Đếm xe đang trên chợ đi CÙNG lượt với quyền, không nối thêm một round-trip nữa: cả hai
+     * chỉ cần `membership` và cùng phải xong trước khi dựng response. Index
+     * `(tenant_id, public_status)` đã có sẵn nên đây là một index-only scan.
+     */
+    /*
+     * Chuyến ĐI THUÊ chưa khép của chính người này (15/09/2026).
+     *
+     * Khu `/account` của một tài khoản gian hàng ẩn menu Chuyến — nhưng KHÔNG được giấu một
+     * chuyến đang chạy của chính họ. Ca thật: một chủ xe tuyến hoa hồng đang đi thuê xe của người
+     * khác thì nâng lên gói; chuyến đó chưa xong, tiền hoàn chưa về, và chat với chủ xe kia vẫn
+     * đang mở. Ẩn menu lúc đó là lấy mất đường vào đúng lúc họ cần nhất.
+     *
+     * Đếm ở đây thay vì để web tự gọi `/trips`: menu vẽ ở LẦN ĐẦU, và một request thứ hai nghĩa
+     * là menu nhấp nháy. Cùng lý do với `publicVehicleCount` ngay bên cạnh, và cùng vị từ với tab
+     * "đang diễn ra" của `/trips` (`OPEN_CUSTOMER_TRIP_STATUSES`).
+     */
+    const openTripWhere: Prisma.BookingRequestWhereInput = {
+      customerUserId: userId,
+      OR: [
+        { booking: { is: { status: { in: OPEN_CUSTOMER_TRIP_STATUSES.bookingStatuses } } } },
+        { booking: { is: null }, status: { in: OPEN_CUSTOMER_TRIP_STATUSES.requestStatuses } },
+      ],
+    };
+
+    const [tenantPermissions, publicVehicleCount] = membership
+      ? await Promise.all([
+          this.rbac.permissionsForTenantMember(
+            membership.roleKey as never,
+            membership.roleId,
+            membership.tenant.id,
+          ),
+          this.prisma.vehicle.count({
+            where: {
+              tenantId: membership.tenant.id,
+              publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+              deletedAt: null,
+            },
+          }),
+        ])
+      : ([[], 0] as [readonly Permission[], number]);
+
+    const [openRenterTripCount, tenantPlan] = await Promise.all([
+      this.prisma.bookingRequest.count({ where: openTripWhere }),
+      /*
+       * Giải ngữ cảnh gói TRƯỚC, vì nó quyết định có cần đọc chính sách phí hay không — và
+       * `toTenantSummary` dùng lại chính kết quả này thay vì giải lần thứ hai.
+       */
+      Promise.resolve(
+        membership
+          ? resolveTenantFeatures(
+              membership.tenant.subscriptions[0] ?? null,
+              membership.tenant.usedFeatures,
+              now,
+            )
+          : null,
+      ),
+    ]);
+
+    /*
+     * % phí dịch vụ ĐANG THU, chỉ cho nhãn của chủ xe TUYẾN HOA HỒNG.
+     *
+     * Đọc qua `FeePoliciesService.findEffective` chứ không query `fee_policies` tay: docblock
+     * của service nói rõ mọi nơi cần "policy hiện hành" phải đi qua đó, và một bản đọc thứ hai
+     * là chỗ để hai định nghĩa "đang hiệu lực" trôi khỏi nhau.
+     *
+     * Điều kiện hẹp có chủ đích: `/auth/me` là endpoint nóng nhất và `findEffective` không có
+     * cache. Tenant tuyến gói trả 0đ/chuyến, khách thuê không có nhãn nào — với họ kết quả này
+     * sẽ bị vứt, nên đừng đi lấy.
+     */
+    const activeServiceFeePercent =
+      tenantPlan?.billingMode === BILLING_MODE.COMMISSION
+        ? ((await this.feePolicies.findEffective())?.serviceFeePercent ?? null)
+        : null;
 
     const platformPermissions: readonly Permission[] = platformMembership
       ? await this.rbac.permissionsForPlatformMember(
@@ -538,7 +620,11 @@ export class AuthService {
       phone: user.phone ? toLocalPhone(user.phone) : null,
       phoneVerified: user.phoneVerifiedAt !== null,
       hasPassword: user.passwordHash !== null,
-      tenant: membership ? toTenantSummary(membership) : null,
+      tenant:
+        membership && tenantPlan
+          ? toTenantSummary(membership, tenantPlan, publicVehicleCount, activeServiceFeePercent)
+          : null,
+      openRenterTripCount,
       platformRole: platformMembership?.roleKey ?? null,
       permissions: [...new Set([...tenantPermissions, ...platformPermissions])],
     };
@@ -551,21 +637,28 @@ export class AuthService {
  * `features` LUÔN đủ 8 cờ kể cả `hidden`: web dựng menu từ nó ở lần vẽ đầu, và một cờ vắng mặt
  * không phân biệt được với "backend cũ chưa biết cờ này".
  */
-function toTenantSummary(membership: {
-  roleKey: string;
-  tenant: {
-    id: string;
-    name: string;
-    slug: string;
-    status: string;
-    usedFeatures: string[];
-    subscriptions: { endsAt: Date; plan: { code: string; limitsJson: unknown } }[];
-  };
-}): CurrentTenantSummaryDto {
-  const plan = resolveTenantFeatures(
-    membership.tenant.subscriptions[0] ?? null,
-    membership.tenant.usedFeatures,
-  );
+function toTenantSummary(
+  membership: {
+    roleKey: string;
+    tenant: {
+      id: string;
+      name: string;
+      slug: string;
+      status: string;
+      usedFeatures: string[];
+      subscriptions: {
+        endsAt: Date;
+        billingMode: string | null;
+        plan: { code: string; name: string; limitsJson: unknown };
+      }[];
+    };
+  },
+  /** Ngữ cảnh gói đã giải ở `me()` — nhận vào thay vì giải lại, để có đúng MỘT phép chấm pha. */
+  plan: TenantPlanContext,
+  publicVehicleCount: number,
+  /** % phí dịch vụ của chính sách phí đang hiệu lực — xem `CurrentTenantSummaryDto`. */
+  activeServiceFeePercent: number | null,
+): CurrentTenantSummaryDto {
   return {
     id: membership.tenant.id,
     name: membership.tenant.name,
@@ -574,7 +667,18 @@ function toTenantSummary(membership: {
     roleKey: membership.roleKey,
     features: Object.entries(plan.features).map(([feature, state]) => ({ feature, state })),
     planCode: plan.planCode,
+    planName: plan.planName,
+    /*
+     * % chỉ có nghĩa ở TUYẾN HOA HỒNG: tuyến gói trả 0đ trên chuyến (ADR 0029 điều 2), và
+     * `unconfigured` chưa xác định được tuyến nên không có gì để hứa.
+     */
+    serviceFeePercent:
+      plan.billingMode === BILLING_MODE.COMMISSION ? activeServiceFeePercent : null,
     planEndsAt: plan.planEndsAt?.toISOString() ?? null,
+    billingMode: plan.billingMode,
+    billingPhase: plan.phase,
+    graceEndsAt: plan.graceEndsAt?.toISOString() ?? null,
+    publicVehicleCount,
   };
 }
 

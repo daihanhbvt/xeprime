@@ -253,3 +253,39 @@ export {
   legalPath,
   type LegalDoc,
 } from './legal';
+
+/**
+ * Giá thuê THAM KHẢO cho chủ xe đang đặt giá lần đầu — mức khởi điểm theo phân khúc, dùng khi
+ * chợ chưa đủ xe tương tự để nói lên một con số thật.
+ *
+ * Nằm ở domain vì đây là chính sách sản phẩm dùng chung (app native có cùng màn đăng xe) và nó
+ * phải chạy được ở chỗ không có React lẫn Prisma — backend đọc chính bảng này khi mẫu quá nhỏ.
+ */
+export {
+  BASELINE_REVIEWED_ON,
+  MARKET_PRICE_BASIS,
+  MARKET_PRICE_MIN_SAMPLE,
+  MARKET_PRICE_ROUND_STEP,
+  baselinePriceBand,
+  carSeatBucketOf,
+  roundPriceBand,
+  type MarketPriceBand,
+  type MarketPriceBasis,
+  type MarketPriceSegment,
+} from './market-price';
+
+/**
+ * Thư viện PDF của chủ xe — cẩm nang, hợp đồng mẫu, chứng từ quyết toán.
+ *
+ * Dùng chung vì cả hai client trưng CÙNG bộ tài liệu: web phục vụ file tĩnh tại
+ * `/owner-resources/<file>`, app native mở đúng địa chỉ đó qua `resolveWebBaseUrl()`.
+ */
+export {
+  OWNER_RESOURCES,
+  OWNER_RESOURCE_BASE,
+  ownerResourcePath,
+  ownerResourcesOfKind,
+  type OwnerResource,
+  type OwnerResourceKey,
+  type OwnerResourceKind,
+} from './owner-resources';

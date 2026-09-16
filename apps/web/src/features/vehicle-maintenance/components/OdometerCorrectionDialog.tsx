@@ -159,7 +159,7 @@ export function OdometerCorrectionDialog({
             type={canDecrease ? 'warning' : 'error'}
             showIcon
             role="alert"
-            message={t('odometer.decreaseAlert', { current: fmt.km(currentKm) })}
+            title={t('odometer.decreaseAlert', { current: fmt.km(currentKm) })}
             description={
               canDecrease
                 ? t('odometer.decreaseAllowed')
@@ -170,7 +170,7 @@ export function OdometerCorrectionDialog({
           <Alert
             type="info"
             showIcon
-            message={t('odometer.auditNote')}
+            title={t('odometer.auditNote')}
           />
         )}
       </div>

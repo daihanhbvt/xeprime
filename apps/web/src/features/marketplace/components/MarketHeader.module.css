@@ -94,3 +94,132 @@
 .avatarTrigger:hover .avatarCaret {
   color: var(--xp-color-primary);
 }
+
+/* ── Menu tài khoản (dropdown avatar) ──────────────────────────────────────
+ *
+ * Bề rộng cố định: nội dung bên trong dài ngắn rất khác nhau giữa các vai (một khách thuê có
+ * bốn dòng ngắn; một chủ gian hàng mang thêm nhãn tuyến kèm tên gói do admin đặt). Để menu tự
+ * co giãn thì nó đổi bề rộng mỗi lần người dùng đổi vai, và ở tiếng Anh lại đổi thêm lần nữa.
+ */
+.menu {
+  min-width: 280px;
+}
+
+/*
+ * Thẻ danh tính KHÔNG phải một dòng menu: gỡ hết padding/hover mặc định của AntD để thẻ tự dựng
+ * bố cục của nó. Giữ lại đúng một thứ — vùng bấm — vì cả thẻ là một liên kết tới hồ sơ.
+ */
+.identityItem {
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-md);
+  border-radius: var(--xp-border-radius);
+  color: inherit;
+}
+
+.identity:hover {
+  background: var(--xp-color-bg-hover);
+}
+
+.identityAvatar {
+  flex: none;
+  background: linear-gradient(150deg, var(--xp-color-primary), var(--xp-gold-deep));
+  color: var(--xp-color-primary-contrast);
+  font-weight: 700;
+}
+
+.identityText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+/*
+ * Hàng TÊN: tên co lại được, dấu xác thực thì không.
+ *
+ * Nếu để dấu nằm trong cùng dòng chữ với tên, phép cắt ellipsis sẽ ăn vào nó trước — tên dài thì
+ * dấu biến mất, đúng lúc nó cần nhất. Tách thành hai phần tử: phần co được và phần `flex: none`.
+ */
+.identityNameRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+/*
+ * Tên và email đều là DỮ LIỆU người dùng nhập — không có trần độ dài nào bảo vệ bố cục, nên cắt
+ * bằng ellipsis thay vì để chúng đẩy mũi tên ra khỏi menu.
+ */
+.identityName,
+.identityContact {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identityVerified {
+  flex: none;
+  /* Cân quang học với chữ đậm 14px: dấu nhỉnh hơn một chút mới không trông như bị lọt thỏm. */
+  margin-block-start: 1px;
+}
+
+.identityName {
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-bold);
+  color: var(--xp-color-text);
+  line-height: 1.4;
+}
+
+.identityContact {
+  font-size: var(--xp-font-size-caption);
+  color: var(--xp-color-text-secondary);
+  line-height: 1.4;
+}
+
+/* ── Một dòng điều hướng ─────────────────────────────────────────────────── */
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  color: inherit;
+}
+
+.row:hover {
+  color: inherit;
+}
+
+.rowLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * Mũi tên là dấu CHỈ HƯỚNG, không phải nút: mờ và nhỏ, đậm lên khi rê vào dòng để nói rằng cả
+ * dòng bấm được — chứ không mời bấm riêng vào nó.
+ */
+.rowChevron {
+  flex: none;
+  font-size: 11px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.identity:hover .rowChevron,
+.row:hover .rowChevron {
+  color: var(--xp-color-primary);
+}

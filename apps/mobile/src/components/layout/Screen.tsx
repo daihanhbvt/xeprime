@@ -5,15 +5,12 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
+import { FocusRevealProvider, revealFocusedInput } from './focus-reveal';
 import { layout } from '@/theme/layout';
 import { colors, space } from '@/theme/tokens';
-
-/** Khoảng thở giữa đáy ô đang gõ và mép trên bàn phím. */
-const KEYBOARD_GAP = space.md;
 
 /**
  * Đệm thêm dưới nội dung KHI bàn phím mở.
@@ -202,20 +199,26 @@ export function Screen({
     requestAnimationFrame(correctFooterLift);
   }, [correctFooterLift]);
 
-  const revealFocusedInput = useCallback((keyboardTop: number) => {
-    const input = TextInput.State.currentlyFocusedInput();
-    if (!input || !scroller.current) return;
-
-    input.measureInWindow((_x, y, _width, height) => {
-      const overlap = y + height + KEYBOARD_GAP - keyboardTop;
-      /*
-       * Không chồng lấn thì không cuộn — gồm luôn trường hợp ô đang gõ thuộc một tấm trượt mở đè
-       * lên màn: tấm trượt tự nâng nội dung của nó, ở đây không có gì để làm.
-       */
-      if (overlap <= 0) return;
-      scroller.current?.scrollTo({ y: scrollY.current + overlap, animated: true });
-    });
+  const reveal = useCallback((top: number) => {
+    revealFocusedInput(scroller.current, scrollY.current, top);
   }, []);
+
+  /**
+   * Cùng việc đó nhưng dùng mép bàn phím ĐÃ BIẾT — cho ô nhập gọi khi NHẬN TIÊU ĐIỂM.
+   *
+   * `keyboardDidShow` chỉ bắn lúc bàn phím BẬT LÊN. Chuyển tiêu điểm từ ô này sang ô khác trong
+   * lúc bàn phím đang mở thì Android không bắn lại, iOS chỉ bắn khi hình dạng bàn phím đổi — nên
+   * ô cuối form, thứ người dùng chạm sau khi đã gõ ô trên, nằm im dưới bàn phím.
+   *
+   * Bàn phím đang đóng thì không làm gì: `keyboardDidShow` sắp bắn và sẽ lo. Đợi một khung hình
+   * để `KeyboardAvoidingView` và phần nâng `footer` áp xong đệm của chúng — không thì `scrollTo`
+   * bị kẹp lại theo chiều cao nội dung CŨ.
+   */
+  const revealOnFocus = useCallback(() => {
+    const top = keyboardTop.current;
+    if (top === null) return;
+    requestAnimationFrame(() => reveal(top));
+  }, [reveal]);
 
   /*
    * ĐO LẠI mỗi lần bàn phím bật lên: `onLayout` chỉ bắn lúc dựng và `measureInWindow` trả về bất
@@ -226,7 +229,7 @@ export function Screen({
     const show = Keyboard.addListener('keyboardDidShow', (event) => {
       measureFrame();
       setKeyboardTail(KEYBOARD_TAIL);
-      revealFocusedInput(event.endCoordinates.screenY);
+      reveal(event.endCoordinates.screenY);
 
       keyboardTop.current = event.endCoordinates.screenY;
       liftPasses.current = 0;
@@ -243,7 +246,7 @@ export function Screen({
       show.remove();
       hide.remove();
     };
-  }, [correctFooterLift, measureFrame, revealFocusedInput]);
+  }, [correctFooterLift, measureFrame, reveal]);
 
   /*
    * Vòng xác nhận: mỗi lần nâng xong thì đo lại. Hội tụ sau một tới hai vòng — `setFooterLift`
@@ -320,12 +323,14 @@ export function Screen({
           dưới lên, và dải trống sinh ra nằm SAU bàn phím nên không ai nhìn thấy.
         */}
         <View style={[styles.flex, footerLift > 0 ? { paddingBottom: footerLift } : null]}>
-          {body}
-          {footer ? (
-            <View ref={footerBox} style={styles.footer} onLayout={handleFooterLayout}>
-              {footer}
-            </View>
-          ) : null}
+          <FocusRevealProvider reveal={revealOnFocus}>
+            {body}
+            {footer ? (
+              <View ref={footerBox} style={styles.footer} onLayout={handleFooterLayout}>
+                {footer}
+              </View>
+            ) : null}
+          </FocusRevealProvider>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

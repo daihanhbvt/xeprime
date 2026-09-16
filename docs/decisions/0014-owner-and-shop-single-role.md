@@ -1,6 +1,6 @@
 # ADR 0014 — Chủ xe và chủ gian hàng là MỘT vai; năng lực đến từ GÓI, không từ role
 
-Ngày: 21/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0020](0020-two-revenue-tracks-one-marketplace.md) và [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md)**. Nguyên tắc một role/capability từ gói vẫn còn hiệu lực; phạm vi XePrime đứng giữa giao dịch đã đổi.
+Ngày: 21/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0020](0020-two-revenue-tracks-one-marketplace.md), [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) và [ADR 0036](0036-single-approval-gate-for-commission-owners.md)**. Nguyên tắc một role/capability từ gói vẫn còn hiệu lực; phạm vi XePrime đứng giữa giao dịch đã đổi.
 
 > ⚠️ **Hai điều khoản đã được sửa (28/08/2026):**
 >
@@ -9,6 +9,11 @@ Ngày: 21/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0020](0020
 > - **Điều 5** — [ADR 0020](0020-two-revenue-tracks-one-marketplace.md) thêm **đúng một dòng**
 >   vào cột *"VẪN đứng giữa"*: **phí dịch vụ của chính nền tảng**. Mọi dòng khác ở nguyên chỗ —
 >   đặc biệt *"Giá, điều kiện thuê, cọc"* vẫn thuộc cột *"KHÔNG đứng giữa"*.
+>
+> **Điều 5 bị [ADR 0036](0036-single-approval-gate-for-commission-owners.md) ghi đè một phần
+> (14/09/2026):** dòng *"Gian hàng được mở hay không (`approval_tasks`)"* KHÔNG còn áp với tuyến
+> hoa hồng — cá nhân chỉ đi qua cổng duyệt **XE**. Việc nền tảng xem xét pháp nhân chuyển thành
+> điều kiện để **mua gói thuê bao**. Ba dòng còn lại của cột "VẪN kiểm duyệt" giữ nguyên.
 >
 > **Điều 1** (mọi xe thuộc một tenant) và **điều 2** (`tenant_type` chỉ là nhãn hiển thị, không
 > bao giờ dùng cho quyền/hạn mức/tiền) **giữ nguyên hiệu lực tuyệt đối**.

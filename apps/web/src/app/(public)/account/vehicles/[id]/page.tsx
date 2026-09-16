@@ -1,5 +1,6 @@
 'use client';
 
+import { OWNER_STAGE } from '@xeprime/types';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
@@ -20,7 +21,7 @@ export default function AccountVehicleDetailPage() {
   const backToList = () => router.push(ROUTES.ACCOUNT.VEHICLES);
 
   return (
-    <OwnerGate>
+    <OwnerGate minStage={OWNER_STAGE.REGISTERING}>
       <AccountPageHeader
         title={t('title')}
         back={{ href: ROUTES.ACCOUNT.VEHICLES, label: t('back') }}

@@ -2,10 +2,14 @@
  * DANH MỤC HÃNG & MẪU XE của thị trường Việt Nam — dữ liệu nền (`SEED_MODE=system`).
  *
  * Đây KHÔNG phải dữ liệu demo. Nó là danh mục mà chủ xe thật sẽ chọn khi đăng xe, nên mọi mẫu
- * trong file này đều kèm `sourceUrl` trỏ tới TRANG SẢN PHẨM CHÍNH HÃNG đã đối chiếu và
- * `verifiedAt` là ngày đối chiếu. Quy tắc một dòng:
+ * trong file này đều kèm `sourceUrl` trỏ tới một trang tra được và `verifiedAt` là ngày đối
+ * chiếu. Quy tắc một dòng:
  *
  *     không có nguồn thì không có mẫu.
+ *
+ * Nguồn có HAI HẠNG, và hai hạng đó phân biệt được từ chính hằng đang dùng: `SOURCE` là trang sản
+ * phẩm chính hãng, `MARKET_SOURCE` là bảng giá thị trường — dùng cho những hãng mà trang chính
+ * hãng chặn truy cập tự động. Đọc docblock của `MARKET_SOURCE` trước khi thêm mẫu vào hạng hai.
  *
  * Vì sao vài trường để trống có chủ đích:
  *
@@ -18,14 +22,23 @@
  *    hybrid). Xe xăng phổ thông có nhiều phiên bản số sàn/tự động nên để rỗng = "chưa xác minh",
  *    và form KHÔNG lọc theo nó (xem `vehicle_catalog_models.fuel_types` trong schema).
  *
- * Các hãng chưa đối chiếu được (trang chính hãng chặn truy cập tự động — HTTP 403) nằm ở
- * `UNVERIFIED_BRANDS` bên dưới: hãng vẫn có trong danh mục để chủ xe chọn, nhưng KHÔNG có mẫu
- * nào được thêm cho tới khi có người mở trang và đối chiếu tay.
+ * Hãng nào chưa đối chiếu được mẫu nào thì khai ở `UNVERIFIED_BRANDS` bên dưới: hãng vẫn có trong
+ * danh mục để chủ xe chọn, nhưng danh sách mẫu để trống cho tới khi có người mở trang và đối
+ * chiếu tay. Sau đợt rà 14/09/2026 thì danh sách đó rỗng.
  */
 import { CATALOG_MARKET_STATUS, MOTORBIKE_CATEGORY, VEHICLE_TYPE } from '@xeprime/types';
 
-/** Ngày đối chiếu toàn bộ nguồn trong file này. */
+/**
+ * Ngày đối chiếu MẶC ĐỊNH — đợt rà đầu tiên (Toyota, Honda, Hyundai, Mitsubishi, Yamaha).
+ *
+ * Mẫu nào được rà ở đợt sau thì mang `verifiedAt` riêng. Dùng chung một hằng cho cả file nghĩa
+ * là mỗi lần bổ sung một hãng, toàn bộ hãng cũ cũng được đóng dấu "vừa kiểm tra" — một lời khai
+ * sai về chính dữ liệu của mình.
+ */
 export const CATALOG_VERIFIED_AT = new Date('2026-09-09T00:00:00.000Z');
+
+/** Đợt rà thứ hai: bổ sung 14 hãng chưa có mẫu nào (VinFast, Kia, Mazda, Ford, …). */
+export const CATALOG_VERIFIED_AT_ROUND_2 = new Date('2026-09-14T00:00:00.000Z');
 
 /** Trang nguồn — một hằng cho mỗi trang, để không có URL nào bị gõ lệch giữa hai mẫu. */
 const SOURCE = {
@@ -35,6 +48,39 @@ const SOURCE = {
   YAMAHA: 'https://yamaha-motor.com.vn/xe/',
   HYUNDAI: 'https://hyundai.thanhcong.vn/',
   MITSUBISHI: 'https://mitsubishi-motors.com.vn/',
+  KIA: 'https://kiavietnam.com.vn/',
+  SUZUKI_CAR: 'https://www.suzuki.com.vn/automobile',
+  SYM: 'https://www.sym.com.vn/',
+} as const;
+
+/**
+ * Nguồn THỨ CẤP — bảng giá thị trường, dùng cho những hãng mà trang chính hãng CHẶN truy cập tự
+ * động (HTTP 403 / chứng chỉ TLS không khớp tên miền, kiểm 14/09/2026).
+ *
+ * Đây là một sự nhượng bộ có ý thức, không phải nới lỏng luật "không có nguồn thì không có mẫu":
+ * mỗi mẫu vẫn trỏ tới MỘT trang tra được, và người rà lại sau này biết chính xác mình đang đọc
+ * loại nguồn nào. Đổi lại, danh mục không còn 14 hãng rỗng — mà một hãng rỗng thì chủ xe buộc
+ * phải bỏ trống ô "Mẫu xe", và toàn bộ lợi ích của danh mục chuẩn hoá biến mất ở đúng những hãng
+ * đông xe dịch vụ nhất (VinFast, Kia, Mazda, Ford).
+ *
+ * Việc cần làm sau: mở tay từng trang chính hãng, đối chiếu và chuyển dần sang `SOURCE`.
+ */
+const MARKET_SOURCE = {
+  VINFAST_CAR: 'https://bonbanh.com/gia-xe-oto-vinfast',
+  VINFAST_BIKE: 'https://xemaynamtien.net/tin-tuc/xe-may-dien-vinfast-2026-ra-mat-4-mau-moi/',
+  KIA_LEGACY: 'https://oto.com.vn/bang-gia-xe-o-to-kia-moi-nhat',
+  MAZDA: 'https://oto.com.vn/bang-gia-xe-o-to-mazda-moi-nhat',
+  FORD: 'https://oto.com.vn/bang-gia-xe-o-to-ford-moi-nhat',
+  NISSAN: 'https://oto.com.vn/bang-gia-xe-o-to-nissan-moi-nhat',
+  PEUGEOT: 'https://oto.com.vn/bang-gia-xe-o-to-peugeot-moi-nhat',
+  MERCEDES: 'https://oto.com.vn/bang-gia-xe-o-to-mercedes-benz-moi-nhat',
+  BMW: 'https://oto.com.vn/bang-gia-xe-o-to-bmw-moi-nhat',
+  VOLKSWAGEN: 'https://oto.com.vn/bang-gia-xe-o-to-volkswagen-moi-nhat',
+  MINI: 'https://oto.com.vn/bang-gia-xe-o-to-mini-moi-nhat',
+  CHEVROLET: 'https://oto.com.vn/bang-gia-xe-o-to-chevrolet-moi-nhat',
+  PIAGGIO: 'https://giaxe.2banh.vn/bang-gia-xe-piaggio-41.html',
+  VESPA: 'https://giaxe.2banh.vn/bang-gia-xe-vespa-117.html',
+  SUZUKI_BIKE: 'https://giaxe.2banh.vn/bang-gia-xe/bang-gia-xe-may-suzuki-40.html',
 } as const;
 
 /**
@@ -64,6 +110,7 @@ export const BRAND_VEHICLE_TYPES: Readonly<Record<string, readonly string[]>> = 
   yamaha: [VEHICLE_TYPE.MOTORBIKE],
   piaggio: [VEHICLE_TYPE.MOTORBIKE],
   sym: [VEHICLE_TYPE.MOTORBIKE],
+  vespa: [VEHICLE_TYPE.MOTORBIKE],
 };
 
 /** Hãng xe máy chưa có trong danh mục gốc — thêm để chủ xe máy không phải chọn "Khác". */
@@ -75,21 +122,26 @@ export const ADDITIONAL_BRANDS: readonly {
 }[] = [
   { key: 'piaggio', label: 'Piaggio', vehicleTypes: [VEHICLE_TYPE.MOTORBIKE], sortOrder: 17 },
   { key: 'sym', label: 'SYM', vehicleTypes: [VEHICLE_TYPE.MOTORBIKE], sortOrder: 18 },
+  /*
+   * Vespa là HÃNG RIÊNG trong danh mục, không gộp vào Piaggio dù cùng tập đoàn: chủ xe tìm ô
+   * "Hãng xe" theo chữ trên yếm xe, và "Piaggio / Vespa Sprint" là một cái tên không tồn tại ở
+   * đâu ngoài bảng dữ liệu của chúng ta. Vespa cũng là dòng cho thuê đông nhất của Piaggio Group
+   * tại Việt Nam, nên chôn nó xuống một tầng là chôn đúng thứ người dùng đang tìm.
+   */
+  { key: 'vespa', label: 'Vespa', vehicleTypes: [VEHICLE_TYPE.MOTORBIKE], sortOrder: 19 },
 ];
 
 /**
- * Hãng CÓ trong danh mục nhưng CHƯA đối chiếu được mẫu xe: trang sản phẩm chính hãng trả HTTP 403
- * với truy cập tự động (09/09/2026). Chủ xe vẫn chọn được hãng và tự gõ tên mẫu; danh sách mẫu
- * để trống cho tới khi có người mở trang và nhập tay.
+ * Hãng CÓ trong danh mục nhưng chưa đối chiếu được mẫu xe từ TRANG CHÍNH HÃNG.
  *
- * Đây là danh sách công khai chứ không phải ghi chú nội bộ: nó là thứ nói cho người rà danh mục
- * sau này biết chỗ nào còn thiếu và VÌ SAO thiếu, thay vì tưởng danh mục đã đủ.
+ * Sau đợt rà 14/09/2026 thì mọi hãng đều đã có mẫu, nên danh sách này rỗng — nhưng 14 hãng trong
+ * `MARKET_SOURCE` mới chỉ đối chiếu qua bảng giá thị trường, và phần việc "mở tay trang chính
+ * hãng" vẫn còn nợ ở đó.
+ *
+ * Giữ lại cấu trúc vì nó là thứ nói cho người rà danh mục sau này biết chỗ nào còn thiếu và VÌ
+ * SAO thiếu, thay vì tưởng danh mục đã đủ. Hãng nào mất mẫu trong tương lai thì thêm lại vào đây.
  */
-export const UNVERIFIED_BRANDS: readonly { key: string; url: string; reason: string }[] = [
-  { key: 'vinfast', url: 'https://vinfastauto.com/vn_vi/san-pham', reason: 'HTTP 403' },
-  { key: 'ford', url: 'https://www.ford.com.vn/vehicles/', reason: 'HTTP 403' },
-  { key: 'piaggio', url: 'https://www.piaggio.com/vn_VI/', reason: 'HTTP 403' },
-];
+export const UNVERIFIED_BRANDS: readonly { key: string; url: string; reason: string }[] = [];
 
 export interface CatalogModelSeed {
   brandKey: string;
@@ -101,6 +153,8 @@ export interface CatalogModelSeed {
   fuelTypes?: readonly string[];
   transmissions?: readonly string[];
   sourceUrl: string;
+  /** Ngày đối chiếu của riêng mẫu này; bỏ trống = `CATALOG_VERIFIED_AT` (đợt rà đầu tiên). */
+  verifiedAt?: Date;
 }
 
 const M = MOTORBIKE_CATEGORY;
@@ -407,9 +461,381 @@ const LEGACY_MODELS: readonly CatalogModelSeed[] = [
   })),
 ];
 
+// ── Đợt rà 2 (14/09/2026) — 14 hãng trước đó không có mẫu nào ────────────────────────────────
+
+/**
+ * Helper của đợt 2: gắn sẵn `verifiedAt` để không phải lặp lại ở từng mẫu.
+ *
+ * Không gộp với `SOURCE`/`CATALOG_VERIFIED_AT` của đợt 1 vì hai đợt khác nhau ở LOẠI nguồn
+ * (trang chính hãng ↔ bảng giá thị trường) và ở ngày đối chiếu — hai thông tin mà người rà lại
+ * sau này cần phân biệt được.
+ */
+function round2(model: Omit<CatalogModelSeed, 'verifiedAt'>): CatalogModelSeed {
+  return { ...model, verifiedAt: CATALOG_VERIFIED_AT_ROUND_2 };
+}
+
+/** Ô tô ĐIỆN: nguồn năng lượng và truyền động là thuộc tính của cả dòng, không phải của phiên bản. */
+const EV_SPECS = { fuelTypes: ['electric'], transmissions: ['direct_drive'] } as const;
+
+const ROUND_2_CAR_MODELS: readonly CatalogModelSeed[] = [
+  // ── VinFast ───────────────────────────────────────────────────────────────
+  // Toàn bộ dải xe đang bán đều thuần điện — đó là thông tin của chính hãng xe, không phải suy đoán.
+  ...[
+    'VF 3',
+    'VF 5',
+    'VF 6',
+    'VF 7',
+    'VF 8',
+    'VF 9',
+    'VF MPV 7',
+    'Minio Green',
+    'Herio Green',
+    'Nerio Green',
+    'Limo Green',
+    'EC Van',
+  ].map((label) =>
+    round2({
+      brandKey: 'vinfast',
+      vehicleType: VEHICLE_TYPE.CAR,
+      label,
+      ...EV_SPECS,
+      sourceUrl: MARKET_SOURCE.VINFAST_CAR,
+    }),
+  ),
+
+  // ── Kia (THACO) ───────────────────────────────────────────────────────────
+  // Bản "New"/"Hybrid" trên trang hãng là PHIÊN BẢN của cùng một dòng, không phải dòng riêng —
+  // tách chúng ra sẽ đẻ "Sorento" và "New Sorento" đứng cạnh nhau trong ô chọn của chủ xe.
+  ...[
+    'Morning',
+    'Soluto',
+    'K3',
+    'K5',
+    'Sonet',
+    'Seltos',
+    'Carens',
+    'Sportage',
+    'Sorento',
+    'Carnival',
+  ].map((label) =>
+    round2({
+      brandKey: 'kia',
+      vehicleType: VEHICLE_TYPE.CAR,
+      label,
+      sourceUrl: SOURCE.KIA,
+    }),
+  ),
+
+  // ── Mazda (THACO) ─────────────────────────────────────────────────────────
+  ...['Mazda2', 'Mazda3', 'Mazda6', 'CX-3', 'CX-30', 'CX-5', 'CX-8'].map((label) =>
+    round2({
+      brandKey: 'mazda',
+      vehicleType: VEHICLE_TYPE.CAR,
+      label,
+      sourceUrl: MARKET_SOURCE.MAZDA,
+    }),
+  ),
+
+  // ── Ford ──────────────────────────────────────────────────────────────────
+  // `Ranger Raptor` đứng riêng chứ không phải phiên bản của Ranger: khác khung gầm, khác hệ treo,
+  // và khách thuê tìm đúng cái tên đó.
+  ...['Ranger', 'Ranger Raptor', 'Everest', 'Territory', 'Transit'].map((label) =>
+    round2({
+      brandKey: 'ford',
+      vehicleType: VEHICLE_TYPE.CAR,
+      label,
+      sourceUrl: MARKET_SOURCE.FORD,
+    }),
+  ),
+  round2({
+    brandKey: 'ford',
+    vehicleType: VEHICLE_TYPE.CAR,
+    label: 'Mustang Mach-E',
+    ...EV_SPECS,
+    sourceUrl: MARKET_SOURCE.FORD,
+  }),
+
+  // ── Suzuki ô tô ───────────────────────────────────────────────────────────
+  // Super Carry (tải/van) không đưa vào: nền tảng cho thuê xe du lịch — cùng luật đã áp cho dải
+  // xe thương mại của Hyundai ở đợt 1.
+  ...['Swift', 'Ciaz', 'Ertiga', 'XL7', 'Jimny', 'Fronx'].map((label) =>
+    round2({
+      brandKey: 'suzuki',
+      vehicleType: VEHICLE_TYPE.CAR,
+      label,
+      sourceUrl: SOURCE.SUZUKI_CAR,
+    }),
+  ),
+
+  // ── Nissan ────────────────────────────────────────────────────────────────
+  ...['Almera', 'Navara', 'Terra'].map((label) =>
+    round2({
+      brandKey: 'nissan',
+      vehicleType: VEHICLE_TYPE.CAR,
+      label,
+      sourceUrl: MARKET_SOURCE.NISSAN,
+    }),
+  ),
+  round2({
+    brandKey: 'nissan',
+    vehicleType: VEHICLE_TYPE.CAR,
+    label: 'Kicks e-POWER',
+    // e-POWER chạy điện hoàn toàn nhưng có máy xăng phát điện — đó là hybrid, không phải xe điện.
+    fuelTypes: ['hybrid'],
+    sourceUrl: MARKET_SOURCE.NISSAN,
+  }),
+
+  // ── Peugeot (THACO) ───────────────────────────────────────────────────────
+  ...['2008', '3008', '5008', '408', '508', 'Traveller'].map((label) =>
+    round2({
+      brandKey: 'peugeot',
+      vehicleType: VEHICLE_TYPE.CAR,
+      label,
+      sourceUrl: MARKET_SOURCE.PEUGEOT,
+    }),
+  ),
+
+  // ── Mercedes-Benz ─────────────────────────────────────────────────────────
+  // Khai theo DÒNG (C-Class, GLC…) chứ không theo mã máy (C 200, GLC 300): mã máy là phiên bản,
+  // và một danh sách 60 mã máy là ô chọn không ai dùng được.
+  ...['C-Class', 'E-Class', 'S-Class', 'GLB', 'GLC', 'GLE', 'GLS', 'G-Class', 'V-Class'].map(
+    (label) =>
+      round2({
+        brandKey: 'mercedes',
+        vehicleType: VEHICLE_TYPE.CAR,
+        label,
+        sourceUrl: MARKET_SOURCE.MERCEDES,
+      }),
+  ),
+  ...['EQB', 'EQE', 'EQS', 'EQS SUV'].map((label) =>
+    round2({
+      brandKey: 'mercedes',
+      vehicleType: VEHICLE_TYPE.CAR,
+      label,
+      ...EV_SPECS,
+      sourceUrl: MARKET_SOURCE.MERCEDES,
+    }),
+  ),
+
+  // ── BMW (THACO) ───────────────────────────────────────────────────────────
+  ...[
+    '3 Series',
+    '4 Series',
+    '5 Series',
+    '7 Series',
+    'X1',
+    'X3',
+    'X4',
+    'X5',
+    'X6',
+    'X7',
+    'XM',
+    'Z4',
+  ].map((label) =>
+    round2({
+      brandKey: 'bmw',
+      vehicleType: VEHICLE_TYPE.CAR,
+      label,
+      sourceUrl: MARKET_SOURCE.BMW,
+    }),
+  ),
+  ...['i4', 'i7', 'iX3'].map((label) =>
+    round2({
+      brandKey: 'bmw',
+      vehicleType: VEHICLE_TYPE.CAR,
+      label,
+      ...EV_SPECS,
+      sourceUrl: MARKET_SOURCE.BMW,
+    }),
+  ),
+
+  // ── Volkswagen ────────────────────────────────────────────────────────────
+  ...['Virtus', 'T-Cross', 'Tiguan', 'Teramont', 'Teramont X', 'Viloran', 'Touareg', 'Golf'].map(
+    (label) =>
+      round2({
+        brandKey: 'volkswagen',
+        vehicleType: VEHICLE_TYPE.CAR,
+        label,
+        sourceUrl: MARKET_SOURCE.VOLKSWAGEN,
+      }),
+  ),
+
+  // ── MINI ──────────────────────────────────────────────────────────────────
+  ...['Cooper', 'Countryman', 'Clubman', 'Convertible'].map((label) =>
+    round2({
+      brandKey: 'mini',
+      vehicleType: VEHICLE_TYPE.CAR,
+      label,
+      sourceUrl: MARKET_SOURCE.MINI,
+    }),
+  ),
+];
+
+const ROUND_2_MOTORBIKE_MODELS: readonly CatalogModelSeed[] = [
+  // ── VinFast xe máy điện ───────────────────────────────────────────────────
+  /*
+   * CHỈ bốn mẫu mà nguồn nêu đích danh là dải 2026. Dải xe máy điện VinFast còn rộng hơn thế
+   * (Klara, Evo Lite, Motio, Vero…), nhưng các trang tổng hợp gọi tên chúng mỗi nơi một kiểu và
+   * trang chính hãng trả HTTP 403 — chép một cái tên sai vào danh mục còn tệ hơn là thiếu nó,
+   * vì nó sẽ được hàng trăm chủ xe chọn rồi in ra hợp đồng.
+   */
+  ...['Evo200', 'Feliz S', 'Vento S', 'Theon S'].map((label) =>
+    round2({
+      brandKey: 'vinfast',
+      vehicleType: VEHICLE_TYPE.MOTORBIKE,
+      label,
+      motorbikeCategory: M.SCOOTER,
+      ...EV_SPECS,
+      sourceUrl: MARKET_SOURCE.VINFAST_BIKE,
+    }),
+  ),
+
+  // ── Piaggio ───────────────────────────────────────────────────────────────
+  ...['Liberty', 'Medley', 'Beverly', 'MP3'].map((label) =>
+    round2({
+      brandKey: 'piaggio',
+      vehicleType: VEHICLE_TYPE.MOTORBIKE,
+      label,
+      motorbikeCategory: M.SCOOTER,
+      fuelTypes: ['gasoline'],
+      transmissions: ['automatic_cvt'],
+      sourceUrl: MARKET_SOURCE.PIAGGIO,
+    }),
+  ),
+
+  // ── Vespa ─────────────────────────────────────────────────────────────────
+  ...['Primavera', 'Sprint', 'GTS', 'GTV'].map((label) =>
+    round2({
+      brandKey: 'vespa',
+      vehicleType: VEHICLE_TYPE.MOTORBIKE,
+      label,
+      motorbikeCategory: M.SCOOTER,
+      fuelTypes: ['gasoline'],
+      transmissions: ['automatic_cvt'],
+      sourceUrl: MARKET_SOURCE.VESPA,
+    }),
+  ),
+
+  // ── SYM ───────────────────────────────────────────────────────────────────
+  // Phân khúc lấy đúng theo cách trang chính hãng xếp nhóm ("Xe tay ga" · "Xe số").
+  ...['TPBW 125', 'Naga 150', 'Tuscany 150', 'Angel 110'].map((label) =>
+    round2({
+      brandKey: 'sym',
+      vehicleType: VEHICLE_TYPE.MOTORBIKE,
+      label,
+      motorbikeCategory: M.SCOOTER,
+      fuelTypes: ['gasoline'],
+      transmissions: ['automatic_cvt'],
+      sourceUrl: SOURCE.SYM,
+    }),
+  ),
+  ...['Priti 125', 'Priti 50'].map((label) =>
+    round2({
+      brandKey: 'sym',
+      vehicleType: VEHICLE_TYPE.MOTORBIKE,
+      label,
+      motorbikeCategory: M.UNDERBONE,
+      fuelTypes: ['gasoline'],
+      transmissions: ['semi_automatic'],
+      sourceUrl: SOURCE.SYM,
+    }),
+  ),
+
+  // ── Suzuki xe máy ─────────────────────────────────────────────────────────
+  ...['Raider R150', 'Satria F150'].map((label) =>
+    round2({
+      brandKey: 'suzuki',
+      vehicleType: VEHICLE_TYPE.MOTORBIKE,
+      label,
+      motorbikeCategory: M.SPORT,
+      fuelTypes: ['gasoline'],
+      transmissions: ['manual_clutch'],
+      sourceUrl: MARKET_SOURCE.SUZUKI_BIKE,
+    }),
+  ),
+  round2({
+    brandKey: 'suzuki',
+    vehicleType: VEHICLE_TYPE.MOTORBIKE,
+    label: 'V-Strom 250SX',
+    motorbikeCategory: M.ADVENTURE,
+    fuelTypes: ['gasoline'],
+    transmissions: ['manual_clutch'],
+    sourceUrl: MARKET_SOURCE.SUZUKI_BIKE,
+  }),
+];
+
+/**
+ * Mẫu ĐỜI TRƯỚC của đợt 2 — cùng lý do với `LEGACY_MODELS`: đây là nhóm xe ĐÔNG NHẤT ngoài dịch
+ * vụ cho thuê. Một chiếc Fadil hay Cerato đời 2019 vẫn chạy hàng ngày, và bắt chủ nó chọn "Khác"
+ * là vứt bỏ chuẩn hoá ở đúng chỗ cần nhất.
+ */
+const ROUND_2_LEGACY_MODELS: readonly CatalogModelSeed[] = [
+  // VinFast: dải xe xăng đã dừng sản xuất từ 2022 khi hãng chuyển hẳn sang thuần điện.
+  ...['Fadil', 'Lux A2.0', 'Lux SA2.0', 'President'].map((label) =>
+    round2({
+      brandKey: 'vinfast',
+      vehicleType: VEHICLE_TYPE.CAR,
+      label,
+      marketStatus: CATALOG_MARKET_STATUS.LEGACY,
+      fuelTypes: ['gasoline'],
+      sourceUrl: MARKET_SOURCE.VINFAST_CAR,
+    }),
+  ),
+  round2({
+    brandKey: 'vinfast',
+    vehicleType: VEHICLE_TYPE.CAR,
+    label: 'VF e34',
+    marketStatus: CATALOG_MARKET_STATUS.LEGACY,
+    ...EV_SPECS,
+    sourceUrl: MARKET_SOURCE.VINFAST_CAR,
+  }),
+
+  // Kia: hai dòng đã ĐỔI TÊN chứ không biến mất (Cerato → K3, Sedona → Carnival). Giữ tên cũ vì
+  // giấy đăng ký của chiếc xe đang chạy vẫn ghi tên đó.
+  ...['Cerato', 'Optima', 'Sedona', 'Rondo'].map((label) =>
+    round2({
+      brandKey: 'kia',
+      vehicleType: VEHICLE_TYPE.CAR,
+      label,
+      marketStatus: CATALOG_MARKET_STATUS.LEGACY,
+      sourceUrl: MARKET_SOURCE.KIA_LEGACY,
+    }),
+  ),
+
+  // Nissan: các dòng đã rời bảng giá chính hãng.
+  ...['Sunny', 'Teana', 'X-Trail', 'Juke'].map((label) =>
+    round2({
+      brandKey: 'nissan',
+      vehicleType: VEHICLE_TYPE.CAR,
+      label,
+      marketStatus: CATALOG_MARKET_STATUS.LEGACY,
+      sourceUrl: MARKET_SOURCE.NISSAN,
+    }),
+  ),
+
+  /*
+   * Chevrolet KHÔNG còn phân phối chính hãng tại Việt Nam (GM chuyển mảng này cho VinFast năm
+   * 2018), nên toàn bộ dải xe của hãng nằm ở nhóm đời trước — không có mẫu `current` nào. Xe vẫn
+   * chạy dịch vụ rất nhiều, đặc biệt Spark và Cruze.
+   */
+  ...['Spark', 'Aveo', 'Cruze', 'Orlando', 'Captiva', 'Trax', 'Colorado', 'Trailblazer'].map(
+    (label) =>
+      round2({
+        brandKey: 'chevrolet',
+        vehicleType: VEHICLE_TYPE.CAR,
+        label,
+        marketStatus: CATALOG_MARKET_STATUS.LEGACY,
+        sourceUrl: MARKET_SOURCE.CHEVROLET,
+      }),
+  ),
+];
+
 /** Toàn bộ mẫu xe của danh mục nền. */
 export const CATALOG_MODELS: readonly CatalogModelSeed[] = [
   ...CAR_MODELS,
   ...MOTORBIKE_MODELS,
   ...LEGACY_MODELS,
+  ...ROUND_2_CAR_MODELS,
+  ...ROUND_2_MOTORBIKE_MODELS,
+  ...ROUND_2_LEGACY_MODELS,
 ];

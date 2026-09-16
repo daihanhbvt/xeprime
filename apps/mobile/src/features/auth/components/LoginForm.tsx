@@ -105,6 +105,7 @@ export function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
       */}
       <Button
         label={t('login.submit')}
+        icon="log-in-outline"
         onPress={onSubmit}
         loading={login.isPending}
         disabled={!isValid}

@@ -74,7 +74,7 @@ export function HandoverSupplementDialog({
           <Alert
             type="info"
             showIcon
-            message="Chưa có biên bản bàn giao nào"
+            title="Chưa có biên bản bàn giao nào"
             description="Bổ sung ảnh được sau khi đã xác nhận giao hoặc nhận xe."
           />
         ) : (
@@ -99,7 +99,7 @@ export function HandoverSupplementDialog({
               <Alert
                 type="warning"
                 showIcon
-                message={`Biên bản đã xác nhận lúc ${fmt.dateTime(shown.confirmedAt)}`}
+                title={`Biên bản đã xác nhận lúc ${fmt.dateTime(shown.confirmedAt)}`}
                 description="Ảnh thêm từ bây giờ được ghi nhận là bổ sung sau, kèm đúng thời điểm tải lên. Số KM và thời gian bàn giao không sửa ở đây."
               />
             ) : null}

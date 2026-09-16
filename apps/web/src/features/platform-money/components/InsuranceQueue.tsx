@@ -180,7 +180,7 @@ export function InsuranceQueue() {
           className={styles.banner}
           type="warning"
           showIcon
-          message={t('partnerMissing.title')}
+          title={t('partnerMissing.title')}
           description={t('partnerMissing.body')}
         />
       ) : null}

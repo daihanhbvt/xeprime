@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Keyboard,
   Modal,
@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { FocusRevealProvider, revealFocusedInput } from '@/components/layout/focus-reveal';
 import { IconButton } from './IconButton';
 import { layout } from '@/theme/layout';
 import { appStyles } from '@/theme/styles';
@@ -28,6 +29,9 @@ import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
  * Đo lấy thì chỉ có hai trạng thái: có bàn phím = chiều cao thật, không có = 0. Không còn phép
  * trừ nào để sai.
  */
+/** Nhịp báo vị trí cuộn — chỉ ghi vào ref, đủ gần đúng cho lần cuộn tới ô đang gõ. */
+const SCROLL_REPORT_MS = 100;
+
 function useKeyboardHeight() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
@@ -93,6 +97,23 @@ export function BottomSheet({
   const keyboardHeight = useKeyboardHeight();
 
   /*
+   * Tấm trượt có vùng cuộn RIÊNG, nên nó cũng phải tự kéo ô đang gõ vào tầm nhìn: `Screen` nằm
+   * ngoài `Modal` và không với tới được nội dung ở đây. Không có nó thì ô nằm ở nửa dưới một
+   * tấm trượt cao — Ghi chú, Lý do chi tiết — vẫn bị bàn phím che sau khi tấm đã nâng.
+   *
+   * Cung cấp cả khi `scroll={false}`: giá trị mặc định của context là hàm rỗng, nhưng ô nhập
+   * trong tấm trượt vẫn thấy context của `Screen` bên dưới qua cây React và sẽ cuộn NHẦM màn nền.
+   */
+  const scroller = useRef<ScrollView>(null);
+  const scrollY = useRef(0);
+  const revealOnFocus = useCallback(() => {
+    if (keyboardHeight <= 0) return;
+    requestAnimationFrame(() => {
+      revealFocusedInput(scroller.current, scrollY.current, height - keyboardHeight);
+    });
+  }, [height, keyboardHeight]);
+
+  /*
     Bàn phím mở: nâng tấm trượt lên đúng chiều cao bàn phím (`mb`) và thu trần chiều cao theo
     phần màn hình còn lại — nội dung dài vẫn cuộn được thay vì bị đẩy khuất.
     Bàn phím đóng: `mb` về 0, tấm trượt trở lại bám đáy, không còn khe hở.
@@ -118,15 +139,16 @@ export function BottomSheet({
         mù. Cơ chế: `mb`/`maxHeight` theo `useKeyboardHeight()` ở trên.
       */}
       <View style={appStyles.fill}>
-        <Pressable
-          style={appStyles.scrim}
-          onPress={dismissable ? onClose : undefined}
-          accessibilityRole="button"
-          accessibilityLabel={t('close')}
-        />
-        <YStack
-          maxHeight={ceiling}
-          /*
+        <FocusRevealProvider reveal={revealOnFocus}>
+          <Pressable
+            style={appStyles.scrim}
+            onPress={dismissable ? onClose : undefined}
+            accessibilityRole="button"
+            accessibilityLabel={t('close')}
+          />
+          <YStack
+            maxHeight={ceiling}
+            /*
             Chế độ `scroll={false}`: tấm trượt phải có chiều cao XÁC ĐỊNH, không phải `maxHeight`.
 
             Ở chế độ cuộn, chiều cao tấm = chiều cao nội dung (bị chặn trên bởi `maxHeight`) và
@@ -138,78 +160,84 @@ export function BottomSheet({
             Chốt luôn bằng trần: một tấm trượt chứa danh sách thì vốn dĩ muốn cao hết mức nó được
             phép, và `maxRatio` chính là con số đó.
           */
-          {...(scroll ? {} : { height: ceiling })}
-          bg={colors.surface}
-          borderTopLeftRadius={radius.lg}
-          borderTopRightRadius={radius.lg}
-          borderTopWidth={1}
-          borderColor={colors.borderSubtle}
-          ov="hidden"
-          /*
+            {...(scroll ? {} : { height: ceiling })}
+            bg={colors.surface}
+            borderTopLeftRadius={radius.lg}
+            borderTopRightRadius={radius.lg}
+            borderTopWidth={1}
+            borderColor={colors.borderSubtle}
+            ov="hidden"
+            /*
             Lề đáy có SÀN, không chỉ là safe-area inset.
 
             Trong `Modal` của Android, `useSafeAreaInsets()` trả bottom = 0 dù thanh điều hướng
             vẫn đè lên tấm trượt — nên lề bằng đúng inset cho ra 0, và MỤC CUỐI của danh sách
             nằm khuất dưới thanh đó. Lấy max với một lề thật để dòng cuối luôn có chỗ thở.
           */
-          pb={lifted ? space.md : Math.max(insets.bottom, space.md)}
-          mb={keyboardHeight}
-        >
-          <YStack ai="center" pt={space.sm}>
-            <YStack w={space.xl} h={space.xs} br={radius.pill} bg={colors.borderInput} />
-          </YStack>
+            pb={lifted ? space.md : Math.max(insets.bottom, space.md)}
+            mb={keyboardHeight}
+          >
+            <YStack ai="center" pt={space.sm}>
+              <YStack w={space.xl} h={space.xs} br={radius.pill} bg={colors.borderInput} />
+            </YStack>
 
-          {title ? (
-            <XStack ai="center" gap={space.sm} px={layout.screenX} pt={space.sm} pb={space.xs}>
-              <YStack f={1} gap={2}>
-                <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
-                  {title}
-                </Text>
-                {subtitle ? (
-                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                    {subtitle}
+            {title ? (
+              <XStack ai="center" gap={space.sm} px={layout.screenX} pt={space.sm} pb={space.xs}>
+                <YStack f={1} gap={2}>
+                  <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
+                    {title}
                   </Text>
+                  {subtitle ? (
+                    <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                      {subtitle}
+                    </Text>
+                  ) : null}
+                </YStack>
+                {dismissable ? (
+                  <IconButton icon="close" label={t('close')} onPress={onClose} />
                 ) : null}
-              </YStack>
-              {dismissable ? (
-                <IconButton icon="close" label={t('close')} onPress={onClose} />
-              ) : null}
-            </XStack>
-          ) : null}
+              </XStack>
+            ) : null}
 
-          {scroll ? (
-            <ScrollView
-              contentContainerStyle={{
-                padding: padded ? layout.screenX : 0,
-                gap: padded ? space.md : 0,
-              }}
-              keyboardShouldPersistTaps="handled"
-            >
-              {children}
-            </ScrollView>
-          ) : (
-            /*
+            {scroll ? (
+              <ScrollView
+                ref={scroller}
+                contentContainerStyle={{
+                  padding: padded ? layout.screenX : 0,
+                  gap: padded ? space.md : 0,
+                }}
+                keyboardShouldPersistTaps="handled"
+                onScroll={(event) => {
+                  scrollY.current = event.nativeEvent.contentOffset.y;
+                }}
+                scrollEventThrottle={SCROLL_REPORT_MS}
+              >
+                {children}
+              </ScrollView>
+            ) : (
+              /*
               `f={1}` chứ không để nội dung tự cao: danh sách bên trong cần một chiều cao CÓ TRẦN
               để ảo hoá và để biết khi nào chạm đáy. Trần đến từ `maxHeight` của tấm trượt ở trên.
             */
-            <YStack f={1} {...(padded ? { p: layout.screenX, gap: space.md } : {})}>
-              {children}
-            </YStack>
-          )}
+              <YStack f={1} {...(padded ? { p: layout.screenX, gap: space.md } : {})}>
+                {children}
+              </YStack>
+            )}
 
-          {footer ? (
-            <YStack
-              px={layout.screenX}
-              py={space.md}
-              gap={space.sm}
-              bg={colors.surface}
-              borderTopWidth={1}
-              borderColor={colors.borderSubtle}
-            >
-              {footer}
-            </YStack>
-          ) : null}
-        </YStack>
+            {footer ? (
+              <YStack
+                px={layout.screenX}
+                py={space.md}
+                gap={space.sm}
+                bg={colors.surface}
+                borderTopWidth={1}
+                borderColor={colors.borderSubtle}
+              >
+                {footer}
+              </YStack>
+            ) : null}
+          </YStack>
+        </FocusRevealProvider>
       </View>
     </Modal>
   );

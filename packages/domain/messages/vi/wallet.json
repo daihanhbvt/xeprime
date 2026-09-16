@@ -88,5 +88,6 @@
       "submit": "Đảo bút toán",
       "done": "Đã đảo. Điểm quay lại ví chủ ví, cả hai bút toán đều còn trên sổ."
     }
-  }
+  },
+  "openLedger": "Xem sổ ví"
 }

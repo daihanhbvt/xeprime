@@ -18,6 +18,9 @@ export type PublicBanner = Schemas['PublicBannerDto'];
 export type ReviewItem = Schemas['ReviewDto'];
 export type ReviewSummary = Schemas['ReviewSummaryDto'];
 export type ReviewPage = Schemas['ReviewPageDto'];
+/** Đánh giá trên trang gian hàng — như `ReviewItem` + chiếc xe khách đã thuê. */
+export type ShopReviewItem = Schemas['ShopReviewDto'];
+export type ShopReviewPage = Schemas['ShopReviewPageDto'];
 
 export type { ListingSort };
 

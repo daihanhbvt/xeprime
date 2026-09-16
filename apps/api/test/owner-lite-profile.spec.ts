@@ -17,7 +17,8 @@ import {
 import { PLAN_FEATURE_KEY } from '../src/common/decorators';
 import { PlanFeatureGuard } from '../src/common/guards/plan-feature.guard';
 import {
-  currentSubscriptionWhere,
+  EFFECTIVE_SUBSCRIPTION_ARGS,
+  effectiveSubscriptionWhere,
   resolveTenantFeatures,
 } from '../src/common/plan/feature-state';
 
@@ -90,10 +91,8 @@ async function profileOf(tenantId: string) {
     select: {
       usedFeatures: true,
       subscriptions: {
-        where: currentSubscriptionWhere(new Date()),
-        orderBy: { endsAt: 'desc' },
-        take: 1,
-        select: { endsAt: true, plan: { select: { code: true, limitsJson: true } } },
+        where: effectiveSubscriptionWhere(new Date()),
+        ...EFFECTIVE_SUBSCRIPTION_ARGS,
       },
     },
   });
@@ -187,20 +186,31 @@ describe('hồ sơ 1 — Basic MỚI: chỉ thấy Owner Lite', () => {
   });
 });
 
-describe('hồ sơ 2 — Basic CÓ DỮ LIỆU CŨ: read_only, không mất quyền xem', () => {
-  maybe('tính năng đã từng dùng ⇒ READ_ONLY; chưa từng dùng ⇒ HIDDEN', async () => {
+/*
+ * ⚠️ HỒ SƠ 2 ĐÃ ĐỔI NGHĨA — quyết định sản phẩm 15/09/2026 ghi đè ADR 0027 điều 3.
+ *
+ * Bản trước khẳng định: chủ xe tuyến hoa hồng CÓ dữ liệu cũ thì tính năng nâng cao ở `read_only`
+ * — "không ai mất quyền xem sổ sách của chính mình". Ranh giới đó nay hẹp lại đúng một bậc:
+ * `read_only` chỉ còn cho tenant VẪN Ở TUYẾN GÓI mà hạ bậc (hoặc đang trong ân hạn). Về tuyến
+ * hoa hồng là về Owner Lite, và Owner Lite không có bộ quản lý nâng cao ở bất kỳ chế độ nào.
+ *
+ * Điều KHÔNG đổi, và là lý do quyết định này không mâu thuẫn với tinh thần ADR 0027: những thứ
+ * chủ xe thật sự cần để khép một chuyến và nhận tiền — đơn thuê, bàn giao, chứng từ, ví điểm,
+ * khai thuế — **không nằm sau cờ tính năng nào**, nên chúng không hề bị ảnh hưởng.
+ */
+describe('hồ sơ 2 — Basic CÓ DỮ LIỆU CŨ: về Owner Lite, KHÔNG có màn chỉ-xem', () => {
+  maybe('tuyến hoa hồng ⇒ HIDDEN hết, kể cả tính năng đã từng dùng', async () => {
     const { features } = await profileOf(basicLegacyId);
-    expect(features[PLAN_FEATURE.FINANCE]).toBe(FEATURE_STATE.READ_ONLY);
-    expect(features[PLAN_FEATURE.DEBTS]).toBe(FEATURE_STATE.READ_ONLY);
-    // `read_only` KHÔNG lan sang cả bộ — họ chỉ giữ lại đúng thứ đã có dữ liệu.
+    expect(features[PLAN_FEATURE.FINANCE]).toBe(FEATURE_STATE.HIDDEN);
+    expect(features[PLAN_FEATURE.DEBTS]).toBe(FEATURE_STATE.HIDDEN);
     expect(features[PLAN_FEATURE.DRIVERS]).toBe(FEATURE_STATE.HIDDEN);
     expect(features[PLAN_FEATURE.BRANCHES]).toBe(FEATURE_STATE.HIDDEN);
   });
 
-  maybe('gia hạn lên gói ⇒ mở lại NGAY ở lượt đọc kế tiếp (ADR 0027 điều 5)', async () => {
+  maybe('mua gói ⇒ mở lại NGAY ở lượt đọc kế tiếp (ADR 0027 điều 5 GIỮ NGUYÊN)', async () => {
     const tenantId = await mkTenant('renew', [PLAN_FEATURE.FINANCE]);
     await subscribe(tenantId, commissionPlanId, BILLING_MODE.COMMISSION);
-    expect((await profileOf(tenantId)).features[SAMPLE]).toBe(FEATURE_STATE.READ_ONLY);
+    expect((await profileOf(tenantId)).features[SAMPLE]).toBe(FEATURE_STATE.HIDDEN);
 
     // Không đóng băng, không job nào phải chạy: chèn dòng gói mới là xong.
     await subscribe(tenantId, packagePlanId, BILLING_MODE.PACKAGE);
@@ -257,16 +267,59 @@ describe('gate — gọi thẳng endpoint nâng cao', () => {
     );
   });
 
-  maybe('Basic có dữ liệu cũ: ĐỌC qua, GHI bị chặn bằng FEATURE_READ_ONLY', async () => {
+  /*
+   * 15/09/2026: tuyến hoa hồng KHÔNG còn nhánh `read_only` ⇒ ĐỌC cũng bị chặn, và bằng
+   * `FEATURE_NOT_IN_PLAN` chứ không phải `FEATURE_READ_ONLY`.
+   *
+   * Phân biệt hai mã có nghĩa với người dùng: `read_only` nói "bạn từng có, gia hạn để ghi tiếp",
+   * `not_in_plan` nói "bậc của bạn không có tính năng này". Với một chủ xe đã về Owner Lite thì
+   * câu thứ hai mới đúng.
+   */
+  maybe('Basic có dữ liệu cũ: ĐỌC lẫn GHI đều chặn bằng FEATURE_NOT_IN_PLAN', async () => {
     const { features } = await profileOf(basicLegacyId);
-    // Đọc phải qua — "không ai mất quyền xem sổ sách của chính mình" (ADR 0027 điều 3).
+    for (const method of ['GET', 'POST']) {
+      expect(() => guardWith('on').canActivate(ctx(features, method))).toThrow(ForbiddenException);
+      expect(() => guardWith('on').canActivate(ctx(features, method))).toThrow(
+        expect.objectContaining({
+          response: expect.objectContaining({ code: API_ERROR_CODE.FEATURE_NOT_IN_PLAN }),
+        }),
+      );
+    }
+  });
+
+  /*
+   * `read_only` vẫn sống, chỉ đổi chỗ: tenant VẪN ở tuyến gói mà bậc mới thiếu cờ. Test này giữ
+   * ADR 0027 điều 3 khỏi bị xoá nhầm cùng với thay đổi ở trên.
+   */
+  maybe('tuyến GÓI hạ bậc: ĐỌC qua, GHI chặn bằng FEATURE_READ_ONLY (ADR 0027 điều 3 còn nguyên)', async () => {
+    const tenantId = await mkTenant('downgrade', [PLAN_FEATURE.FINANCE]);
+    const leanPlanId = newId();
+    await prisma.plan.create({
+      data: {
+        id: leanPlanId,
+        code: `ol-lean-${RUN}`,
+        name: 'Gói theo xe (bậc gọn)',
+        status: PLAN_STATUS.ACTIVE,
+        billingMode: BILLING_MODE.PACKAGE,
+        basePriceMonthly: 0,
+        durationDays: 30,
+        limitsJson: { features: [PLAN_FEATURE.BRANCHES] },
+      },
+    });
+    await subscribe(tenantId, leanPlanId, BILLING_MODE.PACKAGE);
+
+    const { features } = await profileOf(tenantId);
+    expect(features[PLAN_FEATURE.FINANCE]).toBe(FEATURE_STATE.READ_ONLY);
     expect(guardWith('on').canActivate(ctx(features, 'GET'))).toBe(true);
-    expect(() => guardWith('on').canActivate(ctx(features, 'POST'))).toThrow(ForbiddenException);
     expect(() => guardWith('on').canActivate(ctx(features, 'POST'))).toThrow(
       expect.objectContaining({
         response: expect.objectContaining({ code: API_ERROR_CODE.FEATURE_READ_ONLY }),
       }),
     );
+
+    await prisma.tenantSubscription.deleteMany({ where: { tenantId } });
+    await prisma.tenant.deleteMany({ where: { id: tenantId } });
+    await prisma.plan.deleteMany({ where: { id: leanPlanId } });
   });
 
   maybe('gói còn hiệu lực: đọc lẫn ghi đều qua', async () => {

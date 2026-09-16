@@ -10,8 +10,10 @@ import {
   canCustomerCancelTrip,
   CUSTOMER_TRIP_STAGE,
   CUSTOMER_TRIP_STAGE_META,
+  DEPOSIT_COLLECTION_MODE,
   isCustomerTripClosed,
   SERVICE_TYPE,
+  TRIP_ROLE,
   type CustomerTripStage,
 } from '@xeprime/types';
 import { dayjs, LIST_SEPARATOR } from '@xeprime/domain';
@@ -40,6 +42,7 @@ import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/t
 import { CancelTripSheet } from './components/CancelTripSheet';
 import { ReviewSheet } from './components/ReviewSheet';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
+import { TripEstimateCard } from './components/TripEstimateCard';
 import { TripFinanceCard } from './components/TripFinanceCard';
 import { TripHoldPanel } from './components/TripHoldPanel';
 import { TripHandoverEvidence } from './components/TripHandoverEvidence';
@@ -135,6 +138,11 @@ function TripDetailBody({ trip }: { trip: CustomerTripDetail }) {
   const stage = trip.stage as CustomerTripStage;
   const meta = CUSTOMER_TRIP_STAGE_META[stage];
   const closed = isCustomerTripClosed(stage);
+  /*
+    `GET /trips/:id` phục vụ cả hai đầu của một chuyến. Vai quyết định bảng tạm tính hiện tới
+    đâu: khách dừng ở "Tổng bạn trả", chủ xe thấy thêm số THỰC NHẬN (ADR 0029 điều 1).
+  */
+  const isHost = trip.role === TRIP_ROLE.HOST;
 
   function confirmCancel() {
     cancelTrip.mutate(undefined, {
@@ -279,14 +287,29 @@ function TripDetailBody({ trip }: { trip: CustomerTripDetail }) {
           */}
           {trip.hold ? <TripHoldPanel hold={trip.hold} /> : null}
 
+          {/*
+            Đơn KHÔNG đi qua khoản giữ chỗ của XePrime (tuyến gói tắt công tắc thu cọc — Phase 6).
+            Khách phải được nói thẳng giới hạn bảo vệ TRƯỚC khi họ chuyển tiền cho ai đó ngoài nền
+            tảng (ADR 0028 điều 9), chứ không phát hiện ra lúc có tranh chấp.
+          */}
+          {trip.depositCollectionMode === DEPOSIT_COLLECTION_MODE.DIRECT ? (
+            <Callout tone="info" title={t('detail.directDeposit.title')}>
+              {t('detail.directDeposit.body')}
+            </Callout>
+          ) : null}
+
+          {/*
+            Ba nguồn tiền, loại trừ nhau theo đúng thứ tự web đặt:
+              · có đơn      → số ĐÃ ĐÓNG BĂNG (ADR 0024);
+              · chưa có đơn → bảng kê TẠM TÍNH, đúng những dòng khách đã đọc lúc đặt;
+              · không báo giá được (xe thiếu giá, dài hạn chưa chốt gói) → nói thẳng là chưa có.
+            Không bao giờ có hai khối cùng lúc, nên không ai phải chọn giữa hai con số.
+          */}
           {trip.finance ? (
             <TripFinanceCard finance={trip.finance} closed={closed} />
+          ) : trip.estimate ? (
+            <TripEstimateCard estimate={trip.estimate} isHost={isHost} />
           ) : (
-            /*
-              Chưa có đơn thì chưa có giá chốt. Dựng một bảng "dự kiến" ở đây là hứa hẹn thay chủ
-              xe — con số có thể khác hẳn sau khi họ xác nhận. Vẫn giữ TIÊU ĐỀ khối như web, nếu
-              không thì một dòng chữ xám trôi giữa trang chẳng thuộc về đâu.
-            */
             <Card>
               <YStack gap={space.xs}>
                 <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>

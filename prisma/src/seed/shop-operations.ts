@@ -1154,7 +1154,10 @@ export async function buildBookingRequests(
         createdAt: sentNow,
         respondBy: bookingRequestRespondBy(sentNow),
         deliveryRequested: true,
-        deliveryAddress: '25 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh',
+        // Địa chỉ giao lấy theo CHỖ của gian hàng: một yêu cầu giao xe tới Quận 1 nằm trong hộp
+        // thư của chủ xe ở Đà Lạt là dữ liệu tự mâu thuẫn, và nó làm hỏng đúng thứ màn đó dùng
+        // để minh hoạ (phí giao tính theo quãng đường từ chi nhánh — ADR 0018).
+        deliveryAddress: spec.profile.address,
         note: 'Cho mình xin xe màu sáng nếu còn nhé.',
       },
     });

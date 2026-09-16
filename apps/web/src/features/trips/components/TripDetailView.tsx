@@ -65,7 +65,19 @@ import { useTranslations } from 'next-intl';
  * đánh giá và liên hệ gian hàng; chủ xe duyệt hoặc từ chối yêu cầu. Bày nhầm phía nghĩa là bày
  * một nút mà server chắc chắn từ chối.
  */
-export function TripDetailView({ tripId }: { tripId: string }) {
+export interface TripDetailViewProps {
+  tripId: string;
+  /**
+   * Danh sách để quay về — mặc định `/trips`.
+   *
+   * Lối chuyển tiếp trong Manage truyền `/manage/account/trips`: người đang xem là thành viên
+   * gian hàng tuyến gói, nên nút "Quay lại" trỏ về `/trips` sẽ bị `AccountShell` chuyển hướng
+   * ngay lập tức — nút hoạt động nhưng đưa họ đi chỗ khác.
+   */
+  backHref?: string;
+}
+
+export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailViewProps) {
   const t = useTranslations('Trips');
   const dl = useDomainLabel();
   const errorMessage = useErrorMessage();
@@ -125,7 +137,7 @@ export function TripDetailView({ tripId }: { tripId: string }) {
           description={missing ? t('detail.notFoundBody') : errorMessage(error)}
           action={
             missing ? (
-              <Button type="primary" onClick={() => router.push(ROUTES.TRIPS)}>
+              <Button type="primary" onClick={() => router.push(backHref)}>
                 {t('detail.backToTrips')}
               </Button>
             ) : (
@@ -148,7 +160,7 @@ export function TripDetailView({ tripId }: { tripId: string }) {
   return (
     <div className={styles.page}>
       <div className={styles.topBar}>
-        <Link href={ROUTES.TRIPS} className={styles.back}>
+        <Link href={backHref} className={styles.back}>
           <ArrowLeftOutlined aria-hidden="true" /> {t('detail.back')}
         </Link>
         {timeline.visible ? (
@@ -386,7 +398,7 @@ export function TripDetailView({ tripId }: { tripId: string }) {
               className={styles.directDeposit}
               type="info"
               showIcon
-              message={t('detail.directDeposit.title')}
+              title={t('detail.directDeposit.title')}
               description={t('detail.directDeposit.body')}
             />
           ) : null}
@@ -521,7 +533,7 @@ function TerminalNotice({ trip, stage }: { trip: CustomerTripDetail; stage: Cust
 
   if (stage === CUSTOMER_TRIP_STAGE.PENDING_APPROVAL) {
     return (
-      <Alert type="warning" showIcon message={t('pendingTitle')} description={t('pendingBody')} />
+      <Alert type="warning" showIcon title={t('pendingTitle')} description={t('pendingBody')} />
     );
   }
 
@@ -530,7 +542,7 @@ function TerminalNotice({ trip, stage }: { trip: CustomerTripDetail; stage: Cust
       <Alert
         type="error"
         showIcon
-        message={t('rejectedTitle')}
+        title={t('rejectedTitle')}
         // Lý do do chủ xe tự gõ — giữ nguyên chữ của họ, không có bản dịch nào cho câu đó.
         description={trip.rejectReason ?? t('rejectedBody')}
       />
@@ -539,12 +551,12 @@ function TerminalNotice({ trip, stage }: { trip: CustomerTripDetail; stage: Cust
 
   if (stage === CUSTOMER_TRIP_STAGE.CANCELLED) {
     return (
-      <Alert type="info" showIcon message={t('cancelledTitle')} description={t('cancelledBody')} />
+      <Alert type="info" showIcon title={t('cancelledTitle')} description={t('cancelledBody')} />
     );
   }
 
   if (stage === CUSTOMER_TRIP_STAGE.NO_SHOW) {
-    return <Alert type="error" showIcon message={t('noShowTitle')} description={t('noShowBody')} />;
+    return <Alert type="error" showIcon title={t('noShowTitle')} description={t('noShowBody')} />;
   }
 
   return null;

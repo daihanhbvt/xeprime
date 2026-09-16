@@ -75,9 +75,9 @@ export function QuickVehicleImagesStep({ control }: { control: Control<QuickVehi
           />
         </div>
         {missing > 0 ? (
-          <Alert type="info" showIcon message={t('missing', { count: missing })} />
+          <Alert type="info" showIcon title={t('missing', { count: missing })} />
         ) : (
-          <Alert type="success" showIcon message={t('enough')} />
+          <Alert type="success" showIcon title={t('enough')} />
         )}
       </section>
 

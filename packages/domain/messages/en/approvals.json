@@ -1,0 +1,110 @@
+{
+  "page": {
+    "title": "Approvals"
+  },
+  "filters": {
+    "all": "All"
+  },
+  "targetType": {
+    "tenant": "Shop",
+    "vehicle": "Vehicle",
+    "tenant_document": "Shop document",
+    "vehicle_document": "Vehicle document",
+    "seller_profile": "Seller profile"
+  },
+  "table": {
+    "tenant": "Shop",
+    "targetType": "Type",
+    "submittedBy": "Submitted by",
+    "submittedAt": "Submitted at",
+    "status": "Status",
+    "view": "View details",
+    "loadError": "Could not load the approval queue",
+    "empty": "No approval requests"
+  },
+  "drawer": {
+    "title": "Approval request"
+  },
+  "unsupported": {
+    "title": "This request is not reviewed here",
+    "body": "This queue only handles shop and vehicle profiles. Seller profiles are reviewed on the seller verification screen.",
+    "openSellers": "Open seller verification"
+  },
+  "tenant": {
+    "title": "Shop",
+    "name": "Name",
+    "code": "Code",
+    "status": "Status",
+    "tenantType": "Entity type",
+    "track": "Track",
+    "noPlan": "No active plan",
+    "publicVehicles": "{count, plural, =0 {no vehicles listed} one {# vehicle listed} other {# vehicles listed}}",
+    "phone": "Phone",
+    "email": "Email",
+    "targetType": "Request type"
+  },
+  "snapshot": {
+    "shopTitle": "Submitted profile",
+    "vehicleTitle": "Vehicle submitted",
+    "openShop": "Open shop page",
+    "openVehicle": "Open vehicle profile",
+    "imageAlt": "Vehicle photo {index}",
+    "empty": "No profile attached",
+    "fields": {
+      "ownerFullName": "Owner full name",
+      "ownerPhone": "Owner phone",
+      "ownerEmail": "Owner email",
+      "displayName": "Display name",
+      "bio": "About",
+      "address": "Address",
+      "wardName": "Ward",
+      "provinceName": "Province",
+      "taxCode": "Tax code",
+      "businessLicenseNo": "Business licence no.",
+      "bankName": "Bank",
+      "bankAccountNo": "Account number",
+      "bankAccountName": "Account holder",
+      "logoUrl": "Logo",
+      "vehicleName": "Vehicle name",
+      "vehicleCode": "Vehicle code",
+      "plateNumber": "Plate number",
+      "branchName": "Branch holding the vehicle",
+      "vehicleType": "Vehicle type",
+      "serviceType": "Services",
+      "brand": "Make",
+      "model": "Model",
+      "manufactureYear": "Year",
+      "seatCount": "Seats",
+      "fuelType": "Fuel",
+      "bodyType": "Body type",
+      "color": "Colour",
+      "weekdayPrice": "Weekday price",
+      "weekendPrice": "Weekend price",
+      "hourlyPrice": "Hourly price",
+      "monthlyPrice": "Monthly price (long term)",
+      "withDriverDailyPrice": "Daily price with driver",
+      "discountPercent": "Discount",
+      "description": "Description"
+    }
+  },
+  "history": {
+    "title": "History",
+    "system": "System"
+  },
+  "review": {
+    "approve": "Approve",
+    "requestRevision": "Request changes",
+    "reject": "Reject",
+    "done": {
+      "approve": "Approved",
+      "request_revision": "Changes requested",
+      "reject": "Rejected"
+    }
+  },
+  "reason": {
+    "rejectTitle": "Reject profile",
+    "reviseTitle": "Request changes",
+    "hint": "The reason is sent to the shop owner.",
+    "placeholder": "Enter a reason…"
+  }
+}

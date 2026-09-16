@@ -135,6 +135,7 @@ export function OtpLoginForm({ onSuccess }: { onSuccess: (user: CurrentUser) => 
 
           <Button
             label={t('otp.submit')}
+            icon="checkmark-outline"
             onPress={() => submitCode()}
             loading={login.isPending}
             disabled={code.length !== OTP_LENGTH}

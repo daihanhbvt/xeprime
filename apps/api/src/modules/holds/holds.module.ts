@@ -5,6 +5,7 @@ import { CalendarModule } from '../calendar/calendar.module';
 import { BookingHoldsService } from './booking-holds.service';
 import { HoldSettlementModule } from './hold-settlement.module';
 import { InsuranceModule } from '../insurance/insurance.module';
+import { TaxModule } from '../tax/tax.module';
 import { VehicleSettingsModule } from '../vehicle-settings/vehicle-settings.module';
 import { PlatformMoneyController } from './platform-money.controller';
 
@@ -24,6 +25,8 @@ import { PlatformMoneyController } from './platform-money.controller';
     CalendarModule,
     HoldSettlementModule,
     InsuranceModule,
+    // Phase 8: phần thuế chưa nộp ở vế `custodied` — chỉ ĐỌC.
+    TaxModule,
     VehicleSettingsModule,
   ],
   controllers: [PlatformMoneyController],

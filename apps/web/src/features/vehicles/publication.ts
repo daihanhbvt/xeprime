@@ -1,11 +1,29 @@
 import {
-  SERVICE_TYPE,
-  VEHICLE_PUBLIC_MIN_IMAGES,
+  applicablePublishRequirements as applicableRequirements,
+  missingPublishRequirements as missingRequirements,
   VEHICLE_PUBLIC_STATUS,
-  vehicleFieldPolicy,
+  type PublishRequirement,
+  type VehiclePublicationInput,
   type VehiclePublicStatus,
 } from '@xeprime/types';
 import type { VehicleDetail } from './types';
+
+/**
+ * Điều kiện lên chợ — **luật nằm ở `@xeprime/types`**, file này chỉ là lối vào theo shape của web.
+ *
+ * Trước 14/09/2026 có hai bản: một ở đây trả khoá, một ở `VehiclesService.missingPublicFields`
+ * trả câu tiếng Việt. Cả hai docblock đều ghi "sửa một bên phải sửa cả hai" — tức là đã biết
+ * trước rằng chúng sẽ lệch, và khi lệch thì chủ xe thấy checklist xanh hết, bấm gửi, rồi nhận
+ * 400. Giờ chỉ còn MỘT bảng luật, chạy ở cả hai phía.
+ *
+ * Hai thứ file này còn giữ, vì chúng phụ thuộc shape của web:
+ *  - đếm ảnh từ mảng `images` đã tải về (backend đếm bằng một truy vấn);
+ *  - đọc tỉnh của chi nhánh từ `VehicleDetail`.
+ */
+
+export type { PublishRequirement };
+/** Tên cũ, giữ để nơi gọi không phải đổi import. */
+export type PublishRequirementKey = PublishRequirement;
 
 /** Ảnh đại diện ∪ thư viện, khử trùng theo URL — cùng phép đếm với backend. */
 function distinctImageCount(vehicle: VehicleDetail): number {
@@ -15,119 +33,55 @@ function distinctImageCount(vehicle: VehicleDetail): number {
 }
 
 /**
- * Đã khai đủ thông số BẮT BUỘC của loại xe + nguồn năng lượng đang chọn chưa.
+ * `VehicleDetail` → lát cắt mà luật dùng chung cần.
  *
- * Cùng `vehicleFieldPolicy` mà backend dùng trong `missingPublicFields` — sửa một bên phải sửa
- * cả hai, và đó chính là lý do luật nằm ở `@xeprime/types` chứ không viết lại ở đây.
+ * `branchProvinceCode` là mảnh mà bản cũ ở web KHÔNG có, và thiếu nó là một lỗi thật: backend
+ * chặn gửi duyệt khi chi nhánh chưa có tỉnh (`BRANCH_LOCATION_REQUIRED`) trong khi checklist ở
+ * đây báo đủ. Chủ xe bấm một nút sáng và nhận một lỗi không có trong danh sách nào.
  */
-function energySpecReady(vehicle: VehicleDetail): boolean {
-  if (!vehicle.fuelType) return false;
-  const policy = vehicleFieldPolicy(vehicle.vehicleType, vehicle.fuelType);
-  if (policy.fuelConsumption === 'required' && vehicle.fuelConsumptionCombined == null) return false;
-  if (policy.engineDisplacementCc === 'required' && vehicle.engineDisplacementCc == null) {
-    return false;
-  }
-  if (policy.electricRangeKm === 'required' && vehicle.electricRangeKm == null) return false;
-  if (policy.transmission === 'required' && !vehicle.transmission) return false;
-  return true;
+function toInput(vehicle: VehicleDetail): VehiclePublicationInput {
+  return {
+    vehicleType: vehicle.vehicleType,
+    serviceTypes: vehicle.serviceTypes,
+    weekdayPrice: vehicle.weekdayPrice,
+    monthlyPrice: vehicle.monthlyPrice,
+    withDriverDailyPrice: vehicle.withDriverDailyPrice,
+    mainImageUrl: vehicle.mainImageUrl,
+    plateNumber: vehicle.plateNumber,
+    brand: vehicle.brand,
+    model: vehicle.model,
+    manufactureYear: vehicle.manufactureYear,
+    fuelType: vehicle.fuelType,
+    transmission: vehicle.transmission,
+    seatCount: vehicle.seatCount,
+    motorbikeCategory: vehicle.motorbikeCategory,
+    fuelConsumptionCombined: vehicle.fuelConsumptionCombined,
+    engineDisplacementCc: vehicle.engineDisplacementCc,
+    electricRangeKm: vehicle.electricRangeKm,
+    branchProvinceCode: vehicle.branch?.provinceCode ?? null,
+  };
 }
 
 /**
- * Danh tính đã đủ chưa — bộ trường KHÁC nhau giữa ô tô và xe máy.
+ * Các điều kiện CÓ HIỆU LỰC với xe này, kèm trạng thái đạt/chưa đạt.
  *
- * Ô tô cần số chỗ; xe máy cần phân khúc (tay ga / xe số / côn tay). Hỏi số chỗ của một chiếc
- * Wave là hỏi một câu không có câu trả lời, còn bỏ qua phân khúc thì chiếc xe gần như không ai
- * lọc ra được ngoài chợ.
+ * Trả cả `met` chứ không chỉ phần còn thiếu: chủ xe cần thấy mình còn cách bao xa, không chỉ
+ * thấy lỗi (Figma `65:3754` Requirements Checklist).
  */
-function identityReady(vehicle: VehicleDetail): boolean {
-  if (!vehicle.brand || !vehicle.model || vehicle.manufactureYear == null) return false;
-  const policy = vehicleFieldPolicy(vehicle.vehicleType, vehicle.fuelType);
-  if (policy.seatCount === 'required' && vehicle.seatCount == null) return false;
-  if (policy.motorbikeCategory === 'required' && !vehicle.motorbikeCategory) return false;
-  return true;
+export function publishChecklist(
+  vehicle: VehicleDetail,
+): { key: PublishRequirement; met: boolean }[] {
+  const input = toInput(vehicle);
+  const imageCount = distinctImageCount(vehicle);
+  return applicableRequirements(input).map((item) => ({
+    key: item.key,
+    met: item.present(input, imageCount),
+  }));
 }
 
-/**
- * Khoá của một điều kiện lên chợ. Đây là MÃ nội bộ, không phải chữ hiện ra — nhãn tương ứng nằm
- * ở `Vehicles.publish.requirements.<key>` trong cả hai ngôn ngữ.
- */
-export type PublishRequirementKey =
-  | 'selfDrivePrice'
-  | 'longTermPrice'
-  | 'withDriverPrice'
-  | 'mainImage'
-  | 'photos'
-  | 'plateNumber'
-  | 'identity'
-  | 'energySpec';
-
-/**
- * Điều kiện tối thiểu để xe được lên chợ — khớp `missingPublicFields` ở backend và cột
- * "Publish Req" của ma trận trường Figma `65:4844`.
- *
- * Sống ở đây (không phải trong panel) vì HAI bề mặt cùng đọc: checklist của
- * `VehiclePublicReviewPanel` và mục "Việc cần làm" của Hồ sơ 360 — hai nơi lệch nhau một
- * điều kiện là chủ xe được bảo "đủ rồi" ở chỗ này và "còn thiếu" ở chỗ kia.
- *
- * Giá kiểm THEO DỊCH VỤ xe đăng (17/08): đăng dịch vụ nào phải có giá chuyên biệt của dịch vụ
- * đó — không lấy giá tự lái trưng như giá có tài xế/dài hạn. `applies` = điều kiện có hiệu lực
- * với xe này không (điều kiện không áp dụng thì không hiện trong checklist).
- *
- * Bảng này chỉ mang LOGIC và KHOÁ, không mang chữ: nó là hằng module scope, mà một hằng module
- * scope được tính đúng một lần cho cả tiến trình — nhãn nằm trong đó sẽ đóng băng ở ngôn ngữ
- * của request đầu tiên (ADR 0012).
- */
-export const PUBLISH_REQUIREMENTS: readonly {
-  key: PublishRequirementKey;
-  applies: (v: VehicleDetail) => boolean;
-  present: (v: VehicleDetail) => boolean;
-}[] = [
-  {
-    key: 'selfDrivePrice',
-    applies: (v) => (v.serviceTypes ?? []).includes(SERVICE_TYPE.SELF_DRIVE),
-    present: (v) => Boolean(v.weekdayPrice),
-  },
-  {
-    key: 'longTermPrice',
-    applies: (v) => (v.serviceTypes ?? []).includes(SERVICE_TYPE.LONG_TERM),
-    present: (v) => Boolean(v.monthlyPrice),
-  },
-  {
-    key: 'withDriverPrice',
-    applies: (v) => (v.serviceTypes ?? []).includes(SERVICE_TYPE.WITH_DRIVER),
-    present: (v) => Boolean(v.withDriverDailyPrice),
-  },
-  { key: 'mainImage', applies: () => true, present: (v) => Boolean(v.mainImageUrl) },
-  /*
-   * Bốn ảnh KHÁC NHAU (09/09/2026). Đếm trên tập URL đã khử trùng, gồm cả ảnh đại diện — đúng
-   * cách backend đếm, nếu không checklist sẽ nói "đủ" trong khi `submit-public` từ chối.
-   */
-  {
-    key: 'photos',
-    applies: () => true,
-    present: (v) => distinctImageCount(v) >= VEHICLE_PUBLIC_MIN_IMAGES,
-  },
-  { key: 'plateNumber', applies: () => true, present: (v) => Boolean(v.plateNumber) },
-  /**
-   * Danh tính chiếc xe: hãng · mẫu · năm, cộng chiều phân loại của loại xe đó (số chỗ với ô tô,
-   * phân khúc với xe máy) — khách lọc và so sánh bằng đúng những thứ này.
-   */
-  { key: 'identity', applies: () => true, present: (v) => identityReady(v) },
-  /** Thông số của ĐÚNG nguồn năng lượng đã chọn — ma trận dùng chung với backend. */
-  { key: 'energySpec', applies: () => true, present: (v) => energySpecReady(v) },
-  // Mô tả bỏ khỏi danh sách bắt buộc 09/09/2026 — xem missingPublicFields ở backend.
-];
-
-/** Các điều kiện CÓ HIỆU LỰC với xe này (checklist chỉ hiện điều kiện áp dụng). */
-export function applicablePublishRequirements(vehicle: VehicleDetail) {
-  return PUBLISH_REQUIREMENTS.filter((item) => item.applies(vehicle));
-}
-
-/** Khoá các điều kiện public còn thiếu của một xe — rỗng nghĩa là đủ điều kiện gửi duyệt. */
-export function missingPublishRequirements(vehicle: VehicleDetail): PublishRequirementKey[] {
-  return applicablePublishRequirements(vehicle)
-    .filter((item) => !item.present(vehicle))
-    .map((item) => item.key);
+/** Khoá các điều kiện còn thiếu — rỗng nghĩa là đủ điều kiện gửi duyệt. */
+export function missingPublishRequirements(vehicle: VehicleDetail): PublishRequirement[] {
+  return missingRequirements(toInput(vehicle), distinctImageCount(vehicle));
 }
 
 /**

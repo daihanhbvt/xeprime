@@ -18,7 +18,7 @@ import {
 import { catalogLabel } from '@/api/catalog';
 import { serviceTypesFor, serviceUsesRentalRange, LIST_SEPARATOR } from '@xeprime/domain';
 import { type MarketplaceFilters, type PublicListing } from '@xeprime/types';
-import { dayjs, rentalDurationParts } from '@xeprime/domain';
+import { toAppTz } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
@@ -31,7 +31,7 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { layout } from '@/theme/layout';
-import { LIST_TUNING } from '@/theme/list-tuning';
+import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
 import { appStyles } from '@/theme/styles';
 import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
@@ -237,11 +237,6 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
    * Địa điểm hiện TÊN tra từ danh sách điểm đến; mã không phải thứ để người dùng đọc. Lựa chọn
    * cũ không còn khả dụng thì nói thẳng, KHÔNG âm thầm hiện "Toàn quốc" trong khi vẫn đang lọc.
    */
-  const days =
-    filters.pickupAt && filters.returnAt
-      ? rentalDurationParts(dayjs(filters.pickupAt), dayjs(filters.returnAt)).days
-      : 0;
-
   const summary = [
     filters.vehicleType ? domainLabel('vehicleType', filters.vehicleType) : t('allVehicles'),
     filters.serviceType ? domainLabel('serviceType', filters.serviceType) : null,
@@ -250,14 +245,17 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
       ? domainLabel('routeType', filters.routeType, ROUTE_TYPE_LABEL[filters.routeType as never])
       : null,
     provinceLabel(filters.provinceCode ?? ''),
+    /*
+     * NGÀY + GIỜ của cả hai đầu, viết y hệt ô thời gian thuê (`fmt.rentalPointCompact`):
+     * `14/09 17:00 → 15/09 17:00 (1 ngày)`.
+     *
+     * Bản trước chỉ in hai NGÀY LỊCH kèm số ngày suy từ `rentalDurationParts` — nên một chuyến
+     * 17:00 → 17:00 hôm sau hiện hai ngày khác nhau mà không nói giờ nhận, còn một chuyến
+     * 09:00 → 23:00 cùng ngày cũng ra "1 ngày" với đúng hai ngày khác nhau. Giờ nhận là thứ
+     * quyết định số ngày tính tiền, nên nó phải nằm ngay trong dòng này.
+     */
     filters.pickupAt && filters.returnAt
-      ? days
-        ? t('dateRangeWithDays', {
-            from: fmt.date(filters.pickupAt),
-            to: fmt.date(filters.returnAt),
-            days,
-          })
-        : t('dateRange', { from: fmt.date(filters.pickupAt), to: fmt.date(filters.returnAt) })
+      ? fmt.rentalRangeSummary(toAppTz(filters.pickupAt), toAppTz(filters.returnAt))
       : null,
   ]
     .filter(Boolean)
@@ -541,7 +539,7 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
           <Animated.FlatList
             data={results.listings}
             keyExtractor={keyExtractor}
-            {...LIST_TUNING}
+            {...MEDIA_LIST_TUNING}
             onScroll={onScroll}
             scrollEventThrottle={scrollThrottle.frame}
             contentContainerStyle={listPadding}
@@ -564,6 +562,7 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
                   </Text>
                   <Button
                     label={t('loadMore')}
+                    icon="chevron-down-outline"
                     variant="secondary"
                     block={false}
                     align="center"

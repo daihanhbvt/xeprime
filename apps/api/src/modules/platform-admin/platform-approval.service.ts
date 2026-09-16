@@ -8,17 +8,20 @@ import {
   API_ERROR_CODE,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
+  SHOP_VERIFICATION,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   type ApprovalAction,
   type ApprovalStatus,
   type NotificationType,
   type PaginationMeta,
+  type ShopVerification,
   type TenantStatus,
   type VehiclePublicStatus,
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
 import { ListingsService } from '../public-listings/listings.service';
+
 import { NotificationService } from '../notification/notification.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -29,6 +32,7 @@ import {
   ApprovalTaskListItemDto,
 } from './dto/approval.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
+import { currentSubscriptionWhere } from '../../common/plan/feature-state';
 
 type ReviewKind = 'approve' | 'reject' | 'request_revision';
 
@@ -46,17 +50,27 @@ const DECISION: Record<
   },
 };
 
-/** Status tenant + loại thông báo theo quyết định (phiếu duyệt gian hàng). */
-const TENANT_STATUS_BY_KIND: Record<ReviewKind, TenantStatus> = {
-  approve: TENANT_STATUS.ACTIVE,
-  reject: TENANT_STATUS.REJECTED,
-  request_revision: TENANT_STATUS.NEEDS_REVISION,
+/**
+ * Trạng thái XÁC MINH của gian hàng theo quyết định (ADR 0036).
+ *
+ * ⚠️ Đây KHÔNG còn là `tenants.status`. Bản cũ ghi `active`/`rejected`/`needs_revision` thẳng
+ * vào cột đó, và vì `TENANT_STATUS_PUBLISHABLE` chỉ nhận `active`, một quyết định "cần bổ sung"
+ * trên hồ sơ pháp nhân sẽ GỠ TOÀN BỘ XE của gian hàng khỏi marketplace — kể cả những chiếc đã
+ * được duyệt riêng và đang có đơn. Hai việc không liên quan đến nhau bị buộc chung một cột.
+ *
+ * Giờ trục xác minh sống trên chính phiếu duyệt (`resolveShopVerification`), và `tenants.status`
+ * chỉ đổi bằng khoá/mở khoá của `PlatformTenantsService` — cộng đúng một đường chữa dữ liệu cũ
+ * ở `applyTenantDecision`.
+ */
+const SHOP_VERIFICATION_BY_KIND: Record<ReviewKind, ShopVerification> = {
+  approve: SHOP_VERIFICATION.VERIFIED,
+  reject: SHOP_VERIFICATION.REJECTED,
+  request_revision: SHOP_VERIFICATION.NEEDS_REVISION,
 };
-// request_revision chưa có loại thông báo riêng cho "cần bổ sung" — mở sau.
-const TENANT_NOTIFY_BY_KIND: Record<ReviewKind, NotificationType | null> = {
+const TENANT_NOTIFY_BY_KIND: Record<ReviewKind, NotificationType> = {
   approve: NOTIFICATION_TYPE.SHOP_APPROVED,
   reject: NOTIFICATION_TYPE.SHOP_REJECTED,
-  request_revision: null,
+  request_revision: NOTIFICATION_TYPE.SHOP_NEEDS_REVISION,
 };
 
 /** Status public của xe + loại thông báo theo quyết định (phiếu duyệt xe). */
@@ -65,11 +79,42 @@ const VEHICLE_STATUS_BY_KIND: Record<ReviewKind, VehiclePublicStatus> = {
   reject: VEHICLE_PUBLIC_STATUS.REJECTED,
   request_revision: VEHICLE_PUBLIC_STATUS.NEEDS_REVISION,
 };
-const VEHICLE_NOTIFY_BY_KIND: Record<ReviewKind, NotificationType | null> = {
+/**
+ * `request_revision` có loại thông báo RIÊNG từ 14/09/2026 — trước đó nó không gửi gì.
+ *
+ * Đó là tin quan trọng nhất của cả vòng đăng xe: chiếc xe rời hàng đợi và quay về tay chủ xe.
+ * Không báo thì nó nằm im ở `needs_revision` vô thời hạn, và chủ xe chỉ biết nếu tự mở lại đúng
+ * màn xe đó. Mượn `VEHICLE_REJECTED` cũng không được — hai việc phải làm khác hẳn nhau.
+ */
+const VEHICLE_NOTIFY_BY_KIND: Record<ReviewKind, NotificationType> = {
   approve: NOTIFICATION_TYPE.VEHICLE_APPROVED,
   reject: NOTIFICATION_TYPE.VEHICLE_REJECTED,
-  request_revision: null,
+  request_revision: NOTIFICATION_TYPE.VEHICLE_NEEDS_REVISION,
 };
+
+const SHOP_NOTIFY_TITLE: Record<ReviewKind, string> = {
+  approve: 'Gian hàng đã được xác minh',
+  reject: 'Hồ sơ gian hàng bị từ chối',
+  request_revision: 'Hồ sơ gian hàng cần bổ sung',
+};
+
+const VEHICLE_NOTIFY_TITLE: Record<ReviewKind, string> = {
+  approve: 'Xe đã được duyệt công khai',
+  reject: 'Xe bị từ chối',
+  request_revision: 'Xe cần bổ sung để lên chợ',
+};
+
+/**
+ * Trạng thái của gian hàng CŨ chưa từng được mở — dữ liệu sinh trước ADR 0036.
+ *
+ * Từ ADR 0036 tenant mới mở ra đã là `active`, nên ba giá trị này chỉ còn xuất hiện ở dữ liệu cũ.
+ * `rejected` và `suspended` cố ý KHÔNG nằm trong danh sách: chúng là quyết định moderation.
+ */
+const LEGACY_UNOPENED_TENANT_STATUS: readonly TenantStatus[] = [
+  TENANT_STATUS.DRAFT,
+  TENANT_STATUS.PENDING_REVIEW,
+  TENANT_STATUS.NEEDS_REVISION,
+];
 
 @Injectable()
 export class PlatformApprovalService {
@@ -154,6 +199,23 @@ export class PlatformApprovalService {
             status: true,
             phone: true,
             email: true,
+            // Tuyến của gian hàng (ADR 0028 điều 1) — reviewer soi hai tuyến ở hai mức khác nhau.
+            subscriptions: {
+              where: currentSubscriptionWhere(new Date()),
+              orderBy: { endsAt: 'desc' },
+              take: 1,
+              select: { billingMode: true },
+            },
+            _count: {
+              select: {
+                vehicles: {
+                  where: {
+                    publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+                    deletedAt: null,
+                  },
+                },
+              },
+            },
           },
         },
         submitter: { select: { displayName: true } },
@@ -194,6 +256,8 @@ export class PlatformApprovalService {
             status: task.tenant.status,
             phone: task.tenant.phone,
             email: task.tenant.email,
+            billingMode: task.tenant.subscriptions[0]?.billingMode ?? null,
+            publicVehicleCount: task.tenant._count.vehicles,
           }
         : null,
       logs: task.logs.map((l) => ({
@@ -298,7 +362,18 @@ export class PlatformApprovalService {
     });
   }
 
-  /** Nhánh duyệt gian hàng: đổi tenant.status + audit + báo chủ shop. */
+  /**
+   * Nhánh XÁC MINH GIAN HÀNG: chốt phiếu + audit + báo chủ shop.
+   *
+   * Quyết định ở đây **không** đụng `tenants.status` nữa (xem `SHOP_VERIFICATION_BY_KIND`), với
+   * đúng MỘT ngoại lệ: gian hàng cũ còn nằm ở `draft`/`pending_review`/`needs_revision` — dữ liệu
+   * sinh ra trước ADR 0036 — được DUYỆT thì mở luôn sang `active`. Đó là đường chữa cho những hồ
+   * sơ đang kẹt, không phải một quy tắc mới; migration backfill cũng làm đúng việc đó cho phần
+   * còn lại.
+   *
+   * Cố ý KHÔNG tự `active` hoá một gian hàng đang `suspended`/`rejected`: cả hai là quyết định
+   * moderation của con người, và gỡ chúng phải đi qua chính đường mở khoá.
+   */
   private async applyTenantDecision(
     kind: ReviewKind,
     task: ReviewTask,
@@ -308,7 +383,7 @@ export class PlatformApprovalService {
     if (!task.tenantId) throw notFound();
     const tenantId = task.tenantId;
     const decision = DECISION[kind];
-    const tenantStatus = TENANT_STATUS_BY_KIND[kind];
+    const verification = SHOP_VERIFICATION_BY_KIND[kind];
     const notifyType = TENANT_NOTIFY_BY_KIND[kind];
 
     await this.prisma.$transaction(async (tx) => {
@@ -318,7 +393,15 @@ export class PlatformApprovalService {
       });
 
       await this.finalizeTask(tx, task, kind, reviewerId, reason);
-      await tx.tenant.update({ where: { id: tenantId }, data: { status: tenantStatus } });
+
+      const healStatus =
+        kind === 'approve' && LEGACY_UNOPENED_TENANT_STATUS.includes(tenant.status as TenantStatus);
+      if (healStatus) {
+        await tx.tenant.update({
+          where: { id: tenantId },
+          data: { status: TENANT_STATUS.ACTIVE },
+        });
+      }
 
       await this.audit.record(
         {
@@ -329,31 +412,30 @@ export class PlatformApprovalService {
           targetType: APPROVAL_TARGET_TYPE.TENANT,
           targetId: tenantId,
           before: { tenantStatus: tenant.status, approvalStatus: task.status },
-          after: { tenantStatus, approvalStatus: decision.approval },
+          after: {
+            tenantStatus: healStatus ? TENANT_STATUS.ACTIVE : tenant.status,
+            approvalStatus: decision.approval,
+            verification,
+          },
         },
         tx,
       );
 
-      if (notifyType) {
-        await this.notifications.emitToUser(
-          tenant.ownerUserId,
-          {
-            type: notifyType,
-            title:
-              notifyType === NOTIFICATION_TYPE.SHOP_APPROVED
-                ? 'Gian hàng đã được duyệt'
-                : 'Gian hàng bị từ chối',
-            body: reason ? `${tenant.name} · ${reason}` : tenant.name,
-            tenantId,
-            targetType: NOTIFICATION_TARGET_TYPE.TENANT,
-            targetId: tenantId,
-            // Người nhận là CHỦ gian hàng, nên đích là khu quản lý — không phải mặc định
-            // "khu khách" của `emitToUser`.
-            audience: NOTIFICATION_AUDIENCE.MANAGE,
-          },
-          tx,
-        );
-      }
+      await this.notifications.emitToUser(
+        tenant.ownerUserId,
+        {
+          type: notifyType,
+          title: SHOP_NOTIFY_TITLE[kind],
+          body: reason ? `${tenant.name} · ${reason}` : tenant.name,
+          tenantId,
+          targetType: NOTIFICATION_TARGET_TYPE.TENANT,
+          targetId: tenantId,
+          // Người nhận là CHỦ gian hàng, nên đích là khu quản lý — không phải mặc định
+          // "khu khách" của `emitToUser`.
+          audience: NOTIFICATION_AUDIENCE.MANAGE,
+        },
+        tx,
+      );
     });
   }
 
@@ -394,29 +476,24 @@ export class PlatformApprovalService {
         tx,
       );
 
-      if (notifyType) {
-        const owner = await tx.tenant.findUnique({
-          where: { id: vehicle.tenantId },
-          select: { ownerUserId: true },
-        });
-        if (owner) {
-          await this.notifications.emitToUser(
-            owner.ownerUserId,
-            {
-              type: notifyType,
-              title:
-                notifyType === NOTIFICATION_TYPE.VEHICLE_APPROVED
-                  ? 'Xe đã được duyệt công khai'
-                  : 'Xe bị từ chối',
-              body: reason ? `${vehicle.name} · ${reason}` : vehicle.name,
-              tenantId: vehicle.tenantId,
-              targetType: NOTIFICATION_TARGET_TYPE.VEHICLE,
-              targetId: vehicle.id,
-              audience: NOTIFICATION_AUDIENCE.MANAGE,
-            },
-            tx,
-          );
-        }
+      const owner = await tx.tenant.findUnique({
+        where: { id: vehicle.tenantId },
+        select: { ownerUserId: true },
+      });
+      if (owner) {
+        await this.notifications.emitToUser(
+          owner.ownerUserId,
+          {
+            type: notifyType,
+            title: VEHICLE_NOTIFY_TITLE[kind],
+            body: reason ? `${vehicle.name} · ${reason}` : vehicle.name,
+            tenantId: vehicle.tenantId,
+            targetType: NOTIFICATION_TARGET_TYPE.VEHICLE,
+            targetId: vehicle.id,
+            audience: NOTIFICATION_AUDIENCE.MANAGE,
+          },
+          tx,
+        );
       }
     });
   }

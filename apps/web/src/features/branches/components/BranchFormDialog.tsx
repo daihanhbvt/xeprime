@@ -127,7 +127,7 @@ export function BranchFormDialog({
           type="warning"
           showIcon
           className={styles.notice}
-          message={tAddr('review.title')}
+          title={tAddr('review.title')}
           description={
             branch.legacyProvinceValue
               ? `${tAddr('review.hint')} ${tAddr('review.legacyValue', { value: branch.legacyProvinceValue })}`

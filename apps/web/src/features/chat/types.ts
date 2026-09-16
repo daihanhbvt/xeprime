@@ -10,6 +10,13 @@ import type { Paged } from '@/services/api-client';
 type Schemas = components['schemas'];
 
 export type ConversationSummary = Schemas['ConversationSummaryDto'];
+/**
+ * Đích của một hội thoại mới: một chiếc XE (nhắn từ trang xe) hoặc một GIAN HÀNG (nhắn từ
+ * `/shops/[slug]`). Cả hai đổ về đúng một thread — danh tính hội thoại là (khách, gian hàng).
+ */
+export type ConversationTarget = Schemas['CreateConversationDto'];
+/** "Tôi nhắn được cho gian hàng này chưa" — câu trả lời PER-USER cho việc ẩn/hiện nút. */
+export type ChatEligibility = Schemas['ChatEligibilityDto'];
 export type ChatMessage = Schemas['MessageDto'];
 export type MessageAttachment = Schemas['MessageAttachmentDto'];
 export type SendMessageInput = Schemas['SendMessageDto'];

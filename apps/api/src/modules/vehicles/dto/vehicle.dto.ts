@@ -129,6 +129,20 @@ export class VehicleBranchSummaryDto {
   @ApiPropertyOptional({ type: String, nullable: true }) provinceName!: string | null;
 }
 
+/**
+ * Tóm tắt lần gửi duyệt công khai gần nhất — để chủ xe thấy lý do bị từ chối/yêu cầu bổ sung.
+ *
+ * Khai TRƯỚC `VehicleListItemDto` vì nó được dùng làm `type` của một thuộc tính ở đó, và
+ * decorator `@ApiPropertyOptional({ type: ... })` chạy lúc NẠP MODULE — tham chiếu tới một class
+ * khai báo sau sẽ là `undefined` ở thời điểm đó và Swagger sinh ra một schema rỗng.
+ */
+export class VehiclePublicReviewDto {
+  @ApiProperty({ enum: APPROVAL_STATUS_VALUES }) status!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) reason!: string | null;
+  @ApiProperty({ description: 'ISO-8601 UTC' }) submittedAt!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) reviewedAt!: string | null;
+}
+
 export class VehicleListItemDto {
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;
@@ -185,6 +199,19 @@ export class VehicleListItemDto {
   weekendPrice!: string | null;
 
   @ApiProperty({ description: 'ISO-8601 UTC' }) updatedAt!: string;
+
+  /**
+   * Lần gửi duyệt gần nhất — chuyển lên DANH SÁCH ngày 14/09/2026 (trước đó chỉ có ở chi tiết).
+   *
+   * Lý do: với MỘT cổng duyệt (ADR 0036), lý do người duyệt trả xe về là thứ chủ xe cần đọc
+   * NGAY trong danh sách của mình. Bắt họ mở từng chiếc để tìm xem mình sai chỗ nào là biến một
+   * câu trả lời thành một cuộc đi tìm — và đó đúng là lúc họ bỏ cuộc.
+   *
+   * Không phải N+1: `VehiclesService.list` nạp chúng bằng MỘT truy vấn `DISTINCT ON` cho cả
+   * trang.
+   */
+  @ApiPropertyOptional({ type: VehiclePublicReviewDto, nullable: true })
+  latestPublicReview!: VehiclePublicReviewDto | null;
 }
 
 /**
@@ -212,14 +239,6 @@ export class VehicleMediaInputDto {
   @IsOptional()
   @IsIn(VEHICLE_IMAGE_TYPE_VALUES)
   type?: string;
-}
-
-/** Tóm tắt lần gửi duyệt công khai gần nhất — để shop thấy lý do bị từ chối/bổ sung. */
-export class VehiclePublicReviewDto {
-  @ApiProperty({ enum: APPROVAL_STATUS_VALUES }) status!: string;
-  @ApiPropertyOptional({ type: String, nullable: true }) reason!: string | null;
-  @ApiProperty({ description: 'ISO-8601 UTC' }) submittedAt!: string;
-  @ApiPropertyOptional({ type: String, nullable: true }) reviewedAt!: string | null;
 }
 
 /** Chi tiết một xe — dùng cho trang xem/sửa. */
@@ -309,9 +328,6 @@ export class VehicleDetailDto extends VehicleListItemDto {
 
   @ApiProperty({ type: [String], description: 'Key tiện ích (VEHICLE_FEATURE_LABEL)' })
   features!: string[];
-
-  @ApiPropertyOptional({ type: VehiclePublicReviewDto, nullable: true })
-  latestPublicReview!: VehiclePublicReviewDto | null;
 }
 
 /** Bọc phân trang cho danh sách xe (ADR 0007 — shape phải khai báo để FE sinh đúng type). */

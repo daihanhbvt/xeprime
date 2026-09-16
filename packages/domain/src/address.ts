@@ -35,13 +35,26 @@ export function provinceSelectLabel(name: string, administrativeType: string): s
     : `Tỉnh ${name}`;
 }
 
+/**
+ * Ba mảnh của một địa chỉ. Cả ba đều nhận `undefined` TƯỜNG MINH, không chỉ "được phép vắng mặt".
+ *
+ * Khác biệt đó có thật vì `exactOptionalPropertyTypes` đang bật: với `?: string | null`, một
+ * object literal mang `{ wardName: undefined }` bị TỪ CHỐI dù bỏ hẳn khoá đó lại hợp lệ. Mà mọi
+ * nơi gọi đều dựng object bằng optional chaining trên dữ liệu có thể vắng:
+ *
+ *   formatAddress({ addressLine, wardName: ward?.name, provinceName: province.name })
+ *
+ * `ward?.name` là `string | undefined`, nên nếu type không nói ra điều đó thì nơi gọi phải bịa ra
+ * một `?? null` chỉ để làm vừa lòng trình biên dịch — trong khi hàm vốn đã coi `undefined` và
+ * `null` như nhau (cả hai đều bị `filter(Boolean)` loại).
+ */
 export interface AddressParts {
   /** Số nhà, đường, toà nhà — chữ người dùng gõ. */
-  addressLine?: string | null;
+  addressLine?: string | null | undefined;
   /** Tên xã/phường/đặc khu ĐẦY ĐỦ kèm tiền tố: "Phường Ba Đình". */
-  wardName?: string | null;
+  wardName?: string | null | undefined;
   /** Tên tỉnh/thành chuẩn: "Hà Nội". */
-  provinceName?: string | null;
+  provinceName?: string | null | undefined;
 }
 
 /**

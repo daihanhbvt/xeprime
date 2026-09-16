@@ -1,10 +1,10 @@
 'use client';
 
 import { EyeOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import { APPROVAL_STATUS_META, type ApprovalStatus, type PaginationMeta } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { targetTypeLabel } from '../constants';
 import type { ApprovalTask } from '../types';
 import { useAppFormat } from '@/i18n/use-app-format';
 
@@ -28,30 +28,39 @@ export function ApprovalTable({
   onView,
   onPageChange,
 }: ApprovalTableProps) {
+  const t = useTranslations('Approvals');
+  const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
 
   const columns: DataTableColumn<ApprovalTask>[] = [
-    { title: 'Gian hàng', key: 'tenant', width: 220, render: (_, row) => row.tenantName ?? '—' },
     {
-      title: 'Loại',
-      key: 'targetType',
-      width: 130,
-      render: (_, row) => targetTypeLabel(row.targetType),
+      title: t('table.tenant'),
+      key: 'tenant',
+      width: 220,
+      render: (_, row) => row.tenantName ?? '—',
     },
     {
-      title: 'Người gửi',
+      title: t('table.targetType'),
+      key: 'targetType',
+      width: 130,
+      // Nhãn đọc từ message theo MÃ — `seller_profile` trước đây không có trong bảng nhãn nên
+      // hiện ra nguyên chuỗi mã cho reviewer.
+      render: (_, row) => t(`targetType.${row.targetType}`),
+    },
+    {
+      title: t('table.submittedBy'),
       key: 'submittedBy',
       width: 180,
       render: (_, row) => row.submittedByName ?? '—',
     },
     {
-      title: 'Gửi lúc',
+      title: t('table.submittedAt'),
       key: 'submittedAt',
       width: 160,
       render: (_, row) => fmt.dateTime(row.submittedAt),
     },
     {
-      title: 'Trạng thái',
+      title: t('table.status'),
       key: 'status',
       width: 130,
       render: (_, row) => (
@@ -59,23 +68,32 @@ export function ApprovalTable({
       ),
     },
     actionColumn<ApprovalTask>((row) => [
-      { key: 'view', label: 'Xem chi tiết', icon: <EyeOutlined />, onClick: () => onView(row.id) },
+      {
+        key: 'view',
+        label: t('table.view'),
+        icon: <EyeOutlined />,
+        onClick: () => onView(row.id),
+      },
     ]),
   ];
 
   return (
     <DataTable<ApprovalTask>
-      label="Hàng đợi duyệt hồ sơ"
+      label={t('page.title')}
       columns={columns}
       items={items}
       onRowClick={(row) => onView(row.id)}
       minWidth={MIN_TABLE_WIDTH}
       loading={loading}
-      error={error ? { title: 'Không tải được hàng đợi duyệt', onRetry: error.onRetry } : null}
+      error={error ? { title: t('table.loadError'), onRetry: error.onRetry } : null}
       // Trang này KHÔNG phân biệt rỗng vs không-kết-quả: bộ lọc mặc định đã là `pending`, nên
       // "không có phiếu nào" là câu đúng cho cả hai. Giữ nguyên hành vi trước migrate.
-      empty={{ title: 'Không có phiếu nào' }}
-      pagination={{ meta, onChange: onPageChange, totalLabel: (total) => `${total} phiếu` }}
+      empty={{ title: t('table.empty') }}
+      pagination={{
+        meta,
+        onChange: onPageChange,
+        totalLabel: (total) => tCommon('pagination.total', { count: total }),
+      }}
     />
   );
 }

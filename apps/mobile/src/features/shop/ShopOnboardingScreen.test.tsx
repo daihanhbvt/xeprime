@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Provider as ReduxProvider } from 'react-redux';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import { API_ERROR_CODE, TENANT_TYPE } from '@xeprime/types';
+import { API_ERROR_CODE, SHOP_VERIFICATION, TENANT_TYPE } from '@xeprime/types';
 import { ApiClientError } from '@xeprime/api-client';
 import * as authApi from '@/features/auth/api';
 import { locationsApi } from '@/features/locations/api';
@@ -40,6 +40,8 @@ const SHOP: MyShop = {
   name: 'Cho thuê xe Bình Minh',
   tenantType: TENANT_TYPE.INDIVIDUAL,
   status: 'draft',
+  // ADR 0036: trục XÁC MINH tách khỏi `status`. Fixture giữ nguyên `draft` (dữ liệu cũ).
+  verification: SHOP_VERIFICATION.UNVERIFIED,
   phone: null,
   email: null,
   profile: {
@@ -67,7 +69,7 @@ const SHOP: MyShop = {
     name: 'Chi nhánh chính',
     provinceCode: '48',
     provinceName: 'Đà Nẵng',
-  needsLocationReview: false,
+    needsLocationReview: false,
   },
 };
 
@@ -144,8 +146,8 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
       await view.findByLabelText('Tên gian hàng'),
       'Cho thuê xe Bình Minh',
     );
-    await fireEvent.press(view.getByLabelText('Tỉnh/thành'));
-    await fireEvent.press(await view.findByText('Đà Nẵng'));
+    await fireEvent.press(view.getByLabelText('Tỉnh/thành phố'));
+    await fireEvent.press(await view.findByText('TP Đà Nẵng'));
     await fireEvent.press(view.getByRole('button', { name: 'Tạo gian hàng' }));
 
     await waitFor(() => expect(registerSpy).toHaveBeenCalled());
@@ -159,27 +161,25 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
   });
 
   it('backend từ chối (đã có gian hàng): giữ nguyên dữ liệu đã nhập để gửi lại', async () => {
-    jest
-      .spyOn(tenantsApi, 'register')
-      .mockRejectedValue(
-        new ApiClientError({
-          status: 409,
-          code: API_ERROR_CODE.CONFLICT,
-          message: 'Bạn đã có gian hàng',
-        }),
-      );
+    jest.spyOn(tenantsApi, 'register').mockRejectedValue(
+      new ApiClientError({
+        status: 409,
+        code: API_ERROR_CODE.CONFLICT,
+        message: 'Bạn đã có gian hàng',
+      }),
+    );
     const view = await renderScreen();
 
     const nameField = await view.findByLabelText('Tên gian hàng');
     await fireEvent.changeText(nameField, 'Cho thuê xe Bình Minh');
-    await fireEvent.press(view.getByLabelText('Tỉnh/thành'));
-    await fireEvent.press(await view.findByText('Đà Nẵng'));
+    await fireEvent.press(view.getByLabelText('Tỉnh/thành phố'));
+    await fireEvent.press(await view.findByText('TP Đà Nẵng'));
     await fireEvent.press(view.getByRole('button', { name: 'Tạo gian hàng' }));
 
     // Form KHÔNG bị reset: người dùng chỉ cần đọc lỗi rồi bấm lại.
-    await waitFor(() => expect(view.getByLabelText('Tên gian hàng').props.value).toBe(
-      'Cho thuê xe Bình Minh',
-    ));
+    await waitFor(() =>
+      expect(view.getByLabelText('Tên gian hàng').props.value).toBe('Cho thuê xe Bình Minh'),
+    );
     expect(mockReplace).not.toHaveBeenCalled();
   });
 });

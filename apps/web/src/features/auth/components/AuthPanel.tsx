@@ -141,7 +141,7 @@ export function AuthPanel({
 
   return (
     <div className={styles.panel}>
-      {error ? <Alert type="error" showIcon message={error} className={styles.alert} /> : null}
+      {error ? <Alert type="error" showIcon title={error} className={styles.alert} /> : null}
 
       {mode === AUTH_MODE.REGISTER ? (
         <RegisterForm

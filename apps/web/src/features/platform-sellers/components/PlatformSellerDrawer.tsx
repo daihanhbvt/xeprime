@@ -119,7 +119,7 @@ export function PlatformSellerDrawer({ id, onClose }: { id: string | null; onClo
         <Alert
           type="error"
           showIcon
-          message={t('drawer.loadError')}
+          title={t('drawer.loadError')}
           action={
             <Button size="small" onClick={() => void detail.refetch()}>
               {tCommon('actions.retry')}
@@ -175,7 +175,7 @@ export function PlatformSellerDrawer({ id, onClose }: { id: string | null; onClo
               </Button>
             </div>
           ) : (
-            <Alert type="info" showIcon message={t('drawer.handled')} />
+            <Alert type="info" showIcon title={t('drawer.handled')} />
           )}
         </div>
       )}

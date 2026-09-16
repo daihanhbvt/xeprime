@@ -71,7 +71,7 @@ export function SettleHoldModal({ hold, onClose }: { hold: PlatformHold | null; 
     >
       <DialogForm onSubmit={onSubmit} labelWidth="lg">
         {hold?.disputeOpen ? (
-          <Alert type="warning" showIcon message={t('settle.disputeOpen')} />
+          <Alert type="warning" showIcon title={t('settle.disputeOpen')} />
         ) : null}
         <RadioGroupField
           control={control}
@@ -84,7 +84,7 @@ export function SettleHoldModal({ hold, onClose }: { hold: PlatformHold | null; 
           }))}
         />
         <TextAreaField control={control} name="note" label={t('settle.note')} rows={3} />
-        <Alert type="info" showIcon message={t('settle.auditHint')} />
+        <Alert type="info" showIcon title={t('settle.auditHint')} />
       </DialogForm>
     </ResponsiveDialog>
   );

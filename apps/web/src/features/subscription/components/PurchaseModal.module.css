@@ -101,3 +101,86 @@
   font-size: 12.5px;
   color: var(--xp-color-text-secondary);
 }
+
+/* ── Ba lựa chọn mua: đơn giá chỗ → số chỗ → kỳ hạn ── */
+
+/*
+ * Đơn giá chỗ. Xuống dòng được (`flex-wrap`) vì ở 400px hai đơn giá không nằm vừa một hàng, và
+ * cắt chữ một con số tiền thì con số đó vô dụng.
+ */
+.unitPrices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 12.5px;
+  color: var(--xp-color-text-secondary);
+}
+
+.groupTitle {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+/*
+ * Ba thẻ kỳ hạn. `auto-fit` + `minmax` chứ không phải ba cột cứng: ở 400px ba thẻ 100px sẽ chật
+ * tới mức con số tiền bị cắt, nên chúng tự xuống thành một hoặc hai cột.
+ */
+.terms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.termCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--xp-color-border, rgba(0, 0, 0, 0.12));
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  text-align: start;
+  font: inherit;
+  color: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.termCard:hover {
+  border-color: var(--xp-color-primary, #1677ff);
+}
+
+/*
+ * Lựa chọn đang chọn phải phân biệt được KHÔNG CHỈ bằng màu: viền dày lên là tín hiệu thứ hai cho
+ * người không phân biệt được màu sắc, và `aria-checked` trên chính nút là tín hiệu cho trình đọc
+ * màn hình.
+ */
+.termCardActive {
+  border-color: var(--xp-color-primary, #1677ff);
+  border-width: 2px;
+  padding: 9px 11px;
+  background: var(--xp-color-primary-bg, rgba(22, 119, 255, 0.06));
+}
+
+.termMonths {
+  font-size: 12.5px;
+  color: var(--xp-color-text-secondary);
+}
+
+.termTotal {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.termPerMonth {
+  font-size: 12px;
+  color: var(--xp-color-text-secondary);
+}
+
+.termDiscount {
+  margin-top: 4px;
+  margin-inline-end: 0;
+}

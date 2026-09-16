@@ -64,7 +64,7 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { EmbedMap } from '@/components/data-display/EmbedMap';
+import { StaticMap } from '@/components/data-display/StaticMap';
 import { cx } from '@/lib/cx';
 import {
   appWallClockToInstant,
@@ -74,7 +74,7 @@ import {
   type Dayjs,
 } from '@/lib/datetime';
 import { isZeroMoney } from '@/lib/money';
-import { mapDirectionsUrl } from '@/lib/map-embed';
+import { mapRouteUrl } from '@/lib/map-static';
 import { buildBusyDayIndex } from '@/lib/rental-busy';
 import {
   readDeliveryAddress,
@@ -252,6 +252,18 @@ export function RequestBookingFlow({
   const [stepError, setStepError] = useState<string | null>(null);
   /** Yêu cầu trùng lặp — trạng thái riêng, có lối đi tiếp, không phải một alert đỏ. */
   const [duplicate, setDuplicate] = useState(false);
+  /*
+   * Tài khoản KHÔNG được đặt xe (15/09/2026) — tài khoản gian hàng tuyến gói, hoặc đang đặt
+   * chính xe của gian hàng mình.
+   *
+   * Là một TRẠNG THÁI KẾT QUẢ chiếm trọn hộp thoại, không phải một dòng lỗi đỏ cạnh nút gửi:
+   * người dùng cần biết mình đang là AI và phải làm gì tiếp, mà một câu lỗi cạnh nút không nói
+   * được điều đó.
+   *
+   * Nút đặt xe vẫn hiện như cũ. Ẩn nút không phải kiểm soát quyền (cổng thật ở backend), và ẩn
+   * đi thì chủ gian hàng bấm mãi không được mà không bao giờ biết vì sao.
+   */
+  const [blocked, setBlocked] = useState<'shopAccount' | 'ownVehicle' | null>(null);
   /** Người đã đăng nhập bấm "Đổi" ở bước xác nhận → hiện lại ô nhập liên hệ ở bước Chuyến đi. */
   const [editingContact, setEditingContact] = useState(false);
   const [requestCode, setRequestCode] = useState<string | null>(null);
@@ -680,6 +692,14 @@ export function RequestBookingFlow({
         setDuplicate(true);
         return;
       }
+      if (code === API_ERROR_CODE.SHOP_ACCOUNT_CANNOT_BOOK) {
+        setBlocked('shopAccount');
+        return;
+      }
+      if (code === API_ERROR_CODE.CANNOT_BOOK_OWN_VEHICLE) {
+        setBlocked('ownVehicle');
+        return;
+      }
       /*
        * Backend nói SĐT chưa xác thực trong khi FE tưởng được bỏ qua OTP — nghĩa là phiên đã hết
        * hạn hoặc SĐT tài khoản vừa bị đổi. Đây là điểm khôi phục: lùi về bước xác thực, GIỮ
@@ -713,7 +733,7 @@ export function RequestBookingFlow({
     onBusyChange?.(submitting || verifying);
   }, [submitting, verifying, onBusyChange]);
 
-  const isResult = step === 'done' || duplicate;
+  const isResult = step === 'done' || duplicate || blocked !== null;
   useEffect(() => {
     onResultChange?.(isResult);
   }, [isResult, onResultChange]);
@@ -910,6 +930,49 @@ export function RequestBookingFlow({
         ? { label: t('actions.back'), onClick: () => backToTrip(), disabled: verifying }
         : { label: t('actions.back'), onClick: () => backToTrip(), disabled: submitting };
 
+  /*
+   * --- Tài khoản không đặt xe được: chiếm trọn hộp thoại, có lối đi tiếp --------------------
+   *
+   * Hai lối, và chúng là hai VIỆC KHÁC NHAU:
+   *   • "Dùng tài khoản khác"  — đăng xuất rồi quay lại chính trang xe này. Câu chữ phải nói rõ
+   *     "số điện thoại KHÁC", vì `users.phone` là unique: đăng xuất rồi đặt lại bằng chính số
+   *     của mình sẽ bị chặn lần thứ hai và người dùng không hiểu tại sao.
+   *   • "Quản lý gian hàng"    — họ vào nhầm vai; đưa họ về đúng khu làm việc.
+   *
+   * Ca `ownVehicle` KHÔNG mời đổi tài khoản: đổi xong vẫn không phải điều họ muốn làm.
+   */
+  if (blocked) {
+    return (
+      <div className={styles.resultWrap}>
+        <div className={styles.centered}>
+          <span className={cx(styles.doneBadge, styles.warnBadge)} aria-hidden>
+            <ExclamationOutlined />
+          </span>
+          <h3 className={styles.doneTitle}>{t(`blocked.${blocked}.title`)}</h3>
+          <p className={styles.doneText}>{t(`blocked.${blocked}.body`)}</p>
+          <div className={styles.doneActions}>
+            {blocked === 'shopAccount' ? (
+              <Button
+                type="primary"
+                size="large"
+                block
+                onClick={() => {
+                  onClose();
+                  router.push(ROUTES.MANAGE.ROOT);
+                }}
+              >
+                {t('blocked.shopAccount.manage')}
+              </Button>
+            ) : null}
+            <Button size="large" block onClick={onClose}>
+              {t('blocked.close')}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // --- Trạng thái trùng lặp: chiếm trọn thân hộp thoại, có hai lối đi tiếp ------------------
   if (duplicate) {
     return (
@@ -1015,7 +1078,7 @@ export function RequestBookingFlow({
               type="success"
               showIcon
               className={styles.doneNote}
-              message={
+              title={
                 receipt.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD
                   ? t('done.autoAcceptedHold')
                   : t('done.autoAccepted')
@@ -1026,7 +1089,7 @@ export function RequestBookingFlow({
               type="warning"
               showIcon
               className={styles.doneNote}
-              message={t('done.notReserved')}
+              title={t('done.notReserved')}
             />
           )}
 
@@ -1356,8 +1419,8 @@ export function RequestBookingFlow({
                     {t('pickup.resolvedAddress', { address: delivery.formattedAddress })}
                   </p>
                 ) : null}
-                <EmbedMap
-                  src={mapDirectionsUrl(delivery?.origin, delivery?.destination)}
+                <StaticMap
+                  src={mapRouteUrl(delivery?.origin, delivery?.destination)}
                   title={t('pickup.mapTitle')}
                   height={200}
                 />
@@ -1397,13 +1460,13 @@ export function RequestBookingFlow({
             )}
 
             {vp.error ? (
-              <Alert type="error" showIcon message={vp.error} className={styles.err} />
+              <Alert type="error" showIcon title={vp.error} className={styles.err} />
             ) : null}
             {stepError ? (
               <Alert
                 type="warning"
                 showIcon
-                message={stepError}
+                title={stepError}
                 className={styles.err}
                 role="alert"
               />
@@ -1439,7 +1502,7 @@ export function RequestBookingFlow({
               <Alert
                 type="error"
                 showIcon
-                message={stepError}
+                title={stepError}
                 className={styles.err}
                 role="alert"
               />
@@ -1599,7 +1662,7 @@ export function RequestBookingFlow({
                 type="success"
                 showIcon
                 className={styles.err}
-                message={t('review.instantBook')}
+                title={t('review.instantBook')}
                 description={t('review.instantBookHint')}
               />
             ) : null}
@@ -1621,7 +1684,7 @@ export function RequestBookingFlow({
               <Alert
                 type="error"
                 showIcon
-                message={stepError}
+                title={stepError}
                 className={styles.err}
                 role="alert"
               />

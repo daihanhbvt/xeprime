@@ -13,7 +13,8 @@
     "refunds": "Chuyển trả",
     "reconciliation": "Đối chiếu ngày",
     "withdrawals": "Yêu cầu rút",
-    "insurance": "Bảo hiểm"
+    "insurance": "Bảo hiểm",
+    "tax": "Thuế"
   },
   "filters": {
     "search": "Tìm kiếm",
@@ -139,6 +140,54 @@
       "reasonLabel": "Lý do thu hồi",
       "reasonPlaceholder": "Vì sao thu hồi hợp đồng này",
       "done": "Đã thu hồi hợp đồng"
+    }
+  },
+  "tax": {
+    "title": "Sổ thuế theo kỳ",
+    "period": "Kỳ kê khai",
+    "loadError": "Không tải được sổ thuế",
+    "total": "{count, plural, other {# dòng}}",
+    "percentOf": "{percent}% giá trị chịu thuế",
+    "unknownEntity": "Chưa khai hồ sơ",
+    "stats": {
+      "total": "Tổng nghĩa vụ kỳ",
+      "accrued": "Chờ kê khai",
+      "declared": "Đã kê khai",
+      "remitted": "Đã nộp"
+    },
+    "byEntity": {
+      "title": "Chia theo loại chủ thể",
+      "value": "{amount} · {count, plural, other {# dòng}}"
+    },
+    "unknownWarning": {
+      "title": "Có nghĩa vụ thuế của gian hàng chưa khai hồ sơ người bán",
+      "body": "Không xác định được loại chủ thể thì không biết những dòng này thuộc tờ khai nào. Yêu cầu các gian hàng đó hoàn thiện hồ sơ trước khi chốt kỳ — đừng gộp tạm vào nhóm cá nhân, vì đó là đoán hộ họ một nghĩa vụ pháp lý."
+    },
+    "columns": {
+      "booking": "Chuyến / gian hàng",
+      "entity": "Loại chủ thể / MST",
+      "base": "Giá trị chịu thuế",
+      "amount": "Số tiền",
+      "status": "Trạng thái"
+    },
+    "actions": {
+      "export": "Xuất CSV",
+      "markDeclared": "Đánh dấu đã kê khai",
+      "declaredDone": "Đã đánh dấu cả kỳ là đã kê khai",
+      "markRemitted": "Đánh dấu đã nộp",
+      "remittedDone": "Đã đánh dấu cả kỳ là đã nộp",
+      "reverse": "Đảo"
+    },
+    "empty": {
+      "title": "Kỳ này chưa có nghĩa vụ nào",
+      "description": "Thuế chỉ phát sinh khi chuyến đã bắt đầu — chuyến huỷ trước giờ nhận không có dòng nào."
+    },
+    "reverseModal": {
+      "title": "Đảo một dòng thuế",
+      "hint": "Đảo ghi một dòng ÂM trỏ về dòng gốc, không sửa con số cũ. Sau khi đảo, đơn đó lại ghi được nghĩa vụ đúng. Dòng đã nộp không đảo được — hãy dùng tờ khai điều chỉnh.",
+      "reasonLabel": "Lý do đảo",
+      "reasonPlaceholder": "Vì sao dòng này sai",
+      "done": "Đã đảo dòng thuế"
     }
   }
 }

@@ -139,6 +139,7 @@ export function RegisterForm({
 
       <Button
         label={t('register.submit')}
+        icon="person-add-outline"
         onPress={onSubmit}
         loading={register.isPending}
         disabled={!isValid || blocked}

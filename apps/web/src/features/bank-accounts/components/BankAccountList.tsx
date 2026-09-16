@@ -49,7 +49,7 @@ export function BankAccountList({ scope }: { scope: BankAccountScope }) {
       </header>
 
       {isPending ? <Skeleton active paragraph={{ rows: 2 }} /> : null}
-      {isError ? <Alert type="error" showIcon message={t('loadError')} /> : null}
+      {isError ? <Alert type="error" showIcon title={t('loadError')} /> : null}
       {!isPending && !isError && accounts.length === 0 ? (
         <Empty description={t('empty')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
       ) : null}

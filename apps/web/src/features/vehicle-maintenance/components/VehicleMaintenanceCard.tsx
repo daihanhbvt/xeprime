@@ -43,7 +43,7 @@ export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
   if (profile.isError || !profile.data) {
     return (
       <Card title={t('card.title')} className={styles.overviewCard}>
-        <Alert type="error" showIcon message={t('card.loadError')} />
+        <Alert type="error" showIcon title={t('card.loadError')} />
       </Card>
     );
   }
@@ -62,7 +62,7 @@ export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
           className={styles.overviewAlert}
           type="error"
           showIcon
-          message={t('card.overdue', { value: fmt.remainingKm(data.remainingKm) })}
+          title={t('card.overdue', { value: fmt.remainingKm(data.remainingKm) })}
         />
       ) : null}
       {dueStatus === MAINTENANCE_DUE_STATUS.DUE_SOON ? (
@@ -70,7 +70,7 @@ export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
           className={styles.overviewAlert}
           type="warning"
           showIcon
-          message={t('card.dueSoon', { value: fmt.remainingKm(data.remainingKm) })}
+          title={t('card.dueSoon', { value: fmt.remainingKm(data.remainingKm) })}
         />
       ) : null}
       {data.currentOdometerKm == null ? (
@@ -78,7 +78,7 @@ export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
           className={styles.overviewAlert}
           type="warning"
           showIcon
-          message={t('card.noOdometer')}
+          title={t('card.noOdometer')}
           description={t('card.noOdometerHint')}
         />
       ) : null}

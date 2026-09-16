@@ -59,8 +59,12 @@ export function assertSeedTargetIsSafe(): void {
   // Tầng DỮ LIỆU — chỉ production mới có dữ liệu khách hàng để làm hỏng.
   if (IS_PRODUCTION_DATA && SEED_MODE === 'demo') {
     throw new Error(
-      'APP_ENV=production: từ chối seed dữ liệu DEMO. Dùng SEED_MODE=system nếu chỉ cần ' +
-        'permission/role/danh mục/gói dịch vụ. (Staging đặt APP_ENV=staging thì seed demo được.)',
+      'APP_ENV=production: từ chối seed dữ liệu DEMO — biến này nghĩa là "database có dữ liệu ' +
+        'khách hàng thật", và nó MẶC ĐỊNH là `production` khi bạn không khai gì.\n' +
+        '  • Máy dev: đặt APP_ENV=development trong .env, hoặc chạy ' +
+        '`APP_ENV=development pnpm --filter @xeprime/prisma seed`.\n' +
+        '  • Staging: APP_ENV=staging.\n' +
+        '  • Chỉ cần dữ liệu nền (quyền/role/danh mục/gói): SEED_MODE=system — chạy được ở mọi nơi.',
     );
   }
 
@@ -150,6 +154,17 @@ export function dateOnlyFromToday(days: number): Date {
 /** Ảnh Unsplash ghim theo photo id — card/gallery có ảnh thật và ổn định giữa các lần seed. */
 export function photo(id: string): string {
   return `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=1200&q=70`;
+}
+
+/**
+ * Ảnh CHÂN DUNG vuông từ cùng kho ảnh — avatar tài khoản, không phải ảnh xe.
+ *
+ * Khác `photo()` ở hai chỗ có chủ đích: cắt theo KHUÔN MẶT (`fit=facearea`) nên ảnh gốc dạng
+ * nào cũng ra một avatar tròn coi được, và lấy 320px thay vì 1200px — avatar hiển thị ở 32–96px,
+ * tải bản 1200px về là lãng phí băng thông trên đúng thứ xuất hiện nhiều lần nhất mỗi trang.
+ */
+export function portrait(id: string): string {
+  return `https://images.unsplash.com/photo-${id}?auto=format&fit=facearea&facepad=2.5&w=320&h=320&q=70`;
 }
 
 /** Lấy phần tử theo chỉ số vòng lặp — thay cho random, để dữ liệu sinh ra lặp lại được. */

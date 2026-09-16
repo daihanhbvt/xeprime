@@ -137,7 +137,7 @@
       "backToStep": "Back to the previous step",
       "cancel": "Discard",
       "saveDraft": "Save as draft",
-      "saveAndSubmit": "Save & submit for review",
+      "saveAndSubmit": "Save & submit",
       "stepErrors": "{count, plural, one {# error} other {# errors}} to fix before continuing",
       "pricePreview": "Price shown on the marketplace: {price}",
       "cancelWizard": {
@@ -268,6 +268,15 @@
       "withDriverOneWayPlaceholder": "e.g. 2,200,000",
       "withDriverOneWayHelp": "Intercity one way; blank = estimated from the nearest tier"
     },
+    "marketPrice": {
+      "range": "Reference price: {low} – {high} per day",
+      "basisProvinceSegment": "Median of {count} comparable vehicles listed in {province}",
+      "basisSegment": "Median of {count} comparable vehicles listed nationwide",
+      "basisVehicleType": "Median of {count} vehicles of the same type listed nationwide",
+      "basisBaseline": "Suggested starting point — not enough comparable vehicles on the marketplace yet",
+      "apply": "Use {price}",
+      "applyBaseline": "Use starting point {price}"
+    },
     "policies": {
       "delivery": "Vehicle delivery",
       "deliveryDescription": "Marketplace customers can filter for vehicles that offer delivery"
@@ -360,6 +369,7 @@
       "sourceTypeRequired": "Select the vehicle source type",
       "operationStatusRequired": "Select the operation status",
       "fuelTypeIncompatible": "This fuel type isn't compatible with the vehicle type",
+      "transmissionIncompatible": "This transmission doesn't match the vehicle type and fuel type",
       "bodyTypeCarOnly": "Body type only applies to cars",
       "yearTypeError": "Vehicle year must be a number",
       "yearInteger": "Vehicle year must be a whole number",
@@ -428,7 +438,8 @@
       "description": "Vehicle description",
       "photos": "At least 4 vehicle photos",
       "identity": "Brand, model, year and seats",
-      "energySpec": "Specs for the energy source"
+      "energySpec": "Specs for the energy source",
+      "branchLocation": "A branch with a province"
     },
     "status": {
       "pending": {

@@ -118,11 +118,7 @@ export const marketplaceApi = {
 
   /** Gian hàng đang hoạt động có xe công khai, sắp theo điểm đánh giá. */
   shops(limit: number): Promise<Paged<PublicShopSummary>> {
-    return getApiClient().fetchPage<PublicShopSummary>(
-      '/public/shops',
-      { page: 1, limit },
-      limit,
-    );
+    return getApiClient().fetchPage<PublicShopSummary>('/public/shops', { page: 1, limit }, limit);
   },
 
   shop(slug: string): Promise<PublicShop> {

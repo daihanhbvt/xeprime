@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useRef, useState } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { Pressable, TextInput, type TextInputProps } from 'react-native';
+import { useRevealOnFocus } from '@/components/layout/focus-reveal';
 import { Text, YStack } from 'tamagui';
 import { FieldLabel, FieldMessage, FieldShell } from './Field';
 import { FONT_FAMILY } from '@/theme/fonts';
@@ -32,6 +33,8 @@ interface TextFieldProps<T extends FieldValues> {
    * Hiện dấu `*` sau nhãn. THUẦN hiển thị — ràng buộc thật nằm ở schema yup của form và ở
    * DTO backend; đánh dấu ở đây mà quên ở schema thì ô vẫn gửi rỗng được.
    */
+  /** Dấu `●` cần-cho-duyệt-công-khai — xem docblock ở `FieldLabel`. */
+  publishRequired?: boolean;
   required?: boolean;
   secureTextEntry?: boolean;
   /**
@@ -64,6 +67,7 @@ export function TextField<T extends FieldValues>({
   icon,
   hint,
   required = false,
+  publishRequired = false,
   secureTextEntry,
   multiline = false,
   rows = 4,
@@ -85,6 +89,7 @@ export function TextField<T extends FieldValues>({
   const readOnly = inputProps.editable === false;
   const { field, fieldState } = useController({ control, name });
   const inputRef = useRef<TextInput>(null);
+  const revealOnFocus = useRevealOnFocus();
   const [focused, setFocused] = useState(false);
   const [revealed, setRevealed] = useState(false);
 
@@ -109,7 +114,7 @@ export function TextField<T extends FieldValues>({
 
   return (
     <YStack gap={space.xs}>
-      <FieldLabel label={label} required={required} />
+      <FieldLabel label={label} required={required} publishRequired={publishRequired} />
 
       {/*
         `onPress` chuyển focus TƯỜNG MINH vào ô của khung này. Chạm vào đệm/icon/khoảng trống
@@ -140,7 +145,10 @@ export function TextField<T extends FieldValues>({
             setFocused(false);
             field.onBlur();
           }}
-          onFocus={() => setFocused(true)}
+          onFocus={() => {
+            setFocused(true);
+            revealOnFocus();
+          }}
           secureTextEntry={secureTextEntry && !revealed}
           multiline={multiline}
           {...(maxLength === undefined ? {} : { maxLength })}

@@ -42,7 +42,7 @@ export function CreateVehiclePricingStep({
           <Alert
             type="warning"
             showIcon
-            message={t('noPolicyTitle')}
+            title={t('noPolicyTitle')}
             description={
               <Link href={ROUTES.MANAGE.SHOP_POLICIES}>{t('noPolicyAction')}</Link>
             }

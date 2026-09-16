@@ -1,4 +1,17 @@
 {
+  "trackBadge": {
+    "commissionOwner": "Individual host",
+    "commissionOwnerWithFee": "Individual host · {percent, number}% commission",
+    "shopOwner": "Shop owner",
+    "shopOwnerWithPlan": "Shop owner · {plan} plan",
+    "shopManager": "Shop manager",
+    "shopStaff": "Shop staff",
+    "shopViewer": "Shop viewer",
+    "shopMember": "Shop member",
+    "unconfigured": "Plan not configured",
+    "unconfiguredHint": "Your shop has no active service plan, so the platform can't work out how fees apply. This is a XePrime configuration problem — contact support before taking new bookings.",
+    "verifiedHint": "Verified shop owner"
+  },
   "title": "My account",
   "subtitle": "Manage your account details and settings",
   "memberSince": "Member since {date}",
@@ -31,7 +44,7 @@
     "phonePlaceholder": "0901234567",
     "emailHint": "We will send a verification code to this address.",
     "phoneHint": "We will send a verification code by SMS to this number.",
-    "sendCode": "Send verification code",
+    "sendCode": "Send code",
     "codeSentTo": "We sent a 6-digit code to",
     "confirmCode": "Confirm",
     "resend": "Send another code",
@@ -101,7 +114,10 @@
     "bodyMember": "You are a member of {shop}. Vehicle and calendar management for the shop lives in the management portal.",
     "becomeOwner": "Become a host",
     "openManage": "Open management portal",
-    "backToAccount": "Back to my account"
+    "backToAccount": "Back to my account",
+    "registeringTitle": "Your host profile is still under review",
+    "registeringBody": "This section opens once you have at least one vehicle approved for the marketplace. Track your profile and vehicles on the registration screen.",
+    "openRegistration": "View registration status"
   },
   "vehicles": {
     "title": "My vehicles",
@@ -244,10 +260,6 @@
     },
     "retentionNote": "Some data (invoices, tax documents, transaction logs) may have to be kept for a legally required period before it is fully deleted.",
     "acknowledge": "I understand this is a deletion request and XePrime will contact me and process it according to its procedure.",
-    "confirmPhraseLabel": "Confirm by typing the phrase below",
-    "confirmPhrase": "DELETE ACCOUNT",
-    "confirmPhrasePlaceholder": "Type {phrase} to confirm",
-    "confirmPhraseMismatch": "The phrase doesn't match.",
     "acknowledgeRequired": "Please confirm you understand.",
     "submit": "Send deletion request",
     "reset": "Cancel",
@@ -261,5 +273,55 @@
     "withdrawConfirm": "Withdraw this request? Your account stays as it is.",
     "withdrawn": "Deletion request withdrawn.",
     "loadError": "Couldn't check for an existing request."
+  },
+  "registration": {
+    "title": "Host profile",
+    "subtitle": "Track your profile and your first vehicle on their way to the marketplace.",
+    "saved": "Profile saved",
+    "submitted": "Profile submitted for verification",
+    "loadError": "Could not load your host profile",
+    "steps": {
+      "profile": {
+        "title": "Host profile",
+        "description": "Your name, a verified phone number and a pickup address. Filling these in completes this step — there is nobody to wait for."
+      },
+      "vehicle": {
+        "title": "Add a vehicle and submit it",
+        "description": "Add a vehicle with photos and pricing, then hit submit. One button, once.",
+        "addMore": "Add another vehicle"
+      },
+      "live": {
+        "title": "Live on the marketplace",
+        "description": "XePrime reviews the vehicle — this is the only review step. Once approved, guests can find and book it and all host tools unlock."
+      }
+    },
+    "noVehicle": {
+      "title": "Your first vehicle is still missing",
+      "body": "Add a vehicle with photos and pricing, then submit it. Once XePrime approves it, it goes live.",
+      "cta": "Add your first vehicle"
+    },
+    "queue": {
+      "title": "Your vehicles on their way to the marketplace"
+    }
+  },
+  "deletionImpact": {
+    "title": "Read this before you send the request",
+    "body": "Your account is tied to the shop {shop}. XePrime has to settle the items below before the account can be closed; sending the request does not clear them.",
+    "loading": "Checking impact…",
+    "loadError": "Could not check the impact. You can still send the request — XePrime will review it.",
+    "shop": "Shop",
+    "ownerNote": "You are the shop owner. Closing the owner account does not close the shop, and listed vehicles still need someone responsible for them.",
+    "memberNote": "You are a member of this shop, not its owner. This request covers your personal account only.",
+    "balance": "Available balance",
+    "pending": "Being transferred",
+    "withdrawals": "{count, plural, =0 {No withdrawal requests outstanding} other {# withdrawal requests outstanding}}",
+    "openTrips": "{count, plural, =0 {No open rental trips} other {# open rental trips}}",
+    "settleFirst": "Withdraw your balance and let the transfers finish before sending the request — reconciliation is much slower once the account is closed.",
+    "bodyPersonal": "This request covers your personal account only. XePrime still has to settle the items below before the account can be closed."
+  },
+  "trackNotice": {
+    "unconfiguredTitle": "Your shop has no valid service plan",
+    "unconfiguredBody": "XePrime cannot determine how to charge your shop, so new trip amounts will not be recorded until this is resolved. Your existing data, trips and balance are not affected.",
+    "contactSupport": "Contact support"
   }
 }

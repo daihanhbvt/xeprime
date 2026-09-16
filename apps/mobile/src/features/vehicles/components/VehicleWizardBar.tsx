@@ -108,7 +108,16 @@ export function VehicleWizardBar({
  * ô của chúng và bốn nhãn bên dưới không còn thẳng hàng với vòng tròn của mình.
  */
 function Connector({ show, done, arrow }: { show: boolean; done: boolean; arrow?: boolean }) {
-  const tone = done ? colors.primary : colors.borderSubtle;
+  /*
+   * Bước CHƯA xong dùng bậc viền ĐẬM (`borderInput` = `color-border-strong`, #d4cfc6), không
+   * phải `borderSubtle` (#f5f3ef — gần như trắng).
+   *
+   * `borderSubtle` sinh ra cho đường kẻ NGĂN CÁCH: thứ chỉ cần thấy khi mắt đã nhìn thẳng vào.
+   * Vạch nối và mũi tên ở đây làm việc khác hẳn — chúng nói cho người dùng biết còn mấy bước
+   * nữa và chặng đường đi theo chiều nào, nên phải đọc được bằng một cái liếc. Ở bậc nhạt nhất,
+   * dải bốn bước lúc chưa điền gì gần như biến mất trên nền sáng.
+   */
+  const tone = done ? colors.primary : colors.borderInput;
 
   return (
     <XStack f={1} ai="center">

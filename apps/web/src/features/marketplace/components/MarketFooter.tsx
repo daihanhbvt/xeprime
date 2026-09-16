@@ -11,6 +11,8 @@ import {
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Logo } from '@/components/brand/Logo';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import { useWorkspace } from '@/hooks/use-workspace';
 import { FOOTER_COLUMNS } from '../constants';
 import styles from './MarketFooter.module.css';
 
@@ -39,6 +41,14 @@ const COPYRIGHT_YEAR = String(new Date().getFullYear());
  */
 export function MarketFooter() {
   const t = useTranslations('Marketplace.footer');
+  const { paths } = useWorkspace();
+  const { data: user } = useCurrentUser();
+  /*
+   * Chỉ đổi đích khi đã biết CHẮC người này thuộc một gian hàng. Chân trang render cho cả khách
+   * vãng lai, và `useWorkspace` mặc định về `/manage` khi chưa biết — đưa một người chưa đăng
+   * nhập tới đó chỉ để proxy đá ra trang đăng nhập là tệ hơn giữ nguyên landing công khai.
+   */
+  const hasWorkspace = user?.tenant != null;
 
   return (
     <footer className={styles.footer}>
@@ -66,7 +76,17 @@ export function MarketFooter() {
                 </summary>
                 <nav className={styles.colLinks} aria-label={title}>
                   {col.links.map((link) => (
-                    <Link key={link.key} href={link.href} className={styles.link}>
+                    <Link
+                      key={link.key}
+                      // Mục dẫn về khu làm việc đổi đích theo người đang xem; mục thường giữ
+                      // nguyên `href` công khai đã khai trong hằng số.
+                      href={
+                        link.workspaceKey && hasWorkspace
+                          ? paths[link.workspaceKey]
+                          : link.href
+                      }
+                      className={styles.link}
+                    >
                       {t(link.key)}
                     </Link>
                   ))}

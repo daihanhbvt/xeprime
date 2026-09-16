@@ -1,6 +1,8 @@
 'use client';
 
+import { ArrowRightOutlined } from '@ant-design/icons';
 import { Alert, Button, Skeleton } from 'antd';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useWalletSummary } from '../hooks';
@@ -17,20 +19,33 @@ import styles from './WalletSummaryCard.module.css';
  * `legalNote` hiện CỐ ĐỊNH, không phải tooltip: bản chất của sổ này là nghĩa vụ phải trả, và
  * người dùng phải đọc được điều đó ở cùng chỗ họ nhìn thấy con số — "1 điểm = 1đ · rút về ngân
  * hàng được · không hết hạn" (ADR 0033 điều 1).
+ *
+ * ## Hai chỗ đứng, hai hành động (16/09/2026)
+ *
+ * Trên chính màn ví, hành động là RÚT (`onWithdraw`). Khi thẻ đứng trong hồ sơ "Tài khoản của
+ * tôi", hành động là MỞ SỔ (`href`) — ở đó mới có lịch sử giao dịch, các lệnh rút và trạng thái
+ * của chúng. Cùng ba con số, cùng một nguồn; chép chúng ra một thẻ thứ hai là mở đường cho hai
+ * màn hiện hai số dư khác nhau cho cùng một người.
+ *
+ * Truyền cả hai thì `onWithdraw` thắng: nơi duy nhất truyền cả hai là màn ví, nơi nút Rút là
+ * việc chính và một liên kết trỏ về chính trang đang mở thì vô nghĩa.
  */
 export function WalletSummaryCard({
   scope,
   onWithdraw,
+  href,
 }: {
   scope: WalletScope;
   onWithdraw?: () => void;
+  /** Màn ví đầy đủ — hiện một liên kết thay cho nút Rút khi thẻ đứng ngoài màn đó. */
+  href?: string;
 }) {
   const t = useTranslations('Wallet');
   const fmt = useAppFormat();
   const { data, isPending, isError } = useWalletSummary(scope);
 
   if (isPending) return <Skeleton active paragraph={{ rows: 2 }} />;
-  if (isError) return <Alert type="error" showIcon message={t('loadError')} />;
+  if (isError) return <Alert type="error" showIcon title={t('loadError')} />;
 
   const frozen = data.status === 'frozen';
   const canWithdraw = !frozen && Number(data.available) >= Number(data.minWithdrawAmount);
@@ -45,10 +60,14 @@ export function WalletSummaryCard({
           <Button type="primary" disabled={!canWithdraw} onClick={onWithdraw}>
             {t('withdraw.action')}
           </Button>
+        ) : href ? (
+          <Link href={href} className={styles.openLink}>
+            {t('openLedger')} <ArrowRightOutlined aria-hidden="true" />
+          </Link>
         ) : null}
       </header>
 
-      {frozen ? <Alert type="warning" showIcon message={t('balance.frozen')} /> : null}
+      {frozen ? <Alert type="warning" showIcon title={t('balance.frozen')} /> : null}
 
       <dl className={styles.figures}>
         <div className={styles.primary}>

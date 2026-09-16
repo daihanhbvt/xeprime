@@ -1,0 +1,18 @@
+
+/**
+ * Nhãn VAI trên một dòng của hộp thư hợp nhất.
+ *
+ * Nhỏ, không màu nhấn: nó là ngữ cảnh để đọc đúng dòng, không phải trạng thái cần xử lý. Màu
+ * nhấn ở cột này đã thuộc về huy hiệu chưa đọc, và hai tín hiệu cùng độ mạnh thì không tín hiệu
+ * nào còn nghĩa.
+ */
+.convRole {
+  flex: none;
+  padding: 0 6px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-overline);
+  line-height: 1.6;
+  white-space: nowrap;
+}

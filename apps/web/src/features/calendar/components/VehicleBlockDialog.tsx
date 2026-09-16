@@ -180,7 +180,7 @@ function BlockForm({
           type="error"
           showIcon
           className={styles.alert}
-          message={t('block.conflictTitle')}
+          title={t('block.conflictTitle')}
           description={t('block.conflictDescription')}
         />
       ) : previewConflict ? (
@@ -188,7 +188,7 @@ function BlockForm({
           type="warning"
           showIcon
           className={styles.alert}
-          message={t('block.previewConflictTitle')}
+          title={t('block.previewConflictTitle')}
           description={t('block.previewConflictDescription')}
         />
       ) : null}

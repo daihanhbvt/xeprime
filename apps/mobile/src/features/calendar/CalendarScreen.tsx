@@ -5,6 +5,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { holidayRunAround, LIST_SEPARATOR, startOfAppDay } from '@xeprime/domain';
 import { OCCUPANCY_SOURCE_TYPE, PERMISSION, VEHICLE_BLOCK_REASON } from '@xeprime/types';
+import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Callout } from '@/components/ui/Callout';
 import { InlineAction } from '@/components/ui/InlineAction';
@@ -75,8 +76,19 @@ type SheetState =
  * đơn/khoá/bảo dưỡng, có xác nhận, và backend quyết theo ADR 0006). App bám đúng quyết định đó —
  * xem `CalendarTimeline`.
  */
-export function CalendarScreen() {
+/**
+ * VỎ điều hướng bao quanh lưới — KHÔNG đổi gì bên trong nó.
+ *
+ * `manage`  — thanh trên của cổng quản lý (nút mở drawer, bộ chọn chi nhánh): `/manage/calendar`.
+ * `account` — thanh trên có nút LUI, dùng cho `/account/calendar` của chủ xe. Web giải đúng bài
+ *              này bằng cùng một cách: `account/calendar/page.tsx` import thẳng `CalendarScheduler`
+ *              và chỉ đổi khung quanh nó, không fork lịch.
+ */
+export type CalendarShell = 'manage' | 'account';
+
+export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } = {}) {
   const t = useTranslations('Calendar');
+  const tAccount = useTranslations('Account.calendar');
   const tCommon = useTranslations('Common.actions');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
@@ -379,11 +391,26 @@ export function CalendarScreen() {
   );
   const onCellPress = cellActions.length > 0 ? openCellMenu : null;
 
+  /*
+   * Thanh trên dựng MỘT LẦN rồi dùng lại ở cả ba nhánh trả về (thiếu quyền · lưới · trạng thái):
+   * ba lời gọi riêng là ba chỗ phải nhớ đổi khi vỏ đổi, và bản trước đã quên đúng một chỗ.
+   */
+  const header =
+    shell === 'account' ? (
+      <AppHeader
+        onBack={() => goBackOr(router, ROUTES.account.home())}
+        title={tAccount('title')}
+        subtitle={tAccount('subtitle')}
+      />
+    ) : (
+      <ManageHeader />
+    );
+
   // Thiếu quyền là 403 của CHÍNH màn này — không gọi API rồi mới nhận lỗi.
   if (!permissionsLoading && !canView) {
     return (
       <>
-        <ManageHeader />
+        {header}
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
@@ -397,7 +424,7 @@ export function CalendarScreen() {
 
   return (
     <>
-      <ManageHeader />
+      {header}
       <Screen edges={['left', 'right', 'bottom']} scroll={false} padded={false}>
         {/*
           KHÔNG có khối tiêu đề trang — cùng quyết định web ghi ở `manage/calendar/page.tsx`: mọi

@@ -13,3 +13,20 @@
   font-size: 12px;
   color: var(--xp-color-text-secondary);
 }
+
+/*
+ * Tên gói + nhãn "Tuyến mặc định" trên một dòng. `flex-wrap` vì cột rộng 240px và một tên gói
+ * dài cộng nhãn sẽ tràn — xuống dòng đọc được, cắt chữ thì không.
+ */
+.planName {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.intro {
+  margin-bottom: 12px;
+}

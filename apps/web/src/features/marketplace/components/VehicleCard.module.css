@@ -270,6 +270,15 @@
   place-items: center;
 }
 
+/*
+ * Vành vàng của gian hàng tuyến gói. `border` chứ không `box-shadow` như `ShopHeader`: ở đây
+ * `.shop` có `overflow: hidden` để cắt tên dài, và bóng ngoài sẽ bị cắt mất một bên.
+ */
+.shopAvatarShop {
+  border: 2px solid var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+}
+
 .shopAvatar img {
   width: 100%;
   height: 100%;
@@ -289,6 +298,14 @@
   font-size: 10.5px;
 }
 
+/* Tên + dấu là một hàng riêng: chỉ TÊN được co và cắt, dấu luôn giữ nguyên kích thước. */
+.shopNameRow {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 3px;
+}
+
 .shopName {
   overflow: hidden;
   color: var(--xp-color-text);
@@ -299,10 +316,19 @@
   transition: color 0.15s ease;
 }
 
+.shopNameShop {
+  color: var(--xp-color-primary-active);
+  font-weight: 700;
+}
+
+.shopMark {
+  flex: none;
+}
+
 .price {
   display: flex;
-  min-width: 88px;
-  max-width: 52%;
+  min-width: 62px;
+  max-width: 40%;
   flex: none;
   flex-direction: column;
   align-items: flex-end;
@@ -327,7 +353,7 @@
 
 .currentPrice b {
   color: var(--xp-color-price);
-  font-size: 17px;
+  font-size: 15px;
   font-variant-numeric: tabular-nums;
   font-weight: 750;
   line-height: 1.2;
@@ -378,21 +404,20 @@
   }
 
   .shopName {
-    max-width: 72px;
+    max-width: 96px;
   }
 
   .price {
-    min-width: 82px;
+    min-width: 58px;
   }
 
-  .currentPrice {
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0;
-  }
-
+  /*
+   * Ở dạng đầy đủ, `1.350.000 ₫` + `/ngày` không nằm chung một dòng nổi trong hai cột hẹp nên
+   * phải xếp chồng. Dạng rút gọn (`1,35tr/ngày`) thì vừa — bỏ xếp chồng, chân thẻ thấp lại và
+   * số tiền không còn trôi khỏi đơn vị của nó.
+   */
   .currentPrice b {
-    font-size: 15px;
+    font-size: 13.5px;
   }
 }
 
@@ -406,7 +431,7 @@
   }
 
   .currentPrice b {
-    font-size: 17px;
+    font-size: 15px;
   }
 }
 

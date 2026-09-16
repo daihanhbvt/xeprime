@@ -202,7 +202,7 @@ function HandoverForm({
               />
             </div>
           ) : null}
-          <Alert type="info" showIcon message={t('handover.scopeNote')} />
+          <Alert type="info" showIcon title={t('handover.scopeNote')} />
         </SectionCard>
 
         <StickyFormActions

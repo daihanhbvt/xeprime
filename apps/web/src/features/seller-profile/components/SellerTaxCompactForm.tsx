@@ -22,6 +22,7 @@ import { SelectField } from '@/components/form/SelectField';
 import { TextField } from '@/components/form/TextField';
 import { trailingRequiredMark } from '@/components/form/required-mark';
 import { ROUTES } from '@/constants/routes';
+import { useWorkspace } from '@/hooks/use-workspace';
 import { AccountPageHeader } from '@/features/account/components/AccountPageHeader';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -64,6 +65,7 @@ function toValues(profile: SellerProfile): TaxFormValues {
  */
 export function SellerTaxCompactForm() {
   const t = useTranslations('Account.tax');
+  const { paths, isManage } = useWorkspace();
   const tSeller = useTranslations('SellerProfile');
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
@@ -130,7 +132,7 @@ export function SellerTaxCompactForm() {
         <Alert
           type="error"
           showIcon
-          message={t('loadError')}
+          title={t('loadError')}
           action={
             <Button size="small" onClick={() => void profileQuery.refetch()}>
               {tCommon('actions.retry')}
@@ -182,7 +184,7 @@ export function SellerTaxCompactForm() {
           type="warning"
           showIcon
           className={styles.alert}
-          message={tSeller('page.changesRequested')}
+          title={tSeller('page.changesRequested')}
           description={profile.reviewNote}
         />
       ) : null}
@@ -191,20 +193,20 @@ export function SellerTaxCompactForm() {
           type="error"
           showIcon
           className={styles.alert}
-          message={tSeller('page.rejected')}
+          title={tSeller('page.rejected')}
           description={profile.reviewNote}
         />
       ) : null}
       {profile.status === SELLER_PROFILE_STATUS.SUBMITTED ? (
-        <Alert type="info" showIcon className={styles.alert} message={tSeller('page.pendingReview')} />
+        <Alert type="info" showIcon className={styles.alert} title={tSeller('page.pendingReview')} />
       ) : null}
       {profile.status === SELLER_PROFILE_STATUS.VERIFIED ? (
-        <Alert type="success" showIcon className={styles.alert} message={tSeller('page.verified')} />
+        <Alert type="success" showIcon className={styles.alert} title={tSeller('page.verified')} />
       ) : null}
       {!profile.editable ? (
-        <Alert type="info" showIcon className={styles.alert} message={tSeller('page.readOnly')} />
+        <Alert type="info" showIcon className={styles.alert} title={tSeller('page.readOnly')} />
       ) : !canManage ? (
-        <Alert type="info" showIcon className={styles.alert} message={t('viewOnly')} />
+        <Alert type="info" showIcon className={styles.alert} title={t('viewOnly')} />
       ) : null}
 
       <Form
@@ -261,10 +263,17 @@ export function SellerTaxCompactForm() {
             )}
           </fieldset>
 
-          <p className={styles.fullProfile}>
-            {t('fullProfile')}{' '}
-            <Link href={ROUTES.MANAGE.SELLER_PROFILE}>{t('openFullProfile')}</Link>
-          </p>
+          {/*
+            Link "mở hồ sơ đầy đủ" chỉ có nghĩa ở cổng quản lý. Ở khu tài khoản, `/account/tax`
+            CHÍNH LÀ hồ sơ người bán của chủ xe — một link trỏ về chính trang đang mở thì vô
+            nghĩa, còn trỏ sang `/manage/shop/seller-profile` thì đẩy tuyến hoa hồng ra khỏi khu
+            của họ. Đây từng là một trong 19 đường dẫn đó, và là đường khó thấy nhất.
+          */}
+          {isManage ? (
+            <p className={styles.fullProfile}>
+              {t('fullProfile')} <Link href={paths.sellerProfile}>{t('openFullProfile')}</Link>
+            </p>
+          ) : null}
 
           {!readOnly ? (
             <div className={styles.actions}>

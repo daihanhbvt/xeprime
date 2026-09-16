@@ -114,7 +114,7 @@ export function RecordPaymentModal({
           className={styles.note}
           type="info"
           showIcon
-          message="Cọc không trừ vào công nợ"
+          title="Cọc không trừ vào công nợ"
           description="Tiền cọc là tài sản giữ hộ khách, sẽ hoàn lại khi kết thúc chuyến — nên nó lên sổ Thu-Chi nhưng không làm giảm số tiền thuê khách còn nợ."
         />
       ) : null}

@@ -1,6 +1,12 @@
 # ADR 0018 — Bản đồ tính khoảng cách giao xe tận nơi
 
-Ngày: 24/08/2026 · Trạng thái: Accepted
+Ngày: 24/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0037](0037-geoapify-osm-map-provider.md)** — mọi quyết định SẢN PHẨM ở đây vẫn còn hiệu lực; chỉ nhà cung cấp và bộ khoá đã đổi.
+
+> ⚠️ **Nhà cung cấp đã đổi (15/09/2026).** Bản đồ chạy trên **Geoapify/OpenStreetMap**, không còn
+> Google Maps Platform. Bảng khoá ở §4 dưới đây (`GOOGLE_MAPS_SERVER_KEY` ·
+> `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY`) **không còn đúng** — hai khoá hiện hành là
+> `GEOAPIFY_API_KEY` và `NEXT_PUBLIC_GEOAPIFY_MAP_KEY`. Xem
+> [ADR 0037](0037-geoapify-osm-map-provider.md).
 
 Liên quan: [ADR 0014](0014-owner-and-shop-single-role.md) (nền tảng không đứng giữa quan hệ khách ↔
 gian hàng), [ADR 0007](0007-api-type-contract.md) (tiền là chuỗi),

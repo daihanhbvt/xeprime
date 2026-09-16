@@ -1,0 +1,36 @@
+/*
+ * Khối gợi ý giá — nằm NGAY dưới ô giá nên phải đọc được trong một nhịp mắt: một dòng số, một
+ * dòng nguồn, một nút. Nền nhạt để nó là trợ giúp chứ không tranh chỗ với ô nhập.
+ */
+.box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+}
+
+.range {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.basis {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* Nút chữ căn trái cùng mép với hai dòng trên — AntD đệm ngang mặc định cho nút link. */
+.apply.apply {
+  align-self: flex-start;
+  height: auto;
+  padding: 0;
+}
+
+.skeleton.skeleton {
+  width: 100%;
+}

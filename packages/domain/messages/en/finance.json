@@ -405,5 +405,25 @@
     "chartEmpty": "Nothing in this period",
     "chartEmptyHint": "Pick another period, or record a voucher in the ledger.",
     "createReceipt": "New income/expense voucher"
+  },
+  "taxWithheld": {
+    "title": "Tax withheld",
+    "period": "Period",
+    "explainer": "Tax is borne by the vehicle owner and is deducted from what XePrime owes you; it is never added to the customer price. It only accrues once a trip has started — trips cancelled before pickup are not charged.",
+    "loadError": "Could not load tax figures",
+    "empty": "No trips had tax withheld in this period.",
+    "percentOf": "{percent}% of taxable value",
+    "stats": {
+      "total": "Total withheld",
+      "base": "Taxable value",
+      "trips": "Trips"
+    },
+    "columns": {
+      "booking": "Trip",
+      "base": "Taxable value",
+      "label": "Tax type",
+      "amount": "Withheld",
+      "status": "Status"
+    }
   }
 }

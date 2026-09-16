@@ -314,11 +314,17 @@ export const debtsApi = {
  */
 export const financeApi = {
   summary(filters: FinancePeriodFilters, scope?: FinanceScope): Promise<FinanceSummary> {
-    return getApiClient().get<FinanceSummary>('/finance/summary', financeRangeParams(filters, scope));
+    return getApiClient().get<FinanceSummary>(
+      '/finance/summary',
+      financeRangeParams(filters, scope),
+    );
   },
 
   series(filters: FinancePeriodFilters, scope?: FinanceScope): Promise<FinanceSeries> {
-    return getApiClient().get<FinanceSeries>('/finance/series', financeSeriesParams(filters, scope));
+    return getApiClient().get<FinanceSeries>(
+      '/finance/series',
+      financeSeriesParams(filters, scope),
+    );
   },
 
   /** Cơ cấu MỘT chiều tiền — gọi hai lần (thu và chi) để hai khối tải song song, không nối đuôi. */

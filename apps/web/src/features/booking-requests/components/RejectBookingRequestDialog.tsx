@@ -105,7 +105,7 @@ function RejectForm({ request, submitting, error, onCancel, onConfirm }: Props &
           )}
         </label>
 
-        {error ? <Alert type="error" showIcon message={error} /> : null}
+        {error ? <Alert type="error" showIcon title={error} /> : null}
       </div>
     </Modal>
   );

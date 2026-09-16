@@ -89,7 +89,12 @@ function Endpoint({ label, value }: { label: string; value: string }) {
 
   return (
     <XStack ai="baseline" gap={space.xs}>
-      <Text col={colors.textMuted} fos={fieldFontSize.affix} width={58}>
+      {/*
+        Bề ngang cố định để hai nhãn thẳng cột. 58 vừa đủ cho "Return" nhưng ép "Nhận xe" xuống
+        hai dòng ở tiếng Việt — nhãn tràn hàng làm hai đầu của khoảng trông như bốn dòng rời.
+        `numberOfLines` là chốt chặn cuối cho một bản dịch còn dài hơn.
+      */}
+      <Text col={colors.textMuted} fos={fieldFontSize.affix} width={74} numberOfLines={1}>
         {label}
       </Text>
       <Text

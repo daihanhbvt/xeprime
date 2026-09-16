@@ -1,6 +1,5 @@
 'use client';
 
-import { LogoutOutlined } from '@ant-design/icons';
 import { Avatar } from 'antd';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -12,7 +11,6 @@ import {
   matchAccountNavKey,
   resolveAccountNav,
 } from '@/constants/account-nav';
-import { useMarketLogout } from '@/features/auth/hooks/use-market-logout';
 import type { CurrentUser } from '@/hooks/use-current-user';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
@@ -34,13 +32,17 @@ import styles from './AccountSidebar.module.css';
  * Thẻ người dùng chỉ hiện tên và NHÃN VAI (chủ gian hàng / nhân sự nền tảng / tài khoản XePrime)
  * — không hiện email hay số điện thoại, và không gắn nhãn gói kiểu "Premium": gói là dữ liệu
  * của `tenant.planCode`, không phải danh hiệu.
+ *
+ * KHÔNG có nút Đăng xuất ở đây (16/09/2026). Menu avatar trên `MarketHeader` đã có, và header
+ * đứng trên MỌI trang của khu này — kể cả trên điện thoại, nơi menu bên dưới là một dải cuộn
+ * ngang và một nút đăng xuất lọt giữa các mục điều hướng vừa dễ bấm nhầm vừa khó tìm khi cần.
+ * Hai nút đăng xuất trên cùng một màn cũng là hai luồng phải giữ cho giống nhau.
  */
 export function AccountSidebar({ user }: { user: CurrentUser }) {
   const t = useTranslations('Navigation');
   const tAccount = useTranslations('Account');
   const domainLabel = useDomainLabel();
   const pathname = usePathname();
-  const logout = useMarketLogout();
 
   const groups = useMemo(() => resolveAccountNav(user), [user]);
   const activeKey = matchAccountNavKey(pathname, flattenAccountNav(groups));
@@ -84,13 +86,6 @@ export function AccountSidebar({ user }: { user: CurrentUser }) {
             </ul>
           </section>
         ))}
-
-        {/* 'Đăng xuất' đã có ở `Navigation.public` (header marketplace dùng chung chuỗi này) —
-            chép sang bó của tính năng là tạo bản dịch thứ hai cho cùng một từ. */}
-        <button type="button" className={styles.logout} onClick={() => void logout()}>
-          <LogoutOutlined className={styles.icon} />
-          <span className={styles.label}>{t('public.logout')}</span>
-        </button>
       </div>
 
       <div className={styles.userCard} aria-label={tAccount('sidebar.userCard')}>

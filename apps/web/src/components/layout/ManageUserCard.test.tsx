@@ -160,7 +160,11 @@ describe('ManageUserCard — menu tài khoản', () => {
   it('menu chứa hồ sơ, cài đặt gian hàng và đăng xuất — không mục nào lên sidebar chính', async () => {
     await openMenu();
 
-    expect(screen.getByRole('link', { name: 'Hồ sơ' }).getAttribute('href')).toBe('/account');
+    // Hồ sơ con người của người đang ở trong cổng quản lý nằm TRONG cổng đó, không phải ở khu
+    // khách: `/account` đã đóng với thành viên gian hàng tuyến gói.
+    expect(screen.getByRole('link', { name: 'Hồ sơ' }).getAttribute('href')).toBe(
+      '/manage/account',
+    );
     expect(screen.getByRole('link', { name: 'Cài đặt gian hàng' }).getAttribute('href')).toBe(
       '/manage/shop',
     );

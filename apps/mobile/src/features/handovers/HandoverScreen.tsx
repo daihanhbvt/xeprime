@@ -478,6 +478,7 @@ function HandoverForm({
           ) : canConfirm ? (
             <Button
               label={isPickup ? t('actions.confirmPickup') : t('actions.confirmReturn')}
+              icon="checkmark-circle-outline"
               size="lg"
               onPress={() => setConfirming(true)}
             />
@@ -511,18 +512,28 @@ function HandoverForm({
         onClose={() => setConfirming(false)}
         title={t('confirm.title')}
         footer={
-          <>
-            <Button
-              label={t('confirm.ok')}
-              loading={confirm.isPending}
-              onPress={() => void doConfirm()}
-            />
-            <Button
-              label={t('confirm.keep')}
-              variant="ghost"
-              onPress={() => setConfirming(false)}
-            />
-          </>
+          <XStack gap={space.sm}>
+            {/*
+            Hai hành động NGẮN nằm một hàng: lối thoát bên trái, hành động chính bên phải —
+            xếp dọc thì hàng dưới đọc ra là một bước tiếp theo chứ không phải một lựa chọn thay
+            thế. "Quay lại" co vừa chữ, "Xác nhận" lấy phần còn lại — xem luật ở `Button.tsx`.
+          */}
+            <YStack flexShrink={0}>
+              <Button
+                label={t('confirm.keep')}
+                variant="ghost"
+                onPress={() => setConfirming(false)}
+              />
+            </YStack>
+            <YStack f={1}>
+              <Button
+                label={t('confirm.ok')}
+                icon="checkmark-outline"
+                loading={confirm.isPending}
+                onPress={() => void doConfirm()}
+              />
+            </YStack>
+          </XStack>
         }
       >
         <Text col={colors.text} fos={fontSize.bodySm}>

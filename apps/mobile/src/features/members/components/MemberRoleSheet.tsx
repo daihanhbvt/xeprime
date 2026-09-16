@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { ASSIGNABLE_TENANT_ROLES, type TenantRole } from '@xeprime/types';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -80,18 +80,32 @@ function RoleForm({ member, onDone }: { member: Member; onDone: () => void }) {
         ))}
       </YStack>
 
-      <Button
-        label={tActions('save')}
-        loading={update.isPending}
-        disabled={roleKey === member.roleKey}
-        onPress={submit}
-      />
-      <Button
-        label={tActions('close')}
-        variant="ghost"
-        disabled={update.isPending}
-        onPress={onDone}
-      />
+      <XStack gap={space.sm}>
+        {/*
+          Lối thoát bên TRÁI, hành động chính bên PHẢI — xếp dọc thì hàng dưới đọc ra là một
+          bước tiếp theo chứ không phải một lựa chọn thay thế.
+        
+          "Đóng" co vừa chữ, nút chính lấy phần còn lại — xem luật ở `Button.tsx`. Chia đôi thì
+          nửa hàng bên trái bỏ trống quá nửa cho một từ bốn chữ, còn nút chính thiếu chỗ.
+        */}
+        <YStack flexShrink={0}>
+          <Button
+            label={tActions('close')}
+            variant="ghost"
+            disabled={update.isPending}
+            onPress={onDone}
+          />
+        </YStack>
+        <YStack f={1}>
+          <Button
+            label={tActions('save')}
+            icon="checkmark-outline"
+            loading={update.isPending}
+            disabled={roleKey === member.roleKey}
+            onPress={submit}
+          />
+        </YStack>
+      </XStack>
     </YStack>
   );
 }

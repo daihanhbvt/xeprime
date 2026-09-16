@@ -50,6 +50,34 @@ export const TENANT_SCOPED_KEY = 'xeprime:tenantScoped';
 export const TenantScoped = () => SetMetadata(TENANT_SCOPED_KEY, true);
 
 /**
+ * CHỈ CHỦ GIAN HÀNG — trục thứ BA, cạnh permission và cờ gói (`ShopOwnerGuard`).
+ *
+ * Dùng cho tiền của gian hàng: ví, sổ cái, lệnh rút, tài khoản ngân hàng nhận tiền. Cố ý KHÔNG
+ * phải một permission: permission uỷ quyền được, và yêu cầu ở đây là không có đường nào để một
+ * `shop_manager`/`shop_staff`/`shop_viewer` chạm vào — kể cả khi ai đó cấp nhầm một khoá.
+ *
+ * Luôn đi kèm `@TenantScoped()`: guard đọc `req.tenant.roleKey`.
+ */
+export const SHOP_OWNER_ONLY_KEY = 'xeprime:shopOwnerOnly';
+export const ShopOwnerOnly = () => SetMetadata(SHOP_OWNER_ONLY_KEY, true);
+
+/**
+ * CHỈ GIAN HÀNG TUYẾN GÓI — ranh giới hai tuyến (ADR 0032 điều 6), thi hành bởi
+ * `SubscriptionTrackGuard`.
+ *
+ * Khác `@RequiresFeature` ở hai điểm, và cả hai đều quan trọng:
+ *
+ *  - Nó hỏi TUYẾN, không hỏi cờ tính năng. Một gian hàng tuyến gói thiếu cờ `finance` vẫn ở
+ *    trong Manage; một chủ xe tuyến hoa hồng thì không, dù gói của họ có cờ gì đi nữa.
+ *  - Nó chặn THẬT ngay, KHÔNG đi qua `PLAN_FEATURE_ENFORCEMENT`. Công tắc đó gác đợt rollout
+ *    hạ cấp năng lực; ranh giới sản phẩm không nằm sau một công tắc rollout.
+ *
+ * Gắn ở tầng CLASS cho cả controller thuộc bộ quản lý gian hàng. Luôn đi kèm `@TenantScoped()`.
+ */
+export const SUBSCRIPTION_TRACK_ONLY_KEY = 'xeprime:subscriptionTrackOnly';
+export const SubscriptionTrackOnly = () => SetMetadata(SUBSCRIPTION_TRACK_ONLY_KEY, true);
+
+/**
  * Tính năng NÂNG CAO mà endpoint thuộc về — trục thứ hai, độc lập với `@RequirePermissions`
  * (ADR 0027 điều 2). `PlanFeatureGuard` đọc metadata này.
  *

@@ -9,12 +9,18 @@ import { FEATURE_STATE } from '@xeprime/types';
 import { flattenLeaves, matchSelectedKey, navForScope } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
 import { FeatureExpiredNotice } from '@/components/feedback/FeatureExpiredNotice';
-import { portalLoginWithNext } from '@/features/auth/post-auth-destination';
+import {
+  canUseManagePortal,
+  isPlatformRoute,
+  portalLoginWithNext,
+  resolveWorkspaceHref,
+} from '@/features/auth/post-auth-destination';
 import { NoTenantState } from '@/features/shop/components/NoTenantState';
 import { shopStatusNotice } from '@/features/shop/status-notice';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useFeatureStates, usePlanEndsAt } from '@/hooks/use-feature';
 import { useTenantScope } from '@/hooks/use-tenant-scope';
+import { useWorkspace } from '@/hooks/use-workspace';
 import { destroySession } from '@/services/auth.service';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
@@ -64,6 +70,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { hasNoTenant, tenant } = useTenantScope();
   const featureStates = useFeatureStates();
   const planEndsAt = usePlanEndsAt();
+  const workspace = useWorkspace();
   // Một chỗ ghi duy nhất cho tuỳ chọn sidebar/khối menu — sidebar desktop và Drawer mobile
   // cùng sửa một state, nên việc lưu không thuộc về riêng cái nào.
   useNavPreferencesSync();
@@ -114,6 +121,24 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   if (isBarePortalPath) return <>{children}</>;
+
+  /*
+   * CỔNG TUYẾN (ADR 0027 · ADR 0028 điều 1): chủ xe tuyến hoa hồng không vào cổng quản lý.
+   *
+   * Bộ tính năng của họ là Owner Lite ở `/account` — cùng source, khác vỏ — và cổng quản lý bày
+   * ra chi nhánh, nhân viên, tài xế, sổ thu chi, hợp đồng: sáu thứ họ không có và không cần.
+   * Trước đây chỉ cần CÓ tenant là vào được, nên người vừa đăng ký một chiếc xe đã đứng giữa
+   * bảng điều khiển của một đội xe.
+   *
+   * Nhân sự nền tảng đi lối khác: `platformRole` vẫn vào được (họ dùng `/manage/admin`), và
+   * `isPlatformRoute` chừa đường đó ra cho một người vừa là chủ xe vừa là reviewer.
+   *
+   * Đây là lớp TRẢI NGHIỆM. Lớp chặn thật là guard quyền + cờ gói ở backend (ADR 0027 điều 4);
+   * `@RequiresFeature` đã gác đủ nhóm endpoint nâng cao, redirect ở đây không thay cho nó.
+   */
+  if (!canUseManagePortal(user) && !user.platformRole && !isPlatformRoute(pathname)) {
+    return <WrongWorkspaceRedirect href={resolveWorkspaceHref(user) ?? ROUTES.ACCOUNT.ROOT} />;
+  }
 
   const isViewportPath = VIEWPORT_PORTAL_PATHS.includes(pathname);
 
@@ -181,7 +206,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               description={tShop(`status.${shopNotice.key}.shell`)}
               action={
                 shopNotice.action ? (
-                  <Link href={shopNotice.action.href}>
+                  <Link href={workspace.paths[shopNotice.action.target]}>
                     <Button size="small">{tShop(`status.action.${shopNotice.action.key}`)}</Button>
                   </Link>
                 ) : null
@@ -195,6 +220,30 @@ export function AppShell({ children }: { children: ReactNode }) {
         </main>
         {isViewportPath ? null : <MobileNav />}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Người vào nhầm khu: đưa về khu làm việc đúng của họ, không render gì của cổng quản lý.
+ *
+ * Là một component RIÊNG vì `AppShell` đã trả về sớm ở nhiều nhánh phía trên — gọi `useEffect`
+ * sau một `return` có điều kiện là vi phạm quy tắc hook. Tách ra cũng giữ cho đường chuyển
+ * hướng chỉ chạy ĐÚNG một lần cho mỗi đích, thay vì mỗi lần `AppShell` render lại.
+ *
+ * `replace` chứ không `push`: người dùng bấm Quay lại phải về trang trước đó, không phải quay
+ * lại đúng cái URL vừa bị đẩy ra rồi bị đẩy ra lần nữa.
+ */
+function WrongWorkspaceRedirect({ href }: { href: string }) {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace(href);
+  }, [href, router]);
+
+  return (
+    <div className={styles.centered}>
+      <Spin size="large" />
     </div>
   );
 }

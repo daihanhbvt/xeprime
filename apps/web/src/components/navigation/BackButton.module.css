@@ -1,0 +1,102 @@
+/*
+ * Nút quay lại: viên thuốc trắng, viền mảnh, đĩa tròn chứa mũi tên. Hover thì cả viên ngả vàng
+ * thương hiệu và mũi tên trượt sang trái — gợi hướng đi mà không cần thêm chữ.
+ */
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  flex: none;
+  align-self: flex-start;
+  padding: 4px 14px 4px 4px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    color 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text);
+  font-size: 14px;
+  transition:
+    transform 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.label {
+  white-space: nowrap;
+}
+
+.back:hover {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+  box-shadow: var(--xp-shadow-raised);
+  color: var(--xp-color-primary-active);
+}
+
+.back:hover .icon {
+  transform: translateX(-2px);
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+.back:active {
+  box-shadow: var(--xp-shadow-card);
+  transform: translateY(1px);
+}
+
+.back:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 2px;
+}
+
+/* Màn hẹp: chỉ còn đĩa tròn, vùng chạm vẫn đủ rộng; chữ sống tiếp trong `aria-label`. */
+@media (max-width: 640px) {
+  .back {
+    padding: 4px;
+  }
+
+  .label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back,
+  .icon {
+    transition: none;
+  }
+
+  .back:hover .icon {
+    transform: none;
+  }
+
+  .back:active {
+    transform: none;
+  }
+}

@@ -135,7 +135,7 @@ export function VehicleCardGrid({
         type="warning"
         showIcon
         className={styles.alertsBanner}
-        message={t('alertsErrorTitle')}
+        title={t('alertsErrorTitle')}
         description={t('alertsErrorBody')}
         action={
           <Button size="small" onClick={alerts.refetch}>
