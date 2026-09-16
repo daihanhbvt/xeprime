@@ -1,14 +1,45 @@
 /**
- * Màn ví điểm: số dư → lệnh rút đang chạy → sổ.
+ * Màn ví điểm: số dư → nút rút → bảng tổng hợp giao dịch → lệnh rút đang chạy → sổ.
  *
- * Ba khối theo đúng thứ tự câu hỏi người dùng đặt ra khi mở màn này, không phải theo thứ tự dữ
+ * Các khối theo đúng thứ tự câu hỏi người dùng đặt ra khi mở màn này, không phải theo thứ tự dữ
  * liệu có sẵn.
  */
 
+/*
+ * Bề ngang KHÔNG do component này quyết.
+ *
+ * `WalletView` sống ở hai trang (`/manage/balance` và `/account/earnings`) mà mỗi trang có khung
+ * riêng: khu manage căn giữa theo `--xp-shell-form-max-width`, khu tài khoản đi qua
+ * `AccountShell`. Đặt `max-width` ở đây sẽ chồng lên cả hai và tạo hai mép trái khác nhau với
+ * tiêu đề trang ngay phía trên.
+ */
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-lg);
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+/**
+ * Hàng nút RÚT — căn giữa, ngay dưới thẻ số dư.
+ *
+ * Nút KHÔNG có màu riêng: `type="primary"` của AntD lấy sắc gold chung của hệ, y như mọi nút
+ * chính khác. Một màu riêng cho "màn tiền" là cách một sản phẩm có bốn sắc cam khác nhau.
+ */
+.cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  /* Thẻ số dư đã có lề dưới của chính nó — hàng nút chỉ cần sát vào, không cần một khoảng nữa. */
+  margin-top: calc(var(--xp-space-sm) - var(--xp-space-md));
+}
+
+.ctaHint {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-label);
+  text-align: center;
 }
 
 .block {
@@ -26,7 +57,7 @@
 .list {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-sm);
+  gap: var(--xp-space-xs);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -38,7 +69,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--xp-space-md);
-  padding: var(--xp-space-md);
+  padding: var(--xp-space-sm) var(--xp-space-md);
   border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius-lg);
   background: var(--xp-color-bg-container);
@@ -63,14 +94,14 @@
 
 .code {
   color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-caption);
+  font-size: var(--xp-font-size-label);
   font-weight: var(--xp-font-weight-regular);
 }
 
 .muted {
-  margin: var(--xp-space-xxs) 0 0;
+  margin: 2px 0 0;
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
+  font-size: var(--xp-font-size-label);
 }
 
 .entryKind {

@@ -51,7 +51,7 @@ describe('DepositToggleCard', () => {
     expect(toggle).toHaveProperty('disabled', false);
     expect(toggle.getAttribute('aria-checked')).toBe('false');
     // Trạng thái đang áp dụng là KHÔNG thu ⇒ phải nói rõ gian hàng tự thoả thuận với khách.
-    expect(screen.getByText(/tự thoả thuận cọc/i)).toBeTruthy();
+    expect(screen.getByText(/tự thoả thuận với khách/i)).toBeTruthy();
 
     fireEvent.click(toggle);
     expect(onChange).toHaveBeenCalledWith(true);

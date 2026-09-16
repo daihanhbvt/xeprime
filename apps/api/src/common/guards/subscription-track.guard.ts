@@ -1,6 +1,11 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { API_ERROR_CODE, BILLING_PHASE, tenantUsesManagePortal } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  BILLING_PHASE,
+  isPackageOnboardingPending,
+  tenantUsesManagePortal,
+} from '@xeprime/types';
 import { SUBSCRIPTION_TRACK_ONLY_KEY } from '../decorators';
 import type { RequestContext } from '../types/request-context';
 
@@ -61,6 +66,25 @@ export class SubscriptionTrackGuard implements CanActivate {
     if (!req.tenant) return true;
 
     if (tenantUsesManagePortal({ billingMode: req.tenant.billingMode })) return true;
+
+    /*
+     * GIAN HÀNG TRẢ PHÍ CHƯA THANH TOÁN — cùng câu trả lời "không", lối đi tiếp NGƯỢC HẲN
+     * (ADR 0040).
+     *
+     * Ở backend hai tình huống trông y như nhau: không có thuê bao tuyến gói hiệu lực. Nhưng
+     * `SUBSCRIPTION_TRACK_ONLY` nghĩa là "khu này không dành cho bạn, về Owner Lite", còn người
+     * đang chờ đối soát thì khu này LÀ của họ — họ chỉ chưa chuyển tiền. Trả chung một mã là
+     * đẩy họ về đúng màn Owner Lite mà ADR 0040 sinh ra để họ không bao giờ thấy.
+     */
+    if (isPackageOnboardingPending(req.tenant)) {
+      throw new ForbiddenException({
+        code: API_ERROR_CODE.PACKAGE_ONBOARDING_INCOMPLETE,
+        message:
+          'Gian hàng chưa hoàn tất thanh toán gói đầu tiên. ' +
+          'Hoàn tất chuyển khoản để mở bộ quản lý gian hàng.',
+        details: { onboardingState: req.tenant.onboardingState },
+      });
+    }
 
     throw new ForbiddenException({
       code: API_ERROR_CODE.SUBSCRIPTION_TRACK_ONLY,

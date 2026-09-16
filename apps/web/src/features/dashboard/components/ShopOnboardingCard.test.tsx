@@ -1,6 +1,11 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PERMISSION, SHOP_VERIFICATION, TENANT_STATUS } from '@xeprime/types';
+import {
+  PERMISSION,
+  SHOP_ONBOARDING_STATE,
+  SHOP_VERIFICATION,
+  TENANT_STATUS,
+} from '@xeprime/types';
 import type { MyShop } from '@/features/shop/types';
 import { ShopOnboardingCard } from './ShopOnboardingCard';
 
@@ -31,6 +36,7 @@ vi.mock('@/hooks/use-tenant-scope', () => ({
           name: 'Shop',
           slug: 's',
           status: state.tenantStatus,
+          onboardingState: SHOP_ONBOARDING_STATE.COMMISSION,
           roleKey: 'shop_owner',
           publicVehicleCount: state.publicVehicleCount,
         }
@@ -52,7 +58,10 @@ vi.mock('@/features/shop/hooks/use-shop', () => ({
   useMyShop: () => ({ data: state.shop }),
 }));
 
-function makeShop(profile: Partial<MyShop['profile']> = {}): MyShop {
+function makeShop(
+  profile: Partial<MyShop['profile']> = {},
+  owner: Partial<MyShop['ownerAccount']> = {},
+): MyShop {
   return {
     id: '01HSHOP00000000000000000A',
     code: 'SHOP-1',
@@ -60,17 +69,31 @@ function makeShop(profile: Partial<MyShop['profile']> = {}): MyShop {
     name: 'Demo',
     tenantType: 'individual',
     status: state.tenantStatus ?? TENANT_STATUS.DRAFT,
+    onboardingState: SHOP_ONBOARDING_STATE.COMMISSION,
     verification: state.verification ?? SHOP_VERIFICATION.UNVERIFIED,
     phone: null,
     email: null,
     latestApproval: null,
+    /*
+     * Chủ gian hàng đọc từ TÀI KHOẢN (16/09/2026) — ba cột `tenant_profiles.owner_*` đã drop,
+     * và thẻ này chấm "hồ sơ đủ chưa" bằng đúng nguồn mà cổng gửi duyệt ở backend dùng.
+     */
+    ownerAccount: {
+      userId: '01HUSER000000000000000000',
+      displayName: 'Nguyễn Văn A',
+      email: null,
+      phone: '84901234567',
+      emailVerified: false,
+      phoneVerified: true,
+      ...owner,
+    },
     defaultBranch: {
       id: '01HBRANCH0000000000000000',
       code: 'CN01',
       name: 'Chi nhánh',
       provinceCode: '79',
       provinceName: 'Hồ Chí Minh',
-    needsLocationReview: false,
+      needsLocationReview: false,
     },
     profile: {
       displayName: 'Demo',
@@ -82,13 +105,6 @@ function makeShop(profile: Partial<MyShop['profile']> = {}): MyShop {
       provinceName: 'Hồ Chí Minh',
       taxCode: null,
       businessLicenseNo: null,
-      bankName: null,
-      bankAccountNo: null,
-      bankAccountName: null,
-      qrUrl: null,
-      ownerFullName: 'Nguyễn Văn A',
-      ownerPhone: '84901234567',
-      ownerEmail: null,
       ...profile,
     },
   };
@@ -113,7 +129,7 @@ afterEach(cleanup);
 
 describe('Thẻ ba bước — chấm theo dữ liệu thật', () => {
   it('hồ sơ còn thiếu mục bắt buộc: bước hồ sơ CHƯA xong, mời điền', () => {
-    state.shop = makeShop({ ownerPhone: null });
+    state.shop = makeShop({}, { phone: null });
     render(<ShopOnboardingCard vehicleCount={0} />);
 
     expect(stepRow('Hoàn thiện hồ sơ gian hàng').textContent).toContain('Điền hồ sơ');

@@ -46,7 +46,7 @@ describe('FeatureExpiredNotice — băng gói hết hạn', () => {
     render(<FeatureExpiredNotice feature={PLAN_FEATURE.FINANCE} planEndsAt={null} />);
 
     const renew = screen.getByRole('link', { name: /Gia hạn gói/ });
-    expect(renew.getAttribute('href')).toBe('/manage/subscription');
+    expect(renew.getAttribute('href')).toBe('/manage/shop?section=plan');
     expect(screen.getByRole('button', { name: /Tôi đã gia hạn/ })).toBeTruthy();
   });
 
@@ -79,7 +79,7 @@ describe('FeatureUpsellState — tính năng chưa mua', () => {
     render(<FeatureUpsellState feature={PLAN_FEATURE.CONTRACTS} />);
 
     expect(screen.getByRole('link', { name: /Xem các gói/ }).getAttribute('href')).toBe(
-      '/manage/subscription',
+      '/manage/shop?section=plan',
     );
   });
 });

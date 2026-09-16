@@ -68,8 +68,22 @@ export function TripHoldPanel({ hold, tripId }: { hold: Hold; tripId: string }) 
       />
 
       <div className={styles.body}>
+        {/*
+          * QR kèm CHÚ THÍCH: một mã vuông không tự nói nó dùng để làm gì, và khách chưa quen
+          * chuyển khoản bằng QR sẽ đứng lại ở đúng bước này.
+          */}
         {qrUrl ? (
-          <img src={qrUrl} alt={t('qrAlt')} width={220} height={260} className={styles.qr} loading="lazy" />
+          <figure className={styles.qrWrap}>
+            <img
+              src={qrUrl}
+              alt={t('qrAlt')}
+              width={220}
+              height={260}
+              className={styles.qr}
+              loading="lazy"
+            />
+            <figcaption className={styles.qrCaption}>{t('qrCaption')}</figcaption>
+          </figure>
         ) : null}
 
         <dl className={styles.fields}>
@@ -112,9 +126,11 @@ export function TripHoldPanel({ hold, tripId }: { hold: Hold; tripId: string }) 
       </div>
 
       {/*
-        * Đồng hồ chạy, không phải một dòng "hạn lúc 14:35": cửa sổ chỉ còn 2 giờ (ADR 0032 điều
-        * 2), và một mốc giờ tuyệt đối bắt khách tự trừ nhẩm đúng lúc họ cần hành động nhanh.
-        * Chia hai chặng 60 phút — mốc giao giữa hai chặng đúng là lúc worker bắn nhắc.
+        * Đồng hồ chạy, không phải một dòng "hạn lúc 14:35": cửa sổ chỉ còn 10 phút (ADR 0039
+        * điều 2), và một mốc giờ tuyệt đối bắt khách tự trừ nhẩm đúng lúc họ cần hành động nhanh.
+        *
+        * `segmentMs` bằng đúng cửa sổ nên chỉ có MỘT chặng và nhãn chặng không hiện — giữ tham số
+        * lại để cửa sổ dài ra là chia chặng chạy lại ngay, không phải nối lại dây.
         */}
       <Countdown
         deadline={hold.expiresAt}
@@ -126,18 +142,24 @@ export function TripHoldPanel({ hold, tripId }: { hold: Hold; tripId: string }) 
           segment: (index, total) => t('countdownSegment', { index, total }),
         }}
       />
-      <p className={styles.expires}>{t('expires', { time: fmt.dateTime(hold.expiresAt) })}</p>
       {/*
-        * Huỷ miễn phí đếm xuôi từ lúc chủ xe duyệt và bị kẹp bởi giờ nhận xe, nên chuyến sát giờ
-        * có cửa sổ ngắn hơn 4 tiếng. ADR 0032 điều 5 bắt cảnh báo điều đó TRƯỚC khi khách trả
-        * tiền — không để họ phát hiện ra sau.
+        * Ba điều khách cần biết SAU khi đã thấy số tiền, gom thành một danh sách thay vì ba đoạn
+        * rời: chúng cùng một loại — điều kiện của khoản tiền vừa nhìn — nên đọc thành một khối
+        * nhanh hơn ba khối trôi nổi. Gạch đầu dòng cũng nói cho mắt biết đây là phần phụ, không
+        * phải một chỉ dẫn thứ hai cạnh tranh với mã QR.
+        *
+        * Huỷ miễn phí đếm xuôi từ mốc đặt và bị kẹp bởi giờ nhận xe, nên chuyến sát giờ có cửa
+        * sổ ngắn hơn 4 tiếng — ADR 0032 điều 5 bắt cảnh báo điều đó TRƯỚC khi khách trả tiền.
         */}
-      <p className={styles.note}>
-        {t(freeCancelIsShort ? 'freeCancelSoon' : 'freeCancel', {
-          time: fmt.dateTime(hold.freeCancelUntil),
-        })}
-      </p>
-      <p className={styles.note}>{t('restAtHandover')}</p>
+      <ul className={styles.notes}>
+        <li>{t('expires')}</li>
+        <li>
+          {t(freeCancelIsShort ? 'freeCancelSoon' : 'freeCancel', {
+            time: fmt.dateTime(hold.freeCancelUntil),
+          })}
+        </li>
+        <li>{t('restAtHandover')}</li>
+      </ul>
     </section>
   );
 }

@@ -266,7 +266,13 @@
       "chatShop": "Nhắn chủ xe",
       "close": "Quay lại",
       "autoAccepted": "Đơn đã được xác nhận tự động — lịch xe đã giữ cho bạn.",
-      "autoAcceptedHold": "Đơn đã được xác nhận tự động — hoàn tất giữ chỗ để giữ lịch xe."
+      "autoAcceptedHold": "Đơn đã được xác nhận tự động — hoàn tất giữ chỗ để giữ lịch xe.",
+      "openHold": "Theo dõi chuyến này",
+      "holdLoadFailed": "Chưa tải được mã thanh toán. Mở chuyến trong mục Chuyến của tôi để lấy mã — chỗ của bạn vẫn đang được giữ.",
+      "heldTitle": "Chỗ xe đã được giữ cho bạn",
+      "heldSubtitle": "Vui lòng hoàn tất thanh toán để xác nhận chuyến thuê.",
+      "copyRequestCode": "Sao chép mã yêu cầu",
+      "tripInfo": "Thông tin chuyến thuê"
     },
     "duplicate": {
       "title": "Yêu cầu trùng lặp",

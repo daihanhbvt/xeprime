@@ -15,9 +15,9 @@
   "form": {
     "title": "Add payout account",
     "bankCode": "Bank",
-    "bankCodePlaceholder": "VCB, ACB, TCB…",
+    "bankCodePlaceholder": "Choose a bank",
     "accountNumber": "Account number",
-    "accountName": "Account holder name",
+    "accountName": "Beneficiary full name",
     "accountNameHint": "Type it exactly as registered with your bank — a wrong name gets the transfer bounced.",
     "label": "Nickname",
     "labelPlaceholder": "Optional",
@@ -31,7 +31,8 @@
       "numberRequired": "Enter the account number",
       "numberDigits": "Account number must be digits only",
       "nameRequired": "Enter the account holder name"
-    }
+    },
+    "bankNotFound": "No matching bank."
   },
   "refund": {
     "title": "Refund destination",

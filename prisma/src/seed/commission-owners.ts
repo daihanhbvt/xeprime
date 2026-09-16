@@ -129,7 +129,6 @@ function toShopSpec(input: OwnerInput, index: number): ShopSpec {
       taxCode: null,
       businessLicenseNo: null,
       bank: input.bank ? { ...input.bank, accountName: bankAccountName(input.name) } : null,
-      ownerFullName: input.name,
     },
     branches: [
       {

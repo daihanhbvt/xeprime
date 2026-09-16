@@ -15,12 +15,19 @@ import {
 } from './api';
 import type { CustomerTripHandoverEvidence, ProvideRefundAccountInput } from './types';
 
-/** Danh sách chuyến của khách. Lọc + phân trang ở server; `filter` sống trên URL (ADR 0004). */
-export function useTrips(filter: string, page: number, role?: string) {
+/**
+ * Danh sách chuyến của khách. Lọc + phân trang ở server; `filter` sống trên URL (ADR 0004).
+ *
+ * `enabled` cho người gọi TẮT hẳn lượt đọc mà vẫn giữ đúng thứ tự hook. Cần nó vì từ 16/09/2026
+ * thẻ tài khoản của vỏ quản lý (`ManageUserCard`) đếm chuyến đi thuê còn dở trên MỌI trang —
+ * và nhân sự nền tảng thì không bao giờ có chuyến nào để đếm.
+ */
+export function useTrips(filter: string, page: number, role?: string, enabled = true) {
   return useQuery({
     // `role` nằm trong queryKey: đổi tab vai phải là một lần đọc KHÁC, không phải cùng cache.
     queryKey: queryKeys.trips.list(tripsToParams(filter, page, role)),
     queryFn: () => fetchTrips(filter, page, role),
+    enabled,
     // Đổi tab không nháy sang trống rồi mới có dữ liệu.
     placeholderData: keepPreviousData,
   });

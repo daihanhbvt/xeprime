@@ -87,7 +87,7 @@
     "subscriptionsCollected": "Tiền gói đã thu",
     "custodiedTitle": "Tiền giữ hộ — nghĩa vụ phải trả",
     "holdsUnsettled": "Giữ chỗ chưa chốt kết cục",
-    "walletTotal": "Ví điểm",
+    "walletTotal": "Số dư phải trả",
     "walletSplit": "{total} · rút được {available} · đang chuyển {pending}",
     "refundsPending": "Hoàn đang chờ chuyển tay",
     "unmatchedIn": "Tiền vào chưa khớp",

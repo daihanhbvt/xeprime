@@ -49,17 +49,6 @@
   padding-inline: 0;
 }
 
-/* Tên gian hàng — dòng phụ dưới logo, có thể rất dài nên cắt bằng ellipsis. */
-.tenant {
-  flex: none;
-  padding: 0 var(--xp-space-md) var(--xp-space-sm);
-  font-size: var(--xp-font-size-body-sm);
-  color: var(--xp-shell-sidebar-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /**
  * Nút thu gọn.
  *

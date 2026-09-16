@@ -148,3 +148,73 @@
   min-height: 100dvh;
   place-items: center;
 }
+
+/* ─── Chỉ dẫn bước (chỉ tuyến GÓI) ───────────────────────────────────────── */
+
+/*
+ * HAI bước, MỘT dòng. Cố ý không dùng `Steps` của AntD: nó vẽ mô tả, đường nối và icon trạng
+ * thái cho một luồng chỉ có hai chặng, và chiếm gần nửa chiều cao khung nhìn trên điện thoại
+ * ngay phía trên thứ người dùng phải điền.
+ *
+ * `<ol>` chứ không phải `<div>`: đây là một chuỗi có THỨ TỰ, và trình đọc màn hình phải đọc được
+ * "1 trong 2". Bước đang mở mang `aria-current="step"`, nên nó phân biệt được mà không cần màu.
+ */
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 0 var(--xp-space-md);
+  padding: 0;
+  gap: var(--xp-space-sm) var(--xp-space-lg);
+  list-style: none;
+}
+
+.step,
+.stepCurrent {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.stepCurrent {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.stepIndex {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid currentcolor;
+  border-radius: 50%;
+  font-size: var(--xp-font-size-overline);
+  line-height: 1;
+}
+
+.stepCurrent .stepIndex {
+  border-color: transparent;
+  background: var(--xp-color-primary);
+  color: var(--xp-color-text-inverse, #fff);
+}
+
+/* ─── Bước 2: chọn gói / chuyển khoản ────────────────────────────────────── */
+
+/*
+ * Thẻ trắng giống `ShopRegistration` để hai bước trông như cùng một luồng — nhưng KHÔNG chia hai
+ * khoang: bước này không có gì để giới thiệu, chỉ có bảng giá và một mã chuyển khoản.
+ */
+.checkout {
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+}
+
+@media (min-width: 900px) {
+  .checkout {
+    padding: var(--xp-space-xl);
+  }
+}

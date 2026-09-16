@@ -3,6 +3,7 @@ import { apiGet, apiPost, fetchPage, type Paged } from '@/services/api-client';
 import type {
   MySubscription,
   PaymentInfo,
+  PendingSubscriptionInvoice,
   PurchaseSubscriptionInput,
   SubscriptionInvoice,
   TenantPlan,
@@ -19,6 +20,17 @@ export const fetchTenantPlans = (): Promise<TenantPlan[]> =>
 /** Tài khoản nhận chuyển khoản của nền tảng — nguồn dựng ảnh VietQR (ADR 0016 điều 5). */
 export const fetchPaymentInfo = (): Promise<PaymentInfo> =>
   apiGet<PaymentInfo>('/subscription/payment-info');
+
+/**
+ * Hoá đơn gói ĐANG chờ tiền — `null` khi không có (ADR 0040).
+ *
+ * Endpoint riêng thay vì lọc trang đầu của `fetchInvoices`: bất biến "mỗi gian hàng tối đa MỘT
+ * hoá đơn trả được" do server giữ (advisory lock + void hoá đơn cũ trong `purchase`), nên câu
+ * trả lời phải đến từ đó. Lọc ở client biến bất biến thành một giả định, và một lịch sử dài hơn
+ * một trang sẽ đẩy hoá đơn chờ ra khỏi tầm nhìn.
+ */
+export const fetchPendingInvoice = (): Promise<SubscriptionInvoice | null> =>
+  apiGet<PendingSubscriptionInvoice>('/subscription/invoices/pending').then((r) => r.invoice);
 
 export type InvoiceListResult = Paged<SubscriptionInvoice>;
 

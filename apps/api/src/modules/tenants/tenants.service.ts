@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { markBadgesDirty, newId, Prisma } from '@xeprime/prisma';
 import {
   APPROVAL_ACTION,
@@ -7,8 +12,12 @@ import {
   API_ERROR_CODE,
   canSubmitShopVerification,
   MEMBERSHIP_STATUS,
+  missingPackageShopRegistrationFields,
   missingShopProfileRequirements,
+  REGISTRATION_TRACK,
+  registrationTrackOf,
   resolveShopVerification,
+  shopOnboardingStateForTrack,
   SHOP_VERIFICATION,
   TENANT_ROLE,
   TENANT_STATUS,
@@ -24,6 +33,7 @@ import {
   DefaultBranchDto,
   MyShopDto,
   RegisterShopDto,
+  ShopOwnerAccountDto,
   TenantProfileDto,
   UpdateTenantProfileDto,
 } from './dto/tenant-onboarding.dto';
@@ -40,14 +50,38 @@ const PROFILE_SELECT = {
   wardName: true,
   taxCode: true,
   businessLicenseNo: true,
-  bankName: true,
-  bankAccountNo: true,
-  bankAccountName: true,
-  qrUrl: true,
-  ownerFullName: true,
-  ownerPhone: true,
-  ownerEmail: true,
 } satisfies Prisma.TenantProfileSelect;
+
+/**
+ * Tài khoản CHỦ gian hàng — nguồn DUY NHẤT của "chủ gian hàng là ai" (16/09/2026).
+ *
+ * Thay cho ba cột text `owner_*` trên `tenant_profiles` (đã drop): ở đây email và SĐT là thứ
+ * đã đi qua luồng xác minh OTP, nên hai cờ `*Verified` nói được điều mà một ô chữ gõ tay không
+ * bao giờ nói được.
+ */
+const OWNER_SELECT = {
+  id: true,
+  displayName: true,
+  email: true,
+  phone: true,
+  emailVerifiedAt: true,
+  phoneVerifiedAt: true,
+} satisfies Prisma.UserSelect;
+
+type OwnerRow = Prisma.UserGetPayload<{ select: typeof OWNER_SELECT }>;
+
+function toOwnerAccount(owner: OwnerRow): ShopOwnerAccountDto {
+  return {
+    userId: owner.id,
+    displayName: owner.displayName,
+    email: owner.email,
+    phone: owner.phone,
+    // Đi trên dây là BOOLEAN, không phải mốc thời gian: màn hình chỉ hỏi "đã xác minh chưa",
+    // và một mốc `…VerifiedAt` lọt ra ngoài là mời client tự nghĩ ra cách hiển thị nó.
+    emailVerified: owner.emailVerifiedAt !== null,
+    phoneVerified: owner.phoneVerifiedAt !== null,
+  };
+}
 
 @Injectable()
 export class TenantsService {
@@ -87,6 +121,28 @@ export class TenantsService {
    *
    * Tỉnh kiểm TRƯỚC transaction: sai mã là lỗi nhập liệu của người dùng, không đáng để mở
    * transaction rồi rollback.
+   *
+   * ## HAI TUYẾN, một endpoint (16/09/2026 — ADR 0040)
+   *
+   * `dto.registrationTrack` là thứ tách hai cửa vào, và nó được LƯU (`onboarding_state`) chứ
+   * không chỉ dùng một lần rồi bỏ:
+   *
+   * | | `commission` (mặc định) | `package` |
+   * | --- | --- | --- |
+   * | Trường bắt buộc | tỉnh | tỉnh + **xã** + **địa chỉ chi tiết** + **SĐT** |
+   * | Gói gán lúc tạo | gói hoa hồng mặc định | **KHÔNG gán gì** |
+   * | `onboarding_state` | `commission` | `package_pending` |
+   * | Đi đâu sau khi tạo | Owner Lite ở `/account` | bước 2 của onboarding (chọn gói → chuyển khoản) |
+   *
+   * Vì sao tuyến gói KHÔNG nhận một gói hoa hồng tạm: dòng thuê bao là thứ `/auth/me` đọc để
+   * chọn KHU làm việc, nên gán nó nghĩa là người vừa bấm "Đăng ký gian hàng" trở thành chủ xe
+   * tuyến hoa hồng về mặt sản phẩm — đúng lỗi đang sửa. Hệ quả đi kèm là đúng: pha của họ là
+   * `unconfigured`, nên `billingModeForMoneyOrThrow` từ chối mọi đường ghi tiền cho tới khi gói
+   * bật. Một gian hàng chưa trả tiền thì cũng chưa được nhận đơn.
+   *
+   * `subscription.purchase` KHÔNG cần một dòng thuê bao nào: quyền đến từ VAI
+   * (`permissionsForTenantMember`), và `/subscription/*` cố ý không mang `@SubscriptionTrackOnly`
+   * — đó là phễu nâng cấp. Nên tuyến gói mua được gói ngay mà không cần quyền tạm nào.
    */
   async registerShop(userId: string, dto: RegisterShopDto): Promise<MyShopDto> {
     const existing = await this.prisma.tenantMembership.findFirst({
@@ -100,35 +156,60 @@ export class TenantsService {
       });
     }
 
+    const track = registrationTrackOf(dto.registrationTrack);
+    const isPackageTrack = track === REGISTRATION_TRACK.PACKAGE;
+
+    /*
+     * Bộ trường của tuyến GÓI kiểm ở đây, không bằng `@ValidateIf` trong DTO.
+     *
+     * Quy tắc sống ở `@xeprime/types` và dùng CHUNG với cổng đăng xe
+     * (`missingPackageShopListingRequirements` trừ logo) — một định nghĩa, hai điểm thi hành.
+     * Diễn đạt lại nó bằng bốn decorator có điều kiện là bản sao thứ hai sẽ lệch ở lần đổi quy
+     * tắc tiếp theo, và lúc đó người dùng trả tiền xong mới bị cổng đăng xe từ chối.
+     *
+     * Trả `details.missing` là danh sách MÃ (ADR 0012) — web dựng nhãn theo ngôn ngữ đang dùng.
+     */
+    if (isPackageTrack) {
+      const missing = missingPackageShopRegistrationFields({
+        displayName: dto.name,
+        contactPhone: dto.phone,
+        provinceCode: dto.provinceCode,
+        wardCode: dto.wardCode,
+        addressLine: dto.addressLine ?? dto.address,
+      });
+      if (missing.length > 0) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message: 'Gian hàng trả phí cần đủ tên, số điện thoại và địa chỉ trước khi mở.',
+          details: { missing },
+        });
+      }
+    }
+
     /*
      * Kiểm danh mục + ghép chuỗi hiển thị + tra toạ độ TRƯỚC transaction: `AddressService` có
      * thể phải hỏi bản đồ, và giữ transaction mở trong lúc chờ Internet là cách để một sự cố
      * bên ngoài thành một hàng đợi khoá bên trong.
      *
-     * `requireWard: false` — đăng ký gian hàng là bước đầu tiên và người đăng ký thường chưa có
-     * địa chỉ chính xác. Thiếu xã/phường thì chi nhánh mặc định mang cờ chờ bổ sung, và cổng
-     * `submitForReview` mới là chỗ đòi địa chỉ đủ.
+     * `requireWard` theo TUYẾN. Tuyến hoa hồng vẫn `false` — người mở hồ sơ chủ xe thường chưa
+     * có địa chỉ chính xác, và chặn ở đây là chặn luôn việc họ bắt đầu; chi nhánh sinh ra mang
+     * cờ chờ bổ sung. Tuyến gói thì `true`: đó là một mặt tiền có người trả tiền để khách tìm
+     * thấy, nên `AddressService` phải xác nhận xã tồn tại VÀ thuộc đúng tỉnh trước khi ghi.
      */
-    const address = await this.address.resolve({
-      provinceCode: dto.provinceCode,
-      wardCode: dto.wardCode,
-      addressLine: dto.addressLine ?? dto.address,
-      placeId: dto.placeId,
-      latitude: dto.latitude,
-      longitude: dto.longitude,
-      locationSource: dto.locationSource,
-    });
+    const address = await this.address.resolve(
+      {
+        provinceCode: dto.provinceCode,
+        wardCode: dto.wardCode,
+        addressLine: dto.addressLine ?? dto.address,
+        placeId: dto.placeId,
+        latitude: dto.latitude,
+        longitude: dto.longitude,
+        locationSource: dto.locationSource,
+      },
+      { requireWard: isPackageTrack },
+    );
 
     const tenantType = dto.tenantType ?? TENANT_TYPE.INDIVIDUAL;
-    /*
-     * Tên gian hàng CÁ NHÂN chính là tên người cho thuê (tuyến hoa hồng của ADR 0028) — hỏi lại
-     * cùng một cái tên ở một ô thứ hai là ma sát không đổi lấy gì. Gian hàng doanh nghiệp thì
-     * KHÔNG suy diễn: tên công ty không phải tên người chịu trách nhiệm, và đoán sai ở đây nghĩa
-     * là reviewer duyệt một cái tên không ai khai.
-     */
-    const ownerFullName =
-      dto.ownerFullName ?? (tenantType === TENANT_TYPE.INDIVIDUAL ? dto.name : null);
-
     const id = newId();
     const tenantId = await this.prisma.$transaction(async (tx) => {
       await tx.tenant.create({
@@ -139,6 +220,8 @@ export class TenantsService {
           name: dto.name,
           tenantType,
           status: TENANT_STATUS.ACTIVE,
+          // Cửa vào, lưu bền vững — xem docblock của hàm và `shop-onboarding.ts`.
+          onboardingState: shopOnboardingStateForTrack(track),
           ownerUserId: userId,
           phone: dto.phone ?? null,
           email: dto.email ?? null,
@@ -168,16 +251,14 @@ export class TenantsService {
           wardCode: address.wardCode,
           wardName: address.wardName,
           /*
-           * Ba cột chủ gian hàng ghi NGAY tại đây, không để trống chờ một màn khác điền nốt.
+           * KHÔNG còn ba cột chủ gian hàng ở đây (16/09/2026).
            *
-           * `missingShopProfileRequirements` đòi `ownerFullName` + `ownerPhone` mới cho gửi
-           * duyệt. Trước đây `registerShop` không ghi hai cột đó, nên MỌI hồ sơ mở từ luồng đăng
-           * xe công khai đều gửi duyệt thất bại với `PROFILE_INCOMPLETE`, và lối thoát duy nhất
-           * là vào cổng quản lý điền tay — đúng con đường mà tuyến hoa hồng không được đi.
+           * `missingShopProfileRequirements` vẫn đòi họ tên + SĐT chủ mới cho gửi duyệt, nhưng
+           * nó đọc chúng từ `tenants.owner_user_id → users` — tức từ chính tài khoản vừa gọi
+           * endpoint này. Không có bước ghi nào ở đây thì cũng không có bản sao nào trôi khỏi
+           * bản gốc, và một chủ xe đổi SĐT trong hồ sơ cá nhân không còn để lại một số cũ trên
+           * phiếu duyệt.
            */
-          ownerFullName,
-          ownerPhone: dto.phone ?? null,
-          ownerEmail: dto.email ?? null,
         },
       });
       await this.branches.createDefaultBranch(tx, {
@@ -194,8 +275,13 @@ export class TenantsService {
        * có tập cờ RỖNG và mất sạch tính năng nâng cao ngày cổng chặn bật. Ghi qua
        * `BillingService` chứ không tự `tx.tenantSubscription.create` — nó là writer duy nhất của
        * bảng đó (ADR 0010).
+       *
+       * ⚠️ CHỈ tuyến hoa hồng (ADR 0040). Gán một dòng hoa hồng cho người vừa bấm "Đăng ký gian
+       * hàng" là biến họ thành chủ xe tuyến hoa hồng ở mọi nơi đọc `billingMode` — khu làm việc,
+       * nhãn tài khoản, trần 3 xe của Owner Lite — và đó chính là lỗi ADR 0040 sửa. Họ nhận gói
+       * THẬT ở `activateFromInvoiceWithinTx`, khi tiền đã về.
        */
-      await this.billing.assignDefaultPlanWithinTx(tx, id);
+      if (!isPackageTrack) await this.billing.assignDefaultPlanWithinTx(tx, id);
 
       /*
        * VÍ THEO NGƯỜI CHỦ (15/09/2026) — trong CHÍNH transaction này, cùng lý do với dòng gói ở
@@ -225,9 +311,11 @@ export class TenantsService {
         name: true,
         tenantType: true,
         status: true,
+        onboardingState: true,
         phone: true,
         email: true,
         profile: { select: PROFILE_SELECT },
+        owner: { select: OWNER_SELECT },
       },
     });
     if (!tenant) throw notFound();
@@ -269,7 +357,20 @@ export class TenantsService {
        * trường này mới là cổng của việc mua gói thuê bao.
        */
       verification: resolveShopVerification(latest?.status),
+      /*
+       * Trục THỨ TƯ (ADR 0040) — cửa vào của gian hàng này. Trang Cửa hàng đọc nó để biết cổng
+       * logo có áp hay không; suy từ `billingMode` là sai ở cả hai đầu (gian hàng hết gói vẫn là
+       * gian hàng; chủ xe hoa hồng vừa mua gói thì chưa từng đi qua cửa gian hàng).
+       */
+      onboardingState: tenant.onboardingState,
       profile: emptyProfileIfNull(tenant.profile),
+      /*
+       * Chủ gian hàng đọc từ TÀI KHOẢN, không từ hồ sơ (16/09/2026). Đây là lý do khối này là
+       * một object riêng chứ không phải ba trường nữa nằm trong `profile`: `profile` là thứ
+       * `tenant.update` sửa được, còn khối này thì không — nó chỉ đổi khi chính người chủ đổi
+       * tài khoản của họ.
+       */
+      ownerAccount: toOwnerAccount(tenant.owner),
       latestApproval: latest
         ? {
             status: latest.status,
@@ -419,6 +520,7 @@ export class TenantsService {
         id: true,
         status: true,
         profile: { select: PROFILE_SELECT },
+        owner: { select: OWNER_SELECT },
         // Tỉnh HIỆU LỰC nằm ở chi nhánh mặc định; hai cột trên hồ sơ chỉ là bản sao
         // (`syncProfileFromDefaultBranch`), nên chấm theo bản sao là chấm nhầm nguồn.
         branches: {
@@ -457,11 +559,19 @@ export class TenantsService {
       });
     }
 
+    /*
+     * Họ tên + SĐT chủ đọc từ TÀI KHOẢN CHỦ (16/09/2026), không từ hồ sơ gian hàng.
+     *
+     * Cổng này tồn tại để reviewer luôn liên hệ được với một người thật. Ba cột text cũ không
+     * làm được việc đó: không ai chứng minh số trên chúng có thật, và chúng trôi khỏi tài khoản
+     * ngay lần đầu chủ shop đổi SĐT đăng nhập. Đọc thẳng `users` vừa là một nguồn, vừa là nguồn
+     * ĐÃ QUA xác minh OTP.
+     */
     const missing = missingShopProfileRequirements({
       displayName: tenant.profile?.displayName,
       provinceCode: tenant.branches[0]?.provinceCode ?? tenant.profile?.provinceCode,
-      ownerFullName: tenant.profile?.ownerFullName,
-      ownerPhone: tenant.profile?.ownerPhone,
+      ownerFullName: tenant.owner.displayName,
+      ownerPhone: tenant.owner.phone,
     });
     if (missing.length > 0) {
       throw new ConflictException({
@@ -487,7 +597,23 @@ export class TenantsService {
           targetId: tenantId,
           status: APPROVAL_STATUS.PENDING,
           submittedBy: userId,
-          snapshot: (tenant.profile ?? {}) as Prisma.InputJsonValue,
+          /*
+           * SNAPSHOT = hồ sơ + DANH TÍNH CHỦ tại thời điểm gửi (16/09/2026).
+           *
+           * Reviewer phải duyệt đúng bản người gửi đã gửi. Đọc `users` LIVE lúc mở phiếu nghĩa
+           * là chủ shop đổi tên/SĐT trong lúc chờ thì hồ sơ đang duyệt âm thầm đổi theo — và
+           * phiếu đã duyệt xong cũng không còn kể được nó đã duyệt cái gì.
+           *
+           * Ba khoá giữ NGUYÊN TÊN `ownerFullName`/`ownerPhone`/`ownerEmail`: phiếu cũ trong
+           * DB mang đúng ba khoá đó, và `SHOP_SNAPSHOT_FIELDS` ở web vẽ theo khoá. Snapshot là
+           * jsonb đông cứng, không migrate — đổi tên khoá là làm mù mọi phiếu đã lưu.
+           */
+          snapshot: {
+            ...(tenant.profile ?? {}),
+            ownerFullName: tenant.owner.displayName,
+            ownerPhone: tenant.owner.phone,
+            ownerEmail: tenant.owner.email,
+          } as Prisma.InputJsonValue,
         },
       });
 
@@ -582,13 +708,6 @@ function emptyProfileIfNull(
     wardName: profile?.wardName ?? null,
     taxCode: profile?.taxCode ?? null,
     businessLicenseNo: profile?.businessLicenseNo ?? null,
-    bankName: profile?.bankName ?? null,
-    bankAccountNo: profile?.bankAccountNo ?? null,
-    bankAccountName: profile?.bankAccountName ?? null,
-    qrUrl: profile?.qrUrl ?? null,
-    ownerFullName: profile?.ownerFullName ?? null,
-    ownerPhone: profile?.ownerPhone ?? null,
-    ownerEmail: profile?.ownerEmail ?? null,
   };
 }
 

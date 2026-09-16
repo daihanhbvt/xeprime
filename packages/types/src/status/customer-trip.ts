@@ -53,6 +53,18 @@ export const CUSTOMER_TRIP_STAGE = {
    * Gộp lại là giấu mất việc duy nhất khách phải làm để có xe.
    */
   AWAITING_HOLD: 'awaiting_hold',
+  /**
+   * Đã giữ chỗ xong (tiền đã về), đang chờ chủ xe xác nhận — ADR 0039.
+   *
+   * Tách khỏi `PENDING_APPROVAL` vì rủi ro của khách ở hai chặng này khác hẳn nhau: ở kia họ
+   * chưa mất gì, ở đây XePrime đang giữ tiền của họ. Màn hình vì thế phải nói được cả hai vế —
+   * "chỗ của bạn đã được giữ" và "từ chối thì hoàn đủ vào ví điểm" — thứ mà nhãn "Chờ xác nhận"
+   * suông không nói được.
+   *
+   * Cũng KHÔNG phải `READY`: chưa có đơn thuê nào, và gọi một yêu cầu chưa được duyệt là
+   * "sẵn sàng" đúng là điều lượt rà soát 16/09 cấm.
+   */
+  PENDING_APPROVAL_PAID: 'pending_approval_paid',
   /** Chủ xe đã nhận, chưa tới giờ giao xe. */
   READY: 'ready',
   /** Xe đã ở với khách. */
@@ -79,6 +91,10 @@ export const CUSTOMER_TRIP_STAGE_META: Readonly<Record<CustomerTripStage, Status
   [CUSTOMER_TRIP_STAGE.AWAITING_HOLD]: {
     label: 'Chờ chuyển giữ chỗ',
     color: STATUS_COLOR.WARNING,
+  },
+  [CUSTOMER_TRIP_STAGE.PENDING_APPROVAL_PAID]: {
+    label: 'Đã giữ chỗ · chờ chủ xe xác nhận',
+    color: STATUS_COLOR.WAITING,
   },
   [CUSTOMER_TRIP_STAGE.READY]: { label: 'Sẵn sàng', color: STATUS_COLOR.INFO },
   [CUSTOMER_TRIP_STAGE.ACTIVE]: { label: 'Đang thuê', color: STATUS_COLOR.PROCESSING },
@@ -122,6 +138,8 @@ export function customerTripStage(input: {
       return CUSTOMER_TRIP_STAGE.PENDING_APPROVAL;
     case BOOKING_REQUEST_STATUS.AWAITING_HOLD:
       return CUSTOMER_TRIP_STAGE.AWAITING_HOLD;
+    case BOOKING_REQUEST_STATUS.HOLD_PAID:
+      return CUSTOMER_TRIP_STAGE.PENDING_APPROVAL_PAID;
     // `hold_expired` xếp cùng `cancelled_by_customer` chứ không phải `REJECTED`: hết hạn chuyển
     // giữ chỗ là chuyến KHÔNG THÀNH, không ai từ chối khách cả — chỗ chỉ được nhả ra. Xếp vào
     // `REJECTED` là đổ lỗi cho chủ xe về một việc họ không dính vào.
@@ -253,6 +271,12 @@ export const CUSTOMER_CANCELLABLE_STAGES: readonly CustomerTripStage[] = [
   CUSTOMER_TRIP_STAGE.PENDING_APPROVAL,
   // Đang chờ chuyển giữ chỗ (R3): chưa có tiền nào về, huỷ là nhả chỗ — không có gì để hoàn.
   CUSTOMER_TRIP_STAGE.AWAITING_HOLD,
+  /*
+   * Đã cọc, đang chờ gian hàng nhận (ADR 0039). Huỷ được, và ĐÂY là chặng mà quyền huỷ có giá
+   * trị nhất: khách đã trả tiền và có thể phải chờ tới một giờ. Số tiền quay về theo đúng mốc
+   * `free_cancel_until` đã đóng băng trên hold — không có luật riêng cho chặng này.
+   */
+  CUSTOMER_TRIP_STAGE.PENDING_APPROVAL_PAID,
   CUSTOMER_TRIP_STAGE.READY,
 ];
 

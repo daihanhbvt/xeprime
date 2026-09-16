@@ -108,7 +108,8 @@
     "ready": "Yêu cầu thuê xe đã được chủ xe xác nhận thành công",
     "active": "Bạn đang trong thời gian thuê xe này. Vui lòng di chuyển an toàn",
     "completed": "Chuyến đi đã kết thúc tốt đẹp. Cảm ơn bạn đã đồng hành cùng XePrime!",
-    "terminal": "Chuyến đi đã kết thúc sớm"
+    "terminal": "Chuyến đi đã kết thúc sớm",
+    "pending_approval_paid": "Chỗ của bạn đã được giữ và tiền giữ chỗ đã nhận. Đang chờ chủ xe xác nhận — nếu chủ xe từ chối, toàn bộ số tiền được hoàn ngay."
   },
   "notice": {
     "pendingTitle": "Đang chờ chủ xe xác nhận",
@@ -195,7 +196,7 @@
   },
   "hold": {
     "title": "Chuyển khoản giữ chỗ",
-    "intro": "Chủ xe đã duyệt. Chuyển khoản giữ chỗ để chốt chuyến — đúng số tiền và nội dung dưới đây.",
+    "intro": "Chuyển khoản đúng số tiền và nội dung dưới đây để chốt chuyến.",
     "partialIntro": "Đã nhận {paid}. Chuyển nốt phần còn thiếu với CÙNG nội dung chuyển khoản để chốt chuyến.",
     "qrAlt": "Mã QR chuyển khoản giữ chỗ",
     "bank": "Ngân hàng",
@@ -206,18 +207,19 @@
     "copyAccount": "Sao chép số tài khoản",
     "copyAmount": "Sao chép số tiền",
     "copyCode": "Sao chép nội dung",
-    "expires": "Hạn chuyển: {time}. Quá hạn, xe được mở lại cho khách khác.",
+    "expires": "Quá hạn mà chưa nhận đủ tiền, xe được mở lại cho khách khác.",
     "freeCancel": "Huỷ trước {time} được hoàn 100% số đã thanh toán.",
     "restAtHandover": "Phần tiền thuê còn lại trả trực tiếp chủ xe khi nhận xe.",
-    "paid": "Đã giữ chỗ {amount}. Chuyến của bạn đã được chốt.",
-    "expired": "Hết hạn chuyển khoản giữ chỗ nên xe đã được mở lại. Bạn có thể đặt lại chuyến khác.",
+    "paid": "Đã giữ chỗ {amount}. Chỗ của bạn được giữ trong lúc chờ chủ xe xác nhận.",
+    "expired": "Hết hạn chuyển khoản giữ chỗ nên xe đã được mở lại cho khách khác. Bạn có thể đặt lại chuyến khác.",
     "refundPaid": "XePrime đã hoàn {amount} về tài khoản bạn khai.",
     "refundPending": "Đang chờ XePrime chuyển trả {amount}.",
     "refundNeedsAccount": "Có {amount} chờ hoàn — khai tài khoản nhận để XePrime chuyển trả.",
     "countdownRemaining": "Còn lại để chuyển khoản:",
-    "countdownSegment": "lượt {index}/{total}",
+    "countdownSegment": "lần gia hạn {index}/{total}",
     "countdownExpired": "Đã hết hạn chuyển khoản",
-    "freeCancelSoon": "Chuyến này nhận xe sát giờ nên cửa sổ huỷ miễn phí ngắn hơn thường lệ — hết {time} là không hoàn nữa."
+    "freeCancelSoon": "Chuyến này nhận xe sát giờ nên cửa sổ huỷ miễn phí ngắn hơn thường lệ — hết {time} là không hoàn nữa.",
+    "qrCaption": "Quét mã để chuyển khoản"
   },
   "sides": {
     "ariaLabel": "Chọn phía của chuyến",
@@ -268,9 +270,6 @@
     "noteHost": "Phụ phí chuyến nằm ở phía khách và không trừ vào tiền của bạn. Số chốt được xác nhận khi bạn duyệt yêu cầu."
   },
   "transitional": {
-    "title": "Chuyến đi thuê của tôi",
-    "cardTitle": "Chuyến đi thuê chưa khép",
-    "cardBody": "Bạn còn chuyến đi thuê xe của chủ xe khác từ trước khi mở gian hàng. Chuyến, tin nhắn và khoản hoàn của chúng vẫn ở đây.",
-    "open": "Xem chuyến đi thuê"
+    "title": "Chuyến đi thuê của tôi"
   }
 }

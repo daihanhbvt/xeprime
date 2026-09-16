@@ -1,9 +1,14 @@
 import {
   DEFAULT_PLATFORM_ROLE_PERMISSIONS,
   DEFAULT_TENANT_ROLE_PERMISSIONS,
+  FEATURE_STATE,
   PLATFORM_ROLE,
   TENANT_ROLE,
+  isFeatureVisible,
+  type FeatureState,
+  type PlanFeature,
   type Permission,
+  type TenantRole,
 } from '@xeprime/types';
 import { describe, expect, it } from 'vitest';
 
@@ -13,6 +18,7 @@ import {
   branchKeyOf,
   flattenLeaves,
   isNavBranch,
+  leavesOfSection,
   matchSelectedKey,
   mobileTabsForScope,
   navForScope,
@@ -23,14 +29,19 @@ import viNavigation from '@xeprime/domain/messages/vi/navigation.json';
 import { ROUTES } from './routes';
 
 /**
- * Test ĐẶC TẢ cho cây điều hướng, viết lại theo mô hình khối (Tổng quan · Quản lý · Kinh doanh
- * · Gian hàng · Cấu hình · Hỗ trợ).
+ * Test ĐẶC TẢ cho cây điều hướng theo mô hình khối (Tổng quan · Quản lý · Kinh doanh · Gian
+ * hàng · Cấu hình · Tài khoản & thanh toán · Hỗ trợ).
  *
  * Bốn điều bộ này khoá lại:
- *  1. **Không mục nào biến mất khi gom nhóm** — 18 mục cũ vẫn còn nguyên, chỉ đổi chỗ đứng;
- *  2. **Menu nào hiện với vai trò nào** — đổi trình bày KHÔNG được đổi tập mục;
+ *  1. **Những lối vào PHẢI còn** — theo route cụ thể, không theo tổng số mục;
+ *  2. **Vai trò nào thấy gì** — trên BA trục runtime thật (quyền · sở hữu · cờ năng lực);
  *  3. **Quy tắc chọn mục đang mở** (`matchSelectedKey`) — gom nhóm không được làm sáng nhầm;
  *  4. **Ranh giới gian hàng ↔ nền tảng** — `navForScope` chọn MỘT cây, không trộn.
+ *
+ * ⚠️ KHÔNG khoá tổng số mục lá (bản trước khoá cứng "23"). Con số đó không phải một bất biến
+ * nghiệp vụ: nó chỉ đếm những gì đang có, nên mỗi lần thêm mục là một lần sửa số cho test xanh
+ * lại — tức là bộ test khuyến khích menu phình ra và phản đối mọi lần dọn. Thứ đáng khoá là
+ * *route nào phải tới được* và *ai thấy cái gì*, và đó là những gì bộ này khẳng định.
  *
  * ⚠️ Quyền lúc chạy đọc từ DB (`/auth/me`), KHÔNG phải từ `DEFAULT_*_ROLE_PERMISSIONS`.
  * Ở đây dùng bộ mặc định làm MÔ HÌNH ĐẠI DIỆN cho từng vai trò để phát biểu được câu
@@ -38,19 +49,45 @@ import { ROUTES } from './routes';
  * Và ẩn một mục menu KHÔNG bảo vệ gì: chặn thật nằm ở guard backend (CLAUDE.md mục 6).
  */
 
+interface VisibilityContext {
+  /** Vai trong gian hàng — trục SỞ HỮU của `ownerOnly` (ADR 0038 điều 3). */
+  readonly roleKey?: TenantRole;
+  /** Cờ năng lực theo gói (ADR 0027). Vắng ⇒ `enabled`, đúng mặc định "không khoá ai". */
+  readonly features?: Partial<Record<PlanFeature, FeatureState>>;
+}
+
 /**
- * Khoá nhãn của các mục lá mà một tập quyền cho phép nhìn thấy, theo đúng thứ tự khai báo.
+ * Khoá nhãn của các mục lá mà một người CỤ THỂ nhìn thấy, theo đúng thứ tự khai báo.
+ *
+ * Kiểm đủ BA trục như `useManageNav.canSeeLeaf` lúc chạy — quyền, sở hữu, cờ năng lực. Bản
+ * trước chỉ kiểm `permission`, nên nó khẳng định một thế giới không tồn tại: ở đó
+ * `shop_manager` "thấy đủ 23 mục" kể cả mục ví mà runtime luôn ẩn vì `ownerOnly`. Hai bộ test
+ * nói ngược nhau về cùng một màn hình thì bộ sai là bộ không mô phỏng runtime.
  *
  * Khẳng định trên KHOÁ chứ không trên câu tiếng Việt: cây menu là dữ liệu, và khoá là thứ
  * không đổi khi đổi ngôn ngữ. Việc khoá có bản dịch ở CẢ HAI ngôn ngữ do bài test toàn vẹn ở
  * cuối file giữ.
  */
-function visibleLabels(granted: readonly Permission[], isPlatform: boolean): string[] {
+function visibleLabels(
+  granted: readonly Permission[],
+  isPlatform: boolean,
+  context: VisibilityContext = {},
+): string[] {
   const set = new Set<string>(granted);
+  const isShopOwner = context.roleKey === TENANT_ROLE.SHOP_OWNER;
   return flattenLeaves(navForScope(isPlatform))
-    .filter((leaf) => set.has(leaf.permission))
+    .filter(
+      (leaf) =>
+        set.has(leaf.permission) &&
+        (leaf.ownerOnly !== true || isShopOwner) &&
+        (leaf.feature === undefined ||
+          isFeatureVisible(context.features?.[leaf.feature] ?? FEATURE_STATE.ENABLED)),
+    )
     .map((leaf) => leaf.labelKey);
 }
+
+/** Mọi quyền của gian hàng — để chứng minh một mục KHÔNG mở được bằng trục quyền. */
+const ALL_TENANT_PERMISSIONS = DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_OWNER];
 
 /** Toàn bộ href của một cây — dùng để chứng minh "gom nhóm không mất mục nào". */
 function hrefsOf(sections: typeof SHOP_NAV): string[] {
@@ -58,7 +95,7 @@ function hrefsOf(sections: typeof SHOP_NAV): string[] {
 }
 
 describe('nav — cấu trúc khối', () => {
-  it('gian hàng: 6 khối theo hành trình chủ xe, tổng 23 mục lá', () => {
+  it('gian hàng: các khối theo hành trình chủ xe, đúng thứ tự', () => {
     expect(SHOP_NAV.map((section) => section.key)).toEqual([
       'overview',
       'operations',
@@ -67,30 +104,57 @@ describe('nav — cấu trúc khối', () => {
       'settings',
       'support',
     ]);
-    // 20 từ W2 (thêm "Gói của tôi"), rồi 18 từ 03/09/2026: gỡ hai mục placeholder
-    // "Khu vực nhận xe" và "Thùng rác" (R1 — ẩn menu chưa có luồng). Lại 20 ở R3: "Hồ sơ
-    // người bán" và "Yêu cầu hỗ trợ". 21 từ ADR 0033: "Ví điểm" — khoản XePrime phải trả gian
-    // hàng, thuộc bộ CƠ BẢN vì đó là tiền của chính họ, gói hết hạn vẫn phải rút được.
-    // 22 từ Phase 6: "Thu cọc qua XePrime" — KHÔNG gắn `feature` dù đường GHI cần
-    // `escrow_hold`, vì gian hàng thiếu cờ phải vào được để hiểu tính năng thuộc gói nào, và
-    // tuyến hoa hồng phải thấy công tắc bật + khoá (ADR 0027 điều 4).
-    // 23 từ 15/09/2026: "Tài khoản & bảo mật" — hồ sơ của NGƯỜI đăng nhập, tách khỏi hồ sơ gian
-    // hàng. Trước đó nhân viên sống trong `/manage` không có đường nào trong cổng để đổi mật
-    // khẩu của chính mình; màn duy nhất nằm ở `/account` và không mục nào dẫn tới.
-    expect(flattenLeaves(SHOP_NAV)).toHaveLength(23);
   });
 
-  it('Tổng quan và Hỗ trợ luôn hiện (`pinned`), bốn khối giữa gập được', () => {
+  it('Tổng quan và Hỗ trợ luôn hiện (`pinned`), các khối giữa gập được', () => {
     const pinned = SHOP_NAV.filter((section) => section.pinned).map((section) => section.key);
     expect(pinned).toEqual(['overview', 'support']);
   });
 
-  it('nền tảng: 2 khối, tổng 17 mục lá — cây này KHÔNG bị sắp lại', () => {
+  it('nền tảng: 2 khối — cây này KHÔNG bị sắp lại', () => {
     expect(PLATFORM_NAV.map((section) => section.key)).toEqual(['overview', 'platform']);
-    // 13 từ R2: thêm "Đối soát tiền vào" (ADR 0022 điều 4 — hàng đợi khớp tay của admin).
-    // 17 từ R3: xác minh người bán, chính sách phí, money operations, hỗ trợ/tranh chấp —
-    // bốn bề mặt của gate R3 "admin không phải sửa database".
-    expect(flattenLeaves(PLATFORM_NAV)).toHaveLength(17);
+  });
+
+  /*
+   * 16/09/2026 — "Thanh toán giữ chỗ qua XePrime" thôi làm mục độc lập: cả trang cũ chỉ có đúng
+   * một công tắc, nên nó về làm một section của "Chính sách thuê". Route cũ vẫn sống (redirect),
+   * nhưng KHÔNG được quay lại menu: đây đúng là loại mục làm sidebar phình ra.
+   */
+  it('"Thanh toán giữ chỗ" KHÔNG còn là mục điều hướng — nó nằm trong Chính sách thuê', () => {
+    const leaves = flattenLeaves(SHOP_NAV);
+    expect(leaves.map((leaf) => leaf.key)).not.toContain('shop-payment-settings');
+    expect(leaves.map((leaf) => leaf.href)).not.toContain(ROUTES.MANAGE.SHOP_PAYMENT_SETTINGS);
+    // …và lối vào thật vẫn còn: trang chính sách là nơi chứa nó.
+    expect(leaves.map((leaf) => leaf.href)).toContain(ROUTES.MANAGE.SHOP_POLICIES);
+  });
+
+  /*
+   * 16/09/2026 — khối "Tài khoản & thanh toán" biến mất cùng ba mục của nó.
+   *
+   * "Gói & hoá đơn" và "Hồ sơ người bán" về làm hai section của trang Cửa hàng: cả ba mục cũ
+   * đều trả lời cùng một câu hỏi ("gian hàng của tôi khai gì / trả tiền thế nào"), nên chúng là
+   * một trang chứ không phải ba. "Tài khoản & bảo mật" thì rời sidebar hẳn — mật khẩu và xoá
+   * tài khoản là việc của một CON NGƯỜI, và nó sống trong menu tài khoản ở thẻ người dùng.
+   *
+   * Cả ba route cũ vẫn sống dưới dạng redirect (xem `app/(manage)/manage/*`), nhưng KHÔNG được
+   * quay lại menu.
+   */
+  it('KHÔNG còn mục riêng cho gói, hồ sơ người bán hay tài khoản — chúng đã gộp', () => {
+    const hrefs = hrefsOf(SHOP_NAV);
+
+    expect(hrefs).not.toContain(ROUTES.MANAGE.SUBSCRIPTION);
+    expect(hrefs).not.toContain(ROUTES.MANAGE.SELLER_PROFILE);
+    expect(hrefs).not.toContain(ROUTES.MANAGE.ACCOUNT);
+    expect(hrefs).not.toContain(ROUTES.MANAGE.SECURITY);
+
+    // …và lối vào thật vẫn còn: trang Cửa hàng là nơi chứa chúng.
+    expect(hrefs).toContain(ROUTES.MANAGE.SHOP);
+  });
+
+  it('khối "Gian hàng" chỉ còn MỘT mục — trang Cửa hàng gộp năm section', () => {
+    const storefront = SHOP_NAV.find((section) => section.key === 'storefront')!;
+
+    expect(leavesOfSection(storefront).map((leaf) => leaf.href)).toEqual([ROUTES.MANAGE.SHOP]);
   });
 
   it('đúng ba mục cha (submenu): đội xe, đơn thuê, tài chính', () => {
@@ -100,9 +164,12 @@ describe('nav — cấu trúc khối', () => {
     expect(branches).toEqual(['fleet', 'orders', 'finance']);
   });
 
-  it('KHÔNG mất mục nào so với bản 18 mục ngang cấp — chỉ thêm Trung tâm hỗ trợ', () => {
-    // Đây là bài test quan trọng nhất của đợt sắp lại: mọi route cũ vẫn phải có lối vào.
+  it('mọi route quan trọng vẫn có lối vào trong menu', () => {
+    // Đây là bài test quan trọng nhất của mỗi đợt sắp lại: gom nhóm, đổi tên hay gộp trang đều
+    // KHÔNG được làm mất đường vào một trang đang sống.
     for (const href of [
+      ROUTES.MANAGE.BALANCE,
+      ROUTES.MANAGE.SUPPORT_CASES,
       ROUTES.MANAGE.ROOT,
       ROUTES.MANAGE.CALENDAR,
       ROUTES.MANAGE.VEHICLES,
@@ -229,20 +296,70 @@ describe('nav — ranh giới gian hàng ↔ nền tảng', () => {
 });
 
 describe('nav — vai trò gian hàng nhìn thấy gì', () => {
-  it('shop_owner thấy đủ 23 mục', () => {
-    expect(
-      visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_OWNER], false),
-    ).toHaveLength(23);
+  /** Nhãn mà một vai trò thấy, với ĐÚNG vai đó trên trục sở hữu. */
+  function labelsOfRole(role: TenantRole): string[] {
+    return visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[role], false, { roleKey: role });
+  }
+
+  it('shop_owner thấy tiền của mình lẫn mặt tiền gian hàng: Số dư & rút tiền + Cửa hàng', () => {
+    const labels = labelsOfRole(TENANT_ROLE.SHOP_OWNER);
+
+    expect(labels).toEqual(expect.arrayContaining(['manage.balance', 'manage.shop']));
   });
 
-  it('shop_manager cũng thấy đủ 23 mục (có MEMBER_VIEW, FINANCE_VIEW và SUBSCRIPTION_VIEW)', () => {
+  it('shop_manager vào được trang Cửa hàng nhưng KHÔNG thấy Số dư', () => {
+    const labels = labelsOfRole(TENANT_ROLE.SHOP_MANAGER);
+
+    /*
+     * Trang Cửa hàng gác bằng `tenant.view` — mức thấp nhất, vì hồ sơ gian hàng là việc điều
+     * hành. Hai section NHẠY CẢM bên trong tự lọc theo đúng guard của API: "Tài khoản nhận
+     * tiền" chỉ chủ gian hàng (`@ShopOwnerOnly`), "Gói & hạn mức" theo `subscription.view` và
+     * CTA mua theo `subscription.purchase`.
+     */
+    expect(labels).toContain('manage.shop');
+    // Ví là NGHĨA VỤ với một người cụ thể (ADR 0038 điều 3) — quyền không mở được nó.
+    expect(labels).not.toContain('manage.balance');
+  });
+
+  /*
+   * Trục SỞ HỮU không phải trục quyền: kể cả khi được cấp TOÀN BỘ quyền của gian hàng, người
+   * không phải chủ vẫn không thấy mục ví. Đây là khẳng định mà bản test cũ (chỉ lọc
+   * `permission`) không thể phát biểu — và vì thế nó từng "chứng minh" shop_manager thấy đủ mọi
+   * mục, ngược hẳn với runtime.
+   */
+  it('mọi quyền cũng KHÔNG mở được Số dư cho người không phải chủ', () => {
+    for (const role of [
+      TENANT_ROLE.SHOP_MANAGER,
+      TENANT_ROLE.SHOP_STAFF,
+      TENANT_ROLE.SHOP_VIEWER,
+    ]) {
+      expect(visibleLabels(ALL_TENANT_PERMISSIONS, false, { roleKey: role })).not.toContain(
+        'manage.balance',
+      );
+    }
     expect(
-      visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_MANAGER], false),
-    ).toHaveLength(23);
+      visibleLabels(ALL_TENANT_PERMISSIONS, false, { roleKey: TENANT_ROLE.SHOP_OWNER }),
+    ).toContain('manage.balance');
+  });
+
+  /*
+   * Trục CỜ NĂNG LỰC (ADR 0027) — trục thứ ba, cũng phải được mô phỏng ở đây. Ví KHÔNG mang cờ:
+   * tiền của gian hàng không thuộc về gói, nên hết gói vẫn phải thấy và rút được (ADR 0027 điều
+   * 3, ADR 0033).
+   */
+  it('cờ tính năng ẩn được sổ sách, KHÔNG ẩn được Số dư', () => {
+    const labels = visibleLabels(ALL_TENANT_PERMISSIONS, false, {
+      roleKey: TENANT_ROLE.SHOP_OWNER,
+      features: { finance: FEATURE_STATE.HIDDEN, debts: FEATURE_STATE.HIDDEN },
+    });
+
+    expect(labels).not.toContain('manage.financeOverview');
+    expect(labels).not.toContain('manage.debts');
+    expect(labels).toContain('manage.balance');
   });
 
   it('shop_staff KHÔNG thấy tài chính và người dùng', () => {
-    const labels = visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_STAFF], false);
+    const labels = labelsOfRole(TENANT_ROLE.SHOP_STAFF);
 
     expect(labels).not.toContain('manage.financeOverview');
     expect(labels).not.toContain('manage.receipts');
@@ -262,17 +379,19 @@ describe('nav — vai trò gian hàng nhìn thấy gì', () => {
 
   it('shop_viewer thấy ĐÚNG BẰNG shop_staff — menu không phân biệt được hai vai trò này', () => {
     // Khác biệt thật nằm ở quyền GHI (`booking.create`…), không ở quyền XEM.
-    expect(visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_VIEWER], false)).toEqual(
-      visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_STAFF], false),
+    expect(labelsOfRole(TENANT_ROLE.SHOP_VIEWER)).toEqual(
+      labelsOfRole(TENANT_ROLE.SHOP_STAFF),
     );
   });
 });
 
 describe('nav — vai trò nền tảng nhìn thấy gì', () => {
-  it('platform_admin thấy đủ 17 mục', () => {
+  it('platform_admin thấy TOÀN BỘ cây nền tảng — không mục nào ngoài tầm với', () => {
+    // Khẳng định theo TẬP, không theo tổng số: super admin ôm mọi quyền nên tập mục họ thấy
+    // đúng bằng cây. Thêm một mục nền tảng mới thì test này vẫn đúng mà không phải sửa số.
     expect(
       visibleLabels(DEFAULT_PLATFORM_ROLE_PERMISSIONS[PLATFORM_ROLE.PLATFORM_ADMIN], true),
-    ).toHaveLength(17);
+    ).toEqual(flattenLeaves(PLATFORM_NAV).map((leaf) => leaf.labelKey));
   });
 
   it('platform_staff chỉ thấy 5 mục đọc, KHÔNG thấy mục quản trị của super admin', () => {
@@ -381,6 +500,8 @@ describe('matchSelectedKey — quy tắc mục đang mở', () => {
 describe('sectionKeyOf / branchKeyOf — bung đúng khối và đúng mục cha', () => {
   it('khối chứa mục đang chọn, kể cả khi mục nằm trong một mục cha', () => {
     expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.RECEIPTS)).toBe('business');
+    expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.BALANCE)).toBe('business');
+    expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.SHOP)).toBe('storefront');
     expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.MEMBERS)).toBe('settings');
     expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.MAINTENANCE)).toBe('operations');
     expect(sectionKeyOf(SHOP_NAV, ROUTES.MANAGE.ROOT)).toBe('overview');

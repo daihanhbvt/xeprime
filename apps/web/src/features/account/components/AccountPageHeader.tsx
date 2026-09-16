@@ -14,6 +14,15 @@ export interface AccountPageHeaderProps {
   extra?: ReactNode;
   /** Đường quay lại — trang chi tiết đặt link về danh sách ở trên tiêu đề. */
   back?: { href: string; label: string };
+  /**
+   * Cấp tiêu đề. Mặc định `h1` — component này sinh tiêu đề CỦA TRANG.
+   *
+   * Đặt `h2` khi khối được NHÚNG làm một phần của trang khác (`/manage/security` xếp ba khối
+   * dùng lại từ khu tài khoản dưới một `h1` chung). Một trang có ba `h1` không hỏng về hình
+   * ảnh nhưng hỏng thật với trình đọc màn hình: danh sách tiêu đề trở thành ba trang chồng lên
+   * nhau và người dùng bàn phím mất luôn cách nhảy giữa các phần.
+   */
+  as?: 'h1' | 'h2';
 }
 
 /**
@@ -26,7 +35,13 @@ export interface AccountPageHeaderProps {
  *
  * Client island vì dùng icon của AntD — mọi component có icon trong repo này đều là client.
  */
-export function AccountPageHeader({ title, subtitle, extra, back }: AccountPageHeaderProps) {
+export function AccountPageHeader({
+  title,
+  subtitle,
+  extra,
+  back,
+  as: Heading = 'h1',
+}: AccountPageHeaderProps) {
   return (
     <header className={styles.header}>
       {back ? (
@@ -36,7 +51,7 @@ export function AccountPageHeader({ title, subtitle, extra, back }: AccountPageH
       ) : null}
       <div className={styles.row}>
         <div className={styles.text}>
-          <h1 className={styles.title}>{title}</h1>
+          <Heading className={styles.title}>{title}</Heading>
           {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
         </div>
         {extra ? <div className={styles.extra}>{extra}</div> : null}

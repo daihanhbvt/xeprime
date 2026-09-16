@@ -1,0 +1,39 @@
+/*
+ * Bố cục dùng chung của hai nhóm ô hồ sơ gian hàng (`ShopDisplayFields`, `ShopLegalFields`).
+ *
+ * Một file cho cả hai vì chúng dùng CÙNG hai quy tắc — "hai ô một hàng, xuống dòng khi hẹp" —
+ * và hai bản sao của cùng một media query là hai chỗ để chúng lệch nhau.
+ */
+
+/* Hai ô cùng hàng trên desktop, xuống dòng khi cột hẹp. */
+.pairRow,
+.imageRow {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--xp-space-md);
+}
+
+/*
+ * Ghi chú đặt trên khối địa chỉ — nhắc rằng đổi ở đây là đổi chi nhánh mặc định.
+ *
+ * Nằm ở đây chứ không trong `AddressField`: đó là một ô dùng chung, còn hệ quả "dời vị trí công
+ * khai của mọi xe" chỉ đúng ở màn hồ sơ gian hàng.
+ */
+.addressNotice {
+  margin: 0 0 var(--xp-space-md);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}
+
+.helpLink {
+  color: var(--xp-color-link);
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .pairRow,
+  .imageRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

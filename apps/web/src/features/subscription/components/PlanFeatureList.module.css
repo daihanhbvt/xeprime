@@ -1,3 +1,28 @@
+/*
+ * Khối "Nâng cấp để mở thêm" — nền nhạt, không viền, KHÔNG phải một thẻ.
+ *
+ * Nó đứng bên trong section "Gói & hạn mức" và nói về thứ người dùng CHƯA mua, nên nó phải nhẹ
+ * hơn phần nói về gói họ đang dùng. Một thẻ có viền và bóng ở đây kéo mắt về phía upsell trước
+ * cả thông tin họ vào trang để tìm.
+ */
+.block {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--xp-space-md);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-layout);
+  gap: var(--xp-space-xs);
+}
+
+.blockTitle {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
 .groupTitle {
   font-size: var(--xp-font-size-body-sm);
   font-weight: var(--xp-font-weight-semibold);

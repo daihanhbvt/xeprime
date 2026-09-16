@@ -1,8 +1,11 @@
 /**
- * Thẻ số dư ví điểm.
+ * Thẻ số dư.
  *
  * Con số "rút được ngay" lớn hẳn: đó là thứ người dùng mở màn này để xem. Hai con số còn lại là
  * ngữ cảnh — chúng phải đọc được nhưng không cạnh tranh.
+ *
+ * Không còn lớp `.unit`, `.legal`, `.empty`: số dư hiển thị thẳng bằng VND từ 16/09/2026, nên
+ * đơn vị "điểm" và dòng chú thích "1 điểm = 1đ · không hết hạn" đã bỏ khỏi giao diện.
  */
 
 .card {
@@ -15,6 +18,25 @@
   background: var(--xp-color-bg-container);
 }
 
+/**
+ * Hình thái HERO — thẻ mở đầu màn ví.
+ *
+ * Nền gold rất nhạt và căn giữa: đây là câu trả lời duy nhất mà người ta mở màn này để đọc, và
+ * nó phải tách khỏi mọi khối còn lại ngay từ cái nhìn đầu tiên. Bề ngang có trần vì một con số
+ * căn giữa trải hết màn 1440px thì nhãn và giá trị rời nhau ra quá xa để đọc thành một cặp.
+ */
+.hero {
+  align-items: center;
+  align-self: center;
+  gap: var(--xp-space-sm);
+  width: 100%;
+  max-width: 400px;
+  padding: var(--xp-space-md);
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+  text-align: center;
+}
+
 .head {
   display: flex;
   align-items: center;
@@ -25,9 +47,29 @@
 
 .title {
   margin: 0;
-  font-size: var(--xp-font-size-heading-sm);
-  line-height: var(--xp-line-height-heading-sm);
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
   font-weight: var(--xp-font-weight-semibold);
+}
+
+/**
+ * Tiêu đề chỉ dành cho trình đọc màn hình.
+ *
+ * Ở hình thái hero, tiêu đề trang ngay phía trên đã nói "Số dư & rút tiền" — lặp lại nó trong
+ * thẻ là nhiễu thị giác. Nhưng `aria-label` của `<section>` cần một mốc, và bỏ hẳn `<h2>` sẽ
+ * cắt đứt bậc heading của cả màn. Ẩn bằng clip thay vì `display: none`: `display: none` gỡ luôn
+ * khỏi cây khả truy cập, tức mất đúng thứ ta đang cố giữ.
+ */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .figures {
@@ -35,6 +77,7 @@
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: var(--xp-space-md);
   margin: 0;
+  width: 100%;
 }
 
 .figures dt {
@@ -44,7 +87,7 @@
 }
 
 .figures dd {
-  margin: var(--xp-space-xxs) 0 0;
+  margin: var(--xp-space-xs) 0 0;
   font-weight: var(--xp-font-weight-semibold);
   font-variant-numeric: tabular-nums;
 }
@@ -54,33 +97,62 @@
   grid-column: 1 / -1;
 }
 
-.big {
-  font-size: var(--xp-font-size-heading-md);
-  line-height: var(--xp-line-height-heading-md);
+.hero .primary dt {
+  font-size: var(--xp-font-size-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
-.unit {
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-regular);
+.big {
+  font-size: var(--xp-font-size-h2);
+  line-height: var(--xp-line-height-h2);
 }
 
 /*
- * Dòng bản chất: luôn hiện, không phải tooltip. Người dùng phải đọc được "không hết hạn" ở cùng
- * chỗ họ nhìn thấy con số, nếu không "điểm" sẽ được hiểu như một chương trình khuyến mãi.
+ * Con số khả dụng ở hero mang sắc gold đậm của giá — nó LÀ giá trị của màn này.
+ *
+ * Cỡ h2 (24px) chứ không h1: thẻ chỉ rộng 400px, và ở h1 thì một số dư tám chữ số
+ * ("18.520.000 ₫") chạm sát hai mép rồi xuống dòng giữa chừng.
  */
-.legal {
-  margin: 0;
-  padding-top: var(--xp-space-sm);
-  border-top: 1px dashed var(--xp-color-border);
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-caption);
+.hero .big {
+  color: var(--xp-color-price);
 }
 
-.empty {
+/* Hai con số phụ ở hero nằm ngang nhau dưới con số chính, cách nhau bằng một vạch mảnh. */
+.hero .figures {
+  grid-template-columns: 1fr 1fr;
+  gap: var(--xp-space-sm);
+}
+
+.hero .figures > :not(.primary) {
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+/*
+ * Chỉ hai ô PHỤ nhỏ đi một bậc — con số chính giữ nguyên cỡ h2.
+ *
+ * Nhắm vào `> :not(.primary)` thay vì `.hero .figures dd` chung: quy tắc chung đó có đặc tả
+ * cao hơn `.hero .big` và sẽ thu nhỏ luôn con số chính, rồi phải chống bằng một selector
+ * nhân đôi lớp.
+ */
+.hero .figures > :not(.primary) dt,
+.hero .figures > :not(.primary) dd {
+  font-size: var(--xp-font-size-label);
+}
+
+/**
+ * Huy hiệu "đã xác minh" — đứng ngay dưới con số vì hồ sơ chưa xác minh là lý do một lệnh rút
+ * bị treo, và biết điều đó trước khi bấm rút rẻ hơn biết sau.
+ */
+.verified {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
   margin: 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-medium);
 }
 
 /**

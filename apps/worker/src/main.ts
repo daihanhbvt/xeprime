@@ -208,9 +208,9 @@ async function main(): Promise<void> {
       async () => {
         const result = await sweepBookingRequestDeadlines(prisma);
         // Chỉ log khi THẬT SỰ có việc: một dòng "0/0/0" mỗi phút sẽ chôn mọi dòng đáng đọc khác.
-        if (result.firstReminders || result.finalReminders || result.expired) {
+        if (result.firstReminders || result.finalReminders || result.expired || result.expiredPaid) {
           console.log(
-            `yêu cầu thuê: nhắc ${result.firstReminders} + ${result.finalReminders}, quá hạn ${result.expired}`,
+            `yêu cầu thuê: nhắc ${result.firstReminders} + ${result.finalReminders}, quá hạn ${result.expired}, quá hạn sau khi đã cọc ${result.expiredPaid}`,
           );
         }
       },
@@ -250,8 +250,8 @@ async function main(): Promise<void> {
       HOLD_EXPIRY_INTERVAL_MS,
       async () => {
         const result = await sweepBookingHoldExpiry(prisma);
-        if (result.expired || result.reminded) {
-          console.log(`giữ chỗ: nhắc ${result.reminded}, hết hạn ${result.expired}`);
+        if (result.expired || result.extended) {
+          console.log(`giữ chỗ: gia hạn ${result.extended}, hết hạn ${result.expired}`);
         }
       },
       { critical: true },

@@ -8,11 +8,13 @@ import {
   missingShopProfileRequirements,
   missingShopProfileSuggestions,
   SHOP_PROFILE_REQUIREMENT_VALUES,
+  SHOP_PROFILE_SUGGESTION,
   SHOP_PROFILE_SUGGESTION_VALUES,
   type ShopProfileRequirement,
   type ShopProfileSuggestion,
 } from '@xeprime/types';
 import type { ShopProfileValues } from '@xeprime/validators';
+import type { ShopOwnerAccount } from '../types';
 import styles from './ShopProfileChecklist.module.css';
 
 type ChecklistItem = ShopProfileRequirement | ShopProfileSuggestion;
@@ -36,7 +38,38 @@ type ChecklistItem = ShopProfileRequirement | ShopProfileSuggestion;
  * này nằm ngay trên chính form chứa các ô đó, còn nút Gửi duyệt thì tự đưa con trỏ tới ô thiếu
  * đầu tiên; một nút "Điền" chết ở ba dòng còn tệ hơn là không có nút nào.
  */
-export function ShopProfileChecklist({ control }: { control: Control<ShopProfileValues> }) {
+export function ShopProfileChecklist({
+  control,
+  ownerAccount,
+  logoRequired = false,
+}: {
+  control: Control<ShopProfileValues>;
+  /**
+   * Logo là mục CHẶN, không phải gợi ý — đúng với gian hàng TUYẾN GÓI (ADR 0040 điều 7).
+   *
+   * Với họ, thiếu logo là `submitForPublicReview` từ chối thật
+   * (`SHOP_LISTING_REQUIREMENTS_MISSING`). Để nó ở nhóm "Nên có — giúp khách chọn gian hàng của
+   * bạn" là đúng thứ docblock của `missingShopProfileRequirements` viết ra để chặn, chỉ đảo
+   * chiều: checklist nói "không bắt buộc" trong khi server chặn.
+   *
+   * Chủ xe tuyến hoa hồng KHÔNG bị cổng đó chạm tới, nên với họ logo vẫn là gợi ý — mặc định
+   * `false` giữ nguyên hành vi cũ ở `/account/registration`.
+   *
+   * Năm mục còn lại của cổng đăng xe (tên · SĐT liên hệ · tỉnh · xã · địa chỉ) KHÔNG xuất hiện
+   * ở đây: SĐT liên hệ sống trên CHI NHÁNH MẶC ĐỊNH, không phải trên form này, nên chấm nó bằng
+   * `useWatch` là chấm một ô không tồn tại. Bước 1 của onboarding đã đòi đủ cả năm.
+   */
+  logoRequired?: boolean;
+  /**
+   * Tài khoản CHỦ gian hàng — nguồn của hai mục "họ tên" và "số điện thoại" từ 16/09/2026.
+   *
+   * Chúng KHÔNG còn là ô trong form này, nên chúng cũng không đọc từ `useWatch` được. Cùng nguồn
+   * mà `TenantsService.submitForReview` dùng làm cổng thật — nếu hai bên đọc khác nhau thì
+   * checklist sẽ xanh hết trong khi server vẫn từ chối, đúng thứ `missingShopProfileRequirements`
+   * sinh ra để tránh.
+   */
+  ownerAccount: ShopOwnerAccount;
+}) {
   const t = useTranslations('Shop.checklist');
   const values = useWatch({ control }) as Partial<ShopProfileValues>;
 
@@ -45,11 +78,35 @@ export function ShopProfileChecklist({ control }: { control: Control<ShopProfile
    * chuỗi hiển thị: chuỗi đó do server ghép và luôn có ít nhất tên tỉnh, nên chấm theo nó là
    * mục này không bao giờ thiếu — một dòng checklist luôn xanh không nói lên điều gì.
    */
-  const completeness = { ...values, address: values.addressLine };
-  const missingRequired = new Set<string>(missingShopProfileRequirements(completeness));
-  const missingSuggested = new Set<string>(missingShopProfileSuggestions(completeness));
+  const completeness = {
+    ...values,
+    address: values.addressLine,
+    ownerFullName: ownerAccount.displayName,
+    ownerPhone: ownerAccount.phone,
+  };
+  /*
+   * Logo đổi NHÓM, không đổi cách chấm: cùng một phép kiểm "đã có chưa", chỉ khác hệ quả. Dựng
+   * hai bảng luật song song ở đây là mời chúng trôi khỏi nhau — xem docblock của `logoRequired`.
+   */
+  const requiredItems: readonly ChecklistItem[] = logoRequired
+    ? [...SHOP_PROFILE_REQUIREMENT_VALUES, SHOP_PROFILE_SUGGESTION.LOGO]
+    : SHOP_PROFILE_REQUIREMENT_VALUES;
+  const suggestedItems: readonly ChecklistItem[] = logoRequired
+    ? SHOP_PROFILE_SUGGESTION_VALUES.filter((key) => key !== SHOP_PROFILE_SUGGESTION.LOGO)
+    : SHOP_PROFILE_SUGGESTION_VALUES;
 
-  const total = SHOP_PROFILE_REQUIREMENT_VALUES.length + SHOP_PROFILE_SUGGESTION_VALUES.length;
+  const suggestedMissing = new Set<string>(missingShopProfileSuggestions(completeness));
+  const missingRequired = new Set<string>([
+    ...missingShopProfileRequirements(completeness),
+    ...(logoRequired && suggestedMissing.has(SHOP_PROFILE_SUGGESTION.LOGO)
+      ? [SHOP_PROFILE_SUGGESTION.LOGO]
+      : []),
+  ]);
+  const missingSuggested = new Set<string>(
+    [...suggestedMissing].filter((key) => !missingRequired.has(key)),
+  );
+
+  const total = requiredItems.length + suggestedItems.length;
   const done = total - missingRequired.size - missingSuggested.size;
   const ready = missingRequired.size === 0;
 
@@ -73,13 +130,13 @@ export function ShopProfileChecklist({ control }: { control: Control<ShopProfile
       <Group
         label={ready ? t('requiredDone') : t('requiredTitle')}
         tone={ready ? 'done' : 'required'}
-        items={SHOP_PROFILE_REQUIREMENT_VALUES}
+        items={requiredItems}
         missing={missingRequired}
       />
       <Group
         label={t('suggestedTitle')}
         tone="suggested"
-        items={SHOP_PROFILE_SUGGESTION_VALUES}
+        items={suggestedItems}
         missing={missingSuggested}
       />
     </section>

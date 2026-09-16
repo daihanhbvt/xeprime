@@ -1,0 +1,34 @@
+/*
+ * Trang bảo mật — HẸP có chủ đích (~960px).
+ *
+ * Nội dung ở đây là form một cột và hai thẻ đọc; kéo chúng ra hết bề ngang 1440px biến mỗi ô
+ * nhập thành một vệt dài 1200px mà người dùng phải quét mắt hết chiều màn hình để đọc lại thứ
+ * mình vừa gõ. Các trang danh sách/lịch mới cần trọn bề ngang.
+ */
+.page {
+  width: 100%;
+  max-width: 960px;
+  min-width: 0;
+  padding-bottom: var(--xp-space-lg);
+  margin-inline: auto;
+}
+
+/* Khoảng cách giữa các khối do LAYOUT đặt, không do margin của từng khối. */
+.stack {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+}
+
+/*
+ * Vùng nguy hiểm: ảnh hưởng đứng trên form yêu cầu, sát nhau hơn khoảng cách giữa các khối —
+ * chúng là MỘT việc đọc theo thứ tự ("đây là thứ bạn đang mang theo" → "gửi yêu cầu"), không
+ * phải hai khối độc lập.
+ */
+.danger {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}

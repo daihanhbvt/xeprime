@@ -1,0 +1,59 @@
+/*
+ * Hoá đơn thanh toán — khối con nằm dưới "Gói & hạn mức", nên nó không tự vẽ khung.
+ */
+.panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding-top: var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border-subtle);
+  gap: var(--xp-space-sm);
+}
+
+/* `h3` vì `h2` là tiêu đề của section cha — đây là khối con của nó, không phải khối anh em. */
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/*
+ * Rỗng = hai dòng chữ, cao ~100px. Không hình minh hoạ: "chưa có hoá đơn nào" là tin tốt và là
+ * trạng thái bình thường của một gian hàng mới — vẽ một bức tranh cho nó là biến một dòng thông
+ * báo thành một sự kiện.
+ */
+.empty {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100px;
+  padding: var(--xp-space-md);
+  border: 1px dashed var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  margin: 0;
+  gap: var(--xp-space-xs);
+}
+
+.emptyTitle {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.emptyHint {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.codeCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Mã đối soát đọc lại được từng ký tự. */
+.code {
+  font-family: var(--xp-font-mono, ui-monospace, monospace);
+  letter-spacing: 0.5px;
+}

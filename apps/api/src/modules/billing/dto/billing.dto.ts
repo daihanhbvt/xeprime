@@ -567,6 +567,26 @@ export class SubscriptionInvoiceDto {
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
 }
 
+/**
+ * HOÁ ĐƠN GÓI ĐANG CHỜ TIỀN — bọc trong một object vì nó **có thật là null** (ADR 0040).
+ *
+ * Vì sao không trả thẳng `SubscriptionInvoiceDto | null`: `@ApiOkResponse({ type: X })` sinh ra
+ * một schema KHÔNG nullable, nên type sinh cho client sẽ hứa luôn có hoá đơn — và ca thường gặp
+ * nhất của endpoint này lại là không có. App native lấy type thẳng từ `components['schemas']`
+ * (ADR 0031), nên lời hứa sai đó thành một `null` lúc chạy ở chỗ không ai kiểm.
+ *
+ * Một trường nullable BÊN TRONG một object thì `@ApiProperty({ nullable: true })` diễn đạt được
+ * chính xác, và đó cũng là khuôn mà mọi DTO khác trong file này đã dùng cho trường có thể rỗng.
+ */
+export class PendingSubscriptionInvoiceDto {
+  @ApiProperty({
+    type: SubscriptionInvoiceDto,
+    nullable: true,
+    description: 'Hoá đơn còn nhận được tiền (issued | partially_paid); null khi không có',
+  })
+  invoice!: SubscriptionInvoiceDto | null;
+}
+
 export class SubscriptionInvoicePageDto {
   @ApiProperty({ type: [SubscriptionInvoiceDto] }) data!: SubscriptionInvoiceDto[];
   @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;

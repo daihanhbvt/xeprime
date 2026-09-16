@@ -1,6 +1,0 @@
-/* Hai khối độc lập xếp dọc — khoảng cách do LAYOUT đặt, không do margin của từng khối. */
-.stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-lg, 24px);
-}

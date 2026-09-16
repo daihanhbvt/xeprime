@@ -123,7 +123,7 @@ describe('Đối chứng — tuyến gói VẪN đổi khi hết ân hạn', () 
     // ở pha `lapsed` — nên web chỉ cần đọc `billingMode`, không phải tự suy từ pha.
     for (const phase of [BILLING_PHASE.CURRENT, BILLING_PHASE.GRACE]) {
       const inManage = packageAt(phase, BILLING_MODE.PACKAGE);
-      expect(shopAccountRedirect(inManage, '/account')).toBe('/manage/account');
+      expect(shopAccountRedirect(inManage, '/account')).toBe('/manage/security');
     }
 
     const lapsed = packageAt(BILLING_PHASE.LAPSED, BILLING_MODE.COMMISSION);

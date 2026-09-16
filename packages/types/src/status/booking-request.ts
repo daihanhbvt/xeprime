@@ -20,6 +20,18 @@ export const BOOKING_REQUEST_STATUS = {
    * đơn thuê được tạo ngay trong transaction của webhook.
    */
   AWAITING_HOLD: 'awaiting_hold',
+  /**
+   * Khách ĐÃ chuyển đủ giữ chỗ, đang chờ chủ xe duyệt (16/09/2026 — ADR 0039).
+   *
+   * Trạng thái này ra đời cùng lúc với việc đảo thứ tự: tiền đi TRƯỚC, chủ xe duyệt SAU. Không
+   * gộp được vào `pending_host_approval` vì hai thứ khác nhau ở đúng điểm tốn kém nhất —
+   * `pending_host_approval` KHÔNG chiếm lịch và không có đồng nào của khách, còn ở đây xe đã bị
+   * giữ và XePrime đang cầm tiền thật. Nhầm hai trạng thái này nghĩa là một đơn có tiền bị dọn
+   * bằng đường dọn yêu cầu suông.
+   *
+   * **CHIẾM LỊCH.** Chủ xe từ chối hoặc hết hạn phản hồi ⇒ hoàn đủ cho khách và nhả chỗ.
+   */
+  HOLD_PAID: 'hold_paid',
   /** Quá cửa sổ chuyển khoản mà chưa đủ tiền — worker ghi, nhả lịch. Kết thúc. */
   HOLD_EXPIRED: 'hold_expired',
 } as const;
@@ -54,7 +66,59 @@ export function isBookingRequestStatus(value: unknown): value is BookingRequestS
 export const BOOKING_REQUEST_STATUS_OCCUPYING: readonly BookingRequestStatus[] = [
   BOOKING_REQUEST_STATUS.APPROVED_BY_HOST,
   BOOKING_REQUEST_STATUS.AWAITING_HOLD,
+  /*
+   * Đã trả tiền mà chưa duyệt vẫn giữ chỗ — và đây là ô quan trọng nhất trong mảng này. Nhả
+   * lịch ở đây nghĩa là khách đã chuyển tiền thật rồi ngồi nhìn chiếc xe của mình bị người khác
+   * đặt mất trong lúc chủ xe chưa kịp bấm.
+   */
+  BOOKING_REQUEST_STATUS.HOLD_PAID,
 ];
+
+/**
+ * TỈ LỆ PHẢN HỒI — mẫu số và tử số của phép "gian hàng có trả lời khách không".
+ *
+ * Chỉ đếm những yêu cầu mà gian hàng THẬT SỰ phải quyết. Bốn trạng thái cố ý nằm ngoài:
+ *
+ *  - `pending_host_approval` — còn trong hạn, chưa ai chậm trễ cả;
+ *  - `cancelled_by_customer` — khách rút yêu cầu; tính vào là phạt gian hàng vì việc của người khác;
+ *  - `awaiting_hold` / `hold_expired` — luồng tự động của tuyến hoa hồng (ADR 0021), ở đó KHÔNG
+ *    có bước chủ xe duyệt nào để mà phản hồi.
+ *
+ * `hold_paid` cũng ngoài danh sách: khách đã trả tiền và đồng hồ phản hồi mới bắt đầu chạy
+ * (ADR 0039) — nó sẽ rơi vào `approved_by_host` / `rejected_by_host` / `expired` khi ngã ngũ.
+ *
+ * Sống ở `@xeprime/types` vì có HAI bề mặt đọc nó: trang gian hàng công khai
+ * (`public-listings.service.ts`) và bảng tổng hợp giao dịch của ví gian hàng
+ * (`wallet-statement.service.ts`). Hai bản sao là hai cách tính "tỉ lệ phản hồi" khác nhau cho
+ * cùng một gian hàng.
+ */
+export const BOOKING_REQUEST_STATUS_ANSWERED: readonly BookingRequestStatus[] = [
+  BOOKING_REQUEST_STATUS.APPROVED_BY_HOST,
+  BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
+  BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
+];
+
+/** `expired` đúng là "không trả lời": worker chỉ đặt nó khi hết cửa sổ mà yêu cầu vẫn nằm im. */
+export const BOOKING_REQUEST_STATUS_UNANSWERED: readonly BookingRequestStatus[] = [
+  BOOKING_REQUEST_STATUS.EXPIRED,
+];
+
+/** Mẫu số: mọi yêu cầu đã ngã ngũ theo nghĩa "có/không được trả lời". */
+export const BOOKING_REQUEST_STATUS_RESPONSE_RATE: readonly BookingRequestStatus[] = [
+  ...BOOKING_REQUEST_STATUS_ANSWERED,
+  ...BOOKING_REQUEST_STATUS_UNANSWERED,
+];
+
+/**
+ * Tỉ lệ phản hồi từ số yêu cầu đã trả lời / chưa trả lời.
+ *
+ * `null` khi mẫu số bằng 0 — KHÔNG phải 0: "chưa ai hỏi" và "hỏi mà không trả lời" là hai điều
+ * khác hẳn nhau với người đang cân nhắc thuê xe, và với chính chủ xe đang đọc báo cáo của mình.
+ */
+export function responseRatePercent(answered: number, unanswered: number): number | null {
+  const decided = answered + unanswered;
+  return decided === 0 ? null : Math.round((answered / decided) * 100);
+}
 
 /**
  * Lộ trình của yêu cầu thuê XE CÓ TÀI XẾ (mô hình 3 lộ trình — plan 17/08).
@@ -122,6 +186,15 @@ export const BOOKING_REQUEST_STATUS_META: Readonly<Record<BookingRequestStatus, 
   [BOOKING_REQUEST_STATUS.AWAITING_HOLD]: {
     label: 'Chờ chuyển giữ chỗ',
     color: STATUS_COLOR.WAITING,
+  },
+  /*
+   * Nhãn của GIAN HÀNG, nên nó nói thẳng nghĩa vụ đang treo trên đầu họ: tiền của khách đã nằm
+   * ở XePrime và chỗ xe đang bị khoá vì chờ đúng một cú bấm của mình. Màu `SUCCESS` là sai ở
+   * đây — chưa có gì xong cả.
+   */
+  [BOOKING_REQUEST_STATUS.HOLD_PAID]: {
+    label: 'Đã cọc · chờ bạn duyệt',
+    color: STATUS_COLOR.PROCESSING,
   },
   [BOOKING_REQUEST_STATUS.HOLD_EXPIRED]: {
     label: 'Hết hạn chuyển giữ chỗ',

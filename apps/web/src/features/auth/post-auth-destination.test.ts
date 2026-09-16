@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { BILLING_MODE, TENANT_ROLE, TENANT_STATUS } from '@xeprime/types';
-import { ROUTES } from '@/constants/routes';
+import {
+  BILLING_MODE,
+  REGISTRATION_TRACK,
+  SHOP_ONBOARDING_STATE,
+  TENANT_ROLE,
+  TENANT_STATUS,
+} from '@xeprime/types';
+import { REGISTRATION_TRACK_PARAM, ROUTES } from '@/constants/routes';
 import {
   AUTH_INTENT,
   canUseManagePortal,
+  isOnboardingRoute,
+  isPackageOnboarding,
   resolveCustomerDestination,
   resolveOwnerCtaHref,
   resolvePortalDestination,
@@ -266,9 +274,7 @@ describe('canUseManagePortal', () => {
 describe('resolvePortalDestination — tuyến hoa hồng', () => {
   it('không có next → về khu tài khoản, KHÔNG phải /manage', () => {
     expect(resolvePortalDestination({ user: commissionOwner })).toBe(ROUTES.ACCOUNT.VEHICLES);
-    expect(resolvePortalDestination({ user: registeringOwner })).toBe(
-      ROUTES.ACCOUNT.REGISTRATION,
-    );
+    expect(resolvePortalDestination({ user: registeringOwner })).toBe(ROUTES.ACCOUNT.REGISTRATION);
   });
 
   /**
@@ -277,9 +283,9 @@ describe('resolvePortalDestination — tuyến hoa hồng', () => {
    * lần nháy màn hình. Chuyển hướng về đúng khu ngay tại đây.
    */
   it('next trỏ vào /manage → vẫn về khu tài khoản', () => {
-    expect(
-      resolvePortalDestination({ user: commissionOwner, next: ROUTES.MANAGE.VEHICLES }),
-    ).toBe(ROUTES.ACCOUNT.VEHICLES);
+    expect(resolvePortalDestination({ user: commissionOwner, next: ROUTES.MANAGE.VEHICLES })).toBe(
+      ROUTES.ACCOUNT.VEHICLES,
+    );
     expect(resolvePortalDestination({ user: commissionOwner, next: ROUTES.MANAGE.SHOP })).toBe(
       ROUTES.ACCOUNT.VEHICLES,
     );
@@ -303,5 +309,161 @@ describe('resolveOwnerCtaHref — theo tuyến', () => {
     expect(resolveOwnerCtaHref(commissionOwner)).toBe(ROUTES.ACCOUNT.VEHICLES);
     expect(resolveOwnerCtaHref(registeringOwner)).toBe(ROUTES.ACCOUNT.REGISTRATION);
     expect(resolveOwnerCtaHref(packageShop)).toBe(ROUTES.MANAGE.ROOT);
+  });
+});
+
+/**
+ * ── HAI TUYẾN ĐĂNG KÝ (ADR 0040) ─────────────────────────────────────────────────────────────
+ *
+ * Bốn fixture dưới đây là bốn tình huống mà `billingMode` MỘT MÌNH không phân biệt được, và mỗi
+ * cái phải rẽ một đường khác:
+ *
+ * | Fixture | `onboardingState` | `billingMode` | Đích |
+ * | --- | --- | --- | --- |
+ * | `packagePending` | `package_pending` | `null` | màn onboarding (bước 2) |
+ * | `misconfigured` | `commission` | `null` | Owner Lite — đây là LỖI CẤU HÌNH, không phải một tuyến |
+ * | `lapsedPackageShop` | `package_active` | `commission` | danh sách xe, KHÔNG phải wizard lần đầu |
+ * | `paidPackageShop` | `package_active` | `package` | `/manage` |
+ *
+ * Hai dòng đầu có `billingMode` GIỐNG HỆT nhau. Đó chính là lý do trục đăng ký phải tồn tại.
+ */
+const packagePending: AuthScope = {
+  tenant: {
+    id: 'TP',
+    roleKey: TENANT_ROLE.SHOP_OWNER,
+    status: TENANT_STATUS.ACTIVE,
+    onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_PENDING,
+    billingMode: null,
+  },
+  platformRole: null,
+};
+const misconfigured: AuthScope = {
+  tenant: {
+    id: 'TM',
+    roleKey: TENANT_ROLE.SHOP_OWNER,
+    status: TENANT_STATUS.ACTIVE,
+    onboardingState: SHOP_ONBOARDING_STATE.COMMISSION,
+    billingMode: null,
+  },
+  platformRole: null,
+};
+const lapsedPackageShop: AuthScope = {
+  tenant: {
+    id: 'TL',
+    roleKey: TENANT_ROLE.SHOP_OWNER,
+    status: TENANT_STATUS.ACTIVE,
+    onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE,
+    billingMode: BILLING_MODE.COMMISSION,
+    publicVehicleCount: 0,
+  },
+  platformRole: null,
+};
+const paidPackageShop: AuthScope = {
+  tenant: {
+    id: 'TA',
+    roleKey: TENANT_ROLE.SHOP_OWNER,
+    status: TENANT_STATUS.ACTIVE,
+    onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE,
+    billingMode: BILLING_MODE.PACKAGE,
+  },
+  platformRole: null,
+};
+
+describe('resolveWorkspaceHref — hai tuyến đăng ký (ADR 0040)', () => {
+  it('gian hàng trả phí CHƯA thanh toán → màn onboarding, KHÔNG phải Owner Lite', () => {
+    expect(resolveWorkspaceHref(packagePending)).toBe(ROUTES.MANAGE.ONBOARDING);
+    expect(isPackageOnboarding(packagePending)).toBe(true);
+  });
+
+  /*
+   * ĐIỀU MẤU CHỐT: hai fixture này có `billingMode` giống hệt nhau (`null`) và vẫn phải rẽ hai
+   * đường. Nếu phép suy chỉ đọc `billingMode` thì test này không thể xanh.
+   */
+  it('cùng `billingMode: null` nhưng khác cửa vào ⇒ khác đích', () => {
+    expect(resolveWorkspaceHref(packagePending)).toBe(ROUTES.MANAGE.ONBOARDING);
+    expect(resolveWorkspaceHref(misconfigured)).toBe(ROUTES.ACCOUNT.REGISTRATION);
+    expect(isPackageOnboarding(misconfigured)).toBe(false);
+  });
+
+  it('gói đã thanh toán → /manage', () => {
+    expect(resolveWorkspaceHref(paidPackageShop)).toBe(ROUTES.MANAGE.ROOT);
+    expect(canUseManagePortal(paidPackageShop)).toBe(true);
+    expect(isPackageOnboarding(paidPackageShop)).toBe(false);
+  });
+
+  /*
+   * Gian hàng HẾT GÓI không phải người đang đăng ký lần đầu. `resolveOwnerStage` chấm họ là
+   * `registering` ngay khi chiếc xe cuối rời chợ, nên nếu không có trục đăng ký thì họ bị mời vào
+   * wizard "Hồ sơ chủ xe → Đăng xe đầu tiên → Lên chợ" mà họ đã làm xong từ lâu.
+   */
+  it('gói HẾT HẠN → danh sách xe, KHÔNG phải màn đăng ký lần đầu', () => {
+    expect(resolveWorkspaceHref(lapsedPackageShop)).toBe(ROUTES.ACCOUNT.VEHICLES);
+    expect(canUseManagePortal(lapsedPackageShop)).toBe(false);
+    expect(isPackageOnboarding(lapsedPackageShop)).toBe(false);
+  });
+
+  /*
+   * Nhân viên KHÔNG có Owner Lite, kể cả ở một gian hàng đã từng trả tiền: Owner Lite là bộ công
+   * cụ của CHỦ XE, còn họ chỉ là một con người có tài khoản.
+   */
+  it('nhân viên của gian hàng hết gói → khu tài khoản cá nhân, không Owner Lite', () => {
+    for (const roleKey of [
+      TENANT_ROLE.SHOP_MANAGER,
+      TENANT_ROLE.SHOP_STAFF,
+      TENANT_ROLE.SHOP_VIEWER,
+    ]) {
+      const member: AuthScope = {
+        tenant: {
+          ...lapsedPackageShop.tenant!,
+          roleKey,
+        },
+        platformRole: null,
+      };
+      expect(resolveWorkspaceHref(member)).toBe(ROUTES.ACCOUNT.ROOT);
+    }
+  });
+});
+
+describe('resolvePortalDestination — cửa gian hàng đi qua bước đăng nhập', () => {
+  /*
+   * CTA "Đăng ký gian hàng" mang `?track=package`, và proxy đặt nó vào `?next=` khi chặn người
+   * chưa đăng nhập. Phép so `next === ROUTES.MANAGE.ONBOARDING` trả `false` vì có query — nên nó
+   * đã được thay bằng `isOnboardingRoute` (so PHẦN ĐƯỜNG DẪN). Không có test này thì người bấm
+   * đúng cửa gian hàng rồi đăng nhập sẽ mất cửa mình đã chọn mà không có gì đỏ lên.
+   */
+  const onboardingWithTrack = `${ROUTES.MANAGE.ONBOARDING}?${REGISTRATION_TRACK_PARAM}=${REGISTRATION_TRACK.PACKAGE}`;
+
+  it('chưa có gian hàng: `?next=` mang tuyến gói được tôn trọng NGUYÊN VẸN', () => {
+    expect(
+      resolvePortalDestination({
+        user: customer,
+        next: onboardingWithTrack,
+        intent: AUTH_INTENT.OWNER,
+      }),
+    ).toBe(onboardingWithTrack);
+  });
+
+  it('không kèm intent vẫn giữ cửa: ý định nằm trong chính `next`', () => {
+    expect(resolvePortalDestination({ user: customer, next: onboardingWithTrack })).toBe(
+      onboardingWithTrack,
+    );
+  });
+
+  it('isOnboardingRoute bỏ qua query, và không khớp route khác', () => {
+    expect(isOnboardingRoute(onboardingWithTrack)).toBe(true);
+    expect(isOnboardingRoute(ROUTES.MANAGE.ONBOARDING)).toBe(true);
+    expect(isOnboardingRoute(ROUTES.MANAGE.SHOP)).toBe(false);
+    expect(isOnboardingRoute(null)).toBe(false);
+  });
+
+  /*
+   * Đã ĐANG onboarding gói thì mọi `?next=` trong `/manage` đều đưa về bước còn nợ — không thả họ
+   * vào một trang quản lý mà `SubscriptionTrackGuard` sẽ trả 403.
+   */
+  it('đang onboarding gói: next trỏ vào /manage → về đúng bước thanh toán', () => {
+    expect(resolvePortalDestination({ user: packagePending, next: ROUTES.MANAGE.VEHICLES })).toBe(
+      ROUTES.MANAGE.ONBOARDING,
+    );
+    expect(resolvePortalDestination({ user: packagePending })).toBe(ROUTES.MANAGE.ONBOARDING);
   });
 });

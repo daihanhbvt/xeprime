@@ -38,9 +38,6 @@ const SELECT = {
   idNumber: true,
   idIssuedAt: true,
   idIssuedBy: true,
-  bankCode: true,
-  bankAccountNumber: true,
-  bankAccountName: true,
   status: true,
   submittedAt: true,
   verifiedAt: true,
@@ -60,9 +57,12 @@ type Row = Prisma.SellerProfileGetPayload<{ select: typeof SELECT }>;
  *     đuổi người bán đi trước khi họ kịp thấy lý do phải khai.
  *  2. **Xác minh đi qua `approval_tasks`** (`target_type = seller_profile`) — cùng hàng đợi với
  *     duyệt gian hàng/xe, đúng lằn ranh 2 của CLAUDE.md mục 6. Không dựng hàng đợi thứ hai.
- *  3. **Đổi tài khoản nhận tiền là việc NHẠY CẢM.** Hồ sơ đã `verified` mà sửa số tài khoản thì
- *     quay lại `submitted` và ghi `bank_changed_at` — R4 dùng mốc đó đặt cooldown trước khi cho
- *     rút. Sửa các trường khác không hạ trạng thái.
+ *  3. **KHÔNG còn tài khoản nhận tiền ở đây** (16/09/2026). Nó sống ở `bank_accounts`
+ *     (`/shop/bank-accounts`) — sổ có cờ mặc định, lưu trữ và dấu vết đổi, và là bảng mà lệnh
+ *     rút thật sự đọc. Ba cột cũ trên `seller_profiles` là bản khai thứ hai không nối với đồng
+ *     nào: gian hàng điền xong vẫn không rút được, và người bán đã xác minh vẫn phải khai lại ở
+ *     màn bên cạnh. Hồ sơ này giờ chỉ còn nói về DANH TÍNH và thuế — đúng phần mà reviewer nền
+ *     tảng và module thuế cần.
  */
 @Injectable()
 export class SellerProfileService {
@@ -103,12 +103,6 @@ export class SellerProfileService {
       });
     }
 
-    const bankAccountNumber = dto.bankAccountNumber?.replace(/\s+/g, '') || null;
-    const bankChanged =
-      current.status === SELLER_PROFILE_STATUS.VERIFIED &&
-      bankAccountNumber !== null &&
-      bankAccountNumber !== current.bankAccountNumber;
-
     const row = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.sellerProfile.update({
         where: { tenantId },
@@ -119,16 +113,6 @@ export class SellerProfileService {
           idNumber: dto.idNumber?.replace(/\s+/g, '').toUpperCase() || null,
           idIssuedAt: dto.idIssuedAt ? toDateOnly(dto.idIssuedAt) : null,
           idIssuedBy: dto.idIssuedBy?.trim() || null,
-          bankCode: dto.bankCode?.trim().toUpperCase() || null,
-          bankAccountNumber,
-          bankAccountName: dto.bankAccountName?.trim() || null,
-          /*
-           * Đổi TÀI KHOẢN NHẬN TIỀN trên hồ sơ đã xác minh ⇒ phải xác minh lại. Không phải hình
-           * thức: đây chính là đường mà một tài khoản bị chiếm sẽ dùng để đổi đích nhận tiền.
-           */
-          ...(bankChanged
-            ? { status: SELLER_PROFILE_STATUS.SUBMITTED, bankChangedAt: new Date(), verifiedAt: null }
-            : {}),
         },
         select: SELECT,
       });
@@ -141,12 +125,11 @@ export class SellerProfileService {
           action: 'seller_profile.save',
           targetType: 'seller_profile',
           targetId: updated.id,
-          // KHÔNG ghi số tài khoản / số giấy tờ vào audit — chỉ ghi CÓ ĐỔI hay không.
-          after: { entityType: dto.entityType, bankChanged },
+          // KHÔNG ghi số giấy tờ vào audit — chỉ ghi loại chủ thể vừa lưu.
+          after: { entityType: dto.entityType },
         },
         tx,
       );
-      if (bankChanged) await this.openApprovalTask(tx, tenantId, updated.id, actorUserId);
       return updated;
     });
     return toDto(row);
@@ -408,17 +391,15 @@ export function missingFields(row: {
   legalName: string | null;
   taxId: string | null;
   idNumber: string | null;
-  bankCode: string | null;
-  bankAccountNumber: string | null;
-  bankAccountName: string | null;
 }): string[] {
   const missing: string[] = [];
   if (!row.legalName) missing.push('legalName');
-  // Tài khoản nhận tiền: bắt buộc với MỌI loại — không có nó thì R4 không trả tiền cho ai được.
-  if (!row.bankCode) missing.push('bankCode');
-  if (!row.bankAccountNumber) missing.push('bankAccountNumber');
-  if (!row.bankAccountName) missing.push('bankAccountName');
-
+  /*
+   * KHÔNG đòi tài khoản nhận tiền nữa (16/09/2026): nó không sống trên hồ sơ này. Cổng "phải có
+   * tài khoản nhận tiền mới rút được" nằm ở chính luồng rút (`WithdrawalService` đọc
+   * `bank_accounts`), nơi câu hỏi đó mới có nghĩa — chặn ở đây chỉ khiến một hồ sơ DANH TÍNH
+   * không gửi đi được vì lý do chẳng liên quan tới danh tính.
+   */
   if (row.entityType === SELLER_ENTITY_TYPE.INDIVIDUAL) {
     // Cá nhân: định danh bằng CCCD/hộ chiếu. MST cá nhân không bắt buộc — nhiều người chưa có.
     if (!row.idNumber) missing.push('idNumber');
@@ -438,9 +419,6 @@ function toDto(row: Row): SellerProfileDto {
     idNumber: row.idNumber,
     idIssuedAt: fromDateOnly(row.idIssuedAt),
     idIssuedBy: row.idIssuedBy,
-    bankCode: row.bankCode,
-    bankAccountNumber: row.bankAccountNumber,
-    bankAccountName: row.bankAccountName,
     status: row.status,
     submittedAt: row.submittedAt?.toISOString() ?? null,
     verifiedAt: row.verifiedAt?.toISOString() ?? null,
@@ -462,11 +440,6 @@ function toPlatformDto(
     legalName: row.legalName,
     taxId: row.taxId,
     idNumber: opts.mask ? maskAccountNumber(row.idNumber) : row.idNumber,
-    bankCode: row.bankCode,
-    bankAccountNumber: opts.mask
-      ? maskAccountNumber(row.bankAccountNumber)
-      : row.bankAccountNumber,
-    bankAccountName: row.bankAccountName,
     status: row.status,
     submittedAt: row.submittedAt?.toISOString() ?? null,
     verifiedAt: row.verifiedAt?.toISOString() ?? null,

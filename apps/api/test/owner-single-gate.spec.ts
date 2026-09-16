@@ -37,8 +37,12 @@ import {
  *    của admin thì chỉ có phiếu duyệt GIAN HÀNG.
  *
  * Bảy nhóm dưới đây chạy trọn vòng trên PostgreSQL THẬT: đăng ký → đăng xe → admin duyệt → xe
- * lên chợ, cộng các nhánh trả về, chống trùng, và hai cổng KHÔNG được phép biến mất (gian hàng
- * bị khoá, và xác minh trước khi mua gói thuê bao).
+ * lên chợ, cộng các nhánh trả về và chống trùng.
+ *
+ * Nhóm 5 nay khoá MỘT cổng, không phải hai: **gian hàng bị khoá thì không đăng được xe**. Cổng
+ * "xác minh trước khi mua gói" của ADR 0036 điều 4 đã bị [ADR 0040] điều 5 gỡ — thanh toán mở
+ * tuyến gói, và nhóm đó khoá chiều NGƯỢC lại (gian hàng chưa xác minh vẫn tạo được hoá đơn, và
+ * việc trả tiền KHÔNG tự đánh dấu đã xác minh).
  *
  * Chạy: pnpm db:up && pnpm --filter @xeprime/api test owner-single-gate
  */
@@ -135,7 +139,12 @@ beforeAll(async () => {
   reviewerId = newId();
   await prisma.user.createMany({
     data: [
-      { id: ownerId, displayName: 'Chủ xe cá nhân', email: `own-${ownerId}@xeprime.test` },
+      {
+        id: ownerId,
+        displayName: 'Chủ xe cá nhân',
+        email: `own-${ownerId}@xeprime.test`,
+        phone: OWNER_PHONE,
+      },
       { id: reviewerId, displayName: 'Reviewer', email: `rev-${reviewerId}@xeprime.test` },
     ],
   });
@@ -152,7 +161,11 @@ beforeAll(async () => {
       status: PLAN_STATUS.ACTIVE,
       durationDays: 90,
       // Gói được bán theo mọi kỳ hạn toàn cục; `slots` để `priceTerm` ra số > 0.
-      limitsJson: { perVehiclePrice: { car: '100000', motorbike: '50000' }, includedCars: 0, includedMotorbikes: 0 },
+      limitsJson: {
+        perVehiclePrice: { car: '100000', motorbike: '50000' },
+        includedCars: 0,
+        includedMotorbikes: 0,
+      },
       sortOrder: 900,
     },
   });
@@ -178,6 +191,19 @@ afterAll(async () => {
   }
   await prisma.$disconnect();
 });
+
+/**
+ * SĐT của tài khoản CHỦ — bắt buộc, không phải trang trí.
+ *
+ * Từ 16/09/2026 ba cột `tenant_profiles.owner_*` đã bị drop và `submitForReview` đọc họ tên +
+ * SĐT chủ từ `tenants.owner_user_id → users`. Một fixture chủ không có SĐT sẽ bị chính cổng
+ * `missingShopProfileRequirements` từ chối — và nó từ chối ĐÚNG: reviewer phải liên hệ được với
+ * một người thật, còn mọi tài khoản chủ ngoài thực tế đều đã đi qua OTP.
+ *
+ * `users.phone` là UNIQUE nên giá trị phải khác nhau giữa các lần chạy; mốc thời gian là cách rẻ
+ * nhất để có điều đó mà vẫn đúng dạng lưu `84` + 9 chữ số (cùng khuôn `tenant-profile.spec.ts`).
+ */
+const OWNER_PHONE = `849${String(Date.now()).slice(-8)}`;
 
 const maybe = (name: string, fn: () => Promise<void>) =>
   it(name, async () => {
@@ -213,13 +239,28 @@ describe('1. Mở hồ sơ chủ xe: không sinh phiếu duyệt gian hàng', ()
     expect(branch.provinceCode).toBe(HCM);
   });
 
-  maybe('hồ sơ mang sẵn họ tên + SĐT — không phải điền lại ở một màn khác', async () => {
-    const profile = await prisma.tenantProfile.findUniqueOrThrow({
-      where: { tenantId },
-      select: { ownerFullName: true, ownerPhone: true },
+  /*
+   * 16/09/2026 — họ tên + SĐT chủ không còn được CHÉP sang hồ sơ gian hàng lúc đăng ký. Chúng
+   * đã nằm sẵn ở tài khoản người vừa mở gian hàng, và đó là điều làm cho cổng gửi duyệt đi qua
+   * được ngay: không có gì để điền lại ở một màn khác, vì không có bản sao nào cần điền.
+   */
+  maybe('chủ gian hàng đọc từ TÀI KHOẢN, không từ payload đăng ký', async () => {
+    const shop = await tenants.getMyShop(tenantId);
+    const owner = await prisma.user.findUniqueOrThrow({
+      where: { id: ownerId },
+      select: { displayName: true, email: true, phone: true },
     });
-    expect(profile.ownerFullName).toBe('Nguyễn Văn A');
-    expect(profile.ownerPhone).toBe('84901234567');
+
+    expect(shop.ownerAccount.userId).toBe(ownerId);
+    /*
+     * Tên ở đây là tên TÀI KHOẢN ("Chủ xe cá nhân"), KHÔNG phải `name` trong payload đăng ký
+     * gian hàng ("Nguyễn Văn A"). Trước 16/09/2026 `registerShop` chép `dto.name` sang
+     * `tenant_profiles.owner_full_name`, nên hai thứ khác nhau lại trông như một — và hồ sơ đi
+     * duyệt mang một cái tên mà không tài khoản nào đứng sau.
+     */
+    expect(shop.ownerAccount.displayName).toBe(owner.displayName);
+    expect(shop.ownerAccount.email).toBe(owner.email);
+    expect(shop.ownerAccount.phone).toBe(owner.phone);
   });
 
   maybe('gói mặc định là TUYẾN HOA HỒNG — nguồn phân biệt hai tuyến là billingMode', async () => {
@@ -281,17 +322,20 @@ describe('2. Gửi duyệt xe: một cổng, một phiếu', () => {
     expect(await pendingVehicleTasks(vehicleId)).toBe(1);
   });
 
-  maybe('hai request SONG SONG cũng chỉ ra một phiếu (constraint DB, không phải check app)', async () => {
-    const racing = await seedVehicle();
-    const results = await Promise.allSettled([
-      vehicles.submitForPublicReview(tenantId, racing, ownerId),
-      vehicles.submitForPublicReview(tenantId, racing, ownerId),
-    ]);
+  maybe(
+    'hai request SONG SONG cũng chỉ ra một phiếu (constraint DB, không phải check app)',
+    async () => {
+      const racing = await seedVehicle();
+      const results = await Promise.allSettled([
+        vehicles.submitForPublicReview(tenantId, racing, ownerId),
+        vehicles.submitForPublicReview(tenantId, racing, ownerId),
+      ]);
 
-    // Không request nào được phép hỏng: cả hai đều là "gửi duyệt chiếc xe này", và cả hai đều đạt.
-    expect(results.every((r) => r.status === 'fulfilled')).toBe(true);
-    expect(await pendingVehicleTasks(racing)).toBe(1);
-  });
+      // Không request nào được phép hỏng: cả hai đều là "gửi duyệt chiếc xe này", và cả hai đều đạt.
+      expect(results.every((r) => r.status === 'fulfilled')).toBe(true);
+      expect(await pendingVehicleTasks(racing)).toBe(1);
+    },
+  );
 
   maybe('admin duyệt → xe công khai + có trên marketplace + báo chủ xe', async () => {
     const taskId = await pendingTaskId(vehicleId);
@@ -440,7 +484,7 @@ describe('4. Từ chối / yêu cầu bổ sung: chủ xe thấy lý do và gử
   });
 });
 
-describe('5. Hai cổng KHÔNG được biến mất', () => {
+describe('5. Cổng VẬN HÀNH không được biến mất; cổng XÁC MINH không được quay lại đường tiền', () => {
   maybe('gian hàng bị khoá → không đăng được xe lên chợ', async () => {
     await prisma.tenant.update({
       where: { id: tenantId },
@@ -458,23 +502,34 @@ describe('5. Hai cổng KHÔNG được biến mất', () => {
     });
   });
 
-  maybe('mua gói THUÊ BAO khi chưa xác minh → bị chặn', async () => {
-    /*
-     * Đây là điều khoản mà ADR 0036 nợ ADR 0014 điều 5: bỏ cổng duyệt gian hàng khỏi tuyến hoa
-     * hồng KHÔNG được phép làm tuyến thuê bao mất cổng của nó. Cổng chuyển về đúng chỗ nó có
-     * nghĩa — muốn mua gói thì pháp nhân phải đã được xem xét.
-     */
-    await expect(
-      billing.purchase(tenantId, ownerId, { planId: packagePlanId, termMonths: 3, slots: { car: 1, motorbike: 0 } }),
-    ).rejects.toMatchObject({
-      response: {
-        code: API_ERROR_CODE.SHOP_VERIFICATION_REQUIRED,
-        details: { verification: SHOP_VERIFICATION.UNVERIFIED },
-      },
-    });
-  });
+  /*
+   * ADR 0040 ghi đè ADR 0036 ở đúng điều khoản này.
+   *
+   * ADR 0036 đặt xác minh pháp nhân làm cổng MUA GÓI. Ghép nó với luồng đăng ký gian hàng trả
+   * phí thì thứ tự thành: tạo gian hàng → gửi hồ sơ → CHỜ admin (không SLA) → mới được trả tiền,
+   * và trong lúc chờ họ không dùng được gì. Test này khoá chiều NGƯỢC lại: gian hàng CHƯA xác
+   * minh vẫn tạo được hoá đơn gói.
+   *
+   * Điều KHÔNG đổi, và test dưới đây khoá luôn: thanh toán không tự đánh dấu đã xác minh.
+   */
+  maybe(
+    'mua gói THUÊ BAO khi CHƯA xác minh → đi qua, và không tự đánh dấu đã xác minh',
+    async () => {
+      expect((await tenants.getMyShop(tenantId)).verification).toBe(SHOP_VERIFICATION.UNVERIFIED);
 
-  maybe('xác minh xong → mua gói đi qua, và xe trên chợ KHÔNG hề bị ảnh hưởng', async () => {
+      const invoice = await billing.purchase(tenantId, ownerId, {
+        planId: packagePlanId,
+        termMonths: 3,
+        slots: { car: 1, motorbike: 0 },
+      });
+      expect(invoice.code).toMatch(/^XPG/);
+
+      // Tạo hoá đơn KHÔNG chạm vào trục xác minh, và cũng không mở gói (tiền chưa về).
+      expect((await tenants.getMyShop(tenantId)).verification).toBe(SHOP_VERIFICATION.UNVERIFIED);
+    },
+  );
+
+  maybe('xác minh xong → mua gói vẫn đi qua, và xe trên chợ KHÔNG hề bị ảnh hưởng', async () => {
     const liveBefore = await prisma.publicListing.count({
       where: { tenantId, status: LISTING_STATUS.ACTIVE },
     });

@@ -96,6 +96,14 @@ export function isDepositCollectionMode(value: unknown): value is DepositCollect
  * gian hàng chưa có năng lực này". Gộp thành một chữ "không" là bắt người dùng đoán.
  */
 export const DEPOSIT_POLICY_REASON = {
+  /**
+   * GIAI ĐOẠN HIỆN TẠI: cả sàn thu cọc, không phân biệt tuyến (16/09/2026 — xem
+   * `DEPOSIT_COLLECTION_PLATFORM_MANDATORY`). Đứng RIÊNG chứ không mượn
+   * `commission_mandatory`: gian hàng tuyến gói cần đọc đúng lý do họ đang bị thu — "quy định
+   * chung của sàn trong giai đoạn này", không phải "bạn đang ở tuyến hoa hồng" (sai) hay "gói
+   * của bạn thiếu năng lực" (cũng sai).
+   */
+  PLATFORM_MANDATORY: 'platform_mandatory',
   /** Tuyến hoa hồng — BẮT BUỘC, không công tắc nào tắt được (ADR 0032 điều 2). */
   COMMISSION_MANDATORY: 'commission_mandatory',
   /** Tuyến gói: gói có `escrow_hold` và gian hàng đã bật công tắc. */
@@ -122,6 +130,21 @@ export type DepositPolicyReason =
 export const DEPOSIT_POLICY_REASON_VALUES = Object.values(
   DEPOSIT_POLICY_REASON,
 ) as DepositPolicyReason[];
+
+/**
+ * CẢ SÀN THU CỌC trong giai đoạn này — công tắc của gian hàng tạm mất tiếng nói.
+ *
+ * Vì sao là một HẰNG SỐ trong mã chứ không phải biến môi trường: đây là một luật về TIỀN của
+ * khách. Một biến env đổi được trên VPS nghĩa là hành vi thu tiền của cả sàn đổi mà không có
+ * commit nào, không có review nào và không có dòng nào trong lịch sử giải thích vì sao tháng
+ * trước thu còn tháng này không. Mở lại = sửa đúng dòng này (`false`), chạy test, merge — và
+ * lúc đó `tenant_payment_settings.deposit_collection_enabled` đã có sẵn giá trị của từng gian
+ * hàng để quay về, vì migration `20260916…` đã ghi `true` cho tất cả.
+ *
+ * Khi `false`, `DepositPolicyService` quay lại đúng luật hai trục của ADR 0027 điều 2 — không
+ * có nhánh chết nào phải dọn.
+ */
+export const DEPOSIT_COLLECTION_PLATFORM_MANDATORY = true;
 
 // ── Trạng thái: tiền đã về chưa ─────────────────────────────────────────────
 

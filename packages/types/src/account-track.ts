@@ -26,6 +26,7 @@
  */
 
 import { TENANT_ROLE } from './rbac';
+import { isPackageOnboardingPending } from './shop-onboarding';
 import { BILLING_MODE } from './status/billing';
 
 export const ACCOUNT_TRACK = {
@@ -37,6 +38,16 @@ export const ACCOUNT_TRACK = {
   SHOP_OWNER: 'shop_owner',
   /** Quản lý / nhân viên / người xem của một gian hàng — nhãn theo VAI, không theo tuyến. */
   SHOP_MEMBER: 'shop_member',
+  /**
+   * Gian hàng trả phí ĐANG chờ thanh toán lượt gói đầu tiên (ADR 0040 điều 2).
+   *
+   * Nhãn RIÊNG, và nó phải đứng TRƯỚC `UNCONFIGURED`: hai trạng thái có `billingMode` giống hệt
+   * nhau (`null`) nhưng nói hai chuyện ngược nhau. Đây là một bước còn nợ của CHÍNH người dùng —
+   * họ chuyển khoản là xong; còn `UNCONFIGURED` là lỗi vận hành của nền tảng mà họ không tự sửa
+   * được. Trộn hai thứ nghĩa là mọi người vừa mở gian hàng đều nhận một dải đỏ "liên hệ hỗ trợ"
+   * ngay sau bước 1, cho một hệ thống đang chạy đúng.
+   */
+  PACKAGE_PENDING: 'package_pending',
   /** Chủ xe mà tenant chưa xác định được tuyến — LỖI CẤU HÌNH, không phải một tuyến. */
   UNCONFIGURED: 'unconfigured',
 } as const;
@@ -50,6 +61,12 @@ export const ACCOUNT_TRACK_VALUES = Object.values(ACCOUNT_TRACK) as AccountTrack
 export interface AccountTrackInput {
   roleKey?: string | null;
   billingMode?: string | null;
+  /**
+   * Trục ĐĂNG KÝ (ADR 0040) — bắt buộc để phân biệt "đang chờ thanh toán" với "danh mục gói
+   * hỏng". Cả hai đều có `billingMode: null`, nên thiếu trường này là nhãn nói sai về tiền ở
+   * đúng nhóm người vừa bấm mở gian hàng.
+   */
+  onboardingState?: string | null;
   planName?: string | null;
   /*
    * KHÔNG có `planCode` ở đây: docblock đầu file cấm đọc nó để suy tuyến, và một field khai ra
@@ -92,6 +109,13 @@ export function resolveAccountTrack(
   }
   if (tenant.billingMode === BILLING_MODE.COMMISSION) {
     return { ...base, track: ACCOUNT_TRACK.COMMISSION_OWNER };
+  }
+  /*
+   * `billingMode` rỗng có HAI nguyên nhân từ ADR 0040, và chỉ một là sự cố — xem
+   * `ACCOUNT_TRACK.PACKAGE_PENDING`. Hỏi trục đăng ký trước khi kết luận "lỗi cấu hình".
+   */
+  if (isPackageOnboardingPending(tenant)) {
+    return { ...base, track: ACCOUNT_TRACK.PACKAGE_PENDING };
   }
   return { ...base, track: ACCOUNT_TRACK.UNCONFIGURED };
 }

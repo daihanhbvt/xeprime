@@ -4,6 +4,8 @@ import { API_ERROR_CODE, CATALOG_TYPE, CONTRACT_STATUS } from '@xeprime/types';
 import { bookingDebt } from '../../common/money';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { BankAccountsService } from '../bank-accounts/bank-accounts.service';
+import { WALLET_OWNER_TYPE } from '@xeprime/types';
 import { ContractDto, ContractSnapshotDto } from './dto/contract.dto';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -23,6 +25,13 @@ export class ContractsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    /**
+     * Tài khoản nhận tiền của gian hàng để in lên hợp đồng — đọc từ `bank_accounts`, nguồn duy
+     * nhất (ADR 0033). Bốn cột text trên `tenant_profiles` đã bị gỡ 16/09/2026: chúng là bản
+     * sao thứ hai mà không lệnh chuyển nào đọc, nên hợp đồng in ra một số tài khoản trong khi
+     * tiền thật chạy về một số khác.
+     */
+    private readonly bankAccounts: BankAccountsService,
   ) {}
 
   /**
@@ -85,9 +94,6 @@ export class ContractsService {
                 provinceName: true,
                 taxCode: true,
                 businessLicenseNo: true,
-                bankName: true,
-                bankAccountNo: true,
-                bankAccountName: true,
               },
             },
           },
@@ -97,6 +103,18 @@ export class ContractsService {
     if (!booking) throw notFound();
 
     const profile = booking.tenant.profile;
+    /*
+     * Tài khoản MẶC ĐỊNH của gian hàng tại thời điểm lập hợp đồng. Số đầy đủ, không che: đây là
+     * số khách phải chuyển tiền vào, và một hợp đồng in `•••• 8888` thì không dùng được.
+     *
+     * `null` khi gian hàng chưa khai tài khoản nào — hợp đồng vẫn lập được (khoản còn lại có
+     * thể trả tiền mặt lúc nhận xe), chỉ là khối ngân hàng trống, đúng như trước đây khi bốn ô
+     * text để trống.
+     */
+    const payoutAccount = await this.bankAccounts.resolveForPayout({
+      type: WALLET_OWNER_TYPE.TENANT,
+      tenantId,
+    });
     const total = new Prisma.Decimal(booking.totalAmount);
     const paid = new Prisma.Decimal(booking.paidAmount);
     /*
@@ -122,9 +140,14 @@ export class ContractsService {
         province: profile?.provinceName ?? null,
         taxCode: profile?.taxCode ?? null,
         businessLicenseNo: profile?.businessLicenseNo ?? null,
-        bankName: profile?.bankName ?? null,
-        bankAccountNo: profile?.bankAccountNo ?? null,
-        bankAccountName: profile?.bankAccountName ?? null,
+        /*
+         * GIỮ NGUYÊN ba khoá `bankName`/`bankAccountNo`/`bankAccountName`: snapshot là jsonb
+         * ĐÔNG CỨNG và hợp đồng đã ký đọc đúng ba khoá này. Đổi tên là làm mù mọi hợp đồng cũ.
+         * Nguồn thì đã đổi — nay là mã ngân hàng chuẩn VietQR của tài khoản mặc định.
+         */
+        bankName: payoutAccount?.bankCode ?? null,
+        bankAccountNo: payoutAccount?.accountNumber ?? null,
+        bankAccountName: payoutAccount?.accountName ?? null,
       },
       customer: { name: booking.customerName, phone: booking.customerPhone },
       vehicle: {

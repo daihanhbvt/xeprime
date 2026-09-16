@@ -1,0 +1,169 @@
+/*
+ * Trang Cửa hàng: tiêu đề full-width, rồi hai cột (mục lục | nội dung).
+ *
+ * Bề rộng tối đa đặt ở trang (`page.module.css`), không ở đây — component này có thể nằm trong
+ * vỏ khác sau này, và một `max-width` nằm sâu trong cây là thứ không ai tìm ra khi cần đổi.
+ */
+
+.header {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--xp-space-md);
+  gap: var(--xp-space-md);
+}
+
+.identity {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 320px;
+  align-items: center;
+  gap: var(--xp-space-md);
+}
+
+/*
+ * Logo 52px — đủ để nhận ra, không đủ để tranh chỗ với tên gian hàng.
+ *
+ * `.identity .logo` chứ không phải class đơn: AntD đặt nền của `.ant-avatar` ở
+ * `:where(.css-<hash>).ant-avatar`, độ đặc hiệu (0,1,0) — bằng đúng một class CSS Module, và
+ * AntD chèn `<style>` lúc chạy nên luôn thắng khi hoà. Hai class nâng lên (0,2,0).
+ */
+.identity .logo {
+  flex: none;
+  background: linear-gradient(150deg, var(--xp-color-primary), var(--xp-gold-deep));
+  color: var(--xp-color-primary-contrast);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.headText {
+  min-width: 0;
+}
+
+.shopName {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h2);
+  font-weight: var(--xp-font-weight-bold);
+  line-height: var(--xp-line-height-h2);
+  gap: var(--xp-space-sm);
+  overflow-wrap: anywhere;
+}
+
+.subtitle {
+  margin: var(--xp-space-xs) 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+/*
+ * "Chưa lưu" đứng ngay cạnh nút Lưu vừa sáng lên — nút đổi trạng thái là tín hiệu, dòng này là
+ * lời giải thích. Chỉ hiện khi form thật sự có thay đổi, nên nó không bao giờ là chữ trang trí.
+ */
+.dirtyHint {
+  display: inline-flex;
+  align-items: center;
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.dirtyDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentcolor;
+}
+
+.alert {
+  margin-bottom: var(--xp-space-md);
+}
+
+/* Mục lục trái 220px, nội dung chiếm phần còn lại. */
+.layout {
+  display: grid;
+  min-width: 0;
+  align-items: start;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: var(--xp-space-lg);
+}
+
+.content {
+  min-width: 0;
+}
+
+.form {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+}
+
+/* `fieldset` chỉ để KHOÁ, không để trang trí — gỡ hết mặc định của trình duyệt. */
+.fieldset {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  margin: 0;
+}
+
+/*
+ * `BankAccountList` tự dựng tiêu đề và nút thêm, nên nó nhận khung thẻ ở đây thay vì được bọc
+ * bởi `ShopSectionCard` — hai tiêu đề chồng nhau cho một khối là thừa một cái.
+ */
+.payoutCard {
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+  scroll-margin-top: calc(var(--xp-shell-topbar-height) + var(--xp-space-md));
+}
+
+.payoutCard:focus {
+  outline: none;
+}
+
+.payoutCard:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1024px) {
+  /* Mục lục thành ô chọn dính ở đầu nội dung — xem `ShopSectionNav.module.css`. */
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--xp-space-md);
+  }
+}
+
+@media (max-width: 640px) {
+  .shopName {
+    font-size: var(--xp-font-size-h3);
+    line-height: 1.3;
+  }
+
+  /* Nút Lưu chiếm trọn hàng ở điện thoại thay vì chen với hai nút khác thành ba cụm chật. */
+  .actions {
+    width: 100%;
+  }
+
+  .payoutCard {
+    padding: var(--xp-space-md);
+  }
+}

@@ -1,26 +1,25 @@
 import { App } from 'antd';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SHOP_VERIFICATION, TENANT_STATUS } from '@xeprime/types';
+import { SHOP_ONBOARDING_STATE, SHOP_VERIFICATION, TENANT_STATUS } from '@xeprime/types';
 import { ShopProfileWorkspace } from './ShopProfileWorkspace';
 import type { MyShop, UpdateProfileInput } from '../types';
 
 /**
- * Màn hồ sơ gian hàng.
+ * Màn hồ sơ gian hàng dạng MỘT MÀN — dùng ở `/account/registration`.
  *
  * Những thứ test này khoá, đều là chỗ đã sai hoặc dễ sai lại:
  *
  * 1. **Hai nút ở tiêu đề đi theo `isDirty`.** Chưa sửa gì: Lưu mờ, Huỷ bỏ không tồn tại. Sửa rồi:
  *    Lưu sáng, Huỷ bỏ xuất hiện. Đây là ràng buộc về HÀNH VI, không phải trang trí — một nút Lưu
  *    lúc nào cũng sáng làm người dùng không trả lời được câu "mình đã đổi gì chưa".
- * 2. **Chủ gian hàng là bắt buộc** — hồ sơ duyệt phải liên hệ được với một người thật.
- * 3. **Gửi lên là MÃ tỉnh, không phải TÊN tỉnh.** Tên do server tra ra; client gửi tên là dữ liệu
+ * 2. **Gửi lên là MÃ tỉnh, không phải TÊN tỉnh.** Tên do server tra ra; client gửi tên là dữ liệu
  *    không kiểm soát được và nó từng làm hai cột tỉnh lệch hẳn nhau.
- * 4. **SĐT hiện dạng `09…` dù backend lưu `84…`** — không ai đọc số của mình ở dạng lưu.
- * 5. **Gửi duyệt VALIDATE TRƯỚC.** Nút này từng bỏ qua form hoàn toàn: nó sáng cả khi họ tên và
- *    SĐT chủ gian hàng còn trống, nên người duyệt nhận một hồ sơ không liên hệ được với ai.
- * 6. **Gửi duyệt LƯU NỐT thay đổi còn dở.** Backend snapshot hồ sơ từ DATABASE, nên gửi thẳng
- *    khi form còn dirty là đưa cho người duyệt đúng bản cũ mà chủ shop vừa sửa xong.
+ * 3. **Chủ gian hàng KHÔNG còn là ô nhập** (16/09/2026). Ba cột `tenant_profiles.owner_*` đã
+ *    drop; cổng gửi duyệt đọc họ tên + SĐT từ TÀI KHOẢN CHỦ. Form này vì thế không được gửi lên
+ *    ba khoá đó nữa, và checklist phải chấm theo `ownerAccount`.
+ * 4. **Gửi duyệt VALIDATE TRƯỚC**, và **LƯU NỐT thay đổi còn dở**: backend snapshot hồ sơ từ
+ *    DATABASE, nên gửi thẳng khi form còn dirty là đưa cho người duyệt đúng bản cũ.
  */
 const provinces = vi.hoisted(() => ({
   options: [
@@ -56,8 +55,20 @@ vi.mock('@/features/locations/hooks/use-places', () => ({
 }));
 vi.mock('@/components/form/MapPinPicker', () => ({ MapPinPicker: () => null }));
 
+/** Tài khoản chủ mặc định — đủ họ tên + SĐT, tức là hồ sơ gửi duyệt được. */
+const OWNER: MyShop['ownerAccount'] = {
+  userId: '01HUSER000000000000000000',
+  displayName: 'Nguyễn Văn A',
+  email: 'chu@xeprime.vn',
+  phone: '84901234567',
+  emailVerified: true,
+  phoneVerified: true,
+};
 
-function makeShop(overrides: Partial<MyShop['profile']> = {}): MyShop {
+function makeShop(
+  overrides: Partial<MyShop['profile']> = {},
+  owner: Partial<MyShop['ownerAccount']> = {},
+): MyShop {
   return {
     id: '01HSHOP00000000000000000A',
     code: 'SHOP-1',
@@ -65,17 +76,19 @@ function makeShop(overrides: Partial<MyShop['profile']> = {}): MyShop {
     name: 'Demo XePrime',
     tenantType: 'individual',
     status: TENANT_STATUS.ACTIVE,
+    onboardingState: SHOP_ONBOARDING_STATE.COMMISSION,
     verification: SHOP_VERIFICATION.UNVERIFIED,
     phone: null,
     email: null,
     latestApproval: null,
+    ownerAccount: { ...OWNER, ...owner },
     defaultBranch: {
       id: '01HBRANCH0000000000000000',
       code: 'CN01',
       name: 'Chi nhánh Hồ Chí Minh',
       provinceCode: '79',
       provinceName: 'Hồ Chí Minh',
-    needsLocationReview: false,
+      needsLocationReview: false,
     },
     profile: {
       displayName: 'Demo XePrime',
@@ -87,13 +100,6 @@ function makeShop(overrides: Partial<MyShop['profile']> = {}): MyShop {
       provinceName: 'Hồ Chí Minh',
       taxCode: null,
       businessLicenseNo: null,
-      bankName: null,
-      bankAccountNo: null,
-      bankAccountName: null,
-      qrUrl: null,
-      ownerFullName: 'Nguyễn Văn A',
-      ownerPhone: '84901234567',
-      ownerEmail: 'chu@xeprime.vn',
       ...overrides,
     },
   };
@@ -134,15 +140,38 @@ function renderWorkspace(
 }
 
 const saveButton = () => screen.getByRole('button', { name: /Lưu thông tin/ });
-const phoneInput = () => screen.getByLabelText(/Số điện thoại/);
-/** Nút trên DẢI trạng thái, không phải nút OK trong hộp xác nhận (hai nút cùng chữ). */
-const submitReviewButton = () => screen.getAllByRole('button', { name: /^Gửi xác minh$/ })[0]!;
+const displayNameInput = () => screen.getByLabelText(/Tên hiển thị/);
+/**
+ * Nút trên DẢI trạng thái, không phải nút OK trong hộp xác nhận (hai nút cùng chữ).
+ *
+ * Từ ADR 0040 nó CHỈ xuất hiện khi người duyệt đang yêu cầu bổ sung / đã từ chối: thanh toán mở
+ * tuyến gói, nên ở `unverified` việc gửi xác minh không đổi lấy được gì cho người bấm (mà vẫn
+ * khoá hồ sơ suốt thời gian chờ). Nhãn nút đổi theo trạng thái — `resubmit` ở hai trạng thái đó.
+ */
+const submitReviewButton = () => screen.getAllByRole('button', { name: /^Gửi lại xác minh$/ })[0]!;
+
+/** Hồ sơ BỊ TRẢ VỀ — trạng thái duy nhất còn dựng nút gửi (lại) xác minh. */
+function needsRevisionShop(
+  overrides: Partial<MyShop['profile']> = {},
+  owner: Partial<MyShop['ownerAccount']> = {},
+): MyShop {
+  return {
+    ...makeShop(overrides, owner),
+    verification: SHOP_VERIFICATION.NEEDS_REVISION,
+    latestApproval: {
+      status: 'needs_revision',
+      reason: 'Ảnh giấy phép kinh doanh bị mờ',
+      submittedAt: '2026-08-20T03:00:00.000Z',
+      reviewedAt: '2026-08-20T04:00:00.000Z',
+    },
+  };
+}
 /** Thẻ checklist — nhãn mục ở đây TRÙNG nhãn ô trên form, nên mọi khẳng định phải khoanh vùng. */
 const checklist = () => within(screen.getByRole('region', { name: 'Hoàn thiện hồ sơ' }));
 
 /** Một chỉnh sửa bất kỳ để form chuyển sang trạng thái "có thay đổi". */
-function editSomething(value = '0988888888') {
-  fireEvent.change(phoneInput(), { target: { value } });
+function editSomething(value = 'Demo XePrime đổi tên') {
+  fireEvent.change(displayNameInput(), { target: { value } });
 }
 
 /** Mở hộp xác nhận rồi bấm OK trong CHÍNH hộp đó. */
@@ -187,7 +216,7 @@ describe('Hai nút ở tiêu đề đi theo trạng thái chỉnh sửa', () => 
     editSomething();
     await waitFor(() => expect(saveButton()).toHaveProperty('disabled', false));
 
-    editSomething('0901234567'); // đúng giá trị đang lưu
+    editSomething('Demo XePrime'); // đúng giá trị đang lưu
     await waitFor(() => expect(saveButton()).toHaveProperty('disabled', true));
     expect(screen.queryByRole('button', { name: /Huỷ bỏ/ })).toBeNull();
   });
@@ -199,7 +228,7 @@ describe('Hai nút ở tiêu đề đi theo trạng thái chỉnh sửa', () => 
     const cancel = await screen.findByRole('button', { name: /Huỷ bỏ/ });
     fireEvent.click(cancel);
 
-    await waitFor(() => expect(phoneInput()).toHaveProperty('value', '0901234567'));
+    await waitFor(() => expect(displayNameInput()).toHaveProperty('value', 'Demo XePrime'));
     expect(screen.queryByRole('button', { name: /Huỷ bỏ/ })).toBeNull();
     expect(saveButton()).toHaveProperty('disabled', true);
   });
@@ -227,39 +256,10 @@ describe('Hai nút ở tiêu đề đi theo trạng thái chỉnh sửa', () => 
 });
 
 describe('Nội dung gửi lên', () => {
-  it('hiện SĐT chủ gian hàng ở dạng đọc được (09…) dù backend lưu 84…', () => {
-    renderWorkspace(makeShop());
-    expect(phoneInput()).toHaveProperty('value', '0901234567');
-  });
-
-  it('thiếu họ tên + SĐT chủ gian hàng → KHÔNG gọi API, báo lỗi ngay tại field', async () => {
-    const { onSave } = renderWorkspace(makeShop({ ownerFullName: null, ownerPhone: null }));
-
-    // Sửa một ô để bật nút Lưu, nhưng vẫn để trống hai ô bắt buộc.
-    fireEvent.change(screen.getByLabelText(/Mã số thuế/), { target: { value: '0312345678' } });
-    await waitFor(() => expect(saveButton()).toHaveProperty('disabled', false));
-    fireEvent.click(saveButton());
-
-    await waitFor(() => expect(screen.getByText('Họ tên chủ gian hàng là bắt buộc')).toBeTruthy());
-    expect(screen.getByText('Số điện thoại chủ gian hàng là bắt buộc')).toBeTruthy();
-    expect(onSave).not.toHaveBeenCalled();
-  });
-
-  it('SĐT sai định dạng → chặn tại chỗ', async () => {
+  it('gửi lên MÃ tỉnh, KHÔNG gửi tên tỉnh', async () => {
     const { onSave } = renderWorkspace(makeShop());
 
-    editSomething('12345');
-    await waitFor(() => expect(saveButton()).toHaveProperty('disabled', false));
-    fireEvent.click(saveButton());
-
-    await waitFor(() => expect(screen.getByText('Số điện thoại không hợp lệ')).toBeTruthy());
-    expect(onSave).not.toHaveBeenCalled();
-  });
-
-  it('gửi lên MÃ tỉnh + thông tin chủ gian hàng, và KHÔNG gửi tên tỉnh', async () => {
-    const { onSave } = renderWorkspace(makeShop());
-
-    editSomething('0988888888');
+    editSomething();
     await waitFor(() => expect(saveButton()).toHaveProperty('disabled', false));
     fireEvent.click(saveButton());
 
@@ -267,9 +267,59 @@ describe('Nội dung gửi lên', () => {
     const body = onSave.mock.calls[0]![0];
     expect(body.provinceCode).toBe('79');
     expect(body).not.toHaveProperty('provinceName');
-    expect(body.ownerFullName).toBe('Nguyễn Văn A');
-    expect(body.ownerPhone).toBe('0988888888');
-    expect(body.ownerEmail).toBe('chu@xeprime.vn');
+    expect(body.displayName).toBe('Demo XePrime đổi tên');
+  });
+
+  /*
+   * Đây là lằn ranh của ADR 0038 điều 3 viết thành test. Ba cột `tenant_profiles.owner_*` đã
+   * drop và DTO không còn nhận chúng — gửi lên thì `forbidNonWhitelisted` trả 400. Quan trọng
+   * hơn: một ô "họ tên chủ gian hàng" ở form này cho bất kỳ ai có `tenant.update` (gồm cả
+   * `shop_manager`) viết lại danh tính của người CHỦ.
+   */
+  it('KHÔNG còn ô chủ gian hàng, và thân request không mang ba khoá đó', async () => {
+    const { onSave } = renderWorkspace(makeShop());
+
+    expect(screen.queryByLabelText(/Họ và tên/)).toBeNull();
+    expect(screen.queryByLabelText(/Số điện thoại/)).toBeNull();
+
+    editSomething();
+    await waitFor(() => expect(saveButton()).toHaveProperty('disabled', false));
+    fireEvent.click(saveButton());
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    const body = onSave.mock.calls[0]![0];
+    expect(body).not.toHaveProperty('ownerFullName');
+    expect(body).not.toHaveProperty('ownerPhone');
+    expect(body).not.toHaveProperty('ownerEmail');
+  });
+
+  /* Tài khoản nhận tiền sống ở `bank_accounts` — không có ô nào của nó trên form hồ sơ. */
+  it('KHÔNG còn ô ngân hàng, và thân request không mang bốn khoá đó', async () => {
+    const { onSave } = renderWorkspace(makeShop());
+
+    expect(screen.queryByLabelText(/Ngân hàng/)).toBeNull();
+    expect(screen.queryByLabelText(/Số tài khoản/)).toBeNull();
+
+    editSomething();
+    await waitFor(() => expect(saveButton()).toHaveProperty('disabled', false));
+    fireEvent.click(saveButton());
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    const body = onSave.mock.calls[0]![0];
+    for (const key of ['bankName', 'bankAccountNo', 'bankAccountName', 'qrUrl']) {
+      expect(body).not.toHaveProperty(key);
+    }
+  });
+
+  it('tên hiển thị để trống → chặn tại chỗ, không gọi API', async () => {
+    const { onSave } = renderWorkspace(makeShop());
+
+    editSomething('');
+    await waitFor(() => expect(saveButton()).toHaveProperty('disabled', false));
+    fireEvent.click(saveButton());
+
+    await waitFor(() => expect(screen.getByText('Tên hiển thị là bắt buộc')).toBeTruthy());
+    expect(onSave).not.toHaveBeenCalled();
   });
 });
 
@@ -281,25 +331,36 @@ describe('Checklist hồ sơ', () => {
     // Logo chưa có, và nó vẫn nằm trong bảng — chỉ là không cản đường gửi duyệt.
     expect(checklist().getByText('Logo gian hàng')).toBeTruthy();
     expect(checklist().getByText('Nên có — giúp khách chọn gian hàng của bạn')).toBeTruthy();
-    expect(submitReviewButton()).toBeTruthy();
   });
 
-  it('thiếu mục bắt buộc → nhóm đó vẫn là lời nhắc, không phải lời khẳng định', () => {
-    renderWorkspace(makeShop({ ownerPhone: null }));
+  /*
+   * Hai mục "chủ gian hàng" chấm theo TÀI KHOẢN, không theo form — cùng nguồn mà
+   * `TenantsService.submitForReview` dùng làm cổng thật. Đọc khác nhau nghĩa là checklist xanh
+   * hết trong khi server vẫn từ chối.
+   */
+  it('tài khoản chủ thiếu SĐT → mục bắt buộc chưa đủ, dù form không có ô nào của nó', () => {
+    renderWorkspace(makeShop({}, { phone: null }));
 
     expect(checklist().getByText('Bắt buộc để gửi duyệt')).toBeTruthy();
     expect(checklist().queryByText('Đã đủ điều kiện gửi duyệt')).toBeNull();
   });
 
   it('checklist đi theo ô ĐANG NHẬP, không phải hồ sơ đã lưu', async () => {
-    renderWorkspace(makeShop({ ownerPhone: null }));
+    renderWorkspace(makeShop({ displayName: '' }));
     expect(checklist().queryByText('Đã đủ điều kiện gửi duyệt')).toBeNull();
 
     // Vừa gõ xong là mục đó tick ngay — nút Gửi duyệt sẽ lưu nốt trước khi gửi, nên bảng này
     // đọc bản đang gõ mới đúng với thứ sắp được gửi đi.
-    editSomething('0988888888');
+    editSomething('Demo XePrime');
 
     await waitFor(() => expect(checklist().getByText('Đã đủ điều kiện gửi duyệt')).toBeTruthy());
+  });
+
+  /* Tài khoản nhận tiền không còn là một mục — nó không sống trên hồ sơ này nữa. */
+  it('KHÔNG còn mục "Tài khoản nhận tiền" trong checklist', () => {
+    renderWorkspace(makeShop());
+
+    expect(checklist().queryByText('Tài khoản nhận tiền')).toBeNull();
   });
 
   it('hồ sơ đang chờ xác minh: không còn checklist — không có gì để sửa nữa', () => {
@@ -311,19 +372,17 @@ describe('Checklist hồ sơ', () => {
 
 describe('Gửi duyệt', () => {
   it('hồ sơ thiếu mục bắt buộc → KHÔNG mở hộp xác nhận, không gọi API, nói còn thiếu mấy mục', async () => {
-    const { onSubmitReview } = renderWorkspace(
-      makeShop({ ownerFullName: null, ownerPhone: null }),
-    );
+    const { onSubmitReview } = renderWorkspace(needsRevisionShop({ displayName: '' }));
 
     fireEvent.click(submitReviewButton());
 
-    await waitFor(() => expect(screen.getByText(/Còn 2 mục chưa điền đúng/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/Còn 1 mục chưa điền đúng/)).toBeTruthy());
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(onSubmitReview).not.toHaveBeenCalled();
   });
 
   it('hồ sơ đủ và không có thay đổi chưa lưu → gửi thẳng, không kèm bản sửa', async () => {
-    const { onSubmitReview } = renderWorkspace(makeShop());
+    const { onSubmitReview } = renderWorkspace(needsRevisionShop());
 
     await confirmSubmitReview();
 
@@ -332,28 +391,45 @@ describe('Gửi duyệt', () => {
   });
 
   it('còn thay đổi chưa lưu → gửi kèm bản sửa để trang lưu trước rồi mới gửi', async () => {
-    const { onSubmitReview } = renderWorkspace(makeShop());
+    const { onSubmitReview } = renderWorkspace(needsRevisionShop());
 
-    editSomething('0988888888');
+    editSomething('Demo XePrime đổi tên');
     await waitFor(() => expect(saveButton()).toHaveProperty('disabled', false));
     await confirmSubmitReview();
 
     await waitFor(() => expect(onSubmitReview).toHaveBeenCalledTimes(1));
     const body = onSubmitReview.mock.calls[0]?.[0];
-    expect(body?.ownerPhone).toBe('0988888888');
+    expect(body?.displayName).toBe('Demo XePrime đổi tên');
   });
 
   it('thiếu quyền `tenant.submit_review` → không có nút Gửi duyệt', () => {
-    renderWorkspace(makeShop(), { canSubmit: false });
+    renderWorkspace(needsRevisionShop(), { canSubmit: false });
 
-    expect(screen.queryByRole('button', { name: /^Gửi xác minh$/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Gửi lại xác minh$/ })).toBeNull();
   });
 
-  it('đang chờ xác minh: không còn nút gửi, thay bằng việc làm được ngay — thêm xe', () => {
+  /*
+   * ADR 0040 — thanh toán mở tuyến gói, không còn cổng "phải xác minh trước". Nút gửi xác minh ở
+   * trạng thái `unverified` vì thế không đổi lấy được gì cho người bấm, trong khi nó vẫn KHOÁ hồ
+   * sơ khỏi việc sửa suốt thời gian chờ. Một hành động chỉ có giá mà không có giá trị thì ẩn hẳn.
+   */
+  it('chưa xác minh: KHÔNG mời gửi xác minh — nó không còn mở ra gì', () => {
+    renderWorkspace(makeShop());
+
+    expect(screen.queryByRole('button', { name: /Gửi.*xác minh/ })).toBeNull();
+  });
+
+  /*
+   * 16/09/2026 — dải trạng thái KHÔNG còn rơi về nút "Thêm xe" khi không có gì để gửi. Đăng xe
+   * chẳng liên quan gì tới chủ đề của dải, và đặt nó đúng chỗ người dùng vừa học được là "nút ở
+   * đây giải quyết tình trạng ở đây" là một nút nói dối.
+   */
+  it('đang chờ xác minh: dải chỉ còn là thông tin, không có nút nào', () => {
     renderWorkspace({ ...makeShop(), verification: SHOP_VERIFICATION.PENDING });
 
-    expect(screen.queryByRole('button', { name: /^Gửi xác minh$/ })).toBeNull();
-    expect(screen.getByRole('button', { name: /Thêm xe/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Gửi.*xác minh/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Thêm xe/ })).toBeNull();
+    expect(screen.getByText('Hồ sơ đang chờ nền tảng xác minh')).toBeTruthy();
   });
 });
 
@@ -363,26 +439,28 @@ describe('Dải trạng thái nói đúng chặng đang đứng', () => {
    * được nói "xe chỉ lên chợ sau khi hồ sơ được duyệt" nữa — câu đó đúng trước ADR 0036 và sai
    * sau nó, vì tuyến hoa hồng đăng xe thẳng qua cổng duyệt XE.
    */
-  it('chưa xác minh: nói đúng rằng xe KHÔNG bị chặn vì chuyện này', () => {
+  /*
+   * ADR 0040: "chưa xác minh" thôi là một tin. Nó không chặn gì và không còn việc gì để làm, nên
+   * một dải chiếm trọn bề ngang nói về nó chỉ dạy người dùng bỏ qua vùng đó.
+   */
+  it('chưa xác minh: KHÔNG dựng dải nào', () => {
     renderWorkspace(makeShop());
 
-    expect(screen.getByText('Gian hàng chưa được xác minh')).toBeTruthy();
+    expect(screen.queryByText('Gian hàng chưa được xác minh')).toBeNull();
     expect(screen.queryByText('Hồ sơ đang chờ nền tảng xác minh')).toBeNull();
   });
 
   it('bị trả về: hiện NGUYÊN VĂN lý do đội duyệt viết', () => {
-    renderWorkspace({
-      ...makeShop(),
-      verification: SHOP_VERIFICATION.NEEDS_REVISION,
-      latestApproval: {
-        status: 'needs_revision',
-        reason: 'Ảnh giấy phép kinh doanh bị mờ',
-        submittedAt: '2026-08-20T03:00:00.000Z',
-        reviewedAt: '2026-08-20T04:00:00.000Z',
-      },
-    });
+    renderWorkspace(needsRevisionShop());
 
     expect(screen.getByText('Nền tảng yêu cầu bổ sung hồ sơ')).toBeTruthy();
     expect(screen.getByText(/Ảnh giấy phép kinh doanh bị mờ/)).toBeTruthy();
+  });
+
+  /* Đã xác minh xong = không có tin gì. Nhãn trạng thái cạnh tên gian hàng đã nói điều đó. */
+  it('đã xác minh: KHÔNG dựng dải nào — một dải "mọi thứ đều ổn" chỉ dạy người dùng bỏ qua nó', () => {
+    renderWorkspace({ ...makeShop(), verification: SHOP_VERIFICATION.VERIFIED });
+
+    expect(screen.queryByText('Gian hàng đã được xác minh')).toBeNull();
   });
 });

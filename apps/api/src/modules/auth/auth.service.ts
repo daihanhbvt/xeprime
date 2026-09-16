@@ -182,7 +182,11 @@ export class AuthService {
    *    đang đăng nhập hợp lệ, web không được coi đây là phiên hỏng.
    *  - Không ghi mật khẩu hay hash vào log/exception — chỉ có mã lỗi.
    */
-  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null },
       select: { id: true, passwordHash: true },
@@ -511,7 +515,12 @@ export class AuthService {
               name: true,
               slug: true,
               status: true,
+              // Trục ĐĂNG KÝ (ADR 0040) — web chọn KHU làm việc từ đây trước cả `billingMode`:
+              // gian hàng chưa trả tiền phải về màn onboarding, không về Owner Lite.
+              onboardingState: true,
               usedFeatures: true,
+              // Logo cho vỏ portal — xem `CurrentTenantSummaryDto.logoUrl`.
+              profile: { select: { logoUrl: true } },
               subscriptions: {
                 where: effectiveSubscriptionWhere(now),
                 ...EFFECTIVE_SUBSCRIPTION_ARGS,
@@ -645,7 +654,9 @@ function toTenantSummary(
       name: string;
       slug: string;
       status: string;
+      onboardingState: string;
       usedFeatures: string[];
+      profile: { logoUrl: string | null } | null;
       subscriptions: {
         endsAt: Date;
         billingMode: string | null;
@@ -664,7 +675,15 @@ function toTenantSummary(
     name: membership.tenant.name,
     slug: membership.tenant.slug,
     status: membership.tenant.status,
+    /*
+     * Trục ĐĂNG KÝ, độc lập với `status` và `billingMode` — xem `CurrentTenantSummaryDto`.
+     * Web đọc nó TRƯỚC `billingMode` trong `resolveWorkspaceHref`: `package_pending` có
+     * `billingMode = null`, và mọi phép suy chỉ dựa vào `billingMode` sẽ xếp họ vào cùng rổ với
+     * một tenant có danh mục gói hỏng.
+     */
+    onboardingState: membership.tenant.onboardingState,
     roleKey: membership.roleKey,
+    logoUrl: membership.tenant.profile?.logoUrl ?? null,
     features: Object.entries(plan.features).map(([feature, state]) => ({ feature, state })),
     planCode: plan.planCode,
     planName: plan.planName,

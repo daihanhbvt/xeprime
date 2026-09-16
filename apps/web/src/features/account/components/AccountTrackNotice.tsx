@@ -1,6 +1,6 @@
 'use client';
 
-import { ExclamationCircleOutlined } from '@ant-design/icons';
+import { ClockCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { Alert, Button } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -10,7 +10,15 @@ import { ROUTES } from '@/constants/routes';
 import { useCurrentUser } from '@/hooks/use-current-user';
 
 /**
- * LỖI CẤU HÌNH GÓI của gian hàng — nói ra, thay vì âm thầm coi là tuyến hoa hồng.
+ * HAI dải, một chỗ: "đang chờ thanh toán gói" và "lỗi cấu hình gói".
+ *
+ * Chúng phải tách nhau (ADR 0040 điều 2), và lý do là thứ dễ làm sai nhất ở đây: cả hai có
+ * `billingMode` rỗng y như nhau. Một là bước còn nợ của CHÍNH người dùng — chuyển khoản là xong.
+ * Cái kia là lỗi vận hành của nền tảng mà họ không tự sửa được. Gộp chúng nghĩa là mọi người vừa
+ * bấm "Đăng ký gian hàng" đều nhận một dải ĐỎ "liên hệ hỗ trợ" ngay sau bước 1, cho một hệ thống
+ * đang chạy đúng — và đúng lúc lẽ ra phải mời họ trả tiền.
+ *
+ * ## LỖI CẤU HÌNH GÓI của gian hàng — nói ra, thay vì âm thầm coi là tuyến hoa hồng
  *
  * ## Ca thật mà nó bắt
  *
@@ -36,6 +44,28 @@ export function AccountTrackNotice() {
   const { data: user } = useCurrentUser();
 
   const { track } = resolveAccountTrack(user?.tenant ?? null);
+
+  /*
+   * ĐANG CHỜ THANH TOÁN: dải thông tin, không phải dải lỗi — và nút dẫn về đúng bước còn nợ, chứ
+   * không dẫn tới hỗ trợ. Họ không có gì phải hỏi ai; họ chỉ chưa chuyển khoản.
+   */
+  if (track === ACCOUNT_TRACK.PACKAGE_PENDING) {
+    return (
+      <Alert
+        type="info"
+        showIcon
+        icon={<ClockCircleOutlined />}
+        title={t('packagePendingTitle')}
+        description={t('packagePendingBody')}
+        action={
+          <Button size="small" type="primary">
+            <Link href={ROUTES.MANAGE.ONBOARDING}>{t('packagePendingCta')}</Link>
+          </Button>
+        }
+      />
+    );
+  }
+
   if (track !== ACCOUNT_TRACK.UNCONFIGURED) return null;
 
   return (

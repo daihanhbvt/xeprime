@@ -1,0 +1,120 @@
+/*
+ * Thẻ "Phương thức đăng nhập" — hai dòng, không hơn.
+ *
+ * Bố cục là một `dl` hai cột trên desktop và xếp dọc ở màn hẹp. Không dùng bảng: hai dòng dữ
+ * liệu không cần tiêu đề cột, và một `<table>` ở đây bắt trình đọc màn hình đọc "cột 1, hàng 1"
+ * cho thứ vốn là một cặp nhãn–giá trị.
+ */
+.card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+  gap: var(--xp-space-md);
+}
+
+.head {
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-bold);
+  line-height: 1.4;
+}
+
+.subtitle {
+  margin: var(--xp-space-xs) 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.rows {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  margin: 0;
+  gap: var(--xp-space-sm);
+}
+
+.row {
+  display: grid;
+  min-width: 0;
+  align-items: center;
+  grid-template-columns: minmax(0, 180px) minmax(0, 1fr);
+  padding: var(--xp-space-sm) 0;
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+  gap: var(--xp-space-sm) var(--xp-space-md);
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.rowLabel {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-xs);
+}
+
+.rowValue {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+  gap: var(--xp-space-sm);
+}
+
+/* Giá trị là thứ người dùng quét mắt tìm — nó đứng trước, đậm hơn nhãn. */
+.value {
+  min-width: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.empty {
+  color: var(--xp-color-text-tertiary);
+  font-style: italic;
+}
+
+/*
+ * Dấu tích "đã xác minh": màu nằm ở `background`, KHÔNG ở `color`.
+ *
+ * Biểu tượng của AntD nhận màu bằng `color`, mà `color` là thuộc tính kế thừa — nó ở cùng chỗ
+ * với màu chữ của cả hàng, nên chỉ cần một quy tắc nào đó trúng phần tử cha trước là dấu tích
+ * lặng lẽ đen trở lại. `background` thì không kế thừa từ đâu cả.
+ */
+.verifiedMark {
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--xp-color-success);
+  color: #fff;
+  font-size: 10px;
+  place-items: center;
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: var(--xp-space-md);
+  }
+
+  /* Nhãn lên trên, giá trị xuống dưới: cột nhãn 180px không còn chỗ ở bề ngang này. */
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

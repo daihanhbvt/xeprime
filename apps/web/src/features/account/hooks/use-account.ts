@@ -17,9 +17,9 @@ export function useMyProfile() {
 /**
  * Cập nhật hồ sơ.
  *
- * Sau khi lưu phải đồng bộ CẢ HAI nguồn: `account.profile` (trang này) và `auth.me` (header,
- * avatar, menu ở khắp nơi đọc từ đó). Thiếu vế thứ hai thì đổi tên xong header vẫn hiện tên cũ
- * cho tới lần tải trang sau.
+ * Sau khi lưu phải đồng bộ BA nguồn: `account.profile` (trang này), `auth.me` (header, avatar,
+ * menu ở khắp nơi đọc từ đó) và `shop` — từ 16/09/2026 khối "Chủ gian hàng" ở `/manage/shop`
+ * hiện tên chủ đọc từ tài khoản, nên đổi tên ở đây phải hiện ngay bên đó.
  */
 export function useUpdateMyProfile() {
   const queryClient = useQueryClient();
@@ -28,6 +28,7 @@ export function useUpdateMyProfile() {
     onSuccess: (profile: UserProfile) => {
       queryClient.setQueryData(queryKeys.account.profile(), profile);
       void queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.shop.all });
     },
   });
 }

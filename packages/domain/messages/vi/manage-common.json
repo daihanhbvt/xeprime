@@ -7,10 +7,12 @@
     "collapseSection": "Thu gọn nhóm {name}",
     "needsAction": "{count, plural, other {# việc cần xử lý}}",
     "accountMenu": "Menu tài khoản",
-    "profile": "Hồ sơ",
     "shopSettings": "Cài đặt gian hàng",
     "back": "Quay lại",
-    "logout": "Đăng xuất"
+    "logout": "Đăng xuất",
+    "signedInAs": "Đăng nhập: {name}",
+    "security": "Bảo mật tài khoản",
+    "renterTrips": "Chuyến tôi đi thuê"
   },
   "permission": {
     "deniedTitle": "Bạn không có quyền truy cập",

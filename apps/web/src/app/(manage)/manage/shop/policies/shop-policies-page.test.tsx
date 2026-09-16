@@ -2,8 +2,9 @@ import { App } from 'antd';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { PERMISSION, type Permission } from '@xeprime/types';
+import { DEPOSIT_POLICY_REASON, PERMISSION, type Permission } from '@xeprime/types';
 import type { ShopRentalPolicy } from '@/features/rental-policies/types';
+import type { PaymentSettings } from '@/features/shop/types';
 
 import ShopPoliciesPage from './page';
 
@@ -35,6 +36,40 @@ vi.mock('@/features/rental-policies/hooks/use-shop-policy', () => ({
   useShopPolicy: () => query,
   useSaveShopPolicy: () => save,
 }));
+
+/*
+ * Section "Thanh toán giữ chỗ qua XePrime" (16/09/2026) — trang `/manage/shop/payment-settings`
+ * cũ đã gộp vào đây. Mock ở đúng ranh giới hook như phần chính sách phía trên; cả hai phần đọc
+ * hai API khác nhau và phải sống độc lập trên cùng một trang.
+ */
+const paymentQuery = vi.hoisted(() => ({
+  data: undefined as unknown,
+  isLoading: false,
+  isError: false,
+  refetch: vi.fn(),
+}));
+const updatePayment = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
+
+vi.mock('@/hooks/use-tenant-scope', () => ({
+  useTenantScope: () => ({ tenant: { id: 'TENANT_1' } }),
+}));
+
+vi.mock('@/features/shop/hooks/use-shop', () => ({
+  usePaymentSettings: () => paymentQuery,
+  useUpdatePaymentSettings: () => updatePayment,
+}));
+
+function paymentFixture(over: Partial<PaymentSettings> = {}): PaymentSettings {
+  return {
+    billingMode: 'package',
+    depositRequired: true,
+    depositCollectionEnabled: true,
+    planAllows: true,
+    editable: true,
+    reason: DEPOSIT_POLICY_REASON.PACKAGE_ENABLED,
+    ...over,
+  };
+}
 
 function policyFixture(over: Partial<ShopRentalPolicy> = {}): ShopRentalPolicy {
   return {
@@ -82,7 +117,18 @@ beforeEach(() => {
   query.refetch.mockReset();
   save.mutate.mockReset();
   save.isPending = false;
-  grant(PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE);
+  paymentQuery.data = paymentFixture();
+  paymentQuery.isLoading = false;
+  paymentQuery.isError = false;
+  paymentQuery.refetch.mockReset();
+  updatePayment.mutate.mockReset();
+  updatePayment.isPending = false;
+  grant(
+    PERMISSION.TENANT_VIEW,
+    PERMISSION.TENANT_UPDATE,
+    PERMISSION.SELLER_PROFILE_VIEW,
+    PERMISSION.SELLER_PROFILE_MANAGE,
+  );
 });
 
 afterEach(cleanup);
@@ -268,5 +314,67 @@ describe('/manage/shop/policies — sửa, validate, xác nhận lưu', () => {
     renderPage();
     expect(screen.getByText('Khoảng cách')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Xoá bậc 1' })).toBeTruthy();
+  });
+});
+
+/**
+ * Section "Thanh toán giữ chỗ qua XePrime" — gộp từ `/manage/shop/payment-settings` (16/09/2026).
+ *
+ * Điều bộ này khoá: hai KHÁI NIỆM TIỀN không được lẫn vào nhau trên cùng một trang, quyền sửa
+ * là quyền RIÊNG (`seller_profile.*`) chứ không mượn quyền sửa chính sách, và thiếu quyền sửa
+ * thì nói ra chứ không để lại một công tắc mờ không giải thích.
+ */
+describe('/manage/shop/policies — thanh toán giữ chỗ qua XePrime', () => {
+  it('section có mặt, kèm anchor để route cũ redirect tới đúng chỗ', () => {
+    const { container } = renderPage();
+
+    const section = container.querySelector('#deposit-collection');
+    expect(section).toBeTruthy();
+    expect(section?.textContent).toContain('Thanh toán giữ chỗ qua XePrime');
+  });
+
+  it('phân biệt rõ khoản giữ chỗ với tiền cọc/thế chấp nhận khi giao xe', () => {
+    renderPage();
+
+    // Câu mô tả phải nói ra là HAI khoản khác nhau — đây là thứ gây hiểu nhầm tốn tiền nhất.
+    expect(screen.getByText(/KHÔNG phải tiền cọc\/thế chấp/)).toBeTruthy();
+  });
+
+  it('có quyền sửa: bật/tắt gọi đúng mutation', () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole('switch', { name: /XePrime thu khoản giữ chỗ hộ tôi/ }));
+
+    expect(updatePayment.mutate).toHaveBeenCalledTimes(1);
+    expect(updatePayment.mutate.mock.calls[0]?.[0]).toEqual({ depositCollectionEnabled: false });
+  });
+
+  it('chỉ xem (thiếu seller_profile.manage): nói rõ là chỉ đọc và khoá công tắc', () => {
+    grant(PERMISSION.TENANT_VIEW, PERMISSION.SELLER_PROFILE_VIEW);
+    renderPage();
+
+    expect(screen.getByText(/chỉ có quyền xem cấu hình này/)).toBeTruthy();
+    const toggle = screen.getByRole('switch', {
+      name: /XePrime thu khoản giữ chỗ hộ tôi/,
+    }) as HTMLButtonElement;
+    expect(toggle.disabled).toBe(true);
+  });
+
+  it('không có seller_profile.view: ẩn hẳn section, KHÔNG chặn cả trang chính sách', () => {
+    grant(PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE);
+    const { container } = renderPage();
+
+    expect(container.querySelector('#deposit-collection')).toBeNull();
+    // Phần chính sách theo loại xe vẫn dùng được bình thường.
+    expect(screen.getByText('Chính sách thuê mặc định')).toBeTruthy();
+  });
+
+  it('lỗi tải cấu hình giữ chỗ KHÔNG làm hỏng phần chính sách theo loại xe', () => {
+    paymentQuery.data = undefined;
+    paymentQuery.isError = true;
+    renderPage();
+
+    expect(screen.getByText('Không tải được cấu hình thanh toán giữ chỗ')).toBeTruthy();
+    expect(screen.getByText('Chính sách thuê mặc định')).toBeTruthy();
   });
 });

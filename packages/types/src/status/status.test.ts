@@ -138,11 +138,25 @@ describe('ADR 0006 — trạng thái chiếm lịch', () => {
    * Test này là cái backstop duy nhất. Nếu nó đỏ vì bạn vừa thêm một trạng thái: hãy quyết định
    * TƯỜNG MINH trạng thái đó có giữ chỗ hay không, đừng chỉ sửa con số cho xanh.
    */
-  it('yêu cầu chiếm lịch: chỉ approved_by_host và awaiting_hold', () => {
-    expect([...BOOKING_REQUEST_STATUS_OCCUPYING].sort()).toEqual([
-      'approved_by_host',
-      'awaiting_hold',
-    ]);
+  it('yêu cầu chiếm lịch: approved_by_host, awaiting_hold và hold_paid', () => {
+    /*
+     * `hold_paid` vào mảng này ở ADR 0039 — khách đã chuyển tiền thật nhưng chủ xe chưa bấm
+     * duyệt. Thiếu nó ở đây là nhả chỗ của một người đã trả tiền, và họ sẽ ngồi nhìn chiếc xe
+     * của mình bị người khác đặt mất trong lúc chờ.
+     */
+    expect([...BOOKING_REQUEST_STATUS_OCCUPYING].sort()).toEqual(
+      [
+        BOOKING_REQUEST_STATUS.APPROVED_BY_HOST,
+        BOOKING_REQUEST_STATUS.AWAITING_HOLD,
+        BOOKING_REQUEST_STATUS.HOLD_PAID,
+      ].sort(),
+    );
+
+    // Và KHÔNG chiếm lịch: hỏi thì nhiều người cùng hỏi được, chỉ trả tiền mới khoá chỗ.
+    expect(BOOKING_REQUEST_STATUS_OCCUPYING).not.toContain(
+      BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+    );
+    expect(BOOKING_REQUEST_STATUS_OCCUPYING).not.toContain(BOOKING_REQUEST_STATUS.HOLD_EXPIRED);
   });
 
   it('yêu cầu chờ duyệt và hết hạn giữ chỗ KHÔNG giữ lịch', () => {

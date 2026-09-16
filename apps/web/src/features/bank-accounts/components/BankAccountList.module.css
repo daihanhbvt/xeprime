@@ -19,15 +19,20 @@
   flex-wrap: wrap;
 }
 
+/*
+ * Cỡ h4, không h3: đây là tiêu đề của một PANEL, và panel này được nhúng vào trang khác (trang
+ * Cửa hàng xếp nó cạnh bốn section cùng cấp). Một tiêu đề to hơn các tiêu đề anh em của nó làm
+ * người đọc tưởng khối này quan trọng hơn, chứ không phải là nó khác loại.
+ */
 .title {
   margin: 0;
-  font-size: var(--xp-font-size-heading-sm);
-  line-height: var(--xp-line-height-heading-sm);
-  font-weight: var(--xp-font-weight-semibold);
+  font-size: var(--xp-font-size-h4);
+  line-height: 1.4;
+  font-weight: var(--xp-font-weight-bold);
 }
 
 .subtitle {
-  margin: var(--xp-space-xxs) 0 0;
+  margin: var(--xp-space-xs) 0 0;
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
 }
@@ -71,7 +76,7 @@
 }
 
 .number {
-  margin: var(--xp-space-xxs) 0 0;
+  margin: var(--xp-space-xs) 0 0;
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
   font-variant-numeric: tabular-nums;
@@ -80,7 +85,7 @@
 .name {
   margin: 0;
   color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-caption);
+  font-size: var(--xp-font-size-label);
 }
 
 .actions {

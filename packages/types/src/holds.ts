@@ -28,28 +28,67 @@ const MS_PER_HOUR = 3_600_000;
 export const HOLD_FREE_CANCEL_HOURS = 4;
 
 /**
- * Khách có bấy nhiêu phút để chuyển khoản trước khi hold hết hạn và nhả lịch.
+ * Khách có bấy nhiêu phút để chuyển khoản trước khi hold được GIA HẠN hoặc hết hạn và nhả lịch.
  *
- * **2 giờ** (ADR 0032 điều 2), giảm từ 24 giờ của R3. Đánh đổi được chốt ở cấp sản phẩm: một
- * chỗ bị giữ mà chưa có tiền là một chỗ khách khác không đặt được, và giữ nó cả ngày làm hỏng
- * chính cái lịch mà nền tảng bán. Bù lại phải có nhắc hạn giữa chừng
- * (`HOLD_COUNTDOWN_SEGMENT_MINUTES`) — cửa sổ ngắn mà im lặng thì chỉ giỏi huỷ đơn của khách
- * thật.
+ * **10 phút** (16/09/2026 — ADR 0039), giảm từ 2 giờ của ADR 0032, và con số này đi kèm một
+ * thay đổi khác không tách rời được: hold nay sinh ra lúc khách GỬI YÊU CẦU, không phải lúc chủ
+ * xe duyệt. Một chỗ bị giữ trước cả khi chủ xe kịp nhìn thấy yêu cầu thì không thể giữ hai
+ * tiếng — đó là hai tiếng khách khác không đặt được chiếc xe đó, đổi lấy một người có thể đã
+ * đóng trình duyệt ngay sau khi bấm.
+ *
+ * Mười phút đủ cho quãng đường thật của khách: mở app ngân hàng, quét QR, nhập OTP, quay lại.
+ * Ai chậm hơn thì được `HOLD_MAX_EXTENSIONS` lần gia hạn tự động — nên con số này là nhịp của
+ * ĐỒNG HỒ, còn trần thật của một hold là `HOLD_TOTAL_WINDOW_MINUTES`.
  *
  * Con số thật của từng hold lấy từ chính sách phí hiện hành
  * (`FeePolicyValues.holdPaymentWindowMinutes`); hằng này là mặc định khi seed policy.
  */
-export const HOLD_PAYMENT_WINDOW_MINUTES = 2 * 60;
+export const HOLD_PAYMENT_WINDOW_MINUTES = 10;
 
 /**
- * Cửa sổ thanh toán được chia thành các chặng bấy nhiêu phút — hai đồng hồ 60 phút thay vì một
- * đồng hồ 120 phút (ADR 0032 điều 2).
+ * Hold hết hạn mà chưa đủ tiền thì được cộng thêm một cửa sổ nữa — tối đa bấy nhiêu lần
+ * (ADR 0039 điều 3).
  *
- * Không phải chuyện trang trí: hết chặng đầu là mốc hệ thống **nhắc** khách, và một cửa sổ dài
- * hiện thành một con số lớn ("còn 118 phút") không tạo được cảm giác cần hành động. Worker đọc
- * đúng hằng này để biết khi nào bắn nhắc.
+ * Gia hạn TỰ ĐỘNG, khách không phải bấm gì. Đánh đổi đã biết và chấp nhận: một chiếc xe có thể
+ * bị giữ đủ `HOLD_TOTAL_WINDOW_MINUTES` kể cả khi khách đã bỏ đi từ phút thứ hai. Đổi lại,
+ * không ai mất chỗ chỉ vì ngân hàng xử lý chậm hơn một đồng hồ mười phút — và `booking_holds`
+ * ghi `extension_count` nên số lần gia hạn thật vẫn đo được để hiệu chỉnh sau.
+ *
+ * Mỗi lần gia hạn phát một thông báo: một đồng hồ tự nhảy về 10:00 mà không nói gì trông như
+ * lỗi giao diện.
  */
-export const HOLD_COUNTDOWN_SEGMENT_MINUTES = 60;
+export const HOLD_MAX_EXTENSIONS = 2;
+
+/**
+ * Trần thật của một khoản giữ chỗ: cửa sổ đầu + mọi lần gia hạn. **30 phút.**
+ *
+ * Đây là con số dùng khi nói về việc GIỮ XE (bao lâu thì chỗ chắc chắn được nhả), còn
+ * `HOLD_PAYMENT_WINDOW_MINUTES` là con số hiện trên đồng hồ. Nhầm hai thứ này là nguồn của
+ * những câu như "giữ 10 phút" trong khi lịch xe thật sự bị khoá gấp ba.
+ */
+export const HOLD_TOTAL_WINDOW_MINUTES =
+  HOLD_PAYMENT_WINDOW_MINUTES * (HOLD_MAX_EXTENSIONS + 1);
+
+/**
+ * Cửa sổ ngắn nhất còn có nghĩa để đưa QR cho khách.
+ *
+ * Hạn trả tiền bị KẸP bởi giờ nhận xe — một hold còn "chờ tiền" sau khi xe đáng lẽ đã giao là
+ * một chỗ bị khoá vô nghĩa. Với chuyến đặt sát giờ, phần kẹp đó có thể còn lại vài phút, và vài
+ * phút thì không đủ để ai mở được app ngân hàng.
+ *
+ * ⚠️ Hằng này phải NHỎ HƠN `HOLD_PAYMENT_WINDOW_MINUTES`. Trước ADR 0039 ngưỡng là 15 phút trong
+ * khi cửa sổ là 120 — hợp lệ. Cửa sổ rút về 10 mà quên ngưỡng thì mọi hold đều bị từ chối ngay
+ * lúc tạo, vì `expiresAt − now` không bao giờ vượt quá cửa sổ. `holds.test.ts` khoá quan hệ đó.
+ */
+export const HOLD_MIN_USABLE_WINDOW_MINUTES = 5;
+
+/**
+ * Cửa sổ thanh toán được chia thành các chặng bấy nhiêu phút.
+ *
+ * Từ ADR 0039 nó BẰNG cửa sổ: mười phút là một chặng duy nhất, đồng hồ chạy một mạch. Hằng vẫn
+ * còn vì giao diện đọc nó để vẽ đồng hồ, và vì chia chặng sẽ có nghĩa trở lại nếu cửa sổ dài ra.
+ */
+export const HOLD_COUNTDOWN_SEGMENT_MINUTES = HOLD_PAYMENT_WINDOW_MINUTES;
 
 /**
  * Sàn số tiền giữ chỗ. Dưới mức này thì phí chuyển khoản và công đối soát vượt khoản thu.
@@ -103,8 +142,14 @@ export const COMMISSION_PERCENT_MAX = 20;
  * và hiện nó ra trước khi người dùng bấm rút* là quy tắc.
  */
 export const WITHDRAWAL_TERMS = {
-  /** Số tiền rút tối thiểu mỗi lần (VND). */
-  MIN_AMOUNT: 50_000,
+  /**
+   * Số tiền rút tối thiểu mỗi lần (VND).
+   *
+   * 10.000 — hạ từ 50.000 ngày 16/09/2026. Sàn tồn tại để một lần chuyển khoản đáng công đối
+   * soát tay của admin, chứ không phải để giữ lại tiền của người khác; với chủ xe cá nhân mới
+   * chạy vài chuyến, 50.000 là mức khiến số dư nằm im mà không có lý do nào giải thích được.
+   */
+  MIN_AMOUNT: 10_000,
   /** Giờ cắt trong ngày làm việc (giờ Việt Nam). Trước mốc này thì chuyển ngay trong ngày. */
   CUTOFF_HOUR_VN: 16,
   /**

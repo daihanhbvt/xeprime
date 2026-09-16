@@ -69,6 +69,16 @@ interface AddressFieldProps<T extends FieldValues> {
   /** Ô địa chỉ này có bắt buộc không (dấu sao của AntD; ràng buộc thật ở Yup). */
   required?: boolean;
   /**
+   * Tỉnh/thành có bắt buộc riêng không. Bỏ trống = theo `required`.
+   *
+   * Cần một prop riêng vì có form mà tỉnh bắt buộc trong khi xã và số nhà thì không: đăng ký
+   * người cho thuê xe (`registerShopSchema`) đòi tỉnh ở CẢ HAI tuyến — chi nhánh mặc định sinh ra
+   * từ nó — nhưng chỉ tuyến GÓI mới đòi xã + số nhà (ADR 0040). Thiếu prop này thì ô tỉnh của
+   * tuyến hoa hồng không có dấu sao mà vẫn báo `provinceRequired` khi bấm Lưu, tức là dấu sao
+   * đang nói sai về schema.
+   */
+  provinceRequired?: boolean;
+  /**
    * Xã/phường có bắt buộc riêng không. Bỏ trống = theo `required`.
    *
    * Có prop riêng vì hai luồng khác nhau thật: form CHI NHÁNH đòi đủ hai cấp (đó là địa điểm
@@ -108,6 +118,7 @@ export function AddressField<T extends FieldValues>({
   pin,
   title,
   required,
+  provinceRequired = required,
   wardRequired = required,
   disabled,
   notice,
@@ -181,7 +192,7 @@ export function AddressField<T extends FieldValues>({
         control={control}
         name={names.provinceCode}
         label={t('provinceLabel')}
-        required={required}
+        required={provinceRequired}
         onAfterChange={onProvinceChange}
         showSearch
         options={provinces.options}

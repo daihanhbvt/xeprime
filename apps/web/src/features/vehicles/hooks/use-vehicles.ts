@@ -13,12 +13,15 @@ import type { VehicleFilters } from '../types';
  * Bộ chọn chi nhánh ở thanh trên được ghép vào ĐÂY chứ không ở từng màn: `branchId` nằm trong
  * query key nên đổi chi nhánh là tự refetch, và không màn nào quên gửi tham số.
  */
-export function useVehicles(filters: VehicleFilters) {
+export function useVehicles(filters: VehicleFilters, options: { enabled?: boolean } = {}) {
   const branchScope = useBranchScopeParams();
   const params = { ...filtersToParams(filters), ...branchScope };
   return useQuery({
     queryKey: queryKeys.vehicles.list(params),
     queryFn: () => fetchVehicles({ ...filters, ...branchScope }),
     placeholderData: keepPreviousData,
+    // Mặc định BẬT — hơn mười màn gọi hook này chỉ khi chúng đã được dựng. `enabled` là cho
+    // những chỗ hỏi "có xe nào chưa" một cách có điều kiện (dải chào mừng ở trang Cửa hàng).
+    enabled: options.enabled ?? true,
   });
 }

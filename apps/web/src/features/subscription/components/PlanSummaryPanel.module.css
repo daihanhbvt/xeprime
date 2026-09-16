@@ -1,0 +1,135 @@
+/*
+ * "Gói & hạn mức" — một khối phẳng, không thẻ lồng thẻ.
+ *
+ * Khối này được NHÚNG (trang Cửa hàng bọc nó bằng `ShopSectionCard`, `/account/subscription` đặt
+ * nó dưới tiêu đề trang), nên nó không tự vẽ viền hay bóng nào: hai lớp khung cho cùng một nội
+ * dung là thứ mắt đọc ra ngay nhưng không ai gọi tên được.
+ */
+.panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+/* Tên gói + hạn ở trái, nút gia hạn ở phải; xuống dòng khi hẹp. */
+.planRow {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.planText {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.planName {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h5, 16px);
+  font-weight: var(--xp-font-weight-semibold);
+  gap: var(--xp-space-sm);
+  overflow-wrap: anywhere;
+}
+
+.modeTag {
+  font-weight: var(--xp-font-weight-regular, 400);
+}
+
+.planMeta {
+  margin: var(--xp-space-xs) 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/*
+ * Ba ô số: mảnh, ngang hàng, tự xuống dòng. KHÔNG phải ba `Card` — chúng là ba con số, và một
+ * con số không cần tiêu đề, viền và bóng riêng để đọc được.
+ */
+.tiles {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--xp-space-sm);
+}
+
+.tile {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-layout);
+  gap: 2px;
+}
+
+.tileLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.tileValue {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h5, 16px);
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Thanh mức dùng: cao 4px, nằm dưới con số chứ không thay nó.
+ *
+ * Màu theo `data-tone` đặt trên ô cha — dưới 80% là màu thương hiệu (còn chỗ = không có tin
+ * gì), 80–99% cảnh báo, 100% cảnh báo đậm. KHÔNG có nhánh đỏ: dùng hết chỗ đã mua là trạng thái
+ * hợp lệ của gói, không phải sự cố, và đỏ ở đây sẽ dạy người dùng rằng đỏ không có nghĩa gì.
+ */
+.meter {
+  display: block;
+  overflow: hidden;
+  width: 100%;
+  height: 4px;
+  border-radius: var(--xp-border-radius-pill);
+  margin-top: var(--xp-space-xs);
+  background: var(--xp-color-border);
+}
+
+.meterFill {
+  display: block;
+  width: var(--xp-meter, 0%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--xp-color-primary);
+}
+
+.tile[data-tone='near'] .meterFill,
+.tile[data-tone='full'] .meterFill {
+  background: var(--xp-color-warning);
+}
+
+.tile[data-tone='full'] {
+  border-color: var(--xp-color-warning);
+}
+
+.tile[data-tone='full'] .tileValue {
+  color: var(--xp-color-warning-text, var(--xp-color-warning));
+}
+
+.note {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* Chỉ hiện khi đã hết chỗ — xem `QuotaWarning`. */
+.warning {
+  margin: 0;
+}

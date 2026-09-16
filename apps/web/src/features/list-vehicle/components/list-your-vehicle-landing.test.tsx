@@ -30,7 +30,14 @@ vi.mock('@/features/auth/components/AuthModalProvider', () => ({
 }));
 
 const PERSONAL_HREF = '/list-your-vehicle/register?from=marketplace';
-const SHOP_HREF = '/manage/onboarding';
+/**
+ * Cửa GIAN HÀNG mang theo TUYẾN (ADR 0040) — `?track=package`.
+ *
+ * Chuỗi viết TAY chứ không gọi `manageOnboardingPath()`: đây chính là hợp đồng mà test này khoá.
+ * Dùng lại hàm dựng đường dẫn nghĩa là một lần đổi mặc định sẽ làm cả hai nút trỏ về tuyến hoa
+ * hồng mà test vẫn xanh — đúng bug ADR 0040 sửa, chỉ là không ai thấy nữa.
+ */
+const SHOP_HREF = '/manage/onboarding?track=package';
 
 function personalCta(): HTMLElement {
   return screen.getByRole('link', { name: /Đăng xe đầu tiên/ });
@@ -82,7 +89,7 @@ describe('Chưa đăng nhập: đăng nhập tại chỗ rồi quay lại đúng
     expect(authModal.open.mock.calls[0]![0]).toMatchObject({ next: PERSONAL_HREF });
   });
 
-  it('tuyến gian hàng mở auth modal với next là onboarding', () => {
+  it('tuyến gian hàng mở auth modal với next là onboarding KÈM tuyến gói', () => {
     renderWithIntl(<ListYourVehicleLanding />);
 
     fireEvent.click(shopCta());

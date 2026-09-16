@@ -25,13 +25,7 @@ export type ShopNoticeTone = 'info' | 'success' | 'warning' | 'error';
 
 /** Khoá message dưới `Shop.status.<key>` — cũng là khoá của nhánh nội dung ở cả hai chỗ hiển thị. */
 export type ShopNoticeKey =
-  | 'draft'
-  | 'pending'
-  | 'needsRevision'
-  | 'rejected'
-  | 'active'
-  | 'suspended'
-  | 'expired';
+  'draft' | 'pending' | 'needsRevision' | 'rejected' | 'active' | 'suspended' | 'expired';
 
 /** Khoá nhãn nút dưới `Shop.status.action.<key>`. */
 export type ShopNoticeAction = 'complete' | 'view' | 'revise' | 'reason' | 'support';
@@ -128,11 +122,7 @@ export function shopStatusNotice(status: string): ShopStatusNotice {
  * hiện ra như "gian hàng của bạn chưa hoạt động", và chủ xe đi tìm xem xe mình biến đi đâu.
  */
 export type ShopVerificationNoticeKey =
-  | 'unverified'
-  | 'pending'
-  | 'needsRevision'
-  | 'rejected'
-  | 'verified';
+  'unverified' | 'pending' | 'needsRevision' | 'rejected' | 'verified';
 
 export interface ShopVerificationNotice {
   key: ShopVerificationNoticeKey;
@@ -144,10 +134,26 @@ export interface ShopVerificationNotice {
 }
 
 const VERIFICATION_NOTICE: Readonly<Record<ShopVerification, ShopVerificationNotice>> = {
+  /*
+   * CHƯA XÁC MINH = KHÔNG CÓ TIN GÌ, KHÔNG CÓ VIỆC GÌ (16/09/2026 — ADR 0040).
+   *
+   * Tới 16/09/2026 trạng thái này mang một dải "Gian hàng chưa được xác minh" kèm nút "Gửi xác
+   * minh", và câu chữ hứa rằng xác minh là điều kiện để MUA GÓI (ADR 0036). ADR 0040 gỡ cổng đó:
+   * thanh toán mở tuyến gói, không cần một cái gật đầu nào trước.
+   *
+   * Nên nút ấy không còn đổi lấy được gì cho người bấm nó — trong khi nó vẫn KHOÁ hồ sơ khỏi việc
+   * sửa suốt thời gian chờ (`SHOP_VERIFICATION_PENDING`). Một hành động chỉ có giá mà không có
+   * giá trị thì ẩn hẳn, không đổi thành một dòng giải thích luật nội bộ.
+   *
+   * Ba trạng thái CÒN LẠI vẫn hiện: `pending` giải thích vì sao hồ sơ đang bị khoá, còn
+   * `needs_revision`/`rejected` là cuộc trao đổi đang mở với người duyệt và vẫn gửi lại được.
+   * Backend không đổi — `SHOP_VERIFICATION_SUBMITTABLE` vẫn nhận `unverified`, nên hồ sơ cũ và
+   * đường quản trị vẫn chạy nguyên.
+   */
   [SHOP_VERIFICATION.UNVERIFIED]: {
     key: 'unverified',
     tone: 'info',
-    canSubmit: true,
+    canSubmit: false,
     useReason: false,
   },
   [SHOP_VERIFICATION.PENDING]: { key: 'pending', tone: 'info', canSubmit: false, useReason: false },

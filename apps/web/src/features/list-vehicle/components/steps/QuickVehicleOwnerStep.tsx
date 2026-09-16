@@ -18,7 +18,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
-import { TENANT_TYPE } from '@xeprime/types';
+import { REGISTRATION_TRACK, TENANT_TYPE } from '@xeprime/types';
 import { ownerProfileSchema, type OwnerProfileValues } from '@xeprime/validators';
 
 import { AddressField } from '@/components/form/AddressField';
@@ -108,6 +108,12 @@ export function QuickVehicleOwnerStep({ steps, source, onCreated }: QuickVehicle
       await register.mutateAsync({
         name: values.name,
         tenantType: TENANT_TYPE.INDIVIDUAL,
+        /*
+         * CỬA VÀO tường minh (ADR 0040) — wizard này LÀ tuyến hoa hồng, và nói ra điều đó rẻ hơn
+         * hẳn so với dựa vào giá trị mặc định của server: nếu mặc định đổi, một chủ xe cá nhân sẽ
+         * âm thầm rơi vào luồng chờ thanh toán gói.
+         */
+        registrationTrack: REGISTRATION_TRACK.COMMISSION,
         provinceCode: values.provinceCode,
         wardCode: values.wardCode,
         addressLine: values.addressLine,

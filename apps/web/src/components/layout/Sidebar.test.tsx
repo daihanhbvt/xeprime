@@ -51,6 +51,15 @@ vi.mock('@/hooks/use-permissions', () => ({
 
 vi.mock('./use-nav-badges', () => ({ useNavBadges: () => ({}) }));
 
+/*
+ * Thẻ tài khoản ở chân sidebar đếm chuyến ĐI THUÊ còn dở để quyết định mục "Chuyến tôi đi thuê"
+ * (16/09/2026). Bộ này kiểm khung sidebar, không kiểm thẻ đó — nó có test riêng — nên chặn ở
+ * đúng ranh giới hook thay vì dựng một QueryClient giả.
+ */
+vi.mock('@/features/trips/hooks', () => ({
+  useTrips: () => ({ data: { counts: { current: 0 } } }),
+}));
+
 vi.mock('@/features/auth/hooks/use-portal-logout', () => ({
   usePortalLogout: () => vi.fn(async () => undefined),
 }));
@@ -97,13 +106,18 @@ describe('Sidebar — trạng thái mở rộng', () => {
     expect(menuRegion()).toBeTruthy();
   });
 
-  it('hiện tên gian hàng làm dòng phụ dưới logo', () => {
+  /*
+   * 16/09/2026 — tên gian hàng hiện ĐÚNG MỘT LẦN, ở thẻ chân sidebar (`ManageUserCard`) cùng
+   * logo và vai trò. Dòng phụ dưới wordmark đã gỡ: nó là bản sao thứ hai của cùng một cái tên,
+   * cách nhau đúng một chiều cao sidebar.
+   */
+  it('tên gian hàng chỉ xuất hiện MỘT lần, ở thẻ chân sidebar', () => {
     renderSidebar();
 
-    expect(screen.getByText('Thuê Xe Minh Anh')).toBeTruthy();
+    expect(screen.getAllByText('Thuê Xe Minh Anh')).toHaveLength(1);
   });
 
-  it('nhân sự nền tảng không có gian hàng → không dựng dòng phụ rỗng', () => {
+  it('nhân sự nền tảng không có gian hàng → không dựng tên gian hàng rỗng', () => {
     user.platformRole = 'platform_admin';
     user.tenant = null;
     grant(PERMISSION.PLATFORM_DASHBOARD_VIEW);

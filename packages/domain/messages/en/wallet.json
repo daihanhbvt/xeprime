@@ -1,36 +1,38 @@
 {
   "title": {
-    "user": "My points wallet",
-    "tenant": "Shop points wallet"
+    "user": "My balance",
+    "tenant": "Balance & withdrawals"
   },
-  "unit": "points",
-  "legalNote": "1 point = 1đ · withdraw to your bank account · never expires",
+  "page": {
+    "subtitle": "What XePrime owes your shop after each trip, and your withdrawals to your bank account."
+  },
   "balance": {
     "available": "Available now",
     "pending": "Being transferred",
     "total": "Total XePrime owes you",
     "frozen": "This wallet is on hold. Contact support to find out why."
   },
-  "empty": "No points yet. Points arrive when a deposit is refunded or a trip completes.",
   "loadError": "Could not load your balance.",
   "entries": {
-    "title": "Points history",
+    "title": "Transaction history",
     "empty": "No transactions yet.",
     "balanceAfter": "{amount} left",
     "loadMore": "Show more"
   },
   "withdraw": {
     "action": "Withdraw to bank",
-    "title": "Withdraw points to your bank account",
-    "amount": "Points to withdraw",
+    "title": "Withdrawal request",
+    "amount": "Amount to withdraw",
     "amountHint": "Minimum {min}. You have {available} available now.",
     "account": "Destination account",
-    "accountEmpty": "You have no payout account yet. Add one before withdrawing.",
+    "accountEmpty": "Add a payout account",
     "addAccount": "Add payout account",
     "commitment": "XePrime transfers within {days} business days of approval.",
     "submit": "Request withdrawal",
     "created": "Withdrawal requested. XePrime will transfer within the committed time.",
-    "cancelled": "Withdrawal request cancelled."
+    "cancelled": "Withdrawal request cancelled.",
+    "belowMinimum": "Minimum withdrawal is {min}. Below that, the money stays in your balance.",
+    "accountNumber": "Acct: {number}"
   },
   "requests": {
     "title": "Withdrawal requests",
@@ -40,7 +42,7 @@
     "rejected": "Rejected: {reason}",
     "cancel": "Cancel request",
     "cancelConfirm": "Cancel this withdrawal request?",
-    "cancelHint": "The points return to your available balance."
+    "cancelHint": "The money returns to your available balance."
   },
   "admin": {
     "title": "Withdrawal requests",
@@ -79,15 +81,59 @@
       "reason": "Reason",
       "reasonHint": "The wallet owner will read this.",
       "submit": "Reject",
-      "done": "Rejected. Points returned to the owner's balance."
+      "done": "Rejected. The money returns to the owner's available balance."
     },
     "reverse": {
       "title": "Reverse a completed transfer",
       "reason": "Why the money came back",
       "reasonHint": "Transfer failed, wrong account number, bank returned it…",
       "submit": "Reverse entry",
-      "done": "Reversed. Points are back in the wallet, and both entries stay on the ledger."
+      "done": "Reversed. The money is back in the owner's balance, and both entries stay on the ledger."
     }
   },
-  "openLedger": "View ledger"
+  "openLedger": "View ledger",
+  "verified": "Verified",
+  "statement": {
+    "title": "Transaction summary",
+    "period": "Pick a month",
+    "loadError": "Could not load the summary.",
+    "totalLabel": "{count, plural, one {# trip} other {# trips}}",
+    "stats": {
+      "rating": "{count, plural, =0 {No reviews yet} one {Rating (# review)} other {Rating (# reviews)}}",
+      "trips": "Completed trips",
+      "tripsValue": "{count, plural, one {# trip} other {# trips}}",
+      "response": "Response rate",
+      "responseValue": "{percent}%"
+    },
+    "columns": {
+      "code": "Trip",
+      "serviceType": "Type",
+      "pickupAt": "Pick-up",
+      "returnAt": "Return",
+      "unitAmount": "Unit price",
+      "revenue": "Revenue",
+      "tax": "Business tax",
+      "balanceChange": "Balance change"
+    },
+    "empty": {
+      "title": "No trips completed this month",
+      "body": "Pick another month, or come back once a running trip finishes."
+    },
+    "totals": {
+      "balanceChange": "Total balance change — completed trips",
+      "payAtPickup": "Paid to you directly at pick-up",
+      "payAtPickupHint": "The customer hands you this part; it never passes through XePrime.",
+      "subscriptionFee": "Platform plan management fee",
+      "tax": "Business tax withheld on your behalf",
+      "ownerIncome": "Shop owner income",
+      "ownerIncomeHint": "Revenue minus tax and plan fee — includes what the customer paid you directly.",
+      "ownerIncomeCommission": "Car owner income",
+      "ownerIncomeGeneric": "Income"
+    }
+  },
+  "pill": {
+    "label": "Balance",
+    "hide": "Hide balance",
+    "show": "Show balance"
+  }
 }

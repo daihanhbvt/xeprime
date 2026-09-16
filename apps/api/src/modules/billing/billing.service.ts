@@ -10,15 +10,13 @@ import { ConfigService } from '@nestjs/config';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
-  APPROVAL_TARGET_TYPE,
   AUDIT_ACTOR_SCOPE,
   BANK_MATCH_TARGET_TYPE,
   BILLING_MODE,
   BILLING_PHASE,
   resolveEffectiveBilling,
   type EffectiveBilling,
-  resolveShopVerification,
-  SHOP_VERIFICATION,
+  SHOP_ONBOARDING_STATE,
   type BillingMode,
   COMMISSION_TRACK_TERM_MONTHS,
   OWNER_LITE_VEHICLE_LIMIT,
@@ -56,6 +54,7 @@ import {
   CurrentPlanDto,
   MySubscriptionDto,
   PaymentInfoDto,
+  PendingSubscriptionInvoiceDto,
   PlanDto,
   PlanListQueryDto,
   PurchaseSubscriptionDto,
@@ -452,7 +451,6 @@ export class BillingService {
         message: 'Gói đã ngừng bán, không gán được',
       });
     }
-    await this.assertShopVerifiedForPlan(tenantId, plan.billingMode);
 
     const limits = parsePlanLimits(plan.limitsJson);
     const slots = this.resolvePurchaseSlots(limits, dto.slots);
@@ -489,6 +487,13 @@ export class BillingService {
         },
         select: SUB_SELECT,
       });
+
+      /*
+       * Admin gán một gói `package` cho gian hàng đang chờ thanh toán cũng là ONBOARDING XONG
+       * (ADR 0040): tiền đã thu ngoài luồng, nên giữ họ ở màn "hãy chuyển khoản" là bắt họ trả
+       * tiền lần thứ hai. Cùng transaction, cùng lý do với đường webhook.
+       */
+      await this.completePackageOnboardingWithinTx(tx, tenantId, plan.billingMode);
 
       // Hoá đơn gói cho lượt gán tay (ADR 0015 điều 5): admin gán = đã thu tiền ngoài luồng
       // ⇒ hoá đơn `paid` gắn thẳng vào subscription. 0đ (gói tuyến hoa hồng) thì không sinh
@@ -746,6 +751,35 @@ export class BillingService {
       data: { status: SUBSCRIPTION_STATUS.CANCELLED },
     });
     return { startsAt: now, renewedPaidTerm: false };
+  }
+
+  /**
+   * ONBOARDING GÓI ĐÃ XONG — mốc `package_pending → package_active` (ADR 0040).
+   *
+   * Gọi từ CHÍNH transaction bật thuê bao, ở cả hai đường: webhook SePay
+   * (`activateFromInvoiceWithinTx`) và admin gán tay (`assign`). Không phải một job, không phải
+   * một lượt gọi API do client báo — "tôi đã chuyển khoản" không phải một sự kiện, và một mốc
+   * ghi ngoài transaction là một cửa sổ trong đó gói đã bật nhưng người dùng vẫn bị giữ ở màn
+   * thanh toán.
+   *
+   * `updateMany` có điều kiện trạng thái (khuôn claim quen thuộc của file này), nên:
+   *  - chạy lại/song song là no-op, không ghi đè gì;
+   *  - tenant vào bằng cửa hoa hồng rồi mua gói vẫn giữ `commission` — họ chưa từng đi qua cửa
+   *    gian hàng, và nói ngược lại sẽ làm sai luật "gian hàng hết gói không phải người mới".
+   *
+   * Chỉ áp với gói `package`: một dòng hoa hồng (kể cả dòng hệ thống 0đ) không hoàn tất được
+   * onboarding của tuyến trả phí.
+   */
+  private async completePackageOnboardingWithinTx(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    billingMode: string | null,
+  ): Promise<void> {
+    if (billingMode !== BILLING_MODE.PACKAGE) return;
+    await tx.tenant.updateMany({
+      where: { id: tenantId, onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_PENDING },
+      data: { onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE },
+    });
   }
 
   async assignDefaultPlanWithinTx(tx: Prisma.TransactionClient, tenantId: string): Promise<void> {
@@ -1049,10 +1083,45 @@ export class BillingService {
   }
 
   /**
+   * HOÁ ĐƠN GÓI ĐANG CHỜ TIỀN của gian hàng — `null` khi không có (ADR 0040).
+   *
+   * Endpoint riêng thay vì để web lọc trang đầu của `listInvoicesForTenant`, vì đây là thứ màn
+   * onboarding phải phục hồi sau một lần F5: "gian hàng này đang nợ mã nào" là một câu hỏi có
+   * ĐÚNG MỘT câu trả lời, và bất biến đó do server giữ (`purchase` void hoá đơn `issued` cũ và
+   * chặn khi có hoá đơn `partially_paid`, cả hai dưới một advisory lock). Lọc ở client thì bất
+   * biến đó thành một giả định — và một danh sách phân trang có thể đẩy hoá đơn chờ sang trang 2
+   * ngay khi lịch sử dài hơn một trang.
+   *
+   * `orderBy createdAt desc` chỉ là lưới an toàn cho dữ liệu cũ vi phạm bất biến (hoá đơn tạo
+   * trước migration `subscription_invoice_single_payable`): mới nhất là mã người dùng vừa thấy.
+   */
+  async pendingInvoiceForTenant(tenantId: string): Promise<PendingSubscriptionInvoiceDto> {
+    const row = await this.prisma.subscriptionInvoice.findFirst({
+      where: {
+        tenantId,
+        status: {
+          in: [SUBSCRIPTION_INVOICE_STATUS.ISSUED, SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID],
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: INVOICE_SELECT,
+    });
+    return { invoice: row ? toInvoiceDto(row) : null };
+  }
+
+  /**
    * Gian hàng TỰ mua / gia hạn gói: sinh hoá đơn `issued` + mã đối soát `XPG…`, KHÔNG tạo
    * subscription — gói chỉ bật khi tiền đã về (ADR 0026 điều 4; webhook mở ở W4, admin vẫn gán
-   * tay được qua đường platform). Mỗi tenant chỉ giữ MỘT hoá đơn chờ: hoá đơn `issued` cũ bị
-   * lật `void` trong cùng transaction — hai mã cùng sống là hai đường tiền cùng kích hoạt.
+   * tay được qua đường platform).
+   *
+   * ## Mỗi tenant chỉ giữ MỘT hoá đơn trả được — và bất biến đó được giữ bằng hai thứ
+   *
+   * Hai mã cùng sống là hai đường tiền cùng kích hoạt gói, nên:
+   *  - hoá đơn `issued` cũ (chưa đồng nào về) bị lật `void` trong cùng transaction;
+   *  - hoá đơn `partially_paid` (đã có tiền thật) thì CHẶN hẳn lượt mua mới — không void được
+   *    mà cũng không cho đứng cạnh hoá đơn mới;
+   *  - cả transaction chạy sau một advisory lock theo tenant, vì bất biến này nói về sự VẮNG MẶT
+   *    của hàng nên không có unique index nào đại diện được cho nó.
    */
   async purchase(
     tenantId: string,
@@ -1067,7 +1136,19 @@ export class BillingService {
         message: 'Gói đã ngừng bán',
       });
     }
-    await this.assertShopVerifiedForPlan(tenantId, plan.billingMode);
+    /*
+     * KHÔNG có cổng xác minh ở đây (16/09/2026 — ADR 0040 ghi đè ADR 0036 trong phạm vi này).
+     *
+     * ADR 0036 đặt "pháp nhân phải được xem xét" làm điều kiện MUA GÓI. Ghép nó với luồng đăng
+     * ký gian hàng mới thì thứ tự thành: tạo gian hàng → gửi hồ sơ xác minh → CHỜ admin → mới
+     * được trả tiền. Một người đang muốn mua chỗ bán hàng phải chờ một cái gật đầu không có SLA,
+     * và trong lúc chờ họ không dùng được gì cả — đó là chỗ rơi rụng lớn nhất của phễu trả phí.
+     *
+     * Thanh toán mở TUYẾN GÓI và Manage; nó KHÔNG mở bất cứ thứ gì thuộc trục kiểm duyệt. Xe vẫn
+     * đi qua `approval_tasks` loại `VEHICLE` từng chiếc (ADR 0008), và không có nơi nào đánh
+     * `verification = verified` chỉ vì tiền đã về. Xác minh còn nguyên vai trò của nó ở đường
+     * pháp lý/rút tiền, chỉ thôi làm cổng thu tiền.
+     */
     const limits = parsePlanLimits(plan.limitsJson);
 
     /*
@@ -1108,6 +1189,42 @@ export class BillingService {
     const expiresAt = new Date(now.getTime() + SUBSCRIPTION_INVOICE_TTL_HOURS * 60 * 60 * 1000);
 
     const row = await this.prisma.$transaction(async (tx) => {
+      /*
+       * KHOÁ THEO TENANT, giữ tới hết transaction.
+       *
+       * Không có unique nào chặn được "hai hoá đơn payable của cùng một tenant": `code` là chuỗi
+       * ngẫu nhiên nên hai dòng luôn hợp lệ với DB. Ở Read Committed, hai lần bấm "Tạo hoá đơn"
+       * song song (hai tab, hay một cú double-click) cùng đọc tập hoá đơn cũ như nhau, cùng void
+       * nó, rồi mỗi bên INSERT một dòng mới — kết quả là hai mã XPG cùng sống, và hai lần chuyển
+       * khoản đều kích hoạt gói.
+       *
+       * Advisory lock thay vì `SELECT … FOR UPDATE`: thứ cần bảo vệ là sự VẮNG MẶT của một hàng
+       * (chưa có hoá đơn nào), mà khoá hàng thì không khoá được hàng chưa tồn tại.
+       */
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${tenantId}))`;
+
+      /*
+       * Hoá đơn ĐÃ NHẬN MỘT PHẦN TIỀN chặn đường mua tiếp — và phải chặn, không phải void.
+       *
+       * `updateMany` bên dưới cố ý chỉ void trạng thái `issued` (chưa đồng nào về). Một hoá đơn
+       * `partially_paid` thì khác hẳn: void nó là xoá dấu vết của khoản khách đã chuyển, còn để
+       * nó sống cạnh một hoá đơn mới thì `applyBankPaymentWithinTx` coi CẢ HAI đều payable.
+       * Lối đi tiếp đúng là chuyển nốt phần còn thiếu theo mã cũ, nên trả mã lỗi nói thẳng điều
+       * đó kèm chính mã đối soát đang dang dở.
+       */
+      const partiallyPaid = await tx.subscriptionInvoice.findFirst({
+        where: { tenantId, status: SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID },
+        orderBy: { createdAt: 'desc' },
+        select: { code: true },
+      });
+      if (partiallyPaid) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.SUBSCRIPTION_INVOICE_PARTIALLY_PAID,
+          message: `Hoá đơn ${partiallyPaid.code} đã nhận một phần tiền — chuyển nốt phần còn thiếu theo đúng mã đó thay vì tạo hoá đơn mới`,
+          details: { code: partiallyPaid.code },
+        });
+      }
+
       await tx.subscriptionInvoice.updateMany({
         where: { tenantId, status: SUBSCRIPTION_INVOICE_STATUS.ISSUED },
         data: { status: SUBSCRIPTION_INVOICE_STATUS.VOID },
@@ -1358,6 +1475,17 @@ export class BillingService {
       data: { subscriptionId: sub.id, periodFrom: sub.startsAt, periodTo: sub.endsAt },
     });
 
+    /*
+     * ONBOARDING GÓI XONG — trong CHÍNH transaction này (ADR 0040).
+     *
+     * Ba thứ phải cùng sống cùng chết: hoá đơn `paid`, dòng thuê bao `active`, và mốc onboarding.
+     * Tách mốc ra ngoài (một job, hay một lượt gọi API sau khi client thấy `paid`) tạo ra một
+     * cửa sổ trong đó gian hàng đã trả tiền nhưng vẫn bị routing giữ ở màn chuyển khoản — và
+     * `resolveChainStart` ngay trên đã huỷ dòng hoa hồng tạm, nên trong cửa sổ đó họ không thuộc
+     * tuyến nào cả.
+     */
+    await this.completePackageOnboardingWithinTx(tx, args.tenantId, plan.billingMode);
+
     await this.audit.record(
       {
         tenantId: args.tenantId,
@@ -1575,9 +1703,7 @@ export class BillingService {
         kind: 'total',
         limit: OWNER_LITE_VEHICLE_LIMIT,
         reason:
-          billing.phase === BILLING_PHASE.UNCONFIGURED
-            ? 'billing_unconfigured'
-            : 'owner_lite',
+          billing.phase === BILLING_PHASE.UNCONFIGURED ? 'billing_unconfigured' : 'owner_lite',
       };
     }
 
@@ -1610,9 +1736,7 @@ export class BillingService {
    * chiếc thứ tư thì cũng không có chiếc thứ tư nào để gửi lên chợ, nên ở đây thật sự không còn
    * gì để trừ.
    */
-  async remainingMarketplaceSlots(
-    tenantId: string,
-  ): Promise<Record<VehicleType, number | null>> {
+  async remainingMarketplaceSlots(tenantId: string): Promise<Record<VehicleType, number | null>> {
     const quota = await this.vehicleQuotaFor(tenantId);
     if (quota.kind === 'unlimited') {
       return { [VEHICLE_TYPE.CAR]: null, [VEHICLE_TYPE.MOTORBIKE]: null } as Record<
@@ -1625,10 +1749,7 @@ export class BillingService {
       tenantId,
       deletedAt: null,
       publicStatus: {
-        in: [
-          VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW,
-          VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
-        ],
+        in: [VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW, VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC],
       },
     };
 
@@ -1828,10 +1949,32 @@ export class BillingService {
     });
     const billing = resolveEffectiveBilling(row, now);
     if (billing.phase === BILLING_PHASE.UNCONFIGURED) {
-      this.logger.error(
-        `Tenant ${tenantId} KHÔNG xác định được tuyến thu phí (không có dòng thuê bao hợp lệ). ` +
-          'Đường ghi tiền sẽ bị từ chối cho tới khi danh mục gói được sửa.',
-      );
+      /*
+       * `unconfigured` có HAI nguyên nhân từ ADR 0040, và chỉ một trong hai là sự cố.
+       *
+       * Gian hàng trả phí đang chờ thanh toán lượt gói đầu tiên CỐ Ý không có dòng thuê bao nào
+       * (gán một dòng hoa hồng tạm sẽ biến họ thành chủ xe tuyến hoa hồng ở mọi nơi đọc
+       * `billingMode`). Hệ quả — mọi đường ghi tiền bị từ chối — là đúng: một gian hàng chưa trả
+       * tiền thì cũng chưa nhận đơn. Gọi đó là "danh mục gói hỏng" ở mức `error` là dạy đội vận
+       * hành bỏ qua chính mã log này, đúng lúc nó cần được đọc.
+       *
+       * Đọc `tenants` chỉ trong nhánh này: pha `unconfigured` là ngoại lệ, nên một truy vấn nữa
+       * ở đây không nằm trên đường nóng của `/auth/me` hay `TenantScopeGuard`.
+       */
+      const tenant = await client.tenant.findUnique({
+        where: { id: tenantId },
+        select: { onboardingState: true },
+      });
+      if (tenant?.onboardingState === SHOP_ONBOARDING_STATE.PACKAGE_PENDING) {
+        this.logger.debug(
+          `Tenant ${tenantId} đang onboarding tuyến gói (chưa thanh toán) nên chưa có tuyến thu phí.`,
+        );
+      } else {
+        this.logger.error(
+          `Tenant ${tenantId} KHÔNG xác định được tuyến thu phí (không có dòng thuê bao hợp lệ). ` +
+            'Đường ghi tiền sẽ bị từ chối cho tới khi danh mục gói được sửa.',
+        );
+      }
     }
     return billing;
   }
@@ -1898,43 +2041,6 @@ export class BillingService {
       });
     }
     return plan;
-  }
-
-  /**
-   * Cổng XÁC MINH của tuyến thuê bao — ADR 0036.
-   *
-   * Từ ADR 0036, gian hàng mở ra đã `active` ngay và tuyến hoa hồng chỉ đi qua cổng duyệt XE.
-   * Nếu dừng ở đó thì việc "nâng cấp lên gian hàng thuê bao" cũng mất luôn cổng duyệt của nó —
-   * đúng thứ ADR 0014 điều 5 nói nền tảng vẫn phải kiểm. Cổng đó chuyển về đây, nơi nó thực sự
-   * có nghĩa: **muốn mua gói thì pháp nhân phải đã được xem xét.**
-   *
-   * Chỉ áp với gói `package`. Gói tuyến hoa hồng (kể cả gói mặc định gán lúc đăng ký) không đi
-   * qua đây — nếu không thì `assignDefaultPlanWithinTx` sẽ tự chặn chính việc đăng ký, và đó là
-   * đúng vòng lặp mà ADR 0036 vừa gỡ ra.
-   *
-   * Đọc trạng thái xác minh từ phiếu duyệt `tenant` mới nhất (`resolveShopVerification`) — cùng
-   * một nguồn mà `TenantsService.getMyShop` trả cho giao diện, nên nút ở web và cổng ở đây không
-   * thể nói hai điều khác nhau.
-   */
-  private async assertShopVerifiedForPlan(
-    tenantId: string,
-    billingMode: string | null,
-  ): Promise<void> {
-    if (billingMode !== BILLING_MODE.PACKAGE) return;
-
-    const latest = await this.prisma.approvalTask.findFirst({
-      where: { tenantId, targetType: APPROVAL_TARGET_TYPE.TENANT },
-      orderBy: { submittedAt: 'desc' },
-      select: { status: true },
-    });
-    const verification = resolveShopVerification(latest?.status);
-    if (verification === SHOP_VERIFICATION.VERIFIED) return;
-
-    throw new ConflictException({
-      code: API_ERROR_CODE.SHOP_VERIFICATION_REQUIRED,
-      message: 'Gian hàng phải được xác minh trước khi mua gói thuê bao.',
-      details: { verification },
-    });
   }
 
   private async assertTenant(tenantId: string) {
