@@ -28,6 +28,7 @@ function customerUser(tenant: authApi.CurrentUser['tenant'] = null): authApi.Cur
     phoneVerified: true,
     hasPassword: true,
     tenant,
+    openRenterTripCount: 0,
     platformRole: null,
     permissions: [],
   };
@@ -42,6 +43,7 @@ const SHOP: MyShop = {
   status: 'draft',
   // ADR 0036: trục XÁC MINH tách khỏi `status`. Fixture giữ nguyên `draft` (dữ liệu cũ).
   verification: SHOP_VERIFICATION.UNVERIFIED,
+  onboardingState: 'commission',
   phone: null,
   email: null,
   profile: {
@@ -54,13 +56,14 @@ const SHOP: MyShop = {
     provinceName: 'Đà Nẵng',
     taxCode: null,
     businessLicenseNo: null,
-    bankName: null,
-    bankAccountNo: null,
-    bankAccountName: null,
-    qrUrl: null,
-    ownerFullName: null,
-    ownerPhone: null,
-    ownerEmail: null,
+  },
+  ownerAccount: {
+    userId: '01JQZX00000000000000000OW',
+    displayName: 'Nguyễn Văn A',
+    email: null,
+    phone: '84901111111',
+    emailVerified: false,
+    phoneVerified: true,
   },
   latestApproval: null,
   defaultBranch: {
@@ -117,10 +120,18 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
       name: 'Gian hàng Đà Nẵng',
       slug: 'da-nang',
       status: 'active',
+      onboardingState: 'commission',
+      logoUrl: null,
       roleKey: 'shop_owner',
       features: [],
       planCode: null,
+      planName: null,
+      serviceFeePercent: null,
+      billingMode: 'package',
       planEndsAt: null,
+      billingPhase: 'current',
+      graceEndsAt: null,
+      publicVehicleCount: 1,
     });
 
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/manage/shop'));

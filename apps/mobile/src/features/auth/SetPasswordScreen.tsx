@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { setAccountPassword } from '@/features/auth/api';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 
 /**
  * Bước gợi ý đặt mật khẩu sau khi đăng nhập bằng SĐT + OTP — bản native của
@@ -74,7 +74,7 @@ export function SetPasswordScreen({ onDone }: { onDone: () => void }) {
       <Screen edges={['left', 'right', 'bottom']}>
         <YStack gap={space.xl}>
           <YStack gap={space.xs}>
-            <Text col={colors.text} fontFamily="$heading" fos={fontSize.h2}>
+            <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold}>
               {tSet('title')}
             </Text>
             <Text col={colors.textMuted} fos={fontSize.body}>

@@ -10,6 +10,7 @@ import {
   flattenAccountNav,
   isCommissionOwner,
   isShopOwner,
+  accountNavOwner,
   matchAccountNavKey,
   resolveAccountNav,
 } from './account-nav';
@@ -329,11 +330,73 @@ describe('resolveAccountNav', () => {
   });
 });
 
+/**
+ * Đường LUI của một màn con — chỉ dựng khi màn đó KHÔNG tự có mục menu.
+ *
+ * Câu hỏi này phụ thuộc MENU của người đang đăng nhập, không phải bản thân đường dẫn: cùng một
+ * `/account/balance`, chủ xe vào bằng nút trong hồ sơ (cần lui), khách thuê bấm từ menu (không).
+ */
+describe('accountNavOwner', () => {
+  const ownerItems = flattenAccountNav(resolveAccountNav(user({ tenant: tenant() })));
+  const renterItems = flattenAccountNav(resolveAccountNav(user()));
+
+  it('chủ xe: màn tiền có CHỦ là "Tài khoản của tôi"', () => {
+    for (const path of [
+      ROUTES.ACCOUNT.BALANCE,
+      ROUTES.ACCOUNT.EARNINGS,
+      ROUTES.ACCOUNT.BANK_ACCOUNTS,
+      ROUTES.ACCOUNT.PAYMENTS,
+    ]) {
+      expect(accountNavOwner(path, ownerItems)?.href).toBe(ROUTES.ACCOUNT.ROOT);
+    }
+  });
+
+  it('khách thuê: những màn đó TỰ CÓ mục menu nên không dựng đường lui', () => {
+    for (const path of [ROUTES.ACCOUNT.BALANCE, ROUTES.ACCOUNT.BANK_ACCOUNTS]) {
+      expect(accountNavOwner(path, renterItems)).toBeUndefined();
+    }
+  });
+
+  it('màn tự có mục menu thì không có chủ — mục đang sáng đã là chỗ đứng', () => {
+    expect(accountNavOwner(ROUTES.ACCOUNT.VEHICLES, ownerItems)).toBeUndefined();
+    expect(accountNavOwner(ROUTES.ACCOUNT.ROOT, ownerItems)).toBeUndefined();
+  });
+
+  it('đường ngoài khu thì không thuộc về mục nào', () => {
+    expect(accountNavOwner('/search', ownerItems)).toBeUndefined();
+  });
+});
+
 describe('matchAccountNavKey', () => {
   const ownerItems = flattenAccountNav(resolveAccountNav(user({ tenant: tenant() })));
 
   it('khớp tuyệt đối', () => {
     expect(matchAccountNavKey(ROUTES.ACCOUNT.CHANGE_PASSWORD, ownerItems)).toBe('changePassword');
+  });
+
+  /**
+   * ADR 0038 điều 9 gom ba cửa tiền vào trong "Tài khoản của tôi", nên chúng không còn mục menu.
+   * Thiếu phép quy về CHỦ thì ở những màn đó KHÔNG mục nào sáng — người dùng mất dấu mình đang
+   * đứng đâu, đúng lỗi báo về từ staging.
+   */
+  it('màn tiền không có mục riêng thì sáng mục "Tài khoản của tôi"', () => {
+    for (const path of [
+      ROUTES.ACCOUNT.BALANCE,
+      ROUTES.ACCOUNT.EARNINGS,
+      ROUTES.ACCOUNT.BANK_ACCOUNTS,
+      ROUTES.ACCOUNT.PAYMENTS,
+    ]) {
+      expect(matchAccountNavKey(path, ownerItems)).toBe('profile');
+    }
+  });
+
+  /** Khớp TRỰC TIẾP thắng: ở menu khách thuê, chính những đường dẫn đó là mục menu. */
+  it('menu khách thuê: các màn tiền vẫn sáng mục của CHÍNH nó', () => {
+    const renterItems = flattenAccountNav(resolveAccountNav(user()));
+
+    expect(matchAccountNavKey(ROUTES.ACCOUNT.BALANCE, renterItems)).toBe('balance');
+    expect(matchAccountNavKey(ROUTES.ACCOUNT.BANK_ACCOUNTS, renterItems)).toBe('bankAccounts');
+    expect(matchAccountNavKey(ROUTES.ACCOUNT.PAYMENTS, renterItems)).toBe('payments');
   });
 
   it('trang con vẫn sáng mục cha', () => {
@@ -391,8 +454,19 @@ describe('matchAccountNavKey', () => {
      * sang sổ đầy đủ. Một mục ví riêng sẽ là cửa thứ hai vào cùng một sổ.
      */
     expect(matchAccountNavKey(ROUTES.ACCOUNT.ROOT, ownerItems)).toBe('profile');
-    expect(matchAccountNavKey(ROUTES.ACCOUNT.BALANCE, ownerItems)).toBeUndefined();
-    expect(matchAccountNavKey(ROUTES.ACCOUNT.EARNINGS, ownerItems)).toBeUndefined();
+
+    /*
+     * Bất biến là KHÔNG CÓ MỤC MENU riêng cho ví — kiểm trên chính danh sách mục, không kiểm qua
+     * `matchAccountNavKey`.
+     *
+     * Hai câu hỏi khác nhau: "menu có mục ví không" (bất biến ở đây) và "đứng ở /account/balance
+     * thì mục nào sáng" (là 'profile', vì màn tiền thuộc về "Tài khoản của tôi" — `owns`). Bản
+     * trước khoá câu thứ hai bằng `toBeUndefined()`, và chính nó là lỗi báo về từ staging: không
+     * mục nào sáng nên người dùng mất dấu mình đang đứng đâu.
+     */
+    for (const href of [ROUTES.ACCOUNT.BALANCE, ROUTES.ACCOUNT.EARNINGS]) {
+      expect(ownerItems.some((item) => item.href === href)).toBe(false);
+    }
 
     /*
      * Và cả ở bậc ĐANG ĐĂNG KÝ. Bậc đó không chỉ có người mới: một chủ xe từng cho thuê rồi tạm

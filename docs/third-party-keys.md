@@ -261,7 +261,7 @@ phân tách duy nhất là **hạn chế truy cập** ở bước sau. Vì vậy
 | --- | --- |
 | **Secret** | `GEOAPIFY_API_KEY` |
 | Variable | `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` — nằm trong bundle JS ⇒ **không bao giờ** là Secret |
-| Variable | `EXPO_PUBLIC_GOOGLE_MAPS_STATIC_KEY` — app native **vẫn dùng Google Maps Static API**, xem §4.5 |
+| Variable | `EXPO_PUBLIC_GEOAPIFY_MAP_KEY` — app native, Static Maps; nằm trong bundle ⇒ **không bao giờ** là Secret |
 
 Cả hai key đều **tuỳ chọn**: thiếu thì khối bản đồ tự ẩn, ô địa chỉ rơi về nhập tay, phí giao dự
 kiến không hiện — luồng đặt xe chạy y như trước. Không key nào chặn boot.
@@ -290,11 +290,16 @@ Giấy phép ODbL của OpenStreetMap và điều khoản gói miễn phí của
 đã có sẵn: `StaticMap` có một dòng `<figcaption>`, bản đồ Leaflet dùng attribution control.
 **Không được gỡ** — đây là điều kiện giấy phép, không phải trang trí.
 
-### 4.5 App native vẫn dùng Google Maps
+### 4.5 App native
 
-`apps/mobile` còn gọi Google Maps Static API qua `EXPO_PUBLIC_GOOGLE_MAPS_STATIC_KEY`. ADR 0037
-chỉ chuyển web và backend. Tới khi app native chuyển theo, key Google đó vẫn cần một billing
-account Google — nếu app native đang dùng. Chi tiết ở phần "Chưa làm" của ADR 0037.
+`apps/mobile` dùng Geoapify Static Maps qua `EXPO_PUBLIC_GEOAPIFY_MAP_KEY` (16/09/2026 — không
+còn Google). Đây là key RIÊNG của app, không dùng chung với `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` của
+web: hai client hai key thì hạn mức tách được, và một key bị moi ra khỏi bundle app không kéo
+theo web.
+
+App native không có bản đồ tương tác nên không tiêu thụ Map Tiles — chỉ Static Maps, mỗi lần mở
+khối "Vị trí trên bản đồ" là một lượt. Thiếu key thì khối đó lùi về nút "Mở bản đồ"; luồng không
+gãy chỗ nào.
 
 ---
 

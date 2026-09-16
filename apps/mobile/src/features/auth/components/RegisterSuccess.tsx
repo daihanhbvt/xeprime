@@ -2,7 +2,7 @@ import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { Button } from '@/components/ui/Button';
 import { StatusIcon, STATUS_TONE } from '@/components/ui/StatusIcon';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 
 /**
  * Bước sau khi tạo tài khoản thành công — bản native của
@@ -29,7 +29,7 @@ export function RegisterSuccess({
       <StatusIcon icon="checkmark" tone={STATUS_TONE.SUCCESS} />
 
       <YStack ai="center" gap={space.xs}>
-        <Text col={colors.text} fontFamily="$heading" fos={fontSize.h2} ta="center">
+        <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold} ta="center">
           {t('registered.title')}
         </Text>
         <Text col={colors.textMuted} fos={fontSize.body} ta="center">

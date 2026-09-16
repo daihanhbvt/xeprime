@@ -10,7 +10,8 @@ import { useTranslations } from 'next-intl';
 const ROTATE_MS = 6000;
 
 /**
- * Carousel banner hero — dữ liệu từ `/public/banners` (tối đa 3 slide, admin quản lý).
+ * Carousel banner hero — hiển thị toàn bộ dữ liệu từ `/public/banners` (admin quản lý, tối đa 10
+ * banner được phép trùng thời gian hiển thị).
  *
  * Tự viết (~100 dòng) thay vì kéo thư viện slider: cần kiểm soát đủ bốn điều kiện DỪNG tự chạy
  * (hover/focus, tab bị ẩn, `prefers-reduced-motion`, chỉ còn 1 slide) và thứ tự tải ảnh

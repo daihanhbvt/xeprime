@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
   Linking,
@@ -8,16 +8,31 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  withTiming,
+} from 'react-native-reanimated';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { useScreenFocused } from '@/hooks/use-screen-focused';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { duration, easing } from '@/theme/motion';
 import type { PublicBanner } from '../api';
 
 /** Tỉ lệ ảnh banner mobile của backend (780×390) — cùng tỉ lệ web dùng dưới 640px. */
 const BANNER_RATIO = 780 / 390;
+
+/**
+ * Nhịp tự chuyển slide.
+ *
+ * 3s chứ không 6s như `BannerCarousel` của web: banner native chiếm trọn bề ngang và nằm ngay
+ * đầu màn, mắt đọc hết tấm ảnh trong một cái liếc — nhịp của web được canh cho một hero rộng mà
+ * người dùng còn phải quét qua chữ.
+ */
+const AUTO_ROTATE_MS = 3000;
 
 /**
  * Vùng banner trang chủ.
@@ -33,30 +48,71 @@ export function HomeHero({ banners, isLoading }: { banners: PublicBanner[]; isLo
   const t = useTranslations('Marketplace.banner');
   const { width } = useWindowDimensions();
   const [active, setActive] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  /*
+   * Bản sao của `active` để bộ đếm giờ đọc: `setInterval` giữ nguyên closure của lần đăng ký đầu,
+   * nên đọc thẳng state trong đó là đọc mãi số 0 — vòng quay sẽ kẹt ở slide thứ hai.
+   */
+  const activeRef = useRef(0);
+
+  const focused = useScreenFocused();
+  const reducedMotion = useReducedMotion();
 
   const height = width / BANNER_RATIO;
 
   const onScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      setActive(Math.round(event.nativeEvent.contentOffset.x / Math.max(width, 1)));
+      const index = Math.round(event.nativeEvent.contentOffset.x / Math.max(width, 1));
+      activeRef.current = index;
+      setActive(index);
+      setDragging(false);
     },
     [width],
   );
+
+  const goTo = useCallback(
+    (index: number) => {
+      activeRef.current = index;
+      setActive(index);
+      scrollRef.current?.scrollTo({ x: index * width, animated: true });
+    },
+    [width],
+  );
+
+  /*
+   * Tự chuyển slide — dừng khi: người dùng đang tự vuốt, màn không còn tiêu điểm (Tabs giữ màn cũ
+   * SỐNG, không dừng thì banner vẫn quay và vẫn vẽ lại sau lưng tab khác), người dùng bật giảm
+   * chuyển động, hoặc chỉ còn một banner. Cùng bốn điều kiện `BannerCarousel` của web dừng, dịch
+   * sang khái niệm native.
+   */
+  const count = banners.length;
+  useEffect(() => {
+    if (count <= 1 || dragging || !focused || reducedMotion) return;
+
+    const timer = setInterval(() => goTo((activeRef.current + 1) % count), AUTO_ROTATE_MS);
+    return () => clearInterval(timer);
+  }, [count, dragging, focused, reducedMotion, goTo]);
 
   if (isLoading) {
     return <Skeleton width="100%" height={height} />;
   }
 
-  if (banners.length === 0) {
+  if (count === 0) {
     return <YStack w="100%" h={height} bg={colors.surfaceMuted} />;
   }
 
   return (
     <YStack>
       <ScrollView
+        ref={scrollRef}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
+        onScrollBeginDrag={() => setDragging(true)}
+        // Vuốt hụt (thả tay mà không đủ đà) KHÔNG sinh `onMomentumScrollEnd` trên mọi máy — không
+        // gỡ cờ ở đây thì một cú chạm nhỡ làm banner đứng im vĩnh viễn.
+        onScrollEndDrag={() => setDragging(false)}
         onMomentumScrollEnd={onScroll}
         accessibilityLabel={t('carouselLabel')}
       >
@@ -105,7 +161,15 @@ export function HomeHero({ banners, isLoading }: { banners: PublicBanner[]; isLo
   );
 }
 
-function BannerSlide({
+/**
+ * `memo` không phải để tối ưu sớm — nó là điều kiện để vòng tự chạy không tốn gì.
+ *
+ * Mỗi nhịp 3s, `HomeHero` đổi state (`active`) và vẽ lại; không chặn ở đây thì cả ba tấm ảnh
+ * `expo-image` cùng nhận prop mới mỗi ba giây trong khi không có gì của CHÚNG đổi. Ba prop vào
+ * đều ổn định (đối tượng banner đến từ cache query, hai số đo từ bề rộng màn), nên `memo` bỏ
+ * qua sạch và chỉ còn hàng chấm chỉ báo vẽ lại.
+ */
+const BannerSlide = memo(function BannerSlide({
   banner,
   width,
   height,
@@ -167,4 +231,4 @@ function BannerSlide({
       {image}
     </Pressable>
   );
-}
+});

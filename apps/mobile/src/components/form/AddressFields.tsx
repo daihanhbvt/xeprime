@@ -218,6 +218,21 @@ function AddressLocationSection<T extends FieldValues>({
   const [pinAddress, setPinAddress] = useState<string | null>(null);
 
   const onPickSuggestion = async (id: string) => {
+    /*
+     * Điền phần chữ NGAY, từ chính dòng người dùng vừa bấm — trước cả khi hỏi server.
+     *
+     * Chữ do server suy lại từ toạ độ KHÔNG khớp thứ người dùng đã chọn: bấm
+     * "12, Nguyễn Huệ" mà tra ngược toạ độ đó ra "Hoàng Hạc Cafe, 18A, Nguyễn Huệ" (nhà bên
+     * cạnh). Dòng người ta bấm mới là thứ họ muốn, không phải thứ máy suy lại.
+     *
+     * Làm trước `await` cũng là để ô chữ không đứng im suốt lượt gọi mạng: trên 3G đó là một
+     * hai giây người dùng tưởng cú chạm bị trượt.
+     */
+    const picked = suggestions.data?.items.find((item) => item.placeId === id);
+    if (picked) {
+      addressLine.field.onChange(picked.primaryText as PathValue<T, Path<T>>);
+    }
+
     const result = await placeDetail.mutateAsync(id).catch(() => null);
     const place = result?.place;
     if (!place) return;
@@ -226,12 +241,13 @@ function AddressLocationSection<T extends FieldValues>({
     latitude.field.onChange(Number(place.latitude) as PathValue<T, Path<T>>);
     longitude.field.onChange(Number(place.longitude) as PathValue<T, Path<T>>);
     locationSource.field.onChange(LOCATION_SOURCE.GOOGLE_PLACE as PathValue<T, Path<T>>);
+    /*
+     * `formattedAddress` chỉ dùng cho dòng "Ghim đang ở: …" — KHÔNG đổ ngược vào ô chữ. Nó mô
+     * tả chỗ cái ghim THẬT SỰ nằm, và chỗ đó được phép lệch chút ít so với dòng người dùng đã
+     * chọn; đó chính là thông tin họ cần để quyết định có chỉnh ghim hay không.
+     */
     setPinAddress(place.formattedAddress ?? null);
-    // Chỉ điền phần "số nhà, đường" nhà cung cấp tách ra — dán nguyên chuỗi đầy đủ vào ô là mang
-    // theo tên quận/phường CŨ, rồi bị ghép thêm một lần nữa lúc lưu.
-    if (place.suggestedAddressLine) {
-      addressLine.field.onChange(place.suggestedAddressLine as PathValue<T, Path<T>>);
-    }
+
     setProvinceMismatch(
       Boolean(place.suggestedProvinceCode) && place.suggestedProvinceCode !== provinceCode,
     );

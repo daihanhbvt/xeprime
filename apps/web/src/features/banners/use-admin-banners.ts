@@ -8,6 +8,7 @@ import type { AdminBanner } from './types';
 export interface BannerInput {
   title: string;
   imageUrl: string;
+  tabletImageUrl?: string | null;
   mobileImageUrl?: string | null;
   altText: string;
   linkUrl?: string | null;

@@ -56,3 +56,42 @@
   color: var(--xp-color-error);
   gap: var(--xp-space-sm);
 }
+
+/* Card media: preview đúng tỉ lệ và dùng toàn bộ bề rộng cột. */
+.cardItem.cardItem {
+  margin-bottom: 0;
+}
+
+.cardWrap {
+  display: block;
+}
+
+.cardWrap :global(.ant-upload-wrapper),
+.cardWrap :global(.ant-upload-select) {
+  display: block;
+  width: 100%;
+}
+
+.cardTile {
+  width: 100%;
+  height: auto;
+  min-height: 96px;
+  border-style: solid;
+  background:
+    linear-gradient(45deg, rgba(0, 0, 0, 0.025) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(0, 0, 0, 0.025) 25%, transparent 25%), var(--xp-color-bg-layout);
+  background-position:
+    0 0,
+    8px 8px;
+  background-size: 16px 16px;
+}
+
+.cardPreview {
+  object-fit: cover;
+}
+
+.cardActions {
+  flex-direction: row;
+  flex-wrap: wrap;
+  margin-top: var(--xp-space-sm);
+}

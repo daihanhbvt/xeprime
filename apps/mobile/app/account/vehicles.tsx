@@ -1,3 +1,4 @@
+import { OWNER_STAGE } from '@xeprime/types';
 import { RequireSession } from '@/features/auth/RequireSession';
 import { AccountVehiclesScreen } from '@/features/account/AccountVehiclesScreen';
 import { OwnerGate } from '@/features/account/components/OwnerGate';
@@ -11,7 +12,7 @@ import { OwnerGate } from '@/features/account/components/OwnerGate';
 export default function AccountVehiclesRoute() {
   return (
     <RequireSession>
-      <OwnerGate>
+      <OwnerGate minStage={OWNER_STAGE.REGISTERING}>
         <AccountVehiclesScreen />
       </OwnerGate>
     </RequireSession>

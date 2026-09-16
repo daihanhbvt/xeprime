@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { CHAT_SIDE } from '@xeprime/types';
 import type { ConversationSummary } from '@/features/chat/api';
 import { memo } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
@@ -7,7 +8,7 @@ import { useTranslations } from 'use-intl';
 import { Avatar } from '@/components/ui/Avatar';
 import { CountBadge } from '@/components/ui/CountBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, sizing, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 import { layout } from '@/theme/layout';
 
 /** Ảnh đại diện to hơn sàn chạm: nó là mỏ neo thị giác của cả dòng, không phải một icon. */
@@ -21,9 +22,17 @@ const AVATAR = 52;
  */
 export const ConversationRow = memo(function ConversationRow({
   conversation,
+  showRole,
   onPress,
 }: {
   conversation: ConversationSummary;
+  /**
+   * Danh sách đang trộn HAI VAI (hộp thư hợp nhất) ⇒ mỗi dòng mang một nhãn vai.
+   *
+   * Prop chứ không suy từ dữ liệu: một hộp thư khách mà tình cờ chỉ có hội thoại khách vẫn là hộp
+   * thư một-vai, và ở đó nhãn là nhiễu vì mọi dòng mang cùng một chữ.
+   */
+  showRole: boolean;
   onPress: (conversation: ConversationSummary) => void;
 }) {
   const t = useTranslations('Chat');
@@ -66,6 +75,25 @@ export const ConversationRow = memo(function ConversationRow({
             >
               {conversation.partyName}
             </Text>
+            {/*
+              Nhãn VAI, chỉ ở hộp thư hợp nhất.
+
+              Ở đó hai dòng cạnh nhau có thể là hai việc khác hẳn: một chủ xe mà tôi đang thuê, và
+              một khách đang hỏi xe của tôi. Tên phía bên kia không nói ra điều đó — cả hai đều chỉ
+              là một cái tên — nên người đọc phải tự nhớ, và họ sẽ trả lời nhầm giọng.
+            */}
+            {showRole ? (
+              <Text
+                col={colors.textMuted}
+                fos={fontSize.label}
+                numberOfLines={1}
+                bg={colors.surfaceMuted}
+                px={space.xs}
+                br={radius.sm}
+              >
+                {t(conversation.side === CHAT_SIDE.SHOP ? 'roleAsHost' : 'roleAsRenter')}
+              </Text>
+            ) : null}
             {/*
               NGÀY ở hàng tên, GIỜ ở hàng cuối cạnh badge — hai mẩu của cùng một mốc, tách theo
               mức người ta cần chúng.

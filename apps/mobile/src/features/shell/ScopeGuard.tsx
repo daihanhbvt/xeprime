@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'expo-router';
+import { tenantUsesManagePortal } from '@xeprime/types';
 import { APP_SCOPE } from './app-scope';
 import { useTranslations } from 'use-intl';
 import { Screen } from '@/components/layout/Screen';
@@ -75,8 +76,19 @@ export function ScopeGuard({ children }: { children: ReactNode }) {
   const insideManage = (pathname ?? '').startsWith(String(ROUTES.manage.home()));
 
   const ready = status === SESSION_STATUS.READY;
-  // "Không còn gì để quản lý" = mất CẢ hai lối: không gian hàng và không vai nền tảng.
-  const evicted = ready && tenant === null && !user?.platformRole && insideManage && !onOnboarding;
+  /*
+   * "Không còn gì để quản lý" = mất CẢ hai lối: không gian hàng TUYẾN GÓI, và không vai nền tảng.
+   *
+   * Hỏi `tenantUsesManagePortal` chứ không `tenant === null` (ADR 0038 điều 4): chủ xe tuyến hoa
+   * hồng vẫn có `tenant`, nhưng `SubscriptionTrackGuard` ở server từ chối cả bộ quản lý gian hàng.
+   * Thiếu chốt này thì họ vào được khu quản lý rồi nhận 403 ở từng màn — một app trông như hỏng
+   * thay vì một lời giải thích.
+   *
+   * Cổng này cũng bắt ca gian hàng HẾT ÂN HẠN: `billingMode` rơi về `commission`, và chủ, quản
+   * lý, nhân viên, người xem rời khu quản lý cùng lúc — vì câu hỏi hỏi TENANT, không hỏi vai.
+   */
+  const evicted =
+    ready && !tenantUsesManagePortal(tenant) && !user?.platformRole && insideManage && !onOnboarding;
 
   // Toast chỉ bắn MỘT lần cho mỗi lần bị đá: effect chạy lại theo nhịp refetch, và bốn bản sao
   // của cùng một câu đọc như app đang hỏng chứ không như một lời giải thích.

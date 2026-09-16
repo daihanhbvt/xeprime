@@ -1,18 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Fragment, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'expo-router';
-import { Pressable } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { ACCOUNT_TRACK, resolveAccountTrack } from '@xeprime/types';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
+import { VerifiedName } from '@/components/ui/VerifiedName';
 import { useCurrentUser, useLogout } from '@/features/auth/hooks/use-auth';
 import { APP_SCOPE } from '@/features/shell/app-scope';
 import { useShellScope } from '@/features/shell/use-shell-scope';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
-import { useDomainLabel } from '@/i18n/domain';
-import { ROUTES } from '@/navigation/routes';
+import { useAccountIdentityLabel } from '../use-account-identity-label';
 import { colors, fontSize, fontWeight, iconSize, sizing, space } from '@/theme/tokens';
 import {
   NAV_TARGET,
@@ -46,34 +47,44 @@ export function AccountNav() {
   const t = useTranslations('Navigation');
   const tAccount = useTranslations('Account');
   const tCommon = useTranslations('Common.actions');
-  const router = useRouter();
   const { data: user } = useCurrentUser();
   const pathname = usePathname();
   const logout = useLogout();
   const [confirmingLogout, setConfirmingLogout] = useState(false);
-  const domainLabel = useDomainLabel();
+  const identityLabel = useAccountIdentityLabel();
 
   const groups = useMemo(() => resolveAccountNav(user), [user]);
   const activeKey = matchAccountNavKey(pathname ?? '', flattenAccountNav(groups));
 
   /*
-   * Tên và VAI của thẻ người dùng — cùng thứ tự rơi về với `AccountSidebar` bên web.
+   * Tên và VAI của thẻ người dùng.
    *
-   * Vai gian hàng thắng vai nền tảng, và không có vai nào thì rơi về "Tài khoản XePrime" chứ
-   * không để trống: một dòng rỗng dưới tên đọc ra như dữ liệu bị thiếu.
+   * Vai đi qua `useAccountIdentityLabel` — nó đọc TUYẾN, không phải bảng `tenantRole`: chủ xe cá
+   * nhân và chủ gian hàng cùng vai `shop_owner` (ADR 0014), nên bảng vai gọi cả hai là "Chủ gian
+   * hàng" và thẻ này từng mâu thuẫn với chính viên nhãn tuyến nằm ngay dưới nó.
+   *
+   * Tên rơi về "Tài khoản XePrime" chứ không để trống: một dòng rỗng đọc ra như dữ liệu bị thiếu.
    */
   const userName = user?.displayName || user?.email || tAccount('profile.accountLabel');
-  const roleKey = user?.tenant?.roleKey;
-  const userRole = roleKey
-    ? domainLabel('tenantRole', roleKey, roleKey)
-    : user?.platformRole
-      ? domainLabel('platformRole', user.platformRole, user.platformRole)
-      : tAccount('profile.accountLabel');
+  const userRole = identityLabel(user);
+
+  /*
+   * CHỈ chủ gian hàng tuyến gói được đeo dấu (ADR 0038) — cùng phép suy với đầu trang hồ sơ, nên
+   * hai khối trên cùng một màn không bao giờ nói hai điều khác nhau về một con người.
+   */
+  const isShopOwner = resolveAccountTrack(user?.tenant ?? null).track === ACCOUNT_TRACK.SHOP_OWNER;
 
   return (
     <>
       <Card padded={false}>
-        <YStack accessibilityRole="menu" accessibilityLabel={t('account.menuLabel')} py={space.xs}>
+        {/*
+          Vai "menu" phải nằm trên một `View` của React Native, KHÔNG trên một stack Tamagui.
+          `accessibilityRole` đặt trên stack Tamagui không tới được cây truy cập — nên trình đọc
+          màn hình không bao giờ nghe thấy đây là một menu, và nó im lặng suốt vì không có lỗi nào
+          để thấy. Cùng lý do mà mọi thứ bấm được trong app giữ một `Pressable` bao ngoài.
+        */}
+        <View accessibilityRole="menu" accessibilityLabel={t('account.menuLabel')}>
+        <YStack py={space.xs}>
           {groups.map((group, index) => (
             <Fragment key={group.key}>
               {index > 0 ? <Divider /> : null}
@@ -136,16 +147,31 @@ export function AccountNav() {
                 py={space.sm}
                 accessibilityLabel={tAccount('sidebar.userCard')}
               >
-                <Avatar name={userName} url={user.avatarUrl} size={40} />
+                {/*
+                  Đúng ĐỊNH DẠNG NHẬN DIỆN chuẩn: ảnh viền gold có dấu, tên màu chữ thường, dấu
+                  thứ hai ngay sau tên.
+                */}
+                <Avatar
+                  name={userName}
+                  url={user.avatarUrl}
+                  size={40}
+                  verifiedLabel={isShopOwner ? tAccount('trackBadge.verifiedHint') : undefined}
+                />
                 <YStack f={1} minWidth={0} gap={2}>
-                  <Text
-                    col={colors.text}
-                    fos={fontSize.bodySm}
-                    fow={fontWeight.semibold}
-                    numberOfLines={1}
-                  >
-                    {userName}
-                  </Text>
+                  <VerifiedName
+                    name={userName}
+                    verifiedLabel={isShopOwner ? tAccount('trackBadge.verifiedHint') : undefined}
+                    markSize={14}
+                    decorativeMark
+                  />
+                  {/*
+                    Chỉ VAI, KHÔNG nhãn tuyến.
+
+                    "Chủ gian hàng · Gói Gian hàng tiêu chuẩn" đã nằm ở đầu màn, ngay dưới tên
+                    trong khối nhận diện — nhắc lại ở chân menu là câu thứ hai nói cùng một điều,
+                    trong một khối vốn để điều hướng. Cấu hình gói hỏng vẫn lộ ra đúng chỗ của nó:
+                    `AccountTrackNotice` dựng hẳn một callout đỏ (ADR 0038 điều 11).
+                  */}
                   <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
                     {userRole}
                   </Text>
@@ -154,6 +180,7 @@ export function AccountNav() {
             </>
           ) : null}
         </YStack>
+        </View>
       </Card>
 
       {/* Đăng xuất là thao tác không hỏi lại được sau khi làm — hỏi trước, bằng hộp của app. */}
@@ -168,7 +195,8 @@ export function AccountNav() {
         onCancel={() => setConfirmingLogout(false)}
         onConfirm={() =>
           logout.mutate(undefined, {
-            onSettled: () => router.replace(ROUTES.explore.home()),
+            /* Rời màn là việc của `SessionBoundary` — xem docblock của `LogoutRow`. */
+            onSettled: () => setConfirmingLogout(false),
           })
         }
       />

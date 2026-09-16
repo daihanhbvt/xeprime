@@ -1,5 +1,5 @@
 import type { ConversationSummary } from '@/features/chat/api';
-import { CHAT_SIDE, type ChatSide } from '@xeprime/types';
+import { CHAT_INBOX, CHAT_SIDE, type ChatSide } from '@xeprime/types';
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
 import { XStack, YStack } from 'tamagui';
@@ -20,6 +20,8 @@ import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { colors, space } from '@/theme/tokens';
 import { ConversationRow } from './components/ConversationRow';
+import { useCurrentUser } from '@/features/auth/hooks/use-auth';
+import { resolveChatInbox } from './chat-inbox';
 import { useConversationsInfinite } from './hooks/use-chat';
 
 const SKELETON_ROWS = 6;
@@ -55,11 +57,19 @@ export function ChatListScreen({ side }: { side: ChatSide }) {
 
   const shop = side === CHAT_SIDE.SHOP;
 
+  /*
+   * `side` là BỀ MẶT người dùng đang đứng; `inbox` là thứ hỏi server "cho tôi xem hội thoại
+   * nào" (ADR 0038 điều 10). Với chủ xe tuyến hoa hồng ở bề mặt khách, hai thứ đó khác nhau:
+   * họ thấy hộp thư HỢP NHẤT, hợp trong MỘT truy vấn ở server.
+   */
+  const { data: user } = useCurrentUser();
+  const inbox = resolveChatInbox(side, user);
+
   const [search, setSearch] = useState('');
   const [unreadOnly, setUnreadOnly] = useState(false);
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
 
-  const query = useConversationsInfinite(side, {
+  const query = useConversationsInfinite(inbox, {
     ...(debouncedSearch.trim() ? { q: debouncedSearch.trim() } : {}),
     ...(unreadOnly ? { unreadOnly: true } : {}),
   });
@@ -100,10 +110,11 @@ export function ChatListScreen({ side }: { side: ChatSide }) {
     ({ item }: ListRenderItemInfo<ConversationSummary>) => (
       <ConversationRow
         conversation={item}
+        showRole={inbox === CHAT_INBOX.UNIFIED}
         onPress={openConversation}
       />
     ),
-    [openConversation],
+    [inbox, openConversation],
   );
 
   const filtering = unreadOnly || debouncedSearch.trim().length > 0;

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { VerifiedName } from '@/components/ui/VerifiedName';
 import { useCallback, useState } from 'react';
 import { Image } from 'expo-image';
 import {
@@ -27,7 +28,8 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ListingDetailSkeleton } from '@/components/ui/Skeleton';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
-import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
+import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
+import { useShopChatAvailable } from '@/features/chat/hooks/use-shop-chat-available';
 import { Card } from '@/components/ui/Card';
 import { Stars } from '@/components/ui/Stars';
 import type { IconName } from '@/components/ui/Chip';
@@ -162,6 +164,8 @@ export function ListingDetailScreen({
       */}
       <RequestBar
         vehicleId={listing.data.id}
+        shopSlug={listing.data.shopSlug}
+        shopChatOpen={listing.data.shopChatOpen}
         serviceType={
           chosenService ?? defaultServiceOf(listing.data.serviceTypes ?? [], initialServiceType)
         }
@@ -179,10 +183,16 @@ export function ListingDetailScreen({
  */
 function RequestBar({
   vehicleId,
+  shopSlug,
+  shopChatOpen,
   serviceType,
   provinceCode,
 }: {
   vehicleId: string;
+  /** Gian hàng của chiếc xe — cổng nhắn tin hỏi theo GIAN HÀNG, không theo xe. */
+  shopSlug: string;
+  /** Gian hàng mở hộp thư công khai chưa; chưa thì nút hỏi tiếp cổng eligibility. */
+  shopChatOpen: boolean;
   serviceType?: string;
   /** Tỉnh của chính chiếc xe — điền sẵn ô địa chỉ giao xe (ADR 0035). */
   provinceCode?: string;
@@ -190,6 +200,11 @@ function RequestBar({
   const t = useTranslations('BookingRequests.flow');
   const navigateOnce = useNavigateOnce();
   const insets = useSafeAreaInsets();
+  /*
+    Hỏi cổng nhắn tin Ở ĐÂY chứ không để nút tự giấu mình: ô `f={1}` bọc ngoài vẫn giữ nửa bề
+    ngang kể cả khi ruột nó rỗng, nên nút đặt xe sẽ không bao giờ nở ra hết hàng.
+  */
+  const canChat = useShopChatAvailable(shopSlug, shopChatOpen);
 
   return (
     <YStack
@@ -207,21 +222,38 @@ function RequestBar({
         đặt (giao xe ở đâu, có xe khác không) là việc rất hay xảy ra, và bắt khách quay ra tab Tin
         nhắn rồi tự tìm gian hàng là đánh mất chính chiếc xe họ đang xem.
 
-        Cỡ `md` chứ KHÔNG `lg`: `lg` dành cho hành động chính ĐƠN ĐỘC chiếm trọn bề ngang.
-        Thành một hàng hai nút thì mỗi nút chỉ còn ~160dp, mà riêng đệm ngang đã ăn 48dp —
-        ở `lg` (chữ 16px) nhãn tiếng Anh "Select this car" không còn chỗ.
+        Chủ xe cá nhân chưa mở kênh thì KHÔNG có nút nhắn. Lúc đó hàng chỉ còn MỘT hành động, và
+        nó phải chiếm trọn bề ngang như mọi hành động chính đơn độc khác — nên ô chứa nút nhắn
+        biến mất hẳn, chứ không đứng lại giữ chỗ với ruột rỗng.
 
-        Hai nút chia ĐỀU và phân biệt nhau bằng MÀU (vàng đặc so với viền), không bằng bề
-        ngang: đây là hai lối rẽ song song, không phải một hành động chính kèm một lối thoát.
+        Cỡ `md` khi đứng cặp chứ KHÔNG `lg`: thành một hàng hai nút thì mỗi nút chỉ còn ~160dp,
+        mà riêng đệm ngang đã ăn 48dp — ở `lg` (chữ 16px) nhãn tiếng Anh "Select this car" không
+        còn chỗ. Đứng một mình thì trả lại `lg`, cỡ dành cho hành động chính đơn độc.
+
+        Khi có cả hai, chúng chia ĐỀU và phân biệt nhau bằng MÀU (vàng đặc so với viền), không
+        bằng bề ngang: đây là hai lối rẽ song song, không phải một hành động chính kèm một lối
+        thoát.
       */}
       <XStack gap={space.sm}>
-        <YStack f={1}>
-          <ChatWithShopButton vehicleId={vehicleId} />
-        </YStack>
+        {canChat ? (
+          <YStack f={1}>
+            {/*
+              Nút nhắn tin đi qua cổng "khách này có nhắn được không": chủ xe cá nhân không mở
+              hộp thư công khai, họ chỉ mở kênh sau khi khách đã gửi yêu cầu thuê
+              (CHAT_REQUIRES_BOOKING). Nút vẫn mang vehicleId để hội thoại gắn đúng chiếc xe.
+            */}
+            <ShopChatButton
+              shopSlug={shopSlug}
+              vehicleId={vehicleId}
+              publicChatOpen={shopChatOpen}
+            />
+          </YStack>
+        ) : null}
         <YStack f={1}>
           <Button
             label={t('cta')}
             icon="car-sport-outline"
+            size={canChat ? 'md' : 'lg'}
             onPress={() =>
               navigateOnce(
                 ROUTES.booking.request(vehicleId, {
@@ -531,25 +563,28 @@ function DetailBody({
           accessibilityLabel={listing.shopName}
         >
           <XStack ai="center" gap={space.md}>
-            <Avatar name={listing.shopName} url={listing.shopLogoUrl} size={44} />
+            <Avatar
+              name={listing.shopName}
+              url={listing.shopLogoUrl}
+              size={44}
+              verifiedLabel={listing.shopVerified ? t('shopVerified') : undefined}
+            />
             <YStack f={1} gap={2}>
-              <XStack ai="center" gap={space.xs}>
-                <Text
-                  col={colors.text}
-                  fos={fontSize.body}
-                  fow={fontWeight.semibold}
-                  numberOfLines={1}
-                >
-                  {listing.shopName}
-                </Text>
-                {/* Xe lên chợ đồng nghĩa gian hàng đã qua duyệt nền tảng — tick nói đúng điều đó. */}
-                <Ionicons
-                  name="checkmark-circle"
-                  size={15}
-                  color={colors.primary}
-                  accessibilityLabel={t('shopVerified')}
-                />
-              </XStack>
+              {/*
+                Dấu xác minh CÓ ĐIỀU KIỆN (ADR 0028).
+
+                Bản trước hiện tick cho MỌI tin đăng với lý do "xe lên chợ đồng nghĩa gian hàng
+                đã qua duyệt" — đúng với quy trình duyệt, nhưng sai với thứ dấu này hứa: nó nói
+                gian hàng thuê bao đã xác minh, mà chủ xe cá nhân tuyến hoa hồng cũng lên chợ
+                được. Gắn tick cho tất cả là làm dấu mất hết nghĩa.
+              */}
+              <VerifiedName
+                name={listing.shopName}
+                verifiedLabel={listing.shopVerified ? t('shopVerified') : undefined}
+                size={fontSize.body}
+                markSize={16}
+                decorativeMark
+              />
               {listing.shopProvince ? (
                 <Text col={colors.textMuted} fos={fontSize.bodySm}>
                   {listing.shopProvince}

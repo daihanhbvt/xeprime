@@ -20,6 +20,7 @@
   "account": {
     "menuLabel": "Account menu",
     "profile": "My account",
+    "personalProfile": "Personal profile",
     "trips": "My trips",
     "payments": "Payment history",
     "favorites": "Saved vehicles",

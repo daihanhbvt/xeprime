@@ -28,7 +28,7 @@ const conversation = (over: Partial<ConversationSummary> = {}): ConversationSumm
 describe('ConversationRow', () => {
   it('hiện tên gian hàng, ngữ cảnh xe và tin cuối', async () => {
     const view = await render(
-      withIntl(<ConversationRow conversation={conversation()} onPress={jest.fn()} />),
+      withIntl(<ConversationRow conversation={conversation()} showRole={false} onPress={jest.fn()} />),
     );
 
     expect(view.getByText('Salon Xe Cũ')).toBeTruthy();
@@ -38,12 +38,12 @@ describe('ConversationRow', () => {
 
   it('vẽ badge khi còn tin chưa đọc, và KHÔNG vẽ khi đã đọc hết', async () => {
     const unread = await render(
-      withIntl(<ConversationRow conversation={conversation({ unread: 3 })} onPress={jest.fn()} />),
+      withIntl(<ConversationRow conversation={conversation({ unread: 3 })} showRole={false} onPress={jest.fn()} />),
     );
     expect(unread.getByText('3')).toBeTruthy();
 
     const read = await render(
-      withIntl(<ConversationRow conversation={conversation({ unread: 0 })} onPress={jest.fn()} />),
+      withIntl(<ConversationRow conversation={conversation({ unread: 0 })} showRole={false} onPress={jest.fn()} />),
     );
     expect(read.queryByText('0')).toBeNull();
   });
@@ -53,6 +53,7 @@ describe('ConversationRow', () => {
       withIntl(
         <ConversationRow
           conversation={conversation({ lastMessageText: null, lastMessageAt: null })}
+          showRole={false}
           onPress={jest.fn()}
         />,
       ),
@@ -65,7 +66,7 @@ describe('ConversationRow', () => {
   it('chạm vào dòng báo lên trên NGUYÊN hội thoại, không chỉ id', async () => {
     const onPress = jest.fn();
     const view = await render(
-      withIntl(<ConversationRow conversation={conversation()} onPress={onPress} />),
+      withIntl(<ConversationRow conversation={conversation()} showRole={false} onPress={onPress} />),
     );
 
     await fireEvent.press(view.getByRole('button', { name: 'Salon Xe Cũ' }));

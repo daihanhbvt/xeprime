@@ -232,11 +232,20 @@ describe('AccountSidebar — chủ gian hàng', () => {
     }
   });
 
-  it('thẻ người dùng hiện tên và NHÃN VAI thật, không phải danh hiệu bịa', () => {
+  /**
+   * Nhãn của thẻ người dùng đọc TUYẾN, không đọc bảng vai.
+   *
+   * Fixture này là chủ xe tuyến HOA HỒNG. Bảng  gọi vai  là "Chủ gian
+   * hàng" — đúng với một vai RBAC, nhưng ở đây là nói sai về con người: đầu trang cùng lúc hiện
+   * viên nhãn "Chủ xe cá nhân · Hoa hồng 10%". Đó là lỗi nhìn thấy trên  ngày
+   * 16/09/2026, và bộ test cũ khoá đúng cái sai đó lại.
+   */
+  it('thẻ người dùng gọi đúng TUYẾN, không phải nhãn vai RBAC', () => {
     render(<AccountSidebar user={user({ tenant: tenant() })} />);
 
     expect(screen.getByText('Minh Đức')).toBeTruthy();
-    expect(screen.getByText('Chủ gian hàng')).toBeTruthy();
+    expect(screen.getByText('Chủ xe cá nhân')).toBeTruthy();
+    expect(screen.queryByText('Chủ gian hàng')).toBeNull();
     expect(screen.queryByText(/Premium/i)).toBeNull();
   });
 });

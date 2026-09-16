@@ -75,9 +75,19 @@ export function ShopPaymentSettingsScreen() {
 }
 
 /** `null` = công tắc dùng được. Chuỗi trả về là khoá i18n dưới `locked.*`. */
-function lockReason(settings: PaymentSettings): 'commission' | 'featureMissing' | null {
+function lockReason(
+  settings: PaymentSettings,
+): 'commission' | 'featureMissing' | 'notConfigured' | null {
   if (settings.reason === DEPOSIT_POLICY_REASON.COMMISSION_MANDATORY) return 'commission';
   if (settings.reason === DEPOSIT_POLICY_REASON.PACKAGE_FEATURE_MISSING) return 'featureMissing';
+  /*
+   * Chưa xác định được tuyến — LỖI CẤU HÌNH, không phải một lựa chọn kinh doanh (ADR 0038).
+   *
+   * Phải có câu riêng: hai câu trên đều nói "gói của bạn quy định thế", còn ở đây gian hàng không
+   * làm gì sai và cũng không tự sửa được. Gộp vào featureMissing sẽ đẩy họ đi mua một gói mà họ
+   * đã có.
+   */
+  if (settings.reason === DEPOSIT_POLICY_REASON.BILLING_NOT_CONFIGURED) return 'notConfigured';
   return null;
 }
 

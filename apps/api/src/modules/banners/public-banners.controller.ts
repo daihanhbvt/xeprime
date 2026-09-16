@@ -20,7 +20,7 @@ export class PublicBannersController {
   @Public()
   @Get()
   @PublicCache(PUBLIC_CACHE_SECONDS.banner)
-  @ApiOperation({ summary: 'Tối đa 3 banner đang hiển thị cho hero trang chủ' })
+  @ApiOperation({ summary: 'Toàn bộ banner đang hiển thị cho hero trang chủ' })
   @ApiOkResponse({ type: [PublicBannerDto] })
   list(): Promise<PublicBannerDto[]> {
     return this.banners.publicList();

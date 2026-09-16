@@ -1,5 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 import { SERVICE_TYPE } from '@xeprime/types';
+import { OWNER_STAGE } from '@xeprime/types';
 import { RequireSession } from '@/features/auth/RequireSession';
 import { OwnerGate } from '@/features/account/components/OwnerGate';
 import { VehiclePricingScreen } from '@/features/vehicle-pricing/VehiclePricingScreen';
@@ -9,7 +10,7 @@ export default function AccountVehicleWithDriverPricingRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   return (
     <RequireSession>
-      <OwnerGate>
+      <OwnerGate minStage={OWNER_STAGE.REGISTERING}>
         <VehiclePricingScreen
           vehicleId={id}
           visibleServices={[SERVICE_TYPE.WITH_DRIVER]}

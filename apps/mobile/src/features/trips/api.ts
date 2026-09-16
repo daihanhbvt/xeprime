@@ -16,5 +16,6 @@ export type {
   CustomerTripHandoverEvidencePhoto,
   CustomerTripReview,
   PrivateFileTicket,
+  ProvideRefundAccountInput,
   TripsResult,
 } from '@/api/trips/api';

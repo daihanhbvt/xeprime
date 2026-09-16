@@ -5260,7 +5260,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Tối đa 3 banner đang hiển thị cho hero trang chủ
+         * Toàn bộ banner đang hiển thị cho hero trang chủ
          * @description **Truy cập:** công khai — không cần đăng nhập.
          */
         get: operations["PublicBannersController_list"];

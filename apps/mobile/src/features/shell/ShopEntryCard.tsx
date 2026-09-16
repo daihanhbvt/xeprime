@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import type { IconName } from '@/components/ui/Chip';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
+import { canUseManagePortal } from '@/features/account/account-nav';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
@@ -25,6 +26,10 @@ interface VariantConfig {
 
 const CONFIG: Readonly<Record<Variant, VariantConfig>> = {
   platform: { icon: 'shield-checkmark-outline', href: ROUTES.manage.home(), manage: true },
+  /*
+   * `hasShop` chỉ còn dựng cho người VÀO ĐƯỢC cổng quản lý — xem chốt ở đầu component. Nhờ vậy
+   * đích ở đây lại cố định được: không còn ca nào cần suy đích theo tuyến lúc bấm.
+   */
   hasShop: { icon: 'storefront-outline', href: ROUTES.manage.home(), manage: true },
   /*
    * Đăng ký gian hàng nằm dưới `manage/` để deep link ánh xạ 1-1 với web, nhưng nó là màn của
@@ -60,6 +65,21 @@ export function ShopEntryCard() {
    * `/auth/me` trả về là mời họ làm lại thứ họ đã làm rồi.
    */
   if (isLoading || !user) return null;
+
+  /*
+   * Thuộc một gian hàng mà KHÔNG vào được cổng quản lý ⇒ không dựng thẻ nào.
+   *
+   * Thẻ này chỉ có một lời mời: "Vào quản lý gian hàng". Với chủ xe tuyến hoa hồng — và với mọi
+   * thành viên của một tenant không ở tuyến gói — lời mời đó dẫn tới một cánh cửa đóng
+   * (`ScopeGuard` + `SubscriptionTrackGuard`, ADR 0038 điều 4). Trước đợt này nó vẫn hiện, chỉ
+   * âm thầm đổi đích sang danh sách xe: nhãn hứa một nơi, cú bấm đưa tới nơi khác.
+   *
+   * Họ không mất gì: menu Owner Lite đã có đủ danh sách xe, lịch xe và công cụ cho thuê.
+   *
+   * Nhân sự nền tảng xét TRƯỚC — một `platform_admin` không thuộc gian hàng nào vẫn cần lối vào
+   * trang quản trị.
+   */
+  if (!user.platformRole && user.tenant && !canUseManagePortal(user)) return null;
 
   const variant: Variant = user.platformRole ? 'platform' : user.tenant ? 'hasShop' : 'noShop';
   const config = CONFIG[variant];

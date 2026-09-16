@@ -33,6 +33,16 @@ import {
 export const NOTIFICATION_AUDIENCE = {
   CUSTOMER: 'customer',
   MANAGE: 'manage',
+  /**
+   * Chủ xe TUYẾN HOA HỒNG (ADR 0038 điều 10).
+   *
+   * Họ nhận thông báo của cả hai vai — khách đặt xe của họ, và chuyến chính họ đi thuê — nhưng
+   * khu quản lý là cánh cửa ĐÓNG với họ. Dùng `manage` cho họ là dẫn thẳng vào 403; dùng
+   * `customer` thì mọi thông báo về XE và GIAN HÀNG của chính họ thành dòng bấm không đi đâu cả.
+   *
+   * Chỉ dùng ở CLIENT để chọn đích: server vẫn phát `customer`/`manage` theo người nhận.
+   */
+  OWNER: 'owner',
 } as const;
 
 export type NotificationAudience =
@@ -88,7 +98,13 @@ export function notificationDeepLink(
     return id ? `${inbox}/${id}` : inbox;
   }
 
-  if (audience === NOTIFICATION_AUDIENCE.CUSTOMER) {
+  /*
+   * `!== MANAGE` chứ không `=== CUSTOMER`: bề mặt `owner` dùng chung đường của khách cho chuyến
+   * và đánh giá — `/trips/:id` phục vụ CẢ HAI vai (`CustomerTripsService.detail` nhận chuyến mình
+   * đi thuê lẫn chuyến mình cho thuê), nên chủ xe tuyến hoa hồng không cần bản riêng và không bị
+   * đẩy sang `/manage/bookings`, nơi họ không vào được.
+   */
+  if (audience !== NOTIFICATION_AUDIENCE.MANAGE) {
     switch (target.targetType) {
       // Backend nhận CẢ id yêu cầu lẫn id đơn cho `/trips/:id` — một chuyến, hai giai đoạn.
       case NOTIFICATION_TARGET_TYPE.BOOKING:
@@ -97,6 +113,18 @@ export function notificationDeepLink(
       // `targetId` của review là id ĐÁNH GIÁ, không phải id chuyến — dừng ở danh sách.
       case NOTIFICATION_TARGET_TYPE.REVIEW:
         return '/trips';
+      /*
+       * Hai loại dưới chỉ tới được với người CÓ gian hàng, nên chúng chỉ có đích ở bề mặt
+       * `owner`. Khách thuê thuần không bao giờ nhận chúng; trả `null` ở đó là ĐÚNG, không phải
+       * thiếu sót.
+       *
+       * Đích là bản Owner Lite trong khu khách, không phải bản `/manage`: chủ xe tuyến hoa hồng
+       * không mở được khu quản lý.
+       */
+      case NOTIFICATION_TARGET_TYPE.TENANT:
+        return audience === NOTIFICATION_AUDIENCE.OWNER ? '/account' : null;
+      case NOTIFICATION_TARGET_TYPE.VEHICLE:
+        return audience === NOTIFICATION_AUDIENCE.OWNER ? '/account/vehicles' : null;
       default:
         return null;
     }

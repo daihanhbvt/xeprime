@@ -34,7 +34,16 @@ export interface AppFormat {
   /** `1.200.000 ₫` (vi) · `1,200,000 ₫` (en). Không đi qua `Number` — ADR 0007. */
   money: (value: MoneyString | null | undefined) => string;
   /** Dạng rút gọn cho chỗ hẹp: `12,7tr` (vi) · `12.7M` (en). */
-  moneyCompact: (value: MoneyString | null | undefined) => string;
+  /**
+   * `price: true` cho HAI chữ số lẻ ở bậc triệu (`1,05tr` thay vì `1tr`) — bắt buộc khi con số là
+   * GIÁ khách dùng để so hai lựa chọn.
+   *
+   * Một chữ số lẻ biến 1.050.000 thành "1tr" và 1.350.000 thành "1,3tr" — sai 50.000đ trên chính
+   * cái số người ta quyết định mua bằng nó. Bậc nghìn không đổi: 600.000 vốn đã là "600k" chính
+   * xác tuyệt đối ở mọi mức. Mặc định `1` dành cho TRỤC BIỂU ĐỒ và ô thống kê, nơi người đọc cần
+   * độ lớn chứ không cần con số chính xác.
+   */
+  moneyCompact: (value: MoneyString | null | undefined, opts?: { price?: boolean }) => string;
   /** `1.200.000 ₫/ngày` · `1,200,000 ₫/day`. `null` ⇒ "Miễn phí"/"Free". */
   pricePerDay: (value: MoneyString | null | undefined) => string;
   pricePerHour: (value: MoneyString | null | undefined) => string;
@@ -232,9 +241,9 @@ export function createAppFormat(
 
   return {
     money,
-    moneyCompact: (value) => {
+    moneyCompact: (value, opts) => {
       if (value === null || value === undefined || value === '') return empty;
-      const parts = compactMoneyParts(value, separators);
+      const parts = compactMoneyParts(value, separators, opts?.price === true ? 2 : 1);
       if (!parts) return money(wholeUnits(value));
       return t(`units.compact.${parts.unit}` as never, { value: parts.value } as never);
     },

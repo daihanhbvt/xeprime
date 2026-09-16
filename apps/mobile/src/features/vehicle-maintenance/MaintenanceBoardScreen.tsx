@@ -235,7 +235,7 @@ export function MaintenanceBoardScreen() {
   );
 
   const renderQueueItem = useCallback<ListRenderItem<MissingOdometerItem>>(
-    ({ item }) => <MissingOdometerCard item={item} onFix={() => setResolving(item)} />,
+    ({ item }) => <MissingOdometerCard item={item} onFix={setResolving} />,
     [],
   );
 

@@ -10,6 +10,7 @@ import {
   CUSTOMER_TRIP_STAGE_VALUES,
   type CustomerTripFilter,
   type CustomerTripStage,
+  type TripRole,
 } from '@xeprime/types';
 import { Screen } from '@/components/layout/Screen';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -57,7 +58,20 @@ const STAGE_FILTER_MIN_ROWS = 6;
  * Tab lọc giữ ở state màn hình, không ở Redux: mobile không có URL để chia sẻ, và bộ lọc này
  * chết theo màn (ADR 0004, mục "Screen filters").
  */
-export function TripsScreen() {
+/**
+ * `lockedRole` — KHOÁ vai cho lối CHUYỂN TIẾP trong khu quản lý (ADR 0038 điều 7–8).
+ *
+ * Ca thật: chủ xe tuyến hoa hồng đang đi thuê xe người khác thì nâng lên gói. Chuyến chưa xong,
+ * tiền hoàn chưa về, chat với chủ xe kia vẫn mở — nhưng khu khách của họ đã đóng. Những nghĩa vụ
+ * đó đi qua `/manage/account/trips` với vai khoá cứng `renter`.
+ *
+ * Là quyết định ĐIỀU HƯỚNG, không phải hàng rào bảo mật: server vẫn kiểm phạm vi của từng chuyến.
+ *
+ * Màn hình KHÔNG bày bộ chọn vai (ADR 0038 điều 8, 16/09/2026): mỗi thẻ đã mang nhãn vai của nó,
+ * và hai hàng điều khiển chồng nhau buộc người đọc phải hiểu cái nào lồng trong cái nào trước khi
+ * đọc được chuyến nào. Chiều vai vẫn sống ở SERVER qua tham số `role`.
+ */
+export function TripsScreen({ lockedRole }: { lockedRole?: TripRole } = {}) {
   const t = useTranslations('Trips');
   const domainLabel = useDomainLabel();
 
@@ -67,7 +81,7 @@ export function TripsScreen() {
    * chưa nhận tham số chặng. Nó thu hẹp thứ đang đọc chứ không mở một chiều truy vấn mới.
    */
   const [stage, setStage] = useState<CustomerTripStage | null>(null);
-  const query = useTripsInfinite(filter);
+  const query = useTripsInfinite(filter, lockedRole);
 
   const items = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data]);
   // Số đếm giống nhau ở mọi trang (server tính trên toàn bộ), nên đọc trang đầu là đủ.
@@ -196,12 +210,16 @@ export function TripsScreen() {
             title={
               filter === CUSTOMER_TRIP_FILTER.HISTORY
                 ? t('list.emptyHistoryTitle')
-                : t('list.emptyCurrentTitle')
+                : lockedRole
+                  ? t('list.emptyTransitionalTitle')
+                  : t('list.emptyCurrentTitle')
             }
             description={
               filter === CUSTOMER_TRIP_FILTER.HISTORY
                 ? t('list.emptyHistoryBody')
-                : t('list.emptyCurrentBody')
+                : lockedRole
+                  ? t('list.emptyTransitionalBody')
+                  : t('list.emptyCurrentBody')
             }
           />
         ) : (

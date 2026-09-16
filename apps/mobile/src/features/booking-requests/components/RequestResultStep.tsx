@@ -19,12 +19,20 @@ import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
-import { usePublicQuote } from '../hooks/use-booking-request-flow';
+import {
+  BOOKING_BLOCKED,
+  usePublicQuote,
+  type BookingBlocked,
+} from '../hooks/use-booking-request-flow';
 import { toQuoteParams } from '../quote-params';
 import type { BookingRequestReceipt } from '../api';
 
 /**
- * Màn kết thúc của wizard — hai nhánh, và **cả hai đều không phải lỗi**.
+ * Màn kết thúc của wizard — ba nhánh, và **không nhánh nào là lỗi đỏ**.
+ *
+ * `blocked`: tài khoản này không đặt được xe này (ADR 0038 điều 6) — tài khoản gian hàng tuyến
+ * gói, hoặc xe của chính gian hàng mình. Chiếm CẢ màn chứ không phải một dòng lỗi dưới nút Gửi:
+ * không có gì trong biểu mẫu sửa được để qua cổng này.
  *
  * `duplicate`: đã có một yêu cầu đang chờ cho đúng (xe, SĐT, giờ nhận) — unique một phần ở DB
  * chặn bản thứ hai. Khách không làm sai gì; việc cần làm là dẫn họ tới chỗ xem yêu cầu đã gửi.
@@ -34,12 +42,14 @@ import type { BookingRequestReceipt } from '../api';
  * thì được xe. Bỏ câu này đi là để khách tưởng xe đã là của mình.
  */
 export function RequestResultStep({
+  blocked,
   duplicate,
   receipt,
   values,
   listing,
   onClose,
 }: {
+  blocked?: BookingBlocked | null;
   duplicate: boolean;
   receipt: BookingRequestReceipt | null;
   values: BookingRequestFormValues;
@@ -50,6 +60,44 @@ export function RequestResultStep({
   const router = useRouter();
 
   const goToTrips = () => router.replace(ROUTES.booking.list());
+
+  if (blocked) {
+    return (
+      <>
+        <AppHeader right={<HeaderActions />} />
+        <Screen edges={['left', 'right', 'bottom']} centered>
+          <Card>
+            <YStack ai="center" gap={layout.block}>
+              <StatusIcon icon="alert" tone={STATUS_TONE.DANGER} />
+              <YStack ai="center" gap={space.xs}>
+                <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold} ta="center">
+                  {t(`blocked.${blocked}.title`)}
+                </Text>
+                <Text col={colors.textMuted} fos={fontSize.body} ta="center">
+                  {t(`blocked.${blocked}.body`)}
+                </Text>
+              </YStack>
+              <YStack alignSelf="stretch" gap={space.sm}>
+                {/*
+                  Chỉ nhánh tài khoản gian hàng có lối đi tiếp. Nhánh "xe của chính mình" cố ý
+                  KHÔNG mời đổi tài khoản: xe đó vẫn là của họ ở mọi tài khoản khác, nên lời mời
+                  đó dẫn tới đúng một lần từ chối nữa.
+                */}
+                {blocked === BOOKING_BLOCKED.SHOP_ACCOUNT ? (
+                  <Button
+                    label={t('blocked.shopAccount.manage')}
+                    size="lg"
+                    onPress={() => router.replace(ROUTES.manage.home())}
+                  />
+                ) : null}
+                <Button label={t('blocked.close')} variant="ghost" onPress={onClose} />
+              </YStack>
+            </YStack>
+          </Card>
+        </Screen>
+      </>
+    );
+  }
 
   if (duplicate) {
     return (

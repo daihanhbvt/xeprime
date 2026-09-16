@@ -24,7 +24,13 @@ const user = vi.hoisted(() => ({
     email: string | null;
     avatarUrl: string | null;
     platformRole: string | null;
-    tenant: { name: string; roleKey: string; logoUrl: string | null } | null;
+    // Thẻ dùng CẢ hai nguồn: tên/logo cho danh tính khu làm việc, billingMode cho nhãn tuyến.
+    tenant: {
+      name: string;
+      roleKey: string;
+      logoUrl: string | null;
+      billingMode?: string | null;
+    } | null;
   },
 }));
 /** Số chuyến ĐI THUÊ chưa khép — quyết định mục "Chuyến tôi đi thuê" có mặt hay không. */
@@ -53,7 +59,12 @@ function setUser(over: Partial<NonNullable<typeof user.value>> = {}) {
     email: 'a@congty.vn',
     avatarUrl: null,
     platformRole: null,
-    tenant: { name: 'Thuê Xe Minh Anh', roleKey: 'shop_owner', logoUrl: null },
+    tenant: {
+      name: 'Thuê Xe Minh Anh',
+      roleKey: 'shop_owner',
+      logoUrl: null,
+      billingMode: 'package',
+    },
     ...over,
   };
 }
@@ -113,6 +124,26 @@ describe('ManageUserCard — ngữ cảnh vai trò', () => {
     expect(screen.queryByText('shop_owner')).toBeNull();
   });
 
+  /**
+   * Lỗi thật ngày 16/09/2026: chủ xe cá nhân bị gọi là "Chủ gian hàng" ngay cạnh một viên nhãn
+   * ghi "Chủ xe cá nhân · Hoa hồng 10%". Hai người này CÙNG vai `shop_owner` (ADR 0014) — thứ
+   * tách họ là TUYẾN, nên nhãn phải đọc tuyến chứ không đọc bảng vai.
+   */
+  it('cùng vai shop_owner: tuyến hoa hồng là CHỦ XE, không phải chủ gian hàng', () => {
+    setUser({
+      tenant: {
+        name: 'Xe của Minh',
+        roleKey: 'shop_owner',
+        logoUrl: null,
+        billingMode: 'commission',
+      },
+    });
+    render(<ManageUserCard />);
+
+    expect(screen.getByText('Chủ xe cá nhân')).toBeTruthy();
+    expect(screen.queryByText('Chủ gian hàng')).toBeNull();
+  });
+
   it('vai trò gian hàng ĐƯỢC ƯU TIÊN khi user có cả hai scope', () => {
     setUser({
       platformRole: 'platform_admin',
@@ -145,7 +176,9 @@ describe('ManageUserCard — ngữ cảnh vai trò', () => {
     });
     render(<ManageUserCard />);
 
-    expect(screen.getByText('role_moi_toanh')).toBeTruthy();
+    // Vai lạ rơi về nhãn CHUNG, không in khoá kỹ thuật ra màn hình.
+    expect(screen.getByText('Thành viên gian hàng')).toBeTruthy();
+    expect(screen.queryByText('role_moi_toanh')).toBeNull();
   });
 });
 

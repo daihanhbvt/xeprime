@@ -116,6 +116,9 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
   const resolver = useValidationResolver<QuickVehicleValues>(
     quickVehicleSchema,
     'ListYourVehicle.validation',
+    // `quickVehicleSchema` pick phần lớn trường từ `vehicleFormSchema`, và mã lỗi của chúng
+    // thuộc namespace của form xe — không có vế này thì chúng lọt ra giao diện ở dạng thô.
+    'Vehicles.form.validation',
   );
   const { control, getValues, setValue, setError, trigger, formState } =
     useForm<QuickVehicleValues>({

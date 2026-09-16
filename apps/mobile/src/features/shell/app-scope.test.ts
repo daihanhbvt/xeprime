@@ -13,6 +13,7 @@ function me(overrides: Partial<Me> = {}): Me {
     phoneVerified: true,
     hasPassword: true,
     tenant: null,
+    openRenterTripCount: 0,
     platformRole: null,
     permissions: [],
     ...overrides,
@@ -25,10 +26,18 @@ function tenant(status: string) {
     name: 'Gian hàng',
     slug: 'gian-hang',
     status,
+    onboardingState: 'package_active',
+    logoUrl: null,
     roleKey: 'shop_owner',
     features: [],
     planCode: null,
+    planName: null,
+    serviceFeePercent: null,
+    billingMode: 'package',
     planEndsAt: null,
+    billingPhase: 'current',
+    graceEndsAt: null,
+    publicVehicleCount: 1,
   };
 }
 
@@ -53,9 +62,42 @@ describe('resolveScopeCapability', () => {
     });
   });
 
-  it('có membership gian hàng ở BẤT KỲ trạng thái nào cũng quản lý được', () => {
+  it('gian hàng TUYẾN GÓI quản lý được ở BẤT KỲ trạng thái tenant nào', () => {
     for (const status of ['draft', 'pending_review', 'suspended', 'expired', 'active']) {
       expect(resolveScopeCapability(me({ tenant: tenant(status) })).canManage).toBe(true);
+    }
+  });
+
+  /**
+   * ADR 0038 điều 4 — cổng Manage hỏi TUYẾN, không hỏi "có tenant không".
+   *
+   * Chủ xe tuyến hoa hồng cũng có `tenant`, nhưng `SubscriptionTrackGuard` ở server từ chối cả bộ
+   * quản lý gian hàng. Mở khu đó cho họ là đẩy họ vào một loạt màn trả 403 — app trông như hỏng,
+   * còn nguyên nhân nằm ở một tầng họ không nhìn thấy.
+   */
+  it('chủ xe tuyến HOA HỒNG có tenant nhưng KHÔNG vào khu quản lý', () => {
+    const user = me({ tenant: { ...tenant('active'), billingMode: 'commission' } });
+    expect(resolveScopeCapability(user).canManage).toBe(false);
+  });
+
+  /**
+   * `unconfigured` không phải một tuyến (ADR 0038 điều 1) — và mức an toàn khi hỏng là mức CHẶT.
+   */
+  it('gian hàng chưa xác định được tuyến cũng KHÔNG vào khu quản lý', () => {
+    const user = me({ tenant: { ...tenant('active'), billingMode: null } });
+    expect(resolveScopeCapability(user).canManage).toBe(false);
+  });
+
+  /**
+   * Câu hỏi hỏi TENANT, không hỏi vai: hết ân hạn thì chủ, quản lý, nhân viên và người xem rời khu
+   * quản lý CÙNG LÚC. Bản trước hỏi một hàm gộp vai với tuyến, nên nó mở cổng cho mọi vai khác chủ.
+   */
+  it('mọi vai của một tenant tuyến hoa hồng đều bị chặn như nhau', () => {
+    for (const roleKey of ['shop_owner', 'shop_manager', 'shop_staff', 'shop_viewer']) {
+      const user = me({
+        tenant: { ...tenant('active'), roleKey, billingMode: 'commission' },
+      });
+      expect(resolveScopeCapability(user).canManage).toBe(false);
     }
   });
 
@@ -76,7 +118,12 @@ describe('resolveInitialScope', () => {
     );
   });
 
-  it('có gian hàng → khu quản lý ở MỌI trạng thái gian hàng', () => {
+  it('chủ xe tuyến hoa hồng mở ở khu KHÁCH — Owner Lite là nhà của họ', () => {
+    const user = me({ tenant: { ...tenant('active'), billingMode: 'commission' } });
+    expect(resolveInitialScope({ user, remembered: APP_SCOPE.MANAGE })).toBe(APP_SCOPE.CUSTOMER);
+  });
+
+  it('gian hàng tuyến gói → khu quản lý ở MỌI trạng thái gian hàng', () => {
     for (const status of [
       'draft',
       'pending_review',

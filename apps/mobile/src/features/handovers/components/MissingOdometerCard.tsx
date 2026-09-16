@@ -30,7 +30,14 @@ export const MissingOdometerCard = memo(function MissingOdometerCard({
   onFix,
 }: {
   item: MissingOdometerItem;
-  onFix: () => void;
+  /**
+   * Nhận CHÍNH bản ghi, không phải một closure đã đóng sẵn nó.
+   *
+   * `onFix={() => setResolving(item)}` ở `renderItem` là một hàm mới ở mỗi lượt render, và
+   * `memo` so nông nên nó vô hiệu hoá đúng lớp chắn mà `memo` dựng lên. Truyền bản ghi thì
+   * nơi gọi `useCallback` được một lần và thẻ chỉ dựng lại khi bản ghi của nó thật sự đổi.
+   */
+  onFix: (item: MissingOdometerItem) => void;
 }) {
   const t = useTranslations('Bookings.missingKm');
   const fmt = useAppFormat();
@@ -85,7 +92,7 @@ export const MissingOdometerCard = memo(function MissingOdometerCard({
 
         {canResolve ? (
           <YStack pt={space.xs}>
-            <Button label={t('fix')} icon="speedometer-outline" onPress={onFix} />
+            <Button label={t('fix')} icon="speedometer-outline" onPress={() => onFix(item)} />
           </YStack>
         ) : (
           <Text col={colors.textMuted} fos={fontSize.label}>

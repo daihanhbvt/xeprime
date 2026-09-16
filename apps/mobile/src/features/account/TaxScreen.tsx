@@ -34,6 +34,7 @@ import {
 import { profileToSaveInput, type SellerProfile } from '@/features/seller-profile/api';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { ShopTaxWithheldCard } from '@/features/tax/components/ShopTaxWithheldCard';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { colors, fontSize, space } from '@/theme/tokens';
@@ -76,7 +77,8 @@ export function TaxScreen() {
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
   const { has } = usePermissions();
-  const { switchTo } = useShellScope();
+  const { scope, switchTo } = useShellScope();
+  const isManage = scope === APP_SCOPE.MANAGE;
 
   const canView = has(PERMISSION.SELLER_PROFILE_VIEW);
   const canManage = has(PERMISSION.SELLER_PROFILE_MANAGE);
@@ -272,24 +274,36 @@ export function TaxScreen() {
           </Card>
 
           {/*
-            Cùng cặp câu + liên kết web đặt dưới form: bản compact chỉ sửa bốn trường, tài khoản
-            nhận tiền và giấy tờ đầy đủ khai ở hồ sơ người bán. Liên kết ĐỔI KHU (`switchTo`) vì
-            màn đó là một mục của cổng quản lý — push nó vào ngăn xếp khách sẽ để lại thanh tab
-            khách nằm dưới một màn quản lý.
+            Liên kết "mở hồ sơ đầy đủ" CHỈ có nghĩa ở khu quản lý — đúng điều kiện `isManage` của
+            `SellerTaxCompactForm` bên web. Ở khu khách, màn này CHÍNH LÀ hồ sơ người bán của chủ
+            xe: một liên kết trỏ về chính nó thì vô nghĩa, còn đẩy sang cổng quản lý là kéo tuyến
+            hoa hồng ra khỏi khu của họ.
+
+            Khi có hiện thì nó ĐỔI KHU (`switchTo`), không `push`: màn đó là một mục của cổng
+            quản lý, và push sẽ để lại thanh tab khách nằm dưới một màn quản lý.
           */}
-          <YStack gap={space.xs}>
-            <Text col={colors.placeholder} fos={fontSize.label}>
-              {t('fullProfile')}
-            </Text>
-            <Button
-              label={t('openFullProfile')}
-              variant="ghost"
-              size="sm"
-              block={false}
-              icon="id-card-outline"
-              onPress={() => switchTo(APP_SCOPE.MANAGE, ROUTES.manage.sellerProfile())}
-            />
-          </YStack>
+          {isManage ? (
+            <YStack gap={space.xs}>
+              <Text col={colors.placeholder} fos={fontSize.label}>
+                {t('fullProfile')}
+              </Text>
+              <Button
+                label={t('openFullProfile')}
+                variant="ghost"
+                size="sm"
+                block={false}
+                icon="id-card-outline"
+                onPress={() => switchTo(APP_SCOPE.MANAGE, ROUTES.manage.sellerProfile())}
+              />
+            </YStack>
+          ) : null}
+
+          {/*
+            Khối thứ HAI của trang, y như web (`app/(public)/account/tax/page.tsx`): biểu mẫu trên
+            trả lời *"tôi khai thuế thế nào"*, khối này trả lời *"tôi đã bị trừ bao nhiêu"* — nghĩa
+            vụ đã phát sinh theo kỳ (ADR 0032 điều 3).
+          */}
+          <ShopTaxWithheldCard />
 
           {!readOnly ? (
             <XStack gap={space.sm}>

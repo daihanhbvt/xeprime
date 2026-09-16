@@ -1,4 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
+import { OWNER_STAGE } from '@xeprime/types';
 import { RequireSession } from '@/features/auth/RequireSession';
 import { OwnerGate } from '@/features/account/components/OwnerGate';
 import { VehicleDetailScreen } from '@/features/vehicles/VehicleDetailScreen';
@@ -14,7 +15,7 @@ export default function AccountVehicleDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   return (
     <RequireSession>
-      <OwnerGate>
+      <OwnerGate minStage={OWNER_STAGE.REGISTERING}>
         {/*
           `backTo` PHẢI trỏ về danh sách xe của khu TÀI KHOẢN. Bỏ trống thì màn dùng chung lấy
           mặc định `/manage/vehicles`, và xoá một chiếc xe từ hồ sơ cá nhân sẽ ném người dùng

@@ -58,3 +58,22 @@
     position: static;
   }
 }
+
+/*
+  Đường lui của màn con — xem `AccountSubPageBack`.
+
+  Đứng TRÊN nội dung và tách bằng một khoảng thở: nó là thứ đọc trước khi đọc trang, cùng vị trí
+  mà `AccountPageHeader` đặt nút lui của nó, nên hai kiểu màn không nhảy chỗ nút.
+*/
+.subPageBack {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  margin-bottom: var(--xp-space-lg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}
+
+.subPageBack:hover {
+  color: var(--xp-color-primary);
+}

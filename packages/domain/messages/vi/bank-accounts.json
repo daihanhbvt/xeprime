@@ -1,6 +1,7 @@
 {
   "title": "Tài khoản nhận tiền",
   "subtitle": "XePrime chuyển tiền hoàn và các khoản phải trả bạn về tài khoản này.",
+  "emptyTitle": "Chưa có tài khoản nhận tiền",
   "empty": "Chưa có tài khoản nào. Thêm một tài khoản để nhận tiền.",
   "loadError": "Không tải được danh sách tài khoản.",
   "defaultTag": "Mặc định",

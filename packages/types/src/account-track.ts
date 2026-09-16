@@ -119,3 +119,70 @@ export function resolveAccountTrack(
   }
   return { ...base, track: ACCOUNT_TRACK.UNCONFIGURED };
 }
+
+/**
+ * Khoá nhãn trong bó `Account.trackBadge` — bảng dịch sống ở app, phép suy sống ở đây.
+ *
+ * `renter` không có khoá: người chưa thuộc gian hàng nào thì KHÔNG mang nhãn tuyến, và nơi gọi
+ * tự chọn thứ rơi về ("Tài khoản XePrime" trên thẻ hồ sơ, không hiện gì trên viên nhãn).
+ */
+export type AccountTrackLabelKey =
+  | 'commissionOwner'
+  | 'shopOwner'
+  | 'shopManager'
+  | 'shopStaff'
+  | 'shopViewer'
+  | 'shopMember'
+  | 'unconfigured';
+
+/**
+ * Tài khoản này gọi là gì — MỘT bảng cho mọi bề mặt hỏi câu đó.
+ *
+ * ## Vì sao không được dùng `domainLabel('tenantRole', roleKey)` cho câu này
+ *
+ * Chủ xe cá nhân và chủ gian hàng CÙNG một vai `shop_owner` (ADR 0014): thứ tách họ là TUYẾN,
+ * không phải vai. Nên bảng `tenantRole` — đúng khi gọi tên một vai RBAC trong danh sách nhân sự
+ * — lại dịch cả hai thành "Chủ gian hàng" khi dùng làm nhãn danh tính. Đó chính là lỗi đã thấy
+ * trên `/account` ngày 16/09/2026: đầu trang nói "Chủ xe cá nhân · Hoa hồng 10%" còn thẻ người
+ * dùng ngay dưới menu nói "Chủ gian hàng", về cùng một con người.
+ *
+ * Trả về KHOÁ chứ không phải chuỗi đã dịch: package này framework-free và không mang bảng dịch
+ * (bó `Account.trackBadge` nằm ở `@xeprime/domain`, web và native cùng đọc).
+ *
+ * Ca `SHOP_OWNER` và `COMMISSION_OWNER` còn có biến thể MANG THÊM SỐ ("· Gói X", "· Hoa hồng
+ * N%") — chúng là việc của viên nhãn đầy đủ (`AccountTrackBadge`), không phải của một dòng vai
+ * trong thẻ người dùng, nên không nằm ở đây.
+ */
+export function accountTrackLabelKey(track: AccountTrack, roleKey: string | null): AccountTrackLabelKey | null {
+  switch (track) {
+    case ACCOUNT_TRACK.RENTER:
+      return null;
+    case ACCOUNT_TRACK.COMMISSION_OWNER:
+      return 'commissionOwner';
+    case ACCOUNT_TRACK.SHOP_OWNER:
+      return 'shopOwner';
+    case ACCOUNT_TRACK.UNCONFIGURED:
+      return 'unconfigured';
+    default:
+      break;
+  }
+
+  /*
+   * Thành viên gian hàng: nhãn nói đúng VAI, vì gọi một nhân viên là "Chủ gian hàng" ngay trên
+   * thẻ tài khoản của chính họ là sai về con người.
+   *
+   * Nhánh dự phòng không phải phòng thủ thừa: vai là dữ liệu trên dây (`TENANT_ROLE` có thể thêm
+   * giá trị ở backend trước khi client kịp deploy), và một khoá `undefined` sẽ ném ngay giữa lúc
+   * render thanh điều hướng.
+   */
+  switch (roleKey) {
+    case TENANT_ROLE.SHOP_MANAGER:
+      return 'shopManager';
+    case TENANT_ROLE.SHOP_STAFF:
+      return 'shopStaff';
+    case TENANT_ROLE.SHOP_VIEWER:
+      return 'shopViewer';
+    default:
+      return 'shopMember';
+  }
+}

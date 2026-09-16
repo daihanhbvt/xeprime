@@ -133,7 +133,7 @@ export default function TabsLayout() {
           options={{
             title: t('explore'),
             tabBarIcon: ({ color }) => (
-              <Ionicons name="compass-outline" color={color} size={iconSize.lg} />
+              <Ionicons name="home-outline" color={color} size={iconSize.lg} />
             ),
           }}
         />

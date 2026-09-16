@@ -17,6 +17,7 @@ const DEMO_USER: authApi.CurrentUser = {
   phoneVerified: true,
   hasPassword: true,
   tenant: null,
+  openRenterTripCount: 0,
   platformRole: null,
   permissions: [],
 };
