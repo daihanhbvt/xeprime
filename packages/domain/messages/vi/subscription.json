@@ -1,6 +1,6 @@
 {
   "page": {
-    "title": "Gói của tôi",
+    "title": "Gói & hoá đơn",
     "loadError": "Không tải được thông tin gói",
     "accountSubtitle": "Gói hiện hành, hạn mức chỗ và những gì mở thêm khi nâng cấp."
   },
@@ -9,7 +9,7 @@
     "none": "Chưa có gói — gian hàng đang ở tuyến hoa hồng theo chuyến.",
     "noneHint": "Mua gói theo chỗ để không mất phí trên từng chuyến.",
     "expires": "Hết hạn {date}",
-    "commissionSummary": "Hoa hồng {percent}% trên mỗi chuyến, thu qua khoản giữ chỗ của khách.",
+    "commissionSummary": "Phí dịch vụ tính trên mỗi chuyến theo chính sách phí hiện hành của nền tảng, thu qua khoản khách thanh toán trước.",
     "packageSummary": "Trả trước theo chỗ xe — không thu gì trên chuyến.",
     "slotsSummary": "{car} chỗ ô tô · {motorbike} chỗ xe máy",
     "purchaseButton": "Mua gói",
@@ -24,7 +24,8 @@
     "fleet": "Đội xe",
     "onMarketplace": "Trên chợ",
     "ofLimit": "{used} / {limit}",
-    "unlimited": "Không giới hạn"
+    "unlimited": "Không giới hạn",
+    "atLimit": "Đã dùng hết chỗ: {kinds}. Nâng gói để đăng thêm xe."
   },
   "freeTrips": {
     "title": "Lượt miễn phí",
@@ -41,8 +42,8 @@
     "upgradeCta": "Xem gói cao hơn"
   },
   "invoices": {
-    "title": "Lịch sử hoá đơn",
-    "empty": "Chưa có hoá đơn nào",
+    "title": "Hoá đơn thanh toán",
+    "empty": "Chưa phát sinh hoá đơn.",
     "loadError": "Không tải được lịch sử hoá đơn",
     "columns": {
       "code": "Mã đối soát",
@@ -51,7 +52,9 @@
       "status": "Trạng thái",
       "createdAt": "Ngày tạo"
     },
-    "copyCode": "Sao chép mã đối soát"
+    "copyCode": "Sao chép mã đối soát",
+    "emptyHint": "Hoá đơn mua hoặc gia hạn gói sẽ xuất hiện tại đây.",
+    "showHistory": "Xem lịch sử thanh toán"
   },
   "purchase": {
     "slotsTitle": "Số chỗ xe cần mua",
@@ -94,5 +97,11 @@
     "copyAccount": "Sao chép số tài khoản",
     "autoActivateNote": "Gói tự kích hoạt khi tiền về — bạn không cần giữ trang này mở, hệ thống sẽ báo khi xong.",
     "pendingTitle": "Hoá đơn đang chờ chuyển khoản"
+  },
+  "term": {
+    "label": "Thời hạn",
+    "daysLeft": "{days, plural, other {Còn # ngày}}",
+    "grace": "Đang trong thời gian ân hạn",
+    "lapsed": "Đã hết hạn"
   }
 }

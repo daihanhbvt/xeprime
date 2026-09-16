@@ -1,0 +1,73 @@
+/*
+ * Khung chung của một section trong trang Cửa hàng.
+ *
+ * Padding 20–24px ở desktop, 16px ở mobile. Không bóng đậm, không viền màu: năm khối xếp dọc mà
+ * mỗi khối tự nổi lên thì trang trở thành một chồng thẻ tranh nhau sự chú ý, và mắt không còn
+ * biết bắt đầu từ đâu.
+ */
+.card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+  gap: var(--xp-space-md);
+  /* Cuộn tới bằng `?section=` dừng dưới topbar dính, không nằm khuất sau nó. */
+  scroll-margin-top: calc(var(--xp-shell-topbar-height) + var(--xp-space-md));
+}
+
+/* `tabIndex={-1}` để nhận tiêu điểm khi nhảy tới — nhưng đừng vẽ viền như một điều khiển. */
+.card:focus {
+  outline: none;
+}
+
+.card:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.head {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.headText {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-bold);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.hint {
+  margin: var(--xp-space-xs) 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.extra {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: var(--xp-space-md);
+  }
+}

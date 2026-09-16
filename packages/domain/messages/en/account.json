@@ -10,7 +10,9 @@
     "shopMember": "Shop member",
     "unconfigured": "Plan not configured",
     "unconfiguredHint": "Your shop has no active service plan, so the platform can't work out how fees apply. This is a XePrime configuration problem — contact support before taking new bookings.",
-    "verifiedHint": "Verified shop owner"
+    "verifiedHint": "Verified shop owner",
+    "packagePending": "Plan payment pending",
+    "packagePendingHint": "Your shop is created but the first plan has not been paid yet. Complete the transfer to unlock the shop management tools."
   },
   "title": "My account",
   "subtitle": "Manage your account details and settings",
@@ -322,6 +324,18 @@
   "trackNotice": {
     "unconfiguredTitle": "Your shop has no valid service plan",
     "unconfiguredBody": "XePrime cannot determine how to charge your shop, so new trip amounts will not be recorded until this is resolved. Your existing data, trips and balance are not affected.",
-    "contactSupport": "Contact support"
+    "contactSupport": "Contact support",
+    "packagePendingTitle": "One step left: pay for your plan",
+    "packagePendingBody": "Your shop has been created. Pick a plan and transfer the amount to unlock the shop management tools and start listing vehicles.",
+    "packagePendingCta": "Continue to payment"
+  },
+  "security": {
+    "title": "Account security",
+    "subtitle": "Sign-in methods, password, and actions on your account.",
+    "dangerZone": "Danger zone"
+  },
+  "loginMethods": {
+    "title": "Sign-in methods",
+    "subtitle": "The email and phone number you sign in with. Changing them requires an OTP."
   }
 }

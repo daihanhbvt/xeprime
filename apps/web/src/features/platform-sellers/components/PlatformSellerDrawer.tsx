@@ -142,11 +142,6 @@ export function PlatformSellerDrawer({ id, onClose }: { id: string | null; onClo
             <Descriptions.Item label={t('columns.idNumber')}>
               {row.idNumber ?? tCommon('labels.emptyValue')}
             </Descriptions.Item>
-            <Descriptions.Item label={t('columns.bankAccount')}>
-              {row.bankCode && row.bankAccountNumber
-                ? `${row.bankCode} · ${row.bankAccountNumber} · ${row.bankAccountName ?? ''}`
-                : tCommon('labels.emptyValue')}
-            </Descriptions.Item>
             <Descriptions.Item label={t('columns.status')}>
               <StatusTag
                 value={row.status as SellerProfileStatus}

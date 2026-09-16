@@ -8,6 +8,7 @@ import {
   FEATURE_STATE,
   PERMISSION,
   PLAN_FEATURE_VALUES,
+  SHOP_ONBOARDING_STATE,
   TENANT_ROLE,
   canAccessShopWallet,
   type FeatureState,
@@ -51,6 +52,7 @@ function tenantCtx(roleKey: TenantRole, permissions: Permission[] = []): TenantC
   return {
     tenantId: 'T1',
     tenantStatus: 'active',
+    onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE,
     roleKey,
     permissions,
     features: features(),

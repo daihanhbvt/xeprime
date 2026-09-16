@@ -1,8 +1,16 @@
 'use client';
 
-import { App, Alert, Empty, Radio, Skeleton } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import { App, Alert, Radio, Skeleton } from 'antd';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import {
+  CURRENCY_SUFFIX,
+  bankDisplayName,
+  bankInitials,
+  formatMoneyInput,
+  parseMoneyInput,
+} from '@xeprime/domain';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { BankAccountForm } from '@/features/bank-accounts/components/BankAccountForm';
 import { useBankAccounts } from '@/features/bank-accounts/hooks/use-bank-accounts';
@@ -20,6 +28,15 @@ import styles from './WithdrawDialog.module.css';
  *
  * Cam kết thời gian hiện ra TRƯỚC khi bấm gửi — đó là quy tắc (ADR 0025 điều 7), và con số lấy
  * từ server để web và app native không nói hai điều khác nhau.
+ *
+ * ## Hai chi tiết của ô số tiền
+ *
+ * Số gõ vào được nhóm nghìn NGAY khi gõ (`formatMoneyInput`) — cùng hàm mà mọi ô tiền khác trong
+ * sản phẩm dùng. Một ô rút tiền hiện "2000000" là ô mà người dùng phải đếm số 0 bằng mắt, và
+ * đếm nhầm một chữ số ở đây là một lệnh chuyển sai mười lần.
+ *
+ * Nút gửi dùng `type="primary"` mặc định của `ResponsiveDialog` — sắc gold chung của hệ, không
+ * có màu riêng cho "màn tiền".
  */
 export function WithdrawDialog({
   scope,
@@ -49,10 +66,13 @@ export function WithdrawDialog({
   const available = summary.data?.available ?? '0';
   const min = summary.data?.minWithdrawAmount ?? '0';
 
+  const parsed = parseMoneyInput(amount) ?? 0;
+  const valid = parsed >= Number(min) && parsed <= Number(available) && Boolean(chosen);
+
   const submit = () => {
-    if (!chosen) return;
+    if (!chosen || !valid) return;
     create.mutate(
-      { amount: amount.replace(/\D/g, ''), bankAccountId: chosen },
+      { amount: String(parsed), bankAccountId: chosen },
       {
         onSuccess: () => {
           message.success(t('created'));
@@ -63,9 +83,6 @@ export function WithdrawDialog({
       },
     );
   };
-
-  const parsed = Number(amount.replace(/\D/g, '') || 0);
-  const valid = parsed >= Number(min) && parsed <= Number(available) && Boolean(chosen);
 
   return (
     <>
@@ -81,13 +98,20 @@ export function WithdrawDialog({
       >
         <label className={styles.field}>
           <span className={styles.label}>{t('amount')}</span>
-          <input
-            className={styles.input}
-            inputMode="numeric"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            aria-describedby="withdraw-amount-hint"
-          />
+          <span className={styles.amountBox}>
+            <input
+              className={styles.input}
+              inputMode="numeric"
+              value={amount}
+              placeholder="0"
+              onChange={(e) => setAmount(formatMoneyInput(e.target.value))}
+              aria-describedby="withdraw-amount-hint"
+            />
+            {/* Đơn vị tiền KHÔNG dịch — tiền luôn là VND ở cả hai ngôn ngữ (ADR 0012). */}
+            <span aria-hidden="true" className={styles.currency}>
+              {CURRENCY_SUFFIX}
+            </span>
+          </span>
           <span id="withdraw-amount-hint" className={styles.hint}>
             {t('amountHint', { min: fmt.money(min), available: fmt.money(available) })}
           </span>
@@ -95,10 +119,6 @@ export function WithdrawDialog({
 
         <p className={styles.label}>{t('account')}</p>
         {accountsPending ? <Skeleton active paragraph={{ rows: 1 }} /> : null}
-
-        {!accountsPending && list.length === 0 ? (
-          <Empty description={t('accountEmpty')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
-        ) : null}
 
         {list.length > 0 ? (
           <Radio.Group
@@ -108,18 +128,36 @@ export function WithdrawDialog({
           >
             {list.map((account) => (
               <Radio key={account.id} value={account.id} className={styles.option}>
-                <span className={styles.bank}>{account.label || account.bankCode}</span>
-                <span className={styles.number}>
-                  {account.bankCode} · {account.accountNumberMasked}
+                <span aria-hidden="true" className={styles.badge}>
+                  {bankInitials(account.bankCode)}
+                </span>
+                <span className={styles.accountText}>
+                  <span className={styles.bank}>
+                    {account.label || bankDisplayName(account.bankCode)}
+                  </span>
+                  <span className={styles.number}>
+                    {t('accountNumber', { number: account.accountNumberMasked })}
+                  </span>
+                  <span className={styles.holder}>{account.accountName}</span>
                 </span>
               </Radio>
             ))}
           </Radio.Group>
         ) : null}
 
-        <button type="button" className={styles.link} onClick={() => setFormOpen(true)}>
-          {t('addAccount')}
-        </button>
+        {/*
+          Chưa có tài khoản nào ⇒ ô TRỐNG bấm được, không phải một hộp "Không có dữ liệu" câm.
+          Đây là bước bắt buộc để rút được tiền, nên nó phải là một lối đi chứ không phải một
+          thông báo.
+        */}
+        {!accountsPending ? (
+          <button type="button" className={styles.addAccount} onClick={() => setFormOpen(true)}>
+            <span aria-hidden="true" className={styles.addIcon}>
+              <PlusOutlined />
+            </span>
+            {list.length === 0 ? t('accountEmpty') : t('addAccount')}
+          </button>
+        ) : null}
 
         <Alert
           type="info"

@@ -10,7 +10,9 @@
     "shopMember": "Thành viên gian hàng",
     "unconfigured": "Chưa xác định gói",
     "unconfiguredHint": "Gian hàng của bạn chưa có gói dịch vụ hiệu lực nên nền tảng chưa xác định được cách tính phí. Đây là lỗi cấu hình phía XePrime — liên hệ hỗ trợ trước khi nhận đơn mới.",
-    "verifiedHint": "Chủ gian hàng đã xác thực"
+    "verifiedHint": "Chủ gian hàng đã xác thực",
+    "packagePending": "Chờ thanh toán gói",
+    "packagePendingHint": "Gian hàng đã tạo xong nhưng chưa thanh toán gói đầu tiên. Hoàn tất chuyển khoản để mở bộ quản lý gian hàng."
   },
   "title": "Tài khoản của tôi",
   "subtitle": "Quản lý thông tin tài khoản và cài đặt của bạn",
@@ -322,6 +324,18 @@
   "trackNotice": {
     "unconfiguredTitle": "Gian hàng chưa có gói dịch vụ hợp lệ",
     "unconfiguredBody": "XePrime chưa xác định được cách tính phí cho gian hàng của bạn, nên các khoản tiền mới của chuyến sẽ không được ghi nhận cho tới khi xử lý xong. Dữ liệu, chuyến và số dư hiện có không bị ảnh hưởng.",
-    "contactSupport": "Liên hệ hỗ trợ"
+    "contactSupport": "Liên hệ hỗ trợ",
+    "packagePendingTitle": "Còn một bước: thanh toán gói",
+    "packagePendingBody": "Gian hàng của bạn đã được tạo. Chọn gói và chuyển khoản để mở bộ quản lý gian hàng và bắt đầu đăng xe.",
+    "packagePendingCta": "Tiếp tục thanh toán"
+  },
+  "security": {
+    "title": "Bảo mật tài khoản",
+    "subtitle": "Phương thức đăng nhập, mật khẩu và các thao tác với tài khoản của bạn.",
+    "dangerZone": "Vùng nguy hiểm"
+  },
+  "loginMethods": {
+    "title": "Phương thức đăng nhập",
+    "subtitle": "Email và số điện thoại dùng để đăng nhập. Đổi chúng cần xác minh bằng mã OTP."
   }
 }

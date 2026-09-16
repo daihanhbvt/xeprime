@@ -55,8 +55,6 @@ export function profileToSaveInput(profile: SellerProfile): SaveSellerProfileInp
     idNumber: profile.idNumber,
     idIssuedAt: profile.idIssuedAt,
     idIssuedBy: profile.idIssuedBy,
-    bankCode: profile.bankCode,
-    bankAccountNumber: profile.bankAccountNumber,
-    bankAccountName: profile.bankAccountName,
+    // KHÔNG còn ba trường ngân hàng (16/09/2026): tài khoản nhận tiền sống ở `bank_accounts`.
   };
 }

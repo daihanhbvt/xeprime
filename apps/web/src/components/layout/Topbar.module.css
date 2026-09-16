@@ -40,52 +40,38 @@
   flex: none;
 }
 
-/* Ngữ cảnh gian hàng (Figma `14:1519`) — chữ, không phải nút. */
-.tenant {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--xp-space-sm);
-  min-width: 0;
-  color: var(--xp-color-text);
-  font-weight: 600;
-  font-size: var(--xp-font-size-body);
-}
-
-.tenantMark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  flex: none;
-  border-radius: var(--xp-border-radius-sm);
-  /* ĐO ĐƯỢC: `--xp-gold-deep` trên `--xp-gold-wash` chỉ đạt **3.68** — trượt AA. Đây là lỗi
-     do chính Batch 1D-B tạo ra, phát hiện khi đo ở 1D-C. Ô gold đặc + chữ
-     `--xp-color-primary-contrast` đạt 6.60 và bám Figma `14:1520` hơn. */
-  background: var(--xp-color-primary);
-  color: var(--xp-color-primary-contrast);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: 700;
-}
-
-/* Tên gian hàng dài không được đẩy các nút bên phải ra khỏi màn. */
-.tenantName {
-  min-width: 0;
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
+/*
+ * Nút danh tính khu làm việc: logo gian hàng + tên + mũi tên.
+ *
+ * Trước 16/09/2026 chỗ này là HAI khối — một ô chữ cái đầu tên gian hàng (`.tenantMark`) đứng
+ * cạnh một avatar cá nhân mở menu. Hai hình đại diện cách nhau 8px cho hai thứ khác nhau, không
+ * cái nào tự nói mình là cái gì. Nay là một nút duy nhất.
+ */
 .avatarButton {
   display: inline-flex;
   align-items: center;
   gap: var(--xp-space-xs);
-  padding: 2px;
+  padding: 2px var(--xp-space-xs) 2px 2px;
   border: none;
+  border-radius: var(--xp-border-radius-pill);
   background: none;
   cursor: pointer;
-  border-radius: var(--xp-border-radius-pill);
+}
+
+.avatarButton:hover {
+  background: var(--xp-color-bg-hover);
+}
+
+/* Tên gian hàng dài không được đẩy các nút bên phải ra khỏi màn. */
+.workspaceName {
+  min-width: 0;
+  max-width: 160px;
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .avatarButton:focus-visible {
@@ -94,8 +80,8 @@
 }
 
 /*
- * Mũi tên nhỏ cạnh avatar: menu tài khoản giờ chứa cả bộ đổi ngôn ngữ, nên nó phải nhìn ra
- * được là một menu chứ không chỉ là ảnh đại diện.
+ * Mũi tên nhỏ cạnh logo: menu này chứa cả bộ đổi ngôn ngữ và lối vào bảo mật, nên nó phải nhìn
+ * ra được là một menu chứ không chỉ là một nhãn ngữ cảnh.
  */
 .avatarCaret {
   font-size: 10px;
@@ -108,9 +94,32 @@
 
 /* `.header .avatar`: nền của `.ant-avatar` cũng là (0,1,0) — xem ghi chú ở `.hamburger`. */
 .header .avatar {
+  flex: none;
   background: linear-gradient(150deg, var(--xp-color-primary), var(--xp-gold-deep));
   color: var(--xp-color-primary-contrast);
   font-weight: 700;
+}
+
+/* Ba dòng danh tính ở đầu menu — cùng khối với bản ở `ManageUserCard`. */
+.menuIdentity {
+  display: flex;
+  min-width: 0;
+  max-width: 240px;
+  flex-direction: column;
+  gap: 2px;
+  cursor: default;
+}
+
+.menuShop {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.menuUser {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  overflow-wrap: anywhere;
 }
 
 /* Ranh chính tắc 1024px (`--xp-bp-tablet`) — hamburger xuất hiện đúng lúc sidebar biến mất. */
@@ -123,7 +132,9 @@
     display: inline-flex;
   }
 
-  .tenantName {
-    max-width: 100px;
+  /* Tên gian hàng biến mất ở màn hẹp — logo vẫn nói được đang ở khu nào, và ba nút bên phải
+     cần chỗ hơn là một cái tên bị cắt còn hai chữ. */
+  .workspaceName {
+    display: none;
   }
 }

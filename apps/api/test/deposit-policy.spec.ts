@@ -3,6 +3,7 @@ import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   BILLING_MODE,
+  BOOKING_HOLD_STATUS,
   BOOKING_REQUEST_STATUS,
   DEPOSIT_COLLECTION_MODE,
   DEPOSIT_POLICY_REASON,
@@ -27,9 +28,11 @@ import type { PhoneVerificationService } from '../src/modules/phone-verification
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
+  makeBookingHoldsService,
   makeBookingRequestsService,
   makeDepositPolicyService,
   makeNotificationService,
+  makePricingService,
 } from './helpers/service-factory';
 
 /**
@@ -57,6 +60,16 @@ const notifications = makeNotificationService(asService);
 const occupancy = new OccupancyService(asService);
 const settings = new VehicleSettingsService(asService, audit, occupancy);
 const depositPolicy = makeDepositPolicyService(asService);
+/** Đường tiền THẬT của khoản giữ chỗ — dùng để chứng minh hold cũ vẫn chốt được sau khi công tắc đổi. */
+const holds = makeBookingHoldsService(asService);
+/**
+ * Bản DỰNG RIÊNG với `platformMandatory = false` — luật hai trục của ADR 0027 điều 2.
+ *
+ * Giai đoạn 16/09/2026 bắt cả sàn thu cọc, nên `depositPolicy` (bản production) không còn đi
+ * qua nhánh tuyến/gói nào nữa. Xoá các ca đó đi thì ngày mở lại công tắc là ngày một luật về
+ * tiền quay lại mà không còn test nào canh — nên chúng ở lại, chạy trên instance này.
+ */
+const twoAxis = makeDepositPolicyService(asService, { platformMandatory: false });
 
 const phoneVerification = {
   assertPhoneVerifiedForBooking: async () => {},
@@ -72,6 +85,25 @@ const requests = makeBookingRequestsService(asService, {
   notifications,
   occupancy,
   settings,
+});
+
+/**
+ * Đường duyệt dựng trên `twoAxis` — dùng cho các khối "khi giai đoạn kết thúc".
+ *
+ * `pricing` phải dựng từ CHÍNH `twoAxis` đó: `commitDecision` đóng băng con số mà `pricing`
+ * tính, nên một bên nói "có thu cọc" còn bên kia nói "không" sẽ đẻ ra đơn có
+ * `deposit_collection_mode` không khớp số tiền của chính nó — một tổ hợp không tồn tại ở
+ * production, và một spec xanh vì lý do sai.
+ */
+const twoAxisRequests = makeBookingRequestsService(asService, {
+  phoneVerification,
+  auth,
+  audit,
+  notifications,
+  occupancy,
+  settings,
+  depositPolicy: twoAxis,
+  pricing: makePricingService(asService, { depositPolicy: twoAxis }),
 });
 
 /*
@@ -198,8 +230,13 @@ async function setToggle(tenantId: string, enabled: boolean) {
   });
 }
 
-async function submit(shop: Shop, offsetDays = 5) {
-  return requests.submitPublic(
+/**
+ * `via` mặc định là đường production. Khối "khi giai đoạn kết thúc" phải truyền
+ * `twoAxisRequests`: gửi bằng một instance rồi duyệt bằng instance kia nghĩa là hold sinh ra
+ * theo luật này còn đơn được duyệt theo luật kia — một tổ hợp không tồn tại ở production.
+ */
+async function submit(shop: Shop, offsetDays = 5, via = requests) {
+  return via.submitPublic(
     {
       vehicleId: shop.vehicle,
       customerName: 'Nguyễn Văn A',
@@ -266,11 +303,84 @@ const maybe = (name: string, fn: () => Promise<void>) =>
     await fn();
   });
 
-describe('DepositPolicyService.resolveForTenant — hai trục, kiểm nối tiếp', () => {
+describe('DepositPolicyService.resolveForTenant — GIAI ĐOẠN cả sàn thu cọc', () => {
+  /**
+   * Công tắc của gian hàng và năng lực gói đều KHÔNG có tiếng nói nào trong giai đoạn này.
+   *
+   * Đặt công tắc `false` ở cả ba hình dạng gian hàng để chứng minh kết quả không phải trùng
+   * hợp: tuyến hoa hồng (vốn đã bắt buộc), tuyến gói có cờ (trước đây sẽ TẮT), và tuyến gói
+   * THIẾU cờ (trước đây bị chặn bởi năng lực gói).
+   */
+  maybe('mọi gian hàng đều THU, công tắc khoá, lý do nói đúng là luật của SÀN', async () => {
+    for (const shop of [commission, packagePlus, packageBasic]) {
+      await setToggle(shop.tenant, false);
+      const r = await depositPolicy.resolveForTenant(shop.tenant);
+
+      expect(r.required).toBe(true);
+      expect(r.editable).toBe(false);
+      expect(r.reason).toBe(DEPOSIT_POLICY_REASON.PLATFORM_MANDATORY);
+    }
+  });
+
+  /**
+   * `toggleEnabled` phải trả GIÁ TRỊ ĐANG LƯU, không phải `true` cho đẹp.
+   *
+   * Đó là lựa chọn gian hàng sẽ quay về khi công tắc mở lại; một API nói dối về nó sẽ làm màn
+   * cấu hình hiện sai đúng vào ngày đó — và migration 20260916120000 ghi `true` cho tất cả
+   * chính là để giá trị đó có nghĩa.
+   */
+  maybe('vẫn báo đúng giá trị công tắc ĐANG LƯU, dù nó không còn tác dụng', async () => {
+    await setToggle(packagePlus.tenant, false);
+    expect((await depositPolicy.resolveForTenant(packagePlus.tenant)).toggleEnabled).toBe(false);
+
+    await setToggle(packagePlus.tenant, true);
+    expect((await depositPolicy.resolveForTenant(packagePlus.tenant)).toggleEnabled).toBe(true);
+  });
+
+  /** Chưa xác định được tuyến vẫn thắng: không đoán tiền trên một danh mục gói hỏng. */
+  maybe('KHÔNG lấn lên nhánh chưa xác định được tuyến', async () => {
+    /*
+     * Xoá hẳn dòng thuê bao thay vì đẩy `ends_at` về quá khứ: CHECK
+     * `tenant_subscriptions_ends_after_starts` không cho một kỳ kết thúc trước khi bắt đầu, và
+     * "gian hàng chưa có gói nào" mới đúng là tình huống cần dựng ở đây.
+     */
+    const saved = await prisma.tenantSubscription.findMany({
+      where: { tenantId: packageBasic.tenant },
+    });
+    await prisma.tenantSubscription.deleteMany({ where: { tenantId: packageBasic.tenant } });
+    try {
+      const r = await depositPolicy.resolveForTenant(packageBasic.tenant);
+      expect(r.billingMode).toBeNull();
+      expect(r.required).toBe(false);
+      expect(r.reason).toBe(DEPOSIT_POLICY_REASON.BILLING_NOT_CONFIGURED);
+    } finally {
+      // `slotsJson` nullable làm kiểu của `createMany` không nhận lại nguyên bản vừa đọc ra;
+      // dựng lại từng dòng là cách gọn nhất mà vẫn giữ đúng dữ liệu cũ.
+      for (const row of saved) {
+        await prisma.tenantSubscription.create({
+          data: { ...row, slotsJson: row.slotsJson ?? Prisma.JsonNull },
+        });
+      }
+    }
+  });
+
+  maybe('PATCH bị chặn cho MỌI tuyến, kể cả gói có đủ cờ', async () => {
+    for (const shop of [commission, packagePlus, packageBasic]) {
+      await expect(
+        depositPolicy.updateSettings(shop.tenant, shop.owner, false),
+      ).rejects.toMatchObject({
+        constructor: ForbiddenException,
+        response: { code: API_ERROR_CODE.DEPOSIT_ALWAYS_REQUIRED },
+      });
+    }
+  });
+});
+
+describe('DepositPolicyService.resolveForTenant — hai trục, kiểm nối tiếp (khi giai đoạn kết thúc)', () => {
   maybe('tuyến hoa hồng: BẮT BUỘC, khoá, và công tắc không có tiếng nói nào', async () => {
     // Bật công tắc thành `false` để chứng minh nó bị BỎ QUA, không phải "tình cờ cùng kết quả".
     await setToggle(commission.tenant, false);
-    const r = await depositPolicy.resolveForTenant(commission.tenant);
+    const r = await twoAxis.resolveForTenant(commission.tenant);
 
     expect(r.billingMode).toBe(BILLING_MODE.COMMISSION);
     expect(r.required).toBe(true);
@@ -279,7 +389,7 @@ describe('DepositPolicyService.resolveForTenant — hai trục, kiểm nối ti�
   });
 
   maybe('tuyến gói có cờ, chưa ai bấm: TẮT — vắng dòng là câu trả lời đủ', async () => {
-    const r = await depositPolicy.resolveForTenant(packagePlus.tenant);
+    const r = await twoAxis.resolveForTenant(packagePlus.tenant);
 
     expect(r.required).toBe(false);
     expect(r.planAllows).toBe(true);
@@ -289,7 +399,7 @@ describe('DepositPolicyService.resolveForTenant — hai trục, kiểm nối ti�
 
   maybe('tuyến gói có cờ, đã bật: THU', async () => {
     await setToggle(packagePlus.tenant, true);
-    const r = await depositPolicy.resolveForTenant(packagePlus.tenant);
+    const r = await twoAxis.resolveForTenant(packagePlus.tenant);
 
     expect(r.required).toBe(true);
     expect(r.reason).toBe(DEPOSIT_POLICY_REASON.PACKAGE_ENABLED);
@@ -302,7 +412,7 @@ describe('DepositPolicyService.resolveForTenant — hai trục, kiểm nối ti�
      * lựa chọn của họ thì gia hạn xong phải bấm lại, trái ADR 0027 điều 5.
      */
     await setToggle(packageBasic.tenant, true);
-    const r = await depositPolicy.resolveForTenant(packageBasic.tenant);
+    const r = await twoAxis.resolveForTenant(packageBasic.tenant);
 
     expect(r.required).toBe(false);
     expect(r.planAllows).toBe(false);
@@ -312,10 +422,10 @@ describe('DepositPolicyService.resolveForTenant — hai trục, kiểm nối ti�
   });
 });
 
-describe('PATCH /shop/payment-settings — chặn thật ở service, không nhờ guard', () => {
+describe('PATCH /shop/payment-settings — chặn thật ở service (khi giai đoạn kết thúc)', () => {
   maybe('tuyến hoa hồng gọi thẳng vào: 403 DEPOSIT_ALWAYS_REQUIRED', async () => {
     await expect(
-      depositPolicy.updateSettings(commission.tenant, commission.owner, false),
+      twoAxis.updateSettings(commission.tenant, commission.owner, false),
     ).rejects.toMatchObject({
       constructor: ForbiddenException,
       response: { code: API_ERROR_CODE.DEPOSIT_ALWAYS_REQUIRED },
@@ -328,7 +438,7 @@ describe('PATCH /shop/payment-settings — chặn thật ở service, không nh�
 
   maybe('tuyến gói thiếu escrow_hold: 403 FEATURE_NOT_IN_PLAN', async () => {
     await expect(
-      depositPolicy.updateSettings(packageBasic.tenant, packageBasic.owner, true),
+      twoAxis.updateSettings(packageBasic.tenant, packageBasic.owner, true),
     ).rejects.toMatchObject({
       response: {
         code: API_ERROR_CODE.FEATURE_NOT_IN_PLAN,
@@ -341,7 +451,7 @@ describe('PATCH /shop/payment-settings — chặn thật ở service, không nh�
   });
 
   maybe('tuyến gói có cờ: lưu được, và để lại dấu vết ai bấm', async () => {
-    const r = await depositPolicy.updateSettings(packagePlus.tenant, packagePlus.owner, true);
+    const r = await twoAxis.updateSettings(packagePlus.tenant, packagePlus.owner, true);
     expect(r.required).toBe(true);
 
     const row = await prisma.tenantPaymentSettings.findUniqueOrThrow({
@@ -358,10 +468,18 @@ describe('PATCH /shop/payment-settings — chặn thật ở service, không nh�
   });
 });
 
-describe('Duyệt TAY áp đúng chính sách', () => {
+/*
+ * BA KHỐI DƯỚI ĐÂY chạy trên `twoAxisRequests` — tức luật HAI TRỤC của ADR 0027 điều 2.
+ *
+ * Trong giai đoạn cả sàn thu cọc chúng KHÔNG mô tả hành vi đang chạy (mọi gian hàng đều có
+ * hold), nhưng chúng mô tả hành vi sẽ quay lại nguyên vẹn khi `platformMandatory` về `false` —
+ * và nhánh `direct`/`none` của `commitDecision` vẫn còn nguyên trong mã để phục vụ nó.
+ * Hành vi ĐANG chạy được khoá ở khối "GIAI ĐOẠN cả sàn thu cọc" phía trên.
+ */
+describe('Duyệt TAY áp đúng chính sách (khi giai đoạn kết thúc)', () => {
   maybe('gói + TẮT cọc → đơn ra đời ngay, không hold, mode = direct', async () => {
-    const { receipt } = await submit(packagePlus);
-    const approved = await requests.approve(packagePlus.tenant, packagePlus.owner, receipt.id);
+    const { receipt } = await submit(packagePlus, 5, twoAxisRequests);
+    const approved = await twoAxisRequests.approve(packagePlus.tenant, packagePlus.owner, receipt.id);
 
     expect(approved.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
     expect(await prisma.bookingHold.count({ where: { tenantId: packagePlus.tenant } })).toBe(0);
@@ -372,11 +490,11 @@ describe('Duyệt TAY áp đúng chính sách', () => {
 
   maybe('gói + BẬT cọc → awaiting_hold, hold sinh ra, CHƯA có đơn', async () => {
     await setToggle(packagePlus.tenant, true);
-    const { receipt } = await submit(packagePlus, 8);
-    const approved = await requests.approve(packagePlus.tenant, packagePlus.owner, receipt.id);
+    // Có thu cọc ⇒ hold sinh ngay LÚC GỬI (ADR 0039 điều 1), không chờ ai duyệt.
+    const { receipt } = await submit(packagePlus, 8, twoAxisRequests);
 
-    expect(approved.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
-    expect(approved.bookingId).toBeNull();
+    expect(receipt.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    expect(receipt.bookingId).toBeNull();
 
     const hold = await prisma.bookingHold.findFirstOrThrow({
       where: { tenantId: packagePlus.tenant },
@@ -397,10 +515,9 @@ describe('Duyệt TAY áp đúng chính sách', () => {
 
   maybe('hoa hồng → luôn có hold, kể cả khi công tắc bị đặt tắt', async () => {
     await setToggle(commission.tenant, false);
-    const { receipt } = await submit(commission, 11);
-    const approved = await requests.approve(commission.tenant, commission.owner, receipt.id);
+    const { receipt } = await submit(commission, 11, twoAxisRequests);
 
-    expect(approved.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    expect(receipt.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
     const hold = await prisma.bookingHold.findFirstOrThrow({
       where: { tenantId: commission.tenant },
     });
@@ -413,8 +530,8 @@ describe('Duyệt TAY áp đúng chính sách', () => {
 
   maybe('gói THIẾU cờ → không thu, mode = direct (gian hàng tự thoả thuận)', async () => {
     await setToggle(packageBasic.tenant, true); // bật lén: không có hiệu lực
-    const { receipt } = await submit(packageBasic, 14);
-    const approved = await requests.approve(packageBasic.tenant, packageBasic.owner, receipt.id);
+    const { receipt } = await submit(packageBasic, 14, twoAxisRequests);
+    const approved = await twoAxisRequests.approve(packageBasic.tenant, packageBasic.owner, receipt.id);
 
     expect(approved.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
     expect(await prisma.bookingHold.count({ where: { tenantId: packageBasic.tenant } })).toBe(0);
@@ -423,7 +540,7 @@ describe('Duyệt TAY áp đúng chính sách', () => {
   });
 });
 
-describe('TỰ NHẬN đơn áp CÙNG chính sách với duyệt tay', () => {
+describe('TỰ NHẬN đơn áp CÙNG chính sách với duyệt tay (khi giai đoạn kết thúc)', () => {
   maybe('gói + BẬT cọc → tự nhận cũng dừng ở awaiting_hold', async () => {
     await settings.patchServiceSetting(
       packagePlus.tenant,
@@ -435,7 +552,7 @@ describe('TỰ NHẬN đơn áp CÙNG chính sách với duyệt tay', () => {
     );
     await setToggle(packagePlus.tenant, true);
 
-    const { receipt } = await submit(packagePlus, 17);
+    const { receipt } = await submit(packagePlus, 17, twoAxisRequests);
     const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
 
     expect(row.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
@@ -452,7 +569,7 @@ describe('TỰ NHẬN đơn áp CÙNG chính sách với duyệt tay', () => {
       HIDDEN_FEATURES,
     );
 
-    const { receipt } = await submit(packagePlus, 20);
+    const { receipt } = await submit(packagePlus, 20, twoAxisRequests);
     const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } });
 
     expect(row.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
@@ -461,16 +578,85 @@ describe('TỰ NHẬN đơn áp CÙNG chính sách với duyệt tay', () => {
   });
 });
 
-describe('Đóng băng — ADR 0025 ràng buộc 4', () => {
+describe('Đóng băng — ADR 0025 ràng buộc 4 (khi giai đoạn kết thúc)', () => {
   maybe('bật công tắc SAU khi đơn đã tạo không viết lại đơn đó', async () => {
-    const { receipt } = await submit(packagePlus, 23);
-    const approved = await requests.approve(packagePlus.tenant, packagePlus.owner, receipt.id);
+    const { receipt } = await submit(packagePlus, 23, twoAxisRequests);
+    const approved = await twoAxisRequests.approve(packagePlus.tenant, packagePlus.owner, receipt.id);
     const bookingId = approved.bookingId!;
 
-    await depositPolicy.updateSettings(packagePlus.tenant, packagePlus.owner, true);
-    expect((await depositPolicy.resolveForTenant(packagePlus.tenant)).required).toBe(true);
+    await twoAxis.updateSettings(packagePlus.tenant, packagePlus.owner, true);
+    expect((await twoAxis.resolveForTenant(packagePlus.tenant)).required).toBe(true);
 
     const after = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });
     expect(after.depositCollectionMode).toBe(DEPOSIT_COLLECTION_MODE.DIRECT);
+  });
+});
+
+/**
+ * CÔNG TẮC ĐỔI GIỮA CHỪNG — mặt còn lại của việc đóng băng (ADR 0025 ràng buộc 4).
+ *
+ * Ca ở khối trên khoá chiều "bật sau khi đơn `direct` đã tạo". Ca ở đây khoá chiều NGUY HIỂM
+ * HƠN: một chuyến đã bước vào đường tiền — hold đã sinh, mã `XPH…` đã đưa cho khách, khách có
+ * thể đang cầm QR — rồi gian hàng TẮT công tắc. Nếu lượt tắt đó có tiếng nói với chuyến ấy thì
+ * khoản tiền khách vừa chuyển không còn đích nào để về.
+ *
+ * Kỳ vọng: lượt tắt chỉ áp cho chuyến SAU. Hold cũ giữ nguyên số tiền và mã; tiền về vẫn mở đơn;
+ * và đơn đó vẫn mang `platform` — vì nó ra đời từ tiền XePrime đã thu thật.
+ */
+describe('Công tắc đổi SAU khi hold đã sinh — đường tiền không đổi giữa chừng', () => {
+  maybe('tắt cọc khi khách đang cầm mã: hold giữ nguyên, tiền về vẫn mở đơn `platform`', async () => {
+    await setToggle(packagePlus.tenant, true);
+    // Hold sinh NGAY lúc gửi (ADR 0039) — khách cầm mã trước cả khi gian hàng nhìn thấy yêu cầu.
+    const { receipt } = await submit(packagePlus, 26);
+    expect(receipt.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+
+    const hold = await prisma.bookingHold.findFirstOrThrow({
+      where: { tenantId: packagePlus.tenant },
+    });
+    const frozenAmount = hold.amount.toFixed(0);
+
+    /*
+     * Gian hàng đổi ý TRONG LÚC khách đang cầm mã chuyển khoản.
+     *
+     * Ghi thẳng bản ghi thay vì gọi `updateSettings`: trong giai đoạn cả sàn thu cọc, đường ghi
+     * đó trả 403 cho mọi tuyến. Thứ ca này kiểm không phải "ai được bấm nút" (khối PATCH ở trên
+     * lo) mà là "một lượt đổi công tắc — bất kể đến từ đâu — có viết lại được một chuyến đang
+     * chạy hay không".
+     */
+    await setToggle(packagePlus.tenant, false);
+
+    const still = await prisma.bookingHold.findUniqueOrThrow({ where: { id: hold.id } });
+    expect(still.status).toBe(BOOKING_HOLD_STATUS.PENDING);
+    expect(still.code).toBe(hold.code);
+    expect(still.amount.toFixed(0)).toBe(frozenAmount);
+
+    // Khách chuyển đủ. Đường tiền phải hoạt động y như lúc hold được sinh ra.
+    const applied = await prisma.$transaction((tx) =>
+      holds.applyBankPaymentWithinTx(tx, {
+        code: hold.code,
+        amount: new Prisma.Decimal(frozenAmount),
+        providerTxId: `deposit-freeze-${hold.code}`,
+      }),
+    );
+    expect(applied.outcome).toBe('activated');
+
+    /*
+     * Xe này không bật "Đặt ngay" nên tiền về mới chỉ tới `hold_paid`; gian hàng bấm duyệt thì
+     * đơn mới ra đời. Chính cú bấm ĐÓ là lúc `deposit_collection_mode` đóng băng — và nó phải
+     * đóng băng theo khoản tiền ĐÃ THU, không theo công tắc của hôm nay.
+     */
+    await requests.approve(packagePlus.tenant, packagePlus.owner, receipt.id);
+
+    const booking = await prisma.booking.findFirstOrThrow({
+      where: { tenantId: packagePlus.tenant },
+    });
+    /*
+     * `platform` chứ không phải `direct`: đơn này ra đời VÌ tiền đã vào tài khoản XePrime. Đọc
+     * công tắc của hôm nay để suy ra "ai thu cọc" sẽ nói sai về một khoản tiền có thật.
+     */
+    expect(booking.depositCollectionMode).toBe(DEPOSIT_COLLECTION_MODE.PLATFORM);
+    expect(
+      (await prisma.bookingRequest.findUniqueOrThrow({ where: { id: receipt.id } })).status,
+    ).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
   });
 });

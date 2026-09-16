@@ -36,6 +36,11 @@ import { useTranslations } from 'next-intl';
  * `/manage/login` → vòng lặp. `/manage/onboarding` đã đăng nhập nhưng chưa có gian hàng, tức là
  * đúng nhóm mà shell chặn — nên nó tự render lấy, không có sidebar (chưa có gì để điều hướng).
  *
+ * Từ ADR 0040, `/manage/onboarding` còn phục vụ một nhóm thứ hai: gian hàng trả phí ĐÃ tạo hồ sơ
+ * nhưng chưa thanh toán. Với họ, "bare" là chính điểm mấu chốt — cổng quản lý chưa mở, nên không
+ * được dựng sidebar của nó rồi để mọi mục bên trong trả 403. Họ vẫn đi qua nhánh "bare" dưới
+ * đây, và mọi route `/manage/*` khác đá họ về đúng đây (`resolveWorkspaceHref`).
+ *
  * Next.js không cho một route con "thoát" layout cha, nên danh sách này là cách khai báo điều
  * đó ở đúng nơi quyết định — chính shell.
  */

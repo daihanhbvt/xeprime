@@ -21,11 +21,13 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { MouseEvent, ReactNode } from 'react';
 
+import { REGISTRATION_TRACK } from '@xeprime/types';
+
 import { LEGAL_DOC, legalPath } from '@/constants/legal';
 import {
-  ROUTES,
   VEHICLE_REGISTRATION_SOURCE,
   listYourVehicleRegisterPath,
+  manageOnboardingPath,
 } from '@/constants/routes';
 import { useAuthModal } from '@/features/auth/components/AuthModalProvider';
 import { AUTH_MODE } from '@/features/auth/post-auth-destination';
@@ -68,7 +70,16 @@ export function ListYourVehicleLanding() {
   const { open } = useAuthModal();
 
   const personalHref = listYourVehicleRegisterPath(VEHICLE_REGISTRATION_SOURCE.MARKETPLACE);
-  const shopHref = ROUTES.MANAGE.ONBOARDING;
+  /*
+   * CỬA GIAN HÀNG mang theo tuyến (ADR 0040) — `?track=package`.
+   *
+   * Không có tham số này thì cả hai CTA của trang dẫn tới cùng một URL, server gán gói hoa hồng
+   * cho cả hai, và người bấm đúng thẻ "Mở gian hàng cho thuê" bị điều hướng vào màn "Hồ sơ chủ
+   * xe" của tuyến kia. Đó chính là bug mà `?track=` sửa — và vì trang này có thể đẩy người chưa
+   * đăng nhập qua auth modal rồi mới điều hướng, tham số phải nằm trong `next` (nó nằm, vì
+   * `guard()` truyền đúng `destination` này).
+   */
+  const shopHref = manageOnboardingPath(REGISTRATION_TRACK.PACKAGE);
 
   /**
    * Chặn điều hướng khi chưa đăng nhập để mở auth modal tại chỗ; đăng nhập xong modal tự đẩy

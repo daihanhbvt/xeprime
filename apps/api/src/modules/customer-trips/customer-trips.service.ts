@@ -390,13 +390,18 @@ export class CustomerTripsService {
     }
 
     /*
-     * Hai trạng thái huỷ được mà chưa có đơn: `pending_host_approval` (chưa ai duyệt) và
-     * `awaiting_hold` (đã duyệt, đang chờ khách chuyển giữ chỗ — R3). Cái sau CHIẾM LỊCH nên
-     * huỷ phải nhả chỗ và đóng hold; cái trước không giữ gì cả.
+     * Ba trạng thái huỷ được mà chưa có đơn, và chúng khác nhau ở chỗ KHÁCH ĐÃ TRẢ BAO NHIÊU:
+     *
+     *   - `pending_host_approval` — chưa chiếm lịch, chưa có đồng nào. Huỷ là xong.
+     *   - `awaiting_hold` — đã chiếm lịch, chưa trả (hoặc mới trả một phần). Nhả chỗ, đóng hold,
+     *     hoàn phần lẻ nếu có.
+     *   - `hold_paid` (ADR 0039) — đã trả ĐỦ và đang chờ gian hàng nhận. Nhả chỗ và hoàn theo
+     *     đúng mốc `free_cancel_until` đã đóng băng trên hold.
      */
     const cancellable: string[] = [
       BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
       BOOKING_REQUEST_STATUS.AWAITING_HOLD,
+      BOOKING_REQUEST_STATUS.HOLD_PAID,
     ];
     await this.prisma.$transaction(async (tx) => {
       const claimed = await tx.bookingRequest.updateMany({
@@ -409,6 +414,13 @@ export class CustomerTripsService {
           tenantId: row.tenantId,
           actorUserId: customerUserId,
           actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
+        });
+      }
+      if (claimed.count > 0 && row.status === BOOKING_REQUEST_STATUS.HOLD_PAID) {
+        await this.holds.cancelPaidHoldForCustomerWithinTx(tx, {
+          requestId: row.id,
+          tenantId: row.tenantId,
+          actorUserId: customerUserId,
         });
       }
       // 0 dòng = gian hàng vừa duyệt/từ chối xen vào giữa. Không ghi đè quyết định của họ.

@@ -246,7 +246,7 @@ function accountMenu({
    * Thành viên gian hàng tuyến gói đọc nó ở `/manage/account`; `AccountShell` chuyển hướng `/account`
    * của họ sang đó, nên trỏ thẳng là bớt một cú nhảy chứ không phải một luật thứ hai.
    */
-  const profileHref = isShopMember ? ROUTES.MANAGE.ACCOUNT : ROUTES.ACCOUNT.ROOT;
+  const profileHref = isShopMember ? ROUTES.MANAGE.SECURITY : ROUTES.ACCOUNT.ROOT;
 
   return [
     {

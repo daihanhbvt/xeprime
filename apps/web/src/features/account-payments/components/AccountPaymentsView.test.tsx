@@ -13,9 +13,9 @@ import type { AccountPayment, AccountPaymentPage } from '../types';
  * phong bì. Test này dựng dữ liệu đúng hình dạng HTTP THẬT (`meta.totals`) và đọc bốn con số —
  * nếu ai dời `totals` ra ngoài `meta` lần nữa thì đỏ ở đây chứ không đỏ trên máy người dùng.
  *
- * Hai điều còn lại là lý do màn này tồn tại tách khỏi ví điểm:
+ * Hai điều còn lại là lý do màn này tồn tại tách khỏi màn số dư:
  *
- *  · Dải đầu màn phải nói ra BA loại tiền ở ba chỗ, và trỏ sang Ví điểm. Bỏ nó đi là để người
+ *  · Dải đầu màn phải nói ra BA loại tiền ở ba chỗ, và trỏ sang màn SỐ DƯ. Bỏ nó đi là để người
  *    dùng đọc con số ở đây rồi tưởng đó là số dư của mình.
  *  · Tiền CỌC phải kèm câu "sẽ được hoàn khi trả xe". Không có câu đó thì một khoản cọc 5 triệu
  *    đọc như tiền đã mất.
@@ -96,12 +96,12 @@ describe('AccountPaymentsView — phong bì và bốn con số', () => {
     expect(screen.getByText('Số chuyến')).toBeTruthy();
   });
 
-  it('nói ra ba loại tiền và trỏ sang Ví điểm — không để ai đọc đây thành số dư', () => {
+  it('nói ra ba loại tiền và trỏ sang màn Số dư — không để ai đọc đây thành số dư', () => {
     query.data = page();
     render(<AccountPaymentsView />);
 
     expect(screen.getByText('Đây là tiền bạn đã trả cho gian hàng')).toBeTruthy();
-    const link = screen.getByText('Ví điểm').closest('a');
+    const link = screen.getByText('Số dư của tôi').closest('a');
     expect(link?.getAttribute('href')).toBe('/account/balance');
   });
 

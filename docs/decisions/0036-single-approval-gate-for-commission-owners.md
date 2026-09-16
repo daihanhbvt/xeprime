@@ -1,6 +1,6 @@
 # ADR 0036 — Tuyến hoa hồng có MỘT cổng duyệt: duyệt XE. Xác minh gian hàng là trục riêng
 
-Ngày: 14/09/2026 · Trạng thái: **Accepted** · **Ghi đè [ADR 0014](0014-owner-and-shop-single-role.md) điều 5** (dòng *"Gian hàng được mở hay không (`approval_tasks`)"*) trong phạm vi tuyến hoa hồng
+Ngày: 14/09/2026 · Trạng thái: **Accepted; điều 4 bị [ADR 0040](0040-registration-track-split.md) ghi đè** · **Ghi đè [ADR 0014](0014-owner-and-shop-single-role.md) điều 5** (dòng *"Gian hàng được mở hay không (`approval_tasks`)"*) trong phạm vi tuyến hoa hồng
 
 ## Bối cảnh
 
@@ -57,14 +57,20 @@ xe, ảnh xe, giấy tờ xe, giá — tất cả đều nằm trong chính phi�
    gì — CLAUDE.md mục 6 lằn ranh 2), và một cột song song chỉ là bản sao sẽ lệch vào ngày ai đó
    ghi một chỗ mà quên chỗ kia.
 
-4. **Xác minh là cổng của việc MUA GÓI thuê bao, không phải cổng đăng xe.**
-   `BillingService.purchase` từ chối gói `billingMode = package` khi `verification !== verified`
-   (`SHOP_VERIFICATION_REQUIRED`). Đây là chỗ điều 5 của ADR 0014 chuyển tới: nền tảng **vẫn**
-   xem xét pháp nhân trước khi mở bộ quản lý đầy đủ — chỉ là ở đúng thời điểm việc đó có nghĩa.
+4. ~~**Xác minh là cổng của việc MUA GÓI thuê bao, không phải cổng đăng xe.**~~
+   **⚠️ BỊ [ADR 0040](0040-registration-track-split.md) điều 5 GHI ĐÈ (16/09/2026).**
 
-   Đường `BillingService.assign` (admin gán tay) **không** đi qua cổng này: nó đã có một con
-   người với `platform.billing.manage` đứng sau, và bắt họ xin phép chính mình là thêm ma sát mà
-   không thêm một lớp kiểm nào.
+   Điều khoản gốc: `BillingService.purchase` từ chối gói `billingMode = package` khi
+   `verification !== verified` (`SHOP_VERIFICATION_REQUIRED`).
+
+   Vì sao bỏ: ghép nó với luồng đăng ký gian hàng trả phí thì thứ tự thành *tạo gian hàng → gửi
+   hồ sơ xác minh → CHỜ admin (không SLA) → mới được trả tiền*, và trong lúc chờ họ không dùng
+   được gì cả. Nay **thanh toán mở tuyến gói và Manage**; nó không mở bất cứ thứ gì thuộc trục
+   kiểm duyệt — xe vẫn đi qua phiếu duyệt XE từng chiếc, và không nơi nào đánh
+   `verification = verified` vì tiền đã về.
+
+   Điều 1–3 và 5–6 của ADR này KHÔNG đổi: trục xác minh vẫn tồn tại, vẫn đọc từ phiếu duyệt, và
+   vẫn không được đụng tới xe đang bán.
 
 5. **Xin xác minh KHÔNG được đụng tới xe đang bán.** `submitForReview` không còn hạ
    `tenants.status` xuống `pending_review`. Bản cũ làm vậy, và vì `TENANT_STATUS_PUBLISHABLE`

@@ -622,8 +622,8 @@ describe('useManageNav — trục NĂNG LỰC theo gói (ADR 0027)', () => {
  * VÍ GIAN HÀNG — trục SỞ HỮU, không phải trục quyền (ADR 0038 điều 3).
  *
  * API đã là `@ShopOwnerOnly()` từ đợt trước, nhưng menu vẫn gác bằng `seller_profile.view`. Hệ
- * quả: một `shop_manager` được cấp quyền đó nhìn thấy mục "Số dư", bấm vào, và nhận 403 — giao
- * diện mời họ vào một cánh cửa đã khoá.
+ * quả: một `shop_manager` được cấp quyền đó nhìn thấy mục "Số dư & rút tiền", bấm vào, và nhận
+ * 403 — giao diện mời họ vào một cánh cửa đã khoá.
  *
  * Cách sửa là hạ MENU xuống đúng luật của guard. Bộ test này cũng khoá chiều ngược lại: nới guard
  * cho khớp menu sẽ làm test cuối cùng đỏ, vì tiền trong ví là nghĩa vụ với một người cụ thể chứ
@@ -641,7 +641,7 @@ describe('useManageNav — ví gian hàng chỉ dành cho CHỦ', () => {
     renderMenu();
 
     fireEvent.click(screen.getByText('Tài chính'));
-    expect(screen.getByRole('link', { name: /Ví điểm/ }).getAttribute('href')).toBe(
+    expect(screen.getByRole('link', { name: /Số dư & rút tiền/ }).getAttribute('href')).toBe(
       '/manage/balance',
     );
   });
@@ -657,7 +657,7 @@ describe('useManageNav — ví gian hàng chỉ dành cho CHỦ', () => {
       const { unmount } = renderMenu();
 
       fireEvent.click(screen.getByText('Tài chính'));
-      expect(screen.queryByRole('link', { name: /Ví điểm/ })).toBeNull();
+      expect(screen.queryByRole('link', { name: /Số dư & rút tiền/ })).toBeNull();
       unmount();
     }
   });
@@ -685,6 +685,6 @@ describe('useManageNav — ví gian hàng chỉ dành cho CHỦ', () => {
     user.tenant = null;
     renderMenu();
 
-    expect(screen.queryByRole('link', { name: /^Ví điểm$/ })).toBeNull();
+    expect(screen.queryByRole('link', { name: /^Số dư & rút tiền$/ })).toBeNull();
   });
 });

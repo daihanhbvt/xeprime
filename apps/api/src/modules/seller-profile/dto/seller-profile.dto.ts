@@ -59,31 +59,19 @@ export class SaveSellerProfileDto {
   @MaxLength(160)
   idIssuedBy?: string | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Mã ngân hàng chuẩn VietQR' })
-  @IsOptional()
-  @IsString()
-  @Matches(/^[A-Za-z0-9]{2,20}$/, { message: 'Mã ngân hàng không hợp lệ' })
-  bankCode?: string | null;
-
-  @ApiPropertyOptional({ type: String, nullable: true })
-  @IsOptional()
-  @IsString()
-  @Matches(/^[0-9 ]{6,40}$/, { message: 'Số tài khoản không hợp lệ' })
-  bankAccountNumber?: string | null;
-
-  @ApiPropertyOptional({ type: String, nullable: true })
-  @IsOptional()
-  @IsString()
-  @MaxLength(160)
-  bankAccountName?: string | null;
+  /*
+   * ⚠️ KHÔNG nhận lại ba ô NGÂN HÀNG ở đây (16/09/2026). Tài khoản nhận tiền sống ở
+   * `bank_accounts` (`/shop/bank-accounts`) — nơi lệnh rút `withdrawal_requests` thật sự đọc.
+   * Ba cột cũ trên `seller_profiles` chưa bao giờ nối với một đồng nào chạy ra.
+   */
 }
 
 /**
  * Hồ sơ nhìn từ phía GIAN HÀNG — họ thấy đủ dữ liệu của chính mình.
  *
- * Số tài khoản và số giấy tờ trả ĐẦY ĐỦ ở đây có chủ đích: đây là dữ liệu của chính người đang
- * đọc, và che nó đi khiến họ không kiểm tra được mình gõ đúng chưa. Che chỉ áp ở bề mặt NỀN TẢNG
- * (danh sách admin) — xem `PlatformSellerProfileDto`.
+ * Số giấy tờ trả ĐẦY ĐỦ ở đây có chủ đích: đây là dữ liệu của chính người đang đọc, và che nó
+ * đi khiến họ không kiểm tra được mình gõ đúng chưa. Che chỉ áp ở bề mặt NỀN TẢNG (danh sách
+ * admin) — xem `PlatformSellerProfileDto`.
  */
 export class SellerProfileDto {
   @ApiProperty() id!: string;
@@ -93,9 +81,6 @@ export class SellerProfileDto {
   @ApiPropertyOptional({ type: String, nullable: true }) idNumber!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) idIssuedAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) idIssuedBy!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) bankCode!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) bankAccountNumber!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) bankAccountName!: string | null;
   @ApiProperty({ enum: SELLER_PROFILE_STATUS_VALUES }) status!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) submittedAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) verifiedAt!: string | null;
@@ -120,10 +105,6 @@ export class PlatformSellerProfileDto {
   @ApiPropertyOptional({ type: String, nullable: true }) taxId!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Che ở danh sách; đủ ở chi tiết' })
   idNumber!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) bankCode!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Che ở danh sách; đủ ở chi tiết' })
-  bankAccountNumber!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) bankAccountName!: string | null;
   @ApiProperty({ enum: SELLER_PROFILE_STATUS_VALUES }) status!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) submittedAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) verifiedAt!: string | null;

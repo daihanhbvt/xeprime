@@ -4,7 +4,6 @@ import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
 import { Button, Tooltip } from 'antd';
 import { Logo } from '@/components/brand/Logo';
 import { cx } from '@/lib/cx';
-import { useCurrentUser } from '@/hooks/use-current-user';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { toggleSidebar } from '@/store/slices/app.slice';
 import { useManageNav } from './use-manage-nav';
@@ -32,10 +31,8 @@ export function Sidebar() {
   const t = useTranslations('ManageCommon');
   const dispatch = useAppDispatch();
   const collapsed = useAppSelector((s) => s.app.sidebarCollapsed);
-  const { data: user } = useCurrentUser();
   const { items, selectedKey, openKeys, onOpenChange } = useManageNav({ collapsed });
 
-  const tenantName = user?.tenant?.name;
   const toggleLabel = collapsed ? t('shell.expandMenu') : t('shell.collapseMenu');
 
   return (
@@ -61,13 +58,13 @@ export function Sidebar() {
         </Tooltip>
       </div>
 
-      {!collapsed && tenantName ? (
-        // Figma `14:1430`: tên gian hàng làm dòng phụ dưới wordmark — đây là danh tính của gian
-        // hàng trên marketplace, không phải một mục điều hướng.
-        <span className={styles.tenant} title={tenantName}>
-          {tenantName}
-        </span>
-      ) : null}
+      {/*
+        KHÔNG còn dòng phụ tên gian hàng dưới wordmark (16/09/2026).
+
+        Figma `14:1430` đặt nó ở đây khi thẻ ở CHÂN sidebar còn mang tên NGƯỜI đăng nhập. Từ đợt
+        gộp màn Cửa hàng, thẻ đó mang logo + tên gian hàng + vai trò — nên dòng này thành bản sao
+        thứ hai của cùng một cái tên, cách nhau đúng một chiều cao sidebar.
+      */}
 
       {/* Vùng landmark có tên — trang có nhiều <nav> (sidebar, bottom nav), không tên thì
           trình đọc màn hình chỉ đọc "navigation" hai lần. */}

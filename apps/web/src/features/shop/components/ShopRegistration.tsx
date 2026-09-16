@@ -12,7 +12,12 @@ import { Alert, Button, Form } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import { TENANT_TYPE, TENANT_TYPE_VALUES } from '@xeprime/types';
+import {
+  REGISTRATION_TRACK,
+  TENANT_TYPE,
+  TENANT_TYPE_VALUES,
+  type RegistrationTrack,
+} from '@xeprime/types';
 import { registerShopSchema, type RegisterShopValues } from '@xeprime/validators';
 import { AddressField } from '@/components/form/AddressField';
 import { trailingRequiredMark } from '@/components/form/required-mark';
@@ -25,7 +30,7 @@ import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useRegisterShop } from '../hooks/use-shop';
 import styles from './ShopRegistration.module.css';
 
-/** Tên bảy trường địa chỉ trong `registerShopSchema` — hằng số ngoài component để định danh ổn định. */
+/** Tên ba trường địa chỉ trong hai schema đăng ký — hằng ngoài component để định danh ổn định. */
 const ADDRESS_FIELD_NAMES = {
   provinceCode: 'provinceCode',
   wardCode: 'wardCode',
@@ -40,12 +45,6 @@ const ADDRESS_PIN_NAMES = {
   locationSource: 'locationSource',
 } as const;
 
-/**
- * Màn tạo gian hàng cho user chưa thuộc gian hàng nào. Đăng ký xong AppShell tự vào portal.
- *
- * Bố cục hai khoang theo mẫu UI: khoang trái GIỚI THIỆU (đang làm gì, lưu ý gì), khoang phải là
- * form. Trên mobile hai khoang xếp dọc — phần giới thiệu đọc trước rồi mới tới ô nhập.
- */
 interface ShopRegistrationProps {
   /**
    * Đích sau khi tạo hồ sơ thành công — đường dẫn NỘI BỘ do nơi gọi quyết định (trang onboarding
@@ -53,11 +52,27 @@ interface ShopRegistrationProps {
    */
   onCreated?: () => void;
   /**
-   * `shop` (mặc định) — chữ dành cho gian hàng cho thuê xe.
-   * `owner` — chữ dành cho CHỦ XE cá nhân đăng chiếc xe đầu tiên: cùng một API, cùng một form,
-   * chỉ khác cách nói. Người có một chiếc xe không tự nhận mình đang "mở gian hàng".
+   * CỬA VÀO, và nó quyết định cả HỢP ĐỒNG lẫn bộ trường bắt buộc (ADR 0040) — không chỉ câu chữ.
+   *
+   * | | `commission` (mặc định) | `package` |
+   * | --- | --- | --- |
+   * | `registrationTrack` gửi lên | `commission` | `package` |
+   * | Xã/phường · địa chỉ chi tiết · SĐT | tuỳ chọn | **bắt buộc** |
+   * | Ô "loại hình" | có | không (mặc định `individual`) |
+   * | Server gán gói | gói hoa hồng mặc định | không gán gì, chờ thanh toán |
+   *
+   * Đây là thay thế cho prop `variant` cũ. `variant` chỉ đổi chữ, nên hai cửa vào gửi lên cùng
+   * một request và người bấm "Đăng ký gian hàng" thành chủ xe tuyến hoa hồng — chính lỗi mà
+   * ADR 0040 sửa. Nếu một prop điều khiển câu chữ thì nó phải điều khiển cả hợp đồng.
    */
-  variant?: 'shop' | 'owner';
+  track?: RegistrationTrack;
+  /**
+   * Câu chữ cho CHỦ XE cá nhân đăng chiếc xe đầu tiên, thay vì chữ "mở gian hàng".
+   *
+   * Chỉ có nghĩa ở tuyến hoa hồng: người có một chiếc xe không tự nhận mình đang mở gian hàng.
+   * Tuyến gói luôn dùng chữ gian hàng — họ đang trả tiền cho đúng thứ đó.
+   */
+  personalWording?: boolean;
   /**
    * Giá trị điền sẵn từ tài khoản đang đăng nhập — nơi gọi truyền vào. Form KHÔNG tự gọi API
    * lấy user: nó là một form, không phải một màn hình.
@@ -65,55 +80,72 @@ interface ShopRegistrationProps {
   prefill?: { name?: string | null; phone?: string | null; email?: string | null };
 }
 
+/**
+ * Màn tạo hồ sơ người cho thuê xe — MỘT form, HAI cửa vào (ADR 0040).
+ *
+ * Bố cục hai khoang theo mẫu UI: khoang trái GIỚI THIỆU (đang làm gì, lưu ý gì), khoang phải là
+ * form. Trên mobile hai khoang xếp dọc — phần giới thiệu đọc trước rồi mới tới ô nhập.
+ *
+ * ## Vì sao một form chứ không hai
+ *
+ * Bộ trường trùng nhau gần hết (tên · địa chỉ · liên hệ) và cả hai ghi vào cùng `POST /tenants`.
+ * Hai component nghĩa là hai bản của cùng khối `AddressField` + cùng cách dựng thân request, và
+ * khối đó là chỗ lỗi `wardInvalid` từng sống. Khác biệt thật — bộ trường bắt buộc và
+ * `registrationTrack` — nằm ở `track`, tường minh và kiểm được bằng test.
+ */
 export function ShopRegistration({
   onCreated,
-  variant = 'shop',
+  track = REGISTRATION_TRACK.COMMISSION,
+  personalWording = false,
   prefill,
 }: ShopRegistrationProps = {}) {
   const t = useTranslations('ShopOnboarding');
   const domainLabel = useDomainLabel();
   const register = useRegisterShop();
-  const isOwnerVariant = variant === 'owner';
+  const isPackageTrack = track === REGISTRATION_TRACK.PACKAGE;
 
   const typeOptions = useMemo(
     () => TENANT_TYPE_VALUES.map((value) => ({ value, label: domainLabel('tenantType', value) })),
     [domainLabel],
   );
 
+  /*
+   * MỘT schema cho cả hai tuyến — nó đọc `registrationTrack` trong chính giá trị form để biết
+   * ba trường địa chỉ/SĐT là bắt buộc hay không (xem `registerShopSchema`). Nhờ vậy resolver ổn
+   * định qua các lần render: React Hook Form giữ resolver của lần dựng đầu, nên một biểu thức
+   * `isPackageTrack ? A : B` sẽ đổi luật mà RHF không biết.
+   *
+   * Message của schema là MÃ, tra trong `ShopOnboarding.validation` — một mã thiếu bản dịch sẽ
+   * lọt ra giao diện ở dạng chữ trần (đúng thứ đã xảy ra với `wardInvalid`), nên mọi mã của
+   * schema phải có mặt trong namespace đó.
+   */
   const resolver = useValidationResolver<RegisterShopValues>(
     registerShopSchema,
     'ShopOnboarding.validation',
   );
+
+  const emptyValues: RegisterShopValues = {
+    name: prefill?.name ?? '',
+    tenantType: TENANT_TYPE.INDIVIDUAL,
+    // Cửa vào đi VÀO giá trị form, vì schema đọc nó để chấm ba trường bắt buộc.
+    registrationTrack: track,
+    provinceCode: '',
+    wardCode: '',
+    addressLine: '',
+    placeId: null,
+    latitude: null,
+    longitude: null,
+    locationSource: null,
+    phone: prefill?.phone ?? '',
+    email: prefill?.email ?? '',
+  };
+
   const { control, handleSubmit } = useForm<RegisterShopValues>({
     resolver,
-    defaultValues: {
-      name: '',
-      tenantType: TENANT_TYPE.INDIVIDUAL,
-      provinceCode: '',
-      wardCode: '',
-      addressLine: '',
-      placeId: null,
-      latitude: null,
-      longitude: null,
-      locationSource: null,
-      phone: '',
-      email: '',
-    },
-    values: prefill
-      ? {
-          name: prefill.name ?? '',
-          tenantType: TENANT_TYPE.INDIVIDUAL,
-          provinceCode: '',
-          wardCode: '',
-          addressLine: '',
-          placeId: null,
-          latitude: null,
-          longitude: null,
-          locationSource: null,
-          phone: prefill.phone ?? '',
-          email: prefill.email ?? '',
-        }
-      : undefined,
+    defaultValues: emptyValues,
+    // `values` (không `defaultValues` một lần): `prefill` đến từ `/auth/me`, nên nó có thể về
+    // SAU lần render đầu — form phải nhận nó khi đó thay vì đứng trống.
+    values: prefill ? emptyValues : undefined,
   });
 
   // `handleSubmit` giữ nguyên giá trị đã nhập khi mutation lỗi — RHF không reset form, nên người
@@ -122,6 +154,12 @@ export function ShopRegistration({
     register.mutate(
       {
         name: values.name,
+        /*
+         * CỬA VÀO đi trên dây. Đây là điểm mấu chốt của ADR 0040: không có trường này thì server
+         * không phân biệt được hai luồng, và mọi cách phân biệt ở client đều chết sau một lần F5.
+         */
+        registrationTrack: track,
+        // Tuyến gói không hỏi loại hình — gửi mặc định, và server cũng mặc định đúng giá trị đó.
         tenantType: values.tenantType,
         provinceCode: values.provinceCode,
         wardCode: values.wardCode || undefined,
@@ -145,10 +183,10 @@ export function ShopRegistration({
           <ShopOutlined />
         </span>
         <h2 className={styles.introTitle}>
-          {isOwnerVariant ? t('ownerVariant.title') : t('form.title')}
+          {personalWording ? t('ownerVariant.title') : t('form.title')}
         </h2>
         <p className={styles.introText}>
-          {isOwnerVariant ? t('ownerVariant.intro') : t('form.intro')}
+          {personalWording ? t('ownerVariant.intro') : t('form.intro')}
         </p>
 
         <div className={styles.tips}>
@@ -205,20 +243,42 @@ export function ShopRegistration({
               required
               autoFocus
             />
-            <SelectField
-              control={control}
-              name="tenantType"
-              label={t('form.fields.tenantType.label')}
-              options={typeOptions}
-              required
-            />
             {/*
-              Địa chỉ BẮT BUỘC có tỉnh/thành: đăng ký tạo luôn chi nhánh mặc định, và đó là nơi
-              xe của gian hàng hiển thị trên marketplace. Xã/phường thì KHÔNG bắt buộc ở bước này
-              — người mở gian hàng thường chưa có địa chỉ chính xác, và chặn ở đây là chặn luôn
-              việc họ bắt đầu; chi nhánh sinh ra mang cờ chờ bổ sung.
+              Loại hình CHỈ ở tuyến hoa hồng. Tuyến gói không dùng nó để quyết định gì — nguồn duy
+              nhất của chế độ thu phí là GÓI (ADR 0014 điều 2) — nên một ô chọn ở bước đang đếm
+              từng giây trước khi người ta xem giá là ma sát không đổi lấy được gì.
             */}
-            <AddressField control={control} names={ADDRESS_FIELD_NAMES} pin={ADDRESS_PIN_NAMES} />
+            {isPackageTrack ? null : (
+              <SelectField
+                control={control}
+                name="tenantType"
+                label={t('form.fields.tenantType.label')}
+                options={typeOptions}
+                required
+              />
+            )}
+            {/*
+              Địa chỉ BẮT BUỘC có tỉnh/thành ở cả hai tuyến: đăng ký tạo luôn chi nhánh mặc định,
+              và đó là nơi xe hiển thị trên marketplace.
+
+              Xã/phường và số nhà thì theo TUYẾN. Tuyến hoa hồng để trống được — người mở hồ sơ
+              chủ xe thường chưa có địa chỉ chính xác, và chặn ở đây là chặn luôn việc họ bắt đầu;
+              chi nhánh sinh ra mang cờ chờ bổ sung. Tuyến gói thì bắt buộc: đó là một mặt tiền có
+              người trả tiền để khách tìm thấy, và cổng đăng xe sẽ đòi nó ngay sau khi thanh toán
+              — hỏi ở đây rẻ hơn hẳn so với để họ trả tiền rồi mới bị từ chối.
+            */}
+            <AddressField
+              control={control}
+              names={ADDRESS_FIELD_NAMES}
+              pin={ADDRESS_PIN_NAMES}
+              /*
+               * `required` gác xã + số nhà (theo tuyến); tỉnh có prop RIÊNG và luôn bật, vì
+               * `registerShopSchema` đòi nó ở cả hai tuyến. Dùng một cờ cho cả ba nghĩa là ô tỉnh
+               * của tuyến hoa hồng mất dấu sao mà vẫn báo lỗi khi bấm Lưu.
+               */
+              required={isPackageTrack}
+              provinceRequired
+            />
             <TextField
               control={control}
               name="phone"
@@ -226,6 +286,14 @@ export function ShopRegistration({
               type="tel"
               placeholder={t('form.fields.phone.placeholder')}
               prefix={<PhoneOutlined />}
+              required={isPackageTrack}
+              /*
+               * Số ĐIỀN SẴN từ tài khoản, và dòng chú thích nói rõ nó là số LIÊN HỆ CỦA GIAN HÀNG
+               * — không phải một số "đã xác thực" thứ hai. Số đã qua OTP của người chủ sống ở
+               * `users.phone` và hiện ở khối "Chủ gian hàng"; gọi ô này là số đã xác thực sẽ là
+               * một lời hứa không ai đứng sau, vì người dùng sửa được nó tự do ngay tại đây.
+               */
+              help={isPackageTrack ? t('form.fields.phone.shopHelp') : undefined}
             />
             <TextField
               control={control}
@@ -252,7 +320,7 @@ export function ShopRegistration({
             className={styles.submit}
             loading={register.isPending}
           >
-            {t('form.submit')}
+            {isPackageTrack ? t('form.submitPackage') : t('form.submit')}
           </Button>
 
           {/*

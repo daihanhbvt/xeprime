@@ -7,10 +7,12 @@
     "collapseSection": "Collapse the {name} group",
     "needsAction": "{count, plural, one {# item needs action} other {# items need action}}",
     "accountMenu": "Account menu",
-    "profile": "Profile",
     "shopSettings": "Shop settings",
     "back": "Back",
-    "logout": "Log out"
+    "logout": "Log out",
+    "signedInAs": "Signed in as {name}",
+    "security": "Account security",
+    "renterTrips": "Trips I rented"
   },
   "permission": {
     "deniedTitle": "You don't have access",

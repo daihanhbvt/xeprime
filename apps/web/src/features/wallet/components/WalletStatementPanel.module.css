@@ -1,0 +1,212 @@
+/**
+ * Bảng tổng hợp giao dịch của gian hàng.
+ *
+ * Đầu bảng dùng nền TỐI để tách hẳn khối "một tháng làm ăn" khỏi thẻ số dư phía trên: hai khối
+ * nói về hai thứ khác nhau (tôi còn bao nhiêu · tôi kiếm được bao nhiêu), và đặt chúng trên cùng
+ * một nền trắng khiến người đọc phải tự đoán ranh giới.
+ */
+
+.panel {
+  overflow: hidden;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  flex-wrap: wrap;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  background: var(--xp-color-text);
+  color: var(--xp-color-bg-container);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.period {
+  flex: none;
+}
+
+.alert,
+.body {
+  margin: var(--xp-space-md);
+}
+
+/* --- Ba chỉ số của kỳ --- */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: var(--xp-space-md);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+/* Hai ô sau có vách ngăn — ba con số cạnh nhau không có vạch thì đọc thành một câu. */
+.stat + .stat {
+  border-left: 1px solid var(--xp-color-border-subtle);
+}
+
+.statValue {
+  margin: 0;
+  font-size: var(--xp-font-size-h4);
+  line-height: var(--xp-line-height-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.statLabel {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-label);
+}
+
+.star {
+  color: var(--xp-color-primary);
+}
+
+/* --- Bảng --- */
+
+/*
+ * Bảng chạy ở cỡ chữ NHỎ, không phải 14px mặc định của AntD.
+ *
+ * Tám cột toàn con số: ở 14px chúng đòi ~1200px để không xuống dòng, và bảng phải cuộn ngang
+ * ngay trên màn laptop. 12px với `tabular-nums` vẫn đọc tốt vì mọi chữ số cùng bề rộng, và cả
+ * dòng gọn lại trong một tầm mắt — đúng điều một bảng đối chiếu cần.
+ */
+.panel :global(.ant-table) {
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.panel :global(.ant-table-cell) {
+  padding-block: var(--xp-space-sm);
+}
+
+/* --- Ô trong bảng --- */
+
+.code {
+  color: var(--xp-color-primary-active);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.strong {
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.number {
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: var(--xp-color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.positive {
+  color: var(--xp-color-success);
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.negative {
+  color: var(--xp-color-error);
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Khối cộng dồn --- */
+
+.totals {
+  margin: 0;
+  padding: 0 var(--xp-space-md) var(--xp-space-md);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.totalRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-xs) 0;
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+.totalLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+}
+
+.totalHint {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-overline);
+}
+
+.totalValue {
+  margin: 0;
+  flex: none;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Dòng THU NHẬP là câu trả lời của cả bảng — nó được nền riêng và cỡ chữ riêng, để mắt rơi vào
+ * đó trước khi đọc các dòng cộng trừ ở trên.
+ */
+.totalHighlight {
+  margin-top: var(--xp-space-xs);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-primary-light);
+}
+
+.totalHighlight .totalLabel {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.incomeValue {
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-h4);
+  line-height: var(--xp-line-height-h4);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/*
+ * 640px = `--xp-bp-mobile`. CSS custom property không dùng được trong `@media`, nên con số viết
+ * thẳng — nhưng chỉ dùng một trong ba breakpoint chuẩn (640 / 1024 / 1440).
+ */
+@media (max-width: 640px) {
+  /* Ba chỉ số xuống một cột: chúng là số, và số bị bóp ngang thì xuống dòng giữa chừng. */
+  .stats {
+    grid-template-columns: 1fr;
+  }
+
+  .stat + .stat {
+    border-left: none;
+    border-top: 1px solid var(--xp-color-border-subtle);
+    padding-top: var(--xp-space-md);
+  }
+}

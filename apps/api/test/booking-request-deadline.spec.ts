@@ -7,6 +7,7 @@ import {
   BOOKING_REQUEST_REMINDER_MINUTES,
   BOOKING_REQUEST_RESPOND_WINDOW_MINUTES,
   BOOKING_REQUEST_STATUS,
+  bookingRequestRespondBy,
   BOOKING_STATUS,
   MEMBERSHIP_STATUS,
   NOTIFICATION_TYPE,
@@ -23,7 +24,15 @@ import type { AuthService } from '../src/modules/auth/auth.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingRequestsService, makeBookingsService, makeCustomersService, makeNotificationService, makePricingService } from './helpers/service-factory';
+import {
+  makeBookingHoldsService,
+  makeBookingRequestsService,
+  makeBookingsService,
+  makeCustomersService,
+  makeNotificationService,
+  makePricingService,
+} from './helpers/service-factory';
+import { payHoldForRequest } from './helpers/hold-payment';
 
 /**
  * HẠN PHẢN HỒI 60 PHÚT của yêu cầu thuê — trên PostgreSQL THẬT.
@@ -64,6 +73,7 @@ const auth = {
   resolveOrCreateUserByPhone: async () => ({ userId: guestUserId }),
 } as unknown as AuthService;
 
+const holds = makeBookingHoldsService(asService);
 const requests = makeBookingRequestsService(asService, {
   bookings: bookings,
   audit: audit,
@@ -135,6 +145,46 @@ async function submit(vehicleId: string): Promise<string> {
     null,
   );
   return receipt.id;
+}
+
+/**
+ * Một yêu cầu dừng ở `pending_host_approval` — chặng mà worker nhắc hạn và cho hết hạn.
+ *
+ * Từ ADR 0039, chặng này không còn là mặc định: yêu cầu thường được giữ chỗ ngay lúc gửi và đi
+ * thẳng sang `awaiting_hold`. Nó chỉ còn xuất hiện ở các ca KHÔNG chốt được số tiền lúc gửi —
+ * thuê dài hạn, báo giá tạm tính, hoặc lịch vừa bị người khác chiếm.
+ *
+ * Spec này kiểm ĐỒNG HỒ của worker chứ không kiểm cách một yêu cầu rơi vào chặng đó, nên nó
+ * dựng thẳng bản ghi thay vì đi vòng qua một cấu hình mong manh. Cùng cách làm với ca
+ * "dài hạn LEGACY" ở `long-term-packages.spec.ts`.
+ */
+async function submitPendingApproval(vehicleId: string): Promise<string> {
+  const id = newId();
+  const window = nextWindow();
+  // Khách CÓ tài khoản: thông báo phía khách là một phần của luật mà spec này kiểm.
+  const customerId = newId();
+  await prisma.user.create({
+    data: {
+      id: customerId,
+      displayName: 'Khách hạn',
+      email: `dl-${customerId}@xeprime.test`,
+    },
+  });
+  await prisma.bookingRequest.create({
+    data: {
+      id,
+      tenantId,
+      vehicleId,
+      status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+      customerName: 'Nguyễn Văn A',
+      customerPhone: nextPhone(),
+      customerUserId: customerId,
+      pickupAt: new Date(window.pickupAt),
+      returnAt: new Date(window.returnAt),
+      respondBy: bookingRequestRespondBy(new Date()),
+    },
+  });
+  return id;
 }
 
 /** Đẩy hạn phản hồi của một yêu cầu về quá khứ — mô phỏng thời gian trôi mà không phải chờ. */
@@ -212,7 +262,7 @@ const maybe = (name: string, fn: () => Promise<void>) =>
     await fn();
   });
 
-describe('Gửi yêu cầu: hạn 60 phút, KHÔNG giữ lịch', () => {
+describe('Gửi yêu cầu: hạn 60 phút, GIỮ CHỖ ngay (ADR 0039)', () => {
   maybe('respondBy = createdAt + 60 phút, do server đặt', async () => {
     const vehicleId = await seedVehicle();
     const id = await submit(vehicleId);
@@ -222,7 +272,7 @@ describe('Gửi yêu cầu: hạn 60 phút, KHÔNG giữ lịch', () => {
       select: { createdAt: true, respondBy: true, status: true },
     });
 
-    expect(row.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
+    expect(row.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
     // So theo PHÚT: `created_at` do DB đặt còn `respond_by` do Node tính, hai đồng hồ lệch nhau
     // vài mili-giây là chuyện bình thường và không phải thứ test này nói về.
     const gapMinutes = (row.respondBy.getTime() - row.createdAt.getTime()) / MINUTE;
@@ -230,18 +280,23 @@ describe('Gửi yêu cầu: hạn 60 phút, KHÔNG giữ lịch', () => {
   });
 
   /**
-   * Luật quan trọng nhất của cả luồng: "chờ shop trả lời" KHÔNG phải "đã giữ xe". Nếu bước này
-   * chiếm lịch, hai khách hỏi cùng một xe sẽ chặn nhau ngay từ lúc gửi — và người thứ hai bị từ
-   * chối bởi một chỗ mà chưa ai được nhận.
+   * ⚠️ BẤT BIẾN NÀY ĐÃ ĐẢO CHIỀU Ở ADR 0039 — và đây là thay đổi lớn nhất của cả đợt.
+   *
+   * Luật cũ: "chờ shop trả lời" KHÔNG phải "đã giữ xe", nên gửi yêu cầu không chiếm lịch và hai
+   * khách cùng hỏi một xe đều gửi được. Cái giá của nó là người thứ hai có thể chờ hàng giờ rồi
+   * mới biết mình không có xe.
+   *
+   * Luật mới: khách TRẢ TIỀN trước, nên chỗ được giữ ngay lúc bấm. Cuộc đua chuyển lên sớm hơn —
+   * người thua biết ngay, thay vì biết sau khi đã chờ.
    */
-  maybe('yêu cầu chờ duyệt không tạo occupancy nào', async () => {
+  maybe('yêu cầu vừa gửi ĐÃ chiếm lịch — chỗ được giữ trong lúc khách trả tiền', async () => {
     const vehicleId = await seedVehicle();
     await submit(vehicleId);
 
-    expect(await countOccupancyFor(vehicleId)).toBe(0);
+    expect(await countOccupancyFor(vehicleId)).toBe(1);
   });
 
-  maybe('hai khách cùng hỏi một xe cùng khung giờ đều gửi được', async () => {
+  maybe('hai khách cùng hỏi một xe: người đầu giữ chỗ, người sau về hàng chờ', async () => {
     const vehicleId = await seedVehicle();
     const window = nextWindow();
     const send = (phone: string) =>
@@ -250,17 +305,25 @@ describe('Gửi yêu cầu: hạn 60 phút, KHÔNG giữ lịch', () => {
         null,
       );
 
-    await expect(send(nextPhone())).resolves.toBeTruthy();
-    await expect(send(nextPhone())).resolves.toBeTruthy();
-    expect(await countOccupancyFor(vehicleId)).toBe(0);
+    const first = await send(nextPhone());
+    const second = await send(nextPhone());
+
+    // Cả hai VẪN gửi được — không ai bị từ chối ở cửa, đó là luật không đổi.
+    expect(first.receipt.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    expect(second.receipt.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
+
+    // Nhưng chỗ chỉ có MỘT: constraint DB là trọng tài (ADR 0006).
+    expect(await countOccupancyFor(vehicleId)).toBe(1);
   });
 });
 
 describe('Duyệt & giữ xe', () => {
-  maybe('trong hạn → đơn reserved + occupancy, yêu cầu thành converted_to_booking', async () => {
+  maybe('trả tiền rồi duyệt → đơn reserved + occupancy, yêu cầu thành converted_to_booking', async () => {
     const vehicleId = await seedVehicle();
     const id = await submit(vehicleId);
 
+    // Tiền trước, duyệt sau (ADR 0039 điều 1): chưa trả thì chưa có gì để duyệt.
+    await payHoldForRequest(asService, holds, id);
     const approved = await requests.approve(tenantId, ownerId, id);
 
     expect(approved.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
@@ -288,7 +351,7 @@ describe('Duyệt & giữ xe', () => {
    */
   maybe('quá hạn → 409 BOOKING_REQUEST_EXPIRED, không tạo đơn, không giữ lịch', async () => {
     const vehicleId = await seedVehicle();
-    const id = await submit(vehicleId);
+    const id = await submitPendingApproval(vehicleId);
     await setRespondBy(id, new Date(Date.now() - MINUTE));
 
     await expect(requests.approve(tenantId, ownerId, id)).rejects.toMatchObject({
@@ -309,7 +372,7 @@ describe('Duyệt & giữ xe', () => {
 
   maybe('quá hạn → cũng không TỪ CHỐI được nữa', async () => {
     const vehicleId = await seedVehicle();
-    const id = await submit(vehicleId);
+    const id = await submitPendingApproval(vehicleId);
     await setRespondBy(id, new Date(Date.now() - MINUTE));
 
     await expect(requests.reject(tenantId, ownerId, id, 'Hết xe')).rejects.toMatchObject({
@@ -322,7 +385,7 @@ describe('Duyệt & giữ xe', () => {
 describe('Worker — nhắc và hết hạn', () => {
   maybe('nhắc lần 1 chỉ gửi MỘT lần dù quét bao nhiêu lượt', async () => {
     const vehicleId = await seedVehicle();
-    const id = await submit(vehicleId);
+    const id = await submitPendingApproval(vehicleId);
     // Còn đúng 40 phút = đã qua mốc nhắc lần 1 (phút 20), chưa tới mốc lần 2 (phút 45).
     await setRespondBy(id, new Date(Date.now() + 40 * MINUTE));
 
@@ -342,7 +405,7 @@ describe('Worker — nhắc và hết hạn', () => {
 
   maybe('nhắc lần 2 ở mốc còn 15 phút, và cũng chỉ một lần', async () => {
     const vehicleId = await seedVehicle();
-    const id = await submit(vehicleId);
+    const id = await submitPendingApproval(vehicleId);
     const remaining =
       BOOKING_REQUEST_RESPOND_WINDOW_MINUTES - BOOKING_REQUEST_REMINDER_MINUTES.FINAL;
     await setRespondBy(id, new Date(Date.now() + (remaining - 1) * MINUTE));
@@ -359,7 +422,7 @@ describe('Worker — nhắc và hết hạn', () => {
 
   maybe('hết hạn → expired + audit system + báo cả gian hàng lẫn khách', async () => {
     const vehicleId = await seedVehicle();
-    const id = await submit(vehicleId);
+    const id = await submitPendingApproval(vehicleId);
     await setRespondBy(id, new Date(Date.now() - MINUTE));
 
     await sweepBookingRequestDeadlines(prisma);
@@ -385,7 +448,7 @@ describe('Worker — nhắc và hết hạn', () => {
 
   maybe('chạy lại không expire lần hai và không gửi thêm thông báo', async () => {
     const vehicleId = await seedVehicle();
-    const id = await submit(vehicleId);
+    const id = await submitPendingApproval(vehicleId);
     await setRespondBy(id, new Date(Date.now() - MINUTE));
 
     await sweepBookingRequestDeadlines(prisma);
@@ -399,7 +462,7 @@ describe('Worker — nhắc và hết hạn', () => {
 
   maybe('yêu cầu còn hạn không bị đụng tới', async () => {
     const vehicleId = await seedVehicle();
-    const id = await submit(vehicleId);
+    const id = await submitPendingApproval(vehicleId);
 
     await sweepBookingRequestDeadlines(prisma);
 
@@ -419,7 +482,7 @@ describe('Đua giữa Duyệt & giữ xe và worker', () => {
    */
   maybe('chỉ một bên thắng, không có kết cục lai', async () => {
     const vehicleId = await seedVehicle();
-    const id = await submit(vehicleId);
+    const id = await submitPendingApproval(vehicleId);
     // Còn đúng một khoảnh khắc — đủ để `approve` đọc thấy "còn hạn" rồi mới ghi.
     await setRespondBy(id, new Date(Date.now() + 40));
 
@@ -444,13 +507,18 @@ describe('Đua giữa Duyệt & giữ xe và worker', () => {
      * của spec khác trên cùng database dev). Hai vế dưới đây loại trừ nhau tuyệt đối, nên chỉ
      * cần chúng khớp nhau là đủ để nói "đúng một bên thắng".
      */
+    /*
+     * Bên duyệt thắng ⇒ CHỜ TIỀN, chưa phải đơn thuê: cả sàn thu cọc từ 16/09/2026, nên lượt
+     * duyệt của gian hàng sinh hold và chốt lịch chứ không mở đơn (ADR 0039 điều 4 — chặng chờ
+     * duyệt tay là ngoại lệ giữ thứ tự duyệt-trước-cọc-sau).
+     */
     expect(row.status).toBe(
-      approved ? BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING : BOOKING_REQUEST_STATUS.EXPIRED,
+      approved ? BOOKING_REQUEST_STATUS.AWAITING_HOLD : BOOKING_REQUEST_STATUS.EXPIRED,
     );
 
     if (approved) {
-      expect(row.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
-      expect(row.bookingId).toBeTruthy();
+      expect(row.bookingId).toBeNull();
+      // Chỗ vẫn bị giữ — chỉ là giữ bởi YÊU CẦU đang chờ tiền, chưa phải bởi một đơn.
       expect(await countOccupancyFor(vehicleId)).toBe(1);
     } else {
       expect(row.status).toBe(BOOKING_REQUEST_STATUS.EXPIRED);
@@ -463,7 +531,7 @@ describe('Đua giữa Duyệt & giữ xe và worker', () => {
 
   maybe('worker thắng rồi thì duyệt sau đó luôn bị từ chối', async () => {
     const vehicleId = await seedVehicle();
-    const id = await submit(vehicleId);
+    const id = await submitPendingApproval(vehicleId);
     await setRespondBy(id, new Date(Date.now() - MINUTE));
     await sweepBookingRequestDeadlines(prisma);
 

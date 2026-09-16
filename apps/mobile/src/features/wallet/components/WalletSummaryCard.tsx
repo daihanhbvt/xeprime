@@ -60,14 +60,14 @@ export function WalletSummaryCard({
           <Text col={colors.textMuted} fos={fontSize.label}>
             {t('balance.available')}
           </Text>
-          <XStack ai="baseline" gap={space.xs}>
-            <Text col={colors.price} fos={fontSize.h2} fow={fontWeight.bold}>
-              {fmt.money(data.available)}
-            </Text>
-            <Text col={colors.textMuted} fos={fontSize.label}>
-              {t('unit')}
-            </Text>
-          </XStack>
+          {/*
+            Số dư hiển thị thẳng bằng VND (16/09/2026): đơn vị "điểm" và dòng chú thích
+            "1 điểm = 1đ · không hết hạn" đã bỏ khỏi cả hai client cùng lúc — chúng đọc chung
+            một bó message, nên bỏ ở một bên là để bên kia nói một điều đã thôi đúng.
+          */}
+          <Text col={colors.price} fos={fontSize.h2} fow={fontWeight.bold}>
+            {fmt.money(data.available)}
+          </Text>
         </YStack>
 
         <Divider />
@@ -79,16 +79,6 @@ export function WalletSummaryCard({
 
         {onWithdraw ? (
           <Button label={t('withdraw.action')} disabled={!canWithdraw} onPress={onWithdraw} />
-        ) : null}
-
-        <Text col={colors.placeholder} fos={fontSize.label}>
-          {t('legalNote')}
-        </Text>
-
-        {Number(data.total) === 0 ? (
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {t('empty')}
-          </Text>
         ) : null}
       </YStack>
     </Card>

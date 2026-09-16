@@ -12,30 +12,56 @@
 }
 
 /*
+ * Hộp bọc ô số + đơn vị "đ".
+ *
+ * Đơn vị nằm NGOÀI `<input>` chứ không dán vào giá trị: dán vào thì mỗi lần gõ phải cắt nó ra
+ * lại, và con trỏ nhảy về cuối sau mỗi phím. Hộp mang viền và trạng thái focus thay cho ô.
+ */
+.amountBox {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-layout);
+}
+
+.amountBox:focus-within {
+  border-color: var(--xp-color-primary);
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-focus-ring);
+}
+
+/*
  * Ô nhập thô thay vì `NumberField` của RHF: dialog này không dùng react-hook-form (hai trường,
  * một trong hai là radio), và mượn một form runtime chỉ để có một ô số là đắt hơn giá trị.
  */
 .input {
-  width: 100%;
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-md);
-  background: var(--xp-color-bg-container);
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
   font-variant-numeric: tabular-nums;
 }
 
 .input:focus-visible {
-  outline: 2px solid var(--xp-color-primary);
-  outline-offset: 1px;
+  outline: none;
+}
+
+.currency {
+  flex: none;
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-semibold);
 }
 
 .hint {
   display: block;
-  margin-top: var(--xp-space-xxs);
+  margin-top: var(--xp-space-xs);
   color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-caption);
+  font-size: var(--xp-font-size-label);
 }
 
 .group {
@@ -47,17 +73,50 @@
 
 .option {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   padding: var(--xp-space-sm) var(--xp-space-md);
   border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius-lg);
 }
 
+/* Thẻ đang chọn phải nhìn ra được mà không cần soi vào nút radio — đây là ĐÍCH của một lệnh chi. */
+.option:has(:global(.ant-radio-checked)) {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+}
+
 .option :global(.ant-radio + *) {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+  width: 100%;
+}
+
+.accountText {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+}
+
+/*
+ * Biểu trưng ngân hàng dựng từ chính MÃ, không tải logo: logo ngân hàng là tài sản có bản
+ * quyền, và một ô chữ đọc ra ngay ("VCB") thì không phải chờ tải ảnh.
+ */
+.badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-text);
+  color: var(--xp-color-bg-container);
+  font-size: var(--xp-font-size-label);
+  font-weight: var(--xp-font-weight-bold);
+  letter-spacing: 0.02em;
 }
 
 .bank {
@@ -70,18 +129,50 @@
   font-variant-numeric: tabular-nums;
 }
 
-.link {
-  margin-top: var(--xp-space-sm);
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--xp-color-primary);
+.holder {
+  color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body-sm);
+  text-transform: uppercase;
+}
+
+/**
+ * Lối THÊM tài khoản nhận — một ô bấm được, không phải một dòng liên kết nhỏ.
+ *
+ * Khi chưa có tài khoản nào thì đây là bước BẮT BUỘC để rút được tiền, nên nó phải to bằng
+ * những thẻ tài khoản mà nó sẽ trở thành. Không dùng biểu tượng cây bút: sửa một tài khoản đã
+ * lưu là điều `BankAccountForm` cố ý không cho (đổi số tài khoản tại chỗ sẽ âm thầm đổi đích của
+ * những lệnh chuyển đang chờ), và một cây bút hứa đúng điều đó.
+ */
+.addAccount {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  width: 100%;
+  margin-top: var(--xp-space-sm);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px dashed var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-lg);
+  background: none;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  text-align: left;
   cursor: pointer;
 }
 
-.link:hover {
-  text-decoration: underline;
+.addAccount:hover {
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-primary-active);
+}
+
+.addIcon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-layout);
 }
 
 /* Cam kết thời gian phải nằm ngay trên nút gửi — đọc được TRƯỚC khi bấm, không phải sau. */

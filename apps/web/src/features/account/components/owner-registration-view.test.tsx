@@ -1,7 +1,12 @@
 import { App } from 'antd';
 import { cleanup, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PERMISSION, SHOP_VERIFICATION, TENANT_STATUS, VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
+import {
+  PERMISSION,
+  SHOP_VERIFICATION,
+  TENANT_STATUS,
+  VEHICLE_PUBLIC_STATUS,
+} from '@xeprime/types';
 
 import { renderWithIntl } from '@/i18n/test-utils';
 
@@ -36,6 +41,45 @@ vi.mock('@/features/shop/hooks/use-shop', () => ({
   useSubmitShopReview: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 vi.mock('@/features/vehicles/hooks/use-vehicles', () => ({ useVehicles: () => vehicles }));
+
+/*
+ * `OwnerRegistrationView` gọi `useRouter()`, và `next/navigation` ném "app router to be mounted"
+ * ngoài một App Router thật. `replace` là một spy THẬT vì cổng tuyến gói (ADR 0040) được kiểm
+ * bằng chính lời gọi đó.
+ */
+const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => router,
+  usePathname: () => '/account/registration',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+/*
+ * Màn này đọc `/auth/me` để biết chủ xe đang ở TUYẾN nào. Chặn ở tầng hook — bộ này kiểm thanh
+ * bước, không kiểm cách lấy dữ liệu, và dựng một QueryClient chỉ để trả về một object là thêm
+ * một lớp không nói gì thêm.
+ *
+ * `tenant` LÁI ĐƯỢC vì trục đăng ký (ADR 0040) quyết định màn này có được dựng hay không.
+ */
+const scope = vi.hoisted(() => ({
+  tenant: {
+    id: 't1',
+    name: 'Nguyễn Văn A',
+    roleKey: 'shop_owner',
+    onboardingState: 'commission',
+    billingMode: 'commission',
+  } as Record<string, unknown> | null,
+}));
+vi.mock('@/hooks/use-current-user', () => ({
+  useCurrentUser: () => ({
+    data: {
+      id: '01HUSER000000000000000000',
+      displayName: 'Nguyễn Văn A',
+      tenant: scope.tenant,
+    },
+    isLoading: false,
+  }),
+}));
 
 vi.mock('@/hooks/use-permissions', () => ({
   usePermissions: () => ({
@@ -77,11 +121,20 @@ function makeShop(over: Record<string, unknown> = {}) {
       address: null,
       needsLocationReview: false,
     },
+    /*
+     * Chủ gian hàng đọc từ TÀI KHOẢN (16/09/2026): ba cột `tenant_profiles.owner_*` đã drop, và
+     * thẻ tiến trình chấm "hồ sơ đủ chưa" bằng đúng nguồn mà cổng gửi duyệt ở backend dùng.
+     */
+    ownerAccount: {
+      userId: '01HUSER000000000000000000',
+      displayName: 'Nguyễn Văn A',
+      email: null,
+      phone: '84901234567',
+      emailVerified: false,
+      phoneVerified: true,
+    },
     profile: {
       displayName: 'Nguyễn Văn A',
-      ownerFullName: 'Nguyễn Văn A',
-      ownerPhone: '84901234567',
-      ownerEmail: null,
       provinceCode: '79',
       provinceName: 'Hồ Chí Minh',
       bio: null,
@@ -92,10 +145,6 @@ function makeShop(over: Record<string, unknown> = {}) {
       wardName: null,
       taxCode: null,
       businessLicenseNo: null,
-      bankName: null,
-      bankAccountNo: null,
-      bankAccountName: null,
-      qrUrl: null,
     },
     ...over,
   };
@@ -129,6 +178,14 @@ beforeEach(() => {
   shop.isLoading = false;
   shop.isError = false;
   vehicles.data = { items: [] };
+  router.replace.mockReset();
+  scope.tenant = {
+    id: 't1',
+    name: 'Nguyễn Văn A',
+    roleKey: 'shop_owner',
+    onboardingState: 'commission',
+    billingMode: 'commission',
+  };
 });
 
 afterEach(cleanup);
@@ -183,8 +240,9 @@ describe('Tiến trình đăng ký — một cổng duyệt', () => {
    * với ADR 0036 nó sẽ luôn xanh và màn hình không còn nói được hồ sơ thiếu gì.
    */
   it('hồ sơ thiếu mục bắt buộc: bước hồ sơ CHƯA xong', () => {
+    // Thiếu SĐT nghĩa là TÀI KHOẢN CHỦ chưa có số — cổng đọc `users`, không đọc hồ sơ.
     shop.data = makeShop({
-      profile: { ...(makeShop().profile as Record<string, unknown>), ownerPhone: null },
+      ownerAccount: { ...makeShop().ownerAccount, phone: null },
     });
     render();
 
@@ -222,5 +280,50 @@ describe('Quyền', () => {
     render();
     expect(screen.getByTestId('shop-profile-workspace')).toBeTruthy();
     expect(PERMISSION.TENANT_VIEW).toBeTruthy();
+  });
+});
+
+/**
+ * GIAN HÀNG TRẢ PHÍ KHÔNG BAO GIỜ THẤY MÀN NÀY (ADR 0040).
+ *
+ * `resolveWorkspaceHref` đã không dẫn họ tới đây, nhưng route vẫn gõ tay được — và một gian hàng
+ * vừa hết gói thì `resolveOwnerStage` chấm là `registering` ngay khi chiếc xe cuối rời chợ, nên
+ * `OwnerGate` cho họ qua. Màn này kể một câu chuyện ba bước dành cho người CHƯA bắt đầu ("Hồ sơ
+ * chủ xe → Đăng xe đầu tiên → Lên chợ"); với một gian hàng 10 xe vừa cần gia hạn thì đó là câu
+ * chuyện sai hoàn toàn.
+ */
+describe('Cổng tuyến gói', () => {
+  it('gian hàng đã từng trả tiền: điều hướng đi, KHÔNG dựng thanh bước', () => {
+    scope.tenant = {
+      id: 't1',
+      name: 'Gian hàng A',
+      roleKey: 'shop_owner',
+      onboardingState: 'package_active',
+      // Gói ĐÃ HẾT HẠN — đây chính là ca mà `OwnerGate` cho qua.
+      billingMode: 'commission',
+    };
+
+    renderWithIntl(
+      <App>
+        <OwnerRegistrationView />
+      </App>,
+    );
+
+    expect(router.replace).toHaveBeenCalledTimes(1);
+    expect(router.replace.mock.calls[0]![0]).toContain('/vehicles');
+    // Không một chữ nào của wizard đăng ký được dựng ra.
+    expect(screen.queryByTestId('shop-profile-workspace')).toBeNull();
+    expect(screen.queryByText(/Hồ sơ chủ xe/)).toBeNull();
+  });
+
+  it('chủ xe tuyến hoa hồng: dựng bình thường, không điều hướng', () => {
+    renderWithIntl(
+      <App>
+        <OwnerRegistrationView />
+      </App>,
+    );
+
+    expect(router.replace).not.toHaveBeenCalled();
+    expect(screen.getByTestId('shop-profile-workspace')).toBeTruthy();
   });
 });

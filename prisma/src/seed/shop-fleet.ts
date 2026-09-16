@@ -378,7 +378,8 @@ async function buildVehicleDocuments(
       const docFields = {
         type: plan.type,
         documentNumber: `${plan.type.slice(0, 3).toUpperCase()}-${unit.plate.replace(/[^0-9]/g, '')}`,
-        holderName: spec.profile.ownerFullName,
+        // Chủ đứng tên giấy tờ xe = CHỦ GIAN HÀNG, đọc từ tài khoản của họ (`spec.owner`).
+        holderName: spec.owner.displayName,
         holderAddress: spec.profile.address,
         plateNumber: unit.plate,
         chassisNumber: `RL4${String(100000 + unit.index * 997).slice(0, 6)}VN${unit.index}`,

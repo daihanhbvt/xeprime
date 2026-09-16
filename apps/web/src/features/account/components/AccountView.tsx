@@ -18,6 +18,7 @@ import { accountProfileSchema, type AccountProfileValues } from '@xeprime/valida
 import { ImageUploadField } from '@/components/form/ImageUploadField';
 import { TextField } from '@/components/form/TextField';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { WalletBalancePill } from '@/features/wallet/components/WalletBalancePill';
 import { getErrorMessage } from '@/services/api-client';
 import { presignAvatar } from '@/services/upload';
 import { useMyProfile, useUpdateMyProfile } from '../hooks/use-account';
@@ -134,13 +135,22 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
             <h1 className={styles.title}>{t('profile.title')}</h1>
             <p className={styles.description}>{t('profile.description')}</p>
           </div>
-          <Button
-            icon={<EditOutlined />}
-            onClick={() => setIsEditing(true)}
-            disabled={isEditing || update.isPending}
-          >
-            {t('profile.edit')}
-          </Button>
+          {/*
+            Góc phải: sửa hồ sơ, rồi tới lối tắt SỐ DƯ.
+            Tiền đứng ở đây vì nó là câu hỏi người dùng mang theo khi mở trang tài khoản, và
+            trước đợt này họ phải cuộn hết thẻ hồ sơ mới thấy con số. Viên thuốc chỉ nói MỘT con
+            số và mở màn số dư đầy đủ — ba con số, sổ và lệnh rút vẫn ở đúng một chỗ.
+          */}
+          <div className={styles.cardHeadActions}>
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => setIsEditing(true)}
+              disabled={isEditing || update.isPending}
+            >
+              {t('profile.edit')}
+            </Button>
+            <WalletBalancePill />
+          </div>
         </div>
 
         <div className={styles.profileGrid}>

@@ -91,6 +91,14 @@ export const NOTIFICATION_TYPE = {
   HOLD_EXPIRING: 'hold_expiring',
   /** Quá hạn chuyển giữ chỗ, chỗ đã nhả — cả hai bên. Worker phát. */
   HOLD_EXPIRED: 'hold_expired',
+  /**
+   * Chuyến KHÔNG THÀNH sau khi khách đã trả giữ chỗ — tiền đã được hoàn (ADR 0039 điều 5).
+   *
+   * Khác `HOLD_EXPIRED` (khách chưa trả đồng nào, không có gì để hoàn) và khác
+   * `HOLD_REFUND_PAID` (admin đã chuyển khoản trả xong). Đây là mốc ở GIỮA: nghĩa vụ hoàn đã
+   * phát sinh và đã ghi có ví, còn tiền mặt thì tuỳ khách có tài khoản hay không.
+   */
+  HOLD_REFUNDED: 'hold_refunded',
   /** Admin đã chuyển trả khoản giữ chỗ — khách. */
   HOLD_REFUND_PAID: 'hold_refund_paid',
 
@@ -242,6 +250,10 @@ export const NOTIFICATION_TYPE_META: Readonly<Record<NotificationType, Notificat
     color: STATUS_COLOR.WARNING,
   },
   [NOTIFICATION_TYPE.HOLD_EXPIRED]: { label: 'Hết hạn giữ chỗ', color: STATUS_COLOR.NEUTRAL },
+  [NOTIFICATION_TYPE.HOLD_REFUNDED]: {
+    label: 'Chuyến không thành — đã hoàn',
+    color: STATUS_COLOR.NEUTRAL,
+  },
   [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: { label: 'Đã hoàn giữ chỗ', color: STATUS_COLOR.SUCCESS },
   // R3 — hồ sơ người bán
   [NOTIFICATION_TYPE.SELLER_PROFILE_VERIFIED]: {

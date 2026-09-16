@@ -1,5 +1,5 @@
 import { newId } from '@xeprime/prisma';
-import { APPROVAL_STATUS, APPROVAL_TARGET_TYPE, BRANCH_STATUS } from '@xeprime/types';
+import { BRANCH_STATUS } from '@xeprime/types';
 import { ConfigService } from '@nestjs/config';
 import { AuditService } from '../../src/modules/audit/audit.service';
 import { BookingHoldsService } from '../../src/modules/holds/booking-holds.service';
@@ -171,6 +171,12 @@ export function makeBookingRequestsService(
     pricing?: PricingService;
     customers?: CustomersService;
     settings?: VehicleSettingsService;
+    /**
+     * Truyền vào để spec chạy luật HAI TRỤC. Phải đi CÙNG `pricing` dựng từ chính instance đó —
+     * `commitDecision` đóng băng con số do `pricing` tính, nên hai bên lệch nhau là một đơn có
+     * `deposit_collection_mode` không khớp với số tiền của chính nó.
+     */
+    depositPolicy?: DepositPolicyService;
   },
 ): BookingRequestsService {
   const audit = stubs.audit ?? new AuditService(prisma);
@@ -187,7 +193,7 @@ export function makeBookingRequestsService(
     stubs.customers ?? makeCustomersService(prisma, audit),
     makeBookingHoldsService(prisma),
     stubs.settings ?? makeVehicleSettingsService(prisma),
-    makeDepositPolicyService(prisma),
+    stubs.depositPolicy ?? makeDepositPolicyService(prisma),
     makeAddressService(prisma),
   );
 }
@@ -197,8 +203,18 @@ export function makeBookingRequestsService(
  * và `tenant_payment_settings`, và chính hai lượt đọc đó là thứ spec cần kiểm. Thay bằng stub là
  * kiểm một chính sách cọc không tồn tại trong production.
  */
-export function makeDepositPolicyService(prisma: PrismaService): DepositPolicyService {
-  return new DepositPolicyService(prisma, makeBillingService(prisma), new AuditService(prisma));
+export function makeDepositPolicyService(
+  prisma: PrismaService,
+  /**
+   * `platformMandatory: false` dựng bản áp luật HAI TRỤC của ADR 0027 điều 2 — luật sẽ sống
+   * lại khi giai đoạn cả sàn thu cọc kết thúc. Bỏ trống = đúng hành vi production.
+   */
+  overrides: { platformMandatory?: boolean } = {},
+): DepositPolicyService {
+  const deps = [prisma, makeBillingService(prisma), new AuditService(prisma)] as const;
+  return overrides.platformMandatory === undefined
+    ? new DepositPolicyService(...deps)
+    : new DepositPolicyService(...deps, overrides.platformMandatory);
 }
 
 /**
@@ -210,13 +226,18 @@ export function makeDepositPolicyService(prisma: PrismaService): DepositPolicySe
  */
 export function makePricingService(
   prisma: PrismaService,
-  overrides: { listings?: ListingsService } = {},
+  /**
+   * `depositPolicy` để spec chạy được luật HAI TRỤC (giai đoạn cả sàn thu cọc tắt): báo giá và
+   * đường duyệt phải dùng CÙNG một instance, nếu không hai bên trả lời khác nhau về cùng một
+   * gian hàng và spec kiểm một tổ hợp không tồn tại.
+   */
+  overrides: { listings?: ListingsService; depositPolicy?: DepositPolicyService } = {},
 ): PricingService {
   return new PricingService(
     prisma,
     new AuditService(prisma),
     overrides.listings ?? new ListingsService(prisma),
-    makeDepositPolicyService(prisma),
+    overrides.depositPolicy ?? makeDepositPolicyService(prisma),
     new FeePoliciesService(prisma, new AuditService(prisma)),
   );
 }
@@ -390,16 +411,45 @@ export async function seedProvince(
 
 export async function seedBranch(
   prisma: PrismaService,
-  input: { tenantId: string; provinceCode?: string; isDefault?: boolean; status?: string },
+  input: {
+    tenantId: string;
+    provinceCode?: string;
+    isDefault?: boolean;
+    status?: string;
+    /** Bỏ trống ⇒ lấy xã ĐẦU TIÊN của tỉnh từ danh mục thật (migration đã nạp). */
+    wardCode?: string | null;
+    addressLine?: string | null;
+    phone?: string | null;
+  },
 ): Promise<string> {
   const id = newId();
+  const provinceCode = input.provinceCode ?? '79';
+  /*
+   * Chi nhánh mặc định sinh ra ĐỦ ĐỊA CHỈ và có SĐT, đúng như `createDefaultBranch` ở production.
+   *
+   * Không phải trang trí: từ ADR 0040, cổng đăng xe của gian hàng TUYẾN GÓI đọc xã/số nhà/SĐT
+   * TỪ CHI NHÁNH MẶC ĐỊNH. Một fixture chi nhánh chỉ có tỉnh đang mô tả một trạng thái mà luồng
+   * đăng ký không tạo ra được, và nó làm spec đỏ ở một cổng chẳng liên quan gì tới thứ nó kiểm.
+   *
+   * Xã lấy từ danh mục THẬT thay vì gõ tay một mã: FK tổ hợp `(ward_code, province_code)` sẽ
+   * bác bỏ một mã không thuộc tỉnh, và mã hành chính có đổi theo danh mục.
+   */
+  const ward =
+    input.wardCode === undefined
+      ? await prisma.ward.findFirst({ where: { provinceCode }, select: { code: true } })
+      : input.wardCode === null
+        ? null
+        : { code: input.wardCode };
   await prisma.tenantBranch.create({
     data: {
       id,
       tenantId: input.tenantId,
       code: `CN${id.slice(-4)}`,
       name: 'Chi nhánh test',
-      provinceCode: input.provinceCode ?? '79',
+      provinceCode,
+      wardCode: ward?.code ?? null,
+      addressLine: input.addressLine === undefined ? '12 Đường Test' : input.addressLine,
+      phone: input.phone === undefined ? '0900000000' : input.phone,
       isDefault: input.isDefault ?? true,
       status: input.status ?? BRANCH_STATUS.ACTIVE,
     },
@@ -408,32 +458,26 @@ export async function seedBranch(
 }
 
 /**
- * Đánh dấu một gian hàng ĐÃ ĐƯỢC XÁC MINH — điều kiện để mua gói thuê bao (ADR 0036).
+ * MẶT TIỀN gian hàng tuyến gói — tên hiển thị + logo (ADR 0040 điều 7).
  *
- * Trục xác minh đọc từ phiếu `approval_tasks` loại `tenant` mới nhất (`resolveShopVerification`),
- * không từ một cột, nên "gian hàng đã xác minh" trong fixture là MỘT PHIẾU ĐÃ DUYỆT — đúng thứ
- * production có. Dựng tay ở đây thay vì chạy trọn vòng gửi-rồi-duyệt: những spec gọi hàm này
- * đang kiểm chuyện TIỀN (đối soát ngân hàng, hoá đơn gói), và kéo cả vòng duyệt vào là buộc
- * chúng hỏng mỗi lần quy trình duyệt đổi một chi tiết không liên quan.
+ * Cặp với `seedBranch`: hai hàm cùng dựng đủ sáu mục của
+ * `missingPackageShopListingRequirements`, nên một spec về VÒNG DUYỆT XE không phải đi qua cổng
+ * hồ sơ gian hàng để tới được thứ nó đang kiểm.
  *
- * @param reviewerUserId Người duyệt. Cùng người gửi cũng được — cột này chỉ để hàng đợi có tên.
+ * `upsert` vì tenant tạo qua `prisma.tenant.create` trần chưa có hồ sơ.
  */
-export async function verifyShop(
+export async function giveShopStorefront(
   prisma: PrismaService,
   tenantId: string,
-  reviewerUserId: string,
+  input: { displayName?: string; logoUrl?: string } = {},
 ): Promise<void> {
-  const now = new Date();
-  await prisma.approvalTask.create({
-    data: {
-      id: newId(),
-      tenantId,
-      targetType: APPROVAL_TARGET_TYPE.TENANT,
-      targetId: tenantId,
-      status: APPROVAL_STATUS.APPROVED,
-      submittedBy: reviewerUserId,
-      reviewedBy: reviewerUserId,
-      reviewedAt: now,
-    },
+  const data = {
+    displayName: input.displayName ?? 'Gian hàng test',
+    logoUrl: input.logoUrl ?? 'https://img.example/logo.png',
+  };
+  await prisma.tenantProfile.upsert({
+    where: { tenantId },
+    create: { tenantId, ...data },
+    update: data,
   });
 }

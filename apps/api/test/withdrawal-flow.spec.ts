@@ -79,7 +79,11 @@ const maybe = (name: string, fn: () => Promise<void>) =>
 describe('Tạo yêu cầu rút', () => {
   maybe('dưới mức tối thiểu bị từ chối — nói rõ con số, không chỉ "không hợp lệ"', async () => {
     await expect(
-      withdrawals.create(owner(), userId, { amount: '10000', bankAccountId: accountId }),
+      /* Suy từ HẰNG SỐ, không gõ một con số: hạ sàn rút thì ca này phải đi theo, không đỏ lên. */
+      withdrawals.create(owner(), userId, {
+        amount: String(WITHDRAWAL_TERMS.MIN_AMOUNT - 1),
+        bankAccountId: accountId,
+      }),
     ).rejects.toMatchObject({
       response: {
         code: 'WITHDRAWAL_BELOW_MINIMUM',

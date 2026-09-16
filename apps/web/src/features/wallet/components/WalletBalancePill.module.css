@@ -1,0 +1,91 @@
+/**
+ * Lối tắt số dư ở góc hồ sơ.
+ *
+ * Một viên thuốc trắng nổi trên nền trang: nó phải nhặt ra được bằng mắt giữa một thẻ hồ sơ đầy
+ * chữ, vì đây là thứ duy nhất trên trang nói về TIỀN.
+ */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  max-width: 100%;
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+}
+
+/**
+ * Nút ẩn/hiện — một `<button>` thật, không phải biểu tượng trang trí.
+ *
+ * Vùng chạm đạt tối thiểu của sản phẩm: nó nằm sát một liên kết, và hai đích bấm dính nhau là
+ * cách một người định giấu số dư lại mở nhầm cả màn sổ.
+ */
+.eye {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--xp-touch-target-min);
+  height: var(--xp-touch-target-min);
+  margin: calc(var(--xp-space-xs) * -1) 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--xp-border-radius-pill);
+  background: none;
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+}
+
+.eye:hover {
+  color: var(--xp-color-text);
+}
+
+.eye:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-primary);
+  outline-offset: 1px;
+}
+
+.link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+  color: var(--xp-color-text);
+}
+
+.link:hover .amount {
+  text-decoration: underline;
+}
+
+.link:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-primary);
+  outline-offset: 2px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.label {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  white-space: nowrap;
+}
+
+/*
+ * Con số mang sắc gold đậm của giá và `tabular-nums`: bật/tắt chế độ che không được làm viên
+ * thuốc đổi bề rộng và đẩy nút bên cạnh nhảy chỗ.
+ */
+.amount {
+  color: var(--xp-color-price);
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.chevron {
+  flex: none;
+  align-self: center;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}

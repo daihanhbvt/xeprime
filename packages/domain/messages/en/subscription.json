@@ -1,6 +1,6 @@
 {
   "page": {
-    "title": "My plan",
+    "title": "Plan & invoices",
     "loadError": "Couldn't load your plan",
     "accountSubtitle": "Your current plan, slot limits, and what an upgrade unlocks."
   },
@@ -9,7 +9,7 @@
     "none": "No plan yet — this shop is on the per-trip commission track.",
     "noneHint": "Buy a slot-based plan to stop paying per trip.",
     "expires": "Expires {date}",
-    "commissionSummary": "{percent}% commission per trip, collected through the guest's reservation hold.",
+    "commissionSummary": "A per-trip service fee applies under the platform's current fee policy, collected from what the guest pays upfront.",
     "packageSummary": "Prepaid per vehicle slot — nothing charged per trip.",
     "slotsSummary": "{car} car slots · {motorbike} motorbike slots",
     "purchaseButton": "Buy a plan",
@@ -24,7 +24,8 @@
     "fleet": "Fleet",
     "onMarketplace": "On the marketplace",
     "ofLimit": "{used} / {limit}",
-    "unlimited": "Unlimited"
+    "unlimited": "Unlimited",
+    "atLimit": "No slots left: {kinds}. Upgrade your plan to list more vehicles."
   },
   "freeTrips": {
     "title": "Free trips",
@@ -41,8 +42,8 @@
     "upgradeCta": "See higher plans"
   },
   "invoices": {
-    "title": "Invoice history",
-    "empty": "No invoices yet",
+    "title": "Payment invoices",
+    "empty": "No invoices yet.",
     "loadError": "Couldn't load the invoice history",
     "columns": {
       "code": "Reference code",
@@ -51,7 +52,9 @@
       "status": "Status",
       "createdAt": "Created"
     },
-    "copyCode": "Copy reference code"
+    "copyCode": "Copy reference code",
+    "emptyHint": "Invoices for buying or renewing a plan will appear here.",
+    "showHistory": "View payment history"
   },
   "purchase": {
     "slotsTitle": "Vehicle slots to buy",
@@ -93,6 +96,12 @@
     "accountName": "Account holder",
     "copyAccount": "Copy account number",
     "autoActivateNote": "The plan activates automatically once the money arrives — you can close this page; we will notify you.",
-    "pendingTitle": "Invoice awaiting bank transfer"
+    "pendingTitle": "Invoice awaiting payment"
+  },
+  "term": {
+    "label": "Term",
+    "daysLeft": "{days, plural, one {# day left} other {# days left}}",
+    "grace": "In grace period",
+    "lapsed": "Expired"
   }
 }

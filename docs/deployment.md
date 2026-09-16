@@ -456,6 +456,39 @@ unset PW_ADMIN PW_DEMO
 > giả ngay trong database thật. `prisma/src/seed/context.ts` đã chặn sẵn (`NODE_ENV=production`
 > + `SEED_MODE=demo` ⇒ từ chối chạy), nhưng đừng đi tìm cách vòng qua nó.
 
+#### Dựng lại database STAGING từ đầu
+
+Khi dữ liệu staging đã lệch quá xa bản khai seed (gian hàng đăng ký thử, thuê bao trỏ tới gói đã
+bỏ, dữ liệu của một đời seed cũ), cách rẻ nhất là xoá sạch rồi dựng lại. **Chỉ staging** — lệnh
+này trên production là mất dữ liệu khách hàng.
+
+```bash
+cd /opt/xeprime
+export XP_ENV_FILE=.env.staging
+COMPOSE=(docker compose -p xeprime-staging -f docker-compose.prod.yml --env-file .env.staging)
+export XP_IMAGE="$("${COMPOSE[@]}" ps -a --format '{{.Image}}' api | head -1)"
+
+./deploy/scripts/backup-db.sh --env staging          # 1. có bản lùi trước đã
+"${COMPOSE[@]}" stop api web worker                  # 2. không ai ghi vào giữa chừng
+"${COMPOSE[@]}" exec -T db psql -U xeprime -d xeprime -v ON_ERROR_STOP=1 \
+  -c 'DROP SCHEMA public CASCADE;' -c 'CREATE SCHEMA public;' \
+  -c 'GRANT ALL ON SCHEMA public TO xeprime;' -c 'GRANT ALL ON SCHEMA public TO public;'
+"${COMPOSE[@]}" --profile tools run --rm migrate      # 3. dựng lại toàn bộ schema
+# 4. seed demo — xem khối lệnh ở trên (SEED_MODE=demo + hai mật khẩu)
+"${COMPOSE[@]}" up -d api web worker                  # 5. bật lại
+```
+
+Ba chỗ vấp đã biết:
+
+| Vấp | Vì sao |
+| --- | --- |
+| `env file /opt/xeprime/.env.production not found` | Thiếu `export XP_ENV_FILE=.env.staging`. `--env-file` chỉ nội suy biến trong compose file; `env_file:` của service đọc biến này |
+| `prisma migrate reset --skip-seed` in ra trang trợ giúp | Prisma 7 bỏ cờ đó. Dùng `DROP SCHEMA` + `migrate deploy` như trên, hoặc chấp nhận reset chạy luôn seed |
+| Chạy qua `ssh … 'bash -s' <<EOF`: script dừng giữa chừng không báo lỗi | `docker compose exec -T` và `run` ĐỌC STDIN, nuốt nốt phần script còn lại. Thêm `< /dev/null` vào mọi lệnh docker |
+
+Sau khi xong, kiểm chứng từ ngoài: `curl -s https://api-stg.xeprime.vn/public/listings?limit=1`
+phải trả `meta.total` bằng số tin đăng seed vừa in ra.
+
 Tài khoản quản trị đầu tiên: đăng ký qua giao diện rồi gán `platform_admin` bằng SQL
 (`docker compose ... exec db psql -U xeprime -d xeprime`).
 

@@ -3,11 +3,14 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
+  AUTO_ACCEPT_BLOCKER,
   BANK_DIRECTION,
   BANK_MATCH_STATUS,
   BANK_MATCH_TARGET_TYPE,
+  BOOKING_HOLD_OUTCOME,
   BOOKING_HOLD_PURPOSE,
   BOOKING_HOLD_STATUS,
+  BOOKING_REQUEST_DECISION_SOURCE,
   BOOKING_REQUEST_STATUS,
   DEPOSIT_COLLECTION_MODE,
   FEE_BEARER,
@@ -20,16 +23,21 @@ import {
   NOTIFICATION_TYPE,
   OCCUPANCY_SOURCE_TYPE,
   PRICE_ROW,
+  SERVICE_TYPE,
   SUPPORT_CASE_CATEGORY,
   SUPPORT_CASE_STATUS_OPEN,
   TAX_WITHHOLDING_STATUS_UNPAID,
   WITHDRAWAL_STATUS,
+  HOLD_MIN_USABLE_WINDOW_MINUTES,
+  bookingRequestRespondBy,
   holdExpiresAt,
   holdFreeCancelUntil,
   isHoldPastDue,
   maskAccountNumber,
   type AuditActorScope,
+  type AutoAcceptBlocker,
   type BookingPriceSnapshot,
+  type ServiceType,
   type FeeLineKey,
   type RentalTermsSnapshot,
   type PaginationMeta,
@@ -71,7 +79,12 @@ export type HoldPaymentOutcome =
   | { outcome: 'hold_closed'; holdId: string; tenantId: string; status: string }
   | { outcome: 'partial'; holdId: string; tenantId: string; paid: string; amount: string }
   | { outcome: 'already_paid'; holdId: string; tenantId: string }
-  | { outcome: 'activated'; holdId: string; tenantId: string; bookingId: string };
+  /**
+   * Tiền đã ĐỦ. `bookingId` là `null` khi chuyến còn chờ chủ xe xác nhận — từ ADR 0039 đó là
+   * đường MẶC ĐỊNH, không phải lỗi: tiền đi trước, người nhận chuyến đến sau. Chỉ xe bật
+   * "Đặt ngay" mới có đơn ngay tại lượt trả tiền.
+   */
+  | { outcome: 'activated'; holdId: string; tenantId: string; bookingId: string | null };
 
 const CUSTOMER_SELECT = {
   id: true,
@@ -196,15 +209,20 @@ export class BookingHoldsService {
     const windowEnd = holdExpiresAt(input.acceptedAt, fees.policy.holdPaymentWindowMinutes);
     /*
      * Hạn chuyển KHÔNG được vượt quá giờ nhận xe: một hold còn "chờ tiền" sau khi xe đáng lẽ đã
-     * giao là một chỗ bị khoá vô nghĩa. Kẹp về giờ nhận; nếu giờ nhận đã quá sát (dưới 15 phút)
-     * thì không kịp cho khách chuyển — chủ xe phải liên hệ thẳng khách hoặc từ chối.
+     * giao là một chỗ bị khoá vô nghĩa. Kẹp về giờ nhận; nếu phần còn lại quá ngắn để ai kịp mở
+     * app ngân hàng thì không phát QR nữa — chuyến sát giờ phải đi đường thoả thuận trực tiếp.
+     *
+     * ⚠️ Ngưỡng đọc từ `HOLD_MIN_USABLE_WINDOW_MINUTES`, KHÔNG gõ tay. Trước ADR 0039 chỗ này là
+     * `15 * 60_000` trong khi cửa sổ là 120 phút; rút cửa sổ về 10 phút mà để nguyên số 15 thì
+     * `expiresAt − now` (tối đa bằng cửa sổ) không bao giờ vượt nổi ngưỡng, và MỌI hold bị từ
+     * chối ngay lúc tạo — tức là cả sàn ngừng nhận đơn, im lặng.
      */
     const expiresAt = new Date(Math.min(windowEnd.getTime(), input.schedule.pickupAt.getTime()));
-    if (expiresAt.getTime() - now.getTime() < 15 * 60_000) {
+    if (expiresAt.getTime() - now.getTime() < HOLD_MIN_USABLE_WINDOW_MINUTES * 60_000) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
         message:
-          'Giờ nhận xe quá gần để khách kịp chuyển khoản giữ chỗ — liên hệ khách hoặc từ chối yêu cầu',
+          'Giờ nhận xe quá gần để kịp chuyển khoản giữ chỗ — liên hệ trực tiếp gian hàng để thoả thuận',
         details: { pickupAt: input.schedule.pickupAt.toISOString() },
       });
     }
@@ -480,18 +498,279 @@ export class BookingHoldsService {
       });
     }
 
-    const bookingId = await this.convertWithinTx(tx, hold.id, args.providerTxId);
+    const bookingId = await this.settleFullPaymentWithinTx(tx, hold.id, args.providerTxId);
     return { outcome: 'activated', holdId: hold.id, tenantId: hold.tenantId, bookingId };
   }
 
   /**
-   * Tiền đủ ⇒ ĐƠN THUÊ. Tạo từ snapshot đã đóng băng trên hold; lịch của yêu cầu nhả ra rồi lịch
-   * của đơn đặt vào — cùng transaction, nên không có khoảng nào chỗ bị hở.
+   * Tiền ĐỦ — và từ ADR 0039 đây KHÔNG còn đồng nghĩa với "có đơn thuê".
+   *
+   * Thứ tự mới: tiền đi TRƯỚC, chủ xe duyệt SAU. Nên lượt trả đủ chỉ làm được hai việc chắc
+   * chắn đúng — chốt hold `paid` và đẩy yêu cầu sang `hold_paid` (vẫn CHIẾM LỊCH, vì khách đã
+   * trả tiền thật cho chỗ đó). Đơn thuê chỉ ra đời khi có người NHẬN chuyến:
+   *
+   *   - xe bật "Đặt ngay" và yêu cầu đủ điều kiện ⇒ hệ thống nhận ngay tại đây;
+   *   - còn lại ⇒ chờ chủ xe bấm duyệt (`convertPaidHoldWithinTx` gọi từ `BookingRequestsService`).
+   *
+   * Trả `null` nghĩa là "tiền đã vào, chưa có đơn" — một kết cục HỢP LỆ, không phải lỗi.
    */
-  private async convertWithinTx(
+  private async settleFullPaymentWithinTx(
     tx: Prisma.TransactionClient,
     holdId: string,
     providerTxId: string,
+  ): Promise<string | null> {
+    const hold = await tx.bookingHold.findUniqueOrThrow({
+      where: { id: holdId },
+      select: {
+        id: true,
+        code: true,
+        tenantId: true,
+        bookingRequestId: true,
+        customerUserId: true,
+        paidAmount: true,
+        bookingRequest: {
+          select: {
+            id: true,
+            serviceType: true,
+            customerName: true,
+            /*
+             * ĐÃ CÓ AI NHẬN CHUYẾN TRƯỚC KHI TIỀN VỀ CHƯA — đây là thứ phân biệt hai đường sinh
+             * hold, và nó quyết định tiền về thì mở đơn hay còn phải chờ:
+             *
+             *   - hold sinh lúc KHÁCH GỬI (ADR 0039, đường mặc định): `trySecureHold` cố ý KHÔNG
+             *     ghi `decided_*` vì chưa ai quyết định gì ⇒ tiền về mới đi tìm người nhận;
+             *   - hold sinh lúc GIAN HÀNG DUYỆT (thuê dài hạn và báo giá tạm tính — hai ca không
+             *     chốt được số tiền lúc gửi): gian hàng ĐÃ nhận rồi ⇒ tiền về là mở đơn ngay.
+             *
+             * Thiếu phép phân biệt này thì đơn dài hạn bắt gian hàng duyệt HAI lần, lần sau cho
+             * một chuyến họ đã đồng ý và khách đã trả tiền.
+             */
+            decidedAt: true,
+            vehicle: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    /*
+     * Chiếm quyền trên YÊU CẦU bằng điều kiện trong WHERE, không đọc-rồi-ghi. `count = 0` nghĩa
+     * là yêu cầu đã rời `awaiting_hold` giữa chừng (khách huỷ đúng lúc tiền về) — quay đầu cả
+     * transaction để tiền nằm lại `bank_transactions` cho admin, thay vì để lại một hold `paid`
+     * treo trên một yêu cầu đã huỷ.
+     */
+    const claimed = await tx.bookingRequest.updateMany({
+      where: {
+        id: hold.bookingRequestId,
+        tenantId: hold.tenantId,
+        status: BOOKING_REQUEST_STATUS.AWAITING_HOLD,
+      },
+      data: {
+        status: BOOKING_REQUEST_STATUS.HOLD_PAID,
+        /*
+         * ĐỒNG HỒ CỦA CHỦ XE BẮT ĐẦU LẠI TỪ ĐÂY.
+         *
+         * `respond_by` cũ được đặt lúc khách bấm gửi, khi chưa ai nợ ai điều gì. Nghĩa vụ trả
+         * lời chỉ phát sinh khi tiền đã về — và nếu giữ mốc cũ thì một khách trả tiền ở phút
+         * cuối cửa sổ sẽ đẩy chủ xe vào thế quá hạn ngay lập tức, rồi worker hoàn tiền trước cả
+         * khi gian hàng kịp nhìn thấy thông báo.
+         */
+        respondBy: bookingRequestRespondBy(new Date()),
+      },
+    });
+    if (claimed.count === 0) {
+      throw new Error(`Yêu cầu ${hold.bookingRequestId} không còn chờ giữ chỗ khi tiền về`);
+    }
+
+    await this.audit.record(
+      {
+        tenantId: hold.tenantId,
+        actorScope: AUDIT_ACTOR_SCOPE.SYSTEM,
+        action: 'booking_hold.paid',
+        targetType: 'booking_hold',
+        targetId: holdId,
+        after: { code: hold.code, paidAmount: hold.paidAmount.toString(), providerTxId },
+      },
+      tx,
+    );
+
+    /*
+     * GIAN HÀNG ĐÃ NHẬN TỪ TRƯỚC (hold sinh lúc duyệt — dài hạn, báo giá tạm tính) ⇒ tiền về là
+     * mở đơn, không hỏi lại ai. Bắt họ duyệt lần thứ hai cho một chuyến họ đã đồng ý và khách đã
+     * trả tiền là một bước không ai hiểu nổi.
+     *
+     * Ngược lại (đường mặc định ADR 0039) mới đi tìm người nhận: xe bật "Đặt ngay" thì hệ thống
+     * nhận ngay tại đây, còn lại nằm ở `hold_paid` chờ chủ xe.
+     */
+    const bookingId =
+      hold.bookingRequest.decidedAt != null
+        ? await this.convertPaidHoldWithinTx(tx, hold.bookingRequestId, hold.tenantId, {
+            actorUserId: null,
+            actorScope: AUDIT_ACTOR_SCOPE.SYSTEM,
+          })
+        : await this.tryAutoApproveWithinTx(tx, hold.bookingRequestId, hold.tenantId);
+
+    if (bookingId === null) {
+      await this.notifications.emitToTenantMembers(
+        hold.tenantId,
+        {
+          type: NOTIFICATION_TYPE.HOLD_PAID,
+          title: 'Khách đã cọc giữ chỗ — chờ bạn xác nhận',
+          body: `${hold.bookingRequest.vehicle.name} · ${hold.bookingRequest.customerName}`,
+          targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
+          targetId: hold.bookingRequestId,
+        },
+        tx,
+      );
+      if (hold.customerUserId) {
+        await this.notifications.emitToUser(
+          hold.customerUserId,
+          {
+            type: NOTIFICATION_TYPE.HOLD_PAID,
+            title: 'Đã giữ chỗ thành công',
+            body: `${hold.bookingRequest.vehicle.name} · chỗ của bạn đã được giữ, đang chờ chủ xe xác nhận. Nếu chủ xe từ chối, toàn bộ số tiền được hoàn ngay.`,
+            tenantId: hold.tenantId,
+            targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
+            targetId: hold.bookingRequestId,
+          },
+          tx,
+        );
+      }
+    }
+
+    return bookingId;
+  }
+
+  /**
+   * Xe bật "Đặt ngay" và yêu cầu đủ điều kiện ⇒ hệ thống nhận chuyến ngay khi tiền về.
+   *
+   * Điều kiện tiền bạc (`holdRequired`, `quoteIsEstimate`) KHÔNG hỏi lại ở đây: tiền đã về rồi,
+   * và hai cờ đó chỉ có nghĩa ở thời điểm quyết định CÓ thu hay không. Thứ còn phải hỏi là điều
+   * kiện VẬN HÀNH — xe có bật tự nhận không, giờ nhận có nằm trong khung giao xe không, chuyến
+   * có đủ thời lượng tối thiểu không.
+   *
+   * **Chuyến CÓ TÀI XẾ nay tự nhận được** — ADR 0032 từng chặn (`HOLD_REQUIRED_WITH_DRIVER`) vì
+   * lúc đó đơn chỉ ra đời hàng giờ sau khi duyệt, nên không thể hứa một tài xế rồi mới tạo đơn.
+   * Lập luận đó mất hiệu lực ở ADR 0039: tiền đã về và đơn được tạo NGAY trong transaction này,
+   * nên việc gán tài xế ở đây an toàn đúng bằng lúc gian hàng bấm duyệt tay —
+   * `bookings_driver_schedule_excl` vẫn là trọng tài. Không gán được tài xế rảnh thì về chờ
+   * duyệt tay, y như cũ.
+   */
+  private async tryAutoApproveWithinTx(
+    tx: Prisma.TransactionClient,
+    requestId: string,
+    tenantId: string,
+  ): Promise<string | null> {
+    const req = await tx.bookingRequest.findUniqueOrThrow({
+      where: { id: requestId },
+      select: {
+        vehicleId: true,
+        serviceType: true,
+        pickupAt: true,
+        returnAt: true,
+        rentalTerms: true,
+      },
+    });
+
+    const [setting, windows] = await Promise.all([
+      this.settings.serviceSettingFor(tx, req.vehicleId, req.serviceType as ServiceType),
+      this.settings.handoverWindowsFor(tx, req.vehicleId),
+    ]);
+    const terms = req.rentalTerms as unknown as RentalTermsSnapshot | null;
+    const blocker = this.settings.evaluateAutoAccept(setting, windows, {
+      serviceType: req.serviceType,
+      pickupAt: req.pickupAt,
+      returnAt: req.returnAt,
+      quoteIsEstimate: false,
+      holdRequired: false,
+      termsAccepted: !setting.requireTermsAcceptance || terms?.termsAcceptedAt != null,
+    });
+    if (blocker) {
+      await this.recordAutoAcceptSkip(tx, tenantId, requestId, blocker);
+      return null;
+    }
+
+    /*
+     * Tài xế chọn ở ĐÂY, trong chính transaction tạo đơn. `pickAssignableDriver` chỉ lọc theo
+     * dữ liệu đã đọc được; trọng tài thật là `bookings_driver_schedule_excl` lúc ghi (ADR 0006).
+     * Không có ai rảnh ⇒ về chờ duyệt tay, KHÔNG tự từ chối khách.
+     */
+    let driverId: string | null = null;
+    if (req.serviceType === SERVICE_TYPE.WITH_DRIVER) {
+      if (!req.pickupAt || !req.returnAt) return null;
+      const driver = await this.settings.pickAssignableDriver(tx, tenantId, {
+        pickupAt: req.pickupAt,
+        returnAt: req.returnAt,
+      });
+      if (!driver) {
+        await this.recordAutoAcceptSkip(tx, tenantId, requestId, AUTO_ACCEPT_BLOCKER.NO_DRIVER);
+        return null;
+      }
+      driverId = driver.id;
+    }
+
+    return this.convertPaidHoldWithinTx(
+      tx,
+      requestId,
+      tenantId,
+      { actorUserId: null, actorScope: AUDIT_ACTOR_SCOPE.SYSTEM },
+      driverId,
+    );
+  }
+
+  /**
+   * Dấu vết "hệ thống đã cân nhắc và bỏ qua" — chủ xe đọc được vì sao chuyến không tự nhận.
+   *
+   * KHÔNG ghi khi lý do là `disabled`: phần lớn gian hàng không bật "Đặt ngay", và một dòng audit
+   * cho mỗi lượt đặt của họ chỉ làm nhật ký dài ra mà không nói thêm điều gì. Cùng cách cư xử
+   * với đường tự nhận lúc gửi, nơi ứng viên không bật thì còn chẳng được cân nhắc.
+   */
+  private async recordAutoAcceptSkip(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    requestId: string,
+    blocker: AutoAcceptBlocker,
+  ): Promise<void> {
+    if (blocker === AUTO_ACCEPT_BLOCKER.DISABLED) return;
+    await this.audit.record(
+      {
+        tenantId,
+        actorUserId: null,
+        actorScope: AUDIT_ACTOR_SCOPE.SYSTEM,
+        action: 'booking_request.auto_accept_skipped',
+        targetType: 'booking_request',
+        targetId: requestId,
+        after: { blocker },
+      },
+      tx,
+    );
+  }
+
+  /**
+   * Yêu cầu ĐÃ TRẢ TIỀN được NHẬN ⇒ ĐƠN THUÊ. Tạo từ snapshot đã đóng băng trên hold; lịch của
+   * yêu cầu nhả ra rồi lịch của đơn đặt vào — cùng transaction, nên không có khoảng nào chỗ bị hở.
+   *
+   * Hai lối vào, cùng một thân: hệ thống tự nhận ngay khi tiền về, hoặc chủ xe bấm duyệt sau đó.
+   */
+  async convertPaidHoldWithinTx(
+    tx: Prisma.TransactionClient,
+    requestId: string,
+    tenantId: string,
+    actor: { actorUserId: string | null; actorScope: AuditActorScope },
+    /** Tài xế hệ thống vừa chọn cho chuyến CÓ TÀI XẾ — duyệt tay gán sau ở màn đơn. */
+    driverId: string | null = null,
+  ): Promise<string> {
+    const hold = await tx.bookingHold.findFirstOrThrow({
+      where: { bookingRequestId: requestId, tenantId, status: BOOKING_HOLD_STATUS.PAID },
+      select: { id: true },
+    });
+    return this.convertWithinTx(tx, hold.id, actor, driverId);
+  }
+
+  private async convertWithinTx(
+    tx: Prisma.TransactionClient,
+    holdId: string,
+    actor: { actorUserId: string | null; actorScope: AuditActorScope },
+    driverId: string | null = null,
   ): Promise<string> {
     const hold = await tx.bookingHold.findUniqueOrThrow({
       where: { id: holdId },
@@ -561,6 +840,7 @@ export class BookingHoldsService {
       snapshot,
       req.tenantCustomerId,
       {
+        driverId,
         // Điều kiện thuê đã đóng băng trên yêu cầu — copy nguyên sang đơn (08/09/2026).
         rentalTerms: (req.rentalTerms as unknown as RentalTermsSnapshot | null) ?? null,
         /*
@@ -578,22 +858,42 @@ export class BookingHoldsService {
       },
     );
 
+    /*
+     * Chiếm từ `hold_paid` — trạng thái của một yêu cầu đã trả tiền và đang chờ người nhận.
+     * `count = 0` nghĩa là ai đó vừa xử lý xong yêu cầu này (chủ xe bấm duyệt đúng lúc hệ thống
+     * tự nhận, hoặc khách huỷ): quay đầu cả transaction, đơn vừa tạo biến mất.
+     */
+    const systemAccepted = actor.actorScope === AUDIT_ACTOR_SCOPE.SYSTEM;
     const claimed = await tx.bookingRequest.updateMany({
-      where: { id: req.id, tenantId: hold.tenantId, status: BOOKING_REQUEST_STATUS.AWAITING_HOLD },
-      data: { status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING, bookingId: booking.id },
+      where: { id: req.id, tenantId: hold.tenantId, status: BOOKING_REQUEST_STATUS.HOLD_PAID },
+      data: {
+        status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
+        bookingId: booking.id,
+        /*
+         * HỆ THỐNG tự nhận thì ghi dấu quyết định NGAY TẠI ĐÂY — đường duyệt tay đã ghi
+         * `decided_*` trước khi gọi vào (xem `acceptPaidRequest`), nên ghi đè ở đây sẽ xoá mất
+         * tên người đã bấm. Một đơn không biết ai nhận nó là một đơn không truy trách nhiệm được.
+         */
+        ...(systemAccepted
+          ? {
+              decidedBy: null,
+              decidedAt: new Date(),
+              decisionSource: BOOKING_REQUEST_DECISION_SOURCE.SYSTEM,
+            }
+          : {}),
+      },
     });
     if (claimed.count === 0) {
-      // Yêu cầu đã rời `awaiting_hold` (khách huỷ đúng lúc tiền về) — quay đầu cả transaction:
-      // đơn vừa tạo biến mất, tiền vẫn nằm ở bank_transactions cho admin xử lý.
-      throw new Error(`Yêu cầu ${req.id} không còn chờ giữ chỗ khi tiền về`);
+      throw new Error(`Yêu cầu ${req.id} không còn ở trạng thái đã cọc chờ duyệt`);
     }
     await tx.bookingHold.update({ where: { id: holdId }, data: { bookingId: booking.id } });
 
     await this.audit.record(
       {
         tenantId: hold.tenantId,
-        actorScope: AUDIT_ACTOR_SCOPE.SYSTEM,
-        action: 'booking_hold.paid',
+        actorUserId: actor.actorUserId,
+        actorScope: actor.actorScope,
+        action: 'booking_request.accept_paid',
         targetType: 'booking_hold',
         targetId: holdId,
         after: {
@@ -601,21 +901,33 @@ export class BookingHoldsService {
           paidAmount: hold.paidAmount.toString(),
           bookingId: booking.id,
           bookingCode: booking.code,
-          providerTxId,
         },
       },
       tx,
     );
 
+    /*
+     * Hai câu khác nhau cho hai người khác nhau đã quyết định. Gian hàng cần biết ngay là chuyến
+     * này họ KHÔNG phải làm gì (hệ thống nhận hộ) hay là ghi nhận cú bấm của chính họ — gộp một
+     * câu thì người trực không phân biệt được đơn nào đã có người xử lý.
+     */
     await this.notifications.emitToTenantMembers(
       hold.tenantId,
-      {
-        type: NOTIFICATION_TYPE.HOLD_PAID,
-        title: `Khách đã giữ chỗ — đơn ${booking.code} đã tạo`,
-        body: `${req.vehicle.name} · ${req.customerName}`,
-        targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
-        targetId: booking.id,
-      },
+      systemAccepted
+        ? {
+            type: NOTIFICATION_TYPE.BOOKING_AUTO_ACCEPTED,
+            title: `Đã tự động nhận chuyến: ${req.customerName}`,
+            body: `${req.vehicle.name} · khách đã cọc, đơn ${booking.code} đã tạo`,
+            targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+            targetId: booking.id,
+          }
+        : {
+            type: NOTIFICATION_TYPE.HOLD_PAID,
+            title: `Đã nhận chuyến: đơn ${booking.code}`,
+            body: `${req.vehicle.name} · ${req.customerName}`,
+            targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+            targetId: booking.id,
+          },
       tx,
     );
     if (hold.customerUserId) {
@@ -633,6 +945,108 @@ export class BookingHoldsService {
       );
     }
     return booking.id;
+  }
+
+  /**
+   * Yêu cầu ĐÃ TRẢ TIỀN bị TỪ CHỐI hoặc hết hạn phản hồi ⇒ hoàn đủ, nhả chỗ (ADR 0039 điều 5).
+   *
+   * Khách không làm gì sai ở đây: họ đã trả tiền và đã chờ. Nên hoàn **toàn bộ** `D + S + IV +
+   * IP`, không chia đôi, không giữ lại phí dịch vụ — `split_late_cancel` là kết cục của việc
+   * khách đổi ý muộn, không phải của việc gian hàng không nhận chuyến.
+   *
+   * Khách có tài khoản thì `upsertRefundWithinTx` ghi có VÍ ĐIỂM ngay trong chính transaction
+   * này; khách vãng lai thì thành phiếu chờ admin chuyển tay (ADR 0033 điều 5). Không có đường
+   * nào khác — đây cũng là đường mà mọi khoản hoàn khác đi qua.
+   */
+  async releasePaidHoldWithinTx(
+    tx: Prisma.TransactionClient,
+    input: {
+      requestId: string;
+      tenantId: string;
+      reason: 'owner_reject' | 'respond_timeout';
+      actorUserId: string | null;
+      actorScope: AuditActorScope;
+    },
+  ): Promise<void> {
+    /*
+     * Chiếm bằng điều kiện trong WHERE: chỉ hold `paid` CHƯA có kết cục mới được chốt ở đây.
+     * `count = 0` nghĩa là ai đó đã chốt rồi (worker và chủ xe bấm cùng lúc) — không ghi đè,
+     * không hoàn lần thứ hai.
+     */
+    const hold = await tx.bookingHold.findUniqueOrThrow({
+      where: { bookingRequestId: input.requestId },
+      select: {
+        id: true,
+        code: true,
+        amount: true,
+        paidAmount: true,
+        customerUserId: true,
+        vehicle: { select: { name: true } },
+      },
+    });
+    const claimed = await tx.bookingHold.updateMany({
+      where: { id: hold.id, status: BOOKING_HOLD_STATUS.PAID, outcome: null },
+      data: {
+        status: BOOKING_HOLD_STATUS.RELEASED,
+        outcome: BOOKING_HOLD_OUTCOME.REFUNDED,
+        releasedAt: new Date(),
+        /*
+         * Phân bổ ba vế phải khớp bốn dòng tiền — `booking_holds_settled_allocation_check` canh
+         * ở DB, không phải một quy ước trong code. Hoàn 100% nghĩa là toàn bộ về phía KHÁCH và
+         * không đồng nào cho chủ xe, nền tảng, hãng bảo hiểm hay thuế.
+         */
+        settledCustomerAmount: hold.amount,
+        settledOwnerAmount: new Prisma.Decimal(0),
+        settledPlatformAmount: new Prisma.Decimal(0),
+        settledInsurerAmount: new Prisma.Decimal(0),
+        settledTaxAmount: new Prisma.Decimal(0),
+      },
+    });
+    // Nhả lịch dù có chốt được hold hay không: chỗ đã mất lý do tồn tại kể từ khi yêu cầu đóng.
+    await this.occupancy.release(tx, OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST, input.requestId);
+    if (claimed.count === 0) return;
+
+    if (hold.paidAmount.gt(0)) {
+      await this.settlement.upsertRefundWithinTx(tx, {
+        holdId: hold.id,
+        tenantId: input.tenantId,
+        customerUserId: hold.customerUserId,
+        amount: hold.paidAmount,
+        reason: HOLD_REFUND_REASON.OWNER_CANCEL,
+        note:
+          input.reason === 'owner_reject'
+            ? 'Gian hàng từ chối sau khi khách đã giữ chỗ'
+            : 'Gian hàng không phản hồi trong hạn sau khi khách đã giữ chỗ',
+      });
+    }
+
+    await this.audit.record(
+      {
+        tenantId: input.tenantId,
+        actorUserId: input.actorUserId,
+        actorScope: input.actorScope,
+        action: 'booking_hold.release_unaccepted',
+        targetType: 'booking_hold',
+        targetId: hold.id,
+        after: { code: hold.code, refunded: hold.paidAmount.toString(), reason: input.reason },
+      },
+      tx,
+    );
+
+    if (hold.customerUserId) {
+      await this.notifications.emitToUser(
+        hold.customerUserId,
+        {
+          type: NOTIFICATION_TYPE.HOLD_REFUNDED,
+          title: 'Chuyến không thành — đã hoàn tiền giữ chỗ',
+          body: `${hold.vehicle.name} · hoàn ${formatMoneyVndVi(hold.paidAmount.toFixed(0))}`,
+          tenantId: input.tenantId,
+          targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
+          targetId: input.requestId,
+        },
+        tx,
+      );
+    }
   }
 
   // ── Khách huỷ khi đang chờ tiền ──────────────────────────────────────────
@@ -677,6 +1091,71 @@ export class BookingHoldsService {
         targetType: 'booking_hold',
         targetId: hold.id,
         after: { code: hold.code, paidAmount: hold.paidAmount.toString() },
+      },
+      tx,
+    );
+  }
+
+  /**
+   * KHÁCH huỷ khi đã trả đủ nhưng gian hàng CHƯA NHẬN chuyến ⇒ hoàn 100% (ADR 0039 điều 5).
+   *
+   * Hoàn đủ, không chia đôi, và không hỏi `free_cancel_until` — lý do là nghiệp vụ chứ không
+   * phải số học: `split_late_cancel` tồn tại để bù cho gian hàng khi họ ĐÃ NHẬN chuyến, đã giữ
+   * xe cho khách và mất cơ hội cho khách khác. Ở chặng này họ chưa nhận gì cả; giữ lại tiền của
+   * khách cho một cam kết chưa từng được đưa ra là lấy tiền không có căn cứ.
+   *
+   * (Trên thực tế chặng này cũng luôn nằm trong cửa sổ huỷ miễn phí — nó kéo dài nhiều nhất là
+   * `HOLD_TOTAL_WINDOW_MINUTES` + hạn phản hồi của gian hàng, ngắn hơn hẳn 4 giờ. Nhưng luật ở
+   * đây KHÔNG dựa vào phép cộng đó: đổi một trong hai con số không được phép lặng lẽ biến một
+   * khoản hoàn đủ thành một khoản chia đôi.)
+   */
+  async cancelPaidHoldForCustomerWithinTx(
+    tx: Prisma.TransactionClient,
+    input: { requestId: string; tenantId: string; actorUserId: string },
+  ): Promise<void> {
+    const hold = await tx.bookingHold.findUniqueOrThrow({
+      where: { bookingRequestId: input.requestId },
+      select: { id: true, code: true, amount: true, paidAmount: true, customerUserId: true },
+    });
+    const claimed = await tx.bookingHold.updateMany({
+      where: { id: hold.id, status: BOOKING_HOLD_STATUS.PAID, outcome: null },
+      data: {
+        status: BOOKING_HOLD_STATUS.RELEASED,
+        outcome: BOOKING_HOLD_OUTCOME.REFUNDED,
+        releasedAt: new Date(),
+        /*
+         * Phân bổ ba vế phải khớp bốn dòng tiền — `booking_holds_settled_allocation_check` canh
+         * ở DB, không phải một quy ước trong code. Hoàn 100% nghĩa là toàn bộ về phía KHÁCH và
+         * không đồng nào cho chủ xe, nền tảng, hãng bảo hiểm hay thuế.
+         */
+        settledCustomerAmount: hold.amount,
+        settledOwnerAmount: new Prisma.Decimal(0),
+        settledPlatformAmount: new Prisma.Decimal(0),
+        settledInsurerAmount: new Prisma.Decimal(0),
+        settledTaxAmount: new Prisma.Decimal(0),
+      },
+    });
+    await this.occupancy.release(tx, OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST, input.requestId);
+    if (claimed.count === 0) return;
+    if (hold.paidAmount.gt(0)) {
+      await this.settlement.upsertRefundWithinTx(tx, {
+        holdId: hold.id,
+        tenantId: input.tenantId,
+        customerUserId: hold.customerUserId,
+        amount: hold.paidAmount,
+        reason: HOLD_REFUND_REASON.EARLY_CANCEL,
+        note: 'Khách huỷ khi gian hàng chưa nhận chuyến',
+      });
+    }
+    await this.audit.record(
+      {
+        tenantId: input.tenantId,
+        actorUserId: input.actorUserId,
+        actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
+        action: 'booking_hold.cancel_paid',
+        targetType: 'booking_hold',
+        targetId: hold.id,
+        after: { code: hold.code, refunded: hold.paidAmount.toString() },
       },
       tx,
     );

@@ -472,6 +472,27 @@ export const API_ERROR_CODE = {
    */
   PROFILE_INCOMPLETE: 'PROFILE_INCOMPLETE',
   /**
+   * Gian hàng trả phí CHƯA hoàn tất onboarding: đã tạo hồ sơ nhưng chưa thanh toán gói đầu tiên
+   * (`tenants.onboarding_state = 'package_pending'` — ADR 0040).
+   *
+   * Mã riêng, không dùng `SUBSCRIPTION_TRACK_ONLY`: hai tình huống trông giống nhau ở backend
+   * (không có thuê bao tuyến gói hiệu lực) nhưng lối đi tiếp NGƯỢC nhau. `SUBSCRIPTION_TRACK_ONLY`
+   * nói "khu này không dành cho bạn, về Owner Lite"; mã này nói "khu này LÀ của bạn, chuyển nốt
+   * tiền đi" — và đưa một người đang chờ đối soát về Owner Lite là đúng lỗi mà ADR 0040 sửa.
+   */
+  PACKAGE_ONBOARDING_INCOMPLETE: 'PACKAGE_ONBOARDING_INCOMPLETE',
+  /**
+   * Hồ sơ GIAN HÀNG TUYẾN GÓI chưa đủ để gửi xe lên chợ (ADR 0040 điều 7).
+   * `details.missing[]` mang khoá `PACKAGE_SHOP_LISTING_REQUIREMENT`.
+   *
+   * Mã RIÊNG, không dùng chung `PROFILE_INCOMPLETE` ở trên — dù cả hai đều nói "hồ sơ còn thiếu".
+   * Hai bộ quy tắc có hai từ vựng khác nhau và `displayName`/`province` lại TRÙNG TÊN giữa chúng,
+   * nên một client chỉ nhìn `details.missing` không phân biệt được bộ nào: nó sẽ dựng nhãn của bộ
+   * này cho mã của bộ kia, và câu chữ vẫn trông hợp lý. Phân biệt phải nằm ở MÃ, không ở việc
+   * đoán theo endpoint đã gọi.
+   */
+  SHOP_LISTING_REQUIREMENTS_MISSING: 'SHOP_LISTING_REQUIREMENTS_MISSING',
+  /**
    * Hồ sơ xác minh gian hàng đang nằm trong hàng đợi — không gửi thêm phiếu thứ hai.
    *
    * Mã riêng thay vì `CONFLICT` chung: nó là câu trả lời cho một thao tác HỢP LỆ bị bấm lại
@@ -479,14 +500,18 @@ export const API_ERROR_CODE = {
    * "có lỗi".
    */
   SHOP_VERIFICATION_PENDING: 'SHOP_VERIFICATION_PENDING',
-  /**
-   * Thao tác này đòi gian hàng ĐÃ ĐƯỢC XÁC MINH — hiện chỉ áp cho việc mua gói thuê bao
-   * (ADR 0024/0027). `details` mang `{ verification }` để FE dẫn tới đúng bước tiếp theo.
+  /*
+   * ⚠️ KHÔNG thêm lại `SHOP_VERIFICATION_REQUIRED` (16/09/2026 — ADR 0040).
    *
-   * ⚠️ KHÔNG dùng mã này cho cổng duyệt XE: tuyến hoa hồng đăng xe mà không cần xác minh gian
-   * hàng, đó là toàn bộ điểm của ADR 0028 điều 1.
+   * Nó là mã của cổng "phải xác minh pháp nhân mới được mua gói" (ADR 0036). Ghép cổng đó với
+   * luồng đăng ký gian hàng trả phí thì thứ tự thành: tạo gian hàng → gửi hồ sơ → CHỜ admin →
+   * mới được trả tiền, và trong lúc chờ họ không dùng được gì. Không có thao tác nào còn phát ra
+   * mã này, nên nó ra khỏi hợp đồng thay vì ở lại như một nhánh chết mà client vẫn phải dịch.
+   *
+   * Xác minh KHÔNG bị xoá — nó vẫn là trục riêng (`SHOP_VERIFICATION`, đọc từ phiếu duyệt
+   * `tenant`) và vẫn chặn sửa hồ sơ khi đang trong hàng đợi (`SHOP_VERIFICATION_PENDING` ngay
+   * trên). Nó chỉ thôi làm cổng THU TIỀN.
    */
-  SHOP_VERIFICATION_REQUIRED: 'SHOP_VERIFICATION_REQUIRED',
   /**
    * Thao tác này chỉ dành cho CHỦ GIAN HÀNG — tiền của gian hàng (ví, sổ cái, lệnh rút, tài
    * khoản ngân hàng nhận tiền).
@@ -534,6 +559,20 @@ export const API_ERROR_CODE = {
    * rất khác nhau với người đọc.
    */
   SUBSCRIPTION_TRACK_ONLY: 'SUBSCRIPTION_TRACK_ONLY',
+
+  /**
+   * Gian hàng đang có hoá đơn gói ĐÃ NHẬN MỘT PHẦN TIỀN — không tạo hoá đơn mới (16/09/2026).
+   *
+   * Mã riêng thay vì `CONFLICT` chung vì lối đi tiếp rất cụ thể: chuyển nốt phần còn thiếu theo
+   * ĐÚNG mã đối soát cũ, hoặc gọi hỗ trợ. Hai lối còn lại đều hỏng: `purchase()` void hoá đơn
+   * `issued` cũ để mỗi tenant chỉ giữ một mã sống, nhưng void một hoá đơn đã có tiền thật là
+   * đốt khoản khách đã chuyển; còn để hai hoá đơn payable cùng sống thì
+   * `applyBankPaymentWithinTx` coi CẢ HAI đều trả được, và một lần chuyển khoản có thể kích
+   * hoạt gói qua mã người dùng tưởng đã bỏ.
+   *
+   * `details.code` là mã đối soát của hoá đơn đang dang dở — thứ người dùng cần để chuyển nốt.
+   */
+  SUBSCRIPTION_INVOICE_PARTIALLY_PAID: 'SUBSCRIPTION_INVOICE_PARTIALLY_PAID',
 
   /** Gian hàng đang bị khoá/chưa hoạt động nên xe không lên chợ được. */
   SHOP_NOT_ACTIVE: 'SHOP_NOT_ACTIVE',

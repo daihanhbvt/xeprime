@@ -4,8 +4,6 @@ import { TENANT_STATUS, TENANT_STATUS_SUBMITTABLE, type TenantStatus } from '@xe
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { useNavigateOnce } from '@/hooks/use-navigate-once';
-import { ROUTES } from '@/navigation/routes';
 import { space } from '@/theme/tokens';
 import { shopStatusNotice } from '../status-notice';
 import type { MyShop } from '../api';
@@ -34,7 +32,6 @@ export function ShopStatusBanner({
 }) {
   const t = useTranslations('Shop');
   const fmt = useAppFormat();
-  const navigateOnce = useNavigateOnce();
 
   const status = shop.status as TenantStatus;
   const notice = shopStatusNotice(shop.status);
@@ -68,18 +65,6 @@ export function ShopStatusBanner({
           icon="send-outline"
           loading={submitting}
           onPress={onSubmit}
-        />
-      ) : status === TENANT_STATUS.PENDING_REVIEW ? (
-        /*
-         * Chờ duyệt là lúc DUY NHẤT dải này có việc hữu ích để đề nghị: xe khai báo được ngay từ
-         * bây giờ (chỉ không lên marketplace), nên hồ sơ duyệt xong là bán được luôn thay vì mới
-         * bắt đầu nhập xe.
-         */
-        <Button
-          label={t('status.action.addVehicle')}
-          variant="secondary"
-          icon="add"
-          onPress={() => navigateOnce(ROUTES.manage.vehicleNew())}
         />
       ) : null}
     </YStack>

@@ -5,8 +5,6 @@ import { SELLER_ENTITY_TYPE_VALUES } from '@xeprime/types';
 export interface SellerProfileMessages {
   readonly taxId: string;
   readonly idNumber: string;
-  readonly bankCode: string;
-  readonly bankAccountNumber: string;
 }
 
 /**
@@ -33,23 +31,11 @@ export function buildSellerProfileSchema(messages: SellerProfileMessages) {
       .default(''),
     idIssuedAt: yup.string().trim().nullable().default(null),
     idIssuedBy: yup.string().trim().max(160).default(''),
-    bankCode: yup
-      .string()
-      .trim()
-      .matches(/^[A-Za-z0-9]{2,20}$/, {
-        excludeEmptyString: true,
-        message: messages.bankCode,
-      })
-      .default(''),
-    bankAccountNumber: yup
-      .string()
-      .trim()
-      .matches(/^[0-9 ]{6,40}$/, {
-        excludeEmptyString: true,
-        message: messages.bankAccountNumber,
-      })
-      .default(''),
-    bankAccountName: yup.string().trim().max(160).default(''),
+    /*
+     * KHÔNG có ba ô ngân hàng (16/09/2026): tài khoản nhận tiền sống ở `bank_accounts`, nơi
+     * lệnh rút thật sự đọc — và nơi ngân hàng là một ô CHỌN từ danh mục VietQR chứ không phải
+     * chữ tự do như ở đây.
+     */
   });
 }
 

@@ -46,7 +46,7 @@ const ITEMS = ['profile', 'vehicles', 'trips', 'billing'] as const;
  * Sau khi gửi KHÔNG đăng xuất, KHÔNG đánh dấu tài khoản đã xoá — tài khoản dùng bình thường
  * tới khi XePrime hoàn tất, và người dùng rút yêu cầu được trong lúc chờ.
  */
-export function DeleteAccountView() {
+export function DeleteAccountView({ headingLevel = 'h1' }: { headingLevel?: 'h1' | 'h2' } = {}) {
   const t = useTranslations('Account.deleteAccount');
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
@@ -100,7 +100,7 @@ export function DeleteAccountView() {
 
   return (
     <div className={styles.page}>
-      <AccountPageHeader title={t('title')} subtitle={t('subtitle')} />
+      <AccountPageHeader title={t('title')} subtitle={t('subtitle')} as={headingLevel} />
 
       <Alert
         type="error"

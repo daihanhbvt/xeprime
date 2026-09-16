@@ -83,7 +83,8 @@ export const queryKeys = {
     wards: (provinceCode: string, q?: string) =>
       ['locations', 'wards', provinceCode, q ?? ''] as const,
     /** Tra NHÃN theo danh sách mã đã lưu — màn hiển thị dùng, không phải bộ chọn. */
-    wardLookup: (codes: readonly string[]) => ['locations', 'ward-lookup', [...codes].sort()] as const,
+    wardLookup: (codes: readonly string[]) =>
+      ['locations', 'ward-lookup', [...codes].sort()] as const,
     admin: (params: QueryParams) => ['locations', 'admin', params] as const,
   },
   /**
@@ -324,6 +325,18 @@ export const queryKeys = {
     me: () => ['subscription', 'me'] as const,
     plans: () => ['subscription', 'plans'] as const,
     invoices: (page: number) => ['subscription', 'invoices', page] as const,
+    /**
+     * Hoá đơn gói ĐANG chờ tiền — `GET /subscription/invoices/pending` (ADR 0040).
+     *
+     * Key RIÊNG, không phải một trang của `invoices(page)`: màn onboarding và dải QR ở trang "Gói
+     * của tôi" polling nó trong lúc chờ đối soát, và gộp vào key có `page` nghĩa là mỗi nhịp
+     * polling ghi đè cache của bảng lịch sử đang mở ngay bên dưới.
+     *
+     * Nó VẪN dùng chung tiền tố `['subscription','invoices']` — có chủ đích: một lượt ghi vào hoá
+     * đơn (mua gói, tiền về) phải làm mới cả hai, và một lần `invalidateQueries` theo tiền tố đó
+     * là cách nói điều này ngắn nhất.
+     */
+    pendingInvoice: () => ['subscription', 'invoices', 'pending'] as const,
     /** Thông tin nhận chuyển khoản của nền tảng — gần như tĩnh, cache dài. */
     paymentInfo: () => ['subscription', 'payment-info'] as const,
   },
@@ -441,6 +454,9 @@ export const queryKeys = {
     summary: (scope: string) => ['wallet', scope, 'summary'] as const,
     entries: (scope: string, params: QueryParams) => ['wallet', scope, 'entries', params] as const,
     withdrawals: (scope: string) => ['wallet', scope, 'withdrawals'] as const,
+    /** Bảng tổng hợp giao dịch theo kỳ — chỉ có ở scope `shop`. */
+    statement: (scope: string, params: QueryParams) =>
+      ['wallet', scope, 'statement', params] as const,
   },
   /** Hàng đợi rút tiền của nền tảng — tách khỏi `wallet` (phạm vi khác, quyền khác). */
   platformWithdrawals: {

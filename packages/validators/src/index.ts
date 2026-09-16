@@ -33,6 +33,8 @@ import {
   TENANT_CUSTOMER_NOTE_TYPE_VALUES,
   TENANT_CUSTOMER_RISK_LEVEL,
   TENANT_CUSTOMER_RISK_LEVEL_VALUES,
+  REGISTRATION_TRACK,
+  REGISTRATION_TRACK_VALUES,
   TENANT_ROLE,
   TENANT_TYPE_VALUES,
   type TenantCustomerNoteType,
@@ -59,6 +61,20 @@ export {
 } from './phone';
 
 export const emailSchema = yup.string().trim().email('Email không hợp lệ');
+
+/**
+ * Mã đơn vị hành chính — HẰNG SỐ, vì bản viết inline đã sai ba lần.
+ *
+ * Ba ô địa chỉ trong file này từng mang `/^d{2}$/` và `/^d{5}$/`: mẫu khớp chuỗi `"dd"` /
+ * `"ddddd"` và không khớp một mã thật nào, nên mọi lượt chọn tỉnh/xã đều bị từ chối — và mã lỗi
+ * `wardInvalid` lọt ra giao diện ở dạng chữ trần vì namespace của form đó chưa có khoá ấy.
+ *
+ * Độ dài khớp cột DB (`provinces.code CHAR(2)`, `wards.code CHAR(5)`) và `@Length` của DTO.
+ * Lớp chặn THẬT vẫn ở backend: `AddressService` tra danh mục và DB giữ FK tổ hợp
+ * `(ward_code, province_code)` — mẫu ở đây chỉ bắt lỗi hình dạng trước khi gửi.
+ */
+export const PROVINCE_CODE_PATTERN = /^\d{2}$/;
+export const WARD_CODE_PATTERN = /^\d{5}$/;
 
 /** Tiền VND: số nguyên không âm. Không dùng float — xem ADR 0007. */
 export const moneySchema = yup
@@ -707,18 +723,28 @@ const addressShape = {
    * `.matches` + `excludeEmptyString` chứ KHÔNG `.length(5)`: ô chưa chọn mang chuỗi rỗng, và
    * `.length` coi rỗng là sai độ dài. Hệ quả là một trường TUỲ CHỌN chặn cả form ngay khi mở —
    * và lỗi hiện ra ở một ô người dùng chưa hề chạm vào.
+   *
+   * ⚠️ `\d`, không phải `d`. Bản trước viết `/^d{5}$/` — một mẫu khớp với chuỗi `"ddddd"` và
+   * KHÔNG khớp với bất kỳ mã xã thật nào. Hệ quả: mọi người chọn xã/phường đều bị từ chối ở ô
+   * đó, và vì `ShopOnboarding.validation` chưa có khoá `wardInvalid`, `useValidationResolver`
+   * để nguyên chuỗi gốc — người dùng đọc thấy chữ `wardInvalid` trần trên giao diện. Ba mẫu số
+   * trong file này từng mang cùng một lỗi đánh máy.
    */
   wardCode: yup
     .string()
     .trim()
     .default('')
-    .matches(/^d{5}$/, { message: 'wardInvalid', excludeEmptyString: true }),
+    .matches(WARD_CODE_PATTERN, { message: 'wardInvalid', excludeEmptyString: true }),
   addressLine: yup.string().trim().max(ADDRESS_LINE_MAX_LENGTH, 'addressLineMax').default(''),
   /** Mã địa điểm Google — do ô chọn địa điểm đặt, người dùng không gõ. */
   placeId: yup.string().trim().max(255).nullable().default(null),
   latitude: yup.number().min(-90).max(90).nullable().default(null),
   longitude: yup.number().min(-180).max(180).nullable().default(null),
-  locationSource: yup.string().oneOf([...LOCATION_SOURCE_VALUES]).nullable().default(null),
+  locationSource: yup
+    .string()
+    .oneOf([...LOCATION_SOURCE_VALUES])
+    .nullable()
+    .default(null),
 } as const;
 
 /** Như `addressShape` nhưng BẮT BUỘC chọn xã/phường — dùng ở form khai báo địa điểm vận hành. */
@@ -727,26 +753,73 @@ const addressShapeWithWard = {
   wardCode: yup.string().trim().required('wardRequired').length(5, 'wardInvalid'),
 } as const;
 
+/**
+ * ĐĂNG KÝ người cho thuê xe — MỘT schema, HAI cửa vào (ADR 0040).
+ *
+ * `registrationTrack` KHÔNG phải một ô nhập: nó là CỬA VÀO mà người dùng đã chọn trước khi mở
+ * form (CTA "Đăng xe cho thuê" hay "Đăng ký gian hàng"), và ba trường dưới đây nghiêm hay lỏng
+ * tuỳ theo nó.
+ *
+ * | Trường | `commission` | `package` |
+ * | --- | --- | --- |
+ * | `wardCode` | tuỳ chọn | **bắt buộc** |
+ * | `addressLine` | tuỳ chọn | **bắt buộc** |
+ * | `phone` | tuỳ chọn | **bắt buộc** |
+ *
+ * Vì sao tuyến gói chặt hơn: người này đang chuẩn bị TRẢ TIỀN để mở một mặt tiền trên chợ, và cả
+ * ba trường đều là thứ khách cần để tìm và gọi được họ. Hỏi ngay ở bước 1 rẻ hơn hẳn so với để
+ * họ trả tiền xong rồi mới bị cổng đăng xe từ chối — nên bộ này khớp ĐÚNG
+ * `missingPackageShopRegistrationFields` ở `@xeprime/types` (cùng quy tắc, hai lớp thi hành).
+ *
+ * Vì sao MỘT schema chứ không hai, dù hai đọc dễ hơn: `useValidationResolver` nhận schema MỘT
+ * lần và React Hook Form giữ resolver của lần dựng đầu. Một biểu thức `isPackageTrack ? A : B`
+ * nghĩa là form đổi luật khi prop đổi mà RHF không biết — và ở tầng kiểu, union của hai
+ * `ObjectSchema` cũng không gán được vào tham số của resolver. Điều kiện thành DỮ LIỆU
+ * (`.when`) giải cả hai, và đó là khuôn mà `customerRiskSchema` trong file này đã dùng.
+ *
+ * `tenantType` vẫn ở đây cho cả hai tuyến: tuyến gói không HỎI nó (loại hình không quyết định gì
+ * trong luồng tiền — ADR 0014 điều 2) nhưng vẫn gửi một giá trị mặc định.
+ */
 export const registerShopSchema = yup.object({
   name: yup.string().trim().required('nameRequired').min(2, 'nameMin').max(255),
   tenantType: yup.string().oneOf(TENANT_TYPE_VALUES).required('tenantTypeRequired'),
+  registrationTrack: yup
+    .string()
+    .oneOf(REGISTRATION_TRACK_VALUES)
+    .default(REGISTRATION_TRACK.COMMISSION),
   /**
-   * Tỉnh/thành là BẮT BUỘC: đăng ký gian hàng tạo luôn chi nhánh mặc định, và chi nhánh đó là
-   * nguồn vị trí công khai của mọi xe sau này. Giá trị là MÃ 2 ký tự lấy từ `GET /provinces` —
+   * Tỉnh/thành là BẮT BUỘC ở CẢ HAI tuyến: đăng ký tạo luôn chi nhánh mặc định, và chi nhánh đó
+   * là nguồn vị trí công khai của mọi xe sau này. Giá trị là MÃ 2 ký tự lấy từ `GET /provinces` —
    * KHÔNG kiểm theo danh sách cứng ở đây, backend mới là nơi biết tỉnh nào đang mở.
    */
-  /*
-   * Xã/phường KHÔNG bắt buộc ở bước đăng ký: người mở gian hàng thường chưa có địa chỉ chính
-   * xác, và chặn ở đây là chặn luôn việc họ bắt đầu. Chi nhánh mặc định sinh ra mang cờ chờ bổ
-   * sung, còn cổng "gửi duyệt" mới là chỗ đòi địa chỉ đủ.
-   */
   ...addressShape,
-  // default('') + excludeEmptyString: bỏ trống là hợp lệ, chỉ validate khi có nhập.
+  /*
+   * Xã/phường: tuyến hoa hồng để trống được — người mở hồ sơ chủ xe thường chưa có địa chỉ chính
+   * xác, và chặn ở đây là chặn luôn việc họ bắt đầu; chi nhánh sinh ra mang cờ chờ bổ sung.
+   */
+  /*
+   * Chỉ thêm `.required`, KHÔNG thêm `.length(5)`: mẫu `WARD_CODE_PATTERN` của `addressShape` đã
+   * kiểm hình dạng khi ô có giá trị, và `.length` coi chuỗi rỗng là sai độ dài — nên ô chưa chọn
+   * sẽ nhận CẢ HAI mã (`wardRequired` + `wardInvalid`) và giao diện hiện hai câu cho một lỗi.
+   */
+  wardCode: addressShape.wardCode.when('registrationTrack', {
+    is: REGISTRATION_TRACK.PACKAGE,
+    then: (schema) => schema.required('wardRequired'),
+  }),
+  addressLine: addressShape.addressLine.when('registrationTrack', {
+    is: REGISTRATION_TRACK.PACKAGE,
+    then: (schema) => schema.required('addressLineRequired'),
+  }),
+  // default('') + excludeEmptyString: bỏ trống là hợp lệ ở tuyến hoa hồng, chỉ kiểm khi có nhập.
   phone: yup
     .string()
     .trim()
     .default('')
-    .matches(VN_PHONE_PATTERN, { message: 'phoneInvalid', excludeEmptyString: true }),
+    .matches(VN_PHONE_PATTERN, { message: 'phoneInvalid', excludeEmptyString: true })
+    .when('registrationTrack', {
+      is: REGISTRATION_TRACK.PACKAGE,
+      then: (schema) => schema.required('phoneRequired'),
+    }),
   email: yup.string().trim().default('').email('emailInvalid'),
 });
 
@@ -830,24 +903,18 @@ export const shopProfileSchema = yup.object({
    * cấp là form CHI NHÁNH (`branchFormSchema`), nơi địa điểm vận hành thật được khai.
    */
   ...addressShape,
-  /**
-   * Chủ gian hàng — dữ liệu NỘI BỘ cho đội ngũ XePrime, không hiện cho khách. Họ tên + SĐT là bắt
-   * buộc vì hồ sơ duyệt phải liên hệ được với một người thật; email để trống được, do một phần
-   * chủ shop chỉ đăng nhập bằng SĐT (passwordless) và không có email nào để khai.
+  /*
+   * KHÔNG có ô "chủ gian hàng" và KHÔNG có ô ngân hàng trong form này (16/09/2026).
+   *
+   * Chủ gian hàng là TÀI KHOẢN chủ (`tenants.owner_user_id → users`): tên sửa ở màn hồ sơ cá
+   * nhân, email/SĐT đổi qua luồng xác minh OTP. Ba ô text cũ ở đây ghi vào một bản sao mà không
+   * gì chứng minh, và nó nằm ngay cạnh một tài khoản đã xác minh nói khác đi.
+   *
+   * Tài khoản nhận tiền là `bank_accounts` — sổ riêng, cờ mặc định, lưu trữ, và là bảng mà mọi
+   * lệnh chi thật đọc. Bốn ô text cũ ở đây không nối với đồng tiền nào.
    */
-  ownerFullName: yup.string().trim().required('ownerFullNameRequired').max(255).default(''),
-  ownerPhone: yup
-    .string()
-    .trim()
-    .required('ownerPhoneRequired')
-    .matches(VN_PHONE_PATTERN, { message: 'ownerPhoneInvalid' })
-    .default(''),
-  ownerEmail: yup.string().trim().default('').email('ownerEmailInvalid'),
   taxCode: profileText(50),
   businessLicenseNo: profileText(100),
-  bankName: profileText(100),
-  bankAccountNo: profileText(100),
-  bankAccountName: profileText(255),
   logoUrl: yup
     .string()
     .trim()
@@ -960,17 +1027,13 @@ export const customerFormSchema = yup.object({
     .string()
     .trim()
     .default('')
-    .matches(/^d{2}$/, { message: 'provinceInvalid', excludeEmptyString: true }),
+    .matches(PROVINCE_CODE_PATTERN, { message: 'provinceInvalid', excludeEmptyString: true }),
   wardCode: yup
     .string()
     .trim()
     .default('')
-    .matches(/^d{5}$/, { message: 'wardInvalid', excludeEmptyString: true }),
-  addressLine: yup
-    .string()
-    .trim()
-    .max(TENANT_CUSTOMER_FIELD_MAX.ADDRESS, 'addressMax')
-    .default(''),
+    .matches(WARD_CODE_PATTERN, { message: 'wardInvalid', excludeEmptyString: true }),
+  addressLine: yup.string().trim().max(TENANT_CUSTOMER_FIELD_MAX.ADDRESS, 'addressMax').default(''),
 });
 
 export type CustomerFormValues = yup.InferType<typeof customerFormSchema>;

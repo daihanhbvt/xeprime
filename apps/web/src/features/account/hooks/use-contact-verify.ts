@@ -70,6 +70,15 @@ export function useContactVerify(channel: ContactChannel) {
        */
       queryClient.setQueryData(queryKeys.account.profile(), profile);
       void queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
+      /*
+       * …và hồ sơ GIAN HÀNG: từ 16/09/2026 khối "Chủ gian hàng" ở `/manage/shop` đọc email/SĐT
+       * từ tài khoản chủ (`MyShopDto.ownerAccount`), nên một lần xác minh ở đây phải hiện ngay
+       * bên đó. Thiếu dòng này thì chủ shop đổi số xong quay lại trang Cửa hàng vẫn thấy số cũ
+       * cho tới lần F5 — đúng kiểu lệch mà việc gỡ ba cột sao chép vừa dọn xong.
+       *
+       * Vô hại với người không có gian hàng: không có query nào mang khoá đó trong cache.
+       */
+      void queryClient.invalidateQueries({ queryKey: queryKeys.shop.all });
     },
   });
 

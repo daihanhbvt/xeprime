@@ -20,7 +20,6 @@ import {
   PercentageOutlined,
   PictureOutlined,
   QuestionCircleOutlined,
-  UserOutlined,
   SafetyCertificateOutlined,
   ShopOutlined,
   SolutionOutlined,
@@ -147,9 +146,22 @@ export function isNavBranch(node: NavNode): node is NavBranch {
  * Sidebar của GIAN HÀNG — sắp theo hành trình của chủ xe, không theo bảng chức năng.
  *
  * Trật tự có chủ đích: xem tình hình → vận hành đội xe và đơn → chăm khách & tiền → mặt tiền
- * trên marketplace → cấu hình (đụng một lần rồi thôi) → hỗ trợ. Không mục nào bị xoá so với
- * bản 18-mục-ngang-cấp: ba mục lui xuống làm mục con (Bảo dưỡng, Thu chi, Công nợ), Đơn đặt xe
- * thành mục con của Đơn thuê, Thùng rác lui về Cấu hình.
+ * trên marketplace → cấu hình (đụng một lần rồi thôi) → hỗ trợ.
+ *
+ * Đợt dọn 16/09/2026 — toàn bộ là IA, KHÔNG đụng phép tính tiền nào:
+ *  1. "Thu cọc qua XePrime" thôi làm mục độc lập: một trang cho đúng một công tắc. Nó về làm
+ *     một section của "Chính sách thuê"; route cũ còn sống dưới dạng redirect.
+ *  2. "Ví điểm" → "Số dư & rút tiền", GIỮ trong nhánh Tài chính. Tên cũ đọc như điểm thưởng,
+ *     trong khi trang này có số dư thật, khoản chờ chuyển và lệnh rút.
+ *  3. **Khối "Tài khoản & thanh toán" biến mất, cùng ba mục.** "Gói & hoá đơn" và "Hồ sơ người
+ *     bán" về làm hai section của trang Cửa hàng — cả ba mục cũ đều trả lời cùng một câu hỏi
+ *     ("gian hàng của tôi khai gì / trả tiền thế nào"), nên chúng là một trang chứ không phải
+ *     ba. "Tài khoản & bảo mật" thì rời sidebar hẳn: mật khẩu và xoá tài khoản là việc của một
+ *     CON NGƯỜI, không phải một bước vận hành, nên nó sống trong menu tài khoản ở thẻ người
+ *     dùng (`ManageUserCard`) — đúng chỗ người ta đi tìm nó.
+ *
+ * Cả ba route cũ vẫn sống dưới dạng redirect: bookmark và link trong email không được chết vì
+ * một lần sắp lại menu.
  */
 export const SHOP_NAV: readonly NavSection[] = [
   {
@@ -259,12 +271,17 @@ export const SHOP_NAV: readonly NavSection[] = [
         icon: WalletOutlined,
         children: [
           {
-            // KHÔNG gác bằng `feature`: ví là tiền của chính gian hàng, gói hết hạn vẫn phải
-            // xem và rút được (ADR 0027 điều 3, ADR 0033).
-            //
-            // Gác bằng SỞ HỮU (`ownerOnly`), không bằng quyền: API đã là `@ShopOwnerOnly()`.
-            // `permission` hạ về mức thấp nhất mọi vai đều có, để trục duy nhất còn quyết định
-            // là quyền sở hữu — hai trục cùng hướng về một câu trả lời thì chỉ cần một.
+            /*
+             * "Số dư & rút tiền" đứng ĐẦU nhóm Tài chính: đây là tiền THẬT của gian hàng và là
+             * mục duy nhất trong nhóm có HÀNH ĐỘNG (rút), ba mục sau là sổ sách để đọc.
+             *
+             * KHÔNG gác bằng `feature`: số dư là tiền của chính gian hàng, gói hết hạn vẫn phải
+             * xem và rút được (ADR 0027 điều 3, ADR 0033).
+             *
+             * Gác bằng SỞ HỮU (`ownerOnly`), không bằng quyền: API đã là `@ShopOwnerOnly()`.
+             * `permission` hạ về mức thấp nhất mọi vai đều có, để trục duy nhất còn quyết định
+             * là quyền sở hữu — hai trục cùng hướng về một câu trả lời thì chỉ cần một.
+             */
             key: 'balance',
             labelKey: 'manage.balance',
             href: ROUTES.MANAGE.BALANCE,
@@ -305,6 +322,19 @@ export const SHOP_NAV: readonly NavSection[] = [
     labelKey: 'manageGroups.storefront',
     children: [
       {
+        /*
+         * MỘT mục cho toàn bộ thiết lập gian hàng (16/09/2026).
+         *
+         * Trang đích có năm section — thông tin hiển thị · chủ gian hàng · địa chỉ & pháp lý ·
+         * tài khoản nhận tiền · gói & hạn mức — nên ba mục sidebar cũ ("Gói & hoá đơn", "Tài
+         * khoản & bảo mật", "Hồ sơ người bán") không còn lý do tồn tại: hai mục đầu hỏi cùng một
+         * loại câu hỏi với mục này, mục thứ ba thì trùng nội dung với "Địa chỉ & pháp lý".
+         *
+         * KHÔNG gác bằng `feature`: hồ sơ, tiền và gói của chính gian hàng không bao giờ nằm
+         * sau một cờ tính năng (ADR 0027 điều 3 · ADR 0038 điều 5). Section "Gói & hạn mức" bên
+         * trong tự lọc theo `subscription.view`/`subscription.purchase`, và section "Tài khoản
+         * nhận tiền" theo quyền sở hữu — cùng hai trục mà API đang gác.
+         */
         key: 'shop',
         labelKey: 'manage.shop',
         href: ROUTES.MANAGE.SHOP,
@@ -325,15 +355,6 @@ export const SHOP_NAV: readonly NavSection[] = [
         icon: SafetyCertificateOutlined,
       },
       {
-        // "Gói của tôi" (W2, ADR 0015/0026): quyền RIÊNG `subscription.view` — xem gói/hạn mức
-        // là việc điều hành, mua gói (`subscription.purchase`) server chặn riêng.
-        key: 'subscription',
-        labelKey: 'manage.subscription',
-        href: ROUTES.MANAGE.SUBSCRIPTION,
-        permission: PERMISSION.SUBSCRIPTION_VIEW,
-        icon: CreditCardOutlined,
-      },
-      {
         key: 'shop-branches',
         labelKey: 'manage.shopBranches',
         href: ROUTES.MANAGE.SHOP_BRANCHES,
@@ -350,28 +371,6 @@ export const SHOP_NAV: readonly NavSection[] = [
         feature: PLAN_FEATURE.DRIVERS,
       },
       {
-        /*
-         * Công tắc thu cọc (Phase 6). KHÔNG gắn `feature` dù đường GHI cần `escrow_hold`: gian
-         * hàng thiếu cờ phải vào được để hiểu tính năng thuộc gói nào, và tuyến hoa hồng phải
-         * thấy công tắc bật + khoá kèm giải thích (ADR 0027 điều 4). Ẩn menu ở đây chỉ giấu mất
-         * câu trả lời cho câu hỏi "vì sao khách của tôi phải chuyển tiền trước".
-         */
-        key: 'shop-payment-settings',
-        labelKey: 'manage.shopPaymentSettings',
-        href: ROUTES.MANAGE.SHOP_PAYMENT_SETTINGS,
-        permission: PERMISSION.SELLER_PROFILE_VIEW,
-        icon: BankOutlined,
-      },
-      {
-        // Bộ CƠ BẢN (ADR 0027 điều 1): chủ xe cơ bản cũng phải khai được danh tính và tài khoản
-        // nhận tiền — không gắn `feature`.
-        key: 'seller-profile',
-        labelKey: 'manage.sellerProfile',
-        href: ROUTES.MANAGE.SELLER_PROFILE,
-        permission: PERMISSION.SELLER_PROFILE_VIEW,
-        icon: IdcardOutlined,
-      },
-      {
         key: 'members',
         labelKey: 'manage.members',
         href: ROUTES.MANAGE.MEMBERS,
@@ -386,23 +385,6 @@ export const SHOP_NAV: readonly NavSection[] = [
     labelKey: 'manageGroups.support',
     pinned: true,
     children: [
-      {
-        /*
-         * TÀI KHOẢN & BẢO MẬT của chính người đang đăng nhập (15/09/2026).
-         *
-         * `permission: TENANT_VIEW` là mức thấp nhất mọi vai đều có — cố ý: đây là dữ liệu của
-         * một CON NGƯỜI, không phải của gian hàng, nên không có quyền nào để kiểm. Trước đây
-         * `SHOP_NAV` không có mục nào dẫn tới màn đổi mật khẩu, và nhân viên sống trong `/manage`
-         * phải tự đoán ra một URL thuộc khu khác.
-         *
-         * KHÔNG gác bằng `feature`: mật khẩu không thuộc gói nào.
-         */
-        key: 'account',
-        labelKey: 'manage.account',
-        href: ROUTES.MANAGE.ACCOUNT,
-        permission: PERMISSION.TENANT_VIEW,
-        icon: UserOutlined,
-      },
       {
         key: 'support',
         labelKey: 'manage.support',

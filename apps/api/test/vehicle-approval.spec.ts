@@ -18,7 +18,12 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { PlatformApprovalService } from '../src/modules/platform-admin/platform-approval.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeNotificationService, makeVehiclesService, seedBranch } from './helpers/service-factory';
+import {
+  giveShopStorefront,
+  makeNotificationService,
+  makeVehiclesService,
+  seedBranch,
+} from './helpers/service-factory';
 import { giveTenantPlan } from './helpers/billing-fixture';
 
 /**
@@ -165,6 +170,12 @@ beforeAll(async () => {
   });
   for (const t of [tenantId, draftTenantId]) {
     branchByTenant.set(t, await seedBranch(asService, { tenantId: t }));
+    /*
+     * Mặt tiền gian hàng tuyến gói (ADR 0040 điều 7): tên hiển thị + logo. Spec này kiểm VÒNG
+     * DUYỆT XE, không kiểm cổng hồ sơ gian hàng — cổng đó có spec riêng
+     * (`shop-registration-track`), và đi qua nó ở đây là để spec đỏ vì một lý do khác hẳn.
+     */
+    await giveShopStorefront(asService, t);
   }
   vehicleId = await seedVehicle(tenantId);
 });
@@ -185,6 +196,7 @@ afterAll(async () => {
     await prisma.vehicle.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenantMembership.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenantBranch.deleteMany({ where: { tenantId: { in: tenantIds } } });
+    await prisma.tenantProfile.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
     await prisma.user.deleteMany({ where: { id: { in: [ownerId, reviewerId] } } });
   }
@@ -361,57 +373,60 @@ describe('Vehicle public approval (WS0)', () => {
       data: { status: TENANT_STATUS.SUSPENDED },
     });
     const v = await seedVehicle(draftTenantId);
-    await expect(
-      vehicles.submitForPublicReview(draftTenantId, v, ownerId),
-    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.SHOP_NOT_ACTIVE } });
+    await expect(vehicles.submitForPublicReview(draftTenantId, v, ownerId)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.SHOP_NOT_ACTIVE },
+    });
     await prisma.tenant.update({
       where: { id: draftTenantId },
       data: { status: TENANT_STATUS.ACTIVE },
     });
   });
 
-  maybe('đăng dịch vụ nào phải có GIÁ CHUYÊN BIỆT của dịch vụ đó mới gửi duyệt được (17/08)', async () => {
-    // with_driver không có giá tài xế → chặn (không âm thầm trưng giá tự lái như tổng giá).
-    const withDriver = await seedVehicle(tenantId, {
-      serviceTypes: ['self_drive', 'with_driver'],
-    });
-    await expect(
-      vehicles.submitForPublicReview(tenantId, withDriver, ownerId),
-    ).rejects.toMatchObject({
-      response: {
-        details: { missing: expect.arrayContaining([PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE]) },
-      },
-    });
+  maybe(
+    'đăng dịch vụ nào phải có GIÁ CHUYÊN BIỆT của dịch vụ đó mới gửi duyệt được (17/08)',
+    async () => {
+      // with_driver không có giá tài xế → chặn (không âm thầm trưng giá tự lái như tổng giá).
+      const withDriver = await seedVehicle(tenantId, {
+        serviceTypes: ['self_drive', 'with_driver'],
+      });
+      await expect(
+        vehicles.submitForPublicReview(tenantId, withDriver, ownerId),
+      ).rejects.toMatchObject({
+        response: {
+          details: { missing: expect.arrayContaining([PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE]) },
+        },
+      });
 
-    // long_term không có giá tháng → chặn.
-    const longTerm = await seedVehicle(tenantId, { serviceTypes: ['self_drive', 'long_term'] });
-    await expect(
-      vehicles.submitForPublicReview(tenantId, longTerm, ownerId),
-    ).rejects.toMatchObject({
-      response: {
-        details: { missing: expect.arrayContaining([PUBLISH_REQUIREMENT.LONG_TERM_PRICE]) },
-      },
-    });
+      // long_term không có giá tháng → chặn.
+      const longTerm = await seedVehicle(tenantId, { serviceTypes: ['self_drive', 'long_term'] });
+      await expect(
+        vehicles.submitForPublicReview(tenantId, longTerm, ownerId),
+      ).rejects.toMatchObject({
+        response: {
+          details: { missing: expect.arrayContaining([PUBLISH_REQUIREMENT.LONG_TERM_PRICE]) },
+        },
+      });
 
-    // Đủ giá chuyên biệt → gửi duyệt trôi.
-    const ready = await seedVehicle(tenantId, {
-      serviceTypes: ['self_drive', 'with_driver', 'long_term'],
-      monthlyPrice: '12000000',
-      withDriverDailyPrice: '1300000',
-    });
-    const submitted = await vehicles.submitForPublicReview(tenantId, ready, ownerId);
-    expect(submitted.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW);
+      // Đủ giá chuyên biệt → gửi duyệt trôi.
+      const ready = await seedVehicle(tenantId, {
+        serviceTypes: ['self_drive', 'with_driver', 'long_term'],
+        monthlyPrice: '12000000',
+        withDriverDailyPrice: '1300000',
+      });
+      const submitted = await vehicles.submitForPublicReview(tenantId, ready, ownerId);
+      expect(submitted.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW);
 
-    // Xe CHỈ có tài xế (không tự lái): không bị ép giá ngày thường.
-    const driverOnly = await seedVehicle(tenantId, {
-      serviceTypes: ['with_driver'],
-      weekdayPrice: null,
-      weekendPrice: null,
-      withDriverDailyPrice: '2500000',
-    });
-    const submitted2 = await vehicles.submitForPublicReview(tenantId, driverOnly, ownerId);
-    expect(submitted2.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW);
-  });
+      // Xe CHỈ có tài xế (không tự lái): không bị ép giá ngày thường.
+      const driverOnly = await seedVehicle(tenantId, {
+        serviceTypes: ['with_driver'],
+        weekdayPrice: null,
+        weekendPrice: null,
+        withDriverDailyPrice: '2500000',
+      });
+      const submitted2 = await vehicles.submitForPublicReview(tenantId, driverOnly, ownerId);
+      expect(submitted2.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW);
+    },
+  );
 
   maybe('bỏ dịch vụ → giá chuyên biệt của nó bị XOÁ theo (không giữ giá stale)', async () => {
     const v = await seedVehicle(tenantId, {

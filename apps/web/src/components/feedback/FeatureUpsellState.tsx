@@ -5,7 +5,7 @@ import { Button } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { PlanFeature } from '@xeprime/types';
-import { ROUTES } from '@/constants/routes';
+import { SHOP_SECTION, shopSectionPath } from '@/constants/routes';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import styles from './PermissionState.module.css';
 
@@ -34,7 +34,7 @@ export function FeatureUpsellState({ feature }: { feature: PlanFeature }) {
       </p>
       <p className={styles.description}>{t('feature.upsellBody')}</p>
       <div className={styles.actions}>
-        <Link href={ROUTES.MANAGE.SUBSCRIPTION}>
+        <Link href={shopSectionPath(SHOP_SECTION.PLAN)}>
           <Button type="primary">{t('feature.viewPlansCta')}</Button>
         </Link>
       </div>

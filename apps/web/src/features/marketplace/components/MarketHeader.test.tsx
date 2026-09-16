@@ -296,12 +296,12 @@ describe('MarketHeader — thẻ danh tính', () => {
    * Thành viên gian hàng tuyến gói đọc hồ sơ con người ở `/manage/account`; `AccountShell` chuyển
    * hướng `/account` của họ sang đó, nên trỏ thẳng là bớt một cú nhảy chứ không phải một luật thứ hai.
    */
-  it('thành viên gian hàng: thẻ trỏ thẳng /manage/account', async () => {
+  it('thành viên gian hàng: thẻ trỏ thẳng /manage/security', async () => {
     state.user = { ...shopUser(), email: 'shop@x.vn' };
     await openMenu();
 
     const card = screen.getByText('XePrime Sài Gòn').closest('a');
-    expect(card?.getAttribute('href')).toBe('/manage/account');
+    expect(card?.getAttribute('href')).toBe('/manage/security');
   });
 });
 

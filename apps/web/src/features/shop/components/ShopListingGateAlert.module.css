@@ -1,0 +1,10 @@
+/* Dải "hồ sơ gian hàng chưa đủ để gửi xe duyệt" — ADR 0040. */
+
+.alert {
+  margin-bottom: var(--xp-space-md);
+}
+
+.list {
+  margin: 0;
+  padding-inline-start: var(--xp-space-md);
+}

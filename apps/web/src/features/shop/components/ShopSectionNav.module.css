@@ -1,0 +1,93 @@
+/*
+ * Cột điều hướng của trang Cửa hàng.
+ *
+ * Hai hình dạng loại trừ nhau, chuyển bằng CSS chứ không bằng một nhánh JS theo bề rộng: nhánh
+ * JS cần biết bề rộng trước khi render, và trên server thì nó không biết — kết quả là một nhịp
+ * nhấp nháy sau hydrate ở đúng thanh điều hướng.
+ */
+
+.rail {
+  position: sticky;
+  /* Dưới topbar dính của vỏ quản lý, không chui lên đè nó. */
+  top: calc(var(--xp-shell-topbar-height) + var(--xp-space-md));
+  align-self: start;
+  min-width: 0;
+}
+
+.railTitle {
+  margin: 0 0 var(--xp-space-sm);
+  padding-inline: var(--xp-space-sm);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.list {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  gap: 2px;
+  list-style: none;
+}
+
+.link {
+  display: block;
+  padding: var(--xp-space-sm);
+  border-left: 2px solid transparent;
+  border-radius: var(--xp-border-radius-sm);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  text-decoration: none;
+}
+
+.link:hover {
+  background: var(--xp-color-bg-hover);
+  color: var(--xp-color-text);
+}
+
+.link:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: -2px;
+}
+
+/*
+ * Mục đang mở: chữ đậm + vạch trái, KHÔNG phải một khối màu đặc.
+ *
+ * Cột này đứng cạnh sidebar tối của vỏ quản lý, vốn đã có một mục sáng màu vàng. Hai vùng "đang
+ * chọn" cùng nổi bật trên một màn hình làm người dùng phải tự xác định cái nào nói về cái gì.
+ */
+.linkActive {
+  border-left-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Ô chọn chỉ có ở màn hẹp — xem media query cuối file. */
+.mobile {
+  display: none;
+}
+
+.select {
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .rail {
+    display: none;
+  }
+
+  .mobile {
+    display: block;
+    /* Dính ở đầu vùng nội dung: cuộn giữa chừng vẫn nhảy sang phần khác được. */
+    position: sticky;
+    z-index: 4;
+    top: var(--xp-shell-topbar-height);
+    padding-block: var(--xp-space-sm);
+    background: var(--xp-color-bg-layout);
+  }
+}

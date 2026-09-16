@@ -198,3 +198,25 @@ export const BANK_ACCOUNT_STATUS_VALUES = Object.values(
 export function isBankAccountStatus(value: unknown): value is BankAccountStatus {
   return typeof value === 'string' && (BANK_ACCOUNT_STATUS_VALUES as string[]).includes(value);
 }
+
+// ── Bảng tổng hợp giao dịch của gian hàng (16/09/2026) ──────────────────────
+
+/**
+ * Đơn vị của cột "đơn giá" trong bảng tổng hợp giao dịch.
+ *
+ * Hai đơn vị vì có hai cách tính tiền thuê: tự lái / có tài xế tính theo NGÀY, còn thuê dài hạn
+ * tính theo GÓI THÁNG LỊCH (ADR 0011). Hiển thị "1.350.000 ₫/ngày" cho một đơn 6 tháng là sai
+ * cả về số lẫn về cách khách và chủ xe đã thoả thuận với nhau.
+ *
+ * Là MÃ đi trên dây — chỉ nhãn mới dịch (ADR 0012).
+ */
+export const WALLET_STATEMENT_UNIT = {
+  DAY: 'day',
+  MONTH: 'month',
+} as const;
+
+export type WalletStatementUnit =
+  (typeof WALLET_STATEMENT_UNIT)[keyof typeof WALLET_STATEMENT_UNIT];
+export const WALLET_STATEMENT_UNIT_VALUES = Object.values(
+  WALLET_STATEMENT_UNIT,
+) as WalletStatementUnit[];

@@ -11,6 +11,9 @@ import {
   APPROVAL_TARGET_TYPE,
   API_ERROR_CODE,
   BOOKING_STATUS,
+  isPackageShopTrack,
+  missingPackageShopListingRequirements,
+  SHOP_ONBOARDING_STATE,
   POLICY_SOURCE,
   RECEIPT_TYPE,
   REVIEW_STATUS,
@@ -509,7 +512,11 @@ export class VehiclesService {
           // đầu tiên: một chiếc xe máy "4 chỗ" ra tới chợ là đã sai rồi.
           ...clearIncompatibleProfileFields(
             { vehicleType: dto.vehicleType, fuelType: null, transmission: null },
-            { vehicleType: dto.vehicleType, fuelType: input.fuelType ?? null, transmission: input.transmission ?? null },
+            {
+              vehicleType: dto.vehicleType,
+              fuelType: input.fuelType ?? null,
+              transmission: input.transmission ?? null,
+            },
           ),
         },
       });
@@ -555,8 +562,7 @@ export class VehiclesService {
       dto.vehicleCatalogModelId !== undefined
         ? await this.catalogModels.resolveForVehicle(dto.vehicleCatalogModelId, vehicleType)
         : null;
-    const input =
-      dto.vehicleCatalogModelId !== undefined ? applyCatalogModel(dto, canonical) : dto;
+    const input = dto.vehicleCatalogModelId !== undefined ? applyCatalogModel(dto, canonical) : dto;
 
     await this.catalog.assertVehicleValues({ ...input, vehicleType });
     assertVehicleProfile(
@@ -927,14 +933,17 @@ export class VehiclesService {
     });
     const typeOf = new Map(existing.map((i) => [i.imageUrl, i.imageType]));
     return dedupeByUrl(
-      urls.map((u) => u.trim()).filter(Boolean).map((url) => ({ url, type: typeOf.get(url) ?? null })),
+      urls
+        .map((u) => u.trim())
+        .filter(Boolean)
+        .map((url) => ({ url, type: typeOf.get(url) ?? null })),
     );
   }
 
   /**
    * Gửi (lại) xe đi duyệt công khai — **cổng kiểm duyệt DUY NHẤT của tuyến hoa hồng** (ADR 0036).
    *
-   * Bốn cổng, theo thứ tự rẻ-trước-đắt-sau:
+   * Năm cổng, theo thứ tự rẻ-trước-đắt-sau:
    *
    *  1. **Trạng thái xe** cho phép gửi (draft/needs_revision/rejected/hidden).
    *  2. **Gian hàng không bị khoá.** Chú ý: đây KHÔNG phải "gian hàng đã được duyệt". Tenant mở
@@ -942,7 +951,9 @@ export class VehiclesService {
    *     khoá gian hàng — và lúc đó xe không được lên chợ là đúng.
    *  3. **Hồ sơ xe đủ điều kiện** — `missingPublishRequirements` ở `@xeprime/types`, CÙNG hàm mà
    *     checklist của web chạy, nên không còn cảnh checklist xanh hết mà server từ chối.
-   *  4. **Hạn mức chỗ** của gói (ADR 0015 điều 7).
+   *  4. **Mặt tiền GIAN HÀNG đủ điều kiện** — CHỈ với tuyến gói (ADR 0040), xem
+   *     `assertPackageShopReadyToList`.
+   *  5. **Hạn mức chỗ** của gói (ADR 0015 điều 7).
    *
    * Tạo phiếu duyệt + log + audit trong một transaction — client KHÔNG tự set `approved_public`
    * (CLAUDE.md mục 5).
@@ -1001,6 +1012,14 @@ export class VehiclesService {
       });
     }
 
+    /*
+     * Cổng MẶT TIỀN GIAN HÀNG — chỉ tuyến gói (ADR 0040). Đứng TRƯỚC hạn mức chỗ vì nó không
+     * tốn truy vấn nào ngoài một lượt đọc hồ sơ + chi nhánh, còn `assertVehicleQuota` phải đếm
+     * xe. Cũng đứng SAU cổng hồ sơ xe: một chiếc xe thiếu ảnh thì thiếu ảnh, và nói về logo gian
+     * hàng lúc đó là trả lời câu người dùng chưa hỏi.
+     */
+    await this.assertPackageShopReadyToList(tenantId);
+
     // Điểm chặn THỨ HAI của hạn mức chỗ (ADR 0015 điều 7 — "cái răng thật"): hết chỗ trên chợ
     // thì không đưa thêm xe lên, kể cả xe đã tạo từ trước khi gói thu nhỏ. Đếm xe đang chiếm
     // suất (chờ duyệt + đang công khai), trừ chính chiếc này để gửi-lại-duyệt không tự chặn mình.
@@ -1041,6 +1060,92 @@ export class VehiclesService {
     }
 
     return this.getOne(tenantId, id);
+  }
+
+  /**
+   * MẶT TIỀN GIAN HÀNG đã đủ để bán chưa — cổng CHỈ áp với tuyến gói (ADR 0040).
+   *
+   * ## Vì sao chỉ tuyến gói
+   *
+   * Gian hàng trả phí bán bằng THƯƠNG HIỆU: khách thấy logo trong kết quả tìm kiếm, gọi vào số
+   * của gian hàng, đến đúng địa chỉ chi nhánh. Một gian hàng lên chợ mà không có logo là một ô
+   * trống giữa các đối thủ có logo — và chính họ mất tiền vì điều đó.
+   *
+   * Chủ xe tuyến hoa hồng thì KHÔNG bị cổng này chạm tới, và đó là điều quan trọng nhất ở đây:
+   * một người có một chiếc xe không có logo gian hàng và không cần có. Bắt họ thiết kế một cái
+   * là dựng lại đúng rào cản mà ADR 0036 vừa gỡ khỏi phễu chủ xe.
+   *
+   * `isPackageShopTrack` tính cả `package_pending` là CÓ: họ đã chọn cửa gian hàng, nên luật của
+   * gian hàng áp cho họ ngay. (Trên thực tế họ không tới được đây — `SubscriptionTrackGuard` và
+   * routing giữ họ ở màn thanh toán — nhưng cổng không dựa vào điều đó.)
+   *
+   * ## Nguồn dữ liệu, và vì sao KHÔNG đọc `tenant_profiles` cho phần địa chỉ
+   *
+   * Bốn cột địa chỉ trên `tenant_profiles` là BẢN SAO của chi nhánh mặc định
+   * (`BranchesService.syncProfileFromDefaultBranch`). Chấm theo bản sao là chấm nhầm nguồn:
+   * `public_listings` lấy vị trí xe từ chi nhánh, nên một hồ sơ có tỉnh trong khi chi nhánh thì
+   * không sẽ cho ra một xe lên chợ mà không ai biết nó ở đâu.
+   *
+   * Trong luồng bình thường bước "tạo gian hàng" đã đòi đủ năm mục không-phải-logo, nên mục
+   * thường còn thiếu ở đây là ĐÚNG MỘT: logo. Cổng vẫn chấm cả sáu — hồ sơ sửa được sau đó, và
+   * một gian hàng xoá trắng tên rồi đăng xe là thứ không được lọt.
+   *
+   * ## Hợp đồng lỗi
+   *
+   * Mã RIÊNG `SHOP_LISTING_REQUIREMENTS_MISSING`, KHÔNG dùng chung `PROFILE_INCOMPLETE` với cổng
+   * xác minh: hai bộ quy tắc có hai từ vựng khác nhau mà `displayName`/`province` lại trùng tên,
+   * nên một client chỉ nhìn `details.missing` không phân biệt được chúng — và sẽ dựng nhãn của bộ
+   * này cho mã của bộ kia.
+   *
+   * `details.missing` là danh sách MÃ (`PACKAGE_SHOP_LISTING_REQUIREMENT`), không phải câu tiếng
+   * Việt — web dựng nhãn theo ngôn ngữ đang dùng (ADR 0012). Ném TRƯỚC transaction nên xe KHÔNG
+   * chuyển sang `pending` và KHÔNG có phiếu duyệt nào được tạo.
+   */
+  private async assertPackageShopReadyToList(tenantId: string): Promise<void> {
+    const tenant = await this.prisma.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+      select: {
+        onboardingState: true,
+        profile: { select: { displayName: true, logoUrl: true } },
+        branches: {
+          where: { isDefault: true, deletedAt: null },
+          select: { phone: true, provinceCode: true, wardCode: true, addressLine: true },
+          take: 1,
+        },
+      },
+    });
+
+    /*
+     * Hỏi TUYẾN THU PHÍ chỉ khi trục đăng ký chưa trả lời được.
+     *
+     * `package_pending`/`package_active` đã là câu trả lời cuối; chỉ CỬA HOA HỒNG còn mơ hồ (một
+     * chủ xe hoa hồng mua gói vẫn là gian hàng tuyến gói — xem `isPackageShopTrack`). Gọi
+     * `effectiveBillingFor` vô điều kiện nghĩa là mọi lượt gửi xe của mọi gian hàng đều trả tiền
+     * cho một lượt đọc `tenant_subscriptions` mà phần lớn trường hợp không cần tới.
+     */
+    const billingMode =
+      tenant.onboardingState === SHOP_ONBOARDING_STATE.COMMISSION
+        ? (await this.billing.effectiveBillingFor(tenantId)).billingMode
+        : null;
+
+    if (!isPackageShopTrack({ onboardingState: tenant.onboardingState, billingMode })) return;
+
+    const branch = tenant.branches[0];
+    const missing = missingPackageShopListingRequirements({
+      displayName: tenant.profile?.displayName,
+      contactPhone: branch?.phone,
+      provinceCode: branch?.provinceCode,
+      wardCode: branch?.wardCode,
+      addressLine: branch?.addressLine,
+      logoUrl: tenant.profile?.logoUrl,
+    });
+    if (missing.length === 0) return;
+
+    throw new ConflictException({
+      code: API_ERROR_CODE.SHOP_LISTING_REQUIREMENTS_MISSING,
+      message: 'Hồ sơ gian hàng còn thiếu thông tin bắt buộc nên chưa gửi xe duyệt được.',
+      details: { missing },
+    });
   }
 
   /**
@@ -1276,9 +1381,7 @@ function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritab
       ? { fuelConsumptionCombined: dto.fuelConsumptionCombined }
       : {}),
     ...(dto.electricRangeKm !== undefined ? { electricRangeKm: dto.electricRangeKm } : {}),
-    ...(dto.batteryCapacityKwh !== undefined
-      ? { batteryCapacityKwh: dto.batteryCapacityKwh }
-      : {}),
+    ...(dto.batteryCapacityKwh !== undefined ? { batteryCapacityKwh: dto.batteryCapacityKwh } : {}),
     ...(dto.electricConsumptionKwhPer100Km !== undefined
       ? { electricConsumptionKwhPer100Km: dto.electricConsumptionKwhPer100Km }
       : {}),

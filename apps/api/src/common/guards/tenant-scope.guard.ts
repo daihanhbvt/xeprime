@@ -3,7 +3,9 @@ import { Reflector } from '@nestjs/core';
 import {
   API_ERROR_CODE,
   MEMBERSHIP_STATUS,
+  SHOP_ONBOARDING_STATE,
   isPlanFeature,
+  isShopOnboardingState,
   type Permission,
   type TenantRole,
 } from '@xeprime/types';
@@ -65,6 +67,9 @@ export class TenantScopeGuard implements CanActivate {
           select: {
             id: true,
             status: true,
+            // Trục ĐĂNG KÝ (ADR 0040) — đi kèm CHÍNH truy vấn này, cùng lý do với `usedFeatures`
+            // và dòng thuê bao: hai cổng đọc nó ở mọi request tenant-scoped.
+            onboardingState: true,
             deletedAt: true,
             usedFeatures: true,
             subscriptions: {
@@ -99,6 +104,14 @@ export class TenantScopeGuard implements CanActivate {
     req.tenant = {
       tenantId: membership.tenant.id,
       tenantStatus: membership.tenant.status,
+      /*
+       * Lọc qua `isShopOnboardingState`: CHECK ở DB đã canh, nhưng cột là `varchar` nên kiểu
+       * Prisma vẫn là `string`. Giá trị lạ rơi về `commission` — mức KHÔNG cấp gì và không
+       * chặn gì thêm, cùng kỷ luật mà `usedFeatures` ngay dưới dùng.
+       */
+      onboardingState: isShopOnboardingState(membership.tenant.onboardingState)
+        ? membership.tenant.onboardingState
+        : SHOP_ONBOARDING_STATE.COMMISSION,
       roleKey: membership.roleKey as TenantRole,
       permissions,
       features: plan.features,

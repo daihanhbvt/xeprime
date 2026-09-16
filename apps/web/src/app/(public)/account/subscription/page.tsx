@@ -10,7 +10,7 @@ import { OwnerGate } from '@/features/account/components/OwnerGate';
 import { SubscriptionWorkspace } from '@/features/subscription/components/SubscriptionWorkspace';
 
 /**
- * `/account/subscription` — "Gói của tôi" cho chủ xe tuyến hoa hồng.
+ * `/account/subscription` — "Gói & hoá đơn" cho chủ xe tuyến hoa hồng.
  *
  * Cùng `SubscriptionWorkspace` với `/manage/subscription`, chỉ khác tiêu đề. Đây là phễu nâng
  * cấp lên tuyến gian hàng (ADR 0028 điều 1), nên nó phải mở từ bậc `registering`: người đang chờ

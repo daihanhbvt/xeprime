@@ -297,7 +297,7 @@ describe('resolveAccountNav', () => {
    *
    * Nghĩa vụ đó KHÔNG được biến mất — nhưng nó cũng không quay lại đây. Lối đi của nó là một thẻ
    * theo ngữ cảnh trong `/manage/account` dẫn tới `/manage/account/trips` (vai `renter`, xem
-   * `RenterTripsTransitionCard`). Menu khu khách không có ngoại lệ nào: một mục chỉ đôi khi xuất
+   * menu tài khoản của vỏ quản lý — `ManageUserCard`). Menu khu khách không có ngoại lệ nào: một mục chỉ đôi khi xuất
    * hiện khiến hai người dùng cùng vai nhìn thấy hai menu khác nhau và không ai giải thích được.
    */
   it('tài khoản gian hàng: KHÔNG có mục Chuyến, kể cả khi còn chuyến đi thuê chưa khép', () => {

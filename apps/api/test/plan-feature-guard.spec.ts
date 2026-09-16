@@ -8,6 +8,7 @@ import {
   FEATURE_STATE,
   PLAN_FEATURE,
   PLAN_FEATURE_VALUES,
+  SHOP_ONBOARDING_STATE,
   type FeatureState,
   type PlanFeature,
 } from '@xeprime/types';
@@ -53,6 +54,7 @@ function tenantWith(state: FeatureState, feature: PlanFeature = PLAN_FEATURE.FIN
   return {
     tenantId: 'T1',
     tenantStatus: 'active',
+    onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE,
     roleKey: 'shop_owner',
     permissions: [],
     features,

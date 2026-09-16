@@ -1,19 +1,23 @@
 {
   "page": {
     "title": "Trở thành chủ xe",
-    "subtitle": "Tạo gian hàng để đăng và quản lý xe cho thuê. Hồ sơ gian hàng cần được XePrime duyệt trước khi xe của bạn xuất hiện công khai trên marketplace.",
+    "subtitle": "Tạo hồ sơ chủ xe để đăng và quản lý xe cho thuê. Từng chiếc xe sẽ được XePrime duyệt trước khi xuất hiện công khai trên marketplace.",
     "back": "Quay lại marketplace",
     "homeAriaLabel": "Về trang chủ XePrime"
   },
   "guide": {
     "trigger": "Hướng dẫn",
-    "title": "Mở gian hàng trong 4 bước",
+    "title": "Trở thành chủ xe trong 4 bước",
     "steps": {
-      "create": "Tạo gian hàng: tên, loại hình, tỉnh/thành và liên hệ.",
-      "complete": "Hoàn thiện hồ sơ rồi bấm Gửi duyệt — XePrime chỉ xem hồ sơ sau khi bạn gửi.",
-      "prepare": "Trong lúc chờ duyệt, bạn vẫn thêm xe và chuẩn bị dữ liệu bình thường.",
-      "publish": "Hồ sơ được duyệt: xe lên marketplace và bắt đầu nhận đơn."
-    }
+      "create": "Tạo hồ sơ: tên, loại hình, tỉnh/thành và liên hệ.",
+      "complete": "Khai nốt thông tin còn thiếu — hồ sơ đủ thì đăng xe được ngay.",
+      "prepare": "Thêm chiếc xe đầu tiên: ảnh, giấy tờ, giá thuê.",
+      "publish": "Gửi xe duyệt. Được duyệt là xe lên chợ và bắt đầu nhận đơn.",
+      "createShop": "Tạo gian hàng: tên, số điện thoại liên hệ và địa chỉ.",
+      "pay": "Chọn gói, số chỗ xe và kỳ hạn, rồi chuyển khoản theo mã QR.",
+      "logo": "Tải logo gian hàng — cần có trước khi gửi xe lên chợ."
+    },
+    "packageTitle": "Mở gian hàng trong 4 bước"
   },
   "form": {
     "title": "Tạo gian hàng",
@@ -41,13 +45,15 @@
       },
       "phone": {
         "label": "Số điện thoại",
-        "placeholder": "0901234567"
+        "placeholder": "0901234567",
+        "shopHelp": "Số khách gọi khi cần liên hệ gian hàng. Điền sẵn từ tài khoản của bạn, sửa được."
       },
       "email": {
         "label": "Email liên hệ",
         "placeholder": "lienhe@gianhang.vn"
       }
-    }
+    },
+    "submitPackage": "Tạo gian hàng và chọn gói"
   },
   "tips": {
     "title": "Lưu ý",
@@ -65,11 +71,35 @@
     "provinceRequired": "Chọn tỉnh/thành nơi đặt gian hàng",
     "provinceInvalid": "Mã tỉnh không hợp lệ",
     "phoneInvalid": "Số điện thoại không hợp lệ",
-    "emailInvalid": "Email không hợp lệ"
+    "emailInvalid": "Email không hợp lệ",
+    "wardRequired": "Chọn xã/phường/đặc khu",
+    "wardInvalid": "Xã/phường không hợp lệ",
+    "addressLineRequired": "Nhập số nhà, đường của gian hàng",
+    "addressLineMax": "Địa chỉ quá dài",
+    "phoneRequired": "Nhập số điện thoại liên hệ của gian hàng"
   },
   "created": "Đã tạo gian hàng. Hoàn thiện hồ sơ rồi gửi duyệt.",
   "ownerVariant": {
     "title": "Thiết lập hồ sơ chủ xe",
     "intro": "Thông tin liên hệ và địa chỉ nhận xe của bạn. Bạn sửa lại bất cứ lúc nào."
+  },
+  "packagePage": {
+    "title": "Đăng ký gian hàng",
+    "subtitle": "Hai bước: khai thông tin gian hàng, rồi chọn gói và thanh toán. Bộ quản lý gian hàng mở ngay khi XePrime nhận được tiền."
+  },
+  "steps": {
+    "label": "Tiến trình đăng ký gian hàng",
+    "shopInfo": "Thông tin gian hàng",
+    "planPayment": "Gói và thanh toán"
+  },
+  "checkout": {
+    "loadError": "Không tải được trạng thái thanh toán",
+    "plansError": "Không tải được danh sách gói",
+    "noPlans": "Hiện chưa có gói gian hàng nào đang bán",
+    "noPlansHint": "Liên hệ hỗ trợ XePrime để mở gói cho gian hàng của bạn.",
+    "statusWaiting": "Đang chờ tiền về. Chuyển khoản theo đúng mã bên dưới — gói mở tự động khi XePrime nhận được tiền.",
+    "statusPartial": "Đã nhận một phần. Chuyển nốt số còn thiếu theo đúng mã bên dưới.",
+    "createInvoice": "Tạo hoá đơn và lấy mã chuyển khoản",
+    "pickTermFirst": "Chọn kỳ hạn để tạo hoá đơn."
   }
 }

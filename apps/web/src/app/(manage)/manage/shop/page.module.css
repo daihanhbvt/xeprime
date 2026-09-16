@@ -1,6 +1,13 @@
+/*
+ * Trang Cửa hàng — rộng hơn một form (`--xp-shell-form-max-width`) vì nó có thêm một cột mục
+ * lục, nhưng vẫn có trần: ở 1440px+ mà để nội dung tràn hết bề ngang thì mỗi ô nhập thành một
+ * vệt dài và mắt phải quét cả màn hình để đọc lại thứ vừa gõ.
+ *
+ * 1280px = 220px mục lục + 24px khoảng cách + ~1036px nội dung.
+ */
 .page {
   width: 100%;
-  max-width: var(--xp-shell-form-max-width);
+  max-width: 1280px;
   min-width: 0;
   padding-bottom: var(--xp-space-lg);
   margin-inline: auto;

@@ -22,7 +22,7 @@ Nguồn sống (đọc trước, luôn đúng hiện tại):
 1. `docs/design/02_PRODUCT_VISION.md` — **sản phẩm, persona và mô hình doanh thu hiện hành**.
 2. `docs/completion-roadmap.md` — **đang ở đâu, release gate và việc tiếp theo**.
 3. `docs/design/03_PRODUCT_GAP_ANALYSIS.md` — backlog User/Admin/Manage theo hiện trạng source.
-4. `docs/decisions/` — **38 ADR (0001–0038)**; ADR Accepted mới hơn thắng trong đúng phạm vi ghi đè.
+4. `docs/decisions/` — **40 ADR (0001–0040)**; ADR Accepted mới hơn thắng trong đúng phạm vi ghi đè.
 5. `docs/CODEMAP.md` — chỉ mục "cái gì nằm ở đâu".
 6. File này (CLAUDE.md).
 7. `docs/deployment.md`, `docs/backup-and-restore.md`, `docs/third-party-keys.md` — vận hành và dịch vụ ngoài.
@@ -67,6 +67,7 @@ Skill tự kích hoạt theo mô tả; nếu quên thì gọi tay. `navigator` �
 | DB | **PostgreSQL 16** + Prisma — ADR 0001. ID `String @id @db.Char(26)` (ULID), snake_case `@@map`/`@map`, tiền `Decimal @db.Decimal(14,2)`, thời gian `@db.Timestamptz(3)`, JSON dùng `jsonb`, status là String (union type ở `packages/types` — ADR 0005) |
 | Chống trùng lịch | Bảng `vehicle_occupancies` + `EXCLUDE USING gist` — ADR 0006. **Không** dựa vào check ở tầng app |
 | Auth (web) | Mật khẩu + OTP tự làm; Google/Facebook đi qua **OAuth do backend chủ trì** (`GET /auth/social/:provider`, authorization code + PKCE ở server — ADR 0019). Mọi đường đều kết thúc bằng **httpOnly session cookie** do NestJS phát — ADR 0002 |
+| Hai tuyến ĐĂNG KÝ | Cửa vào lưu ở `tenants.onboarding_state` (`commission` · `package_pending` · `package_active`) — ADR 0040. `POST /tenants` nhận `registrationTrack`; tuyến gói KHÔNG nhận gói hoa hồng tạm và chỉ vào được `/manage/onboarding` cho tới khi hoá đơn `paid`. Mốc hoàn tất ghi trong CHÍNH transaction bật thuê bao |
 | Firebase | **CHỈ** chat realtime (custom token + Firestore projection — ADR 0009) và `apps/worker`. KHÔNG còn nằm trên đường đăng nhập |
 | Auth (native) | `Authorization: Bearer <accessToken>` — access token JWT 15 phút, refresh token opaque xoay vòng, phiên thu hồi được theo thiết bị. Endpoint `/auth/mobile/*` — ADR 0017 |
 | Client HTTP | `@xeprime/api-client` = **hạ tầng HTTP dùng chung** (client, phong bì `{data,meta}`, phân trang, `ApiClientError`, `AuthTransport`, `queryKeys`) — KHÔNG còn lời gọi theo nghiệp vụ. Web `credentials: 'include'`, native header Bearer; cấu hình ở `apps/web/src/services/api-client.ts` và `apps/mobile/src/lib/api-client.ts` |
@@ -138,6 +139,12 @@ Bổ sung ngoài tài liệu, đã thống nhất đưa vào base:
 - ❌ Đồng nhất `hold_amount` với `platform_service_fee` — chúng có thể bằng nhau ở một policy nhưng không phải quy tắc (ADR 0028)
 - ❌ Đọc `booking_holds.purpose` để quyết định phần tiền GIỮ HỘ — một hold chứa tiền của nhiều người (`S` của XePrime, `D` của chủ xe, `IV`/`IP` của hãng bảo hiểm). Tách quỹ đọc từ BỐN CỘT số tiền (ADR 0033 điều 4)
 - ❌ `?? BILLING_MODE.PACKAGE` khi tenant thiếu gói hiện hành — dùng `resolveEffectiveBilling` (4 pha). `unconfigured` KHÔNG phải một tuyến: đường đọc hiển thị chưa xác định, đường ghi tiền từ chối (ADR 0038 điều 1)
+- ❌ Phân biệt hai tuyến ĐĂNG KÝ bằng prop component, `?next=`, state router, hay "đã có gói hay chưa" — cả bốn đều chết sau một lần F5. Cửa vào là DỮ LIỆU (`tenants.onboarding_state`), gửi lên bằng `registrationTrack` (ADR 0040 điều 1)
+- ❌ Gán gói hoa hồng tạm cho người đăng ký tuyến GÓI — nó biến họ thành chủ xe tuyến hoa hồng ở mọi nơi đọc `billingMode` (khu làm việc, nhãn tài khoản, trần 3 xe). Họ nhận gói THẬT lúc tiền về (ADR 0040 điều 2)
+- ❌ Ghi mốc hoàn tất onboarding gói ngoài transaction bật thuê bao, hay mở Manage vì người dùng bấm "Tôi đã chuyển khoản" — kích hoạt là việc của webhook SePay (ADR 0040 điều 3)
+- ❌ Lùi `onboarding_state` từ `package_active` về `package_pending`/`commission` khi gói hết hạn, hay mời một gian hàng hết gói vào wizard "Hồ sơ chủ xe → Đăng xe đầu tiên → Lên chợ" — họ là khách cũ cần gia hạn (ADR 0040 điều 4)
+- ❌ Đặt xác minh pháp nhân làm cổng MUA GÓI, hay đánh `verification = verified` vì tiền đã về — thanh toán mở tuyến gói, không mở trục kiểm duyệt (ADR 0040 điều 5 ghi đè ADR 0036 điều 4)
+- ❌ Dùng `missingShopProfileRequirements` làm cổng đăng xe, hay bắt chủ xe tuyến HOA HỒNG phải có logo — cổng đăng xe của gian hàng trả phí là `missingPackageShopListingRequirements` (ADR 0040 điều 7)
 - ❌ Tạo ví thứ hai cho một người ĐÃ là chủ xe — một người một ví, thuộc tenant. Khoản hoàn của họ đi qua `resolveRefundWalletOwner`, không ghi thẳng `{USER, customerUserId}` (ADR 0038 điều 2)
 - ❌ Gác ví/tài khoản ngân hàng của gian hàng bằng một khoá `PERMISSION` — permission uỷ quyền được; dùng `@ShopOwnerOnly()` (ADR 0038 điều 3)
 - ❌ Để ranh giới hai TUYẾN đi qua `PLAN_FEATURE_ENFORCEMENT` — công tắc đó chỉ gác đợt rollout hạ cấp năng lực. Ranh giới tuyến dùng `@SubscriptionTrackOnly()`, chặn thật ngay (ADR 0038 điều 4)

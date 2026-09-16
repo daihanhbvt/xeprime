@@ -142,8 +142,8 @@ export interface ShopSpec {
     coverUrl?: string;
     taxCode: string | null;
     businessLicenseNo: string | null;
+    /** Tài khoản nhận tiền — seed vào `bank_accounts` (ADR 0033), KHÔNG vào hồ sơ gian hàng. */
     bank: { name: string; accountNo: string; accountName: string } | null;
-    ownerFullName: string;
   };
   branches: readonly BranchSpec[];
   fleet: readonly FleetEntry[];
@@ -231,7 +231,6 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
         accountNo: '0071000123456',
         accountName: 'CONG TY TNHH XEPRIME SAI GON',
       },
-      ownerFullName: 'Trần Quốc Bảo',
     },
     branches: [
       {
@@ -357,7 +356,6 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
         accountNo: '19033888888',
         accountName: 'CONG TY TNHH VIET CAR',
       },
-      ownerFullName: 'Phạm Đức Việt',
     },
     branches: [
       {
@@ -429,7 +427,6 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
         accountNo: '0904000001',
         accountName: 'NGO THANH HAI',
       },
-      ownerFullName: 'Ngô Thanh Hải',
     },
     branches: [
       {
@@ -481,7 +478,6 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
       taxCode: null,
       businessLicenseNo: null,
       bank: null,
-      ownerFullName: 'Huỳnh Văn Tài',
     },
     branches: [
       {
@@ -533,7 +529,6 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
       taxCode: null,
       businessLicenseNo: null,
       bank: null,
-      ownerFullName: 'Nguyễn Thị Lan',
     },
     branches: [
       {
@@ -592,7 +587,6 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
       taxCode: null,
       businessLicenseNo: null,
       bank: null,
-      ownerFullName: 'QA Chủ xe cá nhân',
     },
     branches: [
       {
@@ -651,7 +645,6 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
         accountNo: '0071000999888',
         accountName: 'CONG TY TNHH QA GIAN HANG',
       },
-      ownerFullName: 'QA Chủ gian hàng',
     },
     branches: [
       {

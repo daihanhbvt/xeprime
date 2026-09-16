@@ -6,6 +6,7 @@ import {
   FEATURE_STATE,
   PLAN_FEATURE,
   PLAN_FEATURE_VALUES,
+  SHOP_ONBOARDING_STATE,
   type FeatureState,
   type PlanFeature,
 } from '@xeprime/types';
@@ -80,6 +81,7 @@ function tenantCtx(state: FeatureState, used: PlanFeature[] = []): TenantContext
   return {
     tenantId,
     tenantStatus: 'active',
+    onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE,
     roleKey: 'shop_owner',
     permissions: [],
     features,

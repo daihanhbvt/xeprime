@@ -3,11 +3,14 @@
 import { CarOutlined, PlusOutlined, ShopOutlined, ShoppingOutlined } from '@ant-design/icons';
 import { App, Alert, Button, Result, Skeleton, Steps } from 'antd';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useEffect } from 'react';
 import {
   PERMISSION,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
+  isEstablishedPackageShop,
   missingShopProfileRequirements,
   type VehiclePublicStatus,
 } from '@xeprime/types';
@@ -23,6 +26,7 @@ import {
 import type { UpdateProfileInput } from '@/features/shop/types';
 import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
 import type { VehicleListItem } from '@/features/vehicles/types';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -75,6 +79,25 @@ export function OwnerRegistrationView() {
   const errorMessage = useErrorMessage();
   const { has } = usePermissions();
   const { paths } = useWorkspace();
+  const router = useRouter();
+  const { data: user } = useCurrentUser();
+
+  /*
+   * GIAN HÀNG TRẢ PHÍ KHÔNG BAO GIỜ THẤY MÀN NÀY (ADR 0040).
+   *
+   * `resolveWorkspaceHref` đã không dẫn họ tới đây, nhưng route vẫn gõ tay được — và một gian
+   * hàng vừa hết gói thì `resolveOwnerStage` chấm là `registering` ngay khi chiếc xe cuối rời
+   * chợ, nên `OwnerGate` cho họ qua. Màn này kể một câu chuyện ba bước dành cho người CHƯA bắt
+   * đầu ("Hồ sơ chủ xe → Đăng xe đầu tiên → Lên chợ"); với một gian hàng 10 xe vừa cần gia hạn
+   * thì đó là câu chuyện sai hoàn toàn.
+   *
+   * Điều hướng, không phải render một màn lỗi: họ có một khu làm việc hợp lệ, chỉ là không phải
+   * khu này. `replace` để nút Quay lại không rơi vào đúng URL vừa bị đẩy ra.
+   */
+  const wrongWorkspace = isEstablishedPackageShop(user?.tenant);
+  useEffect(() => {
+    if (wrongWorkspace) router.replace(paths.vehicles);
+  }, [wrongWorkspace, paths.vehicles, router]);
 
   const canView = has(PERMISSION.TENANT_VIEW);
   const canEdit = has(PERMISSION.TENANT_UPDATE);
@@ -103,6 +126,9 @@ export function OwnerRegistrationView() {
       onError: (error) => message.error(errorMessage(error)),
     });
   }
+
+  // Đang bị đẩy sang khu đúng của họ (effect ở trên) — không dựng gì của màn này.
+  if (wrongWorkspace) return <Skeleton active paragraph={{ rows: 8 }} />;
 
   if (isError && !shop) {
     return (
@@ -142,8 +168,10 @@ export function OwnerRegistrationView() {
     missingShopProfileRequirements({
       displayName: shop.profile.displayName,
       provinceCode: shop.defaultBranch?.provinceCode ?? shop.profile.provinceCode,
-      ownerFullName: shop.profile.ownerFullName,
-      ownerPhone: shop.profile.ownerPhone,
+      // Chủ gian hàng đọc từ TÀI KHOẢN (16/09/2026) — cùng nguồn mà cổng gửi duyệt ở backend
+      // dùng. Ba cột sao chép trên hồ sơ đã bị gỡ.
+      ownerFullName: shop.ownerAccount.displayName,
+      ownerPhone: shop.ownerAccount.phone,
     }).length === 0;
   const hasVehicle = items.length > 0;
   /*

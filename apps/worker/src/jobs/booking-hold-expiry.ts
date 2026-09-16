@@ -2,8 +2,9 @@ import { newId, Prisma, type PrismaClient } from '@xeprime/prisma';
 import {
   BOOKING_HOLD_STATUS,
   BOOKING_REQUEST_STATUS,
-  HOLD_COUNTDOWN_SEGMENT_MINUTES,
+  HOLD_MAX_EXTENSIONS,
   HOLD_REFUND_REASON,
+  type HoldRefundReason,
   HOLD_REFUND_STATUS,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
@@ -28,7 +29,7 @@ const BATCH = 200;
  * ví viết thẳng ở đây — nhưng vẫn đi qua đúng RÀNG BUỘC chống cộng đôi: unique bốn cột trên
  * `wallet_entries`. Worker chạy lại không cộng tiền lần hai, và đó là điều duy nhất phải đúng.
  */
-async function upsertExpiredHoldRefund(
+export async function upsertWorkerHoldRefund(
   tx: Prisma.TransactionClient,
   hold: {
     id: string;
@@ -36,6 +37,12 @@ async function upsertExpiredHoldRefund(
     customerUserId: string | null;
     paidAmount: Prisma.Decimal;
   },
+  /**
+   * Vì sao khoản này phải quay về khách. Hai job dùng chung thân hàm nhưng KHÔNG dùng chung lý
+   * do: hết hạn giữ chỗ là "khách chưa trả đủ", còn quá hạn phản hồi sau khi đã trả là "gian
+   * hàng không nhận chuyến" — hai thứ khác nhau ở màn đối soát và ở câu giải thích cho khách.
+   */
+  cause: { reason: HoldRefundReason; note: string },
 ): Promise<void> {
   const existing = await tx.holdRefund.findUnique({
     where: { holdId: hold.id },
@@ -65,7 +72,7 @@ async function upsertExpiredHoldRefund(
           amount: hold.paidAmount,
           balanceAfter: updated.balance,
           holdId: hold.id,
-          note: 'Hết hạn giữ chỗ khi chưa đủ tiền',
+          note: cause.note,
         },
       ],
       skipDuplicates: true,
@@ -94,8 +101,8 @@ async function upsertExpiredHoldRefund(
         ? REFUND_SETTLEMENT_MODE.BALANCE
         : REFUND_SETTLEMENT_MODE.BANK_TRANSFER,
       walletEntryId,
-      reason: HOLD_REFUND_REASON.HOLD_EXPIRED,
-      note: 'Hết hạn giữ chỗ khi chưa đủ tiền',
+      reason: cause.reason,
+      note: cause.note,
     },
   });
 }
@@ -117,34 +124,28 @@ async function ensureUserWallet(
 }
 
 /**
- * Hold quá hạn chuyển khoản ⇒ `expired`, yêu cầu ⇒ `hold_expired`, NHẢ LỊCH (R3, ADR 0028).
+ * GIA HẠN TỰ ĐỘNG cửa sổ trả tiền — ADR 0039 điều 3.
  *
- * Cùng luật với `isHoldPastDue` ở @xeprime/types: so MỐC `expires_at`, không so cột status. Đường
- * webhook đã tự từ chối tiền về cho hold quá mốc (`hold_closed`), nên worker chậm một nhịp không
- * mở được lỗ nào — nó chỉ dọn và báo.
+ * Thay cho lượt "nhắc sắp hết hạn" của ADR 0032. Lượt nhắc đó sinh ra cho một cửa sổ 2 giờ chia
+ * hai chặng 60 phút; với cửa sổ 10 phút nó sẽ bắn ngay khi hold vừa tạo (mọi hold đều nằm trong
+ * một chặng tính từ lúc sinh), tức là một thông báo "sắp hết hạn" gửi cùng lúc với thông báo
+ * "hãy chuyển khoản". Việc cần làm ở mốc đó nay là CỘNG THÊM THỜI GIAN, không phải hối thúc.
  *
- * Claim bằng `updateMany` có điều kiện trạng thái, từng hold một trong transaction riêng: một
- * hold hỏng (vd occupancy đã bị xoá tay) không kéo cả lô theo. Chạy lại ra 0 dòng — idempotent.
+ * Hai điểm đáng chú ý:
+ *
+ *   * Hạn mới tính từ **`now`**, không phải từ `expires_at` cũ. Khách phải thấy đúng mười phút
+ *     như lần đầu; cộng vào mốc cũ thì một nhịp worker chạy trễ sẽ trả về một đồng hồ bảy phút
+ *     mà không ai giải thích được.
+ *   * `extension_count < HOLD_MAX_EXTENSIONS` nằm TRONG `WHERE` của chính lượt `UPDATE`. Đó là
+ *     thứ khiến hai worker chạy song song không thể cùng gia hạn một hold: người thua thấy
+ *     `count = 0`. CHECK ở DB là lớp gác cuối.
  */
-/**
- * Nhắc khách khi cửa sổ trả cọc còn một chặng cuối — ADR 0032 điều 2.
- *
- * Vì sao bắt buộc phải có: cửa sổ rút từ 24 giờ xuống 2 giờ. Người nhận thông báo "chủ xe đã
- * duyệt" rồi đặt điện thoại xuống sẽ mất chỗ trong im lặng nếu không có gì gọi họ lại. Cửa sổ
- * ngắn mà không nhắc chỉ giỏi huỷ đơn của khách thật.
- *
- * `payment_reminded_at` là cột CLAIM, không phải nhật ký: `updateMany` có điều kiện `IS NULL`
- * nên hai worker chạy song song, hay một worker chạy lại sau khi chết giữa chừng, vẫn chỉ bắn
- * đúng một lần. Cùng kỷ luật với mọi thứ khác trong file này — điều kiện nằm trong `where`,
- * không nằm trong một phép kiểm ở tầng ứng dụng.
- */
-async function remindExpiringHolds(prisma: PrismaClient, now: Date): Promise<number> {
-  const dueBefore = new Date(now.getTime() + HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000);
+async function extendDueHolds(prisma: PrismaClient, now: Date): Promise<number> {
   const candidates = await prisma.bookingHold.findMany({
     where: {
       status: { in: [BOOKING_HOLD_STATUS.PENDING, BOOKING_HOLD_STATUS.UNDERPAID] },
-      paymentRemindedAt: null,
-      expiresAt: { gt: now, lte: dueBefore },
+      expiresAt: { lte: now },
+      extensionCount: { lt: HOLD_MAX_EXTENSIONS },
     },
     orderBy: { expiresAt: 'asc' },
     take: BATCH,
@@ -156,28 +157,58 @@ async function remindExpiringHolds(prisma: PrismaClient, now: Date): Promise<num
       customerUserId: true,
       amount: true,
       paidAmount: true,
-      expiresAt: true,
+      extensionCount: true,
       vehicle: { select: { name: true } },
+      feePolicy: { select: { holdPaymentWindowMinutes: true } },
     },
   });
 
-  let reminded = 0;
+  let extended = 0;
   for (const hold of candidates) {
-    // Không có tài khoản khách (đặt xe không cần đăng ký) thì không có ai để báo trong app —
-    // vẫn claim cột để lần quét sau không cân nhắc lại hold này nữa.
+    /*
+     * Cửa sổ đọc từ CHÍNH SÁCH ĐÃ GẮN VỚI HOLD, không từ hằng số. Chính sách phí là bất biến
+     * theo phiên bản (ADR 0028 điều 2), nên một hold sinh dưới chính sách cũ phải được gia hạn
+     * bằng đúng cửa sổ của nó — không bị rút ngắn vì sàn vừa đổi số.
+     */
+    const windowMs = hold.feePolicy.holdPaymentWindowMinutes * 60_000;
+    const nextExpiry = new Date(now.getTime() + windowMs);
+
     const done = await prisma.$transaction(async (tx) => {
       const claimed = await tx.bookingHold.updateMany({
-        where: { id: hold.id, paymentRemindedAt: null },
-        data: { paymentRemindedAt: now },
+        where: {
+          id: hold.id,
+          status: { in: [BOOKING_HOLD_STATUS.PENDING, BOOKING_HOLD_STATUS.UNDERPAID] },
+          extensionCount: { lt: HOLD_MAX_EXTENSIONS },
+        },
+        data: { expiresAt: nextExpiry, extensionCount: { increment: 1 } },
       });
       if (claimed.count === 0) return false;
+
+      await recordSystemAudit(tx, {
+        tenantId: hold.tenantId,
+        action: 'booking_hold.extend',
+        targetType: 'booking_hold',
+        targetId: hold.id,
+        after: {
+          code: hold.code,
+          extension: hold.extensionCount + 1,
+          expiresAt: nextExpiry.toISOString(),
+        },
+      });
+
+      // Khách vãng lai không có ai để báo trong app — vẫn gia hạn, chỉ không gửi gì.
       if (!hold.customerUserId) return true;
 
-      // Trừ trên `Decimal`, không đổi sang `number` — tiền không bao giờ đi qua float (ADR 0007).
       const remaining = hold.amount.sub(hold.paidAmount);
+      const isLast = hold.extensionCount + 1 >= HOLD_MAX_EXTENSIONS;
       await notifyUser(tx, hold.customerUserId, {
         type: NOTIFICATION_TYPE.HOLD_EXPIRING,
-        title: 'Sắp hết hạn giữ chỗ',
+        /*
+         * Nói rõ đây là lần gia hạn thứ mấy và còn lần nào nữa không. Một đồng hồ tự nhảy về
+         * 10:00 mà không giải thích trông như lỗi giao diện, và khách sẽ không biết rằng lần
+         * sau thì chỗ mất thật.
+         */
+        title: isLast ? 'Gia hạn lần cuối — còn 10 phút' : 'Đã gia hạn thêm 10 phút',
         body:
           `${hold.vehicle.name} · còn ${formatMoneyVndVi(remaining.toString())} · ` +
           `nội dung ${hold.code}`,
@@ -187,21 +218,34 @@ async function remindExpiringHolds(prisma: PrismaClient, now: Date): Promise<num
       });
       return true;
     });
-    if (done) reminded += 1;
+    if (done) extended += 1;
   }
-  return reminded;
+  return extended;
 }
 
+/**
+ * Hold quá hạn chuyển khoản ⇒ `expired`, yêu cầu ⇒ `hold_expired`, NHẢ LỊCH (R3, ADR 0028).
+ *
+ * Cùng luật với `isHoldPastDue` ở @xeprime/types: so MỐC `expires_at`, không so cột status. Đường
+ * webhook đã tự từ chối tiền về cho hold quá mốc (`hold_closed`), nên worker chậm một nhịp không
+ * mở được lỗ nào — nó chỉ dọn và báo.
+ *
+ * Claim bằng `updateMany` có điều kiện trạng thái, từng hold một trong transaction riêng: một
+ * hold hỏng (vd occupancy đã bị xoá tay) không kéo cả lô theo. Chạy lại ra 0 dòng — idempotent.
+ */
 export async function sweepBookingHoldExpiry(
   prisma: PrismaClient,
   now: Date = new Date(),
-): Promise<{ expired: number; reminded: number }> {
-  const reminded = await remindExpiringHolds(prisma, now);
+): Promise<{ expired: number; extended: number }> {
+  // Gia hạn TRƯỚC: hold vừa được cộng thêm thời gian sẽ không lọt vào lượt quét hết hạn bên dưới.
+  const extended = await extendDueHolds(prisma, now);
 
   const candidates = await prisma.bookingHold.findMany({
     where: {
       status: { in: [BOOKING_HOLD_STATUS.PENDING, BOOKING_HOLD_STATUS.UNDERPAID] },
       expiresAt: { lte: now },
+      // Còn lượt gia hạn thì  vừa dời hạn rồi — chỉ hold đã hết lượt mới chết.
+      extensionCount: { gte: HOLD_MAX_EXTENSIONS },
     },
     orderBy: { expiresAt: 'asc' },
     take: BATCH,
@@ -245,7 +289,10 @@ export async function sweepBookingHoldExpiry(
        * đã chết mà khoản hoàn chưa tồn tại.
        */
       if (hold.paidAmount.gt(0)) {
-        await upsertExpiredHoldRefund(tx, hold);
+        await upsertWorkerHoldRefund(tx, hold, {
+          reason: HOLD_REFUND_REASON.HOLD_EXPIRED,
+          note: 'Hết hạn giữ chỗ khi chưa đủ tiền',
+        });
       }
 
       // Nhả lịch — `deleteMany` để hold không có occupancy (dữ liệu tay) vẫn dọn được.
@@ -283,5 +330,5 @@ export async function sweepBookingHoldExpiry(
     });
     if (done) expired += 1;
   }
-  return { expired, reminded };
+  return { expired, extended };
 }

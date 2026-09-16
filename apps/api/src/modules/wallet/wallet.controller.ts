@@ -12,10 +12,13 @@ import {
   CreateWithdrawalDto,
   WalletEntryPageDto,
   WalletEntryQueryDto,
+  WalletStatementDto,
+  WalletStatementQueryDto,
   WalletSummaryDto,
   WithdrawalRequestDto,
 } from './dto/wallet.dto';
 import { WalletReadService } from './wallet-read.service';
+import { WalletStatementService } from './wallet-statement.service';
 import { WithdrawalService } from './withdrawal.service';
 
 /**
@@ -121,6 +124,7 @@ export class AccountWalletController {
 export class ShopWalletController {
   constructor(
     private readonly read: WalletReadService,
+    private readonly statement: WalletStatementService,
     private readonly withdrawals: WithdrawalService,
   ) {}
 
@@ -139,6 +143,27 @@ export class ShopWalletController {
     @Query() query: WalletEntryQueryDto,
   ): Promise<WalletEntryPageDto> {
     return this.read.entries(
+      { type: WALLET_OWNER_TYPE.TENANT, tenantId: tenant.tenantId },
+      query,
+    );
+  }
+
+  @Get('statement')
+  @ApiOperation({
+    summary: 'Bảng tổng hợp giao dịch của gian hàng trong một kỳ',
+    description:
+      'Chuyến hoàn thành trong kỳ (giờ Việt Nam) kèm doanh thu, thuế khấu trừ, phần khách trả ' +
+      'trực tiếp khi nhận xe và số ví thật sự nhúc nhích. Cộng dồn tính trên CẢ KỲ, không theo ' +
+      'trang đang xem. KHÔNG có dòng "phí sàn": phí dịch vụ XePrime do khách trả thêm và không ' +
+      'trừ vào doanh thu gian hàng (ADR 0032 điều 2).',
+  })
+  @ApiOkResponse({ type: WalletStatementDto })
+  tenantStatement(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: WalletStatementQueryDto,
+  ): Promise<WalletStatementDto> {
+    return this.statement.tenantStatement(
+      tenant.tenantId,
       { type: WALLET_OWNER_TYPE.TENANT, tenantId: tenant.tenantId },
       query,
     );

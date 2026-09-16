@@ -50,9 +50,11 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0033](0033-money-ledger-and-deposit-allocation.md) | Sổ công nợ "Ví điểm", phân bổ cọc nhiều dòng, định tuyến kết cục | **Accepted; ghi đè một phần 0023/0025/0028; cột chủ ví ở điều 2 bị 0038 ghi đè** |
 | [0034](0034-badge-delivery-by-projection.md) | Huy hiệu đi bằng bản chiếu, không bằng nhịp hỏi lại | **Accepted; mở rộng 0009 sang projection thứ hai** |
 | [0035](0035-two-tier-administrative-address.md) | Địa chỉ vật lý theo danh mục hành chính hai cấp (tỉnh → xã/phường/đặc khu) | **Accepted; mở rộng 0018 sang gợi ý địa điểm + ghim có xác nhận** |
-| [0036](0036-single-approval-gate-for-commission-owners.md) | Tuyến hoa hồng chỉ có cổng duyệt XE; xác minh gian hàng là trục riêng và là cổng mua gói | **Accepted; ghi đè 0014 điều 5 trong phạm vi tuyến hoa hồng** |
+| [0036](0036-single-approval-gate-for-commission-owners.md) | Tuyến hoa hồng chỉ có cổng duyệt XE; xác minh gian hàng là trục riêng | **Accepted; ghi đè 0014 điều 5 trong phạm vi tuyến hoa hồng; điều 4 (cổng mua gói) bị 0040 ghi đè** |
 | [0037](0037-geoapify-osm-map-provider.md) | Nhà cung cấp bản đồ là Geoapify/OpenStreetMap, không phải Google Maps | **Accepted; ghi đè 0018 ở phần nhà cung cấp + khoá, 0035 điều 6 ở thư viện bản đồ** |
 | [0038](0038-owner-track-split-and-unified-wallet.md) | Tách hai tuyến chủ xe: một ví cho một người, ranh giới Manage chặn ở server | **Accepted; ghi đè một phần 0027 (điều 3) và 0033 (điều 2, cột chủ ví)** |
+| [0039](0039-hold-before-acceptance.md) | Khách trả giữ chỗ TRƯỚC khi gian hàng duyệt; cửa sổ 10 phút + 2 lần tự gia hạn | **Accepted; ghi đè 0032 điều 2 và 0027 điều 2 trong phạm vi công tắc cọc** |
+| [0040](0040-registration-track-split.md) | Hai tuyến ĐĂNG KÝ tách hẳn: ý định lưu ở `tenants.onboarding_state`, thanh toán mở Manage, cổng logo chỉ áp tuyến gói | **Accepted; ghi đè 0036 điều 4 (xác minh thôi làm cổng mua gói)** |
 
 ## Quy tắc thêm ADR
 
