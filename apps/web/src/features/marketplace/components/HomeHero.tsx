@@ -6,7 +6,7 @@ import styles from './HomeHero.module.css';
 import { useTranslations } from 'next-intl';
 
 /**
- * Vùng hero trang chủ — Figma `18:4`: carousel banner (admin quản lý, tối đa 3); thẻ tìm kiếm
+ * Vùng hero trang chủ — Figma `18:4`: carousel lấy toàn bộ banner đang hiển thị; thẻ tìm kiếm
  * do page đặt ĐÈ lên mép dưới (xem `search/SearchCard`). Banner do admin upload TỰ MANG thông điệp
  * nên không phủ tiêu đề lên (h1 vẫn tồn tại cho SEO/screen reader, ẩn thị giác).
  *
@@ -30,9 +30,7 @@ export function HomeHero({ banners }: { banners: PublicBanner[] }) {
       <div className={styles.fallback} />
       <div className={styles.overlay}>
         <h1 className={styles.title}>{t('title')}</h1>
-        <p className={styles.subtitle}>
-          {t('subtitle')}
-        </p>
+        <p className={styles.subtitle}>{t('subtitle')}</p>
       </div>
     </section>
   );

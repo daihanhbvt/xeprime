@@ -30,7 +30,7 @@ const MIN_TABLE_WIDTH = 960;
 /**
  * Quản lý banner hero trang chủ — nơi DUY NHẤT tạo/sửa nội dung carousel công khai.
  *
- * Trang chủ chỉ lấy 3 banner "đang hiển thị" đầu tiên theo thứ tự; cột "Trạng thái" phân biệt
+ * Trang chủ lấy toàn bộ banner "đang hiển thị" theo thứ tự; cột "Trạng thái" phân biệt
  * rõ đã tắt / chờ tới lịch / hết lịch để admin không phải tự nhẩm.
  */
 export default function AdminBannersPage() {
@@ -44,16 +44,19 @@ export default function AdminBannersPage() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AdminBanner | null>(null);
+  const [formSession, setFormSession] = useState(0);
 
   const items = data ?? [];
 
   function openCreate() {
     setEditing(null);
+    setFormSession((session) => session + 1);
     setFormOpen(true);
   }
 
   function openEdit(banner: AdminBanner) {
     setEditing(banner);
+    setFormSession((session) => session + 1);
     setFormOpen(true);
   }
 
@@ -185,9 +188,10 @@ export default function AdminBannersPage() {
     <div>
       <ManagePageHeader title="Banner trang chủ" />
       <p className={styles.hint}>
-        Trang chủ hiển thị tối đa 3 banner đang bật, theo thứ tự từ trên xuống. Mỗi cỡ màn một ảnh
-        đúng tỉ lệ: PC 1440×300 · tablet 1024×320 · mobile 780×390 (hoặc @2x) — sai tỉ lệ sẽ bị chặn
-        lúc tải lên. Chừa trống ~15% mép dưới: thẻ tìm kiếm của trang chủ đè lên đó.
+        Có thể tạo không giới hạn; trang chủ hiển thị đầy đủ theo thứ tự từ trên xuống, nhưng tối đa
+        10 banner được phép trùng thời gian hiển thị. Mỗi cỡ màn một ảnh đúng tỉ lệ: PC 1440×300 ·
+        tablet 1024×320 · mobile 780×390 (hoặc @2x) — sai tỉ lệ sẽ bị chặn lúc tải lên. Chừa trống
+        ~15% mép dưới: thẻ tìm kiếm của trang chủ đè lên đó.
       </p>
       <div className={styles.toolbar}>{createButton}</div>
 
@@ -210,7 +214,7 @@ export default function AdminBannersPage() {
       />
 
       <BannerFormModal
-        key={editing?.id ?? 'new'}
+        key={`${editing?.id ?? 'new'}-${formSession}`}
         open={formOpen}
         banner={editing}
         onClose={() => setFormOpen(false)}

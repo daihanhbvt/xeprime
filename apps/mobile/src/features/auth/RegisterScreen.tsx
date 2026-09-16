@@ -6,7 +6,6 @@ import { Screen } from '@/components/layout/Screen';
 import { type CurrentUser } from '@/features/auth/api';
 import { LegalConsentCheckbox } from '@/features/legal/components/LegalConsentCheckbox';
 import { APP_NAME } from '@/lib/app-name';
-import { FONT_FAMILY } from '@/theme/fonts';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 import { AuthSwitchLink } from './components/AuthSwitchLink';
 import { RegisterForm } from './components/RegisterForm';
@@ -59,7 +58,6 @@ export function RegisterScreen({
             <YStack gap={space.xs}>
               <Text
                 col={colors.text}
-                fontFamily={FONT_FAMILY.system}
                 fos={fontSize.h2}
                 fow={fontWeight.bold}
               >

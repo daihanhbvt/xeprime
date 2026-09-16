@@ -4,6 +4,7 @@ import enChat from '@xeprime/domain/messages/en/chat.json';
 import enTrips from '@xeprime/domain/messages/en/trips.json';
 import enAddress from '@xeprime/domain/messages/en/address.json';
 import enAccount from '@xeprime/domain/messages/en/account.json';
+import enAccountPayments from '@xeprime/domain/messages/en/account-payments.json';
 import enBankAccounts from '@xeprime/domain/messages/en/bank-accounts.json';
 import enSupportCases from '@xeprime/domain/messages/en/support-cases.json';
 import enSubscription from '@xeprime/domain/messages/en/subscription.json';
@@ -41,6 +42,7 @@ import viChat from '@xeprime/domain/messages/vi/chat.json';
 import viTrips from '@xeprime/domain/messages/vi/trips.json';
 import viAddress from '@xeprime/domain/messages/vi/address.json';
 import viAccount from '@xeprime/domain/messages/vi/account.json';
+import viAccountPayments from '@xeprime/domain/messages/vi/account-payments.json';
 import viBankAccounts from '@xeprime/domain/messages/vi/bank-accounts.json';
 import viSupportCases from '@xeprime/domain/messages/vi/support-cases.json';
 import viSubscription from '@xeprime/domain/messages/vi/subscription.json';
@@ -100,6 +102,7 @@ export const MESSAGES = {
     Notifications: viNotifications,
     Navigation: viNavigation,
     Account: viAccount,
+    AccountPayments: viAccountPayments,
     BankAccounts: viBankAccounts,
     SupportCases: viSupportCases,
     Subscription: viSubscription,
@@ -139,6 +142,7 @@ export const MESSAGES = {
     Notifications: enNotifications,
     Navigation: enNavigation,
     Account: enAccount,
+    AccountPayments: enAccountPayments,
     BankAccounts: enBankAccounts,
     SupportCases: enSupportCases,
     Subscription: enSubscription,

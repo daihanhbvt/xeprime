@@ -15,6 +15,7 @@ import type {
   PublicListingFacets,
   PublicShopSummary,
   ReviewPage,
+  ShopReviewPage,
 } from '@xeprime/types';
 
 /**
@@ -123,6 +124,20 @@ export const marketplaceApi = {
 
   shop(slug: string): Promise<PublicShop> {
     return getApiClient().get<PublicShop>(`/public/shops/${encodeURIComponent(slug)}`);
+  },
+
+  /**
+   * Đánh giá của CẢ gian hàng — khác `reviews(vehicleId)`, vốn chỉ nói về một chiếc xe.
+   *
+   * Khách chọn gian hàng trước rồi mới chọn xe, nên câu hỏi "chỗ này làm ăn thế nào" phải trả
+   * lời được ở tầng gian hàng. Trả nguyên phong bì {summary, data, meta} — `summary` là điểm
+   * trung bình của TOÀN BỘ đánh giá, không phải của trang đang xem, nên không suy lại từ `data`.
+   */
+  shopReviews(slug: string, limit: number): Promise<ShopReviewPage> {
+    return getApiClient().get<ShopReviewPage>(
+      `/public/shops/${encodeURIComponent(slug)}/reviews`,
+      { page: 1, limit },
+    );
   },
 
   /**

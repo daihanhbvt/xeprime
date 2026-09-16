@@ -1,14 +1,21 @@
 'use client';
 
+import { ArrowLeftOutlined } from '@ant-design/icons';
 import { Alert, Button, Spin } from 'antd';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useEffect, type ReactNode } from 'react';
 
+import {
+  accountNavOwner,
+  flattenAccountNav,
+  resolveAccountNav,
+} from '@/constants/account-nav';
 import { ROUTES, isAccountVehicleManagePath } from '@/constants/routes';
 import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
 import { AUTH_MODE } from '@/features/auth/post-auth-destination';
-import { useCurrentUser } from '@/hooks/use-current-user';
+import { useCurrentUser, type CurrentUser } from '@/hooks/use-current-user';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { isUnauthenticated } from '@/services/api-client';
 
@@ -109,9 +116,47 @@ export function AccountShell({ children }: { children: ReactNode }) {
         <aside className={styles.aside}>
           <AccountSidebar user={user} />
         </aside>
-        <div className={styles.content}>{children}</div>
+        <div className={styles.content}>
+          <AccountSubPageBack user={user} pathname={pathname} />
+          {children}
+        </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Đường LUI của một màn con không có mục menu riêng.
+ *
+ * ADR 0038 điều 9 gom ba cửa tiền vào trong "Tài khoản của tôi", nên `/account/balance`,
+ * `/account/earnings`, `/account/bank-accounts` và `/account/payments` không còn là mục menu với
+ * chủ xe. Người dùng vào đó bằng một nút bên trong màn cha — và rồi không có gì đưa họ ngược lại:
+ * menu không sáng mục nào, trang cũng không có nút lui.
+ *
+ * Đặt ở SHELL chứ không ở từng trang: bốn trang kia không hề biết mình đang là màn con hay mục
+ * menu — câu trả lời đó phụ thuộc MENU của người đang đăng nhập (khách thuê vẫn có chúng làm mục
+ * riêng). Và một màn tiền thêm vào tháng sau sẽ tự có đường lui thay vì lại quên.
+ *
+ * Không render gì khi màn hiện tại tự có mục menu — ở đó chính mục đang sáng đã là chỗ đứng.
+ */
+function AccountSubPageBack({
+  user,
+  pathname,
+}: {
+  user: CurrentUser;
+  pathname: string | null;
+}) {
+  const t = useTranslations('Account.ownerGate');
+  const owner = pathname
+    ? accountNavOwner(pathname, flattenAccountNav(resolveAccountNav(user)))
+    : undefined;
+
+  if (!owner) return null;
+
+  return (
+    <Link href={owner.href} className={styles.subPageBack}>
+      <ArrowLeftOutlined aria-hidden="true" /> {t('backToAccount')}
+    </Link>
   );
 }
 

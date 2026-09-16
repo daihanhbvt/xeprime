@@ -230,7 +230,10 @@
     "listCta": "Về danh sách xe",
     "incompleteTitle": "Xe chưa gửi duyệt được",
     "incompleteBody": "Xe đã lưu ở dạng nháp. Bổ sung những mục dưới đây rồi gửi duyệt lại:",
-    "incompleteCta": "Bổ sung ngay"
+    "incompleteCta": "Bổ sung ngay",
+    "shopPendingTitle": "Gian hàng chưa được duyệt",
+    "shopPendingBody": "Xe đã lưu, nhưng chỉ gửi lên chợ được sau khi gian hàng của bạn được duyệt hoạt động. Hoàn tất hồ sơ gian hàng để được duyệt.",
+    "shopPendingCta": "Hoàn tất hồ sơ gian hàng"
   },
   "validation": {
     "weekdayPriceRequired": "Nhập giá thuê mỗi ngày",

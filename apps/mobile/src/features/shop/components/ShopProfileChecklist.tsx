@@ -34,8 +34,15 @@ export function ShopProfileChecklist({ control }: { control: Control<ShopProfile
   const t = useTranslations('Shop.checklist');
   const values = useWatch({ control }) as Partial<ShopProfileValues>;
 
-  const missingRequired = new Set<string>(missingShopProfileRequirements(values));
-  const missingSuggested = new Set<string>(missingShopProfileSuggestions(values));
+  /*
+   * Mục "địa chỉ" của checklist chấm phần CHI TIẾT người dùng gõ (`addressLine`), không chấm
+   * chuỗi hiển thị: biểu mẫu native KHÔNG có ô `address` nào cả (chuỗi đó do server ghép), nên
+   * đưa `values` thô vào hàm chấm là mục này không bao giờ xanh — app đếm 4/9 trong khi web đếm
+   * 5/9 trên cùng một hồ sơ.
+   */
+  const completeness = { ...values, address: values.addressLine };
+  const missingRequired = new Set<string>(missingShopProfileRequirements(completeness));
+  const missingSuggested = new Set<string>(missingShopProfileSuggestions(completeness));
 
   const total = SHOP_PROFILE_REQUIREMENT_VALUES.length + SHOP_PROFILE_SUGGESTION_VALUES.length;
   const done = total - missingRequired.size - missingSuggested.size;

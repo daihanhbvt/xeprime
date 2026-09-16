@@ -12,22 +12,31 @@ import { useTranslations } from 'use-intl';
  * (xem docblock `vehicleSourceFormSchema`) mới cần bọc bằng hook này với đúng `namespace` chứa
  * mã đó. Bọc một schema còn chữ Việt cứng là vô hại — `t.has(code)` không khớp thì giữ nguyên
  * chữ gốc, y hệt hành vi cũ.
+ *
+ * `fallbackNamespace` cho form GHÉP schema: wizard đăng xe nhanh `pick` phần lớn trường từ
+ * `vehicleFormSchema`, nên mã lỗi của nó nằm ở `Vehicles.form.validation` chứ không ở namespace
+ * riêng của wizard. Không có vế dự phòng thì những mã đó lọt ra giao diện ở dạng mã trần
+ * ("nameRequired"). Hai lời gọi `useTranslations` cố định để số hook mỗi lần render không đổi.
  */
 export function useValidationResolver<T extends FieldValues>(
   schema: ObjectSchema<any>, // eslint-disable-line @typescript-eslint/no-explicit-any
   namespace: Parameters<typeof useTranslations>[0],
+  fallbackNamespace?: Parameters<typeof useTranslations>[0],
 ): Resolver<T> {
   const t = useTranslations(namespace);
+  // `useTranslations` phải chạy vô điều kiện; không có vế dự phòng thì trỏ lại chính namespace
+  // đầu — `t.has` khi đó chỉ trả lời đúng một lần nữa, không phát sinh hành vi mới.
+  const tFallback = useTranslations(fallbackNamespace ?? namespace);
   const base = useMemo(() => yupResolver(schema), [schema]);
 
   return useMemo(() => {
     const resolver: Resolver<T> = async (values, context, options) => {
       const result = await base(values, context, options);
-      translateErrors(result.errors as Record<string, unknown>, t);
+      translateErrors(result.errors as Record<string, unknown>, [t, tFallback]);
       return result;
     };
     return resolver;
-  }, [base, t]);
+  }, [base, t, tFallback]);
 }
 
 /**
@@ -46,15 +55,23 @@ const PARAMS_SEPARATOR = '::';
  * `useTranslations` yêu cầu cho `t.has`/`t` — ép kiểu ở đúng những lời gọi đó, không phải né
  * kiểu cho cả hàm.
  */
-function translateErrors(errors: Record<string, unknown>, t: ReturnType<typeof useTranslations>): void {
+function translateErrors(
+  errors: Record<string, unknown>,
+  translators: ReturnType<typeof useTranslations>[],
+): void {
   for (const value of Object.values(errors)) {
     if (!value || typeof value !== 'object') continue;
     const err = value as { message?: unknown };
     if (typeof err.message === 'string') {
-      const translated = translateMessage(err.message, t);
-      if (translated != null) err.message = translated;
+      for (const t of translators) {
+        const translated = translateMessage(err.message, t);
+        if (translated != null) {
+          err.message = translated;
+          break;
+        }
+      }
     }
-    translateErrors(value as Record<string, unknown>, t);
+    translateErrors(value as Record<string, unknown>, translators);
   }
 }
 

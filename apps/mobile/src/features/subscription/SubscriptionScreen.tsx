@@ -22,6 +22,7 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import type { ReactNode } from 'react';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -49,7 +50,16 @@ import { useMySubscription, useSubscriptionInvoices } from './hooks/use-subscrip
  * Quyền XEM gác ở đây (`SUBSCRIPTION_VIEW`, cùng quyền mà mục menu mang); quyền MUA
  * (`SUBSCRIPTION_PURCHASE`) chỉ backend kiểm — ẩn nút không phải lớp chặn (CLAUDE.md §6).
  */
-export function SubscriptionScreen() {
+/**
+ * `header` — VỎ điều hướng của khu đang đứng.
+ *
+ * Cùng màn phục vụ hai khu: khu quản lý (`/manage/subscription`) và khu khách
+ * (`/account/subscription` — chủ xe tuyến hoa hồng KHÔNG vào khu quản lý được, ADR 0038 điều 4).
+ * Mặc định là đầu trang khu quản lý, nơi màn này ra đời; để nguyên mặc định ở khu khách thì người
+ * dùng thấy đầu trang của một khu họ không thuộc về, và không có đường lui.
+ */
+export function SubscriptionScreen({ header }: { header?: ReactNode } = {}) {
+  const shell = header ?? <ManageHeader />;
   const t = useTranslations('Subscription');
   const tPermission = useTranslations('ManageCommon.permission');
   const permissions = usePermissions();
@@ -64,7 +74,7 @@ export function SubscriptionScreen() {
   if (!permissions.isLoading && !canView) {
     return (
       <>
-        <ManageHeader />
+        {shell}
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
@@ -79,7 +89,7 @@ export function SubscriptionScreen() {
   if (me.isLoading) {
     return (
       <>
-        <ManageHeader />
+        {shell}
         <Screen edges={['left', 'right', 'bottom']}>
           <ManagePageTitle title={t('page.title')} />
           <MiniRowsSkeleton rows={6} />
@@ -91,7 +101,7 @@ export function SubscriptionScreen() {
   if (me.isError || !me.data) {
     return (
       <>
-        <ManageHeader />
+        {shell}
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenError
             error={me.error}
@@ -103,7 +113,7 @@ export function SubscriptionScreen() {
     );
   }
 
-  const { currentPlan, usage, freeTrips } = me.data;
+  const { currentPlan, usage, fleetQuota, freeTrips } = me.data;
 
   /*
    * Hoá đơn đang chờ tiền — mỗi gian hàng chỉ giữ MỘT (lệnh mua void hoá đơn `issued` cũ trong
@@ -120,7 +130,7 @@ export function SubscriptionScreen() {
 
   return (
     <>
-      <ManageHeader />
+      {shell}
       <Screen edges={['left', 'right', 'bottom']}>
         <ManagePageTitle title={t('page.title')} />
 
@@ -132,6 +142,15 @@ export function SubscriptionScreen() {
               <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
                 {t('usage.title')}
               </Text>
+              {/*
+                Owner Lite có trần TỔNG (ô tô + xe máy), tuyến gói có hạn mức theo LOẠI. Hai luật
+                khác nhau nên hai cách vẽ khác nhau — nhét trần tổng vào thanh tiến trình của từng
+                loại là màn hình nói "3 ô tô" trong khi backend chặn ở "3 xe", và người dùng sẽ
+                đăng đủ 3 ô tô rồi ngạc nhiên vì chiếc xe máy đầu tiên bị từ chối (ADR 0038 điều 12).
+              */}
+              {fleetQuota.kind === 'total' && fleetQuota.totalLimit != null ? (
+                <FleetTotalRow used={fleetQuota.totalUsed} limit={fleetQuota.totalLimit} />
+              ) : null}
               <UsageRow label={t('usage.car')} usage={usage.car} />
               <UsageRow label={t('usage.motorbike')} usage={usage.motorbike} />
             </YStack>
@@ -279,6 +298,42 @@ function CurrentPlanCard({
         />
       </YStack>
     </Card>
+  );
+}
+
+/**
+ * Trần TỔNG của tuyến hoa hồng — một con số cho cả ô tô lẫn xe máy.
+ *
+ * Không có phần "đội xe / trên chợ" như `UsageRow`: trần này chỉ gác điểm TẠO xe, không gác điểm
+ * gửi lên chợ (ADR 0038 điều 12), nên một con số "trên chợ" ở đây sẽ gợi ý một hạn mức thứ hai
+ * không tồn tại.
+ */
+function FleetTotalRow({ used, limit }: { used: number; limit: number }) {
+  const t = useTranslations('Subscription');
+  const full = used >= limit;
+
+  return (
+    <YStack gap={space.xs}>
+      <XStack ai="center" jc="space-between" gap={space.sm}>
+        <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
+          {t('usage.fleetTotal')}
+        </Text>
+        <Text col={colors.textMuted} fos={fontSize.label}>
+          {t('usage.ofLimit', { used, limit })}
+        </Text>
+      </XStack>
+
+      <ProgressBar
+        percent={Math.min(100, Math.round((used / limit) * 100))}
+        tone={full ? 'exception' : 'active'}
+        size="sm"
+        label={t('usage.fleetTotal')}
+      />
+
+      <Text col={colors.textMuted} fos={fontSize.label}>
+        {t('usage.fleetTotalHint', { limit })}
+      </Text>
+    </YStack>
   );
 }
 

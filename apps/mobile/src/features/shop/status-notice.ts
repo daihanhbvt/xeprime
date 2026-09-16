@@ -1,5 +1,11 @@
 import type { Href } from 'expo-router';
-import { isTenantStatus, TENANT_STATUS, type TenantStatus } from '@xeprime/types';
+import {
+  isTenantStatus,
+  SHOP_VERIFICATION,
+  TENANT_STATUS,
+  type ShopVerification,
+  type TenantStatus,
+} from '@xeprime/types';
 import { ROUTES } from '@/navigation/routes';
 
 /**
@@ -109,4 +115,71 @@ const NOTICE: Readonly<Record<TenantStatus, ShopStatusNotice>> = {
  */
 export function shopStatusNotice(status: string): ShopStatusNotice {
   return NOTICE[isTenantStatus(status) ? status : TENANT_STATUS.DRAFT];
+}
+
+/**
+ * Trạng thái XÁC MINH gian hàng → thông báo hiển thị (ADR 0036) — gương của bảng cùng tên bên web.
+ *
+ * Bảng THỨ HAI, cạnh `NOTICE` ở trên, vì từ ADR 0036 có hai trục và chúng trả lời hai câu khác nhau:
+ *
+ *  - `tenants.status` — *gian hàng còn được hoạt động không?* Thứ quyết định xe có trên chợ hay không.
+ *  - `verification` — *nền tảng đã xem xét pháp nhân chưa?* Không chặn đăng xe; nó là cổng để MUA GÓI.
+ *
+ * Gộp hai bảng lại là quay về đúng chỗ cũ: một quyết định "cần bổ sung hồ sơ pháp nhân" lại hiện
+ * ra như "gian hàng của bạn chưa hoạt động", và chủ xe đi tìm xem xe mình biến đi đâu.
+ */
+export type ShopVerificationNoticeKey =
+  | 'unverified'
+  | 'pending'
+  | 'needsRevision'
+  | 'rejected'
+  | 'verified';
+
+export interface ShopVerificationNotice {
+  key: ShopVerificationNoticeKey;
+  tone: ShopNoticeTone;
+  /** Nút gửi (lại) hồ sơ xác minh có ý nghĩa ở trạng thái này không. */
+  canSubmit: boolean;
+  /** `true` = phần mô tả ghép thêm nguyên văn lý do người duyệt viết. */
+  useReason: boolean;
+}
+
+const VERIFICATION_NOTICE: Readonly<Record<ShopVerification, ShopVerificationNotice>> = {
+  [SHOP_VERIFICATION.UNVERIFIED]: {
+    key: 'unverified',
+    tone: 'info',
+    canSubmit: true,
+    useReason: false,
+  },
+  [SHOP_VERIFICATION.PENDING]: { key: 'pending', tone: 'info', canSubmit: false, useReason: false },
+  [SHOP_VERIFICATION.NEEDS_REVISION]: {
+    key: 'needsRevision',
+    tone: 'warning',
+    canSubmit: true,
+    useReason: true,
+  },
+  [SHOP_VERIFICATION.REJECTED]: {
+    key: 'rejected',
+    tone: 'danger',
+    canSubmit: true,
+    useReason: true,
+  },
+  [SHOP_VERIFICATION.VERIFIED]: {
+    key: 'verified',
+    tone: 'success',
+    canSubmit: false,
+    useReason: false,
+  },
+};
+
+/**
+ * Giá trị lạ rơi về `unverified` — cùng lý do với `shopStatusNotice`: câu an toàn nhất khi không
+ * hiểu mã là "chưa xác minh", vì nó không hứa hẹn gì và không cấp gì.
+ */
+export function shopVerificationNotice(verification: string): ShopVerificationNotice {
+  return VERIFICATION_NOTICE[
+    (VERIFICATION_NOTICE as Record<string, ShopVerificationNotice | undefined>)[verification]
+      ? (verification as ShopVerification)
+      : SHOP_VERIFICATION.UNVERIFIED
+  ];
 }

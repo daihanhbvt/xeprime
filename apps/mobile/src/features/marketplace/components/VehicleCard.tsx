@@ -9,6 +9,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
 import { DetailArrow } from '@/components/ui/DetailArrow';
 import { RemoteImage } from '@/components/ui/RemoteImage';
+import { VerifiedName } from '@/components/ui/VerifiedName';
 import type { IconName } from '@/components/ui/Chip';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -24,6 +25,14 @@ const PHOTO_RATIO = 16 / 10;
 
 /** Đích chạm gian hàng chỉ chiếm phần chữ, không kéo sang cột giá bên phải. */
 const styles = StyleSheet.create({ shopLink: { flex: 1 } });
+
+/**
+ * Cỡ avatar chủ xe trên thẻ — MỘT con số cho cả hai tuyến.
+ *
+ * `Avatar` vẽ vòng nhấn vào bên trong đường kính này, nên thẻ của gian hàng và thẻ của chủ xe cá
+ * nhân có hàng chân cao bằng nhau và ảnh thẳng cột khi cuộn.
+ */
+const SHOP_AVATAR = 34;
 
 interface VehicleCardProps {
   listing: PublicListing;
@@ -43,6 +52,20 @@ function VehicleCardImpl({ listing, onPress }: VehicleCardProps) {
   const navigateOnce = useNavigateOnce();
   const fmt = useAppFormat();
   const filters = useSearchFilters();
+
+  /*
+   * Thẻ xe phải phân biệt được HAI TUYẾN (ADR 0028): gian hàng thuê bao đã qua duyệt hồ sơ VÀ
+   * đang trả tiền — hai điều khách nhìn vào một cái tên không thể tự biết. Là BOOLEAN chứ
+   * không phải storefrontKind: thẻ xe không vẽ mặt tiền, nó chỉ cần biết có dấu hay không.
+   */
+  const isShopTrack = listing.shopVerified ?? false;
+
+  /*
+   * Giá ở dạng GỌN, hai chữ số lẻ. Trên thẻ, tên gian hàng và giá chia nhau một hàng hẹp; giá
+   * đầy đủ đẩy tên bị cắt trước. Hai chữ số lẻ là bắt buộc vì đây là con số khách so giữa hai
+   * chiếc xe — "1tr" cho 1.050.000 là sai 50.000đ ngay chỗ quyết định.
+   */
+  const compactPrice = (value: string) => fmt.moneyCompact(value, { price: true });
   // Thẻ xe lưu KEY hãng/nhiên liệu — nhãn tra từ danh mục chung với web, không dịch tại chỗ.
   const { brandLabel, fuelTypeLabel } = useCatalogLabels();
 
@@ -193,23 +216,59 @@ function VehicleCardImpl({ listing, onPress }: VehicleCardProps) {
           <Pressable
             onPress={() => navigateOnce(ROUTES.explore.shopDetail(listing.shopSlug))}
             accessibilityRole="button"
-            accessibilityLabel={listing.shopName}
+            /*
+              `accessibilityLabel` THAY THẾ mọi chữ bên trong khi trình đọc màn hình đọc nó — nên
+              nhãn của dấu xác minh bên dưới sẽ không bao giờ tới tai người dùng nếu nhãn này chỉ
+              có mỗi tên. Ghép ở tầng BẢN DỊCH, không nối chuỗi: dấu nối và thứ tự hai vế là quyết
+              định của từng ngôn ngữ.
+            */
+            accessibilityLabel={
+              isShopTrack ? t('shopVerifiedAria', { name: listing.shopName }) : listing.shopName
+            }
             style={styles.shopLink}
           >
             <XStack ai="center" gap={space.xs} py={space.xs}>
-              <Avatar name={listing.shopName} url={listing.shopLogoUrl} size={30} />
+              <Avatar
+                name={listing.shopName}
+                url={listing.shopLogoUrl}
+                size={SHOP_AVATAR}
+                verifiedLabel={isShopTrack ? t('shopVerified') : undefined}
+              />
               <YStack f={1} gap={0}>
-                <Text col={colors.placeholder} fos={fontSize.label}>
-                  {t('owner')}
-                </Text>
+                {/*
+                  Chữ "Gian hàng" đậm lên nhưng giữ màu CHỮ THƯỜNG: gold đã dồn hết vào tên bên
+                  dưới và con dấu: tô vàng cả hai dòng thì không dòng nào nổi, và một nhãn 11px màu
+                  gold trên nền trắng là dòng tuột ngưỡng tương phản đầu tiên của cả thẻ.
+                  Chủ xe cá nhân giữ nguyên xám nhạt — nhấn CẢ HAI là không nhấn gì.
+                */}
                 <Text
-                  col={colors.text}
-                  fos={fontSize.bodySm}
-                  fow={fontWeight.semibold}
-                  numberOfLines={1}
+                  col={isShopTrack ? colors.text : colors.placeholder}
+                  fos={fontSize.label}
+                  fow={isShopTrack ? fontWeight.semibold : fontWeight.regular}
                 >
-                  {listing.shopName}
+                  {t(isShopTrack ? 'shop' : 'owner')}
                 </Text>
+                {/*
+                  TÊN GIAN HÀNG tô GOLD trên thẻ chợ — khác định dạng nhận diện ở khu tài khoản,
+                  và cố ý.
+
+                  Ở khu tài khoản, khối nhận diện có cả một dải nền gold và một cái ảnh 96dp để
+                  nói "đã xác thực", nên cái tên được phép giữ màu chữ thường. Trên thẻ chợ thì
+                  hàng này cao 34dp, nằm cuối một thẻ đã đầy chữ, và nó phải cạnh tranh với con số
+                  giá ngay bên phải — gold là thứ kéo mắt sang đúng chỗ khách cần phân biệt: xe
+                  của gian hàng hay xe của một chủ xe cá nhân.
+
+                  `primaryActive` chứ không `primary`: gold nhấn của sản phẩm là màu của MẢNG và
+                  của hình; chữ 12px trên nền trắng cần bậc đậm hơn mới đạt ngưỡng tương phản.
+                */}
+                <VerifiedName
+                  name={listing.shopName}
+                  verifiedLabel={isShopTrack ? t('shopVerified') : undefined}
+                  color={isShopTrack ? colors.primaryActive : colors.text}
+                  weight={isShopTrack ? fontWeight.bold : fontWeight.semibold}
+                  markSize={15}
+                  decorativeMark
+                />
               </YStack>
             </XStack>
           </Pressable>
@@ -217,14 +276,14 @@ function VehicleCardImpl({ listing, onPress }: VehicleCardProps) {
           <YStack ai="flex-end">
             {selfDrive && discount > 0 && listing.weekdayPrice ? (
               <Text col={colors.placeholder} fos={fontSize.label} textDecorationLine="line-through">
-                {fmt.money(listing.weekdayPrice)}
+                {compactPrice(listing.weekdayPrice)}
               </Text>
             ) : null}
 
             {displayPrice ? (
               <XStack ai="baseline" gap={2}>
                 <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
-                  {fmt.money(displayPrice)}
+                  {compactPrice(displayPrice)}
                 </Text>
                 <Text col={colors.textMuted} fos={fontSize.bodySm}>
                   {priceUnit}

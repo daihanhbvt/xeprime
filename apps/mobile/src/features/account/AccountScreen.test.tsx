@@ -1,9 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Provider as ReduxProvider } from 'react-redux';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import type { ReactElement } from 'react';
 import { TENANT_ROLE } from '@xeprime/types';
-import { queryKeys } from '@/queries/query-keys';
 import * as authApi from '@/features/auth/api';
 import { withIntl } from '@/i18n/test-utils';
 import { store } from '@/store';
@@ -40,6 +39,7 @@ const SESSION: authApi.CurrentUser = {
   phoneVerified: true,
   hasPassword: true,
   tenant: null,
+  openRenterTripCount: 0,
   platformRole: null,
   permissions: [],
 };
@@ -49,10 +49,18 @@ const TENANT: NonNullable<authApi.CurrentUser['tenant']> = {
   name: 'Việt Car Hà Nội',
   slug: 'viet-car',
   status: 'active',
+  onboardingState: 'commission',
+  logoUrl: null,
   roleKey: TENANT_ROLE.SHOP_OWNER,
   features: [],
   planCode: null,
+  planName: null,
+  serviceFeePercent: null,
+  billingMode: 'commission',
   planEndsAt: null,
+  billingPhase: 'current',
+  graceEndsAt: null,
+  publicVehicleCount: 1,
 } as NonNullable<authApi.CurrentUser['tenant']>;
 
 async function renderScreen(
@@ -84,12 +92,12 @@ async function renderScreen(
  * xong phải đồng bộ CẢ HAI cache.
  */
 /**
- * Mốc neo "thẻ hồ sơ đã hiện" — dùng MÔ TẢ của thẻ.
+ * Mốc neo "thẻ hồ sơ đã hiện" — tiêu đề khối THÔNG TIN ĐĂNG NHẬP.
  *
- * KHÔNG dùng `Account.profile.title`: chuỗi đó là mốc của phép thử THỨ TỰ KHỐI bên dưới, và
- * nó chỉ hiện khi không ở chế độ sửa — neo mọi test vào nó thì mở form là cả bộ đỏ theo.
+ * Nó là thứ duy nhất của thẻ luôn có mặt ở bản chỉ xem: tên và ảnh thì mỗi hồ sơ một khác, còn
+ * khối sửa đã chuyển hẳn sang `/manage/account` (chốt 16/09/2026).
  */
-const PROFILE_CARD_TEXT = 'Cập nhật tên hiển thị và ảnh đại diện của bạn.';
+const PROFILE_CARD_TEXT = 'Thông tin đăng nhập';
 
 beforeEach(() => {
   mockPush.mockClear();
@@ -112,25 +120,37 @@ describe('AccountScreen — hồ sơ (CUS-04)', () => {
     expect(view.getByText('0901234567')).toBeTruthy();
     // Đã xác thực = dấu tích tròn; trình đọc màn hình nghe thấy nó qua nhãn khả truy cập.
     expect(view.getAllByLabelText('Đã xác thực')).toHaveLength(2);
-    // Hai trường nhận diện KHÔNG có ô nhập khi chưa bấm "Chỉnh sửa hồ sơ".
+    // Màn này không có ô nhập nào — hồ sơ chỉ đọc.
     expect(view.queryByText(/Họ tên hiển thị/)).toBeNull();
   });
 
   /**
-   * Đổi email/SĐT đi đường RIÊNG (mã 6 số tới địa chỉ mới), không nằm trong nút "Lưu thay đổi" —
-   * nên mỗi dòng phải có lối vào của chính nó, và chữ đổi theo việc: Thêm khi trống, Đổi khi đã có.
+   * SỬA Ở ĐÂU đi theo TUYẾN (người dùng chốt 16/09/2026): chủ xe tuyến hoa hồng và khách thuê
+   * không có khu quản lý nào để vào, nên đây là chỗ DUY NHẤT họ sửa được hồ sơ của mình.
    */
-  it('đã có email/SĐT: mỗi dòng có nút "Đổi" của riêng nó', async () => {
+  it('chủ xe / khách thuê: sửa được ngay tại đây', async () => {
     const view = await renderScreen();
     await view.findByText(PROFILE_CARD_TEXT);
+
+    expect(view.getByRole('button', { name: new RegExp('Chỉnh sửa hồ sơ$') })).toBeTruthy();
     // Khớp CHÍNH XÁC: mục "Đổi mật khẩu" trong menu cũng mang nhãn bắt đầu bằng "Đổi".
     expect(view.getAllByRole('button', { name: 'Đổi' })).toHaveLength(2);
   });
 
-  it('còn trống: nút đổi thành "Thêm" — cùng một luồng, khác chữ theo việc', async () => {
-    const view = await renderScreen({ ...PROFILE, email: null, phone: null });
+  /**
+   * Gian hàng TUYẾN GÓI thì ngược lại: hồ sơ con người sống ở `/manage/account`, và thẻ ở đây
+   * chỉ để XEM. Một nút "Đổi" mọc lại là hai bề mặt cùng sửa một thứ, và người dùng không đoán
+   * được cái nào là "thật".
+   */
+  it('gian hàng tuyến gói: CHỈ XEM — không nút sửa hồ sơ, không nút đổi email/SĐT', async () => {
+    const view = await renderScreen(PROFILE, {
+      tenant: { ...TENANT, billingMode: 'package' },
+    });
     await view.findByText(PROFILE_CARD_TEXT);
-    expect(view.getAllByRole('button', { name: 'Thêm' })).toHaveLength(2);
+
+    expect(view.queryByRole('button', { name: new RegExp('Chỉnh sửa hồ sơ$') })).toBeNull();
+    expect(view.queryAllByRole('button', { name: 'Đổi' })).toHaveLength(0);
+    expect(view.queryAllByRole('button', { name: 'Thêm' })).toHaveLength(0);
   });
 
   it('chưa xác thực: hiện CHỮ "Chưa xác thực", không phải một dấu tích im lặng', async () => {
@@ -148,12 +168,6 @@ describe('AccountScreen — hồ sơ (CUS-04)', () => {
     expect(view.getByText('Chưa có số điện thoại')).toBeTruthy();
     // Không có giá trị thì cũng không có dấu xác thực nào để hiện.
     expect(view.queryByLabelText('Đã xác thực')).toBeNull();
-  });
-
-  it('luôn giải thích vì sao email và SĐT không sửa được ở đây', async () => {
-    const view = await renderScreen();
-    await view.findByText(PROFILE_CARD_TEXT);
-    expect(view.getByText('Thông tin đăng nhập')).toBeTruthy();
   });
 
   it('lỗi tải hồ sơ: hiện lỗi có nút thử lại, không hiện form rỗng', async () => {
@@ -175,74 +189,6 @@ describe('AccountScreen — hồ sơ (CUS-04)', () => {
   });
 });
 
-describe('AccountScreen — chỉnh sửa hồ sơ', () => {
-  it('mở chế độ sửa thì hiện ĐÚNG hai trường backend nhận', async () => {
-    const view = await renderScreen();
-    await view.findByText(PROFILE_CARD_TEXT);
-
-    await fireEvent.press(view.getByRole('button', { name: new RegExp('Chỉnh sửa hồ sơ$') }));
-
-    expect(await view.findByText(/Họ tên hiển thị/)).toBeTruthy();
-    // Ảnh đại diện nay là ô TẢI ẢNH (presign → R2), không còn ô dán URL.
-    expect(view.getByText(/Ảnh đại diện/)).toBeTruthy();
-  });
-
-  it('huỷ chỉnh sửa TRẢ LẠI dữ liệu gốc, không giữ thứ vừa gõ dở', async () => {
-    const view = await renderScreen();
-    await view.findByText(PROFILE_CARD_TEXT);
-    await fireEvent.press(view.getByRole('button', { name: new RegExp('Chỉnh sửa hồ sơ$') }));
-
-    await fireEvent.changeText(await view.findByDisplayValue('Nguyễn Văn An'), 'Tên gõ dở');
-    await fireEvent.press(view.getByRole('button', { name: 'Huỷ' }));
-
-    // Form đóng lại và tên hiển thị quay về giá trị của server.
-    await waitFor(() => expect(view.queryByText(/Họ tên hiển thị/)).toBeNull());
-    expect(view.getAllByText('Nguyễn Văn An').length).toBeGreaterThan(0);
-    expect(view.queryByText('Tên gõ dở')).toBeNull();
-  });
-
-  it('tên rỗng bị chặn NGAY ở client — không gửi request', async () => {
-    const update = jest.spyOn(accountApi, 'updateMe');
-    const view = await renderScreen();
-    await view.findByText(PROFILE_CARD_TEXT);
-    await fireEvent.press(view.getByRole('button', { name: new RegExp('Chỉnh sửa hồ sơ$') }));
-
-    await fireEvent.changeText(await view.findByDisplayValue('Nguyễn Văn An'), '   ');
-    await fireEvent.press(view.getByRole('button', { name: new RegExp('Lưu thay đổi$') }));
-
-    expect(await view.findByText('Vui lòng nhập họ tên')).toBeTruthy();
-    expect(update).not.toHaveBeenCalled();
-  });
-
-  it('lưu xong: cập nhật cache hồ sơ VÀ làm mới `auth.me` để header đổi ngay', async () => {
-    const saved: UserProfile = { ...PROFILE, displayName: 'Nguyễn Văn Bình' };
-    const update = jest.spyOn(accountApi, 'updateMe').mockResolvedValue(saved);
-
-    const view = await renderScreen();
-    await view.findByText(PROFILE_CARD_TEXT);
-    const invalidate = jest.spyOn(view.queryClient, 'invalidateQueries');
-
-    await fireEvent.press(view.getByRole('button', { name: new RegExp('Chỉnh sửa hồ sơ$') }));
-    await fireEvent.changeText(await view.findByDisplayValue('Nguyễn Văn An'), 'Nguyễn Văn Bình');
-    await fireEvent.press(view.getByRole('button', { name: new RegExp('Lưu thay đổi$') }));
-
-    await waitFor(() =>
-      expect(update).toHaveBeenCalledWith({
-        displayName: 'Nguyễn Văn Bình',
-        // `null` chứ không phải vắng mặt: `undefined` nghĩa là "không đụng tới", nên nút gỡ ảnh
-        // sẽ im lặng không làm gì.
-        avatarUrl: null,
-      }),
-    );
-
-    // Hai vế BẮT BUỘC: thiếu vế thứ hai thì header vẫn hiện tên cũ tới lần mở app sau.
-    await waitFor(() =>
-      expect(view.queryClient.getQueryData(queryKeys.account.profile())).toEqual(saved),
-    );
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.auth.all });
-  });
-});
-
 /**
  * Menu tài khoản trên màn — bản "đã render" của những gì `account-nav.test.ts` khoá ở mức dữ liệu.
  *
@@ -255,17 +201,17 @@ describe('AccountScreen — điều hướng tài khoản', () => {
     await view.findByText(PROFILE_CARD_TEXT);
 
     const order = view
-      .getAllByText(/^(Tài khoản của tôi|Thông tin tài khoản)$/)
+      .getAllByText(/^(Tài khoản của tôi|Thông tin đăng nhập)$/)
       .map((node) => node.props.children);
     /*
      * Thẻ HỒ SƠ mở đầu màn; menu đứng sau nó. Người mở tab Tài khoản muốn thấy mình là ai
      * trước, rồi mới tới danh sách lối đi — thứ tự do người dùng chốt ngày 15/09/2026.
      */
-    expect(order[0]).toBe('Thông tin tài khoản');
+    expect(order[0]).toBe('Thông tin đăng nhập');
     expect(order).toContain('Tài khoản của tôi');
   });
 
-  it('khách chưa có gian hàng: đúng 5 mục, có "Trở thành chủ xe", không có mục chủ xe', async () => {
+  it('khách chưa có gian hàng: bảy mục, có "Trở thành chủ xe", không có mục chủ xe', async () => {
     const view = await renderScreen();
     await view.findByText(PROFILE_CARD_TEXT);
 
@@ -273,6 +219,9 @@ describe('AccountScreen — điều hướng tài khoản', () => {
       'Tài khoản của tôi',
       'Trở thành chủ xe',
       'Chuyến của tôi',
+      // Khách thuê CÓ số dư: tiền hoàn khoản giữ chỗ chảy vào ví điểm của họ (ADR 0033 điều 5).
+      'Ví điểm',
+      'Tài khoản nhận tiền',
       'Đổi mật khẩu',
       'Yêu cầu xoá tài khoản',
     ]) {
@@ -284,7 +233,7 @@ describe('AccountScreen — điều hướng tài khoản', () => {
     expect(view.queryByText('TÀI KHOẢN')).toBeNull();
   });
 
-  it('chủ gian hàng: 7 mục chủ xe đúng thứ tự, rồi nhóm "TÀI KHOẢN" tách bằng tiêu đề', async () => {
+  it('chủ xe tuyến hoa hồng: chín mục trong MỘT nhóm phẳng, không tiêu đề', async () => {
     const view = await renderScreen(PROFILE, { tenant: TENANT });
     await view.findByText(PROFILE_CARD_TEXT);
 
@@ -296,13 +245,47 @@ describe('AccountScreen — điều hướng tài khoản', () => {
       'Thông tin khai thuế',
       'Hợp đồng & Chứng từ',
       'Chính sách bảo vệ dữ liệu',
+      'Tài khoản của tôi',
+      'Đổi mật khẩu',
     ]) {
       expect(view.getAllByRole('menuitem', { name: label }).length).toBeGreaterThan(0);
     }
-    // Đường phân cách phải ĐỌC RA được, không chỉ là một nét kẻ.
-    expect(view.getByText('TÀI KHOẢN')).toBeTruthy();
+    /*
+     * MỘT nhóm, không tiêu đề (ADR 0038 điều 9): chủ xe không đổi vai khi bấm từ "Lịch xe" sang
+     * "Tài khoản của tôi", nên một tiêu đề ở giữa vẽ ra một ranh giới không có thật.
+     */
+    expect(view.queryByText('TÀI KHOẢN')).toBeNull();
+    /*
+     * "Yêu cầu xoá tài khoản" rời MENU (ADR 0038 điều 9) nhưng KHÔNG rời màn: nó là thẻ riêng
+     * tông đỏ ở cuối "Tài khoản của tôi". Canh cả hai vế — thiếu vế sau thì chủ xe tuyến hoa
+     * hồng không còn lối nào tới màn xoá tài khoản, đúng lỗi đã có trước 16/09/2026.
+     *
+     * Vế "không nằm trong menu" được canh ở tầng dữ liệu (`account-nav.test.ts`), nơi nói được
+     * chính xác điều đó; ở tầng màn thì cả hai đều là `menuitem` và một phép đếm không phân
+     * biệt được thẻ đỏ cuối màn với một mục menu.
+     */
+    expect(view.getByRole('menuitem', { name: 'Yêu cầu xoá tài khoản' })).toBeTruthy();
     // Chủ xe KHÔNG được mời "trở thành chủ xe" lần nữa.
     expect(view.queryByRole('menuitem', { name: 'Trở thành chủ xe' })).toBeNull();
+  });
+
+  /**
+   * ADR 0038 điều 7: khu khách của một tài khoản gian hàng tuyến GÓI còn đúng hai mục. Công cụ
+   * cho thuê, chuyến và hồ sơ con người sống ở khu quản lý.
+   */
+  it('gian hàng tuyến gói: khu khách còn ba mục, cả ba đều dẫn sang khu quản lý', async () => {
+    const view = await renderScreen(PROFILE, {
+      tenant: { ...TENANT, billingMode: 'package' },
+    });
+    await view.findByText(PROFILE_CARD_TEXT);
+
+    expect(view.getAllByRole('menuitem', { name: 'Quản lý gian hàng' }).length).toBeGreaterThan(0);
+    expect(view.getAllByRole('menuitem', { name: 'Hồ sơ gian hàng' }).length).toBeGreaterThan(0);
+    // Lối DUY NHẤT từ khu khách sang 'Tài khoản & bảo mật' — nơi sửa hồ sơ con người.
+    expect(view.getAllByRole('menuitem', { name: 'Hồ sơ cá nhân' }).length).toBeGreaterThan(0);
+    for (const gone of ['Danh sách xe', 'Lịch xe', 'Chuyến của tôi', 'Đổi mật khẩu']) {
+      expect(view.queryByRole('menuitem', { name: gone })).toBeNull();
+    }
   });
 
   it('nhân viên gian hàng KHÔNG nhận menu chủ xe, CTA của họ là "Quản lý gian hàng"', async () => {
@@ -393,24 +376,43 @@ describe('AccountScreen — thẻ gian hàng', () => {
     expect(mockPush).toHaveBeenCalledWith('/manage/onboarding');
   });
 
-  it('đã có gian hàng: hiện TÊN gian hàng thật, không phải nhãn chung', async () => {
+  /**
+   * Thẻ này chỉ có một lời mời — "Vào quản lý gian hàng" — và cánh cửa đó đóng với tuyến hoa hồng
+   * (ADR 0038 điều 4). Bản trước vẫn dựng thẻ, chỉ âm thầm đổi đích sang danh sách xe: nhãn hứa
+   * một nơi, cú bấm đưa tới nơi khác.
+   */
+  it('chủ xe tuyến hoa hồng: KHÔNG dựng thẻ gian hàng nào', async () => {
     const view = await renderScreen(PROFILE, { tenant: TENANT });
     await view.findByText(PROFILE_CARD_TEXT);
 
-    expect(view.getByText('Việt Car Hà Nội')).toBeTruthy();
+    expect(view.queryByRole('button', { name: /Vào quản lý gian hàng/ })).toBeNull();
     expect(view.queryByText('Đăng xe cho thuê')).toBeNull();
-    const cta = view.getByRole('button', { name: /Vào quản lý gian hàng/ });
-    expect(cta).toBeTruthy();
+  });
 
-    // Nút trên thẻ và mục "Trở thành chủ xe" trong menu là HAI luồng khác nhau bên web — nút
-    // này luôn dẫn vào cổng quản lý của người đã có gian hàng.
-    await fireEvent.press(cta);
+  /** Hỏi TENANT, không hỏi vai: nhân viên của gian hàng hoa hồng cũng không thấy thẻ. */
+  it('nhân viên gian hàng tuyến hoa hồng: cũng KHÔNG thấy thẻ', async () => {
+    const view = await renderScreen(PROFILE, {
+      tenant: { ...TENANT, roleKey: TENANT_ROLE.SHOP_STAFF },
+    });
+    await view.findByText(PROFILE_CARD_TEXT);
+
+    expect(view.queryByRole('button', { name: /Vào quản lý gian hàng/ })).toBeNull();
+  });
+
+  it('gian hàng tuyến GÓI: thẻ dẫn vào cổng quản lý', async () => {
+    const view = await renderScreen(PROFILE, {
+      tenant: { ...TENANT, billingMode: 'package' },
+    });
+    await view.findByText(PROFILE_CARD_TEXT);
+
+    await fireEvent.press(view.getByRole('button', { name: /Vào quản lý gian hàng/ }));
     expect(mockReplace).toHaveBeenCalledWith('/manage');
   });
 
   it('tài khoản nền tảng: "Quản trị nền tảng" thắng cả vai gian hàng', async () => {
     const view = await renderScreen(PROFILE, {
       tenant: TENANT,
+      openRenterTripCount: 0,
       platformRole: 'platform_admin',
     } as Partial<authApi.CurrentUser>);
     await view.findByText(PROFILE_CARD_TEXT);

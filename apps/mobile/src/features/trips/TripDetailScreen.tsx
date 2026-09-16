@@ -285,7 +285,7 @@ function TripDetailBody({ trip }: { trip: CustomerTripDetail }) {
             chờ tiền thì đây là việc DUY NHẤT khách cần làm, và nó không được nằm dưới một bảng
             số liệu mà họ chưa có lý do để đọc.
           */}
-          {trip.hold ? <TripHoldPanel hold={trip.hold} /> : null}
+          {trip.hold ? <TripHoldPanel hold={trip.hold} tripId={trip.id} /> : null}
 
           {/*
             Đơn KHÔNG đi qua khoản giữ chỗ của XePrime (tuyến gói tắt công tắc thu cọc — Phase 6).

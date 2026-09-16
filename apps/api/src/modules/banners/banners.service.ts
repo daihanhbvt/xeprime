@@ -11,8 +11,28 @@ import type {
   UpdateBannerDto,
 } from './dto/banner.dto';
 
-/** Trang chủ hiển thị tối đa bấy nhiêu banner — nhiều hơn là carousel thành trò quay số. */
-const MAX_PUBLIC_BANNERS = 3;
+/** Admin có thể lưu không giới hạn, nhưng không được xếp quá bấy nhiêu banner hiển thị cùng lúc. */
+const MAX_CONCURRENT_VISIBLE_BANNERS = 10;
+
+/** Khoá giao dịch riêng cho singleton banner, tránh hai admin cùng vượt trần trong hai request song song. */
+const BANNER_VISIBILITY_LOCK_ID = 93254107;
+
+/**
+ * Giữ khoá singleton của banner trong suốt giao dịch.
+ *
+ * `$executeRaw` chứ KHÔNG `$queryRaw`, và đây là điều kiện để nó chạy được chứ không phải sở
+ * thích: `pg_advisory_xact_lock` trả về kiểu `void`, mà `$queryRaw` phải ánh xạ kiểu của TỪNG
+ * CỘT kết quả — `fieldToColumnType` của `@prisma/adapter-pg` không có nhánh nào cho OID 2278
+ * (`void`) nên nó ném `UnsupportedNativeDataType` ngay câu lệnh đầu tiên của transaction.
+ *
+ * `$executeRaw` chỉ đọc số dòng bị ảnh hưởng, không đụng tới kiểu cột, nên nó là helper đúng cho
+ * mọi câu lệnh mà kết quả bị bỏ đi.
+ *
+ * Lỗi này chỉ lộ ra khi chạy với PostgreSQL THẬT: không có DB thì spec tự bỏ qua và CI xanh giả.
+ */
+function lockBannerVisibility(tx: Pick<PrismaService, '$executeRaw'>): Promise<number> {
+  return tx.$executeRaw`SELECT pg_advisory_xact_lock(CAST(${BANNER_VISIBILITY_LOCK_ID} AS bigint))`;
+}
 
 const SELECT = {
   id: true,
@@ -60,7 +80,7 @@ export class BannersService {
     private readonly audit: AuditService,
   ) {}
 
-  /** Tối đa 3 banner "đang hiển thị": active + trong khung lịch (nếu đặt), theo thứ tự admin sắp. */
+  /** Trả TOÀN BỘ banner đang hiển thị; giới hạn 10 được chặn ở đường ghi, không cắt âm thầm ở đây. */
   async publicList(): Promise<PublicBannerDto[]> {
     const now = new Date();
     const rows = await this.prisma.marketplaceBanner.findMany({
@@ -70,7 +90,6 @@ export class BannersService {
         AND: [{ OR: [{ endsAt: null }, { endsAt: { gt: now } }] }],
       },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
-      take: MAX_PUBLIC_BANNERS,
       select: {
         id: true,
         imageUrl: true,
@@ -95,6 +114,13 @@ export class BannersService {
     this.assertSchedule(dto.startsAt ?? null, dto.endsAt ?? null);
 
     const row = await this.prisma.$transaction(async (tx) => {
+      await lockBannerVisibility(tx);
+
+      const active = dto.active ?? true;
+      const startsAt = dto.startsAt ? new Date(dto.startsAt) : null;
+      const endsAt = dto.endsAt ? new Date(dto.endsAt) : null;
+      if (active) await this.assertVisibilityCapacity(tx, { startsAt, endsAt });
+
       const created = await tx.marketplaceBanner.create({
         data: {
           id: newId(),
@@ -105,9 +131,9 @@ export class BannersService {
           altText: dto.altText.trim(),
           linkUrl: dto.linkUrl?.trim() || null,
           sortOrder: dto.sortOrder ?? (await this.nextSortOrder(tx)),
-          active: dto.active ?? true,
-          startsAt: dto.startsAt ? new Date(dto.startsAt) : null,
-          endsAt: dto.endsAt ? new Date(dto.endsAt) : null,
+          active,
+          startsAt,
+          endsAt,
           createdBy: actorUserId,
         },
         select: SELECT,
@@ -129,16 +155,23 @@ export class BannersService {
   }
 
   async update(actorUserId: string, id: string, dto: UpdateBannerDto): Promise<AdminBannerDto> {
-    const current = await this.load(id);
-
-    // Lịch mới = giá trị gửi lên nếu CÓ MẶT trong payload (kể cả null = xoá), không thì giữ cũ —
-    // phải ghép xong mới kiểm tra được thứ tự, vì admin có thể chỉ sửa một đầu.
-    const startsAt =
-      'startsAt' in dto ? (dto.startsAt ? new Date(dto.startsAt) : null) : current.startsAt;
-    const endsAt = 'endsAt' in dto ? (dto.endsAt ? new Date(dto.endsAt) : null) : current.endsAt;
-    this.assertSchedule(startsAt?.toISOString() ?? null, endsAt?.toISOString() ?? null);
-
     const row = await this.prisma.$transaction(async (tx) => {
+      await lockBannerVisibility(tx);
+      const current = await this.load(id, tx);
+
+      // Lịch mới = giá trị gửi lên nếu CÓ MẶT trong payload (kể cả null = xoá), không thì giữ cũ —
+      // phải ghép xong mới kiểm tra được thứ tự, vì admin có thể chỉ sửa một đầu.
+      const startsAt =
+        'startsAt' in dto ? (dto.startsAt ? new Date(dto.startsAt) : null) : current.startsAt;
+      const endsAt = 'endsAt' in dto ? (dto.endsAt ? new Date(dto.endsAt) : null) : current.endsAt;
+      const active = dto.active ?? current.active;
+      this.assertSchedule(startsAt?.toISOString() ?? null, endsAt?.toISOString() ?? null);
+
+      const visibilityChanged = 'active' in dto || 'startsAt' in dto || 'endsAt' in dto;
+      if (active && visibilityChanged) {
+        await this.assertVisibilityCapacity(tx, { startsAt, endsAt }, id);
+      }
+
       const updated = await tx.marketplaceBanner.update({
         where: { id },
         data: {
@@ -227,8 +260,11 @@ export class BannersService {
     return this.listForAdmin();
   }
 
-  private async load(id: string): Promise<Row> {
-    const row = await this.prisma.marketplaceBanner.findUnique({ where: { id }, select: SELECT });
+  private async load(
+    id: string,
+    db: Pick<PrismaService, 'marketplaceBanner'> = this.prisma,
+  ): Promise<Row> {
+    const row = await db.marketplaceBanner.findUnique({ where: { id }, select: SELECT });
     if (!row) {
       throw new NotFoundException({
         code: API_ERROR_CODE.NOT_FOUND,
@@ -244,6 +280,57 @@ export class BannersService {
         code: API_ERROR_CODE.VALIDATION_FAILED,
         message: 'Thời điểm ngừng hiển thị phải sau thời điểm bắt đầu',
       });
+    }
+  }
+
+  /**
+   * Kiểm tra toàn bộ KHOẢNG LỊCH, không chỉ thời điểm hiện tại. Nếu chỉ đếm `visibleNow`, 10 banner
+   * đang chạy vô hạn cộng một banner hẹn ngày mai vẫn hợp lệ hôm nay nhưng tự thành 11 khi tới lịch.
+   */
+  private async assertVisibilityCapacity(
+    db: Pick<PrismaService, 'marketplaceBanner'>,
+    candidate: { startsAt: Date | null; endsAt: Date | null },
+    excludeId?: string,
+  ): Promise<void> {
+    const rows = await db.marketplaceBanner.findMany({
+      where: {
+        active: true,
+        ...(excludeId ? { id: { not: excludeId } } : {}),
+      },
+      select: { startsAt: true, endsAt: true },
+    });
+
+    // Không xét phần lịch đã trôi qua: banner chưa tồn tại ở quá khứ và không thể làm thay đổi trạng thái cũ.
+    const candidateStart = Math.max(
+      candidate.startsAt?.getTime() ?? Number.NEGATIVE_INFINITY,
+      Date.now(),
+    );
+    const candidateEnd = candidate.endsAt?.getTime() ?? Number.POSITIVE_INFINITY;
+    if (candidateStart >= candidateEnd) return;
+    const events: Array<{ at: number; delta: 1 | -1 }> = [];
+
+    for (const row of rows) {
+      const overlapStart = Math.max(
+        candidateStart,
+        row.startsAt?.getTime() ?? Number.NEGATIVE_INFINITY,
+      );
+      const overlapEnd = Math.min(candidateEnd, row.endsAt?.getTime() ?? Number.POSITIVE_INFINITY);
+      if (overlapStart >= overlapEnd) continue;
+      events.push({ at: overlapStart, delta: 1 }, { at: overlapEnd, delta: -1 });
+    }
+
+    // Khoảng lịch là [bắt đầu, kết thúc): cùng một mốc thì xử lý kết thúc trước bắt đầu.
+    events.sort((a, b) => a.at - b.at || a.delta - b.delta);
+    let concurrent = 0;
+    for (const event of events) {
+      concurrent += event.delta;
+      if (concurrent >= MAX_CONCURRENT_VISIBLE_BANNERS) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message:
+            'Chỉ được phép tối đa 10 banner hiển thị cùng thời điểm. Hãy tắt hoặc điều chỉnh lịch của banner khác trước.',
+        });
+      }
     }
   }
 

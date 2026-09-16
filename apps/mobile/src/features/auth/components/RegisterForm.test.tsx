@@ -17,6 +17,7 @@ const NEW_USER: authApi.CurrentUser = {
   phoneVerified: false,
   hasPassword: true,
   tenant: null,
+  openRenterTripCount: 0,
   platformRole: null,
   permissions: [],
 };

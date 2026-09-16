@@ -5,7 +5,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { usePathname } from 'expo-router';
 import { useTranslations } from 'use-intl';
-import { FEATURE_STATE, isFeatureVisible, type FeatureState, type PlanFeature } from '@xeprime/types';
+import {
+  FEATURE_STATE,
+  TENANT_ROLE,
+  isFeatureVisible,
+  type FeatureState,
+  type PlanFeature,
+} from '@xeprime/types';
 import { images } from '@/assets';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { CountBadge } from '@/components/ui/CountBadge';
@@ -14,7 +20,7 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useFeatureStates } from '@/features/auth/hooks/use-feature';
 import { useAuthenticatedUser } from '@/features/auth/hooks/use-authenticated-user';
 import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
-import { useDomainLabel } from '@/i18n/domain';
+import { useAccountIdentityLabel } from '@/features/account/use-account-identity-label';
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
@@ -29,6 +35,7 @@ import {
   type ManageNavNode,
   type ManageNavSection,
 } from './manage-nav';
+import { ManageAccountSheet } from './ManageAccountSheet';
 import { useManageDrawer } from './ManageDrawerHost';
 import { useManageNavBadges, type ManageNavBadgeCounts } from './use-manage-nav-badges';
 
@@ -123,8 +130,8 @@ interface ResolvedSection {
 export function ManageDrawer() {
   const t = useTranslations('Navigation');
   const tStates = useTranslations('Common.states');
-  const tMore = useTranslations('MobileShell.more');
   const tShell = useTranslations('ManageCommon.shell');
+  const [menuOpen, setMenuOpen] = useState(false);
   const insets = useSafeAreaInsets();
   const navigateOnce = useNavigateOnce();
   const pathname = usePathname();
@@ -133,13 +140,20 @@ export function ManageDrawer() {
   const { tenant } = useTenantScope();
   const permissions = usePermissions();
   const featureStates = useFeatureStates();
-  const domainLabel = useDomainLabel();
+  const identityLabel = useAccountIdentityLabel();
   const badges = useManageNavBadges();
   const drawer = useManageDrawer();
 
   const sections = useMemo(
-    () => resolveSections(Boolean(user.platformRole), permissions.has, featureStates, badges),
-    [user.platformRole, permissions, featureStates, badges],
+    () =>
+      resolveSections(
+        Boolean(user.platformRole),
+        permissions.has,
+        featureStates,
+        badges,
+        user.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER,
+      ),
+    [user.platformRole, user.tenant?.roleKey, permissions, featureStates, badges],
   );
 
   const activeHref = useMemo(
@@ -178,11 +192,6 @@ export function ManageDrawer() {
     [drawer, toast, tStates, navigateOnce],
   );
 
-  const openMore = useCallback(() => {
-    drawer.close();
-    navigateOnce(ROUTES.manage.more());
-  }, [drawer, navigateOnce]);
-
   const labelOf = useCallback((node: { labelKey: string }) => t(node.labelKey as never), [t]);
 
   /** Nhãn cho trình đọc màn hình — mang luôn con số, vì huy hiệu bị ẩn khỏi cây truy cập. */
@@ -197,11 +206,15 @@ export function ManageDrawer() {
     [labelOf, needsActionLabel],
   );
 
-  const roleLabel = user.platformRole
-    ? domainLabel('platformRole', user.platformRole)
-    : tenant
-      ? domainLabel('tenantRole', tenant.roleKey)
-      : null;
+  /*
+   * Nhãn danh tính — `useAccountIdentityLabel`, cùng phép suy với thẻ tài khoản của khu khách.
+   *
+   * Hai thứ đổi so với bản trước: nó đọc TUYẾN chứ không đọc bảng `tenantRole` (chủ xe cá nhân
+   * và chủ gian hàng cùng vai `shop_owner` — ADR 0014, nên bảng vai gọi cả hai là "Chủ gian
+   * hàng"), và vai GIAN HÀNG thắng vai nền tảng — trước đây riêng cột này xếp ngược, nên một
+   * người có cả hai nhìn thấy hai nhãn khác nhau ở hai bề mặt.
+   */
+  const roleLabel = identityLabel(user);
 
   return (
     <YStack f={1} bg={sidebar.bg} pt={insets.top} pb={insets.bottom}>
@@ -291,14 +304,17 @@ export function ManageDrawer() {
       </ScrollView>
 
       {/*
-        Thẻ tài khoản dưới chân mở ngăn "Thêm" — đúng chỗ web đặt nó (`ManageUserCard`), và là
-        lối duy nhất tới đổi ngôn ngữ / đổi khu. Không có nó thì `manage/more` thành một route
-        không ai dẫn tới.
+        Thẻ tài khoản dưới chân mở MENU TÀI KHOẢN — cùng bộ mục với menu thả xuống của
+        `ManageUserCard` bên web: hồ sơ · cài đặt gian hàng (chỉ chủ) · đăng xuất.
+
+        Web dùng dropdown vì con trỏ giữ được menu mở; native mở một tấm trượt từ đáy, vì một
+        tấm menu neo vào chân drawer trên màn 360dp thì hoặc tràn ra ngoài, hoặc đè lên chính
+        thẻ vừa bấm.
       */}
       <Pressable
-        onPress={openMore}
+        onPress={() => setMenuOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel={tMore('title')}
+        accessibilityLabel={tShell('accountMenu')}
         style={({ pressed }) => (pressed ? { backgroundColor: sidebar.hover } : null)}
       >
         <XStack
@@ -344,6 +360,8 @@ export function ManageDrawer() {
           <Ionicons name="chevron-up" size={iconSize.sm} color={sidebar.muted} />
         </XStack>
       </Pressable>
+
+      <ManageAccountSheet open={menuOpen} onClose={() => setMenuOpen(false)} />
     </YStack>
   );
 }
@@ -375,16 +393,25 @@ export function resolveSections(
   has: (permission: ManageNavLeaf['permission']) => boolean,
   featureStates: Partial<Record<PlanFeature, FeatureState>>,
   badges: ManageNavBadgeCounts,
+  isShopOwner = false,
 ): readonly ResolvedSection[] {
   const badgeOf = (key: ManageNavBadge | undefined) => (key ? badges[key] : 0);
 
   /*
-   * Hai trục độc lập kiểm NỐI TIẾP, đúng `canSeeLeaf` của web (ADR 0027 điều 2): `permission`
-   * trả lời "anh là ai", `feature` trả lời "gian hàng này có gì". Cờ vắng trong cache ⇒ coi
-   * như `enabled` — xem docblock của `useFeature` về việc vì sao mặc định phải là "cho qua".
+   * BA trục độc lập kiểm NỐI TIẾP, đúng `canSeeLeaf` của web: `permission` trả lời "anh là ai"
+   * (ADR 0027 điều 2), `ownerOnly` trả lời "anh có phải CHỦ gian hàng này không" (ADR 0038 điều
+   * 3), `feature` trả lời "gian hàng này có gì". Cờ tính năng vắng trong cache ⇒ coi như
+   * `enabled` — xem docblock của `useFeature` về việc vì sao mặc định phải là "cho qua".
+   *
+   * Thiếu một trục trong phép dồn thì nhánh thu gọn sẽ đếm việc-cần-xử-lý cho mục người dùng
+   * KHÔNG thấy — một con số chỉ vào hư không.
+   *
+   * Trục sở hữu đọc `roleKey`, không đọc quyền: nhân sự nền tảng mở Manage của một gian hàng
+   * KHÔNG phải chủ ví của gian hàng đó, nên họ cũng không thấy mục gác bằng trục này.
    */
   const canSeeLeaf = (leaf: ManageNavLeaf): boolean =>
     has(leaf.permission) &&
+    (leaf.ownerOnly !== true || isShopOwner) &&
     (leaf.feature === undefined ||
       isFeatureVisible(featureStates[leaf.feature] ?? FEATURE_STATE.ENABLED));
 

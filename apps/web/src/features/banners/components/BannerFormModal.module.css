@@ -1,18 +1,203 @@
-.scheduleRow {
-  display: grid;
-  gap: var(--xp-space-sm);
-  grid-template-columns: 1fr 1fr;
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
 }
 
-@media (max-width: 480px) {
+.intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--xp-space-md) var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+  gap: var(--xp-space-lg);
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: var(--xp-space-xs);
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.introText {
+  max-width: 720px;
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  line-height: 1.55;
+}
+
+.responsiveBadge,
+.requiredBadge,
+.optionalBadge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  border-radius: var(--xp-border-radius-pill);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.responsiveBadge {
+  padding: 8px 12px;
+  background: rgba(214, 160, 44, 0.14);
+  color: var(--xp-color-primary);
+}
+
+.section {
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--xp-space-md);
+  gap: var(--xp-space-md);
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: 17px;
+  font-weight: var(--xp-font-weight-bold);
+  line-height: 1.35;
+}
+
+.sectionDescription {
+  margin: 4px 0 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 1.5;
+}
+
+.singleField,
+.fieldGrid,
+.scheduleRow {
+  min-width: 0;
+}
+
+.singleField > :global(.ant-form-item),
+.fieldGrid > :global(.ant-form-item),
+.scheduleRow > :global(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+.mediaGrid {
+  display: grid;
+  gap: var(--xp-space-md);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mediaCard {
+  min-width: 0;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-layout);
+}
+
+.desktopMediaCard {
+  grid-column: 1 / -1;
+}
+
+.mediaCard :global(.ant-form-item-label) {
+  padding-bottom: var(--xp-space-sm);
+}
+
+.mediaLabel {
+  display: inline-flex;
+  align-items: center;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+  gap: var(--xp-space-xs);
+}
+
+.mediaLabel > :global(.anticon) {
+  color: var(--xp-color-primary);
+  font-size: 17px;
+}
+
+.requiredBadge,
+.optionalBadge {
+  margin-inline-start: var(--xp-space-xs);
+  padding: 5px 8px;
+}
+
+.requiredBadge {
+  background: rgba(217, 45, 32, 0.1);
+  color: var(--xp-color-error);
+}
+
+.optionalBadge {
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-tertiary);
+}
+
+.fieldGrid,
+.scheduleRow {
+  display: grid;
+  gap: var(--xp-space-md);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.statusCard {
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-sm);
+  margin-top: var(--xp-space-md);
+  background: var(--xp-color-bg-muted);
+}
+
+@media (max-width: 760px) {
+  .intro {
+    align-items: flex-start;
+    padding: var(--xp-space-md);
+  }
+
+  .section {
+    padding: var(--xp-space-md);
+  }
+
+  .fieldGrid,
   .scheduleRow {
     grid-template-columns: 1fr;
   }
 }
 
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: var(--xp-space-md);
-  gap: var(--xp-space-sm);
+@media (max-width: 640px) {
+  .form {
+    gap: var(--xp-space-sm);
+  }
+
+  .intro {
+    flex-direction: column;
+    gap: var(--xp-space-sm);
+  }
+
+  .mediaGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .desktopMediaCard {
+    grid-column: auto;
+  }
+
+  .mediaCard {
+    padding: var(--xp-space-sm);
+  }
+
+  .sectionHeading {
+    margin-bottom: var(--xp-space-sm);
+  }
 }

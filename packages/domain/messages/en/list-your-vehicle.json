@@ -230,7 +230,10 @@
     "listCta": "Back to vehicles",
     "incompleteTitle": "Not submitted yet",
     "incompleteBody": "The vehicle is saved as a draft. Add the items below, then submit it again:",
-    "incompleteCta": "Add the missing details"
+    "incompleteCta": "Add the missing details",
+    "shopPendingTitle": "Your shop is not approved yet",
+    "shopPendingBody": "The vehicle is saved, but it can only go to the marketplace once your shop is approved. Complete your shop profile to get approved.",
+    "shopPendingCta": "Complete shop profile"
   },
   "validation": {
     "weekdayPriceRequired": "Enter the daily rental price",

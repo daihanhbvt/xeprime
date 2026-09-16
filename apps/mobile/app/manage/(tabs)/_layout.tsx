@@ -58,6 +58,13 @@ export default function ManageTabsLayout() {
         <Tabs.Screen name="shop/seller-profile" />
         <Tabs.Screen name="members" />
         <Tabs.Screen name="drivers" />
+        {/*
+          "Tài khoản & bảo mật" (ADR 0038 điều 7) và lối chuyển tiếp của nó — SCREEN PHẲNG của
+          chính bộ tab này, cùng khuôn với nhóm `shop/` và `support/`. `account/trips` không có
+          mục menu nào dẫn tới: lối vào duy nhất là thẻ theo ngữ cảnh trong `account`.
+        */}
+        <Tabs.Screen name="account" />
+        <Tabs.Screen name="account/trips" />
         <Tabs.Screen name="support" />
         {/*
           `support/cases` và `support/cases/[id]` là SCREEN PHẲNG của chính bộ tab này (không có

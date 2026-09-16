@@ -15,7 +15,7 @@ import { TextField } from '@/components/ui/TextField';
 import { resetPasswordWithToken } from '@/features/auth/api';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import type { IconName } from '@/components/ui/Chip';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 
 interface ResetPasswordScreenProps {
   /** `null` khi liên kết thiếu `?token=` — trường hợp HỢP LỆ, không phải lỗi lập trình. */
@@ -121,7 +121,7 @@ function ResetPasswordForm({
       <Screen edges={['left', 'right', 'bottom']}>
         <YStack gap={space.xl}>
           <YStack gap={space.xs}>
-            <Text col={colors.text} fontFamily="$heading" fos={fontSize.h2}>
+            <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold}>
               {t('resetPassword.title')}
             </Text>
             <Text col={colors.textMuted} fos={fontSize.body}>
@@ -196,7 +196,7 @@ function Outcome({
         <YStack ai="center" gap={space.lg}>
           <StatusIcon icon={icon} tone={tone} />
           <YStack ai="center" gap={space.xs}>
-            <Text col={colors.text} fontFamily="$heading" fos={fontSize.h2} ta="center">
+            <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold} ta="center">
               {title}
             </Text>
             <Text col={colors.textMuted} fos={fontSize.body} ta="center">

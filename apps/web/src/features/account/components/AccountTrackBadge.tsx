@@ -5,7 +5,7 @@ import { Tag, Tooltip } from 'antd';
 import { useTranslations } from 'next-intl';
 import {
   ACCOUNT_TRACK,
-  TENANT_ROLE,
+  accountTrackLabelKey,
   resolveAccountTrack,
   type AccountTrackInput,
 } from '@xeprime/types';
@@ -80,7 +80,7 @@ export function AccountTrackBadge({
   if (track === ACCOUNT_TRACK.SHOP_MEMBER) {
     return (
       <Tag color="default" className={className}>
-        {t(memberKeyFor(roleKey))}
+        {t(accountTrackLabelKey(track, roleKey) ?? 'shopMember')}
       </Tag>
     );
   }
@@ -120,26 +120,4 @@ export function AccountTrackBadge({
         : t('commissionOwnerWithFee', { percent: serviceFeePercent })}
     </Tag>
   );
-}
-
-/**
- * Vai → khoá nhãn. Ba vai thật, và một nhánh dự phòng cho vai mà bản web này chưa biết.
- *
- * Nhánh dự phòng không phải phòng thủ thừa: vai là dữ liệu trên dây (`TENANT_ROLE` có thể thêm
- * giá trị ở backend trước khi web kịp deploy), và một `t(undefined)` sẽ ném ngay giữa lúc render
- * thanh điều hướng.
- */
-type MemberLabelKey = 'shopManager' | 'shopStaff' | 'shopViewer' | 'shopMember';
-
-function memberKeyFor(roleKey: string | null): MemberLabelKey {
-  switch (roleKey) {
-    case TENANT_ROLE.SHOP_MANAGER:
-      return 'shopManager';
-    case TENANT_ROLE.SHOP_STAFF:
-      return 'shopStaff';
-    case TENANT_ROLE.SHOP_VIEWER:
-      return 'shopViewer';
-    default:
-      return 'shopMember';
-  }
 }

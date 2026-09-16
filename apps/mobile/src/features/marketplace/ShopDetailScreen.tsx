@@ -15,6 +15,8 @@ import { scrollThrottle } from '@/theme/motion';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 import type { PublicListing } from './api';
 import { ShopHeader } from './components/ShopHeader';
+import { ShopAbout } from './components/ShopAbout';
+import { ShopReviews } from './components/ShopReviews';
 import { VehicleCard } from './components/VehicleCard';
 import { useInfiniteShopListings, usePublicShop } from './hooks/use-shop';
 
@@ -128,6 +130,11 @@ export function ShopDetailScreen({ slug, onBack }: { slug: string; onBack: () =>
         ListHeaderComponent={
           <YStack gap={layout.block} pb={layout.block}>
             <ShopHeader shop={shop.data} />
+
+            <YStack px={layout.screenX} gap={layout.block}>
+              <ShopAbout shop={shop.data} />
+              <ShopReviews slug={shop.data.slug} />
+            </YStack>
 
             <YStack px={layout.screenX} gap={layout.block}>
               <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>

@@ -11,6 +11,7 @@ export type CustomerTripEstimate = Schemas['CustomerTripEstimateDto'];
 export type CustomerTripCounts = Schemas['CustomerTripCountsDto'];
 export type CustomerSurcharge = Schemas['CustomerSurchargeDto'];
 export type CustomerTripReview = Schemas['CustomerTripReviewDto'];
+export type ProvideRefundAccountInput = Schemas['ProvideRefundAccountDto'];
 
 /**
  * Biên bản bàn giao mà KHÁCH được xem — bản của khách, không phải `HandoverDto` của gian hàng.
@@ -35,8 +36,15 @@ export interface TripsResult {
 
 const EMPTY_COUNTS: CustomerTripCounts = { current: 0, history: 0 };
 
-export function tripsToParams(filter: string, page: number): QueryParams {
-  return { filter, page, limit: TRIPS_DEFAULT_LIMIT };
+/**
+ * `role` đi VÀO chính vị từ scope ở server (ADR 0038 điều 8), nên lọc, đếm tổng, đếm từng tab và
+ * phân trang dùng chung một định nghĩa. Bỏ trống = cả hai vai — client cũ không gãy.
+ *
+ * Lọc ở client bị loại có chủ đích: nó cho ra những trang dài ngắn khác nhau và một con số tổng
+ * không khớp thứ người dùng đếm được trên màn hình.
+ */
+export function tripsToParams(filter: string, page: number, role?: string): QueryParams {
+  return { filter, page, limit: TRIPS_DEFAULT_LIMIT, ...(role ? { role } : {}) };
 }
 
 /**
@@ -51,9 +59,9 @@ interface TripsEnvelope {
 }
 
 export const tripsApi = {
-  async list(filter: string, page: number): Promise<TripsResult> {
+  async list(filter: string, page: number, role?: string): Promise<TripsResult> {
     const res = (await getApiClient().request<CustomerTrip[]>('/trips', {
-      query: tripsToParams(filter, page),
+      query: tripsToParams(filter, page, role),
     })) as TripsEnvelope;
 
     return {
@@ -108,5 +116,21 @@ export const tripsApi = {
    */
   cancel(id: string): Promise<CustomerTripDetail> {
     return getApiClient().post<CustomerTripDetail>(`/trips/${encodeURIComponent(id)}/cancel`);
+  },
+
+  /**
+   * Khách khai tài khoản nhận tiền hoàn khoản giữ chỗ — ADR 0033.
+   *
+   * Bắt buộc trước khi admin chuyển được: `markRefundPaid` từ chối một lệnh chuyển không có đích.
+   * Trả về chính chuyến đó để nơi gọi ghi thẳng vào cache, giống `cancel`.
+   */
+  provideRefundAccount(
+    id: string,
+    body: ProvideRefundAccountInput,
+  ): Promise<CustomerTripDetail> {
+    return getApiClient().post<CustomerTripDetail>(
+      `/trips/${encodeURIComponent(id)}/refund-account`,
+      body,
+    );
   },
 };

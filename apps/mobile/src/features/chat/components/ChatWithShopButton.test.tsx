@@ -56,7 +56,7 @@ describe('ChatWithShopButton', () => {
 
     fireEvent.press(view.getByRole('button', { name: 'Nhắn shop' }));
 
-    await waitFor(() => expect(api.start).toHaveBeenCalledWith('veh-1'));
+    await waitFor(() => expect(api.start).toHaveBeenCalledWith({ vehicleId: 'veh-1' }));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/chat/[id]',
       params: { id: 'conv-1', v: 'veh-1' },

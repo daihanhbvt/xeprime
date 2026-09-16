@@ -1,6 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, TextInput, useWindowDimensions } from 'react-native';
+import { memo, useCallback, useMemo, useState } from 'react';
+import {
+  FlatList,
+  Modal,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  useWindowDimensions,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -22,8 +29,20 @@ import {
   sizing,
   space,
 } from '@/theme/tokens';
+import { LIST_TUNING } from '@/theme/list-tuning';
 import { useSearchExperience } from '../search-context';
 import { SectionError } from './SectionError';
+
+/**
+ * Style của vùng cuộn dựng MỘT lần: object literal ở prop là một tham chiếu mới mỗi render, và
+ * `FlatList` so sánh nông nên nó tự coi mình vừa đổi cấu hình — ngay giữa lúc người dùng gõ.
+ */
+const styles = StyleSheet.create({
+  listContent: {
+    paddingHorizontal: layout.screenX,
+    paddingBottom: space.lg,
+  },
+});
 
 /** Số địa điểm phổ biến — cùng con số với web (`search/LocationPicker.tsx`). */
 const POPULAR_COUNT = 6;
@@ -103,7 +122,8 @@ export function LocationPicker({ open, onClose, onSelect }: LocationPickerProps)
         title={item.provinceName}
         count={t('vehicleCount', { count: item.vehicleCount })}
         selected={selectedCode === item.provinceCode}
-        onPress={() => pick(item.provinceCode)}
+        value={item.provinceCode}
+        onPress={pick}
       />
     ),
     [selectedCode, pick, t],
@@ -188,10 +208,8 @@ export function LocationPicker({ open, onClose, onSelect }: LocationPickerProps)
                 data={matches}
                 keyExtractor={provinceKey}
                 keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{
-                  paddingHorizontal: layout.screenX,
-                  paddingBottom: space.lg,
-                }}
+                contentContainerStyle={styles.listContent}
+                {...LIST_TUNING}
                 ListHeaderComponent={
                   <YStack gap={space.sm}>
                     {popular.length > 0 ? (
@@ -219,7 +237,8 @@ export function LocationPicker({ open, onClose, onSelect }: LocationPickerProps)
                         title={nationwideLabel}
                         hint={t('nationwideHint')}
                         selected={selectedCode === ''}
-                        onPress={() => pick('')}
+                        value=""
+                        onPress={pick}
                       />
                     ) : null}
                   </YStack>
@@ -253,12 +272,13 @@ function GroupTitle({ children }: { children: string }) {
 /** Một dòng chọn. Mục đang chọn tô nền và có dấu tick — giống web. */
 const provinceKey = (item: PublicDestination) => item.provinceCode;
 
-function Row({
+const Row = memo(function Row({
   icon,
   title,
   hint,
   count,
   selected,
+  value,
   onPress,
 }: {
   icon: RowIcon;
@@ -266,10 +286,22 @@ function Row({
   hint?: string;
   count?: string;
   selected: boolean;
-  onPress: () => void;
+  /**
+   * Mã tỉnh của CHÍNH hàng này, trả ngược lại cho nơi gọi.
+   *
+   * Nhận giá trị chứ không nhận một closure đã đóng sẵn nó: `onPress={() => pick(code)}` ở
+   * `renderItem` là một hàm mới ở mỗi lượt render, và `memo` so nông nên nó vô hiệu hoá đúng
+   * lớp chắn vừa dựng. Danh sách này là 63 tỉnh và người dùng vừa gõ vừa nhìn nó lọc lại.
+   */
+  value: string;
+  onPress: (value: string) => void;
 }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected }}>
+    <Pressable
+      onPress={() => onPress(value)}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+    >
       <XStack
         ai="center"
         gap={space.sm}
@@ -306,4 +338,4 @@ function Row({
       </XStack>
     </Pressable>
   );
-}
+});

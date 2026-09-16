@@ -69,7 +69,7 @@ export function ForgotPasswordScreen({ onBackToLogin }: { onBackToLogin: () => v
             <StatusIcon icon="mail-open-outline" tone={STATUS_TONE.SUCCESS} />
 
             <YStack ai="center" gap={space.xs}>
-              <Text col={colors.text} fontFamily="$heading" fos={fontSize.h2} ta="center">
+              <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold} ta="center">
                 {t('forgotPassword.sentTitle')}
               </Text>
               {/* Rich text của ICU, không nối ba mảnh chuỗi: vị trí địa chỉ email trong câu khác
@@ -100,7 +100,7 @@ export function ForgotPasswordScreen({ onBackToLogin }: { onBackToLogin: () => v
       <Screen edges={['left', 'right', 'bottom']}>
         <YStack gap={space.xl}>
           <YStack gap={space.xs}>
-            <Text col={colors.text} fontFamily="$heading" fos={fontSize.h2}>
+            <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold}>
               {t('forgotPassword.title')}
             </Text>
             <Text col={colors.textMuted} fos={fontSize.body}>

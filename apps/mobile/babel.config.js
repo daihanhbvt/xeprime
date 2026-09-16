@@ -2,16 +2,19 @@ module.exports = function (api) {
   api.cache(true);
 
   return {
-    presets: ['babel-preset-expo'],
+    presets: [
+      require.resolve('babel-preset-expo', { paths: [require.resolve('expo/package.json')] }),
+    ],
     plugins: [
       [
         '@tamagui/babel-plugin',
         {
           components: ['tamagui'],
           config: './src/theme/tamagui.config.ts',
-          // Chỉ tối ưu ở bản release: bật lúc dev làm Metro build lại chậm hẳn mà không
-          // đổi được gì trên màn hình.
-          disableExtraction: process.env.NODE_ENV === 'development',
+          // Bộ tối ưu Tamagui chưa tải được module native của Expo khi bundle release.
+          // Giữ style runtime để APK build ổn định; bật lại sau khi bộ tối ưu tương thích.
+          disableExtraction: true,
+          disableDebugAttr: true,
         },
       ],
     ],

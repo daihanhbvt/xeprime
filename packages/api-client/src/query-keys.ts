@@ -356,6 +356,9 @@ export const queryKeys = {
       ['marketplace', 'reviews', vehicleId, params] as const,
     /** Hồ sơ gian hàng công khai. Web render server-side cho SEO; app fetch như mọi màn khác. */
     shop: (slug: string) => ['marketplace', 'shop', slug] as const,
+    /** Đánh giá của CẢ gian hàng — khác `reviews` (một chiếc xe) ngay trên. */
+    shopReviews: (slug: string, limit: number) =>
+      ['marketplace', 'shop-reviews', slug, limit] as const,
     shopListings: (slug: string, params: QueryParams) =>
       ['marketplace', 'shop-listings', slug, params] as const,
     /** Bản tải VÔ HẠN của danh sách trên — key KHÔNG chứa page (page là pageParam của TanStack). */
@@ -467,6 +470,12 @@ export const queryKeys = {
   accountPayments: {
     all: ['account-payments'] as const,
     list: (params: QueryParams) => ['account-payments', 'list', params] as const,
+    /**
+     * Bản CUỘN VÔ HẠN của native — `page` KHÔNG nằm trong khoá (nó là `pageParam` của TanStack),
+     * đúng quy ước của các nhánh `*Infinite` khác. Có `page` trong khoá thì mỗi trang là một
+     * cache riêng và danh sách không bao giờ nối lại được.
+     */
+    listInfinite: (params: QueryParams) => ['account-payments', 'list-infinite', params] as const,
   },
   /** Sổ thuế của nền tảng + bản của gian hàng — Phase 8. Một nhánh để đảo một dòng làm mới cả hai. */
   tax: {

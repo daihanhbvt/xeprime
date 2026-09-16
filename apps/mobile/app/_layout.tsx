@@ -17,6 +17,7 @@ import 'react-native-reanimated';
 import { AppErrorScreen } from '@/components/state/AppErrorScreen';
 import { AppToastProvider } from '@/components/feedback/AppToast';
 import { SessionBoundary } from '@/features/auth/SessionBoundary';
+import { ShopAccountGate } from '@/features/account/components/ShopAccountGate';
 import { BadgeRealtimeProvider } from '@/features/badges/BadgeRealtimeProvider';
 import { InAppCameraProvider } from '@/features/camera/InAppCameraProvider';
 import { ChatRealtimeProvider } from '@/features/chat/realtime/ChatRealtimeProvider';
@@ -101,6 +102,12 @@ export default function RootLayout() {
                   này, nên nó phải sống qua điều hướng — gắn ở một màn thì rời màn là mất.
                 */}
                 <BadgeRealtimeProvider>
+                {/*
+                  Cổng URL khu khách cho tài khoản gian hàng tuyến gói (ADR 0038 điều 7). Gắn ở
+                  GỐC vì khu khách là một tập màn phẳng, không có layout chung như web — gác từng
+                  màn sẽ bỏ sót đúng cái màn thêm vào tháng sau.
+                */}
+                <ShopAccountGate />
                 <Stack
                   screenOptions={{
                     headerShown: false,

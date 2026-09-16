@@ -15,3 +15,4 @@
  * Quy ước cũ vẫn giữ: component chỉ nhận props thuần, không gọi API, không đọc Redux.
  */
 export * from './tokens';
+export * from './brand/verified-mark';

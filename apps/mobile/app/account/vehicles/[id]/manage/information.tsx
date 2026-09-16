@@ -1,4 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
+import { OWNER_STAGE } from '@xeprime/types';
 import { RequireSession } from '@/features/auth/RequireSession';
 import { OwnerGate } from '@/features/account/components/OwnerGate';
 import { VehicleInformationScreen } from '@/features/vehicle-manage/VehicleInformationScreen';
@@ -14,7 +15,7 @@ export default function AccountVehicleManageInformationRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   return (
     <RequireSession>
-      <OwnerGate>
+      <OwnerGate minStage={OWNER_STAGE.REGISTERING}>
         <VehicleInformationScreen vehicleId={id} />
       </OwnerGate>
     </RequireSession>
