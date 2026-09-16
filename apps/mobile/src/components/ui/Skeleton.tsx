@@ -1,9 +1,8 @@
-import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated, {
   Easing,
+  makeMutable,
   useAnimatedStyle,
-  useSharedValue,
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
@@ -32,6 +31,46 @@ interface SkeletonProps {
 }
 
 /**
+ * MỘT nhịp thở cho toàn app, khai ở cấp module và chạy đúng một lần.
+ *
+ * Trước đây mỗi `Skeleton` tự dựng shared value + `useEffect` + `withRepeat` của riêng nó. Trên
+ * một màn tĩnh thì không sao; trong DANH SÁCH CUỘN thì một thẻ xe đang chờ dữ liệu có tới bốn
+ * khung chờ (ảnh, dải nhãn, hai dòng chỉ số), nhân với vài chục hàng đang sống là vài chục hoạt
+ * cảnh lặp vô hạn cùng chen nhau trên luồng UI — đúng luồng đang phải vẽ cú cuộn. Tệ hơn: mỗi
+ * hàng mới vào tầm nhìn là dựng thêm một bộ, và dựng đúng lúc bận nhất.
+ *
+ * Chung một bộ đếm thì số hoạt cảnh là MỘT, bất kể bao nhiêu khung chờ đang hiện, và hàng mới
+ * chỉ việc đọc giá trị sẵn có. Mọi khung chờ thở cùng pha — vốn là thứ nhìn gọn hơn bản cũ, nơi
+ * chúng lệch pha nhau tuỳ thời điểm được dựng.
+ *
+ * `makeMutable` chứ không phải `useSharedValue`: giá trị này không thuộc về lượt gắn kết của
+ * component nào cả. Không có ai gỡ nó, và cũng không nên — một hoạt cảnh là cái giá cố định.
+ */
+const pulse = makeMutable(0.5);
+
+let pulseStarted = false;
+
+/**
+ * Khởi động ở lần dựng khung chờ ĐẦU TIÊN, không ở lúc nạp module.
+ *
+ * Module này bị kéo vào rất sớm qua chuỗi import của các màn, có thể trước khi Reanimated dựng
+ * xong luồng UI — giao một hoạt cảnh lúc đó là đặt cược vào thứ tự nạp. Hoãn tới lần dựng đầu
+ * tiên thì Reanimated chắc chắn đã sẵn sàng, và cờ khiến nó vẫn chỉ chạy đúng một lần.
+ *
+ * Gọi thẳng trong thân render chứ không qua `useEffect`: nó tự chặn lần hai, không đụng state
+ * React, và một khung chờ phải THỞ ngay từ khung hình đầu — qua effect là trễ mất một nhịp.
+ */
+function startPulse(): void {
+  if (pulseStarted) return;
+  pulseStarted = true;
+  pulse.value = withRepeat(
+    withTiming(1, { duration: duration.pulse, easing: Easing.inOut(Easing.ease) }),
+    -1,
+    true,
+  );
+}
+
+/**
  * Khung chờ có nhịp thở — dùng thay `ActivityIndicator` ở mọi chỗ đã biết trước HÌNH DẠNG nội
  * dung: khối xám đúng kích thước giữ nguyên bố cục nên trang không nhảy khi dữ liệu về.
  */
@@ -42,15 +81,7 @@ export function Skeleton({
   fill = false,
   round = false,
 }: SkeletonProps) {
-  const pulse = useSharedValue(0.5);
-
-  useEffect(() => {
-    pulse.value = withRepeat(
-      withTiming(1, { duration: duration.pulse, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true,
-    );
-  }, [pulse]);
+  startPulse();
 
   const style = useAnimatedStyle(() => ({ opacity: pulse.value }));
 

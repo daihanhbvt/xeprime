@@ -183,7 +183,7 @@ export function BranchListScreen() {
         pendingAction={pendingIdAction?.id === item.id ? pendingIdAction.action : null}
         onEdit={openEdit}
         onAction={runAction}
-        actionState={actionStateOf(item)}
+        actionState={actionStateOf}
       />
     ),
     [actionStateOf, canManage, openEdit, pendingIdAction, runAction],
@@ -236,6 +236,7 @@ export function BranchListScreen() {
           searchLabel={t('toolbar.searchLabel')}
           searchPlaceholder={t('toolbar.searchPlaceholder')}
           onSearchChange={changeSearch}
+          hasRows={items.length > 0}
           groups={groups}
           onFilterChange={changeFilter}
         >

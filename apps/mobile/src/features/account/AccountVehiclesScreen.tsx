@@ -152,10 +152,10 @@ export function AccountVehiclesScreen() {
         onPress={openVehicle}
         actions={rowActions}
         stats={stats.byId.get(item.id)}
-        statsLoading={stats.isLoading}
+        statsLoading={stats.pendingIds.has(item.id)}
         statsFailed={stats.isError}
         alerts={alerts.byId.get(item.id)}
-        alertsLoading={alerts.isLoading}
+        alertsLoading={alerts.pendingIds.has(item.id)}
         alertsFailed={alerts.isError}
       />
     ),
@@ -163,10 +163,10 @@ export function AccountVehiclesScreen() {
       openVehicle,
       rowActions,
       stats.byId,
-      stats.isLoading,
+      stats.pendingIds,
       stats.isError,
       alerts.byId,
-      alerts.isLoading,
+      alerts.pendingIds,
       alerts.isError,
     ],
   );

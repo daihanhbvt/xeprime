@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { memo } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -49,13 +49,13 @@ export interface BranchCardActionState {
  * Thiếu `branches.manage` thì KHÔNG có thanh thao tác nào cả: đó là chuyện quyền, không phải luật
  * nghiệp vụ, và bày ra ba ô mờ chỉ làm màn hình ồn.
  */
-export function BranchCard({
+function BranchCardImpl({
   branch,
   canManage,
   pendingAction,
   onEdit,
   onAction,
-  actionState,
+  actionState: actionStateOf,
 }: {
   branch: Branch;
   canManage: boolean;
@@ -63,8 +63,15 @@ export function BranchCard({
   pendingAction: BranchAction | null;
   onEdit: (branch: Branch) => void;
   onAction: (branch: Branch, action: BranchAction) => void;
-  /** Luật nghiệp vụ chặn từng thao tác — do màn hình tính, xem `BranchListScreen`. */
-  actionState: Readonly<Record<BranchAction, BranchCardActionState>>;
+  /**
+   * Luật nghiệp vụ chặn từng thao tác — do màn hình tính, xem `BranchListScreen`.
+   *
+   * Nhận HÀM chứ không nhận object đã tính sẵn, cùng lý do với `actions` của `VehicleCard`:
+   * `actionState={actionStateOf(item)}` ở `renderItem` là một object MỚI mỗi lần render, và
+   * `memo` so nông nên nó vô hiệu hoá chính lớp chắn vừa dựng. Hàm thì màn hình đã
+   * `useCallback`, giữ nguyên tham chiếu, nên thẻ chỉ dựng lại khi chi nhánh của nó thật sự đổi.
+   */
+  actionState: (branch: Branch) => Readonly<Record<BranchAction, BranchCardActionState>>;
 }) {
   const t = useTranslations('Branches');
   const tActions = useTranslations('Common.actions');
@@ -75,16 +82,22 @@ export function BranchCard({
   const meta = BRANCH_STATUS_META[branch.status as BranchStatus];
   const statusLabel = domainLabel('branchStatus', branch.status, meta.label);
 
-  const blockedReasons = useMemo(() => {
-    if (!canManage) return [];
-    const shown: BranchAction[] = branch.isDefault
-      ? [toggle]
-      : [BRANCH_ACTION.SET_DEFAULT, toggle];
-    return shown
-      .filter((action) => !actionState[action].enabled)
-      .map((action) => actionState[action].reason)
-      .filter((reason): reason is string => Boolean(reason));
-  }, [actionState, branch.isDefault, canManage, toggle]);
+  const actionState = actionStateOf(branch);
+
+  /*
+   * Không `useMemo`: `actionState` được tính lại trong chính lượt render này, nên ô nhớ không
+   * bao giờ trúng — nó chỉ tốn thêm một phép so phụ thuộc. `memo` ở ngoài mới là thứ chặn
+   * render, và khi nó đã cho render thì lọc hai phần tử là rẻ hơn cả việc đi so.
+   */
+  const shownActions: BranchAction[] = branch.isDefault
+    ? [toggle]
+    : [BRANCH_ACTION.SET_DEFAULT, toggle];
+  const blockedReasons = canManage
+    ? shownActions
+        .filter((action) => !actionState[action].enabled)
+        .map((action) => actionState[action].reason)
+        .filter((reason): reason is string => Boolean(reason))
+    : [];
 
   /*
    * "Chi nhánh này Ở ĐÂU" — tỉnh và địa chỉ là MỘT câu, không hai dòng: đọc rời nhau thì tỉnh
@@ -242,3 +255,10 @@ export function BranchCard({
     </Card>
   );
 }
+
+/**
+ * Bọc `memo`: đây là HÀNG trong một danh sách dài, và màn chứa nó dựng lại vì đủ thứ không liên
+ * quan tới một bản ghi cụ thể (gõ ô tìm kiếm, đo chiều cao khối lọc, nối thêm trang). Không có
+ * lớp chắn này thì mỗi lần như vậy là vẽ lại toàn bộ hàng đang hiển thị giữa lúc đang cuộn.
+ */
+export const BranchCard = memo(BranchCardImpl);

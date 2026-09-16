@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -45,7 +46,7 @@ const AVATAR_SIZE = 36;
  *
  * Ẩn nút chỉ là trải nghiệm — `MembersService` vẫn từ chối cả ba trường hợp.
  */
-export function MemberCard({
+function MemberCardImpl({
   member,
   isMe,
   canUpdateRole,
@@ -174,3 +175,10 @@ export function MemberCard({
     </Card>
   );
 }
+
+/**
+ * Bọc `memo`: đây là HÀNG trong một danh sách dài, và màn chứa nó dựng lại vì đủ thứ không liên
+ * quan tới một bản ghi cụ thể (gõ ô tìm kiếm, đo chiều cao khối lọc, nối thêm trang). Không có
+ * lớp chắn này thì mỗi lần như vậy là vẽ lại toàn bộ hàng đang hiển thị giữa lúc đang cuộn.
+ */
+export const MemberCard = memo(MemberCardImpl);
