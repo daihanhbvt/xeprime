@@ -1,5 +1,7 @@
 import type { Request } from 'express';
 import type {
+  BillingMode,
+  BillingPhase,
   FeatureState,
   Permission,
   PlanFeature,
@@ -40,6 +42,17 @@ export interface TenantContext {
   readonly planCode: string | null;
   /** ISO-8601 UTC — băng "hết hạn" ở web hiện ngày này. */
   readonly planEndsAt: string | null;
+  /**
+   * TUYẾN đang áp dụng, giải bằng `resolveEffectiveBilling` — `null` khi chưa cấu hình được gói.
+   *
+   * Có mặt ở đây để guard TUYẾN (`@SubscriptionTrackOnly`) không phải truy vấn lần thứ hai, và
+   * để không nơi nào phải suy tuyến từ `tenant_type` (ADR 0014 điều 2) hay từ `planCode == null`.
+   */
+  readonly billingMode: BillingMode | null;
+  /** `current` · `grace` · `lapsed` · `unconfigured` — xem `@xeprime/types/effective-billing`. */
+  readonly billingPhase: BillingPhase;
+  /** ISO-8601 UTC. `null` khi gói còn hạn hoặc chưa có dòng thuê bao nào. */
+  readonly graceEndsAt: string | null;
 }
 
 export interface PlatformContext {

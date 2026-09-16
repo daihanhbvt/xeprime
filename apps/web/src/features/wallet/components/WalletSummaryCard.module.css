@@ -82,3 +82,22 @@
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
 }
+
+/**
+ * Lối mở SỔ VÍ đầy đủ — dùng khi thẻ đứng trong hồ sơ, thay cho nút Rút.
+ *
+ * Là một `<a>` chứ không phải `<Button>` bọc link: đây là điều hướng, và một thẻ neo thật thì
+ * mở tab mới, sao chép địa chỉ và điều hướng bằng bàn phím đều hoạt động như người dùng chờ đợi.
+ */
+.openLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  color: var(--xp-color-primary);
+  font-weight: var(--xp-font-weight-medium);
+  white-space: nowrap;
+}
+
+.openLink:hover {
+  text-decoration: underline;
+}

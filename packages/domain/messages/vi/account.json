@@ -1,4 +1,17 @@
 {
+  "trackBadge": {
+    "commissionOwner": "Chủ xe cá nhân",
+    "commissionOwnerWithFee": "Chủ xe cá nhân · Hoa hồng {percent, number}%",
+    "shopOwner": "Chủ gian hàng",
+    "shopOwnerWithPlan": "Chủ gian hàng · Gói {plan}",
+    "shopManager": "Quản lý gian hàng",
+    "shopStaff": "Nhân viên gian hàng",
+    "shopViewer": "Người xem gian hàng",
+    "shopMember": "Thành viên gian hàng",
+    "unconfigured": "Chưa xác định gói",
+    "unconfiguredHint": "Gian hàng của bạn chưa có gói dịch vụ hiệu lực nên nền tảng chưa xác định được cách tính phí. Đây là lỗi cấu hình phía XePrime — liên hệ hỗ trợ trước khi nhận đơn mới.",
+    "verifiedHint": "Chủ gian hàng đã xác thực"
+  },
   "title": "Tài khoản của tôi",
   "subtitle": "Quản lý thông tin tài khoản và cài đặt của bạn",
   "memberSince": "Tham gia từ {date}",
@@ -290,5 +303,25 @@
     "queue": {
       "title": "Xe của bạn đang trên đường lên chợ"
     }
+  },
+  "deletionImpact": {
+    "title": "Trước khi gửi yêu cầu, hãy xem phần này",
+    "body": "Tài khoản của bạn đang gắn với gian hàng {shop}. XePrime phải xử lý xong những khoản dưới đây rồi mới đóng được tài khoản; gửi yêu cầu không làm chúng tự biến mất.",
+    "loading": "Đang kiểm tra ảnh hưởng…",
+    "loadError": "Chưa kiểm tra được ảnh hưởng. Bạn vẫn gửi được yêu cầu, XePrime sẽ tự rà lại.",
+    "shop": "Gian hàng",
+    "ownerNote": "Bạn là chủ gian hàng. Đóng tài khoản chủ không tự đóng gian hàng, và xe đang bán vẫn phải có người chịu trách nhiệm.",
+    "memberNote": "Bạn là thành viên của gian hàng này, không phải chủ. Yêu cầu chỉ liên quan tới tài khoản cá nhân của bạn.",
+    "balance": "Số dư khả dụng",
+    "pending": "Đang chờ chuyển",
+    "withdrawals": "{count, plural, =0 {Không có yêu cầu rút nào đang treo} other {# yêu cầu rút đang treo}}",
+    "openTrips": "{count, plural, =0 {Không còn chuyến đi thuê nào chưa khép} other {# chuyến đi thuê chưa khép}}",
+    "settleFirst": "Rút hết số dư và chờ các lệnh chuyển xong trước khi gửi yêu cầu — sau khi đóng tài khoản, việc đối chiếu sẽ chậm hơn nhiều.",
+    "bodyPersonal": "Yêu cầu này chỉ liên quan tới tài khoản cá nhân của bạn. XePrime vẫn phải xử lý xong những khoản dưới đây trước khi đóng được tài khoản."
+  },
+  "trackNotice": {
+    "unconfiguredTitle": "Gian hàng chưa có gói dịch vụ hợp lệ",
+    "unconfiguredBody": "XePrime chưa xác định được cách tính phí cho gian hàng của bạn, nên các khoản tiền mới của chuyến sẽ không được ghi nhận cho tới khi xử lý xong. Dữ liệu, chuyến và số dư hiện có không bị ảnh hưởng.",
+    "contactSupport": "Liên hệ hỗ trợ"
   }
 }

@@ -25,8 +25,16 @@ export class UpdatePaymentSettingsDto {
  * thích (ADR 0027 điều 4 — ẩn nút chỉ là trang trí, chặn thật nằm ở server).
  */
 export class PaymentSettingsDto {
-  @ApiProperty({ enum: BILLING_MODE_VALUES, description: 'Tuyến thu phí hiện hành của gian hàng' })
-  billingMode!: BillingMode;
+  /**
+   * `null` khi chưa xác định được tuyến (`reason = billing_not_configured`) — danh mục gói hỏng.
+   * Giao diện phải nói "chưa xác định được", KHÔNG được coi là tuyến gói (0đ/chuyến).
+   */
+  @ApiProperty({
+    enum: BILLING_MODE_VALUES,
+    nullable: true,
+    description: 'Tuyến thu phí hiện hành; null = chưa xác định được',
+  })
+  billingMode!: BillingMode | null;
 
   @ApiProperty({ description: 'Chuyến mới của gian hàng này có thu cọc qua XePrime không' })
   depositRequired!: boolean;

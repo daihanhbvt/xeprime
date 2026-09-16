@@ -120,10 +120,10 @@ describe('VehicleCard', () => {
       monthlyPrice: '12000000',
     } as unknown as PublicListing;
     render(<VehicleCard listing={longTermOnly} />);
-    expect(screen.getByText('12.000.000 ₫')).toBeTruthy();
+    expect(screen.getByText('12tr')).toBeTruthy();
     expect(screen.getByText('/tháng')).toBeTruthy();
     // Giá tự lái 1.050.000/ngày KHÔNG được xuất hiện — nó không phải giá dài hạn.
-    expect(screen.queryByText('1.050.000 ₫')).toBeNull();
+    expect(screen.queryByText('1,05tr')).toBeNull();
   });
 
   it('dịch vụ active chưa niêm yết giá → "Liên hệ báo giá", không mượn giá tự lái', () => {
@@ -135,7 +135,7 @@ describe('VehicleCard', () => {
     } as unknown as PublicListing;
     render(<VehicleCard listing={withDriver} />);
     expect(screen.getByText('Liên hệ báo giá')).toBeTruthy();
-    expect(screen.queryByText('1.050.000 ₫')).toBeNull();
+    expect(screen.queryByText('1,05tr')).toBeNull();
     expect(detailLink().getAttribute('href')).toBe('/listings/V1?serviceType=with_driver');
   });
 
@@ -147,9 +147,89 @@ describe('VehicleCard', () => {
       withDriverDailyPrice: '1300000',
     } as unknown as PublicListing;
     render(<VehicleCard listing={withDriver} />);
-    expect(screen.getByText('1.300.000 ₫')).toBeTruthy();
+    expect(screen.getByText('1,3tr')).toBeTruthy();
     expect(screen.getByText('đã gồm tài xế')).toBeTruthy();
     expect(detailLink().getAttribute('href')).toBe('/listings/V1?serviceType=with_driver');
+  });
+
+  /*
+   * Tiền trên thẻ ở dạng RÚT GỌN để chân thẻ còn chỗ cho tên gian hàng. Hai assert dưới khoá
+   * đúng chỗ dễ hỏng của việc rút gọn: bậc nghìn phải CHÍNH XÁC (600.000 là `600k`, không phải
+   * `0,6tr`), và bậc triệu phải giữ hai chữ số lẻ — `1,05tr`, không phải `1tr`.
+   */
+  it('giá trên thẻ ở dạng rút gọn, bậc nghìn chính xác tuyệt đối', () => {
+    render(<VehicleCard listing={{ ...LISTING, weekdayPrice: '600000' } as PublicListing} />);
+    expect(screen.getByText('600k')).toBeTruthy();
+    expect(screen.getByText('/ngày')).toBeTruthy();
+    expect(screen.queryByText('600.000 ₫')).toBeNull();
+  });
+
+  it('bậc triệu giữ 2 chữ số lẻ — không làm tròn mất 50.000đ của khách', () => {
+    render(<VehicleCard listing={LISTING} />);
+    // 1.050.000 ₫ — ở 1 chữ số lẻ nó sẽ in ra "1tr" và thẻ nói sai giá.
+    expect(screen.getByText('1,05tr')).toBeTruthy();
+  });
+
+  it('giá gạch bỏ cũng rút gọn — hai số cạnh nhau phải cùng một dạng', () => {
+    const discounted = { ...LISTING, discountPercent: 20 } as PublicListing;
+    const { container } = render(<VehicleCard listing={discounted} />);
+    const struck = container.querySelector('s');
+    // 1.050.000 gạch bỏ, còn 840.000 sau giảm 20%.
+    expect(struck?.textContent).toBe('1,05tr');
+    expect(screen.getByText('840k')).toBeTruthy();
+  });
+
+  /*
+   * HAI TUYẾN trên một chợ (ADR 0028). Thẻ của gian hàng tuyến gói và thẻ của chủ xe cá nhân
+   * phải đọc ra khác nhau ngay ở lưới kết quả, và `shopVerified` của backend là nguồn DUY NHẤT
+   * quyết định điều đó — thẻ không được tự suy từ tên gian hàng hay từ việc có logo hay không.
+   */
+  it('tuyến hoa hồng: nhãn "Chủ xe", không dấu xác thực', () => {
+    render(<VehicleCard listing={{ ...LISTING, shopVerified: false } as PublicListing} />);
+    expect(screen.getByText('Chủ xe')).toBeTruthy();
+    expect(screen.queryByText('Gian hàng')).toBeNull();
+    expect(screen.queryByRole('img', { name: /xác minh/i })).toBeNull();
+  });
+
+  it('tuyến gói: nhãn "Gian hàng" + dấu xác thực XePrime', () => {
+    render(<VehicleCard listing={{ ...LISTING, shopVerified: true } as PublicListing} />);
+    expect(screen.getByText('Gian hàng')).toBeTruthy();
+    expect(screen.queryByText('Chủ xe')).toBeNull();
+    expect(screen.getByRole('img', { name: 'Gian hàng đã được XePrime xác minh' })).toBeTruthy();
+    // `aria-label` của liên kết nuốt mọi chữ bên trong — nên nó phải tự mang nghĩa của dấu.
+    expect(
+      screen.getByRole('link', {
+        name: 'Gian hàng Minh Tuấn — gian hàng đã được XePrime xác minh',
+      }),
+    ).toBeTruthy();
+  });
+
+  it('backend chưa trả shopVerified → thẻ THƯỜNG, không gắn dấu cho mọi người', () => {
+    // Trong một lần deploy lệch, mặc định phải là "chưa xác minh": gắn dấu cho tất cả là nói
+    // sai về mọi chủ xe cá nhân trên chợ.
+    const legacy = { ...LISTING } as Record<string, unknown>;
+    delete legacy.shopVerified;
+    render(<VehicleCard listing={legacy as PublicListing} />);
+    expect(screen.getByText('Chủ xe')).toBeTruthy();
+    expect(screen.queryByRole('img', { name: /xác minh/i })).toBeNull();
+  });
+
+  it('tên gian hàng dài vẫn cắt được, dấu xác thực nằm ngoài phần bị cắt', () => {
+    const { container } = render(
+      <VehicleCard
+        listing={
+          {
+            ...LISTING,
+            shopVerified: true,
+            shopName: 'XePrime Sài Gòn Cho Thuê Xe Tự Lái Giá Rẻ',
+          } as PublicListing
+        }
+      />,
+    );
+    const mark = container.querySelector('svg[role="img"]');
+    const clipped = screen.getByText('XePrime Sài Gòn Cho Thuê Xe Tự Lái Giá Rẻ');
+    expect(mark).toBeTruthy();
+    expect(clipped.contains(mark)).toBe(false);
   });
 
   it('không để lại vùng hành động rỗng ở chân thẻ', () => {

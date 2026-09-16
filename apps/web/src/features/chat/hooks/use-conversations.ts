@@ -3,7 +3,7 @@
 import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { chatApi } from '../api';
 import type { ConversationListResult } from '../types';
-import { CHAT_SIDE, type ChatSide } from '@xeprime/types';
+import { CHAT_INBOX, type ChatInbox } from '@xeprime/types';
 import { queryKeys } from '@/services/query-keys';
 import { useBadgeRealtime } from '@/features/badges/BadgeRealtimeProvider';
 import { useOnBadgeChange } from '@/features/badges/hooks/use-on-badge-change';
@@ -35,7 +35,7 @@ export interface ConversationListFilters {
  * ở `queryKeys`). Có `page` trong khoá thì mỗi trang là một cache riêng và danh sách không bao
  * giờ nối lại được.
  */
-export function useConversationsInfinite(side: ChatSide, filters: ConversationListFilters = {}) {
+export function useConversationsInfinite(side: ChatInbox, filters: ConversationListFilters = {}) {
   const { counts, live } = useBadgeRealtime();
   const queryClient = useQueryClient();
   const params = {
@@ -48,7 +48,11 @@ export function useConversationsInfinite(side: ChatSide, filters: ConversationLi
    * lại danh sách. Đây là cầu nối mà trước đây thiếu: bản chiếu huy hiệu biết mọi hội thoại, còn
    * listener của thread chỉ biết một.
    */
-  useOnBadgeChange(side === CHAT_SIDE.CUSTOMER ? counts.chatCustomer : counts.chatShop, () => {
+  /*
+   * Tín hiệu làm mới phải bao TRỌN phạm vi đang xem. Hộp thư hợp nhất chứa cả hai vế, nên chỉ
+   * theo dõi một con số nghĩa là tin mới của vế kia nằm im cho tới lần tải trang sau.
+   */
+  useOnBadgeChange(unreadSignalOf(side, counts), () => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.chat.conversations(side) });
   });
 
@@ -72,11 +76,27 @@ export function useConversationsInfinite(side: ChatSide, filters: ConversationLi
  * Đây là thứ làm deep link hoạt động thật: một thread im lặng ba tuần nằm ở trang 4, và suy
  * "hội thoại đang mở" từ trang đầu của danh sách nghĩa là `?c=` trong email mở ra màn trống.
  */
-export function useConversationById(side: ChatSide, id: string | null, enabled: boolean) {
+export function useConversationById(side: ChatInbox, id: string | null, enabled: boolean) {
   return useQuery({
     queryKey: queryKeys.chat.conversation(side, id ?? ''),
     queryFn: () => chatApi.detail(id as string, side),
     enabled: enabled && Boolean(id),
     retry: false,
   });
+}
+
+/**
+ * Con số chưa đọc mà một hộp thư PHẢI theo dõi để tự làm mới.
+ *
+ * `useOnBadgeChange` so sánh một số duy nhất, nên hộp thư hợp nhất phải cộng cả hai vế: theo dõi
+ * mỗi một bên nghĩa là tin mới của bên kia nằm im trong danh sách cho tới lần tải trang sau —
+ * trong khi biểu tượng trên header đã sáng lên, và người dùng bấm vào thì không thấy gì mới.
+ */
+export function unreadSignalOf(
+  inbox: ChatInbox,
+  counts: { chatCustomer: number; chatShop: number },
+): number {
+  if (inbox === CHAT_INBOX.CUSTOMER) return counts.chatCustomer;
+  if (inbox === CHAT_INBOX.SHOP) return counts.chatShop;
+  return counts.chatCustomer + counts.chatShop;
 }

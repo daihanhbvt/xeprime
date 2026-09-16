@@ -24,7 +24,7 @@
     "adjustHint": "Kéo ghim hoặc bấm lên bản đồ để chỉnh lại vị trí.",
     "readOnlyHint": "Bản đồ chỉ để xem. Chọn một gợi ý địa điểm khác nếu ghim chưa đúng.",
     "unavailable": "Chưa hiện được bản đồ. Địa chỉ vẫn lưu bình thường.",
-    "openInMaps": "Mở trong Google Maps"
+    "openInMaps": "Mở trên OpenStreetMap"
   },
   "review": {
     "badge": "Cần cập nhật địa chỉ",

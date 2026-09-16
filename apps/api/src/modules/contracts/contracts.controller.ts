@@ -6,6 +6,7 @@ import {
   CurrentUser,
   RequirePermissions,
   RequiresFeature,
+  SubscriptionTrackOnly,
   TenantScoped,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
@@ -19,6 +20,7 @@ import { ContractsService } from './contracts.service';
 @ApiTags('contracts')
 @Controller()
 @TenantScoped()
+@SubscriptionTrackOnly()
 @RequiresFeature(PLAN_FEATURE.CONTRACTS)
 export class ContractsController {
   constructor(private readonly contracts: ContractsService) {}

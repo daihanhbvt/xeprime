@@ -626,10 +626,37 @@ export class FreeTripsDto {
   @ApiProperty() left!: number;
 }
 
+/**
+ * Hạn mức ĐỘI XE đang áp — ba hình dạng, vì hai tuyến đếm theo hai cách khác nhau.
+ *
+ * `usage` ngay bên cạnh vẫn trả mức dùng THEO LOẠI (giao diện cần con số đó dù tuyến nào), còn
+ * ô này trả lời câu 'trần là gì'. Tách ra vì với Owner Lite trần là một BỂ CHUNG cho cả ô tô
+ * lẫn xe máy: nhét nó vào `usage.car.limit` là màn hình nói '3 ô tô' trong khi luật là '3 xe',
+ * và người dùng sẽ đăng đủ 3 ô tô rồi ngạc nhiên vì chiếc xe máy đầu tiên bị từ chối.
+ */
+export class FleetQuotaDto {
+  @ApiProperty({
+    enum: ['unlimited', 'total', 'per_type'],
+    description: "'total' = trần TỔNG của Owner Lite; 'per_type' = số chỗ đã mua theo loại",
+  })
+  kind!: 'unlimited' | 'total' | 'per_type';
+
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    description: "Trần TỔNG số xe — chỉ có giá trị khi kind = 'total'",
+  })
+  totalLimit!: number | null;
+
+  @ApiProperty({ description: 'Tổng số xe chưa xoá của gian hàng (cả hai loại)' })
+  totalUsed!: number;
+}
+
 export class MySubscriptionDto {
   @ApiPropertyOptional({ type: () => CurrentPlanDto, nullable: true })
   currentPlan!: CurrentPlanDto | null;
   @ApiProperty({ type: VehicleSlotUsageDto }) usage!: VehicleSlotUsageDto;
+  @ApiProperty({ type: FleetQuotaDto }) fleetQuota!: FleetQuotaDto;
   @ApiProperty({ type: FreeTripsDto }) freeTrips!: FreeTripsDto;
 }
 

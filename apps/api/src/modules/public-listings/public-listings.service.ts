@@ -2,19 +2,30 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
+  BRANCH_STATUS,
   PROVINCE_CODES,
   PUBLIC_CACHE_SECONDS,
   REVIEW_STATUS,
   SEAT_BUCKET_VALUES,
   SERVICE_TYPE,
+  STOREFRONT_KIND,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   hasVehicleServiceSettings,
+  hasVerifiedStorefront,
+  resolveEffectiveBilling,
+  resolveStorefrontKind,
+  storefrontAllowsPublicChat,
   type PaginationMeta,
   type SeatBucket,
   type ServiceType,
 } from '@xeprime/types';
+import {
+  EFFECTIVE_SUBSCRIPTION_ARGS,
+  effectiveSubscriptionWhere,
+} from '../../common/plan/feature-state';
 import { ProvincesService } from '../locations/provinces.service';
 import { PricingService } from '../pricing/pricing.service';
 import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
@@ -47,6 +58,33 @@ const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 48;
 
 /**
+ * TỈ LỆ PHẢN HỒI — chỉ đếm những yêu cầu mà gian hàng thật sự PHẢI quyết.
+ *
+ * Bốn trạng thái cố ý nằm ngoài mẫu số:
+ *
+ *  - `pending_host_approval` — còn trong hạn, chưa ai chậm trễ cả;
+ *  - `cancelled_by_customer` — khách rút yêu cầu; tính nó vào là phạt gian hàng vì việc của
+ *    người khác;
+ *  - `awaiting_hold` / `hold_expired` — luồng tự động của tuyến hoa hồng (ADR 0021), ở đó
+ *    KHÔNG có bước chủ xe duyệt nào để mà phản hồi.
+ *
+ * Còn `expired` thì đúng là "không trả lời": worker chỉ đặt nó khi hết cửa sổ phản hồi mà yêu
+ * cầu vẫn nằm im (`apps/worker/src/jobs/booking-request-deadlines.ts`).
+ */
+const REQUEST_ANSWERED_STATUSES: string[] = [
+  BOOKING_REQUEST_STATUS.APPROVED_BY_HOST,
+  BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
+  BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
+];
+
+const REQUEST_UNANSWERED_STATUSES: string[] = [BOOKING_REQUEST_STATUS.EXPIRED];
+
+const RESPONSE_RATE_STATUSES: string[] = [
+  ...REQUEST_ANSWERED_STATUSES,
+  ...REQUEST_UNANSWERED_STATUSES,
+];
+
+/**
  * Facet sống 60 giây trong bộ nhớ tiến trình.
  *
  * Đây là đầu ra ĐẮT NHẤT của marketplace: một lần mở panel Bộ lọc là 11 phép gộp gần như quét
@@ -76,38 +114,59 @@ const FACETS_CACHE_MAX_ENTRIES = 500;
  */
 const UNRESOLVED_PROVINCE_CODE = '00';
 
-/** Cột đủ cho một thẻ marketplace — đọc từ snapshot `public_listings` (ADR 0008). */
-const LISTING_CARD_SELECT = {
-  vehicleId: true,
-  title: true,
-  vehicleType: true,
-  serviceTypes: true,
-  brand: true,
-  model: true,
-  seatCount: true,
-  fuelType: true,
-  bodyType: true,
-  motorbikeCategory: true,
-  mainImageUrl: true,
-  weekdayPrice: true,
-  weekendPrice: true,
-  hourlyPrice: true,
-  monthlyPrice: true,
-  withDriverDailyPrice: true,
-  withDriverInterCityPrice: true,
-  withDriverOneWayPrice: true,
-  deliveryEnabled: true,
-  noCollateral: true,
-  discountPercent: true,
-  ratingAvg: true,
-  ratingCount: true,
-  provinceCode: true,
-  provinceName: true,
-  shopSlug: true,
-  tenant: { select: { name: true, profile: { select: { logoUrl: true } } } },
-} satisfies Prisma.PublicListingSelect;
+/**
+ * Cột đủ cho một thẻ marketplace — đọc từ snapshot `public_listings` (ADR 0008).
+ *
+ * Là HÀM chứ không phải hằng vì một cột không nằm trên snapshot: tuyến thu tiền của gian hàng.
+ * Nó đổi khi dòng thuê bao hết hạn, chứ không khi ai đó sửa chiếc xe — denormalize nó vào
+ * `public_listings` là nhận một giá trị cũ đúng bằng khoảng thời gian từ lần refresh gần nhất
+ * tới lúc gói hết hạn, và trong khoảng đó thẻ xe sẽ đeo dấu xác thực cho một tenant đã rời tuyến
+ * gói. Nên nó đọc live từ `tenant.subscriptions` với `now` của chính request này.
+ */
+const listingCardSelect = (now: Date) =>
+  ({
+    vehicleId: true,
+    title: true,
+    vehicleType: true,
+    serviceTypes: true,
+    brand: true,
+    model: true,
+    seatCount: true,
+    fuelType: true,
+    bodyType: true,
+    motorbikeCategory: true,
+    mainImageUrl: true,
+    weekdayPrice: true,
+    weekendPrice: true,
+    hourlyPrice: true,
+    monthlyPrice: true,
+    withDriverDailyPrice: true,
+    withDriverInterCityPrice: true,
+    withDriverOneWayPrice: true,
+    deliveryEnabled: true,
+    noCollateral: true,
+    discountPercent: true,
+    ratingAvg: true,
+    ratingCount: true,
+    provinceCode: true,
+    provinceName: true,
+    shopSlug: true,
+    tenant: {
+      select: {
+        name: true,
+        profile: { select: { logoUrl: true } },
+        // Avatar chủ tài khoản — ảnh THAY THẾ của mặt tiền cá nhân, xem `storefrontAvatar`.
+        owner: { select: { avatarUrl: true } },
+        // Dòng thuê bao HIỆU LỰC (gồm cả dòng vừa hết hạn) — đầu vào của `resolveEffectiveBilling`.
+        // `take: 1` nên đây là một truy vấn phụ duy nhất cho cả trang kết quả, không phải N+1.
+        subscriptions: { where: effectiveSubscriptionWhere(now), ...EFFECTIVE_SUBSCRIPTION_ARGS },
+      },
+    },
+  }) satisfies Prisma.PublicListingSelect;
 
-type ListingCardRow = Prisma.PublicListingGetPayload<{ select: typeof LISTING_CARD_SELECT }>;
+type ListingCardRow = Prisma.PublicListingGetPayload<{
+  select: ReturnType<typeof listingCardSelect>;
+}>;
 
 /** Điểm đánh giá gộp của MỘT xe (chỉ review `published`). */
 interface VehicleRating {
@@ -116,12 +175,43 @@ interface VehicleRating {
 }
 
 /**
+ * Ảnh đại diện của một mặt tiền: logo gian hàng, và với CHỦ XE CÁ NHÂN thì rơi về avatar của
+ * chính chủ tài khoản.
+ *
+ * Với tuyến hoa hồng, "gian hàng" và "con người" là cùng một thực thể — khách đang thuê xe CỦA
+ * NGƯỜI ĐÓ, không phải của một pháp nhân. Bắt họ tải lên một "logo" riêng trong khi tài khoản
+ * đã có ảnh là hỏi cùng một câu hai lần, và kết quả đúng như báo cáo: trang gian hàng hiện một
+ * chữ cái trong khi chính người đó có ảnh ở góc phải màn hình.
+ *
+ * KHÔNG rơi về avatar cho mặt tiền GIAN HÀNG: một doanh nghiệp chưa có logo hiện chữ cái đầu là
+ * bình thường, còn hiện ảnh chân dung của người đứng tên là trộn danh tính cá nhân vào một pháp
+ * nhân — đúng ranh giới mà `tenant_profiles.owner_*` được đánh dấu là dữ liệu NỘI BỘ.
+ */
+function storefrontAvatar(
+  logoUrl: string | null | undefined,
+  ownerAvatarUrl: string | null | undefined,
+  kind: string,
+): string | null {
+  if (logoUrl) return logoUrl;
+  return kind === STOREFRONT_KIND.PERSONAL ? (ownerAvatarUrl ?? null) : null;
+}
+
+/**
  * Row listing → thẻ marketplace. `id` của thẻ là `vehicleId` (route `/listings/[id]` + đặt xe
  * dùng vehicle id). Decimal → string do ResponseInterceptor lo (ADR 0007). Rating đọc từ cột
  * denormalize trên snapshot (ListingsService.refreshRating nuôi) — hiển thị 1 chữ số thập phân
  * như UI (4.9).
  */
-function toListingCard(l: ListingCardRow, completedTripCount: number): PublicListingDto {
+function toListingCard(
+  l: ListingCardRow,
+  completedTripCount: number,
+  now: Date,
+): PublicListingDto {
+  // MỘT lần chấm tuyến cho cả ba thứ thẻ xe cần nói về gian hàng: dấu tick, mặt tiền, và ảnh
+  // đại diện. Ba lời gọi riêng là ba cơ hội để thẻ tự mâu thuẫn với chính nó.
+  const billingMode = resolveEffectiveBilling(l.tenant.subscriptions[0] ?? null, now).billingMode;
+  const shopKind = resolveStorefrontKind(billingMode);
+
   return {
     id: l.vehicleId,
     name: l.title,
@@ -146,7 +236,10 @@ function toListingCard(l: ListingCardRow, completedTripCount: number): PublicLis
     discountPercent: l.discountPercent,
     shopName: l.tenant.name,
     shopSlug: l.shopSlug,
-    shopLogoUrl: l.tenant.profile?.logoUrl ?? null,
+    shopLogoUrl: storefrontAvatar(l.tenant.profile?.logoUrl, l.tenant.owner.avatarUrl, shopKind),
+    // Cùng phép suy với trang gian hàng: dấu chỉ dành cho tuyến gói, và `unconfigured` không
+    // được đeo (ADR 0038 điều 1 — đường đọc hiển thị chọn mặt tiền cá nhân khi chưa xác định).
+    shopVerified: hasVerifiedStorefront(billingMode),
     provinceCode: l.provinceCode,
     shopProvince: l.provinceName,
     completedTripCount,
@@ -224,6 +317,7 @@ export class PublicListingsService {
     data: PublicListingDto[];
     meta: PaginationMeta;
   }> {
+    const now = new Date();
     const paging = resolvePaging(query, DEFAULT_LIMIT, MAX_LIMIT);
 
     const where = buildListingWhere(await this.withResolvedProvince(query));
@@ -236,13 +330,13 @@ export class PublicListingsService {
         orderBy: listingOrderBy(query.sort),
         skip: paging.skip,
         take: paging.take,
-        select: LISTING_CARD_SELECT,
+        select: listingCardSelect(now),
       }),
     ]);
     const completedTrips = await this.completedTripsByVehicle(rows.map((row) => row.vehicleId));
 
     return {
-      data: rows.map((row) => toListingCard(row, completedTrips.get(row.vehicleId) ?? 0)),
+      data: rows.map((row) => toListingCard(row, completedTrips.get(row.vehicleId) ?? 0, now)),
       meta: paginationMeta(paging, total),
     };
   }
@@ -569,14 +663,28 @@ export class PublicListingsService {
    * khoá. Không lộ dữ liệu nội bộ (id, email, mã số thuế…), chỉ thứ marketplace cần.
    */
   async getShopBySlug(slug: string): Promise<PublicShopDto> {
+    const now = new Date();
     const t = await this.prisma.tenant.findFirst({
       where: { slug, status: TENANT_STATUS.ACTIVE, deletedAt: null },
       select: {
+        id: true,
         name: true,
         slug: true,
-        phone: true,
         ratingAvg: true,
         ratingCount: true,
+        createdAt: true,
+        // Avatar chủ tài khoản — ảnh thay thế của mặt tiền cá nhân (`storefrontAvatar`).
+        owner: { select: { avatarUrl: true } },
+        /*
+         * Tuyến thu tiền HIỆU LỰC, đọc trên cùng một hàng tenant đã chạm tới. Nó quyết định trang
+         * này vẽ mặt tiền nào và có đeo dấu xác thực không — nên nó phải là phép chấm pha THẬT
+         * (`resolveEffectiveBilling`), không phải `tenants.tenant_type` (ADR 0014 điều 2) và
+         * không phải `planCode`.
+         */
+        subscriptions: {
+          where: effectiveSubscriptionWhere(now),
+          ...EFFECTIVE_SUBSCRIPTION_ARGS,
+        },
         profile: {
           select: {
             provinceName: true,
@@ -595,18 +703,100 @@ export class PublicListingsService {
       });
     }
 
+    const stats = await this.shopStats(t.id);
+    const billingMode = resolveEffectiveBilling(t.subscriptions[0] ?? null, now).billingMode;
+    const kind = resolveStorefrontKind(billingMode);
+
     return {
       name: t.name,
       slug: t.slug,
-      phone: t.phone,
+      storefrontKind: kind,
+      verified: hasVerifiedStorefront(billingMode),
+      chatOpen: storefrontAllowsPublicChat(kind),
       provinceName: t.profile?.provinceName ?? null,
-      logoUrl: t.profile?.logoUrl ?? null,
+      logoUrl: storefrontAvatar(t.profile?.logoUrl, t.owner.avatarUrl, kind),
       coverUrl: t.profile?.coverUrl ?? null,
       bio: t.profile?.bio ?? null,
       address: t.profile?.address ?? null,
+      joinedAt: t.createdAt as unknown as string,
       // Decimal → string do ResponseInterceptor lo (ADR 0007).
       ratingAvg: t.ratingAvg as unknown as string,
       ratingCount: t.ratingCount,
+      ...stats,
+    };
+  }
+
+  /**
+   * Số liệu HIỂN THỊ của một gian hàng — những con số khách dùng để quyết định có thuê không.
+   *
+   * Năm phép đếm chạy song song bằng `Promise.all`, KHÔNG phải `$transaction([...])`: overload
+   * transaction-dạng-mảng làm `groupBy` mất literal type của `_count` (cùng lý do đã ghi ở
+   * `computeFacets`). Đánh đổi chấp nhận được ở đây — đây là dữ liệu chỉ-đọc, công khai, đằng nào
+   * cũng đã đi qua cache 60 giây, nên "năm con số đọc trong năm mili-giây khác nhau" không tạo ra
+   * mâu thuẫn nào mà người xem nhận ra được.
+   *
+   * Điều kiện đếm xe là `publicListingScope()` y hệt chợ và trang shop — nếu không, tiêu đề
+   * "Xe đang cho thuê (36)" sẽ nói một số mà lưới bên dưới không bao giờ hiện đủ.
+   */
+  private async shopStats(
+    tenantId: string,
+  ): Promise<
+    Pick<
+      PublicShopDto,
+      | 'vehicleCount'
+      | 'completedTripCount'
+      | 'responseRatePercent'
+      | 'branchCount'
+      | 'serviceProvinceNames'
+      | 'deliveryAvailable'
+    >
+  > {
+    const visibleListing: Prisma.PublicListingWhereInput = { ...publicListingScope(), tenantId };
+
+    const [byProvince, deliveryRow, completedTripCount, branchCount, requestsByStatus] =
+      await Promise.all([
+        // Gộp theo tỉnh trả CẢ HAI thứ cần: danh sách tỉnh phục vụ (sắp theo số xe) và tổng số xe.
+        this.prisma.publicListing.groupBy({
+          by: ['provinceName'],
+          where: visibleListing,
+          _count: { _all: true },
+          orderBy: { _count: { provinceName: 'desc' } },
+        }),
+        this.prisma.publicListing.findFirst({
+          where: { ...visibleListing, deliveryEnabled: true },
+          select: { vehicleId: true },
+        }),
+        this.prisma.booking.count({
+          where: { tenantId, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
+        }),
+        this.prisma.tenantBranch.count({
+          where: { tenantId, status: BRANCH_STATUS.ACTIVE, deletedAt: null },
+        }),
+        this.prisma.bookingRequest.groupBy({
+          by: ['status'],
+          where: { tenantId, status: { in: RESPONSE_RATE_STATUSES } },
+          _count: { _all: true },
+        }),
+      ]);
+
+    const countBy = new Map(requestsByStatus.map((row) => [row.status, row._count._all]));
+    const sumOf = (statuses: readonly string[]): number =>
+      statuses.reduce((total, status) => total + (countBy.get(status) ?? 0), 0);
+    const answered = sumOf(REQUEST_ANSWERED_STATUSES);
+    const unanswered = sumOf(REQUEST_UNANSWERED_STATUSES);
+    const decided = answered + unanswered;
+
+    return {
+      vehicleCount: byProvince.reduce((total, row) => total + row._count._all, 0),
+      completedTripCount,
+      // Chưa có yêu cầu nào tới hạn quyết ⇒ `null`, KHÔNG phải 0: "chưa ai hỏi" và "hỏi mà
+      // không trả lời" là hai điều khác hẳn nhau với người đang cân nhắc thuê xe.
+      responseRatePercent: decided === 0 ? null : Math.round((answered / decided) * 100),
+      branchCount,
+      serviceProvinceNames: byProvince
+        .map((row) => row.provinceName)
+        .filter((name): name is string => Boolean(name)),
+      deliveryAvailable: deliveryRow !== null,
     };
   }
 
@@ -618,6 +808,7 @@ export class PublicListingsService {
     slug: string,
     query: ShopListingQueryDto,
   ): Promise<{ data: PublicListingDto[]; meta: PaginationMeta }> {
+    const now = new Date();
     const paging = resolvePaging(query, DEFAULT_LIMIT, MAX_LIMIT);
 
     // Cùng scope với marketplace: xe của gian hàng nằm ở tỉnh đã bị ẩn cũng không hiện ở trang
@@ -631,13 +822,13 @@ export class PublicListingsService {
         orderBy: listingOrderBy(query.sort),
         skip: paging.skip,
         take: paging.take,
-        select: LISTING_CARD_SELECT,
+        select: listingCardSelect(now),
       }),
     ]);
     const completedTrips = await this.completedTripsByVehicle(rows.map((row) => row.vehicleId));
 
     return {
-      data: rows.map((row) => toListingCard(row, completedTrips.get(row.vehicleId) ?? 0)),
+      data: rows.map((row) => toListingCard(row, completedTrips.get(row.vehicleId) ?? 0, now)),
       meta: paginationMeta(paging, total),
     };
   }
@@ -647,6 +838,7 @@ export class PublicListingsService {
    * kiện scope với danh sách). Không lộ dữ liệu nội bộ (biển số, tenantId…).
    */
   async getById(id: string): Promise<PublicListingDetailDto> {
+    const now = new Date();
     const v = await this.prisma.vehicle.findFirst({
       where: {
         id,
@@ -709,6 +901,13 @@ export class PublicListingsService {
             slug: true,
             // `address`: dự phòng cho điểm nhận xe khi chi nhánh chưa điền địa chỉ.
             profile: { select: { provinceName: true, logoUrl: true, bio: true, address: true } },
+            // Avatar chủ tài khoản — ảnh thay thế của mặt tiền cá nhân (`storefrontAvatar`).
+            owner: { select: { avatarUrl: true } },
+            // Dấu xác thực của thẻ gian hàng trên trang xe — cùng nguồn với thẻ ở lưới kết quả.
+            subscriptions: {
+              where: effectiveSubscriptionWhere(now),
+              ...EFFECTIVE_SUBSCRIPTION_ARGS,
+            },
           },
         },
         images: { orderBy: { sortOrder: 'asc' }, select: { imageUrl: true } },
@@ -798,6 +997,12 @@ export class PublicListingsService {
         }
       : null;
 
+    const detailBilling = resolveEffectiveBilling(
+      v.tenant.subscriptions[0] ?? null,
+      now,
+    ).billingMode;
+    const detailKind = resolveStorefrontKind(detailBilling);
+
     return {
       id: v.id,
       name: v.name,
@@ -822,6 +1027,11 @@ export class PublicListingsService {
       discountPercent: v.discountPercent,
       shopName: v.tenant.name,
       shopSlug: v.tenant.slug,
+      shopVerified: hasVerifiedStorefront(detailBilling),
+      // Nút "Nhắn shop" của trang này chỉ hiện khi gian hàng mở hộp thư công khai. Cờ nói đúng
+      // CHÍNH SÁCH chứ không phải tuyến, vì đó là thứ nút cần biết — xem
+      // `storefrontAllowsPublicChat`. Cổng thật vẫn nằm ở `ChatService`.
+      shopChatOpen: storefrontAllowsPublicChat(detailKind),
       completedTripCount,
       // Vị trí là của CHI NHÁNH giữ xe, không phải của hồ sơ gian hàng: shop nhiều chi nhánh thì
       // hai xe cùng shop hoàn toàn có thể ở hai tỉnh khác nhau.
@@ -830,7 +1040,11 @@ export class PublicListingsService {
       description: v.description,
       color: v.color,
       manufactureYear: v.manufactureYear,
-      shopLogoUrl: v.tenant.profile?.logoUrl ?? null,
+      shopLogoUrl: storefrontAvatar(
+        v.tenant.profile?.logoUrl,
+        v.tenant.owner.avatarUrl,
+        detailKind,
+      ),
       shopBio: v.tenant.profile?.bio ?? null,
       images: v.images.map((i) => i.imageUrl),
       features: v.features.map((f) => f.featureKey),

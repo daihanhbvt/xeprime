@@ -20,6 +20,7 @@ import {
   PercentageOutlined,
   PictureOutlined,
   QuestionCircleOutlined,
+  UserOutlined,
   SafetyCertificateOutlined,
   ShopOutlined,
   SolutionOutlined,
@@ -88,6 +89,20 @@ export interface NavLeaf {
    * `AppShell` tra để dựng băng "hết hạn" — nên nó là nguồn DUY NHẤT, không đẻ bản đồ thứ hai.
    */
   readonly feature?: PlanFeature;
+  /**
+   * TRỤC THỨ BA: **quyền sở hữu**, không phải phân quyền (ADR 0038 điều 3).
+   *
+   * Chỉ `shop_owner` — người CHỦ của gian hàng — mới thấy. Khác hẳn `permission`: quyền cấp
+   * được, thu hồi được, và một `shop_manager` có thể được cấp gần như tất cả; sở hữu thì
+   * không cấp cho ai. Ví là NGHĨA VỤ PHẢI TRẢ của XePrime với một người cụ thể, nên nó đi
+   * theo người đó chứ không theo chức danh trong gian hàng.
+   *
+   * Tồn tại để menu KHỚP với `@ShopOwnerOnly()` ở API. Trước 15/09/2026 mục ví gác bằng
+   * `seller_profile.view`, nên một `shop_manager` nhìn thấy mục, bấm vào, rồi nhận 403 — giao
+   * diện mời họ vào một cánh cửa đã khoá. Cách sửa là hạ menu xuống đúng luật của guard,
+   * KHÔNG phải nới guard cho khớp menu.
+   */
+  readonly ownerOnly?: true;
 }
 
 /**
@@ -246,10 +261,15 @@ export const SHOP_NAV: readonly NavSection[] = [
           {
             // KHÔNG gác bằng `feature`: ví là tiền của chính gian hàng, gói hết hạn vẫn phải
             // xem và rút được (ADR 0027 điều 3, ADR 0033).
+            //
+            // Gác bằng SỞ HỮU (`ownerOnly`), không bằng quyền: API đã là `@ShopOwnerOnly()`.
+            // `permission` hạ về mức thấp nhất mọi vai đều có, để trục duy nhất còn quyết định
+            // là quyền sở hữu — hai trục cùng hướng về một câu trả lời thì chỉ cần một.
             key: 'balance',
             labelKey: 'manage.balance',
             href: ROUTES.MANAGE.BALANCE,
-            permission: PERMISSION.SELLER_PROFILE_VIEW,
+            permission: PERMISSION.TENANT_VIEW,
+            ownerOnly: true,
             icon: WalletOutlined,
           },
           {
@@ -366,6 +386,23 @@ export const SHOP_NAV: readonly NavSection[] = [
     labelKey: 'manageGroups.support',
     pinned: true,
     children: [
+      {
+        /*
+         * TÀI KHOẢN & BẢO MẬT của chính người đang đăng nhập (15/09/2026).
+         *
+         * `permission: TENANT_VIEW` là mức thấp nhất mọi vai đều có — cố ý: đây là dữ liệu của
+         * một CON NGƯỜI, không phải của gian hàng, nên không có quyền nào để kiểm. Trước đây
+         * `SHOP_NAV` không có mục nào dẫn tới màn đổi mật khẩu, và nhân viên sống trong `/manage`
+         * phải tự đoán ra một URL thuộc khu khác.
+         *
+         * KHÔNG gác bằng `feature`: mật khẩu không thuộc gói nào.
+         */
+        key: 'account',
+        labelKey: 'manage.account',
+        href: ROUTES.MANAGE.ACCOUNT,
+        permission: PERMISSION.TENANT_VIEW,
+        icon: UserOutlined,
+      },
       {
         key: 'support',
         labelKey: 'manage.support',

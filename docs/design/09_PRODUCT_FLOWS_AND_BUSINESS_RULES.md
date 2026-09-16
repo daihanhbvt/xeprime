@@ -54,11 +54,13 @@ Platform
 ### 2.1 Quy tắc tài khoản
 
 - Một tài khoản không đồng thời là chủ xe tuyến hoa hồng và chủ gian hàng.
-- Chủ xe/gian hàng vẫn có đầy đủ khả năng thuê xe như người dùng thông thường.
+- Chủ xe **tuyến hoa hồng** vẫn thuê xe như người dùng thông thường.
+- Tài khoản thuộc gian hàng **tuyến gói** KHÔNG gửi được yêu cầu thuê — áp cho mọi vai (chủ, quản lý, nhân viên, người xem). Backend chặn ở cả phiên đăng nhập lẫn luồng khách vãng lai OTP; UI giải thích phải dùng một tài khoản khách thuê với **số điện thoại khác** (ADR 0038 điều 6).
+- Không ai đặt xe của chính gian hàng mình, và không ai tự duyệt yêu cầu do mình gửi.
 - Chủ xe tuyến hoa hồng được có tối đa **3 xe**.
 - Khi muốn đăng xe thứ 4, hệ thống gợi ý nâng cấp thành gian hàng.
 - Chủ xe tuyến hoa hồng không trả phí đăng ký, phí thuê bao hay phí gói.
-- Chủ gian hàng và nhân viên được cấp quyền mới được vào `/manage`.
+- `/manage` chỉ mở cho gian hàng có **thuê bao hiệu lực** (kể cả đang trong ân hạn) — điều kiện là thuộc tính của TENANT, không phụ thuộc vai. Hết ân hạn thì chủ, quản lý, nhân viên và người xem ra khỏi Manage cùng lúc (ADR 0038 điều 4).
 - Tài xế không phải user, không có tài khoản và không cần app riêng.
 
 ### 2.2 Nâng cấp chủ xe thành gian hàng
@@ -68,7 +70,7 @@ Chủ xe tuyến hoa hồng có thể nâng cấp thành gian hàng mà không t
 - Booking tạo trước thời điểm nâng cấp giữ nguyên mô hình hoa hồng, mức phí và chính sách đã snapshot.
 - Booking tạo sau thời điểm nâng cấp áp dụng mô hình gian hàng và hoa hồng 0%.
 - Sau nâng cấp, các công cụ quản lý nâng cao được mở trong Manage.
-- Luồng hạ cấp từ gian hàng về chủ xe cơ bản chưa được chốt trong tài liệu này.
+- **Hạ cấp khi hết gói (ADR 0038):** hết hạn + hết ân hạn ⇒ tenant về tuyến hoa hồng và dùng Owner Lite. Xe ở nguyên trên chợ, booking đang chạy khép bình thường, chứng từ và ví vẫn xem/rút được. KHÔNG còn màn Manage nâng cao ở chế độ chỉ-xem. Hạn mức xe của Owner Lite chặn TẠO MỚI, không gỡ xe đang bán xuống.
 
 ---
 
@@ -83,10 +85,40 @@ Chủ xe tuyến hoa hồng có thể nâng cấp thành gian hàng mà không t
 | Bảo hiểm điện tử cho xe/chuyến | Bắt buộc, khách trả thêm | Bắt buộc, khách trả thêm |
 | Bảo hiểm tai nạn con người | Tùy chọn, khách trả thêm | Tùy chọn, khách trả thêm |
 | Liên hệ trước khi booking được xác nhận | Không công khai | Có thể công khai |
-| Quản lý cơ bản | User Portal/Owner Lite | User Portal |
+| Quản lý cơ bản | User Portal/Owner Lite | Manage |
 | Quản lý nâng cao | Không | Manage |
+| Ví điểm | MỘT ví, thuộc tenant (cả tiền hoàn khi đi thuê lẫn tiền nhận khi cho thuê) | Cùng ví đó, giữ nguyên khi nâng gói |
+| Cửa vào tiền | "Tài khoản của tôi" — ba con số + lối mở sổ giao dịch/lệnh rút | `/manage/balance` (chỉ `shop_owner`) |
+| Hộp thư | **MỘT** hộp thư hợp nhất trên biểu tượng chat ở header | HAI: `/chat` (khách) và `/manage/chat` (vận hành) |
+| Đặt xe trên chợ | Được | **Không** — dùng tài khoản khách thuê khác |
 
-Tỷ lệ 10%, tỷ lệ cọc, tỷ lệ thuế và biểu phí bảo hiểm phải là policy có phiên bản và ngày hiệu lực; booking lưu snapshot, không tính lại theo cấu hình mới. Phí nền tảng và bảo hiểm do khách chịu; thuế không cộng vào giá khách mà khấu trừ từ khoản XePrime phải trả cho chủ xe/gian hàng. Working rate cho ví dụ sản phẩm hiện tại là **7% trên giá thuê gốc**, nhưng không được hard-code trước khi chính sách thuế production được xác nhận.
+Tỷ lệ 10%, tỷ lệ cọc, tỷ lệ thuế và biểu phí bảo hiểm phải là policy có phiên bản và ngày hiệu lực;
+booking lưu snapshot, không tính lại theo cấu hình mới.
+
+**Nguồn canonical của 10% là `fee_policies.service_fee_percent` của bản `active` — một nguồn cho cả
+tiền lẫn nhãn.**
+
+Nó là con số DUY NHẤT nhân vào tiền (`computeCustomerFees`, chỉ áp khi `billingMode = commission`;
+tuyến gói không sinh dòng nào), và từ 16/09/2026 cũng là con số mà giao diện in ra: `/auth/me` trả
+`tenant.serviceFeePercent` đọc thẳng từ chính sách hiệu lực (`FeePoliciesService.findEffective`).
+
+Trước đó nhãn đọc `tenant_subscriptions.commission_percent` — một snapshot của GÓI, không phải của
+chính sách phí. Hai con số khớp nhau trên dev nhưng không có ràng buộc nào giữ chúng khớp, nên nhãn
+có thể hứa một mức phí khác mức khách thật sự bị thu. `plans.commission_percent` giờ chỉ còn là siêu
+dữ liệu của danh mục gói và **không** được đọc để hiển thị hay để tính tiền.
+
+Thiếu chính sách hiệu lực ⇒ nhãn rút gọn còn "Chủ xe cá nhân", không bịa số 10.
+
+**"Thu 10% trên mỗi chuyến" không đúng nguyên văn** — kết cục quyết định phần XePrime giữ lại:
+
+| Kết cục | Phần `S` |
+| --- | --- |
+| Huỷ trong cửa sổ miễn phí · chủ xe huỷ · hold hết hạn | Hoàn **toàn bộ** về ví khách |
+| Huỷ muộn / no-show | `D + S` chia đôi; XePrime nhận phần dư của phép chia |
+| Chuyến hoàn thành | XePrime ghi nhận đủ `S` |
+
+Ở mọi nhánh, tổng phân bổ luôn bằng `D + S + IV + IP` — bất biến này có test ở
+`packages/types/src/fee-policy.test.ts`. Phí nền tảng và bảo hiểm do khách chịu; thuế không cộng vào giá khách mà khấu trừ từ khoản XePrime phải trả cho chủ xe/gian hàng. Working rate cho ví dụ sản phẩm hiện tại là **7% trên giá thuê gốc**, nhưng không được hard-code trước khi chính sách thuế production được xác nhận.
 
 ---
 

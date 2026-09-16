@@ -6,6 +6,7 @@ import type { MenuProps } from 'antd';
 import Link from 'next/link';
 import { PERMISSION } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
+import { AccountTrackBadge } from '@/features/account/components/AccountTrackBadge';
 import { cx } from '@/lib/cx';
 import { usePortalLogout } from '@/features/auth/hooks/use-portal-logout';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -56,10 +57,33 @@ export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUser
   const dark = tone === 'dark';
 
   const menuItems: MenuProps['items'] = [
+    /*
+     * NHÃN TUYẾN mở đầu menu — thông tin duy nhất ở đây mà thẻ bên dưới chưa nói.
+     *
+     * Thẻ đã mang tên và VAI ("Chủ gian hàng"); nhãn này mang TUYẾN và tên gói. Hai thứ khác nhau:
+     * vai nói họ là ai trong gian hàng, tuyến nói gian hàng đang trả tiền theo cách nào — và khi
+     * gói hỏng cấu hình thì đây là chỗ nói ra điều đó.
+     *
+     * Đặt trong MENU chứ không trên thẻ: thẻ còn phải thu về cột 64px, nơi cả tên lẫn vai đã bị ẩn.
+     */
     {
+      key: 'track',
+      label: <AccountTrackBadge tenant={user.tenant} size="small" />,
+      disabled: true,
+    },
+    { type: 'divider' as const },
+    {
+      /*
+       * Hồ sơ CON NGƯỜI, và đích của nó là `/manage/account` — không phải `/account`
+       * (15/09/2026).
+       *
+       * Thẻ này chỉ hiện bên trong cổng quản lý. Đẩy người dùng sang khu khách để đổi tên hay
+       * mật khẩu là bắt họ rời nơi làm việc, và với gian hàng tuyến gói thì khu đó đã đóng:
+       * `AccountShell` chuyển họ ngược về đây, nên mục menu cũ là một vòng tròn.
+       */
       key: 'profile',
       icon: <UserOutlined aria-hidden />,
-      label: <Link href={ROUTES.ACCOUNT.ROOT}>{t('shell.profile')}</Link>,
+      label: <Link href={ROUTES.MANAGE.ACCOUNT}>{t('shell.profile')}</Link>,
     },
     // Cài đặt gian hàng chỉ có nghĩa khi người dùng ĐANG đứng trong một gian hàng — nhân sự
     // nền tảng không có gian hàng nào để cài đặt.

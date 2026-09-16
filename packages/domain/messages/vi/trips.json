@@ -16,7 +16,9 @@
     "stageAll": "Tất cả trạng thái",
     "stageEmptyTitle": "Không có chuyến nào ở trạng thái này",
     "stageEmptyBody": "Bộ lọc chỉ áp cho trang đang xem. Thử xoá lọc hoặc chuyển trang.",
-    "stageClear": "Xoá lọc trạng thái"
+    "stageClear": "Xoá lọc trạng thái",
+    "emptyTransitionalTitle": "Không còn chuyến đi thuê nào đang chạy",
+    "emptyTransitionalBody": "Mọi chuyến bạn từng đi thuê đã khép lại. Chuyến khách đặt xe của gian hàng nằm ở mục Đơn thuê."
   },
   "auth": {
     "expiredTitle": "Phiên đăng nhập đã hết hạn",
@@ -264,5 +266,11 @@
     "ownerNet": "Bạn thực nhận",
     "noteRenter": "Giá tính theo chính sách đang áp dụng. Số chốt được xác nhận khi chủ xe duyệt yêu cầu.",
     "noteHost": "Phụ phí chuyến nằm ở phía khách và không trừ vào tiền của bạn. Số chốt được xác nhận khi bạn duyệt yêu cầu."
+  },
+  "transitional": {
+    "title": "Chuyến đi thuê của tôi",
+    "cardTitle": "Chuyến đi thuê chưa khép",
+    "cardBody": "Bạn còn chuyến đi thuê xe của chủ xe khác từ trước khi mở gian hàng. Chuyến, tin nhắn và khoản hoàn của chúng vẫn ở đây.",
+    "open": "Xem chuyến đi thuê"
   }
 }

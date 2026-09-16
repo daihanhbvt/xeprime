@@ -1,5 +1,11 @@
 {
   "page": {
+    "defaultTrackTag": "Tuyến mặc định",
+    "defaultTrackHint": "Đây là TUYẾN vào cửa, không phải gói để gian hàng mua: mọi gian hàng mới được gán tự động, 0đ thuê bao, không kỳ hạn. Không ngừng bán được và không có bậc hoa hồng thứ hai.",
+    "notForSale": "Không bán",
+    "archivedHint": "Ngừng bán cho khách MỚI. {count, plural, =0 {Hiện không có thuê bao nào trỏ tới bậc này.} other {# thuê bao đang chạy trên bậc này VẪN hiệu lực — ngừng bán không huỷ thuê bao của ai.}}",
+    "introTitle": "Bảng này có hai loại hàng",
+    "introBody": "Bậc “Tuyến mặc định” là tuyến hoa hồng mà mọi chủ xe cá nhân vào cửa bằng nó — không bán, không ngừng bán được, và chỉ có một. Các bậc còn lại là gói gian hàng bán theo chỗ xe. “Ngừng bán” chỉ chặn việc mua MỚI; thuê bao đang chạy vẫn giữ nguyên giá và số chỗ đã chốt cho tới hết kỳ.",
     "title": "Gói dịch vụ",
     "filterLabel": "Trạng thái gói",
     "filterAll": "Tất cả",

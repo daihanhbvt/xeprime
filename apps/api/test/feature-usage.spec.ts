@@ -1,6 +1,8 @@
 import { Reflector } from '@nestjs/core';
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  BILLING_MODE,
+  BILLING_PHASE,
   FEATURE_STATE,
   PLAN_FEATURE,
   PLAN_FEATURE_VALUES,
@@ -84,6 +86,9 @@ function tenantCtx(state: FeatureState, used: PlanFeature[] = []): TenantContext
     usedFeatures: used,
     planCode: 'standard',
     planEndsAt: null,
+    billingMode: BILLING_MODE.PACKAGE,
+    billingPhase: BILLING_PHASE.CURRENT,
+    graceEndsAt: null,
   };
 }
 

@@ -21,7 +21,7 @@ import {
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useFeatureStates } from '@/hooks/use-feature';
 import { usePermissions } from '@/hooks/use-permissions';
-import { FEATURE_STATE, isFeatureVisible } from '@xeprime/types';
+import { FEATURE_STATE, TENANT_ROLE, isFeatureVisible } from '@xeprime/types';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { toggleNavSection } from '@/store/slices/app.slice';
 import { NavBadge } from './NavBadge';
@@ -82,15 +82,23 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
    * MỘT vị từ "người dùng có thấy mục này không", dùng ở BA chỗ: dựng mục lá, và hai phép dồn
    * huy hiệu (mục cha đóng, khối gập).
    *
-   * Hai trục độc lập kiểm NỐI TIẾP nhau (ADR 0027 điều 2): `permission` trả lời "anh là ai",
-   * `feature` trả lời "gian hàng này có gì". Thiếu một trong hai phép dồn thì nhánh/khối thu gọn
-   * sẽ đếm việc-cần-xử-lý cho mục người dùng KHÔNG thấy — một con số chỉ vào hư không.
+   * BA trục độc lập kiểm NỐI TIẾP nhau: `permission` trả lời "anh là ai" (ADR 0027 điều 2),
+   * `ownerOnly` trả lời "anh có phải CHỦ gian hàng này không" (ADR 0038 điều 3), `feature` trả
+   * lời "gian hàng này có gì". Thiếu một trục trong phép dồn thì nhánh/khối thu gọn sẽ đếm
+   * việc-cần-xử-lý cho mục người dùng KHÔNG thấy — một con số chỉ vào hư không.
    *
-   * Cờ vắng trong cache ⇒ coi như `enabled`: xem docblock của `useFeature` về việc vì sao mặc
-   * định phải là "cho qua".
+   * Trục sở hữu đọc `roleKey`, không đọc quyền: xem docblock `NavLeaf.ownerOnly`. Nhân sự nền
+   * tảng mở Manage của một gian hàng KHÔNG phải chủ ví của gian hàng đó, nên họ cũng không thấy
+   * mục gác bằng trục này — muốn xử lý tiền thì đi qua màn quản trị có audit.
+   *
+   * Cờ tính năng vắng trong cache ⇒ coi như `enabled`: xem docblock của `useFeature` về việc vì
+   * sao mặc định phải là "cho qua".
    */
+  const isShopOwner = user?.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER;
+
   const canSeeLeaf = (leaf: NavLeaf): boolean =>
     has(leaf.permission) &&
+    (leaf.ownerOnly !== true || isShopOwner) &&
     (leaf.feature === undefined ||
       isFeatureVisible(featureStates[leaf.feature] ?? FEATURE_STATE.ENABLED));
 

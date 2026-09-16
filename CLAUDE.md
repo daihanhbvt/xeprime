@@ -22,7 +22,7 @@ Nguồn sống (đọc trước, luôn đúng hiện tại):
 1. `docs/design/02_PRODUCT_VISION.md` — **sản phẩm, persona và mô hình doanh thu hiện hành**.
 2. `docs/completion-roadmap.md` — **đang ở đâu, release gate và việc tiếp theo**.
 3. `docs/design/03_PRODUCT_GAP_ANALYSIS.md` — backlog User/Admin/Manage theo hiện trạng source.
-4. `docs/decisions/` — **34 ADR (0001–0034)**; ADR Accepted mới hơn thắng trong đúng phạm vi ghi đè.
+4. `docs/decisions/` — **38 ADR (0001–0038)**; ADR Accepted mới hơn thắng trong đúng phạm vi ghi đè.
 5. `docs/CODEMAP.md` — chỉ mục "cái gì nằm ở đâu".
 6. File này (CLAUDE.md).
 7. `docs/deployment.md`, `docs/backup-and-restore.md`, `docs/third-party-keys.md` — vận hành và dịch vụ ngoài.
@@ -78,7 +78,7 @@ Skill tự kích hoạt theo mô tả; nếu quên thì gọi tay. `navigator` �
 | Doanh thu | **Hai tuyến trên MỘT chợ** — ADR 0028. Basic Owner: không thuê bao, phí dịch vụ theo chuyến (giả thuyết 10%) + Owner Lite. Gian hàng: gói theo chỗ/kỳ hạn, 0% hoa hồng XePrime/chuyến + Full Manage. Thuế, bảo hiểm và phí dịch vụ là ba dòng riêng; mode/policy đóng băng vào booking |
 | Tiền vào nền tảng | **ĐÃ triển khai trên `develop`** (PR #57): SePay đối soát các khoản vào qua MỘT bảng `bank_transactions`, phân loại đích bằng tiền tố mã (`XPG…` gói · `XPH…` giữ chỗ). Webhook công khai không session có khoá time-safe, idempotent bằng unique DB và trả 200 khi nhận lại giao dịch — ADR 0022/0028. Writer duy nhất: `SepayService` |
 | Cọc booking | Khách trả online `D + S + IV + IP` (cọc · phí nền tảng phía khách · bảo hiểm xe · bảo hiểm người); `B − D` trả TRỰC TIẾP chủ xe lúc nhận xe, XePrime không thu hộ. Thuế `T` khấu trừ khỏi tiền chủ xe, KHÔNG cộng vào tổng khách. Cửa sổ trả cọc 2h + hủy miễn phí 4h, **cả hai tính từ `acceptedAt`** — ADR 0032. Mức cọc do nền tảng đặt ở `fee_policies`; gian hàng chỉ có công tắc bật/tắt thu cọc — ADR 0033 |
-| Số dư | `wallets`/`wallet_entries`/`withdrawal_requests` là **sổ công nợ phải trả**, hiển thị là **"Ví điểm"** (1 điểm = 1đ): không nạp/chuyển/thanh toán nội bộ, **không hết hạn, không thu hồi**; ledger append-only (sửa bằng dòng đảo); rút về tài khoản ngân hàng qua admin chuyển tay — ADR 0033. `balance` = KHẢ DỤNG, phần đang rút nằm ở `pending_withdraw_amount` |
+| Số dư | **MỘT ví cho một người** — chủ xe thì ví thuộc TENANT, giữ nguyên khi nâng gói (ADR 0038). `wallets`/`wallet_entries`/`withdrawal_requests` là **sổ công nợ phải trả**, hiển thị là **"Ví điểm"** (1 điểm = 1đ): không nạp/chuyển/thanh toán nội bộ, **không hết hạn, không thu hồi**; ledger append-only (sửa bằng dòng đảo); rút về tài khoản ngân hàng qua admin chuyển tay — ADR 0033. `balance` = KHẢ DỤNG, phần đang rút nằm ở `pending_withdraw_amount` |
 | Đa ngữ | `next-intl` KHÔNG locale routing; hai ngôn ngữ `vi`/`en` dùng CHUNG url; locale ở cookie `XP_LOCALE` (httpOnly) đọc phía server; tiền luôn VND, múi giờ luôn `Asia/Ho_Chi_Minh` — ADR 0012 |
 | Chat | **PostgreSQL là source of truth** (mọi tin/thành viên/đính kèm/đã đọc); Firestore chỉ là projection realtime ~30–50 tin gần nhất; đồng bộ outbox/retry; attachment ở Cloudflare R2 — ADR 0009 |
 | Deploy MVP | 1 VPS mỗi môi trường (staging 6GB, production ≥8GB) — `docs/deployment.md` §1 |
@@ -137,6 +137,12 @@ Bổ sung ngoài tài liệu, đã thống nhất đưa vào base:
 - ❌ Dùng một `commissionPercent` để đại diện cả phí dịch vụ, thuế, bảo hiểm và tiền phải trả chủ xe — từng dòng có chủ sở hữu và snapshot riêng (ADR 0028)
 - ❌ Đồng nhất `hold_amount` với `platform_service_fee` — chúng có thể bằng nhau ở một policy nhưng không phải quy tắc (ADR 0028)
 - ❌ Đọc `booking_holds.purpose` để quyết định phần tiền GIỮ HỘ — một hold chứa tiền của nhiều người (`S` của XePrime, `D` của chủ xe, `IV`/`IP` của hãng bảo hiểm). Tách quỹ đọc từ BỐN CỘT số tiền (ADR 0033 điều 4)
+- ❌ `?? BILLING_MODE.PACKAGE` khi tenant thiếu gói hiện hành — dùng `resolveEffectiveBilling` (4 pha). `unconfigured` KHÔNG phải một tuyến: đường đọc hiển thị chưa xác định, đường ghi tiền từ chối (ADR 0038 điều 1)
+- ❌ Tạo ví thứ hai cho một người ĐÃ là chủ xe — một người một ví, thuộc tenant. Khoản hoàn của họ đi qua `resolveRefundWalletOwner`, không ghi thẳng `{USER, customerUserId}` (ADR 0038 điều 2)
+- ❌ Gác ví/tài khoản ngân hàng của gian hàng bằng một khoá `PERMISSION` — permission uỷ quyền được; dùng `@ShopOwnerOnly()` (ADR 0038 điều 3)
+- ❌ Để ranh giới hai TUYẾN đi qua `PLAN_FEATURE_ENFORCEMENT` — công tắc đó chỉ gác đợt rollout hạ cấp năng lực. Ranh giới tuyến dùng `@SubscriptionTrackOnly()`, chặn thật ngay (ADR 0038 điều 4)
+- ❌ Coi việc ẩn nút đặt xe là kiểm soát quyền — nút vẫn hiện, backend chặn và UI giải thích phải dùng SỐ ĐIỆN THOẠI KHÁC (ADR 0038 điều 6)
+- ❌ Cho tenant/user có ví bị xoá cứng (`deleteMany`) — `wallets.owner_*` là `RESTRICT`; gỡ nghĩa vụ tường minh trước
 - ❌ Ghi dòng sổ ví ngoài `WalletService` — module khác gọi `creditWithinTx(...)` trong transaction của chính mình (ADR 0023 ràng buộc 3)
 - ❌ Cho điểm hết hạn, thu hồi điểm, hay cộng điểm khuyến mãi vào `wallets.balance` — đó là sổ công nợ phải trả, khuyến mãi (nếu có) là bảng KHÁC (ADR 0033 điều 1)
 - ❌ Hiểu `wallets.balance` là tổng nghĩa vụ — nó là phần KHẢ DỤNG; tổng = `balance + pending_withdraw_amount` (ADR 0033 điều 6)
@@ -156,7 +162,8 @@ Bổ sung ngoài tài liệu, đã thống nhất đưa vào base:
 - ❌ Cho số dư nạp tiền / chuyển ngang / thanh toán nội bộ / chi tự động khi chưa có đối tác và release gate — nó chỉ là sổ công nợ phải trả (ADR 0028)
 - ❌ Nhét cờ tính năng vào bảng permission, hay suy quyền của một người từ GÓI — hai trục độc lập, kiểm tra nối tiếp (ADR 0027 điều 2)
 - ❌ Ẩn menu mà không chặn endpoint ở server — ẩn nút chỉ là trang trí (ADR 0027 điều 4)
-- ❌ Để tenant hết hạn gói MẤT QUYỀN XEM sổ thu chi/công nợ/bảo dưỡng của chính họ — hết hạn là `read_only`, không phải `hidden` (ADR 0027 điều 3)
+- ❌ Để tenant hết hạn gói mất quyền xem TIỀN, chứng từ và chuyến đang chạy của chính họ — ví điểm, hoá đơn, bàn giao, khai thuế KHÔNG nằm sau cờ tính năng nào, ở bất kỳ tuyến nào (ADR 0027 điều 3 · ADR 0038 điều 5)
+- ❌ Suy trạng thái cờ tính năng từ PHA thay vì từ TUYẾN — `read_only` chỉ áp khi tenant VẪN ở tuyến gói (hạ bậc, hoặc đang ân hạn); hết ân hạn ⇒ về tuyến hoa hồng và Manage nâng cao là `hidden`, không có chế độ chỉ-xem (ADR 0038 điều 5 ghi đè ADR 0027 điều 3 trong phạm vi HẾT GÓI)
 - ❌ Dựng báo cáo tổng hợp thu chi cho bậc cơ bản — chủ xe thấy tiền của TỪNG đơn, sổ tổng hợp là tính năng của gói (ADR 0027 điều 1)
 - ❌ Boost xe thuê bao bất chấp độ phù hợp/chất lượng, hoặc không gắn nhãn vị trí tài trợ. Chỉ ưu tiên trong nhóm kết quả tương đương (ADR 0028)
 - ❌ Tiền tố ngôn ngữ trong URL (`/en`, `/vi`), `app/[locale]`, hay tham số `?lang=`/`?locale=` — ADR 0012
@@ -215,8 +222,8 @@ Base Phase 0 (đã commit `0a76adf`): 11 bảng lõi + `vehicle_occupancies` (sc
 | Migration | **Một baseline duy nhất** `prisma/migrations/20260821000000_init/` — gộp 44 migration cũ, đã đối chiếu `pg_dump` với chuỗi cũ. Đọc header của file đó trước khi chạy `migrate dev`: nó cảnh báo các FK tổ hợp `(id, tenant_id)` mà `schema.prisma` không mô tả được và Prisma sẽ sinh lệnh DROP chúng |
 | Seed | `prisma/src/seed.ts` + `prisma/src/seed/` — idempotent trên toàn bộ 63 bảng (id tất định từ `seedId`, không xoá-tạo-lại) |
 | `SEED_MODE=system` | Chỉ dữ liệu nền: quyền, role hệ thống, danh mục thu/chi, gói dịch vụ, banner. Chạy được ở production |
-| `SEED_MODE=demo` (mặc định) | Thêm 5 gian hàng **khác quy mô** (40 xe/4 chi nhánh · 10/2 · 3 · 1 · 0 chưa duyệt), 19 tài khoản, 54 xe, 107 đơn, 273 phiếu thu chi |
-| Tài khoản demo | nền tảng đủ 5 vai trò (`admin@xeprime.vn`, `staff@`/`reviewer@`/`support@`/`finance@xeprime.test`) · 5 chủ shop `owner.<tỉnh>@xeprime.test` · 4 nhân viên shop · 5 khách `khach.<tên>@xeprime.test`. Mật khẩu từ env, không in ra stdout |
+| `SEED_MODE=demo` (mặc định) | Thêm **27 gian hàng**: 5 gian hàng khác quy mô (40 xe/4 chi nhánh · 10/2 · 3 · 1 · 0 chưa duyệt) + 2 tài khoản QA hai tuyến + **20 chủ xe cá nhân tuyến hoa hồng** (1–3 xe, 15 tỉnh — `prisma/src/seed/commission-owners.ts`). Tổng: 41 tài khoản, 106 xe, 194 đơn, 579 phiếu thu chi |
+| Tài khoản demo | nền tảng đủ 5 vai trò (`admin@xeprime.vn`, `staff@`/`reviewer@`/`support@`/`finance@xeprime.test`) · 5 chủ shop `owner.<tỉnh>@xeprime.test` · 4 nhân viên shop · 5 khách `khach.<tên>@xeprime.test` · 2 QA `qa.owner@`/`qa.shop@` · 20 chủ xe cá nhân `chuxe.<tên>@xeprime.test`. Mật khẩu từ env, không in ra stdout |
 | Danh tính seed sở hữu | `prisma/src/seed/identities.ts` — `cleanup-test-data.ts` import chính danh sách này làm bộ loại trừ, không chép tay |
 
 > `prisma migrate reset` bị Prisma chặn khi phát hiện agent chạy — người dùng phải tự gõ lệnh đó.

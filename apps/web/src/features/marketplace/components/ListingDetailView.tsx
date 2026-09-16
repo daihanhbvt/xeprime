@@ -14,11 +14,12 @@ import {
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { catalogLabel, type CatalogMap } from '@/features/catalog/types';
-import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
+import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
-import { EmbedMap } from '@/components/data-display/EmbedMap';
+import { StaticMap } from '@/components/data-display/StaticMap';
+import { VerifiedMark } from '@/components/common/VerifiedMark';
 import { shopPath } from '@/constants/routes';
-import { mapPlaceUrl, toGeoPoint } from '@/lib/map-embed';
+import { mapPlaceUrl, toGeoPoint } from '@/lib/map-static';
 import { applyDiscountPercent } from '@/lib/money';
 import type { PublicListingDetail } from '../types';
 import { ListingGallery } from './ListingGallery';
@@ -383,10 +384,15 @@ export async function ListingDetailView({
                 <Link href={shopPath.detail(listing.shopSlug)} className={styles.shopName}>
                   {listing.shopName}
                 </Link>
-                {/* Xe lên chợ đồng nghĩa gian hàng đã qua duyệt nền tảng — tick nói đúng điều đó. */}
-                <span className={styles.verified} title={t('shopVerified')}>
-                  ✓
-                </span>
+                {/*
+                  Dấu xác thực CHỈ cho gian hàng tuyến gói — cùng luật với thẻ xe ở lưới kết quả
+                  và với trang `/shops/[slug]`. Trước 16/09/2026 chỗ này vẽ một tick cho MỌI xe
+                  trên chợ: đã qua duyệt để lên chợ là điều kiện tối thiểu của mọi tin đăng, nên
+                  một dấu gắn cho tất cả thì không phân biệt được ai với ai.
+                */}
+                {listing.shopVerified ? (
+                  <VerifiedMark label={t('shopVerified')} size={16} className={styles.verified} />
+                ) : null}
               </div>
               {listing.shopProvince ? (
                 <div className={styles.shopMeta}>{listing.shopProvince}</div>
@@ -416,7 +422,17 @@ export async function ListingDetailView({
               size="large"
               className={styles.cta}
             />
-            <ChatWithShopButton vehicleId={listing.id} size="large" />
+            {/*
+              Gian hàng tuyến gói: nút luôn có. Chủ xe cá nhân: chỉ hiện với khách ĐÃ gửi yêu cầu
+              thuê cho họ — nút "Chọn thuê" ngay bên trái chính là bước mở kênh đó.
+              `ShopChatButton` hỏi server câu đó; chặn thật nằm ở `ChatService`.
+            */}
+            <ShopChatButton
+              shopSlug={listing.shopSlug}
+              vehicleId={listing.id}
+              publicChatOpen={listing.shopChatOpen}
+              size="large"
+            />
           </div>
         </div>
       </div>
@@ -432,7 +448,7 @@ export async function ListingDetailView({
         </section>
         {/*
           Điểm nhận xe: địa chỉ là thông tin CHÍNH, bản đồ chỉ minh hoạ. Khối vẫn hiện đầy đủ khi
-          chưa có toạ độ hoặc chưa cấu hình key nhúng — `EmbedMap` tự biến mất, phần chữ ở lại.
+          chưa có toạ độ hoặc chưa cấu hình key bản đồ — `StaticMap` tự biến mất, phần chữ ở lại.
           Trải hết chiều ngang (`pickupCard`) để không đẻ ra một ô trống cạnh nó trong lưới 2 cột.
         */}
         {listing.pickupPoint ? (
@@ -451,7 +467,7 @@ export async function ListingDetailView({
             {listing.pickupPoint.provinceName ? (
               <p className={styles.pickupMeta}>{listing.pickupPoint.provinceName}</p>
             ) : null}
-            <EmbedMap
+            <StaticMap
               src={mapPlaceUrl(
                 toGeoPoint(listing.pickupPoint.latitude, listing.pickupPoint.longitude),
               )}

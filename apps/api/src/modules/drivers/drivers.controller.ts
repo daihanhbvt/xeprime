@@ -7,6 +7,7 @@ import {
   RequirePermissions,
   TenantScoped,
   RequiresFeature,
+  SubscriptionTrackOnly,
 } from '../../common/decorators';
 import { OkResultDto } from '../../common/dto/api-response.dto';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
@@ -29,6 +30,7 @@ import {
 @ApiTags('drivers')
 @Controller('drivers')
 @TenantScoped()
+@SubscriptionTrackOnly()
 @RequiresFeature(PLAN_FEATURE.DRIVERS)
 export class DriversController {
   constructor(private readonly drivers: DriversService) {}

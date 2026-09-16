@@ -1,5 +1,5 @@
 import { App } from 'antd';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BILLING_MODE } from '@xeprime/types';
 
@@ -16,8 +16,10 @@ import { PurchaseModal } from './PurchaseModal';
  *
  * Nên thứ được khoá ở đây là VỊ TỪ CHỌN GÓI, không phải bố cục:
  *  1. gói `package` phí nền 0đ VẪN phải bán được;
- *  2. gói `commission` KHÔNG bao giờ lọt vào danh sách mua (nó là tuyến mặc định, không hoá đơn);
- *  3. kỳ hạn chỉ hiện những kỳ gói thật sự bán (ADR 0029 điều 3).
+ *  2. gói `commission` KHÔNG bao giờ lọt vào danh sách mua (nó là TUYẾN mặc định, không SKU);
+ *  3. kỳ hạn chỉ hiện những kỳ gói thật sự bán (ADR 0029 điều 3);
+ *  4. mỗi kỳ hạn là một LỰA CHỌN MUA có giá thật, hiện cùng lúc — không phải một `<Select>`
+ *     nơi giá chỉ lộ ra sau khi đã chọn (quyết định sản phẩm 15/09/2026).
  */
 const plans = vi.hoisted(() => ({
   data: [] as TenantPlan[],
@@ -91,8 +93,62 @@ describe('PurchaseModal — gói nào được bán', () => {
   it('gói package phí nền 0đ VẪN bán được (ADR 0029)', () => {
     renderModal();
     expect(screen.queryByText(/Chưa có gói nào đang bán/)).toBeNull();
+    expect(screen.getByText(/Chọn kỳ hạn cam kết/)).toBeTruthy();
+  });
+
+  it('danh mục MỘT bậc thì không bày bộ chọn gói — nó không phải một lựa chọn', () => {
+    renderModal();
+    expect(screen.queryByRole('combobox')).toBeNull();
+  });
+
+  it('danh mục HAI bậc thì bộ chọn gói xuất hiện lại', () => {
+    plans.data = [makePlan(), makePlan({ id: 'plan-2', code: 'pkg-2', name: 'Gói khác' })];
+    renderModal();
     expect(screen.getByRole('combobox')).toBeTruthy();
   });
+
+  it(
+    'ba kỳ hạn hiện CÙNG LÚC, mỗi kỳ kèm tổng thật của số chỗ đang chọn (ADR 0029 điều 3)',
+    () => {
+      renderModal();
+
+      // 1 chỗ ô tô: 100.000đ/tháng ⇒ 3 tháng = 300.000đ, 6 = 600.000đ, 12 = 1.200.000đ.
+      const carSlots = screen.getByRole('spinbutton', { name: /Số chỗ ô tô/ });
+      fireEvent.change(carSlots, { target: { value: '1' } });
+
+      const terms = screen.getAllByRole('radio');
+      expect(terms).toHaveLength(3);
+      expect(terms[0]!.textContent).toContain('3 tháng');
+      expect(terms[1]!.textContent).toContain('6 tháng');
+      expect(terms[2]!.textContent).toContain('12 tháng');
+
+      // Kỳ 1 tháng KHÔNG được bán ⇒ không có thẻ nào cho nó.
+      expect(terms.some((el) => el.textContent?.includes('1 tháng'))).toBe(false);
+
+      expect(terms[0]!.textContent).toMatch(/300[.,]000/);
+      expect(terms[2]!.textContent).toMatch(/1[.,]200[.,]000/);
+    },
+  );
+
+  it(
+    'chưa chọn kỳ hạn thì không tạo được hoá đơn — không mặc định sẵn một cam kết',
+    () => {
+      renderModal();
+      const submit = screen.getByRole('button', { name: /Tạo hoá đơn/ });
+      expect(submit.getAttribute('disabled')).not.toBeNull();
+
+      const carSlots = screen.getByRole('spinbutton', { name: /Số chỗ ô tô/ });
+      fireEvent.change(carSlots, { target: { value: '1' } });
+      fireEvent.click(screen.getAllByRole('radio')[1]!);
+
+      expect(screen.getByRole('button', { name: /Tạo hoá đơn/ }).getAttribute('disabled')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: /Tạo hoá đơn/ }));
+      expect(purchase.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({ termMonths: 6, slots: { car: 1, motorbike: 0 } }),
+        expect.anything(),
+      );
+    },
+  );
 
   it('gói tuyến hoa hồng KHÔNG lọt vào danh sách mua', () => {
     plans.data = [

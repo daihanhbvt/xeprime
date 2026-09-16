@@ -13,9 +13,17 @@ import { getErrorMessage, isUnauthenticated } from '@/services/api-client';
 import { useStartConversation } from '../hooks/use-chat-mutations';
 import { useTranslations } from 'next-intl';
 
-/** Nút "Nhắn shop" ở trang chi tiết xe — mở/lấy hội thoại rồi mở khu tin nhắn của khách. */
+/**
+ * Nút nhắn cho gian hàng — mở/lấy hội thoại rồi chuyển sang khu tin nhắn của khách.
+ *
+ * Hai đường vào, một nút: từ một chiếc XE (trang chi tiết, overlay đặt xe) thì truyền
+ * `vehicleId`; từ trang GIAN HÀNG thì truyền `shopSlug`. Cả hai rơi vào đúng một thread vì danh
+ * tính hội thoại là (khách, gian hàng) — nên hai nút riêng sẽ chỉ nhân đôi đúng phần khó ở đây:
+ * bắt 401, mở modal đăng nhập tại chỗ, và TỰ CHẠY LẠI hành động sau khi đăng nhập xong.
+ */
 export function ChatWithShopButton({
   vehicleId,
+  shopSlug,
   block,
   size,
   className,
@@ -23,7 +31,10 @@ export function ChatWithShopButton({
   type,
   onNavigate,
 }: {
-  vehicleId: string;
+  /** Nhắn từ một chiếc xe — xe đi kèm làm thẻ ngữ cảnh cho câu nhắn đầu tiên. */
+  vehicleId?: string;
+  /** Nhắn từ trang gian hàng, khi chưa có chiếc xe nào đang mở. */
+  shopSlug?: string;
   block?: boolean;
   size?: 'middle' | 'large';
   className?: string;
@@ -45,14 +56,14 @@ export function ChatWithShopButton({
   const nextFromHere = useNextFromCurrentPath();
 
   function startChat() {
-    start.mutate(vehicleId, {
+    start.mutate(vehicleId ? { vehicleId } : { shopSlug }, {
       onSuccess: (conversation) => {
         onNavigate?.();
-        //  = xe đang xem: hội thoại thuộc về GIAN HÀNG, nên chiếc xe phải đi kèm riêng để
-        // ô soạn tin gắn được thẻ ngữ cảnh vào câu đầu tiên.
         // `v` = xe đang xem. Hội thoại thuộc về GIAN HÀNG (một thread cho mọi xe của shop), nên
-        // chiếc xe phải đi kèm riêng để ô soạn tin gắn được thẻ ngữ cảnh vào câu đầu tiên.
-        router.push(`${ROUTES.CHAT}?c=${conversation.id}&v=${vehicleId}`);
+        // chiếc xe phải đi kèm riêng để ô soạn tin gắn được thẻ ngữ cảnh vào câu đầu tiên. Vào
+        // từ trang gian hàng thì không có xe nào để gắn — bỏ hẳn tham số, đừng gửi `v=undefined`.
+        const query = vehicleId ? `?c=${conversation.id}&v=${vehicleId}` : `?c=${conversation.id}`;
+        router.push(`${ROUTES.CHAT}${query}`);
       },
       onError: (err) => {
         if (isUnauthenticated(err)) {

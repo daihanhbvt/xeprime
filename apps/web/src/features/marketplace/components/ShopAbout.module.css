@@ -1,0 +1,119 @@
+.section {
+  max-width: var(--xp-container-max-width);
+  margin: 0 auto;
+  padding: 24px 20px 0;
+}
+
+/*
+ * KHÔNG bọc cả khối trong một thẻ có viền.
+ *
+ * Bản trước làm vậy và trang thành ba thẻ viền chồng nhau (danh tính · giới thiệu · lưới xe),
+ * trong đó thẻ giữa phình ra một khoảng trắng lớn vì cột số liệu cao hơn đoạn giới thiệu. Ở đây
+ * chỉ Ô SỐ LIỆU mới là thẻ — phần chữ nằm thẳng trên nền trang, đúng như design.
+ */
+.card {
+  display: flex;
+  align-items: flex-start;
+  gap: 40px;
+}
+
+.about {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.title {
+  margin: 0 0 10px;
+  font-size: var(--xp-font-size-h4);
+  line-height: var(--xp-line-height-h4);
+  font-weight: var(--xp-font-weight-bold);
+  color: var(--xp-color-text);
+}
+
+.bio {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: 1.7;
+  /* Giới thiệu là ô văn bản nhiều dòng — người viết xuống dòng thì trang phải giữ đúng như vậy. */
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.address {
+  margin: 10px 0 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-lg);
+  overflow-wrap: anywhere;
+}
+
+/*
+ * Số liệu là một HÀNG, không phải một cột.
+ *
+ * `flex` chứ không `grid auto-fit`: bản trước dùng grid trong một khối `flex: none`, nên grid
+ * không có bề rộng để chia và `auto-fit` xếp cả bốn ô thành một cột dựng đứng — đúng chỗ layout
+ * bị vỡ. Ở đây mỗi ô có `flex-basis` cố định, nên 2, 3 hay 4 ô đều ra một hàng đều nhau.
+ */
+.stats {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stat {
+  display: flex;
+  flex: 0 0 96px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 74px;
+  padding: 12px 8px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-container);
+  text-align: center;
+}
+
+.statValue {
+  font-family: var(--xp-font-family-display);
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
+  font-weight: var(--xp-font-weight-bold);
+  color: var(--xp-color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.statLabel {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+@media (max-width: 1080px) {
+  .card {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .stats {
+    width: 100%;
+  }
+
+  /* Xếp dọc thì số liệu trải hết chiều ngang thay vì bốn ô hẹp dồn về một mép. */
+  .stat {
+    flex: 1 1 96px;
+  }
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 20px 16px 0;
+  }
+}

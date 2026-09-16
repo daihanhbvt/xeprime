@@ -2,8 +2,8 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   CUSTOMER_TRIP_FILTER_DEFAULT,
   CUSTOMER_TRIP_FILTER_VALUES,
-  CUSTOMER_TRIP_STAGE_VALUES,
   TRIP_ROLE_VALUES,
+  CUSTOMER_TRIP_STAGE_VALUES,
   DEPOSIT_COLLECTION_MODE_VALUES,
   DEPOSIT_STATUS_VALUES,
   REFUND_METHOD_VALUES,
@@ -40,6 +40,27 @@ export class CustomerTripListQueryDto {
   @IsOptional()
   @IsIn(CUSTOMER_TRIP_FILTER_VALUES)
   filter?: string;
+
+  /**
+   * VAI của người xem trong chuyến — `renter` (tôi đi thuê) hoặc `host` (tôi cho thuê).
+   *
+   * Trước 15/09/2026 endpoint này trả MỘT danh sách trộn cả hai: `scopeWhere` OR
+   * `customerUserId = tôi` với `tenantId = gian hàng của tôi`. Một chủ xe mở `/trips` thấy chuyến
+   * mình đi thuê nằm lẫn với yêu cầu khách gửi tới xe của mình — hai việc khác hẳn nhau, và số
+   * đếm trên tab cộng gộp cả hai.
+   *
+   * Bỏ trống ⇒ giữ nguyên hành vi cũ (cả hai vai), để client cũ không gãy.
+   *
+   * ⚠️ Lọc, ĐẾM và PHÂN TRANG đều ở server: lọc một trang kết quả ở client sẽ cho ra những trang
+   * dài ngắn khác nhau và một con số tổng không khớp với thứ người dùng đếm được trên màn hình.
+   */
+  @ApiPropertyOptional({
+    enum: TRIP_ROLE_VALUES,
+    description: 'renter = tôi đi thuê · host = tôi cho thuê. Bỏ trống = cả hai.',
+  })
+  @IsOptional()
+  @IsIn(TRIP_ROLE_VALUES)
+  role?: string;
 
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()

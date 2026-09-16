@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
-import { FEATURE_STATE, PERMISSION, type Permission } from '@xeprime/types';
+import { FEATURE_STATE, PERMISSION, TENANT_ROLE, type Permission } from '@xeprime/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { NAV_BADGE } from '@/constants/nav';
@@ -25,7 +25,11 @@ import { useManageNav } from './use-manage-nav';
  */
 
 const nav = vi.hoisted(() => ({ pathname: '/manage' }));
-const user = vi.hoisted(() => ({ platformRole: null as string | null }));
+const user = vi.hoisted(() => ({
+  platformRole: null as string | null,
+  // Trục SỞ HỮU (ADR 0038 điều 3) — `roleKey` quyết định mục gác bằng `ownerOnly`.
+  tenant: null as { roleKey: string } | null,
+}));
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
 const badges = vi.hoisted(() => ({ bookingRequestsPending: 0, chatUnread: 0 }));
 /** Trạng thái cờ năng lực (ADR 0027) — trục THỨ HAI, độc lập với `perms`. */
@@ -107,6 +111,7 @@ function selectedLabel(container: HTMLElement): string | null {
 beforeEach(() => {
   nav.pathname = '/manage';
   user.platformRole = null;
+  user.tenant = { roleKey: TENANT_ROLE.SHOP_OWNER };
   badges.bookingRequestsPending = 0;
   badges.chatUnread = 0;
   // Mặc định RỖNG = chưa biết cờ nào ⇒ mọi mục hiện. Đó chính là hành vi phải giữ cho cache
@@ -145,9 +150,18 @@ describe('useManageNav — hiển thị theo quyền (gian hàng)', () => {
 
   it('mục cha biến mất hoàn toàn khi mọi mục con bị lọc', () => {
     grant(PERMISSION.TENANT_VIEW);
+    /*
+     * NHÂN VIÊN, không phải chủ (sửa 15/09/2026).
+     *
+     * Nhánh "Tài chính" có hai loại mục con: sổ sách gác bằng QUYỀN, và ví gác bằng SỞ HỮU
+     * (`ownerOnly`, ADR 0038 điều 3). Một CHỦ gian hàng chỉ có `tenant.view` vẫn thấy nhánh này
+     * vì ví của chính họ vẫn ở đó — đúng, và đó là lý do ca "mọi mục con bị lọc" phải dựng bằng
+     * một người KHÔNG phải chủ.
+     */
+    user.tenant = { roleKey: TENANT_ROLE.SHOP_STAFF };
     renderMenu();
 
-    // Không có `finance.view` ⇒ không còn mục cha "Tài chính" nào để bấm vào.
+    // Không có `finance.view`, cũng không phải chủ ⇒ không còn mục cha "Tài chính" nào để bấm.
     expect(screen.queryByText('Tài chính')).toBeNull();
   });
 
@@ -602,4 +616,75 @@ describe('useManageNav — trục NĂNG LỰC theo gói (ADR 0027)', () => {
    *
    * Ngày một mục vừa-badge-vừa-cờ xuất hiện, đây là chỗ thêm khẳng định.
    */
+});
+
+/**
+ * VÍ GIAN HÀNG — trục SỞ HỮU, không phải trục quyền (ADR 0038 điều 3).
+ *
+ * API đã là `@ShopOwnerOnly()` từ đợt trước, nhưng menu vẫn gác bằng `seller_profile.view`. Hệ
+ * quả: một `shop_manager` được cấp quyền đó nhìn thấy mục "Số dư", bấm vào, và nhận 403 — giao
+ * diện mời họ vào một cánh cửa đã khoá.
+ *
+ * Cách sửa là hạ MENU xuống đúng luật của guard. Bộ test này cũng khoá chiều ngược lại: nới guard
+ * cho khớp menu sẽ làm test cuối cùng đỏ, vì tiền trong ví là nghĩa vụ với một người cụ thể chứ
+ * không phải một tài nguyên của gian hàng mà quyền cấp phát được.
+ */
+describe('useManageNav — ví gian hàng chỉ dành cho CHỦ', () => {
+  /** Mọi quyền của gian hàng: chứng minh trục quyền KHÔNG mở được mục này. */
+  function grantEverything() {
+    grant(...(Object.values(PERMISSION) as Permission[]));
+  }
+
+  it('chủ gian hàng thấy mục Số dư', () => {
+    grantEverything();
+    user.tenant = { roleKey: TENANT_ROLE.SHOP_OWNER };
+    renderMenu();
+
+    fireEvent.click(screen.getByText('Tài chính'));
+    expect(screen.getByRole('link', { name: /Ví điểm/ }).getAttribute('href')).toBe(
+      '/manage/balance',
+    );
+  });
+
+  it('quản lý, nhân viên và người xem KHÔNG thấy — dù có đủ mọi quyền', () => {
+    for (const roleKey of [
+      TENANT_ROLE.SHOP_MANAGER,
+      TENANT_ROLE.SHOP_STAFF,
+      TENANT_ROLE.SHOP_VIEWER,
+    ]) {
+      grantEverything();
+      user.tenant = { roleKey };
+      const { unmount } = renderMenu();
+
+      fireEvent.click(screen.getByText('Tài chính'));
+      expect(screen.queryByRole('link', { name: /Ví điểm/ })).toBeNull();
+      unmount();
+    }
+  });
+
+  /*
+   * Các mục tài chính KHÁC không bị kéo theo: doanh thu, thu chi và công nợ là sổ sách của gian
+   * hàng, phân quyền được, và một quản lý được cấp quyền phải xem được. Thu hẹp đúng một mục.
+   */
+  it('không kéo theo các mục tài chính khác', () => {
+    grantEverything();
+    user.tenant = { roleKey: TENANT_ROLE.SHOP_MANAGER };
+    renderMenu();
+
+    fireEvent.click(screen.getByText('Tài chính'));
+    expect(screen.getByRole('link', { name: /Tổng quan doanh thu/ })).toBeTruthy();
+  });
+
+  /*
+   * Nhân sự nền tảng mở Manage của một gian hàng KHÔNG phải chủ ví của gian hàng đó. Cây menu
+   * nền tảng vốn đã khác, nên đây chỉ là chốt chặn: không có lối tắt nào vào ví của người khác.
+   */
+  it('nhân sự nền tảng không có lối vào ví của gian hàng', () => {
+    grantEverything();
+    user.platformRole = 'platform_admin';
+    user.tenant = null;
+    renderMenu();
+
+    expect(screen.queryByRole('link', { name: /^Ví điểm$/ })).toBeNull();
+  });
 });

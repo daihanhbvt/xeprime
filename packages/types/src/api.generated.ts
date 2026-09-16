@@ -1822,6 +1822,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/conversations/eligibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Khách có nhắn được cho gian hàng này không (để ẩn/hiện nút)
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         */
+        get: operations["ConversationsController_eligibility"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/conversations/unread-count": {
         parameters: {
             query?: never;
@@ -5532,6 +5552,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/shops/{slug}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Đánh giá công khai của một gian hàng (mọi xe, phân trang)
+         * @description **Truy cập:** công khai — không cần đăng nhập.
+         */
+        get: operations["PublicShopReviewController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/rbac/my-permissions": {
         parameters: {
             query?: never;
@@ -5838,8 +5878,6 @@ export interface paths {
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
-         *
-         *     **Quyền yêu cầu:** `seller_profile.view` (đọc từ DB mỗi request, không nằm trong session).
          */
         get: operations["ShopBankAccountsController_list"];
         put?: never;
@@ -5848,8 +5886,6 @@ export interface paths {
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
-         *
-         *     **Quyền yêu cầu:** `seller_profile.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
         post: operations["ShopBankAccountsController_create"];
         delete?: never;
@@ -5873,8 +5909,6 @@ export interface paths {
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
-         *
-         *     **Quyền yêu cầu:** `seller_profile.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
         delete: operations["ShopBankAccountsController_archive"];
         options?: never;
@@ -5900,8 +5934,6 @@ export interface paths {
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
-         *
-         *     **Quyền yêu cầu:** `seller_profile.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
         patch: operations["ShopBankAccountsController_setDefault"];
         trace?: never;
@@ -6012,8 +6044,6 @@ export interface paths {
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
-         *
-         *     **Quyền yêu cầu:** `seller_profile.view` (đọc từ DB mỗi request, không nằm trong session).
          */
         get: operations["ShopWalletController_summary"];
         put?: never;
@@ -6036,8 +6066,6 @@ export interface paths {
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
-         *
-         *     **Quyền yêu cầu:** `seller_profile.view` (đọc từ DB mỗi request, không nằm trong session).
          */
         get: operations["ShopWalletController_entries"];
         put?: never;
@@ -6060,8 +6088,6 @@ export interface paths {
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
-         *
-         *     **Quyền yêu cầu:** `seller_profile.view` (đọc từ DB mỗi request, không nằm trong session).
          */
         get: operations["ShopWalletController_listWithdrawals"];
         put?: never;
@@ -6070,8 +6096,6 @@ export interface paths {
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
-         *
-         *     **Quyền yêu cầu:** `seller_profile.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
         post: operations["ShopWalletController_createWithdrawal"];
         delete?: never;
@@ -6094,8 +6118,6 @@ export interface paths {
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
-         *
-         *     **Quyền yêu cầu:** `seller_profile.manage` (đọc từ DB mỗi request, không nằm trong session).
          */
         post: operations["ShopWalletController_cancelWithdrawal"];
         delete?: never;
@@ -8182,7 +8204,7 @@ export interface components {
             /** @description true = nếu gửi ngay bây giờ, hệ thống sẽ tự nhận (trừ khi lịch vừa bị chiếm) */
             eligible: boolean;
             /** @enum {string|null} */
-            blocker?: "disabled" | "service_not_supported" | "lead_too_short" | "lead_too_long" | "outside_handover_window" | "below_min_duration" | "quote_estimate" | "schedule_busy" | "no_driver" | "hold_required_with_driver" | "terms_not_accepted" | null;
+            blocker?: "disabled" | "service_not_supported" | "lead_too_short" | "lead_too_long" | "outside_handover_window" | "below_min_duration" | "quote_estimate" | "schedule_busy" | "no_driver" | "hold_required_with_driver" | "terms_not_accepted" | "billing_not_configured" | null;
         };
         BankAccountDto: {
             id: string;
@@ -8853,6 +8875,10 @@ export interface components {
             /** @example matkhaumoi456 */
             newPassword: string;
         };
+        ChatEligibilityDto: {
+            /** @description Khách đang đăng nhập nhắn được cho gian hàng này */
+            canChat: boolean;
+        };
         ChatUnreadCountDto: {
             /**
              * @description Tổng tin chưa đọc mọi hội thoại (phía người xem)
@@ -9326,8 +9352,10 @@ export interface components {
             name: string;
         };
         CreateConversationDto: {
-            /** @description ID xe (listing) muốn nhắn shop */
-            vehicleId: string;
+            /** @description ID xe (listing) muốn nhắn shop — hoặc dùng `shopSlug` */
+            vehicleId?: string;
+            /** @description Slug gian hàng muốn nhắn — hoặc dùng `vehicleId` */
+            shopSlug?: string;
         };
         CreateCustomerNoteDto: {
             /** @enum {string} */
@@ -9672,10 +9700,18 @@ export interface components {
             features: components["schemas"]["TenantFeatureStateDto"][];
             /** @description Mã gói hiện hành; null = không có */
             planCode: string | null;
+            /** @description Tên gói hiện hành; null = không có */
+            planName: string | null;
+            /** @description % phí dịch vụ đang thu trên chuyến (từ chính sách phí hiệu lực); null = không áp */
+            serviceFeePercent: number | null;
             /** @description Xem BillingMode trong @xeprime/types */
             billingMode: string | null;
             /** @description ISO-8601 UTC — băng hết hạn đọc ngày này */
             planEndsAt: string | null;
+            /** @description Xem BillingPhase trong @xeprime/types */
+            billingPhase: string;
+            /** @description ISO-8601 UTC — hết ân hạn; null khi gói còn hạn hoặc chưa có gói */
+            graceEndsAt: string | null;
             /** @description Số xe đang công khai trên marketplace */
             publicVehicleCount: number;
         };
@@ -10389,6 +10425,17 @@ export interface components {
             /** @description Custom token để signInWithCustomToken */
             token?: string | null;
         };
+        FleetQuotaDto: {
+            /**
+             * @description 'total' = trần TỔNG của Owner Lite; 'per_type' = số chỗ đã mua theo loại
+             * @enum {string}
+             */
+            kind: "unlimited" | "total" | "per_type";
+            /** @description Trần TỔNG số xe — chỉ có giá trị khi kind = 'total' */
+            totalLimit: number | null;
+            /** @description Tổng số xe chưa xoá của gian hàng (cả hai loại) */
+            totalUsed: number;
+        };
         FleetSummaryDto: {
             /** @description Tổng số xe của gian hàng (không tính xe đã xoá mềm) */
             total: number;
@@ -10878,6 +10925,8 @@ export interface components {
             /** @description Đã có mật khẩu chưa — false với tài khoản tạo bằng SĐT/OTP (gợi ý đặt mật khẩu) */
             hasPassword: boolean;
             tenant: components["schemas"]["CurrentTenantSummaryDto"] | null;
+            /** @description Số chuyến đi thuê chưa khép của chính người dùng */
+            openRenterTripCount: number;
             /** @description Xem PlatformRole trong @xeprime/types */
             platformRole: string | null;
             permissions: string[];
@@ -11047,6 +11096,7 @@ export interface components {
         MySubscriptionDto: {
             currentPlan?: components["schemas"]["CurrentPlanDto"] | null;
             usage: components["schemas"]["VehicleSlotUsageDto"];
+            fleetQuota: components["schemas"]["FleetQuotaDto"];
             freeTrips: components["schemas"]["FreeTripsDto"];
         };
         NotificationDto: {
@@ -11185,10 +11235,10 @@ export interface components {
         };
         PaymentSettingsDto: {
             /**
-             * @description Tuyến thu phí hiện hành của gian hàng
-             * @enum {string}
+             * @description Tuyến thu phí hiện hành; null = chưa xác định được
+             * @enum {string|null}
              */
-            billingMode: "commission" | "package";
+            billingMode: "commission" | "package" | null;
             /** @description Chuyến mới của gian hàng này có thu cọc qua XePrime không */
             depositRequired: boolean;
             /** @description Giá trị công tắc đang lưu. Tuyến hoa hồng luôn true. */
@@ -11201,7 +11251,7 @@ export interface components {
              * @description Vì sao — client ánh xạ sang câu giải thích, KHÔNG hiện mã này ra màn hình
              * @enum {string}
              */
-            reason: "commission_mandatory" | "package_enabled" | "package_disabled" | "package_feature_missing";
+            reason: "commission_mandatory" | "package_enabled" | "package_disabled" | "package_feature_missing" | "billing_not_configured";
         };
         PhoneLoginDto: {
             /** @example 0901234567 */
@@ -12054,6 +12104,8 @@ export interface components {
             shopLogoUrl?: string | null;
             /** @description Tỉnh/thành gian hàng */
             shopProvince?: string | null;
+            /** @description Gian hàng tuyến gói — đeo dấu xác thực XePrime (hasVerifiedStorefront) */
+            shopVerified: boolean;
             /** @description Số chuyến đã hoàn thành của xe */
             completedTripCount: number;
             /** @description Mã tỉnh nơi xe đang đỗ (theo chi nhánh) — dùng để lọc/điều hướng */
@@ -12062,6 +12114,8 @@ export interface components {
             ratingAvg?: string | null;
             /** @description Số lượt đánh giá của xe */
             ratingCount: number;
+            /** @description Gian hàng mở hộp thư công khai (storefrontAllowsPublicChat) */
+            shopChatOpen: boolean;
             description?: string | null;
             color?: string | null;
             manufactureYear?: number | null;
@@ -12137,6 +12191,8 @@ export interface components {
             shopLogoUrl?: string | null;
             /** @description Tỉnh/thành gian hàng */
             shopProvince?: string | null;
+            /** @description Gian hàng tuyến gói — đeo dấu xác thực XePrime (hasVerifiedStorefront) */
+            shopVerified: boolean;
             /** @description Số chuyến đã hoàn thành của xe */
             completedTripCount: number;
             /** @description Mã tỉnh nơi xe đang đỗ (theo chi nhánh) — dùng để lọc/điều hướng */
@@ -12165,16 +12221,37 @@ export interface components {
             name: string;
             /** @description Slug gian hàng */
             slug: string;
+            /**
+             * @description Mặt tiền cần vẽ — suy từ tuyến thu tiền hiệu lực (resolveStorefrontKind)
+             * @enum {string}
+             */
+            storefrontKind: "personal" | "shop";
+            /** @description Đeo dấu xác thực XePrime — CHỈ gian hàng tuyến gói (hasVerifiedStorefront) */
+            verified: boolean;
             provinceName?: string | null;
             logoUrl?: string | null;
             coverUrl?: string | null;
             bio?: string | null;
             address?: string | null;
-            /** @description Số điện thoại liên hệ */
-            phone?: string | null;
+            /** @description Gian hàng mở hộp thư công khai (storefrontAllowsPublicChat) */
+            chatOpen: boolean;
+            /** @description Ngày mở gian hàng (ISO-8601 UTC) — "Tham gia từ …" */
+            joinedAt: string;
             /** @description Điểm đánh giá trung bình, string — ADR 0007 */
             ratingAvg: string;
             ratingCount: number;
+            /** @description Số xe ĐANG hiển thị công khai (cùng luật lọc với chợ) */
+            vehicleCount: number;
+            /** @description Số chuyến đã hoàn thành của toàn gian hàng */
+            completedTripCount: number;
+            /** @description Tỉ lệ phản hồi yêu cầu thuê (0–100). Null khi chưa đủ dữ liệu. */
+            responseRatePercent?: number | null;
+            /** @description Số chi nhánh đang hoạt động */
+            branchCount: number;
+            /** @description Tên các tỉnh/thành đang có xe công khai — theo số xe giảm dần */
+            serviceProvinceNames: string[];
+            /** @description Có ít nhất một xe công khai hỗ trợ giao tận nơi */
+            deliveryAvailable: boolean;
         };
         PublicShopPageDto: {
             data: components["schemas"]["PublicShopSummaryDto"][];
@@ -12987,6 +13064,24 @@ export interface components {
             inheritingVehicles: number;
             /** @description Số xe đã ghi đè chính sách riêng */
             overriddenVehicles: number;
+        };
+        ShopReviewDto: {
+            id: string;
+            rating: number;
+            comment?: string | null;
+            /** @description Tên khách (đã rút gọn) */
+            customerName: string;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+            /** @description Xe đã thuê — để mở trang chi tiết từ đánh giá */
+            vehicleId: string;
+            /** @description Tên xe đã thuê */
+            vehicleName: string;
+        };
+        ShopReviewPageDto: {
+            summary: components["schemas"]["ReviewSummaryDto"];
+            data: components["schemas"]["ShopReviewDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
         };
         SlotUsageDto: {
             /** @description Số xe chưa xoá (điểm chặn tạo xe) */
@@ -26433,8 +26528,8 @@ export interface operations {
     ConversationsController_list: {
         parameters: {
             query: {
-                /** @description customer = hộp thư khách · shop = inbox gian hàng */
-                side: "customer" | "shop";
+                /** @description customer = hộp thư khách · shop = inbox gian hàng · unified = cả hai */
+                side: "customer" | "shop" | "unified";
                 page?: number;
                 limit?: number;
                 /** @description Tìm theo tên phía bên kia hoặc tên xe */
@@ -26677,8 +26772,8 @@ export interface operations {
     ConversationsController_detail: {
         parameters: {
             query: {
-                /** @description customer = hộp thư khách · shop = inbox gian hàng */
-                side: "customer" | "shop";
+                /** @description customer = hộp thư khách · shop = inbox gian hàng · unified = cả hai */
+                side: "customer" | "shop" | "unified";
             };
             header?: never;
             path: {
@@ -27243,11 +27338,120 @@ export interface operations {
             };
         };
     };
+    ConversationsController_eligibility: {
+        parameters: {
+            query: {
+                /** @description Slug gian hàng đang xem */
+                shopSlug: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ChatEligibilityDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     ConversationsController_unreadCount: {
         parameters: {
             query: {
-                /** @description customer = hộp thư khách · shop = inbox gian hàng */
-                side: "customer" | "shop";
+                /** @description customer = hộp thư khách · shop = inbox gian hàng · unified = cả hai */
+                side: "customer" | "shop" | "unified";
             };
             header?: never;
             path?: never;
@@ -52815,6 +53019,115 @@ export interface operations {
             };
         };
     };
+    PublicShopReviewController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShopReviewPageDto"];
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     RbacController_myPermissions: {
         parameters: {
             query?: never;
@@ -54730,7 +55043,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `NO_TENANT_SCOPE`
              */
             403: {
                 headers: {
@@ -54740,8 +55053,8 @@ export interface operations {
                     /**
                      * @example {
                      *       "error": {
-                     *         "code": "MISSING_PERMISSION",
-                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *         "code": "NO_TENANT_SCOPE",
+                     *         "message": "Tài khoản không thuộc gian hàng nào"
                      *       }
                      *     }
                      */
@@ -54861,7 +55174,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `NO_TENANT_SCOPE`
              */
             403: {
                 headers: {
@@ -54871,8 +55184,8 @@ export interface operations {
                     /**
                      * @example {
                      *       "error": {
-                     *         "code": "MISSING_PERMISSION",
-                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *         "code": "NO_TENANT_SCOPE",
+                     *         "message": "Tài khoản không thuộc gian hàng nào"
                      *       }
                      *     }
                      */
@@ -55007,7 +55320,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `NO_TENANT_SCOPE`
              */
             403: {
                 headers: {
@@ -55017,8 +55330,8 @@ export interface operations {
                     /**
                      * @example {
                      *       "error": {
-                     *         "code": "MISSING_PERMISSION",
-                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *         "code": "NO_TENANT_SCOPE",
+                     *         "message": "Tài khoản không thuộc gian hàng nào"
                      *       }
                      *     }
                      */
@@ -55178,7 +55491,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `NO_TENANT_SCOPE`
              */
             403: {
                 headers: {
@@ -55188,8 +55501,8 @@ export interface operations {
                     /**
                      * @example {
                      *       "error": {
-                     *         "code": "MISSING_PERMISSION",
-                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *         "code": "NO_TENANT_SCOPE",
+                     *         "message": "Tài khoản không thuộc gian hàng nào"
                      *       }
                      *     }
                      */
@@ -55997,7 +56310,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `NO_TENANT_SCOPE`
              */
             403: {
                 headers: {
@@ -56007,8 +56320,8 @@ export interface operations {
                     /**
                      * @example {
                      *       "error": {
-                     *         "code": "MISSING_PERMISSION",
-                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *         "code": "NO_TENANT_SCOPE",
+                     *         "message": "Tài khoản không thuộc gian hàng nào"
                      *       }
                      *     }
                      */
@@ -56127,7 +56440,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `NO_TENANT_SCOPE`
              */
             403: {
                 headers: {
@@ -56137,8 +56450,8 @@ export interface operations {
                     /**
                      * @example {
                      *       "error": {
-                     *         "code": "MISSING_PERMISSION",
-                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *         "code": "NO_TENANT_SCOPE",
+                     *         "message": "Tài khoản không thuộc gian hàng nào"
                      *       }
                      *     }
                      */
@@ -56233,7 +56546,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `NO_TENANT_SCOPE`
              */
             403: {
                 headers: {
@@ -56243,8 +56556,8 @@ export interface operations {
                     /**
                      * @example {
                      *       "error": {
-                     *         "code": "MISSING_PERMISSION",
-                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *         "code": "NO_TENANT_SCOPE",
+                     *         "message": "Tài khoản không thuộc gian hàng nào"
                      *       }
                      *     }
                      */
@@ -56364,7 +56677,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `NO_TENANT_SCOPE`
              */
             403: {
                 headers: {
@@ -56374,8 +56687,8 @@ export interface operations {
                     /**
                      * @example {
                      *       "error": {
-                     *         "code": "MISSING_PERMISSION",
-                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *         "code": "NO_TENANT_SCOPE",
+                     *         "message": "Tài khoản không thuộc gian hàng nào"
                      *       }
                      *     }
                      */
@@ -56510,7 +56823,7 @@ export interface operations {
             /**
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
-             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             *     Mã lỗi: `NO_TENANT_SCOPE`
              */
             403: {
                 headers: {
@@ -56520,8 +56833,8 @@ export interface operations {
                     /**
                      * @example {
                      *       "error": {
-                     *         "code": "MISSING_PERMISSION",
-                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *         "code": "NO_TENANT_SCOPE",
+                     *         "message": "Tài khoản không thuộc gian hàng nào"
                      *       }
                      *     }
                      */
@@ -58623,6 +58936,8 @@ export interface operations {
         parameters: {
             query?: {
                 filter?: "current" | "history";
+                /** @description renter = tôi đi thuê · host = tôi cho thuê. Bỏ trống = cả hai. */
+                role?: "host" | "renter";
                 page?: number;
                 limit?: number;
             };

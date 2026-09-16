@@ -1,8 +1,10 @@
 'use client';
 
-import { CHAT_SIDE, type ChatSide } from '@xeprime/types';
+import { CHAT_INBOX, CHAT_SIDE, type ChatInbox, type ChatSide } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
 import { useBadges } from '@/features/badges/hooks/use-badges';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import { resolveChatInbox } from '../chat-inbox';
 
 export interface ChatBadge {
   /** Con số hiện trên biểu tượng — tổng CẢ HAI vai. */
@@ -10,10 +12,10 @@ export interface ChatBadge {
   /** Hộp thư nên mở khi bấm vào biểu tượng. */
   href: string;
   /**
-   * Vai của hộp thư `href` trỏ tới. Popup xem nhanh phải liệt kê ĐÚNG hộp thư mà biểu tượng sẽ
-   * mở — nếu không thì con số, danh sách và màn hình mở ra nói ba điều khác nhau.
+   * Hộp thư mà `href` trỏ tới. Popup xem nhanh phải liệt kê ĐÚNG hộp thư mà biểu tượng sẽ mở —
+   * nếu không thì con số, danh sách và màn hình mở ra nói ba điều khác nhau.
    */
-  side: ChatSide;
+  inbox: ChatInbox;
 }
 
 /**
@@ -32,6 +34,19 @@ export interface ChatBadge {
  */
 export function useChatBadge(surface: ChatSide): ChatBadge {
   const { chatCustomer, chatShop } = useBadges();
+  const { data: user } = useCurrentUser();
+  const inbox = resolveChatInbox(surface, user);
+
+  /*
+   * HỘP THƯ HỢP NHẤT — biểu tượng luôn mở `/chat`, và `/chat` đã chứa cả hai vế.
+   *
+   * Phép "nhảy sang bề mặt kia" ngay dưới sinh ra để con số và màn hình mở ra không nói hai điều
+   * khác nhau. Với người có hộp thư hợp nhất thì không còn bề mặt nào để nhảy sang — và một trong
+   * hai đích cũ (`/manage/chat`) là cánh cửa đóng với chính họ.
+   */
+  if (inbox === CHAT_INBOX.UNIFIED) {
+    return { count: chatCustomer + chatShop, href: ROUTES.CHAT, inbox };
+  }
 
   const here = surface === CHAT_SIDE.CUSTOMER ? chatCustomer : chatShop;
   const there = surface === CHAT_SIDE.CUSTOMER ? chatShop : chatCustomer;
@@ -44,6 +59,6 @@ export function useChatBadge(surface: ChatSide): ChatBadge {
   return {
     count: chatCustomer + chatShop,
     href: elsewhere ? away : stay,
-    side: elsewhere ? other : surface,
+    inbox: elsewhere ? other : surface,
   };
 }

@@ -1,8 +1,35 @@
 {
+  "badge": {
+    "personal": "Chủ xe cá nhân",
+    "shop": "Đối tác"
+  },
   "header": {
+    "coverAlt": "Ảnh bìa gian hàng {name}",
+    "logoAlt": "Ảnh đại diện {name}",
+    "verified": "Gian hàng đã được XePrime xác minh",
+    "rating": "{avg} ({count, plural, other {# đánh giá}})",
     "noRating": "Chưa có đánh giá",
-    "rating": "{avg} · {count, plural, other {# đánh giá}}",
-    "call": "Gọi {phone}"
+    "joinedPersonal": "Tham gia từ {date}",
+    "joinedShop": "Đối tác từ {date}",
+    "message": "Nhắn tin"
+  },
+  "highlights": {
+    "verified": "Đã xác minh doanh nghiệp",
+    "branches": "{count, plural, other {# chi nhánh}}",
+    "delivery": "Giao xe tận nơi"
+  },
+  "about": {
+    "titlePersonal": "Về tôi",
+    "titleShop": "Giới thiệu doanh nghiệp",
+    "address": "Địa chỉ: {address}"
+  },
+  "stats": {
+    "sectionLabel": "Số liệu gian hàng",
+    "vehicles": "Xe cho thuê",
+    "responseRate": "Phản hồi",
+    "responseRateValue": "{percent}%",
+    "completedTrips": "Chuyến hoàn thành",
+    "rating": "Đánh giá chung"
   },
   "vehicles": {
     "sectionLabel": "Xe của gian hàng",
@@ -10,5 +37,12 @@
     "titleWithCount": "Xe đang cho thuê ({count})",
     "loadError": "Không tải được danh sách xe",
     "empty": "Gian hàng chưa có xe công khai."
+  },
+  "reviews": {
+    "sectionLabel": "Đánh giá gian hàng",
+    "title": "Đánh giá từ khách hàng",
+    "titleWithCount": "Đánh giá từ khách hàng ({count})",
+    "empty": "Gian hàng chưa có đánh giá nào.",
+    "vehicle": "Thuê xe: {name}"
   }
 }

@@ -38,6 +38,7 @@ let vehicleId: string;
 let bookingCompleted1: string;
 let bookingCompleted2: string;
 let bookingReserved: string;
+let tenantSlug: string;
 
 const BASE = new Date('2026-09-01T02:00:00.000Z');
 const hours = (n: number) => new Date(BASE.getTime() + n * 3600_000);
@@ -99,11 +100,12 @@ beforeAll(async () => {
       { id: customerId, displayName: 'Nguyễn Văn An', email: `cus-${customerId}@xeprime.test` },
     ],
   });
+  tenantSlug = `test-${tenantId.toLowerCase().slice(-8)}`;
   await prisma.tenant.create({
     data: {
       id: tenantId,
       code: `TEST-${tenantId.slice(-8)}`,
-      slug: `test-${tenantId.toLowerCase().slice(-8)}`,
+      slug: tenantSlug,
       name: 'Shop test',
       status: TENANT_STATUS.ACTIVE,
       ownerUserId: ownerId,
@@ -217,6 +219,30 @@ describe('ReviewService — tạo đánh giá + recompute rating', () => {
     expect(res.data.length).toBe(2);
     // Tên khách bị rút gọn khi hiển thị công khai.
     expect(res.data[0]?.customerName).toBe('Nguyễn Văn A.');
+  });
+
+  maybe('list theo GIAN HÀNG gộp mọi xe, kèm tên xe đã thuê', async () => {
+    const res = await reviews.listForShop(tenantSlug, {});
+    expect(res.summary.ratingCount).toBe(2);
+    expect(res.summary.ratingAvg).toBe(4);
+    expect(res.data.length).toBe(2);
+    // Thẻ đánh giá trên trang gian hàng phải nói được "4 sao này là của xe nào".
+    expect(res.data.every((r) => r.vehicleId === vehicleId)).toBe(true);
+    expect(res.data[0]?.vehicleName).toBe('Xe demo');
+    // Cùng luật che tên với trang xe — một trang công khai không phơi tên đầy đủ người thuê.
+    expect(res.data[0]?.customerName).toBe('Nguyễn Văn A.');
+  });
+
+  /*
+   * Trang `/shops/[slug]` đã 404 từ `getShopBySlug` trước khi khối đánh giá kịp gọi, nên ở đây
+   * slug lạ phải cho ra một trang RỖNG — không phải một ngoại lệ làm hỏng cả trang vì một lý do
+   * mà trang đã xử lý xong.
+   */
+  maybe('list theo gian hàng với slug không tồn tại → rỗng, không ném', async () => {
+    const res = await reviews.listForShop('khong-ton-tai-xyz', {});
+    expect(res.meta.total).toBe(0);
+    expect(res.data).toHaveLength(0);
+    expect(res.summary.ratingCount).toBe(0);
   });
 
   /*

@@ -83,7 +83,7 @@ nhau giữa hai môi trường, do biến `APP_ENV` (§2.3):
 | **SMTP** (Zoho / Google Workspace / Amazon SES) | ⬜ | ✅ | staging bỏ trống: email in ra log |
 | **Cloudflare R2**: 2 bucket (public + private) | ⬜ | ✅ | staging bỏ trống: endpoint upload trả 503 |
 | Google/Facebook OAuth client | ⬜ | ⬜ | thiếu thì nút social trả `SOCIAL_NOT_CONFIGURED`; mật khẩu và OTP vẫn chạy |
-| Google Maps: **2 key RIÊNG** (server + embed) | ⬜ | ⬜ | thiếu thì phí giao dự kiến không hiện (ADR 0018) |
+| Geoapify: **2 key RIÊNG** (server + web) | ⬜ | ⬜ | thiếu thì phí giao dự kiến không hiện (ADR 0018/0037) |
 | Google Calendar API key | ⬜ | ⬜ | thiếu thì lịch không có lớp ngày lễ |
 
 ---
@@ -402,8 +402,19 @@ unset PLATFORM_ADMIN_PASSWORD
 
 #### Dữ liệu DEMO — chỉ trên staging
 
-`SEED_MODE=demo` dựng 5 gian hàng khác quy mô, 19 tài khoản, 54 xe, 107 đơn và 273 phiếu thu chi
-— đủ để test toàn bộ luồng nghiệp vụ mà không phải bấm tay.
+`SEED_MODE=demo` dựng **27 gian hàng**: 5 gian hàng DEMO khác quy mô (40 / 10 / 3 / 1 / 0 xe) đủ
+để test toàn bộ luồng nghiệp vụ mà không phải bấm tay, **2 gian hàng QA** cho ranh giới hai
+tuyến chủ xe — `qa.owner@xeprime.test` (hoa hồng, đúng 3 xe, làm việc ở `/account`) và
+`qa.shop@xeprime.test` (gói, đúng 10 xe với 8 + 2 chỗ đã mua, làm việc ở `/manage`) — và **20 chủ
+xe cá nhân tuyến hoa hồng** (`chuxe.*@xeprime.test`, mỗi người 1–3 xe, rải trên 15 tỉnh) để chợ xe
+có mật độ thật ngoài bốn thành phố lớn. Chi tiết và các phép kiểm hai tài khoản QA phục vụ:
+[`qa-accounts.md`](qa-accounts.md).
+
+Seed cũng **HỘI TỤ danh mục gói**: nó gỡ hai bậc phí-nền cũ (`standard` / `pro`) khỏi danh mục —
+xoá khi không còn thuê bao nào trỏ tới, archive kèm cảnh báo khi còn. Sau khi chạy, danh mục có
+đúng hai hàng: `free` (tuyến hoa hồng mặc định, không bán) và `per-vehicle` (gói gian hàng, bán
+theo kỳ 3 / 6 / 12 tháng). Vì vậy **mọi đợt deploy đổi danh mục gói phải chạy lại seed** — pipeline
+chỉ chạy `migrate`, và `plans` là dữ liệu do seed sở hữu, không do migration.
 
 Chốt an toàn chia làm HAI tầng, và biết ranh giới đó là biết vì sao lệnh dưới đây chạy được ở
 staging mà không chạy được ở production:
@@ -434,14 +445,14 @@ docker compose -p xeprime-staging -f docker-compose.prod.yml --profile tools \
 unset PW_ADMIN PW_DEMO
 ```
 
-> `DEMO_PASSWORD` bắt buộc vì mật khẩu mẫu nằm **công khai trong repo**: 19 tài khoản demo dùng
-> nó trên một máy có mặt trên Internet là 19 lối vào. Seed idempotent trên toàn bộ 63 bảng nên
+> `DEMO_PASSWORD` bắt buộc vì mật khẩu mẫu nằm **công khai trong repo**: 41 tài khoản demo dùng
+> nó trên một máy có mặt trên Internet là 41 lối vào. Seed idempotent trên toàn bộ 63 bảng nên
 > chạy lại nhiều lần không nhân đôi dữ liệu.
 >
 > ⚠️ **Đừng đưa dữ liệu khách hàng thật lên staging** — `APP_ENV=staging` khiến endpoint gửi OTP
 > trả kèm `devCode` (§2.3).
 
-> ❌ **Không bao giờ chạy `SEED_MODE=demo` trên production** — nó tạo 19 tài khoản và 5 gian hàng
+> ❌ **Không bao giờ chạy `SEED_MODE=demo` trên production** — nó tạo 41 tài khoản và 27 gian hàng
 > giả ngay trong database thật. `prisma/src/seed/context.ts` đã chặn sẵn (`NODE_ENV=production`
 > + `SEED_MODE=demo` ⇒ từ chối chạy), nhưng đừng đi tìm cách vòng qua nó.
 
@@ -690,7 +701,7 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `BACKUP_KEEP_DAYS` | `14` | |
 | `NEXT_PUBLIC_API_URL` | `https://api-stg.xeprime.vn` | |
 | `NEXT_PUBLIC_APP_NAME` | `XePrime STG` | nhãn khác giúp không nhầm tab |
-| `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY` · `NEXT_PUBLIC_FIREBASE_*` (4) | | nằm lộ thiên trong bundle JS ⇒ **không bao giờ** là Secret |
+| `NEXT_PUBLIC_GEOAPIFY_MAP_KEY` · `NEXT_PUBLIC_FIREBASE_*` (4) | | nằm lộ thiên trong bundle JS ⇒ **không bao giờ** là Secret |
 | `VPS_USER` · `VPS_PATH` · `VPS_SSH_PORT` | `xeprime` · `/opt/xeprime` · `22` | |
 
 **Secrets:**
@@ -707,7 +718,7 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `R2_ACCESS_KEY_ID` · `R2_SECRET_ACCESS_KEY` | trống ⇒ endpoint upload trả 503, phần còn lại vẫn chạy |
 | `FIREBASE_PRIVATE_KEY` | một dòng, xuống dòng viết `\n`. Đây là credential **lúc chạy** (ký custom token, ghi bản chiếu) — không dùng để đẩy rules |
 | `FIREBASE_DEPLOY_CREDENTIALS_JSON` | **Bắt buộc khi `FIRESTORE_ENABLED=true`.** Nguyên file JSON của một service account RIÊNG có quyền quản trị Firestore rules (`roles/firebaserules.admin`). Workflow dùng nó ở step "Đẩy Firestore rules" và **không bao giờ** ghi nó vào `.env` của môi trường. Tách khỏi credential runtime để một lần rò rỉ `.env` không kèm theo quyền sửa rules |
-| `GOOGLE_MAPS_SERVER_KEY` · `GOOGLE_HOLIDAY_API_KEY` | key **server** ⇒ Secret, khác hẳn key embed ở bảng trên |
+| `GEOAPIFY_API_KEY` · `GOOGLE_HOLIDAY_API_KEY` | key **server** ⇒ Secret, khác hẳn key web ở bảng trên |
 | `VPS_HOST` | IP VPS — Secret cho đỡ bị quét, không phải vì nó bí mật thật |
 | `VPS_SSH_KEY` | private key cặp khoá deploy (§3.2) |
 | `VPS_KNOWN_HOSTS` | `ssh-keyscan -H <ip>` |
@@ -769,6 +780,19 @@ trên máy khớp **chính xác** commit đã sinh ra image.
 
 ### 9.4b Bật cổng chặn năng lực theo gói (`PLAN_FEATURE_ENFORCEMENT`)
 
+> ⚠️ **Biến này CHỈ gác trục NĂNG LỰC (cờ tính năng trong gói), không gác ranh giới hai tuyến.**
+>
+> Ranh giới "tuyến hoa hồng không dùng bộ quản lý gian hàng" do `SubscriptionTrackGuard`
+> (`@SubscriptionTrackOnly()`) thi hành, và nó **chặn thật ngay, không đọc biến này**. Lý do:
+> `PLAN_FEATURE_ENFORCEMENT` là công tắc của một đợt ROLLOUT (hạ cấp năng lực dần, có đường lùi),
+> còn ranh giới hai tuyến là một quyết định SẢN PHẨM — để nó nằm sau một công tắc rollout nghĩa
+> là trên chính môi trường đang chạy thật, ranh giới đó không tồn tại.
+>
+> Lịch sử: trước 15/09/2026 cổng `/manage` chỉ là một nhánh render ở `AppShell.tsx`, và docblock
+> ở đó tin rằng backend đã chặn. Backend thì lại không có `billingMode` trong `req.tenant`, còn
+> `PlanFeatureGuard` chạy `warn` ở **mọi cấu hình được ship** — nên gọi thẳng API quản lý nâng
+> cao từ một tài khoản tuyến hoa hồng đi lọt trên staging và production.
+
 Biến này quyết định `PlanFeatureGuard` (ADR 0027) chặn thật hay chỉ ghi log. Ba giá trị:
 
 | Giá trị | Hành vi |
@@ -809,6 +833,23 @@ khoá, không ai biết nên revert cái gì — còn tách riêng thì rollback
 
 Rollback: đổi `PLAN_FEATURE_ENFORCEMENT` về `warn` ở GitHub Environment rồi chạy lại workflow —
 không revert commit nào.
+
+#### Khai biến TƯỜNG MINH ở cả hai môi trường
+
+`PLAN_FEATURE_ENFORCEMENT` hiện **chưa được khai** ở GitHub Environment, nên workflow rơi vào
+fallback `warn` (`deploy.yml`), trong khi `.env` của máy dev đặt `on`. Chênh lệch đó có nghĩa là
+**"đã test cục bộ" không nói được gì về hành vi sau deploy** — một thay đổi chạm trục năng lực sẽ
+chặn ở máy dev và im lặng cho qua trên staging.
+
+Việc cần làm, một lần, trước đợt bật `on`:
+
+| Môi trường | Giá trị khai | Vì sao |
+| --- | --- | --- |
+| `staging` | `on` | Staging phải hành xử giống nơi lỗi sẽ xuất hiện; để `warn` là giữ nguyên điểm mù |
+| `production` | `warn` | Giữ nguyên cho tới khi vượt hai điều kiện tiên quyết ở trên |
+
+Khai **cả hai** kể cả khi giá trị trùng fallback: một biến không khai trông giống hệt một biến bị
+xoá nhầm, và người vận hành không phân biệt được.
 
 ### 9.5 App native KHÔNG deploy lên VPS
 

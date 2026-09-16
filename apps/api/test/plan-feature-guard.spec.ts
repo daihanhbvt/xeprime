@@ -3,6 +3,8 @@ import { Reflector } from '@nestjs/core';
 import type { ConfigService } from '@nestjs/config';
 import {
   API_ERROR_CODE,
+  BILLING_MODE,
+  BILLING_PHASE,
   FEATURE_STATE,
   PLAN_FEATURE,
   PLAN_FEATURE_VALUES,
@@ -57,6 +59,9 @@ function tenantWith(state: FeatureState, feature: PlanFeature = PLAN_FEATURE.FIN
     usedFeatures: state === FEATURE_STATE.READ_ONLY ? [feature] : [],
     planCode: state === FEATURE_STATE.ENABLED ? 'standard' : null,
     planEndsAt: '2026-08-01T00:00:00.000Z',
+    billingMode: BILLING_MODE.PACKAGE,
+    billingPhase: BILLING_PHASE.CURRENT,
+    graceEndsAt: null,
   };
 }
 

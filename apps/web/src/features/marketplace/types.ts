@@ -15,4 +15,6 @@ export type {
   ReviewItem,
   ReviewPage,
   ReviewSummary,
+  ShopReviewItem,
+  ShopReviewPage,
 } from '@xeprime/types';

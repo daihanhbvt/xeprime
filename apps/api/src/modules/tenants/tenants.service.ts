@@ -17,6 +17,7 @@ import {
 import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
 import { BranchesService } from '../branches/branches.service';
+import { WalletService } from '../wallet/wallet.service';
 import { AddressService } from '../locations/address.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -56,6 +57,8 @@ export class TenantsService {
     private readonly address: AddressService,
     private readonly branches: BranchesService,
     private readonly billing: BillingService,
+    /** Writer duy nhất của ví (ADR 0023 ràng buộc 3) — dùng để đổi chủ ví lúc mở gian hàng. */
+    private readonly wallet: WalletService,
   ) {}
 
   /**
@@ -193,6 +196,19 @@ export class TenantsService {
        * bảng đó (ADR 0010).
        */
       await this.billing.assignDefaultPlanWithinTx(tx, id);
+
+      /*
+       * VÍ THEO NGƯỜI CHỦ (15/09/2026) — trong CHÍNH transaction này, cùng lý do với dòng gói ở
+       * trên: không được có khoảnh khắc nào tenant đã tồn tại mà ví còn đứng tên cá nhân.
+       *
+       * Người đăng ký thường đã là KHÁCH THUÊ trước đó, nên họ có thể đang có số dư từ tiền hoàn
+       * khoản giữ chỗ, có tài khoản ngân hàng đã khai, thậm chí một lệnh rút đang chờ admin
+       * chuyển. Tất cả đi theo — không chuyển tiền, chỉ đổi chủ của hàng ví (`wallets.id` không
+       * đổi nên lệnh rút và mọi tham chiếu vẫn trỏ đúng).
+       *
+       * Ghi qua `WalletService` vì nó là writer DUY NHẤT của ba bảng ví (ADR 0023 ràng buộc 3).
+       */
+      await this.wallet.adoptUserWalletWithinTx(tx, userId, id);
       return id;
     });
 

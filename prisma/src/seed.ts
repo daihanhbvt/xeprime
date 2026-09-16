@@ -4,7 +4,8 @@
  * Hai chế độ, tách bằng `SEED_MODE`:
  *   • `system` — chỉ dữ liệu NỀN (quyền, role hệ thống, danh mục thu/chi, gói dịch vụ, banner).
  *                Chạy được ở mọi môi trường, kể cả production.
- *   • `demo`   — mặc định: thêm 5 gian hàng, 15 tài khoản và toàn bộ dữ liệu vận hành mẫu.
+ *   • `demo`   — mặc định: 5 gian hàng DEMO (nhiều quy mô) + 2 gian hàng QA hai tuyến + 20 chủ
+ *                xe cá nhân tuyến hoa hồng, kèm tài khoản và dữ liệu vận hành mẫu.
  *
  * Idempotent: chạy nhiều lần không nhân bản. Mọi bản ghi có khoá tự nhiên thì `upsert` theo
  * khoá đó; phần còn lại dùng ID TẤT ĐỊNH suy từ khoá nghiệp vụ (`seedId`), nên chạy lại là cập
@@ -20,6 +21,7 @@ import {
   log,
   prisma,
 } from './seed/context';
+import { COMMISSION_OWNER_SPECS } from './seed/commission-owners';
 import { buildShop } from './seed/shop';
 import { SHOP_SPECS } from './seed/shops';
 import { seedVehicleCatalog } from './seed/catalog-sync';
@@ -137,6 +139,13 @@ async function main(): Promise<void> {
   log('\nĐăng nhập tại /login (mật khẩu: $PLATFORM_ADMIN_PASSWORD / $DEMO_PASSWORD):');
   log(`  nền tảng   : ${PLATFORM_ADMIN_EMAIL} · staff@ · reviewer@ · support@ · finance@xeprime.test`);
   log('  chủ shop   : owner.saigon@ · owner.hanoi@ · owner.danang@ · owner.cantho@ · owner.hue@xeprime.test');
+  log('  QA hai tuyến: qa.owner@xeprime.test (hoa hồng · 3 xe · /account) · qa.shop@xeprime.test (gói · 10 xe · /manage)');
+  log(
+    `  chủ xe cá nhân: ${COMMISSION_OWNER_SPECS.length} tài khoản tuyến hoa hồng — ` +
+      `${COMMISSION_OWNER_SPECS.slice(0, 3)
+        .map((s) => s.owner.email.replace('@xeprime.test', '@'))
+        .join(' · ')} … (chuxe.*@xeprime.test)`,
+  );
   log('  nhân viên  : manager.saigon@ · staff.saigon@ · ketoan.saigon@ · staff.hanoi@xeprime.test');
   log('  khách      : khach.an@ · khach.binh@ · khach.cuong@ · khach.dung@ · khach.duc@xeprime.test');
 }

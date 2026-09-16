@@ -142,6 +142,15 @@ export class PricingService {
      * hai con số bằng nhau.
      */
     const deposit = await this.depositPolicy.resolveForTenant(tenantId);
+    /*
+     * Chưa xác định được tuyến ⇒ KHÔNG dựng bảng phí.
+     *
+     * `null` ở đây đi cùng đường với "chưa có chính sách phí hiệu lực" ngay trên: giao diện hiện
+     * giá thuê mà không hiện dòng phí nào. Cái KHÔNG được làm là đoán `package` rồi trả về một
+     * bảng phí có `S = 0` — bảng đó trông hợp lệ, đóng băng được vào đơn, và không ai phát hiện
+     * ra cho tới lúc đối soát cuối tháng.
+     */
+    if (!deposit.billingMode) return null;
     return computeCustomerFees({
       billingMode: deposit.billingMode,
       policy,

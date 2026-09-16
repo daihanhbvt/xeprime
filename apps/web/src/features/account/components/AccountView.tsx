@@ -17,11 +17,13 @@ import { STATUS_COLOR } from '@xeprime/types';
 import { accountProfileSchema, type AccountProfileValues } from '@xeprime/validators';
 import { ImageUploadField } from '@/components/form/ImageUploadField';
 import { TextField } from '@/components/form/TextField';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { getErrorMessage } from '@/services/api-client';
 import { presignAvatar } from '@/services/upload';
 import { useMyProfile, useUpdateMyProfile } from '../hooks/use-account';
 import { CONTACT_CHANNEL, type ContactChannel, type UserProfile } from '../types';
 import { ContactVerifyModal } from './ContactVerifyModal';
+import { AccountTrackBadge } from './AccountTrackBadge';
 import { ShopEntryCard } from './ShopEntryCard';
 import styles from './AccountView.module.css';
 import { useTranslations } from 'next-intl';
@@ -69,6 +71,9 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
   const update = useUpdateMyProfile();
+  // `/auth/me` đã nằm sẵn trong cache (vỏ khu tài khoản gọi nó trước khi render) — đọc lại ở
+  // đây không thêm request nào, và nó là nguồn DUY NHẤT của tuyến (ADR 0038 điều 1).
+  const { data: user } = useCurrentUser();
   const [isEditing, setIsEditing] = useState(false);
   /** Kênh liên lạc đang được đổi — `null` là không có modal nào mở. */
   const [editingContact, setEditingContact] = useState<ContactChannel | null>(null);
@@ -145,6 +150,13 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
             </Avatar>
             <div className={styles.name}>{displayName || profile.displayName}</div>
             <div className={styles.accountLabel}>{t('profile.accountLabel')}</div>
+            {/*
+              Nhãn TUYẾN ngay dưới tên, không chôn trong trang gói: đây là câu trả lời cho
+              "tôi đang là ai trên sàn này", và nó quyết định menu của họ trông ra sao. Bắt người
+              dùng mở /account/subscription để biết mình thuộc tuyến nào là giấu câu trả lời sau
+              một màn nói về hoá đơn.
+            */}
+            <AccountTrackBadge tenant={user?.tenant ?? null} />
           </section>
 
           <dl className={styles.details}>

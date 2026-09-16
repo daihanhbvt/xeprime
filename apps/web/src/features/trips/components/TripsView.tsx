@@ -11,6 +11,8 @@ import {
   CUSTOMER_TRIP_STAGE_VALUES,
   PERMISSION,
   TRIP_ROLE,
+  isTripRole,
+  type TripRole,
   isCustomerTripFilter,
   type CustomerTripFilter,
   type CustomerTripStage,
@@ -33,6 +35,22 @@ import type { CustomerTrip } from '../types';
 import { TripCard } from './TripCard';
 import styles from './TripsView.module.css';
 
+export interface TripsViewProps {
+  /**
+   * KHOÁ vai — bỏ qua `?role=` trên URL và giấu bộ chọn vai.
+   *
+   * Lối chuyển tiếp trong Manage (`/manage/account/trips`) truyền `renter`: thành viên gian
+   * hàng tuyến gói chỉ còn lý do vào đây vì chuyến họ ĐI THUÊ chưa khép. Chuyến họ CHO THUÊ có
+   * nơi riêng là `/manage/bookings`, và trộn hai phía lại chính là thứ tách tuyến vừa gỡ bỏ.
+   *
+   * Đây là quyết định ĐIỀU HƯỚNG, không phải rào bảo mật: server vẫn nhận `role` như một chiều
+   * truy vấn và vẫn chỉ trả chuyến của chính người gọi (`scopeWhere`). Rào thật nằm ở chỗ khác.
+   */
+  lockedRole?: TripRole;
+  /** KHU chứa danh sách — mặc định `/trips`. Xem `TripCardProps.basePath`. */
+  basePath?: string;
+}
+
 /**
  * `Chuyến của tôi` — danh sách duy nhất cho khách.
  *
@@ -47,16 +65,31 @@ import styles from './TripsView.module.css';
  * giữ chỗ, sắp tới, đang thuê — do nhãn trên từng thẻ nói; dựng thêm tab cho mỗi chặng là bắt
  * khách mở bốn tab mới biết mình có bao nhiêu chuyến.
  *
- * **Một danh sách, HAI PHÍA** (08/09/2026). Chủ gian hàng thấy ở đây cả chuyến mình cho thuê lẫn
- * chuyến mình đi thuê — server trộn chúng trong CÙNG một truy vấn phân trang (ADR 0014: một con
- * người, nhiều vai), nên hai tab và hai con số vẫn đúng mà không có phép gộp nào ở client. Thẻ
- * tự nói mình thuộc phía nào, và chuyến cho thuê còn chờ trả lời mang thêm hai quyết định.
+ * **Một danh sách, HAI PHÍA** (08/09/2026). Chủ xe thấy ở đây cả chuyến mình cho thuê lẫn chuyến
+ * mình đi thuê — server trộn chúng trong CÙNG một truy vấn phân trang (ADR 0014: một con người,
+ * nhiều vai), nên hai tab và hai con số vẫn đúng mà không có phép gộp nào ở client. Thẻ tự nói
+ * mình thuộc phía nào, và chuyến cho thuê còn chờ trả lời mang thêm hai quyết định.
+ *
+ * ## Vì sao KHÔNG có hàng chọn vai (16/09/2026)
+ *
+ * Bản 15/09 thêm một `Segmented` "Tất cả · Tôi đi thuê · Tôi cho thuê" trên hai tab. Hai hàng
+ * điều khiển chồng nhau buộc người đọc phải hiểu cái nào lồng trong cái nào trước khi đọc được
+ * chuyến nào — trong khi mỗi thẻ đã mang sẵn nhãn vai của nó, và phần lớn chủ xe có vài chuyến
+ * chứ không phải vài trăm.
+ *
+ * Chiều VAI vẫn còn nguyên ở SERVER: `?role=` trên URL vẫn được tôn trọng (deep link, thông báo),
+ * và `lockedRole` khoá nó cho lối chuyển tiếp trong Manage. Bỏ phần giao diện không đụng tới phép
+ * lọc, nên số đếm trên tab và phân trang vẫn khớp với tập đang xem.
  *
  * Duyệt/từ chối đi qua `useBookingRequestDecisions` — CÙNG hook với hộp thư
  * `/manage/booking-requests`, nên quy tắc thuê dài hạn, hạn phản hồi và lỗi trùng lịch không thể
  * trôi khỏi nhau giữa hai màn.
+ *
+ * **Một vai, một khu** (15/09/2026). `lockedRole` + `basePath` cho phép cùng danh sách này đứng ở
+ * lối chuyển tiếp `/manage/account/trips` với đúng chuyến ĐI THUÊ. Hai prop luôn đi cùng nhau:
+ * khoá vai mà quên đổi khu thì mọi liên kết trong danh sách vẫn trỏ về `/trips`.
  */
-export function TripsView() {
+export function TripsView({ lockedRole, basePath = ROUTES.TRIPS }: TripsViewProps = {}) {
   const t = useTranslations('Trips');
   const dl = useDomainLabel();
   const errorMessage = useErrorMessage();
@@ -89,13 +122,41 @@ export function TripsView() {
    */
   const [stageFilter, setStageFilter] = useState<CustomerTripStage | undefined>(undefined);
 
-  const { data, isLoading, isError, error, refetch, isFetching } = useTrips(filter, page);
+  /*
+   * VAI — chiều thứ ba, và KHÁC HẲN `stageFilter` ngay trên.
+   *
+   * Trước 15/09/2026 màn này trộn hai việc vào một danh sách: chuyến tôi ĐI THUÊ nằm lẫn với
+   * yêu cầu khách gửi tới xe tôi CHO THUÊ, và số trên tab cộng gộp cả hai. Hai việc đó có nhịp
+   * khác nhau, nút bấm khác nhau, và người dùng đọc chúng ở hai tâm thế khác nhau.
+   *
+   * Vai đi lên URL (ADR 0004) và lên SERVER, không lọc ở client: nó là một chiều TRUY VẤN, nên
+   * lọc một trang kết quả sẽ cho ra những trang dài ngắn khác nhau và số đếm không khớp. Đây
+   * chính là điều `stageFilter` cố ý KHÔNG làm, vì nó chỉ thu hẹp tầm nhìn trong trang đang đọc.
+   */
+  const rawRole = params?.get('role');
+  /*
+   * `lockedRole` THẮNG tham số URL — không chỉ đặt giá trị mặc định.
+   *
+   * Nếu chỉ dùng làm mặc định thì `?role=host` trên chính URL đó lại mở ra tập chuyến cho thuê,
+   * và cả màn hình quay về đúng cái nó sinh ra để tránh. Bookmark cũ mang sẵn tham số ấy.
+   */
+  const role: TripRole | undefined =
+    lockedRole ?? (isTripRole(rawRole) ? rawRole : undefined);
 
+  const { data, isLoading, isError, error, refetch, isFetching } = useTrips(filter, page, role);
+
+  /**
+   * Ghi tab/trang lên URL.
+   *
+   * `role` KHÔNG phải tham số của hàm này (16/09/2026): màn hình không còn nút nào đổi vai. Nó
+   * vẫn SỐNG SÓT qua mọi lần đổi tab vì `search` dựng lại từ chính query hiện tại — một deep link
+   * `?role=host` giữ nguyên phạm vi của nó khi người dùng chuyển sang tab Lịch sử.
+   */
   function navigate(next: { filter?: CustomerTripFilter; page?: number }) {
     const search = new URLSearchParams(params?.toString() ?? '');
     const nextFilter = next.filter ?? filter;
     // Đổi tab luôn về trang 1: giữ `page=4` khi sang tab chỉ có 1 trang là một trang trống.
-    const nextPage = next.page ?? (next.filter ? 1 : page);
+    const nextPage = next.page ?? (next.filter !== undefined ? 1 : page);
 
     // Tab mặc định không cần tham số: `/trips` trần đã là `Chuyến hiện tại`.
     if (nextFilter === CUSTOMER_TRIP_FILTER_DEFAULT) search.delete('filter');
@@ -104,7 +165,7 @@ export function TripsView() {
     else search.set('page', String(nextPage));
 
     const qs = search.toString();
-    router.replace(qs ? `${ROUTES.TRIPS}?${qs}` : ROUTES.TRIPS, { scroll: false });
+    router.replace(qs ? `${basePath}?${qs}` : basePath, { scroll: false });
   }
 
   if (isError) {
@@ -155,7 +216,7 @@ export function TripsView() {
   /** Mở chi tiết một chuyến của CHỦ XE: có đơn thì vào đơn, chưa có thì vào hồ sơ chuyến. */
   function openHostDetail(trip: CustomerTrip) {
     if (trip.bookingId) setHostBookingId(trip.bookingId);
-    else router.push(tripPath.detail(trip.id));
+    else router.push(tripPath.detail(trip.id, basePath));
   }
 
   return (
@@ -227,19 +288,28 @@ export function TripsView() {
           title={
             filter === CUSTOMER_TRIP_FILTER.HISTORY
               ? t('list.emptyHistoryTitle')
-              : t('list.emptyCurrentTitle')
+              : lockedRole
+                ? t('list.emptyTransitionalTitle')
+                : t('list.emptyCurrentTitle')
           }
           description={
             filter === CUSTOMER_TRIP_FILTER.HISTORY
               ? t('list.emptyHistoryBody')
-              : t('list.emptyCurrentBody')
+              : lockedRole
+                ? t('list.emptyTransitionalBody')
+                : t('list.emptyCurrentBody')
           }
+          /*
+           * "Đi tìm xe" chỉ đúng với người ĐƯỢC đặt xe. Ở lối chuyển tiếp, người xem là thành
+           * viên gian hàng tuyến gói — họ không gửi được yêu cầu thuê (ADR 0038 điều 6), nên một
+           * nút mời họ tìm xe là lời mời tới đúng một thông báo từ chối.
+           */
           action={
             filter === CUSTOMER_TRIP_FILTER.HISTORY ? (
               <Button onClick={() => navigate({ filter: CUSTOMER_TRIP_FILTER.CURRENT })}>
                 {t('list.viewCurrent')}
               </Button>
-            ) : (
+            ) : lockedRole ? null : (
               <Button type="primary" onClick={() => router.push(ROUTES.SEARCH)}>
                 {t('list.findVehicle')}
               </Button>
@@ -256,6 +326,7 @@ export function TripsView() {
                 <TripCard
                   key={trip.id}
                   trip={trip}
+                  basePath={basePath}
                   onOpenDetail={isHost ? openHostDetail : undefined}
                   decisions={
                     isHost && canApprove

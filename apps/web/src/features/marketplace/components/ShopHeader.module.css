@@ -1,17 +1,27 @@
+/*
+ * Đầu trang gian hàng. Hai mặt tiền dùng chung bộ class; biến thể `*Shop` chỉ thêm những gì
+ * gian hàng tuyến gói có mà chủ xe cá nhân không có (ảnh bìa, vành vàng, thẻ đè lên bìa).
+ */
+
 .header {
-  max-width: var(--xp-container-max-width);
-  margin: 0 auto;
-  padding: 24px 20px 0;
+  background: var(--xp-color-bg-layout);
 }
 
-.coverWrap {
-  height: 200px;
-  border-radius: var(--xp-border-radius);
-  overflow: hidden;
-  background: var(--xp-color-bg-sand);
-}
+/* ——— Dải bìa (chỉ mặt tiền gian hàng) ——— */
 
+/*
+ * Tỉ lệ dải bìa theo design: rộng và thấp (~5.5:1 ở khổ container). `26vw` của bản trước cho ra
+ * hơn 330px trên màn 1900 — một khối tối chiếm gần nửa màn hình đầu tiên, và đó là lý do cả
+ * trang trông như bị đè.
+ */
 .cover {
+  position: relative;
+  height: clamp(170px, 17vw, 260px);
+  overflow: hidden;
+  background: var(--xp-hero-backdrop);
+}
+
+.coverImg {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -21,43 +31,132 @@
 .coverFallback {
   width: 100%;
   height: 100%;
-  background: linear-gradient(120deg, var(--xp-gold-wash), var(--xp-gold-soft));
+  background: var(--xp-hero-backdrop);
+}
+
+/*
+ * Lớp phủ tối dần từ đáy: chip trắng phải đọc được trên MỌI ảnh bìa mà chủ shop tải lên, kể cả
+ * một bức chụp ban ngày nền trắng. Không có nó thì độ tương phản của chữ phụ thuộc vào ảnh —
+ * tức là không bảo đảm được.
+ */
+.coverScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(20, 16, 8, 0.1) 0%,
+    rgba(20, 16, 8, 0) 35%,
+    rgba(20, 16, 8, 0.58) 100%
+  );
+}
+
+.highlights {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 auto;
+  padding: 0 20px 18px;
+  max-width: var(--xp-container-max-width);
+  list-style: none;
+}
+
+.highlight {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: var(--xp-border-radius-pill);
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #fff;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body);
+  backdrop-filter: blur(6px);
+}
+
+.highlight::before {
+  content: '✓';
+  margin-right: 6px;
+  font-weight: var(--xp-font-weight-bold);
+}
+
+/* ——— Thẻ danh tính ——— */
+
+.inner {
+  max-width: var(--xp-container-max-width);
+  margin: 0 auto;
+  padding: 20px 20px 0;
 }
 
 .identity {
   display: flex;
-  align-items: flex-end;
-  gap: 16px;
-  margin-top: -44px;
-  padding: 0 8px;
+  align-items: center;
+  gap: 20px;
+  padding: 18px 20px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
 }
 
-.logo {
+/*
+ * Thẻ danh tính của gian hàng nằm DƯỚI dải bìa, không đè lên.
+ *
+ * Bản trước kéo nó lên `-56px` để "khoá" vào bìa — và nuốt mất đúng hàng chip năng lực nằm ở
+ * mép dưới dải bìa, tức là xoá thông tin bằng CSS. Dải bìa và thẻ là hai khối kể hai chuyện
+ * khác nhau (họ trông ra sao / họ là ai), một khoảng thở giữa chúng đọc rõ hơn hẳn.
+ *
+ * Viền VÀNG là dấu hạng của tuyến gói — cùng một màu với dấu xác thực và vành logo bên trong,
+ * nên cả thẻ nói đúng một điều thay vì ba sắc độ rời rạc.
+ */
+.identityShop {
+  border-color: var(--xp-color-primary);
+  box-shadow: var(--xp-shadow-raised);
+}
+
+.avatar {
+  position: relative;
   flex: none;
-  width: 96px;
-  height: 96px;
+  width: 84px;
+  height: 84px;
   border-radius: 50%;
   overflow: hidden;
-  border: 3px solid var(--xp-color-bg-container);
-  background: var(--xp-color-bg-container);
-  box-shadow: var(--xp-shadow-sm);
+  background: var(--xp-gold-wash);
 }
 
-.logoImg {
+/*
+ * Vành vàng của gian hàng đã xác minh. `box-shadow` chứ không `border`: border ăn vào 84px làm
+ * ảnh bên trong co lại và lệch so với avatar của mặt tiền cá nhân ngay bên cạnh trên cùng một
+ * danh sách kết quả.
+ */
+.avatarShop {
+  width: 96px;
+  height: 96px;
+  box-shadow:
+    0 0 0 3px var(--xp-color-bg-container),
+    0 0 0 5px var(--xp-color-primary);
+}
+
+.avatarImg {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.logoFallback {
+.avatarFallback {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
-  font-size: 40px;
-  font-weight: 700;
+  font-family: var(--xp-font-family-display);
+  font-size: 38px;
+  font-weight: var(--xp-font-weight-bold);
   color: var(--xp-gold-deep);
   background: var(--xp-gold-wash);
 }
@@ -65,66 +164,136 @@
 .info {
   flex: 1 1 auto;
   min-width: 0;
-  padding-bottom: 4px;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
 }
 
 .name {
   margin: 0;
-  font-family: var(--font-playfair), serif;
-  font-size: 28px;
-  line-height: 1.2;
+  font-family: var(--xp-font-family-display);
+  font-size: var(--xp-font-size-h1);
+  line-height: var(--xp-line-height-h1);
   color: var(--xp-color-text);
+  /* Tên gian hàng là dữ liệu người dùng nhập — không có trần độ dài nào ép nó xuống dòng đẹp. */
+  overflow-wrap: anywhere;
   text-wrap: balance;
+}
+
+.verified {
+  flex: none;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-neutral-bg);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-medium);
+  white-space: nowrap;
+}
+
+.badgeShop {
+  background: var(--xp-gold-wash);
+  color: var(--xp-gold-deep);
 }
 
 .meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 16px;
-  margin-top: 6px;
+  align-items: center;
+  gap: 4px 16px;
+  margin-top: 8px;
   color: var(--xp-color-text-secondary);
-  font-size: 14px;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body-lg);
 }
 
 .metaItem {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pin {
+  flex: none;
+  color: var(--xp-color-primary);
 }
 
 .star {
-  color: var(--xp-gold-deep);
-}
-
-.contact {
-  flex: none;
-  align-self: center;
-  padding: 8px 16px;
-  border: 1px solid var(--xp-color-primary);
-  border-radius: var(--xp-border-radius-sm);
   color: var(--xp-color-primary);
-  font-weight: 600;
-  white-space: nowrap;
+  font-size: 15px;
+  line-height: 1;
 }
 
-.contact:hover {
-  background: var(--xp-color-bg-hover);
+.ratingText {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  font-variant-numeric: tabular-nums;
 }
 
-.bio,
-.address {
-  max-width: 760px;
-  margin: 12px 8px 0;
-  color: var(--xp-color-text-secondary);
-  line-height: 1.6;
+/*
+ * Gạch ngăn TRƯỚC mốc "Đối tác từ …": nó thuộc nhóm khác với địa bàn + đánh giá (một bên mô tả
+ * dịch vụ, một bên mô tả thâm niên). Thuần trang trí nên nó biến mất cùng lúc với việc các mục
+ * xuống dòng — một gạch dọc đứng đầu dòng thứ hai là rác thị giác.
+ */
+.metaDivider {
+  width: 1px;
+  height: 14px;
+  background: var(--xp-color-border-strong);
+}
+
+@media (max-width: 720px) {
+  .metaDivider {
+    display: none;
+  }
+}
+
+.actions {
+  flex: none;
+}
+
+/*
+ * Dưới 900px thẻ danh tính xếp dọc: ba khối (avatar · tên+meta · nút) cạnh nhau cần ~700px để
+ * không khối nào bị bóp, và tên gian hàng là khối bị bóp trước.
+ */
+@media (max-width: 900px) {
+  .identity {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .actions {
+    align-self: stretch;
+  }
 }
 
 @media (max-width: 640px) {
-  .identity {
-    flex-wrap: wrap;
+  .inner {
+    padding: 16px 16px 0;
   }
-  .contact {
-    align-self: stretch;
-    text-align: center;
+
+  .identity {
+    padding: 16px;
+  }
+
+  .name {
+    font-size: var(--xp-font-size-h2);
+    line-height: var(--xp-line-height-h2);
+  }
+
+  .highlights {
+    padding: 0 16px 14px;
+    gap: 8px;
   }
 }

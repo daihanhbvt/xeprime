@@ -109,7 +109,7 @@ export const envSchema = z
      * Vòng OAuth chạy hoàn toàn ở SERVER: client secret dưới đây không bao giờ rời tiến trình
      * này, và trình duyệt cũng không bao giờ cầm access token của provider.
      *
-     * Không provider nào là bắt buộc, kể cả ở production — cùng logic với `GOOGLE_MAPS_SERVER_KEY`:
+     * Không provider nào là bắt buộc, kể cả ở production — cùng logic với `GEOAPIFY_API_KEY`:
      * thiếu cấu hình thì nút Google/Facebook trả `SOCIAL_NOT_CONFIGURED`, còn ba đường đăng nhập
      * còn lại (mật khẩu, OTP, và đăng ký) không hề gãy. Nhưng có MỘT NỬA của một cặp thì fail
      * lúc boot: đó luôn là cấu hình gõ thiếu, không phải một lựa chọn.
@@ -195,17 +195,17 @@ export const envSchema = z
     R2_PRIVATE_BUCKET: z.string().optional(),
 
     /*
-     * --- Bản đồ: geocode địa chỉ + khoảng cách giao xe (24/08/2026) ---
+     * --- Bản đồ: geocode địa chỉ + khoảng cách giao xe (24/08/2026 · Geoapify từ ADR 0037) ---
      *
-     * Đây là **server key**, khoá theo IP trên Cloud Console và chỉ bật Geocoding API + Routes
-     * API. Nó KHÔNG phải key nhúng bản đồ của web (`NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY`, chỉ bật
-     * Maps Embed API, khoá theo referrer): key nhúng nằm lộ thiên trong HTML, nên dùng chung
-     * một key là mở hạn mức tính tiền cho bất kỳ ai xem trang.
+     * Đây là **key server** của Geoapify, khoá theo IP trong Geoapify Projects. Nó KHÔNG phải
+     * key vẽ bản đồ của web (`NEXT_PUBLIC_GEOAPIFY_MAP_KEY`, khoá theo HTTP referrer): key của
+     * web nằm lộ thiên trong bundle, nên dùng chung một key là mở hạn mức của mình cho bất kỳ
+     * ai xem trang.
      *
      * Optional có chủ đích, kể cả ở production: thiếu key thì phí giao dự kiến đơn giản không
      * hiện và hai bên tự thoả thuận như trước — không có gì gãy, nên không đáng chặn boot.
      */
-    GOOGLE_MAPS_SERVER_KEY: z.string().optional(),
+    GEOAPIFY_API_KEY: z.string().optional(),
 
     /*
      * --- Ngày lễ Việt Nam: đồng bộ từ Google Calendar (26/08/2026) ---
@@ -215,11 +215,11 @@ export const envSchema = z
      * `.env`: một biến không được khai báo là một biến không ai kiểm được chính tả, và người
      * gõ nhầm `GOOGLE_HOLIDAYS_API_KEY` sẽ không hiểu vì sao lịch mãi không có ngày lễ.
      *
-     * Key RIÊNG, KHÔNG dùng lại `GOOGLE_MAPS_SERVER_KEY` ở trên: khác API được bật trên Cloud
-     * Console (Calendar API vs Geocoding + Routes), khác hạn mức, và khác cả kiểu khoá — key
-     * bản đồ khoá theo IP của API server, còn key này gọi từ máy chạy worker.
+     * Key RIÊNG, KHÔNG dùng lại `GEOAPIFY_API_KEY` ở trên — và cũng không thể dùng lại: từ
+     * ADR 0037 bản đồ chạy trên Geoapify/OSM, còn lịch nghỉ lễ vẫn là Google Calendar API. Hai
+     * nhà cung cấp khác nhau, hai hạn mức khác nhau, hai chỗ khai báo khác nhau.
      *
-     * Optional kể cả ở production, cùng logic với `GOOGLE_MAPS_SERVER_KEY` và bộ `R2_*` phía
+     * Optional kể cả ở production, cùng logic với `GEOAPIFY_API_KEY` và bộ `R2_*` phía
      * hiển thị: thiếu key thì lịch xe đơn giản không có lớp ngày lễ. Không có gì gãy, nên không
      * đáng chặn boot — vì vậy KHÔNG có điều kiện nào cho chúng ở `superRefine` bên dưới.
      */

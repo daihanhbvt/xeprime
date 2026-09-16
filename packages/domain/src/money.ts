@@ -105,10 +105,25 @@ export interface CompactMoneyParts {
  *
  * Chỉ dùng khi bề rộng thật sự không chứa nổi con số đầy đủ — Figma `186:2417` là trường hợp
  * đó. Mọi chỗ còn lại dùng dạng đầy đủ vì rút gọn là **làm mất thông tin**.
+ *
+ * ## `fractionDigits` — vì sao một con số thôi là không đủ
+ *
+ * Bao nhiêu chữ số lẻ là ĐỦ phụ thuộc con số đó dùng để làm gì, và ở đây có đúng hai việc:
+ *
+ *  - **Trục biểu đồ, ô thống kê** (mặc định `1`): người đọc cần ĐỘ LỚN, không cần con số
+ *    chính xác — họ có bảng bên dưới cho việc đó. Thêm chữ số lẻ chỉ làm trục rối.
+ *  - **GIÁ khách phải trả** (`2`): đây là con số người ta quyết định mua bằng nó. Một chữ số
+ *    lẻ biến `1.050.000` thành `1tr` và `1.350.000` thành `1,3tr` — sai lần lượt 50.000 và
+ *    50.000 đồng, trên chính cái số mà khách so giữa hai chiếc xe. Hai chữ số lẻ cho bậc triệu
+ *    tức là làm tròn tới 10.000đ, mà giá thuê thực tế luôn là bội của 10.000đ ⇒ KHÔNG mất gì.
+ *
+ * Bậc nghìn không bị ảnh hưởng: `600.000` có phần nguyên `600` ≥ 100 nên vốn đã bỏ hết chữ
+ * số lẻ ở mọi mức — `600k` là chính xác tuyệt đối, không phải làm tròn.
  */
 export function compactMoneyParts(
   value: MoneyString,
   separators: MoneySeparators,
+  fractionDigits: 1 | 2 = 1,
 ): CompactMoneyParts | null {
   const cents = toCents(value);
   const negative = cents < 0n;
@@ -123,11 +138,19 @@ export function compactMoneyParts(
     { scale: 100_000n, unit: 'thousand' },
   ] as const;
 
+  // `10n ** 1n` / `10n ** 2n` — bậc chia lấy phần lẻ, vẫn nguyên bigint nên không có bước nào
+  // đi qua `number` (ADR 0007).
+  const fractionScale = 10n ** BigInt(fractionDigits);
+
   for (const { scale, unit } of UNITS) {
     if (absolute >= scale) {
       const whole = absolute / scale;
-      const tenth = (absolute % scale) / (scale / 10n);
-      const decimals = whole >= 100n || tenth === 0n ? '' : `${separators.decimal}${tenth}`;
+      const fraction = (absolute % scale) / (scale / fractionScale);
+      // Đệm 0 ĐẦU rồi cắt 0 ĐUÔI: `1.050.000` ở 2 chữ số cho `05` (phải giữ số 0 đầu, nếu
+      // không thành `1,5tr`), còn `1.300.000` cho `30` và phải rút thành `1,3tr`.
+      const padded = String(fraction).padStart(fractionDigits, '0').replace(/0+$/, '');
+      const decimals =
+        whole >= 100n || padded === '' ? '' : `${separators.decimal}${padded}`;
       return { value: `${sign}${whole}${decimals}`, unit };
     }
   }

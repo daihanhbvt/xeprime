@@ -104,6 +104,16 @@ export const DEPOSIT_POLICY_REASON = {
   PACKAGE_DISABLED: 'package_disabled',
   /** Tuyến gói: gói hiện hành không có `escrow_hold` — công tắc không bật được. */
   PACKAGE_FEATURE_MISSING: 'package_feature_missing',
+  /**
+   * KHÔNG xác định được tuyến (`BILLING_PHASE.UNCONFIGURED`) — danh mục gói rỗng, hoặc dòng
+   * thuê bao gần nhất thiếu `billing_mode`.
+   *
+   * Đây là LỖI CẤU HÌNH, không phải một lựa chọn kinh doanh, nên nó có lý do riêng thay vì bị
+   * gộp vào `package_disabled`. Gộp lại thì một danh mục gói hỏng trông y hệt một gian hàng cố
+   * ý tắt thu cọc — và hệ quả là cả sàn lặng lẽ ngừng thu cọc lẫn phí dịch vụ mà không ai thấy
+   * gì bất thường trên giao diện.
+   */
+  BILLING_NOT_CONFIGURED: 'billing_not_configured',
 } as const;
 
 export type DepositPolicyReason =

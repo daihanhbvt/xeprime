@@ -1,4 +1,5 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
+import { giveTenantPlan } from './helpers/billing-fixture';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
@@ -175,6 +176,16 @@ async function seedShop(label: string, commission: boolean) {
         endsAt: new Date(Date.now() + 365 * DAY),
       },
     });
+  } else {
+    /*
+     * KHÔNG để tenant nào không có gói (15/09/2026).
+     *
+     * `commission: false` ở đây nghĩa là "gian hàng tuyến GÓI", không phải "gian hàng không có
+     * gói" — trạng thái thứ hai không tồn tại trên production (`registerShop` gán gói mặc định
+     * trong cùng transaction, và migration backfill đã vá dữ liệu cũ). Từ khi đường duyệt yêu
+     * cầu từ chối đoán tuyến (`TENANT_BILLING_NOT_CONFIGURED`), fixture phải nói đúng sự thật đó.
+     */
+    await giveTenantPlan(prisma, tenant, { billingMode: BILLING_MODE.PACKAGE });
   }
   return { owner, tenant, vehicle };
 }

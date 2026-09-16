@@ -187,6 +187,35 @@ export const API_ERROR_CODE = {
    */
   PLAN_INCENTIVE_INVALID: 'PLAN_INCENTIVE_INVALID',
 
+  /**
+   * Danh mục gói đã có một bậc TUYẾN HOA HỒNG và không được phép có bậc thứ hai.
+   *
+   * Tuyến hoa hồng là một TUYẾN, không phải một dòng sản phẩm: mọi chủ xe cá nhân vào cửa bằng
+   * đúng một bậc, và `assignDefaultPlanWithinTx` / job vòng đời đều chọn "bậc commission có
+   * `sort_order` nhỏ nhất". Bậc thứ hai biến phép chọn đó thành một cuộc xổ số — hai chủ xe mở
+   * gian hàng cùng ngày có thể nhận hai % phí dịch vụ khác nhau mà không ai quyết định điều đó.
+   */
+  COMMISSION_PLAN_IS_SINGLETON: 'COMMISSION_PLAN_IS_SINGLETON',
+  /**
+   * Thao tác sẽ làm HỎNG bậc gói mặc định của tuyến hoa hồng (archive nó, hoặc đổi nó sang
+   * `package`).
+   *
+   * `details` mang `{ planCode, operation }`. Không phải `FORBIDDEN`: người gọi có thừa quyền,
+   * chính THAO TÁC mới là thứ bị cấm — gỡ bậc đó đi là gỡ luôn tuyến vào cửa của toàn sàn, và
+   * triệu chứng không hiện ra ở màn quản trị gói mà ở chỗ khác hẳn: mọi gian hàng mở sau đó
+   * không có tuyến thu phí.
+   */
+  DEFAULT_PLAN_PROTECTED: 'DEFAULT_PLAN_PROTECTED',
+  /**
+   * KHÔNG có bậc gói tuyến hoa hồng nào đang bán — không mở được gian hàng mới.
+   *
+   * Ném thay vì ghi log rồi tạo tenant không gói: một tenant không có dòng thuê bao nào là pha
+   * `unconfigured` (ADR 0038 điều 1), tức là mọi đường ghi tiền của họ bị từ chối về sau. Thất
+   * bại ngay lúc đăng ký nhìn thấy được và sửa được; thất bại lặng lẽ thì người dùng chỉ phát
+   * hiện khi khách đầu tiên bấm đặt xe.
+   */
+  DEFAULT_COMMISSION_PLAN_MISSING: 'DEFAULT_COMMISSION_PLAN_MISSING',
+
   // Năng lực theo gói (ADR 0027) — TRỤC THỨ HAI, độc lập với MISSING_PERMISSION.
   /**
    * Gian hàng KHÔNG có tính năng này trong gói hiện hành và cũng chưa từng dùng nó
@@ -413,6 +442,16 @@ export const API_ERROR_CODE = {
   CHAT_CUSTOMER_UNAVAILABLE: 'CHAT_CUSTOMER_UNAVAILABLE',
 
   /**
+   * Khách muốn nhắn cho một CHỦ XE CÁ NHÂN (tuyến hoa hồng) mà chưa từng gửi yêu cầu thuê nào
+   * cho họ. Kênh chat của tuyến hoa hồng mở SAU yêu cầu, không mở sẵn — xem
+   * `storefrontAllowsPublicChat`.
+   *
+   * 403 chứ không 404: gian hàng có thật và khách nhìn thấy nó, chỉ là chưa tới lúc mở kênh.
+   * FE dùng mã này để giải thích bước tiếp theo ("gửi yêu cầu thuê trước"), không hiện alert lỗi.
+   */
+  CHAT_REQUIRES_BOOKING: 'CHAT_REQUIRES_BOOKING',
+
+  /**
    * Chi nhánh còn ràng buộc nên chưa ngừng/đổi được: `details` liệt kê CHÍNH XÁC cái gì đang
    * giữ nó (số xe, số đơn đang chạy/sắp tới) để người dùng biết phải chuyển gì trước.
    */
@@ -448,8 +487,67 @@ export const API_ERROR_CODE = {
    * hàng, đó là toàn bộ điểm của ADR 0028 điều 1.
    */
   SHOP_VERIFICATION_REQUIRED: 'SHOP_VERIFICATION_REQUIRED',
+  /**
+   * Thao tác này chỉ dành cho CHỦ GIAN HÀNG — tiền của gian hàng (ví, sổ cái, lệnh rút, tài
+   * khoản ngân hàng nhận tiền).
+   *
+   * Trục RIÊNG, không phải permission: permission uỷ quyền được, còn ở đây yêu cầu là không có
+   * đường nào để quản lý/nhân viên/người xem chạm vào, kể cả khi được cấp nhầm một khoá.
+   * `details.roleKey` để giao diện nói đúng "bạn đang là quản lý" thay vì một câu 403 chung.
+   */
+  SHOP_OWNER_ONLY: 'SHOP_OWNER_ONLY',
+
+  /**
+   * Tài khoản thuộc gian hàng TUYẾN GÓI không gửi được yêu cầu thuê (15/09/2026).
+   *
+   * Áp cho MỌI thành viên hoạt động — chủ, quản lý, nhân viên, người xem. Chủ xe tuyến HOA HỒNG
+   * không nằm trong nhóm này: họ vẫn thuê xe như người dùng thường (ADR 0032 điều 1).
+   *
+   * `details.tenantName` để giao diện gọi đúng tên gian hàng họ đang đăng nhập, thay vì một câu
+   * 403 chung mà người dùng không biết mình đang là ai.
+   */
+  SHOP_ACCOUNT_CANNOT_BOOK: 'SHOP_ACCOUNT_CANNOT_BOOK',
+  /**
+   * Không đặt được xe của CHÍNH gian hàng mình.
+   *
+   * 409 chứ không 403: đây là xung đột giữa yêu cầu và trạng thái (người này ở cả hai phía của
+   * chuyến), không phải thiếu quyền. Chặn ở đây là chuyện KẾ TOÁN — hai vai trên một booking
+   * khiến phí dịch vụ thu từ chính người nhận tiền, và người duyệt là người gửi.
+   */
+  CANNOT_BOOK_OWN_VEHICLE: 'CANNOT_BOOK_OWN_VEHICLE',
+  /**
+   * Tự duyệt yêu cầu do chính mình gửi.
+   *
+   * Cổng THỨ HAI, độc lập với hai mã trên: dữ liệu cũ có thể đã chứa những yêu cầu tự đặt từ
+   * trước khi cổng đầu tồn tại, và chúng không được phép đi tiếp thành đơn.
+   */
+  CANNOT_DECIDE_OWN_REQUEST: 'CANNOT_DECIDE_OWN_REQUEST',
+
+  /**
+   * Tính năng thuộc bộ quản lý của gian hàng TUYẾN GÓI (ADR 0032 điều 6).
+   *
+   * Khác `FEATURE_NOT_IN_PLAN` (thiếu một cờ trong gói) và khác `FEATURE_READ_ONLY` (hạ bậc gói
+   * nhưng vẫn ở tuyến gói): mã này nói tenant KHÔNG Ở tuyến gói, nên cả bộ Manage không thuộc về
+   * họ. Lối đi tiếp cũng khác — mua gói, không phải nâng bậc.
+   *
+   * `details.billingPhase` phân biệt "chưa từng mua gói" với "đã hết hạn + hết ân hạn", hai câu
+   * rất khác nhau với người đọc.
+   */
+  SUBSCRIPTION_TRACK_ONLY: 'SUBSCRIPTION_TRACK_ONLY',
+
   /** Gian hàng đang bị khoá/chưa hoạt động nên xe không lên chợ được. */
   SHOP_NOT_ACTIVE: 'SHOP_NOT_ACTIVE',
+  /**
+   * Không xác định được TUYẾN thu phí của gian hàng (`BILLING_PHASE.UNCONFIGURED`) — danh mục
+   * gói rỗng, hoặc dòng thuê bao gần nhất thiếu `billing_mode`.
+   *
+   * Ném ở đường GHI TIỀN (duyệt yêu cầu, tạo hold) thay vì đoán một tuyến. Đoán ở đây tạo ra một
+   * đơn có giá đã thoả thuận với khách nhưng sai dòng tiền — và đơn đó bất biến sau khi tạo
+   * (ADR 0024), nên không có đường sửa nào ngoài can thiệp dữ liệu.
+   *
+   * `details.phase` để hỗ trợ biết phải sửa gì. Đây là lỗi VẬN HÀNH, không phải lỗi người dùng.
+   */
+  TENANT_BILLING_NOT_CONFIGURED: 'TENANT_BILLING_NOT_CONFIGURED',
   /**
    * Xe chưa đủ điều kiện lên chợ. `details.missing[]` mang khoá `PUBLISH_REQUIREMENT` —
    * MÃ, không phải câu tiếng Việt, nên giao diện chỉ đúng từng mục ở ngôn ngữ đang dùng

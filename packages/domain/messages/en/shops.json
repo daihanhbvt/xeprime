@@ -1,8 +1,35 @@
 {
+  "badge": {
+    "personal": "Individual host",
+    "shop": "Partner"
+  },
   "header": {
+    "coverAlt": "Cover photo of {name}",
+    "logoAlt": "Profile photo of {name}",
+    "verified": "Verified by XePrime",
+    "rating": "{avg} ({count, plural, one {# review} other {# reviews}})",
     "noRating": "No reviews yet",
-    "rating": "{avg} · {count, plural, one {# review} other {# reviews}}",
-    "call": "Call {phone}"
+    "joinedPersonal": "Joined {date}",
+    "joinedShop": "Partner since {date}",
+    "message": "Message"
+  },
+  "highlights": {
+    "verified": "Verified business",
+    "branches": "{count, plural, one {# branch} other {# branches}}",
+    "delivery": "Door-to-door delivery"
+  },
+  "about": {
+    "titlePersonal": "About me",
+    "titleShop": "About this business",
+    "address": "Address: {address}"
+  },
+  "stats": {
+    "sectionLabel": "Shop statistics",
+    "vehicles": "Vehicles listed",
+    "responseRate": "Response rate",
+    "responseRateValue": "{percent}%",
+    "completedTrips": "Completed trips",
+    "rating": "Overall rating"
   },
   "vehicles": {
     "sectionLabel": "Shop vehicles",
@@ -10,5 +37,12 @@
     "titleWithCount": "Vehicles for rent ({count})",
     "loadError": "Couldn't load the vehicle list",
     "empty": "This shop has no public vehicles yet."
+  },
+  "reviews": {
+    "sectionLabel": "Shop reviews",
+    "title": "Customer reviews",
+    "titleWithCount": "Customer reviews ({count})",
+    "empty": "This shop has no reviews yet.",
+    "vehicle": "Rented: {name}"
   }
 }

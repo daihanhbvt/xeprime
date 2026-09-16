@@ -3,9 +3,12 @@
 import { App, Alert, Radio, Skeleton } from 'antd';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { TENANT_ROLE } from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { BankAccountForm } from '@/features/bank-accounts/components/BankAccountForm';
 import { useBankAccounts } from '@/features/bank-accounts/hooks/use-bank-accounts';
+import type { BankAccountScope } from '@/features/bank-accounts/types';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useProvideRefundAccount } from '../hooks';
 import styles from './RefundAccountDialog.module.css';
@@ -19,6 +22,14 @@ import styles from './RefundAccountDialog.module.css';
  *
  * Có tài khoản đã lưu thì CHỌN, chưa có thì khai một lần rồi hệ thống nhớ: bắt khách gõ lại số
  * tài khoản ở mỗi lần hoàn là cách chắc chắn nhất để có một chữ số sai trong một lệnh chuyển.
+ *
+ * ## Sổ tài khoản nào (15/09/2026 — sửa lỗi tiền)
+ *
+ * `scope` đi theo CHỦ VÍ, không đóng đinh `account`. Chủ gian hàng có một ví duy nhất thuộc
+ * tenant (ADR 0038 điều 2) và sổ tài khoản ngân hàng nằm cùng chỗ với ví đó; đọc sổ `account`
+ * của họ sẽ ra danh sách rỗng dù họ đã khai số tài khoản từ lâu. Server chọn sổ bằng ĐÚNG luật
+ * này (`refundBankOwner`), nên hai phía không thể lệch nhau — lệch là một `404` giữa luồng khai
+ * đích cho một lệnh chuyển tiền.
  */
 export function RefundAccountDialog({
   tripId,
@@ -35,7 +46,10 @@ export function RefundAccountDialog({
   const { message } = App.useApp();
   const errorMessage = useErrorMessage();
 
-  const { data: accounts, isPending } = useBankAccounts('account');
+  const { data: user } = useCurrentUser();
+  const scope: BankAccountScope =
+    user?.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER ? 'shop' : 'account';
+  const { data: accounts, isPending } = useBankAccounts(scope);
   const provide = useProvideRefundAccount(tripId);
   const [selected, setSelected] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -98,7 +112,7 @@ export function RefundAccountDialog({
 
       {/* Khai xong thì chọn luôn tài khoản vừa thêm — không bắt người dùng tìm lại nó trong danh sách. */}
       <BankAccountForm
-        scope="account"
+        scope={scope}
         open={formOpen}
         onClose={() => setFormOpen(false)}
         onCreated={(account) => setSelected(account.id)}

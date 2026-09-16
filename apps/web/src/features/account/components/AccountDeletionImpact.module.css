@@ -1,0 +1,57 @@
+/* Khoảng cách do LAYOUT đặt (gap), không do margin của từng phần tử con. */
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+/**
+ * Lưới sự kiện: tự xuống một cột ở bề ngang hẹp. `auto-fit` + `minmax` thay cho media query —
+ * số ô thay đổi theo vai (thành viên thường chỉ có một ô), nên số cột không cố định được.
+ */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--xp-space-md);
+  margin: 0;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-layout);
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.label {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-caption);
+}
+
+.value {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-bold);
+  /* Tiền xếp cột phải thẳng hàng chữ số. */
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.items {
+  margin: 0;
+  padding-inline-start: var(--xp-space-lg);
+  color: var(--xp-color-text);
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.note {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+}

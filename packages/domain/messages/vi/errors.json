@@ -59,6 +59,7 @@
     "CUSTOMER_ARCHIVED": "Khách này đã được lưu trữ.",
     "CUSTOMER_BLOCKED": "Khách này đang trong danh sách từ chối phục vụ.",
     "CHAT_CUSTOMER_UNAVAILABLE": "Khách chưa có tài khoản XePrime nên chưa nhắn tin trong ứng dụng được — hãy gọi điện hoặc nhắn Zalo.",
+    "CHAT_REQUIRES_BOOKING": "Chủ xe cá nhân mở kênh nhắn tin sau khi bạn gửi yêu cầu thuê. Hãy chọn xe và gửi yêu cầu trước nhé.",
     "BRANCH_HAS_DEPENDENCIES": "Chi nhánh còn dữ liệu liên quan nên chưa xoá được.",
     "BRANCH_DEFAULT_IMMUTABLE": "Không sửa/xoá được chi nhánh mặc định.",
     "BRANCH_LOCATION_REQUIRED": "Chi nhánh cần có địa chỉ trước khi dùng.",
@@ -89,7 +90,11 @@
     "SHOP_VERIFICATION_PENDING": "Hồ sơ gian hàng đang chờ nền tảng xác minh.",
     "SHOP_VERIFICATION_REQUIRED": "Gian hàng phải được xác minh trước khi mua gói thuê bao.",
     "SHOP_NOT_ACTIVE": "Gian hàng đang bị khoá nên chưa thực hiện được thao tác này.",
-    "VEHICLE_PUBLISH_INCOMPLETE": "Xe còn thiếu thông tin bắt buộc nên chưa gửi duyệt được."
+    "TENANT_BILLING_NOT_CONFIGURED": "Gian hàng chưa có gói dịch vụ hiệu lực nên chưa xác định được cách tính phí. Liên hệ hỗ trợ XePrime trước khi nhận đơn mới.",
+    "VEHICLE_PUBLISH_INCOMPLETE": "Xe còn thiếu thông tin bắt buộc nên chưa gửi duyệt được.",
+    "SHOP_ACCOUNT_CANNOT_BOOK": "Bạn đang dùng tài khoản của gian hàng. Để thuê xe, hãy đăng nhập bằng một tài khoản khách thuê với số điện thoại khác.",
+    "CANNOT_BOOK_OWN_VEHICLE": "Đây là xe của chính gian hàng bạn nên không đặt thuê được.",
+    "CANNOT_DECIDE_OWN_REQUEST": "Bạn không thể tự duyệt hoặc tự từ chối yêu cầu do chính mình gửi."
   },
   "upload": {
     "imageType": "Chỉ nhận ảnh JPG, PNG hoặc WebP",

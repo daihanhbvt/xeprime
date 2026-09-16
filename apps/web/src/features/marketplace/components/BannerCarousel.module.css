@@ -4,21 +4,23 @@
  */
 /*
  * Khung dùng ASPECT-RATIO đúng tỉ lệ chuẩn của từng slot (banner-media.ts) thay vì chiều cao
- * cố định — ảnh đúng slot thì mọi bề rộng trong dải chỉ SCALE, không crop. max-height chặn
- * màn siêu rộng (>1920px thì bắt đầu crop nhẹ hai bên, chấp nhận).
+ * cố định — ảnh đúng slot thì mọi bề rộng chỉ SCALE, không crop.
+ *
+ * KHÔNG đặt max-height ở đây: khung có aspect-ratio mà bề rộng để auto thì max-height được
+ * CHUYỂN NGƯỢC qua tỉ lệ thành max-width (400px × 1440/300 = 1920px). Viewport rộng hơn 1920px
+ * (màn 2K trở lên, hoặc thu nhỏ zoom trình duyệt) làm banner co lại còn 1920px và chừa một
+ * mảng trắng bên phải. Hero chạy hết bề ngang, cao theo đúng tỉ lệ ảnh admin upload.
  */
 .carousel {
   position: relative;
   overflow: hidden;
   aspect-ratio: 1440 / 300;
-  max-height: 400px;
   background: var(--xp-hero-backdrop);
 }
 
 @media (max-width: 1024px) {
   .carousel {
     aspect-ratio: 1024 / 320;
-    max-height: none;
   }
 }
 

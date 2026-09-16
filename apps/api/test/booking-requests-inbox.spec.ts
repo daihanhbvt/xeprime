@@ -1,8 +1,10 @@
 import type { ConfigService } from '@nestjs/config';
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
+import { giveTenantPlan } from './helpers/billing-fixture';
 import {
   bookingRequestRespondBy,
   API_ERROR_CODE,
+  BILLING_MODE,
   BOOKING_REQUEST_STATUS,
   BRANCH_STATUS,
   MEMBERSHIP_STATUS,
@@ -142,6 +144,7 @@ beforeAll(async () => {
         ownerUserId: owner,
       },
     });
+    await giveTenantPlan(prisma, id, { billingMode: BILLING_MODE.PACKAGE });
     await prisma.tenantMembership.create({
       data: {
         id: newId(),

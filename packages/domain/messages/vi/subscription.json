@@ -16,6 +16,8 @@
     "renewButton": "Gia hạn / đổi gói"
   },
   "usage": {
+    "fleetTotal": "Tổng số xe",
+    "fleetTotalHint": "Chủ xe cá nhân đăng tối đa {limit} xe, tính cả ô tô và xe máy. Mua gói gian hàng để đăng thêm.",
     "title": "Chỗ xe đang dùng",
     "car": "Chỗ ô tô",
     "motorbike": "Chỗ xe máy",
@@ -52,6 +54,14 @@
     "copyCode": "Sao chép mã đối soát"
   },
   "purchase": {
+    "slotsTitle": "Số chỗ xe cần mua",
+    "termsTitle": "Chọn kỳ hạn cam kết",
+    "unitPriceCar": "{amount}/chỗ ô tô/tháng",
+    "unitPriceMotorbike": "{amount}/chỗ xe máy/tháng",
+    "termTotal": "{amount}",
+    "termPerMonth": "≈ {amount}/tháng",
+    "termDiscount": "Giảm {percent}%",
+    "pickTerm": "Chọn một kỳ hạn để xem tổng phải trả.",
     "title": "Mua / gia hạn gói",
     "planLabel": "Chọn gói",
     "planOption": "{name} — {price}/tháng",

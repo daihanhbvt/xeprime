@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { BillingModule } from '../billing/billing.module';
 import { BranchesModule } from '../branches/branches.module';
 import { LocationsModule } from '../locations/locations.module';
+import { WalletModule } from '../wallet/wallet.module';
 import { TenantsController } from './tenants.controller';
 import { TenantsService } from './tenants.service';
 
@@ -14,7 +15,7 @@ import { TenantsService } from './tenants.service';
  * đi qua service của chi nhánh chứ không tự `tx.tenantBranch.create()` ở đây.
  */
 @Module({
-  imports: [LocationsModule, BranchesModule, BillingModule],
+  imports: [LocationsModule, BranchesModule, BillingModule, WalletModule],
   controllers: [TenantsController],
   providers: [TenantsService],
 })

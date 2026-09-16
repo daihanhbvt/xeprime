@@ -60,8 +60,23 @@ không endpoint nào còn ném). `assumedMonthlyGmvJson` thành dữ liệu tham
 
 ## Hệ quả
 
-- Seed gói: thêm plan giá phẳng theo chỗ (kỳ hạn 3/6/12); `standard`/`pro` chuyển `archived`
-  (giữ hàng cho subscription cũ); gian hàng demo tuyến gói chuyển sang plan mới.
+- Seed gói: thêm plan giá phẳng theo chỗ (kỳ hạn 3/6/12); gian hàng demo tuyến gói chuyển sang
+  plan mới.
+- ~~`standard`/`pro` chuyển `archived` (giữ hàng cho subscription cũ)~~ — **sửa 15/09/2026**:
+  hai bậc đó bị **gỡ khỏi danh mục**, không chỉ archive. Lý do nằm ở màn quản trị: bốn hàng trong
+  đó hai hàng mang tên "(cũ)" buộc admin đọc TÊN để đoán hàng nào còn bán, và cột trạng thái
+  "Ngừng bán" bị đọc nhầm thành "thuê bao của gian hàng này đã bị huỷ".
+  `retireLegacyPlans()` trong seed XOÁ khi không còn thuê bao nào trỏ tới, ARCHIVE kèm cảnh báo
+  khi còn — không bao giờ xoá cứng một bậc còn thuê bao (`plan_id` là `ON DELETE RESTRICT`, và mã
+  gói đó đang nằm trên những hoá đơn đã phát hành). Danh mục sau đợt này có ĐÚNG hai hàng; xem
+  [ADR 0038 điều 13](0038-owner-track-split-and-unified-wallet.md).
+- `limits.terms` của bậc tuyến hoa hồng là **mảng rỗng** (15/09/2026): đó là danh sách kỳ hạn
+  ĐƯỢC BÁN, và tuyến đó không bán gì. Để nguyên bảng 1/3/6/12 kèm % giảm là bày một biểu giá cho
+  một thứ không có giá — và màn quản trị sẽ hiện nó như một SKU.
+- Ba kỳ hạn 3/6/12 là ba **lựa chọn mua**, không phải ba hàng `plans`: chúng cùng đơn giá chỗ,
+  cùng bộ cờ năng lực, cùng `graceDays` và 0% giảm, nên ba hàng khác nhau đúng một con số `months`
+  là ba chỗ để giá trôi khỏi nhau. Màn mua dựng ba thẻ từ `limits.terms`; `purchase()` vẫn là lớp
+  chặn thật.
 - Purchase (tenant tự mua) kiểm kỳ hạn theo `limits.terms`; admin gán tay vẫn linh hoạt (có audit).
 - Hoá đơn CHÀO gói khi hết lượt miễn phí (worker) phải dựng theo giá chỗ × đội xe hiện có và
   kỳ hạn nhỏ nhất được bán — bản cũ chỉ nhân phí nền × 1 tháng, ra hoá đơn 0đ vô nghĩa.

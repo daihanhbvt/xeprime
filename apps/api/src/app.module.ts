@@ -7,6 +7,8 @@ import { validateEnv } from './config/env.schema';
 import { AuthGuard } from './common/guards/auth.guard';
 import { PermissionGuard } from './common/guards/permission.guard';
 import { PlanFeatureGuard } from './common/guards/plan-feature.guard';
+import { ShopOwnerGuard } from './common/guards/shop-owner.guard';
+import { SubscriptionTrackGuard } from './common/guards/subscription-track.guard';
 import { TenantScopeGuard } from './common/guards/tenant-scope.guard';
 import { PlatformScopeGuard } from './common/guards/platform-scope.guard';
 import { FeatureUsageInterceptor } from './common/interceptors/feature-usage.interceptor';
@@ -162,6 +164,18 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
     { provide: APP_GUARD, useClass: TenantScopeGuard },
     { provide: APP_GUARD, useClass: PlatformScopeGuard },
     { provide: APP_GUARD, useClass: PermissionGuard },
+    /*
+     * ShopOwnerGuard đứng SAU PermissionGuard, cùng một lý do về THÔNG TIN: người không có quyền
+     * vào khu đó phải nhận MISSING_PERMISSION trước — "gian hàng này có bao nhiêu tiền" không
+     * phải thứ một người ngoài được biết là có tồn tại hay không.
+     */
+    { provide: APP_GUARD, useClass: ShopOwnerGuard },
+    /*
+     * Ranh giới HAI TUYẾN (ADR 0032 điều 6). Chặn THẬT ngay, không đi qua
+     * PLAN_FEATURE_ENFORCEMENT: công tắc đó gác đợt rollout hạ cấp NĂNG LỰC, còn đây là ranh
+     * giới sản phẩm giữa Owner Lite và bộ quản lý gian hàng.
+     */
+    { provide: APP_GUARD, useClass: SubscriptionTrackGuard },
     /*
      * PlanFeatureGuard đứng CUỐI, sau PermissionGuard — quyết định về THÔNG TIN, không phải về
      * hiệu năng: một shop_staff không có `finance.view` ở gian hàng chưa mua gói phải nhận

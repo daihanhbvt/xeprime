@@ -289,8 +289,9 @@ export function makeVehiclesService(
 }
 
 /**
- * `TenantsService` — dựng ở hai spec, và nó vừa mọc thêm dependency thứ năm (`BillingService`,
- * để `registerShop` gán gói mặc định — ADR 0015 điều 9). Đúng ca mà factory này sinh ra để giải.
+ * `TenantsService` — dựng ở hai spec, và nó vừa mọc thêm dependency thứ SÁU (`WalletService`, để
+ * `registerShop` đổi chủ ví sang tenant — ví hợp nhất 15/09/2026). Đúng ca mà factory này sinh
+ * ra để giải.
  */
 export function makeTenantsService(prisma: PrismaService): TenantsService {
   const audit = new AuditService(prisma);
@@ -300,6 +301,7 @@ export function makeTenantsService(prisma: PrismaService): TenantsService {
     makeAddressService(prisma),
     makeBranchesService(prisma),
     makeBillingService(prisma),
+    new WalletService(prisma),
   );
 }
 

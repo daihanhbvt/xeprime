@@ -17,9 +17,23 @@ import {
  * auth chứ không phụ thuộc việc user có tài khoản hay không.
  */
 const customer: AuthScope = { tenant: null, platformRole: null };
-const owner: AuthScope = { tenant: { id: 'T1' }, platformRole: null };
+/*
+ * ⚠️ Fixture phải khai TUYẾN tường minh (15/09/2026).
+ *
+ * Trước đây fixture này chỉ có `{ id: 'T1' }`, và nó đi vào `/manage` nhờ một tai nạn: hàm cũ
+ * `isCommissionTrack` đòi `roleKey === shop_owner`, nên với fixture thiếu `roleKey` nó trả
+ * `false` và `!false` cho qua. Luật mới hỏi đúng một chuyện — tenant có THUÊ BAO hiệu lực không —
+ * nên một fixture không khai `billingMode` là một gian hàng không có gói, và nó về `/account`.
+ */
+const owner: AuthScope = {
+  tenant: { id: 'T1', roleKey: TENANT_ROLE.SHOP_OWNER, billingMode: BILLING_MODE.PACKAGE },
+  platformRole: null,
+};
 const admin: AuthScope = { tenant: null, platformRole: 'platform_admin' };
-const adminWithShop: AuthScope = { tenant: { id: 'T1' }, platformRole: 'platform_admin' };
+const adminWithShop: AuthScope = {
+  tenant: { id: 'T1', roleKey: TENANT_ROLE.SHOP_OWNER, billingMode: BILLING_MODE.PACKAGE },
+  platformRole: 'platform_admin',
+};
 
 describe('resolveCustomerDestination', () => {
   it('không có next → KHÔNG điều hướng (ở lại marketplace), tuyệt đối không /manage', () => {
@@ -135,8 +149,7 @@ describe('resolveOwnerCtaHref', () => {
  * gõ URL hoặc một đường `?next=` cũ dẫn tới đó. Trước bản này `hasTenant → /manage` là toàn bộ
  * luật, nên mọi chủ xe mới đăng ký đều rơi vào cổng quản lý ngay sau khi đăng nhập.
  *
- * `owner` ở trên KHÔNG dính vào nhóm này có chủ đích: nó không có `roleKey`, tức là mô hình hoá
- * một NHÂN VIÊN gian hàng — họ vẫn dùng `/manage` bình thường.
+ * `owner` ở trên nay là một GIAN HÀNG TUYẾN GÓI khai tường minh — xem ghi chú ở chính fixture đó.
  */
 const commissionOwner: AuthScope = {
   tenant: {
@@ -187,17 +200,66 @@ describe('resolveWorkspaceHref — hai tuyến, hai khu', () => {
     expect(resolveWorkspaceHref(packageShop)).toBe(ROUTES.MANAGE.ROOT);
   });
 
-  it('nhân viên gian hàng (không phải chủ) → cổng quản lý, bất kể tuyến', () => {
-    expect(resolveWorkspaceHref(owner)).toBe(ROUTES.MANAGE.ROOT);
+  /*
+   * F7 (sửa 15/09/2026) — ĐÂY LÀ CHỖ LUẬT ĐỔI.
+   *
+   * Bản cũ: "nhân viên gian hàng → cổng quản lý, BẤT KỂ TUYẾN". Nó đúng theo nghĩa đen của hàm
+   * cũ, nhưng hàm cũ hỏi sai câu: `isCommissionTrack` đòi `roleKey === shop_owner`, nên với mọi
+   * vai khác nó trả `false` và `!false` mở cổng — kể cả ở gian hàng tuyến hoa hồng và gian hàng
+   * đã hết gói.
+   *
+   * Luật mới hỏi thuộc tính của TENANT, không hỏi vai: hết gói thì cả gian hàng ra khỏi Manage
+   * cùng lúc, không ai ở lại nhờ `roleKey` của mình.
+   */
+  it('nhân viên của gian hàng TUYẾN GÓI → cổng quản lý', () => {
+    const staffAtShop: AuthScope = {
+      tenant: { id: 'T4', roleKey: TENANT_ROLE.SHOP_STAFF, billingMode: BILLING_MODE.PACKAGE },
+      platformRole: null,
+    };
+    expect(resolveWorkspaceHref(staffAtShop)).toBe(ROUTES.MANAGE.ROOT);
+  });
+
+  it('nhân viên của gian hàng TUYẾN HOA HỒNG → khu tài khoản, KHÔNG vào Manage', () => {
+    for (const roleKey of [
+      TENANT_ROLE.SHOP_MANAGER,
+      TENANT_ROLE.SHOP_STAFF,
+      TENANT_ROLE.SHOP_VIEWER,
+    ]) {
+      const staff: AuthScope = {
+        tenant: { id: 'T2', roleKey, billingMode: BILLING_MODE.COMMISSION },
+        platformRole: null,
+      };
+      // Không phải chủ xe ⇒ không có Owner Lite; họ về khu tài khoản cá nhân.
+      expect(resolveWorkspaceHref(staff)).toBe(ROUTES.ACCOUNT.ROOT);
+    }
   });
 });
 
 describe('canUseManagePortal', () => {
-  it('chỉ tuyến gói và nhân viên mới vào được cổng quản lý', () => {
+  it('chỉ gian hàng có THUÊ BAO hiệu lực mới vào được cổng quản lý', () => {
     expect(canUseManagePortal(packageShop)).toBe(true);
     expect(canUseManagePortal(owner)).toBe(true);
     expect(canUseManagePortal(commissionOwner)).toBe(false);
     expect(canUseManagePortal(registeringOwner)).toBe(false);
+  });
+
+  /*
+   * Cả gian hàng ra cùng lúc khi hết gói — đây là điều bản cũ KHÔNG làm được, vì nhân viên đi
+   * qua một nhánh khác với chủ.
+   */
+  it('gian hàng hết gói: MỌI vai đều mất cổng quản lý', () => {
+    for (const roleKey of [
+      TENANT_ROLE.SHOP_OWNER,
+      TENANT_ROLE.SHOP_MANAGER,
+      TENANT_ROLE.SHOP_STAFF,
+      TENANT_ROLE.SHOP_VIEWER,
+    ]) {
+      const lapsed: AuthScope = {
+        tenant: { id: 'T9', roleKey, billingMode: BILLING_MODE.COMMISSION },
+        platformRole: null,
+      };
+      expect(canUseManagePortal(lapsed)).toBe(false);
+    }
   });
 });
 

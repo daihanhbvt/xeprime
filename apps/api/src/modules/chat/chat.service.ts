@@ -17,6 +17,7 @@ import {
 } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  CHAT_INBOX,
   CHAT_SIDE,
   CONVERSATION_STATUS,
   MEMBERSHIP_STATUS,
@@ -27,11 +28,19 @@ import {
   SENDER_TYPE,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
+  resolveEffectiveBilling,
+  resolveStorefrontKind,
+  storefrontAllowsPublicChat,
+  type ChatInbox,
   type ChatSide,
   type PaginationMeta,
   type SenderType,
 } from '@xeprime/types';
 import { chatNotificationCopy } from '@xeprime/domain';
+import {
+  EFFECTIVE_SUBSCRIPTION_ARGS,
+  effectiveSubscriptionWhere,
+} from '../../common/plan/feature-state';
 // CONVERSATION_STATUS.OPEN (misc.ts) — hội thoại mới mặc định "open".
 import { NotificationService } from '../notification/notification.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -94,20 +103,42 @@ export class ChatService {
   ) {}
 
   /**
-   * Khách mở/lấy hội thoại với SHOP sở hữu một xe.
+   * Khách mở/lấy hội thoại với một GIAN HÀNG — từ một chiếc xe, hoặc từ trang gian hàng.
    *
-   * Idempotent theo (khách, gian hàng): hỏi chiếc thứ hai của cùng salon vẫn rơi vào đúng thread
-   * cũ. Chiếc xe chỉ là ĐƯỜNG VÀO — nó xác định gian hàng, rồi trở thành ngữ cảnh của câu nhắn
-   * đầu tiên (client gửi kèm `vehicleId` ở `sendMessage`). Chỉ nhận xe đã `approved_public` thuộc
-   * shop `active` (như luồng Marketplace); `tenant_id` suy từ xe ở server, không nhận client.
+   * Idempotent theo (khách, gian hàng): hỏi chiếc thứ hai của cùng salon, hay bấm "Nhắn tin" ở
+   * trang gian hàng sau khi đã nhắn về một chiếc xe, đều rơi vào đúng thread cũ. Chiếc xe chỉ là
+   * ĐƯỜNG VÀO — nó xác định gian hàng, rồi trở thành ngữ cảnh của câu nhắn đầu tiên (client gửi
+   * kèm `vehicleId` ở `sendMessage`); vào từ trang gian hàng thì chưa có ngữ cảnh xe nào.
+   *
+   * Cả hai đường đều chỉ nhận gian hàng `active` chưa xoá, và `tenant_id` luôn suy ở server.
    */
   async getOrCreateConversation(
     userId: string,
     dto: CreateConversationDto,
   ): Promise<ConversationSummaryDto> {
+    const target = dto.vehicleId
+      ? await this.resolveTargetByVehicle(dto.vehicleId)
+      : await this.resolveTargetByShopSlug(dto.shopSlug ?? '');
+
+    await this.assertCustomerMayOpenChat(userId, target.tenantId);
+
+    return toSummary(
+      await this.getOrCreateFor({
+        tenantId: target.tenantId,
+        customerUserId: userId,
+        vehicleId: target.vehicleId,
+      }),
+      CHAT_SIDE.CUSTOMER,
+    );
+  }
+
+  /** Đường vào từ một chiếc xe: chỉ xe đã duyệt công khai của gian hàng đang hoạt động. */
+  private async resolveTargetByVehicle(
+    vehicleId: string,
+  ): Promise<{ tenantId: string; vehicleId: string | null }> {
     const vehicle = await this.prisma.vehicle.findFirst({
       where: {
-        id: dto.vehicleId,
+        id: vehicleId,
         deletedAt: null,
         publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
         tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
@@ -120,15 +151,109 @@ export class ChatService {
         message: 'Xe không khả dụng để nhắn tin',
       });
     }
+    return { tenantId: vehicle.tenantId, vehicleId: vehicle.id };
+  }
 
-    return toSummary(
-      await this.getOrCreateFor({
-        tenantId: vehicle.tenantId,
-        customerUserId: userId,
-        vehicleId: vehicle.id,
-      }),
-      CHAT_SIDE.CUSTOMER,
+  /**
+   * Đường vào từ trang gian hàng: `vehicleId` là `null` vì khách chưa nói về chiếc nào cả —
+   * cột đó là preview của "lần cuối bàn về xe nào", không phải danh tính hội thoại.
+   *
+   * Điều kiện gian hàng giống hệt đường kia (`active`, chưa xoá) chứ không lỏng hơn: nếu không,
+   * trang gian hàng trở thành đường vòng để nhắn cho một shop đang bị khoá.
+   */
+  private async resolveTargetByShopSlug(
+    slug: string,
+  ): Promise<{ tenantId: string; vehicleId: string | null }> {
+    const tenant = await this.prisma.tenant.findFirst({
+      where: { slug, status: TENANT_STATUS.ACTIVE, deletedAt: null },
+      select: { id: true },
+    });
+    if (!tenant) {
+      throw new NotFoundException({
+        code: API_ERROR_CODE.NOT_FOUND,
+        message: 'Gian hàng không khả dụng để nhắn tin',
+      });
+    }
+    return { tenantId: tenant.id, vehicleId: null };
+  }
+
+  /**
+   * "Khách này được nhắn cho gian hàng kia chưa" — MỘT phép suy, hai nơi dùng.
+   *
+   * `assertCustomerMayOpenChat` chặn ở đường ghi; `GET /conversations/eligibility` trả lời cho
+   * giao diện để nó quyết định có vẽ nút hay không. Hai câu trả lời BẮT BUỘC phải giống nhau:
+   * một cái nút hiện ra rồi bấm vào báo lỗi, hay một cái nút bị ẩn trong khi khách thừa quyền,
+   * đều là cùng một lỗi — hai bản sao của cùng một luật trôi khỏi nhau.
+   *
+   * Luật:
+   *
+   *  - Tuyến GÓI mở hộp thư công khai (`storefrontAllowsPublicChat`) — luôn được.
+   *  - Tuyến HOA HỒNG chỉ mở sau khi khách đã gửi ít nhất một yêu cầu thuê cho chủ xe đó.
+   *  - Tenant chưa xác định được tuyến (`unconfigured` — ADR 0038 điều 1) đi theo nhánh CHẶT:
+   *    mặc định "mở" khi không biết là mở một kênh thông báo đẩy tới điện thoại của một người
+   *    thật dựa trên phỏng đoán.
+   *
+   * ## "Đã đặt xe" = đã gửi YÊU CẦU, không phải đã có đơn
+   *
+   * Yêu cầu là mốc sớm nhất mà khách thể hiện ý định thật, và cũng chính là lúc họ cần hỏi chủ
+   * xe nhất ("giao tới đây được không?"). Đợi tới khi có `bookings` thì kênh mở sau khi mọi câu
+   * hỏi đã hết cần thiết. Mọi trạng thái yêu cầu đều tính — kể cả bị từ chối hay đã huỷ: hai bên
+   * vẫn có thể còn chuyện dở dang, và đóng hộp thư ngay sau một lời từ chối là cách chắc chắn để
+   * không ai giải thích được điều gì cho ai.
+   *
+   * Khách vãng lai gửi yêu cầu bằng OTP mà chưa đăng nhập sẽ không khớp `customerUserId`. Đó là
+   * đúng: hội thoại thuộc về một TÀI KHOẢN, và họ chưa có tài khoản để gắn vào.
+   */
+  async canCustomerOpenChat(userId: string, tenantId: string): Promise<boolean> {
+    const now = new Date();
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: {
+        subscriptions: {
+          where: effectiveSubscriptionWhere(now),
+          ...EFFECTIVE_SUBSCRIPTION_ARGS,
+        },
+      },
+    });
+    const kind = resolveStorefrontKind(
+      resolveEffectiveBilling(tenant?.subscriptions[0] ?? null, now).billingMode,
     );
+    if (storefrontAllowsPublicChat(kind)) return true;
+
+    const request = await this.prisma.bookingRequest.findFirst({
+      where: { tenantId, customerUserId: userId },
+      select: { id: true },
+    });
+    return request !== null;
+  }
+
+  /**
+   * Cổng ở đường GHI. Ẩn nút chỉ là trang trí — `POST /conversations` là một endpoint mở với
+   * mọi khách đã đăng nhập, và một hộp thư mở ra là một thông báo đẩy tới điện thoại người thật.
+   */
+  private async assertCustomerMayOpenChat(userId: string, tenantId: string): Promise<void> {
+    if (await this.canCustomerOpenChat(userId, tenantId)) return;
+
+    throw new ForbiddenException({
+      code: API_ERROR_CODE.CHAT_REQUIRES_BOOKING,
+      message: 'Hãy gửi yêu cầu thuê trước — chủ xe cá nhân mở kênh nhắn tin sau bước đó',
+    });
+  }
+
+  /**
+   * Trả lời cho GIAO DIỆN: khách đang đăng nhập có nhắn được cho gian hàng theo slug này không.
+   *
+   * Slug không tồn tại / gian hàng đã khoá ⇒ `false` chứ không 404: đây là một câu hỏi về NÚT
+   * BẤM, và một mã lỗi khác nhau giữa "shop không có" và "chưa được nhắn" là một kênh phụ để dò
+   * xem slug nào tồn tại.
+   */
+  async chatEligibilityForShop(userId: string, slug: string): Promise<boolean> {
+    const tenant = await this.prisma.tenant.findFirst({
+      where: { slug, status: TENANT_STATUS.ACTIVE, deletedAt: null },
+      select: { id: true },
+    });
+    if (!tenant) return false;
+    return this.canCustomerOpenChat(userId, tenant.id);
   }
 
   /**
@@ -243,17 +368,31 @@ export class ChatService {
   }
 
   /**
-   * Hộp thư của MỘT bề mặt. `side` là tham số bắt buộc, không phải bộ lọc trang trí: một tài
-   * khoản vừa thuê xe của shop khác vừa là nhân viên shop mình có hai hộp thư, và không có
-   * đường nào ở đây sinh ra danh sách trộn cả hai.
+   * Một HỘP THƯ, phân trang ở server.
+   *
+   * `side` là tham số bắt buộc và nhận ba giá trị (`CHAT_INBOX`): hộp thư khách, hộp thư gian
+   * hàng, hoặc HỢP NHẤT của đúng hai cái đó.
+   *
+   * ## Vì sao có hộp thư hợp nhất (16/09/2026)
+   *
+   * Chủ xe tuyến hoa hồng không có cổng `/manage` để đặt hộp thư công việc. Với họ, "tin nhắn" là
+   * MỘT khái niệm — khách hỏi xe của họ và chủ xe mà họ đang thuê nằm trong cùng một dòng thời
+   * gian. Bắt họ nhớ mình đang đứng ở hộp thư nào là bắt họ làm việc của hệ thống.
+   *
+   * Hợp nhất diễn ra ở SERVER, trong MỘT truy vấn (`chatInboxScope`), và đó là điều kiện để nó
+   * đúng: ghép hai trang kết quả ở client cho ra những trang dài ngắn khác nhau, một thứ tự thời
+   * gian sai ngay ở trang thứ hai, và một con số tổng không khớp thứ đếm được trên màn hình.
+   *
+   * Nó KHÔNG mở thêm phạm vi nào — xem `chatInboxScope`. Ai được THẤY hộp thư hợp nhất là quyết
+   * định của giao diện; ai được ĐỌC một hội thoại vẫn do `resolveAccess` quyết, không đổi.
    */
   async listConversations(
     userId: string,
     query: ConversationListQueryDto,
   ): Promise<{ data: ConversationSummaryDto[]; meta: PaginationMeta }> {
     const paging = resolvePaging(query, CONVERSATION_DEFAULT_LIMIT, CONVERSATION_MAX_LIMIT);
-    const side = query.side as ChatSide;
-    const where = await this.inboxWhere(userId, side, query);
+    const inbox = query.side as ChatInbox;
+    const where = await this.inboxWhere(userId, inbox, query);
 
     if (where === null) {
       return { data: [], meta: paginationMeta(paging, 0) };
@@ -271,7 +410,18 @@ export class ChatService {
     ]);
 
     return {
-      data: rows.map((c) => toSummary(c, side)),
+      /*
+       * VAI đọc theo TỪNG DÒNG, không lấy từ tham số truy vấn.
+       *
+       * Ở hộp thư hợp nhất, hai dòng cạnh nhau có thể thuộc hai vai khác nhau — và vai quyết định
+       * tên hiển thị của phía bên kia, ảnh đại diện, và cột đếm chưa đọc nào là của người xem.
+       * Lấy vai từ `?side=` sẽ làm một hội thoại khách hiện tên GIAN HÀNG CỦA CHÍNH MÌNH ở ô đối
+       * phương và đếm nhầm cột chưa đọc.
+       *
+       * Suy từ `customerUserId` là AN TOÀN vì hai vế của phạm vi rời nhau theo định nghĩa: vế gian
+       * hàng loại trừ chính những hội thoại mà người này là khách (`chatInboxScope`).
+       */
+      data: rows.map((c) => toSummary(c, sideOfRow(c, userId))),
       meta: paginationMeta(paging, total),
     };
   }
@@ -287,9 +437,18 @@ export class ChatService {
   async getConversation(
     userId: string,
     conversationId: string,
-    side: ChatSide,
+    inbox: ChatInbox,
   ): Promise<ConversationSummaryDto> {
-    await this.resolveAccess(userId, conversationId, side);
+    /*
+     * `unified` ⇒ KHÔNG ép vai: hộp thư hợp nhất chứa cả hai, nên một deep link `?c=` mở ở đó
+     * phải mở được hội thoại của bất kỳ vai nào mà người gọi có quyền. `resolveAccess` tự suy vai
+     * khi không được truyền `expected` — và vẫn ném 403 nếu họ không thuộc vai nào.
+     *
+     * Hai giá trị kia vẫn ÉP vai, giữ nguyên hành vi cũ: `?c=` của hộp thư khách dán vào
+     * `/manage/chat` không mở được, vì đó là hai màn với hai tập thông tin khác nhau.
+     */
+    const expected = inbox === CHAT_INBOX.UNIFIED ? undefined : (inbox as ChatSide);
+    const { side } = await this.resolveAccess(userId, conversationId, expected);
     const row = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
       select: CONVERSATION_SELECT,
@@ -503,7 +662,18 @@ export class ChatService {
    * Phép đếm nằm ở `@xeprime/prisma` chứ không ở đây: worker cần đúng nó để chiếu badge sang
    * Firestore, và hai bản sao của một phép đếm là hai con số sẽ lệch nhau.
    */
-  async unreadCount(userId: string, side: ChatSide): Promise<{ count: number }> {
+  async unreadCount(userId: string, inbox: ChatInbox): Promise<{ count: number }> {
+    /*
+     * Hợp nhất KHÔNG gộp được vào một phép `aggregate`: hai vế đếm hai CỘT khác nhau
+     * (`unread_customer_count` ↔ `unread_tenant_count`), nên một câu `SUM` không chọn được cột
+     * theo từng dòng. Cộng hai phép đếm là đúng vì hai vế rời nhau — xem `chatInboxScope`.
+     */
+    if (inbox === CHAT_INBOX.UNIFIED) {
+      const chat = await computeChatUnread(this.prisma, userId);
+      return { count: chat.customer + chat.shop };
+    }
+
+    const side = inbox as ChatSide;
     const tenantIds =
       side === CHAT_SIDE.SHOP ? await activeTenantIdsOf(this.prisma, userId) : [];
     return { count: await chatUnreadOf(this.prisma, userId, side, tenantIds) };
@@ -540,31 +710,67 @@ export class ChatService {
    */
   private async inboxWhere(
     userId: string,
-    side: ChatSide,
+    inbox: ChatInbox,
     filters: { q?: string; unreadOnly?: boolean },
   ): Promise<Prisma.ConversationWhereInput | null> {
     const q = filters.q?.trim();
     const search = q ? { contains: q, mode: Prisma.QueryMode.insensitive } : undefined;
-    const isCustomer = side === CHAT_SIDE.CUSTOMER;
+    const hasCustomerHalf = inbox !== CHAT_INBOX.SHOP;
+    const hasShopHalf = inbox !== CHAT_INBOX.CUSTOMER;
 
-    const tenantIds = isCustomer ? [] : await activeTenantIdsOf(this.prisma, userId);
-    if (!isCustomer && tenantIds.length === 0) return null;
+    const tenantIds = hasShopHalf ? await activeTenantIdsOf(this.prisma, userId) : [];
+    /*
+     * Không thuộc gian hàng nào:
+     *  - hộp thư gian hàng ⇒ `null`, nơi gọi trả danh sách rỗng thay vì dựng một `IN ()`;
+     *  - hộp thư HỢP NHẤT ⇒ vẫn còn vế khách. Trả `null` ở đây sẽ giấu mất hộp thư của chính họ
+     *    vì một lý do không liên quan (chưa mở gian hàng).
+     */
+    if (inbox === CHAT_INBOX.SHOP && tenantIds.length === 0) return null;
+    const scopeInbox = tenantIds.length === 0 ? CHAT_INBOX.CUSTOMER : inbox;
 
-    const where: Prisma.ConversationWhereInput = chatInboxScope(side, userId, tenantIds);
+    /*
+     * Mệnh đề gom bằng `AND`, KHÔNG bằng `Object.assign` + gán thẳng `where.OR` như bản trước.
+     *
+     * Phạm vi của hộp thư hợp nhất ĐÃ là một `OR`, nên gán `where.OR` cho tìm kiếm sẽ ghi đè
+     * chính phạm vi đó — kết quả là một truy vấn không còn ràng buộc quyền sở hữu nào. Đó không
+     * phải lỗi giao diện; đó là hộp thư của người khác hiện ra trong ô tìm kiếm của mình.
+     */
+    const and: Prisma.ConversationWhereInput[] = [
+      chatInboxScope(scopeInbox, userId, tenantIds),
+    ];
 
     if (filters.unreadOnly) {
-      Object.assign(
-        where,
-        isCustomer ? { unreadCustomerCount: { gt: 0 } } : { unreadTenantCount: { gt: 0 } },
-      );
-    }
-    if (search) {
-      where.OR = isCustomer
-        ? [{ tenant: { name: search } }, { vehicle: { name: search } }]
-        : [{ customer: { displayName: search } }, { vehicle: { name: search } }];
+      /*
+       * "Chưa đọc" đọc CỘT khác nhau theo vai, nên ở hộp thư hợp nhất nó phải đi kèm vai của chính
+       * dòng đó — một `unreadTenantCount > 0` áp lên hội thoại mình là khách sẽ lọc theo số chưa
+       * đọc CỦA GIAN HÀNG KIA.
+       */
+      const unreadHalves: Prisma.ConversationWhereInput[] = [];
+      if (hasCustomerHalf) {
+        unreadHalves.push({ customerUserId: userId, unreadCustomerCount: { gt: 0 } });
+      }
+      if (hasShopHalf && tenantIds.length > 0) {
+        unreadHalves.push({
+          NOT: { customerUserId: userId },
+          unreadTenantCount: { gt: 0 },
+        });
+      }
+      and.push(unreadHalves.length === 1 ? unreadHalves[0]! : { OR: unreadHalves });
     }
 
-    return where;
+    if (search) {
+      /*
+       * Cùng một từ khoá tìm trong TÊN PHÍA BÊN KIA — và phía bên kia là ai thì tuỳ vai. Ở hộp thư
+       * hợp nhất, cả hai cách hiểu đều hợp lệ, nên gộp cả hai: gõ tên một gian hàng ra hội thoại
+       * mình là khách, gõ tên một khách ra hội thoại mình là chủ. Tên xe đúng với cả hai vai.
+       */
+      const nameSearch: Prisma.ConversationWhereInput[] = [{ vehicle: { name: search } }];
+      if (hasCustomerHalf) nameSearch.push({ tenant: { name: search } });
+      if (hasShopHalf) nameSearch.push({ customer: { displayName: search } });
+      and.push({ OR: nameSearch });
+    }
+
+    return and.length === 1 ? and[0]! : { AND: and };
   }
 
   /**
@@ -791,6 +997,17 @@ function beforeCursor(query: MessageListQueryDto): Prisma.MessageWhereInput {
   return {
     OR: [{ sentAt: { lt: before } }, { sentAt: before, id: { lt: query.beforeId } }],
   };
+}
+
+/**
+ * VAI của người xem trong MỘT hội thoại.
+ *
+ * Suy từ dữ liệu của chính dòng đó, không từ tham số truy vấn — xem docblock ở `listConversations`.
+ * An toàn vì hai vế của `chatInboxScope` rời nhau: một hội thoại mà người này là khách không bao
+ * giờ nằm trong vế gian hàng, kể cả khi họ là chủ chính gian hàng đó.
+ */
+function sideOfRow(c: { customerUserId: string | null }, userId: string): ChatSide {
+  return c.customerUserId === userId ? CHAT_SIDE.CUSTOMER : CHAT_SIDE.SHOP;
 }
 
 function toSummary(c: ConversationRow, side: ChatSide): ConversationSummaryDto {

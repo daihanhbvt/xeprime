@@ -6,6 +6,7 @@ import {
   CurrentUser,
   RequirePermissions,
   RequiresFeature,
+  SubscriptionTrackOnly,
   TenantScoped,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
@@ -42,6 +43,7 @@ import {
 @ApiTags('branches')
 @Controller('branches')
 @TenantScoped()
+@SubscriptionTrackOnly()
 export class BranchesController {
   constructor(private readonly branches: BranchesService) {}
 

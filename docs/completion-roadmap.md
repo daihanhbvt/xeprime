@@ -1,6 +1,6 @@
 # XePrime — Completion Roadmap
 
-> Cập nhật: 14/09/2026
+> Cập nhật: 15/09/2026
 > Trạng thái: **Canonical — tiến độ và thứ tự thực hiện**
 > Tầm nhìn: [`design/02_PRODUCT_VISION.md`](design/02_PRODUCT_VISION.md)
 > Khoảng trống chi tiết: [`design/03_PRODUCT_GAP_ANALYSIS.md`](design/03_PRODUCT_GAP_ANALYSIS.md)
@@ -23,7 +23,7 @@ Trạng thái dưới đây phân biệt rõ **đã có trong source/feature bra
 | Slot subscription W1–W3 | Đã có trong code                             | Gói/slot, subscription UI/invoice, feature guard                                                                                                                         |
 | SePay subscription W4   | **Đã merge vào `develop`**; chưa vượt Gate R2 | Có VietQR, webhook, bank matching, xử lý thiếu/thừa/trùng và admin match tay; còn cần cấu hình môi trường thật và UAT gate                                              |
 | Marketplace money       | **Đủ mã, chưa vượt gate nào**                 | Mọi mảnh của luồng tiền ADR 0032/0033 đã có mã + test trên máy dev (chi tiết và bằng chứng ở R3). CHƯA CÓ: một lần chạy trên staging, đối tác bảo hiểm thật, ý kiến thuế, ý kiến pháp lý thu hộ. Bảo hiểm và thuế đang BẬT bằng **số tham khảo thị trường** theo chỉ đạo 14/09 — xem mục 5 quyết định 4 và 5 |
-| Basic-owner experience  | Chưa tách hoàn chỉnh                         | Capability có nền móng; cần Owner Lite UX và luồng tiền                                                                                                                  |
+| Basic-owner experience  | **Đã tách ở code (ADR 0038); chưa vượt gate** | Ranh giới hai tuyến chặn ở server, ví hợp nhất một tenant, cổng chặn đặt xe của tài khoản gian hàng, `/trips` tách vai. CHƯA CÓ: một lần chạy migration ví trên staging và smoke test bốn nhóm người dùng |
 | Mobile customer         | Một phần                                     | Auth + discovery + gửi yêu cầu thuê + chuyến của tôi + đánh giá + chat và thông báo in-app (COM-01→04) + thông báo đẩy (COM-07) — tất cả 10/09. Push đủ hai đầu nhưng **chưa thử trên máy thật** (thiếu credential Firebase + khoá APNs). Thiếu payment |
 | Mobile manage           | Một phần                                     | Hộp thư yêu cầu, đơn thuê, biên bản giao/nhận, quyết toán, thu tiền — xem ghi chú ở R6                                                                                   |
 | Production readiness    | Chưa đạt                                     | Chưa có đủ E2E, monitoring, legal/compliance gate và bằng chứng vận hành thật                                                                                            |

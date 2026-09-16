@@ -46,5 +46,7 @@
   "viewAll": "View all messages",
   "viewListing": "View listing",
   "welcomeTitle": "Welcome to XePrime Messages",
-  "yesterday": "Yesterday"
+  "yesterday": "Yesterday",
+  "roleAsHost": "I host",
+  "roleAsRenter": "I rent"
 }

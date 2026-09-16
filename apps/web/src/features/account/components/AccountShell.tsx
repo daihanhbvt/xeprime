@@ -1,9 +1,9 @@
 'use client';
 
 import { Alert, Button, Spin } from 'antd';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 
 import { ROUTES, isAccountVehicleManagePath } from '@/constants/routes';
 import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
@@ -11,6 +11,8 @@ import { AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { isUnauthenticated } from '@/services/api-client';
+
+import { shopAccountRedirect } from '../shop-account-gate';
 
 import { AccountSidebar } from './AccountSidebar';
 import styles from './AccountShell.module.css';
@@ -85,6 +87,20 @@ export function AccountShell({ children }: { children: ReactNode }) {
     );
   }
 
+  /*
+   * CỔNG URL của khu khách (15/09/2026) — không phải chuyện ẩn menu.
+   *
+   * Thành viên gian hàng tuyến gói gõ thẳng `/account/change-password`, `/account/vehicles`,
+   * `/account/earnings`… phải được đưa về đúng nơi làm việc, không được rơi vào một màn khách
+   * mà menu đã bỏ đi. Ẩn mục menu mà để URL mở được là để lại một cửa sau, và người dùng tìm
+   * thấy nó bằng bookmark cũ chứ không phải bằng ý đồ xấu.
+   *
+   * `redirectFor` trả về ĐÍCH TƯƠNG ĐƯƠNG, không phải một trang 403: mỗi màn khách đều có bản
+   * của nó trong Manage, nên người dùng đến được thứ họ định làm.
+   */
+  const redirect = shopAccountRedirect(user, pathname);
+  if (redirect) return <ShellRedirect href={redirect} />;
+
   if (fullWidth) return <div className={styles.fullWidth}>{children}</div>;
 
   return (
@@ -95,6 +111,26 @@ export function AccountShell({ children }: { children: ReactNode }) {
         </aside>
         <div className={styles.content}>{children}</div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Chuyển hướng KHÔNG render gì của khu khách.
+ *
+ * Component riêng vì `AccountShell` đã `return` sớm ở nhiều nhánh phía trên — gọi `useEffect`
+ * sau một `return` có điều kiện là vi phạm quy tắc hook. `replace` để nút Quay lại không rơi
+ * ngược vào chính URL vừa bị chuyển đi.
+ */
+function ShellRedirect({ href }: { href: string }) {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace(href);
+  }, [href, router]);
+
+  return (
+    <div className={styles.center}>
+      <Spin size="large" />
     </div>
   );
 }
