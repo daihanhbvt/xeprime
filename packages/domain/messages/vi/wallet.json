@@ -1,36 +1,38 @@
 {
   "title": {
-    "user": "Ví điểm của tôi",
-    "tenant": "Ví điểm gian hàng"
+    "user": "Số dư của tôi",
+    "tenant": "Số dư & rút tiền"
   },
-  "unit": "điểm",
-  "legalNote": "1 điểm = 1đ · rút về tài khoản ngân hàng · không hết hạn",
+  "page": {
+    "subtitle": "Khoản XePrime phải trả gian hàng sau mỗi chuyến, và các lệnh rút về tài khoản ngân hàng của bạn."
+  },
   "balance": {
     "available": "Rút được ngay",
     "pending": "Đang chờ chuyển",
     "total": "Tổng XePrime phải trả",
     "frozen": "Ví đang tạm khoá. Liên hệ hỗ trợ để biết lý do."
   },
-  "empty": "Chưa có điểm nào. Điểm vào ví khi bạn được hoàn cọc hoặc khi chuyến hoàn tất.",
   "loadError": "Không tải được số dư.",
   "entries": {
-    "title": "Lịch sử điểm",
+    "title": "Lịch sử giao dịch",
     "empty": "Chưa có giao dịch nào.",
     "balanceAfter": "Còn lại {amount}",
     "loadMore": "Xem thêm"
   },
   "withdraw": {
     "action": "Rút về ngân hàng",
-    "title": "Rút điểm về tài khoản ngân hàng",
-    "amount": "Số điểm muốn rút",
+    "title": "Yêu cầu rút tiền",
+    "amount": "Số tiền cần rút",
     "amountHint": "Rút tối thiểu {min}. Bạn đang có {available} rút được ngay.",
     "account": "Tài khoản nhận",
-    "accountEmpty": "Bạn chưa có tài khoản nhận tiền. Thêm một tài khoản trước khi rút.",
+    "accountEmpty": "Thêm tài khoản nhận tiền",
     "addAccount": "Thêm tài khoản nhận",
     "commitment": "XePrime chuyển trong tối đa {days} ngày làm việc kể từ khi duyệt.",
     "submit": "Gửi yêu cầu rút",
     "created": "Đã gửi yêu cầu rút. XePrime sẽ chuyển trong thời gian cam kết.",
-    "cancelled": "Đã huỷ yêu cầu rút."
+    "cancelled": "Đã huỷ yêu cầu rút.",
+    "belowMinimum": "Rút tối thiểu {min}. Chưa đủ thì khoản này vẫn nằm nguyên trong ví.",
+    "accountNumber": "STK: {number}"
   },
   "requests": {
     "title": "Yêu cầu rút",
@@ -40,7 +42,7 @@
     "rejected": "Bị từ chối: {reason}",
     "cancel": "Huỷ yêu cầu",
     "cancelConfirm": "Huỷ yêu cầu rút này?",
-    "cancelHint": "Điểm quay lại số dư rút được ngay."
+    "cancelHint": "Tiền quay lại số dư rút được ngay."
   },
   "admin": {
     "title": "Yêu cầu rút tiền",
@@ -79,15 +81,59 @@
       "reason": "Lý do",
       "reasonHint": "Chủ ví đọc được câu này.",
       "submit": "Từ chối",
-      "done": "Đã từ chối. Điểm quay lại số dư của chủ ví."
+      "done": "Đã từ chối. Tiền quay lại số dư của chủ ví."
     },
     "reverse": {
       "title": "Đảo lệnh đã chuyển",
       "reason": "Vì sao tiền quay lại",
       "reasonHint": "Chuyển hụt, sai số tài khoản, ngân hàng trả về…",
       "submit": "Đảo bút toán",
-      "done": "Đã đảo. Điểm quay lại ví chủ ví, cả hai bút toán đều còn trên sổ."
+      "done": "Đã đảo. Tiền quay lại ví chủ ví, cả hai bút toán đều còn trên sổ."
     }
   },
-  "openLedger": "Xem sổ ví"
+  "openLedger": "Xem sổ ví",
+  "verified": "Đã xác minh",
+  "statement": {
+    "title": "Bảng tổng hợp giao dịch",
+    "period": "Chọn tháng",
+    "loadError": "Không tải được bảng tổng hợp.",
+    "totalLabel": "{count, plural, other {# chuyến}}",
+    "stats": {
+      "rating": "{count, plural, =0 {Chưa có đánh giá} other {Đánh giá sao (# lượt)}}",
+      "trips": "Chuyến thành công",
+      "tripsValue": "{count, plural, other {# chuyến}}",
+      "response": "Tỉ lệ phản hồi",
+      "responseValue": "{percent}%"
+    },
+    "columns": {
+      "code": "Mã chuyến",
+      "serviceType": "Hình thức",
+      "pickupAt": "Ngày đi",
+      "returnAt": "Ngày về",
+      "unitAmount": "Đơn giá",
+      "revenue": "Doanh thu",
+      "tax": "Thuế KD",
+      "balanceChange": "Thay đổi SD"
+    },
+    "empty": {
+      "title": "Tháng này chưa có chuyến nào hoàn thành",
+      "body": "Chọn tháng khác, hoặc quay lại sau khi chuyến đang chạy kết thúc."
+    },
+    "totals": {
+      "balanceChange": "Tổng thay đổi số dư — chuyến đã hoàn thành",
+      "payAtPickup": "Khách trả trực tiếp khi nhận xe",
+      "payAtPickupHint": "Phần này khách đưa thẳng cho bạn, không đi qua XePrime.",
+      "subscriptionFee": "Phí quản lý & vận hành gói nền tảng",
+      "tax": "Tổng thuế KD khấu trừ hộ",
+      "ownerIncome": "Thu nhập chủ gian hàng",
+      "ownerIncomeHint": "Doanh thu trừ thuế và phí gói — gồm cả phần khách trả trực tiếp.",
+      "ownerIncomeCommission": "Thu nhập chủ xe",
+      "ownerIncomeGeneric": "Thu nhập"
+    }
+  },
+  "pill": {
+    "label": "Số dư",
+    "hide": "Ẩn số dư",
+    "show": "Hiện số dư"
+  }
 }

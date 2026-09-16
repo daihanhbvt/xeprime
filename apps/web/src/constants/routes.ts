@@ -4,6 +4,8 @@
  * CLAUDE.md mục 5 cấm rải string literal nghiệp vụ trong component; route cũng vậy — đổi
  * cấu trúc URL mà phải grep chuỗi `/manage/...` khắp source là cách sinh link chết.
  */
+import { REGISTRATION_TRACK, type RegistrationTrack } from '@xeprime/types';
+
 export const ROUTES = {
   HOME: '/',
   /** Trang kết quả tìm xe — sở hữu bộ lọc, sắp xếp, phân trang (trang chủ chỉ xem trước). */
@@ -124,7 +126,23 @@ export const ROUTES = {
     ROOT: '/manage',
     /** Đăng nhập cổng quản lý (chủ xe / nhân viên / quản trị nền tảng). Route CÔNG KHAI. */
     LOGIN: '/manage/login',
-    /** Tạo gian hàng — chỉ mở khi user có owner intent tường minh, không tự bật. */
+    /**
+     * ONBOARDING — hai bước, hai tuyến, một route (ADR 0040).
+     *
+     * Chỉ mở khi user có ý định tường minh (CTA chủ xe / CTA gian hàng), không tự bật. Nội dung
+     * suy từ SERVER, không từ `?track=`:
+     *
+     * | Trạng thái thật | Màn hiện ra |
+     * | --- | --- |
+     * | chưa có gian hàng, `?track=commission` (mặc định) | form hồ sơ chủ xe |
+     * | chưa có gian hàng, `?track=package` | bước 1: tạo gian hàng trả phí |
+     * | `package_pending` | bước 2: chọn gói → QR chuyển khoản |
+     * | gói đã hiệu lực | chuyển tới `/manage/shop?welcome=1` |
+     * | tuyến hoa hồng | chuyển tới `/account/registration` |
+     *
+     * `?track=` CHỈ có nghĩa khi chưa có gian hàng — sau đó `tenants.onboarding_state` là nguồn,
+     * nên F5 / đóng trình duyệt / đăng nhập lại đều rơi đúng bước còn nợ.
+     */
     ONBOARDING: '/manage/onboarding',
 
     // Quản lý gian hàng
@@ -142,12 +160,33 @@ export const ROUTES = {
     RECEIPTS: '/manage/receipts',
     DEBTS: '/manage/debts',
 
-    // Cài đặt gian hàng
+    /**
+     * CỬA HÀNG — một trang cho toàn bộ thiết lập của gian hàng (16/09/2026).
+     *
+     * Năm section, chọn bằng `?section=` (xem `SHOP_SECTION`): thông tin hiển thị · chủ gian
+     * hàng · địa chỉ & pháp lý · tài khoản nhận tiền · gói & hạn mức (kèm hoá đơn).
+     *
+     * Trước đợt này chúng nằm rải ở bốn mục sidebar — "Cửa hàng", "Gói & hoá đơn", "Tài khoản &
+     * bảo mật", "Hồ sơ người bán" — và ba trong bốn mục đó hỏi cùng một loại câu hỏi ("gian
+     * hàng của tôi khai gì"). Gộp ở tầng TRANG, không gộp dữ liệu: mỗi section vẫn gọi đúng API
+     * của nó, và section "Gói & hạn mức" dựng lại chính `SubscriptionWorkspace` chứ không clone.
+     */
     SHOP: '/manage/shop',
     /**
-     * Tài khoản & bảo mật của NGƯỜI đang đăng nhập — tách khỏi hồ sơ gian hàng (`SHOP`).
-     * Trước 15/09/2026 không có màn này, nên nhân viên sống trong `/manage` không có đường nào
-     * trong cổng để đổi mật khẩu của chính mình.
+     * BẢO MẬT TÀI KHOẢN của NGƯỜI đang đăng nhập — phương thức đăng nhập, mật khẩu, xoá tài khoản.
+     *
+     * KHÔNG có mục sidebar (16/09/2026): đây là việc của một CON NGƯỜI, không phải một bước vận
+     * hành, nên nó vào menu tài khoản ở thẻ người dùng — đúng chỗ người ta đi tìm nó. Một dòng
+     * thường trực trong sidebar gian hàng đứng cạnh "Đơn thuê" và "Chi nhánh" là một dòng nói về
+     * chủ đề khác hẳn các dòng còn lại.
+     */
+    SECURITY: '/manage/security',
+    /**
+     * ALIAS CHUYỂN TIẾP (16/09/2026) — đích thật: `SECURITY`.
+     *
+     * Trang cũ gộp hồ sơ CON NGƯỜI (tên, ảnh) với bảo mật (mật khẩu, xoá tài khoản) và một thẻ
+     * lối vào gian hàng. Hai nửa đầu tách ra: tên/ảnh thuộc tài khoản marketplace và sửa ở
+     * `/account`, còn bảo mật ở `SECURITY`. Hằng số này chỉ còn cho trang redirect.
      */
     ACCOUNT: '/manage/account',
     /**
@@ -169,16 +208,36 @@ export const ROUTES = {
     /** Chính sách thuê mặc định của gian hàng (Wave 2 — cọc/giao nhận/quá giờ/ưu đãi). */
     SHOP_POLICIES: '/manage/shop/policies',
     /**
-     * Công tắc thu cọc qua XePrime (Phase 6 — ADR 0032 điều 2).
+     * ALIAS CHUYỂN TIẾP (16/09/2026) — không còn là trang thật, không còn mục nav nào dẫn tới.
+     * Đích thật: `SHOP_POLICIES` + `#${SHOP_POLICIES_DEPOSIT_ANCHOR}`.
      *
-     * Khác `SHOP_POLICIES`: ở đó là **cọc/thế chấp giữa gian hàng và khách** (tài sản, giấy tờ),
-     * ở đây là **khoản `D` XePrime thu hộ trước chuyến**. Hai khái niệm tiền khác nhau, hai màn.
+     * Công tắc thu cọc qua XePrime (Phase 6 — ADR 0032 điều 2) đã gộp vào `SHOP_POLICIES` làm
+     * một section riêng (khái niệm tiền vẫn khác `SHOP_POLICIES` — cọc/thế chấp tại quầy vs
+     * khoản `D` XePrime thu hộ — chỉ không còn cần HAI route cho hai khái niệm đó). Hằng số
+     * này chỉ còn để trang redirect giữ đường dẫn cũ sống cho ai đã bookmark.
      */
     SHOP_PAYMENT_SETTINGS: '/manage/shop/payment-settings',
-    /** Hồ sơ người bán do gian hàng khai — điều kiện trước khi nhận tiền khách thật (ADR 0028 gate 1). */
+    /**
+     * ALIAS CHUYỂN TIẾP (16/09/2026) — đích thật: `SHOP` + `?section=legal`.
+     *
+     * Hồ sơ người bán THÔI làm một màn của chủ gian hàng: bốn thứ nó hỏi (loại chủ thể, tên pháp
+     * lý, MST, số giấy tờ) đã có chỗ trong "Địa chỉ & pháp lý", còn tài khoản nhận tiền — thứ
+     * chiếm nửa màn cũ — đã về `bank_accounts`. Backend GIỮ NGUYÊN (`seller_profiles`, hàng đợi
+     * xác minh `/manage/admin/sellers`, quan hệ khấu trừ thuế): nó vẫn là hồ sơ mà nền tảng
+     * duyệt và module thuế đọc, chỉ không còn là một mục trong menu của chủ shop.
+     */
     SELLER_PROFILE: '/manage/shop/seller-profile',
     MEMBERS: '/manage/members',
-    /** "Gói của tôi" — gói hiện hành, hạn mức chỗ, lượt miễn phí, mua gói (W2, ADR 0015/0026). */
+    /**
+     * ALIAS CHUYỂN TIẾP (16/09/2026) — đích thật: `SHOP` + `?section=plan`.
+     *
+     * Gói và hạn mức là MỘT PHẦN của "gian hàng của tôi khai gì", không phải một khu riêng. Nội
+     * dung không mất gì: hạn mức chỗ, hạn gói, mua/gia hạn và hoá đơn (kèm QR) đều sống tiếp
+     * trong section đó, dựng từ chính `SubscriptionWorkspace`.
+     *
+     * `/account/subscription` thì GIỮ NGUYÊN là trang thật — chủ xe tuyến hoa hồng không vào
+     * `/manage` được, và đó là phễu nâng cấp của họ (ADR 0028 điều 1).
+     */
     SUBSCRIPTION: '/manage/subscription',
     DRIVERS: '/manage/drivers',
     CHAT: '/manage/chat',
@@ -255,7 +314,8 @@ export const VEHICLE_MANAGE_SECTION_VALUES = Object.values(
 ) as VehicleManageSection[];
 
 /** Mục mở mặc định khi vào gốc `/manage` của một xe. */
-export const VEHICLE_MANAGE_DEFAULT_SECTION: VehicleManageSection = VEHICLE_MANAGE_SECTION.INFORMATION;
+export const VEHICLE_MANAGE_DEFAULT_SECTION: VehicleManageSection =
+  VEHICLE_MANAGE_SECTION.INFORMATION;
 
 export const accountVehicleManagePath = {
   section: (id: string, section: VehicleManageSection): string =>
@@ -376,8 +436,11 @@ export function workspacePaths(workspace: Workspace): {
       bookingRequests: ROUTES.MANAGE.BOOKING_REQUESTS,
       ownerProfile: ROUTES.MANAGE.SHOP,
       branches: ROUTES.MANAGE.SHOP_BRANCHES,
-      subscription: ROUTES.MANAGE.SUBSCRIPTION,
-      sellerProfile: ROUTES.MANAGE.SELLER_PROFILE,
+      // Hai mục này KHÔNG còn là trang riêng ở cổng quản lý (16/09/2026) — chúng là section
+      // của trang Cửa hàng. Trỏ vào hằng số route cũ vẫn tới nơi, nhưng qua một lần chuyển
+      // hướng thừa, và mỗi lần chuyển hướng là một lần mất tham số mà người gọi vừa gắn vào.
+      subscription: shopSectionPath(SHOP_SECTION.PLAN),
+      sellerProfile: shopSectionPath(SHOP_SECTION.LEGAL),
       support: ROUTES.MANAGE.SUPPORT,
     };
   }
@@ -524,3 +587,105 @@ export const listingPath = {
 export const shopPath = {
   detail: (slug: string): string => `/shops/${slug}`,
 };
+
+/**
+ * Năm section của trang Cửa hàng — GIÁ TRỊ đi trong `?section=`, không phải nhãn.
+ *
+ * Ở URL chứ không ở state React vì ba lý do, và cả ba đều là hành vi người dùng trông đợi ở một
+ * trang: gửi được link tới đúng phần ("xem hộ mục Gói & hạn mức"), F5 không mất chỗ đang đọc, và
+ * nút Quay lại của trình duyệt đi ngược đúng thứ tự vừa xem. Đây cũng là điều kiện để ba route
+ * cũ redirect vào đúng phần thay vì đổ hết về đầu trang.
+ */
+export const SHOP_SECTION = {
+  /** Tên hiển thị, giới thiệu, logo, ảnh bìa — thứ khách nhìn thấy trên chợ. */
+  PROFILE: 'profile',
+  /** Tài khoản chủ sở hữu (`tenants.owner_user_id`) — chỉ đọc với mọi vai khác chủ. */
+  OWNER: 'owner',
+  /** Địa chỉ chi nhánh mặc định + mã số thuế/giấy phép (tuỳ chọn). */
+  LEGAL: 'legal',
+  /** Sổ `bank_accounts` phạm vi gian hàng. */
+  PAYOUT: 'payout',
+  /** Gói hiện hành, hạn mức chỗ, và hoá đơn thanh toán. */
+  PLAN: 'plan',
+} as const;
+
+export type ShopSection = (typeof SHOP_SECTION)[keyof typeof SHOP_SECTION];
+export const SHOP_SECTION_VALUES = Object.values(SHOP_SECTION) as ShopSection[];
+
+/** Section mở khi `?section=` vắng mặt hoặc không hợp lệ. */
+export const SHOP_SECTION_DEFAULT: ShopSection = SHOP_SECTION.PROFILE;
+
+/**
+ * `?section=` → section hợp lệ. Giá trị lạ (bookmark cũ, gõ tay) rơi về `profile` thay vì dựng
+ * một trang trống — người dùng gõ sai một chữ vẫn phải thấy nội dung.
+ */
+export function shopSectionOf(value: string | null | undefined): ShopSection {
+  return (SHOP_SECTION_VALUES as string[]).includes(value ?? '')
+    ? (value as ShopSection)
+    : SHOP_SECTION_DEFAULT;
+}
+
+/** Đường dẫn tới một section — dùng cho link, redirect và nút điều hướng trong trang. */
+export function shopSectionPath(section: ShopSection): string {
+  return `${ROUTES.MANAGE.SHOP}?section=${section}`;
+}
+
+/** Id của phần tử section trong DOM — dùng chung cho `aria-controls`, anchor và scroll. */
+export function shopSectionDomId(section: ShopSection): string {
+  return `shop-section-${section}`;
+}
+
+/**
+ * `id` của NÚT tải logo gian hàng trong section "Thông tin hiển thị".
+ *
+ * Hai chỗ nhắm vào nó: dải "Còn 1 bước để đăng xe" sau khi gian hàng thanh toán xong, và thông
+ * báo lỗi khi gửi xe duyệt mà hồ sơ chưa có logo (ADR 0040). Hằng số chứ không phải chuỗi gõ tay
+ * ở ba nơi — gõ sai một ký tự là nút cuộn về hư không, và không có gì đỏ lên để báo.
+ */
+export const SHOP_LOGO_TRIGGER_ID = 'shop-logo-upload';
+
+/**
+ * ── ONBOARDING GIAN HÀNG (ADR 0040) ──────────────────────────────────────────────────────────
+ *
+ * Hai tham số URL, hai vai trò khác nhau, và cả hai chỉ là GỢI Ý cho lần vẽ đầu — trạng thái
+ * thật luôn đến từ server (`onboardingState`, `billingMode`).
+ */
+
+/** `?track=` của màn onboarding — chỉ có nghĩa khi người dùng CHƯA có gian hàng nào. */
+export const REGISTRATION_TRACK_PARAM = 'track';
+
+/**
+ * `?welcome=1` của trang Cửa hàng — "vừa thanh toán xong, chào mừng".
+ *
+ * Chỉ điều khiển một dải chào NHỎ, không mở/khoá bất cứ thứ gì: quyền đến từ `/auth/me`. Đó là
+ * lý do nó được phép nằm trong URL và được phép sống sót qua một lần chia sẻ link — kịch bản xấu
+ * nhất là ai đó thấy một dòng chào mừng không dành cho họ.
+ */
+export const SHOP_WELCOME_PARAM = 'welcome';
+
+/** Đường vào màn onboarding theo CỬA người dùng vừa bấm. */
+export function manageOnboardingPath(track: RegistrationTrack): string {
+  return track === REGISTRATION_TRACK.COMMISSION
+    ? ROUTES.MANAGE.ONBOARDING
+    : `${ROUTES.MANAGE.ONBOARDING}?${REGISTRATION_TRACK_PARAM}=${track}`;
+}
+
+/**
+ * Đích SAU LẦN THANH TOÁN ĐẦU TIÊN của gian hàng trả phí.
+ *
+ * `/manage/shop` chứ không `/manage`: gian hàng vừa mở chưa có xe, chưa có đơn, nên dashboard
+ * chỉ toàn số 0 và không nói được việc gì tiếp theo. Việc duy nhất còn lại — tải logo để gửi xe
+ * duyệt — nằm ở section hồ sơ của trang Cửa hàng.
+ */
+export function shopWelcomePath(): string {
+  return `${ROUTES.MANAGE.SHOP}?${SHOP_WELCOME_PARAM}=1&section=${SHOP_SECTION.PROFILE}`;
+}
+
+/**
+ * Anchor của section "Thanh toán giữ chỗ qua XePrime" bên trong trang Chính sách thuê.
+ *
+ * Sống ở đây chứ không trong `page.tsx`: route redirect `/manage/shop/payment-settings` cũng
+ * cần đúng chuỗi này để đưa người đã bookmark rơi vào đúng phần, và hai chỗ gõ tay cùng một
+ * hash là hai chỗ để nó trôi khỏi nhau.
+ */
+export const SHOP_POLICIES_DEPOSIT_ANCHOR = 'deposit-collection';

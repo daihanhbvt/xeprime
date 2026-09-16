@@ -138,6 +138,21 @@ model Tenant {
   tenantType         String    @default("individual") @map("tenant_type") @db.VarChar(50)
   /// @xeprime/types → TenantStatus. Client KHÔNG được set trực tiếp (CLAUDE.md mục 5).
   status             String    @default("draft") @db.VarChar(50)
+  /// @xeprime/types → ShopOnboardingState (`commission` | `package_pending` | `package_active`).
+  ///
+  /// Ý ĐỊNH ĐĂNG KÝ, lưu bền vững (ADR 0040). Trục THỨ TƯ, độc lập với `status` (vận hành),
+  /// `billing_mode` của gói hiện hành (tiền chạy tuyến nào lúc này) và `SHOP_VERIFICATION`
+  /// (nền tảng đã xem pháp nhân chưa). Nó trả lời đúng một câu: *người này vào bằng cửa nào,
+  /// và còn nợ bước nào của cửa đó.*
+  ///
+  /// Cần một CỘT chứ không phải một phép suy, vì cả bốn cách suy đều không sống qua một lần F5:
+  /// prop của component, `?next=`, state của router, và "đã có gói hay chưa". Gian hàng trả phí
+  /// đang chờ chuyển khoản phải quay lại đúng bước thanh toán sau khi đóng trình duyệt.
+  ///
+  /// `package_pending → package_active` ghi trong CHÍNH transaction bật thuê bao; `package_active`
+  /// KHÔNG bao giờ lùi lại (gói hết hạn là chuyện của `billing_mode`, không phải của cửa vào).
+  /// Giá trị canh bằng CHECK `tenants_onboarding_state_check` ở migration.
+  onboardingState    String    @default("commission") @map("onboarding_state") @db.VarChar(20)
   ownerUserId        String    @map("owner_user_id") @db.Char(26)
   phone              String?   @db.VarChar(30)
   email              String?   @db.VarChar(255)
@@ -749,16 +764,16 @@ model TenantProfile {
   wardName          String?  @map("ward_name") @db.VarChar(150)
   taxCode           String?  @map("tax_code") @db.VarChar(50)
   businessLicenseNo String?  @map("business_license_no") @db.VarChar(100)
-  bankName          String?  @map("bank_name") @db.VarChar(100)
-  bankAccountNo     String?  @map("bank_account_no") @db.VarChar(100)
-  bankAccountName   String?  @map("bank_account_name") @db.VarChar(255)
-  qrUrl             String?  @map("qr_url") @db.Text
-  /// Chủ gian hàng — NGƯỜI CHỊU TRÁCH NHIỆM pháp lý, không phải tài khoản đăng nhập (một shop có
-  /// thể do nhân viên vận hành). Dữ liệu NỘI BỘ: chỉ hồ sơ duyệt và đội ngũ nền tảng đọc, không
-  /// bao giờ lọt ra `public_listings` hay trang gian hàng công khai (ADR 0008).
-  ownerFullName     String?  @map("owner_full_name") @db.VarChar(255)
-  ownerPhone        String?  @map("owner_phone") @db.VarChar(30)
-  ownerEmail        String?  @map("owner_email") @db.VarChar(255)
+  /// ⚠️ KHÔNG thêm lại cột ngân hàng hay cột "chủ gian hàng" vào bảng này (16/09/2026).
+  ///
+  /// Tài khoản nhận tiền có ĐÚNG MỘT nguồn: `bank_accounts` (ADR 0023/0033) — nơi có sổ nhiều
+  /// tài khoản, cờ mặc định, lưu trữ và lịch sử. Bốn cột text cũ (`bank_name`, `bank_account_no`,
+  /// `bank_account_name`, `qr_url`) là bản sao thứ hai không ai đồng bộ, trong khi lệnh chi đọc
+  /// bảng kia — nên chúng chỉ làm người dùng tưởng mình đã khai xong.
+  ///
+  /// Chủ gian hàng có ĐÚNG MỘT nguồn: `tenants.owner_user_id → users` — nơi email/SĐT đã qua
+  /// xác minh OTP. Ba cột text cũ (`owner_full_name`, `owner_phone`, `owner_email`) là chữ gõ
+  /// tay không ai chứng minh, đứng cạnh một tài khoản đã xác minh nói khác đi.
   settings          Json?    @map("settings_json") @db.JsonB
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -3294,6 +3309,13 @@ model TenantSubscription {
 /// `subscription-lifecycle` của worker cho hoá đơn CHÀO gói khi tiêu hết lượt miễn phí
 /// (ADR 0026 điều 4; worker không import được service của api — cùng tiền lệ `lib/notify.ts`,
 /// hình dạng hàng khoá bằng `@xeprime/types`). Không có người ghi thứ ba.
+///
+/// ⚠️ CÓ MỘT INDEX PRISMA KHÔNG MÔ TẢ ĐƯỢC, và nó là ràng buộc về tiền:
+/// `subscription_invoices_one_payable_per_tenant` — UNIQUE `(tenant_id)` WHERE
+/// `status IN ('issued','partially_paid')`, tức mỗi tenant tối đa MỘT hoá đơn còn nhận được
+/// tiền (migration `20260916150000_subscription_invoice_single_payable`). Ngôn ngữ schema không
+/// có index-có-điều-kiện, nên `prisma migrate dev` sẽ sinh lệnh DROP cho nó ở migration kế
+/// tiếp — đọc diff và giữ lại, y như các FK tổ hợp mà header của migration baseline cảnh báo.
 model SubscriptionInvoice {
   id             String    @id @db.Char(26)
   tenantId       String    @map("tenant_id") @db.Char(26)
@@ -3575,8 +3597,10 @@ model FeePolicy {
   /// % phí dịch vụ áp cho TUYẾN HOA HỒNG. Tuyến gói luôn 0 (quy tắc trong code, không có cột).
   serviceFeePercent        Decimal @map("service_fee_percent") @db.Decimal(5, 2)
   holdMinAmount            Decimal @default(20000) @map("hold_min_amount") @db.Decimal(14, 2)
-  /// Cửa sổ trả cọc — 2 GIỜ (ADR 0032 điều 2). Bản chính sách cũ giữ nguyên số của nó.
-  holdPaymentWindowMinutes Int     @default(120) @map("hold_payment_window_minutes")
+  /// Cửa sổ trả cọc — 10 PHÚT (ADR 0039 điều 2), một chặng của đồng hồ. Trần thật của một
+  /// hold là 30 phút vì worker tự gia hạn tối đa hai lần (`booking_holds.extension_count`).
+  /// Bản chính sách cũ giữ nguyên số của nó — bản `active` là BẤT BIẾN (ADR 0028 điều 2).
+  holdPaymentWindowMinutes Int     @default(10) @map("hold_payment_window_minutes")
   freeCancelHours          Int     @default(4) @map("free_cancel_hours")
 
   /// `D` — % CỌC trên giá thuê gốc. NỀN TẢNG đặt, không phải gian hàng (ADR 0033 điều 7).
@@ -3688,6 +3712,11 @@ model BookingHold {
   /// Cột CLAIM, không phải nhật ký: worker chỉ nhắc khi nó còn NULL, nên chạy lại bao nhiêu
   /// lần cũng đúng một lần nhắc — cùng kỷ luật `booking_requests.first_reminded_at`.
   paymentRemindedAt DateTime? @map("payment_reminded_at") @db.Timestamptz(3)
+  /// Đã tự gia hạn cửa sổ trả tiền bao nhiêu lần (ADR 0039 điều 3) — trần `HOLD_MAX_EXTENSIONS`.
+  /// Là BỘ ĐẾM chứ không phải cờ: worker cộng `expires_at` thêm một cửa sổ và tăng cột này
+  /// trong cùng một `updateMany` có điều kiện, nên hai worker chạy song song không thể gia hạn
+  /// quá số lần cho phép. Cũng là số liệu để biết mười phút có đủ không.
+  extensionCount    Int       @default(0) @map("extension_count")
   releasedAt        DateTime? @map("released_at") @db.Timestamptz(3)
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -4116,9 +4145,8 @@ model SellerProfile {
   idNumber          String?   @map("id_number") @db.VarChar(30)
   idIssuedAt        DateTime? @map("id_issued_at") @db.Date
   idIssuedBy        String?   @map("id_issued_by") @db.VarChar(160)
-  bankCode          String?   @map("bank_code") @db.VarChar(20)
-  bankAccountNumber String?   @map("bank_account_number") @db.VarChar(40)
-  bankAccountName   String?   @map("bank_account_name") @db.VarChar(160)
+  /// ⚠️ KHÔNG thêm lại cột ngân hàng (16/09/2026) — `bank_accounts` là nguồn duy nhất, và lệnh
+  /// rút (`withdrawal_requests`) vẫn luôn đọc thẳng bảng đó chứ chưa bao giờ đọc ba cột này.
   /// @xeprime/types → SellerProfileStatus; DB canh CHECK.
   status            String    @default("draft") @db.VarChar(30)
   submittedAt       DateTime? @map("submitted_at") @db.Timestamptz(3)

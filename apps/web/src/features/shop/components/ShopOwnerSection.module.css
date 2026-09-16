@@ -1,0 +1,96 @@
+/*
+ * Khối "Chủ gian hàng" — một cái tên và hai dòng liên hệ. Không avatar.
+ *
+ * Trong cổng quản lý, hình đại diện nổi bật là LOGO GIAN HÀNG (ở tiêu đề trang và thẻ người
+ * dùng). Một avatar cá nhân lớn ở đây dựng ra tấm ảnh thứ hai tranh chỗ với nó, và nói sai điều
+ * quan trọng: cái đang được thiết lập là gian hàng, không phải một hồ sơ cá nhân.
+ */
+.identity {
+  min-width: 0;
+}
+
+.name {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h5, 16px);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.rows {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  margin: 0;
+  gap: 0;
+}
+
+.row {
+  display: grid;
+  min-width: 0;
+  align-items: center;
+  grid-template-columns: minmax(0, 150px) minmax(0, 1fr);
+  padding: var(--xp-space-sm) 0;
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+  gap: var(--xp-space-xs) var(--xp-space-md);
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.rowLabel {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-xs);
+}
+
+.rowValue {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+  gap: var(--xp-space-sm);
+}
+
+.value {
+  min-width: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.empty {
+  color: var(--xp-color-text-tertiary);
+  font-style: italic;
+}
+
+/* Xem `LoginMethodsCard.module.css`: màu ở `background` vì `color` kế thừa và bị nuốt. */
+.verifiedMark {
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--xp-color-success);
+  color: #fff;
+  font-size: 10px;
+  place-items: center;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+}
+
+@media (max-width: 640px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

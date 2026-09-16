@@ -364,10 +364,33 @@ async function offerPlanOnFreeTripsExhausted(prisma: PrismaClient, now: Date): P
       });
       if (current) return true;
 
+      /*
+       * Đã có hoá đơn gói đang chờ tiền ⇒ CHỈ NHẮC, không chào thêm một hoá đơn nữa (16/09/2026).
+       *
+       * Bất biến của `subscription_invoices`: mỗi tenant tối đa MỘT hoá đơn trả được
+       * (`issued`/`partially_paid`) — `BillingService.purchase` giữ nó ở đường người dùng, và từ
+       * migration `…_subscription_invoice_single_payable` chính DB giữ nó. Job này là writer THỨ
+       * HAI của bảng đó, nên nếu chào bừa một hoá đơn nữa thì hoặc sinh hai mã XPG cùng kích hoạt
+       * được gói (trước khi có index), hoặc chết cả transaction vì đụng unique (sau khi có).
+       *
+       * Vì sao NHẮC chứ không void hoá đơn cũ: hoá đơn đang chờ là thứ gian hàng có thể đang
+       * chuyển khoản ngay lúc này, và nó có thể đã nhận một phần tiền. Lời nhắc chung vẫn dẫn họ
+       * về màn gói — nơi hoá đơn đó đang nằm sẵn với QR của nó.
+       */
+      const pendingInvoice = await tx.subscriptionInvoice.findFirst({
+        where: {
+          tenantId: tenant.id,
+          status: {
+            in: [SUBSCRIPTION_INVOICE_STATUS.ISSUED, SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID],
+          },
+        },
+        select: { id: true },
+      });
+
       let body =
         'Từ đơn tiếp theo, mỗi chuyến chịu hoa hồng của nền tảng. Mua gói theo chỗ ở màn "Gói của tôi" để về 0đ trên chuyến.';
 
-      if (offerPlan) {
+      if (offerPlan && !pendingInvoice) {
         /*
          * ADR 0029 — gói giá phẳng theo CHỖ, không phí nền: hoá đơn chào phải dựng theo đội xe
          * hiện có của tenant (mua đúng số chỗ họ cần) và theo kỳ hạn NHỎ NHẤT plan còn bán

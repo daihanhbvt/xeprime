@@ -396,13 +396,62 @@
  * `currentColor`, mà style runtime của AntD tiêm sau CSS Module nên một class đơn không chắc
  * thắng và dấu tích ra màu chữ. Cách này không phụ thuộc thừa kế nào.
  */
+/*
+ * Cụm huy hiệu: đĩa tích ở giữa, bốn ánh sao quanh nó.
+ *
+ * Ánh sao đặt tuyệt đối trong một khung có kích thước cố định thay vì lệch dòng theo nội dung —
+ * vị trí của chúng là trang trí, và một trang trí xê dịch theo độ dài tiêu đề trông như lỗi.
+ */
+.doneBadgeWrap {
+  position: relative;
+  display: block;
+  width: 96px;
+  height: 96px;
+  margin: 0 auto;
+}
+
+.sparkle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-success);
+  opacity: 0.45;
+}
+
+.sparkle:nth-child(1) {
+  top: 10px;
+  left: 12px;
+}
+
+.sparkle:nth-child(2) {
+  top: 18px;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  opacity: 0.3;
+}
+
+.sparkle:nth-child(3) {
+  bottom: 16px;
+  left: 6px;
+  width: 5px;
+  height: 5px;
+  opacity: 0.35;
+}
+
+.sparkle:nth-child(4) {
+  right: 18px;
+  bottom: 10px;
+  opacity: 0.25;
+}
+
 .doneBadge {
+  position: absolute;
+  inset: 20px;
   display: grid;
-  width: 56px;
-  height: 56px;
   place-items: center;
   border-radius: var(--xp-border-radius-pill);
-  margin: 0 auto var(--xp-space-md);
   background: var(--xp-color-success);
   box-shadow: 0 0 0 8px var(--xp-color-success-bg);
   color: #fff;
@@ -426,8 +475,28 @@
   color: var(--xp-color-text);
 }
 
+/* Một dòng dẫn dưới tiêu đề — nói VIỆC CẦN LÀM, nên đậm hơn ghi chú và nhạt hơn tiêu đề. */
+.doneLead {
+  margin: 0 0 var(--xp-space-md);
+  font-size: var(--xp-font-size);
+  line-height: var(--xp-line-height);
+  color: var(--xp-color-text-secondary);
+}
+
+/*
+ * Mã yêu cầu là một THẺ chép được, không phải một dòng chữ mờ: khách đọc nó cho tổng đài, và
+ * viền + nền nhạt là thứ nói cho mắt biết "đây là một giá trị, không phải lời dẫn".
+ */
 .requestCode {
-  margin: 0 0 var(--xp-space-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  max-width: 100%;
+  margin: 0 auto var(--xp-space-lg);
+  padding: 4px var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-fill-quaternary, transparent);
   font-size: var(--xp-font-size-sm);
   color: var(--xp-color-text-secondary);
   overflow-wrap: anywhere;
@@ -441,14 +510,71 @@
 }
 
 .doneSummary {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-sm);
-  margin: 0 0 var(--xp-space-lg);
-  padding: var(--xp-space-md);
+  margin: 0 0 var(--xp-space-md);
   border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius);
   text-align: left;
+  overflow: hidden;
+}
+
+/* Đầu thẻ: nhãn khối bên trái, chiếc xe bên phải — xe là thứ nhận diện chuyến bằng mắt. */
+.summaryHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-bottom: 1px solid var(--xp-color-border);
+  background: var(--xp-color-fill-quaternary, transparent);
+}
+
+.summaryHeadLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  flex: none;
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.summaryVehicle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.summaryVehicleText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.summaryVehicleText b {
+  overflow-wrap: anywhere;
+}
+
+.summaryVehicleText small {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.summaryVehicleImg {
+  flex: none;
+  width: 56px;
+  height: 40px;
+  border-radius: var(--xp-border-radius-sm, 6px);
+  object-fit: cover;
+}
+
+.doneRows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: var(--xp-space-md);
 }
 
 .doneRow {
@@ -459,10 +585,21 @@
   min-width: 0;
 }
 
+/*
+ * Biểu tượng đi trước nhãn để mắt quét cột trái theo HÌNH thay vì theo chữ. `baseline` của dòng
+ * căn theo chữ, nên biểu tượng phải tự căn giữa trong cụm nhãn của nó.
+ */
 .doneRow dt {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
   flex: none;
   font-size: var(--xp-font-size-sm);
   color: var(--xp-color-text-secondary);
+}
+
+.doneRow dt :global(.anticon) {
+  color: var(--xp-color-text-tertiary);
 }
 
 .doneRow dd {
@@ -497,10 +634,21 @@
 }
 
 .doneActionsRow :global(.ant-btn) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--xp-space-xs);
   width: 100%;
   min-width: 0;
   padding-inline: var(--xp-space-xs);
   font-size: var(--xp-font-size-sm);
+}
+
+/* Ba nút cạnh nhau ở overlay hẹp thì chữ vỡ — xuống hàng dọc trước khi tới mức đó. */
+@media (max-width: 560px) {
+  .doneActionsRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .verifiedTag {

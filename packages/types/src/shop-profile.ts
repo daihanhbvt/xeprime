@@ -40,7 +40,6 @@ export const SHOP_PROFILE_SUGGESTION = {
   BIO: 'bio',
   ADDRESS: 'address',
   COVER: 'cover',
-  BANK: 'bank',
 } as const;
 
 export type ShopProfileSuggestion =
@@ -56,19 +55,24 @@ export const SHOP_PROFILE_SUGGESTION_VALUES = Object.values(
  * `provinceCode` là tỉnh HIỆU LỰC của gian hàng — tức tỉnh của chi nhánh mặc định, với hai cột
  * trên `tenant_profiles` chỉ là bản sao (xem `syncProfileFromDefaultBranch`). Người gọi tự phân
  * giải trước khi truyền vào; hàm này không biết gì về bảng nào.
+ *
+ * `ownerFullName`/`ownerPhone` đến từ TÀI KHOẢN CHỦ (`tenants.owner_user_id → users`), không
+ * phải từ hồ sơ gian hàng: ba cột text cũ trên `tenant_profiles` đã bị gỡ 16/09/2026 vì chúng
+ * là chữ gõ tay đứng cạnh một tài khoản đã xác minh nói khác đi. Hai khoá giữ NGUYÊN TÊN — mã
+ * `ownerName`/`ownerPhone` đi trên dây trong `PROFILE_INCOMPLETE.details.missing`, và đổi tên
+ * chúng là làm hỏng nhãn lỗi của mọi client đang chạy.
  */
 export interface ShopProfileCompletenessInput {
   displayName?: string | null;
   provinceCode?: string | null;
+  /** Tên hiển thị của user chủ gian hàng. */
   ownerFullName?: string | null;
+  /** SĐT của user chủ gian hàng (dạng lưu `84…`). */
   ownerPhone?: string | null;
   logoUrl?: string | null;
   coverUrl?: string | null;
   bio?: string | null;
   address?: string | null;
-  bankName?: string | null;
-  bankAccountNo?: string | null;
-  bankAccountName?: string | null;
 }
 
 /**
@@ -96,8 +100,10 @@ export function missingShopProfileRequirements(
 /**
  * Các mục NÊN CÓ còn thiếu — chỉ để hiện trong checklist, không bao giờ chặn.
  *
- * Tài khoản nhận tiền tính là MỘT mục: ba cột ngân hàng chỉ có nghĩa khi có đủ cả ba, và tách
- * chúng ra ba dòng biến một việc thành ba lần gõ vào cùng một khối.
+ * KHÔNG còn mục "tài khoản nhận tiền" (16/09/2026): nó không sống trên hồ sơ gian hàng nữa mà ở
+ * `bank_accounts` — một sổ riêng, có cờ mặc định và lưu trữ, với màn hình riêng trong trang Cửa
+ * hàng. Chấm nó ở đây nghĩa là checklist phải đọc một bảng khác để trả lời, và lời hứa "hàm
+ * thuần, không biết bảng nào" ở trên sẽ hết đúng.
  */
 export function missingShopProfileSuggestions(
   profile: ShopProfileCompletenessInput,
@@ -107,13 +113,120 @@ export function missingShopProfileSuggestions(
   if (!filled(profile.bio)) missing.push(SHOP_PROFILE_SUGGESTION.BIO);
   if (!filled(profile.address)) missing.push(SHOP_PROFILE_SUGGESTION.ADDRESS);
   if (!filled(profile.coverUrl)) missing.push(SHOP_PROFILE_SUGGESTION.COVER);
-  if (!filled(profile.bankName) || !filled(profile.bankAccountNo) || !filled(profile.bankAccountName)) {
-    missing.push(SHOP_PROFILE_SUGGESTION.BANK);
-  }
   return missing;
 }
 
 /** Hồ sơ đã đủ điều kiện gửi duyệt chưa. */
 export function isShopProfileSubmittable(profile: ShopProfileCompletenessInput): boolean {
   return missingShopProfileRequirements(profile).length === 0;
+}
+
+/**
+ * ── CỔNG ĐĂNG XE CỦA GIAN HÀNG TUYẾN GÓI (ADR 0040) ──────────────────────────────────────────
+ *
+ * Bộ quy tắc THỨ HAI trong file này, và nó cố ý KHÔNG dùng lại `SHOP_PROFILE_REQUIREMENT` ở
+ * trên. Hai bộ trả lời hai câu hỏi khác nhau cho hai loại người khác nhau:
+ *
+ * | Bộ | Câu hỏi | Áp cho ai | Hệ quả khi thiếu |
+ * | --- | --- | --- | --- |
+ * | `SHOP_PROFILE_REQUIREMENT` | Reviewer có gì để XÁC MINH pháp nhân? | mọi tenant gửi xác minh | không gửi được phiếu `tenant` |
+ * | `PACKAGE_SHOP_LISTING_REQUIREMENT` | Gian hàng trả phí đã đủ mặt tiền để BÁN chưa? | CHỈ gian hàng tuyến gói | không gửi được XE lên chợ |
+ *
+ * Gộp chúng lại là hỏng theo cả hai chiều:
+ *
+ *  - Bộ trên đòi `ownerName`/`ownerPhone` (danh tính của một CON NGƯỜI để reviewer gọi được) và
+ *    coi `logo` là gợi ý. Đem nguyên nó ra gác việc đăng xe nghĩa là logo không bao giờ bị đòi,
+ *    tức là cổng này không gác được thứ duy nhất nó sinh ra để gác.
+ *  - Ngược lại, thêm `logo` vào bộ trên là chặn luôn chủ xe tuyến hoa hồng — một người có một
+ *    chiếc xe không có logo gian hàng và không cần có, và bắt họ thiết kế một cái là dựng lại
+ *    đúng rào cản mà ADR 0036 vừa gỡ.
+ *
+ * Trong luồng bình thường, bước "tạo gian hàng" của onboarding tuyến gói đã đòi đủ năm mục đầu
+ * (tên · SĐT liên hệ · tỉnh · xã · địa chỉ chi tiết), nên mục thường còn thiếu sau khi thanh
+ * toán là ĐÚNG MỘT mục: logo. Cổng vẫn chấm cả sáu vì hồ sơ sửa được sau đó, và một gian hàng
+ * xoá trắng tên rồi đăng xe là thứ không được lọt.
+ *
+ * Nguồn dữ liệu của từng mục là RÕ RÀNG và không đọc cột trùng lặp:
+ *   `displayName`/`logoUrl` ← `tenant_profiles` · phần địa chỉ + SĐT ← CHI NHÁNH MẶC ĐỊNH
+ *   (`tenant_branches`, nguồn sự thật vận hành — hai cột tỉnh trên hồ sơ chỉ là bản sao).
+ */
+
+export const PACKAGE_SHOP_LISTING_REQUIREMENT = {
+  /** Tên hiển thị trên marketplace. */
+  DISPLAY_NAME: 'displayName',
+  /** SĐT liên hệ của gian hàng — khách gọi vào đây. Từ chi nhánh mặc định. */
+  CONTACT_PHONE: 'contactPhone',
+  PROVINCE: 'province',
+  /** Xã/phường — cấp thứ hai của mô hình hành chính 2 cấp (ADR 0035). */
+  WARD: 'ward',
+  /** Số nhà, đường — phần không danh mục nào phát hành. */
+  ADDRESS: 'address',
+  /** Logo gian hàng: nhận diện trên chợ. CHỈ gian hàng tuyến gói bị đòi mục này. */
+  LOGO: 'logo',
+} as const;
+
+export type PackageShopListingRequirement =
+  (typeof PACKAGE_SHOP_LISTING_REQUIREMENT)[keyof typeof PACKAGE_SHOP_LISTING_REQUIREMENT];
+
+export const PACKAGE_SHOP_LISTING_REQUIREMENT_VALUES = Object.values(
+  PACKAGE_SHOP_LISTING_REQUIREMENT,
+) as PackageShopListingRequirement[];
+
+/**
+ * Giá trị cần để chấm cổng đăng xe của gian hàng tuyến gói.
+ *
+ * Cố ý KHÔNG có `ownerFullName`, `email`, `coverUrl`, `bio`, `taxCode`, toạ độ ghim hay tài
+ * khoản nhận tiền: không mục nào trong số đó cần thiết để một chiếc xe xuất hiện đúng trên chợ,
+ * và mỗi mục thêm vào đây là một lần chặn người đang muốn bán hàng.
+ */
+export interface PackageShopListingInput {
+  displayName?: string | null;
+  /** SĐT liên hệ của CHI NHÁNH MẶC ĐỊNH (dạng lưu `84…` hoặc `0…`; hàm chỉ hỏi có hay không). */
+  contactPhone?: string | null;
+  provinceCode?: string | null;
+  wardCode?: string | null;
+  /** Số nhà/đường của chi nhánh mặc định — KHÔNG phải chuỗi hiển thị đã ghép. */
+  addressLine?: string | null;
+  logoUrl?: string | null;
+}
+
+/**
+ * Các mục còn thiếu để gian hàng tuyến gói gửi xe lên chợ. Rỗng ⇒ qua cổng.
+ *
+ * Trả MÃ, không trả câu: danh sách này đi trên dây trong
+ * `PROFILE_INCOMPLETE.details.missing` và web dựng nhãn theo ngôn ngữ đang dùng (ADR 0012).
+ */
+export function missingPackageShopListingRequirements(
+  input: PackageShopListingInput,
+): PackageShopListingRequirement[] {
+  const missing: PackageShopListingRequirement[] = [];
+  if (!filled(input.displayName)) missing.push(PACKAGE_SHOP_LISTING_REQUIREMENT.DISPLAY_NAME);
+  if (!filled(input.contactPhone)) missing.push(PACKAGE_SHOP_LISTING_REQUIREMENT.CONTACT_PHONE);
+  if (!filled(input.provinceCode)) missing.push(PACKAGE_SHOP_LISTING_REQUIREMENT.PROVINCE);
+  if (!filled(input.wardCode)) missing.push(PACKAGE_SHOP_LISTING_REQUIREMENT.WARD);
+  if (!filled(input.addressLine)) missing.push(PACKAGE_SHOP_LISTING_REQUIREMENT.ADDRESS);
+  if (!filled(input.logoUrl)) missing.push(PACKAGE_SHOP_LISTING_REQUIREMENT.LOGO);
+  return missing;
+}
+
+/**
+ * Các mục còn thiếu để MỞ được gian hàng tuyến gói (bước 1 của onboarding).
+ *
+ * Đúng bộ trên TRỪ logo — cùng một quy tắc, một chỗ sửa. Logo không bị đòi ở bước tạo vì nó
+ * chưa cần thiết để nhận tiền gói, và đòi một tấm ảnh trước khi người ta kịp xem giá là ma sát
+ * đặt sai chỗ. Nó bị đòi đúng lúc nó bắt đầu có nghĩa: khi chiếc xe đầu tiên lên chợ.
+ */
+export function missingPackageShopRegistrationFields(
+  input: Omit<PackageShopListingInput, 'logoUrl'>,
+): PackageShopListingRequirement[] {
+  /*
+   * LỌC mục logo ra, không ép một giá trị giả vào `logoUrl`.
+   *
+   * Bản trước truyền `logoUrl: 'n/a'` để mục đó "đã có". Nó chạy đúng nhưng nói sai: chữ ký nhận
+   * một `logoUrl` rồi âm thầm ghi đè, nên nơi gọi không có cách nào biết giá trị mình truyền bị
+   * bỏ. `Omit` + lọc nói thẳng cả hai điều: bộ này không hỏi logo, và nó vẫn là cùng một quy tắc.
+   */
+  return missingPackageShopListingRequirements(input).filter(
+    (key) => key !== PACKAGE_SHOP_LISTING_REQUIREMENT.LOGO,
+  );
 }

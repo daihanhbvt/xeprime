@@ -45,12 +45,6 @@ function missingFieldLabel(
   switch (field) {
     case 'legalName':
       return t('form.missingField.legalName');
-    case 'bankCode':
-      return t('form.missingField.bankCode');
-    case 'bankAccountNumber':
-      return t('form.missingField.bankAccountNumber');
-    case 'bankAccountName':
-      return t('form.missingField.bankAccountName');
     case 'idNumber':
       return t('form.missingField.idNumber');
     case 'taxId':
@@ -68,9 +62,6 @@ function toValues(profile: SellerProfile): SellerProfileFormValues {
     idNumber: profile.idNumber ?? '',
     idIssuedAt: profile.idIssuedAt ?? null,
     idIssuedBy: profile.idIssuedBy ?? '',
-    bankCode: profile.bankCode ?? '',
-    bankAccountNumber: profile.bankAccountNumber ?? '',
-    bankAccountName: profile.bankAccountName ?? '',
   };
 }
 
@@ -104,8 +95,6 @@ export function SellerProfileScreen() {
       buildSellerProfileSchema({
         taxId: t('form.validation.taxId'),
         idNumber: t('form.validation.idNumber'),
-        bankCode: t('form.validation.bankCode'),
-        bankAccountNumber: t('form.validation.bankAccountNumber'),
       }),
     [t],
   );
@@ -155,9 +144,6 @@ export function SellerProfileScreen() {
         idNumber: values.idNumber || null,
         idIssuedAt: values.idIssuedAt || null,
         idIssuedBy: values.idIssuedBy || null,
-        bankCode: values.bankCode || null,
-        bankAccountNumber: values.bankAccountNumber || null,
-        bankAccountName: values.bankAccountName || null,
       },
       {
         onSuccess: () => toast.showSuccess(t('form.saved')),
@@ -252,35 +238,11 @@ export function SellerProfileScreen() {
           </Card>
 
           {/*
-            Tài khoản NHẬN TIỀN tách thành thẻ riêng: đây là phần quyết định tiền về đâu, và đổi
-            nó trên một hồ sơ đã xác minh sẽ phải xác minh lại (docblock của controller).
+            KHÔNG còn thẻ "tài khoản nhận tiền" ở đây (16/09/2026): nó sống ở `bank_accounts`
+            (`/shop/bank-accounts`) — bảng mà lệnh rút thật sự đọc. Ba cột cũ trên
+            `seller_profiles` chưa bao giờ nối với một đồng nào chạy ra, nên gian hàng điền xong
+            vẫn không rút được tiền.
           */}
-          <Card>
-            <YStack gap={space.md}>
-              <TextField
-                control={control}
-                name="bankCode"
-                label={t('form.bankCode')}
-                hint={t('form.bankCodeHint')}
-                autoCapitalize="characters"
-                editable={!readOnly && !save.isPending}
-              />
-              <TextField
-                control={control}
-                name="bankAccountNumber"
-                label={t('form.bankAccountNumber')}
-                keyboardType="number-pad"
-                editable={!readOnly && !save.isPending}
-              />
-              <TextField
-                control={control}
-                name="bankAccountName"
-                label={t('form.bankAccountName')}
-                autoCapitalize="characters"
-                editable={!readOnly && !save.isPending}
-              />
-            </YStack>
-          </Card>
 
           {!readOnly && profile.missingFields.length > 0 ? (
             <Callout

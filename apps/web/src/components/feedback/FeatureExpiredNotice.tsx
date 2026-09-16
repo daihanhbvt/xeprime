@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import type { PlanFeature } from '@xeprime/types';
-import { ROUTES } from '@/constants/routes';
+import { SHOP_SECTION, shopSectionPath } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { queryKeys } from '@/services/query-keys';
@@ -50,7 +50,7 @@ export function FeatureExpiredNotice({
       }
       action={
         <span className={styles.actions}>
-          <Link href={ROUTES.MANAGE.SUBSCRIPTION}>
+          <Link href={shopSectionPath(SHOP_SECTION.PLAN)}>
             <Button size="small" type="primary">
               {t('feature.renewCta')}
             </Button>

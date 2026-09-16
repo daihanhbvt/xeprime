@@ -15,9 +15,9 @@
   "form": {
     "title": "Thêm tài khoản nhận tiền",
     "bankCode": "Ngân hàng",
-    "bankCodePlaceholder": "VCB, ACB, TCB…",
+    "bankCodePlaceholder": "Chọn ngân hàng",
     "accountNumber": "Số tài khoản",
-    "accountName": "Tên chủ tài khoản",
+    "accountName": "Họ và tên người thụ hưởng",
     "accountNameHint": "Gõ đúng như đăng ký ở ngân hàng — sai tên là lệnh chuyển bị trả về.",
     "label": "Tên gợi nhớ",
     "labelPlaceholder": "Không bắt buộc",
@@ -31,7 +31,8 @@
       "numberRequired": "Nhập số tài khoản",
       "numberDigits": "Số tài khoản chỉ gồm chữ số",
       "nameRequired": "Nhập tên chủ tài khoản"
-    }
+    },
+    "bankNotFound": "Không tìm thấy ngân hàng nào khớp."
   },
   "refund": {
     "title": "Tài khoản nhận tiền hoàn",

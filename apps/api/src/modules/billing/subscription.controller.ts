@@ -12,6 +12,7 @@ import { BillingService } from './billing.service';
 import {
   MySubscriptionDto,
   PaymentInfoDto,
+  PendingSubscriptionInvoiceDto,
   PurchaseSubscriptionDto,
   SubscriptionInvoiceDto,
   SubscriptionInvoicePageDto,
@@ -69,6 +70,26 @@ export class SubscriptionController {
       tenant.tenantId,
       query,
     ) as Promise<SubscriptionInvoicePageDto>;
+  }
+
+  /**
+   * HOÁ ĐƠN ĐANG CHỜ TIỀN — `data: null` khi không có.
+   *
+   * Tồn tại vì màn onboarding gian hàng phải PHỤC HỒI sau một lần F5: người dùng tạo hoá đơn,
+   * đóng trình duyệt, đăng nhập lại và phải thấy lại đúng mã + đúng QR đó thay vì một form mua
+   * gói mời họ tạo mã thứ hai. Trang "Gói của tôi" dùng cùng endpoint cho dải QR ở đầu trang.
+   *
+   * `subscription.view` chứ không `subscription.purchase`: đây là đường ĐỌC, và quản lý cần biết
+   * gian hàng đang nợ khoản nào.
+   */
+  @Get('invoices/pending')
+  @RequirePermissions(PERMISSION.SUBSCRIPTION_VIEW)
+  @ApiOperation({
+    summary: 'Hoá đơn gói đang chờ tiền (issued | partially_paid); `invoice: null` nếu không có',
+  })
+  @ApiOkResponse({ type: PendingSubscriptionInvoiceDto })
+  pendingInvoice(@CurrentTenant() tenant: TenantContext): Promise<PendingSubscriptionInvoiceDto> {
+    return this.billing.pendingInvoiceForTenant(tenant.tenantId);
   }
 
   @Post('purchase')

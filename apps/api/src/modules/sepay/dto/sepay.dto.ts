@@ -19,14 +19,20 @@ export class SepayWebhookAckDto {
  */
 export class SepayWebhookResultDto {
   @ApiProperty() received!: boolean;
-  @ApiProperty({ description: 'Giao dịch này đã nhận trước đó — lần này không ghi gì thêm' })
+  @ApiProperty({
+    description:
+      'Giao dịch này đã nhận trước đó — dòng `bank_transactions` không được ghi lần nữa. ' +
+      'Vẫn có thể `matched: true` nếu dòng cũ còn chưa khớp và lần này khớp được.',
+  })
   duplicate!: boolean;
-  @ApiProperty({ description: 'Đã khớp tự động vào một hoá đơn gói hay chưa' })
+  @ApiProperty({ description: 'Đã khớp tự động vào một khoản giữ chỗ hay hoá đơn gói hay chưa' })
   matched!: boolean;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Chú thích máy đọc được (partial | activated | already_paid | invoice_… )',
+    description:
+      'Chú thích máy đọc được (partial | activated | already_paid | hold_… | invoice_… | ' +
+      'match_failed — giao dịch đã ghi nhưng lượt khớp lỗi, đang nằm ở hàng đợi đối soát)',
   })
   note!: string | null;
 }

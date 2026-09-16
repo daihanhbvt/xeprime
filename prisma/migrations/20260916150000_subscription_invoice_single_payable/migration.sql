@@ -1,0 +1,45 @@
+-- ═══════════════════════════════════════════════════════════════════════════
+-- MỘT HOÁ ĐƠN GÓI TRẢ ĐƯỢC CHO MỖI GIAN HÀNG — ràng buộc ở DB (16/09/2026)
+--
+-- Bất biến: tại mọi thời điểm, một tenant có TỐI ĐA MỘT hàng `subscription_invoices` ở trạng
+-- thái còn nhận được tiền (`issued` hoặc `partially_paid`).
+--
+-- Vì sao nó phải nằm ở DB chứ không chỉ ở service:
+--
+--   * `applyBankPaymentWithinTx` coi CẢ HAI trạng thái trên là payable. Hai hàng cùng sống
+--     nghĩa là hai mã `XPG…` cùng kích hoạt được gói — gian hàng chuyển khoản theo mã cũ vẫn
+--     "trúng", và sổ đối soát có hai chứng từ cho một kỳ.
+--   * `code` là chuỗi ngẫu nhiên nên KHÔNG unique nào sẵn có chặn được: với DB, hàng thứ hai
+--     luôn hợp lệ.
+--   * Bất biến này nói về sự VẮNG MẶT của hàng ("chưa có hoá đơn payable nào"), mà khoá hàng
+--     (`SELECT … FOR UPDATE`) không khoá được hàng chưa tồn tại. Ở Read Committed, hai lượt mua
+--     song song đều đọc tập cũ như nhau rồi mỗi bên INSERT một hàng.
+--
+-- Tầng ứng dụng đã được vá cùng đợt và vẫn cần thiết — index này là lưới cuối, không phải lời
+-- xin lỗi cho tầng trên:
+--   * `BillingService.purchase` chạy sau `pg_advisory_xact_lock(hashtext(tenant_id))`, void hoá
+--     đơn `issued` cũ, và TỪ CHỐI (409 `SUBSCRIPTION_INVOICE_PARTIALLY_PAID`) khi hoá đơn cũ đã
+--     nhận một phần tiền — void một hoá đơn đã có tiền thật là xoá dấu vết tiền của khách.
+--   * `subscription-lifecycle.offerPlanOnFreeTripsExhausted` (writer THỨ HAI của bảng này) nay
+--     chỉ nhắc, không chào thêm hoá đơn, khi tenant đang có hoá đơn chờ.
+--
+-- ⚠️ PRISMA KHÔNG DIỄN ĐẠT ĐƯỢC index có `WHERE`. `schema.prisma` vì thế không mô tả index này,
+-- và `prisma migrate dev` sẽ coi nó là vật thể lạ rồi sinh lệnh DROP trong migration kế tiếp —
+-- đúng cái bẫy mà header của `20260821000000_init` cảnh báo cho các FK tổ hợp. Đọc diff trước
+-- khi chấp nhận, và giữ lại lệnh CREATE này.
+--
+-- Nếu migration này DỪNG vì dữ liệu đang vi phạm: đó là bằng chứng có tenant mang hai hoá đơn
+-- payable — KHÔNG được void bừa. Lấy danh sách bằng câu dưới rồi xử từng ca (giữ hoá đơn đã có
+-- `paid_amount > 0`, void hoá đơn còn 0đ):
+--
+--   SELECT tenant_id, array_agg(code ORDER BY created_at) AS codes
+--     FROM subscription_invoices
+--    WHERE status IN ('issued','partially_paid')
+--    GROUP BY tenant_id HAVING count(*) > 1;
+--
+-- Idempotent: `IF NOT EXISTS`, chạy lại không đổi gì.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+CREATE UNIQUE INDEX IF NOT EXISTS "subscription_invoices_one_payable_per_tenant"
+    ON "public"."subscription_invoices" ("tenant_id")
+ WHERE "status" IN ('issued', 'partially_paid');

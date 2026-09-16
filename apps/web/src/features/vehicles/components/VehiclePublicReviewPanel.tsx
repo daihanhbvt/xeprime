@@ -3,15 +3,18 @@
 import { CheckCircleFilled, CloseCircleOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import { Alert, App, Button, Card } from 'antd';
 import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 import {
   PERMISSION,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_SUBMITTABLE,
   type VehiclePublicStatus,
 } from '@xeprime/types';
+import { ShopListingGateAlert } from '@/features/shop/components/ShopListingGateAlert';
+import { packageShopListingGateFrom } from '@/features/shop/listing-gate';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import { decorativeIcon } from '@/lib/decorative-icon';
-import { getErrorMessage } from '@/services/api-client';
 import { useSubmitVehiclePublic } from '../hooks/use-vehicle-mutations';
 import { usePublicationLabels } from '../hooks/use-publication-labels';
 import { publishChecklist } from '../publication';
@@ -29,9 +32,21 @@ import styles from './VehiclePublicReviewPanel.module.css';
 export function VehiclePublicReviewPanel({ vehicle }: { vehicle: VehicleDetail }) {
   const t = useTranslations('Vehicles.publish.panel');
   const { message } = App.useApp();
+  const errorMessage = useErrorMessage();
   const { requirement, statusCopy } = usePublicationLabels();
   const { has } = usePermissions();
   const submit = useSubmitVehiclePublic(vehicle.id);
+  /**
+   * Hồ sơ GIAN HÀNG còn thiếu gì (ADR 0040) — `null` = không phải lỗi đó.
+   *
+   * Giữ trong state thay vì đọc từ `submit.error`: dải này phải ĐỨNG LẠI cho tới khi người dùng
+   * sửa xong (họ sẽ mở tab khác để tải logo rồi quay về), còn `submit.error` biến mất ngay khi
+   * mutation được gọi lại. Và nó phải tự dọn khi lượt gửi kế tiếp đi qua được — nếu không, một
+   * dải nói về logo còn đứng đó sau khi logo đã có.
+   */
+  const [listingGate, setListingGate] = useState<ReturnType<
+    typeof packageShopListingGateFrom
+  > | null>(null);
 
   const status = vehicle.publicStatus as VehiclePublicStatus;
   const canSubmit =
@@ -47,8 +62,20 @@ export function VehiclePublicReviewPanel({ vehicle }: { vehicle: VehicleDetail }
 
   function onSubmit() {
     submit.mutate(undefined, {
-      onSuccess: () => message.success(t('submitted')),
-      onError: (err) => message.error(getErrorMessage(err)),
+      onSuccess: () => {
+        setListingGate(null);
+        message.success(t('submitted'));
+      },
+      onError: (err) => {
+        /*
+         * Cổng hồ sơ gian hàng có một dải RIÊNG vì nó cần một cái link (xem
+         * `ShopListingGateAlert`). Mọi lỗi khác vẫn là một toast — chúng không có lối đi tiếp
+         * nào ngoài "thử lại".
+         */
+        const gate = packageShopListingGateFrom(err);
+        setListingGate(gate);
+        if (!gate) message.error(errorMessage(err));
+      },
     });
   }
 
@@ -60,6 +87,8 @@ export function VehiclePublicReviewPanel({ vehicle }: { vehicle: VehicleDetail }
         title={presentation.message}
         description={presentation.description}
       />
+
+      {listingGate ? <ShopListingGateAlert missing={listingGate} /> : null}
 
       {canSubmit ? (
         <>

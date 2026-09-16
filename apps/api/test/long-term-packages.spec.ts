@@ -19,7 +19,15 @@ import type { AuthService } from '../src/modules/auth/auth.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingRequestsService, makeBookingsService, makeCustomersService, makeNotificationService, makePricingService } from './helpers/service-factory';
+import {
+  makeBookingHoldsService,
+  makeBookingRequestsService,
+  makeBookingsService,
+  makeCustomersService,
+  makeNotificationService,
+  makePricingService,
+} from './helpers/service-factory';
+import { settleIfAwaitingHold } from './helpers/hold-payment';
 
 /**
  * Thuê dài hạn theo GÓI cố định (ADR 0011), trên PostgreSQL THẬT — vòng đời đầy đủ:
@@ -54,6 +62,12 @@ const auth = {
   resolveOrCreateUserByPhone: async () => ({ userId: guestUserId }),
 } as unknown as AuthService;
 
+/**
+ * Thuê dài hạn là NGOẠI LỆ của ADR 0039 điều 4: chưa chốt lịch thì chưa có giá, nên hold sinh
+ * lúc gian hàng DUYỆT chứ không lúc khách gửi. Nhưng cọc thì vẫn thu (cả sàn thu từ
+ * 16/09/2026), nên duyệt xong chuyến dừng ở `awaiting_hold` và chỉ thành ĐƠN khi tiền về.
+ */
+const holds = makeBookingHoldsService(asService);
 const requests = makeBookingRequestsService(asService, {
   bookings: bookings,
   audit: audit,
@@ -299,10 +313,22 @@ describe('duyệt yêu cầu dài hạn — gian hàng chốt giờ nhận, serv
     const approved = await requests.approve(tenantId, ownerId, requestId, {
       scheduledPickupAt: atVn(wanted, '08:30'),
     });
-    expect(approved.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
+    // Duyệt xong là CHỜ TIỀN, chưa có đơn — gian hàng đã chốt lịch, khách chưa trả.
+    expect(approved.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    expect(approved.bookingId).toBeNull();
+
+    await settleIfAwaitingHold(asService, holds, requestId);
+
+    /*
+     * Tiền về ⇒ ĐƠN NGAY, không bắt duyệt lần hai: gian hàng đã nhận chuyến ở bước trên
+     * (`decided_at` khác null), và đó chính là phép phân biệt hai đường sinh hold của ADR 0039
+     * điều 4.
+     */
+    const settled = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } });
+    expect(settled.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
 
     const booking = await prisma.booking.findUniqueOrThrow({
-      where: { id: approved.bookingId! },
+      where: { id: settled.bookingId! },
     });
     expect(booking.longTermPackageMonths).toBe(3);
     expect(vnDateKey(booking.pickupAt)).toBe(wanted);
@@ -394,11 +420,12 @@ describe('yêu cầu dài hạn LEGACY (chưa có gói)', () => {
       response: { message: expect.stringContaining('chưa có gói') },
     });
 
-    const approved = await requests.approve(tenantId, ownerId, legacyId, {
-      longTermPackageMonths: 2,
-    });
+    await requests.approve(tenantId, ownerId, legacyId, { longTermPackageMonths: 2 });
+    // Cùng đường với ca trên: duyệt chốt lịch, tiền về mới thành đơn (ADR 0039 điều 4).
+    await settleIfAwaitingHold(asService, holds, legacyId);
+    const settled = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: legacyId } });
     const booking = await prisma.booking.findUniqueOrThrow({
-      where: { id: approved.bookingId! },
+      where: { id: settled.bookingId! },
     });
     // Giữ nguyên giờ nhận khách từng chọn (không đổi ngày ngầm), ngày trả theo gói đã chốt.
     expect(booking.pickupAt.toISOString()).toBe(pickupAt.toISOString());

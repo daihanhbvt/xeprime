@@ -33,15 +33,15 @@ export async function generateMetadata(): Promise<Metadata> {
  * có màn. Nhưng SỔ TIỀN là ngoại lệ, vì hai lẽ:
  *
  *  1. Một chủ xe từng cho thuê rồi TẠM ẨN hết xe sẽ tụt về bậc `registering`. Gác ở bậc `owner`
- *     nghĩa là khoá luôn phần tiền họ ĐÃ kiếm được — mà ADR 0033 điều 1 nói điểm không hết hạn
- *     và không bị thu hồi, nên nó cũng không được vô hình. Ẩn đường vào một sổ công nợ là một
- *     cách không trả tiền.
- *  2. "0 điểm" là một câu ĐÚNG và tự giải thích, không giống một lịch rỗng trông như hỏng.
+ *     nghĩa là khoá luôn phần tiền họ ĐÃ kiếm được — số dư không hết hạn và không bị thu hồi,
+ *     nên nó cũng không được vô hình. Ẩn đường vào một sổ công nợ là một cách không trả tiền.
+ *  2. "0 đ" là một câu ĐÚNG và tự giải thích, không giống một lịch rỗng trông như hỏng.
  */
 export default function AccountEarningsPage() {
   return (
     <OwnerGate minStage={OWNER_STAGE.REGISTERING}>
-      <WalletView scope="shop" />
+      {/* `compact`: khu /account có menu trái 256px, bảng 8 cột sẽ phải cuộn ngang mới đọc được. */}
+      <WalletView scope="shop" variant="compact" />
     </OwnerGate>
   );
 }

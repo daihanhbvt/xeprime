@@ -25,6 +25,7 @@ export * from './holds';
 export * from './fee-policy';
 export * from './pricing';
 export * from './shop-profile';
+export * from './shop-onboarding';
 export * from './shop-verification';
 export * from './shop-storefront';
 export * from './vehicle-publication';

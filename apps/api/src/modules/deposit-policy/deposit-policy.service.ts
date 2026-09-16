@@ -1,9 +1,10 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, Optional } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
   BILLING_MODE,
+  DEPOSIT_COLLECTION_PLATFORM_MANDATORY,
   DEPOSIT_POLICY_REASON,
   PLAN_FEATURE,
   PLAN_FEATURE_LABEL,
@@ -43,6 +44,10 @@ export interface DepositPolicyResolution {
 }
 
 /**
+ * ⚠️ GIAI ĐOẠN HIỆN TẠI (16/09/2026): `DEPOSIT_COLLECTION_PLATFORM_MANDATORY = true` — CẢ SÀN
+ * thu cọc, mọi tuyến, mọi gói. Luật hai trục bên dưới vẫn còn nguyên và sẽ sống lại khi hằng đó
+ * về `false`; nó KHÔNG phải mã chết, nên đừng dọn.
+ *
  * HAI TRỤC, kiểm NỐI TIẾP — ADR 0027 điều 2.
  *
  *   1. Tuyến thu phí (`BillingService.billingModeFor`) — hoa hồng thì cọc BẮT BUỘC, hết chuyện.
@@ -60,6 +65,22 @@ export class DepositPolicyService {
     private readonly prisma: PrismaService,
     private readonly billing: BillingService,
     private readonly audit: AuditService,
+    /**
+     * Giai đoạn cả sàn thu cọc. KHÔNG phải một provider của Nest — DI không có token nào cho nó
+     * nên giá trị mặc định luôn thắng ở production, và hằng ở `@xeprime/types` vẫn là nguồn duy
+     * nhất.
+     *
+     * Có mặt ở đây chỉ vì MỘT lý do: để spec dựng được một instance với `false` và tiếp tục
+     * khoá luật hai trục của ADR 0027 điều 2 — thứ sẽ sống lại nguyên vẹn khi giai đoạn này
+     * kết thúc. Không có tham số này thì bốn ca đó phải xoá, và ngày mở lại công tắc sẽ là ngày
+     * một luật về tiền quay lại mà không còn test nào canh.
+     */
+    // `@Optional()` là BẮT BUỘC, không phải trang trí: Nest đọc `design:paramtypes` và thấy
+    // `Boolean` ở index 3, rồi đi tìm một provider cho nó — giá trị mặc định của TypeScript
+    // không làm nó bỏ qua tham số. Thiếu decorator này, cả ứng dụng không khởi động được
+    // (`UnknownDependenciesException` ở `DepositPolicyModule`). Có nó thì DI truyền `undefined`
+    // và default value thắng, đúng như docblock trên mô tả.
+    @Optional() private readonly platformMandatory: boolean = DEPOSIT_COLLECTION_PLATFORM_MANDATORY,
   ) {}
 
   /**
@@ -93,6 +114,28 @@ export class DepositPolicyService {
         toggleEnabled: false,
         editable: false,
         reason: DEPOSIT_POLICY_REASON.BILLING_NOT_CONFIGURED,
+      };
+    }
+
+    /*
+     * GIAI ĐOẠN CẢ SÀN THU CỌC (16/09/2026) — đứng TRƯỚC cả nhánh tuyến và nhánh gói.
+     *
+     * Đặt ở đây vì nó là một luật CAO HƠN hai trục của ADR 0027 điều 2, không phải một nhánh
+     * thứ ba ngang hàng: trong giai đoạn này không có gian hàng nào không thu cọc, nên đọc gói
+     * rồi đọc công tắc chỉ để bỏ qua cả hai là tạo ấn tượng sai rằng chúng còn ảnh hưởng.
+     *
+     * `toggleEnabled` vẫn trả GIÁ TRỊ ĐANG LƯU chứ không trả cứng `true`: nó là lựa chọn của
+     * gian hàng cho ngày công tắc mở lại, và một API nói dối về giá trị đang lưu sẽ làm màn
+     * cấu hình hiện sai đúng vào ngày đó.
+     */
+    if (this.platformMandatory) {
+      return {
+        billingMode,
+        required: true,
+        planAllows: true,
+        toggleEnabled: await this.toggleEnabledFor(tenantId, tx),
+        editable: false,
+        reason: DEPOSIT_POLICY_REASON.PLATFORM_MANDATORY,
       };
     }
 
@@ -166,6 +209,21 @@ export class DepositPolicyService {
     const now = new Date();
     // Đây là đường GHI cấu hình tiền ⇒ ném khi chưa xác định được tuyến, không đoán.
     const billingMode = await this.billing.billingModeForMoneyOrThrow(tenantId, now);
+
+    /*
+     * Giai đoạn cả sàn thu cọc: KHÔNG ai ghi được, kể cả tuyến gói có đủ cờ. Chặn ở đây chứ
+     * không chỉ ở `editable: false` của đường đọc — `editable` là để giao diện khỏi mời bấm một
+     * thứ chắc chắn hỏng, còn cái chặn thật phải nằm trên đường ghi (ADR 0027 điều 4).
+     */
+    if (this.platformMandatory) {
+      throw new ForbiddenException({
+        code: API_ERROR_CODE.DEPOSIT_ALWAYS_REQUIRED,
+        message:
+          'Trong giai đoạn này mọi gian hàng đều thu cọc qua XePrime — công tắc tạm khoá, ' +
+          'lựa chọn đang lưu sẽ được dùng lại khi mở lại tính năng',
+        details: { billingMode, platformMandatory: true },
+      });
+    }
 
     if (billingMode === BILLING_MODE.COMMISSION) {
       throw new ForbiddenException({

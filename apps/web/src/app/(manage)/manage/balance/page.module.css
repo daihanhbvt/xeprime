@@ -1,0 +1,16 @@
+/**
+ * Khung trang "Số dư & rút tiền" — cùng khuôn với `/manage/shop`.
+ *
+ * Bọc CẢ tiêu đề lẫn nội dung: căn giữa mỗi phần nội dung mà để tiêu đề bám lề trái sẽ tạo hai
+ * mép trái khác nhau trên cùng một trang. Trần lấy từ token dùng chung, không phải một con số
+ * riêng của màn này.
+ */
+.page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: var(--xp-shell-form-max-width);
+  min-width: 0;
+  margin-inline: auto;
+  padding-bottom: var(--xp-space-lg);
+}

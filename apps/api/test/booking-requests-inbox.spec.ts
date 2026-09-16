@@ -21,7 +21,15 @@ import { ChatService } from '../src/modules/chat/chat.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingRequestsService, makeBookingsService, makeCustomersService, makeNotificationService, makePricingService } from './helpers/service-factory';
+import {
+  makeBookingHoldsService,
+  makeBookingRequestsService,
+  makeBookingsService,
+  makeCustomersService,
+  makeNotificationService,
+  makePricingService,
+} from './helpers/service-factory';
+import { settleIfAwaitingHold } from './helpers/hold-payment';
 
 /**
  * Hộp thư yêu cầu thuê của gian hàng, trên PostgreSQL THẬT.
@@ -57,6 +65,7 @@ const auth = {
   resolveOrCreateUserByPhone: async () => ({ userId: null }),
 } as unknown as AuthService;
 
+const holds = makeBookingHoldsService(asService);
 const requests = makeBookingRequestsService(asService, {
   bookings: bookings,
   audit: audit,
@@ -494,12 +503,17 @@ describe('BookingRequestsService.approve — chặn ở tầng dữ liệu', () 
     });
 
     const dto = await requests.approve(tenantId, ownerId, id);
-    expect(dto.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
-    expect(dto.bookingId).not.toBeNull();
+    // Duyệt chốt quyết định và GIỮ CHỖ; đơn ra đời khi tiền về (ADR 0039).
+    expect(dto.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
     expect(dto.decidedAt).not.toBeNull();
 
+    await settleIfAwaitingHold(asService, holds, id);
+    const settled = await prisma.bookingRequest.findUniqueOrThrow({ where: { id } });
+    expect(settled.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
+    expect(settled.bookingId).not.toBeNull();
+
     const held = await prisma.vehicleOccupancy.count({
-      where: { vehicleId: vehicleBId, sourceId: dto.bookingId! },
+      where: { vehicleId: vehicleBId, sourceId: settled.bookingId! },
     });
     expect(held).toBe(1);
   });

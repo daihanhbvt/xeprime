@@ -5,7 +5,9 @@ import type { SaveSellerProfileInput, SellerProfile } from './types';
  *
  * Endpoint lưu là PUT toàn phần: trường không gửi bị ghi thành `null`. Màn nào chỉ sửa MỘT PHẦN
  * hồ sơ (bản compact "Thông tin khai thuế" ở khu tài khoản) phải bắt đầu từ bản đầy đủ này rồi
- * ghi đè phần mình hiện — nếu không, lưu tên pháp lý sẽ xoá sạch tài khoản ngân hàng đã khai.
+ * ghi đè phần mình hiện — nếu không, lưu tên pháp lý sẽ xoá sạch số giấy tờ đã khai.
+ *
+ * KHÔNG còn ba trường ngân hàng (16/09/2026): tài khoản nhận tiền sống ở `bank_accounts`.
  */
 export function profileToSaveInput(profile: SellerProfile): SaveSellerProfileInput {
   return {
@@ -15,8 +17,5 @@ export function profileToSaveInput(profile: SellerProfile): SaveSellerProfileInp
     idNumber: profile.idNumber,
     idIssuedAt: profile.idIssuedAt,
     idIssuedBy: profile.idIssuedBy,
-    bankCode: profile.bankCode,
-    bankAccountNumber: profile.bankAccountNumber,
-    bankAccountName: profile.bankAccountName,
   };
 }

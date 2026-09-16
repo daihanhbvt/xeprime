@@ -20,19 +20,12 @@
     "idNumber": "Representative's ID / passport number",
     "idIssuedAt": "Issue date",
     "idIssuedBy": "Issued by",
-    "bankCode": "Bank code",
-    "bankCodeHint": "VietQR standard, e.g. VCB, TCB.",
-    "bankAccountNumber": "Payout account number",
-    "bankAccountName": "Account holder name",
     "saved": "Profile saved.",
     "submitted": "Sent for verification.",
     "reset": "Undo",
     "missingFields": "{count} required fields left before you can submit for verification",
     "missingField": {
       "legalName": "Legal name",
-      "bankCode": "Bank code",
-      "bankAccountNumber": "Account number",
-      "bankAccountName": "Account holder name",
       "idNumber": "ID / passport number",
       "taxId": "Tax ID"
     },
@@ -40,9 +33,7 @@
     "saveBeforeSubmit": "Save your changes before submitting for verification.",
     "validation": {
       "taxId": "Invalid tax ID",
-      "idNumber": "Invalid ID number",
-      "bankCode": "Invalid bank code",
-      "bankAccountNumber": "Invalid account number"
+      "idNumber": "Invalid ID number"
     }
   }
 }

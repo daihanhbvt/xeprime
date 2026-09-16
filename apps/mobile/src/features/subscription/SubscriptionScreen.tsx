@@ -259,9 +259,7 @@ function CurrentPlanCard({
             </Text>
 
             <Text col={colors.textMuted} fos={fontSize.bodySm}>
-              {isCommission
-                ? t('current.commissionSummary', { percent: plan.commissionPercent ?? 0 })
-                : t('current.packageSummary')}
+              {isCommission ? t('current.commissionSummary') : t('current.packageSummary')}
             </Text>
           </>
         ) : (

@@ -13,6 +13,7 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import type { AuthService } from '../src/modules/auth/auth.service';
+import { BankAccountsService } from '../src/modules/bank-accounts/bank-accounts.service';
 import { ContractsService } from '../src/modules/contracts/contracts.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
@@ -41,7 +42,7 @@ const bookings = makeBookingsService(asService, {
   notifications: notifications,
   customers: makeCustomersService(asService, audit),
 });
-const contracts = new ContractsService(asService, audit);
+const contracts = new ContractsService(asService, audit, new BankAccountsService(asService));
 
 const phoneVerification = {
   assertPhoneVerifiedForBooking: async () => {},

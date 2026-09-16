@@ -63,6 +63,7 @@ const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   [NOTIFICATION_TYPE.HOLD_PAID]: <CheckCircleOutlined />,
   [NOTIFICATION_TYPE.HOLD_EXPIRING]: <HourglassOutlined />,
   [NOTIFICATION_TYPE.HOLD_EXPIRED]: <HourglassOutlined />,
+  [NOTIFICATION_TYPE.HOLD_REFUNDED]: <RollbackOutlined />,
   [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: <RollbackOutlined />,
   // Hồ sơ người bán — dùng icon chứng nhận, không phải icon gian hàng: đây là danh tính pháp lý.
   [NOTIFICATION_TYPE.SELLER_PROFILE_VERIFIED]: <SafetyCertificateOutlined />,

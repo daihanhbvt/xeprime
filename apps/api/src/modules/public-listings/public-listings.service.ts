@@ -2,7 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
-  BOOKING_REQUEST_STATUS,
+  BOOKING_REQUEST_STATUS_ANSWERED,
+  BOOKING_REQUEST_STATUS_RESPONSE_RATE,
+  BOOKING_REQUEST_STATUS_UNANSWERED,
   BOOKING_STATUS,
   BRANCH_STATUS,
   PROVINCE_CODES,
@@ -17,6 +19,7 @@ import {
   hasVerifiedStorefront,
   resolveEffectiveBilling,
   resolveStorefrontKind,
+  responseRatePercent,
   storefrontAllowsPublicChat,
   type PaginationMeta,
   type SeatBucket,
@@ -56,33 +59,6 @@ import {
 
 const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 48;
-
-/**
- * TỈ LỆ PHẢN HỒI — chỉ đếm những yêu cầu mà gian hàng thật sự PHẢI quyết.
- *
- * Bốn trạng thái cố ý nằm ngoài mẫu số:
- *
- *  - `pending_host_approval` — còn trong hạn, chưa ai chậm trễ cả;
- *  - `cancelled_by_customer` — khách rút yêu cầu; tính nó vào là phạt gian hàng vì việc của
- *    người khác;
- *  - `awaiting_hold` / `hold_expired` — luồng tự động của tuyến hoa hồng (ADR 0021), ở đó
- *    KHÔNG có bước chủ xe duyệt nào để mà phản hồi.
- *
- * Còn `expired` thì đúng là "không trả lời": worker chỉ đặt nó khi hết cửa sổ phản hồi mà yêu
- * cầu vẫn nằm im (`apps/worker/src/jobs/booking-request-deadlines.ts`).
- */
-const REQUEST_ANSWERED_STATUSES: string[] = [
-  BOOKING_REQUEST_STATUS.APPROVED_BY_HOST,
-  BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
-  BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
-];
-
-const REQUEST_UNANSWERED_STATUSES: string[] = [BOOKING_REQUEST_STATUS.EXPIRED];
-
-const RESPONSE_RATE_STATUSES: string[] = [
-  ...REQUEST_ANSWERED_STATUSES,
-  ...REQUEST_UNANSWERED_STATUSES,
-];
 
 /**
  * Facet sống 60 giây trong bộ nhớ tiến trình.
@@ -774,7 +750,7 @@ export class PublicListingsService {
         }),
         this.prisma.bookingRequest.groupBy({
           by: ['status'],
-          where: { tenantId, status: { in: RESPONSE_RATE_STATUSES } },
+          where: { tenantId, status: { in: [...BOOKING_REQUEST_STATUS_RESPONSE_RATE] } },
           _count: { _all: true },
         }),
       ]);
@@ -782,16 +758,13 @@ export class PublicListingsService {
     const countBy = new Map(requestsByStatus.map((row) => [row.status, row._count._all]));
     const sumOf = (statuses: readonly string[]): number =>
       statuses.reduce((total, status) => total + (countBy.get(status) ?? 0), 0);
-    const answered = sumOf(REQUEST_ANSWERED_STATUSES);
-    const unanswered = sumOf(REQUEST_UNANSWERED_STATUSES);
-    const decided = answered + unanswered;
+    const answered = sumOf(BOOKING_REQUEST_STATUS_ANSWERED);
+    const unanswered = sumOf(BOOKING_REQUEST_STATUS_UNANSWERED);
 
     return {
       vehicleCount: byProvince.reduce((total, row) => total + row._count._all, 0),
       completedTripCount,
-      // Chưa có yêu cầu nào tới hạn quyết ⇒ `null`, KHÔNG phải 0: "chưa ai hỏi" và "hỏi mà
-      // không trả lời" là hai điều khác hẳn nhau với người đang cân nhắc thuê xe.
-      responseRatePercent: decided === 0 ? null : Math.round((answered / decided) * 100),
+      responseRatePercent: responseRatePercent(answered, unanswered),
       branchCount,
       serviceProvinceNames: byProvince
         .map((row) => row.provinceName)

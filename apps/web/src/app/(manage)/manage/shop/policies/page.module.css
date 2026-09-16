@@ -6,6 +6,26 @@
   margin-inline: auto;
 }
 
+.depositSection {
+  margin-bottom: var(--xp-space-lg);
+  padding-bottom: var(--xp-space-lg);
+  border-bottom: 1px solid var(--xp-color-border-secondary);
+  /* Đích của `#deposit-collection`: chừa khoảng cho topbar dính, nếu không tiêu đề section
+     nằm khuất dưới thanh header khi người dùng tới đây từ route redirect. */
+  scroll-margin-top: var(--xp-space-xl);
+}
+
+/* Cấp heading lấy theo NGỮ NGHĨA (h2 dưới h1 của trang), cỡ chữ lấy theo bố cục — cùng kỷ luật
+   với `ManagePageHeader`: không hạ cấp heading chỉ để lấy chữ nhỏ. */
+.sectionTitle {
+  margin-bottom: var(--xp-space-xs);
+  font-size: var(--xp-font-size-h4);
+}
+
+.readOnly {
+  margin-bottom: var(--xp-space-md);
+}
+
 .toolbar {
   display: grid;
   min-width: 0;

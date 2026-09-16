@@ -1,6 +1,6 @@
 {
   "page": {
-    "subtitle": "What renters see on the marketplace, plus the internal details XePrime uses to review your shop.",
+    "subtitle": "Your shop’s details and settings.",
     "viewPublicPage": "View shop page",
     "loadError": "Couldn't load your shop profile",
     "forbidden": {
@@ -32,8 +32,7 @@
       "view": "View profile",
       "revise": "Add the details",
       "reason": "See the reason",
-      "support": "Contact support",
-      "addVehicle": "Add a vehicle"
+      "support": "Contact support"
     },
     "draft": {
       "title": "This profile has not been submitted yet",
@@ -98,25 +97,6 @@
         "hint": "Recommended size: 1600×600px."
       }
     },
-    "owner": {
-      "title": "Shop owner",
-      "fullName": {
-        "label": "Full name",
-        "placeholder": "e.g. Nguyễn Văn A"
-      },
-      "phone": {
-        "label": "Phone number",
-        "placeholder": "0901234567"
-      },
-      "email": {
-        "label": "Email",
-        "placeholder": "owner@yourshop.vn"
-      },
-      "privacy": {
-        "title": "Kept private",
-        "body": "Owner details are visible only to the XePrime team and are never shown to renters."
-      }
-    },
     "address": {
       "title": "Address & legal",
       "address": {
@@ -139,22 +119,6 @@
         "label": "Business licence no.",
         "placeholder": "If you have one"
       }
-    },
-    "bank": {
-      "title": "Payout account",
-      "hint": "XePrime uses this account to reconcile and pay out to your shop.",
-      "bankName": {
-        "label": "Bank",
-        "placeholder": "e.g. Vietcombank"
-      },
-      "accountNo": {
-        "label": "Account number",
-        "placeholder": "Payout account number"
-      },
-      "accountName": {
-        "label": "Account holder",
-        "placeholder": "Name on the account"
-      }
     }
   },
   "checklist": {
@@ -171,18 +135,13 @@
       "logo": "Shop logo",
       "bio": "Shop description",
       "address": "Shop address",
-      "cover": "Shop page cover image",
-      "bank": "Payout account"
+      "cover": "Shop page cover image"
     }
   },
   "validation": {
     "displayNameRequired": "Display name is required",
     "provinceRequired": "Select the shop's province",
     "provinceInvalid": "Invalid province code",
-    "ownerFullNameRequired": "Shop owner's full name is required",
-    "ownerPhoneRequired": "Shop owner's phone number is required",
-    "ownerPhoneInvalid": "Invalid phone number",
-    "ownerEmailInvalid": "Invalid email address",
     "logoUrlInvalid": "Invalid logo URL",
     "coverUrlInvalid": "Invalid cover image URL"
   },
@@ -214,34 +173,39 @@
     "dirtyDiscard": "Discard"
   },
   "paymentSettings": {
-    "title": "Deposit collection",
-    "subtitle": "Decide whether XePrime holds the customer deposit before the trip. This is not the same as the security deposit you take at the counter — that one lives in Rental policies.",
-    "loadError": "Could not load deposit settings",
+    "title": "Reservation payment through XePrime",
+    "subtitle": "During this phase, every trip on XePrime collects the reservation amount from the customer before the trip is confirmed. This is NOT the security deposit you take at handover — that one you collect, hold and refund yourself, and it lives in the per-vehicle policy below.",
+    "loadError": "Could not load reservation payment settings",
+    "readOnly": "You can only view this setting. The shop owner is the one who turns it on or off.",
     "forbidden": {
       "title": "Access denied",
-      "description": "You need the permission below to view this shop deposit settings."
+      "description": "You need the permission below to view this shop's reservation payment settings."
     },
     "toggle": {
-      "label": "Let XePrime collect the deposit for me",
+      "label": "Let XePrime collect the reservation payment for me",
       "on": "Collecting",
       "off": "Not collecting",
-      "saved": "Deposit settings saved"
+      "saved": "Reservation payment settings saved"
     },
     "mode": {
-      "onTitle": "Customers pay the deposit before the booking exists",
-      "onBody": "The customer scans a VietQR code and transfers the deposit to XePrime within 2 hours of your approval. The booking is only created once the money arrives, so no slot is held by a request that never materialises. The customer pays you the rest of the rent directly at pickup.",
-      "offTitle": "You arrange the deposit with the customer yourself",
-      "offBody": "Approving creates the booking straight away, with no wait for money. You contact the customer to arrange the deposit directly — XePrime neither collects nor reconciles it, so if a dispute over the deposit arises XePrime has no record to support you."
+      "onTitle": "Guests pay a reservation amount before the booking exists",
+      "onBody": "The customer scans a VietQR transfer to XePrime the moment they book, within 10 minutes (auto-extended up to twice). The slot is held while they pay, and the request only reaches you once the money has arrived — no more approving and then waiting to see whether they pay. This amount is PART of the rental price; the customer pays you the rest directly at handover. If you decline, they are refunded in full.",
+      "offTitle": "You arrange it with the guest yourself",
+      "offBody": "Approving creates the booking straight away, with no wait for money. You contact the guest to arrange the security deposit at pickup — XePrime neither collects nor reconciles it, so if a dispute arises XePrime has no record to support you."
     },
     "locked": {
+      "platform": {
+        "title": "XePrime collects the reservation amount for every shop",
+        "body": "During this phase every trip on XePrime collects the reservation amount from the customer up front, regardless of plan. The switch is locked for now and will reopen later; your saved choice is kept and will apply again then."
+      },
       "commission": {
         "title": "Your shop always collects deposits through XePrime",
-        "body": "You are on the commission track: no subscription fee, and XePrime charges a per-trip service fee on the customer side. The deposit is a condition of this track, so the switch is locked. Move to a subscription plan if you want to decide for yourself.",
+        "body": "You are on the commission track: no subscription fee, and XePrime charges a per-trip service fee on the customer side. The reservation payment is a condition of this track, so the switch is locked. Move to a subscription plan if you want to decide for yourself.",
         "cta": "View subscription plans"
       },
       "featureMissing": {
         "title": "Your current plan does not include this",
-        "body": "Deposit collection through XePrime is part of the subscription plan. Until then you still take bookings as usual and arrange deposits with customers directly.",
+        "body": "Collecting the reservation payment through XePrime is part of the subscription plan. Until then you still take bookings as usual and arrange the security deposit with guests directly at handover.",
         "cta": "Upgrade plan"
       },
       "notConfigured": {
@@ -250,15 +214,10 @@
         "cta": "Contact support"
       }
     },
-    "frozen": "Changing this switch only affects rental requests approved from now on. Existing bookings keep the deposit arrangement frozen when they were created."
+    "frozen": "Changing this switch only affects rental requests approved from now on. Existing bookings keep the arrangement frozen when they were created."
   },
   "verification": {
-    "submit": "Request verification",
     "resubmit": "Submit again",
-    "unverified": {
-      "title": "Shop not verified yet",
-      "body": "Your vehicles still list and go live as usual — verification is only needed when you want to buy a shop plan and unlock the full management suite."
-    },
     "pending": {
       "title": "Waiting for XePrime to verify your profile",
       "body": "Nothing changes for your vehicles: approved ones stay on the marketplace and keep taking bookings.",
@@ -271,10 +230,55 @@
     "rejected": {
       "title": "Verification declined",
       "body": "Fix the points below and submit again. This does not affect the vehicles you already have listed."
+    }
+  },
+  "sections": {
+    "navTitle": "Settings",
+    "navLabel": "Shop page sections",
+    "profile": "Public details",
+    "profileHint": "What customers see on the marketplace.",
+    "owner": "Shop owner",
+    "legal": "Address & legal",
+    "legalHint": "Where customers pick the car up. Tax code and licence are optional.",
+    "payout": "Payout account",
+    "payoutHint": "Where XePrime transfers your shop’s money.",
+    "plan": "Plan & limits"
+  },
+  "owner": {
+    "title": "Shop owner",
+    "hint": "Taken from the owner’s account.",
+    "email": "Email",
+    "phone": "Phone number",
+    "noEmail": "No email yet",
+    "noPhone": "No phone number yet",
+    "verified": "Verified",
+    "unverified": "Not verified",
+    "manageLogin": "Manage sign-in details"
+  },
+  "welcome": {
+    "logo": {
+      "title": "1 step left before you can list",
+      "body": "Upload your shop logo to complete how you appear on the marketplace.",
+      "cta": "Upload logo"
     },
-    "verified": {
-      "title": "Shop verified",
-      "body": "You can now buy a shop plan to unlock the ledger, receivables, staff and reports."
+    "ready": {
+      "title": "Your shop is ready",
+      "body": "The profile is complete. List your first vehicle to start taking bookings.",
+      "cta": "List your first vehicle"
+    }
+  },
+  "listingGate": {
+    "title": "Your shop profile is still missing details",
+    "logoOnly": "Your shop needs a logo before you can submit a vehicle.",
+    "cta": "Open shop profile",
+    "ctaLogo": "Upload logo",
+    "items": {
+      "displayName": "Shop display name",
+      "contactPhone": "Contact phone number",
+      "province": "Province / city",
+      "ward": "Ward",
+      "address": "Street number and street",
+      "logo": "Shop logo"
     }
   }
 }

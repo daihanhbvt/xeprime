@@ -79,10 +79,14 @@ export class ApprovalTenantSummaryDto {
   /**
    * TUYẾN của gian hàng — `commission` (Basic Owner) hay `package` (gian hàng thuê bao).
    *
-   * Reviewer cần biết vì hai tuyến có mức soi khác nhau: gian hàng thuê bao đã qua một vòng
-   * thương mại, còn chủ xe tuyến hoa hồng vào miễn phí và đây là lần kiểm tra đầu tiên. Đọc từ
-   * `billingMode` của gói hiện hành, KHÔNG suy từ `tenantType` (ADR 0014 điều 2: nhãn hiển thị,
-   * không phải nguồn năng lực) và cũng không suy từ `planCode` (mọi tenant mới đều có gói).
+   * Reviewer cần biết vì hai tuyến có mức soi khác nhau: gian hàng thuê bao đã trả tiền, còn chủ
+   * xe tuyến hoa hồng vào miễn phí và đây là lần kiểm tra đầu tiên. Đọc từ `billingMode` của gói
+   * hiện hành, KHÔNG suy từ `tenantType` (ADR 0014 điều 2: nhãn hiển thị, không phải nguồn năng
+   * lực) và cũng không suy từ `planCode`.
+   *
+   * `null` có thể nghĩa là "đang chờ thanh toán gói đầu tiên" (ADR 0040 điều 2 — tuyến gói cố ý
+   * không nhận gói tạm), nên đừng đọc nó thành "chủ xe tuyến hoa hồng": trục trả lời câu đó là
+   * `tenants.onboarding_state`.
    */
   @ApiPropertyOptional({
     type: String,

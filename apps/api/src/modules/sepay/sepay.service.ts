@@ -22,16 +22,23 @@ import { BookingHoldsService } from '../holds/booking-holds.service';
 import type { SepayWebhookResultDto } from './dto/sepay.dto';
 
 /**
+ * Nhà cung cấp đối soát của mọi dòng do service này ghi — nằm trong khoá unique
+ * `(provider, provider_tx_id)`, nên ghi và đọc lại phải dùng CÙNG một chuỗi. Gõ tay ở ba chỗ là
+ * ba chỗ để chốt chống ghi đôi lệch khỏi nhau.
+ */
+const SEPAY_PROVIDER = 'sepay';
+
+/**
  * Đối soát tiền VÀO qua SePay — writer DUY NHẤT của `bank_transactions` (ADR 0022).
  *
  * Nguyên tắc xuyên suốt, xếp theo thứ tự sống còn:
  *
- *  1. **Ghi thô trước, khớp sau.** Dòng `bank_transactions` được chèn TRƯỚC khi biết nội dung
- *     khớp vào đâu — giao dịch không khớp được vẫn có chỗ nằm chờ admin, không bị bỏ rơi để
- *     lần retry sau chèn lại.
+ *  1. **Ghi thô trước, khớp sau — HAI transaction tách rời.** Dòng `bank_transactions` được
+ *     chèn và COMMIT trước khi biết nội dung khớp vào đâu. Một lượt khớp hỏng vì thế không cuốn
+ *     theo bằng chứng rằng tiền đã tới: giao dịch nằm lại hàng đợi admin, đúng chỗ của nó.
  *  2. **Idempotent bằng unique DB**, không bằng check tầng app: `(provider, provider_tx_id)`.
- *     Bắt P2002 = "đã xử lý rồi" → trả 200. KHÔNG BAO GIỜ trả 5xx cho một giao dịch đã nhận —
- *     SePay sẽ retry vĩnh viễn.
+ *     Bắt P2002 = "đã nhận rồi" → 200, và chỉ khớp tiếp nếu dòng cũ còn `unmatched` (xem bất
+ *     biến ở `ingest`). KHÔNG BAO GIỜ trả 5xx cho một giao dịch đã nhận — SePay retry vĩnh viễn.
  *  3. **Không tin payload lấy tenant.** Mọi hiệu ứng ghi đều suy từ ĐÍCH đã khớp qua mã đối
  *     soát; webhook không có ngữ cảnh tenant nào.
  *  4. **Không khớp tự động theo số tiền** (ADR 0022 điều 4) — không rút được mã thì nằm ở
@@ -91,6 +98,23 @@ export class SepayService {
    * `forbidNonWhitelisted` sẽ 400 mọi trường lạ mà SePay thêm vào sau này (cùng bẫy đã ghi ở
    * `bootstrap.ts` cho OAuth callback), nên bóc tay đúng các trường cần và giữ nguyên phần còn
    * lại trong `raw_json`.
+   *
+   * HAI BƯỚC COMMIT RIÊNG, và đó là điều quan trọng nhất ở đây (16/09/2026).
+   *
+   * Trước đợt này, dòng `bank_transactions` được chèn trong CÙNG transaction với lượt khớp. Đọc
+   * thì giống nguyên tắc 1, nhưng hiệu ứng thì ngược hẳn: bất kỳ lỗi nào trong lúc khớp —
+   * deadlock với một lượt khách huỷ cùng lúc, `EXCLUDE` của lịch nổ khi mở đơn, một bug ở tầng
+   * tạo đơn — đều cuốn LUÔN dòng tiền đó theo, rồi trả 5xx. Kết quả: SePay retry, lỗi lặp lại y
+   * hệt, và khoản tiền thật của khách không có một dòng nào trong sổ để admin nhìn thấy. Đúng
+   * loại "giao dịch mồ côi" mà gate R3 cấm.
+   *
+   * Nên: BƯỚC 1 ghi thô và COMMIT; BƯỚC 2 khớp trong transaction của riêng nó. Lỗi ở bước 2 chỉ
+   * làm giao dịch nằm lại hàng đợi `unmatched` — nơi nó vốn phải nằm khi không khớp được.
+   *
+   * Bất biến giữ cho việc đó an toàn: **`match_status` luôn được ghi trong CÙNG transaction với
+   * lượt cộng tiền.** Vì vậy `unmatched` chứng minh chưa có gì được áp, và một lần gửi lại có
+   * thể khớp tiếp mà không sợ cộng đôi; ngược lại `matched`/`manual`/`ignored` thì không bao giờ
+   * áp lại.
    */
   async ingest(payload: unknown): Promise<SepayWebhookResultDto> {
     const parsed = parseWebhookPayload(payload);
@@ -103,105 +127,181 @@ export class SepayService {
     const tx = parsed.value;
 
     const referenceCode = extractReferenceCode(tx.content);
+
+    // ── BƯỚC 1: ghi thô, commit ngay ───────────────────────────────────────
+    const record = await this.recordTransaction(tx, referenceCode);
+
+    /*
+     * Đã nhận trước đó VÀ đã có kết luận (`matched` tự động, `manual` do admin, `ignored` do
+     * admin bỏ qua) ⇒ không đụng gì nữa. Chỉ dòng còn `unmatched` mới được khớp tiếp, và theo
+     * bất biến ở docblock thì dòng đó chắc chắn chưa cộng tiền vào đâu.
+     */
+    if (record.duplicate && record.matchStatus !== BANK_MATCH_STATUS.UNMATCHED) {
+      return { received: true, duplicate: true, matched: false, note: null };
+    }
+
+    // Mã không rút được ⇒ nằm lại `unmatched` cho admin; KHÔNG đoán theo số tiền (nguyên tắc 4).
+    if (!referenceCode) {
+      return { received: true, duplicate: record.duplicate, matched: false, note: null };
+    }
+
+    // ── BƯỚC 2: khớp, trong transaction RIÊNG ──────────────────────────────
+    let result: { matched: boolean; note: string | null };
+    try {
+      result = await this.prisma.$transaction((db) => this.matchWithinTx(db, tx, referenceCode));
+    } catch (error) {
+      /*
+       * Dòng tiền ĐÃ an toàn ở bước 1, nên chỗ này chỉ còn là một lượt khớp hỏng: trả 200 để
+       * SePay thôi retry (một lỗi tất định sẽ lặp lại y hệt), và để giao dịch nằm ở hàng đợi
+       * admin. `error` vào log ở mức `error` vì đây là thứ cần người nhìn, không phải một kết
+       * cục nghiệp vụ bình thường.
+       */
+      this.logger.error(
+        `SePay ${tx.providerTxId}: khớp thất bại — giao dịch nằm lại hàng đợi đối soát`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return { received: true, duplicate: record.duplicate, matched: false, note: 'match_failed' };
+    }
+
+    this.logger.log(
+      `SePay ${tx.providerTxId}: ${result.matched ? 'khớp' : 'chưa khớp'}${result.note ? ` (${result.note})` : ''}`,
+    );
+    return {
+      received: true,
+      duplicate: record.duplicate,
+      matched: result.matched,
+      note: result.note,
+    };
+  }
+
+  /**
+   * Chèn dòng `bank_transactions` và COMMIT — bằng chứng rằng tiền đã tới, độc lập với việc nó
+   * khớp được vào đâu.
+   *
+   * Idempotent bằng unique DB `(provider, provider_tx_id)`, không bằng check tầng app (nguyên
+   * tắc 2): bắt P2002 rồi đọc lại dòng đã có để biết nó đã có kết luận hay chưa.
+   */
+  private async recordTransaction(
+    tx: ParsedTransaction,
+    referenceCode: string | null,
+  ): Promise<{ duplicate: boolean; matchStatus: string }> {
+    try {
+      await this.prisma.bankTransaction.create({
+        data: {
+          id: newId(),
+          provider: SEPAY_PROVIDER,
+          providerTxId: tx.providerTxId,
+          amountIn: tx.amount,
+          content: tx.content,
+          referenceCode,
+          bankTime: tx.bankTime,
+          rawJson: tx.raw as Prisma.InputJsonValue,
+        },
+      });
+      return { duplicate: false, matchStatus: BANK_MATCH_STATUS.UNMATCHED };
+    } catch (error) {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') {
+        throw error;
+      }
+      const existing = await this.prisma.bankTransaction.findUnique({
+        where: {
+          provider_providerTxId: { provider: SEPAY_PROVIDER, providerTxId: tx.providerTxId },
+        },
+        select: { matchStatus: true },
+      });
+      /*
+       * Không đọc lại được dòng vừa đụng unique (bị admin xoá ngay giữa chừng là trường hợp duy
+       * nhất) ⇒ coi như ĐÃ CÓ KẾT LUẬN: chọn hướng an toàn về phía không cộng tiền lần nữa.
+       */
+      return { duplicate: true, matchStatus: existing?.matchStatus ?? BANK_MATCH_STATUS.MATCHED };
+    }
+  }
+
+  /**
+   * Áp một giao dịch đã ghi vào đích của nó — hold (`XPH…`) hoặc hoá đơn gói (`XPG…`).
+   *
+   * Lượt cập nhật `match_status` nằm TRONG chính transaction này, cùng với lượt cộng tiền: đó là
+   * thứ làm cho `unmatched` có nghĩa "chưa áp gì" ở lần webhook sau.
+   */
+  private async matchWithinTx(
+    db: Prisma.TransactionClient,
+    tx: ParsedTransaction,
+    referenceCode: string,
+  ): Promise<{ matched: boolean; note: string | null }> {
     const target = referenceCodeTarget(referenceCode);
 
-    try {
-      const result = await this.prisma.$transaction(async (db) => {
-        await db.bankTransaction.create({
-          data: {
-            id: newId(),
-            provider: 'sepay',
-            providerTxId: tx.providerTxId,
-            amountIn: tx.amount,
-            content: tx.content,
-            referenceCode,
-            bankTime: tx.bankTime,
-            rawJson: tx.raw as Prisma.InputJsonValue,
-          },
-        });
-
-        // Mã không rút được ⇒ nằm lại `unmatched` cho admin; KHÔNG đoán theo số tiền (nguyên tắc 4).
-        if (!referenceCode) return { matched: false as const, note: null };
-
-        // `XPH…` — khoản giữ chỗ của khách (R3, ADR 0022 điều 3). Đủ tiền thì ĐƠN THUÊ được tạo
-        // ngay trong transaction này, cùng kỷ luật với kích hoạt gói: tiền về là hiệu lực, không
-        // phụ thuộc trình duyệt khách có quay lại hay không.
-        if (target === BANK_MATCH_TARGET_TYPE.BOOKING_HOLD) {
-          const applied = await this.holds.applyBankPaymentWithinTx(db, {
-            code: referenceCode,
-            amount: tx.amount,
-            providerTxId: tx.providerTxId,
-          });
-          switch (applied.outcome) {
-            case 'hold_not_found':
-              return { matched: false as const, note: 'hold_not_found' };
-            case 'hold_closed':
-              return { matched: false as const, note: `hold_${applied.status}` };
-            case 'partial':
-            case 'already_paid':
-            case 'activated': {
-              await db.bankTransaction.updateMany({
-                where: { provider: 'sepay', providerTxId: tx.providerTxId },
-                data: {
-                  matchStatus: BANK_MATCH_STATUS.MATCHED,
-                  matchedType: BANK_MATCH_TARGET_TYPE.BOOKING_HOLD,
-                  matchedRefId: applied.holdId,
-                  matchedAt: new Date(),
-                  matchNote: applied.outcome === 'already_paid' ? 'overpaid' : null,
-                },
-              });
-              return { matched: true as const, note: applied.outcome };
-            }
-          }
-        }
-
-        if (target !== BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE) {
-          return { matched: false as const, note: null };
-        }
-
-        const applied = await this.billing.applyBankPaymentWithinTx(db, {
-          code: referenceCode,
-          amount: tx.amount,
-          providerTxId: tx.providerTxId,
-        });
-
-        switch (applied.outcome) {
-          case 'invoice_not_found':
-            // Mã đúng định dạng nhưng không có hoá đơn — gõ tay sai một ký tự, hoặc mã của môi
-            // trường khác. Nằm lại hàng đợi.
-            return { matched: false as const, note: 'invoice_not_found' };
-          case 'invoice_closed':
-            return { matched: false as const, note: `invoice_${applied.status}` };
-          case 'partial':
-          case 'already_paid':
-          case 'activated': {
-            await db.bankTransaction.updateMany({
-              where: { provider: 'sepay', providerTxId: tx.providerTxId },
-              data: {
-                matchStatus: BANK_MATCH_STATUS.MATCHED,
-                matchedType: BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE,
-                matchedRefId: applied.invoiceId,
-                matchedAt: new Date(),
-                // `already_paid` là tiền THỪA — ghi chú để màn đối soát không phải suy.
-                matchNote: applied.outcome === 'already_paid' ? 'overpaid' : null,
-              },
-            });
-            return { matched: true as const, note: applied.outcome };
-          }
-        }
+    // `XPH…` — khoản giữ chỗ của khách (R3, ADR 0022 điều 3). Đủ tiền thì ĐƠN THUÊ được tạo
+    // ngay trong transaction này, cùng kỷ luật với kích hoạt gói: tiền về là hiệu lực, không
+    // phụ thuộc trình duyệt khách có quay lại hay không.
+    if (target === BANK_MATCH_TARGET_TYPE.BOOKING_HOLD) {
+      const applied = await this.holds.applyBankPaymentWithinTx(db, {
+        code: referenceCode,
+        amount: tx.amount,
+        providerTxId: tx.providerTxId,
       });
-
-      this.logger.log(
-        `SePay ${tx.providerTxId}: ${result.matched ? 'khớp' : 'chưa khớp'}${result.note ? ` (${result.note})` : ''}`,
-      );
-      return { received: true, duplicate: false, matched: result.matched, note: result.note };
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        // Đã nhận giao dịch này rồi — unique DB là người gác (nguyên tắc 2). 200 để SePay thôi.
-        return { received: true, duplicate: true, matched: false, note: null };
+      switch (applied.outcome) {
+        case 'hold_not_found':
+          return { matched: false, note: 'hold_not_found' };
+        case 'hold_closed':
+          return { matched: false, note: `hold_${applied.status}` };
+        case 'partial':
+        case 'already_paid':
+        case 'activated':
+          await this.markMatched(db, tx.providerTxId, {
+            type: BANK_MATCH_TARGET_TYPE.BOOKING_HOLD,
+            refId: applied.holdId,
+            overpaid: applied.outcome === 'already_paid',
+          });
+          return { matched: true, note: applied.outcome };
       }
-      throw error;
     }
+
+    if (target !== BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE) {
+      return { matched: false, note: null };
+    }
+
+    const applied = await this.billing.applyBankPaymentWithinTx(db, {
+      code: referenceCode,
+      amount: tx.amount,
+      providerTxId: tx.providerTxId,
+    });
+
+    switch (applied.outcome) {
+      case 'invoice_not_found':
+        // Mã đúng định dạng nhưng không có hoá đơn — gõ tay sai một ký tự, hoặc mã của môi
+        // trường khác. Nằm lại hàng đợi.
+        return { matched: false, note: 'invoice_not_found' };
+      case 'invoice_closed':
+        return { matched: false, note: `invoice_${applied.status}` };
+      case 'partial':
+      case 'already_paid':
+      case 'activated':
+        await this.markMatched(db, tx.providerTxId, {
+          type: BANK_MATCH_TARGET_TYPE.SUBSCRIPTION_INVOICE,
+          refId: applied.invoiceId,
+          overpaid: applied.outcome === 'already_paid',
+        });
+        return { matched: true, note: applied.outcome };
+    }
+  }
+
+  /** Đóng dấu đã khớp — `updateMany` theo khoá unique để không phải cầm `id` của dòng vừa ghi. */
+  private async markMatched(
+    db: Prisma.TransactionClient,
+    providerTxId: string,
+    target: { type: string; refId: string; overpaid: boolean },
+  ): Promise<void> {
+    await db.bankTransaction.updateMany({
+      where: { provider: SEPAY_PROVIDER, providerTxId },
+      data: {
+        matchStatus: BANK_MATCH_STATUS.MATCHED,
+        matchedType: target.type,
+        matchedRefId: target.refId,
+        matchedAt: new Date(),
+        // `already_paid` là tiền THỪA — ghi chú để màn đối soát không phải suy.
+        matchNote: target.overpaid ? 'overpaid' : null,
+      },
+    });
   }
 }
 
@@ -226,19 +326,20 @@ function extractReferenceCode(content: string): string | null {
   return match ? match[0] : null;
 }
 
-type ParsedWebhook =
-  | { ok: false; reason: string }
-  | {
-      ok: true;
-      value: {
-        providerTxId: string;
-        amount: Prisma.Decimal;
-        content: string;
-        bankTime: Date | null;
-        raw: Record<string, unknown>;
-      };
-    };
+/**
+ * Các trường tối thiểu đã bóc được từ một webhook — thứ mọi bước sau (ghi thô, khớp) làm việc
+ * trên đó. Đặt tên riêng thay vì nội tuyến trong `ParsedWebhook` vì `recordTransaction` và
+ * `matchWithinTx` đều nhận đúng hình dạng này.
+ */
+type ParsedTransaction = {
+  providerTxId: string;
+  amount: Prisma.Decimal;
+  content: string;
+  bankTime: Date | null;
+  raw: Record<string, unknown>;
+};
 
+type ParsedWebhook = { ok: false; reason: string } | { ok: true; value: ParsedTransaction };
 /**
  * Bóc các trường tối thiểu từ payload SePay. Phòng thủ từng trường: đây là dữ liệu NGOÀI,
  * đổi định dạng không báo trước, và một field lạ không được làm sập đường tiền.

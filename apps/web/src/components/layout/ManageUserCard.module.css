@@ -33,6 +33,10 @@
 }
 
 /**
+ * Logo GIAN HÀNG (16/09/2026), fallback là chữ cái đầu của tên gian hàng — không phải avatar
+ * cá nhân. Vuông bo góc chứ không tròn: tròn là quy ước của ảnh một CON NGƯỜI, và trong cổng
+ * quản lý thứ đang được vận hành là một cửa hàng.
+ *
  * `.card .avatar` chứ không phải class đơn: AntD đặt nền của `.ant-avatar` ở
  * `:where(.css-<hash>).ant-avatar`. `:where()` khiến phần hash có độ đặc hiệu 0 ⇒ luật của
  * AntD là (0,1,0), bằng đúng một class CSS Module. Hoà thì thứ tự chèn quyết định, và AntD
@@ -116,4 +120,29 @@
 
 .dark .caret {
   color: var(--xp-shell-sidebar-muted);
+}
+
+/* ─── Khối danh tính ở đầu menu tài khoản ────────────────────────────────────
+   Ba dòng: gian hàng · ai đang đăng nhập · nhãn tuyến. Mục `disabled` của AntD nên nó không
+   bấm được — đây là ngữ cảnh, không phải một lựa chọn.                                       */
+.menuIdentity {
+  display: flex;
+  min-width: 0;
+  max-width: 240px;
+  flex-direction: column;
+  gap: 2px;
+  /* Mục menu bị `disabled` bị AntD làm mờ; khối này là chữ để ĐỌC nên trả lại độ đậm. */
+  cursor: default;
+}
+
+.menuShop {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.menuUser {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  overflow-wrap: anywhere;
 }

@@ -266,7 +266,13 @@
       "chatShop": "Message the host",
       "close": "Back",
       "autoAccepted": "Your booking was confirmed automatically — the vehicle is reserved for you.",
-      "autoAcceptedHold": "Your booking was confirmed automatically — complete the hold to keep the reservation."
+      "autoAcceptedHold": "Your booking was confirmed automatically — complete the hold to keep the reservation.",
+      "openHold": "Track this trip",
+      "holdLoadFailed": "Could not load the payment code. Open the trip under My trips to get it — your slot is still on hold.",
+      "heldTitle": "Your slot is on hold",
+      "heldSubtitle": "Complete the payment to confirm your booking.",
+      "copyRequestCode": "Copy request code",
+      "tripInfo": "Trip details"
     },
     "duplicate": {
       "title": "Duplicate request",

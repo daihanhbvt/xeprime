@@ -3,7 +3,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
 import { WORKSPACE, workspacePaths, type Workspace, type WorkspacePaths } from '@/constants/routes';
-import { canUseManagePortal } from '@/features/auth/post-auth-destination';
+import { canUseManagePortal, isPackageOnboarding } from '@/features/auth/post-auth-destination';
 import { useCurrentUser } from '@/hooks/use-current-user';
 
 export interface WorkspaceContextValue {
@@ -49,8 +49,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
      * Chưa biết mình là ai, hoặc chưa có gian hàng nào → giữ mặc định `/manage`: đó là nơi
      * `/manage/onboarding` sống. Chỉ khi đã xác định được đây là chủ xe TUYẾN HOA HỒNG thì link
      * mới đổi khu.
+     *
+     * Gian hàng trả phí ĐANG chờ thanh toán cũng giữ `/manage` (ADR 0040): họ chưa vào được cổng
+     * quản lý, nhưng họ đang trên đường tới đó — đổi bảng đường dẫn sang `/account` nghĩa là mọi
+     * link trong màn onboarding của họ trỏ vào Owner Lite, đúng khu mà ADR 0040 tách họ ra khỏi.
      */
-    if (!user || user.tenant == null || canUseManagePortal(user)) return DEFAULT_VALUE;
+    if (!user || user.tenant == null) return DEFAULT_VALUE;
+    if (canUseManagePortal(user) || isPackageOnboarding(user)) return DEFAULT_VALUE;
     return {
       workspace: WORKSPACE.ACCOUNT,
       paths: workspacePaths(WORKSPACE.ACCOUNT),

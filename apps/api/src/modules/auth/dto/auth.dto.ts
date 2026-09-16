@@ -100,7 +100,43 @@ export class CurrentTenantSummaryDto {
   @ApiProperty() name!: string;
   @ApiProperty() slug!: string;
   @ApiProperty({ description: 'Xem TenantStatus trong @xeprime/types' }) status!: string;
+
+  /**
+   * TRỤC ĐĂNG KÝ — `commission` · `package_pending` · `package_active` (ADR 0040).
+   *
+   * Thứ QUYẾT ĐỊNH KHU LÀM VIỆC, và nó được đọc TRƯỚC `billingMode`:
+   *
+   *  - `package_pending` ⇒ gian hàng trả phí chưa thanh toán. `billingMode` của họ là `null`
+   *    (cố ý không gán gói hoa hồng tạm), nên mọi phép suy chỉ dựa vào `billingMode` xếp họ
+   *    cùng rổ với một tenant có danh mục gói hỏng — và đẩy họ vào Owner Lite. Đích đúng là màn
+   *    onboarding, bước chọn gói/thanh toán.
+   *  - `package_active` ⇒ đã trả tiền ít nhất một lần. Gói hết hạn thì `billingMode` về
+   *    `commission` nhưng cột này KHÔNG lùi, nên web biết không được mời họ vào wizard "đăng ký
+   *    chủ xe lần đầu" — họ là khách cũ cần gia hạn.
+   *
+   * Độc lập với `status` (khoá/mở của nền tảng) và với trục xác minh pháp nhân.
+   */
+  @ApiProperty({ description: 'Xem ShopOnboardingState trong @xeprime/types' })
+  onboardingState!: string;
+
   @ApiProperty({ description: 'Xem TenantRole trong @xeprime/types' }) roleKey!: string;
+
+  /**
+   * LOGO gian hàng — hình đại diện DUY NHẤT của cổng quản lý (16/09/2026).
+   *
+   * Đi cùng `/auth/me` chứ không đợi `GET /tenants/current/shop`: vỏ portal vẽ nó ở LẦN RENDER
+   * ĐẦU của mọi trang, và một truy vấn thứ hai chỉ để lấy một tấm ảnh nghĩa là avatar nhấp nháy
+   * sau mỗi lần chuyển trang — cùng lý do `features` đi kèm ở đây.
+   *
+   * `null` ⇒ vỏ dựng chữ cái đầu của TÊN GIAN HÀNG. KHÔNG rơi về `users.avatarUrl`: trong
+   * Manage, danh tính nổi bật là của gian hàng, không phải của người đang đăng nhập.
+   */
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Logo gian hàng; null = dùng chữ cái đầu',
+  })
+  logoUrl!: string | null;
 
   /**
    * LUÔN đủ 8 cờ, kể cả `hidden` — vắng mặt ≠ hidden: client phải phân biệt được "cờ này ẩn"
@@ -149,10 +185,18 @@ export class CurrentTenantSummaryDto {
    * khu làm việc. Suy từ `planCode == null` là SAI: `assignDefaultPlanWithinTx` gán cho mọi gian
    * hàng mới một gói tuyến hoa hồng, nên `planCode` gần như không bao giờ rỗng.
    */
-  @ApiProperty({ type: String, nullable: true, description: 'Xem BillingMode trong @xeprime/types' })
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Xem BillingMode trong @xeprime/types',
+  })
   billingMode!: string | null;
 
-  @ApiProperty({ type: String, nullable: true, description: 'ISO-8601 UTC — băng hết hạn đọc ngày này' })
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'ISO-8601 UTC — băng hết hạn đọc ngày này',
+  })
   planEndsAt!: string | null;
 
   /**

@@ -99,6 +99,7 @@ Trạng thái: **Lát cắt W4 đã merge vào `develop`, chưa vượt Gate R2*
 - Grace/read-only/downgrade rõ ràng; không khóa mất dữ liệu cũ.
 - Trang so sánh Basic Owner và Gian hàng.
 - Áp dụng giá phẳng theo từng chỗ xe: 100.000đ/ô tô/tháng và 40.000đ/xe máy/tháng, bán các kỳ hạn 3/6/12 tháng; `basePriceMonthly = 0`, không chỗ gồm sẵn và không overage chéo loại xe; đo conversion, utilization và chi phí phục vụ trước khi chốt giá production.
+- **Phễu đăng ký gian hàng trả phí — xong 16/09/2026 (ADR 0040).** Hai cửa vào tách hẳn: ý định lưu ở `tenants.onboarding_state`, onboarding hai bước (khai gian hàng → chọn gói + QR) phục hồi được sau F5, thanh toán mở Manage trong cùng transaction với webhook. Cổng "xác minh pháp nhân mới được mua gói" của ADR 0036 đã bỏ — nó đứng chắn ở đúng chỗ nền tảng đang muốn thu tiền.
 
 **Gate R2:** một shop tự mua/gia hạn gói và hệ thống đối soát đúng mà admin không sửa database.
 

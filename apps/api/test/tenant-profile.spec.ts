@@ -8,6 +8,7 @@ import {
   TENANT_STATUS,
 } from '@xeprime/types';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { UpdateTenantProfileDto } from '../src/modules/tenants/dto/tenant-onboarding.dto';
 import { makeBranchesService, makeTenantsService } from './helpers/service-factory';
 
 /**
@@ -19,7 +20,10 @@ import { makeBranchesService, makeTenantsService } from './helpers/service-facto
  *    ghi thẳng vào chúng đúng cho tới lần chạm chi nhánh kế tiếp rồi bị ghi đè, và trong lúc đó
  *    xe vẫn nằm ở tỉnh cũ trên marketplace.
  * 2. **Đang chờ XÁC MINH là khoá ghi thật, không phải một thuộc tính `disabled` ở frontend.**
- * 3. **Ô để trống = NULL**, không phải chuỗi rỗng — và SĐT chủ shop lưu ở DẠNG CHUẨN `84…`.
+ * 3. **Ô để trống = NULL**, không phải chuỗi rỗng.
+ * 4. **Chủ gian hàng đọc từ TÀI KHOẢN CHỦ**, không từ hồ sơ (16/09/2026): `ownerAccount` phản
+ *    chiếu `users`, endpoint hồ sơ KHÔNG sửa được nó, và `submitForReview` chụp nó vào
+ *    snapshot thay vì để reviewer đọc giá trị sống.
  */
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
@@ -32,6 +36,12 @@ const DANANG = '48';
 let dbAvailable = false;
 let ownerId: string;
 let tenantId: string;
+
+/**
+ * SĐT của tài khoản chủ. `users.phone` là UNIQUE, nên nó phải khác nhau giữa các lần chạy —
+ * mốc thời gian là cách rẻ nhất để có điều đó mà vẫn đúng dạng lưu `84` + 9 chữ số.
+ */
+const OWNER_PHONE = `849${String(Date.now()).slice(-8)}`;
 
 beforeAll(async () => {
   try {
@@ -47,7 +57,13 @@ beforeAll(async () => {
   tenantId = newId();
 
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+    data: {
+      id: ownerId,
+      displayName: 'Chủ shop',
+      email: `own-${ownerId}@xeprime.test`,
+      phone: OWNER_PHONE,
+      emailVerifiedAt: new Date(),
+    },
   });
   await prisma.tenant.create({
     data: {
@@ -93,32 +109,69 @@ const maybe = (name: string, fn: () => Promise<void>) =>
     await fn();
   });
 
+/**
+ * CHỦ GIAN HÀNG = TÀI KHOẢN CHỦ (16/09/2026).
+ *
+ * Ba cột `owner_*` trên `tenant_profiles` đã bị drop. Bộ này khoá cả hai nửa của thay đổi đó:
+ * khối `ownerAccount` nói đúng thứ `users` đang giữ, và endpoint hồ sơ KHÔNG còn là một đường
+ * để ai đó có `tenant.update` viết lại danh tính người chủ.
+ */
 describe('Thông tin chủ gian hàng', () => {
-  maybe('lưu và trả về đủ ba trường; SĐT về dạng chuẩn 84…', async () => {
-    const shop = await tenants.updateProfile(tenantId, ownerId, {
-      ownerFullName: 'Nguyễn Văn A',
-      ownerPhone: '84901234567',
-      ownerEmail: 'chu@xeprime.vn',
+  maybe('ownerAccount phản chiếu tài khoản chủ, kèm cờ đã-xác-minh', async () => {
+    const shop = await tenants.getMyShop(tenantId);
+    const owner = await prisma.user.findUniqueOrThrow({
+      where: { id: ownerId },
+      select: { displayName: true, email: true, phone: true },
     });
 
-    expect(shop.profile.ownerFullName).toBe('Nguyễn Văn A');
-    expect(shop.profile.ownerPhone).toBe('84901234567');
-    expect(shop.profile.ownerEmail).toBe('chu@xeprime.vn');
+    expect(shop.ownerAccount.userId).toBe(ownerId);
+    expect(shop.ownerAccount.displayName).toBe(owner.displayName);
+    expect(shop.ownerAccount.email).toBe(owner.email);
+    expect(shop.ownerAccount.phone).toBe(owner.phone);
+    // Mốc `email_verified_at` đặt ở `beforeAll`; SĐT thì chưa ai xác minh.
+    expect(shop.ownerAccount.emailVerified).toBe(true);
+    expect(shop.ownerAccount.phoneVerified).toBe(false);
+  });
+
+  /*
+   * Lằn ranh của ADR 0038 điều 3 viết thành test: quyền `tenant.update` mở hồ sơ GIAN HÀNG,
+   * không mở tài khoản của người CHỦ.
+   *
+   * Hai nửa của khẳng định đó: lưu hồ sơ KHÔNG đụng tới khối `ownerAccount`, và khối đó đổi
+   * khi — và chỉ khi — chính hàng `users` đổi. Ba khoá `owner_*` cũ không còn cách nào đi vào
+   * endpoint này: DTO không khai chúng, nên `forbidNonWhitelisted` trả 400 ngay ở biên.
+   */
+  maybe('lưu hồ sơ KHÔNG đụng tới danh tính chủ — nó đọc từ users', async () => {
+    const before = await tenants.updateProfile(tenantId, ownerId, { displayName: 'Shop hồ sơ' });
+    expect(before.ownerAccount.displayName).toBe('Chủ shop');
+
+    await prisma.user.update({ where: { id: ownerId }, data: { displayName: 'Chủ shop đổi tên' } });
+    const after = await tenants.getMyShop(tenantId);
+    expect(after.ownerAccount.displayName).toBe('Chủ shop đổi tên');
+
+    await prisma.user.update({ where: { id: ownerId }, data: { displayName: 'Chủ shop' } });
+  });
+
+  /* DTO không còn khai ba khoá đó — `forbidNonWhitelisted` biến chúng thành 400 ở biên. */
+  maybe('UpdateTenantProfileDto không còn nhận ba khoá chủ gian hàng', () => {
+    const dto = new UpdateTenantProfileDto() as Record<string, unknown>;
+    for (const key of ['ownerFullName', 'ownerPhone', 'ownerEmail']) {
+      expect(key in dto).toBe(false);
+    }
+    return Promise.resolve();
   });
 
   maybe('ô để trống lưu thành NULL, không phải chuỗi rỗng', async () => {
-    await tenants.updateProfile(tenantId, ownerId, { ownerEmail: '', taxCode: '' });
+    await tenants.updateProfile(tenantId, ownerId, { taxCode: '' });
 
     const row = await prisma.tenantProfile.findUniqueOrThrow({
       where: { tenantId },
-      select: { ownerEmail: true, taxCode: true },
+      select: { taxCode: true },
     });
-    expect(row.ownerEmail).toBeNull();
     expect(row.taxCode).toBeNull();
   });
 
-  maybe('hồ sơ gửi xác minh mang theo thông tin chủ gian hàng cho người duyệt', async () => {
-    await tenants.updateProfile(tenantId, ownerId, { ownerFullName: 'Nguyễn Văn A' });
+  maybe('hồ sơ gửi xác minh CHỤP danh tính chủ cho người duyệt', async () => {
     const shop = await tenants.submitForReview(tenantId, ownerId);
     expect(shop.verification).toBe(SHOP_VERIFICATION.PENDING);
     /*
@@ -133,7 +186,39 @@ describe('Thông tin chủ gian hàng', () => {
       orderBy: { submittedAt: 'desc' },
       select: { snapshot: true },
     });
-    expect((task.snapshot as Record<string, unknown>).ownerFullName).toBe('Nguyễn Văn A');
+    const snapshot = task.snapshot as Record<string, unknown>;
+    const owner = await prisma.user.findUniqueOrThrow({
+      where: { id: ownerId },
+      select: { displayName: true, email: true, phone: true },
+    });
+    /*
+     * Ba khoá giữ NGUYÊN TÊN: phiếu cũ trong DB mang đúng chúng và màn duyệt vẽ theo khoá.
+     * Snapshot là jsonb đông cứng, không migrate.
+     */
+    expect(snapshot.ownerFullName).toBe(owner.displayName);
+    expect(snapshot.ownerPhone).toBe(owner.phone);
+    expect(snapshot.ownerEmail).toBe(owner.email);
+  });
+
+  maybe('snapshot ĐÔNG CỨNG — chủ đổi tên sau khi gửi không sửa được phiếu đã gửi', async () => {
+    const before = await prisma.approvalTask.findFirstOrThrow({
+      where: { tenantId },
+      orderBy: { submittedAt: 'desc' },
+      select: { snapshot: true },
+    });
+
+    await prisma.user.update({ where: { id: ownerId }, data: { displayName: 'Tên mới sau khi gửi' } });
+
+    const after = await prisma.approvalTask.findFirstOrThrow({
+      where: { tenantId },
+      orderBy: { submittedAt: 'desc' },
+      select: { snapshot: true },
+    });
+    expect((after.snapshot as Record<string, unknown>).ownerFullName).toBe(
+      (before.snapshot as Record<string, unknown>).ownerFullName,
+    );
+
+    await prisma.user.update({ where: { id: ownerId }, data: { displayName: 'Chủ shop' } });
   });
 
   maybe('đang chờ xác minh: mọi cập nhật hồ sơ bị từ chối ở BACKEND', async () => {
@@ -204,7 +289,8 @@ describe('Tỉnh/thành đi qua chi nhánh mặc định', () => {
  */
 describe('Gửi duyệt đòi hồ sơ đủ thông tin bắt buộc', () => {
   maybe('thiếu SĐT chủ gian hàng → từ chối kèm danh sách mục thiếu, không tạo hồ sơ duyệt', async () => {
-    await tenants.updateProfile(tenantId, ownerId, { ownerPhone: '' });
+    // Thiếu SĐT nghĩa là TÀI KHOẢN CHỦ chưa có số — cổng đọc `users`, không đọc hồ sơ.
+    await prisma.user.update({ where: { id: ownerId }, data: { phone: null } });
     const tasksBefore = await prisma.approvalTask.count({ where: { tenantId } });
 
     await expect(tenants.submitForReview(tenantId, ownerId)).rejects.toMatchObject({
@@ -224,7 +310,7 @@ describe('Gửi duyệt đòi hồ sơ đủ thông tin bắt buộc', () => {
   });
 
   maybe('điền lại đủ → gửi xác minh đi qua', async () => {
-    await tenants.updateProfile(tenantId, ownerId, { ownerPhone: '0901234567' });
+    await prisma.user.update({ where: { id: ownerId }, data: { phone: OWNER_PHONE } });
     const shop = await tenants.submitForReview(tenantId, ownerId);
 
     expect(shop.verification).toBe(SHOP_VERIFICATION.PENDING);

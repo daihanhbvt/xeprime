@@ -14,7 +14,6 @@ import {
   makeVehiclesService,
   vehicleCreator,
   makeBillingService,
-  verifyShop,
 } from './helpers/service-factory';
 
 /**
@@ -130,13 +129,6 @@ beforeAll(async () => {
   await mkTenant(tenantFreeId, 'free');
   await mkTenant(tenantPkgId, 'pkg');
   await mkTenant(tenantQuotaId, 'quota');
-  /*
-   * Mua gói THUÊ BAO đòi gian hàng đã được xác minh (ADR 0036) — fixture phải phản ánh đúng
-   * production. Spec này kiểm vòng đời GÓI, không kiểm cổng xác minh; cổng đó có spec riêng.
-   */
-  for (const id of [tenantId, tenantFreeId, tenantPkgId, tenantQuotaId]) {
-    await verifyShop(asService, id, actorId);
-  }
 });
 
 afterAll(async () => {
@@ -723,7 +715,6 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
         },
       });
       cleanupTenantIds.push(upgradeTenantId);
-      await verifyShop(asService, upgradeTenantId, actorId);
 
       // Đúng đường production: `registerShop` gán gói mặc định trong cùng transaction.
       await prisma.$transaction((tx) => billing.assignDefaultPlanWithinTx(tx, upgradeTenantId));

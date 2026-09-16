@@ -26,6 +26,17 @@ interface ImageUploadFieldProps<T extends FieldValues> {
   validate?: (file: File) => Promise<string | null>;
   /** Gợi ý dưới ô upload khi không có lỗi (vd cỡ ảnh chuẩn). */
   help?: ReactNode;
+  /**
+   * `id` gắn lên chính NÚT mở hộp chọn file — để một CTA ở nơi khác đưa được tiêu điểm tới đây.
+   *
+   * Dùng cho dải "Còn 1 bước để đăng xe" ở trang Cửa hàng: nút của nó phải CUỘN TỚI và ĐẶT TIÊU
+   * ĐIỂM vào ô logo, không chỉ cuộn. Cuộn không thôi thì người dùng bàn phím vẫn đứng ở dải
+   * thông báo và phím Tab tiếp theo đưa họ đi đâu đó khác.
+   *
+   * Đặt trên nút chứ không trên `Form.Item`: `Form.Item` là một `<div>` không nhận tiêu điểm,
+   * còn nút này là thứ thật sự mở hộp chọn file.
+   */
+  triggerId?: string;
 }
 
 /**
@@ -39,6 +50,7 @@ export function ImageUploadField<T extends FieldValues>({
   presign,
   validate,
   help,
+  triggerId,
 }: ImageUploadFieldProps<T>) {
   const t = useTranslations('Common.components.imageUpload');
   const tCommon = useTranslations('Common');
@@ -94,7 +106,7 @@ export function ImageUploadField<T extends FieldValues>({
           beforeUpload={handleSelect}
           disabled={uploading}
         >
-          <button type="button" className={styles.tile} disabled={uploading}>
+          <button id={triggerId} type="button" className={styles.tile} disabled={uploading}>
             {url ? (
               // eslint-disable-next-line @next/next/no-img-element -- ảnh trên R2, không qua next/image
               <img src={url} alt={t('alt')} className={styles.preview} />

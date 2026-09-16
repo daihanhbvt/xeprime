@@ -6,7 +6,7 @@
   "scope": {
     "title": "Đây là tiền bạn đã trả cho gian hàng",
     "body": "Khoản chuyển giữ chỗ cho XePrime nằm trong chi tiết từng chuyến. Tiền XePrime đang nợ bạn nằm ở",
-    "balanceLink": "Ví điểm"
+    "balanceLink": "Số dư của tôi"
   },
   "depositNote": "Tiền cọc trả gian hàng sẽ được hoàn khi bạn trả xe, sau khi trừ phát sinh (nếu có). Đây không phải khoản mất đi.",
   "stats": {

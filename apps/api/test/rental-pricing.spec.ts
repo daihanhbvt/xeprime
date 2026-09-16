@@ -21,7 +21,17 @@ import type { SaveRentalPolicyDto } from '../src/modules/pricing/dto/pricing.dto
 import type { AuthService } from '../src/modules/auth/auth.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingRequestsService, makeBookingsService, makeCustomersService, makeNotificationService, makePricingService, makeVehiclesService, vehicleCreator } from './helpers/service-factory';
+import {
+  makeBookingHoldsService,
+  makeBookingRequestsService,
+  makeBookingsService,
+  makeCustomersService,
+  makeNotificationService,
+  makePricingService,
+  makeVehiclesService,
+  vehicleCreator,
+} from './helpers/service-factory';
+import { settleIfAwaitingHold } from './helpers/hold-payment';
 
 /**
  * Wave 2 (B2 — Pricing & Rental Policies), chạy trên PostgreSQL THẬT.
@@ -46,6 +56,8 @@ const bookings = makeBookingsService(asService, {
 });
 // Nhánh test chỉ đi qua inbox shop (quote/approve) — không đụng OTP/đăng nhập khách, nên hai
 // dependency đó stub rỗng thay vì dựng cả cây AuthService/Firebase.
+/** Cả sàn thu cọc từ 16/09/2026, nên duyệt xong còn một bước trả tiền mới ra ĐƠN (ADR 0039). */
+const holds = makeBookingHoldsService(asService);
 const requests = makeBookingRequestsService(asService, {
   bookings: bookings,
   audit: audit,
@@ -385,11 +397,14 @@ describe('giao nhận miễn phí lúc duyệt + cập nhật phí sau + snapsho
     });
 
     const approved = await requests.approve(tenantId, ownerId, requestId);
-    expect(approved.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
     // Địa chỉ giao và cờ yêu cầu giao vẫn còn — chủ xe cần biết giao ở đâu.
     expect(approved.deliveryRequested).toBe(true);
     expect(approved.deliveryAddress).toBe('123 Nguyễn Huệ, Q.1, HCM');
-    bookingId = approved.bookingId!;
+
+    await settleIfAwaitingHold(asService, holds, requestId);
+    const settled = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } });
+    expect(settled.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
+    bookingId = settled.bookingId!;
   });
 
   maybe('đơn tạo ra: phí giao nhận 0, tiền thuê từ PricingService + snapshot đầy đủ', async () => {
@@ -876,9 +891,11 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
           destination: 'Huế',
         },
       });
-      const approved = await requests.approve(tenantId, ownerId, requestId);
+      await requests.approve(tenantId, ownerId, requestId);
+      await settleIfAwaitingHold(asService, holds, requestId);
+      const settled = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } });
       const booking = await prisma.booking.findUniqueOrThrow({
-        where: { id: approved.bookingId! },
+        where: { id: settled.bookingId! },
         select: { totalAmount: true, baseAmount: true },
       });
 

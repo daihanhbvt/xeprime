@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BILLING_MODE, BILLING_PHASE, TENANT_ROLE } from '@xeprime/types';
 
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, SHOP_SECTION, shopSectionPath } from '@/constants/routes';
 import type { CurrentUser } from '@/hooks/use-current-user';
 
 import { shopAccountRedirect } from './shop-account-gate';
@@ -44,14 +44,24 @@ describe('shopAccountRedirect — ai bị đưa ra khỏi khu khách', () => {
    * Ba đường trong ảnh chụp báo cáo lỗi, cộng đường gốc. Chúng thuộc về một CON NGƯỜI, nên đích
    * là "Tài khoản & bảo mật" trong Manage — nơi chúng đứng cạnh ví, lệnh rút và pháp nhân.
    */
-  it('hồ sơ, đổi mật khẩu, xoá tài khoản → /manage/account', () => {
+  it('hồ sơ, đổi mật khẩu, xoá tài khoản → /manage/security', () => {
     for (const path of [
       ROUTES.ACCOUNT.ROOT,
       ROUTES.ACCOUNT.CHANGE_PASSWORD,
       ROUTES.ACCOUNT.DELETE_ACCOUNT,
     ]) {
-      expect(shopAccountRedirect(shopMember(), path)).toBe(ROUTES.MANAGE.ACCOUNT);
+      expect(shopAccountRedirect(shopMember(), path)).toBe(ROUTES.MANAGE.SECURITY);
     }
+  });
+
+  /*
+   * Gói dịch vụ có bản Manage CHÍNH XÁC tương ứng — một section của trang Cửa hàng. Người bấm
+   * vào link "gói dịch vụ" muốn xem gói, không muốn xem bảng điều khiển rồi tự đi tìm.
+   */
+  it('gói dịch vụ → thẳng tới section Gói & hạn mức của trang Cửa hàng', () => {
+    expect(shopAccountRedirect(shopMember(), ROUTES.ACCOUNT.SUBSCRIPTION)).toBe(
+      shopSectionPath(SHOP_SECTION.PLAN),
+    );
   });
 
   /* Công cụ CHO THUÊ có bản đầy đủ trong Manage — đưa họ tới đó, không tới một trang 403. */
@@ -81,7 +91,7 @@ describe('shopAccountRedirect — ai bị đưa ra khỏi khu khách', () => {
   it('áp cho MỌI vai của gian hàng, không riêng chủ', () => {
     for (const roleKey of ALL_ROLES) {
       expect(shopAccountRedirect(shopMember(roleKey), ROUTES.ACCOUNT.ROOT)).toBe(
-        ROUTES.MANAGE.ACCOUNT,
+        ROUTES.MANAGE.SECURITY,
       );
     }
   });
@@ -91,7 +101,7 @@ describe('shopAccountRedirect — ai bị đưa ra khỏi khu khách', () => {
     const grace = shopMember();
     (grace.tenant as Tenant).billingPhase = BILLING_PHASE.GRACE;
 
-    expect(shopAccountRedirect(grace, ROUTES.ACCOUNT.ROOT)).toBe(ROUTES.MANAGE.ACCOUNT);
+    expect(shopAccountRedirect(grace, ROUTES.ACCOUNT.ROOT)).toBe(ROUTES.MANAGE.SECURITY);
   });
 });
 

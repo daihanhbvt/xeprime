@@ -87,7 +87,7 @@
     "subscriptionsCollected": "Subscription payments collected",
     "custodiedTitle": "Money held for others — liabilities",
     "holdsUnsettled": "Holds not yet settled",
-    "walletTotal": "Points wallets",
+    "walletTotal": "Balances payable",
     "walletSplit": "{total} · {available} withdrawable · {pending} in transit",
     "refundsPending": "Refunds awaiting manual transfer",
     "unmatchedIn": "Unmatched incoming",

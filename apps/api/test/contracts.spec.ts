@@ -8,6 +8,7 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
+import { BankAccountsService } from '../src/modules/bank-accounts/bank-accounts.service';
 import { ContractsService } from '../src/modules/contracts/contracts.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
@@ -18,7 +19,11 @@ import type { PrismaService } from '../src/prisma/prisma.service';
  */
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
-const contracts = new ContractsService(asService, new AuditService(asService));
+const contracts = new ContractsService(
+  asService,
+  new AuditService(asService),
+  new BankAccountsService(asService),
+);
 
 let dbAvailable = false;
 let ownerId: string;

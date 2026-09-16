@@ -6,11 +6,13 @@ import {
   cancelWithdrawal,
   createWithdrawal,
   fetchWalletEntries,
+  fetchWalletStatement,
   fetchWalletSummary,
   fetchWithdrawals,
   walletEntriesParams,
+  walletStatementParams,
 } from './api';
-import type { CreateWithdrawalInput, WalletScope } from './types';
+import type { CreateWithdrawalInput, WalletScope, WalletStatementFilters } from './types';
 
 export function useWalletSummary(scope: WalletScope) {
   return useQuery({
@@ -63,5 +65,24 @@ export function useCancelWithdrawal(scope: WalletScope) {
   return useMutation({
     mutationFn: (id: string) => cancelWithdrawal(scope, id),
     onSuccess: invalidate,
+  });
+}
+
+/**
+ * Bảng tổng hợp giao dịch của gian hàng theo kỳ.
+ *
+ * `placeholderData` giữ bảng cũ trong lúc đổi tháng hoặc lật trang: một bảng tiền nhấp nháy về
+ * trắng rồi hiện lại là cách nhanh nhất để người đọc tưởng số liệu vừa biến mất.
+ *
+ * `enabled` để màn ví phía KHÁCH (`scope === 'account'`) không gọi một endpoint chỉ dành cho
+ * gian hàng rồi nhận 403.
+ */
+export function useWalletStatement(filters: WalletStatementFilters, enabled: boolean) {
+  const params = walletStatementParams(filters);
+  return useQuery({
+    queryKey: queryKeys.wallet.statement('shop', params),
+    queryFn: () => fetchWalletStatement(params),
+    enabled,
+    placeholderData: keepPreviousData,
   });
 }

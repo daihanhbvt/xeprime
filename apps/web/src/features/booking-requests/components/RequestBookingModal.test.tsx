@@ -43,6 +43,13 @@ const media = vi.hoisted(() => ({ isMobile: false }));
 
 const me = vi.hoisted(() => ({ data: undefined as unknown }));
 vi.mock('@/hooks/use-current-user', () => ({ useCurrentUser: () => me }));
+
+/**
+ * Khối giữ chỗ ở bước cuối nạp chuyến qua `useTrip`. Mặc định trả rỗng nên mọi ca khác không đổi
+ * hành vi; chỉ ca ADR 0039 bên dưới bơm dữ liệu vào.
+ */
+const trip = vi.hoisted(() => ({ data: undefined as unknown, isPending: false }));
+vi.mock('@/features/trips/hooks', () => ({ useTrip: () => trip }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: nav.push }) }));
 /*
  * Danh mục hành chính + bản đồ: stub cố định.
@@ -320,6 +327,7 @@ function submitFromReview() {
 beforeEach(() => {
   media.isMobile = false;
   nav.push.mockReset();
+  trip.data = undefined;
   // Mặc định là KHÁCH VÃNG LAI — mọi test cũ mô tả đúng luồng đó.
   me.data = undefined;
   listing.data = null;
@@ -587,6 +595,72 @@ describe('RequestBookingModal — luồng đặt xe', () => {
         // Dịch vụ của chuyến luôn đi kèm (17/08) — mặc định tự lái.
         serviceType: 'self_drive',
       });
+    });
+
+    /**
+     * BƯỚC QR NGAY SAU KHI GỬI — ADR 0039 điều 1, và bản vá giao diện 16/09.
+     *
+     * Ba lỗi mà ca này chặn, cả ba đều đến từ ảnh chụp màn hình thật:
+     *
+     *  1. Tiêu đề "Yêu cầu đã được gửi" + câu "chủ xe sẽ xem xét và phản hồi" — SAI ở chặng này:
+     *     chỗ đã bị giữ, đồng hồ đang chạy, và việc tiếp theo thuộc về KHÁCH.
+     *  2. HAI khối nói cùng một điều chồng lên nhau (một Alert của luồng + một Alert của
+     *     `TripHoldPanel`), đẩy mã QR xuống dưới nếp gấp.
+     *  3. Không có mã QR nào cả ⇒ khách rời đi mà không trả tiền.
+     */
+    it('trả về awaiting_hold: tiêu đề nói ĐÃ GIỮ CHỖ, có QR, và không có khối chữ trùng', async () => {
+      trip.data = {
+        vehicle: { id: 'V1', name: 'Kia Seltos 2022', plateNumber: '43A-123.45' },
+        hold: {
+          id: '01HOLD',
+          code: 'XPH23456789',
+          status: 'pending',
+          outcome: null,
+          amount: '176000',
+          paidAmount: '0',
+          remainingAmount: '176000',
+          expiresAt: new Date(Date.now() + 10 * 60_000).toISOString(),
+          freeCancelUntil: new Date(Date.now() + 4 * 3600_000).toISOString(),
+          paidAt: null,
+          allocation: [],
+          refund: null,
+          paymentInfo: {
+            configured: true,
+            bankCode: 'VCB',
+            accountNumber: '0123456789',
+            accountName: 'XE PRIME',
+          },
+        },
+      };
+      renderModal();
+      await advanceToOtp();
+      await advanceToReview();
+
+      api.submitBookingRequest.mockResolvedValue({ id: 'R9', status: 'awaiting_hold' });
+      submitFromReview();
+
+      await waitFor(() => expect(screen.getByText('XPH23456789')).toBeTruthy());
+
+      // (1) Không còn nói "chủ xe sẽ xem xét" ở một chặng mà chỗ đã được giữ.
+      expect(screen.queryByText(/sẽ xem xét và phản hồi/i)).toBeNull();
+
+      /*
+       * (2) MỖI Ý NÓI ĐÚNG MỘT LẦN — đây là thứ ảnh chụp 16/09 cho thấy đã hỏng:
+       *   · "chỗ đã được giữ"        → tiêu đề, một lần;
+       *   · "chuyển khoản thế nào"   → câu mở của panel, một lần;
+       *   · "hết giờ thì mở lại"     → dòng dưới đồng hồ, một lần.
+       */
+      expect(screen.getAllByText(/chỗ xe đã được giữ cho bạn/i)).toHaveLength(1);
+      expect(screen.getAllByText(/đúng số tiền và nội dung dưới đây/i)).toHaveLength(1);
+      expect(screen.getAllByText(/xe được mở lại cho khách khác/i)).toHaveLength(1);
+
+      // (3) QR mang sẵn số tiền và nội dung — khách không bao giờ gõ tay mã đối soát.
+      const qr = screen.getByAltText(/mã qr/i) as HTMLImageElement;
+      expect(qr.src).toContain('amount=176000');
+      expect(qr.src).toContain('addInfo=XPH23456789');
+
+      // Biển số và ảnh xe đến từ CHUYẾN, không từ phiếu gửi yêu cầu — phiếu không mang chúng.
+      expect(screen.getByText('43A-123.45')).toBeTruthy();
     });
 
     it('có dòng "Người thuê" ngay trên bảng xác nhận', async () => {

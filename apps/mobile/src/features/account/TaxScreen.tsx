@@ -104,8 +104,6 @@ export function TaxScreen() {
       buildSellerProfileSchema({
         taxId: tSeller('form.validation.taxId'),
         idNumber: tSeller('form.validation.idNumber'),
-        bankCode: tSeller('form.validation.bankCode'),
-        bankAccountNumber: tSeller('form.validation.bankAccountNumber'),
       }).pick(TAX_FIELDS),
     [tSeller],
   );

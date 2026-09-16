@@ -11,9 +11,12 @@
 import {
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
+  BANK_ACCOUNT_STATUS,
   BILLING_MODE,
   BRANCH_STATUS,
   COMMISSION_TRACK_TERM_MONTHS,
+  DEFAULT_PACKAGE_PLAN_CODE,
+  SHOP_ONBOARDING_STATE,
   addCalendarMonthsVn,
   WALLET_OWNER_TYPE,
   WALLET_STATUS,
@@ -105,6 +108,22 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
     name: spec.name,
     tenantType: spec.tenantType,
     status: spec.status,
+    /*
+     * Trục ĐĂNG KÝ (ADR 0040) — SUY từ `planCode`, không khai tay trong `ShopSpec`.
+     *
+     * Bản khai đã nói gian hàng này dùng gói nào; một trường thứ hai nói "cửa vào" chỉ là cơ hội
+     * để hai chỗ lệch nhau (đúng loại lỗi mà docblock của `commission-owners.ts` kể lại). Gian
+     * hàng demo mang gói `package` là gian hàng ĐÃ trả tiền ⇒ `package_active`; mọi gian hàng
+     * còn lại là tuyến hoa hồng ⇒ `commission`.
+     *
+     * KHÔNG có gian hàng demo nào ở `package_pending`: seed dựng dữ liệu đã vận hành được, còn
+     * `package_pending` là một gian hàng chưa dùng được gì cả. Muốn thử màn onboarding thì đi
+     * đúng luồng thật ("Đăng ký gian hàng" → bước 2), vì đó chính là thứ cần thử.
+     */
+    onboardingState:
+      spec.planCode === DEFAULT_PACKAGE_PLAN_CODE
+        ? SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE
+        : SHOP_ONBOARDING_STATE.COMMISSION,
     ownerUserId,
     phone: spec.owner.phone,
     email: spec.owner.email,
@@ -172,12 +191,9 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
     wardName: null as string | null,
     taxCode: spec.profile.taxCode,
     businessLicenseNo: spec.profile.businessLicenseNo,
-    bankName: spec.profile.bank?.name ?? null,
-    bankAccountNo: spec.profile.bank?.accountNo ?? null,
-    bankAccountName: spec.profile.bank?.accountName ?? null,
-    ownerFullName: spec.profile.ownerFullName,
-    ownerPhone: spec.owner.phone,
-    ownerEmail: spec.owner.email,
+    // KHÔNG còn cột ngân hàng / chủ gian hàng ở đây (16/09/2026): tài khoản nhận tiền đi vào
+    // `bank_accounts` (xem `buildBankAccount`), còn chủ gian hàng LÀ `spec.owner` — hàng
+    // `users` mà `tenants.owner_user_id` trỏ tới.
   };
   const [province, ward] = await Promise.all([
     prisma.province.findUnique({
@@ -233,6 +249,7 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
   await buildOnboarding(spec, tenantId, ownerUserId, deps.platform);
   await buildSubscription(spec, tenantId, deps);
   await buildWallet(spec, tenantId);
+  await buildBankAccount(spec, tenantId);
   await buildRentalPolicies(spec, tenantId);
 
   // ── Tài xế ──────────────────────────────────────────────────────────────
@@ -624,6 +641,54 @@ async function buildWallet(spec: ShopSpec, tenantId: string): Promise<void> {
     },
   });
 }
+/**
+ * Tài khoản nhận tiền MẶC ĐỊNH của gian hàng — `bank_accounts`, nguồn duy nhất (ADR 0033).
+ *
+ * Trước 16/09/2026 bản khai này đổ vào bốn cột text trên `tenant_profiles`, nên dữ liệu demo có
+ * một gian hàng "đã khai tài khoản" mà màn rút tiền vẫn nói "chưa có tài khoản nào" — hai bảng,
+ * hai câu trả lời. Nay chỉ còn một.
+ *
+ * `bank.name` trong bản khai là TÊN ngân hàng ("Techcombank"); cột `bank_code` cần mã VietQR,
+ * nên tra qua `BANK_CODE_BY_NAME`. Tên không có trong bảng thì rơi về chính nó viết hoa — dữ
+ * liệu demo vẫn dựng được, chỉ là QR của nó không quét ra.
+ */
+async function buildBankAccount(spec: ShopSpec, tenantId: string): Promise<void> {
+  if (!spec.profile.bank) return;
+  const { name, accountNo, accountName } = spec.profile.bank;
+  const id = seedId(`${spec.key}:bank-account`);
+  const fields = {
+    bankCode: BANK_CODE_BY_NAME[name] ?? name.toUpperCase(),
+    accountNumber: accountNo,
+    accountName,
+    label: name,
+    isDefault: true,
+    status: BANK_ACCOUNT_STATUS.ACTIVE,
+  };
+  await prisma.bankAccount.upsert({
+    where: { id },
+    update: fields,
+    create: {
+      id,
+      ownerType: WALLET_OWNER_TYPE.TENANT,
+      ownerTenantId: tenantId,
+      ...fields,
+    },
+  });
+}
+
+/** Tên ngân hàng trong bản khai demo → mã VietQR (cùng bộ mã với SePay và QR thanh toán). */
+const BANK_CODE_BY_NAME: Record<string, string> = {
+  ACB: 'ACB',
+  Agribank: 'AGRIBANK',
+  BIDV: 'BIDV',
+  'MB Bank': 'MB',
+  Sacombank: 'SACOMBANK',
+  Techcombank: 'TCB',
+  VPBank: 'VPB',
+  Vietcombank: 'VCB',
+  VietinBank: 'ICB',
+};
+
 // ---------------------------------------------------------------------------
 // Chính sách thuê
 // ---------------------------------------------------------------------------

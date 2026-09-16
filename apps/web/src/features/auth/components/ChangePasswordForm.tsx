@@ -48,7 +48,7 @@ interface ChangePasswordValues {
  * Sau khi thành công: reset form và invalidate `auth.me` để `hasPassword` đảo sang `true` — form
  * tự chuyển từ "đặt lần đầu" sang "đổi" mà không cần tải lại trang.
  */
-export function ChangePasswordForm() {
+export function ChangePasswordForm({ headingLevel = 'h1' }: { headingLevel?: 'h1' | 'h2' } = {}) {
   const t = useTranslations('Account.changePassword');
   const { message } = App.useApp();
   const errorMessage = useErrorMessage();
@@ -114,7 +114,7 @@ export function ChangePasswordForm() {
 
   return (
     <div className={styles.page}>
-      <AccountPageHeader title={t('title')} subtitle={t('subtitle')} />
+      <AccountPageHeader title={t('title')} subtitle={t('subtitle')} as={headingLevel} />
 
       <div className={styles.grid}>
         <form onSubmit={onSubmit} noValidate className={styles.card}>

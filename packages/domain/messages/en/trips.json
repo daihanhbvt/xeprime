@@ -108,7 +108,8 @@
     "ready": "The host has confirmed your rental request",
     "active": "You have this car right now — drive safely",
     "completed": "The trip is complete. Thanks for riding with XePrime!",
-    "terminal": "This trip ended early"
+    "terminal": "This trip ended early",
+    "pending_approval_paid": "Your slot is held and the reservation amount has been received. Waiting for the host to confirm — if they decline, the full amount is refunded right away."
   },
   "notice": {
     "pendingTitle": "Waiting for the host to confirm",
@@ -195,7 +196,7 @@
   },
   "hold": {
     "title": "Reservation payment",
-    "intro": "The host approved your request. Transfer the reservation payment to confirm the trip — use the exact amount and reference below.",
+    "intro": "Transfer exactly the amount and note below to confirm the trip.",
     "partialIntro": "We received {paid}. Send the remainder using the SAME transfer reference to confirm.",
     "qrAlt": "Reservation payment QR code",
     "bank": "Bank",
@@ -206,18 +207,19 @@
     "copyAccount": "Copy account number",
     "copyAmount": "Copy amount",
     "copyCode": "Copy reference",
-    "expires": "Pay before {time}. After that the car is released to other guests.",
+    "expires": "If the full amount does not arrive in time, the vehicle reopens for other customers.",
     "freeCancel": "Cancel before {time} for a full refund of what you paid online.",
     "restAtHandover": "The remaining rental is paid directly to the host at pickup.",
-    "paid": "Reserved with {amount}. Your trip is confirmed.",
-    "expired": "The payment window closed and the car was released. You can book another trip.",
+    "paid": "Reservation of {amount} received. Your slot stays held while the host confirms.",
+    "expired": "The reservation window closed, so the vehicle reopened for other customers. You can book another trip.",
     "refundPaid": "XePrime refunded {amount} to the account you provided.",
     "refundPending": "Waiting for XePrime to transfer {amount} back to you.",
     "refundNeedsAccount": "{amount} is waiting to be refunded — tell us where to send it.",
     "countdownRemaining": "Time left to pay:",
-    "countdownSegment": "round {index}/{total}",
+    "countdownSegment": "extension {index}/{total}",
     "countdownExpired": "Payment window closed",
-    "freeCancelSoon": "This trip starts soon, so the free-cancellation window is shorter than usual — no refund after {time}."
+    "freeCancelSoon": "This trip starts soon, so the free-cancellation window is shorter than usual — no refund after {time}.",
+    "qrCaption": "Scan to transfer"
   },
   "sides": {
     "ariaLabel": "Choose trip side",
@@ -268,9 +270,6 @@
     "noteHost": "Trip fees sit on the guest side and are not deducted from your payout. The final amount is confirmed when you approve."
   },
   "transitional": {
-    "title": "Trips I rented",
-    "cardTitle": "Open rental trips",
-    "cardBody": "You still have trips you rented from other hosts, from before you opened your shop. Those trips, their messages and their refunds stay here.",
-    "open": "View rental trips"
+    "title": "Trips I rented"
   }
 }

@@ -52,6 +52,21 @@ export function AccountTrackBadge({
 
   const className = size === 'small' ? styles.small : styles.badge;
 
+  /*
+   * ĐANG CHỜ THANH TOÁN (ADR 0040) — thẻ TRUNG TÍNH, và nó phải đứng trước nhánh `unconfigured`.
+   * Cùng `billingMode: null`, nhưng một bên là việc của người dùng còn một bên là sự cố của nền
+   * tảng; dùng `color="error"` cho cả hai là gắn nhãn "hỏng" lên mọi gian hàng vừa mở.
+   */
+  if (track === ACCOUNT_TRACK.PACKAGE_PENDING) {
+    return (
+      <Tooltip title={t('packagePendingHint')}>
+        <Tag color="processing" className={className}>
+          {t('packagePending')}
+        </Tag>
+      </Tooltip>
+    );
+  }
+
   if (track === ACCOUNT_TRACK.UNCONFIGURED) {
     return (
       <Tooltip title={t('unconfiguredHint')}>

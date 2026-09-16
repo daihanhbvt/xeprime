@@ -6076,6 +6076,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/shop/wallet/statement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Bảng tổng hợp giao dịch của gian hàng trong một kỳ
+         * @description Chuyến hoàn thành trong kỳ (giờ Việt Nam) kèm doanh thu, thuế khấu trừ, phần khách trả trực tiếp khi nhận xe và số ví thật sự nhúc nhích. Cộng dồn tính trên CẢ KỲ, không theo trang đang xem. KHÔNG có dòng "phí sàn": phí dịch vụ XePrime do khách trả thêm và không trừ vào doanh thu gian hàng (ADR 0032 điều 2).
+         *
+         *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         */
+        get: operations["ShopWalletController_tenantStatement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/shop/wallet/withdrawals": {
         parameters: {
             query?: never;
@@ -6166,6 +6190,30 @@ export interface paths {
          *     **Quyền yêu cầu:** `subscription.view` (đọc từ DB mỗi request, không nằm trong session).
          */
         get: operations["SubscriptionController_invoices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/subscription/invoices/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Hoá đơn gói đang chờ tiền (issued | partially_paid); `invoice: null` nếu không có
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *
+         *     **Quyền yêu cầu:** `subscription.view` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["SubscriptionController_pendingInvoice"];
         put?: never;
         post?: never;
         delete?: never;
@@ -8447,7 +8495,7 @@ export interface components {
             /** @enum {string|null} */
             vehicleType?: "car" | "motorbike" | null;
             /** @enum {string} */
-            status: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_expired";
+            status: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_paid" | "hold_expired";
             customerName: string;
             customerPhone: string;
             customerEmail?: string | null;
@@ -8526,7 +8574,7 @@ export interface components {
         BookingRequestReceiptDto: {
             id: string;
             /** @enum {string} */
-            status: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_expired";
+            status: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_paid" | "hold_expired";
             /** @description Sau khi gửi, khách đã có phiên đăng nhập (passwordless qua SĐT) — FE chuyển tới /trips. */
             authenticated: boolean;
             session?: components["schemas"]["MobileSessionDto"];
@@ -8536,7 +8584,7 @@ export interface components {
         };
         BookingRequestStatusCountDto: {
             /** @enum {string} */
-            status: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_expired";
+            status: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_paid" | "hold_expired";
             /** @example 7 */
             count: number;
         };
@@ -9695,8 +9743,12 @@ export interface components {
             slug: string;
             /** @description Xem TenantStatus trong @xeprime/types */
             status: string;
+            /** @description Xem ShopOnboardingState trong @xeprime/types */
+            onboardingState: string;
             /** @description Xem TenantRole trong @xeprime/types */
             roleKey: string;
+            /** @description Logo gian hàng; null = dùng chữ cái đầu */
+            logoUrl: string | null;
             features: components["schemas"]["TenantFeatureStateDto"][];
             /** @description Mã gói hiện hành; null = không có */
             planCode: string | null;
@@ -9901,7 +9953,7 @@ export interface components {
              * @description @xeprime/types CustomerTripStage
              * @enum {string}
              */
-            stage: "pending_approval" | "awaiting_hold" | "ready" | "active" | "completed" | "cancelled" | "rejected" | "no_show";
+            stage: "pending_approval" | "awaiting_hold" | "pending_approval_paid" | "ready" | "active" | "completed" | "cancelled" | "rejected" | "no_show";
             vehicle: components["schemas"]["CustomerTripVehicleDto"];
             shop: components["schemas"]["CustomerTripShopDto"];
             /** @description ISO-8601 UTC */
@@ -10034,7 +10086,7 @@ export interface components {
              * @description @xeprime/types CustomerTripStage
              * @enum {string}
              */
-            stage: "pending_approval" | "awaiting_hold" | "ready" | "active" | "completed" | "cancelled" | "rejected" | "no_show";
+            stage: "pending_approval" | "awaiting_hold" | "pending_approval_paid" | "ready" | "active" | "completed" | "cancelled" | "rejected" | "no_show";
             vehicle: components["schemas"]["CustomerTripVehicleDto"];
             shop: components["schemas"]["CustomerTripShopDto"];
             /** @description ISO-8601 UTC */
@@ -11087,9 +11139,12 @@ export interface components {
             status: "draft" | "pending_review" | "needs_revision" | "active" | "suspended" | "rejected" | "expired";
             /** @enum {string} */
             verification: "unverified" | "pending" | "verified" | "needs_revision" | "rejected";
+            /** @enum {string} */
+            onboardingState: "commission" | "package_pending" | "package_active";
             phone?: string | null;
             email?: string | null;
             profile: components["schemas"]["TenantProfileDto"];
+            ownerAccount: components["schemas"]["ShopOwnerAccountDto"];
             latestApproval?: components["schemas"]["LatestApprovalDto"] | null;
             defaultBranch?: components["schemas"]["DefaultBranchDto"] | null;
         };
@@ -11102,7 +11157,7 @@ export interface components {
         NotificationDto: {
             id: string;
             /** @enum {string} */
-            type: "booking_created" | "booking_status_changed" | "booking_request_submitted" | "booking_request_approved" | "booking_request_rejected" | "booking_request_cancelled" | "booking_request_expiring" | "booking_request_expired" | "booking_auto_accepted" | "shop_approved" | "shop_rejected" | "shop_needs_revision" | "vehicle_approved" | "vehicle_rejected" | "vehicle_needs_revision" | "review_received" | "subscription_expiring" | "subscription_expired" | "subscription_lapsed" | "free_trips_exhausted" | "subscription_activated" | "hold_requested" | "hold_paid" | "hold_expiring" | "hold_expired" | "hold_refund_paid" | "seller_profile_verified" | "seller_profile_changes_requested" | "seller_profile_rejected" | "support_case_updated" | "chat_message_received";
+            type: "booking_created" | "booking_status_changed" | "booking_request_submitted" | "booking_request_approved" | "booking_request_rejected" | "booking_request_cancelled" | "booking_request_expiring" | "booking_request_expired" | "booking_auto_accepted" | "shop_approved" | "shop_rejected" | "shop_needs_revision" | "vehicle_approved" | "vehicle_rejected" | "vehicle_needs_revision" | "review_received" | "subscription_expiring" | "subscription_expired" | "subscription_lapsed" | "free_trips_exhausted" | "subscription_activated" | "hold_requested" | "hold_paid" | "hold_expiring" | "hold_expired" | "hold_refunded" | "hold_refund_paid" | "seller_profile_verified" | "seller_profile_changes_requested" | "seller_profile_rejected" | "support_case_updated" | "chat_message_received";
             title: string;
             body?: string | null;
             /** @description Loại đối tượng để dựng link */
@@ -11251,7 +11306,11 @@ export interface components {
              * @description Vì sao — client ánh xạ sang câu giải thích, KHÔNG hiện mã này ra màn hình
              * @enum {string}
              */
-            reason: "commission_mandatory" | "package_enabled" | "package_disabled" | "package_feature_missing" | "billing_not_configured";
+            reason: "platform_mandatory" | "commission_mandatory" | "package_enabled" | "package_disabled" | "package_feature_missing" | "billing_not_configured";
+        };
+        PendingSubscriptionInvoiceDto: {
+            /** @description Hoá đơn còn nhận được tiền (issued | partially_paid); null khi không có */
+            invoice: components["schemas"]["SubscriptionInvoiceDto"] | null;
         };
         PhoneLoginDto: {
             /** @example 0901234567 */
@@ -11719,10 +11778,6 @@ export interface components {
             taxId?: string | null;
             /** @description Che ở danh sách; đủ ở chi tiết */
             idNumber?: string | null;
-            bankCode?: string | null;
-            /** @description Che ở danh sách; đủ ở chi tiết */
-            bankAccountNumber?: string | null;
-            bankAccountName?: string | null;
             /** @enum {string} */
             status: "draft" | "submitted" | "verified" | "changes_requested" | "rejected";
             submittedAt?: string | null;
@@ -12590,11 +12645,14 @@ export interface components {
              * @enum {string}
              */
             tenantType: "individual" | "business";
+            /**
+             * @description Cửa vào: `commission` (Owner Lite) hoặc `package` (gian hàng trả phí). Vắng mặt = `commission`.
+             * @enum {string}
+             */
+            registrationTrack?: "commission" | "package";
             /** @example 0901234567 */
             phone?: string;
             email?: string;
-            /** @description Họ tên chủ gian hàng; bỏ trống ⇒ lấy `name` nếu là cá nhân */
-            ownerFullName?: string;
         };
         RejectBookingRequestDto: {
             reason?: string;
@@ -12863,10 +12921,6 @@ export interface components {
             /** @description YYYY-MM-DD */
             idIssuedAt?: string | null;
             idIssuedBy?: string | null;
-            /** @description Mã ngân hàng chuẩn VietQR */
-            bankCode?: string | null;
-            bankAccountNumber?: string | null;
-            bankAccountName?: string | null;
         };
         SaveSurchargeDto: {
             /**
@@ -12981,9 +13035,6 @@ export interface components {
             idNumber?: string | null;
             idIssuedAt?: string | null;
             idIssuedBy?: string | null;
-            bankCode?: string | null;
-            bankAccountNumber?: string | null;
-            bankAccountName?: string | null;
             /** @enum {string} */
             status: "draft" | "submitted" | "verified" | "changes_requested" | "rejected";
             submittedAt?: string | null;
@@ -13056,6 +13107,16 @@ export interface components {
             /** @description VND string — ADR 0007 */
             amount: string;
             thresholdValue?: number | null;
+        };
+        ShopOwnerAccountDto: {
+            /** @description Id user chủ gian hàng */
+            userId: string;
+            displayName: string;
+            email?: string | null;
+            /** @description Dạng lưu 84… */
+            phone?: string | null;
+            emailVerified: boolean;
+            phoneVerified: boolean;
         };
         ShopRentalPolicyDto: {
             /** @description null = gian hàng chưa cấu hình */
@@ -13505,14 +13566,6 @@ export interface components {
             wardName?: string | null;
             taxCode?: string | null;
             businessLicenseNo?: string | null;
-            bankName?: string | null;
-            bankAccountNo?: string | null;
-            bankAccountName?: string | null;
-            qrUrl?: string | null;
-            ownerFullName?: string | null;
-            /** @description Dạng lưu 84… */
-            ownerPhone?: string | null;
-            ownerEmail?: string | null;
         };
         TenantTaxSummaryDto: {
             /** @example 2026-09 */
@@ -13754,19 +13807,6 @@ export interface components {
             wardCode?: string;
             taxCode?: string;
             businessLicenseNo?: string;
-            bankName?: string;
-            bankAccountNo?: string;
-            bankAccountName?: string;
-            qrUrl?: string;
-            /** @example Nguyễn Văn A */
-            ownerFullName?: string;
-            /**
-             * @description Nhận 09…/84…/+84…, lưu 84…
-             * @example 0901234567
-             */
-            ownerPhone?: string;
-            /** @example chugianhang@xeprime.vn */
-            ownerEmail?: string;
         };
         UpdateVehicleBlockDto: {
             /**
@@ -14512,12 +14552,12 @@ export interface components {
             /** @enum {string|null} */
             bookingStatus?: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show" | null;
             /** @enum {string|null} */
-            requestStatus?: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_expired" | null;
+            requestStatus?: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_paid" | "hold_expired" | null;
             /**
              * @description Chặng gộp — cùng phép chiếu với Chuyến của tôi
              * @enum {string}
              */
-            stage: "pending_approval" | "awaiting_hold" | "ready" | "active" | "completed" | "cancelled" | "rejected" | "no_show";
+            stage: "pending_approval" | "awaiting_hold" | "pending_approval_paid" | "ready" | "active" | "completed" | "cancelled" | "rejected" | "no_show";
             /** @enum {string} */
             serviceType: "self_drive" | "with_driver" | "long_term";
             routeType?: string | null;
@@ -14604,6 +14644,70 @@ export interface components {
             page: number;
             limit: number;
             hasNext: boolean;
+        };
+        WalletStatementDto: {
+            /** @example 2026-10 */
+            periodKey: string;
+            stats: components["schemas"]["WalletStatementStatsDto"];
+            totals: components["schemas"]["WalletStatementTotalsDto"];
+            items: components["schemas"]["WalletStatementTripDto"][];
+            total: number;
+            page: number;
+            limit: number;
+            hasNext: boolean;
+        };
+        WalletStatementStatsDto: {
+            /** @description Điểm trung bình các đánh giá NHẬN ĐƯỢC trong kỳ. `null` = kỳ này chưa ai đánh giá. */
+            ratingAvg?: number | null;
+            /** @description Số đánh giá nhận được trong kỳ */
+            ratingCount: number;
+            /** @description Số chuyến hoàn thành trong kỳ */
+            completedTripCount: number;
+            /** @description Tỉ lệ phản hồi yêu cầu thuê nhận trong kỳ. `null` = không có yêu cầu nào tới hạn quyết — KHÔNG phải 0. */
+            responseRatePercent?: number | null;
+        };
+        WalletStatementTotalsDto: {
+            /** @description Σ doanh thu các chuyến hoàn thành trong kỳ */
+            revenueTotal: string;
+            /** @description Σ thuế đã khấu trừ hộ trong kỳ (số dương) */
+            taxTotal: string;
+            /** @description Σ phần khách trả trực tiếp khi nhận xe */
+            payAtPickupTotal: string;
+            /** @description Σ thay đổi số dư ví do các chuyến của kỳ */
+            balanceChangeTotal: string;
+            /** @description Phí quản lý & vận hành gói nền tảng ĐÃ TRẢ trong kỳ (số dương). 0 với tuyến hoa hồng. */
+            subscriptionFeeTotal: string;
+            /** @description Thu nhập chủ gian hàng = doanh thu − thuế − phí gói */
+            ownerIncome: string;
+        };
+        WalletStatementTripDto: {
+            bookingId: string;
+            /** @description Mã chuyến hiển thị — `XP…` */
+            code: string;
+            /**
+             * @description Hình thức thuê
+             * @enum {string}
+             */
+            serviceType: "self_drive" | "with_driver" | "long_term";
+            /** @description Ngày đi — giờ nhận xe theo lịch đơn */
+            pickupAt: string;
+            /** @description Ngày về — giờ trả THỰC TẾ nếu có, không thì theo lịch */
+            returnAt: string;
+            /** @description Đơn giá một đơn vị thuê (ngày hoặc tháng). `null` khi snapshot giá của đơn không đủ dữ liệu để chia — KHÔNG suy ngược từ tổng. */
+            unitAmount?: string | null;
+            /**
+             * @description Đơn vị của `unitAmount`. `null` đi cùng `unitAmount = null`.
+             * @enum {string|null}
+             */
+            unitKind?: "day" | "month" | null;
+            /** @description Doanh thu chuyến `B` (VND string) */
+            revenueAmount: string;
+            /** @description Thuế khấu trừ `T` — chủ xe chịu */
+            taxAmount: string;
+            /** @description `B − D` — khách trả trực tiếp chủ xe, không qua ví */
+            payAtPickupAmount: string;
+            /** @description Ví nhúc nhích bao nhiêu vì chuyến này. Đọc từ sổ, âm được. */
+            balanceChange: string;
         };
         WalletSummaryDto: {
             /** @description Rút được ngay (VND string) */
@@ -18077,7 +18181,7 @@ export interface operations {
                 q?: string;
                 /** @description Lọc theo dịch vụ được yêu cầu */
                 serviceType?: "self_drive" | "with_driver" | "long_term";
-                status?: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_expired";
+                status?: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_paid" | "hold_expired";
                 vehicleId?: string;
                 /** @description Lọc theo chi nhánh (qua xe của yêu cầu) */
                 branchId?: string;
@@ -56502,6 +56606,138 @@ export interface operations {
             };
         };
     };
+    ShopWalletController_tenantStatement: {
+        parameters: {
+            query?: {
+                /** @description Kỳ `YYYY-MM` theo giờ Việt Nam. Bỏ trống = kỳ hiện tại. */
+                period?: string;
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["WalletStatementDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `NO_TENANT_SCOPE`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NO_TENANT_SCOPE",
+                     *         "message": "Tài khoản không thuộc gian hàng nào"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     ShopWalletController_listWithdrawals: {
         parameters: {
             query?: never;
@@ -57073,6 +57309,112 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    SubscriptionController_pendingInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["PendingSubscriptionInvoiceDto"];
+                    };
                 };
             };
             /**

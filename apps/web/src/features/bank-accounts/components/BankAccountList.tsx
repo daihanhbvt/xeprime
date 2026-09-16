@@ -4,6 +4,7 @@ import { App, Alert, Button, Empty, Popconfirm, Skeleton, Tag } from 'antd';
 import { BankOutlined, PlusOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { cx } from '@/lib/cx';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import {
   useArchiveBankAccount,
@@ -23,8 +24,25 @@ import styles from './BankAccountList.module.css';
  *
  * Không có nút "sửa": đổi số tài khoản tại chỗ sẽ âm thầm đổi đích của lệnh chuyển đang chờ.
  * Thêm cái mới rồi bỏ cái cũ là hai hành động người dùng nhìn thấy và kiểm chứng được.
+ *
+ * `id`/`className`/`title`/`subtitle` để phần tử cha NHÚNG được panel này vào bố cục của nó
+ * (trang Cửa hàng xếp nó làm một trong năm section, có khung thẻ và có anchor `?section=payout`)
+ * mà không phải dựng một danh sách thứ hai. Bỏ trống thì panel tự xưng như cũ — `/account/bank-accounts`
+ * và `AccountMoneyPanel` không phải đổi gì.
  */
-export function BankAccountList({ scope }: { scope: BankAccountScope }) {
+export function BankAccountList({
+  scope,
+  id,
+  className,
+  title,
+  subtitle,
+}: {
+  scope: BankAccountScope;
+  id?: string;
+  className?: string;
+  title?: string;
+  subtitle?: string;
+}) {
   const t = useTranslations('BankAccounts');
   const { message } = App.useApp();
   const errorMessage = useErrorMessage();
@@ -36,12 +54,23 @@ export function BankAccountList({ scope }: { scope: BankAccountScope }) {
 
   const accounts = data ?? [];
 
+  const headingId = id ? `${id}-title` : undefined;
+
   return (
-    <section className={styles.panel} aria-label={t('title')}>
+    <section
+      id={id}
+      className={cx(styles.panel, className)}
+      aria-labelledby={headingId}
+      aria-label={headingId ? undefined : t('title')}
+      // Đích của `?section=` khi panel này được nhúng — xem `ShopSectionCard`.
+      tabIndex={id ? -1 : undefined}
+    >
       <header className={styles.head}>
         <div>
-          <h2 className={styles.title}>{t('title')}</h2>
-          <p className={styles.subtitle}>{t('subtitle')}</p>
+          <h2 className={styles.title} id={headingId}>
+            {title ?? t('title')}
+          </h2>
+          <p className={styles.subtitle}>{subtitle ?? t('subtitle')}</p>
         </div>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setFormOpen(true)}>
           {t('actions.add')}

@@ -1,13 +1,18 @@
-import type { PrismaClient } from '@xeprime/prisma';
+import { Prisma, type PrismaClient } from '@xeprime/prisma';
 import {
   BOOKING_REQUEST_FINAL_REMINDER_REMAINING_MINUTES,
   BOOKING_REQUEST_REMINDER_MINUTES,
   BOOKING_REQUEST_RESPOND_WINDOW_MINUTES,
+  BOOKING_HOLD_OUTCOME,
+  BOOKING_HOLD_STATUS,
   BOOKING_REQUEST_STATUS,
   NOTIFICATION_TARGET_TYPE,
+  HOLD_REFUND_REASON,
   NOTIFICATION_TYPE,
+  OCCUPANCY_SOURCE_TYPE,
 } from '@xeprime/types';
 import { notifyTenantMembers, notifyUser, recordSystemAudit } from '../lib/notify';
+import { upsertWorkerHoldRefund } from './booking-hold-expiry';
 
 /** Trần số bản ghi xử lý mỗi lượt — một nhịp worker không được biến thành một job hàng giờ. */
 const BATCH = 200;
@@ -19,6 +24,12 @@ export interface DeadlineSweepResult {
   firstReminders: number;
   finalReminders: number;
   expired: number;
+  /**
+   * Yêu cầu ĐÃ CỌC mà gian hàng không phản hồi trong hạn — đã hoàn tiền và nhả chỗ (ADR 0039).
+   * Đếm riêng với  vì đây là con số có TIỀN đi kèm: nó tăng bất thường nghĩa là gian
+   * hàng đang bỏ đơn đã thu tiền, và đó là việc vận hành phải biết ngay.
+   */
+  expiredPaid: number;
 }
 
 /**
@@ -50,7 +61,151 @@ export async function sweepBookingRequestDeadlines(
     firstReminders: await remind(prisma, now, 'first'),
     finalReminders: await remind(prisma, now, 'final'),
     expired: await expire(prisma, now),
+    expiredPaid: await expirePaidAwaitingAccept(prisma, now),
   };
+}
+
+
+/**
+ * QUÁ HẠN PHẢN HỒI SAU KHI KHÁCH ĐÃ CỌC ⇒ hoàn đủ, nhả chỗ (ADR 0039 điều 5).
+ *
+ * Tách khỏi `expire` ở trên vì hai tình huống chỉ giống nhau ở cái tên. Ở kia không ai mất gì:
+ * yêu cầu chưa chiếm lịch và chưa có đồng nào của khách. Ở đây XePrime đang GIỮ TIỀN THẬT và
+ * chiếc xe đang bị khoá — bỏ sót nhánh này nghĩa là tiền của khách nằm lại vô thời hạn vì gian
+ * hàng không bấm nút, và đó là kiểu lỗi không ai phát hiện ra cho tới lúc khách gọi hỗ trợ.
+ *
+ * Trạng thái đích là `rejected_by_host`, không phải `expired`: từ phía khách, một chuyến đã trả
+ * tiền mà gian hàng không nhận thì đúng là bị từ chối — và `customerTripStage` chiếu cả hai về
+ * `REJECTED` nên màn hình nói đúng một câu.
+ *
+ * Hoàn 100%, không chia đôi: khách không làm gì sai. Dùng CHUNG `upsertWorkerHoldRefund` với job
+ * hết hạn giữ chỗ — một đường ghi tiền, không phải hai bản chép tay.
+ */
+async function expirePaidAwaitingAccept(prisma: PrismaClient, now: Date): Promise<number> {
+  const overdue = await prisma.bookingRequest.findMany({
+    where: {
+      status: BOOKING_REQUEST_STATUS.HOLD_PAID,
+      respondBy: { lte: now },
+    },
+    orderBy: { respondBy: 'asc' },
+    take: BATCH,
+    select: {
+      id: true,
+      tenantId: true,
+      customerName: true,
+      customerUserId: true,
+      vehicle: { select: { name: true } },
+      hold: {
+        select: {
+          id: true,
+          amount: true,
+          paidAmount: true,
+          customerUserId: true,
+          outcome: true,
+          status: true,
+        },
+      },
+    },
+  });
+
+  let count = 0;
+  for (const req of overdue) {
+    const hold = req.hold;
+    const done = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.bookingRequest.updateMany({
+        where: {
+          id: req.id,
+          status: BOOKING_REQUEST_STATUS.HOLD_PAID,
+          respondBy: { lte: now },
+        },
+        data: {
+          status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
+          rejectReason: 'Gian hàng không phản hồi trong hạn',
+        },
+      });
+      // 0 dòng = gian hàng vừa bấm duyệt/từ chối. Họ thắng cuộc đua, không ghi đè.
+      if (claimed.count === 0) return false;
+
+      /*
+       * Nhả lịch trước: chỗ đã mất lý do tồn tại kể từ khi yêu cầu đóng, và việc này phải xảy ra
+       * kể cả khi hold vì lý do nào đó đã được chốt kết cục ở đường khác.
+       */
+      await tx.vehicleOccupancy.deleteMany({
+        where: { sourceType: OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST, sourceId: req.id },
+      });
+
+      if (hold && hold.status === BOOKING_HOLD_STATUS.PAID && hold.outcome === null) {
+        const chotted = await tx.bookingHold.updateMany({
+          where: { id: hold.id, status: BOOKING_HOLD_STATUS.PAID, outcome: null },
+          data: {
+            status: BOOKING_HOLD_STATUS.RELEASED,
+            outcome: BOOKING_HOLD_OUTCOME.REFUNDED,
+            releasedAt: now,
+            /*
+             * Phân bổ ba vế phải khớp bốn dòng tiền — `booking_holds_settled_allocation_check`
+             * canh ở DB. Hoàn 100% nghĩa là toàn bộ về phía KHÁCH.
+             */
+            settledCustomerAmount: hold.amount,
+            settledOwnerAmount: new Prisma.Decimal(0),
+            settledPlatformAmount: new Prisma.Decimal(0),
+            settledInsurerAmount: new Prisma.Decimal(0),
+            settledTaxAmount: new Prisma.Decimal(0),
+          },
+        });
+        if (chotted.count > 0 && hold.paidAmount.gt(0)) {
+          await upsertWorkerHoldRefund(
+            tx,
+            {
+              id: hold.id,
+              tenantId: req.tenantId,
+              customerUserId: hold.customerUserId,
+              paidAmount: hold.paidAmount,
+            },
+            {
+              reason: HOLD_REFUND_REASON.OWNER_CANCEL,
+              note: 'Gian hàng không phản hồi trong hạn sau khi khách đã giữ chỗ',
+            },
+          );
+        }
+      }
+
+      await recordSystemAudit(tx, {
+        tenantId: req.tenantId,
+        action: 'booking_request.expire_paid',
+        targetType: 'booking_request',
+        targetId: req.id,
+        before: { status: BOOKING_REQUEST_STATUS.HOLD_PAID },
+        after: {
+          status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
+          refunded: hold?.paidAmount.toString() ?? '0',
+        },
+      });
+
+      await notifyTenantMembers(tx, req.tenantId, {
+        type: NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRED,
+        title: `Quá hạn phản hồi — đã hoàn tiền khách: ${req.customerName}`,
+        body: `${req.vehicle.name} · khách đã cọc và chuyến bị huỷ vì không có phản hồi`,
+        targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
+        targetId: req.id,
+      });
+
+      if (req.customerUserId) {
+        await notifyUser(tx, req.customerUserId, {
+          type: NOTIFICATION_TYPE.HOLD_REFUNDED,
+          title: 'Chuyến không thành — đã hoàn tiền giữ chỗ',
+          body: `${req.vehicle.name} · gian hàng không phản hồi, toàn bộ số tiền đã được hoàn`,
+          tenantId: req.tenantId,
+          targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
+          targetId: req.id,
+        });
+      }
+
+      return true;
+    });
+
+    if (done) count += 1;
+  }
+  return count;
 }
 
 type ReminderStage = 'first' | 'final';

@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  ArrowLeftOutlined,
   CalendarOutlined,
   CarOutlined,
   CheckCircleFilled,
@@ -9,11 +10,13 @@ import {
   EditOutlined,
   EnvironmentOutlined,
   ExclamationOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Radio, Segmented } from 'antd';
+import { Alert, Button, Radio, Segmented, Skeleton } from 'antd';
 import { CheckboxField } from '@/components/form/CheckboxField';
+import { CopyButton } from '@/components/data-display/CopyButton';
 
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -48,7 +51,9 @@ import {
 } from '@/components/form/RentalDateTimeRangeField';
 import { AddressField } from '@/components/form/AddressField';
 import { TextField } from '@/components/form/TextField';
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, tripPath } from '@/constants/routes';
+import { TripHoldPanel } from '@/features/trips/components/TripHoldPanel';
+import { useTrip } from '@/features/trips/hooks';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { fetchListingDetailClient } from '@/features/marketplace/api';
@@ -154,11 +159,15 @@ interface RequestBookingFlowProps {
    */
   onBusyChange?: (busy: boolean) => void;
   /**
-   * Đã sang màn KẾT QUẢ (gửi xong / trùng lặp). Vỏ dùng tín hiệu này để thu overlay lại cho vừa
-   * nội dung — khung hai cột rộng 1180px và cao hết màn là dành cho biểu mẫu, giữ nguyên cho
-   * một thẻ xác nhận ngắn thì thừa mênh mông chỗ trống.
+   * Đã sang màn KẾT QUẢ, và thuộc KIỂU nào — vỏ overlay đổi bề rộng theo tín hiệu này.
+   *
+   *  - `false`     — còn đang nhập liệu: giữ khung hai cột rộng 1180px của biểu mẫu;
+   *  - `'compact'` — một thẻ xác nhận vài dòng: thu lại, vì giữ nguyên khung biểu mẫu thì phần
+   *    lớn hộp thoại là chỗ trống và mắt phải đi rất xa mới tới hàng nút;
+   *  - `'payment'` — có mã QR, số tài khoản và nội dung chuyển khoản: rộng hơn `compact` để một
+   *    chuỗi 19 ký tự liền mạch không bị bẻ làm ba khúc, vì mã đọc thành ba dòng là mã gõ sai.
    */
-  onResultChange?: (isResult: boolean) => void;
+  onResultChange?: (result: false | 'compact' | 'payment') => void;
 }
 
 /**
@@ -250,6 +259,7 @@ export function RequestBookingFlow({
   const [otpPhone, setOtpPhone] = useState('');
   const [code, setCode] = useState('');
   const [stepError, setStepError] = useState<string | null>(null);
+
   /** Yêu cầu trùng lặp — trạng thái riêng, có lối đi tiếp, không phải một alert đỏ. */
   const [duplicate, setDuplicate] = useState(false);
   /*
@@ -295,6 +305,26 @@ export function RequestBookingFlow({
     staleTime: 5 * 60_000,
   });
   const listing = providedListing ?? listingQ.data ?? null;
+
+  /**
+   * Chuyến vừa tạo — chỉ nạp khi đang CHỜ TIỀN, và nạp ở thân component chứ không trong bước
+   * cuối vì hook không được đặt sau một `return`.
+   *
+   * Một lượt đọc phục vụ HAI chỗ: thẻ tóm tắt cần biển số + ảnh xe (phiếu gửi yêu cầu không có
+   * hai thứ đó), và khối QR cần khoản giữ chỗ. Truyền chuỗi rỗng khi chưa tới chặng đó thì
+   * `useTrip` tự tắt — không có request nào cho chuyến chưa cần.
+   */
+  const holdTripId =
+    receipt?.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD ? receipt.id : '';
+  const holdTrip = useTrip(holdTripId);
+
+  /**
+   * Ảnh xe cho thẻ tóm tắt — ưu tiên ảnh của CHUYẾN (chính chiếc xe đã được giữ), rồi tới ảnh
+   * tin đăng, rồi tới ảnh thẻ xe mà nơi gọi truyền vào. Ba nguồn vì ba chặng khác nhau có sẵn
+   * ba thứ khác nhau; thiếu cả ba thì bỏ ảnh chứ không dựng ô xám rỗng.
+   */
+  const vehicleThumbUrl =
+    holdTrip.data?.vehicle.imageUrl ?? listing?.mainImageUrl ?? vehicleImageUrl ?? null;
 
   const { control, trigger, getValues, setValue, formState } = useForm<RequestFormValues>({
     resolver: yupResolver(requestFormSchema),
@@ -735,8 +765,14 @@ export function RequestBookingFlow({
 
   const isResult = step === 'done' || duplicate || blocked !== null;
   useEffect(() => {
-    onResultChange?.(isResult);
-  }, [isResult, onResultChange]);
+    onResultChange?.(
+      isResult
+        ? receipt?.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD
+          ? 'payment'
+          : 'compact'
+        : false,
+    );
+  }, [isResult, receipt?.status, onResultChange]);
 
   /**
    * Vừa mở bảng chi tiết thì đưa nó vào tầm mắt. Bảng nằm cuối thân bước nên với một bước dài
@@ -1007,6 +1043,12 @@ export function RequestBookingFlow({
   // --- Đã gửi xong: kết quả, không phải một bước biểu mẫu -----------------------------------
   if (step === 'done') {
     const v = getValues();
+    /*
+     * Chặng CHỜ TIỀN quyết định cả ba thứ ở bước cuối: tiêu đề, có hiện mã QR không, và nút
+     * chính dẫn đi đâu. Tính một lần ở đây thay vì so lại `receipt.status` ở bốn chỗ — bốn chỗ
+     * là bốn cơ hội để một chỗ bị quên và màn hình nói hai điều trái nhau.
+     */
+    const awaitingHold = receipt?.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD;
     return (
       <div className={styles.resultWrap}>
         <div className={styles.centered}>
@@ -1016,29 +1058,101 @@ export function RequestBookingFlow({
             class đơn (0,1,0) không chắc thắng — dấu tích ra màu chữ (gần đen) đúng như đã thấy.
             Ở đây màu là NỀN của thẻ bọc, không phụ thuộc thừa kế nào.
           */}
-          <span className={styles.doneBadge} aria-hidden>
-            <CheckOutlined />
+          {/*
+            Ánh sao quanh huy hiệu là TRANG TRÍ thuần — `aria-hidden` cả cụm để trình đọc màn
+            hình không đọc ra một chuỗi ký tự vô nghĩa giữa tiêu đề và nội dung.
+          */}
+          <span className={styles.doneBadgeWrap} aria-hidden>
+            <span className={styles.sparkle} />
+            <span className={styles.sparkle} />
+            <span className={styles.sparkle} />
+            <span className={styles.sparkle} />
+            <span className={styles.doneBadge}>
+              <CheckOutlined />
+            </span>
           </span>
-          <h3 className={styles.doneTitle}>{t('done.title')}</h3>
+{/*
+            Ba chặng, ba câu — và chặng chờ tiền KHÔNG được nói "đã gửi yêu cầu, chủ xe sẽ phản
+            hồi": chỗ đã bị giữ, đồng hồ đang chạy, và việc tiếp theo thuộc về KHÁCH chứ không
+            phải chủ xe. Câu sai ở đây là lý do khách đóng tab rồi mất chuyến.
+          */}
+          <h3 className={styles.doneTitle}>
+            {awaitingHold ? t('done.heldTitle') : t('done.title')}
+          </h3>
+          {/*
+            Chặng chờ tiền có thêm MỘT dòng nói việc phải làm. Tiêu đề nói chỗ đã giữ; dòng này
+            nói vì sao chưa xong — hai ý khác nhau, không phải một câu bị chẻ đôi.
+          */}
+          {awaitingHold ? <p className={styles.doneLead}>{t('done.heldSubtitle')}</p> : null}
+          {/*
+            Mã yêu cầu là thứ khách đọc cho tổng đài khi gọi hỗ trợ, nên nó phải CHÉP ĐƯỢC —
+            một chuỗi 26 ký tự đọc qua điện thoại là một chuỗi đọc sai.
+          */}
           {requestCode ? (
-            <p className={styles.requestCode}>{t('done.requestCode', { code: requestCode })}</p>
+            <p className={styles.requestCode}>
+              <span>{t('done.requestCode', { code: requestCode })}</span>
+              <CopyButton value={requestCode} label={t('done.copyRequestCode')} />
+            </p>
           ) : null}
-          <p className={styles.doneText}>{t('done.body')}</p>
+          {/*
+            Chặng chờ tiền KHÔNG có đoạn mô tả ở đây: tiêu đề đã nói chỗ được giữ, và khối
+            `TripHoldPanel` ngay dưới nói phải làm gì cùng hệ quả khi hết giờ. Thêm một đoạn nữa
+            là nói lại lần thứ ba và đẩy mã QR xuống dưới nếp gấp.
+          */}
+          {awaitingHold ? null : <p className={styles.doneText}>{t('done.body')}</p>}
 
-          <dl className={styles.doneSummary}>
+          <section className={styles.doneSummary}>
+            {/*
+              XE lên ĐẦU THẺ chứ không nằm thành một dòng như mọi thuộc tính khác: nó là thứ
+              khách nhận diện chuyến bằng mắt, và một cái tên xe nằm lẫn giữa "Dịch vụ" và
+              "Nhận xe" thì phải đọc mới thấy.
+
+              Biển số và ảnh lấy từ CHUYẾN vừa tạo — phiếu gửi yêu cầu không mang hai thứ đó, và
+              cả hai chỉ tồn tại khi chỗ đã thực sự được giữ.
+            */}
+            <header className={styles.summaryHead}>
+              <span className={styles.summaryHeadLabel}>
+                <CarOutlined aria-hidden />
+                {t('done.tripInfo')}
+              </span>
+              <span className={styles.summaryVehicle}>
+                <span className={styles.summaryVehicleText}>
+                  <b>{listing?.name ?? vehicleName}</b>
+                  {holdTrip.data?.vehicle.plateNumber ? (
+                    <small>{holdTrip.data.vehicle.plateNumber}</small>
+                  ) : null}
+                </span>
+                {vehicleThumbUrl ? (
+                  /* Ảnh xe từ storage ngoài, 56×40 và TRANG TRÍ (alt rỗng). `PreviewImage` sẽ
+                     thêm cú bấm phóng to mà ô này không cần — cùng tiền lệ với logo gian hàng ở
+                     `VehicleSummaryPanel`. */
+                  // eslint-disable-next-line @next/next/no-img-element -- lý do ngay trên
+                  <img
+                    className={styles.summaryVehicleImg}
+                    src={vehicleThumbUrl}
+                    alt=""
+                    loading="lazy"
+                  />
+                ) : null}
+              </span>
+            </header>
+
+            <dl className={styles.doneRows}>
             <div className={styles.doneRow}>
-              <dt>{t('review.vehicle')}</dt>
-              <dd>{listing?.name ?? vehicleName}</dd>
-            </div>
-            <div className={styles.doneRow}>
-              <dt>{t('done.time')}</dt>
+              <dt>
+                <CalendarOutlined aria-hidden />
+                {t('done.time')}
+              </dt>
               <dd>
                 {v.pickupAt ? fmt.rentalPoint(v.pickupAt) : '—'} →{' '}
                 {v.returnAt ? fmt.rentalPoint(v.returnAt) : '—'}
               </dd>
             </div>
             <div className={styles.doneRow}>
-              <dt>{t('review.service')}</dt>
+              <dt>
+                <CarOutlined aria-hidden />
+                {t('review.service')}
+              </dt>
               <dd>
                 {dl('serviceType', v.serviceType)}
                 {v.serviceType === SERVICE_TYPE.WITH_DRIVER
@@ -1047,7 +1161,10 @@ export function RequestBookingFlow({
               </dd>
             </div>
             <div className={styles.doneRow}>
-              <dt>{t('done.pickupMethod')}</dt>
+              <dt>
+                <EnvironmentOutlined aria-hidden />
+                {t('done.pickupMethod')}
+              </dt>
               <dd>
                 {v.serviceType === SERVICE_TYPE.WITH_DRIVER
                   ? t('done.driverPickup', { address: pickupAddressPreview ?? '—' })
@@ -1060,29 +1177,27 @@ export function RequestBookingFlow({
               <div className={styles.doneRow}>
                 {/* Còn phụ phí chưa tính (estimateNote) thì KHÔNG gọi "Tổng dự kiến" — 17/08. */}
                 <dt>
+                  <FileTextOutlined aria-hidden />
                   {quoteQ.data.breakdown.estimateNote ? t('price.subtotal') : t('price.total')}
                 </dt>
                 {/* Tiền LUÔN qua bộ format — `1800000` trần là con số thô lọt ra ngoài. */}
                 <dd className={styles.doneMoney}>{fmt.money(quoteQ.data.breakdown.totalAmount)}</dd>
               </div>
             ) : null}
-          </dl>
+            </dl>
+          </section>
 
-          {/*
-            Nói rõ đây MỚI là yêu cầu — xe chưa bị giữ chỗ (pending không chiếm lịch). Ngoại lệ
-            08/09/2026: chủ xe bật Đặt ngay và server đã tự xác nhận → đơn ĐÃ giữ lịch (hoặc đang
-            chờ khách giữ chỗ nếu chính sách yêu cầu) — câu chữ phải nói đúng điều đó.
+{/*
+            Chặng chờ tiền KHÔNG có Alert nào ở đây: `TripHoldPanel` ngay bên dưới đã mở đầu bằng
+            đúng câu đó, và hai khối nói cùng một điều chồng lên nhau chỉ đẩy mã QR xuống dưới nếp
+            gấp — thứ duy nhất khách cần thấy.
           */}
-          {receipt?.autoAccepted ? (
+          {awaitingHold ? null : receipt?.autoAccepted ? (
             <Alert
               type="success"
               showIcon
               className={styles.doneNote}
-              title={
-                receipt.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD
-                  ? t('done.autoAcceptedHold')
-                  : t('done.autoAccepted')
-              }
+              title={t('done.autoAccepted')}
             />
           ) : (
             <Alert
@@ -1093,17 +1208,36 @@ export function RequestBookingFlow({
             />
           )}
 
+          {/*
+            MÃ QR NGAY TẠI ĐÂY — ADR 0039 điều 1.
+
+            Dùng lại `TripHoldPanel` của màn chi tiết chuyến chứ không vẽ QR lần thứ hai: đó là
+            nơi đã có đồng hồ đếm ngược, nút sao chép, và mọi trạng thái hoàn tiền. Hai bản QR
+            là hai chỗ để số tiền hoặc nội dung chuyển khoản trôi khỏi nhau — và một nội dung
+            sai là một khoản tiền không khớp được.
+          */}
+          {awaitingHold && receipt ? (
+            <HoldStep tripId={receipt.id} trip={holdTrip} />
+          ) : null}
+
           <div className={cx(styles.doneActions, styles.doneActionsRow)}>
+            {/*
+              Đang chờ tiền thì đích là CHUYẾN NÀY, không phải danh sách: khách cần chỗ có mã QR
+              và đồng hồ, và họ sẽ quay lại đó sau khi chuyển khoản xong.
+            */}
             <Button
               type="primary"
               size="large"
               block
               onClick={() => {
                 onClose();
-                router.push(ROUTES.TRIPS);
+                router.push(
+                  awaitingHold && receipt ? tripPath.detail(receipt.id) : ROUTES.TRIPS,
+                );
               }}
             >
-              {t('done.myTrips')}
+              {awaitingHold ? <ClockCircleOutlined aria-hidden /> : null}
+              {awaitingHold ? t('done.openHold') : t('done.myTrips')}
             </Button>
             {/*
               Hỏi thêm chủ xe là việc RẤT hay xảy ra ngay sau khi gửi (giao xe ở đâu, có giao
@@ -1117,7 +1251,7 @@ export function RequestBookingFlow({
               block
               onNavigate={onClose}
             />
-            <Button size="large" block onClick={onClose}>
+            <Button size="large" block icon={<ArrowLeftOutlined aria-hidden />} onClick={onClose}>
               {t('done.close')}
             </Button>
           </div>
@@ -1734,4 +1868,46 @@ export function RequestBookingFlow({
       </div>
     </div>
   );
+}
+
+/**
+ * KHỐI MÃ QR ngay trong bước cuối của luồng đặt xe — ADR 0039 điều 1.
+ *
+ * Vì sao nạp lại chuyến thay vì đọc từ `receipt`: phiếu gửi yêu cầu chỉ mang id và trạng thái,
+ * còn khoản giữ chỗ (mã `XPH…`, số tiền, hạn, tài khoản nhận) thuộc về chuyến. Nhét chúng vào
+ * phiếu nghĩa là hai endpoint cùng mô tả một khoản tiền — và chỗ nào lệch thì khách quét ra một
+ * nội dung chuyển khoản không khớp được.
+ *
+ * Dùng lại `TripHoldPanel` của màn chi tiết chuyến: đồng hồ đếm ngược, nút sao chép tài khoản/số
+ * tiền/nội dung và mọi trạng thái hoàn tiền đã nằm sẵn ở đó.
+ */
+function HoldStep({
+  tripId,
+  trip,
+}: {
+  tripId: string;
+  /** Kết quả nạp do bước cuối truyền xuống — một lượt đọc dùng cho cả thẻ tóm tắt lẫn khối này. */
+  trip: ReturnType<typeof useTrip>;
+}) {
+  const t = useTranslations('BookingRequests.flow');
+
+  if (trip.isPending) return <Skeleton active paragraph={{ rows: 6 }} />;
+
+  /*
+   * Không nạp được thì KHÔNG im lặng: khách vừa được báo là chỗ đã giữ và đồng hồ đang chạy, nên
+   * một khoảng trống ở đây là cách chắc chắn để họ bỏ đi mà không trả tiền. Chỉ đường sang màn
+   * chuyến, nơi cùng khối đó được nạp lại.
+   */
+  if (!trip.data?.hold) {
+    return (
+      <Alert
+        type="warning"
+        showIcon
+        className={styles.doneNote}
+        title={t('done.holdLoadFailed')}
+      />
+    );
+  }
+
+  return <TripHoldPanel hold={trip.data.hold} tripId={tripId} />;
 }

@@ -71,38 +71,19 @@
 }
 
 /*
- * Cột trái = thông tin CÔNG KHAI, cột phải = thông tin NỘI BỘ (chủ gian hàng).
+ * Hai khối xếp DỌC: "Thông tin hiển thị" rồi "Địa chỉ & pháp lý".
  *
- * `grid-template-areas` chứ không phải hai thẻ `div` lồng: nhờ vậy thứ tự trong DOM là thứ tự
- * ĐỌC trên mobile (giới thiệu → chủ gian hàng → địa chỉ → tài khoản) mà desktop vẫn hai cột,
- * không cần render hai cây khác nhau theo bề rộng.
+ * Trước 16/09/2026 lưới này có bốn khối và hai cột — cột phải là "chủ gian hàng" + "tài khoản
+ * ngân hàng". Cả hai đã rời khỏi form: chủ gian hàng đọc từ tài khoản (không sửa ở đây), tài
+ * khoản nhận tiền sống ở `bank_accounts`. Hai khối còn lại đều là form một cột, nên một cột là
+ * đúng — ép chúng thành hai cột chỉ để lấp chỗ trống sẽ làm mỗi ô nhập hẹp lại vô cớ.
  */
 .grid {
   display: grid;
   min-width: 0;
   align-items: start;
-  grid-template-areas:
-    'display owner'
-    'address owner'
-    'bank owner';
-  grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--xp-space-md);
-}
-
-.displayCard {
-  grid-area: display;
-}
-
-.ownerCard {
-  grid-area: owner;
-}
-
-.addressCard {
-  grid-area: address;
-}
-
-.bankCard {
-  grid-area: bank;
 }
 
 .card {
@@ -153,69 +134,6 @@
   line-height: var(--xp-line-height-body);
 }
 
-/* Hai ô cùng hàng trên desktop, xuống dòng khi cột hẹp — dùng cho cả địa chỉ lẫn tài khoản. */
-.pairRow,
-.imageRow {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 var(--xp-space-md);
-}
-
-.inputIcon {
-  color: var(--xp-color-text-tertiary);
-}
-
-.helpLink {
-  color: var(--xp-color-link);
-  white-space: nowrap;
-}
-
-/*
- * Ghi chú "chỉ đội ngũ XePrime đọc" — nằm NGAY DƯỚI ba ô nó nói về, không phải cuối trang, vì
- * đó là lúc người dùng đang phân vân có nên gõ số điện thoại thật vào hay không.
- */
-.privacy {
-  display: flex;
-  align-items: flex-start;
-  padding: 12px var(--xp-space-md);
-  border: 1px solid var(--xp-gold-soft);
-  border-radius: var(--xp-border-radius);
-  margin: var(--xp-space-xs) 0 0;
-  background: var(--xp-color-primary-light);
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  gap: var(--xp-space-sm);
-  line-height: 1.6;
-}
-
-.privacyIcon {
-  margin-top: 2px;
-  color: var(--xp-color-primary);
-  font-size: 16px;
-}
-
-.privacyTitle {
-  display: block;
-  color: var(--xp-color-primary-active);
-  font-weight: var(--xp-font-weight-semibold);
-}
-
-.privacyBody {
-  display: block;
-}
-
-@media (max-width: 1180px) {
-  .grid {
-    grid-template-areas:
-      'display'
-      'owner'
-      'address'
-      'bank';
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 @media (max-width: 640px) {
   /*
    * Mobile: thôi dính. Ở bề ngang này tiêu đề + nhãn + các nút xuống thành ba dòng, và một thanh
@@ -232,21 +150,4 @@
   .card {
     padding: var(--xp-space-md);
   }
-
-  .pairRow,
-  .imageRow {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-/*
- * Ghi chú đặt trên khối địa chỉ — nhắc rằng đổi ở đây là đổi chi nhánh mặc định.
- *
- * Nằm ở đây chứ không trong `AddressField`: đó là một ô dùng chung, còn hệ quả "dời vị trí công
- * khai của mọi xe" chỉ đúng ở màn hồ sơ gian hàng.
- */
-.addressNotice {
-  margin: 0 0 var(--xp-space-md);
-  font-size: var(--xp-font-size-sm);
-  color: var(--xp-color-text-secondary);
 }

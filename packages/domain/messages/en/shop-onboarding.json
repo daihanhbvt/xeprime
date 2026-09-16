@@ -1,19 +1,23 @@
 {
   "page": {
     "title": "Become a host",
-    "subtitle": "Create a shop to list and manage your rental vehicles. XePrime reviews your shop profile before your vehicles go live on the marketplace.",
+    "subtitle": "Create a host profile to list and manage your rental vehicles. XePrime reviews each vehicle before it goes live on the marketplace.",
     "back": "Back to marketplace",
     "homeAriaLabel": "Go to the XePrime home page"
   },
   "guide": {
     "trigger": "Guide",
-    "title": "Open your shop in 4 steps",
+    "title": "Become a host in 4 steps",
     "steps": {
-      "create": "Create the shop: name, business type, province and contacts.",
-      "complete": "Complete the profile, then press Submit for review — XePrime only looks at it once you submit.",
-      "prepare": "While you wait, you can already add vehicles and get your data ready.",
-      "publish": "Once approved: your vehicles go live on the marketplace and you start taking bookings."
-    }
+      "create": "Create the profile: name, business type, province and contacts.",
+      "complete": "Fill in whatever is still missing — a complete profile can list vehicles right away.",
+      "prepare": "Add your first vehicle: photos, documents, rental price.",
+      "publish": "Submit the vehicle for review. Once approved it goes live and starts taking bookings.",
+      "createShop": "Create the shop: name, contact phone number and address.",
+      "pay": "Pick a plan, vehicle slots and term, then transfer using the QR code.",
+      "logo": "Upload your shop logo — required before you can submit a vehicle."
+    },
+    "packageTitle": "Open your shop in 4 steps"
   },
   "form": {
     "title": "Create your shop",
@@ -41,13 +45,15 @@
       },
       "phone": {
         "label": "Phone number",
-        "placeholder": "0901234567"
+        "placeholder": "0901234567",
+        "shopHelp": "The number customers call to reach your shop. Prefilled from your account; you can change it."
       },
       "email": {
         "label": "Contact email",
         "placeholder": "contact@yourshop.vn"
       }
-    }
+    },
+    "submitPackage": "Create shop and pick a plan"
   },
   "tips": {
     "title": "Good to know",
@@ -65,11 +71,35 @@
     "provinceRequired": "Select the shop's province",
     "provinceInvalid": "Invalid province code",
     "phoneInvalid": "Invalid phone number",
-    "emailInvalid": "Invalid email address"
+    "emailInvalid": "Invalid email address",
+    "wardRequired": "Select a ward",
+    "wardInvalid": "Invalid ward",
+    "addressLineRequired": "Enter your shop's street number and street",
+    "addressLineMax": "Address is too long",
+    "phoneRequired": "Enter your shop's contact phone number"
   },
   "created": "Shop created. Complete the profile, then submit it for review.",
   "ownerVariant": {
     "title": "Set up your host profile",
     "intro": "Your contact details and pick-up address. You can change them any time."
+  },
+  "packagePage": {
+    "title": "Register your shop",
+    "subtitle": "Two steps: fill in your shop details, then pick a plan and pay. The shop management tools unlock as soon as XePrime receives the money."
+  },
+  "steps": {
+    "label": "Shop registration progress",
+    "shopInfo": "Shop details",
+    "planPayment": "Plan and payment"
+  },
+  "checkout": {
+    "loadError": "Could not load the payment status",
+    "plansError": "Could not load the plan list",
+    "noPlans": "No shop plan is on sale right now",
+    "noPlansHint": "Contact XePrime support to have a plan opened for your shop.",
+    "statusWaiting": "Waiting for your transfer. Use exactly the code below — the plan unlocks automatically once XePrime receives the money.",
+    "statusPartial": "Part of the amount has arrived. Transfer the remainder using exactly the code below.",
+    "createInvoice": "Create invoice and get the transfer code",
+    "pickTermFirst": "Pick a term to create the invoice."
   }
 }

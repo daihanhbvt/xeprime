@@ -1,6 +1,6 @@
 {
   "page": {
-    "subtitle": "Thông tin khách nhìn thấy trên marketplace, và thông tin nội bộ để XePrime duyệt hồ sơ.",
+    "subtitle": "Thông tin và thiết lập của gian hàng.",
     "viewPublicPage": "Xem gian hàng",
     "loadError": "Không tải được hồ sơ gian hàng",
     "forbidden": {
@@ -32,8 +32,7 @@
       "view": "Xem hồ sơ",
       "revise": "Bổ sung ngay",
       "reason": "Xem lý do",
-      "support": "Liên hệ hỗ trợ",
-      "addVehicle": "Thêm xe"
+      "support": "Liên hệ hỗ trợ"
     },
     "draft": {
       "title": "Hồ sơ chưa được gửi duyệt",
@@ -98,25 +97,6 @@
         "hint": "Kích thước đề xuất: 1600×600px."
       }
     },
-    "owner": {
-      "title": "Thông tin chủ gian hàng",
-      "fullName": {
-        "label": "Họ và tên",
-        "placeholder": "VD: Nguyễn Văn A"
-      },
-      "phone": {
-        "label": "Số điện thoại",
-        "placeholder": "0901234567"
-      },
-      "email": {
-        "label": "Email",
-        "placeholder": "chugianhang@xeprime.vn"
-      },
-      "privacy": {
-        "title": "Bảo mật thông tin",
-        "body": "Thông tin chủ gian hàng chỉ hiển thị với đội ngũ XePrime và không công khai với khách hàng."
-      }
-    },
     "address": {
       "title": "Địa chỉ & pháp lý",
       "address": {
@@ -139,22 +119,6 @@
         "label": "Số giấy phép KD",
         "placeholder": "Nếu có"
       }
-    },
-    "bank": {
-      "title": "Tài khoản nhận tiền",
-      "hint": "Tài khoản XePrime dùng để đối soát và chuyển tiền cho gian hàng.",
-      "bankName": {
-        "label": "Ngân hàng",
-        "placeholder": "VD: Vietcombank"
-      },
-      "accountNo": {
-        "label": "Số tài khoản",
-        "placeholder": "Số tài khoản nhận tiền"
-      },
-      "accountName": {
-        "label": "Chủ tài khoản",
-        "placeholder": "Tên chủ tài khoản"
-      }
     }
   },
   "checklist": {
@@ -171,18 +135,13 @@
       "logo": "Logo gian hàng",
       "bio": "Giới thiệu gian hàng",
       "address": "Địa chỉ gian hàng",
-      "cover": "Ảnh bìa trang gian hàng",
-      "bank": "Tài khoản nhận tiền"
+      "cover": "Ảnh bìa trang gian hàng"
     }
   },
   "validation": {
     "displayNameRequired": "Tên hiển thị là bắt buộc",
     "provinceRequired": "Chọn tỉnh/thành của gian hàng",
     "provinceInvalid": "Mã tỉnh không hợp lệ",
-    "ownerFullNameRequired": "Họ tên chủ gian hàng là bắt buộc",
-    "ownerPhoneRequired": "Số điện thoại chủ gian hàng là bắt buộc",
-    "ownerPhoneInvalid": "Số điện thoại không hợp lệ",
-    "ownerEmailInvalid": "Email không hợp lệ",
     "logoUrlInvalid": "Đường dẫn logo không hợp lệ",
     "coverUrlInvalid": "Đường dẫn ảnh bìa không hợp lệ"
   },
@@ -214,34 +173,39 @@
     "dirtyDiscard": "Hủy bỏ"
   },
   "paymentSettings": {
-    "title": "Thu cọc qua XePrime",
-    "subtitle": "Quyết định XePrime có giữ khoản cọc của khách trước chuyến hay không. Khác với cọc/thế chấp bạn nhận trực tiếp tại quầy — cái đó nằm ở Chính sách thuê.",
-    "loadError": "Không tải được cấu hình thu cọc",
+    "title": "Thanh toán giữ chỗ qua XePrime",
+    "subtitle": "Trong giai đoạn này, mọi chuyến trên XePrime đều thu khoản giữ chỗ của khách trước khi chuyến được xác nhận. Đây KHÔNG phải tiền cọc/thế chấp bạn nhận trực tiếp khi giao xe — khoản đó do bạn tự thu, tự giữ và tự hoàn, và đặt ở phần chính sách theo loại xe bên dưới.",
+    "loadError": "Không tải được cấu hình thanh toán giữ chỗ",
+    "readOnly": "Bạn chỉ có quyền xem cấu hình này. Chủ gian hàng là người bật/tắt.",
     "forbidden": {
       "title": "Không có quyền truy cập",
-      "description": "Bạn cần quyền dưới đây để xem cấu hình thu cọc của gian hàng."
+      "description": "Bạn cần quyền dưới đây để xem cấu hình thanh toán giữ chỗ của gian hàng."
     },
     "toggle": {
-      "label": "XePrime thu cọc hộ tôi",
+      "label": "XePrime thu khoản giữ chỗ hộ tôi",
       "on": "Đang thu",
       "off": "Không thu",
-      "saved": "Đã lưu cấu hình thu cọc"
+      "saved": "Đã lưu cấu hình thanh toán giữ chỗ"
     },
     "mode": {
-      "onTitle": "Khách chuyển cọc trước khi có đơn",
-      "onBody": "Khách quét VietQR chuyển cọc cho XePrime trong vòng 2 giờ kể từ khi bạn duyệt. Đơn thuê chỉ ra đời khi tiền đã về, nên chỗ xe không bị giữ bởi một yêu cầu không có thật. Phần tiền thuê còn lại khách trả trực tiếp cho bạn khi nhận xe.",
-      "offTitle": "Bạn tự thoả thuận cọc với khách",
-      "offBody": "Duyệt xong là có đơn ngay, không chờ tiền. Bạn liên hệ khách để thoả thuận cọc trực tiếp — XePrime không thu hộ và không đối soát khoản này, nên nếu có tranh chấp về tiền cọc thì XePrime không có bằng chứng để hỗ trợ."
+      "onTitle": "Khách trả khoản giữ chỗ trước khi có đơn",
+      "onBody": "Khách quét VietQR chuyển khoản giữ chỗ cho XePrime ngay khi bấm đặt, trong vòng 10 phút (tự gia hạn tối đa 2 lần). Chỗ xe được giữ trong lúc chờ, và bạn chỉ nhận được yêu cầu khi tiền đã về — không còn duyệt rồi ngồi chờ xem khách có chuyển hay không. Khoản này là một PHẦN của tiền thuê; phần còn lại khách trả trực tiếp cho bạn khi nhận xe. Nếu bạn từ chối, khách được hoàn đủ 100%.",
+      "offTitle": "Bạn tự thoả thuận với khách",
+      "offBody": "Duyệt xong là có đơn ngay, không chờ tiền. Bạn liên hệ khách để thoả thuận tiền cọc/thế chấp khi nhận xe — XePrime không thu hộ và không đối soát khoản này, nên nếu có tranh chấp thì XePrime không có bằng chứng để hỗ trợ."
     },
     "locked": {
+      "platform": {
+        "title": "XePrime đang thu khoản giữ chỗ cho mọi gian hàng",
+        "body": "Trong giai đoạn này, mọi chuyến trên XePrime đều thu khoản giữ chỗ của khách trước — không phân biệt gói dịch vụ. Công tắc tạm khoá và sẽ mở lại sau; lựa chọn của bạn được giữ nguyên để dùng lại đúng lúc đó."
+      },
       "commission": {
         "title": "Gian hàng của bạn luôn thu cọc qua XePrime",
-        "body": "Bạn đang ở tuyến hoa hồng: không trả phí thuê bao, và XePrime thu phí dịch vụ theo từng chuyến ở phía khách. Khoản cọc là điều kiện của tuyến này nên công tắc bị khoá. Chuyển sang gói thuê bao nếu bạn muốn tự quyết.",
+        "body": "Bạn đang ở tuyến hoa hồng: không trả phí thuê bao, và XePrime thu phí dịch vụ theo từng chuyến ở phía khách. Khoản giữ chỗ là điều kiện của tuyến này nên công tắc bị khoá. Chuyển sang gói thuê bao nếu bạn muốn tự quyết.",
         "cta": "Xem gói thuê bao"
       },
       "featureMissing": {
         "title": "Gói hiện tại chưa có tính năng này",
-        "body": "Thu cọc qua XePrime thuộc gói thuê bao. Trong lúc chưa có, bạn vẫn nhận đơn bình thường và tự thoả thuận cọc trực tiếp với khách.",
+        "body": "Thu khoản giữ chỗ qua XePrime thuộc gói thuê bao. Trong lúc chưa có, bạn vẫn nhận đơn bình thường và tự thoả thuận tiền cọc/thế chấp trực tiếp với khách khi giao xe.",
         "cta": "Nâng cấp gói"
       },
       "notConfigured": {
@@ -250,15 +214,10 @@
         "cta": "Liên hệ hỗ trợ"
       }
     },
-    "frozen": "Đổi công tắc chỉ áp dụng cho yêu cầu thuê được duyệt từ lúc này trở đi. Đơn đã tạo giữ nguyên cách thu cọc đã chốt lúc đó."
+    "frozen": "Đổi công tắc chỉ áp dụng cho yêu cầu thuê được duyệt từ lúc này trở đi. Đơn đã tạo giữ nguyên cách thu đã chốt lúc đó."
   },
   "verification": {
-    "submit": "Gửi xác minh",
     "resubmit": "Gửi lại xác minh",
-    "unverified": {
-      "title": "Gian hàng chưa được xác minh",
-      "body": "Xe của bạn vẫn đăng và lên chợ bình thường — xác minh chỉ cần khi bạn muốn mua gói gian hàng để mở bộ quản lý đầy đủ."
-    },
     "pending": {
       "title": "Hồ sơ đang chờ nền tảng xác minh",
       "body": "Xe của bạn không bị ảnh hưởng: xe đã duyệt vẫn trên chợ và vẫn nhận đơn bình thường.",
@@ -271,10 +230,55 @@
     "rejected": {
       "title": "Hồ sơ xác minh bị từ chối",
       "body": "Chỉnh lại theo lý do bên dưới rồi gửi lại. Việc này không ảnh hưởng tới xe đang bán của bạn."
+    }
+  },
+  "sections": {
+    "navTitle": "Thiết lập",
+    "navLabel": "Các mục của trang Cửa hàng",
+    "profile": "Thông tin hiển thị",
+    "profileHint": "Những gì khách nhìn thấy trên marketplace.",
+    "owner": "Chủ gian hàng",
+    "legal": "Địa chỉ & pháp lý",
+    "legalHint": "Nơi khách nhận xe. Mã số thuế và giấy phép là tuỳ chọn.",
+    "payout": "Tài khoản nhận tiền",
+    "payoutHint": "Nơi XePrime chuyển tiền cho gian hàng.",
+    "plan": "Gói & hạn mức"
+  },
+  "owner": {
+    "title": "Chủ gian hàng",
+    "hint": "Thông tin lấy từ tài khoản chủ sở hữu.",
+    "email": "Email",
+    "phone": "Số điện thoại",
+    "noEmail": "Chưa có email",
+    "noPhone": "Chưa có số điện thoại",
+    "verified": "Đã xác minh",
+    "unverified": "Chưa xác minh",
+    "manageLogin": "Quản lý thông tin đăng nhập"
+  },
+  "welcome": {
+    "logo": {
+      "title": "Còn 1 bước để đăng xe",
+      "body": "Tải logo gian hàng để hoàn thiện nhận diện trên marketplace.",
+      "cta": "Tải logo"
     },
-    "verified": {
-      "title": "Gian hàng đã được xác minh",
-      "body": "Bạn có thể mua gói gian hàng để mở sổ thu chi, công nợ, nhân viên và báo cáo."
+    "ready": {
+      "title": "Gian hàng đã sẵn sàng",
+      "body": "Hồ sơ đủ điều kiện. Đăng chiếc xe đầu tiên để bắt đầu nhận đơn.",
+      "cta": "Đăng xe đầu tiên"
+    }
+  },
+  "listingGate": {
+    "title": "Hồ sơ gian hàng còn thiếu thông tin",
+    "logoOnly": "Gian hàng cần có logo trước khi gửi xe duyệt.",
+    "cta": "Mở hồ sơ gian hàng",
+    "ctaLogo": "Tải logo",
+    "items": {
+      "displayName": "Tên hiển thị của gian hàng",
+      "contactPhone": "Số điện thoại liên hệ",
+      "province": "Tỉnh/thành",
+      "ward": "Xã/phường",
+      "address": "Số nhà, đường",
+      "logo": "Logo gian hàng"
     }
   }
 }

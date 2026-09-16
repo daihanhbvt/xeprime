@@ -5,7 +5,7 @@ import { Alert, Button, Card, Switch, Tag, Typography } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { DEPOSIT_POLICY_REASON } from '@xeprime/types';
-import { ROUTES } from '@/constants/routes';
+import { SHOP_SECTION, shopSectionPath } from '@/constants/routes';
 import type { PaymentSettings } from '../types';
 import styles from './DepositToggleCard.module.css';
 
@@ -73,9 +73,16 @@ export function DepositToggleCard({ settings, canEdit, saving, onChange }: Props
           description={
             <>
               <Paragraph className={styles.lockBody}>{t(`locked.${locked}.body`)}</Paragraph>
-              <Link href={ROUTES.MANAGE.SUBSCRIPTION}>
-                <Button size="small">{t(`locked.${locked}.cta`)}</Button>
-              </Link>
+              {/*
+                * Khoá theo GIAI ĐOẠN thì không có nút nào cả: không có gói nào mua được để mở
+                * nó, và một nút "Xem gói thuê bao" ở đây là mời gian hàng đi tiêu tiền cho một
+                * thứ không liên quan. Ba lý do còn lại đều có một việc thật để làm.
+                */}
+              {locked === 'platform' ? null : (
+                <Link href={shopSectionPath(SHOP_SECTION.PLAN)}>
+                  <Button size="small">{t(`locked.${locked}.cta`)}</Button>
+                </Link>
+              )}
             </>
           }
         />
@@ -105,7 +112,13 @@ export function DepositToggleCard({ settings, canEdit, saving, onChange }: Props
 /** `null` = công tắc dùng được. Chuỗi trả về là khoá i18n dưới `locked.*`. */
 function lockReason(
   settings: PaymentSettings,
-): 'commission' | 'featureMissing' | 'notConfigured' | null {
+): 'platform' | 'commission' | 'featureMissing' | 'notConfigured' | null {
+  /*
+   * ĐỨNG TRƯỚC mọi lý do khác, cùng thứ tự với `DepositPolicyService.resolveForTenant`: trong
+   * giai đoạn này không gian hàng nào đọc được lý do theo tuyến hay theo gói nữa, và hiện câu
+   * "bạn đang ở tuyến hoa hồng" cho một gian hàng tuyến gói là nói sai về hợp đồng của họ.
+   */
+  if (settings.reason === DEPOSIT_POLICY_REASON.PLATFORM_MANDATORY) return 'platform';
   if (settings.reason === DEPOSIT_POLICY_REASON.COMMISSION_MANDATORY) return 'commission';
   if (settings.reason === DEPOSIT_POLICY_REASON.PACKAGE_FEATURE_MISSING) return 'featureMissing';
   /*

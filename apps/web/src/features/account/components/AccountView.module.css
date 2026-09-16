@@ -19,6 +19,20 @@
   border-bottom: 1px solid var(--xp-color-border-subtle);
 }
 
+/*
+ * Cột hành động ở góc phải: nút sửa hồ sơ, rồi lối tắt số dư.
+ *
+ * Xếp DỌC và canh phải, không nằm ngang: viên thuốc số dư rộng theo con số bên trong, và đặt
+ * cạnh nút sửa thì một số dư tám chữ số sẽ đẩy nút ra khỏi mép thẻ trên màn laptop.
+ */
+.cardHeadActions {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--xp-space-sm);
+}
+
 .eyebrow {
   display: inline-flex;
   align-items: center;
@@ -212,7 +226,13 @@
     flex-direction: column;
   }
 
-  .cardHead > :global(.ant-btn) {
+  /* Trên điện thoại hàng hành động trải ngang cả thẻ — nút chạm được, viên thuốc vẫn ôm nội dung. */
+  .cardHeadActions {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .cardHeadActions > :global(.ant-btn) {
     width: 100%;
   }
 

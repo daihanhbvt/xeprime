@@ -7,12 +7,14 @@ import {
   BILLING_PHASE,
   FEATURE_STATE,
   PLAN_FEATURE_VALUES,
+  SHOP_ONBOARDING_STATE,
   TENANT_ROLE,
   tenantUsesManagePortal,
   type BillingMode,
   type BillingPhase,
   type FeatureState,
   type PlanFeature,
+  type ShopOnboardingState,
   type TenantRole,
 } from '@xeprime/types';
 
@@ -50,10 +52,12 @@ function tenantCtx(
   billingMode: BillingMode | null,
   billingPhase: BillingPhase,
   roleKey: TenantRole = TENANT_ROLE.SHOP_OWNER,
+  onboardingState: ShopOnboardingState = SHOP_ONBOARDING_STATE.COMMISSION,
 ): TenantContext {
   return {
     tenantId: 'T1',
     tenantStatus: 'active',
+    onboardingState,
     roleKey,
     permissions: [],
     features: features(),
@@ -101,20 +105,22 @@ describe('SubscriptionTrackGuard', () => {
     ).toBe(true);
   });
 
-  it.each([TENANT_ROLE.SHOP_OWNER, TENANT_ROLE.SHOP_MANAGER, TENANT_ROLE.SHOP_STAFF, TENANT_ROLE.SHOP_VIEWER])(
-    'tuyến HOA HỒNG, vai %s: 403 SUBSCRIPTION_TRACK_ONLY',
-    (roleKey) => {
-      const context = ctx({
-        tenant: tenantCtx(BILLING_MODE.COMMISSION, BILLING_PHASE.CURRENT, roleKey),
-      });
-      expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
-      expect(() => guard.canActivate(context)).toThrow(
-        expect.objectContaining({
-          response: expect.objectContaining({ code: API_ERROR_CODE.SUBSCRIPTION_TRACK_ONLY }),
-        }),
-      );
-    },
-  );
+  it.each([
+    TENANT_ROLE.SHOP_OWNER,
+    TENANT_ROLE.SHOP_MANAGER,
+    TENANT_ROLE.SHOP_STAFF,
+    TENANT_ROLE.SHOP_VIEWER,
+  ])('tuyến HOA HỒNG, vai %s: 403 SUBSCRIPTION_TRACK_ONLY', (roleKey) => {
+    const context = ctx({
+      tenant: tenantCtx(BILLING_MODE.COMMISSION, BILLING_PHASE.CURRENT, roleKey),
+    });
+    expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
+    expect(() => guard.canActivate(context)).toThrow(
+      expect.objectContaining({
+        response: expect.objectContaining({ code: API_ERROR_CODE.SUBSCRIPTION_TRACK_ONLY }),
+      }),
+    );
+  });
 
   /*
    * F7: nhân viên/quản lý của tenant ĐÃ HẾT ÂN HẠN ra khỏi Manage cùng chủ. Bản cũ để họ ở lại
@@ -146,6 +152,74 @@ describe('SubscriptionTrackGuard', () => {
     expect(() =>
       guard.canActivate(ctx({ tenant: tenantCtx(null, BILLING_PHASE.UNCONFIGURED) })),
     ).toThrow(ForbiddenException);
+  });
+
+  /*
+   * ADR 0040: gian hàng trả phí CHƯA thanh toán cũng bị chặn — nhưng bằng mã KHÁC.
+   *
+   * Cả hai đều là "không có thuê bao tuyến gói hiệu lực", nên nếu chỉ đọc `billingMode` thì hai
+   * tình huống không phân biệt được. Lối đi tiếp thì ngược nhau: `SUBSCRIPTION_TRACK_ONLY` đẩy
+   * người dùng về Owner Lite, còn người đang chờ đối soát phải về đúng màn chuyển khoản. Trả sai
+   * mã ở đây là dựng lại đúng cái bug mà ADR 0040 sửa, chỉ ở một tầng khác.
+   */
+  it('gian hàng tuyến gói CHƯA thanh toán: 403 PACKAGE_ONBOARDING_INCOMPLETE, không phải TRACK_ONLY', () => {
+    const context = ctx({
+      tenant: tenantCtx(
+        null,
+        BILLING_PHASE.UNCONFIGURED,
+        TENANT_ROLE.SHOP_OWNER,
+        SHOP_ONBOARDING_STATE.PACKAGE_PENDING,
+      ),
+    });
+    expect(() => guard.canActivate(context)).toThrow(
+      expect.objectContaining({
+        response: expect.objectContaining({
+          code: API_ERROR_CODE.PACKAGE_ONBOARDING_INCOMPLETE,
+          details: { onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_PENDING },
+        }),
+      }),
+    );
+  });
+
+  /*
+   * Đã trả tiền rồi thì gói hết hạn là chuyện của `billingMode`, và câu trả lời phải là
+   * "gia hạn đi" — không phải "hoàn tất thanh toán lượt đầu". `package_active` không bao giờ lùi
+   * lại, đó chính là thứ giữ cho hai câu này không đổi chỗ.
+   */
+  it('gian hàng ĐÃ từng trả tiền mà hết ân hạn: vẫn là TRACK_ONLY, không phải onboarding', () => {
+    const context = ctx({
+      tenant: tenantCtx(
+        BILLING_MODE.COMMISSION,
+        BILLING_PHASE.LAPSED,
+        TENANT_ROLE.SHOP_OWNER,
+        SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE,
+      ),
+    });
+    expect(() => guard.canActivate(context)).toThrow(
+      expect.objectContaining({
+        response: expect.objectContaining({ code: API_ERROR_CODE.SUBSCRIPTION_TRACK_ONLY }),
+      }),
+    );
+  });
+
+  /*
+   * Admin gán gói tay có thể để lại `package_pending` cạnh một gói ĐANG hiệu lực (dữ liệu cũ,
+   * hoặc một đường gán khác). Tiền đã về ⇒ phải cho qua. `isPackageOnboardingPending` hỏi cả
+   * `billingMode` chính vì ca này.
+   */
+  it('`package_pending` nhưng ĐÃ có gói hiệu lực: qua — tiền đã về thì không chặn', () => {
+    expect(
+      guard.canActivate(
+        ctx({
+          tenant: tenantCtx(
+            BILLING_MODE.PACKAGE,
+            BILLING_PHASE.CURRENT,
+            TENANT_ROLE.SHOP_OWNER,
+            SHOP_ONBOARDING_STATE.PACKAGE_PENDING,
+          ),
+        }),
+      ),
+    ).toBe(true);
   });
 
   it('nhân sự nền tảng: qua (ADR 0032 điều 6 — admin mở Manage của gian hàng bất kỳ)', () => {

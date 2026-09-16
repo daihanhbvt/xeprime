@@ -63,14 +63,8 @@ function toBody(v: ShopProfileValues): UpdateShopProfileInput {
     addressLine: v.addressLine,
     taxCode: v.taxCode,
     businessLicenseNo: v.businessLicenseNo,
-    bankName: v.bankName,
-    bankAccountNo: v.bankAccountNo,
-    bankAccountName: v.bankAccountName,
     logoUrl: v.logoUrl ?? '',
     coverUrl: v.coverUrl ?? '',
-    ownerFullName: v.ownerFullName,
-    ownerPhone: v.ownerPhone,
-    ownerEmail: v.ownerEmail,
   };
 }
 
@@ -101,14 +95,8 @@ function toValues(shop: MyShop): ShopProfileValues {
     locationSource: null,
     taxCode: p.taxCode ?? '',
     businessLicenseNo: p.businessLicenseNo ?? '',
-    bankName: p.bankName ?? '',
-    bankAccountNo: p.bankAccountNo ?? '',
-    bankAccountName: p.bankAccountName ?? '',
     logoUrl: p.logoUrl ?? null,
     coverUrl: p.coverUrl ?? null,
-    ownerFullName: p.ownerFullName ?? '',
-    ownerPhone: p.ownerPhone ? toLocalVnPhone(p.ownerPhone) : '',
-    ownerEmail: p.ownerEmail ?? '',
   };
 }
 
@@ -388,41 +376,12 @@ function ProfileForm({
             />
           </FormSection>
 
-          {/* Khối NỘI BỘ — chỉ đội ngũ XePrime đọc, khách không thấy. */}
-          <FormSection title={t('form.owner.title')} icon="person-outline">
-            <TextField
-              control={control}
-              name="ownerFullName"
-              label={t('form.owner.fullName.label')}
-              placeholder={t('form.owner.fullName.placeholder')}
-              required
-              autoComplete="name"
-              editable={editable}
-            />
-            <TextField
-              control={control}
-              name="ownerPhone"
-              label={t('form.owner.phone.label')}
-              placeholder={t('form.owner.phone.placeholder')}
-              required
-              keyboardType="phone-pad"
-              autoComplete="tel"
-              editable={editable}
-            />
-            <TextField
-              control={control}
-              name="ownerEmail"
-              label={t('form.owner.email.label')}
-              placeholder={t('form.owner.email.placeholder')}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              editable={editable}
-            />
-            <Callout tone="info" title={t('form.owner.privacy.title')}>
-              {t('form.owner.privacy.body')}
-            </Callout>
-          </FormSection>
+          {/*
+            KHÔNG còn khối "chủ gian hàng" (16/09/2026): ba cột `tenant_profiles.owner_*` đã
+            drop, và danh tính chủ đọc từ tài khoản (`MyShopDto.ownerAccount`). Nó đổi qua đúng
+            luồng của nó — tên ở hồ sơ cá nhân, email/SĐT qua xác minh OTP — chứ không phải qua
+            một form mà bất kỳ ai có `tenant.update` cũng ghi được (ADR 0038 điều 3).
+          */}
 
           <FormSection title={t('form.address.title')} icon="location-outline">
             {/*
@@ -470,32 +429,11 @@ function ProfileForm({
             />
           </FormSection>
 
-          <FormSection title={t('form.bank.title')} icon="card-outline">
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
-              {t('form.bank.hint')}
-            </Text>
-            <TextField
-              control={control}
-              name="bankName"
-              label={t('form.bank.bankName.label')}
-              placeholder={t('form.bank.bankName.placeholder')}
-              editable={editable}
-            />
-            <TextField
-              control={control}
-              name="bankAccountNo"
-              label={t('form.bank.accountNo.label')}
-              placeholder={t('form.bank.accountNo.placeholder')}
-              editable={editable}
-            />
-            <TextField
-              control={control}
-              name="bankAccountName"
-              label={t('form.bank.accountName.label')}
-              placeholder={t('form.bank.accountName.placeholder')}
-              editable={editable}
-            />
-          </FormSection>
+          {/*
+            KHÔNG còn khối "tài khoản nhận tiền" ở đây: nó sống ở `bank_accounts`
+            (`/shop/bank-accounts`) — nơi lệnh rút thật sự đọc. Bốn ô text cũ ghi vào chỗ không
+            đồng tiền nào chạy tới.
+          */}
         </YStack>
       </Screen>
 

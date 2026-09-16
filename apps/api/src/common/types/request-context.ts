@@ -6,6 +6,7 @@ import type {
   Permission,
   PlanFeature,
   PlatformRole,
+  ShopOnboardingState,
   TenantRole,
 } from '@xeprime/types';
 
@@ -27,6 +28,18 @@ export interface AuthenticatedUser {
 export interface TenantContext {
   readonly tenantId: string;
   readonly tenantStatus: string;
+  /**
+   * Trục ĐĂNG KÝ — `commission` · `package_pending` · `package_active` (ADR 0040).
+   *
+   * Ở đây vì hai cổng đọc nó và cả hai chạy trên đường nóng: `PackageOnboardingGuard` (gian
+   * hàng chưa trả tiền không được dùng bộ quản lý) và cổng hồ sơ trước khi gửi xe duyệt (chỉ
+   * gian hàng tuyến gói bị đòi logo). Giải cùng lượt truy vấn membership của `TenantScopeGuard`
+   * thay vì một truy vấn `tenants` thứ hai mỗi request.
+   *
+   * KHÔNG suy được từ `billingMode`: `package_pending` có `billingMode = null`, và một gian hàng
+   * hết gói có `billingMode = 'commission'` trong khi vẫn là gian hàng.
+   */
+  readonly onboardingState: ShopOnboardingState;
   readonly roleKey: TenantRole;
   readonly permissions: readonly Permission[];
   /**

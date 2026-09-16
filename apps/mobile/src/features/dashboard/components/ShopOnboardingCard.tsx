@@ -77,8 +77,10 @@ export function ShopOnboardingCard({ vehicleCount }: { vehicleCount: number | un
         displayName: shop.profile.displayName,
         // Tỉnh hiệu lực nằm ở chi nhánh mặc định; hai cột trên hồ sơ chỉ là bản sao.
         provinceCode: shop.defaultBranch?.provinceCode ?? shop.profile.provinceCode,
-        ownerFullName: shop.profile.ownerFullName,
-        ownerPhone: shop.profile.ownerPhone,
+        // Chủ gian hàng đọc từ TÀI KHOẢN (16/09/2026) — ba cột `tenant_profiles.owner_*` đã
+        // drop, và cổng gửi duyệt ở backend đọc đúng nguồn này.
+        ownerFullName: shop.ownerAccount.displayName,
+        ownerPhone: shop.ownerAccount.phone,
       })
     : false;
 

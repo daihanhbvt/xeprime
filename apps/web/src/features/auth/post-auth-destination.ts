@@ -1,4 +1,11 @@
-import { OWNER_STAGE, TENANT_ROLE, resolveOwnerStage, tenantUsesManagePortal } from '@xeprime/types';
+import {
+  OWNER_STAGE,
+  TENANT_ROLE,
+  isEstablishedPackageShop,
+  isPackageOnboardingPending,
+  resolveOwnerStage,
+  tenantUsesManagePortal,
+} from '@xeprime/types';
 
 import { ROUTES } from '@/constants/routes';
 import { isSafeNextPath, safeNextPath } from './safe-next';
@@ -29,6 +36,18 @@ export interface AuthScope {
     roleKey?: string | null;
     status?: string | null;
     billingMode?: string | null;
+    /**
+     * Trục ĐĂNG KÝ (ADR 0040) — `commission` · `package_pending` · `package_active`.
+     *
+     * Bắt buộc phải ở đây vì `billingMode` một mình KHÔNG phân biệt được ba tình huống mà
+     * `resolveWorkspaceHref` phải rẽ ba đường khác nhau:
+     *
+     *  - gian hàng trả phí chưa chuyển khoản (`billingMode` rỗng) → màn thanh toán;
+     *  - danh mục gói hỏng (`billingMode` rỗng) → Owner Lite, và log lỗi ở server;
+     *  - gian hàng đã trả tiền mà hết gói (`billingMode = commission`) → danh sách xe, KHÔNG
+     *    phải wizard "đăng ký chủ xe lần đầu".
+     */
+    onboardingState?: string | null;
     publicVehicleCount?: number | null;
   } | null;
   platformRole?: string | null;
@@ -41,11 +60,25 @@ export interface AuthScope {
  * hàng ở trang tài khoản, menu marketplace, màn kết thúc wizard đăng xe, và cổng chặn của
  * `AppShell`. Mỗi nơi tự quyết định là mỗi nơi một luật, và đó chính là hiện trạng đang sửa.
  *
- * Luật (sửa 15/09/2026 — xem bên dưới):
+ * Luật (sửa 16/09/2026 — xem bên dưới):
  *  - Không có gian hàng → `null` (nơi gọi tự chọn: landing đăng xe, hay ở nguyên trang).
+ *  - Gian hàng TRẢ PHÍ chưa thanh toán lượt gói đầu → `/manage/onboarding` (bước 2). Đọc TRƯỚC
+ *    mọi luật khác — xem "Vì sao tuyến gói đọc trước" bên dưới.
  *  - Gian hàng có THUÊ BAO hiệu lực (kể cả đang trong ân hạn) → `/manage`, cho MỌI vai.
  *  - Còn lại → `/account`: chủ xe về Owner Lite (đang đăng ký thì về màn tiến trình, xong rồi
  *    thì về danh sách xe); nhân viên của gian hàng đó về khu tài khoản cá nhân.
+ *
+ * ## Vì sao tuyến gói đọc TRƯỚC (ADR 0040)
+ *
+ * Gian hàng trả phí đang chờ đối soát cố ý KHÔNG có dòng thuê bao nào, nên `billingMode` của họ
+ * rỗng — cùng hình dạng với một tenant có danh mục gói hỏng. Mọi phép suy chỉ dựa vào
+ * `billingMode` đẩy họ vào Owner Lite, tức là đúng màn "Hồ sơ chủ xe" mà ADR 0040 sinh ra để họ
+ * không bao giờ thấy. Câu hỏi "họ vào bằng cửa nào" phải được trả lời trước câu hỏi "tiền đang
+ * chạy theo tuyến nào".
+ *
+ * Và ở chiều ngược lại: gian hàng ĐÃ trả tiền mà hết gói (`package_active` + `commission`) về
+ * DANH SÁCH XE, không về màn tiến trình đăng ký. Họ đã đi hết vòng đó; mời họ làm lại là nói
+ * sai với chính người đang cần một nút gia hạn.
  *
  * ## Vì sao đổi
  *
@@ -60,12 +93,29 @@ export interface AuthScope {
 export function resolveWorkspaceHref(user: AuthScope | null | undefined): string | null {
   const tenant = user?.tenant;
   if (!tenant) return null;
+  /*
+   * CHƯA TRẢ TIỀN LƯỢT GÓI ĐẦU — bước 2 của onboarding, và câu này đọc TRƯỚC `billingMode`.
+   *
+   * Nhân viên thì sao: một gian hàng `package_pending` chưa có nhân viên nào (chưa vào được
+   * Manage, chưa mời được ai), nên nhánh này trên thực tế chỉ có chủ đi qua. Không hỏi vai ở đây
+   * có chủ đích — nếu một ngày có nhân viên trong tình trạng đó, đưa họ tới màn nói rõ "gian hàng
+   * chưa thanh toán" vẫn đúng hơn là thả họ vào Owner Lite của người khác.
+   */
+  if (isPackageOnboardingPending(tenant)) return ROUTES.MANAGE.ONBOARDING;
   if (tenantUsesManagePortal(tenant)) return ROUTES.MANAGE.ROOT;
   /*
    * Không có thuê bao hiệu lực. Chủ xe về Owner Lite; nhân viên/quản lý/người xem của gian hàng
    * đó KHÔNG có Owner Lite (đó là bộ công cụ của chủ xe) nên họ về khu tài khoản cá nhân.
    */
   if (tenant.roleKey !== TENANT_ROLE.SHOP_OWNER) return ROUTES.ACCOUNT.ROOT;
+  /*
+   * Gian hàng ĐÃ từng trả tiền mà gói hết hạn: về DANH SÁCH XE, không về màn tiến trình đăng ký.
+   *
+   * `resolveOwnerStage` sẽ chấm họ là `registering` ngay khi chiếc xe cuối cùng rời chợ (hạn mức
+   * gói thu nhỏ, hay chính họ ẩn xe), và màn tiến trình thì kể một câu chuyện ba bước dành cho
+   * người chưa bắt đầu. Với một gian hàng 10 xe vừa hết gói, đó là câu chuyện sai hoàn toàn.
+   */
+  if (isEstablishedPackageShop(tenant)) return ROUTES.ACCOUNT.VEHICLES;
   return resolveOwnerStage(tenant) === OWNER_STAGE.OWNER
     ? ROUTES.ACCOUNT.VEHICLES
     : ROUTES.ACCOUNT.REGISTRATION;
@@ -74,6 +124,17 @@ export function resolveWorkspaceHref(user: AuthScope | null | undefined): string
 /** Khu làm việc là `/manage` — tức người này ĐƯỢC vào cổng quản lý. */
 export function canUseManagePortal(user: AuthScope | null | undefined): boolean {
   return resolveWorkspaceHref(user) === ROUTES.MANAGE.ROOT;
+}
+
+/**
+ * Người này đang ở giữa luồng mở gian hàng trả phí — màn onboarding là nơi DUY NHẤT họ vào được.
+ *
+ * Tách thành hàm riêng thay vì để mỗi nơi tự so `resolveWorkspaceHref(user) === ONBOARDING`:
+ * `AppShell`, `WorkspaceProvider` và chính trang onboarding đều hỏi nó, và ba phép so chuỗi là
+ * ba chỗ để một lần đổi route làm hỏng cổng chặn mà không ai thấy.
+ */
+export function isPackageOnboarding(user: AuthScope | null | undefined): boolean {
+  return isPackageOnboardingPending(user?.tenant);
 }
 
 /** Ý định mở cổng quản lý, đi trong URL (`?intent=owner`). */
@@ -137,12 +198,19 @@ export function resolvePortalDestination(params: {
      * của mình thay vì để `AppShell` nhận rồi đá ra — một cú nhảy, không phải hai.
      */
     if (isManageRoute(next) && !isPlatform && workspace !== ROUTES.MANAGE.ROOT) {
-      if (next === ROUTES.MANAGE.ONBOARDING && !hasTenant) return next;
+      /*
+       * `isOnboardingRoute`, KHÔNG so chuỗi bằng nhau (sửa 16/09/2026).
+       *
+       * Từ ADR 0040, đường vào onboarding mang `?track=package` — nên phép so `next ===
+       * ROUTES.MANAGE.ONBOARDING` trả `false` và người vừa bấm "Đăng ký gian hàng" rồi đăng nhập
+       * bị đẩy về `/manage` (màn "bạn chưa có gian hàng"), mất luôn cửa họ đã chọn.
+       */
+      if (isOnboardingRoute(next) && !hasTenant) return next;
       return workspace ?? ROUTES.MANAGE.ROOT;
     }
     // Đừng ném người chưa có gian hàng vào một trang quản lý gian hàng cụ thể — họ sẽ thấy
     // dashboard rỗng/lỗi. Cho về `/manage` để gặp màn lựa chọn.
-    if (!hasTenant && !isPlatform && next !== ROUTES.MANAGE.ONBOARDING) {
+    if (!hasTenant && !isPlatform && !isOnboardingRoute(next)) {
       return intent === AUTH_INTENT.OWNER ? ROUTES.MANAGE.ONBOARDING : ROUTES.MANAGE.ROOT;
     }
     return next;
@@ -159,11 +227,21 @@ export function isManageRoute(pathname: string): boolean {
   return pathname === ROUTES.MANAGE.ROOT || pathname.startsWith(`${ROUTES.MANAGE.ROOT}/`);
 }
 
+/**
+ * Đường này có phải màn ONBOARDING không — so PHẦN ĐƯỜNG DẪN, bỏ qua query.
+ *
+ * Từ ADR 0040 route đó mang `?track=`, nên mọi phép so bằng chuỗi trần đều hỏng âm thầm: nó vẫn
+ * biên dịch, vẫn chạy, và chỉ sai đúng ở nhánh người dùng bấm CTA gian hàng rồi mới đăng nhập.
+ */
+export function isOnboardingRoute(path: string | null | undefined): boolean {
+  if (!path) return false;
+  const [pathname] = path.split('?');
+  return pathname === ROUTES.MANAGE.ONBOARDING;
+}
+
 /** `/manage/admin` và mọi route con. */
 export function isPlatformRoute(pathname: string): boolean {
-  return (
-    pathname === ROUTES.MANAGE.ADMIN || pathname.startsWith(`${ROUTES.MANAGE.ADMIN}/`)
-  );
+  return pathname === ROUTES.MANAGE.ADMIN || pathname.startsWith(`${ROUTES.MANAGE.ADMIN}/`);
 }
 
 /**

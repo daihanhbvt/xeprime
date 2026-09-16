@@ -2,67 +2,153 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  /*
+   * ĐẶT LẠI căn lề — khối này được nhúng ở hai nơi có luật khác nhau: màn chi tiết chuyến (căn
+   * trái) và bước cuối của luồng đặt xe, nơi vỏ `.centered` đặt `text-align: center`.
+   *
+   * Thiếu dòng này thì NHÃN bị căn giữa trong khi GIÁ TRỊ vẫn nằm trái (chúng là `display: flex`
+   * nên `text-align` không đụng tới) — hai cột lệch nhau và bảng chuyển khoản đọc như bị vỡ.
+   * Một khối dùng chung không được phép phụ thuộc vào căn lề của chỗ nó bị gắn vào.
+   */
+  text-align: left;
 }
 
+/*
+ * QR và thông tin chuyển khoản đứng cạnh nhau khi còn chỗ, xuống dòng khi hết.
+ *
+ * `minmax(0, …)` ở cột phải là thứ giữ cho mã đối soát và số tài khoản không đẩy cả lưới rộng
+ * ra: thiếu nó, `min-content` của một chuỗi 19 ký tự liền mạch thắng, và khối tràn khỏi overlay.
+ */
 .body {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 20px;
-  align-items: flex-start;
-  flex-wrap: wrap;
+  align-items: start;
 }
 
-.qr {
-  flex: none;
+@media (max-width: 560px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+}
+
+/* Khung QR + chú thích đứng thành một cụm, viền bao cả hai. */
+.qrWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
   border: 1px solid var(--xp-color-border-secondary);
-  border-radius: 12px;
+  border-radius: var(--xp-border-radius);
   background: #fff;
 }
 
-.fields {
-  flex: 1 1 240px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 0;
+.qr {
+  display: block;
+  /* Ở bề ngang hẹp, lưới xuống một cột — ảnh 220px phải co theo thay vì đẩy khối tràn ngang. */
+  max-width: 100%;
+  height: auto;
 }
 
-.row {
+.qrCaption {
+  font-size: 12px;
+  color: var(--xp-color-text-tertiary);
+  text-align: center;
+}
+
+.fields {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 12px;
+  min-width: 0;
+  width: 100%;
+}
+
+/*
+ * HAI CỘT — nhãn trái, giá trị trái trong cột của nó. KHÔNG căn phải.
+ *
+ * Bản căn phải đầu tiên làm số tài khoản và nội dung chuyển khoản bị bẻ làm ba khúc
+ * ("XPHEN / 7X3K6 / 5"), và một mã đọc thành ba dòng là một mã khách gõ sai. Thủ phạm không phải
+ * "hai cột" mà là căn phải cộng với cột không có `minmax(0, …)`: giá trị bị ép vừa phần thừa
+ * của nhãn. Cho mỗi bên một cột thật thì chuỗi dài nhất (19 ký tự) nằm gọn.
+ */
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 130px) minmax(0, 1fr);
+  gap: 4px 12px;
+  align-items: baseline;
   font-size: 14px;
+}
+
+@media (max-width: 480px) {
+  /* Hết chỗ cho hai cột thì xếp chồng — vẫn hơn hẳn việc bóp cột giá trị. */
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .row dt {
   color: var(--xp-color-text-tertiary);
-  flex: none;
+  font-size: 13px;
 }
 
 .row dd {
-  text-align: right;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+}
+
+/*
+ * Giá trị là FLEX ITEM, và flex item mặc định không co xuống dưới `min-content` của nó — với một
+ * số tài khoản 19 ký tự liền mạch, `min-content` chính là cả chuỗi. Thiếu `min-width: 0` ở đây
+ * thì ở cột hẹp chuỗi TRÀN ra khỏi khối thay vì xuống dòng, và nút sao chép bị đẩy ra ngoài.
+ */
+.row dd > * {
+  min-width: 0;
   overflow-wrap: anywhere;
+}
+
+/* Nút sao chép giữ nguyên bề rộng của nó — co nó lại là làm mất vùng bấm. */
+.row dd > button {
+  flex: none;
 }
 
 .amount {
   color: var(--xp-color-price);
-  font-size: 16px;
+  font-size: 18px;
 }
 
 /* Mã đối soát phải đọc lại được từng ký tự — font đơn cách, giãn chữ. */
 .code {
   font-family: var(--xp-font-mono, monospace);
   letter-spacing: 0.08em;
+  font-size: 15px;
 }
 
-.expires {
-  font-size: 12.5px;
-  color: var(--xp-color-text-tertiary);
-}
-
-.note {
+/*
+ * Ghi chú điều kiện — danh sách chấm, không phải ba đoạn rời.
+ *
+ * Chấm màu nhấn được vẽ bằng `::marker` thay vì một `<span>` giả: nó đi kèm ngữ nghĩa danh sách
+ * thật, nên trình đọc màn hình đọc ra "danh sách 3 mục" chứ không phải ba câu trôi nổi.
+ */
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
   font-size: 13px;
+  line-height: var(--xp-line-height);
   color: var(--xp-color-text-secondary);
+}
+
+.notes li::marker {
+  color: var(--xp-color-warning);
 }
 
 /* Đoạn trên dùng chung hình dạng với `InvoicePaymentPanel` có chủ đích: khách gian hàng và khách
