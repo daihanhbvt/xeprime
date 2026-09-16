@@ -13,6 +13,7 @@ import {
 
 import { WalletService } from '../src/modules/wallet/wallet.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { releaseWalletObligations } from './helpers/wallet-cleanup';
 
 /**
  * VÍ HỢP NHẤT — đường CHẠY THẬT (không phải migration dữ liệu cũ), trên PostgreSQL thật.
@@ -93,19 +94,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (dbAvailable) {
-    const wallets = await prisma.wallet.findMany({
-      where: {
-        OR: [{ ownerUserId: { in: userIds } }, { ownerTenantId: { in: tenantIds } }],
-      },
-      select: { id: true },
-    });
-    const ids = wallets.map((w) => w.id);
-    await prisma.walletEntry.deleteMany({ where: { walletId: { in: ids } } });
-    await prisma.withdrawalRequest.deleteMany({ where: { walletId: { in: ids } } });
-    await prisma.wallet.deleteMany({ where: { id: { in: ids } } });
-    await prisma.bankAccount.deleteMany({
-      where: { OR: [{ ownerUserId: { in: userIds } }, { ownerTenantId: { in: tenantIds } }] },
-    });
+    await releaseWalletObligations(prisma, { tenantIds, userIds });
     await prisma.tenantMembership.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
     await prisma.user.deleteMany({ where: { id: { in: userIds } } });

@@ -31,6 +31,7 @@ import { makeNotificationService,
   makeBookingHoldsService,
   makeBookingsService,
 } from './helpers/service-factory';
+import { releaseWalletObligations } from './helpers/wallet-cleanup';
 
 /**
  * VÒNG ĐỜI KHOẢN GIỮ CHỖ — đường tiền của tuyến hoa hồng (R3, ADR 0028/0029) trên PostgreSQL THẬT.
@@ -321,6 +322,12 @@ afterEach(async () => {
 
 afterAll(async () => {
   if (dbAvailable) {
+    // Ví của gian hàng (tiền giữ chỗ bị tịch thu) và của khách (tiền hoàn) — `Restrict` chặn
+    // xoá tenant/user khi chúng còn, nên gỡ trước.
+    await releaseWalletObligations(prisma, {
+      tenantIds: [tenantId],
+      userIds: [ownerId, customerId],
+    });
     await prisma.tenantCustomer.deleteMany({ where: { tenantId } });
     await prisma.tenantSubscription.deleteMany({ where: { tenantId } });
     await prisma.plan.deleteMany({ where: { id: planId } });

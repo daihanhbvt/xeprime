@@ -28,6 +28,7 @@ import {
   makeNotificationService,
   makePricingService,
 } from './helpers/service-factory';
+import { releaseWalletObligations } from './helpers/wallet-cleanup';
 import { giveTenantPlan } from './helpers/billing-fixture';
 
 /**
@@ -178,6 +179,10 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (dbAvailable) {
+    await releaseWalletObligations(prisma, {
+      tenantIds: [ownTenantId, hostTenantId],
+      userIds: [ownerId, renterId],
+    });
     await prisma.tenant.deleteMany({ where: { id: { in: [ownTenantId, hostTenantId] } } });
     await prisma.user.deleteMany({ where: { id: { in: [ownerId, renterId] } } });
   }
