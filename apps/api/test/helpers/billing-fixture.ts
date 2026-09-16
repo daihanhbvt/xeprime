@@ -9,6 +9,56 @@ import {
   type BillingMode,
 } from '@xeprime/types';
 
+/** Postgres báo vi phạm unique bằng mã này — Prisma giữ nguyên trong `code`. */
+const UNIQUE_VIOLATION = 'P2002';
+
+/**
+ * `plan.upsert` chịu được HAI suite chạy song song cùng dựng một bậc gói.
+ *
+ * ## Vì sao `upsert` không tự lo được
+ *
+ * `plans.code` là unique nhưng KHÔNG phải khoá chính, nên Prisma không compile được thành một
+ * `INSERT ... ON CONFLICT` duy nhất — nó SELECT rồi mới INSERT. Hai worker của Jest cùng chạy
+ * qua khe hở giữa hai câu đó thì một bên INSERT thắng, bên kia lĩnh `P2002`:
+ *
+ *     Invalid `prisma.plan.upsert()` invocation
+ *     Unique constraint failed on the fields: (`code`)
+ *
+ * Đó không phải lỗi giả: nó đã làm `booking-handovers.spec.ts` đỏ ở CI trong khi bản thân spec
+ * đó chẳng liên quan gì tới gói. Và nó CHẬP CHỜN — số suite dùng fixture càng tăng thì xác suất
+ * càng cao, nên "chạy lại là xanh" là cách chắc chắn để nó quay lại vào một ngày tệ hơn.
+ *
+ * ## Vì sao không đặt mã gói RIÊNG cho từng suite
+ *
+ * Dùng chung là chủ đích (xem docblock `giveTenantPlan`): mã riêng cho mỗi suite sẽ rải hàng
+ * chục bậc gói rác vào database dùng chung, và `loadDefaultCommissionPlanOrThrow` chọn bậc
+ * `commission` có `sort_order` nhỏ nhất — càng nhiều bậc thì càng dễ có ngày chọn nhầm.
+ *
+ * Nên cách đúng là CHẤP NHẬN cuộc đua và đọc lại kết quả của bên thắng — cùng khuôn với
+ * `ChatService.getOrCreateFor`, nơi bất biến thật nằm ở constraint DB chứ không ở câu `findFirst`
+ * mở đầu.
+ */
+async function upsertSharedPlan(
+  prisma: PrismaClient,
+  args: Parameters<PrismaClient['plan']['upsert']>[0],
+): Promise<{ id: string }> {
+  try {
+    return (await prisma.plan.upsert(args)) as { id: string };
+  } catch (error) {
+    const isUniqueViolation =
+      typeof error === 'object' &&
+      error !== null &&
+      (error as { code?: string }).code === UNIQUE_VIOLATION;
+    if (!isUniqueViolation) throw error;
+
+    // Bên kia vừa INSERT xong — hàng đã có, đọc lại là đủ.
+    return prisma.plan.findUniqueOrThrow({
+      where: args.where,
+      select: { id: true },
+    });
+  }
+}
+
 /**
  * Gán một dòng thuê bao cho tenant của fixture — BẮT BUỘC với mọi spec chạm đường duyệt yêu cầu.
  *
@@ -48,7 +98,7 @@ export async function giveTenantPlan(
   const graceDays = options.graceDays ?? 7;
   const planCode = `fixture-${billingMode}-${graceDays}-${[...features].sort().join('.') || 'none'}`;
 
-  const plan = await prisma.plan.upsert({
+  const plan = await upsertSharedPlan(prisma, {
     where: { code: planCode },
     update: {},
     create: {
