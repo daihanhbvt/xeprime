@@ -24,8 +24,13 @@ import { BillingService } from '../billing/billing.service';
  * `bookings.deposit_collection_mode`.
  */
 export interface DepositPolicyResolution {
-  /** Chế độ thu phí hiện hành — trả kèm để caller không phải hỏi `BillingService` lần thứ hai. */
-  billingMode: BillingMode;
+  /**
+   * TUYẾN hiệu lực — trả kèm để caller không phải hỏi `BillingService` lần thứ hai.
+   *
+   * `null` khi chưa xác định được (`reason = billing_not_configured`). Caller ở đường GHI phải
+   * coi `null` là lỗi, KHÔNG được `?? PACKAGE`.
+   */
+  billingMode: BillingMode | null;
   /** XePrime có thu cọc của chuyến này không. */
   required: boolean;
   /** Gói hiện hành có mở QUYỀN bật công tắc không. Tuyến hoa hồng luôn `true` (không qua gói). */
@@ -68,7 +73,28 @@ export class DepositPolicyService {
     now: Date = new Date(),
     tx?: Prisma.TransactionClient,
   ): Promise<DepositPolicyResolution> {
-    const billingMode = await this.billing.billingModeFor(tenantId, now, tx);
+    const billing = await this.billing.effectiveBillingFor(tenantId, now, tx);
+    const billingMode = billing.billingMode;
+
+    /*
+     * KHÔNG xác định được tuyến ⇒ không quyết định được gì về tiền của khách.
+     *
+     * Trả `required: false` ở đây là ĐÚNG và cố ý: đường ĐỌC (báo giá công khai, màn cấu hình)
+     * phải sống sót qua một danh mục gói hỏng thay vì trả 500 cho cả marketplace. Cái chặn thật
+     * nằm ở đường GHI — `billingModeForMoneyOrThrow` ném `TENANT_BILLING_NOT_CONFIGURED` khi
+     * duyệt yêu cầu — nên không có đơn nào được tạo với dòng tiền đoán mò. Hai vế đó phải đi
+     * cùng nhau: thiếu vế sau thì `required: false` ở đây chính là "lặng lẽ tạo booking 0đ phí".
+     */
+    if (!billingMode) {
+      return {
+        billingMode: null,
+        required: false,
+        planAllows: false,
+        toggleEnabled: false,
+        editable: false,
+        reason: DEPOSIT_POLICY_REASON.BILLING_NOT_CONFIGURED,
+      };
+    }
 
     /*
      * Tuyến hoa hồng: dừng ở đây. Không đọc gói, không đọc công tắc — hai thứ đó không có tiếng
@@ -138,7 +164,8 @@ export class DepositPolicyService {
     depositCollectionEnabled: boolean,
   ): Promise<DepositPolicyResolution> {
     const now = new Date();
-    const billingMode = await this.billing.billingModeFor(tenantId, now);
+    // Đây là đường GHI cấu hình tiền ⇒ ném khi chưa xác định được tuyến, không đoán.
+    const billingMode = await this.billing.billingModeForMoneyOrThrow(tenantId, now);
 
     if (billingMode === BILLING_MODE.COMMISSION) {
       throw new ForbiddenException({

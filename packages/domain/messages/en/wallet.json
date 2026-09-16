@@ -88,5 +88,6 @@
       "submit": "Reverse entry",
       "done": "Reversed. Points are back in the wallet, and both entries stay on the ledger."
     }
-  }
+  },
+  "openLedger": "View ledger"
 }

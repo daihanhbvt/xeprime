@@ -28,7 +28,7 @@ import {
   type VehicleModelSpec,
 } from './catalog';
 import { dateOnlyFromToday, daysFromToday, photo, pick, prisma, seedId } from './context';
-import type { ShopSpec } from './shops';
+import { shopOrdinal, type ShopSpec } from './shops';
 
 /** Một CHIẾC xe cụ thể — mẫu xe cộng với những gì làm nó khác các chiếc cùng dòng. */
 export interface VehicleUnit {
@@ -49,12 +49,35 @@ export interface VehicleUnit {
 /** Xe 16 chỗ không cho thuê tự lái — luật vận tải, và cũng là một ca dữ liệu cần có thật. */
 const DRIVER_ONLY_SEAT_THRESHOLD = 16;
 
-function buildPlate(spec: VehicleModelSpec, provinceCode: string, index: number): string {
+/**
+ * Khoảng số biển dành riêng cho MỘT gian hàng. Lớn hơn đội xe lớn nhất trong bản khai (40 chiếc)
+ * nên hai gian hàng không bao giờ giẫm lên số của nhau.
+ */
+const PLATE_BLOCK_SIZE = 64;
+
+/**
+ * Hệ số trải số, nguyên tố cùng nhau với 90.000 (= 900 × 100).
+ *
+ * Nhân rồi lấy dư theo một số nguyên tố cùng nhau là một SONG ÁNH trên `0…89.999`: hai chiếc xe
+ * khác `serial` chắc chắn ra hai cặp (đầu, đuôi) khác nhau. Đây là thứ thay cho `(i*37)%900` +
+ * `(i*17)%100` của bản trước — hai phép mod độc lập ấy cho cùng một biển số ở những `i` cách
+ * nhau bội của 900/100, và kết quả là năm chiếc xe của năm gian hàng khác nhau cùng mang biển
+ * `30F-359.19`.
+ */
+const PLATE_SPREAD = 34_567;
+const PLATE_SERIAL_SPACE = 90_000;
+
+/**
+ * Biển số một chiếc: đầu số theo TỈNH của chi nhánh, phần số suy tất định từ `serial` — số thứ
+ * tự TOÀN CỤC của chiếc xe (block của gian hàng + vị trí trong đội).
+ */
+function buildPlate(spec: VehicleModelSpec, provinceCode: string, serial: number): string {
   const pools = PLATE_PREFIX[provinceCode] ?? PLATE_PREFIX['79']!;
   const isBike = spec.vehicleType === VEHICLE_TYPE.MOTORBIKE;
-  const prefix = pick(isBike ? pools.bike : pools.car, index);
-  const head = String(100 + ((index * 37) % 900));
-  const tail = String((index * 17) % 100).padStart(2, '0');
+  const prefix = pick(isBike ? pools.bike : pools.car, serial);
+  const spread = (serial * PLATE_SPREAD) % PLATE_SERIAL_SPACE;
+  const head = String(100 + (spread % 900));
+  const tail = String(Math.floor(spread / 900)).padStart(2, '0');
   return `${prefix}-${head}.${tail}`;
 }
 
@@ -179,6 +202,8 @@ function expandFleet(spec: ShopSpec): VehicleModelSpec[] {
 
 export async function buildFleet(spec: ShopSpec, deps: FleetDeps): Promise<VehicleUnit[]> {
   const models = expandFleet(spec);
+  // Mỗi gian hàng một khoảng số biển riêng — xem `PLATE_BLOCK_SIZE`.
+  const plateBlock = shopOrdinal(spec) * PLATE_BLOCK_SIZE;
   const rotation = buildBranchRotation(deps.branchIds.length);
   const units: VehicleUnit[] = [];
 
@@ -208,7 +233,7 @@ export async function buildFleet(spec: ShopSpec, deps: FleetDeps): Promise<Vehic
     const fields = {
       branchId: branch.id,
       name: `${brandLabel} ${model.model} ${year}`,
-      plateNumber: buildPlate(model, branch.provinceCode, index + spec.key.length),
+      plateNumber: buildPlate(model, branch.provinceCode, plateBlock + index),
       vehicleType: model.vehicleType,
       serviceTypes,
       brand: model.brand,

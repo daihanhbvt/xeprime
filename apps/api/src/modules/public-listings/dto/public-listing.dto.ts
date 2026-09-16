@@ -10,6 +10,7 @@ import {
   MOTORBIKE_CATEGORY_VALUES,
   SEAT_BUCKET_VALUES,
   SERVICE_TYPE_VALUES,
+  STOREFRONT_KIND_VALUES,
   VEHICLE_FEATURE_KEYS,
   VEHICLE_TYPE_VALUES,
   type ListingSort,
@@ -318,6 +319,20 @@ export class PublicListingDto {
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Tỉnh/thành gian hàng' })
   shopProvince!: string | null;
 
+  /*
+   * Thẻ xe phải phân biệt được HAI TUYẾN (ADR 0028) — cùng một luật với `PublicShopDto.verified`
+   * và với dấu cạnh tên người đang đăng nhập, cố ý: nếu thẻ xe đeo dấu cho mọi gian hàng còn
+   * trang gian hàng chỉ đeo cho tuyến gói thì dấu đó không còn phân biệt được gì.
+   *
+   * Là BOOLEAN chứ không phải `storefrontKind`: thẻ xe không vẽ mặt tiền, nó chỉ cần biết có
+   * gắn dấu và tô nổi bật hay không. Trả cả hai là hai cách nói cùng một điều, và hai cách nói
+   * thì có ngày lệch nhau.
+   */
+  @ApiProperty({
+    description: 'Gian hàng tuyến gói — đeo dấu xác thực XePrime (hasVerifiedStorefront)',
+  })
+  shopVerified!: boolean;
+
   @ApiProperty({ description: 'Số chuyến đã hoàn thành của xe' })
   completedTripCount!: number;
 
@@ -431,6 +446,23 @@ export class ListingMileagePolicyDto {
 }
 
 export class PublicListingDetailDto extends PublicListingDto {
+  /**
+   * Gian hàng này có nhận tin nhắn từ khách CHƯA đặt xe không.
+   *
+   * Nằm ở DTO chi tiết chứ không ở thẻ xe vì chỉ trang này có nút "Nhắn shop" — thẻ trong lưới
+   * không có, và một cờ không ai đọc trên mọi thẻ của mọi trang kết quả là chi phí không đổi
+   * lấy gì.
+   *
+   * Là cờ CHÍNH SÁCH, không phải `shopVerified` gọi bằng tên khác: hôm nay cả hai cùng đúng với
+   * tuyến gói, nhưng "đeo dấu xác thực" và "mở hộp thư công khai" là hai quyết định rời nhau
+   * được (xem `storefrontAllowsPublicChat`). Ẩn nút theo cờ này chỉ là lịch sự với người dùng —
+   * chặn thật nằm ở `ChatService` (`CHAT_REQUIRES_BOOKING`).
+   */
+  @ApiProperty({
+    description: 'Gian hàng mở hộp thư công khai (storefrontAllowsPublicChat)',
+  })
+  shopChatOpen!: boolean;
+
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) color!: string | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) manufactureYear!: number | null;
@@ -577,22 +609,100 @@ export class PublicListingPageDto {
   @ApiProperty({ type: PublicListingPageMetaDto }) meta!: PublicListingPageMetaDto;
 }
 
-/** Hồ sơ công khai của một gian hàng — cho trang `/shops/[slug]`. Chỉ dữ liệu công khai. */
+/**
+ * Hồ sơ công khai của một gian hàng — cho trang `/shops/[slug]`. Chỉ dữ liệu công khai.
+ *
+ * ## Vì sao một DTO gánh cả HAI mặt tiền thay vì hai endpoint
+ *
+ * Chủ xe cá nhân và gian hàng tuyến gói được vẽ rất khác nhau (ảnh bìa, dấu xác thực, số chi
+ * nhánh), nhưng chúng là cùng một THỰC THỂ ở cùng một URL, và mặt tiền thì đổi được trong đời
+ * một tenant: mua gói là thành gian hàng, hết ân hạn là về lại cá nhân (ADR 0038 điều 5). Hai
+ * endpoint nghĩa là mỗi lần tuyến đổi thì link cũ trả 404 — và là hai chỗ để luật hiển thị
+ * công khai (`publicListingScope`) trôi khỏi nhau.
+ *
+ * `storefrontKind` chọn cách VẼ; mọi số liệu bên dưới đều có nghĩa với cả hai mặt tiền.
+ *
+ * ## Mọi con số ở đây phải ĐẾM ĐƯỢC
+ *
+ * Không có trường nào là lời hứa marketing. "Bảo hiểm toàn diện" / "Hỗ trợ 24/7" cố ý KHÔNG có
+ * mặt: chưa có partner + policy + chứng nhận thật thì in chúng lên trang là nói dối khách
+ * (ADR 0028). Mỗi trường dưới đây đều truy ngược được về một hàng trong DB.
+ */
 export class PublicShopDto {
   @ApiProperty() name!: string;
   @ApiProperty({ description: 'Slug gian hàng' }) slug!: string;
+
+  @ApiProperty({
+    enum: STOREFRONT_KIND_VALUES,
+    description: 'Mặt tiền cần vẽ — suy từ tuyến thu tiền hiệu lực (resolveStorefrontKind)',
+  })
+  storefrontKind!: string;
+
+  @ApiProperty({
+    description: 'Đeo dấu xác thực XePrime — CHỈ gian hàng tuyến gói (hasVerifiedStorefront)',
+  })
+  verified!: boolean;
+
   @ApiPropertyOptional({ type: String, nullable: true }) provinceName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) logoUrl!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) coverUrl!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) bio!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) address!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Số điện thoại liên hệ' })
-  phone!: string | null;
+
+  /*
+   * KHÔNG có `phone` ở đây, và đó là một quyết định chứ không phải một thiếu sót.
+   *
+   * Số điện thoại từng được trả ra để trang vẽ nút "Gọi 09xxxxxxxx" — tức là đăng số của chủ xe
+   * lên một trang không cần đăng nhập, nơi mọi trình thu thập đều đọc được. Với chủ xe cá nhân
+   * đó là số riêng của họ; với gian hàng đó là đường dây tổng bị bỏ ngoài mọi thống kê liên hệ.
+   *
+   * Liên hệ đi qua hộp thư trong ứng dụng: có danh tính hai đầu, có lịch sử, và có cổng
+   * `CHAT_REQUIRES_BOOKING` cho tuyến hoa hồng. Số điện thoại vẫn tới tay khách — ở bước bàn
+   * giao, sau khi đã có một chuyến thật.
+   */
+
+  @ApiProperty({
+    description: 'Gian hàng mở hộp thư công khai (storefrontAllowsPublicChat)',
+  })
+  chatOpen!: boolean;
+
+  @ApiProperty({ description: 'Ngày mở gian hàng (ISO-8601 UTC) — "Tham gia từ …"' })
+  joinedAt!: string;
 
   @ApiProperty({ description: 'Điểm đánh giá trung bình, string — ADR 0007' })
   ratingAvg!: string;
 
   @ApiProperty() ratingCount!: number;
+
+  @ApiProperty({ description: 'Số xe ĐANG hiển thị công khai (cùng luật lọc với chợ)' })
+  vehicleCount!: number;
+
+  @ApiProperty({ description: 'Số chuyến đã hoàn thành của toàn gian hàng' })
+  completedTripCount!: number;
+
+  /**
+   * Tỉ lệ gian hàng TRẢ LỜI yêu cầu thuê trong hạn, 0–100. `null` = chưa đủ dữ liệu để nói
+   * (chưa có yêu cầu nào cần chủ xe quyết) — FE ẩn ô đó thay vì hiện 0%, vì 0% và "chưa có yêu
+   * cầu nào" là hai câu hoàn toàn khác nhau với người đang cân nhắc thuê xe.
+   */
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Tỉ lệ phản hồi yêu cầu thuê (0–100). Null khi chưa đủ dữ liệu.',
+  })
+  responseRatePercent!: number | null;
+
+  @ApiProperty({ description: 'Số chi nhánh đang hoạt động' })
+  branchCount!: number;
+
+  @ApiProperty({
+    type: [String],
+    description: 'Tên các tỉnh/thành đang có xe công khai — theo số xe giảm dần',
+  })
+  serviceProvinceNames!: string[];
+
+  @ApiProperty({ description: 'Có ít nhất một xe công khai hỗ trợ giao tận nơi' })
+  deliveryAvailable!: boolean;
 }
 
 /**

@@ -35,6 +35,14 @@ interface TripCardProps {
   };
   /** Mở chi tiết. Chuyến của chủ xe đi vào đơn/yêu cầu; khách đi vào `/trips/[id]`. */
   onOpenDetail?: (trip: CustomerTrip) => void;
+  /**
+   * KHU chứa chuyến — mặc định `/trips`.
+   *
+   * Thẻ có thể đứng trong lối chuyển tiếp của Manage (`/manage/account/trips`), nơi khu khách
+   * đã đóng với người đang xem. Giữ cứng `/trips` ở đây sẽ tạo một liên kết dẫn thẳng vào
+   * cánh cửa vừa khoá, và `AccountShell` sẽ đá họ ngược lại — một vòng tròn.
+   */
+  basePath?: string;
 }
 
 /**
@@ -49,7 +57,7 @@ interface TripCardProps {
  * ngược cùng hai quyết định ngay trên thẻ, vì đó là việc phải làm trước khi hết hạn. Mọi chặng
  * còn lại của cả hai phía chỉ có một lối đi tiếp là mở chi tiết.
  */
-export function TripCard({ trip, decisions, onOpenDetail }: TripCardProps) {
+export function TripCard({ trip, decisions, onOpenDetail, basePath }: TripCardProps) {
   const t = useTranslations('Trips');
   const dl = useDomainLabel();
   const fmt = useAppFormat();
@@ -57,7 +65,7 @@ export function TripCard({ trip, decisions, onOpenDetail }: TripCardProps) {
   const stage = trip.stage as CustomerTripStage;
   const role = trip.role as TripRole;
   const isHost = role === TRIP_ROLE.HOST;
-  const href = tripPath.detail(trip.id);
+  const href = tripPath.detail(trip.id, basePath);
   /* Chỉ chuyến của CHỦ XE còn chờ chính họ trả lời mới có gì để quyết định. */
   const canDecide = Boolean(decisions && isHost && trip.respondBy);
 

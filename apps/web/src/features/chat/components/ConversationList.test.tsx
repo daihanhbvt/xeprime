@@ -40,6 +40,8 @@ const baseProps = {
   onLoadMore: noop,
   error: false,
   onRetry: noop,
+  // Hộp thư MỘT VAI là mặc định của bộ này; nhãn vai có bộ test riêng ở cuối file.
+  showRole: false,
 };
 
 afterEach(cleanup);

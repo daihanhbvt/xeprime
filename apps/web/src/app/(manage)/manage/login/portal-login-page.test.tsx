@@ -1,4 +1,5 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { BILLING_MODE, TENANT_ROLE } from '@xeprime/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import PortalLoginPage from './page';
@@ -36,7 +37,20 @@ vi.mock('@/features/auth/components/AuthPanel', () => ({
   AuthPanel: () => <div data-testid="auth-panel" />,
 }));
 
-const OWNER = { id: 'U1', displayName: 'Chủ shop', tenant: { id: 'T1' }, platformRole: null };
+/*
+ * Gian hàng TUYẾN GÓI, khai tường minh (15/09/2026).
+ *
+ * Fixture cũ chỉ có `{ id: 'T1' }` và vào được `/manage` nhờ một tai nạn của hàm cũ (nó đòi
+ * `roleKey === shop_owner` nên với fixture thiếu `roleKey` thì `!false` cho qua). Luật mới hỏi
+ * tenant có THUÊ BAO hiệu lực không — một fixture không khai `billingMode` là gian hàng không có
+ * gói, và nó về `/account`.
+ */
+const OWNER = {
+  id: 'U1',
+  displayName: 'Chủ shop',
+  tenant: { id: 'T1', roleKey: TENANT_ROLE.SHOP_OWNER, billingMode: BILLING_MODE.PACKAGE },
+  platformRole: null,
+};
 const PLATFORM = { id: 'U2', displayName: 'Admin', tenant: null, platformRole: 'platform_admin' };
 
 beforeEach(() => {

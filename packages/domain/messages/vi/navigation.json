@@ -4,6 +4,7 @@
     "about": "Về Prime",
     "trips": "Chuyến của tôi",
     "tripsShort": "Chuyến",
+    "vehiclesMine": "Xe của tôi",
     "chat": "Tin nhắn",
     "account": "Tài khoản",
     "accountMine": "Tài khoản của tôi",
@@ -13,7 +14,8 @@
     "becomeOwner": "Trở thành chủ xe",
     "platformAdmin": "Quản trị nền tảng",
     "mainNavLabel": "Điều hướng chính",
-    "quickNavLabel": "Điều hướng nhanh"
+    "quickNavLabel": "Điều hướng nhanh",
+    "shopProfile": "Hồ sơ gian hàng"
   },
   "account": {
     "menuLabel": "Menu tài khoản",
@@ -41,7 +43,8 @@
     "registration": "Hồ sơ đăng ký",
     "ownerProfile": "Hồ sơ chủ xe",
     "messages": "Tin nhắn với khách",
-    "subscription": "Gói dịch vụ"
+    "subscription": "Gói dịch vụ",
+    "shopProfile": "Hồ sơ gian hàng"
   },
   "manage": {
     "home": "Trang chủ",
@@ -76,7 +79,8 @@
     "openMenu": "Mở menu",
     "fullMenu": "Menu đầy đủ",
     "balance": "Ví điểm",
-    "shopPaymentSettings": "Thu cọc qua XePrime"
+    "shopPaymentSettings": "Thu cọc qua XePrime",
+    "account": "Tài khoản & bảo mật"
   },
   "manageGroups": {
     "overview": "Tổng quan",

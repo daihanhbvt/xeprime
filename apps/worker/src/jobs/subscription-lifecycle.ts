@@ -182,9 +182,39 @@ async function lapseToCommission(prisma: PrismaClient, now: Date): Promise<numbe
 
   let handled = 0;
   for (const sub of candidates) {
+    /*
+     * ÂN HẠN CHỈ ÁP CHO DÒNG GÓI (15/09/2026).
+     *
+     * Ân hạn là ưu đãi dành cho người ĐÃ TRẢ TIỀN — "gói hết hạn rồi nhưng chưa mất gì trong N
+     * ngày". Áp nó cho dòng thuê bao hoa hồng 0đ do chính hệ thống tự gán thì không giữ lại
+     * được gì (không có năng lực nào để mất, không có gì để gia hạn) nhưng vẫn để lại hậu quả
+     * thật: suốt cửa sổ đó tenant KHÔNG có dòng thuê bao nào còn hạn.
+     *
+     * Với `COMMISSION_TRACK_TERM_MONTHS = 12`, seed `graceDays = 7`, và migration backfill gán
+     * gói mặc định cho toàn bộ tenant trong CÙNG MỘT NGÀY, đó là 7 ngày mỗi năm mà mọi chủ xe
+     * trên sàn cùng lúc không thu phí dịch vụ và không thu cọc.
+     *
+     * `resolveEffectiveBilling` đã bịt lỗ này ở tầng ĐỌC (pha `grace` giữ nguyên tuyến của dòng
+     * vừa hết hạn). Điều kiện dưới đây bịt nó ở tầng DỮ LIỆU, để trạng thái "không có dòng thuê
+     * bao hiệu lực" biến mất khỏi hệ thống thay vì chỉ được diễn giải đúng ở một nơi.
+     */
     const graceDays = parsePlanLimits(sub.plan.limitsJson).graceDays;
     const graceEndsAt = new Date(sub.endsAt.getTime() + graceDays * MS_PER_DAY);
-    if (now < graceEndsAt) continue; // còn trong ân hạn — lượt sau tính tiếp
+    const isPackage = sub.billingMode === BILLING_MODE.PACKAGE;
+    if (isPackage && now < graceEndsAt) continue; // còn trong ân hạn — lượt sau tính tiếp
+
+    /*
+     * Mốc dòng mới bắt đầu — nối LIỀN, không bắt đầu từ `now`.
+     *
+     * Dòng gói rơi xuống thì tuyến hoa hồng có hiệu lực từ lúc HẾT ÂN HẠN: trong ân hạn tenant
+     * vẫn là tuyến gói, và một dòng commission `starts_at` lùi về `ends_at` sẽ nói dối về bảy
+     * ngày đã qua. Dòng hoa hồng tự nối lại thì nối thẳng từ `ends_at` — giữa hai kỳ của cùng
+     * một tuyến không có khoảng nào cả.
+     *
+     * Cả hai nhánh đều KHÔNG dùng `now`: job chạy mỗi giờ và có thể dừng vài tiếng khi deploy,
+     * và `now` để lại một khe hở đúng bằng độ trễ đó.
+     */
+    const chainFrom = isPackage ? graceEndsAt : sub.endsAt;
 
     const done = await prisma.$transaction(async (tx) => {
       const claimed = await tx.tenantSubscription.updateMany({
@@ -215,8 +245,19 @@ async function lapseToCommission(prisma: PrismaClient, now: Date): Promise<numbe
           termMonths: COMMISSION_TRACK_TERM_MONTHS,
           billingMode: BILLING_MODE.COMMISSION,
           commissionPercent: fallbackPlan.commissionPercent,
-          startsAt: now,
-          endsAt: addCalendarMonthsVn(now, COMMISSION_TRACK_TERM_MONTHS),
+          /*
+           * Nối LIỀN vào dòng vừa hết hạn, không bắt đầu từ `now`.
+           *
+           * `startsAt = sub.endsAt` khiến dòng mới phủ kín khoảng job chạy trễ (job chạy mỗi
+           * giờ, và có thể dừng vài tiếng khi deploy). Bắt đầu từ `now` để lại một khe hở đúng
+           * bằng độ trễ đó, và trong khe hở ấy tenant không có dòng thuê bao nào còn hạn — lại
+           * đúng trạng thái mà cả thay đổi này lẫn `resolveEffectiveBilling` sinh ra để xoá bỏ.
+           *
+           * `startsAt` ở quá khứ hoàn toàn hợp lệ với vị từ `startsAt <= now`, và `endsAt` vẫn
+           * đếm đủ 12 tháng lịch kể từ mốc đó (ADR 0011: cộng THÁNG LỊCH, không nhân 30 ngày).
+           */
+          startsAt: chainFrom,
+          endsAt: addCalendarMonthsVn(chainFrom, COMMISSION_TRACK_TERM_MONTHS),
           note: 'Tự chuyển về tuyến hoa hồng khi gói hết hạn + ân hạn (job vòng đời — ADR 0020 điều 5).',
         },
         select: { id: true },

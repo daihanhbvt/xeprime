@@ -58,7 +58,7 @@ function hrefsOf(sections: typeof SHOP_NAV): string[] {
 }
 
 describe('nav — cấu trúc khối', () => {
-  it('gian hàng: 6 khối theo hành trình chủ xe, tổng 22 mục lá', () => {
+  it('gian hàng: 6 khối theo hành trình chủ xe, tổng 23 mục lá', () => {
     expect(SHOP_NAV.map((section) => section.key)).toEqual([
       'overview',
       'operations',
@@ -74,7 +74,10 @@ describe('nav — cấu trúc khối', () => {
     // 22 từ Phase 6: "Thu cọc qua XePrime" — KHÔNG gắn `feature` dù đường GHI cần
     // `escrow_hold`, vì gian hàng thiếu cờ phải vào được để hiểu tính năng thuộc gói nào, và
     // tuyến hoa hồng phải thấy công tắc bật + khoá (ADR 0027 điều 4).
-    expect(flattenLeaves(SHOP_NAV)).toHaveLength(22);
+    // 23 từ 15/09/2026: "Tài khoản & bảo mật" — hồ sơ của NGƯỜI đăng nhập, tách khỏi hồ sơ gian
+    // hàng. Trước đó nhân viên sống trong `/manage` không có đường nào trong cổng để đổi mật
+    // khẩu của chính mình; màn duy nhất nằm ở `/account` và không mục nào dẫn tới.
+    expect(flattenLeaves(SHOP_NAV)).toHaveLength(23);
   });
 
   it('Tổng quan và Hỗ trợ luôn hiện (`pinned`), bốn khối giữa gập được', () => {
@@ -226,16 +229,16 @@ describe('nav — ranh giới gian hàng ↔ nền tảng', () => {
 });
 
 describe('nav — vai trò gian hàng nhìn thấy gì', () => {
-  it('shop_owner thấy đủ 22 mục', () => {
+  it('shop_owner thấy đủ 23 mục', () => {
     expect(
       visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_OWNER], false),
-    ).toHaveLength(22);
+    ).toHaveLength(23);
   });
 
-  it('shop_manager cũng thấy đủ 22 mục (có MEMBER_VIEW, FINANCE_VIEW và SUBSCRIPTION_VIEW)', () => {
+  it('shop_manager cũng thấy đủ 23 mục (có MEMBER_VIEW, FINANCE_VIEW và SUBSCRIPTION_VIEW)', () => {
     expect(
       visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_MANAGER], false),
-    ).toHaveLength(22);
+    ).toHaveLength(23);
   });
 
   it('shop_staff KHÔNG thấy tài chính và người dùng', () => {

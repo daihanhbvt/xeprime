@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { nowInAppTz, toAppTz } from '@xeprime/domain';
-import type { ChatSide } from '@xeprime/types';
+import type { ChatInbox, ChatSide } from '@xeprime/types';
 import { HeaderIconButton } from '@/components/layout/HeaderIconButton';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -57,7 +57,7 @@ export function ChatMenu({ side }: { side: ChatSide }) {
     <Popover
       content={
         <ChatQuickPanel
-          side={badge.side}
+          side={badge.inbox}
           inboxHref={badge.href}
           open={open}
           onNavigate={() => setOpen(false)}
@@ -85,7 +85,7 @@ function ChatQuickPanel({
   open,
   onNavigate,
 }: {
-  side: ChatSide;
+  side: ChatInbox;
   inboxHref: string;
   open: boolean;
   onNavigate: () => void;

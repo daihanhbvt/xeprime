@@ -322,6 +322,19 @@ function AddressLocationSection<T extends FieldValues>({
   };
 
   const onPickSuggestion = async (id: string) => {
+    /*
+     * Điền phần chữ NGAY, từ chính dòng người dùng vừa bấm — trước cả khi hỏi server.
+     *
+     * Hai lý do, và cả hai đều đã từng cắn:
+     *   1. Nếu để `onChange` của AntD tự xử, ô chữ nhận `value` của lựa chọn — tức MÃ ĐỊA ĐIỂM.
+     *      Bất kỳ lỗi nào sau đó là người dùng nhìn thấy một dãy ký tự vô nghĩa trong ô địa chỉ.
+     *   2. Chữ do server suy lại từ toạ độ KHÔNG khớp thứ người dùng đã chọn: chọn
+     *      "12, Nguyễn Huệ" mà tra ngược toạ độ đó ra "Hoàng Hạc Cafe, 18A, Nguyễn Huệ" (nhà
+     *      bên cạnh). Dòng người ta bấm mới là thứ họ muốn, không phải thứ máy suy lại.
+     */
+    const picked = suggestions.data?.items.find((s) => s.placeId === id);
+    if (picked) addressLine.field.onChange(picked.primaryText as PathValue<T, Path<T>>);
+
     const result = await placeDetail.mutateAsync(id).catch(() => null);
     const place = result?.place;
     if (!place) return;
@@ -331,12 +344,12 @@ function AddressLocationSection<T extends FieldValues>({
       { lat: Number(place.latitude), lng: Number(place.longitude) },
       LOCATION_SOURCE.GOOGLE_PLACE,
     );
+    /*
+     * `formattedAddress` chỉ dùng cho dòng "Ghim đang ở: …" — KHÔNG đổ ngược vào ô chữ. Nó mô tả
+     * chỗ cái ghim thật sự nằm, và chỗ đó được phép lệch chút ít so với dòng người dùng đã chọn;
+     * đó chính là thông tin họ cần để quyết định có chỉnh ghim hay không.
+     */
     setPinAddress(place.formattedAddress ?? null);
-    // Chỉ điền phần "số nhà, đường" mà bản đồ tách ra — KHÔNG dán nguyên chuỗi đầy đủ vào ô, vì
-    // chuỗi đó còn chứa tên quận/phường CŨ và sẽ bị ghép thêm một lần nữa lúc lưu.
-    if (place.suggestedAddressLine) {
-      addressLine.field.onChange(place.suggestedAddressLine as PathValue<T, Path<T>>);
-    }
     setProvinceMismatch(
       Boolean(place.suggestedProvinceCode) && place.suggestedProvinceCode !== provinceCode,
     );
@@ -388,7 +401,16 @@ function AddressLocationSection<T extends FieldValues>({
           id={inputId}
           value={line}
           disabled={disabled}
-          onChange={(value: string) => addressLine.field.onChange(value as PathValue<T, Path<T>>)}
+          /*
+           * Bấm một gợi ý làm AntD phát `onChange` với `value` của lựa chọn — tức MÃ ĐỊA ĐIỂM,
+           * không phải chữ. Chặn ngay tại đây thay vì trông chờ `onSelect` ghi đè sau: thứ tự
+           * hai sự kiện đó là chi tiết nội bộ của rc-select, và đặt cược vào nó nghĩa là một
+           * bản nâng cấp AntD có thể lặng lẽ dán một dãy hash vào ô địa chỉ của khách.
+           */
+          onChange={(value: string) => {
+            if (suggestions.data?.items.some((s) => s.placeId === value)) return;
+            addressLine.field.onChange(value as PathValue<T, Path<T>>);
+          }}
           onBlur={addressLine.field.onBlur}
           onSelect={(value: string) => void onPickSuggestion(value)}
           placeholder={t('addressLinePlaceholder')}

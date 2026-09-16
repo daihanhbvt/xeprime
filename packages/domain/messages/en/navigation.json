@@ -4,6 +4,7 @@
     "about": "About Prime",
     "trips": "My trips",
     "tripsShort": "Trips",
+    "vehiclesMine": "My vehicles",
     "chat": "Messages",
     "account": "Account",
     "accountMine": "My account",
@@ -13,7 +14,8 @@
     "becomeOwner": "Become a host",
     "platformAdmin": "Platform admin",
     "mainNavLabel": "Main navigation",
-    "quickNavLabel": "Quick navigation"
+    "quickNavLabel": "Quick navigation",
+    "shopProfile": "Shop profile"
   },
   "account": {
     "menuLabel": "Account menu",
@@ -41,7 +43,8 @@
     "registration": "Registration status",
     "ownerProfile": "Host profile",
     "messages": "Guest messages",
-    "subscription": "Subscription"
+    "subscription": "Subscription",
+    "shopProfile": "Shop profile"
   },
   "manage": {
     "home": "Home",
@@ -76,7 +79,8 @@
     "openMenu": "Open menu",
     "fullMenu": "Full menu",
     "balance": "Points wallet",
-    "shopPaymentSettings": "Deposit collection"
+    "shopPaymentSettings": "Deposit collection",
+    "account": "Account & security"
   },
   "manageGroups": {
     "overview": "Overview",

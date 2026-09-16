@@ -65,3 +65,29 @@ export class ReviewPageDto {
   @ApiProperty({ type: [ReviewDto] }) data!: ReviewDto[];
   @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
 }
+
+/**
+ * Một đánh giá trên trang GIAN HÀNG — thêm đúng một thứ so với đánh giá trên trang xe: chiếc xe
+ * mà khách đã thuê.
+ *
+ * Nó không thừa ở đây và cũng không thiếu ở kia: trên trang một chiếc xe thì mọi đánh giá đều
+ * nói về chính chiếc xe đang mở, còn trên trang gian hàng thì "4 sao" của một chiếc VinFast và
+ * "5 sao" của một chiếc Camry là hai thông tin khác nhau, và người đọc cần biết cái nào là cái
+ * nào trước khi tin vào điểm trung bình.
+ *
+ * KHÔNG có avatar khách ở đây, có chủ đích: `customerName` đã được rút gọn ("Nguyễn Văn A.")
+ * để một trang công khai không phơi tên đầy đủ của người thuê, và dán ảnh thật của họ cạnh cái
+ * tên đã che là tự tay cởi bỏ lớp che đó. FE dựng avatar bằng chữ cái đầu.
+ */
+export class ShopReviewDto extends ReviewDto {
+  @ApiProperty({ description: 'Xe đã thuê — để mở trang chi tiết từ đánh giá' })
+  vehicleId!: string;
+
+  @ApiProperty({ description: 'Tên xe đã thuê' }) vehicleName!: string;
+}
+
+export class ShopReviewPageDto {
+  @ApiProperty({ type: ReviewSummaryDto }) summary!: ReviewSummaryDto;
+  @ApiProperty({ type: [ShopReviewDto] }) data!: ShopReviewDto[];
+  @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
+}

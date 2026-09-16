@@ -3,10 +3,10 @@
 }
 
 /* Fallback khi không có banner — cùng CHIỀU CAO với carousel để layout không đổi. */
-/* Cùng aspect-ratio với carousel — có hay không có banner, trang không đổi hình dạng. */
+/* Cùng aspect-ratio với carousel — có hay không có banner, trang không đổi hình dạng.
+   Cũng KHÔNG đặt max-height, vì lý do đã ghi ở BannerCarousel.module.css. */
 .fallback {
   aspect-ratio: 1440 / 300;
-  max-height: 400px;
   background:
     radial-gradient(80% 120% at 70% 20%, rgba(214, 160, 44, 0.35), transparent 60%),
     var(--xp-hero-backdrop);
@@ -43,7 +43,6 @@
 @media (max-width: 1024px) {
   .fallback {
     aspect-ratio: 1024 / 320;
-    max-height: none;
   }
 }
 

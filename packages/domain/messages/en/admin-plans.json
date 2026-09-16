@@ -1,5 +1,11 @@
 {
   "page": {
+    "defaultTrackTag": "Default track",
+    "defaultTrackHint": "This is the entry TRACK, not a plan shops buy: every new shop is assigned it automatically, 0đ subscription, no term. It cannot be retired, and there is never a second commission tier.",
+    "notForSale": "Not for sale",
+    "archivedHint": "Closed to NEW buyers. {count, plural, =0 {No subscription points at this tier right now.} other {# subscriptions still running on this tier stay valid — retiring a tier cancels nobody.}}",
+    "introTitle": "This table holds two kinds of row",
+    "introBody": "The “Default track” tier is the commission track every individual host enters through — it is not sold, cannot be retired, and there is only ever one. The other tiers are shop plans sold per vehicle slot. “Retired” only blocks new purchases; running subscriptions keep the price and slot count they locked in until their term ends.",
     "title": "Service plans",
     "filterLabel": "Plan status",
     "filterAll": "All",

@@ -1,13 +1,21 @@
 .section {
   max-width: var(--xp-container-max-width);
   margin: 0 auto;
-  padding: 24px 20px 48px;
+  padding: 28px 20px 8px;
 }
 
+/*
+ * Tiêu đề khối dùng font CHỮ THƯỜNG đậm, không phải serif hiển thị.
+ *
+ * Serif ở trang này dành cho hai thứ mang danh tính: TÊN gian hàng và các con số nổi bật. Dùng
+ * nó cho cả tiêu đề khối nữa thì ba cấp chữ cùng một kiểu và không cấp nào nổi lên — tên gian
+ * hàng mất chỗ đứng của nó.
+ */
 .title {
   margin: 0 0 16px;
-  font-family: var(--font-playfair), serif;
-  font-size: 22px;
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
+  font-weight: var(--xp-font-weight-bold);
   color: var(--xp-color-text);
 }
 
@@ -38,4 +46,10 @@
   display: flex;
   justify-content: center;
   margin-top: 28px;
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 20px 16px 8px;
+  }
 }

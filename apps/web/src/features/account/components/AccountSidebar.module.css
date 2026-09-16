@@ -91,28 +91,6 @@
   min-width: 0;
 }
 
-.logout {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  margin-top: var(--xp-space-xs);
-  padding: 10px var(--xp-space-md);
-  border: 0;
-  border-left: 3px solid transparent;
-  background: none;
-  color: var(--xp-color-error);
-  font-family: inherit;
-  font-size: var(--xp-font-size);
-  font-weight: var(--xp-font-weight-medium);
-  text-align: start;
-  cursor: pointer;
-}
-
-.logout:hover {
-  background: var(--xp-color-error-bg);
-}
-
 /* ── Thẻ người dùng ở chân menu ───────────────────────────────────────── */
 
 .userCard {
@@ -212,16 +190,6 @@
 
   .label {
     flex: none;
-  }
-
-  .logout {
-    flex: none;
-    width: auto;
-    margin: 0;
-    padding: 8px 14px;
-    border: 1px solid var(--xp-color-error);
-    border-radius: var(--xp-border-radius-pill);
-    white-space: nowrap;
   }
 
   /* Header marketplace đã hiện avatar/tên — thẻ người dùng ở đây chỉ chiếm chỗ. */

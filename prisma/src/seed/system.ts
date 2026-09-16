@@ -8,6 +8,8 @@
  * là một phần của lược đồ (mọi môi trường có ngay sau `migrate deploy`, không đợi ai chạy seed).
  */
 import {
+  DEFAULT_COMMISSION_PLAN_CODE,
+  DEFAULT_PACKAGE_PLAN_CODE,
   BILLING_MODE,
   DEFAULT_PLATFORM_ROLE_PERMISSIONS,
   DEFAULT_TENANT_ROLE_PERMISSIONS,
@@ -209,13 +211,6 @@ const FEATURES_BY_TIER = {
   fullManage: [...FULL_MANAGE_FEATURES],
 };
 
-/** Bốn kỳ hạn chuẩn (ADR 0015 điều 3) — % giảm là DỮ LIỆU đặt tạm, admin chỉnh ở màn quản trị. */
-const DEFAULT_TERMS = [
-  { months: 1, discountPercent: 0 },
-  { months: 3, discountPercent: 5 },
-  { months: 6, discountPercent: 10 },
-  { months: 12, discountPercent: 15 },
-];
 
 /**
  * Gói dịch vụ nền tảng (ADR 0015/0020). Không phải dữ liệu demo: màn quản trị gói và màn chọn
@@ -225,9 +220,29 @@ const DEFAULT_TERMS = [
  * hết vai trò thì lật `archived`, không xoá. Giá là DỮ LIỆU pilot cho admin chỉnh sau
  * (ADR 0029 — kiểm điểm giao đã gỡ, phí nền 0đ hợp lệ).
  *
- * ⚠️ `free` là gói MẶC ĐỊNH lúc đăng ký — đặt nó vào TUYẾN HOA HỒNG (10%, không phí cố định,
- * không giới hạn chỗ) là quyết định tiền bạc của ADR 0020: chủ xe nhỏ vào miễn phí và chỉ trả
- * khi có doanh thu; hai đơn đầu còn được miễn cả hoa hồng (ADR 0026, thi công đợt sau).
+ * ## Danh mục có ĐÚNG HAI hàng, và chúng không cùng một loại thứ
+ *
+ * `free` (`DEFAULT_COMMISSION_PLAN_CODE`) **không phải một SKU**. Nó là TUYẾN vào cửa: mọi
+ * chủ xe cá nhân được gán nó lúc mở gian hàng, giá 0đ, không kỳ hạn nào để mua, không gì để
+ * gia hạn. Backend giữ nó là duy nhất và không cho archive (`BillingService` —
+ * `COMMISSION_PLAN_IS_SINGLETON` / `DEFAULT_PLAN_PROTECTED`), còn `listPlansForTenant` lọc nó
+ * ra khỏi màn chọn gói. Phí dịch vụ 10% nằm PHÍA KHÁCH, cộng vào khoản giữ chỗ (ADR 0029
+ * điều 2) — không phải khoản khấu trừ của chủ xe.
+ *
+ * `per-vehicle` là SKU duy nhất của tuyến gói, bán theo BA kỳ hạn (3/6/12 tháng) trong
+ * `limits.terms`.
+ *
+ * ## Vì sao MỘT hàng plan + ba kỳ hạn, không phải ba hàng plan
+ *
+ * Ba kỳ hạn hiện được duyệt có CÙNG đơn giá chỗ (100k ô tô / 40k xe máy), CÙNG bộ cờ năng
+ * lực, CÙNG `graceDays`, và 0% giảm giá. Ba hàng `plans` khác nhau đúng một con số `months`
+ * là ba bản sao của cùng một sản phẩm, và mỗi bản sao là một chỗ để giá trôi: đổi giá chỗ
+ * phải sửa ba hàng, quên một hàng thì một nhóm khách trả giá cũ mà không ai biết. Ba lựa
+ * chọn MUA là chuyện của màn mua (`PurchaseModal` dựng ba thẻ kỳ hạn từ `limits.terms`), và
+ * `purchase()` đã chặn kỳ hạn ngoài danh sách ở server.
+ *
+ * Hàng plan thứ hai chỉ xứng đáng ra đời khi có KHÁC BIỆT THẬT: đơn giá khác, cờ năng lực
+ * khác, hoặc trần chỗ khác.
  */
 const PLANS: ReadonlyArray<{
   code: string;
@@ -247,10 +262,11 @@ const PLANS: ReadonlyArray<{
   status?: 'active' | 'archived';
 }> = [
   {
-    code: 'free',
-    name: 'Hoa hồng theo chuyến',
+    code: DEFAULT_COMMISSION_PLAN_CODE,
+    name: 'Tuyến hoa hồng mặc định',
     description:
-      'Mặc định khi mở gian hàng — không phí cố định, nền tảng thu hoa hồng trên mỗi chuyến qua khoản giữ chỗ.',
+      'TUYẾN vào cửa của mọi chủ xe cá nhân, không phải gói để mua: 0đ thuê bao, không hạn sử dụng. '  +
+      'Nền tảng thu phí dịch vụ 10% ở PHÍA KHÁCH qua khoản giữ chỗ khi đặt xe. Tối đa 3 xe (Owner Lite).',
     billingMode: BILLING_MODE.COMMISSION,
     commissionPercent: 10,
     basePriceMonthly: 0,
@@ -263,7 +279,16 @@ const PLANS: ReadonlyArray<{
       maxMotorbikes: null,
       maxMembers: null,
       maxBranches: null,
-      terms: DEFAULT_TERMS,
+      /*
+       * RỖNG có chủ đích: `limits.terms` là danh sách kỳ hạn ĐƯỢC BÁN (ADR 0029 điều 3), và
+       * tuyến hoa hồng không bán gì cả — không có hoá đơn, không có gia hạn, không có ngày hết
+       * gói trong sản phẩm. Để nguyên bảng kỳ hạn mặc định (1/3/6/12 kèm % giảm) là bày ra một
+       * biểu giá cho một thứ không có giá, và màn quản trị gói sẽ hiện nó như một SKU.
+       *
+       * Dòng thuê bao kỹ thuật vẫn dài `COMMISSION_TRACK_TERM_MONTHS` (12 tháng) và được job vòng
+       * đời nối liền từ `ends_at` — đó là chuyện của DỮ LIỆU, không phải của bảng giá.
+       */
+      terms: [],
       graceDays: 7,
       features: FEATURES_BY_TIER.ownerLite,
     },
@@ -279,10 +304,11 @@ const PLANS: ReadonlyArray<{
    * Giá là DỮ LIỆU pilot; admin đổi ở màn quản trị gói, đổi không hồi tố đơn/hoá đơn cũ.
    */
   {
-    code: 'per-vehicle',
-    name: 'Gói theo xe',
+    code: DEFAULT_PACKAGE_PLAN_CODE,
+    name: 'Gian hàng theo chỗ xe',
     description:
-      'Trả theo số chỗ xe: 100.000đ/ô tô và 40.000đ/xe máy mỗi tháng, tối thiểu 3 tháng — 0đ phí dịch vụ nền tảng trên mỗi chuyến.',
+      'Gói gian hàng: 100.000đ/chỗ ô tô và 40.000đ/chỗ xe máy mỗi tháng, mua theo kỳ 3 / 6 hoặc 12 tháng. ' +
+      '0đ phí dịch vụ nền tảng trên mỗi chuyến, không giới hạn số xe, mở toàn bộ bộ quản lý gian hàng.',
     billingMode: BILLING_MODE.PACKAGE,
     commissionPercent: null,
     basePriceMonthly: 0,
@@ -309,65 +335,6 @@ const PLANS: ReadonlyArray<{
     maxVehicles: null,
     sortOrder: 1,
   },
-
-  // Hai bậc phí-nền cũ (ADR 0015/0020) — ARCHIVED từ ADR 0029: giữ hàng cho subscription demo
-  // cũ còn trỏ tới, không bán nữa. Seed chạy lại sẽ tự lật archived cho DB đã có sẵn chúng.
-  {
-    code: 'standard',
-    name: 'Tiêu chuẩn (cũ)',
-    status: 'archived',
-    description:
-      'Gian hàng một chi nhánh — phí nền gồm sẵn 5 chỗ ô tô, 0đ trên chuyến, mua thêm chỗ theo đơn giá.',
-    billingMode: BILLING_MODE.PACKAGE,
-    commissionPercent: null,
-    basePriceMonthly: 990_000,
-    // Ngưỡng kiểm điểm giao: 5 chỗ × 10% × 1.500.000đ = 750.000đ ≤ 990.000đ ✓ (ADR 0020).
-    assumedMonthlyGmv: { monthlyGmvPerCar: '1500000', commissionPercent: 10 },
-    limits: {
-      perVehiclePrice: { car: '120000', motorbike: '40000' },
-      includedCars: 5,
-      includedMotorbikes: 0,
-      maxCars: 20,
-      maxMotorbikes: 20,
-      maxMembers: 5,
-      maxBranches: 1,
-      terms: DEFAULT_TERMS,
-      graceDays: 7,
-      features: FEATURES_BY_TIER.fullManage,
-    },
-    price: 490_000,
-    durationDays: 30,
-    maxVehicles: 20,
-    sortOrder: 8,
-  },
-  {
-    code: 'pro',
-    name: 'Chuyên nghiệp (cũ)',
-    status: 'archived',
-    description:
-      'Đội xe lớn, nhiều chi nhánh — đơn giá chỗ rẻ hơn, không trần chỗ, gồm sẵn 12 chỗ ô tô.',
-    billingMode: BILLING_MODE.PACKAGE,
-    commissionPercent: null,
-    basePriceMonthly: 1_990_000,
-    // Ngưỡng: 12 chỗ × 10% × 1.500.000đ = 1.800.000đ ≤ 1.990.000đ ✓.
-    assumedMonthlyGmv: { monthlyGmvPerCar: '1500000', commissionPercent: 10 },
-    limits: {
-      perVehiclePrice: { car: '100000', motorbike: '30000' },
-      includedCars: 12,
-      includedMotorbikes: 0,
-      maxCars: null,
-      maxMotorbikes: null,
-      maxMembers: null,
-      maxBranches: null,
-      terms: DEFAULT_TERMS,
-      graceDays: 7,
-      features: FEATURES_BY_TIER.fullManage,
-    },
-    price: 1_490_000,
-    durationDays: 30,
-    maxVehicles: null,
-    sortOrder: 9,
-  },
 ];
 
 /** Tra gói theo `code` để gán thuê bao cho gian hàng demo (kèm snapshot chế độ — ADR 0024). */
@@ -386,8 +353,51 @@ export type PlanIds = Map<
   }
 >;
 
+/**
+ * Hai bậc phí-nền của mô hình cũ (`standard` / `pro`, ADR 0015/0020).
+ *
+ * ADR 0029 đã lật chúng `archived`; quyết định sản phẩm 15/09/2026 đi tiếp một bước: chúng ra
+ * KHỎI danh mục. Lý do là màn quản trị gói, không phải sự sạch sẽ — bốn hàng trong đó hai hàng
+ * tên "(cũ)" khiến admin phải đọc tên để đoán hàng nào còn bán, và "Ngừng bán" ở cột trạng
+ * thái bị đọc nhầm thành "thuê bao của gian hàng này đã bị huỷ".
+ */
+const RETIRED_PLAN_CODES = ['standard', 'pro'] as const;
+
+/**
+ * Gỡ hai bậc cũ khỏi danh mục — XOÁ khi không còn ai trỏ tới, ARCHIVE khi còn.
+ *
+ * Không bao giờ xoá cứng một bậc còn thuê bao: `tenant_subscriptions.plan_id` là
+ * `ON DELETE RESTRICT`, và kể cả nếu không thì xoá nó là xoá mất mã gói mà một hoá đơn đã
+ * phát hành đang nhắc tới. Ở DB đã reset thì nhánh xoá chạy; ở một môi trường còn thuê bao cũ
+ * thì seed để lại bậc đó, lật `archived`, và NÓI RA — im lặng ở đây là admin mở màn gói ra
+ * thấy một hàng mà tài liệu bảo là đã bỏ.
+ */
+async function retireLegacyPlans(): Promise<void> {
+  for (const code of RETIRED_PLAN_CODES) {
+    const plan = await prisma.plan.findUnique({
+      where: { code },
+      select: { id: true, _count: { select: { subscriptions: true } } },
+    });
+    if (!plan) continue;
+    if (plan._count.subscriptions > 0) {
+      await prisma.plan.update({
+        where: { id: plan.id },
+        data: { status: PLAN_STATUS.ARCHIVED },
+      });
+      log(
+        `  ⚠️  gói cũ "${code}" còn ${plan._count.subscriptions} thuê bao trỏ tới — giữ lại và ` +
+          'lật NGỪNG BÁN thay vì xoá. Chạy lại seed một lượt nữa: lượt này vừa dọn xong các dòng ' +
+          'thuê bao lạc của gian hàng demo, nên lượt sau sẽ xoá được hàng gói cũ.',
+      );
+      continue;
+    }
+    await prisma.plan.delete({ where: { id: plan.id } });
+    log(`  gỡ gói cũ khỏi danh mục: ${code}`);
+  }
+}
 async function seedPlans(): Promise<PlanIds> {
   const byCode: PlanIds = new Map();
+  await retireLegacyPlans();
   for (const plan of PLANS) {
     const id = seedId(`plan:${plan.code}`);
     const fields = {

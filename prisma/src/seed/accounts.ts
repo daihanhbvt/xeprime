@@ -28,6 +28,12 @@ export interface PasswordUserInput {
   displayName: string;
   phone?: string;
   phoneVerified?: boolean;
+  /**
+   * Ảnh đại diện. Với chủ xe tuyến HOA HỒNG đây không phải trang trí: trang gian hàng cá nhân
+   * và mọi thẻ xe của họ lấy chính avatar này làm ảnh đại diện khi không có logo
+   * (`PublicListingsService.storefrontAvatar`).
+   */
+  avatarUrl?: string;
 }
 
 /**
@@ -51,6 +57,9 @@ export async function upsertPasswordUser(input: PasswordUserInput): Promise<stri
       status: USER_STATUS.ACTIVE,
       phone: input.phone ?? null,
       phoneVerifiedAt: input.phoneVerified ? new Date() : null,
+      // Bản khai không có ảnh thì GIỮ ảnh đang có thay vì ghi null: người chạy seed có thể đã
+      // tự đặt avatar cho một tài khoản demo, và seed chạy lại không nên xoá thứ đó.
+      ...(input.avatarUrl ? { avatarUrl: input.avatarUrl } : {}),
     };
     if (existing) {
       await tx.user.update({ where: { id: userId }, data: common });

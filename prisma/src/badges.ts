@@ -1,7 +1,9 @@
 import {
   BELL_HIDDEN_NOTIFICATION_TYPES,
+  CHAT_INBOX,
   CHAT_SIDE,
   MEMBERSHIP_STATUS,
+  type ChatInbox,
   type ChatSide,
   type UserBadgeCounts,
 } from '@xeprime/types';
@@ -25,7 +27,7 @@ import type { PrismaClient } from '../generated/client';
 type Client = PrismaClient | Prisma.TransactionClient;
 
 /**
- * Phạm vi hộp thư của MỘT bề mặt — định nghĩa DUY NHẤT của câu "hội thoại nào là của tôi".
+ * Phạm vi của MỘT hộp thư — định nghĩa DUY NHẤT của câu "hội thoại nào là của tôi".
  *
  * `ChatService.inboxWhere` chồng thêm bộ lọc tìm kiếm/chưa-đọc lên đúng cái này thay vì viết lại,
  * nên danh sách hộp thư, số chưa đọc và quyền truy cập không thể nói ba điều khác nhau.
@@ -34,13 +36,28 @@ type Client = PrismaClient | Prisma.TransactionClient;
  * việc riêng của họ, không phải việc của hộp thư công việc.
  */
 export function chatInboxScope(
-  side: ChatSide,
+  inbox: ChatInbox,
   userId: string,
   tenantIds: readonly string[],
 ): Prisma.ConversationWhereInput {
-  return side === CHAT_SIDE.CUSTOMER
-    ? { customerUserId: userId }
-    : { tenantId: { in: [...tenantIds] }, NOT: { customerUserId: userId } };
+  const asCustomer: Prisma.ConversationWhereInput = { customerUserId: userId };
+  const asShop: Prisma.ConversationWhereInput = {
+    tenantId: { in: [...tenantIds] },
+    NOT: { customerUserId: userId },
+  };
+
+  if (inbox === CHAT_INBOX.CUSTOMER) return asCustomer;
+  if (inbox === CHAT_INBOX.SHOP) return asShop;
+  /*
+   * HỢP NHẤT — và hai vế RỜI NHAU theo đúng định nghĩa ở trên: vế gian hàng loại trừ chính
+   * những hội thoại mà người này là khách (`NOT customerUserId`). Không có dòng nào đếm hai
+   * lần, nên phân trang, tổng và số chưa đọc đều cộng thẳng được.
+   *
+   * Nó KHÔNG mở thêm phạm vi nào: đúng bằng hai phạm vi người gọi đã có, gộp trong một truy vấn
+   * để phân trang và sắp xếp diễn ra ở SERVER. Ghép hai trang kết quả ở client sẽ cho ra những
+   * trang dài ngắn khác nhau và một thứ tự thời gian sai ngay ở trang thứ hai.
+   */
+  return { OR: [asCustomer, asShop] };
 }
 
 /** Gian hàng mà người này đang là thành viên active — phạm vi của hộp thư công việc. */

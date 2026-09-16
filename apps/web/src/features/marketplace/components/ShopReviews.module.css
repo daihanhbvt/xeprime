@@ -1,0 +1,144 @@
+.section {
+  max-width: var(--xp-container-max-width);
+  margin: 0 auto;
+  padding: 8px 20px 48px;
+}
+
+/*
+ * Tiêu đề khối dùng font CHỮ THƯỜNG đậm, không phải serif hiển thị.
+ *
+ * Serif ở trang này dành cho hai thứ mang danh tính: TÊN gian hàng và các con số nổi bật. Dùng
+ * nó cho cả tiêu đề khối nữa thì ba cấp chữ cùng một kiểu và không cấp nào nổi lên — tên gian
+ * hàng mất chỗ đứng của nó.
+ */
+.title {
+  margin: 0 0 16px;
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
+  font-weight: var(--xp-font-weight-bold);
+  color: var(--xp-color-text);
+}
+
+.empty {
+  margin: 0;
+  padding: 28px;
+  border: 1px dashed var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  color: var(--xp-color-text-secondary);
+  text-align: center;
+}
+
+/*
+ * Lưới tự co: một gian hàng mới có thể chỉ có một đánh giá, và một thẻ kéo dài hết 1280px trông
+ * như lỗi. `auto-fill` với minmax giữ bề rộng thẻ ổn định ở mọi số lượng.
+ */
+.list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--xp-gold-wash);
+  color: var(--xp-gold-deep);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.name {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.date {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+/*
+ * Nhận xét dài bị cắt ở 4 dòng để lưới không xô lệch vì một khách viết cả trang. Cắt bằng CSS
+ * chứ không cắt chuỗi ở server: chuỗi đầy đủ vẫn nằm trong HTML cho công cụ tìm kiếm, và thẻ
+ * vẫn mở rộng đúng khi người dùng phóng to chữ.
+ */
+.comment {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: 1.6;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.vehicle {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 4px 10px;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vehicle:hover {
+  background: var(--xp-color-bg-selected);
+  color: var(--xp-gold-deep);
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 8px 16px 40px;
+  }
+
+
+  .list {
+    grid-template-columns: 1fr;
+  }
+}

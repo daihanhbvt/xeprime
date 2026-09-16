@@ -3926,8 +3926,17 @@ model Wallet {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  ownerUser   User?               @relation("wallet_user", fields: [ownerUserId], references: [id], onDelete: Cascade)
-  ownerTenant Tenant?             @relation(fields: [ownerTenantId], references: [id], onDelete: Cascade)
+  /// ⚠️ `Restrict`, KHÔNG phải `Cascade` (15/09/2026).
+  ///
+  /// Đây là SỔ CÔNG NỢ PHẢI TRẢ. Với `Cascade`, một `DELETE` cứng trên `users`/`tenants` xoá
+  /// sạch ví, sổ cái và mọi lệnh rút — im lặng, không để lại vết. Xoá tài khoản thật đi qua
+  /// support case nên chưa ai chạm đường đó, nhưng `prisma/src/cleanup-test-data.ts` gọi thẳng
+  /// `deleteMany` trên cả hai bảng và staging thì được dọn định kỳ.
+  ///
+  /// `Restrict` buộc người xoá phải xử lý nghĩa vụ TRƯỚC, tường minh. Cùng kỷ luật mà
+  /// `withdrawal_requests.requested_by_user_id` đã dùng từ đầu (`NoAction`).
+  ownerUser   User?               @relation("wallet_user", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  ownerTenant Tenant?             @relation(fields: [ownerTenantId], references: [id], onDelete: Restrict)
   entries     WalletEntry[]
   withdrawals WithdrawalRequest[]
 

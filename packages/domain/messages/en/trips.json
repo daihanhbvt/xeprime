@@ -16,7 +16,9 @@
     "stageAll": "All statuses",
     "stageEmptyTitle": "No trips with this status",
     "stageEmptyBody": "The filter applies to the page you are viewing. Clear it or try another page.",
-    "stageClear": "Clear status filter"
+    "stageClear": "Clear status filter",
+    "emptyTransitionalTitle": "No rental trips in progress",
+    "emptyTransitionalBody": "Every trip you rented has been closed. Trips where customers book your shop are under Bookings."
   },
   "auth": {
     "expiredTitle": "Your session has expired",
@@ -264,5 +266,11 @@
     "ownerNet": "You receive",
     "noteRenter": "Priced with the policy in force. The final amount is confirmed when the host approves.",
     "noteHost": "Trip fees sit on the guest side and are not deducted from your payout. The final amount is confirmed when you approve."
+  },
+  "transitional": {
+    "title": "Trips I rented",
+    "cardTitle": "Open rental trips",
+    "cardBody": "You still have trips you rented from other hosts, from before you opened your shop. Those trips, their messages and their refunds stay here.",
+    "open": "View rental trips"
   }
 }

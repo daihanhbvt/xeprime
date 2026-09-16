@@ -135,6 +135,33 @@ describe('compactMoneyParts — rút gọn cho chỗ hẹp', () => {
     expect(compactMoneyParts('999', VI)).toBeNull();
     expect(compactMoneyParts('0', VI)).toBeNull();
   });
+
+  /*
+   * Hai chữ số lẻ là bậc dành cho GIÁ — con số khách quyết định mua bằng nó. Ở một chữ số,
+   * `1.050.000` in ra `1tr` và `1.350.000` in ra `1,3tr`: cùng sai 50.000đ trên đúng cái số
+   * mà khách dùng để so hai chiếc xe.
+   */
+  it('2 chữ số lẻ giữ nguyên giá thuê thực tế (bội của 10.000đ)', () => {
+    expect(compactMoneyParts('1050000', VI, 2)).toEqual({ value: '1,05', unit: 'million' });
+    expect(compactMoneyParts('1350000', VI, 2)).toEqual({ value: '1,35', unit: 'million' });
+    expect(compactMoneyParts('12750000', VI, 2)).toEqual({ value: '12,75', unit: 'million' });
+    expect(compactMoneyParts('1050000', EN, 2)).toEqual({ value: '1.05', unit: 'million' });
+  });
+
+  it('2 chữ số lẻ vẫn cắt số 0 thừa ở đuôi', () => {
+    // `30` phần trăm triệu là `,3` — `1,30tr` là hai ký tự thừa ở chỗ vốn đã hẹp.
+    expect(compactMoneyParts('1300000', VI, 2)).toEqual({ value: '1,3', unit: 'million' });
+    expect(compactMoneyParts('12000000', VI, 2)).toEqual({ value: '12', unit: 'million' });
+  });
+
+  it('bậc nghìn không đổi theo số chữ số lẻ — phần nguyên ≥ 100 vốn đã bỏ phần lẻ', () => {
+    expect(compactMoneyParts('600000', VI, 1)).toEqual({ value: '600', unit: 'thousand' });
+    expect(compactMoneyParts('600000', VI, 2)).toEqual({ value: '600', unit: 'thousand' });
+  });
+
+  it('mặc định vẫn là 1 chữ số lẻ — trục biểu đồ không tự nhiên dài ra', () => {
+    expect(compactMoneyParts('1350000', VI)).toEqual({ value: '1,3', unit: 'million' });
+  });
 });
 
 /*

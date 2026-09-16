@@ -1,0 +1,48 @@
+/*
+ * Nhãn tuyến tài khoản. Hai cỡ, cùng một hình dạng — khác nhau đúng ở chỗ nhãn cỡ nhỏ phải sống
+ * được trong dropdown avatar ở màn hẹp, nơi tên người dùng đã chiếm gần hết chiều ngang.
+ */
+
+.badge {
+  margin-inline-end: 0;
+  font-weight: 500;
+  white-space: normal;
+}
+
+.small {
+  margin-inline-end: 0;
+  font-size: 11px;
+  line-height: 18px;
+  padding-inline: 6px;
+  /*
+   * `max-width` + cắt chữ: tên gói là DỮ LIỆU admin đặt, không có trần độ dài nào ở DB ngoài
+   * varchar(255). Một tên dài trong dropdown avatar sẽ đẩy vỡ layout ở 400px nếu không cắt.
+   */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/**
+ * DẤU XÁC THỰC của chủ gian hàng — nền vàng nhạt, chữ đen, tích vàng đặc.
+ *
+ * Không dùng `Tag color="gold"` của AntD: bảng màu preset của nó đặt cả chữ lẫn viền theo cùng
+ * một tông, và tông vàng đủ đậm để chữ đạt AA thì nền cũng đậm theo — thành một nhãn cảnh báo.
+ * Ở đây màu thương hiệu dồn vào cái TÍCH (không mang chữ, không có ngưỡng tương phản của chữ),
+ * còn chữ giữ `--xp-color-text` để đọc được ở mọi cỡ.
+ */
+.verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--xp-gold-wash);
+  border: 1px solid var(--xp-gold-soft);
+  color: var(--xp-color-text);
+}
+
+.verifiedMark {
+  color: var(--xp-color-primary);
+  /* Tích phải cân quang học với chữ, không to hơn — nó là dấu, không phải biểu tượng chính. */
+  font-size: 1em;
+}

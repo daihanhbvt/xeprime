@@ -17,7 +17,7 @@
  *   pnpm db:cleanup-test          # đếm, không xoá
  *   pnpm db:cleanup-test --execute
  */
-import { createPrismaClient } from './index';
+import { createPrismaClient, Prisma } from './index';
 import { SEED_OWNED_EMAILS, SEED_OWNED_TENANT_SLUGS } from './seed/identities';
 
 const prisma = createPrismaClient();
@@ -131,19 +131,69 @@ async function main(): Promise<void> {
     return;
   }
 
-  // Một transaction: hoặc dọn sạch, hoặc không đụng gì. Xoá tenant trước để cascade gỡ hết dữ
-  // liệu phụ thuộc, rồi mới tới user (user có thể là chủ tenant).
+  /*
+   * SỔ CÔNG NỢ PHẢI TRẢ phải được gỡ TƯỜNG MINH, không đi nhờ cascade (15/09/2026).
+   *
+   * `wallets.owner_user_id`/`owner_tenant_id` nay là `ON DELETE RESTRICT`, nên `tenant.deleteMany`
+   * dưới đây sẽ NÉM nếu còn ví — và đó là điều đúng: một script dọn dữ liệu test không được phép
+   * xoá số dư, sổ cái và lệnh rút của ai đó chỉ vì tên họ khớp một bộ lọc.
+   *
+   * Vì vậy ví bị xoá ở đây, trước, và CHỈ khi không còn nghĩa vụ nào: có số dư, có khoản đang
+   * chờ rút, hay có lệnh rút chưa chung cuộc thì dừng hẳn và báo người vận hành. Trên staging,
+   * dữ liệu demo luôn thoả điều kiện đó; nếu không thoả thì đúng là có thứ không nên xoá.
+   */
   const result = await prisma.$transaction(async (tx) => {
+    const wallets = await tx.wallet.findMany({
+      where: {
+        OR: [{ ownerUserId: { in: userIds } }, { ownerTenantId: { in: tenantIds } }],
+      },
+      select: { id: true, balance: true, pendingWithdrawAmount: true },
+    });
+    const walletIds = wallets.map((w) => w.id);
+
+    const owed = wallets.filter(
+      (w) => !w.balance.isZero() || !w.pendingWithdrawAmount.isZero(),
+    );
+    if (owed.length > 0) {
+      throw new Error(
+        `DỪNG: ${owed.length} ví còn nghĩa vụ chưa trả (tổng ` +
+          `${owed.reduce((s, w) => s.add(w.balance).add(w.pendingWithdrawAmount), new Prisma.Decimal(0)).toFixed(0)}đ). ` +
+          'Xử lý số dư trước khi dọn — script này không xoá tiền của ai.',
+      );
+    }
+
+    const liveWithdrawals = walletIds.length
+      ? await tx.withdrawalRequest.count({
+          where: { walletId: { in: walletIds }, status: { in: ['pending', 'approved'] } },
+        })
+      : 0;
+    if (liveWithdrawals > 0) {
+      throw new Error(
+        `DỪNG: còn ${liveWithdrawals} lệnh rút chưa chung cuộc. Duyệt/từ chối trước khi dọn.`,
+      );
+    }
+
+    if (walletIds.length) {
+      await tx.walletEntry.deleteMany({ where: { walletId: { in: walletIds } } });
+      await tx.withdrawalRequest.deleteMany({ where: { walletId: { in: walletIds } } });
+      await tx.wallet.deleteMany({ where: { id: { in: walletIds } } });
+    }
+    await tx.bankAccount.deleteMany({
+      where: { OR: [{ ownerUserId: { in: userIds } }, { ownerTenantId: { in: tenantIds } }] },
+    });
+
     const tenantsDeleted = tenantIds.length
       ? (await tx.tenant.deleteMany({ where: { id: { in: tenantIds } } })).count
       : 0;
     const usersDeleted = userIds.length
       ? (await tx.user.deleteMany({ where: { id: { in: userIds } } })).count
       : 0;
-    return { tenantsDeleted, usersDeleted };
+    return { tenantsDeleted, usersDeleted, walletsDeleted: walletIds.length };
   });
 
-  console.log(`\nĐã xoá: tenants=${result.tenantsDeleted}, users=${result.usersDeleted}`);
+  console.log(
+    `\nĐã xoá: tenants=${result.tenantsDeleted}, users=${result.usersDeleted}, ví=${result.walletsDeleted}`,
+  );
 }
 
 main()

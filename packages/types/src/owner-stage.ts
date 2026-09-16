@@ -92,3 +92,41 @@ export function isCommissionTrack(
     tenant?.roleKey === TENANT_ROLE.SHOP_OWNER && tenant.billingMode !== BILLING_MODE.PACKAGE
   );
 }
+
+/**
+ * ── HAI CÂU HỎI, TÁCH RA (15/09/2026) ───────────────────────────────────────────────────────
+ *
+ * `isCommissionTrack` ở trên trả lời "người này có phải CHỦ XE tuyến hoa hồng không" — nó hỏi cả
+ * vai lẫn tuyến. Cổng `/manage` từng dùng chính nó, và đó là lỗi: điều kiện `roleKey ===
+ * shop_owner` khiến hàm trả `false` cho quản lý/nhân viên/người xem, nên `canUseManagePortal`
+ * cho họ vào Manage của **mọi** gian hàng — kể cả gian hàng tuyến hoa hồng và gian hàng đã hết
+ * gói. Docblock của `resolveWorkspaceHref` còn ghi hẳn điều đó ra như một quy tắc.
+ *
+ * Hai hàm dưới đây hỏi đúng MỘT chuyện mỗi hàm:
+ *
+ *   tenantUsesManagePortal   — GIAN HÀNG này có bộ quản lý đầy đủ không?  (thuộc tính của TENANT)
+ *   isCommissionOwnerAccount — NGƯỜI này là chủ xe Owner Lite không?      (vai + tuyến)
+ *
+ * Câu thứ nhất không hỏi vai, nên nó áp cho mọi thành viên: hết gói thì cả gian hàng ra khỏi
+ * Manage, không ai ở lại chỉ vì `roleKey` của họ khác `shop_owner`.
+ */
+
+/** Tenant đang mang thuê bao hiệu lực (kể cả trong ÂN HẠN) ⇒ được dùng `/manage`. */
+export function tenantUsesManagePortal(
+  tenant: { billingMode?: string | null } | null | undefined,
+): boolean {
+  return tenant?.billingMode === BILLING_MODE.PACKAGE;
+}
+
+/**
+ * Người này là CHỦ XE tuyến hoa hồng — làm việc ở Owner Lite trong `/account`.
+ *
+ * Khác `tenantUsesManagePortal` ở chỗ nó hỏi thêm VAI: nhân viên của một gian hàng tuyến hoa
+ * hồng không phải chủ xe, họ chỉ là một con người có tài khoản (và menu `/account` của họ là
+ * menu khách thuê).
+ */
+export function isCommissionOwnerAccount(
+  tenant: (OwnerStageInput & { billingMode?: string | null }) | null | undefined,
+): boolean {
+  return tenant?.roleKey === TENANT_ROLE.SHOP_OWNER && !tenantUsesManagePortal(tenant);
+}

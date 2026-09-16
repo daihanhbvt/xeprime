@@ -6,6 +6,7 @@ import {
   CurrentUser,
   RequirePermissions,
   RequiresFeature,
+  SubscriptionTrackOnly,
   TenantScoped,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
@@ -24,6 +25,7 @@ import { MembersService } from './members.service';
 @ApiTags('members')
 @Controller('members')
 @TenantScoped()
+@SubscriptionTrackOnly()
 @RequiresFeature(PLAN_FEATURE.MEMBERS)
 export class MembersController {
   constructor(private readonly members: MembersService) {}

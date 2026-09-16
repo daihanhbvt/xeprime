@@ -2,6 +2,8 @@ import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   BILLING_MODE,
+  BILLING_PHASE,
+  OWNER_LITE_VEHICLE_LIMIT,
   PLAN_STATUS,
   SUBSCRIPTION_STATUS,
   VEHICLE_TYPE,
@@ -36,12 +38,20 @@ let tenantFreeId: string;
 let tenantPkgId: string;
 let tenantQuotaId: string;
 let planId: string;
+let packagePlanId: string;
 let pkgPlanId: string;
 const planIds: string[] = [];
+/** Tenant do từng test tự dựng — afterAll dọn cùng bộ với bốn tenant cố định. */
+const cleanupTenantIds: string[] = [];
 
 type CreatePlanInput = Parameters<typeof billing.createPlan>[1];
 
-/** Mặc định: bậc tuyến hoa hồng 10% (hình dạng tối thiểu hợp lệ sau ADR 0020). */
+/**
+ * Bậc gói mới qua ĐƯỜNG ADMIN. Mặc định `package` — từ 15/09/2026 tuyến hoa hồng là một bậc
+ * DUY NHẤT được bảo vệ, nên `createPlan` từ chối bậc `commission` thứ hai
+ * (`COMMISSION_PLAN_IS_SINGLETON`). Bậc hoa hồng dùng trong spec này dựng bằng
+ * `mkCommissionPlanDirect` bên dưới.
+ */
 async function mkPlan(
   code: string,
   opts: { maxVehicles?: number | null } & Partial<CreatePlanInput> = {},
@@ -50,11 +60,39 @@ async function mkPlan(
   const plan = await billing.createPlan(actorId, {
     code: `${code}-${RUN}`,
     name: `Gói ${code}`,
-    billingMode: BILLING_MODE.COMMISSION,
-    commissionPercent: 10,
+    billingMode: BILLING_MODE.PACKAGE,
     price: '500000',
     maxVehicles: maxVehicles ?? null,
     ...rest,
+  });
+  planIds.push(plan.id);
+  return plan;
+}
+
+/**
+ * Bậc TUYẾN HOA HỒNG dựng thẳng bằng Prisma, cố ý đi vòng qua `BillingService`.
+ *
+ * Không phải một cửa hậu: danh mục THẬT chỉ có đúng một bậc hoa hồng (`free`, seed dữ liệu
+ * nền), và spec này cần một bậc RIÊNG để bật/tắt tự do mà không đụng bậc mặc định của
+ * database test — bậc đó là thứ mọi spec khác dựa vào. Cổng singleton ở tầng service được
+ * kiểm riêng ở test "bậc hoa hồng là SINGLETON".
+ */
+async function mkCommissionPlanDirect(code: string, opts: { maxVehicles?: number | null } = {}) {
+  const plan = await prisma.plan.create({
+    data: {
+      id: newId(),
+      code: `${code}-${RUN}`,
+      name: `Gói ${code}`,
+      status: PLAN_STATUS.ACTIVE,
+      billingMode: BILLING_MODE.COMMISSION,
+      commissionPercent: 10,
+      price: '0',
+      durationDays: 30,
+      maxVehicles: opts.maxVehicles ?? null,
+      // `sortOrder` lớn để bậc này KHÔNG bị chọn làm "gói mặc định" của database test
+      // (`loadDefaultCommissionPlanOrThrow` lấy `sort_order` nhỏ nhất).
+      sortOrder: 900,
+    },
   });
   planIds.push(plan.id);
   return plan;
@@ -107,20 +145,20 @@ afterAll(async () => {
       where: { targetType: { in: ['plan', 'tenant_subscription'] }, actorUserId: actorId },
     });
     await prisma.auditLog.deleteMany({
-      where: { tenantId: { in: [tenantId, tenantFreeId, tenantPkgId, tenantQuotaId] } },
+      where: { tenantId: { in: [tenantId, tenantFreeId, tenantPkgId, tenantQuotaId, ...cleanupTenantIds] } },
     });
     await prisma.subscriptionInvoice.deleteMany({
-      where: { tenantId: { in: [tenantId, tenantFreeId, tenantPkgId, tenantQuotaId] } },
+      where: { tenantId: { in: [tenantId, tenantFreeId, tenantPkgId, tenantQuotaId, ...cleanupTenantIds] } },
     });
     await prisma.tenantSubscription.deleteMany({
-      where: { tenantId: { in: [tenantId, tenantFreeId, tenantPkgId, tenantQuotaId] } },
+      where: { tenantId: { in: [tenantId, tenantFreeId, tenantPkgId, tenantQuotaId, ...cleanupTenantIds] } },
     });
     await prisma.plan.deleteMany({ where: { id: { in: planIds } } });
     await prisma.vehicle.deleteMany({
-      where: { tenantId: { in: [tenantId, tenantFreeId, tenantPkgId, tenantQuotaId] } },
+      where: { tenantId: { in: [tenantId, tenantFreeId, tenantPkgId, tenantQuotaId, ...cleanupTenantIds] } },
     });
     await prisma.tenant.deleteMany({
-      where: { id: { in: [tenantId, tenantFreeId, tenantPkgId, tenantQuotaId] } },
+      where: { id: { in: [tenantId, tenantFreeId, tenantPkgId, tenantQuotaId, ...cleanupTenantIds] } },
     });
     await prisma.user.deleteMany({ where: { id: actorId } });
   }
@@ -136,7 +174,7 @@ const maybe = (name: string, fn: () => Promise<void>) =>
 describe('Billing — plans & subscriptions (ADR 0010)', () => {
   maybe('plan: tạo (+audit), trùng code → CONFLICT, sửa, archive chặn gán mới', async () => {
     const plan = await mkPlan('basic', { maxVehicles: 1 });
-    planId = plan.id;
+    packagePlanId = plan.id;
     expect(plan.status).toBe(PLAN_STATUS.ACTIVE);
     expect(plan.price).toBe('500000');
 
@@ -149,8 +187,7 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
       billing.createPlan(actorId, {
         code: `basic-${RUN}`,
         name: 'Trùng',
-        billingMode: BILLING_MODE.COMMISSION,
-        commissionPercent: 10,
+        billingMode: BILLING_MODE.PACKAGE,
         price: '1',
       }),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.CONFLICT } });
@@ -166,6 +203,86 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.CONFLICT } });
   });
 
+  maybe(
+    'tuyến hoa hồng là bậc DUY NHẤT và được bảo vệ: không tạo bậc thứ hai, không archive, không đổi sang package',
+    async () => {
+      /*
+       * Ba cổng, một lý do: `assignDefaultPlanWithinTx` và job vòng đời đều chọn "bậc
+       * commission đang bán có `sort_order` nhỏ nhất". Bậc thứ hai biến phép chọn đó thành xổ
+       * số; archive hoặc đổi bậc duy nhất sang `package` thì phép chọn không còn gì để chọn và
+       * mọi gian hàng mở sau đó ra đời KHÔNG có tuyến thu phí.
+       */
+      const existing = await prisma.plan.findFirst({
+        where: { billingMode: BILLING_MODE.COMMISSION },
+        orderBy: { sortOrder: 'asc' },
+        select: { id: true, code: true },
+      });
+      expect(existing).toBeTruthy();
+
+      await expect(
+        billing.createPlan(actorId, {
+          code: `comm-2-${RUN}`,
+          name: 'Hoa hồng thứ hai',
+          billingMode: BILLING_MODE.COMMISSION,
+          commissionPercent: 12,
+        }),
+      ).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.COMMISSION_PLAN_IS_SINGLETON },
+      });
+
+      await expect(billing.archivePlan(actorId, existing!.id)).rejects.toMatchObject({
+        response: {
+          code: API_ERROR_CODE.DEFAULT_PLAN_PROTECTED,
+          details: { operation: 'archive' },
+        },
+      });
+
+      await expect(
+        billing.updatePlan(actorId, existing!.id, { billingMode: BILLING_MODE.PACKAGE }),
+      ).rejects.toMatchObject({
+        response: {
+          code: API_ERROR_CODE.DEFAULT_PLAN_PROTECTED,
+          details: { operation: 'change_billing_mode' },
+        },
+      });
+
+      // Chiều ngược lại cũng chặn: nâng một bậc `package` lên `commission` sinh ra bậc thứ hai.
+      await expect(
+        billing.updatePlan(actorId, packagePlanId, {
+          billingMode: BILLING_MODE.COMMISSION,
+          commissionPercent: 10,
+        }),
+      ).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.COMMISSION_PLAN_IS_SINGLETON },
+      });
+
+      // % phí dịch vụ vẫn sửa được TRÊN CHÍNH bậc đó — đó là dữ liệu, không phải cấu trúc.
+      const before = await prisma.plan.findUniqueOrThrow({
+        where: { id: existing!.id },
+        select: { commissionPercent: true },
+      });
+      const bumped = await billing.updatePlan(actorId, existing!.id, { commissionPercent: 11 });
+      expect(bumped.commissionPercent).toBe(11);
+      await billing.updatePlan(actorId, existing!.id, {
+        commissionPercent: Number(before.commissionPercent),
+      });
+    },
+  );
+
+  maybe(
+    'danh mục BÁN cho gian hàng chỉ có bậc `package` — tuyến hoa hồng không phải một SKU',
+    async () => {
+      const catalog = await billing.listPlansForTenant();
+      expect(catalog.length).toBeGreaterThan(0);
+      expect(catalog.every((plan) => plan.billingMode === BILLING_MODE.PACKAGE)).toBe(true);
+
+      // Mọi bậc trong danh mục đều bán được ít nhất một kỳ hạn, và kỳ hạn đó nằm trong
+      // `limits.terms` — màn mua dựng thẻ từ chính danh sách này.
+      for (const plan of catalog) {
+        expect(plan.status).toBe(PLAN_STATUS.ACTIVE);
+      }
+    },
+  );
   maybe(
     'bậc gói package (ADR 0029): phí nền 0đ hợp lệ, không cần giả định, % hoa hồng tự xoá',
     async () => {
@@ -252,6 +369,7 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
       const before = await billing.currentPlan(tenantId);
       expect(before).toBeNull();
 
+      planId = (await mkCommissionPlanDirect('basic-comm', { maxVehicles: 1 })).id;
       const first = await billing.assign(tenantId, actorId, {
         planId,
         termMonths: 1,
@@ -274,28 +392,45 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
       expect(current?.billingMode).toBe(BILLING_MODE.COMMISSION);
       expect(current?.commissionPercent).toBe(10);
 
-      // Gia hạn trước hạn → chu kỳ mới NỐI ĐUÔI, không chồng; 12 tháng lịch từ điểm nối.
+      /*
+       * Gán LẠI bậc hoa hồng KHÔNG nối đuôi — nó THAY dòng cũ (15/09/2026).
+       *
+       * Dòng hoa hồng là dòng hệ thống 0đ, không ai trả gì cho nó, nên không có kỳ nào để tôn
+       * trọng. Nối sau nó là cách một gian hàng vừa MUA GÓI phải đợi hết 12 tháng hoa hồng mới
+       * được dùng thứ họ đã trả tiền — xem test "NÂNG CẤP hoa hồng → gói" bên dưới.
+       *
+       * Bất biến còn lại vẫn nguyên: đúng MỘT dòng hiệu lực, và lịch sử giữ đủ hai dòng.
+       */
       const second = await billing.assign(tenantId, actorId, { planId, termMonths: 12 });
-      expect(second.startsAt).toBe(first.endsAt);
+      expect(new Date(second.startsAt).getTime()).toBeLessThan(new Date(first.endsAt).getTime());
       expect(second.endsAt).toBe(addCalendarMonthsVn(new Date(second.startsAt), 12).toISOString());
+
+      const replaced = await prisma.tenantSubscription.findUniqueOrThrow({
+        where: { id: first.id },
+        select: { status: true },
+      });
+      expect(replaced.status).toBe(SUBSCRIPTION_STATUS.CANCELLED);
 
       const history = await billing.listSubscriptions(tenantId, {});
       expect(history.meta.total).toBe(2);
       expect(history.data[0]!.id).toBe(second.id); // mới nhất trước
 
-      const renewAudit = await prisma.auditLog.findFirst({
-        where: { targetId: second.id, action: 'subscription.renew' },
-      });
-      expect(renewAudit).toBeTruthy();
-      const assignAudit = await prisma.auditLog.findFirst({
-        where: { targetId: first.id, action: 'subscription.assign' },
-      });
-      expect(assignAudit).toBeTruthy();
+      /*
+       * Cả hai lượt đều là `assign`, KHÔNG phải `renew`: `renew` dành riêng cho việc nối sau
+       * một kỳ đã trả tiền, và gọi một lần thay dòng 0đ là "gia hạn" làm mất dấu đúng sự kiện
+       * mà một cuộc đối soát doanh thu đi tìm. Ca `renew` thật được khoá ở test riêng bên dưới.
+       */
+      for (const id of [first.id, second.id]) {
+        const assignAudit = await prisma.auditLog.findFirst({
+          where: { targetId: id, action: 'subscription.assign' },
+        });
+        expect(assignAudit).toBeTruthy();
+      }
     },
   );
 
   maybe(
-    'quota CHỖ theo LOẠI XE (ADR 0015 điều 1+7): slots chặn từng loại kèm details; tuyến hoa hồng và không gói thoải mái',
+    'quota: tuyến gói chặn theo LOẠI (ADR 0015), tuyến hoa hồng chặn theo TỔNG 3 xe (Owner Lite)',
     async () => {
       const mkVehicle = (tid: string, code: string, type: string = VEHICLE_TYPE.CAR) =>
         createVehicle(tid, actorId, {
@@ -304,10 +439,12 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
           vehicleType: type,
         } as Parameters<typeof vehicles.create>[2]);
 
-      // tenantId đang có gói COMMISSION hiệu lực (test 'gán') → tuyến A không bán chỗ,
-      // KHÔNG giới hạn số xe (ADR 0020) — dù plan cũ ghi maxVehicles=1.
+      // tenantId đang có gói COMMISSION hiệu lực (test 'gán') → Owner Lite: trần 3 xe TỔNG,
+      // không đọc `maxVehicles` của bậc gói (ADR 0038).
       await mkVehicle(tenantId, `XE1-${RUN}`);
       await mkVehicle(tenantId, `XE2-${RUN}`);
+      const quota = await billing.vehicleQuotaFor(tenantId);
+      expect(quota).toEqual({ kind: 'total', limit: OWNER_LITE_VEHICLE_LIMIT, reason: 'owner_lite' });
 
       // Gói PACKAGE bán chỗ: mua 1 chỗ ô tô + 1 chỗ xe máy.
       const quotaPlan = await mkPlan('pkg-quota', {
@@ -374,9 +511,38 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
         }),
       ).resolves.toBeUndefined();
 
-      // Không có gói = không giới hạn (grandfather — ADR 0010).
+      /*
+       * KHÔNG có dòng thuê bao nào (`BILLING_PHASE.UNCONFIGURED`) đi CÙNG ĐƯỜNG với tuyến hoa
+       * hồng, không đi cùng đường với "không giới hạn" (ADR 0038 điều 1). Bản trước trả vô hạn
+       * ở đây, và vì `findCurrent` cũng trả `null` trong cả cửa sổ ÂN HẠN, trần biến mất định
+       * kỳ cho mọi tenant cùng lúc.
+       */
+      expect(await billing.vehicleQuotaFor(tenantFreeId)).toEqual({
+        kind: 'total',
+        limit: OWNER_LITE_VEHICLE_LIMIT,
+        // Chưa có dòng thuê bao nào ⇒ LỖI CẤU HÌNH, không phải Owner Lite — thông điệp khác hẳn.
+        reason: 'billing_unconfigured',
+      });
       await mkVehicle(tenantFreeId, `XF1-${RUN}`);
       await mkVehicle(tenantFreeId, `XF2-${RUN}`);
+
+      /*
+       * Trần là TỔNG, không phải 3 mỗi loại: hai ô tô + một xe máy đã đầy, và chiếc thứ tư bị
+       * từ chối dù nó là loại xe chưa chạm trần nào.
+       */
+      await mkVehicle(tenantFreeId, `XF3-${RUN}`, VEHICLE_TYPE.MOTORBIKE);
+      await expect(
+        mkVehicle(tenantFreeId, `XF4-${RUN}`, VEHICLE_TYPE.MOTORBIKE),
+      ).rejects.toMatchObject({
+        response: {
+          // Tenant này CHƯA có gói ⇒ mã nói về CẤU HÌNH, không nói về hạn mức gói.
+          code: API_ERROR_CODE.TENANT_BILLING_NOT_CONFIGURED,
+          details: { scope: 'owner_lite_total', used: 3, limit: OWNER_LITE_VEHICLE_LIMIT },
+        },
+      });
+      await expect(mkVehicle(tenantFreeId, `XF5-${RUN}`)).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.TENANT_BILLING_NOT_CONFIGURED },
+      });
     },
   );
 
@@ -480,33 +646,172 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
   );
 
   maybe(
-    'huỷ cả 2 chu kỳ → current null; huỷ lần nữa → INVALID_STATUS_TRANSITION; quota mở lại',
+    'huỷ cả 2 chu kỳ → current null; huỷ lần nữa → INVALID_STATUS_TRANSITION; trần về Owner Lite',
     async () => {
       const history = await billing.listSubscriptions(tenantId, {});
-      for (const sub of history.data) {
+      /*
+       * Chỉ huỷ dòng còn ACTIVE: dòng hoa hồng đầu tiên đã bị chính lượt gán thứ hai thay thế
+       * (`resolveChainStart`), nên nó vào đây với trạng thái `cancelled` sẵn.
+       */
+      const active = history.data.filter((sub) => sub.status === SUBSCRIPTION_STATUS.ACTIVE);
+      expect(active).toHaveLength(1);
+      for (const sub of active) {
         const cancelled = await billing.cancel(tenantId, actorId, sub.id);
         expect(cancelled.status).toBe(SUBSCRIPTION_STATUS.CANCELLED);
       }
       expect(await billing.currentPlan(tenantId)).toBeNull();
 
-      await expect(billing.cancel(tenantId, actorId, history.data[0]!.id)).rejects.toMatchObject({
+      await expect(billing.cancel(tenantId, actorId, active[0]!.id)).rejects.toMatchObject({
         response: { code: API_ERROR_CODE.INVALID_STATUS_TRANSITION },
       });
 
       const cancelAudit = await prisma.auditLog.count({
         where: { action: 'subscription.cancel', tenantId },
       });
-      expect(cancelAudit).toBe(2);
+      expect(cancelAudit).toBe(1);
 
-      // Hết gói giới hạn → tạo xe lại được (unlimited).
+      /*
+       * Huỷ hết thuê bao KHÔNG mở trần ra vô hạn — nó đưa tenant về Owner Lite (3 xe TỔNG).
+       * `tenantId` đang có 2 xe từ test quota, nên chiếc thứ 3 vào được và chiếc thứ 4 thì
+       * không. Đây là nơi bản cũ nói "unlimited", và câu đó chính là lỗ hổng ADR 0038 vá.
+       */
+      expect(await billing.vehicleQuotaFor(tenantId)).toEqual({
+        kind: 'total',
+        limit: OWNER_LITE_VEHICLE_LIMIT,
+        // Huỷ hết thuê bao ⇒ không còn dòng nào ⇒ "chưa cấu hình", không phải hoa hồng.
+        reason: 'billing_unconfigured',
+      });
       await createVehicle(tenantId, actorId, {
         code: `XE3-${RUN}`,
         name: 'Vios',
         vehicleType: VEHICLE_TYPE.CAR,
       } as Parameters<typeof vehicles.create>[2]);
+      await expect(
+        createVehicle(tenantId, actorId, {
+          code: `XE4-${RUN}`,
+          name: 'Vios',
+          vehicleType: VEHICLE_TYPE.CAR,
+        } as Parameters<typeof vehicles.create>[2]),
+      ).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.TENANT_BILLING_NOT_CONFIGURED },
+      });
     },
   );
 
+  maybe(
+    'NÂNG CẤP hoa hồng → gói có hiệu lực NGAY, không xếp hàng sau kỳ hoa hồng 12 tháng',
+    async () => {
+      /*
+       * Lỗi tiền thật mà test này khoá lại.
+       *
+       * Mọi tenant mang một dòng hoa hồng 0đ dài `COMMISSION_TRACK_TERM_MONTHS` (12 tháng) do
+       * `assignDefaultPlanWithinTx` gán lúc mở gian hàng. Phép "nối sau `ends_at` muộn nhất" đặt
+       * `starts_at` của gói vừa mua ở 12 THÁNG SAU — và `effectiveSubscriptionWhere` đòi
+       * `starts_at <= now`, nên dòng đó không được tính. Gian hàng trả tiền, hoá đơn `paid`,
+       * audit có, mà tuyến KHÔNG đổi: vẫn trần Owner Lite 3 xe, vẫn bị đẩy khỏi `/manage`, và
+       * khách của họ vẫn bị cộng phí dịch vụ. Không màn nào trông như đang hỏng.
+       */
+      const upgradeTenantId = newId();
+      await prisma.tenant.create({
+        data: {
+          id: upgradeTenantId,
+          code: `T-${upgradeTenantId.slice(-8)}`,
+          slug: `t-${upgradeTenantId.toLowerCase().slice(-10)}`,
+          name: `BillShop-upgrade-${RUN}`,
+          status: 'active',
+          ownerUserId: actorId,
+        },
+      });
+      cleanupTenantIds.push(upgradeTenantId);
+      await verifyShop(asService, upgradeTenantId, actorId);
+
+      // Đúng đường production: `registerShop` gán gói mặc định trong cùng transaction.
+      await prisma.$transaction((tx) => billing.assignDefaultPlanWithinTx(tx, upgradeTenantId));
+      const seeded = await billing.currentPlan(upgradeTenantId);
+      expect(seeded?.billingMode).toBe(BILLING_MODE.COMMISSION);
+
+      const pkg = await mkPlan(`pkg-upgrade`, {
+        billingMode: BILLING_MODE.PACKAGE,
+        basePriceMonthly: '0',
+        limits: {
+          perVehiclePrice: { car: '100000', motorbike: '40000' },
+          includedCars: 0,
+          includedMotorbikes: 0,
+          terms: [{ months: 3, discountPercent: 0 }],
+        },
+      });
+
+      const sub = await billing.assign(upgradeTenantId, actorId, {
+        planId: pkg.id,
+        termMonths: 3,
+        slots: { car: 2, motorbike: 0 },
+      });
+
+      // Bắt đầu NGAY, không phải sau 12 tháng.
+      expect(new Date(sub.startsAt).getTime()).toBeLessThanOrEqual(Date.now() + 5_000);
+
+      // Và đó mới là phép kiểm thật: tuyến HIỆU LỰC đã đổi.
+      const billingNow = await billing.effectiveBillingFor(upgradeTenantId);
+      expect(billingNow.billingMode).toBe(BILLING_MODE.PACKAGE);
+      expect(billingNow.phase).toBe(BILLING_PHASE.CURRENT);
+
+      // Trần xe đi theo tuyến ngay trong cùng một nhịp — không còn là 3 xe TỔNG.
+      expect(await billing.vehicleQuotaFor(upgradeTenantId)).toEqual({
+        kind: 'per_type',
+        limit: { car: 2, motorbike: 0 },
+      });
+
+      // Dòng hoa hồng bị HUỶ, không bị xoá — lịch sử tuyến phải kể lại được.
+      const rows = await prisma.tenantSubscription.findMany({
+        where: { tenantId: upgradeTenantId },
+        orderBy: { createdAt: 'asc' },
+        select: { status: true, billingMode: true },
+      });
+      expect(rows).toHaveLength(2);
+      expect(rows[0]).toEqual({
+        status: SUBSCRIPTION_STATUS.CANCELLED,
+        billingMode: BILLING_MODE.COMMISSION,
+      });
+      expect(rows[1]).toEqual({
+        status: SUBSCRIPTION_STATUS.ACTIVE,
+        billingMode: BILLING_MODE.PACKAGE,
+      });
+
+      // Và đúng MỘT dòng hiệu lực — bất biến mà `findCurrent` dựa vào.
+      const actives = await prisma.tenantSubscription.count({
+        where: {
+          tenantId: upgradeTenantId,
+          status: SUBSCRIPTION_STATUS.ACTIVE,
+          startsAt: { lte: new Date() },
+          endsAt: { gt: new Date() },
+        },
+      });
+      expect(actives).toBe(1);
+    },
+  );
+
+  maybe(
+    'GIA HẠN một kỳ ĐÃ TRẢ TIỀN vẫn nối đuôi — không cắt ngắn thứ khách đã mua',
+    async () => {
+      const before = await billing.currentPlan(tenantPkgId);
+      expect(before).toBeTruthy();
+
+      const renewed = await billing.assign(tenantPkgId, actorId, {
+        planId: pkgPlanId,
+        termMonths: 1,
+        slots: { car: 6, motorbike: 0 },
+      });
+      // Nối từ `ends_at` của kỳ đang chạy, KHÔNG từ `now`.
+      expect(new Date(renewed.startsAt).getTime()).toBeGreaterThanOrEqual(
+        new Date(before!.endsAt).getTime(),
+      );
+
+      const renewAudit = await prisma.auditLog.findFirst({
+        where: { targetId: renewed.id, action: 'subscription.renew' },
+      });
+      expect(renewAudit).toBeTruthy();
+    },
+  );
   maybe('id lạ → NOT_FOUND (plan / tenant / subscription)', async () => {
     await expect(billing.updatePlan(actorId, newId(), { price: '1' })).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.NOT_FOUND },

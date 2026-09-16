@@ -144,6 +144,26 @@ export const ROUTES = {
 
     // Cài đặt gian hàng
     SHOP: '/manage/shop',
+    /**
+     * Tài khoản & bảo mật của NGƯỜI đang đăng nhập — tách khỏi hồ sơ gian hàng (`SHOP`).
+     * Trước 15/09/2026 không có màn này, nên nhân viên sống trong `/manage` không có đường nào
+     * trong cổng để đổi mật khẩu của chính mình.
+     */
+    ACCOUNT: '/manage/account',
+    /**
+     * LỐI ĐI CHUYỂN TIẾP tới chuyến ĐI THUÊ cũ của người đang đăng nhập (15/09/2026).
+     *
+     * Chỉ dành cho người từng là chủ xe tuyến hoa hồng rồi nâng lên gian hàng tuyến gói: họ có
+     * thể còn chuyến đi thuê chưa khép, kênh liên hệ với chủ xe kia, và khoản hoàn chưa nhận.
+     * Ẩn `/trips` mà không để lại đường nào là GIẤU MẤT tiền và nghĩa vụ của chính họ.
+     *
+     * KHÔNG có mục menu nào dẫn tới đây — nó là lối THEO NGỮ CẢNH, hiện trong "Tài khoản & bảo
+     * mật" đúng khi còn chuyến. Một mục "Chuyến của tôi" thường trực trong Manage sẽ dựng lại
+     * đúng thứ tuyến gói vừa gỡ bỏ.
+     *
+     * Dữ liệu ở đây LUÔN khoá vai `renter`. Chuyến họ CHO THUÊ sống ở `/manage/bookings`.
+     */
+    ACCOUNT_TRIPS: '/manage/account/trips',
     /** Chi nhánh gian hàng — nơi xe thực sự nằm, và là vị trí công khai của xe. */
     SHOP_BRANCHES: '/manage/shop/branches',
     /** Chính sách thuê mặc định của gian hàng (Wave 2 — cọc/giao nhận/quá giờ/ưu đãi). */
@@ -485,7 +505,14 @@ export const receiptsPath = {
  * biết trước chuyến đã lên đơn hay chưa.
  */
 export const tripPath = {
-  detail: (id: string): string => `/trips/${id}`,
+  /**
+   * `base` đổi KHU chứa chuyến, không đổi chuyến.
+   *
+   * Cùng một chuyến đọc được từ hai vỏ: khu khách (`/trips`) và lối chuyển tiếp trong Manage
+   * (`/manage/account/trips`) — xem `ROUTES.MANAGE.ACCOUNT_TRIPS`. Ghép chuỗi tại nơi gọi thì mỗi
+   * màn tự nhớ một tiền tố, và một trong số đó sẽ trỏ ngược vào khu người dùng vừa bị đưa ra.
+   */
+  detail: (id: string, base: string = ROUTES.TRIPS): string => `${base}/${id}`,
 };
 
 /** Đường dẫn xe công khai trên Marketplace. */

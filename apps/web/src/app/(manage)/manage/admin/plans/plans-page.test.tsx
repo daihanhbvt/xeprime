@@ -294,6 +294,49 @@ describe('/manage/admin/plans — hành động', () => {
   });
 });
 
+describe('/manage/admin/plans — hai loại hàng, hai nghĩa của "ngừng bán"', () => {
+  /*
+   * Đây là chỗ hiểu nhầm đắt nhất của màn này, và nó đã xảy ra thật: ảnh chụp màn hình cho thấy
+   * hai bậc gói cũ ở trạng thái "Ngừng bán", và câu hỏi đầu tiên của người xem là "vậy thuê bao
+   * của các gian hàng đó bị huỷ à?". Không — archive nói về DANH MỤC (ADR 0024: dòng thuê bao
+   * giữ nguyên giá và số chỗ đã snapshot cho tới hết kỳ).
+   *
+   * Và bậc tuyến hoa hồng không phải một SKU: nó không "đang bán", và nút Ngừng bán không được
+   * tồn tại cạnh nó (backend chặn bằng `DEFAULT_PLAN_PROTECTED`).
+   */
+  it('bậc tuyến hoa hồng mang nhãn "Tuyến mặc định" và KHÔNG nói "Đang bán"', () => {
+    renderPageWith([
+      plan({ billingMode: 'commission', commissionPercent: 10, status: 'active' }),
+    ]);
+
+    expect(screen.getByText('Tuyến mặc định')).toBeTruthy();
+    // Giới hạn trong BẢNG: bộ lọc phía trên cũng có một nút mang chữ "Đang bán".
+    const table = within(screen.getByRole('table'));
+    expect(table.getByText('Không bán')).toBeTruthy();
+    expect(table.queryByText('Đang bán')).toBeNull();
+  });
+
+  it('bậc tuyến hoa hồng KHÔNG có nút Ngừng bán — gỡ nó là gỡ tuyến vào cửa của cả sàn', () => {
+    renderPageWith([plan({ billingMode: 'commission', commissionPercent: 10, status: 'active' })]);
+
+    expect(screen.queryByRole('button', { name: /Ngừng bán/ })).toBeNull();
+  });
+
+  it('bậc gói VẪN ngừng bán được — nó là SKU thật', () => {
+    renderPageWith([plan({ billingMode: 'package', status: 'active' })]);
+
+    expect(screen.getByRole('button', { name: /Ngừng bán/ })).toBeTruthy();
+    expect(screen.queryByText('Tuyến mặc định')).toBeNull();
+  });
+
+  it('băng đầu trang nói rõ ngừng bán KHÔNG huỷ thuê bao của ai', () => {
+    renderPageWith([plan()]);
+
+    expect(screen.getByText('Bảng này có hai loại hàng')).toBeTruthy();
+    expect(screen.getByText(/chỉ chặn việc mua MỚI/)).toBeTruthy();
+  });
+});
+
 function renderPageWith(plans: Plan[]) {
   setQuery({ data: plans });
   return renderPage();

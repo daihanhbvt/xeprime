@@ -6,6 +6,7 @@ import {
   CurrentUser,
   RequirePermissions,
   RequiresFeature,
+  SubscriptionTrackOnly,
   TenantScoped,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
@@ -30,6 +31,7 @@ import { ReceiptsService } from './receipts.service';
 @ApiTags('receipts')
 @Controller('receipts')
 @TenantScoped()
+@SubscriptionTrackOnly()
 @RequiresFeature(PLAN_FEATURE.FINANCE)
 export class ReceiptsController {
   constructor(private readonly receipts: ReceiptsService) {}

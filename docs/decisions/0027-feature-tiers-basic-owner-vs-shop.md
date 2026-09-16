@@ -1,6 +1,22 @@
 # ADR 0027 — Hai bậc năng lực: chủ xe dùng bộ cơ bản, gian hàng mở toàn bộ quản lý
 
-Ngày: 29/08/2026 · Trạng thái: Accepted · **Cụ thể hoá [ADR 0014](0014-owner-and-shop-single-role.md) điều 3 · được [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) làm rõ bằng Owner Lite dùng chung source với Manage**
+Ngày: 29/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0038](0038-owner-track-split-and-unified-wallet.md)** · **Cụ thể hoá [ADR 0014](0014-owner-and-shop-single-role.md) điều 3 · được [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) làm rõ bằng Owner Lite dùng chung source với Manage**
+
+> ⚠️ **Điều 3 bị [ADR 0038](0038-owner-track-split-and-unified-wallet.md) ghi đè trong phạm vi
+> HẾT GÓI (15/09/2026).**
+>
+> Trạng thái `read_only` **vẫn còn**, nhưng chỉ cho tenant **vẫn ở tuyến gói** mà hạ bậc — hoặc
+> đang trong ân hạn. Tenant đã **hết gói VÀ hết ân hạn** rơi về tuyến hoa hồng, và tuyến đó không
+> có bộ quản lý nâng cao ở bất kỳ chế độ nào, kể cả chỉ-xem: mọi cờ thành `hidden`.
+>
+> Điều mà điều 3 lo — *"không ai mất quyền xem sổ sách của chính mình"* — **không bị vi phạm**:
+> đơn đang chạy, bàn giao, chứng từ, ví điểm và khai thuế KHÔNG nằm sau cờ tính năng nào, nên chủ
+> xe vẫn khép được chuyến và vẫn rút được tiền. Thứ mất đi là **sổ tổng hợp** (thu chi, công nợ,
+> báo cáo) — đúng ranh giới mà điều 1 đã vẽ.
+>
+> Điều 4 (chặn ở server) được ADR 0038 SIẾT thêm: ranh giới hai TUYẾN đi qua một guard riêng
+> (`@SubscriptionTrackOnly`) và **không** đọc `PLAN_FEATURE_ENFORCEMENT` — công tắc đó chỉ gác
+> đợt rollout hạ cấp năng lực, không gác một ranh giới sản phẩm.
 
 ## Bối cảnh
 

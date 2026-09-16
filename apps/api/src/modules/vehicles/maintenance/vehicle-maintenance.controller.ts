@@ -19,6 +19,7 @@ import {
   RequirePermissions,
   TenantScoped,
   RequiresFeature,
+  SubscriptionTrackOnly,
 } from '../../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../../common/types/request-context';
 import { SourceContractDownloadDto, SourceContractPresignDto } from '../dto/vehicle-source.dto';
@@ -52,6 +53,7 @@ import { OdometerService } from './odometer.service';
 @ApiTags('vehicle-maintenance')
 @Controller('vehicles/:id/maintenance')
 @TenantScoped()
+@SubscriptionTrackOnly()
 @RequiresFeature(PLAN_FEATURE.MAINTENANCE)
 export class VehicleMaintenanceController {
   constructor(

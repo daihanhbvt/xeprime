@@ -243,6 +243,11 @@
         "title": "Your current plan does not include this",
         "body": "Deposit collection through XePrime is part of the subscription plan. Until then you still take bookings as usual and arrange deposits with customers directly.",
         "cta": "Upgrade plan"
+      },
+      "notConfigured": {
+        "title": "We cannot determine your shop plan",
+        "body": "We could not read an active service plan for your shop, so fees cannot be calculated and new bookings are paused. This is a XePrime configuration problem, not something you did. Contact support to get it fixed.",
+        "cta": "Contact support"
       }
     },
     "frozen": "Changing this switch only affects rental requests approved from now on. Existing bookings keep the deposit arrangement frozen when they were created."

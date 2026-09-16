@@ -417,6 +417,11 @@ export const queryKeys = {
     unreadCount: (side: string) => ['chat', 'unread-count', side] as const,
     /** Chưa đọc CẢ HAI vai — badge biểu tượng chat, không thuộc bề mặt nào. */
     unreadSummary: () => ['chat', 'unread-summary'] as const,
+    /**
+     * "Tôi nhắn được cho gian hàng này chưa" — PER-USER, nên khoá mang slug chứ không gộp vào
+     * cache của hồ sơ gian hàng (hồ sơ là dữ liệu công khai, dùng chung mọi người xem).
+     */
+    eligibility: (shopSlug: string) => ['chat', 'eligibility', shopSlug] as const,
   },
   /** Hồ sơ người bán do CHÍNH gian hàng khai (R3 — ADR 0028 release gate 1). */
   sellerProfile: {

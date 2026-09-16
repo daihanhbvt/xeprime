@@ -1,5 +1,13 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
-import { TENANT_STATUS, VEHICLE_PUBLIC_STATUS, VEHICLE_TYPE } from '@xeprime/types';
+import {
+  BILLING_MODE,
+  PLAN_STATUS,
+  STOREFRONT_KIND,
+  SUBSCRIPTION_STATUS,
+  TENANT_STATUS,
+  VEHICLE_PUBLIC_STATUS,
+  VEHICLE_TYPE,
+} from '@xeprime/types';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { makePublicListingsService, seedBranch } from './helpers/service-factory';
@@ -19,6 +27,7 @@ const listings = new ListingsService(asService);
 /** Tỉnh chính thức 79 — có sẵn sau migration danh mục, không cần seed riêng. */
 const PROV = '79';
 const PROV_NAME = 'Hồ Chí Minh';
+const OWNER_AVATAR = 'https://img.example/owner-avatar.jpg';
 const branchByTenant = new Map<string, string>();
 
 let dbAvailable = false;
@@ -28,6 +37,8 @@ let draftTenantId: string;
 let otherTenantId: string;
 let activeSlug: string;
 let draftSlug: string;
+let otherSlug: string;
+let packagePlanId: string;
 
 async function seedTenant(status: string): Promise<{ id: string; slug: string }> {
   const id = newId();
@@ -88,7 +99,12 @@ beforeAll(async () => {
 
   ownerId = newId();
   await prisma.user.create({
-    data: { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+    data: {
+      id: ownerId,
+      displayName: 'Chủ shop',
+      email: `own-${ownerId}@xeprime.test`,
+      avatarUrl: OWNER_AVATAR,
+    },
   });
 
   const active = await seedTenant(TENANT_STATUS.ACTIVE);
@@ -99,6 +115,40 @@ beforeAll(async () => {
   draftTenantId = draft.id;
   draftSlug = draft.slug;
   otherTenantId = other.id;
+  otherSlug = other.slug;
+
+  /*
+   * Shop "other" là tenant TUYẾN GÓI của spec này — nó tồn tại để thẻ xe có hai đầu để so.
+   * Gói dựng qua `plans` + `tenant_subscriptions` chứ không set thẳng cờ nào: `shopVerified`
+   * phải đi đúng con đường `resolveEffectiveBilling` mà request thật đi, nếu không spec sẽ
+   * xanh cả khi phép chấm pha hỏng.
+   */
+  packagePlanId = newId();
+  await prisma.plan.create({
+    data: {
+      id: packagePlanId,
+      code: `shops-package-${packagePlanId.slice(-8).toLowerCase()}`,
+      name: 'Gói theo chỗ xe',
+      status: PLAN_STATUS.ACTIVE,
+      billingMode: BILLING_MODE.PACKAGE,
+      basePriceMonthly: 0,
+      durationDays: 30,
+    },
+  });
+  const subNow = Date.now();
+  await prisma.tenantSubscription.create({
+    data: {
+      id: newId(),
+      tenantId: otherTenantId,
+      planId: packagePlanId,
+      status: SUBSCRIPTION_STATUS.ACTIVE,
+      price: 0,
+      termMonths: 12,
+      billingMode: BILLING_MODE.PACKAGE,
+      startsAt: new Date(subNow - 60_000),
+      endsAt: new Date(subNow + 365 * 24 * 60 * 60 * 1000),
+    },
+  });
 
   // Shop active: 2 xe approved + 1 draft + 1 hidden (chỉ 2 approved được hiển thị).
   await seedVehicle(activeTenantId, VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC);
@@ -120,6 +170,8 @@ afterAll(async () => {
   if (dbAvailable) {
     const tenantIds = [activeTenantId, draftTenantId, otherTenantId];
     await prisma.vehicle.deleteMany({ where: { tenantId: { in: tenantIds } } });
+    await prisma.tenantSubscription.deleteMany({ where: { tenantId: { in: tenantIds } } });
+    await prisma.plan.deleteMany({ where: { id: packagePlanId } });
     await prisma.tenantProfile.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenantBranch.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
@@ -146,6 +198,60 @@ describe('Public shop page (/shops/[slug])', () => {
     expect(String(shop.ratingAvg)).toBe('4.5');
   });
 
+  /*
+   * Ba tenant trong spec này KHÔNG có dòng thuê bao nào ⇒ `resolveEffectiveBilling` trả
+   * `unconfigured`. Đây chính là ca mà ADR 0038 điều 1 cấm mặc định về tuyến gói, và trên trang
+   * công khai thì hậu quả cụ thể là DẤU XÁC THỰC: gắn nó cho một tenant chưa xác định được tuyến
+   * là nói với khách một điều mà đường ghi tiền đang từ chối.
+   */
+  maybe('getShopBySlug tenant chưa có gói → mặt tiền cá nhân, KHÔNG dấu xác thực', async () => {
+    const shop = await service.getShopBySlug(activeSlug);
+    expect(shop.storefrontKind).toBe(STOREFRONT_KIND.PERSONAL);
+    expect(shop.verified).toBe(false);
+  });
+
+  /*
+   * SỐ ĐIỆN THOẠI không có mặt trên hồ sơ công khai — trang này không cần đăng nhập, nên một số
+   * in ra ở đây là số bị công khai cho mọi trình thu thập. Bài test khoá điều đó ở tầng DTO chứ
+   * không chỉ ở tầng vẽ: ẩn ở component thì lần sau ai đó thêm lại một nút "Gọi" là số lại ra.
+   */
+  maybe('getShopBySlug KHÔNG trả số điện thoại', async () => {
+    const shop = await service.getShopBySlug(activeSlug);
+    expect('phone' in shop).toBe(false);
+  });
+
+  /*
+   * Tenant chưa xác định được tuyến ⇒ mặt tiền cá nhân ⇒ hộp thư KHÔNG mở công khai. Mặc định
+   * về "mở" khi không biết là mở kênh thông báo đẩy tới một người thật dựa trên phỏng đoán.
+   */
+  maybe('getShopBySlug mặt tiền cá nhân → chatOpen = false', async () => {
+    const shop = await service.getShopBySlug(activeSlug);
+    expect(shop.chatOpen).toBe(false);
+  });
+
+  /*
+   * Chưa có logo gian hàng ⇒ rơi về avatar của chủ tài khoản. Với tuyến hoa hồng, "gian hàng" và
+   * "con người" là một, nên trang gian hàng hiện chữ cái trong khi chính người đó có ảnh ở góc
+   * màn hình là một sự không đồng bộ mà người dùng nhìn ra ngay.
+   */
+  maybe('getShopBySlug chưa có logo → dùng avatar chủ tài khoản', async () => {
+    const shop = await service.getShopBySlug(activeSlug);
+    expect(shop.logoUrl).toBe(OWNER_AVATAR);
+  });
+
+  maybe('getShopBySlug đếm đúng số liệu hiển thị', async () => {
+    const shop = await service.getShopBySlug(activeSlug);
+    // 2 xe approved — cùng con số mà listShopVehicles trả, cùng luật publicListingScope().
+    expect(shop.vehicleCount).toBe(2);
+    expect(shop.serviceProvinceNames).toEqual([PROV_NAME]);
+    expect(shop.branchCount).toBe(1);
+    expect(shop.completedTripCount).toBe(0);
+    // Chưa có yêu cầu thuê nào tới hạn quyết ⇒ null, KHÔNG phải 0%.
+    expect(shop.responseRatePercent).toBeNull();
+    expect(shop.deliveryAvailable).toBe(false);
+    expect(new Date(shop.joinedAt).getTime()).toBeGreaterThan(0);
+  });
+
   maybe('getShopBySlug shop draft → 404', async () => {
     await expect(service.getShopBySlug(draftSlug)).rejects.toThrow(/không/i);
   });
@@ -159,6 +265,33 @@ describe('Public shop page (/shops/[slug])', () => {
     expect(res.meta.total).toBe(2); // 2 approved, bỏ draft + hidden
     expect(res.data).toHaveLength(2);
     expect(res.data.every((v) => v.shopSlug === activeSlug)).toBe(true);
+  });
+
+  /*
+   * THẺ XE cũng phải phân biệt được hai tuyến, không chỉ trang gian hàng: khách gặp thẻ trước,
+   * ở lưới kết quả, và thường không bao giờ mở trang gian hàng. `shopVerified` đọc tuyến thu
+   * tiền HIỆU LỰC của tenant — nó không nằm trên snapshot `public_listings`, nên hai assert
+   * này cũng là chỗ duy nhất bắt được việc ai đó denormalize nó vào snapshot rồi quên refresh.
+   */
+  maybe('listShopVehicles: tenant chưa có gói → thẻ xe KHÔNG có dấu xác thực', async () => {
+    const res = await service.listShopVehicles(activeSlug, {});
+    expect(res.data).not.toHaveLength(0);
+    expect(res.data.every((v) => v.shopVerified === false)).toBe(true);
+  });
+
+  maybe('listShopVehicles: tenant tuyến gói → thẻ xe CÓ dấu xác thực', async () => {
+    const [card, ...rest] = await service
+      .listShopVehicles(otherSlug, {})
+      .then((res) => res.data);
+    expect(rest).toHaveLength(0);
+    expect(card?.shopVerified).toBe(true);
+  });
+
+  maybe('getById: chi tiết xe nói cùng một điều với thẻ ở lưới', async () => {
+    const [card] = await service.listShopVehicles(otherSlug, {}).then((res) => res.data);
+    if (!card) throw new Error('seed thiếu xe của tenant tuyến gói');
+    const detail = await service.getById(card.id);
+    expect(detail.shopVerified).toBe(true);
   });
 
   maybe('listShopVehicles phân trang (limit 1 → hasNext)', async () => {

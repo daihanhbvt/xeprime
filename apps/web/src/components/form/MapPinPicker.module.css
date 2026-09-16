@@ -5,8 +5,8 @@
 /*
  * Bọc riêng để lớp "đang tải" phủ đúng khung bản đồ.
  *
- * `position: relative` ở đây chứ không ở `.map`: Google ghi đè style của chính phần tử nó dựng
- * bản đồ vào, nên mọi thứ của mình phải nằm ở lớp ngoài.
+ * `position: relative` ở đây chứ không ở `.map`: Leaflet tự đặt `position` lên chính phần tử nó
+ * dựng bản đồ vào, nên mọi thứ của mình phải nằm ở lớp ngoài.
  */
 .mapWrap {
   position: relative;
@@ -23,6 +23,45 @@
   height: 240px;
   width: 100%;
   background: var(--xp-color-bg-muted);
+}
+
+/*
+ * Ghim tự vẽ — `L.divIcon` nhận đúng class này và KHÔNG kèm style mặc định nào của Leaflet
+ * (truyền `className` là thay hẳn `leaflet-div-icon`, không phải cộng thêm).
+ *
+ * Dựng bằng hình tròn + tam giác chứ không bằng một hình vuông bo góc xoay 45°: cách xoay đẩy
+ * mũi ghim ra khỏi hộp 28×28 một đoạn lẻ (14·√2 ≈ 19,8px), nên `iconAnchor` sẽ phải là một con
+ * số ước lượng. Ở đây mũi nằm đúng đáy hộp, và `iconAnchor: [14, 28]` là chính xác — điều đáng
+ * giá, vì lệch vài pixel ở mức thu phóng 17 là lệch cả một căn nhà.
+ */
+.pin {
+  position: relative;
+  cursor: grab;
+}
+
+.pin::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 1px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--xp-color-primary);
+  border: 2px solid var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-raised);
+}
+
+/* Mũi ghim: tam giác trỏ xuống, chạm đúng đáy hộp — đó là điểm toạ độ thật. */
+.pin::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 9px solid var(--xp-color-primary);
 }
 
 .loading {

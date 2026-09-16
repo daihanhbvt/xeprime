@@ -1,4 +1,4 @@
-import { OWNER_STAGE, isCommissionTrack, resolveOwnerStage } from '@xeprime/types';
+import { OWNER_STAGE, TENANT_ROLE, resolveOwnerStage, tenantUsesManagePortal } from '@xeprime/types';
 
 import { ROUTES } from '@/constants/routes';
 import { isSafeNextPath, safeNextPath } from './safe-next';
@@ -41,16 +41,31 @@ export interface AuthScope {
  * hàng ở trang tài khoản, menu marketplace, màn kết thúc wizard đăng xe, và cổng chặn của
  * `AppShell`. Mỗi nơi tự quyết định là mỗi nơi một luật, và đó chính là hiện trạng đang sửa.
  *
- * Luật:
+ * Luật (sửa 15/09/2026 — xem bên dưới):
  *  - Không có gian hàng → `null` (nơi gọi tự chọn: landing đăng xe, hay ở nguyên trang).
- *  - `shop_owner` tuyến HOA HỒNG → `/account`: đang đăng ký thì về màn tiến trình, xong rồi thì
- *    về danh sách xe. Tuyệt đối không đưa vào `/manage`.
- *  - Còn lại (gian hàng có gói, và nhân viên của mọi gian hàng) → `/manage`.
+ *  - Gian hàng có THUÊ BAO hiệu lực (kể cả đang trong ân hạn) → `/manage`, cho MỌI vai.
+ *  - Còn lại → `/account`: chủ xe về Owner Lite (đang đăng ký thì về màn tiến trình, xong rồi
+ *    thì về danh sách xe); nhân viên của gian hàng đó về khu tài khoản cá nhân.
+ *
+ * ## Vì sao đổi
+ *
+ * Bản trước hỏi `isCommissionTrack`, một hàm gộp VAI với TUYẾN. Vì nó đòi `roleKey ===
+ * shop_owner`, nó trả `false` cho quản lý/nhân viên/người xem — và `!false` đưa họ vào `/manage`
+ * của MỌI gian hàng, kể cả gian hàng tuyến hoa hồng và gian hàng đã hết gói. Docblock cũ ghi
+ * hẳn điều đó ra như một quy tắc ("và nhân viên của mọi gian hàng → /manage").
+ *
+ * Nay câu hỏi là thuộc tính của TENANT (`tenantUsesManagePortal`), không hỏi vai: hết gói thì cả
+ * gian hàng ra khỏi Manage cùng lúc, không ai ở lại nhờ `roleKey` của mình.
  */
 export function resolveWorkspaceHref(user: AuthScope | null | undefined): string | null {
   const tenant = user?.tenant;
   if (!tenant) return null;
-  if (!isCommissionTrack(tenant)) return ROUTES.MANAGE.ROOT;
+  if (tenantUsesManagePortal(tenant)) return ROUTES.MANAGE.ROOT;
+  /*
+   * Không có thuê bao hiệu lực. Chủ xe về Owner Lite; nhân viên/quản lý/người xem của gian hàng
+   * đó KHÔNG có Owner Lite (đó là bộ công cụ của chủ xe) nên họ về khu tài khoản cá nhân.
+   */
+  if (tenant.roleKey !== TENANT_ROLE.SHOP_OWNER) return ROUTES.ACCOUNT.ROOT;
   return resolveOwnerStage(tenant) === OWNER_STAGE.OWNER
     ? ROUTES.ACCOUNT.VEHICLES
     : ROUTES.ACCOUNT.REGISTRATION;

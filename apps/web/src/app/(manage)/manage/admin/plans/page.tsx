@@ -1,7 +1,7 @@
 'use client';
 
 import { EditOutlined, PlusOutlined, StopOutlined } from '@ant-design/icons';
-import { App, Button } from 'antd';
+import { Alert, App, Button, Tag, Tooltip } from 'antd';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
@@ -22,12 +22,29 @@ import type { Plan } from '@/features/admin-plans/types';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import styles from './plans-page.module.css';
 
 /**
  * Suy từ tổng bề rộng cột (P25 — Figma `127:1725` không đặc tả cột cho bảng này).
  * Bảng gói là ngoại lệ **không phân trang** đã ghi nhận ở Figma `130:1752`.
  */
 const MIN_TABLE_WIDTH = 1080;
+
+/**
+ * Bảng này chứa HAI LOẠI hàng, và gộp chúng vào một cột trạng thái là chỗ hiểu nhầm đắt nhất
+ * của màn quản trị gói:
+ *
+ *  - **Bậc `commission`** là TUYẾN vào cửa, không phải một SKU. Đúng một hàng, gán tự động cho
+ *    mọi gian hàng mới, không có kỳ hạn nào để bán. Nó hiện "Đang bán" như ba hàng còn lại thì
+ *    admin đọc ra "đây là một gói khách chọn mua" — và nút Ngừng bán bên cạnh nó trông như một
+ *    thao tác hợp lệ, trong khi bấm vào là gỡ tuyến vào cửa của toàn sàn (backend từ chối bằng
+ *    `DEFAULT_PLAN_PROTECTED`, nhưng một nút chỉ để báo lỗi là một nút sai).
+ *  - **Bậc `package`** là SKU thật: bán được, ngừng bán được.
+ *
+ * Và "Ngừng bán" nói về DANH MỤC, không nói về khách hàng: thuê bao đang chạy trên một bậc đã
+ * ngừng bán vẫn chạy hết kỳ của nó với đúng giá và số chỗ đã snapshot (ADR 0024). Cột "Đã gán"
+ * ngay cạnh là bằng chứng — nó vẫn đếm ra số khác 0.
+ */
 
 export default function AdminPlansPage() {
   const t = useTranslations('AdminPlans');
@@ -101,8 +118,15 @@ export default function AdminPlansPage() {
       width: 240,
       render: (_, p) => (
         <div>
-          <div>{p.name}</div>
-          <div>
+          <div className={styles.planName}>
+            <span>{p.name}</span>
+            {p.billingMode === BILLING_MODE.COMMISSION ? (
+              <Tooltip title={t('page.defaultTrackHint')}>
+                <Tag color="green">{t('page.defaultTrackTag')}</Tag>
+              </Tooltip>
+            ) : null}
+          </div>
+          <div className={styles.meta}>
             {p.code}
             {p.description ? ` · ${p.description}` : ''}
           </div>
@@ -174,9 +198,25 @@ export default function AdminPlansPage() {
       title: t('page.columns.status'),
       key: 'status',
       width: 110,
-      render: (_, p) => (
-        <StatusTag value={p.status as PlanStatus} meta={PLAN_STATUS_META} group="planStatus" />
-      ),
+      render: (_, p) => {
+        /*
+         * Bậc tuyến hoa hồng không có trạng thái BÁN HÀNG — nó không được bày ra cho gian hàng
+         * chọn (`listPlansForTenant` lọc `billingMode = package`). "Đang bán" ở đây là một câu
+         * nói về một việc không tồn tại.
+         */
+        if (p.billingMode === BILLING_MODE.COMMISSION) {
+          return <Tag>{t('page.notForSale')}</Tag>;
+        }
+        const tag = (
+          <StatusTag value={p.status as PlanStatus} meta={PLAN_STATUS_META} group="planStatus" />
+        );
+        // "Ngừng bán" bị đọc nhầm thành "thuê bao của gian hàng bị huỷ" — nói rõ ngay tại chỗ.
+        return p.status === PLAN_STATUS.ARCHIVED ? (
+          <Tooltip title={t('page.archivedHint', { count: p.subscriptionCount })}>{tag}</Tooltip>
+        ) : (
+          tag
+        );
+      },
     },
     // Hai nút có chữ → rộng hơn thang icon; giữ cả hai inline như trước, không đẩy vào menu ⋮.
     actionColumn<Plan>(
@@ -192,7 +232,13 @@ export default function AdminPlansPage() {
           label: t('page.archiveAction'),
           icon: <StopOutlined />,
           danger: true,
-          hidden: p.status !== PLAN_STATUS.ACTIVE,
+          /*
+           * Ẩn với bậc tuyến hoa hồng: backend chặn bằng `DEFAULT_PLAN_PROTECTED`, và một nút
+           * chỉ tồn tại để báo lỗi dạy admin bỏ qua thông báo lỗi. Đây là ẩn cho ĐÚNG, không
+           * phải ẩn THAY cho kiểm soát — cổng thật vẫn ở server.
+           */
+          hidden:
+            p.status !== PLAN_STATUS.ACTIVE || p.billingMode === BILLING_MODE.COMMISSION,
           loading: archive.isPending && archive.variables === p.id,
           confirm: {
             title: t('page.archiveConfirmTitle'),
@@ -209,6 +255,15 @@ export default function AdminPlansPage() {
   return (
     <div>
       <ManagePageHeader title={t('page.title')} />
+
+      {/* Hai loại hàng, hai nghĩa của "ngừng bán" — xem docblock đầu file. */}
+      <Alert
+        type="info"
+        showIcon
+        className={styles.intro}
+        title={t('page.introTitle')}
+        description={t('page.introBody')}
+      />
 
       <FilterBar
         fields={statusFilter}

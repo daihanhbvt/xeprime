@@ -1,6 +1,9 @@
 import type { ConfigService } from '@nestjs/config';
 import { computeUserBadges, createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  API_ERROR_CODE,
+  bookingRequestRespondBy,
+  BILLING_MODE,
   CHAT_SIDE,
   MEMBERSHIP_STATUS,
   NOTIFICATION_TARGET_TYPE,
@@ -14,6 +17,7 @@ import {
 } from '@xeprime/types';
 import { ChatService } from '../src/modules/chat/chat.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { giveTenantPlan } from './helpers/billing-fixture';
 import { makeNotificationService } from './helpers/service-factory';
 
 /**
@@ -31,6 +35,7 @@ const asService = prisma as unknown as PrismaService;
 const notifications = makeNotificationService(asService);
 const chat = new ChatService(asService, fakeConfig, notifications);
 
+const gatedTenantIds: string[] = [];
 let dbAvailable = false;
 let customerId: string;
 let ownerId: string;
@@ -86,6 +91,12 @@ beforeAll(async () => {
         ownerUserId: id === tenantId ? ownerId : strangerId,
       },
     });
+    /*
+     * Tuyến GÓI, cố ý: hộp thư mở công khai là năng lực của gian hàng thuê bao. Không gán gói
+     * thì tenant rơi vào `unconfigured`, và `assertCustomerMayOpenChat` chặn đúng như nó phải
+     * chặn — cả spec này sẽ đo cái cổng đó thay vì đo chat. Cổng có spec riêng ở dưới.
+     */
+    await giveTenantPlan(prisma, id, { billingMode: BILLING_MODE.PACKAGE });
   }
 
   await prisma.tenantMembership.createMany({
@@ -146,13 +157,74 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (dbAvailable) {
-    await prisma.tenant.deleteMany({ where: { id: { in: [tenantId, otherTenantId] } } });
+    await prisma.tenant.deleteMany({
+      where: { id: { in: [tenantId, otherTenantId, ...gatedTenantIds] } },
+    });
     await prisma.user.deleteMany({
       where: { id: { in: [customerId, ownerId, staffId, strangerId] } },
     });
   }
   await prisma.$disconnect();
 });
+
+/**
+ * Tenant dùng riêng cho các bài về CỔNG mở kênh — không đụng `tenantId` của cả spec (nó là
+ * tuyến gói, và mọi bài khác dựa vào việc hộp thư của nó mở sẵn).
+ *
+ * `billingMode = null` nghĩa là KHÔNG gán gói ⇒ tenant ở `unconfigured`.
+ */
+async function seedGatedTenant(
+  billingMode: string | null,
+): Promise<{ id: string; slug: string; vehicleId: string }> {
+  const id = newId();
+  const slug = `gate-${id.toLowerCase().slice(-10)}`;
+  await prisma.tenant.create({
+    data: {
+      id,
+      code: `GATE-${id.slice(-8)}`,
+      slug,
+      name: 'Chủ xe cá nhân',
+      status: TENANT_STATUS.ACTIVE,
+      ownerUserId: ownerId,
+    },
+  });
+  if (billingMode) await giveTenantPlan(prisma, id, { billingMode: billingMode as never });
+
+  const vehicleId = newId();
+  await prisma.vehicle.create({
+    data: {
+      id: vehicleId,
+      tenantId: id,
+      code: `GV-${vehicleId.slice(-6)}`,
+      name: 'Xe nhà',
+      vehicleType: VEHICLE_TYPE.CAR,
+      publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+    },
+  });
+  gatedTenantIds.push(id);
+  return { id, slug, vehicleId };
+}
+
+/** Yêu cầu thuê của KHÁCH ĐANG ĐĂNG NHẬP — bằng chứng mà cổng đòi. */
+async function seedRequestFor(
+  tenantId: string,
+  vehicleId: string,
+  customerUserId: string,
+): Promise<void> {
+  await prisma.bookingRequest.create({
+    data: {
+      id: newId(),
+      tenantId,
+      vehicleId,
+      customerUserId,
+      customerName: 'Người lạ',
+      customerPhone: '0900000111',
+      respondBy: bookingRequestRespondBy(new Date()),
+      pickupAt: new Date(Date.now() + 86_400_000),
+      returnAt: new Date(Date.now() + 172_800_000),
+    },
+  });
+}
 
 const maybe = (name: string, fn: () => Promise<void>) =>
   it(name, async () => {
@@ -182,6 +254,102 @@ describe('ChatService — hội thoại', () => {
     expect(
       await prisma.conversation.count({ where: { customerUserId: customerId, tenantId } }),
     ).toBe(1);
+  });
+
+  /**
+   * Đường vào thứ hai: nút "Nhắn tin" ở trang gian hàng `/shops/[slug]`, nơi chưa có chiếc xe
+   * nào đang mở. Nó phải rơi vào ĐÚNG thread mà đường-qua-xe đã tạo — nếu không, một khách hỏi
+   * từ trang gian hàng rồi hỏi tiếp từ trang xe sẽ có hai hộp thư với cùng một người bán.
+   */
+  maybe('nhắn từ TRANG GIAN HÀNG (slug) rơi vào đúng thread đã có', async () => {
+    const viaVehicle = await chat.getOrCreateConversation(customerId, { vehicleId });
+    const tenant = await prisma.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+      select: { slug: true },
+    });
+
+    const viaShop = await chat.getOrCreateConversation(customerId, { shopSlug: tenant.slug });
+
+    expect(viaShop.id).toBe(viaVehicle.id);
+    expect(
+      await prisma.conversation.count({ where: { customerUserId: customerId, tenantId } }),
+    ).toBe(1);
+  });
+
+  /*
+   * CỔNG của tuyến hoa hồng. Ba ca, và ca thứ ba là ca dễ làm sai nhất: một tenant chưa xác
+   * định được tuyến (`unconfigured` — ADR 0038 điều 1) phải rơi vào nhánh CHẶT, không phải
+   * nhánh mở. Mặc định về "mở hộp thư" khi không biết là mở một kênh thông báo đẩy tới điện
+   * thoại một người thật dựa trên một phỏng đoán.
+   */
+  maybe('tuyến hoa hồng + khách CHƯA gửi yêu cầu → 403 CHAT_REQUIRES_BOOKING', async () => {
+    const gated = await seedGatedTenant(BILLING_MODE.COMMISSION);
+
+    await expect(
+      chat.getOrCreateConversation(strangerId, { shopSlug: gated.slug }),
+    ).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.CHAT_REQUIRES_BOOKING },
+    });
+    expect(
+      await prisma.conversation.count({ where: { tenantId: gated.id } }),
+    ).toBe(0);
+  });
+
+  maybe('tuyến hoa hồng + khách ĐÃ gửi yêu cầu → mở được hội thoại', async () => {
+    const gated = await seedGatedTenant(BILLING_MODE.COMMISSION);
+    await seedRequestFor(gated.id, gated.vehicleId, strangerId);
+
+    const conv = await chat.getOrCreateConversation(strangerId, { shopSlug: gated.slug });
+    expect(conv.id).toBeTruthy();
+  });
+
+  maybe('tenant CHƯA xác định được tuyến → chặn như tuyến hoa hồng', async () => {
+    const gated = await seedGatedTenant(null);
+
+    await expect(
+      chat.getOrCreateConversation(strangerId, { shopSlug: gated.slug }),
+    ).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.CHAT_REQUIRES_BOOKING },
+    });
+  });
+
+  /*
+   * ELIGIBILITY và CỔNG phải luôn nói cùng một điều — chúng gọi chung `canCustomerOpenChat`, và
+   * ba bài dưới khoá lại chính điều đó ở cả hai đầu. Một cái nút hiện ra rồi bấm vào báo lỗi, hay
+   * một cái nút bị ẩn trong khi khách thừa quyền, đều là cùng một lỗi.
+   */
+  maybe('eligibility: tuyến gói → true (hộp thư công khai)', async () => {
+    const tenant = await prisma.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+      select: { slug: true },
+    });
+    expect(await chat.chatEligibilityForShop(strangerId, tenant.slug)).toBe(true);
+  });
+
+  maybe('eligibility: tuyến hoa hồng đổi false → true ngay khi có yêu cầu', async () => {
+    const gated = await seedGatedTenant(BILLING_MODE.COMMISSION);
+
+    expect(await chat.chatEligibilityForShop(strangerId, gated.slug)).toBe(false);
+
+    await seedRequestFor(gated.id, gated.vehicleId, strangerId);
+
+    expect(await chat.chatEligibilityForShop(strangerId, gated.slug)).toBe(true);
+    // Và nút hiện ra thì bấm vào phải CHẠY — cùng một phép suy ở cả hai đầu.
+    expect((await chat.getOrCreateConversation(strangerId, { shopSlug: gated.slug })).id).toBeTruthy();
+  });
+
+  /*
+   * Slug lạ trả `false`, KHÔNG ném: đây là câu hỏi về một cái nút, và một mã lỗi khác nhau giữa
+   * "shop không có" với "chưa được nhắn" là một kênh phụ để dò xem slug nào tồn tại.
+   */
+  maybe('eligibility: slug không tồn tại → false, không ném', async () => {
+    expect(await chat.chatEligibilityForShop(strangerId, 'khong-ton-tai-xyz')).toBe(false);
+  });
+
+  maybe('nhắn theo slug gian hàng không tồn tại → 404', async () => {
+    await expect(
+      chat.getOrCreateConversation(customerId, { shopSlug: 'khong-ton-tai-xyz' }),
+    ).rejects.toThrow(/gian hàng/i);
   });
 
   /**

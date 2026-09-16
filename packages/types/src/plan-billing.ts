@@ -49,6 +49,48 @@ export const SUBSCRIPTION_RENEWAL_REMINDER_DAYS = 7;
  */
 export const COMMISSION_TRACK_TERM_MONTHS = 12;
 
+/**
+ * Mã của GÓI MẶC ĐỊNH tuyến hoa hồng — bậc duy nhất của tuyến đó, và nó không phải một SKU.
+ *
+ * Tuyến hoa hồng có ĐÚNG MỘT bậc (quyết định sản phẩm 15/09/2026): mọi chủ xe cá nhân vào cửa
+ * bằng chính nó, phí dịch vụ 10% thu qua khoản giữ chỗ của KHÁCH (ADR 0029 điều 2), không có kỳ
+ * hạn nào để mua và không có gì để gia hạn. Vì thế nó:
+ *
+ *  - KHÔNG xuất hiện trong danh mục gói bán cho gian hàng (`listPlansForTenant` lọc nó ra);
+ *  - KHÔNG được archive — archive nó là gỡ mất tuyến vào cửa của toàn sàn;
+ *  - KHÔNG được đổi sang `package`, và không được có bậc hoa hồng thứ hai bên cạnh.
+ *
+ * Hằng này là mã mà SEED tạo ra. Phép nhận diện thật ở backend là `billingMode = commission`
+ * (bậc duy nhất mang chế độ đó), không phải so chuỗi — mã ở đây để seed, tài liệu và màn quản
+ * trị gọi cùng một thứ bằng cùng một tên.
+ */
+export const DEFAULT_COMMISSION_PLAN_CODE = 'free';
+
+/**
+ * Mã SKU duy nhất của TUYẾN GÓI — bậc mà gian hàng thật sự mua.
+ *
+ * Khác `DEFAULT_COMMISSION_PLAN_CODE` ở một điểm quan trọng: đây **không** phải một bất biến.
+ * Danh mục được phép có nhiều bậc `package` (một bậc có trần chỗ khác, một bậc mở thêm cờ năng
+ * lực…), và backend không chặn gì cả. Hằng này chỉ để seed và tài liệu gọi cùng một thứ bằng
+ * cùng một tên thay vì rải chuỗi `per-vehicle` khắp nơi — nơi nào cần "bậc nào đang bán" thì
+ * hỏi `listPlansForTenant`, không hỏi hằng này.
+ */
+export const DEFAULT_PACKAGE_PLAN_CODE = 'per-vehicle';
+
+/**
+ * Trần số xe của Owner Lite — TỔNG ô tô + xe máy, không phải 3 mỗi loại.
+ *
+ * Tuyến hoa hồng không bán chỗ nên nó không có `slots_json` để đọc hạn mức; trần này là quy tắc
+ * SẢN PHẨM viết trong code, cùng hạng với `COMMISSION_TRACK_TERM_MONTHS`. Đếm GỘP hai loại vì
+ * câu hỏi là "người này đang tự cho thuê vài chiếc, hay đang vận hành một đội xe" — ba ô tô cộng
+ * ba xe máy đã là một đội xe.
+ *
+ * ⚠️ Trần này CHẶN TẠO MỚI, không gỡ thứ đang có (ADR 0038, mục "Hạn mức xe khi chuyển tuyến").
+ * Gian hàng 10 xe rơi khỏi gói vẫn giữ nguyên 10 xe trên chợ, đơn vẫn chạy, tiền vẫn về ví; thứ
+ * bị khoá là chiếc TIẾP THEO.
+ */
+export const OWNER_LITE_VEHICLE_LIMIT = 3;
+
 // ── Hình dạng limits_json ───────────────────────────────────────────────────
 
 /** Đơn giá MỘT chỗ / tháng theo loại xe. `null` = bậc gói chưa bán loại chỗ đó. */

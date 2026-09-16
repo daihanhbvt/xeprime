@@ -1,4 +1,17 @@
 {
+  "trackBadge": {
+    "commissionOwner": "Individual host",
+    "commissionOwnerWithFee": "Individual host · {percent, number}% commission",
+    "shopOwner": "Shop owner",
+    "shopOwnerWithPlan": "Shop owner · {plan} plan",
+    "shopManager": "Shop manager",
+    "shopStaff": "Shop staff",
+    "shopViewer": "Shop viewer",
+    "shopMember": "Shop member",
+    "unconfigured": "Plan not configured",
+    "unconfiguredHint": "Your shop has no active service plan, so the platform can't work out how fees apply. This is a XePrime configuration problem — contact support before taking new bookings.",
+    "verifiedHint": "Verified shop owner"
+  },
   "title": "My account",
   "subtitle": "Manage your account details and settings",
   "memberSince": "Member since {date}",
@@ -290,5 +303,25 @@
     "queue": {
       "title": "Your vehicles on their way to the marketplace"
     }
+  },
+  "deletionImpact": {
+    "title": "Read this before you send the request",
+    "body": "Your account is tied to the shop {shop}. XePrime has to settle the items below before the account can be closed; sending the request does not clear them.",
+    "loading": "Checking impact…",
+    "loadError": "Could not check the impact. You can still send the request — XePrime will review it.",
+    "shop": "Shop",
+    "ownerNote": "You are the shop owner. Closing the owner account does not close the shop, and listed vehicles still need someone responsible for them.",
+    "memberNote": "You are a member of this shop, not its owner. This request covers your personal account only.",
+    "balance": "Available balance",
+    "pending": "Being transferred",
+    "withdrawals": "{count, plural, =0 {No withdrawal requests outstanding} other {# withdrawal requests outstanding}}",
+    "openTrips": "{count, plural, =0 {No open rental trips} other {# open rental trips}}",
+    "settleFirst": "Withdraw your balance and let the transfers finish before sending the request — reconciliation is much slower once the account is closed.",
+    "bodyPersonal": "This request covers your personal account only. XePrime still has to settle the items below before the account can be closed."
+  },
+  "trackNotice": {
+    "unconfiguredTitle": "Your shop has no valid service plan",
+    "unconfiguredBody": "XePrime cannot determine how to charge your shop, so new trip amounts will not be recorded until this is resolved. Your existing data, trips and balance are not affected.",
+    "contactSupport": "Contact support"
   }
 }

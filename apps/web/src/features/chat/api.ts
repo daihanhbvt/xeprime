@@ -6,7 +6,9 @@ import type {
   ChatMessage,
   ConversationFilters,
   ConversationListResult,
+  ChatEligibility,
   ConversationSummary,
+  ConversationTarget,
   FirebaseChatToken,
   MessageCursor,
   MessagePage,
@@ -59,9 +61,20 @@ export const chatApi = {
     return apiGet<ConversationSummary>(`/conversations/${encodeURIComponent(id)}`, { side });
   },
 
-  /** Khách mở/lấy hội thoại với shop về một xe. Idempotent ở DB — bấm nhiều lần vẫn một thread. */
-  start(vehicleId: string): Promise<ConversationSummary> {
-    return apiPost<ConversationSummary>('/conversations', { vehicleId });
+  /**
+   * Khách đang đăng nhập có nhắn được cho gian hàng theo slug này không — để giao diện quyết
+   * định VẼ nút hay không. Chặn thật vẫn ở `POST /conversations`.
+   */
+  eligibility(shopSlug: string): Promise<ChatEligibility> {
+    return apiGet<ChatEligibility>('/conversations/eligibility', { shopSlug });
+  },
+
+  /**
+   * Khách mở/lấy hội thoại với một gian hàng, từ một chiếc xe hoặc từ trang gian hàng.
+   * Idempotent ở DB (unique `(customer_user_id, tenant_id)`) — bấm nhiều lần vẫn một thread.
+   */
+  start(target: ConversationTarget): Promise<ConversationSummary> {
+    return apiPost<ConversationSummary>('/conversations', target);
   },
 
   async messages(conversationId: string, cursor?: MessageCursor | null): Promise<MessagePage> {

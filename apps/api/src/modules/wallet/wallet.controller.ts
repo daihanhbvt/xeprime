@@ -1,10 +1,10 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
 import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, WALLET_OWNER_TYPE } from '@xeprime/types';
+import { WALLET_OWNER_TYPE } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
-  RequirePermissions,
+  ShopOwnerOnly,
   TenantScoped,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
@@ -19,11 +19,14 @@ import { WalletReadService } from './wallet-read.service';
 import { WithdrawalService } from './withdrawal.service';
 
 /**
- * "Ví điểm" của MỘT CON NGƯỜI — khách nhận tiền hoàn, chủ xe cơ bản nhận khoản XePrime phải trả.
+ * "Ví điểm" của MỘT CON NGƯỜI — dành cho người CHƯA là chủ xe.
  *
- * Không gắn `@TenantScoped`: đây là tài sản của tài khoản cá nhân. Một chủ gian hàng có hai ví
- * và chúng KHÔNG trộn — tiền hoàn chuyến của họ với tư cách khách không đi chung đường với tiền
- * của gian hàng.
+ * Không gắn `@TenantScoped`: đây là tài sản của tài khoản cá nhân.
+ *
+ * ⚠️ Từ 15/09/2026, một chủ xe KHÔNG còn ví ở đây. Ví của họ đã đổi chủ sang tenant lúc mở gian
+ * hàng (`WalletService.adoptUserWalletWithinTx`), và tiền hoàn khi chính họ đi thuê cũng chảy về
+ * đó. Endpoint này vì vậy trả số 0 cho họ — đúng, vì sổ của họ nằm ở `/shop/wallet`. Bản trước
+ * ghi "một chủ gian hàng có hai ví và chúng KHÔNG trộn"; đó chính là điều đợt này bỏ đi.
  *
  * Không gắn `@RequiresFeature`: số dư là tiền của chính họ. Gói hết hạn vẫn phải xem và rút được
  * (ADR 0027 điều 3 — hết hạn là `read_only`, không phải `hidden`; và tiền thì không thuộc về gói).
@@ -102,13 +105,19 @@ export class AccountWalletController {
 /**
  * "Ví điểm" của GIAN HÀNG — khoản XePrime phải trả sau mỗi chuyến (ADR 0033 điều 2).
  *
- * `tenant_id` từ membership qua `@TenantScoped`, không bao giờ từ body. Quyền dùng chung với hồ
- * sơ người bán: rút tiền của gian hàng là quyết định tiền của chủ, không phải việc của nhân viên
- * trực đơn.
+ * `tenant_id` từ membership qua `@TenantScoped`, không bao giờ từ body.
+ *
+ * `@ShopOwnerOnly()` là cổng THẬT (15/09/2026): CHỈ `shop_owner`. Trước đó nhóm này gác bằng
+ * `seller_profile.view`/`.manage`, và `shop_manager` có `seller_profile.view` mặc định — nên quản
+ * lý đọc được số dư, toàn bộ sổ cái và lịch sử rút.
+ *
+ * Cố ý KHÔNG kèm `@RequirePermissions`: thêm một khoá quyền vào đây sẽ gợi ý rằng cấp khoá đó là
+ * đủ để mở ví, trong khi vai mới là thứ quyết định. Một cổng, một câu trả lời.
  */
 @ApiTags('wallet')
 @Controller('shop/wallet')
 @TenantScoped()
+@ShopOwnerOnly()
 export class ShopWalletController {
   constructor(
     private readonly read: WalletReadService,
@@ -116,7 +125,6 @@ export class ShopWalletController {
   ) {}
 
   @Get()
-  @RequirePermissions(PERMISSION.SELLER_PROFILE_VIEW)
   @ApiOperation({ summary: 'Số dư ví điểm của gian hàng' })
   @ApiOkResponse({ type: WalletSummaryDto })
   summary(@CurrentTenant() tenant: TenantContext): Promise<WalletSummaryDto> {
@@ -124,7 +132,6 @@ export class ShopWalletController {
   }
 
   @Get('entries')
-  @RequirePermissions(PERMISSION.SELLER_PROFILE_VIEW)
   @ApiOperation({ summary: 'Sổ ví của gian hàng' })
   @ApiOkResponse({ type: WalletEntryPageDto })
   entries(
@@ -138,7 +145,6 @@ export class ShopWalletController {
   }
 
   @Get('withdrawals')
-  @RequirePermissions(PERMISSION.SELLER_PROFILE_VIEW)
   @ApiOperation({ summary: 'Các yêu cầu rút của gian hàng' })
   @ApiOkResponse({ type: [WithdrawalRequestDto] })
   listWithdrawals(@CurrentTenant() tenant: TenantContext): Promise<WithdrawalRequestDto[]> {
@@ -146,7 +152,6 @@ export class ShopWalletController {
   }
 
   @Post('withdrawals')
-  @RequirePermissions(PERMISSION.SELLER_PROFILE_MANAGE)
   @ApiOperation({ summary: 'Gian hàng tạo yêu cầu rút' })
   @ApiOkResponse({ type: WithdrawalRequestDto })
   createWithdrawal(
@@ -162,7 +167,6 @@ export class ShopWalletController {
   }
 
   @Post('withdrawals/:id/cancel')
-  @RequirePermissions(PERMISSION.SELLER_PROFILE_MANAGE)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Gian hàng tự huỷ yêu cầu rút' })
   @ApiNoContentResponse()

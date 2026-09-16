@@ -905,10 +905,19 @@ export const VEHICLE_MODEL_BY_KEY: ReadonlyMap<string, VehicleModelSpec> = new M
  */
 export const PLATE_PREFIX: Readonly<Record<string, { car: readonly string[]; bike: readonly string[] }>> = {
   '01': { car: ['29A', '30A', '30E', '30F'], bike: ['29B1', '29H1'] }, // Hà Nội
+  '22': { car: ['14A', '14C'], bike: ['14B1'] }, // Quảng Ninh
+  '24': { car: ['99A', '98A'], bike: ['99B1'] }, // Bắc Ninh (gồm Bắc Giang cũ — đầu số 98)
   '31': { car: ['15A', '15C'], bike: ['15B1'] }, // Hải Phòng
+  '38': { car: ['36A'], bike: ['36B1'] }, // Thanh Hóa
+  '40': { car: ['37A'], bike: ['37B1'] }, // Nghệ An
   '46': { car: ['75A'], bike: ['75B1'] }, // Huế
   '48': { car: ['43A', '43C'], bike: ['43B1'] }, // Đà Nẵng
+  '56': { car: ['79A'], bike: ['79B1'] }, // Khánh Hòa — đầu số 79, KHÔNG liên quan mã tỉnh 79
+  '66': { car: ['47A'], bike: ['47B1'] }, // Đắk Lắk
+  '68': { car: ['49A'], bike: ['49B1'] }, // Lâm Đồng
+  '75': { car: ['60A', '60H'], bike: ['60B1'] }, // Đồng Nai
   '79': { car: ['51H', '50A', '51K', '51G'], bike: ['59X1', '59H1'] }, // Hồ Chí Minh
+  '91': { car: ['67A'], bike: ['67B1'] }, // An Giang
   '92': { car: ['65A', '65C'], bike: ['65B1'] }, // Cần Thơ
 };
 

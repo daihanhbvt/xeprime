@@ -24,7 +24,7 @@
     "adjustHint": "Drag the pin or tap the map to move it.",
     "readOnlyHint": "This map is view-only. Pick a different suggested place if the pin is wrong.",
     "unavailable": "The map could not be shown. The address still saves normally.",
-    "openInMaps": "Open in Google Maps"
+    "openInMaps": "Open in OpenStreetMap"
   },
   "review": {
     "badge": "Address needs updating",

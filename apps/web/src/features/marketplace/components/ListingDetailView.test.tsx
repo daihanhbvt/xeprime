@@ -9,8 +9,13 @@ vi.mock('@/features/booking-requests/components/RequestBookingButton', () => ({
   RequestBookingButton: () => <button type="button">Chọn thuê</button>,
 }));
 
-vi.mock('@/features/chat/components/ChatWithShopButton', () => ({
-  ChatWithShopButton: () => <button type="button">Nhắn shop</button>,
+/*
+ * `ShopChatButton` tự hỏi server "khách này nhắn được chưa" qua TanStack Query, nên render thật
+ * nó ở đây sẽ đòi một QueryClientProvider mà bài test này không có lý do gì phải dựng — nó đang
+ * đo GIÁ và ĐIỀU KIỆN THUÊ. Luật ẩn/hiện nút có spec riêng ở `ShopContactActions.test.tsx`.
+ */
+vi.mock('@/features/chat/components/ShopChatButton', () => ({
+  ShopChatButton: () => <button type="button">Nhắn shop</button>,
 }));
 
 /*

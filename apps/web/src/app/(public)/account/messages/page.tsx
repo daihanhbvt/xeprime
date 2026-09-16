@@ -1,24 +1,29 @@
-import { CHAT_SIDE, OWNER_STAGE } from '@xeprime/types';
-import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+import { permanentRedirect } from 'next/navigation';
 
-import { OwnerGate } from '@/features/account/components/OwnerGate';
-import { ChatView } from '@/features/chat/components/ChatView';
-
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations('Navigation.account');
-  return { title: t('messages'), robots: { index: false, follow: false } };
-}
+import { ROUTES } from '@/constants/routes';
 
 /**
- * Hộp thư phía CHỦ XE trong khu tài khoản — `side=shop`, cùng `ChatView` với `/manage/chat`.
+ * Hộp thư CHỦ XE cũ — nay chuyển về `/chat` (16/09/2026).
  *
- * Tồn tại vì chủ xe tuyến hoa hồng không vào cổng quản lý được (ADR 0027/0028) và `/chat` là hộp
- * thư phía KHÁCH: nó chỉ hiện những cuộc họ đi thuê xe của người khác. Không có trang này thì
- * chặn `/manage` đồng nghĩa với cắt đứt liên lạc giữa họ và khách thuê xe của chính họ.
+ * ## Vì sao trang này biến mất
  *
- * Cổng ở mức `registering`: khách có thể nhắn tin từ trước khi chiếc xe đầu tiên được duyệt, và
- * một tin nhắn không đọc được vì cổng đóng là một khách mất.
+ * Nó tồn tại vì chủ xe tuyến hoa hồng không vào `/manage/chat` được, nên hộp thư gian hàng của
+ * họ cần một chỗ trong khu user. Kết quả là họ có HAI hộp thư trên hai đường dẫn, và biểu tượng
+ * chat trên header nhảy qua lại giữa chúng tuỳ bên nào đang có tin chưa đọc — cùng một cái bấm
+ * dẫn tới hai nơi khác nhau vào hai thời điểm khác nhau.
+ *
+ * Nay `/chat` là hộp thư HỢP NHẤT cho họ (`resolveChatInbox`): hợp ở SERVER trong một truy vấn,
+ * nên phân trang, tìm kiếm và số chưa đọc đều nhất quán, và mỗi dòng mang nhãn vai của nó.
+ *
+ * ## Vì sao chuyển hướng chứ không xoá
+ *
+ * Đường dẫn này nằm trong bookmark, trong email thông báo đã gửi và trong lịch sử trình duyệt.
+ * Một trang 404 ở đó là một chủ xe tin rằng mình vừa mất hộp thư. `permanentRedirect` (308) nói
+ * đúng điều đã xảy ra: nội dung không mất, nó đổi địa chỉ.
+ *
+ * `?c=` phải được CHÉP TAY sang đích: `permanentRedirect` đi tới đúng chuỗi được truyền và không
+ * mang theo query của trang cũ. Bỏ nó đi nghĩa là mọi liên kết "mở hội thoại này" trong email đã
+ * gửi sẽ đổ về đầu danh sách, và người dùng phải tự đi tìm lại thread mình vừa bấm.
  */
 export default async function AccountMessagesPage({
   searchParams,
@@ -26,9 +31,5 @@ export default async function AccountMessagesPage({
   searchParams: Promise<{ c?: string }>;
 }) {
   const { c } = await searchParams;
-  return (
-    <OwnerGate minStage={OWNER_STAGE.REGISTERING}>
-      <ChatView side={CHAT_SIDE.SHOP} initialConversationId={c ?? null} />
-    </OwnerGate>
-  );
+  permanentRedirect(c ? `${ROUTES.CHAT}?c=${encodeURIComponent(c)}` : ROUTES.CHAT);
 }

@@ -5,6 +5,7 @@ import {
   CurrentTenant,
   RequirePermissions,
   RequiresFeature,
+  SubscriptionTrackOnly,
   TenantScoped,
 } from '../../../common/decorators';
 import type { TenantContext } from '../../../common/types/request-context';
@@ -26,6 +27,7 @@ import { scopeOf } from './vehicle-maintenance.controller';
 @ApiTags('maintenance')
 @Controller('maintenance')
 @TenantScoped()
+@SubscriptionTrackOnly()
 @RequiresFeature(PLAN_FEATURE.MAINTENANCE)
 export class MaintenanceBoardController {
   constructor(private readonly maintenance: MaintenanceService) {}

@@ -11,7 +11,9 @@ import {
 import Link from 'next/link';
 import { SERVICE_TYPE, VEHICLE_TYPE, VEHICLE_TYPE_LABEL, type VehicleType } from '@xeprime/types';
 import { listingPath, shopPath } from '@/constants/routes';
+import { cx } from '@/lib/cx';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
+import { VerifiedMark } from '@/components/common/VerifiedMark';
 import { applyDiscountPercent } from '@/lib/money';
 import { initialOf } from '@/lib/initials';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
@@ -66,6 +68,17 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
   const hasRating = listing.ratingCount > 0 && Number.isFinite(rating);
   const completedTripCount = listing.completedTripCount ?? 0;
 
+  /*
+   * HAI TUYẾN trên một chợ (ADR 0028) và khách phải đọc được mình đang xem xe của ai. Backend
+   * đã chấm tuyến thu tiền hiệu lực; thẻ chỉ dựng lại điều đó bằng ba tín hiệu cùng nói một
+   * điều — chữ ("Gian hàng" thay cho "Chủ xe"), dấu xác thực, và tông vàng cam ở tên + vành
+   * avatar. Ba tín hiệu vì một mình dấu tick thì quá nhỏ ở cỡ 34px của footer thẻ.
+   *
+   * `?? false` chứ không `?? true`: một backend chưa có trường này phải cho ra thẻ THƯỜNG.
+   * Mặc định ngược lại là gắn dấu xác thực cho mọi chủ xe cá nhân trong suốt lần deploy lệch.
+   */
+  const isShopTrack = listing.shopVerified ?? false;
+
   // Preview cùng công thức với PricingService; báo giá server vẫn là nguồn chốt.
   const discount = listing.discountPercent ?? 0;
 
@@ -90,6 +103,19 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
     : (monthlyContext ?? driverContext);
   const priceMessage = monthlyContext ? 'priceMonthly' : 'priceDaily';
   const showStrikethrough = selfDriveContext && discount > 0;
+
+  /*
+   * Tiền RÚT GỌN trên thẻ — `600k/ngày` thay cho `600.000 ₫/ngày` (16/09/2026).
+   *
+   * Chân thẻ chỉ có một hàng cho hai thứ cùng muốn rộng: tên gian hàng bên trái và giá bên
+   * phải. Dạng đầy đủ chiếm quá nửa hàng đó, nên tên bị cắt còn `XePrime Sà…` ngay cả trên
+   * màn hình rộng. Rút gọn trả lại khoảng một nửa bề rộng cho bên trái.
+   *
+   * `price: true`: ở bậc triệu, một chữ số lẻ biến `1.050.000` thành `1tr`. Trên một cái thẻ
+   * mà việc duy nhất của nó là giúp khách SO GIÁ giữa các xe, sai 50.000đ là sai ở đúng chỗ
+   * không được phép sai. Dạng đầy đủ vẫn nằm ở trang chi tiết và trong mọi báo giá.
+   */
+  const compactPrice = (value: string) => fmt.moneyCompact(value, { price: true });
 
   // Mang ngữ cảnh sang trang chi tiết để prefill luồng đặt xe: ngày giờ + dịch vụ đang active
   // + lộ trình có tài xế — card và detail không bao giờ nói hai dịch vụ khác nhau.
@@ -190,9 +216,22 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
             href={shopPath.detail(listing.shopSlug)}
             className={styles.shop}
             title={listing.shopName}
-            aria-label={listing.shopName}
+            /*
+              `aria-label` trên liên kết THAY THẾ mọi chữ bên trong khi trình đọc màn hình đọc
+              nó — nên nhãn của dấu xác thực bên dưới sẽ không bao giờ tới tai người dùng nếu
+              nhãn này chỉ có mỗi tên. Ghép ở tầng BẢN DỊCH, không nối chuỗi: dấu nối và thứ tự
+              hai vế là quyết định của từng ngôn ngữ.
+            */
+            aria-label={
+              isShopTrack
+                ? t('shopVerifiedAria', { name: listing.shopName })
+                : listing.shopName
+            }
           >
-            <span className={styles.shopAvatar} aria-hidden="true">
+            <span
+              className={cx(styles.shopAvatar, isShopTrack && styles.shopAvatarShop)}
+              aria-hidden="true"
+            >
               {listing.shopLogoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element -- logo gian hàng từ storage ngoài
                 <img src={listing.shopLogoUrl} alt="" loading="lazy" />
@@ -201,8 +240,16 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
               )}
             </span>
             <span className={styles.shopCopy}>
-              <span className={styles.shopCaption}>{t('owner')}</span>
-              <span className={styles.shopName}>{listing.shopName}</span>
+              <span className={styles.shopCaption}>{t(isShopTrack ? 'shop' : 'owner')}</span>
+              <span className={styles.shopNameRow}>
+                <span className={cx(styles.shopName, isShopTrack && styles.shopNameShop)}>
+                  {listing.shopName}
+                </span>
+                {/* Dấu nằm NGOÀI phần tử cắt chữ: tên dài bị ellipsis thì dấu vẫn còn. */}
+                {isShopTrack ? (
+                  <VerifiedMark label={t('shopVerified')} size={13} className={styles.shopMark} />
+                ) : null}
+              </span>
             </span>
           </Link>
 
@@ -210,7 +257,7 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
             {displayPrice ? (
               <>
                 {showStrikethrough && listing.weekdayPrice ? (
-                  <s className={styles.oldPrice}>{fmt.money(listing.weekdayPrice)}</s>
+                  <s className={styles.oldPrice}>{compactPrice(listing.weekdayPrice)}</s>
                 ) : null}
                 {/*
                   Số tiền và ĐƠN VỊ là hai phần tử có style riêng (đơn vị nhỏ và mờ hơn).
@@ -219,7 +266,7 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
                 */}
                 <span className={styles.currentPrice}>
                   {t.rich(priceMessage, {
-                    value: fmt.money(displayPrice),
+                    value: compactPrice(displayPrice),
                     amount: (chunks) => <b>{chunks}</b>,
                     unit: (chunks) => <span>{chunks}</span>,
                   })}

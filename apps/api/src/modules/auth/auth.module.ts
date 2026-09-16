@@ -8,6 +8,7 @@ import { NativeAuthCodeService } from './social/native-auth-code.service';
 import { OauthStateService } from './social/oauth-state.service';
 import { SocialAuthController } from './social/social-auth.controller';
 import { SocialAuthService } from './social/social-auth.service';
+import { FeePoliciesModule } from '../fee-policies/fee-policies.module';
 
 /**
  * Ba controller, ba họ endpoint, MỘT `AuthService`.
@@ -24,6 +25,12 @@ import { SocialAuthService } from './social/social-auth.service';
  */
 @Global()
 @Module({
+  /*
+   * `FeePoliciesModule` cho `/auth/me`: nhãn tài khoản của chủ xe tuyến hoa hồng in % phí dịch
+   * vụ ĐANG THU, và con số đó chỉ có một nguồn hợp lệ — `FeePoliciesService.findEffective()`.
+   * Không nối `PricingModule` hay tự query `fee_policies` ở đây.
+   */
+  imports: [FeePoliciesModule],
   controllers: [AuthController, MobileAuthController, SocialAuthController],
   providers: [
     AuthService,

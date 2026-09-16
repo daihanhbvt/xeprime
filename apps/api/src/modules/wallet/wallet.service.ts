@@ -6,6 +6,7 @@ import {
   WALLET_ENTRY_SOURCE,
   WALLET_OWNER_TYPE,
   WALLET_STATUS,
+  BANK_ACCOUNT_STATUS,
   type WalletEntryKind,
   type WalletEntrySource,
 } from '@xeprime/types';
@@ -87,6 +88,86 @@ export class WalletService {
       }
       throw err;
     }
+  }
+
+  /**
+   * Người này trở thành CHỦ XE ⇒ ví của họ thuộc về TENANT từ đây (15/09/2026).
+   *
+   * Gọi trong CHÍNH transaction mở gian hàng (`TenantsService.registerShop`), nên không có
+   * khoảnh khắc nào tenant tồn tại mà ví còn đứng tên cá nhân.
+   *
+   * **Đổi CHỦ của hàng ví, không chuyển tiền.** Một `UPDATE` đặt cả ba cột cùng lúc (CHECK owner
+   * XOR kiểm theo từng câu lệnh nên không thấy trạng thái nửa vời). Đây là cách duy nhất không
+   * sinh một bút toán nào: không có phép cộng nào để cộng đôi, không dòng lịch sử nào bị viết
+   * lại, `balance`/`pending_withdraw_amount` giữ nguyên, và vì `wallets.id` KHÔNG đổi nên mọi
+   * tham chiếu vẫn đúng mà không phải sửa gì —
+   *
+   *   • `wallet_entries.wallet_id`          — sổ cái nguyên vẹn, `balance_after` vẫn liền mạch
+   *   • `withdrawal_requests.wallet_id`     — lệnh rút đang `pending`/`approved` đi theo miễn phí
+   *   • `hold_refunds.wallet_entry_id`      — tham chiếu mềm theo id dòng, không đụng tới
+   *
+   * Nhờ đó KHÔNG cần chặn đăng ký khi người dùng đang có lệnh rút chờ xử lý: thông tin ngân hàng
+   * trên lệnh đã là snapshot (ADR 0023 điều 8) nên admin vẫn chuyển đúng tài khoản cá nhân họ đã
+   * khai.
+   *
+   * Tài khoản ngân hàng `active` đi theo ví — không chuyển thì màn rút tiền hiện ô chọn RỖNG dù
+   * họ đã khai số từ lâu, vì `resolveForPayout` chỉ nhận tài khoản cùng chủ với ví.
+   *
+   * Tenant vừa được tạo trong cùng transaction nên KHÔNG BAO GIỜ có sẵn ví: nhánh gộp hai ví chỉ
+   * tồn tại trong migration dữ liệu cũ (`20260915120000_wallet_owner_unification`). Ở đây nó là
+   * một lỗi lập trình, và ném là đúng.
+   */
+  async adoptUserWalletWithinTx(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    tenantId: string,
+  ): Promise<{ walletId: string; bankAccountsMoved: number } | null> {
+    const existingTenantWallet = await tx.wallet.findFirst({
+      where: { ownerType: WALLET_OWNER_TYPE.TENANT, ownerTenantId: tenantId },
+      select: { id: true },
+    });
+    if (existingTenantWallet) {
+      throw new Error(
+        `adoptUserWalletWithinTx: tenant ${tenantId} đã có ví ${existingTenantWallet.id}. ` +
+          'Gộp hai ví là việc của migration dữ liệu cũ, không phải của đường đăng ký.',
+      );
+    }
+
+    const userWallet = await tx.wallet.findFirst({
+      where: { ownerType: WALLET_OWNER_TYPE.USER, ownerUserId: userId },
+      select: { id: true },
+    });
+
+    if (userWallet) {
+      await tx.wallet.update({
+        where: { id: userWallet.id },
+        data: {
+          ownerType: WALLET_OWNER_TYPE.TENANT,
+          ownerTenantId: tenantId,
+          ownerUserId: null,
+        },
+      });
+    }
+
+    const moved = await tx.bankAccount.updateMany({
+      where: {
+        ownerType: WALLET_OWNER_TYPE.USER,
+        ownerUserId: userId,
+        status: BANK_ACCOUNT_STATUS.ACTIVE,
+      },
+      data: {
+        ownerType: WALLET_OWNER_TYPE.TENANT,
+        ownerTenantId: tenantId,
+        ownerUserId: null,
+      },
+    });
+
+    if (!userWallet && moved.count === 0) return null;
+    this.logger.log(
+      `Ví/tài khoản NH của user ${userId} chuyển sang tenant ${tenantId} ` +
+        `(ví: ${userWallet?.id ?? 'chưa có'}, tài khoản NH: ${moved.count}).`,
+    );
+    return { walletId: userWallet?.id ?? '', bankAccountsMoved: moved.count };
   }
 
   /**

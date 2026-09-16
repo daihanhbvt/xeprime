@@ -16,11 +16,11 @@ import { ProvincesService } from './provinces.service';
 /**
  * Tìm địa điểm / tra địa chỉ ngược cho ô nhập ĐỊA CHỈ — proxy qua backend.
  *
- * **Vì sao đi vòng qua server thay vì gọi thẳng Google từ trình duyệt.** Khoá bản đồ có tính
- * tiền theo request. Một khoá nhúng trong bundle web là một khoá ai cũng sao chép được, và hoá
- * đơn cuối tháng là của mình. Cùng kỷ luật với ADR 0018: `GOOGLE_MAPS_SERVER_KEY` khoá theo IP,
+ * **Vì sao đi vòng qua server thay vì gọi thẳng nhà cung cấp từ trình duyệt.** Khoá bản đồ có
+ * hạn mức theo request. Một khoá nhúng trong bundle web là một khoá ai cũng sao chép được, và
+ * hạn mức cạn là của mình. Cùng kỷ luật với ADR 0018/0037: `GEOAPIFY_API_KEY` khoá theo IP,
  * không bao giờ đi qua `NEXT_PUBLIC_*`. Đi vòng qua đây còn cho ba thứ miễn phí: rate limit thật,
- * cache dùng chung giữa mọi người dùng, và MỘT điểm để đổi nhà cung cấp (Goong, Mapbox).
+ * cache dùng chung giữa mọi người dùng, và MỘT điểm để đổi nhà cung cấp (Goong, OSRM tự host).
  *
  * **Không endpoint nào ở đây trả lỗi vì bản đồ.** Chưa cấu hình khoá, hết hạn mức, nhà cung cấp
  * chậm — tất cả thành `available: false` với danh sách rỗng, và giao diện rơi về nhập tay. Người

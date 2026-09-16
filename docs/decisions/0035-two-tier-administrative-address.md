@@ -1,6 +1,6 @@
 # ADR 0035 — Địa chỉ vật lý theo danh mục hành chính HAI CẤP
 
-Ngày: 14/09/2026 · Trạng thái: Accepted
+Ngày: 14/09/2026 · Trạng thái: **Accepted; điều 6 bị [ADR 0037](0037-geoapify-osm-map-provider.md) ghi đè ở phần THƯ VIỆN** — bản đồ tương tác nay là Leaflet + tile Geoapify/OSM, không phải Maps JavaScript API, và khoá là `NEXT_PUBLIC_GEOAPIFY_MAP_KEY`. Quyết định sản phẩm (ghim phải được người dùng xác nhận) không đổi.
 
 Liên quan: [ADR 0018](0018-map-delivery-distance.md) (bản đồ là ước lượng; khoá server không bao
 giờ ra client), [ADR 0008](0008-public-listings-sync.md) (`ListingsService` là writer duy nhất của

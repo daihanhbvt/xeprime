@@ -5,6 +5,7 @@ import {
   CurrentTenant,
   RequirePermissions,
   RequiresFeature,
+  SubscriptionTrackOnly,
   TenantScoped,
 } from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
@@ -20,6 +21,7 @@ import { FinanceCategoriesService } from './finance-categories.service';
 @ApiTags('finance-categories')
 @Controller('finance/categories')
 @TenantScoped()
+@SubscriptionTrackOnly()
 @RequiresFeature(PLAN_FEATURE.FINANCE)
 export class FinanceCategoriesController {
   constructor(private readonly categories: FinanceCategoriesService) {}

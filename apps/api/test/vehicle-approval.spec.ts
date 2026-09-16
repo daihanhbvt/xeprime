@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  BILLING_MODE,
   API_ERROR_CODE,
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
@@ -18,6 +19,7 @@ import { ListingsService } from '../src/modules/public-listings/listings.service
 import { PlatformApprovalService } from '../src/modules/platform-admin/platform-approval.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { makeNotificationService, makeVehiclesService, seedBranch } from './helpers/service-factory';
+import { giveTenantPlan } from './helpers/billing-fixture';
 
 /**
  * WS0 — vòng đăng xe → duyệt → công khai (ADR 0008) chạy trên PostgreSQL THẬT. Kiểm chứng:
@@ -142,6 +144,16 @@ beforeAll(async () => {
       },
     ],
   });
+  /*
+   * Gian hàng test = gian hàng TUYẾN GÓI. Không phải trang trí: từ 15/09/2026 một tenant
+   * không có thuê bao hiệu lực bị coi là Owner Lite và chỉ tạo được
+   * `OWNER_LITE_VEHICLE_LIMIT` xe (ADR 0038). Fixture nào dựng đội xe lớn bằng
+   * `prisma.tenant.create` trần đang mô tả một trạng thái sản phẩm không cho phép tồn tại —
+   * `registerShop` luôn gán gói trong cùng transaction.
+   */
+  for (const id of [tenantId, draftTenantId]) {
+    await giveTenantPlan(prisma, id, { billingMode: BILLING_MODE.PACKAGE });
+  }
   await prisma.tenantMembership.create({
     data: {
       id: newId(),

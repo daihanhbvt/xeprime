@@ -203,16 +203,7 @@
 
 /* Tick "đã duyệt" — vòng vàng nhỏ cạnh tên gian hàng, đúng mockup. */
 .verified {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--xp-gold-deep);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
+  flex: none;
 }
 
 .shopName {

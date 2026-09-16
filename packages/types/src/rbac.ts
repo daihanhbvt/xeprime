@@ -209,6 +209,14 @@ export const PERMISSION = {
 
   // Hồ sơ người bán (R3 — ADR 0028 gate 1): danh tính pháp lý, thuế, tài khoản nhận tiền.
   // Chỉ chủ gian hàng: đổi tài khoản nhận tiền là quyết định TIỀN của chính chủ.
+  /**
+   * Hồ sơ NGƯỜI BÁN: pháp nhân, thuế, KYC (ADR 0028 release gate 1).
+   *
+   * ⚠️ KHÔNG còn mở VÍ GIAN HÀNG (15/09/2026). Trước đợt này ví gác bằng chính hai khoá này, và
+   * `shop_manager` có `seller_profile.view` mặc định — nên quản lý đọc được số dư, toàn bộ sổ cái
+   * và lịch sử rút. Ví nay đi qua `@ShopOwnerOnly()`, một trục KHÁC: xem mục "Ví gian hàng" ở
+   * cuối file.
+   */
   SELLER_PROFILE_VIEW: 'seller_profile.view',
   SELLER_PROFILE_MANAGE: 'seller_profile.manage',
 
@@ -434,3 +442,32 @@ export const DEFAULT_PLATFORM_ROLE_PERMISSIONS: Readonly<
     PERMISSION.PLATFORM_SELLER_VERIFY,
   ],
 };
+
+/**
+ * ── VÍ GIAN HÀNG: quyền SỞ HỮU, không phải permission uỷ được ────────────────────────────────
+ *
+ * Số dư, sổ cái, lịch sử rút và việc tạo/huỷ lệnh rút của ví gian hàng chỉ thuộc về
+ * `shop_owner`. Đây KHÔNG phải một khoá trong `PERMISSION`, và đó là chủ đích.
+ *
+ * Vì sao không làm một permission như mọi thứ khác:
+ *
+ *  - Permission uỷ quyền được. Chủ shop tạo một vai tuỳ biến rồi gán cho quản lý là mở luôn
+ *    đường ra của tiền — mà guard thì đọc quyền từ DB mỗi request (ADR 0002), nên "mặc định
+ *    không có" không ngăn được gì. Yêu cầu sản phẩm là **không có đường nào** để một
+ *    `shop_manager`/`shop_staff`/`shop_viewer` chạm vào ví, kể cả khi ai đó cấp nhầm.
+ *  - Câu hỏi ở đây không phải "người này được làm gì trong gian hàng" mà "tiền này của ai".
+ *    Chủ ví là tenant; người đại diện hợp pháp của tenant là chủ gian hàng. Một khoá quyền đặt
+ *    câu hỏi thứ nhất, và nó là câu hỏi sai.
+ *
+ * Trục này ĐỘC LẬP với `PERMISSION` (ADR 0002) và với cờ gói (ADR 0027) — ba câu hỏi, kiểm nối
+ * tiếp. Quyền tiền của NỀN TẢNG đi đường riêng (`platform.money.manage` + `@PlatformOnly()`),
+ * không đụng tới trục này.
+ *
+ * Thi hành: `@ShopOwnerOnly()` ở `apps/api`, đọc `req.tenant.roleKey`.
+ */
+export const SHOP_WALLET_OWNER_ROLE: TenantRole = TENANT_ROLE.SHOP_OWNER;
+
+/** Vai này có được chạm vào ví của gian hàng không — dùng chung cho guard backend và menu web. */
+export function canAccessShopWallet(roleKey: string | null | undefined): boolean {
+  return roleKey === SHOP_WALLET_OWNER_ROLE;
+}

@@ -10,7 +10,7 @@ import {
 } from '@xeprime/types';
 import { GeoService } from '../src/modules/geo/geo.service';
 import { GeoNotConfiguredProvider, type GeoProvider } from '../src/modules/geo/geo-provider';
-import { GoogleGeoProvider } from '../src/modules/geo/google-geo.provider';
+import { GeoapifyGeoProvider } from '../src/modules/geo/geoapify-geo.provider';
 import { DeliveryDistanceService } from '../src/modules/pricing/delivery-distance.service';
 import type { SaveRentalPolicyDto } from '../src/modules/pricing/dto/pricing.dto';
 import type { PrismaService } from '../src/prisma/prisma.service';
@@ -27,8 +27,9 @@ import { makePricingService, makeVehiclesService, vehicleCreator } from './helpe
  *      lần người dùng bấm lại);
  *   3. lọc trước bằng đường chim bay kết luận "ngoài bán kính" mà KHÔNG gọi Routes API.
  *
- * Ba điều đó là toàn bộ lý do 10.000 request/tháng đủ dùng, nên chúng phải có test — nếu không,
- * một lần refactor vô tình bỏ cache sẽ chỉ lộ ra ở hoá đơn.
+ * Ba điều đó là toàn bộ lý do 3.000 credit/ngày của gói Geoapify miễn phí đủ dùng, nên chúng
+ * phải có test — nếu không, một lần refactor vô tình bỏ cache sẽ chỉ lộ ra khi hạn mức cạn giữa
+ * ban ngày.
  */
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
@@ -135,10 +136,18 @@ function policyDto(over: Partial<SaveRentalPolicyDto> = {}): SaveRentalPolicyDto
   };
 }
 
-/** Xoá sạch cache giữa các test — mỗi test tự quyết định trạng thái cache nó cần. */
+/**
+ * Xoá sạch cache giữa các test — mỗi test tự quyết định trạng thái cache nó cần.
+ *
+ * Dọn CẢ hai tên nhà cung cấp, không chỉ `fake`: suite cuối file chạy provider thật (tên
+ * `geoapify`), và nếu một assertion ở đó fail thì bước dọn cuối của nó không bao giờ chạy. Lần
+ * chạy kế tiếp sẽ đọc trúng cache còn sót, thấy 0 request, rồi fail ở một chỗ KHÁC hẳn nguyên
+ * nhân — kiểu hỏng tốn cả buổi để lần ra.
+ */
 async function clearGeoCache(): Promise<void> {
-  await prisma.geocodeCache.deleteMany({ where: { provider: 'fake' } });
-  await prisma.geoRouteCache.deleteMany({ where: { provider: 'fake' } });
+  const providers = { in: ['fake', 'geoapify'] };
+  await prisma.geocodeCache.deleteMany({ where: { provider: providers } });
+  await prisma.geoRouteCache.deleteMany({ where: { provider: providers } });
 }
 
 beforeAll(async () => {
@@ -419,46 +428,49 @@ describe('DeliveryDistanceService — năm trạng thái, không trạng thái n
 /**
  * Toàn chuỗi với NHÀ CUNG CẤP THẬT — trả lời đúng câu "cắm key vào thì có chạy không".
  *
- * Khác mọi test ở trên: `GoogleGeoProvider` thật, `GeoService` thật, `PricingService` thật, dữ
- * liệu trên PostgreSQL thật. Thứ DUY NHẤT bị thay là máy chủ của Google — `fetch` trả về đúng
- * hình response mà API của họ trả (hình đó được khoá riêng ở `google-geo-provider.spec.ts`).
+ * Khác mọi test ở trên: `GeoapifyGeoProvider` thật, `GeoService` thật, `PricingService` thật,
+ * dữ liệu trên PostgreSQL thật. Thứ DUY NHẤT bị thay là máy chủ của Geoapify — `fetch` trả về
+ * đúng hình response mà API của họ trả (hình đó được khoá riêng ở `geoapify-geo-provider.spec.ts`).
  *
  * Nói cách khác: nếu suite này xanh, phần còn thiếu để tính năng chạy thật đúng bằng một chuỗi
  * ký tự trong `.env`.
  */
-describe('cắm nhà cung cấp thật vào — chuỗi đầy đủ, chỉ máy chủ Google là giả', () => {
+describe('cắm nhà cung cấp thật vào — chuỗi đầy đủ, chỉ máy chủ Geoapify là giả', () => {
   const FAKE_KEY = 'e2e-test-key';
   const realFetch = global.fetch;
   let fetchCalls = 0;
 
-  /** Trả response theo ĐÚNG hình của Geocoding API và Routes API. */
-  function stubGoogle(): void {
+  /** Trả response theo ĐÚNG hình của Geocoding API và Routing API (`format=json`). */
+  function stubGeoapify(): void {
     fetchCalls = 0;
     global.fetch = ((url: string | URL) => {
       fetchCalls += 1;
       const href = String(url);
-      if (href.includes('geocode/json')) {
+      if (href.includes('/geocode/search')) {
         return Promise.resolve({
           ok: true,
           status: 200,
           json: () =>
             Promise.resolve({
-              status: 'OK',
               results: [
                 {
-                  geometry: { location: { lat: NEAR_POINT.lat, lng: NEAR_POINT.lng } },
-                  formatted_address: '12 Nguyễn Huệ, Bến Nghé, Quận 1, TP.HCM',
-                  place_id: 'ChIJ_e2e',
+                  lat: NEAR_POINT.lat,
+                  lon: NEAR_POINT.lng,
+                  formatted: '12 Nguyễn Huệ, Bến Nghé, Quận 1, TP.HCM',
+                  place_id: '51abc_e2e',
+                  // Trên ngưỡng `MIN_GEOCODE_CONFIDENCE` — dưới ngưỡng thì provider trả null và
+                  // cả chuỗi này rơi về MANUAL, đó là một ca riêng ở spec của provider.
+                  rank: { confidence: 0.9 },
                 },
               ],
             }),
         } as Response);
       }
-      // Routes API: 3421 m → 3.42 km → rơi vào bậc >3–5 km = 30.000₫.
+      // Routing API: 3421 m → 3.42 km → rơi vào bậc >3–5 km = 30.000₫.
       return Promise.resolve({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({ routes: [{ distanceMeters: 3421 }] }),
+        json: () => Promise.resolve({ results: [{ distance: 3421 }] }),
       } as Response);
     }) as typeof fetch;
   }
@@ -469,10 +481,10 @@ describe('cắm nhà cung cấp thật vào — chuỗi đầy đủ, chỉ máy
 
   maybe('địa chỉ khách → toạ độ → km đường bộ → đúng bậc phí, và ghi cả hai bảng cache', async () => {
     await clearGeoCache();
-    stubGoogle();
+    stubGeoapify();
 
     const config = { get: () => FAKE_KEY, getOrThrow: () => FAKE_KEY } as unknown as ConfigService;
-    const liveGeo = new GeoService(asService, new GoogleGeoProvider(config));
+    const liveGeo = new GeoService(asService, new GeoapifyGeoProvider(config));
     const liveDistance = new DeliveryDistanceService(asService, pricing, liveGeo);
 
     const res = await liveDistance.forListing(vehicleId, NEAR_ADDRESS);
@@ -489,19 +501,20 @@ describe('cắm nhà cung cấp thật vào — chuỗi đầy đủ, chỉ máy
     // Đúng hai lượt gọi ra ngoài cho một lần tra: 1 geocode + 1 routes.
     expect(fetchCalls).toBe(2);
 
-    const geocodeRow = await prisma.geocodeCache.findFirst({ where: { provider: 'google' } });
-    expect(geocodeRow?.placeId).toBe('ChIJ_e2e');
-    const routeRow = await prisma.geoRouteCache.findFirst({ where: { provider: 'google' } });
+    const geocodeRow = await prisma.geocodeCache.findFirst({ where: { provider: 'geoapify' } });
+    // Mã địa điểm là TOẠ ĐỘ (xem `placeToken`), không phải `place_id` thô của Geoapify.
+    expect(geocodeRow?.placeId).toBe('gp1:10.7743,106.7038');
+    const routeRow = await prisma.geoRouteCache.findFirst({ where: { provider: 'geoapify' } });
     expect(Number(routeRow?.distanceKm)).toBe(3.42);
 
     // Lần thứ hai đọc sạch từ cache — KHÔNG một request nào nữa. Đây là thứ quyết định hạn mức
-    // 10k/tháng có đủ dùng hay không, nên nó phải đúng với provider thật chứ không chỉ provider giả.
+    // 3.000 credit/ngày có đủ dùng hay không, nên nó phải đúng với provider thật chứ không chỉ provider giả.
     const again = await liveDistance.forListing(vehicleId, NEAR_ADDRESS);
     expect(again.status).toBe(DELIVERY_DISTANCE_STATUS.AUTO);
     expect(again.fee).toBe('30000');
     expect(fetchCalls).toBe(2);
 
-    await prisma.geocodeCache.deleteMany({ where: { provider: 'google' } });
-    await prisma.geoRouteCache.deleteMany({ where: { provider: 'google' } });
+    await prisma.geocodeCache.deleteMany({ where: { provider: 'geoapify' } });
+    await prisma.geoRouteCache.deleteMany({ where: { provider: 'geoapify' } });
   });
 });

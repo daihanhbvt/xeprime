@@ -16,10 +16,11 @@ import {
 import type { CustomerTripHandoverEvidence, ProvideRefundAccountInput } from './types';
 
 /** Danh sách chuyến của khách. Lọc + phân trang ở server; `filter` sống trên URL (ADR 0004). */
-export function useTrips(filter: string, page: number) {
+export function useTrips(filter: string, page: number, role?: string) {
   return useQuery({
-    queryKey: queryKeys.trips.list(tripsToParams(filter, page)),
-    queryFn: () => fetchTrips(filter, page),
+    // `role` nằm trong queryKey: đổi tab vai phải là một lần đọc KHÁC, không phải cùng cache.
+    queryKey: queryKeys.trips.list(tripsToParams(filter, page, role)),
+    queryFn: () => fetchTrips(filter, page, role),
     // Đổi tab không nháy sang trống rồi mới có dữ liệu.
     placeholderData: keepPreviousData,
   });

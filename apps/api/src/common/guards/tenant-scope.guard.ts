@@ -10,7 +10,11 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { RbacService } from '../../modules/rbac/rbac.service';
 import { TENANT_SCOPED_KEY } from '../decorators';
-import { currentSubscriptionWhere, resolveTenantFeatures } from '../plan/feature-state';
+import {
+  EFFECTIVE_SUBSCRIPTION_ARGS,
+  effectiveSubscriptionWhere,
+  resolveTenantFeatures,
+} from '../plan/feature-state';
 import type { RequestContext } from '../types/request-context';
 
 /**
@@ -64,10 +68,8 @@ export class TenantScopeGuard implements CanActivate {
             deletedAt: true,
             usedFeatures: true,
             subscriptions: {
-              where: currentSubscriptionWhere(now),
-              orderBy: { endsAt: 'desc' },
-              take: 1,
-              select: { endsAt: true, billingMode: true, plan: { select: { code: true, limitsJson: true } } },
+              where: effectiveSubscriptionWhere(now),
+              ...EFFECTIVE_SUBSCRIPTION_ARGS,
             },
           },
         },
@@ -91,6 +93,7 @@ export class TenantScopeGuard implements CanActivate {
     const plan = resolveTenantFeatures(
       membership.tenant.subscriptions[0] ?? null,
       membership.tenant.usedFeatures,
+      now,
     );
 
     req.tenant = {
@@ -104,6 +107,9 @@ export class TenantScopeGuard implements CanActivate {
       usedFeatures: membership.tenant.usedFeatures.filter(isPlanFeature),
       planCode: plan.planCode,
       planEndsAt: plan.planEndsAt?.toISOString() ?? null,
+      billingMode: plan.billingMode,
+      billingPhase: plan.phase,
+      graceEndsAt: plan.graceEndsAt?.toISOString() ?? null,
     };
 
     return true;

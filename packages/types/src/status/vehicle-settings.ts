@@ -213,6 +213,15 @@ export const AUTO_ACCEPT_BLOCKER = {
   NO_DRIVER: 'no_driver',
   HOLD_REQUIRED_WITH_DRIVER: 'hold_required_with_driver',
   TERMS_NOT_ACCEPTED: 'terms_not_accepted',
+  /**
+   * Chưa xác định được TUYẾN thu phí của gian hàng (`BILLING_PHASE.UNCONFIGURED`).
+   *
+   * Tự nhận chuyến DỪNG thay vì ném: đây là đường chạy nền, và một ngoại lệ ở đây chỉ để lại
+   * một yêu cầu treo không ai biết vì sao. Bỏ qua + audit giữ yêu cầu ở `pending_host_approval`
+   * để chủ xe thấy nó, và lần duyệt tay sẽ trả về `TENANT_BILLING_NOT_CONFIGURED` — một câu nói
+   * rõ phải sửa gì.
+   */
+  BILLING_NOT_CONFIGURED: 'billing_not_configured',
 } as const;
 
 export type AutoAcceptBlocker = (typeof AUTO_ACCEPT_BLOCKER)[keyof typeof AUTO_ACCEPT_BLOCKER];

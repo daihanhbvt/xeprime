@@ -27,6 +27,36 @@ export function isChatSide(value: unknown): value is ChatSide {
   return typeof value === 'string' && (CHAT_SIDE_VALUES as string[]).includes(value);
 }
 
+/**
+ * HỘP THƯ mà người xem đang mở — trục TRUY VẤN, khác hẳn `CHAT_SIDE` ngay trên.
+ *
+ * `CHAT_SIDE` trả lời "trong hội thoại NÀY tôi là ai" và nó là thuộc tính của từng dòng.
+ * `CHAT_INBOX` trả lời "cho tôi xem những hội thoại nào" và nó là tham số của một lần đọc. Hai
+ * câu hỏi khác nhau, nên hai union — trộn chúng lại thì `unified` sẽ trôi vào những chỗ đang
+ * hỏi vai của một dòng (`participantType`, `senderType`, nhãn trên thẻ) và ở đó nó vô nghĩa.
+ *
+ * `UNIFIED` là hợp của đúng hai phạm vi mà người gọi ĐÃ có (`chatInboxScope`), không phải một
+ * phạm vi thứ ba: nó không mở thêm hội thoại nào. Lý do nó tồn tại là chủ xe tuyến hoa hồng
+ * không có cổng `/manage` để đặt hộp thư công việc — với họ, "tin nhắn" là MỘT khái niệm, và
+ * bắt họ nhớ mình đang đứng ở hộp thư nào là bắt họ làm việc của hệ thống (ADR 0038 điều 9).
+ *
+ * Hai giá trị đầu TRÙNG giá trị của `CHAT_SIDE` có chủ đích: mọi URL, bookmark và lời gọi cũ
+ * (`?side=customer`, `?side=shop`) vẫn đúng nguyên nghĩa.
+ */
+export const CHAT_INBOX = {
+  CUSTOMER: 'customer',
+  SHOP: 'shop',
+  UNIFIED: 'unified',
+} as const;
+
+export type ChatInbox = (typeof CHAT_INBOX)[keyof typeof CHAT_INBOX];
+
+export const CHAT_INBOX_VALUES = Object.values(CHAT_INBOX) as ChatInbox[];
+
+export function isChatInbox(value: unknown): value is ChatInbox {
+  return typeof value === 'string' && (CHAT_INBOX_VALUES as string[]).includes(value);
+}
+
 /** Vai trò một thành viên trong hội thoại (docs §15.3). MVP dùng customer + shop_member. */
 export const PARTICIPANT_TYPE = {
   CUSTOMER: 'customer',

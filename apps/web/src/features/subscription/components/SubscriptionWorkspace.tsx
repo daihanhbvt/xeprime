@@ -136,7 +136,7 @@ export function SubscriptionWorkspace({ header }: { header: ReactNode }) {
     );
   }
 
-  const { currentPlan, usage, freeTrips } = me.data;
+  const { currentPlan, usage, fleetQuota, freeTrips } = me.data;
   const isCommission = currentPlan?.billingMode === BILLING_MODE.COMMISSION;
 
   return (
@@ -193,6 +193,15 @@ export function SubscriptionWorkspace({ header }: { header: ReactNode }) {
         </Card>
 
         <Card size="small" title={t('usage.title')}>
+          {/*
+            Owner Lite có trần TỔNG (ô tô + xe máy), tuyến gói có hạn mức theo LOẠI. Hai luật
+            khác nhau nên hai cách vẽ khác nhau — nhét trần tổng vào thanh tiến trình của từng
+            loại là màn hình nói "3 ô tô" trong khi backend chặn ở "3 xe", và người dùng sẽ đăng
+            đủ 3 ô tô rồi ngạc nhiên vì chiếc xe máy đầu tiên bị từ chối.
+          */}
+          {fleetQuota.kind === 'total' && fleetQuota.totalLimit != null ? (
+            <FleetTotalRow used={fleetQuota.totalUsed} limit={fleetQuota.totalLimit} />
+          ) : null}
           <UsageRow label={t('usage.car')} usage={usage.car} />
           <UsageRow label={t('usage.motorbike')} usage={usage.motorbike} />
         </Card>
@@ -240,6 +249,32 @@ export function SubscriptionWorkspace({ header }: { header: ReactNode }) {
       />
 
       <PurchaseModal open={purchaseOpen} onClose={() => setPurchaseOpen(false)} />
+    </div>
+  );
+}
+
+/**
+ * Trần TỔNG của Owner Lite — một dòng riêng, đứng TRÊN hai dòng theo loại.
+ *
+ * Nó phải đứng trước vì nó là ràng buộc CHẶT hơn: hai dòng dưới sẽ hiện "Không giới hạn" cho
+ * từng loại (đúng — không có hạn mức theo loại nào), và nếu chỉ có hai dòng đó thì màn hình nói
+ * ngược hẳn với thứ backend làm.
+ */
+function FleetTotalRow({ used, limit }: { used: number; limit: number }) {
+  const t = useTranslations('Subscription');
+  return (
+    <div className={styles.usageRow}>
+      <div className={styles.usageHead}>
+        <span>{t('usage.fleetTotal')}</span>
+        <span className={styles.meta}>{t('usage.ofLimit', { used, limit })}</span>
+      </div>
+      <Progress
+        percent={Math.min(100, Math.round((used / limit) * 100))}
+        size="small"
+        showInfo={false}
+        status={used >= limit ? 'exception' : 'normal'}
+      />
+      <div className={styles.metaSmall}>{t('usage.fleetTotalHint', { limit })}</div>
     </div>
   );
 }

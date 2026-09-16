@@ -12,8 +12,12 @@
  * chuyện khác nhau.
  */
 
-import { BOOKING_STATUS, type BookingStatus } from './booking';
-import { BOOKING_REQUEST_STATUS, type BookingRequestStatus } from './booking-request';
+import { BOOKING_STATUS, BOOKING_STATUS_VALUES, type BookingStatus } from './booking';
+import {
+  BOOKING_REQUEST_STATUS,
+  BOOKING_REQUEST_STATUS_VALUES,
+  type BookingRequestStatus,
+} from './booking-request';
 import { STATUS_COLOR, type StatusMeta } from './meta';
 
 /**
@@ -32,6 +36,10 @@ export const TRIP_ROLE = {
 
 export type TripRole = (typeof TRIP_ROLE)[keyof typeof TRIP_ROLE];
 export const TRIP_ROLE_VALUES = Object.values(TRIP_ROLE) as TripRole[];
+
+export function isTripRole(value: unknown): value is TripRole {
+  return typeof value === 'string' && (TRIP_ROLE_VALUES as string[]).includes(value);
+}
 
 export const CUSTOMER_TRIP_STAGE = {
   /** Đã gửi yêu cầu, chủ xe chưa trả lời. Chưa có đơn thuê. */
@@ -251,3 +259,45 @@ export const CUSTOMER_CANCELLABLE_STAGES: readonly CustomerTripStage[] = [
 export function canCustomerCancelTrip(stage: CustomerTripStage): boolean {
   return CUSTOMER_CANCELLABLE_STAGES.includes(stage);
 }
+
+/**
+ * Trạng thái THẬT ở DB ứng với mỗi tab chuyến — suy NGƯỢC từ phép chiếu `customerTripStage`.
+ *
+ * Trước 15/09/2026 bảng này sống trong `CustomerTripsService`. Nó chuyển lên đây vì nơi thứ hai
+ * cần đúng phép suy ấy: `/auth/me` phải đếm "chuyến đi thuê CHƯA KHÉP" để biết có giữ menu
+ * Chuyến cho một tài khoản gian hàng hay không (quy tắc chuyển tiếp khi nâng gói giữa chuyến).
+ *
+ * Chép sang một bản thứ hai thì hai nơi lệch nhau vào đúng ngày ai đó thêm một trạng thái, và
+ * hậu quả là một người bị GIẤU MẤT chuyến đang chạy của chính mình.
+ *
+ * Không liệt kê tay: mỗi trạng thái vận hành được đem chiếu ra CHẶNG rồi hỏi chặng đó thuộc tab
+ * nào — thêm trạng thái mới là nó tự vào đúng chỗ.
+ */
+export interface CustomerTripStatusSets {
+  bookingStatuses: BookingStatus[];
+  requestStatuses: BookingRequestStatus[];
+}
+
+export function customerTripStatusesFor(
+  stages: readonly CustomerTripStage[],
+): CustomerTripStatusSets {
+  return {
+    bookingStatuses: BOOKING_STATUS_VALUES.filter((status) =>
+      stages.includes(
+        // Yêu cầu đã sinh đơn thì trạng thái của nó chỉ còn là lịch sử — phép chiếu bỏ qua.
+        customerTripStage({
+          requestStatus: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
+          bookingStatus: status,
+        }),
+      ),
+    ),
+    requestStatuses: BOOKING_REQUEST_STATUS_VALUES.filter((status) =>
+      stages.includes(customerTripStage({ requestStatus: status, bookingStatus: null })),
+    ),
+  };
+}
+
+/** Trạng thái của chuyến CHƯA KHÉP — tab "đang diễn ra". */
+export const OPEN_CUSTOMER_TRIP_STATUSES: CustomerTripStatusSets = customerTripStatusesFor(
+  CUSTOMER_TRIP_STAGE_VALUES.filter((stage) => !isCustomerTripClosed(stage)),
+);
