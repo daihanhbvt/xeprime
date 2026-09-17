@@ -29,7 +29,9 @@ import {
   isCustomerTripFilter,
   isTripRole,
   isDepositCollectionMode,
+  resolveEffectiveBilling,
   resolveRefundWalletOwner,
+  resolveStorefrontKind,
   isHandoverPhotoAddedAfterConfirmation,
   type BookingRequestStatus,
   type BookingStatus,
@@ -41,7 +43,11 @@ import {
   type TripRole,
 } from '@xeprime/types';
 import { fromDateOnly } from '../../common/date-only';
-import { currentSubscriptionWhere } from '../../common/plan/feature-state';
+import {
+  currentSubscriptionWhere,
+  effectiveSubscriptionWhere,
+  EFFECTIVE_SUBSCRIPTION_ARGS,
+} from '../../common/plan/feature-state';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { BookingsService } from '../bookings/bookings.service';
@@ -140,6 +146,7 @@ export class CustomerTripsService {
     viewerUserId: string,
     query: CustomerTripListQueryDto,
   ): Promise<CustomerTripPageDto> {
+    const now = new Date();
     const paging = resolvePaging(query, CUSTOMER_TRIP_DEFAULT_LIMIT, CUSTOMER_TRIP_MAX_LIMIT);
     const filter: CustomerTripFilter = isCustomerTripFilter(query.filter)
       ? query.filter
@@ -159,7 +166,7 @@ export class CustomerTripsService {
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: paging.skip,
         take: paging.take,
-        select: LIST_SELECT,
+        select: listSelect(now),
       }),
       this.counts(scope, role),
     ]);
@@ -171,7 +178,7 @@ export class CustomerTripsService {
 
     const meta: PaginationMeta = paginationMeta(paging, total);
     return {
-      data: rows.map((row) => toListItem(row, surchargeTotals, scope, estimates)),
+      data: rows.map((row) => toListItem(row, surchargeTotals, scope, estimates, now)),
       meta,
       counts,
     };
@@ -224,7 +231,7 @@ export class CustomerTripsService {
    * và không giúp gì cho dữ liệu đã có, nên chưa làm.
    */
   private async estimateQuotes(
-    rows: Prisma.BookingRequestGetPayload<{ select: typeof LIST_SELECT }>[],
+    rows: Prisma.BookingRequestGetPayload<{ select: ReturnType<typeof listSelect> }>[],
   ): Promise<Map<string, TripEstimate>> {
     const pending = rows.filter((row) => row.booking === null);
     if (pending.length === 0) return new Map();
@@ -312,6 +319,7 @@ export class CustomerTripsService {
    * và bắt khách phải biết mình đang cầm loại id nào là một yêu cầu vô lý.
    */
   async detail(viewerUserId: string, id: string): Promise<CustomerTripDetailDto> {
+    const now = new Date();
     const scope = await this.resolveScope(viewerUserId);
     const row = await this.prisma.bookingRequest.findFirst({
       where: {
@@ -319,7 +327,7 @@ export class CustomerTripsService {
         // của gian hàng tôi làm chủ. Không phải của tôi ⇒ đơn giản là không tồn tại.
         AND: [scopeWhere(scope), { OR: [{ id }, { bookingId: id }] }],
       },
-      select: DETAIL_SELECT,
+      select: detailSelect(now),
     });
     if (!row) throw tripNotFound();
 
@@ -328,7 +336,7 @@ export class CustomerTripsService {
       this.surchargeTotals([row.bookingId]),
       this.estimateQuotes([row]),
     ]);
-    const base = toListItem(row, surcharges, scope, estimates);
+    const base = toListItem(row, surcharges, scope, estimates, now);
 
     return {
       ...base,
@@ -855,7 +863,7 @@ const BOOKING_SELECT = {
   review: { select: { id: true, rating: true, comment: true, createdAt: true } },
 } satisfies Prisma.BookingSelect;
 
-const LIST_SELECT = {
+const listSelect = (now: Date) => ({
   id: true,
   status: true,
   pickupAt: true,
@@ -899,7 +907,22 @@ const LIST_SELECT = {
       discountPercent: true,
     },
   },
-  tenant: { select: { name: true, slug: true, ratingAvg: true, ratingCount: true, phone: true } },
+  tenant: {
+    select: {
+      name: true,
+      slug: true,
+      ratingAvg: true,
+      ratingCount: true,
+      phone: true,
+      /*
+       * Dòng thuê bao HIỆU LỰC — đầu vào của `resolveEffectiveBilling`, để tách "chủ xe cá nhân
+       * tuyến hoa hồng" khỏi "gian hàng tuyến gói" (ADR 0028/0040): màn chi tiết chuyến không
+       * được gọi CẢ HAI là "gian hàng" như trước 17/09/2026, vì chủ xe cá nhân không có mặt tiền
+       * kiểu doanh nghiệp để "xem".
+       */
+      subscriptions: { where: effectiveSubscriptionWhere(now), ...EFFECTIVE_SUBSCRIPTION_ARGS },
+    },
+  },
   booking: { select: BOOKING_SELECT },
   /*
    * Snapshot giá ĐÃ ĐÓNG BĂNG lúc sinh khoản giữ chỗ (ADR 0024 · ADR 0039).
@@ -910,22 +933,23 @@ const LIST_SELECT = {
    * với khách một con số không ai từng thu của họ.
    */
   hold: { select: { status: true, priceSnapshotJson: true } },
-} satisfies Prisma.BookingRequestSelect;
+}) satisfies Prisma.BookingRequestSelect;
 
-const DETAIL_SELECT = {
-  ...LIST_SELECT,
+const detailSelect = (now: Date) => ({
+  ...listSelect(now),
   note: true,
   rejectReason: true,
-} satisfies Prisma.BookingRequestSelect;
+}) satisfies Prisma.BookingRequestSelect;
 
-type TripRow = Prisma.BookingRequestGetPayload<{ select: typeof DETAIL_SELECT }>;
+type TripRow = Prisma.BookingRequestGetPayload<{ select: ReturnType<typeof detailSelect> }>;
 type BookingRow = NonNullable<TripRow['booking']>;
 
 function toListItem(
-  row: TripRow | Prisma.BookingRequestGetPayload<{ select: typeof LIST_SELECT }>,
+  row: TripRow | Prisma.BookingRequestGetPayload<{ select: ReturnType<typeof listSelect> }>,
   surchargeTotals: Map<string, Prisma.Decimal>,
   scope: TripViewerScope,
   estimates: Map<string, TripEstimate>,
+  now: Date,
 ) {
   const booking = row.booking;
   const stage = customerTripStage({
@@ -983,6 +1007,11 @@ function toListItem(
       ratingAvg: Number(row.tenant.ratingAvg),
       ratingCount: row.tenant.ratingCount,
       phone: canContact ? row.tenant.phone : null,
+      // Cùng phép suy với trang gian hàng công khai (`resolveStorefrontKind`, ADR 0038 điều 1):
+      // `unconfigured`/hết ân hạn rơi về `personal`, KHÔNG mặc định thành `shop`.
+      shopKind: resolveStorefrontKind(
+        resolveEffectiveBilling(row.tenant.subscriptions[0] ?? null, now).billingMode,
+      ),
     },
     // Giờ trên ĐƠN thắng giờ trên yêu cầu: shop dời lịch thì đơn mới là cái đang có hiệu lực.
     // Yêu cầu dài hạn chờ duyệt chưa có lịch nào — trả null, KHÔNG suy ra ngày từ nguyện vọng.

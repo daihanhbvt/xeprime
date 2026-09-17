@@ -174,7 +174,6 @@ export class TenantsService {
         displayName: dto.name,
         contactPhone: dto.phone,
         provinceCode: dto.provinceCode,
-        wardCode: dto.wardCode,
         addressLine: dto.addressLine ?? dto.address,
       });
       if (missing.length > 0) {
@@ -191,10 +190,10 @@ export class TenantsService {
      * thể phải hỏi bản đồ, và giữ transaction mở trong lúc chờ Internet là cách để một sự cố
      * bên ngoài thành một hàng đợi khoá bên trong.
      *
-     * `requireWard` theo TUYẾN. Tuyến hoa hồng vẫn `false` — người mở hồ sơ chủ xe thường chưa
-     * có địa chỉ chính xác, và chặn ở đây là chặn luôn việc họ bắt đầu; chi nhánh sinh ra mang
-     * cờ chờ bổ sung. Tuyến gói thì `true`: đó là một mặt tiền có người trả tiền để khách tìm
-     * thấy, nên `AddressService` phải xác nhận xã tồn tại VÀ thuộc đúng tỉnh trước khi ghi.
+     * `requireWard: false` ở CẢ HAI tuyến (ADR 0042). Không màn hình nào còn hỏi xã/phường cho
+     * một địa chỉ có ghim, nên đòi nó ở đây là từ chối đúng payload mà giao diện gửi lên. Mã xã
+     * vẫn được NHẬN nếu client gửi (app bản cũ, dữ liệu nhập tay) và vẫn bị `AddressService` đối
+     * chiếu với tỉnh khi có giá trị — chỉ là không bắt buộc nữa.
      */
     const address = await this.address.resolve(
       {
@@ -206,7 +205,7 @@ export class TenantsService {
         longitude: dto.longitude,
         locationSource: dto.locationSource,
       },
-      { requireWard: isPackageTrack },
+      { requireWard: false },
     );
 
     const tenantType = dto.tenantType ?? TENANT_TYPE.INDIVIDUAL;

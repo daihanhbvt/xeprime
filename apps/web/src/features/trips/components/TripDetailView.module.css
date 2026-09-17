@@ -62,6 +62,46 @@
   overflow-wrap: anywhere;
 }
 
+/* Tóm tắt chuyến (xe/gian hàng/lịch) — full width, đứng TRƯỚC `.layout`. Xem chú thích ở JSX. */
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+  /*
+   * Container query cho `.vehicleShopRow` bên dưới — trang này còn được nhúng trong khu vực hẹp
+   * của `/manage/account` (xem `TripHoldPanel.module.css`, lỗi bẻ ký tự đã gặp đúng lý do này),
+   * nên bề ngang THẬT của `.summary` có thể nhỏ hơn khổ máy nhiều. `@media` sẽ không chuyển
+   * sang một cột đúng lúc cần.
+   */
+  container-type: inline-size;
+}
+
+/* Xe + chủ tài khoản: một hàng khi đủ chỗ, xếp dọc khi hẹp (mặc định). */
+.vehicleShopRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+@container (min-width: 560px) {
+  .vehicleShopRow {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .vehicleShopRow > .block {
+    flex: 3 1 0;
+    min-width: 0;
+  }
+
+  .vehicleShopRow > .shop {
+    flex: 2 1 0;
+    min-width: 0;
+  }
+}
+
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
@@ -269,20 +309,22 @@
   white-space: nowrap;
 }
 
-.pickupMethod {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--xp-space-xs);
-  margin: 0;
-  padding-top: var(--xp-space-sm);
-  border-top: 1px solid var(--xp-color-border-subtle);
+/*
+ * Giá trị của hàng "Hình thức nhận xe" — nhãn ngắn (nowrap, kế thừa từ `.row dd`) rồi tới các
+ * dòng địa chỉ CÓ THỂ dài, không được phép ép về một dòng như các hàng tiền/giờ khác.
+ */
+.pickupMethodValue {
   min-width: 0;
 }
 
 .address {
   display: block;
+  margin-top: 2px;
   font-size: var(--xp-font-size-sm);
+  font-weight: 400;
   color: var(--xp-color-text-secondary);
+  text-align: left;
+  white-space: normal;
   overflow-wrap: anywhere;
 }
 

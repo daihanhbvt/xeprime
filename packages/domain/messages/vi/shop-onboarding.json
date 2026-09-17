@@ -41,7 +41,7 @@
       },
       "address": {
         "label": "Địa chỉ",
-        "placeholder": "Số nhà, đường, phường/xã"
+        "placeholder": "Ví dụ: 12 Nguyễn Thái Học"
       },
       "phone": {
         "label": "Số điện thoại",
@@ -74,7 +74,7 @@
     "emailInvalid": "Email không hợp lệ",
     "wardRequired": "Chọn xã/phường/đặc khu",
     "wardInvalid": "Xã/phường không hợp lệ",
-    "addressLineRequired": "Nhập số nhà, đường của gian hàng",
+    "addressLineRequired": "Nhập địa chỉ của gian hàng",
     "addressLineMax": "Địa chỉ quá dài",
     "phoneRequired": "Nhập số điện thoại liên hệ của gian hàng"
   },

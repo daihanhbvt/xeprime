@@ -72,6 +72,19 @@ const INTENTIONALLY_UNGATED: Readonly<Record<string, readonly string[]>> = {
 };
 
 /**
+ * Cổng TUYẾN (`@SubscriptionTrackOnly`) trên controller có ngoại lệ — ADR 0038 điều 4.
+ *
+ * Hai cổng trả lời hai câu khác nhau ("gói của bạn chưa mua thứ này" vs "khu này không thuộc
+ * tuyến của bạn") nên chúng phải khai riêng. Nhưng ở `BranchesController` chúng phải TRÙNG
+ * nhau đúng bốn route: mở đọc/sửa cho bậc cơ bản rồi vẫn khoá cả tuyến hoa hồng là đúng cái lỗ
+ * đã có thật — chủ xe cá nhân không đọc nổi chi nhánh của chính mình, và `POST /vehicles` bắt
+ * buộc `branchId` nên họ không đăng nổi chiếc xe đầu tiên.
+ */
+const TRACK_ONLY: Readonly<Record<string, readonly string[]>> = {
+  BranchesController: ['create', 'setDefault', 'deactivate', 'activate'],
+};
+
+/**
  * Controller bậc CƠ BẢN — phải KHÔNG có marker nào. Mỗi dòng là một quyết định của ADR 0027:
  * tiền của từng đơn, giao nhận xe, số KM lúc bàn giao, và hợp đồng NGUỒN GỐC xe đều là bộ cơ bản.
  */
@@ -184,6 +197,34 @@ describe('phủ cổng chặn năng lực — bất biến chung', () => {
     for (const feature of used) {
       expect(Object.values(PLAN_FEATURE)).toContain(feature);
     }
+  });
+
+  it('cổng TUYẾN trên BranchesController trùng đúng bốn route của cờ nhiều-chi-nhánh', () => {
+    for (const [controller, handlers] of Object.entries(TRACK_ONLY)) {
+      const routes = routesOf(controller);
+      expect(routes.length).toBeGreaterThan(0);
+
+      const gated = routes
+        .filter((r) => r.trackOnly)
+        .map((r) => r.handler)
+        .sort();
+      expect(gated).toEqual([...handlers].sort());
+
+      // Và trùng đúng tập route mang cờ năng lực — hai cổng lệch nhau ở đây là một lỗ im lặng.
+      const byFeature = routes
+        .filter((r) => r.feature !== null)
+        .map((r) => r.handler)
+        .sort();
+      expect(gated).toEqual(byFeature);
+    }
+  });
+
+  it('đọc/sửa chi nhánh của CHÍNH MÌNH mở cho cả hai tuyến — không có cổng nào', () => {
+    const open = routesOf('BranchesController')
+      .filter((r) => !r.trackOnly && r.feature === null)
+      .map((r) => r.handler)
+      .sort();
+    expect(open).toEqual(['get', 'list', 'update']);
   });
 
   it('escrow_hold chỉ gác đường GHI công tắc thu cọc — đường ĐỌC luôn mở (Phase 6)', () => {

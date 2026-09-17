@@ -1,8 +1,9 @@
 'use client';
 
-import { InfoCircleOutlined } from '@ant-design/icons';
+import { DownOutlined, InfoCircleOutlined, UpOutlined } from '@ant-design/icons';
 import { Tooltip } from 'antd';
 import type { ReactNode } from 'react';
+import { useState } from 'react';
 import { subtractMoney } from '@xeprime/domain';
 import { FEE_BEARER, PRICE_ROW } from '@xeprime/types';
 import styles from './PriceBreakdown.module.css';
@@ -72,6 +73,13 @@ interface PriceBreakdownProps {
    * hiểm vào đó là nói dối cả hai phía — xem docblock `PlatformFeeSnapshot` ở @xeprime/types.
    */
   fees?: PriceBreakdownFees | null;
+  /**
+   * Gấp các dòng kê chi tiết (bảng giá thuê + từng khoản phụ phí) sau một nút "Xem chi tiết",
+   * mặc định ĐÓNG — chỉ tổng cuối/cọc/tiền giữ chỗ hiện ngay. Mặc định của prop là `false` để
+   * KHÔNG đổi hành vi ở màn đặt xe (khách cần thấy đủ trước khi bấm gửi): chỉ màn xem lại sau
+   * khi đã đặt (chi tiết chuyến) mới bật, nơi con số đã chốt và bảng dài chỉ còn là tra cứu.
+   */
+  collapsible?: boolean;
 }
 
 /**
@@ -92,6 +100,7 @@ export function PriceBreakdown({
   footer,
   fees,
   audience = 'customer',
+  collapsible = false,
 }: PriceBreakdownProps) {
   const tCommon = useTranslations('Common');
   const totalText = totalLabel ?? tCommon('components.price.subtotal');
@@ -99,6 +108,8 @@ export function PriceBreakdown({
   const titleText = title ?? tCommon('components.price.title');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
+  const [expanded, setExpanded] = useState(!collapsible);
+  const showItems = !collapsible || expanded;
 
   /*
    * Dòng do CHỦ XE chịu chỉ vẽ cho chủ xe. Với khách, thuế khấu trừ là một con số lạ nằm giữa
@@ -116,29 +127,43 @@ export function PriceBreakdown({
         {badge ? <span className={styles.badge}>{badge}</span> : null}
       </header>
 
-      <dl className={styles.rows}>
-        {rows.map((row) => (
-          <div key={row.key} className={styles.row}>
-            <dt className={styles.rowLabel}>
-              <span className={row.key === PRICE_ROW.DISCOUNT ? styles.discountText : undefined}>
-                {row.label}
-              </span>
-              {row.sublabel ? <span className={styles.sublabel}>{row.sublabel}</span> : null}
-            </dt>
-            <dd
-              className={[
-                styles.rowAmount,
-                row.key === PRICE_ROW.DISCOUNT ? styles.discountText : '',
-                row.amount === '0' ? styles.muted : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-            >
-              {fmt.money(row.amount)}
-            </dd>
-          </div>
-        ))}
-      </dl>
+      {collapsible ? (
+        <button
+          type="button"
+          className={styles.toggle}
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+        >
+          {expanded ? tCommon('components.price.collapse') : tCommon('components.price.viewDetails')}
+          {expanded ? <UpOutlined aria-hidden="true" /> : <DownOutlined aria-hidden="true" />}
+        </button>
+      ) : null}
+
+      {showItems ? (
+        <dl className={styles.rows}>
+          {rows.map((row) => (
+            <div key={row.key} className={styles.row}>
+              <dt className={styles.rowLabel}>
+                <span className={row.key === PRICE_ROW.DISCOUNT ? styles.discountText : undefined}>
+                  {row.label}
+                </span>
+                {row.sublabel ? <span className={styles.sublabel}>{row.sublabel}</span> : null}
+              </dt>
+              <dd
+                className={[
+                  styles.rowAmount,
+                  row.key === PRICE_ROW.DISCOUNT ? styles.discountText : '',
+                  row.amount === '0' ? styles.muted : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {fmt.money(row.amount)}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
 
       <div className={styles.totalBlock}>
         <div className={styles.totalRow}>
@@ -165,35 +190,37 @@ export function PriceBreakdown({
       {fees && feeLines.length > 0 ? (
         <div className={styles.feesBlock}>
           <h4 className={styles.feesTitle}>{tCommon('components.price.feesTitle')}</h4>
-          <dl className={styles.rows}>
-            {feeLines.map((line) => (
-              <div key={line.key} className={styles.row}>
-                <dt className={styles.rowLabel}>
-                  <span>{domainLabel('feeLine', line.key)}</span>
-                  {/*
-                    Dòng do CHỦ XE chịu (bảo vệ xe) không cộng vào tổng khách — nói rõ ngay tại
-                    dòng, nếu không khách sẽ tự cộng vào và thấy tổng không khớp.
-                  */}
-                  <span className={styles.sublabel}>
-                    {line.bearer === FEE_BEARER.OWNER
-                      ? tCommon('components.price.ownerNet')
-                      : `${line.percent}%`}
-                    {line.partnerName ? ` · ${line.partnerName}` : ''}
-                  </span>
-                </dt>
-                <dd
-                  className={[
-                    styles.rowAmount,
-                    line.bearer === FEE_BEARER.OWNER ? styles.muted : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                >
-                  {fmt.money(line.amount)}
-                </dd>
-              </div>
-            ))}
-          </dl>
+          {showItems ? (
+            <dl className={styles.rows}>
+              {feeLines.map((line) => (
+                <div key={line.key} className={styles.row}>
+                  <dt className={styles.rowLabel}>
+                    <span>{domainLabel('feeLine', line.key)}</span>
+                    {/*
+                      Dòng do CHỦ XE chịu (bảo vệ xe) không cộng vào tổng khách — nói rõ ngay tại
+                      dòng, nếu không khách sẽ tự cộng vào và thấy tổng không khớp.
+                    */}
+                    <span className={styles.sublabel}>
+                      {line.bearer === FEE_BEARER.OWNER
+                        ? tCommon('components.price.ownerNet')
+                        : `${line.percent}%`}
+                      {line.partnerName ? ` · ${line.partnerName}` : ''}
+                    </span>
+                  </dt>
+                  <dd
+                    className={[
+                      styles.rowAmount,
+                      line.bearer === FEE_BEARER.OWNER ? styles.muted : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    {fmt.money(line.amount)}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
 
           <div className={styles.totalRow}>
             <span className={styles.totalLabel}>{tCommon('components.price.customerTotal')}</span>

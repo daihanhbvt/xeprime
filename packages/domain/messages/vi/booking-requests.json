@@ -179,8 +179,7 @@
       "estimatedDistance": "Quãng đường giao xe khoảng {distance} (một chiều). Phí trên là DỰ KIẾN theo bảng giá của gian hàng — chủ xe chốt lại khi duyệt yêu cầu.",
       "manualWithDistance": "Địa chỉ của bạn cách điểm giao xe khoảng {distance} (một chiều), ngoài phạm vi báo giá tự động. Chủ xe sẽ trao đổi phí giao trực tiếp với bạn.",
       "addressNotFound": "Chưa xác định được địa chỉ này trên bản đồ. Bạn thử ghi rõ hơn (số nhà, tên đường, phường/xã) để xem phí giao dự kiến.",
-      "resolvedAddress": "Bản đồ hiểu là: {address}",
-      "mapTitle": "Bản đồ đường đi tới địa chỉ giao xe"
+      "resolvedAddress": "Bản đồ hiểu là: {address}"
     },
     "driver": {
       "pickupAddressLabel": "Địa chỉ đón",
@@ -346,9 +345,9 @@
       "pickupPreferenceRequired": "Chọn nguyện vọng nhận xe",
       "requestedPickupDateRequired": "Chọn ngày mong muốn nhận xe",
       "routeRequired": "Chọn lộ trình",
-      "pickupAddressRequired": "Nhập số nhà, đường nơi đón",
+      "pickupAddressRequired": "Nhập địa chỉ đón",
       "destinationRequired": "Nhập điểm đến",
-      "deliveryAddressRequired": "Nhập số nhà, đường nơi giao xe",
+      "deliveryAddressRequired": "Nhập địa chỉ giao xe",
       "noteTooLong": "Ghi chú tối đa {max} ký tự",
       "pickupProvinceRequired": "Chọn tỉnh/thành phố nơi đón",
       "pickupWardRequired": "Chọn xã/phường nơi đón",
@@ -366,6 +365,9 @@
         "title": "Đây là xe của bạn",
         "body": "Chiếc xe này thuộc chính gian hàng của bạn nên không đặt thuê được. Nếu muốn chặn lịch cho việc riêng, hãy dùng mục Lịch xe."
       }
+    },
+    "address": {
+      "vehicleAt": "Xe đang ở {province}. Nhập địa chỉ rồi chọn trong danh sách gợi ý."
     }
   },
   "approved": {
@@ -382,5 +384,23 @@
     "expired": "Đã quá hạn phản hồi",
     "pastDueHint": "Quá 60 phút chưa phản hồi nên yêu cầu đã đóng. Gọi cho khách nếu vẫn muốn nhận chuyến này.",
     "hint": "Gian hàng có 60 phút để trả lời. Quá hạn, yêu cầu tự đóng và khách được báo để chọn xe khác."
+  },
+  "form": {
+    "errors": {
+      "customerName": "Nhập họ tên",
+      "customerPhone": "Nhập số điện thoại",
+      "customerPhoneFormat": "Số điện thoại không hợp lệ",
+      "pickupAddressLine": "Nhập địa chỉ đón",
+      "deliveryAddressLine": "Nhập địa chỉ giao xe",
+      "addressLineMax": "Tối đa {max} ký tự",
+      "addressNotConfirmed": "Chọn một địa chỉ trong danh sách gợi ý, hoặc đặt ghim trên bản đồ",
+      "destination": "Nhập điểm đến",
+      "destinationMax": "Tối đa {max} ký tự",
+      "pickupAt": "Chọn thời gian nhận xe",
+      "returnAt": "Chọn thời gian trả xe",
+      "returnAfterPickup": "Thời gian trả phải sau thời gian nhận",
+      "longTermPackage": "Chọn gói thuê",
+      "requestedPickupDate": "Chọn ngày muốn nhận xe"
+    }
   }
 }

@@ -1,9 +1,8 @@
-'use client';
+﻿'use client';
 
-import { EnvironmentOutlined } from '@ant-design/icons';
-import { Alert, AutoComplete, Button, Form, Spin } from 'antd';
+import { Alert, Button, Spin } from 'antd';
 import { useTranslations } from 'next-intl';
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   useController,
   type Control,
@@ -11,21 +10,26 @@ import {
   type Path,
   type PathValue,
 } from 'react-hook-form';
-import type { GeoPoint } from '@xeprime/domain';
-import { LOCATION_SOURCE } from '@xeprime/types';
+import { provinceCenter } from '@xeprime/domain';
 import { SelectField } from '@/components/form/SelectField';
 import { TextField } from '@/components/form/TextField';
-import { MapPinPicker } from '@/components/form/MapPinPicker';
+import {
+  ConfirmedPlaceField,
+  type AddressPinNames,
+} from '@/components/form/ConfirmedPlaceField';
 import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
 import { useWardOptions } from '@/features/locations/hooks/use-wards';
-import {
-  PLACE_SEARCH_MIN_LENGTH,
-  usePlaceDetail,
-  usePlaceSearch,
-  useReverseGeocode,
-} from '@/features/locations/hooks/use-places';
-import fieldStyles from './field.module.css';
+import { readRememberedProvince, rememberProvince } from '@/lib/province-memory';
 import styles from './AddressField.module.css';
+
+/**
+ * Thu phóng khi bản đồ mở ở TÂM MỘT TỈNH — rộng hơn hẳn mức mặc định "một phường".
+ *
+ * Tâm tỉnh là một điểm neo, không phải một phỏng đoán về chỗ người dùng muốn tới. Mở ở mức
+ * phường tại đó là trình ra một khu phố ngẫu nhiên và bắt họ thu nhỏ lại trước khi làm được gì;
+ * mức này cho thấy hình dạng của cả vùng để họ phóng vào đúng hướng.
+ */
+const PROVINCE_ZOOM = 11;
 
 /**
  * Tên ba trường HÀNH CHÍNH + chi tiết của một địa chỉ trong form.
@@ -41,23 +45,10 @@ export interface AddressFieldNames<T extends FieldValues> {
 }
 
 /**
- * Tên bốn trường GHIM. Truyền hay không là một quyết định sản phẩm, không phải tuỳ tiện:
- *
- * - CÓ ghim ở những địa chỉ mà toạ độ có hệ quả — chi nhánh (điểm xuất phát tính phí giao xe),
- *   địa chỉ giao xe, điểm đón khách. Ở đó cái ghim phải được người dùng nhìn và xác nhận.
- * - KHÔNG ghim ở địa chỉ chỉ để liên hệ (sổ khách). Bắt người ta xác nhận một cái ghim mà hệ
- *   thống không dùng tới là thêm một bước vô nghĩa, và mỗi lượt tra bản đồ là một request có
- *   tính tiền.
- *
- * Bốn trường đi CÙNG NHAU: có `latitude` mà thiếu `longitude` là một cấu hình sai, và kiểu này
- * khiến nó không biên dịch được thay vì hỏng ở chỗ khác, muộn hơn.
+ * Tên bốn trường GHIM — định nghĩa ở `ConfirmedPlaceField`, nơi chúng thật sự được đọc và ghi.
+ * Xuất lại ở đây để nơi gọi cũ không phải đổi đường import.
  */
-export interface AddressPinNames<T extends FieldValues> {
-  placeId: Path<T>;
-  latitude: Path<T>;
-  longitude: Path<T>;
-  locationSource: Path<T>;
-}
+export type { AddressPinNames };
 
 interface AddressFieldProps<T extends FieldValues> {
   control: Control<T>;
@@ -93,6 +84,17 @@ interface AddressFieldProps<T extends FieldValues> {
    * là dời vị trí công khai của mọi xe thuộc chi nhánh mặc định.
    */
   notice?: React.ReactNode;
+  /**
+   * Điền sẵn tỉnh/thành mà người dùng đã CHỌN gần nhất ở nơi khác (thanh tìm xe, một form địa
+   * chỉ trước đó) khi ô đang trống.
+   *
+   * Mặc định TẮT, và mặc định đó là có chủ ý. Chỉ form TẠO MỚI mới bật: ở đó ô trống nghĩa là
+   * "chưa ai khai", nên điền sẵn là tiết kiệm một thao tác. Ở form SỬA, ô trống nghĩa là bản
+   * ghi này KHÔNG có tỉnh — thường là dữ liệu có từ trước danh mục hành chính (ADR 0035 điều 7)
+   * — và điền vào đó tỉnh mà người dùng vừa tìm xe sẽ dời địa chỉ một chi nhánh có thật sang
+   * tỉnh khác, âm thầm, chỉ vì họ bấm Lưu.
+   */
+  prefillRememberedProvince?: boolean;
 }
 
 /**
@@ -101,16 +103,18 @@ interface AddressFieldProps<T extends FieldValues> {
  * 1. **Tỉnh/thành** và 2. **xã/phường/đặc khu** chọn từ DANH MỤC NHÀ NƯỚC (mô hình hai cấp, hiệu
  *    lực 01/07/2025 — không có quận/huyện). Cả hai đều có ô tìm; danh mục cấp xã lọc ở server
  *    theo khoá đã bỏ dấu nên gõ `"ba dinh"` ra `"Phường Ba Đình"`.
- * 3. **Số nhà, đường** thì GÕ, có gợi ý địa điểm Google khi ô này lưu toạ độ. Không danh mục nhà
- *    nước nào phát hành số nhà và tên đường, nên ép chọn từ dropdown là bịa ra một danh mục
- *    không tồn tại.
+ * 3. **Số nhà, đường** thì GÕ, và phải được BẢN ĐỒ XÁC NHẬN — chọn một gợi ý, hoặc tự đặt ghim.
+ *    Kỷ luật đó sống ở `ConfirmedPlaceField`, cùng một bản dùng chung với luồng đặt xe của khách.
+ *    Không danh mục nhà nước nào phát hành số nhà và tên đường, nên ép chọn từ một dropdown danh
+ *    mục là bịa ra một danh mục không tồn tại — nhưng gõ tự do thì để lại một địa chỉ không có
+ *    toạ độ, và mọi phép tính quãng đường phía sau đo từ toạ độ.
  *
- * **Ghim là bước KIỂM, không phải bước nhập.** Gợi ý của Google còn dùng tên đơn vị hành chính
- * CŨ và đôi khi ghim lệch cả trăm mét. Toạ độ đó tính phí giao xe và là chỗ tài xế lái tới, nên
- * khối bản đồ nói rõ ghim đang đến từ đâu: người tự đặt, hay máy đoán.
+ * Phần hành chính và phần toạ độ là HAI ĐƯỜNG ĐỘC LẬP: chọn một gợi ý KHÔNG tự đổi tỉnh đã chọn —
+ * nó chỉ hiện một lời nhắc nếu hai bên không khớp, và người dùng là người chốt. Lý do nằm ở dữ
+ * liệu: nhà cung cấp bản đồ còn dùng tên đơn vị hành chính TRƯỚC sắp xếp 01/07/2025.
  *
- * Phần hành chính và phần toạ độ là HAI ĐƯỜNG ĐỘC LẬP: chọn một gợi ý Google KHÔNG tự đổi tỉnh
- * đã chọn — nó chỉ hiện một lời nhắc nếu hai bên không khớp, và người dùng là người chốt.
+ * **Ô này là của CHỦ XE khai địa chỉ vận hành.** Khách thuê xe dùng `RenterAddressBlock` — cùng ô
+ * địa chỉ, nhưng không có hai bộ chọn hành chính, vì họ không biết mình sẽ nhận xe ở phường nào.
  */
 export function AddressField<T extends FieldValues>({
   control,
@@ -122,6 +126,7 @@ export function AddressField<T extends FieldValues>({
   wardRequired = required,
   disabled,
   notice,
+  prefillRememberedProvince = false,
 }: AddressFieldProps<T>) {
   const t = useTranslations('Address');
   const tc = useTranslations('Common');
@@ -130,11 +135,15 @@ export function AddressField<T extends FieldValues>({
   const ward = useController({ control, name: names.wardCode });
 
   const provinceCode = (province.field.value as string | null) ?? '';
-  const wardCode = (ward.field.value as string | null) ?? '';
 
   const provinces = useProvinceOptions();
   const [wardSearch, setWardSearch] = useState('');
-  const wards = useWardOptions(provinceCode, wardSearch);
+  /*
+   * Ô có GHIM thì không hỏi danh mục cấp xã: bộ chọn đó không được dựng (xem phần render), và
+   * tải 168 dòng cho một ô không tồn tại là một request cho mỗi lần mở form, mỗi người dùng.
+   * Truyền mã tỉnh rỗng là cách TẮT có sẵn của hook — nó đã dừng khi chưa chọn tỉnh.
+   */
+  const wards = useWardOptions(pin ? '' : provinceCode, wardSearch);
 
   /**
    * Người dùng vừa đổi tỉnh ⇒ mã xã cũ chắc chắn sai, và cái ghim cũ nằm ở tỉnh khác.
@@ -152,18 +161,62 @@ export function AddressField<T extends FieldValues>({
    * lần mở đầu tiên KHÔNG dọn gì — đúng thứ form ở chế độ sửa cần.
    */
   const [pinResetKey, setPinResetKey] = useState(0);
-  const onProvinceChange = () => {
+  /** Tỉnh bản đồ đoán khác tỉnh người dùng đã chọn — hiện lời nhắc, KHÔNG tự sửa. */
+  const [provinceMismatch, setProvinceMismatch] = useState(false);
+  const onProvinceChange = (next: string) => {
     ward.field.onChange('' as PathValue<T, Path<T>>);
     setWardSearch('');
     setPinResetKey((n) => n + 1);
+    // Lời nhắc cũ nói về cặp (địa điểm, tỉnh) vừa bị thay — để lại là một cảnh báo về chuyện đã
+    // không còn.
+    setProvinceMismatch(false);
+    /*
+     * Ghi bộ nhớ ở TRÌNH XỬ LÝ SỰ KIỆN — đây là một lựa chọn chủ động của người dùng, thứ duy
+     * nhất được phép đi vào `province-memory`. Điền sẵn ở effect bên dưới cố ý KHÔNG ghi ngược
+     * lại: nếu có, một gợi ý sẽ tự đóng dấu thành "người dùng đã chọn" và không bao giờ hết hạn.
+     */
+    rememberProvince(next);
   };
 
-  /** Tên xã + tên tỉnh ĐANG CHỌN — dùng làm ngữ cảnh khi hỏi bản đồ. */
-  const locationContext = useMemo(() => {
-    const wardName = wards.items.find((w) => w.code === wardCode)?.name ?? '';
-    const provinceName = provinces.options.find((p) => p.value === provinceCode)?.label ?? '';
-    return [wardName, provinceName].filter(Boolean).join(', ');
-  }, [wards.items, wardCode, provinces.options, provinceCode]);
+  /*
+   * Điền sẵn tỉnh đã nhớ — MỘT LẦN, sau khi mount, và chỉ khi ô đang trống.
+   *
+   * Trong effect chứ không trong `defaultValues`: `localStorage` không tồn tại trên server, nên
+   * đọc nó lúc render sẽ cho hai kết quả khác nhau giữa HTML server dựng và lần render đầu ở
+   * client. Điều kiện "đang trống" đọc trong thân effect chứ không ở mảng phụ thuộc, để lần điền
+   * này không bao giờ đè lên thứ người dùng vừa gõ.
+   */
+  const prefilledProvince = useRef(false);
+  useEffect(() => {
+    if (!prefillRememberedProvince || prefilledProvince.current) return;
+    /*
+     * Đợi DANH MỤC về rồi mới quyết, và chỉ điền mã có TRONG danh mục đó.
+     *
+     * Bộ nhớ tỉnh dùng chung cho cả thanh tìm xe lẫn các form địa chỉ, nhưng hai bên đọc hai danh
+     * mục khác nhau: thanh tìm xe lấy tỉnh ĐANG CÓ XE (`/public/destinations`), còn ô này lấy
+     * tỉnh đang MỞ ĐĂNG KÝ (`/provinces`). Không danh mục nào chứa trọn danh mục kia — một tỉnh
+     * có xe trên chợ vẫn có thể bị admin tắt đăng ký mới.
+     *
+     * Điền một mã không có trong `options` thì AntD dựng ô chọn với một giá trị nó không tra ra
+     * nhãn: người dùng nhìn thấy ô trống trong khi form đang mang mã đó, rồi bấm Lưu và không
+     * hiểu vì sao hỏng. Tra được thì mới điền; không thì để trống và họ tự chọn.
+     */
+    if (provinces.isLoading) return;
+    prefilledProvince.current = true;
+    if (province.field.value) return;
+    const remembered = readRememberedProvince();
+    if (!remembered || !provinces.options.some((o) => o.value === remembered)) return;
+    province.field.onChange(remembered as PathValue<T, Path<T>>);
+    // Chạy lại khi danh mục đổi trạng thái; `prefilledProvince` giữ cho nó chỉ điền ĐÚNG MỘT lần.
+    // `field` của RHF đổi định danh mỗi render nên không đưa vào mảng phụ thuộc.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefillRememberedProvince, provinces.isLoading, provinces.options]);
+
+  /*
+   * Ở đây từng có một `locationContext` ghép tên xã + tên tỉnh vào sau chữ người dùng gõ trước
+   * khi hỏi bản đồ. Nó bị bỏ vì phản tác dụng — xem `placeQuery` ở `ConfirmedPlaceField`. Việc
+   * khoanh vùng do điểm neo (`anchor`) lo, và nó khoanh bằng TOẠ ĐỘ chứ không bằng chữ.
+   */
 
   return (
     <section className={styles.block} aria-label={title ?? t('sectionTitle')}>
@@ -193,7 +246,7 @@ export function AddressField<T extends FieldValues>({
         name={names.provinceCode}
         label={t('provinceLabel')}
         required={provinceRequired}
-        onAfterChange={onProvinceChange}
+        onAfterChange={(next) => onProvinceChange(typeof next === 'string' ? next : '')}
         showSearch
         options={provinces.options}
         loading={provinces.isLoading}
@@ -213,39 +266,85 @@ export function AddressField<T extends FieldValues>({
         }
       />
 
-      <SelectField
-        control={control}
-        name={names.wardCode}
-        label={t('wardLabel')}
-        required={wardRequired}
-        showSearch
-        options={wards.options}
-        loading={wards.isLoading}
-        disabled={disabled || !provinceCode}
-        placeholder={t('wardPlaceholder')}
-        onSearch={setWardSearch}
-        notFoundContent={wards.isLoading ? <Spin size="small" /> : t('wardEmpty')}
-        /*
-         * Chỉ nói khi có chuyện: chưa chọn tỉnh, hoặc danh mục lỗi. Đếm số đơn vị của tỉnh là
-         * một con số người đang điền địa chỉ không dùng vào việc gì.
-         */
-        help={
-          !provinceCode ? t('wardNeedsProvince') : wards.isError ? t('wardLoadError') : undefined
-        }
-      />
+      {/*
+        Xã/phường CHỈ hỏi khi ô này KHÔNG lưu toạ độ (ADR 0042).
+
+        Có ghim thì mã xã là một câu hỏi thừa và đắt: toạ độ đã xác nhận định vị chính xác hơn
+        hẳn một mã năm chữ số, trong khi danh mục cấp xã có 3.321 đơn vị vừa đổi tên hàng loạt từ
+        01/07/2025 — đủ để một người đang khai địa chỉ của chính mình cũng phải dừng lại tra cứu.
+
+        Không ghim (sổ khách) thì ngược lại: mã xã là cấp định vị DUY NHẤT dưới tỉnh, nên nó ở
+        lại. Đó cũng là lý do `wardCode` vẫn nằm trong `AddressFieldNames` chứ không bị gỡ.
+      */}
+      {pin ? null : (
+        <SelectField
+          control={control}
+          name={names.wardCode}
+          label={t('wardLabel')}
+          required={wardRequired}
+          showSearch
+          options={wards.options}
+          loading={wards.isLoading}
+          disabled={disabled || !provinceCode}
+          placeholder={t('wardPlaceholder')}
+          onSearch={setWardSearch}
+          notFoundContent={wards.isLoading ? <Spin size="small" /> : t('wardEmpty')}
+          /*
+           * Chỉ nói khi có chuyện: chưa chọn tỉnh, hoặc danh mục lỗi. Đếm số đơn vị của tỉnh là
+           * một con số người đang điền địa chỉ không dùng vào việc gì.
+           */
+          help={
+            !provinceCode ? t('wardNeedsProvince') : wards.isError ? t('wardLoadError') : undefined
+          }
+        />
+      )}
 
       {pin ? (
-        <AddressLocationSection
-          key={pinResetKey}
-          clearPin={pinResetKey > 0}
-          control={control}
-          addressLineName={names.addressLine}
-          pin={pin}
-          provinceCode={provinceCode}
-          locationContext={locationContext}
-          required={required}
-          disabled={disabled}
-        />
+        <>
+          {/*
+            Phần hành chính và phần toạ độ là HAI ĐƯỜNG ĐỘC LẬP: chọn một gợi ý KHÔNG tự đổi tỉnh
+            đã chọn, nó chỉ hiện lời nhắc này. Lý do nằm ở dữ liệu: nhà cung cấp bản đồ còn dùng
+            tên đơn vị hành chính TRƯỚC sắp xếp 01/07/2025, nên "tin bản đồ" nghĩa là ghi mã sai
+            một cách có hệ thống (ADR 0035 điều 4). Người dùng là người chốt.
+          */}
+          {provinceMismatch ? (
+            <Alert
+              type="warning"
+              showIcon
+              className={styles.alert}
+              title={t('provinceMismatchTitle')}
+              description={t('provinceMismatchHint')}
+            />
+          ) : null}
+          <ConfirmedPlaceField
+            key={pinResetKey}
+            clearOnMount={pinResetKey > 0}
+            control={control}
+            addressLineName={names.addressLine}
+            pin={pin}
+            label={t('addressLineLabel')}
+            placeholder={t('addressLinePlaceholder')}
+            /*
+             * Neo vào TÂM TỈNH đang chọn. Thiếu nó thì mọi form địa chỉ trong sản phẩm mở bản đồ
+             * ở cùng một chỗ giữa Đà Nẵng — kể cả khi người dùng vừa chọn Bắc Ninh ngay phía
+             * trên. Tham chiếu ổn định theo mã tỉnh (bảng hằng ở `@xeprime/domain`), nên truyền
+             * thẳng xuống không làm bản đồ dời khung nhìn ở mỗi lần render.
+             */
+            anchor={provinceCenter(provinceCode)}
+            anchorZoom={PROVINCE_ZOOM}
+            // Chưa chọn tỉnh thì chưa hỏi bản đồ: gợi ý lúc đó rải khắp cả nước và chẳng giúp
+            // được ai, trong khi mỗi lượt hỏi là một request có tính tiền.
+            searchEnabled={Boolean(provinceCode)}
+            required={required}
+            disabled={disabled}
+            onPlaceResolved={(place) =>
+              setProvinceMismatch(
+                Boolean(place.suggestedProvinceCode) &&
+                  place.suggestedProvinceCode !== provinceCode,
+              )
+            }
+          />
+        </>
       ) : (
         <TextField
           control={control}
@@ -260,217 +359,3 @@ export function AddressField<T extends FieldValues>({
   );
 }
 
-/**
- * Phần "số nhà, đường + ghim" — tách thành component riêng để **hook chỉ chạy khi ô này thật sự
- * lưu toạ độ**. Gọi `useController` cho bốn trường ghim ngay trong `AddressField` sẽ nổ ở những
- * form không khai chúng (sổ khách), mà hook thì không gọi có điều kiện được.
- */
-function AddressLocationSection<T extends FieldValues>({
-  control,
-  addressLineName,
-  pin,
-  provinceCode,
-  locationContext,
-  clearPin,
-  required,
-  disabled,
-}: {
-  control: Control<T>;
-  addressLineName: Path<T>;
-  pin: AddressPinNames<T>;
-  provinceCode: string;
-  locationContext: string;
-  /** Lần dựng này đến từ một cú ĐỔI TỈNH — xem `pinResetKey` ở `AddressField`. */
-  clearPin: boolean;
-  required?: boolean;
-  disabled?: boolean;
-}) {
-  const t = useTranslations('Address');
-
-  const addressLine = useController({ control, name: addressLineName });
-  const placeId = useController({ control, name: pin.placeId });
-  const latitude = useController({ control, name: pin.latitude });
-  const longitude = useController({ control, name: pin.longitude });
-  const locationSource = useController({ control, name: pin.locationSource });
-
-  const line = (addressLine.field.value as string | null) ?? '';
-  const inputId = `${String(addressLineName)}-${useId()}`;
-
-  const point = useMemo<GeoPoint | null>(() => {
-    const lat = latitude.field.value as number | null | undefined;
-    const lng = longitude.field.value as number | null | undefined;
-    return lat == null || lng == null ? null : { lat, lng };
-  }, [latitude.field.value, longitude.field.value]);
-
-  /**
-   * Chữ dùng để HỎI bản đồ, khác chữ trong ô nhập.
-   *
-   * Ghép thêm xã và tỉnh vì `"12 Nguyễn Huệ"` là tên đường có ở hàng chục tỉnh — hỏi trống không
-   * thì gợi ý đầu tiên gần như luôn rơi vào TP.HCM. Ngữ cảnh lấy từ danh mục ĐANG CHỌN, nên gợi
-   * ý bám theo lựa chọn hành chính của người dùng chứ không ngược lại.
-   */
-  const placeQuery = line.trim()
-    ? `${line.trim()}${locationContext ? `, ${locationContext}` : ''}`
-    : '';
-  const suggestions = usePlaceSearch(placeQuery, {
-    biasPoint: point,
-    // Chưa chọn tỉnh thì không hỏi: gợi ý lúc đó rải khắp cả nước và chẳng giúp được ai, trong
-    // khi mỗi lượt hỏi là một request có tính tiền.
-    enabled: !disabled && Boolean(provinceCode),
-  });
-  const placeDetail = usePlaceDetail();
-  const reverse = useReverseGeocode();
-
-  /** Tỉnh bản đồ đoán khác tỉnh người dùng đã chọn — hiện lời nhắc, KHÔNG tự sửa. */
-  const [provinceMismatch, setProvinceMismatch] = useState(false);
-  /** Địa chỉ chữ của cái ghim hiện tại, để người dùng đọc lại "chỗ này là đâu". */
-  const [pinAddress, setPinAddress] = useState<string | null>(null);
-
-  const setPoint = (next: GeoPoint | null, source: string | null) => {
-    latitude.field.onChange((next?.lat ?? null) as PathValue<T, Path<T>>);
-    longitude.field.onChange((next?.lng ?? null) as PathValue<T, Path<T>>);
-    locationSource.field.onChange((source ?? null) as PathValue<T, Path<T>>);
-  };
-
-  const onPickSuggestion = async (id: string) => {
-    /*
-     * Điền phần chữ NGAY, từ chính dòng người dùng vừa bấm — trước cả khi hỏi server.
-     *
-     * Hai lý do, và cả hai đều đã từng cắn:
-     *   1. Nếu để `onChange` của AntD tự xử, ô chữ nhận `value` của lựa chọn — tức MÃ ĐỊA ĐIỂM.
-     *      Bất kỳ lỗi nào sau đó là người dùng nhìn thấy một dãy ký tự vô nghĩa trong ô địa chỉ.
-     *   2. Chữ do server suy lại từ toạ độ KHÔNG khớp thứ người dùng đã chọn: chọn
-     *      "12, Nguyễn Huệ" mà tra ngược toạ độ đó ra "Hoàng Hạc Cafe, 18A, Nguyễn Huệ" (nhà
-     *      bên cạnh). Dòng người ta bấm mới là thứ họ muốn, không phải thứ máy suy lại.
-     */
-    const picked = suggestions.data?.items.find((s) => s.placeId === id);
-    if (picked) addressLine.field.onChange(picked.primaryText as PathValue<T, Path<T>>);
-
-    const result = await placeDetail.mutateAsync(id).catch(() => null);
-    const place = result?.place;
-    if (!place) return;
-
-    placeId.field.onChange(place.placeId as PathValue<T, Path<T>>);
-    setPoint(
-      { lat: Number(place.latitude), lng: Number(place.longitude) },
-      LOCATION_SOURCE.GOOGLE_PLACE,
-    );
-    /*
-     * `formattedAddress` chỉ dùng cho dòng "Ghim đang ở: …" — KHÔNG đổ ngược vào ô chữ. Nó mô tả
-     * chỗ cái ghim thật sự nằm, và chỗ đó được phép lệch chút ít so với dòng người dùng đã chọn;
-     * đó chính là thông tin họ cần để quyết định có chỉnh ghim hay không.
-     */
-    setPinAddress(place.formattedAddress ?? null);
-    setProvinceMismatch(
-      Boolean(place.suggestedProvinceCode) && place.suggestedProvinceCode !== provinceCode,
-    );
-  };
-
-  const onMovePin = (next: GeoPoint) => {
-    setPoint(next, LOCATION_SOURCE.MAP_PIN);
-    // Ghim tự đặt thì `placeId` cũ không còn mô tả đúng chỗ này nữa — giữ lại là nói dối về
-    // nguồn gốc của toạ độ.
-    placeId.field.onChange(null as PathValue<T, Path<T>>);
-    setProvinceMismatch(false);
-    void reverse
-      .mutateAsync(next)
-      .then((r) => setPinAddress(r.place?.formattedAddress ?? null))
-      .catch(() => setPinAddress(null));
-  };
-
-  /*
-   * Đổi tỉnh ⇒ ghim cũ nằm ở tỉnh khác. Bỏ nó thay vì mang theo một toạ độ chắc chắn sai.
-   *
-   * `key` ở nơi gọi đã dựng lại component này, nên state CỤC BỘ (`pinAddress`,
-   * `provinceMismatch`) sạch sẵn — ở đây chỉ còn bốn trường ghim trong FORM, thứ sống ngoài
-   * vòng đời component và không được remount dọn hộ. Effect chạy đúng một lần lúc dựng và
-   * không đụng state React nào, nên nó không tạo thêm vòng render.
-   */
-  useEffect(() => {
-    if (!clearPin) return;
-    setPoint(null, null);
-    placeId.field.onChange(null as PathValue<T, Path<T>>);
-    // Chạy MỘT LẦN cho mỗi lần dựng: `clearPin` cố định trong suốt vòng đời của instance này,
-    // và các `field` của RHF đổi định danh mỗi render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const source = locationSource.field.value as string | null;
-  const needsPinCheck = point != null && source !== LOCATION_SOURCE.MAP_PIN;
-
-  return (
-    <>
-      <Form.Item
-        label={t('addressLineLabel')}
-        htmlFor={inputId}
-        required={required}
-        validateStatus={addressLine.fieldState.error ? 'error' : ''}
-        help={addressLine.fieldState.error?.message}
-        className={fieldStyles.item}
-      >
-        <AutoComplete
-          id={inputId}
-          value={line}
-          disabled={disabled}
-          /*
-           * Bấm một gợi ý làm AntD phát `onChange` với `value` của lựa chọn — tức MÃ ĐỊA ĐIỂM,
-           * không phải chữ. Chặn ngay tại đây thay vì trông chờ `onSelect` ghi đè sau: thứ tự
-           * hai sự kiện đó là chi tiết nội bộ của rc-select, và đặt cược vào nó nghĩa là một
-           * bản nâng cấp AntD có thể lặng lẽ dán một dãy hash vào ô địa chỉ của khách.
-           */
-          onChange={(value: string) => {
-            if (suggestions.data?.items.some((s) => s.placeId === value)) return;
-            addressLine.field.onChange(value as PathValue<T, Path<T>>);
-          }}
-          onBlur={addressLine.field.onBlur}
-          onSelect={(value: string) => void onPickSuggestion(value)}
-          placeholder={t('addressLinePlaceholder')}
-          // Lọc phía client TẮT: danh sách đến từ bản đồ theo đúng chữ vừa gõ, lọc lần nữa sẽ
-          // giấu mất chính kết quả vừa tìm được.
-          filterOption={false}
-          notFoundContent={
-            suggestions.isFetching ? (
-              <Spin size="small" />
-            ) : line.trim().length >= PLACE_SEARCH_MIN_LENGTH ? (
-              t('placeEmpty')
-            ) : null
-          }
-          options={(suggestions.data?.items ?? []).map((s) => ({
-            value: s.placeId,
-            label: (
-              <span className={styles.suggestion}>
-                <EnvironmentOutlined className={styles.suggestionIcon} />
-                <span className={styles.suggestionText}>
-                  <strong>{s.primaryText}</strong>
-                  {s.secondaryText ? <em>{s.secondaryText}</em> : null}
-                </span>
-              </span>
-            ),
-          }))}
-          status={addressLine.fieldState.error ? 'error' : undefined}
-        />
-      </Form.Item>
-
-      {provinceMismatch ? (
-        <Alert
-          type="warning"
-          showIcon
-          className={styles.alert}
-          title={t('provinceMismatchTitle')}
-          description={t('provinceMismatchHint')}
-        />
-      ) : null}
-
-      {needsPinCheck ? (
-        <Alert type="info" showIcon className={styles.alert} title={t('pinNeedsCheck')} />
-      ) : null}
-
-      <MapPinPicker value={point} onChange={onMovePin} label={t('mapLabel')} disabled={disabled} />
-
-      {pinAddress ? (
-        <p className={styles.pinAddress}>{t('pinAt', { address: pinAddress })}</p>
-      ) : null}
-      {!point && provinceCode ? <p className={styles.pinAddress}>{t('noPinYet')}</p> : null}
-    </>
-  );
-}

@@ -26,6 +26,21 @@
   color: var(--xp-color-text-secondary);
 }
 
+/* Nút gấp/mở bảng kê từng dòng — `.total`/cọc KHÔNG nằm sau nút này, chỉ bảng kê thô. */
+.toggle {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .rows {
   display: flex;
   flex-direction: column;

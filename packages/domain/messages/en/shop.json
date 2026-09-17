@@ -101,7 +101,7 @@
       "title": "Address & legal",
       "address": {
         "label": "Address",
-        "placeholder": "Street number, street, ward"
+        "placeholder": "For example: 12 Nguyen Thai Hoc"
       },
       "province": {
         "label": "Province / City",
@@ -276,8 +276,7 @@
       "displayName": "Shop display name",
       "contactPhone": "Contact phone number",
       "province": "Province / city",
-      "ward": "Ward",
-      "address": "Street number and street",
+      "address": "Address",
       "logo": "Shop logo"
     }
   }

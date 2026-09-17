@@ -7,6 +7,7 @@ import {
   PERMISSIONS_KEY,
   PLAN_FEATURE_KEY,
   PLATFORM_ONLY_KEY,
+  SUBSCRIPTION_TRACK_ONLY_KEY,
   TENANT_SCOPED_KEY,
   VERIFIES_CREDENTIALS_KEY,
 } from '../common/decorators';
@@ -30,6 +31,16 @@ export interface RouteAccess {
   readonly feature: PlanFeature | null;
   /** Route hình-đọc dù không phải GET — xem `@FeatureReadSafe()`. */
   readonly featureReadSafe: boolean;
+  /**
+   * Route CHỈ dành cho tuyến GÓI (ADR 0038 điều 4) — `SubscriptionTrackGuard` chặn tuyến hoa
+   * hồng ở đây, thật ngay, không đi qua công tắc `PLAN_FEATURE_ENFORCEMENT`.
+   *
+   * Khác `feature`: cờ năng lực nói "gói của bạn chưa mua thứ này", còn cờ này nói "khu này
+   * không thuộc tuyến của bạn". Thu vào đây để `plan-feature-coverage.spec.ts` nhìn thấy hai
+   * cổng cạnh nhau — một controller mở cho bậc cơ bản nhưng vẫn khoá cả tuyến là một lỗ im lặng
+   * đúng bằng lỗ mà cờ năng lực thiếu marker tạo ra.
+   */
+  readonly trackOnly: boolean;
   /**
    * Hạn mức riêng của route, đọc từ metadata `@Throttle`/`@SkipThrottle`.
    *
@@ -85,6 +96,7 @@ export function collectRouteAccess(app: INestApplication): Map<string, RouteAcce
           platformOnly: readFlag(PLATFORM_ONLY_KEY, handler, controller),
           feature: readFeature(handler, controller),
           featureReadSafe: readFlag(FEATURE_READ_SAFE_KEY, handler, controller),
+          trackOnly: readFlag(SUBSCRIPTION_TRACK_ONLY_KEY, handler, controller),
           rateLimit: readRateLimit(handler, controller),
         });
       }

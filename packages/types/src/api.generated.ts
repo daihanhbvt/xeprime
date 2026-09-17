@@ -10097,6 +10097,8 @@ export interface components {
             ratingAvg: number;
             ratingCount: number;
             phone?: string | null;
+            /** @enum {string} */
+            shopKind: "personal" | "shop";
         };
         CustomerTripVehicleDto: {
             id: string;

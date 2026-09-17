@@ -236,6 +236,8 @@ const LISTING = {
   discountPercent: 10,
   deliveryEnabled: true,
   deliveryAvailable: true,
+  /** Tỉnh nơi xe đang đỗ — khối địa chỉ của khách lấy nó làm ngữ cảnh và làm mã tỉnh dự phòng. */
+  provinceCode: '48',
   pickupPoint: null,
   noCollateral: false,
   shopName: 'Gian hàng Demo XePrime',
@@ -681,24 +683,13 @@ describe('RequestBookingModal — luồng đặt xe', () => {
     /**
      * Chọn "giao tận nơi" rồi chờ ô ĐỊA CHỈ dựng xong.
      *
-     * Mốc chờ là ô "Số nhà, đường" chứ không phải nhãn "Địa chỉ giao xe": từ ADR 0035 nhãn đó là
-     * TIÊU ĐỀ của cả khối (tỉnh → xã/phường → số nhà → ghim), còn ô gõ được là ô cuối.
+     * Khối địa chỉ của KHÁCH chỉ còn MỘT ô, nhãn "Địa chỉ giao xe". Không còn bộ chọn tỉnh và bộ
+     * chọn xã/phường ở đây: người thuê xe ở tỉnh khác không biết mình đang ở phường nào, còn mã
+     * tỉnh thì suy từ địa điểm họ chọn trên bản đồ (xem `RenterAddressBlock`).
      */
     async function chooseDelivery() {
       fireEvent.click(await screen.findByRole('radio', { name: /Giao xe tận nơi/ }));
-      await screen.findByLabelText(/Số nhà, đường/);
-    }
-
-    /** Chọn một giá trị trong `Select` của AntD — nó là combobox dựng bằng div, không phải <select>. */
-    async function pickOption(label: RegExp, optionTitle: string) {
-      fireEvent.mouseDown(screen.getByLabelText(label));
-      fireEvent.click(await screen.findByTitle(optionTitle));
-    }
-
-    /** Khai đủ phần hành chính của địa chỉ giao xe — hai cấp, đúng thứ tự phụ thuộc. */
-    async function fillDeliveryAdministrative() {
-      await pickOption(/Tỉnh\/thành/, 'TP Đà Nẵng');
-      await pickOption(/Xã\/phường/, 'Phường Hải Châu');
+      await screen.findByLabelText(/Địa chỉ giao xe/);
     }
 
     beforeEach(() => {
@@ -708,7 +699,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
     it('mặc định là nhận tại điểm hẹn — KHÔNG hỏi địa chỉ', async () => {
       renderModal();
       await screen.findByRole('radio', { name: /Nhận tại điểm hẹn/ });
-      expect(screen.queryByLabelText(/Số nhà, đường/)).toBeNull();
+      expect(screen.queryByLabelText(/Địa chỉ giao xe/)).toBeNull();
     });
 
     /**
@@ -716,6 +707,23 @@ describe('RequestBookingModal — luồng đặt xe', () => {
      * hỏi địa chỉ, nói hai bên tự trao đổi phí. Đây là bài kiểm quan trọng nhất của cả nhóm này,
      * vì nó khoá lời hứa "bản đồ vắng mặt không làm gãy luồng đặt xe".
      */
+    /**
+     * KHÁCH không bị hỏi đơn vị hành chính.
+     *
+     * Danh mục cấp xã có 3.321 đơn vị và vừa đổi tên hàng loạt từ 01/07/2025; một người đang thuê
+     * xe ở tỉnh khác không biết mình sẽ nhận xe ở phường nào. Hai bộ chọn đó là việc của CHỦ XE
+     * khai địa chỉ vận hành (`AddressField`), không phải của người đặt xe.
+     */
+    it('chỉ hỏi MỘT ô địa chỉ — không bộ chọn tỉnh, không bộ chọn xã/phường', async () => {
+      renderModal();
+      await chooseDelivery();
+
+      expect(screen.queryByLabelText(/Xã\/phường/)).toBeNull();
+      expect(screen.queryByLabelText(/Tỉnh\/thành/)).toBeNull();
+      // Tỉnh của xe vẫn hiện ra, nhưng là NGỮ CẢNH để đọc chứ không phải một ô để điền.
+      expect(screen.getByText(/Xe đang ở TP\. Hồ Chí Minh/)).toBeTruthy();
+    });
+
     it('chưa cấu hình bản đồ → hiện ô địa chỉ và câu giải thích như cũ', async () => {
       renderModal();
       await chooseDelivery();
@@ -731,7 +739,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       renderModal();
       await chooseDelivery();
 
-      fireEvent.change(screen.getByLabelText(/Số nhà, đường/), { target: { value: '12 Ng' } });
+      fireEvent.change(screen.getByLabelText(/Địa chỉ giao xe/), { target: { value: '12 Ng' } });
       await new Promise((r) => setTimeout(r, 1100));
 
       expect(deliveryDistance.fn).not.toHaveBeenCalled();
@@ -751,7 +759,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
 
       renderModal();
       await chooseDelivery();
-      fireEvent.change(screen.getByLabelText(/Số nhà, đường/), {
+      fireEvent.change(screen.getByLabelText(/Địa chỉ giao xe/), {
         target: { value: '12 Nguyễn Huệ, Quận 1, TP.HCM' },
       });
 
@@ -775,7 +783,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
 
       renderModal();
       await chooseDelivery();
-      fireEvent.change(screen.getByLabelText(/Số nhà, đường/), {
+      fireEvent.change(screen.getByLabelText(/Địa chỉ giao xe/), {
         target: { value: 'Khu công nghiệp Sóng Thần, Dĩ An, Bình Dương' },
       });
 
@@ -797,16 +805,15 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       fillContact();
       fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
 
-      // Ô đầu tiên còn thiếu là TỈNH — mô hình hai cấp bắt đầu từ đó (ADR 0035 điều 3).
-      expect(await screen.findByText('Chọn tỉnh/thành nơi giao xe')).toBeTruthy();
+      // Khối chỉ có MỘT ô, nên ô còn thiếu chính là ô địa chỉ — không bộ chọn nào đứng trước nó.
+      expect(await screen.findByText('Nhập địa chỉ giao xe')).toBeTruthy();
       expect(api.sendAsync).not.toHaveBeenCalled();
     });
 
     it('gửi kèm địa chỉ và deliveryRequested — KHÔNG kèm bất kỳ số phí nào', async () => {
       renderModal();
       await chooseDelivery();
-      await fillDeliveryAdministrative();
-      fireEvent.change(screen.getByLabelText(/Số nhà, đường/), {
+      fireEvent.change(screen.getByLabelText(/Địa chỉ giao xe/), {
         target: { value: '  123 Nguyễn Văn Linh  ' },
       });
       await advanceToOtp();
@@ -820,8 +827,13 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(payload.deliveryRequested).toBe(true);
       // Client gửi MÃ + phần chi tiết; chuỗi hiển thị do server ghép (ADR 0035 điều 3), nên
       // `deliveryAddress` KHÔNG còn nằm trong payload.
+      // Mã tỉnh lấy từ CHÍNH CHIẾC XE khi bản đồ chưa quy được tỉnh từ địa điểm khách chọn.
       expect(payload.deliveryProvinceCode).toBe('48');
-      expect(payload.deliveryWardCode).toBe('20242');
+      /*
+       * Mã xã KHÔNG còn trong payload: màn hình không hỏi khách xã/phường nữa, và một chuỗi rỗng
+       * gửi lên sẽ bị `@Length(5, 5)` bên API từ chối — `@IsOptional` chỉ bỏ qua null/undefined.
+       */
+      expect(payload).not.toHaveProperty('deliveryWardCode');
       expect(payload.deliveryAddressLine).toBe('123 Nguyễn Văn Linh');
       expect(payload).not.toHaveProperty('deliveryAddress');
       expect(payload).not.toHaveProperty('deliveryFee');
@@ -839,7 +851,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
 
       await screen.findByText('Gian hàng Demo XePrime');
       expect(screen.queryByRole('radio', { name: /Giao xe tận nơi/ })).toBeNull();
-      expect(screen.queryByLabelText(/Số nhà, đường/)).toBeNull();
+      expect(screen.queryByLabelText(/Địa chỉ giao xe/)).toBeNull();
       expect(screen.getByText('Nhận tại điểm hẹn')).toBeTruthy();
     });
 

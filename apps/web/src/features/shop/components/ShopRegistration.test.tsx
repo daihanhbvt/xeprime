@@ -78,6 +78,13 @@ function renderForm() {
 beforeEach(() => {
   mutation.mutate.mockReset();
   mutation.isError = false;
+  /*
+   * Form này bật `prefillRememberedProvince`, và chọn một tỉnh GHI vào `localStorage`
+   * (`lib/province-memory`). `localStorage` sống xuyên suốt cả file test, nên không dọn ở đây thì
+   * ca thứ hai mở ra đã có sẵn tỉnh của ca thứ nhất — và một test đọc "chưa chọn gì" sẽ hỏng vì
+   * một hành vi đúng của sản phẩm. Chính bộ nhớ đó được kiểm riêng ở `lib/province-memory.test.ts`.
+   */
+  window.localStorage.clear();
   provinces.options = [
     { value: '79', label: 'TP Hồ Chí Minh' },
     { value: '48', label: 'TP Đà Nẵng' },
@@ -148,39 +155,33 @@ describe('ShopRegistration — cửa vào quyết định hợp đồng', () => 
     });
   });
 
-  it('tuyến gói: thiếu xã/địa chỉ/SĐT → KHÔNG gọi API, và lỗi hiện bằng TIẾNG VIỆT', async () => {
+  it('tuyến gói: thiếu địa chỉ/SĐT → KHÔNG gọi API, và lỗi hiện bằng TIẾNG VIỆT', async () => {
     renderTrack('package');
 
     fireEvent.change(screen.getByLabelText(/Tên gian hàng/), { target: { value: 'Gian hàng A' } });
     await pickOption(/Tỉnh\/thành/, 'TP Hồ Chí Minh');
     fireEvent.click(screen.getByRole('button', { name: /Tạo gian hàng và chọn gói/ }));
 
-    await waitFor(() => expect(screen.getByText('Chọn xã/phường/đặc khu')).toBeTruthy());
-    expect(screen.getByText('Nhập số nhà, đường của gian hàng')).toBeTruthy();
+    await waitFor(() => expect(screen.getByText('Nhập địa chỉ của gian hàng')).toBeTruthy());
     expect(screen.getByText('Nhập số điện thoại liên hệ của gian hàng')).toBeTruthy();
     expect(mutation.mutate).not.toHaveBeenCalled();
   });
 
   /**
-   * HỒI QUY `wardInvalid` — lỗi đã thấy trên giao diện.
+   * Xã/phường KHÔNG còn được hỏi ở bất kỳ ô địa chỉ có ghim nào (ADR 0042) — và tuyến GÓI là
+   * chỗ dễ sót nhất, vì nó từng là tuyến duy nhất bắt buộc trường đó.
    *
-   * Mẫu cũ trong `@xeprime/validators` là `/^d{5}$/` (thiếu dấu gạch chéo ngược): nó khớp chuỗi
-   * "ddddd" và không khớp MỘT mã xã thật nào. Hệ quả kép:
-   *
-   *   1. mọi lượt chọn xã đều bị từ chối, kể cả xã hợp lệ;
-   *   2. và vì `ShopOnboarding.validation` chưa có khoá `wardInvalid`, `useValidationResolver`
-   *      để nguyên chuỗi gốc — người dùng đọc thấy đúng chữ `wardInvalid` trên màn hình.
-   *
-   * Test này khoá CẢ HAI: chọn một mã 5 chữ số hợp lệ thì form phải đi qua, và chữ `wardInvalid`
-   * không bao giờ xuất hiện ở dạng mã trần.
+   * Ca này khoá cả hai lớp cùng lúc: không có ô trên màn hình, VÀ schema không chặn khi thiếu.
+   * Thiếu một trong hai là một nút Lưu chết không giải thích được.
    */
-  it('chọn xã hợp lệ → đi qua; mã trần `wardInvalid` KHÔNG bao giờ hiện trên giao diện', async () => {
+  it('tuyến gói: không có ô xã/phường, và thiếu nó vẫn gửi được', async () => {
     renderTrack('package');
+
+    expect(screen.queryByLabelText(/Xã\/phường/)).toBeNull();
 
     fireEvent.change(screen.getByLabelText(/Tên gian hàng/), { target: { value: 'Gian hàng A' } });
     await pickOption(/Tỉnh\/thành/, 'TP Hồ Chí Minh');
-    await pickOption(/Xã\/phường/, WARD.name);
-    fireEvent.change(screen.getByLabelText(/Số nhà, đường/), {
+    fireEvent.change(screen.getByLabelText(/^Địa chỉ\s*\*?\s*$/), {
       target: { value: '12 Nguyễn Huệ' },
     });
     fireEvent.change(screen.getByLabelText(/Số điện thoại/), { target: { value: '0901234567' } });
@@ -190,12 +191,23 @@ describe('ShopRegistration — cửa vào quyết định hợp đồng', () => 
     expect(mutation.mutate.mock.calls[0]![0]).toMatchObject({
       registrationTrack: 'package',
       provinceCode: '79',
-      wardCode: WARD.code,
       addressLine: '12 Nguyễn Huệ',
       phone: '0901234567',
+      // Chuỗi rỗng KHÔNG được gửi: `@IsOptional()` bên API chỉ bỏ qua null/undefined, còn `''`
+      // vẫn đi vào `@Length(5, 5)` và bật lỗi 400.
+      wardCode: undefined,
     });
-    expect(screen.queryByText(/wardInvalid/)).toBeNull();
   });
+
+  /*
+   * Ở đây từng có một ca HỒI QUY `wardInvalid`: mẫu cũ trong `@xeprime/validators` là `/^d{5}$/`
+   * (thiếu dấu gạch chéo ngược), nó khớp chuỗi "ddddd" và không khớp MỘT mã xã thật nào — nên
+   * mọi lượt chọn xã đều bị từ chối và người dùng đọc thấy chữ `wardInvalid` trần trên màn hình.
+   *
+   * Màn này không còn ô Xã/phường để diễn lại kịch bản đó (ADR 0042). Mẫu vẫn được khoá ở đúng
+   * chỗ nó sống: `packages/validators/src/register-shop.test.ts` kiểm cả mã hợp lệ lẫn mã sai
+   * hình dạng, và ô chọn xã còn lại (sổ khách) đi qua cùng `addressShape`.
+   */
 
   /*
    * Loại hình CHỈ hỏi ở tuyến hoa hồng: nó không quyết định gì trong luồng tiền (ADR 0014 điều

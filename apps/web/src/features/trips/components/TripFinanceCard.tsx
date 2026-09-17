@@ -1,6 +1,8 @@
 'use client';
 
+import { DownOutlined, UpOutlined } from '@ant-design/icons';
 import { Alert } from 'antd';
+import { useState } from 'react';
 import {
   DEPOSIT_STATUS,
   DEPOSIT_STATUS_META,
@@ -34,8 +36,15 @@ export function TripFinanceCard({
   closed: boolean;
 }) {
   const t = useTranslations('Trips.finance');
+  const tCommon = useTranslations('Common');
   const dl = useDomainLabel();
   const fmt = useAppFormat();
+  /*
+   * Gấp bảng kê từng dòng theo mặc định — khách chỉ cần "phải trả bao nhiêu" (`.total`) và tình
+   * trạng cọc ngay khi mở màn; cách tính ra con số đó là tra cứu, không phải thứ đầu tiên cần
+   * đọc. `.total`, tiền đã trả và khối cọc KHÔNG nằm sau nút này — chúng không phải "chi tiết".
+   */
+  const [expanded, setExpanded] = useState(false);
 
   const depositStatus = finance.depositStatus as DepositStatus;
   const hasSurcharge = finance.surcharges.length > 0;
@@ -58,45 +67,59 @@ export function TripFinanceCard({
         />
       ) : null}
 
-      <dl className={styles.rows}>
-        <div className={styles.row}>
-          <dt>{t('rental')}</dt>
-          <dd>{fmt.money(finance.baseAmount)}</dd>
-        </div>
-        {!isZeroMoney(finance.discountAmount) ? (
-          <div className={styles.row}>
-            <dt>{t('discount')}</dt>
-            <dd className={styles.discount}>−{fmt.money(finance.discountAmount)}</dd>
-          </div>
-        ) : null}
-        <div className={styles.row}>
-          <dt>{t('deliveryFee')}</dt>
-          {/*
-            Phí giao nhận mặc định miễn phí; chủ xe chốt lại sau khi thoả thuận (Wave 9). Khách
-            thấy số MỚI NHẤT — không có bước chấp nhận, nên cũng không có nút nào ở đây.
-          */}
-          <dd className={isZeroMoney(finance.deliveryFee) ? styles.free : undefined}>
-            {isZeroMoney(finance.deliveryFee) ? t('free') : fmt.money(finance.deliveryFee)}
-          </dd>
-        </div>
-      </dl>
+      <button
+        type="button"
+        className={styles.toggle}
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+      >
+        {expanded ? tCommon('components.price.collapse') : tCommon('components.price.viewDetails')}
+        {expanded ? <UpOutlined aria-hidden="true" /> : <DownOutlined aria-hidden="true" />}
+      </button>
 
-      {hasSurcharge ? (
+      {expanded ? (
         <>
-          <h3 className={styles.subTitle}>{t('surchargesTitle')}</h3>
           <dl className={styles.rows}>
-            {finance.surcharges.map((row, index) => (
-              <div key={`${row.category}-${row.recordedAt}-${index}`} className={styles.row}>
-                <dt className={styles.surchargeLabel}>
-                  <span>
-                    {dl('surchargeCategory', row.category)}
-                  </span>
-                  <span className={styles.surchargeReason}>{row.reason}</span>
-                </dt>
-                <dd>{fmt.money(row.amount)}</dd>
+            <div className={styles.row}>
+              <dt>{t('rental')}</dt>
+              <dd>{fmt.money(finance.baseAmount)}</dd>
+            </div>
+            {!isZeroMoney(finance.discountAmount) ? (
+              <div className={styles.row}>
+                <dt>{t('discount')}</dt>
+                <dd className={styles.discount}>−{fmt.money(finance.discountAmount)}</dd>
               </div>
-            ))}
+            ) : null}
+            <div className={styles.row}>
+              <dt>{t('deliveryFee')}</dt>
+              {/*
+                Phí giao nhận mặc định miễn phí; chủ xe chốt lại sau khi thoả thuận (Wave 9). Khách
+                thấy số MỚI NHẤT — không có bước chấp nhận, nên cũng không có nút nào ở đây.
+              */}
+              <dd className={isZeroMoney(finance.deliveryFee) ? styles.free : undefined}>
+                {isZeroMoney(finance.deliveryFee) ? t('free') : fmt.money(finance.deliveryFee)}
+              </dd>
+            </div>
           </dl>
+
+          {hasSurcharge ? (
+            <>
+              <h3 className={styles.subTitle}>{t('surchargesTitle')}</h3>
+              <dl className={styles.rows}>
+                {finance.surcharges.map((row, index) => (
+                  <div key={`${row.category}-${row.recordedAt}-${index}`} className={styles.row}>
+                    <dt className={styles.surchargeLabel}>
+                      <span>
+                        {dl('surchargeCategory', row.category)}
+                      </span>
+                      <span className={styles.surchargeReason}>{row.reason}</span>
+                    </dt>
+                    <dd>{fmt.money(row.amount)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </>
+          ) : null}
         </>
       ) : null}
 

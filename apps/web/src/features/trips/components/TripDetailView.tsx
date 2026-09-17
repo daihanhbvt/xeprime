@@ -3,7 +3,6 @@
 import {
   ArrowLeftOutlined,
   ClockCircleOutlined,
-  EnvironmentOutlined,
   PhoneOutlined,
   StarOutlined,
 } from '@ant-design/icons';
@@ -17,6 +16,7 @@ import {
   CUSTOMER_TRIP_STAGE_META,
   DEPOSIT_COLLECTION_MODE,
   SERVICE_TYPE,
+  STOREFRONT_KIND,
   TRIP_ROLE,
   canCustomerCancelTrip,
   customerTripTimeline,
@@ -157,6 +157,27 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
   /** Người đang xem là CHỦ XE của chuyến này — server đã quyết, client không suy lại. */
   const isHost = data.role === TRIP_ROLE.HOST;
 
+  /*
+   * Nhãn + địa chỉ của hình thức nhận xe — tính MỘT LẦN ở đây để hàng "Hình thức nhận xe" trong
+   * `dl` lịch trình không phải lặp lại nhánh CÓ TÀI XẾ / giao tận nơi / tự đến đại lý ngay trong
+   * JSX (trước đây việc này nằm trong một đoạn văn riêng có icon, tách khỏi các mốc giờ).
+   */
+  const pickupMethodLabel =
+    data.serviceType === SERVICE_TYPE.WITH_DRIVER
+      ? t('pickup.driverPickup')
+      : data.deliveryRequested
+        ? t('pickup.delivery')
+        : t('pickup.agency');
+  const pickupAddressLines =
+    data.serviceType === SERVICE_TYPE.WITH_DRIVER
+      ? [
+          data.pickupAddress ? t('pickup.pickupPoint', { address: data.pickupAddress }) : null,
+          data.destination ? t('pickup.destination', { address: data.destination }) : null,
+        ].filter((line): line is string => line !== null)
+      : data.deliveryRequested && data.deliveryAddress
+        ? [data.deliveryAddress]
+        : [];
+
   return (
     <div className={styles.page}>
       <div className={styles.topBar}>
@@ -183,19 +204,29 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
 
       <TerminalNotice trip={data} stage={stage} />
 
-      <div className={styles.layout}>
-        <div className={styles.main}>
-          {stage === CUSTOMER_TRIP_STAGE.ACTIVE ? (
-            <section className={styles.highlight}>
-              <h2 className={styles.highlightTitle}>{t('detail.activeTitle')}</h2>
-              <p className={styles.highlightLead}>
-                <ClockCircleOutlined aria-hidden="true" /> {t('detail.activeReturn')}{' '}
-                <b>{fmt.rentalPoint(dayjs(data.returnAt))}</b>
-              </p>
-              <p className={styles.highlightNote}>{t('detail.activeNote')}</p>
-            </section>
-          ) : null}
+      {/*
+        TÓM TẮT chuyến — full-width, TRƯỚC bố cục hai cột: xe/gian hàng/lịch là một khối đọc
+        MỘT LẦN rồi thôi, ép nó vào 60% bề ngang của `.main` chỉ tổ cao thêm mà không được gì.
+        Cũng là lý do khối chuyển khoản (ngay dưới, trong `.layout`) không còn bị đẩy xuống dưới
+        một cột trái rất dài trong khi cột phải (chi tiết giá) đứng cao lên tận đầu trang.
+      */}
+      <div className={styles.summary}>
+        {stage === CUSTOMER_TRIP_STAGE.ACTIVE ? (
+          <section className={styles.highlight}>
+            <h2 className={styles.highlightTitle}>{t('detail.activeTitle')}</h2>
+            <p className={styles.highlightLead}>
+              <ClockCircleOutlined aria-hidden="true" /> {t('detail.activeReturn')}{' '}
+              <b>{fmt.rentalPoint(dayjs(data.returnAt))}</b>
+            </p>
+            <p className={styles.highlightNote}>{t('detail.activeNote')}</p>
+          </section>
+        ) : null}
 
+        {/*
+          Xe + chủ tài khoản đứng CHUNG một hàng: hai khối đều ngắn (một ảnh + vài dòng, một
+          avatar + tên), xếp dọc như trước chỉ tổ chiếm gấp đôi chiều cao mà không khối nào cần.
+        */}
+        <div className={styles.vehicleShopRow}>
           <section className={styles.block}>
             <h2 className={styles.blockTitle}>{t('detail.vehicleBlock')}</h2>
             <div className={styles.vehicle}>
@@ -252,84 +283,95 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
                 )}
               </span>
             </div>
+            {/*
+              Chủ xe cá nhân tuyến hoa hồng KHÔNG có mặt tiền kiểu doanh nghiệp (ADR 0028/0040) —
+              mời khách "Xem gian hàng" một người không bán qua gian hàng là nói sai. Cùng phép
+              suy `resolveStorefrontKind` với trang `/shops/:slug` công khai; cả hai nhãn cùng
+              trỏ một URL vì trang đó tự vẽ đúng mặt tiền theo tuyến (ADR 0038 điều 1).
+            */}
             <Link href={shopPath.detail(data.shop.slug)} className={styles.shopLink}>
-              {t('detail.viewShop')}
+              {data.shop.shopKind === STOREFRONT_KIND.SHOP
+                ? t('detail.viewShop')
+                : t('detail.viewOwner')}
             </Link>
           </section>
+        </div>
 
-          <section className={styles.block}>
-            <h2 className={styles.blockTitle}>{t('detail.scheduleBlock')}</h2>
-            <dl className={styles.rows}>
+        <section className={styles.block}>
+          <h2 className={styles.blockTitle}>{t('detail.scheduleBlock')}</h2>
+          <dl className={styles.rows}>
+            <div className={styles.row}>
+              <dt>{t('detail.service')}</dt>
+              <dd>
+                {dl('serviceType', data.serviceType)}
+                {data.routeType ? ` · ${dl('routeType', data.routeType)}` : ''}
+              </dd>
+            </div>
+            {/*
+              Chuyến THUÊ DÀI HẠN còn chờ duyệt chưa có lịch nào (ADR 0011): hiện gói đã mua và
+              nguyện vọng ngày nhận. Đổ dayjs(null) vào đây sẽ in "Invalid Date", và tệ hơn là
+              khiến khách tưởng lịch đã chốt.
+            */}
+            {data.longTermPackageMonths ? (
               <div className={styles.row}>
-                <dt>{t('detail.service')}</dt>
-                <dd>
-                  {dl('serviceType', data.serviceType)}
-                  {data.routeType ? ` · ${dl('routeType', data.routeType)}` : ''}
-                </dd>
+                <dt>{t('detail.package')}</dt>
+                <dd>{fmt.packageLabel(data.longTermPackageMonths)}</dd>
               </div>
-              {/*
-                Chuyến THUÊ DÀI HẠN còn chờ duyệt chưa có lịch nào (ADR 0011): hiện gói đã mua và
-                nguyện vọng ngày nhận. Đổ dayjs(null) vào đây sẽ in "Invalid Date", và tệ hơn là
-                khiến khách tưởng lịch đã chốt.
-              */}
-              {data.longTermPackageMonths ? (
+            ) : null}
+            {/*
+              Hình thức + địa điểm nhận xe ĐI CHUNG một hàng với các mốc giờ, không còn một đoạn
+              văn riêng có viền/icon phía dưới `dl`: cùng một loại thông tin ("nhận xe thế nào")
+              thì đọc thành một khối hàng-giá-trị nhanh hơn một danh sách rồi một đoạn văn rời.
+            */}
+            <div className={styles.row}>
+              <dt>{t('detail.pickupMethodLabel')}</dt>
+              <dd className={styles.pickupMethodValue}>
+                <span>{pickupMethodLabel}</span>
+                {pickupAddressLines.map((line) => (
+                  <span key={line} className={styles.address}>
+                    {line}
+                  </span>
+                ))}
+              </dd>
+            </div>
+            {data.pickupAt && data.returnAt ? (
+              <>
                 <div className={styles.row}>
-                  <dt>{t('detail.package')}</dt>
-                  <dd>{fmt.packageLabel(data.longTermPackageMonths)}</dd>
+                  <dt>{t('detail.pickupAt')}</dt>
+                  <dd>{fmt.rentalPoint(dayjs(data.pickupAt))}</dd>
                 </div>
-              ) : null}
-              {data.pickupAt && data.returnAt ? (
-                <>
-                  <div className={styles.row}>
-                    <dt>{t('detail.pickupAt')}</dt>
-                    <dd>{fmt.rentalPoint(dayjs(data.pickupAt))}</dd>
-                  </div>
-                  <div className={styles.row}>
-                    <dt>{t('detail.returnAt')}</dt>
-                    <dd>{fmt.rentalPoint(dayjs(data.returnAt))}</dd>
-                  </div>
-                  <div className={styles.row}>
-                    <dt>{t('detail.duration')}</dt>
-                    <dd>{fmt.rentalDuration(dayjs(data.pickupAt), dayjs(data.returnAt))}</dd>
-                  </div>
-                </>
-              ) : (
                 <div className={styles.row}>
-                  <dt>{t('detail.pickupWish')}</dt>
-                  <dd>{fmt.pickupWish(data)}</dd>
+                  <dt>{t('detail.returnAt')}</dt>
+                  <dd>{fmt.rentalPoint(dayjs(data.returnAt))}</dd>
                 </div>
-              )}
-            </dl>
-            {/* Chuyến CÓ TÀI XẾ: xe đến đón — hiện hành trình thay cho hình thức nhận xe. */}
-            {data.serviceType === SERVICE_TYPE.WITH_DRIVER ? (
-              <p className={styles.pickupMethod}>
-                <EnvironmentOutlined aria-hidden="true" />
-                <span>
-                  <b>{t('pickup.driverPickup')}</b>
-                  {data.pickupAddress ? (
-                    <span className={styles.address}>
-                      {t('pickup.pickupPoint', { address: data.pickupAddress })}
-                    </span>
-                  ) : null}
-                  {data.destination ? (
-                    <span className={styles.address}>
-                      {t('pickup.destination', { address: data.destination })}
-                    </span>
-                  ) : null}
-                </span>
-              </p>
+                <div className={styles.row}>
+                  <dt>{t('detail.duration')}</dt>
+                  <dd>{fmt.rentalDuration(dayjs(data.pickupAt), dayjs(data.returnAt))}</dd>
+                </div>
+              </>
             ) : (
-              <p className={styles.pickupMethod}>
-                <EnvironmentOutlined aria-hidden="true" />
-                <span>
-                  <b>{data.deliveryRequested ? t('pickup.delivery') : t('pickup.agency')}</b>
-                  {data.deliveryRequested && data.deliveryAddress ? (
-                    <span className={styles.address}>{data.deliveryAddress}</span>
-                  ) : null}
-                </span>
-              </p>
+              <div className={styles.row}>
+                <dt>{t('detail.pickupWish')}</dt>
+                <dd>{fmt.pickupWish(data)}</dd>
+              </div>
             )}
-          </section>
+          </dl>
+        </section>
+      </div>
+
+      <div className={styles.layout}>
+        <div className={styles.main}>
+          {/*
+            Khoản giữ chỗ đứng ĐẦU cột trái của hàng thứ hai — ngay cạnh chi tiết giá bên phải,
+            không còn nằm cuối một cột trái cao gấp đôi cột phải như khi nó còn đứng sau khối tóm
+            tắt phía trên. QR + số tài khoản cần bề ngang thật để không bị bẻ chữ (từng vỡ ở đúng
+            chỗ này khi nhúng vào `/manage/account`).
+          */}
+          {data.hold ? (
+            <section className={styles.block}>
+              <TripHoldPanel hold={data.hold} tripId={data.id} />
+            </section>
+          ) : null}
 
           {/* Mốc THỰC TẾ chỉ có ý nghĩa sau chuyến — và chỉ hiện khi thật sự được ghi nhận. */}
           {data.actualPickupAt || data.actualReturnAt ? (
@@ -383,11 +425,6 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
         </div>
 
         <aside className={styles.side}>
-          {/*
-            Khoản giữ chỗ đứng TRƯỚC khối tiền của chuyến: khi chuyến đang chờ tiền thì đây là
-            việc duy nhất khách cần làm, và nó không được nằm dưới một bảng số liệu.
-          */}
-          {data.hold ? <TripHoldPanel hold={data.hold} tripId={data.id} /> : null}
           {/*
             Đơn KHÔNG đi qua khoản giữ chỗ của XePrime (tuyến gói tắt công tắc thu cọc — Phase 6).
             Khách phải được nói thẳng giới hạn bảo vệ trước khi họ chuyển tiền cho ai đó ngoài

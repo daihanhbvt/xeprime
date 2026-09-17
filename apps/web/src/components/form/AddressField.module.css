@@ -55,3 +55,13 @@
   font-size: var(--xp-font-size-sm);
   color: var(--xp-color-text-secondary);
 }
+
+/*
+ * Lỗi của SCHEMA gắn trên hai trường toạ độ — chúng không có ô nhập nào để AntD treo lỗi vào,
+ * nên nó được hiện thủ công ngay dưới bản đồ, đúng chỗ người dùng phải thao tác để sửa.
+ */
+.pinError {
+  margin: 0 0 var(--xp-space-md);
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-error);
+}

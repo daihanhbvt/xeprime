@@ -101,7 +101,7 @@
       "title": "Địa chỉ & pháp lý",
       "address": {
         "label": "Địa chỉ",
-        "placeholder": "Số nhà, đường, phường/xã"
+        "placeholder": "Ví dụ: 12 Nguyễn Thái Học"
       },
       "province": {
         "label": "Tỉnh / Thành",
@@ -276,8 +276,7 @@
       "displayName": "Tên hiển thị của gian hàng",
       "contactPhone": "Số điện thoại liên hệ",
       "province": "Tỉnh/thành",
-      "ward": "Xã/phường",
-      "address": "Số nhà, đường",
+      "address": "Địa chỉ",
       "logo": "Logo gian hàng"
     }
   }
