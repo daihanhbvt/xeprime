@@ -15,6 +15,12 @@ import { PROVINCE_CODES, type RouteType, type ServiceType, type VehicleType } fr
 import type { RentalMode, RentalRange } from '@/components/form/RentalDateTimeRangeField';
 import { ROUTES } from '@/constants/routes';
 import {
+  rememberProvince,
+  rememberedProvinceSnapshot,
+  serverRememberedProvinceSnapshot,
+  subscribeRememberedProvince,
+} from '@/lib/province-memory';
+import {
   rememberRentalRange,
   rememberedRentalRangeSnapshot,
   serverRememberedRentalRangeSnapshot,
@@ -24,6 +30,7 @@ import { XP_TOKENS } from '@/styles/theme';
 import { applyFilterPatch } from '../filter-params';
 import { useDestinations } from '../hooks/use-destinations';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
+import { provinceLabelOf } from '../province-options';
 import type { PublicDestination } from '../types';
 import {
   buildSearchHref,
@@ -185,6 +192,58 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
   }
 
   /*
+   * Tỉnh/thành khách đã TỰ CHỌN ở lượt trước → điền vào nháp. Cùng cơ chế `useSyncExternalStore`
+   * và cùng lý do hydration với khoảng thuê ngay trên.
+   *
+   * Khác một điểm quan trọng: **chỉ điền ngoài trang KẾT QUẢ**. Ở `/search`, thẻ tìm kiếm LÀ bộ
+   * lọc, và URL là thứ quyết định danh sách. Điền một tỉnh mà URL không mang nghĩa là viên địa
+   * điểm hiện "Bắc Ninh" trong khi kết quả bên dưới vẫn là toàn quốc — một lời nói dối, và cách
+   * duy nhất để chữa là tự ghi tỉnh đó vào URL, tức là lọc hộ người dùng một thứ họ chưa bấm.
+   *
+   * Cố ý KHÔNG bật `userEditedRef`: đây là điền sẵn, không phải một thao tác mới.
+   */
+  const rememberedProvince = useSyncExternalStore(
+    subscribeRememberedProvince,
+    rememberedProvinceSnapshot,
+    serverRememberedProvinceSnapshot,
+  );
+
+  /*
+   * ⚠️ Bộ nhớ tỉnh có HAI người ghi, và họ chọn từ HAI danh mục khác nhau:
+   *
+   *   - bộ chọn địa điểm ở đây ghi mã lấy từ `/public/destinations` — chỉ những tỉnh ĐANG CÓ XE;
+   *   - ô địa chỉ trong các form (`AddressField`) ghi mã lấy từ `/provinces` — MỌI tỉnh đang mở.
+   *
+   * Người đọc thì chỉ hiển thị được mã có trong `destinations`. Nên một người vừa khai địa chỉ
+   * gian hàng ở một tỉnh chưa có xe nào sẽ quay lại trang chủ và thấy viên địa điểm ghi "Địa
+   * điểm không còn khả dụng" — một câu đúng nghĩa đen nhưng nói về một lựa chọn họ chưa hề làm
+   * ở đây. Cùng chuyện đó xảy ra khi tỉnh từng có xe rồi hết xe.
+   *
+   * Vì vậy: bộ nhớ là một GỢI Ý, và bề mặt nào cũng có quyền không nhận nó. Chỉ điền khi danh
+   * mục của CHÍNH bề mặt này tra ra được tên tỉnh; không tra ra thì để nguyên "Toàn quốc".
+   *
+   * KHÔNG xoá bộ nhớ trong nhánh đó: mã vẫn đúng và vẫn hữu ích cho các form địa chỉ — nó chỉ
+   * không dùng được để TÌM XE lúc này.
+   *
+   * Phải đợi `destinations` về mới quyết (`destinationsLoading`), nếu không lần render đầu luôn
+   * tra hụt và bộ nhớ không bao giờ được dùng. Danh mục lỗi cũng rơi vào nhánh không điền — bộ
+   * chọn đã có thông báo lỗi riêng của nó.
+   */
+  const [restoredProvince, setRestoredProvince] = useState(false);
+  if (
+    !restoredProvince &&
+    rememberedProvince &&
+    !destinationsLoading &&
+    !isResultsPage &&
+    !filters.provinceCode
+  ) {
+    setRestoredProvince(true);
+    if (provinceLabelOf(destinations, rememberedProvince)) {
+      setDraft((prev) => (prev.provinceCode ? prev : { ...prev, provinceCode: rememberedProvince }));
+    }
+  }
+
+  /*
    * Nháp → URL, **chỉ khi chính người dùng chạm vào thẻ tìm kiếm**.
    *
    *  - Trang KẾT QUẢ: ghi qua `setFilters` (router.replace) — facet của panel Bộ lọc giữ nguyên,
@@ -243,7 +302,16 @@ export function SearchExperienceProvider({ children }: { children: ReactNode }) 
        * giờ suy ra một khoảng ngày từ gói thuê (ADR 0011).
        */
       setServiceType: (serviceType) => edit((prev) => ({ ...prev, serviceType })),
-      setProvinceCode: (provinceCode) => edit((prev) => ({ ...prev, provinceCode })),
+      /*
+       * Chỗ DUY NHẤT ghi tỉnh vào bộ nhớ trình duyệt, và nó nằm đúng ở hàm xử lý thao tác của
+       * người dùng — không phải trong một effect theo dõi `draft`. Khác biệt là toàn bộ điểm
+       * của việc ghi nhớ: `draft` còn đổi vì URL (bấm "Địa điểm nổi bật", mở link chia sẻ), nên
+       * một effect sẽ đóng dấu cả những tỉnh khách chưa bao giờ chọn.
+       */
+      setProvinceCode: (provinceCode) => {
+        rememberProvince(provinceCode);
+        edit((prev) => ({ ...prev, provinceCode }));
+      },
       setRouteType: (routeType) => edit((prev) => ({ ...prev, routeType })),
       /*
        * Đây là chỗ DUY NHẤT ghi khoảng thuê vào bộ nhớ trình duyệt, và nó nằm đúng ở hàm xử lý

@@ -747,11 +747,16 @@ const addressShape = {
     .default(null),
 } as const;
 
-/** Như `addressShape` nhưng BẮT BUỘC chọn xã/phường — dùng ở form khai báo địa điểm vận hành. */
-const addressShapeWithWard = {
-  ...addressShape,
-  wardCode: yup.string().trim().required('wardRequired').length(5, 'wardInvalid'),
-} as const;
+/*
+ * Từng có một `addressShapeWithWard` ở đây — bản BẮT BUỘC chọn xã/phường, dùng cho form khai
+ * địa điểm vận hành (chi nhánh, hồ sơ chủ xe).
+ *
+ * Nó bị bỏ theo ADR 0042: mọi ô địa chỉ CÓ GHIM thôi hỏi xã/phường, vì toạ độ đã xác nhận định
+ * vị chính xác hơn hẳn một mã năm chữ số — và ô đó là thứ người dùng thường không trả lời được.
+ * `wardCode` vẫn nằm trong `addressShape` (vẫn đi trên dây, vẫn có ở dữ liệu cũ và ở sổ khách,
+ * nơi KHÔNG có ghim nên mã xã vẫn là cấp định vị duy nhất dưới tỉnh), chỉ là không form có ghim
+ * nào đòi nó nữa.
+ */
 
 /**
  * ĐĂNG KÝ người cho thuê xe — MỘT schema, HAI cửa vào (ADR 0040).
@@ -762,12 +767,11 @@ const addressShapeWithWard = {
  *
  * | Trường | `commission` | `package` |
  * | --- | --- | --- |
- * | `wardCode` | tuỳ chọn | **bắt buộc** |
  * | `addressLine` | tuỳ chọn | **bắt buộc** |
  * | `phone` | tuỳ chọn | **bắt buộc** |
  *
  * Vì sao tuyến gói chặt hơn: người này đang chuẩn bị TRẢ TIỀN để mở một mặt tiền trên chợ, và cả
- * ba trường đều là thứ khách cần để tìm và gọi được họ. Hỏi ngay ở bước 1 rẻ hơn hẳn so với để
+ * hai trường đều là thứ khách cần để tìm và gọi được họ. Hỏi ngay ở bước 1 rẻ hơn hẳn so với để
  * họ trả tiền xong rồi mới bị cổng đăng xe từ chối — nên bộ này khớp ĐÚNG
  * `missingPackageShopRegistrationFields` ở `@xeprime/types` (cùng quy tắc, hai lớp thi hành).
  *
@@ -794,18 +798,10 @@ export const registerShopSchema = yup.object({
    */
   ...addressShape,
   /*
-   * Xã/phường: tuyến hoa hồng để trống được — người mở hồ sơ chủ xe thường chưa có địa chỉ chính
-   * xác, và chặn ở đây là chặn luôn việc họ bắt đầu; chi nhánh sinh ra mang cờ chờ bổ sung.
+   * KHÔNG đòi xã/phường ở tuyến nào cả (ADR 0042): form không còn ô đó, và một schema đòi thứ
+   * màn hình không hỏi là một nút Lưu chết không giải thích được. Vị trí chính xác của gian hàng
+   * nay đến từ cái ghim mà người dùng đã xác nhận trên bản đồ.
    */
-  /*
-   * Chỉ thêm `.required`, KHÔNG thêm `.length(5)`: mẫu `WARD_CODE_PATTERN` của `addressShape` đã
-   * kiểm hình dạng khi ô có giá trị, và `.length` coi chuỗi rỗng là sai độ dài — nên ô chưa chọn
-   * sẽ nhận CẢ HAI mã (`wardRequired` + `wardInvalid`) và giao diện hiện hai câu cho một lỗi.
-   */
-  wardCode: addressShape.wardCode.when('registrationTrack', {
-    is: REGISTRATION_TRACK.PACKAGE,
-    then: (schema) => schema.required('wardRequired'),
-  }),
   addressLine: addressShape.addressLine.when('registrationTrack', {
     is: REGISTRATION_TRACK.PACKAGE,
     then: (schema) => schema.required('addressLineRequired'),
@@ -844,11 +840,11 @@ export type RegisterShopValues = yup.InferType<typeof registerShopSchema>;
 export const ownerProfileSchema = yup.object({
   name: yup.string().trim().required('nameRequired').min(2, 'nameMin').max(255),
   /*
-   * Địa chỉ dùng CHUNG một hình dạng với mọi form khai địa điểm (`addressShapeWithWard`):
-   * tỉnh → xã/phường → số nhà, kèm ghim toạ độ. Không tự khai lại ba ô ở đây — lệch một
-   * ràng buộc là lệch luôn thứ `AddressField` gửi lên so với thứ schema chấp nhận.
+   * Địa chỉ dùng CHUNG một hình dạng với mọi form khai địa điểm (`addressShape`): tỉnh → số nhà,
+   * kèm ghim toạ độ. Không tự khai lại các ô ở đây — lệch một ràng buộc là lệch luôn thứ
+   * `AddressField` gửi lên so với thứ schema chấp nhận.
    */
-  ...addressShapeWithWard,
+  ...addressShape,
   /*
    * Ghi đè ĐÚNG một ô: với chủ xe cá nhân, số nhà/đường là BẮT BUỘC. Đăng ký gian hàng để nó
    * tuỳ chọn vì gian hàng còn một cổng "gửi duyệt" phía sau để đòi địa chỉ đủ; ở đây thì
@@ -874,10 +870,11 @@ export type OwnerProfileValues = yup.InferType<typeof ownerProfileSchema>;
 export const branchFormSchema = yup.object({
   name: yup.string().trim().required('nameRequired').min(2, 'nameMin').max(255),
   /*
-   * Chi nhánh BẮT BUỘC có xã/phường: đây là địa điểm vận hành thật — xe nằm ở đó, khách tới đó
-   * nhận xe, và toạ độ của nó là điểm xuất phát của mọi phép tính phí giao xe tận nơi.
+   * Chi nhánh là địa điểm vận hành thật — xe nằm ở đó, khách tới đó nhận xe, và toạ độ của nó là
+   * điểm xuất phát của mọi phép tính phí giao xe tận nơi. Thứ chốt độ chính xác ở đây là CÁI
+   * GHIM đã xác nhận, không phải mã xã (ADR 0042), nên `addressShape` giữ `wardCode` tuỳ chọn.
    */
-  ...addressShapeWithWard,
+  ...addressShape,
   phone: yup
     .string()
     .trim()

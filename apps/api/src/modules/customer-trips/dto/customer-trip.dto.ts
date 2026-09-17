@@ -7,6 +7,7 @@ import {
   DEPOSIT_COLLECTION_MODE_VALUES,
   DEPOSIT_STATUS_VALUES,
   REFUND_METHOD_VALUES,
+  STOREFRONT_KIND_VALUES,
   SURCHARGE_CATEGORY_VALUES,
   type DepositCollectionMode,
 } from '@xeprime/types';
@@ -114,6 +115,12 @@ export class CustomerTripShopDto {
   @ApiProperty() ratingCount!: number;
   /** SĐT gian hàng — chỉ trả khi chuyến đã được nhận (khách cần gọi được chủ xe). */
   @ApiPropertyOptional({ type: String, nullable: true }) phone!: string | null;
+  /**
+   * `personal` (chủ xe cá nhân, tuyến hoa hồng) hay `shop` (gian hàng tuyến gói) — cùng phép suy
+   * `resolveStorefrontKind` với trang `/shops/:slug` công khai (ADR 0028/0038/0040). Khách không
+   * được mời "Xem gian hàng" một người không có mặt tiền doanh nghiệp nào để xem.
+   */
+  @ApiProperty({ enum: STOREFRONT_KIND_VALUES }) shopKind!: string;
 }
 
 /** Một khoản phát sinh, bản của KHÁCH: không có người ghi, không có ghi chú nội bộ. */

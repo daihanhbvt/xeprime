@@ -1,7 +1,7 @@
 import { App } from 'antd';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CUSTOMER_TRIP_STAGE, DEPOSIT_STATUS, TRIP_ROLE } from '@xeprime/types';
+import { CUSTOMER_TRIP_STAGE, DEPOSIT_STATUS, STOREFRONT_KIND, TRIP_ROLE } from '@xeprime/types';
 import { ApiClientError } from '@/services/api-client';
 
 import { TripDetailView } from './TripDetailView';
@@ -85,6 +85,7 @@ const TRIP: CustomerTripDetail = {
     ratingAvg: 4.8,
     ratingCount: 12,
     phone: '0909123456',
+    shopKind: STOREFRONT_KIND.SHOP,
   },
   pickupAt: '2026-08-09T14:00:00.000Z',
   returnAt: '2026-08-12T14:00:00.000Z',
@@ -206,6 +207,22 @@ describe('Sẵn sàng và Đang thuê', () => {
   it('vẫn liên hệ được chủ xe', () => {
     renderView();
     expect(screen.getByText('Nhắn tin cho cửa hàng')).toBeTruthy();
+  });
+});
+
+describe('Nhãn mặt tiền theo tuyến', () => {
+  it('gian hàng tuyến gói ⇒ "Xem gian hàng"', () => {
+    setTrip({ shop: { ...TRIP.shop, shopKind: STOREFRONT_KIND.SHOP } });
+    renderView();
+    expect(screen.getByText('Xem gian hàng →')).toBeTruthy();
+    expect(screen.queryByText('Xem chủ xe →')).toBeNull();
+  });
+
+  it('chủ xe cá nhân tuyến hoa hồng ⇒ "Xem chủ xe", KHÔNG "Xem gian hàng"', () => {
+    setTrip({ shop: { ...TRIP.shop, shopKind: STOREFRONT_KIND.PERSONAL } });
+    renderView();
+    expect(screen.getByText('Xem chủ xe →')).toBeTruthy();
+    expect(screen.queryByText('Xem gian hàng →')).toBeNull();
   });
 });
 

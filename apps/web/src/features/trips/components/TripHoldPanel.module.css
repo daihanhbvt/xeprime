@@ -11,6 +11,14 @@
    * Một khối dùng chung không được phép phụ thuộc vào căn lề của chỗ nó bị gắn vào.
    */
   text-align: left;
+  /*
+   * Container query, KHÔNG media query, cho `.body`/`.row` bên dưới — panel này nhúng vào cột
+   * phụ hẹp của `/manage/account` (sidebar + hai cột `TripDetailView`), nơi bề ngang THẬT của nó
+   * nhỏ hơn nhiều so với khổ máy. Một `@media` theo khổ máy không bao giờ chuyển sang một cột ở
+   * đó: lưới hai cột bị ép vào phần thừa vài px, và một chuỗi số dài bị bẻ từng ký tự một xuống
+   * dòng — đúng lỗi đã xảy ra ở trang chi tiết chuyến.
+   */
+  container-type: inline-size;
 }
 
 /*
@@ -26,7 +34,7 @@
   align-items: start;
 }
 
-@media (max-width: 560px) {
+@container (max-width: 560px) {
   .body {
     grid-template-columns: minmax(0, 1fr);
     justify-items: center;
@@ -83,7 +91,7 @@
   font-size: 14px;
 }
 
-@media (max-width: 480px) {
+@container (max-width: 480px) {
   /* Hết chỗ cho hai cột thì xếp chồng — vẫn hơn hẳn việc bóp cột giá trị. */
   .row {
     grid-template-columns: minmax(0, 1fr);

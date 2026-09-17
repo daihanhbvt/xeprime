@@ -1139,7 +1139,6 @@ export class VehiclesService {
       displayName: tenant.profile?.displayName,
       contactPhone: branch?.phone,
       provinceCode: branch?.provinceCode,
-      wardCode: branch?.wardCode,
       addressLine: branch?.addressLine,
       logoUrl: tenant.profile?.logoUrl,
     });

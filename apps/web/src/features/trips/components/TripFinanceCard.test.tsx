@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEPOSIT_STATUS, SURCHARGE_CATEGORY } from '@xeprime/types';
 
@@ -44,6 +44,8 @@ function money(text: string): boolean {
 describe('Bảng giá trước chuyến', () => {
   it('phí giao nhận 0 hiện `Miễn phí`, không phải `0 đ`', () => {
     render(<TripFinanceCard finance={BASE} closed={false} />);
+    // Bảng kê từng dòng (gồm phí giao nhận) nằm sau nút "Xem chi tiết giá".
+    fireEvent.click(screen.getByText('Xem chi tiết giá'));
     expect(screen.getByText('Miễn phí')).toBeTruthy();
   });
 
@@ -60,8 +62,9 @@ describe('Bảng giá trước chuyến', () => {
       />,
     );
     // Phí giao nhận do chủ xe chốt sau khi thoả thuận ngoài ứng dụng (Wave 9): không có bước
-    // khách xác nhận, nên cũng không được có nút nào ở đây.
-    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    // khách xác nhận, nên nút duy nhất được phép ở đây là gấp/mở bảng kê — không có nút
+    // duyệt/từ chối/xác nhận nào.
+    expect(screen.queryByRole('button', { name: /duyệt|từ chối|xác nhận/i })).toBeNull();
     expect(money('2.892.000')).toBe(true);
   });
 });
@@ -99,6 +102,7 @@ describe('Hoá đơn sau chuyến', () => {
 
   it('phụ phí hiện kèm lý do để khách đối chiếu được', () => {
     render(<TripFinanceCard finance={WITH_SURCHARGE} closed />);
+    fireEvent.click(screen.getByText('Xem chi tiết giá'));
     expect(screen.getByText('Trả trễ 1.5 giờ')).toBeTruthy();
     expect(screen.getByText('Vệ sinh xe')).toBeTruthy();
   });
@@ -111,7 +115,8 @@ describe('Hoá đơn sau chuyến', () => {
   it('chờ hoàn cọc: nói XePrime chỉ ghi nhận, không chuyển tiền', () => {
     render(<TripFinanceCard finance={WITH_SURCHARGE} closed />);
     expect(screen.getByText(/không thực hiện chuyển tiền/)).toBeTruthy();
-    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    // Nút duy nhất được phép là gấp/mở bảng kê — không có nút duyệt/hoàn tiền nào ở đây.
+    expect(screen.queryByRole('button', { name: /duyệt|từ chối|hoàn tiền/i })).toBeNull();
   });
 });
 

@@ -278,6 +278,11 @@ export function ShopRegistration({
                */
               required={isPackageTrack}
               provinceRequired
+              /*
+               * Form TẠO MỚI: điền sẵn tỉnh người dùng vừa chọn ở nơi khác (thanh tìm xe) để bớt
+               * một thao tác. Họ vẫn đổi được, và chỉ điền khi ô đang trống.
+               */
+              prefillRememberedProvince
             />
             <TextField
               control={control}

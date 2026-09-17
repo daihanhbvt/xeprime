@@ -141,10 +141,10 @@ export function isShopProfileSubmittable(profile: ShopProfileCompletenessInput):
  *    chiếc xe không có logo gian hàng và không cần có, và bắt họ thiết kế một cái là dựng lại
  *    đúng rào cản mà ADR 0036 vừa gỡ.
  *
- * Trong luồng bình thường, bước "tạo gian hàng" của onboarding tuyến gói đã đòi đủ năm mục đầu
- * (tên · SĐT liên hệ · tỉnh · xã · địa chỉ chi tiết), nên mục thường còn thiếu sau khi thanh
- * toán là ĐÚNG MỘT mục: logo. Cổng vẫn chấm cả sáu vì hồ sơ sửa được sau đó, và một gian hàng
- * xoá trắng tên rồi đăng xe là thứ không được lọt.
+ * Trong luồng bình thường, bước "tạo gian hàng" của onboarding tuyến gói đã đòi đủ bốn mục đầu
+ * (tên · SĐT liên hệ · tỉnh · địa chỉ chi tiết), nên mục thường còn thiếu sau khi thanh toán là
+ * ĐÚNG MỘT mục: logo. Cổng vẫn chấm cả năm vì hồ sơ sửa được sau đó, và một gian hàng xoá trắng
+ * tên rồi đăng xe là thứ không được lọt.
  *
  * Nguồn dữ liệu của từng mục là RÕ RÀNG và không đọc cột trùng lặp:
  *   `displayName`/`logoUrl` ← `tenant_profiles` · phần địa chỉ + SĐT ← CHI NHÁNH MẶC ĐỊNH
@@ -157,9 +157,13 @@ export const PACKAGE_SHOP_LISTING_REQUIREMENT = {
   /** SĐT liên hệ của gian hàng — khách gọi vào đây. Từ chi nhánh mặc định. */
   CONTACT_PHONE: 'contactPhone',
   PROVINCE: 'province',
-  /** Xã/phường — cấp thứ hai của mô hình hành chính 2 cấp (ADR 0035). */
-  WARD: 'ward',
-  /** Số nhà, đường — phần không danh mục nào phát hành. */
+  /**
+   * Số nhà, đường — phần không danh mục nào phát hành, và từ ADR 0042 là phần ĐÃ ĐƯỢC BẢN ĐỒ
+   * XÁC NHẬN (chọn từ gợi ý hoặc tự đặt ghim).
+   *
+   * Từng có một mục `ward` đứng cạnh đây. Nó bị bỏ cùng lúc với ô Xã/phường ở mọi form địa chỉ
+   * có ghim: một cổng đòi thứ không màn hình nào còn hỏi là một cổng không ai qua được.
+   */
   ADDRESS: 'address',
   /** Logo gian hàng: nhận diện trên chợ. CHỈ gian hàng tuyến gói bị đòi mục này. */
   LOGO: 'logo',
@@ -184,7 +188,6 @@ export interface PackageShopListingInput {
   /** SĐT liên hệ của CHI NHÁNH MẶC ĐỊNH (dạng lưu `84…` hoặc `0…`; hàm chỉ hỏi có hay không). */
   contactPhone?: string | null;
   provinceCode?: string | null;
-  wardCode?: string | null;
   /** Số nhà/đường của chi nhánh mặc định — KHÔNG phải chuỗi hiển thị đã ghép. */
   addressLine?: string | null;
   logoUrl?: string | null;
@@ -203,7 +206,6 @@ export function missingPackageShopListingRequirements(
   if (!filled(input.displayName)) missing.push(PACKAGE_SHOP_LISTING_REQUIREMENT.DISPLAY_NAME);
   if (!filled(input.contactPhone)) missing.push(PACKAGE_SHOP_LISTING_REQUIREMENT.CONTACT_PHONE);
   if (!filled(input.provinceCode)) missing.push(PACKAGE_SHOP_LISTING_REQUIREMENT.PROVINCE);
-  if (!filled(input.wardCode)) missing.push(PACKAGE_SHOP_LISTING_REQUIREMENT.WARD);
   if (!filled(input.addressLine)) missing.push(PACKAGE_SHOP_LISTING_REQUIREMENT.ADDRESS);
   if (!filled(input.logoUrl)) missing.push(PACKAGE_SHOP_LISTING_REQUIREMENT.LOGO);
   return missing;

@@ -180,7 +180,9 @@
       "holdHint": "Chuyển khoản cho XePrime để chốt chuyến. Phần tiền thuê còn lại trả trực tiếp chủ xe khi nhận xe.",
       "payAtHandover": "Trả chủ xe khi nhận xe",
       "feesNote": "Mỗi khoản ghi rõ ai nhận. Số cuối cùng được chốt khi chủ xe duyệt yêu cầu.",
-      "noFees": "Chuyến này không có khoản đi kèm nào."
+      "noFees": "Chuyến này không có khoản đi kèm nào.",
+      "viewDetails": "Xem chi tiết giá",
+      "collapse": "Thu gọn"
     },
     "filterBar": {
       "allOf": "{label}: Tất cả",

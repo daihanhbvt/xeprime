@@ -75,7 +75,12 @@ export function toShopProfileBody(v: ShopProfileValues): UpdateProfileInput {
     // Chỉ gửi MÃ + phần chi tiết — tên tỉnh/xã và chuỗi hiển thị do server ghép. Backend
     // chuyển tiếp cả cụm cho chi nhánh mặc định (writer duy nhất của địa chỉ vận hành).
     provinceCode: v.provinceCode,
-    wardCode: v.wardCode,
+    /*
+     * Chuỗi RỖNG không được gửi: DTO khai `@IsOptional()` kèm `@Length(5, 5)`, mà `@IsOptional`
+     * chỉ bỏ qua `null`/`undefined`. Từ ADR 0042 form không còn ô Xã/phường, nên hồ sơ chưa từng
+     * khai mã xã sẽ luôn rơi vào nhánh này.
+     */
+    wardCode: v.wardCode || undefined,
     addressLine: v.addressLine,
     taxCode: v.taxCode,
     businessLicenseNo: v.businessLicenseNo,

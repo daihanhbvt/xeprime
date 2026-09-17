@@ -103,6 +103,8 @@ export {
   type GeoPoint,
 } from './geo';
 
+export { provinceCenter, provinceCodesMissingCenter } from './province-center';
+
 /**
  * Ghép địa chỉ vật lý Việt Nam (số nhà → xã/phường → tỉnh/thành).
  *

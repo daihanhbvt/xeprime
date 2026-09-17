@@ -53,6 +53,7 @@ export function TripEstimateCard({
       depositAmount={estimate.depositAmount}
       fees={estimate.fees}
       audience={isHost ? 'owner' : 'customer'}
+      collapsible
       footer={
         <div className={styles.footer}>
           {/*

@@ -41,7 +41,7 @@
       },
       "address": {
         "label": "Address",
-        "placeholder": "Street number, street, ward"
+        "placeholder": "For example: 12 Nguyen Thai Hoc"
       },
       "phone": {
         "label": "Phone number",
@@ -74,7 +74,7 @@
     "emailInvalid": "Invalid email address",
     "wardRequired": "Select a ward",
     "wardInvalid": "Invalid ward",
-    "addressLineRequired": "Enter your shop's street number and street",
+    "addressLineRequired": "Enter your shop's address",
     "addressLineMax": "Address is too long",
     "phoneRequired": "Enter your shop's contact phone number"
   },

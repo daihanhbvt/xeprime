@@ -84,9 +84,21 @@ const PIN = {
 function Harness({
   defaults,
   onValues,
+  withPin = true,
+  prefill = false,
 }: {
   defaults?: Partial<Values>;
   onValues?: (values: Values) => void;
+  /**
+   * Ô này có lưu toạ độ không — và đó là thứ quyết định CÓ hỏi xã/phường hay không (ADR 0042).
+   *
+   * `true` (mặc định) là hình dạng của gần như mọi form thật: chi nhánh, hồ sơ gian hàng, đăng
+   * xe nhanh. `false` là sổ khách — địa chỉ chỉ để liên hệ, không ghim, nên mã xã là cấp định vị
+   * duy nhất dưới tỉnh và bộ chọn đó ở lại.
+   */
+  withPin?: boolean;
+  /** Form TẠO MỚI: điền sẵn tỉnh người dùng đã chọn ở nơi khác, nếu danh mục tra ra được nó. */
+  prefill?: boolean;
 }) {
   const { control, handleSubmit } = useForm<Values>({
     defaultValues: {
@@ -102,7 +114,13 @@ function Harness({
   });
   return (
     <form onSubmit={handleSubmit((values) => onValues?.(values))}>
-      <AddressField control={control} names={NAMES} pin={PIN} required />
+      <AddressField
+        control={control}
+        names={NAMES}
+        pin={withPin ? PIN : undefined}
+        prefillRememberedProvince={prefill}
+        required
+      />
       <button type="submit">Gửi</button>
     </form>
   );
@@ -114,6 +132,9 @@ function openSelect(label: RegExp) {
 }
 
 beforeEach(() => {
+  // Bộ nhớ tỉnh (`lib/province-memory`) sống xuyên suốt cả file test — dọn để mỗi ca tự dựng
+  // trạng thái của nó thay vì thừa hưởng lựa chọn của ca trước.
+  window.localStorage.clear();
   provinces.options = [
     { value: '01', label: 'TP Hà Nội' },
     { value: '79', label: 'TP Hồ Chí Minh' },
@@ -127,16 +148,30 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('AddressField — hai cấp hành chính', () => {
-  it('ô xã/phường KHOÁ cho tới khi chọn tỉnh', () => {
-    const { container } = render(<Harness />);
+  /**
+   * Ô CÓ GHIM không hỏi xã/phường (ADR 0042).
+   *
+   * Toạ độ đã xác nhận định vị chính xác hơn hẳn một mã năm chữ số, còn danh mục cấp xã có 3.321
+   * đơn vị vừa đổi tên hàng loạt từ 01/07/2025 — đủ để một người đang khai địa chỉ của CHÍNH MÌNH
+   * cũng phải dừng lại tra cứu.
+   */
+  it('ô có ghim: KHÔNG có bộ chọn xã/phường', () => {
+    render(<Harness />);
+
+    expect(screen.queryByLabelText(/Xã\/phường/)).toBeNull();
+    expect(screen.getByLabelText(/Tỉnh\/thành/)).toBeTruthy();
+  });
+
+  it('ô KHÔNG ghim (sổ khách): xã/phường vẫn hỏi, và KHOÁ cho tới khi chọn tỉnh', () => {
+    const { container } = render(<Harness withPin={false} />);
 
     expect(container.textContent).toContain('Chọn tỉnh/thành trước');
     // Hai ô chọn: tỉnh mở được, xã thì không.
     expect(container.querySelectorAll('.ant-select-disabled')).toHaveLength(1);
   });
 
-  it('chọn tỉnh xong thì ô xã mở ra và chỉ liệt kê xã CỦA TỈNH đó', async () => {
-    render(<Harness />);
+  it('ô KHÔNG ghim: chọn tỉnh xong thì ô xã mở ra và chỉ liệt kê xã CỦA TỈNH đó', async () => {
+    render(<Harness withPin={false} />);
 
     openSelect(/Tỉnh\/thành/);
     fireEvent.click(await screen.findByTitle('TP Hà Nội'));
@@ -144,6 +179,46 @@ describe('AddressField — hai cấp hành chính', () => {
     openSelect(/Xã\/phường/);
     expect(await screen.findByTitle('Phường Ba Đình')).toBeTruthy();
     expect(screen.queryByTitle('Phường Chợ Quán')).toBeNull();
+  });
+
+  /**
+   * Điền sẵn tỉnh đã nhớ, và CHỈ khi danh mục của chính ô này tra ra được nó.
+   *
+   * Bộ nhớ dùng chung với thanh tìm xe, nhưng hai bên đọc hai danh mục khác nhau: thanh tìm xe
+   * lấy tỉnh ĐANG CÓ XE, ô này lấy tỉnh đang MỞ ĐĂNG KÝ. Không bên nào chứa trọn bên kia. Điền
+   * một mã không có trong `options` là dựng một ô chọn hiện ra TRỐNG trong khi form đang mang mã
+   * đó — người dùng bấm Lưu và không hiểu vì sao hỏng.
+   */
+  it('điền sẵn tỉnh đã nhớ khi danh mục có nó', async () => {
+    window.localStorage.setItem(
+      'xp.provinceCode',
+      JSON.stringify({ provinceCode: '79', savedAt: new Date().toISOString() }),
+    );
+    const onValues = vi.fn();
+    render(<Harness prefill onValues={onValues} />);
+
+    await waitFor(() => expect(screen.getByLabelText(/Tỉnh\/thành/)).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi' }));
+
+    await waitFor(() => expect(onValues).toHaveBeenCalled());
+    expect(onValues.mock.calls[0]?.[0]).toMatchObject({ provinceCode: '79' });
+  });
+
+  it('KHÔNG điền tỉnh đã nhớ khi danh mục của ô này không có nó', async () => {
+    // `'24'` hợp lệ ở danh mục hành chính nhưng không nằm trong `options` của ô này — hình dạng
+    // của một tỉnh có xe trên chợ mà admin đã tắt đăng ký mới.
+    window.localStorage.setItem(
+      'xp.provinceCode',
+      JSON.stringify({ provinceCode: '24', savedAt: new Date().toISOString() }),
+    );
+    const onValues = vi.fn();
+    render(<Harness prefill onValues={onValues} />);
+
+    await waitFor(() => expect(screen.getByLabelText(/Tỉnh\/thành/)).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi' }));
+
+    await waitFor(() => expect(onValues).toHaveBeenCalled());
+    expect(onValues.mock.calls[0]?.[0]).toMatchObject({ provinceCode: '' });
   });
 
   it('đổi tỉnh thì XOÁ mã xã cũ — không gửi lên một cặp mã DB sẽ từ chối', async () => {
@@ -198,7 +273,8 @@ describe('AddressField — trạng thái của danh mục', () => {
 
   it('danh mục cấp xã lỗi: nói ở chính ô đó, không chặn cả khối địa chỉ', async () => {
     wards.isError = true;
-    const { container } = render(<Harness defaults={{ provinceCode: '01' }} />);
+    // Chỉ ô KHÔNG ghim mới còn bộ chọn xã, nên đây là chỗ duy nhất lỗi danh mục đó hiện ra.
+    const { container } = render(<Harness withPin={false} defaults={{ provinceCode: '01' }} />);
 
     await waitFor(() =>
       expect(container.textContent).toContain('Không tải được danh mục xã/phường.'),

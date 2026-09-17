@@ -111,9 +111,12 @@ export class BranchListQueryDto {
  * Tạo chi nhánh.
  *
  * Địa chỉ là các trường PHẲNG, không phải một object lồng — xem `AddressViewDto` ở
- * `modules/locations/dto/address.dto.ts` để biết vì sao. `wardCode` tuỳ chọn ở tầng DTO nhưng
- * giao diện luôn hỏi: client cũ chưa có bộ chọn cấp xã vẫn tạo được chi nhánh, bản ghi chỉ mang
- * `needsLocationReview = true` và được mời bổ sung.
+ * `modules/locations/dto/address.dto.ts` để biết vì sao.
+ *
+ * `wardCode` tuỳ chọn, và từ ADR 0042 giao diện KHÔNG còn hỏi nó ở đây: một chi nhánh có ghim
+ * đã xác nhận thì toạ độ định vị chính xác hơn hẳn một mã năm chữ số. Trường vẫn nhận giá trị
+ * (client cũ, dữ liệu nhập tay) và vẫn bị đối chiếu với tỉnh khi có — chỉ là không màn hình nào
+ * còn sinh ra nó.
  */
 export class CreateBranchDto {
   @ApiProperty({ example: 'Chi nhánh Đà Nẵng' })

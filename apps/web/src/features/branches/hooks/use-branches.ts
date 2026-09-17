@@ -15,19 +15,25 @@ import type { Branch, BranchList, CreateBranchInput, UpdateBranchInput } from '.
  * `vehicles` (thẻ xe hiển thị tên chi nhánh) và `shop` (hồ sơ mang tỉnh của chi nhánh mặc định).
  * Bỏ sót một nhánh là màn hình nói một đằng, dữ liệu một nẻo.
  */
-export function useBranches(params: QueryParams = {}) {
+export function useBranches(params: QueryParams = {}, enabled = true) {
   return useQuery({
     queryKey: queryKeys.branches.list(params),
     queryFn: async (): Promise<BranchList> => {
       const res = await apiRequest<BranchList>('/branches', { query: params });
       return res.data;
     },
+    /*
+     * `enabled` cho nơi gọi TẮT hẳn câu hỏi, không phải để lọc kết quả: người chưa thuộc gian
+     * hàng nào không có chi nhánh để hỏi, và một lần 403 ở đó chỉ biến thành cảnh báo "không tải
+     * được danh sách chi nhánh" trên màn hình của đúng người không có chi nhánh nào.
+     */
+    enabled,
   });
 }
 
 /** Chi nhánh ĐANG HOẠT ĐỘNG — dùng cho bộ chọn ở form xe và thanh trên. */
-export function useActiveBranches() {
-  return useBranches({ status: 'active' });
+export function useActiveBranches(enabled = true) {
+  return useBranches({ status: 'active' }, enabled);
 }
 
 function useInvalidateBranchSurfaces() {

@@ -26,24 +26,32 @@ import {
  * Không có `DELETE`: chi nhánh còn xe/đơn là dữ liệu lịch sử của những chuyến đã đi. Vòng đời
  * đúng là `deactivate` (ngừng nhận xe mới) — xoá cứng bị FK chặn ở DB.
  *
- * ⚠️ `@RequiresFeature(BRANCHES)` gắn THEO TỪNG ROUTE, không gắn ở class — và đó là chủ đích.
+ * ⚠️ CẢ HAI cổng — `@RequiresFeature(BRANCHES)` và `@SubscriptionTrackOnly()` — gắn THEO TỪNG
+ * ROUTE, không gắn ở class, và gắn lên ĐÚNG CÙNG BỐN route. Đó là chủ đích.
  *
- * Tính năng bán được là **nhiều chi nhánh**, không phải "có chi nhánh". Một gian hàng bậc cơ bản
- * luôn có đúng MỘT chi nhánh mặc định do `registerShop` tạo, và địa chỉ của nó là **địa chỉ công
- * khai của họ trên chợ** — khoá lại là khoá một thứ thuộc bộ cơ bản (ADR 0027 điều 1).
+ * Tính năng bán được là **nhiều chi nhánh**, không phải "có chi nhánh". Mọi tenant — gian hàng
+ * bậc cơ bản lẫn chủ xe tuyến hoa hồng — luôn có đúng MỘT chi nhánh mặc định do `registerShop`
+ * tạo, và địa chỉ của nó là **địa chỉ giao nhận xe công khai của họ trên chợ**: chỗ khách tới
+ * lấy xe, và điểm xuất phát của mọi phép tính phí giao tận nơi. Khoá lại là khoá một thứ thuộc
+ * bộ cơ bản (ADR 0027 điều 1).
  *
- * Nên ba route dưới đây CỐ Ý không có marker:
+ * Nên ba route dưới đây CỐ Ý không có cổng nào:
  *   GET /branches · GET /branches/:id — không đọc được thì không có form nào để sửa;
  *   PATCH /branches/:id              — sửa địa chỉ chi nhánh của chính mình.
  *
+ * ⚠️ Tới 17/09/2026 `@SubscriptionTrackOnly()` còn nằm ở CLASS, và nó khoá luôn ba route trên
+ * với tuyến hoa hồng. Hậu quả không phải một menu bị ẩn: `POST /vehicles` BẮT BUỘC `branchId`,
+ * nên chủ xe cá nhân không đọc nổi chi nhánh của chính mình ⇒ không đăng nổi chiếc xe đầu tiên
+ * (bước "Địa chỉ xe" của `/list-your-vehicle/register` chết ở một bộ chọn rỗng). Ranh giới hai
+ * tuyến là bộ quản lý NHIỀU chi nhánh, không phải địa chỉ của chính mình (ADR 0038 điều 4).
+ *
  * Ngoại lệ nằm ở METADATA chứ không giấu trong service: nó hiện trong `route-access`, và
- * `plan-feature-coverage.spec.ts` khai đúng ba route này thành danh sách chờ — thêm bớt một
- * route ở đây là đỏ CI, không phải một thay đổi im lặng.
+ * `plan-feature-coverage.spec.ts` khai đúng ba route này thành danh sách chờ cho CẢ HAI cổng —
+ * thêm bớt một route ở đây là đỏ CI, không phải một thay đổi im lặng.
  */
 @ApiTags('branches')
 @Controller('branches')
 @TenantScoped()
-@SubscriptionTrackOnly()
 export class BranchesController {
   constructor(private readonly branches: BranchesService) {}
 
@@ -60,6 +68,7 @@ export class BranchesController {
 
   @Post()
   @RequiresFeature(PLAN_FEATURE.BRANCHES)
+  @SubscriptionTrackOnly()
   @RequirePermissions(PERMISSION.BRANCH_MANAGE)
   @ApiOperation({ summary: 'Tạo chi nhánh mới (mã CNxx sinh ở server)' })
   @ApiCreatedResponse({ type: BranchDto })
@@ -94,6 +103,7 @@ export class BranchesController {
 
   @Post(':id/set-default')
   @RequiresFeature(PLAN_FEATURE.BRANCHES)
+  @SubscriptionTrackOnly()
   @RequirePermissions(PERMISSION.BRANCH_MANAGE)
   @ApiOperation({ summary: 'Đặt làm chi nhánh mặc định của gian hàng' })
   @ApiOkResponse({ type: BranchDto })
@@ -107,6 +117,7 @@ export class BranchesController {
 
   @Post(':id/deactivate')
   @RequiresFeature(PLAN_FEATURE.BRANCHES)
+  @SubscriptionTrackOnly()
   @RequirePermissions(PERMISSION.BRANCH_MANAGE)
   @ApiOperation({ summary: 'Ngừng hoạt động (chặn nếu còn xe hoặc đơn đang chạy/sắp tới)' })
   @ApiOkResponse({ type: BranchDto })
@@ -120,6 +131,7 @@ export class BranchesController {
 
   @Post(':id/activate')
   @RequiresFeature(PLAN_FEATURE.BRANCHES)
+  @SubscriptionTrackOnly()
   @RequirePermissions(PERMISSION.BRANCH_MANAGE)
   @ApiOperation({ summary: 'Bật lại chi nhánh đã ngừng hoạt động' })
   @ApiOkResponse({ type: BranchDto })

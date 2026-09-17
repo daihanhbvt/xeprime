@@ -396,8 +396,20 @@ export class BookingRequestsService {
     // Giao tận nơi: kiểm ở SERVER theo chính sách hiệu lực — FE ẩn ô nhập không phải lớp chặn.
     // Chuyến CÓ TÀI XẾ thì xe đến đón khách — "giao xe tận nơi" không có nghĩa, ép false.
     const deliveryRequested = !withDriver && dto.deliveryRequested === true;
+    /**
+     * Chữ mô tả địa điểm giao xe, đọc từ CẢ HAI ngả mà client có thể gửi.
+     *
+     * `deliveryAddress` là ô chữ tự do đời đầu; `deliveryAddressLine` là phần "số nhà, đường"
+     * của địa chỉ có cấu trúc (ADR 0035), và đó là thứ DUY NHẤT web gửi từ khi ô địa chỉ được
+     * tách thành mã tỉnh + mã xã + phần chi tiết. Bản trước chỉ kiểm ngả cũ, nên mọi yêu cầu
+     * giao tận nơi từ web đều dừng ở đây với `VALIDATION_FAILED` — và thông báo thì nói rằng
+     * khách chưa nhập địa chỉ, đúng lúc họ vừa nhập xong.
+     *
+     * App native gửi ngả nào cũng được chấp nhận, nên không bản nào bị bỏ lại.
+     */
+    const deliveryText = dto.deliveryAddress?.trim() || dto.deliveryAddressLine?.trim() || '';
     if (deliveryRequested) {
-      if (!dto.deliveryAddress?.trim()) {
+      if (!deliveryText) {
         throw new BadRequestException({
           code: API_ERROR_CODE.VALIDATION_FAILED,
           message: 'Vui lòng nhập địa điểm giao xe',
@@ -568,12 +580,20 @@ export class BookingRequestsService {
             // Chuỗi hiển thị do SERVER ghép khi có mã hành chính — một địa chỉ chỉ có một cách
             // viết. Không có mã thì giữ nguyên chuỗi khách đã gõ.
             pickupAddress: pickupLocation?.displayAddress ?? route.pickupAddress,
-            pickupAddressLine: pickupLocation?.addressLine ?? null,
+            pickupAddressLine: pickupLocation?.addressLine ?? dto.pickupAddressLine?.trim() ?? null,
             pickupProvinceCode: pickupLocation?.provinceCode ?? null,
             pickupWardCode: pickupLocation?.wardCode ?? null,
-            pickupPlaceId: pickupLocation?.placeId ?? null,
-            pickupLatitude: pickupLocation?.latitude ?? null,
-            pickupLongitude: pickupLocation?.longitude ?? null,
+            /*
+             * Ghim của KHÁCH được giữ kể cả khi không quy được mã hành chính.
+             *
+             * `resolveOptional` trả `null` khi thiếu mã tỉnh, và trước đây điều đó kéo theo việc
+             * VỨT luôn toạ độ khách đã tự xác nhận trên bản đồ. Toạ độ và mã hành chính là hai
+             * đường độc lập (ADR 0035 điều 4): một ghim không có mã tỉnh vẫn là một ghim đúng, và
+             * nó là thứ duy nhất phép tính quãng đường giao xe dùng tới (ADR 0018).
+             */
+            pickupPlaceId: pickupLocation?.placeId ?? dto.pickupPlaceId ?? null,
+            pickupLatitude: pickupLocation?.latitude ?? dto.pickupLatitude ?? null,
+            pickupLongitude: pickupLocation?.longitude ?? dto.pickupLongitude ?? null,
             destination: route.destination,
             // Điểm đến chỉ có ghim, không có mã hành chính — nó là một địa điểm, không phải
             // một địa chỉ giao nhận. Ghim chỉ lưu khi CÒN điểm đến (nội thành thì route đã
@@ -583,15 +603,22 @@ export class BookingRequestsService {
             destinationLongitude: route.destination ? (dto.destinationLongitude ?? null) : null,
             note: dto.note ?? null,
             deliveryRequested,
+            /*
+             * Chuỗi hiển thị do SERVER ghép khi có mã hành chính; không quy được tỉnh thì giữ
+             * nguyên chữ khách đã gõ. `deliveryText` đã được kiểm không rỗng ở guard phía trên,
+             * nên nhánh này không còn chỗ nào cần `!`.
+             */
             deliveryAddress: deliveryRequested
-              ? (deliveryLocation?.displayAddress ?? dto.deliveryAddress!.trim())
+              ? (deliveryLocation?.displayAddress ?? deliveryText)
               : null,
-            deliveryAddressLine: deliveryLocation?.addressLine ?? null,
+            deliveryAddressLine:
+              deliveryLocation?.addressLine ?? dto.deliveryAddressLine?.trim() ?? null,
             deliveryProvinceCode: deliveryLocation?.provinceCode ?? null,
             deliveryWardCode: deliveryLocation?.wardCode ?? null,
-            deliveryPlaceId: deliveryLocation?.placeId ?? null,
-            deliveryLatitude: deliveryLocation?.latitude ?? null,
-            deliveryLongitude: deliveryLocation?.longitude ?? null,
+            // Ghim của khách được giữ kể cả khi không quy được mã hành chính — xem điểm đón.
+            deliveryPlaceId: deliveryLocation?.placeId ?? dto.deliveryPlaceId ?? null,
+            deliveryLatitude: deliveryLocation?.latitude ?? dto.deliveryLatitude ?? null,
+            deliveryLongitude: deliveryLocation?.longitude ?? dto.deliveryLongitude ?? null,
             /*
              * Hạn phản hồi do SERVER đặt, luôn luôn. DTO không có trường này nên client không
              * gửi được, và không có nhánh nào đọc một giá trị từ ngoài vào: một khách tự nới

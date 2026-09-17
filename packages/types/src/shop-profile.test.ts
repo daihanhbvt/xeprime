@@ -110,23 +110,22 @@ const PACKAGE_SHOP_COMPLETE: PackageShopListingInput = {
 };
 
 describe('missingPackageShopListingRequirements', () => {
-  it('đủ sáu mục → qua cổng', () => {
+  it('đủ năm mục → qua cổng', () => {
     expect(missingPackageShopListingRequirements(PACKAGE_SHOP_COMPLETE)).toEqual([]);
   });
 
-  it('hồ sơ trắng trơn → thiếu đủ sáu mục, theo đúng thứ tự đọc trên màn hình', () => {
+  it('hồ sơ trắng trơn → thiếu đủ năm mục, theo đúng thứ tự đọc trên màn hình', () => {
     expect(missingPackageShopListingRequirements({})).toEqual([
       PACKAGE_SHOP_LISTING_REQUIREMENT.DISPLAY_NAME,
       PACKAGE_SHOP_LISTING_REQUIREMENT.CONTACT_PHONE,
       PACKAGE_SHOP_LISTING_REQUIREMENT.PROVINCE,
-      PACKAGE_SHOP_LISTING_REQUIREMENT.WARD,
       PACKAGE_SHOP_LISTING_REQUIREMENT.ADDRESS,
       PACKAGE_SHOP_LISTING_REQUIREMENT.LOGO,
     ]);
   });
 
   /**
-   * Ca THƯỜNG GẶP NHẤT trong luồng thật: bước 1 của onboarding đã đòi đủ năm mục còn lại, nên
+   * Ca THƯỜNG GẶP NHẤT trong luồng thật: bước 1 của onboarding đã đòi đủ bốn mục còn lại, nên
    * sau khi thanh toán mục duy nhất còn thiếu là logo. Giao diện dựa vào đúng mệnh đề này để nói
    * một câu riêng ("Gian hàng cần có logo…") thay vì một danh sách một dòng.
    */
@@ -171,7 +170,6 @@ describe('missingPackageShopRegistrationFields', () => {
       PACKAGE_SHOP_LISTING_REQUIREMENT.DISPLAY_NAME,
       PACKAGE_SHOP_LISTING_REQUIREMENT.CONTACT_PHONE,
       PACKAGE_SHOP_LISTING_REQUIREMENT.PROVINCE,
-      PACKAGE_SHOP_LISTING_REQUIREMENT.WARD,
       PACKAGE_SHOP_LISTING_REQUIREMENT.ADDRESS,
     ]);
     expect(missingPackageShopRegistrationFields(PACKAGE_SHOP_COMPLETE)).toEqual([]);

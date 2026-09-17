@@ -1,18 +1,33 @@
 'use client';
 
-import { Alert, Slider } from 'antd';
+import { Alert, Button, Slider } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { Controller, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
-import { MILEAGE_LIMIT } from '@xeprime/types';
+import { useState } from 'react';
+import {
+  Controller,
+  useFormState,
+  useWatch,
+  type Control,
+  type UseFormSetValue,
+} from 'react-hook-form';
+import { formatAddress } from '@xeprime/domain';
+import { MILEAGE_LIMIT, PERMISSION } from '@xeprime/types';
+import type { OwnerProfileValues } from '@xeprime/validators';
 
 import { NumberField } from '@/components/form/NumberField';
 import { SelectField } from '@/components/form/SelectField';
 import { SwitchField } from '@/components/form/SwitchField';
 import { TextAreaField } from '@/components/form/TextAreaField';
+import { LoadingState } from '@/components/feedback/LoadingState';
+import { usePermissions } from '@/hooks/use-permissions';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { branchLabel } from '@/features/branches/branch-label';
+import { BranchFormDialog } from '@/features/branches/components/BranchFormDialog';
+import type { Branch } from '@/features/branches/types';
 import type { useActiveBranches } from '@/features/branches/hooks/use-branches';
+import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
+import { useWardOptions } from '@/features/locations/hooks/use-wards';
 import { MarketPriceHint } from '@/features/vehicles/components/MarketPriceHint';
 import { discountedPriceVnd } from '@/features/vehicles/pricing';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -29,6 +44,13 @@ interface Props {
   setValue: UseFormSetValue<QuickVehicleValues>;
   vehicleType: string;
   branches: ReturnType<typeof useActiveBranches>;
+  /**
+   * Địa chỉ đã khai ở bước "Hồ sơ chủ xe" nhưng CHƯA gửi lên server — người đang đăng ký chiếc
+   * xe đầu tiên. Có giá trị ⇒ chưa có chi nhánh nào để đọc, và đây là nguồn địa chỉ duy nhất.
+   */
+  pendingAddress?: OwnerProfileValues | null;
+  /** Bấm "Sửa địa chỉ" khi địa chỉ còn nằm ở hồ sơ chưa gửi — wizard quay lại bước hồ sơ. */
+  onEditPendingAddress?: () => void;
 }
 
 /**
@@ -46,11 +68,16 @@ interface Props {
  *
  * Mọi công tắc mặc định TẮT: không có ưu đãi, bán kính hay hạn mức nào tự sinh ra.
  */
-export function QuickVehicleRentalStep({ control, setValue, vehicleType, branches }: Props) {
+export function QuickVehicleRentalStep({
+  control,
+  setValue,
+  vehicleType,
+  branches,
+  pendingAddress,
+  onEditPendingAddress,
+}: Props) {
   const t = useTranslations('ListYourVehicle.rental');
-  const tBranches = useTranslations('Branches');
   const fmt = useAppFormat();
-  const { paths, isManage } = useWorkspace();
 
   const weekdayPrice = useWatch({ control, name: 'weekdayPrice' });
   const discountEnabled = useWatch({ control, name: 'discountEnabled' });
@@ -67,11 +94,6 @@ export function QuickVehicleRentalStep({ control, setValue, vehicleType, branche
   const seatCount = useWatch({ control, name: 'seatCount' });
   const branchId = useWatch({ control, name: 'branchId' });
 
-  const noProvince = tBranches('labels.noProvince');
-  const branchOptions = (branches.data?.items ?? []).map((b) => ({
-    value: b.id,
-    label: branchLabel(b, noProvince),
-  }));
   // Tỉnh của chi nhánh giữ xe — chiều hẹp nhất của gợi ý giá; chưa chọn chi nhánh thì bỏ qua vế đó.
   const branch = (branches.data?.items ?? []).find((b) => b.id === branchId) ?? null;
   const discounted = discountEnabled
@@ -99,7 +121,7 @@ export function QuickVehicleRentalStep({ control, setValue, vehicleType, branche
           vehicleType={vehicleType}
           motorbikeCategory={motorbikeCategory}
           seatCount={seatCount}
-          provinceCode={branch?.provinceCode ?? null}
+          provinceCode={branch?.provinceCode ?? pendingAddress?.provinceCode ?? null}
           provinceName={branch?.provinceName ?? null}
           onApply={(price) => setValue('weekdayPrice', price, { shouldValidate: true })}
         />
@@ -147,32 +169,13 @@ export function QuickVehicleRentalStep({ control, setValue, vehicleType, branche
         />
       </section>
 
-      <section className={styles.block}>
-        <h3 className={styles.blockTitle}>{t('addressTitle')}</h3>
-        <p className={styles.blockHint}>{t('addressHint')}</p>
-        <SelectField
-          control={control}
-          name="branchId"
-          label={t('addressLabel')}
-          options={branchOptions}
-          loading={branches.isLoading}
-          disabled={branches.isError}
-          required
-        />
-        {branches.isError ? (
-          <Alert type="warning" showIcon title={t('addressLoadError')} />
-        ) : null}
-        {/*
-          Quản lý chi nhánh chỉ có ở cổng gian hàng. Wizard này là cửa vào CÔNG KHAI của chủ xe
-          mới — phần lớn người đứng ở đây là tuyến hoa hồng, chỉ có chi nhánh mặc định, và không
-          vào `/manage` được (ADR 0027/0028). Hiện link cho họ là hứa một màn họ sẽ bị đá ra.
-        */}
-        {isManage ? (
-          <p className={styles.blockHint}>
-            <Link href={paths.branches}>{t('addressManageLink')}</Link>
-          </p>
-        ) : null}
-      </section>
+      <VehicleAddressBlock
+        control={control}
+        branches={branches}
+        selected={branch}
+        pendingAddress={pendingAddress ?? null}
+        onEditPendingAddress={onEditPendingAddress}
+      />
 
       <section className={styles.block}>
         <SwitchField
@@ -258,5 +261,214 @@ export function QuickVehicleRentalStep({ control, setValue, vehicleType, branche
         />
       </section>
     </div>
+  );
+}
+
+/**
+ * "Địa chỉ xe" — địa chỉ khách tới nhận xe, tức là CHI NHÁNH đang giữ xe (`Vehicle.branchId`).
+ *
+ * Hai hình dạng, quyết định bằng SỐ chi nhánh đang hoạt động chứ không bằng tuyến:
+ *
+ *  - **Một chi nhánh** (chủ xe cá nhân tuyến hoa hồng, và cả gian hàng một cơ sở): không có gì
+ *    để chọn, nên không hiện bộ chọn. Địa chỉ hiện ra như một dòng chữ kèm nút sửa — đúng thứ
+ *    người dùng cần ở đây, thay vì một ô select chỉ có một dòng.
+ *  - **Nhiều chi nhánh**: bộ chọn, và địa chỉ của chi nhánh đang chọn hiện ngay bên dưới để
+ *    người dùng thấy mình vừa chọn CHỖ NÀO, không chỉ một cái tên.
+ *
+ * Nút sửa mở `BranchFormDialog` dùng chung (`PATCH /branches/:id`) — hộp thoại địa chỉ duy nhất
+ * của sản phẩm, đã có danh mục hành chính hai cấp, gợi ý địa điểm và ghim toạ độ. Một ô địa chỉ
+ * riêng cho wizard sẽ trôi khỏi nó ngay lần danh mục đổi tiếp theo, và toạ độ ghim là thứ mọi
+ * phép tính phí giao xe tận nơi đọc.
+ *
+ * Sửa được hay không đọc từ quyền `branches.manage`: nhân viên được cử đi đăng xe không phải
+ * người quyết định địa chỉ của gian hàng.
+ */
+function VehicleAddressBlock({
+  control,
+  branches,
+  selected,
+  pendingAddress,
+  onEditPendingAddress,
+}: {
+  control: Control<QuickVehicleValues>;
+  branches: ReturnType<typeof useActiveBranches>;
+  /** Chi nhánh đang chọn — parent đã tra sẵn cho khối gợi ý giá, không tra lần hai. */
+  selected: Branch | null;
+  pendingAddress: OwnerProfileValues | null;
+  onEditPendingAddress?: () => void;
+}) {
+  const t = useTranslations('ListYourVehicle.rental');
+  const tBranches = useTranslations('Branches');
+  const tCommon = useTranslations('Common.actions');
+  const { paths, isManage } = useWorkspace();
+  const { has } = usePermissions();
+  const [editing, setEditing] = useState(false);
+  /*
+   * Lỗi của `branchId` phải có CHỖ ĐỂ HIỆN kể cả khi không vẽ bộ chọn. Bấm "Tiếp tục" trong lúc
+   * danh sách chi nhánh còn đang tải thì `branchId` vẫn rỗng: không có dòng này, bước 2 đứng im
+   * mà không nói vì sao.
+   */
+  const { errors } = useFormState({ control, name: 'branchId' });
+
+  const items = branches.data?.items ?? [];
+  const multiple = items.length > 1;
+  const canEdit = has(PERMISSION.BRANCH_MANAGE);
+
+  const noProvince = tBranches('labels.noProvince');
+  const options = items.map((b) => ({ value: b.id, label: branchLabel(b, noProvince) }));
+
+  /*
+   * GIAN HÀNG CHƯA TỒN TẠI: địa chỉ duy nhất đang có là thứ người dùng vừa khai ở bước hồ sơ.
+   *
+   * Chuỗi hiển thị ghép bằng `formatAddress` của `@xeprime/domain` — CÙNG hàm mà backend dùng
+   * để sinh `branch.address`, nên dòng chữ ở đây và dòng chữ sau khi lưu là một.
+   */
+  if (pendingAddress) {
+    return (
+      <PendingAddressBlock address={pendingAddress} onEdit={onEditPendingAddress} />
+    );
+  }
+
+  return (
+    <section className={styles.block}>
+      <h3 className={styles.blockTitle}>{t('addressTitle')}</h3>
+      <p className={styles.blockHint}>{multiple ? t('addressHintMulti') : t('addressHint')}</p>
+
+      {branches.isLoading ? <LoadingState variant="inline" /> : null}
+
+      {/* Lỗi tải: nói ra và cho bấm lại ngay tại chỗ — bắt F5 cả wizard là mất hết dữ liệu đã nhập. */}
+      {branches.isError ? (
+        <Alert
+          type="warning"
+          showIcon
+          title={t('addressLoadError')}
+          action={
+            <Button size="small" onClick={() => void branches.refetch()}>
+              {tCommon('retry')}
+            </Button>
+          }
+        />
+      ) : null}
+
+      {/*
+        Không có chi nhánh nào đang hoạt động: dữ liệu cũ chưa qua đợt chi nhánh. Xe BẮT BUỘC
+        thuộc một chi nhánh nên đây là ngõ cụt thật — nói thẳng thay vì để một ô select rỗng.
+      */}
+      {!branches.isLoading && !branches.isError && items.length === 0 ? (
+        <Alert type="warning" showIcon title={t('addressMissing')} />
+      ) : null}
+
+      {multiple ? (
+        <SelectField
+          control={control}
+          name="branchId"
+          label={t('addressLabel')}
+          options={options}
+          required
+        />
+      ) : null}
+
+      {!multiple && errors.branchId ? (
+        <p className={styles.addressError} role="alert">
+          {errors.branchId.message}
+        </p>
+      ) : null}
+
+      {selected ? (
+        <div className={styles.addressRow}>
+          <p className={styles.address}>{selected.address ?? selected.provinceName ?? ''}</p>
+          {canEdit ? (
+            <Button type="link" className={styles.addressEdit} onClick={() => setEditing(true)}>
+              {t('addressEdit')}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/*
+        Chỉ gắn khi MỞ: `BranchFormDialog` dựng `defaultValues` đúng một lần lúc mount, nên một
+        bản luôn nằm sẵn trong cây sẽ mở lại bằng địa chỉ CŨ ngay sau lần lưu đầu tiên.
+      */}
+      {selected && canEdit && editing ? (
+        <BranchFormDialog
+          open
+          branch={selected}
+          onClose={() => setEditing(false)}
+          notice={
+            selected.vehicleCount > 0 ? (
+              <Alert
+                type="warning"
+                showIcon
+                title={t('addressSharedTitle', { count: selected.vehicleCount })}
+                description={t('addressSharedBody')}
+              />
+            ) : null
+          }
+        />
+      ) : null}
+
+      {/*
+        Quản lý chi nhánh chỉ có ở cổng gian hàng. Wizard này là cửa vào CÔNG KHAI của chủ xe
+        mới — phần lớn người đứng ở đây là tuyến hoa hồng, chỉ có chi nhánh mặc định, và không
+        vào `/manage` được (ADR 0027/0028). Hiện link cho họ là hứa một màn họ sẽ bị đá ra.
+      */}
+      {isManage ? (
+        <p className={styles.blockHint}>
+          <Link href={paths.branches}>{t('addressManageLink')}</Link>
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+/**
+ * Địa chỉ xe của người CHƯA có gian hàng — nguồn là hồ sơ họ vừa khai ở bước 1, còn nằm trong
+ * bộ nhớ của wizard.
+ *
+ * Không có bộ chọn: họ có đúng một địa chỉ, và nó sẽ thành chi nhánh mặc định ngay khi chiếc xe
+ * được lưu. Nút sửa đưa họ về chính bước hồ sơ — chứ không mở một ô địa chỉ thứ hai ở đây, thứ
+ * sẽ phải tự đồng bộ ngược lại với hồ sơ và sẽ lệch ngay lần sửa đầu tiên.
+ *
+ * Tên tỉnh/xã tra từ danh mục đã nạp sẵn ở bước hồ sơ (cùng `queryKey`, `staleTime` 30 phút),
+ * nên khối này không phát thêm request nào. Chưa tra ra tên thì hiện phần người dùng tự gõ —
+ * thà thiếu một vế còn hơn một dòng trống ở chỗ nói "xe của bạn nằm ở đâu".
+ */
+function PendingAddressBlock({
+  address,
+  onEdit,
+}: {
+  address: OwnerProfileValues;
+  onEdit?: () => void;
+}) {
+  const t = useTranslations('ListYourVehicle.rental');
+  const provinces = useProvinceOptions();
+  const wards = useWardOptions(address.provinceCode);
+
+  const provinceName =
+    provinces.options.find((o) => o.value === address.provinceCode)?.label ?? null;
+  const wardName = wards.options.find((o) => o.value === address.wardCode)?.label ?? null;
+  const line =
+    formatAddress({
+      addressLine: address.addressLine || null,
+      wardName,
+      provinceName,
+    }) ??
+    address.addressLine ??
+    '';
+
+  return (
+    <section className={styles.block}>
+      <h3 className={styles.blockTitle}>{t('addressTitle')}</h3>
+      <p className={styles.blockHint}>{t('addressHint')}</p>
+      <div className={styles.addressRow}>
+        <p className={styles.address}>{line}</p>
+        {onEdit ? (
+          <Button type="link" className={styles.addressEdit} onClick={onEdit}>
+            {t('addressEdit')}
+          </Button>
+        ) : null}
+      </div>
+      <p className={styles.blockHint}>{t('addressPendingNote')}</p>
+    </section>
   );
 }

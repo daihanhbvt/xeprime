@@ -65,7 +65,7 @@ interface SelectFieldProps<T extends FieldValues> {
    * biệt được "người dùng vừa đổi tỉnh" với "form vừa mở ở chế độ sửa và đã có sẵn tỉnh", nên
    * nó cần thêm một ref đọc lúc render để nhớ mốc cũ — hai thứ `react-hooks` chặn đúng chỗ.
    */
-  onAfterChange?: () => void;
+  onAfterChange?: (value: string | string[] | null) => void;
 }
 
 /**
@@ -113,8 +113,11 @@ export function SelectField<T extends FieldValues>({
         value={(field.value as string | string[] | null | undefined) ?? undefined}
         // multiple: bỏ hết lựa chọn trả mảng RỖNG (schema .min(1) báo lỗi) chứ không phải null.
         onChange={(value: string | string[] | undefined) => {
-          field.onChange(value ?? (mode === 'multiple' ? [] : null));
-          onAfterChange?.();
+          const next = value ?? (mode === 'multiple' ? [] : null);
+          field.onChange(next);
+          // Giá trị đi kèm: nơi nghe thường cần chính nó (ghi bộ nhớ, tra danh mục con). Đọc lại
+          // `field.value` ở đó sẽ ra giá trị CŨ — RHF chưa render lại tại thời điểm này.
+          onAfterChange?.(next);
         }}
         onBlur={field.onBlur}
         options={

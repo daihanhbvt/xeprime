@@ -34,6 +34,15 @@ export interface MapPinPickerProps {
   onChange: (point: GeoPoint) => void;
   /** Mở ở đâu khi chưa có ghim — thường là trung tâm tỉnh người dùng vừa chọn. */
   fallbackCenter?: GeoPoint | null;
+  /**
+   * Thu phóng khi mở ở `fallbackCenter`. Bỏ trống = {@link UNPINNED_ZOOM}.
+   *
+   * Có prop riêng vì hai loại "chưa có ghim" cần hai khoảng cách khác nhau: neo vào điểm nhận xe
+   * của chính chiếc xe thì mức phường là đúng, còn neo vào TÂM MỘT TỈNH ở mức đó là mở ra một
+   * khu phố ngẫu nhiên cách chỗ cần tới vài chục km — người dùng phải thu nhỏ ra trước khi làm
+   * được gì.
+   */
+  fallbackZoom?: number;
   /** Nhãn cho trình đọc màn hình; cũng là `alt` của ảnh khi rơi về bản đồ tĩnh. */
   label: string;
   disabled?: boolean;
@@ -59,6 +68,7 @@ export function MapPinPicker({
   value,
   onChange,
   fallbackCenter,
+  fallbackZoom = UNPINNED_ZOOM,
   label,
   disabled,
 }: MapPinPickerProps) {
@@ -118,7 +128,7 @@ export function MapPinPicker({
       const center = value ?? fallbackCenter ?? FALLBACK_CENTER;
       map = L.map(el, {
         center: [center.lat, center.lng],
-        zoom: value ? PINNED_ZOOM : UNPINNED_ZOOM,
+        zoom: value ? PINNED_ZOOM : fallbackZoom,
         // Bàn phím/cuộn: giữ cuộn trang là mặc định của Leaflet khi `scrollWheelZoom: false`,
         // nhưng ô này nằm giữa một form dài — cuộn qua bản đồ mà bị "hút" vào thu phóng là một
         // trong những khó chịu kinh điển của form có bản đồ.
@@ -211,6 +221,20 @@ export function MapPinPicker({
     marker.addTo(map);
     map.setView([value.lat, value.lng], PINNED_ZOOM);
   }, [status, value]);
+
+  /*
+   * CHƯA có ghim mà điểm neo đổi (người dùng vừa đổi tỉnh) → dời khung nhìn theo.
+   *
+   * Bản đồ chỉ đọc `fallbackCenter` MỘT LẦN lúc dựng, nên thiếu effect này thì đổi tỉnh xong
+   * khung vẫn nằm ở tỉnh cũ — và người dùng phải tự kéo qua cả nước để tìm chỗ đặt ghim.
+   *
+   * Chặn khi ĐÃ có ghim: lúc đó khung nhìn thuộc về cái ghim, và kéo nó đi vì một prop vừa đổi
+   * sẽ giật màn hình ngay giữa lúc người ta đang soi lại vị trí mình vừa chọn.
+   */
+  useEffect(() => {
+    if (status !== 'ready' || value || !fallbackCenter) return;
+    mapRef.current?.setView([fallbackCenter.lat, fallbackCenter.lng], fallbackZoom);
+  }, [status, value, fallbackCenter, fallbackZoom]);
 
   if (!interactive) {
     const staticUrl = mapPlaceUrl(value);

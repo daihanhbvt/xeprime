@@ -9,6 +9,7 @@ import { VEHICLE_GALLERY_MAX_IMAGES, VEHICLE_PUBLIC_MIN_IMAGES } from '@xeprime/
 import { ImageGalleryField } from '@/components/form/ImageGalleryField';
 import { ImageUploadField } from '@/components/form/ImageUploadField';
 import { presignVehicleImage } from '@/services/upload';
+import type { UploadPresign } from '@/services/upload';
 
 import type { QuickVehicleValues } from '../../schema';
 import styles from './QuickVehicleSteps.module.css';
@@ -27,7 +28,20 @@ const ANGLES = ['front', 'rear', 'side', 'interior'] as const;
  * Bộ đếm nói thẳng còn thiếu mấy ảnh để GỬI DUYỆT được. Thiếu vẫn lưu nháp được: chặn người
  * dùng ở bước cuối vì thiếu một tấm ảnh là cách chắc chắn để mất luôn chiếc xe đó.
  */
-export function QuickVehicleImagesStep({ control }: { control: Control<QuickVehicleValues> }) {
+export function QuickVehicleImagesStep({
+  control,
+  presign = presignVehicleImage,
+}: {
+  control: Control<QuickVehicleValues>;
+  /**
+   * Cho phép nơi gọi BỌC lời gọi presign.
+   *
+   * Người đăng ký chiếc xe đầu tiên chưa có gian hàng, mà `/uploads/vehicle-images/presign` là
+   * tenant-scoped — wizard dùng chỗ này để mở gian hàng ngay trước tấm ảnh đầu tiên. Vẫn là
+   * ĐÚNG một đường tải ảnh: chỉ có thêm một việc xảy ra trước nó.
+   */
+  presign?: (file: File) => Promise<UploadPresign>;
+}) {
   const t = useTranslations('ListYourVehicle.images');
   const tForm = useTranslations('Vehicles.form.media');
 
@@ -49,7 +63,7 @@ export function QuickVehicleImagesStep({ control }: { control: Control<QuickVehi
           control={control}
           name="mainImageUrl"
           label={tForm('mainImage')}
-          presign={presignVehicleImage}
+          presign={presign}
           help={t('mainImageHelp')}
         />
 
@@ -57,7 +71,7 @@ export function QuickVehicleImagesStep({ control }: { control: Control<QuickVehi
           control={control}
           name="images"
           label={tForm('gallery')}
-          presign={presignVehicleImage}
+          presign={presign}
           max={VEHICLE_GALLERY_MAX_IMAGES}
         />
       </section>

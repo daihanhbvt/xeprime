@@ -60,6 +60,15 @@ beforeEach(() => {
   nav.replace.mockClear();
   nav.searchParams = new URLSearchParams();
   observers.length = 0;
+  /*
+   * Thẻ tìm kiếm GHI lựa chọn của người dùng vào `localStorage`/`sessionStorage` (khoảng thuê ở
+   * `rental-range-memory`, tỉnh ở `province-memory`) và ĐỌC lại chúng khi URL không nói gì. Hai
+   * kho đó sống xuyên suốt cả file test, nên không dọn ở đây thì một ca chọn Đà Nẵng sẽ làm ca
+   * sau mở ra đã có sẵn Đà Nẵng — và một test đọc "Toàn quốc" hỏng vì một hành vi đúng của sản
+   * phẩm. Hành vi ghi nhớ được kiểm TƯỜNG MINH ở ca riêng phía dưới.
+   */
+  window.localStorage.clear();
+  window.sessionStorage.clear();
   window.history.replaceState(null, '', '/');
   window.IntersectionObserver = TestIntersectionObserver as unknown as typeof IntersectionObserver;
 });
@@ -449,6 +458,76 @@ describe('panel chỉnh sửa', () => {
 
     fireEvent.change(input, { target: { value: 'zzzz' } });
     expect(within(panel).getByText(/Không có tỉnh\/thành nào khớp/)).toBeTruthy();
+  });
+
+  /**
+   * Tỉnh đã chọn phải sống qua F5.
+   *
+   * Đây là thứ khách nhìn thấy đầu tiên mỗi lần quay lại, và trước đây nó luôn mở ra "Toàn quốc"
+   * dù họ vừa xem xe ở Bắc Ninh mười phút trước. Bộ nhớ nằm ở `localStorage` nên nó cũng là thứ
+   * điền sẵn cho các form địa chỉ ở màn khác — một câu trả lời, mọi bề mặt.
+   */
+  it('tỉnh đã chọn được nhớ lại ở lần mở sau, kể cả khi URL không mang gì', async () => {
+    await renderExperience();
+    pickProvince(hero(), /Địa điểm nhận xe/, 'Đà Nẵng');
+    expect(within(hero()).getByRole('button', { name: 'Địa điểm nhận xe: Đà Nẵng' })).toBeTruthy();
+
+    // Mở lại từ đầu với URL TRẮNG — đúng thứ F5 trên trang chủ tạo ra.
+    cleanup();
+    window.history.replaceState(null, '', '/');
+    await renderExperience();
+
+    expect(within(hero()).getByRole('button', { name: 'Địa điểm nhận xe: Đà Nẵng' })).toBeTruthy();
+  });
+
+  /**
+   * "Toàn quốc" là một LỰA CHỌN, không phải một khoảng trống: chọn nó phải XOÁ tỉnh đã nhớ, nếu
+   * không lần mở sau lại điền đúng cái tỉnh mà khách vừa chủ động bỏ.
+   */
+  it('chọn Toàn quốc xoá tỉnh đã nhớ', async () => {
+    await renderExperience();
+    pickProvince(hero(), /Địa điểm nhận xe/, 'Đà Nẵng');
+
+    fireEvent.click(within(hero()).getByRole('button', { name: /Địa điểm nhận xe/ }));
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'Bạn muốn thuê xe ở đâu?' })).getByRole('button', {
+        name: /^Toàn quốc/,
+      }),
+    );
+
+    cleanup();
+    window.history.replaceState(null, '', '/');
+    await renderExperience();
+
+    expect(within(hero()).getByRole('button', { name: /Toàn quốc/ })).toBeTruthy();
+  });
+
+  /**
+   * HỒI QUY: bộ nhớ tỉnh có HAI người ghi, chọn từ HAI danh mục khác nhau.
+   *
+   * Bộ chọn ở đây ghi mã lấy từ `/public/destinations` (chỉ tỉnh ĐANG CÓ XE); ô địa chỉ trong các
+   * form ghi mã lấy từ `/provinces` (MỌI tỉnh đang mở). Người đọc thì chỉ hiển thị được mã có
+   * trong `destinations` — nên một người vừa khai địa chỉ gian hàng ở một tỉnh chưa có xe nào
+   * quay lại trang chủ và thấy "Địa điểm không còn khả dụng", nói về một lựa chọn họ chưa hề làm
+   * ở đây. Cùng chuyện đó xảy ra khi một tỉnh từng có xe rồi hết xe.
+   *
+   * Bộ nhớ là một GỢI Ý: tra không ra tên thì để nguyên "Toàn quốc", và KHÔNG xoá bộ nhớ — mã đó
+   * vẫn đúng và vẫn hữu ích cho các form địa chỉ.
+   */
+  it('tỉnh đã nhớ KHÔNG có trong danh mục điểm đến → giữ "Toàn quốc", không báo lỗi', async () => {
+    // `'24'` (Bắc Ninh) là mã hợp lệ của danh mục hành chính nhưng KHÔNG nằm trong `DESTINATIONS`
+    // của test — đúng hình dạng của một tỉnh chưa có xe nào trên chợ.
+    window.localStorage.setItem(
+      'xp.provinceCode',
+      JSON.stringify({ provinceCode: '24', savedAt: new Date().toISOString() }),
+    );
+
+    await renderExperience();
+
+    expect(within(hero()).getByRole('button', { name: /Toàn quốc/ })).toBeTruthy();
+    expect(within(hero()).queryByRole('button', { name: /không còn khả dụng/i })).toBeNull();
+    // Bộ nhớ còn nguyên: màn địa chỉ ở nơi khác vẫn điền sẵn được tỉnh này.
+    expect(window.localStorage.getItem('xp.provinceCode')).toContain('24');
   });
 });
 

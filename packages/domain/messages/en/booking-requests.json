@@ -179,8 +179,7 @@
       "estimatedDistance": "The delivery distance is about {distance} one way. The fee above is an ESTIMATE from the shop's price list — the owner confirms it when approving your request.",
       "manualWithDistance": "Your address is about {distance} one way from the pickup point, outside the automatic quote range. The owner will discuss the delivery fee with you directly.",
       "addressNotFound": "We could not locate this address on the map. Try adding more detail (street number, street name, ward) to see the estimated delivery fee.",
-      "resolvedAddress": "The map reads this as: {address}",
-      "mapTitle": "Map of the route to the delivery address"
+      "resolvedAddress": "The map reads this as: {address}"
     },
     "driver": {
       "pickupAddressLabel": "Pick-up address",
@@ -346,9 +345,9 @@
       "pickupPreferenceRequired": "Pick when you would like the car",
       "requestedPickupDateRequired": "Pick your preferred pickup date",
       "routeRequired": "Pick a route type",
-      "pickupAddressRequired": "Enter the pickup house number and street",
+      "pickupAddressRequired": "Enter the pickup address",
       "destinationRequired": "Enter the destination",
-      "deliveryAddressRequired": "Enter the delivery house number and street",
+      "deliveryAddressRequired": "Enter the delivery address",
       "noteTooLong": "Note can be at most {max} characters",
       "pickupProvinceRequired": "Select the pickup province or city",
       "pickupWardRequired": "Select the pickup ward",
@@ -366,6 +365,9 @@
         "title": "This is your own vehicle",
         "body": "This vehicle belongs to your own shop, so you cannot book it. To reserve it for personal use, block the dates in Vehicle calendar instead."
       }
+    },
+    "address": {
+      "vehicleAt": "The car is in {province}. Type an address, then pick it from the suggestions."
     }
   },
   "approved": {
@@ -382,5 +384,23 @@
     "expired": "Response deadline passed",
     "pastDueHint": "No answer within 60 minutes, so this request closed itself. Call the customer if you still want the trip.",
     "hint": "The shop has 60 minutes to answer. After that the request closes itself and the customer is told to pick another vehicle."
+  },
+  "form": {
+    "errors": {
+      "customerName": "Enter your full name",
+      "customerPhone": "Enter your phone number",
+      "customerPhoneFormat": "That phone number is not valid",
+      "pickupAddressLine": "Enter the pickup address",
+      "deliveryAddressLine": "Enter the delivery address",
+      "addressLineMax": "At most {max} characters",
+      "addressNotConfirmed": "Pick an address from the suggestions, or drop the pin on the map",
+      "destination": "Enter the destination",
+      "destinationMax": "At most {max} characters",
+      "pickupAt": "Choose when you pick the car up",
+      "returnAt": "Choose when you return the car",
+      "returnAfterPickup": "The return time has to be after the pickup time",
+      "longTermPackage": "Choose a rental package",
+      "requestedPickupDate": "Choose the date you want the car"
+    }
   }
 }

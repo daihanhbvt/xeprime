@@ -42,14 +42,14 @@ import {
   type RouteType,
   type ServiceType,
 } from '@xeprime/types';
-import { LIST_SEPARATOR } from '@xeprime/domain';
+import { LIST_SEPARATOR, type GeoPoint } from '@xeprime/domain';
 import type { BookingRequestReceipt } from '../types';
 import { LongTermPackageStep } from './LongTermPackageStep';
 import {
   RentalDateTimeRangeField,
   type RentalMode,
 } from '@/components/form/RentalDateTimeRangeField';
-import { AddressField } from '@/components/form/AddressField';
+import { RenterAddressBlock } from './RenterAddressBlock';
 import { TextField } from '@/components/form/TextField';
 import { ROUTES, tripPath } from '@/constants/routes';
 import { TripHoldPanel } from '@/features/trips/components/TripHoldPanel';
@@ -69,8 +69,8 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { StaticMap } from '@/components/data-display/StaticMap';
 import { cx } from '@/lib/cx';
+import { isInteractiveMapConfigured } from '@/lib/leaflet-loader';
 import {
   appWallClockToInstant,
   appWallClockToIso,
@@ -79,7 +79,6 @@ import {
   type Dayjs,
 } from '@/lib/datetime';
 import { isZeroMoney } from '@/lib/money';
-import { mapRouteUrl } from '@/lib/map-static';
 import { buildBusyDayIndex } from '@/lib/rental-busy';
 import {
   readDeliveryAddress,
@@ -109,22 +108,18 @@ import styles from './RequestBookingFlow.module.css';
  */
 const MIN_DELIVERY_ADDRESS_LENGTH = 12;
 
-/** Tên trường của hai địa chỉ vật lý trong form — xem `AddressField`. */
-const PICKUP_ADDRESS_NAMES = {
-  provinceCode: 'pickupProvinceCode',
-  wardCode: 'pickupWardCode',
-  addressLine: 'pickupAddressLine',
-} as const;
+/**
+ * Tên trường của hai địa chỉ vật lý trong form — xem `RenterAddressBlock`.
+ *
+ * KHÔNG có `wardCode`: khách thuê xe không được hỏi xã/phường (lý do đầy đủ ở docblock của
+ * `RenterAddressBlock`). Hai trường `*WardCode` vẫn còn trong schema vì chúng là một phần của
+ * hợp đồng gửi lên và của các bản ghi cũ, nhưng luồng này để chúng ở rỗng và backend nhận.
+ */
 const PICKUP_PIN_NAMES = {
   placeId: 'pickupPlaceId',
   latitude: 'pickupLatitude',
   longitude: 'pickupLongitude',
   locationSource: 'pickupLocationSource',
-} as const;
-const DELIVERY_ADDRESS_NAMES = {
-  provinceCode: 'deliveryProvinceCode',
-  wardCode: 'deliveryWardCode',
-  addressLine: 'deliveryAddressLine',
 } as const;
 const DELIVERY_PIN_NAMES = {
   placeId: 'deliveryPlaceId',
@@ -218,6 +213,8 @@ export function RequestBookingFlow({
   onResultChange,
 }: RequestBookingFlowProps) {
   const t = useTranslations('BookingRequests.flow');
+  /** Chữ của các câu báo lỗi validation — namespace riêng, dùng bởi `requestFormSchema`. */
+  const tf = useTranslations('BookingRequests.form');
   const dl = useDomainLabel();
   const fmt = useAppFormat();
   const errorMessage = useErrorMessage();
@@ -326,8 +323,18 @@ export function RequestBookingFlow({
   const vehicleThumbUrl =
     holdTrip.data?.vehicle.imageUrl ?? listing?.mainImageUrl ?? vehicleImageUrl ?? null;
 
+  /*
+   * Schema dựng lại khi ĐỔI NGÔN NGỮ, không phải mỗi lần render: câu báo lỗi validation là chữ
+   * hiện cho khách đọc, nên nó phải đi qua `t` (ADR 0012). `t` ổn định theo locale, nên `useMemo`
+   * ở đây giữ cho `yupResolver` không nhận một schema mới ở mỗi phím gõ.
+   */
+  const schema = useMemo(
+    () => requestFormSchema(tf, { canConfirmLocation: isInteractiveMapConfigured() }),
+    [tf],
+  );
+
   const { control, trigger, getValues, setValue, formState } = useForm<RequestFormValues>({
-    resolver: yupResolver(requestFormSchema),
+    resolver: yupResolver(schema),
     defaultValues: {
       customerName: '',
       customerPhone: '',
@@ -389,6 +396,23 @@ export function RequestBookingFlow({
 
   /** Chỗ khách tới lấy xe khi tự nhận — chi nhánh giữ xe, backend đã lo phần fallback. */
   const pickupPoint = listing?.pickupPoint ?? null;
+
+  /**
+   * Ngữ cảnh VỊ TRÍ của chiếc xe — ba thứ mà khối địa chỉ của khách cần để hỏi bản đồ đúng chỗ.
+   *
+   * Tỉnh lấy từ chính hồ sơ xe chứ không từ bộ lọc: bộ lọc là nơi khách vừa đi qua, còn đây là
+   * nơi chiếc xe thật sự đang đỗ. `deliveryProvinceCode` (tỉnh gợi ý từ bộ lọc) vẫn dùng làm giá
+   * trị dự phòng khi hồ sơ xe chưa về hoặc chi nhánh chưa khai tỉnh.
+   */
+  const vehicleProvinceCode = listing?.provinceCode ?? deliveryProvinceCode ?? null;
+  const vehicleProvinceName = pickupPoint?.provinceName ?? listing?.shopProvince ?? null;
+  const vehiclePoint = useMemo<GeoPoint | null>(
+    () =>
+      pickupPoint?.latitude != null && pickupPoint.longitude != null
+        ? { lat: pickupPoint.latitude, lng: pickupPoint.longitude }
+        : null,
+    [pickupPoint],
+  );
 
   /** Các dịch vụ xe phục vụ được — nguồn của bộ chọn dịch vụ trong luồng. */
   const vehicleServices = useMemo<string[]>(
@@ -599,7 +623,13 @@ export function RequestBookingFlow({
    * Thứ tự ưu tiên, và mỗi bậc là một loại bằng chứng khác nhau về ý định của khách:
    *   1. **Địa chỉ lần trước** (`localStorage`) — chính họ đã gõ và xác nhận ghim. Điền cả cụm,
    *      kể cả toạ độ, để họ không phải ghim lại chỗ cũ.
-   *   2. **Tỉnh đang lọc / tỉnh của xe** (`deliveryProvinceCode`) — chỉ điền được mã tỉnh.
+   *   2. **Tỉnh của chính chiếc xe**, rồi tới tỉnh đang lọc — chỉ điền được mã tỉnh, và mã đó
+   *      không hiện ra ô nào: nó chỉ là giá trị dự phòng khi bản đồ không quy được tỉnh từ địa
+   *      điểm khách chọn (xem `RenterAddressBlock`).
+   *
+   * Địa chỉ điền lại ở bậc 1 có kèm toạ độ, tức là đã XÁC NHẬN — `ConfirmedPlaceField` nhận nó
+   * làm mốc ngay khi giá trị về (khối "nhận mốc từ bên ngoài"), nên cú blur đầu tiên không xoá
+   * mất thứ vừa được điền hộ.
    *
    * Trong effect chứ không trong `defaultValues`: `localStorage` không tồn tại trên server, nên
    * đọc nó lúc render sẽ cho hai kết quả khác nhau giữa HTML server dựng và lần render đầu ở
@@ -622,14 +652,25 @@ export function RequestBookingFlow({
       setValue('deliveryLatitude', remembered.latitude, { shouldDirty: false });
       setValue('deliveryLongitude', remembered.longitude, { shouldDirty: false });
       setValue('deliveryLocationSource', remembered.locationSource, { shouldDirty: false });
-      return;
-    }
-    if (deliveryProvinceCode) {
-      setValue('deliveryProvinceCode', deliveryProvinceCode, { shouldDirty: false });
     }
     // Chạy một lần cho vòng đời của flow; `setValue` ổn định theo RHF.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /*
+   * Mã tỉnh DỰ PHÒNG — điền khi hồ sơ xe đã về và ô vẫn còn trống.
+   *
+   * Tách khỏi effect trên vì nó phụ thuộc một thứ đến MUỘN: mở hộp thoại từ lưới kết quả thì
+   * `listing` còn đang tải, nên một effect chạy-một-lần-lúc-mount sẽ chốt `null` và ô tỉnh vĩnh
+   * viễn rỗng. Điều kiện "còn trống" đọc qua `getValues` trong thân effect, nên nó không bao giờ
+   * đè lên tỉnh mà địa điểm khách chọn vừa ghi vào.
+   */
+  useEffect(() => {
+    if (!vehicleProvinceCode) return;
+    for (const name of ['deliveryProvinceCode', 'pickupProvinceCode'] as const) {
+      if (!getValues(name)) setValue(name, vehicleProvinceCode, { shouldDirty: false });
+    }
+  }, [vehicleProvinceCode, getValues, setValue]);
 
   const submitM = useMutation({
     mutationFn: (phone: string) => {
@@ -660,9 +701,17 @@ export function RequestBookingFlow({
         ...(withDriver
           ? {
               routeType: v.routeType,
-              // Chuỗi hiển thị do SERVER ghép từ ba mảnh dưới — client không gửi lên.
-              pickupProvinceCode: v.pickupProvinceCode,
-              pickupWardCode: v.pickupWardCode,
+              /*
+               * Chuỗi hiển thị do SERVER ghép từ các mảnh dưới — client không gửi lên.
+               *
+               * Mã tỉnh/xã chỉ gửi khi CÓ GIÁ TRỊ. DTO bên API khai `@IsOptional()` kèm
+               * `@Length(2,2)`/`@Length(5,5)`, mà `@IsOptional` chỉ bỏ qua `null`/`undefined` —
+               * một chuỗi RỖNG vẫn đi vào `@Length` và bật lỗi 400. Luồng này để mã xã rỗng theo
+               * thiết kế (khách không được hỏi xã/phường), nên nếu gửi thẳng thì mọi yêu cầu có
+               * địa chỉ đều bị từ chối.
+               */
+              ...(v.pickupProvinceCode ? { pickupProvinceCode: v.pickupProvinceCode } : {}),
+              ...(v.pickupWardCode ? { pickupWardCode: v.pickupWardCode } : {}),
               pickupAddressLine: v.pickupAddressLine.trim(),
               ...(v.pickupPlaceId ? { pickupPlaceId: v.pickupPlaceId } : {}),
               ...(v.pickupLatitude != null && v.pickupLongitude != null
@@ -676,8 +725,9 @@ export function RequestBookingFlow({
         ...(!withDriver && v.pickupMethod === PICKUP_METHOD.DELIVERY
           ? {
               deliveryRequested: true,
-              deliveryProvinceCode: v.deliveryProvinceCode,
-              deliveryWardCode: v.deliveryWardCode,
+              // Chuỗi rỗng KHÔNG được gửi — xem lý do ở khối địa chỉ đón phía trên.
+              ...(v.deliveryProvinceCode ? { deliveryProvinceCode: v.deliveryProvinceCode } : {}),
+              ...(v.deliveryWardCode ? { deliveryWardCode: v.deliveryWardCode } : {}),
               deliveryAddressLine: v.deliveryAddressLine.trim(),
               ...(v.deliveryPlaceId ? { deliveryPlaceId: v.deliveryPlaceId } : {}),
               ...(v.deliveryLatitude != null && v.deliveryLongitude != null
@@ -812,14 +862,20 @@ export function RequestBookingFlow({
     const fields: Array<keyof RequestFormValues> = isLongTerm
       ? ['longTermPackageMonths', 'pickupPreference', 'requestedPickupDate']
       : ['pickupAt', 'returnAt'];
-    // Địa chỉ giao/đón và liên hệ nằm CÙNG bước này — schema tự bỏ qua trường không liên quan.
+    /*
+     * Địa chỉ giao/đón và liên hệ nằm CÙNG bước này — schema tự bỏ qua trường không liên quan.
+     *
+     * Cặp TOẠ ĐỘ phải có mặt trong danh sách này, không chỉ phần chữ: đó là chỗ duy nhất chặn
+     * một địa chỉ chưa được bản đồ xác nhận. Thiếu nó thì khách gõ tay một dòng chữ, bấm Tiếp
+     * tục, và yêu cầu đi tiếp với một địa chỉ mà quãng đường giao xe không tính được.
+     */
     fields.push(
-      'deliveryProvinceCode',
-      'deliveryWardCode',
       'deliveryAddressLine',
-      'pickupProvinceCode',
-      'pickupWardCode',
+      'deliveryLatitude',
+      'deliveryLongitude',
       'pickupAddressLine',
+      'pickupLatitude',
+      'pickupLongitude',
       'destination',
     );
     if (!contactKnown) fields.push('customerName', 'customerPhone');
@@ -1404,12 +1460,16 @@ export function RequestBookingFlow({
                    không có khái niệm "giao xe tận nơi". ─────────────────────── */}
             {isWithDriver ? (
               <div className={styles.deliveryBlock}>
-                <AddressField
+                <RenterAddressBlock
                   control={control}
-                  names={PICKUP_ADDRESS_NAMES}
+                  provinceCodeName="pickupProvinceCode"
+                  addressLineName="pickupAddressLine"
                   pin={PICKUP_PIN_NAMES}
-                  title={t('driver.pickupAddressLabel')}
-                  required
+                  label={t('driver.pickupAddressLabel')}
+                  placeholder={t('driver.pickupAddressPlaceholder')}
+                  vehicleProvinceCode={vehicleProvinceCode}
+                  vehicleProvinceName={vehicleProvinceName}
+                  vehiclePoint={vehiclePoint}
                 />
                 {watchedRoute !== ROUTE_TYPE.IN_CITY ? (
                   <TextField
@@ -1500,12 +1560,16 @@ export function RequestBookingFlow({
 
             {isDelivery ? (
               <div className={styles.deliveryBlock}>
-                <AddressField
+                <RenterAddressBlock
                   control={control}
-                  names={DELIVERY_ADDRESS_NAMES}
+                  provinceCodeName="deliveryProvinceCode"
+                  addressLineName="deliveryAddressLine"
                   pin={DELIVERY_PIN_NAMES}
-                  title={t('pickup.addressLabel')}
-                  required
+                  label={t('pickup.addressLabel')}
+                  placeholder={t('pickup.addressPlaceholder')}
+                  vehicleProvinceCode={vehicleProvinceCode}
+                  vehicleProvinceName={vehicleProvinceName}
+                  vehiclePoint={vehiclePoint}
                 />
                 {/*
                   Quãng đường + phí DỰ KIẾN. Chủ xe vẫn là người chốt (ADR 0014), nên mọi nhãn ở
@@ -1553,11 +1617,16 @@ export function RequestBookingFlow({
                     {t('pickup.resolvedAddress', { address: delivery.formattedAddress })}
                   </p>
                 ) : null}
-                <StaticMap
-                  src={mapRouteUrl(delivery?.origin, delivery?.destination)}
-                  title={t('pickup.mapTitle')}
-                  height={200}
-                />
+                {/*
+                  KHÔNG có bản đồ thứ hai ở đây.
+
+                  Khối này từng kết thúc bằng một ảnh bản đồ tĩnh vẽ tuyến chi nhánh → địa chỉ
+                  giao. Nó có nghĩa khi địa chỉ còn là một ô chữ tự do: lúc đó ảnh kia là bằng
+                  chứng duy nhất cho thấy máy hiểu địa chỉ ở đâu. Từ ADR 0042 thì địa chỉ chỉ vào
+                  được form sau khi khách đã nhìn và xác nhận cái ghim trên BẢN ĐỒ TƯƠNG TÁC ngay
+                  phía trên — nên ảnh này chỉ vẽ lại chỗ họ vừa tự chỉ, cách đó vài trăm pixel,
+                  trong một hộp thoại vốn đã phải cuộn. Quãng đường và phí thì đã nói bằng chữ.
+                */}
               </div>
             ) : null}
 
