@@ -4,3 +4,40 @@
   gap: 8px;
   margin-top: 16px;
 }
+
+/* Dải giải thích đầu form — cách phần nhập bên dưới đúng một nhịp của AntD. */
+.intro {
+  margin-bottom: 16px;
+}
+
+/*
+ * Khối THÔNG TIN, không phải ô nhập: trần của tuyến hoa hồng là quy tắc trong code
+ * (`OWNER_LITE_VEHICLE_LIMIT`). Nền chìm + không viền input để nó không trông như một ô bị khoá
+ * — "bị khoá" gợi ý rằng có cách nào đó mở ra được.
+ */
+.readonlyBox {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-radius: var(--xp-radius-md, 8px);
+  background: var(--xp-color-fill-quaternary, rgb(0 0 0 / 3%));
+}
+
+.readonlyTitle {
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--xp-color-text-secondary, rgb(0 0 0 / 65%));
+}
+
+.readonlyRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 0;
+}
+
+/* Câu nhắc mốc so sánh của % tiết kiệm — phụ, nên nhỏ và chìm hơn nhãn ô nhập. */
+.pricingNote {
+  margin: 0 0 16px;
+  color: var(--xp-color-text-tertiary, rgb(0 0 0 / 45%));
+  font-size: 13px;
+}

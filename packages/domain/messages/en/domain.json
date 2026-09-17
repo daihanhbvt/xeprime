@@ -704,8 +704,6 @@
   "autoAcceptBlocker": {
     "disabled": "Instant booking is off for this vehicle",
     "service_not_supported": "This service does not support instant booking",
-    "lead_too_short": "Pickup is sooner than the minimum notice",
-    "lead_too_long": "Pickup is later than the maximum notice",
     "outside_handover_window": "Pickup or return falls outside the host’s hours",
     "below_min_duration": "Rental is shorter than the minimum duration",
     "quote_estimate": "The price is still an estimate; the host must confirm",

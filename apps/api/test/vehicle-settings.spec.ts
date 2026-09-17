@@ -413,19 +413,6 @@ describe('Thời gian chết — đệm thật sự chiếm lịch', () => {
 });
 
 describe('Thiết lập theo dịch vụ — ràng buộc chéo ở server', () => {
-  maybe('đặt trước tối thiểu không được vượt tối đa', async () => {
-    await expect(
-      settings.patchServiceSetting(
-        tenantA,
-        vehicleA,
-        SERVICE_TYPE.SELF_DRIVE,
-        ownerA,
-        { autoAcceptMinLeadMinutes: 10080, autoAcceptMaxLeadMinutes: 360 },
-        features(),
-      ),
-    ).rejects.toMatchObject({ status: 400 });
-  });
-
   maybe('bắt đồng ý điều khoản thì phải có nội dung điều khoản', async () => {
     await expect(
       settings.patchServiceSetting(
@@ -569,7 +556,6 @@ describe('Thiết lập theo dịch vụ — ràng buộc chéo ở server', () 
       ownerA,
       {
         autoAcceptEnabled: false,
-        autoAcceptMinLeadMinutes: 720,
         identityVerifyMethod: IDENTITY_VERIFY_METHOD.VNEID,
         termsText: 'Điều khoản gốc',
       },
@@ -584,7 +570,6 @@ describe('Thiết lập theo dịch vụ — ràng buộc chéo ở server', () 
       features(),
     );
     expect(patched.autoAcceptEnabled).toBe(true);
-    expect(patched.autoAcceptMinLeadMinutes).toBe(720);
     expect(patched.identityVerifyMethod).toBe(IDENTITY_VERIFY_METHOD.VNEID);
     expect(patched.termsText).toBe('Điều khoản gốc');
   });
@@ -622,33 +607,31 @@ describe('Đánh giá tự nhận — hàm thuần, mã chặn nói đúng lý d
         quoteIsEstimate: false,
         holdRequired: false,
         termsAccepted: true,
-        now,
       }),
     ).toBe(AUTO_ACCEPT_BLOCKER.DISABLED);
 
-    const on = {
-      ...base,
-      autoAcceptEnabled: true,
-      autoAcceptMinLeadMinutes: 360,
-      autoAcceptMaxLeadMinutes: 10080,
-    };
+    const on = { ...base, autoAcceptEnabled: true };
     const input = {
       serviceType: SERVICE_TYPE.SELF_DRIVE,
       quoteIsEstimate: false,
       holdRequired: false,
       termsAccepted: true,
-      now,
     };
+    /*
+     * KHÔNG còn mốc đặt trước (17/09/2026). Hai ca này từng là LEAD_TOO_SHORT / LEAD_TOO_LONG —
+     * giữ lại đúng chúng và lật kỳ vọng, vì đây là thứ dễ bị cài lại nhất: đặt sau 2 giờ và đặt
+     * trước 30 ngày đều phải tự nhận.
+     */
     expect(
       settings.evaluateAutoAccept(on, windows, { ...input, pickupAt: at(2), returnAt: at(30) }),
-    ).toBe(AUTO_ACCEPT_BLOCKER.LEAD_TOO_SHORT);
+    ).toBeNull();
     expect(
       settings.evaluateAutoAccept(on, windows, {
         ...input,
         pickupAt: at(24 * 30),
         returnAt: at(24 * 31),
       }),
-    ).toBe(AUTO_ACCEPT_BLOCKER.LEAD_TOO_LONG);
+    ).toBeNull();
     expect(
       settings.evaluateAutoAccept(on, windows, {
         ...input,
@@ -702,7 +685,7 @@ describe('Đánh giá tự nhận — hàm thuần, mã chặn nói đúng lý d
       vehicleA,
       SERVICE_TYPE.SELF_DRIVE,
       ownerA,
-      { autoAcceptEnabled: true, autoAcceptMinLeadMinutes: 60, autoAcceptMaxLeadMinutes: 129600 },
+      { autoAcceptEnabled: true },
       features(),
     );
     const pickupAt = vnDay(12, 8);

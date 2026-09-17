@@ -1,7 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   AUTO_ACCEPT_BLOCKER_VALUES,
-  AUTO_ACCEPT_LEAD_MAX_MINUTES,
   BOOKING_REQUEST_DECISION_SOURCE_VALUES,
   BOOKING_REQUEST_STATUS_VALUES,
   BOOKING_STATUS_VALUES,
@@ -121,9 +120,8 @@ export class WithDriverAutoAcceptCapabilityDto {
 
 export class VehicleServiceSettingDto {
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
-  @ApiProperty() autoAcceptEnabled!: boolean;
-  @ApiProperty() autoAcceptMinLeadMinutes!: number;
-  @ApiProperty() autoAcceptMaxLeadMinutes!: number;
+  @ApiProperty({ description: 'Bật là nhận — không còn khoảng đặt trước nào (17/09/2026)' })
+  autoAcceptEnabled!: boolean;
   @ApiPropertyOptional({ type: Number, nullable: true, description: 'Chỉ có tài xế' })
   minRentalMinutes!: number | null;
   @ApiProperty({ enum: ROUTE_TYPE_VALUES, isArray: true }) preferredRouteTypes!: string[];
@@ -170,20 +168,6 @@ export class PatchVehicleServiceSettingDto {
   @IsOptional()
   @IsBoolean()
   autoAcceptEnabled?: boolean;
-
-  @ApiPropertyOptional({ minimum: 0, maximum: AUTO_ACCEPT_LEAD_MAX_MINUTES })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  @Max(AUTO_ACCEPT_LEAD_MAX_MINUTES)
-  autoAcceptMinLeadMinutes?: number;
-
-  @ApiPropertyOptional({ minimum: 0, maximum: AUTO_ACCEPT_LEAD_MAX_MINUTES })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  @Max(AUTO_ACCEPT_LEAD_MAX_MINUTES)
-  autoAcceptMaxLeadMinutes?: number;
 
   @ApiPropertyOptional({
     type: Number,

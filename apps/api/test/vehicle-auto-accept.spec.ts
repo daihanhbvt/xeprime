@@ -168,8 +168,6 @@ async function seedShop(label: string, commission: boolean) {
         billingMode: BILLING_MODE.COMMISSION,
         commissionPercent: new Prisma.Decimal(10),
         basePriceMonthly: new Prisma.Decimal(0),
-        price: 0,
-        durationDays: 30,
         limitsJson: { features: [] } as unknown as Prisma.InputJsonValue,
       },
     });
@@ -213,7 +211,7 @@ async function enableAutoAccept(
     vehicle,
     serviceType,
     owner,
-    { autoAcceptEnabled: true, autoAcceptMinLeadMinutes: 60, autoAcceptMaxLeadMinutes: 129600 },
+    { autoAcceptEnabled: true },
     featureMap,
   );
 }
@@ -446,51 +444,40 @@ describe('Đủ điều kiện — hệ thống nhận ngay khi tiền về', ()
 });
 
 describe('Không đủ điều kiện — về hàng chờ, không tự từ chối khách', () => {
-  maybe('đặt quá sát giờ: yêu cầu ở lại chờ duyệt và ghi dấu lý do bỏ qua', async () => {
-    await settings.patchServiceSetting(
-      tenantId,
-      vehicleId,
-      SERVICE_TYPE.SELF_DRIVE,
-      ownerId,
-      {
-        autoAcceptEnabled: true,
-        autoAcceptMinLeadMinutes: 10080,
-        autoAcceptMaxLeadMinutes: 129600,
-      },
-      features(),
-    );
-    // Nhận sau 2 ngày < 7 ngày tối thiểu.
+  /**
+   * MỐC ĐẶT TRƯỚC ĐÃ BỊ BỎ (17/09/2026).
+   *
+   * Ca này trước đây khẳng định điều ngược lại: nhận sau 2 ngày < mức tối thiểu 7 ngày ⇒ bỏ qua
+   * tự nhận với mã `lead_too_short`. Giữ nguyên tình huống và lật kỳ vọng, vì đây là thứ dễ bị
+   * cài lại nhất — một mặc định "6 giờ tới 1 tuần" quay về là công tắc lại nói dối.
+   */
+  maybe('đặt sát giờ vẫn tự nhận — không còn khoảng đặt trước nào', async () => {
+    await enableAutoAccept(tenantId, vehicleId, ownerId, SERVICE_TYPE.SELF_DRIVE);
+    // Nhận ngay ngày mai: dưới mọi mức "đặt trước tối thiểu" từng tồn tại.
     const { row } = await submitAndPay({
-      pickupAt: vnAt(2, 9).toISOString(),
-      returnAt: vnAt(3, 9).toISOString(),
+      pickupAt: vnAt(1, 9).toISOString(),
+      returnAt: vnAt(2, 9).toISOString(),
     });
 
-    /*
-     * Không tự nhận được KHÔNG còn nghĩa là "về hàng chờ suông": tiền đã về và chỗ đã bị chiếm,
-     * nên chuyến dừng ở `hold_paid` chờ chủ xe bấm. Rơi về `pending_host_approval` ở đây là mất
-     * dấu một khoản tiền thật.
-     */
-    expect(row.status).toBe(BOOKING_REQUEST_STATUS.HOLD_PAID);
-    expect(row.bookingId).toBeNull();
-    expect(await prisma.booking.count({ where: { tenantId } })).toBe(0);
+    expect(row.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
+    expect(row.bookingId).not.toBeNull();
     expect(
-      await prisma.vehicleOccupancy.count({
-        where: { tenantId, sourceType: OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST },
+      await prisma.auditLog.count({
+        where: { tenantId, action: 'booking_request.auto_accept_skipped' },
       }),
-    ).toBe(1);
+    ).toBe(0);
+  });
 
-    const skip = await prisma.auditLog.findFirstOrThrow({
-      where: { tenantId, action: 'booking_request.auto_accept_skipped' },
+  /** Đặt xa cũng vậy — mốc "tối đa" từng chặn mọi chuyến đặt trước hơn một tuần. */
+  maybe('đặt trước cả tháng vẫn tự nhận', async () => {
+    await enableAutoAccept(tenantId, vehicleId, ownerId, SERVICE_TYPE.SELF_DRIVE);
+    const { row } = await submitAndPay({
+      pickupAt: vnAt(40, 9).toISOString(),
+      returnAt: vnAt(41, 9).toISOString(),
     });
-    expect((skip.afterJson as { blocker?: string } | null)?.blocker).toBe(
-      AUTO_ACCEPT_BLOCKER.LEAD_TOO_SHORT,
-    );
-    // Chủ xe phải được gọi — tiền của khách đang chờ đúng một cú bấm của họ.
-    expect(
-      await prisma.notification.count({
-        where: { tenantId, type: NOTIFICATION_TYPE.HOLD_PAID },
-      }),
-    ).toBeGreaterThanOrEqual(1);
+
+    expect(row.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
+    expect(row.bookingId).not.toBeNull();
   });
 
   maybe('chưa bật tự nhận: tiền về xong vẫn chờ chủ xe bấm duyệt', async () => {

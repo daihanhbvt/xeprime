@@ -414,8 +414,6 @@ export class ListingRentalTermsDto {
   depositMode!: string | null;
   @ApiProperty({ description: 'Xe bật tự động nhận cho dịch vụ này (điều kiện cụ thể do báo giá trả)' })
   instantBookEnabled!: boolean;
-  @ApiProperty() autoAcceptMinLeadMinutes!: number;
-  @ApiProperty() autoAcceptMaxLeadMinutes!: number;
   @ApiPropertyOptional({ type: Number, nullable: true }) minRentalMinutes!: number | null;
 }
 

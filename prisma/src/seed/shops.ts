@@ -43,7 +43,7 @@
 import {
   BRANCH_STATUS,
   DEFAULT_COMMISSION_PLAN_CODE,
-  DEFAULT_PACKAGE_PLAN_CODE,
+  SHOP_PLAN_CODE,
   TENANT_STATUS,
   TENANT_ROLE,
 } from '@xeprime/types';
@@ -147,10 +147,8 @@ export interface ShopSpec {
   };
   branches: readonly BranchSpec[];
   fleet: readonly FleetEntry[];
-  /** Mã gói thuê bao đang dùng — null = chưa gán gói. */
+  /** Mã BẬC gói đang dùng (ADR 0041) — null = chưa gán gói. Trần xe/chi nhánh đi theo bậc. */
   planCode: string | null;
-  /** Số chỗ đã mua (ADR 0029 — gói giá phẳng theo chỗ): đặt ≥ đội xe để demo còn thêm xe được. */
-  planSlots?: { car: number; motorbike: number };
   depth: ShopDepth;
   driverCount: number;
   customerCount: number;
@@ -314,8 +312,8 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
       { model: 'yamaha-exciter', count: 1 },
       { model: 'vinfast-klara', count: 1 },
     ],
-    planCode: DEFAULT_PACKAGE_PLAN_CODE,
-    planSlots: { car: 35, motorbike: 5 },
+    // 40 xe + 4 chi nhánh: chỉ bậc không giới hạn chứa nổi (ADR 0041 điều 7).
+    planCode: SHOP_PLAN_CODE.PRO,
     depth: 'full',
     driverCount: 4,
     customerCount: 12,
@@ -394,8 +392,8 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
       { model: 'honda-vision', count: 1 },
       { model: 'honda-airblade', count: 1 },
     ],
-    planCode: DEFAULT_PACKAGE_PLAN_CODE,
-    planSlots: { car: 8, motorbike: 2 },
+    // 10 xe / 2 chi nhánh — vừa khít bậc nâng cao (10 xe / 3 chi nhánh).
+    planCode: SHOP_PLAN_CODE.ADVANCED,
     depth: 'medium',
     driverCount: 2,
     customerCount: 6,
@@ -447,8 +445,8 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
       { model: 'mazda-3', count: 1 },
       { model: 'honda-sh', count: 1 },
     ],
-    planCode: DEFAULT_PACKAGE_PLAN_CODE,
-    planSlots: { car: 2, motorbike: 1 },
+    // 3 xe / 1 chi nhánh — vừa khít bậc cơ bản.
+    planCode: SHOP_PLAN_CODE.BASIC,
     depth: 'light',
     driverCount: 0,
     customerCount: 3,
@@ -617,9 +615,9 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
   /*
    * ── QA 2. Gian hàng TUYẾN GÓI, đúng 10 xe / 10 chỗ ───────────────────────
    *
-   * `planSlots` khai đúng 8 ô tô + 2 xe máy — KHÔNG phải một gói 'không giới hạn'. Số chỗ đã
-   * mua chính là hạn mức (ADR 0015 điều 1), nên fixture này kiểm được cả hai chiều: 10 xe hiện
-   * có đều hợp lệ, và chiếc thứ 11 của MỖI LOẠI đều bị từ chối vì loại đó đã đầy.
+   * Bậc NÂNG CAO có trần đúng 10 xe (ADR 0041 điều 1) — KHÔNG phải một gói 'không giới hạn'.
+   * Fixture này vì thế kiểm được cả hai chiều: 10 xe hiện có đều hợp lệ, và chiếc thứ 11 bị từ
+   * chối. Trần là TỔNG hai loại, nên chiếc thứ 11 bị chặn dù nó là ô tô hay xe máy.
    */
   {
     key: 'qaShop',
@@ -672,8 +670,7 @@ const HANDWRITTEN_SHOPS: readonly ShopSpec[] = [
       { model: 'honda-vision', count: 1 },
       { model: 'honda-airblade', count: 1 },
     ],
-    planCode: DEFAULT_PACKAGE_PLAN_CODE,
-    planSlots: { car: 8, motorbike: 2 },
+    planCode: SHOP_PLAN_CODE.ADVANCED,
     depth: 'minimal',
     driverCount: 0,
     customerCount: 0,

@@ -15,6 +15,10 @@
 }
 
 .label {
+  /* inline-flex để `labelExtra` (icon thông tin) đứng cùng dòng, canh giữa theo chữ. */
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 14px;
   font-weight: 600;
   color: var(--xp-color-text);

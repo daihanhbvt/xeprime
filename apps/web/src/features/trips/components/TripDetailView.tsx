@@ -412,7 +412,16 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
           {data.finance ? (
             <TripFinanceCard finance={data.finance} closed={closed} />
           ) : data.estimate ? (
-            <TripEstimateCard estimate={data.estimate} isHost={isHost} />
+            <TripEstimateCard
+              estimate={data.estimate}
+              isHost={isHost}
+              /*
+               * Tiền đã về ⇒ số đã chốt. Hỏi mốc thanh toán chứ không hỏi trạng thái: hold
+               * chuyển sang `released` khi chốt kết cục, và lúc đó tiền vẫn đã được trả —
+               * `paidAt` là thứ duy nhất không bao giờ bị viết lại.
+               */
+              settled={data.hold?.paidAt != null}
+            />
           ) : (
             <section className={styles.block}>
               <h2 className={styles.blockTitle}>{t('detail.priceBlock')}</h2>

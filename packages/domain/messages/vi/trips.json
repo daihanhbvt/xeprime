@@ -267,7 +267,9 @@
     "rentalTotal": "Tiền thuê",
     "ownerNet": "Bạn thực nhận",
     "noteRenter": "Giá tính theo chính sách đang áp dụng. Số chốt được xác nhận khi chủ xe duyệt yêu cầu.",
-    "noteHost": "Phụ phí chuyến nằm ở phía khách và không trừ vào tiền của bạn. Số chốt được xác nhận khi bạn duyệt yêu cầu."
+    "noteHost": "Phụ phí chuyến nằm ở phía khách và không trừ vào tiền của bạn. Số chốt được xác nhận khi bạn duyệt yêu cầu.",
+    "badgeSettled": "Đã chốt",
+    "noteSettled": "Số này đã được chốt khi bạn thanh toán giữ chỗ và không đổi nữa."
   },
   "transitional": {
     "title": "Chuyến đi thuê của tôi"

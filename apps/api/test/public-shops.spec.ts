@@ -132,7 +132,6 @@ beforeAll(async () => {
       status: PLAN_STATUS.ACTIVE,
       billingMode: BILLING_MODE.PACKAGE,
       basePriceMonthly: 0,
-      durationDays: 30,
     },
   });
   const subNow = Date.now();

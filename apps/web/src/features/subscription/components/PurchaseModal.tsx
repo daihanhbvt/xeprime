@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { InvoicePaymentPanel } from './InvoicePaymentPanel';
-import { PlanPurchaseFields } from './PlanPurchaseFields';
+import { PlanPricingTable } from './PlanPricingTable';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { usePlanPurchase } from '../plan-purchase';
 import { usePurchaseSubscription, useTenantPlans } from '../hooks/use-subscription';
@@ -14,13 +14,13 @@ import type { SubscriptionInvoice } from '../types';
 import styles from './PurchaseModal.module.css';
 
 /**
- * Mua / gia hạn gói: chọn số chỗ + KỲ HẠN → sinh HOÁ ĐƠN kèm mã đối soát. Gói chỉ kích hoạt
- * khi tiền về (ADR 0026 điều 4), nên modal chuyển sang màn "chuyển khoản" ngay khi hoá đơn tạo
- * xong để mã không bị bỏ lỡ.
+ * Mua / gia hạn gói: chọn BẬC + KỲ HẠN → sinh HOÁ ĐƠN kèm mã đối soát. Gói chỉ kích hoạt khi
+ * tiền về (ADR 0026 điều 4), nên modal chuyển sang màn "chuyển khoản" ngay khi hoá đơn tạo xong
+ * để mã không bị bỏ lỡ.
  *
- * Bộ ô nhập và toàn bộ phép tính tiền nằm ở `usePlanPurchase` + `PlanPurchaseFields`, dùng CHUNG
- * với bước 2 của onboarding gian hàng trả phí (ADR 0040). Modal này chỉ còn là VỎ: quyền, hộp
- * thoại, nút, và chuyển màn sau khi hoá đơn tạo xong.
+ * Bảng giá và toàn bộ phép đọc giá nằm ở `usePlanPurchase` + `PlanPricingTable`, dùng CHUNG với
+ * bước 2 của onboarding gian hàng trả phí (ADR 0040 · ADR 0041). Modal này chỉ còn là VỎ: quyền,
+ * hộp thoại, nút, và chuyển màn sau khi hoá đơn tạo xong.
  */
 export function PurchaseModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const t = useTranslations('Subscription');
@@ -83,11 +83,11 @@ export function PurchaseModal({ open, onClose }: { open: boolean; onClose: () =>
             {tCommon('actions.retry')}
           </Button>
         </div>
-      ) : selection.purchasable.length === 0 ? (
+      ) : selection.tiers.length === 0 ? (
         <div className={styles.empty}>{t('purchase.empty')}</div>
       ) : (
         <>
-          <PlanPurchaseFields state={selection} />
+          <PlanPricingTable state={selection} />
 
           {/*
             Đây là lần duy nhất gian hàng trả tiền cho XePrime, và quy chế sàn là văn bản quy

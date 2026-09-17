@@ -191,17 +191,11 @@ beforeAll(async () => {
       billingMode: BILLING_MODE.PACKAGE,
       basePriceMonthly: new Prisma.Decimal(0),
       status: PLAN_STATUS.ACTIVE,
-      price: 0,
-      durationDays: 30,
       limitsJson: {
-        perVehiclePrice: { car: '100000', motorbike: '40000' },
-        includedCars: 0,
-        includedMotorbikes: 0,
-        maxCars: null,
-        maxMotorbikes: null,
-        maxMembers: null,
+        maxVehicles: null,
+                maxMembers: null,
         maxBranches: null,
-        terms: [{ months: 3, discountPercent: 0 }],
+        termPrices: [{ months: 3, price: '300000' }],
         graceDays: 7,
         features: [],
       } as unknown as Prisma.InputJsonValue,
@@ -437,8 +431,7 @@ describe('2. Tuyến GÓI — ý định lưu bền vững, KHÔNG thành Owner 
 
     const invoice = await billing.purchase(tenantId, packageOwnerId, {
       planId: packagePlanId,
-      termMonths: 3,
-      slots: { car: 1, motorbike: 0 },
+      termMonths: 3
     });
     expect(invoice.code).toMatch(/^XPG/);
     expect(invoice.status).toBe(SUBSCRIPTION_INVOICE_STATUS.ISSUED);

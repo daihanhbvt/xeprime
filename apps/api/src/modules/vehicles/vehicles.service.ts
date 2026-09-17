@@ -33,7 +33,6 @@ import {
   VEHICLE_PUBLIC_STATUS_SUBMITTABLE,
   type PaginationMeta,
   type VehiclePublicStatus,
-  type VehicleType,
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
@@ -471,8 +470,9 @@ export class VehiclesService {
   }
 
   async create(tenantId: string, userId: string, dto: CreateVehicleDto): Promise<VehicleDetailDto> {
-    // Hạn mức CHỖ theo loại xe (ADR 0015 điều 7, điểm chặn 1): chạm số chỗ đã mua → PLAN_LIMIT_REACHED.
-    await this.billing.assertVehicleQuota(tenantId, dto.vehicleType as VehicleType);
+    // Trần TỔNG số xe của bậc gói / Owner Lite (ADR 0041 điều 4, điểm chặn 1) —
+    // chạm trần thì PLAN_LIMIT_REACHED, và thông điệp nói đúng lối đi tiếp theo NGUỒN của trần.
+    await this.billing.assertVehicleQuota(tenantId);
     const id = newId();
     const code = dto.code?.trim() || `XP-${id.slice(-8).toUpperCase()}`;
     await this.assertCodeFree(tenantId, code);
@@ -1020,13 +1020,17 @@ export class VehiclesService {
      */
     await this.assertPackageShopReadyToList(tenantId);
 
-    // Điểm chặn THỨ HAI của hạn mức chỗ (ADR 0015 điều 7 — "cái răng thật"): hết chỗ trên chợ
-    // thì không đưa thêm xe lên, kể cả xe đã tạo từ trước khi gói thu nhỏ. Đếm xe đang chiếm
-    // suất (chờ duyệt + đang công khai), trừ chính chiếc này để gửi-lại-duyệt không tự chặn mình.
-    await this.billing.assertVehicleQuota(tenantId, vehicle.vehicleType as VehicleType, {
-      scope: 'marketplace',
-      excludeVehicleId: id,
-    });
+    /*
+     * Điểm chặn THỨ HAI của trần xe (ADR 0041 điều 4) — và nó CHỈ áp cho trần đã trả tiền.
+     *
+     * Gian hàng hạ bậc bước sang kỳ mới với nhiều xe hơn trần vừa mua: đó là cửa duy nhất còn
+     * lại để trần của một bậc trả phí có nghĩa. Trần Owner Lite thì  tự bỏ
+     * qua ở đây — nó đã gác điểm TẠO, và gác thêm ở chợ sẽ khoá vĩnh viễn mọi chiếc rời chợ một
+     * lần (sửa hồ sơ, bị yêu cầu bổ sung, tạm gỡ) của một gian hàng vừa rơi khỏi gói.
+     *
+     * Trừ chính chiếc này để gửi-lại-duyệt không tự chặn mình.
+     */
+    await this.billing.assertVehicleQuota(tenantId, { scope: 'marketplace', excludeVehicleId: id });
 
     const isResubmit = status !== VEHICLE_PUBLIC_STATUS.DRAFT;
 

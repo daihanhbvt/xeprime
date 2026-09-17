@@ -1188,9 +1188,6 @@ model VehicleServiceSetting {
   serviceType              String   @map("service_type") @db.VarChar(50)
   /// Tự động nhận yêu cầu đạt đủ điều kiện (server quyết, không phải toggle trang trí).
   autoAcceptEnabled        Boolean  @default(false) @map("auto_accept_enabled")
-  /// Khoảng "đặt trước" cho phép tự động nhận, tính bằng PHÚT tới giờ nhận. CHECK 0 ≤ min ≤ max ≤ 129600.
-  autoAcceptMinLeadMinutes Int      @default(360) @map("auto_accept_min_lead_minutes")
-  autoAcceptMaxLeadMinutes Int      @default(10080) @map("auto_accept_max_lead_minutes")
   /// Thời lượng thuê tối thiểu (phút) — chỉ có tài xế; NULL = không giới hạn. CHECK ≥ 0.
   minRentalMinutes         Int?     @map("min_rental_minutes")
   /// @xeprime/types → RouteType[] — lộ trình ưu tiên tự động nhận (có tài xế). CHECK subset.
@@ -3204,44 +3201,30 @@ model Contract {
 /// Danh mục gói dịch vụ. BillingService là writer DUY NHẤT. Plan chỉ archive, không xoá
 /// (FK RESTRICT từ tenant_subscriptions).
 model Plan {
-  id                    String   @id @db.Char(26)
-  code                  String   @unique @db.VarChar(50)
-  name                  String   @db.VarChar(255)
-  description           String?  @db.Text
-  /// ⚠ Cột của mô hình gói phẳng ADR 0010 — thay bằng `basePriceMonthly` + `limitsJson.perVehiclePrice`
-  /// (ADR 0015). Giữ lại ở bước expand; drop ở đợt contract sau khi không còn code nào đọc.
-  price                 Decimal  @default(0) @db.Decimal(14, 2)
-  currency              String   @default("VND") @db.VarChar(10)
-  /// ⚠ ADR 0015 điều 2: kỳ hạn nay tính bằng THÁNG LỊCH ở `tenant_subscriptions.term_months`.
-  /// Cột này chỉ còn cho dữ liệu cũ — drop ở đợt contract.
-  durationDays          Int      @map("duration_days")
-  /// ⚠ NULL = không giới hạn (ADR 0010). Thay bằng `limitsJson.maxCars`/`maxMotorbikes` (ADR 0015) —
-  /// drop ở đợt contract.
-  maxVehicles           Int?     @map("max_vehicles")
-  /// Núm vặn của bậc gói (ADR 0015 điều 4): { perVehiclePrice: {car, motorbike}, includedCars,
-  /// includedMotorbikes, maxCars, maxMotorbikes, maxMembers, maxBranches,
-  /// terms: [{months, discountPercent}], graceDays, features: [...] }.
-  /// Giá / % / số chỗ là DỮ LIỆU admin sửa được; QUY TẮC nằm trong code.
-  limitsJson            Json?    @map("limits_json") @db.JsonB
-  /// Phí nền mỗi tháng của bậc gói. ⚠ ADR 0020 từng bắt nó phải đủ lớn để gói chỉ có lợi từ một
-  /// quy mô đội xe trở lên; **ADR 0029 điều 3–4 GỠ ràng buộc đó**. Gói pilot giá phẳng theo chỗ
-  /// đặt `base_price_monthly = 0` một cách CÓ CHỦ ĐÍCH — tiền nằm hết ở đơn giá chỗ xe, và động
-  /// lực nâng cấp là giá cạnh tranh trên chợ chứ không phải phí nền. Đừng khôi phục phép kiểm.
-  basePriceMonthly      Decimal  @default(0) @map("base_price_monthly") @db.Decimal(14, 2)
+  id                String   @id @db.Char(26)
+  code              String   @unique @db.VarChar(50)
+  name              String   @db.VarChar(255)
+  description       String?  @db.Text
+  currency          String   @default("VND") @db.VarChar(10)
+  /// Núm vặn của bậc gói (ADR 0041 điều 1): { maxVehicles, maxBranches, maxMembers,
+  /// termPrices: [{months, price}], salesOnly, recommended, graceDays, features: [...] }.
+  /// `maxVehicles` là trần TỔNG ô tô + xe máy; `termPrices[].price` là tiền CẢ KỲ, số TUYỆT ĐỐI
+  /// admin gõ (không có % giảm nào được lưu — xem ADR 0041 điều 2).
+  /// Trần / giá / cờ là DỮ LIỆU admin sửa được; QUY TẮC nằm trong code.
+  limitsJson        Json?    @map("limits_json") @db.JsonB
+  /// Phí nền mỗi tháng. ⚠ Giữ ở 0 từ ADR 0041: giá của một bậc nằm TRỌN ở `limits_json.termPrices`
+  /// (giá cả kỳ), nên cộng thêm một phí nền là hai nguồn cho cùng một con số. Cột còn lại cho dữ
+  /// liệu cũ và cho khả năng mở lại một mô hình có phí nền — không đường nào hiện cộng nó.
+  basePriceMonthly  Decimal  @default(0) @map("base_price_monthly") @db.Decimal(14, 2)
   /// @xeprime/types → BillingMode (commission | package) — ADR 0020. DB canh bằng CHECK.
-  billingMode           String   @default("commission") @map("billing_mode") @db.VarChar(30)
+  billingMode       String   @default("commission") @map("billing_mode") @db.VarChar(30)
   /// BẮT BUỘC (1–20, CHECK) khi `billing_mode = 'commission'`; NULL khi `package`.
-  commissionPercent     Decimal? @map("commission_percent") @db.Decimal(5, 2)
-  /// Doanh thu giả định mỗi xe mỗi tháng, admin nhập. ⚠ Từng là đầu vào của phép KIỂM ĐIỂM GIAO
-  /// (ADR 0020); **ADR 0029 điều 4 cho phép kiểm đó nghỉ hưu** nên cột này nay chỉ là số THAM
-  /// KHẢO khi định giá, không chặn việc lưu gói và không có endpoint nào còn ném
-  /// `PLAN_INCENTIVE_INVALID`.
-  assumedMonthlyGmvJson Json?    @map("assumed_monthly_gmv_json") @db.JsonB
+  commissionPercent Decimal? @map("commission_percent") @db.Decimal(5, 2)
   /// @xeprime/types → PlanStatus (active | archived)
-  status                String   @default("active") @db.VarChar(50)
-  sortOrder             Int      @default(0) @map("sort_order")
-  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  status            String   @default("active") @db.VarChar(50)
+  sortOrder         Int      @default(0) @map("sort_order")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   subscriptions TenantSubscription[]
 
@@ -3264,9 +3247,14 @@ model TenantSubscription {
   /// `ends_at = addCalendarMonthsVn(starts_at, term_months)`. NULL tạm ở bước expand —
   /// backfill xong siết NOT NULL ở đợt contract.
   termMonths        Int?      @map("term_months")
-  /// Số chỗ đã mua theo loại xe (ADR 0015 điều 1), vd { car: 5, motorbike: 10 }.
-  /// Số chỗ đã mua CHÍNH LÀ hạn mức xe — không có bước đếm xe cuối kỳ.
-  slotsJson         Json?     @map("slots_json") @db.JsonB
+  /// SNAPSHOT hạn mức của bậc gói lúc gán (ADR 0041 điều 3), vd
+  /// { maxVehicles: 3, maxBranches: 1, maxMembers: null } — `null` ở một trường = KHÔNG GIỚI HẠN.
+  ///
+  /// NULL cả cột = dòng KHÔNG có snapshot (tuyến hoa hồng, hoặc dòng trước ADR 0041); đường đọc
+  /// rơi về `plan.limits_json`. Snapshot tồn tại vì cùng lý do `billing_mode` được chụp lại
+  /// (ADR 0024 điều 2): admin sửa trần của một BẬC không được lật hạn mức của gian hàng đang
+  /// giữa kỳ đã trả tiền.
+  quotaJson         Json?     @map("quota_json") @db.JsonB
   /// SNAPSHOT chế độ thu phí lúc gán (ADR 0024 điều 2) — KHÔNG đọc xuyên qua `plans`:
   /// admin sửa bậc gói không được lật chế độ của tenant giữa kỳ.
   billingMode       String?   @map("billing_mode") @db.VarChar(30)
@@ -3293,8 +3281,8 @@ model TenantSubscription {
   @@map("tenant_subscriptions")
 }
 
-/// Hoá đơn gói — ADR 0015 điều 5. Sinh tại thời điểm mua / gia hạn / mua thêm chỗ, snapshot
-/// từng dòng vào `lines_json` ({ planId, planCode, termMonths, slots, lines: [...] }).
+/// Hoá đơn gói — ADR 0015 điều 5. Sinh tại thời điểm mua / gia hạn, snapshot từng dòng vào
+/// `lines_json` ({ planId, planCode, termMonths, quota, lines: [...] }).
 ///
 /// `subscription_id` NULL tới khi KÍCH HOẠT: gói chỉ bật khi tiền đã về (ADR 0026 điều 4 —
 /// webhook SePay hoặc admin gán tay); admin gán tay tạo hoá đơn `paid` + subscription trong
@@ -3305,7 +3293,7 @@ model TenantSubscription {
 /// tự sinh phiếu thu cho tenant — tiền gói sẽ hiện trên báo cáo của CHÍNH gian hàng như khoản
 /// thu của họ. Tiền gói ghi ở `paid_amount` + `bank_transactions` (W4).
 ///
-/// Writer: `BillingService` (mua/gia hạn/mua thêm chỗ) và — ngoại lệ có tên — job
+/// Writer: `BillingService` (mua/gia hạn) và — ngoại lệ có tên — job
 /// `subscription-lifecycle` của worker cho hoá đơn CHÀO gói khi tiêu hết lượt miễn phí
 /// (ADR 0026 điều 4; worker không import được service của api — cùng tiền lệ `lib/notify.ts`,
 /// hình dạng hàng khoá bằng `@xeprime/types`). Không có người ghi thứ ba.
@@ -3324,8 +3312,10 @@ model SubscriptionInvoice {
   code           String    @unique @db.VarChar(20)
   periodFrom     DateTime  @map("period_from") @db.Timestamptz(3)
   periodTo       DateTime  @map("period_to") @db.Timestamptz(3)
-  /// Snapshot lượt mua: { planId, planCode, termMonths, slots, lines: [{kind, vehicleType?,
-  /// quantity, months, unitPrice, amount}] } — hoá đơn phải tự giải thích được không cần join.
+  /// Snapshot lượt mua: { planId, planCode, termMonths, quota, lines: [{kind, quantity, months,
+  /// unitPrice, amount}] } — hoá đơn phải tự giải thích được không cần join. `quota` là hạn mức
+  /// sẽ ghi lên dòng thuê bao khi hoá đơn này kích hoạt gói (ADR 0041 điều 3); hoá đơn phát hành
+  /// TRƯỚC ADR 0041 mang `slots: {car, motorbike}` và `parsePlanInvoiceSnapshot` đọc được cả hai.
   linesJson      Json      @map("lines_json") @db.JsonB
   subtotal       Decimal   @db.Decimal(14, 2)
   discountAmount Decimal   @default(0) @map("discount_amount") @db.Decimal(14, 2)

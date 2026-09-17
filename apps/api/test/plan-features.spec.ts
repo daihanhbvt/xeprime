@@ -76,7 +76,6 @@ beforeAll(async () => {
       status: PLAN_STATUS.ACTIVE,
       billingMode: BILLING_MODE.PACKAGE,
       basePriceMonthly: 0,
-      durationDays: 30,
       limitsJson: { features: [PLAN_FEATURE.FINANCE, PLAN_FEATURE.BRANCHES] },
     },
   });
@@ -262,7 +261,6 @@ describe('năm mốc vòng đời gói trên PostgreSQL thật (F1)', () => {
         billingMode: BILLING_MODE.COMMISSION,
         commissionPercent: 10,
         basePriceMonthly: 0,
-        durationDays: 365,
         limitsJson: { features: [], graceDays: 7 },
       },
     });

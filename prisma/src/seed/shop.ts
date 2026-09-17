@@ -15,7 +15,7 @@ import {
   BILLING_MODE,
   BRANCH_STATUS,
   COMMISSION_TRACK_TERM_MONTHS,
-  DEFAULT_PACKAGE_PLAN_CODE,
+  SHOP_PLAN_CODE,
   SHOP_ONBOARDING_STATE,
   addCalendarMonthsVn,
   WALLET_OWNER_TYPE,
@@ -79,6 +79,25 @@ export interface ShopBuildResult {
  */
 const PACKAGE_DEMO_TERM_MONTHS = 3;
 
+/**
+ * Ba BẬC gian hàng (ADR 0041 điều 7) — dùng để suy cửa vào onboarding từ `planCode`.
+ *
+ * Một `Set` thay vì so chuỗi với một hằng: từ ADR 0041 tuyến gói có ba mã, và một phép so đơn
+ * lẻ sẽ lặng lẽ xếp hai bậc còn lại vào tuyến hoa hồng — gian hàng demo 40 xe sẽ ra đời với
+ * `onboarding_state = commission` và mọi màn đọc tuyến sẽ nói sai về nó.
+ */
+const PACKAGE_PLAN_CODES: ReadonlySet<string> = new Set(Object.values(SHOP_PLAN_CODE));
+
+/**
+ * Giá ĐÀM PHÁN của gian hàng demo nằm trên bậc bán-qua-tư-vấn (ADR 0041 điều 5).
+ *
+ * Bậc đó không có bảng giá để rơi về, và một dòng thuê bao 0đ trong dữ liệu demo nói sai hai
+ * điều cùng lúc: nó làm màn "Gói của tôi" hiện một gói miễn phí, và nó làm mọi báo cáo doanh thu
+ * demo thiếu đúng khách hàng lớn nhất. Con số ở đây là một hợp đồng giả định cho kỳ
+ * `PACKAGE_DEMO_TERM_MONTHS` — cùng vai trò với `price` mà admin gõ ở `BillingService.assign`.
+ */
+const PACKAGE_DEMO_NEGOTIATED_PRICE = 6_000_000;
+
 /** Tài xế mẫu — đủ ba loại hình, kèm một người đã nghỉ để thử lọc "chỉ tài xế đang làm". */
 const DRIVER_POOL = [
   { name: 'Nguyễn Văn Dũng', phone: '0921000001', type: DRIVER_TYPE.STAFF, licence: 'B2' },
@@ -113,17 +132,16 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
      *
      * Bản khai đã nói gian hàng này dùng gói nào; một trường thứ hai nói "cửa vào" chỉ là cơ hội
      * để hai chỗ lệch nhau (đúng loại lỗi mà docblock của `commission-owners.ts` kể lại). Gian
-     * hàng demo mang gói `package` là gian hàng ĐÃ trả tiền ⇒ `package_active`; mọi gian hàng
-     * còn lại là tuyến hoa hồng ⇒ `commission`.
+     * hàng demo mang một BẬC gian hàng là gian hàng ĐÃ trả tiền ⇒ `package_active`; mọi gian
+     * hàng còn lại là tuyến hoa hồng ⇒ `commission`.
      *
      * KHÔNG có gian hàng demo nào ở `package_pending`: seed dựng dữ liệu đã vận hành được, còn
      * `package_pending` là một gian hàng chưa dùng được gì cả. Muốn thử màn onboarding thì đi
      * đúng luồng thật ("Đăng ký gian hàng" → bước 2), vì đó chính là thứ cần thử.
      */
-    onboardingState:
-      spec.planCode === DEFAULT_PACKAGE_PLAN_CODE
-        ? SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE
-        : SHOP_ONBOARDING_STATE.COMMISSION,
+    onboardingState: PACKAGE_PLAN_CODES.has(spec.planCode ?? '')
+      ? SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE
+      : SHOP_ONBOARDING_STATE.COMMISSION,
     ownerUserId,
     phone: spec.owner.phone,
     email: spec.owner.email,
@@ -522,8 +540,10 @@ async function buildVehicleApprovals(
  *
  * ## Hai tuyến, hai kỳ hạn
  *
- * Tuyến gói: kỳ theo `spec.planSlots` (bán tối thiểu 3 tháng — ADR 0029 điều 3), tiền = chỗ ×
- * đơn giá × tháng.
+ * Tuyến gói: kỳ `PACKAGE_DEMO_TERM_MONTHS`, tiền = GIÁ NIÊM YẾT của kỳ đó trong bảng giá của
+ * bậc (ADR 0041 điều 2) — không phép nhân nào. Bậc `salesOnly` không có bảng giá, nên dòng demo
+ * của nó mang giá 0đ và một ghi chú nói rõ đó là gói cấp tay: đúng hình dạng mà
+ * `BillingService.assign` ghi khi admin gán một hợp đồng đàm phán.
  *
  * Tuyến hoa hồng: `COMMISSION_TRACK_TERM_MONTHS` (12 tháng), 0đ, KHÔNG có `slots_json`. Kỳ 12
  * tháng không phải chi tiết thẩm mỹ: tuyến hoa hồng không có ngày hết hạn trong sản phẩm, và
@@ -556,15 +576,9 @@ async function buildSubscription(
   }
 
   const isPackage = plan.billingMode === BILLING_MODE.PACKAGE;
-  const slots = isPackage ? (spec.planSlots ?? plan.slots) : null;
   const termMonths = isPackage ? PACKAGE_DEMO_TERM_MONTHS : COMMISSION_TRACK_TERM_MONTHS;
-  const price =
-    isPackage && slots
-      ? (plan.basePriceMonthly +
-          slots.car * plan.perVehiclePrice.car +
-          slots.motorbike * plan.perVehiclePrice.motorbike) *
-        termMonths
-      : 0;
+  const listed = plan.termPrices.find((t) => t.months === termMonths)?.price ?? null;
+  const price = isPackage ? (listed ? Number(listed) : PACKAGE_DEMO_NEGOTIATED_PRICE) : 0;
 
   const startsAt = daysFromToday(-15, 0);
   const fields = {
@@ -574,17 +588,20 @@ async function buildSubscription(
     // `price` là tiền CẢ KỲ — cùng ngữ nghĩa với `BillingService.assign` (pricing.total).
     price,
     termMonths,
-    // Snapshot chế độ thu phí từ gói (ADR 0015/0024) — cùng hình dạng dòng mà
+    // Snapshot HẠN MỨC từ bậc gói (ADR 0041 điều 3) — cùng hình dạng dòng mà
     // BillingService.assign ghi, để dữ liệu demo không khác dữ liệu thật.
-    // `JsonNull` chứ không phải `null`: cột jsonb nullable, và dòng tuyến hoa hồng phải GHI ĐÈ
-    // về NULL khi seed hội tụ một gian hàng từ tuyến gói về hoa hồng — bỏ khoá đi thì số chỗ cũ
-    // ở lại và trở thành hạn mức của một tenant không còn mua chỗ nào.
-    slotsJson: slots ?? Prisma.DbNull,
+    // `DbNull` chứ không phải `null`: cột jsonb nullable, và dòng tuyến hoa hồng phải GHI ĐÈ về
+    // NULL khi seed hội tụ một gian hàng từ tuyến gói về hoa hồng — bỏ khoá đi thì hạn mức cũ ở
+    // lại và trở thành trần của một tenant không còn mua bậc nào.
+    quotaJson: isPackage ? plan.quota : Prisma.DbNull,
     billingMode: plan.billingMode,
     commissionPercent: plan.commissionPercent,
     startsAt,
     endsAt: addCalendarMonthsVn(startsAt, termMonths),
-    note: 'Gói đang hiệu lực (seed demo).',
+    note:
+      isPackage && !listed
+        ? 'Gói cấp tay theo hợp đồng tư vấn (seed demo) — bậc này không bán tự động.'
+        : 'Gói đang hiệu lực (seed demo).',
     createdBy: deps.platform.adminUserId,
   };
 

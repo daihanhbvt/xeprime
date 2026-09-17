@@ -924,8 +924,6 @@ export class PublicListingsService {
                 requireTermsAcceptance: setting.requireTermsAcceptance,
                 depositMode: s === SERVICE_TYPE.WITH_DRIVER ? setting.depositMode : null,
                 instantBookEnabled: setting.autoAcceptEnabled,
-                autoAcceptMinLeadMinutes: setting.autoAcceptMinLeadMinutes,
-                autoAcceptMaxLeadMinutes: setting.autoAcceptMaxLeadMinutes,
                 minRentalMinutes: setting.minRentalMinutes,
               };
             }),

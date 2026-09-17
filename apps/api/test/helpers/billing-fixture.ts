@@ -110,7 +110,6 @@ export async function giveTenantPlan(
       // CHECK ở DB: bậc hoa hồng BẮT BUỘC có `commission_percent` trong [1, 20].
       commissionPercent: billingMode === BILLING_MODE.COMMISSION ? 10 : null,
       basePriceMonthly: 0,
-      durationDays: 30,
       /*
        * 900, KHÔNG để mặc định 0.
        *
@@ -120,7 +119,13 @@ export async function giveTenantPlan(
        * thứ tự chạy, không theo code.
        */
       sortOrder: 900,
-      limitsJson: { features: [...features], graceDays },
+      /*
+       * Không trần nào và không bảng giá: fixture này dựng một tenant ĐÃ có tuyến thu phí, không
+       * dựng một SKU để bán. Spec nào cần trần thật (chạm hạn mức xe/chi nhánh) thì khai
+       * `limits_json` của riêng nó — nhét một con số mặc định ở đây sẽ làm hàng chục spec không
+       * liên quan bắt đầu đỏ ở chiếc xe thứ N.
+       */
+      limitsJson: { features: [...features], graceDays, maxVehicles: null, termPrices: [] },
     },
     select: { id: true },
   });

@@ -6,9 +6,9 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   BILLING_MODE,
+  OWNER_LITE_VEHICLE_LIMIT,
   PLAN_STATUS,
   PLAN_STATUS_META,
-  VEHICLE_TYPE,
   type PlanStatus,
 } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
@@ -39,11 +39,12 @@ const MIN_TABLE_WIDTH = 1080;
  *    admin đọc ra "đây là một gói khách chọn mua" — và nút Ngừng bán bên cạnh nó trông như một
  *    thao tác hợp lệ, trong khi bấm vào là gỡ tuyến vào cửa của toàn sàn (backend từ chối bằng
  *    `DEFAULT_PLAN_PROTECTED`, nhưng một nút chỉ để báo lỗi là một nút sai).
- *  - **Bậc `package`** là SKU thật: bán được, ngừng bán được.
+ *  - **Bậc `package`** là SKU thật: bán được, ngừng bán được. Từ ADR 0041 có BA bậc, khác nhau
+ *    ở quy mô (trần xe, trần chi nhánh, bảng giá) chứ không ở năng lực.
  *
  * Và "Ngừng bán" nói về DANH MỤC, không nói về khách hàng: thuê bao đang chạy trên một bậc đã
- * ngừng bán vẫn chạy hết kỳ của nó với đúng giá và số chỗ đã snapshot (ADR 0024). Cột "Đã gán"
- * ngay cạnh là bằng chứng — nó vẫn đếm ra số khác 0.
+ * ngừng bán vẫn chạy hết kỳ của nó với đúng giá và hạn mức đã snapshot (ADR 0024 · ADR 0041
+ * điều 3). Cột "Đã gán" ngay cạnh là bằng chứng — nó vẫn đếm ra số khác 0.
  */
 
 export default function AdminPlansPage() {
@@ -103,19 +104,21 @@ export default function AdminPlansPage() {
 
   const empty = tCommon('labels.emptyValue');
 
-  /** `{gồm sẵn} → {trần}` cho một loại xe — trần null hiện "Không giới hạn". */
-  function slotRange(included: number | undefined, max: number | null | undefined): string {
-    return t('page.slotRange', {
-      included: included ?? 0,
-      max: max == null ? t('page.unlimited') : max,
-    });
+  /** Một dòng của bảng giá: "3 tháng · 250.000đ". */
+  function termLine(term: Plan['limits']['termPrices'][number]): string {
+    return t('page.termLine', { months: term.months, amount: fmt.money(term.price) });
+  }
+
+  /** Trần hiển thị — `null` là KHÔNG GIỚI HẠN, không phải "chưa khai". */
+  function limitText(value: number | null | undefined): string {
+    return value == null ? t('page.unlimited') : String(value);
   }
 
   const columns: DataTableColumn<Plan>[] = [
     {
       title: t('page.columns.plan'),
       key: 'name',
-      width: 240,
+      width: 260,
       render: (_, p) => (
         <div>
           <div className={styles.planName}>
@@ -125,6 +128,8 @@ export default function AdminPlansPage() {
                 <Tag color="green">{t('page.defaultTrackTag')}</Tag>
               </Tooltip>
             ) : null}
+            {p.limits.recommended ? <Tag color="orange">{t('page.recommendedTag')}</Tag> : null}
+            {p.limits.salesOnly ? <Tag color="purple">{t('page.salesOnlyTag')}</Tag> : null}
           </div>
           <div className={styles.meta}>
             {p.code}
@@ -147,42 +152,53 @@ export default function AdminPlansPage() {
       ),
     },
     {
-      title: t('page.columns.baseFee'),
-      key: 'baseFee',
-      align: 'right',
-      width: 140,
-      render: (_, p) => (p.billingMode === BILLING_MODE.PACKAGE ? fmt.money(p.basePriceMonthly) : empty),
-    },
-    {
-      title: t('page.columns.slotPrice'),
-      key: 'slotPrice',
-      width: 190,
+      /*
+       * Bảng giá đọc được ngay trên hàng: đó là thứ admin mở màn này để kiểm. Bốn kỳ hạn × bốn
+       * con số không nhét vừa một ô, nên hiện kỳ NGẮN NHẤT và kỳ DÀI NHẤT — hai đầu của biểu
+       * giá — rồi để tooltip kể đủ. Một cột "giá" chỉ có một con số sẽ không nói được bậc này
+       * bán mấy kỳ hạn.
+       */
+      title: t('page.columns.pricing'),
+      key: 'pricing',
+      width: 220,
       render: (_, p) => {
         if (p.billingMode !== BILLING_MODE.PACKAGE) return empty;
-        const { car, motorbike } = p.limits.perVehiclePrice;
-        if (car == null && motorbike == null) return t('page.noSlotSale');
+        if (p.limits.salesOnly) return <Tag color="purple">{t('page.salesOnlyPricing')}</Tag>;
+        const terms = p.limits.termPrices;
+        if (terms.length === 0) return t('page.noPricing');
         return (
-          <div>
-            {car != null ? (
-              <div>{`${domainLabel('vehicleType', VEHICLE_TYPE.CAR)} · ${fmt.money(car)}`}</div>
-            ) : null}
-            {motorbike != null ? (
-              <div>{`${domainLabel('vehicleType', VEHICLE_TYPE.MOTORBIKE)} · ${fmt.money(motorbike)}`}</div>
-            ) : null}
-          </div>
+          <Tooltip title={terms.map((term) => termLine(term)).join(' · ')}>
+            <div>
+              {terms.map((term) => (
+                <div key={term.months}>{termLine(term)}</div>
+              ))}
+            </div>
+          </Tooltip>
         );
       },
     },
     {
-      title: t('page.columns.slots'),
-      key: 'slots',
+      title: t('page.columns.limits'),
+      key: 'limits',
       width: 190,
       render: (_, p) => {
-        if (p.billingMode !== BILLING_MODE.PACKAGE) return empty;
+        /*
+         * Tuyến hoa hồng KHÔNG đọc trần từ `limits` — nó dùng `OWNER_LITE_VEHICLE_LIMIT`, một
+         * quy tắc trong code (ADR 0038 điều 12). Hiện "Không giới hạn" ở đây vì `limits_json`
+         * của nó để null là nói ngược hẳn với thứ backend thật sự chặn.
+         */
+        if (p.billingMode === BILLING_MODE.COMMISSION) {
+          return (
+            <div>
+              <div>{t('page.vehicleLimit', { value: String(OWNER_LITE_VEHICLE_LIMIT) })}</div>
+              <div>{t('page.branchLimit', { value: '1' })}</div>
+            </div>
+          );
+        }
         return (
           <div>
-            <div>{`${domainLabel('vehicleType', VEHICLE_TYPE.CAR)} · ${slotRange(p.limits.includedCars, p.limits.maxCars)}`}</div>
-            <div>{`${domainLabel('vehicleType', VEHICLE_TYPE.MOTORBIKE)} · ${slotRange(p.limits.includedMotorbikes, p.limits.maxMotorbikes)}`}</div>
+            <div>{t('page.vehicleLimit', { value: limitText(p.limits.maxVehicles) })}</div>
+            <div>{t('page.branchLimit', { value: limitText(p.limits.maxBranches) })}</div>
           </div>
         );
       },

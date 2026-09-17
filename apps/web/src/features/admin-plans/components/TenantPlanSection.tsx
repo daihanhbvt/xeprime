@@ -12,8 +12,7 @@ import {
   STATUS_COLOR,
   addCalendarMonthsVn,
   parsePlanLimits,
-  subscriptionTermTotalPreview,
-  termDiscountPercent,
+  planTermPrice,
   type PlanLimitsJson,
   type SubscriptionStatus,
   type SubscriptionTermMonths,
@@ -71,14 +70,25 @@ export function TenantPlanSection({
             <div className={styles.meta}>
               {t('tenant.expires', { date: fmt.date(currentPlan.endsAt) })}
               {LIST_SEPARATOR}
-              {currentPlan.slots
-                ? t('tenant.slotsSummary', {
-                    car: currentPlan.slots.car,
-                    motorbike: currentPlan.slots.motorbike,
+              {/*
+                Hạn mức đọc từ SNAPSHOT của dòng thuê bao, không từ bậc gói (ADR 0041 điều 3):
+                admin sửa trần của một bậc không lật hạn mức của gian hàng đang giữa kỳ, nên in
+                con số của bậc ở đây là nói sai về chính tenant đang mở.
+                `quota` null = tuyến hoa hồng hoặc dòng trước ADR 0041 — cả hai đều không có hạn
+                mức MUA để in.
+              */}
+              {currentPlan.quota
+                ? t('tenant.quotaSummary', {
+                    vehicles:
+                      currentPlan.quota.maxVehicles == null
+                        ? t('tenant.assign.unlimited')
+                        : String(currentPlan.quota.maxVehicles),
+                    branches:
+                      currentPlan.quota.maxBranches == null
+                        ? t('tenant.assign.unlimited')
+                        : String(currentPlan.quota.maxBranches),
                   })
-                : currentPlan.maxVehicles != null
-                  ? t('tenant.legacyMaxVehicles', { count: currentPlan.maxVehicles })
-                  : t('tenant.legacyUnlimited')}
+                : t('tenant.noQuota')}
             </div>
           </div>
         ) : (
@@ -148,7 +158,7 @@ function HistoryRow({
         <div className={styles.meta}>
           {fmt.date(sub.startsAt)} → {fmt.date(sub.endsAt)} · {fmt.money(sub.price)}
           {sub.termMonths != null
-            ? ` · ${t('tenant.assign.termOption', { months: sub.termMonths })}`
+            ? ` · ${t('tenant.termMonths', { months: sub.termMonths })}`
             : ''}
           {sub.note ? ` · ${sub.note}` : ''}
         </div>
@@ -203,8 +213,14 @@ function AssignPlanModal({
   const assign = useAssignSubscription(tenantId);
   const [planId, setPlanId] = useState<string | null>(null);
   const [termMonths, setTermMonths] = useState<SubscriptionTermMonths>(1);
-  const [carSlots, setCarSlots] = useState<number | null>(null);
-  const [motorbikeSlots, setMotorbikeSlots] = useState<number | null>(null);
+  /**
+   * Giá ĐÀM PHÁN — `null` = dùng giá niêm yết của kỳ hạn (ADR 0041 điều 5).
+   *
+   * Phân biệt `null` với `0` là điều kiện để cả hai ý định cùng diễn đạt được: bỏ trống là "lấy
+   * giá bảng", còn gõ 0 là "tặng kỳ này" — và một lượt tặng phải để lại dấu vết trong audit chứ
+   * không lẫn vào ca mặc định.
+   */
+  const [price, setPrice] = useState<number | null>(null);
 
   const selected: Plan | undefined = plans.data?.find((p) => p.id === planId);
   // PlanDto.limits đã đủ hình, nhưng parse lại cho ra kiểu chia sẻ (PlanLimitsJson) dùng
@@ -214,67 +230,62 @@ function AssignPlanModal({
     [selected],
   );
   const isPackage = selected?.billingMode === BILLING_MODE.PACKAGE;
+  const listed = limits ? planTermPrice(limits, termMonths) : null;
+  /** Bậc tư vấn, hoặc kỳ hạn ngoài bảng giá: không có gì để rơi về ⇒ `price` BẮT BUỘC. */
+  const priceRequired = Boolean(isPackage && listed === null);
 
-  const options = (plans.data ?? []).map((p) => ({
-    value: p.id,
-    label:
-      p.billingMode === BILLING_MODE.COMMISSION
-        ? t('tenant.assign.planOptionCommission', {
-            name: p.name,
-            percent: p.commissionPercent ?? 0,
-          })
-        : t('tenant.assign.planOptionPackage', {
-            name: p.name,
-            price: fmt.money(p.basePriceMonthly),
-          }),
-  }));
+  const options = (plans.data ?? []).map((p) => {
+    const planLimits = parsePlanLimits(p.limits);
+    return {
+      value: p.id,
+      label:
+        p.billingMode === BILLING_MODE.COMMISSION
+          ? t('tenant.assign.planOptionCommission', {
+              name: p.name,
+              percent: p.commissionPercent ?? 0,
+            })
+          : planLimits.salesOnly
+            ? t('tenant.assign.planOptionSalesOnly', { name: p.name })
+            : t('tenant.assign.planOptionPackage', {
+                name: p.name,
+                vehicles:
+                  planLimits.maxVehicles == null
+                    ? t('tenant.assign.unlimited')
+                    : String(planLimits.maxVehicles),
+              }),
+    };
+  });
 
   function selectPlan(id: string) {
     setPlanId(id);
-    const plan = plans.data?.find((p) => p.id === id);
-    const planLimits = plan ? parsePlanLimits(plan.limits) : null;
-    // Mặc định = số chỗ gồm sẵn của gói — đúng hành vi backend khi bỏ trống.
-    setCarSlots(planLimits?.includedCars ?? 0);
-    setMotorbikeSlots(planLimits?.includedMotorbikes ?? 0);
+    // Đổi bậc là đổi bảng giá — giữ lại một con số đàm phán của bậc trước là gán nhầm giá.
+    setPrice(null);
   }
-
-  /** Số chỗ hiệu lực: không dưới mức gồm sẵn (backend cũng nâng lên như vậy). */
-  const slots = useMemo(
-    () => ({
-      car: Math.max(carSlots ?? 0, limits?.includedCars ?? 0),
-      motorbike: Math.max(motorbikeSlots ?? 0, limits?.includedMotorbikes ?? 0),
-    }),
-    [carSlots, motorbikeSlots, limits],
-  );
 
   // Preview chu kỳ mới, cùng quy tắc BE: nối đuôi gói còn hạn, hết/chưa có thì từ bây giờ;
   // ends = THÁNG LỊCH qua addCalendarMonthsVn (ADR 0015 điều 2), không phải cộng ngày.
   const preview = useMemo(() => {
-    if (!selected || !limits) return null;
+    if (!selected) return null;
     const now = dayjs();
     const starts = currentEndsAt && dayjs(currentEndsAt).isAfter(now) ? dayjs(currentEndsAt) : now;
-    const total = subscriptionTermTotalPreview(
-      selected.basePriceMonthly,
-      limits,
-      slots,
-      termMonths,
-    );
     return {
       starts,
       ends: dayjs(addCalendarMonthsVn(starts.toDate(), termMonths)),
-      total,
       queued: Boolean(currentEndsAt && dayjs(currentEndsAt).isAfter(now)),
     };
-  }, [selected, limits, slots, termMonths, currentEndsAt]);
+  }, [selected, termMonths, currentEndsAt]);
+
+  /** Tiền sẽ ghi lên dòng thuê bao: con số admin gõ thắng giá niêm yết. */
+  const effectiveTotal = price ?? (listed == null ? null : Number(listed));
 
   const termOptions = SUBSCRIPTION_TERM_MONTHS.map((months) => {
-    const discount = limits ? termDiscountPercent(limits, months) : 0;
+    const amount = limits ? planTermPrice(limits, months) : null;
     return {
       value: months,
       label:
-        discount > 0
-          ? t('tenant.assign.termOptionDiscount', { months, percent: discount })
-          : t('tenant.assign.termOption', { months }),
+        amount == null
+          ? t('tenant.assign.termOptionNoPrice', { months })
+          : t('tenant.assign.termOptionPriced', { months, amount: fmt.money(amount) }),
     };
   });
 
@@ -284,11 +295,12 @@ function AssignPlanModal({
       return;
     }
     assign.mutate(
-      { planId, termMonths, ...(isPackage ? { slots } : {}) },
+      { planId, termMonths, ...(price == null ? {} : { price: String(price) }) },
       {
         onSuccess: () => {
           message.success(t('tenant.assign.success'));
           setPlanId(null);
+          setPrice(null);
           onClose();
         },
         onError: (err) => message.error(errorMessage(err)),
@@ -325,32 +337,47 @@ function AssignPlanModal({
                   onChange={setTermMonths}
                 />
               </label>
-              {isPackage && limits ? (
+              {isPackage ? (
                 <>
                   <label className={styles.assignField}>
-                    <span>{t('tenant.assign.carSlots')}</span>
+                    <span>{t('tenant.assign.price')}</span>
                     <InputNumber
-                      min={limits.includedCars}
-                      max={limits.maxCars ?? undefined}
-                      value={slots.car}
-                      onChange={(value) => setCarSlots(value)}
-                    />
-                  </label>
-                  <label className={styles.assignField}>
-                    <span>{t('tenant.assign.motorbikeSlots')}</span>
-                    <InputNumber
-                      min={limits.includedMotorbikes}
-                      max={limits.maxMotorbikes ?? undefined}
-                      value={slots.motorbike}
-                      onChange={(value) => setMotorbikeSlots(value)}
+                      min={0}
+                      step={10000}
+                      value={price}
+                      placeholder={
+                        listed == null
+                          ? t('tenant.assign.pricePlaceholderRequired')
+                          : fmt.money(listed)
+                      }
+                      onChange={setPrice}
                     />
                   </label>
                   <div className={styles.meta}>
-                    {t('tenant.assign.slotsHelp', {
-                      car: limits.includedCars,
-                      motorbike: limits.includedMotorbikes,
-                    })}
+                    {priceRequired
+                      ? t('tenant.assign.priceRequiredHelp')
+                      : t('tenant.assign.priceHelp')}
                   </div>
+                  {/*
+                    Hạn mức của lượt gán này đến từ BẬC và được snapshot lên dòng thuê bao
+                    (ADR 0041 điều 3) — admin không sửa được ở đây. Hiện nó ra vì đó là thứ thay
+                    đổi thật sự đối với gian hàng; muốn một trần khác thì sửa bậc, hoặc dựng một
+                    bậc riêng — không phải chỉnh tay một dòng thuê bao.
+                  */}
+                  {limits ? (
+                    <div className={styles.meta}>
+                      {t('tenant.assign.quotaSummary', {
+                        vehicles:
+                          limits.maxVehicles == null
+                            ? t('tenant.assign.unlimited')
+                            : String(limits.maxVehicles),
+                        branches:
+                          limits.maxBranches == null
+                            ? t('tenant.assign.unlimited')
+                            : String(limits.maxBranches),
+                      })}
+                    </div>
+                  ) : null}
                 </>
               ) : null}
             </div>
@@ -364,9 +391,9 @@ function AssignPlanModal({
               })}
               {preview.queued ? ` ${t('tenant.assign.previewQueued')}` : ''}
               <div>
-                {preview.total != null
-                  ? t('tenant.assign.previewTotal', { amount: fmt.money(String(preview.total)) })
-                  : t('tenant.assign.previewUnavailable')}
+                {effectiveTotal != null
+                  ? t('tenant.assign.previewTotal', { amount: fmt.money(String(effectiveTotal)) })
+                  : t('tenant.assign.previewNeedsPrice')}
               </div>
             </div>
           ) : null}
@@ -376,7 +403,7 @@ function AssignPlanModal({
             <Button
               type="primary"
               loading={assign.isPending}
-              disabled={Boolean(selected && isPackage && preview?.total == null)}
+              disabled={priceRequired && price == null}
               onClick={submit}
             >
               {tCommon('actions.confirm')}

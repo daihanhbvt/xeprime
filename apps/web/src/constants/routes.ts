@@ -467,6 +467,13 @@ export const vehiclePath = {
   edit: (id: string): string => `/manage/vehicles/${id}/edit`,
   /** Giá & chính sách theo xe (Wave 2): kế thừa gian hàng hoặc ghi đè riêng. */
   pricing: (id: string): string => `/manage/vehicles/${id}/pricing`,
+  /**
+   * Tối ưu nhận chuyến — tự động nhận, khoảng đặt trước, lộ trình ưu tiên (17/09/2026).
+   *
+   * Bề mặt chủ xe tuyến hoa hồng có mục này từ lâu ở `/account/vehicles/...`; gian hàng thì
+   * không, nên xe gian hàng không có đường nào bật "Đặt ngay" dù server vẫn đọc đúng cờ đó.
+   */
+  optimization: (id: string): string => `/manage/vehicles/${id}/optimization`,
 };
 
 /**
