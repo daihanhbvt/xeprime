@@ -181,21 +181,21 @@ export function hasVehicleServiceSettings(serviceType: string): boolean {
   return (VEHICLE_SERVICE_SETTING_SERVICES as string[]).includes(serviceType);
 }
 
-/** Lựa chọn "đặt trước ít nhất" (phút) — 1 giờ tới 3 ngày. */
-export const AUTO_ACCEPT_MIN_LEAD_OPTIONS_MINUTES: readonly number[] = [
-  60, 120, 240, 360, 720, 1440, 2880, 4320,
-];
-/** Lựa chọn "đặt trước tối đa" (phút) — 1 ngày tới 90 ngày. */
-export const AUTO_ACCEPT_MAX_LEAD_OPTIONS_MINUTES: readonly number[] = [
-  1440, 4320, 10080, 20160, 43200, 129600,
-];
-export const AUTO_ACCEPT_LEAD_MAX_MINUTES = 129600;
-export const AUTO_ACCEPT_DEFAULT_MIN_LEAD_MINUTES = 360;
-export const AUTO_ACCEPT_DEFAULT_MAX_LEAD_MINUTES = 10080;
+/*
+ * KHOẢNG ĐẶT TRƯỚC ĐÃ BỊ BỎ (17/09/2026).
+ *
+ * Trước đây tự động nhận chuyến còn kèm hai mốc "đặt trước ít nhất / nhiều nhất"
+ * (auto_accept_min_lead_minutes / auto_accept_max_lead_minutes) mặc định 6 giờ – 1 tuần.
+ * Hệ quả: chủ xe bật công tắc, thấy chữ "đang hoạt động", rồi vẫn phải duyệt tay mọi chuyến đặt
+ * gấp hoặc đặt xa — mà không có gì trên màn hình nói vì sao. Một công tắc nói dối về chính nó.
+ *
+ * Nay BẬT là nhận, không có mốc thời gian nào ở giữa. Điều kiện còn lại đều là điều kiện THẬT
+ * chứ không phải tuỳ chọn: xe còn trống (ADR 0006), giờ nhận/trả nằm trong khung giao nhận của
+ * xe, giá đã chốt, dài hạn luôn chốt tay (ADR 0011).
+ */
 
 /** Thời lượng thuê tối thiểu (có tài xế) — giờ, dạng phút. */
 export const MIN_RENTAL_MINUTES_RANGE = { min: 60, max: 24 * 60 } as const;
-export const MIN_BOOKING_LEAD_MINUTES_RANGE = { min: 60, max: 72 * 60 } as const;
 
 /**
  * Vì sao một yêu cầu KHÔNG được tự động nhận — MÃ, không phải câu; giao diện dịch qua `Domain`.
@@ -204,8 +204,6 @@ export const MIN_BOOKING_LEAD_MINUTES_RANGE = { min: 60, max: 72 * 60 } as const
 export const AUTO_ACCEPT_BLOCKER = {
   DISABLED: 'disabled',
   SERVICE_NOT_SUPPORTED: 'service_not_supported',
-  LEAD_TOO_SHORT: 'lead_too_short',
-  LEAD_TOO_LONG: 'lead_too_long',
   OUTSIDE_HANDOVER_WINDOW: 'outside_handover_window',
   BELOW_MIN_DURATION: 'below_min_duration',
   QUOTE_ESTIMATE: 'quote_estimate',

@@ -9,8 +9,6 @@ import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
   AUTO_ACCEPT_BLOCKER,
-  AUTO_ACCEPT_DEFAULT_MAX_LEAD_MINUTES,
-  AUTO_ACCEPT_DEFAULT_MIN_LEAD_MINUTES,
   BOOKING_STATUS_OCCUPYING,
   CUSTOMER_DOCUMENT_TYPE,
   DRIVER_DEPOSIT_MODE,
@@ -64,8 +62,6 @@ type Db = Prisma.TransactionClient | PrismaService;
 export interface EffectiveServiceSetting {
   serviceType: ServiceType;
   autoAcceptEnabled: boolean;
-  autoAcceptMinLeadMinutes: number;
-  autoAcceptMaxLeadMinutes: number;
   minRentalMinutes: number | null;
   preferredRouteTypes: string[];
   requiredDocuments: string[];
@@ -87,8 +83,6 @@ export interface AutoAcceptInput {
   serviceType: string;
   pickupAt: Date | null;
   returnAt: Date | null;
-  /** Thời điểm hỏi — mặc định bây giờ; truyền vào để test tất định. */
-  now?: Date;
   quoteIsEstimate: boolean;
   /** Tuyến hoa hồng sẽ sinh khoản giữ chỗ thay vì tạo đơn ngay. */
   holdRequired: boolean;
@@ -99,8 +93,6 @@ export interface AutoAcceptInput {
 const SERVICE_SELECT = {
   serviceType: true,
   autoAcceptEnabled: true,
-  autoAcceptMinLeadMinutes: true,
-  autoAcceptMaxLeadMinutes: true,
   minRentalMinutes: true,
   preferredRouteTypes: true,
   requiredDocuments: true,
@@ -309,12 +301,6 @@ export class VehicleSettingsService {
     const next: EffectiveServiceSetting = {
       ...current,
       ...(dto.autoAcceptEnabled !== undefined ? { autoAcceptEnabled: dto.autoAcceptEnabled } : {}),
-      ...(dto.autoAcceptMinLeadMinutes !== undefined
-        ? { autoAcceptMinLeadMinutes: dto.autoAcceptMinLeadMinutes }
-        : {}),
-      ...(dto.autoAcceptMaxLeadMinutes !== undefined
-        ? { autoAcceptMaxLeadMinutes: dto.autoAcceptMaxLeadMinutes }
-        : {}),
       ...(dto.minRentalMinutes !== undefined ? { minRentalMinutes: dto.minRentalMinutes } : {}),
       ...(dto.preferredRouteTypes !== undefined ? { preferredRouteTypes: dto.preferredRouteTypes } : {}),
       ...(dto.requiredDocuments !== undefined ? { requiredDocuments: dto.requiredDocuments } : {}),
@@ -326,10 +312,6 @@ export class VehicleSettingsService {
       ...(dto.depositMode !== undefined ? { depositMode: dto.depositMode as DriverDepositMode } : {}),
     };
 
-    // Ràng buộc chéo — class-validator không mô tả được quan hệ giữa trường.
-    if (next.autoAcceptMinLeadMinutes > next.autoAcceptMaxLeadMinutes) {
-      throw invalid('Mức đặt trước tối thiểu không được lớn hơn mức tối đa');
-    }
     if (serviceType === SERVICE_TYPE.SELF_DRIVE) {
       // Trường riêng của có tài xế bị chuẩn hoá về mặc định — không giữ dữ liệu ẩn không đường dùng.
       next.minRentalMinutes = null;
@@ -366,8 +348,6 @@ export class VehicleSettingsService {
     await this.prisma.$transaction(async (tx) => {
       const data = {
         autoAcceptEnabled: next.autoAcceptEnabled,
-        autoAcceptMinLeadMinutes: next.autoAcceptMinLeadMinutes,
-        autoAcceptMaxLeadMinutes: next.autoAcceptMaxLeadMinutes,
         minRentalMinutes: next.minRentalMinutes,
         preferredRouteTypes: [...new Set(next.preferredRouteTypes)],
         requiredDocuments: [...new Set(next.requiredDocuments)],
@@ -423,8 +403,6 @@ export class VehicleSettingsService {
       return {
         serviceType,
         autoAcceptEnabled: false,
-        autoAcceptMinLeadMinutes: AUTO_ACCEPT_DEFAULT_MIN_LEAD_MINUTES,
-        autoAcceptMaxLeadMinutes: AUTO_ACCEPT_DEFAULT_MAX_LEAD_MINUTES,
         minRentalMinutes: null,
         preferredRouteTypes: [],
         requiredDocuments: [],
@@ -439,8 +417,6 @@ export class VehicleSettingsService {
     return {
       serviceType,
       autoAcceptEnabled: row.autoAcceptEnabled,
-      autoAcceptMinLeadMinutes: row.autoAcceptMinLeadMinutes,
-      autoAcceptMaxLeadMinutes: row.autoAcceptMaxLeadMinutes,
       minRentalMinutes: row.minRentalMinutes,
       preferredRouteTypes: row.preferredRouteTypes,
       requiredDocuments: row.requiredDocuments,
@@ -494,10 +470,11 @@ export class VehicleSettingsService {
     if (!hasVehicleServiceSettings(input.serviceType)) return AUTO_ACCEPT_BLOCKER.SERVICE_NOT_SUPPORTED;
     if (!setting.autoAcceptEnabled) return AUTO_ACCEPT_BLOCKER.DISABLED;
     if (!input.pickupAt || !input.returnAt) return AUTO_ACCEPT_BLOCKER.SERVICE_NOT_SUPPORTED;
-    const now = input.now ?? new Date();
-    const leadMinutes = (input.pickupAt.getTime() - now.getTime()) / MS_PER_MINUTE;
-    if (leadMinutes < setting.autoAcceptMinLeadMinutes) return AUTO_ACCEPT_BLOCKER.LEAD_TOO_SHORT;
-    if (leadMinutes > setting.autoAcceptMaxLeadMinutes) return AUTO_ACCEPT_BLOCKER.LEAD_TOO_LONG;
+    /*
+     * KHÔNG còn mốc "đặt trước ít nhất/nhiều nhất" (17/09/2026): bật công tắc là nhận, đặt gấp
+     * hay đặt xa đều vậy. Mọi điều kiện dưới đây là ràng buộc THẬT của chuyến, không phải ngưỡng
+     * cấu hình — đó là lý do chúng ở lại.
+     */
     if (handoverBlocker(windows, input.pickupAt, input.returnAt)) {
       return AUTO_ACCEPT_BLOCKER.OUTSIDE_HANDOVER_WINDOW;
     }
@@ -805,8 +782,6 @@ function toServiceDto(
   return {
     serviceType: s.serviceType,
     autoAcceptEnabled: s.autoAcceptEnabled,
-    autoAcceptMinLeadMinutes: s.autoAcceptMinLeadMinutes,
-    autoAcceptMaxLeadMinutes: s.autoAcceptMaxLeadMinutes,
     minRentalMinutes: s.minRentalMinutes,
     preferredRouteTypes: s.preferredRouteTypes,
     requiredDocuments: s.requiredDocuments,
@@ -824,8 +799,6 @@ function toServiceDto(
 function auditShape(s: EffectiveServiceSetting): Record<string, unknown> {
   return {
     autoAcceptEnabled: s.autoAcceptEnabled,
-    autoAcceptMinLeadMinutes: s.autoAcceptMinLeadMinutes,
-    autoAcceptMaxLeadMinutes: s.autoAcceptMaxLeadMinutes,
     minRentalMinutes: s.minRentalMinutes,
     preferredRouteTypes: s.preferredRouteTypes,
     requiredDocuments: s.requiredDocuments,

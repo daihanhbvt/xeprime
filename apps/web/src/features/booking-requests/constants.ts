@@ -20,7 +20,14 @@ export interface BookingRequestTab {
   /** Trạng thái để tra `statusCounts`; `null` với tab "Tất cả" (cộng mọi trạng thái). */
   readonly status: BookingRequestStatus | null;
   /** Khoá message trong namespace `BookingRequests.tabs`. */
-  readonly labelKey: 'needsAction' | 'converted' | 'rejected' | 'cancelled' | 'expired' | 'all';
+  readonly labelKey:
+    | 'needsAction'
+    | 'paidNeedsAction'
+    | 'converted'
+    | 'rejected'
+    | 'cancelled'
+    | 'expired'
+    | 'all';
 }
 
 /**
@@ -36,6 +43,16 @@ export const BOOKING_REQUEST_TABS: readonly BookingRequestTab[] = [
     value: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
     status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
     labelKey: 'needsAction',
+  },
+  /*
+   * ĐÃ CỌC, CHỜ DUYỆT (ADR 0039) — tab riêng vì đây là việc khẩn nhất trong cả hộp thư: tiền
+   * của khách đang nằm ở XePrime, chỗ xe đang bị giữ, và hết hạn phản hồi là hệ thống tự hoàn
+   * rồi huỷ chuyến. Để nó lẫn trong "Tất cả" nghĩa là người trực phải tự đi tìm.
+   */
+  {
+    value: BOOKING_REQUEST_STATUS.HOLD_PAID,
+    status: BOOKING_REQUEST_STATUS.HOLD_PAID,
+    labelKey: 'paidNeedsAction',
   },
   {
     value: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,

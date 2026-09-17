@@ -106,7 +106,6 @@ export function BookingRequestCard({
   const domainLabel = useDomainLabel();
   const [noteExpanded, setNoteExpanded] = useState(false);
 
-  const isPending = request.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL;
   /*
    * Quá hạn phản hồi thì KHÔNG còn quyết định nào — server từ chối cả duyệt lẫn từ chối
    * (`BOOKING_REQUEST_EXPIRED`), nên bày nút ra là mời người dùng bấm một thứ chắc chắn hỏng.
@@ -116,7 +115,18 @@ export function BookingRequestCard({
    * là vị từ mà server dùng, nên hai phía không bao giờ nói hai câu khác nhau.
    */
   const pastDue = isBookingRequestPastDue(request.respondBy);
-  const decidable = isPending && !pastDue;
+  /*
+   * HAI chặng cần gian hàng quyết định, và chặng thứ hai là chặng TỐN KÉM hơn hẳn:
+   *
+   *   · `pending_host_approval` — khách mới hỏi, chưa ai mất gì;
+   *   · `hold_paid` (ADR 0039)  — khách ĐÃ TRẢ TIỀN và chỗ xe đang bị giữ. Bỏ sót chặng này là
+   *     bày ra một thẻ ghi "chờ bạn duyệt" mà không có nút nào để duyệt, trong khi tiền của
+   *     khách nằm ở XePrime và đồng hồ phản hồi đang chạy tới lượt hoàn tự động.
+   */
+  const needsDecision =
+    request.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL ||
+    request.status === BOOKING_REQUEST_STATUS.HOLD_PAID;
+  const decidable = needsDecision && !pastDue;
   // Bất kỳ thao tác nào đang chạy đều khoá CẢ HAI quyết định: duyệt và từ chối cùng lúc trên
   // một yêu cầu là hai kết cục loại trừ nhau, và cái tới sau chỉ nhận được lỗi khó hiểu.
   const busy = pendingAction !== null;
@@ -303,7 +313,7 @@ export function BookingRequestCard({
             đang ở đâu"), chỉ khác là theo trục thời gian. Chỉ hiện khi còn chờ: một đơn đã
             thành đơn thuê rồi thì hạn phản hồi là chuyện đã qua.
           */}
-          {isPending ? <RespondDeadline respondBy={request.respondBy} /> : null}
+          {needsDecision ? <RespondDeadline respondBy={request.respondBy} /> : null}
         </div>
 
         {/*
@@ -556,7 +566,7 @@ export function BookingRequestCard({
           <div className={styles.decision}>
             <RowActions actions={decisionActions} variant="filled" maxInline={2} />
           </div>
-        ) : isPending && pastDue ? (
+        ) : needsDecision && pastDue ? (
           // Nói vì sao không còn nút, và việc cần làm tiếp — im lặng ở đây đọc như một lỗi tải.
           <p className={styles.expiredHint}>{t('deadline.pastDueHint')}</p>
         ) : hasBookingLink ? (

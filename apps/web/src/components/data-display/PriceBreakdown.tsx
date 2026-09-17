@@ -51,6 +51,16 @@ interface PriceBreakdownProps {
   title?: string;
   /** Chip cạnh tiêu đề (tên xe, nguồn chính sách…). */
   badge?: ReactNode;
+  /**
+   * Người đang đọc bảng này là CHỦ XE hay KHÁCH. Mặc định là khách — bề mặt đông hơn, và mặc
+   * định an toàn phải là "ít lộ hơn".
+   *
+   * Quyết định đúng một chuyện: có vẽ những dòng do CHỦ XE chịu hay không. Thuế khấu trừ là ví
+   * dụ điển hình — nó KHÔNG cộng vào tổng khách (ADR 0032 điều 3), nên với khách nó chỉ là một
+   * con số lạ nằm giữa hoá đơn của mình. Với chủ xe thì ngược lại: đó là dòng giải thích vì sao
+   * số thực nhận thấp hơn tổng khách trả.
+   */
+  audience?: 'customer' | 'owner';
   /** Khối chú thích cuối (vd "Áp dụng chính sách riêng cho xe này"). */
   footer?: ReactNode;
   /**
@@ -81,6 +91,7 @@ export function PriceBreakdown({
   badge,
   footer,
   fees,
+  audience = 'customer',
 }: PriceBreakdownProps) {
   const tCommon = useTranslations('Common');
   const totalText = totalLabel ?? tCommon('components.price.subtotal');
@@ -88,6 +99,15 @@ export function PriceBreakdown({
   const titleText = title ?? tCommon('components.price.title');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
+
+  /*
+   * Dòng do CHỦ XE chịu chỉ vẽ cho chủ xe. Với khách, thuế khấu trừ là một con số lạ nằm giữa
+   * hoá đơn của họ mà họ không trả — nó không cộng vào tổng (ADR 0032 điều 3), nên hiện ra chỉ
+   * làm người ta tưởng mình đang gánh thuế của người khác.
+   */
+  const feeLines = (fees?.lines ?? []).filter(
+    (line) => audience === 'owner' || line.bearer !== FEE_BEARER.OWNER,
+  );
 
   return (
     <section className={styles.card} aria-label={titleText}>
@@ -142,11 +162,11 @@ export function PriceBreakdown({
         ) : null}
       </div>
 
-      {fees && fees.lines.length > 0 ? (
+      {fees && feeLines.length > 0 ? (
         <div className={styles.feesBlock}>
           <h4 className={styles.feesTitle}>{tCommon('components.price.feesTitle')}</h4>
           <dl className={styles.rows}>
-            {fees.lines.map((line) => (
+            {feeLines.map((line) => (
               <div key={line.key} className={styles.row}>
                 <dt className={styles.rowLabel}>
                   <span>{domainLabel('feeLine', line.key)}</span>

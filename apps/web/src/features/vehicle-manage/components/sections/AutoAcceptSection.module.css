@@ -45,12 +45,6 @@
   font-size: var(--xp-font-size-body-sm);
 }
 
-.pair {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--xp-space-md);
-}
-
 .rules {
   margin: 0;
   padding-left: 20px;
@@ -75,8 +69,22 @@
   margin: 4px 0 0;
 }
 
-@media (max-width: 640px) {
-  .pair {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.infoTrigger {
+  display: inline-flex;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+  cursor: help;
+}
+
+.infoTrigger:hover,
+.infoTrigger:focus-visible {
+  color: var(--xp-color-primary);
+}
+
+/* Hộp nổi: đủ rộng để bốn dòng điều kiện không xuống dòng vụn, vẫn vừa màn hình hẹp. */
+.rulesPopover {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  max-width: min(420px, calc(100vw - 48px));
 }

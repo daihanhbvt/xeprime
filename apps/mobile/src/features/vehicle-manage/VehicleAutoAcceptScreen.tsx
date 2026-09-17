@@ -1,3 +1,4 @@
+import { yupResolver } from '@hookform/resolvers/yup';
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
@@ -6,9 +7,6 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
 import {
-  AUTO_ACCEPT_MAX_LEAD_OPTIONS_MINUTES,
-  AUTO_ACCEPT_MIN_LEAD_OPTIONS_MINUTES,
-  MIN_BOOKING_LEAD_MINUTES_RANGE,
   MIN_RENTAL_MINUTES_RANGE,
   ROUTE_TYPE_VALUES,
   SERVICE_TYPE,
@@ -29,7 +27,6 @@ import { APP_SCOPE } from '@/features/shell/app-scope';
 import { useShellScope } from '@/features/shell/use-shell-scope';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { ROUTES } from '@/navigation/routes';
 import {
   VEHICLE_MANAGE_SECTION,
@@ -47,23 +44,11 @@ import {
 const RULES = ['schedule', 'window', 'quote', 'longTerm'] as const;
 
 const HOUR = 60;
-const DAY = 24 * HOUR;
-const WEEK = 7 * DAY;
 
 const schema = yup.object({
   autoAcceptEnabled: yup.boolean().defined(),
   // Giá trị giữ dạng CHUỖI vì `options` của ô chọn (web + native) khoá `value: string`; số thô
   // không khớp option nào nên ô hiện ra số phút trần ("60") hoặc bỏ trống. Quy về số lúc gửi đi.
-  autoAcceptMinLeadMinutes: yup.string().defined().required(),
-  autoAcceptMaxLeadMinutes: yup
-    .string()
-    .defined()
-    .required()
-    .test(
-      'min-max',
-      'minMax',
-      (max, ctx) => Number(max) >= Number(ctx.parent.autoAcceptMinLeadMinutes),
-    ),
   minRentalMinutes: yup.string().nullable().defined(),
   preferredRouteTypes: yup.array().of(yup.string().defined()).defined(),
 });
@@ -156,7 +141,11 @@ function AutoAcceptForm({
   const toast = useAppToast();
   const { switchTo } = useShellScope();
   const patch = usePatchVehicleServiceSetting(vehicleId, serviceType);
-  const resolver = useValidationResolver<FormValues>(schema, 'VehicleManage.autoAccept.validation');
+  /*
+   * `yupResolver` trần: bỏ ràng buộc "tối thiểu ≤ tối đa" cùng khoảng đặt trước (17/09/2026)
+   * thì schema này không còn câu lỗi nào để dịch, và namespace kia không còn tồn tại.
+   */
+  const resolver = yupResolver(schema);
   const withDriver = serviceType === SERVICE_TYPE.WITH_DRIVER;
   const capability = setting.withDriverAutoAccept;
   const capabilityBlocked = withDriver && capability ? !capability.available : false;
@@ -164,8 +153,6 @@ function AutoAcceptForm({
   const values = useMemo<FormValues>(
     () => ({
       autoAcceptEnabled: setting.autoAcceptEnabled,
-      autoAcceptMinLeadMinutes: String(setting.autoAcceptMinLeadMinutes),
-      autoAcceptMaxLeadMinutes: String(setting.autoAcceptMaxLeadMinutes),
       minRentalMinutes: setting.minRentalMinutes == null ? null : String(setting.minRentalMinutes),
       preferredRouteTypes: setting.preferredRouteTypes,
     }),
@@ -174,30 +161,6 @@ function AutoAcceptForm({
   const { control, handleSubmit, reset, formState } = useForm<FormValues>({ resolver, values });
   const enabled = useWatch({ control, name: 'autoAcceptEnabled' });
 
-  /** Nhãn "6 giờ tới" / "1 tuần tới" — dựng từ phút, không có bảng nhãn thứ hai. */
-  const leadLabel = (minutes: number) => {
-    const text =
-      minutes % WEEK === 0
-        ? t('common.weeks', { count: minutes / WEEK })
-        : minutes % DAY === 0
-          ? t('common.days', { count: minutes / DAY })
-          : minutes % HOUR === 0
-            ? t('common.hours', { count: minutes / HOUR })
-            : t('common.minutes', { count: minutes });
-    return t('autoAccept.leadValue', { value: text });
-  };
-
-  const minLeadOptions = (
-    withDriver
-      ? AUTO_ACCEPT_MIN_LEAD_OPTIONS_MINUTES.filter(
-          (m) => m >= MIN_BOOKING_LEAD_MINUTES_RANGE.min && m <= MIN_BOOKING_LEAD_MINUTES_RANGE.max,
-        )
-      : AUTO_ACCEPT_MIN_LEAD_OPTIONS_MINUTES
-  ).map((m) => ({ value: String(m), label: leadLabel(m) }));
-  const maxLeadOptions = AUTO_ACCEPT_MAX_LEAD_OPTIONS_MINUTES.map((m) => ({
-    value: String(m),
-    label: leadLabel(m),
-  }));
   const minRentalOptions = Array.from(
     { length: MIN_RENTAL_MINUTES_RANGE.max / HOUR },
     (_, i) => (i + 1) * HOUR,
@@ -207,8 +170,6 @@ function AutoAcceptForm({
     patch.mutate(
       {
         autoAcceptEnabled: next.autoAcceptEnabled,
-        autoAcceptMinLeadMinutes: Number(next.autoAcceptMinLeadMinutes),
-        autoAcceptMaxLeadMinutes: Number(next.autoAcceptMaxLeadMinutes),
         ...(withDriver
           ? {
               minRentalMinutes:
@@ -277,48 +238,20 @@ function AutoAcceptForm({
         />
       </Card>
 
-      <Card>
-        <YStack gap={space.md}>
-          <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-            {t('autoAccept.windowTitle')}
-          </Text>
-          {withDriver ? (
-            <>
-              <SelectField
-                control={control}
-                name="minRentalMinutes"
-                label={t('autoAccept.minRental')}
-                options={minRentalOptions}
-                hint={t('autoAccept.minRentalHint')}
-                disabled={!canEdit}
-              />
-              <SelectField
-                control={control}
-                name="autoAcceptMinLeadMinutes"
-                label={t('autoAccept.minLeadDriver')}
-                options={minLeadOptions}
-                hint={t('autoAccept.minLeadDriverHint')}
-                disabled={!canEdit}
-              />
-            </>
-          ) : (
+      {withDriver ? (
+        <Card>
+          <YStack gap={space.md}>
+            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+              {t('autoAccept.withDriverTitle')}
+            </Text>
             <SelectField
               control={control}
-              name="autoAcceptMinLeadMinutes"
-              label={t('autoAccept.minLead')}
-              options={minLeadOptions}
+              name="minRentalMinutes"
+              label={t('autoAccept.minRental')}
+              options={minRentalOptions}
+              hint={t('autoAccept.minRentalHint')}
               disabled={!canEdit}
             />
-          )}
-          <SelectField
-            control={control}
-            name="autoAcceptMaxLeadMinutes"
-            label={t('autoAccept.maxLead')}
-            options={maxLeadOptions}
-            disabled={!canEdit}
-          />
-
-          {withDriver ? (
             <Controller
               control={control}
               name="preferredRouteTypes"
@@ -360,9 +293,9 @@ function AutoAcceptForm({
                 </YStack>
               )}
             />
-          ) : null}
-        </YStack>
-      </Card>
+          </YStack>
+        </Card>
+      ) : null}
 
       <Card tone="muted" lift="flat">
         <YStack gap={space.xs}>

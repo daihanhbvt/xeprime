@@ -267,7 +267,9 @@
     "rentalTotal": "Rental",
     "ownerNet": "You receive",
     "noteRenter": "Priced with the policy in force. The final amount is confirmed when the host approves.",
-    "noteHost": "Trip fees sit on the guest side and are not deducted from your payout. The final amount is confirmed when you approve."
+    "noteHost": "Trip fees sit on the guest side and are not deducted from your payout. The final amount is confirmed when you approve.",
+    "badgeSettled": "Final",
+    "noteSettled": "These figures were locked when you paid the reservation and will not change."
   },
   "transitional": {
     "title": "Trips I rented"

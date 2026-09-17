@@ -25,6 +25,7 @@ import { useTranslations } from 'next-intl';
 import {
   BOOKING_STATUS,
   PERMISSION,
+  VEHICLE_SERVICE_SETTING_SERVICES,
   VEHICLE_ALERT_KIND,
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS,
@@ -176,6 +177,7 @@ export function Vehicle360Overview({
       <div className={styles.columns}>
         <div className={styles.column}>
           <PricingCard vehicle={vehicle} canEdit={canEdit} />
+          <AutomationCard vehicle={vehicle} canEdit={canEdit} />
           <DocumentsCard vehicleId={vehicle.id} summary={summary} />
           <SpecsCard vehicle={vehicle} />
           <MediaCard vehicle={vehicle} />
@@ -516,6 +518,40 @@ function PerformanceCard({
 }
 
 /* ─── Lưới hai cột ────────────────────────────────────────────────────────── */
+
+/**
+ * TỐI ƯU NHẬN CHUYẾN — đường vào duy nhất tới thiết lập tự động nhận của xe gian hàng.
+ *
+ * Trước 17/09/2026 thiết lập này chỉ có ở bề mặt chủ xe tuyến hoa hồng, nên xe của gian hàng
+ * không có chỗ nào bật "Đặt ngay" — dù server vẫn đọc đúng cờ đó cho cả hai tuyến. Một trang
+ * không có lối vào thì bằng như chưa có, nên thẻ này ra đời cùng lúc với trang.
+ *
+ * Chỉ hiện khi xe phục vụ ít nhất một dịch vụ CÓ thiết lập riêng: thuê dài hạn luôn do gian
+ * hàng chốt lịch tay (ADR 0011), nên với xe chỉ cho thuê dài hạn thì thẻ này không có gì để nói.
+ */
+function AutomationCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
+  const t = useTranslations('Vehicles.overview');
+  const hasConfigurableService = VEHICLE_SERVICE_SETTING_SERVICES.some((service) =>
+    vehicle.serviceTypes.includes(service),
+  );
+  if (!hasConfigurableService) return null;
+
+  return (
+    <Card
+      title={t('automation.title')}
+      extra={
+        canEdit ? (
+          <Link href={vehiclePath.optimization(vehicle.id)} className={styles.cardLink}>
+            {t('automation.editLink')}
+          </Link>
+        ) : null
+      }
+      className={styles.sectionCard}
+    >
+      <p className={styles.cardHint}>{t('automation.hint')}</p>
+    </Card>
+  );
+}
 
 function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
   const t = useTranslations('Vehicles.overview');

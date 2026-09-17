@@ -12,6 +12,7 @@
   "tabs": {
     "ariaLabel": "Filter requests by status",
     "needsAction": "Needs action",
+    "paidNeedsAction": "Paid · awaiting approval",
     "converted": "Booking created",
     "rejected": "Rejected",
     "cancelled": "Cancelled",

@@ -704,8 +704,6 @@
   "autoAcceptBlocker": {
     "disabled": "Xe chưa bật tự động nhận chuyến",
     "service_not_supported": "Dịch vụ này không hỗ trợ tự động nhận",
-    "lead_too_short": "Giờ nhận xe quá gần so với mức đặt trước tối thiểu",
-    "lead_too_long": "Giờ nhận xe quá xa so với mức đặt trước tối đa",
     "outside_handover_window": "Giờ giao/nhận nằm ngoài khung giờ chủ xe phục vụ",
     "below_min_duration": "Thời lượng thuê ngắn hơn mức tối thiểu",
     "quote_estimate": "Giá còn tạm tính, chủ xe cần xác nhận",

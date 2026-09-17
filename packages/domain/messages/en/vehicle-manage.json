@@ -144,7 +144,7 @@
   },
   "autoAccept": {
     "activeTitle": "Instant booking is active",
-    "activeBody": "The system will automatically accept rental requests that meet the criteria below, without manual approval.",
+    "activeBody": "Qualifying rental requests are confirmed straight away, with no manual approval from you.",
     "inactiveTitle": "Manual approval",
     "inactiveBody": "Every rental request waits for your decision within 60 minutes.",
     "toggleTitle": "Auto-accept trips",
@@ -152,12 +152,7 @@
     "toggleLabel": "Auto-accept trips",
     "instantTitle": "Instant booking",
     "instantBody": "Renters do not wait for manual approval. The system confirms automatically when a driver is free.",
-    "windowTitle": "Notice window for auto-acceptance",
-    "minLead": "From",
-    "maxLead": "Up to",
-    "leadValue": "{value} ahead",
-    "minLeadDriver": "Minimum notice",
-    "minLeadDriverHint": "Notice required to schedule a driver (1 – 72 hours)",
+    "withDriverTitle": "Chauffeured-trip conditions",
     "minRental": "Minimum rental duration",
     "minRentalHint": "Supported range: 1 – 24 hours",
     "routesTitle": "Preferred trip types",
@@ -177,10 +172,7 @@
     "capabilityNoDriver": "No active drivers yet. Add a driver in the management portal before enabling.",
     "capabilityOk": "{count, plural, one {# active driver} other {# active drivers}} — the system assigns a free driver on acceptance.",
     "openDrivers": "Manage drivers",
-    "saved": "Instant booking settings saved",
-    "validation": {
-      "minMax": "Minimum notice cannot exceed maximum notice"
-    }
+    "saved": "Instant booking settings saved"
   },
   "delivery": {
     "title": "Home delivery",

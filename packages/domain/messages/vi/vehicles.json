@@ -601,7 +601,12 @@
       "item": "Đơn {code} · {status}",
       "sub": "{customer} • {range} • {amount}"
     },
-    "dateRange": "{from} – {to}"
+    "dateRange": "{from} – {to}",
+    "automation": {
+      "title": "Tối ưu nhận chuyến",
+      "editLink": "Cấu hình",
+      "hint": "Bật tự động nhận chuyến để khách đặt xong là có đơn ngay, không phải chờ bạn bấm duyệt. Đặt kèm khoảng đặt trước và điều kiện áp dụng riêng cho xe này."
+    }
   },
   "edit": {
     "title": "Sửa hồ sơ xe",
@@ -1319,6 +1324,28 @@
       "costMin": "Số tiền không được âm",
       "endRequired": "Nhập thời điểm kết thúc để giữ lịch xe",
       "endAfterStart": "Thời điểm kết thúc phải sau thời điểm bắt đầu"
+    }
+  },
+  "optimization": {
+    "title": "Tối ưu nhận chuyến",
+    "subtitle": "Bật tự động nhận chuyến và đặt điều kiện áp dụng cho riêng xe này",
+    "backToVehicle": "Về hồ sơ xe",
+    "backToList": "Về danh sách xe",
+    "forbidden": {
+      "title": "Không có quyền truy cập",
+      "description": "Bạn cần quyền dưới đây để xem thiết lập nhận chuyến của xe."
+    },
+    "loadError": {
+      "title": "Không tải được thiết lập nhận chuyến"
+    },
+    "notFound": {
+      "title": "Không tìm thấy xe",
+      "description": "Xe có thể đã bị xoá hoặc không thuộc gian hàng này."
+    },
+    "noService": {
+      "title": "Xe chưa bật dịch vụ nào có thiết lập riêng",
+      "description": "Tự động nhận chuyến áp dụng cho thuê tự lái và thuê có tài xế. Thuê dài hạn luôn do gian hàng chốt lịch tay nên không có thiết lập này.",
+      "action": "Sửa dịch vụ của xe"
     }
   }
 }

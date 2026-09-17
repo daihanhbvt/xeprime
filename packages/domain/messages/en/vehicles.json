@@ -601,7 +601,12 @@
       "item": "Booking {code} · {status}",
       "sub": "{customer} • {range} • {amount}"
     },
-    "dateRange": "{from} – {to}"
+    "dateRange": "{from} – {to}",
+    "automation": {
+      "title": "Booking automation",
+      "editLink": "Configure",
+      "hint": "Turn on instant booking so a paid request becomes an order without waiting for your approval. Set the lead time and conditions that apply to this vehicle."
+    }
   },
   "edit": {
     "title": "Edit vehicle",
@@ -1319,6 +1324,28 @@
       "costMin": "The amount cannot be negative",
       "endRequired": "Enter an end time to hold the vehicle slot",
       "endAfterStart": "The end time must be after the start time"
+    }
+  },
+  "optimization": {
+    "title": "Booking automation",
+    "subtitle": "Turn on instant booking and set the conditions that apply to this vehicle",
+    "backToVehicle": "Back to vehicle",
+    "backToList": "Back to vehicles",
+    "forbidden": {
+      "title": "No access",
+      "description": "You need the permission below to view this vehicle’s booking settings."
+    },
+    "loadError": {
+      "title": "Could not load the booking settings"
+    },
+    "notFound": {
+      "title": "Vehicle not found",
+      "description": "It may have been deleted, or it does not belong to this shop."
+    },
+    "noService": {
+      "title": "No service with its own settings is enabled",
+      "description": "Instant booking applies to self-drive and with-driver rentals. Long-term rentals are always scheduled by the shop, so they have no such setting.",
+      "action": "Edit vehicle services"
     }
   }
 }

@@ -120,8 +120,6 @@ describe('ListingDetailView — điều kiện thuê công bố', () => {
         requireTermsAcceptance: true,
         depositMode: null,
         instantBookEnabled: true,
-        autoAcceptMinLeadMinutes: 360,
-        autoAcceptMaxLeadMinutes: 10080,
         minRentalMinutes: null,
       },
       {
@@ -132,8 +130,6 @@ describe('ListingDetailView — điều kiện thuê công bố', () => {
         requireTermsAcceptance: false,
         depositMode: 'none',
         instantBookEnabled: false,
-        autoAcceptMinLeadMinutes: 360,
-        autoAcceptMaxLeadMinutes: 10080,
         minRentalMinutes: 720,
       },
     ],

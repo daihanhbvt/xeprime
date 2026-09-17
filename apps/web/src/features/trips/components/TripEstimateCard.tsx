@@ -27,9 +27,18 @@ import styles from './TripEstimateCard.module.css';
 export function TripEstimateCard({
   estimate,
   isHost,
+  settled = false,
 }: {
   estimate: CustomerTripEstimate;
   isHost: boolean;
+  /**
+   * Khách ĐÃ TRẢ khoản giữ chỗ ⇒ bảng này không còn là "tạm tính".
+   *
+   * Từ ADR 0039, chuyến đã cọc đọc SNAPSHOT đã đóng băng trên hold thay vì một lượt báo giá mới,
+   * nên mọi con số ở đây đúng bằng thứ đã thu. Vẫn dán nhãn "tạm tính" lên nó là nói với người
+   * vừa chuyển tiền rằng số họ trả có thể đổi — đúng câu hỏi người dùng đã hỏi ngày 17/09/2026.
+   */
+  settled?: boolean;
 }) {
   const t = useTranslations('Trips.estimate');
   const fmt = useAppFormat();
@@ -37,12 +46,13 @@ export function TripEstimateCard({
   return (
     <PriceBreakdown
       title={t('title')}
-      badge={t('badge')}
+      badge={settled ? t('badgeSettled') : t('badge')}
       rows={estimate.rows}
       totalAmount={estimate.rentalTotal}
       totalLabel={t('rentalTotal')}
       depositAmount={estimate.depositAmount}
       fees={estimate.fees}
+      audience={isHost ? 'owner' : 'customer'}
       footer={
         <div className={styles.footer}>
           {/*
@@ -55,7 +65,9 @@ export function TripEstimateCard({
               <span className={styles.netValue}>{fmt.money(estimate.fees.ownerNetAmount)}</span>
             </p>
           ) : null}
-          <p className={styles.note}>{isHost ? t('noteHost') : t('noteRenter')}</p>
+          <p className={styles.note}>
+            {settled ? t('noteSettled') : isHost ? t('noteHost') : t('noteRenter')}
+          </p>
         </div>
       }
     />
