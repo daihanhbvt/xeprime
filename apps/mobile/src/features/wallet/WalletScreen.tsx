@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { absoluteMoney, isNegativeMoney } from '@xeprime/domain';
@@ -7,6 +7,7 @@ import {
   STATUS_COLOR,
   WITHDRAWAL_STATUS,
   WITHDRAWAL_STATUS_META,
+  type StatusColor,
   type WithdrawalStatus,
 } from '@xeprime/types';
 import { useAppToast } from '@/components/feedback/use-app-toast';
@@ -15,9 +16,13 @@ import { Screen } from '@/components/layout/Screen';
 import { ScreenError } from '@/components/state/ScreenError';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { BlockTitle } from '@/components/ui/BlockTitle';
-import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { CardAccent } from '@/components/ui/CardAccent';
+import { CardActionBar, type CardAction } from '@/components/ui/CardActionBar';
+import type { IconName } from '@/components/ui/Chip';
 import { Divider } from '@/components/ui/DataRow';
+import { IconDisc } from '@/components/ui/IconDisc';
+import { IconLine } from '@/components/ui/IconLine';
 import { Pagination } from '@/components/ui/Pagination';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -62,6 +67,7 @@ export function WalletScreen({ scope = WALLET_SCOPE.ACCOUNT }: { scope?: WalletS
   const entries = useWalletEntries(scope, page);
   const withdrawals = useWithdrawals(scope);
   const requests = withdrawals.data ?? [];
+  const rows = entries.data?.items ?? [];
 
   const isShop = scope === WALLET_SCOPE.SHOP;
   const title = t(isShop ? 'title.tenant' : 'title.user');
@@ -90,9 +96,7 @@ export function WalletScreen({ scope = WALLET_SCOPE.ACCOUNT }: { scope?: WalletS
             {withdrawals.isPending ? (
               <MiniRowsSkeleton rows={2} />
             ) : requests.length === 0 ? (
-              <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                {t('requests.empty')}
-              </Text>
+              <EmptyNote>{t('requests.empty')}</EmptyNote>
             ) : (
               requests.map((request) => (
                 <WithdrawalRow key={request.id} request={request} scope={scope} />
@@ -110,20 +114,21 @@ export function WalletScreen({ scope = WALLET_SCOPE.ACCOUNT }: { scope?: WalletS
                 title={t('loadError')}
                 onRetry={() => void entries.refetch()}
               />
-            ) : (entries.data?.items.length ?? 0) === 0 ? (
-              <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                {t('entries.empty')}
-              </Text>
+            ) : rows.length === 0 ? (
+              <EmptyNote>{t('entries.empty')}</EmptyNote>
             ) : (
+              /*
+               * Sổ là MỘT mặt phẳng chia bằng kẻ ngang chạy sát hai mép thẻ, không phải N thẻ rời.
+               * Bản trước đệm cả cụm rồi kẻ bên trong: đường kẻ thụt vào 16pt hai đầu đọc ra như
+               * vẽ hụt, và mỗi dòng phải gánh thêm một lớp `YStack` chỉ để chở đường kẻ đó.
+               */
               <Card padded={false}>
-                <YStack p={space.md} gap={space.sm}>
-                  {(entries.data?.items ?? []).map((entry, index) => (
-                    <YStack key={entry.id} gap={space.sm}>
-                      {index > 0 ? <Divider /> : null}
-                      <EntryRow entry={entry} />
-                    </YStack>
-                  ))}
-                </YStack>
+                {rows.map((entry, index) => (
+                  <Fragment key={entry.id}>
+                    {index > 0 ? <Divider /> : null}
+                    <EntryRow entry={entry} />
+                  </Fragment>
+                ))}
               </Card>
             )}
 
@@ -145,10 +150,28 @@ export function WalletScreen({ scope = WALLET_SCOPE.ACCOUNT }: { scope?: WalletS
 }
 
 /**
- * Một lệnh rút.
+ * Chỗ trống của một KHỐI (chưa có lệnh rút, sổ chưa có dòng nào).
+ *
+ * Một dòng chữ xám thả trần dưới tiêu đề khối đọc ra như phần nội dung chưa tải xong. Cho nó một
+ * mặt phẳng mờ thì nó thành câu trả lời "ở đây đang trống", đúng chỗ mà nội dung sẽ xuất hiện.
+ */
+function EmptyNote({ children }: { children: string }) {
+  return (
+    <Card tone="muted" lift="flat">
+      <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center">
+        {children}
+      </Text>
+    </Card>
+  );
+}
+
+/**
+ * Một lệnh rút — cùng khuôn thẻ với phiếu thu/chi và khoản đã trả: vạch trạng thái ở mép trái,
+ * SỐ TIỀN là thứ to nhất, nhãn trạng thái đối diện, thao tác ở chân thẻ.
  *
  * Ba dòng phụ LOẠI TRỪ nhau, đúng thứ tự ưu tiên của web: bị từ chối (kèm lý do) → đã chuyển →
- * hạn chuyển. Hiện cả ba là kể ba câu chuyện cho một lệnh.
+ * hạn chuyển. Hiện cả ba là kể ba câu chuyện cho một lệnh. Dòng đó mang MÀU của chính nó — một
+ * lý do từ chối in xám giữa hai dòng xám khác là câu quan trọng nhất thẻ mà không ai đọc.
  *
  * Nút huỷ CHỈ có ở trạng thái `pending`: lệnh đã duyệt là tiền đang trên đường đi, huỷ nó ở client
  * chỉ tạo ra một nút mà server luôn từ chối.
@@ -162,58 +185,82 @@ function WithdrawalRow({ request, scope }: { request: WithdrawalRequest; scope: 
   const cancel = useCancelWithdrawal(scope);
   const [confirming, setConfirming] = useState(false);
 
-  const note =
+  const statusColor: StatusColor =
+    WITHDRAWAL_STATUS_META[request.status as WithdrawalStatus]?.color ?? STATUS_COLOR.NEUTRAL;
+
+  const note: { text: string; icon: IconName; tone?: string } | null =
     request.status === WITHDRAWAL_STATUS.REJECTED && request.rejectReason
-      ? t('requests.rejected', { reason: request.rejectReason })
+      ? {
+          text: t('requests.rejected', { reason: request.rejectReason }),
+          icon: 'close-circle-outline',
+          tone: colors.danger,
+        }
       : request.paidAt
-        ? t('requests.paidAt', { time: fmt.dateTime(request.paidAt) })
+        ? {
+            text: t('requests.paidAt', { time: fmt.dateTime(request.paidAt) }),
+            icon: 'checkmark-circle-outline',
+            tone: colors.success,
+          }
         : request.dueBy
-          ? t('requests.dueBy', { time: fmt.dateTime(request.dueBy) })
+          ? { text: t('requests.dueBy', { time: fmt.dateTime(request.dueBy) }), icon: 'time-outline' }
           : null;
+
+  const actions: CardAction[] =
+    request.status === WITHDRAWAL_STATUS.PENDING
+      ? [
+          {
+            key: 'cancel',
+            label: t('requests.cancel'),
+            icon: 'close-circle-outline',
+            tone: 'danger',
+            onPress: () => setConfirming(true),
+          },
+        ]
+      : [];
 
   return (
     <>
-      <Card>
-        <YStack gap={space.sm}>
-          <XStack ai="flex-start" gap={space.sm}>
-            <YStack f={1} minWidth={0} gap={2}>
-              <XStack ai="baseline" gap={space.xs}>
-                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
+      <Card padded={false}>
+        <XStack>
+          <CardAccent color={statusColor} />
+
+          <YStack f={1} minWidth={0}>
+            <YStack p={space.sm} gap={space.xs}>
+              <XStack ai="center" gap={space.xs}>
+                <Text
+                  f={1}
+                  minWidth={0}
+                  col={colors.text}
+                  fos={fontSize.h4}
+                  fow={fontWeight.bold}
+                  numberOfLines={1}
+                >
                   {fmt.money(request.amount)}
                 </Text>
-                <Text col={colors.textMuted} fos={fontSize.label}>
-                  {request.code}
-                </Text>
+                <StatusBadge
+                  label={domainLabel('withdrawalStatus', request.status)}
+                  color={statusColor}
+                  size="sm"
+                />
               </XStack>
-              <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                {request.bankCode} · {request.accountNumberMasked}
-              </Text>
+
+              {/* Tiền về ĐÂU — mẩu người ta soát lại trước khi chờ hai ngày làm việc. */}
+              <IconLine icon="card-outline" iconTone={colors.primaryActive} strong>
+                {`${request.bankCode} · ${request.accountNumberMasked}`}
+              </IconLine>
+
+              <IconLine icon="receipt-outline">{request.code}</IconLine>
+
               {note ? (
-                <Text col={colors.textMuted} fos={fontSize.label}>
-                  {note}
-                </Text>
+                <IconLine icon={note.icon} {...(note.tone ? { tone: note.tone } : {})}>
+                  {note.text}
+                </IconLine>
               ) : null}
             </YStack>
 
-            <StatusBadge
-              label={domainLabel('withdrawalStatus', request.status)}
-              color={
-                WITHDRAWAL_STATUS_META[request.status as WithdrawalStatus]?.color ??
-                STATUS_COLOR.NEUTRAL
-              }
-              size="sm"
-            />
-          </XStack>
-
-          {request.status === WITHDRAWAL_STATUS.PENDING ? (
-            <Button
-              label={t('requests.cancel')}
-              variant="secondary"
-              size="sm"
-              onPress={() => setConfirming(true)}
-            />
-          ) : null}
-        </YStack>
+            <CardActionBar actions={actions} />
+          </YStack>
+        </XStack>
       </Card>
 
       <AlertDialog
@@ -240,7 +287,13 @@ function WithdrawalRow({ request, scope }: { request: WithdrawalRequest; scope: 
   );
 }
 
-/** Một dòng sổ. `amount` dương = điểm vào ví, âm = ra — dấu và MÀU phải nói cùng một điều. */
+/**
+ * Một dòng sổ. `amount` dương = điểm vào ví, âm = ra — dấu, MÀU và HÌNH phải nói cùng một điều.
+ *
+ * Đĩa mũi tên ở đầu dòng là thứ phân loại dòng TRƯỚC KHI mắt kịp đọc chữ: trên một trang hai mươi
+ * dòng, một dấu `+`/`−` ở tận mép phải bắt người ta đọc từng con số mới thấy được nhịp vào/ra của
+ * cả trang.
+ */
 function EntryRow({ entry }: { entry: WalletEntry }) {
   const t = useTranslations('Wallet');
   const fmt = useAppFormat();
@@ -248,11 +301,23 @@ function EntryRow({ entry }: { entry: WalletEntry }) {
 
   // Tiền đọc trên CHUỖI, không qua `Number` (ADR 0007) — hai helper này tính trên bigint.
   const positive = !isNegativeMoney(entry.amount);
+  const tone = positive ? colors.success : colors.danger;
 
   return (
-    <XStack ai="flex-start" gap={space.sm}>
+    <XStack ai="center" gap={space.sm} px={space.md} py={space.sm}>
+      <IconDisc
+        icon={positive ? 'arrow-down' : 'arrow-up'}
+        tone={tone}
+        surface={positive ? colors.successSurface : colors.dangerSurface}
+      />
+
       <YStack f={1} minWidth={0} gap={2}>
-        <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
+        <Text
+          col={colors.text}
+          fos={fontSize.bodySm}
+          fow={fontWeight.medium}
+          numberOfLines={1}
+        >
           {domainLabel('walletEntryKind', entry.kind)}
         </Text>
         <Text col={colors.textMuted} fos={fontSize.label}>
@@ -261,16 +326,12 @@ function EntryRow({ entry }: { entry: WalletEntry }) {
       </YStack>
 
       <YStack ai="flex-end" gap={2}>
-        <Text
-          col={positive ? colors.success : colors.danger}
-          fos={fontSize.bodySm}
-          fow={fontWeight.semibold}
-        >
+        <Text col={tone} fos={fontSize.bodySm} fow={fontWeight.semibold}>
           {/* Dấu TRỪ thật (U+2212), không phải gạch nối — cùng ký tự web dùng. */}
           {positive ? '+' : '−'}
           {fmt.money(absoluteMoney(entry.amount) ?? entry.amount)}
         </Text>
-        <Text col={colors.textMuted} fos={fontSize.label}>
+        <Text col={colors.placeholder} fos={fontSize.label}>
           {t('entries.balanceAfter', { amount: fmt.money(entry.balanceAfter) })}
         </Text>
       </YStack>

@@ -126,7 +126,7 @@ function RequestBookingBody({
   const toast = useAppToast();
 
   const flow = useBookingRequestFlow(listing.id);
-  const { state, setStep: setStepRaw, setOtpPhone, setDuplicate, setError } = flow;
+  const { state, setStep: setStepRaw, setOtpPhone, setDuplicate, setBlocked, setError } = flow;
 
   /** Người đã đăng nhập bấm "Đổi" ở bước Xác nhận → hiện lại ô nhập liên hệ ở bước Chuyến đi. */
   const [editingContact, setEditingContact] = useState(false);
@@ -424,6 +424,16 @@ function RequestBookingBody({
           return;
         }
         /*
+         * Tài khoản gian hàng, hoặc xe của chính gian hàng mình (ADR 0038 điều 6). Thay CẢ luồng
+         * bằng một màn kết quả giải thích, không phải một dòng lỗi đỏ dưới nút Gửi: người dùng
+         * không sửa được gì trong biểu mẫu để qua được cổng này.
+         */
+        const blockedReason = flow.blockedReason(error);
+        if (blockedReason) {
+          setBlocked(blockedReason);
+          return;
+        }
+        /*
          * Backend nói SĐT chưa xác thực trong khi app tưởng được bỏ qua OTP ⇒ phiên vừa hết hạn
          * hoặc SĐT tài khoản vừa đổi. Đây là điểm khôi phục: lùi về bước xác thực, GIỮ NGUYÊN
          * mọi thứ đã nhập, gửi mã cho chính số đó.
@@ -439,7 +449,7 @@ function RequestBookingBody({
         setError(errorMessage(error));
       },
     });
-  }, [errorMessage, flow, form, otp, setDuplicate, setError, setOtpPhone, setStep, t]);
+  }, [errorMessage, flow, form, otp, setBlocked, setDuplicate, setError, setOtpPhone, setStep, t]);
 
   /** Lui về bước Chuyến đi. `editContact` = mở lại ô liên hệ (nút 'Đổi' ở bước Xác nhận). */
   const backToTrip = useCallback(
@@ -457,10 +467,11 @@ function RequestBookingBody({
     [listing.id, router],
   );
 
-  /** Ba nhánh KẾT THÚC dùng chung một màn kết quả — hai trong số đó không phải lỗi. */
-  if (state.duplicate || state.step === REQUEST_STEP.DONE) {
+  /** Bốn nhánh KẾT THÚC dùng chung một màn kết quả — ba trong số đó không phải lỗi. */
+  if (state.blocked || state.duplicate || state.step === REQUEST_STEP.DONE) {
     return (
       <RequestResultStep
+        blocked={state.blocked}
         duplicate={state.duplicate}
         receipt={state.receipt}
         values={form.getValues()}

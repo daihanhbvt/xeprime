@@ -2,7 +2,6 @@ import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import {
-  AUTO_ACCEPT_LEAD_MAX_MINUTES,
   CUSTOMER_DOCUMENT_TYPE,
   DRIVER_DEPOSIT_MODE,
   DRIVER_SURCHARGE_KIND,
@@ -95,24 +94,9 @@ describe('SaveVehicleOperationSettingsDto — khung giờ và thời gian chết
   });
 });
 
-describe('PatchVehicleServiceSettingDto — đặt trước, thời lượng, giấy tờ, điều khoản', () => {
+describe('PatchVehicleServiceSettingDto — thời lượng, giấy tờ, điều khoản', () => {
   it('payload rỗng hợp lệ — PATCH chỉ đụng trường được gửi', () => {
     expect(errorsOf(PatchVehicleServiceSettingDto, {})).toEqual({});
-  });
-
-  it('khoảng đặt trước nằm trong [0, trần]; vượt trần bị chặn', () => {
-    expect(
-      errorsOf(PatchVehicleServiceSettingDto, {
-        autoAcceptMinLeadMinutes: 0,
-        autoAcceptMaxLeadMinutes: AUTO_ACCEPT_LEAD_MAX_MINUTES,
-      }),
-    ).toEqual({});
-    const errors = errorsOf(PatchVehicleServiceSettingDto, {
-      autoAcceptMinLeadMinutes: -1,
-      autoAcceptMaxLeadMinutes: AUTO_ACCEPT_LEAD_MAX_MINUTES + 1,
-    });
-    expect(errors.autoAcceptMinLeadMinutes).toBeDefined();
-    expect(errors.autoAcceptMaxLeadMinutes).toBeDefined();
   });
 
   it('thời lượng tối thiểu phải nằm trong dải giờ có nghĩa', () => {

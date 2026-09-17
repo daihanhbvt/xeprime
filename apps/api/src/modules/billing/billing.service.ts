@@ -28,27 +28,23 @@ import {
   SUBSCRIPTION_STATUS,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
-  VEHICLE_TYPE_VALUES,
   addCalendarMonthsVn,
-  parsePlanAssumedGmv,
   parsePlanInvoiceSnapshot,
   parsePlanLimits,
-  parsePlanSlots,
-  termDiscountPercent,
+  parsePlanQuota,
+  planSellableTerms,
+  planTermPrice,
   type PaginationMeta,
-  type PlanAssumedGmvJson,
   type PlanInvoiceLine,
   type PlanInvoiceSnapshot,
   type PlanLimitsJson,
-  type PlanSlots,
-  type VehicleType,
+  type PlanQuotaSnapshot,
 } from '@xeprime/types';
 import { ListingsService } from '../public-listings/listings.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
 import {
-  AddSlotsDto,
   AssignSubscriptionDto,
   CreatePlanDto,
   CurrentPlanDto,
@@ -81,13 +77,8 @@ const PLAN_SELECT = {
   description: true,
   billingMode: true,
   commissionPercent: true,
-  basePriceMonthly: true,
-  assumedMonthlyGmvJson: true,
   limitsJson: true,
-  price: true,
   currency: true,
-  durationDays: true,
-  maxVehicles: true,
   status: true,
   sortOrder: true,
   createdAt: true,
@@ -119,14 +110,14 @@ const SUB_SELECT = {
   status: true,
   price: true,
   termMonths: true,
-  slotsJson: true,
+  quotaJson: true,
   billingMode: true,
   commissionPercent: true,
   startsAt: true,
   endsAt: true,
   note: true,
   createdAt: true,
-  plan: { select: { code: true, name: true, maxVehicles: true, limitsJson: true } },
+  plan: { select: { code: true, name: true, limitsJson: true } },
 } satisfies Prisma.TenantSubscriptionSelect;
 
 /**
@@ -136,9 +127,10 @@ const SUB_SELECT = {
  * còn hạn, hoặc = now), không update dòng cũ trừ huỷ sớm (active → cancelled). "Hết hạn" suy
  * ra từ `endsAt` — không job. Mọi mutation ghi audit trong cùng transaction.
  *
- * Từ ADR 0015/0020/0024: cước theo CHỖ XE, kỳ hạn THÁNG LỊCH (`addCalendarMonthsVn`, không bao
- * giờ `× 30 ngày`), chế độ thu phí SNAPSHOT lên dòng subscription lúc gán, và bậc gói `package`
- * phải qua KIỂM ĐIỂM GIAO trước khi lưu.
+ * Từ ADR 0041: bậc gói bán theo TRẦN SỐ XE + KỲ HẠN, giá là con số tuyệt đối của kỳ hạn
+ * (`limits.termPrices`) chứ không phải một phép nhân. Kỳ hạn tính bằng THÁNG LỊCH
+ * (`addCalendarMonthsVn`, không bao giờ `× 30 ngày`); chế độ thu phí VÀ hạn mức đều SNAPSHOT lên
+ * dòng subscription lúc gán (ADR 0024 điều 2 · ADR 0041 điều 3).
  */
 @Injectable()
 export class BillingService {
@@ -201,9 +193,7 @@ export class BillingService {
     const knobs = this.normalizePlanKnobs({
       billingMode: dto.billingMode,
       commissionPercent: dto.commissionPercent ?? null,
-      basePriceMonthly: dto.basePriceMonthly ?? '0',
       limits: parsePlanLimits(dto.limits ?? null),
-      assumedGmv: dto.assumedMonthlyGmv ?? null,
     });
 
     const row = await this.prisma.$transaction(async (tx) => {
@@ -215,15 +205,7 @@ export class BillingService {
           description: dto.description ?? null,
           billingMode: knobs.billingMode,
           commissionPercent: knobs.commissionPercent,
-          basePriceMonthly: knobs.basePriceMonthly,
           limitsJson: knobs.limits as unknown as Prisma.InputJsonValue,
-          assumedMonthlyGmvJson:
-            knobs.assumedGmv === null
-              ? Prisma.JsonNull
-              : (knobs.assumedGmv as unknown as Prisma.InputJsonValue),
-          price: dto.price ?? '0',
-          durationDays: dto.durationDays ?? 30,
-          maxVehicles: dto.maxVehicles ?? null,
           sortOrder: dto.sortOrder ?? 0,
         },
         select: PLAN_SELECT,
@@ -240,8 +222,7 @@ export class BillingService {
             name: dto.name,
             billingMode: knobs.billingMode,
             commissionPercent: knobs.commissionPercent,
-            basePriceMonthly: knobs.basePriceMonthly,
-            maxVehicles: dto.maxVehicles ?? null,
+            ...planAuditKnobs(knobs.limits),
           },
         },
         tx,
@@ -275,9 +256,9 @@ export class BillingService {
       await this.assertCommissionTrackStaysSingle(dto.billingMode, current.id);
     }
 
-    // Kiểm trên hình MERGED (field không gửi = giữ giá trị đang lưu): kiểm điểm giao chạy trên
-    // trạng thái SẼ được lưu, không phải trên mảnh dto — sửa một field lẻ của bậc `package`
-    // vẫn phải chứng minh được bài toán khuyến khích (ADR 0020, quy tắc trong code).
+    // Chuẩn hoá trên hình MERGED (field không gửi = giữ giá trị đang lưu): phép kiểm chạy trên
+    // trạng thái SẼ được lưu, không phải trên mảnh dto — sửa mỗi cái tên của một bậc `commission`
+    // vẫn phải giữ đúng bất biến "% bắt buộc, 1–20" mà CHECK ở DB cũng canh.
     const knobs = this.normalizePlanKnobs({
       billingMode: dto.billingMode ?? current.billingMode,
       commissionPercent:
@@ -286,13 +267,9 @@ export class BillingService {
           : current.commissionPercent === null
             ? null
             : Number(current.commissionPercent),
-      basePriceMonthly: dto.basePriceMonthly ?? current.basePriceMonthly.toString(),
       limits: parsePlanLimits(dto.limits !== undefined ? dto.limits : current.limitsJson),
-      assumedGmv:
-        dto.assumedMonthlyGmv !== undefined
-          ? dto.assumedMonthlyGmv
-          : parsePlanAssumedGmv(current.assumedMonthlyGmvJson),
     });
+    const before = parsePlanLimits(current.limitsJson);
 
     const row = await this.prisma.$transaction(async (tx) => {
       const plan = await tx.plan.update({
@@ -301,18 +278,10 @@ export class BillingService {
           ...(dto.name !== undefined ? { name: dto.name } : {}),
           ...(dto.description !== undefined ? { description: dto.description } : {}),
           // Bộ núm ghi TRỌN theo hình merged đã kiểm — mỗi lần sửa là một lần chuẩn hoá
-          // limits_json về đủ hình dạng ADR 0015 điều 4.
+          // limits_json về đủ hình dạng ADR 0041 điều 1.
           billingMode: knobs.billingMode,
           commissionPercent: knobs.commissionPercent,
-          basePriceMonthly: knobs.basePriceMonthly,
           limitsJson: knobs.limits as unknown as Prisma.InputJsonValue,
-          assumedMonthlyGmvJson:
-            knobs.assumedGmv === null
-              ? Prisma.JsonNull
-              : (knobs.assumedGmv as unknown as Prisma.InputJsonValue),
-          ...(dto.price !== undefined ? { price: dto.price } : {}),
-          ...(dto.durationDays !== undefined ? { durationDays: dto.durationDays } : {}),
-          ...('maxVehicles' in dto ? { maxVehicles: dto.maxVehicles ?? null } : {}),
           ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
         },
         select: PLAN_SELECT,
@@ -329,20 +298,14 @@ export class BillingService {
             billingMode: current.billingMode,
             commissionPercent:
               current.commissionPercent === null ? null : current.commissionPercent.toString(),
-            basePriceMonthly: current.basePriceMonthly.toString(),
-            price: current.price.toString(),
-            durationDays: current.durationDays,
-            maxVehicles: current.maxVehicles,
+            ...planAuditKnobs(before),
           },
           after: {
             name: plan.name,
             billingMode: plan.billingMode,
             commissionPercent:
               plan.commissionPercent === null ? null : plan.commissionPercent.toString(),
-            basePriceMonthly: plan.basePriceMonthly.toString(),
-            price: plan.price.toString(),
-            durationDays: plan.durationDays,
-            maxVehicles: plan.maxVehicles,
+            ...planAuditKnobs(knobs.limits),
           },
         },
         tx,
@@ -357,7 +320,7 @@ export class BillingService {
    *
    * ⚠️ Archive là chuyện của DANH MỤC, không phải của khách hàng: **không một thuê bao nào bị
    * huỷ**. Mọi `tenant_subscriptions` đang trỏ tới bậc này chạy hết kỳ của nó, giữ nguyên
-   * `billing_mode`, `slots_json` và `commission_percent` đã snapshot (ADR 0024) — thứ duy nhất
+   * `billing_mode`, `quota_json` và `commission_percent` đã snapshot (ADR 0024) — thứ duy nhất
    * mất đi là khả năng MUA MỚI bậc đó (`purchase` từ chối `status != active`) và khả năng admin
    * gán nó cho một tenant khác. Huỷ thuê bao là `cancel()`, một thao tác khác, trên một bảng
    * khác, có audit riêng.
@@ -453,8 +416,31 @@ export class BillingService {
     }
 
     const limits = parsePlanLimits(plan.limitsJson);
-    const slots = this.resolvePurchaseSlots(limits, dto.slots);
-    const pricing = this.priceTerm(plan.basePriceMonthly, limits, slots, dto.termMonths);
+    const quota = quotaOf(limits);
+    /*
+     * Giá của một lượt GÁN TAY: ưu tiên con số admin gõ, rơi về giá niêm yết của kỳ hạn.
+     *
+     * Admin được quyền lệch khỏi bảng giá (tặng, khuyến mãi, hợp đồng đàm phán) và mỗi lượt đều
+     * có audit. Nhưng bậc `salesOnly` KHÔNG có bảng giá để rơi về (ADR 0041 điều 5), nên ở đó
+     * thiếu `price` là lỗi nhập liệu — mặc định 0đ sẽ tặng một gói doanh nghiệp vì một ô trống.
+     */
+    /*
+     * Tuyến hoa hồng KHÔNG có bảng giá và cũng không cần một cái: thuê bao của nó là 0đ, tiền
+     * nằm ở khoản giữ chỗ theo chuyến (ADR 0029 điều 2). Đòi `price` ở đây là chặn chính đường
+     * mà `assignDefaultPlanWithinTx` và job vòng đời đi qua.
+     */
+    const listed =
+      plan.billingMode === BILLING_MODE.COMMISSION ? '0' : planTermPrice(limits, dto.termMonths);
+    if (dto.price === undefined && listed === null) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: limits.salesOnly
+          ? 'Bậc gói này bán bằng tư vấn — nhập giá đàm phán cho kỳ hạn đã chọn'
+          : `Bậc gói này không niêm yết giá cho kỳ ${dto.termMonths} tháng — nhập giá, hoặc chọn kỳ hạn có trong bảng giá`,
+        details: { field: 'price', termMonths: dto.termMonths, salesOnly: limits.salesOnly },
+      });
+    }
+    const pricing = this.priceTerm(dto.price ?? (listed as string), dto.termMonths);
     const price = pricing.total;
 
     const row = await this.prisma.$transaction(async (tx) => {
@@ -475,7 +461,12 @@ export class BillingService {
           status: SUBSCRIPTION_STATUS.ACTIVE,
           price,
           termMonths: dto.termMonths,
-          slotsJson: slots as unknown as Prisma.InputJsonValue,
+          // SNAPSHOT hạn mức (ADR 0041 điều 3) — chỉ tuyến gói có; tuyến hoa hồng không mua hạn
+          // mức nào, trần của nó là `OWNER_LITE_VEHICLE_LIMIT` trong code.
+          quotaJson:
+            plan.billingMode === BILLING_MODE.PACKAGE
+              ? (quota as unknown as Prisma.InputJsonValue)
+              : Prisma.DbNull,
           // SNAPSHOT chế độ thu phí (ADR 0024 điều 2) — admin sửa plan sau đó KHÔNG được
           // lật chế độ của dòng này giữa kỳ.
           billingMode: plan.billingMode,
@@ -506,7 +497,7 @@ export class BillingService {
             planId: plan.id,
             planCode: plan.code,
             termMonths: dto.termMonths,
-            slots,
+            quota,
             lines: pricing.lines,
           },
           subtotal: pricing.subtotal,
@@ -533,8 +524,12 @@ export class BillingService {
           after: {
             planCode: plan.code,
             price: price.toString(),
+            // Dấu vết của một giá LỆCH bảng giá: một cuộc đối soát doanh thu phải phân biệt được
+            // "admin gõ 0đ" với "bậc này niêm yết 0đ".
+            listedPrice: listed,
+            priceOverridden: dto.price !== undefined && dto.price !== listed,
             termMonths: dto.termMonths,
-            slots,
+            quota,
             billingMode: plan.billingMode,
             commissionPercent:
               plan.commissionPercent === null ? null : plan.commissionPercent.toString(),
@@ -804,152 +799,10 @@ export class BillingService {
   }
 
   // -------------------------------------------------------------------------
-  // Mua thêm chỗ giữa kỳ (ADR 0015 điều 8) — admin, đã thu tiền
-  // -------------------------------------------------------------------------
-
-  /**
-   * Mua thêm chỗ giữa kỳ: HUỶ dòng hiện hành + CHÈN dòng mới CÙNG `ends_at`, số chỗ mới —
-   * giữ bất biến "MỘT dòng hiệu lực tại một thời điểm" mà `findCurrent` dựa vào (ADR 0015
-   * điều 8). Prorate TRÒN THÁNG theo số tháng còn lại (làm tròn LÊN), KHÔNG áp % giảm kỳ hạn —
-   * ưu đãi đó trả cho cam kết trả trước cả kỳ, phần mua thêm không cam kết gì mới.
-   *
-   * Đường admin (đã thu tiền ngoài luồng) ⇒ hoá đơn `paid`. Tenant tự mua thêm chỗ đi đường
-   * hoá đơn `issued` + kích hoạt khi tiền về — mở ở W4 cùng webhook.
-   */
-  async addSlots(
-    tenantId: string,
-    actorUserId: string,
-    dto: AddSlotsDto,
-  ): Promise<SubscriptionDto> {
-    await this.assertTenant(tenantId);
-    const now = new Date();
-    const current = await this.findCurrent(tenantId, now);
-    if (!current || current.billingMode !== BILLING_MODE.PACKAGE || current.slotsJson === null) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.CONFLICT,
-        message:
-          'Chỉ mua thêm chỗ được khi đang có gói tuyến package còn hạn (dòng có snapshot số chỗ)',
-      });
-    }
-    const limits = parsePlanLimits(current.plan.limitsJson);
-    const oldSlots = parsePlanSlots(current.slotsJson);
-    const newSlots = this.resolvePurchaseSlots(limits, dto.slots);
-    const deltaCar = newSlots.car - oldSlots.car;
-    const deltaMotorbike = newSlots.motorbike - oldSlots.motorbike;
-    if (deltaCar < 0 || deltaMotorbike < 0 || deltaCar + deltaMotorbike === 0) {
-      // Thu hẹp chỗ giữa kỳ không phải nghiệp vụ này — tiền đã trả trước, "mua bớt" là hoàn
-      // tiền, và hoàn tiền có đường riêng (ví — ADR 0023, chưa mở cho gói).
-      throw new BadRequestException({
-        code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Số chỗ mới phải lớn hơn số chỗ hiện có (mua thêm, không mua bớt)',
-        details: { current: oldSlots, requested: newSlots },
-      });
-    }
-
-    // Số tháng còn lại, TRÒN THÁNG làm tròn lên: n nhỏ nhất sao cho now + n tháng lịch >= endsAt.
-    let monthsLeft = 1;
-    while (monthsLeft < 24 && addCalendarMonthsVn(now, monthsLeft) < current.endsAt) {
-      monthsLeft += 1;
-    }
-
-    const lines: PlanInvoiceLine[] = [];
-    let subtotal = new Prisma.Decimal(0);
-    for (const [type, delta, unitPrice] of [
-      [VEHICLE_TYPE.CAR, deltaCar, limits.perVehiclePrice.car],
-      [VEHICLE_TYPE.MOTORBIKE, deltaMotorbike, limits.perVehiclePrice.motorbike],
-    ] as const) {
-      if (delta <= 0) continue;
-      if (unitPrice === null) {
-        throw new BadRequestException({
-          code: API_ERROR_CODE.VALIDATION_FAILED,
-          message: 'Bậc gói không bán thêm loại chỗ này',
-          details: { field: `slots.${type}` },
-        });
-      }
-      const amount = new Prisma.Decimal(unitPrice).mul(delta).mul(monthsLeft).toDecimalPlaces(2);
-      lines.push({
-        kind: 'add_slot',
-        vehicleType: type,
-        quantity: delta,
-        months: monthsLeft,
-        unitPrice,
-        amount: amount.toString(),
-      });
-      subtotal = subtotal.add(amount);
-    }
-
-    const row = await this.prisma.$transaction(async (tx) => {
-      // Huỷ dòng hiện hành bằng updateMany có điều kiện — hai admin bấm cùng lúc thì người
-      // đến sau thấy count=0 và dừng, không sinh hai dòng hiệu lực chồng nhau.
-      const closed = await tx.tenantSubscription.updateMany({
-        where: { id: current.id, status: SUBSCRIPTION_STATUS.ACTIVE },
-        data: { status: SUBSCRIPTION_STATUS.CANCELLED },
-      });
-      if (closed.count !== 1) {
-        throw new ConflictException({
-          code: API_ERROR_CODE.CONFLICT,
-          message: 'Dòng thuê bao hiện hành vừa thay đổi — tải lại rồi thử lại',
-        });
-      }
-      const sub = await tx.tenantSubscription.create({
-        data: {
-          id: newId(),
-          tenantId,
-          planId: current.planId,
-          status: SUBSCRIPTION_STATUS.ACTIVE,
-          // Giá trị kỳ = tiền đã trả cho dòng cũ + tiền mua thêm — snapshot vẫn cộng dồn được.
-          price: new Prisma.Decimal(current.price).add(subtotal),
-          termMonths: current.termMonths,
-          slotsJson: newSlots as unknown as Prisma.InputJsonValue,
-          // SNAPSHOT chế độ GIỮ NGUYÊN giữa kỳ (ADR 0024 điều 2) — mua thêm chỗ không đổi tuyến.
-          billingMode: current.billingMode,
-          commissionPercent: current.commissionPercent,
-          startsAt: now,
-          endsAt: current.endsAt,
-          note: dto.note ?? null,
-          createdBy: actorUserId,
-        },
-        select: SUB_SELECT,
-      });
-      await this.createInvoiceWithinTx(tx, {
-        tenantId,
-        subscriptionId: sub.id,
-        snapshot: {
-          planId: current.planId,
-          planCode: current.plan.code,
-          termMonths: monthsLeft,
-          slots: newSlots,
-          lines,
-        },
-        subtotal,
-        discountAmount: new Prisma.Decimal(0),
-        periodFrom: now,
-        periodTo: current.endsAt,
-        paid: true,
-      });
-      await this.audit.record(
-        {
-          tenantId,
-          actorUserId,
-          actorScope: 'platform',
-          action: 'subscription.add_slots',
-          targetType: 'tenant_subscription',
-          targetId: sub.id,
-          before: { subscriptionId: current.id, slots: oldSlots },
-          after: { slots: newSlots, monthsLeft, amount: subtotal.toString() },
-        },
-        tx,
-      );
-      return sub;
-    });
-    return toSubscriptionDto(row);
-  }
-
-  // -------------------------------------------------------------------------
   // "Gói của tôi" — tenant-scoped (W2 LÔ 3)
   // -------------------------------------------------------------------------
 
-  /** Gói hiện hành + mức dùng chỗ theo loại xe + lượt miễn phí (ADR 0026). */
+  /** Gói hiện hành + mức dùng đội xe + lượt miễn phí (ADR 0026). */
   async mySubscription(tenantId: string): Promise<MySubscriptionDto> {
     const tenant = await this.prisma.tenant.findFirst({
       where: { id: tenantId, deletedAt: null },
@@ -1006,33 +859,28 @@ export class BillingService {
      * bản sao của luật ở đây, và bản sao đó đọc `findCurrent` (vô hạn khi vừa hết hạn) trong
      * khi cổng chặn đọc pha hiệu lực.
      *
-     * Owner Lite: trần là một BỂ CHUNG nên `usage.<loại>.limit` để `null` và con số thật đi ở
-     * `fleetQuota`. Viết trần tổng vào ô của từng loại là nói "3 ô tô" khi luật là "3 xe".
+     * Trần là MỘT con số cho cả đội xe (ADR 0041 điều 4), nên nó chỉ xuất hiện ở `fleetQuota`.
+     * `usage` vẫn tách theo loại vì màn hình cần con số đó — nhưng không mang trần nào: viết
+     * trần tổng vào ô của từng loại là nói "3 ô tô" khi luật là "3 xe".
      */
     const quota = await this.vehicleQuotaFor(tenantId);
     const carUsed = countOf(fleet, VEHICLE_TYPE.CAR);
     const motorbikeUsed = countOf(fleet, VEHICLE_TYPE.MOTORBIKE);
-    const limitOf = (type: VehicleType): number | null =>
-      quota.kind === 'per_type' ? quota.limit[type] : null;
 
     const used = Math.min(tenant.freeTripsUsed, FREE_TRIP_ALLOWANCE);
     return {
       currentPlan: current ? toCurrentPlanDto(current) : null,
       usage: {
-        car: {
-          used: carUsed,
-          onMarketplace: countOf(onMarket, VEHICLE_TYPE.CAR),
-          limit: limitOf(VEHICLE_TYPE.CAR),
-        },
+        car: { used: carUsed, onMarketplace: countOf(onMarket, VEHICLE_TYPE.CAR) },
         motorbike: {
           used: motorbikeUsed,
           onMarketplace: countOf(onMarket, VEHICLE_TYPE.MOTORBIKE),
-          limit: limitOf(VEHICLE_TYPE.MOTORBIKE),
         },
       },
       fleetQuota: {
         kind: quota.kind,
         totalLimit: quota.kind === 'total' ? quota.limit : null,
+        reason: quota.kind === 'total' ? quota.reason : null,
         totalUsed: carUsed + motorbikeUsed,
       },
       freeTrips: {
@@ -1058,7 +906,7 @@ export class BillingService {
       select: PLAN_SELECT,
     });
     return rows.map((row) => {
-      const { assumedMonthlyGmv: _gmv, subscriptionCount: _count, ...rest } = toPlanDto(row);
+      const { subscriptionCount: _count, ...rest } = toPlanDto(row);
       return rest;
     });
   }
@@ -1152,28 +1000,46 @@ export class BillingService {
     const limits = parsePlanLimits(plan.limitsJson);
 
     /*
-     * `limits.terms` là danh sách kỳ hạn ĐƯỢC BÁN của plan, không chỉ là bảng giảm giá
-     * (ADR 0029 điều 3 — giá pilot bán tối thiểu 3 tháng). DTO chỉ chặn được tập kỳ hạn
-     * toàn cục [1,3,6,12]; plan thu hẹp thêm ở đây, và đây là lớp chặn thật — ẩn lựa chọn
-     * ở PurchaseModal chỉ là UX. Danh sách rỗng (plan cũ chưa khai) = không thu hẹp.
+     * Bậc bán bằng TƯ VẤN không tự mua được (ADR 0041 điều 5) — và đây là lớp chặn thật.
+     *
+     * Thẻ của nó VẪN hiện trên bảng giá (với nút "Liên hệ tư vấn", không có giá), vì giấu hẳn
+     * một bậc doanh nghiệp là giấu luôn lối nâng cấp của gian hàng lớn nhất. Nhưng thẻ hiện thì
+     * đường POST cũng gọi được, nên mã lỗi phải nói đúng việc cần làm thay vì rơi vào nhánh
+     * "không có khoản phải trả".
      */
-    const allowedTerms = limits.terms.map((t) => t.months);
-    if (allowedTerms.length > 0 && !allowedTerms.includes(dto.termMonths)) {
+    if (limits.salesOnly) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.PLAN_NOT_SELF_SERVE,
+        message:
+          'Gói này được cấu hình riêng theo quy mô gian hàng — liên hệ XePrime để được tư vấn và báo giá.',
+        details: { planCode: plan.code },
+      });
+    }
+
+    /*
+     * `limits.termPrices` là bảng giá VÀ danh sách kỳ hạn ĐƯỢC BÁN (ADR 0041 điều 2). DTO chỉ
+     * chặn được tập kỳ hạn toàn cục [1,3,6,12]; bậc gói thu hẹp thêm ở đây, và đây là lớp chặn
+     * thật — ẩn thẻ kỳ hạn ở màn mua chỉ là UX.
+     */
+    const price = planTermPrice(limits, dto.termMonths);
+    if (price === null) {
+      const allowedTerms = planSellableTerms(limits);
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: `Gói này chỉ bán theo kỳ hạn ${allowedTerms.join('/')} tháng`,
+        message: allowedTerms.length
+          ? `Gói này chỉ bán theo kỳ hạn ${allowedTerms.join('/')} tháng`
+          : 'Gói này hiện không có bảng giá nên chưa mua được',
         details: { field: 'termMonths', allowedTerms },
       });
     }
 
-    const slots = this.resolvePurchaseSlots(limits, dto.slots);
-    const pricing = this.priceTerm(plan.basePriceMonthly, limits, slots, dto.termMonths);
+    const pricing = this.priceTerm(price, dto.termMonths);
     if (pricing.total.isZero()) {
-      // 0đ = không có gì để mua: hoặc gói tuyến hoa hồng, hoặc gói giá-theo-chỗ mà chưa chọn
-      // chỗ nào (ADR 0029 — phí nền 0đ, tiền nằm hết ở chỗ xe).
+      // 0đ = không có khoản phải trả: một hoá đơn 0đ không có gì để webhook khớp, và nó sẽ
+      // nằm mãi ở `issued` cho tới khi job lật `void`.
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Không có khoản phải trả — chọn ít nhất một chỗ xe',
+        message: 'Gói này đang niêm yết 0đ cho kỳ hạn đã chọn nên không có khoản phải trả',
       });
     }
 
@@ -1236,7 +1102,7 @@ export class BillingService {
           planId: plan.id,
           planCode: plan.code,
           termMonths: dto.termMonths,
-          slots,
+          quota: quotaOf(limits),
           lines: pricing.lines,
         },
         subtotal: pricing.subtotal,
@@ -1258,7 +1124,7 @@ export class BillingService {
             code: invoice.code,
             planCode: plan.code,
             termMonths: dto.termMonths,
-            slots,
+            quota: quotaOf(limits),
             totalAmount: invoice.totalAmount.toString(),
             expiresAt: expiresAt.toISOString(),
           },
@@ -1458,7 +1324,13 @@ export class BillingService {
         status: SUBSCRIPTION_STATUS.ACTIVE,
         price: args.totalAmount,
         termMonths: snapshot.termMonths,
-        slotsJson: snapshot.slots as unknown as Prisma.InputJsonValue,
+        // Hạn mức từ CHÍNH hoá đơn, không đọc lại `plan.limits_json`: giữa lúc phát hành mã và
+        // lúc tiền về, admin có thể đã sửa bậc gói. Thứ gian hàng trả tiền cho là thứ ghi trên
+        // tờ hoá đơn họ đang cầm (ADR 0041 điều 3).
+        quotaJson:
+          plan.billingMode === BILLING_MODE.PACKAGE
+            ? (snapshot.quota as unknown as Prisma.InputJsonValue)
+            : Prisma.DbNull,
         billingMode: plan.billingMode,
         commissionPercent: plan.commissionPercent,
         startsAt,
@@ -1497,7 +1369,7 @@ export class BillingService {
           invoiceId: args.invoiceId,
           planId: plan.id,
           termMonths: snapshot.termMonths,
-          slots: snapshot.slots,
+          quota: snapshot.quota,
           price: args.totalAmount.toString(),
           startsAt: sub.startsAt.toISOString(),
           endsAt: sub.endsAt.toISOString(),
@@ -1524,76 +1396,55 @@ export class BillingService {
   }
 
   /**
-   * Số chỗ mua: bỏ trống = đúng số gồm sẵn; không mua DƯỚI mức gồm sẵn — phí nền đã bao chúng,
-   * ghi con số nhỏ hơn chỉ tạo ra một hạn mức giả thấp hơn thứ tenant đã trả tiền. Vượt trần
-   * bậc gói thì từ chối.
-   */
-  private resolvePurchaseSlots(
-    limits: PlanLimitsJson,
-    input: { car: number; motorbike: number } | undefined,
-  ): PlanSlots {
-    const slots: PlanSlots = {
-      car: Math.max(input?.car ?? limits.includedCars, limits.includedCars),
-      motorbike: Math.max(input?.motorbike ?? limits.includedMotorbikes, limits.includedMotorbikes),
-    };
-    for (const [type, bought, max] of [
-      ['car', slots.car, limits.maxCars],
-      ['motorbike', slots.motorbike, limits.maxMotorbikes],
-    ] as const) {
-      if (max !== null && bought > max) {
-        throw new BadRequestException({
-          code: API_ERROR_CODE.VALIDATION_FAILED,
-          message: 'Số chỗ vượt trần của bậc gói',
-          details: { field: `slots.${type}`, requested: bought, max },
-        });
-      }
-    }
-    return slots;
-  }
-
-  /**
-   * Hạn mức SỐ XE — hai tuyến, hai cách đếm, một cổng.
+   * Hạn mức SỐ XE — một cách đếm, hai điểm thi hành (ADR 0041 điều 4).
    *
-   * | Tuyến hiệu lực | Hạn mức | Cách đếm |
-   * | --- | --- | --- |
-   * | `package` (pha `current` hoặc `grace`) | số CHỖ đã mua, theo LOẠI xe | ô tô và xe máy riêng |
-   * | `commission` (kể cả `lapsed`) | `OWNER_LITE_VEHICLE_LIMIT` | **TỔNG** ô tô + xe máy |
-   * | `unconfigured` | như tuyến hoa hồng | tổng — xem dưới |
+   * | Nguồn trần | Trần | Gác tạo xe | Gác gửi lên chợ |
+   * | --- | --- | --- | --- |
+   * | Bậc gói đã mua (`plan`) | `quota.maxVehicles` | ✅ | ✅ |
+   * | Owner Lite (`owner_lite`) | `OWNER_LITE_VEHICLE_LIMIT` | ✅ | ❌ |
+   * | Chưa cấu hình (`billing_unconfigured`) | 3, mã lỗi khác | ✅ | ❌ |
+   *
+   * ## Đếm TỔNG, không đếm theo loại
+   *
+   * `vehicleType` cố ý KHÔNG vào `where`: từ ADR 0041 một bậc bán "tối đa N xe", và ba ô tô cộng
+   * ba xe máy vẫn là sáu chiếc. Mô hình cũ đếm theo LOẠI vì thứ bán ra là CHỖ của từng loại —
+   * không còn chỗ nào để bán thì cũng không còn hai con số để so.
    *
    * ## Vì sao đọc `resolveEffectiveBilling` chứ không `findCurrent`
    *
-   * `findCurrent` đòi `ends_at > now`, nên đúng giây một gói hết hạn nó trả `null` — và bản
+   * `findCurrent` đòi `ends_at > now`, nên đúng giây một gói hết hạn nó trả `null` — và một bản
    * trước của hàm này coi `null` là KHÔNG GIỚI HẠN. Cộng với `graceDays = 7` và kỳ hoa hồng 12
    * tháng mà mọi tenant cùng nhận trong một ngày (ADR 0038, bối cảnh điều 2), đó là một cửa sổ
    * ĐỊNH KỲ trong đó mọi chủ xe đăng được vô số xe. Pha `grace`/`lapsed` chỉ tồn tại ở
    * `resolveEffectiveBilling`, nên hạn mức phải hỏi chính nó.
    *
-   * `unconfigured` đi cùng đường với tuyến hoa hồng, KHÔNG đi cùng đường với "không giới hạn":
-   * đó là lỗi cấu hình (ADR 0038 điều 1), và mức an toàn khi hỏng là mức CHẶT. Chủ xe thật vẫn
-   * đăng được 3 xe trong lúc vận hành sửa lại danh mục gói.
-   *
-   * ## Hai điểm thi hành
+   * ## Hai điểm thi hành, và vì sao chúng khác nhau
    *
    * `scope: 'fleet'` (mặc định) — tạo xe. `scope: 'marketplace'` — gửi xe lên chợ; chỉ đếm xe
-   * đang chiếm suất và TRỪ chính chiếc đang gửi, để tenant tụt gói vẫn chọn được xe nào ở lại.
+   * đang chiếm suất và TRỪ chính chiếc đang gửi, để tenant tụt bậc vẫn chọn được xe nào ở lại.
    *
-   * Hai tuyến dùng hai điểm khác nhau, và đó là chủ đích: trần TỔNG của Owner Lite chỉ gác
-   * `fleet`, còn hạn mức theo CHỖ của tuyến gói gác cả hai (chỗ là suất TRÊN CHỢ). Lý do đầy
-   * đủ nằm ngay trong thân hàm, ở nhánh `total`.
+   * Trần KHÔNG trả tiền (Owner Lite, `unconfigured`) chỉ gác điểm TẠO: không tạo được chiếc thứ
+   * tư thì không có chiếc thứ tư để gửi, còn gác thêm ở chợ gây đúng thiệt hại ADR 0038 cấm —
+   * gian hàng rơi khỏi gói giữ nguyên xe TRÊN chợ, nhưng mọi chiếc rời chợ một lần (sửa hồ sơ,
+   * bị yêu cầu bổ sung, tạm gỡ) sẽ không bao giờ quay lại được.
    *
-   * ⚠️ Cổng này CHẶN THÊM MỚI, không gỡ thứ đang có (ADR 0038 — "Hạn mức xe khi chuyển tuyến").
-   * Gian hàng 10 xe rơi về tuyến hoa hồng giữ nguyên 10 xe trên chợ, đơn chạy tiếp, tiền về ví
-   * bình thường; chỉ chiếc THỨ 11 bị từ chối.
+   * Trần ĐÃ TRẢ TIỀN thì gác cả hai, vì đó là cửa duy nhất còn lại của một lần HẠ BẬC: gói mới
+   * nối đuôi gói cũ (`resolveChainStart`), nên gian hàng 40 xe hạ về bậc 3 xe bước sang kỳ mới
+   * với 40 xe đang bán và một hoá đơn 100.000đ.
+   *
+   * ⚠️ Cổng này CHẶN THÊM MỚI, không gỡ thứ đang có (ADR 0038 · ADR 0041 điều 4). Xe ở nguyên
+   * trên chợ, chuyến chạy tiếp, tiền về ví bình thường; chỉ chiếc TIẾP THEO bị từ chối.
    */
   async assertVehicleQuota(
     tenantId: string,
-    vehicleType: VehicleType,
     opts: { scope?: 'fleet' | 'marketplace'; excludeVehicleId?: string } = {},
   ): Promise<void> {
     const quota = await this.vehicleQuotaFor(tenantId, new Date());
     if (quota.kind === 'unlimited') return;
 
     const scope = opts.scope ?? 'fleet';
+    if (scope === 'marketplace' && quota.reason !== 'plan') return;
+
     const scopeWhere: Prisma.VehicleWhereInput =
       scope === 'marketplace'
         ? {
@@ -1607,98 +1458,66 @@ export class BillingService {
           }
         : {};
 
-    if (quota.kind === 'total') {
-      /*
-       * Trần Owner Lite gác ĐIỂM TẠO, không gác điểm gửi lên chợ.
-       *
-       * Nó không cần gác điểm thứ hai: không tạo được chiếc thứ tư thì cũng không có chiếc thứ
-       * tư nào để gửi. Gác thêm ở đây lại gây đúng thiệt hại mà ADR 0038 cấm — gian hàng 10 xe
-       * rơi về tuyến hoa hồng giữ nguyên 10 xe TRÊN CHỢ, nhưng mọi chiếc rời chợ một lần (sửa
-       * hồ sơ, bị yêu cầu bổ sung, tạm gỡ) sẽ KHÔNG BAO GIỜ quay lại được. Đó là "gỡ xe đang
-       * bán" trả góp, chỉ chậm hơn.
-       *
-       * Hạn mức theo CHỖ của tuyến gói thì ngược lại: chỗ là suất TRÊN CHỢ, nên nó gác cả hai
-       * điểm (xem nhánh `per_type` bên dưới).
-       */
-      if (scope === 'marketplace') return;
-
-      /*
-       * Đếm GỘP hai loại — `vehicleType` cố ý KHÔNG vào `where`. Ba ô tô cộng ba xe máy vẫn là
-       * sáu chiếc, và trần này nói về ĐỘI XE chứ không về từng loại.
-       */
-      const used = await this.prisma.vehicle.count({
-        where: { tenantId, deletedAt: null, ...scopeWhere },
-      });
-      if (used >= quota.limit) {
-        if (quota.reason === 'billing_unconfigured') {
-          throw new ConflictException({
-            code: API_ERROR_CODE.TENANT_BILLING_NOT_CONFIGURED,
-            message:
-              `Gian hàng chưa có gói dịch vụ hiệu lực nên tạm thời chỉ giữ được ${quota.limit} xe. ` +
-              'Liên hệ hỗ trợ XePrime — đây là lỗi cấu hình phía nền tảng, không phải hạn mức của bạn.',
-            details: { scope: 'owner_lite_total', used, limit: quota.limit },
-          });
-        }
-        throw new ForbiddenException({
-          code: API_ERROR_CODE.PLAN_LIMIT_REACHED,
-          message:
-            `Chủ xe cá nhân đăng tối đa ${quota.limit} xe (tính cả ô tô và xe máy). ` +
-            'Mua gói gian hàng để đăng thêm xe.',
-          details: { scope: 'owner_lite_total', used, limit: quota.limit },
-        });
-      }
-      return;
-    }
-
-    const limit = quota.limit[vehicleType];
-    if (limit == null) return;
     const used = await this.prisma.vehicle.count({
-      where: { tenantId, deletedAt: null, vehicleType, ...scopeWhere },
+      where: { tenantId, deletedAt: null, ...scopeWhere },
     });
-    if (used >= limit) {
-      throw new ForbiddenException({
-        code: API_ERROR_CODE.PLAN_LIMIT_REACHED,
-        message: 'Đã chạm giới hạn số chỗ của gói cho loại xe này. Vui lòng mua thêm chỗ.',
-        details: { vehicleType, used, limit },
+    if (used < quota.limit) return;
+
+    const details = { scope, reason: quota.reason, used, limit: quota.limit };
+
+    /*
+     * Cùng CON SỐ, khác LÝ DO — và lý do đi theo tới tận thông điệp lỗi.
+     *
+     * `unconfigured` không phải tuyến hoa hồng (ADR 0038 điều 1): đó là lỗi cấu hình của nền
+     * tảng mà người dùng không tự sửa được. Nói với họ "chủ xe cá nhân đăng tối đa 3 xe" là nói
+     * sai nguyên nhân, và đẩy họ đi mua một gói không giải quyết được gì.
+     */
+    if (quota.reason === 'billing_unconfigured') {
+      throw new ConflictException({
+        code: API_ERROR_CODE.TENANT_BILLING_NOT_CONFIGURED,
+        message:
+          `Gian hàng chưa có gói dịch vụ hiệu lực nên tạm thời chỉ giữ được ${quota.limit} xe. ` +
+          'Liên hệ hỗ trợ XePrime — đây là lỗi cấu hình phía nền tảng, không phải hạn mức của bạn.',
+        details,
       });
     }
+    throw new ForbiddenException({
+      code: API_ERROR_CODE.PLAN_LIMIT_REACHED,
+      message:
+        quota.reason === 'plan'
+          ? `Gói hiện tại cho phép tối đa ${quota.limit} xe. Nâng bậc gói để đăng thêm xe.`
+          : `Chủ xe cá nhân đăng tối đa ${quota.limit} xe (tính cả ô tô và xe máy). ` +
+            'Mua gói gian hàng để đăng thêm xe.',
+      details,
+    });
   }
 
   /**
    * Hạn mức xe đang áp cho một tenant — MỘT phép suy cho cổng chặn và cho màn "Gói của tôi".
    *
-   * Ba HÌNH DẠNG, không phải một con số: tuyến gói giới hạn theo LOẠI, Owner Lite giới hạn
-   * TỔNG, và một bậc `package` không khai trần nào thì thật sự là không giới hạn. Nén ba thứ
-   * đó vào một `number | null` là cách màn hiển thị bắt đầu nói "3 ô tô" khi luật là "3 xe".
+   * `reason` đi kèm con số vì nó quyết định hai thứ khác nhau: điểm thi hành (điều 4) và câu
+   * người dùng đọc khi chạm trần. Nén ba lý do vào một `number | null` là cách một màn hình bắt
+   * đầu mời chủ xe "mua gói" để sửa một lỗi cấu hình của nền tảng.
    */
   async vehicleQuotaFor(
     tenantId: string,
     now: Date = new Date(),
   ): Promise<
     | { kind: 'unlimited' }
-    | { kind: 'total'; limit: number; reason: 'owner_lite' | 'billing_unconfigured' }
-    | { kind: 'per_type'; limit: Record<VehicleType, number | null> }
+    | { kind: 'total'; limit: number; reason: 'plan' | 'owner_lite' | 'billing_unconfigured' }
   > {
     /*
-     * `EFFECTIVE_SUBSCRIPTION_ARGS.select` + đúng MỘT cột thêm (`slots_json`), thay vì chép lại
+     * `EFFECTIVE_SUBSCRIPTION_ARGS.select` + đúng MỘT cột thêm (`quota_json`), thay vì chép lại
      * cả khối select. Hằng đó tồn tại để không có định nghĩa thứ hai của "dòng hiệu lực"; một
      * bản chép tay ở đây là chỗ nó bắt đầu trôi (thiếu `plan.name`, `orderBy` lệch…).
      */
     const row = await this.prisma.tenantSubscription.findFirst({
       where: { tenantId, ...effectiveSubscriptionWhere(now) },
       orderBy: EFFECTIVE_SUBSCRIPTION_ARGS.orderBy,
-      select: { ...EFFECTIVE_SUBSCRIPTION_ARGS.select, slotsJson: true },
+      select: { ...EFFECTIVE_SUBSCRIPTION_ARGS.select, quotaJson: true },
     });
     const billing = resolveEffectiveBilling(row, now);
     if (billing.billingMode !== BILLING_MODE.PACKAGE || !row) {
-      /*
-       * Cùng CON SỐ, khác LÝ DO — và lý do đi theo tới tận thông điệp lỗi.
-       *
-       * `unconfigured` không phải tuyến hoa hồng (ADR 0038 điều 1): đó là lỗi cấu hình của nền
-       * tảng mà người dùng không tự sửa được. Áp trần 3 xe cho họ là lựa chọn AN TOÀN (mức chặt,
-       * không phải mức rộng nhất) — nhưng nói với họ "chủ xe cá nhân đăng tối đa 3 xe" là nói
-       * sai nguyên nhân, và đẩy họ đi mua một gói không giải quyết được gì.
-       */
       return {
         kind: 'total',
         limit: OWNER_LITE_VEHICLE_LIMIT,
@@ -1707,77 +1526,39 @@ export class BillingService {
       };
     }
 
-    const limits = parsePlanLimits(row.plan.limitsJson);
-    const slots = row.slotsJson === null ? null : parsePlanSlots(row.slotsJson);
-    const limit: Record<VehicleType, number | null> = {
-      [VEHICLE_TYPE.CAR]: slots ? slots.car : limits.maxCars,
-      [VEHICLE_TYPE.MOTORBIKE]: slots ? slots.motorbike : limits.maxMotorbikes,
-    };
-    if (limit[VEHICLE_TYPE.CAR] == null && limit[VEHICLE_TYPE.MOTORBIKE] == null) {
-      return { kind: 'unlimited' };
-    }
-    return { kind: 'per_type', limit };
+    /*
+     * SNAPSHOT thắng bậc gói (ADR 0041 điều 3), và phép chọn phải TƯỜNG MINH.
+     *
+     * `quota.maxVehicles ?? limits.maxVehicles` đọc một `null` TƯỜNG MINH ("bậc này không giới
+     * hạn") thành "chưa khai" rồi rơi về bậc gói — sai ở đúng chỗ tốn tiền nhất. `parsePlanQuota`
+     * trả `null` cho cả cột NULL lẫn jsonb hỏng, và chỉ khi đó mới hỏi tới bậc gói.
+     */
+    const quota = parsePlanQuota(row.quotaJson);
+    const limit = quota ? quota.maxVehicles : parsePlanLimits(row.plan.limitsJson).maxVehicles;
+    return limit == null ? { kind: 'unlimited' } : { kind: 'total', limit, reason: 'plan' };
   }
+
   /**
-   * Số suất CHỢ còn trống theo từng loại xe — `null` = không giới hạn.
+   * Trần CHI NHÁNH đang áp — `null` = không giới hạn. Cùng nguồn, cùng luật snapshot với
+   * `vehicleQuotaFor`; `BranchesService.create` là nơi duy nhất gọi.
    *
-   * Tồn tại riêng bên cạnh `assertVehicleQuota` vì hai câu hỏi khác nhau: cổng kia chấm MỘT
-   * chiếc với dữ liệu đã commit, còn hàm này phục vụ nơi gửi NHIỀU xe trong cùng một lượt (tự
-   * gửi duyệt sau khi hồ sơ gian hàng được duyệt). Gọi `assertVehicleQuota` trong vòng lặp sẽ
-   * đọc lại cùng một con số đã commit cho mọi chiếc và cho qua cả đàn vượt hạn mức — nơi gọi
-   * phải tự trừ dần trên số trả về ở đây.
-   *
-   * Hạn mức đến từ `vehicleQuotaFor`, KHÔNG tự suy lại: bản trước có một bản sao của luật
-   * ("không gói ⇒ vô hạn, hoa hồng ⇒ vô hạn") và bản sao đó là chỗ trần Owner Lite lặng lẽ
-   * biến mất ở đường gửi hàng loạt.
-   *
-   * ⚠️ Owner Lite trả `null` ở CẢ HAI loại, và đó không phải "vô hạn" — trần của tuyến đó gác ở
-   * điểm TẠO xe, không gác suất chợ (xem `assertVehicleQuota`, nhánh `total`). Không tạo được
-   * chiếc thứ tư thì cũng không có chiếc thứ tư nào để gửi lên chợ, nên ở đây thật sự không còn
-   * gì để trừ.
+   * Tuyến hoa hồng KHÔNG có trần chi nhánh ở đây: nhiều chi nhánh là một CỜ NĂNG LỰC
+   * (`PLAN_FEATURE.BRANCHES`), và tuyến đó không có cờ nào (ADR 0027) nên nó đã bị chặn ở trục
+   * thứ nhất. Hai trục độc lập, kiểm nối tiếp — đặt thêm một con số ở đây là trả lời hai lần cho
+   * cùng một câu hỏi, bằng hai luật có thể trôi khỏi nhau.
    */
-  async remainingMarketplaceSlots(tenantId: string): Promise<Record<VehicleType, number | null>> {
-    const quota = await this.vehicleQuotaFor(tenantId);
-    if (quota.kind === 'unlimited') {
-      return { [VEHICLE_TYPE.CAR]: null, [VEHICLE_TYPE.MOTORBIKE]: null } as Record<
-        VehicleType,
-        number | null
-      >;
-    }
-
-    const onMarket: Prisma.VehicleWhereInput = {
-      tenantId,
-      deletedAt: null,
-      publicStatus: {
-        in: [VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW, VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC],
-      },
-    };
-
-    if (quota.kind === 'total') {
-      // Owner Lite không có suất CHỢ — trần của họ gác điểm tạo (xem `assertVehicleQuota`),
-      // nên ở đây không còn gì để trừ. Đội xe tối đa 3 chiếc đã là trần thật.
-      return { [VEHICLE_TYPE.CAR]: null, [VEHICLE_TYPE.MOTORBIKE]: null } as Record<
-        VehicleType,
-        number | null
-      >;
-    }
-
-    const used = await this.prisma.vehicle.groupBy({
-      by: ['vehicleType'],
-      where: onMarket,
-      _count: { _all: true },
+  async branchQuotaFor(tenantId: string, now: Date = new Date()): Promise<number | null> {
+    const row = await this.prisma.tenantSubscription.findFirst({
+      where: { tenantId, ...effectiveSubscriptionWhere(now) },
+      orderBy: EFFECTIVE_SUBSCRIPTION_ARGS.orderBy,
+      select: { ...EFFECTIVE_SUBSCRIPTION_ARGS.select, quotaJson: true },
     });
-    const usedOf = new Map(used.map((row) => [row.vehicleType, row._count._all]));
-
-    return VEHICLE_TYPE_VALUES.reduce(
-      (acc, type) => {
-        const limit = quota.limit[type];
-        acc[type] = limit == null ? null : Math.max(0, limit - (usedOf.get(type) ?? 0));
-        return acc;
-      },
-      {} as Record<VehicleType, number | null>,
-    );
+    const billing = resolveEffectiveBilling(row, now);
+    if (billing.billingMode !== BILLING_MODE.PACKAGE || !row) return null;
+    const quota = parsePlanQuota(row.quotaJson);
+    return quota ? quota.maxBranches : parsePlanLimits(row.plan.limitsJson).maxBranches;
   }
+
   // -------------------------------------------------------------------------
 
   /**
@@ -1788,9 +1569,7 @@ export class BillingService {
   private normalizePlanKnobs(input: {
     billingMode: string;
     commissionPercent: number | null;
-    basePriceMonthly: string;
     limits: PlanLimitsJson;
-    assumedGmv: PlanAssumedGmvJson | null;
   }): typeof input {
     if (input.billingMode === BILLING_MODE.COMMISSION) {
       if (input.commissionPercent == null) {
@@ -1800,26 +1579,46 @@ export class BillingService {
           details: { field: 'commissionPercent' },
         });
       }
-      return input;
+      /*
+       * Tuyến hoa hồng KHÔNG bán gì (ADR 0038 điều 13): bảng giá phải rỗng, và nó cũng không
+       * phải một bậc "tư vấn" đang chờ báo giá. Xoá lặng thay vì từ chối — vài dòng giá sót lại
+       * là dữ liệu thừa chứ không phải ý định của admin; nhưng để chúng lọt vào `limits_json`
+       * thì màn quản trị sẽ hiện tuyến vào cửa miễn phí như một SKU có giá.
+       */
+      return {
+        ...input,
+        limits: { ...input.limits, termPrices: [], salesOnly: false, recommended: false },
+      };
     }
-    // package: KHÔNG có % hoa hồng (0đ phí dịch vụ trên chuyến). Tự xoá thay vì bắt client gửi
-    // null tường minh — không có cách đọc thứ hai cho tổ hợp package + %.
-    //
-    // KHÔNG còn kiểm điểm giao ở đây (ADR 0029 gỡ ADR 0020): phí theo chuyến nay do KHÁCH gánh
-    // trên giá đặt xe, nên phí nền 0đ không giết phễu — động lực nâng cấp là giá cạnh tranh
-    // trên chợ, không phải chi phí trực tiếp của chủ xe. `assumedMonthlyGmv` thành tham khảo.
-    return { ...input, commissionPercent: null };
+    /*
+     * package: KHÔNG có % hoa hồng (0đ phí dịch vụ trên chuyến). Tự xoá thay vì bắt client gửi
+     * null tường minh — không có cách đọc thứ hai cho tổ hợp package + %.
+     *
+     * Bậc `salesOnly` bán bằng tư vấn nên bảng giá của nó phải RỖNG (ADR 0041 điều 5): để cả hai
+     * cùng tồn tại là bày một giá niêm yết cạnh nút "Liên hệ tư vấn", rồi `purchase()` vẫn từ
+     * chối — người dùng thấy một con số và bị chặn mà không hiểu vì sao.
+     */
+    return {
+      ...input,
+      commissionPercent: null,
+      limits: input.limits.salesOnly ? { ...input.limits, termPrices: [] } : input.limits,
+    };
   }
 
   /**
-   * Bảng kê cả kỳ = (phí nền + chỗ mua thêm × đơn giá) × số tháng, giảm % theo kỳ hạn cam kết.
-   * Chỗ trong mức gồm sẵn không tính thêm tiền — phí nền đã bao. Trả về TỪNG DÒNG để snapshot
-   * vào hoá đơn (ADR 0015 điều 5) — hoá đơn phải tự giải thích được, không cần join.
+   * Bảng kê cả kỳ của MỘT lượt mua bậc gói — ADR 0041 điều 2.
+   *
+   * Một dòng, một con số: giá của kỳ hạn là thứ admin gõ vào bảng giá (hoặc thứ admin đàm phán ở
+   * đường gán tay), không phải kết quả của một phép nhân. `unitPrice` cố ý bằng `amount` — "đơn
+   * giá" của một bậc gói CHÍNH LÀ tiền cả kỳ, và chia nó cho số tháng để lấp ô đó sẽ in lên
+   * chứng từ một con số lẻ không có trên bất kỳ bảng giá nào.
+   *
+   * `discountAmount = 0` luôn: % tiết kiệm trên thẻ kỳ hạn là một phép SO SÁNH giữa các kỳ hạn
+   * (`planTermSavingPercent`), không phải một khoản giảm trên một giá gốc. Ghi nó vào chứng từ là
+   * phát hành một hoá đơn khai rằng gói 12 tháng vốn giá 1.200.000đ — một con số không tồn tại.
    */
   private priceTerm(
-    basePriceMonthly: Prisma.Decimal,
-    limits: PlanLimitsJson,
-    slots: PlanSlots,
+    price: string,
     termMonths: number,
   ): {
     lines: PlanInvoiceLine[];
@@ -1827,57 +1626,21 @@ export class BillingService {
     discountAmount: Prisma.Decimal;
     total: Prisma.Decimal;
   } {
-    const lines: PlanInvoiceLine[] = [];
-    let subtotal = new Prisma.Decimal(0);
-
-    const base = new Prisma.Decimal(basePriceMonthly);
-    if (!base.isZero()) {
-      const amount = base.mul(termMonths).toDecimalPlaces(2);
-      lines.push({
-        kind: 'base',
-        quantity: 1,
-        months: termMonths,
-        unitPrice: base.toString(),
-        amount: amount.toString(),
-      });
-      subtotal = subtotal.add(amount);
-    }
-
-    for (const [type, bought, included, unitPrice] of [
-      [VEHICLE_TYPE.CAR, slots.car, limits.includedCars, limits.perVehiclePrice.car],
-      [
-        VEHICLE_TYPE.MOTORBIKE,
-        slots.motorbike,
-        limits.includedMotorbikes,
-        limits.perVehiclePrice.motorbike,
+    const amount = new Prisma.Decimal(price).toDecimalPlaces(2);
+    return {
+      lines: [
+        {
+          kind: 'package',
+          quantity: 1,
+          months: termMonths,
+          unitPrice: amount.toString(),
+          amount: amount.toString(),
+        },
       ],
-    ] as const) {
-      const extra = bought - included;
-      if (extra <= 0) continue;
-      if (unitPrice === null) {
-        throw new BadRequestException({
-          code: API_ERROR_CODE.VALIDATION_FAILED,
-          message: 'Bậc gói không bán thêm loại chỗ này',
-          details: { field: `slots.${type}` },
-        });
-      }
-      const amount = new Prisma.Decimal(unitPrice).mul(extra).mul(termMonths).toDecimalPlaces(2);
-      lines.push({
-        kind: 'slot',
-        vehicleType: type,
-        quantity: extra,
-        months: termMonths,
-        unitPrice,
-        amount: amount.toString(),
-      });
-      subtotal = subtotal.add(amount);
-    }
-
-    const discountAmount = subtotal
-      .mul(termDiscountPercent(limits, termMonths))
-      .div(100)
-      .toDecimalPlaces(2);
-    return { lines, subtotal, discountAmount, total: subtotal.sub(discountAmount) };
+      subtotal: amount,
+      discountAmount: new Prisma.Decimal(0),
+      total: amount,
+    };
   }
 
   /**
@@ -2061,19 +1824,48 @@ type PlanRow = Prisma.PlanGetPayload<{ select: typeof PLAN_SELECT }>;
 type SubRow = Prisma.TenantSubscriptionGetPayload<{ select: typeof SUB_SELECT }>;
 type InvoiceRow = Prisma.SubscriptionInvoiceGetPayload<{ select: typeof INVOICE_SELECT }>;
 
+/** Hoá đơn tay/hỏng không đọc ra snapshot nào — hiện "không giới hạn" là sai, nhưng DTO phải đủ hình. */
+const EMPTY_QUOTA: PlanQuotaSnapshot = { maxVehicles: null, maxBranches: null, maxMembers: null };
+
+/**
+ * Hạn mức mà một lượt mua bậc gói này CHỤP LẠI (ADR 0041 điều 3) — ba trần, không kèm giá.
+ *
+ * Tách thành hàm vì nó được gọi ở BA đường ghi (admin gán, tenant mua, webhook kích hoạt) và cả
+ * ba phải chụp đúng cùng một tập trường: thiếu `maxBranches` ở một đường là một gian hàng mua
+ * bậc 3 chi nhánh rồi mở được vô số.
+ */
+function quotaOf(limits: PlanLimitsJson): PlanQuotaSnapshot {
+  return {
+    maxVehicles: limits.maxVehicles,
+    maxBranches: limits.maxBranches,
+    maxMembers: limits.maxMembers,
+  };
+}
+
+/** Phần núm vặn của một bậc gói đi vào audit — đủ để đọc lại một quyết định định giá. */
+function planAuditKnobs(limits: PlanLimitsJson): Record<string, unknown> {
+  return {
+    maxVehicles: limits.maxVehicles,
+    maxBranches: limits.maxBranches,
+    maxMembers: limits.maxMembers,
+    termPrices: limits.termPrices,
+    salesOnly: limits.salesOnly,
+    features: limits.features,
+  };
+}
+
 function toCurrentPlanDto(current: SubRow): CurrentPlanDto {
   return {
     subscriptionId: current.id,
     planId: current.planId,
     planCode: current.plan.code,
     planName: current.plan.name,
-    maxVehicles: current.plan.maxVehicles,
-    // Ba cột SNAPSHOT trên chính dòng subscription (ADR 0024 điều 2) — null ở dòng gán
-    // trước ADR 0015; caller phân biệt "không biết" với "0/commission", đừng bịa mặc định.
+    // Ba cột SNAPSHOT trên chính dòng subscription (ADR 0024 điều 2 · ADR 0041 điều 3) — null ở
+    // dòng gán trước đó; caller phân biệt "không biết" với "0/commission", đừng bịa mặc định.
     billingMode: current.billingMode,
     commissionPercent:
       current.commissionPercent === null ? null : Number(current.commissionPercent),
-    slots: current.slotsJson === null ? null : parsePlanSlots(current.slotsJson),
+    quota: parsePlanQuota(current.quotaJson),
     endsAt: current.endsAt.toISOString(),
   };
 }
@@ -2089,7 +1881,9 @@ function toInvoiceDto(row: InvoiceRow): SubscriptionInvoiceDto {
     planId: snapshot.planId ?? '',
     planCode: snapshot.planCode ?? '',
     termMonths: snapshot.termMonths ?? 0,
-    slots: parsePlanSlots(snapshot.slots),
+    // Đọc qua parser đầy đủ: hoá đơn phát hành TRƯỚC ADR 0041 mang  thay cho ,
+    // và màn lịch sử hoá đơn phải hiện đúng con số của chính tờ chứng từ đó.
+    quota: parsePlanInvoiceSnapshot(row.linesJson)?.quota ?? EMPTY_QUOTA,
     lines: Array.isArray(snapshot.lines) ? snapshot.lines : [],
     periodFrom: (row.periodFrom as Date).toISOString(),
     periodTo: (row.periodTo as Date).toISOString(),
@@ -2112,14 +1906,9 @@ function toPlanDto(p: PlanRow): PlanDto {
     description: p.description,
     billingMode: p.billingMode,
     commissionPercent: p.commissionPercent === null ? null : Number(p.commissionPercent),
-    basePriceMonthly: p.basePriceMonthly.toString(),
     // Parser phòng thủ: jsonb hỏng/thiếu key không sập đường đọc — rơi về giá trị an toàn.
     limits: parsePlanLimits(p.limitsJson),
-    assumedMonthlyGmv: parsePlanAssumedGmv(p.assumedMonthlyGmvJson),
-    price: p.price.toString(),
     currency: p.currency,
-    durationDays: p.durationDays,
-    maxVehicles: p.maxVehicles,
     status: p.status,
     sortOrder: p.sortOrder,
     subscriptionCount: p._count.subscriptions,
@@ -2138,7 +1927,7 @@ function toSubscriptionDto(s: SubRow): SubscriptionDto {
     price: s.price.toString(),
     // null = dòng lịch sử gán trước ADR 0015 — "không ghi", khác với 0/commission.
     termMonths: s.termMonths,
-    slots: s.slotsJson === null ? null : parsePlanSlots(s.slotsJson),
+    quota: parsePlanQuota(s.quotaJson),
     billingMode: s.billingMode,
     commissionPercent: s.commissionPercent === null ? null : Number(s.commissionPercent),
     startsAt: (s.startsAt as Date).toISOString(),

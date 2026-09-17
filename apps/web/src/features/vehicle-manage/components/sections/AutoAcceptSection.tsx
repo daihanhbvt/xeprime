@@ -1,16 +1,14 @@
 'use client';
 
-import { ThunderboltFilled } from '@ant-design/icons';
-import { Alert, App, Button, Form } from 'antd';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { InfoCircleOutlined, ThunderboltFilled } from '@ant-design/icons';
+import { Alert, App, Button, Form, Popover } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useMemo } from 'react';
+import { useMemo, type MouseEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import * as yup from 'yup';
 import {
-  AUTO_ACCEPT_MAX_LEAD_OPTIONS_MINUTES,
-  AUTO_ACCEPT_MIN_LEAD_OPTIONS_MINUTES,
-  MIN_BOOKING_LEAD_MINUTES_RANGE,
   MIN_RENTAL_MINUTES_RANGE,
   ROUTE_TYPE_VALUES,
   isRouteType,
@@ -27,7 +25,6 @@ import { LoadingState } from '@/components/feedback/LoadingState';
 import { ROUTES } from '@/constants/routes';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { useValidationResolver } from '@/i18n/use-validation-resolver';
 
 import { usePatchVehicleServiceSetting, useVehicleServiceSettings } from '../../hooks';
 import type { VehicleServiceSetting } from '../../types';
@@ -36,23 +33,9 @@ import { SectionCard } from '../SectionCard';
 import styles from './AutoAcceptSection.module.css';
 
 const HOUR = 60;
-const DAY = 24 * HOUR;
-const WEEK = 7 * DAY;
 
 const schema = yup.object({
   autoAcceptEnabled: yup.boolean().defined(),
-  // Giá trị giữ dạng CHUỖI vì `options` của ô chọn (web + native) khoá `value: string`; số thô
-  // không khớp option nào nên ô hiện ra số phút trần ("60") hoặc bỏ trống. Quy về số lúc gửi đi.
-  autoAcceptMinLeadMinutes: yup.string().defined().required(),
-  autoAcceptMaxLeadMinutes: yup
-    .string()
-    .defined()
-    .required()
-    .test(
-      'min-max',
-      'minMax',
-      (max, ctx) => Number(max) >= Number(ctx.parent.autoAcceptMinLeadMinutes),
-    ),
   minRentalMinutes: yup.string().nullable().defined(),
   preferredRouteTypes: yup.array().of(yup.string().defined()).defined(),
 });
@@ -63,6 +46,10 @@ type FormValues = yup.InferType<typeof schema>;
  * khác nhau ở các ô riêng của có tài xế (thời lượng tối thiểu, lộ trình ưu tiên, năng lực tài
  * xế). Toggle ở đây chỉ là GHI thiết lập; quyết định tự nhận nằm ở server
  * (`VehicleSettingsService.evaluateAutoAccept` + `BookingRequestsService.tryAutoAccept`).
+ *
+ * 17/09/2026 — bỏ "Khoảng thời gian cho phép tự động đồng ý". Trước đó công tắc này đi kèm hai
+ * mốc đặt trước (mặc định 6 giờ – 1 tuần), nên chủ xe bật nó, đọc dòng "đang hoạt động", rồi vẫn
+ * phải duyệt tay mọi chuyến đặt gấp hoặc đặt xa mà không có gì nói vì sao. Nay BẬT là nhận.
  */
 export function AutoAcceptSection({ serviceType }: { serviceType: ServiceType }) {
   const { vehicle, canEdit } = useManagedVehicle();
@@ -93,6 +80,33 @@ export function AutoAcceptSection({ serviceType }: { serviceType: ServiceType })
   );
 }
 
+/**
+ * Điều kiện để hệ thống tự nhận — nội dung của icon thông tin cạnh công tắc.
+ *
+ * Trước đây là một thẻ riêng chiếm nửa màn hình. Đây là thứ người ta đọc MỘT lần lúc quyết định
+ * bật rồi không đọc lại, nên nó không xứng một chỗ thường trực; nhưng cũng không được biến mất —
+ * bốn dòng này là toàn bộ lời hứa của công tắc.
+ */
+function AutoAcceptRules({ withDriver }: { withDriver: boolean }) {
+  const t = useTranslations('VehicleManage.autoAccept');
+  return (
+    <div className={styles.rulesPopover}>
+      <ul className={styles.rules}>
+        <li>{t('rules.schedule')}</li>
+        <li>{t('rules.window')}</li>
+        <li>{t('rules.quote')}</li>
+        <li>{t('rules.longTerm')}</li>
+        {withDriver ? <li>{t('rules.driver')}</li> : null}
+        {withDriver ? <li>{t('rules.hold')}</li> : null}
+      </ul>
+      <div className={styles.policy}>
+        <strong>{t('policyTitle')}</strong>
+        <p>{t('policyBody')}</p>
+      </div>
+    </div>
+  );
+}
+
 function AutoAcceptForm({
   setting,
   serviceType,
@@ -110,7 +124,12 @@ function AutoAcceptForm({
   const errorMessage = useErrorMessage();
   const { message } = App.useApp();
   const patch = usePatchVehicleServiceSetting(vehicleId, serviceType);
-  const resolver = useValidationResolver<FormValues>(schema, 'VehicleManage.autoAccept.validation');
+  /*
+   * `yupResolver` trần chứ không phải `useValidationResolver`: schema này không còn câu lỗi nào
+   * để dịch sau khi bỏ ràng buộc "tối thiểu ≤ tối đa" (17/09/2026). Bọc nó sẽ trỏ tới một
+   * namespace không tồn tại.
+   */
+  const resolver = yupResolver(schema);
   const withDriver = serviceType === SERVICE_TYPE.WITH_DRIVER;
   const capability = setting.withDriverAutoAccept;
   const capabilityBlocked = withDriver && capability ? !capability.available : false;
@@ -118,8 +137,6 @@ function AutoAcceptForm({
   const values = useMemo<FormValues>(
     () => ({
       autoAcceptEnabled: setting.autoAcceptEnabled,
-      autoAcceptMinLeadMinutes: String(setting.autoAcceptMinLeadMinutes),
-      autoAcceptMaxLeadMinutes: String(setting.autoAcceptMaxLeadMinutes),
       minRentalMinutes: setting.minRentalMinutes == null ? null : String(setting.minRentalMinutes),
       preferredRouteTypes: setting.preferredRouteTypes,
     }),
@@ -128,29 +145,6 @@ function AutoAcceptForm({
   const { control, handleSubmit, reset, formState } = useForm<FormValues>({ resolver, values });
   const enabled = useWatch({ control, name: 'autoAcceptEnabled' });
 
-  /** Nhãn "6 giờ tới" / "1 tuần tới" — dựng từ phút, không có bảng nhãn thứ hai. */
-  const leadLabel = (minutes: number) => {
-    const text =
-      minutes % WEEK === 0
-        ? t('common.weeks', { count: minutes / WEEK })
-        : minutes % DAY === 0
-          ? t('common.days', { count: minutes / DAY })
-          : minutes % HOUR === 0
-            ? t('common.hours', { count: minutes / HOUR })
-            : t('common.minutes', { count: minutes });
-    return t('autoAccept.leadValue', { value: text });
-  };
-  const minLeadOptions = (
-    withDriver
-      ? AUTO_ACCEPT_MIN_LEAD_OPTIONS_MINUTES.filter(
-          (m) => m >= MIN_BOOKING_LEAD_MINUTES_RANGE.min && m <= MIN_BOOKING_LEAD_MINUTES_RANGE.max,
-        )
-      : AUTO_ACCEPT_MIN_LEAD_OPTIONS_MINUTES
-  ).map((m) => ({ value: String(m), label: leadLabel(m) }));
-  const maxLeadOptions = AUTO_ACCEPT_MAX_LEAD_OPTIONS_MINUTES.map((m) => ({
-    value: String(m),
-    label: leadLabel(m),
-  }));
   const minRentalOptions = Array.from(
     { length: MIN_RENTAL_MINUTES_RANGE.max / HOUR },
     (_, i) => (i + 1) * HOUR,
@@ -164,8 +158,6 @@ function AutoAcceptForm({
     try {
       await patch.mutateAsync({
         autoAcceptEnabled: next.autoAcceptEnabled,
-        autoAcceptMinLeadMinutes: Number(next.autoAcceptMinLeadMinutes),
-        autoAcceptMaxLeadMinutes: Number(next.autoAcceptMaxLeadMinutes),
         ...(withDriver
           ? {
               minRentalMinutes:
@@ -223,86 +215,57 @@ function AutoAcceptForm({
             name="autoAcceptEnabled"
             label={t(withDriver ? 'autoAccept.instantTitle' : 'autoAccept.toggleTitle')}
             description={t(withDriver ? 'autoAccept.instantBody' : 'autoAccept.toggleBody')}
+            labelExtra={
+              <Popover
+                content={<AutoAcceptRules withDriver={withDriver} />}
+                title={t('autoAccept.rulesTitle')}
+                trigger={['hover', 'click']}
+                placement="topLeft"
+              >
+                {/*
+                  `preventDefault` vì cả hàng là một `<label>`: thiếu nó thì chạm vào icon để đọc
+                  điều kiện cũng lật luôn công tắc — đúng thứ người dùng chưa quyết định.
+                */}
+                <span
+                  role="button"
+                  tabIndex={0}
+                  aria-label={t('autoAccept.rulesTitle')}
+                  className={styles.infoTrigger}
+                  onClick={(event: MouseEvent<HTMLSpanElement>) => event.preventDefault()}
+                >
+                  <InfoCircleOutlined aria-hidden="true" />
+                </span>
+              </Popover>
+            }
             disabled={!canEdit || (capabilityBlocked && !setting.autoAcceptEnabled)}
           />
         </SectionCard>
 
-        <SectionCard title={t('autoAccept.windowTitle')}>
-          <div className={styles.pair}>
-            {withDriver ? (
-              <>
-                <SelectField
-                  control={control}
-                  name="minRentalMinutes"
-                  label={t('autoAccept.minRental')}
-                  options={minRentalOptions}
-                  allowClear
-                  help={t('autoAccept.minRentalHint')}
-                  disabled={!canEdit}
-                />
-                <SelectField
-                  control={control}
-                  name="autoAcceptMinLeadMinutes"
-                  label={t('autoAccept.minLeadDriver')}
-                  options={minLeadOptions}
-                  help={t('autoAccept.minLeadDriverHint')}
-                  disabled={!canEdit}
-                />
-              </>
-            ) : (
-              <>
-                <SelectField
-                  control={control}
-                  name="autoAcceptMinLeadMinutes"
-                  label={t('autoAccept.minLead')}
-                  options={minLeadOptions}
-                  disabled={!canEdit}
-                />
-                <SelectField
-                  control={control}
-                  name="autoAcceptMaxLeadMinutes"
-                  label={t('autoAccept.maxLead')}
-                  options={maxLeadOptions}
-                  disabled={!canEdit}
-                />
-              </>
-            )}
-          </div>
-          {withDriver ? (
-            <>
-              <SelectField
-                control={control}
-                name="autoAcceptMaxLeadMinutes"
-                label={t('autoAccept.maxLead')}
-                options={maxLeadOptions}
-                disabled={!canEdit}
-              />
-              <CheckboxGroupField
-                control={control}
-                name="preferredRouteTypes"
-                label={t('autoAccept.routesTitle')}
-                options={routeOptions}
-                help={t('autoAccept.routesHint')}
-                disabled={!canEdit}
-              />
-            </>
-          ) : null}
-        </SectionCard>
-
-        <SectionCard title={t('autoAccept.rulesTitle')}>
-          <ul className={styles.rules}>
-            <li>{t('autoAccept.rules.schedule')}</li>
-            <li>{t('autoAccept.rules.window')}</li>
-            <li>{t('autoAccept.rules.quote')}</li>
-            <li>{t('autoAccept.rules.longTerm')}</li>
-            {withDriver ? <li>{t('autoAccept.rules.driver')}</li> : null}
-            {withDriver ? <li>{t('autoAccept.rules.hold')}</li> : null}
-          </ul>
-          <div className={styles.policy}>
-            <strong>{t('autoAccept.policyTitle')}</strong>
-            <p>{t('autoAccept.policyBody')}</p>
-          </div>
-        </SectionCard>
+        {/*
+          Chỉ có tài xế mới còn thiết lập riêng. Tự lái nay đúng MỘT công tắc — dựng thêm một thẻ
+          ở đây là bắt người dùng cuộn qua một khung không chứa gì.
+        */}
+        {withDriver ? (
+          <SectionCard title={t('autoAccept.withDriverTitle')}>
+            <SelectField
+              control={control}
+              name="minRentalMinutes"
+              label={t('autoAccept.minRental')}
+              options={minRentalOptions}
+              allowClear
+              help={t('autoAccept.minRentalHint')}
+              disabled={!canEdit}
+            />
+            <CheckboxGroupField
+              control={control}
+              name="preferredRouteTypes"
+              label={t('autoAccept.routesTitle')}
+              options={routeOptions}
+              help={t('autoAccept.routesHint')}
+              disabled={!canEdit}
+            />
+          </SectionCard>
+        ) : null}
 
         <StickyFormActions
           submitLabel={tActions('saveChanges')}

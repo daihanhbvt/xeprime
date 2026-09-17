@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { IconDisc } from '@/components/ui/IconDisc';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
-import { ROUTES, vehicleListPathFor } from '@/navigation/routes';
+import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
 import type { VehicleRegistrationSource } from '@/navigation/vehicle-registration-source';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
@@ -59,6 +59,17 @@ export function QuickVehicleSuccess({
     source === VEHICLE_REGISTRATION_SOURCE.MANAGE
       ? ROUTES.manage.vehicles()
       : ROUTES.account.vehicleManage(result.vehicle.id);
+
+  /*
+    KHÔNG dùng `vehicleListPathFor(source)` ở đây. Hàm đó trả landing "Trở thành chủ xe" cho
+    `marketplace` vì nó phục vụ nút QUAY LẠI — lúc chưa đăng xe thì đúng là chưa có danh sách nào
+    để về. Ở màn này thì ngược lại: xe VỪA được lưu, nên danh sách luôn tồn tại, và đẩy người dùng
+    về trang mời-làm-chủ-xe là trả lời sai câu họ vừa hỏi ("xe tôi đâu?").
+  */
+  const listHref =
+    source === VEHICLE_REGISTRATION_SOURCE.MANAGE
+      ? ROUTES.manage.vehicles()
+      : ROUTES.account.vehicles();
 
   return (
     <>
@@ -119,11 +130,7 @@ export function QuickVehicleSuccess({
           <YStack gap={space.sm}>
             <Button label={t('manageCta')} onPress={() => navigateOnce(manageHref)} />
             <Button label={t('addAnotherCta')} variant="secondary" onPress={onAddAnother} />
-            <Button
-              label={t('listCta')}
-              variant="ghost"
-              onPress={() => navigateOnce(vehicleListPathFor(source))}
-            />
+            <Button label={t('listCta')} variant="ghost" onPress={() => navigateOnce(listHref)} />
           </YStack>
         </YStack>
       </Screen>

@@ -75,6 +75,9 @@ export function makeBranchesService(prisma: PrismaService): BranchesService {
     new ListingsService(prisma),
     audit,
     makeAddressService(prisma),
+    // Trần chi nhánh của bậc gói đọc qua đây (ADR 0041 điều 1) — `BillingService` thật trên
+    // cùng database, không phải một stub: luật snapshot-thắng-bậc-gói là thứ cần được kiểm.
+    makeBillingService(prisma),
   );
 }
 

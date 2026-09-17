@@ -14,7 +14,9 @@ import { PriceBreakdown, type PriceBreakdownFees } from './PriceBreakdown';
  *     gian hàng thấy doanh thu phồng lên, hoặc khách thấy một tổng không giải thích được.
  *  2. **Mỗi dòng nói rõ ai nhận** (ADR 0028 điều 3) — không gọi phí XePrime là thuế hay bảo hiểm.
  *  3. **Tuyến gói không có dòng phí 0đ lấp lửng** — không có phụ phí thì không có khối nào.
- *  4. **Dòng do CHỦ XE chịu không cộng vào tổng khách.**
+ *  4. **Dòng do CHỦ XE chịu không cộng vào tổng khách, và KHÁCH KHÔNG THẤY NÓ** (17/09/2026).
+ *     Thuế khấu trừ nằm giữa hoá đơn của khách là một con số họ không trả và không giải thích
+ *     được — người dùng thật đã hiểu nhầm đúng như vậy.
  */
 const ROWS = [{ key: 'base', label: 'Tiền thuê 2 ngày', amount: '1000000' }];
 
@@ -32,10 +34,10 @@ function moneyText(expected: string) {
 }
 
 
-function renderIt(fees: PriceBreakdownFees | null) {
+function renderIt(fees: PriceBreakdownFees | null, audience: 'customer' | 'owner' = 'customer') {
   return render(
     <NextIntlClientProvider locale="vi" messages={viMessages} timeZone="Asia/Ho_Chi_Minh">
-      <PriceBreakdown rows={ROWS} totalAmount="1000000" fees={fees} />
+      <PriceBreakdown rows={ROWS} totalAmount="1000000" fees={fees} audience={audience} />
     </NextIntlClientProvider>,
   );
 }
@@ -85,20 +87,38 @@ describe('PriceBreakdown — phụ phí phía khách', () => {
     expect(screen.queryByText('Chuyển trước để giữ chỗ')).toBeNull();
   });
 
-  it('dòng do CHỦ XE chịu được đánh dấu riêng và không nằm trong tổng khách', () => {
-    renderIt({
-      lines: [
-        { key: 'service_fee', bearer: 'customer', percent: 10, amount: '100000' },
-        { key: 'vehicle_protection', bearer: 'owner', percent: 2, amount: '20000', partnerName: 'Đối tác BH' },
-      ],
-      // Tổng khách CHỈ cộng dòng của khách — bảo vệ xe trừ vào tiền chủ xe.
-      customerTotalAmount: '1100000',
-      holdAmount: '100000',
-    });
+  const OWNER_BORNE: PriceBreakdownFees = {
+    lines: [
+      { key: 'service_fee', bearer: 'customer', percent: 10, amount: '100000' },
+      { key: 'vehicle_protection', bearer: 'owner', percent: 2, amount: '20000', partnerName: 'Đối tác BH' },
+    ],
+    // Tổng khách CHỈ cộng dòng của khách — dòng kia trừ vào tiền chủ xe.
+    customerTotalAmount: '1100000',
+    holdAmount: '100000',
+  };
+
+  it('CHỦ XE đọc: dòng họ chịu hiện ra, đánh dấu riêng, không nằm trong tổng khách', () => {
+    renderIt(OWNER_BORNE, 'owner');
 
     expect(screen.getByText('Bảo vệ xe')).toBeTruthy();
     expect(screen.getAllByText(moneyText('1.100.000 ₫'))[0]).toBeTruthy();
     // Tên đối tác bảo hiểm hiện ngay tại dòng — không được thu dưới danh nghĩa một hãng không có.
     expect(screen.getByText(/Đối tác BH/)).toBeTruthy();
+  });
+
+  /**
+   * Lỗi thật người dùng báo (17/09/2026): hoá đơn của khách có dòng "Thuế khấu trừ/nộp thay ·
+   * Chủ xe thực nhận", và họ hỏi mình có đang phải trả khoản đó không.
+   *
+   * Không trả — nó không nằm trong tổng. Nhưng một con số nằm giữa hoá đơn thì mặc nhiên được
+   * đọc là tiền mình phải lo, và phần chú thích nhỏ không cứu được điều đó.
+   */
+  it('KHÁCH đọc: KHÔNG thấy dòng do chủ xe chịu, tổng vẫn nguyên', () => {
+    renderIt(OWNER_BORNE);
+
+    expect(screen.queryByText('Bảo vệ xe')).toBeNull();
+    expect(screen.queryByText(/Đối tác BH/)).toBeNull();
+    // Tổng khách KHÔNG đổi vì dòng đó vốn chưa từng nằm trong đó.
+    expect(screen.getAllByText(moneyText('1.100.000 ₫'))[0]).toBeTruthy();
   });
 });

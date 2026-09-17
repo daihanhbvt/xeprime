@@ -25,6 +25,8 @@ import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { ChatComposer } from './components/ChatComposer';
 import { MessageBubble } from './components/MessageBubble';
+import { useCurrentUser } from '@/features/auth/hooks/use-auth';
+import { resolveChatInbox } from './chat-inbox';
 import { useConversation } from './hooks/use-chat';
 import { useThread, type ThreadEntry } from './hooks/use-thread';
 import { useVehicleContext } from './hooks/use-vehicle-context';
@@ -82,7 +84,15 @@ export function ChatThreadScreen({
   const router = useRouter();
   const navigateOnce = useNavigateOnce();
 
-  const conversationQuery = useConversation(side, conversationId);
+  /*
+   * Trục TRUY VẤN là hộp thư, không phải vai của dòng: server kiểm phạm vi bằng chính tham số
+   * này, nên một chủ xe tuyến hoa hồng mở hội thoại phía gian hàng của mình từ hộp thư hợp nhất
+   * sẽ nhận 403 nếu ta gửi `customer` (ADR 0038 điều 10).
+   */
+  const { data: user } = useCurrentUser();
+  const inbox = resolveChatInbox(side, user);
+
+  const conversationQuery = useConversation(inbox, conversationId);
   /*
    * Bề mặt THẬT của người đang xem. `side` là thứ route nói; `conversation.side` là thứ server
    * xác nhận sau khi kiểm quyền. Phải có trước `useThread`: tin lạc quan dựng `senderType` từ
@@ -206,7 +216,19 @@ export function ChatThreadScreen({
   const onScroll = useCallback(
     // Danh sách đảo: `contentOffset.y` là khoảng cách tính từ ĐÁY, nên phép so là trực tiếp.
     (event: { nativeEvent: { contentOffset: { y: number } } }) => {
-      setAwayFromBottom(event.nativeEvent.contentOffset.y > NEAR_BOTTOM_PX);
+      const away = event.nativeEvent.contentOffset.y > NEAR_BOTTOM_PX;
+      /*
+       * Chỉ gọi `setState` khi giá trị THẬT SỰ đổi.
+       *
+       * Bộ nhận này chạy trên luồng JS, mỗi 64ms suốt cú cuộn. Gọi `setAwayFromBottom(away)`
+       * trần thì React vẫn phải render lại màn một lượt trước khi nhận ra giá trị không đổi và
+       * bỏ qua cây con — tức ~15 lượt render mỗi giây của CẢ màn hội thoại, đúng lúc luồng JS
+       * đang phải dựng các bong bóng tin mới vào tầm nhìn.
+       *
+       * Dạng hàm cập nhật thì React so ngay trong `setState` và không lên lịch gì cả. Cùng cách
+       * `ShopDetailScreen` đã làm cho ngưỡng hiện tên gian hàng.
+       */
+      setAwayFromBottom((prev) => (prev === away ? prev : away));
     },
     [],
   );

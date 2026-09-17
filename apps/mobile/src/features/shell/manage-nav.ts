@@ -49,6 +49,15 @@ export interface ManageNavLeaf {
    * việc hết hạn gói làm mất luôn quyền xem sổ của chính mình.
    */
   readonly feature?: PlanFeature;
+  /**
+   * Chỉ CHỦ gian hàng thấy mục này (ADR 0038 điều 3).
+   *
+   * Không phải một khoá `PERMISSION`, và đó là cả điểm: permission uỷ quyền được. Chủ shop tạo
+   * một vai tuỳ biến rồi gán cho quản lý là mở luôn đường ra của tiền, còn guard đọc quyền từ DB
+   * mỗi request nên "mặc định không có" không ngăn được gì. Câu hỏi ở đây cũng khác: không phải
+   * "người này được làm gì trong gian hàng" mà "tiền này của ai".
+   */
+  readonly ownerOnly?: true;
 }
 
 /**
@@ -192,11 +201,17 @@ const SHOP_NAV: readonly ManageNavSection[] = [
              * KHÔNG gác bằng `feature`: ví là TIỀN CỦA CHÍNH gian hàng, gói hết hạn vẫn phải xem
              * và rút được (ADR 0027 điều 3 — hết hạn là `read_only`, không phải `hidden`; ADR
              * 0033). Đây là mục duy nhất trong nhóm Tài chính không mang cờ gói, và đó là chủ ý.
+             *
+             * `ownerOnly` thay cho `SELLER_PROFILE_VIEW` (ADR 0038 điều 3): `shop_manager` có
+             * khoá đó MẶC ĐỊNH, nên trước đợt này quản lý đọc được số dư, toàn bộ sổ cái và lịch
+             * sử rút của gian hàng. Server đã đóng bằng `@ShopOwnerOnly()`; mục menu này chỉ để
+             * quản lý không bấm vào một màn chắc chắn trả 403.
              */
             key: 'balance',
             labelKey: 'manage.balance',
             icon: 'wallet-outline',
-            permission: PERMISSION.SELLER_PROFILE_VIEW,
+            permission: PERMISSION.TENANT_VIEW,
+            ownerOnly: true,
             href: ROUTES.manage.balance(),
           },
           {
@@ -322,6 +337,18 @@ const SHOP_NAV: readonly ManageNavSection[] = [
     labelKey: 'manageGroups.support',
     pinned: true,
     children: [
+      {
+        /*
+         * `TENANT_VIEW` là mức thấp nhất mọi vai đều có — cố ý: đây là dữ liệu của một CON NGƯỜI,
+         * không phải của gian hàng, nên không có quyền nào để kiểm. Và KHÔNG gác bằng `feature`:
+         * mật khẩu không thuộc gói nào.
+         */
+        key: 'account',
+        labelKey: 'manage.account',
+        icon: 'person-outline',
+        permission: PERMISSION.TENANT_VIEW,
+        href: ROUTES.manage.account(),
+      },
       {
         key: 'support',
         labelKey: 'manage.support',

@@ -1,12 +1,13 @@
 import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { BOOKING_HOLD_STATUS, HOLD_REFUND_STATUS } from '@xeprime/types';
 import { buildVietQrUrl } from '@xeprime/domain';
-import { Callout } from '@/components/ui/Callout';
+import { Button } from '@/components/ui/Button';
+import { Callout, CalloutBody } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { DataRow } from '@/components/ui/DataRow';
 import { IconButton } from '@/components/ui/IconButton';
@@ -14,6 +15,7 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { CustomerTripDetail } from '../api';
+import { RefundAccountSheet } from './RefundAccountSheet';
 
 type Hold = NonNullable<CustomerTripDetail['hold']>;
 
@@ -47,7 +49,7 @@ const styles = StyleSheet.create({
  * Mọi mốc đọc từ SERVER (`expiresAt`, `freeCancelUntil`) — không tính lại ở client, vì lệch đồng
  * hồ máy khách sẽ rơi đúng vào lúc tiền phụ thuộc vào nó.
  */
-export function TripHoldPanel({ hold }: { hold: Hold }) {
+export function TripHoldPanel({ hold, tripId }: { hold: Hold; tripId: string }) {
   const t = useTranslations('Trips.hold');
   const fmt = useAppFormat();
   const toast = useAppToast();
@@ -64,7 +66,7 @@ export function TripHoldPanel({ hold }: { hold: Hold }) {
   const awaiting =
     hold.status === BOOKING_HOLD_STATUS.PENDING || hold.status === BOOKING_HOLD_STATUS.UNDERPAID;
 
-  if (!awaiting) return <HoldOutcome hold={hold} />;
+  if (!awaiting) return <HoldOutcome hold={hold} tripId={tripId} />;
 
   const info = hold.paymentInfo;
   const qrUrl = buildVietQrUrl(info, hold.remainingAmount, hold.code);
@@ -170,21 +172,48 @@ export function TripHoldPanel({ hold }: { hold: Hold }) {
  * Không im lặng ở bất kỳ trạng thái nào: một khoản tiền đã chuyển mà màn hình không nhắc tới là
  * lý do đầu tiên khách gọi hỗ trợ.
  */
-function HoldOutcome({ hold }: { hold: Hold }) {
+function HoldOutcome({ hold, tripId }: { hold: Hold; tripId: string }) {
   const t = useTranslations('Trips.hold');
+  const tRefund = useTranslations('BankAccounts.refund');
+  const [refundOpen, setRefundOpen] = useState(false);
   const fmt = useAppFormat();
   const refund = hold.refund;
 
   if (refund) {
     const paid = refund.status === HOLD_REFUND_STATUS.PAID;
+    // Chưa khai tài khoản thì phải có ĐƯỜNG khai ngay đây: một câu "cần tài khoản ngân hàng"
+    // không kèm nút là đẩy người dùng đi tìm một màn mà họ không biết tên (ADR 0033).
+    const needsAccount = !paid && !refund.hasAccount;
+
     return (
-      <Callout tone={paid ? 'success' : 'info'}>
-        {paid
-          ? t('refundPaid', { amount: fmt.money(refund.amount) })
-          : refund.hasAccount
-            ? t('refundPending', { amount: fmt.money(refund.amount) })
-            : t('refundNeedsAccount', { amount: fmt.money(refund.amount) })}
-      </Callout>
+      <>
+        <Callout tone={paid ? 'success' : 'info'}>
+          <CalloutBody>
+            {paid
+              ? t('refundPaid', { amount: fmt.money(refund.amount) })
+              : refund.hasAccount
+                ? t('refundPending', { amount: fmt.money(refund.amount) })
+                : t('refundNeedsAccount', { amount: fmt.money(refund.amount) })}
+          </CalloutBody>
+          {needsAccount ? (
+            <Button
+              label={tRefund('title')}
+              variant="secondary"
+              size="sm"
+              onPress={() => setRefundOpen(true)}
+            />
+          ) : null}
+        </Callout>
+
+        {needsAccount ? (
+          <RefundAccountSheet
+            tripId={tripId}
+            amount={refund.amount}
+            open={refundOpen}
+            onClose={() => setRefundOpen(false)}
+          />
+        ) : null}
+      </>
     );
   }
 

@@ -29,7 +29,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0012](0012-i18n-shared-url-cookie-locale.md) | i18n vi/en dùng chung URL và message source | Accepted |
 | [0013](0013-no-online-payment-mvp.md) | Không online payment ở MVP cũ | **Superseded bởi 0028** |
 | [0014](0014-owner-and-shop-single-role.md) | Một role owner/shop, capability từ gói | **Partially superseded bởi 0020/0028/0032/0036** |
-| [0015](0015-vehicle-slot-billing.md) | Gói trả trước theo chỗ xe | **Partially superseded bởi 0020/0028** |
+| [0015](0015-vehicle-slot-billing.md) | Gói trả trước theo chỗ xe | **Partially superseded bởi 0020/0028; điều 1/3/8 bị 0041 ghi đè** |
 | [0016](0016-sepay-bank-reconciliation.md) | SePay đối soát tiền gói | Accepted; phạm vi mở rộng bởi 0022/0028 |
 | [0017](0017-native-bearer-auth.md) | Bearer auth cho native | Accepted |
 | [0018](0018-map-delivery-distance.md) | Khoảng cách giao xe là ước lượng | Accepted |
@@ -43,7 +43,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0026](0026-first-trips-free-then-commission.md) | Hai chuyến đầu miễn phí | **Superseded bởi 0028** |
 | [0027](0027-feature-tiers-basic-owner-vs-shop.md) | Basic Owner và Full Shop capability | **Partially superseded bởi 0032/0038; điều 3 bị 0038 ghi đè trong phạm vi HẾT GÓI** |
 | [0028](0028-marketplace-subscription-fees-and-custodied-funds.md) | Hai lựa chọn, phí minh bạch, hold/payout có gate | **Partially superseded bởi 0032; điều 6 + tên gọi ở điều 8 bị 0033 ghi đè** |
-| [0029](0029-per-vehicle-flat-pricing-and-customer-side-fees.md) | Giá gói phẳng theo chỗ; phụ phí chuyến phía khách | **Partially superseded/làm rõ bởi 0032** |
+| [0029](0029-per-vehicle-flat-pricing-and-customer-side-fees.md) | Giá gói phẳng theo chỗ; phụ phí chuyến phía khách | **Partially superseded/làm rõ bởi 0032; điều 3 (giá theo chỗ) bị 0041 ghi đè — điều 1–2 (phí phía khách) còn hiệu lực** |
 | [0030](0030-locked-identity-fields-instead-of-reapproval.md) | Khoá căn cước xe thay cho "sửa là duyệt lại" | **Accepted; ghi đè 0008 điều 2** |
 | [0031](0031-split-feature-api-per-app.md) | Tách tầng gọi API theo app; api-client chỉ còn hạ tầng HTTP | **Accepted; ghi đè 0007 phần tầng feature** |
 | [0032](0032-booking-deposit-insurance-and-owner-lite.md) | Cọc booking bắt buộc, bảo hiểm tại bàn giao và ranh giới Owner Lite | **Accepted; ghi đè một phần 0014/0025/0027/0028/0029** |
@@ -55,6 +55,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0038](0038-owner-track-split-and-unified-wallet.md) | Tách hai tuyến chủ xe: một ví cho một người, ranh giới Manage chặn ở server | **Accepted; ghi đè một phần 0027 (điều 3) và 0033 (điều 2, cột chủ ví)** |
 | [0039](0039-hold-before-acceptance.md) | Khách trả giữ chỗ TRƯỚC khi gian hàng duyệt; cửa sổ 10 phút + 2 lần tự gia hạn | **Accepted; ghi đè 0032 điều 2 và 0027 điều 2 trong phạm vi công tắc cọc** |
 | [0040](0040-registration-track-split.md) | Hai tuyến ĐĂNG KÝ tách hẳn: ý định lưu ở `tenants.onboarding_state`, thanh toán mở Manage, cổng logo chỉ áp tuyến gói | **Accepted; ghi đè 0036 điều 4 (xác minh thôi làm cổng mua gói)** |
+| [0041](0041-plan-tiers-by-vehicle-count.md) | Ba bậc gian hàng bán theo SỐ XE và KỲ HẠN; bậc doanh nghiệp bán bằng tư vấn | **Accepted; ghi đè 0029 điều 3, 0015 điều 1/3/8, và 0038 điều 12 ở phần cách đếm tuyến gói** |
 
 ## Quy tắc thêm ADR
 

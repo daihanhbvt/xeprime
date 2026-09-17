@@ -10,12 +10,26 @@ export type SendMessageInput = Schemas['SendMessageDto'];
 export type ChatAttachmentPresign = Schemas['PresignResultDto'];
 export type FirebaseChatToken = Schemas['FirebaseTokenDto'];
 export type ChatUnreadSummary = Schemas['ChatUnreadSummaryDto'];
+export type ChatEligibility = Schemas['ChatEligibilityDto'];
+
+/**
+ * Mở hội thoại theo XE, hoặc theo GIAN HÀNG — hai lối, một endpoint.
+ *
+ * Lối gian hàng tồn tại từ khi trang gian hàng bỏ số điện thoại (ADR 0038): liên hệ đi qua hộp
+ * thư trong ứng dụng, và ở màn gian hàng thì chưa có chiếc xe nào để gắn vào.
+ */
+export type ConversationTarget = { vehicleId: string } | { shopSlug: string };
 
 export const CONVERSATIONS_DEFAULT_LIMIT = 20;
 export const MESSAGES_DEFAULT_LIMIT = 30;
 
 export interface ConversationFilters {
-  /** `CHAT_SIDE.CUSTOMER` | `CHAT_SIDE.SHOP` — bắt buộc, xem docblock của `chatApi`. */
+  /**
+   * `CHAT_INBOX.CUSTOMER` | `.SHOP` | `.UNIFIED` — bắt buộc, xem docblock của `chatApi`.
+   *
+   * Tên tham số vẫn là `side` để mọi URL và lời gọi cũ giữ nguyên nghĩa; giá trị thì đã là trục
+   * HỘP THƯ (ADR 0038 điều 10). Hai giá trị đầu trùng `CHAT_SIDE` có chủ đích.
+   */
   side: string;
   q?: string;
   unreadOnly?: boolean;
@@ -82,9 +96,19 @@ export const chatApi = {
     });
   },
 
-  /** Khách mở/lấy hội thoại với shop về một xe. Idempotent ở DB — bấm nhiều lần vẫn một thread. */
-  start(vehicleId: string): Promise<ConversationSummary> {
-    return getApiClient().post<ConversationSummary>('/conversations', { vehicleId });
+  /** Khách mở/lấy hội thoại với shop. Idempotent ở DB — bấm nhiều lần vẫn một thread. */
+  start(target: ConversationTarget): Promise<ConversationSummary> {
+    return getApiClient().post<ConversationSummary>('/conversations', target);
+  },
+
+  /**
+   * Khách có nhắn được cho gian hàng này không — chỉ để ẨN/HIỆN nút.
+   *
+   * Cổng THẬT vẫn ở `POST /conversations` (`CHAT_REQUIRES_BOOKING`): chủ xe cá nhân chỉ mở kênh
+   * sau khi khách đã gửi một yêu cầu thuê.
+   */
+  eligibility(shopSlug: string): Promise<ChatEligibility> {
+    return getApiClient().get<ChatEligibility>('/conversations/eligibility', { shopSlug });
   },
 
   async messages(conversationId: string, cursor?: MessageCursor | null): Promise<MessagePage> {

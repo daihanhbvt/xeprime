@@ -60,6 +60,17 @@ export interface AccountNavItem {
   readonly href: string;
   readonly icon: ComponentType<{ className?: string }>;
   readonly external?: boolean;
+  /**
+   * Những màn KHÔNG có mục menu riêng nhưng thuộc về mục này.
+   *
+   * ADR 0038 điều 9 gom ba cửa tiền vào trong "Tài khoản của tôi", nên `/account/balance`,
+   * `/account/earnings`… không còn là mục menu — nhưng chúng vẫn là màn mở được. Thiếu khai báo
+   * này thì ở đó KHÔNG mục nào sáng (người dùng mất dấu mình đang đứng đâu) và không có đường lui.
+   *
+   * Chỉ là FALLBACK: ở menu khách thuê, chính những đường dẫn này lại là mục menu, và khớp trực
+   * tiếp luôn thắng.
+   */
+  readonly owns?: readonly string[];
 }
 
 export interface AccountNavGroup {
@@ -74,6 +85,13 @@ const PROFILE: AccountNavItem = {
   labelKey: 'account.profile',
   href: ROUTES.ACCOUNT.ROOT,
   icon: UserOutlined,
+  // Ba cửa tiền + lịch sử thanh toán sống TRONG màn này từ ADR 0038 điều 9 — xem `owns`.
+  owns: [
+    ROUTES.ACCOUNT.BALANCE,
+    ROUTES.ACCOUNT.EARNINGS,
+    ROUTES.ACCOUNT.BANK_ACCOUNTS,
+    ROUTES.ACCOUNT.PAYMENTS,
+  ],
 };
 
 const TRIPS: AccountNavItem = {
@@ -426,7 +444,30 @@ export function matchAccountNavKey(
       (item.href !== ROUTES.ACCOUNT.ROOT && pathname.startsWith(`${item.href}/`));
     if (isMatch && (!best || item.href.length > best.href.length)) best = item;
   }
-  return best?.key;
+  // Khớp trực tiếp THẮNG `owns`: ở menu khách thuê, chính các đường dẫn đó là mục menu.
+  return (best ?? owningItem(pathname, items))?.key;
+}
+
+/**
+ * Mục menu SỞ HỮU một màn không có mục riêng — `undefined` nếu màn đó tự có mục, hoặc không
+ * thuộc về mục nào.
+ *
+ * Nơi gọi dùng nó để dựng đường lui: những màn này đi vào bằng một nút bên trong màn cha, nên
+ * không có gì trong menu đưa người dùng quay lại.
+ */
+export function accountNavOwner(
+  pathname: string,
+  items: readonly AccountNavItem[],
+): AccountNavItem | undefined {
+  if (items.some((item) => item.href === pathname)) return undefined;
+  return owningItem(pathname, items);
+}
+
+function owningItem(
+  pathname: string,
+  items: readonly AccountNavItem[],
+): AccountNavItem | undefined {
+  return items.find((item) => item.owns?.includes(pathname));
 }
 
 /** Mọi mục của mọi nhóm — cho hàm khớp đường dẫn. */

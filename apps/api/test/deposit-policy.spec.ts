@@ -200,8 +200,6 @@ async function seedShop(
       commissionPercent:
         billingMode === BILLING_MODE.COMMISSION ? new Prisma.Decimal(10) : null,
       basePriceMonthly: new Prisma.Decimal(0),
-      price: 0,
-      durationDays: 30,
       limitsJson: { features: [...planFeatures] } as unknown as Prisma.InputJsonValue,
     },
   });
@@ -354,11 +352,11 @@ describe('DepositPolicyService.resolveForTenant — GIAI ĐOẠN cả sàn thu c
       expect(r.required).toBe(false);
       expect(r.reason).toBe(DEPOSIT_POLICY_REASON.BILLING_NOT_CONFIGURED);
     } finally {
-      // `slotsJson` nullable làm kiểu của `createMany` không nhận lại nguyên bản vừa đọc ra;
+      // `quotaJson` nullable làm kiểu của `createMany` không nhận lại nguyên bản vừa đọc ra;
       // dựng lại từng dòng là cách gọn nhất mà vẫn giữ đúng dữ liệu cũ.
       for (const row of saved) {
         await prisma.tenantSubscription.create({
-          data: { ...row, slotsJson: row.slotsJson ?? Prisma.JsonNull },
+          data: { ...row, quotaJson: row.quotaJson ?? Prisma.JsonNull },
         });
       }
     }
@@ -547,7 +545,7 @@ describe('TỰ NHẬN đơn áp CÙNG chính sách với duyệt tay (khi giai �
       packagePlus.vehicle,
       SERVICE_TYPE.SELF_DRIVE,
       packagePlus.owner,
-      { autoAcceptEnabled: true, autoAcceptMinLeadMinutes: 60, autoAcceptMaxLeadMinutes: 129600 },
+      { autoAcceptEnabled: true },
       HIDDEN_FEATURES,
     );
     await setToggle(packagePlus.tenant, true);
@@ -565,7 +563,7 @@ describe('TỰ NHẬN đơn áp CÙNG chính sách với duyệt tay (khi giai �
       packagePlus.vehicle,
       SERVICE_TYPE.SELF_DRIVE,
       packagePlus.owner,
-      { autoAcceptEnabled: true, autoAcceptMinLeadMinutes: 60, autoAcceptMaxLeadMinutes: 129600 },
+      { autoAcceptEnabled: true },
       HIDDEN_FEATURES,
     );
 

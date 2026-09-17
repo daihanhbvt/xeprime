@@ -9,6 +9,7 @@ import type { ServiceType } from '@xeprime/types';
 import { accountVehicleManagePath, vehicleManageSectionOf } from '@/constants/routes';
 import type { VehicleDetail } from '@/features/vehicles/types';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { useAccountIdentityLabel } from '@/features/account/hooks/use-account-identity-label';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
 import { initialOf } from '@/lib/initials';
@@ -32,6 +33,7 @@ interface Props {
 export function VehicleManageSidebar({ vehicle, toggle }: Props) {
   const t = useTranslations('VehicleManage');
   const tAccount = useTranslations('Account');
+  const identityLabel = useAccountIdentityLabel();
   const domainLabel = useDomainLabel();
   const pathname = usePathname();
   const { data: user } = useCurrentUser();
@@ -39,9 +41,8 @@ export function VehicleManageSidebar({ vehicle, toggle }: Props) {
   const services = vehicle.serviceTypes ?? [];
 
   const name = user?.displayName || user?.email || tAccount('profile.accountLabel');
-  const role = user?.tenant?.roleKey
-    ? domainLabel('tenantRole', user.tenant.roleKey, user.tenant.roleKey)
-    : tAccount('profile.accountLabel');
+  /* Nhãn danh tính đọc TUYẾN, và có cả bậc vai NỀN TẢNG — xem `useAccountIdentityLabel`. */
+  const role = identityLabel(user);
 
   return (
     <nav className={styles.nav} aria-label={t('nav.menuLabel')}>

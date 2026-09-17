@@ -14,4 +14,6 @@ export type {
   PublicListingFacets,
   PublicShop,
   PublicShopSummary,
+  ShopReviewItem,
+  ShopReviewPage,
 } from '@xeprime/types';

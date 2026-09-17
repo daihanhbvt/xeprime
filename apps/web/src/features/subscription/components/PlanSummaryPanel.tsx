@@ -9,7 +9,7 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 
-import type { MySubscription, SlotUsage } from '../types';
+import type { MySubscription } from '../types';
 import { PlanFeatureList } from './PlanFeatureList';
 import styles from './PlanSummaryPanel.module.css';
 
@@ -89,31 +89,18 @@ export function PlanSummaryPanel({
 
       <div className={styles.tiles}>
         {/*
-          Owner Lite có trần TỔNG (ô tô + xe máy), tuyến gói có hạn mức theo LOẠI. Hai luật khác
-          nhau nên hai cách vẽ khác nhau — nhét trần tổng vào ô của từng loại là màn hình nói
-          "3 ô tô" trong khi backend chặn ở "3 xe", và chủ xe sẽ đăng đủ 3 ô tô rồi ngạc nhiên
-          vì chiếc xe máy đầu tiên bị từ chối.
+          MỘT ô trần cho cả đội xe (ADR 0041 điều 4) — cả hai tuyến đếm TỔNG ô tô + xe máy. Hai
+          ô theo loại bên cạnh nó chỉ nói MỨC DÙNG, không mang trần nào: viết trần tổng vào ô
+          của từng loại là màn hình nói "3 ô tô" trong khi backend chặn ở "3 xe", và chủ xe sẽ
+          đăng đủ 3 ô tô rồi ngạc nhiên vì chiếc xe máy đầu tiên bị từ chối.
         */}
-        {fleetQuota.kind === 'total' && fleetQuota.totalLimit != null ? (
-          <QuotaTile
-            label={t('usage.fleetTotal')}
-            used={fleetQuota.totalUsed}
-            limit={fleetQuota.totalLimit}
-          />
-        ) : (
-          <>
-            <QuotaTile
-              label={t('usage.car')}
-              used={usage.car.used}
-              limit={usage.car.limit ?? null}
-            />
-            <QuotaTile
-              label={t('usage.motorbike')}
-              used={usage.motorbike.used}
-              limit={usage.motorbike.limit ?? null}
-            />
-          </>
-        )}
+        <QuotaTile
+          label={t('usage.fleetTotal')}
+          used={fleetQuota.totalUsed}
+          limit={fleetQuota.totalLimit}
+        />
+        <UsageTile label={t('usage.car')} used={usage.car.used} />
+        <UsageTile label={t('usage.motorbike')} used={usage.motorbike.used} />
         {currentPlan ? <TermTile endsAt={currentPlan.endsAt} phase={phase} /> : null}
       </div>
 
@@ -121,7 +108,7 @@ export function PlanSummaryPanel({
         {isCommission ? t('current.commissionSummary') : t('current.packageSummary')}
       </p>
 
-      <QuotaWarning usage={usage} fleetQuota={fleetQuota} />
+      <QuotaWarning fleetQuota={fleetQuota} />
 
       {/* "Nâng cấp được thêm gì" — tự biến mất khi không còn tính năng nào bị khoá. */}
       <PlanFeatureList onUpgrade={canPurchase ? onPurchase : undefined} />
@@ -193,39 +180,46 @@ function TermTile({ endsAt, phase }: { endsAt: string; phase: BillingPhase | nul
 }
 
 /**
- * Một dòng cảnh báo khi đã dùng hết chỗ — và chỉ khi đó.
+ * Một ô MỨC DÙNG theo loại xe — không có trần, nên không có thanh.
  *
- * Alert full-width chỉ xuất hiện khi có việc phải làm. Còn chỗ trống thì ba ô số ở trên đã nói
- * đủ, và một dải "mọi thứ đều ổn" đứng thường trực chỉ dạy người dùng bỏ qua vùng đó.
+ * Tách khỏi `QuotaTile` thay vì truyền `limit={null}`: hai ô trả lời hai câu hỏi khác nhau
+ * ("còn bao nhiêu suất" ↔ "đang có mấy chiếc"), và một tham số null-able ở giữa là chỗ để ai đó
+ * sau này truyền một con số vào và dựng lại đúng cái trần-theo-loại mà ADR 0041 vừa gỡ.
  */
-function QuotaWarning({
-  usage,
-  fleetQuota,
-}: {
-  usage: MySubscription['usage'];
-  fleetQuota: MySubscription['fleetQuota'];
-}) {
+function UsageTile({ label, used }: { label: string; used: number }) {
+  return (
+    <div className={styles.tile} data-tone="ok">
+      <span className={styles.tileLabel}>{label}</span>
+      <span className={styles.tileValue}>{used}</span>
+    </div>
+  );
+}
+
+/**
+ * Một dòng cảnh báo khi đã dùng hết trần — và chỉ khi đó.
+ *
+ * Alert full-width chỉ xuất hiện khi có việc phải làm. Còn chỗ trống thì các ô số ở trên đã nói
+ * đủ, và một dải "mọi thứ đều ổn" đứng thường trực chỉ dạy người dùng bỏ qua vùng đó.
+ *
+ * Câu chữ đi theo `reason`: chạm trần của bậc ĐÃ MUA thì việc cần làm là nâng bậc; chạm trần
+ * Owner Lite thì là mua gói. Một câu chung cho cả hai sẽ mời một gian hàng đang trả tiền đi
+ * "mua gói" mà họ đã có.
+ */
+function QuotaWarning({ fleetQuota }: { fleetQuota: MySubscription['fleetQuota'] }) {
   const t = useTranslations('Subscription');
 
-  const full: string[] = [];
-  if (fleetQuota.kind === 'total' && fleetQuota.totalLimit != null) {
-    if (fleetQuota.totalUsed >= fleetQuota.totalLimit) full.push(t('usage.fleetTotal'));
-  } else {
-    if (atLimit(usage.car)) full.push(t('usage.car'));
-    if (atLimit(usage.motorbike)) full.push(t('usage.motorbike'));
-  }
-  if (full.length === 0) return null;
+  const limit = fleetQuota.totalLimit;
+  if (limit == null || limit <= 0 || fleetQuota.totalUsed < limit) return null;
 
   return (
     <Alert
       type="warning"
       showIcon
       className={styles.warning}
-      title={t('usage.atLimit', { kinds: full.join(', ') })}
+      title={t('usage.atLimitTotal', { limit })}
+      description={
+        fleetQuota.reason === 'plan' ? t('usage.atLimitUpgrade') : t('usage.atLimitBuyPlan')
+      }
     />
   );
-}
-
-function atLimit(slot: SlotUsage): boolean {
-  return slot.limit != null && slot.limit > 0 && slot.used >= slot.limit;
 }

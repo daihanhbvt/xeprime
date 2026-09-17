@@ -110,10 +110,9 @@ before(async () => {
       billingMode: BILLING_MODE.COMMISSION,
       commissionPercent: 10,
       basePriceMonthly: 0,
-      durationDays: 365,
       // `sortOrder` nhỏ nhất trong các bậc hoa hồng đang bán ⇒ job chọn đúng bậc này làm fallback.
       sortOrder: -1,
-      limitsJson: { features: [], graceDays: 7 },
+      limitsJson: { features: [], graceDays: 7, termPrices: [] },
     },
   });
   await prisma.plan.create({
@@ -124,8 +123,14 @@ before(async () => {
       status: PLAN_STATUS.ACTIVE,
       billingMode: BILLING_MODE.PACKAGE,
       basePriceMonthly: 0,
-      durationDays: 30,
-      limitsJson: { features: [], graceDays: 7 },
+      // Bậc gian hàng phải có BẢNG GIÁ, nếu không job chào gói lọc nó ra (ADR 0041 điều 5).
+      limitsJson: {
+        features: [],
+        graceDays: 7,
+        maxVehicles: 3,
+        maxBranches: 1,
+        termPrices: [{ months: 1, price: '100000' }],
+      },
     },
   });
 });

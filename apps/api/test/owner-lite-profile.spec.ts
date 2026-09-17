@@ -127,7 +127,6 @@ beforeAll(async () => {
       billingMode: BILLING_MODE.COMMISSION,
       commissionPercent: 10,
       basePriceMonthly: 0,
-      durationDays: 30,
       limitsJson: { features: [...OWNER_LITE_FEATURES] },
     },
   });
@@ -139,7 +138,6 @@ beforeAll(async () => {
       status: PLAN_STATUS.ACTIVE,
       billingMode: BILLING_MODE.PACKAGE,
       basePriceMonthly: 0,
-      durationDays: 30,
       limitsJson: { features: [...FULL_MANAGE_FEATURES] },
     },
   });
@@ -302,7 +300,6 @@ describe('gate — gọi thẳng endpoint nâng cao', () => {
         status: PLAN_STATUS.ACTIVE,
         billingMode: BILLING_MODE.PACKAGE,
         basePriceMonthly: 0,
-        durationDays: 30,
         limitsJson: { features: [PLAN_FEATURE.BRANCHES] },
       },
     });

@@ -46,7 +46,7 @@ Không dùng phần trăm hoàn thành tổng dự án: một màn hình đơn g
 
 Với tuyến Basic, tổng giá khách thấy gồm giá thuê do chủ xe đặt và các dòng phụ phí chuyến hợp lệ. Pilot khởi đầu chỉ bật **phí dịch vụ XePrime 10%** theo policy; khoản này không bị khấu trừ khỏi tiền thuê của chủ xe. Thuế và bảo hiểm chỉ được bật bằng số thực sau khi vượt gate tương ứng. `commissionPercent` trong code cũ phải được hiểu là tỷ lệ phí dịch vụ cộng vào giá khách, không phải tỷ lệ trừ vào owner earning.
 
-Chi tiết và quan hệ ghi đè ADR cũ: [ADR 0028](decisions/0028-marketplace-subscription-fees-and-custodied-funds.md) và [ADR 0029](decisions/0029-per-vehicle-flat-pricing-and-customer-side-fees.md). Trong phạm vi người trả phí dịch vụ và giá gói phẳng theo chỗ xe, ADR 0029 mới hơn được ưu tiên.
+Chi tiết và quan hệ ghi đè ADR cũ: [ADR 0028](decisions/0028-marketplace-subscription-fees-and-custodied-funds.md), [ADR 0029](decisions/0029-per-vehicle-flat-pricing-and-customer-side-fees.md) và [ADR 0041](decisions/0041-plan-tiers-by-vehicle-count.md). Trong phạm vi NGƯỜI trả phí dịch vụ, ADR 0029 (điều 1–2) được ưu tiên; trong phạm vi CÁCH ĐÓNG GÓI và ĐỊNH GIÁ tuyến gói, ADR 0041 ghi đè giá theo chỗ của ADR 0029 điều 3.
 
 ## 3. Lộ trình hiện hành
 
@@ -98,7 +98,7 @@ Trạng thái: **Lát cắt W4 đã merge vào `develop`, chưa vượt Gate R2*
 - Admin xem invoice và giao dịch chưa khớp; có đường xử lý thủ công kèm audit.
 - Grace/read-only/downgrade rõ ràng; không khóa mất dữ liệu cũ.
 - Trang so sánh Basic Owner và Gian hàng.
-- Áp dụng giá phẳng theo từng chỗ xe: 100.000đ/ô tô/tháng và 40.000đ/xe máy/tháng, bán các kỳ hạn 3/6/12 tháng; `basePriceMonthly = 0`, không chỗ gồm sẵn và không overage chéo loại xe; đo conversion, utilization và chi phí phục vụ trước khi chốt giá production.
+- Bán BA BẬC gian hàng theo trần số xe và kỳ hạn (ADR 0041): Cơ bản 3 xe / 1 chi nhánh (100k · 250k · 450k · 800k cho 1/3/6/12 tháng), Nâng cao 10 xe / 3 chi nhánh, Chuyên nghiệp không giới hạn và bán bằng tư vấn. Giá là con số tuyệt đối của từng kỳ hạn; % tiết kiệm chỉ là phép so sánh hiển thị. Đo conversion theo bậc và tỉ lệ chạm trần trước khi chốt giá production.
 - **Phễu đăng ký gian hàng trả phí — xong 16/09/2026 (ADR 0040).** Hai cửa vào tách hẳn: ý định lưu ở `tenants.onboarding_state`, onboarding hai bước (khai gian hàng → chọn gói + QR) phục hồi được sau F5, thanh toán mở Manage trong cùng transaction với webhook. Cổng "xác minh pháp nhân mới được mua gói" của ADR 0036 đã bỏ — nó đứng chắn ở đúng chỗ nền tảng đang muốn thu tiền.
 
 **Gate R2:** một shop tự mua/gia hạn gói và hệ thống đối soát đúng mà admin không sửa database.
@@ -218,7 +218,7 @@ Backlog/acceptance criteria đầy đủ: [`design/03_PRODUCT_GAP_ANALYSIS.md`](
 | --- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | Basic owner trả phần còn lại trực tiếp hay qua XePrime mặc định? | Trực tiếp trong R3; thu hộ tùy chọn ở R4                                                                                                                                                                             |
 | 2   | Ai trả phí dịch vụ XePrime theo chuyến?                          | Khách thuê trả qua phụ phí cộng vào báo giá ở tuyến Basic; không khấu trừ phí này khỏi tiền thuê của chủ xe. Pilot bắt đầu 10%; tuyến gói 0%                                                                         |
-| 3   | Mức gói và kỳ hạn?                                               | Giá phẳng 100.000đ/chỗ ô tô/tháng, 40.000đ/chỗ xe máy/tháng, tối thiểu 3 tháng; không phí nền/chỗ gồm sẵn/overage chéo; admin cấu hình động và đo trước khi chốt giá production                                      |
+| 3   | Mức gói và kỳ hạn?                                               | Ba bậc theo trần SỐ XE (3 / 10 / không giới hạn), bán kỳ 1/3/6/12 tháng với giá tuyệt đối từng kỳ (ADR 0041); bậc không giới hạn bán bằng tư vấn. Admin cấu hình động và đo trước khi chốt giá production            |
 | 4   | Bảo hiểm nào, ai cung cấp, ai trả?                               | Dự kiến PVI; **khách** trả `IV` + `IP` (ADR 0032 điều 2 ghi đè câu "chủ xe chịu" ở đây); phát hành ở mốc bàn giao. **ĐÃ BẬT 14/09/2026 bằng số tham khảo thị trường theo chỉ đạo** — xem ghi chú rủi ro dưới bảng |
 | 5   | Thuế cho thuê xe được phân loại và nộp thay thế nào?             | Thuế do **chủ xe** chịu, khấu trừ khỏi khoản phải trả, không cộng vào tổng khách. **ĐÃ BẬT 14/09/2026 ở 10% (5% VAT + 5% TNCN) bằng số tham khảo thị trường theo chỉ đạo**, chưa có tư vấn thuế — xem ghi chú rủi ro dưới bảng |
 | 6   | Giao dịch ngoài nền tảng được hưởng hỗ trợ tới đâu?              | Chỉ hỗ trợ thông tin/listing; không cam kết tiền/hoàn cho phần giao dịch không ghi nhận                                                                                                                              |

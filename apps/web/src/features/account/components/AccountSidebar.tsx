@@ -12,7 +12,7 @@ import {
   resolveAccountNav,
 } from '@/constants/account-nav';
 import type { CurrentUser } from '@/hooks/use-current-user';
-import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useAccountIdentityLabel } from '@/features/account/hooks/use-account-identity-label';
 import { cx } from '@/lib/cx';
 import { initialOf } from '@/lib/initials';
 
@@ -41,19 +41,15 @@ import styles from './AccountSidebar.module.css';
 export function AccountSidebar({ user }: { user: CurrentUser }) {
   const t = useTranslations('Navigation');
   const tAccount = useTranslations('Account');
-  const domainLabel = useDomainLabel();
+  const identityLabel = useAccountIdentityLabel();
   const pathname = usePathname();
 
   const groups = useMemo(() => resolveAccountNav(user), [user]);
   const activeKey = matchAccountNavKey(pathname, flattenAccountNav(groups));
 
   const name = user.displayName || user.email || tAccount('profile.accountLabel');
-  const roleKey = user.tenant?.roleKey;
-  const role = roleKey
-    ? domainLabel('tenantRole', roleKey, roleKey)
-    : user.platformRole
-      ? domainLabel('platformRole', user.platformRole, user.platformRole)
-      : tAccount('profile.accountLabel');
+  /* Nhãn danh tính đọc TUYẾN, không đọc bảng vai — xem `useAccountIdentityLabel`. */
+  const role = identityLabel(user);
 
   return (
     <nav className={styles.nav} aria-label={t('account.menuLabel')}>

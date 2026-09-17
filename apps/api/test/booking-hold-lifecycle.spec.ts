@@ -298,8 +298,6 @@ beforeAll(async () => {
       billingMode: BILLING_MODE.COMMISSION,
       commissionPercent: new Prisma.Decimal(10),
       basePriceMonthly: new Prisma.Decimal(0),
-      price: 0,
-      durationDays: 30,
       limitsJson: { features: [] } as unknown as Prisma.InputJsonValue,
     },
   });

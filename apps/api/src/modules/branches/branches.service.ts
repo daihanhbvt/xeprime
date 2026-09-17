@@ -1,4 +1,10 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
@@ -7,6 +13,7 @@ import {
   type BranchStatus,
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
+import { BillingService } from '../billing/billing.service';
 import { AddressService, type ResolvedAddress } from '../locations/address.service';
 import { ListingsService } from '../public-listings/listings.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -62,6 +69,7 @@ export class BranchesService {
     private readonly listings: ListingsService,
     private readonly audit: AuditService,
     private readonly address: AddressService,
+    private readonly billing: BillingService,
   ) {}
 
   async list(tenantId: string, query: BranchListQueryDto): Promise<BranchListDto> {
@@ -121,7 +129,33 @@ export class BranchesService {
     return toDto(row, counts.get(row.id) ?? 0);
   }
 
+  /**
+   * Trần CHI NHÁNH của bậc gói đang hiệu lực — ADR 0041 điều 1.
+   *
+   * Trước ADR 0041, `maxBranches` là một ô admin nhập mà KHÔNG nơi nào đọc. Từ đợt này nó in
+   * lên thẻ bảng giá ("Chi nhánh: 1" / "3" / "Không giới hạn"), nên nó phải bít thật — một con
+   * số quảng cáo mà hệ thống không giữ là tệ hơn không quảng cáo nó.
+   *
+   * Đếm chi nhánh CHƯA XOÁ (cả `inactive`): một chi nhánh ngừng hoạt động vẫn giữ mã, lịch sử
+   * đơn và xe đã từng gắn — nó vẫn chiếm một suất. Chỉ `deletedAt` mới trả lại suất.
+   *
+   * Cổng này CHẶN TẠO MỚI, không gỡ thứ đang có: gian hàng hạ bậc giữ nguyên mọi chi nhánh đang
+   * chạy (cùng nguyên tắc với trần xe — ADR 0038 · ADR 0041 điều 4).
+   */
+  private async assertBranchQuota(tenantId: string): Promise<void> {
+    const limit = await this.billing.branchQuotaFor(tenantId);
+    if (limit == null) return;
+    const used = await this.prisma.tenantBranch.count({ where: { tenantId, deletedAt: null } });
+    if (used < limit) return;
+    throw new ForbiddenException({
+      code: API_ERROR_CODE.PLAN_LIMIT_REACHED,
+      message: `Gói hiện tại cho phép tối đa ${limit} chi nhánh. Nâng bậc gói để mở thêm.`,
+      details: { scope: 'branches', used, limit },
+    });
+  }
+
   async create(tenantId: string, userId: string, dto: CreateBranchDto): Promise<BranchDto> {
+    await this.assertBranchQuota(tenantId);
     /*
      * Kiểm danh mục + ghép chuỗi hiển thị + tra toạ độ TRƯỚC transaction: bên trong có một lượt
      * gọi mạng có timeout, và giữ một transaction Postgres mở trong lúc chờ Internet là cách

@@ -11,6 +11,7 @@ function user(hasPassword: boolean): CurrentUser {
     phoneVerified: true,
     hasPassword,
     tenant: null,
+    openRenterTripCount: 0,
     platformRole: null,
     permissions: [],
   };

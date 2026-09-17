@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useState, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { IMAGE_UPLOAD_MIME_TYPES } from '@xeprime/types';
+import { cx } from '@/lib/cx';
 import { getErrorMessage } from '@/services/api-client';
 import { uploadImage, validateImageFile, type UploadPresign } from '@/services/upload';
 import fieldStyles from './field.module.css';
@@ -26,6 +27,12 @@ interface ImageUploadFieldProps<T extends FieldValues> {
   validate?: (file: File) => Promise<string | null>;
   /** Gợi ý dưới ô upload khi không có lỗi (vd cỡ ảnh chuẩn). */
   help?: ReactNode;
+  /** Preview full-width và hàng action nằm ngang, phù hợp cho card media. */
+  variant?: 'default' | 'card';
+  /** Tỉ lệ khung xem trước ở card mode; validation thật vẫn do feature cung cấp. */
+  previewAspectRatio?: number;
+  /** Chỉ hiển thị dấu bắt buộc; schema form vẫn là nguồn validation. */
+  required?: boolean;
   /**
    * `id` gắn lên chính NÚT mở hộp chọn file — để một CTA ở nơi khác đưa được tiêu điểm tới đây.
    *
@@ -50,6 +57,9 @@ export function ImageUploadField<T extends FieldValues>({
   presign,
   validate,
   help,
+  variant = 'default',
+  previewAspectRatio,
+  required,
   triggerId,
 }: ImageUploadFieldProps<T>) {
   const t = useTranslations('Common.components.imageUpload');
@@ -62,6 +72,7 @@ export function ImageUploadField<T extends FieldValues>({
   const [failedUpload, setFailedUpload] = useState<{ file: File; message: string } | null>(null);
 
   const url = (field.value as string | null | undefined) ?? null;
+  const cardMode = variant === 'card';
 
   function startUpload(file: File) {
     setUploading(true);
@@ -97,19 +108,30 @@ export function ImageUploadField<T extends FieldValues>({
       label={label}
       validateStatus={fieldState.error ? 'error' : ''}
       help={fieldState.error?.message ?? help}
-      className={fieldStyles.item}
+      required={required}
+      className={cx(fieldStyles.item, cardMode && styles.cardItem)}
     >
-      <div className={styles.wrap}>
+      <div className={cx(styles.wrap, cardMode && styles.cardWrap)}>
         <Upload
           accept={IMAGE_UPLOAD_MIME_TYPES.join(',')}
           showUploadList={false}
           beforeUpload={handleSelect}
           disabled={uploading}
         >
-          <button id={triggerId} type="button" className={styles.tile} disabled={uploading}>
+          <button
+            id={triggerId}
+            type="button"
+            className={cx(styles.tile, cardMode && styles.cardTile)}
+            style={cardMode && previewAspectRatio ? { aspectRatio: previewAspectRatio } : undefined}
+            disabled={uploading}
+          >
             {url ? (
               // eslint-disable-next-line @next/next/no-img-element -- ảnh trên R2, không qua next/image
-              <img src={url} alt={t('alt')} className={styles.preview} />
+              <img
+                src={url}
+                alt={t('alt')}
+                className={cx(styles.preview, cardMode && styles.cardPreview)}
+              />
             ) : (
               <span className={styles.placeholder}>
                 {uploading ? (
@@ -133,7 +155,7 @@ export function ImageUploadField<T extends FieldValues>({
           là xoá đi rồi tải lại — người dùng không đoán ra bấm thẳng vào ảnh cũng được.
         */}
         {url ? (
-          <div className={styles.actions}>
+          <div className={cx(styles.actions, cardMode && styles.cardActions)}>
             <Upload
               accept={IMAGE_UPLOAD_MIME_TYPES.join(',')}
               showUploadList={false}

@@ -1,6 +1,7 @@
 {
   "title": "Payout accounts",
   "subtitle": "XePrime sends refunds and amounts owed to you to this account.",
+  "emptyTitle": "No payout account yet",
   "empty": "No account yet. Add one to receive money.",
   "loadError": "Could not load your accounts.",
   "defaultTag": "Default",

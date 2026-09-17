@@ -34,9 +34,18 @@ function shop(overrides: Partial<PublicShop> = {}): PublicShop {
     coverUrl: null,
     bio: 'Gian hàng 12 năm kinh nghiệm.',
     address: '12 Nguyễn Văn Linh, Hải Châu',
-    phone: '0901234567',
+    storefrontKind: 'shop',
+    verified: true,
+    chatOpen: true,
+    joinedAt: '2024-01-15T00:00:00.000Z',
     ratingAvg: '4.8',
     ratingCount: 26,
+    vehicleCount: 12,
+    completedTripCount: 340,
+    responseRatePercent: 96,
+    branchCount: 2,
+    serviceProvinceNames: ['Đà Nẵng'],
+    deliveryAvailable: true,
     ...overrides,
   };
 }
@@ -101,18 +110,22 @@ function mockListings(items: PublicListing[], total = items.length) {
 }
 
 describe('ShopDetailScreen — hồ sơ công khai', () => {
-  it('hiện đủ hồ sơ gian hàng: tên, tỉnh, đánh giá, giới thiệu, địa chỉ, gọi', async () => {
+  it('hiện đủ hồ sơ gian hàng: tên, tỉnh, đánh giá, giới thiệu, địa chỉ, nhắn tin', async () => {
     mockShop();
     mockListings([listing()]);
     const view = await renderScreen();
 
     // Tên và tỉnh có mặt ở CẢ đầu trang lẫn chân mỗi thẻ xe — neo vào thứ chỉ đầu trang có.
-    expect(await view.findByText('4,8 · 26 đánh giá')).toBeTruthy();
+    expect(await view.findByText('4,8 (26 đánh giá)')).toBeTruthy();
     expect(view.getAllByText('Cho thuê xe Bình Minh').length).toBeGreaterThan(0);
     expect(view.getAllByText('Đà Nẵng').length).toBeGreaterThan(0);
     expect(view.getByText('Gian hàng 12 năm kinh nghiệm.')).toBeTruthy();
-    expect(view.getByText('12 Nguyễn Văn Linh, Hải Châu')).toBeTruthy();
-    expect(view.getByRole('button', { name: 'Gọi 0901234567' })).toBeTruthy();
+    expect(view.getByText('Địa chỉ: 12 Nguyễn Văn Linh, Hải Châu')).toBeTruthy();
+    /*
+      Liên hệ đi qua HỘP THƯ, không qua số điện thoại (ADR 0038): PublicShopDto đã bỏ trường phone.
+      Trả nó ra là đăng số riêng của chủ xe lên một trang không cần đăng nhập.
+    */
+    expect(view.getByRole('button', { name: 'Nhắn tin' })).toBeTruthy();
   });
 
   it('gian hàng chưa có đánh giá: nói "chưa có", KHÔNG dựng 0,0 sao', async () => {
@@ -121,16 +134,15 @@ describe('ShopDetailScreen — hồ sơ công khai', () => {
     const view = await renderScreen();
 
     expect(await view.findByText('Chưa có đánh giá')).toBeTruthy();
-    expect(view.queryByText('0,0 · 0 đánh giá')).toBeNull();
+    expect(view.queryByText('0,0 (0 đánh giá)')).toBeNull();
   });
 
-  it('không có số điện thoại: KHÔNG dựng nút gọi rỗng', async () => {
-    mockShop(shop({ phone: null }));
+  it('gian hàng đóng hộp thư công khai: KHÔNG dựng nút nhắn tin', async () => {
+    mockShop(shop({ chatOpen: false }));
     mockListings([]);
     const view = await renderScreen();
 
-    await view.findByText('Cho thuê xe Bình Minh');
-    expect(view.queryByRole('button', { name: /^Gọi/ })).toBeNull();
+    expect(view.queryByRole('button', { name: 'Nhắn tin' })).toBeNull();
   });
 
   it('hồ sơ hỏng: cả màn báo lỗi — không còn gì để nói về gian hàng', async () => {
@@ -179,6 +191,6 @@ describe('ShopDetailScreen — xe của gian hàng', () => {
     expect(await view.findByText('Không tải được danh sách xe')).toBeTruthy();
     // Tên, địa chỉ và số điện thoại là thứ khách vào đây tìm — mất danh sách không được mất chúng.
     expect(view.getByText('Cho thuê xe Bình Minh')).toBeTruthy();
-    expect(view.getByText('12 Nguyễn Văn Linh, Hải Châu')).toBeTruthy();
+    expect(view.getByText('Địa chỉ: 12 Nguyễn Văn Linh, Hải Châu')).toBeTruthy();
   });
 });

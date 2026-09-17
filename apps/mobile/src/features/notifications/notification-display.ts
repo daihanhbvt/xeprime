@@ -12,6 +12,8 @@ import { notificationHref as hrefFromPath } from './deep-link';
 export const NOTIFICATION_CONTEXT = {
   MANAGE: 'manage',
   CUSTOMER: 'customer',
+  /** Chủ xe tuyến hoa hồng — xem `NOTIFICATION_AUDIENCE.OWNER` (ADR 0038 điều 10). */
+  OWNER: 'owner',
 } as const;
 
 export type NotificationContext =
@@ -28,6 +30,7 @@ export type NotificationContext =
 const AUDIENCE_OF: Readonly<Record<NotificationContext, NotificationAudience>> = {
   [NOTIFICATION_CONTEXT.CUSTOMER]: NOTIFICATION_AUDIENCE.CUSTOMER,
   [NOTIFICATION_CONTEXT.MANAGE]: NOTIFICATION_AUDIENCE.MANAGE,
+  [NOTIFICATION_CONTEXT.OWNER]: NOTIFICATION_AUDIENCE.OWNER,
 };
 
 /**
@@ -74,6 +77,7 @@ const ICONS: Readonly<Record<NotificationType, IconName>> = {
   // Sắp hết hạn và ĐÃ hết hạn dùng chung đồng hồ cát — cùng cặp icon web dùng.
   [NOTIFICATION_TYPE.HOLD_EXPIRING]: 'hourglass-outline',
   [NOTIFICATION_TYPE.HOLD_EXPIRED]: 'hourglass-outline',
+  [NOTIFICATION_TYPE.HOLD_REFUNDED]: 'arrow-undo-outline',
   [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: 'arrow-undo-outline',
   // Hồ sơ người bán — icon chứng nhận, không phải icon gian hàng: đây là danh tính pháp lý.
   [NOTIFICATION_TYPE.SELLER_PROFILE_VERIFIED]: 'shield-checkmark-outline',

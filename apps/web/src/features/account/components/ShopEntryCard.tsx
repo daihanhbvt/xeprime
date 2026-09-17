@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 
 import { ROUTES } from '@/constants/routes';
-import { resolveOwnerCtaHref } from '@/features/auth/post-auth-destination';
+import { canUseManagePortal, resolveOwnerCtaHref } from '@/features/auth/post-auth-destination';
 import { useCurrentUser } from '@/hooks/use-current-user';
 
 import styles from './ShopEntryCard.module.css';
@@ -30,6 +30,21 @@ export function ShopEntryCard() {
   // Chưa biết mình là ai thì chưa đoán: hiện thẻ "Đăng xe cho thuê" cho một chủ shop đang chờ
   // `/auth/me` trả về là mời họ làm lại thứ họ đã làm rồi.
   if (isLoading || !user) return null;
+
+  /*
+   * Thuộc một gian hàng mà KHÔNG vào được cổng quản lý ⇒ không dựng thẻ nào.
+   *
+   * Thẻ này chỉ có một lời mời: "Vào quản lý gian hàng". Với chủ xe tuyến hoa hồng — và với mọi
+   * thành viên của một tenant không ở tuyến gói — lời mời đó dẫn tới một cánh cửa đóng
+   * (`SubscriptionTrackGuard`, ADR 0038 điều 4). Trước đợt này nó vẫn hiện, chỉ âm thầm đổi đích
+   * sang `/account/vehicles`: nhãn hứa một nơi, cú bấm đưa tới nơi khác.
+   *
+   * Họ cũng không mất gì: menu Owner Lite đã có đủ danh sách xe, lịch xe và công cụ cho thuê.
+   *
+   * Nhân sự nền tảng xét TRƯỚC — một `platform_admin` không thuộc gian hàng nào vẫn cần lối vào
+   * trang quản trị.
+   */
+  if (!user.platformRole && user.tenant && !canUseManagePortal(user)) return null;
 
   const variant = user.platformRole ? 'platform' : user.tenant ? 'hasShop' : 'noShop';
 

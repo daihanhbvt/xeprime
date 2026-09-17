@@ -1,7 +1,7 @@
 import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { chatApi, type ConversationListResult } from '@/features/chat/api';
-import { CHAT_SIDE, type ChatSide } from '@xeprime/types';
+import { CHAT_INBOX, CHAT_SIDE, type ChatInbox, type ChatSide } from '@xeprime/types';
 import type { Href } from 'expo-router';
 import { useAppActive, useRefetchOnForeground } from '@/hooks/use-app-active';
 import { ROUTES } from '@/navigation/routes';
@@ -9,6 +9,8 @@ import { useBadgeRealtime } from '@/features/badges/BadgeRealtimeProvider';
 import { useBadges } from '@/features/badges/hooks/use-badges';
 import { useOnBadgeChange } from '@/features/badges/hooks/use-on-badge-change';
 import { queryKeys } from '@/queries/query-keys';
+import { useCurrentUser } from '@/features/auth/hooks/use-auth';
+import { resolveChatInbox } from '../chat-inbox';
 
 /**
  * Nhịp làm mới DANH SÁCH — chỉ còn là LƯỚI AN TOÀN.
@@ -40,7 +42,10 @@ export interface ConversationListFilters {
  * Phân trang là tải-thêm-khi-cuộn thay cho bộ số trang của web, nhưng việc CẮT TRANG và LỌC vẫn
  * ở server — không có chỗ nào kéo cả hộp thư về rồi lọc tại chỗ.
  */
-export function useConversationsInfinite(side: ChatSide, filters: ConversationListFilters = {}) {
+export function useConversationsInfinite(
+  inbox: ChatInbox,
+  filters: ConversationListFilters = {},
+) {
   const params = {
     ...(filters.q ? { q: filters.q } : {}),
     ...(filters.unreadOnly ? { unreadOnly: true } : {}),
@@ -54,14 +59,26 @@ export function useConversationsInfinite(side: ChatSide, filters: ConversationLi
    * tải lại danh sách. Đây là cầu nối mà trước đây thiếu: bản chiếu huy hiệu biết MỌI hội
    * thoại, còn listener của thread chỉ biết một.
    */
-  useOnBadgeChange(side === CHAT_SIDE.CUSTOMER ? counts.chatCustomer : counts.chatShop, () => {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.chat.conversations(side) });
+  /*
+   * Hộp thư HỢP NHẤT phải theo dõi CẢ HAI con số: nó chứa cả hai vế, nên một tin đến ở vế gian
+   * hàng cũng là một dòng vừa đổi trong chính danh sách đang mở. Nghe một vế thôi thì nửa hộp
+   * thư đứng im tới nhịp poll kế tiếp.
+   */
+  const watched =
+    inbox === CHAT_INBOX.UNIFIED
+      ? counts.chatCustomer + counts.chatShop
+      : inbox === CHAT_INBOX.CUSTOMER
+        ? counts.chatCustomer
+        : counts.chatShop;
+
+  useOnBadgeChange(watched, () => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.chat.conversations(inbox) });
   });
 
   const query = useInfiniteQuery({
     // KHÔNG có `page` trong khoá — page là `pageParam` của TanStack (quy ước `*Infinite`).
-    queryKey: queryKeys.chat.conversations(side, params),
-    queryFn: ({ pageParam }) => chatApi.list({ side, ...filters }, pageParam),
+    queryKey: queryKeys.chat.conversations(inbox, params),
+    queryFn: ({ pageParam }) => chatApi.list({ side: inbox, ...filters }, pageParam),
     initialPageParam: 1,
     getNextPageParam: (last: ConversationListResult) =>
       last.meta.hasNext ? last.meta.page + 1 : undefined,
@@ -106,10 +123,10 @@ export function useConversationsInfinite(side: ChatSide, filters: ConversationLi
  * mở thẳng từ ngoài app, và ở đó không có danh sách nào để lấy tiêu đề ra. Cũng là lý do không
  * suy từ trang đầu danh sách: một thread im lặng ba tuần nằm ở trang 4.
  */
-export function useConversation(side: ChatSide, id: string) {
+export function useConversation(inbox: ChatInbox, id: string) {
   return useQuery({
-    queryKey: queryKeys.chat.conversation(side, id),
-    queryFn: () => chatApi.detail(id, side),
+    queryKey: queryKeys.chat.conversation(inbox, id),
+    queryFn: () => chatApi.detail(id, inbox),
     enabled: Boolean(id),
     // 403 vì dán id của hộp thư kia sang bề mặt này — thử lại vẫn 403.
     retry: false,
@@ -131,6 +148,8 @@ export interface ChatBadge {
   count: number;
   /** Hộp thư nên mở khi bấm vào biểu tượng. */
   href: Href;
+  /** Hộp thư mà đích đến sẽ mở — màn nhận nó để khỏi giải lại một lần nữa. */
+  inbox: ChatInbox;
 }
 
 /**
@@ -154,14 +173,29 @@ export function useChatBadge(surface: ChatSide): ChatBadge {
    */
   const { chatCustomer, chatShop } = useBadges();
 
+  const { data: user } = useCurrentUser();
+  const inbox = resolveChatInbox(surface, user);
+
+  /*
+   * Hộp thư hợp nhất KHÔNG bao giờ nhảy khu: nó đã chứa cả hai vế, nên "bên này hết thì sang bên
+   * kia" không còn nghĩa gì — và bên kia (khu quản lý) là nơi chủ xe tuyến hoa hồng không vào
+   * được. Chính cái nhảy đó là lỗi ADR 0038 điều 10 viết ra để bỏ.
+   */
+  if (inbox === CHAT_INBOX.UNIFIED) {
+    return { count: chatCustomer + chatShop, href: ROUTES.chat.list(), inbox };
+  }
+
   const here = surface === CHAT_SIDE.CUSTOMER ? chatCustomer : chatShop;
   const there = surface === CHAT_SIDE.CUSTOMER ? chatShop : chatCustomer;
+  const elsewhere = here === 0 && there > 0;
 
   const stay = surface === CHAT_SIDE.CUSTOMER ? ROUTES.chat.list() : ROUTES.manage.chat();
   const away = surface === CHAT_SIDE.CUSTOMER ? ROUTES.manage.chat() : ROUTES.chat.list();
+  const other = surface === CHAT_SIDE.CUSTOMER ? CHAT_INBOX.SHOP : CHAT_INBOX.CUSTOMER;
 
   return {
     count: chatCustomer + chatShop,
-    href: here === 0 && there > 0 ? away : stay,
+    href: elsewhere ? away : stay,
+    inbox: elsewhere ? other : (surface as ChatInbox),
   };
 }

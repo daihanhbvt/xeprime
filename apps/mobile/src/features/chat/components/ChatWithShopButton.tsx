@@ -21,12 +21,22 @@ import { ROUTES } from '@/navigation/routes';
  */
 export function ChatWithShopButton({
   vehicleId,
+  shopSlug,
   label,
   variant = 'secondary',
   size,
   onNavigate,
 }: {
-  vehicleId: string;
+  /** Mở hội thoại VỀ MỘT XE. Loại trừ nhau với `shopSlug` — truyền đúng một trong hai. */
+  vehicleId?: string;
+  /**
+   * Mở hội thoại với GIAN HÀNG, cho màn gian hàng nơi chưa có chiếc xe nào được chọn.
+   *
+   * Lối này có từ khi trang gian hàng bỏ số điện thoại (ADR 0038): liên hệ đi qua hộp thư trong
+   * ứng dụng — có danh tính hai đầu, có lịch sử — thay vì đăng số riêng của chủ xe lên một trang
+   * không cần đăng nhập.
+   */
+  shopSlug?: string;
   /** Nhãn theo ngữ cảnh — trang xe dùng "Nhắn shop", màn chuyến dùng "Liên hệ gian hàng". */
   label?: string;
   variant?: 'primary' | 'secondary';
@@ -43,7 +53,7 @@ export function ChatWithShopButton({
   const navigateOnce = useNavigateOnce();
 
   const start = useMutation({
-    mutationFn: () => chatApi.start(vehicleId),
+    mutationFn: () => chatApi.start(vehicleId ? { vehicleId } : { shopSlug: shopSlug ?? '' }),
     onSuccess: (conversation) => {
       onNavigate?.();
       navigateOnce(ROUTES.chat.thread(conversation.id, vehicleId));

@@ -9,10 +9,8 @@ import {
   SUBSCRIPTION_INVOICE_STATUS,
   SUBSCRIPTION_RENEWAL_REMINDER_DAYS,
   SUBSCRIPTION_STATUS,
-  VEHICLE_TYPE,
   addCalendarMonthsVn,
   parsePlanLimits,
-  termDiscountPercent,
   type PlanInvoiceSnapshot,
 } from '@xeprime/types';
 import { notifyTenantMembers, recordSystemAudit } from '../lib/notify';
@@ -327,10 +325,22 @@ async function offerPlanOnFreeTripsExhausted(prisma: PrismaClient, now: Date): P
   });
   if (candidates.length === 0) return 0;
 
+  /*
+   * Bậc để CHÀO: bậc `package` đang bán, sort_order nhỏ nhất, VÀ có bảng giá.
+   *
+   * Điều kiện cuối là bậc `salesOnly` (ADR 0041 điều 5): nó bán bằng tư vấn nên không có giá để
+   * dựng hoá đơn, và nếu nó tình cờ đứng đầu `sort_order` thì mọi lời chào sẽ rơi về "chỉ nhắc".
+   * Lọc ở Postgres thay vì đọc hết rồi lọc trong JS — `jsonb_array_length` không có ở Prisma
+   * query API, nên dùng chính vị từ `termPrices` khác mảng rỗng.
+   */
   const offerPlan = await prisma.plan.findFirst({
-    where: { status: PLAN_STATUS.ACTIVE, billingMode: BILLING_MODE.PACKAGE },
+    where: {
+      status: PLAN_STATUS.ACTIVE,
+      billingMode: BILLING_MODE.PACKAGE,
+      NOT: { limitsJson: { path: ['termPrices'], equals: [] } },
+    },
     orderBy: { sortOrder: 'asc' },
-    select: { id: true, code: true, name: true, basePriceMonthly: true, limitsJson: true },
+    select: { id: true, code: true, name: true, limitsJson: true },
   });
 
   let offered = 0;
@@ -392,79 +402,42 @@ async function offerPlanOnFreeTripsExhausted(prisma: PrismaClient, now: Date): P
 
       if (offerPlan && !pendingInvoice) {
         /*
-         * ADR 0029 — gói giá phẳng theo CHỖ, không phí nền: hoá đơn chào phải dựng theo đội xe
-         * hiện có của tenant (mua đúng số chỗ họ cần) và theo kỳ hạn NHỎ NHẤT plan còn bán
-         * (`limits.terms` từ ADR 0029 là danh sách kỳ được bán — bán tối thiểu 3 tháng thì lời
-         * chào cũng 3 tháng, một hoá đơn kỳ 1 tháng là lời chào không mua nổi).
+         * ADR 0041 — bậc gói bán theo TRẦN SỐ XE và KỲ HẠN, giá là con số niêm yết của kỳ hạn.
+         *
+         * Lời chào dựng ở kỳ hạn NHỎ NHẤT mà bậc còn bán: mời một chủ xe vừa hết lượt miễn phí
+         * trả trước 12 tháng là mời họ bỏ đi. Bậc `salesOnly` (bán bằng tư vấn) không có bảng giá
+         * nên không chào được — `offerPlan` đã lọc nó ra bằng chính điều kiện "có termPrices".
+         *
+         * Bản trước (mô hình chỗ xe) đếm đội xe rồi nhân đơn giá; ở mô hình bậc thì đội xe không
+         * vào giá, nó chỉ quyết bậc NÀO phù hợp — và việc chọn bậc là của người dùng, không phải
+         * của một job. Job chào bậc rẻ nhất; họ đổi bậc ở màn "Gói của tôi".
          */
         const limits = parsePlanLimits(offerPlan.limitsJson);
-        const termMonths = limits.terms.length ? Math.min(...limits.terms.map((t) => t.months)) : 1;
-        const [carCount, motorbikeCount] = await Promise.all([
-          tx.vehicle.count({
-            where: { tenantId: tenant.id, deletedAt: null, vehicleType: VEHICLE_TYPE.CAR },
-          }),
-          tx.vehicle.count({
-            where: { tenantId: tenant.id, deletedAt: null, vehicleType: VEHICLE_TYPE.MOTORBIKE },
-          }),
-        ]);
-        const slots = {
-          car: Math.max(carCount, limits.includedCars),
-          motorbike: Math.max(motorbikeCount, limits.includedMotorbikes),
-        };
+        const cheapest = limits.termPrices[0];
 
-        const base = new Prisma.Decimal(offerPlan.basePriceMonthly);
-        const carPrice = new Prisma.Decimal(limits.perVehiclePrice.car ?? 0);
-        const motoPrice = new Prisma.Decimal(limits.perVehiclePrice.motorbike ?? 0);
-        const extraCars = Math.max(0, slots.car - limits.includedCars);
-        const extraMotos = Math.max(0, slots.motorbike - limits.includedMotorbikes);
-        const monthly = base
-          .add(carPrice.mul(extraCars))
-          .add(motoPrice.mul(extraMotos))
-          .toDecimalPlaces(2);
-        const discount = termDiscountPercent(limits, termMonths);
-        const subtotal = monthly.mul(termMonths).toDecimalPlaces(2);
-        const discountAmount = subtotal.mul(discount).div(100).toDecimalPlaces(2);
-        const total = subtotal.sub(discountAmount);
-
-        // Đội xe rỗng + không phí nền = 0đ: không có gì để chào, chỉ nhắc — một hoá đơn 0đ
-        // là rác trong sổ và webhook không có gì để khớp.
-        if (total.gt(0)) {
-          const lines: PlanInvoiceSnapshot['lines'] = [];
-          if (base.gt(0)) {
-            lines.push({
-              kind: 'base',
-              quantity: 1,
-              months: termMonths,
-              unitPrice: base.toString(),
-              amount: base.mul(termMonths).toDecimalPlaces(2).toString(),
-            });
-          }
-          if (extraCars > 0) {
-            lines.push({
-              kind: 'slot',
-              vehicleType: 'car',
-              quantity: extraCars,
-              months: termMonths,
-              unitPrice: carPrice.toString(),
-              amount: carPrice.mul(extraCars).mul(termMonths).toDecimalPlaces(2).toString(),
-            });
-          }
-          if (extraMotos > 0) {
-            lines.push({
-              kind: 'slot',
-              vehicleType: 'motorbike',
-              quantity: extraMotos,
-              months: termMonths,
-              unitPrice: motoPrice.toString(),
-              amount: motoPrice.mul(extraMotos).mul(termMonths).toDecimalPlaces(2).toString(),
-            });
-          }
+        // Không có bảng giá = không có gì để chào, chỉ nhắc. Một hoá đơn 0đ là rác trong sổ và
+        // webhook không có gì để khớp.
+        if (cheapest && Number(cheapest.price) > 0) {
+          const termMonths = cheapest.months;
+          const total = new Prisma.Decimal(cheapest.price).toDecimalPlaces(2);
           const snapshot: PlanInvoiceSnapshot = {
             planId: offerPlan.id,
             planCode: offerPlan.code,
             termMonths,
-            slots,
-            lines,
+            quota: {
+              maxVehicles: limits.maxVehicles,
+              maxBranches: limits.maxBranches,
+              maxMembers: limits.maxMembers,
+            },
+            lines: [
+              {
+                kind: 'package',
+                quantity: 1,
+                months: termMonths,
+                unitPrice: total.toString(),
+                amount: total.toString(),
+              },
+            ],
           };
           const invoice = await tx.subscriptionInvoice.create({
             data: {
@@ -475,8 +448,10 @@ async function offerPlanOnFreeTripsExhausted(prisma: PrismaClient, now: Date): P
               periodFrom: now,
               periodTo: addCalendarMonthsVn(now, termMonths),
               linesJson: snapshot as unknown as Prisma.InputJsonValue,
-              subtotal,
-              discountAmount,
+              subtotal: total,
+              // Giá niêm yết của kỳ hạn LÀ tổng phải trả — không có khoản giảm nào trên một giá
+              // gốc (ADR 0041 điều 2).
+              discountAmount: 0,
               totalAmount: total,
               paidAmount: 0,
               status: SUBSCRIPTION_INVOICE_STATUS.ISSUED,
@@ -484,7 +459,7 @@ async function offerPlanOnFreeTripsExhausted(prisma: PrismaClient, now: Date): P
             },
             select: { code: true, totalAmount: true },
           });
-          body = `Từ đơn tiếp theo, mỗi chuyến chịu phí dịch vụ của nền tảng. Đã tạo sẵn hoá đơn gói ${offerPlan.name} cho đội xe hiện tại (${invoice.totalAmount.toString()}đ/${termMonths} tháng) — chuyển khoản với nội dung ${invoice.code} để kích hoạt, hoặc chọn lại ở màn "Gói của tôi".`;
+          body = `Từ đơn tiếp theo, mỗi chuyến chịu phí dịch vụ của nền tảng. Đã tạo sẵn hoá đơn gói ${offerPlan.name} (${invoice.totalAmount.toString()}đ/${termMonths} tháng) — chuyển khoản với nội dung ${invoice.code} để kích hoạt, hoặc chọn gói khác ở màn "Gói của tôi".`;
         }
       }
 

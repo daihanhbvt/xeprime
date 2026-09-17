@@ -110,12 +110,29 @@ export function useDeliveryDistance(
   });
 }
 
+/**
+ * Vì sao yêu cầu thuê bị chặn — nhánh KẾT THÚC riêng, không phải một lỗi đỏ (ADR 0038 điều 6).
+ *
+ * Chỉ biết được bằng cách THỬ GỬI: không endpoint đọc nào trả cờ này, vì cổng nằm sau cửa OTP và
+ * sau điểm hội tụ danh tính (`effectiveUserId`) — mốc duy nhất mà server biết chắc "người gửi
+ * này là ai". Đó cũng là lý do giao diện KHÔNG ẩn nút đặt xe: ẩn nút không phải kiểm soát quyền,
+ * và ẩn đi thì chủ gian hàng bấm mãi không được mà không bao giờ biết vì sao.
+ */
+export const BOOKING_BLOCKED = {
+  SHOP_ACCOUNT: 'shopAccount',
+  OWN_VEHICLE: 'ownVehicle',
+} as const;
+
+export type BookingBlocked = (typeof BOOKING_BLOCKED)[keyof typeof BOOKING_BLOCKED];
+
 export interface RequestFlowState {
   step: RequestStep;
   /** SĐT đang chờ nhập mã — giữ riêng để đổi SĐT ở bước Chuyến đi không làm hỏng bước OTP. */
   otpPhone: string;
   /** Yêu cầu trùng: nhánh RIÊNG, không phải lỗi đỏ. */
   duplicate: boolean;
+  /** Tài khoản này không đặt được xe này — nhánh RIÊNG, cũng không phải lỗi đỏ. */
+  blocked: BookingBlocked | null;
   receipt: BookingRequestReceipt | null;
   error: string | null;
 }
@@ -136,6 +153,7 @@ export function useBookingRequestFlow(vehicleId: string) {
   const [step, setStep] = useState<RequestStep>(REQUEST_STEP.TRIP);
   const [otpPhone, setOtpPhone] = useState('');
   const [duplicate, setDuplicate] = useState(false);
+  const [blocked, setBlocked] = useState<BookingBlocked | null>(null);
   const [receipt, setReceipt] = useState<BookingRequestReceipt | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -177,6 +195,7 @@ export function useBookingRequestFlow(vehicleId: string) {
     setStep(REQUEST_STEP.TRIP);
     setOtpPhone('');
     setDuplicate(false);
+    setBlocked(null);
     setReceipt(null);
     setError(null);
     availability.reset();
@@ -184,7 +203,7 @@ export function useBookingRequestFlow(vehicleId: string) {
   }, [availability, submit]);
 
   return {
-    state: { step, otpPhone, duplicate, receipt, error } satisfies RequestFlowState,
+    state: { step, otpPhone, duplicate, blocked, receipt, error } satisfies RequestFlowState,
     accountPhone,
     accountName,
     accountPhoneVerified,
@@ -194,11 +213,24 @@ export function useBookingRequestFlow(vehicleId: string) {
     setStep,
     setOtpPhone,
     setDuplicate,
+    setBlocked,
     setError,
     reset,
     /** Mã lỗi "SĐT chưa xác thực" — nơi gọi lùi về bước OTP và GIỮ NGUYÊN dữ liệu đã nhập. */
     isPhoneUnverified: (e: unknown) => getErrorCode(e) === API_ERROR_CODE.PHONE_NOT_VERIFIED,
     isDuplicate: (e: unknown) => getErrorCode(e) === API_ERROR_CODE.BOOKING_REQUEST_DUPLICATE,
+    /**
+     * Hai mã chặn đặt xe của ADR 0038 điều 6, trả về nhãn nhánh kết quả tương ứng.
+     *
+     * Đây là chuyện KẾ TOÁN chứ không phải sở thích sản phẩm: hai vai trên một booking khiến phí
+     * dịch vụ thu từ chính người nhận tiền, và người duyệt là người gửi.
+     */
+    blockedReason: (e: unknown): BookingBlocked | null => {
+      const code = getErrorCode(e);
+      if (code === API_ERROR_CODE.SHOP_ACCOUNT_CANNOT_BOOK) return BOOKING_BLOCKED.SHOP_ACCOUNT;
+      if (code === API_ERROR_CODE.CANNOT_BOOK_OWN_VEHICLE) return BOOKING_BLOCKED.OWN_VEHICLE;
+      return null;
+    },
     otpPurpose: PHONE_VERIFICATION_PURPOSE.BOOKING,
     isLongTerm: (serviceType: string) => serviceType === SERVICE_TYPE.LONG_TERM,
   };

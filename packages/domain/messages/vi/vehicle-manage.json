@@ -144,7 +144,7 @@
   },
   "autoAccept": {
     "activeTitle": "Tính năng Tối ưu nhận chuyến đang hoạt động",
-    "activeBody": "Hệ thống sẽ tự động chấp nhận yêu cầu thuê phù hợp với các tiêu chí dưới đây mà không cần bạn duyệt thủ công.",
+    "activeBody": "Yêu cầu thuê đạt đủ điều kiện sẽ được xác nhận ngay, không cần bạn duyệt thủ công.",
     "inactiveTitle": "Đang duyệt thủ công",
     "inactiveBody": "Mọi yêu cầu thuê sẽ chờ bạn duyệt trong 60 phút.",
     "toggleTitle": "Tự động đồng ý nhận chuyến",
@@ -152,12 +152,7 @@
     "toggleLabel": "Tự động nhận chuyến",
     "instantTitle": "Đặt chuyến nhanh (Instant Booking)",
     "instantBody": "Khách hàng không cần đợi bạn duyệt chuyến thủ công. Hệ thống tự động xác nhận khi có tài xế rảnh.",
-    "windowTitle": "Khoảng thời gian cho phép tự động đồng ý",
-    "minLead": "Giới hạn từ",
-    "maxLead": "Cho đến",
-    "leadValue": "{value} tới",
-    "minLeadDriver": "Đặt trước tối thiểu",
-    "minLeadDriverHint": "Yêu cầu đặt trước để sắp xếp tài xế (1 – 72 giờ)",
+    "withDriverTitle": "Điều kiện riêng của chuyến có tài xế",
     "minRental": "Thời gian thuê tối thiểu",
     "minRentalHint": "Phạm vi hỗ trợ cấu hình: 1 – 24 giờ",
     "routesTitle": "Phân khúc loại chuyến đi ưu tiên nhận",
@@ -177,10 +172,7 @@
     "capabilityNoDriver": "Chưa có tài xế đang hoạt động. Thêm tài xế ở cổng quản lý trước khi bật.",
     "capabilityOk": "{count, plural, other {# tài xế}} đang hoạt động — hệ thống gán tài xế rảnh ngay khi nhận chuyến.",
     "openDrivers": "Quản lý tài xế",
-    "saved": "Đã lưu thiết lập nhận chuyến",
-    "validation": {
-      "minMax": "Mức đặt trước tối thiểu không được lớn hơn mức tối đa"
-    }
+    "saved": "Đã lưu thiết lập nhận chuyến"
   },
   "delivery": {
     "title": "Giao nhận xe tận nơi",

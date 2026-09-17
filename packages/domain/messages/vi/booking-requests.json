@@ -12,6 +12,7 @@
   "tabs": {
     "ariaLabel": "Lọc yêu cầu theo trạng thái",
     "needsAction": "Cần xử lý",
+    "paidNeedsAction": "Đã cọc · chờ duyệt",
     "converted": "Đã tạo đơn",
     "rejected": "Đã từ chối",
     "cancelled": "Khách đã huỷ",

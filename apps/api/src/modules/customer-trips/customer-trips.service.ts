@@ -4,6 +4,7 @@ import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
   BOOKING_REQUEST_STATUS,
+  type BookingPriceSnapshot,
   BOOKING_STATUS,
   CUSTOMER_TRIP_FILTER,
   WALLET_OWNER_TYPE,
@@ -228,8 +229,40 @@ export class CustomerTripsService {
     const pending = rows.filter((row) => row.booking === null);
     if (pending.length === 0) return new Map();
 
+    /*
+     * ĐÃ CÓ KHOẢN GIỮ CHỖ ⇒ đọc snapshot, không báo giá lại (ADR 0039).
+     *
+     * Đây là chỗ trước 17/09/2026 nói sai với khách: hàm này luôn dựng một báo giá MỚI theo
+     * chính sách hiện hành, kể cả cho chuyến khách đã chuyển tiền. Hệ quả là bảng giá gắn nhãn
+     * "tạm tính" trên một chuyến đã thu tiền, không có dòng "đã cọc", và các con số có thể lệch
+     * khỏi thứ đã thu nếu chính sách vừa đổi.
+     */
+    const frozen = new Map<string, TripEstimate>();
+    const needQuote: typeof pending = [];
+    for (const row of pending) {
+      const snapshot = row.hold?.priceSnapshotJson as unknown as BookingPriceSnapshot | null;
+      if (snapshot?.fees) {
+        /*
+         * Chuẩn hoá `sublabel` về `null`: snapshot lưu trong JSON dùng trường TUỲ CHỌN, còn DTO
+         * khai `string | null`. Ép kiểu ở đây sẽ đẩy `undefined` ra tận JSON trả về, và client
+         * đọc thành "thiếu trường" thay vì "không có mô tả".
+         */
+        frozen.set(row.id, {
+          breakdown: {
+            rows: snapshot.rows.map((line) => ({ ...line, sublabel: line.sublabel ?? null })),
+            totalAmount: snapshot.totalAmount,
+            depositAmount: snapshot.depositAmount,
+          },
+          fees: snapshot.fees,
+        });
+      } else {
+        needQuote.push(row);
+      }
+    }
+    if (needQuote.length === 0) return frozen;
+
     const quotes = await Promise.all(
-      pending.map(async (row) => {
+      needQuote.map(async (row) => {
         const quote = await this.pricing.estimateQuote({
           tenantId: row.tenantId,
           vehicleId: row.vehicle.id,
@@ -244,9 +277,10 @@ export class CustomerTripsService {
       }),
     );
 
-    return new Map(
-      quotes.filter((entry): entry is readonly [string, TripEstimate] => entry[1] !== null),
-    );
+    for (const [id, quote] of quotes) {
+      if (quote) frozen.set(id, quote);
+    }
+    return frozen;
   }
 
   /**
@@ -867,6 +901,15 @@ const LIST_SELECT = {
   },
   tenant: { select: { name: true, slug: true, ratingAvg: true, ratingCount: true, phone: true } },
   booking: { select: BOOKING_SELECT },
+  /*
+   * Snapshot giá ĐÃ ĐÓNG BĂNG lúc sinh khoản giữ chỗ (ADR 0024 · ADR 0039).
+   *
+   * Có mặt ở đây để bảng giá của một chuyến đã cọc đọc đúng con số khách ĐÃ TRẢ, thay vì một
+   * lượt báo giá lại theo chính sách của hôm nay. Hai thứ đó lệch nhau là chuyện bình thường —
+   * giá cuối tuần, khuyến mãi, chính sách phí đều đổi được — và khi lệch thì màn hình đang nói
+   * với khách một con số không ai từng thu của họ.
+   */
+  hold: { select: { status: true, priceSnapshotJson: true } },
 } satisfies Prisma.BookingRequestSelect;
 
 const DETAIL_SELECT = {
@@ -996,8 +1039,22 @@ function toListItem(
  * chỉ thấy chuyến của chính họ. `customerUserId` có thể null (đơn do nhân viên nhập tay), nên
  * nhánh khách phải so bằng giá trị thật chứ không dựa vào một mặc định.
  */
-/** Bảng kê tạm tính của một chuyến chưa có đơn — trả nguyên từ `PricingService`. */
-type TripEstimate = NonNullable<Awaited<ReturnType<PricingService['estimateQuote']>>>;
+/**
+ * Bảng kê giá của một chuyến CHƯA CÓ ĐƠN — hai nguồn, cùng một hình dạng đọc được.
+ *
+ *   · chuyến chưa có khoản giữ chỗ ⇒ một lượt báo giá MỚI từ `PricingService`;
+ *   · chuyến đã có khoản giữ chỗ  ⇒ SNAPSHOT đã đóng băng trên hold (ADR 0039).
+ *
+ * Kiểu thu về đúng những trường hai bên cùng có và `toEstimate` thật sự đọc. Lấy nguyên kiểu trả
+ * về của `estimateQuote` thì snapshot không khớp: nó không mang `policySource`/`estimateNote` —
+ * những thứ chỉ có nghĩa với một lượt báo giá vừa chạy.
+ */
+type QuotedEstimate = NonNullable<Awaited<ReturnType<PricingService['estimateQuote']>>>;
+
+type TripEstimate = {
+  breakdown: Pick<QuotedEstimate['breakdown'], 'rows' | 'totalAmount' | 'depositAmount'>;
+  fees: QuotedEstimate['fees'];
+};
 
 /** Số KHÁCH TRẢ cả chuyến. Không có chính sách phí ⇒ đúng bằng giá thuê, không cộng gì thêm. */
 function customerTotalOf(estimate: TripEstimate | undefined): string | null {

@@ -65,24 +65,20 @@ function plan(over: Partial<Plan> = {}): Plan {
     description: 'Cho shop nhỏ',
     billingMode: 'package',
     commissionPercent: null,
-    basePriceMonthly: '500000',
-    assumedMonthlyGmv: null,
     limits: {
-      perVehiclePrice: { car: '120000', motorbike: null },
-      includedCars: 5,
-      includedMotorbikes: 0,
-      maxCars: 10,
-      maxMotorbikes: null,
-      maxMembers: null,
+      maxVehicles: 10,
       maxBranches: null,
-      terms: [],
+      maxMembers: null,
+      termPrices: [
+        { months: 1, price: '100000' },
+        { months: 12, price: '800000' },
+      ],
+      salesOnly: false,
+      recommended: false,
       graceDays: 7,
       features: [],
     },
-    price: '500000',
     currency: 'VND',
-    durationDays: 30,
-    maxVehicles: 10,
     subscriptionCount: 3,
     status: 'active',
     sortOrder: 1,
@@ -177,30 +173,51 @@ describe('/manage/admin/plans — bảng không phân trang', () => {
     expect(screen.getByText('BASIC · Cho shop nhỏ')).toBeTruthy();
   });
 
-  it('phí nền / tháng của gói tuyến package hiển thị qua formatMoneyVnd', () => {
-    renderPageWith([plan({ basePriceMonthly: '500000' })]);
+  it('bảng giá hiện TỪNG kỳ hạn được bán, tiền qua formatMoneyVnd', () => {
+    renderPageWith([plan()]);
 
-    expect(screen.getByText('500.000 ₫')).toBeTruthy();
+    expect(screen.getByText('1 tháng · 100.000 ₫')).toBeTruthy();
+    expect(screen.getByText('12 tháng · 800.000 ₫')).toBeTruthy();
   });
 
-  it('gói tuyến hoa hồng hiện nhãn chế độ + % thay cho phí nền', () => {
-    renderPageWith([
-      plan({
-        billingMode: 'commission',
-        commissionPercent: 10,
-        basePriceMonthly: '0',
-      }),
-    ]);
+  it('gói tuyến hoa hồng hiện nhãn chế độ + % thay cho bảng giá', () => {
+    renderPageWith([plan({ billingMode: 'commission', commissionPercent: 10 })]);
 
     expect(screen.getByText('Hoa hồng theo chuyến')).toBeTruthy();
     expect(screen.getByText('10% / chuyến')).toBeTruthy();
   });
 
-  it('trần chỗ rỗng nghĩa là không giới hạn', () => {
-    renderPageWith([plan()]);
+  /*
+   * Trần của tuyến hoa hồng là QUY TẮC trong code (OWNER_LITE_VEHICLE_LIMIT), không phải
+   * `limits_json` — bậc đó để null ở mọi trần. In "Không giới hạn" cho nó là nói ngược hẳn với
+   * thứ backend thật sự chặn (ADR 0041 điều 4).
+   */
+  it('tuyến hoa hồng hiện trần Owner Lite, không hiện "Không giới hạn"', () => {
+    renderPageWith([
+      plan({
+        billingMode: 'commission',
+        commissionPercent: 10,
+        limits: { ...plan().limits, maxVehicles: null, maxBranches: null, termPrices: [] },
+      }),
+    ]);
 
-    // maxMotorbikes null trong fixture → dòng xe máy hiện "Không giới hạn".
+    expect(screen.getByText('Tối đa 3 xe')).toBeTruthy();
+    expect(screen.getByText('Tối đa 1 chi nhánh')).toBeTruthy();
+    expect(screen.queryByText(/Không giới hạn/)).toBeNull();
+  });
+
+  it('trần rỗng của một BẬC GÓI nghĩa là không giới hạn', () => {
+    renderPageWith([plan({ limits: { ...plan().limits, maxVehicles: null, maxBranches: null } })]);
+
     expect(screen.getAllByText(/Không giới hạn/).length).toBeGreaterThan(0);
+  });
+
+  it('bậc bán qua tư vấn hiện "Liên hệ báo giá" thay cho giá', () => {
+    renderPageWith([
+      plan({ limits: { ...plan().limits, salesOnly: true, termPrices: [] } }),
+    ]);
+
+    expect(screen.getByText('Liên hệ báo giá')).toBeTruthy();
   });
 
   it('trạng thái hiển thị bằng StatusTag', () => {

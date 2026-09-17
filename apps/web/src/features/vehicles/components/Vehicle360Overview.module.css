@@ -536,3 +536,11 @@
     gap: var(--xp-space-sm);
   }
 }
+
+/* Câu mô tả ngắn trong một thẻ chỉ có link — không có bảng khoá/giá trị nào để căn theo. */
+.cardHint {
+  margin: 0;
+  font-size: var(--xp-font-size-sm);
+  line-height: var(--xp-line-height);
+  color: var(--xp-color-text-secondary);
+}

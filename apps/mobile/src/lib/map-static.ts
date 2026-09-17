@@ -1,50 +1,77 @@
 import { isValidGeoPoint, type GeoPoint } from '@xeprime/domain';
+import { XP_TOKENS } from '@xeprime/ui';
 
 /**
- * Xem trước vị trí bằng **Google Maps Static API** — bản native của `lib/map-embed.ts` bên web.
+ * Ảnh bản đồ TĨNH — Geoapify + nền OpenStreetMap (ADR 0037).
  *
- * Web nhúng `<iframe>` Maps Embed API. Native không có iframe, và một bản đồ TƯƠNG TÁC thì phải
- * kéo `react-native-maps` vào: một native module, tức một bản dev build mới cho mọi máy, cho một
- * khối mà việc duy nhất là KIỂM lại cái ghim backend vừa tra ra từ địa chỉ. Static API trả đúng
- * một tấm ảnh — hiện được ngay trong bản build hiện tại, không thêm phụ thuộc nào, và chạm vào
- * vẫn mở bản đồ THẬT của hệ điều hành, thứ zoom và chỉ đường tốt hơn mọi khung nhúng.
+ * ## Vì sao ảnh tĩnh chứ không phải bản đồ tương tác
  *
- * Key nằm trong bundle của app (`EXPO_PUBLIC_*`) nên nó phải là một key RIÊNG: chỉ bật Maps
- * Static API, có hạn mức chặn trên. Cùng hạng với `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY` của web,
- * và KHÔNG BAO GIỜ là `GOOGLE_MAPS_SERVER_KEY` (Geocoding + Routes, có tính tiền theo lượt gọi,
- * chỉ backend được cầm). Cách khoá key: `docs/third-party-keys.md` §4.
+ * App native KHÔNG cài thư viện bản đồ nào. Ở đây bản đồ chỉ trả lời một câu — "cái ghim đang ở
+ * đúng chỗ chưa" — và một ảnh trả lời xong câu đó. Thêm một module native cho việc này là thêm
+ * một thứ có thể vắng trong dev build, và một module native vắng mặt thì crash lúc CHẠY chứ
+ * không phải lúc build. Muốn xem kỹ thì mở app bản đồ của máy (`mapAppUrl`).
  *
- * Thiếu key thì mọi hàm ở đây trả `null` và nơi gọi lùi về nút "Mở bản đồ" — cùng cách web ẩn
- * hẳn khối bản đồ thay vì hiện một khung vỡ.
+ * ## Vì sao không còn Google
+ *
+ * Nền tảng đã chuyển provider geo sang Geoapify (`GeoapifyGeoProvider` ở API). Giữ Google riêng
+ * cho ảnh tĩnh nghĩa là hai nhà cung cấp cho cùng một bản đồ: ghim của người dùng do Geoapify
+ * geocode ra, còn ảnh họ nhìn để xác nhận lại do Google vẽ — hai bộ dữ liệu đường khác nhau, và
+ * sai lệch giữa chúng rơi đúng vào lúc người dùng đang kiểm tra.
+ *
+ * ## Khoá
+ *
+ * `EXPO_PUBLIC_GEOAPIFY_MAP_KEY` — khoá CÔNG KHAI, chỉ dùng cho Static Maps, phải đặt hạn mức
+ * chặn trên ở bảng điều khiển Geoapify. Nó nằm trong bundle nên coi như ai cũng đọc được; KHÔNG
+ * bao giờ dùng khoá server (`GEOAPIFY_API_KEY`, tính tiền theo lượt geocode) ở đây.
+ *
+ * Ghi nguồn ODbL: Geoapify NUNG SẴN dòng "Powered by Geoapify | © OpenMapTiles © OpenStreetMap
+ * contributors" vào chính tấm ảnh, nên nơi hiển thị KHÔNG cần in thêm — thêm một dòng nữa bên
+ * dưới là nói hai lần cùng một câu. Xác minh bằng ảnh thật ngày 16/09/2026; nếu đổi provider thì
+ * kiểm lại, vì lúc đó ghi nguồn thành trách nhiệm của phía hiển thị.
  */
-const STATIC_BASE = 'https://maps.googleapis.com/maps/api/staticmap';
+const STATIC_BASE = 'https://maps.geoapify.com/v1/staticmap';
 
-/** Tỉ lệ khung xem trước. Nơi gọi dựng ô đựng theo đúng số này. */
+/** Cùng style với web (`osm-bright`) — một chiếc xe không được trông khác nhau ở hai client. */
+const STYLE = 'osm-bright';
+
 export const MAP_PREVIEW_RATIO = 2;
 
-/**
- * Bề rộng ảnh xin từ Google — 640 là TRẦN của bậc tiêu chuẩn, `scale=2` nhân đôi số điểm ảnh
- * thật (1280×640) để ảnh không rỗ trên màn hình mật độ cao. Xin quá trần là 400 Bad Request.
- */
 const WIDTH = 640;
 const HEIGHT = WIDTH / MAP_PREVIEW_RATIO;
-const SCALE = 2;
 
-/** Đủ gần để đọc được tên đường quanh ghim, đủ xa để thấy mình đang ở khu nào. */
 const ZOOM = 16;
 
-function staticKey(): string | null {
-  return process.env.EXPO_PUBLIC_GOOGLE_MAPS_STATIC_KEY?.trim() || null;
+const MARKER_COLOR = XP_TOKENS['color-primary'];
+
+function mapKey(): string | null {
+  return process.env.EXPO_PUBLIC_GEOAPIFY_MAP_KEY?.trim() || null;
 }
 
-const coordParam = (point: GeoPoint): string => `${point.lat},${point.lng}`;
+/** `true` khi app dựng được ảnh bản đồ — nơi gọi dùng nó để chọn giữa ảnh và dòng chữ địa chỉ. */
+export function isMapConfigured(): boolean {
+  return mapKey() !== null;
+}
 
 /**
- * Toạ độ từ hai giá trị rời của API.
+ * Geoapify nhận `lon,lat` — NGƯỢC thứ tự với Google (`lat,lng`) và ngược với chính `GeoPoint`.
  *
- * Nhận cả `string` vì `Decimal` đi trên dây dưới dạng chuỗi (ADR 0007). Gom phép kiểm vào một
- * chỗ vì mọi nơi hiện bản đồ đều phải làm đúng nó, và một chỗ quên kiểm là một cái ghim ở Vịnh
- * Guinea.
+ * Đảo nhầm không gây lỗi nào: nó trả về một ảnh hợp lệ của một chỗ khác hẳn, thường là giữa biển.
+ */
+const lonLat = (p: GeoPoint): string => `${p.lng},${p.lat}`;
+
+/**
+ * Ghim `material` màu thương hiệu.
+ *
+ * `#` phải thành `%23` BẰNG TAY: giá trị này nằm trong một tham số đã ghép chuỗi, và một `#` thô
+ * cắt phần còn lại của URL thành fragment — ảnh vẫn trả về, chỉ là không có ghim nào.
+ */
+function marker(point: GeoPoint): string {
+  const color = MARKER_COLOR.replace('#', '%23');
+  return `lonlat:${lonLat(point)};type:material;color:${color};size:44`;
+}
+
+/**
+ * Toạ độ từ hai giá trị rời (form giữ chúng dạng chuỗi) — `null` nếu thiếu hoặc ngoài khoảng hợp lệ.
  */
 export function toGeoPoint(
   lat: string | number | null | undefined,
@@ -55,33 +82,43 @@ export function toGeoPoint(
   return isValidGeoPoint(point) ? point : null;
 }
 
-/** Ảnh bản đồ có ghim. `null` khi thiếu key hoặc toạ độ hỏng — nơi gọi lùi về nút mở bản đồ. */
+/** Ảnh xem trước quanh một điểm. `null` = chưa cấu hình khoá, hoặc toạ độ không hợp lệ. */
 export function mapPreviewUrl(point: GeoPoint | null | undefined): string | null {
-  const key = staticKey();
+  const key = mapKey();
   if (!key || !isValidGeoPoint(point)) return null;
 
-  const url = new URL(STATIC_BASE);
-  url.searchParams.set('center', coordParam(point));
-  url.searchParams.set('zoom', String(ZOOM));
-  url.searchParams.set('size', `${WIDTH}x${HEIGHT}`);
-  url.searchParams.set('scale', String(SCALE));
   /*
-   * Ghim ĐỎ, không phải gold thương hiệu: nền bản đồ của Google đã đầy vàng và cam (đường lớn,
-   * đường cao tốc), nên một cái ghim gold lẫn thẳng vào nền — mà cả khối này tồn tại để người
-   * dùng nhìn ra cái ghim nằm ở đâu.
+   * Ghép TAY chứ không `URLSearchParams`: tham số `marker` của Geoapify dùng `;` và `:` làm cú
+   * pháp riêng, và bộ mã hoá chuẩn sẽ escape chúng thành `%3B`/`%3A` — lúc đó Geoapify không đọc
+   * ra ghim nào và trả về một tấm bản đồ trống.
    */
-  url.searchParams.set('markers', `color:red|${coordParam(point)}`);
-  url.searchParams.set('language', 'vi');
-  url.searchParams.set('region', 'VN');
-  url.searchParams.set('key', key);
-  return url.toString();
+  const params: Record<string, string> = {
+    style: STYLE,
+    width: String(WIDTH),
+    height: String(HEIGHT),
+    // `png` thay vì `jpeg` mặc định: nét chữ tên đường sắc hơn hẳn ở mức thu phóng này, và bản đồ
+    // là thứ người ta nhìn để ĐỌC tên đường.
+    format: 'png',
+    center: `lonlat:${lonLat(point)}`,
+    zoom: String(ZOOM),
+    marker: marker(point),
+    apiKey: encodeURIComponent(key),
+  };
+
+  const query = Object.entries(params)
+    .map(([k, v]) => `${k}=${v}`)
+    .join('&');
+  return `${STATIC_BASE}?${query}`;
 }
 
 /**
- * Mở trong ứng dụng bản đồ của máy — KHÔNG cần key, đây là URL công khai của Google Maps.
+ * Mở điểm này trong app bản đồ của MÁY.
  *
- * Vì thế nó luôn dùng được, kể cả khi chưa khai key xem trước.
+ * `geo:` là lược đồ chuẩn của Android/iOS: nó để HỆ ĐIỀU HÀNH chọn app bản đồ mà người dùng đã
+ * đặt mặc định, thay vì ép mở Google Maps — cùng tinh thần với việc web chuyển link ra
+ * OpenStreetMap. Tham số `q` giữ ghim đúng toạ độ ở những app bỏ qua phần trước dấu `?`.
  */
 export function mapAppUrl(point: GeoPoint): string {
-  return `https://www.google.com/maps/search/?api=1&query=${coordParam(point)}`;
+  const coords = `${point.lat},${point.lng}`;
+  return `geo:${coords}?q=${coords}`;
 }

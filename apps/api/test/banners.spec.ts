@@ -5,7 +5,7 @@ import type { PrismaService } from '../src/prisma/prisma.service';
 
 /**
  * Banner trang chủ — chạy trên PostgreSQL THẬT vì các khẳng định đều thuộc về DB:
- * lọc active + khung lịch, trần 3 banner, CHECK lịch ngược, reorder trọn danh sách.
+ * public trả đầy đủ, tối đa 10 banner trùng lịch, CHECK lịch ngược, reorder trọn danh sách.
  *
  * Cô lập bằng cách tắt (active=false) các banner sẵn có của seed trong lúc chạy rồi trả lại —
  * bảng này là singleton toàn hệ thống, không có chiều tenant để né.
@@ -87,37 +87,71 @@ async function make(input: {
 }
 
 describe('Banner trang chủ', () => {
-  maybe('public trả TỐI ĐA 3 banner đang hiển thị, đúng thứ tự, đúng shape', async () => {
-    const now = Date.now();
-    await make({ title: 'B1', sortOrder: 1 });
-    await make({ title: 'B0', sortOrder: 0 });
-    await make({ title: 'B2', sortOrder: 2 });
-    await make({ title: 'B3 thừa', sortOrder: 3 });
-    await make({ title: 'Đã tắt', sortOrder: 0, active: false });
-    await make({
-      title: 'Chưa tới giờ',
-      sortOrder: 0,
-      startsAt: new Date(now + HOUR).toISOString(),
-    });
-    await make({ title: 'Đã hết hạn', sortOrder: 0, endsAt: new Date(now - HOUR).toISOString() });
-    await make({
-      title: 'Đang trong lịch',
-      sortOrder: 0,
-      startsAt: new Date(now - HOUR).toISOString(),
-      endsAt: new Date(now + HOUR).toISOString(),
-    });
+  maybe(
+    'admin lưu không giới hạn, chỉ 10 banner được trùng lịch và public trả đầy đủ',
+    async () => {
+      const now = Date.now();
+      const visibleIds: string[] = [];
+      for (const sortOrder of [1, 0, 2, 3, 4, 5, 6, 7, 8, 9]) {
+        const banner = await make({
+          title: `B${sortOrder}`,
+          sortOrder,
+          endsAt: new Date(now + HOUR).toISOString(),
+        });
+        visibleIds.push(banner.id);
+      }
 
-    const rows = await banners.publicList();
-    expect(rows).toHaveLength(3);
-    // Chỉ các trường render — tuyệt đối không lộ title nội bộ/lịch/metadata.
-    expect(Object.keys(rows[0]!).sort()).toEqual(
-      ['altText', 'id', 'imageUrl', 'linkUrl', 'mobileImageUrl', 'tabletImageUrl'].sort(),
-    );
-    const alts = rows.map((r) => r.altText);
-    expect(alts.some((a) => a.includes('Đã tắt'))).toBe(false);
-    expect(alts.some((a) => a.includes('Chưa tới giờ'))).toBe(false);
-    expect(alts.some((a) => a.includes('Đã hết hạn'))).toBe(false);
-  });
+      await expect(
+        make({
+          title: 'Banner thứ 11',
+          sortOrder: 10,
+          endsAt: new Date(now + HOUR).toISOString(),
+        }),
+      ).rejects.toThrow(/tối đa 10 banner/);
+
+      const disabled = await make({ title: 'Đã tắt', sortOrder: 10, active: false });
+      await expect(
+        banners.update(adminId, disabled.id, {
+          active: true,
+          endsAt: new Date(now + HOUR).toISOString(),
+        }),
+      ).rejects.toThrow(/tối đa 10 banner/);
+
+      // Không có trần tổng số: banner tắt, hết hạn hoặc có lịch KHÔNG chồng 10 banner trên vẫn tạo được.
+      await make({
+        title: 'Chưa tới giờ',
+        sortOrder: 11,
+        startsAt: new Date(now + 2 * HOUR).toISOString(),
+        endsAt: new Date(now + 3 * HOUR).toISOString(),
+      });
+      await make({
+        title: 'Đã hết hạn',
+        sortOrder: 12,
+        endsAt: new Date(now - HOUR).toISOString(),
+      });
+
+      const rows = await banners.publicList();
+      expect(rows).toHaveLength(10);
+      // Chỉ các trường render — tuyệt đối không lộ title nội bộ/lịch/metadata.
+      expect(Object.keys(rows[0]!).sort()).toEqual(
+        ['altText', 'id', 'imageUrl', 'linkUrl', 'mobileImageUrl', 'tabletImageUrl'].sort(),
+      );
+      const alts = rows.map((r) => r.altText);
+      expect(alts).toEqual(Array.from({ length: 10 }, (_, index) => `Alt của B${index}`));
+      expect(alts.some((a) => a.includes('Đã tắt'))).toBe(false);
+      expect(alts.some((a) => a.includes('Chưa tới giờ'))).toBe(false);
+      expect(alts.some((a) => a.includes('Đã hết hạn'))).toBe(false);
+
+      const adminRows = await banners.listForAdmin();
+      expect(adminRows.filter((row) => createdIds.includes(row.id)).length).toBeGreaterThan(10);
+
+      // Nhường sức chứa cho các test sau; cleanup cuối suite vẫn xoá toàn bộ các hàng này.
+      await prisma.marketplaceBanner.updateMany({
+        where: { id: { in: visibleIds } },
+        data: { active: false },
+      });
+    },
+  );
 
   maybe('lịch ngược bị chặn ở cả service lẫn CHECK của DB', async () => {
     const now = Date.now();

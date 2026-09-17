@@ -21,6 +21,7 @@ const SESSION: authApi.CurrentUser = {
   phoneVerified: true,
   hasPassword: true,
   tenant: null,
+  openRenterTripCount: 0,
   platformRole: null,
   permissions: [],
 };
@@ -30,10 +31,18 @@ const TENANT = {
   name: 'Việt Car Hà Nội',
   slug: 'viet-car',
   status: 'active',
+  onboardingState: 'commission',
+  logoUrl: null,
   roleKey: TENANT_ROLE.SHOP_OWNER,
   features: [],
   planCode: null,
+  planName: null,
+  serviceFeePercent: null,
+  billingMode: 'package',
   planEndsAt: null,
+  billingPhase: 'current',
+  graceEndsAt: null,
+  publicVehicleCount: 1,
 } as NonNullable<authApi.CurrentUser['tenant']>;
 
 /** `session = null` = khách VÃNG LAI: `/auth/me` trả 401, và đó là trạng thái hợp lệ. */

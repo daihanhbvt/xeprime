@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from 'antd';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { addDateKeyDays, API_ERROR_CODE, vnDateKey } from '@xeprime/types';
@@ -1065,6 +1065,13 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Xác thực' }));
 
       await waitFor(() => expect(api.verifyOtp).toHaveBeenCalled());
+      /*
+       * "Đang gửi" leo lên vỏ (RequestBookingModal) qua `onBusyChange`, rồi vỏ mới khoá
+       * `keyboard` của Modal — hai vòng render/effect NỐI TIẾP nhau ngoài lần render đã đợi ở
+       * `waitFor` trên. Không xả hết ở đây thì Esc bấm ngay sau đó rơi vào khung hình mà khoá
+       * Esc chưa kịp tới Modal, làm test không ổn định giữa các máy.
+       */
+      await act(async () => {});
       fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape', keyCode: 27 });
       expect(onClose).not.toHaveBeenCalled();
     });

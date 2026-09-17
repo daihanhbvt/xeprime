@@ -197,6 +197,16 @@ export const API_ERROR_CODE = {
    */
   COMMISSION_PLAN_IS_SINGLETON: 'COMMISSION_PLAN_IS_SINGLETON',
   /**
+   * Bậc gói này bán bằng TƯ VẤN — gian hàng không tự mua được (ADR 0041 điều 5).
+   *
+   * `details` mang `{ planCode }`. Không phải `FORBIDDEN` cũng không phải `VALIDATION_FAILED`:
+   * người gọi có thừa quyền và dữ liệu họ gửi hoàn toàn hợp lệ — chỉ là bậc doanh nghiệp không
+   * có giá niêm yết để tự thanh toán. Thẻ của nó VẪN hiện trên bảng giá (với nút "Liên hệ tư
+   * vấn") vì giấu hẳn nó là giấu luôn lối nâng cấp của gian hàng lớn nhất, nên đường POST gọi
+   * được và mã lỗi phải nói đúng việc cần làm.
+   */
+  PLAN_NOT_SELF_SERVE: 'PLAN_NOT_SELF_SERVE',
+  /**
    * Thao tác sẽ làm HỎNG bậc gói mặc định của tuyến hoa hồng (archive nó, hoặc đổi nó sang
    * `package`).
    *

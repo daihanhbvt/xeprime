@@ -174,6 +174,32 @@ export const ROUTES = {
     /** YÊU CẦU xoá tài khoản — mở support case `account_deletion`, nền tảng xử lý tay. */
     deleteAccount: (): Href => '/account/delete-account',
     /**
+     * Gói dịch vụ nhìn từ khu KHÁCH — cùng màn với , khác đúng cái vỏ.
+     *
+     * Phải có bản này vì chủ xe tuyến hoa hồng KHÔNG vào khu quản lý được (ADR 0038 điều 4), mà
+     * họ chính là người cần màn này nhất: đây là phễu nâng cấp lên gian hàng, và cũng là nơi duy
+     * nhất hiện trần 3 xe của Owner Lite (điều 12). Thiếu nó thì đường nâng cấp đứt hẳn trên app.
+     *
+     * Rời MENU theo ADR 0038 điều 9 — nâng cấp là việc MỘT LẦN — nên lối vào là thẻ "Gian hàng
+     * của tôi" đầu trang hồ sơ, không phải một mục thường trực.
+     */
+    subscription: (): Href => '/account/subscription',
+
+    /**
+     * "Tiền cho thuê xe" — sổ ví của GIAN HÀNG nhìn từ khu khách.
+     *
+     * Hai route vì HAI SỔ, không phải vì hai giao diện: cả hai đều dựng `WalletScreen`, chỉ khác
+     * `scope`. Chủ xe tuyến hoa hồng không vào `/manage/balance` được, nên sổ tenant của họ cần
+     * một cửa ở đây.
+     */
+    earnings: (): Href => '/account/earnings',
+
+    /** Lịch sử thanh toán của CHÍNH khách — các khoản đã trả online cho XePrime. */
+    payments: (): Href => '/account/payments',
+
+    /** Tiến trình đăng ký chủ xe, và là màn "Hồ sơ chủ xe" về sau. */
+    registration: (): Href => '/account/registration',
+    /**
      * Ví điểm — sổ công nợ XePrime phải trả, KHÔNG phải ví điện tử (ADR 0033 điều 1).
      *
      * Không gác bằng `OwnerGate`: khách thuê cũng có số dư (tiền hoàn cọc) và họ là phần đông.
@@ -368,6 +394,26 @@ export const ROUTES = {
 
     /** Hồ sơ gian hàng + gửi duyệt (SHP-02). */
     shop: (): Href => '/manage/shop',
+
+    /**
+     * "Tài khoản & bảo mật" của NGƯỜI đăng nhập, bên trong khu quản lý (ADR 0038 điều 7).
+     *
+     * Hai HỒ SƠ khác nhau, và đây là chỗ tách chúng: `manage.shop` là hồ sơ PHÁP NHÂN (địa chỉ,
+     * mã số thuế, tài khoản thu — đổi nó là đổi thứ in trên hợp đồng), còn màn này là hồ sơ CON
+     * NGƯỜI. Trước đợt này, khu khách của một tài khoản gian hàng đóng lại mà không mục nào trong
+     * `SHOP_NAV` dẫn tới màn đổi mật khẩu — họ phải tự đoán ra một URL thuộc khu khác.
+     */
+    account: (): Href => '/manage/account',
+
+    /**
+     * Chuyến ĐI THUÊ cũ của chính người đăng nhập — lối CHUYỂN TIẾP, không phải một mục menu.
+     *
+     * Ca thật: chủ xe tuyến hoa hồng đang đi thuê xe người khác thì nâng lên gói. Khu khách đóng
+     * cùng lúc, nhưng chuyến đang chạy thì không: xe vẫn phải trả, khoản hoàn vẫn phải nhận. Lối
+     * vào là một THẺ trong "Tài khoản & bảo mật", chỉ hiện khi còn chuyến chưa khép — một mục menu
+     * hiện rồi biến mất theo ngày khiến hai người cùng vai nhìn thấy hai menu khác nhau.
+     */
+    accountTrips: (): Href => '/manage/account/trips',
 
     /** Chi nhánh gian hàng (SHP-03) — nơi xe thực sự nằm. */
     shopBranches: (): Href => '/manage/shop/branches',

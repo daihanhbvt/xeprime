@@ -7,7 +7,6 @@ import { LOGIN_METHOD, type LoginMethod } from './post-login-destination';
 import { Screen } from '@/components/layout/Screen';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { APP_NAME } from '@/lib/app-name';
-import { FONT_FAMILY } from '@/theme/fonts';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 import { AUTH_METHOD, AuthMethodTabs, type AuthMethod } from './components/AuthMethodTabs';
 import { AuthSwitchLink } from './components/AuthSwitchLink';
@@ -63,7 +62,6 @@ export function LoginScreen({
             */}
             <Text
               col={colors.text}
-              fontFamily={FONT_FAMILY.system}
               fos={fontSize.h2}
               fow={fontWeight.bold}
             >

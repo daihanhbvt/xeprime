@@ -1,13 +1,14 @@
 /**
- * Gói theo CHỖ XE — hình dạng núm vặn của một bậc gói và cách đọc nó an toàn.
- * ADR 0015 điều 3–4 · ADR 0020 · ADR 0024.
+ * Bậc gói gian hàng — hình dạng núm vặn của một bậc và cách đọc nó an toàn.
+ * ADR 0041 (ghi đè ADR 0015 điều 1/3/8 và ADR 0029 điều 3) · ADR 0024 · ADR 0038.
  *
- * `plans.limits_json` là DỮ LIỆU admin sửa được (giá / % / số chỗ / số ngày); QUY TẮC nằm
- * trong code (BillingService). File này chỉ đóng đinh HÌNH DẠNG và cung cấp parser phòng thủ
- * — một jsonb hỏng/thiếu key không được phép làm sập đường đọc gói ở api, web hay mobile.
+ * `plans.limits_json` là DỮ LIỆU admin sửa được (trần xe / trần chi nhánh / bảng giá / số ngày
+ * ân hạn / cờ năng lực); QUY TẮC nằm trong code (BillingService). File này chỉ đóng đinh HÌNH
+ * DẠNG và cung cấp parser phòng thủ — một jsonb hỏng/thiếu key không được phép làm sập đường
+ * đọc gói ở api, web hay mobile.
  *
- * Tiền trong JSON là CHUỖI thập phân (cùng kỷ luật ADR 0007 — không bao giờ `number` cho
- * tiền); số đếm (chỗ, tháng, ngày, %) là `number`.
+ * Tiền trong JSON là CHUỖI thập phân (cùng kỷ luật ADR 0007 — không bao giờ `number` cho tiền);
+ * số đếm (xe, chi nhánh, tháng, ngày) là `number`.
  */
 
 import { isPlanFeature, type PlanFeature } from './status/billing';
@@ -62,25 +63,38 @@ export const COMMISSION_TRACK_TERM_MONTHS = 12;
  *
  * Hằng này là mã mà SEED tạo ra. Phép nhận diện thật ở backend là `billingMode = commission`
  * (bậc duy nhất mang chế độ đó), không phải so chuỗi — mã ở đây để seed, tài liệu và màn quản
- * trị gọi cùng một thứ bằng cùng một tên.
+ * trị gói gọi cùng một thứ bằng cùng một tên.
  */
 export const DEFAULT_COMMISSION_PLAN_CODE = 'free';
 
 /**
- * Mã SKU duy nhất của TUYẾN GÓI — bậc mà gian hàng thật sự mua.
+ * Ba bậc gian hàng mà SEED tạo ra (ADR 0041 điều 7) — mã để seed, migration và tài liệu gọi
+ * cùng một thứ bằng cùng một tên.
  *
- * Khác `DEFAULT_COMMISSION_PLAN_CODE` ở một điểm quan trọng: đây **không** phải một bất biến.
- * Danh mục được phép có nhiều bậc `package` (một bậc có trần chỗ khác, một bậc mở thêm cờ năng
- * lực…), và backend không chặn gì cả. Hằng này chỉ để seed và tài liệu gọi cùng một thứ bằng
- * cùng một tên thay vì rải chuỗi `per-vehicle` khắp nơi — nơi nào cần "bậc nào đang bán" thì
- * hỏi `listPlansForTenant`, không hỏi hằng này.
+ * Khác `DEFAULT_COMMISSION_PLAN_CODE` ở một điểm quan trọng: đây **không** phải bất biến. Danh
+ * mục được phép có nhiều hơn hoặc ít hơn ba bậc `package`, và `BillingService` không đếm bậc,
+ * không biết tên nào — nơi nào cần "bậc nào đang bán" thì hỏi `listPlansForTenant`, không hỏi
+ * hằng này. Bất biến duy nhất của danh mục là ĐÚNG MỘT bậc `commission` (ADR 0038 điều 13).
  */
-export const DEFAULT_PACKAGE_PLAN_CODE = 'per-vehicle';
+export const SHOP_PLAN_CODE = {
+  BASIC: 'shop-basic',
+  ADVANCED: 'shop-advanced',
+  /** Bậc doanh nghiệp — `salesOnly`, admin gán tay với giá đàm phán (ADR 0041 điều 5). */
+  PRO: 'shop-pro',
+} as const;
+
+/**
+ * Bậc gói theo CHỖ XE của ADR 0029 — nghỉ hưu bởi ADR 0041.
+ *
+ * Giữ hằng vì seed vẫn phải NHẬN RA nó để gỡ khỏi danh mục (`retireLegacyPlans`), và migration
+ * ánh xạ thuê bao cũ sang ba bậc mới cần gọi tên nó. Không nơi nào được tạo mới bậc này.
+ */
+export const RETIRED_PER_VEHICLE_PLAN_CODE = 'per-vehicle';
 
 /**
  * Trần số xe của Owner Lite — TỔNG ô tô + xe máy, không phải 3 mỗi loại.
  *
- * Tuyến hoa hồng không bán chỗ nên nó không có `slots_json` để đọc hạn mức; trần này là quy tắc
+ * Tuyến hoa hồng không bán gói nên nó không có `quota_json` để đọc hạn mức; trần này là quy tắc
  * SẢN PHẨM viết trong code, cùng hạng với `COMMISSION_TRACK_TERM_MONTHS`. Đếm GỘP hai loại vì
  * câu hỏi là "người này đang tự cho thuê vài chiếc, hay đang vận hành một đội xe" — ba ô tô cộng
  * ba xe máy đã là một đội xe.
@@ -93,60 +107,66 @@ export const OWNER_LITE_VEHICLE_LIMIT = 3;
 
 // ── Hình dạng limits_json ───────────────────────────────────────────────────
 
-/** Đơn giá MỘT chỗ / tháng theo loại xe. `null` = bậc gói chưa bán loại chỗ đó. */
-export interface PlanVehicleSlotPrice {
-  car: string | null;
-  motorbike: string | null;
-}
-
-/** Một kỳ hạn bậc gói bán, kèm % giảm cho cam kết dài (ADR 0015 điều 3). */
-export interface PlanTermOption {
+/**
+ * MỘT lựa chọn mua của bậc gói: kỳ hạn + tiền CẢ KỲ (ADR 0041 điều 2).
+ *
+ * `price` là số TUYỆT ĐỐI admin gõ, không phải kết quả của một phép nhân — 3 tháng 250.000đ là
+ * 250.000đ, không phải "100.000 × 3 trừ 16,67%". % tiết kiệm hiển thị được TÍNH RA từ bảng này
+ * (`planTermSavingPercent`), và không bao giờ đi vào một dòng tiền.
+ */
+export interface PlanTermPrice {
   months: number;
-  discountPercent: number;
+  /** VND, chuỗi thập phân — ADR 0007. */
+  price: string;
 }
 
-/** Hình dạng chốt của `plans.limits_json` — ADR 0015 điều 4. */
+/** Hình dạng chốt của `plans.limits_json` — ADR 0041 điều 1. */
 export interface PlanLimitsJson {
-  perVehiclePrice: PlanVehicleSlotPrice;
-  /** Số chỗ gồm sẵn trong phí nền của gói gian hàng. */
-  includedCars: number;
-  includedMotorbikes: number;
+  /** Trần TỔNG số xe (ô tô + xe máy). `null` = không giới hạn. */
+  maxVehicles: number | null;
   /** `null` = không giới hạn. */
-  maxCars: number | null;
-  maxMotorbikes: number | null;
-  maxMembers: number | null;
   maxBranches: number | null;
-  terms: PlanTermOption[];
+  maxMembers: number | null;
+  /** Bảng giá = danh sách kỳ hạn ĐƯỢC BÁN. Rỗng = bậc không bán trực tiếp. */
+  termPrices: PlanTermPrice[];
+  /**
+   * Bậc bán bằng TƯ VẤN: tenant không tự mua được (`PLAN_NOT_SELF_SERVE`), admin gán tay với
+   * giá đàm phán (ADR 0041 điều 5). Bảng giá vẫn hiện thẻ của nó, kèm nút liên hệ.
+   */
+  salesOnly: boolean;
+  /** Nhãn "Được đề xuất" trên bảng giá — lựa chọn marketing của admin, không đổi hành vi nào. */
+  recommended: boolean;
+  /** Số ngày ân hạn sau `ends_at` trước khi rơi về tuyến hoa hồng (ADR 0038 điều 1). */
   graceDays: number;
   /** Cờ năng lực (ADR 0027) — chỉ chứa giá trị của `PLAN_FEATURE`. */
   features: PlanFeature[];
 }
 
-/** Số chỗ một dòng thuê bao đã mua (`tenant_subscriptions.slots_json`) — ADR 0015 điều 1. */
-export interface PlanSlots {
-  car: number;
-  motorbike: number;
-}
-
 /**
- * Giả định admin nhập cho phép KIỂM ĐIỂM GIAO (ADR 0020) — `plans.assumed_monthly_gmv_json`.
- * Cả hai đầu vào đều là giả định thị trường, không phải cấu hình hệ thống: G (doanh thu một xe
- * một tháng) và % hoa hồng của tuyến A để so.
+ * Hạn mức ĐÃ MUA, chụp lại trên `tenant_subscriptions.quota_json` — ADR 0041 điều 3.
+ *
+ * Tồn tại vì cùng lý do `billing_mode` được snapshot (ADR 0024 điều 2): admin sửa trần của một
+ * bậc là quyết định về DANH MỤC, và nó không được lật hạn mức của gian hàng đang giữa kỳ đã trả
+ * tiền. `null` ở một trường = KHÔNG GIỚI HẠN (tường minh), không phải "chưa khai".
  */
-export interface PlanAssumedGmvJson {
-  /** Doanh thu giả định của MỘT xe trong MỘT tháng — chuỗi tiền VND. */
-  monthlyGmvPerCar: string;
-  /** % hoa hồng tuyến A dùng để so (thường là % của gói mặc định). */
-  commissionPercent: number;
+export interface PlanQuotaSnapshot {
+  maxVehicles: number | null;
+  maxBranches: number | null;
+  maxMembers: number | null;
 }
 
 // ── Hoá đơn gói — hình dạng lines_json (ADR 0015 điều 5) ───────────────────
 
-/** Một dòng snapshot của hoá đơn gói — hoá đơn phải tự giải thích được, không cần join. */
+/**
+ * Một dòng snapshot của hoá đơn — hoá đơn phải tự giải thích được, không cần join.
+ *
+ * Chỉ `package` được GHI từ ADR 0041 (một dòng: bậc gói cho N tháng). Ba giá trị còn lại là hoá
+ * đơn phát hành TRƯỚC ADR 0041 theo mô hình chỗ xe — giữ trong union để chứng từ cũ còn đọc
+ * được, không bao giờ ghi mới.
+ */
 export interface PlanInvoiceLine {
-  /** `base` = phí nền · `slot` = chỗ mua thêm · `add_slot` = mua thêm chỗ giữa kỳ (prorate). */
-  kind: 'base' | 'slot' | 'add_slot';
-  /** Chỉ có ở dòng chỗ xe. */
+  kind: 'package' | 'base' | 'slot' | 'add_slot';
+  /** Chỉ có ở dòng chỗ xe của hoá đơn cũ. */
   vehicleType?: 'car' | 'motorbike';
   quantity: number;
   months: number;
@@ -155,26 +175,25 @@ export interface PlanInvoiceLine {
   amount: string;
 }
 
-/** Gốc `subscription_invoices.lines_json` — đủ dữ kiện để KÍCH HOẠT gói khi tiền về (W4). */
+/** Gốc `subscription_invoices.lines_json` — đủ dữ kiện để KÍCH HOẠT gói khi tiền về. */
 export interface PlanInvoiceSnapshot {
   planId: string;
   planCode: string;
   termMonths: number;
-  slots: PlanSlots;
+  /** Hạn mức sẽ ghi lên dòng thuê bao khi hoá đơn này kích hoạt gói (ADR 0041 điều 3). */
+  quota: PlanQuotaSnapshot;
   lines: PlanInvoiceLine[];
 }
 
 // ── Parser phòng thủ ────────────────────────────────────────────────────────
 
 const EMPTY_LIMITS: PlanLimitsJson = {
-  perVehiclePrice: { car: null, motorbike: null },
-  includedCars: 0,
-  includedMotorbikes: 0,
-  maxCars: null,
-  maxMotorbikes: null,
-  maxMembers: null,
+  maxVehicles: null,
   maxBranches: null,
-  terms: [],
+  maxMembers: null,
+  termPrices: [],
+  salesOnly: false,
+  recommended: false,
   graceDays: 0,
   features: [],
 };
@@ -199,46 +218,46 @@ function asMoneyString(value: unknown): string | null {
   return typeof value === 'string' && /^\d{1,12}(\.\d{1,2})?$/.test(value) ? value : null;
 }
 
-function asPercent(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100
-    ? value
-    : fallback;
+function asFlag(value: unknown): boolean {
+  return value === true;
 }
 
 /**
  * Đọc `plans.limits_json` về hình dạng chốt. KHÔNG ném với dữ liệu hỏng — key thiếu/sai kiểu
- * rơi về giá trị an toàn (không giới hạn, không gồm sẵn, không cờ), chuỗi lạ trong `features`
- * bị BỎ chứ không lọt ra ngoài union.
+ * rơi về giá trị an toàn (không giới hạn, không bán, không cờ), chuỗi lạ trong `features` bị BỎ
+ * chứ không lọt ra ngoài union.
+ *
+ * Kỳ hạn trùng nhau trong `termPrices` được rút về LẦN ĐẦU xuất hiện: hai giá cho cùng một kỳ
+ * hạn là dữ liệu hỏng, và để cả hai lọt ra thì bảng giá hiện hai thẻ "3 tháng" cạnh nhau với
+ * hai con số khác nhau — còn tệ hơn chọn sai một trong hai.
  */
 export function parsePlanLimits(value: unknown): PlanLimitsJson {
   const raw = asRecord(value);
-  if (!raw) return { ...EMPTY_LIMITS, perVehiclePrice: { ...EMPTY_LIMITS.perVehiclePrice } };
+  if (!raw) return { ...EMPTY_LIMITS, termPrices: [], features: [] };
 
-  const price = asRecord(raw['perVehiclePrice']);
-  const terms: PlanTermOption[] = Array.isArray(raw['terms'])
-    ? (raw['terms'] as unknown[])
+  const seen = new Set<number>();
+  const termPrices: PlanTermPrice[] = Array.isArray(raw['termPrices'])
+    ? (raw['termPrices'] as unknown[])
         .map((t) => {
           const r = asRecord(t);
           if (!r) return null;
           const months = asCount(r['months'], 0);
-          if (months < 1) return null;
-          return { months, discountPercent: asPercent(r['discountPercent'], 0) };
+          const price = asMoneyString(r['price']);
+          if (months < 1 || price === null || seen.has(months)) return null;
+          seen.add(months);
+          return { months, price };
         })
-        .filter((t): t is PlanTermOption => t !== null)
+        .filter((t): t is PlanTermPrice => t !== null)
+        .sort((a, b) => a.months - b.months)
     : [];
 
   return {
-    perVehiclePrice: {
-      car: asMoneyString(price?.['car']),
-      motorbike: asMoneyString(price?.['motorbike']),
-    },
-    includedCars: asCount(raw['includedCars'], 0),
-    includedMotorbikes: asCount(raw['includedMotorbikes'], 0),
-    maxCars: asNullableCount(raw['maxCars']),
-    maxMotorbikes: asNullableCount(raw['maxMotorbikes']),
-    maxMembers: asNullableCount(raw['maxMembers']),
+    maxVehicles: asNullableCount(raw['maxVehicles']),
     maxBranches: asNullableCount(raw['maxBranches']),
-    terms,
+    maxMembers: asNullableCount(raw['maxMembers']),
+    termPrices,
+    salesOnly: asFlag(raw['salesOnly']),
+    recommended: asFlag(raw['recommended']),
     graceDays: asCount(raw['graceDays'], 0),
     features: Array.isArray(raw['features'])
       ? (raw['features'] as unknown[]).filter(isPlanFeature)
@@ -246,18 +265,37 @@ export function parsePlanLimits(value: unknown): PlanLimitsJson {
   };
 }
 
-/** Đọc `tenant_subscriptions.slots_json` — NULL/hỏng = chưa mua chỗ nào, không ném. */
-export function parsePlanSlots(value: unknown): PlanSlots {
+/**
+ * Đọc `tenant_subscriptions.quota_json` — `null` = dòng KHÔNG có snapshot (thuê bao tuyến hoa
+ * hồng, hoặc dòng lịch sử trước ADR 0041), caller rơi về `limits` của bậc gói.
+ *
+ * Khoá `maxVehicles` phải CÓ MẶT (số nguyên hoặc `null` tường minh) thì snapshot mới được công
+ * nhận. Khác biệt đó là cố ý: một jsonb hỏng/rỗng đọc thành `{maxVehicles: null}` sẽ là "không
+ * giới hạn" — mức RỘNG NHẤT — ở đúng chỗ tốn tiền nhất. Không có snapshot thì hỏi bậc gói, và
+ * bậc gói luôn có câu trả lời.
+ */
+export function parsePlanQuota(value: unknown): PlanQuotaSnapshot | null {
   const raw = asRecord(value);
-  return { car: asCount(raw?.['car'], 0), motorbike: asCount(raw?.['motorbike'], 0) };
+  if (!raw || !('maxVehicles' in raw)) return null;
+  if (raw['maxVehicles'] !== null && asNullableCount(raw['maxVehicles']) === null) return null;
+  return {
+    maxVehicles: asNullableCount(raw['maxVehicles']),
+    maxBranches: asNullableCount(raw['maxBranches']),
+    maxMembers: asNullableCount(raw['maxMembers']),
+  };
 }
 
 /**
  * Đọc `subscription_invoices.lines_json` — `null` khi thiếu trường BẮT BUỘC để kích hoạt.
  *
  * Khác `parsePlanLimits` (rơi về mặc định rỗng): mặc định hoá một snapshot hoá đơn là kích hoạt
- * một gói 0 tháng 0 chỗ — với DỮ LIỆU TIỀN, "không làm gì và đẩy sang hàng đợi admin" đúng hơn
- * "đoán một giá trị". Caller nhận `null` thì để giao dịch nằm ở trạng thái chưa khớp kèm ghi chú.
+ * một gói 0 tháng không trần — với DỮ LIỆU TIỀN, "không làm gì và đẩy sang hàng đợi admin" đúng
+ * hơn "đoán một giá trị". Caller nhận `null` thì để giao dịch nằm ở trạng thái chưa khớp kèm
+ * ghi chú.
+ *
+ * ⚠️ Đọc được CẢ hoá đơn trước ADR 0041: những hoá đơn đó mang `slots: {car, motorbike}` thay
+ * cho `quota`, và một hoá đơn `issued` như thế có thể đang chờ tiền ngay lúc deploy. Tổng hai
+ * loại chỗ thành `maxVehicles` là đúng ánh xạ mà migration dùng cho thuê bao (ADR 0041 điều 8).
  */
 export function parsePlanInvoiceSnapshot(value: unknown): PlanInvoiceSnapshot | null {
   const raw = asRecord(value);
@@ -274,7 +312,9 @@ export function parsePlanInvoiceSnapshot(value: unknown): PlanInvoiceSnapshot | 
           const r = asRecord(l);
           if (!r) return null;
           const kind = r['kind'];
-          if (kind !== 'base' && kind !== 'slot' && kind !== 'add_slot') return null;
+          if (kind !== 'package' && kind !== 'base' && kind !== 'slot' && kind !== 'add_slot') {
+            return null;
+          }
           const unitPrice = asMoneyString(r['unitPrice']);
           const amount = asMoneyString(r['amount']);
           if (unitPrice === null || amount === null) return null;
@@ -291,53 +331,61 @@ export function parsePlanInvoiceSnapshot(value: unknown): PlanInvoiceSnapshot | 
         .filter((l): l is PlanInvoiceLine => l !== null)
     : [];
 
-  return { planId, planCode, termMonths, slots: parsePlanSlots(raw['slots']), lines };
+  return { planId, planCode, termMonths, quota: invoiceQuota(raw), lines };
 }
 
-/** Đọc `plans.assumed_monthly_gmv_json` — `null` khi thiếu/hỏng, để caller quyết đường đi. */
-export function parsePlanAssumedGmv(value: unknown): PlanAssumedGmvJson | null {
-  const raw = asRecord(value);
-  if (!raw) return null;
-  const monthlyGmvPerCar = asMoneyString(raw['monthlyGmvPerCar']);
-  const commissionPercent = raw['commissionPercent'];
-  if (
-    monthlyGmvPerCar == null ||
-    typeof commissionPercent !== 'number' ||
-    !Number.isFinite(commissionPercent) ||
-    commissionPercent <= 0 ||
-    commissionPercent > 100
-  ) {
-    return null;
-  }
-  return { monthlyGmvPerCar, commissionPercent };
+/** `quota` của hoá đơn mới; hoá đơn trước ADR 0041 suy từ `slots` cũ. */
+function invoiceQuota(raw: Record<string, unknown>): PlanQuotaSnapshot {
+  const quota = parsePlanQuota(raw['quota']);
+  if (quota) return quota;
+  const legacy = asRecord(raw['slots']);
+  if (!legacy) return { maxVehicles: null, maxBranches: null, maxMembers: null };
+  return {
+    maxVehicles: asCount(legacy['car'], 0) + asCount(legacy['motorbike'], 0),
+    maxBranches: null,
+    maxMembers: null,
+  };
 }
 
-/** % giảm của một kỳ hạn theo bảng `terms` của bậc gói — kỳ không khai báo = 0%. */
-export function termDiscountPercent(limits: PlanLimitsJson, termMonths: number): number {
-  return limits.terms.find((t) => t.months === termMonths)?.discountPercent ?? 0;
+// ── Phép đọc bảng giá ───────────────────────────────────────────────────────
+
+/** Kỳ hạn bậc gói BÁN được, tăng dần. Rỗng = không bán trực tiếp (bậc tư vấn hoặc chưa khai). */
+export function planSellableTerms(limits: PlanLimitsJson): number[] {
+  return limits.termPrices.map((t) => t.months);
+}
+
+/** Tiền CẢ KỲ của một kỳ hạn — `null` khi bậc gói không bán kỳ hạn đó. */
+export function planTermPrice(limits: PlanLimitsJson, termMonths: number): string | null {
+  return limits.termPrices.find((t) => t.months === termMonths)?.price ?? null;
 }
 
 /**
- * Tiền CẢ KỲ của một lượt mua gói — phép XEM TRƯỚC cho form gán/gia hạn, cùng công thức
- * `BillingService.termTotal`: (phí nền + chỗ mua thêm × đơn giá) × tháng × (1 − % giảm).
- * Trả `null` khi cần mua thêm loại chỗ mà bậc gói không bán (đơn giá null).
+ * Tenant có TỰ MUA được bậc này không (ADR 0041 điều 5).
+ *
+ * Phép xem trước cho UI; lớp chặn thật là `BillingService.purchase` — bậc `salesOnly` ném
+ * `PLAN_NOT_SELF_SERVE`, bậc không có bảng giá thì không có khoản phải trả.
  */
-export function subscriptionTermTotalPreview(
-  basePriceMonthly: string,
-  limits: PlanLimitsJson,
-  slots: PlanSlots,
-  termMonths: number,
-): number | null {
-  let monthly = Number(basePriceMonthly) || 0;
-  for (const [bought, included, unitPrice] of [
-    [slots.car, limits.includedCars, limits.perVehiclePrice.car],
-    [slots.motorbike, limits.includedMotorbikes, limits.perVehiclePrice.motorbike],
-  ] as const) {
-    const extra = bought - included;
-    if (extra <= 0) continue;
-    if (unitPrice === null) return null;
-    monthly += Number(unitPrice) * extra;
-  }
-  const discount = termDiscountPercent(limits, termMonths);
-  return Math.round(monthly * termMonths * (1 - discount / 100));
+export function isPlanSelfServe(limits: PlanLimitsJson): boolean {
+  return !limits.salesOnly && limits.termPrices.length > 0;
+}
+
+/**
+ * % TIẾT KIỆM của một kỳ hạn so với việc mua từng tháng — CHỈ ĐỂ HIỂN THỊ (ADR 0041 điều 2).
+ *
+ * Mốc so là giá kỳ 1 tháng của chính bậc đó. Bậc không bán kỳ 1 tháng thì không có mốc ⇒ trả 0
+ * (không hiện nhãn) thay vì bịa một mốc từ kỳ ngắn nhất: "tiết kiệm 12% so với mua 3 tháng" là
+ * một câu không ai kiểm chứng được trên bảng giá đang nhìn.
+ *
+ * ⚠️ Con số này KHÔNG bao giờ đi vào một dòng tiền. Hoá đơn ghi `subtotal = total = price(N)`,
+ * `discountAmount = 0` — một dòng "giảm giá" trên chứng từ phải ứng với một giá gốc THẬT.
+ */
+export function planTermSavingPercent(limits: PlanLimitsJson, termMonths: number): number {
+  if (termMonths <= 1) return 0;
+  const monthly = planTermPrice(limits, 1);
+  const total = planTermPrice(limits, termMonths);
+  if (monthly === null || total === null) return 0;
+  const reference = Number(monthly) * termMonths;
+  if (!Number.isFinite(reference) || reference <= 0) return 0;
+  const saving = Math.round((1 - Number(total) / reference) * 100);
+  return saving > 0 ? saving : 0;
 }

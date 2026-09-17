@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated, {
+  cancelAnimation,
   Easing,
   makeMutable,
   useAnimatedStyle,
@@ -44,30 +46,44 @@ interface SkeletonProps {
  * chúng lệch pha nhau tuỳ thời điểm được dựng.
  *
  * `makeMutable` chứ không phải `useSharedValue`: giá trị này không thuộc về lượt gắn kết của
- * component nào cả. Không có ai gỡ nó, và cũng không nên — một hoạt cảnh là cái giá cố định.
+ * component nào cả — nó sống lâu hơn mọi khung chờ đã dựng nó.
  */
 const pulse = makeMutable(0.5);
 
-let pulseStarted = false;
-
 /**
- * Khởi động ở lần dựng khung chờ ĐẦU TIÊN, không ở lúc nạp module.
+ * Số khung chờ ĐANG gắn kết. Hoạt cảnh chạy khi con số này rời 0, và DỪNG khi nó về 0.
  *
- * Module này bị kéo vào rất sớm qua chuỗi import của các màn, có thể trước khi Reanimated dựng
- * xong luồng UI — giao một hoạt cảnh lúc đó là đặt cược vào thứ tự nạp. Hoãn tới lần dựng đầu
- * tiên thì Reanimated chắc chắn đã sẵn sàng, và cờ khiến nó vẫn chỉ chạy đúng một lần.
+ * Đếm chứ không phải một cờ "đã khởi động": một hoạt cảnh `withRepeat(-1)` không bao giờ tự
+ * kết thúc, nên cờ một chiều nghĩa là sau khung chờ đầu tiên của phiên, luồng UI tính lại giá
+ * trị này mỗi khung hình cho tới lúc đóng app — kể cả khi không còn khung chờ nào trên màn. Nó
+ * nhỏ, nhưng nó là chi phí thường trực trả cho một thứ không ai nhìn thấy, và nó rơi đúng vào
+ * những khung hình đắt nhất: chuyển màn, cuộn.
  *
- * Gọi thẳng trong thân render chứ không qua `useEffect`: nó tự chặn lần hai, không đụng state
- * React, và một khung chờ phải THỞ ngay từ khung hình đầu — qua effect là trễ mất một nhịp.
+ * Hai hàm này chỉ được gọi từ `useEffect` của `Skeleton`, tức luôn theo cặp và luôn trên
+ * luồng JS — không có đường nào để bộ đếm lệch.
  */
-function startPulse(): void {
-  if (pulseStarted) return;
-  pulseStarted = true;
+let mounted = 0;
+
+function acquirePulse(): void {
+  mounted += 1;
+  if (mounted > 1) return;
   pulse.value = withRepeat(
     withTiming(1, { duration: duration.pulse, easing: Easing.inOut(Easing.ease) }),
     -1,
     true,
   );
+}
+
+function releasePulse(): void {
+  mounted -= 1;
+  if (mounted > 0) return;
+  /*
+   * `cancelAnimation` rồi đặt lại mốc: bỏ huỷ thì hoạt cảnh vẫn chạy dù không ai đọc, còn bỏ
+   * đặt lại thì khung chờ kế tiếp bắt đầu từ độ mờ ngẫu nhiên của lần trước — một khối xám
+   * nhảy vào ở nửa nhịp.
+   */
+  cancelAnimation(pulse);
+  pulse.value = 0.5;
 }
 
 /**
@@ -81,7 +97,14 @@ export function Skeleton({
   fill = false,
   round = false,
 }: SkeletonProps) {
-  startPulse();
+  /*
+   * Giữ nhịp sống đúng bằng vòng đời của khung chờ. Effect chạy SAU khung hình đầu, nên khung
+   * hình đó vẽ ở `opacity: 0.5` — đứng yên một nhịp rồi mới thở, thay vì nhấp nháy.
+   */
+  useEffect(() => {
+    acquirePulse();
+    return releasePulse;
+  }, []);
 
   const style = useAnimatedStyle(() => ({ opacity: pulse.value }));
 

@@ -145,8 +145,6 @@ function setting(overrides: Record<string, unknown> = {}) {
   return {
     serviceType: SERVICE_TYPE.SELF_DRIVE,
     autoAcceptEnabled: false,
-    autoAcceptMinLeadMinutes: 360,
-    autoAcceptMaxLeadMinutes: 10080,
     minRentalMinutes: null,
     preferredRouteTypes: [],
     requiredDocuments: [],
@@ -226,6 +224,55 @@ describe('Tối ưu nhận chuyến — lưu một màn không xoá thiết lậ
     const sent = patch.mutateAsync.mock.calls[0]![0]!;
     expect(Object.keys(sent)).not.toContain('minRentalMinutes');
     expect(Object.keys(sent)).not.toContain('preferredRouteTypes');
+  });
+
+  /**
+   * KHOẢNG ĐẶT TRƯỚC ĐÃ BỊ BỎ (17/09/2026) — bật là nhận.
+   *
+   * Trước đó màn này có "Giới hạn từ / Cho đến" (mặc định 6 giờ – 1 tuần), nên chủ xe bật công
+   * tắc, đọc dòng "đang hoạt động", rồi vẫn phải duyệt tay chuyến đặt gấp. Khoá cả HAI đầu: ô
+   * chọn không còn trên màn, và không có mốc nào lọt xuống dây.
+   */
+  it('không còn ô chọn khoảng đặt trước, và payload không mang mốc nào', async () => {
+    renderSection(<AutoAcceptSection serviceType={SERVICE_TYPE.SELF_DRIVE} />);
+
+    expect(screen.queryByText(/Khoảng thời gian cho phép/i)).toBeNull();
+    expect(screen.queryByRole('combobox')).toBeNull();
+
+    fireEvent.click(screen.getByRole('switch'));
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+
+    await waitFor(() => expect(patch.mutateAsync).toHaveBeenCalled());
+    const sent = patch.mutateAsync.mock.calls[0]![0]!;
+    expect(Object.keys(sent)).not.toContain('autoAcceptMinLeadMinutes');
+    expect(Object.keys(sent)).not.toContain('autoAcceptMaxLeadMinutes');
+  });
+
+  /** Điều kiện tự nhận nằm sau icon thông tin — không còn là một thẻ chiếm nửa màn hình. */
+  it('điều kiện tự nhận ẩn sau icon thông tin, mở ra mới đọc được', async () => {
+    renderSection(<AutoAcceptSection serviceType={SERVICE_TYPE.SELF_DRIVE} />);
+
+    expect(screen.queryByText(/kể cả thời gian chết giữa hai chuyến/i)).toBeNull();
+
+    const info = screen.getByRole('button', { name: 'Điều kiện để hệ thống tự nhận' });
+    fireEvent.click(info);
+
+    await waitFor(() =>
+      expect(screen.getByText(/kể cả thời gian chết giữa hai chuyến/i)).toBeTruthy(),
+    );
+  });
+
+  /**
+   * Icon nằm TRONG `<label>` của công tắc: thiếu `preventDefault` thì chạm vào nó để đọc điều
+   * kiện cũng lật luôn thiết lập — đúng thứ người dùng đang cân nhắc chứ chưa quyết.
+   */
+  it('mở phần điều kiện KHÔNG lật công tắc', () => {
+    renderSection(<AutoAcceptSection serviceType={SERVICE_TYPE.SELF_DRIVE} />);
+    const before = screen.getByRole('switch').getAttribute('aria-checked');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Điều kiện để hệ thống tự nhận' }));
+
+    expect(screen.getByRole('switch').getAttribute('aria-checked')).toBe(before);
   });
 
   it('ghi vào đúng dịch vụ đang mở', () => {

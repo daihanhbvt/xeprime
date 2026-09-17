@@ -7,12 +7,12 @@ import Link from 'next/link';
 import { CUSTOMER_TRIP_FILTER, PERMISSION, TRIP_ROLE } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
 import { AccountTrackBadge } from '@/features/account/components/AccountTrackBadge';
+import { useAccountIdentityLabel } from '@/features/account/hooks/use-account-identity-label';
 import { cx } from '@/lib/cx';
 import { usePortalLogout } from '@/features/auth/hooks/use-portal-logout';
 import { useTrips } from '@/features/trips/hooks';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { usePermissions } from '@/hooks/use-permissions';
-import { useDomainLabel } from '@/i18n/use-domain-label';
 import { initialOf } from '@/lib/initials';
 import styles from './ManageUserCard.module.css';
 import { useTranslations } from 'next-intl';
@@ -51,8 +51,8 @@ export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUser
   const t = useTranslations('ManageCommon');
   const { data: user } = useCurrentUser();
   const { has } = usePermissions();
-  const domainLabel = useDomainLabel();
   const logout = usePortalLogout();
+  const identityLabel = useAccountIdentityLabel();
   /*
    * Chuyến ĐI THUÊ chưa khép của chính người này — quyết định mục "Chuyến tôi đi thuê" có mặt
    * hay không. Trang 1, vai `renter`: chỉ cần `counts.current`, không cần danh sách.
@@ -76,12 +76,13 @@ export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUser
 
   const workspaceName = user.tenant?.name ?? (user.displayName || user.email || '—');
   const signedInAs = user.displayName || user.email || '—';
-  const roleKey = user.tenant?.roleKey;
-  const role = roleKey
-    ? domainLabel('tenantRole', roleKey, roleKey)
-    : user.platformRole
-      ? domainLabel('platformRole', user.platformRole, user.platformRole)
-      : '—';
+  /*
+   * Nhãn danh tính đọc TUYẾN, không đọc bảng vai — xem `useAccountIdentityLabel`.
+   *
+   * Chủ xe cá nhân và chủ gian hàng cùng mang vai `shop_owner`, nên một `domainLabel('tenantRole')`
+   * gọi cả hai là "Chủ gian hàng" — ngay cạnh viên nhãn ghi "Chủ xe cá nhân · Hoa hồng 10%".
+   */
+  const role = identityLabel(user);
   const dark = tone === 'dark';
   const hasOpenRenterTrips = (trips.data?.counts.current ?? 0) > 0;
 

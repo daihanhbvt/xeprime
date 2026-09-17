@@ -1,0 +1,220 @@
+/*
+ * Bảng giá ba bậc — dùng CHUNG cho `PurchaseModal` và bước 2 của onboarding gian hàng.
+ *
+ * Tách khỏi CSS của hai màn đó cùng lúc với component: cả hai dựng cùng bảng giá, và một bản CSS
+ * thứ hai là hai bố cục sẽ trôi khỏi nhau ở đúng chỗ khó thấy nhất (bề rộng thẻ ở màn hình hẹp).
+ * Phần vỏ — khoảng cách ngoài, nút chính, dải chuyển khoản — vẫn thuộc từng màn.
+ */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+/*
+ * `auto-fit` + `minmax` chứ không ba cột cứng: ở 400px ba thẻ sẽ chật tới mức con số tiền bị
+ * cắt, nên chúng tự xếp thành một cột. Giá trị 220px là bề rộng nhỏ nhất còn đọc trọn được
+ * "1.200.000 ₫" cạnh nhãn kỳ hạn.
+ */
+.tiers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--xp-space-sm);
+}
+
+.tier {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+/*
+ * Bậc đang chọn phân biệt được KHÔNG CHỈ bằng màu: viền dày lên là tín hiệu thứ hai cho người
+ * không phân biệt được màu sắc, và `aria-checked` trên chính nút là tín hiệu cho trình đọc màn
+ * hình. `padding` bù lại đúng 1px để thẻ không nhảy khi được chọn.
+ */
+.tierActive {
+  border-color: var(--xp-color-primary);
+  border-width: 2px;
+  padding: calc(var(--xp-space-md) - 1px);
+  background: var(--xp-color-bg-selected);
+}
+
+/* Bậc tư vấn: nền chìm để nó đọc ra là một LỐI KHÁC, không phải một lựa chọn mua thứ ba. */
+.tierEnterprise {
+  background: var(--xp-color-bg-muted);
+}
+
+.tierHead {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+.tierName {
+  font-size: var(--xp-font-size-h4);
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.tierDesc {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.limits {
+  margin: var(--xp-space-xs) 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text);
+}
+
+.limits li {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.limits :global(.anticon) {
+  color: var(--xp-color-success);
+}
+
+/* Giá THÁNG — mốc rẻ nhất để so ngang ba bậc; bảng kỳ hạn đầy đủ nằm bên dưới. */
+.tierPrice {
+  display: flex;
+  align-items: baseline;
+  gap: var(--xp-space-xs);
+  margin: auto 0 0;
+  padding-top: var(--xp-space-sm);
+}
+
+.tierPrice strong {
+  font-size: var(--xp-font-size-h3);
+  color: var(--xp-color-price);
+}
+
+.tierPrice span {
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.tierQuote {
+  margin: auto 0 0;
+  padding-top: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body);
+  font-weight: 600;
+  color: var(--xp-color-text-secondary);
+}
+
+.tierAction {
+  margin-top: var(--xp-space-sm);
+  padding: var(--xp-space-sm);
+  border: 1px solid var(--xp-color-primary);
+  border-radius: var(--xp-border-radius-sm);
+  background: transparent;
+  color: var(--xp-color-primary-active);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.tierAction:hover {
+  background: var(--xp-color-bg-hover);
+}
+
+.tierAction:focus-visible {
+  outline: 2px solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* ── Bảng kỳ hạn của bậc đang chọn ─────────────────────────────────────── */
+
+.terms {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.termsTitle {
+  font-size: var(--xp-font-size-body);
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.termCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: var(--xp-space-sm);
+}
+
+.termCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--xp-space-sm) 12px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: transparent;
+  cursor: pointer;
+  text-align: start;
+  font: inherit;
+  color: inherit;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.termCard:hover {
+  border-color: var(--xp-color-primary);
+}
+
+.termCard:focus-visible {
+  outline: 2px solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.termCardActive {
+  border-color: var(--xp-color-primary);
+  border-width: 2px;
+  padding: calc(var(--xp-space-sm) - 1px) 11px;
+  background: var(--xp-color-bg-selected);
+}
+
+.termMonths {
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.termTotal {
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: 600;
+  color: var(--xp-color-price);
+}
+
+.termSaving {
+  margin-top: var(--xp-space-xs);
+  margin-inline-end: 0;
+}
+
+.total {
+  padding: 10px 12px;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  font-size: var(--xp-font-size-body);
+  font-weight: 600;
+}

@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Text, XStack, YStack } from 'tamagui';
+import { XStack, YStack } from 'tamagui';
+import type { ReactNode } from 'react';
 import { useTranslations } from 'use-intl';
 import {
+  canSubmitShopVerification,
   PERMISSION,
+  SHOP_VERIFICATION,
   TENANT_STATUS,
-  TENANT_STATUS_SUBMITTABLE,
-  toLocalVnPhone,
+  type ShopVerification,
   type TenantStatus,
 } from '@xeprime/types';
 import { guessAddressLine } from '@xeprime/domain';
@@ -31,7 +33,7 @@ import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { space } from '@/theme/tokens';
 import type { MyShop, UpdateShopProfileInput } from './api';
 import { ShopIdentityCard } from './components/ShopIdentityCard';
 import { ShopProfileChecklist } from './components/ShopProfileChecklist';
@@ -111,8 +113,22 @@ function toValues(shop: MyShop): ShopProfileValues {
  * `tenant.submit_review` để gửi duyệt. Và "không có quyền" KHÁC "gian hàng đang chờ duyệt" —
  * cái sau khoá form vì backend từ chối ghi (`INVALID_STATUS_TRANSITION`), không phải vì vai trò.
  */
-export function ShopProfileScreen() {
+/**
+ * `header` — VỎ điều hướng của khu đang đứng.
+ *
+ * Cùng màn này phục vụ hai khu: khu quản lý (`/manage/shop`) và khu khách
+ * (`/account/registration`, nơi chủ xe tuyến hoa hồng sửa hồ sơ gian hàng của mình — họ KHÔNG
+ * vào khu quản lý được, ADR 0038 điều 4). Chỉ cái đầu trang khác nhau; luật lưu, luật gửi
+ * duyệt và quyền thì giống hệt, nên clone màn là hai chỗ phải sửa mỗi lần đổi luật.
+ *
+ * Mặc định là đầu trang khu quản lý — nơi màn này ra đời.
+ */
+export function ShopProfileScreen({
+  header,
+  intro,
+}: { header?: ReactNode; intro?: ReactNode } = {}) {
   const t = useTranslations('Shop');
+  const shell = header ?? <ManageHeader />;
   const permissions = usePermissions();
   const { tenant } = useTenantScope();
 
@@ -125,7 +141,7 @@ export function ShopProfileScreen() {
   if (!permissions.isLoading && !canView) {
     return (
       <>
-        <ManageHeader />
+        {shell}
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenMessage
             icon="lock-closed-outline"
@@ -142,13 +158,13 @@ export function ShopProfileScreen() {
    * phải lỗi. Lối đi tiếp là đăng ký gian hàng — cùng câu chữ với `NoTenantState` bên web.
    */
   if (!permissions.isLoading && canView && !tenant) {
-    return <NoTenantState />;
+    return <NoTenantState shell={shell} />;
   }
 
   if (query.isError && !query.data) {
     return (
       <>
-        <ManageHeader />
+        {shell}
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenError
             error={query.error}
@@ -163,7 +179,7 @@ export function ShopProfileScreen() {
   if (!query.data) {
     return (
       <>
-        <ManageHeader />
+        {shell}
         {/* `padded={false}`: khung chờ vẽ luôn ảnh bìa TRÀN VIỀN như bản thật. */}
         <Screen edges={['left', 'right', 'bottom']} padded={false}>
           <ShopProfileSkeleton />
@@ -172,16 +188,24 @@ export function ShopProfileScreen() {
     );
   }
 
-  return <ProfileForm shop={query.data} canEdit={canEdit} canSubmit={canSubmit} />;
+  return (
+    <ProfileForm
+      shell={shell}
+      intro={intro}
+      shop={query.data}
+      canEdit={canEdit}
+      canSubmit={canSubmit}
+    />
+  );
 }
 
-function NoTenantState() {
+function NoTenantState({ shell }: { shell: ReactNode }) {
   const t = useTranslations('Shop.noTenant');
   const navigateOnce = useNavigateOnce();
 
   return (
     <>
-      <ManageHeader />
+      {shell}
       <Screen edges={['left', 'right', 'bottom']} scroll={false}>
         <ScreenMessage
           icon="storefront-outline"
@@ -196,10 +220,15 @@ function NoTenantState() {
 }
 
 function ProfileForm({
+  shell,
+  intro,
   shop,
   canEdit,
   canSubmit,
 }: {
+  shell: ReactNode;
+  /** Khối của khu gọi, đặt TRÊN biểu mẫu — tiến trình đăng ký ở khu khách, không có gì ở Manage. */
+  intro?: ReactNode;
   shop: MyShop;
   canEdit: boolean;
   canSubmit: boolean;
@@ -226,10 +255,13 @@ function ProfileForm({
 
   const status = shop.status as TenantStatus;
   /*
-   * Backend cũng từ chối ghi khi đang chờ duyệt (`INVALID_STATUS_TRANSITION`). Khoá ở đây để
+   * Backend cũng từ chối ghi khi đang chờ XÁC MINH (`SHOP_VERIFICATION_PENDING`). Khoá ở đây để
    * người dùng biết TRƯỚC khi gõ, chứ không phải sau khi bấm Lưu.
+   *
+   * Điều kiện đọc từ trục xác minh, không từ `tenants.status`: từ ADR 0036 cột đó không còn mang
+   * nghĩa "đang chờ duyệt", nên hỏi nó là hỏi nhầm chỗ và ô nhập sẽ mở ra đúng lúc phải khoá.
    */
-  const pendingReview = status === TENANT_STATUS.PENDING_REVIEW;
+  const pendingReview = shop.verification === SHOP_VERIFICATION.PENDING;
   const readOnly = pendingReview || !canEdit;
   const readOnlyReason = pendingReview
     ? t('form.lockedWhilePending')
@@ -238,8 +270,8 @@ function ProfileForm({
       : t('form.readOnly');
 
   const dirty = formState.isDirty && !readOnly;
-  /** Hồ sơ ở chặng "chưa gửi / bị trả về" — chỉ khi đó checklist và nút Gửi duyệt mới có nghĩa. */
-  const submittable = TENANT_STATUS_SUBMITTABLE.includes(status);
+  /** Hồ sơ ở chặng "chưa gửi / bị trả về" — chỉ khi đó checklist và nút Gửi xác minh mới có nghĩa. */
+  const submittable = canSubmitShopVerification(shop.verification as ShopVerification);
   const saving = updateProfile.isPending;
   const submitting = submitReview.isPending || updateProfile.isPending;
 
@@ -287,40 +319,50 @@ function ProfileForm({
 
   return (
     <>
-      <ManageHeader />
+      {shell}
       <Screen
         edges={['left', 'right', 'bottom']}
         padded={false}
         /*
-          Hành động Lưu neo ở ĐÁY MÀN, và chỉ mọc ra khi form thật sự có thay đổi.
+          Hành động Lưu neo ở ĐÁY MÀN và LUÔN có mặt khi form sửa được — mờ đi cho tới khi thật
+          sự có thay đổi, đúng như `ShopProfileWorkspace` bên web.
 
-          Biểu mẫu này dài bốn khối: một nút nằm cuối trang nghĩa là sửa một ô ở khối đầu rồi
-          phải cuộn qua toàn bộ phần còn lại mới lưu được. Thanh đáy cũng thay luôn nhãn "Chưa
-          lưu" trước đây — chính sự xuất hiện của nó đã là câu đó, nói thêm một lần nữa thì cả
-          hai cùng mờ đi.
+          Bản trước ẩn cả thanh cho tới lúc form dirty. Với một chủ xe tuyến hoa hồng đã được
+          duyệt, màn "Hồ sơ chủ xe" khi đó KHÔNG CÒN CÁI NÚT NÀO: hồ sơ đang `active` nên dải
+          trạng thái cũng không có nút gửi duyệt, và người dùng đọc màn đó ra là một trang chỉ
+          để xem. Một nút mờ nói "sửa đi rồi lưu được"; không có nút thì không nói gì cả.
+
+          "Đặt lại" thì vẫn chỉ mọc khi có thay đổi — nó là thao tác HOÀN TÁC, và một nút hoàn
+          tác thường trực mời người ta bấm vào thứ chẳng có gì để hoàn.
+
+          Neo ở đáy chứ không đặt cuối trang: biểu mẫu này dài bốn khối, sửa một ô ở khối đầu mà
+          phải cuộn hết phần còn lại mới lưu được là bắt người dùng đi một quãng vô ích.
         */
         footer={
-          !readOnly && dirty ? (
+          readOnly ? null : (
             <XStack gap={space.sm}>
-              <YStack flexShrink={0}>
-                <Button
-                  label={t('form.reset')}
-                  icon="refresh-outline"
-                  variant="secondary"
-                  disabled={saving}
-                  onPress={() => reset()}
-                />
-              </YStack>
+              {dirty ? (
+                <YStack flexShrink={0}>
+                  <Button
+                    label={t('form.reset')}
+                    icon="refresh-outline"
+                    variant="secondary"
+                    disabled={saving}
+                    onPress={() => reset()}
+                  />
+                </YStack>
+              ) : null}
               <YStack f={1}>
                 <Button
                   label={t('form.submit')}
                   icon="save-outline"
+                  disabled={!dirty}
                   loading={saving}
                   onPress={() => void save()}
                 />
               </YStack>
             </XStack>
-          ) : null
+          )
         }
       >
         {/*
@@ -339,6 +381,13 @@ function ProfileForm({
         />
 
         <YStack px={layout.screenX} pt={layout.section} gap={layout.section} pb={layout.section}>
+          {/*
+            Khối của khu gọi — tiến trình đăng ký ở khu khách, không có gì ở khu quản lý. Đặt TRÊN
+            dải trạng thái: người mới đăng ký cần biết mình đang ở bước nào trước khi đọc một câu
+            về việc gửi duyệt.
+          */}
+          {intro}
+
           <ShopStatusBanner
             shop={shop}
             canSubmit={canSubmit}

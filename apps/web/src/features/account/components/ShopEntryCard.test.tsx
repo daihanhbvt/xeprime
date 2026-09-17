@@ -61,7 +61,12 @@ describe('ShopEntryCard', () => {
    * Nó nằm ngay đầu trang tài khoản của chính họ và là đường vào nhầm khu rõ nhất của bản cũ —
    * bản cũ chỉ hỏi "có tenant không" rồi trỏ thẳng `/manage`.
    */
-  it('chủ xe TUYẾN HOA HỒNG → về khu tài khoản, KHÔNG vào /manage', () => {
+  /**
+   * Thẻ này chỉ có một lời mời — "Vào quản lý gian hàng" — và cánh cửa đó đóng với tuyến hoa hồng
+   * (ADR 0038 điều 4). Bản trước vẫn dựng thẻ, chỉ âm thầm đổi đích sang `/account/vehicles`:
+   * nhãn hứa một nơi, cú bấm đưa tới nơi khác.
+   */
+  it('chủ xe TUYẾN HOA HỒNG → KHÔNG dựng thẻ nào', () => {
     user.value = {
       platformRole: null,
       tenant: {
@@ -74,10 +79,10 @@ describe('ShopEntryCard', () => {
     };
     render(<ShopEntryCard />);
 
-    expect(screen.getByRole('link').getAttribute('href')).toBe('/account/vehicles');
+    expect(screen.queryByRole('link')).toBeNull();
   });
 
-  it('chủ xe hoa hồng ĐANG đăng ký → về màn tiến trình', () => {
+  it('chủ xe hoa hồng ĐANG đăng ký → cũng KHÔNG dựng thẻ', () => {
     user.value = {
       platformRole: null,
       tenant: {
@@ -90,7 +95,44 @@ describe('ShopEntryCard', () => {
     };
     render(<ShopEntryCard />);
 
-    expect(screen.getByRole('link').getAttribute('href')).toBe('/account/registration');
+    expect(screen.queryByRole('link')).toBeNull();
+  });
+
+  /**
+   * Quy tắc hỏi TENANT, không hỏi vai: ai không vào được cổng quản lý thì không thấy thẻ, kể cả
+   * quản lý/nhân viên của một gian hàng tuyến hoa hồng.
+   */
+  it('nhân viên của gian hàng tuyến hoa hồng cũng KHÔNG thấy thẻ', () => {
+    user.value = {
+      platformRole: null,
+      tenant: {
+        name: 'Xe của Minh',
+        roleKey: TENANT_ROLE.SHOP_STAFF,
+        status: 'active',
+        billingMode: BILLING_MODE.COMMISSION,
+        publicVehicleCount: 2,
+      },
+    };
+    render(<ShopEntryCard />);
+
+    expect(screen.queryByRole('link')).toBeNull();
+  });
+
+  /** `unconfigured` cũng không vào được Manage — mức an toàn khi hỏng là mức CHẶT. */
+  it('gian hàng chưa xác định được tuyến cũng KHÔNG thấy thẻ', () => {
+    user.value = {
+      platformRole: null,
+      tenant: {
+        name: 'Xe của Minh',
+        roleKey: TENANT_ROLE.SHOP_OWNER,
+        status: 'active',
+        billingMode: null,
+        publicVehicleCount: 2,
+      },
+    };
+    render(<ShopEntryCard />);
+
+    expect(screen.queryByRole('link')).toBeNull();
   });
 
   it('chưa có gian hàng → mời đăng xe, dẫn tới LANDING công khai', () => {

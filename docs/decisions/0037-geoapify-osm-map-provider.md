@@ -148,6 +148,11 @@ tốt hơn OSM, thanh toán bằng VND không cần thẻ quốc tế. Đổi sa
 implement `GeoProvider` cộng một dòng ở `geo.module.ts`; khớp nối này vừa chứng minh là nó hoạt
 động.
 
-**Chưa làm:** `apps/mobile` vẫn dùng Google Maps Static API (`EXPO_PUBLIC_GOOGLE_MAPS_STATIC_KEY`).
-App native do người khác giữ và nằm ngoài thay đổi này — nó cần một đợt riêng, nếu không sẽ là
-hai nhà cung cấp bản đồ trong một sản phẩm.
+**Đã hoàn tất (16/09/2026):** `apps/mobile` đã chuyển theo. `apps/mobile/src/lib/map-static.ts`
+dùng Geoapify Static Maps với `EXPO_PUBLIC_GEOAPIFY_MAP_KEY`, và `mapAppUrl()` trả lược đồ `geo:`
+để hệ điều hành chọn app bản đồ mặc định thay vì ép mở Google Maps. Không còn bề mặt Google nào
+trong sản phẩm.
+
+App native KHÔNG có bản đồ tương tác (không cài Leaflet/MapLibre/react-native-maps): ở đó bản đồ
+chỉ trả lời "cái ghim đúng chỗ chưa", và một ảnh tĩnh trả lời xong câu đó. Ghi nguồn ODbL đi qua
+hằng `MAP_ATTRIBUTION` — ảnh tĩnh không tự mang dòng đó như bản đồ tương tác.
