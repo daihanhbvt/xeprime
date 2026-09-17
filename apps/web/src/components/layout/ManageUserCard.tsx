@@ -52,6 +52,7 @@ export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUser
   const { data: user } = useCurrentUser();
   const { has } = usePermissions();
   const logout = usePortalLogout();
+  const identityLabel = useAccountIdentityLabel();
   /*
    * Chuyến ĐI THUÊ chưa khép của chính người này — quyết định mục "Chuyến tôi đi thuê" có mặt
    * hay không. Trang 1, vai `renter`: chỉ cần `counts.current`, không cần danh sách.
@@ -72,8 +73,6 @@ export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUser
   );
 
   if (!user) return null;
-
-  const identityLabel = useAccountIdentityLabel();
 
   const workspaceName = user.tenant?.name ?? (user.displayName || user.email || '—');
   const signedInAs = user.displayName || user.email || '—';
