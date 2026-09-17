@@ -67,15 +67,13 @@ beforeAll(async () => {
     code: `purchase-${RUN}`,
     name: 'Gói theo chỗ (spec)',
     billingMode: BILLING_MODE.PACKAGE,
-    price: '0',
-    maxVehicles: null,
     limits: {
-      perVehiclePrice: { car: '100000', motorbike: '40000' },
-      includedCars: 0,
-      includedMotorbikes: 0,
-      maxCars: null,
-      maxMotorbikes: null,
-      terms: SUBSCRIPTION_TERM_MONTHS.map((months) => ({ months, discountPercent: 0 })),
+      maxVehicles: null,
+      // Bán CẢ BỐN kỳ hạn: spec này đua hai lượt mua song song, nên kỳ nào cũng phải hợp lệ.
+      termPrices: SUBSCRIPTION_TERM_MONTHS.map((months) => ({
+        months,
+        price: String(months * 100_000),
+      })),
     },
   };
   const plan = await billing.createPlan(actorId, input);
@@ -106,7 +104,7 @@ async function resetInvoices() {
 }
 
 function purchase() {
-  const input: PurchaseInput = { planId, termMonths: TERM, slots: { car: 1, motorbike: 0 } };
+  const input: PurchaseInput = { planId, termMonths: TERM };
   return billing.purchase(tenantId, actorId, input);
 }
 

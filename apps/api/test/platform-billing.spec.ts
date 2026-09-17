@@ -51,18 +51,13 @@ type CreatePlanInput = Parameters<typeof billing.createPlan>[1];
  * (`COMMISSION_PLAN_IS_SINGLETON`). Bậc hoa hồng dùng trong spec này dựng bằng
  * `mkCommissionPlanDirect` bên dưới.
  */
-async function mkPlan(
-  code: string,
-  opts: { maxVehicles?: number | null } & Partial<CreatePlanInput> = {},
-) {
-  const { maxVehicles, ...rest } = opts;
+async function mkPlan(code: string, opts: Partial<CreatePlanInput> = {}) {
   const plan = await billing.createPlan(actorId, {
     code: `${code}-${RUN}`,
     name: `Gói ${code}`,
     billingMode: BILLING_MODE.PACKAGE,
-    price: '500000',
-    maxVehicles: maxVehicles ?? null,
-    ...rest,
+    limits: { maxVehicles: null, termPrices: [{ months: 1, price: '500000' }] },
+    ...opts,
   });
   planIds.push(plan.id);
   return plan;
@@ -76,7 +71,7 @@ async function mkPlan(
  * database test — bậc đó là thứ mọi spec khác dựa vào. Cổng singleton ở tầng service được
  * kiểm riêng ở test "bậc hoa hồng là SINGLETON".
  */
-async function mkCommissionPlanDirect(code: string, opts: { maxVehicles?: number | null } = {}) {
+async function mkCommissionPlanDirect(code: string) {
   const plan = await prisma.plan.create({
     data: {
       id: newId(),
@@ -85,12 +80,10 @@ async function mkCommissionPlanDirect(code: string, opts: { maxVehicles?: number
       status: PLAN_STATUS.ACTIVE,
       billingMode: BILLING_MODE.COMMISSION,
       commissionPercent: 10,
-      price: '0',
-      durationDays: 30,
-      maxVehicles: opts.maxVehicles ?? null,
       // `sortOrder` lớn để bậc này KHÔNG bị chọn làm "gói mặc định" của database test
       // (`loadDefaultCommissionPlanOrThrow` lấy `sort_order` nhỏ nhất).
       sortOrder: 900,
+      limitsJson: { maxVehicles: null, termPrices: [], features: [], graceDays: 7 },
     },
   });
   planIds.push(plan.id);
@@ -165,10 +158,13 @@ const maybe = (name: string, fn: () => Promise<void>) =>
 
 describe('Billing — plans & subscriptions (ADR 0010)', () => {
   maybe('plan: tạo (+audit), trùng code → CONFLICT, sửa, archive chặn gán mới', async () => {
-    const plan = await mkPlan('basic', { maxVehicles: 1 });
+    const plan = await mkPlan('basic', {
+      limits: { maxVehicles: 1, termPrices: [{ months: 1, price: '500000' }] },
+    });
     packagePlanId = plan.id;
     expect(plan.status).toBe(PLAN_STATUS.ACTIVE);
-    expect(plan.price).toBe('500000');
+    expect(plan.limits.maxVehicles).toBe(1);
+    expect(plan.limits.termPrices).toEqual([{ months: 1, price: '500000' }]);
 
     const auditRow = await prisma.auditLog.findFirst({
       where: { targetId: plan.id, action: 'plan.create' },
@@ -180,12 +176,13 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
         code: `basic-${RUN}`,
         name: 'Trùng',
         billingMode: BILLING_MODE.PACKAGE,
-        price: '1',
       }),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.CONFLICT } });
 
-    const updated = await billing.updatePlan(actorId, plan.id, { price: '600000' });
-    expect(updated.price).toBe('600000');
+    const updated = await billing.updatePlan(actorId, plan.id, {
+      limits: { maxVehicles: 1, termPrices: [{ months: 1, price: '600000' }] },
+    });
+    expect(updated.limits.termPrices).toEqual([{ months: 1, price: '600000' }]);
 
     const toArchive = await mkPlan('old');
     const archived = await billing.archivePlan(actorId, toArchive.id);
@@ -276,84 +273,96 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
     },
   );
   maybe(
-    'bậc gói package (ADR 0029): phí nền 0đ hợp lệ, không cần giả định, % hoa hồng tự xoá',
+    'bậc gói (ADR 0041): giá là con số NIÊM YẾT của kỳ hạn, % hoa hồng tự xoá, hạn mức snapshot',
     async () => {
-      const packageKnobs = {
+      const ok = await mkPlan('pkg-ok', {
         billingMode: BILLING_MODE.PACKAGE,
         commissionPercent: undefined,
         limits: {
-          perVehiclePrice: { car: '100000', motorbike: null },
-          includedCars: 5,
-          maxCars: 10,
-          terms: [
-            { months: 1, discountPercent: 0 },
-            { months: 3, discountPercent: 0 },
-            { months: 12, discountPercent: 10 },
+          maxVehicles: 10,
+          maxBranches: 2,
+          termPrices: [
+            { months: 1, price: '700000' },
+            { months: 3, price: '1800000' },
+            { months: 12, price: '7560000' },
           ],
         },
-        // Từ ADR 0029 đây là THAM KHẢO định giá — không còn là đầu vào của phép kiểm nào.
-        assumedMonthlyGmv: { monthlyGmvPerCar: '1000000', commissionPercent: 10 },
-      };
-
-      /*
-       * Đảo ngược bài test cũ, có chủ đích: kiểm điểm giao của ADR 0020 đã bị ADR 0029 gỡ
-       * (phí theo chuyến nay do KHÁCH gánh nên phí nền thấp không phá phễu). Ba ca dưới đây
-       * từng bị TỪ CHỐI với `PLAN_INCENTIVE_INVALID`; giờ chúng phải LƯU ĐƯỢC — gói pilot
-       * chính thức có phí nền 0đ.
-       */
-      const noGmv = await mkPlan('pkg-nogmv', {
-        billingMode: BILLING_MODE.PACKAGE,
-        limits: packageKnobs.limits,
-        basePriceMonthly: '0',
       });
-      expect(noGmv.basePriceMonthly).toBe('0');
-
-      const cheap = await mkPlan('pkg-cheap', { ...packageKnobs, basePriceMonthly: '400000' });
-      expect(cheap.basePriceMonthly).toBe('400000');
-
-      const ok = await mkPlan('pkg-ok', { ...packageKnobs, basePriceMonthly: '500000' });
       pkgPlanId = ok.id;
       expect(ok.billingMode).toBe(BILLING_MODE.PACKAGE);
       expect(ok.commissionPercent).toBeNull();
-      expect(ok.basePriceMonthly).toBe('500000');
-      expect(ok.limits.includedCars).toBe(5);
+      expect(ok.limits.maxVehicles).toBe(10);
 
-      // Hạ phí nền qua update cũng tự do — không còn ngưỡng nào canh.
-      const lowered = await billing.updatePlan(actorId, ok.id, { basePriceMonthly: '1000' });
-      expect(lowered.basePriceMonthly).toBe('1000');
-      await billing.updatePlan(actorId, ok.id, { basePriceMonthly: '500000' });
-
-      // Gán (tenant riêng, không đụng các phép đếm ở test sau): mua thêm chỗ tính đơn giá.
-      const sub = await billing.assign(tenantPkgId, actorId, {
-        planId: ok.id,
-        termMonths: 1,
-        slots: { car: 7, motorbike: 0 },
-      });
-      // 500.000 (nền, đã gồm 5 chỗ) + 2 × 100.000 = 700.000đ/tháng × 1 tháng.
+      /*
+       * Tiền của một lượt gán = con số NIÊM YẾT của kỳ hạn, không phải một phép nhân
+       * (ADR 0041 điều 2). Đây là điểm mà mô hình cũ sai được: nó nhân đơn giá chỗ × số chỗ ×
+       * số tháng rồi trừ %, nên giá tròn (250k / 450k / 800k) không diễn đạt được.
+       */
+      const sub = await billing.assign(tenantPkgId, actorId, { planId: ok.id, termMonths: 1 });
       expect(sub.price).toBe('700000');
-      expect(sub.slots).toEqual({ car: 7, motorbike: 0 });
       expect(sub.termMonths).toBe(1);
       expect(sub.billingMode).toBe(BILLING_MODE.PACKAGE);
       expect(sub.commissionPercent).toBeNull();
+      // Hạn mức CHỤP LẠI lên dòng thuê bao (ADR 0041 điều 3).
+      expect(sub.quota).toEqual({ maxVehicles: 10, maxBranches: 2, maxMembers: null });
 
-      // Kỳ 12 tháng ăn % giảm của terms: 700.000 × 12 × 90% = 7.560.000.
-      const yearly = await billing.assign(tenantPkgId, actorId, {
-        planId: ok.id,
-        termMonths: 12,
-        slots: { car: 7, motorbike: 0 },
-      });
+      const yearly = await billing.assign(tenantPkgId, actorId, { planId: ok.id, termMonths: 12 });
       expect(yearly.price).toBe('7560000');
 
-      // Vượt trần chỗ của bậc gói → chặn.
-      await expect(
-        billing.assign(tenantPkgId, actorId, {
-          planId: ok.id,
-          termMonths: 1,
-          slots: { car: 11, motorbike: 0 },
-        }),
-      ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
+      /*
+       * Admin sửa TRẦN của bậc KHÔNG lật hạn mức của dòng đang chạy — đó là toàn bộ lý do
+       * `quota_json` tồn tại (ADR 0041 điều 3 · cùng lập luận với ADR 0024 điều 2).
+       */
+      await billing.updatePlan(actorId, ok.id, {
+        limits: { maxVehicles: 2, maxBranches: 1, termPrices: ok.limits.termPrices },
+      });
+      const stillTen = await billing.currentPlan(tenantPkgId);
+      expect(stillTen?.quota?.maxVehicles).toBe(10);
+      await billing.updatePlan(actorId, ok.id, {
+        limits: { maxVehicles: 10, maxBranches: 2, termPrices: ok.limits.termPrices },
+      });
     },
   );
+
+  maybe('bậc bán qua TƯ VẤN: tenant không tự mua, admin gán tay phải nhập giá', async () => {
+    const pro = await mkPlan('pkg-pro', {
+      limits: { maxVehicles: null, maxBranches: null, termPrices: [], salesOnly: true },
+    });
+    expect(pro.limits.salesOnly).toBe(true);
+    expect(pro.limits.termPrices).toEqual([]);
+
+    // Thẻ của nó VẪN hiện trên bảng giá — nên đường POST gọi được, và phải nói đúng việc cần làm.
+    const catalog = await billing.listPlansForTenant();
+    expect(catalog.some((plan) => plan.id === pro.id)).toBe(true);
+
+    await expect(
+      billing.purchase(tenantPkgId, actorId, { planId: pro.id, termMonths: 3 }),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.PLAN_NOT_SELF_SERVE } });
+
+    // Admin gán tay THIẾU giá: không có bảng giá để rơi về ⇒ lỗi nhập liệu, không mặc định 0đ.
+    await expect(
+      billing.assign(tenantPkgId, actorId, { planId: pro.id, termMonths: 3 }),
+    ).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.VALIDATION_FAILED, details: { field: 'price' } },
+    });
+
+    const negotiated = await billing.assign(tenantPkgId, actorId, {
+      planId: pro.id,
+      termMonths: 3,
+      price: '5000000',
+    });
+    expect(negotiated.price).toBe('5000000');
+    expect(negotiated.quota).toEqual({ maxVehicles: null, maxBranches: null, maxMembers: null });
+
+    // Giá ĐÀM PHÁN để lại vết: một cuộc đối soát doanh thu phải phân biệt được nó với giá bảng.
+    // KHÔNG lọc theo action: lượt gán này nối sau một kỳ ĐÃ TRẢ TIỀN nên nó được ghi là
+    // `subscription.renew` — dấu vết giá đàm phán nằm ở `after`, không ở tên hành động.
+    const audit = await prisma.auditLog.findFirst({
+      where: { targetId: negotiated.id },
+      select: { afterJson: true },
+    });
+    expect((audit?.afterJson as { priceOverridden?: boolean }).priceOverridden).toBe(true);
+  });
 
   maybe(
     'gán → gói hiện hành đúng (snapshot mode); ends_at THÁNG LỊCH; gia hạn nối đuôi',
@@ -361,7 +370,7 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
       const before = await billing.currentPlan(tenantId);
       expect(before).toBeNull();
 
-      planId = (await mkCommissionPlanDirect('basic-comm', { maxVehicles: 1 })).id;
+      planId = (await mkCommissionPlanDirect('basic-comm')).id;
       const first = await billing.assign(tenantId, actorId, {
         planId,
         termMonths: 1,
@@ -380,7 +389,8 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
 
       const current = await billing.currentPlan(tenantId);
       expect(current?.planId).toBe(planId);
-      expect(current?.maxVehicles).toBe(1);
+      // Tuyến hoa hồng KHÔNG mua hạn mức nào — trần của nó là OWNER_LITE_VEHICLE_LIMIT trong code.
+      expect(current?.quota).toBeNull();
       expect(current?.billingMode).toBe(BILLING_MODE.COMMISSION);
       expect(current?.commissionPercent).toBe(10);
 
@@ -438,69 +448,64 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
       const quota = await billing.vehicleQuotaFor(tenantId);
       expect(quota).toEqual({ kind: 'total', limit: OWNER_LITE_VEHICLE_LIMIT, reason: 'owner_lite' });
 
-      // Gói PACKAGE bán chỗ: mua 1 chỗ ô tô + 1 chỗ xe máy.
+      // Bậc gói trần 2 xe — TỔNG hai loại, không phải 2 mỗi loại (ADR 0041 điều 1).
       const quotaPlan = await mkPlan('pkg-quota', {
         billingMode: BILLING_MODE.PACKAGE,
         commissionPercent: undefined,
-        basePriceMonthly: '100000', // ngưỡng = 1 chỗ × 10% × 1tr = 100k ✓
-        assumedMonthlyGmv: { monthlyGmvPerCar: '1000000', commissionPercent: 10 },
-        limits: {
-          perVehiclePrice: { car: '50000', motorbike: '20000' },
-          includedCars: 1,
-          includedMotorbikes: 1,
-          maxCars: 5,
-          maxMotorbikes: 5,
-        },
+        limits: { maxVehicles: 2, termPrices: [{ months: 1, price: '100000' }] },
       });
-      await billing.assign(tenantQuotaId, actorId, {
-        planId: quotaPlan.id,
-        termMonths: 1,
-        slots: { car: 1, motorbike: 1 },
-      });
+      await billing.assign(tenantQuotaId, actorId, { planId: quotaPlan.id, termMonths: 1 });
 
       const car1 = await mkVehicle(tenantQuotaId, `XQ1-${RUN}`);
+      /*
+       * Chiếc thứ hai là XE MÁY và vẫn CHIẾM một suất của trần TỔNG — mô hình cũ đếm riêng nên
+       * nó sẽ lọt qua. Trần trả lời câu "gian hàng này vận hành bao nhiêu xe", và một ô tô cộng
+       * một xe máy là hai chiếc.
+       */
+      await mkVehicle(tenantQuotaId, `XQM1-${RUN}`, VEHICLE_TYPE.MOTORBIKE);
       await expect(mkVehicle(tenantQuotaId, `XQ2-${RUN}`)).rejects.toMatchObject({
         response: {
           code: API_ERROR_CODE.PLAN_LIMIT_REACHED,
-          details: { vehicleType: VEHICLE_TYPE.CAR, used: 1, limit: 1 },
+          details: { scope: 'fleet', reason: 'plan', used: 2, limit: 2 },
         },
       });
 
-      // Xe máy đếm RIÊNG — hết chỗ ô tô không chặn xe máy.
-      await mkVehicle(tenantQuotaId, `XQM1-${RUN}`, VEHICLE_TYPE.MOTORBIKE);
-      await expect(
-        mkVehicle(tenantQuotaId, `XQM2-${RUN}`, VEHICLE_TYPE.MOTORBIKE),
-      ).rejects.toMatchObject({
-        response: {
-          code: API_ERROR_CODE.PLAN_LIMIT_REACHED,
-          details: { vehicleType: VEHICLE_TYPE.MOTORBIKE, used: 1, limit: 1 },
-        },
-      });
-
-      // ĐIỂM CHẶN THỨ HAI (marketplace): xe đang chiếm suất trên chợ đếm theo publicStatus.
-      // Dựng tiền đề bằng Prisma trực tiếp (spec không kiểm đường duyệt ở đây).
-      await prisma.vehicle.update({
-        where: { id: car1.id },
+      /*
+       * ĐIỂM CHẶN THỨ HAI (marketplace) — CHỈ với trần ĐÃ TRẢ TIỀN (ADR 0041 điều 4).
+       *
+       * Đây là cửa duy nhất còn lại của một lần HẠ BẬC: gói mới nối đuôi gói cũ, nên một gian
+       * hàng 40 xe hạ về bậc 3 xe bước sang kỳ mới với 40 xe đang bán.
+       */
+      await prisma.vehicle.updateMany({
+        where: { tenantId: tenantQuotaId },
         data: { publicStatus: 'approved_public' },
       });
-      // Một xe KHÁC xin lên chợ khi suất duy nhất đã bị chiếm → chặn.
       await expect(
-        billing.assertVehicleQuota(tenantQuotaId, VEHICLE_TYPE.CAR, {
+        billing.assertVehicleQuota(tenantQuotaId, {
           scope: 'marketplace',
           excludeVehicleId: newId(),
         }),
       ).rejects.toMatchObject({
         response: {
           code: API_ERROR_CODE.PLAN_LIMIT_REACHED,
-          details: { vehicleType: VEHICLE_TYPE.CAR, used: 1, limit: 1 },
+          details: { scope: 'marketplace', reason: 'plan', used: 2, limit: 2 },
         },
       });
       // Chính xe đang chiếm suất gửi LẠI duyệt thì không tự chặn mình.
       await expect(
-        billing.assertVehicleQuota(tenantQuotaId, VEHICLE_TYPE.CAR, {
+        billing.assertVehicleQuota(tenantQuotaId, {
           scope: 'marketplace',
           excludeVehicleId: car1.id,
         }),
+      ).resolves.toBeUndefined();
+
+      /*
+       * Trần Owner Lite thì NGƯỢC LẠI: nó không gác điểm chợ. Trần tạo đã đủ, và gác thêm ở đó
+       * sẽ khoá vĩnh viễn mọi chiếc rời chợ một lần của một gian hàng vừa rơi khỏi gói
+       * (ADR 0038 · ADR 0041 điều 4).
+       */
+      await expect(
+        billing.assertVehicleQuota(tenantId, { scope: 'marketplace' }),
       ).resolves.toBeUndefined();
 
       /*
@@ -529,7 +534,7 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
         response: {
           // Tenant này CHƯA có gói ⇒ mã nói về CẤU HÌNH, không nói về hạn mức gói.
           code: API_ERROR_CODE.TENANT_BILLING_NOT_CONFIGURED,
-          details: { scope: 'owner_lite_total', used: 3, limit: OWNER_LITE_VEHICLE_LIMIT },
+          details: { scope: 'fleet', reason: 'billing_unconfigured', used: 3, limit: OWNER_LITE_VEHICLE_LIMIT },
         },
       });
       await expect(mkVehicle(tenantFreeId, `XF5-${RUN}`)).rejects.toMatchObject({
@@ -546,16 +551,18 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
         where: { tenantId: tenantPkgId, status: 'paid' },
         orderBy: { createdAt: 'asc' },
       });
-      expect(paid).toHaveLength(2);
+      // Ba lượt gán package ở test trên: 700k (kỳ 1) + 7.560k (kỳ 12) + 5.000k (giá đàm phán).
+      expect(paid).toHaveLength(3);
       expect(paid[0]!.code.startsWith('XPG')).toBe(true);
       expect(paid[0]!.totalAmount.toString()).toBe('700000');
       expect(paid[1]!.totalAmount.toString()).toBe('7560000');
+      expect(paid[2]!.totalAmount.toString()).toBe('5000000');
       expect(paid.every((i) => i.subscriptionId !== null)).toBe(true);
 
       /*
-       * Kỳ hạn NGOÀI danh sách gói bán bị từ chối ở SERVER (ADR 0029 điều 3) — gói này bán
-       * 1/3/12, nên kỳ 6 tháng không mua được dù nó nằm trong bộ kỳ hạn toàn cục của DTO.
-       * Ẩn lựa chọn ở PurchaseModal chỉ là UX; đây mới là lớp chặn.
+       * Kỳ hạn NGOÀI bảng giá bị từ chối ở SERVER (ADR 0041 điều 2) — bậc này bán 1/3/12, nên
+       * kỳ 6 tháng không mua được dù nó nằm trong bộ kỳ hạn toàn cục của DTO. Ẩn thẻ ở màn mua
+       * chỉ là UX; đây mới là lớp chặn.
        */
       await expect(
         billing.purchase(tenantPkgId, actorId, { planId: pkgPlanId, termMonths: 6 }),
@@ -569,24 +576,29 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
       // Tenant tự mua: hoá đơn ISSUED, CHƯA có subscription — gói chỉ bật khi tiền về (ADR 0026).
       const inv = await billing.purchase(tenantPkgId, actorId, {
         planId: pkgPlanId,
-        termMonths: 3,
-        slots: { car: 6, motorbike: 0 },
+        termMonths: 3
       });
       expect(inv.status).toBe('issued');
       expect(inv.subscriptionId).toBeNull();
       expect(inv.code.startsWith('XPG')).toBe(true);
       expect(inv.expiresAt).toBeTruthy();
-      // (500k nền + 1 chỗ thêm × 100k) × 3 tháng, kỳ 3 không khai % giảm → 1.800.000.
+      // Giá NIÊM YẾT của kỳ 3 tháng — một dòng, không phép nhân nào (ADR 0041 điều 2).
       expect(inv.totalAmount).toBe('1800000');
-      expect(inv.lines).toHaveLength(2);
+      expect(inv.subtotal).toBe('1800000');
+      // Không có khoản "giảm giá" nào trên chứng từ: % tiết kiệm là phép so sánh hiển thị.
+      expect(inv.discountAmount).toBe('0');
+      expect(inv.lines).toEqual([
+        { kind: 'package', quantity: 1, months: 3, unitPrice: '1800000', amount: '1800000' },
+      ]);
+      // Hạn mức đi theo hoá đơn — nó là thứ sẽ ghi lên dòng thuê bao khi tiền về.
+      expect(inv.quota).toEqual({ maxVehicles: 10, maxBranches: 2, maxMembers: null });
 
-      // Mua lần nữa → hoá đơn chờ cũ bị VOID (một mã sống tại một thời điểm), slots bỏ trống
-      // = đúng số chỗ gồm sẵn.
+      // Mua lần nữa → hoá đơn chờ cũ bị VOID (một mã sống tại một thời điểm).
       const inv2 = await billing.purchase(tenantPkgId, actorId, {
         planId: pkgPlanId,
         termMonths: 1,
       });
-      expect(inv2.totalAmount).toBe('500000');
+      expect(inv2.totalAmount).toBe('700000');
       const oldRow = await prisma.subscriptionInvoice.findUnique({ where: { id: inv.id } });
       expect(oldRow?.status).toBe('void');
 
@@ -597,45 +609,23 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
     },
   );
 
-  maybe(
-    'mua thêm chỗ giữa kỳ (ADR 0015 điều 8): dòng mới CÙNG ends_at, prorate tròn tháng, MỘT dòng hiệu lực',
-    async () => {
-      const before = await billing.currentPlan(tenantPkgId);
-      expect(before?.slots).toEqual({ car: 7, motorbike: 0 });
-
-      const updated = await billing.addSlots(tenantPkgId, actorId, {
-        slots: { car: 9, motorbike: 0 },
-      });
-      expect(updated.slots).toEqual({ car: 9, motorbike: 0 });
-      // CÙNG ends_at — không kéo dài kỳ (ADR 0015 điều 8).
-      expect(updated.endsAt).toBe(before!.endsAt);
-
-      // Bất biến: đúng MỘT dòng hiệu lực tại thời điểm hiện tại.
-      const now = new Date();
-      const actives = await prisma.tenantSubscription.findMany({
-        where: {
-          tenantId: tenantPkgId,
-          status: SUBSCRIPTION_STATUS.ACTIVE,
-          startsAt: { lte: now },
-          endsAt: { gt: now },
-        },
-      });
-      expect(actives).toHaveLength(1);
-      expect(actives[0]!.id).toBe(updated.id);
-
-      // Prorate: 2 chỗ × 100k × 1 tháng còn lại = 200k, hoá đơn PAID gắn dòng mới.
-      const addInv = await prisma.subscriptionInvoice.findFirst({
-        where: { subscriptionId: updated.id },
-      });
-      expect(addInv?.status).toBe('paid');
-      expect(addInv?.totalAmount.toString()).toBe('200000');
-
-      // Mua BỚT bị chặn — hoàn tiền không phải nghiệp vụ này.
-      await expect(
-        billing.addSlots(tenantPkgId, actorId, { slots: { car: 8, motorbike: 0 } }),
-      ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
-    },
-  );
+  /*
+   * "Mua thêm chỗ giữa kỳ" biến mất cùng mô hình chỗ xe (ADR 0041 điều 6) — không còn chỗ để
+   * mua. Bất biến nó từng giữ thì KHÔNG mất: đúng MỘT dòng thuê bao hiệu lực tại một thời điểm,
+   * và `findCurrent` dựa vào đúng điều đó. Nên chỗ này kiểm bất biến, không kiểm nghiệp vụ đã gỡ.
+   */
+  maybe('đúng MỘT dòng thuê bao hiệu lực sau nhiều lượt gán', async () => {
+    const now = new Date();
+    const actives = await prisma.tenantSubscription.findMany({
+      where: {
+        tenantId: tenantPkgId,
+        status: SUBSCRIPTION_STATUS.ACTIVE,
+        startsAt: { lte: now },
+        endsAt: { gt: now },
+      },
+    });
+    expect(actives).toHaveLength(1);
+  });
 
   maybe(
     'huỷ cả 2 chu kỳ → current null; huỷ lần nữa → INVALID_STATUS_TRANSITION; trần về Owner Lite',
@@ -723,19 +713,12 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
 
       const pkg = await mkPlan(`pkg-upgrade`, {
         billingMode: BILLING_MODE.PACKAGE,
-        basePriceMonthly: '0',
-        limits: {
-          perVehiclePrice: { car: '100000', motorbike: '40000' },
-          includedCars: 0,
-          includedMotorbikes: 0,
-          terms: [{ months: 3, discountPercent: 0 }],
-        },
+        limits: { maxVehicles: 2, termPrices: [{ months: 3, price: '300000' }] },
       });
 
       const sub = await billing.assign(upgradeTenantId, actorId, {
         planId: pkg.id,
-        termMonths: 3,
-        slots: { car: 2, motorbike: 0 },
+        termMonths: 3
       });
 
       // Bắt đầu NGAY, không phải sau 12 tháng.
@@ -746,10 +729,11 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
       expect(billingNow.billingMode).toBe(BILLING_MODE.PACKAGE);
       expect(billingNow.phase).toBe(BILLING_PHASE.CURRENT);
 
-      // Trần xe đi theo tuyến ngay trong cùng một nhịp — không còn là 3 xe TỔNG.
+      // Trần xe đi theo tuyến ngay trong cùng một nhịp — từ 3 (Owner Lite) về 2 (bậc đã mua).
       expect(await billing.vehicleQuotaFor(upgradeTenantId)).toEqual({
-        kind: 'per_type',
-        limit: { car: 2, motorbike: 0 },
+        kind: 'total',
+        limit: 2,
+        reason: 'plan',
       });
 
       // Dòng hoa hồng bị HUỶ, không bị xoá — lịch sử tuyến phải kể lại được.
@@ -789,8 +773,7 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
 
       const renewed = await billing.assign(tenantPkgId, actorId, {
         planId: pkgPlanId,
-        termMonths: 1,
-        slots: { car: 6, motorbike: 0 },
+        termMonths: 1
       });
       // Nối từ `ends_at` của kỳ đang chạy, KHÔNG từ `now`.
       expect(new Date(renewed.startsAt).getTime()).toBeGreaterThanOrEqual(
@@ -804,7 +787,7 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
     },
   );
   maybe('id lạ → NOT_FOUND (plan / tenant / subscription)', async () => {
-    await expect(billing.updatePlan(actorId, newId(), { price: '1' })).rejects.toMatchObject({
+    await expect(billing.updatePlan(actorId, newId(), { name: 'x' })).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.NOT_FOUND },
     });
     await expect(billing.assign(newId(), actorId, { planId, termMonths: 1 })).rejects.toMatchObject(

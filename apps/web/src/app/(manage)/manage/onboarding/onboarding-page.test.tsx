@@ -74,18 +74,15 @@ vi.mock('@/features/shop/components/ShopRegistration', () => ({
 
 const PLAN = {
   id: 'PLAN1',
-  name: 'Gói gian hàng theo chỗ',
+  name: 'Gói cơ bản',
   billingMode: BILLING_MODE.PACKAGE,
-  basePriceMonthly: '0',
   limits: {
-    perVehiclePrice: { car: '100000', motorbike: '40000' },
-    includedCars: 0,
-    includedMotorbikes: 0,
-    maxCars: null,
-    maxMotorbikes: null,
+    maxVehicles: 3,
+    maxBranches: 1,
     maxMembers: null,
-    maxBranches: null,
-    terms: [{ months: 3, discountPercent: 0 }],
+    termPrices: [{ months: 3, price: '250000' }],
+    salesOnly: false,
+    recommended: false,
     graceDays: 7,
     features: [],
   },
@@ -199,7 +196,10 @@ describe('Bước 2 — đã tạo gian hàng, chưa thanh toán', () => {
     renderPage();
 
     expect(screen.queryByTestId('shop-registration')).toBeNull();
-    expect(screen.getByRole('radiogroup', { name: /Chọn kỳ hạn cam kết/ })).toBeTruthy();
+    // Bảng giá BẬC là bước đầu; kỳ hạn chỉ mở ra sau khi chọn bậc (ADR 0041).
+    expect(screen.getByRole('radiogroup', { name: /Chọn gói dịch vụ/ })).toBeTruthy();
+    expect(screen.getByText('Gói cơ bản')).toBeTruthy();
+    expect(screen.getByText('Tối đa 3 xe')).toBeTruthy();
     expect(screen.getByRole('button', { name: /Tạo hoá đơn và lấy mã chuyển khoản/ })).toBeTruthy();
     expect(screen.queryByText(/^2$/)).toBeTruthy();
   });

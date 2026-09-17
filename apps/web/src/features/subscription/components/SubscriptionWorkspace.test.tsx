@@ -87,18 +87,18 @@ function subscriptionFixture(over: Partial<MySubscription> = {}): MySubscription
     currentPlan: {
       subscriptionId: 'SUB1',
       planId: 'PLAN1',
-      planCode: 'per-vehicle',
-      planName: 'Gói theo xe',
+      planCode: 'shop-basic',
+      planName: 'Gói cơ bản',
       billingMode: BILLING_MODE.PACKAGE,
       commissionPercent: null,
-      slots: { car: 3, motorbike: 2 },
+      quota: { maxVehicles: 5, maxBranches: 1, maxMembers: null },
       endsAt: '2027-01-01T00:00:00.000Z',
     },
     usage: {
-      car: { used: 2, onMarketplace: 2, limit: 3 },
-      motorbike: { used: 0, onMarketplace: 0, limit: 2 },
+      car: { used: 2, onMarketplace: 2 },
+      motorbike: { used: 0, onMarketplace: 0 },
     },
-    fleetQuota: { kind: 'per_type', totalLimit: null, totalUsed: 2 },
+    fleetQuota: { kind: 'total', totalLimit: 5, totalUsed: 2, reason: 'plan' },
     freeTrips: { allowance: 2, used: 0, left: 2 },
     ...over,
   };
@@ -158,10 +158,10 @@ describe('SubscriptionWorkspace — quyền mua gói', () => {
     grant(PERMISSION.SUBSCRIPTION_VIEW);
     renderWorkspace();
 
-    expect(screen.getByText('Gói theo xe')).toBeTruthy();
-    // Hạn mức là hai ô số, không còn là một thẻ có tiêu đề "Chỗ xe đang dùng".
-    expect(screen.getByText('Chỗ ô tô')).toBeTruthy();
-    expect(screen.getByText('2/3')).toBeTruthy();
+    expect(screen.getByText('Gói cơ bản')).toBeTruthy();
+    // Trần là MỘT ô cho cả đội xe (ADR 0041 điều 4); hai ô theo loại chỉ nói mức dùng.
+    expect(screen.getByText('Tổng số xe')).toBeTruthy();
+    expect(screen.getByText('2/5')).toBeTruthy();
   });
 
   /*
@@ -180,41 +180,53 @@ describe('SubscriptionWorkspace — quyền mua gói', () => {
 describe('SubscriptionWorkspace — hạn mức nói đúng mức dùng', () => {
   /*
    * Dưới 80% là trung tính: còn chỗ thì không có gì để báo động. Dải cảnh báo chỉ xuất hiện khi
-   * ĐÃ HẾT chỗ — và nó vẫn là cảnh báo, không phải lỗi: dùng hết chỗ đã mua là trạng thái hợp
-   * lệ của gói.
+   * ĐÃ HẾT trần — và nó vẫn là cảnh báo, không phải lỗi: dùng hết hạn mức đã mua là trạng thái
+   * hợp lệ của gói.
    */
   it('còn chỗ trống: KHÔNG dựng dải cảnh báo nào', () => {
     renderWorkspace();
 
-    expect(screen.queryByText(/Đã dùng hết chỗ/)).toBeNull();
-  });
-
-  it('hết chỗ ô tô: nói đúng loại xe đã hết, và chỉ loại đó', () => {
-    me.data = subscriptionFixture({
-      usage: {
-        car: { used: 3, onMarketplace: 3, limit: 3 },
-        motorbike: { used: 0, onMarketplace: 0, limit: 2 },
-      },
-    });
-    renderWorkspace();
-
-    const warning = screen.getByText(/Đã dùng hết chỗ/);
-    expect(warning.textContent).toContain('Chỗ ô tô');
-    expect(warning.textContent).not.toContain('Chỗ xe máy');
+    expect(screen.queryByText(/Đã dùng hết hạn mức/)).toBeNull();
   });
 
   /*
-   * Owner Lite có trần TỔNG, tuyến gói có hạn mức theo LOẠI — hai luật, hai cách vẽ. Nhét trần
-   * tổng vào ô của từng loại là màn hình nói "3 ô tô" trong khi backend chặn ở "3 xe".
+   * Câu chữ đi theo `reason`: chạm trần của bậc ĐÃ MUA thì việc cần làm là nâng bậc. Mời một
+   * gian hàng đang trả tiền đi "mua gói" là dẫn họ tới thứ họ đã có.
    */
-  it('Owner Lite: một ô TỔNG SỐ XE, không phải hai ô theo loại', () => {
+  it('hết trần của bậc đã mua: dẫn tới NÂNG BẬC, không phải mua gói', () => {
     me.data = subscriptionFixture({
-      fleetQuota: { kind: 'total', totalLimit: 3, totalUsed: 3 },
+      fleetQuota: { kind: 'total', totalLimit: 3, totalUsed: 3, reason: 'plan' },
+    });
+    renderWorkspace();
+
+    expect(screen.getByText(/Đã dùng hết hạn mức 3 xe/)).toBeTruthy();
+    expect(screen.getByText(/Nâng lên bậc gói lớn hơn/)).toBeTruthy();
+  });
+
+  it('hết trần Owner Lite: dẫn tới MUA GÓI', () => {
+    me.data = subscriptionFixture({
+      fleetQuota: { kind: 'total', totalLimit: 3, totalUsed: 3, reason: 'owner_lite' },
+    });
+    renderWorkspace();
+
+    expect(screen.getByText(/Mua gói gian hàng để đăng thêm xe/)).toBeTruthy();
+  });
+
+  /*
+   * Trần là MỘT con số cho cả đội xe ở CẢ HAI tuyến (ADR 0041 điều 4). Hai ô theo loại vẫn ở
+   * lại vì màn hình cần con số đó, nhưng chúng không mang trần — viết trần tổng vào ô của từng
+   * loại là màn hình nói "3 ô tô" trong khi backend chặn ở "3 xe".
+   */
+  it('ô theo loại chỉ nói mức dùng, không kèm trần', () => {
+    me.data = subscriptionFixture({
+      fleetQuota: { kind: 'total', totalLimit: 3, totalUsed: 2, reason: 'owner_lite' },
     });
     renderWorkspace();
 
     expect(screen.getByText('Tổng số xe')).toBeTruthy();
-    expect(screen.queryByText('Chỗ ô tô')).toBeNull();
+    expect(screen.getByText('2/3')).toBeTruthy();
+    expect(screen.getByText('Ô tô')).toBeTruthy();
+    expect(screen.queryByText('2/2')).toBeNull();
   });
 });
 
@@ -272,7 +284,7 @@ describe('SubscriptionWorkspace — không hứa con số hệ thống không gi
         planName: 'Tuyến hoa hồng',
         billingMode: BILLING_MODE.COMMISSION,
         commissionPercent: 10,
-        slots: null,
+        quota: null,
         endsAt: '2027-01-01T00:00:00.000Z',
       },
     });

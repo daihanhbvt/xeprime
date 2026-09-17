@@ -12,6 +12,7 @@ import {
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsNumber,
@@ -36,77 +37,39 @@ export { DEFAULT_LIMIT as SUBSCRIPTION_DEFAULT_LIMIT, MAX_LIMIT as SUBSCRIPTION_
 // Núm vặn bậc gói (ADR 0015 điều 4) — input validate chặt, response luôn đủ hình
 // ---------------------------------------------------------------------------
 
-/** Đơn giá MỘT chỗ / tháng theo loại xe. `null` = bậc gói không bán loại chỗ đó. */
-export class PlanVehicleSlotPriceDto {
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'VND, chuỗi — ADR 0007' })
-  @IsOptional()
-  @Matches(MONEY_PATTERN, { message: 'perVehiclePrice.car phải là số tiền hợp lệ' })
-  car?: string | null;
-
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'VND, chuỗi — ADR 0007' })
-  @IsOptional()
-  @Matches(MONEY_PATTERN, { message: 'perVehiclePrice.motorbike phải là số tiền hợp lệ' })
-  motorbike?: string | null;
-}
-
-/** Một kỳ hạn bậc gói bán, kèm % giảm cho cam kết dài (ADR 0015 điều 3). */
-export class PlanTermOptionDto {
+/**
+ * MỘT lựa chọn mua của bậc gói: kỳ hạn + tiền CẢ KỲ (ADR 0041 điều 2).
+ *
+ * `price` là số TUYỆT ĐỐI admin gõ. Không có `discountPercent` nào được lưu — % tiết kiệm trên
+ * bảng giá được TÍNH RA từ chính bảng này (`planTermSavingPercent`) và không bao giờ đi vào một
+ * dòng tiền.
+ */
+export class PlanTermPriceDto {
   @ApiProperty({ enum: SUBSCRIPTION_TERM_MONTHS, description: 'Kỳ hạn THÁNG LỊCH' })
+  @Type(() => Number)
   @IsIn([...SUBSCRIPTION_TERM_MONTHS])
   months!: number;
 
-  @ApiProperty({ minimum: 0, maximum: 100 })
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  discountPercent!: number;
+  @ApiProperty({ description: 'Tiền CẢ KỲ — VND, chuỗi — ADR 0007', example: '250000' })
+  @Matches(MONEY_PATTERN, { message: 'termPrices[].price phải là số tiền hợp lệ' })
+  price!: string;
 }
 
 /**
  * `plans.limits_json` — mọi field optional ở INPUT (thiếu = giá trị an toàn: không giới hạn,
- * không gồm sẵn, không cờ); service chuẩn hoá về đủ hình trước khi ghi DB.
+ * không bán, không cờ); service chuẩn hoá về đủ hình trước khi ghi DB.
  */
 export class PlanLimitsInputDto {
-  @ApiPropertyOptional({ type: PlanVehicleSlotPriceDto })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => PlanVehicleSlotPriceDto)
-  perVehiclePrice?: PlanVehicleSlotPriceDto;
-
-  @ApiPropertyOptional({ description: 'Số chỗ ô tô gồm sẵn trong phí nền', default: 0 })
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Trần TỔNG ô tô + xe máy (ADR 0041 điều 1). null = không giới hạn',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  includedCars?: number;
-
-  @ApiPropertyOptional({ description: 'Số chỗ xe máy gồm sẵn trong phí nền', default: 0 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  includedMotorbikes?: number;
-
-  @ApiPropertyOptional({ type: Number, nullable: true, description: 'null = không giới hạn' })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  maxCars?: number | null;
-
-  @ApiPropertyOptional({ type: Number, nullable: true, description: 'null = không giới hạn' })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  maxMotorbikes?: number | null;
-
-  @ApiPropertyOptional({ type: Number, nullable: true, description: 'null = không giới hạn' })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  maxMembers?: number | null;
+  maxVehicles?: number | null;
 
   @ApiPropertyOptional({ type: Number, nullable: true, description: 'null = không giới hạn' })
   @IsOptional()
@@ -115,12 +78,34 @@ export class PlanLimitsInputDto {
   @Min(0)
   maxBranches?: number | null;
 
-  @ApiPropertyOptional({ type: [PlanTermOptionDto] })
+  @ApiPropertyOptional({ type: Number, nullable: true, description: 'null = không giới hạn' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  maxMembers?: number | null;
+
+  @ApiPropertyOptional({
+    type: [PlanTermPriceDto],
+    description: 'Bảng giá = danh sách kỳ hạn ĐƯỢC BÁN. Rỗng = bậc không bán trực tiếp',
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => PlanTermOptionDto)
-  terms?: PlanTermOptionDto[];
+  @Type(() => PlanTermPriceDto)
+  termPrices?: PlanTermPriceDto[];
+
+  @ApiPropertyOptional({
+    description: 'Bậc bán bằng TƯ VẤN — tenant không tự mua được (ADR 0041 điều 5)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  salesOnly?: boolean;
+
+  @ApiPropertyOptional({ description: 'Nhãn "Được đề xuất" trên bảng giá' })
+  @IsOptional()
+  @IsBoolean()
+  recommended?: boolean;
 
   @ApiPropertyOptional({ description: 'Số ngày ân hạn sau ends_at', default: 0 })
   @IsOptional()
@@ -142,47 +127,24 @@ export class PlanLimitsInputDto {
 
 /** Response: luôn ĐỦ hình dạng (parser phòng thủ đã điền giá trị an toàn). */
 export class PlanLimitsDto {
-  @ApiProperty({ type: PlanVehicleSlotPriceDto }) perVehiclePrice!: PlanVehicleSlotPriceDto;
-  @ApiProperty() includedCars!: number;
-  @ApiProperty() includedMotorbikes!: number;
-  @ApiPropertyOptional({ type: Number, nullable: true }) maxCars!: number | null;
-  @ApiPropertyOptional({ type: Number, nullable: true }) maxMotorbikes!: number | null;
-  @ApiPropertyOptional({ type: Number, nullable: true }) maxMembers!: number | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) maxVehicles!: number | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) maxBranches!: number | null;
-  @ApiProperty({ type: [PlanTermOptionDto] }) terms!: PlanTermOptionDto[];
+  @ApiPropertyOptional({ type: Number, nullable: true }) maxMembers!: number | null;
+  @ApiProperty({ type: [PlanTermPriceDto] }) termPrices!: PlanTermPriceDto[];
+  @ApiProperty() salesOnly!: boolean;
+  @ApiProperty() recommended!: boolean;
   @ApiProperty() graceDays!: number;
   @ApiProperty({ enum: PLAN_FEATURE_VALUES, isArray: true }) features!: string[];
 }
 
 /**
- * Giả định cho phép KIỂM ĐIỂM GIAO (ADR 0020) — bắt buộc với bậc gói `package`:
- * không chứng minh được bài toán khuyến khích thì không lưu được gói bán tiền thật.
+ * Hạn mức ĐÃ MUA, chụp lại trên dòng thuê bao (ADR 0041 điều 3) — `null` ở một trường là KHÔNG
+ * GIỚI HẠN tường minh, không phải "chưa khai".
  */
-export class PlanAssumedGmvDto {
-  @ApiProperty({ description: 'Doanh thu giả định 1 xe / 1 tháng — VND, chuỗi' })
-  @Matches(MONEY_PATTERN, { message: 'monthlyGmvPerCar phải là số tiền hợp lệ' })
-  monthlyGmvPerCar!: string;
-
-  @ApiProperty({ minimum: 1, maximum: 20, description: '% hoa hồng tuyến A dùng để so' })
-  @IsNumber()
-  @Min(1)
-  @Max(20)
-  commissionPercent!: number;
-}
-
-/** Số chỗ theo loại xe (ADR 0015 điều 1) — dùng cho cả input lẫn response. */
-export class PlanSlotsDto {
-  @ApiProperty({ minimum: 0 })
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  car!: number;
-
-  @ApiProperty({ minimum: 0 })
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  motorbike!: number;
+export class PlanQuotaDto {
+  @ApiPropertyOptional({ type: Number, nullable: true }) maxVehicles!: number | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) maxBranches!: number | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) maxMembers!: number | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -232,53 +194,11 @@ export class CreatePlanDto {
   @Max(20)
   commissionPercent?: number | null;
 
-  @ApiPropertyOptional({
-    description: 'Phí nền / tháng (ADR 0020) — VND, chuỗi. Bỏ trống = 0',
-    example: '990000',
-  })
-  @IsOptional()
-  @Matches(MONEY_PATTERN, { message: 'basePriceMonthly phải là số tiền hợp lệ' })
-  basePriceMonthly?: string;
-
-  @ApiPropertyOptional({ type: PlanAssumedGmvDto, description: 'Bắt buộc với bậc package' })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => PlanAssumedGmvDto)
-  assumedMonthlyGmv?: PlanAssumedGmvDto;
-
   @ApiPropertyOptional({ type: PlanLimitsInputDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => PlanLimitsInputDto)
   limits?: PlanLimitsInputDto;
-
-  @ApiPropertyOptional({
-    description: 'CỘT CŨ (ADR 0010, chờ contract) — giá phẳng một chu kỳ. Bỏ trống = 0',
-  })
-  @IsOptional()
-  @Matches(MONEY_PATTERN, { message: 'price phải là số tiền hợp lệ' })
-  price?: string;
-
-  @ApiPropertyOptional({
-    description: 'CỘT CŨ (ADR 0015 điều 2 thay bằng term_months, chờ contract) — bỏ trống = 30',
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(3660)
-  durationDays?: number;
-
-  @ApiPropertyOptional({
-    type: Number,
-    nullable: true,
-    description: 'CỘT CŨ — thay bằng limits.maxCars/maxMotorbikes (ADR 0015, chờ contract)',
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  maxVehicles?: number | null;
 
   // Không khai `default` ở @ApiPropertyOptional: openapi-typescript coi field có default là
   // BẮT BUỘC trong type sinh ra, ép client phải gửi thứ vốn dĩ bỏ trống được.
@@ -315,42 +235,11 @@ export class UpdatePlanDto {
   @Max(20)
   commissionPercent?: number | null;
 
-  @ApiPropertyOptional({ description: 'Phí nền / tháng — VND, chuỗi' })
-  @IsOptional()
-  @Matches(MONEY_PATTERN, { message: 'basePriceMonthly phải là số tiền hợp lệ' })
-  basePriceMonthly?: string;
-
-  @ApiPropertyOptional({ type: PlanAssumedGmvDto })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => PlanAssumedGmvDto)
-  assumedMonthlyGmv?: PlanAssumedGmvDto;
-
   @ApiPropertyOptional({ type: PlanLimitsInputDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => PlanLimitsInputDto)
   limits?: PlanLimitsInputDto;
-
-  @ApiPropertyOptional({ description: 'CỘT CŨ (chờ contract) — tiền dạng string — ADR 0007' })
-  @IsOptional()
-  @Matches(MONEY_PATTERN, { message: 'price phải là số tiền hợp lệ' })
-  price?: string;
-
-  @ApiPropertyOptional({ description: 'CỘT CŨ (chờ contract)' })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(3660)
-  durationDays?: number;
-
-  @ApiPropertyOptional({ type: Number, nullable: true, description: 'null = bỏ giới hạn' })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  maxVehicles?: number | null;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -372,27 +261,9 @@ export class PlanDto {
     description: '% hoa hồng — chỉ có ở bậc commission',
   })
   commissionPercent!: number | null;
-  @ApiProperty({ description: 'Phí nền / tháng — tiền dạng string — ADR 0007' })
-  basePriceMonthly!: string;
-  @ApiProperty({ type: PlanLimitsDto, description: 'Núm vặn bậc gói (ADR 0015 điều 4)' })
+  @ApiProperty({ type: PlanLimitsDto, description: 'Núm vặn bậc gói (ADR 0041 điều 1)' })
   limits!: PlanLimitsDto;
-  @ApiPropertyOptional({
-    type: PlanAssumedGmvDto,
-    nullable: true,
-    description: 'Giả định cho kiểm điểm giao (ADR 0020)',
-  })
-  assumedMonthlyGmv!: PlanAssumedGmvDto | null;
-  @ApiProperty({ description: 'CỘT CŨ (chờ contract) — tiền dạng string — ADR 0007' })
-  price!: string;
   @ApiProperty() currency!: string;
-  @ApiProperty({ description: 'CỘT CŨ (chờ contract) — kỳ hạn nay ở term_months' })
-  durationDays!: number;
-  @ApiPropertyOptional({
-    type: Number,
-    nullable: true,
-    description: 'CỘT CŨ (chờ contract) — null = không giới hạn',
-  })
-  maxVehicles!: number | null;
   @ApiProperty({ enum: PLAN_STATUS_VALUES }) status!: string;
   @ApiProperty() sortOrder!: number;
   @ApiProperty({ description: 'Số thuê bao đã gán từ gói này (mọi trạng thái)' })
@@ -436,15 +307,20 @@ export class AssignSubscriptionDto {
   @IsIn([...SUBSCRIPTION_TERM_MONTHS])
   termMonths!: number;
 
+  /**
+   * Giá ĐÀM PHÁN cả kỳ — ADR 0041 điều 5.
+   *
+   * Bỏ trống = lấy giá niêm yết của kỳ hạn (`limits.termPrices`). **BẮT BUỘC** với bậc
+   * `salesOnly`: bậc đó không có bảng giá để rơi về, và mặc định 0đ ở một đường ghi tiền là
+   * tặng một gói doanh nghiệp vì admin quên một ô.
+   */
   @ApiPropertyOptional({
-    type: PlanSlotsDto,
-    description:
-      'Số chỗ mua — bỏ trống = đúng số chỗ gồm sẵn của gói; thấp hơn số gồm sẵn thì được nâng lên bằng (phí nền đã bao chúng)',
+    description: 'Giá đàm phán CẢ KỲ — VND, chuỗi. Bắt buộc với bậc salesOnly (ADR 0041 điều 5)',
+    example: '5000000',
   })
   @IsOptional()
-  @ValidateNested()
-  @Type(() => PlanSlotsDto)
-  slots?: PlanSlotsDto;
+  @Matches(MONEY_PATTERN, { message: 'price phải là số tiền hợp lệ' })
+  price?: string;
 
   @ApiPropertyOptional({ description: 'Ghi chú (số chứng từ, lý do tặng…)' })
   @IsOptional()
@@ -473,11 +349,12 @@ export class SubscriptionDto {
   })
   termMonths!: number | null;
   @ApiPropertyOptional({
-    type: PlanSlotsDto,
+    type: PlanQuotaDto,
     nullable: true,
-    description: 'Số chỗ đã mua — null ở dòng lịch sử trước ADR 0015',
+    description:
+      'SNAPSHOT hạn mức lúc gán (ADR 0041 điều 3) — null ở dòng tuyến hoa hồng và dòng trước ADR 0041',
   })
-  slots!: PlanSlotsDto | null;
+  quota!: PlanQuotaDto | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
@@ -502,10 +379,16 @@ export class SubscriptionPageDto {
 // Hoá đơn gói (ADR 0015 điều 5) + màn "Gói của tôi"
 // ---------------------------------------------------------------------------
 
-/** Một dòng snapshot của hoá đơn — hoá đơn tự giải thích được, không cần join. */
+/**
+ * Một dòng snapshot của hoá đơn — hoá đơn tự giải thích được, không cần join.
+ *
+ * Chỉ `package` được GHI từ ADR 0041; ba giá trị còn lại là hoá đơn phát hành TRƯỚC đó theo mô
+ * hình chỗ xe, giữ trong enum để chứng từ cũ còn hiển thị đúng.
+ */
 export class PlanInvoiceLineDto {
-  @ApiProperty({ enum: ['base', 'slot', 'add_slot'] }) kind!: string;
-  @ApiPropertyOptional({ enum: VEHICLE_TYPE_VALUES }) vehicleType?: string;
+  @ApiProperty({ enum: ['package', 'base', 'slot', 'add_slot'] }) kind!: string;
+  @ApiPropertyOptional({ enum: VEHICLE_TYPE_VALUES, description: 'Chỉ có ở hoá đơn trước ADR 0041' })
+  vehicleType?: string;
   @ApiProperty() quantity!: number;
   @ApiProperty() months!: number;
   @ApiProperty({ description: 'VND, chuỗi — ADR 0007' }) unitPrice!: string;
@@ -547,7 +430,8 @@ export class SubscriptionInvoiceDto {
   @ApiProperty() planId!: string;
   @ApiProperty() planCode!: string;
   @ApiProperty() termMonths!: number;
-  @ApiProperty({ type: PlanSlotsDto }) slots!: PlanSlotsDto;
+  @ApiProperty({ type: PlanQuotaDto, description: 'Hạn mức sẽ áp khi hoá đơn này kích hoạt gói' })
+  quota!: PlanQuotaDto;
   @ApiProperty({ type: [PlanInvoiceLineDto] }) lines!: PlanInvoiceLineDto[];
   @ApiProperty({ description: 'ISO-8601 UTC' }) periodFrom!: string;
   @ApiProperty({ description: 'ISO-8601 UTC' }) periodTo!: string;
@@ -603,35 +487,18 @@ export class PurchaseSubscriptionDto {
   @Type(() => Number)
   @IsIn([...SUBSCRIPTION_TERM_MONTHS])
   termMonths!: number;
-
-  @ApiPropertyOptional({ type: PlanSlotsDto, description: 'Bỏ trống = đúng số chỗ gồm sẵn' })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => PlanSlotsDto)
-  slots?: PlanSlotsDto;
 }
 
-/** Mua thêm chỗ giữa kỳ (ADR 0015 điều 8) — slots là TỔNG số chỗ mới, không phải phần thêm. */
-export class AddSlotsDto {
-  @ApiProperty({ type: PlanSlotsDto, description: 'TỔNG số chỗ sau khi mua thêm' })
-  @ValidateNested()
-  @Type(() => PlanSlotsDto)
-  slots!: PlanSlotsDto;
-
-  @ApiPropertyOptional({ description: 'Ghi chú (số chứng từ…)' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(1000)
-  note?: string;
-}
-
-/** Mức dùng chỗ của MỘT loại xe — so với hạn mức từ snapshot slots (ADR 0015 điều 1). */
+/**
+ * Mức dùng xe của MỘT loại — con số để HIỂN THỊ.
+ *
+ * Không còn `limit` ở đây từ ADR 0041: trần là MỘT con số cho cả đội xe và nó ở `fleetQuota`.
+ * Viết trần tổng vào ô của từng loại là màn hình nói "3 ô tô" trong khi luật là "3 xe".
+ */
 export class SlotUsageDto {
   @ApiProperty({ description: 'Số xe chưa xoá (điểm chặn tạo xe)' }) used!: number;
   @ApiProperty({ description: 'Số xe đang chiếm suất trên chợ (chờ duyệt + công khai)' })
   onMarketplace!: number;
-  @ApiPropertyOptional({ type: Number, nullable: true, description: 'null = không giới hạn' })
-  limit!: number | null;
 }
 
 export class VehicleSlotUsageDto {
@@ -647,19 +514,19 @@ export class FreeTripsDto {
 }
 
 /**
- * Hạn mức ĐỘI XE đang áp — ba hình dạng, vì hai tuyến đếm theo hai cách khác nhau.
+ * Hạn mức ĐỘI XE đang áp — ADR 0041 điều 4.
  *
- * `usage` ngay bên cạnh vẫn trả mức dùng THEO LOẠI (giao diện cần con số đó dù tuyến nào), còn
- * ô này trả lời câu 'trần là gì'. Tách ra vì với Owner Lite trần là một BỂ CHUNG cho cả ô tô
- * lẫn xe máy: nhét nó vào `usage.car.limit` là màn hình nói '3 ô tô' trong khi luật là '3 xe',
- * và người dùng sẽ đăng đủ 3 ô tô rồi ngạc nhiên vì chiếc xe máy đầu tiên bị từ chối.
+ * Một con số cho cả đội xe ở CẢ HAI tuyến: `quota.maxVehicles` của bậc đã mua, hoặc
+ * `OWNER_LITE_VEHICLE_LIMIT` khi không có gói. `usage` ngay bên cạnh vẫn trả mức dùng THEO LOẠI
+ * vì giao diện cần con số đó, nhưng nó không mang trần nào — trần chỉ có ĐÚNG MỘT nơi.
+ *
+ * `reason` để màn hình nói đúng lối đi tiếp: chạm trần của bậc đã mua thì việc cần làm là NÂNG
+ * BẬC; chạm trần Owner Lite thì là MUA GÓI; `billing_unconfigured` thì là liên hệ hỗ trợ — đó
+ * là lỗi cấu hình phía nền tảng, không phải hạn mức của người dùng (ADR 0038 điều 1).
  */
 export class FleetQuotaDto {
-  @ApiProperty({
-    enum: ['unlimited', 'total', 'per_type'],
-    description: "'total' = trần TỔNG của Owner Lite; 'per_type' = số chỗ đã mua theo loại",
-  })
-  kind!: 'unlimited' | 'total' | 'per_type';
+  @ApiProperty({ enum: ['unlimited', 'total'] })
+  kind!: 'unlimited' | 'total';
 
   @ApiProperty({
     type: Number,
@@ -667,6 +534,14 @@ export class FleetQuotaDto {
     description: "Trần TỔNG số xe — chỉ có giá trị khi kind = 'total'",
   })
   totalLimit!: number | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    enum: ['plan', 'owner_lite', 'billing_unconfigured'],
+    description: "Trần này từ đâu ra — null khi kind = 'unlimited'",
+  })
+  reason!: 'plan' | 'owner_lite' | 'billing_unconfigured' | null;
 
   @ApiProperty({ description: 'Tổng số xe chưa xoá của gian hàng (cả hai loại)' })
   totalUsed!: number;
@@ -681,13 +556,10 @@ export class MySubscriptionDto {
 }
 
 /**
- * Gói cho GIAN HÀNG chọn mua: như PlanDto nhưng không lộ `assumedMonthlyGmv` (giả định định
- * giá nội bộ của nền tảng) và `subscriptionCount` (số liệu vận hành).
+ * Gói cho GIAN HÀNG chọn mua: như PlanDto nhưng không lộ `subscriptionCount` — số liệu vận hành
+ * của nền tảng, không phải thông tin của người đang chọn gói.
  */
-export class TenantPlanDto extends OmitType(PlanDto, [
-  'assumedMonthlyGmv',
-  'subscriptionCount',
-] as const) {}
+export class TenantPlanDto extends OmitType(PlanDto, ['subscriptionCount'] as const) {}
 
 /** Gói hiện hành của tenant — nhúng vào PlatformTenantDetailDto. */
 export class CurrentPlanDto {
@@ -695,7 +567,6 @@ export class CurrentPlanDto {
   @ApiProperty() planId!: string;
   @ApiProperty() planCode!: string;
   @ApiProperty() planName!: string;
-  @ApiPropertyOptional({ type: Number, nullable: true }) maxVehicles!: number | null;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
@@ -706,10 +577,10 @@ export class CurrentPlanDto {
   @ApiPropertyOptional({ type: Number, nullable: true, description: 'SNAPSHOT lúc gán' })
   commissionPercent!: number | null;
   @ApiPropertyOptional({
-    type: PlanSlotsDto,
+    type: PlanQuotaDto,
     nullable: true,
-    description: 'Số chỗ đã mua — null ở dòng trước ADR 0015',
+    description: 'SNAPSHOT hạn mức (ADR 0041 điều 3) — null ở tuyến hoa hồng và dòng cũ',
   })
-  slots!: PlanSlotsDto | null;
+  quota!: PlanQuotaDto | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) endsAt!: string;
 }

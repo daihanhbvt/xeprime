@@ -14,7 +14,7 @@ import {
   useTenantPlans,
 } from '../hooks/use-subscription';
 import { InvoicePaymentPanel } from './InvoicePaymentPanel';
-import { PlanPurchaseFields } from './PlanPurchaseFields';
+import { PlanPricingTable } from './PlanPricingTable';
 import styles from './PackageShopCheckout.module.css';
 
 /**
@@ -117,7 +117,7 @@ export function PackageShopCheckout() {
    * Danh mục không có bậc gói nào đang bán = lỗi cấu hình phía nền tảng, không phải lựa chọn của
    * người dùng. Nói thẳng và cho đường liên hệ thay vì hiện một form không bấm được.
    */
-  if (selection.purchasable.length === 0) {
+  if (selection.tiers.length === 0) {
     return <Alert type="warning" showIcon title={t('noPlans')} description={t('noPlansHint')} />;
   }
 
@@ -127,7 +127,7 @@ export function PackageShopCheckout() {
         <Alert type="error" showIcon title={errorMessage(purchase.error)} />
       ) : null}
 
-      <PlanPurchaseFields state={selection} />
+      <PlanPricingTable state={selection} />
 
       {/*
         Quy chế sàn là văn bản quy định phí dịch vụ và thứ tự hiển thị mà gian hàng đang mua —

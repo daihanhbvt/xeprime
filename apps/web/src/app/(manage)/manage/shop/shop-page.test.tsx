@@ -270,18 +270,18 @@ beforeEach(() => {
     currentPlan: {
       subscriptionId: 'SUB1',
       planId: 'PLAN1',
-      planCode: 'per-slot',
-      planName: 'Gian hàng theo chỗ xe',
+      planCode: 'shop-advanced',
+      planName: 'Gói nâng cao',
       billingMode: BILLING_MODE.PACKAGE,
       commissionPercent: null,
-      slots: { car: 8, motorbike: 2 },
+      quota: { maxVehicles: 10, maxBranches: 3, maxMembers: null },
       endsAt: '2026-12-01T00:00:00.000Z',
     },
     usage: {
-      car: { used: 8, onMarketplace: 8, limit: 8 },
-      motorbike: { used: 2, onMarketplace: 2, limit: 2 },
+      car: { used: 8, onMarketplace: 8 },
+      motorbike: { used: 2, onMarketplace: 2 },
     },
-    fleetQuota: { kind: 'per_type', totalLimit: null, totalUsed: 10 },
+    fleetQuota: { kind: 'total', totalLimit: 10, totalUsed: 10, reason: 'plan' },
     freeTrips: { allowance: 0, used: 0, left: 0 },
   };
   grant(
@@ -439,19 +439,21 @@ describe('Trang Cửa hàng — tài khoản nhận tiền', () => {
 });
 
 describe('Trang Cửa hàng — gói & hạn mức', () => {
-  it('hiện gói hiện hành, hạn và hạn mức chỗ theo loại xe', () => {
+  it('hiện gói hiện hành, hạn và trần TỔNG đội xe', () => {
     renderPage();
 
     const section = within(document.querySelector('#shop-section-plan') as HTMLElement);
-    expect(section.getByText('Gian hàng theo chỗ xe')).toBeTruthy();
-    expect(section.getByText('8/8')).toBeTruthy();
-    expect(section.getByText('2/2')).toBeTruthy();
+    expect(section.getByText('Gói nâng cao')).toBeTruthy();
+    // MỘT ô trần cho cả đội xe (ADR 0041 điều 4) — hai ô theo loại chỉ nói mức dùng.
+    expect(section.getByText('10/10')).toBeTruthy();
+    expect(section.getByText('Ô tô')).toBeTruthy();
+    expect(section.getByText('Xe máy')).toBeTruthy();
   });
 
-  it('đã dùng hết chỗ: một dòng cảnh báo, KHÔNG phải một dải đỏ', () => {
+  it('đã dùng hết trần: một dòng cảnh báo, KHÔNG phải một dải đỏ', () => {
     renderPage();
 
-    const warning = screen.getByText(/Đã dùng hết chỗ/);
+    const warning = screen.getByText(/Đã dùng hết hạn mức/);
     expect(warning.closest('.ant-alert-warning')).toBeTruthy();
     expect(warning.closest('.ant-alert-error')).toBeNull();
   });
@@ -469,7 +471,7 @@ describe('Trang Cửa hàng — gói & hạn mức', () => {
     expect(screen.queryByRole('button', { name: /Gia hạn \/ đổi gói/ })).toBeNull();
     expect(document.querySelector('.ant-modal-root')).toBeNull();
     // …nhưng vẫn XEM được gói: hạn mức là việc điều hành đội xe.
-    expect(screen.getByText('Gian hàng theo chỗ xe')).toBeTruthy();
+    expect(screen.getByText('Gói nâng cao')).toBeTruthy();
   });
 
   it('thiếu `subscription.view`: khối đó vắng hẳn khỏi trang và khỏi mục lục', () => {

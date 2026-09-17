@@ -156,15 +156,17 @@ beforeAll(async () => {
       code: `SPEC-PKG-${packagePlanId.slice(-6)}`,
       name: 'Gói gian hàng (spec)',
       billingMode: BILLING_MODE.PACKAGE,
-      basePriceMonthly: '500000',
-      price: '500000',
       status: PLAN_STATUS.ACTIVE,
-      durationDays: 90,
-      // Gói được bán theo mọi kỳ hạn toàn cục; `slots` để `priceTerm` ra số > 0.
+      // Bán đủ bốn kỳ hạn toàn cục — spec này chỉ cần MUA ĐƯỢC, không quan tâm con số.
       limitsJson: {
-        perVehiclePrice: { car: '100000', motorbike: '50000' },
-        includedCars: 0,
-        includedMotorbikes: 0,
+        maxVehicles: 10,
+        maxBranches: 1,
+        termPrices: [
+          { months: 1, price: '500000' },
+          { months: 3, price: '1400000' },
+          { months: 6, price: '2700000' },
+          { months: 12, price: '5000000' },
+        ],
       },
       sortOrder: 900,
     },
@@ -519,8 +521,7 @@ describe('5. Cổng VẬN HÀNH không được biến mất; cổng XÁC MINH k
 
       const invoice = await billing.purchase(tenantId, ownerId, {
         planId: packagePlanId,
-        termMonths: 3,
-        slots: { car: 1, motorbike: 0 },
+        termMonths: 3
       });
       expect(invoice.code).toMatch(/^XPG/);
 
@@ -553,8 +554,7 @@ describe('5. Cổng VẬN HÀNH không được biến mất; cổng XÁC MINH k
 
     const invoice = await billing.purchase(tenantId, ownerId, {
       planId: packagePlanId,
-      termMonths: 3,
-      slots: { car: 1, motorbike: 0 },
+      termMonths: 3
     });
     expect(invoice.code).toMatch(/^XPG/);
   });

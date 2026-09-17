@@ -1,14 +1,14 @@
 'use client';
 
-import { App, Alert, Divider } from 'antd';
+import { App, Alert, Divider, Tag } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import * as yup from 'yup';
 import {
-  API_ERROR_CODE,
   BILLING_MODE,
+  OWNER_LITE_VEHICLE_LIMIT,
   PLAN_FEATURE_VALUES,
   SUBSCRIPTION_TERM_MONTHS,
   isPlanFeature,
@@ -17,31 +17,54 @@ import { NumberField } from '@/components/form/NumberField';
 import { CheckboxGroupField } from '@/components/form/CheckboxGroupField';
 import { DialogForm } from '@/components/form/DialogForm';
 import { RadioGroupField } from '@/components/form/RadioGroupField';
+import { SwitchField } from '@/components/form/SwitchField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { getErrorCode } from '@/services/api-client';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useCreatePlan, useUpdatePlan } from '../hooks/use-plan-mutations';
 import type { CreatePlanInput, Plan } from '../types';
+import styles from './PlanFormModal.module.css';
 
-/** Khoá ổn định cho 4 ô giảm giá kỳ hạn — RHF cần tên field tĩnh, không index mảng. */
+/**
+ * Khoá ổn định cho bốn ô giá kỳ hạn — RHF cần tên field TĨNH, không index mảng.
+ *
+ * Bốn kỳ hạn là toàn bộ `SUBSCRIPTION_TERM_MONTHS`, và DB canh cùng danh sách bằng CHECK. Thêm
+ * một kỳ hạn là sửa ba nơi (hằng, CHECK, bảng này) — cố ý khó, vì một kỳ hạn chỉ tồn tại ở một
+ * trong ba nơi là một lựa chọn mua hiện ra rồi bị server từ chối.
+ */
 const TERM_FIELDS = [
-  ['discountM1', 1],
-  ['discountM3', 3],
-  ['discountM6', 6],
-  ['discountM12', 12],
+  ['priceM1', 1],
+  ['priceM3', 3],
+  ['priceM6', 6],
+  ['priceM12', 12],
 ] as const;
 
 /**
- * Tạo/sửa bậc gói theo mô hình cước theo CHỖ (ADR 0015/0020): chế độ thu phí quyết định bộ núm
- * hiện ra — tuyến hoa hồng chỉ có %, tuyến gói có phí nền + đơn giá chỗ + kỳ hạn + giả định
- * kiểm điểm giao. Cảnh báo kiểm điểm giao hiện NGAY trong form (phép xem trước dùng chung
- * nguồn sự thật vẫn là BillingService — lỗi trả về đọc từ MÃ. Kiểm điểm giao đã gỡ (ADR 0029).
+ * Tạo/sửa bậc gói — ADR 0041.
+ *
+ * ## Hai hình dạng, không phải một form có vài ô ẩn
+ *
+ * Chế độ thu phí quyết định form là cái gì:
+ *
+ *   `commission` — **một TUYẾN, không phải một SKU** (ADR 0038 điều 13). Chỉ có tên, mô tả và
+ *   % phí dịch vụ. Không bảng giá, không trần, không cờ năng lực: trần của tuyến này là
+ *   `OWNER_LITE_VEHICLE_LIMIT` — một quy tắc SẢN PHẨM trong code, nên nó hiện ra ở đây dưới dạng
+ *   THÔNG TIN chứ không phải ô nhập. Một ô nhập cho nó là mời admin sửa một con số mà backend
+ *   không đọc.
+ *
+ *   `package` — một BẬC gian hàng: trần xe, trần chi nhánh, và bảng giá bốn kỳ hạn.
+ *
+ * ## Giá nhập TUYỆT ĐỐI, % tiết kiệm chỉ để nhìn
+ *
+ * Admin gõ 100.000 / 250.000 / 450.000 / 800.000. Nhãn "Tiết kiệm 17%" bên cạnh mỗi kỳ được TÍNH
+ * từ giá kỳ 1 tháng đang gõ dở, cập nhật ngay — nó là phép so sánh để admin thấy biểu giá mình
+ * vừa đặt ra trông thế nào với người mua, không phải một giá trị được lưu (ADR 0041 điều 2).
  *
  * Sửa thì `code` bị khoá (định danh, ADR 0010); tiền nhập number ở form và hoá string khi gửi
- * API (ADR 0007). Remount theo `open` để form sạch mỗi lần mở.
+ * API (ADR 0007). Remount theo `key` ở nơi gọi để form sạch mỗi lần mở.
  */
 export function PlanFormModal({
   open,
@@ -56,14 +79,13 @@ export function PlanFormModal({
   const t = useTranslations('AdminPlans');
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
+  const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
   const create = useCreatePlan();
   const update = useUpdatePlan();
   const isEdit = Boolean(plan);
   const pending = create.isPending || update.isPending;
-  /** Lỗi kiểm điểm giao từ server — giữ hiện trong form thay vì chỉ một toast thoáng qua. */
-  const [incentiveError, setIncentiveError] = useState<string | null>(null);
 
   const schema = useMemo(() => {
     const int = (v: yup.NumberSchema<number | null | undefined>) =>
@@ -72,6 +94,8 @@ export function PlanFormModal({
         .defined()
         .integer(t('form.validation.integer'))
         .min(0, t('form.validation.nonNegative'));
+    const money = () =>
+      yup.number().nullable().defined().min(0, t('form.validation.nonNegative'));
     return yup.object({
       code: yup
         .string()
@@ -79,7 +103,7 @@ export function PlanFormModal({
         .required(t('form.validation.codeRequired'))
         .matches(/^[a-z0-9][a-z0-9_-]{1,49}$/, t('form.validation.codePattern')),
       name: yup.string().trim().required(t('form.validation.nameRequired')).max(255),
-      description: yup.string().trim().max(2000).default(''),
+      description: yup.string().trim().max(200).default(''),
       billingMode: yup.string().oneOf([BILLING_MODE.COMMISSION, BILLING_MODE.PACKAGE]).required(),
       commissionPercent: yup
         .number()
@@ -92,48 +116,16 @@ export function PlanFormModal({
           then: (s) =>
             s.test('required', t('form.validation.commissionRequired'), (v) => v != null),
         }),
-      basePriceMonthly: yup
-        .number()
-        .nullable()
-        .defined()
-        .min(0, t('form.validation.nonNegative'))
-        .when('billingMode', {
-          is: BILLING_MODE.PACKAGE,
-          then: (s) => s.test('required', t('form.validation.baseRequired'), (v) => v != null),
-        }),
-      perCarPrice: yup.number().nullable().defined().min(0, t('form.validation.nonNegative')),
-      perMotorbikePrice: yup.number().nullable().defined().min(0, t('form.validation.nonNegative')),
-      includedCars: int(yup.number()),
-      includedMotorbikes: int(yup.number()),
-      maxCars: int(yup.number()),
-      maxMotorbikes: int(yup.number()),
-      discountM1: yup.number().nullable().defined().min(0).max(100),
-      discountM3: yup.number().nullable().defined().min(0).max(100),
-      discountM6: yup.number().nullable().defined().min(0).max(100),
-      discountM12: yup.number().nullable().defined().min(0).max(100),
-      graceDays: int(yup.number()),
-      gmvPerCar: yup
-        .number()
-        .nullable()
-        .defined()
-        .min(0, t('form.validation.nonNegative'))
-        .when('billingMode', {
-          is: BILLING_MODE.PACKAGE,
-          then: (s) => s.test('required', t('form.validation.gmvRequired'), (v) => v != null),
-        }),
-      gmvCommission: yup
-        .number()
-        .nullable()
-        .defined()
-        .min(1)
-        .max(20)
-        .when('billingMode', {
-          is: BILLING_MODE.PACKAGE,
-          then: (s) =>
-            s.test('required', t('form.validation.assumedCommissionRequired'), (v) => v != null),
-        }),
-      maxMembers: int(yup.number()),
+      maxVehicles: int(yup.number()),
       maxBranches: int(yup.number()),
+      maxMembers: int(yup.number()),
+      priceM1: money(),
+      priceM3: money(),
+      priceM6: money(),
+      priceM12: money(),
+      salesOnly: yup.boolean().defined(),
+      recommended: yup.boolean().defined(),
+      graceDays: int(yup.number()),
       features: yup.array().of(yup.string().defined()).defined(),
       sortOrder: yup.number().nullable().defined().integer(t('form.validation.integer')),
     });
@@ -150,30 +142,16 @@ export function PlanFormModal({
           description: plan.description ?? '',
           billingMode: plan.billingMode as FormValues['billingMode'],
           commissionPercent: plan.commissionPercent,
-          basePriceMonthly: Number(plan.basePriceMonthly),
-          perCarPrice:
-            plan.limits.perVehiclePrice.car != null
-              ? Number(plan.limits.perVehiclePrice.car)
-              : null,
-          perMotorbikePrice:
-            plan.limits.perVehiclePrice.motorbike != null
-              ? Number(plan.limits.perVehiclePrice.motorbike)
-              : null,
-          includedCars: plan.limits.includedCars,
-          includedMotorbikes: plan.limits.includedMotorbikes,
-          maxCars: plan.limits.maxCars,
-          maxMotorbikes: plan.limits.maxMotorbikes,
-          discountM1: termDiscountOf(plan, 1),
-          discountM3: termDiscountOf(plan, 3),
-          discountM6: termDiscountOf(plan, 6),
-          discountM12: termDiscountOf(plan, 12),
+          maxVehicles: plan.limits.maxVehicles ?? null,
+          maxBranches: plan.limits.maxBranches ?? null,
+          maxMembers: plan.limits.maxMembers ?? null,
+          priceM1: termPriceOf(plan, 1),
+          priceM3: termPriceOf(plan, 3),
+          priceM6: termPriceOf(plan, 6),
+          priceM12: termPriceOf(plan, 12),
+          salesOnly: plan.limits.salesOnly,
+          recommended: plan.limits.recommended,
           graceDays: plan.limits.graceDays,
-          gmvPerCar: plan.assumedMonthlyGmv
-            ? Number(plan.assumedMonthlyGmv.monthlyGmvPerCar)
-            : null,
-          gmvCommission: plan.assumedMonthlyGmv?.commissionPercent ?? null,
-          maxMembers: plan.limits.maxMembers,
-          maxBranches: plan.limits.maxBranches,
           features: [...plan.limits.features],
           sortOrder: plan.sortOrder,
         }
@@ -181,38 +159,59 @@ export function PlanFormModal({
           code: '',
           name: '',
           description: '',
-          billingMode: BILLING_MODE.COMMISSION,
+          /*
+           * Tạo mới mặc định là bậc GIAN HÀNG, không phải tuyến hoa hồng.
+           *
+           * Danh mục chỉ được có ĐÚNG MỘT bậc `commission` và nó đã tồn tại từ seed
+           * (`COMMISSION_PLAN_IS_SINGLETON` — ADR 0038 điều 13), nên mở form ở chế độ đó là mở
+           * sẵn con đường duy nhất bị server từ chối.
+           */
+          billingMode: BILLING_MODE.PACKAGE,
           commissionPercent: null,
-          basePriceMonthly: null,
-          perCarPrice: null,
-          perMotorbikePrice: null,
-          includedCars: 0,
-          includedMotorbikes: 0,
-          maxCars: null,
-          maxMotorbikes: null,
-          discountM1: 0,
-          discountM3: null,
-          discountM6: null,
-          discountM12: null,
-          graceDays: 7,
-          gmvPerCar: null,
-          gmvCommission: null,
-          maxMembers: null,
+          maxVehicles: null,
           maxBranches: null,
-          features: [],
+          maxMembers: null,
+          priceM1: null,
+          priceM3: null,
+          priceM6: null,
+          priceM12: null,
+          salesOnly: false,
+          recommended: false,
+          graceDays: 7,
+          features: [...PLAN_FEATURE_VALUES],
           sortOrder: 0,
         },
   });
 
   const isPackage = watch('billingMode') === BILLING_MODE.PACKAGE;
+  const salesOnly = watch('salesOnly');
+  /*
+   * Đọc CẢ BỐN ô giá trong MỘT lượt `watch`, không gọi `watch(field)` trong vòng lặp vẽ.
+   *
+   * Lý do thực dụng: `watch()` của RHF là một hàm không memo hoá an toàn được, và gọi nó ở giữa
+   * JSX làm React Compiler bỏ tối ưu cả component. Lý do đúng hơn: cả bốn con số là MỘT trạng
+   * thái — % tiết kiệm của mỗi kỳ tính từ giá kỳ 1 tháng, nên chúng phải đến từ cùng một lần đọc.
+   */
+  const [monthlyPrice, priceM3, priceM6, priceM12] = watch([
+    'priceM1',
+    'priceM3',
+    'priceM6',
+    'priceM12',
+  ]);
+  const termPriceOfField: Record<(typeof TERM_FIELDS)[number][0], number | null | undefined> = {
+    priceM1: monthlyPrice,
+    priceM3,
+    priceM6,
+    priceM12,
+  };
 
   const onSubmit = handleSubmit((values) => {
     const isPkg = values.billingMode === BILLING_MODE.PACKAGE;
-    const discounts: Record<number, number | null | undefined> = {
-      1: values.discountM1,
-      3: values.discountM3,
-      6: values.discountM6,
-      12: values.discountM12,
+    const prices: Record<number, number | null | undefined> = {
+      1: values.priceM1,
+      3: values.priceM3,
+      6: values.priceM6,
+      12: values.priceM12,
     };
     const shared = {
       name: values.name.trim(),
@@ -220,52 +219,44 @@ export function PlanFormModal({
       billingMode: values.billingMode,
       // Tuyến gói: service tự xoá % — không gửi. Tuyến hoa hồng: schema đã bắt buộc có.
       ...(isPkg ? {} : { commissionPercent: values.commissionPercent as number }),
-      basePriceMonthly: String(values.basePriceMonthly ?? 0),
-      ...(isPkg && values.gmvPerCar != null && values.gmvCommission != null
+      /*
+       * Tuyến hoa hồng KHÔNG gửi `limits` — bỏ trống là giữ nguyên giá trị đang lưu
+       * (`updatePlan` merge trên hình đang có). Form này cố ý không có ô cho `graceDays`,
+       * `features` hay trần nào của tuyến đó, nên gửi một `limits` dựng từ default của form sẽ
+       * lặng lẽ XOÁ cờ năng lực và số ngày ân hạn mà seed đã đặt.
+       */
+      ...(isPkg
         ? {
-            assumedMonthlyGmv: {
-              monthlyGmvPerCar: String(values.gmvPerCar),
-              commissionPercent: values.gmvCommission,
-            },
+            limits: {
+              maxVehicles: values.maxVehicles,
+              maxBranches: values.maxBranches,
+              maxMembers: values.maxMembers,
+              // Bậc tư vấn không có bảng giá (ADR 0041 điều 5) — service cũng xoá, nhưng gửi
+              // đúng ngay từ đây thì cái admin thấy sau khi lưu bằng cái họ vừa bấm.
+              termPrices: values.salesOnly
+                ? []
+                : SUBSCRIPTION_TERM_MONTHS.flatMap((months) => {
+                    const price = prices[months];
+                    // Ô trống = KHÔNG bán kỳ hạn đó, khác hẳn với 0đ. `termPrices` vừa là bảng
+                    // giá vừa là danh sách kỳ hạn được bán (ADR 0041 điều 2).
+                    return price == null ? [] : [{ months, price: String(price) }];
+                  }),
+              salesOnly: values.salesOnly,
+              recommended: values.recommended,
+              graceDays: values.graceDays ?? 0,
+              // Narrow về union PlanFeature — yup chỉ biết string[], contract sinh enum literal.
+              features: values.features.filter(isPlanFeature),
+            } satisfies CreatePlanInput['limits'],
           }
         : {}),
-      limits: {
-        perVehiclePrice: {
-          car: isPkg && values.perCarPrice != null ? String(values.perCarPrice) : null,
-          motorbike:
-            isPkg && values.perMotorbikePrice != null ? String(values.perMotorbikePrice) : null,
-        },
-        includedCars: (isPkg ? values.includedCars : 0) ?? 0,
-        includedMotorbikes: (isPkg ? values.includedMotorbikes : 0) ?? 0,
-        maxCars: values.maxCars,
-        maxMotorbikes: values.maxMotorbikes,
-        maxMembers: values.maxMembers,
-        maxBranches: values.maxBranches,
-        terms: SUBSCRIPTION_TERM_MONTHS.map((months) => ({
-          months,
-          discountPercent: discounts[months] ?? 0,
-        })),
-        graceDays: values.graceDays ?? 0,
-        // Narrow về union PlanFeature — yup chỉ biết string[], còn contract sinh enum literal.
-        features: values.features.filter(isPlanFeature),
-      } satisfies CreatePlanInput['limits'],
       sortOrder: values.sortOrder ?? 0,
     };
     const done = {
       onSuccess: () => {
-        setIncentiveError(null);
         message.success(isEdit ? t('form.updatedSuccess') : t('form.createdSuccess'));
         onClose();
       },
-      onError: (err: unknown) => {
-        // Kiểm điểm giao đọc từ MÃ và ghim trong form — toast thoáng qua không đủ cho một
-        // quyết định định giá; lỗi khác vẫn toast như mọi form.
-        if (getErrorCode(err) === API_ERROR_CODE.PLAN_INCENTIVE_INVALID) {
-          setIncentiveError(errorMessage(err));
-        } else {
-          message.error(errorMessage(err));
-        }
-      },
+      onError: (err: unknown) => message.error(errorMessage(err)),
     };
     if (plan) update.mutate({ id: plan.id, ...shared }, done);
     else create.mutate({ code: values.code.trim(), ...shared }, done);
@@ -281,111 +272,162 @@ export function PlanFormModal({
       confirmLoading={pending}
     >
       <DialogForm onSubmit={onSubmit} labelWidth="lg">
+        <Alert
+          type="info"
+          showIcon
+          className={styles.intro}
+          title={isPackage ? t('form.packageIntroTitle') : t('form.commissionIntroTitle')}
+          description={isPackage ? t('form.packageIntroBody') : t('form.commissionIntroBody')}
+        />
+
+        {/*
+          Chế độ thu phí chỉ CHỌN được lúc tạo. Ở chế độ sửa nó là một sự thật đã rồi: backend
+          từ chối mọi lượt đổi chiều (`DEFAULT_PLAN_PROTECTED` / `COMMISSION_PLAN_IS_SINGLETON`
+          — ADR 0038 điều 13), nên một bộ radio ở đây chỉ để dẫn admin tới một thông báo lỗi.
+        */}
         {!isEdit ? (
-          <TextField control={control} name="code" label={t('form.code')} placeholder="basic" />
+          <>
+            <TextField control={control} name="code" label={t('form.code')} placeholder="shop-basic" />
+            <RadioGroupField
+              control={control}
+              name="billingMode"
+              label={t('form.billingMode')}
+              options={[
+                {
+                  value: BILLING_MODE.PACKAGE,
+                  label: domainLabel('billingMode', BILLING_MODE.PACKAGE),
+                  description: t('form.packageHint'),
+                },
+                {
+                  value: BILLING_MODE.COMMISSION,
+                  label: domainLabel('billingMode', BILLING_MODE.COMMISSION),
+                  description: t('form.commissionHint'),
+                },
+              ]}
+            />
+          </>
         ) : null}
+
+        <Divider plain>{t('form.sectionInfo')}</Divider>
         <TextField control={control} name="name" label={t('form.name')} />
         <TextAreaField
           control={control}
           name="description"
           label={t('form.description')}
-          rows={2}
-        />
-
-        <RadioGroupField
-          control={control}
-          name="billingMode"
-          label={t('form.billingMode')}
-          options={[
-            {
-              value: BILLING_MODE.COMMISSION,
-              label: domainLabel('billingMode', BILLING_MODE.COMMISSION),
-              description: t('form.commissionHint'),
-            },
-            {
-              value: BILLING_MODE.PACKAGE,
-              label: domainLabel('billingMode', BILLING_MODE.PACKAGE),
-              description: t('form.packageHint'),
-            },
-          ]}
+          rows={3}
+          maxLength={200}
         />
 
         {!isPackage ? (
-          <NumberField
-            control={control}
-            name="commissionPercent"
-            label={t('form.commissionPercent')}
-            percent
-            min={1}
-            max={20}
-            precision={2}
-          />
-        ) : (
           <>
             <NumberField
               control={control}
-              name="basePriceMonthly"
-              label={t('form.basePriceMonthly')}
-              money
+              name="commissionPercent"
+              label={t('form.commissionPercent')}
+              percent
+              min={1}
+              max={20}
+              precision={2}
+              help={t('form.commissionPercentHelp')}
+            />
+            <Alert
+              type="warning"
+              showIcon
+              className={styles.intro}
+              title={t('form.commissionCustomerSideNote')}
+            />
+            {/*
+              Trần của tuyến hoa hồng là QUY TẮC trong code (`OWNER_LITE_VEHICLE_LIMIT`), không
+              phải dữ liệu của bậc — `vehicleQuotaFor` nhận ra tuyến này trước khi đọc tới
+              `limits`. Hiện nó ra để admin không đi tìm, nhưng KHÔNG cho sửa: một ô nhập ở đây
+              là mời sửa một con số mà backend không đọc.
+            */}
+            <div className={styles.readonlyBox}>
+              <div className={styles.readonlyTitle}>{t('form.sectionLimits')}</div>
+              <div className={styles.readonlyRow}>
+                <span>{t('form.maxVehicles')}</span>
+                <strong>{t('form.vehiclesValue', { count: OWNER_LITE_VEHICLE_LIMIT })}</strong>
+              </div>
+              <div className={styles.readonlyRow}>
+                <span>{t('form.maxBranches')}</span>
+                <strong>{t('form.branchesValue', { count: 1 })}</strong>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <Divider plain>{t('form.sectionLimits')}</Divider>
+            <NumberField
+              control={control}
+              name="maxVehicles"
+              label={t('form.maxVehicles')}
               min={0}
+              addonAfter={t('form.vehiclesUnit')}
+              help={t('form.unlimitedHelp')}
+            />
+            <NumberField
+              control={control}
+              name="maxBranches"
+              label={t('form.maxBranches')}
+              min={0}
+              addonAfter={t('form.branchesUnit')}
+              help={t('form.unlimitedHelp')}
             />
 
-            <Divider plain>{t('form.sectionSlots')}</Divider>
-            <NumberField
+            <Divider plain>{t('form.sectionSales')}</Divider>
+            <SwitchField
               control={control}
-              name="perCarPrice"
-              label={t('form.perCarPrice')}
-              money
-              min={0}
-              help={t('form.perPriceHelp')}
+              name="salesOnly"
+              label={t('form.salesOnly')}
+              description={t('form.salesOnlyHint')}
             />
-            <NumberField
+            <SwitchField
               control={control}
-              name="perMotorbikePrice"
-              label={t('form.perMotorbikePrice')}
-              money
-              min={0}
-              help={t('form.perPriceHelp')}
-            />
-            <NumberField
-              control={control}
-              name="includedCars"
-              label={t('form.includedCars')}
-              min={0}
-            />
-            <NumberField
-              control={control}
-              name="includedMotorbikes"
-              label={t('form.includedMotorbikes')}
-              min={0}
-            />
-            <NumberField
-              control={control}
-              name="maxCars"
-              label={t('form.maxCars')}
-              min={0}
-              help={t('form.maxHelp')}
-            />
-            <NumberField
-              control={control}
-              name="maxMotorbikes"
-              label={t('form.maxMotorbikes')}
-              min={0}
-              help={t('form.maxHelp')}
+              name="recommended"
+              label={t('form.recommended')}
+              description={t('form.recommendedHint')}
             />
 
-            <Divider plain>{t('form.sectionTerms')}</Divider>
-            {TERM_FIELDS.map(([field, months]) => (
-              <NumberField
-                key={field}
-                control={control}
-                name={field}
-                label={t('form.termDiscount', { months })}
-                percent
-                min={0}
-                max={100}
+            {salesOnly ? (
+              <Alert
+                type="info"
+                showIcon
+                className={styles.intro}
+                title={t('form.salesOnlyNoPricing')}
               />
-            ))}
+            ) : (
+              <>
+                <Divider plain>{t('form.sectionPricing')}</Divider>
+                {TERM_FIELDS.map(([field, months]) => (
+                  <NumberField
+                    key={field}
+                    control={control}
+                    name={field}
+                    label={t('form.termPrice', { months })}
+                    labelAccessory={savingTag(monthlyPrice, termPriceOfField[field], months)}
+                    money
+                    min={0}
+                    help={t('form.termPriceHelp')}
+                  />
+                ))}
+                <p className={styles.pricingNote}>
+                  {monthlyPrice
+                    ? t('form.pricingReference', {
+                        amount: fmt.money(String(monthlyPrice)),
+                      })
+                    : t('form.pricingReferenceEmpty')}
+                </p>
+              </>
+            )}
+
+            <Divider plain>{t('form.sectionOther')}</Divider>
+            <NumberField
+              control={control}
+              name="maxMembers"
+              label={t('form.maxMembers')}
+              min={0}
+              help={t('form.unlimitedHelp')}
+            />
             <NumberField
               control={control}
               name="graceDays"
@@ -393,61 +435,44 @@ export function PlanFormModal({
               min={0}
               addonAfter={t('form.graceDaysUnit')}
             />
-
-            <Divider plain>{t('form.sectionIncentive')}</Divider>
-            <Alert type="info" showIcon title={t('form.gmvReferenceNote')} />
-            <NumberField
+            <CheckboxGroupField
               control={control}
-              name="gmvPerCar"
-              label={t('form.assumedGmv')}
-              money
-              min={0}
+              name="features"
+              label={t('form.features')}
+              options={PLAN_FEATURE_VALUES.map((feature) => ({
+                value: feature,
+                label: domainLabel('planFeature', feature),
+              }))}
             />
-            <NumberField
-              control={control}
-              name="gmvCommission"
-              label={t('form.assumedCommission')}
-              percent
-              min={1}
-              max={20}
-              precision={2}
-            />
+            <NumberField control={control} name="sortOrder" label={t('form.sortOrder')} />
           </>
         )}
-
-        <Divider plain>{t('form.sectionOther')}</Divider>
-        <NumberField
-          control={control}
-          name="maxMembers"
-          label={t('form.maxMembers')}
-          min={0}
-          help={t('form.maxHelp')}
-        />
-        <NumberField
-          control={control}
-          name="maxBranches"
-          label={t('form.maxBranches')}
-          min={0}
-          help={t('form.maxHelp')}
-        />
-        <CheckboxGroupField
-          control={control}
-          name="features"
-          label={t('form.features')}
-          options={PLAN_FEATURE_VALUES.map((feature) => ({
-            value: feature,
-            label: domainLabel('planFeature', feature),
-          }))}
-        />
-        <NumberField control={control} name="sortOrder" label={t('form.sortOrder')} />
-
-        {incentiveError ? <Alert type="error" showIcon title={incentiveError} /> : null}
       </DialogForm>
     </ResponsiveDialog>
   );
+
+  /**
+   * Nhãn "Tiết kiệm N%" cạnh một ô giá — CÙNG công thức với `planTermSavingPercent` ở
+   * `@xeprime/types`, chỉ khác đầu vào: ở đây là con số đang gõ dở trong form, chưa lưu.
+   *
+   * Không gọi thẳng hàm đó vì nó nhận một `PlanLimitsJson` đã chốt hình, còn cái admin cần thấy
+   * là biểu giá mình ĐANG đặt ra. Công thức chỉ là một phép chia, và giữ nó ở đây tránh phải
+   * dựng một `limits` giả sau mỗi phím gõ.
+   */
+  function savingTag(
+    monthly: number | null | undefined,
+    total: number | null | undefined,
+    months: number,
+  ) {
+    if (months <= 1 || !monthly || !total) return undefined;
+    const saving = Math.round((1 - total / (monthly * months)) * 100);
+    if (saving <= 0) return undefined;
+    return <Tag color="green">{t('form.termSaving', { percent: saving })}</Tag>;
+  }
 }
 
-/** % giảm của kỳ `months` trong gói đang sửa — kỳ chưa khai báo hiện null (ô trống). */
-function termDiscountOf(plan: Plan, months: number): number | null {
-  return plan.limits.terms.find((term) => term.months === months)?.discountPercent ?? null;
+/** Giá kỳ `months` của gói đang sửa — kỳ không bán hiện ô TRỐNG, không phải 0. */
+function termPriceOf(plan: Plan, months: number): number | null {
+  const found = plan.limits.termPrices.find((term) => term.months === months);
+  return found ? Number(found.price) : null;
 }

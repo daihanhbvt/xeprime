@@ -83,8 +83,7 @@ function payload(over: Partial<Record<string, unknown>> = {}): Record<string, un
 async function issueInvoice(termMonths = 3) {
   return billing.purchase(tenantId, ownerId, {
     planId,
-    termMonths,
-    slots: { car: 5, motorbike: 0 },
+    termMonths
   });
 }
 
@@ -135,17 +134,11 @@ beforeAll(async () => {
       billingMode: BILLING_MODE.PACKAGE,
       basePriceMonthly: new Prisma.Decimal(1_000_000),
       status: PLAN_STATUS.ACTIVE,
-      price: 0,
-      durationDays: 30,
       limitsJson: {
-        perVehiclePrice: { car: '100000', motorbike: '40000' },
-        includedCars: 5,
-        includedMotorbikes: 0,
-        maxCars: null,
-        maxMotorbikes: null,
-        maxMembers: null,
+        maxVehicles: null,
+                maxMembers: null,
         maxBranches: null,
-        terms: [{ months: 3, discountPercent: 0 }],
+        termPrices: [{ months: 3, price: '300000' }],
         graceDays: 7,
         features: [],
       } as unknown as Prisma.InputJsonValue,
