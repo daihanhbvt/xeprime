@@ -62740,13 +62740,21 @@
           "phone": {
             "type": "string",
             "nullable": true
+          },
+          "shopKind": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "shop"
+            ]
           }
         },
         "required": [
           "name",
           "slug",
           "ratingAvg",
-          "ratingCount"
+          "ratingCount",
+          "shopKind"
         ]
       },
       "CustomerTripVehicleDto": {

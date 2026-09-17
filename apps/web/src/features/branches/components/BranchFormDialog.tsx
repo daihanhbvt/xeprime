@@ -94,7 +94,13 @@ export function BranchFormDialog({
     const payload = {
       name: values.name,
       provinceCode: values.provinceCode,
-      wardCode: values.wardCode,
+      /*
+       * Chuỗi RỖNG không được gửi. DTO khai `@IsOptional()` kèm `@Length(5, 5)`, mà `@IsOptional`
+       * chỉ bỏ qua `null`/`undefined` — một `''` vẫn đi vào `@Length` và bật lỗi 400. Từ ADR 0042
+       * form không còn ô Xã/phường nên chi nhánh MỚI luôn để trống trường này; chi nhánh cũ đã có
+       * mã thì giữ nguyên mã đó.
+       */
+      wardCode: values.wardCode || undefined,
       addressLine: values.addressLine || undefined,
       placeId: values.placeId ?? undefined,
       latitude: values.latitude ?? undefined,
@@ -151,6 +157,13 @@ export function BranchFormDialog({
           names={ADDRESS_FIELD_NAMES}
           pin={ADDRESS_PIN_NAMES}
           required
+          /*
+           * Chỉ TẠO MỚI mới điền sẵn tỉnh đã nhớ. Ở chế độ SỬA, ô tỉnh trống nghĩa là chi nhánh
+           * này có từ trước danh mục hành chính (ADR 0035 điều 7) — điền vào đó tỉnh mà người
+           * dùng vừa xem ở nơi khác sẽ dời một địa điểm vận hành có thật sang tỉnh khác, âm thầm,
+           * chỉ vì họ bấm Lưu.
+           */
+          prefillRememberedProvince={!branch}
         />
         <TextField
           control={control}

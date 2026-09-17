@@ -56,6 +56,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0039](0039-hold-before-acceptance.md) | Khách trả giữ chỗ TRƯỚC khi gian hàng duyệt; cửa sổ 10 phút + 2 lần tự gia hạn | **Accepted; ghi đè 0032 điều 2 và 0027 điều 2 trong phạm vi công tắc cọc** |
 | [0040](0040-registration-track-split.md) | Hai tuyến ĐĂNG KÝ tách hẳn: ý định lưu ở `tenants.onboarding_state`, thanh toán mở Manage, cổng logo chỉ áp tuyến gói | **Accepted; ghi đè 0036 điều 4 (xác minh thôi làm cổng mua gói)** |
 | [0041](0041-plan-tiers-by-vehicle-count.md) | Ba bậc gian hàng bán theo SỐ XE và KỲ HẠN; bậc doanh nghiệp bán bằng tư vấn | **Accepted; ghi đè 0029 điều 3, 0015 điều 1/3/8, và 0038 điều 12 ở phần cách đếm tuyến gói** |
+| [0042](0042-confirmed-place-address-for-renters.md) | Địa chỉ có ghim phải được bản đồ xác nhận; bỏ hẳn ô xã/phường ở mọi ô địa chỉ có ghim; tỉnh đã chọn nhớ dùng chung | **Accepted; ghi đè 0035 điều 3 (phần xã/phường) và điều 5** |
 
 ## Quy tắc thêm ADR
 

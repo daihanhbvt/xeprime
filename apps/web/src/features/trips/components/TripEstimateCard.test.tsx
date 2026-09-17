@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { describe, expect, it } from 'vitest';
 import viMessages from '../../../../messages/vi';
@@ -46,6 +46,8 @@ function renderCard(opts: { isHost?: boolean; settled?: boolean } = {}) {
 describe('TripEstimateCard', () => {
   it('KHÁCH không thấy dòng thuế của chủ xe, nhưng thấy phí dịch vụ mình trả', () => {
     renderCard();
+    // Bảng kê từng dòng nằm sau nút "Xem chi tiết giá" — mở ra trước khi đọc dòng phí.
+    fireEvent.click(screen.getByText('Xem chi tiết giá'));
 
     expect(screen.getByText('Phí dịch vụ XePrime')).toBeTruthy();
     // Thuế do CHỦ XE chịu — khách không trả, nên không được bày ra giữa hoá đơn của họ.
@@ -55,6 +57,7 @@ describe('TripEstimateCard', () => {
 
   it('CHỦ XE thấy đủ cả dòng thuế lẫn số thực nhận — đó là thứ giải thích doanh thu của họ', () => {
     renderCard({ isHost: true });
+    fireEvent.click(screen.getByText('Xem chi tiết giá'));
 
     expect(screen.getByText(/Thuế/)).toBeTruthy();
     // Hai chỗ: nhãn nhỏ dưới dòng thuế, và dòng tổng thực nhận ở chân thẻ.

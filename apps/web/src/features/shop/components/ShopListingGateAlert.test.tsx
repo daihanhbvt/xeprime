@@ -65,10 +65,10 @@ describe('packageShopListingGateFrom', () => {
     expect(
       isLogoOnlyGate([
         PACKAGE_SHOP_LISTING_REQUIREMENT.LOGO,
-        PACKAGE_SHOP_LISTING_REQUIREMENT.WARD,
+        PACKAGE_SHOP_LISTING_REQUIREMENT.PROVINCE,
       ]),
     ).toBe(false);
-    expect(isLogoOnlyGate([PACKAGE_SHOP_LISTING_REQUIREMENT.WARD])).toBe(false);
+    expect(isLogoOnlyGate([PACKAGE_SHOP_LISTING_REQUIREMENT.PROVINCE])).toBe(false);
   });
 });
 
@@ -87,7 +87,7 @@ describe('ShopListingGateAlert', () => {
     render(
       <ShopListingGateAlert
         missing={[
-          PACKAGE_SHOP_LISTING_REQUIREMENT.WARD,
+          PACKAGE_SHOP_LISTING_REQUIREMENT.PROVINCE,
           PACKAGE_SHOP_LISTING_REQUIREMENT.CONTACT_PHONE,
           PACKAGE_SHOP_LISTING_REQUIREMENT.LOGO,
         ]}
@@ -95,11 +95,11 @@ describe('ShopListingGateAlert', () => {
     );
 
     expect(screen.getByText('Hồ sơ gian hàng còn thiếu thông tin')).toBeTruthy();
-    expect(screen.getByText('Xã/phường')).toBeTruthy();
+    expect(screen.getByText('Tỉnh/thành')).toBeTruthy();
     expect(screen.getByText('Số điện thoại liên hệ')).toBeTruthy();
     expect(screen.getByText('Logo gian hàng')).toBeTruthy();
     // Không mã nào lọt ra giao diện ở dạng chữ trần.
-    for (const code of ['ward', 'contactPhone', 'logo']) {
+    for (const code of ['province', 'contactPhone', 'logo']) {
       expect(screen.queryByText(code)).toBeNull();
     }
   });

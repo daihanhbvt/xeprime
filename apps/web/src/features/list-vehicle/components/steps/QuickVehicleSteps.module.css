@@ -87,3 +87,31 @@
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
 }
+
+/*
+ * Địa chỉ xe: một dòng chữ + nút sửa ở cuối dòng. Nút là `Button type="link"` của AntD nên phải
+ * gỡ padding ngang, nếu không nó thụt khỏi mép phải so với các ô nhập cùng khối.
+ */
+.addressRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.address {
+  margin: 0;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.addressEdit {
+  flex-shrink: 0;
+  height: auto;
+  padding: 0;
+}
+
+.addressError {
+  margin: 0;
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-body-sm);
+}

@@ -321,10 +321,13 @@ describe('2. Tuyến GÓI — ý định lưu bền vững, KHÔNG thành Owner 
   /*
    * Bộ trường của tuyến gói kiểm bằng CHÍNH quy tắc mà cổng đăng xe dùng
    * (`missingPackageShopRegistrationFields` = `missingPackageShopListingRequirements` trừ logo),
-   * nên hai lớp không thể lệch nhau. Ba ca dưới đây là ba trường bị thiếu, từng cái một.
+   * nên hai lớp không thể lệch nhau. Hai ca dưới đây là hai trường bị thiếu, từng cái một.
+   *
+   * `wardCode` KHÔNG còn trong bộ này (ADR 0042): không màn hình nào hỏi xã/phường cho một địa
+   * chỉ có ghim, nên đòi nó ở đây là từ chối đúng payload mà giao diện gửi lên.
    */
   maybe(
-    'thiếu xã / địa chỉ / SĐT ⇒ 400 kèm details.missing là MÃ, không phải câu tiếng Việt',
+    'thiếu địa chỉ / SĐT ⇒ 400 kèm details.missing là MÃ, không phải câu tiếng Việt',
     async () => {
       const base = {
         name: 'Gian hàng Bình Minh',
@@ -336,7 +339,6 @@ describe('2. Tuyến GÓI — ý định lưu bền vững, KHÔNG thành Owner 
       };
 
       for (const [field, expected] of [
-        ['wardCode', PACKAGE_SHOP_LISTING_REQUIREMENT.WARD],
         ['addressLine', PACKAGE_SHOP_LISTING_REQUIREMENT.ADDRESS],
         ['phone', PACKAGE_SHOP_LISTING_REQUIREMENT.CONTACT_PHONE],
       ] as const) {

@@ -12,13 +12,12 @@ import {
   TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Alert, Button, Form } from 'antd';
+import { Button, Form } from 'antd';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
-import { REGISTRATION_TRACK, TENANT_TYPE } from '@xeprime/types';
 import { ownerProfileSchema, type OwnerProfileValues } from '@xeprime/validators';
 
 import { AddressField } from '@/components/form/AddressField';
@@ -28,10 +27,8 @@ import { trailingRequiredMark } from '@/components/form/required-mark';
 import { ROUTES, vehicleListPathFor, type VehicleRegistrationSource } from '@/constants/routes';
 import { ContactVerifyModal } from '@/features/account/components/ContactVerifyModal';
 import { CONTACT_CHANNEL } from '@/features/account/types';
-import { useRegisterShop, useUpdateShopProfile } from '@/features/shop/hooks/use-shop';
 import { VehicleWizard, type WizardStep } from '@/features/vehicles/components/VehicleWizard';
 import { useCurrentUser } from '@/hooks/use-current-user';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 
 import styles from './QuickVehicleOwnerStep.module.css';
@@ -43,8 +40,12 @@ interface QuickVehicleOwnerStepProps {
   /** Thanh bước của CẢ wizard — truyền vào để đánh số không nhảy khi sang bước sau. */
   steps: readonly WizardStep[];
   source: VehicleRegistrationSource;
-  /** Hồ sơ đã tạo xong — nơi gọi chuyển sang bước "Thông tin xe". */
-  onCreated: () => void;
+  /** Giá trị đã khai ở lần trước — quay lại sửa địa chỉ thì không phải gõ lại từ đầu. */
+  defaultValues?: OwnerProfileValues | null;
+  /** Khai xong — nơi gọi GIỮ giá trị này và chuyển sang bước "Thông tin xe". */
+  onCompleted: (values: OwnerProfileValues) => void;
+  /** Nhãn nút chính: lần đầu là "Tiếp tục", lúc quay lại sửa thì là "Lưu". */
+  submitLabel?: string;
 }
 
 /**
@@ -65,16 +66,32 @@ interface QuickVehicleOwnerStepProps {
  * Một ô gõ tự do ở đây tạo ra số thứ hai không ai kiểm chứng, ngay cạnh số đã xác thực của
  * cùng người đó — và khách sẽ gọi vào đúng cái số không ai kiểm chứng.
  *
- * API vẫn là `POST /tenants` như gian hàng: theo ADR 0014/0024, cái phân biệt hai tuyến là GÓI
- * đang có hiệu lực, không phải một loại tenant riêng. Chủ xe cá nhân = tenant chưa có gói.
+ * ## ⚠️ BƯỚC NÀY KHÔNG GỌI API (17/09/2026)
+ *
+ * Trước đây nó gọi thẳng `POST /tenants` khi người dùng bấm "Tiếp tục", và đó là một lỗi thật:
+ * chỉ cần điền xong màn này rồi F5 hay bấm về trang chủ là tài khoản ĐÃ thành chủ xe — có gian
+ * hàng, có chi nhánh mặc định, có gói hoa hồng, và menu `/account` đổi hẳn sang menu chủ xe
+ * (`resolveAccountNav` → `OWNER_REGISTERING_NAV`) — dù họ chưa khai một chiếc xe nào. Một cú
+ * bấm nhầm đẻ ra một pháp nhân.
+ *
+ * Giờ bước này chỉ THU THẬP: giá trị đi lên wizard, nằm trong nháp `sessionStorage`, và
+ * `POST /tenants` chạy ở CHÍNH lần lưu chiếc xe (`useQuickVehicleRegistration`). Bỏ dở giữa
+ * chừng không để lại gì trên server.
+ *
+ * Gian hàng vẫn mở bằng `POST /tenants` như mọi tuyến: theo ADR 0014/0024, cái phân biệt hai
+ * tuyến là GÓI đang có hiệu lực, không phải một loại tenant riêng. Chủ xe cá nhân = tenant chưa
+ * có gói.
  */
-export function QuickVehicleOwnerStep({ steps, source, onCreated }: QuickVehicleOwnerStepProps) {
+export function QuickVehicleOwnerStep({
+  steps,
+  source,
+  defaultValues,
+  onCompleted,
+  submitLabel,
+}: QuickVehicleOwnerStepProps) {
   const t = useTranslations('ListYourVehicle.ownerProfile');
   const tCommon = useTranslations('Common.actions');
   const { data: user } = useCurrentUser();
-  const register = useRegisterShop();
-  const updateProfile = useUpdateShopProfile();
-  const errorMessage = useErrorMessage();
   const [verifyOpen, setVerifyOpen] = useState(false);
 
   const phone = user?.phone ?? null;
@@ -86,7 +103,7 @@ export function QuickVehicleOwnerStep({ steps, source, onCreated }: QuickVehicle
   );
   const { control, handleSubmit } = useForm<OwnerProfileValues>({
     resolver,
-    defaultValues: {
+    defaultValues: defaultValues ?? {
       name: user?.displayName ?? '',
       provinceCode: '',
       wardCode: '',
@@ -100,53 +117,10 @@ export function QuickVehicleOwnerStep({ steps, source, onCreated }: QuickVehicle
     },
   });
 
-  const submit = handleSubmit(async (values) => {
+  const submit = handleSubmit((values) => {
     // Nút đã bị khoá khi chưa xác thực; chặn lần hai ở đây vì Enter trong ô nhập cũng submit.
     if (!phoneVerified || !phone) return;
-
-    try {
-      await register.mutateAsync({
-        name: values.name,
-        tenantType: TENANT_TYPE.INDIVIDUAL,
-        /*
-         * CỬA VÀO tường minh (ADR 0040) — wizard này LÀ tuyến hoa hồng, và nói ra điều đó rẻ hơn
-         * hẳn so với dựa vào giá trị mặc định của server: nếu mặc định đổi, một chủ xe cá nhân sẽ
-         * âm thầm rơi vào luồng chờ thanh toán gói.
-         */
-        registrationTrack: REGISTRATION_TRACK.COMMISSION,
-        provinceCode: values.provinceCode,
-        wardCode: values.wardCode,
-        addressLine: values.addressLine,
-        // Ghim toạ độ đi kèm địa chỉ: nó quyết định phí giao xe và chỗ tài xế lái tới.
-        placeId: values.placeId ?? undefined,
-        latitude: values.latitude ?? undefined,
-        longitude: values.longitude ?? undefined,
-        locationSource: values.locationSource ?? undefined,
-        phone,
-        email: values.email || undefined,
-      });
-    } catch {
-      // Lỗi đã hiện bằng `register.isError` ngay trên form — không đi tiếp, không nuốt im lặng.
-      return;
-    }
-
-    /*
-     * Giới thiệu ngắn KHÔNG nằm trong `POST /tenants`: DTO đăng ký chỉ nhận những thứ bắt buộc
-     * để mở được hồ sơ. Nó đi bằng một lần `PATCH /tenants/current/profile` ngay sau đó.
-     *
-     * Hỏng ở bước này cố ý KHÔNG chặn luồng: hồ sơ đã tồn tại, chiếc xe vẫn đăng được, và đoạn
-     * giới thiệu là tuỳ chọn sửa lại lúc nào cũng được. Bắt người dùng làm lại từ đầu vì một
-     * đoạn văn không bắt buộc là đánh đổi sai.
-     */
-    if (values.bio) {
-      try {
-        await updateProfile.mutateAsync({ bio: values.bio });
-      } catch {
-        // Bỏ qua có chủ đích — xem docblock ngay trên.
-      }
-    }
-
-    onCreated();
+    onCompleted(values);
   });
 
   const footer = (
@@ -154,13 +128,8 @@ export function QuickVehicleOwnerStep({ steps, source, onCreated }: QuickVehicle
       <Link href={vehicleListPathFor(source)}>
         <Button icon={<ArrowLeftOutlined />}>{tCommon('cancel')}</Button>
       </Link>
-      <Button
-        type="primary"
-        htmlType="submit"
-        loading={register.isPending || updateProfile.isPending}
-        disabled={!phoneVerified}
-      >
-        {tCommon('next')}
+      <Button type="primary" htmlType="submit" disabled={!phoneVerified}>
+        {submitLabel ?? tCommon('next')}
       </Button>
     </>
   );
@@ -210,16 +179,6 @@ export function QuickVehicleOwnerStep({ steps, source, onCreated }: QuickVehicle
             <p className={styles.publicNote}>
               <CheckCircleFilled aria-hidden="true" /> {t('publicNote')}
             </p>
-
-            {register.isError ? (
-              <Alert
-                type="error"
-                showIcon
-                role="alert"
-                className={styles.alert}
-                title={errorMessage(register.error)}
-              />
-            ) : null}
 
             <div className={styles.grid}>
               <div className={styles.column}>
@@ -340,6 +299,11 @@ export function QuickVehicleOwnerStep({ steps, source, onCreated }: QuickVehicle
                   longitude: 'longitude',
                   locationSource: 'locationSource',
                 }}
+                /*
+                 * Form TẠO MỚI: điền sẵn tỉnh người dùng vừa chọn ở nơi khác (thanh tìm xe). Chủ
+                 * xe đăng xe đầu tiên gần như luôn ở đúng tỉnh họ vừa xem.
+                 */
+                prefillRememberedProvince
               />
             </div>
 

@@ -180,7 +180,9 @@
       "holdHint": "Transferred to XePrime to confirm the trip. The remaining rental is paid directly to the host at pickup.",
       "payAtHandover": "Pay the host at pickup",
       "feesNote": "Every line names who receives it. Final amounts are locked when the host approves.",
-      "noFees": "No extra charges on this trip."
+      "noFees": "No extra charges on this trip.",
+      "viewDetails": "View price details",
+      "collapse": "Collapse"
     },
     "filterBar": {
       "allOf": "{label}: All",

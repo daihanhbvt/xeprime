@@ -91,7 +91,9 @@ export function TripHoldPanel({ hold, tripId }: { hold: Hold; tripId: string }) 
             <>
               <div className={styles.row}>
                 <dt>{t('bank')}</dt>
-                <dd>{info.bankCode}</dd>
+                <dd>
+                  <span>{info.bankCode}</span>
+                </dd>
               </div>
               <div className={styles.row}>
                 <dt>{t('accountNumber')}</dt>
@@ -104,7 +106,9 @@ export function TripHoldPanel({ hold, tripId }: { hold: Hold; tripId: string }) 
               </div>
               <div className={styles.row}>
                 <dt>{t('accountName')}</dt>
-                <dd>{info.accountName}</dd>
+                <dd>
+                  <span>{info.accountName}</span>
+                </dd>
               </div>
             </>
           ) : null}

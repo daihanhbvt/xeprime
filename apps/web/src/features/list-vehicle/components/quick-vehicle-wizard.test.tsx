@@ -1,7 +1,15 @@
 import { App } from 'antd';
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { API_ERROR_CODE, PERMISSION, PUBLISH_REQUIREMENT, VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
+import { useController, type Control } from 'react-hook-form';
+import {
+  API_ERROR_CODE,
+  PERMISSION,
+  PUBLISH_REQUIREMENT,
+  REGISTRATION_TRACK,
+  VEHICLE_PUBLIC_STATUS,
+} from '@xeprime/types';
+import type { OwnerProfileValues } from '@xeprime/validators';
 import { ApiClientError } from '@xeprime/api-client';
 
 import { VEHICLE_REGISTRATION_SOURCE } from '@/constants/routes';
@@ -51,20 +59,71 @@ vi.mock('@/hooks/use-permissions', () => ({
  * giả — test này hỏi "bước hồ sơ có hiện không", không hỏi "ô địa chỉ chạy thế nào".
  */
 vi.mock('@/components/form/AddressField', () => ({
-  AddressField: ({ title }: { title?: string }) => <div data-testid="address-field">{title}</div>,
+  AddressField: ({
+    control,
+    names,
+  }: {
+    control: Control<OwnerProfileValues>;
+    names: { provinceCode: 'provinceCode'; addressLine: 'addressLine' };
+  }) => <AddressFieldStub control={control} names={names} />,
 }));
 
-const registerShop = vi.hoisted(() => ({
-  mutate: vi.fn(),
-  mutateAsync: vi.fn(),
-  isPending: false,
-  isError: false,
-  error: null,
+/*
+ * Ô địa chỉ thật gọi danh mục hành chính + bản đồ và đã có test riêng. Bản giả ở đây chỉ cần
+ * GHI ĐƯỢC giá trị vào form: `ownerProfileSchema` đòi mã tỉnh, nên một stub chỉ hiện chữ sẽ
+ * khiến bước hồ sơ không bao giờ hợp lệ và mọi test sau nó kẹt ở màn đầu.
+ */
+function AddressFieldStub({
+  control,
+  names,
+}: {
+  control: Control<OwnerProfileValues>;
+  names: { provinceCode: 'provinceCode'; addressLine: 'addressLine' };
+}) {
+  const province = useController({ control, name: names.provinceCode });
+  const line = useController({ control, name: names.addressLine });
+  return (
+    <div data-testid="address-field">
+      <label>
+        Tỉnh/thành
+        <input
+          value={province.field.value ?? ''}
+          onChange={(e) => province.field.onChange(e.target.value)}
+        />
+      </label>
+      <label>
+        Địa chỉ
+        <input
+          value={line.field.value ?? ''}
+          onChange={(e) => line.field.onChange(e.target.value)}
+        />
+      </label>
+    </div>
+  );
+}
+
+/* Danh mục hành chính: test không dựng `QueryClientProvider`, chốt hai hook ở danh sách rỗng. */
+vi.mock('@/features/locations/hooks/use-provinces', () => ({
+  useProvinceOptions: () => ({ options: [{ value: '79', label: 'TP Hồ Chí Minh' }] }),
 }));
-const updateShopProfile = vi.hoisted(() => ({ mutateAsync: vi.fn(), isPending: false }));
-vi.mock('@/features/shop/hooks/use-shop', () => ({
-  useRegisterShop: () => registerShop,
-  useUpdateShopProfile: () => updateShopProfile,
+vi.mock('@/features/locations/hooks/use-wards', () => ({
+  useWardOptions: () => ({ options: [] }),
+}));
+
+/**
+ * `POST /tenants` và `PATCH /tenants/current/profile` ở mức API, không phải mock hook.
+ *
+ * Từ 17/09/2026 bước "Hồ sơ chủ xe" KHÔNG gọi API nào — gian hàng mở trong cùng lần lưu chiếc
+ * xe (`useQuickVehicleRegistration`). Đếm ở đây là cách chứng minh đúng điều đó.
+ */
+const shopApi = vi.hoisted(() => ({
+  registerShop: vi.fn(),
+  updateShopProfile: vi.fn(),
+}));
+vi.mock('@/features/shop/api', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  registerShop: (...args: unknown[]) => shopApi.registerShop(...args),
+  updateShopProfile: (...args: unknown[]) => shopApi.updateShopProfile(...args),
 }));
 
 /* Hộp xác thực OTP có luồng API riêng và đã được test ở feature tài khoản. */
@@ -72,14 +131,29 @@ vi.mock('@/features/account/components/ContactVerifyModal', () => ({
   ContactVerifyModal: () => null,
 }));
 
+/**
+ * Chi nhánh — thay đổi được theo từng test vì bước "Địa chỉ xe" có hai hình dạng: MỘT chi nhánh
+ * thì không có gì để chọn (chủ xe cá nhân tuyến hoa hồng), NHIỀU thì mới có bộ chọn.
+ */
+const BRANCH_1 = {
+  id: 'b1',
+  name: 'Chi nhánh 1',
+  provinceName: 'Hồ Chí Minh',
+  address: '12 Nguyễn Huệ, Phường Bến Nghé, Hồ Chí Minh',
+  isDefault: true,
+  vehicleCount: 0,
+};
+const branches = vi.hoisted(() => ({
+  data: { items: [] as unknown[] },
+  isLoading: false,
+  isError: false,
+  refetch: vi.fn(),
+}));
 vi.mock('@/features/branches/hooks/use-branches', () => ({
-  useActiveBranches: () => ({
-    data: {
-      items: [{ id: 'b1', name: 'Chi nhánh 1', provinceName: 'Hồ Chí Minh', isDefault: true }],
-    },
-    isLoading: false,
-    isError: false,
-  }),
+  useActiveBranches: () => branches,
+  useBranches: () => branches,
+  useCreateBranch: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUpdateBranch: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 /** Danh mục thật đến từ API — mock trả đúng bộ của TỪNG loại, không phải một danh sách chung. */
@@ -99,6 +173,20 @@ vi.mock('@/features/catalog/use-catalog', () => ({
           { value: 'hybrid', label: 'Hybrid' },
         ]
       : [{ value: 'toyota', label: 'Toyota' }],
+}));
+
+/*
+ * Tải ảnh: `uploadImage` thật sẽ PUT lên R2. Bản giả ở đây GỌI ĐÚNG `presign` được truyền vào —
+ * đó chính là chỗ wizard chèn bước mở gian hàng cho người chưa có, nên không được đi vòng qua nó.
+ */
+const upload = vi.hoisted(() => ({ presign: vi.fn() }));
+vi.mock('@/services/upload', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  presignVehicleImage: (...args: unknown[]) => upload.presign(...args),
+  uploadImage: async (file: File, presign: (f: File) => Promise<unknown>) => {
+    await presign(file);
+    return 'https://cdn.xeprime.test/anh-xe.jpg';
+  },
 }));
 
 /** API biên: đếm số lần gọi để chứng minh retry không tạo xe thứ hai. */
@@ -139,6 +227,13 @@ vi.mock('@tanstack/react-query', async (importOriginal) => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn(), setQueryData: vi.fn() }),
 }));
 
+/** `POST /tenants` trả về hồ sơ gian hàng KÈM chi nhánh mặc định — xe mới gắn thẳng vào đó. */
+const SHOP = {
+  id: 't1',
+  name: 'Chủ xe',
+  defaultBranch: { id: 'b-new', name: 'Chi nhánh TP Hồ Chí Minh' },
+};
+
 const VEHICLE = {
   id: 'v1',
   name: 'Toyota Vios 2023',
@@ -154,6 +249,37 @@ function render(source = VEHICLE_REGISTRATION_SOURCE.MARKETPLACE) {
 }
 
 /** Điền tối thiểu để qua bước 1 và bước 2 rồi tới bước ảnh. */
+/**
+ * Khai xong bước "Hồ sơ chủ xe" của người CHƯA có gian hàng.
+ *
+ * Đặt `currentUser.data.tenant = null` TRƯỚC khi gọi `render()`.
+ */
+async function fillOwnerStep() {
+  fireEvent.change(screen.getByLabelText('Tỉnh/thành'), { target: { value: '79' } });
+  fireEvent.change(screen.getByLabelText('Địa chỉ'), {
+    target: { value: '12 Nguyễn Huệ' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: /Tiếp tục/ }));
+  await screen.findByText('1. Thông tin xe');
+}
+
+async function gotoRentalStep() {
+  fireEvent.change(screen.getByLabelText(/Biển số xe/), { target: { value: '51H-123.45' } });
+  fireEvent.change(screen.getByLabelText(/Tên hiển thị/), {
+    target: { value: 'Toyota Vios 2023' },
+  });
+  fireEvent.mouseDown(screen.getByLabelText(/Nguồn năng lượng|Nhiên liệu/));
+  fireEvent.click(await screen.findByText('Xăng'));
+  fireEvent.change(await screen.findByLabelText(/Mức tiêu thụ nhiên liệu/), {
+    target: { value: '7.5' },
+  });
+  fireEvent.mouseDown(screen.getByLabelText(/Hộp số/));
+  fireEvent.click(await screen.findByText('Số tự động (AT)'));
+
+  fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+  await screen.findByText('2. Thiết lập cho thuê');
+}
+
 async function fillToLastStep() {
   fireEvent.change(screen.getByLabelText(/Biển số xe/), { target: { value: '51H-123.45' } });
   fireEvent.change(screen.getByLabelText(/Tên hiển thị/), {
@@ -177,9 +303,18 @@ async function fillToLastStep() {
 }
 
 beforeEach(() => {
+  sessionStorage.clear();
   permissions.granted = new Set([PERMISSION.VEHICLE_CREATE]);
-  registerShop.mutate.mockReset();
-  registerShop.mutateAsync.mockReset();
+  branches.data = { items: [BRANCH_1] };
+  branches.isLoading = false;
+  branches.isError = false;
+  branches.refetch.mockReset();
+  shopApi.registerShop.mockReset();
+  shopApi.registerShop.mockResolvedValue(SHOP);
+  shopApi.updateShopProfile.mockReset();
+  shopApi.updateShopProfile.mockResolvedValue(SHOP);
+  upload.presign.mockReset();
+  upload.presign.mockResolvedValue({ uploadUrl: 'https://r2.test/put', publicUrl: 'https://cdn.xeprime.test/anh-xe.jpg' });
   currentUser.data = {
     id: 'u1',
     displayName: 'Chủ xe',
@@ -246,7 +381,7 @@ describe('Cửa vào', () => {
 
     expect(screen.getByText('Tài khoản chưa có số điện thoại')).toBeTruthy();
     expect(screen.getByRole('button', { name: /Tiếp tục/ }).hasAttribute('disabled')).toBe(true);
-    expect(registerShop.mutateAsync).not.toHaveBeenCalled();
+    expect(shopApi.registerShop).not.toHaveBeenCalled();
   });
 
   it('thiếu quyền thêm xe: forbidden state, không có form', () => {
@@ -462,5 +597,181 @@ describe('Một cổng duyệt: gửi thẳng XE', () => {
     expect(screen.queryByRole('heading', { name: 'Đã gửi xe đi duyệt' })).toBeNull();
     // Xe ĐÃ tồn tại — lối vào sửa phải có mặt để chủ xe bổ sung rồi gửi lại.
     expect(screen.getByRole('button', { name: 'Bổ sung ngay' })).toBeTruthy();
+  });
+});
+
+/**
+ * ĐỊA CHỈ XE — chỗ luồng này từng chết hẳn với tuyến hoa hồng.
+ *
+ * `GET /branches` khi đó nằm sau `@SubscriptionTrackOnly` ở cấp class, nên chủ xe cá nhân nhận
+ * 403: bộ chọn "Chi nhánh giữ xe" rỗng, `branchId` không bao giờ có giá trị, và `POST /vehicles`
+ * thì bắt buộc trường đó ⇒ không đăng nổi chiếc xe đầu tiên. Backend đã mở ba route đọc/sửa chi
+ * nhánh của CHÍNH MÌNH cho cả hai tuyến; phần còn lại là hình dạng của bước này.
+ */
+describe('Bước 2 — địa chỉ xe', () => {
+  it('một chi nhánh: KHÔNG có bộ chọn, hiện thẳng địa chỉ kèm nút sửa', async () => {
+    permissions.granted = new Set([PERMISSION.VEHICLE_CREATE, PERMISSION.BRANCH_MANAGE]);
+    render();
+    await gotoRentalStep();
+
+    expect(screen.getByText('12 Nguyễn Huệ, Phường Bến Nghé, Hồ Chí Minh')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sửa địa chỉ' })).toBeTruthy();
+    // Một dòng thì không có gì để chọn — một ô select một lựa chọn là thao tác thừa.
+    expect(screen.queryByLabelText(/Chi nhánh giữ xe/)).toBeNull();
+  });
+
+  it('không có quyền sửa chi nhánh: vẫn thấy địa chỉ, KHÔNG có nút sửa', async () => {
+    permissions.granted = new Set([PERMISSION.VEHICLE_CREATE]);
+    render();
+    await gotoRentalStep();
+
+    expect(screen.getByText('12 Nguyễn Huệ, Phường Bến Nghé, Hồ Chí Minh')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Sửa địa chỉ' })).toBeNull();
+  });
+
+  it('nhiều chi nhánh: có bộ chọn, và địa chỉ của chi nhánh mặc định hiện ngay bên dưới', async () => {
+    branches.data = {
+      items: [
+        BRANCH_1,
+        {
+          id: 'b2',
+          name: 'Chi nhánh 2',
+          provinceName: 'Đà Nẵng',
+          address: '5 Bạch Đằng, Đà Nẵng',
+          isDefault: false,
+          vehicleCount: 3,
+        },
+      ],
+    };
+    render();
+    await gotoRentalStep();
+
+    expect(screen.getByLabelText(/Chi nhánh giữ xe/)).toBeTruthy();
+    expect(screen.getByText('12 Nguyễn Huệ, Phường Bến Nghé, Hồ Chí Minh')).toBeTruthy();
+  });
+
+  it('tải chi nhánh hỏng: báo lỗi kèm nút thử lại NGAY TẠI CHỖ, không bắt F5 cả wizard', async () => {
+    branches.data = { items: [] };
+    branches.isError = true;
+    render();
+    await gotoRentalStep();
+
+    expect(screen.getByText(/Không tải được danh sách chi nhánh/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }));
+    expect(branches.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('tài khoản chưa có chi nhánh nào: nói thẳng, không để một ô select rỗng', async () => {
+    branches.data = { items: [] };
+    render();
+    await gotoRentalStep();
+
+    expect(screen.getByText(/chưa có địa chỉ nhận xe/i)).toBeTruthy();
+  });
+});
+
+/**
+ * GIAN HÀNG CHỈ MỞ KHI CÓ MỘT CHIẾC XE THẬT — sửa 17/09/2026.
+ *
+ * Lỗi cũ: bước "Hồ sơ chủ xe" gọi thẳng `POST /tenants`. Điền xong màn đó rồi F5 hoặc bấm về
+ * trang chủ là tài khoản ĐÃ thành chủ xe — có gian hàng, có chi nhánh mặc định, có gói hoa hồng,
+ * và menu `/account` đổi hẳn sang menu chủ xe — dù chưa khai một chiếc xe nào.
+ *
+ * Bốn điều được khoá ở đây, và điều đầu tiên là điều quan trọng nhất.
+ */
+describe('Gian hàng chỉ mở cùng chiếc xe', () => {
+  beforeEach(() => {
+    currentUser.data = {
+      id: 'u1',
+      displayName: 'Chủ xe',
+      tenant: null,
+      phone: '0901234567',
+      phoneVerified: true,
+    };
+  });
+
+  it('khai xong hồ sơ rồi bỏ dở: KHÔNG có lời gọi tạo gian hàng nào', async () => {
+    render();
+    await fillOwnerStep();
+
+    // Đã sang bước xe — tức là hồ sơ hợp lệ và wizard đi tiếp.
+    expect(screen.getByLabelText(/Biển số xe/)).toBeTruthy();
+    // …nhưng trên server vẫn chưa có gì. Đây chính là ca "back về trang chủ hoặc F5".
+    expect(shopApi.registerShop).not.toHaveBeenCalled();
+    expect(api.createVehicle).not.toHaveBeenCalled();
+  });
+
+  it('bước 2 hiện địa chỉ vừa khai, KHÔNG có bộ chọn chi nhánh', async () => {
+    render();
+    await fillOwnerStep();
+    await gotoRentalStep();
+
+    expect(screen.getByText(/12 Nguyễn Huệ/)).toBeTruthy();
+    expect(screen.queryByLabelText(/Chi nhánh giữ xe/)).toBeNull();
+  });
+
+  it('lưu xe: mở gian hàng TRƯỚC, rồi gắn xe vào chi nhánh mặc định vừa sinh ra', async () => {
+    render();
+    await fillOwnerStep();
+    await fillToLastStep();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    await waitFor(() => expect(api.createVehicle).toHaveBeenCalledTimes(1));
+
+    expect(shopApi.registerShop).toHaveBeenCalledTimes(1);
+    expect(shopApi.registerShop.mock.invocationCallOrder[0]!).toBeLessThan(
+      api.createVehicle.mock.invocationCallOrder[0]!,
+    );
+    expect(shopApi.registerShop.mock.calls[0]![0]).toMatchObject({
+      registrationTrack: REGISTRATION_TRACK.COMMISSION,
+      provinceCode: '79',
+      addressLine: '12 Nguyễn Huệ',
+    });
+    // Chi nhánh của chiếc xe đến từ `defaultBranch` của gian hàng vừa mở, không từ form.
+    expect(api.createVehicle.mock.calls[0]![0]).toMatchObject({ branchId: 'b-new' });
+  });
+
+  /*
+   * `/uploads/vehicle-images/presign` là tenant-scoped: không có gian hàng thì tấm ảnh đầu tiên
+   * nhận 403. Gian hàng phải được mở NGAY TRƯỚC lời gọi presign đó — và chỉ khi người dùng thật
+   * sự chọn một tấm ảnh, chứ không phải khi họ bấm "Tiếp tục" sang bước ảnh.
+   */
+  it('chọn ảnh đầu tiên: mở gian hàng ngay trước khi presign', async () => {
+    render();
+    await fillOwnerStep();
+    await fillToLastStep();
+    expect(shopApi.registerShop).not.toHaveBeenCalled();
+
+    const input = document.querySelector('input[type="file"]');
+    fireEvent.change(input!, {
+      target: { files: [new File(['x'], 'anh-xe.jpg', { type: 'image/jpeg' })] },
+    });
+
+    await waitFor(() => expect(upload.presign).toHaveBeenCalledTimes(1));
+    expect(shopApi.registerShop).toHaveBeenCalledTimes(1);
+    expect(shopApi.registerShop.mock.invocationCallOrder[0]!).toBeLessThan(
+      upload.presign.mock.invocationCallOrder[0]!,
+    );
+  });
+
+  it('tạo xe hỏng rồi thử lại: KHÔNG mở gian hàng lần hai', async () => {
+    let attempt = 0;
+    api.createVehicle = vi.fn(async () => {
+      attempt += 1;
+      if (attempt === 1) throw new Error('network');
+      return VEHICLE;
+    });
+    render();
+    await fillOwnerStep();
+    await fillToLastStep();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    await waitFor(() => expect(api.createVehicle).toHaveBeenCalledTimes(1));
+    expect(shopApi.registerShop).toHaveBeenCalledTimes(1);
+
+    // Người dùng bấm lại: gian hàng ĐÃ mở ở lần trước, gọi `POST /tenants` lần nữa là 409.
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    await waitFor(() => expect(api.createVehicle).toHaveBeenCalledTimes(2));
+    expect(shopApi.registerShop).toHaveBeenCalledTimes(1);
   });
 });

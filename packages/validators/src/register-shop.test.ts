@@ -101,20 +101,25 @@ describe('registerShopSchema — tuyến GÓI', () => {
   });
 
   /**
-   * Ba trường nghiêm hơn, và chúng khớp ĐÚNG `missingPackageShopRegistrationFields` ở
+   * Hai trường nghiêm hơn, và chúng khớp ĐÚNG `missingPackageShopRegistrationFields` ở
    * `@xeprime/types` — cùng quy tắc, hai lớp thi hành. Hỏi ở bước 1 rẻ hơn hẳn so với để gian
    * hàng trả tiền xong rồi mới bị cổng đăng xe từ chối.
+   *
+   * Từng có trường thứ ba là `wardCode`. ADR 0042 bỏ nó ở cả hai lớp cùng lúc: form không còn ô
+   * Xã/phường, nên một schema vẫn đòi nó là một nút Lưu chết không giải thích được.
    */
-  it('thiếu cả ba ⇒ ba mã lỗi, không phải một câu chung', async () => {
-    expect(await errorsFor({ ...PACKAGE, wardCode: '', addressLine: '', phone: '' })).toEqual([
+  it('thiếu cả hai ⇒ hai mã lỗi, không phải một câu chung', async () => {
+    expect(await errorsFor({ ...PACKAGE, addressLine: '', phone: '' })).toEqual([
       'addressLineRequired',
       'phoneRequired',
-      'wardRequired',
     ]);
   });
 
+  it('xã/phường để trống vẫn qua — không lớp nào còn đòi nó', async () => {
+    expect(await errorsFor({ ...PACKAGE, wardCode: '' })).toEqual([]);
+  });
+
   it.each([
-    ['wardCode', 'wardRequired'],
     ['addressLine', 'addressLineRequired'],
     ['phone', 'phoneRequired'],
   ])('thiếu %s ⇒ %s', async (field, code) => {
@@ -135,7 +140,6 @@ describe('registerShopSchema — tuyến GÓI', () => {
     expect(await errorsFor({ ...bare, registrationTrack: REGISTRATION_TRACK.PACKAGE })).toEqual([
       'addressLineRequired',
       'phoneRequired',
-      'wardRequired',
     ]);
   });
 

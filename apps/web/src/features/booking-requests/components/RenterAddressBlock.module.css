@@ -1,0 +1,20 @@
+.block {
+  display: block;
+}
+
+/*
+ * Dòng ngữ cảnh "Xe đang ở …". Nhạt hơn nhãn của ô nhập vì nó là thông tin để ĐỌC, không phải
+ * một thứ để điền — trông giống một ô bị khoá thì người dùng sẽ ngồi thử bấm vào nó.
+ */
+.context {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  margin: 0 0 var(--xp-space-sm);
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.contextIcon {
+  color: var(--xp-color-text-tertiary);
+}
