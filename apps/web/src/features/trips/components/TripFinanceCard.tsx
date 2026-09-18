@@ -48,6 +48,10 @@ export function TripFinanceCard({
 
   const depositStatus = finance.depositStatus as DepositStatus;
   const hasSurcharge = finance.surcharges.length > 0;
+  const hasHoldPaymentPlan =
+    finance.customerTotalAmount != null &&
+    finance.holdPaidAmount != null &&
+    finance.payAtPickupAmount != null;
   /*
    * Chỉ `NONE` (chưa từng có cọc) mới ẩn khối này. Mọi trạng thái còn lại đều dính tới một
    * khoản tiền có thật — đang chờ thu, đang giữ, đã khấu trừ, hay đã hoàn — và giấu nó đi vì
@@ -127,6 +131,31 @@ export function TripFinanceCard({
         <span>{closed ? t('totalFinal') : t('total')}</span>
         <span className={styles.totalValue}>{fmt.money(finance.finalTotal)}</span>
       </div>
+
+      {/*
+        Kế hoạch trả tiền của chuyến đã cọc phải nằm NGAY trong "Chi tiết giá", không chỉ là
+        một câu Alert nhỏ ở khối giữ chỗ. Ba số do server trả sẵn: tổng khách trả, số đã chuyển
+        XePrime và phần còn lại đưa chủ xe — client không tự lấy tổng trừ cọc.
+      */}
+      {hasHoldPaymentPlan ? (
+        <section className={styles.paymentPlan} aria-label={t('paymentPlanTitle')}>
+          <h3 className={styles.subTitle}>{t('paymentPlanTitle')}</h3>
+          <dl className={styles.paymentPlanRows}>
+            <div className={styles.paymentPlanRow}>
+              <dt>{tCommon('components.price.customerTotal')}</dt>
+              <dd>{fmt.money(finance.customerTotalAmount)}</dd>
+            </div>
+            <div className={styles.paymentPlanRow}>
+              <dt>{t('holdPaid')}</dt>
+              <dd>{fmt.money(finance.holdPaidAmount)}</dd>
+            </div>
+            <div className={styles.paymentPlanRowStrong}>
+              <dt>{tCommon('components.price.payAtHandover')}</dt>
+              <dd>{fmt.money(finance.payAtPickupAmount)}</dd>
+            </div>
+          </dl>
+        </section>
+      ) : null}
 
       {!isZeroMoney(finance.rentalPaid) ? (
         <div className={styles.row}>

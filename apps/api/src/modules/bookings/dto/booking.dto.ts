@@ -178,6 +178,21 @@ export class BookingDetailDto extends BookingListItemDto {
   /** Snapshot giá bất biến chốt lúc tạo đơn (Wave 2) — null với đơn tạo trước khi có tính năng. */
   @ApiPropertyOptional({ type: BookingPriceSnapshotDto, nullable: true })
   priceSnapshot!: BookingPriceSnapshotDto | null;
+  /**
+   * Tổng khách phải trả cả chuyến, gồm các phụ phí phía khách đã đóng băng lúc đặt.
+   * `null` với đơn lập tay/đơn cũ không đi qua chính sách phí của marketplace.
+   */
+  @ApiPropertyOptional({ type: String, nullable: true })
+  customerTotalAmount!: string | null;
+  /**
+   * Số khách đã chuyển cho XePrime để giữ chỗ. Đây là số THỰC THU trên `booking_holds`,
+   * không phải cọc tài sản `depositAmount` mà chủ xe giữ khi giao xe.
+   */
+  @ApiPropertyOptional({ type: String, nullable: true })
+  holdPaidAmount!: string | null;
+  /** B − D — phần khách còn trả trực tiếp chủ xe khi nhận xe, do server đóng băng trong snapshot. */
+  @ApiPropertyOptional({ type: String, nullable: true })
+  payAtPickupAmount!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) actualPickupAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) actualReturnAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) note!: string | null;
