@@ -232,6 +232,7 @@
       "packageTitle": "Chi tiết giá gói {months, plural, other {# tháng}}",
       "subtotal": "Tạm tính",
       "total": "Tổng dự kiến",
+      "rentalTotal": "Tiền thuê",
       "expand": "Chi tiết",
       "collapse": "Thu gọn",
       "unitTitle": "Giá thuê xe · {service}",

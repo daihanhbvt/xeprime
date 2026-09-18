@@ -5,6 +5,7 @@
 
 import { Alert, Button } from 'antd';
 import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import {
   BOOKING_HOLD_STATUS,
@@ -36,8 +37,21 @@ type Hold = NonNullable<CustomerTripDetail['hold']>;
  * Mọi mốc đọc từ server (`expiresAt`, `freeCancelUntil`) — không tính lại ở client, vì lệch đồng
  * hồ máy khách sẽ rơi đúng vào lúc tiền phụ thuộc vào nó.
  */
-export function TripHoldPanel({ hold, tripId }: { hold: Hold; tripId: string }) {
+export function TripHoldPanel({
+  hold,
+  tripId,
+  tripTotalAmount,
+  payAtHandoverAmount,
+}: {
+  hold: Hold;
+  tripId: string;
+  /** Tổng khách phải chuẩn bị cả chuyến (đã gồm phụ phí) — null khi chưa có báo giá kèm theo. */
+  tripTotalAmount?: string | null;
+  /** B − D — phần trả TRỰC TIẾP chủ xe lúc nhận xe, không đi qua khoản giữ chỗ này. */
+  payAtHandoverAmount?: string | null;
+}) {
   const t = useTranslations('Trips.hold');
+  const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
 
   const awaiting =
@@ -50,7 +64,27 @@ export function TripHoldPanel({ hold, tripId }: { hold: Hold; tripId: string }) 
   const freeCancelIsShort =
     new Date(hold.freeCancelUntil).getTime() <= new Date(hold.expiresAt).getTime();
 
-  if (!awaiting) return <HoldOutcome hold={hold} tripId={tripId} />;
+  /*
+   * Bức tranh đầy đủ, CÙNG chữ dùng ở bảng "Chi tiết giá" (`PriceBreakdown`) — khách hỏi hoài
+   * "chuyển 176k xong thì tổng chuyến/còn lại là bao nhiêu" (phản hồi 18/09/2026) vì trước đây
+   * khối này chỉ có một câu văn mơ hồ "phần còn lại trả tay chủ xe", không có con số. Chỉ vẽ khi
+   * CẢ HAI số đều có — thiếu một nửa còn tệ hơn không có gì.
+   */
+  const summary =
+    tripTotalAmount != null && payAtHandoverAmount != null ? (
+      <dl className={styles.summary}>
+        <div className={styles.summaryRow}>
+          <dt>{tCommon('components.price.customerTotal')}</dt>
+          <dd>{fmt.money(tripTotalAmount)}</dd>
+        </div>
+        <div className={styles.summaryRow}>
+          <dt>{tCommon('components.price.payAtHandover')}</dt>
+          <dd className={styles.summaryHighlight}>{fmt.money(payAtHandoverAmount)}</dd>
+        </div>
+      </dl>
+    ) : null;
+
+  if (!awaiting) return <HoldOutcome hold={hold} tripId={tripId} summary={summary} />;
 
   const info = hold.paymentInfo;
   const qrUrl = buildVietQrUrl(info, hold.remainingAmount, hold.code);
@@ -66,6 +100,8 @@ export function TripHoldPanel({ hold, tripId }: { hold: Hold; tripId: string }) 
             : t('intro')
         }
       />
+
+      {summary}
 
       <div className={styles.body}>
         {/*
@@ -162,7 +198,9 @@ export function TripHoldPanel({ hold, tripId }: { hold: Hold; tripId: string }) 
             time: fmt.dateTime(hold.freeCancelUntil),
           })}
         </li>
-        <li>{t('restAtHandover')}</li>
+        {/* Đã có con số thật ở `summary` phía trên thì câu văn mơ hồ này thừa — chỉ giữ khi
+            thiếu báo giá kèm theo (tránh nói ra một khoản mà không kèm số). */}
+        {summary ? null : <li>{t('restAtHandover')}</li>}
       </ul>
     </section>
   );
@@ -174,7 +212,15 @@ export function TripHoldPanel({ hold, tripId }: { hold: Hold; tripId: string }) 
  * Không im lặng ở bất kỳ trạng thái nào: một khoản tiền đã chuyển mà màn hình không nhắc tới là
  * lý do đầu tiên khách gọi hỗ trợ.
  */
-function HoldOutcome({ hold, tripId }: { hold: Hold; tripId: string }) {
+function HoldOutcome({
+  hold,
+  tripId,
+  summary,
+}: {
+  hold: Hold;
+  tripId: string;
+  summary: ReactNode;
+}) {
   const t = useTranslations('Trips.hold');
   const tRefund = useTranslations('BankAccounts.refund');
   const fmt = useAppFormat();
@@ -232,6 +278,9 @@ function HoldOutcome({ hold, tripId }: { hold: Hold; tripId: string }) {
 
   // `paid` / `released`: tiền đã về và chuyến đã có đơn — nói ngắn, chi tiết nằm ở khối tiền.
   return (
-    <Alert type="success" showIcon title={t('paid', { amount: fmt.money(hold.paidAmount) })} />
+    <>
+      <Alert type="success" showIcon title={t('paid', { amount: fmt.money(hold.paidAmount) })} />
+      {summary}
+    </>
   );
 }

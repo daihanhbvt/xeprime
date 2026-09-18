@@ -39,6 +39,12 @@ export interface PriceBreakdownFees {
   customerTotalAmount: string;
   /** Khách chuyển online để giữ chỗ; null/undefined = chuyến này không cần giữ chỗ. */
   holdAmount?: string | null;
+  /**
+   * B − D — khách trả TRỰC TIẾP chủ xe lúc nhận xe, do server tính sẵn (`CustomerFeeBreakdownDto`).
+   * Ưu tiên đọc trường này thay vì tự trừ `customerTotalAmount − holdAmount` ở client; thiếu thì
+   * mới rơi về phép trừ (đơn/snapshot cũ chưa có trường này).
+   */
+  payAtPickupAmount?: string | null;
 }
 
 interface PriceBreakdownProps {
@@ -119,6 +125,16 @@ export function PriceBreakdown({
   const feeLines = (fees?.lines ?? []).filter(
     (line) => audience === 'owner' || line.bearer !== FEE_BEARER.OWNER,
   );
+  /*
+   * Có khối phụ phí ⇒ `totalAmount` (giá thuê) KHÔNG còn là số cuối cùng khách phải chuẩn bị —
+   * `fees.customerTotalAmount` mới là. Vẽ to-đậm CẢ HAI bằng cùng kiểu chữ (bản trước) khiến
+   * người đọc không biết số nào là "cái phải trả" — đúng phản hồi người dùng 18/09/2026. Khi
+   * không có phụ phí thì `totalAmount` vẫn là số cuối, giữ nguyên kiểu chữ nổi bật như cũ.
+   */
+  const hasFees = Boolean(fees) && feeLines.length > 0;
+  const payAtHandoverAmount =
+    fees?.payAtPickupAmount ??
+    (fees?.holdAmount ? subtractMoney(fees.customerTotalAmount, fees.holdAmount) : null);
 
   return (
     <section className={styles.card} aria-label={titleText}>
@@ -166,9 +182,11 @@ export function PriceBreakdown({
       ) : null}
 
       <div className={styles.totalBlock}>
-        <div className={styles.totalRow}>
-          <span className={styles.totalLabel}>{totalText}</span>
-          <span className={styles.totalAmount}>{fmt.money(totalAmount)}</span>
+        <div className={hasFees ? styles.totalRowMuted : styles.totalRow}>
+          <span className={hasFees ? styles.totalLabelMuted : styles.totalLabel}>{totalText}</span>
+          <span className={hasFees ? styles.totalAmountMuted : styles.totalAmount}>
+            {fmt.money(totalAmount)}
+          </span>
         </div>
 
         {depositAmount != null ? (
@@ -222,32 +240,42 @@ export function PriceBreakdown({
             </dl>
           ) : null}
 
-          <div className={styles.totalRow}>
-            <span className={styles.totalLabel}>{tCommon('components.price.customerTotal')}</span>
-            <span className={styles.totalAmount}>{fmt.money(fees.customerTotalAmount)}</span>
+          {/*
+            Số CUỐI CÙNG khách phải chuẩn bị — hero của cả bảng, to hơn hẳn "tiền thuê" ở trên vì
+            đây mới là con số họ cần biết trước khi bấm gửi/chuyển khoản.
+          */}
+          <div className={styles.grandTotalRow}>
+            <span className={styles.grandTotalLabel}>{tCommon('components.price.customerTotal')}</span>
+            <span className={styles.grandTotalAmount}>{fmt.money(fees.customerTotalAmount)}</span>
           </div>
 
-          {/* Giữ chỗ: số khách chuyển ONLINE, và phần còn lại trả tay chủ xe (ADR 0028 điều 7A). */}
+          {/*
+            Giữ chỗ: số khách chuyển ONLINE ngay, và phần còn lại trả tay chủ xe lúc nhận xe
+            (ADR 0028 điều 7A) — hai con số hành động, đặt trong một khối riêng để không lẫn vào
+            các dòng phụ phí nhạt màu phía trên.
+          */}
           {fees.holdAmount ? (
-            <>
-              <div className={styles.depositRow}>
-                <span className={styles.depositLabel}>
+            <div className={styles.paymentPlan}>
+              <div className={styles.paymentPlanRow}>
+                <span className={styles.paymentPlanLabel}>
                   {tCommon('components.price.holdAmount')}
                   <Tooltip title={tCommon('components.price.holdHint')}>
                     <InfoCircleOutlined className={styles.depositInfo} />
                   </Tooltip>
                 </span>
-                <span className={styles.depositAmount}>{fmt.money(fees.holdAmount)}</span>
+                <span className={styles.paymentPlanAmountNow}>{fmt.money(fees.holdAmount)}</span>
               </div>
-              <div className={styles.depositRow}>
-                <span className={styles.depositLabel}>
-                  {tCommon('components.price.payAtHandover')}
-                </span>
-                <span className={styles.depositAmount}>
-                  {fmt.money(subtractMoney(fees.customerTotalAmount, fees.holdAmount))}
-                </span>
-              </div>
-            </>
+              {payAtHandoverAmount != null ? (
+                <div className={styles.paymentPlanRow}>
+                  <span className={styles.paymentPlanLabel}>
+                    {tCommon('components.price.payAtHandover')}
+                  </span>
+                  <span className={styles.paymentPlanAmountLater}>
+                    {fmt.money(payAtHandoverAmount)}
+                  </span>
+                </div>
+              ) : null}
+            </div>
           ) : null}
 
           <p className={styles.depositNote}>{tCommon('components.price.feesNote')}</p>
