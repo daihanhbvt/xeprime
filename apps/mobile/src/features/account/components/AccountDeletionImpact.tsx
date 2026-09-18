@@ -31,8 +31,8 @@ import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
  * Đọc ví qua `walletScopeFor` — chủ xe có ví thuộc TENANT (ADR 0038 điều 2), nên đóng đinh scope
  * `account` ở đây sẽ báo "số dư 0đ" cho đúng người đang có tiền chưa rút.
  *
- * AI dựng khối này KHÔNG phải việc của nó: bên web, hai trang `/account` và `/manage/account`
- * quyết định, còn `/account/delete-account` thì không dựng. Xem `DeleteAccountScreen`.
+ * Trên app, khối này do MÀN xoá tài khoản dựng và dựng ở cả hai khu — app không có sự phân đôi
+ * trang mà web có. Lý do đầy đủ nằm ở docblock của `DeleteAccountScreen`.
  */
 export function AccountDeletionImpact() {
   const t = useTranslations('Account.deletionImpact');

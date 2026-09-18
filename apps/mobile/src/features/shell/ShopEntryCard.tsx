@@ -32,11 +32,14 @@ const CONFIG: Readonly<Record<Variant, VariantConfig>> = {
    */
   hasShop: { icon: 'storefront-outline', href: ROUTES.manage.home(), manage: true },
   /*
-   * Đăng ký gian hàng nằm dưới `manage/` để deep link ánh xạ 1-1 với web, nhưng nó là màn của
-   * người CHƯA có gian hàng — `ScopeGuard` cho qua đúng route đó. Đổi khu sang một nơi họ chưa có
-   * quyền vào là đá chính họ ra ngay sau đó, nên nó `push`.
+   * Chưa có gian hàng ⇒ LANDING "Đăng xe cho thuê", không phải thẳng form đăng ký.
+   *
+   * Từ ADR 0040 có HAI cửa vào với hai hợp đồng khác nhau, và landing là nơi người dùng chọn cửa.
+   * Nhảy thẳng vào `/manage/onboarding` là chọn hộ họ cửa MẶC ĐỊNH (hoa hồng) — người muốn mở gian
+   * hàng trả phí sẽ được server gán gói hoa hồng và rơi vào đúng màn "Hồ sơ chủ xe" của tuyến kia.
+   * Web dẫn cùng chỗ (`ROUTES.LIST_YOUR_VEHICLE.ROOT`) vì cùng lý do.
    */
-  noShop: { icon: 'storefront-outline', href: ROUTES.manage.onboarding(), manage: false },
+  noShop: { icon: 'storefront-outline', href: ROUTES.listYourVehicle.root(), manage: false },
 };
 
 /**

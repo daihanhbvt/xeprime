@@ -1,4 +1,5 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import type { HandoverPhotoSlot, HandoverType } from '@xeprime/types';
 import { keepPageData } from '@/queries/keep-page-data';
 import { queryKeys } from '@/queries/query-keys';
@@ -36,6 +37,33 @@ export function useHandoverContext(bookingId: string, enabled = true) {
  * `expectedRowVersion` bắt buộc khi sửa bản đã có: hai nhân viên cùng mở một biên bản ở quầy là
  * chuyện thường, và không có nó thì người lưu sau âm thầm đè mất số KM người trước vừa nhập.
  */
+/**
+ * Mọi nhánh dữ liệu mà một lượt ghi bàn giao CÓ THẨM QUYỀN làm đổi — bản native của
+ * `useInvalidateHandovers`.
+ *
+ * Tất cả đổi trong MỘT transaction ở backend, nên ở client chúng cũng phải cùng được làm mới. Để
+ * sót một nhánh là để lại một màn hình kể chuyện cũ, và ở đây "chuyện cũ" là một con số KM:
+ *
+ *  - `bookings.detail` — trạng thái đơn vừa nhảy (`pickup → active`, `return → completed`);
+ *  - `maintenance.all` — chu kỳ bảo dưỡng tính TỪ số KM vừa ghi, nên bảng bảo dưỡng đang hiển thị
+ *    một mốc đã sai ngay khi biên bản được xác nhận;
+ *  - `vehicles.all` — danh sách, cảnh báo, tóm tắt và cụm bảo dưỡng của từng xe.
+ *
+ * MỘT hàm cho cả xác nhận lẫn sửa KM: hai đường ghi khác nhau nhưng cùng đụng đúng những nhánh
+ * này, và nếu mỗi bên tự liệt kê thì sớm muộn một bên sẽ thiếu một cái.
+ */
+function useInvalidateHandover(bookingId: string): () => void {
+  const queryClient = useQueryClient();
+  return useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.handovers(bookingId) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(bookingId) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.maintenance.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
+  }, [bookingId, queryClient]);
+}
+
 export function useSaveHandoverDraft(bookingId: string, type: HandoverType) {
   const queryClient = useQueryClient();
 
@@ -56,14 +84,13 @@ export function useSaveHandoverDraft(bookingId: string, type: HandoverType) {
  */
 export function useConfirmHandover(bookingId: string, type: HandoverType) {
   const queryClient = useQueryClient();
+  const invalidate = useInvalidateHandover(bookingId);
 
   return useMutation({
     mutationFn: (body: ConfirmHandoverInput) => handoversApi.confirm(bookingId, type, body),
     onSuccess: (context) => {
       queryClient.setQueryData(queryKeys.bookings.handovers(bookingId), context);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
+      invalidate();
     },
   });
 }
@@ -186,14 +213,14 @@ export function useCancelHandover(bookingId: string, type: HandoverType) {
  */
 export function useResolveHandoverOdometer(bookingId: string, type: HandoverType) {
   const queryClient = useQueryClient();
+  const invalidate = useInvalidateHandover(bookingId);
 
   return useMutation({
     mutationFn: (body: ResolveOdometerInput) => handoversApi.resolveOdometer(bookingId, type, body),
     onSuccess: (context) => {
       queryClient.setQueryData(queryKeys.bookings.handovers(bookingId), context);
       // KM có thẩm quyền của XE vừa đổi — hồ sơ xe và trung tâm bảo dưỡng đọc chung con số đó.
-      void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.maintenance.all });
+      invalidate();
     },
   });
 }

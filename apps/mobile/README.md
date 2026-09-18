@@ -290,6 +290,7 @@ flowchart TD
   F --> G["/ — Bootstrap<br/>khu đã nhớ + /auth/me, TRẦN CHỜ 2.5s"]
   G -->|"resolveInitialScope"| J["/explore — Navigator A, khách xem được"]
   G -->|"tenant active + đã nhớ"| M["/manage — Navigator B, sau ScopeGuard"]
+  G -->|"onboarding_state = package_pending"| O["/manage/onboarding — bước 2: chọn gói → QR"]
   J <-->|"switcher — replace, không push"| M
   J -->|"nút Đăng nhập"| I["/login ⇄ /register"]
   I -->|"phiên đã cấp"| K["useEnterApp() — cùng luật với Bootstrap"]
@@ -302,8 +303,17 @@ quản lý là một dashboard rỗng hoặc một loạt 403. Không có trần
 ở màn mở, và người dùng không có thao tác nào để ra khỏi đó.
 
 Luật suy khu là hàm thuần `resolveInitialScope` ở
-[`@xeprime/domain/app-scope`](../../packages/domain/src/app-scope.ts) — test được mà không cần
+[`src/features/shell/app-scope.ts`](src/features/shell/app-scope.ts) — test được mà không cần
 dựng router, và dùng chung một chỗ cho cả lúc mở app lẫn lúc vừa đăng nhập.
+
+**Gian hàng trả phí chưa chuyển khoản là một nhánh RIÊNG** (ADR 0040): `billingMode` của họ rỗng y
+như một tenant có danh mục gói hỏng, nên mọi phép suy chỉ nhìn `billingMode` thả họ vào Owner Lite —
+đúng màn mà ADR 0040 sinh ra để họ không bao giờ thấy. `resolveScopeCapability` vì thế trả thêm cờ
+`packageOnboardingPending`, nó THẮNG cả khu đã nhớ, và `ScopeGuard` đưa họ về `/manage/onboarding`
+thay vì đá ra khu khách. Đích theo khu làm việc đầy đủ: phép suy dùng chung ở `resolveWorkspaceTarget`
+(`@xeprime/types`) trả về một KHOÁ, còn [`src/features/shell/workspace.ts`](src/features/shell/workspace.ts)
+chỉ giữ bảng khoá → `Href` của app. Web có bảng của nó ở `post-auth-destination.ts` — cùng khuôn
+`status-notice.ts`: chia sẻ quyết định, mỗi app một địa chỉ.
 
 `ErrorBoundary` của expo-router nằm **ngoài** toàn bộ khối này (lỗi có thể đến từ chính các
 provider), nên `AppErrorScreen` tự dựng lại `IntlProvider` ở ngôn ngữ mặc định.
@@ -699,6 +709,12 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
 - **Nhóm lựa chọn của form: 2 lựa chọn → [`<RadioField>`](src/components/ui/RadioField.tsx),
   từ 3 → [`<SelectField>`](src/components/ui/SelectField.tsx).** Cả hai nối RHF sẵn; `RadioOption`
   là viên rời cho lựa chọn KHÔNG sống trong form.
+- **Giá trị KHÔNG sống trong form thì dùng bản `…Control`**, không dựng một form giả để mượn ô:
+  [`<SelectControl>`](src/components/ui/SelectControl.tsx) và
+  [`<NumberControl>`](src/components/ui/NumberControl.tsx) là HÌNH DẠNG + hành vi, còn
+  `SelectField`/`NumberField` chỉ thêm phần nối vào RHF. Có những giá trị lái cả màn chứ không
+  phải một trường của form — số chỗ xe trong bộ chọn mua gói quyết định luôn bảng giá kỳ hạn
+  (`usePlanPurchase`) — và chúng phải ra CÙNG một ô, nếu không trên một màn sẽ có hai kiểu ô nhập.
 - **Dòng trong menu xổ từ đáy đi qua [`<MenuOption>`](src/components/ui/MenuOption.tsx), gói
   trong `<MenuOptionList>`** — danh sách kẻ GẠCH GOLD (`colors.primary` hạ độ mờ; thang gold
   không có bậc trung gian nào giữa nó và `primaryLight` — thứ là màu NỀN, kẻ 1px thì mất hẳn)

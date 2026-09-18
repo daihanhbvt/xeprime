@@ -3,7 +3,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
 import {
-  isPublishRequirement,
   POLICY_SOURCE,
   REGISTRATION_TRACK,
   SERVICE_TYPE,
@@ -21,7 +20,7 @@ import type { SaveRentalPolicyInput } from '@/features/rental-policies/types';
 import { registerShop, updateShopProfile } from '@/features/shop/api';
 import type { MyShop } from '@/features/shop/types';
 import { patchVehicleServiceSetting } from '@/features/vehicle-manage/api';
-import { getErrorDetails } from '@/services/api-client';
+import { publishRequirementsFrom } from '@xeprime/domain';
 
 import { quickVehicleToCreateInput, quickVehicleToPolicyInput } from './mappers';
 import type { QuickVehicleValues } from './schema';
@@ -287,16 +286,4 @@ export function useQuickVehicleRegistration() {
     /** Xe đã tạo ở lần chạy trước (nếu có) — dùng để hiện lối "quản lý xe" khi lỗi giữa chừng. */
     createdVehicle,
   };
-}
-
-/**
- * `details.missing[]` của `VEHICLE_PUBLISH_INCOMPLETE` → danh sách mã đã lọc.
- *
- * Lọc qua `isPublishRequirement` chứ không tin thẳng mảng từ mạng: một mã lạ (backend mới hơn
- * web) sẽ thành `t('requirements.<mã lạ>')` và next-intl ném ra giữa lúc render. Thà hiện thiếu
- * một dòng còn hơn làm trắng màn hình của người vừa điền xong cả wizard.
- */
-function publishRequirementsFrom(error: unknown): PublishRequirement[] {
-  const missing = getErrorDetails(error)?.missing;
-  return Array.isArray(missing) ? missing.filter(isPublishRequirement) : [];
 }

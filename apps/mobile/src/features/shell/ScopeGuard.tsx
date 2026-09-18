@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'expo-router';
-import { tenantUsesManagePortal } from '@xeprime/types';
+import { isPackageOnboardingPending, tenantUsesManagePortal } from '@xeprime/types';
 import { APP_SCOPE } from './app-scope';
 import { useTranslations } from 'use-intl';
 import { Screen } from '@/components/layout/Screen';
@@ -11,7 +11,7 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { SESSION_STATUS, useSessionGate } from '@/features/auth/hooks/use-session-gate';
 import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
-import { ROUTES } from '@/navigation/routes';
+import { MANAGE_ONBOARDING_PATHNAME, ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { fireAndForget } from '@/lib/fire-and-forget';
 import { useAppDispatch } from '@/store/hooks';
@@ -57,10 +57,11 @@ export function ScopeGuard({ children }: { children: ReactNode }) {
    * người CHƯA có gian hàng — đá họ về khu khách ngay khi mở chính là đóng cửa duy nhất dẫn tới
    * việc mở gian hàng. Web giải cùng bài này bằng cách liệt kê route đó là "bare" trong `AppShell`.
    *
-   * So bằng CHÍNH giá trị trong bản đồ route, không gõ lại chuỗi: đổi đường dẫn ở `routes.ts` mà
-   * quên chỗ này thì cổng lại chặn nhầm, và đó là lỗi im lặng.
+   * So với HẰNG PHẦN ĐƯỜNG DẪN của `routes.ts`, không `String(ROUTES.manage.onboarding())`: từ
+   * ADR 0040 builder đó nhận `track` và trả về một object `Href`, nên `String()` sẽ cho
+   * `"[object Object]"` ngay khi ai đó thêm một tham số — phép so vẫn chạy và chỉ sai âm thầm.
    */
-  const onOnboarding = pathname === String(ROUTES.manage.onboarding());
+  const onOnboarding = pathname === MANAGE_ONBOARDING_PATHNAME;
 
   /**
    * Còn ĐANG ĐỨNG trong khu quản lý hay không.
@@ -87,14 +88,29 @@ export function ScopeGuard({ children }: { children: ReactNode }) {
    * Cổng này cũng bắt ca gian hàng HẾT ÂN HẠN: `billingMode` rơi về `commission`, và chủ, quản
    * lý, nhân viên, người xem rời khu quản lý cùng lúc — vì câu hỏi hỏi TENANT, không hỏi vai.
    */
-  const evicted =
+  const outsideManagePortal =
     ready && !tenantUsesManagePortal(tenant) && !user?.platformRole && insideManage && !onOnboarding;
+
+  /**
+   * Gian hàng trả phí CHƯA chuyển khoản, đang đứng ở một màn quản lý khác (ADR 0040).
+   *
+   * Họ không "mất quyền" — họ còn nợ một bước, và bước đó nằm ngay trong khu này. Đá họ về chợ xe
+   * kèm câu "Bạn không còn quyền truy cập gian hàng này" là nói sai với người vừa mở gian hàng và
+   * xoá luôn lối duy nhất dẫn tới màn thanh toán. Web giải cùng bài bằng `WrongWorkspaceRedirect`
+   * tới `resolveWorkspaceHref`, và với họ hàm đó trả về chính màn onboarding.
+   */
+  const needsOnboarding = outsideManagePortal && isPackageOnboardingPending(tenant);
+  const evicted = outsideManagePortal && !needsOnboarding;
 
   // Toast chỉ bắn MỘT lần cho mỗi lần bị đá: effect chạy lại theo nhịp refetch, và bốn bản sao
   // của cùng một câu đọc như app đang hỏng chứ không như một lời giải thích.
   const announced = useRef(false);
 
   useEffect(() => {
+    if (needsOnboarding) {
+      router.replace(ROUTES.manage.onboarding());
+      return;
+    }
     if (!evicted) {
       announced.current = false;
       return;
@@ -106,7 +122,7 @@ export function ScopeGuard({ children }: { children: ReactNode }) {
     fireAndForget(forgetScope, 'ScopeGuard.forgetScope');
     toast.showInfo(t('lostAccess'));
     router.replace(scopeHome(APP_SCOPE.CUSTOMER));
-  }, [dispatch, evicted, router, t, toast]);
+  }, [dispatch, evicted, needsOnboarding, router, t, toast]);
 
   switch (status) {
     case SESSION_STATUS.LOADING:
@@ -137,8 +153,8 @@ export function ScopeGuard({ children }: { children: ReactNode }) {
 
     case SESSION_STATUS.READY:
       // Khung hình giữa lúc effect ở trên chưa kịp chạy: hiện màn chờ thay vì nội dung quản lý
-      // của một người vừa mất quyền đọc nó. (`READY` đã bảo đảm có `user` — xem `useSessionGate`.)
-      return evicted ? (
+      // của một người chưa được đọc nó. (`READY` đã bảo đảm có `user` — xem `useSessionGate`.)
+      return evicted || needsOnboarding ? (
         <Screen scroll={false}>
           <ScreenLoading />
         </Screen>

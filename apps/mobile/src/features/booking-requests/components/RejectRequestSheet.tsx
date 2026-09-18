@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { TextField } from '@/components/ui/TextField';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
-import type { BookingRequestItem } from '../api';
+import type { BookingRequestDecisionTarget } from '../api';
 
 const PRESET_KEYS = [
   'vehicleUnavailable',
@@ -44,7 +44,7 @@ export function RejectRequestSheet({
 }: {
   open: boolean;
   onClose: () => void;
-  request: BookingRequestItem;
+  request: BookingRequestDecisionTarget;
   onConfirm: (reason: string) => void;
   loading: boolean;
 }) {

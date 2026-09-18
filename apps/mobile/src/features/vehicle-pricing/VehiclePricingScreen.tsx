@@ -45,6 +45,10 @@ import { useLeaveGuard } from '@/hooks/use-leave-guard';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
+import {
+  isServiceOff,
+  VehicleSectionDisabled,
+} from '@/features/vehicle-manage/components/VehicleSectionDisabled';
 import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
@@ -171,6 +175,26 @@ export function VehiclePricingScreen({
           />
         </Screen>
       </>
+    );
+  }
+
+  /*
+   * Mục giá của một DỊCH VỤ ĐANG TẮT: mời bật, không bày form.
+   *
+   * Hai màn giá là hai mục của không gian "Quản lý xe" y như mười mục còn lại, nhưng chúng dựng
+   * thẳng màn này thay vì đi qua `VehicleManageShell` (màn này có vỏ và form riêng; lồng vào vỏ
+   * kia là hai thanh đầu màn chồng nhau). Nên cổng đó phải được gọi lại TẠI ĐÂY — thiếu nó, đây
+   * là chỗ duy nhất trong cả không gian cho chủ xe đặt giá cho một dịch vụ không chuyến nào đi
+   * qua. `sectionService` là thứ nói màn này đang đứng làm mục nào.
+   */
+  if (sectionService && isServiceOff(vehicle.data, sectionService)) {
+    return (
+      <VehicleSectionDisabled
+        vehicle={vehicle.data}
+        canEdit={has(PERMISSION.VEHICLE_UPDATE)}
+        service={sectionService}
+        header={<AppHeader title={t('title')} onBack={back} />}
+      />
     );
   }
 

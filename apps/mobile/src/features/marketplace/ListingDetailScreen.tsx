@@ -302,7 +302,9 @@ function DetailBody({
 
   const brand = catalogLabel(catalog[CATALOG_TYPE.VEHICLE_BRAND], listing.brand);
   const rating = Number(listing.ratingAvg);
-  const hasRating = listing.ratingCount > 0 && Number.isFinite(rating);
+  // `?? 0`: cột DB cho phép NULL ở xe chưa từng được đồng bộ lại rating (dữ liệu cũ) dù DTO
+  // khai `ratingCount` không optional — hợp đồng kiểu và thực tế lệch nhau.
+  const hasRating = (listing.ratingCount ?? 0) > 0 && Number.isFinite(rating);
 
   const specs: { key: string; label: string; value: string }[] = [
     {
@@ -798,7 +800,13 @@ function Reviews({ vehicleId }: { vehicleId: string }) {
   const fmt = useAppFormat();
   const { data } = useListingReviews(vehicleId);
 
-  const hasReviews = Boolean(data && data.summary.ratingCount > 0);
+  /*
+   * `data?.summary?.ratingCount`: `useListingReviews` nuốt lỗi mạng thành `data = null`, nhưng
+   * một phản hồi THÀNH CÔNG mà thiếu hẳn `summary` (dữ liệu cũ chưa qua đợt tính rating) vẫn để
+   * `data` là object thật — `data.summary.ratingCount` lúc đó ném "Cannot read property
+   * 'ratingCount' of undefined" đúng giữa trang chi tiết xe.
+   */
+  const hasReviews = Boolean(data?.summary?.ratingCount && data.summary.ratingCount > 0);
 
   return (
     <Card lift="flat">

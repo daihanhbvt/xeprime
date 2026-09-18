@@ -7,6 +7,7 @@ type Schemas = components['schemas'];
 export type MySubscription = Schemas['MySubscriptionDto'];
 export type TenantPlan = Schemas['TenantPlanDto'];
 export type SubscriptionInvoice = Schemas['SubscriptionInvoiceDto'];
+export type PendingSubscriptionInvoice = Schemas['PendingSubscriptionInvoiceDto'];
 export type PurchaseSubscriptionInput = Schemas['PurchaseSubscriptionDto'];
 export type SlotUsage = Schemas['SlotUsageDto'];
 export type PaymentInfo = Schemas['PaymentInfoDto'];
@@ -28,6 +29,20 @@ export const subscriptionApi = {
   /** Tài khoản nhận chuyển khoản của nền tảng — nguồn dựng mã VietQR (ADR 0016 điều 5). */
   paymentInfo(): Promise<PaymentInfo> {
     return getApiClient().get<PaymentInfo>('/subscription/payment-info');
+  },
+
+  /**
+   * Hoá đơn gói ĐANG chờ tiền — `null` khi không có (ADR 0040).
+   *
+   * Endpoint riêng thay vì lọc trang đầu của `invoices()`: bất biến "mỗi gian hàng tối đa MỘT hoá
+   * đơn trả được" do server giữ (advisory lock + void hoá đơn cũ trong `purchase`), nên câu trả
+   * lời phải đến từ đó. Lọc ở client biến bất biến thành một giả định, và một lịch sử dài hơn một
+   * trang sẽ đẩy hoá đơn chờ ra khỏi tầm nhìn.
+   */
+  pendingInvoice(): Promise<SubscriptionInvoice | null> {
+    return getApiClient()
+      .get<PendingSubscriptionInvoice>('/subscription/invoices/pending')
+      .then((r) => r.invoice);
   },
 
   invoices(page = 1): Promise<InvoicePage> {

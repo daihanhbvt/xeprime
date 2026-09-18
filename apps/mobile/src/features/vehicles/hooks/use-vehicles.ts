@@ -113,7 +113,7 @@ export function useInfiniteVehicles(filters: Omit<VehicleFilters, 'page' | 'limi
   };
 }
 
-export function useVehiclesPage(filters: VehicleFilters) {
+export function useVehiclesPage(filters: VehicleFilters, enabled = true) {
   const branchScope = useBranchScopeParams();
   const scoped = { ...filters, ...branchScope };
   const params = vehicleFiltersToParams(scoped);
@@ -121,6 +121,7 @@ export function useVehiclesPage(filters: VehicleFilters) {
   return useQuery({
     queryKey: queryKeys.vehicles.list(params),
     queryFn: () => vehiclesApi.list(scoped),
+    enabled,
     placeholderData: keepPageData<Awaited<ReturnType<typeof vehiclesApi.list>>>(params),
   });
 }

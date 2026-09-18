@@ -24,9 +24,18 @@ import type { CustomerTripEstimate } from '../api';
 export function TripEstimateCard({
   estimate,
   isHost,
+  settled = false,
 }: {
   estimate: CustomerTripEstimate;
   isHost: boolean;
+  /**
+   * Khách ĐÃ TRẢ khoản giữ chỗ ⇒ bảng này không còn là "tạm tính".
+   *
+   * Từ ADR 0039, chuyến đã cọc đọc SNAPSHOT đã đóng băng trên hold thay vì một lượt báo giá mới,
+   * nên mọi con số ở đây đúng bằng thứ đã thu. Vẫn dán nhãn "tạm tính" lên nó là nói với người vừa
+   * chuyển tiền rằng số họ trả có thể đổi.
+   */
+  settled?: boolean;
 }) {
   const t = useTranslations('Trips.estimate');
   const fmt = useAppFormat();
@@ -35,12 +44,18 @@ export function TripEstimateCard({
     <Card>
       <PriceBreakdown
         title={t('title')}
-        badge={t('badge')}
+        badge={settled ? t('badgeSettled') : t('badge')}
         rows={estimate.rows}
         totalAmount={estimate.rentalTotal}
         totalLabel={t('rentalTotal')}
         depositAmount={estimate.depositAmount}
         fees={estimate.fees}
+        // Dòng do CHỦ XE chịu (thuế khấu trừ) chỉ vẽ cho chủ xe — ADR 0032 điều 3.
+        audience={isHost ? 'owner' : 'customer'}
+        // Màn này là XEM LẠI một chuyến đã đặt: con số đã chốt và bảng dài chỉ còn để tra cứu,
+        // nên nó gấp lại sau "Xem chi tiết giá". Luồng ĐẶT xe thì không — ở đó khách phải thấy
+        // đủ từng dòng trước khi bấm gửi.
+        collapsible
         footer={
           <YStack gap={space.xs}>
             {/*
@@ -58,7 +73,7 @@ export function TripEstimateCard({
               </XStack>
             ) : null}
             <Text col={colors.placeholder} fos={fontSize.label}>
-              {isHost ? t('noteHost') : t('noteRenter')}
+              {settled ? t('noteSettled') : isHost ? t('noteHost') : t('noteRenter')}
             </Text>
           </YStack>
         }

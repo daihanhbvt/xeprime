@@ -83,6 +83,16 @@ export const MissingOdometerCard = memo(function MissingOdometerCard({
           </Text>
         </XStack>
         {/*
+          AI đã xác nhận biên bản này — web để nó ngay dưới mốc thời gian ở cùng ô.
+          Đây là hàng đợi đi SỬA một số KM có thẩm quyền, nên người đi sửa cần biết hỏi ai trước
+          khi ghi đè con số của người khác.
+        */}
+        {item.confirmedByName ? (
+          <Text col={colors.placeholder} fos={fontSize.label}>
+            {item.confirmedByName}
+          </Text>
+        ) : null}
+        {/*
           `fmt.km(null)` tự nói "Chưa có" — biên bản GIAO cũng chưa có số thì không có mốc sàn để
           đối chiếu, và dựng 0 km ở đây là bịa ra một số đo.
         */}

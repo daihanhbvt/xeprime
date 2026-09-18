@@ -30,9 +30,15 @@ describe('tab của hộp thư yêu cầu', () => {
     );
   });
 
-  it('có đủ năm trạng thái còn lại cộng tab Tất cả', () => {
+  /*
+   * "Đã cọc, chờ duyệt" (ADR 0039) đứng NGAY SAU "Cần xử lý" và trước mọi ngăn đã có kết cục: đây
+   * là việc khẩn nhất trong hộp thư — tiền của khách đang nằm ở XePrime, chỗ xe đang bị giữ, và
+   * hết hạn phản hồi là hệ thống tự hoàn rồi huỷ chuyến.
+   */
+  it('có đủ sáu trạng thái cộng tab Tất cả, đúng thứ tự ưu tiên', () => {
     expect(REQUEST_INBOX_TABS.map((tab) => tab.value)).toEqual([
       BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+      BOOKING_REQUEST_STATUS.HOLD_PAID,
       BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
       BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
       BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER,
@@ -47,6 +53,7 @@ describe('tab của hộp thư yêu cầu', () => {
      */
     expect(REQUEST_INBOX_TABS.map((tab) => tab.labelKey)).toEqual([
       'needsAction',
+      'paidNeedsAction',
       'converted',
       'rejected',
       'cancelled',

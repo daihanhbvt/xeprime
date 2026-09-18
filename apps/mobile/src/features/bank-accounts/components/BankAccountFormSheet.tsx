@@ -1,12 +1,14 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
+import { VIETNAM_BANKS } from '@xeprime/domain';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
+import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
 import { ToggleRow } from '@/features/rental-policies/components/PolicySections';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -22,7 +24,14 @@ const LABEL_MAX = 60;
 /**
  * Khai một tài khoản nhận tiền — bản native của `BankAccountForm`.
  *
- * Ba ô bắt buộc, không có ô nào tuỳ tiện: mã ngân hàng và số tài khoản dựng nên lệnh chuyển,
+ * ## Ngân hàng là ô CHỌN, không phải ô gõ (16/09/2026)
+ *
+ * Trước đợt này nó là chữ tự do với gợi ý "VCB, ACB, TCB…" — ô nguy hiểm nhất trên đường tiền đi
+ * ra. Mã gõ sai thì lệnh chuyển hoặc bị trả về sau vài ngày, hoặc trỏ về một nhà băng khác. Danh
+ * mục sống ở `@xeprime/domain` (`VIETNAM_BANKS`), dùng chung với web và đúng bộ mã VietQR mà QR
+ * trả cọc đang dùng.
+ *
+ * Ba ô bắt buộc, không có ô nào tuỳ tiện: ngân hàng và số tài khoản dựng nên lệnh chuyển,
  * còn TÊN CHỦ TÀI KHOẢN là thứ ngân hàng đối chiếu — sai tên thì lệnh bị trả về và tiền quay
  * lại sau vài ngày mà không ai biết vì sao. Vì thế ô tên có dòng nhắc riêng.
  *
@@ -46,6 +55,29 @@ export function BankAccountFormSheet({
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
   const create = useCreateBankAccount(scope);
+  /*
+   * Lọc TẠI CHỖ, khác ô xã/phường.
+   *
+   * Danh mục ngân hàng là hằng nằm sẵn trong bundle (35 dòng), nên không có gì để hỏi server;
+   * `SelectField` chỉ đẩy chữ đang gõ ra ngoài, còn lọc là việc của nơi gọi.
+   */
+  const [bankSearch, setBankSearch] = useState('');
+
+  /*
+   * Nhãn ghép tên gọi hằng ngày + tên đầy đủ: VIB và VietinBank, SCB và Sacombank là bốn cái tên
+   * mà người gõ vội chọn nhầm, và chọn nhầm ở đây là tiền đi sai chỗ. Tên ngân hàng KHÔNG dịch —
+   * đó là tên riêng (ADR 0012).
+   */
+  const bankOptions = useMemo(() => {
+    const needle = bankSearch.trim().toLowerCase();
+    return VIETNAM_BANKS.filter(
+      (bank) =>
+        !needle ||
+        bank.code.toLowerCase().includes(needle) ||
+        bank.shortName.toLowerCase().includes(needle) ||
+        bank.fullName.toLowerCase().includes(needle),
+    ).map((bank) => ({ value: bank.code, label: `${bank.shortName} — ${bank.fullName}` }));
+  }, [bankSearch]);
 
   const schema = useMemo(
     () =>
@@ -111,12 +143,16 @@ export function BankAccountFormSheet({
   return (
     <BottomSheet open={open} onClose={close} title={t('title')}>
       <YStack gap={space.md}>
-        <TextField
+        {/* Ba mươi lăm nhà băng — gõ vài chữ nhanh hơn cuộn, đúng `showSearch` của web. */}
+        <SelectField
           control={control}
           name="bankCode"
           label={t('bankCode')}
+          options={bankOptions}
           placeholder={t('bankCodePlaceholder')}
-          autoCapitalize="characters"
+          onSearch={setBankSearch}
+          searchPlaceholder={t('bankCodePlaceholder')}
+          emptyText={t('bankNotFound')}
           required
         />
         <TextField

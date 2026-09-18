@@ -22,6 +22,8 @@ export function SelectField<T extends FieldValues>({
   onSearch,
   searchPlaceholder,
   emptyText,
+  onValueChange,
+  allowClear = false,
 }: {
   control: Control<T>;
   name: Path<T>;
@@ -37,6 +39,17 @@ export function SelectField<T extends FieldValues>({
   onSearch?: (value: string) => void;
   searchPlaceholder?: string;
   emptyText?: string;
+  /**
+   * Chạy SAU khi giá trị đã vào form, và CHỈ khi chính người dùng chọn.
+   *
+   * Có mặt để phân biệt "người dùng vừa chọn" với "form vừa được nạp giá trị" — hai chuyện mà
+   * một effect theo dõi `field.value` không tách được. Nơi gọi dùng nó cho việc phụ thuộc vào Ý
+   * ĐỊNH: ghi bộ nhớ tỉnh, dọn ô phụ thuộc, gửi số liệu. KHÔNG dùng để sửa lại chính giá trị —
+   * đó là việc của schema.
+   */
+  onValueChange?: (value: string) => void;
+  /** Cho phép bỏ chọn — xem `SelectControl`. Ô được xoá về `null`, không phải chuỗi rỗng. */
+  allowClear?: boolean;
 }) {
   const { field, fieldState } = useController({ control, name });
 
@@ -45,7 +58,17 @@ export function SelectField<T extends FieldValues>({
       label={label}
       value={(field.value as string | null) ?? null}
       options={options}
-      onChange={field.onChange}
+      allowClear={allowClear}
+      onChange={(next) => {
+        /*
+         * Bỏ chọn ghi `null`, không phải `''`. Nơi gọi đọc ô này bằng `== null` rồi mới chuyển sang
+         * số (giống hệt web, nơi allowClear của AntD trả `undefined`); một chuỗi rỗng lọt qua phép
+         * thử đó và `Number('')` là `0` — ô "không đặt sàn" âm thầm thành "sàn 0 phút".
+         */
+        const value = allowClear && next === '' ? null : next;
+        field.onChange(value);
+        onValueChange?.(next);
+      }}
       required={required}
       publishRequired={publishRequired}
       disabled={disabled}

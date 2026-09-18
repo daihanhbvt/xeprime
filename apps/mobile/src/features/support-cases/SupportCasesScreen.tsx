@@ -21,6 +21,7 @@ import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Pagination } from '@/components/ui/Pagination';
+import { SearchInput } from '@/components/ui/SearchInput';
 import { SelectControl } from '@/components/ui/SelectControl';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -31,6 +32,7 @@ import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { useDomainLabel } from '@/i18n/domain';
 import { goBackOr } from '@/navigation/go-back-or';
 import { FILTER_ALL } from '@/constants/filters';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { ROUTES } from '@/navigation/routes';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 import {
@@ -54,6 +56,9 @@ const ALL = FILTER_ALL;
  * Phạm vi đọc là việc của server (`SupportService.scopeWhere`), không phải của client — nên không
  * có bộ lọc "chỉ yêu cầu của tôi" ở đây, đúng như web.
  */
+/** Hoãn gọi API trong lúc người dùng còn gõ — cùng nhịp với hộp thư yêu cầu thuê. */
+const SEARCH_DEBOUNCE_MS = 350;
+
 export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
   const t = useTranslations('SupportCases');
   const router = useRouter();
@@ -66,19 +71,30 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
   // chọn thì nó phải là đúng một mã server hiểu — nới thành `string` là mất luôn phần canh đó.
   const [status, setStatus] = useState<SupportCaseStatus | typeof ALL>(ALL);
   const [category, setCategory] = useState<SupportCaseCategory | typeof ALL>(ALL);
+  /*
+   * Tìm theo MÃ hoặc tiêu đề — cách người ta thật sự tìm lại một yêu cầu cũ là đọc mã trong email
+   * rồi dán vào, và hai bộ lọc kia không thay được việc đó.
+   *
+   * Gõ thì hoãn 350ms rồi mới gọi: mỗi ký tự một request là một lượt tải cho một chuỗi chưa gõ
+   * xong. Ô hiện chữ NGAY (state cục bộ), chỉ lượt gọi bị hoãn.
+   */
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
   const [page, setPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
 
+  const q = debouncedSearch.trim();
   const query = useSupportCases(surface, {
     ...(status === ALL ? {} : { status }),
     ...(category === ALL ? {} : { category }),
+    ...(q ? { q } : {}),
     page,
     limit: SUPPORT_CASES_PAGE_SIZE,
   });
 
   const items = query.data?.items ?? [];
   const total = query.data?.meta?.total ?? 0;
-  const filtered = status !== ALL || category !== ALL;
+  const filtered = status !== ALL || category !== ALL || q !== '';
 
   const statusOptions = useMemo(
     () => [
@@ -159,6 +175,13 @@ export function SupportCasesScreen({ surface }: { surface: SupportSurface }) {
           {openButton}
 
           <YStack gap={space.sm}>
+            <SearchInput
+              value={search}
+              onChange={(next) => patch(() => setSearch(next))}
+              label={t('filters.search')}
+              placeholder={t('filters.searchPlaceholder')}
+              variant="boxed"
+            />
             <SelectControl
               label={t('filters.status')}
               value={status}

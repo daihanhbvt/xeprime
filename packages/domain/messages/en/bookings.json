@@ -154,6 +154,13 @@
       "hintWithCurrent": "Currently recorded: {km}. You can confirm without entering it.",
       "hintPlain": "You can confirm without entering it. Left blank, the vehicle mileage stays as is."
     },
+    "odometerError": {
+      "notNumber": "Odometer must be a number",
+      "notInteger": "Odometer must be a whole number",
+      "negative": "Odometer cannot be negative",
+      "tooLarge": "Odometer can be at most {max}",
+      "required": "Enter the odometer reading"
+    },
     "condition": {
       "label": "Vehicle condition",
       "normalOption": "Normal — no new damage",

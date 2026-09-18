@@ -42,8 +42,13 @@ export function toRequestBody(
     ...(withDriver
       ? {
           routeType: values.routeType as CreateBookingRequestInput['routeType'],
-          pickupProvinceCode: values.pickupProvinceCode,
-          pickupWardCode: values.pickupWardCode,
+          /*
+           * Chuỗi RỖNG không được gửi: DTO khai `@IsOptional()` kèm `@Length(5, 5)`, mà
+           * `@IsOptional` chỉ bỏ qua `null`/`undefined`. Từ ADR 0042 luồng khách không còn bộ
+           * chọn hành chính nào, nên hai trường này rỗng ở gần như mọi yêu cầu.
+           */
+          ...(values.pickupProvinceCode ? { pickupProvinceCode: values.pickupProvinceCode } : {}),
+          ...(values.pickupWardCode ? { pickupWardCode: values.pickupWardCode } : {}),
           pickupAddressLine: values.pickupAddressLine,
           ...(values.pickupPlaceId ? { pickupPlaceId: values.pickupPlaceId } : {}),
           ...(values.pickupLatitude != null && values.pickupLongitude != null
@@ -56,8 +61,10 @@ export function toRequestBody(
     ...(!withDriver && values.deliveryRequested
       ? {
           deliveryRequested: true,
-          deliveryProvinceCode: values.deliveryProvinceCode,
-          deliveryWardCode: values.deliveryWardCode,
+          ...(values.deliveryProvinceCode
+            ? { deliveryProvinceCode: values.deliveryProvinceCode }
+            : {}),
+          ...(values.deliveryWardCode ? { deliveryWardCode: values.deliveryWardCode } : {}),
           deliveryAddressLine: values.deliveryAddressLine,
           ...(values.deliveryPlaceId ? { deliveryPlaceId: values.deliveryPlaceId } : {}),
           ...(values.deliveryLatitude != null && values.deliveryLongitude != null

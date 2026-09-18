@@ -8,6 +8,8 @@ import {
   CUSTOMER_TRIP_FILTER_DEFAULT,
   CUSTOMER_TRIP_FILTER_VALUES,
   CUSTOMER_TRIP_STAGE_VALUES,
+  PERMISSION,
+  TRIP_ROLE,
   type CustomerTripFilter,
   type CustomerTripStage,
   type TripRole,
@@ -19,12 +21,24 @@ import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
 import { TripCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
+import { useAppToast } from '@/components/feedback/use-app-toast';
+import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { ApproveRequestSheet } from '@/features/booking-requests/components/ApproveRequestSheet';
+import { ApproveSuccessSheet } from '@/features/booking-requests/components/ApproveSuccessSheet';
+import { RejectRequestSheet } from '@/features/booking-requests/components/RejectRequestSheet';
+import {
+  useApproveBookingRequest,
+  useRejectBookingRequest,
+} from '@/features/booking-requests/hooks/use-booking-requests';
+import type { BookingRequestDecisionTarget } from '@/features/booking-requests/api';
 import { useDomainLabel } from '@/i18n/domain';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { colors, space } from '@/theme/tokens';
 import { TripCard } from './components/TripCard';
+import { tripToDecisionTarget } from './decision-target';
 import { useTripsInfinite } from './hooks/use-trips';
 import type { CustomerTrip, CustomerTripCounts } from './api';
 
@@ -73,7 +87,26 @@ const STAGE_FILTER_MIN_ROWS = 6;
  */
 export function TripsScreen({ lockedRole }: { lockedRole?: TripRole } = {}) {
   const t = useTranslations('Trips');
+  const tRequests = useTranslations('BookingRequests');
   const domainLabel = useDomainLabel();
+  const toast = useAppToast();
+  const errorMessage = useErrorMessage();
+  const permissions = usePermissions();
+
+  /*
+   * Duyệt/từ chối đi qua ĐÚNG hai mutation và ĐÚNG ba tấm trượt của hộp thư
+   * `/manage/booking-requests`, không phải một bản sao — nếu không, quy tắc thuê dài hạn, hạn
+   * phản hồi và lỗi trùng lịch sẽ trôi khỏi nhau giữa hai màn.
+   *
+   * Chuyến ở đây chỉ có `CustomerTripListItemDto` (hẹp hơn DTO hộp thư), nên nó đi qua
+   * `tripToDecisionTarget` — xem docblock ở đó.
+   */
+  const canApprove = permissions.has(PERMISSION.BOOKING_REQUEST_APPROVE);
+  const approve = useApproveBookingRequest();
+  const reject = useRejectBookingRequest();
+  const [approving, setApproving] = useState<BookingRequestDecisionTarget | null>(null);
+  const [rejecting, setRejecting] = useState<BookingRequestDecisionTarget | null>(null);
+  const [approved, setApproved] = useState<BookingRequestDecisionTarget | null>(null);
 
   const [filter, setFilter] = useState<CustomerTripFilter>(CUSTOMER_TRIP_FILTER_DEFAULT);
   /*
@@ -150,10 +183,66 @@ export function TripsScreen({ lockedRole }: { lockedRole?: TripRole } = {}) {
     setStage(null);
   }, []);
 
-  const renderTrip = useCallback(
-    ({ item }: ListRenderItemInfo<CustomerTrip>) => <TripCard trip={item} onPress={openTrip} />,
-    [openTrip],
+  /*
+   * Hai quyết định trên thẻ — dựng MỘT lần ở đây, không phải một closure mới cho mỗi thẻ mỗi lần
+   * render (thẻ có `memo`, và một prop đổi danh tính làm `memo` chạy không tải).
+   */
+  const decisions = useMemo(
+    () =>
+      canApprove
+        ? {
+            onApprove: (trip: CustomerTrip) => setApproving(tripToDecisionTarget(trip)),
+            onReject: (trip: CustomerTrip) => setRejecting(tripToDecisionTarget(trip)),
+          }
+        : undefined,
+    [canApprove],
   );
+
+  const renderTrip = useCallback(
+    ({ item }: ListRenderItemInfo<CustomerTrip>) => (
+      <TripCard
+        trip={item}
+        onPress={openTrip}
+        /* Chỉ chuyến mình CHO THUÊ mới có gì để quyết định — chuyến đi thuê thì mình là khách. */
+        {...((item.role as TripRole) === TRIP_ROLE.HOST && decisions ? { decisions } : {})}
+      />
+    ),
+    [openTrip, decisions],
+  );
+
+  function confirmApprove(body?: Parameters<typeof approve.mutate>[0]['body']) {
+    if (!approving) return;
+    const target = approving;
+    approve.mutate(
+      { id: target.id, ...(body ? { body } : {}) },
+      {
+        onSuccess: () => {
+          toast.showSuccess(
+            target.longTermPackageMonths
+              ? tRequests('approve.successLongTerm')
+              : tRequests('approve.success'),
+          );
+          setApproving(null);
+          setApproved(target);
+        },
+        onError: (error) => toast.showError(errorMessage(error)),
+      },
+    );
+  }
+
+  function confirmReject(reason: string) {
+    if (!rejecting) return;
+    reject.mutate(
+      { id: rejecting.id, reason },
+      {
+        onSuccess: () => {
+          toast.showSuccess(tRequests('reject.success'));
+          setRejecting(null);
+        },
+        onError: (error) => toast.showError(errorMessage(error)),
+      },
+    );
+  }
 
   return (
     <>
@@ -240,6 +329,35 @@ export function TripsScreen({ lockedRole }: { lockedRole?: TripRole } = {}) {
           />
         )}
       </Screen>
+
+      {/*
+        Ba tấm trượt quyết định — gắn CÓ ĐIỀU KIỆN vì `useForm`/`useState` bên trong chốt giá trị
+        mặc định ở lần render đầu; giữ chúng sống sẵn thì tấm mở cho chuyến thứ hai vẫn mang dữ
+        liệu của chuyến thứ nhất.
+      */}
+      {approving ? (
+        <ApproveRequestSheet
+          open
+          onClose={() => setApproving(null)}
+          request={approving}
+          onConfirm={confirmApprove}
+          loading={approve.isPending}
+        />
+      ) : null}
+
+      {approved ? (
+        <ApproveSuccessSheet request={approved} onClose={() => setApproved(null)} />
+      ) : null}
+
+      {rejecting ? (
+        <RejectRequestSheet
+          open
+          onClose={() => setRejecting(null)}
+          request={rejecting}
+          onConfirm={confirmReject}
+          loading={reject.isPending}
+        />
+      ) : null}
     </>
   );
 }

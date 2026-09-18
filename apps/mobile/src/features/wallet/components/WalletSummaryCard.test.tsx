@@ -23,13 +23,17 @@ function summary(patch: Partial<WalletSummary> = {}): WalletSummary {
   } as WalletSummary;
 }
 
-async function renderCard(data: WalletSummary, onWithdraw = jest.fn()) {
+async function renderCard(data: WalletSummary, onWithdraw = jest.fn(), pageVariant = false) {
   summaryMock.mockResolvedValue(data);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = await render(
     withIntl(
       <QueryClientProvider client={client}>
-        <WalletSummaryCard scope={WALLET_SCOPE.ACCOUNT} onWithdraw={onWithdraw} />
+        <WalletSummaryCard
+          scope={WALLET_SCOPE.ACCOUNT}
+          onWithdraw={onWithdraw}
+          pageVariant={pageVariant}
+        />
       </QueryClientProvider>,
     ),
   );
@@ -52,10 +56,23 @@ describe('WalletSummaryCard', () => {
     expect(view.getByText('Tổng XePrime phải trả')).toBeTruthy();
   });
 
+  /**
+   * ADR 0033 điều 1 — và câu chữ mang nghĩa đó ĐÃ ĐỔI ngày 16/09/2026.
+   *
+   * Tới bản đó, thẻ mang dòng "1 điểm = 1đ · rút về tài khoản ngân hàng · không hết hạn" và ví tên
+   * là "Ví điểm". Cả hai bị gỡ khỏi gốc message khi ví đổi tên thành "Số dư": nghĩa "sổ công nợ"
+   * giờ nằm ở chính nhãn con số tổng (`Tổng XePrime phải trả`) và ở câu mô tả trang
+   * (`Wallet.page.subtitle`), chứ không ở một dòng chú thích riêng.
+   *
+   * Nên test này canh ĐÚNG chỗ nghĩa đó đang sống, và canh cả việc thẻ KHÔNG mọc lại một hành động
+   * kiểu ví điện tử: rút là thao tác duy nhất, không nạp, không chuyển ngang.
+   */
   it('nói rõ đây là sổ công nợ, không phải ví điện tử (ADR 0033 điều 1)', async () => {
     const view = await renderCard(summary());
 
-    expect(view.getByText(/1 điểm = 1đ/)).toBeTruthy();
+    expect(view.getByText('Tổng XePrime phải trả')).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Rút về ngân hàng' })).toBeTruthy();
+    expect(view.queryByText(/Nạp tiền|Chuyển điểm|Thanh toán bằng điểm/)).toBeNull();
   });
 
   it('KHOÁ nút rút khi số dư chưa đạt ngưỡng của server', async () => {
@@ -81,5 +98,17 @@ describe('WalletSummaryCard', () => {
     expect(view.getByRole('button', { name: 'Rút về ngân hàng' }).props.accessibilityState).toEqual(
       expect.objectContaining({ disabled: true }),
     );
+  });
+
+  it('hình thái trang không lặp tiêu đề và nút đã nằm ở hàng tiêu đề', async () => {
+    const view = await renderCard(
+      summary({ available: '50000', minWithdrawAmount: '100000' }),
+      jest.fn(),
+      true,
+    );
+
+    expect(view.queryByText('Số dư của tôi')).toBeNull();
+    expect(view.queryByRole('button', { name: 'Rút về ngân hàng' })).toBeNull();
+    expect(view.getByText(/Rút tối thiểu 100.000 ₫/)).toBeTruthy();
   });
 });

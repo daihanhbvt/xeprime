@@ -19,6 +19,7 @@ export const SECURE_KEY = {
    * dựng lại dev build. Bị mã hoá thừa không hại gì; không có chỗ lưu mới hại.
    */
   RENTAL_RANGE: 'xp.rentalRange',
+  PROVINCE_CODE: 'xp.provinceCode',
   DELIVERY_ADDRESS: 'xp.deliveryAddress',
 } as const;
 

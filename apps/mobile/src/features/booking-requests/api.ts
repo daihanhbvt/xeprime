@@ -12,6 +12,7 @@ export { publicQuote, deliveryDistance } from '@/api/marketplace/api';
 
 export type {
   ApproveBookingRequestInput,
+  BookingRequestDecisionTarget,
   BookingRequestFilters,
   BookingRequestItem,
   BookingRequestListMeta,

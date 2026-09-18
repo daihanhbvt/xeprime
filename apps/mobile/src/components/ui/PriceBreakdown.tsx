@@ -1,10 +1,13 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
+import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { subtractMoney } from '@xeprime/domain';
 import { FEE_BEARER, PRICE_ROW } from '@xeprime/types';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 /**
  * PHỤ PHÍ PHÍA KHÁCH — ADR 0029 điều 1, cùng shape với `PriceBreakdownFees` bên web.
@@ -59,6 +62,8 @@ export function PriceBreakdown({
   badge,
   footer,
   fees,
+  audience = 'customer',
+  collapsible = false,
 }: {
   rows: readonly PriceBreakdownRowInput[];
   /** Tổng khách trả TRƯỚC cọc. */
@@ -72,10 +77,38 @@ export function PriceBreakdown({
   footer?: React.ReactNode;
   /** Có mặt ⇒ hiện thêm khối phụ phí phía khách rồi mới tới "Tổng bạn trả". */
   fees?: PriceBreakdownFeesInput | null;
+  /**
+   * Người đang đọc bảng này là CHỦ XE hay KHÁCH. Mặc định là khách — bề mặt đông hơn, và mặc định
+   * an toàn phải là "ít lộ hơn".
+   *
+   * Quyết định đúng một chuyện: có vẽ những dòng do CHỦ XE chịu hay không. Thuế khấu trừ là ví dụ
+   * điển hình — nó KHÔNG cộng vào tổng khách (ADR 0032 điều 3), nên với khách nó chỉ là một con số
+   * lạ nằm giữa hoá đơn của mình. Với chủ xe thì ngược lại: đó là dòng giải thích vì sao số thực
+   * nhận thấp hơn tổng khách trả.
+   */
+  audience?: 'customer' | 'owner';
+  /**
+   * Gấp các dòng kê chi tiết (bảng giá thuê + từng khoản phụ phí) sau một nút "Xem chi tiết",
+   * mặc định ĐÓNG — chỉ tổng cuối/cọc/tiền giữ chỗ hiện ngay. Mặc định của prop là `false` để
+   * KHÔNG đổi hành vi ở màn đặt xe (khách cần thấy đủ trước khi bấm gửi): chỉ màn xem lại sau
+   * khi đã đặt (chi tiết chuyến) mới bật, nơi con số đã chốt và bảng dài chỉ còn là tra cứu.
+   */
+  collapsible?: boolean;
 }) {
   const tCommon = useTranslations('Common.components.price');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
+  const [expanded, setExpanded] = useState(!collapsible);
+  const showItems = !collapsible || expanded;
+
+  /*
+   * Dòng do CHỦ XE chịu chỉ vẽ cho chủ xe. Với khách, thuế khấu trừ là một con số lạ nằm giữa hoá
+   * đơn của họ mà họ không trả — nó không cộng vào tổng (ADR 0032 điều 3), nên hiện ra chỉ làm
+   * người ta tưởng mình đang gánh thuế của người khác.
+   */
+  const feeLines = (fees?.lines ?? []).filter(
+    (line) => audience === 'owner' || line.bearer !== FEE_BEARER.OWNER,
+  );
 
   return (
     <YStack gap={space.sm}>
@@ -92,38 +125,59 @@ export function PriceBreakdown({
         ) : null}
       </XStack>
 
-      <YStack gap={space.sm} pt={space.sm} borderTopWidth={1} borderColor={colors.borderSubtle}>
-        {rows.map((row, index) => {
-          const isDiscount = row.key === PRICE_ROW.DISCOUNT;
-          const isZero = row.amount === '0';
+      {collapsible ? (
+        <Pressable
+          onPress={() => setExpanded((v) => !v)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded }}
+        >
+          <XStack ai="center" gap={space.xs}>
+            <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+              {expanded ? tCommon('collapse') : tCommon('viewDetails')}
+            </Text>
+            <Ionicons
+              name={expanded ? 'chevron-up' : 'chevron-down'}
+              size={iconSize.sm}
+              color={colors.primaryActive}
+            />
+          </XStack>
+        </Pressable>
+      ) : null}
 
-          return (
-            <XStack key={`${row.key}-${index}`} ai="flex-start" jc="space-between" gap={space.sm}>
-              <YStack f={1} gap={2}>
-                <Text
-                  col={isDiscount ? colors.danger : colors.text}
-                  fos={fontSize.bodySm}
-                  fow={fontWeight.semibold}
-                >
-                  {row.label}
-                </Text>
-                {row.sublabel ? (
-                  <Text col={colors.placeholder} fos={fontSize.label}>
-                    {row.sublabel}
+      {showItems ? (
+        <YStack gap={space.sm} pt={space.sm} borderTopWidth={1} borderColor={colors.borderSubtle}>
+          {rows.map((row, index) => {
+            const isDiscount = row.key === PRICE_ROW.DISCOUNT;
+            const isZero = row.amount === '0';
+
+            return (
+              <XStack key={`${row.key}-${index}`} ai="flex-start" jc="space-between" gap={space.sm}>
+                <YStack f={1} gap={2}>
+                  <Text
+                    col={isDiscount ? colors.danger : colors.text}
+                    fos={fontSize.bodySm}
+                    fow={fontWeight.semibold}
+                  >
+                    {row.label}
                   </Text>
-                ) : null}
-              </YStack>
-              <Text
-                col={isDiscount ? colors.danger : isZero ? colors.placeholder : colors.text}
-                fos={fontSize.bodySm}
-                fow={isZero && !isDiscount ? fontWeight.regular : fontWeight.semibold}
-              >
-                {fmt.money(row.amount)}
-              </Text>
-            </XStack>
-          );
-        })}
-      </YStack>
+                  {row.sublabel ? (
+                    <Text col={colors.placeholder} fos={fontSize.label}>
+                      {row.sublabel}
+                    </Text>
+                  ) : null}
+                </YStack>
+                <Text
+                  col={isDiscount ? colors.danger : isZero ? colors.placeholder : colors.text}
+                  fos={fontSize.bodySm}
+                  fow={isZero && !isDiscount ? fontWeight.regular : fontWeight.semibold}
+                >
+                  {fmt.money(row.amount)}
+                </Text>
+              </XStack>
+            );
+          })}
+        </YStack>
+      ) : null}
 
       <YStack gap={6} pt={space.sm} borderTopWidth={1} borderColor={colors.borderSubtle}>
         <XStack ai="baseline" jc="space-between" gap={space.sm}>
@@ -164,38 +218,40 @@ export function PriceBreakdown({
         ) : null}
       </YStack>
 
-      {fees && fees.lines.length > 0 ? (
+      {fees && feeLines.length > 0 ? (
         <YStack gap={space.sm} pt={space.sm} borderTopWidth={1} borderColor={colors.borderSubtle}>
           <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.semibold}>
             {tCommon('feesTitle')}
           </Text>
 
-          {fees.lines.map((line) => {
-            // Dòng do CHỦ XE chịu không cộng vào tổng khách — nói rõ ngay tại dòng, nếu không
-            // khách tự cộng vào rồi thấy tổng không khớp.
-            const ownerBorne = line.bearer === FEE_BEARER.OWNER;
+          {showItems
+            ? feeLines.map((line) => {
+                // Dòng do CHỦ XE chịu không cộng vào tổng khách — nói rõ ngay tại dòng, nếu không
+                // khách tự cộng vào rồi thấy tổng không khớp.
+                const ownerBorne = line.bearer === FEE_BEARER.OWNER;
 
-            return (
-              <XStack key={line.key} ai="flex-start" jc="space-between" gap={space.sm}>
-                <YStack f={1} gap={2}>
-                  <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                    {domainLabel('feeLine', line.key)}
-                  </Text>
-                  <Text col={colors.placeholder} fos={fontSize.label}>
-                    {(ownerBorne ? tCommon('ownerNet') : `${line.percent}%`) +
-                      (line.partnerName ? ` · ${line.partnerName}` : '')}
-                  </Text>
-                </YStack>
-                <Text
-                  col={ownerBorne ? colors.placeholder : colors.text}
-                  fos={fontSize.bodySm}
-                  fow={fontWeight.semibold}
-                >
-                  {fmt.money(line.amount)}
-                </Text>
-              </XStack>
-            );
-          })}
+                return (
+                  <XStack key={line.key} ai="flex-start" jc="space-between" gap={space.sm}>
+                    <YStack f={1} gap={2}>
+                      <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                        {domainLabel('feeLine', line.key)}
+                      </Text>
+                      <Text col={colors.placeholder} fos={fontSize.label}>
+                        {(ownerBorne ? tCommon('ownerNet') : `${line.percent}%`) +
+                          (line.partnerName ? ` · ${line.partnerName}` : '')}
+                      </Text>
+                    </YStack>
+                    <Text
+                      col={ownerBorne ? colors.placeholder : colors.text}
+                      fos={fontSize.bodySm}
+                      fow={fontWeight.semibold}
+                    >
+                      {fmt.money(line.amount)}
+                    </Text>
+                  </XStack>
+                );
+              })
+            : null}
 
           <XStack ai="baseline" jc="space-between" gap={space.sm}>
             <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.bold} letterSpacing={0.4}>

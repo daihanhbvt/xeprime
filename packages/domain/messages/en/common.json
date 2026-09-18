@@ -20,6 +20,7 @@
     "reset": "Reset",
     "undo": "Undo",
     "clear": "Clear filters",
+    "clearSelection": "Clear selection",
     "back": "Back",
     "next": "Continue",
     "previous": "Previous",

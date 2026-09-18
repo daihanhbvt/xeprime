@@ -80,6 +80,8 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     fuelConsumptionHighway: values.fuelConsumptionHighway ?? undefined,
     fuelConsumptionCombined: values.fuelConsumptionCombined ?? undefined,
     electricRangeKm: values.electricRangeKm ?? undefined,
+    batteryCapacityKwh: values.batteryCapacityKwh ?? undefined,
+    electricConsumptionKwhPer100Km: values.electricConsumptionKwhPer100Km ?? undefined,
     weekdayPrice: values.weekdayPrice == null ? undefined : String(values.weekdayPrice),
     weekendPrice: values.weekendPrice == null ? undefined : String(values.weekendPrice),
     hourlyPrice: values.hourlyPrice == null ? null : String(values.hourlyPrice),
@@ -177,6 +179,10 @@ export function informationValuesToInput(values: VehicleFormValues): UpdateVehic
     color: textOrNull(values.color),
     fuelType: values.fuelType,
     bodyType: values.vehicleType === VEHICLE_TYPE.CAR ? (values.bodyType ?? null) : null,
+    motorbikeCategory:
+      values.vehicleType === VEHICLE_TYPE.MOTORBIKE ? (values.motorbikeCategory ?? null) : null,
+    // Backend chép `brand`/`model` từ mẫu này xuống — hai ô chữ ở trên chỉ còn là bản đọc lại.
+    vehicleCatalogModelId: values.vehicleCatalogModelId ?? null,
     manufactureYear: values.manufactureYear,
     seatCount: values.seatCount,
     lengthMm: values.lengthMm,
@@ -190,6 +196,8 @@ export function informationValuesToInput(values: VehicleFormValues): UpdateVehic
     fuelConsumptionHighway: values.fuelConsumptionHighway,
     fuelConsumptionCombined: values.fuelConsumptionCombined,
     electricRangeKm: values.electricRangeKm,
+    batteryCapacityKwh: values.batteryCapacityKwh,
+    electricConsumptionKwhPer100Km: values.electricConsumptionKwhPer100Km,
   };
 }
 

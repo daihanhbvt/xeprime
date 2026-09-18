@@ -70,6 +70,13 @@ export function DataRow({
           fos={strong ? fontSize.body : fontSize.bodySm}
           fow={strong ? fontWeight.bold : fontWeight.medium}
           ta={block ? 'left' : 'right'}
+          {...(block
+            ? {}
+            : {
+                numberOfLines: 1,
+                adjustsFontSizeToFit: true,
+                minimumFontScale: 0.75,
+              })}
         >
           {value}
         </Text>
@@ -111,7 +118,7 @@ export function DataRow({
   }
 
   return (
-    <XStack ai="flex-start" jc="space-between" gap={space.md}>
+    <XStack ai="center" jc="space-between" gap={space.md}>
       {labelBlock}
       {valueText}
     </XStack>

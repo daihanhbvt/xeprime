@@ -106,10 +106,14 @@ function TripHistoryBody({ vehicleId }: { vehicleId: string }) {
           {/*
             Nút "tải thêm" chứ không phải cuộn-chạm-đáy: danh sách này nằm TRONG `Screen` cuộn
             chung với các khối khác, nên không có `onEndReached` để bám vào.
+
+            Chỉ hiện khi CÒN trang sau (`hasNextPage` đọc từ `meta.hasNext` của server) — đúng
+            điều kiện `total > limit` mà web gác bộ số trang. Bày nó ở trang cuối là một nút bấm
+            vào không xảy ra gì, và người dùng sẽ bấm vài lần trước khi tin là đã hết.
           */}
           {query.isFetchingNextPage ? (
             <MiniRowsSkeleton rows={2} />
-          ) : (
+          ) : query.hasNextPage ? (
             <Button
               label={tActions('viewMore')}
               icon="chevron-down-outline"
@@ -117,7 +121,7 @@ function TripHistoryBody({ vehicleId }: { vehicleId: string }) {
               size="sm"
               onPress={query.fetchNextPage}
             />
-          )}
+          ) : null}
         </YStack>
       )}
     </YStack>

@@ -59,6 +59,7 @@ export function SelectControl({
   onSearch,
   searchPlaceholder,
   emptyText,
+  allowClear = false,
 }: {
   label: string;
   value: string | null;
@@ -88,6 +89,15 @@ export function SelectControl({
   searchPlaceholder?: string;
   /** Chữ khi danh sách rỗng sau khi tìm. Bỏ trống thì không hiện gì. */
   emptyText?: string;
+  /**
+   * Cho phép BỎ CHỌN — hiện nút xoá khi ô đang có giá trị, và bỏ chọn trả về chuỗi rỗng.
+   *
+   * Chỉ bật ở những ô mà "không chọn gì" là một câu trả lời HỢP LỆ và KHÁC với mọi lựa chọn
+   * trong danh sách — thời lượng thuê tối thiểu chẳng hạn: bỏ trống nghĩa là không đặt sàn,
+   * chứ không phải sàn bằng 1 giờ. Thiếu nó thì ô một chiều: chọn xong không có đường lùi, và
+   * người dùng phải đoán xem giá trị nhỏ nhất có phải là "tắt" hay không.
+   */
+  allowClear?: boolean;
 }) {
   const t = useTranslations('Common.actions');
   const [open, setOpen] = useState(false);
@@ -121,6 +131,21 @@ export function SelectControl({
           >
             {current?.label ?? placeholder ?? t('choose')}
           </Text>
+          {/*
+            Nút xoá là một Pressable RIÊNG lồng trong vỏ chạm, kèm hitSlop: biểu tượng chỉ 16dp,
+            mà một vùng chạm 16dp nằm sát mép phải màn hình là thứ người ta bấm trượt sang mở
+            tấm chọn — đúng thao tác họ vừa tránh.
+          */}
+          {allowClear && current && !disabled ? (
+            <Pressable
+              onPress={() => onChange('')}
+              hitSlop={space.sm}
+              accessibilityRole="button"
+              accessibilityLabel={t('clearSelection')}
+            >
+              <Ionicons name="close-circle" size={iconSize.sm} color={colors.textMuted} />
+            </Pressable>
+          ) : null}
           <Ionicons
             name="chevron-down"
             size={iconSize.sm}
