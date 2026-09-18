@@ -30,8 +30,6 @@ import {
   useSupportCases,
   useWithdrawAccountDeletion,
 } from '@/features/support-cases/hooks/use-support-cases';
-import { APP_SCOPE } from '@/features/shell/app-scope';
-import { useShellScope } from '@/features/shell/use-shell-scope';
 import { useDomainLabel } from '@/i18n/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -58,16 +56,16 @@ const ITEMS = ['profile', 'vehicles', 'trips', 'billing'] as const;
  * khi gửi KHÔNG đăng xuất, KHÔNG đánh dấu tài khoản đã xoá — tài khoản dùng bình thường tới khi
  * XePrime hoàn tất, và người dùng rút yêu cầu được trong lúc chờ.
  *
- * ## Khối "ảnh hưởng khi đóng tài khoản" chỉ hiện ở KHU QUẢN LÝ
+ * ## Khối "ảnh hưởng khi đóng tài khoản" hiện ở CẢ HAI khu
  *
  * Bên web, `AccountDeletionImpact` (số dư khả dụng · đang chờ chuyển · lệnh rút đang treo ·
- * chuyến chưa khép) do TRANG dựng, không do form: `/manage/account` và `/account` đặt nó ngay
- * trên `DeleteAccountView`, còn `/account/delete-account` — đường đi từ menu — thì không.
+ * chuyến chưa khép) do TRANG dựng: `/manage/account` và `/account` đều đặt nó ngay trên form,
+ * còn `/account/delete-account` thì không — vì người đi đường đó vừa đọc nó ở `/account`.
  *
- * App không có trang gộp nào để chia như vậy: cả hai menu tài khoản (khu khách và khu quản lý)
- * cùng dẫn về MỘT màn này. Nên điều kiện chuyển thành KHU: ở `manage`, người dùng đứng trước
- * đúng ngữ cảnh của `/manage/account` (có ví gian hàng, có lệnh rút, có pháp nhân) và phải thấy
- * mình đang mang theo gì; ở khu khách thì màn này khớp `/account/delete-account` của web.
+ * App KHÔNG có sự phân đôi ấy: cả hai menu tài khoản dẫn về MỘT màn này, và màn `/account` của app
+ * không dựng form xoá. Bản trước gác khối theo KHU, nên một khách thuê ở khu khách không bao giờ
+ * đọc được mình đang mang theo gì — đúng cái mà web bảo đảm cho họ ở `/account`. Gác theo khu vì
+ * thế là chép cái HÌNH của web mà bỏ mất cái NGHĨA.
  */
 export function DeleteAccountScreen() {
   const t = useTranslations('Account.deleteAccount');
@@ -78,8 +76,6 @@ export function DeleteAccountScreen() {
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
   const [confirmingWithdraw, setConfirmingWithdraw] = useState(false);
-  const { scope } = useShellScope();
-  const isManage = scope === APP_SCOPE.MANAGE;
 
   const pendingQuery = useSupportCases(SUPPORT_SURFACE.CUSTOMER, {
     category: SUPPORT_CASE_CATEGORY.ACCOUNT_DELETION,
@@ -143,7 +139,7 @@ export function DeleteAccountScreen() {
             Đứng TRƯỚC form, y như hai trang web dựng nó: một cảnh báo đọc sau khi đã bấm gửi thì
             không còn là cảnh báo. KHÔNG chặn nút gửi — yêu cầu vẫn vào hàng đợi support.
           */}
-          {isManage ? <AccountDeletionImpact /> : null}
+          <AccountDeletionImpact />
 
           {pendingQuery.isLoading ? (
             <Card>

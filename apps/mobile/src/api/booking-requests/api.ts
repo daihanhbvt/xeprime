@@ -13,6 +13,54 @@ export type CheckAvailabilityResult = Schemas['CheckAvailabilityResultDto'];
 /** Lịch bận của một xe để tô/khoá ô trên hộp chọn thời gian thuê (preview — ADR 0006). */
 export type VehicleBusyDays = Schemas['VehicleBusyDaysDto'];
 export type BookingRequestConversation = Schemas['ConversationSummaryDto'];
+
+/**
+ * Lát cắt mà BA tấm trượt quyết định (duyệt · từ chối · duyệt xong) thật sự đọc.
+ *
+ * Tồn tại vì hai màn nuôi cùng ba tấm trượt đó bằng hai DTO khác nhau: hộp thư gian hàng có
+ * `BookingRequestDto` đầy đủ, còn danh sách "Chuyến của tôi" chỉ có `CustomerTripListItemDto` —
+ * một DTO CỐ Ý hẹp hơn (không ghi chú nội bộ, không hồ sơ khách). Khai kiểu theo cái rộng hơn sẽ
+ * buộc màn chuyến bịa ra những trường nó không có, ngay trước một thao tác giữ chỗ một chiếc xe
+ * thật.
+ *
+ * `customerPhone` là `null` khi chưa được phép liên hệ — chuyến tuyến hoa hồng còn chờ duyệt
+ * (ADR 0028 điều 9). Hộp thư luôn có số thật nên vẫn thoả kiểu này.
+ */
+export type BookingRequestDecisionTarget = Omit<
+  Pick<
+    BookingRequestItem,
+    | 'id'
+    | 'bookingId'
+    | 'vehicleId'
+    | 'vehicleName'
+    | 'vehiclePlate'
+    | 'customerName'
+    | 'customerPhone'
+    | 'serviceType'
+    | 'respondBy'
+    | 'pickupAt'
+    | 'returnAt'
+    | 'deliveryRequested'
+    | 'longTermPackageMonths'
+    | 'pickupPreference'
+    | 'requestedPickupDate'
+    | 'pickupWindowStartDate'
+    | 'pickupWindowEndDate'
+  >,
+  'customerPhone' | 'serviceType' | 'pickupPreference' | 'respondBy'
+> & {
+  readonly customerPhone: string | null;
+  /**
+   * `null` khi chuyến không còn (hoặc chưa có) hạn phản hồi — hộp thư luôn có mốc thật.
+   *
+   * `isBookingRequestPastDue(null)` trả `false`, tức "không có hạn thì không quá hạn": đúng, vì
+   * một chuyến đã được duyệt hoặc đã khép không còn đồng hồ nào chạy.
+   */
+  readonly respondBy: string | null;
+  /** Mã dịch vụ đi trên dây; `/trips` khai `string` còn hộp thư khai union — `string` nhận cả hai. */
+  readonly serviceType: string;
+  readonly pickupPreference?: string | null;
+};
 export type BookingRequestStatusCount = Schemas['BookingRequestStatusCountDto'];
 
 /**

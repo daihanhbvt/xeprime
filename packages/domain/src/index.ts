@@ -19,6 +19,13 @@
  */
 
 export {
+  packageShopListingGateFrom,
+  isLogoOnlyGate,
+  publishRequirementsFrom,
+  type ApiErrorLike,
+} from './listing-gate';
+
+export {
   CURRENCY_SUFFIX,
   subtractMoney,
   absoluteMoney,

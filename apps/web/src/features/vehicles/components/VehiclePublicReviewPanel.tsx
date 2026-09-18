@@ -11,7 +11,7 @@ import {
   type VehiclePublicStatus,
 } from '@xeprime/types';
 import { ShopListingGateAlert } from '@/features/shop/components/ShopListingGateAlert';
-import { packageShopListingGateFrom } from '@/features/shop/listing-gate';
+import { packageShopListingGateFrom } from '@xeprime/domain';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { decorativeIcon } from '@/lib/decorative-icon';

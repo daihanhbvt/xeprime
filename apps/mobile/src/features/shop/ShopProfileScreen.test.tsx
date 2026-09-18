@@ -173,15 +173,15 @@ describe('ShopProfileScreen — quyền', () => {
     expect(view.queryByText('Lưu thông tin')).toBeNull();
   });
 
-  it('thiếu `tenant.submit_review`: KHÔNG có nút gửi xác minh dù hồ sơ chưa xác minh', async () => {
+  it('thiếu `tenant.submit_review`: đọc được dải xác minh nhưng KHÔNG có nút gửi lại', async () => {
     const view = await renderScreen(
       [PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE],
-      shop(ACTIVE),
+      shop({ ...ACTIVE, verification: SHOP_VERIFICATION.NEEDS_REVISION }),
       TENANT_STATUS.ACTIVE,
     );
 
-    expect(await view.findByText('Gian hàng chưa được xác minh')).toBeTruthy();
-    expect(view.queryByText('Gửi xác minh')).toBeNull();
+    expect(await view.findByText('Nền tảng yêu cầu bổ sung hồ sơ')).toBeTruthy();
+    expect(view.queryByText('Gửi lại xác minh')).toBeNull();
   });
 });
 
@@ -204,8 +204,8 @@ describe('ShopProfileScreen — trục TRẠNG THÁI gian hàng (tenants.status)
     );
 
     expect(await view.findByText('Gian hàng đang bị khoá')).toBeTruthy();
-    expect(view.queryByText('Gian hàng chưa được xác minh')).toBeNull();
-    expect(view.queryByText('Gửi xác minh')).toBeNull();
+    expect(view.queryByText('Hồ sơ đang chờ nền tảng xác minh')).toBeNull();
+    expect(view.queryByText('Gửi lại xác minh')).toBeNull();
   });
 
   it('expired: hết hạn GÓI vẫn xem được hồ sơ của chính mình (ADR 0027 điều 3)', async () => {
@@ -227,13 +227,24 @@ describe('ShopProfileScreen — trục XÁC MINH (ADR 0036)', () => {
     PERMISSION.TENANT_SUBMIT_REVIEW,
   ];
 
-  it('chưa xác minh: nói đúng rằng xe KHÔNG bị chặn, kèm nút gửi + checklist', async () => {
+  /**
+   * CHƯA XÁC MINH = KHÔNG CÓ TIN GÌ, KHÔNG CÓ VIỆC GÌ (ADR 0040).
+   *
+   * Tới 16/09/2026 trạng thái này mang một dải kèm nút "Gửi xác minh", và câu chữ hứa rằng xác
+   * minh là điều kiện để MUA GÓI. ADR 0040 gỡ cổng đó — nút không còn đổi lấy được gì cho người
+   * bấm, trong khi nó vẫn KHOÁ hồ sơ khỏi việc sửa suốt thời gian chờ. Nên dải im lặng hẳn.
+   *
+   * Checklist thì VẪN còn: hồ sơ vẫn gửi xác minh được (`SHOP_VERIFICATION_SUBMITTABLE` không
+   * đổi), và nó là bảng kiểm kê cho cả cổng gửi duyệt xe.
+   */
+  it('chưa xác minh: KHÔNG dựng dải nào, nhưng checklist vẫn còn', async () => {
     const view = await renderScreen(all, shop(ACTIVE), TENANT_STATUS.ACTIVE);
 
-    expect(await view.findByText('Gian hàng chưa được xác minh')).toBeTruthy();
+    expect(await view.findByText('Hoàn thiện hồ sơ')).toBeTruthy();
+    expect(view.queryByText('Gian hàng chưa được xác minh')).toBeNull();
     expect(view.queryByText('Hồ sơ đang chờ nền tảng xác minh')).toBeNull();
-    expect(view.getByText('Gửi xác minh')).toBeTruthy();
-    expect(view.getByText('Hoàn thiện hồ sơ')).toBeTruthy();
+    expect(view.queryByText('Gửi xác minh')).toBeNull();
+    expect(view.queryByText('Gửi lại xác minh')).toBeNull();
   });
 
   it('đang chờ xác minh: KHOÁ form vì backend từ chối ghi, KHÔNG phải vì thiếu quyền', async () => {
@@ -246,10 +257,13 @@ describe('ShopProfileScreen — trục XÁC MINH (ADR 0036)', () => {
     expect(await view.findByText('Hồ sơ đang chờ duyệt nên tạm khoá chỉnh sửa.')).toBeTruthy();
     // Câu của "thiếu quyền" phải KHÁC hẳn — hai tình huống, hai lối ra.
     expect(view.queryByText('Bạn chỉ có quyền xem hồ sơ gian hàng.')).toBeNull();
-    expect(view.queryByText('Gửi xác minh')).toBeNull();
+    expect(view.queryByText('Gửi lại xác minh')).toBeNull();
     expect(view.queryByText('Hoàn thiện hồ sơ')).toBeNull();
-    // Không có gì để gửi thì việc làm được ngay là thêm xe — xe không chờ xác minh.
-    expect(view.getByText('Thêm xe')).toBeTruthy();
+    /*
+     * Dải nói VÌ SAO đang khoá — xe không bị ảnh hưởng. Đây là khác biệt so với nhánh trạng thái
+     * vận hành: ở đó tin là "gian hàng không chạy", ở đây là "hồ sơ đang trong hàng đợi".
+     */
+    expect(view.getByText('Hồ sơ đang chờ nền tảng xác minh')).toBeTruthy();
   });
 
   it('bị trả về: hiện NGUYÊN VĂN lý do của đội duyệt + nút gửi lại', async () => {
@@ -280,9 +294,14 @@ describe('ShopProfileScreen — trục XÁC MINH (ADR 0036)', () => {
       TENANT_STATUS.ACTIVE,
     );
 
-    expect(await view.findByText('Gian hàng đã được xác minh')).toBeTruthy();
+    expect(await view.findByLabelText('Tên hiển thị')).toBeTruthy();
+    /*
+     * Một dải xanh "mọi thứ đều ổn" chiếm trọn bề ngang chỉ dạy người dùng bỏ qua vùng ấy — và
+     * đúng lúc có tin xấu thì họ cũng không đọc nữa. Nhãn trạng thái cạnh tên gian hàng đã đủ.
+     */
+    expect(view.queryByText('Gian hàng đã được xác minh')).toBeNull();
     expect(view.queryByText('Hoàn thiện hồ sơ')).toBeNull();
-    expect(view.queryByText('Gửi xác minh')).toBeNull();
+    expect(view.queryByText('Gửi lại xác minh')).toBeNull();
   });
 });
 
@@ -293,34 +312,38 @@ describe('ShopProfileScreen — gửi xác minh', () => {
     PERMISSION.TENANT_SUBMIT_REVIEW,
   ];
 
-  it('hồ sơ THIẾU mục bắt buộc: chặn ngay, không mở hộp xác nhận và không gọi API', async () => {
+  /**
+   * Cổng CLIENT là schema của chính biểu mẫu, không phải `missingShopProfileRequirements`.
+   *
+   * Hai bộ khác nhau có chủ đích, và web gác đúng như vậy (`openSubmitConfirm = handleSubmit(...)`):
+   * họ tên + SĐT chủ đọc từ TÀI KHOẢN (16/09/2026), không còn là ô trong form này, nên màn không có
+   * cách nào bắt người dùng sửa chúng ở đây — cổng thật cho nhóm đó là backend
+   * (`PROFILE_INCOMPLETE`), và checklist ngay trên nút mới là chỗ nói ra chúng còn thiếu.
+   *
+   * Thứ màn này chặn được là ô của chính nó: thiếu tên hiển thị thì không mở hộp xác nhận, không
+   * gọi API, và toast đếm đúng số ô hỏng.
+   */
+  it('ô bắt buộc của form còn trống: chặn ngay, không mở hộp xác nhận và không gọi API', async () => {
     const view = await renderScreen(
       all,
-      // Danh tính chủ đọc từ ownerAccount (ADR 0040) — thiếu ở ĐÓ mới là hồ sơ chưa đủ.
-      shop({
-        ...ACTIVE,
-        ownerAccount: {
-          userId: '01JQZX00000000000000000OW',
-          displayName: '',
-          email: null,
-          phone: null,
-          emailVerified: false,
-          phoneVerified: false,
-        },
-      }),
+      shop({ ...ACTIVE, verification: SHOP_VERIFICATION.NEEDS_REVISION }, { displayName: '' }),
       TENANT_STATUS.ACTIVE,
     );
 
-    await fireEvent.press(await view.findByText('Gửi xác minh'));
+    await fireEvent.press(await view.findByText('Gửi lại xác minh'));
 
     await waitFor(() => expect(view.submitSpy).not.toHaveBeenCalled());
     expect(view.queryByText('Gửi hồ sơ cho nền tảng duyệt?')).toBeNull();
   });
 
   it('hồ sơ đủ: xác nhận rồi mới gửi', async () => {
-    const view = await renderScreen(all, shop(ACTIVE), TENANT_STATUS.ACTIVE);
+    const view = await renderScreen(
+      all,
+      shop({ ...ACTIVE, verification: SHOP_VERIFICATION.NEEDS_REVISION }),
+      TENANT_STATUS.ACTIVE,
+    );
 
-    await fireEvent.press(await view.findByText('Gửi xác minh'));
+    await fireEvent.press(await view.findByText('Gửi lại xác minh'));
     expect(await view.findByText('Gửi hồ sơ cho nền tảng duyệt?')).toBeTruthy();
     expect(view.submitSpy).not.toHaveBeenCalled();
 
@@ -329,10 +352,14 @@ describe('ShopProfileScreen — gửi xác minh', () => {
   });
 
   it('còn thay đổi chưa lưu: LƯU trước rồi mới gửi (backend snapshot từ DB)', async () => {
-    const view = await renderScreen(all, shop(ACTIVE), TENANT_STATUS.ACTIVE);
+    const view = await renderScreen(
+      all,
+      shop({ ...ACTIVE, verification: SHOP_VERIFICATION.NEEDS_REVISION }),
+      TENANT_STATUS.ACTIVE,
+    );
 
     await fireEvent.changeText(await view.findByLabelText('Tên hiển thị'), 'Bình Minh Xe');
-    await fireEvent.press(view.getByText('Gửi xác minh'));
+    await fireEvent.press(view.getByText('Gửi lại xác minh'));
     await fireEvent.press(await view.findByText('Gửi duyệt'));
 
     await waitFor(() => expect(view.updateSpy).toHaveBeenCalled());

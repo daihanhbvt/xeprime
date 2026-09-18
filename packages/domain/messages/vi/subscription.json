@@ -96,7 +96,9 @@
     "bank": "Ngân hàng",
     "accountNumber": "Số tài khoản",
     "accountName": "Chủ tài khoản",
+    "copyBank": "Sao chép tên ngân hàng",
     "copyAccount": "Sao chép số tài khoản",
+    "copyAccountName": "Sao chép chủ tài khoản",
     "autoActivateNote": "Gói tự kích hoạt khi tiền về — bạn không cần giữ trang này mở, hệ thống sẽ báo khi xong.",
     "pendingTitle": "Hoá đơn đang chờ chuyển khoản"
   },

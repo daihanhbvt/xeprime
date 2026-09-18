@@ -17,7 +17,14 @@ export interface RequestInboxTab {
   /** Giá trị đi vào `?status=`. */
   readonly value: string;
   /** Khoá message trong namespace `BookingRequests.tabs` — DÙNG CHUNG với web. */
-  readonly labelKey: 'needsAction' | 'converted' | 'rejected' | 'cancelled' | 'expired' | 'all';
+  readonly labelKey:
+    | 'needsAction'
+    | 'paidNeedsAction'
+    | 'converted'
+    | 'rejected'
+    | 'cancelled'
+    | 'expired'
+    | 'all';
 }
 
 /**
@@ -32,6 +39,12 @@ export interface RequestInboxTab {
  */
 export const REQUEST_INBOX_TABS: readonly RequestInboxTab[] = [
   { value: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL, labelKey: 'needsAction' },
+  /*
+   * ĐÃ CỌC, CHỜ DUYỆT (ADR 0039) — tab riêng vì đây là việc khẩn nhất trong cả hộp thư: tiền của
+   * khách đang nằm ở XePrime, chỗ xe đang bị giữ, và hết hạn phản hồi là hệ thống tự hoàn rồi huỷ
+   * chuyến. Để nó lẫn trong "Tất cả" nghĩa là người trực phải tự đi tìm.
+   */
+  { value: BOOKING_REQUEST_STATUS.HOLD_PAID, labelKey: 'paidNeedsAction' },
   { value: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING, labelKey: 'converted' },
   { value: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST, labelKey: 'rejected' },
   { value: BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER, labelKey: 'cancelled' },
@@ -91,6 +104,13 @@ export function useApproveBookingRequest() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      /*
+       * Danh sách CHUYẾN cũng đổi: tab 'Chuyến của tôi' trộn cả chuyến mình cho thuê, và từ đợt
+       * này hai quyết định duyệt/từ chối bấm được ngay trên thẻ ở đó. Thiếu dòng này, thẻ vừa
+       * duyệt vẫn bày hai nút cho tới khi người dùng tự kéo làm mới.
+       */
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
     },
   });
 }
@@ -103,6 +123,7 @@ export function useRejectBookingRequest() {
       bookingRequestsApi.reject(input.id, input.reason),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
     },
   });
 }

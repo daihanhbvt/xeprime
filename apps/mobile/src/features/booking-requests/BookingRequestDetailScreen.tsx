@@ -6,6 +6,7 @@ import { useTranslations } from 'use-intl';
 import {
   BOOKING_REQUEST_STATUS,
   BOOKING_REQUEST_STATUS_META,
+  isBookingRequestPastDue,
   PERMISSION,
   ROUTE_TYPE,
   SERVICE_TYPE,
@@ -70,7 +71,27 @@ export function BookingRequestDetailScreen({
 
   const status = request.status as BookingRequestStatus;
   const meta = BOOKING_REQUEST_STATUS_META[status];
-  const isPending = status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL;
+  /*
+   * HAI chặng cần gian hàng quyết định, và chặng thứ hai là chặng TỐN KÉM hơn hẳn:
+   *
+   *   · `pending_host_approval` — khách mới hỏi, chưa ai mất gì;
+   *   · `hold_paid` (ADR 0039)  — khách ĐÃ TRẢ TIỀN và chỗ xe đang bị giữ. Bỏ sót chặng này là
+   *     bày ra một màn ghi "chờ bạn duyệt" mà không có nút nào để duyệt, trong khi tiền của
+   *     khách nằm ở XePrime và đồng hồ phản hồi đang chạy tới lượt hoàn tự động.
+   */
+  const needsDecision =
+    status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL ||
+    status === BOOKING_REQUEST_STATUS.HOLD_PAID;
+  /*
+   * Quá hạn phản hồi thì KHÔNG còn quyết định nào — server từ chối cả duyệt lẫn từ chối
+   * (`BOOKING_REQUEST_EXPIRED`), nên bày nút ra là mời người dùng bấm một thứ chắc chắn hỏng.
+   *
+   * Hỏi `respondBy` chứ không hỏi `status`: trạng thái `expired` do worker ghi theo nhịp, nên có
+   * một cửa sổ mà bản ghi vẫn còn `pending_host_approval` trong khi giờ đã hết. Đây chính là vị
+   * từ mà server dùng, nên hai phía không bao giờ nói hai câu khác nhau.
+   */
+  const pastDue = isBookingRequestPastDue(request.respondBy);
+  const decidable = needsDecision && !pastDue;
   const canApprove = permissions.has(PERMISSION.BOOKING_REQUEST_APPROVE);
   const canViewVehicle = permissions.has(PERMISSION.VEHICLE_VIEW);
 
@@ -107,7 +128,7 @@ export function BookingRequestDetailScreen({
                 color={meta.color}
                 size="sm"
               />
-              {isPending ? <RespondDeadline respondBy={request.respondBy} /> : null}
+              {needsDecision ? <RespondDeadline respondBy={request.respondBy} /> : null}
             </XStack>
           </Card>
 
@@ -399,7 +420,7 @@ export function BookingRequestDetailScreen({
           <Card>
             <YStack gap={space.xs}>
               <DataRow label={t('detail.createdAt')} value={fmt.dateTime(request.createdAt)} />
-              {isPending ? (
+              {needsDecision ? (
                 <DataRow label={t('deadline.label')} value={fmt.dateTime(request.respondBy)} />
               ) : null}
               {request.decidedAt ? (
@@ -408,7 +429,7 @@ export function BookingRequestDetailScreen({
             </YStack>
           </Card>
 
-          {isPending && canApprove ? (
+          {decidable && canApprove ? (
             <YStack gap={space.sm}>
               <Button
                 label={t('actions.approve')}
@@ -423,6 +444,14 @@ export function BookingRequestDetailScreen({
                 onPress={() => onReject(request)}
               />
             </YStack>
+          ) : needsDecision && pastDue ? (
+            /*
+              Quá hạn mà bản ghi CHƯA kịp đổi trạng thái: nói rõ vì sao không còn nút, và nói việc
+              còn làm được (gọi khách). Một khoảng trống ở đây đọc ra như màn hình bị hỏng.
+            */
+            <Text col={colors.textMuted} fos={fontSize.bodySm}>
+              {t('deadline.pastDueHint')}
+            </Text>
           ) : null}
 
           <Button label={tCommon('close')} variant="ghost" onPress={onClose} />

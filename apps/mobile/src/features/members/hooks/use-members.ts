@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { keepPageData } from '@/queries/keep-page-data';
 import { queryKeys } from '@/queries/query-keys';
 import {
+  inviteAnswersApi,
   inviteFiltersToParams,
   membersApi,
   memberFiltersToParams,
@@ -93,4 +94,43 @@ export function useRemoveMember() {
     mutationFn: (userId: string) => membersApi.remove(userId),
     onSuccess: invalidate,
   });
+}
+
+/**
+ * Xem trước một lời mời — dùng ở màn `/invites/[token]`.
+ *
+ * `retry: false`: token sai hoặc lời mời đã bị thu hồi trả 404, và thử lại ba lần chỉ làm người
+ * dùng nhìn vòng xoay lâu hơn trước khi nhận cùng một câu trả lời.
+ *
+ * `staleTime: 0`: trạng thái lời mời đổi được từ phía gian hàng (thu hồi) giữa lúc người dùng mở
+ * liên kết và lúc họ bấm — đọc lại là đúng, cache một lời mời thì không.
+ */
+export function useInvitePreview(token: string) {
+  return useQuery({
+    queryKey: queryKeys.members.invitePreview(token),
+    queryFn: () => inviteAnswersApi.preview(token),
+    retry: false,
+    staleTime: 0,
+    enabled: Boolean(token),
+  });
+}
+
+/**
+ * Trả lời một lời mời.
+ *
+ * Nhận lời mời làm người dùng có thêm một membership, tức `/auth/me` đổi — và cùng với nó là khu
+ * làm việc, menu và mọi cổng quyền. Không làm mới nhánh `auth` thì người vừa bấm "Đồng ý" đứng ở
+ * một màn cảm ơn trong khi cả app vẫn tin họ chưa thuộc gian hàng nào.
+ */
+export function useAnswerInvite(token: string) {
+  const queryClient = useQueryClient();
+  const onSettled = () => queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
+
+  const accept = useMutation({
+    mutationFn: () => inviteAnswersApi.accept(token),
+    onSuccess: onSettled,
+  });
+  const decline = useMutation({ mutationFn: () => inviteAnswersApi.decline(token) });
+
+  return { accept, decline };
 }

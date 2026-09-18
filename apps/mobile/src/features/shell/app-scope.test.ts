@@ -1,4 +1,6 @@
 import type { components } from '@xeprime/types';
+import { SHOP_ONBOARDING_STATE } from '@xeprime/types';
+
 import { APP_SCOPE, resolveInitialScope, resolveScopeCapability } from './app-scope';
 
 type Me = components['schemas']['MeDto'];
@@ -26,7 +28,7 @@ function tenant(status: string) {
     name: 'Gian hàng',
     slug: 'gian-hang',
     status,
-    onboardingState: 'package_active',
+    onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE,
     logoUrl: null,
     roleKey: 'shop_owner',
     features: [],
@@ -51,6 +53,7 @@ describe('resolveScopeCapability', () => {
       canRent: false,
       canManage: false,
       canAdmin: false,
+      packageOnboardingPending: false,
     });
   });
 
@@ -59,6 +62,7 @@ describe('resolveScopeCapability', () => {
       canRent: true,
       canManage: false,
       canAdmin: false,
+      packageOnboardingPending: false,
     });
   });
 
@@ -103,7 +107,44 @@ describe('resolveScopeCapability', () => {
 
   it('nhân sự nền tảng nhận cờ riêng, không lẫn với chủ gian hàng', () => {
     const cap = resolveScopeCapability(me({ platformRole: 'platform_admin' }));
-    expect(cap).toEqual({ canRent: true, canManage: false, canAdmin: true });
+    expect(cap).toEqual({
+      canRent: true,
+      canManage: false,
+      canAdmin: true,
+      packageOnboardingPending: false,
+    });
+  });
+
+  /**
+   * ADR 0040 — gian hàng trả phí CHƯA chuyển khoản có `billingMode` rỗng y như một tenant hỏng
+   * danh mục gói, nên cờ này là thứ duy nhất tách được hai ca đó ở client.
+   */
+  it('gian hàng tuyến gói chưa thanh toán: chưa vào Manage, nhưng đang NỢ bước onboarding', () => {
+    const user = me({
+      tenant: { ...tenant('draft'), onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_PENDING, billingMode: null },
+    });
+    const cap = resolveScopeCapability(user);
+    expect(cap.canManage).toBe(false);
+    expect(cap.packageOnboardingPending).toBe(true);
+  });
+
+  it('gian hàng đã trả tiền xong KHÔNG còn nợ bước nào', () => {
+    const user = me({ tenant: { ...tenant('active'), onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE } });
+    expect(resolveScopeCapability(user).packageOnboardingPending).toBe(false);
+  });
+
+  /**
+   * Một dòng dữ liệu cũ có thể để lại `package_pending` cạnh một gói ĐANG hiệu lực (admin gán tay).
+   * Tiền đã về ⇒ không còn nợ gì, và một màn "hãy chuyển khoản" đứng trước một gian hàng đã trả
+   * tiền là lỗi tệ hơn hẳn việc bỏ sót một lần cập nhật cột.
+   */
+  it('còn cờ package_pending nhưng gói đã hiệu lực ⇒ không nợ bước nào', () => {
+    const user = me({
+      tenant: { ...tenant('active'), onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_PENDING, billingMode: 'package' },
+    });
+    const cap = resolveScopeCapability(user);
+    expect(cap.canManage).toBe(true);
+    expect(cap.packageOnboardingPending).toBe(false);
   });
 });
 
@@ -148,5 +189,20 @@ describe('resolveInitialScope', () => {
     expect(resolveInitialScope({ user, remembered: APP_SCOPE.CUSTOMER })).toBe(APP_SCOPE.CUSTOMER);
     expect(resolveInitialScope({ user, remembered: APP_SCOPE.MANAGE })).toBe(APP_SCOPE.MANAGE);
     expect(resolveInitialScope({ user })).toBe(APP_SCOPE.MANAGE);
+  });
+
+  /**
+   * ADR 0040 — bước còn nợ THẮNG cả lựa chọn đã nhớ.
+   *
+   * Không có chốt này thì người vừa bấm "Đăng ký gian hàng" rồi tắt app giữa chừng mở lại vào chợ
+   * xe (hoặc tệ hơn: vào Owner Lite của tuyến hoa hồng, đúng màn mà ADR 0040 sinh ra để họ không
+   * bao giờ thấy) — trong khi việc duy nhất họ có là màn thanh toán ở khu quản lý.
+   */
+  it('gian hàng trả phí chưa chuyển khoản → khu QUẢN LÝ, kể cả khi lần trước chọn khu khách', () => {
+    const user = me({
+      tenant: { ...tenant('draft'), onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_PENDING, billingMode: null },
+    });
+    expect(resolveInitialScope({ user })).toBe(APP_SCOPE.MANAGE);
+    expect(resolveInitialScope({ user, remembered: APP_SCOPE.CUSTOMER })).toBe(APP_SCOPE.MANAGE);
   });
 });

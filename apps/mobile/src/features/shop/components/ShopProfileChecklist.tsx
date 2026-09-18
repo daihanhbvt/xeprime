@@ -6,11 +6,13 @@ import {
   missingShopProfileRequirements,
   missingShopProfileSuggestions,
   SHOP_PROFILE_REQUIREMENT_VALUES,
+  SHOP_PROFILE_SUGGESTION,
   SHOP_PROFILE_SUGGESTION_VALUES,
   type ShopProfileRequirement,
   type ShopProfileSuggestion,
 } from '@xeprime/types';
 import type { ShopProfileValues } from '@xeprime/validators';
+import type { ShopOwnerAccount } from '../api';
 import { Card } from '@/components/ui/Card';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
@@ -30,7 +32,32 @@ type ChecklistItem = ShopProfileRequirement | ShopProfileSuggestion;
  * đỏ — và họ sẽ không tin bảng này nữa. `useWatch` cũng khoanh việc render lại vào riêng thẻ này
  * thay vì cả màn hồ sơ nhấp nháy theo từng phím gõ.
  */
-export function ShopProfileChecklist({ control }: { control: Control<ShopProfileValues> }) {
+export function ShopProfileChecklist({
+  control,
+  ownerAccount,
+  logoRequired = false,
+}: {
+  control: Control<ShopProfileValues>;
+  /**
+   * Tài khoản CHỦ gian hàng — nguồn của hai mục "họ tên" và "số điện thoại" từ 16/09/2026.
+   *
+   * Chúng KHÔNG còn là ô trong form này (ba cột `tenant_profiles.owner_*` đã drop), nên chúng cũng
+   * không đọc từ `useWatch` được. Thiếu chúng thì hai dòng đó đỏ VĨNH VIỄN — kể cả với một chủ shop
+   * đã xác minh cả tên lẫn SĐT — và checklist đếm 5/9 trong khi server cho gửi duyệt. Cùng nguồn mà
+   * `TenantsService.submitForReview` dùng làm cổng thật.
+   */
+  ownerAccount: ShopOwnerAccount;
+  /**
+   * Logo là mục CHẶN, không phải gợi ý — đúng với gian hàng TUYẾN GÓI (ADR 0040 điều 7).
+   *
+   * Với họ, thiếu logo là `submitForPublicReview` từ chối thật (`SHOP_LISTING_REQUIREMENTS_MISSING`).
+   * Để nó ở nhóm "Nên có" là checklist nói "không bắt buộc" trong khi server chặn.
+   *
+   * Chủ xe tuyến hoa hồng KHÔNG bị cổng đó chạm tới, nên với họ logo vẫn là gợi ý — mặc định
+   * `false` giữ nguyên hành vi cũ ở màn tiến trình đăng ký.
+   */
+  logoRequired?: boolean;
+}) {
   const t = useTranslations('Shop.checklist');
   const values = useWatch({ control }) as Partial<ShopProfileValues>;
 
@@ -40,11 +67,35 @@ export function ShopProfileChecklist({ control }: { control: Control<ShopProfile
    * đưa `values` thô vào hàm chấm là mục này không bao giờ xanh — app đếm 4/9 trong khi web đếm
    * 5/9 trên cùng một hồ sơ.
    */
-  const completeness = { ...values, address: values.addressLine };
-  const missingRequired = new Set<string>(missingShopProfileRequirements(completeness));
-  const missingSuggested = new Set<string>(missingShopProfileSuggestions(completeness));
+  const completeness = {
+    ...values,
+    address: values.addressLine,
+    ownerFullName: ownerAccount.displayName,
+    ownerPhone: ownerAccount.phone,
+  };
+  /*
+   * Logo đổi NHÓM, không đổi cách chấm: cùng một phép kiểm "đã có chưa", chỉ khác hệ quả. Dựng hai
+   * bảng luật song song ở đây là mời chúng trôi khỏi nhau — xem docblock của `logoRequired`.
+   */
+  const requiredItems: readonly ChecklistItem[] = logoRequired
+    ? [...SHOP_PROFILE_REQUIREMENT_VALUES, SHOP_PROFILE_SUGGESTION.LOGO]
+    : SHOP_PROFILE_REQUIREMENT_VALUES;
+  const suggestedItems: readonly ChecklistItem[] = logoRequired
+    ? SHOP_PROFILE_SUGGESTION_VALUES.filter((key) => key !== SHOP_PROFILE_SUGGESTION.LOGO)
+    : SHOP_PROFILE_SUGGESTION_VALUES;
 
-  const total = SHOP_PROFILE_REQUIREMENT_VALUES.length + SHOP_PROFILE_SUGGESTION_VALUES.length;
+  const suggestedMissing = new Set<string>(missingShopProfileSuggestions(completeness));
+  const missingRequired = new Set<string>([
+    ...missingShopProfileRequirements(completeness),
+    ...(logoRequired && suggestedMissing.has(SHOP_PROFILE_SUGGESTION.LOGO)
+      ? [SHOP_PROFILE_SUGGESTION.LOGO]
+      : []),
+  ]);
+  const missingSuggested = new Set<string>(
+    [...suggestedMissing].filter((key) => !missingRequired.has(key)),
+  );
+
+  const total = requiredItems.length + suggestedItems.length;
   const done = total - missingRequired.size - missingSuggested.size;
   const ready = missingRequired.size === 0;
 
@@ -64,13 +115,13 @@ export function ShopProfileChecklist({ control }: { control: Control<ShopProfile
 
         <Group
           label={ready ? t('requiredDone') : t('requiredTitle')}
-          items={SHOP_PROFILE_REQUIREMENT_VALUES}
+          items={requiredItems}
           missing={missingRequired}
           tone={ready ? 'done' : 'required'}
         />
         <Group
           label={t('suggestedTitle')}
-          items={SHOP_PROFILE_SUGGESTION_VALUES}
+          items={suggestedItems}
           missing={missingSuggested}
           tone="suggested"
         />

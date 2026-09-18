@@ -30,6 +30,7 @@ export * from './shop-verification';
 export * from './shop-storefront';
 export * from './vehicle-publication';
 export * from './owner-stage';
+export * from './workspace-target';
 export * from './account-track';
 export * from './rbac';
 export * from './notifications';

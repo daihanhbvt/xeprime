@@ -1,6 +1,10 @@
 import { useCallback } from 'react';
 import { useRouter } from 'expo-router';
-import { resolveInitialScope, type AppScope } from '@/features/shell/app-scope';
+import {
+  resolveInitialScope,
+  resolveScopeCapability,
+  type AppScope,
+} from '@/features/shell/app-scope';
 import type { CurrentUser } from '@/features/auth/api';
 import { enterApp } from '@/features/auth/enter-app';
 import { fireAndForget } from '@/lib/fire-and-forget';
@@ -43,11 +47,12 @@ export function useEnterApp(): (user?: CurrentUser) => void {
         }
 
         const scope = resolveInitialScope({ user: user ?? cachedUser, remembered });
+        const { packageOnboardingPending } = resolveScopeCapability(user ?? cachedUser);
 
         dispatch(scopeChanged(scope));
         if (pendingDeepLink) dispatch(deepLinkConsumed());
 
-        enterApp(router, { scope, next: pendingDeepLink });
+        enterApp(router, { scope, packageOnboardingPending, next: pendingDeepLink });
       };
 
       fireAndForget(enter, 'useEnterApp');

@@ -24,6 +24,7 @@ import { VehicleIdentityFields } from '@/features/vehicles/components/VehicleIde
 import { useUpdateVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { manageInformationValuesToInput, vehicleToFormValues } from '@/features/vehicles/mappers';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { VEHICLE_MANAGE_SECTION } from '@/navigation/vehicle-manage-section';
 import { colors, fontSize, space } from '@/theme/tokens';
@@ -118,7 +119,8 @@ function InformationForm({
     vehicleFormSchema,
     'Vehicles.form.validation',
   );
-  const { control, getValues, handleSubmit, reset, setValue, trigger, formState } =
+  const applyApiFieldErrors = useApiFieldErrors();
+  const { control, getValues, handleSubmit, reset, setError, setValue, trigger, formState } =
     useForm<VehicleFormValues>({ resolver, values: initialValues });
 
   const vehicleType = vehicle.vehicleType ?? '';
@@ -146,7 +148,18 @@ function InformationForm({
         toast.showSuccess(t('saved'));
         reset(vehicleToFormValues(saved));
       },
-      onError: (error) => toast.showError(errorMessage(error)),
+        /*
+         * Lỗi validate của SERVER được đặt ĐÚNG Ô nó nói tới, không gom vào một toast chung.
+         *
+         * Hai lớp validate (yup ở client, class-validator ở server) không bao giờ trùng khít; khi
+         * server bắt được thứ yup bỏ lọt — biển số trùng, đời xe ngoài dải — một câu chung buộc
+         * người dùng tự dò trên một form vài chục ô. Lọc theo `FIELDS` là bắt buộc: `setError` với
+         * một tên không có ô nào sẽ khoá `handleSubmit` vĩnh viễn mà không hiện gì.
+         */
+      onError: (error) => {
+        const applied = applyApiFieldErrors(error, setError, { fields: FIELDS });
+        if (applied.length === 0) toast.showError(errorMessage(error));
+      },
     });
   });
 

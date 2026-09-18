@@ -61,7 +61,7 @@ function HostRow({ shop, onPress }: { shop: PublicShopSummary; onPress?: () => v
   const fmt = useAppFormat();
 
   const rating = Number(shop.ratingAvg);
-  const hasRating = shop.ratingCount > 0 && Number.isFinite(rating);
+  const hasRating = (shop.ratingCount ?? 0) > 0 && Number.isFinite(rating);
 
   return (
     <Card lift="flat" {...(onPress ? { onPress, accessibilityLabel: shop.name } : {})}>

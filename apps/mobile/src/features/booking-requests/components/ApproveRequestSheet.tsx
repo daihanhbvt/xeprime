@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { isBookingRequestPastDue, LONG_TERM_PACKAGE_MONTHS, SERVICE_TYPE } from '@xeprime/types';
-import type { Dayjs } from '@xeprime/domain';
+import { LIST_SEPARATOR, type Dayjs } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -11,7 +11,7 @@ import { Chip } from '@/components/ui/Chip';
 import { RentalRangeSheet } from '@/features/marketplace/components/RentalRangeSheet';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { colors, fieldFontSize, fontSize, fontWeight, radius, space } from '@/theme/tokens';
-import type { ApproveBookingRequestInput, BookingRequestItem } from '../api';
+import type { ApproveBookingRequestInput, BookingRequestDecisionTarget } from '../api';
 
 /**
  * Duyệt yêu cầu — hai hình thái, cùng một tấm.
@@ -32,7 +32,7 @@ export function ApproveRequestSheet({
 }: {
   open: boolean;
   onClose: () => void;
-  request: BookingRequestItem;
+  request: BookingRequestDecisionTarget;
   onConfirm: (body?: ApproveBookingRequestInput) => void;
   loading: boolean;
 }) {
@@ -88,9 +88,14 @@ export function ApproveRequestSheet({
       <Card tone="muted" lift="flat">
         <YStack gap={space.xs}>
           <DataRow label={t('approve.vehicle')} value={request.vehicleName} />
+          {/*
+            Nối bằng `filter(Boolean)`, không phải chuỗi mẫu: chuyến tuyến hoa hồng còn chờ duyệt
+            KHÔNG trả SĐT (ADR 0028 điều 9), và `${null}` in ra đúng bốn chữ "null" ngay cạnh tên
+            khách. Web thoát điều đó nhờ JSX bỏ qua `null`; ở đây phải nói ra.
+          */}
           <DataRow
             label={t('approve.customer')}
-            value={`${request.customerName} · ${request.customerPhone}`}
+            value={[request.customerName, request.customerPhone].filter(Boolean).join(LIST_SEPARATOR)}
           />
           {longTerm ? (
             <DataRow label={t('longTerm.pickupWish')} value={fmt.pickupWish(request)} />

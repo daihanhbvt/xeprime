@@ -6,6 +6,7 @@ import enAddress from '@xeprime/domain/messages/en/address.json';
 import enAccount from '@xeprime/domain/messages/en/account.json';
 import enAccountPayments from '@xeprime/domain/messages/en/account-payments.json';
 import enBankAccounts from '@xeprime/domain/messages/en/bank-accounts.json';
+import enSupport from '@xeprime/domain/messages/en/support.json';
 import enSupportCases from '@xeprime/domain/messages/en/support-cases.json';
 import enSubscription from '@xeprime/domain/messages/en/subscription.json';
 import enWallet from '@xeprime/domain/messages/en/wallet.json';
@@ -44,6 +45,7 @@ import viAddress from '@xeprime/domain/messages/vi/address.json';
 import viAccount from '@xeprime/domain/messages/vi/account.json';
 import viAccountPayments from '@xeprime/domain/messages/vi/account-payments.json';
 import viBankAccounts from '@xeprime/domain/messages/vi/bank-accounts.json';
+import viSupport from '@xeprime/domain/messages/vi/support.json';
 import viSupportCases from '@xeprime/domain/messages/vi/support-cases.json';
 import viSubscription from '@xeprime/domain/messages/vi/subscription.json';
 import viWallet from '@xeprime/domain/messages/vi/wallet.json';
@@ -104,6 +106,7 @@ export const MESSAGES = {
     Account: viAccount,
     AccountPayments: viAccountPayments,
     BankAccounts: viBankAccounts,
+    Support: viSupport,
     SupportCases: viSupportCases,
     Subscription: viSubscription,
     Wallet: viWallet,
@@ -144,6 +147,7 @@ export const MESSAGES = {
     Account: enAccount,
     AccountPayments: enAccountPayments,
     BankAccounts: enBankAccounts,
+    Support: enSupport,
     SupportCases: enSupportCases,
     Subscription: enSubscription,
     Wallet: enWallet,

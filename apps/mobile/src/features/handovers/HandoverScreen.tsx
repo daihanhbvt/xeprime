@@ -13,11 +13,12 @@ import {
   isHandoverEditable,
   HANDOVER_STATUS,
   HANDOVER_STATUS_META,
+  ODOMETER_MAX_KM,
   type HandoverCondition,
   type HandoverStatus,
   type HandoverType,
 } from '@xeprime/types';
-import { dayjs, type Dayjs } from '@xeprime/domain';
+import { appWallClockToIso, dayjs, nowInAppTz, toAppTz, type Dayjs } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -51,7 +52,6 @@ import {
 import type { Handover, HandoverContext, HandoverBelowPickupDetails } from './api';
 
 const NOTE_MAX = 2000;
-const ODOMETER_MAX = 2_000_000;
 
 interface HandoverFormValues {
   odometerKm: number | null;
@@ -151,8 +151,14 @@ export function HandoverScreen({ bookingId, type }: { bookingId: string; type: H
  * vô nghĩa và server cũng từ chối, nên không đưa người dùng một biểu mẫu sai sẵn từ lúc mở.
  */
 function defaultOccurredAt(scheduledIso: string): Dayjs {
-  const now = dayjs();
-  const scheduled = dayjs(scheduledIso);
+  /*
+   * Mặt đồng hồ neo vào GIỜ VIỆT NAM, không vào giờ máy (CLAUDE.md §9).
+   *
+   * Thiết bị đặt lệch múi giờ mà dùng `dayjs()` sẽ hiện một giờ ở thẻ chọn và một giờ khác ở
+   * dòng gợi ý ngay dưới (dòng đó vốn đã in giờ VN) — rồi ghi đúng cái giờ sai ấy vào biên bản.
+   */
+  const now = nowInAppTz();
+  const scheduled = toAppTz(scheduledIso);
   return scheduled.isValid() && scheduled.isBefore(now) ? scheduled : now;
 }
 
@@ -174,6 +180,7 @@ function HandoverForm({
   onBack: () => void;
 }) {
   const t = useTranslations('Bookings.handover');
+  const tOdoError = useTranslations('Bookings.handover.odometerError');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
@@ -213,13 +220,18 @@ function HandoverForm({
      * `null` = CHƯA NHẬP, tuyệt đối không phải 0 km. Server có cờ `odometerMissing` riêng đúng
      * vì phân biệt này — ép về 0 là bịa một số đo và làm hỏng mọi phép so hao mòn.
      */
+    /*
+     * BỐN câu báo lỗi khác nhau, không phải bốn lần in ra cái nhãn của chính ô. Bản trước dùng
+     * `odometer.labelPickup` cho cả bốn, nên gõ "12a" vào ô KM thì lỗi hiện ra là "Chỉ số Odo khi
+     * giao (km)" — một cái nhãn, không nói người dùng đã sai chỗ nào. Cùng bốn câu với web.
+     */
     odometerKm: yup
       .number()
       .transform((v, orig) => (orig === '' || orig === null ? null : v))
-      .typeError(t('odometer.labelPickup'))
-      .integer(t('odometer.labelPickup'))
-      .min(0, t('odometer.labelPickup'))
-      .max(ODOMETER_MAX, t('odometer.labelPickup'))
+      .typeError(tOdoError('notNumber'))
+      .integer(tOdoError('notInteger'))
+      .min(0, tOdoError('negative'))
+      .max(ODOMETER_MAX_KM, tOdoError('tooLarge', { max: ODOMETER_MAX_KM }))
       .nullable()
       .default(null),
     condition: yup.string().nullable().default(null),
@@ -247,7 +259,8 @@ function HandoverForm({
     setError(null);
     confirm.mutate(
       {
-        occurredAt: occurredAt.toISOString(),
+        // Mặt đồng hồ là giờ VN ⇒ đổi về UTC bằng đúng phép của domain, không `toISOString` trần.
+        occurredAt: appWallClockToIso(occurredAt),
         odometerKm: values.odometerKm,
         ...(values.condition ? { condition: values.condition as HandoverCondition } : {}),
         notes: values.notes || null,

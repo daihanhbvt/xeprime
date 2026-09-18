@@ -1,17 +1,21 @@
-import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { BOOKING_HOLD_STATUS, HOLD_REFUND_STATUS } from '@xeprime/types';
+import {
+  BOOKING_HOLD_STATUS,
+  HOLD_COUNTDOWN_SEGMENT_MINUTES,
+  HOLD_REFUND_STATUS,
+} from '@xeprime/types';
 import { buildVietQrUrl } from '@xeprime/domain';
 import { Button } from '@/components/ui/Button';
 import { Callout, CalloutBody } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
+import { Countdown } from '@/components/ui/Countdown';
 import { DataRow } from '@/components/ui/DataRow';
 import { IconButton } from '@/components/ui/IconButton';
-import { useAppToast } from '@/components/feedback/use-app-toast';
+import { useCopy } from '@/hooks/use-copy';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { CustomerTripDetail } from '../api';
@@ -20,8 +24,8 @@ import { RefundAccountSheet } from './RefundAccountSheet';
 type Hold = NonNullable<CustomerTripDetail['hold']>;
 
 /** Ảnh QR do VietQR sinh — tỉ lệ cố định của bản `compact2`. */
-const QR_WIDTH = 220;
-const QR_HEIGHT = 260;
+const QR_WIDTH = 260;
+const QR_HEIGHT = 308;
 
 const styles = StyleSheet.create({
   qr: {
@@ -52,19 +56,17 @@ const styles = StyleSheet.create({
 export function TripHoldPanel({ hold, tripId }: { hold: Hold; tripId: string }) {
   const t = useTranslations('Trips.hold');
   const fmt = useAppFormat();
-  const toast = useAppToast();
-  const tActions = useTranslations('Common.actions');
-
-  const copy = useCallback(
-    async (value: string) => {
-      await Clipboard.setStringAsync(value);
-      toast.showSuccess(tActions('copied'));
-    },
-    [tActions, toast],
-  );
+  const copy = useCopy();
 
   const awaiting =
     hold.status === BOOKING_HOLD_STATUS.PENDING || hold.status === BOOKING_HOLD_STATUS.UNDERPAID;
+
+  /*
+   * Cửa sổ huỷ miễn phí hẹp hơn cửa sổ trả tiền nghĩa là nó đã bị kẹp bởi giờ nhận xe — chuyến
+   * sát giờ. So hai MỐC ĐÃ LƯU của server, không tính lại từ giờ máy khách.
+   */
+  const freeCancelIsShort =
+    new Date(hold.freeCancelUntil).getTime() <= new Date(hold.expiresAt).getTime();
 
   if (!awaiting) return <HoldOutcome hold={hold} tripId={tripId} />;
 
@@ -85,7 +87,7 @@ export function TripHoldPanel({ hold, tripId }: { hold: Hold; tripId: string }) 
         </Callout>
 
         {qrUrl ? (
-          <YStack ai="center">
+          <YStack ai="center" gap={space.xs}>
             <Image
               source={{ uri: qrUrl }}
               style={styles.qr}
@@ -93,13 +95,29 @@ export function TripHoldPanel({ hold, tripId }: { hold: Hold; tripId: string }) 
               cachePolicy="memory-disk"
               accessibilityLabel={t('qrAlt')}
             />
+            {/* Khách chưa quen chuyển khoản bằng QR sẽ đứng lại đúng ở bước này. */}
+            <Text col={colors.textMuted} fos={fontSize.bodySm}>
+              {t('qrCaption')}
+            </Text>
           </YStack>
         ) : null}
 
         <YStack>
           {info.configured ? (
             <>
-              <DataRow label={t('bank')} value={info.bankCode ?? ''} />
+              {info.bankCode ? (
+                <DataRow
+                  label={t('bank')}
+                  value={info.bankCode}
+                  action={
+                    <IconButton
+                      icon="copy-outline"
+                      label={t('copyBank')}
+                      onPress={() => void copy(info.bankCode as string)}
+                    />
+                  }
+                />
+              ) : null}
               <DataRow
                 label={t('accountNumber')}
                 value={info.accountNumber ?? ''}
@@ -116,7 +134,19 @@ export function TripHoldPanel({ hold, tripId }: { hold: Hold; tripId: string }) 
                     }
                   : {})}
               />
-              <DataRow label={t('accountName')} value={info.accountName ?? ''} />
+              {info.accountName ? (
+                <DataRow
+                  label={t('accountName')}
+                  value={info.accountName}
+                  action={
+                    <IconButton
+                      icon="copy-outline"
+                      label={t('copyAccountName')}
+                      onPress={() => void copy(info.accountName as string)}
+                    />
+                  }
+                />
+              ) : null}
             </>
           ) : null}
 
@@ -124,6 +154,7 @@ export function TripHoldPanel({ hold, tripId }: { hold: Hold; tripId: string }) 
             label={t('amount')}
             value={fmt.money(hold.remainingAmount)}
             strong
+            tone="price"
             action={
               <IconButton
                 icon="copy-outline"
@@ -150,12 +181,38 @@ export function TripHoldPanel({ hold, tripId }: { hold: Hold; tripId: string }) 
           />
         </YStack>
 
+        {/*
+          Đồng hồ CHẠY, không phải một dòng "hạn lúc 14:35": cửa sổ chỉ còn 10 phút (ADR 0039
+          điều 2), và một mốc giờ tuyệt đối bắt khách tự trừ nhẩm đúng lúc họ cần hành động
+          nhanh. Trên native điều đó còn nặng hơn — người dùng rời app sang app ngân hàng rồi
+          quay lại, và thứ họ cần thấy ngay khi quay lại là "còn bao lâu".
+
+          `segmentMs` bằng đúng cửa sổ nên chỉ có MỘT chặng và nhãn chặng không hiện — giữ tham
+          số lại để cửa sổ dài ra là chia chặng chạy lại ngay, không phải nối lại dây.
+        */}
+        <Countdown
+          deadline={hold.expiresAt}
+          urgentMs={HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000}
+          segmentMs={HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000}
+          labels={{
+            remaining: t('countdownRemaining'),
+            expired: t('countdownExpired'),
+            segment: (index, total) => t('countdownSegment', { index, total }),
+          }}
+        />
+
         <YStack gap={space.xs}>
           <Text col={colors.warning} fos={fontSize.bodySm} fow={fontWeight.medium}>
-            {t('expires', { time: fmt.dateTime(hold.expiresAt) })}
+            {t('expires')}
           </Text>
+          {/*
+            Huỷ miễn phí đếm XUÔI từ mốc đặt và bị kẹp bởi giờ nhận xe, nên chuyến sát giờ có cửa
+            sổ ngắn hơn 4 tiếng — ADR 0032 điều 5 bắt cảnh báo điều đó TRƯỚC khi khách trả tiền.
+          */}
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {t('freeCancel', { time: fmt.dateTime(hold.freeCancelUntil) })}
+            {t(freeCancelIsShort ? 'freeCancelSoon' : 'freeCancel', {
+              time: fmt.dateTime(hold.freeCancelUntil),
+            })}
           </Text>
           <Text col={colors.textMuted} fos={fontSize.bodySm}>
             {t('restAtHandover')}
@@ -187,7 +244,7 @@ function HoldOutcome({ hold, tripId }: { hold: Hold; tripId: string }) {
 
     return (
       <>
-        <Callout tone={paid ? 'success' : 'info'}>
+        <Callout tone={paid ? 'success' : needsAccount ? 'warning' : 'info'}>
           <CalloutBody>
             {paid
               ? t('refundPaid', { amount: fmt.money(refund.amount) })
@@ -197,7 +254,7 @@ function HoldOutcome({ hold, tripId }: { hold: Hold; tripId: string }) {
           </CalloutBody>
           {needsAccount ? (
             <Button
-              label={tRefund('title')}
+              label={tRefund('submit')}
               variant="secondary"
               size="sm"
               onPress={() => setRefundOpen(true)}

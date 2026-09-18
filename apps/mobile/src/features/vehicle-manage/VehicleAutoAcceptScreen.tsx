@@ -87,7 +87,13 @@ export function VehicleAutoAcceptScreen({
   );
 }
 
-function AutoAcceptBody({
+/**
+ * Thân của mục — nạp thiết lập rồi dựng form. Xuất ra ngoài vì cổng QUẢN LÝ dùng lại đúng nó
+ * (`VehicleOptimizationScreen`) với một cái vỏ khác: cùng thiết lập, cùng endpoint, nên hai bề
+ * mặt không thể trôi khỏi nhau. Vỏ ở đây (`VehicleManageShell`) là mục lục quản lý xe của khu
+ * TÀI KHOẢN — lồng nó vào cổng quản lý sẽ ra hai thanh đầu màn chồng nhau.
+ */
+export function AutoAcceptBody({
   vehicleId,
   serviceType,
   canEdit,
@@ -249,6 +255,8 @@ function AutoAcceptForm({
               name="minRentalMinutes"
               label={t('autoAccept.minRental')}
               options={minRentalOptions}
+              // Bỏ trống = KHÔNG đặt sàn thời lượng, một câu trả lời khác hẳn "sàn 1 giờ".
+              allowClear
               hint={t('autoAccept.minRentalHint')}
               disabled={!canEdit}
             />

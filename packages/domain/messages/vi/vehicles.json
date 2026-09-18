@@ -605,7 +605,7 @@
     "automation": {
       "title": "Tối ưu nhận chuyến",
       "editLink": "Cấu hình",
-      "hint": "Bật tự động nhận chuyến để khách đặt xong là có đơn ngay, không phải chờ bạn bấm duyệt. Đặt kèm khoảng đặt trước và điều kiện áp dụng riêng cho xe này."
+      "hint": "Bật tự động nhận chuyến để khách đặt xong là có đơn ngay, không phải chờ bạn bấm duyệt. Đặt kèm điều kiện áp dụng riêng cho xe này."
     }
   },
   "edit": {

@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { XStack, YStack } from 'tamagui';
 import type { ReactNode } from 'react';
 import { useTranslations } from 'use-intl';
 import {
   canSubmitShopVerification,
+  isEstablishedPackageShop,
+  isPackageShopTrack,
   PERMISSION,
   SHOP_VERIFICATION,
   TENANT_STATUS,
@@ -38,6 +40,8 @@ import type { MyShop, UpdateShopProfileInput } from './api';
 import { ShopIdentityCard } from './components/ShopIdentityCard';
 import { ShopProfileChecklist } from './components/ShopProfileChecklist';
 import { ShopStatusBanner } from './components/ShopStatusBanner';
+import { ShopWelcomeBanner } from './components/ShopWelcomeBanner';
+import { useVehiclesPage } from '@/features/vehicles/hooks/use-vehicles';
 import { useMyShop, useSubmitShopReview, useUpdateShopProfile } from './hooks/use-shop';
 
 /** Tên trường địa chỉ trong `shopProfileSchema` — hằng ngoài component, định danh ổn định. */
@@ -53,6 +57,9 @@ const ADDRESS_PIN_NAMES = {
   locationSource: 'locationSource',
 } as const;
 
+/** Dải chào chỉ hỏi "đã có xe nào chưa" — MỘT bản ghi là đủ để trả lời, đúng cỡ web hỏi. */
+const WELCOME_VEHICLE_PAGE = { page: 1, limit: 1 };
+
 /** Giá trị form → thân request. Dùng cho CẢ hai đường ra: lưu, và lưu-rồi-gửi-duyệt. */
 function toBody(v: ShopProfileValues): UpdateShopProfileInput {
   return {
@@ -61,7 +68,13 @@ function toBody(v: ShopProfileValues): UpdateShopProfileInput {
     // Chỉ gửi MÃ + phần chi tiết — tên tỉnh/xã và chuỗi hiển thị do server ghép, rồi chuyển tiếp
     // cho chi nhánh mặc định (writer duy nhất của địa chỉ vận hành).
     provinceCode: v.provinceCode,
-    wardCode: v.wardCode,
+    /*
+     * Chuỗi RỖNG không được gửi: DTO khai `@IsOptional()` kèm `@Length(5, 5)`, mà `@IsOptional`
+     * chỉ bỏ qua `null`/`undefined`. Từ ADR 0042 form không còn ô Xã/phường, nên hồ sơ chưa từng
+     * khai mã xã sẽ luôn rơi vào nhánh này — thiếu dòng này thì nút Lưu chết với một lỗi độ dài
+     * trỏ vào một ô không tồn tại trên màn.
+     */
+    wardCode: v.wardCode || undefined,
     addressLine: v.addressLine,
     taxCode: v.taxCode,
     businessLicenseNo: v.businessLicenseNo,
@@ -126,7 +139,18 @@ function toValues(shop: MyShop): ShopProfileValues {
 export function ShopProfileScreen({
   header,
   intro,
-}: { header?: ReactNode; intro?: ReactNode } = {}) {
+  welcome = false,
+}: {
+  header?: ReactNode;
+  intro?: ReactNode;
+  /**
+   * Vừa thanh toán lượt gói đầu tiên xong — bật DẢI CHÀO một lần (ADR 0040).
+   *
+   * Không mở hay khoá gì: cổng logo thật nằm ở `submitForPublicReview`. Route đọc nó từ tham số
+   * điều hướng, và kịch bản xấu nhất là ai đó thấy một dòng chào không dành cho mình.
+   */
+  welcome?: boolean;
+} = {}) {
   const t = useTranslations('Shop');
   const shell = header ?? <ManageHeader />;
   const permissions = usePermissions();
@@ -195,6 +219,11 @@ export function ShopProfileScreen({
       shop={query.data}
       canEdit={canEdit}
       canSubmit={canSubmit}
+      /*
+       * Dải chào chỉ dành cho gian hàng ĐÃ đi qua cửa gói và trả tiền — không cho một chủ xe
+       * tuyến hoa hồng bắt được tham số từ một link chia sẻ.
+       */
+      welcome={welcome && isEstablishedPackageShop(tenant)}
     />
   );
 }
@@ -225,6 +254,7 @@ function ProfileForm({
   shop,
   canEdit,
   canSubmit,
+  welcome,
 }: {
   shell: ReactNode;
   /** Khối của khu gọi, đặt TRÊN biểu mẫu — tiến trình đăng ký ở khu khách, không có gì ở Manage. */
@@ -232,6 +262,8 @@ function ProfileForm({
   shop: MyShop;
   canEdit: boolean;
   canSubmit: boolean;
+  /** Đã lọc theo tuyến ở nơi gọi — ở đây chỉ còn là "có dựng dải chào hay không". */
+  welcome: boolean;
 }) {
   const t = useTranslations('Shop');
   const tActions = useTranslations('Common.actions');
@@ -239,9 +271,35 @@ function ProfileForm({
   const errorMessage = useErrorMessage();
   const navigateOnce = useNavigateOnce();
 
+  const { tenant } = useTenantScope();
   const updateProfile = useUpdateShopProfile();
   const submitReview = useSubmitShopReview();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  /**
+   * Hàm mở tấm chọn ảnh LOGO, do `ShopIdentityCard` đặt vào — CTA của dải chào gọi nó.
+   *
+   * Web cuộn tới ô logo rồi `focus()` vào nút mở hộp chọn file; native không có DOM để hỏi, nên
+   * khối sở hữu tấm chọn phải tự đưa tay ra. Chỉ có `welcome` cần tới, và chỉ ở một nhánh.
+   */
+  const logoPicker = useRef<(() => void) | null>(null);
+
+  /*
+   * Chỉ cần BIẾT có xe nào chưa — dải chào đổi câu theo đó. Trang đầu là đủ để trả lời, nên không
+   * kéo bộ lọc của màn danh sách vào một màn không có ô lọc nào.
+   *
+   * `enabled` theo `welcome`: gian hàng không ở trong khoảnh khắc vừa-thanh-toán thì không phải
+   * trả một lượt gọi danh sách xe cho một dải không dựng.
+   */
+  const vehicles = useVehiclesPage(WELCOME_VEHICLE_PAGE, welcome);
+  /*
+   * ĐANG TẢI tính là CÓ xe — mặc định im lặng, đúng như web.
+   *
+   * Trong lúc lượt đếm còn bay, `data` rỗng; coi đó là "chưa có xe" sẽ nháy đúng dòng "Sẵn sàng rồi
+   * · Đăng xe đầu tiên" vào mặt một gian hàng mười xe. Dải này vốn được thiết kế để im khi không có
+   * gì để nói, nên im cũng là câu trả lời đúng cho "chưa biết". `isLoading` là `false` với query bị
+   * tắt, nên cổng `enabled: welcome` vẫn nguyên tác dụng.
+   */
+  const hasVehicle = vehicles.isLoading || (vehicles.data?.items.length ?? 0) > 0;
 
   const resolver = useValidationResolver<ShopProfileValues>(shopProfileSchema, 'Shop.validation');
   /*
@@ -375,6 +433,7 @@ function ProfileForm({
           status={status}
           description={t('page.subtitle')}
           editable={editable}
+          logoPickerRef={logoPicker}
           {...(status === TENANT_STATUS.ACTIVE
             ? { onViewPublicPage: () => navigateOnce(ROUTES.explore.shopDetail(shop.slug)) }
             : {})}
@@ -388,6 +447,18 @@ function ProfileForm({
           */}
           {intro}
 
+          {/*
+            Dải chào sau lượt thanh toán gói đầu tiên (ADR 0040). Tự im lặng khi không còn gì để
+            nói — xem `ShopWelcomeBanner`, "hình dạng thứ ba".
+          */}
+          {welcome ? (
+            <ShopWelcomeBanner
+              missingLogo={!shop.profile.logoUrl}
+              hasVehicle={hasVehicle}
+              onPickLogo={() => logoPicker.current?.()}
+            />
+          ) : null}
+
           <ShopStatusBanner
             shop={shop}
             canSubmit={canSubmit}
@@ -399,7 +470,19 @@ function ProfileForm({
             Checklist chỉ ở chặng chưa gửi / bị trả về. Hồ sơ đang chờ duyệt hay đã hoạt động thì
             nó không còn nói gì mới — người dùng đâu sửa được nữa.
           */}
-          {submittable ? <ShopProfileChecklist control={control} /> : null}
+          {submittable ? (
+            <ShopProfileChecklist
+              control={control}
+              ownerAccount={shop.ownerAccount}
+              /*
+               * Logo là mục CHẶN với gian hàng TUYẾN GÓI (ADR 0040 điều 7): thiếu nó thì
+               * `submitForPublicReview` từ chối thật. Chủ xe tuyến hoa hồng không bị cổng đó chạm
+               * tới — bắt một người có một chiếc xe phải có logo gian hàng là dựng lại đúng rào cản
+               * mà ADR 0036 vừa gỡ.
+               */
+              logoRequired={isPackageShopTrack(tenant)}
+            />
+          ) : null}
 
           {readOnlyReason ? <Callout tone="info">{readOnlyReason}</Callout> : null}
 
