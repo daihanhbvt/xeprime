@@ -8382,6 +8382,9 @@ export interface components {
             deliveryFee: string;
             discountAmount: string;
             priceSnapshot?: components["schemas"]["BookingPriceSnapshotDto"] | null;
+            customerTotalAmount?: string | null;
+            holdPaidAmount?: string | null;
+            payAtPickupAmount?: string | null;
             actualPickupAt?: string | null;
             actualReturnAt?: string | null;
             note?: string | null;
@@ -9990,6 +9993,12 @@ export interface components {
             finalTotal: string;
             /** @description Đã thanh toán TIỀN THUÊ (không gồm cọc) */
             rentalPaid: string;
+            /** @description Tổng khách trả gồm phụ phí phía khách */
+            customerTotalAmount?: string | null;
+            /** @description Khoản giữ chỗ khách đã thực trả cho XePrime */
+            holdPaidAmount?: string | null;
+            /** @description B − D — còn trả trực tiếp chủ xe khi nhận xe */
+            payAtPickupAmount?: string | null;
             /** @description Cọc theo đơn (cấu hình) */
             depositRequired: string;
             /** @description Cọc chủ xe ĐÃ ghi nhận thu */

@@ -162,6 +162,8 @@
     "totalFinal": "Tổng thanh toán",
     "total": "Tổng cộng",
     "paid": "Đã thanh toán",
+    "paymentPlanTitle": "Sau khi đã giữ chỗ",
+    "holdPaid": "Đã giữ chỗ qua XePrime",
     "additionalDue": "Cần thanh toán thêm {amount}",
     "additionalDueBody": "Phụ phí vượt quá tiền cọc đã giữ. Vui lòng thanh toán phần chênh lệch trực tiếp với chủ xe.",
     "depositTitle": "Đặt cọc thế chấp",

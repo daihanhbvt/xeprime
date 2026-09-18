@@ -57527,6 +57527,18 @@
               }
             ]
           },
+          "customerTotalAmount": {
+            "type": "string",
+            "nullable": true
+          },
+          "holdPaidAmount": {
+            "type": "string",
+            "nullable": true
+          },
+          "payAtPickupAmount": {
+            "type": "string",
+            "nullable": true
+          },
           "actualPickupAt": {
             "type": "string",
             "nullable": true
@@ -62396,6 +62408,21 @@
           "rentalPaid": {
             "type": "string",
             "description": "Đã thanh toán TIỀN THUÊ (không gồm cọc)"
+          },
+          "customerTotalAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tổng khách trả gồm phụ phí phía khách"
+          },
+          "holdPaidAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Khoản giữ chỗ khách đã thực trả cho XePrime"
+          },
+          "payAtPickupAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "B − D — còn trả trực tiếp chủ xe khi nhận xe"
           },
           "depositRequired": {
             "type": "string",

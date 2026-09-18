@@ -162,6 +162,8 @@
     "totalFinal": "Total paid",
     "total": "Total",
     "paid": "Paid",
+    "paymentPlanTitle": "After reserving",
+    "holdPaid": "Paid to reserve via XePrime",
     "additionalDue": "{amount} still to pay",
     "additionalDueBody": "The extra charges exceed the deposit held. Please settle the difference directly with the host.",
     "depositTitle": "Security deposit",

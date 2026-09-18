@@ -94,6 +94,9 @@ const DETAIL_SELECT = {
   deliveryFee: true,
   discountAmount: true,
   priceSnapshot: true,
+  // Một đơn chỉ có tối đa một khoản giữ chỗ. Đọc số THỰC THU để màn chi tiết không diễn giải
+  // `fees.holdAmount` (số phải thu trong snapshot) thành số khách đã chuyển.
+  hold: { select: { paidAmount: true } },
   routeType: true,
   pickupAddress: true,
   pickupAddressLine: true,
@@ -1329,13 +1332,18 @@ function toListItem(b: BookingListRow): BookingListItemDto {
 }
 
 function toDetail(b: BookingDetailRow): BookingDetailDto {
+  const internalSnapshot = b.priceSnapshot as unknown as BookingPriceSnapshot | null;
+  const priceSnapshot = (b.priceSnapshot as unknown as BookingDetailDto['priceSnapshot']) ?? null;
   return {
     ...toListItem(b),
     tenantCustomerId: b.tenantCustomerId,
     baseAmount: b.baseAmount as unknown as string,
     deliveryFee: b.deliveryFee as unknown as string,
     discountAmount: b.discountAmount as unknown as string,
-    priceSnapshot: (b.priceSnapshot as unknown as BookingDetailDto['priceSnapshot']) ?? null,
+    priceSnapshot,
+    customerTotalAmount: b.customerTotalAmount as unknown as string | null,
+    holdPaidAmount: (b.hold?.paidAmount as unknown as string | undefined) ?? null,
+    payAtPickupAmount: internalSnapshot?.fees?.payAtPickupAmount ?? null,
     routeType: b.routeType,
     pickupAddress: b.pickupAddress,
     pickupLocation: addressViewOf({

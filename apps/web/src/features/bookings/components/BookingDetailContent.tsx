@@ -103,6 +103,7 @@ export function BookingDetailContent({
 
   const hasDebt = !isZeroMoney(data.debtAmount);
   const hasDeposit = !isZeroMoney(data.depositAmount);
+  const hasHoldPaymentPlan = data.holdPaidAmount != null && data.payAtPickupAmount != null;
   // Thu vượt = đã thu − phải thu, chỉ khi dương. Tính trên CHUỖI tiền (ADR 0007), không Number.
   const excess = subtractMoney(data.collectedAmount, data.amountDue);
   const overCollected = isNegativeMoney(excess) || isZeroMoney(excess) ? null : excess;
@@ -343,6 +344,36 @@ export function BookingDetailContent({
                 </div>
               ) : null}
             </dl>
+
+            {/*
+              Khoản GIỮ CHỖ qua XePrime khác cả "Đã thu" (tiền gian hàng đã cầm) lẫn "Đặt cọc
+              tài sản" (cọc hoàn trả lúc giao xe). Đặt thành một khối riêng, luôn mở, để một đơn
+              đã duyệt không còn trông như khách chưa trả đồng nào.
+            */}
+            {hasHoldPaymentPlan ? (
+              <section className={styles.paymentPlan} aria-label="Thanh toán giữ chỗ">
+                <h4 className={styles.paymentPlanTitle}>Thanh toán giữ chỗ</h4>
+                <dl className={styles.paymentPlanRows}>
+                  {data.customerTotalAmount != null ? (
+                    <div className={styles.paymentPlanRow}>
+                      <dt>Tổng khách trả</dt>
+                      <dd>{fmt.money(data.customerTotalAmount)}</dd>
+                    </div>
+                  ) : null}
+                  <div className={styles.paymentPlanRow}>
+                    <dt>Đã giữ chỗ qua XePrime</dt>
+                    <dd>{fmt.money(data.holdPaidAmount)}</dd>
+                  </div>
+                  <div className={styles.paymentPlanRowStrong}>
+                    <dt>Còn trả chủ xe khi nhận xe</dt>
+                    <dd>{fmt.money(data.payAtPickupAmount)}</dd>
+                  </div>
+                </dl>
+                <p className={styles.paymentPlanNote}>
+                  Khoản giữ chỗ do XePrime thu nên không nằm trong dòng “Đã thu” của gian hàng.
+                </p>
+              </section>
+            ) : null}
           </section>
 
           {data.note ? (
