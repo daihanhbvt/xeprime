@@ -401,7 +401,12 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
           */}
           {data.hold ? (
             <section className={styles.block}>
-              <TripHoldPanel hold={data.hold} tripId={data.id} />
+              <TripHoldPanel
+                hold={data.hold}
+                tripId={data.id}
+                tripTotalAmount={data.estimate?.fees?.customerTotalAmount ?? null}
+                payAtHandoverAmount={data.estimate?.fees?.payAtPickupAmount ?? null}
+              />
             </section>
           ) : null}
 
