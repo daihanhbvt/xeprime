@@ -2,17 +2,21 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useBadgeRealtime } from '@/features/badges/BadgeRealtimeProvider';
-import { BOOKING_REQUEST_STATUS } from '@xeprime/types';
 import { useBranchScopeParams } from '@/features/branches/hooks/use-branch-scope';
 import { queryKeys } from '@/services/query-keys';
 import { fetchBookingRequests, filtersToParams } from '../api';
+import { BOOKING_REQUEST_NEEDS_ACTION_STATUSES } from '../constants';
 
 /**
  * Số yêu cầu đặt xe đang chờ gian hàng duyệt — nuôi huy hiệu trên menu điều hướng.
  *
- * Lấy `meta.total` của chính danh sách đã lọc `pending_host_approval` với `limit: 1`: backend
- * đếm ở SERVER nên con số đúng kể cả khi có hàng trăm yêu cầu, còn thân phản hồi chỉ mang một
- * bản ghi. Không cộng ở client và không tải cả trang inbox chỉ để hiện một con số.
+ * Lấy `meta.total` của chính danh sách đã lọc theo HAI trạng thái của tab gộp "Cần xử lý"
+ * (`pending_host_approval` + `hold_paid`, ADR 0039) với `limit: 1`: backend đếm ở SERVER nên
+ * con số đúng kể cả khi có hàng trăm yêu cầu, còn thân phản hồi chỉ mang một bản ghi. Không
+ * cộng ở client và không tải cả trang inbox chỉ để hiện một con số.
+ *
+ * PHẢI cùng bộ trạng thái với tab "Cần xử lý" — trước đây chỉ đếm `pending_host_approval` nên
+ * huy hiệu và tab có thể nói hai con số khác nhau (yêu cầu đã cọc chờ duyệt không được đếm).
  *
  * Theo scope chi nhánh đang chọn, giống hệt inbox — nếu không thì huy hiệu báo 5 trong khi
  * danh sách mở ra chỉ có 2.
@@ -36,7 +40,7 @@ export function usePendingBookingRequestCount(enabled = true) {
    * một việc.
    */
   const filters = {
-    status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+    status: BOOKING_REQUEST_NEEDS_ACTION_STATUSES.join(','),
     limit: 1,
     page: 1,
     ...branchScope,

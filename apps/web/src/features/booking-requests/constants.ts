@@ -13,21 +13,38 @@ import { BOOKING_REQUEST_STATUS, type BookingRequestStatus } from '@xeprime/type
  */
 export const BOOKING_REQUEST_STATUS_ALL = 'all';
 
+/**
+ * Tab GỘP "Cần xử lý" — KHÔNG phải một trạng thái thật của `BookingRequestStatus`, mà là HAI
+ * trạng thái cùng cần gian hàng quyết định (`BookingRequestCard.needsDecision` đã đối xử với
+ * chúng như nhau từ lâu — xem component đó): `pending_host_approval` (mới hỏi) và `hold_paid`
+ * (ADR 0039 — đã cọc, tiền đang nằm ở XePrime, xe đang bị giữ chỗ).
+ *
+ * Trước đây hai cái này là HAI TAB riêng vì sợ `hold_paid` — việc khẩn nhất hộp thư — chìm mất.
+ * Nhưng nó chỉ chìm khi lẫn vào tab "Tất cả" (gồm cả yêu cầu đã chết); gộp với đúng
+ * `pending_host_approval` — trạng thái CẦN QUYẾT ĐỊNH còn lại — không làm mất tính khẩn cấp:
+ * đồng hồ đếm hạn phản hồi (`RespondDeadline`) đã hiện trên MỌI thẻ cần quyết định, không phân
+ * biệt theo tab. Phản hồi người dùng 19/09/2026.
+ *
+ * Không phải một mã nghiệp vụ đi trên dây (ADR 0005) — `filtersToParams` dịch nó thành
+ * `status=pending_host_approval,hold_paid` (một chuỗi, ngăn cách dấu phẩy: `@xeprime/api-client`
+ * cố ý không hỗ trợ query param dạng mảng).
+ */
+export const BOOKING_REQUEST_TAB_NEEDS_ACTION = 'needs_action';
+
+/** Hai trạng thái gộp trong tab "Cần xử lý" — cùng thứ tự với chuỗi gửi lên server. */
+export const BOOKING_REQUEST_NEEDS_ACTION_STATUSES = [
+  BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+  BOOKING_REQUEST_STATUS.HOLD_PAID,
+] as const;
+
 /** Tab của inbox — `null` ở `status` nghĩa là tab "Tất cả". */
 export interface BookingRequestTab {
   /** Giá trị đi vào `?status=`. */
   readonly value: string;
-  /** Trạng thái để tra `statusCounts`; `null` với tab "Tất cả" (cộng mọi trạng thái). */
-  readonly status: BookingRequestStatus | null;
+  /** Trạng thái để tra `statusCounts` (cộng dồn nếu nhiều); `null` = tab "Tất cả". */
+  readonly status: readonly BookingRequestStatus[] | null;
   /** Khoá message trong namespace `BookingRequests.tabs`. */
-  readonly labelKey:
-    | 'needsAction'
-    | 'paidNeedsAction'
-    | 'converted'
-    | 'rejected'
-    | 'cancelled'
-    | 'expired'
-    | 'all';
+  readonly labelKey: 'needsAction' | 'converted' | 'rejected' | 'cancelled' | 'expired' | 'all';
 }
 
 /**
@@ -40,38 +57,35 @@ export interface BookingRequestTab {
  */
 export const BOOKING_REQUEST_TABS: readonly BookingRequestTab[] = [
   {
-    value: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
-    status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+    value: BOOKING_REQUEST_TAB_NEEDS_ACTION,
+    status: BOOKING_REQUEST_NEEDS_ACTION_STATUSES,
     labelKey: 'needsAction',
   },
   /*
-   * ĐÃ CỌC, CHỜ DUYỆT (ADR 0039) — tab riêng vì đây là việc khẩn nhất trong cả hộp thư: tiền
-   * của khách đang nằm ở XePrime, chỗ xe đang bị giữ, và hết hạn phản hồi là hệ thống tự hoàn
-   * rồi huỷ chuyến. Để nó lẫn trong "Tất cả" nghĩa là người trực phải tự đi tìm.
+   * `awaiting_hold` (ADR 0039 — hold đã sinh, khách CHƯA chuyển khoản) CỐ Ý không có tab riêng
+   * (phản hồi người dùng 19/09/2026): chưa có gì để gian hàng quyết định, và một tab riêng cho
+   * một trạng thái không-hành-động-được chỉ thêm rối. Nó vẫn xem được qua tab "Tất cả", và thẻ
+   * của nó tự nói rõ lý do không có nút Duyệt (`awaitingHold.footerHint` ở `BookingRequestCard`)
+   * thay vì để trống khó hiểu.
    */
   {
-    value: BOOKING_REQUEST_STATUS.HOLD_PAID,
-    status: BOOKING_REQUEST_STATUS.HOLD_PAID,
-    labelKey: 'paidNeedsAction',
-  },
-  {
     value: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
-    status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
+    status: [BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING],
     labelKey: 'converted',
   },
   {
     value: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
-    status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
+    status: [BOOKING_REQUEST_STATUS.REJECTED_BY_HOST],
     labelKey: 'rejected',
   },
   {
     value: BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER,
-    status: BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER,
+    status: [BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER],
     labelKey: 'cancelled',
   },
   {
     value: BOOKING_REQUEST_STATUS.EXPIRED,
-    status: BOOKING_REQUEST_STATUS.EXPIRED,
+    status: [BOOKING_REQUEST_STATUS.EXPIRED],
     labelKey: 'expired',
   },
   { value: BOOKING_REQUEST_STATUS_ALL, status: null, labelKey: 'all' },

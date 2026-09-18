@@ -1,13 +1,14 @@
 /*
- * Hộp thư yêu cầu thuê — cùng trần bề rộng và cùng cách căn giữa với các trang /manage khác.
+ * Hộp thư yêu cầu thuê — KHÔNG trần bề rộng, giống `/manage/bookings` (danh sách/bảng) chứ
+ * không phải `--xp-shell-form-max-width` (dành cho trang FORM). Mỗi thẻ giờ có 5 vùng ngang
+ * hàng (xe · khách · lịch trình · tiền · trạng thái — mẫu 19/09); ép vào trần 1216px của một
+ * form là nguồn cơn bảng tiền bị bóp chữ xuống dòng lung tung (phản hồi người dùng 19/09/2026).
  *
  * Màu nhấn là GOLD của thương hiệu. Bản vẽ dùng xanh cho gạch tab, badge và link; ở đây chúng
  * lấy `--xp-color-primary*` để màn này không đẻ ra một màu nhấn thứ hai chỉ sống ở đúng đây.
  */
 .page {
   width: 100%;
-  max-width: var(--xp-shell-form-max-width);
-  margin-inline: auto;
   min-width: 0;
 }
 

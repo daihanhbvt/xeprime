@@ -12,7 +12,6 @@
   "tabs": {
     "ariaLabel": "Lọc yêu cầu theo trạng thái",
     "needsAction": "Cần xử lý",
-    "paidNeedsAction": "Đã cọc · chờ duyệt",
     "converted": "Đã tạo đơn",
     "rejected": "Đã từ chối",
     "cancelled": "Khách đã huỷ",
@@ -52,6 +51,19 @@
     "handoverDelivery": "Giao xe tận nơi",
     "deliveryAddress": "Địa chỉ giao xe",
     "deliveryFeeHint": "Phí giao nhận chốt trên đơn sau khi hai bên thống nhất."
+  },
+  "pricing": {
+    "heading": "Tiền",
+    "zoneHeading": "Chi tiết thanh toán",
+    "estimateBadge": "Tạm tính",
+    "estimateHint": "Số tạm tính theo chính sách đang áp dụng — chốt lại khi bạn duyệt yêu cầu.",
+    "rentalTotal": "Tiền thuê",
+    "customerTotal": "Khách trả",
+    "paidViaPlatform": "Đã giữ chỗ",
+    "payAtHandover": "Trả chủ xe khi nhận xe"
+  },
+  "awaitingHold": {
+    "footerHint": "Đang chờ khách chuyển khoản giữ chỗ — nút Duyệt sẽ hiện ngay khi tiền về."
   },
   "note": {
     "label": "Ghi chú của khách",

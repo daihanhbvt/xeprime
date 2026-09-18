@@ -14,6 +14,7 @@ import {
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
 import {
+  IsArray,
   IsBoolean,
   IsDateString,
   IsEmail,
@@ -430,10 +431,23 @@ export class BookingRequestListQueryDto {
   @IsIn(SERVICE_TYPE_VALUES)
   serviceType?: string;
 
-  @ApiPropertyOptional({ enum: BOOKING_REQUEST_STATUS_VALUES })
+  /**
+   * Một trạng thái, hoặc NHIỀU trạng thái nối bằng dấu phẩy (`?status=pending_host_approval,
+   * hold_paid`) — tab GỘP "Cần xử lý" của web dùng hình thức này. Chuỗi, không phải query param
+   * lặp lại: `@xeprime/api-client` cố ý không hỗ trợ query dạng mảng (xem `packages/api-client`).
+   */
+  @ApiPropertyOptional({
+    enum: BOOKING_REQUEST_STATUS_VALUES,
+    isArray: true,
+    description: 'Một trạng thái, hoặc nhiều trạng thái nối dấu phẩy',
+  })
   @IsOptional()
-  @IsIn(BOOKING_REQUEST_STATUS_VALUES)
-  status?: string;
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.split(',').filter(Boolean) : value,
+  )
+  @IsArray()
+  @IsIn(BOOKING_REQUEST_STATUS_VALUES, { each: true })
+  status?: string[];
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -462,6 +476,41 @@ export class BookingRequestListQueryDto {
   @Min(1)
   @Max(MAX_LIMIT)
   limit?: number;
+}
+
+/**
+ * Tiền của MỘT yêu cầu thuê, nhìn từ phía gian hàng — nguồn khác nhau tuỳ trạng thái, không
+ * bao giờ tính lại một con số đã đóng băng (ADR 0024):
+ *
+ *  - **Đã tạo đơn** (`converted_to_booking`): cột phẳng trên `Booking` — nguồn DUY NHẤT, dù
+ *    đơn đi qua đường có hold hay không.
+ *  - **Đã cọc, hoặc từng cọc rồi mới huỷ/từ chối/hết hạn**: snapshot đóng băng lúc hold sinh
+ *    ra (`BookingHold.priceSnapshotJson`).
+ *  - **Còn chờ duyệt, chưa từng có hold**: TẠM TÍNH theo chính sách ĐANG hiệu lực — đổi khi
+ *    chủ xe duyệt, `isEstimate = true`.
+ *
+ * `null` (cả field lẫn từng con số) khi không tính được: dài hạn chưa chốt lịch, xe thiếu giá,
+ * hoặc chính sách phí chưa cấu hình cho gian hàng.
+ */
+export class BookingRequestPricingDto {
+  @ApiProperty({ description: 'true = tạm tính (chưa duyệt), false = số đã chốt/đã đóng băng' })
+  isEstimate!: boolean;
+  @ApiProperty({ description: 'Tiền thuê — doanh thu gian hàng, VND string' })
+  rentalTotal!: string;
+  @ApiProperty({ description: 'Tổng khách phải trả (đã gồm phụ phí nếu có), VND string' })
+  customerTotalAmount!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Đã trả qua nền tảng (giữ chỗ/đơn) — null khi còn tạm tính',
+  })
+  paidAmount!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Trả TRỰC TIẾP chủ xe khi nhận xe — null khi tạm tính hoặc không áp dụng',
+  })
+  remainingAmount!: string | null;
 }
 
 /** Một yêu cầu đặt xe (dùng cho cả list lẫn chi tiết ở inbox shop). */
@@ -591,6 +640,16 @@ export class BookingRequestDto {
     description: 'Ai quyết định — chủ xe hay hệ thống tự nhận (08/09/2026); null khi chưa quyết',
   })
   decisionSource!: string | null;
+
+  @ApiPropertyOptional({
+    type: BookingRequestPricingDto,
+    nullable: true,
+    description:
+      'Tiền của yêu cầu này — xem docblock BookingRequestPricingDto cho nguồn theo trạng thái. ' +
+      'Luôn có mặt (kể cả `null`) ở danh sách và chi tiết; VẮNG MẶT ở phiếu trả về của các thao ' +
+      'tác duyệt/từ chối/huỷ — client đọc lại danh sách/chi tiết để thấy số mới.',
+  })
+  pricing?: BookingRequestPricingDto | null;
 }
 
 /**
