@@ -102,6 +102,30 @@
   }
 }
 
+/*
+ * Lịch trình: dịch vụ + hình thức nhận xe VÀ mốc giờ, hai nhóm cạnh nhau khi đủ chỗ, xếp dọc
+ * khi hẹp (mặc định). `row-reverse` để dịch vụ (nhóm đứng TRƯỚC trong DOM) hiện bên PHẢI, mốc
+ * giờ bên TRÁI — trong khi xếp dọc vẫn giữ đúng thứ tự đọc cũ (dịch vụ trước, mốc giờ sau).
+ */
+.scheduleGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+@container (min-width: 560px) {
+  .scheduleGrid {
+    flex-direction: row-reverse;
+    align-items: start;
+  }
+
+  .scheduleGrid > .rows {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
@@ -116,6 +140,14 @@
   flex-direction: column;
   gap: var(--xp-space-md);
   min-width: 0;
+}
+
+/*
+ * `.main` cũng có thể mang trực tiếp `.vehicleShopRow`/`.scheduleGrid` (khi không có QR —
+ * `hasQrPanel` false, xem JSX): cùng một container query, cùng một ngưỡng, chỉ khác chỗ đứng.
+ */
+.main {
+  container-type: inline-size;
 }
 
 .block {
