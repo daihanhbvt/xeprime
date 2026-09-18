@@ -155,6 +155,29 @@ export class CustomerTripFinanceDto {
   finalTotal!: string;
   @ApiProperty({ description: 'Đã thanh toán TIỀN THUÊ (không gồm cọc)' }) rentalPaid!: string;
 
+  /**
+   * Kế hoạch thanh toán đã đóng băng của chuyến marketplace. `holdPaidAmount` là `null` với
+   * đơn không đi qua khoản giữ chỗ XePrime; client không tự trừ các số tiền.
+   */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Tổng khách trả gồm phụ phí phía khách',
+  })
+  customerTotalAmount!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Khoản giữ chỗ khách đã thực trả cho XePrime',
+  })
+  holdPaidAmount!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'B − D — còn trả trực tiếp chủ xe khi nhận xe',
+  })
+  payAtPickupAmount!: string | null;
+
   @ApiProperty({ description: 'Cọc theo đơn (cấu hình)' }) depositRequired!: string;
   @ApiProperty({ description: 'Cọc chủ xe ĐÃ ghi nhận thu' }) depositReceived!: string;
   @ApiProperty({ description: 'Phần phát sinh khấu trừ vào cọc = min(phát sinh, cọc đã thu)' })

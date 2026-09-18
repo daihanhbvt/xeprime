@@ -237,3 +237,34 @@ describe('Các trạng thái cọc', () => {
     expect(screen.getByText(/chỉ còn lưu tổng tiền/)).toBeTruthy();
   });
 });
+
+describe('Chuyến đã giữ chỗ qua XePrime', () => {
+  const WITH_HOLD: CustomerTripFinance = {
+    ...BASE,
+    baseAmount: '520000',
+    discountAmount: '52000',
+    rentalTotal: '468000',
+    finalTotal: '468000',
+    customerTotalAmount: '477360',
+    holdPaidAmount: '102960',
+    payAtPickupAmount: '374400',
+  };
+
+  it('hiện đủ số đã giữ chỗ và số còn trả chủ xe ngay trong chi tiết giá', () => {
+    render(<TripFinanceCard finance={WITH_HOLD} closed={false} />);
+
+    const plan = screen.getByRole('region', { name: 'Sau khi đã giữ chỗ' });
+    expect(plan.textContent).toContain('Tổng bạn trả');
+    expect(plan.textContent).toContain('477.360');
+    expect(plan.textContent).toContain('Đã giữ chỗ qua XePrime');
+    expect(plan.textContent).toContain('102.960');
+    expect(plan.textContent).toContain('Trả chủ xe khi nhận xe');
+    expect(plan.textContent).toContain('374.400');
+  });
+
+  it('đơn không qua khoản giữ chỗ thì không dựng một kế hoạch thanh toán giả', () => {
+    render(<TripFinanceCard finance={BASE} closed={false} />);
+
+    expect(screen.queryByRole('region', { name: 'Sau khi đã giữ chỗ' })).toBeNull();
+  });
+});

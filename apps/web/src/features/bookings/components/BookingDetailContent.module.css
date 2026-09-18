@@ -165,6 +165,70 @@
   color: var(--xp-color-error);
 }
 
+/* Kế hoạch thanh toán của đơn marketplace — tách khỏi sổ "đã thu/còn nợ" của gian hàng vì
+   khoản giữ chỗ đang do XePrime cầm, không phải một phiếu thu tại quầy. */
+.paymentPlan {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-container);
+}
+
+.paymentPlanTitle {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.paymentPlanRows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.paymentPlanRow,
+.paymentPlanRowStrong {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.paymentPlanRow dt,
+.paymentPlanRowStrong dt {
+  color: var(--xp-color-text-secondary);
+}
+
+.paymentPlanRow dd,
+.paymentPlanRowStrong dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.paymentPlanRowStrong {
+  padding-top: 6px;
+  border-top: 1px solid var(--xp-color-border-subtle);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.paymentPlanRowStrong dd {
+  color: var(--xp-color-price);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.paymentPlanNote {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-overline);
+}
+
 /* Diễn biến chuyến + quyết toán: hai khối ngang hàng, không khối nào là "phụ". */
 .layout {
   display: grid;

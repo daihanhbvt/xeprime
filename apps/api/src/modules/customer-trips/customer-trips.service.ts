@@ -722,6 +722,8 @@ export class CustomerTripsService {
     const rentalTotal = new Prisma.Decimal(booking.totalAmount);
     const surchargeTotal = new Prisma.Decimal(settlement.surchargeTotal);
     const depositReceived = new Prisma.Decimal(settlement.depositReceived);
+    const snapshot = booking.priceSnapshot as unknown as BookingPriceSnapshot | null;
+    const feeSnapshot = snapshot?.fees ?? null;
 
     // Khấu trừ = phần phát sinh mà tiền cọc gánh được. Vượt quá thì phần dư là `additionalDue`
     // (server đã tính), khách trả trực tiếp — không bao giờ hiện một khoản khấu trừ âm.
@@ -742,6 +744,9 @@ export class CustomerTripsService {
       surchargeTotal: surchargeTotal.toFixed(2),
       finalTotal: rentalTotal.plus(surchargeTotal).toFixed(2),
       rentalPaid: (rentalPaidAgg._sum.amount ?? ZERO).toFixed(2),
+      customerTotalAmount: booking.customerTotalAmount?.toFixed(2) ?? null,
+      holdPaidAmount: booking.hold?.paidAmount.toFixed(2) ?? null,
+      payAtPickupAmount: feeSnapshot?.payAtPickupAmount ?? null,
       depositRequired: settlement.depositRequired,
       depositReceived: settlement.depositReceived,
       depositDeducted: depositDeducted.toFixed(2),
@@ -857,7 +862,10 @@ const BOOKING_SELECT = {
   discountAmount: true,
   deliveryFee: true,
   totalAmount: true,
+  customerTotalAmount: true,
   priceSnapshot: true,
+  // Số đã chuyển thật; không dùng `fees.holdAmount` (số phải thu) để kể lại lịch sử thanh toán.
+  hold: { select: { paidAmount: true } },
   depositCollectionMode: true,
   vehicle: { select: { plateNumber: true } },
   review: { select: { id: true, rating: true, comment: true, createdAt: true } },
