@@ -2,13 +2,12 @@
 
 import { useCallback, useMemo } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { BOOKING_REQUEST_STATUS } from '@xeprime/types';
-import { BOOKING_REQUEST_STATUS_ALL } from '../constants';
+import { BOOKING_REQUEST_STATUS_ALL, BOOKING_REQUEST_TAB_NEEDS_ACTION } from '../constants';
 import type { BookingRequestFilters } from '../types';
 
 /**
- * Filter inbox ở URL searchParams (ADR 0004). Mặc định lọc `pending_host_approval` — inbox
- * mở ra là thấy ngay việc cần xử lý.
+ * Filter inbox ở URL searchParams (ADR 0004). Mặc định lọc tab GỘP "Cần xử lý" — inbox mở ra
+ * là thấy ngay việc cần xử lý, kể cả yêu cầu đã cọc (`BOOKING_REQUEST_TAB_NEEDS_ACTION`).
  *
  * "Tất cả" là `?status=all`, KHÔNG phải "xoá tham số".
  *
@@ -30,7 +29,7 @@ export function useBookingRequestFilters() {
       return Number.isFinite(parsed) ? parsed : undefined;
     };
     return {
-      status: searchParams.get('status') ?? BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+      status: searchParams.get('status') ?? BOOKING_REQUEST_TAB_NEEDS_ACTION,
       q: searchParams.get('q') ?? undefined,
       serviceType: searchParams.get('serviceType') ?? undefined,
       vehicleId: searchParams.get('vehicleId') ?? undefined,
@@ -71,7 +70,7 @@ export function useBookingRequestFilters() {
   );
 
   /** Tab đang mở — dùng cho `<Tabs activeKey>`; thiếu tham số vẫn là "Cần xử lý". */
-  const activeTab = filters.status ?? BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL;
+  const activeTab = filters.status ?? BOOKING_REQUEST_TAB_NEEDS_ACTION;
 
   /** Đổi tab → về trang 1 (không truyền `page` nên tham số bị xoá, tức trang 1). */
   const selectTab = useCallback(

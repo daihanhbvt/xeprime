@@ -12,7 +12,6 @@
   "tabs": {
     "ariaLabel": "Filter requests by status",
     "needsAction": "Needs action",
-    "paidNeedsAction": "Paid · awaiting approval",
     "converted": "Booking created",
     "rejected": "Rejected",
     "cancelled": "Cancelled",
@@ -52,6 +51,19 @@
     "handoverDelivery": "Vehicle delivery",
     "deliveryAddress": "Delivery address",
     "deliveryFeeHint": "The delivery fee is set on the booking once you and the guest agree."
+  },
+  "pricing": {
+    "heading": "Pricing",
+    "zoneHeading": "Payment details",
+    "estimateBadge": "Estimate",
+    "estimateHint": "Estimated under the current policy — locked in once you approve.",
+    "rentalTotal": "Rental",
+    "customerTotal": "Guest pays",
+    "paidViaPlatform": "Held via platform",
+    "payAtHandover": "Pay the host at pickup"
+  },
+  "awaitingHold": {
+    "footerHint": "Waiting for the guest to transfer the hold — the Approve button appears once it's paid."
   },
   "note": {
     "label": "Customer note",

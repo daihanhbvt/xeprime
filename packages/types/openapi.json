@@ -3258,19 +3258,23 @@
             "name": "status",
             "required": false,
             "in": "query",
+            "description": "Một trạng thái, hoặc nhiều trạng thái nối dấu phẩy",
             "schema": {
-              "type": "string",
-              "enum": [
-                "pending_host_approval",
-                "approved_by_host",
-                "rejected_by_host",
-                "cancelled_by_customer",
-                "expired",
-                "converted_to_booking",
-                "awaiting_hold",
-                "hold_paid",
-                "hold_expired"
-              ]
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "pending_host_approval",
+                  "approved_by_host",
+                  "rejected_by_host",
+                  "cancelled_by_customer",
+                  "expired",
+                  "converted_to_booking",
+                  "awaiting_hold",
+                  "hold_paid",
+                  "hold_expired"
+                ]
+              }
             }
           },
           {
@@ -58051,6 +58055,16 @@
               "system"
             ],
             "description": "Ai quyết định — chủ xe hay hệ thống tự nhận (08/09/2026); null khi chưa quyết"
+          },
+          "pricing": {
+            "nullable": true,
+            "description": "Tiền của yêu cầu này — xem docblock BookingRequestPricingDto cho nguồn theo trạng thái. Luôn có mặt (kể cả `null`) ở danh sách và chi tiết; VẮNG MẶT ở phiếu trả về của các thao tác duyệt/từ chối/huỷ — client đọc lại danh sách/chi tiết để thấy số mới.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookingRequestPricingDto"
+              }
+            ]
           }
         },
         "required": [
@@ -58117,6 +58131,38 @@
           "total",
           "hasNext",
           "statusCounts"
+        ]
+      },
+      "BookingRequestPricingDto": {
+        "type": "object",
+        "properties": {
+          "isEstimate": {
+            "type": "boolean",
+            "description": "true = tạm tính (chưa duyệt), false = số đã chốt/đã đóng băng"
+          },
+          "rentalTotal": {
+            "type": "string",
+            "description": "Tiền thuê — doanh thu gian hàng, VND string"
+          },
+          "customerTotalAmount": {
+            "type": "string",
+            "description": "Tổng khách phải trả (đã gồm phụ phí nếu có), VND string"
+          },
+          "paidAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Đã trả qua nền tảng (giữ chỗ/đơn) — null khi còn tạm tính"
+          },
+          "remainingAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Trả TRỰC TIẾP chủ xe khi nhận xe — null khi tạm tính hoặc không áp dụng"
+          }
+        },
+        "required": [
+          "isEstimate",
+          "rentalTotal",
+          "customerTotalAmount"
         ]
       },
       "BookingRequestReceiptDto": {

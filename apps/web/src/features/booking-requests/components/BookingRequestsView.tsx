@@ -16,7 +16,11 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
 import { currentPathWithQuery } from '@/features/auth/safe-next';
-import { BOOKING_REQUEST_TABS } from '../constants';
+import {
+  BOOKING_REQUEST_NEEDS_ACTION_STATUSES,
+  BOOKING_REQUEST_TAB_NEEDS_ACTION,
+  BOOKING_REQUEST_TABS,
+} from '../constants';
 import { useBookingRequestFilters } from '../hooks/use-booking-request-filters';
 import { useBookingRequestDecisions } from '../hooks/use-booking-request-decisions';
 import { useStartBookingRequestConversation } from '../hooks/use-booking-request-mutations';
@@ -180,7 +184,7 @@ export function BookingRequestsView() {
 
   const isFirstLoad = isFetching && !data;
   const showEmpty = !isFirstLoad && !isError && items.length === 0;
-  const isNeedsActionTab = activeTab === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL;
+  const isNeedsActionTab = activeTab === BOOKING_REQUEST_TAB_NEEDS_ACTION;
 
   /*
    * Hai con số quan trọng nhất của hộp thư, tách khỏi hàng tab: "còn bao nhiêu việc" và "đã
@@ -192,13 +196,13 @@ export function BookingRequestsView() {
       <div className={styles.stat}>
         <dt className={styles.statLabel}>{t('stats.pending')}</dt>
         <dd className={styles.statValue}>
-          {fmt.count(countFor(statusCounts, BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL))}
+          {fmt.count(countFor(statusCounts, BOOKING_REQUEST_NEEDS_ACTION_STATUSES))}
         </dd>
       </div>
       <div className={styles.stat}>
         <dt className={styles.statLabel}>{t('stats.converted')}</dt>
         <dd className={styles.statValue}>
-          {fmt.count(countFor(statusCounts, BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING))}
+          {fmt.count(countFor(statusCounts, [BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING]))}
         </dd>
       </div>
     </dl>
@@ -382,7 +386,10 @@ export function BookingRequestsView() {
  * trường riêng: backend đã trả đủ bộ trạng thái nên phép cộng ở đây là chính xác, và một
  * trường `all` thứ hai chỉ tạo thêm một con số có thể lệch với phần còn lại.
  */
-function countFor(counts: BookingRequestStatusCount[], status: string | null): number {
-  if (status === null) return counts.reduce((sum, entry) => sum + entry.count, 0);
-  return counts.find((entry) => entry.status === status)?.count ?? 0;
+/** `null` = tab "Tất cả" (cộng mọi trạng thái); mảng nhiều phần tử = tab GỘP (cộng dồn). */
+function countFor(counts: BookingRequestStatusCount[], statuses: readonly string[] | null): number {
+  if (statuses === null) return counts.reduce((sum, entry) => sum + entry.count, 0);
+  return counts
+    .filter((entry) => statuses.includes(entry.status))
+    .reduce((sum, entry) => sum + entry.count, 0);
 }

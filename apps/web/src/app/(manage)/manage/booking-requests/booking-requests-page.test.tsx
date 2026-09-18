@@ -11,6 +11,7 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { renderWithIntl } from '@/i18n/test-utils';
+import { BOOKING_REQUEST_TAB_NEEDS_ACTION } from '@/features/booking-requests/constants';
 import type { BookingRequestItem, BookingRequestListMeta } from '@/features/booking-requests/types';
 import BookingRequestsPage from './page';
 
@@ -201,9 +202,9 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('/manage/booking-requests — bộ lọc trạng thái ở URL', () => {
-  it('không có tham số ⇒ mặc định lọc "chờ duyệt"', () => {
+  it('không có tham số ⇒ mặc định lọc tab gộp "Cần xử lý"', () => {
     renderPage();
-    expect(queries.lastFilters?.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
+    expect(queries.lastFilters?.status).toBe(BOOKING_REQUEST_TAB_NEEDS_ACTION);
   });
 
   it('chọn tab "Tất cả" ⇒ ghi `status=all` vào URL (không phải xoá tham số)', () => {
@@ -237,6 +238,30 @@ describe('/manage/booking-requests — bộ lọc trạng thái ở URL', () => 
     expect(within(screen.getByRole('tab', { name: /Đã từ chối/ })).getByText('3')).toBeTruthy();
     // 7 + 12 + 3 + 2 + 1 + 0 — cộng ĐỦ bộ trạng thái, không chỉ các tab hiện ra.
     expect(within(screen.getByRole('tab', { name: /Tất cả/ })).getByText('25')).toBeTruthy();
+  });
+
+  /**
+   * ADR 0039 — tab "Cần xử lý" GỘP `pending_host_approval` + `hold_paid` (trước đây hai tab
+   * riêng). Khoá cả hai nửa của phép gộp: số hiện trên tab CỘNG DỒN, và tham số gửi lên API là
+   * giá trị GỘP (`filtersToParams` dịch thành `status=pending_host_approval,hold_paid`) — không
+   * phải một trong hai mã thật, nếu không backend sẽ chỉ lọc đúng một nửa.
+   */
+  it('tab "Cần xử lý" gộp pending_host_approval + hold_paid — cộng số lẫn tham số gửi API', () => {
+    setRows([], {
+      total: 0,
+      statusCounts: [
+        { status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL, count: 4 },
+        { status: BOOKING_REQUEST_STATUS.HOLD_PAID, count: 3 },
+        { status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING, count: 0 },
+        { status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST, count: 0 },
+        { status: BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER, count: 0 },
+        { status: BOOKING_REQUEST_STATUS.EXPIRED, count: 0 },
+      ],
+    });
+    renderPage();
+
+    expect(within(screen.getByRole('tab', { name: /Cần xử lý/ })).getByText('7')).toBeTruthy();
+    expect(queries.lastFilters?.status).toBe(BOOKING_REQUEST_TAB_NEEDS_ACTION);
   });
 });
 
@@ -343,6 +368,131 @@ describe('/manage/booking-requests — vùng xe và khách', () => {
     setRows([request({ customerRiskLevel: TENANT_CUSTOMER_RISK_LEVEL.BLOCKED })]);
     renderPage();
     expect(screen.getByText(/Từ chối phục vụ — kiểm tra lại trước khi duyệt/)).toBeTruthy();
+  });
+});
+
+/**
+ * Tiền trên thẻ (`BookingRequestPricingDto`, phản hồi người dùng 19/09/2026) — trước đây hộp
+ * thư không hiện một con số tiền nào, nên gian hàng phải mở từng yêu cầu mới biết đáng bao
+ * nhiêu. Bốn điều được khoá:
+ *
+ *  1. `pricing: null` (dài hạn chưa chốt lịch, xe thiếu giá…) ⇒ KHÔNG vẽ khối tiền nào, không
+ *     phải một hàng "—" lấp lửng.
+ *  2. Không có phụ phí (`customerTotalAmount === rentalTotal`) ⇒ CHỈ một dòng "Tiền thuê", không
+ *     lặp lại "Khách trả" cho cùng một số — bài học đã sửa ở `PriceBreakdown` (18/09/2026).
+ *  3. `isEstimate: true` (còn `pending_host_approval`, chưa từng có hold) ⇒ nhãn "Tạm tính" đi
+ *     kèm số khách trả, và KHÔNG có dòng "Đã giữ chỗ"/"Trả chủ xe khi nhận xe" (chưa ai trả gì).
+ *  4. Đã cọc (`hold_paid`) ⇒ đủ bốn dòng: tiền thuê, khách trả, đã giữ chỗ, trả chủ xe khi nhận.
+ */
+describe('/manage/booking-requests — tiền trên thẻ', () => {
+  it('pricing = null ⇒ không vẽ khối tiền nào', () => {
+    setRows([request({ pricing: null })]);
+    renderPage();
+    const card = cardFor('Kia Carnival 2025');
+    expect(within(card).queryByText('Khách trả')).toBeNull();
+    expect(within(card).queryByText('Tiền thuê')).toBeNull();
+  });
+
+  it('không có phụ phí (khách trả = tiền thuê) ⇒ chỉ MỘT dòng, không lặp số', () => {
+    setRows([
+      request({
+        pricing: {
+          isEstimate: false,
+          rentalTotal: '600000',
+          customerTotalAmount: '600000',
+          paidAmount: null,
+          remainingAmount: null,
+        },
+      }),
+    ]);
+    renderPage();
+    const card = cardFor('Kia Carnival 2025');
+    expect(within(card).queryByText('Khách trả')).toBeNull();
+    expect(within(card).getByText('Tiền thuê')).toBeTruthy();
+    expect(within(card).getByText('600.000 ₫')).toBeTruthy();
+  });
+
+  it('tạm tính (chưa duyệt) ⇒ nhãn "Tạm tính", không có dòng đã giữ chỗ/trả tay', () => {
+    setRows([
+      request({
+        pricing: {
+          isEstimate: true,
+          rentalTotal: '600000',
+          customerTotalAmount: '672200',
+          paidAmount: null,
+          remainingAmount: null,
+        },
+      }),
+    ]);
+    renderPage();
+    const card = cardFor('Kia Carnival 2025');
+    expect(within(card).getByText('Tạm tính')).toBeTruthy();
+    expect(within(card).getByText('672.200 ₫')).toBeTruthy();
+    expect(within(card).queryByText('Đã giữ chỗ')).toBeNull();
+    expect(within(card).queryByText('Trả chủ xe khi nhận xe')).toBeNull();
+  });
+
+  it('đã cọc ⇒ đủ bốn dòng: tiền thuê, khách trả, đã giữ chỗ, trả chủ xe khi nhận', () => {
+    setRows([
+      request({
+        status: BOOKING_REQUEST_STATUS.HOLD_PAID,
+        pricing: {
+          isEstimate: false,
+          rentalTotal: '810000',
+          customerTotalAmount: '907200',
+          paidAmount: '259200',
+          remainingAmount: '648000',
+        },
+      }),
+    ]);
+    renderPage();
+    const card = cardFor('Kia Carnival 2025');
+    expect(within(card).getByText('810.000 ₫')).toBeTruthy();
+    expect(within(card).getByText('907.200 ₫')).toBeTruthy();
+    expect(within(card).getByText('259.200 ₫')).toBeTruthy();
+    expect(within(card).getByText('648.000 ₫')).toBeTruthy();
+    expect(within(card).queryByText('Tạm tính')).toBeNull();
+  });
+});
+
+/**
+ * `awaiting_hold` (ADR 0039 — hold đã sinh, khách CHƯA chuyển khoản) — phản hồi người dùng
+ * 19/09/2026: trạng thái này trước đây hoàn toàn vô hình với gian hàng, nên một yêu cầu thật
+ * trông như biến mất và mất luôn nút Duyệt. KHÔNG có tab riêng (phản hồi 19/09/2026, lượt hai:
+ * chỉ "Cần xử lý" và "Tất cả" là đủ, một trạng thái không-hành-động-được không đáng một tab) —
+ * vẫn xem được qua "Tất cả", và thẻ tự nói rõ lý do thay vì để trống.
+ */
+describe('/manage/booking-requests — awaiting_hold (chờ khách chuyển khoản)', () => {
+  it('KHÔNG có tab riêng — vẫn đếm đúng ở "Tất cả", không lẫn vào "Cần xử lý"', () => {
+    setRows([request({ status: BOOKING_REQUEST_STATUS.AWAITING_HOLD, bookingId: null })], {
+      total: 1,
+      statusCounts: [
+        { status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL, count: 0 },
+        { status: BOOKING_REQUEST_STATUS.HOLD_PAID, count: 0 },
+        { status: BOOKING_REQUEST_STATUS.AWAITING_HOLD, count: 2 },
+        { status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING, count: 0 },
+        { status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST, count: 0 },
+        { status: BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER, count: 0 },
+        { status: BOOKING_REQUEST_STATUS.EXPIRED, count: 0 },
+      ],
+    });
+    renderPage();
+
+    expect(within(screen.getByRole('tab', { name: /Cần xử lý/ })).getByText('0')).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: /Chờ chuyển khoản/ })).toBeNull();
+    expect(within(screen.getByRole('tab', { name: /Tất cả/ })).getByText('2')).toBeTruthy();
+  });
+
+  it('thẻ KHÔNG có nút Duyệt/Từ chối, nhưng nói RÕ vì sao thay vì để trống', () => {
+    setRows([request({ status: BOOKING_REQUEST_STATUS.AWAITING_HOLD, bookingId: null })]);
+    renderPage();
+    const card = cardFor('Kia Carnival 2025');
+
+    expect(within(card).queryByRole('button', { name: 'Duyệt & giữ xe' })).toBeNull();
+    expect(within(card).queryByRole('button', { name: 'Từ chối' })).toBeNull();
+    expect(
+      within(card).getByText(/Đang chờ khách chuyển khoản giữ chỗ/),
+    ).toBeTruthy();
   });
 });
 

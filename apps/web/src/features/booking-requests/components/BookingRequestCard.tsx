@@ -75,10 +75,12 @@ interface Props {
 /**
  * MỘT yêu cầu thuê trong hộp thư của gian hàng.
  *
- * Bố cục theo mẫu 19/08: một THÂN bốn vùng (xe · khách · yêu cầu thuê · trạng thái) rồi một
- * CHÂN THẺ ngăn bằng đường kẻ, trái là liên hệ, phải là quyết định (hoặc đường sang đơn đã tạo).
- * Các vùng là con TRỰC TIẾP của lưới nên `grid-template-areas` xếp lại được theo bề rộng mà
- * không phải render nội dung lần thứ hai cho mobile.
+ * Bố cục theo mẫu 19/09: một THÂN năm vùng (xe · khách · lịch trình · tiền · trạng thái) rồi
+ * một CHÂN THẺ ngăn bằng đường kẻ, trái là liên hệ, phải là quyết định (hoặc đường sang đơn đã
+ * tạo). Tiền tách khỏi lịch trình thành vùng RIÊNG (trước đó nhét chung một cột, đọc dọc dài) —
+ * hai loại thông tin khác nhau ("khi nào" và "bao nhiêu") xứng đáng hai cột ngang hàng. Các
+ * vùng là con TRỰC TIẾP của lưới nên `grid-template-areas` xếp lại được theo bề rộng mà không
+ * phải render nội dung lần thứ hai cho mobile.
  *
  * Màu nhấn dùng GOLD thương hiệu (`--xp-color-primary*`), không dùng `--xp-color-link` xanh:
  * xanh trong bản mẫu chỉ là màu tạm của người vẽ, còn màu chính của sản phẩm là gold.
@@ -401,6 +403,49 @@ export function BookingRequestCard({
           ) : null}
         </div>
 
+        {/*
+          ── Tiền — VÙNG RIÊNG cạnh lịch trình (mẫu 19/09), không còn nhét chung một cột với
+          lịch: hai loại thông tin khác nhau ("khi nào" và "bao nhiêu") xứng đáng hai cột ngang
+          hàng thay vì đọc dọc một cột dài. `null` (dài hạn chưa chốt lịch, xe thiếu giá, chưa
+          có chính sách phí — xem docblock `BookingRequestPricingDto`) thì KHÔNG dựng vùng này.
+        */}
+        {request.pricing ? (
+          <div className={styles.payment}>
+            <h3 className={styles.zoneTitle}>{t('pricing.zoneHeading')}</h3>
+            <dl className={styles.facts}>
+              {/* "Khách trả" KHÔNG lặp lại khi hai số bằng nhau (không có phụ phí) — cùng bài
+                  học đã sửa ở PriceBreakdown: hai nhãn trỏ một số là mập mờ, không phải đầy đủ
+                  hơn. "Tiền thuê" luôn có mặt — nó là con số nền, không đổi theo phụ phí. */}
+              <Fact
+                label={t('pricing.rentalTotal')}
+                strong={request.pricing.customerTotalAmount === request.pricing.rentalTotal}
+              >
+                {fmt.money(request.pricing.rentalTotal)}
+                {request.pricing.isEstimate &&
+                request.pricing.customerTotalAmount === request.pricing.rentalTotal ? (
+                  <span className={styles.pricingEstimateTag}>{t('pricing.estimateBadge')}</span>
+                ) : null}
+              </Fact>
+              {request.pricing.customerTotalAmount !== request.pricing.rentalTotal ? (
+                <Fact label={t('pricing.customerTotal')} strong>
+                  {fmt.money(request.pricing.customerTotalAmount)}
+                  {request.pricing.isEstimate ? (
+                    <span className={styles.pricingEstimateTag}>{t('pricing.estimateBadge')}</span>
+                  ) : null}
+                </Fact>
+              ) : null}
+              {request.pricing.paidAmount != null ? (
+                <Fact label={t('pricing.paidViaPlatform')}>{fmt.money(request.pricing.paidAmount)}</Fact>
+              ) : null}
+              {request.pricing.remainingAmount != null ? (
+                <Fact label={t('pricing.payAtHandover')}>
+                  {fmt.money(request.pricing.remainingAmount)}
+                </Fact>
+              ) : null}
+            </dl>
+          </div>
+        ) : null}
+
         {/* ── Dấu vết xử lý — desktop nằm dưới trạng thái, mobile xuống dưới. ── */}
         <div className={styles.stamps}>
           <p className={styles.timestamp}>
@@ -569,6 +614,13 @@ export function BookingRequestCard({
         ) : needsDecision && pastDue ? (
           // Nói vì sao không còn nút, và việc cần làm tiếp — im lặng ở đây đọc như một lỗi tải.
           <p className={styles.expiredHint}>{t('deadline.pastDueHint')}</p>
+        ) : request.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD ? (
+          /*
+           * Chưa có gì để quyết định (ADR 0039 — khách chưa chuyển khoản), nhưng im lặng ở đây
+           * đọc như thẻ bị mất nút. Nói thẳng lý do, cùng câu với `tabs.awaitingHold` đang dùng
+           * để tìm lại thẻ này (phản hồi người dùng 19/09/2026).
+           */
+          <p className={styles.expiredHint}>{t('awaitingHold.footerHint')}</p>
         ) : hasBookingLink ? (
           /*
            * MỞ MODAL, không điều hướng: người trực đang quét cả hộp thư, nhảy sang một trang

@@ -427,7 +427,7 @@ describe('BookingRequestsService.list — đếm theo trạng thái', () => {
 
     const all = await requests.list(tenantId, {});
     const filtered = await requests.list(tenantId, {
-      status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
+      status: [BOOKING_REQUEST_STATUS.REJECTED_BY_HOST],
     });
 
     // Trang dữ liệu hẹp lại theo bộ lọc…

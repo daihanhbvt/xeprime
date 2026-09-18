@@ -1,10 +1,16 @@
 /*
- * Thẻ một yêu cầu thuê — bố cục theo mẫu 19/08.
+ * Thẻ một yêu cầu thuê — bố cục theo mẫu 19/09.
  *
- * Thân thẻ là bốn vùng (xe · khách · yêu cầu thuê · trạng thái) rồi một CHÂN THẺ ngăn bằng
- * đường kẻ: trái là liên hệ, phải là quyết định. MOBILE-FIRST: mặc định hai cột hẹp, hai
- * `@media (min-width: …)` mở dần ra. Không có nhánh JS nào theo breakpoint nên không có pha
- * nhấp nháy khi hydrate.
+ * Thân thẻ là NĂM vùng (xe · khách · lịch trình · tiền · trạng thái) rồi một CHÂN THẺ ngăn bằng
+ * đường kẻ: trái là liên hệ, phải là quyết định. Tiền tách khỏi lịch trình thành cột RIÊNG
+ * (trước đó nhét chung, đọc dọc dài) — hai loại thông tin khác nhau ("khi nào" và "bao nhiêu")
+ * xứng đáng hai cột ngang hàng. MOBILE-FIRST: mặc định hai cột hẹp, hai `@container (min-width:
+ * …)` mở dần ra. Không có nhánh JS nào theo breakpoint nên không có pha nhấp nháy khi hydrate.
+ *
+ * `@container`, KHÔNG `@media`: thẻ này nhúng vào một cột NỘI DUNG cạnh sidebar quản lý, chiều
+ * rộng thật của nó KHÔNG bằng khổ máy (đúng kỷ luật `TripHoldPanel.module.css`). `@media` theo
+ * khổ máy từng làm 5 vùng bật ra ở một viewport "đủ rộng" trong khi cột thật còn hẹp hơn nhiều —
+ * bảng tiền bị bóp chữ xuống dòng lung tung dù màn hình không hề nhỏ (phản hồi 19/09/2026).
  *
  * MÀU NHẤN LÀ GOLD, không phải xanh. Bản vẽ dùng xanh cho link/nút/badge, nhưng màu chính của
  * XePrime là gold (`--xp-color-primary`) — dùng `--xp-color-link` ở đây sẽ đẻ ra một màu nhấn
@@ -21,6 +27,7 @@
   transition:
     border-color 150ms ease,
     box-shadow 150ms ease;
+  container-type: inline-size;
 }
 
 .card:hover {
@@ -40,6 +47,7 @@
     'vehicle  vehicle'
     'customer state'
     'request  request'
+    'payment  payment'
     'stamps   stamps';
   row-gap: var(--xp-space-md);
 }
@@ -252,6 +260,23 @@
   pointer-events: none;
 }
 
+/*
+ * Vùng "Tiền" — CÙNG kiểu hộp với `.request` (viền + nền `--xp-color-bg-muted`) để hai vùng
+ * đọc thành MỘT cặp ngang hàng, không phải một vùng chính-một vùng phụ. Không bấm được: đây là
+ * bảng kê, chi tiết yêu cầu vẫn mở từ vùng lịch trình bên cạnh.
+ */
+.payment {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  gap: var(--xp-space-xs);
+  grid-area: payment;
+}
+
 .srOnly {
   position: absolute;
   overflow: hidden;
@@ -368,6 +393,18 @@
   align-items: center;
   color: var(--xp-color-text-secondary);
   gap: var(--xp-space-xs);
+}
+
+/* "Tạm tính" cạnh số tiền — chưa duyệt thì số này còn đổi (ADR 0024). */
+.pricingEstimateTag {
+  padding: 1px 6px;
+  border-radius: var(--xp-border-radius-pill);
+  margin-inline-start: var(--xp-space-xs);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-semibold);
+  vertical-align: middle;
 }
 
 /* ── Trạng thái · dấu vết xử lý ─────────────────────────────────────────── */
@@ -509,7 +546,7 @@
   min-height: var(--xp-touch-target-min);
 }
 
-@media (max-width: 640px) {
+@container (max-width: 640px) {
   /* `RowActions` render một `div` gốc — cho nó trải hết hàng rồi chia đôi hai nút bên trong. */
   .decision > * {
     width: 100%;
@@ -553,7 +590,7 @@
 
 /* ── Tablet trở lên: nút trở về bề rộng theo nội dung, chân thẻ thành một hàng ── */
 
-@media (min-width: 641px) {
+@container (min-width: 641px) {
   .body {
     padding: var(--xp-space-md) var(--xp-space-lg);
   }
@@ -580,18 +617,19 @@
   }
 }
 
-/* ── Desktop: bốn vùng của một hàng hộp thư ─────────────────────────────── */
+/* ── Đủ rộng: năm vùng của một hàng hộp thư ───────────────────────────────
+   Ngưỡng theo BỀ RỘNG CỦA CHÍNH THẺ (container), không phải khổ máy — xem docblock đầu file. */
 
-@media (min-width: 1025px) {
+@container (min-width: 1025px) {
   .body {
     align-items: start;
     column-gap: var(--xp-space-lg);
     grid-template-columns:
-      minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.2fr)
-      minmax(170px, 0.8fr);
+      minmax(0, 1.3fr) minmax(0, 0.85fr) minmax(0, 1fr) minmax(0, 1fr)
+      minmax(150px, 0.75fr);
     grid-template-areas:
-      'vehicle customer request state'
-      'vehicle customer request stamps';
+      'vehicle customer request payment state'
+      'vehicle customer request payment stamps';
     grid-template-rows: auto 1fr;
     row-gap: var(--xp-space-xs);
   }
