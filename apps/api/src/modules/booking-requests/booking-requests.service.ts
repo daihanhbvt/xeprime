@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
+import { subtractMoney } from '@xeprime/domain';
 import {
   addDateKeyDays,
   API_ERROR_CODE,
@@ -75,6 +76,7 @@ import {
   BookingRequestDto,
   BookingRequestListQueryDto,
   BookingRequestPageMetaDto,
+  BookingRequestPricingDto,
   BookingRequestReceiptDto,
   BUSY_DAYS_MAX_WINDOW,
   CreateBookingRequestDto,
@@ -141,10 +143,33 @@ const SELECT = {
    * thêm sau khi có danh sách (N+1).
    */
   vehicle: {
-    select: { name: true, plateNumber: true, code: true, vehicleType: true, mainImageUrl: true },
+    select: {
+      name: true,
+      plateNumber: true,
+      code: true,
+      vehicleType: true,
+      mainImageUrl: true,
+      // Bốn giá + khuyến mãi — CHỈ để ước TẠM TÍNH cho yêu cầu còn `pending_host_approval` chưa
+      // từng có hold (`resolvePricing`). Không kéo `monthlyPrice`: dài hạn bị loại khỏi ước giá
+      // ngay từ `resolvePricing` (chưa chốt lịch thì chưa có giá — ADR 0011), giống `trySecureHold`.
+      weekdayPrice: true,
+      weekendPrice: true,
+      withDriverDailyPrice: true,
+      withDriverInterCityPrice: true,
+      withDriverOneWayPrice: true,
+      discountPercent: true,
+    },
   },
   customer: { select: { avatarUrl: true } },
   tenantCustomer: { select: { riskLevel: true } },
+  /*
+   * Tiền của yêu cầu (`resolvePricing`) — ĐÚNG một quan hệ 1-1 mỗi loại, cùng một truy vấn với
+   * phần còn lại của inbox, không phải một lượt tra thêm sau khi có danh sách.
+   */
+  hold: { select: { amount: true, paidAmount: true, priceSnapshotJson: true } },
+  booking: {
+    select: { totalAmount: true, customerTotalAmount: true, paidAmount: true },
+  },
 } satisfies Prisma.BookingRequestSelect;
 
 /** Nguyện vọng thuê dài hạn sau khi server chuẩn hoá — hai nhánh ngày LOẠI TRỪ nhau. */
@@ -161,6 +186,25 @@ interface ApprovalSchedule {
   pickupAt: Date;
   returnAt: Date;
   packageMonths: number | null;
+}
+
+/**
+ * Đúng những trường `quoteFor` cần đọc — TÁCH khỏi `PendingRequestRow` để `list()` gọi được
+ * hàm này thẳng từ hàng đã SELECT sẵn (không `loadPending` thêm một truy vấn mỗi hàng để ước
+ * giá tạm tính). Kiểu hẹp hơn ⇒ mọi shape có đủ ngần này field đều truyền vào được, không cast.
+ */
+interface QuoteableRequest {
+  vehicleId: string;
+  serviceType: string;
+  routeType: string | null;
+  vehicle: {
+    weekdayPrice: Prisma.Decimal | null;
+    weekendPrice: Prisma.Decimal | null;
+    withDriverDailyPrice: Prisma.Decimal | null;
+    withDriverInterCityPrice: Prisma.Decimal | null;
+    withDriverOneWayPrice: Prisma.Decimal | null;
+    discountPercent: number | null;
+  };
 }
 
 /**
@@ -920,7 +964,7 @@ export class BookingRequestsService {
    * tự động nhận, nên hai đường không thể tính ra hai con số.
    */
   private async quoteFor(
-    req: PendingRequestRow,
+    req: QuoteableRequest,
     schedule: ApprovalSchedule,
     policy: EffectivePolicy | null,
   ) {
@@ -945,6 +989,97 @@ export class BookingRequestsService {
       withDriverOneWayPrice: req.vehicle.withDriverOneWayPrice?.toFixed(0) ?? null,
       discountPercent: req.vehicle.discountPercent,
     });
+  }
+
+  /**
+   * Tiền của MỘT yêu cầu cho inbox gian hàng — `BookingRequestPricingDto`, xem docblock ở DTO.
+   *
+   * BA nhánh, THEO ĐÚNG THỨ TỰ đóng băng (ADR 0024 — không bao giờ tính lại một con số đã chốt):
+   *
+   *  1. Đã tạo đơn ⇒ cột phẳng trên `Booking` (`row.booking`) — nguồn DUY NHẤT, bất kể đơn đi
+   *     qua đường có hold hay không.
+   *  2. Có hold (`row.hold`) — kể cả yêu cầu đã huỷ/từ chối/hết hạn SAU khi đã cọc — đọc
+   *     snapshot đóng băng lúc hold sinh ra, không đọc lại policy hôm nay.
+   *  3. Còn lại: CHỈ khi vẫn `pending_host_approval` và có đủ lịch (tự lái/có tài xế — dài hạn bỏ
+   *     qua, cùng lý do `trySecureHold` bỏ qua) mới ước TẠM TÍNH, bằng ĐÚNG máy giá `approve()`
+   *     dùng. Yêu cầu đã chết (từ chối/huỷ/hết hạn) mà CHƯA TỪNG có hold thì không có gì để tính
+   *     lại — trả `null`, không đoán một con số theo chính sách của hôm nay cho một việc đã qua.
+   *
+   * Bounded theo trang: chỉ nhánh (3) gọi thêm dịch vụ giá, và chỉ cho hàng `pending_host_approval`
+   * trong ĐÚNG trang đang xem (`limit` tối đa `BOOKING_REQUEST_MAX_LIMIT`) — không quét toàn bảng.
+   */
+  private async resolvePricing(
+    tenantId: string,
+    r: BookingRequestRow,
+  ): Promise<BookingRequestPricingDto | null> {
+    if (r.booking) {
+      const rentalTotal = r.booking.totalAmount.toFixed(0);
+      const customerTotalAmount = (r.booking.customerTotalAmount ?? r.booking.totalAmount).toFixed(
+        0,
+      );
+      const paidAmount = r.booking.paidAmount.toFixed(0);
+      return {
+        isEstimate: false,
+        rentalTotal,
+        customerTotalAmount,
+        paidAmount,
+        // Chỉ có ý nghĩa khi đơn thật sự có phụ phí (billingMode khác null) — đơn ngoài luồng
+        // chợ (ADR 0028 điều 9) không có "phần trả tay" tách biệt để nói.
+        remainingAmount: r.booking.customerTotalAmount
+          ? subtractMoney(customerTotalAmount, paidAmount)
+          : null,
+      };
+    }
+
+    if (r.hold) {
+      const snapshot = r.hold.priceSnapshotJson as unknown as BookingPriceSnapshot;
+      const rentalTotal = snapshot.totalAmount;
+      return {
+        isEstimate: false,
+        rentalTotal,
+        customerTotalAmount: snapshot.fees?.customerTotalAmount ?? rentalTotal,
+        paidAmount: r.hold.paidAmount.toFixed(0),
+        remainingAmount: snapshot.fees?.payAtPickupAmount ?? null,
+      };
+    }
+
+    if (
+      r.status !== BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL ||
+      r.serviceType === SERVICE_TYPE.LONG_TERM ||
+      !r.pickupAt ||
+      !r.returnAt
+    ) {
+      return null;
+    }
+
+    try {
+      const policy = await this.pricing.effectivePolicy(tenantId, r.vehicleId);
+      const schedule: ApprovalSchedule = {
+        pickupAt: r.pickupAt,
+        returnAt: r.returnAt,
+        packageMonths: null,
+      };
+      const breakdown = await this.quoteFor(r, schedule, policy);
+      const fees = await this.pricing.customerFeesFor(
+        tenantId,
+        breakdown.totalAmount,
+        breakdown.estimateNote != null,
+      );
+      return {
+        isEstimate: true,
+        rentalTotal: breakdown.totalAmount,
+        customerTotalAmount: fees?.customerTotalAmount ?? breakdown.totalAmount,
+        paidAmount: null,
+        remainingAmount: null,
+      };
+    } catch (err) {
+      // Không sập cả trang inbox vì MỘT yêu cầu không ước được giá — thiếu tiền trên một thẻ còn
+      // hơn thiếu cả danh sách (cùng kỷ luật `trySecureHold`/`autoAccept`).
+      this.logger.warn(
+        `Không ước được giá tạm tính cho yêu cầu ${r.id}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return null;
+    }
   }
 
   /**
@@ -1182,7 +1317,7 @@ export class BookingRequestsService {
     };
     const where: Prisma.BookingRequestWhereInput = {
       ...scope,
-      ...(query.status ? { status: query.status } : {}),
+      ...(query.status?.length ? { status: { in: query.status } } : {}),
     };
 
     /*
@@ -1211,8 +1346,17 @@ export class BookingRequestsService {
 
     const counted = new Map(grouped.map((g) => [g.status, g._count]));
 
+    /*
+     * Tiền gắn SAU khi đã có trang — `resolvePricing` chỉ gọi thêm dịch vụ giá cho hàng
+     * `pending_host_approval` (nhánh 3 của nó), nên chi phí bị CHẶN TRẦN bởi `limit` của trang
+     * này, không phải toàn bảng. `Promise.all` vì các hàng độc lập nhau.
+     */
+    const data = await Promise.all(
+      rows.map(async (row) => ({ ...toDto(row), pricing: await this.resolvePricing(tenantId, row) })),
+    );
+
     return {
-      data: rows.map(toDto),
+      data,
       meta: {
         ...paginationMeta(paging, total),
         // Liệt kê ĐỦ bộ trạng thái, kể cả trạng thái không có yêu cầu nào: một tab không có
@@ -1231,7 +1375,7 @@ export class BookingRequestsService {
       select: SELECT,
     });
     if (!row) throw notFound();
-    return toDto(row);
+    return { ...toDto(row), pricing: await this.resolvePricing(tenantId, row) };
   }
 
   /**

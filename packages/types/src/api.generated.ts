@@ -8528,6 +8528,8 @@ export interface components {
              * @enum {string|null}
              */
             decisionSource?: "host" | "system" | null;
+            /** @description Tiền của yêu cầu này — xem docblock BookingRequestPricingDto cho nguồn theo trạng thái. Luôn có mặt (kể cả `null`) ở danh sách và chi tiết; VẮNG MẶT ở phiếu trả về của các thao tác duyệt/từ chối/huỷ — client đọc lại danh sách/chi tiết để thấy số mới. */
+            pricing?: components["schemas"]["BookingRequestPricingDto"] | null;
         };
         BookingRequestPageDto: {
             data: components["schemas"]["BookingRequestDto"][];
@@ -8543,6 +8545,18 @@ export interface components {
             /** @example true */
             hasNext: boolean;
             statusCounts: components["schemas"]["BookingRequestStatusCountDto"][];
+        };
+        BookingRequestPricingDto: {
+            /** @description true = tạm tính (chưa duyệt), false = số đã chốt/đã đóng băng */
+            isEstimate: boolean;
+            /** @description Tiền thuê — doanh thu gian hàng, VND string */
+            rentalTotal: string;
+            /** @description Tổng khách phải trả (đã gồm phụ phí nếu có), VND string */
+            customerTotalAmount: string;
+            /** @description Đã trả qua nền tảng (giữ chỗ/đơn) — null khi còn tạm tính */
+            paidAmount?: string | null;
+            /** @description Trả TRỰC TIẾP chủ xe khi nhận xe — null khi tạm tính hoặc không áp dụng */
+            remainingAmount?: string | null;
         };
         BookingRequestReceiptDto: {
             id: string;
@@ -18095,7 +18109,8 @@ export interface operations {
                 q?: string;
                 /** @description Lọc theo dịch vụ được yêu cầu */
                 serviceType?: "self_drive" | "with_driver" | "long_term";
-                status?: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_paid" | "hold_expired";
+                /** @description Một trạng thái, hoặc nhiều trạng thái nối dấu phẩy */
+                status?: ("pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking" | "awaiting_hold" | "hold_paid" | "hold_expired")[];
                 vehicleId?: string;
                 /** @description Lọc theo chi nhánh (qua xe của yêu cầu) */
                 branchId?: string;

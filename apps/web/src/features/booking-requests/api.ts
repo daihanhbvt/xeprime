@@ -1,6 +1,10 @@
 import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
 import { apiPost, apiRequest, type QueryParams } from '@/services/api-client';
-import { BOOKING_REQUEST_STATUS_ALL } from './constants';
+import {
+  BOOKING_REQUEST_NEEDS_ACTION_STATUSES,
+  BOOKING_REQUEST_STATUS_ALL,
+  BOOKING_REQUEST_TAB_NEEDS_ACTION,
+} from './constants';
 import type {
   ApproveBookingRequestInput,
   BookingRequestConversation,
@@ -32,9 +36,18 @@ export interface BookingRequestListResult {
  * `status=all` là trạng thái của TAB, không phải một mã nghiệp vụ: backend chỉ biết bộ mã thật
  * (ADR 0005) nên "Tất cả" được dịch thành *không gửi* `status`. Phép dịch nằm đúng ở đây, một
  * chỗ, để URL giữ được lựa chọn còn dây thì vẫn sạch.
+ *
+ * `status=needs_action` (tab GỘP) cũng không phải một mã thật — dịch thành hai mã thật nối
+ * dấu phẩy (`pending_host_approval,hold_paid`). MỘT chuỗi, không phải mảng: `QueryParams` của
+ * `@xeprime/api-client` cố ý không có kiểu mảng (xem `url.ts`), backend tách chuỗi ở DTO.
  */
 export function filtersToParams(filters: BookingRequestFilters): QueryParams {
-  const status = filters.status === BOOKING_REQUEST_STATUS_ALL ? null : (filters.status ?? null);
+  const status =
+    filters.status === BOOKING_REQUEST_STATUS_ALL
+      ? null
+      : filters.status === BOOKING_REQUEST_TAB_NEEDS_ACTION
+        ? BOOKING_REQUEST_NEEDS_ACTION_STATUSES.join(',')
+        : (filters.status ?? null);
   return {
     status,
     q: filters.q ?? null,

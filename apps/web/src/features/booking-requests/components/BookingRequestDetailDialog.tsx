@@ -258,6 +258,32 @@ function DetailBody({
         ) : null}
       </Section>
 
+      {/*
+        ── Tiền — CÙNG dữ liệu đã hiện trên thẻ (`request.pricing`), không gọi API lần hai.
+        `null` (dài hạn chưa chốt lịch, xe thiếu giá…) thì KHÔNG dựng Section rỗng.
+      */}
+      {request.pricing ? (
+        <Section title={t('pricing.heading')}>
+          <dl className={styles.facts}>
+            <Fact label={t('pricing.rentalTotal')}>{fmt.money(request.pricing.rentalTotal)}</Fact>
+            {request.pricing.customerTotalAmount !== request.pricing.rentalTotal ? (
+              <Fact label={t('pricing.customerTotal')}>
+                {fmt.money(request.pricing.customerTotalAmount)}
+              </Fact>
+            ) : null}
+            {request.pricing.paidAmount != null ? (
+              <Fact label={t('pricing.paidViaPlatform')}>{fmt.money(request.pricing.paidAmount)}</Fact>
+            ) : null}
+            {request.pricing.remainingAmount != null ? (
+              <Fact label={t('pricing.payAtHandover')}>
+                {fmt.money(request.pricing.remainingAmount)}
+              </Fact>
+            ) : null}
+          </dl>
+          {request.pricing.isEstimate ? <p className={styles.hint}>{t('pricing.estimateHint')}</p> : null}
+        </Section>
+      ) : null}
+
       {/* ── Ghi chú · lý do từ chối · dấu vết ──────────────────────────────── */}
       {request.note ? (
         <Section title={t('note.label')}>
