@@ -232,6 +232,7 @@
       "packageTitle": "Price details · {months, plural, one {# month} other {# months}} package",
       "subtotal": "Estimate",
       "total": "Estimated total",
+      "rentalTotal": "Rental price",
       "expand": "Details",
       "collapse": "Hide",
       "unitTitle": "Rental price · {service}",

@@ -76,6 +76,43 @@
 }
 
 /*
+ * Bức tranh tổng — tổng chuyến + phần trả tay chủ xe, đứng NGAY dưới câu giới thiệu và TRƯỚC mã
+ * QR. Khách đang cầm điện thoại chuẩn bị chuyển khoản cần biết hai con số này trước khi quét,
+ * không phải đọc ra ở một trang khác (phản hồi 18/09/2026).
+ */
+.summary {
+  display: flex;
+  flex-direction: column;
+  padding: 10px var(--xp-space-md);
+  margin: 0;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  gap: 4px;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  font-size: 13px;
+  color: var(--xp-color-text-secondary);
+}
+
+.summaryRow dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Phần trả tay chủ xe — số khách sẽ cần chuẩn bị SAU, nổi hơn dòng tổng ở trên nó. */
+.summaryHighlight {
+  color: var(--xp-color-text);
+  font-size: 15px;
+  font-weight: var(--xp-font-weight-bold);
+}
+
+/*
  * HAI CỘT — nhãn trái, giá trị trái trong cột của nó. KHÔNG căn phải.
  *
  * Bản căn phải đầu tiên làm số tài khoản và nội dung chuyển khoản bị bẻ làm ba khúc

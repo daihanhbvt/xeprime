@@ -1978,5 +1978,12 @@ function HoldStep({
     );
   }
 
-  return <TripHoldPanel hold={trip.data.hold} tripId={tripId} />;
+  return (
+    <TripHoldPanel
+      hold={trip.data.hold}
+      tripId={tripId}
+      tripTotalAmount={trip.data.estimate?.fees?.customerTotalAmount ?? null}
+      payAtHandoverAmount={trip.data.estimate?.fees?.payAtPickupAmount ?? null}
+    />
+  );
 }

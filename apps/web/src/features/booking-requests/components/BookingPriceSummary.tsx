@@ -77,6 +77,7 @@ export function BookingPriceSummary({
   onExpandedChange,
 }: BookingPriceSummaryProps) {
   const t = useTranslations('BookingRequests.flow');
+  const tCommon = useTranslations('Common');
   const dl = useDomainLabel();
   const fmt = useAppFormat();
 
@@ -87,7 +88,20 @@ export function BookingPriceSummary({
 
   const breakdown = quote?.breakdown ?? null;
   const longTerm = breakdown?.longTerm ?? null;
-  const totalLabel = breakdown?.estimateNote ? t('price.subtotal') : t('price.total');
+  /*
+   * Có khối phụ phí ⇒ số khách thật sự phải chuẩn bị là `customerTotalAmount`, không phải
+   * `totalAmount` (giá thuê, doanh thu gian hàng) — hai nhãn phải TÁCH RA để không cùng đọc
+   * "Tổng dự kiến" cho hai con số khác nhau tuỳ lúc bảng đang thu gọn hay mở (phản hồi người
+   * dùng 18/09/2026): thu gọn hiện `customerTotalAmount` nên dùng nhãn "Tổng bạn trả"; bảng chi
+   * tiết thì dòng đầu chỉ là tiền thuê, dùng nhãn "Tiền thuê".
+   */
+  const hasFees = Boolean(breakdown?.fees?.lines?.length);
+  const rentalLabel = breakdown?.estimateNote
+    ? t('price.subtotal')
+    : hasFees
+      ? t('price.rentalTotal')
+      : t('price.total');
+  const barLabel = hasFees ? tCommon('components.price.customerTotal') : rentalLabel;
 
   const unitRows = buildUnitRows();
   const headline = unitRows[0];
@@ -228,7 +242,7 @@ export function BookingPriceSummary({
     if (!isDetail) {
       return (
         <div className={styles.bar}>
-          <span className={styles.barLabel}>{totalLabel}</span>
+          <span className={styles.barLabel}>{barLabel}</span>
           {/* Thanh thu gọn hiện số KHÁCH TRẢ (đã gồm phụ phí) — hiện giá thuê trần ở đây rồi
               bung ra một con số lớn hơn là đúng thứ ADR 0029 cấm. */}
           <b className={styles.barAmount}>
@@ -243,7 +257,7 @@ export function BookingPriceSummary({
         <PriceBreakdown
           rows={breakdown.rows}
           totalAmount={breakdown.totalAmount}
-          totalLabel={totalLabel}
+          totalLabel={rentalLabel}
           depositAmount={breakdown.depositAmount}
           fees={breakdown.fees ?? null}
           title={

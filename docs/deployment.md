@@ -410,11 +410,14 @@ xe cá nhân tuyến hoa hồng** (`chuxe.*@xeprime.test`, mỗi người 1–3 
 có mật độ thật ngoài bốn thành phố lớn. Chi tiết và các phép kiểm hai tài khoản QA phục vụ:
 [`qa-accounts.md`](qa-accounts.md).
 
-Seed cũng **HỘI TỤ danh mục gói**: nó gỡ hai bậc phí-nền cũ (`standard` / `pro`) khỏi danh mục —
-xoá khi không còn thuê bao nào trỏ tới, archive kèm cảnh báo khi còn. Sau khi chạy, danh mục có
-đúng hai hàng: `free` (tuyến hoa hồng mặc định, không bán) và `per-vehicle` (gói gian hàng, bán
-theo kỳ 3 / 6 / 12 tháng). Vì vậy **mọi đợt deploy đổi danh mục gói phải chạy lại seed** — pipeline
-chỉ chạy `migrate`, và `plans` là dữ liệu do seed sở hữu, không do migration.
+Seed cũng **HỘI TỤ danh mục gói**: nó gỡ các bậc phí-nền cũ không còn dùng khỏi danh mục — xoá
+khi không còn thuê bao nào trỏ tới, archive kèm cảnh báo khi còn. Sau khi chạy (kể cả
+`SEED_MODE=system`), danh mục có `free` (tuyến hoa hồng mặc định, không bán) và **ba bậc gian
+hàng** theo ADR 0041 — `shop-basic`/`shop-advanced`/`shop-pro`, bán theo trần TỔNG số xe + kỳ hạn
+1/3/6/12 tháng với giá tuyệt đối ở `limits.termPrices` (không phải đơn giá × số xe). Gói
+`per-vehicle` cũ chỉ còn khi vẫn có thuê bao lịch sử trỏ tới — giữ ở trạng thái `archived`, không
+bán tiếp. Vì vậy **mọi đợt deploy đổi danh mục gói phải chạy lại seed** — pipeline chỉ chạy
+`migrate`, và `plans` là dữ liệu do seed sở hữu, không do migration.
 
 Chốt an toàn chia làm HAI tầng, và biết ranh giới đó là biết vì sao lệnh dưới đây chạy được ở
 staging mà không chạy được ở production:
