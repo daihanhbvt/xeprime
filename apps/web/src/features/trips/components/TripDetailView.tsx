@@ -20,7 +20,9 @@ import {
   TRIP_ROLE,
   canCustomerCancelTrip,
   customerTripTimeline,
+  isAwaitingPayment,
   isCustomerTripClosed,
+  type BookingHoldStatus,
   type CustomerTripStage,
 } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
@@ -178,6 +180,181 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
         ? [data.deliveryAddress]
         : [];
 
+  /*
+   * Có QR để chuyển khoản hay không mới là thứ quyết định bố cục — KHÔNG phải cứ có `hold` là
+   * đẩy tóm tắt chuyến lên full-width. Hold đã hết hạn/đã huỷ/đã chốt chỉ còn một dòng Alert
+   * (`TripHoldPanel` tự vẽ `HoldOutcome`), và một dòng Alert không đáng để đẩy "Chi tiết giá"
+   * xuống dưới một khối tóm tắt cao — báo cáo 24/09/2026 đúng lỗi này.
+   */
+  const hasQrPanel = data.hold != null && isAwaitingPayment(data.hold.status as BookingHoldStatus);
+
+  /*
+   * Xe + chủ tài khoản + lịch — tính MỘT LẦN, đặt ở ĐÂU thì do `hasQrPanel` quyết (xem `.layout`
+   * bên dưới): full-width phía trên khi có QR cần chỗ riêng, hoặc ngay trong `.main` như bố cục
+   * hai cột kinh điển khi không có gì phải nhường chỗ.
+   */
+  const tripSummarySection = (
+    <>
+      {stage === CUSTOMER_TRIP_STAGE.ACTIVE ? (
+        <section className={styles.highlight}>
+          <h2 className={styles.highlightTitle}>{t('detail.activeTitle')}</h2>
+          <p className={styles.highlightLead}>
+            <ClockCircleOutlined aria-hidden="true" /> {t('detail.activeReturn')}{' '}
+            <b>{fmt.rentalPoint(dayjs(data.returnAt))}</b>
+          </p>
+          <p className={styles.highlightNote}>{t('detail.activeNote')}</p>
+        </section>
+      ) : null}
+
+      {/*
+        Xe + chủ tài khoản đứng CHUNG một hàng khi đủ chỗ (container query — cả hai vị trí có
+        thể nhúng nó đều rộng hẹp khác nhau), xếp dọc khi hẹp: hai khối đều ngắn, xếp dọc mãi chỉ
+        tổ chiếm gấp đôi chiều cao mà không khối nào cần.
+      */}
+      <div className={styles.vehicleShopRow}>
+        <section className={styles.block}>
+          <h2 className={styles.blockTitle}>{t('detail.vehicleBlock')}</h2>
+          <div className={styles.vehicle}>
+            {data.vehicle.imageUrl ? (
+              <PreviewImage
+                src={data.vehicle.imageUrl}
+                alt={data.vehicle.name}
+                className={styles.vehicleImage}
+                loading="lazy"
+              />
+            ) : null}
+            <div className={styles.vehicleBody}>
+              <Link href={listingPath.detail(data.vehicle.id)} className={styles.vehicleName}>
+                {data.vehicle.name}
+              </Link>
+              <p className={styles.vehicleSpecs}>
+                {[
+                  data.vehicle.seatCount
+                    ? t('detail.seatCount', { count: data.vehicle.seatCount })
+                    : null,
+                  data.vehicle.transmission,
+                  data.vehicle.fuelType,
+                ]
+                  .filter(Boolean)
+                  .join(LIST_SEPARATOR) || t('detail.specsEmpty')}
+              </p>
+              {/* Biển số chỉ có sau khi chủ xe nhận chuyến — server quyết định, không phải UI. */}
+              {data.vehicle.plateNumber ? (
+                <p className={styles.plate}>{data.vehicle.plateNumber}</p>
+              ) : null}
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.shop}>
+          <span className={styles.shopAvatar} aria-hidden="true">
+            {data.shop.name.charAt(0).toUpperCase()}
+          </span>
+          <div className={styles.shopBody}>
+            <span className={styles.shopName}>{data.shop.name}</span>
+            <span className={styles.shopMeta}>
+              {data.shop.ratingCount > 0 ? (
+                <>
+                  <Stars value={data.shop.ratingAvg} size="sm" />
+                  <span>
+                    {t('detail.ratingSummary', {
+                      avg: fmt.rating(data.shop.ratingAvg),
+                      count: data.shop.ratingCount,
+                    })}
+                  </span>
+                </>
+              ) : (
+                <span>{t('detail.noRating')}</span>
+              )}
+            </span>
+          </div>
+          {/*
+            Chủ xe cá nhân tuyến hoa hồng KHÔNG có mặt tiền kiểu doanh nghiệp (ADR 0028/0040) —
+            mời khách "Xem gian hàng" một người không bán qua gian hàng là nói sai. Cùng phép
+            suy `resolveStorefrontKind` với trang `/shops/:slug` công khai; cả hai nhãn cùng
+            trỏ một URL vì trang đó tự vẽ đúng mặt tiền theo tuyến (ADR 0038 điều 1).
+          */}
+          <Link href={shopPath.detail(data.shop.slug)} className={styles.shopLink}>
+            {data.shop.shopKind === STOREFRONT_KIND.SHOP
+              ? t('detail.viewShop')
+              : t('detail.viewOwner')}
+          </Link>
+        </section>
+      </div>
+
+      <section className={styles.block}>
+        <h2 className={styles.blockTitle}>{t('detail.scheduleBlock')}</h2>
+        {/*
+          HAI nhóm cạnh nhau khi đủ chỗ: dịch vụ + hình thức nhận xe (bên PHẢI — thứ ít quan
+          trọng hơn giờ giấc), mốc giờ (bên TRÁI). `row-reverse` để thứ tự DOM giữ nguyên — dịch
+          vụ trước, mốc giờ sau — nên xếp dọc khi hẹp vẫn đọc đúng thứ tự cũ (dịch vụ trước).
+        */}
+        <div className={styles.scheduleGrid}>
+          <dl className={styles.rows}>
+            <div className={styles.row}>
+              <dt>{t('detail.service')}</dt>
+              <dd>
+                {dl('serviceType', data.serviceType)}
+                {data.routeType ? ` · ${dl('routeType', data.routeType)}` : ''}
+              </dd>
+            </div>
+            {/*
+              Hình thức + địa điểm nhận xe ĐI CHUNG một hàng với dịch vụ, không còn một đoạn văn
+              riêng có viền/icon phía dưới `dl`: cùng một loại thông tin ("nhận xe thế nào") thì
+              đọc thành một khối hàng-giá-trị nhanh hơn một danh sách rồi một đoạn văn rời.
+            */}
+            <div className={styles.row}>
+              <dt>{t('detail.pickupMethodLabel')}</dt>
+              <dd className={styles.pickupMethodValue}>
+                <span>{pickupMethodLabel}</span>
+                {pickupAddressLines.map((line) => (
+                  <span key={line} className={styles.address}>
+                    {line}
+                  </span>
+                ))}
+              </dd>
+            </div>
+          </dl>
+
+          <dl className={styles.rows}>
+            {/*
+              Chuyến THUÊ DÀI HẠN còn chờ duyệt chưa có lịch nào (ADR 0011): hiện gói đã mua và
+              nguyện vọng ngày nhận. Đổ dayjs(null) vào đây sẽ in "Invalid Date", và tệ hơn là
+              khiến khách tưởng lịch đã chốt.
+            */}
+            {data.longTermPackageMonths ? (
+              <div className={styles.row}>
+                <dt>{t('detail.package')}</dt>
+                <dd>{fmt.packageLabel(data.longTermPackageMonths)}</dd>
+              </div>
+            ) : null}
+            {data.pickupAt && data.returnAt ? (
+              <>
+                <div className={styles.row}>
+                  <dt>{t('detail.pickupAt')}</dt>
+                  <dd>{fmt.rentalPoint(dayjs(data.pickupAt))}</dd>
+                </div>
+                <div className={styles.row}>
+                  <dt>{t('detail.returnAt')}</dt>
+                  <dd>{fmt.rentalPoint(dayjs(data.returnAt))}</dd>
+                </div>
+                <div className={styles.row}>
+                  <dt>{t('detail.duration')}</dt>
+                  <dd>{fmt.rentalDuration(dayjs(data.pickupAt), dayjs(data.returnAt))}</dd>
+                </div>
+              </>
+            ) : (
+              <div className={styles.row}>
+                <dt>{t('detail.pickupWish')}</dt>
+                <dd>{fmt.pickupWish(data)}</dd>
+              </div>
+            )}
+          </dl>
+        </div>
+      </section>
+    </>
+  );
+
   return (
     <div className={styles.page}>
       <div className={styles.topBar}>
@@ -205,167 +382,22 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
       <TerminalNotice trip={data} stage={stage} />
 
       {/*
-        TÓM TẮT chuyến — full-width, TRƯỚC bố cục hai cột: xe/gian hàng/lịch là một khối đọc
-        MỘT LẦN rồi thôi, ép nó vào 60% bề ngang của `.main` chỉ tổ cao thêm mà không được gì.
-        Cũng là lý do khối chuyển khoản (ngay dưới, trong `.layout`) không còn bị đẩy xuống dưới
-        một cột trái rất dài trong khi cột phải (chi tiết giá) đứng cao lên tận đầu trang.
+        Full-width CHỈ khi có QR thật cần chỗ riêng: một khoản giữ chỗ còn đang chờ chuyển khoản
+        (`hasQrPanel`) đáng để tách tóm tắt chuyến ra khỏi cột trái, nhường `.main` lại cho đúng
+        một việc (mã QR + số tài khoản) đứng ngang tầm "Chi tiết giá" bên `.side`. Không có QR
+        (hold đã chốt/huỷ/hết hạn — chỉ còn một dòng Alert, hoặc không có `hold` nào) thì quay về
+        đúng bố cục hai cột kinh điển: tóm tắt nằm trong `.main`, "Chi tiết giá" đứng NGAY ĐẦU
+        `.side`, ngang hàng với xe — không phải bị đẩy xuống dưới một khối tóm tắt cao.
       */}
-      <div className={styles.summary}>
-        {stage === CUSTOMER_TRIP_STAGE.ACTIVE ? (
-          <section className={styles.highlight}>
-            <h2 className={styles.highlightTitle}>{t('detail.activeTitle')}</h2>
-            <p className={styles.highlightLead}>
-              <ClockCircleOutlined aria-hidden="true" /> {t('detail.activeReturn')}{' '}
-              <b>{fmt.rentalPoint(dayjs(data.returnAt))}</b>
-            </p>
-            <p className={styles.highlightNote}>{t('detail.activeNote')}</p>
-          </section>
-        ) : null}
-
-        {/*
-          Xe + chủ tài khoản đứng CHUNG một hàng: hai khối đều ngắn (một ảnh + vài dòng, một
-          avatar + tên), xếp dọc như trước chỉ tổ chiếm gấp đôi chiều cao mà không khối nào cần.
-        */}
-        <div className={styles.vehicleShopRow}>
-          <section className={styles.block}>
-            <h2 className={styles.blockTitle}>{t('detail.vehicleBlock')}</h2>
-            <div className={styles.vehicle}>
-              {data.vehicle.imageUrl ? (
-                <PreviewImage
-                  src={data.vehicle.imageUrl}
-                  alt={data.vehicle.name}
-                  className={styles.vehicleImage}
-                  loading="lazy"
-                />
-              ) : null}
-              <div className={styles.vehicleBody}>
-                <Link href={listingPath.detail(data.vehicle.id)} className={styles.vehicleName}>
-                  {data.vehicle.name}
-                </Link>
-                <p className={styles.vehicleSpecs}>
-                  {[
-                    data.vehicle.seatCount
-                      ? t('detail.seatCount', { count: data.vehicle.seatCount })
-                      : null,
-                    data.vehicle.transmission,
-                    data.vehicle.fuelType,
-                  ]
-                    .filter(Boolean)
-                    .join(LIST_SEPARATOR) || t('detail.specsEmpty')}
-                </p>
-                {/* Biển số chỉ có sau khi chủ xe nhận chuyến — server quyết định, không phải UI. */}
-                {data.vehicle.plateNumber ? (
-                  <p className={styles.plate}>{data.vehicle.plateNumber}</p>
-                ) : null}
-              </div>
-            </div>
-          </section>
-
-          <section className={styles.shop}>
-            <span className={styles.shopAvatar} aria-hidden="true">
-              {data.shop.name.charAt(0).toUpperCase()}
-            </span>
-            <div className={styles.shopBody}>
-              <span className={styles.shopName}>{data.shop.name}</span>
-              <span className={styles.shopMeta}>
-                {data.shop.ratingCount > 0 ? (
-                  <>
-                    <Stars value={data.shop.ratingAvg} size="sm" />
-                    <span>
-                      {t('detail.ratingSummary', {
-                        avg: fmt.rating(data.shop.ratingAvg),
-                        count: data.shop.ratingCount,
-                      })}
-                    </span>
-                  </>
-                ) : (
-                  <span>{t('detail.noRating')}</span>
-                )}
-              </span>
-            </div>
-            {/*
-              Chủ xe cá nhân tuyến hoa hồng KHÔNG có mặt tiền kiểu doanh nghiệp (ADR 0028/0040) —
-              mời khách "Xem gian hàng" một người không bán qua gian hàng là nói sai. Cùng phép
-              suy `resolveStorefrontKind` với trang `/shops/:slug` công khai; cả hai nhãn cùng
-              trỏ một URL vì trang đó tự vẽ đúng mặt tiền theo tuyến (ADR 0038 điều 1).
-            */}
-            <Link href={shopPath.detail(data.shop.slug)} className={styles.shopLink}>
-              {data.shop.shopKind === STOREFRONT_KIND.SHOP
-                ? t('detail.viewShop')
-                : t('detail.viewOwner')}
-            </Link>
-          </section>
-        </div>
-
-        <section className={styles.block}>
-          <h2 className={styles.blockTitle}>{t('detail.scheduleBlock')}</h2>
-          <dl className={styles.rows}>
-            <div className={styles.row}>
-              <dt>{t('detail.service')}</dt>
-              <dd>
-                {dl('serviceType', data.serviceType)}
-                {data.routeType ? ` · ${dl('routeType', data.routeType)}` : ''}
-              </dd>
-            </div>
-            {/*
-              Chuyến THUÊ DÀI HẠN còn chờ duyệt chưa có lịch nào (ADR 0011): hiện gói đã mua và
-              nguyện vọng ngày nhận. Đổ dayjs(null) vào đây sẽ in "Invalid Date", và tệ hơn là
-              khiến khách tưởng lịch đã chốt.
-            */}
-            {data.longTermPackageMonths ? (
-              <div className={styles.row}>
-                <dt>{t('detail.package')}</dt>
-                <dd>{fmt.packageLabel(data.longTermPackageMonths)}</dd>
-              </div>
-            ) : null}
-            {/*
-              Hình thức + địa điểm nhận xe ĐI CHUNG một hàng với các mốc giờ, không còn một đoạn
-              văn riêng có viền/icon phía dưới `dl`: cùng một loại thông tin ("nhận xe thế nào")
-              thì đọc thành một khối hàng-giá-trị nhanh hơn một danh sách rồi một đoạn văn rời.
-            */}
-            <div className={styles.row}>
-              <dt>{t('detail.pickupMethodLabel')}</dt>
-              <dd className={styles.pickupMethodValue}>
-                <span>{pickupMethodLabel}</span>
-                {pickupAddressLines.map((line) => (
-                  <span key={line} className={styles.address}>
-                    {line}
-                  </span>
-                ))}
-              </dd>
-            </div>
-            {data.pickupAt && data.returnAt ? (
-              <>
-                <div className={styles.row}>
-                  <dt>{t('detail.pickupAt')}</dt>
-                  <dd>{fmt.rentalPoint(dayjs(data.pickupAt))}</dd>
-                </div>
-                <div className={styles.row}>
-                  <dt>{t('detail.returnAt')}</dt>
-                  <dd>{fmt.rentalPoint(dayjs(data.returnAt))}</dd>
-                </div>
-                <div className={styles.row}>
-                  <dt>{t('detail.duration')}</dt>
-                  <dd>{fmt.rentalDuration(dayjs(data.pickupAt), dayjs(data.returnAt))}</dd>
-                </div>
-              </>
-            ) : (
-              <div className={styles.row}>
-                <dt>{t('detail.pickupWish')}</dt>
-                <dd>{fmt.pickupWish(data)}</dd>
-              </div>
-            )}
-          </dl>
-        </section>
-      </div>
+      {hasQrPanel ? <div className={styles.summary}>{tripSummarySection}</div> : null}
 
       <div className={styles.layout}>
         <div className={styles.main}>
+          {hasQrPanel ? null : tripSummarySection}
+
           {/*
-            Khoản giữ chỗ đứng ĐẦU cột trái của hàng thứ hai — ngay cạnh chi tiết giá bên phải,
-            không còn nằm cuối một cột trái cao gấp đôi cột phải như khi nó còn đứng sau khối tóm
-            tắt phía trên. QR + số tài khoản cần bề ngang thật để không bị bẻ chữ (từng vỡ ở đúng
-            chỗ này khi nhúng vào `/manage/account`).
+            Khoản giữ chỗ: mã QR thật (nếu đang chờ chuyển khoản) hoặc chỉ một dòng Alert kết
+            cục (đã chốt/huỷ/hết hạn) — `TripHoldPanel` tự quyết định vẽ gì.
           */}
           {data.hold ? (
             <section className={styles.block}>

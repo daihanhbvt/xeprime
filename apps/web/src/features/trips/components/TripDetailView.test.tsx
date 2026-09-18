@@ -1,7 +1,13 @@
 import { App } from 'antd';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CUSTOMER_TRIP_STAGE, DEPOSIT_STATUS, STOREFRONT_KIND, TRIP_ROLE } from '@xeprime/types';
+import {
+  BOOKING_HOLD_STATUS,
+  CUSTOMER_TRIP_STAGE,
+  DEPOSIT_STATUS,
+  STOREFRONT_KIND,
+  TRIP_ROLE,
+} from '@xeprime/types';
 import { ApiClientError } from '@/services/api-client';
 
 import { TripDetailView } from './TripDetailView';
@@ -207,6 +213,52 @@ describe('Sẵn sàng và Đang thuê', () => {
   it('vẫn liên hệ được chủ xe', () => {
     renderView();
     expect(screen.getByText('Nhắn tin cho cửa hàng')).toBeTruthy();
+  });
+});
+
+describe('Bố cục theo có/không QR chuyển khoản', () => {
+  const HOLD_BASE = {
+    id: '01HOLD',
+    code: 'XPH23456789',
+    outcome: null,
+    amount: '100000',
+    paidAmount: '0',
+    remainingAmount: '100000',
+    expiresAt: '2026-09-08T03:00:00.000Z',
+    freeCancelUntil: '2026-09-16T03:00:00.000Z',
+    paidAt: null,
+    allocation: [],
+    refund: null,
+    paymentInfo: {
+      configured: true,
+      bankCode: 'VCB',
+      accountNumber: '0123456789',
+      accountName: 'CONG TY XEPRIME',
+    },
+  };
+
+  /**
+   * Báo cáo 24/09/2026: đang có QR thì tóm tắt chuyến tách riêng full-width phía trên là hợp lý
+   * (nhường `.main` cho đúng QR, ngang tầm "Chi tiết giá"). KHÔNG có QR (hold đã huỷ/hết hạn,
+   * hoặc không có hold nào) thì việc này chỉ đẩy "Chi tiết giá" xuống dưới một khối tóm tắt cao
+   * mà không được gì — phải quay lại bố cục hai cột kinh điển.
+   */
+  it('đang chờ chuyển khoản (còn QR) ⇒ tóm tắt chuyến tách riêng, full-width', () => {
+    setTrip({ hold: { ...HOLD_BASE, status: BOOKING_HOLD_STATUS.PENDING } });
+    const { container } = renderView();
+    expect(container.querySelector('[class*="summary"]')).not.toBeNull();
+  });
+
+  it('hold đã hết hạn (hết QR, chỉ còn Alert) ⇒ KHÔNG tách tóm tắt ra riêng nữa', () => {
+    setTrip({ hold: { ...HOLD_BASE, status: BOOKING_HOLD_STATUS.EXPIRED } });
+    const { container } = renderView();
+    expect(container.querySelector('[class*="summary"]')).toBeNull();
+  });
+
+  it('không có khoản giữ chỗ nào ⇒ KHÔNG tách tóm tắt ra riêng', () => {
+    setTrip({ hold: null });
+    const { container } = renderView();
+    expect(container.querySelector('[class*="summary"]')).toBeNull();
   });
 });
 
