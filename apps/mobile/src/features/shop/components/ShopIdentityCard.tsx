@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useEffect, type RefObject } from 'react';
 import { Pressable } from 'react-native';
 import { useController, useWatch, type Control } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
@@ -25,6 +26,15 @@ interface Props {
   editable: boolean;
   /** Có mặt khi gian hàng đang hoạt động — trang công khai chỉ tồn tại lúc đó. */
   onViewPublicPage?: () => void;
+  /**
+   * Ô nhận HÀM MỞ tấm chọn ảnh logo, cho một CTA nằm ngoài khối này.
+   *
+   * Web giải cùng bài bằng `document.getElementById(SHOP_LOGO_TRIGGER_ID).focus()`; native không
+   * có DOM để hỏi, nên khối sở hữu tấm chọn phải tự đưa tay ra. Dải chào mừng sau khi thanh toán
+   * gói (`ShopWelcomeBanner`) là nơi duy nhất cần nó: CTA của nó hứa mở ô logo, và một nút hứa
+   * rồi không làm gì còn tệ hơn không có nút.
+   */
+  logoPickerRef?: RefObject<(() => void) | null>;
 }
 
 /**
@@ -50,6 +60,7 @@ export function ShopIdentityCard({
   description,
   editable,
   onViewPublicPage,
+  logoPickerRef,
 }: Props) {
   const t = useTranslations('Shop');
   const tImage = useTranslations('Common.image');
@@ -78,6 +89,29 @@ export function ShopIdentityCard({
     onUploaded: ([url]) => logo.field.onChange(url ?? null),
     ...(logoUrl ? { onRemove: () => logo.field.onChange(null) } : {}),
   });
+
+  /*
+   * Gán trong effect, không giữa lúc render: ghi vào một ref của component KHÁC trong thân render
+   * là thứ React Compiler chặn, và nó cũng sai về thời điểm — nơi gọi đọc ref lúc người dùng chạm,
+   * không phải lúc dựng cây.
+   */
+  const openLogoPicker = logoUpload.open;
+  useEffect(() => {
+    if (!logoPickerRef) return;
+    /*
+     * CHỈ đưa tay ra khi hồ sơ đang SỬA ĐƯỢC.
+     *
+     * Ô logo trong khối này đã bị `disabled={!editable}` chặn; một CTA ở ngoài gọi thẳng
+     * `logoUpload.open` thì đi vòng qua đúng cái chặn đó. Ở chế độ chỉ-đọc (`verification =
+     * pending`, hoặc thành viên không có `tenant.update`) màn không dựng nút Lưu, nên ảnh vừa tải
+     * lên R2 sẽ ghi vào một form không có đường ra và mất trắng — người dùng thấy logo đổi rồi mất
+     * sau lần mở lại. Web no-op ở đúng ca này vì section chứa ô logo không được dựng.
+     */
+    logoPickerRef.current = editable ? openLogoPicker : null;
+    return () => {
+      logoPickerRef.current = null;
+    };
+  }, [editable, logoPickerRef, openLogoPicker]);
 
   return (
     <YStack>

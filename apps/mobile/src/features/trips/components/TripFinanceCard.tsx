@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -14,7 +15,7 @@ import { DataRow, Divider } from '@/components/ui/DataRow';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { CustomerTripFinance } from '../api';
 
 /**
@@ -36,10 +37,26 @@ export function TripFinanceCard({
   closed: boolean;
 }) {
   const t = useTranslations('Trips.finance');
+  const tPrice = useTranslations('Common.components.price');
   const domainLabel = useDomainLabel();
   const fmt = useAppFormat();
 
   const depositStatus = finance.depositStatus as DepositStatus;
+  /*
+   * Kế hoạch trả tiền của chuyến ĐÃ CỌC nằm NGAY trong khối giá, không chỉ là một dòng nhỏ ở
+   * khối giữ chỗ. Ba số do server trả sẵn — client KHÔNG tự lấy tổng trừ cọc; `null` ở bất kỳ
+   * số nào nghĩa là chuyến không đi qua khoản giữ chỗ XePrime, và lúc đó không dựng khối này.
+   */
+  const hasHoldPaymentPlan =
+    finance.customerTotalAmount != null &&
+    finance.holdPaidAmount != null &&
+    finance.payAtPickupAmount != null;
+  /*
+   * Gấp bảng kê từng dòng theo mặc định — khách chỉ cần "phải trả bao nhiêu" và tình trạng cọc
+   * ngay khi mở màn; cách tính ra con số đó là tra cứu, không phải thứ đầu tiên cần đọc. Tổng,
+   * tiền đã trả và khối cọc KHÔNG nằm sau nút này — chúng không phải "chi tiết".
+   */
+  const [expanded, setExpanded] = useState(false);
 
   return (
     <Card>
@@ -50,38 +67,59 @@ export function TripFinanceCard({
 
         {finance.legacyPricing ? <Notice tone="info" text={t('legacy')} /> : null}
 
-        <DataRow label={t('rental')} value={fmt.money(finance.baseAmount)} />
-        {isZeroMoney(finance.discountAmount) ? null : (
-          <DataRow
-            label={t('discount')}
-            value={`−${fmt.money(finance.discountAmount)}`}
-            tone="discount"
-          />
-        )}
-        {/*
+        <Pressable
+          onPress={() => setExpanded((v) => !v)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded }}
+        >
+          <XStack ai="center" gap={space.xs}>
+            <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+              {expanded ? tPrice('collapse') : tPrice('viewDetails')}
+            </Text>
+            <Ionicons
+              name={expanded ? 'chevron-up' : 'chevron-down'}
+              size={iconSize.sm}
+              color={colors.primaryActive}
+            />
+          </XStack>
+        </Pressable>
+
+        {expanded ? (
+          <>
+            <DataRow label={t('rental')} value={fmt.money(finance.baseAmount)} />
+            {isZeroMoney(finance.discountAmount) ? null : (
+              <DataRow
+                label={t('discount')}
+                value={`−${fmt.money(finance.discountAmount)}`}
+                tone="discount"
+              />
+            )}
+            {/*
           Phí giao nhận mặc định miễn phí; chủ xe chốt lại sau khi thoả thuận NGOÀI ứng dụng.
           Khách thấy số MỚI NHẤT — không có bước chấp nhận, nên cũng không có nút nào ở đây.
         */}
-        <DataRow
-          label={t('deliveryFee')}
-          value={isZeroMoney(finance.deliveryFee) ? t('free') : fmt.money(finance.deliveryFee)}
-          tone={isZeroMoney(finance.deliveryFee) ? 'muted' : 'default'}
-        />
+            <DataRow
+              label={t('deliveryFee')}
+              value={isZeroMoney(finance.deliveryFee) ? t('free') : fmt.money(finance.deliveryFee)}
+              tone={isZeroMoney(finance.deliveryFee) ? 'muted' : 'default'}
+            />
 
-        {finance.surcharges.length > 0 ? (
-          <YStack gap={space.xs} pt={space.xs}>
-            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-              {t('surchargesTitle')}
-            </Text>
-            {finance.surcharges.map((row, index) => (
-              <DataRow
-                key={`${row.category}-${row.recordedAt}-${index}`}
-                label={domainLabel('surchargeCategory', row.category)}
-                hint={row.reason}
-                value={fmt.money(row.amount)}
-              />
-            ))}
-          </YStack>
+            {finance.surcharges.length > 0 ? (
+              <YStack gap={space.xs} pt={space.xs}>
+                <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                  {t('surchargesTitle')}
+                </Text>
+                {finance.surcharges.map((row, index) => (
+                  <DataRow
+                    key={`${row.category}-${row.recordedAt}-${index}`}
+                    label={domainLabel('surchargeCategory', row.category)}
+                    hint={row.reason}
+                    value={fmt.money(row.amount)}
+                  />
+                ))}
+              </YStack>
+            ) : null}
+          </>
         ) : null}
 
         <Divider />
@@ -94,6 +132,26 @@ export function TripFinanceCard({
             {fmt.money(finance.finalTotal)}
           </Text>
         </XStack>
+
+        {hasHoldPaymentPlan ? (
+          <YStack gap={space.xs} p={space.sm} br={radius.md} bg={colors.surfaceMuted}>
+            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+              {t('paymentPlanTitle')}
+            </Text>
+            <DataRow
+              label={tPrice('customerTotal')}
+              value={fmt.money(finance.customerTotalAmount as string)}
+            />
+            <DataRow label={t('holdPaid')} value={fmt.money(finance.holdPaidAmount as string)} />
+            {/* Số khách còn đưa tận tay chủ xe lúc nhận — con số hành động, nhấn màu tiền. */}
+            <DataRow
+              label={tPrice('payAtHandover')}
+              value={fmt.money(finance.payAtPickupAmount as string)}
+              tone="price"
+              strong
+            />
+          </YStack>
+        ) : null}
 
         {isZeroMoney(finance.rentalPaid) ? null : (
           <DataRow label={t('paid')} value={fmt.money(finance.rentalPaid)} />
@@ -214,8 +272,6 @@ function DepositBlock({
     </YStack>
   );
 }
-
-
 
 function Notice({
   tone,

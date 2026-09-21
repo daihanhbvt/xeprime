@@ -1,25 +1,11 @@
-import { useRef, useState } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
-import { TextInput } from 'react-native';
-import { useRevealOnFocus } from '@/components/layout/focus-reveal';
-import { Text, YStack } from 'tamagui';
-import { CURRENCY_SUFFIX, formatMoneyInput, parseMoneyInput } from '@xeprime/domain';
-import { FieldLabel, FieldMessage, FieldShell } from './Field';
-import { FONT_FAMILY } from '@/theme/fonts';
-import { colors, fieldFontSize, fontWeight, sizing, space } from '@/theme/tokens';
-
-/** Không phụ thuộc prop/state nào — dựng MỘT lần ở module scope, không phải mỗi lần render. */
-const INPUT_STYLE = {
-  flex: 1,
-  color: colors.text,
-  fontSize: fieldFontSize.value,
-  fontFamily: FONT_FAMILY.body,
-  minHeight: sizing.touchTarget,
-  paddingVertical: 0,
-} as const;
+import { MoneyControl } from './MoneyControl';
 
 /**
  * Ô nhập TIỀN — bản native của `MoneyInput` bên web.
+ *
+ * Toàn bộ hình dạng và hành vi nằm ở [`MoneyControl`](./MoneyControl.tsx); file này chỉ làm đúng
+ * một việc là nối nó vào React Hook Form — cùng cặp `NumberControl`/`NumberField`.
  *
  * Giá trị trong form là `number | null`, không phải chuỗi đã format: chuỗi chỉ tồn tại trên màn
  * hình, còn feature vẫn hoá nó thành chuỗi số khi gửi API (ADR 0007). Không quy đổi đơn vị —
@@ -62,52 +48,21 @@ export function MoneyField<T extends FieldValues>({
   unit?: string;
 }) {
   const { field, fieldState } = useController({ control, name });
-  const inputRef = useRef<TextInput>(null);
-  const revealOnFocus = useRevealOnFocus();
-  const [focused, setFocused] = useState(false);
-
-  const error = fieldState.error?.message;
 
   return (
-    <YStack gap={space.xs}>
-      <FieldLabel label={label} required={required} publishRequired={publishRequired} />
-
-      <FieldShell
-        focused={focused}
-        invalid={Boolean(error)}
-        align="center"
-        onPress={() => inputRef.current?.focus()}
-      >
-        <TextInput
-          // A11Y-LABEL: nhãn nằm ở `FieldLabel` BÊN CẠNH ô, không nằm trong ô — trình đọc
-          // màn hình vì thế đọc ra một ô nhập vô danh. Gắn tên ô vào chính input là chỗ duy
-          // nhất sửa được cho cả app (và là cách test tìm đúng ô, thay vì dò placeholder).
-          accessibilityLabel={label}
-          ref={inputRef}
-          value={formatMoneyInput(field.value as number | null)}
-          onChangeText={(text) => field.onChange(parseMoneyInput(text))}
-          onBlur={() => {
-            setFocused(false);
-            field.onBlur();
-          }}
-          onFocus={() => {
-            setFocused(true);
-            revealOnFocus();
-          }}
-          editable={editable}
-          keyboardType="number-pad"
-          {...(placeholder === undefined ? {} : { placeholder })}
-          placeholderTextColor={colors.placeholder}
-          style={INPUT_STYLE}
-        />
-
-        {/* Đơn vị là TRANG TRÍ của ô, không nằm trong giá trị — đúng vai `suffix` bên web. */}
-        <Text col={colors.textMuted} fos={fieldFontSize.affix} fow={fontWeight.medium}>
-          {unit ?? CURRENCY_SUFFIX}
-        </Text>
-      </FieldShell>
-
-      <FieldMessage error={error} hint={hint} />
-    </YStack>
+    <MoneyControl
+      label={label}
+      value={(field.value as number | null | undefined) ?? null}
+      onChange={field.onChange}
+      // RHF cần `onBlur` để đánh dấu `touched` — thiếu nó, `mode: 'onTouched'` không chấm ô này.
+      onBlur={field.onBlur}
+      required={required}
+      publishRequired={publishRequired}
+      editable={editable}
+      {...(hint === undefined ? {} : { hint })}
+      {...(placeholder === undefined ? {} : { placeholder })}
+      {...(unit === undefined ? {} : { unit })}
+      {...(fieldState.error?.message === undefined ? {} : { error: fieldState.error.message })}
+    />
   );
 }

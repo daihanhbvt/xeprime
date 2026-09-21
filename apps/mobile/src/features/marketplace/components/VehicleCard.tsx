@@ -91,7 +91,9 @@ function VehicleCardImpl({ listing, onPress }: VehicleCardProps) {
     (serviceTypes.includes(SERVICE_TYPE.SELF_DRIVE) ? SERVICE_TYPE.SELF_DRIVE : serviceTypes[0]);
 
   const rating = Number(listing.ratingAvg);
-  const hasRating = listing.ratingCount > 0 && Number.isFinite(rating);
+  // `?? 0`: cột DB cho phép NULL ở xe chưa từng được đồng bộ lại rating (dữ liệu cũ) dù DTO
+  // khai `ratingCount` không optional — hợp đồng kiểu và thực tế lệch nhau.
+  const hasRating = (listing.ratingCount ?? 0) > 0 && Number.isFinite(rating);
   // Preview cùng công thức với PricingService; báo giá server vẫn là nguồn chốt.
   const discount = listing.discountPercent ?? 0;
 

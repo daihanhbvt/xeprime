@@ -26,6 +26,12 @@ export function enterApp(
   options: {
     scope?: AppScope;
     /**
+     * Gian hàng trả phí còn nợ bước thanh toán lượt gói đầu (ADR 0040) — đích ở khu quản lý là
+     * màn onboarding, không phải tổng quan. `ScopeGuard` chỉ cho họ qua đúng route đó, nên thả họ
+     * ở `/manage` là đá họ ngược ra khu khách ngay khung hình sau.
+     */
+    packageOnboardingPending?: boolean;
+    /**
      * Đường dẫn deep link đang chờ. Là CHUỖI THÔ từ hệ điều hành, không dựng từ `ROUTES`, nên
      * typed routes của expo-router không kiểm được nó — phải ép kiểu ở đây chứ không ở nơi gọi.
      */
@@ -37,7 +43,9 @@ export function enterApp(
     return;
   }
   if (options.scope === APP_SCOPE.MANAGE) {
-    router.replace(ROUTES.manage.home());
+    router.replace(
+      options.packageOnboardingPending ? ROUTES.manage.onboarding() : ROUTES.manage.home(),
+    );
     return;
   }
   if (router.canDismiss()) router.dismissAll();

@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useEffect } from 'react';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
+  isEstablishedPackageShop,
   missingShopProfileRequirements,
   type VehiclePublicStatus,
 } from '@xeprime/types';
@@ -14,6 +16,7 @@ import { Callout, CalloutBody } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
+import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { ShopProfileScreen } from '@/features/shop/ShopProfileScreen';
 import { useMyShop } from '@/features/shop/hooks/use-shop';
 import { useVehiclesPage } from '@/features/vehicles/hooks/use-vehicles';
@@ -59,6 +62,23 @@ export function OwnerRegistrationScreen() {
   const domainLabel = useDomainLabel();
   const router = useRouter();
   const navigateOnce = useNavigateOnce();
+  const { data: user } = useCurrentUser();
+
+  /*
+   * GIAN HÀNG TRẢ PHÍ KHÔNG BAO GIỜ THẤY MÀN NÀY (ADR 0040 điều 4).
+   *
+   * Một gian hàng vừa hết gói thì `resolveOwnerStage` chấm là `registering` ngay khi chiếc xe cuối
+   * rời chợ, nên `OwnerGate` cho họ qua. Màn này kể một câu chuyện ba bước dành cho người CHƯA bắt
+   * đầu ("Hồ sơ chủ xe → Đăng xe đầu tiên → Lên chợ"); với một gian hàng 10 xe vừa cần gia hạn thì
+   * đó là câu chuyện sai hoàn toàn.
+   *
+   * Điều hướng, không render một màn lỗi: họ có một khu làm việc hợp lệ, chỉ là không phải khu này.
+   * `replace` để nút lui không rơi lại đúng màn vừa bị đẩy ra.
+   */
+  const wrongWorkspace = isEstablishedPackageShop(user?.tenant);
+  useEffect(() => {
+    if (wrongWorkspace) router.replace(ROUTES.account.vehicles());
+  }, [router, wrongWorkspace]);
 
   const vehicles = useVehiclesPage(VEHICLE_PAGE);
   /*

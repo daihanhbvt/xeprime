@@ -40,7 +40,7 @@ import {
   useRejectBookingRequest,
 } from './hooks/use-booking-requests';
 import { useStickyStatusCounts, type StatusCounts } from './hooks/use-status-counts';
-import type { BookingRequestItem } from './api';
+import { BOOKING_REQUEST_TAB_NEEDS_ACTION, type BookingRequestItem } from './api';
 
 /** Sentinel "mọi loại dịch vụ" của giao diện — API nhận `serviceType` vắng, không nhận `all`. */
 const SERVICE_ALL = 'all';
@@ -424,10 +424,9 @@ function RequestStats({ counts }: { counts: StatusCounts }) {
       borderColor={colors.border}
       bg={colors.surface}
     >
-      <StatCell
-        label={t('pending')}
-        count={statusCountOf(counts, BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL)}
-      />
+      {/* Cùng bộ trạng thái với tab "Cần xử lý" — hai con số lệch nhau là người trực đi tìm việc
+          không có ở đâu cả. */}
+      <StatCell label={t('pending')} count={statusCountOf(counts, BOOKING_REQUEST_TAB_NEEDS_ACTION)} />
       {/* Đường kẻ dọc dựng bằng viền của ô sau, không thêm một phần tử rỗng — như web. */}
       <StatCell
         label={t('converted')}

@@ -7,6 +7,7 @@ import {
 import { chatDebug } from '@/lib/chat-debug';
 import { useBadgeRealtime } from '@/features/badges/BadgeRealtimeProvider';
 import { useOnBadgeChange } from '@/features/badges/hooks/use-on-badge-change';
+import { useRefreshBadges } from '@/features/badges/hooks/use-badges';
 import { queryKeys } from '@/queries/query-keys';
 
 /**
@@ -55,14 +56,22 @@ export function useNotificationsInfinite(enabled: boolean) {
 }
 
 
-/** Đánh dấu MỘT thông báo đã đọc → làm mới cả danh sách và badge đếm. */
+/**
+ * Đánh dấu MỘT thông báo đã đọc → làm mới cả danh sách và huy hiệu.
+ *
+ * HAI lần invalidate vì đó là hai query khác nhau: danh sách nằm ở `notifications.*`, còn con số
+ * trên chuông sống chung với huy hiệu chat ở `badges.me`. Bỏ vế thứ hai thì chuông vẫn sáng sau
+ * khi người dùng vừa bấm đọc, cho tới nhịp làm mới kế tiếp — đúng thứ người dùng để ý đầu tiên.
+ */
 export function useMarkNotificationRead() {
   const queryClient = useQueryClient();
+  const refreshBadges = useRefreshBadges();
   return useMutation({
     mutationFn: (id: string) => notificationsApi.markRead(id),
     onSuccess: () => {
       chatDebug.notificationReadOk(false, 1);
       void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
+      refreshBadges();
     },
     onError: (error) => chatDebug.notificationReadFailed(error),
   });
@@ -70,11 +79,13 @@ export function useMarkNotificationRead() {
 
 export function useMarkAllNotificationsRead() {
   const queryClient = useQueryClient();
+  const refreshBadges = useRefreshBadges();
   return useMutation({
     mutationFn: () => notificationsApi.markAllRead(),
     onSuccess: (result) => {
       chatDebug.notificationReadOk(true, result.updated);
       void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
+      refreshBadges();
     },
     onError: (error) => chatDebug.notificationReadFailed(error),
   });

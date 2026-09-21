@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { useRouter } from 'expo-router';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { API_ERROR_CODE, PERMISSION, type ServiceType } from '@xeprime/types';
+import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
 import { getErrorCode } from '@xeprime/api-client';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
@@ -12,12 +12,11 @@ import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import type { VehicleDetail } from '@/features/vehicles/api';
-import { useDomainLabel } from '@/i18n/domain';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { sectionServiceType, type VehicleManageSection } from '@/navigation/vehicle-manage-section';
 import { space } from '@/theme/tokens';
-import { useServiceToggle } from '../hooks/use-service-toggle';
+import { isServiceOff, VehicleSectionDisabled } from './VehicleSectionDisabled';
 
 interface Props {
   vehicleId: string;
@@ -44,7 +43,6 @@ interface Props {
 export function VehicleManageShell({ vehicleId, section, title, subtitle, children }: Props) {
   const t = useTranslations('VehicleManage');
   const router = useRouter();
-  const domainLabel = useDomainLabel();
   const { has } = usePermissions();
   const canView = has(PERMISSION.VEHICLE_VIEW);
   const canEdit = has(PERMISSION.VEHICLE_UPDATE);
@@ -99,59 +97,24 @@ export function VehicleManageShell({ vehicleId, section, title, subtitle, childr
     );
   }
 
-  return (
-    <ShellBody
-      vehicle={query.data}
-      canEdit={canEdit}
-      section={section}
-      header={header}
-      serviceLabel={(service) => domainLabel('serviceType', service)}
-    >
-      {children}
-    </ShellBody>
-  );
-}
+  const vehicle = query.data;
 
-/** Tách để `useServiceToggle` chỉ chạy khi ĐÃ có xe — hook không nhận `undefined`. */
-function ShellBody({
-  vehicle,
-  canEdit,
-  section,
-  header,
-  serviceLabel,
-  children,
-}: {
-  vehicle: VehicleDetail;
-  canEdit: boolean;
-  section: VehicleManageSection;
-  header: ReactNode;
-  serviceLabel: (service: ServiceType) => string;
-  children: (ctx: { vehicle: VehicleDetail; canEdit: boolean }) => ReactNode;
-}) {
-  const t = useTranslations('VehicleManage');
-  const toggle = useServiceToggle(vehicle, canEdit);
-
+  /*
+   * Mục thuộc một DỊCH VỤ ĐANG TẮT: mời bật, không bày form.
+   *
+   * Không còn phải tách một `ShellBody` riêng để gọi `useServiceToggle` sau khi đã có xe — hook
+   * đó nay sống trong `VehicleSectionDisabled`, tức trong đúng nhánh cần nó. Nhánh thường không
+   * gọi hook nào, nên nó dựng được thẳng ở đây.
+   */
   const service = sectionServiceType(section);
-  const serviceOff = service !== null && !(vehicle.serviceTypes ?? []).includes(service);
-
-  if (serviceOff && service) {
-    const blocked = toggle.blockedReason(service, true);
+  if (service !== null && isServiceOff(vehicle, service)) {
     return (
-      <>
-        {header}
-        <Screen edges={['left', 'right', 'bottom']} scroll={false}>
-          <ScreenMessage
-            icon="power-outline"
-            title={t('disabledSection.title', { service: serviceLabel(service) })}
-            description={blocked ?? t('disabledSection.body', { service: serviceLabel(service) })}
-            actionLabel={
-              blocked ? undefined : t('disabledSection.enable', { service: serviceLabel(service) })
-            }
-            onAction={blocked ? undefined : () => toggle.toggle(service, true)}
-          />
-        </Screen>
-        {toggle.dialog}
-      </>
+      <VehicleSectionDisabled
+        vehicle={vehicle}
+        canEdit={canEdit}
+        service={service}
+        header={header}
+      />
     );
   }
 
@@ -164,7 +127,6 @@ function ShellBody({
           {children({ vehicle, canEdit })}
         </YStack>
       </Screen>
-      {toggle.dialog}
     </>
   );
 }

@@ -35,14 +35,28 @@ export interface BookingRequestSchemaLabels {
   pickupPreferenceRequired: string;
   requestedPickupDateRequired: string;
   routeRequired: string;
-  pickupProvinceRequired: string;
-  pickupWardRequired: string;
   pickupAddressRequired: string;
   destinationRequired: string;
-  deliveryProvinceRequired: string;
-  deliveryWardRequired: string;
   deliveryAddressRequired: string;
+  /**
+   * Địa chỉ có chữ nhưng CHƯA có toạ độ (ADR 0042).
+   *
+   * Một câu cho cả hai địa chỉ: việc phải làm giống hệt nhau — chọn một dòng gợi ý, hoặc đặt ghim.
+   */
+  addressNotConfirmed: string;
   noteTooLong: string;
+}
+
+export interface BookingRequestSchemaOptions {
+  /**
+   * Người dùng CÓ CÁCH nào để tạo ra một toạ độ không.
+   *
+   * `false` khi `/places/search` trả `available: false` (chưa cấu hình khoá, hoặc nhà cung cấp
+   * lỗi). Trên native cái ghim chỉ sinh ra từ một dòng gợi ý — không có bản đồ tương tác để tự
+   * đặt — nên lúc đó đòi toạ độ là khoá luôn nút "Tiếp tục" bằng một lỗi mà không thao tác nào
+   * sửa được. Bản đồ hỏng không được phép trở thành "không đặt được xe" (ADR 0035 điều 6).
+   */
+  canConfirmLocation: boolean;
 }
 
 /**
@@ -56,7 +70,11 @@ export interface BookingRequestSchemaLabels {
  * Câu lỗi đi VÀO qua `labels` vì chúng phải đổi theo ngôn ngữ đang chọn, mà hằng mức module thì
  * cố định từ lúc nạp bundle.
  */
-export function buildBookingRequestSchema(labels: BookingRequestSchemaLabels) {
+export function buildBookingRequestSchema(
+  labels: BookingRequestSchemaLabels,
+  options: BookingRequestSchemaOptions = { canConfirmLocation: true },
+) {
+  const { canConfirmLocation } = options;
   return yup.object({
     customerName: yup
       .string()
@@ -128,22 +146,19 @@ export function buildBookingRequestSchema(labels: BookingRequestSchemaLabels) {
      * phần "số nhà, đường" thì gõ. Chuỗi hiển thị do SERVER ghép nên form KHÔNG còn ô nào chứa
      * nó — bắt buộc chuyển sang ba trường dưới đây.
      */
-    pickupProvinceCode: yup
-      .string()
-      .trim()
-      .default('')
-      .when('serviceType', {
-        is: SERVICE_TYPE.WITH_DRIVER,
-        then: (s) => s.required(labels.pickupProvinceRequired),
-      }),
-    pickupWardCode: yup
-      .string()
-      .trim()
-      .default('')
-      .when('serviceType', {
-        is: SERVICE_TYPE.WITH_DRIVER,
-        then: (s) => s.required(labels.pickupWardRequired),
-      }),
+    /*
+     * `provinceCode` và `wardCode` KHÔNG bao giờ bắt buộc ở luồng này (ADR 0042).
+     *
+     * Người điền là KHÁCH THUÊ và màn hình không hỏi họ hai thứ đó — lý do đầy đủ ở
+     * `RenterAddressBlock`: mã tỉnh suy ra từ địa điểm họ chọn, mã xã thì bỏ hẳn. Bắt buộc một
+     * trường không có ô nhập nào là dựng một lỗi mà người dùng không có cách nào sửa.
+     *
+     * Thứ bắt buộc thay vào đó là TOẠ ĐỘ: phí giao xe đo bằng quãng đường tới cái ghim (ADR 0018),
+     * nên một địa chỉ không ghim là một đơn không tính được phí — và điều đó chỉ lộ ra ở bước báo
+     * giá, sau khi khách đã điền xong mọi thứ.
+     */
+    pickupProvinceCode: yup.string().trim().default(''),
+    pickupWardCode: yup.string().trim().default(''),
     pickupAddressLine: yup
       .string()
       .trim()
@@ -154,8 +169,22 @@ export function buildBookingRequestSchema(labels: BookingRequestSchemaLabels) {
         then: (s) => s.required(labels.pickupAddressRequired),
       }),
     pickupPlaceId: yup.string().trim().nullable().default(null),
-    pickupLatitude: yup.number().nullable().default(null),
-    pickupLongitude: yup.number().nullable().default(null),
+    pickupLatitude: yup
+      .number()
+      .nullable()
+      .default(null)
+      .when('serviceType', {
+        is: (v: string) => canConfirmLocation && v === SERVICE_TYPE.WITH_DRIVER,
+        then: (s) => s.required(labels.addressNotConfirmed),
+      }),
+    pickupLongitude: yup
+      .number()
+      .nullable()
+      .default(null)
+      .when('serviceType', {
+        is: (v: string) => canConfirmLocation && v === SERVICE_TYPE.WITH_DRIVER,
+        then: (s) => s.required(labels.addressNotConfirmed),
+      }),
     pickupLocationSource: yup.string().nullable().default(null),
     /** Điểm đến bắt buộc với lộ trình LIÊN TỈNH — nội thành thì lộ trình tự do. */
     destination: yup
@@ -171,25 +200,11 @@ export function buildBookingRequestSchema(labels: BookingRequestSchemaLabels) {
 
     deliveryRequested: yup.boolean().default(false),
     /*
-     * Địa chỉ giao xe là địa chỉ SINH RA TIỀN (phí giao theo km từ chi nhánh tới ghim), nên cả
-     * ba phần đều bắt buộc khi khách chọn giao tận nơi.
+     * Địa chỉ giao xe là địa chỉ SINH RA TIỀN (phí giao theo km từ chi nhánh tới GHIM), nên thứ
+     * bắt buộc là CHỮ + TOẠ ĐỘ. Mã tỉnh/xã thì không — xem chú thích ở khối địa chỉ đón.
      */
-    deliveryProvinceCode: yup
-      .string()
-      .trim()
-      .default('')
-      .when('deliveryRequested', {
-        is: true,
-        then: (s) => s.required(labels.deliveryProvinceRequired),
-      }),
-    deliveryWardCode: yup
-      .string()
-      .trim()
-      .default('')
-      .when('deliveryRequested', {
-        is: true,
-        then: (s) => s.required(labels.deliveryWardRequired),
-      }),
+    deliveryProvinceCode: yup.string().trim().default(''),
+    deliveryWardCode: yup.string().trim().default(''),
     deliveryAddressLine: yup
       .string()
       .trim()
@@ -200,8 +215,22 @@ export function buildBookingRequestSchema(labels: BookingRequestSchemaLabels) {
         then: (s) => s.required(labels.deliveryAddressRequired),
       }),
     deliveryPlaceId: yup.string().trim().nullable().default(null),
-    deliveryLatitude: yup.number().nullable().default(null),
-    deliveryLongitude: yup.number().nullable().default(null),
+    deliveryLatitude: yup
+      .number()
+      .nullable()
+      .default(null)
+      .when('deliveryRequested', {
+        is: (v: boolean) => canConfirmLocation && v === true,
+        then: (s) => s.required(labels.addressNotConfirmed),
+      }),
+    deliveryLongitude: yup
+      .number()
+      .nullable()
+      .default(null)
+      .when('deliveryRequested', {
+        is: (v: boolean) => canConfirmLocation && v === true,
+        then: (s) => s.required(labels.addressNotConfirmed),
+      }),
     deliveryLocationSource: yup.string().nullable().default(null),
 
     note: yup.string().trim().max(NOTE_MAX, labels.noteTooLong).default(''),

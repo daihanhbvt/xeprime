@@ -36,6 +36,13 @@ const BASE_PATH: Readonly<Record<SupportSurface, string>> = {
 export interface SupportCaseFilters {
   status?: SupportCaseStatus;
   category?: SupportCaseCategory;
+  /**
+   * Tìm theo MÃ hoặc tiêu đề — server lo phép khớp (`SupportService`), client chỉ chuyền chữ.
+   *
+   * Cần thật: một gian hàng chạy vài tháng có hàng trăm yêu cầu, và cách người ta tìm lại một cái
+   * là đọc mã trong email rồi dán vào. Lọc theo trạng thái + danh mục không thay được việc đó.
+   */
+  q?: string;
   page?: number;
   limit?: number;
 }
@@ -55,6 +62,7 @@ export function supportCasesToParams(
     surface,
     status: filters.status ?? null,
     category: filters.category ?? null,
+    q: filters.q ?? null,
     page: filters.page ?? null,
     limit: filters.limit ?? null,
   };

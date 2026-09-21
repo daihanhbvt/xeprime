@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { Pressable, TextInput, type TextInputProps } from 'react-native';
 import { useRevealOnFocus } from '@/components/layout/focus-reveal';
@@ -57,6 +57,26 @@ interface TextFieldProps<T extends FieldValues> {
   keyboardType?: TextInputProps['keyboardType'];
   returnKeyType?: TextInputProps['returnKeyType'];
   onSubmitEditing?: TextInputProps['onSubmitEditing'];
+  /**
+   * Chạy THÊM mỗi lần chữ đổi, SAU khi `field.onChange` đã ghi vào form.
+   *
+   * Khai riêng (không đi qua `...inputProps`/`TextInputProps`) vì `onChangeText` của
+   * `TextInput` đã bị component này chiếm để nối vào RHF — một bản thứ hai đến từ nơi gọi sẽ
+   * ghi đè bản đó thay vì cộng thêm. Dùng khi nơi gọi cần biết "người dùng vừa TỰ gõ", không chỉ
+   * "giá trị vừa đổi" (giá trị đổi còn do `setValue` lập trình gây ra) — ví dụ
+   * `ConfirmedPlaceField` cần phân biệt hai nguồn đó để quyết định có tự phong một giá trị là
+   * "đã xác nhận" hay không.
+   */
+  onChangeText?: (text: string) => void;
+  /** Content attached below the input control and above its hint/error, e.g. an autocomplete menu. */
+  afterControl?: ReactNode;
+  /**
+   * Chạy THÊM khi rời ô, SAU khi `field.onBlur()` đã chạy. Cùng lý do tách riêng với
+   * `onChangeText` ở trên — bản nội bộ của `onBlur` còn phải tắt viền focus.
+   */
+  onBlur?: () => void;
+  /** Runs after the field receives focus. */
+  onFocus?: () => void;
 }
 
 /** Form state ở React Hook Form, không Redux (ADR 0004). */
@@ -72,6 +92,10 @@ export function TextField<T extends FieldValues>({
   multiline = false,
   rows = 4,
   maxLength,
+  onChangeText: onChangeTextExtra,
+  onBlur: onBlurExtra,
+  onFocus: onFocusExtra,
+  afterControl,
   ...inputProps
 }: TextFieldProps<T>) {
   /*
@@ -140,14 +164,19 @@ export function TextField<T extends FieldValues>({
           accessibilityLabel={label}
           ref={inputRef}
           value={String(field.value ?? '')}
-          onChangeText={field.onChange}
+          onChangeText={(text) => {
+            field.onChange(text);
+            onChangeTextExtra?.(text);
+          }}
           onBlur={() => {
             setFocused(false);
             field.onBlur();
+            onBlurExtra?.();
           }}
           onFocus={() => {
             setFocused(true);
             revealOnFocus();
+            onFocusExtra?.();
           }}
           secureTextEntry={secureTextEntry && !revealed}
           multiline={multiline}
@@ -176,6 +205,8 @@ export function TextField<T extends FieldValues>({
           </Pressable>
         ) : null}
       </FieldShell>
+
+      {afterControl}
 
       <FieldMessage error={error} hint={hint} />
 

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { DEPOSIT_POLICY_REASON, PERMISSION, STATUS_COLOR } from '@xeprime/types';
@@ -6,6 +7,7 @@ import { Screen } from '@/components/layout/Screen';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
+import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
@@ -16,6 +18,7 @@ import { ToggleRow } from '@/features/rental-policies/components/PolicySections'
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { ROUTES } from '@/navigation/routes';
 import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import type { PaymentSettings } from './api';
 import { usePaymentSettings, useUpdatePaymentSettings } from './hooks/use-shop';
@@ -77,7 +80,13 @@ export function ShopPaymentSettingsScreen() {
 /** `null` = công tắc dùng được. Chuỗi trả về là khoá i18n dưới `locked.*`. */
 function lockReason(
   settings: PaymentSettings,
-): 'commission' | 'featureMissing' | 'notConfigured' | null {
+): 'platform' | 'commission' | 'featureMissing' | 'notConfigured' | null {
+  /*
+   * ĐỨNG TRƯỚC mọi lý do khác, cùng thứ tự với `DepositPolicyService.resolveForTenant`: trong
+   * giai đoạn này không gian hàng nào đọc được lý do theo tuyến hay theo gói nữa, và hiện câu
+   * "bạn đang ở tuyến hoa hồng" cho một gian hàng tuyến gói là nói sai về hợp đồng của họ.
+   */
+  if (settings.reason === DEPOSIT_POLICY_REASON.PLATFORM_MANDATORY) return 'platform';
   if (settings.reason === DEPOSIT_POLICY_REASON.COMMISSION_MANDATORY) return 'commission';
   if (settings.reason === DEPOSIT_POLICY_REASON.PACKAGE_FEATURE_MISSING) return 'featureMissing';
   /*
@@ -111,6 +120,7 @@ function DepositToggleCard({
   canEdit: boolean;
 }) {
   const t = useTranslations('Shop.paymentSettings');
+  const router = useRouter();
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
   const update = useUpdatePaymentSettings();
@@ -166,10 +176,18 @@ function DepositToggleCard({
               </YStack>
             </XStack>
             {/*
-              Web kèm nút "Xem gói thuê bao" dẫn tới `/manage/subscription`. App chưa dựng màn
-              gói, nên ở đây chỉ còn lời giải thích — một nút dẫn tới màn không tồn tại còn tệ
-              hơn là không có nút.
+              Khoá theo GIAI ĐOẠN thì không có nút nào cả: không có gói nào mua được để mở nó, và
+              một nút "Xem gói thuê bao" ở đây là mời gian hàng đi tiêu tiền cho một thứ không
+              liên quan. Ba lý do còn lại đều có một việc thật để làm.
             */}
+            {locked === 'platform' ? null : (
+              <Button
+                label={t(`locked.${locked}.cta` as never)}
+                variant="secondary"
+                size="sm"
+                onPress={() => router.push(ROUTES.manage.subscription())}
+              />
+            )}
           </YStack>
         </Card>
       ) : null}

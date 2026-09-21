@@ -53,6 +53,22 @@ describe('notificationHref — đích hợp lệ', () => {
   it('bỏ query/hash — đích của thông báo không mang tham số', () => {
     expect(notificationHref('/trips?utm=x#frag')).toBe('/trips');
   });
+
+  /*
+   * Bề mặt CHỦ XE tuyến hoa hồng. `notificationDeepLink` trả `/account` cho thông báo về gian
+   * hàng và `/account/vehicles` cho thông báo về xe — họ không mở được `/manage`. Thiếu hai đích
+   * này thì mọi thông báo duyệt hồ sơ và duyệt xe của họ bấm vào không đi đâu cả.
+   */
+  it('nhận hai đích Owner Lite trong khu khách', () => {
+    expect(notificationHref('/account')).toBe('/account');
+    expect(notificationHref('/account/vehicles')).toBe('/account/vehicles');
+  });
+
+  // Hai đích đó KHÔNG mang id — nhận thêm một đoạn phía sau là nới allowlist quá phạm vi của nó.
+  it('không nới thêm đoạn phía sau hai đích Owner Lite', () => {
+    expect(notificationHref('/account/settings')).toBeNull();
+    expect(notificationHref('/account/vehicles/01J')).toBeNull();
+  });
 });
 
 describe('notificationHref — payload không hợp lệ KHÔNG điều hướng', () => {

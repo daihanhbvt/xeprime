@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import { StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { TENANT_TYPE } from '@xeprime/types';
 import { ownerProfileSchema, type OwnerProfileValues } from '@xeprime/validators';
 import { OWNER_PERSONAL_CAR_RATIO, images } from '@/assets';
 import { AddressFields } from '@/components/form/AddressFields';
@@ -19,10 +18,8 @@ import { TextField } from '@/components/ui/TextField';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { ContactVerifySheet } from '@/features/account/components/ContactVerifySheet';
 import { CONTACT_CHANNEL } from '@/api/account/api';
-import { useRegisterShop, useUpdateShopProfile } from '@/features/shop/hooks/use-shop';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 
@@ -49,22 +46,37 @@ const styles = StyleSheet.create({ art: { width: '100%' } });
  * ô gõ tự do ở đây tạo ra số thứ hai không ai kiểm chứng, ngay cạnh số đã xác thực của cùng
  * người đó — và khách sẽ gọi vào đúng cái số không ai kiểm chứng.
  *
- * API vẫn là `POST /tenants` như gian hàng: theo ADR 0014/0024, cái phân biệt hai tuyến là GÓI
- * đang có hiệu lực, không phải một loại tenant riêng. Chủ xe cá nhân = tenant chưa có gói.
+ * ## ⚠️ BƯỚC NÀY KHÔNG GỌI API (17/09/2026)
+ *
+ * Trước đây nó gọi thẳng `POST /tenants` khi người dùng bấm "Tiếp tục", và đó là một lỗi thật:
+ * chỉ cần điền xong màn này rồi thoát ra là tài khoản ĐÃ thành chủ xe — có gian hàng, có chi
+ * nhánh mặc định, có gói hoa hồng, và menu tài khoản đổi hẳn sang menu chủ xe — dù họ chưa khai
+ * một chiếc xe nào. Một cú bấm nhầm đẻ ra một pháp nhân.
+ *
+ * Giờ bước này chỉ THU THẬP: giá trị đi lên wizard và `POST /tenants` chạy ở CHÍNH lần lưu chiếc
+ * xe (`useQuickVehicleRegistration`). Bỏ dở giữa chừng không để lại gì trên server.
+ *
+ * Gian hàng vẫn mở bằng `POST /tenants` như mọi tuyến: theo ADR 0014/0024, cái phân biệt hai
+ * tuyến là GÓI đang có hiệu lực, không phải một loại tenant riêng. Chủ xe cá nhân = tenant chưa
+ * có gói.
  */
 export function QuickVehicleOwnerStep({
-  onCreated,
+  defaultValues,
+  onCompleted,
   onCancel,
+  submitLabel,
 }: {
-  onCreated: () => void;
+  /** Giá trị đã khai ở lần trước — quay lại sửa địa chỉ thì không phải gõ lại từ đầu. */
+  defaultValues?: OwnerProfileValues | null;
+  /** Khai xong — nơi gọi GIỮ giá trị này và chuyển sang bước "Thông tin xe". */
+  onCompleted: (values: OwnerProfileValues) => void;
   onCancel: () => void;
+  /** Nhãn nút chính: lần đầu là "Tiếp tục", lúc quay lại sửa thì là "Lưu". */
+  submitLabel?: string;
 }) {
   const t = useTranslations('ListYourVehicle.ownerProfile');
   const tCommon = useTranslations('Common.actions');
   const { data: user } = useCurrentUser();
-  const register = useRegisterShop();
-  const updateProfile = useUpdateShopProfile();
-  const errorMessage = useErrorMessage();
   const [verifyOpen, setVerifyOpen] = useState(false);
 
   const phone = user?.phone ?? null;
@@ -76,7 +88,7 @@ export function QuickVehicleOwnerStep({
   );
   const { control, handleSubmit } = useForm<OwnerProfileValues>({
     resolver,
-    defaultValues: {
+    defaultValues: defaultValues ?? {
       name: user?.displayName ?? '',
       provinceCode: '',
       wardCode: '',
@@ -90,47 +102,10 @@ export function QuickVehicleOwnerStep({
     },
   });
 
-  const submit = handleSubmit(async (values) => {
+  const submit = handleSubmit((values) => {
     // Nút đã bị khoá khi chưa xác thực; chặn lần hai ở đây vì Enter trong ô nhập cũng submit.
     if (!phoneVerified || !phone) return;
-
-    try {
-      await register.mutateAsync({
-        name: values.name,
-        tenantType: TENANT_TYPE.INDIVIDUAL,
-        provinceCode: values.provinceCode,
-        wardCode: values.wardCode,
-        addressLine: values.addressLine,
-        // Ghim toạ độ đi kèm địa chỉ: nó quyết định phí giao xe và chỗ tài xế lái tới.
-        ...(values.placeId ? { placeId: values.placeId } : {}),
-        ...(values.latitude == null ? {} : { latitude: values.latitude }),
-        ...(values.longitude == null ? {} : { longitude: values.longitude }),
-        ...(values.locationSource ? { locationSource: values.locationSource } : {}),
-        phone,
-        ...(values.email ? { email: values.email } : {}),
-      });
-    } catch {
-      // Lỗi đã hiện bằng `register.isError` ngay trên form — không đi tiếp, không nuốt im lặng.
-      return;
-    }
-
-    /*
-     * Giới thiệu ngắn KHÔNG nằm trong `POST /tenants`: DTO đăng ký chỉ nhận những thứ bắt buộc
-     * để mở được hồ sơ. Nó đi bằng một lần `PATCH /tenants/current/profile` ngay sau đó.
-     *
-     * Hỏng ở bước này cố ý KHÔNG chặn luồng: hồ sơ đã tồn tại, chiếc xe vẫn đăng được, và đoạn
-     * giới thiệu là tuỳ chọn sửa lại lúc nào cũng được. Bắt người dùng làm lại từ đầu vì một
-     * đoạn văn không bắt buộc là đánh đổi sai.
-     */
-    if (values.bio) {
-      try {
-        await updateProfile.mutateAsync({ bio: values.bio });
-      } catch {
-        // Bỏ qua có chủ đích — xem docblock ngay trên.
-      }
-    }
-
-    onCreated();
+    onCompleted(values);
   });
 
   return (
@@ -171,8 +146,6 @@ export function QuickVehicleOwnerStep({
             {t('publicNote')}
           </Text>
         </XStack>
-
-        {register.isError ? <Callout tone="danger">{errorMessage(register.error)}</Callout> : null}
 
         <Card>
           <YStack gap={space.md}>
@@ -268,6 +241,7 @@ export function QuickVehicleOwnerStep({
               }}
               title={t('fields.address.title')}
               required
+              prefillRememberedProvince
             />
           </YStack>
         </Card>
@@ -280,9 +254,8 @@ export function QuickVehicleOwnerStep({
 
         <YStack gap={space.sm}>
           <Button
-            label={tCommon('next')}
+            label={submitLabel ?? tCommon('next')}
             disabled={!phoneVerified}
-            loading={register.isPending || updateProfile.isPending}
             onPress={() => void submit()}
           />
           <Button label={tCommon('cancel')} variant="ghost" icon="arrow-back" onPress={onCancel} />

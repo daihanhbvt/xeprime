@@ -605,7 +605,7 @@
     "automation": {
       "title": "Booking automation",
       "editLink": "Configure",
-      "hint": "Turn on instant booking so a paid request becomes an order without waiting for your approval. Set the lead time and conditions that apply to this vehicle."
+      "hint": "Turn on instant booking so a paid request becomes an order without waiting for your approval. Set the conditions that apply to this vehicle."
     }
   },
   "edit": {

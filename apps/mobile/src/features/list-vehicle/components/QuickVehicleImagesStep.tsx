@@ -7,7 +7,7 @@ import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { ImageUploadField } from '@/components/ui/ImageUploadField';
 import { ProgressBar } from '@/components/ui/ProgressBar';
-import { uploadsApi } from '@/api/uploads/api';
+import type { UploadMeta, UploadPresign } from '@/api/uploads/api';
 import { colors, fontSize, space } from '@/theme/tokens';
 import type { QuickVehicleValues } from '../quick-schema';
 
@@ -24,7 +24,19 @@ const ANGLES = ['front', 'rear', 'side', 'interior'] as const;
  *
  * Thiếu ảnh KHÔNG chặn lưu: xe vẫn lưu nháp được, chỉ là chưa gửi duyệt được.
  */
-export function QuickVehicleImagesStep({ control }: { control: Control<QuickVehicleValues> }) {
+export function QuickVehicleImagesStep({
+  control,
+  presign,
+}: {
+  control: Control<QuickVehicleValues>;
+  /**
+   * Lấy chữ ký tải ảnh. Wizard truyền vào thay vì màn này tự gọi `uploadsApi.vehicleImage`:
+   * người CHƯA có gian hàng phải mở gian hàng ngay trước tấm ảnh đầu tiên (endpoint presign là
+   * tenant-scoped, không có tenant thì 403), và quyết định đó thuộc về wizard, không thuộc về
+   * một bước hình ảnh.
+   */
+  presign: (meta: UploadMeta) => Promise<UploadPresign>;
+}) {
   const t = useTranslations('ListYourVehicle.images');
   const tForm = useTranslations('Vehicles.form.media');
 
@@ -49,13 +61,13 @@ export function QuickVehicleImagesStep({ control }: { control: Control<QuickVehi
             label={tForm('mainImage')}
             emptyLabel={tForm('addMainImage')}
             hint={t('mainImageHelp')}
-            presign={uploadsApi.vehicleImage}
+            presign={presign}
           />
           <ImageUploadField
             control={control}
             name="images"
             label={tForm('gallery')}
-            presign={uploadsApi.vehicleImage}
+            presign={presign}
             multiple
           />
 

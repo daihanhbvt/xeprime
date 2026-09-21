@@ -31,7 +31,7 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
   const fmt = useAppFormat();
 
   const rating = Number(shop.ratingAvg);
-  const hasRating = shop.ratingCount > 0 && Number.isFinite(rating);
+  const hasRating = (shop.ratingCount ?? 0) > 0 && Number.isFinite(rating);
   /* Hỏi ở đây để bỏ luôn hàng chứa nút: một `XStack` rỗng vẫn ăn trọn một nhịp `gap` của cột. */
   const canChat = useShopChatAvailable(shop.slug, shop.chatOpen);
 

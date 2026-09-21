@@ -10,7 +10,9 @@ import { LOCALE_COOKIE_NAME } from '@xeprime/types';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppLocale } from '@/i18n/I18nProvider';
+import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { logger } from '@/lib/logger';
+import { ROUTES } from '@/navigation/routes';
 import { resolveWebBaseUrl } from '@/lib/web-base-url';
 import { colors } from '@/theme/tokens';
 
@@ -53,10 +55,20 @@ const HIDE_SITE_CHROME = `
  * JS trong trang không đặt được. Gửi thẳng ở header của lần tải đầu là cách duy nhất để một
  * người đang dùng app tiếng Anh không nhận về một trang điều khoản tiếng Việt.
  */
+/**
+ * Đường dẫn trung tâm hỗ trợ trong chính văn bản pháp lý.
+ *
+ * Neo vào RANH GIỚI đoạn đường dẫn (`/`, `?`, `#`, hết chuỗi) chứ không `includes('/support')`:
+ * một địa chỉ như `/legal/support-policy` cũng chứa chuỗi đó, và bắt nhầm nó là kéo người đọc ra
+ * khỏi văn bản họ đang mở.
+ */
+const SUPPORT_PATH = /\/support(?:[/?#]|$)/;
+
 export function LegalDocScreen({ doc, onBack }: { doc: LegalDoc; onBack: () => void }) {
   const t = useTranslations('Legal');
   const tCommon = useTranslations('Common');
   const { locale } = useAppLocale();
+  const navigateOnce = useNavigateOnce();
   const [failed, setFailed] = useState(false);
   /** Đổi để BẮT `WebView` tải lại — nó không có API "thử lại" nào khác. */
   const [attempt, setAttempt] = useState(0);
@@ -88,15 +100,26 @@ export function LegalDocScreen({ doc, onBack }: { doc: LegalDoc; onBack: () => v
   );
 
   /**
-   * Giữ WebView TRONG khu pháp lý.
+   * Giữ WebView TRONG khu pháp lý — với ĐÚNG một ngoại lệ.
    *
    * Bốn văn bản viện dẫn lẫn nhau nên đi giữa chúng là chuyện bình thường và phải mượt. Nhưng
    * chân trang của web dẫn ra cả chợ xe: cho phép mọi liên kết ở đây là dựng một bản web đầy đủ
    * bên trong app, nơi nút lui của app không hiểu người dùng đang ở đâu.
+   *
+   * Ngoại lệ là `/support`. Quy chế sàn viện dẫn thẳng trung tâm hỗ trợ làm "cơ chế tiếp nhận
+   * phản ánh", nên chặn nó nghĩa là một điều khoản trỏ vào hư không — đúng chỗ người đang đọc để
+   * đi khiếu nại. App có màn hỗ trợ NATIVE cùng địa chỉ, nên liên kết đó rời WebView và mở màn ấy:
+   * cùng một đích với web, chỉ khác lớp vẽ.
    */
   const allowNavigation = useCallback(
-    (request: WebViewNavigation) => request.url.includes('/legal'),
-    [],
+    (request: WebViewNavigation) => {
+      if (SUPPORT_PATH.test(request.url)) {
+        navigateOnce(ROUTES.support.home());
+        return false;
+      }
+      return request.url.includes('/legal');
+    },
+    [navigateOnce],
   );
 
   return (

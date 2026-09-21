@@ -3,18 +3,22 @@ import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
+  DEPOSIT_STATUS,
   DEPOSIT_STATUS_META,
+  PAYMENT_KIND,
   PERMISSION,
   SURCHARGE_CATEGORY_META,
   type DepositStatus,
   type SurchargeCategory,
 } from '@xeprime/types';
-import { isZeroMoney } from '@xeprime/domain';
+import { isNegativeMoney, isZeroMoney, subtractMoney } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
+import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { DataRow, Divider } from '@/components/ui/DataRow';
+import { InlineAction } from '@/components/ui/InlineAction';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
@@ -27,6 +31,7 @@ import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { RecordPaymentSheet } from './components/RecordPaymentSheet';
 import { RefundSheet } from './components/RefundSheet';
 import { SurchargeSheet } from './components/SurchargeSheet';
 import { useAddSurcharge, useSettlement, useVoidSurcharge } from './hooks/use-settlement';
@@ -115,6 +120,7 @@ function SettlementBody({
 
   const [recording, setRecording] = useState(false);
   const [refunding, setRefunding] = useState(false);
+  const [takingDeposit, setTakingDeposit] = useState(false);
 
   const addSurcharge = useAddSurcharge(bookingId);
   const voidSurcharge = useVoidSurcharge(bookingId);
@@ -123,6 +129,34 @@ function SettlementBody({
   const canVoid = permissions.has(PERMISSION.PAYMENT_VOID);
   const depositStatus = settlement.depositStatus as DepositStatus;
   const depositMeta = DEPOSIT_STATUS_META[depositStatus];
+
+  /*
+   * Chỉ nói chuyện hoàn tiền khi thật sự CÓ tiền trong tay — cùng vị từ với `BookingSettlementCard`.
+   *
+   * `not_received` chưa từng thu cọc, `received` (đang thuê) chưa tới lúc, `settled` thì phát sinh
+   * đã ăn hết. Dựng dòng "đề xuất hoàn" và nút "đánh dấu đã hoàn" ở ba trạng thái đó là mời người
+   * dùng ghi sổ một khoản hoàn không có thật — cách nhanh nhất để chủ xe mất tiền thật.
+   */
+  const showRefundLine =
+    depositStatus === DEPOSIT_STATUS.AWAITING_REFUND ||
+    depositStatus === DEPOSIT_STATUS.REFUNDED ||
+    depositStatus === DEPOSIT_STATUS.PARTIALLY_REFUNDED;
+
+  /*
+   * Cọc còn THIẾU so với mức đơn khai — phép trừ trên CHUỖI tiền, không qua `Number` (ADR 0007).
+   * Đây là số điền sẵn vào ô nhập của tấm thu tiền.
+   */
+  const depositOutstanding = subtractMoney(settlement.depositRequired, settlement.depositReceived);
+
+  /*
+   * Chỉ mời thu cọc khi còn thiếu VÀ chưa bước sang giai đoạn hoàn: sau khi đã hoàn thì "thu
+   * thêm" là một nghiệp vụ khác hẳn, không phải thu nốt cọc. Trước đợt này app KHÔNG có đường ghi
+   * nhận thu cọc nào, nên `depositReceived` vĩnh viễn bằng 0 và cả khối quyết toán chạy không tải.
+   */
+  const canTakeDeposit =
+    !isNegativeMoney(depositOutstanding) &&
+    !isZeroMoney(depositOutstanding) &&
+    (depositStatus === DEPOSIT_STATUS.NOT_RECEIVED || depositStatus === DEPOSIT_STATUS.RECEIVED);
 
   return (
     <>
@@ -154,18 +188,36 @@ function SettlementBody({
               />
               <DataRow
                 label={t('depositReceived')}
-                value={fmt.money(settlement.depositReceived)}
-                strong
+                /* Chưa có bằng chứng thu tiền thì nói THẲNG, không hiện một số 0 mập mờ. */
+                value={
+                  depositStatus === DEPOSIT_STATUS.NOT_RECEIVED
+                    ? t('depositNotReceived')
+                    : fmt.money(settlement.depositReceived)
+                }
+                tone={depositStatus === DEPOSIT_STATUS.NOT_RECEIVED ? 'muted' : 'default'}
+                strong={depositStatus !== DEPOSIT_STATUS.NOT_RECEIVED}
+                {...(canRecord && canTakeDeposit
+                  ? {
+                      action: (
+                        <InlineAction
+                          label={t('takeDeposit')}
+                          onPress={() => setTakingDeposit(true)}
+                        />
+                      ),
+                    }
+                  : {})}
               />
               <DataRow label={t('surchargeTotal')} value={fmt.money(settlement.surchargeTotal)} />
 
               <Divider />
 
-              <DataRow
-                label={t('proposedRefund')}
-                value={fmt.money(settlement.proposedRefund)}
-                strong
-              />
+              {showRefundLine ? (
+                <DataRow
+                  label={t('proposedRefund')}
+                  value={fmt.money(settlement.proposedRefund)}
+                  strong
+                />
+              ) : null}
               {isZeroMoney(settlement.additionalDue) ? null : (
                 <DataRow
                   label={t('additionalDue')}
@@ -175,6 +227,21 @@ function SettlementBody({
                   strong
                 />
               )}
+
+              {/*
+                Ba dải LOẠI TRỪ nhau, mỗi dải cho một trạng thái mà câu hỏi "bao giờ hoàn cọc?" có
+                một câu trả lời khác hẳn. Thiếu chúng, người dùng nhìn một khối không có nút nào và
+                không biết mình đang chờ điều gì — đây là ba câu duy nhất giải thích được điều đó.
+              */}
+              {depositStatus === DEPOSIT_STATUS.NOT_RECEIVED ? (
+                <Callout tone="info">{t('noticeNotReceived')}</Callout>
+              ) : null}
+              {depositStatus === DEPOSIT_STATUS.RECEIVED ? (
+                <Callout tone="info">{t('noticeReceived')}</Callout>
+              ) : null}
+              {depositStatus === DEPOSIT_STATUS.SETTLED ? (
+                <Callout tone="info">{t('noticeSettled')}</Callout>
+              ) : null}
 
               <Text col={colors.textMuted} fos={fontSize.label}>
                 {t('formulaNote')}
@@ -244,6 +311,12 @@ function SettlementBody({
                     label={t('refund.noteLabel')}
                     value={fmt.dateTime(settlement.refund.refundedAt)}
                   />
+                  {settlement.refund.reference ? (
+                    <DataRow
+                      label={t('refund.referenceLabel')}
+                      value={settlement.refund.reference}
+                    />
+                  ) : null}
                   {settlement.refund.recordedByName ? (
                     <Text col={colors.textMuted} fos={fontSize.label}>
                       {t('refund.recordedBy', { name: settlement.refund.recordedByName })}
@@ -269,7 +342,11 @@ function SettlementBody({
                     onPress={() => setRefunding(true)}
                   />
                 ) : null
-              ) : canRecord ? (
+              ) : canRecord && depositStatus === DEPOSIT_STATUS.AWAITING_REFUND ? (
+                /*
+                 * Nút ghi nhận hoàn CHỈ ở `awaiting_refund`: đó là trạng thái duy nhất mà tiền
+                 * đang nằm trong tay và đã tới lúc trả lại. Web gác đúng như vậy.
+                 */
                 <Button
                   label={t('refund.record')}
                   icon="arrow-undo-outline"
@@ -286,6 +363,7 @@ function SettlementBody({
           open
           onClose={() => setRecording(false)}
           overtime={settlement.overtime}
+          surchargeRules={settlement.surchargeRules}
           loading={addSurcharge.isPending}
           onConfirm={(body) =>
             addSurcharge.mutate(body, {
@@ -306,6 +384,21 @@ function SettlementBody({
         mặc định bị đóng băng ở `proposedRefund` lúc mở màn — thêm một khoản phụ phí xong rồi
         mở tấm hoàn cọc sẽ thấy con số TRƯỚC khi trừ phụ phí, và bấm là ghi sổ đúng con số sai đó.
       */}
+      {/*
+        Dùng LẠI đúng tấm thu tiền của đơn, chỉ đổi `kind` — hai loại tiền cùng đi qua một đường
+        ghi (`PaymentsService`), nên dựng một tấm thứ hai là mở đường cho hai luồng ghi tiền lệch
+        nhau. Mount có điều kiện vì `defaultValues` chỉ đọc lúc dựng (xem chú thích ở `RefundSheet`).
+      */}
+      {takingDeposit ? (
+        <RecordPaymentSheet
+          open
+          onClose={() => setTakingDeposit(false)}
+          bookingId={bookingId}
+          kind={PAYMENT_KIND.DEPOSIT}
+          debtAmount={depositOutstanding}
+        />
+      ) : null}
+
       {refunding ? (
         <RefundSheet
           open

@@ -91,7 +91,12 @@ export function VehicleSummaryCard({
   ].filter(Boolean) as Array<{ label: string; value: string }>;
 
   const rating = Number(listing.ratingAvg);
-  const hasRating = listing.ratingCount > 0 && Number.isFinite(rating);
+  /*
+   * `ratingCount` khai KHÔNG optional ở DTO, nhưng cột DB cho phép NULL ở những xe chưa từng
+   * được đồng bộ lại rating (dữ liệu cũ) — hợp đồng kiểu và thực tế lệch nhau. `?? 0` chặn
+   * đúng khe hở đó thay vì tin tuyệt đối vào kiểu khai báo.
+   */
+  const hasRating = (listing.ratingCount ?? 0) > 0 && Number.isFinite(rating);
 
   return (
     <Card>

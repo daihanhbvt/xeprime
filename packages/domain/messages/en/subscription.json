@@ -96,7 +96,9 @@
     "bank": "Bank",
     "accountNumber": "Account number",
     "accountName": "Account holder",
+    "copyBank": "Copy bank name",
     "copyAccount": "Copy account number",
+    "copyAccountName": "Copy account holder",
     "autoActivateNote": "The plan activates automatically once the money arrives — you can close this page; we will notify you.",
     "pendingTitle": "Invoice awaiting payment"
   },

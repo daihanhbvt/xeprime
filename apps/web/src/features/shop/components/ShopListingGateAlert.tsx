@@ -3,11 +3,11 @@
 import { Alert, Button } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { isLogoOnlyGate } from '@xeprime/domain';
 import type { PackageShopListingRequirement } from '@xeprime/types';
 
 import { SHOP_SECTION, shopSectionPath } from '@/constants/routes';
 
-import { isLogoOnlyGate } from '../listing-gate';
 import styles from './ShopListingGateAlert.module.css';
 
 /**

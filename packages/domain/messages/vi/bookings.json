@@ -108,7 +108,14 @@
     "depositAmount": "Đặt cọc tài sản",
     "free": "Miễn phí",
     "note": "Mọi con số do hệ thống tính từ phiếu thu và phụ phí — không sửa trực tiếp được.",
-    "overCollected": "Thu vượt"
+    "overCollected": "Thu vượt",
+    "holdPaymentPlan": {
+      "title": "Thanh toán giữ chỗ",
+      "customerTotal": "Tổng khách trả",
+      "holdPaid": "Đã giữ chỗ qua XePrime",
+      "payAtPickup": "Còn trả chủ xe khi nhận xe",
+      "note": "Khoản giữ chỗ do XePrime thu nên không nằm trong dòng “Đã thu” của gian hàng."
+    }
   },
   "driver": {
     "title": "Tài xế",
@@ -153,6 +160,13 @@
       "labelReturn": "Chỉ số Odo khi nhận (km)",
       "hintWithCurrent": "KM hệ thống đang ghi: {km}. Không nhập cũng xác nhận được.",
       "hintPlain": "Không nhập cũng xác nhận được. Bỏ trống thì KM của xe giữ nguyên."
+    },
+    "odometerError": {
+      "notNumber": "Chỉ số KM phải là số",
+      "notInteger": "Chỉ số KM phải là số nguyên",
+      "negative": "Chỉ số KM không thể âm",
+      "tooLarge": "Chỉ số KM tối đa {max}",
+      "required": "Nhập chỉ số KM"
     },
     "condition": {
       "label": "Tình trạng xe",

@@ -3,8 +3,11 @@ import { queryKeys } from '@/queries/query-keys';
 import {
   walletApi,
   walletEntriesParams,
+  walletStatementParams,
+  WALLET_SCOPE,
   type CreateWithdrawalInput,
   type WalletScope,
+  type WalletStatementFilters,
 } from '@/api/wallet/api';
 
 /**
@@ -29,6 +32,25 @@ export function useWalletEntries(scope: WalletScope, page: number, enabled = tru
     // Giữ trang cũ trong lúc tải trang mới — sổ tiền nhấp nháy trắng mỗi lần lật là khó đọc.
     placeholderData: keepPreviousData,
     enabled,
+  });
+}
+
+/**
+ * Bảng tổng hợp giao dịch của gian hàng theo kỳ.
+ *
+ * `placeholderData` giữ bảng cũ trong lúc đổi tháng hoặc lật trang: một bảng tiền nhấp nháy về
+ * trắng rồi hiện lại là cách nhanh nhất để người đọc tưởng số liệu vừa biến mất.
+ *
+ * `enabled` để màn ví phía KHÁCH (`scope === 'account'`) không gọi một endpoint chỉ dành cho gian
+ * hàng rồi nhận 403.
+ */
+export function useWalletStatement(filters: WalletStatementFilters, enabled: boolean) {
+  const params = walletStatementParams(filters);
+  return useQuery({
+    queryKey: queryKeys.wallet.statement(WALLET_SCOPE.SHOP, params),
+    queryFn: () => walletApi.statement(params),
+    enabled,
+    placeholderData: keepPreviousData,
   });
 }
 

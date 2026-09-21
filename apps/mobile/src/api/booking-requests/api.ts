@@ -1,4 +1,4 @@
-import type { components, PaginationMeta } from '@xeprime/types';
+import { BOOKING_REQUEST_STATUS, type components, type PaginationMeta } from '@xeprime/types';
 import { getApiClient, type QueryParams } from '@xeprime/api-client';
 
 type Schemas = components['schemas'];
@@ -13,6 +13,54 @@ export type CheckAvailabilityResult = Schemas['CheckAvailabilityResultDto'];
 /** Lịch bận của một xe để tô/khoá ô trên hộp chọn thời gian thuê (preview — ADR 0006). */
 export type VehicleBusyDays = Schemas['VehicleBusyDaysDto'];
 export type BookingRequestConversation = Schemas['ConversationSummaryDto'];
+
+/**
+ * Lát cắt mà BA tấm trượt quyết định (duyệt · từ chối · duyệt xong) thật sự đọc.
+ *
+ * Tồn tại vì hai màn nuôi cùng ba tấm trượt đó bằng hai DTO khác nhau: hộp thư gian hàng có
+ * `BookingRequestDto` đầy đủ, còn danh sách "Chuyến của tôi" chỉ có `CustomerTripListItemDto` —
+ * một DTO CỐ Ý hẹp hơn (không ghi chú nội bộ, không hồ sơ khách). Khai kiểu theo cái rộng hơn sẽ
+ * buộc màn chuyến bịa ra những trường nó không có, ngay trước một thao tác giữ chỗ một chiếc xe
+ * thật.
+ *
+ * `customerPhone` là `null` khi chưa được phép liên hệ — chuyến tuyến hoa hồng còn chờ duyệt
+ * (ADR 0028 điều 9). Hộp thư luôn có số thật nên vẫn thoả kiểu này.
+ */
+export type BookingRequestDecisionTarget = Omit<
+  Pick<
+    BookingRequestItem,
+    | 'id'
+    | 'bookingId'
+    | 'vehicleId'
+    | 'vehicleName'
+    | 'vehiclePlate'
+    | 'customerName'
+    | 'customerPhone'
+    | 'serviceType'
+    | 'respondBy'
+    | 'pickupAt'
+    | 'returnAt'
+    | 'deliveryRequested'
+    | 'longTermPackageMonths'
+    | 'pickupPreference'
+    | 'requestedPickupDate'
+    | 'pickupWindowStartDate'
+    | 'pickupWindowEndDate'
+  >,
+  'customerPhone' | 'serviceType' | 'pickupPreference' | 'respondBy'
+> & {
+  readonly customerPhone: string | null;
+  /**
+   * `null` khi chuyến không còn (hoặc chưa có) hạn phản hồi — hộp thư luôn có mốc thật.
+   *
+   * `isBookingRequestPastDue(null)` trả `false`, tức "không có hạn thì không quá hạn": đúng, vì
+   * một chuyến đã được duyệt hoặc đã khép không còn đồng hồ nào chạy.
+   */
+  readonly respondBy: string | null;
+  /** Mã dịch vụ đi trên dây; `/trips` khai `string` còn hộp thư khai union — `string` nhận cả hai. */
+  readonly serviceType: string;
+  readonly pickupPreference?: string | null;
+};
 export type BookingRequestStatusCount = Schemas['BookingRequestStatusCountDto'];
 
 /**
@@ -51,8 +99,37 @@ export const BOOKING_REQUESTS_DEFAULT_LIMIT = 20;
 /** Sentinel "mọi trạng thái" của giao diện — không endpoint nào nhận `status=all`. */
 export const BOOKING_REQUEST_STATUS_ALL = 'all';
 
+/**
+ * Tab GỘP "Cần xử lý" — KHÔNG phải một trạng thái thật của `BookingRequestStatus`, mà là HAI
+ * trạng thái cùng cần gian hàng quyết định: `pending_host_approval` (mới hỏi) và `hold_paid`
+ * (ADR 0039 — đã cọc, tiền đang nằm ở XePrime, xe đang bị giữ chỗ).
+ *
+ * Trước đây hai cái này là HAI TAB riêng vì sợ `hold_paid` chìm mất. Nhưng nó chỉ chìm khi lẫn
+ * vào tab "Tất cả" (gồm cả yêu cầu đã chết); gộp với đúng `pending_host_approval` không làm mất
+ * tính khẩn cấp — đồng hồ đếm hạn phản hồi đã hiện trên MỌI thẻ cần quyết định, không phân biệt
+ * theo tab. Phản hồi người dùng 19/09/2026, gương `BOOKING_REQUEST_TAB_NEEDS_ACTION` bên web.
+ */
+export const BOOKING_REQUEST_TAB_NEEDS_ACTION = 'needs_action';
+
+/** Hai trạng thái gộp trong tab "Cần xử lý" — cùng thứ tự với chuỗi gửi lên server. */
+export const BOOKING_REQUEST_NEEDS_ACTION_STATUSES = [
+  BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+  BOOKING_REQUEST_STATUS.HOLD_PAID,
+] as const;
+
+/**
+ * `status=all` là trạng thái của TAB, không phải mã nghiệp vụ (ADR 0005) — dịch thành *không
+ * gửi* `status`. `status=needs_action` cũng vậy: dịch thành hai mã thật nối dấu phẩy. MỘT chuỗi,
+ * không phải mảng — `QueryParams` của `@xeprime/api-client` cố ý không có kiểu mảng, backend
+ * tách chuỗi ở DTO (`BookingRequestListQueryDto`).
+ */
 export function bookingRequestFiltersToParams(filters: BookingRequestFilters): QueryParams {
-  const status = filters.status === BOOKING_REQUEST_STATUS_ALL ? null : (filters.status ?? null);
+  const status =
+    filters.status === BOOKING_REQUEST_STATUS_ALL
+      ? null
+      : filters.status === BOOKING_REQUEST_TAB_NEEDS_ACTION
+        ? BOOKING_REQUEST_NEEDS_ACTION_STATUSES.join(',')
+        : (filters.status ?? null);
   return {
     status,
     q: filters.q ?? null,

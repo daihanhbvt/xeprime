@@ -235,3 +235,46 @@ export function isHoldPastDue(
   const due = expiresAt instanceof Date ? expiresAt : new Date(expiresAt);
   return due.getTime() <= now.getTime();
 }
+
+/** Ba sắc thái của một đồng hồ đếm ngược — thứ tự ưu tiên khi vẽ. */
+export type CountdownState = 'normal' | 'urgent' | 'expired';
+
+/** Sắc thái của đồng hồ theo thời gian còn lại. Hết giờ thắng mọi ngưỡng khác. */
+export function countdownState(remainingMs: number, urgentMs: number): CountdownState {
+  if (remainingMs <= 0) return 'expired';
+  return remainingMs <= urgentMs ? 'urgent' : 'normal';
+}
+
+/** `m:ss` — không đưa giờ vào vì mọi cửa sổ dùng đồng hồ này đều không quá 60 phút mỗi chặng. */
+export function clockText(ms: number): string {
+  const total = Math.floor(ms / 1000);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/**
+ * Chia thời gian còn lại thành CHẶNG — ADR 0032 điều 2 ("hai countdown 60 phút").
+ *
+ * Vì sao chia: một cửa sổ dài và một con số "còn 118 phút" không tạo được cảm giác cần hành
+ * động. Chia thành chặng cho người dùng một đồng hồ họ đọc được ngay, và mốc giao giữa hai chặng
+ * đúng là lúc worker bắn nhắc — hai kênh nói cùng một điều.
+ *
+ * `index` đếm từ 1 và là chặng ĐANG chạy; `total` là số chặng của cả cửa sổ.
+ *
+ * Ở đây (`packages/types`) chứ không ở component của một app, vì đây là LUẬT trình bày cửa sổ
+ * tiền — web và app native phải chia chặng giống hệt nhau, nếu không hai client nói hai con số
+ * khác nhau về cùng một khoản.
+ */
+export function countdownSegment(
+  remainingMs: number,
+  segmentMs: number,
+): { index: number; total: number; remainingInSegment: number } {
+  if (segmentMs <= 0 || remainingMs <= 0) {
+    return { index: 1, total: 1, remainingInSegment: Math.max(0, remainingMs) };
+  }
+  const rest = remainingMs % segmentMs;
+  return {
+    index: Math.ceil(remainingMs / segmentMs),
+    total: Math.ceil(remainingMs / segmentMs),
+    remainingInSegment: rest === 0 ? segmentMs : rest,
+  };
+}

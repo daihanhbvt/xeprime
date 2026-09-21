@@ -65,6 +65,21 @@ const ALLOWED: { prefix: string; resolve: Resolver }[] = [
   },
   { prefix: 'trips', resolve: listOrDetail(ROUTES.booking.list, ROUTES.booking.detail) },
   { prefix: 'chat', resolve: listOrDetail(ROUTES.chat.list, ROUTES.chat.thread) },
+  /*
+   * Hai đích của bề mặt CHỦ XE tuyến hoa hồng (`NOTIFICATION_AUDIENCE.OWNER`): thông báo về gian
+   * hàng đi tới `/account`, thông báo về xe đi tới `/account/vehicles` — bản Owner Lite trong khu
+   * khách, vì họ không mở được `/manage`.
+   *
+   * Thiếu hai dòng này thì mọi thông báo duyệt hồ sơ và duyệt xe của chủ xe tuyến hoa hồng bấm
+   * vào KHÔNG đi đâu cả — đúng cái mà docblock ở trên bảo là không được phép xảy ra.
+   *
+   * `exact`, không phải `listOrDetail`: `notificationDeepLink` không bao giờ gắn id vào hai đích
+   * này, nên nhận thêm một đoạn phía sau là nới allowlist rộng hơn thứ nó phải bảo vệ.
+   *
+   * Đứng SAU `chat` và đoạn dài trước đoạn ngắn — phép so là so tiền tố.
+   */
+  { prefix: 'account/vehicles', resolve: exact(ROUTES.account.vehicles) },
+  { prefix: 'account', resolve: exact(ROUTES.account.home) },
 ];
 
 /** Đích cần đăng nhập không? Toàn bộ đích của thông báo đều cần — không có ngoại lệ hôm nay. */

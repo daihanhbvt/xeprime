@@ -6,6 +6,7 @@ import { useRouter, type Href } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
+  API_ERROR_CODE,
   PERMISSION,
   STATUS_COLOR,
   BOOKING_STATUS,
@@ -13,6 +14,7 @@ import {
   VEHICLE_ALERT_KIND,
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS_META,
+  VEHICLE_SERVICE_SETTING_SERVICES,
   VEHICLE_SOURCE_TYPE,
   type BookingStatus,
   type VehicleOperationStatus,
@@ -20,6 +22,7 @@ import {
   type VehicleSourceType,
 } from '@xeprime/types';
 import { LIST_SEPARATOR, toAppTz } from '@xeprime/domain';
+import { getErrorCode } from '@/lib/api-client';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { AlertDialog } from '@/components/ui/AlertDialog';
@@ -175,15 +178,35 @@ export function VehicleDetailScreen({
   }
 
   if (query.isError) {
+    /*
+     * "Không tìm thấy" là một KẾT CỤC, không phải một lỗi để thử lại.
+     *
+     * Backend trả 404 cho cả "xe không tồn tại" lẫn "xe của gian hàng khác" — cố ý, để không xác
+     * nhận sự tồn tại xe của người khác (CLAUDE.md §3). Nên ở đây lối thoát là quay về danh sách
+     * chứ không phải một nút "Thử lại" mà lần nào cũng cho cùng một kết quả. Nhánh theo MÃ lỗi có
+     * cấu trúc, không theo câu tiếng Việt của backend (ADR 0012) — cùng cách web phân nhánh.
+     */
+    const notFound = getErrorCode(query.error) === API_ERROR_CODE.NOT_FOUND;
+
     return (
       <>
         <AppHeader title={t('title')} onBack={back} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
-          <ScreenError
-            error={query.error}
-            title={t('loadErrorTitle')}
-            onRetry={() => void query.refetch()}
-          />
+          {notFound ? (
+            <ScreenMessage
+              icon="car-outline"
+              title={t('notFoundTitle')}
+              description={t('notFoundBody')}
+              actionLabel={t('backToList')}
+              onAction={back}
+            />
+          ) : (
+            <ScreenError
+              error={query.error}
+              title={t('loadErrorTitle')}
+              onRetry={() => void query.refetch()}
+            />
+          )}
         </Screen>
       </>
     );
@@ -687,6 +710,9 @@ function ModuleLinks({
   customerScope: boolean;
 }) {
   const t = useTranslations('Vehicles.overview.links');
+  /* Nhãn mục "Tối ưu nhận chuyến" dùng lại CHÍNH chữ của thẻ tương ứng bên web, không chép ra
+     một khoá thứ hai — hai chuỗi cho một mục là hai chuỗi sẽ trôi khỏi nhau. */
+  const tAutomation = useTranslations('Vehicles.overview.automation');
   const tStates = useTranslations('Common.states');
   const { has } = usePermissions();
   const navigateOnce = useNavigateOnce();
@@ -732,6 +758,24 @@ function ModuleLinks({
           : ROUTES.manage.vehiclePricing(vehicle.id),
       },
     );
+    /*
+     * TỐI ƯU NHẬN CHUYẾN — chỉ ở cổng QUẢN LÝ. Khu tài khoản đã có mục này trong mục lục quản
+     * lý xe của chính nó (`VEHICLE_MANAGE_NAV`), nên thêm ở đây là hai lối vào cùng một màn.
+     *
+     * Ẩn khi xe không phục vụ dịch vụ nào CÓ thiết lập riêng: thuê dài hạn luôn do gian hàng
+     * chốt lịch tay (ADR 0011), nên với xe chỉ cho thuê dài hạn thì mục này mở ra một màn rỗng.
+     */
+    if (
+      !customerScope &&
+      VEHICLE_SERVICE_SETTING_SERVICES.some((service) => vehicle.serviceTypes.includes(service))
+    ) {
+      links.push({
+        key: 'optimization',
+        label: tAutomation('title'),
+        icon: 'flash-outline',
+        href: ROUTES.manage.vehicleOptimization(vehicle.id),
+      });
+    }
     if (has(PERMISSION.FINANCE_VIEW) && !customerScope) {
       links.push({
         key: 'source',

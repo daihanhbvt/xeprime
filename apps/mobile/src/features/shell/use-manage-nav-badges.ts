@@ -1,7 +1,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
-import { BOOKING_REQUEST_STATUS, PERMISSION } from '@xeprime/types';
-import { bookingRequestFiltersToParams, bookingRequestsApi } from '@/features/booking-requests/api';
+import { PERMISSION } from '@xeprime/types';
+import {
+  bookingRequestFiltersToParams,
+  bookingRequestsApi,
+  BOOKING_REQUEST_NEEDS_ACTION_STATUSES,
+} from '@/features/booking-requests/api';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { useBranchScopeParams } from '@/features/branches/hooks/use-branch-scope';
@@ -53,7 +57,12 @@ export function useManageNavBadges(): ManageNavBadgeCounts {
    */
   const branchScope = useBranchScopeParams();
   const filters = {
-    status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+    /*
+     * PHẢI cùng bộ trạng thái với tab "Cần xử lý" của hộp thư (ADR 0039): trước đây chỉ đếm
+     * `pending_host_approval` nên huy hiệu và tab nói hai con số khác nhau — yêu cầu đã cọc
+     * chờ duyệt không được đếm, đúng loại việc khẩn nhất.
+     */
+    status: BOOKING_REQUEST_NEEDS_ACTION_STATUSES.join(","),
     page: FIRST_PAGE,
     limit: COUNT_ONLY_LIMIT,
     ...branchScope,

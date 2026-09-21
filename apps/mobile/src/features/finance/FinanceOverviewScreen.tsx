@@ -24,6 +24,7 @@ import { CategoryBreakdown } from './components/CategoryBreakdown';
 import { CustomerRevenueList } from './components/CustomerRevenueList';
 import { FinanceOverviewCards } from './components/FinanceOverviewCards';
 import { FinancePeriodBar } from './components/FinancePeriodBar';
+import { ShopTaxWithheldCard } from '@/features/tax/components/ShopTaxWithheldCard';
 import { RevenueTrendChart } from './components/RevenueTrendChart';
 import { useBucketLabels } from './hooks/use-bucket-labels';
 import { VehicleProfitList } from './components/VehicleProfitList';
@@ -290,6 +291,12 @@ export function FinanceOverviewScreen() {
             }}
             onPageChange={setCustomerPage}
           />
+
+          {/*
+            Thuế đã khấu trừ trong kỳ (Phase 8 — ADR 0032 điều 3). Đứng ở sổ tài chính vì nó là một
+            dòng làm GIẢM tiền chủ xe thực nhận, nên nó thuộc cùng câu hỏi với doanh thu và chi phí.
+          */}
+          <ShopTaxWithheldCard />
         </YStack>
       </Screen>
     </>

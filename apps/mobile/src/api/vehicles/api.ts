@@ -5,6 +5,29 @@ import { uploadsApi, type UploadMeta, type UploadPresign } from '../uploads/api'
 type Schemas = components['schemas'];
 
 export type VehicleListItem = Schemas['VehicleListItemDto'];
+/**
+ * Khoảng giá tham khảo cho ô "Giá thuê mỗi ngày" — kèm phần nói lên ĐỘ TIN CẬY (`basis`,
+ * `sampleSize`), không chỉ một con số.
+ */
+export type MarketPriceSuggestion = Schemas['MarketPriceSuggestionDto'];
+
+/** Chiều so sánh gửi lên — tất cả tuỳ chọn trừ loại xe; thiếu chiều nào thì backend nới rộng. */
+export interface MarketPriceParams {
+  vehicleType: string;
+  bodyType?: string | null;
+  motorbikeCategory?: string | null;
+  seatCount?: number | null;
+  provinceCode?: string | null;
+}
+
+/** Tham số gửi lên — khai tường minh để hai client hỏi cùng một câu (và trúng cùng một cache). */
+export const marketPriceParams = (params: MarketPriceParams): QueryParams => ({
+  vehicleType: params.vehicleType,
+  bodyType: params.bodyType ?? null,
+  motorbikeCategory: params.motorbikeCategory ?? null,
+  seatCount: params.seatCount ?? null,
+  provinceCode: params.provinceCode ?? null,
+});
 export type VehicleDetail = Schemas['VehicleDetailDto'];
 export type CreateVehicleInput = Schemas['CreateVehicleDto'];
 export type UpdateVehicleInput = Schemas['UpdateVehicleDto'];
@@ -184,6 +207,19 @@ export const vehiclesApi = {
 
   savePricing(id: string, body: SaveVehiclePricingInput): Promise<VehiclePricing> {
     return getApiClient().put<VehiclePricing>(`/vehicles/${encodeURIComponent(id)}/pricing`, body);
+  },
+
+  /**
+   * Khoảng giá tham khảo của phân khúc — endpoint CÔNG KHAI, không cần gian hàng.
+   *
+   * Nó trả lời "xe như thế này ở tỉnh này đang cho thuê bao nhiêu", nên nó là mặt bằng thị trường
+   * chứ không phải số liệu của chiếc xe đang khai.
+   */
+  marketPriceSuggestion(params: MarketPriceParams): Promise<MarketPriceSuggestion> {
+    return getApiClient().get<MarketPriceSuggestion>(
+      '/public/listings/price-suggestion',
+      marketPriceParams(params),
+    );
   },
 
   /** Presign ảnh xe — chuyển tiếp cho `uploadsApi`, chủ sở hữu của mọi đường presign công khai. */
