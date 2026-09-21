@@ -1,4 +1,8 @@
-import { tenantUsesManagePortal, type components } from '@xeprime/types';
+import {
+  isPackageOnboardingPending,
+  tenantUsesManagePortal,
+  type components,
+} from '@xeprime/types';
 
 /**
  * Hai KHU của app native: khu khách thuê xe và khu quản lý gian hàng.
@@ -30,6 +34,14 @@ export interface ScopeCapability {
   readonly canManage: boolean;
   /** Nhân sự nền tảng. App native chưa phục vụ scope này — tính sẵn để khỏi đổi chữ ký sau. */
   readonly canAdmin: boolean;
+  /**
+   * Gian hàng TRẢ PHÍ đang nợ bước thanh toán lượt gói đầu (ADR 0040).
+   *
+   * Tách hẳn khỏi `canManage` vì họ chưa vào được bộ quản lý — nhưng cũng KHÔNG phải chủ xe tuyến
+   * hoa hồng: `billingMode` của họ rỗng y như một tenant có danh mục gói hỏng, và xếp họ vào Owner
+   * Lite là thả họ vào đúng màn "Hồ sơ chủ xe" mà ADR 0040 sinh ra để họ không bao giờ thấy.
+   */
+  readonly packageOnboardingPending: boolean;
 }
 
 /**
@@ -57,6 +69,7 @@ export function resolveScopeCapability(user: CurrentUserLike | null | undefined)
     canRent: user != null,
     canManage: tenantUsesManagePortal(user?.tenant ?? null),
     canAdmin: Boolean(user?.platformRole),
+    packageOnboardingPending: isPackageOnboardingPending(user?.tenant ?? null),
   };
 }
 
@@ -80,6 +93,15 @@ export function resolveInitialScope(params: {
   remembered?: AppScope | null;
 }): AppScope {
   const capability = resolveScopeCapability(params.user);
+  /*
+   * BƯỚC CÒN NỢ thắng cả lựa chọn đã nhớ (ADR 0040).
+   *
+   * Gian hàng trả phí chưa chuyển khoản chỉ vào được đúng màn onboarding, và đó là việc duy nhất
+   * họ có trong app lúc này. Tôn trọng `remembered = customer` ở đây là mở marketplace cho một
+   * người vừa bấm "Đăng ký gian hàng" rồi tắt app giữa chừng — họ không có gì để làm ở đó, và
+   * Owner Lite thì `AccountTrackNotice` phải giải thích bằng một dải nhắc thay vì một màn hình.
+   */
+  if (capability.packageOnboardingPending) return APP_SCOPE.MANAGE;
   if (!capability.canManage && !capability.canAdmin) return APP_SCOPE.CUSTOMER;
   return params.remembered === APP_SCOPE.CUSTOMER ? APP_SCOPE.CUSTOMER : APP_SCOPE.MANAGE;
 }

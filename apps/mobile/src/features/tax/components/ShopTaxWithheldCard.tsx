@@ -156,6 +156,12 @@ export function ShopTaxWithheldCard() {
  * một hàng năm cột chỉ còn chỗ cho những con số bị cắt.
  *
  * Dòng ÂM là bút toán ĐẢO: nó phải đọc được là ÂM (màu + dấu), không chỉ là một số nhỏ hơn.
+ *
+ * ⚠️ Màu của dòng âm là **cảnh báo**, không phải xanh — đúng `.negative` của web. Bản trước tô
+ * xanh vì "thuế hoàn lại thì tốt cho chủ xe", nhưng đó là một cách đọc app tự nghĩ ra, và nó đá
+ * nhau với chính app: ở sổ ví xanh nghĩa là TIỀN VÀO. Cùng một sắc nói hai điều khác nhau trên hai
+ * màn tiền là cách chắc chắn để người dùng đọc sai một con số. Ở bảng kế toán, màu này chỉ có một
+ * nghĩa duy nhất: con số này ÂM.
  */
 function TaxRowLine({ row }: { row: TaxRow }) {
   const t = useTranslations('Finance.taxWithheld');
@@ -181,7 +187,7 @@ function TaxRowLine({ row }: { row: TaxRow }) {
 
       <YStack ai="flex-end" gap={space.xs}>
         <Text
-          col={negative ? colors.success : colors.text}
+          col={negative ? colors.danger : colors.text}
           fos={fontSize.bodySm}
           fow={fontWeight.semibold}
         >

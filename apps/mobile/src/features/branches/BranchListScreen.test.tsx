@@ -277,16 +277,19 @@ describe('BranchListScreen — thao tác vòng đời', () => {
     expect(view.createSpy).not.toHaveBeenCalled();
   });
 
-  it('tạo chi nhánh đủ trường: gửi MÃ hai cấp, không gửi tên và không gửi chuỗi hiển thị', async () => {
+  /*
+   * Từ ADR 0042 ô CÓ GHIM không hỏi Xã/phường nữa: một toạ độ người dùng nhìn và xác nhận định vị
+   * chính xác hơn hẳn một mã năm chữ số. Body vì thế mang MÃ TỈNH + địa chỉ, và `wardCode` vắng
+   * mặt — không phải chuỗi rỗng, thứ sẽ đi vào `@Length(5, 5)` của DTO và bật 400.
+   */
+  it('tạo chi nhánh: gửi MÃ TỈNH, không gửi tên, không gửi chuỗi hiển thị, không gửi mã xã rỗng', async () => {
     const view = await renderScreen([PERMISSION.BRANCH_VIEW, PERMISSION.BRANCH_MANAGE]);
 
     await fireEvent.press(await view.findByLabelText('Thêm chi nhánh'));
     await fireEvent.changeText(await view.findByLabelText('Tên chi nhánh'), 'Chi nhánh mới');
     await fireEvent.press(view.getByLabelText('Tỉnh/thành phố'));
     await fireEvent.press(await view.findByText('TP Đà Nẵng'));
-    await fireEvent.press(view.getByLabelText('Xã/phường'));
-    await fireEvent.press(await view.findByText('Phường Hải Châu'));
-    await fireEvent.changeText(view.getByLabelText('Số nhà, đường'), '215 Nguyễn Văn Linh');
+    await fireEvent.changeText(view.getByLabelText('Địa chỉ'), '215 Nguyễn Văn Linh');
     await fireEvent.press(view.getByText('Tạo chi nhánh'));
 
     await waitFor(() => expect(view.createSpy).toHaveBeenCalled());
@@ -294,12 +297,13 @@ describe('BranchListScreen — thao tác vòng đời', () => {
     expect(body).toMatchObject({
       name: 'Chi nhánh mới',
       provinceCode: '48',
-      wardCode: '20242',
       addressLine: '215 Nguyễn Văn Linh',
     });
-    // Tên tỉnh/xã và chuỗi hiển thị do SERVER tra và ghép (ADR 0035 điều 3).
+    // Tên tỉnh và chuỗi hiển thị do SERVER tra và ghép (ADR 0035 điều 3).
     expect(body).not.toHaveProperty('provinceName');
     expect(body).not.toHaveProperty('address');
+    // Ô không còn tồn tại ⇒ trường vắng mặt, KHÔNG phải một chuỗi rỗng.
+    expect(body?.wardCode).toBeUndefined();
   });
 });
 

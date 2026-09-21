@@ -1,5 +1,7 @@
+import type { Href } from 'expo-router';
 import { TENANT_ROLE } from '@xeprime/types';
 import { WALLET_SCOPE, type WalletScope } from '@/api/wallet/api';
+import { ROUTES } from '@/navigation/routes';
 import type { CurrentUser } from '@/features/auth/api';
 
 /**
@@ -25,4 +27,18 @@ export function walletScopeFor(
   return user?.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER
     ? WALLET_SCOPE.SHOP
     : WALLET_SCOPE.ACCOUNT;
+}
+
+/**
+ * ĐÍCH của sổ ví cho người đang đăng nhập — cùng luật, cùng hai đích với
+ * `apps/web/src/features/wallet/wallet-scope.ts`.
+ *
+ * Hai route vì hai SỔ khác nhau: chủ xe đọc sổ tenant ở `/account/earnings`, người chưa là chủ xe
+ * đọc sổ cá nhân ở `/account/balance`. Chủ xe tuyến hoa hồng không vào khu quản lý được, nên sổ
+ * tenant của họ phải có một cửa trong khu khách.
+ */
+export function walletHrefFor(user: Pick<CurrentUser, 'tenant'> | null | undefined): Href {
+  return walletScopeFor(user) === WALLET_SCOPE.SHOP
+    ? ROUTES.account.earnings()
+    : ROUTES.account.balance();
 }

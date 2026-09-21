@@ -8,6 +8,8 @@ export type MyShop = Schemas['MyShopDto'];
 export type ShopProfile = Schemas['TenantProfileDto'];
 export type ShopDefaultBranch = Schemas['DefaultBranchDto'];
 export type ShopLatestApproval = Schemas['LatestApprovalDto'];
+/** Tài khoản CHỦ gian hàng — nguồn của họ tên + SĐT từ 16/09/2026, KHÔNG còn nằm trên hồ sơ. */
+export type ShopOwnerAccount = Schemas['ShopOwnerAccountDto'];
 export type RegisterShopInput = Schemas['RegisterShopDto'];
 export type UpdateShopProfileInput = Schemas['UpdateTenantProfileDto'];
 /** Gian hàng nhìn từ phiên hiện tại (`GET /tenants/current`) — tóm tắt, không phải hồ sơ. */

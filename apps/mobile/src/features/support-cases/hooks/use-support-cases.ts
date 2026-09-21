@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPageData } from '@/queries/keep-page-data';
 import { queryKeys } from '@/queries/query-keys';
 import {
   supportCasesApi,
@@ -19,9 +20,18 @@ import {
  * dùng lẫn cache của nhau — cùng một `id` trả về dòng thời gian khác nhau ở hai bề mặt.
  */
 export function useSupportCases(surface: SupportSurface, filters: SupportCaseFilters) {
+  const params = supportCasesToParams(surface, filters);
+
   return useQuery({
-    queryKey: queryKeys.supportCases.list(supportCasesToParams(surface, filters)),
+    queryKey: queryKeys.supportCases.list(params),
     queryFn: () => supportCasesApi.list(surface, filters),
+    /*
+     * Giữ trang TRƯỚC trong lúc trang/bộ lọc mới đang tải — đúng `keepPreviousData` của web.
+     *
+     * Thiếu nó thì mỗi ký tự gõ vào ô tìm là một lần danh sách biến mất và khung chờ nhảy vào,
+     * trên một màn mà người dùng đang đọc để so sánh.
+     */
+    placeholderData: keepPageData<Awaited<ReturnType<typeof supportCasesApi.list>>>(params),
   });
 }
 

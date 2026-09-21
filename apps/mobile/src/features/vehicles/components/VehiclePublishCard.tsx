@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -14,7 +15,9 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
-import { applicablePublishRequirements, publicStatusPresentation } from '../publication';
+import { ShopListingGateAlert } from '@/features/shop/components/ShopListingGateAlert';
+import { packageShopListingGateFrom } from '@xeprime/domain';
+import { publicStatusPresentation, publishChecklist } from '../publication';
 import { useSubmitVehiclePublic } from '../hooks/use-vehicle';
 import type { VehicleDetail } from '../api';
 
@@ -41,17 +44,32 @@ export function VehiclePublishCard({ vehicle }: { vehicle: VehicleDetail }) {
   const errorMessage = useErrorMessage();
   const { has } = usePermissions();
   const submit = useSubmitVehiclePublic(vehicle.id);
+  /**
+   * Hồ sơ GIAN HÀNG còn thiếu gì (ADR 0040) — `null` = không phải lỗi đó.
+   *
+   * Giữ trong state thay vì đọc từ `submit.error`: dải này phải ĐỨNG LẠI cho tới khi người dùng sửa
+   * xong (họ sẽ rời sang màn hồ sơ để tải logo rồi quay về), còn `submit.error` biến mất ngay khi
+   * mutation được gọi lại. Và nó phải tự dọn khi lượt gửi kế tiếp đi qua được — nếu không, một dải
+   * nói về logo còn đứng đó sau khi logo đã có.
+   */
+  const [listingGate, setListingGate] = useState<
+    ReturnType<typeof packageShopListingGateFrom>
+  >(null);
 
   const status = vehicle.publicStatus as VehiclePublicStatus;
   const canSubmit =
     has(PERMISSION.VEHICLE_SUBMIT_PUBLIC) &&
     (VEHICLE_PUBLIC_STATUS_SUBMITTABLE as readonly string[]).includes(status);
 
-  // Checklist chỉ gồm điều kiện ÁP DỤNG với xe này — giá kiểm theo dịch vụ xe đăng.
-  const checklist = applicablePublishRequirements(vehicle).map((item) => ({
-    key: item.key,
-    label: t(`requirements.${item.key}`),
-    met: item.present(vehicle),
+  /*
+   * Checklist chỉ gồm điều kiện ÁP DỤNG với xe này — giá kiểm theo dịch vụ xe đăng.
+   *
+   * Luật đến từ `@xeprime/types` (qua `publishChecklist`), CÙNG bảng mà backend dùng để từ chối
+   * `submit-public`. Trước đợt này app giữ một bản chép tay thiếu mục `branchLocation`.
+   */
+  const checklist = publishChecklist(vehicle).map((item) => ({
+    ...item,
+    label: t(`requirements.${item.key}` as 'requirements.plateNumber'),
   }));
   const missingCount = checklist.filter((item) => !item.met).length;
   const isResubmit = status !== VEHICLE_PUBLIC_STATUS.DRAFT;
@@ -62,8 +80,20 @@ export function VehiclePublishCard({ vehicle }: { vehicle: VehicleDetail }) {
 
   function onSubmit() {
     submit.mutate(undefined, {
-      onSuccess: () => toast.showSuccess(t('panel.submitted')),
-      onError: (error) => toast.showError(errorMessage(error)),
+      onSuccess: () => {
+        setListingGate(null);
+        toast.showSuccess(t('panel.submitted'));
+      },
+      onError: (error) => {
+        /*
+         * Cổng hồ sơ gian hàng có một dải RIÊNG vì nó cần một đường đi tiếp (xem
+         * `ShopListingGateAlert`). Mọi lỗi khác vẫn là một toast — chúng không có lối đi nào
+         * ngoài "thử lại".
+         */
+        const gate = packageShopListingGateFrom(error);
+        setListingGate(gate);
+        if (!gate) toast.showError(errorMessage(error));
+      },
     });
   }
 
@@ -83,6 +113,8 @@ export function VehiclePublishCard({ vehicle }: { vehicle: VehicleDetail }) {
               : t(`status.${presentation.key}.description`)}
           </Text>
         </YStack>
+
+        {listingGate ? <ShopListingGateAlert missing={listingGate} /> : null}
 
         {canSubmit ? (
           <>

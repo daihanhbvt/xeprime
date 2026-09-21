@@ -1,5 +1,6 @@
 import type { Href } from 'expo-router';
 import type { LegalDoc } from '@xeprime/domain';
+import { REGISTRATION_TRACK, type RegistrationTrack } from '@xeprime/types';
 import { VEHICLE_EDIT_TAB, type VehicleEditTab } from './vehicle-edit-tab';
 import {
   VEHICLE_REGISTRATION_SOURCE,
@@ -47,6 +48,26 @@ const VEHICLE_MANAGE_SECTION_PATHNAME = {
     '/account/vehicles/[id]/manage/with-driver/surcharges',
   [VEHICLE_MANAGE_SECTION.WITH_DRIVER_TERMS]: '/account/vehicles/[id]/manage/with-driver/terms',
 } as const satisfies Record<VehicleManageSection, string>;
+
+/**
+ * Tên tham số mang CỬA VÀO của màn onboarding — cùng chữ với `REGISTRATION_TRACK_PARAM` bên web,
+ * nên một deep link `xeprime://manage/onboarding?track=package` và URL web trỏ cùng một chỗ.
+ */
+export const REGISTRATION_TRACK_PARAM = 'track';
+
+/** "Vừa thanh toán xong, chào mừng" trên màn hồ sơ gian hàng — cùng chữ với web. */
+export const SHOP_WELCOME_PARAM = 'welcome';
+
+/**
+ * PHẦN ĐƯỜNG DẪN của hai route nhận tham số — thứ mà cổng chặn đem ra so với `usePathname()`.
+ *
+ * Phải là hằng riêng, KHÔNG phải `String(ROUTES.manage.onboarding())`: hai builder đó nay trả về
+ * một object `Href` khi có tham số, và `String({…})` cho ra `"[object Object]"`. Phép so vẫn biên
+ * dịch, vẫn chạy, và chỉ sai âm thầm ở đúng nhánh người dùng đi qua cửa gian hàng — tức cổng
+ * `ScopeGuard` mở nhầm cho một route nó phải gác.
+ */
+export const MANAGE_ONBOARDING_PATHNAME = '/manage/onboarding';
+export const MANAGE_SHOP_PATHNAME = '/manage/shop';
 
 export const ROUTES = {
   /** Chợ xe: trang khám phá, tìm kiếm, chi tiết xe. */
@@ -220,6 +241,17 @@ export const ROUTES = {
   },
 
   /**
+   * Lời mời tham gia gian hàng — CÔNG KHAI, mở từ liên kết trong thư.
+   *
+   * Namespace riêng chứ không nhét vào `members`: `members` là khu QUẢN LÝ nhân sự của một gian
+   * hàng, còn người mở địa chỉ này chưa thuộc gian hàng nào và có thể còn chưa có tài khoản. Cùng
+   * địa chỉ với web (`/invites/<token>`) nên một liên kết gửi qua thư mở được ở cả hai nơi.
+   */
+  invites: {
+    answer: (token: string): Href => ({ pathname: '/invites/[token]', params: { token } }),
+  },
+
+  /**
    * Đăng xe cho thuê — CỬA VÀO công khai của chủ xe mới, cùng địa chỉ với web.
    *
    * Nằm NGOÀI `manage` có chủ đích: người chưa có gian hàng không nên gặp form hỏi tên gian hàng
@@ -389,11 +421,31 @@ export const ROUTES = {
      *
      * Nằm dưới `manage/` như web (`/manage/onboarding`) để deep link ánh xạ 1-1, nhưng nó là
      * màn của người CHƯA có gian hàng: `ScopeGuard` cho qua đúng route này, xem `app/manage/_layout.tsx`.
+     *
+     * `track` là CỬA VÀO người dùng vừa bấm (ADR 0040) — `commission` cho "Đăng xe cho thuê",
+     * `package` cho "Đăng ký gian hàng". Nó quyết định cả hợp đồng gửi lên (`registrationTrack`)
+     * lẫn bộ trường bắt buộc, không chỉ câu chữ. Vắng mặt = cửa mặc định (hoa hồng), đúng như
+     * `registrationTrackOf` ở server hiểu.
+     *
+     * Chỉ có nghĩa khi CHƯA có gian hàng: sau bước 1, nguồn là `tenants.onboarding_state` — đó là
+     * lý do bốn cách phân biệt cũ ở client đều chết sau một lần mở lại app.
      */
-    onboarding: (): Href => '/manage/onboarding',
+    onboarding: (track: RegistrationTrack = REGISTRATION_TRACK.COMMISSION): Href =>
+      track === REGISTRATION_TRACK.COMMISSION
+        ? MANAGE_ONBOARDING_PATHNAME
+        : { pathname: MANAGE_ONBOARDING_PATHNAME, params: { [REGISTRATION_TRACK_PARAM]: track } },
 
-    /** Hồ sơ gian hàng + gửi duyệt (SHP-02). */
-    shop: (): Href => '/manage/shop',
+    /**
+     * Hồ sơ gian hàng + gửi duyệt (SHP-02).
+     *
+     * `welcome` là dải chào MỘT LẦN sau lượt thanh toán gói đầu tiên (ADR 0040). Nó không mở hay
+     * khoá gì — cổng logo thật nằm ở `submitForPublicReview` — nên nó được phép đi trong tham số
+     * điều hướng, và kịch bản xấu nhất là ai đó thấy một dòng chào không dành cho mình.
+     */
+    shop: (options?: { welcome?: boolean }): Href =>
+      options?.welcome
+        ? { pathname: MANAGE_SHOP_PATHNAME, params: { [SHOP_WELCOME_PARAM]: '1' } }
+        : MANAGE_SHOP_PATHNAME,
 
     /**
      * "Tài khoản & bảo mật" của NGƯỜI đăng nhập, bên trong khu quản lý (ADR 0038 điều 7).
@@ -488,6 +540,18 @@ export const ROUTES = {
       pathname: '/manage/vehicles/[id]/pricing',
       params: { id: vehicleId },
     }),
+    /**
+     * Tối ưu nhận chuyến của xe GIAN HÀNG — cùng địa chỉ với web
+     * (`/manage/vehicles/{id}/optimization`).
+     *
+     * Khu tài khoản có mục này từ lâu dưới `/account/vehicles/[id]/manage/.../optimization`; cổng
+     * quản lý thì không, nên xe gian hàng không có đường nào bật "Đặt ngay" dù server vẫn đọc
+     * đúng cờ đó. Một màn, nhiều tab dịch vụ — xem `VehicleOptimizationScreen`.
+     */
+    vehicleOptimization: (vehicleId: string): Href => ({
+      pathname: '/manage/vehicles/[id]/optimization',
+      params: { id: vehicleId },
+    }),
 
     /**
      * Trung tâm hỗ trợ của cổng quản lý (SYS-05) — cùng địa chỉ với web (`/manage/support`).
@@ -511,6 +575,16 @@ export const ROUTES = {
    */
   legal: {
     doc: (doc: LegalDoc): Href => ({ pathname: '/legal/[doc]', params: { doc } }),
+  },
+
+  /**
+   * Trung tâm hỗ trợ CÔNG KHAI — khác hẳn `account.support` (hàng đợi yêu cầu của một người) và
+   * `manage.support` (trung tâm trợ giúp của gian hàng).
+   *
+   * Cùng địa chỉ với web vì Quy chế sàn viện dẫn thẳng nó làm "cơ chế tiếp nhận phản ánh".
+   */
+  support: {
+    home: (): Href => '/support',
   },
 
   /** Gốc app — chỉ dùng cho fallback khi không có màn nào để lui về. */

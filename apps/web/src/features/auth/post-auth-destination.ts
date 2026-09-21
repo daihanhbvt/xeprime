@@ -1,10 +1,8 @@
 import {
-  OWNER_STAGE,
-  TENANT_ROLE,
-  isEstablishedPackageShop,
+  WORKSPACE_TARGET,
   isPackageOnboardingPending,
-  resolveOwnerStage,
-  tenantUsesManagePortal,
+  resolveWorkspaceTarget,
+  type WorkspaceTarget,
 } from '@xeprime/types';
 
 import { ROUTES } from '@/constants/routes';
@@ -54,71 +52,35 @@ export interface AuthScope {
 }
 
 /**
+ * Khoá khu làm việc → đích của WEB.
+ *
+ * Phép suy nằm ở `resolveWorkspaceTarget` (`@xeprime/types`), dùng chung với app native; ở đây
+ * chỉ còn bảng địa chỉ, vì hai app đi tới hai nơi khác nhau cho cùng một câu trả lời. `Record`
+ * đầy đủ nên thêm một khoá vào `WORKSPACE_TARGET` mà quên đường dẫn sẽ đỏ ngay ở đây, thay vì
+ * âm thầm rơi vào một nhánh mặc định.
+ */
+const TARGET_HREF: Readonly<Record<WorkspaceTarget, string>> = {
+  [WORKSPACE_TARGET.ONBOARDING]: ROUTES.MANAGE.ONBOARDING,
+  [WORKSPACE_TARGET.MANAGE]: ROUTES.MANAGE.ROOT,
+  [WORKSPACE_TARGET.ACCOUNT]: ROUTES.ACCOUNT.ROOT,
+  [WORKSPACE_TARGET.VEHICLES]: ROUTES.ACCOUNT.VEHICLES,
+  [WORKSPACE_TARGET.REGISTRATION]: ROUTES.ACCOUNT.REGISTRATION,
+};
+
+/**
  * "Khu làm việc của người này ở đâu" — `/manage` hay `/account`.
  *
  * MỘT nơi trả lời, vì câu hỏi này xuất hiện ở rất nhiều chỗ: sau đăng nhập, CTA chủ xe, thẻ gian
  * hàng ở trang tài khoản, menu marketplace, màn kết thúc wizard đăng xe, và cổng chặn của
- * `AppShell`. Mỗi nơi tự quyết định là mỗi nơi một luật, và đó chính là hiện trạng đang sửa.
+ * `AppShell`. Mỗi nơi tự quyết định là mỗi nơi một luật.
  *
- * Luật (sửa 16/09/2026 — xem bên dưới):
- *  - Không có gian hàng → `null` (nơi gọi tự chọn: landing đăng xe, hay ở nguyên trang).
- *  - Gian hàng TRẢ PHÍ chưa thanh toán lượt gói đầu → `/manage/onboarding` (bước 2). Đọc TRƯỚC
- *    mọi luật khác — xem "Vì sao tuyến gói đọc trước" bên dưới.
- *  - Gian hàng có THUÊ BAO hiệu lực (kể cả đang trong ân hạn) → `/manage`, cho MỌI vai.
- *  - Còn lại → `/account`: chủ xe về Owner Lite (đang đăng ký thì về màn tiến trình, xong rồi
- *    thì về danh sách xe); nhân viên của gian hàng đó về khu tài khoản cá nhân.
- *
- * ## Vì sao tuyến gói đọc TRƯỚC (ADR 0040)
- *
- * Gian hàng trả phí đang chờ đối soát cố ý KHÔNG có dòng thuê bao nào, nên `billingMode` của họ
- * rỗng — cùng hình dạng với một tenant có danh mục gói hỏng. Mọi phép suy chỉ dựa vào
- * `billingMode` đẩy họ vào Owner Lite, tức là đúng màn "Hồ sơ chủ xe" mà ADR 0040 sinh ra để họ
- * không bao giờ thấy. Câu hỏi "họ vào bằng cửa nào" phải được trả lời trước câu hỏi "tiền đang
- * chạy theo tuyến nào".
- *
- * Và ở chiều ngược lại: gian hàng ĐÃ trả tiền mà hết gói (`package_active` + `commission`) về
- * DANH SÁCH XE, không về màn tiến trình đăng ký. Họ đã đi hết vòng đó; mời họ làm lại là nói
- * sai với chính người đang cần một nút gia hạn.
- *
- * ## Vì sao đổi
- *
- * Bản trước hỏi `isCommissionTrack`, một hàm gộp VAI với TUYẾN. Vì nó đòi `roleKey ===
- * shop_owner`, nó trả `false` cho quản lý/nhân viên/người xem — và `!false` đưa họ vào `/manage`
- * của MỌI gian hàng, kể cả gian hàng tuyến hoa hồng và gian hàng đã hết gói. Docblock cũ ghi
- * hẳn điều đó ra như một quy tắc ("và nhân viên của mọi gian hàng → /manage").
- *
- * Nay câu hỏi là thuộc tính của TENANT (`tenantUsesManagePortal`), không hỏi vai: hết gói thì cả
- * gian hàng ra khỏi Manage cùng lúc, không ai ở lại nhờ `roleKey` của mình.
+ * Thứ tự quyết định và lý do của TỪNG nhánh nằm ở `resolveWorkspaceTarget` (`@xeprime/types`) —
+ * dùng chung với app native, nên hai client không thể trả lời khác nhau. Ở đây chỉ còn phép ánh
+ * xạ khoá → đường dẫn của web.
  */
 export function resolveWorkspaceHref(user: AuthScope | null | undefined): string | null {
-  const tenant = user?.tenant;
-  if (!tenant) return null;
-  /*
-   * CHƯA TRẢ TIỀN LƯỢT GÓI ĐẦU — bước 2 của onboarding, và câu này đọc TRƯỚC `billingMode`.
-   *
-   * Nhân viên thì sao: một gian hàng `package_pending` chưa có nhân viên nào (chưa vào được
-   * Manage, chưa mời được ai), nên nhánh này trên thực tế chỉ có chủ đi qua. Không hỏi vai ở đây
-   * có chủ đích — nếu một ngày có nhân viên trong tình trạng đó, đưa họ tới màn nói rõ "gian hàng
-   * chưa thanh toán" vẫn đúng hơn là thả họ vào Owner Lite của người khác.
-   */
-  if (isPackageOnboardingPending(tenant)) return ROUTES.MANAGE.ONBOARDING;
-  if (tenantUsesManagePortal(tenant)) return ROUTES.MANAGE.ROOT;
-  /*
-   * Không có thuê bao hiệu lực. Chủ xe về Owner Lite; nhân viên/quản lý/người xem của gian hàng
-   * đó KHÔNG có Owner Lite (đó là bộ công cụ của chủ xe) nên họ về khu tài khoản cá nhân.
-   */
-  if (tenant.roleKey !== TENANT_ROLE.SHOP_OWNER) return ROUTES.ACCOUNT.ROOT;
-  /*
-   * Gian hàng ĐÃ từng trả tiền mà gói hết hạn: về DANH SÁCH XE, không về màn tiến trình đăng ký.
-   *
-   * `resolveOwnerStage` sẽ chấm họ là `registering` ngay khi chiếc xe cuối cùng rời chợ (hạn mức
-   * gói thu nhỏ, hay chính họ ẩn xe), và màn tiến trình thì kể một câu chuyện ba bước dành cho
-   * người chưa bắt đầu. Với một gian hàng 10 xe vừa hết gói, đó là câu chuyện sai hoàn toàn.
-   */
-  if (isEstablishedPackageShop(tenant)) return ROUTES.ACCOUNT.VEHICLES;
-  return resolveOwnerStage(tenant) === OWNER_STAGE.OWNER
-    ? ROUTES.ACCOUNT.VEHICLES
-    : ROUTES.ACCOUNT.REGISTRATION;
+  const target = resolveWorkspaceTarget(user?.tenant);
+  return target ? TARGET_HREF[target] : null;
 }
 
 /** Khu làm việc là `/manage` — tức người này ĐƯỢC vào cổng quản lý. */

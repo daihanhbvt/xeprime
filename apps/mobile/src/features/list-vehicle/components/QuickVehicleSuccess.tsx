@@ -1,14 +1,14 @@
-import { Text, YStack } from 'tamagui';
+import { Ionicons } from '@expo/vector-icons';
+import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { TENANT_STATUS, VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
+import { VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { IconDisc } from '@/components/ui/IconDisc';
-import { useCurrentUser } from '@/features/auth/hooks/use-auth';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { ROUTES } from '@/navigation/routes';
 import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
 import type { VehicleRegistrationSource } from '@/navigation/vehicle-registration-source';
@@ -18,17 +18,24 @@ import type { QuickRegistrationResult } from '../hooks/use-quick-vehicle';
 /**
  * Màn KẾT QUẢ của wizard đăng xe nhanh — bản native của `QuickVehicleSuccess`.
  *
- * Ba kết cục khác nhau và không được lẫn vào nhau:
+ * BỐN kết cục khác nhau và không được lẫn vào nhau:
  *
- *  1. **Đã gửi duyệt** — có phiếu duyệt thật, xe đang chờ nền tảng xem.
- *  2. **Đã lưu nháp** — người dùng chọn lưu nháp, hoặc gian hàng chưa được duyệt hoạt động nên
- *     chưa gửi xe lên chợ được.
- *  3. **Đã lưu nháp nhưng một phần cấu hình chưa lưu được** — xe TỒN TẠI; người dùng phải biết
- *     điều đó để không bấm tạo lại và đẻ ra chiếc xe thứ hai.
+ *  1. **Đã gửi duyệt** — phiếu duyệt XE có thật (`submitted` chỉ bật khi server trả về xe ở
+ *     `pending_public_review`). Đây là toàn bộ vòng duyệt của tuyến hoa hồng: một cổng, không
+ *     còn bước "chờ duyệt gian hàng" nào phía trước (ADR 0036).
+ *  2. **Chưa gửi được vì còn thiếu điều kiện** — liệt kê TỪNG mục, xe nằm nháp và sửa được ngay.
+ *     Đây là lý do màn này nhận `missingRequirements` dưới dạng MÃ: nó dựng nhãn theo ngôn ngữ
+ *     đang dùng, thay vì hiện lại câu tiếng Việt của server (ADR 0012).
+ *  3. **Đã lưu nháp** — người dùng chủ động chọn "Lưu nháp".
+ *  4. **Lưu nháp nhưng một phần cấu hình chưa lưu được** — xe TỒN TẠI; người dùng phải biết điều
+ *     đó để không bấm tạo lại và đẻ ra chiếc xe thứ hai.
  *
- * Hồ sơ chủ xe chờ duyệt là một LỜI NHẮC RIÊNG chồng lên ba ca trên, không phải ca thứ tư thay
- * thế tiêu đề: xe vẫn vừa được lưu (hoặc vừa gửi duyệt), và nói "hồ sơ cần được duyệt" ở chỗ
- * đáng lẽ nói kết quả của chiếc xe là trả lời một câu hỏi khác câu vừa hỏi.
+ * ## KHÔNG còn dải "gian hàng chưa được duyệt" (ADR 0036/0040 điều 5)
+ *
+ * Bản trước đọc `tenant.status !== active` và mời người dùng đi hoàn tất hồ sơ gian hàng. Hai chỗ
+ * sai: trạng thái gian hàng KHÔNG còn là cổng đăng xe (xác minh là một trục riêng), và nút đó dẫn
+ * tới `/manage/shop` — một cánh cửa mà chính chủ xe tuyến hoa hồng không mở được, nên `ScopeGuard`
+ * đá họ ngược ra. Cổng thật khi gửi duyệt là `missingRequirements` ở ca 2, do SERVER trả về.
  */
 export function QuickVehicleSuccess({
   result,
@@ -42,18 +49,21 @@ export function QuickVehicleSuccess({
   onDone: () => void;
 }) {
   const t = useTranslations('ListYourVehicle.success');
+  const tRequirement = useTranslations('Vehicles.publish.requirements');
   const navigateOnce = useNavigateOnce();
-  const { data: user } = useCurrentUser();
 
-  const tenantActive = user?.tenant?.status === TENANT_STATUS.ACTIVE;
   const pendingReview = result.vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW;
   const submitted = result.submitted || pendingReview;
+  const incomplete = result.missingRequirements.length > 0;
+  const warned = Boolean(result.partialError) || incomplete;
 
   const title = result.partialError
     ? t('partialTitle')
-    : submitted
-      ? t('submittedTitle')
-      : t('draftTitle');
+    : incomplete
+      ? t('incompleteTitle')
+      : submitted
+        ? t('submittedTitle')
+        : t('draftTitle');
 
   const manageHref =
     source === VEHICLE_REGISTRATION_SOURCE.MANAGE
@@ -79,9 +89,9 @@ export function QuickVehicleSuccess({
           <Card>
             <YStack ai="center" gap={space.md}>
               <IconDisc
-                icon={result.partialError ? 'alert-circle' : 'checkmark-circle'}
-                tone={result.partialError ? colors.warning : colors.success}
-                surface={result.partialError ? colors.warningSurface : colors.successSurface}
+                icon={warned ? 'alert-circle' : 'checkmark-circle'}
+                tone={warned ? colors.warning : colors.success}
+                surface={warned ? colors.warningSurface : colors.successSurface}
                 size={64}
                 filled
               />
@@ -96,9 +106,11 @@ export function QuickVehicleSuccess({
                 <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center">
                   {result.partialError
                     ? t('partialBody')
-                    : submitted
-                      ? t('submittedBody')
-                      : t('draftBody')}
+                    : incomplete
+                      ? t('incompleteBody')
+                      : submitted
+                        ? t('submittedBody')
+                        : t('draftBody')}
                 </Text>
               </YStack>
             </YStack>
@@ -108,20 +120,32 @@ export function QuickVehicleSuccess({
           {result.partialError ? <Callout tone="warning">{result.partialError}</Callout> : null}
 
           {/*
-            Gian hàng chưa được duyệt hoạt động thì backend KHÔNG cho gửi xe lên chợ. Nói đúng việc
-            cần làm và dẫn tới đúng chỗ làm việc đó, thay vì để người dùng bấm gửi duyệt và ăn lỗi.
+            Danh sách VIỆC PHẢI LÀM, không phải một lỗi. Mỗi dòng là một mục CỤ THỂ — "Ảnh đại
+            diện" chứ không phải "dữ liệu chưa hợp lệ" — vì chủ xe phải biết bấm vào đâu để sửa,
+            và nút ngay dưới dẫn thẳng tới chỗ sửa.
           */}
-          {!tenantActive ? (
-            <Callout tone="info" title={t('shopPendingTitle')}>
+          {incomplete ? (
+            <Callout tone="warning">
               <YStack gap={space.sm}>
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {t('shopPendingBody')}
-                </Text>
+                <YStack gap={space.xs}>
+                  {result.missingRequirements.map((key) => (
+                    <XStack key={key} ai="center" gap={space.xs}>
+                      <Ionicons
+                        name="close-circle-outline"
+                        size={iconSize.sm}
+                        color={colors.warning}
+                      />
+                      <Text f={1} col={colors.text} fos={fontSize.bodySm}>
+                        {tRequirement(key as 'plateNumber')}
+                      </Text>
+                    </XStack>
+                  ))}
+                </YStack>
                 <Button
-                  label={t('shopPendingCta')}
+                  label={t('incompleteCta')}
                   variant="secondary"
                   size="sm"
-                  onPress={() => navigateOnce(ROUTES.manage.shop())}
+                  onPress={() => navigateOnce(manageHref)}
                 />
               </YStack>
             </Callout>

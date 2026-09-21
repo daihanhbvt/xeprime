@@ -15,6 +15,9 @@ import {
   holdExpiresAt,
   holdFreeCancelUntil,
   holdRemainingMs,
+  clockText,
+  countdownSegment,
+  countdownState,
   isHoldPastDue,
   isWithinFreeCancel,
 } from './holds';
@@ -397,5 +400,47 @@ describe('mã đối soát', () => {
     for (const prefix of Object.values(REFERENCE_CODE_PREFIX)) {
       for (const ch of prefix) expect(REFERENCE_CODE_ALPHABET).toContain(ch);
     }
+  });
+});
+
+describe('đồng hồ đếm ngược', () => {
+  it('sắc thái: hết giờ thắng mọi ngưỡng, kể cả ngưỡng khẩn bằng 0', () => {
+    expect(countdownState(0, 0)).toBe('expired');
+    expect(countdownState(-1, 60_000)).toBe('expired');
+    expect(countdownState(60_000, 60_000)).toBe('urgent');
+    expect(countdownState(60_001, 60_000)).toBe('normal');
+  });
+
+  it('định dạng m:ss, cắt phần mili-giây chứ không làm tròn lên', () => {
+    expect(clockText(0)).toBe('0:00');
+    expect(clockText(9_999)).toBe('0:09');
+    expect(clockText(65_000)).toBe('1:05');
+    expect(clockText(600_000)).toBe('10:00');
+  });
+
+  it('chia chặng: chặng ĐANG chạy đếm từ 1, dư 0 nghĩa là vừa tròn một chặng', () => {
+    // Cửa sổ 10 phút chia chặng 10 phút ⇒ luôn MỘT chặng, nhãn chặng không hiện.
+    expect(countdownSegment(600_000, 600_000)).toEqual({
+      index: 1,
+      total: 1,
+      remainingInSegment: 600_000,
+    });
+    // Còn 90 phút, chặng 60 phút ⇒ đang ở chặng 2/2, trong chặng còn 30 phút.
+    expect(countdownSegment(90 * 60_000, 60 * 60_000)).toEqual({
+      index: 2,
+      total: 2,
+      remainingInSegment: 30 * 60_000,
+    });
+    // Đúng ranh giới: KHÔNG được trả 0 giây còn lại, vì chặng mới chưa bắt đầu.
+    expect(countdownSegment(120 * 60_000, 60 * 60_000).remainingInSegment).toBe(60 * 60_000);
+  });
+
+  it('chia chặng: tham số vô nghĩa không làm vỡ đồng hồ', () => {
+    expect(countdownSegment(600_000, 0)).toEqual({
+      index: 1,
+      total: 1,
+      remainingInSegment: 600_000,
+    });
+    expect(countdownSegment(-5, 60_000)).toEqual({ index: 1, total: 1, remainingInSegment: 0 });
   });
 });

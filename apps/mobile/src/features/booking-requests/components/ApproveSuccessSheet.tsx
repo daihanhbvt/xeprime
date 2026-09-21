@@ -9,7 +9,7 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { colors, fontSize, iconSize, radius, space } from '@/theme/tokens';
-import type { BookingRequestItem } from '../api';
+import type { BookingRequestDecisionTarget } from '../api';
 
 /**
  * Kết quả sau khi DUYỆT — bản native của `ApproveSuccessDialog`.
@@ -21,7 +21,7 @@ export function ApproveSuccessSheet({
   request,
   onClose,
 }: {
-  request: BookingRequestItem;
+  request: BookingRequestDecisionTarget;
   onClose: () => void;
 }) {
   const t = useTranslations('BookingRequests');
@@ -88,10 +88,14 @@ export function ApproveSuccessSheet({
           value={request.vehicleName}
           {...(request.vehiclePlate ? { valueHint: request.vehiclePlate } : {})}
         />
+        {/*
+          SĐT chỉ hiện khi ĐƯỢC lộ: chuyến tuyến hoa hồng còn chờ duyệt không trả số (ADR 0028
+          điều 9), và một dòng phụ trống đọc ra như dữ liệu bị mất.
+        */}
         <DataRow
           label={t('approve.customer')}
           value={request.customerName}
-          valueHint={request.customerPhone}
+          {...(request.customerPhone ? { valueHint: request.customerPhone } : {})}
         />
         {pickup && dropoff ? (
           <DataRow

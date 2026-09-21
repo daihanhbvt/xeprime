@@ -26,6 +26,7 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useFormRefresh } from '@/hooks/use-form-refresh';
 import { useActiveBranches } from '@/features/branches/hooks/use-branches';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
@@ -189,10 +190,13 @@ function EditForm({
     'Vehicles.form.validation',
   );
 
+  const applyApiFieldErrors = useApiFieldErrors();
+
   const {
     control,
     getValues,
     reset,
+    setError,
     setValue,
     trigger,
     formState: { errors, isDirty },
@@ -272,7 +276,15 @@ function EditForm({
       */
       toast.showSuccess(t(isMediaTab ? 'saved.media' : 'saved.information'));
     } catch (error) {
-      toast.showError(errorMessage(error));
+      /*
+       * Lỗi validate của SERVER được đặt ĐÚNG Ô nó nói tới, không gom vào một toast chung.
+       *
+       * Lọc theo `activeFields` — tức các ô của TAB ĐANG MỞ: một lỗi gắn vào ô của tab kia sẽ
+       * khoá nút Lưu mà người dùng không nhìn thấy gì để sửa, và họ không có cách nào biết phải
+       * sang tab nào.
+       */
+      const applied = applyApiFieldErrors(error, setError, { fields: activeFields });
+      if (applied.length === 0) toast.showError(errorMessage(error));
     }
   }
 

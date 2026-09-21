@@ -25,7 +25,6 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { LegalDocLinks } from '@/features/legal/components/LegalDocLinks';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
-import { useComingSoon } from '@/hooks/use-coming-soon';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { colors, fontSize, fontWeight, sizing, space } from '@/theme/tokens';
@@ -122,15 +121,17 @@ const FAQ_KEYS = [
  *
  * Màn này KHÔNG tự dựng form gửi ticket — kênh hỗ trợ thật (`support_cases`, ADR 0028 release
  * gate 7) sống ở `/manage/support/cases`, nơi mỗi yêu cầu có mã, dòng thời gian và người phụ
- * trách. App chưa dựng màn đó nên nút ở đây báo "đang phát triển" theo đúng quy ước `comingSoon`:
- * hai chỗ cùng nhận yêu cầu là hai hàng đợi, và cái thứ hai sẽ là cái không ai trực.
+ * trách. Hai chỗ cùng nhận yêu cầu là hai hàng đợi, và cái thứ hai sẽ là cái không ai trực; nên
+ * nút ở đây DẪN sang màn đó chứ không mở một form thứ hai.
+ *
+ * (Bản trước báo "đang phát triển" vì app chưa có màn ấy. Nó đã có — một nút báo đang-phát-triển
+ * đứng trước một màn đã dựng xong là cách chắc chắn để không ai tìm ra nó.)
  */
 export function SupportCenterScreen() {
   const t = useTranslations('ManageCommon');
   const { has } = usePermissions();
   const featureStates = useFeatureStates();
   const navigateOnce = useNavigateOnce();
-  const comingSoon = useComingSoon();
 
   const links = useMemo(
     () =>
@@ -242,7 +243,7 @@ export function SupportCenterScreen() {
                 <Button
                   label={t('support.contact.casesCta')}
                   icon="chatbox-ellipses-outline"
-                  onPress={comingSoon}
+                  onPress={() => navigateOnce(ROUTES.manage.supportCases())}
                 />
               </>
             ) : null}

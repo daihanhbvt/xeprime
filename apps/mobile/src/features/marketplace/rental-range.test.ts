@@ -1,4 +1,11 @@
-import { dayjs, rentalDurationParts, type Dayjs } from '@xeprime/domain';
+import {
+  buildBusyDayIndex,
+  dayjs,
+  firstBusyDayAfter,
+  rentalDurationParts,
+  type BusyDayIndex,
+  type Dayjs,
+} from '@xeprime/domain';
 
 /**
  * Canh hai công thức của hộp chọn khoảng thuê, port từ `RentalRangePanel.tsx` của web.
@@ -72,5 +79,56 @@ describe('hourlyDuration', () => {
     expect(hourlyDurationOf(a, a.add(25, 'hour'))).toBe(DEFAULT_HOURLY_DURATION);
     expect(hourlyDurationOf(a, a)).toBe(DEFAULT_HOURLY_DURATION);
     expect(hourlyDurationOf(null, null)).toBe(DEFAULT_HOURLY_DURATION);
+  });
+});
+
+/**
+ * TRẦN NGÀY TRẢ — luật của `RentalRangeSheet`, port nguyên từ `RentalRangePanel.tsx` của web.
+ *
+ * Hai đầu khoảng rảnh KHÔNG có nghĩa là cả khoảng rảnh: 21→27/08 mà 25/08 bận trọn là bất khả thi,
+ * và exclusion constraint ở DB sẽ từ chối (ADR 0006). Lịch phải khoá TRƯỚC, không để người dùng
+ * dựng xong một dải rồi mới báo lỗi.
+ */
+const returnCeilingOf = (busy: BusyDayIndex, pickupAt: Dayjs | null, returnAt: Dayjs | null) => {
+  if (!pickupAt || returnAt) return null;
+  const next = firstBusyDayAfter(busy, pickupAt, 366);
+  if (!next) return null;
+  return next.level === 'full' ? next.date : next.date.add(1, 'day');
+};
+
+function busyIndex(days: { date: string; fullyBusy: boolean; periods?: { startAt: string; endAt: string }[] }[]): BusyDayIndex {
+  return buildBusyDayIndex(
+    days.map((d) => ({ date: d.date, fullyBusy: d.fullyBusy, periods: d.periods ?? [] })),
+  );
+}
+
+describe('trần ngày trả theo lịch bận', () => {
+  const pickup = dayjs('2026-08-21T10:00:00+07:00');
+
+  it('không có ngày bận nào ⇒ không có trần', () => {
+    expect(returnCeilingOf(busyIndex([]), pickup, null)).toBeNull();
+  });
+
+  /** Bận TRỌN ngày 25 ⇒ chính ngày 25 là trần: mọi ngày từ đó trở đi không chọn làm ngày trả được. */
+  it('ngày bận TRỌN chặn từ chính ngày đó', () => {
+    const busy = busyIndex([{ date: '2026-08-25', fullyBusy: true }]);
+    expect(returnCeilingOf(busy, pickup, null)?.format('YYYY-MM-DD')).toBe('2026-08-25');
+  });
+
+  /** Bận MỘT PHẦN vẫn trả được trong ngày đó (trả trước giờ bận) ⇒ trần lùi thêm một ngày. */
+  it('ngày bận MỘT PHẦN vẫn được là ngày trả', () => {
+    const busy = busyIndex([
+      {
+        date: '2026-08-25',
+        fullyBusy: false,
+        periods: [{ startAt: '2026-08-25T14:00:00+07:00', endAt: '2026-08-25T18:00:00+07:00' }],
+      },
+    ]);
+    expect(returnCeilingOf(busy, pickup, null)?.format('YYYY-MM-DD')).toBe('2026-08-26');
+  });
+
+  it('đã chọn đủ hai đầu thì không còn trần nào để áp', () => {
+    const busy = busyIndex([{ date: '2026-08-25', fullyBusy: true }]);
+    expect(returnCeilingOf(busy, pickup, dayjs('2026-08-23T10:00:00+07:00'))).toBeNull();
   });
 });

@@ -49,6 +49,13 @@ export function BookingMoneyCard({
    */
   const excess = subtractMoney(booking.collectedAmount, booking.amountDue);
   const overCollected = isNegativeMoney(excess) || isZeroMoney(excess) ? null : excess;
+  /*
+   * Khoản GIỮ CHỖ qua XePrime khác cả "Đã thu" (tiền gian hàng đã cầm) lẫn "Đặt cọc tài sản"
+   * (cọc hoàn trả lúc giao xe). Khối riêng, luôn mở, để một đơn đã duyệt không còn trông như
+   * khách chưa trả đồng nào — hai trường là `null` với đơn lập tay hoặc đơn cũ không đi qua
+   * chính sách phí marketplace.
+   */
+  const hasHoldPaymentPlan = booking.holdPaidAmount != null && booking.payAtPickupAmount != null;
 
   return (
     <Card>
@@ -141,6 +148,39 @@ export function BookingMoneyCard({
         {isZeroMoney(booking.depositAmount) ? null : (
           <DataRow label={t('depositAmount')} value={fmt.money(booking.depositAmount)} />
         )}
+
+        {hasHoldPaymentPlan ? (
+          <YStack gap={space.xs} p={space.sm} br={radius.md} bg={colors.surfaceMuted}>
+            <Text
+              col={colors.textMuted}
+              fos={fontSize.label}
+              fow={fontWeight.bold}
+              letterSpacing={0.4}
+            >
+              {t('holdPaymentPlan.title').toLocaleUpperCase('vi')}
+            </Text>
+            {booking.customerTotalAmount != null ? (
+              <DataRow
+                label={t('holdPaymentPlan.customerTotal')}
+                value={fmt.money(booking.customerTotalAmount)}
+              />
+            ) : null}
+            <DataRow
+              label={t('holdPaymentPlan.holdPaid')}
+              value={fmt.money(booking.holdPaidAmount as string)}
+            />
+            {/* Số CÒN LẠI khách đưa tận tay lúc nhận xe — con số người trực cần đọc to. */}
+            <DataRow
+              label={t('holdPaymentPlan.payAtPickup')}
+              value={fmt.money(booking.payAtPickupAmount as string)}
+              tone="price"
+              strong
+            />
+            <Text col={colors.placeholder} fos={fontSize.label}>
+              {t('holdPaymentPlan.note')}
+            </Text>
+          </YStack>
+        ) : null}
 
         <Text col={colors.textMuted} fos={fontSize.label}>
           {t('note')}

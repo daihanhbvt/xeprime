@@ -11,6 +11,7 @@ import { ShopEntryCard } from '@/features/shell/ShopEntryCard';
 import { ROUTES } from '@/navigation/routes';
 import { space } from '@/theme/tokens';
 import { showsDeleteAccountCard } from './account-nav';
+import { AccountMoneyPanel } from './components/AccountMoneyPanel';
 import { AccountNav } from './components/AccountNav';
 import { AccountTrackNotice } from './components/AccountTrackNotice';
 import { PersonalProfileCard } from './components/PersonalProfileCard';
@@ -117,6 +118,12 @@ function AccountBody({
           bấm vào bất cứ việc gì (ADR 0038 điều 11).
         */}
         <AccountTrackNotice />
+
+        {/*
+          TIỀN đứng NGAY SAU hồ sơ, trước menu — đúng thứ tự web: câu hỏi "XePrime đang nợ tôi bao
+          nhiêu" là thứ người ta mở màn này để đọc, còn menu là danh sách lối đi.
+        */}
+        <AccountMoneyPanel />
 
         <AccountNav />
 

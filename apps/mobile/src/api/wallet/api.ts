@@ -21,6 +21,23 @@ export type WithdrawalRequest = Schemas['WithdrawalRequestDto'];
 export type CreateWithdrawalInput = Schemas['CreateWithdrawalDto'];
 
 /**
+ * Bảng tổng hợp giao dịch theo KỲ của gian hàng — `GET /shop/wallet/statement`.
+ *
+ * Chỉ có ở `scope === 'shop'`: nó nói về CHUYẾN cho thuê, và một tài khoản khách thuê thuần không
+ * có chuyến nào ở phía bán.
+ */
+export type WalletStatement = Schemas['WalletStatementDto'];
+export type WalletStatementTrip = Schemas['WalletStatementTripDto'];
+export type WalletStatementTotals = Schemas['WalletStatementTotalsDto'];
+
+/** Kỳ + trang của bảng tổng hợp. Native không có URL nên chúng sống ở state màn. */
+export interface WalletStatementFilters {
+  /** `YYYY-MM` theo giờ Việt Nam. */
+  period: string;
+  page: number;
+}
+
+/**
  * Hai bề mặt dùng chung một feature — khác nhau đúng ở TIỀN TỐ đường dẫn, y như web.
  *
  * `account` là ví của CON NGƯỜI (tiền hoàn cọc của khách thuê), `shop` là ví của GIAN HÀNG (tiền
@@ -38,6 +55,16 @@ const base = (scope: WalletScope) => `/${scope}/wallet`;
 /** Cỡ trang sổ ví — cùng cỡ với web để hai bên lật cùng nhịp; màn hình đọc lại hằng này. */
 export const WALLET_ENTRIES_PAGE_SIZE = 20;
 
+/** Cỡ trang bảng tổng hợp — cùng cỡ với web. */
+export const WALLET_STATEMENT_PAGE_SIZE = 20;
+
+/** Tham số bảng tổng hợp — kỳ và trang. */
+export const walletStatementParams = (filters: WalletStatementFilters): QueryParams => ({
+  period: filters.period,
+  page: filters.page,
+  limit: WALLET_STATEMENT_PAGE_SIZE,
+});
+
 /** Tham số phân trang sổ. */
 export const walletEntriesParams = (page: number): QueryParams => ({
   page,
@@ -51,6 +78,16 @@ export const walletApi = {
 
   entries(scope: WalletScope, params: QueryParams): Promise<WalletEntryPage> {
     return getApiClient().get<WalletEntryPage>(`${base(scope)}/entries`, params);
+  },
+
+  /**
+   * Bảng tổng hợp giao dịch của gian hàng trong một kỳ.
+   *
+   * Không nhận `scope`: endpoint chỉ tồn tại ở phía gian hàng, và một hàm nhận tham số chỉ có một
+   * giá trị hợp lệ là một lời mời gọi nó sai.
+   */
+  statement(params: QueryParams): Promise<WalletStatement> {
+    return getApiClient().get<WalletStatement>('/shop/wallet/statement', params);
   },
 
   withdrawals(scope: WalletScope): Promise<WithdrawalRequest[]> {

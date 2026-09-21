@@ -14,6 +14,7 @@ import { FormSection } from '@/components/ui/FormSection';
 import { DataRow } from '@/components/ui/DataRow';
 import { PriceBreakdown } from '@/components/ui/PriceBreakdown';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { useAddressPreview } from '@/features/locations/hooks/use-address-preview';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
@@ -239,6 +240,13 @@ export function RequestReviewStep({
           )}
         </YStack>
       </FormSection>
+
+      {/*
+        Bước cuối trước khi gửi yêu cầu là chỗ duy nhất khách còn dừng lại được — và chính sách
+        huỷ/hoàn tiền là văn bản họ sẽ cần đúng lúc chuyến hỏng. Cùng câu, cùng chỗ đặt với web
+        (`LegalConsentNote place="booking"`); liên kết mở ra ngoài nên biểu mẫu đang điền không mất.
+      */}
+      <LegalConsentNote place="booking" />
     </YStack>
   );
 }

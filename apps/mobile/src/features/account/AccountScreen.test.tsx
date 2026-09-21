@@ -219,8 +219,13 @@ describe('AccountScreen — điều hướng tài khoản', () => {
       'Tài khoản của tôi',
       'Trở thành chủ xe',
       'Chuyến của tôi',
-      // Khách thuê CÓ số dư: tiền hoàn khoản giữ chỗ chảy vào ví điểm của họ (ADR 0033 điều 5).
-      'Ví điểm',
+      /*
+       * Khách thuê CÓ số dư: tiền hoàn khoản giữ chỗ chảy vào sổ của họ (ADR 0033 điều 5).
+       *
+       * Nhãn là "Số dư của tôi" từ 16/09/2026 — ví đổi tên khỏi "Ví điểm" ở gốc message dùng chung
+       * (`Navigation.account.balance`), nên một nhãn "Ví điểm" ở đây là app nói khác web.
+       */
+      'Số dư của tôi',
       'Tài khoản nhận tiền',
       'Đổi mật khẩu',
       'Yêu cầu xoá tài khoản',
@@ -367,13 +372,21 @@ describe('AccountScreen — điều hướng tài khoản', () => {
  * chưa về là mời họ làm lại thứ họ đã làm rồi.
  */
 describe('AccountScreen — thẻ gian hàng', () => {
-  it('chưa có gian hàng: mời đăng xe, nút "Bắt đầu" dẫn tới form đăng ký', async () => {
+  /**
+   * Đích là LANDING "Đăng xe cho thuê", không phải thẳng form đăng ký (ADR 0040).
+   *
+   * Từ ADR 0040 có HAI cửa vào với hai hợp đồng khác nhau, và landing là nơi người dùng chọn cửa.
+   * Nhảy thẳng vào `/manage/onboarding` là chọn hộ họ cửa MẶC ĐỊNH (hoa hồng) — người muốn mở gian
+   * hàng trả phí sẽ được server gán gói hoa hồng và rơi vào màn "Hồ sơ chủ xe" của tuyến kia. Web
+   * dẫn cùng chỗ (`ROUTES.LIST_YOUR_VEHICLE.ROOT`) vì cùng lý do.
+   */
+  it('chưa có gian hàng: mời đăng xe, nút "Bắt đầu" dẫn tới landing hai tuyến', async () => {
     const view = await renderScreen();
     await view.findByText(PROFILE_CARD_TEXT);
 
     expect(view.getByText('Đăng xe cho thuê')).toBeTruthy();
     await fireEvent.press(view.getByRole('button', { name: new RegExp('Bắt đầu$') }));
-    expect(mockPush).toHaveBeenCalledWith('/manage/onboarding');
+    expect(mockPush).toHaveBeenCalledWith('/list-your-vehicle');
   });
 
   /**

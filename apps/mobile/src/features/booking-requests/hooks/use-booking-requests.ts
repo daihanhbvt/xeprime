@@ -7,7 +7,9 @@ import type { StatusCounts } from './use-status-counts';
 import {
   bookingRequestFiltersToParams,
   bookingRequestsApi,
+  BOOKING_REQUEST_NEEDS_ACTION_STATUSES,
   BOOKING_REQUEST_STATUS_ALL,
+  BOOKING_REQUEST_TAB_NEEDS_ACTION,
   type ApproveBookingRequestInput,
   type BookingRequestFilters,
   type BookingRequestListResult,
@@ -16,6 +18,8 @@ import {
 export interface RequestInboxTab {
   /** Giá trị đi vào `?status=`. */
   readonly value: string;
+  /** Trạng thái để tra `statusCounts` (cộng dồn nếu nhiều); `null` = tab "Tất cả". */
+  readonly statuses: readonly BookingRequestStatus[] | null;
   /** Khoá message trong namespace `BookingRequests.tabs` — DÙNG CHUNG với web. */
   readonly labelKey: 'needsAction' | 'converted' | 'rejected' | 'cancelled' | 'expired' | 'all';
 }
@@ -31,16 +35,42 @@ export interface RequestInboxTab {
  * ("Cần xử lý", không phải "Chờ gian hàng duyệt").
  */
 export const REQUEST_INBOX_TABS: readonly RequestInboxTab[] = [
-  { value: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL, labelKey: 'needsAction' },
-  { value: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING, labelKey: 'converted' },
-  { value: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST, labelKey: 'rejected' },
-  { value: BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER, labelKey: 'cancelled' },
-  { value: BOOKING_REQUEST_STATUS.EXPIRED, labelKey: 'expired' },
-  { value: BOOKING_REQUEST_STATUS_ALL, labelKey: 'all' },
+  /*
+   * Tab GỘP: `pending_host_approval` + `hold_paid` (ADR 0039). Hai trạng thái này đều CẦN gian
+   * hàng quyết định và thẻ đã đối xử với chúng như nhau từ lâu (`needsDecision`), nên tách hai
+   * tab chỉ bắt người trực nhìn hai chỗ cho cùng một việc — phản hồi người dùng 19/09/2026.
+   */
+  {
+    value: BOOKING_REQUEST_TAB_NEEDS_ACTION,
+    statuses: BOOKING_REQUEST_NEEDS_ACTION_STATUSES,
+    labelKey: 'needsAction',
+  },
+  /*
+   * `awaiting_hold` (hold đã sinh, khách CHƯA chuyển khoản) CỐ Ý không có tab riêng: chưa có gì
+   * để quyết định, và một tab cho trạng thái không-hành-động-được chỉ thêm rối. Nó vẫn xem được
+   * ở tab "Tất cả", và thẻ tự nói lý do không có nút Duyệt (`awaitingHold.footerHint`).
+   */
+  {
+    value: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
+    statuses: [BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING],
+    labelKey: 'converted',
+  },
+  {
+    value: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
+    statuses: [BOOKING_REQUEST_STATUS.REJECTED_BY_HOST],
+    labelKey: 'rejected',
+  },
+  {
+    value: BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER,
+    statuses: [BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER],
+    labelKey: 'cancelled',
+  },
+  { value: BOOKING_REQUEST_STATUS.EXPIRED, statuses: [BOOKING_REQUEST_STATUS.EXPIRED], labelKey: 'expired' },
+  { value: BOOKING_REQUEST_STATUS_ALL, statuses: null, labelKey: 'all' },
 ];
 
-/** Tab mặc định: việc cần làm ngay. */
-export const DEFAULT_REQUEST_TAB: string = BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL;
+/** Tab mặc định: việc cần làm ngay (gộp cả yêu cầu đã cọc chờ duyệt). */
+export const DEFAULT_REQUEST_TAB: string = BOOKING_REQUEST_TAB_NEEDS_ACTION;
 
 /**
  * MỘT trang hộp thư yêu cầu.
@@ -91,6 +121,13 @@ export function useApproveBookingRequest() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      /*
+       * Danh sách CHUYẾN cũng đổi: tab 'Chuyến của tôi' trộn cả chuyến mình cho thuê, và từ đợt
+       * này hai quyết định duyệt/từ chối bấm được ngay trên thẻ ở đó. Thiếu dòng này, thẻ vừa
+       * duyệt vẫn bày hai nút cho tới khi người dùng tự kéo làm mới.
+       */
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
     },
   });
 }
@@ -103,6 +140,7 @@ export function useRejectBookingRequest() {
       bookingRequestsApi.reject(input.id, input.reason),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
     },
   });
 }
@@ -117,5 +155,13 @@ export function statusCountOf(counts: StatusCounts, status: string): number {
   if (status === BOOKING_REQUEST_STATUS_ALL) {
     return counts.reduce((sum, row) => sum + row.count, 0);
   }
-  return counts.find((row) => row.status === (status as BookingRequestStatus))?.count ?? 0;
+  /*
+   * Tab GỘP đếm CỘNG DỒN hai trạng thái của nó — không phải một mã thật để tra thẳng, và tra
+   * hụt thì tab "Cần xử lý" báo 0 trong khi danh sách bên dưới có việc.
+   */
+  const statuses: readonly string[] =
+    status === BOOKING_REQUEST_TAB_NEEDS_ACTION ? BOOKING_REQUEST_NEEDS_ACTION_STATUSES : [status];
+  return counts
+    .filter((row) => statuses.includes(row.status))
+    .reduce((sum, row) => sum + row.count, 0);
 }

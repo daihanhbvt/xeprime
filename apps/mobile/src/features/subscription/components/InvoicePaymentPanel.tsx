@@ -1,21 +1,20 @@
-import * as Clipboard from 'expo-clipboard';
-import { Text, XStack, YStack } from 'tamagui';
+import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { buildVietQrUrl, subtractMoney } from '@xeprime/domain';
 import { SUBSCRIPTION_INVOICE_STATUS } from '@xeprime/types';
-import { useAppToast } from '@/components/feedback/use-app-toast';
-import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { DataRow } from '@/components/ui/DataRow';
+import { IconButton } from '@/components/ui/IconButton';
 import { RemoteImage } from '@/components/ui/RemoteImage';
+import { useCopy } from '@/hooks/use-copy';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { colors, fontSize, radius, space } from '@/theme/tokens';
 import type { SubscriptionInvoice } from '@/api/subscription/api';
 import { usePaymentInfo } from '../hooks/use-subscription';
 
 /** Cỡ ảnh QR — đủ để camera ngân hàng bắt được ở khoảng cách cầm tay. */
-const QR_SIZE = 220;
-const QR_RATIO = 220 / 260;
+const QR_SIZE = 260;
+const QR_RATIO = 260 / 308;
 
 /**
  * Hướng dẫn chuyển khoản cho MỘT hoá đơn gói đang chờ tiền — bản native của `InvoicePaymentPanel`.
@@ -34,7 +33,7 @@ const QR_RATIO = 220 / 260;
 export function InvoicePaymentPanel({ invoice }: { invoice: SubscriptionInvoice }) {
   const t = useTranslations('Subscription.payment');
   const fmt = useAppFormat();
-  const toast = useAppToast();
+  const copy = useCopy();
   const paymentInfo = usePaymentInfo();
 
   const partial = invoice.status === SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID;
@@ -45,9 +44,7 @@ export function InvoicePaymentPanel({ invoice }: { invoice: SubscriptionInvoice 
   const info = paymentInfo.data;
   const qrUrl = info ? buildVietQrUrl(info, remaining, invoice.code) : null;
 
-  const copy = (value: string, done: string) => {
-    void Clipboard.setStringAsync(value).then(() => toast.showSuccess(done));
-  };
+
 
   return (
     <YStack gap={space.md}>
@@ -70,56 +67,84 @@ export function InvoicePaymentPanel({ invoice }: { invoice: SubscriptionInvoice 
         </YStack>
       ) : null}
 
-      <YStack gap={space.xs}>
+      <YStack>
         {info?.configured ? (
           <>
-            <DataRow label={t('bank')} value={info.bankCode ?? ''} />
-            <DataRow label={t('accountNumber')} value={info.accountNumber ?? ''} />
-            <DataRow label={t('accountName')} value={info.accountName ?? ''} />
+            {info.bankCode ? (
+              <DataRow
+                label={t('bank')}
+                value={info.bankCode}
+                action={
+                  <IconButton
+                    icon="copy-outline"
+                    label={t('copyBank')}
+                    onPress={() => void copy(info.bankCode as string)}
+                  />
+                }
+              />
+            ) : null}
+            <DataRow
+              label={t('accountNumber')}
+              value={info.accountNumber ?? ''}
+              strong
+              {...(info.accountNumber
+                ? {
+                    action: (
+                      <IconButton
+                        icon="copy-outline"
+                        label={t('copyAccount')}
+                        onPress={() => void copy(info.accountNumber as string)}
+                      />
+                    ),
+                  }
+                : {})}
+            />
+            {info.accountName ? (
+              <DataRow
+                label={t('accountName')}
+                value={info.accountName}
+                action={
+                  <IconButton
+                    icon="copy-outline"
+                    label={t('copyAccountName')}
+                    onPress={() => void copy(info.accountName as string)}
+                  />
+                }
+              />
+            ) : null}
           </>
         ) : null}
 
-        <DataRow label={t('amount')} value={fmt.money(remaining)} />
+        <DataRow
+          label={t('amount')}
+          value={fmt.money(remaining)}
+          strong
+          tone="price"
+          action={
+            <IconButton
+              icon="copy-outline"
+              label={t('copyAmount')}
+              onPress={() => void copy(remaining)}
+            />
+          }
+        />
 
         {/*
-          Mã đối soát là thứ DUY NHẤT không được gõ sai — chuyển đúng tiền mà sai nội dung thì
-          tiền về tới nơi nhưng không khớp được hoá đơn nào. Vì thế nó có nút chép riêng, và hiện
-          ở cỡ chữ đọc được chứ không nhét vào một dòng phụ.
+          Mã đối soát là thứ quyết định tiền khớp vào hoá đơn nào — đứng riêng một hàng, in đậm,
+          kèm nút chép. Gõ tay sai một ký tự là một khoản tiền treo chờ admin gỡ.
         */}
-        <YStack gap={2}>
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {t('code')}
-          </Text>
-          <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold}>
-            {invoice.code}
-          </Text>
-        </YStack>
-
-        <XStack gap={space.sm} flexWrap="wrap">
-          <Button
-            label={t('copyCode')}
-            icon="copy-outline"
-            variant="secondary"
-            size="sm"
-            onPress={() => copy(invoice.code, t('copyCode'))}
-          />
-          <Button
-            label={t('copyAmount')}
-            icon="copy-outline"
-            variant="ghost"
-            size="sm"
-            onPress={() => copy(remaining, t('copyAmount'))}
-          />
-          {info?.configured && info.accountNumber ? (
-            <Button
-              label={t('copyAccount')}
+        <DataRow
+          label={t('code')}
+          value={invoice.code}
+          strong
+          action={
+            <IconButton
               icon="copy-outline"
-              variant="ghost"
-              size="sm"
-              onPress={() => copy(info.accountNumber as string, t('copyAccount'))}
+              label={t('copyCode')}
+              onPress={() => void copy(invoice.code)}
             />
-          ) : null}
-        </XStack>
+          }
+        />
       </YStack>
 
       {invoice.expiresAt ? (

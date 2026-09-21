@@ -13,6 +13,7 @@ import {
   DEPOSIT_COLLECTION_MODE,
   isCustomerTripClosed,
   SERVICE_TYPE,
+  STOREFRONT_KIND,
   TRIP_ROLE,
   type CustomerTripStage,
 } from '@xeprime/types';
@@ -46,6 +47,7 @@ import { TripEstimateCard } from './components/TripEstimateCard';
 import { TripFinanceCard } from './components/TripFinanceCard';
 import { TripHoldPanel } from './components/TripHoldPanel';
 import { TripHandoverEvidence } from './components/TripHandoverEvidence';
+import { TripHostDecisions } from './components/TripHostDecisions';
 import { TripTimeline } from './components/TripTimeline';
 import { useCancelTrip, useTrip } from './hooks/use-trips';
 import type { CustomerTripDetail } from './api';
@@ -165,15 +167,15 @@ function TripDetailBody({ trip }: { trip: CustomerTripDetail }) {
         <YStack gap={layout.section}>
           <Card>
             <YStack gap={space.md}>
-              <XStack ai="center" jc="space-between" gap={space.sm}>
-                <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
-                  {subtitleOf(t, stage)}
-                </Text>
+              <YStack gap={space.xs}>
                 <StatusBadge
                   label={domainLabel('customerTripStage', stage, meta.label)}
                   color={meta.color}
                 />
-              </XStack>
+                <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                  {subtitleOf(t, stage)}
+                </Text>
+              </YStack>
               <TripTimeline stage={stage} />
             </YStack>
           </Card>
@@ -285,7 +287,14 @@ function TripDetailBody({ trip }: { trip: CustomerTripDetail }) {
             chờ tiền thì đây là việc DUY NHẤT khách cần làm, và nó không được nằm dưới một bảng
             số liệu mà họ chưa có lý do để đọc.
           */}
-          {trip.hold ? <TripHoldPanel hold={trip.hold} tripId={trip.id} /> : null}
+          {trip.hold ? (
+            <TripHoldPanel
+              hold={trip.hold}
+              tripId={trip.id}
+              tripTotalAmount={trip.estimate?.fees?.customerTotalAmount ?? null}
+              payAtHandoverAmount={trip.estimate?.fees?.payAtPickupAmount ?? null}
+            />
+          ) : null}
 
           {/*
             Đơn KHÔNG đi qua khoản giữ chỗ của XePrime (tuyến gói tắt công tắc thu cọc — Phase 6).
@@ -308,7 +317,12 @@ function TripDetailBody({ trip }: { trip: CustomerTripDetail }) {
           {trip.finance ? (
             <TripFinanceCard finance={trip.finance} closed={closed} />
           ) : trip.estimate ? (
-            <TripEstimateCard estimate={trip.estimate} isHost={isHost} />
+            /* Đã trả khoản giữ chỗ ⇒ con số đã ĐÓNG BĂNG, không còn là tạm tính (ADR 0039). */
+            <TripEstimateCard
+              estimate={trip.estimate}
+              isHost={isHost}
+              settled={trip.hold?.paidAt != null}
+            />
           ) : (
             <Card>
               <YStack gap={space.xs}>
@@ -321,6 +335,13 @@ function TripDetailBody({ trip }: { trip: CustomerTripDetail }) {
               </YStack>
             </Card>
           )}
+
+          {/*
+            Cụm quyết định của CHỦ XE — component riêng vì nó cầm hai mutation và ba tấm trượt, và
+            người đi thuê thì không có gì để quyết định ở đây. Thiếu nó, một chủ xe mở chuyến đã
+            nhận tiền giữ chỗ của khách không có đường nào duyệt hay từ chối ngay tại chỗ.
+          */}
+          {isHost && trip.respondBy ? <TripHostDecisions trip={trip} /> : null}
 
           {/* Chỉ hỏi bằng chứng bàn giao khi chuyến ĐÃ đi tới đó — chờ duyệt thì chắc chắn rỗng. */}
           <TripHandoverEvidence
@@ -477,10 +498,18 @@ function ShopBlock({ trip }: { trip: CustomerTripDetail }) {
   const navigateOnce = useNavigateOnce();
   const { shop } = trip;
 
+  /*
+   * Chủ xe cá nhân tuyến hoa hồng KHÔNG có mặt tiền kiểu doanh nghiệp (ADR 0028/0040) — mời khách
+   * "Xem gian hàng" một người không bán qua gian hàng là nói sai. Cùng phép suy
+   * `resolveStorefrontKind` với trang gian hàng công khai; cả hai nhãn cùng trỏ một địa chỉ vì
+   * trang đó tự vẽ đúng mặt tiền theo tuyến (ADR 0038 điều 1).
+   */
+  const openLabel = shop.shopKind === STOREFRONT_KIND.SHOP ? t('viewShop') : t('viewOwner');
+
   return (
     <Card
       onPress={() => navigateOnce(ROUTES.explore.shopDetail(shop.slug))}
-      accessibilityLabel={t('viewShop')}
+      accessibilityLabel={openLabel}
     >
       <XStack ai="center" gap={space.sm}>
         <Avatar name={shop.name} size={40} />
@@ -488,7 +517,8 @@ function ShopBlock({ trip }: { trip: CustomerTripDetail }) {
           <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} numberOfLines={1}>
             {shop.name}
           </Text>
-          {shop.ratingCount > 0 ? (
+          {/* `?? 0`: dữ liệu cũ chưa qua đợt tính rating vẫn có thể thiếu cột này ở DB. */}
+          {(shop.ratingCount ?? 0) > 0 ? (
             <XStack ai="center" gap={space.xs}>
               <Stars value={shop.ratingAvg} />
               <Text col={colors.textMuted} fos={fontSize.label}>
@@ -515,6 +545,7 @@ function ShopBlock({ trip }: { trip: CustomerTripDetail }) {
  */
 function PickupMethod({ trip }: { trip: CustomerTripDetail }) {
   const t = useTranslations('Trips.pickup');
+  const tDetail = useTranslations('Trips.detail');
   const withDriver = trip.serviceType === SERVICE_TYPE.WITH_DRIVER;
 
   const lines = withDriver
@@ -528,6 +559,14 @@ function PickupMethod({ trip }: { trip: CustomerTripDetail }) {
     <XStack ai="flex-start" gap={space.xs} pt={space.xs}>
       <Ionicons name="location-outline" size={iconSize.sm} color={colors.textMuted} />
       <YStack f={1} gap={2}>
+        {/*
+          NHÃN đứng trước giá trị — cùng hàng nhãn/giá trị với các mốc giờ ngay trên, đúng như web
+          xếp nó vào bảng lịch trình. Thiếu nhãn thì "Giao tận nơi" đứng trần giữa hai mốc giờ và
+          người đọc phải tự suy nó đang trả lời câu hỏi nào.
+        */}
+        <Text col={colors.textMuted} fos={fontSize.label}>
+          {tDetail('pickupMethodLabel')}
+        </Text>
         <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
           {withDriver ? t('driverPickup') : trip.deliveryRequested ? t('delivery') : t('agency')}
         </Text>
@@ -681,22 +720,34 @@ function StageNotice({
  * Liệt kê tường minh thay vì ghép chuỗi `subtitle.${stage}`: khoá ghép động lọt qua typecheck
  * của `use-intl`, nên thêm một chặng mới mà quên khoá sẽ thành một ô trống lúc chạy.
  */
+/**
+ * Chặng → KHOÁ message của câu phụ đề.
+ *
+ * Bảng tra LITERAL chứ không `switch` có nhánh mặc định. Bản trước dùng `switch`, và nhánh mặc
+ * định nuốt đúng hai chặng của ADR 0039: chuyến đang chờ tiền giữ chỗ và chuyến ĐÃ TRẢ tiền chờ
+ * chủ xe duyệt đều hiện "Chuyến đi đã kết thúc sớm" — một câu sai hoàn toàn, nói với người vừa
+ * chuyển tiền rằng chuyến của họ đã hỏng.
+ *
+ * `satisfies Record<CustomerTripStage, …>` khiến chặng mới là lỗi BIÊN DỊCH, không phải một câu
+ * sai lặng lẽ; `as const` giữ kiểu literal để `t()` vẫn kiểm được khoá.
+ */
+const SUBTITLE_KEY = {
+  [CUSTOMER_TRIP_STAGE.PENDING_APPROVAL]: 'subtitle.pending_approval',
+  [CUSTOMER_TRIP_STAGE.AWAITING_HOLD]: 'subtitle.awaiting_hold',
+  [CUSTOMER_TRIP_STAGE.PENDING_APPROVAL_PAID]: 'subtitle.pending_approval_paid',
+  [CUSTOMER_TRIP_STAGE.READY]: 'subtitle.ready',
+  [CUSTOMER_TRIP_STAGE.ACTIVE]: 'subtitle.active',
+  [CUSTOMER_TRIP_STAGE.COMPLETED]: 'subtitle.completed',
+  [CUSTOMER_TRIP_STAGE.CANCELLED]: 'subtitle.terminal',
+  [CUSTOMER_TRIP_STAGE.REJECTED]: 'subtitle.terminal',
+  [CUSTOMER_TRIP_STAGE.NO_SHOW]: 'subtitle.terminal',
+} as const satisfies Record<CustomerTripStage, string>;
+
 function subtitleOf(
   t: ReturnType<typeof useTranslations<'Trips'>>,
   stage: CustomerTripStage,
 ): string {
-  switch (stage) {
-    case CUSTOMER_TRIP_STAGE.PENDING_APPROVAL:
-      return t('subtitle.pending_approval');
-    case CUSTOMER_TRIP_STAGE.READY:
-      return t('subtitle.ready');
-    case CUSTOMER_TRIP_STAGE.ACTIVE:
-      return t('subtitle.active');
-    case CUSTOMER_TRIP_STAGE.COMPLETED:
-      return t('subtitle.completed');
-    default:
-      return t('subtitle.terminal');
-  }
+  return t(SUBTITLE_KEY[stage]);
 }
 
 function TripDetailSkeleton() {

@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import {
   keepPreviousData,
   useInfiniteQuery,
@@ -6,6 +7,8 @@ import {
   useQueryClient,
   type UseQueryResult,
 } from '@tanstack/react-query';
+import { BOOKING_HOLD_STATUS } from '@xeprime/types';
+import { useAppActive, useRefetchOnForeground } from '@/hooks/use-app-active';
 import { queryKeys } from '@/queries/query-keys';
 import {
   reviewsApi,
@@ -53,12 +56,57 @@ export function useTripsInfinite(filter: string, role?: string, enabled = true) 
   });
 }
 
+/** Nhịp hỏi lại trong lúc chờ tiền giữ chỗ về — cùng 8 giây với hoá đơn gói (ADR 0039). */
+const HOLD_POLL_MS = 8_000;
+
+/** Hold còn có thể nhận thêm tiền ⇒ còn đáng hỏi lại. */
+function isAwaitingHold(trip: CustomerTripDetail | null | undefined): boolean {
+  const status = trip?.hold?.status;
+  return status === BOOKING_HOLD_STATUS.PENDING || status === BOOKING_HOLD_STATUS.UNDERPAID;
+}
+
+/**
+ * Chi tiết MỘT chuyến — tự hỏi lại trong lúc còn hold đang chờ tiền, cùng khuôn với
+ * `usePendingInvoice` bên gói (ADR 0039/ADR 0040).
+ *
+ * ## Đây là lớp thứ BA, không phải lớp duy nhất
+ *
+ * Màn đang mở đã có hai đường tự làm mới từ trước:
+ *   1. Push FCM tới lúc app đang MỞ TRÊN TAY → `refreshForNotification` tự `invalidateQueries`
+ *      đúng nhánh `trips` cho loại `HOLD_PAID` (`use-push-notifications.ts`);
+ *   2. Huy hiệu Firestore đổi số (ADR 0009, kênh KHÔNG phụ thuộc quyền push) → làm mới RỘNG mọi
+ *      nhánh (`BadgeRealtimeProvider`), có nhịp hỏi lại dự phòng 2 phút nếu mất kết nối Firestore.
+ *
+ * Nhịp 8 giây ở đây không thay hai đường trên — nó SIẾT lại đúng khoảnh khắc rủi ro nhất: khách
+ * đang nhìn một đồng hồ đếm ngược và tiền đang trên đường về, mà cả push (cần quyền, có thể trễ
+ * do Doze/OS) lẫn Firestore (nhịp dự phòng tới 2 phút) đều không hứa tới NGAY. Chỉ chạy khi hold
+ * còn ở trạng thái chờ — không tốn nhịp nào trên một chuyến đã xong việc hay không có hold nào.
+ *
+ * `refetchInterval` là HÀM vì lý do đó: tắt ngay khi hold hết cửa nhận tiền (đã `paid`, hết hạn,
+ * đã huỷ…), không chạy mãi trên một màn đã xong việc.
+ *
+ * `useAppActive` bắt buộc, khác web: React Native không có `document.visibilityState` để
+ * `focusManager` tự dừng nhịp khi app xuống nền — thiếu nó, nhịp 8 giây chạy cả khi máy nằm
+ * trong túi. `useRefetchOnForeground` lo nửa còn lại: quay về từ app ngân hàng phải thấy kết quả
+ * NGAY tại khoảnh khắc đó, không đợi hết một nhịp poll lẫn một đường tín hiệu nào khác.
+ */
 export function useTrip(id: string): UseQueryResult<CustomerTripDetail> {
-  return useQuery({
+  const appActive = useAppActive();
+  const query = useQuery({
     queryKey: queryKeys.trips.detail(id),
     queryFn: () => tripsApi.detail(id),
     enabled: Boolean(id),
+    refetchInterval: (q) => (appActive && isAwaitingHold(q.state.data) ? HOLD_POLL_MS : false),
   });
+
+  const { refetch } = query;
+  useRefetchOnForeground(
+    useCallback(() => {
+      if (id) void refetch();
+    }, [id, refetch]),
+  );
+
+  return query;
 }
 
 /**

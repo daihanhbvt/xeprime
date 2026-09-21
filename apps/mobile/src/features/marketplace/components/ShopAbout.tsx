@@ -39,7 +39,7 @@ export function ShopAbout({ shop }: { shop: PublicShop }) {
       value: fmt.count(shop.completedTripCount),
       label: t('stats.completedTrips'),
     },
-    shop.ratingCount > 0 && Number.isFinite(rating)
+    (shop.ratingCount ?? 0) > 0 && Number.isFinite(rating)
       ? { key: 'rating', value: fmt.rating(rating), label: t('stats.rating') }
       : null,
   ].filter((stat): stat is { key: string; value: string; label: string } => stat !== null);

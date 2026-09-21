@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { ApiClientError } from '@xeprime/api-client';
 import { API_ERROR_CODE, PACKAGE_SHOP_LISTING_REQUIREMENT } from '@xeprime/types';
 
-import { isLogoOnlyGate, packageShopListingGateFrom } from '../listing-gate';
+import { isLogoOnlyGate, packageShopListingGateFrom } from '@xeprime/domain';
 import { ShopListingGateAlert } from './ShopListingGateAlert';
 
 /**

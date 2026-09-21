@@ -134,7 +134,17 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
       publicVehicleCount: 1,
     });
 
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/manage/shop'));
+    /*
+     * `?welcome=1`: gian hàng tuyến gói đã có thuê bao hiệu lực tới đây nghĩa là vừa thanh toán
+     * xong, và dải chào một-lần sống ở màn hồ sơ (ADR 0040). Tham số không mở/khoá gì — chính
+     * `ShopProfileScreen` còn lọc lại theo `isEstablishedPackageShop`.
+     */
+    await waitFor(() =>
+      expect(mockReplace).toHaveBeenCalledWith({
+        pathname: '/manage/shop',
+        params: { welcome: '1' },
+      }),
+    );
     expect(view.queryByRole('button', { name: 'Tạo gian hàng' })).toBeNull();
   });
 
@@ -142,6 +152,11 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
     const registerSpy = jest.spyOn(tenantsApi, 'register').mockResolvedValue(SHOP);
     const view = await renderScreen();
 
+    /*
+     * Xoá TRẮNG ô tên trước khi gửi: form điền sẵn tên tài khoản (đúng như web), nên bấm gửi ngay
+     * sẽ qua được luật `nameRequired` và test không còn kiểm thứ nó định kiểm.
+     */
+    await fireEvent.changeText(await view.findByLabelText('Tên gian hàng'), '');
     await fireEvent.press(await view.findByRole('button', { name: 'Tạo gian hàng' }));
 
     expect(await view.findByText('Tên gian hàng là bắt buộc')).toBeTruthy();

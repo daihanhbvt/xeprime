@@ -6,7 +6,9 @@ import {
 } from '@xeprime/types';
 import {
   bookingRequestFiltersToParams,
+  BOOKING_REQUEST_NEEDS_ACTION_STATUSES,
   BOOKING_REQUEST_STATUS_ALL,
+  BOOKING_REQUEST_TAB_NEEDS_ACTION,
 } from '@/api/booking-requests/api';
 import {
   DEFAULT_REQUEST_TAB,
@@ -15,8 +17,8 @@ import {
 } from './hooks/use-booking-requests';
 
 describe('tab của hộp thư yêu cầu', () => {
-  it('mặc định là việc cần làm ngay', () => {
-    expect(DEFAULT_REQUEST_TAB).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
+  it('mặc định là tab GỘP việc cần làm ngay', () => {
+    expect(DEFAULT_REQUEST_TAB).toBe(BOOKING_REQUEST_TAB_NEEDS_ACTION);
   });
 
   /**
@@ -30,9 +32,14 @@ describe('tab của hộp thư yêu cầu', () => {
     );
   });
 
-  it('có đủ năm trạng thái còn lại cộng tab Tất cả', () => {
+  /*
+   * "Đã cọc, chờ duyệt" (ADR 0039) KHÔNG còn tab riêng: nó gộp vào "Cần xử lý" cùng
+   * `pending_host_approval` — hai trạng thái cùng cần gian hàng quyết định, và thẻ đã đối xử
+   * với chúng như nhau từ lâu. Tách hai tab chỉ bắt người trực nhìn hai chỗ cho một việc.
+   */
+  it('có tab GỘP cần xử lý, năm ngăn còn lại và tab Tất cả, đúng thứ tự ưu tiên', () => {
     expect(REQUEST_INBOX_TABS.map((tab) => tab.value)).toEqual([
-      BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+      BOOKING_REQUEST_TAB_NEEDS_ACTION,
       BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
       BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
       BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER,
@@ -54,6 +61,22 @@ describe('tab của hộp thư yêu cầu', () => {
       'all',
     ]);
   });
+
+  it('tab GỘP mang đúng hai trạng thái cần quyết định, không kèm awaiting_hold', () => {
+    const needsAction = REQUEST_INBOX_TABS[0];
+    expect(needsAction?.statuses).toEqual([
+      BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+      BOOKING_REQUEST_STATUS.HOLD_PAID,
+    ]);
+    expect(needsAction?.statuses).not.toContain(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+  });
+
+  /* Tab "Tất cả" là ngăn DUY NHẤT còn thấy `awaiting_hold` — nó không có ngăn riêng. */
+  it('KHÔNG có tab riêng cho awaiting_hold', () => {
+    expect(REQUEST_INBOX_TABS.map((tab) => tab.value)).not.toContain(
+      BOOKING_REQUEST_STATUS.AWAITING_HOLD,
+    );
+  });
 });
 
 /**
@@ -63,6 +86,16 @@ describe('tab của hộp thư yêu cầu', () => {
 describe('filtersToParams', () => {
   it('dịch tab "all" thành KHÔNG gửi status', () => {
     expect(bookingRequestFiltersToParams({ status: BOOKING_REQUEST_STATUS_ALL }).status).toBeNull();
+  });
+
+  it('dịch tab GỘP thành hai mã thật nối dấu phẩy', () => {
+    /*
+     * MỘT chuỗi, không phải mảng: `QueryParams` của `@xeprime/api-client` cố ý không có kiểu
+     * mảng, backend tách chuỗi ở DTO. Thứ tự phải khớp web để hai client gửi cùng một URL.
+     */
+    expect(bookingRequestFiltersToParams({ status: BOOKING_REQUEST_TAB_NEEDS_ACTION }).status).toBe(
+      'pending_host_approval,hold_paid',
+    );
   });
 
   it('giữ nguyên mã trạng thái thật', () => {
@@ -97,6 +130,13 @@ describe('statusCountOf', () => {
 
   it('tab Tất cả cộng mọi trạng thái', () => {
     expect(statusCountOf(counts, BOOKING_REQUEST_STATUS_ALL)).toBe(9);
+  });
+
+  it('tab GỘP cộng dồn hai trạng thái của nó', () => {
+    // Đếm hụt ở đây nghĩa là tab "Cần xử lý" báo 7 trong khi danh sách bên dưới có 10 việc.
+    const withHoldPaid = [...counts, { status: BOOKING_REQUEST_STATUS.HOLD_PAID, count: 3 }];
+    expect(statusCountOf(withHoldPaid, BOOKING_REQUEST_TAB_NEEDS_ACTION)).toBe(10);
+    expect(BOOKING_REQUEST_NEEDS_ACTION_STATUSES).toHaveLength(2);
   });
 
   it('chưa có lần đọc nào thì huy hiệu là 0', () => {

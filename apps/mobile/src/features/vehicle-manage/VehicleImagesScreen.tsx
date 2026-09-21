@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -126,6 +126,19 @@ function ImagesForm({
     setItems((prev) => prev.filter((i) => i.url !== url));
   }
 
+  /*
+   * Còn ảnh ĐANG TẢI thì chưa lưu được.
+   *
+   * Một tấm chưa tải xong chưa nằm trong `items`, nên bấm Lưu lúc đó ghi lên server một danh sách
+   * THIẾU đúng tấm đó. Upload xong sau thì nó chỉ vào state cục bộ — màn hình có ảnh, server thì
+   * không, và người dùng không có cách nào biết cho tới lần mở lại. Web gác bằng
+   * `pending.length > 0`; ở đây trạng thái tải nằm trong từng ô, nên các ô báo lên một bộ đếm.
+   */
+  const [uploading, setUploading] = useState(0);
+  const trackUpload = useCallback((busy: boolean) => {
+    setUploading((n) => Math.max(0, n + (busy ? 1 : -1)));
+  }, []);
+
   function save() {
     update.mutate(
       {
@@ -146,6 +159,7 @@ function ImagesForm({
         vehicleName={vehicle.name}
         canEdit={canEdit}
         onChange={setMainImageUrl}
+        onBusyChange={trackUpload}
       />
 
       {slots.map((slot) => (
@@ -160,6 +174,7 @@ function ImagesForm({
           full={!isSingleVehicleImageSlot(slot) && galleryCount >= VEHICLE_GALLERY_MAX_IMAGES}
           onUploaded={(url) => place(slot, url)}
           onRemove={removeUrl}
+          onBusyChange={trackUpload}
         />
       ))}
 
@@ -167,7 +182,7 @@ function ImagesForm({
         <YStack gap={space.sm}>
           <Button
             label={tActions('saveChanges')}
-            disabled={!dirty}
+            disabled={!dirty || uploading > 0}
             loading={update.isPending}
             onPress={save}
           />
@@ -199,11 +214,14 @@ function MainImageCard({
   vehicleName,
   canEdit,
   onChange,
+  onBusyChange,
 }: {
   url: string | null;
   vehicleName: string;
   canEdit: boolean;
   onChange: (url: string | null) => void;
+  /** Báo lên màn khi ô này bắt đầu/kết thúc một lượt tải — xem `uploading` ở màn. */
+  onBusyChange: (busy: boolean) => void;
 }) {
   const t = useTranslations('VehicleManage.images');
   const tImage = useTranslations('Common.components.imageUpload');
@@ -220,6 +238,19 @@ function MainImageCard({
     },
     onRemove: url ? () => onChange(null) : undefined,
   });
+
+  /*
+   * Báo trạng thái tải lên NGƯỢC về màn, để nút Lưu khoá trong lúc còn ảnh đang bay.
+   *
+   * Dọn dẹp trả lại một lần giảm: ô bị tháo giữa chừng (đổi mục, lui màn) mà không trả thì bộ đếm
+   * ở màn kẹt trên 0 và nút Lưu khoá vĩnh viễn.
+   */
+  const busy = upload.busy;
+  useEffect(() => {
+    if (!busy) return;
+    onBusyChange(true);
+    return () => onBusyChange(false);
+  }, [busy, onBusyChange]);
 
   return (
     <Card>
@@ -287,6 +318,7 @@ function SlotCard({
   full,
   onUploaded,
   onRemove,
+  onBusyChange,
 }: {
   slot: VehicleImageType;
   label: string;
@@ -297,6 +329,8 @@ function SlotCard({
   full: boolean;
   onUploaded: (url: string) => void;
   onRemove: (url: string) => void;
+  /** Báo lên màn khi ô này bắt đầu/kết thúc một lượt tải — xem `uploading` ở màn. */
+  onBusyChange: (busy: boolean) => void;
 }) {
   const t = useTranslations('VehicleManage.images');
   const tActions = useTranslations('Common.actions');
@@ -310,6 +344,19 @@ function SlotCard({
     /* Người dùng chọn được NHIỀU tấm một lượt — ô đơn chỉ giữ tấm cuối, ô "khác" nhận hết. */
     onUploaded: (urls: readonly string[]) => urls.forEach(onUploaded),
   });
+
+  /*
+   * Báo trạng thái tải lên NGƯỢC về màn, để nút Lưu khoá trong lúc còn ảnh đang bay.
+   *
+   * Dọn dẹp trả lại một lần giảm: ô bị tháo giữa chừng (đổi mục, lui màn) mà không trả thì bộ đếm
+   * ở màn kẹt trên 0 và nút Lưu khoá vĩnh viễn.
+   */
+  const busy = upload.busy;
+  useEffect(() => {
+    if (!busy) return;
+    onBusyChange(true);
+    return () => onBusyChange(false);
+  }, [busy, onBusyChange]);
 
   return (
     <Card>

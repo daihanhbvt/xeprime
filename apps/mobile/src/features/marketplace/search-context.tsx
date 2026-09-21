@@ -19,6 +19,7 @@ import { type MarketplaceFilters, type PublicDestination } from '@xeprime/types'
 import { PROVINCE_CODES, type RouteType, type ServiceType, type VehicleType } from '@xeprime/types';
 import type { Dayjs } from '@xeprime/domain';
 import { useTranslations } from 'use-intl';
+import { readRememberedProvince, rememberProvince } from '@/lib/province-memory';
 import { readRememberedRentalRange, rememberRentalRange } from '@/lib/rental-range-memory';
 import { useDestinations } from './hooks/use-marketplace-data';
 
@@ -174,6 +175,49 @@ export function SearchExperienceProvider({
   }, []);
 
   /**
+   * Tỉnh/thành khách đã TỰ CHỌN ở lượt trước → điền vào BẢN NHÁP (ADR 0042 điều 6). Bản native
+   * của khối khôi phục tỉnh trong `search/search-context.tsx`.
+   *
+   * **Chỉ ngoài màn KẾT QUẢ.** Ở màn kết quả, thẻ tìm kiếm LÀ bộ lọc và `initial` là thứ quyết
+   * định danh sách; điền một tỉnh mà bộ lọc không mang nghĩa là viên địa điểm hiện "Bắc Ninh"
+   * trong khi kết quả bên dưới vẫn là toàn quốc — và cách duy nhất để chữa là tự lọc hộ khách
+   * một thứ họ chưa bấm. `initialRef` có giá trị đúng bằng "đang ở màn kết quả" (chỉ màn đó
+   * truyền `initial`), nên điều kiện này là bản dịch thẳng của `!isResultsPage` bên web.
+   *
+   * ⚠️ Bộ nhớ tỉnh có HAI người ghi, và họ chọn từ HAI danh mục khác nhau:
+   *
+   *   - bộ chọn địa điểm ở đây ghi mã lấy từ `/public/destinations` — chỉ những tỉnh ĐANG CÓ XE;
+   *   - ô địa chỉ trong các form (`AddressFields`) ghi mã lấy từ `/provinces` — MỌI tỉnh đang mở.
+   *
+   * Người đọc thì chỉ hiển thị được mã có trong `destinations`. Nên một người vừa khai địa chỉ
+   * gian hàng ở một tỉnh chưa có xe nào sẽ quay lại trang chủ và thấy viên địa điểm ghi "Địa điểm
+   * không còn khả dụng" — một câu đúng nghĩa đen nhưng nói về một lựa chọn họ chưa hề làm ở đây.
+   *
+   * Vì vậy: bộ nhớ là một GỢI Ý, và bề mặt nào cũng có quyền không nhận nó. Chỉ điền khi danh mục
+   * của CHÍNH bề mặt này tra ra tỉnh đó; không tra ra thì để nguyên "Toàn quốc" — và KHÔNG xoá bộ
+   * nhớ, vì mã vẫn đúng và vẫn hữu ích cho các form địa chỉ.
+   *
+   * Phải đợi `destinations` về mới quyết, nếu không lượt render đầu luôn tra hụt và bộ nhớ không
+   * bao giờ được dùng. Cố ý KHÔNG bật `userEditedRef`: đây là điền sẵn, không phải một thao tác —
+   * bật lên là khoá ngày mặc định của bản nháp cũng thành bộ lọc mà khách chưa hề xác nhận.
+   */
+  const restoredProvinceRef = useRef(false);
+  useEffect(() => {
+    if (initialRef.current || restoredProvinceRef.current || destinationsLoading) return;
+    restoredProvinceRef.current = true;
+
+    let alive = true;
+    void readRememberedProvince().then((code) => {
+      if (!alive || !code) return;
+      if (!destinations?.some((item) => item.provinceCode === code)) return;
+      setDraft((prev) => (prev.provinceCode ? prev : { ...prev, provinceCode: code }));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [destinations, destinationsLoading]);
+
+  /**
    * Mọi lối sửa của NGƯỜI DÙNG đi qua đây — và chỉ từ đây ngữ cảnh mới được áp.
    *
    * Đổi loại xe / dịch vụ / địa điểm áp NGAY (web cũng ghi shallow lên URL ngay), nhưng lần áp
@@ -209,8 +253,18 @@ export function SearchExperienceProvider({
     [edit],
   );
 
+  /*
+   * Chỗ DUY NHẤT ghi tỉnh vào bộ nhớ, và nó nằm đúng ở trình xử lý thao tác của người dùng —
+   * không phải trong một effect theo dõi `draft`. Khác biệt đó là toàn bộ điểm của việc ghi nhớ:
+   * `draft` còn đổi vì tham số điều hướng và vì chính khối điền sẵn ở trên, nên một effect sẽ
+   * đóng dấu cả những tỉnh khách chưa bao giờ chọn. `pickProvince` ("Địa điểm nổi bật") cũng
+   * KHÔNG ghi — web để nguyên như vậy: đó là một gợi ý bấm nhanh, không phải khai báo nơi mình ở.
+   */
   const setProvinceCode = useCallback(
-    (next: string) => edit((prev) => ({ ...prev, provinceCode: next })),
+    (next: string) => {
+      rememberProvince(next);
+      edit((prev) => ({ ...prev, provinceCode: next }));
+    },
     [edit],
   );
 

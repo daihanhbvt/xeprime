@@ -108,7 +108,14 @@
     "depositAmount": "Asset deposit",
     "free": "Free",
     "note": "Every figure is computed by the system from receipts and surcharges — it cannot be edited directly.",
-    "overCollected": "Over-collected"
+    "overCollected": "Over-collected",
+    "holdPaymentPlan": {
+      "title": "Hold payment plan",
+      "customerTotal": "Customer total",
+      "holdPaid": "Held via XePrime",
+      "payAtPickup": "Due to the owner at pickup",
+      "note": "The hold is collected by XePrime, so it is not part of the shop’s “Collected” line."
+    }
   },
   "driver": {
     "title": "Driver",
@@ -153,6 +160,13 @@
       "labelReturn": "Odometer at return (km)",
       "hintWithCurrent": "Currently recorded: {km}. You can confirm without entering it.",
       "hintPlain": "You can confirm without entering it. Left blank, the vehicle mileage stays as is."
+    },
+    "odometerError": {
+      "notNumber": "Odometer must be a number",
+      "notInteger": "Odometer must be a whole number",
+      "negative": "Odometer cannot be negative",
+      "tooLarge": "Odometer can be at most {max}",
+      "required": "Enter the odometer reading"
     },
     "condition": {
       "label": "Vehicle condition",
