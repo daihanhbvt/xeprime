@@ -44,11 +44,19 @@ export function BranchFormSheet({
   open,
   branch,
   onClose,
+  notice,
 }: {
   open: boolean;
   /** `null` = thêm mới; có giá trị = sửa chi nhánh đó. */
   branch: Branch | null;
   onClose: () => void;
+  /**
+   * Dải cảnh báo đặt TRÊN form — nơi gọi nói điều mà form không tự biết.
+   *
+   * Ví dụ duy nhất đang dùng: chi nhánh này đang giữ nhiều xe, nên sửa địa chỉ ở đây đổi vị trí
+   * công khai của tất cả chúng. Form chi nhánh không biết mình đang được mở từ đâu.
+   */
+  notice?: React.ReactNode;
 }) {
   const t = useTranslations('Branches.form');
 
@@ -58,7 +66,12 @@ export function BranchFormSheet({
       onClose={onClose}
       title={branch ? t('editTitle', { name: branch.name }) : t('createTitle')}
     >
-      {open ? <BranchForm key={branch?.id ?? 'new'} branch={branch} onDone={onClose} /> : null}
+      {open ? (
+        <>
+          {notice}
+          <BranchForm key={branch?.id ?? 'new'} branch={branch} onDone={onClose} />
+        </>
+      ) : null}
     </BottomSheet>
   );
 }
@@ -99,7 +112,13 @@ function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => v
     const body = {
       name: values.name.trim(),
       provinceCode: values.provinceCode,
-      wardCode: values.wardCode,
+      /*
+       * Chuỗi RỖNG không được gửi. DTO khai `@IsOptional()` kèm `@Length(5, 5)`, mà `@IsOptional`
+       * chỉ bỏ qua `null`/`undefined` — một `''` vẫn đi vào `@Length` và bật 400. Từ ADR 0042
+       * form không còn ô Xã/phường nên chi nhánh MỚI luôn để trống trường này; chi nhánh cũ đã có
+       * mã thì giữ nguyên mã đó.
+       */
+      wardCode: values.wardCode || undefined,
       addressLine: values.addressLine.trim() || undefined,
       placeId: values.placeId ?? undefined,
       latitude: values.latitude ?? undefined,
@@ -141,6 +160,10 @@ function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => v
         names={ADDRESS_FIELD_NAMES}
         pin={ADDRESS_PIN_NAMES}
         required
+        // Chỉ form TẠO MỚI. Ở form SỬA, ô tỉnh trống nghĩa là chi nhánh này có từ trước danh mục
+        // hành chính (ADR 0035 điều 7) — điền vào đó tỉnh người dùng vừa tìm xe là dời một địa
+        // điểm vận hành có thật sang tỉnh khác, âm thầm, chỉ vì họ bấm Lưu.
+        prefillRememberedProvince={!branch}
       />
       <TextField
         control={control}

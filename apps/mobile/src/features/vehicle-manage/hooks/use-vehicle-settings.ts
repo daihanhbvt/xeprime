@@ -136,6 +136,12 @@ export function useVehicleTripHistory(vehicleId: string, filter: string, enabled
     appendError: query.isError && query.data ? query.error : null,
     isRefreshing: query.isRefetching && !query.isFetchingNextPage,
     isFetchingNextPage: query.isFetchingNextPage,
+    /*
+     * Phải LỘ RA, không chỉ dùng nội bộ ở `fetchNextPage`: màn hình cần nó để ẩn hẳn nút "Xem
+     * thêm" ở trang cuối. Giấu nó đi thì nút vẫn hiện và bấm vào không xảy ra gì — người dùng bấm
+     * vài lần trước khi tin là đã hết.
+     */
+    hasNextPage: query.hasNextPage,
     fetchNextPage: () => {
       if (!query.isFetchingNextPage && query.hasNextPage) void query.fetchNextPage();
     },

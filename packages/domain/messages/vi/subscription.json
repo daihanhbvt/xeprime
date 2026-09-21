@@ -2,18 +2,25 @@
   "page": {
     "title": "Gói & hoá đơn",
     "loadError": "Không tải được thông tin gói",
-    "accountSubtitle": "Gói hiện hành, hạn mức chỗ và những gì mở thêm khi nâng cấp."
+    "accountSubtitle": "Nâng cấp lên gian hàng để mở rộng hoạt động, quản lý xe hiệu quả hơn và tăng doanh thu.",
+    "breadcrumb": "Gói & hoá đơn",
+    "heroBadge": "Gian hàng",
+    "heroBenefit1": "Mở rộng cơ hội",
+    "heroBenefit2": "Tăng doanh thu",
+    "heroBenefit3": "Xây dựng thương hiệu"
   },
   "current": {
     "title": "Gói hiện hành",
     "none": "Chưa có gói — gian hàng đang ở tuyến hoa hồng theo chuyến.",
     "noneHint": "Mua gói theo chỗ để không mất phí trên từng chuyến.",
     "expires": "Hết hạn {date}",
-    "commissionSummary": "Phí dịch vụ tính trên mỗi chuyến theo chính sách phí hiện hành của nền tảng, thu qua khoản khách thanh toán trước.",
+    "activeTag": "Đang sử dụng",
+    "commissionSummary": "Bạn đang là chủ xe tuyến hoa hồng. Hoa hồng được tính theo từng chuyến thực tế hoàn thành.",
     "packageSummary": "Trả trước theo chỗ xe — không thu gì trên chuyến.",
     "slotsSummary": "{car} chỗ ô tô · {motorbike} chỗ xe máy",
     "purchaseButton": "Mua gói",
-    "renewButton": "Gia hạn / đổi gói"
+    "renewButton": "Gia hạn / đổi gói",
+    "upgradeButton": "Nâng cấp lên gian hàng"
   },
   "usage": {
     "fleetTotal": "Tổng số xe",
@@ -27,7 +34,10 @@
     "unlimited": "Không giới hạn",
     "atLimitTotal": "Đã dùng hết hạn mức {limit} xe.",
     "atLimitUpgrade": "Nâng lên bậc gói lớn hơn để đăng thêm xe.",
-    "atLimitBuyPlan": "Mua gói gian hàng để đăng thêm xe."
+    "atLimitBuyPlan": "Mua gói gian hàng để đăng thêm xe.",
+    "serviceFee": "Phí dịch vụ",
+    "serviceFeeValue": "{percent}% / chuyến",
+    "fleetLimitSub": "xe được kích hoạt"
   },
   "freeTrips": {
     "title": "Lượt miễn phí",
@@ -41,7 +51,11 @@
     "upgrade": "Nâng cấp để mở thêm",
     "readOnlyHint": "đang chỉ xem",
     "allIncluded": "Gói hiện tại đã mở toàn bộ tính năng nâng cao.",
-    "upgradeCta": "Xem gói cao hơn"
+    "upgradeCta": "Xem gói cao hơn",
+    "unlockTitle": "Nâng cấp lên gian hàng để mở khoá nhiều tính năng hơn",
+    "unlockSubtitle": "Quản lý nhiều xe, nhiều chi nhánh, đội ngũ nhân viên và các công cụ vận hành chuyên nghiệp.",
+    "unlockVehicles": "Không giới hạn số xe (tuỳ gói)",
+    "unlockMore": "Nhiều tính năng khác…"
   },
   "invoices": {
     "title": "Hoá đơn thanh toán",
@@ -56,7 +70,8 @@
     },
     "copyCode": "Sao chép mã đối soát",
     "emptyHint": "Hoá đơn mua hoặc gia hạn gói sẽ xuất hiện tại đây.",
-    "showHistory": "Xem lịch sử thanh toán"
+    "showHistory": "Xem lịch sử thanh toán",
+    "hideHistory": "Ẩn lịch sử thanh toán"
   },
   "purchase": {
     "title": "Mua / gia hạn gói",
@@ -68,19 +83,21 @@
     "limitBranches": "Tối đa {count} chi nhánh",
     "limitBranchesUnlimited": "Không giới hạn chi nhánh",
     "perTerm": "/{months} tháng",
+    "perMonth": "/ tháng",
     "contactForQuote": "Liên hệ báo giá",
     "contactSales": "Liên hệ tư vấn",
     "tierSelect": "Chọn gói",
     "tierSelected": "Đang chọn",
     "termsTitle": "Chọn thời hạn",
-    "termsTitleFor": "Thời hạn cho {plan}",
+    "termsTitleFor": "Chọn thời hạn cho {plan}",
     "termOption": "{months} tháng",
     "termSaving": "Tiết kiệm {percent}%",
     "pickTerm": "Chọn một thời hạn để xem tổng phải trả.",
     "total": "Tổng cả kỳ: {amount}",
     "submit": "Tạo hoá đơn",
     "empty": "Chưa có gói nào đang bán.",
-    "loadError": "Không tải được danh sách gói"
+    "loadError": "Không tải được danh sách gói",
+    "termsHint": "Thời hạn càng dài, chi phí mỗi tháng càng thấp."
   },
   "payment": {
     "title": "Chuyển khoản để kích hoạt gói",
@@ -96,11 +113,62 @@
     "bank": "Ngân hàng",
     "accountNumber": "Số tài khoản",
     "accountName": "Chủ tài khoản",
+    "copyBank": "Sao chép tên ngân hàng",
     "copyAccount": "Sao chép số tài khoản",
+    "copyAccountName": "Sao chép chủ tài khoản",
     "autoActivateNote": "Gói tự kích hoạt khi tiền về — bạn không cần giữ trang này mở, hệ thống sẽ báo khi xong.",
-    "pendingTitle": "Hoá đơn đang chờ chuyển khoản"
+    "pendingTitle": "Hoá đơn đang chờ chuyển khoản",
+    "statusWaiting": "Đang chờ tiền về. Chuyển khoản theo đúng mã bên dưới — gói mở tự động khi XePrime nhận được tiền.",
+    "statusPartial": "Đã nhận một phần. Chuyển nốt số còn thiếu theo đúng mã bên dưới.",
+    "buying": "Gói đang mua",
+    "period": "Áp dụng {from} → {to}"
+  },
+  "upgrade": {
+    "title": "Các bước nâng cấp gian hàng",
+    "steps": {
+      "plan": "Chọn gói dịch vụ",
+      "shopInfo": "Thông tin gian hàng",
+      "payment": "Thanh toán & Hoàn tất"
+    },
+    "continue": "Tiếp tục",
+    "back": "Quay lại chọn gói",
+    "loadError": "Không tải được trạng thái thanh toán",
+    "chosenPlan": "Gói đã chọn: {plan} · {months} tháng · {amount}",
+    "submit": "Lưu thông tin và tạo hoá đơn",
+    "shopInfo": {
+      "title": "Thông tin gian hàng",
+      "intro": "Đây là mặt tiền khách nhìn thấy trên chợ. Thông tin hiện có đã điền sẵn — kiểm tra lại rồi tạo hoá đơn.",
+      "phoneHelp": "Số khách gọi khi cần liên hệ gian hàng. Lưu vào chi nhánh mặc định của bạn.",
+      "logoHelp": "Chưa bắt buộc để mua gói, nhưng gian hàng phải có logo trước khi gửi xe lên chợ.",
+      "missingTitle": "Còn thiếu thông tin bắt buộc của gian hàng",
+      "loadError": "Không tải được thông tin gian hàng",
+      "noBranch": "Không tìm thấy chi nhánh của gian hàng",
+      "noBranchHint": "Liên hệ hỗ trợ XePrime để kiểm tra lại hồ sơ trước khi mua gói."
+    },
+    "validation": {
+      "addressLineRequired": "Nhập số nhà, đường của gian hàng",
+      "addressLineMax": "Địa chỉ quá dài",
+      "wardInvalid": "Mã xã/phường không hợp lệ",
+      "phoneRequired": "Nhập số điện thoại liên hệ của gian hàng",
+      "phoneInvalid": "Số điện thoại không hợp lệ"
+    },
+    "planTitle": "Chọn gói gian hàng phù hợp",
+    "planSubtitle": "Lựa chọn gói phù hợp với nhu cầu hiện tại và định hướng phát triển của bạn.",
+    "totalLabel": "Tổng thanh toán",
+    "totalFor": "{months, plural, other {cho # tháng}}",
+    "secureTitle": "Thanh toán an toàn, bảo mật",
+    "secureHint": "Bạn có thể nâng cấp hoặc gia hạn bất cứ lúc nào.",
+    "nextStep": "Bước tiếp theo: Thông tin gian hàng",
+    "supportTitle": "Cần tư vấn thêm?",
+    "supportBody": "Đội ngũ XePrime sẵn sàng hỗ trợ bạn chọn gói phù hợp với nhu cầu.",
+    "supportCta": "Liên hệ hỗ trợ",
+    "editInvoice": "Chọn lại gói",
+    "backToInvoice": "Quay lại mã đang chờ",
+    "editWarnTitle": "Bạn đang có hoá đơn {code} chờ chuyển khoản",
+    "editWarnBody": "Mã cũ VẪN dùng được cho tới khi bạn tạo hoá đơn mới ở bước 3 — lúc đó nó mới bị huỷ. Nếu bạn đã chuyển khoản theo mã đó thì đừng tạo mã mới, hãy quay lại và chờ tiền về."
   },
   "term": {
+    "pillLabel": "Thời hạn",
     "label": "Thời hạn",
     "daysLeft": "{days, plural, other {Còn # ngày}}",
     "grace": "Đang trong thời gian ân hạn",

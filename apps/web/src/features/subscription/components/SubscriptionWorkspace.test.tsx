@@ -1,7 +1,13 @@
 import { App } from 'antd';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { BILLING_MODE, PERMISSION, type Permission } from '@xeprime/types';
+import {
+  BILLING_MODE,
+  PERMISSION,
+  SHOP_ONBOARDING_STATE,
+  TENANT_ROLE,
+  type Permission,
+} from '@xeprime/types';
 
 import type { MySubscription } from '../types';
 import { SubscriptionWorkspace } from './SubscriptionWorkspace';
@@ -61,6 +67,7 @@ vi.mock('../hooks/use-subscription', () => ({
   useTenantPlans: () => ({ data: [], isLoading: false, isError: false, refetch: vi.fn() }),
   usePurchaseSubscription: () => ({ mutate: vi.fn(), isPending: false }),
   usePaymentInfo: () => ({ data: undefined, isLoading: false, isError: false }),
+  useSyncScopeWhenInvoiceSettles: () => undefined,
 }));
 
 vi.mock('@/hooks/use-url-filters', async (importOriginal) => {
@@ -74,13 +81,48 @@ vi.mock('@/hooks/use-feature', () => ({ useFeatureStates: () => ({}) }));
  * PHA của gói (`current`/`grace`/`lapsed`) đọc từ `/auth/me`, KHÔNG suy từ `endsAt` bằng đồng
  * hồ máy khách (ADR 0038 điều 1). Chặn ở đúng ranh giới đó thay vì dựng một QueryClient giả —
  * thứ bộ này quan tâm là màn hình nói gì, không phải hook lấy dữ liệu bằng cách nào.
+ *
+ * Scope cũng là nơi đọc TUYẾN: màn này có hai hình dạng (gia hạn ↔ nâng cấp) và cái nào hiện ra
+ * do `canUpgradeToPackageTrack` quyết định.
  */
-const currentUser = vi.hoisted(() => ({
-  data: { tenant: { billingPhase: 'current' } } as unknown,
-}));
+const currentUser = vi.hoisted(() => ({ data: undefined as unknown }));
 vi.mock('@/hooks/use-current-user', () => ({
   useCurrentUser: () => currentUser,
 }));
+
+/** Scope của một gian hàng ĐANG có gói — hình dạng mặc định của bộ test này. */
+function packageScope(over: Record<string, unknown> = {}) {
+  return {
+    tenant: {
+      billingPhase: 'current',
+      roleKey: TENANT_ROLE.SHOP_OWNER,
+      billingMode: BILLING_MODE.PACKAGE,
+      onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE,
+      ...over,
+    },
+  };
+}
+
+/** Scope của một chủ xe tuyến hoa hồng — chưa từng đi qua cửa gói. */
+function commissionScope(over: Record<string, unknown> = {}) {
+  return packageScope({
+    billingMode: BILLING_MODE.COMMISSION,
+    onboardingState: SHOP_ONBOARDING_STATE.COMMISSION,
+    ...over,
+  });
+}
+
+/** Gói hoa hồng vẫn là một `currentPlan` — đó chính là chỗ bản cũ mời họ "gia hạn". */
+const COMMISSION_PLAN: MySubscription['currentPlan'] = {
+  subscriptionId: 'SUB2',
+  planId: 'PLAN2',
+  planCode: 'commission',
+  planName: 'Tuyến hoa hồng',
+  billingMode: BILLING_MODE.COMMISSION,
+  commissionPercent: 10,
+  quota: null,
+  endsAt: '2027-01-01T00:00:00.000Z',
+};
 
 function subscriptionFixture(over: Partial<MySubscription> = {}): MySubscription {
   return {
@@ -122,6 +164,7 @@ beforeEach(() => {
   me.isError = false;
   invoices.data = { items: [], meta: { page: 1, limit: 20, total: 0, hasNext: false } };
   pendingInvoice.data = undefined;
+  currentUser.data = packageScope();
   grant(PERMISSION.SUBSCRIPTION_VIEW, PERMISSION.SUBSCRIPTION_PURCHASE);
 });
 
@@ -275,22 +318,121 @@ describe('SubscriptionWorkspace — không hứa con số hệ thống không gi
     expect(screen.queryByText(/lượt miễn phí/)).toBeNull();
   });
 
-  it('tuyến hoa hồng: mô tả phí theo CHÍNH SÁCH hiện hành, không in phần trăm của gói', () => {
-    me.data = subscriptionFixture({
-      currentPlan: {
-        subscriptionId: 'SUB2',
-        planId: 'PLAN2',
-        planCode: 'commission',
-        planName: 'Tuyến hoa hồng',
-        billingMode: BILLING_MODE.COMMISSION,
-        commissionPercent: 10,
-        quota: null,
-        endsAt: '2027-01-01T00:00:00.000Z',
-      },
+  /**
+   * Phí dịch vụ hiện ra từ CHÍNH SÁCH PHÍ hiệu lực (`/auth/me`), KHÔNG từ `commissionPercent`
+   * của gói: hai con số không bị ràng buộc phải bằng nhau (ADR 0029 điều 2), và thứ thật sự trừ
+   * vào tiền chủ xe là con số của chính sách.
+   */
+  it('tuyến hoa hồng: in phí của CHÍNH SÁCH, không in phần trăm của gói', () => {
+    me.data = subscriptionFixture({ currentPlan: COMMISSION_PLAN });
+    currentUser.data = commissionScope({ serviceFeePercent: 7 });
+    renderWorkspace();
+
+    expect(screen.getByText('7% / chuyến')).toBeTruthy();
+    // `commissionPercent: 10` của gói KHÔNG được lên màn hình.
+    expect(screen.queryByText(/10%/)).toBeNull();
+  });
+
+  it('chưa có chính sách phí hiệu lực: KHÔNG dựng ô phí dịch vụ', () => {
+    me.data = subscriptionFixture({ currentPlan: COMMISSION_PLAN });
+    currentUser.data = commissionScope({ serviceFeePercent: null });
+    renderWorkspace();
+
+    expect(screen.queryByText('Phí dịch vụ')).toBeNull();
+  });
+});
+
+/**
+ * HAI TUYẾN, HAI LỜI MỜI (ADR 0028 điều 1).
+ *
+ * Gói hoa hồng cũng là một `currentPlan`, nên bản cũ mời chủ xe tuyến hoa hồng "Gia hạn / đổi
+ * gói" — một thứ họ chưa từng mua — rồi mở hộp thoại mua gói không có bước hồ sơ nào. Câu chữ và
+ * màn hình phải đi theo TUYẾN, không theo "có dòng gói hay không".
+ */
+describe('SubscriptionWorkspace — gia hạn hay nâng cấp', () => {
+  /**
+   * Tuyến hoa hồng KHÔNG có nút nào ở khối gói: lối nâng cấp của họ là cả một luồng ba bước dựng
+   * sẵn ngay bên dưới, với bảng giá mở sẵn. Thứ tuyệt đối không được xuất hiện là lời mời "Gia
+   * hạn / đổi gói" — họ chưa từng mua gói nào để mà gia hạn.
+   */
+  it('tuyến hoa hồng: KHÔNG mời gia hạn, và luồng nâng cấp nằm ngay trên trang', () => {
+    me.data = subscriptionFixture({ currentPlan: COMMISSION_PLAN });
+    currentUser.data = commissionScope();
+    renderWorkspace();
+
+    expect(screen.queryByRole('button', { name: /Gia hạn \/ đổi gói/ })).toBeNull();
+    // Bảng giá không nằm sau một cú bấm: khối nâng cấp dựng sẵn ngay dưới khối gói.
+    expect(
+      screen.getByRole('heading', { name: 'Các bước nâng cấp gian hàng' }),
+    ).toBeTruthy();
+  });
+
+  /**
+   * Hoá đơn chờ hiện ở ĐÚNG MỘT chỗ trên màn.
+   *
+   * Luồng nâng cấp dựng khối chuyển khoản ở bước 3 của nó, còn sổ hoá đơn cũng dựng một khối như
+   * vậy cho hoá đơn đang chờ. Cả hai cùng bật thì trang có hai mã QR cho CÙNG một khoản tiền, và
+   * người dùng không có cách nào biết chúng là một.
+   */
+  it('tuyến hoa hồng đang chờ tiền: chỉ MỘT khối chuyển khoản, không nhân đôi mã QR', () => {
+    me.data = subscriptionFixture({ currentPlan: COMMISSION_PLAN });
+    currentUser.data = commissionScope();
+    pendingInvoice.data = {
+      id: 'INV1',
+      code: 'XPG123456',
+      planId: 'PLAN1',
+      planCode: 'shop-basic',
+      termMonths: 3,
+      quota: { maxVehicles: 5, maxBranches: 1, maxMembers: null },
+      status: 'issued',
+      totalAmount: '250000',
+      paidAmount: '0',
+    };
+    renderWorkspace();
+
+    expect(screen.getAllByText('XPG123456')).toHaveLength(1);
+  });
+
+  it('tuyến gói: giữ nguyên "Gia hạn / đổi gói", không có khối nâng cấp', () => {
+    renderWorkspace();
+
+    expect(screen.getByRole('button', { name: /Gia hạn \/ đổi gói/ })).toBeTruthy();
+    expect(
+      screen.queryByRole('heading', { name: 'Các bước nâng cấp gian hàng' }),
+    ).toBeNull();
+  });
+
+  /*
+   * Thiếu quyền mua thì KHÔNG có CTA nào, và cũng KHÔNG dựng luồng nâng cấp trong cây — một form
+   * treo sẵn là một đường vào bằng phím tắt mà API sẽ từ chối ở bước cuối.
+   */
+  it('tuyến hoa hồng nhưng không có quyền mua: không CTA, không khối nâng cấp', () => {
+    me.data = subscriptionFixture({ currentPlan: COMMISSION_PLAN });
+    currentUser.data = commissionScope();
+    grant(PERMISSION.SUBSCRIPTION_VIEW);
+    renderWorkspace();
+
+    expect(screen.queryByRole('button', { name: /Gia hạn \/ đổi gói/ })).toBeNull();
+    expect(
+      screen.queryByRole('heading', { name: 'Các bước nâng cấp gian hàng' }),
+    ).toBeNull();
+  });
+
+  /**
+   * Gian hàng đã trả tiền rồi hết gói cũng rơi về `billingMode = commission`. Họ là khách cũ cần
+   * GIA HẠN — mời họ "nâng cấp lên gian hàng" là kể sai câu chuyện của chính họ (ADR 0040 điều 4).
+   */
+  it('gian hàng hết gói: vẫn là gia hạn, không phải nâng cấp', () => {
+    me.data = subscriptionFixture({ currentPlan: COMMISSION_PLAN });
+    currentUser.data = commissionScope({
+      onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE,
+      billingPhase: 'lapsed',
     });
     renderWorkspace();
 
-    expect(screen.getByText(/theo chính sách phí hiện hành/)).toBeTruthy();
-    expect(screen.queryByText(/10%/)).toBeNull();
+    expect(screen.getByRole('button', { name: /Gia hạn \/ đổi gói/ })).toBeTruthy();
+    expect(
+      screen.queryByRole('heading', { name: 'Các bước nâng cấp gian hàng' }),
+    ).toBeNull();
   });
 });

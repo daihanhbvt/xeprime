@@ -142,12 +142,23 @@ describe('ListYourVehicleScreen', () => {
     expect(mockPush).toHaveBeenCalledWith(QUICK_REGISTER);
   });
 
-  it('đã đăng nhập, chưa có gian hàng: tuyến gian hàng vào form TẠO GIAN HÀNG', async () => {
+  /**
+   * CTA gian hàng phải mang theo CỬA VÀO (ADR 0040), không chỉ đường dẫn.
+   *
+   * Thiếu `track=package` thì server nhận đúng một request giống hệt tuyến hoa hồng, gán gói hoa
+   * hồng mặc định, và người vừa bấm "Đăng ký gian hàng" thành chủ xe tuyến hoa hồng ở mọi nơi đọc
+   * `billingMode` — kể cả trần 3 xe và nhãn tài khoản. Đó là bug mà tham số này sửa, nên nó được
+   * kiểm ở đây chứ không chỉ ở màn nhận.
+   */
+  it('đã đăng nhập, chưa có gian hàng: tuyến gian hàng vào form TẠO GIAN HÀNG kèm track=package', async () => {
     const view = await renderScreen(SESSION);
     await view.findByText(SUBTITLE);
 
     await pressTrack(view, SHOP_CTA);
-    expect(mockPush).toHaveBeenCalledWith('/manage/onboarding');
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/manage/onboarding',
+      params: { track: 'package' },
+    });
   });
 
   it('đã có gian hàng: tuyến cá nhân vẫn vào thẳng màn đăng xe', async () => {

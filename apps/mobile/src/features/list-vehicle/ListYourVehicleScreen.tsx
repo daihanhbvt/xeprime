@@ -6,6 +6,7 @@ import { StyleSheet, type ImageSourcePropType } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { LEGAL_DOC } from '@xeprime/domain';
+import { REGISTRATION_TRACK } from '@xeprime/types';
 import { OWNER_PERSONAL_CAR_RATIO, OWNER_SHOP_SHOWROOM_RATIO, images } from '@/assets';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
@@ -147,7 +148,7 @@ export function ListYourVehicleScreen() {
                 icon="storefront-outline"
                 variant="secondary"
                 loading={isLoading}
-                onPress={go(ROUTES.manage.onboarding())}
+                onPress={go(ROUTES.manage.onboarding(REGISTRATION_TRACK.PACKAGE))}
               />
             }
           />

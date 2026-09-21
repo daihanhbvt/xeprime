@@ -26,6 +26,7 @@ import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
@@ -130,6 +131,14 @@ const STEP_FIELDS: Record<string, ReadonlyArray<keyof VehicleFormValues>> = {
 };
 
 /**
+ * MỌI ô của wizard — bộ lọc cho lỗi validate từ server.
+ *
+ * Dựng từ chính `STEP_FIELDS` chứ không chép tay danh sách thứ hai: thêm một ô vào một bước là
+ * tập này tự rộng ra theo, không có chỗ nào để hai bên trôi khỏi nhau.
+ */
+const WIZARD_FIELDS: ReadonlyArray<keyof VehicleFormValues> = Object.values(STEP_FIELDS).flat();
+
+/**
  * Wizard THÊM XE (VEH-02) — bốn bước, thuần client.
  *
  * ⚠️ Mọi bước giữ giá trị trong CÙNG một form React Hook Form và chỉ gọi API **một lần** ở bước
@@ -162,10 +171,13 @@ export function CreateVehicleScreen() {
     vehicleFormSchema,
     'Vehicles.form.validation',
   );
+  const applyApiFieldErrors = useApiFieldErrors();
+
   const {
     control,
     getValues,
     handleSubmit,
+    setError,
     setValue,
     trigger,
     formState: { errors, isDirty },
@@ -242,7 +254,24 @@ export function CreateVehicleScreen() {
               setCreated({ vehicle, submittedForReview: false });
             }
           },
-          onError: (error) => toast.showError(errorMessage(error)),
+          onError: (error) => {
+            /*
+             * Server bắt được thứ yup bỏ lọt (luật chỉ có ở backend: biển số trùng, số chữ số
+             * thập phân, độ dài…) → gắn vào ĐÚNG Ô và nhảy về bước chứa nó, thay vì để người dùng
+             * đứng ở bước xác nhận với một dòng "Dữ liệu gửi lên không hợp lệ" không chỉ được chỗ
+             * nào. Cùng cách xử lý với lỗi schema ở nhánh ngay dưới.
+             */
+            const applied = applyApiFieldErrors(error, setError, { fields: WIZARD_FIELDS });
+            if (applied.length === 0) {
+              toast.showError(errorMessage(error));
+              return;
+            }
+            const bad = new Set<string>(applied);
+            const target = steps.findIndex((candidate) =>
+              (STEP_FIELDS[candidate.key] ?? []).some((f) => bad.has(f)),
+            );
+            if (target >= 0) setStep(target);
+          },
         });
       },
       /*

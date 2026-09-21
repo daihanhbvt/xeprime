@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { useRouter } from 'expo-router';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { PERMISSION } from '@xeprime/types';
+import type { OwnerProfileValues } from '@xeprime/validators';
+import { uploadsApi, type UploadMeta } from '@/api/uploads/api';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
@@ -110,7 +112,11 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
   const { data: user, isLoading: userLoading } = useCurrentUser();
   const { has } = usePermissions();
   const canCreate = has(PERMISSION.VEHICLE_CREATE);
-  const branches = useActiveBranches();
+  /*
+   * Chưa có gian hàng thì KHÔNG hỏi `GET /branches`: câu trả lời chắc chắn là 403, và nó chỉ
+   * làm bước 2 hiện một cảnh báo "không tải được chi nhánh" cho người chẳng có chi nhánh nào.
+   */
+  const branches = useActiveBranches(user?.tenant != null);
   const registration = useQuickVehicleRegistration();
 
   const resolver = useValidationResolver<QuickVehicleValues>(
@@ -127,11 +133,15 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
     });
 
   const [step, setStep] = useState<StepKey>('info');
-  /*
-   * Giữ bước hồ sơ trên thanh bước SAU KHI nó xong, thay vì để thanh bước co từ 4 xuống 3 và
-   * "Thông tin xe" nhảy từ số 2 về số 1 ngay dưới tay người dùng.
+  /** Đang quay lại sửa hồ sơ ⇒ bước sẽ trở về sau khi lưu. `null` = không sửa. */
+  const [ownerReturnStep, setOwnerReturnStep] = useState<StepKey | null>(null);
+  /**
+   * Hồ sơ chủ xe đã KHAI nhưng CHƯA gửi. `null` = chưa qua bước đó.
+   *
+   * Sống trong state của wizard, không trên server — và đó là toàn bộ điểm của đợt sửa
+   * 17/09/2026 (xem docblock `QuickVehicleOwnerStep`): bỏ dở giữa chừng không để lại gì.
    */
-  const [ownerStepDone, setOwnerStepDone] = useState(false);
+  const [ownerProfile, setOwnerProfile] = useState<OwnerProfileValues | null>(null);
   const [result, setResult] = useState<Awaited<ReturnType<typeof registration.run>> | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
 
@@ -154,9 +164,60 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
     [branchItems, noProvince],
   );
 
-  const needsOwnerProfile = user != null && user.tenant == null;
-  /** Thanh bước có 4 mục khi luồng này phải đi qua hồ sơ chủ xe, 3 mục khi không. */
-  const withOwnerStep = needsOwnerProfile || ownerStepDone;
+  /*
+   * Tỉnh của chi nhánh ĐANG CHỌN — chiều so sánh sát nhất của gợi ý giá thị trường.
+   *
+   * Tra ở đây chứ không đẩy cả danh sách chi nhánh xuống bước giá: bước đó chỉ cần đúng hai
+   * trường, và biết hình dạng DTO chi nhánh là việc của màn này.
+   */
+  const branchId = useWatch({ control, name: 'branchId' });
+  /** Chi nhánh ĐANG CHỌN — khối địa chỉ và gợi ý giá cùng đọc một bản, không tra hai lần. */
+  const selectedBranch = useMemo(
+    () => (branchItems ?? []).find((b) => b.id === branchId) ?? null,
+    [branchItems, branchId],
+  );
+  const branchProvince = useMemo(() => {
+    const picked = (branchItems ?? []).find((b) => b.id === branchId);
+    return picked
+      ? { code: picked.provinceCode ?? null, name: picked.provinceName ?? null }
+      : undefined;
+  }, [branchItems, branchId]);
+
+  /**
+   * Gian hàng CHƯA tồn tại trên server — người này đang đăng ký chiếc xe đầu tiên.
+   *
+   * Khác `ownerProfile == null` (đã khai chưa) và khác `canCreate` (có quyền chưa): đây là câu
+   * hỏi "server đã có gì chưa", và nó quyết định cả ba thứ — không gọi `GET /branches`, không
+   * validate `branchId`, không chặn vì thiếu quyền.
+   */
+  const pendingShop = user != null && user.tenant == null;
+  /**
+   * Thanh bước có 4 mục khi luồng này phải đi qua hồ sơ chủ xe, 3 mục khi không.
+   *
+   * `ownerProfile != null` giữ mục đó lại trong lúc LƯU: `POST /tenants` làm mới `/auth/me`
+   * giữa chừng, và nếu chỉ đọc `pendingShop` thì thanh bước co từ 4 xuống 3 ngay dưới tay
+   * người dùng, "Thông tin xe" nhảy từ số 2 về số 1.
+   */
+  const withOwnerStep = pendingShop || ownerProfile != null;
+  /** Lần chạy này là lần MỞ gian hàng — khác `pendingShop`, nó không đổi giữa chừng. */
+  const opensShop = withOwnerStep;
+
+  /**
+   * Tải ảnh của người CHƯA có gian hàng: mở gian hàng ngay trước tấm đầu tiên.
+   *
+   * `/uploads/vehicle-images/presign` là tenant-scoped (khoá đối tượng nằm dưới
+   * `tenants/<id>/vehicles`), nên không có gian hàng thì tấm ảnh đầu tiên nhận 403. Mở nó ở đúng
+   * thao tác NÀY — chứ không phải ở nút "Tiếp tục" của bước trước — giữ nguyên nguyên tắc của
+   * đợt sửa: server chỉ có dữ liệu khi người dùng thật sự làm một việc. Bỏ dở ở bước ảnh mà
+   * chưa chọn tấm nào vẫn không để lại gì.
+   */
+  const presignImage = useCallback(
+    async (meta: UploadMeta) => {
+      if (opensShop) await registration.ensureShop(ownerProfile);
+      return uploadsApi.vehicleImage(meta);
+    },
+    [opensShop, ownerProfile, registration],
+  );
 
   const steps = useMemo(
     () =>
@@ -165,9 +226,19 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
         title: t(`steps.${key}.title` as never),
         shortTitle: t(`steps.${key}.short` as never),
         heading: t(`steps.${key}.heading` as never),
-        fields: STEP_FIELDS[key],
+        /*
+         * `branchId` KHÔNG được validate khi wizard này là người MỞ gian hàng: chi nhánh mặc
+         * định sinh ra cùng `POST /tenants` ở bước lưu, nên trước đó không có id nào để điền —
+         * và bước 2 cũng không vẽ bộ chọn chi nhánh cho họ.
+         *
+         * Điều kiện đọc `ownerProfile` chứ không chỉ `pendingShop`: sau khi `POST /tenants` chạy
+         * giữa chừng, `/auth/me` làm `pendingShop` thành `false` ngay trong lần chạy đó. Nếu lúc
+         * ấy bước tạo xe hỏng và người dùng bấm lại, phép kiểm tra sẽ đòi một `branchId` mà form
+         * chưa bao giờ có — và chặn đúng lần thử lại.
+         */
+        fields: opensShop ? STEP_FIELDS[key].filter((f) => f !== 'branchId') : STEP_FIELDS[key],
       })),
-    [t],
+    [opensShop, t],
   );
 
   /*
@@ -220,16 +291,20 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
    * Đường cũ bắt người chỉ có một chiếc xe đi qua form "đăng ký gian hàng" ở một khu khác, rồi
    * thả họ lại ở hồ sơ gian hàng thay vì chỗ đang làm dở.
    */
-  if (needsOwnerProfile && !ownerStepDone) {
+  if (pendingShop && (ownerProfile == null || ownerReturnStep != null)) {
     return (
       <>
         <AppHeader title={t('exit')} onBack={exit} />
         <Screen edges={['left', 'right', 'bottom']}>
           <VehicleWizardBar steps={barSteps} current={0} onStepChange={() => undefined} />
           <QuickVehicleOwnerStep
-            onCreated={() => {
-              setOwnerStepDone(true);
-              setStep('info');
+            defaultValues={ownerProfile}
+            {...(ownerReturnStep ? { submitLabel: tCommon('save') } : {})}
+            onCompleted={(values) => {
+              setOwnerProfile(values);
+              // Quay lại đúng chỗ đã bấm "Sửa địa chỉ"; lần đầu thì đi tiếp sang bước xe.
+              setStep(ownerReturnStep ?? 'info');
+              setOwnerReturnStep(null);
             }}
             onCancel={exit}
           />
@@ -239,21 +314,11 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
   }
 
   /*
-   * Hồ sơ vừa tạo xong nhưng `/auth/me` chưa trả về tenant + quyền mới. Chờ ở đây, nếu không
-   * người dùng thấy nháy qua màn "Không có quyền thêm xe" ngay sau khi tạo hồ sơ thành công.
+   * Quyền thêm xe đến CÙNG gian hàng, và gian hàng mở ở bước lưu — nên người đang đăng ký chiếc
+   * xe đầu tiên chắc chắn chưa có `vehicle.create`. Chặn họ ở đây là chặn đúng luồng mà màn này
+   * sinh ra để phục vụ; backend vẫn là lớp chặn thật nếu `POST /vehicles` không được phép.
    */
-  if (ownerStepDone && !user.tenant) {
-    return (
-      <>
-        <AppHeader title={t('exit')} onBack={exit} />
-        <Screen edges={['left', 'right', 'bottom']} scroll={false}>
-          <ScreenLoading />
-        </Screen>
-      </>
-    );
-  }
-
-  if (!canCreate) {
+  if (!pendingShop && !canCreate) {
     return (
       <>
         <AppHeader title={t('exit')} onBack={exit} />
@@ -303,6 +368,8 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
       const outcome = await registration.run(getValues(), {
         submitForReview,
         toMessage: errorMessage,
+        // Gian hàng mở ở CHÍNH lần bấm này khi người dùng chưa có — xem `useQuickVehicleRegistration`.
+        ownerProfile,
       });
       setResult(outcome);
       if (!outcome.partialError) {
@@ -336,6 +403,15 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
    */
   function goToBar(index: number) {
     const target = withOwnerStep ? index - 1 : index;
+    /*
+     * Hồ sơ chủ xe quay lại SỬA được chừng nào gian hàng chưa được mở — sau đó nó là dữ liệu
+     * trên server và sửa ở hồ sơ gian hàng, không phải trong wizard.
+     */
+    if (target === -1 && pendingShop) {
+      setStepError(null);
+      setOwnerReturnStep(step);
+      return;
+    }
     if (target < 0 || target >= vehicleIndex) return;
     setStepError(null);
     setStep(STEP_KEYS[target] as StepKey);
@@ -344,7 +420,7 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
   /** Đi tiếp — validate ĐÚNG bước đang mở, và chặn ngay nếu thông số năng lượng còn thiếu. */
   async function next() {
     setStepError(null);
-    const okay = await trigger([...STEP_FIELDS[step]]);
+    const okay = await trigger([...(steps[vehicleIndex]?.fields ?? STEP_FIELDS[step])]);
     const energyMissing = step === 'info' ? missingEnergyFields(getValues()) : [];
     if (!okay || energyMissing.length > 0) {
       if (energyMissing.length > 0) setStepError(t('errors.energyRequired'));
@@ -366,13 +442,21 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
           {step === 'info' ? <QuickVehicleInfoStep control={control} setValue={setValue} /> : null}
           {step === 'rental' ? (
             <QuickVehicleRentalStep
+              branchProvince={branchProvince}
+              onApplyPrice={(price) => setValue('weekdayPrice', price, { shouldValidate: true })}
               control={control}
               branchOptions={branchOptions}
               branchLoading={branches.isLoading}
               branchError={branches.isError}
+              onRetryBranches={() => void branches.refetch()}
+              selectedBranch={selectedBranch}
+              pendingAddress={pendingShop ? ownerProfile : null}
+              onEditPendingAddress={() => setOwnerReturnStep('rental')}
             />
           ) : null}
-          {step === 'images' ? <QuickVehicleImagesStep control={control} /> : null}
+          {step === 'images' ? (
+            <QuickVehicleImagesStep control={control} presign={presignImage} />
+          ) : null}
 
           {stepError ? <Callout tone="danger">{stepError}</Callout> : null}
 

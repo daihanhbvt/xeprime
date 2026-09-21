@@ -1,9 +1,8 @@
 /*
- * Khối "Nâng cấp để mở thêm" — nền nhạt, không viền, KHÔNG phải một thẻ.
+ * Khối "Nâng cấp để mở khoá" — thẻ nền vàng nhạt, viền vàng.
  *
- * Nó đứng bên trong section "Gói & hạn mức" và nói về thứ người dùng CHƯA mua, nên nó phải nhẹ
- * hơn phần nói về gói họ đang dùng. Một thẻ có viền và bóng ở đây kéo mắt về phía upsell trước
- * cả thông tin họ vào trang để tìm.
+ * Nó nói về thứ người dùng CHƯA có, nên nó không được trông giống thẻ trắng nói về gói họ đang
+ * dùng: màu là thứ phân biệt hai vai trò đó mà không cần thêm một dòng chữ nào.
  */
 .block {
   display: flex;
@@ -11,65 +10,111 @@
   flex-direction: column;
   align-items: flex-start;
   padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-primary);
   border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-layout);
-  gap: var(--xp-space-xs);
+  background: var(--xp-color-primary-light);
+  gap: var(--xp-space-sm);
+}
+
+.blockHead {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.blockIcon {
+  display: grid;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  font-size: var(--xp-font-size-body);
 }
 
 .blockTitle {
   margin: 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-semibold);
-}
-
-.groupTitle {
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-semibold);
-  color: var(--xp-color-text-secondary);
-  margin-bottom: var(--xp-space-xs);
-}
-
-.groupTitle:not(:first-child) {
-  margin-top: var(--xp-space-md);
-}
-
-.list {
-  list-style: none;
-  margin: 0 0 var(--xp-space-sm);
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.item,
-.itemLocked {
-  display: flex;
-  align-items: center;
-  gap: var(--xp-space-xs);
-  font-size: var(--xp-font-size-body-sm);
   color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
 }
 
-/* Mục chưa mở làm nhạt đi — vẫn đọc được, nhưng không cạnh tranh với mục đang dùng. */
-.itemLocked {
+.blockSubtitle {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/*
+ * BA cột cố định ở desktop — chín ô thành ba hàng ba, không có hàng cuối lẻ một ô. `auto-fit`
+ * từng dùng ở đây và nó chia theo bề rộng khả dụng, nên ở một số cỡ màn hình lưới rơi về bốn
+ * cột và ô cuối đứng trơ một mình.
+ */
+.grid {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  gap: var(--xp-space-xs);
+  list-style: none;
+}
+
+/*
+ * Ô CAO 32px: icon đi thẳng vào hàng chữ, không còn ô vuông nền bọc quanh nó.
+ *
+ * Bản trước mỗi ô cao 46px (icon 28px trong một khối nền + padding 8px trên dưới), ba hàng thành
+ * gần 160px cho một danh sách chỉ để LƯỚT QUA. Khối này nói "nâng cấp thì có thêm gì" — nó không
+ * đáng chiếm chỗ ngang với phần nói về gói đang dùng ngay phía trên.
+ */
+.item,
+.itemMore {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  gap: var(--xp-space-xs);
+}
+
+/* Ô "còn nữa" là một lời hứa, không phải một năng lực — chữ chìm hơn để không đọc ngang hàng. */
+.itemMore {
   color: var(--xp-color-text-secondary);
 }
 
-.iconOn {
-  color: var(--xp-color-success, #52c41a);
-}
-
-.iconOff {
-  color: var(--xp-color-text-tertiary, var(--xp-color-text-secondary));
+/* Icon TRẦN, cùng cỡ chữ đứng cạnh — một khối nền quanh nó đẩy mỗi ô cao thêm 14px. */
+.itemIcon {
+  display: grid;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body);
 }
 
 .hint {
-  color: var(--xp-color-warning, #faad14);
+  color: var(--xp-color-warning);
 }
 
-.allIncluded {
-  font-size: var(--xp-font-size-body-sm);
-  color: var(--xp-color-text-secondary);
+@media (max-width: 899px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 599px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

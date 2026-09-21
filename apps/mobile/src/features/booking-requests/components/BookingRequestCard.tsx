@@ -6,6 +6,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   BOOKING_REQUEST_STATUS,
+  isBookingRequestPastDue,
   STATUS_COLOR,
   BOOKING_REQUEST_STATUS_META,
   PERMISSION,
@@ -84,7 +85,27 @@ function BookingRequestCardImpl({
 
   const status = request.status as BookingRequestStatus;
   const meta = BOOKING_REQUEST_STATUS_META[status];
-  const pending = status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL;
+  /*
+   * HAI chặng cần gian hàng quyết định, và chặng thứ hai là chặng TỐN KÉM hơn hẳn:
+   *
+   *   · `pending_host_approval` — khách mới hỏi, chưa ai mất gì;
+   *   · `hold_paid` (ADR 0039)  — khách ĐÃ TRẢ TIỀN và chỗ xe đang bị giữ. Bỏ sót chặng này là
+   *     bày ra một thẻ ghi "chờ bạn duyệt" mà không có nút nào để duyệt, trong khi tiền của
+   *     khách nằm ở XePrime và đồng hồ phản hồi đang chạy tới lượt hoàn tự động.
+   */
+  const needsDecision =
+    status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL ||
+    status === BOOKING_REQUEST_STATUS.HOLD_PAID;
+  /*
+   * Quá hạn phản hồi thì KHÔNG còn quyết định nào — server từ chối cả duyệt lẫn từ chối
+   * (`BOOKING_REQUEST_EXPIRED`), nên bày nút ra là mời người dùng bấm một thứ chắc chắn hỏng.
+   *
+   * Hỏi `respondBy` chứ không hỏi `status`: trạng thái `expired` do worker ghi theo nhịp, nên có
+   * một cửa sổ mà bản ghi vẫn còn `pending_host_approval` trong khi giờ đã hết. Đây chính là vị
+   * từ mà server dùng, nên hai phía không bao giờ nói hai câu khác nhau.
+   */
+  const pastDue = isBookingRequestPastDue(request.respondBy);
+  const decidable = needsDecision && !pastDue;
   const canDecide = permissions.has(PERMISSION.BOOKING_REQUEST_APPROVE);
   /** Lối "Xem lịch" gác bằng ĐÚNG quyền web gác nó (`canViewVehicle` = `vehicles.view`). */
   const canViewVehicle = permissions.has(PERMISSION.VEHICLE_VIEW);
@@ -134,7 +155,7 @@ function BookingRequestCardImpl({
               color={meta.color}
               size="sm"
             />
-            {pending ? <RespondDeadline respondBy={request.respondBy} /> : null}
+            {needsDecision ? <RespondDeadline respondBy={request.respondBy} /> : null}
           </XStack>
 
           {/* Xe: mỏ neo thị giác đầu tiên, y như web. */}
@@ -378,6 +399,52 @@ function BookingRequestCardImpl({
             </YStack>
           ) : null}
 
+          {/*
+            TIỀN — vùng riêng cạnh lịch trình (mẫu 19/09): "khi nào" và "bao nhiêu" là hai loại
+            thông tin khác nhau. `pricing` là `null` khi không tính được (dài hạn chưa chốt lịch,
+            xe thiếu giá, chưa có chính sách phí — xem `BookingRequestPricingDto`), và lúc đó
+            KHÔNG dựng vùng rỗng.
+          */}
+          {request.pricing ? (
+            <YStack gap={space.xs}>
+              <ZoneTitle>{t('pricing.zoneHeading')}</ZoneTitle>
+              {/*
+                "Khách trả" KHÔNG lặp lại khi hai số bằng nhau (không có phụ phí) — hai nhãn trỏ
+                một số là mập mờ, không phải đầy đủ hơn. "Tiền thuê" luôn có mặt: nó là con số
+                nền, không đổi theo phụ phí.
+              */}
+              <DataRow
+                label={t('pricing.rentalTotal')}
+                value={fmt.money(request.pricing.rentalTotal)}
+                strong={request.pricing.customerTotalAmount === request.pricing.rentalTotal}
+                {...(request.pricing.isEstimate &&
+                request.pricing.customerTotalAmount === request.pricing.rentalTotal
+                  ? { hint: t('pricing.estimateBadge') }
+                  : {})}
+              />
+              {request.pricing.customerTotalAmount !== request.pricing.rentalTotal ? (
+                <DataRow
+                  label={t('pricing.customerTotal')}
+                  value={fmt.money(request.pricing.customerTotalAmount)}
+                  strong
+                  {...(request.pricing.isEstimate ? { hint: t('pricing.estimateBadge') } : {})}
+                />
+              ) : null}
+              {request.pricing.paidAmount != null ? (
+                <DataRow
+                  label={t('pricing.paidViaPlatform')}
+                  value={fmt.money(request.pricing.paidAmount)}
+                />
+              ) : null}
+              {request.pricing.remainingAmount != null ? (
+                <DataRow
+                  label={t('pricing.payAtHandover')}
+                  value={fmt.money(request.pricing.remainingAmount)}
+                />
+              ) : null}
+            </YStack>
+          ) : null}
+
           {request.note ? (
             <NotePanel icon="chatbox-ellipses-outline" title={t('note.label')} tone="muted">
               {request.note}
@@ -431,8 +498,8 @@ function BookingRequestCardImpl({
           <YStack gap={space.sm} pt={space.sm} borderTopWidth={1} bc={colors.borderSubtle}>
             <ContactRow request={request} />
 
-            {/* Chỉ yêu cầu CÒN chờ mới có nút quyết định — trạng thái khác đã có kết cục. */}
-            {pending && canDecide ? (
+            {/* Chỉ yêu cầu CÒN chờ VÀ CHƯA quá hạn mới có nút quyết định. */}
+            {decidable && canDecide ? (
               <YStack gap={space.xs}>
                 <Button
                   label={t('actions.approve')}
@@ -448,6 +515,19 @@ function BookingRequestCardImpl({
                   onPress={() => onReject(request)}
                 />
               </YStack>
+            ) : needsDecision && pastDue ? (
+              // Nói vì sao không còn nút, và việc cần làm tiếp — im lặng ở đây đọc như một lỗi tải.
+              <Text col={colors.textMuted} fos={fontSize.label}>
+                {t('deadline.pastDueHint')}
+              </Text>
+            ) : status === BOOKING_REQUEST_STATUS.AWAITING_HOLD ? (
+              /*
+               * Chưa có gì để quyết định (ADR 0039 — khách chưa chuyển khoản), nhưng im lặng ở
+               * đây đọc như thẻ bị mất nút. Nói thẳng lý do thay vì để trống khó hiểu.
+               */
+              <Text col={colors.textMuted} fos={fontSize.label}>
+                {t('awaitingHold.footerHint')}
+              </Text>
             ) : null}
           </YStack>
         </YStack>

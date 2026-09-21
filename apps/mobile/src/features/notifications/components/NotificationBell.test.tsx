@@ -45,6 +45,12 @@ jest.mock('@/features/notifications/api', () => {
  */
 jest.mock('@/features/badges/hooks/use-badges', () => ({
   useBadges: jest.fn(() => ({ chatCustomer: 0, chatShop: 0, notificationsUnread: 0 })),
+  /*
+   * PHẢI có mặt: `useMarkNotificationRead` gọi nó sau mỗi lượt đánh dấu đã đọc (con số trên
+   * chuông phải tụt ngay lúc bấm, không đợi nhịp làm mới kế tiếp). Mock thiếu hàm này thì nó là
+   * `undefined` và mọi bài test trong file đổ ngay ở lượt render đầu.
+   */
+  useRefreshBadges: jest.fn(() => jest.fn()),
 }));
 
 jest.mock('@/hooks/use-app-active', () => ({

@@ -31,16 +31,24 @@ import type { Handover, HandoverContext } from '../api';
 /** Suy từ CHÍNH schema — `yup.oneOf` thu hẹp kiểu, interface viết tay sẽ lệch với resolver. */
 type ResolveFormValues = yup.InferType<ReturnType<typeof buildSchema>>;
 
-function buildSchema(labels: { km: string; reason: string }) {
+function buildSchema(labels: {
+  notNumber: string;
+  notInteger: string;
+  negative: string;
+  tooLarge: string;
+  required: string;
+  reason: string;
+}) {
   return yup.object({
+    /* Bốn câu báo lỗi khác nhau — xem chú thích cùng chỗ ở `HandoverScreen`. */
     odometerKm: yup
       .number()
       .transform((v, orig) => (orig === '' || orig === null ? undefined : v))
-      .typeError(labels.km)
-      .integer(labels.km)
-      .min(0, labels.km)
-      .max(ODOMETER_MAX_KM, labels.km)
-      .required(labels.km),
+      .typeError(labels.notNumber)
+      .integer(labels.notInteger)
+      .min(0, labels.negative)
+      .max(ODOMETER_MAX_KM, labels.tooLarge)
+      .required(labels.required),
     reasonCode: yup
       .string()
       .oneOf(ODOMETER_CORRECTION_REASON_VALUES)
@@ -76,6 +84,8 @@ export function ResolveOdometerSheet({
   onClose: () => void;
 }) {
   const t = useTranslations('Bookings.handover.odometerFix');
+  const tOdoError = useTranslations('Bookings.handover.odometerError');
+  const tConflict = useTranslations('Bookings.handover.conflict');
   const domainLabel = useDomainLabel();
   const fmt = useAppFormat();
   const toast = useAppToast();
@@ -95,7 +105,18 @@ export function ResolveOdometerSheet({
     null,
   );
 
-  const schema = useMemo(() => buildSchema({ km: t('kmLabel'), reason: t('reasonHint') }), [t]);
+  const schema = useMemo(
+    () =>
+      buildSchema({
+        notNumber: tOdoError('notNumber'),
+        notInteger: tOdoError('notInteger'),
+        negative: tOdoError('negative'),
+        tooLarge: tOdoError('tooLarge', { max: ODOMETER_MAX_KM }),
+        required: tOdoError('required'),
+        reason: t('reasonHint'),
+      }),
+    [t, tOdoError],
+  );
 
   const { control, handleSubmit } = useForm<ResolveFormValues>({
     resolver: yupResolver(schema),
@@ -123,7 +144,20 @@ export function ResolveOdometerSheet({
             onClose();
           },
           onError: (error) => {
-            if (getErrorCode(error) !== API_ERROR_CODE.ODOMETER_DECREASE_FORBIDDEN) {
+            const code = getErrorCode(error);
+            /*
+             * 409 = `expectedRowVersion` đã cũ: ai đó vừa sửa chính biên bản này.
+             *
+             * Bấm lại CŨNG hỏng, vì số phiên bản trong tay vẫn là số cũ — nên đường đúng là đóng
+             * tấm này lại (mutation đã invalidate biên bản) và mở lại trên dữ liệu mới. Rơi vào
+             * câu lỗi chung như trước là để người dùng bấm mãi một nút chắc chắn không chạy.
+             */
+            if (code === API_ERROR_CODE.CONFLICT) {
+              toast.showError(tConflict('body'));
+              onClose();
+              return;
+            }
+            if (code !== API_ERROR_CODE.ODOMETER_DECREASE_FORBIDDEN) {
               toast.showError(errorMessage(error));
               return;
             }

@@ -9,6 +9,7 @@ export type {
   RegisterShopInput,
   ShopDefaultBranch,
   ShopLatestApproval,
+  ShopOwnerAccount,
   PaymentSettings,
   ShopProfile,
   UpdatePaymentSettingsInput,

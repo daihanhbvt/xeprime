@@ -1,5 +1,6 @@
 {
   "public": {
+    "home": "Home",
     "explore": "Explore",
     "about": "About Prime",
     "trips": "My trips",
@@ -70,6 +71,9 @@
     "shop": "Shop",
     "shopBranches": "Branches",
     "shopPolicies": "Rental policies",
+    "subscription": "Plan & invoices",
+    "shopPaymentSettings": "Reservation payments",
+    "sellerProfile": "Seller profile",
     "members": "Users & permissions",
     "drivers": "Drivers",
     "chat": "Messages",

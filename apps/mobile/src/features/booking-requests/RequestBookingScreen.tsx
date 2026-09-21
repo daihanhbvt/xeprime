@@ -120,6 +120,7 @@ function RequestBookingBody({
   deliveryProvinceCode?: string;
 }) {
   const t = useTranslations('BookingRequests.flow');
+  const tFormErrors = useTranslations('BookingRequests.form.errors');
   const tCommon = useTranslations('Common.actions');
   const router = useRouter();
   const errorMessage = useErrorMessage();
@@ -168,36 +169,46 @@ function RequestBookingBody({
         ? SERVICE_TYPE.SELF_DRIVE
         : (services[0] ?? SERVICE_TYPE.SELF_DRIVE);
 
+  /**
+   * Dịch vụ địa điểm còn sống không — quyết định có ĐÒI toạ độ hay không.
+   *
+   * Khởi tạo `true` (coi như sống): ô địa chỉ vẫn đòi xác nhận, và khách chưa gõ gì thì chưa có
+   * gì để mất. Chỉ một câu trả lời tường minh `available: false` từ `/places/search` mới hạ cờ,
+   * và lúc đó schema dựng lại mà không còn ràng buộc toạ độ — bản đồ hỏng không được phép trở
+   * thành "không đặt được xe" (ADR 0035 điều 6).
+   */
+  const [canConfirmLocation, setCanConfirmLocation] = useState(true);
+
   /*
-   * Dựng lại schema khi ngôn ngữ đổi — `t` đổi định danh theo locale, nên `useMemo` bám vào nó
-   * là đủ. Dựng mỗi lần render thì `yupResolver` nhận một object mới mỗi nhịp và RHF phải xác
-   * thực lại toàn form sau từng phím gõ.
+   * Dựng lại schema khi ngôn ngữ hoặc cờ trên đổi — `t` đổi định danh theo locale. Dựng mỗi lần
+   * render thì `yupResolver` nhận một object mới mỗi nhịp và RHF phải xác thực lại toàn form sau
+   * từng phím gõ.
    */
   const schema = useMemo(
     () =>
-      buildBookingRequestSchema({
-        nameRequired: t('validation.nameRequired'),
-        nameTooLong: t('validation.nameTooLong', { max: NAME_MAX }),
-        phoneRequired: t('validation.phoneRequired'),
-        phoneInvalid: t('validation.phoneInvalid'),
-        emailInvalid: t('validation.emailInvalid'),
-        serviceRequired: t('validation.serviceRequired'),
-        pickupAtRequired: t('validation.pickupAtRequired'),
-        returnAtRequired: t('validation.returnAtRequired'),
-        packageRequired: t('validation.packageRequired'),
-        pickupPreferenceRequired: t('validation.pickupPreferenceRequired'),
-        requestedPickupDateRequired: t('validation.requestedPickupDateRequired'),
-        routeRequired: t('validation.routeRequired'),
-        pickupProvinceRequired: t('validation.pickupProvinceRequired'),
-        pickupWardRequired: t('validation.pickupWardRequired'),
-        pickupAddressRequired: t('validation.pickupAddressRequired'),
-        destinationRequired: t('validation.destinationRequired'),
-        deliveryProvinceRequired: t('validation.deliveryProvinceRequired'),
-        deliveryWardRequired: t('validation.deliveryWardRequired'),
-        deliveryAddressRequired: t('validation.deliveryAddressRequired'),
-        noteTooLong: t('validation.noteTooLong', { max: NOTE_MAX }),
-      }),
-    [t],
+      buildBookingRequestSchema(
+        {
+          nameRequired: t('validation.nameRequired'),
+          nameTooLong: t('validation.nameTooLong', { max: NAME_MAX }),
+          phoneRequired: t('validation.phoneRequired'),
+          phoneInvalid: t('validation.phoneInvalid'),
+          emailInvalid: t('validation.emailInvalid'),
+          serviceRequired: t('validation.serviceRequired'),
+          pickupAtRequired: t('validation.pickupAtRequired'),
+          returnAtRequired: t('validation.returnAtRequired'),
+          packageRequired: t('validation.packageRequired'),
+          pickupPreferenceRequired: t('validation.pickupPreferenceRequired'),
+          requestedPickupDateRequired: t('validation.requestedPickupDateRequired'),
+          routeRequired: t('validation.routeRequired'),
+          pickupAddressRequired: t('validation.pickupAddressRequired'),
+          destinationRequired: t('validation.destinationRequired'),
+          deliveryAddressRequired: t('validation.deliveryAddressRequired'),
+          addressNotConfirmed: tFormErrors('addressNotConfirmed'),
+          noteTooLong: t('validation.noteTooLong', { max: NOTE_MAX }),
+        },
+        { canConfirmLocation },
+      ),
+    [canConfirmLocation, t, tFormErrors],
   );
 
   const form = useForm<BookingRequestFormValues>({
@@ -296,6 +307,25 @@ function RequestBookingBody({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /**
+   * Tỉnh của CHIẾC XE điền sẵn vào cả hai ô địa chỉ khi chúng còn trống.
+   *
+   * Luồng khách không còn bộ chọn tỉnh nào (ADR 0042 điều 4), nên giá trị này là thứ duy nhất
+   * giữ cho yêu cầu có mã tỉnh khi bản đồ không quy ra được — và mã tỉnh là thứ mọi thống kê
+   * theo khu vực đọc. Lấy từ HỒ SƠ XE trước, rồi mới tới tỉnh mang sang từ bộ lọc: bộ lọc là
+   * nơi khách vừa đi qua, còn hồ sơ xe là nơi chiếc xe thật sự đang đỗ.
+   *
+   * `shouldDirty: false` và chỉ điền ô TRỐNG: đây là gợi ý, và bộ nhớ địa chỉ giao xe ở effect
+   * trên có quyền cao hơn.
+   */
+  const vehicleProvinceCode = listing?.provinceCode ?? deliveryProvinceCode ?? null;
+  useEffect(() => {
+    if (!vehicleProvinceCode) return;
+    for (const name of ['deliveryProvinceCode', 'pickupProvinceCode'] as const) {
+      if (!form.getValues(name)) form.setValue(name, vehicleProvinceCode, { shouldDirty: false });
+    }
+  }, [form, vehicleProvinceCode]);
+
   const [rentalMode, setRentalMode] = useState<RentalMode>('daily');
   /*
    * `useWatch` chứ không phải `form.watch()`: bản kia trả về một HÀM mà React Compiler không
@@ -356,13 +386,21 @@ function RequestBookingBody({
     const fields: Array<keyof BookingRequestFormValues> = isLongTerm
       ? ['longTermPackageMonths', 'pickupPreference', 'requestedPickupDate']
       : ['pickupAt', 'returnAt'];
+    /*
+     * Cặp TOẠ ĐỘ phải có mặt trong danh sách này, không chỉ phần chữ: đó là chỗ duy nhất chặn
+     * một địa chỉ chưa được bản đồ xác nhận. Thiếu nó thì khách gõ tay một dòng chữ, bấm Tiếp
+     * tục, và yêu cầu đi tiếp với một địa chỉ mà quãng đường giao xe không tính được (ADR 0018).
+     *
+     * Mã tỉnh/xã KHÔNG còn trong danh sách: luồng khách không có ô nào để chọn chúng, nên bắt
+     * chúng hợp lệ là chặn bằng một lỗi không có ô nào để sửa.
+     */
     fields.push(
-      'deliveryProvinceCode',
-      'deliveryWardCode',
       'deliveryAddressLine',
-      'pickupProvinceCode',
-      'pickupWardCode',
+      'deliveryLatitude',
+      'deliveryLongitude',
       'pickupAddressLine',
+      'pickupLatitude',
+      'pickupLongitude',
       'destination',
       'customerName',
       'customerPhone',
@@ -587,6 +625,7 @@ function RequestBookingBody({
 
           {state.step === REQUEST_STEP.TRIP ? (
             <RequestTripStep
+              onServiceAvailabilityChange={setCanConfirmLocation}
               form={form}
               listing={listing}
               services={services}

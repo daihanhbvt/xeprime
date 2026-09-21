@@ -212,13 +212,17 @@ describe('SupportCenterScreen — văn bản pháp lý', () => {
 });
 
 describe('SupportCenterScreen — yêu cầu hỗ trợ', () => {
-  it('có `support.view` thì hiện nút, và nút báo màn chưa dựng thay vì mở hàng đợi thứ hai', async () => {
+  /*
+   * Nút DẪN sang hàng đợi thật (`/manage/support/cases`), không mở một form thứ hai và cũng không
+   * còn báo "đang phát triển": màn đó đã dựng xong, và một nút báo đang-phát-triển đứng trước một
+   * màn đã có là cách chắc chắn để không ai tìm ra nó.
+   */
+  it('có `support.view` thì nút dẫn sang hàng đợi yêu cầu hỗ trợ', async () => {
     const view = await renderScreen([...ALL_PERMISSIONS, PERMISSION.SUPPORT_VIEW]);
 
     await fireEvent.press(view.getByText('Mở yêu cầu hỗ trợ'));
 
-    await view.findByText('Chức năng đang được phát triển.');
-    expect(mockPush).not.toHaveBeenCalled();
+    expect(mockPush).toHaveBeenCalledWith('/manage/support/cases');
   });
 
   it('thiếu `support.view` thì không hiện nút', async () => {

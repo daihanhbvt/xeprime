@@ -1,5 +1,6 @@
 {
   "public": {
+    "home": "Trang chủ",
     "explore": "Khám phá",
     "about": "Về Prime",
     "trips": "Chuyến của tôi",
@@ -70,6 +71,9 @@
     "shop": "Cửa hàng",
     "shopBranches": "Chi nhánh",
     "shopPolicies": "Chính sách thuê",
+    "subscription": "Gói & hoá đơn",
+    "shopPaymentSettings": "Thanh toán giữ chỗ",
+    "sellerProfile": "Hồ sơ người bán",
     "members": "Người dùng & phân quyền",
     "drivers": "Tài xế",
     "chat": "Trò chuyện",

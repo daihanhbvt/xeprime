@@ -8,9 +8,17 @@ import { ROUTES } from '@/navigation/routes';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { lastRouteChanged, scopeChanged } from './shell-scope.slice';
 
-/** Màn đầu của mỗi khu — nơi rơi về khi chưa nhớ đích nào. */
-export function scopeHome(scope: AppScope): Href {
-  return scope === APP_SCOPE.MANAGE ? ROUTES.manage.home() : ROUTES.explore.home();
+/**
+ * Màn đầu của mỗi khu — nơi rơi về khi chưa nhớ đích nào.
+ *
+ * `packageOnboardingPending` đổi màn đầu của khu QUẢN LÝ, không đổi khu: gian hàng trả phí chưa
+ * chuyển khoản thuộc về khu quản lý (đó là nơi duy nhất có việc cho họ) nhưng `ScopeGuard` chỉ cho
+ * họ qua đúng `/manage/onboarding` — thả họ ở `/manage` là đá họ ngược ra khu khách ngay khung
+ * hình sau, một vòng nhảy mà người dùng đọc thành "app tự thoát".
+ */
+export function scopeHome(scope: AppScope, packageOnboardingPending = false): Href {
+  if (scope !== APP_SCOPE.MANAGE) return ROUTES.explore.home();
+  return packageOnboardingPending ? ROUTES.manage.onboarding() : ROUTES.manage.home();
 }
 
 /** Lựa chọn khu lần trước. Giá trị lạ (bản cũ, dữ liệu hỏng) coi như chưa chọn gì. */
@@ -55,6 +63,8 @@ export function useShellScope(): ShellScope {
   const scope = useAppSelector((s) => s.shellScope.scope);
   const lastRoute = useAppSelector((s) => s.shellScope.lastRoute);
   const { data: user } = useCurrentUser();
+  const capability = resolveScopeCapability(user);
+  const { packageOnboardingPending } = capability;
 
   const trackRoute = useCallback(
     (target: AppScope, route: string) => {
@@ -77,15 +87,23 @@ export function useShellScope(): ShellScope {
         fireAndForget(() => rememberScope(target), 'useShellScope.rememberScope');
       }
 
+      /*
+       * Bước còn nợ thắng cả đích đã nhớ: một gian hàng `package_pending` có thể còn `lastRoute`
+       * từ lần trước, và `ScopeGuard` sẽ đá họ ra khỏi đúng màn đó.
+       */
+      const fallback = scopeHome(target, packageOnboardingPending);
+      const remembered = packageOnboardingPending
+        ? undefined
+        : (lastRoute[target] as Href | undefined);
       // Đích đã nhớ là một chuỗi đường dẫn thật đã từng render — dùng thẳng làm `Href`.
-      router.replace(destination ?? (lastRoute[target] as Href | undefined) ?? scopeHome(target));
+      router.replace(destination ?? remembered ?? fallback);
     },
-    [dispatch, lastRoute, router, scope],
+    [dispatch, lastRoute, packageOnboardingPending, router, scope],
   );
 
   return {
     scope,
-    canManage: resolveScopeCapability(user).canManage,
+    canManage: capability.canManage,
     switchTo,
     trackRoute,
   };

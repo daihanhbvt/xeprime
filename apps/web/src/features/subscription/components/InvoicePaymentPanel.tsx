@@ -9,7 +9,7 @@ import { buildVietQrUrl, subtractMoney } from '@xeprime/domain';
 import { SUBSCRIPTION_INVOICE_STATUS } from '@xeprime/types';
 import { CopyButton } from '@/components/data-display/CopyButton';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { usePaymentInfo } from '../hooks/use-subscription';
+import { usePaymentInfo, useTenantPlans } from '../hooks/use-subscription';
 import type { SubscriptionInvoice } from '../types';
 import styles from './InvoicePaymentPanel.module.css';
 
@@ -28,8 +28,15 @@ import styles from './InvoicePaymentPanel.module.css';
  */
 export function InvoicePaymentPanel({ invoice }: { invoice: SubscriptionInvoice }) {
   const t = useTranslations('Subscription.payment');
+  const tPurchase = useTranslations('Subscription.purchase');
   const fmt = useAppFormat();
   const paymentInfo = usePaymentInfo();
+  /*
+   * Danh mục gói chỉ để lấy TÊN bậc: hoá đơn mang `planCode` (`shop-advanced`) chứ không mang
+   * tên người đọc được. Dùng chung query key với bảng giá nên khi người dùng vừa đi qua bước
+   * chọn gói thì đây là một lượt đọc cache, không phải một request nữa.
+   */
+  const plans = useTenantPlans();
 
   const remaining =
     invoice.status === SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID
@@ -38,9 +45,35 @@ export function InvoicePaymentPanel({ invoice }: { invoice: SubscriptionInvoice 
 
   const info = paymentInfo.data;
   const qrUrl = info ? buildVietQrUrl(info, remaining, invoice.code) : null;
+  /* Danh mục chưa về (hoặc bậc đã lưu trữ) ⇒ rơi về MÃ bậc: một chuỗi kỹ thuật vẫn hơn một ô trống. */
+  const planName = plans.data?.find((plan) => plan.id === invoice.planId)?.name ?? invoice.planCode;
 
   return (
     <div className={styles.panel}>
+      {/*
+        BẠN ĐANG MUA GÌ — trước cả hướng dẫn chuyển khoản.
+
+        Màn này sống qua F5 và qua một lần đăng nhập ở máy khác, nên không có gì bảo đảm người
+        đang đọc còn nhớ mình đã chọn bậc nào: thiếu dòng này, thứ duy nhất họ thấy là một số
+        tiền và một mã. Dữ liệu lấy từ CHÍNH hoá đơn (bậc, kỳ hạn, kỳ áp dụng, hạn mức đã đóng
+        băng lúc tạo), không phải từ lựa chọn còn trong bộ nhớ trình duyệt.
+      */}
+      <div className={styles.plan}>
+        <span className={styles.planLabel}>{t('buying')}</span>
+        <p className={styles.planName}>
+          {planName}
+          <span className={styles.planTerm}>
+            {tPurchase('termOption', { months: invoice.termMonths })}
+          </span>
+        </p>
+        <p className={styles.planMeta}>
+          {t('period', { from: fmt.date(invoice.periodFrom), to: fmt.date(invoice.periodTo) })}
+          {invoice.quota.maxVehicles == null
+            ? ` · ${tPurchase('limitVehiclesUnlimited')}`
+            : ` · ${tPurchase('limitVehicles', { count: invoice.quota.maxVehicles })}`}
+        </p>
+      </div>
+
       <Alert
         type="info"
         showIcon

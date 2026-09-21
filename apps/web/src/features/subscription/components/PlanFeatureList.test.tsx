@@ -41,7 +41,7 @@ describe('PlanFeatureList', () => {
     };
     renderWithIntl(<PlanFeatureList onUpgrade={vi.fn()} />);
 
-    expect(screen.getByText('Nâng cấp để mở thêm')).toBeTruthy();
+    expect(screen.getByText('Nâng cấp lên gian hàng để mở khoá nhiều tính năng hơn')).toBeTruthy();
     expect(screen.getByText('Quản lý tài xế')).toBeTruthy();
     // Thứ ĐANG mở không được liệt kê lại: người dùng biết họ đang có nó.
     expect(screen.queryByText('Sổ thu chi và báo cáo')).toBeNull();

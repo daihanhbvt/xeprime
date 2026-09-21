@@ -2,11 +2,12 @@ import { useRouter } from 'expo-router';
 import { Fragment, useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { absoluteMoney, isNegativeMoney } from '@xeprime/domain';
+import { absoluteMoney, bankDisplayName, isNegativeMoney, nowInAppTz } from '@xeprime/domain';
 import {
   STATUS_COLOR,
   WITHDRAWAL_STATUS,
   WITHDRAWAL_STATUS_META,
+  WALLET_STATUS,
   type StatusColor,
   type WithdrawalStatus,
 } from '@xeprime/types';
@@ -22,6 +23,7 @@ import { CardActionBar, type CardAction } from '@/components/ui/CardActionBar';
 import type { IconName } from '@/components/ui/Chip';
 import { Divider } from '@/components/ui/DataRow';
 import { IconDisc } from '@/components/ui/IconDisc';
+import { IconButton } from '@/components/ui/IconButton';
 import { IconLine } from '@/components/ui/IconLine';
 import { Pagination } from '@/components/ui/Pagination';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
@@ -33,19 +35,30 @@ import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
+import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 import {
   WALLET_ENTRIES_PAGE_SIZE,
   WALLET_SCOPE,
   type WalletEntry,
   type WalletScope,
+  type WalletStatementFilters,
   type WithdrawalRequest,
 } from '@/api/wallet/api';
+import { WalletStatementPanel } from './components/WalletStatementPanel';
 import { WalletSummaryCard } from './components/WalletSummaryCard';
 import { WithdrawSheet } from './components/WithdrawSheet';
-import { useCancelWithdrawal, useWalletEntries, useWithdrawals } from './hooks/use-wallet';
+import {
+  useCancelWithdrawal,
+  useWalletEntries,
+  useWalletSummary,
+  useWithdrawals,
+} from './hooks/use-wallet';
 
 const ENTRIES_LIMIT = WALLET_ENTRIES_PAGE_SIZE;
+
+/** Kỳ mặc định của bảng tổng hợp: tháng đang chạy, theo giờ Việt Nam — đúng như web. */
+const STATEMENT_PERIOD_FORMAT = 'YYYY-MM';
 
 /**
  * Ví điểm — bản native của `WalletView`. Dùng chung khu cá nhân và khu gian hàng, khác nhau đúng ở
@@ -63,14 +76,36 @@ export function WalletScreen({ scope = WALLET_SCOPE.ACCOUNT }: { scope?: WalletS
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  /*
+   * Kỳ + trang của bảng tổng hợp sống ở state MÀN, không dùng chung `page` với sổ ví: hai danh
+   * sách phân trang cùng một biến sẽ kéo nhau mỗi lần một bên lật trang.
+   *
+   * Web giữ chúng trên URL (ADR 0004) để "gửi kế toán đường dẫn tháng 10" chạy được; native không
+   * có thanh địa chỉ, nên state màn là chỗ tương đương gần nhất — và nó vẫn sống qua một lần đi
+   * sang màn khác rồi lui lại, vì màn không bị tháo.
+   */
+  const [statementFilters, setStatementFilters] = useState<WalletStatementFilters>(() => ({
+    period: nowInAppTz().format(STATEMENT_PERIOD_FORMAT),
+    page: 1,
+  }));
 
   const entries = useWalletEntries(scope, page);
   const withdrawals = useWithdrawals(scope);
+  /*
+   * Hàng tiêu đề của khu quản lý đặt hành động chính cạnh tên trang, cùng khuôn với màn
+   * Giao dịch thu chi. Query này dùng chung cache với `WalletSummaryCard`, nên không tạo thêm
+   * một request mạng; nó chỉ cho hàng tiêu đề biết lúc nào nút Rút được phép bật.
+   */
+  const walletSummary = useWalletSummary(scope, scope === WALLET_SCOPE.SHOP);
   const requests = withdrawals.data ?? [];
   const rows = entries.data?.items ?? [];
 
   const isShop = scope === WALLET_SCOPE.SHOP;
   const title = t(isShop ? 'title.tenant' : 'title.user');
+  const canWithdraw =
+    walletSummary.data !== undefined &&
+    walletSummary.data.status !== WALLET_STATUS.FROZEN &&
+    Number(walletSummary.data.available) >= Number(walletSummary.data.minWithdrawAmount);
 
   /*
    * Hai VỎ cho cùng một màn: khu gian hàng có thanh quản lý + tiêu đề trang, khu tài khoản có nút
@@ -85,11 +120,59 @@ export function WalletScreen({ scope = WALLET_SCOPE.ACCOUNT }: { scope?: WalletS
   return (
     <>
       {header}
-      <Screen edges={['left', 'right', 'bottom']}>
-        {isShop ? <ManagePageTitle title={title} /> : null}
+      <Screen edges={['left', 'right', 'bottom']} padded={!isShop}>
+        {/*
+          Câu mô tả trang nói ĐÂY LÀ KHOẢN PHẢI TRẢ, không phải ví điện tử (ADR 0033 điều 1) — cùng
+          khe `subtitle` mà `/manage/balance` bên web dùng. Nó thay cho dòng "1 điểm = 1đ" đã bị gỡ
+          khi ví đổi tên từ "Ví điểm" sang "Số dư".
+        */}
+        {isShop ? (
+          <YStack pb={space.sm}>
+            <ManagePageTitle
+              title={title}
+              action={
+                <IconButton
+                  icon="cash-outline"
+                  label={t('withdraw.action')}
+                  tone="primary"
+                  disabled={!canWithdraw}
+                  loading={walletSummary.isPending}
+                  onPress={() => setWithdrawOpen(true)}
+                />
+              }
+            />
+            {/*
+              Mô tả đứng TRỌN bề ngang dưới hàng tiêu đề, giống `summaryBlock` của Giao dịch
+              thu chi. Đặt nó chung cột với nút Rút sẽ bó câu dài vào phần bề ngang còn lại và
+              biến hai dòng thành bốn dòng trên máy 360dp.
+            */}
+            <Text px={layout.screenX} col={colors.textMuted} fos={fontSize.label}>
+              {t('page.subtitle')}
+            </Text>
+          </YStack>
+        ) : null}
 
-        <YStack gap={space.lg}>
-          <WalletSummaryCard scope={scope} onWithdraw={() => setWithdrawOpen(true)} />
+        <YStack
+          gap={layout.section}
+          px={isShop ? layout.screenX : 0}
+          pb={isShop ? layout.section : 0}
+        >
+          <WalletSummaryCard
+            scope={scope}
+            onWithdraw={() => setWithdrawOpen(true)}
+            pageVariant={isShop}
+          />
+
+          {/*
+            Bảng tổng hợp chỉ có ở phía GIAN HÀNG — khách thuê thuần không có chuyến nào ở phía bán,
+            và một bảng rỗng vĩnh viễn là một câu hỏi không lời đáp.
+          */}
+          {isShop ? (
+            <WalletStatementPanel
+              filters={statementFilters}
+              onFiltersChange={(patch) => setStatementFilters((prev) => ({ ...prev, ...patch }))}
+            />
+          ) : null}
 
           <YStack gap={space.sm}>
             <BlockTitle>{t('requests.title')}</BlockTitle>
@@ -202,7 +285,10 @@ function WithdrawalRow({ request, scope }: { request: WithdrawalRequest; scope: 
             tone: colors.success,
           }
         : request.dueBy
-          ? { text: t('requests.dueBy', { time: fmt.dateTime(request.dueBy) }), icon: 'time-outline' }
+          ? {
+              text: t('requests.dueBy', { time: fmt.dateTime(request.dueBy) }),
+              icon: 'time-outline',
+            }
           : null;
 
   const actions: CardAction[] =
@@ -246,7 +332,7 @@ function WithdrawalRow({ request, scope }: { request: WithdrawalRequest; scope: 
 
               {/* Tiền về ĐÂU — mẩu người ta soát lại trước khi chờ hai ngày làm việc. */}
               <IconLine icon="card-outline" iconTone={colors.primaryActive} strong>
-                {`${request.bankCode} · ${request.accountNumberMasked}`}
+                {`${bankDisplayName(request.bankCode)} · ${request.accountNumberMasked}`}
               </IconLine>
 
               <IconLine icon="receipt-outline">{request.code}</IconLine>
@@ -312,12 +398,7 @@ function EntryRow({ entry }: { entry: WalletEntry }) {
       />
 
       <YStack f={1} minWidth={0} gap={2}>
-        <Text
-          col={colors.text}
-          fos={fontSize.bodySm}
-          fow={fontWeight.medium}
-          numberOfLines={1}
-        >
+        <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium} numberOfLines={1}>
           {domainLabel('walletEntryKind', entry.kind)}
         </Text>
         <Text col={colors.textMuted} fos={fontSize.label}>

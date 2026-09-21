@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { APP_SCOPE, resolveInitialScope, type AppScope } from './app-scope';
+import type { Href } from 'expo-router';
+import { APP_SCOPE, resolveInitialScope, resolveScopeCapability, type AppScope } from './app-scope';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { SESSION_STATUS, useSessionGate } from '@/features/auth/hooks/use-session-gate';
 import { useAppDispatch } from '@/store/hooks';
-import { readRememberedScope } from './use-shell-scope';
+import { readRememberedScope, scopeHome } from './use-shell-scope';
 import { scopeChanged } from './shell-scope.slice';
 
 /**
@@ -19,8 +20,12 @@ import { scopeChanged } from './shell-scope.slice';
  *
  * Trả `null` = chưa quyết được, hãy hiện màn chờ. Mạng chết KHÔNG chặn ở đây: khu khách là khu
  * công khai, cứ vào rồi từng màn tự hiện lỗi của nó.
+ *
+ * Trả về cả `href` chứ không chỉ khu: từ ADR 0040, màn đầu của khu quản lý phụ thuộc bước còn nợ
+ * (`/manage/onboarding` với gian hàng chưa chuyển khoản), và để nơi gọi tự ánh xạ khu → màn là
+ * chép lại phép ánh xạ đó ở một chỗ thứ hai.
  */
-export function useLandingScope(): AppScope | null {
+export function useLandingScope(): { scope: AppScope; href: Href } | null {
   const dispatch = useAppDispatch();
   const { status } = useSessionGate();
   const { data: user } = useCurrentUser();
@@ -60,5 +65,6 @@ export function useLandingScope(): AppScope | null {
     if (scope) dispatch(scopeChanged(scope));
   }, [dispatch, scope]);
 
-  return scope;
+  if (!scope) return null;
+  return { scope, href: scopeHome(scope, resolveScopeCapability(user).packageOnboardingPending) };
 }

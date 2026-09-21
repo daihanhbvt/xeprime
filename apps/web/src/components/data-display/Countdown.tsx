@@ -2,7 +2,13 @@
 
 import { ClockCircleOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
-import { holdRemainingMs } from '@xeprime/types';
+import {
+  clockText,
+  countdownSegment,
+  countdownState,
+  holdRemainingMs,
+  type CountdownState,
+} from '@xeprime/types';
 import styles from './Countdown.module.css';
 
 /**
@@ -11,42 +17,12 @@ import styles from './Countdown.module.css';
  */
 const TICK_MS = 1_000;
 
-export type CountdownState = 'normal' | 'urgent' | 'expired';
-
-export function countdownState(remainingMs: number, urgentMs: number): CountdownState {
-  if (remainingMs <= 0) return 'expired';
-  return remainingMs <= urgentMs ? 'urgent' : 'normal';
-}
-
-/** `mm:ss` — không đưa giờ vào vì mọi cửa sổ dùng đồng hồ này đều không quá 60 phút mỗi chặng. */
-export function clockText(ms: number): string {
-  const total = Math.floor(ms / 1000);
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-}
-
-/**
- * Chia thời gian còn lại thành CHẶNG — ADR 0032 điều 2 ("hai countdown 60 phút").
- *
- * Vì sao chia: cửa sổ trả cọc dài 2 giờ, và một con số "còn 118 phút" không tạo được cảm giác
- * cần hành động. Chia thành hai chặng 60 phút cho người dùng một đồng hồ họ đọc được ngay, và
- * mốc giao giữa hai chặng đúng là lúc worker bắn nhắc — hai kênh nói cùng một điều.
- *
- * `index` đếm từ 1 và là chặng ĐANG chạy; `total` là số chặng của cả cửa sổ.
+/*
+ * `countdownState` / `clockText` / `countdownSegment` đã chuyển sang `@xeprime/types`: chia
+ * chặng là LUẬT trình bày cửa sổ tiền (ADR 0032 điều 2), và app native phải chia y hệt. Re-export
+ * để nơi gọi cũ không phải đổi đường import.
  */
-export function countdownSegment(
-  remainingMs: number,
-  segmentMs: number,
-): { index: number; total: number; remainingInSegment: number } {
-  if (segmentMs <= 0 || remainingMs <= 0) {
-    return { index: 1, total: 1, remainingInSegment: Math.max(0, remainingMs) };
-  }
-  const rest = remainingMs % segmentMs;
-  return {
-    index: Math.ceil(remainingMs / segmentMs),
-    total: Math.ceil(remainingMs / segmentMs),
-    remainingInSegment: rest === 0 ? segmentMs : rest,
-  };
-}
+export { clockText, countdownSegment, countdownState, type CountdownState };
 
 /**
  * Đồng hồ đếm ngược tới một mốc do SERVER chốt.

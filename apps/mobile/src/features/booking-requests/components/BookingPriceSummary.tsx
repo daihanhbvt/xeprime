@@ -55,6 +55,7 @@ export function BookingPriceSummary({
   onExpandedChange: (next: boolean) => void;
 }) {
   const t = useTranslations('BookingRequests.flow');
+  const tPrice = useTranslations('Common.components.price');
   const domainLabel = useDomainLabel();
   const fmt = useAppFormat();
 
@@ -65,7 +66,20 @@ export function BookingPriceSummary({
 
   const breakdown = quote?.breakdown ?? null;
   const longTerm = breakdown?.longTerm ?? null;
-  const totalLabel = breakdown?.estimateNote ? t('price.subtotal') : t('price.total');
+  /*
+   * Có khối phụ phí ⇒ số khách thật sự phải chuẩn bị là `customerTotalAmount`, không phải
+   * `totalAmount` (giá thuê, doanh thu gian hàng) — hai nhãn phải TÁCH RA để không cùng đọc
+   * "Tổng dự kiến" cho hai con số khác nhau tuỳ lúc bảng đang thu gọn hay mở (phản hồi người
+   * dùng 18/09/2026): thu gọn hiện `customerTotalAmount` nên dùng nhãn "Tổng bạn trả"; bảng chi
+   * tiết thì dòng đầu chỉ là tiền thuê, dùng nhãn "Tiền thuê".
+   */
+  const hasFees = Boolean(breakdown?.fees?.lines?.length);
+  const rentalLabel = breakdown?.estimateNote
+    ? t('price.subtotal')
+    : hasFees
+      ? t('price.rentalTotal')
+      : t('price.total');
+  const barLabel = hasFees ? tPrice('customerTotal') : rentalLabel;
 
   const unitRows = buildUnitRows();
   const headline = unitRows[0];
@@ -173,10 +187,12 @@ export function BookingPriceSummary({
       return (
         <Bar onExpand={() => onExpandedChange(true)}>
           <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
-            {totalLabel}
+            {barLabel}
           </Text>
+          {/* Thanh thu gọn hiện số KHÁCH TRẢ (đã gồm phụ phí) — hiện giá thuê trần ở đây rồi
+              bung ra một con số lớn hơn là đúng thứ ADR 0029 cấm. */}
           <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
-            {fmt.money(breakdown.totalAmount)}
+            {fmt.money(breakdown.fees?.customerTotalAmount ?? breakdown.totalAmount)}
           </Text>
         </Bar>
       );
@@ -188,8 +204,9 @@ export function BookingPriceSummary({
           <PriceBreakdown
             rows={breakdown.rows}
             totalAmount={breakdown.totalAmount}
-            totalLabel={totalLabel}
+            totalLabel={rentalLabel}
             depositAmount={breakdown.depositAmount}
+            fees={breakdown.fees ?? null}
             title={
               longTerm
                 ? // Tham số ICU tên là `months`. Truyền sai tên thì `use-intl` bỏ cả câu và in

@@ -22,14 +22,26 @@ const paymentInfo = vi.hoisted(() => ({
   isError: false,
 }));
 
+const plans = vi.hoisted(() => ({
+  data: [{ id: 'plan-basic', name: 'Gói cơ bản' }] as unknown[],
+  isLoading: false,
+  isError: false,
+}));
+
 vi.mock('../hooks/use-subscription', () => ({
   usePaymentInfo: () => paymentInfo,
+  /* Danh mục gói chỉ để tra TÊN bậc từ `invoice.planId` — rỗng ⇒ rơi về mã bậc. */
+  useTenantPlans: () => plans,
 }));
 
 function makeInvoice(over: Partial<SubscriptionInvoice> = {}): SubscriptionInvoice {
   return {
     id: '01HINVOICE00000000000000',
     code: 'XPG2K9ADFG',
+    planId: 'plan-basic',
+    planCode: 'shop-basic',
+    termMonths: 3,
+    quota: { maxVehicles: 3, maxBranches: 1, maxMembers: null },
     status: SUBSCRIPTION_INVOICE_STATUS.ISSUED,
     totalAmount: '3000000',
     paidAmount: '0',

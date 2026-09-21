@@ -1,5 +1,6 @@
 'use client';
 
+import { DownOutlined } from '@ant-design/icons';
 import { Alert, Button } from 'antd';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
@@ -10,6 +11,7 @@ import { DataTable, type DataTableColumn } from '@/components/data-display/DataT
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { useUrlFilters, positiveIntParam } from '@/hooks/use-url-filters';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { cx } from '@/lib/cx';
 
 import { usePendingInvoice, useSubscriptionInvoices } from '../hooks/use-subscription';
 import type { SubscriptionInvoice } from '../types';
@@ -41,7 +43,20 @@ const INVOICE_TABLE_MIN_WIDTH = 760;
  * trả được" do server giữ, nên câu trả lời phải đến từ đó, và nó tự HỎI LẠI theo nhịp trong lúc
  * chờ đối soát — tiền về là trạng thái tự đổi, không cần F5.
  */
-export function SubscriptionInvoicesPanel({ headingId }: { headingId?: string }) {
+export function SubscriptionInvoicesPanel({
+  headingId,
+  showPending = true,
+}: {
+  headingId?: string;
+  /**
+   * Dựng khối chuyển khoản của hoá đơn ĐANG CHỜ ở đây.
+   *
+   * Tắt khi màn hình đã có một khối như vậy ở chỗ khác — luồng nâng cấp dựng nó ngay tại bước 3
+   * của mình. Hai mã QR cho CÙNG một hoá đơn trên cùng một trang là hai lời mời quét khác nhau
+   * cho một khoản tiền, và người dùng không có cách nào biết chúng là một.
+   */
+  showPending?: boolean;
+}) {
   const t = useTranslations('Subscription');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
@@ -120,7 +135,7 @@ export function SubscriptionInvoicesPanel({ headingId }: { headingId?: string })
         />
       ) : null}
 
-      {pendingInvoice ? <InvoicePaymentPanel invoice={pendingInvoice} /> : null}
+      {showPending && pendingInvoice ? <InvoicePaymentPanel invoice={pendingInvoice} /> : null}
 
       {!invoices.isPending && !invoices.isError && !hasHistory ? (
         <p className={styles.empty}>
@@ -130,33 +145,47 @@ export function SubscriptionInvoicesPanel({ headingId }: { headingId?: string })
       ) : null}
 
       {/*
-        Lịch sử GẬP LẠI mặc định: bảng chỉ được dựng khi người dùng mở nó, nên trang không gánh
+        Lịch sử là một khối GẬP — bấm để mở, bấm lần nữa để đóng lại.
+
+        Bản trước là một nút đổi thành bảng: mở ra rồi thì không còn đường đóng, và người dùng
+        phải tải lại trang để lấy lại chỗ. Bảng vẫn chỉ được DỰNG khi mở, nên trang không gánh
         một bảng 5 cột cho việc mà phần lớn lượt truy cập không làm.
       */}
       {hasHistory ? (
-        historyOpen ? (
-          <DataTable<SubscriptionInvoice>
-            label={t('invoices.title')}
-            columns={invoiceColumns}
-            items={items}
-            minWidth={INVOICE_TABLE_MIN_WIDTH}
-            loading={invoices.isFetching}
-            empty={{ title: t('invoices.empty') }}
-            pagination={
-              invoices.data
-                ? {
-                    meta: invoices.data.meta,
-                    onChange: (page) => setFilters({ page }),
-                    totalLabel: (total) => tCommon('pagination.total', { count: total }),
-                  }
-                : undefined
-            }
-          />
-        ) : (
-          <Button size="small" onClick={() => setHistoryOpen(true)}>
-            {t('invoices.showHistory')}
-          </Button>
-        )
+        <div className={styles.history}>
+          <button
+            type="button"
+            className={styles.historyToggle}
+            aria-expanded={historyOpen}
+            onClick={() => setHistoryOpen((open) => !open)}
+          >
+            <DownOutlined
+              className={cx(styles.historyChevron, historyOpen && styles.historyChevronOpen)}
+              aria-hidden="true"
+            />
+            {historyOpen ? t('invoices.hideHistory') : t('invoices.showHistory')}
+          </button>
+
+          {historyOpen ? (
+            <DataTable<SubscriptionInvoice>
+              label={t('invoices.title')}
+              columns={invoiceColumns}
+              items={items}
+              minWidth={INVOICE_TABLE_MIN_WIDTH}
+              loading={invoices.isFetching}
+              empty={{ title: t('invoices.empty') }}
+              pagination={
+                invoices.data
+                  ? {
+                      meta: invoices.data.meta,
+                      onChange: (page) => setFilters({ page }),
+                      totalLabel: (total) => tCommon('pagination.total', { count: total }),
+                    }
+                  : undefined
+              }
+            />
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

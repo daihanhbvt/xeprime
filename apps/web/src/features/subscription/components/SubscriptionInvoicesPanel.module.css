@@ -46,6 +46,62 @@
   font-size: var(--xp-font-size-body-sm);
 }
 
+/* ── Lịch sử gập ───────────────────────────────────────────────────────── */
+
+.history {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  overflow: hidden;
+}
+
+/*
+ * Cả hàng là vùng bấm, không phải một nút nhỏ nép ở góc: đây là một khối GẬP, và vùng bấm rộng
+ * bằng khối là thứ người dùng mong đợi khi thấy dấu mũi tên.
+ */
+.historyToggle {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 0;
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text);
+  font: inherit;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  text-align: start;
+  gap: var(--xp-space-sm);
+  cursor: pointer;
+}
+
+.historyToggle:hover {
+  background: var(--xp-color-bg-hover);
+}
+
+.historyToggle:focus-visible {
+  outline: 2px solid var(--xp-color-border-focus);
+  outline-offset: -2px;
+}
+
+.historyChevron {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  transition: transform 0.15s ease;
+}
+
+.historyChevronOpen {
+  transform: rotate(180deg);
+}
+
+/* Bảng nằm trong cùng khung với thanh gập — một khối, không phải hai. */
+.history > :not(.historyToggle) {
+  padding: var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border);
+}
+
 .codeCell {
   display: inline-flex;
   align-items: center;

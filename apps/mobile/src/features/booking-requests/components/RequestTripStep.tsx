@@ -28,7 +28,7 @@ import { FieldMessage } from '@/components/ui/Field';
 import { FieldBox } from '@/components/ui/FieldBox';
 import { RangeFieldBox } from '@/components/ui/RangeFieldBox';
 import { FormSection } from '@/components/ui/FormSection';
-import { AddressFields } from '@/components/form/AddressFields';
+import { RenterAddressBlock } from './RenterAddressBlock';
 import { TextField } from '@/components/ui/TextField';
 import { RentalRangeSheet } from '@/features/marketplace/components/RentalRangeSheet';
 import { ServiceSelector } from '@/features/marketplace/components/ServiceSelector';
@@ -84,6 +84,7 @@ export function RequestTripStep({
   rentalMode,
   onRentalModeChange,
   contactKnown,
+  onServiceAvailabilityChange,
 }: {
   form: RequestForm;
   listing: PublicListingDetail;
@@ -93,9 +94,30 @@ export function RequestTripStep({
   onRentalModeChange: (mode: RentalMode) => void;
   /** Tài khoản đã có SĐT đã xác thực — không hỏi lại thứ hệ thống đã biết. */
   contactKnown: boolean;
+  /** Dịch vụ địa điểm sống hay chết — form dùng để quyết định có đòi toạ độ hay không. */
+  onServiceAvailabilityChange?: (available: boolean) => void;
 }) {
   const t = useTranslations('BookingRequests.flow');
   const domainLabel = useDomainLabel();
+
+  /*
+   * Ngữ cảnh VỊ TRÍ của chiếc xe — thứ khối địa chỉ của khách cần để hỏi bản đồ đúng chỗ.
+   *
+   * Tỉnh lấy từ chính hồ sơ xe, không từ bộ lọc tìm kiếm: bộ lọc là nơi khách vừa đi qua, còn đây
+   * là nơi chiếc xe thật sự đang đỗ. Tên tỉnh ưu tiên điểm nhận xe của chi nhánh, rồi mới tới tỉnh
+   * gian hàng.
+   */
+  const vehicleProvinceCode = listing.provinceCode ?? null;
+  const vehicleProvinceName = listing.pickupPoint?.provinceName ?? listing.shopProvince ?? null;
+  /*
+   * Toạ độ điểm nhận xe — điểm neo của ô địa chỉ khách khai. Đọc thẳng từ hồ sơ xe chứ không
+   * tính lại: `pickupPoint` là chi nhánh đã được duyệt, và cái ghim ở đó chính là mốc mà phí
+   * giao xe đo quãng đường từ đấy (ADR 0018).
+   */
+  const vehiclePoint =
+    listing.pickupPoint?.latitude != null && listing.pickupPoint.longitude != null
+      ? { lat: listing.pickupPoint.latitude, lng: listing.pickupPoint.longitude }
+      : null;
 
   // `useWatch` chứ không phải `form.watch()` — xem ghi chú ở `RequestBookingScreen`.
   const serviceType = useWatch({ control: form.control, name: 'serviceType' });
@@ -168,12 +190,16 @@ export function RequestTripStep({
               </YStack>
             )}
           />
-          <AddressFields
+          <RenterAddressBlock
             control={form.control}
-            names={PICKUP_ADDRESS_NAMES}
+            provinceCodeName={PICKUP_ADDRESS_NAMES.provinceCode}
+            addressLineName={PICKUP_ADDRESS_NAMES.addressLine}
             pin={PICKUP_PIN_NAMES}
-            title={t('driver.pickupAddressLabel')}
-            required
+            label={t('driver.pickupAddressLabel')}
+            vehicleProvinceCode={vehicleProvinceCode}
+            vehicleProvinceName={vehicleProvinceName}
+            vehiclePoint={vehiclePoint}
+            {...(onServiceAvailabilityChange ? { onServiceAvailabilityChange } : {})}
           />
           {interCity ? (
             <TextField
@@ -246,12 +272,17 @@ export function RequestTripStep({
           {deliveryRequested ? (
             <Card>
               <YStack gap={space.sm}>
-                <AddressFields
+                <RenterAddressBlock
                   control={form.control}
-                  names={DELIVERY_ADDRESS_NAMES}
+                  provinceCodeName={DELIVERY_ADDRESS_NAMES.provinceCode}
+                  addressLineName={DELIVERY_ADDRESS_NAMES.addressLine}
                   pin={DELIVERY_PIN_NAMES}
-                  title={t('pickup.addressLabel')}
-                  required
+                  label={t('pickup.addressLabel')}
+                  vehicleProvinceCode={vehicleProvinceCode}
+                  vehicleProvinceName={vehicleProvinceName}
+                  vehiclePoint={vehiclePoint}
+                  {...(onServiceAvailabilityChange ? { onServiceAvailabilityChange } : {})}
+            {...(onServiceAvailabilityChange ? { onServiceAvailabilityChange } : {})}
                 />
                 <DeliveryEstimate form={form} vehicleId={listing.id} />
               </YStack>

@@ -50,8 +50,12 @@ export function ShopReviews({ slug }: { slug: string }) {
   if (query.isError || !query.data) return null;
 
   const { summary, data } = query.data;
+  // `summary?.ratingCount`: phản hồi thiếu `summary` (dữ liệu cũ chưa qua đợt tính rating) vẫn
+  // là một `query.data` hợp lệ — đọc thẳng `summary.ratingCount` lúc đó ném lỗi undefined.
   const title =
-    summary.ratingCount > 0 ? t('titleWithCount', { count: summary.ratingCount }) : t('title');
+    (summary?.ratingCount ?? 0) > 0
+      ? t('titleWithCount', { count: summary.ratingCount })
+      : t('title');
 
   return (
     <Card>

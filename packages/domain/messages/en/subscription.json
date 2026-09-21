@@ -2,18 +2,25 @@
   "page": {
     "title": "Plan & invoices",
     "loadError": "Couldn't load your plan",
-    "accountSubtitle": "Your current plan, slot limits, and what an upgrade unlocks."
+    "accountSubtitle": "Upgrade to a shop to grow your fleet, manage it properly and earn more.",
+    "breadcrumb": "Plan & invoices",
+    "heroBadge": "Shop",
+    "heroBenefit1": "More reach",
+    "heroBenefit2": "More revenue",
+    "heroBenefit3": "A brand of your own"
   },
   "current": {
     "title": "Current plan",
     "none": "No plan yet — this shop is on the per-trip commission track.",
     "noneHint": "Buy a slot-based plan to stop paying per trip.",
     "expires": "Expires {date}",
-    "commissionSummary": "A per-trip service fee applies under the platform's current fee policy, collected from what the guest pays upfront.",
+    "activeTag": "In use",
+    "commissionSummary": "You are on the commission track. Commission is charged per completed trip.",
     "packageSummary": "Prepaid per vehicle slot — nothing charged per trip.",
     "slotsSummary": "{car} car slots · {motorbike} motorbike slots",
     "purchaseButton": "Buy a plan",
-    "renewButton": "Renew / change plan"
+    "renewButton": "Renew / change plan",
+    "upgradeButton": "Upgrade to a shop"
   },
   "usage": {
     "fleetTotal": "Total vehicles",
@@ -27,7 +34,10 @@
     "unlimited": "Unlimited",
     "atLimitTotal": "You have reached the {limit}-vehicle limit.",
     "atLimitUpgrade": "Move up to a larger plan tier to list more vehicles.",
-    "atLimitBuyPlan": "Buy a shop plan to list more vehicles."
+    "atLimitBuyPlan": "Buy a shop plan to list more vehicles.",
+    "serviceFee": "Service fee",
+    "serviceFeeValue": "{percent}% / trip",
+    "fleetLimitSub": "vehicles activated"
   },
   "freeTrips": {
     "title": "Free trips",
@@ -41,7 +51,11 @@
     "upgrade": "Upgrade to unlock",
     "readOnlyHint": "view-only",
     "allIncluded": "Your current plan already includes every advanced feature.",
-    "upgradeCta": "See higher plans"
+    "upgradeCta": "See higher plans",
+    "unlockTitle": "Upgrade to a shop to unlock more",
+    "unlockSubtitle": "Run more vehicles, more branches, a real team, and the tools that go with them.",
+    "unlockVehicles": "No vehicle cap (depends on plan)",
+    "unlockMore": "And more…"
   },
   "invoices": {
     "title": "Payment invoices",
@@ -56,7 +70,8 @@
     },
     "copyCode": "Copy reference code",
     "emptyHint": "Invoices for buying or renewing a plan will appear here.",
-    "showHistory": "View payment history"
+    "showHistory": "View payment history",
+    "hideHistory": "Hide payment history"
   },
   "purchase": {
     "title": "Buy / renew plan",
@@ -68,19 +83,21 @@
     "limitBranches": "Up to {count} branches",
     "limitBranchesUnlimited": "Unlimited branches",
     "perTerm": "/{months} months",
+    "perMonth": "/ month",
     "contactForQuote": "Contact for a quote",
     "contactSales": "Contact sales",
     "tierSelect": "Choose plan",
     "tierSelected": "Selected",
     "termsTitle": "Choose a term",
-    "termsTitleFor": "Terms for {plan}",
+    "termsTitleFor": "Choose a term for {plan}",
     "termOption": "{months} months",
     "termSaving": "Save {percent}%",
     "pickTerm": "Pick a term to see the total.",
     "total": "Total for the term: {amount}",
     "submit": "Create invoice",
     "empty": "No plans are for sale yet.",
-    "loadError": "Could not load the plan list"
+    "loadError": "Could not load the plan list",
+    "termsHint": "The longer the term, the lower the monthly cost."
   },
   "payment": {
     "title": "Transfer to activate your plan",
@@ -96,11 +113,62 @@
     "bank": "Bank",
     "accountNumber": "Account number",
     "accountName": "Account holder",
+    "copyBank": "Copy bank name",
     "copyAccount": "Copy account number",
+    "copyAccountName": "Copy account holder",
     "autoActivateNote": "The plan activates automatically once the money arrives — you can close this page; we will notify you.",
-    "pendingTitle": "Invoice awaiting payment"
+    "pendingTitle": "Invoice awaiting payment",
+    "statusWaiting": "Waiting for your transfer. Use exactly the code below — the plan unlocks automatically once XePrime receives the money.",
+    "statusPartial": "Part of the amount has arrived. Transfer the remainder using exactly the code below.",
+    "buying": "What you are buying",
+    "period": "Covers {from} → {to}"
+  },
+  "upgrade": {
+    "title": "How the upgrade works",
+    "steps": {
+      "plan": "Choose a plan",
+      "shopInfo": "Shop details",
+      "payment": "Payment & finish"
+    },
+    "continue": "Continue",
+    "back": "Back to plans",
+    "loadError": "Could not load the payment status",
+    "chosenPlan": "Selected plan: {plan} · {months} months · {amount}",
+    "submit": "Save details and create invoice",
+    "shopInfo": {
+      "title": "Shop details",
+      "intro": "This is the storefront guests see on the marketplace. We have filled in what you already have — check it, then create the invoice.",
+      "phoneHelp": "The number guests call to reach your shop. Saved on your default branch.",
+      "logoHelp": "Not required to buy a plan, but your shop needs a logo before you can list a vehicle on the marketplace.",
+      "missingTitle": "Your shop details are still missing something",
+      "loadError": "Could not load your shop details",
+      "noBranch": "No branch found for this shop",
+      "noBranchHint": "Contact XePrime support to check your profile before buying a plan."
+    },
+    "validation": {
+      "addressLineRequired": "Enter your shop's street address",
+      "addressLineMax": "That address is too long",
+      "wardInvalid": "Invalid ward code",
+      "phoneRequired": "Enter your shop's contact phone number",
+      "phoneInvalid": "Invalid phone number"
+    },
+    "planTitle": "Pick the shop plan that fits",
+    "planSubtitle": "Choose the plan that matches your fleet today and where you are taking it.",
+    "totalLabel": "Total to pay",
+    "totalFor": "{months, plural, one {for # month} other {for # months}}",
+    "secureTitle": "Secure payment",
+    "secureHint": "You can upgrade or renew at any time.",
+    "nextStep": "Next step: shop details",
+    "supportTitle": "Want a hand choosing?",
+    "supportBody": "The XePrime team can help you pick the plan that fits.",
+    "supportCta": "Contact support",
+    "editInvoice": "Change plan",
+    "backToInvoice": "Back to the pending code",
+    "editWarnTitle": "Invoice {code} is still waiting for your transfer",
+    "editWarnBody": "The old code STAYS valid until you create a new invoice at step 3 — only then is it voided. If you have already transferred against it, go back and wait for the money instead of creating a new one."
   },
   "term": {
+    "pillLabel": "Term",
     "label": "Term",
     "daysLeft": "{days, plural, one {# day left} other {# days left}}",
     "grace": "In grace period",

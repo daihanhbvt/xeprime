@@ -344,7 +344,12 @@ const SHOP_NAV: readonly ManageNavSection[] = [
          * mật khẩu không thuộc gói nào.
          */
         key: 'account',
-        labelKey: 'manage.account',
+        /*
+         * Dùng lại khoá `manage.security` của web, không tạo `manage.account` thứ hai: mục này mở
+         * đúng màn mà `/manage/account` bên web chuyển hướng tới (`/manage/security`), nên hai nhãn
+         * khác nhau cho cùng một màn là hai chỗ để chúng trôi khỏi nhau.
+         */
+        labelKey: 'manage.security',
         icon: 'person-outline',
         permission: PERMISSION.TENANT_VIEW,
         href: ROUTES.manage.account(),

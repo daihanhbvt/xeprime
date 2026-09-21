@@ -1,25 +1,11 @@
-import { useRef, useState } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
-import { TextInput } from 'react-native';
-import { useRevealOnFocus } from '@/components/layout/focus-reveal';
-import { Text, YStack } from 'tamagui';
-import { formatNumberInput, normalizeNumberInput, parseNumberInput } from '@xeprime/domain';
-import { FieldLabel, FieldMessage, FieldShell } from './Field';
-import { FONT_FAMILY } from '@/theme/fonts';
-import { colors, fieldFontSize, fontWeight, sizing, space } from '@/theme/tokens';
-
-/** Không phụ thuộc prop/state nào — dựng MỘT lần ở module scope, không phải mỗi lần render. */
-const INPUT_STYLE = {
-  flex: 1,
-  color: colors.text,
-  fontSize: fieldFontSize.value,
-  fontFamily: FONT_FAMILY.body,
-  minHeight: sizing.touchTarget,
-  paddingVertical: 0,
-} as const;
+import { NumberControl } from './NumberControl';
 
 /**
  * Ô nhập SỐ ĐO — số chỗ, đời xe, phần trăm, kích thước, khối lượng, số KM, mức tiêu thụ.
+ *
+ * Toàn bộ hình dạng và hành vi nằm ở [`NumberControl`](./NumberControl.tsx); file này chỉ làm đúng
+ * một việc là nối nó vào React Hook Form — cùng cặp `SelectControl`/`SelectField`.
  *
  * Tách khỏi `MoneyField` vì hai thứ khác nhau ở chỗ quan trọng nhất: tiền luôn là số nguyên và
  * luôn ngăn nhóm nghìn, còn số đo thì có loại thập phân (`2,8` L/100km) và có loại không được
@@ -84,108 +70,28 @@ export function NumberField<T extends FieldValues>({
   /** Ô phần trăm: tự `min=0`, `max=100`, hậu tố `%`; tự nguyên hoá trừ khi có `precision`. */
   percent?: boolean;
 }) {
-  const effectiveMin = min ?? (percent ? 0 : undefined);
-  const effectiveMax = max ?? (percent ? 100 : undefined);
-  const effectiveSuffix = suffix ?? (percent ? '%' : undefined);
-  const effectiveInteger = integer || (percent && precision == null);
-
   const { field, fieldState } = useController({ control, name });
-  const inputRef = useRef<TextInput>(null);
-  const revealOnFocus = useRevealOnFocus();
-  const [focused, setFocused] = useState(false);
-  /*
-   * Bản NHÁP của chuỗi đang gõ, chỉ sống trong lúc ô đang được chọn.
-   *
-   * Không có nó thì mọi ký tự gõ vào đều phải đi qua `Number()` rồi quay lại thành chuỗi, và các
-   * trạng thái NỬA CHỪNG hợp lệ biến mất ngay dưới ngón tay: gõ `2,` cho ra `2` → dấu phẩy bay
-   * mất và không bao giờ gõ nổi một số thập phân.
-   *
-   * Nháp cũng là lý do KHÔNG ngăn nhóm trong lúc gõ: chèn dấu vào giữa chuỗi làm con trỏ nhảy về
-   * cuối sau mỗi phím. Dấu ngăn xuất hiện khi rời ô, lúc chuỗi đã đứng yên.
-   */
-  const [draft, setDraft] = useState<string | null>(null);
-
-  const error = fieldState.error?.message;
-  const value = field.value as number | null | undefined;
 
   return (
-    <YStack gap={space.xs}>
-      <FieldLabel label={label} required={required} publishRequired={publishRequired} />
-
-      <FieldShell
-        focused={focused}
-        invalid={Boolean(error)}
-        align="center"
-        onPress={() => inputRef.current?.focus()}
-      >
-        <TextInput
-          // A11Y-LABEL: nhãn nằm ở `FieldLabel` BÊN CẠNH ô, không nằm trong ô — trình đọc
-          // màn hình vì thế đọc ra một ô nhập vô danh. Gắn tên ô vào chính input là chỗ duy
-          // nhất sửa được cho cả app (và là cách test tìm đúng ô, thay vì dò placeholder).
-          accessibilityLabel={label}
-          ref={inputRef}
-          value={focused && draft != null ? draft : formatNumberInput(value, { grouped })}
-          onChangeText={(text) => {
-            const cleaned = normalizeNumberInput(text, { integer: effectiveInteger });
-            setDraft(cleaned);
-            field.onChange(parseNumberInput(cleaned));
-          }}
-          onBlur={() => {
-            setFocused(false);
-            setDraft(null);
-            /*
-             * Kẹp lúc RỜI ô, không phải theo từng phím — đúng mốc `<InputNumber>` bên web kẹp:
-             * gõ 45 vào "ngày đến hạn" thì rời ô ra 31. Kẹp theo phím thì ô `min={1}` nuốt mất
-             * số 0 vừa gõ và không ai gõ nổi "05".
-             */
-            const clamped = clampOnCommit(field.value as number | null | undefined, {
-              min: effectiveMin,
-              max: effectiveMax,
-              precision: effectiveInteger ? 0 : precision,
-            });
-            if (clamped !== field.value) field.onChange(clamped);
-            field.onBlur();
-          }}
-          onFocus={() => {
-            setFocused(true);
-            revealOnFocus();
-          }}
-          editable={editable}
-          /*
-            `decimal-pad` mở phím dấu thập phân; `number-pad` thì không có. Ô số nguyên dùng bàn
-            phím không có dấu là một lớp chặn ngay tại nguồn, đỡ phải lọc.
-          */
-          keyboardType={effectiveInteger ? 'number-pad' : 'decimal-pad'}
-          placeholder={placeholder}
-          placeholderTextColor={colors.placeholder}
-          style={INPUT_STYLE}
-        />
-
-        {effectiveSuffix ? (
-          <Text col={colors.textMuted} fos={fieldFontSize.affix} fow={fontWeight.medium}>
-            {effectiveSuffix}
-          </Text>
-        ) : null}
-      </FieldShell>
-
-      <FieldMessage error={error} hint={hint} />
-    </YStack>
+    <NumberControl
+      label={label}
+      value={(field.value as number | null | undefined) ?? null}
+      onChange={field.onChange}
+      // RHF cần `onBlur` để đánh dấu `touched` — thiếu nó, `mode: 'onTouched'` không chấm ô này.
+      onBlur={field.onBlur}
+      required={required}
+      publishRequired={publishRequired}
+      editable={editable}
+      integer={integer}
+      grouped={grouped}
+      percent={percent}
+      {...(hint === undefined ? {} : { hint })}
+      {...(suffix === undefined ? {} : { suffix })}
+      {...(placeholder === undefined ? {} : { placeholder })}
+      {...(min === undefined ? {} : { min })}
+      {...(max === undefined ? {} : { max })}
+      {...(precision === undefined ? {} : { precision })}
+      {...(fieldState.error?.message === undefined ? {} : { error: fieldState.error.message })}
+    />
   );
-}
-
-/** `null` đi qua nguyên vẹn: chưa nhập không được biến thành `min`. */
-function clampOnCommit(
-  value: number | null | undefined,
-  bounds: { min?: number; max?: number; precision?: number },
-): number | null {
-  if (value == null || Number.isNaN(value)) return null;
-
-  let next = value;
-  if (bounds.precision != null) {
-    const factor = 10 ** bounds.precision;
-    next = Math.round(next * factor) / factor;
-  }
-  if (bounds.min != null) next = Math.max(next, bounds.min);
-  if (bounds.max != null) next = Math.min(next, bounds.max);
-  return next;
 }

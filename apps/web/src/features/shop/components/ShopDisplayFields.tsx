@@ -1,7 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import type { Control } from 'react-hook-form';
+import type { ReactNode } from 'react';
+import type { Control, FieldValues, Path } from 'react-hook-form';
 import type { ShopProfileValues } from '@xeprime/validators';
 
 import { SHOP_LOGO_TRIGGER_ID } from '@/constants/routes';
@@ -29,13 +30,7 @@ export function ShopDisplayFields({ control }: { control: Control<ShopProfileVal
 
   return (
     <>
-      <TextField
-        control={control}
-        name="displayName"
-        label={t('form.display.displayName.label')}
-        required
-        placeholder={t('form.display.displayName.placeholder')}
-      />
+      <ShopDisplayNameField control={control} />
       <TextAreaField
         control={control}
         name="bio"
@@ -48,19 +43,7 @@ export function ShopDisplayFields({ control }: { control: Control<ShopProfileVal
         hàng của tôi trông thế nào"), nên nhìn thấy cả hai cùng lúc mới so được.
       */}
       <div className={styles.imageRow}>
-        <ImageUploadField
-          control={control}
-          name="logoUrl"
-          label={t('form.display.logo.label')}
-          help={t('form.display.logo.hint')}
-          presign={presignShopMedia}
-          /*
-           * Đích của CTA "Tải logo" ở dải chào mừng sau khi thanh toán, và của lỗi thiếu logo khi
-           * gửi xe duyệt (ADR 0040). Hằng số dùng chung nên hai nơi kia không gõ tay một chuỗi
-           * `id` — gõ sai là nút cuộn về hư không, và không có gì đỏ lên để báo.
-           */
-          triggerId={SHOP_LOGO_TRIGGER_ID}
-        />
+        <ShopLogoField control={control} />
         <ImageUploadField
           control={control}
           name="coverUrl"
@@ -70,5 +53,61 @@ export function ShopDisplayFields({ control }: { control: Control<ShopProfileVal
         />
       </div>
     </>
+  );
+}
+
+/**
+ * Hai ô dưới đây tách riêng vì có màn hình hỏi ĐÚNG chúng mà không hỏi giới thiệu/ảnh bìa: bước
+ * "thông tin gian hàng" của luồng nâng cấp lên tuyến gói (`PackageUpgradeWizard`) chỉ cần đủ bộ
+ * `missingPackageShopRegistrationFields` + logo.
+ *
+ * Tách ở mức Ô NHẬP, không phải chép lại: nhãn, gợi ý, đường presign và `triggerId` chỉ có một
+ * bản. Một bản sao của ô logo ở màn khác là một chỗ để `SHOP_LOGO_TRIGGER_ID` lặng lẽ trỏ vào hư
+ * không sau lần đổi id tiếp theo.
+ *
+ * `Control<ShopProfileValues>` không dùng được ở đây: form nâng cấp `pick` một tập con của
+ * `shopProfileSchema`, và `Control` của nó là một kiểu KHÁC. Nên hai ô này chỉ đòi form có đúng
+ * trường mình đọc — đó là toàn bộ thứ chúng chạm tới.
+ */
+export function ShopDisplayNameField<T extends FieldValues & { displayName: string }>({
+  control,
+}: {
+  control: Control<T>;
+}) {
+  const t = useTranslations('Shop');
+  return (
+    <TextField
+      control={control}
+      name={'displayName' as Path<T>}
+      label={t('form.display.displayName.label')}
+      required
+      placeholder={t('form.display.displayName.placeholder')}
+    />
+  );
+}
+
+export function ShopLogoField<T extends FieldValues & { logoUrl?: string | null }>({
+  control,
+  help,
+}: {
+  control: Control<T>;
+  /** Gợi ý thay thế — luồng nâng cấp nói rõ logo bắt buộc TRƯỚC KHI gửi xe lên chợ, không phải lúc mua gói. */
+  help?: ReactNode;
+}) {
+  const t = useTranslations('Shop');
+  return (
+    <ImageUploadField
+      control={control}
+      name={'logoUrl' as Path<T>}
+      label={t('form.display.logo.label')}
+      help={help ?? t('form.display.logo.hint')}
+      presign={presignShopMedia}
+      /*
+       * Đích của CTA "Tải logo" ở dải chào mừng sau khi thanh toán, và của lỗi thiếu logo khi
+       * gửi xe duyệt (ADR 0040). Hằng số dùng chung nên hai nơi kia không gõ tay một chuỗi
+       * `id` — gõ sai là nút cuộn về hư không, và không có gì đỏ lên để báo.
+       */
+      triggerId={SHOP_LOGO_TRIGGER_ID}
+    />
   );
 }

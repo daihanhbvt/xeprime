@@ -19,6 +19,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { CHAT_DEBUG_SOURCE, chatDebug, type ChatDebugSource } from '@/lib/chat-debug';
 import { useAppActive, useRefetchOnForeground } from '@/hooks/use-app-active';
 import type { UploadedAttachment } from '@/lib/r2-image-upload';
+import { useRefreshBadges } from '@/features/badges/hooks/use-badges';
 import { queryKeys } from '@/queries/query-keys';
 import { REALTIME_STATE } from '@/hooks/use-realtime-subscription';
 import { useThreadRealtime } from '../realtime/use-thread-realtime';
@@ -133,10 +134,18 @@ export function useThread(conversationId: string, viewerSide: ChatSide): ThreadS
     [],
   );
 
+  const refreshBadges = useRefreshBadges();
+
   const invalidateInbox = useCallback(() => {
     // Không biết người xem đang ở bề mặt nào, và không cần biết: tiền tố `chat` phủ cả hai.
     void queryClient.invalidateQueries({ queryKey: queryKeys.chat.all });
-  }, [queryClient]);
+    /*
+     * Huy hiệu KHÔNG nằm dưới nhánh `chat` (nó gộp cả chuông thông báo), nên nó phải được gọi tên
+     * riêng. Thiếu dòng này thì mở một hội thoại ra đọc mà con số trên tab Tin nhắn vẫn đứng
+     * nguyên cho tới nhịp làm mới kế tiếp — đúng thứ người dùng để ý đầu tiên.
+     */
+    refreshBadges();
+  }, [queryClient, refreshBadges]);
 
   const markRead = useCallback(() => {
     chatApi

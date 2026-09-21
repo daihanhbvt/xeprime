@@ -10,6 +10,7 @@ import {
   chargedDays,
   DAY_PARAM_FORMAT,
   EMPTY_BUSY_INDEX,
+  firstBusyDayAfter,
   nowInAppTz,
   rangeBusyConflict,
   type BusyDayIndex,
@@ -46,6 +47,14 @@ const BUSY_STRIPE = {
   full: `${colors.placeholder}73`,
   partial: `${colors.warning}59`,
 } as const;
+
+/**
+ * Tầm nhìn khi đi tìm ngày bận kế tiếp — một năm, đúng bằng `BUSY_LOOKAHEAD_DAYS` bên web.
+ *
+ * Phải có một trần: `firstBusyDayAfter` duyệt từng ngày, và một chiếc xe rảnh hoàn toàn sẽ kéo
+ * vòng lặp đi vô tận nếu không dừng ở đâu.
+ */
+const BUSY_LOOKAHEAD_DAYS = 366;
 
 const DEFAULT_HOUR = 10;
 const DEFAULT_HOURLY_DURATION = 4;
@@ -185,7 +194,7 @@ export function RentalRangeSheet({
       if (!returnAt.isAfter(value.pickupAt)) {
         returnAt = value.pickupAt.add(Math.max(1, minDays), 'day');
       } else if (chargedDays(value.pickupAt, returnAt) < minDays) {
-        // Lưới an toàn cho ca lệch giờ — lịch đã khoá các ngày trả dưới sàn.
+        // Lưới an toàn cho ca LỆCH GIỜ: lịch đã khoá ngày dưới sàn, nhưng giờ trong ngày thì không.
         returnAt = withTime(value.pickupAt.add(minDays, 'day'), value.returnAt);
       }
       onChange({ pickupAt: value.pickupAt, returnAt });
@@ -303,15 +312,62 @@ export function RentalRangeSheet({
   const startAt = rangeStart?.valueOf() ?? null;
   const endAt = rangeEnd?.valueOf() ?? null;
 
+  /**
+   * Trần ngày TRẢ khi đã có ngày nhận: ngày bận đầu tiên sau ngày nhận chặn mọi ngày sau nó.
+   *
+   * Hai đầu khoảng rảnh KHÔNG có nghĩa là cả khoảng rảnh — 21→27/08 mà 25/08 bận trọn là bất khả
+   * thi, và `rangeBusyConflict` chỉ nói ra điều đó SAU khi người dùng đã chọn xong. Khoá thẳng
+   * trên lịch thì họ không dựng được một dải mà server chắc chắn từ chối (ADR 0006).
+   *
+   * Ngày bận MỘT PHẦN vẫn được phép LÀ ngày trả (trả trước giờ bận), ngày bận trọn thì không —
+   * nên trần lùi thêm một ngày ở ca bận một phần.
+   */
+  /*
+   * Theo dõi hai mốc bằng SỐ, khai thành biến trước khi đưa vào dep list.
+   *
+   * `Dayjs` là đối tượng mới sau mỗi lần render nên so tham chiếu luôn "đã đổi"; còn viết thẳng
+   * `value.pickupAt?.valueOf()` trong dep list thì React Compiler từ chối — dep phải là một biểu
+   * thức đơn giản (`x`, `x.y.z`), không phải một lời gọi hàm.
+   */
+  const pickupStamp = value.pickupAt?.valueOf() ?? null;
+  const returnStamp = value.returnAt?.valueOf() ?? null;
+
+  const returnCeiling = useMemo(() => {
+    if (!value.pickupAt || value.returnAt) return null;
+    const next = firstBusyDayAfter(busyDays, value.pickupAt, BUSY_LOOKAHEAD_DAYS);
+    if (!next) return null;
+    return next.level === 'full' ? next.date : next.date.add(1, 'day');
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- xem chú thích hai mốc ngay trên
+  }, [busyDays, pickupStamp, returnStamp]);
+
   const marks = useMemo(() => {
     const out: Record<string, RentalDayMark> = {};
+    /*
+     * Đang chờ ngày TRẢ và có sàn `minDays` ⇒ khoá luôn các ngày dưới sàn, đúng như web.
+     *
+     * `selectDay` vẫn nâng ngày trả lên sàn như một lưới an toàn cho ca lệch giờ, nhưng một ô
+     * ngày bấm được rồi lại nhảy sang ngày khác là thứ người dùng đọc thành "app tự đổi lựa chọn
+     * của tôi".
+     */
+    const floorDay =
+      minDays > 1 && value.pickupAt && !value.returnAt
+        ? value.pickupAt.startOf('day').add(minDays, 'day')
+        : null;
+
     for (const day of visibleDays(month)) {
       const busy = busyLevelOf(busyDays, day);
       const isPickup = Boolean(rangeStart && day.isSame(rangeStart, 'day'));
       const isReturn = Boolean(rangeEnd && day.isSame(rangeEnd, 'day'));
+      /*
+       * Bấm TRƯỚC ngày nhận vẫn được — đó là chọn lại ngày nhận, không phải chọn ngày trả, nên
+       * cả sàn lẫn trần đều chỉ áp cho những ngày SAU ngày nhận.
+       */
+      const afterPickup = Boolean(value.pickupAt && day.isAfter(value.pickupAt, 'day'));
+      const belowFloor = Boolean(floorDay && afterPickup && day.isBefore(floorDay, 'day'));
+      const aboveCeiling = Boolean(returnCeiling && afterPickup && !day.isBefore(returnCeiling, 'day'));
       out[day.format(DAY_PARAM_FORMAT)] = {
         busy,
-        disabled: day.isBefore(today, 'day') || busy === 'full',
+        disabled: day.isBefore(today, 'day') || busy === 'full' || belowFloor || aboveCeiling,
         edge: isPickup && isReturn ? 'both' : isPickup ? 'start' : isReturn ? 'end' : null,
         inRange: Boolean(
           rangeStart && rangeEnd && day.isAfter(rangeStart, 'day') && day.isBefore(rangeEnd, 'day'),
@@ -321,7 +377,7 @@ export function RentalRangeSheet({
     return out;
     // Theo dõi hai đầu dải bằng MỐC: `Dayjs` là đối tượng mới sau mỗi lần render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month, busyDays, today, startAt, endAt]);
+  }, [month, busyDays, today, startAt, endAt, minDays, returnCeiling]);
 
   /** Tham chiếu phải ĐỨNG YÊN, và ô chỉ được vẽ từ đối số — xem docblock `MonthGrid`. */
   const renderDay = useCallback(
