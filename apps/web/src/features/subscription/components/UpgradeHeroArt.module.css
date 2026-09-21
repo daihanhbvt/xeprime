@@ -1,0 +1,89 @@
+/*
+ * Minh hoạ đầu trang — TRANG TRÍ, nên nó nhường chỗ trước.
+ *
+ * Hình và bong bóng nằm CẠNH nhau: chồng lên thì bong bóng che mất biển hiệu và mái hiên, tức là
+ * che đúng phần duy nhất nói ra "gian hàng". Nằm cạnh cũng THẤP hơn, vì chiều cao cụm này quyết
+ * định chiều cao cả khối tiêu đề.
+ *
+ * Dưới 1024px hình biến mất: ở đó chiều ngang thuộc về tiêu đề, còn một hình nhỏ xíu bị ép co chỉ
+ * là nhiễu. Ba dòng chữ thì ở lại — chúng là nội dung.
+ */
+.hero {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.art {
+  display: block;
+  width: 160px;
+  height: auto;
+  flex: none;
+}
+
+.signText {
+  font-size: 9px;
+  font-weight: var(--xp-font-weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Bong bóng ba lời hứa, có đuôi chỉ về phía gian hàng. */
+.benefits {
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  margin: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-primary-light);
+  gap: 0;
+  list-style: none;
+}
+
+.benefits::before {
+  content: '';
+  position: absolute;
+  top: 18px;
+  left: -5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--xp-color-primary-light);
+  transform: rotate(45deg);
+}
+
+.benefits li {
+  display: flex;
+  align-items: center;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 20px;
+  gap: var(--xp-space-xs);
+  white-space: nowrap;
+}
+
+.benefits :global(.anticon) {
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+@media (max-width: 1023px) {
+  .art {
+    display: none;
+  }
+
+  .benefits::before {
+    display: none;
+  }
+
+  .benefits {
+    flex-direction: row;
+    flex-wrap: wrap;
+    background: transparent;
+    padding: 0;
+    gap: var(--xp-space-xs) var(--xp-space-md);
+  }
+}

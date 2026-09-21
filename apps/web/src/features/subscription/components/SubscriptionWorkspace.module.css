@@ -11,6 +11,10 @@
  * thế nào") thành ba khối tranh nhau sự chú ý, và ở trong trang Cửa hàng chúng còn nằm lồng
  * trong một thẻ section nữa.
  */
+/*
+ * `md`, không phải `lg`: tiêu đề trang đã tự mang `margin-bottom: lg`, nên một `gap: lg` nữa
+ * cộng vào thành 48px trống giữa tiêu đề và thẻ đầu tiên — đúng khoảng hở thấy trên ảnh.
+ */
 .workspace {
   display: flex;
   min-width: 0;

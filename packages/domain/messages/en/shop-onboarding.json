@@ -97,8 +97,6 @@
     "plansError": "Could not load the plan list",
     "noPlans": "No shop plan is on sale right now",
     "noPlansHint": "Contact XePrime support to have a plan opened for your shop.",
-    "statusWaiting": "Waiting for your transfer. Use exactly the code below — the plan unlocks automatically once XePrime receives the money.",
-    "statusPartial": "Part of the amount has arrived. Transfer the remainder using exactly the code below.",
     "createInvoice": "Create invoice and get the transfer code",
     "pickTermFirst": "Pick a term to create the invoice."
   }

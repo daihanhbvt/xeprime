@@ -1,0 +1,71 @@
+/* Bước 2 của luồng nâng cấp — năm ô, không phải cả hồ sơ gian hàng. */
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+/* Gói vừa chọn đứng NGAY TRÊN form: người ta đang điền vì con số này, nên nó phải còn nhìn thấy. */
+.planSummary {
+  margin: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+.introText {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.missingList {
+  margin: 0;
+  padding-left: var(--xp-space-lg);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+/* `fieldset` là cơ chế khoá NATIVE lúc đang lưu — không phải một hộp có viền. */
+.fieldset {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+}
+
+@media (max-width: 599px) {
+  /* Ở màn hẹp hai nút xếp dọc, nút chính LÊN TRÊN: nó là việc người dùng đang làm. */
+  .actions {
+    flex-direction: column-reverse;
+  }
+}

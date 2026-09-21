@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   REGISTRATION_TRACK,
   SHOP_ONBOARDING_STATE,
+  canUpgradeToPackageTrack,
   isEstablishedPackageShop,
   isPackageOnboardingPending,
   isPackageShopTrack,
@@ -9,6 +10,7 @@ import {
   registrationTrackOf,
   shopOnboardingStateForTrack,
 } from './shop-onboarding';
+import { TENANT_ROLE } from './rbac';
 import { BILLING_MODE } from './status/billing';
 
 /**
@@ -168,5 +170,60 @@ describe('isPackageShopTrack', () => {
   it('không có tenant ⇒ false', () => {
     expect(isPackageShopTrack(null)).toBe(false);
     expect(isPackageShopTrack(undefined)).toBe(false);
+  });
+});
+
+describe('canUpgradeToPackageTrack', () => {
+  const commissionOwner = {
+    roleKey: TENANT_ROLE.SHOP_OWNER,
+    onboardingState: SHOP_ONBOARDING_STATE.COMMISSION,
+    billingMode: BILLING_MODE.COMMISSION,
+  };
+
+  it('chủ xe tuyến hoa hồng ⇒ mời nâng cấp', () => {
+    expect(canUpgradeToPackageTrack(commissionOwner)).toBe(true);
+  });
+
+  /*
+   * Quản lý/nhân viên KHÔNG mua gói được (`subscription.purchase` mặc định chỉ chủ có), nên một
+   * lời mời nâng cấp trên màn của họ dẫn tới đúng một lần 403 ở bước cuối.
+   */
+  it.each([TENANT_ROLE.SHOP_MANAGER, TENANT_ROLE.SHOP_STAFF, TENANT_ROLE.SHOP_VIEWER])(
+    '%s của gian hàng hoa hồng ⇒ không mời',
+    (roleKey) => {
+      expect(canUpgradeToPackageTrack({ ...commissionOwner, roleKey })).toBe(false);
+    },
+  );
+
+  /*
+   * `unconfigured` KHÔNG phải một tuyến (ADR 0038 điều 1). Hỏi `!== package` sẽ gom cả tenant
+   * thiếu gói hiện hành vào lời mời — tức là đoán hộ một trạng thái hỏng.
+   */
+  it('tenant thiếu gói hiện hành (billingMode null) ⇒ không mời', () => {
+    expect(canUpgradeToPackageTrack({ ...commissionOwner, billingMode: null })).toBe(false);
+  });
+
+  it('đã ở tuyến gói ⇒ không mời', () => {
+    expect(canUpgradeToPackageTrack({ ...commissionOwner, billingMode: BILLING_MODE.PACKAGE })).toBe(
+      false,
+    );
+  });
+
+  /*
+   * Gian hàng đã trả tiền rồi hết gói rơi về `commission`, nhưng họ cần GIA HẠN chứ không phải
+   * một câu chuyện "nâng cấp lên gian hàng" mà họ đã đi qua (ADR 0040 điều 4).
+   */
+  it('gian hàng hết gói (đã từng trả tiền) ⇒ không mời nâng cấp', () => {
+    expect(
+      canUpgradeToPackageTrack({
+        ...commissionOwner,
+        onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE,
+      }),
+    ).toBe(false);
+  });
+
+  it('không có tenant ⇒ false', () => {
+    expect(canUpgradeToPackageTrack(null)).toBe(false);
+    expect(canUpgradeToPackageTrack(undefined)).toBe(false);
   });
 });

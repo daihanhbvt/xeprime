@@ -25,9 +25,19 @@
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
+  gap: var(--xp-space-sm);
+  margin-top: var(--xp-space-md);
+}
+
+/* Tổng tiền đẩy hai nút sang phải và tự xuống dòng riêng ở màn hẹp. */
+.total {
+  margin-right: auto;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
 }
 
 /* ── Màn "chuyển khoản" sau khi hoá đơn tạo xong ── */

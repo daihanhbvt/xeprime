@@ -49,6 +49,7 @@
  * `verified` — bốn câu trả lời khác nhau cho bốn câu hỏi khác nhau.
  */
 
+import { TENANT_ROLE } from './rbac';
 import { BILLING_MODE } from './status/billing';
 import { tenantUsesManagePortal } from './owner-stage';
 
@@ -158,4 +159,27 @@ export function isPackageShopTrack(tenant: ShopOnboardingInput | null | undefine
   if (tenant.onboardingState === SHOP_ONBOARDING_STATE.PACKAGE_PENDING) return true;
   if (tenant.onboardingState === SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE) return true;
   return tenant.billingMode === BILLING_MODE.PACKAGE;
+}
+
+/**
+ * Người này là ứng viên của luồng NÂNG CẤP lên gian hàng — chủ xe tuyến hoa hồng chưa từng đi qua
+ * cửa gói.
+ *
+ * Ba điều kiện, mỗi điều kiện loại một nhóm mà lời mời "Nâng cấp lên gian hàng" nói SAI:
+ *
+ * 1. **`shop_owner`** — quản lý/nhân viên của một gian hàng tuyến hoa hồng không mua gói được
+ *    (`subscription.purchase` mặc định chỉ chủ có), nên mời họ là dẫn tới một cánh cửa đóng.
+ * 2. **`billingMode === commission` TƯỜNG MINH** — không phải `!== package`. Tenant thiếu gói hiện
+ *    hành (`unconfigured`, ADR 0038 điều 1) KHÔNG phải một tuyến: đường đọc để "chưa xác định",
+ *    đường ghi tiền từ chối. Mời họ nâng cấp là đoán hộ một trạng thái hỏng.
+ * 3. **Chưa từng `package_active`** — gian hàng đã trả tiền rồi hết gói cũng rơi về `commission`
+ *    (ADR 0038 điều 5), nhưng họ là KHÁCH CŨ CẦN GIA HẠN, không phải người chưa biết gian hàng là
+ *    gì. ADR 0040 điều 4 cấm kể lại câu chuyện onboarding lần đầu cho họ.
+ */
+export function canUpgradeToPackageTrack(
+  tenant: (ShopOnboardingInput & { roleKey?: string | null }) | null | undefined,
+): boolean {
+  if (tenant?.roleKey !== TENANT_ROLE.SHOP_OWNER) return false;
+  if (tenant.billingMode !== BILLING_MODE.COMMISSION) return false;
+  return !isEstablishedPackageShop(tenant);
 }

@@ -47,6 +47,13 @@ import { PlanPricingTable } from './PlanPricingTable';
  */
 export function PackageShopCheckout() {
   const t = useTranslations('ShopOnboarding.checkout');
+  /*
+   * Dòng TRẠNG THÁI chờ tiền đọc từ `Subscription.payment`, không phải namespace của onboarding:
+   * cùng một câu xuất hiện ở mọi màn chờ đối soát một hoá đơn gói (onboarding gian hàng trả phí,
+   * và luồng nâng cấp từ tuyến hoa hồng bên web), nên nó sống cạnh phần còn lại của hướng dẫn
+   * chuyển khoản. Hai bản của cùng một câu là hai chỗ để một lần sửa chỉ đúng với một nửa người dùng.
+   */
+  const tPayment = useTranslations('Subscription.payment');
   const errorMessage = useErrorMessage();
 
   const pending = usePendingInvoice();
@@ -81,8 +88,8 @@ export function PackageShopCheckout() {
           fow={fontWeight.medium}
         >
           {invoice.status === SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID
-            ? t('statusPartial')
-            : t('statusWaiting')}
+            ? tPayment('statusPartial')
+            : tPayment('statusWaiting')}
         </Text>
         <InvoicePaymentPanel invoice={invoice} />
       </YStack>

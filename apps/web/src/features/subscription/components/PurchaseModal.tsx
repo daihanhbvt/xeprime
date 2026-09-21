@@ -7,6 +7,7 @@ import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { InvoicePaymentPanel } from './InvoicePaymentPanel';
 import { PlanPricingTable } from './PlanPricingTable';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { usePlanPurchase } from '../plan-purchase';
 import { usePurchaseSubscription, useTenantPlans } from '../hooks/use-subscription';
@@ -25,6 +26,7 @@ import styles from './PurchaseModal.module.css';
 export function PurchaseModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const t = useTranslations('Subscription');
   const tCommon = useTranslations('Common');
+  const fmt = useAppFormat();
   const errorMessage = useErrorMessage();
   const { message } = App.useApp();
 
@@ -97,6 +99,16 @@ export function PurchaseModal({ open, onClose }: { open: boolean; onClose: () =>
           <LegalConsentNote place="subscription" className={styles.consent} />
 
           <div className={styles.actions}>
+            {/*
+              Tổng tiền đứng CẠNH nút tạo hoá đơn, không nằm trong bảng giá: đây là con số người
+              dùng xác nhận khi bấm, nên nó phải ở trong tầm mắt của chính cú bấm đó.
+              `aria-live` vì nó đổi do một cú bấm ở chỗ khác trên màn hình.
+            */}
+            <span className={styles.total} aria-live="polite">
+              {selection.total == null
+                ? t('purchase.pickTerm')
+                : t('purchase.total', { amount: fmt.money(String(selection.total)) })}
+            </span>
             <Button onClick={close}>{tCommon('actions.close')}</Button>
             <Button
               type="primary"

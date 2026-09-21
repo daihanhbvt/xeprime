@@ -97,8 +97,6 @@
     "plansError": "Không tải được danh sách gói",
     "noPlans": "Hiện chưa có gói gian hàng nào đang bán",
     "noPlansHint": "Liên hệ hỗ trợ XePrime để mở gói cho gian hàng của bạn.",
-    "statusWaiting": "Đang chờ tiền về. Chuyển khoản theo đúng mã bên dưới — gói mở tự động khi XePrime nhận được tiền.",
-    "statusPartial": "Đã nhận một phần. Chuyển nốt số còn thiếu theo đúng mã bên dưới.",
     "createInvoice": "Tạo hoá đơn và lấy mã chuyển khoản",
     "pickTermFirst": "Chọn kỳ hạn để tạo hoá đơn."
   }
