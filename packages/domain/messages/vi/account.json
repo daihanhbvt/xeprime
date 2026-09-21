@@ -94,6 +94,11 @@
       "body": "Có xe đang nhàn rỗi? Đăng lên XePrime và bắt đầu nhận đơn.",
       "action": "Bắt đầu"
     },
+    "upgrade": {
+      "title": "Nâng cấp lên gian hàng",
+      "body": "Không còn phí dịch vụ theo chuyến, mở bộ quản lý gian hàng và hạn mức xe theo gói.",
+      "action": "Xem các gói"
+    },
     "platform": {
       "title": "Quản trị nền tảng",
       "body": "Duyệt hồ sơ, theo dõi gian hàng và toàn bộ hệ thống.",

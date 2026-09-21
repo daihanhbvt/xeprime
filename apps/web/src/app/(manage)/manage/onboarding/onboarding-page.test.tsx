@@ -36,12 +36,6 @@ vi.mock('next/navigation', () => ({
 const currentUser = vi.hoisted(() => ({ data: undefined as unknown, isLoading: false }));
 vi.mock('@/hooks/use-current-user', () => ({ useCurrentUser: () => currentUser }));
 
-const invalidate = vi.hoisted(() => vi.fn());
-vi.mock('@tanstack/react-query', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@tanstack/react-query')>();
-  return { ...actual, useQueryClient: () => ({ invalidateQueries: invalidate }) };
-});
-
 /**
  * Cả nhánh hook của gói được thay một lần: trang và `PackageShopCheckout` cùng gọi
  * `usePendingInvoice` (chung query key, chung cache), nên mock ở tầng hook giữ cho hai chỗ luôn
@@ -63,6 +57,8 @@ vi.mock('@/features/subscription/hooks/use-subscription', () => ({
   useTenantPlans: () => subscription.plans,
   usePurchaseSubscription: () => subscription.purchase,
   usePaymentInfo: () => subscription.paymentInfo,
+  /* Làm mới scope khi tiền về — hành vi của nó thuộc về hook, không phải trang này. */
+  useSyncScopeWhenInvoiceSettles: () => undefined,
 }));
 
 /** Form bước 1 thay bằng một dấu hiệu: hành vi của nó có spec riêng (`ShopRegistration.test`). */
@@ -91,6 +87,10 @@ const PLAN = {
 const INVOICE = {
   id: 'INV1',
   code: 'XPGABC1234',
+  planId: 'plan-basic',
+  planCode: 'shop-basic',
+  termMonths: 3,
+  quota: { maxVehicles: 3, maxBranches: 1, maxMembers: null },
   status: SUBSCRIPTION_INVOICE_STATUS.ISSUED,
   totalAmount: '300000',
   paidAmount: '0',
@@ -131,7 +131,6 @@ function renderPage() {
 
 beforeEach(() => {
   router.replace.mockReset();
-  invalidate.mockReset();
   search.value = '';
   subscription.pending.data = null;
   subscription.pending.isLoading = false;
@@ -268,20 +267,22 @@ describe('Thanh toán xong', () => {
   });
 
   /*
-   * Scope CHƯA cập nhật (`package_pending` + hoá đơn đã rời trạng thái chờ): KHÔNG điều hướng,
-   * chỉ làm mới `/auth/me`. Đây là nhịp giữa webhook và lượt fetch scope kế tiếp.
+   * Scope CHƯA cập nhật (`package_pending` + hoá đơn đã rời trạng thái chờ): KHÔNG điều hướng.
+   * Đây là nhịp giữa webhook và lượt fetch scope kế tiếp.
+   *
+   * Việc LÀM MỚI scope ở nhịp đó nay do `useSyncScopeWhenInvoiceSettles` lo — một hook dùng chung
+   * với luồng nâng cấp ở `/account/subscription`, và nó có spec riêng ở
+   * `features/subscription/hooks/use-subscription.test.tsx`. Ở đây chỉ còn phần thuộc về TRANG:
+   * đứng yên cho tới khi scope thật sự đổi.
    */
-  it('hoá đơn rời trạng thái chờ mà scope chưa kịp: làm mới auth, chưa điều hướng', async () => {
+  it('hoá đơn rời trạng thái chờ mà scope chưa kịp: chưa điều hướng đi đâu', async () => {
     signedIn({
       onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_PENDING,
       billingMode: null,
     });
-    // Lượt đầu: đang chờ tiền.
     subscription.pending.data = INVOICE;
     const view = renderPage();
-    expect(invalidate).not.toHaveBeenCalled();
 
-    // Lượt polling cuối trả `null` — tiền đã về.
     subscription.pending.data = null;
     view.rerender(
       <App>
@@ -289,22 +290,11 @@ describe('Thanh toán xong', () => {
       </App>,
     );
 
-    await waitFor(() => expect(invalidate).toHaveBeenCalledTimes(1));
+    // Vẫn đứng ở bước 2 (bộ chọn gói hiện lại vì hoá đơn đã rời danh sách chờ), chưa đi đâu cả.
+    await waitFor(() =>
+      expect(screen.getByRole('radiogroup', { name: /Chọn gói dịch vụ/ })).toBeTruthy(),
+    );
     expect(router.replace).not.toHaveBeenCalled();
-  });
-
-  /*
-   * Chưa từng tạo hoá đơn cũng cho `data === null`. Làm mới scope ở ca đó là một lượt gọi vô ích
-   * mỗi lần trang mở — nên hook phân biệt "vừa trả xong" với "chưa bắt đầu".
-   */
-  it('chưa từng tạo hoá đơn: KHÔNG làm mới auth vô ích', () => {
-    signedIn({
-      onboardingState: SHOP_ONBOARDING_STATE.PACKAGE_PENDING,
-      billingMode: null,
-    });
-    renderPage();
-
-    expect(invalidate).not.toHaveBeenCalled();
   });
 });
 

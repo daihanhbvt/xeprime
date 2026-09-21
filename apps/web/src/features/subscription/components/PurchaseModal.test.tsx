@@ -176,7 +176,7 @@ describe('PurchaseModal — bậc bán qua tư vấn', () => {
    * Giấu hẳn bậc doanh nghiệp là giấu luôn lối nâng cấp của gian hàng lớn nhất, và một bảng giá
    * dừng ở "10 xe" nói rằng nền tảng không phục vụ được đội xe lớn hơn (ADR 0041 điều 5).
    */
-  it('vẫn có thẻ, nhưng là "Liên hệ báo giá" chứ không phải một con số', () => {
+  it('vẫn có thẻ, nhưng là lời mời LIÊN HỆ chứ không phải một con số', () => {
     plans.data = [
       makePlan(),
       makePlan({
@@ -199,6 +199,7 @@ describe('PurchaseModal — bậc bán qua tư vấn', () => {
 
     expect(screen.getByText('Gói chuyên nghiệp')).toBeTruthy();
     expect(screen.getByText('Không giới hạn xe')).toBeTruthy();
+    // Chỗ của giá là một lời mời liên hệ, không phải một con số không ai kiểm được.
     expect(screen.getByText('Liên hệ báo giá')).toBeTruthy();
     // Lối đi là một LIÊN KẾT tới trung tâm hỗ trợ, không phải một nút chọn mua.
     const contact = screen.getByRole('link', { name: 'Liên hệ tư vấn' });

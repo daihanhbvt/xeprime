@@ -1,0 +1,19 @@
+/* Bộ chọn gói + nút hành động — dùng chung cho onboarding gian hàng và luồng nâng cấp. */
+
+.panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.consent {
+  text-align: left;
+}
+
+.hint {
+  margin: 0;
+  text-align: center;
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}

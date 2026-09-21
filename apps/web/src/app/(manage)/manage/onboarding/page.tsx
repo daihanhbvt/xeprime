@@ -1,27 +1,20 @@
 'use client';
 
 import { ArrowLeftOutlined, QuestionCircleOutlined } from '@ant-design/icons';
-import { useQueryClient } from '@tanstack/react-query';
 import { Button, Popover, Spin } from 'antd';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useEffect, useRef } from 'react';
-import {
-  REGISTRATION_TRACK,
-  SUBSCRIPTION_INVOICE_STATUS,
-  registrationTrackOf,
-  tenantUsesManagePortal,
-} from '@xeprime/types';
+import { useEffect } from 'react';
+import { REGISTRATION_TRACK, registrationTrackOf, tenantUsesManagePortal } from '@xeprime/types';
 import { Logo } from '@/components/brand/Logo';
 import { REGISTRATION_TRACK_PARAM, ROUTES, shopWelcomePath } from '@/constants/routes';
 import { isPackageOnboarding, resolveWorkspaceHref } from '@/features/auth/post-auth-destination';
 import { safeNextPath } from '@/features/auth/safe-next';
 import { ShopRegistration } from '@/features/shop/components/ShopRegistration';
 import { PackageShopCheckout } from '@/features/subscription/components/PackageShopCheckout';
-import { usePendingInvoice } from '@/features/subscription/hooks/use-subscription';
+import { useSyncScopeWhenInvoiceSettles } from '@/features/subscription/hooks/use-subscription';
 import { useCurrentUser } from '@/hooks/use-current-user';
-import { queryKeys } from '@/services/query-keys';
 import styles from './onboarding.module.css';
 
 /**
@@ -62,7 +55,6 @@ export default function OwnerOnboardingPage() {
   const t = useTranslations('ShopOnboarding');
   const router = useRouter();
   const params = useSearchParams();
-  const queryClient = useQueryClient();
   const { data: user, isLoading } = useCurrentUser();
 
   const tenant = user?.tenant ?? null;
@@ -94,7 +86,7 @@ export default function OwnerOnboardingPage() {
   /** Đến từ luồng đăng xe → dùng chữ dành cho chủ xe cá nhân, không phải chữ "mở gian hàng". */
   const personalWording = commissionNext.startsWith(ROUTES.LIST_YOUR_VEHICLE.ROOT);
 
-  useSyncScopeWhenInvoiceSettles(packagePending, queryClient);
+  useSyncScopeWhenInvoiceSettles(packagePending);
 
   useEffect(() => {
     if (!hasTenant || packagePending) return;
@@ -224,38 +216,3 @@ export default function OwnerOnboardingPage() {
   );
 }
 
-/**
- * Hoá đơn vừa RỜI trạng thái chờ ⇒ hỏi lại scope thật.
- *
- * Tiền về là webhook SePay lật hoá đơn `paid`, bật thuê bao và hoàn tất onboarding trong MỘT
- * transaction (ADR 0040). Client không biết điều đó xảy ra lúc nào, nên `usePendingInvoice` hỏi
- * lại theo nhịp và tự dừng khi hoá đơn tới trạng thái kết thúc. Lượt hỏi CUỐI CÙNG đó — lượt trả
- * về `null` — là tín hiệu duy nhất đáng tin, và hook này biến nó thành một lần làm mới
- * `/auth/me`. Điều hướng thì để `useEffect` ở trang lo, sau khi scope mới thật sự về.
- *
- * `seenAwaiting` là thứ phân biệt "vừa trả xong" với "chưa bao giờ tạo hoá đơn": cả hai đều cho
- * `data === null`, và làm mới scope ở ca thứ hai là một lượt gọi vô ích mỗi lần trang mở.
- *
- * Cũng chạy đúng khi hoá đơn hết hạn (`void`): scope không đổi, màn hình quay về bộ chọn gói.
- */
-function useSyncScopeWhenInvoiceSettles(
-  enabled: boolean,
-  queryClient: ReturnType<typeof useQueryClient>,
-): void {
-  const pending = usePendingInvoice(enabled);
-  const status = pending.data?.status ?? null;
-  const awaiting =
-    status === SUBSCRIPTION_INVOICE_STATUS.ISSUED ||
-    status === SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID;
-  const seenAwaiting = useRef(false);
-
-  useEffect(() => {
-    if (awaiting) {
-      seenAwaiting.current = true;
-      return;
-    }
-    if (!seenAwaiting.current) return;
-    seenAwaiting.current = false;
-    void queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
-  }, [awaiting, queryClient]);
-}

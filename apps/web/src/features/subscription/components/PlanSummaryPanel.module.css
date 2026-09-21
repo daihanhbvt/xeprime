@@ -1,30 +1,57 @@
 /*
- * "Gói & hạn mức" — một khối phẳng, không thẻ lồng thẻ.
+ * "Gói hiện hành" — tiêu đề + viên nhãn thời hạn + ba ô số + dải tính năng còn khoá.
  *
- * Khối này được NHÚNG (trang Cửa hàng bọc nó bằng `ShopSectionCard`, `/account/subscription` đặt
- * nó dưới tiêu đề trang), nên nó không tự vẽ viền hay bóng nào: hai lớp khung cho cùng một nội
- * dung là thứ mắt đọc ra ngay nhưng không ai gọi tên được.
+ * Khối này được NHÚNG ở trang Cửa hàng (`ShopSectionCard` đã là một thẻ), nên viền/bóng chỉ bật
+ * khi nơi gọi xin (`framed`): hai lớp khung cho cùng một nội dung là thứ mắt đọc ra ngay nhưng
+ * không ai gọi tên được.
  */
 .panel {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: var(--xp-space-md);
-}
-
-/* Tên gói + hạn ở trái, nút gia hạn ở phải; xuống dòng khi hẹp. */
-.planRow {
-  display: flex;
-  min-width: 0;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
   gap: var(--xp-space-sm);
 }
 
-.planText {
+.framed {
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+}
+
+/* Tên gói + mô tả ở trái; thời hạn (và nút gia hạn của tuyến gói) ở phải. */
+.head {
+  display: flex;
   min-width: 0;
-  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-sm) var(--xp-space-md);
+}
+
+.planIcon {
+  display: grid;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.headText {
+  min-width: 0;
+  flex: 1 1 260px;
+}
+
+.headSide {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
 }
 
 .planName {
@@ -34,30 +61,83 @@
   align-items: center;
   margin: 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-h5, 16px);
+  font-size: var(--xp-font-size-h4);
+  line-height: var(--xp-line-height-h4);
   font-weight: var(--xp-font-weight-semibold);
   gap: var(--xp-space-sm);
   overflow-wrap: anywhere;
 }
 
-.modeTag {
-  font-weight: var(--xp-font-weight-regular, 400);
+/* Nhãn "đang kích hoạt": nền vàng nhạt, chữ nâu — cùng họ với thương hiệu, không phải màu trạng thái. */
+.activeTag {
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-overline);
+  line-height: var(--xp-line-height-overline);
+  font-weight: var(--xp-font-weight-semibold);
 }
 
 .planMeta {
   margin: var(--xp-space-xs) 0 0;
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
 }
 
+/* ── Viên nhãn THỜI HẠN GÓI ────────────────────────────────────────────── */
+
+.termPill {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: var(--xp-space-xs) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+  gap: 2px;
+}
+
+.termPillLabel {
+  display: inline-flex;
+  align-items: center;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  gap: var(--xp-space-xs);
+}
+
+.termPillValue {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.termPill[data-tone='near'] {
+  border-color: var(--xp-color-warning);
+  background: var(--xp-color-warning-bg);
+}
+
+.termPill[data-tone='near'] .termPillValue {
+  color: var(--xp-color-warning);
+}
+
+/* ── Ba ô số ───────────────────────────────────────────────────────────── */
+
 /*
- * Ba ô số: mảnh, ngang hàng, tự xuống dòng. KHÔNG phải ba `Card` — chúng là ba con số, và một
- * con số không cần tiêu đề, viền và bóng riêng để đọc được.
+ * Ô đầu (hạn mức) RỘNG GẤP ĐÔI ba ô còn lại: nó mang cả con số, dòng phụ và thanh mức dùng, còn
+ * ba ô kia chỉ có một con số. Chia đều bốn phần làm ô quan trọng nhất chật nhất.
+ *
+ * Cột khai TƯỜNG MINH thay vì `auto-fit`: `auto-fit` chia đều rồi mới bù `span 2`, nên ô cuối
+ * ("10% / chuyến") tụt xuống dưới 150px và con số gãy làm hai dòng — đúng lỗi nhìn thấy trên
+ * ảnh. Dưới 900px thì xếp hai cột, dưới 560px thì một cột.
  */
 .tiles {
   display: grid;
   min-width: 0;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: 1.7fr 1fr 1fr 1.3fr;
   gap: var(--xp-space-sm);
 }
 
@@ -66,26 +146,74 @@
   min-width: 0;
   flex-direction: column;
   padding: var(--xp-space-sm) var(--xp-space-md);
-  border: 1px solid var(--xp-color-border-subtle);
+  border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-layout);
-  gap: 2px;
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-xs);
+}
+
+/* Ô HẠN MỨC là con số người dùng tới đây để xem — nền vàng nhạt kéo mắt về nó trước. */
+.tileQuota {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
 }
 
 .tileLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  gap: var(--xp-space-sm);
+}
+
+.tileIcon {
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.tileQuota .tileIcon {
+  color: var(--xp-color-primary-active);
 }
 
 .tileValue {
+  display: flex;
+  align-items: baseline;
+  margin: 0;
+  gap: var(--xp-space-xs);
+  flex-wrap: wrap;
+}
+
+.tileNumber {
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-h5, 16px);
-  font-weight: var(--xp-font-weight-semibold);
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
+  font-weight: var(--xp-font-weight-bold);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Giá trị đã định dạng sẵn ("10% / chuyến") — cùng hàng với con số nhưng nhẹ hơn một bậc. */
+.tileText {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  white-space: nowrap;
+}
+
+.tileSub {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
 }
 
 /*
- * Thanh mức dùng: cao 4px, nằm dưới con số chứ không thay nó.
+ * Thanh mức dùng: cao 6px, nằm dưới con số chứ không thay nó.
  *
  * Màu theo `data-tone` đặt trên ô cha — dưới 80% là màu thương hiệu (còn chỗ = không có tin
  * gì), 80–99% cảnh báo, 100% cảnh báo đậm. KHÔNG có nhánh đỏ: dùng hết chỗ đã mua là trạng thái
@@ -95,10 +223,10 @@
   display: block;
   overflow: hidden;
   width: 100%;
-  height: 4px;
+  height: 6px;
   border-radius: var(--xp-border-radius-pill);
   margin-top: var(--xp-space-xs);
-  background: var(--xp-color-border);
+  background: rgb(255 255 255 / 70%);
 }
 
 .meterFill {
@@ -118,18 +246,35 @@
   border-color: var(--xp-color-warning);
 }
 
-.tile[data-tone='full'] .tileValue {
-  color: var(--xp-color-warning-text, var(--xp-color-warning));
-}
-
-.note {
-  margin: 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
+.tile[data-tone='full'] .tileNumber {
+  color: var(--xp-color-warning);
 }
 
 /* Chỉ hiện khi đã hết chỗ — xem `QuotaWarning`. */
 .warning {
   margin: 0;
+}
+
+@media (max-width: 899px) {
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 559px) {
+  .tiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 599px) {
+  /* Viên nhãn thời hạn trải hết chiều ngang ở màn hẹp thay vì nép vào một góc. */
+  .headSide {
+    width: 100%;
+  }
+
+  .termPill {
+    flex: 1 1 auto;
+    align-items: flex-start;
+  }
 }

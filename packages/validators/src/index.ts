@@ -747,6 +747,23 @@ const addressShape = {
     .default(null),
 } as const;
 
+/**
+ * SỐ ĐIỆN THOẠI LIÊN HỆ của một địa điểm (chi nhánh / gian hàng) — luật gốc, TUỲ CHỌN.
+ *
+ * Một const riêng vì đúng ô này xuất hiện ở ba form (đăng ký gian hàng, form chi nhánh, nâng cấp
+ * lên tuyến gói) và hai trong ba đòi nó BẮT BUỘC. Ba bản chép tay của cùng một `matches` là ba
+ * chỗ để mẫu số điện thoại lệch nhau — và `VN_PHONE_PATTERN` là thứ quyết định một khách có gọi
+ * được cho gian hàng hay không.
+ *
+ * `default('') + excludeEmptyString`: bỏ trống là hợp lệ, chỉ kiểm khi có nhập. Nơi cần bắt buộc
+ * thì nối thêm `.required(...)` — schema của yup bất biến nên nối thêm không đụng tới bản gốc.
+ */
+const contactPhoneRule = yup
+  .string()
+  .trim()
+  .default('')
+  .matches(VN_PHONE_PATTERN, { message: 'phoneInvalid', excludeEmptyString: true });
+
 /*
  * Từng có một `addressShapeWithWard` ở đây — bản BẮT BUỘC chọn xã/phường, dùng cho form khai
  * địa điểm vận hành (chi nhánh, hồ sơ chủ xe).
@@ -806,16 +823,11 @@ export const registerShopSchema = yup.object({
     is: REGISTRATION_TRACK.PACKAGE,
     then: (schema) => schema.required('addressLineRequired'),
   }),
-  // default('') + excludeEmptyString: bỏ trống là hợp lệ ở tuyến hoa hồng, chỉ kiểm khi có nhập.
-  phone: yup
-    .string()
-    .trim()
-    .default('')
-    .matches(VN_PHONE_PATTERN, { message: 'phoneInvalid', excludeEmptyString: true })
-    .when('registrationTrack', {
-      is: REGISTRATION_TRACK.PACKAGE,
-      then: (schema) => schema.required('phoneRequired'),
-    }),
+  // Bỏ trống là hợp lệ ở tuyến hoa hồng, chỉ kiểm khi có nhập — xem `contactPhoneRule`.
+  phone: contactPhoneRule.when('registrationTrack', {
+    is: REGISTRATION_TRACK.PACKAGE,
+    then: (schema) => schema.required('phoneRequired'),
+  }),
   email: yup.string().trim().default('').email('emailInvalid'),
 });
 
@@ -875,11 +887,7 @@ export const branchFormSchema = yup.object({
    * GHIM đã xác nhận, không phải mã xã (ADR 0042), nên `addressShape` giữ `wardCode` tuỳ chọn.
    */
   ...addressShape,
-  phone: yup
-    .string()
-    .trim()
-    .default('')
-    .matches(VN_PHONE_PATTERN, { message: 'phoneInvalid', excludeEmptyString: true }),
+  phone: contactPhoneRule,
 });
 
 export type BranchFormValues = yup.InferType<typeof branchFormSchema>;
@@ -932,6 +940,55 @@ export const shopProfileSchema = yup.object({
 });
 
 export type ShopProfileValues = yup.InferType<typeof shopProfileSchema>;
+
+/**
+ * BƯỚC "thông tin gian hàng" của luồng NÂNG CẤP chủ xe hoa hồng → tuyến gói (ADR 0028 điều 1).
+ *
+ * Không phải một form hồ sơ thứ hai: nó `pick` đúng những ô cần để một gian hàng có mặt tiền
+ * bán được, từ chính `shopProfileSchema`. Tenant đã tồn tại, nên mọi thứ khác (loại hình, email,
+ * mã số thuế, giấy phép, ngân hàng) KHÔNG được hỏi lại ở một màn đang trên đường ra hoá đơn.
+ *
+ * Hai ô nghiêm hơn bản hồ sơ, và đó là toàn bộ khác biệt:
+ *
+ * | Ô | `shopProfileSchema` | ở đây |
+ * | --- | --- | --- |
+ * | `addressLine` | tuỳ chọn | **bắt buộc** |
+ * | `contactPhone` | không có (thuộc CHI NHÁNH) | **bắt buộc** |
+ *
+ * Bộ bắt buộc khớp ĐÚNG `missingPackageShopRegistrationFields` ở `@xeprime/types` (tên · SĐT ·
+ * tỉnh · số nhà) — cùng một quy tắc, hai lớp thi hành, y như `registerShopSchema` tuyến gói. Hỏi
+ * ở đây rẻ hơn hẳn so với để họ trả tiền xong rồi bị cổng đăng xe từ chối.
+ *
+ * `contactPhone` mang tên khác `phone` của `branchFormSchema` có chủ đích: giá trị này sống ở
+ * CHI NHÁNH MẶC ĐỊNH (`PATCH /branches/:id`) trong khi mọi ô còn lại đi `PATCH /shop/profile`, và
+ * một cái tên nói đúng vai trò giữ cho nơi gọi không gửi nó nhầm phong bì. Luật thì vẫn là MỘT
+ * (`contactPhoneRule`).
+ *
+ * Logo cố ý KHÔNG bắt buộc: nó chưa cần thiết để nhận tiền gói, và đòi một tấm ảnh trước khi
+ * người ta kịp trả tiền là ma sát đặt sai chỗ. Cổng đòi nó là lúc chiếc xe đầu tiên lên chợ
+ * (`missingPackageShopListingRequirements`).
+ *
+ * Message là MÃ — `useValidationResolver` tra `Subscription.upgrade.validation.*` trước, rồi
+ * `Shop.validation.*` cho những mã đến từ `shopProfileSchema`.
+ */
+export const shopUpgradeSchema = shopProfileSchema
+  .pick([
+    'displayName',
+    'provinceCode',
+    'wardCode',
+    'addressLine',
+    'placeId',
+    'latitude',
+    'longitude',
+    'locationSource',
+    'logoUrl',
+  ])
+  .shape({
+    addressLine: addressShape.addressLine.required('addressLineRequired'),
+    contactPhone: contactPhoneRule.required('phoneRequired'),
+  });
+
+export type ShopUpgradeValues = yup.InferType<typeof shopUpgradeSchema>;
 
 /**
  * Hồ sơ tài khoản KHÁCH (`PATCH /users/me`) — khác hoàn toàn `shopProfileSchema` ở trên.

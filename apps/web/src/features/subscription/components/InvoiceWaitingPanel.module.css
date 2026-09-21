@@ -1,4 +1,4 @@
-/* Bước 2 của onboarding gian hàng trả phí — bộ chọn gói, hoặc dải chuyển khoản. */
+/* Màn chờ tiền của một hoá đơn gói — dòng trạng thái + hướng dẫn chuyển khoản. */
 
 .panel {
   display: flex;
@@ -13,17 +13,6 @@
 .status {
   margin: 0;
   font-size: var(--xp-font-size-body);
-  font-weight: 600;
+  font-weight: var(--xp-font-weight-semibold);
   color: var(--xp-color-text);
-}
-
-.consent {
-  text-align: left;
-}
-
-.disabledHint {
-  margin: 0;
-  text-align: center;
-  font-size: var(--xp-font-size-body-sm);
-  color: var(--xp-color-text-secondary);
 }

@@ -94,6 +94,11 @@
       "body": "Got a vehicle sitting idle? List it on XePrime and start taking bookings.",
       "action": "Get started"
     },
+    "upgrade": {
+      "title": "Upgrade to a shop",
+      "body": "No more per-trip service fee, plus the full shop management tools and a plan-based vehicle limit.",
+      "action": "See the plans"
+    },
     "platform": {
       "title": "Platform administration",
       "body": "Review applications and monitor shops across the whole system.",

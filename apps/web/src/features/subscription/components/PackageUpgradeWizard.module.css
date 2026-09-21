@@ -1,0 +1,363 @@
+/*
+ * Luồng nâng cấp chủ xe hoa hồng → gian hàng tuyến gói: chọn gói → thông tin → thanh toán.
+ *
+ * Khối này KHÔNG phải một thẻ: tiêu đề section nằm trên nền trang, còn thanh bước, ba thẻ bậc
+ * gói và dải hotline mỗi thứ là một khối riêng. Bọc tất cả trong một thẻ nữa là một khung lớn
+ * chứa toàn khung nhỏ — mắt đọc ra ngay nhưng không ai gọi tên được.
+ */
+.wizard {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+/* Tiêu đề + thanh bước đi CHUNG một thẻ: chúng trả lời một câu hỏi ("sắp tới là những gì"). */
+.stepsCard {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-sm);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+/* Tiêu đề nhận tiêu điểm từ CTA ở khối trên — không vẽ viền focus mặc định của trình duyệt lên chữ. */
+.title:focus-visible {
+  outline: 2px solid var(--xp-color-border-focus);
+  outline-offset: 4px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+/* ── Thanh ba bước ─────────────────────────────────────────────────────── */
+
+/*
+ * Ba chặng trên MỘT dòng, nối nhau bằng một nét mảnh. Không dùng `Steps` của AntD: nó vẽ mô tả,
+ * icon trạng thái và đường nối cho một luồng ba bước, chiếm gần nửa chiều cao khung nhìn trên
+ * điện thoại ngay phía trên thứ người dùng phải đọc.
+ */
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  gap: var(--xp-space-sm);
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  min-width: 0;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* Nét nối: co giãn theo chỗ trống nên ba bước trải đều cả chiều ngang thẻ. */
+.step:not(:last-child)::after {
+  content: '';
+  flex: 1 1 24px;
+  min-width: 24px;
+  height: 1px;
+  margin-left: var(--xp-space-sm);
+  background: var(--xp-color-border);
+}
+
+.step:not(:last-child) {
+  flex: 1 1 auto;
+}
+
+.stepLabel {
+  white-space: nowrap;
+}
+
+/* Bước đã qua: cả cụm số + nhãn là một nút lùi, không phải một dòng chữ trang trí. */
+.stepBack {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  gap: var(--xp-space-sm);
+  cursor: pointer;
+}
+
+.stepBack:hover .stepLabel {
+  text-decoration: underline;
+}
+
+.stepBack:focus-visible {
+  outline: 2px solid var(--xp-color-border-focus);
+  outline-offset: 4px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.stepIndex {
+  display: grid;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid currentcolor;
+  border-radius: 50%;
+  background: var(--xp-color-bg-muted);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: 1;
+}
+
+.stepCurrent {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.stepCurrent .stepIndex {
+  border-color: transparent;
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+/* Bước ĐÃ QUA vẫn đọc được là đã xong, nhưng không tranh sự chú ý với bước đang mở. */
+.stepDone {
+  color: var(--xp-color-primary-active);
+}
+
+/* ── Thân bước ─────────────────────────────────────────────────────────── */
+
+/*
+ * Bước 2 (form) và bước 3 (chuyển khoản) đi trong một thẻ trắng. Bước 1 thì KHÔNG: ba thẻ bậc
+ * gói tự đứng, và một khung bọc ngoài chúng là hai lớp viền cho cùng một nội dung.
+ */
+.stepCard {
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+/* Lối sửa ở màn chờ chuyển khoản — nút phụ, tách khỏi khối QR bằng một nét mảnh. */
+.paymentActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--xp-space-md);
+  padding-top: var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+/* ── Tiêu đề mục trong thân bước ───────────────────────────────────────── */
+
+.sectionHead {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--xp-space-md);
+  gap: var(--xp-space-xs);
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h4);
+  line-height: var(--xp-line-height-h4);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.sectionSubtitle {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* ── Dải chốt đơn: tổng tiền · ghi chú bảo mật · nút đi tiếp ───────────── */
+
+/*
+ * BA cột: tổng tiền · ghi chú bảo mật · nút đi tiếp, và nút luôn nằm ngoài cùng bên phải.
+ *
+ * `flex-wrap` từng bật ở đây và nó thả nút xuống dòng dưới ngay khi ghi chú bảo mật dài ra —
+ * hành động chính của cả trang rơi xuống một góc trái. Nay chỉ màn HẸP mới xếp dọc, và khi đó
+ * nút trải hết chiều ngang.
+ */
+.checkoutBar {
+  display: flex;
+  align-items: center;
+  margin-top: var(--xp-space-md);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+  gap: var(--xp-space-lg);
+}
+
+.total {
+  display: flex;
+  min-width: 0;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: baseline;
+  margin: 0;
+  gap: var(--xp-space-xs);
+}
+
+.totalLabel {
+  width: 100%;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.totalValue {
+  color: var(--xp-color-price);
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.totalFor {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.secure {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: flex-start;
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  gap: var(--xp-space-sm);
+}
+
+.secure strong {
+  color: var(--xp-color-text);
+}
+
+.secure :global(.anticon) {
+  margin-top: 2px;
+  color: var(--xp-color-success);
+}
+
+.checkoutAction {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--xp-space-xs);
+}
+
+.nextStep {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* ── Thẻ hỗ trợ ────────────────────────────────────────────────────────── */
+
+.support {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-md);
+}
+
+.supportIcon {
+  display: grid;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.supportText {
+  min-width: 0;
+  flex: 1 1 260px;
+}
+
+.supportTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.supportBody {
+  margin: 2px 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.supportAction {
+  flex: none;
+}
+
+@media (max-width: 899px) {
+  /* Dải chốt đơn xếp dọc khi không còn đủ chỗ cho ba cột. */
+  .checkoutBar {
+    flex-wrap: wrap;
+  }
+
+  .checkoutAction {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .checkoutAction :global(.ant-btn) {
+    width: 100%;
+  }
+}
+
+@media (max-width: 599px) {
+  /* Ở màn hẹp ba bước xếp dọc — nét nối ngang không còn chỗ và cũng không còn nghĩa. */
+  .step:not(:last-child)::after {
+    display: none;
+  }
+
+  .step,
+  .step:not(:last-child) {
+    flex: 1 0 100%;
+  }
+
+  /* Dải chốt đơn xếp dọc; nút chiếm cả chiều ngang — ngón tay cái không phải nhắm. */
+  .checkoutAction {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .checkoutAction :global(.ant-btn) {
+    width: 100%;
+  }
+
+  .nextStep {
+    text-align: center;
+  }
+
+  .support,
+  .supportAction {
+    width: 100%;
+  }
+
+  .supportAction :global(.ant-btn) {
+    width: 100%;
+  }
+}
