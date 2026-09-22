@@ -7,6 +7,7 @@ import {
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  appliesExcessMileage,
   BOOKING_STATUS,
   DEPOSIT_STATUS,
   DRIVER_SURCHARGE_KIND_SPEC,
@@ -21,6 +22,7 @@ import {
   RECEIPT_SOURCE,
   RECEIPT_TYPE,
   SURCHARGE_CATEGORY,
+  isSingleEntrySurchargeCategory,
   SYSTEM_FINANCE_CATEGORY,
   type BookingStatus,
   type DepositStatus,
@@ -100,44 +102,53 @@ export class SettlementService {
     dto: SaveSurchargeDto,
   ): Promise<BookingSettlementDto> {
     const booking = await this.requireBooking(tenantId, bookingId);
+    await this.requireNoDuplicateCategory(tenantId, bookingId, dto.category);
     const id = newId();
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.bookingSurcharge.create({
-        data: {
-          id,
-          tenantId,
-          bookingId,
-          category: dto.category,
-          amount: new Prisma.Decimal(dto.amount),
-          reason: dto.reason.trim(),
-          createdBy: userId,
-          updatedBy: userId,
-        },
-      });
-      await this.audit.record(
-        {
-          tenantId,
-          actorUserId: userId,
-          actorScope: 'tenant',
-          action: 'booking.surcharge.create',
-          targetType: 'booking_surcharge',
-          targetId: id,
-          after: { bookingId, category: dto.category, amount: dto.amount, reason: dto.reason },
-        },
-        tx,
-      );
+    /*
+     * `.catch` chứ không phải một `try` bọc ngoài: nhánh duy nhất cần dịch là P2002 của partial
+     * unique một-khoản, và nó chỉ sinh ra từ đúng transaction này.
+     */
+    await this.prisma
+      .$transaction(async (tx) => {
+        await tx.bookingSurcharge.create({
+          data: {
+            id,
+            tenantId,
+            bookingId,
+            category: dto.category,
+            amount: new Prisma.Decimal(dto.amount),
+            reason: dto.reason.trim(),
+            createdBy: userId,
+            updatedBy: userId,
+          },
+        });
+        await this.audit.record(
+          {
+            tenantId,
+            actorUserId: userId,
+            actorScope: 'tenant',
+            action: 'booking.surcharge.create',
+            targetType: 'booking_surcharge',
+            targetId: id,
+            after: { bookingId, category: dto.category, amount: dto.amount, reason: dto.reason },
+          },
+          tx,
+        );
 
-      /*
-       * KHÔNG báo cho khách (Wave 11.1). Ghi phát sinh là việc chủ xe làm nhiều lần trong lúc
-       * quyết toán — thêm, sửa số, gỡ đi rồi ghi lại — và mỗi bước bắn một tin biến hộp thư của
-       * khách thành nhật ký thao tác của người khác. Khách không duyệt phát sinh, nên tin nhắn
-       * đó cũng không mở ra hành động nào.
-       *
-       * Minh bạch vẫn giữ nguyên: `GET /trips/:id` luôn tính lại từ dữ liệu mới nhất, kèm lý do
-       * từng khoản. Audit ở trên là nơi truy vết đầy đủ.
-       */
-    });
+        /*
+         * KHÔNG báo cho khách (Wave 11.1). Ghi phát sinh là việc chủ xe làm nhiều lần trong lúc
+         * quyết toán — thêm, sửa số, gỡ đi rồi ghi lại — và mỗi bước bắn một tin biến hộp thư
+         * của khách thành nhật ký thao tác của người khác. Khách không duyệt phát sinh, nên tin
+         * nhắn đó cũng không mở ra hành động nào.
+         *
+         * Minh bạch vẫn giữ nguyên: `GET /trips/:id` luôn tính lại từ dữ liệu mới nhất, kèm lý
+         * do từng khoản. Audit ở trên là nơi truy vết đầy đủ.
+         */
+      })
+      .catch((err: unknown) => {
+        throw SettlementService.translateDuplicate(err);
+      });
 
     return this.build(tenantId, booking);
   }
@@ -151,6 +162,11 @@ export class SettlementService {
   ): Promise<BookingSettlementDto> {
     const booking = await this.requireBooking(tenantId, bookingId);
     const current = await this.requireSurcharge(tenantId, bookingId, surchargeId);
+    // Đổi SANG một danh mục chỉ-một-khoản cũng phải qua cùng cửa; giữ nguyên danh mục thì không
+    // — nếu không, sửa số tiền của chính khoản vượt km sẽ tự đâm vào lỗi trùng của chính nó.
+    if (dto.category !== current.category) {
+      await this.requireNoDuplicateCategory(tenantId, bookingId, dto.category);
+    }
 
     await this.prisma.$transaction(async (tx) => {
       await tx.bookingSurcharge.update({
@@ -482,6 +498,8 @@ export class SettlementService {
         id: true,
         code: true,
         status: true,
+        // Hạn mức km chỉ áp cho chuyến TỰ LÁI — `appliesExcessMileage` là nơi duy nhất nói vậy.
+        serviceType: true,
         vehicleId: true,
         tenantCustomerId: true,
         depositAmount: true,
@@ -552,6 +570,55 @@ export class SettlementService {
     return row;
   }
 
+  /**
+   * Câu báo lỗi TỬ TẾ cho danh mục chỉ-một-khoản (`SINGLE_ENTRY_SURCHARGE_CATEGORIES`).
+   *
+   * **Đây KHÔNG phải chốt chặn.** Nó là một `SELECT` ngoài transaction rồi mới `INSERT` bên
+   * trong, nên hai request song song (double-click, retry mạng, hai tab) đều vượt qua được.
+   * Thứ khiến bất biến thành thật là partial unique `booking_surcharges_single_entry_uq`
+   * (migration 20260921120000) — CLAUDE.md §5: chống ghi đôi tiền bằng constraint DB.
+   *
+   * Giữ phép kiểm này vì nó biết `id` của khoản đang tồn tại và đưa được vào `details`, thứ mà
+   * một P2002 dịch lại không có.
+   *
+   * Khoản đã GỠ (`voidedAt`) không tính: gỡ rồi ghi lại là cách sửa hợp lệ.
+   */
+  private async requireNoDuplicateCategory(
+    tenantId: string,
+    bookingId: string,
+    category: string,
+  ): Promise<void> {
+    if (!isSingleEntrySurchargeCategory(category)) return;
+
+    const existing = await this.prisma.bookingSurcharge.findFirst({
+      where: { tenantId, bookingId, category, voidedAt: null },
+      select: { id: true },
+    });
+    if (!existing) return;
+
+    throw new ConflictException({
+      code: API_ERROR_CODE.SURCHARGE_CATEGORY_DUPLICATE,
+      message: 'Đơn này đã có khoản phụ phí vượt km — sửa khoản đang có thay vì ghi thêm',
+      details: { category, surchargeId: existing.id },
+    });
+  }
+
+  /**
+   * Vi phạm partial unique một-khoản → 409 nói đúng chuyện, thay vì một P2002 khó đọc.
+   *
+   * Chỉ DỊCH lỗi của database. Đây là nhánh chạy khi hai request về cùng lúc và cả hai đã vượt
+   * qua `requireNoDuplicateCategory`; không có nó thì người dùng thứ hai nhận 500.
+   */
+  private static translateDuplicate(err: unknown): unknown {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      return new ConflictException({
+        code: API_ERROR_CODE.SURCHARGE_CATEGORY_DUPLICATE,
+        message: 'Đơn này đã có khoản phụ phí vượt km — sửa khoản đang có thay vì ghi thêm',
+      });
+    }
+    return err;
+  }
+
   /** Cọc đã THU + tổng phát sinh còn hiệu lực — hai con số nuôi mọi phép tính còn lại. */
   private async moneySnapshot(
     tenantId: string,
@@ -598,6 +665,8 @@ export class SettlementService {
     booking: {
       id: string;
       status: string;
+      /** Hạn mức km chỉ áp cho TỰ LÁI — `excessMileageSuggestion` đọc qua `appliesExcessMileage`. */
+      serviceType: string;
       vehicleId: string;
       depositAmount: Prisma.Decimal;
       pickupAt?: Date | null;
@@ -671,9 +740,15 @@ export class SettlementService {
    *
    * Số km cho phép = số ngày TÍNH PHÍ × km/ngày. Số ngày lấy từ chính snapshot giá (cùng con số
    * đã dùng để tính tiền thuê), nên khách không bị tính hai kiểu ngày ở hai chỗ.
+   *
+   * **Chỉ chuyến TỰ LÁI.** `buildSnapshot` đóng băng cặp hạn mức cho MỌI dịch vụ, nên một xe
+   * vừa tự lái vừa có tài xế sẽ mang hạn mức đó sang cả đơn có tài xế — km do chính tài xế của
+   * shop chạy, và là điều khoản khách chưa bao giờ được cho xem (trang xe và bước Xác nhận đều
+   * chỉ công bố nó cho tự lái). Cổng này và cổng công bố đọc CÙNG một hàm để không lệch nhau.
    */
   private async excessMileageSuggestion(booking: {
     id: string;
+    serviceType: string;
     priceSnapshot?: Prisma.JsonValue | null;
   }): Promise<ExcessMileageSuggestionDto> {
     const empty: ExcessMileageSuggestionDto = {
@@ -681,20 +756,28 @@ export class SettlementService {
       includedKmPerDay: null,
       chargedDays: 0,
       allowedKm: 0,
+      pickupOdometerKm: null,
+      returnOdometerKm: null,
       actualKm: 0,
       excessKm: 0,
       feePerKm: null,
       amount: null,
       formula: null,
     };
+    if (!appliesExcessMileage(booking.serviceType)) return empty;
 
     const snapshot = booking.priceSnapshot as unknown as BookingPriceSnapshot | null;
     const includedKmPerDay = snapshot?.policy?.includedDistanceKmPerDay ?? null;
     const feePerKm = snapshot?.policy?.excessDistanceFeePerKm ?? null;
     if (includedKmPerDay == null || feePerKm == null) return empty;
 
+    /*
+     * Không có "số ngày tính phí" thì không suy ra được hạn mức. Trả lại hạn mức ĐÃ BIẾT thay vì
+     * `empty` trắng: `includedKmPerDay = null` là câu "chuyến này không đặt hạn mức", và nói câu
+     * đó cho một chuyến CÓ hạn mức là nói sai.
+     */
     const chargedDays = snapshot?.days ?? 0;
-    if (chargedDays <= 0) return empty;
+    if (chargedDays <= 0) return { ...empty, includedKmPerDay, feePerKm };
 
     // Km lúc GIAO và lúc NHẬN LẠI — cả hai đều phải có; thiếu một đầu thì không có quãng đường.
     const handovers = await this.prisma.vehicleHandover.findMany({
@@ -705,8 +788,22 @@ export class SettlementService {
     const pickupKm =
       handovers.find((row) => row.type === HANDOVER_TYPE.PICKUP)?.odometerKm ?? null;
     const returnKm = handovers.find((row) => row.type === HANDOVER_TYPE.RETURN)?.odometerKm ?? null;
+    /*
+     * Thiếu một đầu, hoặc đồng hồ lúc trả NHỎ HƠN lúc giao (gõ nhầm, đồng hồ thay/quay lại) —
+     * không có quãng đường nào suy ra được. Trả về `available: false` kèm những gì đã biết để
+     * màn quyết toán nói "thiếu dữ liệu" và CHÍNH XÁC là thiếu cái gì, thay vì dựng một số 0
+     * trông như "khách chạy trong hạn mức".
+     */
     if (pickupKm == null || returnKm == null || returnKm < pickupKm) {
-      return { ...empty, includedKmPerDay, chargedDays, feePerKm };
+      return {
+        ...empty,
+        includedKmPerDay,
+        chargedDays,
+        allowedKm: includedKmPerDay * chargedDays,
+        pickupOdometerKm: pickupKm,
+        returnOdometerKm: returnKm,
+        feePerKm,
+      };
     }
 
     const actualKm = returnKm - pickupKm;
@@ -719,6 +816,8 @@ export class SettlementService {
       includedKmPerDay,
       chargedDays,
       allowedKm,
+      pickupOdometerKm: pickupKm,
+      returnOdometerKm: returnKm,
       actualKm,
       excessKm,
       feePerKm,

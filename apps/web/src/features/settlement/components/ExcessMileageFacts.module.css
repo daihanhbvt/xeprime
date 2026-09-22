@@ -1,0 +1,49 @@
+.facts {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-xs) var(--xp-space-md);
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.row dt {
+  color: var(--xp-color-text-tertiary);
+  overflow-wrap: anywhere;
+}
+
+.row dd {
+  margin: 0;
+  font-weight: var(--xp-font-weight-bold);
+  white-space: nowrap;
+}
+
+/* Dòng KẾT LUẬN (km vượt và tiền đề xuất) chiếm trọn bề ngang để mắt dừng đúng chỗ. */
+.rowWide {
+  grid-column: 1 / -1;
+}
+
+.excess {
+  color: var(--xp-color-warning);
+}
+
+.note {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 1.5;
+}
+
+@media (max-width: 560px) {
+  .facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

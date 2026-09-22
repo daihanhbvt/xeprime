@@ -261,7 +261,8 @@
     "depositNote": "Khác với cọc thế chấp của tự lái: đây là tiền trả trước cho chính chuyến đi.",
     "publicNotice": "Xe đang công khai — đổi hình thức bảo đảm chỉ cập nhật nhãn trên chợ, không cần duyệt lại.",
     "saved": "Đã lưu thủ tục cho thuê",
-    "collateralCustomize": "Tuỳ chỉnh riêng cho xe này"
+    "collateralCustomize": "Tuỳ chỉnh riêng cho xe này",
+    "mileageTitle": "Hạn mức quãng đường"
   },
   "surcharges": {
     "title": "Cấu hình các khoản phụ phí dịch vụ tài xế",

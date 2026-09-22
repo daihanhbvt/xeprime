@@ -7,7 +7,6 @@ import {
   DEPOSIT_STATUS_META,
   PAYMENT_KIND,
   PERMISSION,
-  REFUND_DISCLAIMER,
   REFUND_METHOD_LABEL,
   SURCHARGE_CATEGORY_LABEL,
   type DepositStatus,
@@ -20,10 +19,12 @@ import { getErrorMessage } from '@/services/api-client';
 import { RecordPaymentModal } from '@/features/payments/components/RecordPaymentModal';
 import { isNegativeMoney, isZeroMoney, subtractMoney } from '@/lib/money';
 import { useSettlement } from '../hooks';
+import { ExcessMileageFacts } from './ExcessMileageFacts';
 import { RecordRefundDialog } from './RecordRefundDialog';
 import { SurchargeDialog } from './SurchargeDialog';
 import styles from './SettlementCard.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useTranslations } from 'next-intl';
 
 /**
@@ -37,6 +38,8 @@ import { useTranslations } from 'next-intl';
  */
 export function SettlementCard({ bookingId, canView }: { bookingId: string; canView: boolean }) {
   const tSettlement = useTranslations('Bookings.settlement');
+  const tActions = useTranslations('Common.actions');
+  const domainLabel = useDomainLabel();
   const fmt = useAppFormat();
 
   const { has } = usePermissions();
@@ -53,7 +56,7 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
 
   if (isLoading) {
     return (
-      <Card title="Phát sinh & Tiền cọc" className={styles.card}>
+      <Card title={tSettlement('cardTitle')} className={styles.card}>
         <Skeleton active paragraph={{ rows: 3 }} title={false} />
       </Card>
     );
@@ -61,15 +64,15 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
 
   if (isError || !data) {
     return (
-      <Card title="Phát sinh & Tiền cọc" className={styles.card}>
+      <Card title={tSettlement('cardTitle')} className={styles.card}>
         <Alert
           type="error"
           showIcon
-          title="Không tải được thông tin quyết toán"
+          title={tSettlement('errorTitle')}
           description={getErrorMessage(error)}
           action={
             <Button size="small" onClick={() => void refetch()}>
-              Thử lại
+              {tActions('retry')}
             </Button>
           }
         />
@@ -98,7 +101,7 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
 
   return (
     <Card
-      title="Phát sinh & Tiền cọc"
+      title={tSettlement('cardTitle')}
       className={styles.card}
       extra={<StatusTag value={status} meta={DEPOSIT_STATUS_META} group="depositStatus" />}
     >
@@ -106,10 +109,10 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
         {/* ── Phát sinh ─────────────────────────────────────────────── */}
         <section className={styles.section}>
           <div className={styles.sectionHead}>
-            <span className={styles.sectionTitle}>Chi phí phát sinh</span>
+            <span className={styles.sectionTitle}>{tSettlement('surchargeHeading')}</span>
             {canRecord ? (
               <Button size="small" onClick={() => setSurchargeOpen(true)}>
-                Ghi nhận phát sinh
+                {tSettlement('surchargeRecord')}
               </Button>
             ) : null}
           </div>
@@ -120,7 +123,11 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
                 <li key={row.id} className={styles.item}>
                   <span className={styles.itemMain}>
                     <span className={styles.itemCategory}>
-                      {SURCHARGE_CATEGORY_LABEL[row.category as SurchargeCategory] ?? row.category}
+                      {domainLabel(
+                        'surchargeCategory',
+                        row.category,
+                        SURCHARGE_CATEGORY_LABEL[row.category as SurchargeCategory] ?? row.category,
+                      )}
                     </span>
                     <span className={styles.itemReason}>{row.reason}</span>
                   </span>
@@ -129,23 +136,41 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
               ))}
             </ul>
           ) : (
-            <p className={styles.empty}>Không có phát sinh.</p>
+            <p className={styles.empty}>{tSettlement('surchargeEmpty')}</p>
           )}
         </section>
+
+        {/*
+          ── Vượt hạn mức km ────────────────────────────────────────────
+
+          Khối này chỉ hiện khi chuyến CÓ hạn mức (`includedKmPerDay` khác null) — xe không đặt
+          hạn mức thì không có gì để nói, và một dòng "không giới hạn" trên mọi đơn là nhiễu.
+
+          Nó là thông tin ĐỌC, không phải một nút: mọi con số do server tính từ hạn mức đã đóng
+          băng trên đơn, và phụ phí chỉ tồn tại sau khi chủ xe tự bấm ghi trong hộp phát sinh.
+        */}
+        {data.excessMileage.includedKmPerDay != null ? (
+          <section className={styles.section}>
+            <div className={styles.sectionHead}>
+              <span className={styles.sectionTitle}>{tSettlement('excessMileage.title')}</span>
+            </div>
+            <ExcessMileageFacts suggestion={data.excessMileage} />
+          </section>
+        ) : null}
 
         {/* ── Cọc ───────────────────────────────────────────────────── */}
         <section className={styles.section}>
           <dl className={styles.rows}>
             <div className={styles.row}>
-              <dt>Cọc theo đơn</dt>
+              <dt>{tSettlement('depositRequiredShort')}</dt>
               <dd className={styles.money}>{fmt.money(data.depositRequired)}</dd>
             </div>
             <div className={styles.row}>
-              <dt>Cọc đã nhận</dt>
+              <dt>{tSettlement('depositReceivedShort')}</dt>
               <dd className={styles.money}>
                 {status === DEPOSIT_STATUS.NOT_RECEIVED ? (
                   // Nói THẲNG là chưa có bằng chứng thu tiền, không hiện một số 0 mập mờ.
-                  <span className={styles.muted}>Chưa ghi nhận đã thu cọc</span>
+                  <span className={styles.muted}>{tSettlement('depositNotReceived')}</span>
                 ) : (
                   fmt.money(data.depositReceived)
                 )}
@@ -156,14 +181,14 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
                 */}
                 {canRecord && canTakeDeposit ? (
                   <Button type="link" size="small" onClick={() => setDepositOpen(true)}>
-                    Thu cọc
+                    {tSettlement('takeDeposit')}
                   </Button>
                 ) : null}
               </dd>
             </div>
             {hasSurcharges ? (
               <div className={styles.row}>
-                <dt>Tổng phát sinh</dt>
+                <dt>{tSettlement('surchargeTotalShort')}</dt>
                 <dd className={styles.moneyNegative}>−{fmt.money(data.surchargeTotal)}</dd>
               </div>
             ) : null}
@@ -174,7 +199,9 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
             */}
             {showRefundLine ? (
               <div className={styles.rowTotal}>
-                <dt>{data.refund ? 'Đã hoàn' : 'Đề xuất hoàn lại'}</dt>
+                <dt>
+                  {data.refund ? tSettlement('refunded') : tSettlement('proposedRefundShort')}
+                </dt>
                 <dd className={styles.moneyStrong}>
                   {fmt.money(data.refund ? data.refund.refundAmount : data.proposedRefund)}
                 </dd>
@@ -186,54 +213,48 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
             <Alert
               type="warning"
               showIcon
-              title={`Cần thu thêm ${fmt.money(data.additionalDue)}`}
-              description={tSettlement('additionalDueHint')}
+              title={tSettlement('needsMoreTitle', { amount: fmt.money(data.additionalDue) })}
+              description={tSettlement('needsMoreBody')}
             />
           ) : null}
 
           {status === DEPOSIT_STATUS.NOT_RECEIVED ? (
-            <Alert
-              type="info"
-              showIcon
-              title="Chưa có ghi nhận thu cọc cho đơn này nên không có việc hoàn cọc. Ghi nhận khoản thu cọc ở mục Thanh toán nếu đã nhận tiền."
-            />
+            <Alert type="info" showIcon title={tSettlement('noticeNotReceived')} />
           ) : null}
 
           {status === DEPOSIT_STATUS.RECEIVED ? (
-            <Alert
-              type="info"
-              showIcon
-              title="Đang giữ tiền cọc của khách. Việc hoàn cọc mở ra sau khi nhận lại xe và chốt phát sinh."
-            />
+            <Alert type="info" showIcon title={tSettlement('noticeReceived')} />
           ) : null}
 
           {status === DEPOSIT_STATUS.SETTLED ? (
-            <Alert
-              type="info"
-              showIcon
-              title="Phát sinh đã bù trọn phần cọc đã thu — không còn khoản nào phải hoàn lại cho khách."
-            />
+            <Alert type="info" showIcon title={tSettlement('noticeSettled')} />
           ) : null}
 
           {data.refund ? (
             <div className={styles.refundBox}>
               <div className={styles.refundRow}>
-                <span>Phương thức</span>
-                <b>{REFUND_METHOD_LABEL[data.refund.refundMethod as RefundMethod]}</b>
+                <span>{tSettlement('refundMethod')}</span>
+                <b>
+                  {domainLabel(
+                    'refundMethod',
+                    data.refund.refundMethod,
+                    REFUND_METHOD_LABEL[data.refund.refundMethod as RefundMethod],
+                  )}
+                </b>
               </div>
               <div className={styles.refundRow}>
-                <span>Thời gian hoàn</span>
+                <span>{tSettlement('refundedAt')}</span>
                 <b>{fmt.dateTime(data.refund.refundedAt)}</b>
               </div>
               {data.refund.reference ? (
                 <div className={styles.refundRow}>
-                  <span>Mã giao dịch</span>
+                  <span>{tSettlement('refundReference')}</span>
                   <b>{data.refund.reference}</b>
                 </div>
               ) : null}
               {data.refund.recordedByName ? (
                 <div className={styles.refundRow}>
-                  <span>Người ghi nhận</span>
+                  <span>{tSettlement('refundRecordedBy')}</span>
                   <b>{data.refund.recordedByName}</b>
                 </div>
               ) : null}
@@ -243,9 +264,9 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
           {status === DEPOSIT_STATUS.AWAITING_REFUND && canRecord ? (
             <Space direction="vertical" className={styles.actionBlock}>
               <Button type="primary" block onClick={() => setRefundOpen(true)}>
-                Đánh dấu đã hoàn cọc
+                {tSettlement('markRefunded')}
               </Button>
-              <span className={styles.disclaimer}>{REFUND_DISCLAIMER}</span>
+              <span className={styles.disclaimer}>{tSettlement('refund.disclaimer')}</span>
             </Space>
           ) : null}
 
@@ -257,7 +278,7 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
                 setRefundOpen(true);
               }}
             >
-              Điều chỉnh thông tin hoàn cọc
+              {tSettlement('correctRefund')}
             </Button>
           ) : null}
         </section>

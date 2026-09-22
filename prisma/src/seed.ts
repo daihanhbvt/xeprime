@@ -13,6 +13,7 @@
  *
  * Chi tiết từng phần: `src/seed/*.ts`. Chạy: `pnpm db:seed`.
  */
+import { refreshListingRankScore } from './listing-rank';
 import { seedCustomerAccounts, seedPlatformAccounts } from './seed/accounts';
 import {
   PLATFORM_ADMIN_EMAIL,
@@ -115,6 +116,20 @@ async function main(): Promise<void> {
       }),
     );
   }
+
+  /*
+   * Xếp hạng lại chợ sau khi đã có đủ xe, đánh giá và chuyến.
+   *
+   * Seed ghi `public_listings` trực tiếp (không đi qua `ListingsService`) nên không xe nào có
+   * điểm; bỏ bước này thì một database vừa seed xong sẽ hiện trang chủ theo đúng thứ tự ngẫu
+   * nhiên của `created_at` và mọi thao tác kiểm thử xếp hạng đều nói dối.
+   *
+   * Đặt ở CUỐI có chủ đích: điểm đọc số chuyến đã hoàn thành và số đánh giá, hai thứ chỉ tồn
+   * tại sau khi `buildShop` chạy xong.
+   */
+  const ranked = await refreshListingRankScore(prisma);
+  log(`
+Xếp hạng chợ: ${ranked} tin đăng đã có điểm gợi ý`);
 
   const total = results.reduce(
     (acc, r) => ({

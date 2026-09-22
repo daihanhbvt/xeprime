@@ -576,6 +576,36 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect((submit as HTMLButtonElement).disabled).toBe(false);
     });
 
+    /**
+     * HẠN MỨC QUÃNG ĐƯỜNG nhắc lại ở lần soát cuối (21/09/2026).
+     *
+     * Phí vượt km là khoản duy nhất có thể phát sinh sau chuyến mà không nằm trong bảng giá bên
+     * cạnh, nên khách phải đọc nó ngay trước khi cam kết — không phải nhớ lại từ một trang đã
+     * cuộn qua. Màn này KHÔNG tự nhân ra tổng km cho cả chuyến: số ngày tính phí là của server.
+     */
+    it('bước Xác nhận nhắc lại km/ngày và phí mỗi km vượt', async () => {
+      listing.data = {
+        ...LISTING,
+        mileagePolicy: { includedKmPerDay: 200, excessFeePerKm: '3000' },
+      };
+      renderModal();
+      await advanceToOtp();
+      await advanceToReview();
+
+      expect(screen.getByText('Hạn mức quãng đường')).toBeTruthy();
+      expect(screen.getByText(/Bao gồm 200 km\/ngày/)).toBeTruthy();
+      expect(screen.getByText(/3\.000/)).toBeTruthy();
+    });
+
+    it('xe không đặt hạn mức: bước Xác nhận không mọc thêm dòng rỗng', async () => {
+      listing.data = LISTING;
+      renderModal();
+      await advanceToOtp();
+      await advanceToReview();
+
+      expect(screen.queryByText('Hạn mức quãng đường')).toBeNull();
+    });
+
     it('gửi payload đúng (SĐT đã xác minh, tên đã trim, KHÔNG có trường giao nhận)', async () => {
       renderModal();
       await advanceToOtp();
@@ -853,6 +883,277 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(screen.queryByRole('radio', { name: /Giao xe tận nơi/ })).toBeNull();
       expect(screen.queryByLabelText(/Địa chỉ giao xe/)).toBeNull();
       expect(screen.getByText('Nhận tại điểm hẹn')).toBeTruthy();
+    });
+
+    /**
+     * BA LÝ DO rơi về báo giá thủ công, ba câu khác nhau (21/09/2026 — mở rộng ADR 0018 §4).
+     *
+     * Trước đây cả ba dùng chung một dòng nói "ngoài phạm vi", nên một địa chỉ ngay trong thành
+     * phố vẫn bị báo là quá xa chỉ vì nhà cung cấp bản đồ timeout — và khách đi sửa một địa chỉ
+     * vốn đã đúng. Không ca nào trong ba được phép chặn nút gửi.
+     */
+    function respondWith(body: Record<string, unknown>) {
+      deliveryDistance.fn = vi.fn(() =>
+        Promise.resolve({
+          status: 'manual',
+          manualReason: null,
+          distanceKm: null,
+          straightLineKm: null,
+          maxRadiusKm: null,
+          fee: null,
+          origin: null,
+          destination: null,
+          formattedAddress: null,
+          ...body,
+        }),
+      ) as unknown as (...args: unknown[]) => Promise<unknown>;
+    }
+
+    async function typeDeliveryAddress(value = 'Khu công nghiệp Sóng Thần, Dĩ An, Bình Dương') {
+      await chooseDelivery();
+      fireEvent.change(screen.getByLabelText(/Địa chỉ giao xe/), { target: { value } });
+    }
+
+    it('ngoài bán kính: cảnh báo nêu ĐÚNG bán kính chủ xe đặt, và vẫn gửi được', async () => {
+      respondWith({
+        manualReason: 'outside_auto_radius',
+        straightLineKm: 42.5,
+        maxRadiusKm: 20,
+      });
+      renderModal();
+      await typeDeliveryAddress();
+
+      expect(await screen.findByText('Ngoài phạm vi giao xe tự động')).toBeTruthy();
+      // Đường CHIM BAY phải được gọi đúng tên — nó không phải quãng đường lái xe.
+      expect(screen.getByText(/theo đường chim bay/)).toBeTruthy();
+      expect(screen.getByText(/42,5 km/)).toBeTruthy();
+      expect(screen.getByText(/20 km/)).toBeTruthy();
+      expect(screen.getByText(/vẫn gửi được yêu cầu/)).toBeTruthy();
+      // Ngoài phạm vi KHÔNG chặn: nút đi tiếp vẫn bấm được (ADR 0018).
+      expect((screen.getByRole('button', { name: 'Tiếp tục' }) as HTMLButtonElement).disabled).toBe(
+        false,
+      );
+    });
+
+    it('đo được đường BỘ mà vượt bậc phí: gọi đúng là quãng đường đường bộ', async () => {
+      respondWith({ manualReason: 'outside_auto_radius', distanceKm: 42.5, maxRadiusKm: 20 });
+      renderModal();
+      await typeDeliveryAddress();
+
+      expect(await screen.findByText(/42,5 km đường bộ/)).toBeTruthy();
+      expect(screen.queryByText(/chim bay/)).toBeNull();
+    });
+
+    it('không có tuyến đường: KHÔNG nói là ngoài phạm vi', async () => {
+      respondWith({ manualReason: 'route_unavailable' });
+      renderModal();
+      await typeDeliveryAddress('123 Đường không có tuyến, Cần Giờ');
+
+      expect(await screen.findByText('Chưa ước tính được quãng đường')).toBeTruthy();
+      expect(screen.queryByText('Ngoài phạm vi giao xe tự động')).toBeNull();
+      expect(screen.getByText(/vẫn gửi được yêu cầu/)).toBeTruthy();
+    });
+
+    it('nhà cung cấp bản đồ lỗi: im lặng rơi về câu cũ, không đổ lỗi cho khách', async () => {
+      respondWith({ manualReason: 'provider_unavailable' });
+      renderModal();
+      await typeDeliveryAddress('123 Nguyễn Văn Linh, Đà Nẵng');
+
+      expect(
+        await screen.findByText(
+          'Nếu có chi phí phát sinh, chủ xe sẽ trao đổi trực tiếp với bạn trước khi cập nhật đơn thuê.',
+        ),
+      ).toBeTruthy();
+      expect(screen.queryByText('Ngoài phạm vi giao xe tự động')).toBeNull();
+      expect(screen.queryByText('Chưa ước tính được quãng đường')).toBeNull();
+    });
+
+    it('không tìm thấy địa chỉ: mời sửa địa chỉ, KHÔNG gọi là ngoài phạm vi', async () => {
+      respondWith({ status: 'address_not_found', manualReason: null });
+      renderModal();
+      await typeDeliveryAddress('chỗ nào đó không có thật');
+
+      expect(await screen.findByText('Chưa tìm thấy địa chỉ này')).toBeTruthy();
+      expect(screen.getByText(/ghi rõ hơn/)).toBeTruthy();
+      expect(screen.queryByText('Ngoài phạm vi giao xe tự động')).toBeNull();
+    });
+
+    /**
+     * Đổi địa chỉ phải XOÁ kết quả cũ trước khi có kết quả mới.
+     *
+     * Khoá query chỉ đổi sau 900ms debounce, nên nếu không tự dọn thì trong quãng đó màn hình
+     * vẫn trưng quãng đường và phí của một địa chỉ khác hẳn chỗ khách đang gõ.
+     */
+    it('đổi địa chỉ: phí và quãng đường cũ biến mất ngay, không chờ hết debounce', async () => {
+      deliveryDistance.fn = vi.fn(() =>
+        Promise.resolve({
+          status: 'auto',
+          manualReason: null,
+          distanceKm: 3.4,
+          straightLineKm: null,
+          maxRadiusKm: 20,
+          fee: '30000',
+          origin: { lat: 10.7721, lng: 106.698 },
+          destination: { lat: 10.79, lng: 106.71 },
+          formattedAddress: '12 Nguyễn Huệ, Bến Nghé, Quận 1, TP.HCM',
+        }),
+      ) as unknown as (...args: unknown[]) => Promise<unknown>;
+      renderModal();
+      await typeDeliveryAddress('12 Nguyễn Huệ, Quận 1, TP.HCM');
+      expect(await screen.findByText(/3,4 km/)).toBeTruthy();
+
+      fireEvent.change(screen.getByLabelText(/Địa chỉ giao xe/), {
+        target: { value: '999 Một con đường hoàn toàn khác, Hà Nội' },
+      });
+
+      expect(screen.queryByText(/3,4 km/)).toBeNull();
+      expect(screen.getByText('Đang tính quãng đường…')).toBeTruthy();
+    });
+
+    it('xoá trắng địa chỉ: phí cũ biến mất, và KHÔNG treo spinner cho một ô rỗng', async () => {
+      deliveryDistance.fn = vi.fn(() =>
+        Promise.resolve({
+          status: 'auto',
+          manualReason: null,
+          distanceKm: 3.4,
+          straightLineKm: null,
+          maxRadiusKm: 20,
+          fee: '30000',
+          origin: null,
+          destination: null,
+          formattedAddress: null,
+        }),
+      ) as unknown as (...args: unknown[]) => Promise<unknown>;
+      renderModal();
+      await typeDeliveryAddress('12 Nguyễn Huệ, Quận 1, TP.HCM');
+      expect(await screen.findByText(/3,4 km/)).toBeTruthy();
+
+      fireEvent.change(screen.getByLabelText(/Địa chỉ giao xe/), { target: { value: '' } });
+
+      expect(screen.queryByText(/3,4 km/)).toBeNull();
+      expect(screen.queryByText('Đang tính quãng đường…')).toBeNull();
+    });
+
+    it('API lỗi: không treo loading, không vỡ luồng', async () => {
+      deliveryDistance.fn = vi.fn(() => Promise.reject(new Error('mạng hỏng'))) as unknown as (
+        ...args: unknown[]
+      ) => Promise<unknown>;
+      renderModal();
+      await typeDeliveryAddress('12 Nguyễn Huệ, Quận 1, TP.HCM');
+
+      expect(
+        await screen.findByText(
+          'Nếu có chi phí phát sinh, chủ xe sẽ trao đổi trực tiếp với bạn trước khi cập nhật đơn thuê.',
+        ),
+      ).toBeTruthy();
+      expect(screen.queryByText('Đang tính quãng đường…')).toBeNull();
+    });
+
+    /**
+     * Phí giao nhận KHÔNG nằm trong tổng, nhưng "không nằm trong tổng" ≠ "miễn phí".
+     *
+     * Câu cũ ("Phí giao nhận: Miễn phí.") hiện ra với MỌI đơn giao tận nơi, kể cả khi bước trước
+     * vừa báo 50.000đ — một lời hứa sai về tiền, đúng loại lỗi mà cả tính năng này sinh ra để
+     * dẹp. Chủ xe chốt phí lúc duyệt (ADR 0018 + Wave 9); khối giá chỉ được nói đúng chừng đó.
+     */
+    it('bước Xác nhận KHÔNG hứa giao xe miễn phí', async () => {
+      deliveryDistance.fn = vi.fn(() =>
+        Promise.resolve({
+          status: 'auto',
+          manualReason: null,
+          distanceKm: 9.7,
+          straightLineKm: null,
+          maxRadiusKm: 10,
+          fee: '50000',
+          origin: { lat: 21.03, lng: 105.79 },
+          destination: { lat: 20.99, lng: 105.86 },
+          formattedAddress: null,
+        }),
+      ) as unknown as (...args: unknown[]) => Promise<unknown>;
+      renderModal();
+      await chooseDelivery();
+      fireEvent.change(screen.getByLabelText(/Địa chỉ giao xe/), {
+        target: { value: '12 Nguyễn Huệ, Quận 1, TP.HCM' },
+      });
+      await advanceToOtp();
+      await advanceToReview();
+
+      expect(screen.queryByText(/Phí giao nhận: Miễn phí/)).toBeNull();
+      expect(screen.queryByText(/Delivery fee: Free/)).toBeNull();
+    });
+
+    /**
+     * Ước tính phải CÓ MẶT ở lần soát cuối.
+     *
+     * Đây là khoản duy nhất có thể phát sinh thêm trước chuyến mà không nằm trong "Tổng bạn trả".
+     * Chỉ hiện ở bước Chuyến đi rồi biến mất là bắt khách nhớ lại từ một màn đã cuộn qua.
+     */
+    it('bước Xác nhận nhắc lại quãng đường và phí giao DỰ KIẾN', async () => {
+      deliveryDistance.fn = vi.fn(() =>
+        Promise.resolve({
+          status: 'auto',
+          manualReason: null,
+          distanceKm: 9.7,
+          straightLineKm: null,
+          maxRadiusKm: 10,
+          fee: '50000',
+          origin: { lat: 21.03, lng: 105.79 },
+          destination: { lat: 20.99, lng: 105.86 },
+          formattedAddress: null,
+        }),
+      ) as unknown as (...args: unknown[]) => Promise<unknown>;
+      renderModal();
+      await chooseDelivery();
+      fireEvent.change(screen.getByLabelText(/Địa chỉ giao xe/), {
+        target: { value: '12 Nguyễn Huệ, Quận 1, TP.HCM' },
+      });
+      expect(await screen.findByText(/9,7 km/)).toBeTruthy();
+
+      await advanceToOtp();
+      await advanceToReview();
+
+      /*
+       * Cùng con số, cùng chữ "DỰ KIẾN" — không dựng một cách diễn đạt thứ hai ở bước này.
+       *
+       * Soi TRONG khối ước tính chứ không tìm "50.000" trên cả màn: giá gạch ngang của xe là
+       * "650.000 ₫" và cũng khớp chuỗi đó.
+       */
+      const estimate = screen.getByText(/9,7 km/).closest('div');
+      expect(estimate?.textContent).toMatch(/Phí giao nhận/);
+      expect(estimate?.textContent).toMatch(/50.000/);
+    });
+
+    /** Ngoài phạm vi: cảnh báo phải còn nguyên ở lần bấm gửi, không chỉ ở bước nhập địa chỉ. */
+    it('ngoài phạm vi: bước Xác nhận vẫn cảnh báo trước khi gửi', async () => {
+      deliveryDistance.fn = vi.fn(() =>
+        Promise.resolve({
+          status: 'manual',
+          manualReason: 'outside_auto_radius',
+          distanceKm: null,
+          straightLineKm: 10.3,
+          maxRadiusKm: 10,
+          fee: null,
+          origin: null,
+          destination: null,
+          formattedAddress: null,
+        }),
+      ) as unknown as (...args: unknown[]) => Promise<unknown>;
+      renderModal();
+      await chooseDelivery();
+      fireEvent.change(screen.getByLabelText(/Địa chỉ giao xe/), {
+        target: { value: 'Ngõ 587 Tam Trinh, Hoàng Mai, Hà Nội' },
+      });
+      await screen.findByText('Ngoài phạm vi giao xe tự động');
+
+      await advanceToOtp();
+      await advanceToReview();
+
+      expect(screen.getByText('Ngoài phạm vi giao xe tự động')).toBeTruthy();
+      expect(screen.getByText(/vẫn gửi được yêu cầu/)).toBeTruthy();
+      // Và vẫn gửi được — ngoài phạm vi không bao giờ là một cái chặn (ADR 0018).
+      expect(
+        (screen.getByRole('button', { name: 'Gửi yêu cầu thuê' }) as HTMLButtonElement).disabled,
+      ).toBe(false);
     });
 
     it('có điểm nhận xe → hiện ĐỊA CHỈ thật thay cho câu gợi ý chung', async () => {

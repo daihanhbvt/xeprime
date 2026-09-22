@@ -407,3 +407,87 @@ export function buildProvinceAliasSeeds(): ProvinceAliasSeed[] {
       a.normalizedAlias.localeCompare(b.normalizedAlias),
   );
 }
+
+/**
+ * Ba vùng địa lý — CHỈ dùng để xếp hạng theo "gần bạn" trên marketplace.
+ *
+ * Đây KHÔNG phải một đơn vị hành chính: không có quyết định nào chia 34 tỉnh thành ba vùng, và
+ * không màn hình nào hiển thị giá trị này cho người dùng. Nó tồn tại vì một lý do hẹp: khi tỉnh
+ * khách đang đứng không đủ xe, thứ tự bù phải là "xe cùng miền trước, xe đầu kia đất nước sau"
+ * — một khách Hà Nội thấy Bắc Ninh trước Cà Mau.
+ *
+ * Vì sao không phải khoảng cách thật: `public_listings` không snapshot toạ độ (chỉ có mã tỉnh),
+ * nên tính km sẽ phải join sang chi nhánh cho MỖI dòng của mọi truy vấn chợ. Ba bậc thô giải
+ * quyết đúng phần lợi ích lớn nhất với chi phí bằng không.
+ */
+export const PROVINCE_REGION = {
+  /** Bắc Bộ — từ Ninh Bình trở ra. */
+  NORTH: 'north',
+  /** Trung Bộ + Tây Nguyên — Thanh Hóa tới Lâm Đồng. */
+  CENTRAL: 'central',
+  /** Nam Bộ — Đồng Nai trở vào. */
+  SOUTH: 'south',
+} as const;
+
+export type ProvinceRegion = (typeof PROVINCE_REGION)[keyof typeof PROVINCE_REGION];
+
+/**
+ * Vùng của từng mã tỉnh. Thứ tự theo mã, cùng thứ tự với {@link PROVINCE_CATALOG}.
+ *
+ * Mã tỉnh BẤT BIẾN (xem docblock đầu file) nên bảng này không trôi theo thời gian; thêm một
+ * tỉnh mới mà quên khai ở đây thì `province.test.ts` đỏ — không có đường lọt âm thầm.
+ */
+const PROVINCE_REGION_BY_CODE: Readonly<Record<string, ProvinceRegion>> = {
+  '01': PROVINCE_REGION.NORTH, // Hà Nội
+  '04': PROVINCE_REGION.NORTH, // Cao Bằng
+  '08': PROVINCE_REGION.NORTH, // Tuyên Quang
+  '11': PROVINCE_REGION.NORTH, // Điện Biên
+  '12': PROVINCE_REGION.NORTH, // Lai Châu
+  '14': PROVINCE_REGION.NORTH, // Sơn La
+  '15': PROVINCE_REGION.NORTH, // Lào Cai
+  '19': PROVINCE_REGION.NORTH, // Thái Nguyên
+  '20': PROVINCE_REGION.NORTH, // Lạng Sơn
+  '22': PROVINCE_REGION.NORTH, // Quảng Ninh
+  '24': PROVINCE_REGION.NORTH, // Bắc Ninh
+  '25': PROVINCE_REGION.NORTH, // Phú Thọ
+  '31': PROVINCE_REGION.NORTH, // Hải Phòng
+  '33': PROVINCE_REGION.NORTH, // Hưng Yên
+  '37': PROVINCE_REGION.NORTH, // Ninh Bình
+  '38': PROVINCE_REGION.CENTRAL, // Thanh Hóa
+  '40': PROVINCE_REGION.CENTRAL, // Nghệ An
+  '42': PROVINCE_REGION.CENTRAL, // Hà Tĩnh
+  '44': PROVINCE_REGION.CENTRAL, // Quảng Trị
+  '46': PROVINCE_REGION.CENTRAL, // Huế
+  '48': PROVINCE_REGION.CENTRAL, // Đà Nẵng
+  '51': PROVINCE_REGION.CENTRAL, // Quảng Ngãi
+  '52': PROVINCE_REGION.CENTRAL, // Gia Lai
+  '56': PROVINCE_REGION.CENTRAL, // Khánh Hòa
+  '66': PROVINCE_REGION.CENTRAL, // Đắk Lắk
+  '68': PROVINCE_REGION.CENTRAL, // Lâm Đồng
+  '75': PROVINCE_REGION.SOUTH, // Đồng Nai
+  '79': PROVINCE_REGION.SOUTH, // Hồ Chí Minh
+  '80': PROVINCE_REGION.SOUTH, // Tây Ninh
+  '82': PROVINCE_REGION.SOUTH, // Đồng Tháp
+  '86': PROVINCE_REGION.SOUTH, // Vĩnh Long
+  '91': PROVINCE_REGION.SOUTH, // An Giang
+  '92': PROVINCE_REGION.SOUTH, // Cần Thơ
+  '96': PROVINCE_REGION.SOUTH, // Cà Mau
+};
+
+/** Vùng của một mã tỉnh; `null` khi mã không thuộc danh mục. */
+export function provinceRegion(code: string): ProvinceRegion | null {
+  return PROVINCE_REGION_BY_CODE[code] ?? null;
+}
+
+/**
+ * Các tỉnh CÙNG VÙNG với `code`, KHÔNG gồm chính nó.
+ *
+ * Trả mảng rỗng khi mã không thuộc danh mục — bậc "cùng vùng" biến mất và phép xếp hạng rơi về
+ * hai bậc (đúng tỉnh / còn lại). Đó là suy giảm êm, không phải lỗi: một mã lạ thì thà không ưu
+ * tiên ai còn hơn ưu tiên nhầm nửa đất nước.
+ */
+export function provinceRegionPeers(code: string): readonly string[] {
+  const region = provinceRegion(code);
+  if (!region) return [];
+  return PROVINCE_CODES.filter((c) => c !== code && PROVINCE_REGION_BY_CODE[c] === region);
+}

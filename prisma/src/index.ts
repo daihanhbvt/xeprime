@@ -56,6 +56,19 @@ export {
 } from './badges';
 
 /**
+ * Điểm xếp hạng "phù hợp" của xe trên chợ — dùng chung cho API (cập nhật khi xe/đánh giá đổi)
+ * và worker (quét lại mỗi ngày để độ mới kịp phai). Xem docblock `listing-rank.ts`.
+ */
+export {
+  RANK_SCORE_BAYES,
+  RANK_SCORE_FRESHNESS_DAYS,
+  RANK_SCORE_TRIPS_CAP,
+  RANK_SCORE_WEIGHTS,
+  refreshListingRankScore,
+  type ListingRankScope,
+} from './listing-rank';
+
+/**
  * Hàng đợi đẩy thông báo — dùng chung cho API và worker, hai tiến trình cùng phát thông báo.
  * Xem docblock của `push-outbox.ts` để biết vì sao nó ở đây chứ không ở `apps/api`.
  */

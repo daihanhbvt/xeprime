@@ -22,6 +22,9 @@ export const EMPTY_POLICY_FORM: PolicyFormValues = {
   deliveryEnabled: false,
   deliveryMaxRadiusKm: null,
   deliveryTiers: [],
+  mileageLimitEnabled: false,
+  includedDistanceKmPerDay: null,
+  excessDistanceFeePerKm: null,
   overtimeFeePerHour: null,
   overtimeGraceMinutes: null,
   overtimeRoundingMinutes: null,
@@ -38,6 +41,15 @@ export function policyToForm(policy: RentalPolicyValues | null | undefined): Pol
     deliveryEnabled: policy.deliveryEnabled,
     deliveryMaxRadiusKm: policy.deliveryMaxRadiusKm ?? null,
     deliveryTiers: policy.deliveryTiers.map((t) => ({ toKm: t.toKm, fee: toNumber(t.fee) })),
+    /*
+     * Công tắc suy ra từ DỮ LIỆU, không lưu riêng: API chỉ biết "cả hai null = không giới hạn".
+     * Đủ một trong hai là đang có hạn mức — bật công tắc để chủ xe thấy ngay ô còn thiếu, thay
+     * vì thấy một màn hình "tắt" trong khi chính sách hiệu lực thì không phải vậy.
+     */
+    mileageLimitEnabled:
+      policy.includedDistanceKmPerDay != null || policy.excessDistanceFeePerKm != null,
+    includedDistanceKmPerDay: policy.includedDistanceKmPerDay ?? null,
+    excessDistanceFeePerKm: toNumber(policy.excessDistanceFeePerKm),
     overtimeFeePerHour: toNumber(policy.overtimeFeePerHour),
     overtimeGraceMinutes: policy.overtimeGraceMinutes ?? null,
     overtimeRoundingMinutes: policy.overtimeRoundingMinutes ?? null,
@@ -68,6 +80,18 @@ export function formToSaveInput(values: PolicyFormValues): SaveRentalPolicyInput
       toKm: t.toKm ?? 0,
       fee: toMoneyString(t.fee),
     })),
+    /*
+     * Tắt công tắc ⇒ gửi CẢ HAI về null, không giữ lại số cũ. Gửi nửa cặp là thứ
+     * `PricingService.validatePolicy` và CHECK ở DB từ chối, và giữ lại số cũ là để một hạn mức
+     * chủ xe vừa tắt vẫn còn hiệu lực với khách.
+     */
+    includedDistanceKmPerDay: values.mileageLimitEnabled
+      ? (values.includedDistanceKmPerDay ?? null)
+      : null,
+    excessDistanceFeePerKm:
+      values.mileageLimitEnabled && values.excessDistanceFeePerKm != null
+        ? toMoneyString(values.excessDistanceFeePerKm)
+        : null,
     overtimeFeePerHour:
       values.overtimeFeePerHour == null ? null : toMoneyString(values.overtimeFeePerHour),
     overtimeGraceMinutes: values.overtimeGraceMinutes ?? null,

@@ -62,9 +62,11 @@
     "subtitle": "Hàng nghìn xe ô tô và xe máy từ các gian hàng uy tín trên toàn quốc"
   },
   "available": {
-    "title": "Xe khả dụng",
-    "titleWithService": "Xe khả dụng · {service}",
+    "title": "Xe phù hợp với bạn",
+    "titleWithService": "Xe phù hợp với bạn · {service}",
     "count": "({count, plural, other {# xe}})",
+    "nearProvince": "Ưu tiên xe ở {province}",
+    "nearProvinceMixed": "Ưu tiên xe ở {province} — chưa đủ nên có thêm xe tỉnh khác",
     "exploreAll": "Khám phá xe",
     "loadError": "Không tải được danh sách xe",
     "openSearch": "Mở trang tìm xe",

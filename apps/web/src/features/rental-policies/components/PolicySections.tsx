@@ -21,6 +21,7 @@ import {
   COLLATERAL_MODE,
   COLLATERAL_MODE_VALUES,
   LONG_TERM_PACKAGE_MONTHS,
+  MILEAGE_LIMIT,
   type CollateralMode,
 } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
@@ -78,10 +79,15 @@ export function PolicySections({
         title={n(2, t('delivery.title'))}
         disabled={disabled}
       />
-      <OvertimeSection control={control} title={n(3, t('overtime.title'))} disabled={disabled} />
+      <MileagePolicySection
+        control={control}
+        title={n(3, t('mileage.title'))}
+        disabled={disabled}
+      />
+      <OvertimeSection control={control} title={n(4, t('overtime.title'))} disabled={disabled} />
       <DiscountSection
         control={control}
-        title={n(4, t('longTermDiscount.title'))}
+        title={n(5, t('longTermDiscount.title'))}
         legacyTiers={legacyDiscountTiers}
         disabled={disabled}
       />
@@ -394,6 +400,103 @@ export function DeliveryPolicySection<T extends PolicyFormValues>({
               </span>
             </div>
           ) : null}
+        </>
+      ) : (
+        <p className={styles.disabledNote}>{t('disabledNote')}</p>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Khối HẠN MỨC QUÃNG ĐƯỜNG của chuyến tự lái — một công tắc, hai ô đi CẶP.
+ *
+ * Cùng hình dạng và cùng mã lỗi với bước "Cho thuê" của wizard đăng xe nhanh
+ * (`QuickVehicleRentalStep`): hai màn hỏi cùng một chính sách thì phải hỏi giống nhau, nếu
+ * không chủ xe sẽ thấy hai bộ luật cho một con số.
+ *
+ * Bật/tắt là trường của FORM. Backend chỉ biết "cả hai null = không giới hạn"
+ * (`formToSaveInput` dịch qua lại), nên nếu không có công tắc thì "tắt" và "mới nhập được một
+ * nửa" trông y hệt nhau trên màn hình.
+ *
+ * Phí vượt KHÔNG cộng vào báo giá lúc đặt — lúc đó chưa ai biết khách sẽ chạy bao xa. Nó chỉ
+ * thành một khoản ĐỀ XUẤT lúc quyết toán, và chủ xe vẫn phải bấm ghi.
+ */
+export function MileagePolicySection<T extends PolicyFormValues>({
+  control: outerControl,
+  title,
+  disabled = false,
+}: {
+  control: Control<T>;
+  title: string;
+  disabled?: boolean;
+}) {
+  // Cùng lý do quy chiếu như `DeliveryPolicySection` — xem ghi chú ở đó.
+  const control = outerControl as unknown as Control<PolicyFormValues>;
+  const t = useTranslations('Vehicles.pricing.mileage');
+  const tLabels = useTranslations('Common.labels');
+  const fmt = useAppFormat();
+
+  const enabled = useWatch({ control, name: 'mileageLimitEnabled' });
+  const includedKm = useWatch({ control, name: 'includedDistanceKmPerDay' });
+  const feePerKm = useWatch({ control, name: 'excessDistanceFeePerKm' });
+
+  return (
+    <section className={styles.card} aria-label={title}>
+      <div className={styles.cardHeader}>
+        <SectionTitle title={title} infoLabel={t('tipLabel')}>
+          {t('hint')}
+        </SectionTitle>
+        <SwitchField
+          control={control}
+          name="mileageLimitEnabled"
+          label={enabled ? tLabels('enabled') : tLabels('disabled')}
+          disabled={disabled}
+        />
+      </div>
+      {enabled ? (
+        <>
+          <div className={styles.mileageRow}>
+            <div className={styles.overtimeField}>
+              <NumberField
+                control={control}
+                name="includedDistanceKmPerDay"
+                label={t('includedLabel')}
+                labelAccessory={
+                  <PolicyInfoTip label={t('includedTipLabel')}>{t('includedHint')}</PolicyInfoTip>
+                }
+                addonAfter={t('unitPerDay')}
+                min={MILEAGE_LIMIT.minKmPerDay}
+                max={MILEAGE_LIMIT.maxKmPerDay}
+                required
+                disabled={disabled}
+              />
+            </div>
+            <div className={styles.overtimeField}>
+              <NumberField
+                control={control}
+                name="excessDistanceFeePerKm"
+                label={t('excessLabel')}
+                labelAccessory={
+                  <PolicyInfoTip label={t('excessTipLabel')}>{t('excessHint')}</PolicyInfoTip>
+                }
+                money
+                addonAfter={t('unitPerKm')}
+                min={0}
+                max={MILEAGE_LIMIT.maxFeePerKm}
+                required
+                disabled={disabled}
+              />
+            </div>
+          </div>
+          <div className={styles.formulaCard}>
+            <span className={styles.previewTitle}>{t('previewTitle')}</span>
+            <span className={styles.previewText}>
+              {includedKm != null && feePerKm != null
+                ? t('preview', { km: fmt.km(includedKm), fee: fmt.money(String(feePerKm)) })
+                : t('previewIncomplete')}
+            </span>
+          </div>
         </>
       ) : (
         <p className={styles.disabledNote}>{t('disabledNote')}</p>

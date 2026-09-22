@@ -68,6 +68,11 @@
       "rule": "{kind}: {amount}/{unit}",
       "threshold": "áp dụng {kind} từ {value}",
       "note": "Phụ phí được ghi nhận khi quyết toán chuyến, chưa nằm trong giá hiển thị."
+    },
+    "mileage": {
+      "title": "Hạn mức quãng đường",
+      "included": "Bao gồm {km}/ngày. Phụ phí {fee} cho mỗi km vượt giới hạn.",
+      "note": "Hạn mức tính theo số ngày thuê có tính phí. Phí vượt km chỉ được ghi nhận khi quyết toán chuyến, không nằm trong giá hiển thị."
     }
   },
   "reviews": {

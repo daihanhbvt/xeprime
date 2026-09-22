@@ -678,6 +678,21 @@ function InheritedPolicyCard({
             </dd>
           </div>
           <div className={styles.summaryRow}>
+            <dt>{t('mileage')}</dt>
+            {/*
+              Hai trường đi CẶP ở backend, nên chỉ cần một trường có mặt là đang có hạn mức. Đọc
+              cả hai vẫn rẻ hơn việc hiện "không giới hạn" cho một chiếc xe thật ra có hạn mức.
+            */}
+            <dd className={policy.includedDistanceKmPerDay != null ? styles.summaryOn : undefined}>
+              {policy.includedDistanceKmPerDay != null && policy.excessDistanceFeePerKm != null
+                ? t('mileageValue', {
+                    km: fmt.km(policy.includedDistanceKmPerDay),
+                    fee: fmt.money(policy.excessDistanceFeePerKm),
+                  })
+                : t('mileageOff')}
+            </dd>
+          </div>
+          <div className={styles.summaryRow}>
             <dt>{t('overtime')}</dt>
             <dd>
               {policy.overtimeFeePerHour

@@ -23,6 +23,7 @@ import {
   MAINTENANCE_TYPE_VALUES,
   LOCATION_SOURCE_VALUES,
   LONG_TERM_PACKAGE_MONTHS,
+  MILEAGE_LIMIT,
   ODOMETER_CORRECTION_REASON_VALUES,
   ODOMETER_MAX_KM,
   SERVICE_TYPE,
@@ -1333,6 +1334,38 @@ export const policyFormSchema = yup.object({
           radius: deliveryMaxRadiusKm,
         }),
       });
+    }),
+  /*
+   * Hạn mức quãng đường — MỘT công tắc, HAI ô, và chúng đi cặp (ADR 0007 · `MILEAGE_LIMIT`).
+   *
+   * Công tắc là trường của FORM chứ không phải của API: backend chỉ biết "cả hai null = không
+   * giới hạn". Không có nó thì "tắt" phải suy từ việc người dùng xoá trắng cả hai ô, và một ô
+   * để trống nửa chừng trông y hệt trạng thái tắt — đúng cái mà `PricingService.validatePolicy`
+   * và CHECK ở DB từ chối. Cùng luật, cùng mã lỗi với wizard đăng xe nhanh.
+   *
+   * Dùng CHUNG `$policyEditable` với các khối chính sách khác: ba trường này nằm trên cùng bản
+   * ghi `rental_policies`, nên chúng luôn hiện ra và bị khoá cùng một nhịp với cọc/giao nhận.
+   * Một cờ riêng chỉ có nghĩa nếu có màn nào cho sửa hạn mức mà KHÔNG cho ghi đè chính sách —
+   * điều đó cần một cột riêng trên `vehicles`, không phải một cờ validate.
+   */
+  mileageLimitEnabled: yup.boolean().defined().default(false),
+  includedDistanceKmPerDay: yup
+    .number()
+    .nullable()
+    .defined()
+    .default(null)
+    .integer('mileageInteger')
+    .min(MILEAGE_LIMIT.minKmPerDay, 'mileageMin')
+    .max(MILEAGE_LIMIT.maxKmPerDay, 'mileageMax')
+    .when(['mileageLimitEnabled', '$policyEditable'], {
+      is: (enabled: boolean, editable?: boolean) => enabled && editable !== false,
+      then: (s) => s.test('required', 'mileageRequired', (value) => value != null),
+    }),
+  excessDistanceFeePerKm: optionalPolicyMoney()
+    .max(MILEAGE_LIMIT.maxFeePerKm, 'excessFeeMax')
+    .when(['mileageLimitEnabled', '$policyEditable'], {
+      is: (enabled: boolean, editable?: boolean) => enabled && editable !== false,
+      then: (s) => s.test('required', 'excessFeeRequired', (value) => value != null),
     }),
   overtimeFeePerHour: optionalPolicyMoney(),
   overtimeGraceMinutes: yup

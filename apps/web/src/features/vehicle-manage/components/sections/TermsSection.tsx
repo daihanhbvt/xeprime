@@ -26,7 +26,10 @@ import { TextAreaField } from '@/components/form/TextAreaField';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { ROUTES } from '@/constants/routes';
-import { CollateralPolicySection } from '@/features/rental-policies/components/PolicySections';
+import {
+  CollateralPolicySection,
+  MileagePolicySection,
+} from '@/features/rental-policies/components/PolicySections';
 import { formToSaveInput, policyToForm } from '@/features/rental-policies/form';
 import {
   useSaveVehiclePricing,
@@ -191,7 +194,11 @@ function TermsForm({
         collateralEditable &&
         (formState.dirtyFields.collateralMode ||
           formState.dirtyFields.depositAmount ||
-          formState.dirtyFields.collateralAssetTypes);
+          formState.dirtyFields.collateralAssetTypes ||
+          // Hạn mức km đi cùng bản ghi đè, nên nó cũng chỉ ghi khi chủ xe đã mở khoá tường minh.
+          formState.dirtyFields.mileageLimitEnabled ||
+          formState.dirtyFields.includedDistanceKmPerDay ||
+          formState.dirtyFields.excessDistanceFeePerKm);
       if (policyTouched) {
         await savePricing.mutateAsync({ source: POLICY_SOURCE.VEHICLE, policy: formToSaveInput(next) });
       }
@@ -255,6 +262,26 @@ function TermsForm({
                 title={t('collateralTitle')}
                 disabled={!canEdit || !editingCollateral}
                 optionDescriptions={{ none: t('collateralNoneHint') }}
+              />
+              {/*
+                Hạn mức quãng đường là một ĐIỀU KHOẢN công bố với khách (nó hiện ngay cạnh hình
+                thức bảo đảm trên trang xe và được đóng băng vào đơn), nên nó thuộc màn này —
+                không phải một màn quản lý thứ sáu. Dùng đúng khối của form chính sách.
+
+                Khoá sau CÙNG nút "Tuỳ chỉnh" với khối bảo đảm, và đó không phải sự lười: lưu ở
+                đây gửi `PUT /vehicles/:id/pricing` với `source: vehicle` và TOÀN BỘ chính sách,
+                nên một cú gạt công tắc hạn mức trên chiếc xe đang KẾ THỪA sẽ ghi xuống một bản
+                sao đóng băng của cọc/giao nhận/quá giờ/ưu đãi — và chiếc xe đó âm thầm ngừng
+                nhận mọi thay đổi chính sách của gian hàng về sau (chính cái bẫy mà
+                `VehiclesService.savePricing` ghi lại trong docblock của nó).
+
+                Tách hạn mức ra khỏi bản ghi đè là một quyết định khác (cần cột riêng trên
+                `vehicles`), không phải hệ quả của một công tắc.
+              */}
+              <MileagePolicySection
+                control={control}
+                title={t('mileageTitle')}
+                disabled={!canEdit || !editingCollateral}
               />
             </>
           )}

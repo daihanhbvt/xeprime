@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { newId, Prisma } from '@xeprime/prisma';
+import { newId, Prisma, refreshListingRankScore } from '@xeprime/prisma';
 import {
   BILLING_MODE,
   COLLATERAL_MODE,
@@ -123,6 +123,10 @@ export class ListingsService {
         create: { id: newId(), tenantId: v.tenantId, vehicleId, ...snapshot },
         update: snapshot,
       });
+      // Điểm xếp hạng đọc CHÍNH snapshot vừa ghi (ảnh, giá, tiện ích, rating) nên phải chạy sau
+      // upsert và trong cùng transaction — nếu không, một xe vừa duyệt sẽ mang điểm 0 cho tới
+      // nhịp worker kế tiếp, tức là nằm cuối chợ suốt một ngày.
+      await refreshListingRankScore(tx, { vehicleId });
       return;
     }
 
@@ -210,6 +214,9 @@ export class ListingsService {
       where: { vehicleId },
       data: { ratingAvg: rating.avg, ratingCount: rating.count },
     });
+    // Chất lượng là thành phần NẶNG NHẤT của điểm xếp hạng, nên một đánh giá mới phải đổi thứ
+    // tự chợ ngay — chờ tới nhịp ngày là để xe vừa bị chấm 1 sao đứng nguyên chỗ cũ.
+    await refreshListingRankScore(tx, { vehicleId });
   }
 
   /**

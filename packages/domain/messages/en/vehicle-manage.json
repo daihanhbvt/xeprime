@@ -261,7 +261,8 @@
     "depositNote": "Different from self-drive collateral: this is an advance payment for the trip itself.",
     "publicNotice": "This vehicle is public — changing collateral only updates the marketplace label, no re-review needed.",
     "saved": "Rental terms saved",
-    "collateralCustomize": "Customize for this vehicle"
+    "collateralCustomize": "Customize for this vehicle",
+    "mileageTitle": "Mileage allowance"
   },
   "surcharges": {
     "title": "Chauffeur service surcharges",

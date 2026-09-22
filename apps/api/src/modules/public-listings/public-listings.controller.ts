@@ -12,6 +12,8 @@ import {
   PublicListingDetailDto,
   PublicListingPageDto,
   PublicListingQueryDto,
+  RecommendedListingQueryDto,
+  RecommendedListingsDto,
 } from './dto/public-listing.dto';
 
 /**
@@ -45,6 +47,24 @@ export class PublicListingsController {
   @ApiOkResponse({ type: ListingFacetsDto })
   facets(@Query() query: ListingFacetsQueryDto): Promise<ListingFacetsDto> {
     return this.listings.facets(query);
+  }
+
+  /**
+   * Khối gợi ý của trang chủ. Route tĩnh nên cũng phải đứng TRƯỚC `:id`, cùng lý do với
+   * `facets`.
+   *
+   * Tách khỏi `GET /public/listings` vì nó trả lời một câu hỏi khác: ở đó tỉnh là bộ lọc cứng
+   * và rỗng là câu trả lời hợp lệ, còn ở đây tỉnh là ưu tiên và danh sách luôn được lấp đầy
+   * chừng nào chợ còn xe (xem docblock `RecommendedListingQueryDto`). Nhét cả hai vào một
+   * endpoint nghĩa là một cờ boolean đổi ngữ nghĩa của một tham số — thứ sẽ bị đọc nhầm.
+   */
+  @Public()
+  @Get('recommended')
+  @PublicCache(PUBLIC_CACHE_SECONDS.listing)
+  @ApiOperation({ summary: 'Xe phù hợp với bạn — gợi ý trang chủ, ưu tiên theo tỉnh của khách' })
+  @ApiOkResponse({ type: RecommendedListingsDto })
+  recommended(@Query() query: RecommendedListingQueryDto): Promise<RecommendedListingsDto> {
+    return this.listings.recommended(query);
   }
 
   /**

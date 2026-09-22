@@ -317,7 +317,7 @@ describe('thuê dài hạn — chỉ tìm XE (ADR 0011)', () => {
     }
   });
 
-  it('URL trang chủ cũng sạch lịch — khối "Xe khả dụng" bên dưới không đọc phải ngày cũ', async () => {
+  it('URL trang chủ cũng sạch lịch — khối "Xe phù hợp với bạn" bên dưới không đọc phải ngày cũ', async () => {
     await openLongTerm();
 
     const query = homeUrlQuery();
@@ -546,7 +546,7 @@ describe('URL bị KHỐI KHÁC trên trang chủ đổi', () => {
 
     changeUrlExternally('provinceCode=48');
 
-    // "Xe khả dụng" đọc chính URL này — thêm pickupAt/returnAt là âm thầm lọc theo một khoảng
+    // "Xe phù hợp với bạn" đọc chính URL này — thêm pickupAt/returnAt là âm thầm lọc theo một khoảng
     // ngày khách không chọn, và khách không nhìn thấy nó ở đâu cả.
     const query = homeUrlQuery();
     expect(query.get('provinceCode')).toBe('48');
