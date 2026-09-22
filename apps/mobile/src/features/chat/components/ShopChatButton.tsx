@@ -14,6 +14,8 @@ export function ShopChatButton({
   label,
   variant,
   size,
+  iconOnly,
+  iconTone,
   onNavigate,
 }: {
   shopSlug: string;
@@ -22,6 +24,8 @@ export function ShopChatButton({
   label?: string;
   variant?: 'primary' | 'secondary';
   size?: 'sm' | 'md' | 'lg';
+  iconOnly?: boolean;
+  iconTone?: 'primary' | 'surface' | 'accent';
   onNavigate?: () => void;
 }) {
   const canChat = useShopChatAvailable(shopSlug, publicChatOpen);
@@ -34,6 +38,8 @@ export function ShopChatButton({
       {...(label ? { label } : {})}
       {...(variant ? { variant } : {})}
       {...(size ? { size } : {})}
+      {...(iconOnly ? { iconOnly } : {})}
+      {...(iconTone ? { iconTone } : {})}
       {...(onNavigate ? { onNavigate } : {})}
     />
   );

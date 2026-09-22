@@ -1,11 +1,14 @@
-import { ShopPaymentSettingsScreen } from '@/features/shop/ShopPaymentSettingsScreen';
+import { Redirect } from 'expo-router';
+
+import { ROUTES } from '@/navigation/routes';
 
 /**
- * Công tắc thu cọc qua XePrime (Phase 6 — ADR 0032 điều 2) — cùng địa chỉ với web.
+ * ALIAS CHUYỂN TIẾP — "Thanh toán giữ chỗ qua XePrime" thôi làm màn độc lập, y như web.
  *
- * Cổng phiên + phạm vi khu quản lý ở `app/manage/_layout.tsx`; quyền `seller_profile.*` do guard
- * backend quyết. KHÔNG gác theo cờ gói: gian hàng thiếu `escrow_hold` phải vào được để ĐỌC.
+ * Cả màn cũ chỉ có đúng MỘT công tắc, nên nó về làm một khối của "Chính sách thuê" — nơi gian
+ * hàng vốn đã tới để chỉnh tiền cọc/thế chấp. Đường cũ giữ lại vì thông báo đẩy và liên kết sâu
+ * đã phát ra ngoài trỏ vào nó; đây là đường vào của lịch sử, không còn mục menu nào tới đây.
  */
-export default function ManageShopPaymentSettingsRoute() {
-  return <ShopPaymentSettingsScreen />;
+export default function ManageShopPaymentSettingsRedirectRoute() {
+  return <Redirect href={ROUTES.manage.shopPolicies()} />;
 }

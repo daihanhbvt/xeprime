@@ -1,12 +1,8 @@
-import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { SUBSCRIPTION_INVOICE_STATUS } from '@xeprime/types';
 import { Button } from '@/components/ui/Button';
-import { Callout, CalloutBody } from '@/components/ui/Callout';
+import { Callout } from '@/components/ui/Callout';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
-import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 
 import { usePlanPurchase } from '../plan-purchase';
 import {
@@ -14,8 +10,8 @@ import {
   usePurchaseSubscription,
   useTenantPlans,
 } from '../hooks/use-subscription';
-import { InvoicePaymentPanel } from './InvoicePaymentPanel';
-import { PlanPricingTable } from './PlanPricingTable';
+import { InvoiceWaitingPanel } from './InvoiceWaitingPanel';
+import { PlanPickerPanel } from './PlanPickerPanel';
 
 /**
  * BƯỚC 2 của onboarding gian hàng trả phí: chọn gói → chuyển khoản (ADR 0040).
@@ -47,13 +43,6 @@ import { PlanPricingTable } from './PlanPricingTable';
  */
 export function PackageShopCheckout() {
   const t = useTranslations('ShopOnboarding.checkout');
-  /*
-   * Dòng TRẠNG THÁI chờ tiền đọc từ `Subscription.payment`, không phải namespace của onboarding:
-   * cùng một câu xuất hiện ở mọi màn chờ đối soát một hoá đơn gói (onboarding gian hàng trả phí,
-   * và luồng nâng cấp từ tuyến hoa hồng bên web), nên nó sống cạnh phần còn lại của hướng dẫn
-   * chuyển khoản. Hai bản của cùng một câu là hai chỗ để một lần sửa chỉ đúng với một nửa người dùng.
-   */
-  const tPayment = useTranslations('Subscription.payment');
   const errorMessage = useErrorMessage();
 
   const pending = usePendingInvoice();
@@ -73,77 +62,27 @@ export function PackageShopCheckout() {
     return <RetryNotice title={t('loadError')} onRetry={() => void pending.refetch()} />;
   }
 
-  if (invoice) {
-    return (
-      <YStack gap={space.md}>
-        {/*
-          Trạng thái nói bằng CHỮ, không chỉ bằng màu của một viên nhãn. "Đang chờ tiền về" và "đã
-          nhận một phần" là hai tình huống khác nhau với hai việc phải làm khác nhau, và người
-          không phân biệt được màu vẫn phải đọc ra được mình đang ở đâu.
-        */}
-        <Text
-          accessibilityLiveRegion="polite"
-          col={colors.textMuted}
-          fos={fontSize.bodySm}
-          fow={fontWeight.medium}
-        >
-          {invoice.status === SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID
-            ? tPayment('statusPartial')
-            : tPayment('statusWaiting')}
-        </Text>
-        <InvoicePaymentPanel invoice={invoice} />
-      </YStack>
-    );
-  }
-
-  if (plans.isLoading) return <MiniRowsSkeleton rows={6} />;
-
-  if (plans.isError) {
-    return <RetryNotice title={t('plansError')} onRetry={() => void plans.refetch()} />;
-  }
-
-  /*
-   * Danh mục không có bậc gói nào đang bán = lỗi cấu hình phía nền tảng, không phải lựa chọn của
-   * người dùng. Nói thẳng và cho đường liên hệ thay vì hiện một form không bấm được.
-   */
-  if (selection.tiers.length === 0) {
-    return (
-      <Callout tone="warning" title={t('noPlans')}>
-        <CalloutBody>{t('noPlansHint')}</CalloutBody>
-      </Callout>
-    );
-  }
+  // Dải chờ tiền dùng CHUNG với luồng nâng cấp tuyến hoa hồng — cùng một trạng thái thì cùng một
+  // câu chữ và cùng một QR (`InvoiceWaitingPanel`).
+  if (invoice) return <InvoiceWaitingPanel invoice={invoice} />;
 
   return (
-    <YStack gap={space.md}>
-      {purchase.isError ? <Callout tone="danger" title={errorMessage(purchase.error)} /> : null}
-
-      <PlanPricingTable state={selection} />
-
-      {/*
-        Quy chế sàn là văn bản quy định phí dịch vụ và thứ tự hiển thị mà gian hàng đang mua — đây
-        là khoảnh khắc nó bắt đầu ràng buộc họ (ADR 0028 điều 9).
-      */}
-      <LegalConsentNote place="subscription" />
-
-      <Button
-        label={t('createInvoice')}
-        loading={purchase.isPending}
-        disabled={!selection.selection}
-        onPress={() => {
-          if (selection.selection) purchase.mutate(selection.selection.body);
-        }}
-      />
-      {/*
-        Nút mờ phải nói VÌ SAO. Không có dòng này, người dùng chọn số chỗ xong thấy nút xám và
-        không có cách nào biết mình còn thiếu một cú chạm vào thẻ kỳ hạn.
-      */}
-      {selection.selection ? null : (
-        <Text col={colors.textMuted} fos={fontSize.label} ta="center">
-          {t('pickTermFirst')}
-        </Text>
-      )}
-    </YStack>
+    <PlanPickerPanel
+      plans={plans}
+      state={selection}
+      submitting={purchase.isPending}
+      errorText={purchase.isError ? errorMessage(purchase.error) : null}
+      copy={{
+        loadError: t('plansError'),
+        empty: t('noPlans'),
+        emptyHint: t('noPlansHint'),
+        submit: t('createInvoice'),
+        pickTermHint: t('pickTermFirst'),
+      }}
+      onSubmit={() => {
+        if (selection.selection) purchase.mutate(selection.selection.body);
+      }}
+    />
   );
 }
 

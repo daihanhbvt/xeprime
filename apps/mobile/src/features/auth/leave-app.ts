@@ -26,17 +26,27 @@ import { ROUTES } from '@/navigation/routes';
  */
 export function leaveApp(router: Router): void {
   /*
-   * Bọc try/catch vì hàm này chạy từ listener "phiên đã kết thúc", và listener đó có thể nổ
+   * HAI lượt try RIÊNG, không phải một.
+   *
+   * Gộp chung là một lỗi đã xảy ra thật: `dismissAll()` ném thì `replace()` nằm cùng khối nên
+   * bị bỏ qua hoàn toàn, và người vừa đăng xuất ở khu quản lý nằm lại đúng màn cần phiên —
+   * `ScopeGuard` đổi nó thành "Vui lòng đăng nhập" rồi dừng ở đó. Dấu vết duy nhất là một
+   * dòng `warn`. Gỡ chồng màn là việc DỌN DẸP; đưa về chợ xe là việc BẮT BUỘC, và cái sau không được
+   * phụ thuộc vào cái trước.
+   *
+   * Cả hai đều bọc try vì hàm này chạy từ listener "phiên đã kết thúc", và listener đó có thể nổ
    * TRƯỚC khi cây điều hướng kịp mount: mở app bằng một refresh token đã bị thu hồi thì phiên
    * chết ngay ở khung hình đầu, lúc `router` còn chưa sẵn sàng và mọi lệnh đi đều ném
-   * `assertIsReady`.
-   *
-   * Ném ở đó không chỉ mất cú điều hướng: listener chạy trong một vòng lặp chung, nên lỗi này
-   * nuốt luôn phần dọn dẹp của những listener đứng sau. Mà lúc đó cũng chẳng có gì để rời —
-   * chưa màn nào được dựng, app sẽ mở thẳng vào chợ xe.
+   * `assertIsReady`. Ném ở đó không chỉ mất cú điều hướng: listener chạy trong một vòng lặp
+   * chung, nên lỗi này nuốt luôn phần dọn dẹp của những listener đứng sau.
    */
   try {
     if (router.canDismiss()) router.dismissAll();
+  } catch (error) {
+    logger.warn('Không gỡ được chồng màn khi phiên kết thúc', { error: String(error) });
+  }
+
+  try {
     router.replace(ROUTES.explore.home());
   } catch (error) {
     logger.warn('Chưa rời được màn sau khi phiên kết thúc', { error: String(error) });

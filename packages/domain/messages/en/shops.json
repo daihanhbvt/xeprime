@@ -42,6 +42,7 @@
     "sectionLabel": "Shop reviews",
     "title": "Customer reviews",
     "titleWithCount": "Customer reviews ({count})",
+    "ratingValue": "{rating} out of 5 stars",
     "empty": "This shop has no reviews yet.",
     "vehicle": "Rented: {name}"
   }

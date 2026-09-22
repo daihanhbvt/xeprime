@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { YStack } from 'tamagui';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
+import { useOpenPushPermissionGate } from '@/features/notifications/push-permission-gate';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { colors, space } from '@/theme/tokens';
@@ -41,7 +42,7 @@ const REVEAL_DISTANCE = 120;
  */
 export function HomeScreen() {
   return (
-    <SearchExperienceProvider>
+    <SearchExperienceProvider askLocation>
       <HomeContent />
     </SearchExperienceProvider>
   );
@@ -53,6 +54,9 @@ function HomeContent() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { data: user } = useCurrentUser();
+  // Trang chủ là một trong hai màn CHÍNH mà người dùng hạ cánh — mở cửa xin quyền thông báo ở đây,
+  // không phải ở màn nhập OTP (`push-permission-gate.ts`).
+  useOpenPushPermissionGate();
   const {
     data: banners,
     isLoading: bannersLoading,

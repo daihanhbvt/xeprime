@@ -133,11 +133,19 @@ export const marketplaceApi = {
    * lời được ở tầng gian hàng. Trả nguyên phong bì {summary, data, meta} — `summary` là điểm
    * trung bình của TOÀN BỘ đánh giá, không phải của trang đang xem, nên không suy lại từ `data`.
    */
-  shopReviews(slug: string, limit: number): Promise<ShopReviewPage> {
-    return getApiClient().get<ShopReviewPage>(
+  async shopReviews(slug: string, limit: number): Promise<ShopReviewPage> {
+    /*
+     * CÙNG cái bẫy với `reviews(vehicleId)` ở trên, và lần này đã sập: endpoint tự trả phong
+     * bì `{ summary, data, meta }` nên `ResponseInterceptor` không bọc thêm lớp nào. `get`
+     * bóc đúng một lớp và trả về `data` — tức MẢNG đánh giá — nên nơi gọi destructure ra
+     * `summary` và `data` đều `undefined`, và `data.length` ném "Cannot read property
+     * length of undefined" ngay khi mở trang gian hàng.
+     */
+    const res = await getApiClient().request<ShopReviewPage['data']>(
       `/public/shops/${encodeURIComponent(slug)}/reviews`,
-      { page: 1, limit },
+      { query: { page: 1, limit } },
     );
+    return res as unknown as ShopReviewPage;
   },
 
   /**

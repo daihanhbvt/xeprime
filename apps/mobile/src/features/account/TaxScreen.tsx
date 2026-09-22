@@ -293,7 +293,7 @@ export function TaxScreen() {
                 size="sm"
                 block={false}
                 icon="id-card-outline"
-                onPress={() => switchTo(APP_SCOPE.MANAGE, ROUTES.manage.sellerProfile())}
+                onPress={() => switchTo(APP_SCOPE.MANAGE, ROUTES.manage.shop())}
               />
             </YStack>
           ) : null}

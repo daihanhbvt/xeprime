@@ -233,7 +233,14 @@ với cập nhật trạng thái), và `android.notification.channelId` theo `an
 
 Đã có (đợt này):
 
-- xin quyền (Android 13+ `POST_NOTIFICATIONS`, iOS APNs) đúng một lần mỗi phiên chạy;
+- **xin quyền ở MÀN CHÍNH, không phải lúc đăng nhập** (Android 13+ `POST_NOTIFICATIONS`, iOS
+  APNs). Đăng ký thiết bị và xin quyền là hai việc tách rời
+  (`src/features/notifications/push-permission-gate.ts`): có phiên mà quyền đã cấp sẵn thì đăng ký
+  ngay và im lặng; chưa có quyền thì ĐỢI tới khi người dùng đã vào trang chủ marketplace hoặc bảng
+  điều khiển gian hàng (+1,5s) mới hiện hộp thoại. Gộp hai việc làm một là lý do hộp thoại từng
+  nhảy lên giữa màn nhập mã OTP — nơi câu hỏi chưa có nghĩa và câu trả lời "Không" là vĩnh viễn.
+  Hộp thoại đi qua `src/lib/permission-queue.ts` vì trang chủ cũng xin quyền VỊ TRÍ, và hai hộp
+  thoại cùng lúc thì cái sau bị hệ điều hành từ chối thẳng;
 - đăng ký token **sau khi đã đăng nhập**, đăng ký lại khi FCM xoay token;
 - app đang mở → toast; app ở nền/đã tắt → hệ điều hành hiện thông báo;
 - bấm thông báo → điều hướng theo `data.url`, qua allowlist
@@ -329,7 +336,7 @@ Trung tâm thông báo, badge chưa đọc và refetch hộp thư khi nhận pus
 làm trong cùng ngày (`docs/mobile-module-status.md` §2.9). Còn lại, cố ý chưa làm:
 
 - màn cài đặt bật/tắt từng loại thông báo;
-- UX xin quyền (màn giải thích trước khi hiện hộp thoại hệ thống);
+- UX xin quyền (màn GIẢI THÍCH trước khi hiện hộp thoại hệ thống — thời điểm hỏi thì đã sửa, xem §7);
 - đo đếm tỉ lệ nhận/mở;
 - tạo kênh Android thật (§6);
 - **gộp thông báo chat trong HỘP THƯ.** `pushCollapseKey` đã gộp trên khay, nhưng

@@ -372,6 +372,12 @@ export const chatDebug = {
   /** Bản build có module FCM native không (Expo Go và bản thiếu credential thì KHÔNG). */
   pushAvailable: (present: boolean) => write('debug', 'push.available', { flag: present }),
   pushPermission: (granted: boolean) => write('debug', 'push.permission', { flag: granted }),
+  /** Quyền đã có sẵn từ trước ⇒ đăng ký thẳng, không hộp thoại nào. */
+  pushPermissionAlready: () => write('debug', 'push.permission.already'),
+  /** Có phiên nhưng CHƯA có quyền và cửa chưa mở — đợi người dùng vào màn chính rồi mới hỏi. */
+  pushPermissionDeferred: () => write('debug', 'push.permission.deferred'),
+  /** Người dùng đã vào một màn chính — từ giờ được phép hỏi quyền thông báo. */
+  pushGateOpened: () => write('debug', 'push.gate.opened'),
   /** FCM không trả token — thường là sai project trong credential, hoặc Play Services lỗi. */
   pushTokenMissing: () => write('warn', 'push.token.missing'),
   /**

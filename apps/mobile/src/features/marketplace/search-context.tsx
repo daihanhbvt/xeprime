@@ -19,7 +19,11 @@ import { type MarketplaceFilters, type PublicDestination } from '@xeprime/types'
 import { PROVINCE_CODES, type RouteType, type ServiceType, type VehicleType } from '@xeprime/types';
 import type { Dayjs } from '@xeprime/domain';
 import { useTranslations } from 'use-intl';
-import { readRememberedProvince, rememberProvince } from '@/lib/province-memory';
+import { logger } from '@/lib/logger';
+import { forgetGeoProvince } from '@/lib/geo-province-memory';
+import { rememberProvince } from '@/lib/province-memory';
+import { deviceInitialProvinceDeps } from './initial-province.deps';
+import { resolveInitialProvince } from './initial-province';
 import { readRememberedRentalRange, rememberRentalRange } from '@/lib/rental-range-memory';
 import { useDestinations } from './hooks/use-marketplace-data';
 
@@ -104,10 +108,19 @@ export function useSearchFilters(): MarketplaceFilters {
 export function SearchExperienceProvider({
   children,
   initial,
+  askLocation = false,
 }: {
   children: ReactNode;
   /** Ngữ cảnh mang từ màn trước sang — màn kết quả nhận nguyên bộ filter của trang chủ. */
   initial?: MarketplaceFilters;
+  /**
+   * Được phép HỎI quyền vị trí để đoán tỉnh mở đầu. Mặc định TẮT, và chỉ trang chủ bật.
+   *
+   * Hộp thoại quyền là thứ đắt nhất app tiêu của người dùng, nên nó phải gắn với một lý do họ
+   * nhìn thấy: trang chủ đang chọn xem xe ở đâu. Bật ở màn kết quả là hỏi giữa lúc họ đã tự nói
+   * ra tỉnh mình muốn — và câu trả lời sẽ bị bỏ đi ngay, vì `initial` thắng mọi gợi ý.
+   */
+  askLocation?: boolean;
 }) {
   const t = useTranslations('HomeSearch.location');
   const nationwideLabel = t('nationwide');
@@ -207,14 +220,28 @@ export function SearchExperienceProvider({
     restoredProvinceRef.current = true;
 
     let alive = true;
-    void readRememberedProvince().then((code) => {
-      if (!alive || !code) return;
-      if (!destinations?.some((item) => item.provinceCode === code)) return;
-      setDraft((prev) => (prev.provinceCode ? prev : { ...prev, provinceCode: code }));
+    void resolveInitialProvince(
+      deviceInitialProvinceDeps({
+        hasVehicles: (code) => Boolean(destinations?.some((item) => item.provinceCode === code)),
+        // Chỉ hỏi quyền vị trí ở bề mặt trang chủ, và chỉ khi lượt này CHƯA có ngữ cảnh nào:
+        // `askLocation` đi vào từ nơi dựng provider, nên màn kết quả không bao giờ hỏi.
+        mayAskPermission: askLocation,
+      }),
+    ).then((resolved) => {
+      if (!alive) return;
+      logger.debug('[home-province] chốt tỉnh mở trang chủ', {
+        code: resolved.code,
+        source: resolved.source,
+      });
+      if (!resolved.code) return;
+      setDraft((prev) => (prev.provinceCode ? prev : { ...prev, provinceCode: resolved.code }));
     });
     return () => {
       alive = false;
     };
+    // `askLocation` cố ý KHÔNG nằm trong danh sách phụ thuộc: nó là cấu hình của bề mặt, chốt ở
+    // lần mount đầu, và `restoredProvinceRef` đã khoá effect này lại đúng một lượt.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [destinations, destinationsLoading]);
 
   /**
@@ -263,6 +290,13 @@ export function SearchExperienceProvider({
   const setProvinceCode = useCallback(
     (next: string) => {
       rememberProvince(next);
+      /*
+       * Và VỨT phép đo vị trí. Từ giây này trở đi lựa chọn của người dùng là câu trả lời, kể cả
+       * khi nó là "Toàn quốc" — mà "Toàn quốc" thì `rememberProvince` XOÁ bộ nhớ lựa chọn
+       * (ADR 0042 điều 6). Giữ lại phép đo nghĩa là lần mở sau app lại tự lọc theo tỉnh nó đoán,
+       * đè lên đúng cái ý định vừa được nói ra.
+       */
+      forgetGeoProvince();
       edit((prev) => ({ ...prev, provinceCode: next }));
     },
     [edit],

@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
+  Dimensions,
   Keyboard,
-  KeyboardAvoidingView,
   RefreshControl,
   ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
-import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
+import Animated, {
+  KeyboardState,
+  runOnJS,
+  useAnimatedKeyboard,
+  useAnimatedStyle,
+  useDerivedValue,
+  useSharedValue,
+} from 'react-native-reanimated';
+import { SafeAreaView, useSafeAreaInsets, type Edge } from 'react-native-safe-area-context';
 import { FocusRevealProvider, revealFocusedInput } from './focus-reveal';
 import { layout } from '@/theme/layout';
 import { colors, space } from '@/theme/tokens';
@@ -26,41 +34,34 @@ const KEYBOARD_TAIL = space.xl;
  */
 const SCROLL_REPORT_MS = 100;
 
-/**
- * Lệch dưới ngần này (dp) thì coi như đã khớp — đo trên thiết bị luôn có phần lẻ.
- */
-const LIFT_EPSILON = 1;
+
+
 
 /**
- * Số lần đo lại tối đa cho MỖI lần bàn phím mở.
+ * Mép trên bàn phím, quy về HỆ TOẠ ĐỘ CỬA SỔ.
  *
- * Vòng đo là "đo → nâng → đo lại", và nó hội tụ sau một hoặc hai vòng. Cái chặn này để một phép
- * đo bất thường (khung đang chuyển động) không kéo thành vòng lặp render vô tận.
+ * `keyboardDidShow` trả `endCoordinates.screenY` — đo từ mép trên MÀN HÌNH. Mọi phép đo
+ * còn lại ở đây dùng `measureInWindow` — đo từ mép trên CỬA SỔ. Trên Android hai gốc đó
+ * KHÔNG trùng nhau: cửa sổ của ứng dụng thường bắt đầu dưới thanh trạng thái, nên cùng một
+ * vật thể mang hai con số lệch nhau đúng bằng chiều cao thanh đó.
+ *
+ * Đo thật trên một máy Android: `windowH=853` trong khi bàn phím khai `screenY=550`. Vòng bù
+ * so thẳng `footerBottom=550` với `550` rồi kết luận `hidden=0` — khớp hoàn hảo, và thanh soạn
+ * tin vẫn nằm dưới bàn phím trên màn. Cơ chế không sai; nó so hai thứ không cùng thước đo.
+ *
+ * Quy đổi qua CHIỀU CAO bàn phím, không qua vị trí: chiều cao là con số giống nhau ở cả hai
+ * hệ, và đáy cửa sổ luôn trùng đáy màn hình (thanh trạng thái nằm ở TRÊN). Lấy hiệu vị trí
+ * thì phải biết cửa sổ bắt đầu từ đâu — thứ không API nào trả lời chắc chắn dưới chế độ
+ * edge-to-edge.
+ *
+ * iOS: hai hệ vốn trùng nhau nên phép quy đổi trả về đúng `screenY` — không đổi hành vi.
  */
-const LIFT_MAX_PASSES = 4;
-
-/** Trần nâng (dp). Đo ra số lớn hơn ngần này thì gần như chắc chắn là đo sai, không phải bị che. */
-const LIFT_MAX = 160;
-
-/**
- * Giá trị nâng KẾ TIẾP, từ giá trị hiện tại và phần chênh đo được giữa đáy `footer` và mép trên
- * bàn phím. Dương = đang bị che (nâng thêm); ÂM = đang nâng dư (hạ bớt).
- *
- * Phép bù phải đi được CẢ HAI CHIỀU. Chỉ-nâng làm giá trị này thành một cái chốt một chiều: hình
- * dạng bàn phím đổi trong lúc vẫn đang mở — đính kèm một tấm ảnh làm thanh soạn tin cao lên, bàn
- * phím Samsung bật/tắt dải công cụ, đổi sang bàn phím số — thì phần nâng của lần trước thành dư,
- * và không có đường nào trả nó về. Đó là dải trống to đúng một thanh công cụ nằm giữa ô nhập và
- * bàn phím. Hạ chỉ gỡ lại phần CHÍNH NÓ đã nâng: sàn là 0, không màn nào bị kéo xuống dưới chỗ
- * `KeyboardAvoidingView` đặt.
- *
- * Tách ra khỏi component để kiểm được bằng test: phần đo đạc (`measureInWindow`, sự kiện bàn
- * phím) chỉ chạy thật trên máy, nhưng luật số học ở đây thì không cần máy nào — ngưỡng bỏ qua,
- * cộng dồn qua từng vòng, sàn 0 và cái trần chặn đo sai.
- */
-export function nextFooterLift(current: number, hidden: number): number {
-  if (!Number.isFinite(hidden) || Math.abs(hidden) <= LIFT_EPSILON) return current;
-  return Math.min(Math.max(current + hidden, 0), LIFT_MAX);
+export function keyboardTopInWindow(screenY: number, windowH: number, screenH: number): number {
+  // Số đo vô lý (chưa có kích thước, xoay màn giữa chừng) ⇒ giữ nguyên hành vi cũ.
+  if (!(windowH > 0) || !(screenH > 0) || screenH < windowH) return screenY;
+  return windowH - (screenH - screenY);
 }
+
 
 interface ScreenProps {
   children: ReactNode;
@@ -119,23 +120,66 @@ export function Screen({
   onRefresh,
 }: ScreenProps) {
   /**
-   * Khoảng cách từ MÉP TRÊN CỬA SỔ xuống đầu vùng tránh bàn phím.
+   * Chiều cao bàn phím đọc từ WINDOW INSET, không từ sự kiện `keyboardDidShow`.
    *
-   * ĐO chứ không hỏi bằng prop: có màn đặt `<AppHeader>` lên trên `Screen`, có màn không, và
-   * mười một màn hiện tại thuộc nhóm sau. Một cờ `headered` bắt mọi nơi gọi phải nhớ, và chỗ
-   * nào quên thì nội dung bị đẩy dư đúng 56dp — một lỗi im lặng, chỉ lộ ra khi bàn phím mở.
+   * Ba vòng chẩn đoán trên máy thật (21/09/2026) đều cho ra những con số tự chúng hợp lý —
+   * `footerBottom` đúng bằng `keyboardTop`, `hidden=0`, thanh soạn tin cao đủ 73dp — trong khi
+   * trên màn nó vẫn bị bàn phím cắt mất khoảng 34dp. Nghĩa là `endCoordinates.screenY` mô tả
+   * một khung KHÁC với vùng bàn phím thật sự chiếm, và mọi phép bù dựa trên nó đều bù đúng
+   * một con số sai.
    *
-   * `measureInWindow` trả về BẤT ĐỒNG BỘ, nên khung hình đầu tiên luôn là 0. Với màn mở bàn
-   * phím ngay lúc mount thì con số 0 đó là con số được dùng thật — xem effect đo lại bên dưới.
+   * `useAnimatedKeyboard` của Reanimated đọc `WindowInsetsCompat.Type.ime()` — chính con số
+   * hệ thống dùng để chừa chỗ cho bàn phím, gồm cả dải công cụ của bộ gõ lẫn phần nó phủ lên
+   * thanh điều hướng. Reanimated đã là module native có sẵn trong bản build, nên đây không
+   * phải thêm một phụ thuộc mới.
    */
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const keyboard = useAnimatedKeyboard();
+  /** Giá trị đã đẩy sang JS lần gần nhất — chốt chặn để không gọi lại với cùng con số. */
+  const lastPushed = useSharedValue(-1);
+  const insets = useSafeAreaInsets();
+  /**
+   * Trừ phần safe area ĐÁY: `SafeAreaView` đã chừa sẵn dải điều hướng, còn inset của bàn phím
+   * đo từ mép dưới CÙNG của cửa sổ. Không trừ thì một dải trống bằng đúng thanh điều hướng
+   * nằm lại giữa bàn phím và ô nhập.
+   */
+  const keyboardPad = useAnimatedStyle(() => ({
+    paddingBottom: Math.max(keyboard.height.value - insets.bottom, 0),
+  }));
+  /* Bản JS của cùng con số — phần cuộn và vòng bù chạy trên luồng JS nên cần một state thật. */
+  const [imeHeight, setImeHeight] = useState(0);
+  const imeHeightRef = useRef(0);
+  /*
+   * Ghi ref TRONG callback, không giữa lúc render: listener bàn phím đọc giá trị mới nhất qua
+   * ref nên không phải dựng lại mỗi lần chiều cao đổi, còn ghi ref lúc render là thứ React
+   * Compiler chặn — và cũng sai về thời điểm.
+   */
+  const applyImeHeight = useCallback((next: number) => {
+    imeHeightRef.current = next;
+    setImeHeight(next);
+  }, []);
+  /*
+   * Chỉ đẩy sang luồng JS khi bàn phím ĐÃ ĐỨNG YÊN.
+   *
+   * `keyboard.height` đổi ở MỌI khung hình của animation bung/thu. Gọi `runOnJS` theo từng
+   * khung nghĩa là một lượt `setState` — và một lượt render cả cây màn hình — trên mỗi khung,
+   * đúng lúc luồng JS phải rảnh nhất. Đó chính là cái giật khi bàn phím lên xuống.
+   *
+   * Phần ĐỆM vẫn chạy mượt theo từng khung, vì nó nằm ở `useAnimatedStyle` trên luồng UI và
+   * không đi qua JS. Thứ duy nhất cần con số bằng JS là phép cuộn ô đang gõ vào tầm nhìn, và
+   * phép đó chỉ có nghĩa khi bàn phím đã tới nơi.
+   */
+  useDerivedValue(() => {
+    const settled =
+      keyboard.state.value === KeyboardState.OPEN ||
+      keyboard.state.value === KeyboardState.CLOSED;
+    if (!settled) return;
+    // Cùng một giá trị thì không đánh thức JS: trạng thái OPEN giữ nguyên qua nhiều khung.
+    if (keyboard.height.value === lastPushed.value) return;
+    lastPushed.value = keyboard.height.value;
+    runOnJS(applyImeHeight)(keyboard.height.value);
+  });
   /** Đệm đuôi nội dung khi bàn phím đang mở — xem {@link KEYBOARD_TAIL}. */
   const [keyboardTail, setKeyboardTail] = useState(0);
-  const frame = useRef<View>(null);
-
-  const measureFrame = useCallback(() => {
-    frame.current?.measureInWindow((_x, y) => setKeyboardOffset(y));
-  }, []);
 
   /**
    * Bàn phím mở lên KHÔNG tự kéo ô đang gõ vào tầm nhìn — đây là việc phải tự làm.
@@ -155,49 +199,8 @@ export function Screen({
   const scroller = useRef<ScrollView>(null);
   const scrollY = useRef(0);
 
-  /**
-   * Bù phần bàn phím CHE thanh `footer` mà `KeyboardAvoidingView` tính hụt.
-   *
-   * `KeyboardAvoidingView` dựng phần đệm từ `endCoordinates.screenY` của sự kiện bàn phím. Trên
-   * Android edge-to-edge con số đó không phải lúc nào cũng khớp với thứ thật sự phủ lên màn: bàn
-   * phím Samsung còn có một dải công cụ riêng (emoji, dịch, cài đặt) nằm TRÊN bàn phím, và phần
-   * hụt đó ăn thẳng vào ô nhập của thanh soạn tin.
-   *
-   * ĐO thay vì đoán: sau khi khung đã áp phần đệm của nó, hỏi vị trí thật của `footer` trong cửa
-   * sổ, so với mép trên bàn phím, rồi nâng đúng bằng phần chênh. Đo lại một vòng nữa để xác nhận.
-   * Màn nào `KeyboardAvoidingView` vốn đã đúng thì phần chênh ≤ 0 và giá trị nâng đứng yên ở 0 —
-   * không màn nào bị đẩy thêm một pixel nào vì cơ chế này.
-   */
-  const footerBox = useRef<View>(null);
+  /** Mép trên bàn phím trong hệ CỬA SỔ — `null` khi bàn phím đang đóng. */
   const keyboardTop = useRef<number | null>(null);
-  const liftPasses = useRef(0);
-  const [footerLift, setFooterLift] = useState(0);
-
-  const correctFooterLift = useCallback(() => {
-    const top = keyboardTop.current;
-    if (top === null || liftPasses.current >= LIFT_MAX_PASSES) return;
-
-    footerBox.current?.measureInWindow((_x, y, _width, height) => {
-      const hidden = y + height - top;
-      if (Math.abs(hidden) <= LIFT_EPSILON) return;
-      liftPasses.current += 1;
-      setFooterLift((prev) => nextFooterLift(prev, hidden));
-    });
-  }, []);
-
-  /**
-   * Thanh `footer` ĐỔI CHIỀU CAO trong lúc bàn phím đang mở — đính kèm một tấm ảnh vào tin nhắn
-   * là đúng trường hợp đó: thẻ tệp chèn thêm một dòng vào ô soạn tin.
-   *
-   * Không đo lại ở đây thì phần nâng tính cho chiều cao CŨ nằm nguyên, và thanh trôi lên cách bàn
-   * phím đúng bằng dòng vừa thêm. Cho `liftPasses` chạy lại từ đầu vì đây là một hình dạng mới,
-   * không phải vòng xác nhận của lần đo trước.
-   */
-  const handleFooterLayout = useCallback(() => {
-    if (keyboardTop.current === null) return;
-    liftPasses.current = 0;
-    requestAnimationFrame(correctFooterLift);
-  }, [correctFooterLift]);
 
   const reveal = useCallback((top: number) => {
     revealFocusedInput(scroller.current, scrollY.current, top);
@@ -227,36 +230,49 @@ export function Screen({
    */
   useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', (event) => {
-      measureFrame();
-      setKeyboardTail(KEYBOARD_TAIL);
-      reveal(event.endCoordinates.screenY);
+      /*
+       * Đọc lại kích thước ở MỖI lần bàn phím bật: xoay màn, chia đôi màn hình và chế độ cửa
+       * sổ nổi đều đổi cả hai con số, và một giá trị chụp lúc mount sẽ sai im lặng sau đó.
+       */
+      const windowH = Dimensions.get('window').height;
+      const screenH = Dimensions.get('screen').height;
+      /*
+       * Sự kiện chỉ còn dùng làm TÍN HIỆU "bàn phím vừa mở"; con số thì lấy từ inset. Giữ lại
+       * phép quy đổi cũ làm vế dự phòng cho lúc inset chưa kịp về (khung hình đầu tiên).
+       */
+      const top =
+        imeHeightRef.current > 0
+          ? windowH - imeHeightRef.current
+          : keyboardTopInWindow(event.endCoordinates.screenY, windowH, screenH);
 
-      keyboardTop.current = event.endCoordinates.screenY;
-      liftPasses.current = 0;
-      // Đợi một khung hình: `KeyboardAvoidingView` chưa áp phần đệm của nó thì đo ra số vô nghĩa.
-      requestAnimationFrame(correctFooterLift);
+      /*
+       * Đuôi đệm chỉ có nghĩa với màn CUỘN — nó nằm trong `contentContainerStyle` của
+       * `ScrollView`. Màn không cuộn (chat) mà vẫn gọi `setKeyboardTail` là một lượt render cả
+       * cây, đúng vào khung hình bàn phím vừa mở xong, để ghi một giá trị không ai đọc.
+       */
+      if (scroll) setKeyboardTail(KEYBOARD_TAIL);
+      reveal(top);
+      keyboardTop.current = top;
     });
     const hide = Keyboard.addListener('keyboardDidHide', () => {
-      setKeyboardTail(0);
+      if (scroll) setKeyboardTail(0);
       keyboardTop.current = null;
-      liftPasses.current = 0;
-      setFooterLift(0);
     });
     return () => {
       show.remove();
       hide.remove();
     };
-  }, [correctFooterLift, measureFrame, reveal]);
+  }, [reveal, scroll]);
 
   /*
-   * Vòng xác nhận: mỗi lần nâng xong thì đo lại. Hội tụ sau một tới hai vòng — `setFooterLift`
-   * với CÙNG giá trị không render lại, nên vòng tự dừng khi đã khớp.
+   * Chiều cao bàn phím ĐỔI trong lúc nó đang mở: đổi bộ gõ, bật dải gợi ý, xoay máy. Sự kiện
+   * `keyboardDidShow` không bắn lại ở những ca đó, nên nếu chỉ nghe sự kiện thì mép trên bàn
+   * phím đứng lại ở giá trị cũ và ô nhập lệch đúng phần vừa đổi.
    */
   useEffect(() => {
-    if (keyboardTop.current === null) return;
-    const frameId = requestAnimationFrame(correctFooterLift);
-    return () => cancelAnimationFrame(frameId);
-  }, [correctFooterLift, footerLift]);
+    if (imeHeight <= 0) return;
+    keyboardTop.current = Dimensions.get('window').height - imeHeight;
+  }, [imeHeight]);
 
   const contentStyle = [
     styles.content,
@@ -298,9 +314,7 @@ export function Screen({
 
   return (
     <SafeAreaView
-      ref={frame}
       style={styles.flex}
-      onLayout={measureFrame}
       {...(edges ? { edges } : {})}
     >
       {/*
@@ -312,27 +326,17 @@ export function Screen({
         thoả vì nó là gốc của một `Modal`; `Screen` thì KHÔNG, `AppHeader` là anh em đứng trên nó,
         nên khung hụt đúng chiều cao thanh đó cộng safe area và ô cuối màn vẫn nằm dưới bàn phím.
       */}
-      <KeyboardAvoidingView
-        behavior="padding"
-        keyboardVerticalOffset={keyboardOffset}
-        style={styles.flex}
-      >
+      <Animated.View style={[styles.flex, keyboardPad]}>
         {/*
           Lớp bọc chỉ để mang phần NÂNG. Không đặt được lên chính `KeyboardAvoidingView`: nó tự
           ghi `paddingBottom` của mình đè lên style truyền vào. Nâng ở đây kéo cả thân lẫn thanh
           dưới lên, và dải trống sinh ra nằm SAU bàn phím nên không ai nhìn thấy.
         */}
-        <View style={[styles.flex, footerLift > 0 ? { paddingBottom: footerLift } : null]}>
-          <FocusRevealProvider reveal={revealOnFocus}>
-            {body}
-            {footer ? (
-              <View ref={footerBox} style={styles.footer} onLayout={handleFooterLayout}>
-                {footer}
-              </View>
-            ) : null}
-          </FocusRevealProvider>
-        </View>
-      </KeyboardAvoidingView>
+        <FocusRevealProvider reveal={revealOnFocus}>
+          {body}
+          {footer ? <View style={styles.footer}>{footer}</View> : null}
+        </FocusRevealProvider>
+      </Animated.View>
     </SafeAreaView>
   );
 }

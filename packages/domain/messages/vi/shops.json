@@ -42,6 +42,7 @@
     "sectionLabel": "Đánh giá gian hàng",
     "title": "Đánh giá từ khách hàng",
     "titleWithCount": "Đánh giá từ khách hàng ({count})",
+    "ratingValue": "{rating} trên 5 sao",
     "empty": "Gian hàng chưa có đánh giá nào.",
     "vehicle": "Thuê xe: {name}"
   }

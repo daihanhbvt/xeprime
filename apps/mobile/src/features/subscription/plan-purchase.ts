@@ -77,8 +77,11 @@ export interface PlanPurchaseState {
    * Xoá sạch lựa chọn — cho vỏ dùng lại được instance này (tấm trượt mở/đóng nhiều lần).
    *
    * `PurchaseSheet` sống suốt vòng đời màn, nên không có lần remount nào dọn hộ. Giữ lựa chọn cũ
-   * nghĩa là mở lại tấm thấy một kỳ hạn ĐÃ SÁNG — đúng thứ `selectPlan` đang chống. Tệ hơn sau một
-   * lượt mua thành công: form trở lại đầy đủ, cách một cú chạm với hoá đơn thứ hai.
+   * nghĩa là mở tấm LẦN SAU đã thấy sẵn một bậc và một kỳ hạn chưa ai chọn trong lượt này. Tệ
+   * hơn sau một lượt mua thành công: form trở lại đầy đủ, cách một cú chạm với hoá đơn thứ hai.
+   *
+   * Khác với `selectPlan`, thứ MANG THEO kỳ hạn giữa các bậc trong CÙNG một lượt chọn: ở đó
+   * người dùng vừa tự tay chạm vào kỳ đó, còn ở đây lượt chọn đã khép lại.
    */
   reset: () => void;
 }
@@ -116,12 +119,19 @@ export function usePlanPurchase(plans: readonly TenantPlan[]): PlanPurchaseState
   function selectPlan(id: string): void {
     setPlanId(id);
     /*
-     * Kỳ đang chọn có thể không được bậc MỚI bán — bỏ chọn thay vì giữ một lựa chọn mà server sẽ
-     * từ chối (`purchase()` kiểm `limits.termPrices`). `null` = chưa chọn kỳ nào, và nút tạo hoá
-     * đơn khoá cho tới khi người dùng chạm một thẻ: mặc định sẵn một kỳ hạn nghĩa là có người trả
-     * trước 12 tháng vì đó là thứ đang sáng lên, không vì họ chọn nó.
+     * Đổi bậc thì GIỮ kỳ hạn người dùng đã chọn — miễn là bậc mới cũng bán kỳ đó.
+     *
+     * Phân biệt hai thứ dễ lẫn. Tự MẶC ĐỊNH một kỳ hạn là sai: nó khiến có người trả trước 12
+     * tháng vì đó là thứ đang sáng lên, không vì họ chọn nó. Nhưng MANG THEO một kỳ hạn họ đã
+     * tự tay chạm thì ngược lại — đó chính là ý định họ vừa nói ra, và bắt chọn lại ở mỗi lần
+     * so sánh hai bậc là bắt lặp lại một câu trả lời không đổi.
+     *
+     * Bậc mới KHÔNG bán kỳ đó thì mới bỏ chọn: server kiểm `limits.termPrices` và sẽ từ chối,
+     * nên giữ lại là dựng sẵn một lỗi ở bước cuối.
      */
-    setTermMonths(null);
+    const next = tiers.find((tier) => tier.plan.id === id);
+    const keeps = next?.terms.some((term) => term.months === termMonths) ?? false;
+    if (!keeps) setTermMonths(null);
   }
 
   const chosenTerm =
