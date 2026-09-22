@@ -335,7 +335,6 @@ describe('Huỷ ở `awaiting_hold` — một transaction, năm việc', () => {
         code: hold.code,
         amount: partial,
         providerTxId: `part-${newId()}`,
-        transferredAt: new Date(),
       }),
     );
     const mid = await prisma.bookingHold.findUniqueOrThrow({ where: { id: hold.id } });
@@ -382,7 +381,6 @@ describe('Huỷ ở `awaiting_hold` — một transaction, năm việc', () => {
         code: hold.code,
         amount: hold.amount,
         providerTxId: `full-${newId()}`,
-        transferredAt: new Date(),
       }),
     );
 
@@ -475,7 +473,6 @@ describe('Lượt huỷ chạy thẳng vào chỉ số uy tín', () => {
           code: hold.code,
           amount: hold.amount,
           providerTxId: `m-${newId()}`,
-          transferredAt: new Date(),
         }),
       );
     }

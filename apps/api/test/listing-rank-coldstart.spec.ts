@@ -118,7 +118,7 @@ async function seedVehicle(name: string, f: Fixture): Promise<string> {
         vehicleId: id,
         tenantId: f.tenant,
         imageUrl: `https://img.example/${id}-${i}.jpg`,
-        imageType: VEHICLE_IMAGE_TYPE.EXTERIOR,
+        imageType: VEHICLE_IMAGE_TYPE.FRONT,
         sortOrder: i,
       },
     });
