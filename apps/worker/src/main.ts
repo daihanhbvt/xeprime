@@ -24,13 +24,14 @@ import { sweepSubscriptionLifecycle } from './jobs/subscription-lifecycle';
 import { sweepBookingHoldExpiry } from './jobs/booking-hold-expiry';
 import { sweepInsuranceIssue } from './jobs/insurance-issue';
 import { purgeExpiredOauthStates } from './jobs/oauth-state-cleanup';
+import { refreshListingRanks } from './jobs/listing-rank-refresh';
 import { dispatchPushDeliveries } from './jobs/push-dispatch';
 import { HOLIDAY_INTERVAL_MS, shouldRunHolidaySync, syncHolidays } from './jobs/holiday-sync';
 
 /**
  * Worker XePrime — mọi việc chạy theo ĐỒNG HỒ, không theo request của người dùng.
  *
- * Sáu nhóm việc, và chúng độc lập với nhau:
+ * Bảy nhóm việc, và chúng độc lập với nhau:
  *
  *  1. **Hạn phản hồi yêu cầu thuê** (25/08) — nhắc gian hàng ở phút 20/45 và đóng yêu cầu ở
  *     phút 60. Đây là việc NGHIỆP VỤ LÕI: nó chạy ở mọi cấu hình, kể cả khi chat Firestore tắt.
@@ -47,6 +48,9 @@ import { HOLIDAY_INTERVAL_MS, shouldRunHolidaySync, syncHolidays } from './jobs/
  *     NGHE thay vì hỏi lại mỗi vài chục giây. CHỈ khi `FIRESTORE_ENABLED`: tắt thì tín hiệu được
  *     GIỮ trong `user_badge_signals` (một dòng/người, không phình theo sự kiện) để bật lại là
  *     chiếu đúng những gì đã đổi — dọn chúng đi sẽ để lại document cũ thắng lượt đọc REST đầu tiên.
+ *  7. **Xếp hạng chợ xe** (22/09/2026) — tính lại `public_listings.rank_score` để khối "Xe phù
+ *     hợp với bạn" xếp đúng thứ tự. Việc nghiệp vụ, chạy ở mọi cấu hình; xem
+ *     `jobs/listing-rank-refresh.ts` để biết vì sao nó cần nhịp đồng hồ thay vì chỉ cần sự kiện.
  *
  * Ràng buộc chung: idempotent + advisory lock chống hai instance chạy chồng nhau. Chạy polling
  * loop (không kéo cả Nest runtime vào worker), và có endpoint `/health` nội bộ để Docker và
@@ -93,6 +97,15 @@ const LOCK_PUSH = 4_208;
 const PUSH_INTERVAL_MS = 5_000;
 
 const LOCK_BADGES = 4_209;
+
+/**
+ * Xếp hạng lại chợ xe. Sáu giờ một nhịp, không phải một phút: thành phần duy nhất cần nhịp này
+ * là ĐỘ MỚI (phai theo hằng số 30 ngày) và SỐ CHUYẾN — cả hai đo bằng ngày, nên một nhịp mịn
+ * hơn chỉ tạo ra cùng một con số và một lần ghi lại toàn bảng. Mọi thay đổi cần thấy ngay (duyệt
+ * xe, sửa giá, đánh giá mới) đã được `ListingsService` ghi trong chính transaction của nó.
+ */
+const LOCK_LISTING_RANK = 4_211;
+const LISTING_RANK_INTERVAL_MS = 6 * 60 * 60 * 1_000;
 /**
  * Nhịp chiếu huy hiệu. Ba giây là độ trễ tối đa giữa "có tin/thông báo mới" và "con số trên
  * chuông đổi" — đủ nhanh để badge còn giống realtime, và rẻ hơn hẳn thứ nó thay thế: trước đây
@@ -270,6 +283,11 @@ async function main(): Promise<void> {
       if (result.claimed) {
         console.log(`bảo hiểm: xử lý ${result.claimed}, lỗi ${result.failed}`);
       }
+    }),
+    loop('xếp hạng chợ xe', LOCK_LISTING_RANK, LISTING_RANK_INTERVAL_MS, async () => {
+      const changed = await refreshListingRanks(prisma);
+      // Chỉ log khi có dòng đổi — sáu giờ một dòng "0" là nhiễu, không phải dấu hiệu sống.
+      if (changed) console.log(`xếp hạng chợ: cập nhật ${changed} xe`);
     }),
     loop('dọn phiên OAuth dở dang', LOCK_OAUTH_STATES, OAUTH_STATE_INTERVAL_MS, async () => {
       const purged = await purgeExpiredOauthStates(prisma);

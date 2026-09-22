@@ -6,6 +6,8 @@ import {
   PROVINCE_CODES,
   buildProvinceAliasSeeds,
   normalizeProvinceAlias,
+  provinceRegion,
+  provinceRegionPeers,
   provinceSlug,
 } from './province';
 
@@ -189,5 +191,30 @@ describe('bí danh tỉnh', () => {
     const canonical = seeds.filter((s) => s.aliasType === PROVINCE_ALIAS_TYPE.CANONICAL_NAME);
     expect(canonical).toHaveLength(34);
     expect(new Set(canonical.map((s) => s.provinceCode)).size).toBe(34);
+  });
+});
+
+/**
+ * Vùng nuôi bậc "cùng miền" khi xếp hạng xe gần khách. Thiếu một mã ở bảng vùng thì tỉnh đó
+ * lặng lẽ rơi xuống bậc thấp nhất ở mọi kết quả — đúng loại lỗi không ai nhìn thấy, nên khoá
+ * bằng test thay vì bằng trí nhớ.
+ */
+describe('vùng địa lý của tỉnh', () => {
+  it('mọi mã trong danh mục đều được khai vùng', () => {
+    const missing = PROVINCE_CODES.filter((code) => provinceRegion(code) === null);
+    expect(missing).toEqual([]);
+  });
+
+  it('cùng vùng thì là bạn của nhau, và không ai là bạn của chính mình', () => {
+    const peers = provinceRegionPeers('01');
+    expect(peers).toContain('24');
+    expect(peers).toContain('31');
+    expect(peers).not.toContain('01');
+    expect(peers).not.toContain('79');
+  });
+
+  it('mã ngoài danh mục suy giảm êm: không vùng, không bạn cùng vùng', () => {
+    expect(provinceRegion('99')).toBeNull();
+    expect(provinceRegionPeers('99')).toEqual([]);
   });
 });

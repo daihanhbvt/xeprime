@@ -62,9 +62,11 @@
     "subtitle": "Thousands of cars and motorbikes from trusted shops across Vietnam"
   },
   "available": {
-    "title": "Available vehicles",
-    "titleWithService": "Available vehicles · {service}",
+    "title": "Picked for you",
+    "titleWithService": "Picked for you · {service}",
     "count": "({count, plural, one {# vehicle} other {# vehicles}})",
+    "nearProvince": "Prioritising vehicles in {province}",
+    "nearProvinceMixed": "Prioritising vehicles in {province} — not enough there, so others are included",
     "exploreAll": "Explore vehicles",
     "loadError": "Couldn't load the vehicle list",
     "openSearch": "Open search",

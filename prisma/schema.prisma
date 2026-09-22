@@ -1445,6 +1445,12 @@ model PublicListing {
   /// ListingsService.refreshRating được cập nhật (ADR 0008).
   ratingAvg                Decimal? @map("rating_avg") @db.Decimal(3, 2)
   ratingCount              Int      @default(0) @map("rating_count")
+  /// Điểm xếp hạng "phù hợp" trong [0,1] — phần KHÔNG phụ thuộc truy vấn của thứ tự gợi ý
+  /// (chất lượng Bayes, số chuyến đã chạy, độ đầy hồ sơ, độ mới). Phần phụ thuộc truy vấn
+  /// (khách đang ở tỉnh nào) cộng vào lúc đọc, không lưu ở đây. Cột DẪN XUẤT: nguồn ghi duy
+  /// nhất là `refreshListingRankScore` ở @xeprime/prisma (ADR 0008 §1) — ListingsService gọi
+  /// khi xe/đánh giá đổi, worker gọi mỗi ngày để độ mới kịp phai.
+  rankScore                Float    @default(0) @map("rank_score")
   createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -1460,6 +1466,10 @@ model PublicListing {
   @@index([serviceTypes], type: Gin)
   /// Bộ lọc marketplace theo tỉnh chạy trên MÃ, không phải tên.
   @@index([status, provinceCode])
+  /// Phục vụ khối "Xe phù hợp với bạn": lọc theo trạng thái + tỉnh rồi lấy điểm cao nhất.
+  @@index([status, provinceCode, rankScore])
+  /// Cùng truy vấn đó ở bậc "toàn quốc" (khách chưa có tỉnh, hoặc bù cho đủ số ô).
+  @@index([status, rankScore])
   @@index([tenantId, status])
   @@index([weekdayPrice])
   @@index([status, bodyType])
@@ -2447,6 +2457,13 @@ model VehicleHandoverPhoto {
 ///
 /// Đây KHÔNG phải sổ tiền: ghi phát sinh không sinh phiếu thu, không đụng `paid_amount`, không
 /// tạo giao dịch. Nó nuôi phép tính đề xuất hoàn cọc và dừng ở đó.
+///
+/// Chống trùng cho danh mục CHỈ-MỘT-KHOẢN: partial unique
+/// `(booking_id, category) WHERE voided_at IS NULL AND category = 'excess_mileage'`
+/// (migration SQL tay, Prisma không mô tả được điều kiện WHERE). Vượt km suy ra từ đúng MỘT cặp
+/// chỉ số đồng hồ nên nó là một con số duy nhất của chuyến; double-click hay hai tab cùng bấm
+/// "dùng số đề xuất" không được phép trừ tiền khách hai lần cho cùng quãng đường. Kiểm ở tầng
+/// app chỉ để có câu báo lỗi tử tế — chốt chặn là ràng buộc này (CLAUDE.md §5).
 model BookingSurcharge {
   id         String    @id @db.Char(26)
   tenantId   String    @map("tenant_id") @db.Char(26)

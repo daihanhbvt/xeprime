@@ -5468,6 +5468,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/listings/recommended": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Xe phù hợp với bạn — gợi ý trang chủ, ưu tiên theo tỉnh của khách
+         * @description **Truy cập:** công khai — không cần đăng nhập.
+         */
+        get: operations["PublicListingsController_recommended"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/shops": {
         parameters: {
             query?: never;
@@ -10190,8 +10210,17 @@ export interface components {
         DeliveryDistanceDto: {
             /** @enum {string} */
             status: "auto" | "manual" | "unsupported" | "address_not_found" | "unavailable";
+            /**
+             * @description Nguyên nhân báo giá thủ công — chỉ khác null khi status = 'manual'
+             * @enum {string|null}
+             */
+            manualReason?: "outside_auto_radius" | "route_unavailable" | "provider_unavailable" | null;
             /** @description Khoảng cách đường bộ MỘT CHIỀU (km). Null khi không tra được. */
             distanceKm?: number | null;
+            /** @description Khoảng cách đường chim bay (km) — chỉ có ở ca ngoài bán kính, không phải đường lái */
+            straightLineKm?: number | null;
+            /** @description Bán kính tự báo giá của chính sách hiệu lực (km) — để giao diện nói đúng con số */
+            maxRadiusKm?: number | null;
             /** @description Phí giao dự kiến (VND dạng chuỗi). Chỉ khác null khi status = 'auto'. */
             fee?: string | null;
             /** @description Điểm giao xe đi — chi nhánh giữ xe. Null khi chi nhánh chưa có toạ độ. */
@@ -10294,6 +10323,10 @@ export interface components {
             chargedDays: number;
             /** @description Hạn mức tổng = số ngày × km mỗi ngày */
             allowedKm: number;
+            /** @description Đồng hồ km lúc GIAO xe */
+            pickupOdometerKm?: number | null;
+            /** @description Đồng hồ km lúc NHẬN LẠI xe */
+            returnOdometerKm?: number | null;
             /** @description Km thực tế đã chạy (đồng hồ trả − đồng hồ giao) */
             actualKm: number;
             /** @description Km vượt hạn mức (không âm) */
@@ -12455,6 +12488,20 @@ export interface components {
         };
         ReceiptVehicleOptionListDto: {
             data: components["schemas"]["ReceiptVehicleOptionDto"][];
+        };
+        RecommendedListingsDto: {
+            data: components["schemas"]["PublicListingDto"][];
+            meta: components["schemas"]["RecommendedListingsMetaDto"];
+        };
+        RecommendedListingsMetaDto: {
+            /** @description Số xe đang hiển thị trong khối */
+            count: number;
+            /** @description Tổng số xe khớp ngữ cảnh (dịch vụ/loại xe/thời gian), toàn quốc */
+            total: number;
+            /** @description Tỉnh đã được ưu tiên khi xếp hạng; null nghĩa là xếp theo cả nước */
+            nearProvinceCode?: string | null;
+            /** @description Kết quả có lẫn xe ngoài tỉnh được ưu tiên — UI cần nói rõ thay vì ngụ ý */
+            mixedProvinces: boolean;
         };
         ReconciliationCustodiedDto: {
             /** @description TOÀN BỘ số đã nhận của hold chưa chốt kết cục. Không tách riêng phần `D+IV+IP`: trước khi chốt thì cả `S` cũng có thể phải hoàn khách (huỷ sớm), nên chưa đồng nào là của nền tảng. */
@@ -52515,6 +52562,100 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["MarketPriceSuggestionDto"];
                     };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PublicListingsController_recommended: {
+        parameters: {
+            query?: {
+                /** @description car | motorbike */
+                vehicleType?: "car" | "motorbike";
+                serviceType?: "self_drive" | "with_driver" | "long_term";
+                /** @description Mã tỉnh 2 ký tự khách đang quan tâm — ƯU TIÊN xếp hạng, KHÔNG lọc bỏ xe tỉnh khác */
+                nearProvinceCode?: string;
+                /** @description Nhận xe (ISO-8601) — loại xe đã bận trong khoảng */
+                pickupAt?: string;
+                /** @description Trả xe (ISO-8601) — dùng cùng pickupAt */
+                returnAt?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendedListingsDto"];
                 };
             };
             /**
