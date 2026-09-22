@@ -6,11 +6,18 @@ import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
-import { BOOKING_STATUS } from '@xeprime/types';
+import {
+  BOOKING_STATUS,
+  CANCELLATION_REASON_CATEGORY_VALUES,
+  cancellationReasonNeedsText,
+  type CancellationReasonCategory,
+} from '@xeprime/types';
 import { DialogForm } from '@/components/form/DialogForm';
+import { SelectField } from '@/components/form/SelectField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { isZeroMoney } from '@/lib/money';
 import { useTransitionBooking } from '../hooks/use-booking-mutations';
@@ -49,6 +56,18 @@ interface BookingStatusTransitionDialogProps {
  * Tiền đã thu KHÔNG bị đụng tới. XePrime không có cổng thanh toán (ADR 0013) nên không có gì để
  * hoàn tự động — hộp này nói thẳng điều đó TRƯỚC khi bấm, thay vì để nhân viên phát hiện ra khi
  * khách gọi đòi tiền.
+ *
+ * ## Huỷ đơn còn có một ô nữa: NHÓM lý do (ADR 0045 điều 1)
+ *
+ * Ô chữ tự do trả lời "vì sao" cho một con người đọc; nhóm lý do trả lời cùng câu đó cho một
+ * câu SQL. Vận hành cần biết "xe hỏng" chiếm bao nhiêu phần trăm để sửa đúng chỗ, và chỉ số
+ * uy tín cần một khoá để lọc — không cột nào làm được việc của cột kia.
+ *
+ * `no_show` KHÔNG có ô này: nó tự nó đã là một phân loại, và bên chịu trách nhiệm ở đó là
+ * khách chứ không phải gian hàng.
+ *
+ * Danh sách nhóm KHÔNG có "bất khả kháng". Trách nhiệm do server suy từ người thao tác, không
+ * do người huỷ tự khai — cho tự chọn là xoá luôn ý nghĩa của chỉ số uy tín.
  */
 export function BookingStatusTransitionDialog({
   booking,
@@ -60,6 +79,7 @@ export function BookingStatusTransitionDialog({
   const { message } = App.useApp();
   const fmt = useAppFormat();
   const errorMessage = useErrorMessage();
+  const domainLabel = useDomainLabel();
   const transition = useTransitionBooking(booking.id);
 
   const isCancel = target === BOOKING_STATUS.CANCELLED;
@@ -78,14 +98,56 @@ export function BookingStatusTransitionDialog({
           .required(t('reasonRequired'))
           .max(REASON_MAX, t('reasonTooLong'))
           .default(''),
+        /*
+         * Bắt buộc CHỈ khi huỷ. `no_show` đi qua cùng hộp này nhưng không phải một lượt huỷ,
+         * và backend cũng chỉ đòi nhóm lý do khi `status = cancelled` — hai phía phải hỏi
+         * đúng một câu, nếu không sẽ có một ô bắt buộc mà server chẳng dùng tới.
+         *
+         * Điều kiện nằm trong `.test()` chứ không phải một ternary chọn giữa hai schema: ternary
+         * cho ra HAI hình dạng object khác nhau, và `useForm` mất khả năng suy kiểu từ resolver
+         * (TS2322 hàng loạt ở mọi `control`). Một hình dạng, một phép kiểm chạy lúc gửi.
+         */
+        reasonCategory: yup
+          .string()
+          .defined()
+          .default('')
+          .test(
+            'category-required-on-cancel',
+            t('categoryRequired'),
+            (value) =>
+              !isCancel ||
+              (CANCELLATION_REASON_CATEGORY_VALUES as readonly string[]).includes(value),
+          ),
       }),
-    [t],
+    [t, isCancel],
   );
 
-  const { control, handleSubmit } = useForm<{ reason: string }>({
+  /*
+   * Ô nhóm lý do khai là `string` BẮT BUỘC với mặc định rỗng, không phải `string | undefined`.
+   *
+   * Không phải chuyện thẩm mỹ: `useForm` suy tham số kiểu thứ ba từ resolver, và một khoá tuỳ
+   * chọn trong kiểu yup sinh ra làm phép suy đó gãy — mọi `control` truyền xuống field thành
+   * TS2322. Cả kho dùng đúng một lối: field khai `defined()`, luật nằm ở `.test()`.
+   * Chuỗi rỗng không bao giờ ra tới API — `submit` chỉ gửi khi đang HUỶ, và lúc đó `.test()`
+   * đã buộc nó phải là một mã hợp lệ.
+   */
+  const { control, handleSubmit, watch } = useForm<{ reason: string; reasonCategory: string }>({
     resolver: yupResolver(schema),
-    defaultValues: { reason: '' },
+    defaultValues: { reason: '', reasonCategory: '' },
   });
+
+  /*
+   * "Lý do khác" thì ô chữ phải nói được điều mà nhóm không nói. Nó vốn đã bắt buộc ở hộp này,
+   * nên chỗ này chỉ đổi GỢI Ý dưới ô — một câu nhắc đúng lúc rẻ hơn một lỗi đỏ sau khi gửi.
+   */
+  const needsText = cancellationReasonNeedsText(
+    watch('reasonCategory') as CancellationReasonCategory,
+  );
+
+  const categoryOptions = CANCELLATION_REASON_CATEGORY_VALUES.map((value) => ({
+    value,
+    label: domainLabel('cancellationReasonCategory', value),
+  }));
 
   /*
    * "Đã thu" là tiền gian hàng ĐANG CẦM của khách — gồm cả phiếu thu tay ghi ở sổ Thu-Chi.
@@ -94,9 +156,21 @@ export function BookingStatusTransitionDialog({
    */
   const hasCollected = !isZeroMoney(booking.collectedAmount);
 
-  function submit(values: { reason: string }) {
+  function submit(values: { reason: string; reasonCategory: string }) {
     transition.mutate(
-      { status: target, reason: values.reason.trim() },
+      {
+        status: target,
+        reason: values.reason.trim(),
+        /*
+         * `no_show` không gửi nhóm lý do — DTO chỉ đòi nó khi huỷ, và gửi thừa là nói dối dữ
+         * liệu. Ép kiểu ở đây là chỗ DUY NHẤT hợp lệ: ô chọn chỉ dựng được từ
+         * `CANCELLATION_REASON_CATEGORY_VALUES`, và `.test()` của schema đã chặn mọi giá trị
+         * ngoài danh sách trước khi `submit` chạy.
+         */
+        ...(isCancel
+          ? { reasonCategory: values.reasonCategory as CancellationReasonCategory }
+          : {}),
+      },
       {
         onSuccess: () => {
           message.success(
@@ -166,12 +240,24 @@ export function BookingStatusTransitionDialog({
           />
         ) : null}
 
+        {isCancel ? (
+          <SelectField
+            control={control}
+            name="reasonCategory"
+            label={t('categoryLabel')}
+            options={categoryOptions}
+            placeholder={t('categoryPlaceholder')}
+            help={t('categoryHelp')}
+            required
+          />
+        ) : null}
+
         <TextAreaField
           control={control}
           name="reason"
           label={t('reasonLabel')}
           placeholder={t('reasonPlaceholder')}
-          help={t('reasonHelp')}
+          help={needsText ? t('reasonHelpOther') : t('reasonHelp')}
           maxLength={REASON_MAX}
           rows={3}
           required

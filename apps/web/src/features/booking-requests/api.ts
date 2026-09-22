@@ -12,6 +12,7 @@ import type {
   BookingRequestItem,
   BookingRequestListMeta,
   BookingRequestReceipt,
+  CancelBookingRequestInput,
   CheckAvailabilityInput,
   CheckAvailabilityResult,
   CreateBookingRequestInput,
@@ -93,6 +94,19 @@ export const approveBookingRequest = (
 
 export const rejectBookingRequest = (id: string, reason?: string): Promise<BookingRequestItem> =>
   apiPost<BookingRequestItem>(`/booking-requests/${id}/reject`, { reason });
+
+/**
+ * HUỶ một chuyến ĐÃ NHẬN — khác endpoint với `reject` vì đây là một việc khác (ADR 0045 điều 1).
+ *
+ * `reject` trả lời "không" cho một câu hỏi còn treo; `cancel` rút lại một lời đã hứa, nên nó
+ * phải đóng khoản giữ chỗ, nhả lịch, hoàn phần khách đã chuyển và ghi một dòng trách nhiệm.
+ * Gộp hai việc vào một endpoint bằng một cờ sẽ để một trong hai nhánh tiền đi sai đường.
+ */
+export const cancelBookingRequest = (
+  id: string,
+  body: CancelBookingRequestInput,
+): Promise<BookingRequestItem> =>
+  apiPost<BookingRequestItem>(`/booking-requests/${id}/cancel`, body);
 
 /**
  * Mở/lấy hội thoại với khách của một yêu cầu — đường của GIAN HÀNG.

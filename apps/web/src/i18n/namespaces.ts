@@ -87,6 +87,9 @@ export const MESSAGE_NAMESPACES = [
   { file: 'support-cases', namespace: 'SupportCases' },
   // Quản trị chính sách phí có phiên bản (R3 — ADR 0028 điều 2–3).
   { file: 'fee-policies', namespace: 'FeePolicies' },
+  // Mã khuyến mãi nền tảng (ADR 0046) — dùng chung KHÁCH (ô áp mã) và ADMIN (màn quản trị):
+  // hai bề mặt nói về cùng một chiến dịch, nên cùng một bộ nhãn và cùng một bản dịch lý do.
+  { file: 'promo-codes', namespace: 'PromoCodes' },
   // Money operations của nền tảng: hàng đợi giữ chỗ, chuyển trả, đối chiếu ngày (R3).
   { file: 'platform-money', namespace: 'PlatformMoney' },
   // Hàng đợi xác minh người bán của nền tảng (R3 — ADR 0028 release gate 1).

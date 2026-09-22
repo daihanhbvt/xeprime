@@ -57,7 +57,7 @@ function row(
   // Đích đóng băng vào `data_json` lúc PHÁT — worker gửi (push-dispatch) chỉ đọc lại nó, vì bề
   // mặt của người nhận không suy được từ hàng trong DB. Cùng luật với NotificationService.
   const url = notificationDeepLink(
-    { targetType: payload.targetType, targetId: payload.targetId },
+    { targetType: payload.targetType, targetId: payload.targetId, type: payload.type },
     audience,
   );
 

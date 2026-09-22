@@ -630,17 +630,17 @@ describe('RequestBookingModal — luồng đặt xe', () => {
     });
 
     /**
-     * BƯỚC QR NGAY SAU KHI GỬI — ADR 0039 điều 1, và bản vá giao diện 16/09.
+     * BƯỚC QR NGAY SAU KHI GỬI — chỉ khi xe bật "Đặt ngay" và hệ thống vừa NHẬN chuyến
+     * (ADR 0044 điều 2). Ở đường mặc định, gửi xong là chờ duyệt và KHÔNG có QR nào.
      *
      * Ba lỗi mà ca này chặn, cả ba đều đến từ ảnh chụp màn hình thật:
      *
      *  1. Tiêu đề "Yêu cầu đã được gửi" + câu "chủ xe sẽ xem xét và phản hồi" — SAI ở chặng này:
-     *     chỗ đã bị giữ, đồng hồ đang chạy, và việc tiếp theo thuộc về KHÁCH.
-     *  2. HAI khối nói cùng một điều chồng lên nhau (một Alert của luồng + một Alert của
-     *     `TripHoldPanel`), đẩy mã QR xuống dưới nếp gấp.
+     *     chuyến đã được nhận, đồng hồ đang chạy, và việc tiếp theo thuộc về KHÁCH.
+     *  2. HAI khối nói cùng một điều chồng lên nhau, đẩy mã QR xuống dưới nếp gấp.
      *  3. Không có mã QR nào cả ⇒ khách rời đi mà không trả tiền.
      */
-    it('trả về awaiting_hold: tiêu đề nói ĐÃ GIỮ CHỖ, có QR, và không có khối chữ trùng', async () => {
+    it('trả về awaiting_hold: tiêu đề nói ĐÃ ĐƯỢC NHẬN, có QR, và không có khối chữ trùng', async () => {
       trip.data = {
         vehicle: { id: 'V1', name: 'Kia Seltos 2022', plateNumber: '43A-123.45' },
         hold: {
@@ -678,12 +678,12 @@ describe('RequestBookingModal — luồng đặt xe', () => {
 
       /*
        * (2) MỖI Ý NÓI ĐÚNG MỘT LẦN — đây là thứ ảnh chụp 16/09 cho thấy đã hỏng:
-       *   · "chỗ đã được giữ"        → tiêu đề, một lần;
-       *   · "chuyển khoản thế nào"   → câu mở của panel, một lần;
-       *   · "hết giờ thì mở lại"     → dòng dưới đồng hồ, một lần.
+       *   · "chuyến đã được nhận"  → tiêu đề, một lần;
+       *   · "phải làm gì tiếp"     → dòng dưới tiêu đề, một lần;
+       *   · "hết giờ thì mở lại"   → dòng ghi chú của panel, một lần.
        */
-      expect(screen.getAllByText(/chỗ xe đã được giữ cho bạn/i)).toHaveLength(1);
-      expect(screen.getAllByText(/đúng số tiền và nội dung dưới đây/i)).toHaveLength(1);
+      expect(screen.getAllByText(/chủ xe đã nhận chuyến của bạn/i)).toHaveLength(1);
+      expect(screen.getAllByText(/thanh toán tiền giữ chỗ trước khi hết giờ/i)).toHaveLength(1);
       expect(screen.getAllByText(/xe được mở lại cho khách khác/i)).toHaveLength(1);
 
       // (3) QR mang sẵn số tiền và nội dung — khách không bao giờ gõ tay mã đối soát.
@@ -1178,7 +1178,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
     async function reachDone() {
       api.submitBookingRequest.mockResolvedValue({ id: 'R1', status: 'pending_host_approval' });
       submitFromReview();
-      await screen.findByText('Yêu cầu đã được gửi');
+      await screen.findByText('Đã gửi yêu cầu');
     }
 
     it('hiện màn thành công kèm mã yêu cầu', async () => {
@@ -1187,9 +1187,26 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       await advanceToReview();
       await reachDone();
 
-      expect(screen.getByText('Yêu cầu đã được gửi')).toBeTruthy();
+      expect(screen.getByText('Đã gửi yêu cầu')).toBeTruthy();
       expect(screen.getByText(/R1/)).toBeTruthy();
       expect(screen.getByText(/Xe chưa được giữ chỗ/)).toBeTruthy();
+    });
+
+    /**
+     * ĐƯỜNG MẶC ĐỊNH KHÔNG CÓ QR — ADR 0044 điều 1.
+     *
+     * Chưa ai nhận chuyến thì chưa chốt được giá, chưa giữ chỗ và chưa có gì để thu. Dựng một
+     * mã QR ở đây là mời khách trả tiền cho một chỗ chưa tồn tại — đúng thứ mà đợt này bỏ đi.
+     */
+    it('chưa ai duyệt ⇒ KHÔNG có mã QR, không có thông tin chuyển khoản', async () => {
+      renderModal();
+      await advanceToOtp();
+      await advanceToReview();
+      await reachDone();
+
+      expect(screen.queryByAltText(/mã qr/i)).toBeNull();
+      expect(screen.queryByText(/nội dung chuyển khoản/i)).toBeNull();
+      expect(screen.queryByText(/còn lại để thanh toán/i)).toBeNull();
     });
 
     it('có lối liên hệ chủ xe, và nó đóng overlay trước khi rời trang', async () => {
@@ -1274,7 +1291,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(screen.getByText(/Trần Minh Tuấn · 0901234567/)).toBeTruthy();
 
       submitFromReview();
-      await screen.findByText('Yêu cầu đã được gửi');
+      await screen.findByText('Đã gửi yêu cầu');
       expect(api.sendAsync).not.toHaveBeenCalled();
       expect(api.verifyOtp).not.toHaveBeenCalled();
       expect(api.submitBookingRequest).toHaveBeenCalledWith(

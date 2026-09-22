@@ -7,6 +7,8 @@ export type BookingRequestItem = Schemas['BookingRequestDto'];
 export type CreateBookingRequestInput = Schemas['CreateBookingRequestDto'];
 /** Body duyệt — thuê dài hạn bắt buộc `scheduledPickupAt` (ADR 0011). */
 export type ApproveBookingRequestInput = Schemas['ApproveBookingRequestDto'];
+/** Body huỷ chuyến đã nhận — nhóm lý do BẮT BUỘC, chữ tự do bắt buộc khi chọn "Lý do khác". */
+export type CancelBookingRequestInput = Schemas['CancelBookingRequestDto'];
 export type BookingRequestReceipt = Schemas['BookingRequestReceiptDto'];
 export type CheckAvailabilityInput = Schemas['CheckAvailabilityDto'];
 export type CheckAvailabilityResult = Schemas['CheckAvailabilityResultDto'];
@@ -102,7 +104,8 @@ export const BOOKING_REQUEST_STATUS_ALL = 'all';
 /**
  * Tab GỘP "Cần xử lý" — KHÔNG phải một trạng thái thật của `BookingRequestStatus`, mà là HAI
  * trạng thái cùng cần gian hàng quyết định: `pending_host_approval` (mới hỏi) và `hold_paid`
- * (ADR 0039 — đã cọc, tiền đang nằm ở XePrime, xe đang bị giữ chỗ).
+ * (LEGACY ADR 0039 — đã trả đủ trước khi ai duyệt; ADR 0044 không sinh trạng thái này nữa, nhưng
+ * những yêu cầu đã ở đó vẫn cần gian hàng quyết).
  *
  * Trước đây hai cái này là HAI TAB riêng vì sợ `hold_paid` chìm mất. Nhưng nó chỉ chìm khi lẫn
  * vào tab "Tất cả" (gồm cả yêu cầu đã chết); gộp với đúng `pending_host_approval` không làm mất
@@ -188,6 +191,20 @@ export const bookingRequestsApi = {
     return getApiClient().post<BookingRequestItem>(
       `/booking-requests/${encodeURIComponent(id)}/reject`,
       { reason },
+    );
+  },
+
+  /**
+   * HUỶ một chuyến ĐÃ NHẬN — endpoint KHÁC `reject` vì đây là việc khác (ADR 0045 điều 1).
+   *
+   * `reject` trả lời "không" cho một câu hỏi còn treo; `cancel` rút lại một lời đã hứa, nên
+   * server phải đóng khoản giữ chỗ, nhả lịch, hoàn phần khách đã chuyển và ghi một dòng trách
+   * nhiệm. Gộp hai việc vào một endpoint bằng một cờ sẽ để một trong hai nhánh tiền đi sai đường.
+   */
+  cancel(id: string, body: CancelBookingRequestInput): Promise<BookingRequestItem> {
+    return getApiClient().post<BookingRequestItem>(
+      `/booking-requests/${encodeURIComponent(id)}/cancel`,
+      body,
     );
   },
 

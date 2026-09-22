@@ -7,10 +7,9 @@ import {
   HOLD_FREE_CANCEL_HOURS,
   HOLD_MIN_AMOUNT,
   HOLD_COUNTDOWN_SEGMENT_MINUTES,
-  HOLD_MAX_EXTENSIONS,
+  HOLD_PAYMENT_REMINDER_REMAINING_MINUTES,
   HOLD_MIN_USABLE_WINDOW_MINUTES,
   HOLD_PAYMENT_WINDOW_MINUTES,
-  HOLD_TOTAL_WINDOW_MINUTES,
   WITHDRAWAL_TERMS,
   holdExpiresAt,
   holdFreeCancelUntil,
@@ -90,36 +89,45 @@ describe('mốc thời gian của khoản giữ chỗ', () => {
     expect(holdExpiresAt(created, 120).toISOString()).toBe('2026-08-28T05:00:00.000Z');
   });
 
-  it('mặc định (không truyền cửa sổ) là 10 PHÚT — ADR 0039 điều 2', () => {
+  it('mặc định (không truyền cửa sổ) là 120 PHÚT — ADR 0044 điều 3', () => {
     const created = new Date('2026-08-28T03:00:00.000Z');
-    expect(holdExpiresAt(created).toISOString()).toBe('2026-08-28T03:10:00.000Z');
-    expect(HOLD_PAYMENT_WINDOW_MINUTES).toBe(10);
-  });
-
-  it('đồng hồ chạy MỘT chặng — mười phút không chia nhỏ được nữa', () => {
-    expect(HOLD_COUNTDOWN_SEGMENT_MINUTES).toBe(HOLD_PAYMENT_WINDOW_MINUTES);
-    expect(HOLD_PAYMENT_WINDOW_MINUTES / HOLD_COUNTDOWN_SEGMENT_MINUTES).toBe(1);
+    expect(holdExpiresAt(created).toISOString()).toBe('2026-08-28T05:00:00.000Z');
+    expect(HOLD_PAYMENT_WINDOW_MINUTES).toBe(120);
   });
 
   /**
-   * HAI con số, hai câu hỏi khác nhau — và lẫn chúng là nguồn của những câu như "giữ 10 phút"
-   * trong khi lịch xe thật sự bị khoá gấp ba.
+   * Cửa sổ chia thành HAI chặng 60 phút — ADR 0032 điều 2 ("hai countdown 60 phút").
    *
-   *   * `HOLD_PAYMENT_WINDOW_MINUTES` — đồng hồ khách NHÌN THẤY;
-   *   * `HOLD_TOTAL_WINDOW_MINUTES` — bao lâu thì chiếc xe chắc chắn được nhả cho người khác.
+   * Không phải chi tiết trình bày: ranh giới giữa hai chặng đúng là mốc worker bắn lần nhắc thứ
+   * nhất, nên hai kênh (đồng hồ trên màn hình và thông báo) phải nói cùng một điều tại cùng một
+   * thời điểm. Lệch một trong hai số là hai câu trả lời khác nhau cho cùng một câu hỏi.
    */
-  it('trần giữ xe = cửa sổ × (số lần gia hạn + 1) = 30 phút', () => {
-    expect(HOLD_MAX_EXTENSIONS).toBe(2);
-    expect(HOLD_TOTAL_WINDOW_MINUTES).toBe(30);
-    expect(HOLD_TOTAL_WINDOW_MINUTES).toBe(
-      HOLD_PAYMENT_WINDOW_MINUTES * (HOLD_MAX_EXTENSIONS + 1),
-    );
+  it('cửa sổ chia đúng hai chặng, ranh giới trùng mốc nhắc thứ nhất', () => {
+    expect(HOLD_COUNTDOWN_SEGMENT_MINUTES).toBe(60);
+    expect(HOLD_PAYMENT_WINDOW_MINUTES / HOLD_COUNTDOWN_SEGMENT_MINUTES).toBe(2);
+    expect(HOLD_PAYMENT_REMINDER_REMAINING_MINUTES.FIRST).toBe(HOLD_COUNTDOWN_SEGMENT_MINUTES);
   });
 
   /**
-   * Ngưỡng "cửa sổ còn dùng được" phải NHỎ HƠN cửa sổ. Trước ADR 0039 ngưỡng là 15 phút trong
-   * khi cửa sổ là 120 — hợp lệ; rút cửa sổ về 10 mà quên ngưỡng thì `expiresAt − now` không bao
-   * giờ vượt nổi nó và MỌI hold bị từ chối ngay lúc tạo. Ca này là cái chặn cho lần rút tiếp theo.
+   * HAI mốc nhắc, và chúng phải nằm THỰC SỰ trong cửa sổ.
+   *
+   * Một ngưỡng ≥ cửa sổ sẽ bắn ngay lúc hold vừa sinh — một thông báo "sắp hết hạn" gửi cùng
+   * giây với thông báo "hãy thanh toán". Đó chính là lý do lượt nhắc của ADR 0032 phải bị bỏ khi
+   * ADR 0039 rút cửa sổ về 10 phút; ca này là cái chặn để lịch sử đó không lặp lại.
+   */
+  it('hai mốc nhắc nằm trong cửa sổ và giảm dần', () => {
+    const { FIRST, FINAL } = HOLD_PAYMENT_REMINDER_REMAINING_MINUTES;
+    expect(FIRST).toBeLessThan(HOLD_PAYMENT_WINDOW_MINUTES);
+    expect(FINAL).toBeLessThan(FIRST);
+    expect(FINAL).toBeGreaterThan(0);
+  });
+
+  /**
+   * Ngưỡng "cửa sổ còn dùng được" phải NHỎ HƠN cửa sổ.
+   *
+   * `expiresAt − now` không bao giờ vượt quá cửa sổ thanh toán, nên một ngưỡng ≥ cửa sổ sẽ từ
+   * chối MỌI hold ngay lúc tạo — tức là cả sàn ngừng nhận đơn, im lặng. Đúng cái bẫy mà ADR 0039
+   * rơi vào khi rút cửa sổ 120 → 10 mà ngưỡng vẫn là 15; ca này là cái chặn cho lần sau.
    */
   it('ngưỡng cửa sổ dùng được phải nhỏ hơn chính cửa sổ', () => {
     expect(HOLD_MIN_USABLE_WINDOW_MINUTES).toBeLessThan(HOLD_PAYMENT_WINDOW_MINUTES);

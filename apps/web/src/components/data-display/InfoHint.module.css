@@ -1,0 +1,49 @@
+/**
+ * Dấu "i" — nút thật, nhưng trông như một icon nhạt cạnh nhãn.
+ *
+ * `inline-flex` + `vertical-align` giữ nó thẳng hàng với chữ đứng cạnh; padding 0 và nền trong
+ * suốt xoá mọi dấu vết của `<button>` mặc định mà không xoá khả năng nhận focus.
+ */
+.trigger {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  margin: 0 0 0 var(--xp-space-xxs);
+  background: none;
+  color: var(--xp-color-text-tertiary);
+  cursor: help;
+  font-size: inherit;
+  line-height: 1;
+  vertical-align: baseline;
+}
+
+.trigger:hover,
+.trigger:focus-visible {
+  color: var(--xp-color-primary);
+}
+
+/*
+ * Vòng focus PHẢI thấy được: đây là một nút chỉ-icon, không có chữ nào để người dùng bàn phím
+ * biết mình đang đứng ở đâu.
+ */
+.trigger:focus-visible {
+  border-radius: var(--xp-border-radius-sm);
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 2px;
+}
+
+/*
+ * Bản chỉ-dành-cho-trình-đọc của nội dung tooltip — cắt về 1px thay vì `display: none`, vì
+ * `none` bị loại khỏi cây khả truy cập và `aria-describedby` sẽ trỏ vào hư không.
+ */
+.srOnly {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  margin: -1px;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

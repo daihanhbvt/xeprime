@@ -55,11 +55,13 @@ vi.mock('@/features/booking-requests/hooks/use-booking-requests', () => ({
 const mutations = vi.hoisted(() => ({
   approve: { mutate: vi.fn(), isPending: false, variables: undefined as unknown },
   reject: { mutate: vi.fn(), isPending: false, variables: undefined as unknown },
+  cancel: { mutate: vi.fn(), isPending: false, variables: undefined as unknown },
   conversation: { mutate: vi.fn(), isPending: false, variables: undefined as unknown },
 }));
 vi.mock('@/features/booking-requests/hooks/use-booking-request-mutations', () => ({
   useApproveBookingRequest: () => mutations.approve,
   useRejectBookingRequest: () => mutations.reject,
+  useCancelBookingRequest: () => mutations.cancel,
   useStartBookingRequestConversation: () => mutations.conversation,
 }));
 
@@ -461,8 +463,11 @@ describe('/manage/booking-requests — tiền trên thẻ', () => {
  * trông như biến mất và mất luôn nút Duyệt. KHÔNG có tab riêng (phản hồi 19/09/2026, lượt hai:
  * chỉ "Cần xử lý" và "Tất cả" là đủ, một trạng thái không-hành-động-được không đáng một tab) —
  * vẫn xem được qua "Tất cả", và thẻ tự nói rõ lý do thay vì để trống.
+ *
+ * Từ ADR 0044 chặng này nghĩa là GIAN HÀNG ĐÃ NHẬN và đang chờ khách trả tiền, nên thẻ còn phải
+ * nói ĐÚNG mốc chỗ sẽ tự nhả — thứ quyết định người trực có nên gọi cho khách hay không.
  */
-describe('/manage/booking-requests — awaiting_hold (chờ khách chuyển khoản)', () => {
+describe('/manage/booking-requests — awaiting_hold (đã nhận, chờ khách thanh toán)', () => {
   it('KHÔNG có tab riêng — vẫn đếm đúng ở "Tất cả", không lẫn vào "Cần xử lý"', () => {
     setRows([request({ status: BOOKING_REQUEST_STATUS.AWAITING_HOLD, bookingId: null })], {
       total: 1,
@@ -490,9 +495,7 @@ describe('/manage/booking-requests — awaiting_hold (chờ khách chuyển kho�
 
     expect(within(card).queryByRole('button', { name: 'Duyệt & giữ xe' })).toBeNull();
     expect(within(card).queryByRole('button', { name: 'Từ chối' })).toBeNull();
-    expect(
-      within(card).getByText(/Đang chờ khách chuyển khoản giữ chỗ/),
-    ).toBeTruthy();
+    expect(within(card).getByText(/đang chờ khách thanh toán tiền giữ chỗ/i)).toBeTruthy();
   });
 });
 

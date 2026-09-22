@@ -14,8 +14,13 @@ export function DataRow({
   labelWide = false,
 }: {
   label: string;
-  /** Dòng phụ dưới NHÃN — giải thích nhãn nghĩa là gì. */
-  hint?: string;
+  /**
+   * Dòng phụ dưới NHÃN — giải thích nhãn nghĩa là gì.
+   *
+   * Nhận `ReactNode` để một nhãn có thể mang dấu "i" (`InfoHint`) thay cho một câu giải thích
+   * dài luôn hiện: chuỗi thì được bọc vào `Text` như trước, node thì dựng nguyên.
+   */
+  hint?: ReactNode;
   value: string;
   /**
    * Nút nhỏ đứng NGAY CẠNH giá trị — "Sửa" của phí giao nhận chẳng hạn.
@@ -100,11 +105,13 @@ export function DataRow({
       >
         {label}
       </Text>
-      {hint ? (
+      {typeof hint === 'string' ? (
         <Text col={colors.placeholder} fos={fontSize.label}>
           {hint}
         </Text>
-      ) : null}
+      ) : (
+        (hint ?? null)
+      )}
     </YStack>
   );
 

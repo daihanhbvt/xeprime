@@ -1,11 +1,13 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@xeprime/prisma';
+import { Prisma, releasePromoRedemption } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
   BOOKING_REQUEST_STATUS,
   type BookingPriceSnapshot,
   BOOKING_STATUS,
+  CANCELLATION_REASON_CATEGORY,
+  CANCELLATION_STAGE,
   CUSTOMER_TRIP_FILTER,
   WALLET_OWNER_TYPE,
   CUSTOMER_TRIP_FILTER_DEFAULT,
@@ -16,6 +18,7 @@ import {
   HANDOVER_TYPE,
   MEMBERSHIP_STATUS,
   NOTIFICATION_TARGET_TYPE,
+  PROMO_RELEASE_REASON,
   NOTIFICATION_TYPE,
   PAYMENT_KIND,
   PAYMENT_STATUS,
@@ -50,6 +53,7 @@ import {
 } from '../../common/plan/feature-state';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { CancellationsService } from '../cancellations/cancellations.service';
 import { BookingsService } from '../bookings/bookings.service';
 import { BankAccountsService, type BankAccountOwner } from '../bank-accounts/bank-accounts.service';
 import { BookingHoldsService } from '../holds/booking-holds.service';
@@ -140,6 +144,8 @@ export class CustomerTripsService {
     private readonly bankAccounts: BankAccountsService,
     private readonly notifications: NotificationService,
     private readonly audit: AuditService,
+    /** Writer DUY NHẤT của `booking_cancellations` (ADR 0045 điều 1). */
+    private readonly cancellations: CancellationsService,
   ) {}
 
   async list(
@@ -424,8 +430,17 @@ export class CustomerTripsService {
           customerUserId,
           booking.status as BookingStatus,
           BOOKING_STATUS.CANCELLED,
-          // Khách thao tác, không phải nhân viên gian hàng — audit phải phân biệt được.
-          { actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER },
+          {
+            // Khách thao tác, không phải nhân viên gian hàng — audit phải phân biệt được.
+            actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
+            /*
+             * Nhóm lý do CỐ ĐỊNH cho đường này (ADR 0045 điều 1): khách bấm huỷ ở màn chuyến
+             * không có hộp chọn nhóm, và bịa ra một hộp chỉ để lấp dữ liệu sẽ cho ra một cột
+             * toàn "other". Phía chịu trách nhiệm suy từ `actorScope`, nên chuyến này không
+             * bao giờ tính vào chỉ số uy tín của gian hàng.
+             */
+            reasonCategory: CANCELLATION_REASON_CATEGORY.CUSTOMER_CHANGED_PLAN,
+          },
         );
       });
       return this.detail(customerUserId, id);
@@ -463,6 +478,47 @@ export class CustomerTripsService {
           requestId: row.id,
           tenantId: row.tenantId,
           actorUserId: customerUserId,
+        });
+      }
+      /*
+       * MỘT dòng `booking_cancellations` cho lượt huỷ của KHÁCH ở chặng đã được nhận
+       * (ADR 0045 điều 1).
+       *
+       * Ghi để chỉ số uy tín ĐỌC ĐÚNG, không phải để phạt ai: `responsibleParty = customer` ⇒
+       * `counts_against_host = false` ⇒ mẫu đó VẪN nằm trong tử số "nhận và giữ chuyến". Gian
+       * hàng đã làm đúng phần của mình; phần còn lại không thuộc về họ.
+       *
+       * Chặng `pending_host_approval` KHÔNG ghi: ở đó chưa ai quyết định gì, và mẫu đó bị loại
+       * khỏi mẫu số ngay từ truy vấn — một dòng huỷ ở đây chỉ là rác.
+       */
+      if (
+        claimed.count > 0 &&
+        row.status !== BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL
+      ) {
+        await this.cancellations.recordWithinTx(tx, {
+          tenantId: row.tenantId,
+          bookingRequestId: row.id,
+          stage:
+            row.status === BOOKING_REQUEST_STATUS.HOLD_PAID
+              ? CANCELLATION_STAGE.HOLD_PAID
+              : CANCELLATION_STAGE.AWAITING_HOLD,
+          reasonCategory: CANCELLATION_REASON_CATEGORY.CUSTOMER_CHANGED_PLAN,
+          actorUserId: customerUserId,
+          actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
+        });
+      }
+      /*
+       * NHẢ lượt mã khuyến mãi (ADR 0046 điều 6) — khách rút lại TRƯỚC khi có đơn.
+       *
+       * `releasePromoRedemption` chỉ khớp lượt đang ở trạng thái GIỮ, nên nó tự đúng ở cả ba
+       * chặng huỷ được: chưa duyệt, đã nhận chờ tiền, và (dữ liệu LEGACY) đã trả chờ nhận. Một
+       * lượt đã CHỐT — tức là đơn đã hình thành — không khớp, và đó chính là quy tắc "đơn đã
+       * hình thành rồi bị huỷ KHÔNG khôi phục lượt mã".
+       */
+      if (claimed.count > 0) {
+        await releasePromoRedemption(tx, {
+          bookingRequestId: row.id,
+          reason: PROMO_RELEASE_REASON.REQUEST_CANCELLED,
         });
       }
       // 0 dòng = gian hàng vừa duyệt/từ chối xen vào giữa. Không ghi đè quyết định của họ.

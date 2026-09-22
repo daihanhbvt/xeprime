@@ -149,11 +149,21 @@ export const DEPOSIT_COLLECTION_PLATFORM_MANDATORY = true;
 // ── Trạng thái: tiền đã về chưa ─────────────────────────────────────────────
 
 export const BOOKING_HOLD_STATUS = {
-  /** Đã phát VietQR, đang chờ khách chuyển. Chiếm lịch (khoá mềm — ADR 0021 điều 6). */
+  /**
+   * Chuyến ĐÃ ĐƯỢC NHẬN, VietQR đã phát, đang chờ khách chuyển (ADR 0044 điều 2). Chiếm lịch —
+   * chỗ đã thuộc về đúng một người.
+   */
   PENDING: 'pending',
   /** Tiền về nhưng THIẾU — không tạo đơn, giữ nguyên mã để khách chuyển bù (ADR 0022 điều 5). */
   UNDERPAID: 'underpaid',
-  /** Đã đủ tiền. Đơn thuê được tạo trong CÙNG transaction, nên không có khoảng "đã trả mà chưa có đơn". */
+  /**
+   * Đã đủ tiền.
+   *
+   * Ở luồng hiện hành (ADR 0044) đơn thuê được tạo trong CÙNG transaction, nên không có khoảng
+   * "đã trả mà chưa có đơn". Hold LEGACY của ADR 0039 — sinh trước khi ai duyệt, nhận ra bằng
+   * `booking_requests.decided_at IS NULL` — vẫn có thể nằm ở `paid` mà chưa có đơn cho tới khi
+   * gian hàng bấm nhận.
+   */
   PAID: 'paid',
   /** Quá cửa sổ chuyển khoản mà chưa đủ tiền — worker ghi, nhả lịch. */
   EXPIRED: 'expired',

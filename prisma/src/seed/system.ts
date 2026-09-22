@@ -21,7 +21,11 @@ import {
   PLAN_STATUS,
   PLATFORM_ROLE,
   PLATFORM_ROLE_LABEL,
+  PROMO_AUDIENCE,
+  PROMO_DISCOUNT_TYPE,
+  PROMO_VEHICLE_SCOPE,
   SCOPE,
+  SERVICE_TYPE,
   SYSTEM_FINANCE_CATEGORY,
   TENANT_ROLE,
   TENANT_ROLE_LABEL,
@@ -31,7 +35,7 @@ import {
   type SystemFinanceCategoryKey,
 } from '@xeprime/types';
 import { Prisma } from '../index';
-import { log, photo, prisma, seedId } from './context';
+import { daysFromToday, log, photo, prisma, seedId } from './context';
 
 export type PermissionIds = Map<Permission, string>;
 
@@ -514,6 +518,194 @@ async function seedBanners(): Promise<void> {
   }
 }
 
+/**
+ * MÃ KHUYẾN MÃI NỀN TẢNG (ADR 0046) — dữ liệu NỀN, không phải demo.
+ *
+ * Ở đây vì ba lý do: chúng không có tên người thật, không thuộc gian hàng nào, và màn quản trị
+ * `/manage/admin/promo-codes` cần có nội dung để dùng được ngay sau `SEED_MODE=system`.
+ *
+ * Bộ này cố ý phủ đủ mọi hình dạng mà giao diện phải vẽ được: mã tiền / mã %, có trần / không
+ * trần, đang chạy / sắp diễn ra / sắp hết hạn / đã hết hạn / đã tắt / hết lượt, và mã KHÔNG
+ * công bố (chỉ gõ tay được). Thiếu một hình dạng nào thì nhánh giao diện của nó không ai từng
+ * nhìn thấy trước khi lên production.
+ *
+ * `update: {}` như banner: admin sửa rồi chạy lại seed thì bản sửa phải còn.
+ */
+const PROMO_CODES = [
+  {
+    key: 'banmoi',
+    code: 'BANMOI',
+    name: 'Ưu đãi khách hàng mới',
+    description: 'Giảm 100.000đ cho đơn thuê xe đầu tiên',
+    discountType: PROMO_DISCOUNT_TYPE.FIXED,
+    discountAmount: '100000',
+    minOrderAmount: '800000',
+    audience: PROMO_AUDIENCE.NEW_CUSTOMER,
+    totalUsageLimit: 500,
+    perCustomerLimit: 1,
+    startsFromToday: -21,
+    endsInDays: 100,
+  },
+  {
+    key: 'vaothu',
+    code: 'VAOTHU',
+    name: 'Voucher vào thu',
+    description: 'Giảm 8% giá thuê, tối đa 80.000đ',
+    discountType: PROMO_DISCOUNT_TYPE.PERCENT,
+    discountPercent: 8,
+    maxDiscountAmount: '80000',
+    minOrderAmount: '500000',
+    totalUsageLimit: 1000,
+    perCustomerLimit: 2,
+    startsFromToday: -7,
+    endsInDays: 69,
+  },
+  {
+    key: 'trangtron',
+    code: 'TRANGTRON',
+    name: 'Ưu đãi trung thu',
+    description: 'Giảm 120.000đ cho chuyến từ 1.000.000đ',
+    discountType: PROMO_DISCOUNT_TYPE.FIXED,
+    discountAmount: '120000',
+    minOrderAmount: '1000000',
+    totalUsageLimit: 500,
+    perCustomerLimit: 1,
+    startsFromToday: -2,
+    // Sắp hết hạn — đúng hình dạng thẻ thống kê "Sắp hết hạn" của màn admin đếm tới.
+    endsInDays: 5,
+  },
+  {
+    key: 'xemay50',
+    code: 'XEMAY50',
+    name: 'Xe máy đi phố',
+    description: 'Giảm 50.000đ cho chuyến thuê xe máy tự lái',
+    discountType: PROMO_DISCOUNT_TYPE.FIXED,
+    discountAmount: '50000',
+    minOrderAmount: '200000',
+    vehicleScope: PROMO_VEHICLE_SCOPE.MOTORBIKE,
+    serviceScope: [SERVICE_TYPE.SELF_DRIVE],
+    totalUsageLimit: 800,
+    perCustomerLimit: 3,
+    startsFromToday: -10,
+    endsInDays: 80,
+  },
+  {
+    key: 'vip20',
+    code: 'VIP20',
+    name: 'Ưu đãi khách VIP',
+    description: 'Giảm 20% giá thuê, tối đa 200.000đ — mã riêng, không công bố',
+    discountType: PROMO_DISCOUNT_TYPE.PERCENT,
+    discountPercent: 20,
+    maxDiscountAmount: '200000',
+    minOrderAmount: '1000000',
+    totalUsageLimit: 200,
+    perCustomerLimit: 1,
+    // KHÔNG công bố: chỉ gõ tay được, không lọt vào danh sách mã khả dụng của khách.
+    listed: false,
+    startsFromToday: -21,
+    endsInDays: 100,
+  },
+  {
+    key: 'sapmo',
+    code: 'SAPMO',
+    name: 'Chiến dịch sắp mở',
+    description: 'Giảm 150.000đ — bắt đầu tuần sau',
+    discountType: PROMO_DISCOUNT_TYPE.FIXED,
+    discountAmount: '150000',
+    minOrderAmount: '900000',
+    totalUsageLimit: 300,
+    perCustomerLimit: 1,
+    startsFromToday: 7,
+    endsInDays: 45,
+  },
+  {
+    key: 'hello50',
+    code: 'HELLO50',
+    name: 'Chào hè',
+    description: 'Giảm 50.000đ — chiến dịch đã kết thúc',
+    discountType: PROMO_DISCOUNT_TYPE.FIXED,
+    discountAmount: '50000',
+    minOrderAmount: '300000',
+    totalUsageLimit: 500,
+    perCustomerLimit: 1,
+    startsFromToday: -120,
+    endsInDays: -30,
+  },
+  {
+    key: 'flash48',
+    code: 'FLASH48',
+    name: 'Flash sale 48h',
+    description: 'Giảm 10% tối đa 100.000đ — đã dùng hết lượt',
+    discountType: PROMO_DISCOUNT_TYPE.PERCENT,
+    discountPercent: 10,
+    maxDiscountAmount: '100000',
+    totalUsageLimit: 50,
+    perCustomerLimit: 1,
+    startsFromToday: -12,
+    endsInDays: 30,
+    /*
+     * Bộ đếm mồi để màn admin có một hàng "Hết lượt" thật. `reserved_count` KHÔNG kèm dòng
+     * `promo_redemptions` nào, và đó là chủ đích của dữ liệu nền: một lượt dùng phải gắn với một
+     * yêu cầu thuê có thật, còn ở chế độ `system` thì chưa có yêu cầu nào tồn tại.
+     */
+    reservedCount: 50,
+  },
+  {
+    key: 'tamdung',
+    code: 'TAMDUNG',
+    name: 'Chiến dịch đang tạm dừng',
+    description: 'Giảm 80.000đ — công tắc đang TẮT',
+    discountType: PROMO_DISCOUNT_TYPE.FIXED,
+    discountAmount: '80000',
+    minOrderAmount: '600000',
+    totalUsageLimit: 400,
+    perCustomerLimit: 1,
+    isActive: false,
+    startsFromToday: -14,
+    endsInDays: 60,
+  },
+] as const;
+
+async function seedPromoCodes(): Promise<void> {
+  for (const promo of PROMO_CODES) {
+    const id = seedId(`promo:${promo.key}`);
+    await prisma.promoCode.upsert({
+      where: { id },
+      update: {},
+      create: {
+        id,
+        code: promo.code,
+        name: promo.name,
+        description: promo.description,
+        discountType: promo.discountType,
+        discountAmount:
+          'discountAmount' in promo && promo.discountAmount != null
+            ? new Prisma.Decimal(promo.discountAmount)
+            : null,
+        discountPercent: 'discountPercent' in promo ? promo.discountPercent : null,
+        maxDiscountAmount:
+          'maxDiscountAmount' in promo && promo.maxDiscountAmount != null
+            ? new Prisma.Decimal(promo.maxDiscountAmount)
+            : null,
+        minOrderAmount: new Prisma.Decimal(
+          'minOrderAmount' in promo ? promo.minOrderAmount : '0',
+        ),
+        audience: 'audience' in promo ? promo.audience : PROMO_AUDIENCE.ALL,
+        vehicleScope: 'vehicleScope' in promo ? promo.vehicleScope : PROMO_VEHICLE_SCOPE.ALL,
+        serviceScope: 'serviceScope' in promo ? [...promo.serviceScope] : [],
+        provinceCodes: [],
+        totalUsageLimit: promo.totalUsageLimit,
+        perCustomerLimit: promo.perCustomerLimit,
+        reservedCount: 'reservedCount' in promo ? promo.reservedCount : 0,
+        startsAt: daysFromToday(promo.startsFromToday),
+        endsAt: daysFromToday(promo.endsInDays),
+        isActive: 'isActive' in promo ? promo.isActive : true,
+        listed: 'listed' in promo ? promo.listed : true,
+      },
+    });
+  }
+}
+
 export interface SystemSeedResult {
   permissionIds: PermissionIds;
   financeCategoryIds: FinanceCategoryIds;
@@ -555,6 +747,9 @@ export async function seedSystemData(): Promise<SystemSeedResult> {
 
   await seedBanners();
   log(`  banner trang chủ: ${BANNERS.length}`);
+
+  await seedPromoCodes();
+  log(`  mã khuyến mãi nền tảng: ${PROMO_CODES.length}`);
 
   return { permissionIds, financeCategoryIds, planIds };
 }

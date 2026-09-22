@@ -4,12 +4,14 @@ import {
   API_ERROR_CODE,
   BILLING_MODE,
   AUDIT_ACTOR_SCOPE,
+  BOOKING_REQUEST_DECISION_SOURCE,
   BOOKING_REQUEST_REMINDER_MINUTES,
   BOOKING_REQUEST_RESPOND_WINDOW_MINUTES,
   BOOKING_REQUEST_STATUS,
   bookingRequestRespondBy,
   BOOKING_STATUS,
   MEMBERSHIP_STATUS,
+  NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   OCCUPANCY_SOURCE_TYPE,
   SERVICE_TYPE,
@@ -18,6 +20,7 @@ import {
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
 } from '@xeprime/types';
+import { sweepBookingHoldExpiry } from '../../worker/src/jobs/booking-hold-expiry';
 import { sweepBookingRequestDeadlines } from '../../worker/src/jobs/booking-request-deadlines';
 import { AuditService } from '../src/modules/audit/audit.service';
 import type { AuthService } from '../src/modules/auth/auth.service';
@@ -150,13 +153,10 @@ async function submit(vehicleId: string): Promise<string> {
 /**
  * Một yêu cầu dừng ở `pending_host_approval` — chặng mà worker nhắc hạn và cho hết hạn.
  *
- * Từ ADR 0039, chặng này không còn là mặc định: yêu cầu thường được giữ chỗ ngay lúc gửi và đi
- * thẳng sang `awaiting_hold`. Nó chỉ còn xuất hiện ở các ca KHÔNG chốt được số tiền lúc gửi —
- * thuê dài hạn, báo giá tạm tính, hoặc lịch vừa bị người khác chiếm.
- *
- * Spec này kiểm ĐỒNG HỒ của worker chứ không kiểm cách một yêu cầu rơi vào chặng đó, nên nó
- * dựng thẳng bản ghi thay vì đi vòng qua một cấu hình mong manh. Cùng cách làm với ca
- * "dài hạn LEGACY" ở `long-term-packages.spec.ts`.
+ * Từ ADR 0044 đây lại là chặng MẶC ĐỊNH của mọi yêu cầu vừa gửi: chưa ai duyệt thì chưa thu
+ * tiền và chưa giữ chỗ. `submit()` ở trên đi qua đúng đường đó; helper này dựng thẳng bản ghi
+ * để gắn thêm một TÀI KHOẢN khách — thông báo phía khách là một phần của luật mà spec này kiểm,
+ * và đường public tạo tài khoản theo SĐT thì không kiểm soát được id.
  */
 async function submitPendingApproval(vehicleId: string): Promise<string> {
   const id = newId();
@@ -262,7 +262,7 @@ const maybe = (name: string, fn: () => Promise<void>) =>
     await fn();
   });
 
-describe('Gửi yêu cầu: hạn 60 phút, GIỮ CHỖ ngay (ADR 0039)', () => {
+describe('Gửi yêu cầu: hạn 60 phút, CHƯA giữ chỗ (ADR 0044)', () => {
   maybe('respondBy = createdAt + 60 phút, do server đặt', async () => {
     const vehicleId = await seedVehicle();
     const id = await submit(vehicleId);
@@ -272,7 +272,7 @@ describe('Gửi yêu cầu: hạn 60 phút, GIỮ CHỖ ngay (ADR 0039)', () => 
       select: { createdAt: true, respondBy: true, status: true },
     });
 
-    expect(row.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    expect(row.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
     // So theo PHÚT: `created_at` do DB đặt còn `respond_by` do Node tính, hai đồng hồ lệch nhau
     // vài mili-giây là chuyện bình thường và không phải thứ test này nói về.
     const gapMinutes = (row.respondBy.getTime() - row.createdAt.getTime()) / MINUTE;
@@ -280,23 +280,37 @@ describe('Gửi yêu cầu: hạn 60 phút, GIỮ CHỖ ngay (ADR 0039)', () => 
   });
 
   /**
-   * ⚠️ BẤT BIẾN NÀY ĐÃ ĐẢO CHIỀU Ở ADR 0039 — và đây là thay đổi lớn nhất của cả đợt.
+   * ⚠️ BẤT BIẾN GỐC CỦA ADR 0006, được ADR 0044 trả lại sau một vòng qua ADR 0039.
    *
-   * Luật cũ: "chờ shop trả lời" KHÔNG phải "đã giữ xe", nên gửi yêu cầu không chiếm lịch và hai
-   * khách cùng hỏi một xe đều gửi được. Cái giá của nó là người thứ hai có thể chờ hàng giờ rồi
-   * mới biết mình không có xe.
-   *
-   * Luật mới: khách TRẢ TIỀN trước, nên chỗ được giữ ngay lúc bấm. Cuộc đua chuyển lên sớm hơn —
-   * người thua biết ngay, thay vì biết sau khi đã chờ.
+   * "Chờ chủ xe trả lời" KHÔNG phải "đã giữ xe": chưa ai nhận chuyến thì chưa có chỗ nào thuộc
+   * về ai, và nhiều khách được phép cùng hỏi một chiếc xe. Chiếm lịch ở bước này là khoá xe cho
+   * một người có thể đã đóng trình duyệt ngay sau khi bấm.
    */
-  maybe('yêu cầu vừa gửi ĐÃ chiếm lịch — chỗ được giữ trong lúc khách trả tiền', async () => {
+  maybe('yêu cầu vừa gửi KHÔNG chiếm lịch và không sinh khoản tiền nào', async () => {
     const vehicleId = await seedVehicle();
-    await submit(vehicleId);
+    const id = await submit(vehicleId);
 
-    expect(await countOccupancyFor(vehicleId)).toBe(1);
+    expect(await countOccupancyFor(vehicleId)).toBe(0);
+    expect(await prisma.bookingHold.count({ where: { bookingRequestId: id } })).toBe(0);
   });
 
-  maybe('hai khách cùng hỏi một xe: người đầu giữ chỗ, người sau về hàng chờ', async () => {
+  /**
+   * ĐÚNG MỘT tin "có yêu cầu mới" mỗi lượt gửi.
+   *
+   * Hai nhánh cùng gửi tin này — nhánh trong transaction ghi yêu cầu, và nhánh sau khi một lượt
+   * tự nhận hụt — nên chúng phải LOẠI TRỪ nhau. Trong thời gian ADR 0039 còn hiệu lực chúng
+   * không loại trừ: đường "không tự nhận, không có hold" bắn cả hai, và nó hiếm nên không ai
+   * thấy. ADR 0044 biến chính đường đó thành mặc định của cả sàn, nên hai tin trùng sẽ là hai
+   * tin cho MỌI lượt đặt xe — cách nhanh nhất để người trực học cách bỏ qua thông báo.
+   */
+  maybe('gửi yêu cầu ⇒ ĐÚNG MỘT tin cho gian hàng, không phải hai', async () => {
+    const vehicleId = await seedVehicle();
+    const id = await submit(vehicleId);
+
+    expect(await notificationsOfType(NOTIFICATION_TYPE.BOOKING_REQUEST_SUBMITTED, id)).toBe(1);
+  });
+
+  maybe('hai khách cùng hỏi một xe: cả hai đều vào hàng chờ, chưa ai mất gì', async () => {
     const vehicleId = await seedVehicle();
     const window = nextWindow();
     const send = (phone: string) =>
@@ -308,23 +322,187 @@ describe('Gửi yêu cầu: hạn 60 phút, GIỮ CHỖ ngay (ADR 0039)', () => 
     const first = await send(nextPhone());
     const second = await send(nextPhone());
 
-    // Cả hai VẪN gửi được — không ai bị từ chối ở cửa, đó là luật không đổi.
-    expect(first.receipt.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    // Không ai bị từ chối ở cửa, và không ai giữ được chỗ trước khi chủ xe quyết định.
+    expect(first.receipt.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
     expect(second.receipt.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
+    expect(await countOccupancyFor(vehicleId)).toBe(0);
+  });
 
-    // Nhưng chỗ chỉ có MỘT: constraint DB là trọng tài (ADR 0006).
+  /**
+   * Chủ xe nhận MỘT trong hai ⇒ người kia được trả lời NGAY (ADR 0044 điều 6).
+   *
+   * Không có bước này, yêu cầu thua cuộc nằm im tới khi hết hạn phản hồi: khách chờ thêm tới một
+   * giờ một câu trả lời đã có sẵn, và gian hàng bị tính một lượt "không phản hồi" cho việc họ
+   * không gây ra.
+   */
+  maybe('nhận một yêu cầu ⇒ các yêu cầu trùng khung giờ được đóng bằng `slot_taken`', async () => {
+    const vehicleId = await seedVehicle();
+    const window = nextWindow();
+    const send = (phone: string) =>
+      requests.submitPublic(
+        { vehicleId, customerName: 'Khách', customerPhone: phone, ...window },
+        null,
+      );
+
+    const winner = await send(nextPhone());
+    const loser = await send(nextPhone());
+
+    await requests.approve(tenantId, ownerId, winner.receipt.id);
+
+    const closed = await prisma.bookingRequest.findUniqueOrThrow({
+      where: { id: loser.receipt.id },
+      select: { status: true, rejectReason: true, decisionSource: true, decidedBy: true },
+    });
+    expect(closed.status).toBe(BOOKING_REQUEST_STATUS.SLOT_TAKEN);
+    expect(closed.rejectReason).toBeTruthy();
+    // Hệ thống đóng, KHÔNG phải một người trong gian hàng — audit và tỉ lệ phản hồi đọc cột này.
+    expect(closed.decisionSource).toBe(BOOKING_REQUEST_DECISION_SOURCE.SYSTEM);
+    expect(closed.decidedBy).toBeNull();
+
+    // Và chỗ chỉ có MỘT: đúng một bản ghi chiếm lịch, của người thắng.
     expect(await countOccupancyFor(vehicleId)).toBe(1);
+  });
+
+  /**
+   * Yêu cầu KHÁC KHUNG GIỜ trên cùng chiếc xe không liên quan gì tới lượt duyệt này — đóng nó
+   * là cướp mất một chuyến mà gian hàng vẫn nhận được.
+   */
+  maybe('yêu cầu KHÔNG trùng khung giờ vẫn nằm nguyên trong hàng chờ', async () => {
+    const vehicleId = await seedVehicle();
+    const first = nextWindow();
+    const later = nextWindow();
+
+    const winner = await requests.submitPublic(
+      { vehicleId, customerName: 'Khách', customerPhone: nextPhone(), ...first },
+      null,
+    );
+    const other = await requests.submitPublic(
+      { vehicleId, customerName: 'Khách', customerPhone: nextPhone(), ...later },
+      null,
+    );
+
+    await requests.approve(tenantId, ownerId, winner.receipt.id);
+
+    expect(
+      (await prisma.bookingRequest.findUniqueOrThrow({ where: { id: other.receipt.id } })).status,
+    ).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
+  });
+
+  /*
+   * NGƯỜI THẮNG KHÔNG TRẢ TIỀN ⇒ chiếc xe rảnh lại. Câu hỏi là: những người thua nên nhận gì?
+   *
+   * KHÔNG hồi sinh yêu cầu cũ (ADR 0045 điều 6). Hồi sinh là tạo một chuyến mà cả hai bên đã
+   * quên, ở một mức giá đã cũ, cho một khung giờ khách có thể đã lấp bằng xe khác — và không ai
+   * bấm nút nào để nó xảy ra. Thay vào đó là một LỜI MỜI đặt lại, trỏ vào chiếc XE.
+   */
+  maybe('hold người thắng hết hạn ⇒ người thua nhận LỜI MỜI đặt lại, không bị hồi sinh', async () => {
+    const vehicleId = await seedVehicle();
+    const window = nextWindow();
+    const winner = await requests.submitPublic(
+      { vehicleId, customerName: 'Khách thắng', customerPhone: nextPhone(), ...window },
+      null,
+    );
+    const loser = await requests.submitPublic(
+      { vehicleId, customerName: 'Khách thua', customerPhone: nextPhone(), ...window },
+      null,
+    );
+    await requests.approve(tenantId, ownerId, winner.receipt.id);
+
+    const closed = await prisma.bookingRequest.findUniqueOrThrow({
+      where: { id: loser.receipt.id },
+      select: { status: true, customerUserId: true, slotReopenedNotifiedAt: true },
+    });
+    expect(closed.status).toBe(BOOKING_REQUEST_STATUS.SLOT_TAKEN);
+    expect(closed.slotReopenedNotifiedAt).toBeNull();
+
+    // Người thắng để hết hạn — worker nhả chỗ.
+    await prisma.bookingHold.updateMany({
+      where: { bookingRequestId: winner.receipt.id },
+      data: { expiresAt: new Date(Date.now() - 60_000) },
+    });
+    await sweepBookingHoldExpiry(prisma, new Date());
+
+    expect(await countOccupancyFor(vehicleId)).toBe(0);
+
+    // Yêu cầu thua cuộc VẪN đóng — không có đường nào biến nó thành đơn sau lưng hai bên.
+    const after = await prisma.bookingRequest.findUniqueOrThrow({
+      where: { id: loser.receipt.id },
+      select: { status: true, bookingId: true, slotReopenedNotifiedAt: true },
+    });
+    expect(after.status).toBe(BOOKING_REQUEST_STATUS.SLOT_TAKEN);
+    expect(after.bookingId).toBeNull();
+    expect(after.slotReopenedNotifiedAt).not.toBeNull();
+
+    // Lời mời trỏ vào CHIẾC XE, để khách gửi một yêu cầu mới ở giá và lịch hiện hành.
+    const invite = await prisma.notification.findFirstOrThrow({
+      where: {
+        userId: closed.customerUserId!,
+        type: NOTIFICATION_TYPE.BOOKING_REQUEST_SLOT_REOPENED,
+      },
+      select: { targetType: true, targetId: true },
+    });
+    expect(invite.targetType).toBe(NOTIFICATION_TARGET_TYPE.VEHICLE);
+    expect(invite.targetId).toBe(vehicleId);
+  });
+
+  /*
+   * Worker chạy theo nhịp, và một lượt quét có thể lặp lại trên cùng dữ liệu. Chống trùng bằng
+   * cột claim `slot_reopened_notified_at` (`updateMany` có điều kiện `null`), không bằng một
+   * phép so ở tầng app — hai lượt quét song song sẽ cùng đọc "chưa gửi".
+   */
+  maybe('lời mời chỉ gửi MỘT lần, dù worker quét lại', async () => {
+    const vehicleId = await seedVehicle();
+    const window = nextWindow();
+    const winner = await requests.submitPublic(
+      { vehicleId, customerName: 'Khách thắng', customerPhone: nextPhone(), ...window },
+      null,
+    );
+    // Người thua không cần giữ id: bài test này đếm LỜI MỜI theo chiếc xe, không theo yêu cầu.
+    await requests.submitPublic(
+      { vehicleId, customerName: 'Khách thua', customerPhone: nextPhone(), ...window },
+      null,
+    );
+    await requests.approve(tenantId, ownerId, winner.receipt.id);
+    await prisma.bookingHold.updateMany({
+      where: { bookingRequestId: winner.receipt.id },
+      data: { expiresAt: new Date(Date.now() - 60_000) },
+    });
+
+    await sweepBookingHoldExpiry(prisma, new Date());
+    await sweepBookingHoldExpiry(prisma, new Date());
+
+    /*
+     * Đếm theo CHIẾC XE, không theo người nhận: cả spec dùng chung một tài khoản khách vãng lai
+     * (`guestUserId`), nên đếm theo `userId` sẽ gộp cả lời mời của những bài test trước. Xe thì
+     * mỗi bài một chiếc — và `targetId` của lời mời chính là chiếc xe đó.
+     */
+    expect(
+      await prisma.notification.count({
+        where: {
+          type: NOTIFICATION_TYPE.BOOKING_REQUEST_SLOT_REOPENED,
+          targetType: NOTIFICATION_TARGET_TYPE.VEHICLE,
+          targetId: vehicleId,
+        },
+      }),
+    ).toBe(1);
   });
 });
 
 describe('Duyệt & giữ xe', () => {
-  maybe('trả tiền rồi duyệt → đơn reserved + occupancy, yêu cầu thành converted_to_booking', async () => {
+  maybe('duyệt rồi trả tiền → đơn reserved + occupancy, yêu cầu thành converted_to_booking', async () => {
     const vehicleId = await seedVehicle();
     const id = await submit(vehicleId);
 
-    // Tiền trước, duyệt sau (ADR 0039 điều 1): chưa trả thì chưa có gì để duyệt.
+    /*
+     * Duyệt trước, tiền sau (ADR 0044 điều 2): lượt duyệt chốt lịch và phát QR, còn ĐƠN THUÊ chỉ
+     * ra đời khi đối soát xác nhận đã nhận đủ tiền.
+     */
+    const accepted = await requests.approve(tenantId, ownerId, id);
+    expect(accepted.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    expect(accepted.bookingId).toBeNull();
+
     await payHoldForRequest(asService, holds, id);
-    const approved = await requests.approve(tenantId, ownerId, id);
+    const approved = await requests.getOne(tenantId, id);
 
     expect(approved.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
     expect(approved.bookingId).toBeTruthy();
@@ -508,9 +686,8 @@ describe('Đua giữa Duyệt & giữ xe và worker', () => {
      * cần chúng khớp nhau là đủ để nói "đúng một bên thắng".
      */
     /*
-     * Bên duyệt thắng ⇒ CHỜ TIỀN, chưa phải đơn thuê: cả sàn thu cọc từ 16/09/2026, nên lượt
-     * duyệt của gian hàng sinh hold và chốt lịch chứ không mở đơn (ADR 0039 điều 4 — chặng chờ
-     * duyệt tay là ngoại lệ giữ thứ tự duyệt-trước-cọc-sau).
+     * Bên duyệt thắng ⇒ CHỜ TIỀN, chưa phải đơn thuê: cả sàn thu tiền giữ chỗ từ 16/09/2026, nên
+     * lượt duyệt chốt lịch và phát QR chứ không mở đơn (ADR 0044 điều 2).
      */
     expect(row.status).toBe(
       approved ? BOOKING_REQUEST_STATUS.AWAITING_HOLD : BOOKING_REQUEST_STATUS.EXPIRED,

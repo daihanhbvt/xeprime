@@ -1,4 +1,10 @@
-import { BOOKING_STATUS, LISTING_STATUS } from '@xeprime/types';
+import {
+  BOOKING_REQUEST_STATUS,
+  BOOKING_STATUS,
+  HOST_METRIC_WINDOW_DAYS,
+  HOST_RELIABILITY_PRIOR,
+  LISTING_STATUS,
+} from '@xeprime/types';
 import { Prisma } from '../generated/client';
 import type { PrismaClient } from '../generated/client';
 
@@ -16,17 +22,23 @@ import type { PrismaClient } from '../generated/client';
  *
  * ## Điểm này ĐO cái gì
  *
- * Bốn thành phần, mỗi thành phần chuẩn hoá về [0,1] rồi nhân trọng số — tổng trọng số bằng 1
+ * SÁU thành phần, mỗi thành phần chuẩn hoá về [0,1] rồi nhân trọng số — tổng trọng số bằng 1
  * nên `rank_score` cũng nằm trong [0,1] và so sánh được giữa hai xe bất kỳ.
  *
- *   · **Chất lượng** (0,45) — trung bình BAYES chứ không phải `rating_avg` trần. Một xe 5,0 sao
+ *   · **Chất lượng** (0,40) — trung bình BAYES chứ không phải `rating_avg` trần. Một xe 5,0 sao
  *     với một đánh giá KHÔNG được thắng một xe 4,8 sao với hai trăm đánh giá; trung bình trần
  *     không phân biệt được "tốt" với "chưa ai chấm", Bayes thì có.
- *   · **Số chuyến đã chạy** (0,25) — thang log: chuyến thứ hai nói nhiều hơn chuyến thứ bốn mươi.
- *   · **Độ đầy hồ sơ** (0,18) — bốn điều kiện ĐẾM ĐƯỢC (ảnh chính, giá ngày, ≥4 ảnh, ≥3 tiện
+ *   · **Số chuyến đã chạy** (0,22) — thang log: chuyến thứ hai nói nhiều hơn chuyến thứ bốn mươi.
+ *   · **Độ đầy hồ sơ** (0,16) — bốn điều kiện ĐẾM ĐƯỢC (ảnh chính, giá ngày, ≥4 ảnh, ≥3 tiện
  *     ích). Xe thiếu ảnh không nên đứng trước xe khai đủ, dù cả hai chưa có đánh giá nào.
- *   · **Độ mới** (0,12) — phai theo hàm mũ (~30 ngày). Không có vế này thì xe mới lên sàn nằm
- *     vĩnh viễn ở dưới vì chưa ai từng thuê, nên sẽ mãi mãi không ai thuê.
+ *   · **Độ mới** (0,10) — phai theo hàm mũ (~30 ngày), áp cho MỌI xe.
+ *   · **Uy tín chủ xe** (0,07 — ADR 0045 điều 3) — tỉ lệ "nhận và giữ chuyến" trong 90 ngày,
+ *     LÀM MƯỢT Bayes. Chủ xe mới nhận mức nền trung tính; một sự cố đơn lẻ kéo xuống nhẹ chứ
+ *     không đẩy xuống đáy. Phép phân loại TRÙNG KHÍT "HostMetricsService" — con số khách nhìn
+ *     thấy và con số quyết định thứ hạng phải nói cùng một điều về cùng một người bán.
+ *   · **Khám phá** (0,05 — ADR 0045 điều 3) — CHỈ cho xe đủ hồ sơ, chưa có chuyến nào, và còn
+ *     trong cửa sổ "RANK_DISCOVERY_DAYS". Đây là vế gỡ cái bẫy tự khoá của sàn hai mặt: chưa ai
+ *     thuê nên không lên được trang đầu, nên sẽ mãi không ai thuê.
  *
  * ## Điểm này KHÔNG đo cái gì, và vì sao
  *
@@ -42,15 +54,38 @@ import type { PrismaClient } from '../generated/client';
 type Client = PrismaClient | Prisma.TransactionClient;
 
 /**
- * Trọng số bốn thành phần. Tổng phải bằng 1 — `apps/api/test/listing-recommendations.spec.ts`
+ * Trọng số SÁU thành phần. Tổng phải bằng 1 — `apps/api/test/listing-recommendations.spec.ts`
  * khoá lại điều đó, vì một tổng khác 1 làm `rank_score` không còn nằm trong thang [0,1] mà ADR
  * 0043, giao diện và hai index đang giả định.
  */
 export const RANK_SCORE_WEIGHTS = {
-  quality: 0.45,
-  traction: 0.25,
-  completeness: 0.18,
-  freshness: 0.12,
+  quality: 0.4,
+  traction: 0.22,
+  completeness: 0.16,
+  freshness: 0.1,
+  /**
+   * UY TÍN CỦA CHỦ XE (ADR 0045 điều 3) — từ chối nhiều, bỏ lỡ phản hồi và tự huỷ chuyến kéo
+   * vị trí xuống.
+   *
+   * Trọng số NHỎ có chủ đích. Đây là tín hiệu về người bán, còn thứ khách tìm là một chiếc xe:
+   * một chủ xe hoàn hảo với chiếc xe sai vẫn là kết quả sai. 0,07 đủ để phân biệt hai xe ngang
+   * nhau, không đủ để một sự cố đơn lẻ đẩy ai xuống đáy — và phép làm mượt ở dưới lo phần còn lại.
+   */
+  reliability: 0.07,
+  /**
+   * CƠ HỘI CHO XE MỚI (ADR 0045 điều 3) — khác `freshness`, và khác ở chỗ quan trọng.
+   *
+   * `freshness` phai cho MỌI xe, kể cả xe đã chạy trăm chuyến. Thành phần này chỉ bật cho xe
+   * **đủ điều kiện khám phá**: hồ sơ đầy, chưa có chuyến nào, và còn trong cửa sổ
+   * `RANK_DISCOVERY_DAYS`. Nó trả lời đúng cái bẫy tự khoá của một sàn hai mặt — chưa ai thuê
+   * nên không lên được trang đầu, nên sẽ mãi không ai thuê.
+   *
+   * Vì sao nằm trong ĐIỂM chứ không phải một bước trộn riêng lúc đọc: một bước trộn sẽ xáo thứ
+   * tự giữa hai lần gọi và làm vỡ phân trang (xe trùng giữa trang 1 và 2). Nằm trong điểm thì
+   * thứ tự ổn định, và `RANK_CANDIDATE_POOL` không thể loại xe mới trước khi khám phá kịp chạy
+   * — vì chính cái pool đó đã xếp theo điểm ĐÃ GỒM khám phá.
+   */
+  discovery: 0.05,
 } as const;
 
 /**
@@ -70,6 +105,19 @@ export const RANK_SCORE_TRIPS_CAP = 50;
 
 /** Hằng số phai của độ mới, tính bằng NGÀY. */
 export const RANK_SCORE_FRESHNESS_DAYS = 30;
+
+/**
+ * CỬA SỔ KHÁM PHÁ của một xe mới, tính bằng NGÀY.
+ *
+ * Ba mươi ngày là một giả định, và nó được ghi ra vì đó là điều trung thực duy nhất làm được ở
+ * đây: **chưa có số liệu impression**, nên không có cách nào đo "xe này đã được nhìn đủ chưa".
+ * Thay vào đó là một cửa sổ THỜI GIAN có hạn — đủ dài để một xe đi qua vài chu kỳ cuối tuần, đủ
+ * ngắn để không thành một ưu đãi vĩnh viễn.
+ *
+ * Điều kiện xem lại: khi `public_listings` có số lượt hiển thị, thay cửa sổ thời gian bằng một
+ * hạn ngạch lượt hiển thị — đó mới là thứ "cơ hội" thật sự đo được.
+ */
+export const RANK_DISCOVERY_DAYS = 30;
 
 /**
  * Phạm vi tính lại. Không truyền gì = toàn bảng (nhịp ngày của worker).
@@ -107,8 +155,33 @@ export async function refreshListingRankScore(
   const where = Prisma.sql`WHERE ${Prisma.join(filters, ' AND ')}`;
 
   const { priorRating, priorWeight } = RANK_SCORE_BAYES;
+  const { priorRate, priorWeight: relPriorWeight } = HOST_RELIABILITY_PRIOR;
+  const metricSince = new Date(Date.now() - HOST_METRIC_WINDOW_DAYS * 24 * 3600_000);
 
   return db.$executeRaw`
+    WITH host AS (
+      /*
+       * UY TÍN CỦA TỪNG GIAN HÀNG trong cửa sổ chỉ số — MỘT lượt gộp cho cả bảng, không phải
+       * một lượt cho mỗi listing. Phép phân loại phải TRÙNG KHÍT "HostMetricsService": hai định
+       * nghĩa "mẫu" khác nhau nghĩa là con số khách nhìn thấy và con số quyết định thứ hạng nói
+       * hai điều khác nhau về cùng một người bán.
+       */
+      SELECT r."tenant_id",
+             COUNT(*)::numeric AS samples,
+             COUNT(*) FILTER (
+               WHERE r."decided_at" IS NOT NULL
+                 AND r."status" <> ${BOOKING_REQUEST_STATUS.REJECTED_BY_HOST}
+                 AND COALESCE(c."counts_against_host", false) = false
+             )::numeric AS kept
+        FROM "booking_requests" r
+        LEFT JOIN "booking_cancellations" c ON c."booking_request_id" = r."id"
+       WHERE r."created_at" >= ${metricSince}
+         AND r."status" <> ${BOOKING_REQUEST_STATUS.SLOT_TAKEN}
+         AND NOT (r."status" = ${BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER} AND r."decided_at" IS NULL)
+         AND NOT (r."status" = ${BOOKING_REQUEST_STATUS.HOLD_EXPIRED} AND r."decided_at" IS NULL)
+         AND NOT (r."status" = ${BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL} AND r."respond_by" > now())
+       GROUP BY r."tenant_id"
+    )
     UPDATE "public_listings" pl
        SET "rank_score" = s."score"
       FROM (
@@ -137,8 +210,44 @@ export async function refreshListingRankScore(
                      EXTRACT(EPOCH FROM (now() - p."created_at"))
                        / 86400 / ${RANK_SCORE_FRESHNESS_DAYS}::numeric
                    )::numeric)
+                 /*
+                  * Uy tín chủ xe, LÀM MƯỢT Bayes. Chủ xe chưa có mẫu nào nhận đúng "priorRate"
+                  * (mức nền trung tính) — không phải 0 và cũng không phải 1. Một sự cố đơn lẻ
+                  * kéo xuống nhẹ; một chuỗi dài huỷ chuyến mới kéo về gần 0.
+                  *
+                  * Xe MỚI của một chủ xe ĐÃ CÓ LỊCH SỬ vì thế hưởng uy tín thật của người bán,
+                  * trong khi phần CHẤT LƯỢNG của chính nó vẫn dùng prior trung tính — hai câu
+                  * hỏi khác nhau, hai phép làm mượt khác nhau.
+                  */
+                 + ${RANK_SCORE_WEIGHTS.reliability}::numeric * (
+                     (COALESCE(h."kept", 0) + ${relPriorWeight}::numeric * ${priorRate}::numeric)
+                     / (COALESCE(h."samples", 0) + ${relPriorWeight}::numeric)
+                   )
+                 /*
+                  * KHÁM PHÁ — chỉ cho xe đủ điều kiện, và phai hết sau "RANK_DISCOVERY_DAYS".
+                  *
+                  * Ba điều kiện, tất cả đều ĐẾM ĐƯỢC: hồ sơ đầy (không tặng cơ hội cho một hồ sơ
+                  * mà khách mở ra rồi đóng lại), chưa có chuyến nào (xe đã chạy thì không còn là
+                  * xe mới), và còn trong cửa sổ. Thiếu điều kiện đầu thì đây là một kênh để đẩy
+                  * hồ sơ rỗng lên trang đầu.
+                  */
+                 + ${RANK_SCORE_WEIGHTS.discovery}::numeric * (
+                     CASE
+                       WHEN tr."trips" = 0
+                        AND p."main_image_url" IS NOT NULL
+                        AND p."weekday_price" IS NOT NULL
+                        AND img."images" >= 4
+                        AND COALESCE(array_length(p."features", 1), 0) >= 3
+                       THEN EXP(-(
+                              EXTRACT(EPOCH FROM (now() - p."created_at"))
+                                / 86400 / ${RANK_DISCOVERY_DAYS}::numeric
+                            )::numeric)
+                       ELSE 0
+                     END
+                   )
                , 6) AS "score"
           FROM "public_listings" p
+          LEFT JOIN host h ON h."tenant_id" = p."tenant_id"
           LEFT JOIN LATERAL (
             SELECT COUNT(*)::int AS "trips"
               FROM "bookings" b

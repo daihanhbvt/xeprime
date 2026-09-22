@@ -33,10 +33,12 @@ interface Props {
   request: BookingRequestItem | null;
   canApprove: boolean;
   /** Đang chạy quyết định nào trên yêu cầu này — khoá nút để không bấm chồng. */
-  pendingAction: 'approve' | 'reject' | null;
+  pendingAction: 'approve' | 'reject' | 'cancel' | null;
   onClose: () => void;
   onApprove: (request: BookingRequestItem) => void;
   onReject: (request: BookingRequestItem) => void;
+  /** HUỶ một chuyến ĐÃ NHẬN (ADR 0045 điều 1) — chỉ có ở `awaiting_hold`. */
+  onCancel: (request: BookingRequestItem) => void;
   onOpenVehicle: (request: BookingRequestItem) => void;
   onOpenCustomer: (request: BookingRequestItem) => void;
   /** Đường quay lại đúng chỗ đang đứng, gắn vào link sang màn lịch. */
@@ -61,6 +63,7 @@ function DetailBody({
   onClose,
   onApprove,
   onReject,
+  onCancel,
   onOpenVehicle,
   onOpenCustomer,
   backHref,
@@ -314,6 +317,21 @@ function DetailBody({
           <RowActions actions={decisionActions} variant="filled" maxInline={2} />
         ) : needsDecision && pastDue ? (
           <p className={styles.expiredHint}>{t('deadline.pastDueHint')}</p>
+        ) : request.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD && canApprove ? (
+          /*
+           * Chuyến đã nhận, đang chờ khách trả tiền: việc chính là ĐỢI, nên chỗ này chỉ có một
+           * lối thoát. Nó nằm ở đây thay vì ở chính giữa màn vì người mở chi tiết ra hiếm khi
+           * để huỷ — họ mở ra để đọc lại lịch trình rồi gọi cho khách (ADR 0045 điều 1).
+           */
+          <Button
+            type="link"
+            danger
+            loading={pendingAction === 'cancel'}
+            disabled={busy && pendingAction !== 'cancel'}
+            onClick={() => onCancel(request)}
+          >
+            {t('actions.cancel')}
+          </Button>
         ) : null}
       </div>
     </div>

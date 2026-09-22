@@ -1,0 +1,53 @@
+/* Form tạo/sửa mã khuyến mãi — hai cột: xem trước + ô nhập (ảnh thiết kế 6). */
+
+.intro {
+  margin: 0 0 var(--xp-space-md);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.notice {
+  margin-bottom: var(--xp-space-md);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  gap: var(--xp-space-lg);
+  align-items: start;
+}
+
+/* Xem trước DÍNH khi cuộn form dài — người soạn phải thấy kết quả trong lúc gõ điều kiện. */
+.previewCol {
+  position: sticky;
+  top: 0;
+}
+
+.formCol {
+  min-width: 0;
+}
+
+.finalNote {
+  margin: var(--xp-space-sm) 0 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-overline);
+}
+
+/*
+ * Màn hẹp: một cột, và ô nhập lên TRƯỚC xem trước. Người dùng điện thoại tới đây để gõ; xem
+ * trước là phần họ cuộn xuống kiểm tra sau.
+ */
+@media (max-width: 991px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .previewCol {
+    position: static;
+    order: 2;
+  }
+
+  .formCol {
+    order: 1;
+  }
+}

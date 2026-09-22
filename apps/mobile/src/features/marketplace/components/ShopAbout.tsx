@@ -9,37 +9,47 @@ import type { IconName } from '@/components/ui/Chip';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import type { PublicShop } from '../api';
+import { HostMetrics } from './HostMetrics';
+
+/** Một ô trong lưới số liệu đếm được. */
+type ShopStat = { key: string; value: string; label: string; icon: IconName };
 
 /**
  * Số ô trên MỘT hàng.
  *
- * Chia hàng bằng tay chứ không thả cho `flexWrap` tự xếp: với bốn ô và `flex: 1`, bề ngang
- * thật của màn quyết định có ba hay hai ô lọt một hàng — và ca ba-ô để lại ô thứ tư đứng một
- * mình KÉO DÃN hết bề ngang, đọc ra như một khối khác loại. Hai cột thì luôn là 2×2 hoặc 2+1,
- * giống nhau trên mọi máy.
+ * Chia hàng bằng tay chứ không thả cho `flexWrap` tự xếp: với `flex: 1`, bề ngang thật của màn
+ * quyết định có ba hay hai ô lọt một hàng — và ca ba-ô để lại ô cuối đứng một mình KÉO DÃN hết
+ * bề ngang, đọc ra như một khối khác loại. Hai cột thì luôn là 2+1, giống nhau trên mọi máy.
  */
 const STATS_PER_ROW = 2;
 
 /**
- * Khối "gian hàng này là ai" — lời giới thiệu, địa chỉ, và bốn con số đáng tin.
+ * Khối "gian hàng này là ai" — lời giới thiệu, địa chỉ, ba chỉ số uy tín, và lưới số liệu đếm được.
  *
  * ## Con số RỖNG thì BỎ, không hiện 0
  *
- * "Tỉ lệ phản hồi 0%" của một gian hàng vừa mở nói sai hoàn toàn: họ chưa từng bỏ lỡ tin nào, họ
- * chỉ chưa nhận tin nào. Cũng vậy với "0,0 sao" khi chưa có đánh giá — đó là một lời buộc tội
- * dựng từ chỗ trống. Nên `responseRatePercent == null` và `ratingCount === 0` bị LOẠI khỏi danh
- * sách chứ không in ra số 0.
+ * "0,0 sao" khi chưa có đánh giá là một lời buộc tội dựng từ chỗ trống, nên `ratingCount === 0`
+ * bị LOẠI khỏi lưới chứ không in ra số 0.
  *
- * Không có gì để kể VÀ không có số nào đáng trưng ⇒ không dựng thẻ rỗng.
+ * ## Ba chỉ số UY TÍN tách khỏi lưới số liệu
  *
- * ## Thu gọn được, nhưng BỐN CON SỐ thì không
+ * Lưới ở đây là những thứ ĐẾM ĐƯỢC không cần diễn giải (bao nhiêu xe, bao nhiêu chuyến). Ba chỉ
+ * số của ADR 0045 thì mỗi con số cần một định nghĩa mẫu số đi kèm, và chúng dùng chung một
+ * ngưỡng "đủ dữ liệu" — trộn vào cùng lưới sẽ có ô biến mất ô còn, trông như lỗi hiển thị.
+ * `HostMetrics` vì thế là khối riêng, dùng chung với trang chi tiết xe và khớp bản web.
+ *
+ * Thẻ vì thế LUÔN được dựng: `HostMetrics` luôn có điều để nói — ít nhất là "chưa đủ dữ liệu,
+ * mới có N yêu cầu". Một gian hàng chưa viết giới thiệu vẫn là một gian hàng khách cần đọc được
+ * ba chỉ số.
+ *
+ * ## Thu gọn được phần CHỮ, nhưng bằng chứng thì không
  *
  * Lời giới thiệu do chủ xe tự viết nên dài ngắn tuỳ người — có gian hàng viết ba dòng, có gian
  * hàng viết cả trang, và trang dài đó đẩy danh sách xe (thứ khách vào đây để xem) xuống dưới
  * tầm mắt. Nên phần CHỮ gập được.
  *
- * Bốn con số thì ở lại kể cả khi gập: chúng là bằng chứng, chiếm đúng hai hàng, và giấu chúng
- * sau một cú chạm là giấu chính thứ thuyết phục người đọc. `BlockTitle` không tự ẩn gì —
+ * Ba chỉ số và lưới số liệu thì ở lại kể cả khi gập: chúng là bằng chứng, cao cố định, và giấu
+ * chúng sau một cú chạm là giấu chính thứ thuyết phục người đọc. `BlockTitle` không tự ẩn gì —
  * docblock của nó nói rõ nội dung do nơi gọi quyết định, và đây là chỗ quyết định đó có nghĩa.
  */
 export function ShopAbout({ shop }: { shop: PublicShop }) {
@@ -50,21 +60,13 @@ export function ShopAbout({ shop }: { shop: PublicShop }) {
   const isShop = shop.storefrontKind === STOREFRONT_KIND.SHOP;
   const rating = Number(shop.ratingAvg);
 
-  const stats: { key: string; value: string; label: string; icon: IconName }[] = [
+  const stats: ShopStat[] = [
     {
       key: 'vehicles',
       value: fmt.count(shop.vehicleCount),
       label: t('stats.vehicles'),
       icon: 'car-outline',
     },
-    typeof shop.responseRatePercent === 'number'
-      ? {
-          key: 'responseRate',
-          value: t('stats.responseRateValue', { percent: shop.responseRatePercent }),
-          label: t('stats.responseRate'),
-          icon: 'chatbubble-ellipses-outline',
-        }
-      : null,
     {
       key: 'completedTrips',
       value: fmt.count(shop.completedTripCount),
@@ -79,16 +81,11 @@ export function ShopAbout({ shop }: { shop: PublicShop }) {
           icon: 'star-outline',
         }
       : null,
-  ].filter((stat): stat is { key: string; value: string; label: string; icon: IconName } =>
-    stat !== null,
-  );
-
-  if (!shop.bio && !shop.address && stats.length === 0) return null;
+  ].filter((stat): stat is ShopStat => stat !== null);
 
   const title = t(isShop ? 'about.titleShop' : 'about.titlePersonal');
-  const statRows = Array.from(
-    { length: Math.ceil(stats.length / STATS_PER_ROW) },
-    (_unused, row) => stats.slice(row * STATS_PER_ROW, (row + 1) * STATS_PER_ROW),
+  const statRows = Array.from({ length: Math.ceil(stats.length / STATS_PER_ROW) }, (_unused, row) =>
+    stats.slice(row * STATS_PER_ROW, (row + 1) * STATS_PER_ROW),
   );
   const hasText = Boolean(shop.bio || shop.address);
 
@@ -96,8 +93,8 @@ export function ShopAbout({ shop }: { shop: PublicShop }) {
     <Card>
       <YStack gap={space.sm}>
         {/*
-          Chỉ bắt chạm khi CÓ chữ để gập. Một mũi tên lật trên khối chỉ có bốn con số là một cú
-          chạm không làm gì — tệ hơn là nó hứa có nội dung đang bị giấu.
+          Chỉ bắt chạm khi CÓ chữ để gập. Một mũi tên lật trên khối chỉ còn số là một cú chạm
+          không làm gì — tệ hơn là nó hứa có nội dung đang bị giấu.
         */}
         <BlockTitle
           {...(hasText ? { collapsed, onToggleCollapsed: () => setCollapsed((v) => !v) } : {})}
@@ -138,6 +135,9 @@ export function ShopAbout({ shop }: { shop: PublicShop }) {
             ) : null}
           </YStack>
         ) : null}
+
+        {/* Ngoài vùng gập: ba chỉ số là bằng chứng, không phải lời tự giới thiệu. */}
+        <HostMetrics metrics={shop.metrics} />
 
         {stats.length > 0 ? (
           <YStack gap={space.sm} accessibilityLabel={t('stats.sectionLabel')}>

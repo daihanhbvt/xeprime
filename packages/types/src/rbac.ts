@@ -267,6 +267,17 @@ export const PERMISSION = {
   // ── R3: vận hành tiền marketplace ────────────────────────────────────────
   /** Chính sách phí có phiên bản (ADR 0028/0029): soạn, kích hoạt, lưu trữ. */
   PLATFORM_FEE_POLICY_MANAGE: 'platform.fee_policies.manage',
+  /**
+   * Mã khuyến mãi nền tảng (ADR 0046): tạo, sửa, bật/tắt, xem lượt sử dụng.
+   *
+   * Quyền RIÊNG, không gộp vào `platform.fee_policies.manage`: chính sách phí đặt cách nền tảng
+   * THU tiền, còn mã khuyến mãi là cách nền tảng CHI tiền tài trợ — hai chiều ngược nhau, và
+   * người được quyền đặt tỷ lệ phí không nhất thiết được quyền phát hành ngân sách marketing.
+   *
+   * Không có khoá tương ứng ở tuyến tenant, và đó là chủ đích: gian hàng KHÔNG tạo mã nền tảng
+   * (`@PlatformOnly()` chặn thật ở controller — ADR 0046 điều 1).
+   */
+  PLATFORM_PROMO_CODE_MANAGE: 'platform.promo_codes.manage',
   /** Xác minh người bán: duyệt/từ chối hồ sơ, xem PII hồ sơ (CCCD, tài khoản ngân hàng đầy đủ). */
   PLATFORM_SELLER_VERIFY: 'platform.sellers.verify',
   /** Money operations: hàng đợi giữ chỗ, chuyển trả, đối chiếu ngày. */
@@ -438,6 +449,8 @@ export const DEFAULT_PLATFORM_ROLE_PERMISSIONS: Readonly<
     PERMISSION.PLATFORM_BOOKING_VIEW,
     // R3: finance_admin vận hành tiền marketplace và chính sách phí.
     PERMISSION.PLATFORM_FEE_POLICY_MANAGE,
+    // Ngân sách tài trợ mã khuyến mãi là một dòng chi — cùng người chịu trách nhiệm với dòng thu.
+    PERMISSION.PLATFORM_PROMO_CODE_MANAGE,
     PERMISSION.PLATFORM_MONEY_MANAGE,
     PERMISSION.PLATFORM_SELLER_VERIFY,
   ],

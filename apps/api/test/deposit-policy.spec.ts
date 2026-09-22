@@ -486,13 +486,18 @@ describe('Duyệt TAY áp đúng chính sách (khi giai đoạn kết thúc)', (
     expect(booking.depositCollectionMode).toBe(DEPOSIT_COLLECTION_MODE.DIRECT);
   });
 
-  maybe('gói + BẬT cọc → awaiting_hold, hold sinh ra, CHƯA có đơn', async () => {
+  maybe('gói + BẬT cọc → duyệt ra awaiting_hold, hold sinh ra, CHƯA có đơn', async () => {
     await setToggle(packagePlus.tenant, true);
-    // Có thu cọc ⇒ hold sinh ngay LÚC GỬI (ADR 0039 điều 1), không chờ ai duyệt.
+    // Có thu tiền giữ chỗ ⇒ hold sinh lúc DUYỆT (ADR 0044 điều 2), không phải lúc gửi.
     const { receipt } = await submit(packagePlus, 8, twoAxisRequests);
+    const approved = await twoAxisRequests.approve(
+      packagePlus.tenant,
+      packagePlus.owner,
+      receipt.id,
+    );
 
-    expect(receipt.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
-    expect(receipt.bookingId).toBeNull();
+    expect(approved.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    expect(approved.bookingId).toBeNull();
 
     const hold = await prisma.bookingHold.findFirstOrThrow({
       where: { tenantId: packagePlus.tenant },
@@ -514,8 +519,9 @@ describe('Duyệt TAY áp đúng chính sách (khi giai đoạn kết thúc)', (
   maybe('hoa hồng → luôn có hold, kể cả khi công tắc bị đặt tắt', async () => {
     await setToggle(commission.tenant, false);
     const { receipt } = await submit(commission, 11, twoAxisRequests);
+    const approved = await twoAxisRequests.approve(commission.tenant, commission.owner, receipt.id);
 
-    expect(receipt.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    expect(approved.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
     const hold = await prisma.bookingHold.findFirstOrThrow({
       where: { tenantId: commission.tenant },
     });
@@ -604,9 +610,10 @@ describe('Đóng băng — ADR 0025 ràng buộc 4 (khi giai đoạn kết thúc
 describe('Công tắc đổi SAU khi hold đã sinh — đường tiền không đổi giữa chừng', () => {
   maybe('tắt cọc khi khách đang cầm mã: hold giữ nguyên, tiền về vẫn mở đơn `platform`', async () => {
     await setToggle(packagePlus.tenant, true);
-    // Hold sinh NGAY lúc gửi (ADR 0039) — khách cầm mã trước cả khi gian hàng nhìn thấy yêu cầu.
+    // Hold sinh lúc gian hàng NHẬN chuyến (ADR 0044) — từ đó khách cầm mã và đồng hồ chạy.
     const { receipt } = await submit(packagePlus, 26);
-    expect(receipt.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    const accepted = await requests.approve(packagePlus.tenant, packagePlus.owner, receipt.id);
+    expect(accepted.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
 
     const hold = await prisma.bookingHold.findFirstOrThrow({
       where: { tenantId: packagePlus.tenant },
@@ -639,12 +646,10 @@ describe('Công tắc đổi SAU khi hold đã sinh — đường tiền không 
     expect(applied.outcome).toBe('activated');
 
     /*
-     * Xe này không bật "Đặt ngay" nên tiền về mới chỉ tới `hold_paid`; gian hàng bấm duyệt thì
-     * đơn mới ra đời. Chính cú bấm ĐÓ là lúc `deposit_collection_mode` đóng băng — và nó phải
-     * đóng băng theo khoản tiền ĐÃ THU, không theo công tắc của hôm nay.
+     * Chuyến đã được nhận từ trước, nên lượt tiền về này mở ĐƠN ngay (ADR 0044 điều 2) — không
+     * bắt gian hàng bấm lần thứ hai. Đó cũng là lúc `deposit_collection_mode` đóng băng, và nó
+     * phải đóng băng theo khoản tiền ĐÃ THU chứ không theo công tắc của hôm nay.
      */
-    await requests.approve(packagePlus.tenant, packagePlus.owner, receipt.id);
-
     const booking = await prisma.booking.findFirstOrThrow({
       where: { tenantId: packagePlus.tenant },
     });

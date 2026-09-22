@@ -2,9 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
-  BOOKING_REQUEST_STATUS_ANSWERED,
-  BOOKING_REQUEST_STATUS_RESPONSE_RATE,
-  BOOKING_REQUEST_STATUS_UNANSWERED,
   BOOKING_STATUS,
   BRANCH_STATUS,
   PROVINCE_CODES,
@@ -20,7 +17,6 @@ import {
   provinceRegionPeers,
   resolveEffectiveBilling,
   resolveStorefrontKind,
-  responseRatePercent,
   storefrontAllowsPublicChat,
   type PaginationMeta,
   type SeatBucket,
@@ -33,6 +29,7 @@ import {
 import { ProvincesService } from '../locations/provinces.service';
 import { PricingService } from '../pricing/pricing.service';
 import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
+import { HostMetricsService } from '../host-metrics/host-metrics.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import type {
   FacetBucketDto,
@@ -251,15 +248,33 @@ function toListingCard(
 }
 
 /** `recommended` (mặc định): điểm cao trước (NULLS LAST) → nhiều đánh giá trước → mới trước. */
+/**
+ * Thứ tự của danh sách chợ — ADR 0043 §2, đồng bộ hoá ở ADR 0045 điều 3.
+ *
+ * Ba sort do KHÁCH chọn giữ nguyên tuyệt đối: giá tăng, giá giảm, mới nhất. Khách bấm "giá thấp
+ * nhất" thì họ muốn giá thấp nhất, không phải "giá thấp nhất theo ý chúng tôi".
+ *
+ * ## Vì sao mặc định đổi từ `rating_avg` sang `rank_score`
+ *
+ * Trang chủ đã dùng `rank_score` từ ADR 0043, còn trang KẾT QUẢ thì vẫn xếp theo trung bình sao
+ * trần — nên cùng một sàn, hai bề mặt trả lời "xe nào phù hợp" bằng hai câu khác nhau. Trung
+ * bình trần cũng là công thức có đúng cái bệnh mà ADR 0043 sinh ra để chữa:
+ *
+ *   · một xe 5,0 sao với MỘT đánh giá đứng trên một xe 4,8 sao với hai trăm đánh giá;
+ *   · xe MỚI chưa ai chấm rơi xuống dưới MỌI xe đã có đánh giá — tức là sẽ mãi không ai thuê.
+ *
+ * `rank_score` đã gồm Bayes, số chuyến, độ đầy hồ sơ, độ mới, uy tín chủ xe và cửa sổ khám phá.
+ * Nó là một cột đã tính sẵn nên không có phép gộp nào chạy lúc đọc, và hai index
+ * `(status, province_code, rank_score)` / `(status, rank_score)` phục vụ đúng câu này.
+ *
+ * `createdAt` vẫn là khoá phụ: hai xe cùng điểm phải có một thứ tự XÁC ĐỊNH, nếu không phân
+ * trang sẽ trả về cùng một xe ở hai trang khác nhau.
+ */
 function listingOrderBy(sort: string | undefined): Prisma.PublicListingOrderByWithRelationInput[] {
-  if (sort === 'price_asc') return [{ weekdayPrice: 'asc' }];
-  if (sort === 'price_desc') return [{ weekdayPrice: 'desc' }];
+  if (sort === 'price_asc') return [{ weekdayPrice: 'asc' }, { createdAt: 'desc' }];
+  if (sort === 'price_desc') return [{ weekdayPrice: 'desc' }, { createdAt: 'desc' }];
   if (sort === 'newest') return [{ createdAt: 'desc' }];
-  return [
-    { ratingAvg: { sort: 'desc', nulls: 'last' } },
-    { ratingCount: 'desc' },
-    { createdAt: 'desc' },
-  ];
+  return [{ rankScore: 'desc' }, { createdAt: 'desc' }];
 }
 
 /**
@@ -293,6 +308,8 @@ export class PublicListingsService {
     private readonly provinces: ProvincesService,
     private readonly pricing: PricingService,
     private readonly settings: VehicleSettingsService,
+    /** Ba chỉ số công khai — nguồn tính DUY NHẤT (ADR 0045 điều 2). */
+    private readonly hostMetrics: HostMetricsService,
   ) {}
 
   /**
@@ -868,7 +885,7 @@ export class PublicListingsService {
       PublicShopDto,
       | 'vehicleCount'
       | 'completedTripCount'
-      | 'responseRatePercent'
+      | 'metrics'
       | 'branchCount'
       | 'serviceProvinceNames'
       | 'deliveryAvailable'
@@ -876,7 +893,7 @@ export class PublicListingsService {
   > {
     const visibleListing: Prisma.PublicListingWhereInput = { ...publicListingScope(), tenantId };
 
-    const [byProvince, deliveryRow, completedTripCount, branchCount, requestsByStatus] =
+    const [byProvince, deliveryRow, completedTripCount, branchCount, metrics] =
       await Promise.all([
         // Gộp theo tỉnh trả CẢ HAI thứ cần: danh sách tỉnh phục vụ (sắp theo số xe) và tổng số xe.
         this.prisma.publicListing.groupBy({
@@ -895,23 +912,18 @@ export class PublicListingsService {
         this.prisma.tenantBranch.count({
           where: { tenantId, status: BRANCH_STATUS.ACTIVE, deletedAt: null },
         }),
-        this.prisma.bookingRequest.groupBy({
-          by: ['status'],
-          where: { tenantId, status: { in: [...BOOKING_REQUEST_STATUS_RESPONSE_RATE] } },
-          _count: { _all: true },
-        }),
+        /*
+         * Ba chỉ số đi qua MỘT nguồn (ADR 0045 điều 2). Trước đợt này chỗ này tự cộng lấy hai
+         * mảng trạng thái, và bản của sổ ví đã trôi khỏi nó — hai con số khác nhau về cùng một
+         * gian hàng là cách nhanh nhất để không ai tin con số nào.
+         */
+        this.hostMetrics.forTenant(tenantId),
       ]);
-
-    const countBy = new Map(requestsByStatus.map((row) => [row.status, row._count._all]));
-    const sumOf = (statuses: readonly string[]): number =>
-      statuses.reduce((total, status) => total + (countBy.get(status) ?? 0), 0);
-    const answered = sumOf(BOOKING_REQUEST_STATUS_ANSWERED);
-    const unanswered = sumOf(BOOKING_REQUEST_STATUS_UNANSWERED);
 
     return {
       vehicleCount: byProvince.reduce((total, row) => total + row._count._all, 0),
       completedTripCount,
-      responseRatePercent: responseRatePercent(answered, unanswered),
+      metrics,
       branchCount,
       serviceProvinceNames: byProvince
         .map((row) => row.provinceName)
@@ -1046,8 +1058,15 @@ export class PublicListingsService {
      * DUY NHẤT trả lời được "xe này có đặt giao tận nơi được không" — cùng giá trị mà
      * `BookingRequestsService` dùng để chấp nhận/từ chối `deliveryRequested`.
      */
-    const [rating, completedTripCount, policy, handover, surchargeRules, rentalTerms] =
-      await Promise.all([
+    const [
+      rating,
+      completedTripCount,
+      policy,
+      handover,
+      surchargeRules,
+      rentalTerms,
+      shopMetrics,
+    ] = await Promise.all([
         this.ratingsByVehicle([v.id]).then((ratings) => ratings.get(v.id)),
         this.prisma.booking.count({
           where: { vehicleId: v.id, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
@@ -1075,6 +1094,11 @@ export class PublicListingsService {
               };
             }),
         ),
+        /*
+         * Ba chỉ số của CHỦ XE, ngay tại trang này (ADR 0045 điều 2) — một truy vấn gộp cho MỘT
+         * tenant, chạy song song với phần còn lại. Không có N+1: trang chi tiết chỉ có một chủ xe.
+         */
+        this.hostMetrics.forTenant(v.tenantId),
       ]);
 
     /*
@@ -1146,6 +1170,7 @@ export class PublicListingsService {
       shopName: v.tenant.name,
       shopSlug: v.tenant.slug,
       shopVerified: hasVerifiedStorefront(detailBilling),
+      shopMetrics,
       // Nút "Nhắn shop" của trang này chỉ hiện khi gian hàng mở hộp thư công khai. Cờ nói đúng
       // CHÍNH SÁCH chứ không phải tuyến, vì đó là thứ nút cần biết — xem
       // `storefrontAllowsPublicChat`. Cổng thật vẫn nằm ở `ChatService`.

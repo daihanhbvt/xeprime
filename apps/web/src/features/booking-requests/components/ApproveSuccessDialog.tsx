@@ -15,10 +15,17 @@ import styles from './ApproveSuccessDialog.module.css';
 /**
  * Kết quả sau khi duyệt — thay cho một dòng toast trôi qua trong ba giây.
  *
- * Vì sao là hộp thoại: duyệt yêu cầu **tạo ra một đơn thuê và giữ chỗ lịch xe**. Đó là hệ quả
- * lớn nhất trong cả hộp thư yêu cầu, và ngay sau đó người trực còn phải làm tiếp một chuỗi việc
- * trên chính đơn vừa tạo (liên hệ khách, thu cọc, giao xe). Một `message.success` báo xong rồi
- * biến mất bỏ họ lại giữa danh sách yêu cầu, phải tự đi tìm đơn mình vừa tạo.
+ * Vì sao là hộp thoại: duyệt yêu cầu **giữ chỗ lịch xe**, và hệ quả tiếp theo khác hẳn nhau tuỳ
+ * chuyến có thu tiền giữ chỗ hay không. Một `message.success` không nói được khác biệt đó, lại
+ * bỏ người trực giữa danh sách yêu cầu mà không chỉ họ đi đâu tiếp.
+ *
+ * HAI kết cục, và chúng đọc như hai màn hình khác nhau (ADR 0044 điều 2):
+ *
+ *  - **Có thu tiền giữ chỗ** (`bookingId` rỗng) — lịch đã giữ, mã thanh toán đã gửi cho khách,
+ *    đơn thuê mở TỰ ĐỘNG khi tiền về. Không có đơn để mở, nên cũng không có nút dẫn tới đơn;
+ *    nói thẳng điều đó thay vì để một nút biến mất không lời giải thích.
+ *  - **Không thu** (chính sách tắt, hoặc báo giá còn tạm tính) — đơn thuê đã có ngay, và việc
+ *    tiếp theo nằm trên chính nó.
  *
  * Cấu trúc soi gương `ApproveBookingRequestDialog`: cùng bộ dòng thông tin, cùng thứ tự — người
  * đọc thấy đúng thứ mình vừa duyệt, không phải một màn hình lạ.
@@ -39,9 +46,21 @@ export function ApproveSuccessDialog({
   const longTerm = request.serviceType === SERVICE_TYPE.LONG_TERM;
   const pickup = request.pickupAt ? toAppTz(request.pickupAt) : null;
   const dropoff = request.returnAt ? toAppTz(request.returnAt) : null;
+  /*
+   * Chưa có đơn ⇒ chuyến này thu tiền giữ chỗ và đang chờ khách chuyển khoản. Hỏi `bookingId`
+   * chứ không hỏi trạng thái: nó là thứ quyết định có nút "Xem chi tiết đơn" hay không, nên hai
+   * câu hỏi đó phải có cùng một câu trả lời.
+   */
+  const awaitingPayment = !request.bookingId;
 
   return (
-    <ResponsiveDialog title={t('approved.title')} open={open} onClose={onClose} size="md" footer={null}>
+    <ResponsiveDialog
+      title={awaitingPayment ? t('approved.holdTitle') : t('approved.title')}
+      open={open}
+      onClose={onClose}
+      size="md"
+      footer={null}
+    >
       <div className={styles.body}>
         <div className={styles.head}>
           {/*
@@ -51,7 +70,13 @@ export function ApproveSuccessDialog({
           <span className={styles.badge} aria-hidden>
             <CheckOutlined />
           </span>
-          <p className={styles.lead}>{longTerm ? t('approved.leadLongTerm') : t('approved.lead')}</p>
+          <p className={styles.lead}>
+            {awaitingPayment
+              ? t('approved.holdLead')
+              : longTerm
+                ? t('approved.leadLongTerm')
+                : t('approved.lead')}
+          </p>
         </div>
 
         <dl className={styles.facts}>
@@ -79,13 +104,15 @@ export function ApproveSuccessDialog({
           ) : null}
         </dl>
 
-        <p className={styles.next}>{t('approved.next')}</p>
+        <p className={styles.next}>
+          {awaitingPayment ? t('approved.holdNext') : t('approved.next')}
+        </p>
 
         <div className={styles.actions}>
           {/*
-            Lối đi tiếp là VIỆC TIẾP THEO, không phải "đóng": mọi thao tác còn lại của chuyến
-            nằm trên đơn vừa tạo. `bookingId` luôn có ở đây — đơn được tạo trong cùng transaction
-            với việc duyệt, nên phản hồi thành công không thể thiếu nó.
+            Lối đi tiếp là VIỆC TIẾP THEO, không phải "đóng". Chuyến đang chờ tiền chưa có đơn để
+            mở — việc duy nhất còn lại là chờ, nên nút chính quay về hộp thư thay vì dẫn vào một
+            trang không tồn tại.
           */}
           {request.bookingId ? (
             <Button
@@ -100,8 +127,8 @@ export function ApproveSuccessDialog({
               {t('approved.viewBooking')}
             </Button>
           ) : null}
-          <Button size="large" block onClick={onClose}>
-            {t('approved.close')}
+          <Button type={awaitingPayment ? 'primary' : 'default'} size="large" block onClick={onClose}>
+            {awaitingPayment ? t('approved.holdClose') : t('approved.close')}
           </Button>
         </div>
       </div>

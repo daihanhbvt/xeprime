@@ -71,7 +71,7 @@ describe('TripEstimateCard', () => {
   it('có dòng ĐÃ CHUYỂN GIỮ CHỖ và dòng TRẢ KHI NHẬN XE, không bắt khách tự trừ', () => {
     renderCard({ settled: true });
 
-    expect(screen.getByText('Chuyển trước để giữ chỗ')).toBeTruthy();
+    expect(screen.getByText('Tiền giữ chỗ (trả trước)')).toBeTruthy();
     expect(screen.getByText('Trả chủ xe khi nhận xe')).toBeTruthy();
   });
 

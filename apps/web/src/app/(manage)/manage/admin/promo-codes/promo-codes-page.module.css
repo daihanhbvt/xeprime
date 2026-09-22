@@ -1,0 +1,87 @@
+/* Trang quản trị MÃ KHUYẾN MÃI — ADR 0046 (ảnh thiết kế 5). */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: var(--xp-space-md);
+  gap: var(--xp-space-md);
+}
+
+/* Hàng bộ lọc — cuộn ngang trên màn hẹp thay vì nén các ô xuống còn vài ký tự. */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: var(--xp-space-md);
+  gap: var(--xp-space-sm);
+}
+
+.search {
+  min-width: 240px;
+  flex: 1 1 240px;
+}
+
+.select {
+  min-width: 170px;
+}
+
+.range {
+  min-width: 250px;
+}
+
+/* Ô mã + nút sao chép — mã là thứ admin đọc cho khách qua điện thoại, nên nó phải nổi. */
+.codeCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.code {
+  font-weight: var(--xp-font-weight-bold);
+  letter-spacing: 0.04em;
+}
+
+.cellStack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cellMain {
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.cellSub {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-overline);
+}
+
+.amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Mã không công bố — nhãn nhỏ cạnh tên, để admin biết vì sao khách không thấy nó trong danh sách. */
+.hiddenTag {
+  margin-left: 6px;
+}
+
+@media (max-width: 991px) {
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575px) {
+  .stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .search,
+  .select,
+  .range {
+    min-width: 0;
+    flex-basis: 100%;
+    width: 100%;
+  }
+}

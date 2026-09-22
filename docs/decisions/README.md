@@ -1,6 +1,6 @@
 # Architecture Decision Records — XePrime
 
-> Cập nhật: 15/09/2026
+> Cập nhật: 23/09/2026
 
 ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted mới hơn thắng trong đúng phạm vi phần **Quan hệ với ADR cũ**; không suy rằng toàn bộ ADR cũ mất hiệu lực.
 
@@ -53,11 +53,14 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0036](0036-single-approval-gate-for-commission-owners.md) | Tuyến hoa hồng chỉ có cổng duyệt XE; xác minh gian hàng là trục riêng | **Accepted; ghi đè 0014 điều 5 trong phạm vi tuyến hoa hồng; điều 4 (cổng mua gói) bị 0040 ghi đè** |
 | [0037](0037-geoapify-osm-map-provider.md) | Nhà cung cấp bản đồ là Geoapify/OpenStreetMap, không phải Google Maps | **Accepted; ghi đè 0018 ở phần nhà cung cấp + khoá, 0035 điều 6 ở thư viện bản đồ** |
 | [0038](0038-owner-track-split-and-unified-wallet.md) | Tách hai tuyến chủ xe: một ví cho một người, ranh giới Manage chặn ở server | **Accepted; ghi đè một phần 0027 (điều 3) và 0033 (điều 2, cột chủ ví)** |
-| [0039](0039-hold-before-acceptance.md) | Khách trả giữ chỗ TRƯỚC khi gian hàng duyệt; cửa sổ 10 phút + 2 lần tự gia hạn | **Accepted; ghi đè 0032 điều 2 và 0027 điều 2 trong phạm vi công tắc cọc** |
+| [0039](0039-hold-before-acceptance.md) | Khách trả giữ chỗ TRƯỚC khi gian hàng duyệt; cửa sổ 10 phút + 2 lần tự gia hạn | **Superseded bởi 0044** — chỉ đọc để hiểu dữ liệu sinh 16–22/09/2026 |
 | [0040](0040-registration-track-split.md) | Hai tuyến ĐĂNG KÝ tách hẳn: ý định lưu ở `tenants.onboarding_state`, thanh toán mở Manage, cổng logo chỉ áp tuyến gói | **Accepted; ghi đè 0036 điều 4 (xác minh thôi làm cổng mua gói)** |
 | [0041](0041-plan-tiers-by-vehicle-count.md) | Ba bậc gian hàng bán theo SỐ XE và KỲ HẠN; bậc doanh nghiệp bán bằng tư vấn | **Accepted; ghi đè 0029 điều 3, 0015 điều 1/3/8, và 0038 điều 12 ở phần cách đếm tuyến gói** |
 | [0042](0042-confirmed-place-address-for-renters.md) | Địa chỉ có ghim phải được bản đồ xác nhận; bỏ hẳn ô xã/phường ở mọi ô địa chỉ có ghim; tỉnh đã chọn nhớ dùng chung | **Accepted; ghi đè 0035 điều 3 (phần xã/phường) và điều 5** |
 | [0043](0043-marketplace-relevance-ranking.md) | Xếp hạng "phù hợp" cho chợ xe: điểm denormalize `rank_score` + ưu tiên địa lý ở trang chủ | **Accepted; mở rộng 0008 (cột dẫn xuất mới), không ghi đè ADR nào** |
+| [0044](0044-approve-before-hold.md) | Duyệt trước, thu tiền giữ chỗ sau: cửa sổ 120 phút + hai mốc nhắc, không gia hạn; khung giờ đã mất đóng bằng `slot_taken` | **Accepted; ghi đè TOÀN BỘ 0039, khôi phục 0032 điều 2** |
+| [0045](0045-host-cancellation-and-reputation.md) | Chủ xe huỷ được theo từng chặng và lượt huỷ được ghi nhận; ba chỉ số uy tín công khai một nguồn tính; sort mặc định của chợ về `rank_score` + hai vế uy tín/khám phá | **Accepted; mở rộng 0043 (trọng số) và 0044 (điều 7), không ghi đè ADR nào** |
+| [0046](0046-platform-funded-promo-codes.md) | Mã khuyến mãi do NỀN TẢNG tài trợ: giảm số khách trả mà không bớt tiền gian hàng; chỉ trừ vào khoản online; lượt dùng GIỮ → CHỐT → NHẢ | **Accepted; mở rộng 0029 điều 1–2, 0032 điều 2, 0033 điều 3–4 và 0044, không ghi đè ADR nào** |
 
 ## Quy tắc thêm ADR
 

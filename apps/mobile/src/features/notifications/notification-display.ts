@@ -56,6 +56,20 @@ const ICONS: Readonly<Record<NotificationType, IconName>> = {
   // Hạn phản hồi 60 phút: đồng hồ cho lời nhắc, đồng hồ cát cho lúc hết giờ.
   [NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRING]: 'time-outline',
   [NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRED]: 'hourglass-outline',
+  // Xe đã có khách khác: không ai từ chối, chỉ là chỗ đã hết — icon TRUNG TÍNH, không phải dấu X.
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_SLOT_TAKEN]: 'calendar-clear-outline',
+  /*
+   * Chiếc xe RẢNH LẠI (ADR 0045 điều 6) — người thắng không thanh toán. Tin VUI, nên nó phải
+   * trông khác hẳn dòng "chỗ đã hết" ngay trên: cùng icon lịch thì hai tin ngược nghĩa nhau
+   * lại nhìn y hệt.
+   *
+   * KHÔNG dùng `notifications-outline`: đó là icon DỰ PHÒNG cho loại lạ (bản backend mới hơn
+   * app). Gán nó cho một loại đã khai làm bài test "mọi loại đều có icon riêng" mất tác dụng —
+   * một loại bị quên sau này sẽ trốn được sau đúng cái icon đó.
+   */
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_SLOT_REOPENED]: 'sparkles-outline',
+  // Chủ xe rút lại chuyến ĐÃ NHẬN — dấu X, khác hẳn mũi tên "khách rút" ở trên.
+  [NOTIFICATION_TYPE.BOOKING_CANCELLED_BY_HOST]: 'close-circle-outline',
   // Hệ thống tự nhận chuyến theo thiết lập của chủ xe — tia sét, không phải dấu tích của người duyệt.
   [NOTIFICATION_TYPE.BOOKING_AUTO_ACCEPTED]: 'flash-outline',
   [NOTIFICATION_TYPE.SHOP_APPROVED]: 'storefront-outline',
@@ -79,6 +93,8 @@ const ICONS: Readonly<Record<NotificationType, IconName>> = {
   [NOTIFICATION_TYPE.HOLD_EXPIRED]: 'hourglass-outline',
   [NOTIFICATION_TYPE.HOLD_REFUNDED]: 'arrow-undo-outline',
   [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: 'arrow-undo-outline',
+  /* Mã khuyến mãi không còn áp được (ADR 0046) — icon QUÀ, cùng ký hiệu với ô áp mã ở luồng đặt xe. */
+  [NOTIFICATION_TYPE.PROMO_CODE_DROPPED]: 'gift-outline',
   // Hồ sơ người bán — icon chứng nhận, không phải icon gian hàng: đây là danh tính pháp lý.
   [NOTIFICATION_TYPE.SELLER_PROFILE_VERIFIED]: 'shield-checkmark-outline',
   [NOTIFICATION_TYPE.SELLER_PROFILE_CHANGES_REQUESTED]: 'shield-checkmark-outline',

@@ -77,3 +77,15 @@ export {
   type EnqueuePushOptions,
   type PushRecipientNotification,
 } from './push-outbox';
+
+/**
+ * Vòng đời LƯỢT DÙNG mã khuyến mãi (ADR 0046) — dùng chung cho API (giữ/chốt/nhả trên đường
+ * nghiệp vụ) và worker (nhả khi yêu cầu quá hạn phản hồi, và khi khách không trả tiền giữ chỗ).
+ * Xem docblock của `promo-redemption.ts` để biết vì sao nó ở đây chứ không ở `apps/api`.
+ */
+export {
+  PromoQuotaExceededError,
+  redeemPromoRedemption,
+  releasePromoRedemption,
+  reservePromoRedemption,
+} from './promo-redemption';

@@ -228,6 +228,11 @@
   color: var(--xp-color-text-secondary);
 }
 
+/* Ba chỉ số uy tín trong thẻ chủ xe — cách phần giới thiệu một nhịp rõ hơn khoảng cách dòng. */
+.shopMetrics {
+  margin-top: 10px;
+}
+
 .actions {
   display: flex;
   gap: 10px;

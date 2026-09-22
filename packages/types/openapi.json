@@ -3272,7 +3272,9 @@
                   "converted_to_booking",
                   "awaiting_hold",
                   "hold_paid",
-                  "hold_expired"
+                  "hold_expired",
+                  "slot_taken",
+                  "cancelled_by_host"
                 ]
               }
             }
@@ -3718,6 +3720,173 @@
           }
         },
         "summary": "Duyệt yêu cầu → tạo đơn thuê (giữ chỗ lịch, phí giao nhận 0)",
+        "tags": [
+          "booking-requests"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/booking-requests/{id}/cancel": {
+      "post": {
+        "description": "Chỉ áp dụng cho awaiting_hold và hold_paid (LEGACY). Đóng hold, nhả lịch, hoàn phần đã chuyển và ghi một dòng booking_cancellations tính vào chỉ số uy tín. Yêu cầu chưa được nhận thì dùng /reject; đơn đã tạo thì dùng POST /bookings/:id/transition.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `booking_requests.approve` (đọc từ DB mỗi request, không nằm trong session).",
+        "operationId": "BookingRequestsController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelBookingRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/BookingRequestDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Huỷ một chuyến ĐÃ NHẬN (chưa có đơn thuê)",
         "tags": [
           "booking-requests"
         ],
@@ -32136,6 +32305,1296 @@
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.billing.manage` (đọc từ DB mỗi request, không nằm trong session)."
       }
     },
+    "/platform/promo-codes": {
+      "get": {
+        "operationId": "PlatformPromoCodesController_list",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo mã / tên chương trình",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "discountType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "fixed",
+                "percent"
+              ]
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo trạng thái SUY RA (không phải cột) — server dịch thành điều kiện ngày/bộ đếm tương ứng.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "disabled",
+                "upcoming",
+                "active",
+                "ending_soon",
+                "expired",
+                "exhausted"
+              ]
+            }
+          },
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "description": "Chiến dịch còn hiệu lực TỪ (ISO-8601)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateTo",
+            "required": false,
+            "in": "query",
+            "description": "Chiến dịch còn hiệu lực ĐẾN (ISO-8601)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sắp theo: createdAt | endsAt | reservedCount. Mặc định createdAt.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "createdAt",
+                "endsAt",
+                "reservedCount"
+              ]
+            }
+          },
+          {
+            "name": "dir",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromoCodePageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách mã khuyến mãi — lọc/tìm/sắp/phân trang ở SERVER, kèm thẻ thống kê",
+        "tags": [
+          "platform-promo-codes"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.promo_codes.manage` (đọc từ DB mỗi request, không nằm trong session)."
+      },
+      "post": {
+        "operationId": "PlatformPromoCodesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertPromoCodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PromoCodeDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tạo mã khuyến mãi",
+        "tags": [
+          "platform-promo-codes"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.promo_codes.manage` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
+    "/platform/promo-codes/{id}": {
+      "get": {
+        "operationId": "PlatformPromoCodesController_getOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PromoCodeDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Chi tiết một mã",
+        "tags": [
+          "platform-promo-codes"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.promo_codes.manage` (đọc từ DB mỗi request, không nằm trong session)."
+      },
+      "patch": {
+        "operationId": "PlatformPromoCodesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertPromoCodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PromoCodeDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sửa mã — mã đã phát sinh lượt thì mức giảm/điều kiện/phạm vi bị khoá (PROMO_CODE_LOCKED)",
+        "tags": [
+          "platform-promo-codes"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.promo_codes.manage` (đọc từ DB mỗi request, không nằm trong session)."
+      },
+      "delete": {
+        "operationId": "PlatformPromoCodesController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Thành công, không có nội dung trả về"
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Xoá MỀM — mã đã dùng vẫn giải thích được giá của đơn cũ (RESTRICT ở DB)",
+        "tags": [
+          "platform-promo-codes"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.promo_codes.manage` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
+    "/platform/promo-codes/{id}/duplicate": {
+      "post": {
+        "operationId": "PlatformPromoCodesController_duplicate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PromoCodeDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Nhân bản — mã mới TẮT sẵn để soát lại số trước khi chạy",
+        "tags": [
+          "platform-promo-codes"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.promo_codes.manage` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
+    "/platform/promo-codes/{id}/redemptions": {
+      "get": {
+        "operationId": "PlatformPromoCodesController_redemptions",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "reserved",
+                "redeemed",
+                "released"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromoRedemptionPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lượt sử dụng của một mã (tên khách đã che)",
+        "tags": [
+          "platform-promo-codes"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.promo_codes.manage` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
+    "/platform/promo-codes/{id}/toggle": {
+      "post": {
+        "operationId": "PlatformPromoCodesController_toggle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TogglePromoCodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PromoCodeDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Bật/tắt — thao tác duy nhất còn dùng được khi mã đã có lượt dùng",
+        "tags": [
+          "platform-promo-codes"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.promo_codes.manage` (đọc từ DB mỗi request, không nằm trong session)."
+      }
+    },
     "/platform/seller-profiles": {
       "get": {
         "operationId": "PlatformSellerProfilesController_list",
@@ -38378,6 +39837,254 @@
         "summary": "Xe phù hợp với bạn — gợi ý trang chủ, ưu tiên theo tỉnh của khách",
         "tags": [
           "public-listings"
+        ],
+        "security": [],
+        "description": "**Truy cập:** công khai — không cần đăng nhập."
+      }
+    },
+    "/public/promo-codes/available": {
+      "get": {
+        "operationId": "PublicPromoCodesController_available",
+        "parameters": [
+          {
+            "name": "vehicleId",
+            "required": true,
+            "in": "query",
+            "description": "Xe đang xem (ULID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "serviceType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "self_drive",
+                "with_driver",
+                "long_term"
+              ]
+            }
+          },
+          {
+            "name": "pickupAt",
+            "required": false,
+            "in": "query",
+            "description": "ISO-8601",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "returnAt",
+            "required": false,
+            "in": "query",
+            "description": "ISO-8601",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "packageMonths",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "routeType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "inner_city",
+                "inter_city",
+                "inter_city_one_way"
+              ]
+            }
+          },
+          {
+            "name": "personalAccidentSelected",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromoPreviewListDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 30 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Mã khuyến mãi khả dụng cho chuyến đang chọn (kèm lý do nếu không áp được)",
+        "tags": [
+          "public-promo-codes"
+        ],
+        "security": [],
+        "description": "**Truy cập:** công khai — không cần đăng nhập."
+      }
+    },
+    "/public/promo-codes/preview": {
+      "post": {
+        "operationId": "PublicPromoCodesController_preview",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewPromoCodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PromoPreviewDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 20 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Xem trước một mã khuyến mãi cho chuyến đang chọn — KHÔNG giữ lượt sử dụng",
+        "tags": [
+          "public-promo-codes"
         ],
         "security": [],
         "description": "**Truy cập:** công khai — không cần đăng nhập."
@@ -55828,7 +57535,7 @@
   },
   "info": {
     "title": "XePrime API",
-    "description": "API của XePrime — nền tảng cho thuê xe nhiều gian hàng (multi-tenant).\n\n## Lớp bọc response\n\nResponse thành công của API XePrime được bọc một lớp `data`; endpoint phân trang có thêm `meta`:\n\n```jsonc\n// GET /bookings/{id}\n{ \"data\": { \"id\": \"01J...\", \"code\": \"BK-000123\", \"status\": \"active\" } }\n\n// GET /bookings?page=1&limit=20\n{ \"data\": [ /* ... */ ], \"meta\": { \"page\": 1, \"limit\": 20, \"total\": 137, \"hasNext\": true } }\n```\n\nSchema trong tài liệu này đã bao gồm lớp bọc đó, nên copy thẳng ra client là đúng shape thật.\nNgoại lệ là endpoint tích hợp bên thứ ba được đánh dấu `x-xeprime-raw-response`, ví dụ webhook\nSePay phải trả nguyên `{\"success\": true}` theo contract của nhà cung cấp.\n\nLỗi luôn cùng một hình dạng, ở mọi mã HTTP:\n\n```jsonc\n{ \"error\": { \"code\": \"MISSING_PERMISSION\", \"message\": \"...\", \"details\": [ /* tuỳ mã */ ] } }\n```\n\n**Nhánh theo `error.code`, đừng nhánh theo `error.message`.** `message` là tiếng Việt dành cho\nlog và có thể đổi câu chữ bất cứ lúc nào; giao diện tiếng Anh phải tự ánh xạ từ mã (ADR 0012).\n\n## Xác thực\n\n**Hai đường vận chuyển, một nguồn sự thật về quyền.**\n\n**Web** — mọi đường đăng nhập đều kết thúc bằng **httpOnly session cookie** (ADR 0002). Không có\ngì đọc được từ JavaScript.\n\n- `POST /auth/login` (email/SĐT + mật khẩu) · `POST /auth/register` · `POST /auth/phone/login`\n  (SĐT + OTP, passwordless).\n- **Google/Facebook**: trình duyệt điều hướng tới `GET /auth/social/{provider}`; vòng OAuth chạy\n  hoàn toàn ở SERVER và callback tự đặt cookie rồi redirect về web (ADR 0019). Hai route đó trả\n  **302**, không trả JSON — đừng gọi chúng bằng XHR.\n- Từ trình duyệt: đặt `credentials: 'include'`, và origin phải nằm trong `CORS_ORIGINS`.\n- Từ curl/Postman: giữ cookie jar (`curl -c jar.txt -b jar.txt`).\n- Ngay trong trang này: cứ gọi `POST /auth/login` một lần, các endpoint sau dùng lại cookie đó.\n\n**App native** — `Authorization: Bearer <accessToken>` (ADR 0017). Lấy token ở\n`POST /auth/mobile/login` (mật khẩu). Đăng nhập mạng xã hội cho native chưa làm — xem ADR 0019\nmục \"Chỗ cắm cho app native\".\n\n- Access token sống **15 phút**. Hết hạn trả `SESSION_EXPIRED` → gọi `POST /auth/mobile/refresh`.\n- Refresh token **dùng một lần**: mỗi lần refresh trả cặp mới và token cũ chết ngay. Gửi lại token\n  đã dùng ⇒ coi là bị đánh cắp ⇒ thu hồi cả phiên của thiết bị đó.\n- `POST /auth/mobile/logout` thu hồi phiên phía server. Chỉ xoá token ở máy là chưa đăng xuất.\n\n**Đừng gửi cả cookie lẫn Bearer trong một request** — API trả 401 thay vì đoán bên nào thắng.\n\nQuyền **không** nằm trong token — mỗi request đọc lại vai trò/quyền từ DB. Ổ khoá trên mỗi\nendpoint cho biết endpoint đó có cần đăng nhập không; phần **Truy cập / Phạm vi / Quyền yêu cầu**\ntrong mô tả endpoint cho biết cần chính xác quyền nào.\n\nEndpoint có phạm vi gian hàng lấy `tenantId` từ membership của phiên đăng nhập. **Không endpoint\nnào nhận `tenantId` từ body hoặc query** — gửi lên cũng bị bỏ qua hoặc bị từ chối.\n\n## Phân trang, lọc, sắp xếp\n\nQuery dùng chung: `page` (từ 1), `limit`, `sort`. Kết quả trả `meta.total` và `meta.hasNext`.\nBộ lọc riêng của từng endpoint mô tả tại chính endpoint đó.\n\n## Kiểu dữ liệu\n\n| Loại | Trên dây | Ghi chú |\n| --- | --- | --- |\n| Tiền | `string` | Ví dụ `\"1250000.00\"`. **Không bao giờ là `number`** — tránh sai số dấu phẩy động (ADR 0007). Đơn vị luôn là VND. |\n| Thời điểm | `string` ISO-8601 UTC | Ví dụ `\"2026-08-21T03:00:00.000Z\"`. Hiển thị thì đổi sang `Asia/Ho_Chi_Minh`. |\n| Ngày (không giờ) | `string` `YYYY-MM-DD` | Dùng cho ngày nhận/trả theo lịch. |\n| ID | `string` 26 ký tự | ULID. |\n| Trạng thái, vai trò, quyền | `string` mã ổn định | Mã là DỮ LIỆU, chỉ nhãn hiển thị mới dịch. |\n\nThuê dài hạn là gói cố định 1/2/3/6/9/12 **tháng lịch**; server tự tính ngày trả từ ngày nhận —\nclient không gửi lên và không được suy bằng `số tháng × 30` (ADR 0011).\n\nTiền thuê xe của khách **chưa đi qua nền tảng**: thu/chi của đơn vẫn là ghi sổ thủ công. Đường\ntiền tự động duy nhất đang chạy là **hoá đơn gói của gian hàng**, đối soát bằng webhook SePay\n(ADR 0016/0022) — nền tảng không giữ tiền hộ ai ở luồng đó. Lệnh cấm cũ của ADR 0013 đã được\nADR 0028 thay bằng một lộ trình có release gate.\n\n## Mã lỗi\n\nMã dùng chung ở mọi endpoint:\n\n| HTTP | Mã | Khi nào |\n| --- | --- | --- |\n| 400 | `VALIDATION_FAILED` | Sai schema. `error.details` liệt kê từng field và ràng buộc hỏng. |\n| 401 | `UNAUTHENTICATED` | Thiếu cookie phiên hoặc phiên đã hết hạn. |\n| 403 | `MISSING_PERMISSION` | Đã đăng nhập nhưng thiếu quyền endpoint đòi. |\n| 403 | `NO_TENANT_SCOPE` | Tài khoản không thuộc gian hàng nào. |\n| 404 | `NOT_FOUND` | Không có bản ghi, hoặc có nhưng thuộc gian hàng khác. |\n| 409 | `CONFLICT` | Trùng bản ghi đã tồn tại. |\n| 409 | `BOOKING_SCHEDULE_CONFLICT` | Xe đã có lịch trùng khoảng thời gian. Chặn bằng ràng buộc `EXCLUDE USING gist` ở DB (ADR 0006) — kiểm tra phía client chỉ là gợi ý UX, luôn phải xử lý mã này. |\n| 429 | `RATE_LIMITED` | Vượt hạn mức. Mức chung là 120 request / 60 giây, nhưng các cửa dò (đăng nhập, đăng ký, quên mật khẩu, OTP, báo giá công khai) siết chặt hơn — con số THẬT của từng endpoint nằm ở mô tả nhánh 429 của chính endpoint đó. |\n| 500 | `INTERNAL_ERROR` | Lỗi server. Ở production `message` được che, tra log theo request-id. |\n\nToàn bộ mã (gồm cả mã nghiệp vụ riêng của từng luồng):\n\n`ACCOUNT_LOCKED` · `BANK_ACCOUNT_DUPLICATE` · `BANK_TX_ALREADY_HANDLED` · `BANK_TX_TARGET_NOT_PAYABLE` · `BOOKING_NO_SHOW_NOT_ALLOWED` · `BOOKING_REQUEST_DUPLICATE` · `BOOKING_REQUEST_EXPIRED` · `BOOKING_SCHEDULE_CONFLICT` · `BRANCH_DEFAULT_IMMUTABLE` · `BRANCH_HAS_DEPENDENCIES` · `BRANCH_LOCATION_REQUIRED` · `CANNOT_BOOK_OWN_VEHICLE` · `CANNOT_DECIDE_OWN_REQUEST` · `CHAT_CUSTOMER_UNAVAILABLE` · `CHAT_REQUIRES_BOOKING` · `COMMISSION_PLAN_IS_SINGLETON` · `CONFLICT` · `CURRENT_PASSWORD_INCORRECT` · `CUSTOMER_ARCHIVED` · `CUSTOMER_BLOCKED` · `CUSTOMER_PHONE_DUPLICATE` · `DEFAULT_COMMISSION_PLAN_MISSING` · `DEFAULT_PLAN_PROTECTED` · `DELIVERY_NOT_SUPPORTED` · `DELIVERY_QUOTE_REQUIRED` · `DEPOSIT_ALWAYS_REQUIRED` · `EMAIL_TAKEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY` · `FEE_POLICY_ACTIVATION_BLOCKED` · `FEE_POLICY_MISSING` · `FEE_POLICY_NOT_DRAFT` · `FORBIDDEN` · `HANDOVER_NOT_ELIGIBLE` · `HANDOVER_ODOMETER_BELOW_PICKUP` · `HANDOVER_ODOMETER_SUSPICIOUS` · `HANDOVER_WINDOW_VIOLATION` · `HOLD_ALREADY_PAID` · `HOLD_EXPIRED` · `HOLD_LOCKED_BY_DISPUTE` · `HOLD_NOT_PENDING` · `HOLD_NOT_REFUNDABLE` · `HOLD_REQUIRED` · `INSTANT_BOOK_UNAVAILABLE` · `INSUFFICIENT_BALANCE` · `INTERNAL_ERROR` · `INVALID_CREDENTIALS` · `INVALID_RESET_TOKEN` · `INVALID_STATUS_TRANSITION` · `INVITE_ALREADY_MEMBER` · `INVITE_EMAIL_MISMATCH` · `INVITE_EXPIRED` · `INVITE_INVALID` · `MIN_RENTAL_DURATION` · `MISSING_PERMISSION` · `NOT_FOUND` · `NO_TENANT_SCOPE` · `OCR_FAILED` · `OCR_NOT_CONFIGURED` · `OCR_PROCESSING` · `OCR_UNREADABLE` · `ODOMETER_DECREASE_FORBIDDEN` · `OTP_COOLDOWN` · `OTP_EXPIRED` · `OTP_INVALID` · `OTP_LOCKED` · `OTP_TOO_MANY` · `PACKAGE_ONBOARDING_INCOMPLETE` · `PASSWORD_NOT_SET` · `PASSWORD_UNCHANGED` · `PHONE_NOT_VERIFIED` · `PHONE_TAKEN` · `PLAN_INCENTIVE_INVALID` · `PLAN_LIMIT_REACHED` · `PLAN_NOT_SELF_SERVE` · `PROFILE_INCOMPLETE` · `RATE_LIMITED` · `RECEIPT_BOOKING_VEHICLE_MISMATCH` · `RECEIPT_SOURCE_LOCKED` · `REFUND_ACCOUNT_REQUIRED` · `REFUND_ALREADY_HANDLED` · `RENTAL_TERMS_ACCEPTANCE_REQUIRED` · `SELLER_PROFILE_INCOMPLETE` · `SELLER_PROFILE_NOT_EDITABLE` · `SEPAY_NOT_CONFIGURED` · `SEPAY_SIGNATURE_INVALID` · `SESSION_EXPIRED` · `SHOP_ACCOUNT_CANNOT_BOOK` · `SHOP_LISTING_REQUIREMENTS_MISSING` · `SHOP_NOT_ACTIVE` · `SHOP_OWNER_ONLY` · `SHOP_VERIFICATION_PENDING` · `SOCIAL_CANCELLED` · `SOCIAL_EXCHANGE_FAILED` · `SOCIAL_NOT_CONFIGURED` · `SOCIAL_STATE_INVALID` · `SUBSCRIPTION_INVOICE_PARTIALLY_PAID` · `SUBSCRIPTION_TRACK_ONLY` · `SUPPORT_CASE_CATEGORY_NOT_ALLOWED` · `SUPPORT_CASE_CLOSED` · `SURCHARGE_CATEGORY_DUPLICATE` · `TENANT_BILLING_NOT_CONFIGURED` · `TENANT_NOT_ACTIVE` · `TRIP_CANCEL_NOT_ALLOWED` · `UNAUTHENTICATED` · `UPLOADS_NOT_CONFIGURED` · `VALIDATION_FAILED` · `VEHICLE_FIELD_LOCKED` · `VEHICLE_PUBLISH_INCOMPLETE` · `WALLET_INSUFFICIENT_BALANCE` · `WITHDRAWAL_ALREADY_HANDLED` · `WITHDRAWAL_BELOW_MINIMUM`\n\nĐịnh nghĩa gốc: `packages/types/src/api.ts` → `API_ERROR_CODE`.\n\n## Sinh type cho client TypeScript\n\n```bash\npnpm contract   # apps/api → packages/types/openapi.json → packages/types/src/api.generated.ts\n```\n\nType client **không viết tay** (ADR 0007): import từ `@xeprime/types`.",
+    "description": "API của XePrime — nền tảng cho thuê xe nhiều gian hàng (multi-tenant).\n\n## Lớp bọc response\n\nResponse thành công của API XePrime được bọc một lớp `data`; endpoint phân trang có thêm `meta`:\n\n```jsonc\n// GET /bookings/{id}\n{ \"data\": { \"id\": \"01J...\", \"code\": \"BK-000123\", \"status\": \"active\" } }\n\n// GET /bookings?page=1&limit=20\n{ \"data\": [ /* ... */ ], \"meta\": { \"page\": 1, \"limit\": 20, \"total\": 137, \"hasNext\": true } }\n```\n\nSchema trong tài liệu này đã bao gồm lớp bọc đó, nên copy thẳng ra client là đúng shape thật.\nNgoại lệ là endpoint tích hợp bên thứ ba được đánh dấu `x-xeprime-raw-response`, ví dụ webhook\nSePay phải trả nguyên `{\"success\": true}` theo contract của nhà cung cấp.\n\nLỗi luôn cùng một hình dạng, ở mọi mã HTTP:\n\n```jsonc\n{ \"error\": { \"code\": \"MISSING_PERMISSION\", \"message\": \"...\", \"details\": [ /* tuỳ mã */ ] } }\n```\n\n**Nhánh theo `error.code`, đừng nhánh theo `error.message`.** `message` là tiếng Việt dành cho\nlog và có thể đổi câu chữ bất cứ lúc nào; giao diện tiếng Anh phải tự ánh xạ từ mã (ADR 0012).\n\n## Xác thực\n\n**Hai đường vận chuyển, một nguồn sự thật về quyền.**\n\n**Web** — mọi đường đăng nhập đều kết thúc bằng **httpOnly session cookie** (ADR 0002). Không có\ngì đọc được từ JavaScript.\n\n- `POST /auth/login` (email/SĐT + mật khẩu) · `POST /auth/register` · `POST /auth/phone/login`\n  (SĐT + OTP, passwordless).\n- **Google/Facebook**: trình duyệt điều hướng tới `GET /auth/social/{provider}`; vòng OAuth chạy\n  hoàn toàn ở SERVER và callback tự đặt cookie rồi redirect về web (ADR 0019). Hai route đó trả\n  **302**, không trả JSON — đừng gọi chúng bằng XHR.\n- Từ trình duyệt: đặt `credentials: 'include'`, và origin phải nằm trong `CORS_ORIGINS`.\n- Từ curl/Postman: giữ cookie jar (`curl -c jar.txt -b jar.txt`).\n- Ngay trong trang này: cứ gọi `POST /auth/login` một lần, các endpoint sau dùng lại cookie đó.\n\n**App native** — `Authorization: Bearer <accessToken>` (ADR 0017). Lấy token ở\n`POST /auth/mobile/login` (mật khẩu). Đăng nhập mạng xã hội cho native chưa làm — xem ADR 0019\nmục \"Chỗ cắm cho app native\".\n\n- Access token sống **15 phút**. Hết hạn trả `SESSION_EXPIRED` → gọi `POST /auth/mobile/refresh`.\n- Refresh token **dùng một lần**: mỗi lần refresh trả cặp mới và token cũ chết ngay. Gửi lại token\n  đã dùng ⇒ coi là bị đánh cắp ⇒ thu hồi cả phiên của thiết bị đó.\n- `POST /auth/mobile/logout` thu hồi phiên phía server. Chỉ xoá token ở máy là chưa đăng xuất.\n\n**Đừng gửi cả cookie lẫn Bearer trong một request** — API trả 401 thay vì đoán bên nào thắng.\n\nQuyền **không** nằm trong token — mỗi request đọc lại vai trò/quyền từ DB. Ổ khoá trên mỗi\nendpoint cho biết endpoint đó có cần đăng nhập không; phần **Truy cập / Phạm vi / Quyền yêu cầu**\ntrong mô tả endpoint cho biết cần chính xác quyền nào.\n\nEndpoint có phạm vi gian hàng lấy `tenantId` từ membership của phiên đăng nhập. **Không endpoint\nnào nhận `tenantId` từ body hoặc query** — gửi lên cũng bị bỏ qua hoặc bị từ chối.\n\n## Phân trang, lọc, sắp xếp\n\nQuery dùng chung: `page` (từ 1), `limit`, `sort`. Kết quả trả `meta.total` và `meta.hasNext`.\nBộ lọc riêng của từng endpoint mô tả tại chính endpoint đó.\n\n## Kiểu dữ liệu\n\n| Loại | Trên dây | Ghi chú |\n| --- | --- | --- |\n| Tiền | `string` | Ví dụ `\"1250000.00\"`. **Không bao giờ là `number`** — tránh sai số dấu phẩy động (ADR 0007). Đơn vị luôn là VND. |\n| Thời điểm | `string` ISO-8601 UTC | Ví dụ `\"2026-08-21T03:00:00.000Z\"`. Hiển thị thì đổi sang `Asia/Ho_Chi_Minh`. |\n| Ngày (không giờ) | `string` `YYYY-MM-DD` | Dùng cho ngày nhận/trả theo lịch. |\n| ID | `string` 26 ký tự | ULID. |\n| Trạng thái, vai trò, quyền | `string` mã ổn định | Mã là DỮ LIỆU, chỉ nhãn hiển thị mới dịch. |\n\nThuê dài hạn là gói cố định 1/2/3/6/9/12 **tháng lịch**; server tự tính ngày trả từ ngày nhận —\nclient không gửi lên và không được suy bằng `số tháng × 30` (ADR 0011).\n\nTiền thuê xe của khách **chưa đi qua nền tảng**: thu/chi của đơn vẫn là ghi sổ thủ công. Đường\ntiền tự động duy nhất đang chạy là **hoá đơn gói của gian hàng**, đối soát bằng webhook SePay\n(ADR 0016/0022) — nền tảng không giữ tiền hộ ai ở luồng đó. Lệnh cấm cũ của ADR 0013 đã được\nADR 0028 thay bằng một lộ trình có release gate.\n\n## Mã lỗi\n\nMã dùng chung ở mọi endpoint:\n\n| HTTP | Mã | Khi nào |\n| --- | --- | --- |\n| 400 | `VALIDATION_FAILED` | Sai schema. `error.details` liệt kê từng field và ràng buộc hỏng. |\n| 401 | `UNAUTHENTICATED` | Thiếu cookie phiên hoặc phiên đã hết hạn. |\n| 403 | `MISSING_PERMISSION` | Đã đăng nhập nhưng thiếu quyền endpoint đòi. |\n| 403 | `NO_TENANT_SCOPE` | Tài khoản không thuộc gian hàng nào. |\n| 404 | `NOT_FOUND` | Không có bản ghi, hoặc có nhưng thuộc gian hàng khác. |\n| 409 | `CONFLICT` | Trùng bản ghi đã tồn tại. |\n| 409 | `BOOKING_SCHEDULE_CONFLICT` | Xe đã có lịch trùng khoảng thời gian. Chặn bằng ràng buộc `EXCLUDE USING gist` ở DB (ADR 0006) — kiểm tra phía client chỉ là gợi ý UX, luôn phải xử lý mã này. |\n| 429 | `RATE_LIMITED` | Vượt hạn mức. Mức chung là 120 request / 60 giây, nhưng các cửa dò (đăng nhập, đăng ký, quên mật khẩu, OTP, báo giá công khai) siết chặt hơn — con số THẬT của từng endpoint nằm ở mô tả nhánh 429 của chính endpoint đó. |\n| 500 | `INTERNAL_ERROR` | Lỗi server. Ở production `message` được che, tra log theo request-id. |\n\nToàn bộ mã (gồm cả mã nghiệp vụ riêng của từng luồng):\n\n`ACCOUNT_LOCKED` · `BANK_ACCOUNT_DUPLICATE` · `BANK_TX_ALREADY_HANDLED` · `BANK_TX_TARGET_NOT_PAYABLE` · `BOOKING_CANCEL_NOT_ALLOWED` · `BOOKING_NO_SHOW_NOT_ALLOWED` · `BOOKING_REQUEST_DUPLICATE` · `BOOKING_REQUEST_EXPIRED` · `BOOKING_SCHEDULE_CONFLICT` · `BRANCH_DEFAULT_IMMUTABLE` · `BRANCH_HAS_DEPENDENCIES` · `BRANCH_LOCATION_REQUIRED` · `CANNOT_BOOK_OWN_VEHICLE` · `CANNOT_DECIDE_OWN_REQUEST` · `CHAT_CUSTOMER_UNAVAILABLE` · `CHAT_REQUIRES_BOOKING` · `COMMISSION_PLAN_IS_SINGLETON` · `CONFLICT` · `CURRENT_PASSWORD_INCORRECT` · `CUSTOMER_ARCHIVED` · `CUSTOMER_BLOCKED` · `CUSTOMER_PHONE_DUPLICATE` · `DEFAULT_COMMISSION_PLAN_MISSING` · `DEFAULT_PLAN_PROTECTED` · `DELIVERY_NOT_SUPPORTED` · `DELIVERY_QUOTE_REQUIRED` · `DEPOSIT_ALWAYS_REQUIRED` · `EMAIL_TAKEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY` · `FEE_POLICY_ACTIVATION_BLOCKED` · `FEE_POLICY_MISSING` · `FEE_POLICY_NOT_DRAFT` · `FORBIDDEN` · `HANDOVER_NOT_ELIGIBLE` · `HANDOVER_ODOMETER_BELOW_PICKUP` · `HANDOVER_ODOMETER_SUSPICIOUS` · `HANDOVER_WINDOW_VIOLATION` · `HOLD_ALREADY_PAID` · `HOLD_EXPIRED` · `HOLD_LIMIT_REACHED` · `HOLD_LOCKED_BY_DISPUTE` · `HOLD_NOT_PENDING` · `HOLD_NOT_REFUNDABLE` · `HOLD_REQUIRED` · `HOLD_WINDOW_TOO_SHORT` · `INSTANT_BOOK_UNAVAILABLE` · `INSUFFICIENT_BALANCE` · `INTERNAL_ERROR` · `INVALID_CREDENTIALS` · `INVALID_RESET_TOKEN` · `INVALID_STATUS_TRANSITION` · `INVITE_ALREADY_MEMBER` · `INVITE_EMAIL_MISMATCH` · `INVITE_EXPIRED` · `INVITE_INVALID` · `MIN_RENTAL_DURATION` · `MISSING_PERMISSION` · `NOT_FOUND` · `NO_TENANT_SCOPE` · `OCR_FAILED` · `OCR_NOT_CONFIGURED` · `OCR_PROCESSING` · `OCR_UNREADABLE` · `ODOMETER_DECREASE_FORBIDDEN` · `OTP_COOLDOWN` · `OTP_EXPIRED` · `OTP_INVALID` · `OTP_LOCKED` · `OTP_TOO_MANY` · `PACKAGE_ONBOARDING_INCOMPLETE` · `PASSWORD_NOT_SET` · `PASSWORD_UNCHANGED` · `PHONE_NOT_VERIFIED` · `PHONE_TAKEN` · `PLAN_INCENTIVE_INVALID` · `PLAN_LIMIT_REACHED` · `PLAN_NOT_SELF_SERVE` · `PROFILE_INCOMPLETE` · `PROMO_CODE_DUPLICATE` · `PROMO_CODE_EXHAUSTED` · `PROMO_CODE_LOCKED` · `PROMO_CODE_NOT_APPLICABLE` · `RATE_LIMITED` · `RECEIPT_BOOKING_VEHICLE_MISMATCH` · `RECEIPT_SOURCE_LOCKED` · `REFUND_ACCOUNT_REQUIRED` · `REFUND_ALREADY_HANDLED` · `RENTAL_TERMS_ACCEPTANCE_REQUIRED` · `SELLER_PROFILE_INCOMPLETE` · `SELLER_PROFILE_NOT_EDITABLE` · `SEPAY_NOT_CONFIGURED` · `SEPAY_SIGNATURE_INVALID` · `SESSION_EXPIRED` · `SHOP_ACCOUNT_CANNOT_BOOK` · `SHOP_LISTING_REQUIREMENTS_MISSING` · `SHOP_NOT_ACTIVE` · `SHOP_OWNER_ONLY` · `SHOP_VERIFICATION_PENDING` · `SOCIAL_CANCELLED` · `SOCIAL_EXCHANGE_FAILED` · `SOCIAL_NOT_CONFIGURED` · `SOCIAL_STATE_INVALID` · `SUBSCRIPTION_INVOICE_PARTIALLY_PAID` · `SUBSCRIPTION_TRACK_ONLY` · `SUPPORT_CASE_CATEGORY_NOT_ALLOWED` · `SUPPORT_CASE_CLOSED` · `SURCHARGE_CATEGORY_DUPLICATE` · `TENANT_BILLING_NOT_CONFIGURED` · `TENANT_NOT_ACTIVE` · `TRIP_CANCEL_NOT_ALLOWED` · `UNAUTHENTICATED` · `UPLOADS_NOT_CONFIGURED` · `VALIDATION_FAILED` · `VEHICLE_FIELD_LOCKED` · `VEHICLE_PUBLISH_INCOMPLETE` · `WALLET_INSUFFICIENT_BALANCE` · `WITHDRAWAL_ALREADY_HANDLED` · `WITHDRAWAL_BELOW_MINIMUM`\n\nĐịnh nghĩa gốc: `packages/types/src/api.ts` → `API_ERROR_CODE`.\n\n## Sinh type cho client TypeScript\n\n```bash\npnpm contract   # apps/api → packages/types/openapi.json → packages/types/src/api.generated.ts\n```\n\nType client **không viết tay** (ADR 0007): import từ `@xeprime/types`.",
     "version": "0.1.0",
     "contact": {}
   },
@@ -55860,6 +57567,10 @@
     {
       "name": "public-booking-requests",
       "description": "Khách gửi yêu cầu thuê và tra cứu yêu cầu của mình. Yêu cầu CHƯA giữ chỗ lịch — gian hàng duyệt mới sinh đơn (ADR 0006, ADR 0011)."
+    },
+    {
+      "name": "public-promo-codes",
+      "description": "Xem trước mã khuyến mãi cho chuyến đang chọn (ADR 0046) — ĐỌC THUẦN, không giữ lượt. Danh tính đến từ phiên, không từ payload: endpoint này không nhận SĐT và không nói gì về lịch sử của một khách nào. Rate limit siết hơn mức chung để chặn dò mã."
     },
     {
       "name": "public-reviews",
@@ -56096,6 +57807,10 @@
     {
       "name": "platform-fee-policies",
       "description": "Chính sách phí có phiên bản (ADR 0028/0029): phí dịch vụ, thuế, bảo hiểm. Đúng một bản hiệu lực; bản đã kích hoạt là bất biến và booking snapshot theo nó."
+    },
+    {
+      "name": "platform-promo-codes",
+      "description": "Mã khuyến mãi do NỀN TẢNG tài trợ (ADR 0046): tạo, sửa, bật/tắt, xem lượt sử dụng. Khác khuyến mãi trực tiếp của chủ xe — mã ở đây giảm số khách trả mà không bớt một đồng nào của gian hàng. Mã đã phát sinh lượt thì mức giảm và điều kiện bị khoá."
     },
     {
       "name": "platform-money",
@@ -58016,7 +59731,9 @@
               "converted_to_booking",
               "awaiting_hold",
               "hold_paid",
-              "hold_expired"
+              "hold_expired",
+              "slot_taken",
+              "cancelled_by_host"
             ]
           },
           "customerName": {
@@ -58205,6 +59922,11 @@
             ],
             "description": "Ai quyết định — chủ xe hay hệ thống tự nhận (08/09/2026); null khi chưa quyết"
           },
+          "holdExpiresAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC — hạn khách chuyển tiền giữ chỗ; null khi chuyến không thu"
+          },
           "pricing": {
             "nullable": true,
             "description": "Tiền của yêu cầu này — xem docblock BookingRequestPricingDto cho nguồn theo trạng thái. Luôn có mặt (kể cả `null`) ở danh sách và chi tiết; VẮNG MẶT ở phiếu trả về của các thao tác duyệt/từ chối/huỷ — client đọc lại danh sách/chi tiết để thấy số mới.",
@@ -58331,7 +60053,9 @@
               "converted_to_booking",
               "awaiting_hold",
               "hold_paid",
-              "hold_expired"
+              "hold_expired",
+              "slot_taken",
+              "cancelled_by_host"
             ]
           },
           "authenticated": {
@@ -58371,7 +60095,9 @@
               "converted_to_booking",
               "awaiting_hold",
               "hold_paid",
-              "hold_expired"
+              "hold_expired",
+              "slot_taken",
+              "cancelled_by_host"
             ]
           },
           "count": {
@@ -59067,6 +60793,30 @@
           "code",
           "vehicleType",
           "operationStatus"
+        ]
+      },
+      "CancelBookingRequestDto": {
+        "type": "object",
+        "properties": {
+          "reasonCategory": {
+            "type": "string",
+            "enum": [
+              "vehicle_unavailable",
+              "schedule_conflict",
+              "customer_requirements",
+              "customer_unreachable",
+              "customer_changed_plan",
+              "other"
+            ],
+            "description": "Nhóm lý do — thứ DUY NHẤT người huỷ chọn. Không có nhóm \"bất khả kháng\"."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Bắt buộc khi reasonCategory = other"
+          }
+        },
+        "required": [
+          "reasonCategory"
         ]
       },
       "CancelHandoverDto": {
@@ -60486,6 +62236,10 @@
           "acceptedTerms": {
             "type": "boolean",
             "description": "Đồng ý điều khoản thuê của chủ xe"
+          },
+          "promoCode": {
+            "type": "string",
+            "description": "Mã khuyến mãi nền tảng (server tự chuẩn hoá)"
           }
         },
         "required": [
@@ -61923,9 +63677,27 @@
             "type": "string",
             "description": "D — cọc trả online cho XePrime; \"0\" khi chuyến không thu cọc"
           },
+          "grossOnlineAmount": {
+            "type": "string",
+            "description": "D + S + IV + IP TRƯỚC tài trợ mã khuyến mãi — con số phân bổ quyền lợi làm việc trên"
+          },
+          "promoDiscountAmount": {
+            "type": "string",
+            "description": "P — số XePrime TÀI TRỢ qua mã khuyến mãi (ADR 0046). \"0\" khi không có mã. Không đụng tiền gian hàng."
+          },
+          "promo": {
+            "nullable": true,
+            "description": "Mã đã áp + điều kiện đóng băng. null khi chuyến không dùng mã.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PromoCodeSnapshotDto"
+              }
+            ]
+          },
           "onlineAmount": {
             "type": "string",
-            "description": "D + S + IV + IP — số quét QR trả ngay"
+            "description": "D + S + IV + IP − P — số quét QR trả ngay"
           },
           "payAtPickupAmount": {
             "type": "string",
@@ -61957,6 +63729,8 @@
           "customerFeeTotal",
           "customerTotalAmount",
           "depositAmount",
+          "grossOnlineAmount",
+          "promoDiscountAmount",
           "onlineAmount",
           "payAtPickupAmount",
           "taxAmount",
@@ -62315,6 +64089,7 @@
               "completed",
               "cancelled",
               "rejected",
+              "slot_taken",
               "no_show"
             ],
             "description": "@xeprime/types CustomerTripStage"
@@ -62773,6 +64548,7 @@
               "completed",
               "cancelled",
               "rejected",
+              "slot_taken",
               "no_show"
             ],
             "description": "@xeprime/types CustomerTripStage"
@@ -63607,7 +65383,8 @@
               "tax",
               "trip_insurance",
               "vehicle_protection",
-              "deposit"
+              "deposit",
+              "promo"
             ]
           },
           "beneficiary": {
@@ -64642,6 +66419,41 @@
         },
         "required": [
           "items"
+        ]
+      },
+      "HostMetricsDto": {
+        "type": "object",
+        "properties": {
+          "sampleCount": {
+            "type": "number",
+            "description": "Số YÊU CẦU mà gian hàng thật sự phải quyết, trong 90 ngày gần nhất. Không gồm slot_taken, khách rút trước khi gian hàng quyết, và dữ liệu LEGACY ADR 0039 không có quyết định nào."
+          },
+          "responseRatePercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "Tỉ lệ phản hồi trong hạn (0–100). Null = chưa đủ mẫu, KHÔNG phải 0."
+          },
+          "acceptKeepRatePercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "Tỉ lệ NHẬN VÀ GIỮ chuyến (0–100). Từ chối trong hạn KHÔNG nằm trong tử số; gian hàng huỷ sau khi đã nhận thì mẫu đó rời tử số. Null = chưa đủ mẫu."
+          },
+          "responseMinutesMedian": {
+            "type": "number",
+            "nullable": true,
+            "description": "Trung vị số PHÚT tới quyết định của NGƯỜI. Lượt tự nhận không vào phép tính này — xem instantBook. Null = chưa đủ mẫu do người quyết."
+          },
+          "instantBook": {
+            "type": "boolean",
+            "description": "Gian hàng có xe bật \"Đặt ngay\" trong cửa sổ — giao diện hiện nhãn thay cho số phút, thay vì quảng cáo một tốc độ trả lời thủ công không có thật."
+          }
+        },
+        "required": [
+          "sampleCount",
+          "responseRatePercent",
+          "acceptKeepRatePercent",
+          "responseMinutesMedian",
+          "instantBook"
         ]
       },
       "IdResultDto": {
@@ -66248,6 +68060,7 @@
                 "platform.locations.view",
                 "platform.locations.manage",
                 "platform.fee_policies.manage",
+                "platform.promo_codes.manage",
                 "platform.sellers.verify",
                 "platform.money.manage",
                 "platform.support.manage"
@@ -66402,6 +68215,9 @@
               "booking_request_cancelled",
               "booking_request_expiring",
               "booking_request_expired",
+              "booking_request_slot_taken",
+              "booking_request_slot_reopened",
+              "booking_cancelled_by_host",
               "booking_auto_accepted",
               "shop_approved",
               "shop_rejected",
@@ -66421,6 +68237,7 @@
               "hold_expired",
               "hold_refunded",
               "hold_refund_paid",
+              "promo_code_dropped",
               "seller_profile_verified",
               "seller_profile_changes_requested",
               "seller_profile_rejected",
@@ -69389,6 +71206,55 @@
           "fileSize"
         ]
       },
+      "PreviewPromoCodeDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Mã khách gõ — server tự chuẩn hoá"
+          },
+          "vehicleId": {
+            "type": "string",
+            "description": "Xe đang xem (ULID)"
+          },
+          "serviceType": {
+            "type": "string",
+            "enum": [
+              "self_drive",
+              "with_driver",
+              "long_term"
+            ]
+          },
+          "pickupAt": {
+            "type": "string",
+            "description": "ISO-8601 — bắt buộc với dịch vụ theo ngày"
+          },
+          "returnAt": {
+            "type": "string",
+            "description": "ISO-8601 — bắt buộc với dịch vụ theo ngày"
+          },
+          "packageMonths": {
+            "type": "number",
+            "description": "Gói thuê dài hạn (tháng lịch)"
+          },
+          "routeType": {
+            "type": "string",
+            "enum": [
+              "inner_city",
+              "inter_city",
+              "inter_city_one_way"
+            ]
+          },
+          "personalAccidentSelected": {
+            "type": "boolean",
+            "description": "Khách có giữ lựa chọn bảo hiểm tai nạn người không"
+          }
+        },
+        "required": [
+          "code",
+          "vehicleId"
+        ]
+      },
       "PriceBoundsDto": {
         "type": "object",
         "properties": {
@@ -69434,6 +71300,508 @@
           "key",
           "label",
           "amount"
+        ]
+      },
+      "PromoCodeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "discountType": {
+            "type": "string",
+            "enum": [
+              "fixed",
+              "percent"
+            ]
+          },
+          "discountAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "VND string (ADR 0007)"
+          },
+          "discountPercent": {
+            "type": "number",
+            "nullable": true
+          },
+          "maxDiscountAmount": {
+            "type": "string",
+            "nullable": true
+          },
+          "minOrderAmount": {
+            "type": "string",
+            "description": "VND string (ADR 0007)"
+          },
+          "audience": {
+            "type": "string",
+            "enum": [
+              "all",
+              "new_customer"
+            ]
+          },
+          "vehicleScope": {
+            "type": "string",
+            "enum": [
+              "all",
+              "car",
+              "motorbike"
+            ]
+          },
+          "serviceScope": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "self_drive",
+                "with_driver",
+                "long_term"
+              ]
+            }
+          },
+          "provinceCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "totalUsageLimit": {
+            "type": "number",
+            "nullable": true
+          },
+          "perCustomerLimit": {
+            "type": "number",
+            "nullable": true
+          },
+          "reservedCount": {
+            "type": "number",
+            "description": "Lượt đang giữ + đã chốt — con số mà trần tổng so sánh"
+          },
+          "redeemedCount": {
+            "type": "number",
+            "description": "Lượt đã thành đơn"
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "ISO-8601"
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "ISO-8601"
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Công tắc admin — trạng thái duy nhất được LƯU"
+          },
+          "listed": {
+            "type": "boolean"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "upcoming",
+              "active",
+              "ending_soon",
+              "expired",
+              "exhausted"
+            ],
+            "description": "Trạng thái SUY RA từ công tắc + mốc thời gian + bộ đếm (promoCodeState)"
+          },
+          "hasUsage": {
+            "type": "boolean",
+            "description": "Chiến dịch đã phát sinh lượt ⇒ các trường trong `lockedFields` không sửa được nữa (ADR 0046 điều 8)"
+          },
+          "lockedFields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sponsoredAmount": {
+            "type": "string",
+            "description": "Tổng tiền XePrime đã tài trợ qua mã này (VND string)"
+          },
+          "createdByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "discountType",
+          "minOrderAmount",
+          "audience",
+          "vehicleScope",
+          "serviceScope",
+          "provinceCodes",
+          "reservedCount",
+          "redeemedCount",
+          "startsAt",
+          "endsAt",
+          "isActive",
+          "listed",
+          "state",
+          "hasUsage",
+          "lockedFields",
+          "sponsoredAmount",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "PromoCodePageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromoCodeDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/PromoCodeStatsDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta",
+          "stats"
+        ]
+      },
+      "PromoCodeSnapshotDto": {
+        "type": "object",
+        "properties": {
+          "promoCodeId": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "description": "Mã đã chuẩn hoá (in hoa)"
+          },
+          "name": {
+            "type": "string",
+            "description": "Tên chương trình lúc khách áp mã"
+          },
+          "discountApplied": {
+            "type": "string",
+            "description": "Số giảm ĐÃ ÁP (VND string — ADR 0007)"
+          },
+          "discountType": {
+            "type": "string",
+            "enum": [
+              "fixed",
+              "percent"
+            ]
+          },
+          "discountAmount": {
+            "type": "string",
+            "nullable": true
+          },
+          "discountPercent": {
+            "type": "number",
+            "nullable": true
+          },
+          "maxDiscountAmount": {
+            "type": "string",
+            "nullable": true
+          },
+          "minOrderAmount": {
+            "type": "string"
+          },
+          "audience": {
+            "type": "string",
+            "enum": [
+              "all",
+              "new_customer"
+            ]
+          },
+          "vehicleScope": {
+            "type": "string",
+            "enum": [
+              "all",
+              "car",
+              "motorbike"
+            ]
+          },
+          "serviceScope": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "self_drive",
+                "with_driver",
+                "long_term"
+              ]
+            }
+          },
+          "provinceCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "perCustomerLimit": {
+            "type": "number",
+            "nullable": true
+          },
+          "appliedAt": {
+            "type": "string",
+            "description": "ISO-8601"
+          }
+        },
+        "required": [
+          "promoCodeId",
+          "code",
+          "name",
+          "discountApplied",
+          "discountType",
+          "minOrderAmount",
+          "audience",
+          "vehicleScope",
+          "serviceScope",
+          "provinceCodes",
+          "appliedAt"
+        ]
+      },
+      "PromoCodeStatsDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          },
+          "createdLast30Days": {
+            "type": "number",
+            "description": "Thêm mới trong 30 ngày qua — cho chỉ số \"so với tháng trước\""
+          },
+          "active": {
+            "type": "number"
+          },
+          "endingSoon": {
+            "type": "number",
+            "description": "Hết hạn trong PROMO_ENDING_SOON_DAYS ngày tới"
+          },
+          "expired": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "createdLast30Days",
+          "active",
+          "endingSoon",
+          "expired"
+        ]
+      },
+      "PromoPreviewDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Mã đã CHUẨN HOÁ"
+          },
+          "applicable": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "not_found",
+              "disabled",
+              "not_started",
+              "expired",
+              "exhausted",
+              "customer_limit_reached",
+              "audience_mismatch",
+              "min_order_not_met",
+              "vehicle_scope_mismatch",
+              "service_scope_mismatch",
+              "province_mismatch",
+              "no_online_payment",
+              "discount_below_floor",
+              "requires_identity"
+            ],
+            "description": "Mã lý do ổn định — giao diện dịch từ MÃ, không hiện message của server"
+          },
+          "discountAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "VND string (ADR 0007)"
+          },
+          "clamped": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "Số giảm đã bị một trần nào đó kẹp xuống — giao diện nói rõ để khách không tự trừ"
+          },
+          "customerTotalAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tổng khách trả SAU khi áp mã (VND string) — số duy nhất giao diện được hiện"
+          },
+          "holdAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tiền giữ chỗ sau khi áp mã"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "discountType": {
+            "type": "string",
+            "enum": [
+              "fixed",
+              "percent"
+            ]
+          },
+          "discountPercent": {
+            "type": "number",
+            "nullable": true
+          },
+          "maxDiscountAmount": {
+            "type": "string",
+            "nullable": true
+          },
+          "minOrderAmount": {
+            "type": "string",
+            "description": "VND string (ADR 0007)"
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "ISO-8601"
+          }
+        },
+        "required": [
+          "code",
+          "applicable",
+          "name",
+          "discountType",
+          "minOrderAmount",
+          "endsAt"
+        ]
+      },
+      "PromoPreviewListDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromoPreviewDto"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "PromoRedemptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "reserved",
+              "redeemed",
+              "released"
+            ]
+          },
+          "releaseReason": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "request_rejected",
+              "request_expired",
+              "request_cancelled",
+              "slot_taken",
+              "hold_expired",
+              "no_longer_eligible"
+            ]
+          },
+          "discountAmount": {
+            "type": "string",
+            "description": "VND string (ADR 0007)"
+          },
+          "bookingRequestId": {
+            "type": "string"
+          },
+          "bookingId": {
+            "type": "string",
+            "nullable": true
+          },
+          "bookingCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerNameMasked": {
+            "type": "string",
+            "description": "ĐÃ CHE — admin xem danh sách không cần PII"
+          },
+          "reservedAt": {
+            "type": "string",
+            "description": "ISO-8601"
+          },
+          "redeemedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "releasedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "discountAmount",
+          "bookingRequestId",
+          "customerNameMasked",
+          "reservedAt"
+        ]
+      },
+      "PromoRedemptionPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromoRedemptionDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
         ]
       },
       "ProvideRefundAccountDto": {
@@ -69723,6 +72091,9 @@
             "type": "number",
             "description": "Số lượt đánh giá của xe"
           },
+          "shopMetrics": {
+            "$ref": "#/components/schemas/HostMetricsDto"
+          },
           "shopChatOpen": {
             "type": "boolean",
             "description": "Gian hàng mở hộp thư công khai (storefrontAllowsPublicChat)"
@@ -69850,6 +72221,7 @@
           "shopVerified",
           "completedTripCount",
           "ratingCount",
+          "shopMetrics",
           "shopChatOpen",
           "images",
           "features",
@@ -70161,10 +72533,8 @@
             "type": "number",
             "description": "Số chuyến đã hoàn thành của toàn gian hàng"
           },
-          "responseRatePercent": {
-            "type": "number",
-            "nullable": true,
-            "description": "Tỉ lệ phản hồi yêu cầu thuê (0–100). Null khi chưa đủ dữ liệu."
+          "metrics": {
+            "$ref": "#/components/schemas/HostMetricsDto"
           },
           "branchCount": {
             "type": "number",
@@ -70193,6 +72563,7 @@
           "ratingCount",
           "vehicleCount",
           "completedTripCount",
+          "metrics",
           "branchCount",
           "serviceProvinceNames",
           "deliveryAvailable"
@@ -74226,6 +76597,17 @@
           "items"
         ]
       },
+      "TogglePromoCodeDto": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "isActive"
+        ]
+      },
       "TransitionBookingDto": {
         "type": "object",
         "properties": {
@@ -74245,6 +76627,18 @@
             "type": "string",
             "description": "Lý do — BẮT BUỘC khi status = cancelled/no_show. Ghi vào audit (afterJson.reason), KHÔNG ghi vào note của đơn",
             "maxLength": 500
+          },
+          "reasonCategory": {
+            "type": "string",
+            "enum": [
+              "vehicle_unavailable",
+              "schedule_conflict",
+              "customer_requirements",
+              "customer_unreachable",
+              "customer_changed_plan",
+              "other"
+            ],
+            "description": "Nhóm lý do — BẮT BUỘC khi status = cancelled"
           },
           "actualPickupAt": {
             "type": "string",
@@ -75322,6 +77716,135 @@
           "taxEnabled",
           "tripInsuranceEnabled",
           "vehicleProtectionEnabled"
+        ]
+      },
+      "UpsertPromoCodeDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Mã khách gõ. Server CHUẨN HOÁ (in hoa, bỏ khoảng trắng) trước khi lưu — client gửi chữ thường vẫn đúng.",
+            "example": "BANMOI",
+            "minLength": 3,
+            "maxLength": 20
+          },
+          "name": {
+            "type": "string",
+            "example": "Ưu đãi khách hàng mới"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "discountType": {
+            "type": "string",
+            "enum": [
+              "fixed",
+              "percent"
+            ]
+          },
+          "discountAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Số tiền giảm (VND string) — bắt buộc khi discountType = fixed",
+            "example": "100000"
+          },
+          "discountPercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "Bắt buộc khi discountType = percent",
+            "example": 8
+          },
+          "maxDiscountAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Trần số tiền giảm của mã % (VND string). Bỏ trống = không trần.",
+            "example": "80000"
+          },
+          "minOrderAmount": {
+            "type": "string",
+            "description": "Sàn TIỀN THUÊ đủ điều kiện (VND string) — sau khuyến mãi trực tiếp, chưa gồm phí/bảo hiểm/cọc. \"0\" = không yêu cầu.",
+            "example": "800000"
+          },
+          "audience": {
+            "type": "string",
+            "enum": [
+              "all",
+              "new_customer"
+            ]
+          },
+          "vehicleScope": {
+            "type": "string",
+            "enum": [
+              "all",
+              "car",
+              "motorbike"
+            ]
+          },
+          "serviceScope": {
+            "type": "array",
+            "description": "Mảng RỖNG = mọi dịch vụ",
+            "items": {
+              "type": "string",
+              "enum": [
+                "self_drive",
+                "with_driver",
+                "long_term"
+              ]
+            }
+          },
+          "provinceCodes": {
+            "description": "Mã tỉnh/thành (2 ký tự). Mảng RỖNG = toàn quốc.",
+            "example": [
+              "01",
+              "79"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "totalUsageLimit": {
+            "type": "number",
+            "nullable": true,
+            "description": "Bỏ trống = không giới hạn"
+          },
+          "perCustomerLimit": {
+            "type": "number",
+            "nullable": true,
+            "description": "Bỏ trống = không giới hạn"
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "ISO-8601"
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "ISO-8601"
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Kích hoạt ngay — mã có hiệu lực trong khoảng thời gian đã chọn"
+          },
+          "listed": {
+            "type": "boolean",
+            "description": "Hiện trong danh sách mã khả dụng của khách (false = chỉ gõ tay)"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "discountType",
+          "minOrderAmount",
+          "audience",
+          "vehicleScope",
+          "serviceScope",
+          "provinceCodes",
+          "startsAt",
+          "endsAt",
+          "isActive",
+          "listed"
         ]
       },
       "UserBadgesDto": {
@@ -77267,7 +79790,9 @@
               "converted_to_booking",
               "awaiting_hold",
               "hold_paid",
-              "hold_expired"
+              "hold_expired",
+              "slot_taken",
+              "cancelled_by_host"
             ]
           },
           "stage": {
@@ -77281,6 +79806,7 @@
               "completed",
               "cancelled",
               "rejected",
+              "slot_taken",
               "no_show"
             ],
             "description": "Chặng gộp — cùng phép chiếu với Chuyến của tôi"
@@ -77648,12 +80174,22 @@
           "responseRatePercent": {
             "type": "number",
             "nullable": true,
-            "description": "Tỉ lệ phản hồi yêu cầu thuê nhận trong kỳ. `null` = không có yêu cầu nào tới hạn quyết — KHÔNG phải 0."
+            "description": "Tỉ lệ phản hồi yêu cầu thuê nhận trong kỳ. `null` = chưa đủ mẫu để nói — KHÔNG phải 0. Cùng phép phân loại với chỉ số công khai (ADR 0045 điều 2), chỉ khác cửa sổ."
+          },
+          "responseSampleCount": {
+            "type": "number",
+            "description": "Số YÊU CẦU gian hàng phải quyết trong kỳ — mẫu số của hai tỉ lệ trên. Luôn hiện để \"chưa đủ dữ liệu\" là một câu kiểm chứng được."
+          },
+          "acceptKeepRatePercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "Tỉ lệ NHẬN VÀ GIỮ chuyến trong kỳ (ADR 0045 điều 2). Gian hàng đọc chính con số mà khách đang nhìn thấy trên trang công khai của họ."
           }
         },
         "required": [
           "ratingCount",
-          "completedTripCount"
+          "completedTripCount",
+          "responseSampleCount"
         ]
       },
       "WalletStatementTotalsDto": {
@@ -77968,6 +80504,7 @@
       "tags": [
         "public-listings",
         "public-booking-requests",
+        "public-promo-codes",
         "public-reviews",
         "public-banners",
         "catalog",
@@ -78057,6 +80594,7 @@
         "platform-plans",
         "platform-subscriptions",
         "platform-fee-policies",
+        "platform-promo-codes",
         "platform-money",
         "platform-sellers",
         "platform-support",

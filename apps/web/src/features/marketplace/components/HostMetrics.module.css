@@ -1,0 +1,84 @@
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+/*
+ * Ba chỉ số là một HÀNG chip gọn, không phải ba thẻ lớn.
+ *
+ * Khối này xuất hiện ở hai chỗ có không gian rất khác nhau — cạnh phần giới thiệu ở trang gian
+ * hàng, và trong thẻ chủ xe hẹp ở trang chi tiết xe. `flex-wrap` để nó tự xuống dòng thay vì
+ * ép hai bố cục khác nhau.
+ */
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.value {
+  font-family: var(--xp-font-family-display);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+  font-weight: var(--xp-font-weight-bold);
+  color: var(--xp-color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.hint {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Cơ sở của cả ba con số — cố ý nhỏ và mờ hơn, nó là chú thích chứ không phải một chỉ số. */
+.basis {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.insufficient {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+/*
+ * "Đặt ngay" là một CÀI ĐẶT, không phải một phép đo — nên nó được phép nổi bật kể cả khi chưa
+ * đủ mẫu cho ba con số kia.
+ */
+.instant {
+  align-self: flex-start;
+  padding: 1px 8px;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-medium);
+}

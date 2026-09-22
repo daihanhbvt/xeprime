@@ -3,6 +3,7 @@ import {
   ADDRESS_LINE_MAX_LENGTH,
   BOOKING_REQUEST_DECISION_SOURCE_VALUES,
   BOOKING_REQUEST_STATUS_VALUES,
+  CANCELLATION_REASON_CATEGORY_VALUES,
   LONG_TERM_PACKAGE_MONTHS_VALUES,
   PICKUP_PREFERENCE,
   PICKUP_PREFERENCE_VALUES,
@@ -299,6 +300,22 @@ export class CreateBookingRequestDto {
   @IsOptional()
   @IsBoolean()
   acceptedTerms?: boolean;
+
+  /**
+   * MÃ KHUYẾN MÃI nền tảng khách đã áp ở bước xem giá — ADR 0046.
+   *
+   * Client gửi CHUỖI MÃ, không gửi số giảm: số giảm do server tính ở cả ba cửa kiểm, và một
+   * client gửi lên "giảm 5.000.000đ" thì không có gì phản đối nó nếu tin payload.
+   *
+   * Mã không còn hợp lệ ở thời điểm gửi ⇒ lượt gửi bị TỪ CHỐI (`PROMO_CODE_NOT_APPLICABLE` /
+   * `PROMO_CODE_EXHAUSTED`), không âm thầm bỏ mã rồi ghi yêu cầu: bỏ mã làm số tiền khách phải
+   * trả tăng so với con số họ vừa đồng ý, và họ chỉ phát hiện ra lúc nhìn mã QR.
+   */
+  @ApiPropertyOptional({ description: 'Mã khuyến mãi nền tảng (server tự chuẩn hoá)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  promoCode?: string;
 }
 
 /** Khách kiểm tra nhanh khung giờ của một xe có trống không (preview — ADR 0006). */
@@ -413,6 +430,33 @@ export class ApproveBookingRequestDto {
 /** Từ chối yêu cầu — lý do tuỳ chọn để báo lại khách. */
 export class RejectBookingRequestDto {
   @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  reason?: string;
+}
+
+/**
+ * GIAN HÀNG RÚT LẠI một chuyến ĐÃ NHẬN — ADR 0045 điều 1.
+ *
+ * Hai trường, và cả hai đều KHÔNG nói về "ai chịu trách nhiệm": phía chịu trách nhiệm do SERVER
+ * suy từ người đang gọi (`host` cho mọi lượt bấm từ cổng quản lý, kể cả nhân viên được uỷ
+ * quyền). Nếu nó là một trường trong body thì mọi gian hàng đều tự khai `force_majeure` và chỉ
+ * số uy tín mất nghĩa trong một tuần.
+ */
+export class CancelBookingRequestDto {
+  @ApiProperty({
+    enum: CANCELLATION_REASON_CATEGORY_VALUES,
+    description: 'Nhóm lý do — thứ DUY NHẤT người huỷ chọn. Không có nhóm "bất khả kháng".',
+  })
+  @IsIn(CANCELLATION_REASON_CATEGORY_VALUES)
+  reasonCategory!: string;
+
+  /**
+   * Chữ giải thích. BẮT BUỘC khi nhóm là `other` — kiểm ở service (một phép so hai trường,
+   * `class-validator` diễn đạt được nhưng bằng một decorator tuỳ biến mà chỉ chỗ này dùng).
+   */
+  @ApiPropertyOptional({ description: 'Bắt buộc khi reasonCategory = other' })
   @IsOptional()
   @IsString()
   @MaxLength(1000)
@@ -640,6 +684,21 @@ export class BookingRequestDto {
     description: 'Ai quyết định — chủ xe hay hệ thống tự nhận (08/09/2026); null khi chưa quyết',
   })
   decisionSource!: string | null;
+
+  /**
+   * HẠN KHÁCH THANH TOÁN tiền giữ chỗ (ADR 0044 điều 3) — `null` khi chuyến không có khoản nào.
+   *
+   * Hộp thư của gian hàng cần đúng mốc này chứ không phải `respondBy`: sau khi họ bấm duyệt,
+   * đồng hồ đang chạy là đồng hồ của KHÁCH, và câu hỏi duy nhất còn lại là "bao giờ thì chỗ này
+   * tự nhả nếu tiền không về". Suy ở client từ `decidedAt + 120 phút` sẽ sai với mọi chuyến bị
+   * kẹp bởi giờ nhận xe, và sai với mọi hold sinh dưới một chính sách phí khác.
+   */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ISO-8601 UTC — hạn khách chuyển tiền giữ chỗ; null khi chuyến không thu',
+  })
+  holdExpiresAt!: string | null;
 
   @ApiPropertyOptional({
     type: BookingRequestPricingDto,

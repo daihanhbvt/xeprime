@@ -58,7 +58,7 @@ describe('PriceBreakdown — phụ phí phía khách', () => {
     expect(screen.getAllByText(moneyText('1.000.000 ₫'))[0]).toBeTruthy();
     expect(screen.getAllByText(moneyText('1.100.000 ₫'))[0]).toBeTruthy();
     expect(screen.getByText('Tổng bạn trả')).toBeTruthy();
-    expect(screen.getByText('Chuyển trước để giữ chỗ')).toBeTruthy();
+    expect(screen.getByText('Tiền giữ chỗ (trả trước)')).toBeTruthy();
     // Phần trả tay chủ xe = tổng khách − giữ chỗ.
     expect(screen.getByText('Trả chủ xe khi nhận xe')).toBeTruthy();
   });
@@ -84,7 +84,7 @@ describe('PriceBreakdown — phụ phí phía khách', () => {
 
     expect(screen.getByText('Phí dịch vụ XePrime')).toBeTruthy();
     // Không thu % trên một con số chưa chốt (CLAUDE.md) — nên không có ô giữ chỗ.
-    expect(screen.queryByText('Chuyển trước để giữ chỗ')).toBeNull();
+    expect(screen.queryByText('Tiền giữ chỗ (trả trước)')).toBeNull();
   });
 
   const OWNER_BORNE: PriceBreakdownFees = {

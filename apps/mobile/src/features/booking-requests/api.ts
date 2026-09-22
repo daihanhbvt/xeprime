@@ -20,6 +20,7 @@ export type {
   BookingRequestListMeta,
   BookingRequestListResult,
   BookingRequestReceipt,
+  CancelBookingRequestInput,
   CheckAvailabilityResult,
   CreateBookingRequestInput,
   VehicleBusyDays,

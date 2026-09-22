@@ -8,6 +8,8 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
+  CANCELLATION_REASON_CATEGORY,
+  CANCELLATION_STAGE,
   BOOKING_NO_SHOW_GRACE_MINUTES,
   BOOKING_STATUS,
   BOOKING_STATUS_META,
@@ -26,6 +28,7 @@ import {
   SERVICE_TYPE,
   TENANT_CUSTOMER_SOURCE,
   type AuditActorScope,
+  type CancellationReasonCategory,
   type BookingPriceSnapshot,
   type DepositCollectionMode,
   type InsuranceConsentSource,
@@ -44,6 +47,7 @@ import { OccupancyService } from '../calendar/occupancy.service';
 import { CustomersService } from '../customers/customers.service';
 import { InsuranceService } from '../insurance/insurance.service';
 import { TaxService } from '../tax/tax.service';
+import { CancellationsService } from '../cancellations/cancellations.service';
 import { AddressService } from '../locations/address.service';
 import { DriversService } from '../drivers/drivers.service';
 import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
@@ -168,6 +172,8 @@ export class BookingsService {
     private readonly address: AddressService,
     /** Phase 8: nghĩa vụ thuế phát sinh khi chuyến BẮT ĐẦU (ADR 0032 điều 3). */
     private readonly tax: TaxService,
+    /** Writer DUY NHẤT của `booking_cancellations` (ADR 0045 điều 1). */
+    private readonly cancellations: CancellationsService,
   ) {}
 
   async list(
@@ -891,6 +897,7 @@ export class BookingsService {
         actualPickupAt: dto.actualPickupAt,
         actualReturnAt: dto.actualReturnAt,
         reason: dto.reason,
+        reasonCategory: dto.reasonCategory as CancellationReasonCategory | undefined,
       }),
     );
 
@@ -936,6 +943,14 @@ export class BookingsService {
        * đã tự mang ngữ cảnh của chúng, ép thêm một chuỗi ở đây chỉ sinh ra lý do bịa.
        */
       reason?: string;
+      /**
+       * NHÓM lý do khi huỷ — vào `booking_cancellations`, nguồn của chỉ số uy tín (ADR 0045).
+       *
+       * Bỏ trống ở đường gọi nội bộ: KHÁCH tự huỷ chuyến đã có nhóm riêng của họ
+       * (`customer_changed_plan`), và worker thì không có ai để hỏi. Chỉ đường bấm tay của gian
+       * hàng mới bắt buộc, và cửa đó nằm ở DTO.
+       */
+      reasonCategory?: CancellationReasonCategory;
     } = {},
   ): Promise<BookingDetailRow> {
     if (from === to || !canTransitionBooking(from, to)) {
@@ -980,6 +995,44 @@ export class BookingsService {
     // Trạng thái đích không còn chiếm lịch → nhả occupancy để xe trống cho đơn khác.
     if (!occupiesSchedule(to)) {
       await this.occupancy.release(tx, OCCUPANCY_SOURCE_TYPE.BOOKING, id);
+    }
+
+    /*
+     * MỘT dòng `booking_cancellations` cho mỗi lượt huỷ — nguồn của chỉ số uy tín công khai
+     * (ADR 0045 điều 1). Trong CHÍNH transaction này: một đơn đã huỷ mà không có dòng nào giải
+     * thích ai huỷ là đúng thứ bảng đó sinh ra để chấm dứt.
+     *
+     * `no_show` KHÔNG ghi: nó không phải một lượt huỷ của ai cả, và phía chịu trách nhiệm ở đó
+     * là khách — `decideOutcome` đã xử lý phần tiền theo đúng nghĩa đó.
+     *
+     * Chặng suy từ trạng thái NGUỒN, không từ đích: `from` là thứ nói chuyến đã đi tới đâu khi
+     * bị cắt, và sau lượt ghi này `to` luôn là `cancelled` bất kể chặng nào.
+     */
+    if (to === BOOKING_STATUS.CANCELLED) {
+      await this.cancellations.recordWithinTx(tx, {
+        tenantId,
+        bookingId: id,
+        /*
+         * Gắn CẢ yêu cầu gốc: chỉ số uy tín đếm theo YÊU CẦU (một yêu cầu = một mẫu), nên một
+         * lượt huỷ đơn phải tìm về được yêu cầu đã sinh ra đơn đó. Đơn gian hàng tự lập ngoài
+         * chợ không có yêu cầu nào — cột để trống, và nó đơn giản không vào mẫu số.
+         */
+        bookingRequestId:
+          (
+            await tx.bookingRequest.findUnique({
+              where: { bookingId: id },
+              select: { id: true },
+            })
+          )?.id ?? null,
+        stage:
+          from === BOOKING_STATUS.ACTIVE
+            ? CANCELLATION_STAGE.BOOKING_ACTIVE
+            : CANCELLATION_STAGE.BOOKING_BEFORE_PICKUP,
+        reasonCategory: opts.reasonCategory ?? CANCELLATION_REASON_CATEGORY.OTHER,
+        reason: opts.reason ?? null,
+        actorUserId: userId,
+        actorScope: opts.actorScope ?? AUDIT_ACTOR_SCOPE.TENANT,
+      });
     }
 
     /*
@@ -1298,6 +1351,15 @@ function feeColumns(snapshot: BookingPriceSnapshot) {
      */
     taxAmount: new Prisma.Decimal(fees.taxAmount),
     feePolicyId: fees.policy.policyId,
+    /*
+     * MÃ KHUYẾN MÃI nền tảng (ADR 0046) — cũng đọc từ snapshot, cùng kỷ luật với mọi cột trên.
+     *
+     * ⚠️ `promoDiscountAmount` KHÔNG được trừ vào `total_amount`: đó là doanh thu gian hàng, và
+     * mã này là tiền XePrime tài trợ. Nó đã nằm trong `customerTotalAmount` ở trên (số khách
+     * trả) và trong `booking_holds.promo_discount_amount` (số nền tảng bù vào khoản giữ chỗ).
+     */
+    promoCodeId: fees.promo?.promoCodeId ?? null,
+    promoDiscountAmount: new Prisma.Decimal(fees.promoDiscountAmount),
   };
 }
 

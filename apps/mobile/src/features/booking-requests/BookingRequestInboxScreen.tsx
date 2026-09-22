@@ -3,7 +3,12 @@ import { FlatList, RefreshControl, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { BOOKING_REQUEST_STATUS, PERMISSION, SERVICE_TYPE_VALUES } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  BOOKING_REQUEST_STATUS,
+  PERMISSION,
+  SERVICE_TYPE_VALUES,
+} from '@xeprime/types';
 import { Screen } from '@/components/layout/Screen';
 import { Chip } from '@/components/ui/Chip';
 import { RecordCardSkeleton } from '@/components/ui/Skeleton';
@@ -11,6 +16,7 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { getErrorCode } from '@/lib/api-client';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManageListShell } from '@/features/shell/ManageListShell';
 import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
@@ -30,6 +36,7 @@ import { BookingRequestDetailScreen } from './BookingRequestDetailScreen';
 import { BookingRequestCard } from './components/BookingRequestCard';
 import { ApproveRequestSheet } from './components/ApproveRequestSheet';
 import { ApproveSuccessSheet } from './components/ApproveSuccessSheet';
+import { CancelRequestSheet } from './components/CancelRequestSheet';
 import { RejectRequestSheet } from './components/RejectRequestSheet';
 import {
   DEFAULT_REQUEST_TAB,
@@ -37,10 +44,15 @@ import {
   statusCountOf,
   useApproveBookingRequest,
   useBookingRequestsPage,
+  useCancelBookingRequest,
   useRejectBookingRequest,
 } from './hooks/use-booking-requests';
 import { useStickyStatusCounts, type StatusCounts } from './hooks/use-status-counts';
-import { BOOKING_REQUEST_TAB_NEEDS_ACTION, type BookingRequestItem } from './api';
+import {
+  BOOKING_REQUEST_TAB_NEEDS_ACTION,
+  type BookingRequestItem,
+  type CancelBookingRequestInput,
+} from './api';
 
 /** Sentinel "mọi loại dịch vụ" của giao diện — API nhận `serviceType` vắng, không nhận `all`. */
 const SERVICE_ALL = 'all';
@@ -80,6 +92,8 @@ export function BookingRequestInboxScreen() {
 
   const [approving, setApproving] = useState<BookingRequestItem | null>(null);
   const [rejecting, setRejecting] = useState<BookingRequestItem | null>(null);
+  /** Chuyến ĐÃ NHẬN đang chờ huỷ (ADR 0045 điều 1) — khác hẳn `rejecting` về đường tiền. */
+  const [cancelling, setCancelling] = useState<BookingRequestItem | null>(null);
   /** Yêu cầu vừa duyệt xong — mở hộp kết quả kèm lối sang đơn vừa tạo. */
   const [approved, setApproved] = useState<BookingRequestItem | null>(null);
   /** Yêu cầu đang xem chi tiết — CHƯA thành đơn (đã thành đơn thì sang màn đơn). */
@@ -96,6 +110,7 @@ export function BookingRequestInboxScreen() {
 
   const approve = useApproveBookingRequest();
   const reject = useRejectBookingRequest();
+  const cancel = useCancelBookingRequest();
 
   const items = query.data?.items ?? [];
   const meta = query.data?.meta;
@@ -188,6 +203,7 @@ export function BookingRequestInboxScreen() {
         request={item}
         onApprove={setApproving}
         onReject={setRejecting}
+        onCancel={setCancelling}
         onOpenDetail={openDetail}
       />
     ),
@@ -225,6 +241,31 @@ export function BookingRequestInboxScreen() {
     );
   }
 
+  function confirmCancel(body: CancelBookingRequestInput) {
+    if (!cancelling) return;
+    cancel.mutate(
+      { id: cancelling.id, body },
+      {
+        onSuccess: () => {
+          toast.showSuccess(t('cancel.success'));
+          setCancelling(null);
+          setDetail(null);
+        },
+        /*
+         * Cuộc đua với đồng tiền: khách chuyển khoản đúng lúc người trực đang mở tấm trượt ⇒
+         * webhook thắng, yêu cầu đã thành đơn, lệnh huỷ không claim được gì (409). Câu chung
+         * ("có lỗi xảy ra") sẽ khiến họ bấm lại vài lần rồi gọi hỗ trợ.
+         */
+        onError: (error) =>
+          toast.showError(
+            getErrorCode(error) === API_ERROR_CODE.CONFLICT
+              ? t('cancel.raceLost')
+              : errorMessage(error),
+          ),
+      },
+    );
+  }
+
   // Không có quyền xem thì đây là 403 của chính màn này — hiện trạng thái lỗi của nó, KHÔNG đá
   // về đăng nhập (`ScopeGuard` lo phần mất quyền gian hàng).
   if (!permissions.isLoading && !permissions.has(PERMISSION.BOOKING_REQUEST_VIEW)) {
@@ -238,7 +279,7 @@ export function BookingRequestInboxScreen() {
   }
 
   /*
-   * Ba tấm trượt quyết định dựng MỘT lần rồi dùng ở cả hai nhánh render.
+   * Bốn tấm trượt quyết định dựng MỘT lần rồi dùng ở cả hai nhánh render.
    *
    * Chúng mở được từ thẻ trong hộp thư LẪN từ màn chi tiết. Để chúng nằm riêng ở nhánh hộp thư
    * thì bấm "Duyệt & giữ xe" trong màn chi tiết chỉ đổi state mà không có gì hiện ra.
@@ -268,6 +309,16 @@ export function BookingRequestInboxScreen() {
           loading={reject.isPending}
         />
       ) : null}
+
+      {cancelling ? (
+        <CancelRequestSheet
+          open
+          onClose={() => setCancelling(null)}
+          request={cancelling}
+          onConfirm={confirmCancel}
+          loading={cancel.isPending}
+        />
+      ) : null}
     </>
   );
 
@@ -282,6 +333,7 @@ export function BookingRequestInboxScreen() {
           request={detail}
           onApprove={setApproving}
           onReject={setRejecting}
+          onCancel={setCancelling}
           onClose={() => setDetail(null)}
         />
         {decisionSheets}

@@ -489,9 +489,10 @@ export class VehicleSettingsService {
     }
     if (input.quoteIsEstimate) return AUTO_ACCEPT_BLOCKER.QUOTE_ESTIMATE;
     /*
-     * Có tài xế + tuyến hoa hồng: đơn chỉ sinh khi tiền về (webhook), mà tài xế phải được gán
-     * TRONG transaction tạo đơn để `bookings_driver_schedule_excl` gác. Không thể hứa tài xế
-     * trước hàng giờ rồi mới tạo đơn — để chủ xe duyệt tay.
+     * Có tài xế + có thu tiền giữ chỗ: đơn chỉ sinh khi tiền về (webhook), mà tài xế phải được
+     * gán TRONG transaction tạo đơn để `bookings_driver_schedule_excl` gác. Tự nhận ở đây sẽ
+     * nhận một chuyến mà hai giờ sau mới biết có tài xế rảnh hay không — và lúc đó khách đã trả
+     * tiền. Để chủ xe duyệt tay và tự chọn người (ADR 0044 điều 2).
      */
     if (input.serviceType === SERVICE_TYPE.WITH_DRIVER && input.holdRequired) {
       return AUTO_ACCEPT_BLOCKER.HOLD_REQUIRED_WITH_DRIVER;

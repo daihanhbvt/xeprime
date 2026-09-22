@@ -12,6 +12,7 @@ import { dayjs, DAY_PARAM_FORMAT, type RentalMode, LIST_SEPARATOR } from '@xepri
 import type { BookingRequestFormValues } from '../booking-schema';
 import { FormSection } from '@/components/ui/FormSection';
 import { DataRow } from '@/components/ui/DataRow';
+import type { ReactNode } from 'react';
 import { PriceBreakdown } from '@/components/ui/PriceBreakdown';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
@@ -41,12 +42,18 @@ export function RequestReviewStep({
   listing,
   rentalMode,
   accountPhoneVerified,
+  promoSlot,
 }: {
   values: BookingRequestFormValues;
   listing: PublicListingDetail;
   /** Cách tính thời gian đang chọn — vào dòng "Hình thức", đúng như web. */
   rentalMode: RentalMode;
   accountPhoneVerified: boolean;
+  /**
+   * Ô ÁP MÃ KHUYẾN MÃI (ADR 0046) — bước cuối trước khi gửi là chỗ khách soát lại tiền, nên đó
+   * là chỗ của nó.
+   */
+  promoSlot?: ReactNode;
 }) {
   const t = useTranslations('BookingRequests.flow');
   const fmt = useAppFormat();
@@ -224,6 +231,16 @@ export function RequestReviewStep({
                 quote.data.breakdown.estimateNote ? t('price.subtotal') : t('price.total')
               }
               depositAmount={quote.data.breakdown.depositAmount}
+              /*
+               * PHỤ PHÍ PHÍA KHÁCH (ADR 0029) — bắt buộc có ở đây, không phải tuỳ chọn.
+               *
+               * Bước này là nơi khách soát con số cuối cùng trước khi gửi, và `totalAmount` chỉ
+               * là tiền thuê (doanh thu gian hàng). Bỏ `fees` đi thì màn hình hiện một số nhỏ
+               * hơn số họ thật sự phải chuẩn bị — và dòng giảm của mã khuyến mãi cũng không có
+               * chỗ nào để vẽ.
+               */
+              fees={quote.data.breakdown.fees ?? null}
+              promoSlot={promoSlot}
               title={t('price.detailTitle')}
               footer={
                 <YStack gap={space.xs}>

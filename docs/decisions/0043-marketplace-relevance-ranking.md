@@ -3,6 +3,11 @@
 Ngày: 22/09/2026 · Trạng thái: **Accepted** · Mở rộng [ADR 0008](0008-public-listing-snapshot.md)
 (thêm một cột dẫn xuất trên `public_listings`), không ghi đè ADR nào
 
+> ⚠️ **Cập nhật 22/09/2026 — [ADR 0045](0045-host-cancellation-and-reputation.md) điều 5** thêm
+> HAI thành phần vào công thức (uy tín chủ xe · cửa sổ khám phá) và cân lại bốn trọng số cũ. Bảng
+> ở điều 2 dưới đây đã được cập nhật theo. ADR 0045 cũng chuyển sort MẶC ĐỊNH của trang kết quả
+> sang chính `rank_score` này — trước đó chỉ trang chủ dùng nó.
+
 ## Bối cảnh
 
 Thứ tự mặc định của chợ (`sort=recommended`) từ đầu tới nay là:
@@ -39,18 +44,29 @@ công thức (API cập nhật theo sự kiện, worker quét lại theo đồng
 Denormalize chứ không tính trong `ORDER BY`: công thức cần đếm chuyến đã hoàn thành và đếm ảnh của
 từng xe, tức hai phép gộp cho MỖI dòng của MỖI lượt mở trang chủ.
 
-### 2. Bốn thành phần, trọng số cộng lại bằng 1
+### 2. Sáu thành phần, trọng số cộng lại bằng 1
 
 | Thành phần | Trọng số | Công thức |
 | --- | --- | --- |
-| Chất lượng | 0,45 | Trung bình **Bayes** `(v·R + m·C)/(v + m)` với `C = 4,6` (mặt bằng sàn), `m = 5`, rồi đưa thang 1–5 về `[0,1]` |
-| Số chuyến đã chạy | 0,25 | `ln(1 + chuyến) / ln(51)`, kẹp 1 |
-| Độ đầy hồ sơ | 0,18 | Tỉ lệ thoả của 4 điều kiện đếm được: có ảnh chính · có giá ngày · ≥ 4 ảnh · ≥ 3 tiện ích |
-| Độ mới | 0,12 | `exp(−ngày/30)` |
+| Chất lượng | 0,40 | Trung bình **Bayes** `(v·R + m·C)/(v + m)` với `C = 4,6` (mặt bằng sàn), `m = 5`, rồi đưa thang 1–5 về `[0,1]` |
+| Số chuyến đã chạy | 0,22 | `ln(1 + chuyến) / ln(51)`, kẹp 1 |
+| Độ đầy hồ sơ | 0,16 | Tỉ lệ thoả của 4 điều kiện đếm được: có ảnh chính · có giá ngày · ≥ 4 ảnh · ≥ 3 tiện ích |
+| Độ mới | 0,10 | `exp(−ngày/30)` |
+| **Uy tín chủ xe** (0045) | 0,07 | `(giữ + w·p)/(mẫu + w)` với `p = 0,8`, `w = 5` trên cửa sổ chỉ số 90 ngày |
+| **Khám phá** (0045) | 0,05 | `exp(−ngày/30)` — CHỈ khi chưa có chuyến nào VÀ hồ sơ đủ cả 4 điều kiện |
 
 Bayes là vế chữa vấn đề (1): xe ít đánh giá bị kéo về mặt bằng chung thay vì được coi là hoàn hảo.
 Độ mới có mặt để xe vừa lên sàn còn cơ hội có đánh giá đầu tiên — thiếu nó thì "chưa ai thuê" là
 một cái bẫy tự khoá.
+
+Hai vế thêm ở ADR 0045 đều có trần nhỏ có chủ đích. **Uy tín** là tín hiệu ĐIỀU CHỈNH: chênh lệch
+tối đa giữa một chủ xe hoàn hảo và một chủ xe huỷ mọi chuyến là 0,07 điểm — đủ đổi thứ tự trong
+một nhóm ngang tài, không đủ chôn ai vì vài mẫu. **Khám phá** chỉ cộng cho xe đã khai đủ hồ sơ,
+chưa từng chạy chuyến nào, và còn trong cửa sổ 30 ngày; nó không phải quà cho mọi xe mới, và nó
+đóng lại sau một tháng dù có đơn hay không.
+
+Phép phân loại mẫu của vế uy tín **trùng khít** `HostMetricsService` (ADR 0045 điều 3): con số
+khách nhìn thấy và con số quyết định thứ hạng phải nói cùng một điều về cùng một người bán.
 
 ### 3. Địa lý là BẬC lúc ĐỌC, không nằm trong cột
 
@@ -115,5 +131,8 @@ quảng cáo mà không nói với người xem. Nó vắng mặt có chủ đí
 2. **Khi giao diện có nhãn vị trí tài trợ**: mở lại điều 6.
 3. **Khi `public_listings` có toạ độ**: thay ba bậc vùng bằng khoảng cách thật, ít nhất cho các
    thành phố lớn nơi "cùng tỉnh" vẫn là hai chục cây số.
-4. **Khi có số liệu hành vi** (lượt xem → lượt gửi yêu cầu): cân lại bốn trọng số bằng dữ liệu
-   thay vì bằng phán đoán. Bốn con số ở điều 2 là điểm xuất phát có lý do, không phải kết quả đo.
+4. **Khi có số liệu hành vi** (lượt xem → lượt gửi yêu cầu): cân lại SÁU trọng số bằng dữ liệu
+   thay vì bằng phán đoán. Sáu con số ở điều 2 là điểm xuất phát có lý do, không phải kết quả đo.
+5. **Khi có dữ liệu impression thật**: thay cửa sổ khám phá 30 ngày bằng một trần SỐ LƯỢT HIỂN
+   THỊ (ADR 0045). Cửa sổ thời gian là một xấp xỉ được chọn vì chưa đo được lượt nhìn — nó là một
+   giả định được ghi ra, không phải một sự thật.

@@ -97,7 +97,9 @@
     "SHOP_ACCOUNT_CANNOT_BOOK": "Bạn đang dùng tài khoản của gian hàng. Để thuê xe, hãy đăng nhập bằng một tài khoản khách thuê với số điện thoại khác.",
     "CANNOT_BOOK_OWN_VEHICLE": "Đây là xe của chính gian hàng bạn nên không đặt thuê được.",
     "CANNOT_DECIDE_OWN_REQUEST": "Bạn không thể tự duyệt hoặc tự từ chối yêu cầu do chính mình gửi.",
-    "SURCHARGE_CATEGORY_DUPLICATE": "Đơn này đã có khoản phụ phí vượt km. Gỡ khoản đang có nếu bạn muốn ghi lại."
+    "SURCHARGE_CATEGORY_DUPLICATE": "Đơn này đã có khoản phụ phí vượt km. Gỡ khoản đang có nếu bạn muốn ghi lại.",
+    "HOLD_LIMIT_REACHED": "Bạn đang có quá nhiều chuyến chờ thanh toán. Hãy thanh toán hoặc huỷ bớt một chuyến rồi thử lại.",
+    "BOOKING_CANCEL_NOT_ALLOWED": "Chuyến này không còn ở chặng huỷ được từ màn hình này."
   },
   "upload": {
     "imageType": "Chỉ nhận ảnh JPG, PNG hoặc WebP",

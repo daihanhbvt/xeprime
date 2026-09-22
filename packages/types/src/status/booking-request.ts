@@ -14,26 +14,60 @@ export const BOOKING_REQUEST_STATUS = {
   EXPIRED: 'expired',
   CONVERTED_TO_BOOKING: 'converted_to_booking',
   /**
-   * Tuyến hoa hồng: khách đã bấm đặt, đang chờ chuyển khoản giữ chỗ (ADR 0021).
+   * **ĐÃ ĐƯỢC NHẬN · CHỜ THANH TOÁN TIỀN GIỮ CHỖ** — chặng giữa của luồng chuẩn (ADR 0044).
    *
-   * **CHIẾM LỊCH** — khác hẳn `pending_host_approval`. Không có bước chủ xe duyệt: đủ tiền là
-   * đơn thuê được tạo ngay trong transaction của webhook.
+   * Chủ xe đã duyệt (hoặc xe bật "Đặt ngay" và hệ thống tự nhận), nên lịch đã chốt, giá đã đóng
+   * băng, mã `XPH…` đã phát và khách có `HOLD_PAYMENT_WINDOW_MINUTES` để chuyển tiền. Đơn thuê
+   * chỉ ra đời khi backend đối soát xác nhận đã nhận ĐỦ tiền.
+   *
+   * **CHIẾM LỊCH** — khác hẳn `pending_host_approval`: ở kia nhiều khách được phép cùng hỏi một
+   * chiếc xe, ở đây chỗ đã thuộc về đúng một người vì chủ xe đã đồng ý.
+   *
+   * ⚠️ Trước ADR 0044 trạng thái này mang nghĩa NGƯỢC LẠI — "khách vừa bấm đặt, chưa ai duyệt"
+   * (ADR 0039). Dữ liệu cũ phân biệt được bằng `decided_at`: bản ghi theo luồng cũ cố ý để
+   * trống cột đó.
    */
   AWAITING_HOLD: 'awaiting_hold',
   /**
-   * Khách ĐÃ chuyển đủ giữ chỗ, đang chờ chủ xe duyệt (16/09/2026 — ADR 0039).
+   * **LEGACY (ADR 0039, đã bị ADR 0044 ghi đè)** — khách đã chuyển đủ tiền TRƯỚC khi có ai duyệt.
    *
-   * Trạng thái này ra đời cùng lúc với việc đảo thứ tự: tiền đi TRƯỚC, chủ xe duyệt SAU. Không
-   * gộp được vào `pending_host_approval` vì hai thứ khác nhau ở đúng điểm tốn kém nhất —
-   * `pending_host_approval` KHÔNG chiếm lịch và không có đồng nào của khách, còn ở đây xe đã bị
-   * giữ và XePrime đang cầm tiền thật. Nhầm hai trạng thái này nghĩa là một đơn có tiền bị dọn
-   * bằng đường dọn yêu cầu suông.
+   * Luồng hiện hành không bao giờ tạo trạng thái này nữa: tiền chỉ được thu sau khi chuyến đã
+   * được nhận, nên "đã trả đủ" đồng nghĩa với "có đơn thuê". Nó ở lại vì những yêu cầu sinh ra
+   * trong thời gian ADR 0039 còn hiệu lực phải đi hết đường của chúng — chủ xe vẫn nhận/từ chối
+   * được, và worker vẫn hoàn tiền khi hết hạn phản hồi.
    *
    * **CHIẾM LỊCH.** Chủ xe từ chối hoặc hết hạn phản hồi ⇒ hoàn đủ cho khách và nhả chỗ.
    */
   HOLD_PAID: 'hold_paid',
-  /** Quá cửa sổ chuyển khoản mà chưa đủ tiền — worker ghi, nhả lịch. Kết thúc. */
+  /** Quá cửa sổ chuyển tiền mà chưa đủ — worker ghi, nhả lịch. Kết thúc. */
   HOLD_EXPIRED: 'hold_expired',
+  /**
+   * Khung giờ đã thuộc về một khách khác — hệ thống đóng yêu cầu này (ADR 0044 điều 6).
+   *
+   * Nhiều khách được phép cùng hỏi một chiếc xe cho cùng khung giờ (ADR 0006), nhưng chỉ MỘT
+   * lượt duyệt/tự nhận giữ được chỗ — `vehicle_occupancies` với `EXCLUDE USING gist` không cho
+   * hai khoảng chồng nhau. Những yêu cầu còn lại vì thế không còn duyệt được, và để chúng nằm
+   * im tới khi hết hạn phản hồi là đổ cho gian hàng một lỗi họ không gây ra, đồng thời bắt khách
+   * chờ vô ích một câu trả lời đã có sẵn.
+   *
+   * Cố ý KHÔNG dùng `rejected_by_host` (không ai từ chối khách) và KHÔNG dùng `expired` (gian
+   * hàng đã trả lời, chỉ là trả lời cho người khác). Vì vậy nó nằm ngoài CẢ HAI danh sách tính
+   * tỉ lệ phản hồi.
+   */
+  SLOT_TAKEN: 'slot_taken',
+  /**
+   * **GIAN HÀNG RÚT LẠI một chuyến ĐÃ NHẬN** — khác hẳn `rejected_by_host`.
+   *
+   * `rejected_by_host` là "tôi không nhận chuyến này", nói ra trước khi có bất kỳ cam kết nào;
+   * ở đây gian hàng ĐÃ nhận, xe đã bị giữ, khách đã được báo là chuyến của họ được chấp nhận và
+   * có thể đang trên đường đi chuyển khoản. Với khách đó là hai trải nghiệm khác nhau, và với
+   * chỉ số "nhận và giữ chuyến" chúng là hai con số khác nhau — nên chúng phải là hai trạng thái.
+   *
+   * Chỉ dùng cho chặng CHƯA có đơn thuê (`awaiting_hold`, và `hold_paid` của dữ liệu LEGACY).
+   * Sau khi đơn đã tồn tại, việc huỷ thuộc về vòng đời ĐƠN (`bookings.status = cancelled`) và
+   * yêu cầu giữ nguyên `converted_to_booking` — nó là lịch sử có thật.
+   */
+  CANCELLED_BY_HOST: 'cancelled_by_host',
 } as const;
 
 export type BookingRequestStatus =
@@ -53,11 +87,11 @@ export function isBookingRequestStatus(value: unknown): value is BookingRequestS
  * `pending_host_approval` cố ý KHÔNG chiếm lịch: nhiều khách được phép cùng hỏi một xe
  * cùng khung giờ, ai được duyệt trước thì được xe. Chỉ khi shop duyệt mới giữ chỗ.
  *
- * `awaiting_hold` thì NGƯỢC LẠI, và đó là chủ ý (ADR 0021 điều 6). Lập luận ở đoạn trên nói về
- * việc **hỏi**; trả tiền là chuyện khác. Nếu đợi tiền về mới chiếm lịch thì hai khách cùng
- * chuyển khoản cho một chỗ và nền tảng buộc phải hoàn một người — phá đúng cái đơn giản hoá
- * "không cần đường chuyển trả" mà cả mô hình dựa vào. Khoá mềm 15 phút
- * (`HOLD_PAYMENT_WINDOW_MINUTES`) là mặt rẻ của đánh đổi đó.
+ * `awaiting_hold` thì NGƯỢC LẠI, và đó là chủ ý: chuyến đã được NHẬN (ADR 0044), nên chỗ thuộc
+ * về đúng một người và phải được giữ trong lúc họ chuyển tiền. Nếu đợi tiền về mới chiếm lịch
+ * thì hai khách cùng chuyển khoản cho một chỗ và nền tảng buộc phải hoàn một người — phá đúng
+ * cái đơn giản hoá "không cần đường chuyển trả" mà cả mô hình dựa vào. Khoá mềm
+ * `HOLD_PAYMENT_WINDOW_MINUTES` là mặt rẻ của đánh đổi đó.
  *
  * ⚠️ Mảng này **không có kiểm tra vét cạn của compiler**: thêm một trạng thái chiếm lịch mà quên
  * khai ở đây là bán trùng xe, im lặng. `status.test.ts` khoá danh sách này — nếu bạn đang sửa
@@ -65,60 +99,15 @@ export function isBookingRequestStatus(value: unknown): value is BookingRequestS
  */
 export const BOOKING_REQUEST_STATUS_OCCUPYING: readonly BookingRequestStatus[] = [
   BOOKING_REQUEST_STATUS.APPROVED_BY_HOST,
-  BOOKING_REQUEST_STATUS.AWAITING_HOLD,
   /*
-   * Đã trả tiền mà chưa duyệt vẫn giữ chỗ — và đây là ô quan trọng nhất trong mảng này. Nhả
-   * lịch ở đây nghĩa là khách đã chuyển tiền thật rồi ngồi nhìn chiếc xe của mình bị người khác
-   * đặt mất trong lúc chủ xe chưa kịp bấm.
+   * Đã được nhận, đang chờ khách chuyển tiền (ADR 0044) — ô quan trọng nhất trong mảng này.
+   * Nhả lịch ở đây nghĩa là khách vừa được chủ xe đồng ý, quay sang app ngân hàng, rồi quay lại
+   * thấy chiếc xe của mình đã bị người khác đặt.
    */
+  BOOKING_REQUEST_STATUS.AWAITING_HOLD,
+  /* LEGACY ADR 0039: đã trả đủ mà chưa ai duyệt — tiền thật đang nằm ở XePrime cho chỗ này. */
   BOOKING_REQUEST_STATUS.HOLD_PAID,
 ];
-
-/**
- * TỈ LỆ PHẢN HỒI — mẫu số và tử số của phép "gian hàng có trả lời khách không".
- *
- * Chỉ đếm những yêu cầu mà gian hàng THẬT SỰ phải quyết. Bốn trạng thái cố ý nằm ngoài:
- *
- *  - `pending_host_approval` — còn trong hạn, chưa ai chậm trễ cả;
- *  - `cancelled_by_customer` — khách rút yêu cầu; tính vào là phạt gian hàng vì việc của người khác;
- *  - `awaiting_hold` / `hold_expired` — luồng tự động của tuyến hoa hồng (ADR 0021), ở đó KHÔNG
- *    có bước chủ xe duyệt nào để mà phản hồi.
- *
- * `hold_paid` cũng ngoài danh sách: khách đã trả tiền và đồng hồ phản hồi mới bắt đầu chạy
- * (ADR 0039) — nó sẽ rơi vào `approved_by_host` / `rejected_by_host` / `expired` khi ngã ngũ.
- *
- * Sống ở `@xeprime/types` vì có HAI bề mặt đọc nó: trang gian hàng công khai
- * (`public-listings.service.ts`) và bảng tổng hợp giao dịch của ví gian hàng
- * (`wallet-statement.service.ts`). Hai bản sao là hai cách tính "tỉ lệ phản hồi" khác nhau cho
- * cùng một gian hàng.
- */
-export const BOOKING_REQUEST_STATUS_ANSWERED: readonly BookingRequestStatus[] = [
-  BOOKING_REQUEST_STATUS.APPROVED_BY_HOST,
-  BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
-  BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
-];
-
-/** `expired` đúng là "không trả lời": worker chỉ đặt nó khi hết cửa sổ mà yêu cầu vẫn nằm im. */
-export const BOOKING_REQUEST_STATUS_UNANSWERED: readonly BookingRequestStatus[] = [
-  BOOKING_REQUEST_STATUS.EXPIRED,
-];
-
-/** Mẫu số: mọi yêu cầu đã ngã ngũ theo nghĩa "có/không được trả lời". */
-export const BOOKING_REQUEST_STATUS_RESPONSE_RATE: readonly BookingRequestStatus[] = [
-  ...BOOKING_REQUEST_STATUS_ANSWERED,
-  ...BOOKING_REQUEST_STATUS_UNANSWERED,
-];
-
-/**
- * Tỉ lệ phản hồi từ số yêu cầu đã trả lời / chưa trả lời.
- *
- * `null` khi mẫu số bằng 0 — KHÔNG phải 0: "chưa ai hỏi" và "hỏi mà không trả lời" là hai điều
- * khác hẳn nhau với người đang cân nhắc thuê xe, và với chính chủ xe đang đọc báo cáo của mình.
- */
-export function responseRatePercent(answered: number, unanswered: number): number | null {
-  const decided = answered + unanswered;
-  return decided === 0 ? null : Math.round((answered / decided) * 100);
-}
 
 /**
  * Lộ trình của yêu cầu thuê XE CÓ TÀI XẾ (mô hình 3 lộ trình — plan 17/08).
@@ -183,22 +172,30 @@ export const BOOKING_REQUEST_STATUS_META: Readonly<Record<BookingRequestStatus, 
     label: 'Đã tạo đơn thuê',
     color: STATUS_COLOR.SUCCESS,
   },
-  [BOOKING_REQUEST_STATUS.AWAITING_HOLD]: {
-    label: 'Chờ chuyển giữ chỗ',
-    color: STATUS_COLOR.WAITING,
-  },
   /*
-   * Nhãn của GIAN HÀNG, nên nó nói thẳng nghĩa vụ đang treo trên đầu họ: tiền của khách đã nằm
-   * ở XePrime và chỗ xe đang bị khoá vì chờ đúng một cú bấm của mình. Màu `SUCCESS` là sai ở
-   * đây — chưa có gì xong cả.
+   * Nhãn của GIAN HÀNG: họ đã nhận chuyến, xe đang bị giữ, và việc còn lại thuộc về KHÁCH. Màu
+   * `PROCESSING` chứ không `SUCCESS` — chuyến chỉ chắc chắn khi tiền về.
    */
+  [BOOKING_REQUEST_STATUS.AWAITING_HOLD]: {
+    label: 'Đã nhận · chờ khách thanh toán',
+    color: STATUS_COLOR.PROCESSING,
+  },
+  /* LEGACY ADR 0039 — tiền của khách đã nằm ở XePrime và chỗ xe bị khoá chờ một cú bấm. */
   [BOOKING_REQUEST_STATUS.HOLD_PAID]: {
-    label: 'Đã cọc · chờ bạn duyệt',
+    label: 'Đã thanh toán · chờ bạn duyệt',
     color: STATUS_COLOR.PROCESSING,
   },
   [BOOKING_REQUEST_STATUS.HOLD_EXPIRED]: {
-    label: 'Hết hạn chuyển giữ chỗ',
+    label: 'Khách không thanh toán',
     color: STATUS_COLOR.NEUTRAL,
+  },
+  [BOOKING_REQUEST_STATUS.SLOT_TAKEN]: {
+    label: 'Khung giờ đã có khách khác',
+    color: STATUS_COLOR.NEUTRAL,
+  },
+  [BOOKING_REQUEST_STATUS.CANCELLED_BY_HOST]: {
+    label: 'Gian hàng đã huỷ',
+    color: STATUS_COLOR.DANGER,
   },
 };
 

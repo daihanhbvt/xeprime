@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CancellationsModule } from '../cancellations/cancellations.module';
 import { CalendarModule } from '../calendar/calendar.module';
 import { CustomersModule } from '../customers/customers.module';
 import { DriversModule } from '../drivers/drivers.module';
@@ -39,6 +40,8 @@ import { SettlementService } from './settlement/settlement.service';
   // writer duy nhất của `receipts` — module này chỉ gọi, không tự ghi.
   imports: [
     CalendarModule,
+    // Writer DUY NHẤT của `booking_cancellations` (ADR 0045 điều 1) — module LÁ, không vòng.
+    CancellationsModule,
     VehiclesModule,
     // Thời gian chết + snapshot điều kiện thuê khi tạo/dời đơn (08/09/2026) — module lá, không vòng.
     VehicleSettingsModule,

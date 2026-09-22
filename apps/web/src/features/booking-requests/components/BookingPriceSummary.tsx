@@ -3,6 +3,7 @@
 import { DownOutlined, UpOutlined } from '@ant-design/icons';
 import { Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
 import { SERVICE_TYPE, type RouteType, type ServiceType } from '@xeprime/types';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { PriceBreakdown } from '@/components/data-display/PriceBreakdown';
@@ -32,6 +33,14 @@ interface BookingPriceSummaryProps {
   /** Trạng thái mở do luồng giữ: hai hình thái LOẠI TRỪ nhau, không bao giờ cùng hiện. */
   expanded: boolean;
   onExpandedChange?: (next: boolean) => void;
+  /**
+   * Ô ÁP MÃ KHUYẾN MÃI (ADR 0046) — chỉ hiện ở hình thái `detail`.
+   *
+   * Không hiện ở thanh thu gọn có chủ đích: thanh đó là một dòng để LIẾC trong lúc đổi thời gian,
+   * còn áp mã là một hành động cần thấy cả bảng giá trước và sau. Nhét một ô nhập vào một dòng
+   * dính đáy cũng là nhét một phần tử nhận focus vào chỗ khách đang bấm "Tiếp tục".
+   */
+  promoSlot?: ReactNode;
 }
 
 /** Một dòng đơn giá khi CHƯA có báo giá — bảng niêm yết, không phải breakdown. */
@@ -75,6 +84,7 @@ export function BookingPriceSummary({
   variant,
   expanded,
   onExpandedChange,
+  promoSlot,
 }: BookingPriceSummaryProps) {
   const t = useTranslations('BookingRequests.flow');
   const tCommon = useTranslations('Common');
@@ -95,7 +105,14 @@ export function BookingPriceSummary({
    * dùng 18/09/2026): thu gọn hiện `customerTotalAmount` nên dùng nhãn "Tổng bạn trả"; bảng chi
    * tiết thì dòng đầu chỉ là tiền thuê, dùng nhãn "Tiền thuê".
    */
-  const hasFees = Boolean(breakdown?.fees?.lines?.length);
+  /*
+   * Mã khuyến mãi CŨNG làm `customerTotalAmount` khác `totalAmount` (ADR 0046), nên nó cũng đổi
+   * nhãn của thanh thu gọn. Chỉ đếm dòng phụ phí sẽ để một chuyến tuyến gói có mã hiện nhãn
+   * "Tổng dự kiến" cho một con số đã trừ mã — đúng thứ hai nhãn được tách ra để tránh.
+   */
+  const hasFees =
+    Boolean(breakdown?.fees?.lines?.length) ||
+    Number(breakdown?.fees?.promoDiscountAmount ?? 0) > 0;
   const rentalLabel = breakdown?.estimateNote
     ? t('price.subtotal')
     : hasFees
@@ -260,6 +277,7 @@ export function BookingPriceSummary({
           totalLabel={rentalLabel}
           depositAmount={breakdown.depositAmount}
           fees={breakdown.fees ?? null}
+          promoSlot={promoSlot}
           title={
             longTerm
               ? t('price.packageTitle', { months: longTerm.packageMonths })

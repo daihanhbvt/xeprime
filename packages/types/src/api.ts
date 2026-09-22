@@ -282,6 +282,63 @@ export const API_ERROR_CODE = {
   INSTANT_BOOK_UNAVAILABLE: 'INSTANT_BOOK_UNAVAILABLE',
   /** Hold không ở trạng thái chờ tiền — đã trả, đã hết hạn hoặc đã huỷ. `details` mang `{ status }`. */
   HOLD_NOT_PENDING: 'HOLD_NOT_PENDING',
+  /**
+   * Giờ nhận xe quá gần để kịp thu tiền giữ chỗ — ADR 0044 điều 4.
+   *
+   * Hạn chuyển tiền bị kẹp bởi `pickupAt`, và phần còn lại đã ngắn hơn
+   * `HOLD_MIN_USABLE_WINDOW_MINUTES`. Ném khi gian hàng bấm duyệt (hoặc lúc hệ thống định tự
+   * nhận) một chuyến sát giờ: phát một mã QR chắc chắn hết hạn trước khi khách mở nổi app ngân
+   * hàng là khoá xe vô nghĩa rồi bắt cả hai bên chờ.
+   *
+   * Không phải lỗi dữ liệu của người bấm — nó là một câu trả lời: chuyến này phải thoả thuận
+   * trực tiếp với khách. `details` mang `{ pickupAt, minWindowMinutes }`.
+   */
+  HOLD_WINDOW_TOO_SHORT: 'HOLD_WINDOW_TOO_SHORT',
+
+  /**
+   * Khách đang giữ quá nhiều chỗ chưa thanh toán — `HOLD_MAX_OPEN_PER_CUSTOMER` (ADR 0044).
+   *
+   * Ném khi một lượt DUYỆT định sinh khoản giữ chỗ thứ tư cho cùng một khách. Chặn ở đường
+   * DUYỆT chứ không ở đường gửi yêu cầu là có chủ đích: gửi yêu cầu không khoá xe của ai, nên
+   * chặn ở đó là chặn nhầm người. `details` mang `{ openHolds, limit }`.
+   */
+  HOLD_LIMIT_REACHED: 'HOLD_LIMIT_REACHED',
+
+  // Mã khuyến mãi nền tảng (ADR 0046)
+  /**
+   * Mã khuyến mãi không áp được cho chuyến này — `details.reason` là một `PromoIneligibleReason`
+   * và đó là thứ giao diện ánh xạ thành câu chữ (ADR 0012: dịch từ MÃ, không hiện `message`).
+   *
+   * MỘT mã lỗi cho mười hai lý do là chủ đích: web/mobile chỉ cần một nhánh xử lý, và danh sách
+   * lý do còn mọc thêm khi chiến dịch có thêm điều kiện. `details` cũng mang `code` (mã đã chuẩn
+   * hoá) để giao diện nói đúng mã khách vừa gõ, kể cả khi họ gõ chữ thường.
+   *
+   * Ném ở CẢ BA cửa kiểm: xem trước, gửi yêu cầu, và chốt giá lúc duyệt.
+   */
+  PROMO_CODE_NOT_APPLICABLE: 'PROMO_CODE_NOT_APPLICABLE',
+  /**
+   * Mã đã hết lượt đúng lúc khách bấm gửi — cuộc đua ở slot cuối, và bên thua nhận mã này.
+   *
+   * Tách khỏi `PROMO_CODE_NOT_APPLICABLE` vì nó cần một câu chữ khác: khách vừa thấy mã còn hiệu
+   * lực ở bước xem trước, nên câu trả lời phải nói rõ là vừa có người dùng hết, không nói rằng
+   * họ không đủ điều kiện.
+   */
+  PROMO_CODE_EXHAUSTED: 'PROMO_CODE_EXHAUSTED',
+  /** Mã đã tồn tại (unique `code` sau chuẩn hoá) — admin tạo/nhân bản trùng. */
+  PROMO_CODE_DUPLICATE: 'PROMO_CODE_DUPLICATE',
+  /**
+   * Admin sửa một trường đã BỊ KHOÁ sau khi chiến dịch phát sinh lượt dùng
+   * (`PROMO_LOCKED_FIELDS_AFTER_USE` — ADR 0046 điều 8). `details.fields` liệt kê tên trường.
+   */
+  PROMO_CODE_LOCKED: 'PROMO_CODE_LOCKED',
+  /**
+   * Chuyến này không ở chặng huỷ được — `details` mang `{ stage }`.
+   *
+   * Khác `INVALID_STATUS_TRANSITION`: kia nói về máy trạng thái của ĐƠN, còn đây trả lời câu
+   * hỏi nghiệp vụ "gian hàng có được rút lại chuyến này không" — và câu trả lời phụ thuộc chặng
+   * (đã bàn giao thì phải đi quyết toán, đã kết thúc thì chỉ còn lịch sử).
+   */
+  BOOKING_CANCEL_NOT_ALLOWED: 'BOOKING_CANCEL_NOT_ALLOWED',
   /** Khoản giữ chỗ đang bị TẠM GIỮ vì có tranh chấp mở — không chốt kết cục được (R3). */
   HOLD_LOCKED_BY_DISPUTE: 'HOLD_LOCKED_BY_DISPUTE',
   /**

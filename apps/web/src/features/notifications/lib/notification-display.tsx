@@ -12,13 +12,14 @@ import {
   RollbackOutlined,
   SafetyCertificateOutlined,
   MessageOutlined,
+  NotificationOutlined,
   DollarOutlined,
   ShopOutlined,
   StarOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import { NOTIFICATION_TARGET_TYPE, NOTIFICATION_TYPE, type NotificationType } from '@xeprime/types';
-import { ROUTES, tripPath } from '@/constants/routes';
+import { listingPath, ROUTES, tripPath } from '@/constants/routes';
 
 /** Ngữ cảnh xem thông báo — quyết định link click-through (khu quản lý vs khu khách). */
 /**
@@ -43,6 +44,18 @@ const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   // Hạn phản hồi 60 phút: đồng hồ cho lời nhắc, đồng hồ-đã-dừng cho lúc hết giờ.
   [NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRING]: <ClockCircleOutlined />,
   [NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRED]: <HourglassOutlined />,
+  // Xe đã có khách khác: không ai từ chối, chỉ là chỗ đã hết — icon TRUNG TÍNH, không phải dấu X.
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_SLOT_TAKEN]: <CalendarOutlined />,
+  /*
+   * Chiếc xe RẢNH LẠI (ADR 0045 điều 6) — người thắng không thanh toán.
+   *
+   * Đây là tin VUI, và nó phải trông khác hẳn tin "chỗ đã hết" ở ngay trên: cùng icon lịch thì
+   * hai dòng ngược nghĩa nhau lại nhìn y hệt. Tia sét cũng không đúng (đó là tự-nhận), nên đây
+   * là chuông mở — một lời mời quay lại.
+   */
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_SLOT_REOPENED]: <NotificationOutlined />,
+  // Chủ xe rút lại chuyến ĐÃ NHẬN — dấu X, khác hẳn mũi tên "khách rút" ở trên.
+  [NOTIFICATION_TYPE.BOOKING_CANCELLED_BY_HOST]: <CloseCircleOutlined />,
   // Hệ thống tự nhận chuyến theo thiết lập của chủ xe — tia sét, không phải dấu tích của người duyệt.
   [NOTIFICATION_TYPE.BOOKING_AUTO_ACCEPTED]: <ThunderboltOutlined />,
   [NOTIFICATION_TYPE.SHOP_APPROVED]: <ShopOutlined />,
@@ -65,6 +78,12 @@ const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   [NOTIFICATION_TYPE.HOLD_EXPIRED]: <HourglassOutlined />,
   [NOTIFICATION_TYPE.HOLD_REFUNDED]: <RollbackOutlined />,
   [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: <RollbackOutlined />,
+  /*
+   * Mã khuyến mãi không còn áp được (ADR 0046) — icon QUÀ, cùng ký hiệu với ô áp mã ở luồng đặt
+   * xe, để khách nhận ra ngay tin này nói về cái gì. Không dùng icon cảnh báo: đây là tin về một
+   * ưu đãi, không phải về một sự cố của chuyến.
+   */
+  [NOTIFICATION_TYPE.PROMO_CODE_DROPPED]: <GiftOutlined />,
   // Hồ sơ người bán — dùng icon chứng nhận, không phải icon gian hàng: đây là danh tính pháp lý.
   [NOTIFICATION_TYPE.SELLER_PROFILE_VERIFIED]: <SafetyCertificateOutlined />,
   [NOTIFICATION_TYPE.SELLER_PROFILE_CHANGES_REQUESTED]: <SafetyCertificateOutlined />,
@@ -87,10 +106,23 @@ export function notificationIcon(type: string): ReactNode {
  * dừng ở danh sách thay vì dẫn tới một trang 404.
  */
 export function notificationHref(
-  notification: { targetType?: string | null; targetId?: string | null },
+  notification: { targetType?: string | null; targetId?: string | null; type?: string | null },
   context: NotificationContext,
 ): string | null {
   const target = notification.targetType;
+
+  /*
+   * "Xe bạn hỏi đã rảnh lại" (ADR 0045 điều 6) là thông báo DUY NHẤT mà đích không suy được từ
+   * `targetType` một mình.
+   *
+   * Nó trỏ vào một chiếc XE, và với mọi thông báo xe khác thì đích là trang quản lý xe của
+   * chính chủ. Ở đây người nhận là KHÁCH, và việc họ cần làm là đặt lại — nên đích là trang xe
+   * CÔNG KHAI. Yêu cầu cũ cố ý không sống lại (nó vẫn đóng ở `slot_taken`): giá và lịch phải
+   * được chốt lại ở thời điểm hiện tại, không phải khôi phục từ một bản ghi đã nguội.
+   */
+  if (notification.type === NOTIFICATION_TYPE.BOOKING_REQUEST_SLOT_REOPENED) {
+    return notification.targetId ? listingPath.detail(notification.targetId) : null;
+  }
 
   // Hội thoại mở ở ĐÚNG hộp thư của bề mặt đang xem — `?c=` mở sẵn thread kể cả khi nó không
   // nằm ở trang đầu danh sách. Hai hộp thư là hai trang khác nhau (ADR 0009), nên không có

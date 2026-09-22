@@ -89,6 +89,19 @@ function openClosingDialog(name: string | RegExp): void {
   fireEvent.click(screen.getByRole('button', { name }));
 }
 
+/**
+ * Chọn một NHÓM lý do trong ô Select của AntD (ADR 0045 điều 1).
+ *
+ * `Select` không phải `<select>` thật: nó là một combobox dựng bằng div, nên `fireEvent.change`
+ * không chạm tới nó. Mở danh sách bằng `mouseDown` rồi bấm đúng mục — đúng thao tác của người
+ * dùng, và cũng là cách duy nhất chạy được trong jsdom.
+ */
+async function pickReasonCategory(dialog: HTMLElement, label: string): Promise<void> {
+  fireEvent.mouseDown(within(dialog).getByRole('combobox'));
+  const option = await screen.findByTitle(label);
+  fireEvent.click(option);
+}
+
 beforeEach(() => {
   permissions.granted = new Set([PERMISSION.BOOKING_UPDATE]);
   transition.mutate.mockReset();
@@ -231,11 +244,31 @@ describe('Hộp xác nhận hủy đơn', () => {
     expect(transition.mutate).not.toHaveBeenCalled();
   });
 
-  it('có lý do thì gửi đúng trạng thái đích và lý do đã trim', async () => {
+  /*
+   * ADR 0045 điều 1: huỷ một đơn phải kèm NHÓM lý do. Ô chữ tự do trả lời "vì sao" cho một con
+   * người đọc; nhóm lý do trả lời cùng câu đó cho một câu SQL — vận hành thống kê theo nó, và
+   * chỉ số uy tín lọc theo nó.
+   */
+  it('thiếu NHÓM lý do thì không gửi được, dù đã có chữ', async () => {
     renderActions(booking({ status: BOOKING_STATUS.RESERVED }));
     openClosingDialog('Hủy đơn');
 
     const dialog = await screen.findByRole('dialog');
+    fireEvent.change(within(dialog).getByRole('textbox'), {
+      target: { value: 'Khách báo hủy qua điện thoại' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Hủy đơn' }));
+
+    expect(await screen.findByText('Chọn một nhóm lý do')).toBeTruthy();
+    expect(transition.mutate).not.toHaveBeenCalled();
+  });
+
+  it('có nhóm lý do + lý do thì gửi đúng trạng thái đích và lý do đã trim', async () => {
+    renderActions(booking({ status: BOOKING_STATUS.RESERVED }));
+    openClosingDialog('Hủy đơn');
+
+    const dialog = await screen.findByRole('dialog');
+    await pickReasonCategory(dialog, 'Khách đổi kế hoạch');
     fireEvent.change(within(dialog).getByRole('textbox'), {
       target: { value: '  Khách báo hủy qua điện thoại  ' },
     });
@@ -245,6 +278,7 @@ describe('Hộp xác nhận hủy đơn', () => {
     expect(transition.mutate.mock.calls[0]![0]).toEqual({
       status: BOOKING_STATUS.CANCELLED,
       reason: 'Khách báo hủy qua điện thoại',
+      reasonCategory: 'customer_changed_plan',
     });
   });
 
@@ -297,6 +331,7 @@ describe('Hộp xác nhận hủy đơn', () => {
     openClosingDialog('Hủy đơn');
 
     const dialog = await screen.findByRole('dialog');
+    await pickReasonCategory(dialog, 'Xe không sẵn sàng (hỏng, tai nạn, đang sửa)');
     fireEvent.change(within(dialog).getByRole('textbox'), {
       target: { value: 'Xe hỏng đột xuất' },
     });

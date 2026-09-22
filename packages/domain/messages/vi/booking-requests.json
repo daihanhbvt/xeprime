@@ -63,7 +63,8 @@
     "payAtHandover": "Trả chủ xe khi nhận xe"
   },
   "awaitingHold": {
-    "footerHint": "Đang chờ khách chuyển khoản giữ chỗ — nút Duyệt sẽ hiện ngay khi tiền về."
+    "footerHint": "Đã giữ xe — đang chờ khách thanh toán tiền giữ chỗ. Đơn thuê mở khi tiền về.",
+    "deadline": "Hạn khách thanh toán:"
   },
   "note": {
     "label": "Ghi chú của khách",
@@ -94,7 +95,8 @@
     "call": "Gọi",
     "callAria": "Gọi {name} theo số {phone}",
     "zalo": "Zalo",
-    "zaloAria": "Mở Zalo với {name} theo số {phone}"
+    "zaloAria": "Mở Zalo với {name} theo số {phone}",
+    "cancel": "Huỷ chuyến"
   },
   "approve": {
     "title": "Duyệt và giữ xe cho khách?",
@@ -278,22 +280,21 @@
       "loadError": "Chưa tải được giá tạm tính. Bạn vẫn tiếp tục được; chủ xe sẽ xác nhận giá."
     },
     "done": {
-      "title": "Yêu cầu đã được gửi",
+      "title": "Đã gửi yêu cầu",
       "requestCode": "Mã yêu cầu: {code}",
-      "body": "Chủ xe sẽ xem xét và phản hồi yêu cầu của bạn. Bạn có thể theo dõi trạng thái trong mục chuyến đi của mình.",
+      "body": "Chủ xe đang xem xét. Bạn sẽ nhận thông báo ngay khi có phản hồi.",
       "time": "Thời gian",
       "pickupMethod": "Nhận xe",
       "driverPickup": "Đón tại: {address}",
-      "notReserved": "Xe chưa được giữ chỗ. Yêu cầu cần được chủ xe chấp thuận trước.",
+      "notReserved": "Xe chưa được giữ chỗ — chủ xe cần duyệt yêu cầu trước.",
       "myTrips": "Chuyến của tôi",
       "chatShop": "Nhắn chủ xe",
       "close": "Quay lại",
-      "autoAccepted": "Đơn đã được xác nhận tự động — lịch xe đã giữ cho bạn.",
-      "autoAcceptedHold": "Đơn đã được xác nhận tự động — hoàn tất giữ chỗ để giữ lịch xe.",
-      "openHold": "Theo dõi chuyến này",
+      "autoAccepted": "Chuyến đã được xác nhận tự động — lịch xe đã giữ cho bạn.",
+      "openHold": "Thanh toán giữ chỗ",
       "holdLoadFailed": "Chưa tải được mã thanh toán. Mở chuyến trong mục Chuyến của tôi để lấy mã — chỗ của bạn vẫn đang được giữ.",
-      "heldTitle": "Chỗ xe đã được giữ cho bạn",
-      "heldSubtitle": "Vui lòng hoàn tất thanh toán để xác nhận chuyến thuê.",
+      "heldTitle": "Chủ xe đã nhận chuyến của bạn",
+      "heldSubtitle": "Thanh toán tiền giữ chỗ trước khi hết giờ để chốt chuyến.",
       "copyRequestCode": "Sao chép mã yêu cầu",
       "tripInfo": "Thông tin chuyến thuê"
     },
@@ -399,7 +400,11 @@
     "leadLongTerm": "Yêu cầu đã được duyệt và đơn thuê dài hạn đã được tạo theo lịch bạn vừa chốt.",
     "next": "Việc tiếp theo: liên hệ khách để hẹn giờ nhận xe, thu cọc nếu có, rồi xác nhận giao xe ngay trên đơn.",
     "viewBooking": "Xem chi tiết đơn",
-    "close": "Đóng"
+    "close": "Đóng",
+    "holdTitle": "Đã nhận chuyến — chờ khách thanh toán",
+    "holdLead": "Lịch xe đã được giữ và mã thanh toán đã gửi cho khách. Đơn thuê mở tự động khi XePrime nhận đủ tiền giữ chỗ.",
+    "holdNext": "Khách có 2 giờ để chuyển khoản. Hết hạn mà chưa đủ tiền, chỗ tự nhả và bạn nhận thông báo.",
+    "holdClose": "Về hộp thư yêu cầu"
   },
   "deadline": {
     "label": "Hạn phản hồi",
@@ -425,5 +430,28 @@
       "longTermPackage": "Chọn gói thuê",
       "requestedPickupDate": "Chọn ngày muốn nhận xe"
     }
+  },
+  "cancel": {
+    "title": "Huỷ chuyến đã nhận",
+    "context": "Chuyến của {customer} · {vehicle}",
+    "effects": {
+      "vehicle": "Xe quay lại chợ ngay, khung giờ này mở cho khách khác.",
+      "customer": "Khách nhận thông báo kèm lý do bạn ghi dưới đây.",
+      "money": "Phần tiền giữ chỗ khách đã chuyển được hoàn lại toàn bộ.",
+      "metrics": "Lần huỷ này tính vào tỉ lệ “nhận và giữ chuyến” của bạn.",
+      "metricsHintLabel": "Ảnh hưởng tới chỉ số uy tín",
+      "metricsHint": "Chuyến bạn đã nhận rồi huỷ sẽ bị trừ khỏi tỉ lệ “nhận và giữ chuyến” hiển thị công khai. Từ chối một yêu cầu TRONG hạn thì không bị trừ như vậy — nó chỉ không được tính là đã nhận. Khách không thanh toán hoặc khách tự huỷ thì không ảnh hưởng gì tới bạn."
+    },
+    "categoryLabel": "Vì sao bạn huỷ?",
+    "categoryRequired": "Chọn một nhóm lý do",
+    "reasonLabel": "Nhắn thêm cho khách (không bắt buộc)",
+    "reasonLabelRequired": "Nói rõ lý do cho khách",
+    "reasonPlaceholder": "Ví dụ: xe vừa bị va chạm sáng nay, đang ở gara.",
+    "reasonHint": "Khách sẽ đọc đúng những gì bạn viết ở đây.",
+    "reasonRequired": "Chọn “Lý do khác” thì phải ghi rõ cho khách",
+    "confirm": "Huỷ chuyến",
+    "success": "Đã huỷ chuyến và nhả lịch xe",
+    "raceLost": "Khách vừa thanh toán xong nên chuyến đã thành đơn thuê — không huỷ từ đây được nữa. Mở đơn để xử lý tiếp.",
+    "notAllowed": "Chuyến này không còn ở chặng huỷ được từ hộp thư yêu cầu."
   }
 }

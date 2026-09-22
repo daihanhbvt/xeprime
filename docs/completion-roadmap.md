@@ -24,6 +24,7 @@ Trạng thái dưới đây phân biệt rõ **đã có trong source/feature bra
 | SePay subscription W4   | **Đã merge vào `develop`**; chưa vượt Gate R2 | Có VietQR, webhook, bank matching, xử lý thiếu/thừa/trùng và admin match tay; còn cần cấu hình môi trường thật và UAT gate                                              |
 | Marketplace money       | **Đủ mã, chưa vượt gate nào**                 | Mọi mảnh của luồng tiền ADR 0032/0033 đã có mã + test trên máy dev (chi tiết và bằng chứng ở R3). CHƯA CÓ: một lần chạy trên staging, đối tác bảo hiểm thật, ý kiến thuế, ý kiến pháp lý thu hộ. Bảo hiểm và thuế đang BẬT bằng **số tham khảo thị trường** theo chỉ đạo 14/09 — xem mục 5 quyết định 4 và 5 |
 | Basic-owner experience  | **Đã tách ở code (ADR 0038); chưa vượt gate** | Ranh giới hai tuyến chặn ở server, ví hợp nhất một tenant, cổng chặn đặt xe của tài khoản gian hàng, `/trips` tách vai. CHƯA CÓ: một lần chạy migration ví trên staging và smoke test bốn nhóm người dùng |
+| Khuyến mãi nền tảng     | **Đã có mã (ADR 0046); chưa vượt gate R3**    | Mã do XePrime tài trợ: admin phát hành, khách áp ở web + app, dòng tiền khép kín qua hold/đơn/hoàn. CHƯA CÓ: một chiến dịch chạy thật và một lần đối soát ngân sách tài trợ trên staging |
 | Mobile customer         | Một phần                                     | Auth + discovery + gửi yêu cầu thuê + chuyến của tôi + đánh giá + chat và thông báo in-app (COM-01→04) + thông báo đẩy (COM-07) — tất cả 10/09. Push đủ hai đầu nhưng **chưa thử trên máy thật** (thiếu credential Firebase + khoá APNs). Thiếu payment |
 | Mobile manage           | Một phần                                     | Hộp thư yêu cầu, đơn thuê, biên bản giao/nhận, quyết toán, thu tiền — xem ghi chú ở R6                                                                                   |
 | Production readiness    | Chưa đạt                                     | Chưa có đủ E2E, monitoring, legal/compliance gate và bằng chứng vận hành thật                                                                                            |
@@ -113,10 +114,12 @@ mảnh cuối của luồng tiền. Bảng dưới là trạng thái THẬT đ�
 | Mảnh | Đã có ở đâu | Bằng chứng |
 | --- | --- | --- |
 | Công tắc thu cọc của gian hàng (tuyến hoa hồng BẬT + KHOÁ, tuyến gói theo cờ `ESCROW_HOLD`) · `deposit_collection_mode` đóng băng vào booking | `modules/deposit-policy/` · `booking_requests` duyệt tay VÀ tự nhận đều tính phí trước `commitDecision` | `deposit-policy.spec.ts` |
+| Thứ tự **duyệt → thu tiền giữ chỗ → đơn thuê** (ADR 0044); yêu cầu trùng khung giờ đóng bằng `slot_taken` | `booking-requests.service.ts` (`commitDecision` · `approveWithHold` · `closeSupersededRequests`) · `apps/worker/src/jobs/booking-hold-expiry.ts` | `booking-hold-lifecycle.spec.ts` · `booking-request-deadline.spec.ts` · `vehicle-auto-accept.spec.ts` |
 | Bảo hiểm `IV`/`IP` — vòng đời 7 trạng thái, phát hành ở mốc bàn giao qua job có retry, adapter mặc định KHÔNG tạo chứng nhận giả | `modules/insurance/` · `apps/worker/src/jobs/insurance-issue.ts` | `insurance-lifecycle.spec.ts` |
 | Thuế `T` — sổ append-only, chỉ phát sinh khi chuyến BẮT ĐẦU, đảo bằng dòng âm, kỳ theo giờ VN | `modules/tax/` · `bookings.service.ts` khi `→ active` | `tax-withholding.spec.ts` · `packages/types/src/tax.test.ts` |
 | Đối chiếu BA CHIỀU (nền tảng ↔ giữ hộ ↔ số dư ngân hàng cuối ngày) · phân bổ đóng băng vào 5 cột `settled_*` · phát hiện lệch sổ ví | `modules/holds/booking-holds.service.ts` · `hold-settlement.service.ts` | `reconciliation-three-way.spec.ts` |
 | "Tiền của các chuyến đã thuê" cho khách — đọc `payments`, KHÔNG phải màn ví | `modules/payments/account-payments.*` · web `features/account-payments/` | `account-payments.spec.ts` |
+| **Mã khuyến mãi do NỀN TẢNG tài trợ** (23/09/2026) — giảm số khách trả mà không bớt tiền gian hàng; lượt dùng GIỮ → CHỐT → NHẢ với trần gác ở DB; ba cửa kiểm và snapshot điều kiện | `modules/promo-codes/` · `prisma/src/promo-redemption.ts` · `packages/types/src/promo-code.ts` · web `features/promo-codes/` + `/manage/admin/promo-codes` · native `apps/mobile/src/features/promo-codes/` | `promo-code-lifecycle.spec.ts` (36 test) · `packages/types/src/promo-code.test.ts` (46 test) · `PriceBreakdown.promo.test.tsx` · `PromoCodeField.test.tsx` |
 
 Bằng chứng test ngày 14/09/2026: **5 suite / 64 test xanh** trên PostgreSQL thật với `REQUIRE_DB=1`
 (thiếu DB là cả run đỏ, nên không có test nào bị bỏ qua lặng lẽ) · `packages/types` 207 test ·
@@ -129,7 +132,8 @@ Cái này KHÔNG phải bằng chứng vượt gate: tất cả đều là máy 
 - Xác minh người bán, loại chủ thể, thông tin thuế và tài khoản nhận tiền.
 - Versioned fee policy và booking snapshot, phân biệt phí dịch vụ XePrime, thuế thật, bảo vệ xe và bảo hiểm chuyến đi.
 - Quote breakdown minh bạch cho khách và net earning preview cho chủ xe; phí dịch vụ XePrime 10% của tuyến Basic nằm phía khách, không trừ khỏi tiền thuê chủ xe; tuyến gói là 0%.
-- Khoản giữ chỗ bắt buộc, expiry, cancellation và refund.
+- Khoản giữ chỗ bắt buộc, expiry, cancellation và refund — thu SAU khi chuyến được nhận, cửa sổ 120 phút với hai mốc nhắc và không gia hạn (ADR 0044).
+- Mã khuyến mãi do nền tảng tài trợ (ADR 0046): giảm khoản khách chuyển online, gian hàng nhận đủ; `settled_platform_amount` nay là con số NET và **âm được** khi khoản tài trợ lớn hơn phí dịch vụ của chuyến — mọi báo cáo doanh thu nền tảng phải đọc nó như vậy.
 - Tích hợp bảo vệ xe bắt buộc cho chủ xe và bảo hiểm chuyến đi tùy chọn cho người thuê với PVI nếu hoàn tất hợp đồng/sản phẩm; lựa chọn của khách phải được lưu vào booking snapshot.
 - Phân bổ riêng phí dịch vụ, thuế, bảo hiểm thật và khoản phải trả chủ xe; mỗi dòng có người hưởng/chịu, trạng thái và quy tắc hoàn rõ ràng.
 - Support case/dispute gắn booking.

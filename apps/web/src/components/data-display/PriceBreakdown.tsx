@@ -1,11 +1,11 @@
 'use client';
 
-import { DownOutlined, InfoCircleOutlined, UpOutlined } from '@ant-design/icons';
-import { Tooltip } from 'antd';
+import { DownOutlined, UpOutlined } from '@ant-design/icons';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { subtractMoney } from '@xeprime/domain';
-import { FEE_BEARER, PRICE_ROW } from '@xeprime/types';
+import { FEE_BEARER, FEE_LINE, PRICE_ROW } from '@xeprime/types';
+import { InfoHint } from './InfoHint';
 import styles from './PriceBreakdown.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -37,6 +37,16 @@ export interface PriceBreakdownFees {
     partnerName?: string | null;
   }>;
   customerTotalAmount: string;
+  /**
+   * `P` — TÀI TRỢ mã khuyến mãi của XePrime (ADR 0046). `'0'`/vắng = chuyến không dùng mã.
+   *
+   * Vẽ thành một dòng RIÊNG, không trộn vào `lines`: `lines` là các khoản khách PHẢI TRẢ THÊM,
+   * còn đây là khoản trừ đi — và nó cũng khác `PRICE_ROW.DISCOUNT` (khuyến mãi của chủ xe) ở
+   * chỗ ai bỏ tiền ra.
+   */
+  promoDiscountAmount?: string | null;
+  /** Mã đã áp — tên hiển thị của dòng giảm trên. */
+  promo?: { code: string; name?: string } | null;
   /** Khách chuyển online để giữ chỗ; null/undefined = chuyến này không cần giữ chỗ. */
   holdAmount?: string | null;
   /**
@@ -86,6 +96,15 @@ interface PriceBreakdownProps {
    * khi đã đặt (chi tiết chuyến) mới bật, nơi con số đã chốt và bảng dài chỉ còn là tra cứu.
    */
   collapsible?: boolean;
+  /**
+   * Khối HÀNH ĐỘNG chèn giữa bảng tạm tính và tổng cộng — ô áp mã khuyến mãi của luồng đặt xe
+   * (ADR 0046, ảnh thiết kế 4).
+   *
+   * Là một `slot` chứ không phải một prop `onApplyPromo`: `PriceBreakdown` dùng chung cho báo
+   * giá công khai, chi tiết chuyến và snapshot đơn cũ — ba bề mặt trong đó chỉ MỘT có ô áp mã.
+   * Nhồi trạng thái của ô đó vào đây là bắt hai bề mặt kia mang theo thứ chúng không dùng.
+   */
+  promoSlot?: ReactNode;
 }
 
 /**
@@ -107,6 +126,7 @@ export function PriceBreakdown({
   fees,
   audience = 'customer',
   collapsible = false,
+  promoSlot,
 }: PriceBreakdownProps) {
   const tCommon = useTranslations('Common');
   const totalText = totalLabel ?? tCommon('components.price.subtotal');
@@ -126,12 +146,30 @@ export function PriceBreakdown({
     (line) => audience === 'owner' || line.bearer !== FEE_BEARER.OWNER,
   );
   /*
+   * DÒNG 0đ KHÔNG VẼ.
+   *
+   * `buildDailyQuote` cố ý sinh "Phí phát sinh ngoài giờ" và "Dịch vụ cộng thêm" bằng 0 để
+   * snapshot của đơn có chỗ cho chúng về sau (chúng phát sinh lúc trả xe). Đó là đúng cho DỮ
+   * LIỆU và sai cho MÀN HÌNH: một bảng giá đầy dòng "0 ₫" bắt khách đọc hết mới biết không có
+   * gì ở đó, và nó làm những dòng có tiền thật khó tìm hơn.
+   *
+   * Chỉ ẩn ở UI. Không dòng nào bị bỏ khỏi snapshot, khỏi `totalAmount`, khỏi sổ kế toán — và
+   * TỔNG thì không bao giờ ẩn, kể cả khi bằng 0.
+   */
+  const visibleRows = rows.filter((row) => Number(row.amount) !== 0);
+  const visibleFeeLines = feeLines.filter((line) => Number(line.amount) !== 0);
+  const promoDiscount = Number(fees?.promoDiscountAmount ?? 0);
+  /*
    * Có khối phụ phí ⇒ `totalAmount` (giá thuê) KHÔNG còn là số cuối cùng khách phải chuẩn bị —
    * `fees.customerTotalAmount` mới là. Vẽ to-đậm CẢ HAI bằng cùng kiểu chữ (bản trước) khiến
    * người đọc không biết số nào là "cái phải trả" — đúng phản hồi người dùng 18/09/2026. Khi
    * không có phụ phí thì `totalAmount` vẫn là số cuối, giữ nguyên kiểu chữ nổi bật như cũ.
+   *
+   * MÃ KHUYẾN MÃI cũng kéo khối đó ra (ADR 0046): một chuyến tuyến gói không có dòng phụ phí nào
+   * nhưng có mã thì `customerTotalAmount` vẫn khác `totalAmount`, và giấu khối đi sẽ hiện tiền
+   * thuê như số phải trả.
    */
-  const hasFees = Boolean(fees) && feeLines.length > 0;
+  const hasFees = Boolean(fees) && (visibleFeeLines.length > 0 || promoDiscount > 0);
   const payAtHandoverAmount =
     fees?.payAtPickupAmount ??
     (fees?.holdAmount ? subtractMoney(fees.customerTotalAmount, fees.holdAmount) : null);
@@ -155,9 +193,9 @@ export function PriceBreakdown({
         </button>
       ) : null}
 
-      {showItems ? (
+      {showItems && visibleRows.length > 0 ? (
         <dl className={styles.rows}>
-          {rows.map((row) => (
+          {visibleRows.map((row) => (
             <div key={row.key} className={styles.row}>
               <dt className={styles.rowLabel}>
                 <span className={row.key === PRICE_ROW.DISCOUNT ? styles.discountText : undefined}>
@@ -169,7 +207,6 @@ export function PriceBreakdown({
                 className={[
                   styles.rowAmount,
                   row.key === PRICE_ROW.DISCOUNT ? styles.discountText : '',
-                  row.amount === '0' ? styles.muted : '',
                 ]
                   .filter(Boolean)
                   .join(' ')}
@@ -194,9 +231,11 @@ export function PriceBreakdown({
             <div className={styles.depositRow}>
               <span className={styles.depositLabel}>
                 {tCommon('components.price.deposit')}
-                <Tooltip title={tCommon('components.price.depositHint')}>
-                  <InfoCircleOutlined className={styles.depositInfo} />
-                </Tooltip>
+                <InfoHint
+                  content={tCommon('components.price.depositHint')}
+                  label={tCommon('components.price.depositHintLabel')}
+                  className={styles.depositInfo}
+                />
               </span>
               <span className={styles.depositAmount}>{fmt.money(depositAmount)}</span>
             </div>
@@ -205,12 +244,19 @@ export function PriceBreakdown({
         ) : null}
       </div>
 
-      {fees && feeLines.length > 0 ? (
+      {/*
+        Ô ÁP MÃ — SAU bảng tạm tính, TRƯỚC tổng cộng (ảnh thiết kế 4). Nằm ngoài khối phụ phí có
+        chủ đích: nó phải hiện ngay cả khi chuyến chưa có phụ phí nào, vì một chuyến không có
+        dòng phí vẫn áp mã được.
+      */}
+      {promoSlot}
+
+      {fees && hasFees ? (
         <div className={styles.feesBlock}>
           <h4 className={styles.feesTitle}>{tCommon('components.price.feesTitle')}</h4>
           {showItems ? (
             <dl className={styles.rows}>
-              {feeLines.map((line) => (
+              {visibleFeeLines.map((line) => (
                 <div key={line.key} className={styles.row}>
                   <dt className={styles.rowLabel}>
                     <span>{domainLabel('feeLine', line.key)}</span>
@@ -241,6 +287,30 @@ export function PriceBreakdown({
           ) : null}
 
           {/*
+            MÃ KHUYẾN MÃI — dòng TRỪ, luôn hiện (không gấp theo `showItems`).
+            Không gấp vì nó là thứ khách vừa chủ động làm: giấu nó sau nút "Xem chi tiết" sẽ
+            khiến họ không thấy việc mình vừa làm có tác dụng gì.
+          */}
+          {promoDiscount > 0 ? (
+            <div className={styles.row}>
+              <dt className={styles.rowLabel}>
+                <span className={styles.discountText}>
+                  {domainLabel('feeLine', FEE_LINE.PROMO)}
+                </span>
+                {fees.promo ? (
+                  <span className={styles.sublabel}>
+                    {fees.promo.code}
+                    {fees.promo.name ? ` · ${fees.promo.name}` : ''}
+                  </span>
+                ) : null}
+              </dt>
+              <dd className={[styles.rowAmount, styles.discountText].join(' ')}>
+                −{fmt.money(String(promoDiscount))}
+              </dd>
+            </div>
+          ) : null}
+
+          {/*
             Số CUỐI CÙNG khách phải chuẩn bị — hero của cả bảng, to hơn hẳn "tiền thuê" ở trên vì
             đây mới là con số họ cần biết trước khi bấm gửi/chuyển khoản.
           */}
@@ -259,9 +329,11 @@ export function PriceBreakdown({
               <div className={styles.paymentPlanRow}>
                 <span className={styles.paymentPlanLabel}>
                   {tCommon('components.price.holdAmount')}
-                  <Tooltip title={tCommon('components.price.holdHint')}>
-                    <InfoCircleOutlined className={styles.depositInfo} />
-                  </Tooltip>
+                  <InfoHint
+                    content={tCommon('components.price.holdHint')}
+                    label={tCommon('components.price.holdHintLabel')}
+                    className={styles.depositInfo}
+                  />
                 </span>
                 <span className={styles.paymentPlanAmountNow}>{fmt.money(fees.holdAmount)}</span>
               </div>

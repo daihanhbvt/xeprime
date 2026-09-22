@@ -43,7 +43,12 @@
     "rejected_by_host": "Declined by shop",
     "cancelled_by_customer": "Cancelled by customer",
     "expired": "Response window expired",
-    "converted_to_booking": "Booking created"
+    "converted_to_booking": "Booking created",
+    "awaiting_hold": "Accepted · awaiting payment",
+    "hold_paid": "Paid · awaiting your approval",
+    "hold_expired": "Guest did not pay",
+    "slot_taken": "Dates taken by someone else",
+    "cancelled_by_host": "Cancelled by host"
   },
   "bookingStatus": {
     "reserved": "Vehicle held",
@@ -108,13 +113,15 @@
   },
   "customerTripStage": {
     "pending_approval": "Awaiting confirmation",
-    "awaiting_hold": "Reservation payment due",
+    "awaiting_hold": "Accepted · payment due",
     "ready": "Ready",
     "active": "On rent",
     "completed": "Completed",
     "cancelled": "Trip cancelled",
     "rejected": "Declined",
-    "no_show": "Not picked up"
+    "no_show": "Not picked up",
+    "pending_approval_paid": "Paid · awaiting host confirmation",
+    "slot_taken": "Another customer got this car"
   },
   "deliveryQuoteSource": {
     "auto": "Calculated automatically",
@@ -275,7 +282,16 @@
     "free_trips_exhausted": "Free trips used up",
     "subscription_activated": "Plan activated",
     "booking_auto_accepted": "Auto-accepted booking",
-    "chat_message_received": "New message"
+    "chat_message_received": "New message",
+    "booking_request_slot_taken": "Another customer got this car",
+    "hold_requested": "Reservation payment due",
+    "hold_paid": "Reservation payment received",
+    "hold_expiring": "Payment window closing",
+    "hold_expired": "Payment window closed",
+    "hold_refunded": "Trip fell through — refunded",
+    "hold_refund_paid": "Reservation payment refunded",
+    "booking_request_slot_reopened": "That car is free again",
+    "booking_cancelled_by_host": "Host cancelled the trip"
   },
   "occupancySourceType": {
     "booking": "Booking",
@@ -589,7 +605,35 @@
     "service_fee": "XePrime service fee",
     "tax": "Withheld / remitted tax",
     "trip_insurance": "Trip insurance",
-    "vehicle_protection": "Vehicle protection"
+    "vehicle_protection": "Vehicle protection",
+    "deposit": "Booking deposit",
+    "promo": "XePrime promo code"
+  },
+  "promoCodeState": {
+    "disabled": "Paused",
+    "upcoming": "Upcoming",
+    "active": "Active",
+    "ending_soon": "Ending soon",
+    "expired": "Expired",
+    "exhausted": "Fully used"
+  },
+  "promoDiscountType": {
+    "fixed": "Fixed amount",
+    "percent": "Percentage"
+  },
+  "promoAudience": {
+    "all": "All customers",
+    "new_customer": "First-time customers"
+  },
+  "promoVehicleScope": {
+    "all": "All vehicles",
+    "car": "Cars",
+    "motorbike": "Motorbikes"
+  },
+  "promoRedemptionStatus": {
+    "reserved": "On hold",
+    "redeemed": "Used",
+    "released": "Released"
   },
   "sellerEntityType": {
     "individual": "Individual",
@@ -787,5 +831,25 @@
     "declared": "Declared",
     "remitted": "Remitted",
     "reversed": "Reversed"
+  },
+  "cancellationParty": {
+    "host": "Cancelled by host",
+    "customer": "Cancelled by guest",
+    "platform": "Cancelled by XePrime",
+    "force_majeure": "Force majeure"
+  },
+  "cancellationReasonCategory": {
+    "vehicle_unavailable": "Vehicle unavailable (damage, accident, repairs)",
+    "schedule_conflict": "Clashes with another trip",
+    "customer_requirements": "Guest does not meet the rental requirements",
+    "customer_unreachable": "Could not reach the guest",
+    "customer_changed_plan": "Guest changed their plans",
+    "other": "Other reason"
+  },
+  "cancellationStage": {
+    "awaiting_hold": "Accepted, awaiting payment",
+    "hold_paid": "Paid, awaiting approval",
+    "booking_before_pickup": "Booked, not yet picked up",
+    "booking_active": "Vehicle with the guest"
   }
 }
