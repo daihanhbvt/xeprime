@@ -47,10 +47,27 @@ export function HostMetrics({
   metrics,
   className,
 }: {
-  metrics: HostMetricsShape;
+  /**
+   * `undefined` KHÁC `sampleCount: 0`, nên kiểu ở đây rộng hơn kiểu sinh từ OpenAPI.
+   *
+   * Giá trị tới được component này đi qua Data Cache của Next (`fetchListingDetail` dùng
+   * `force-cache` + `revalidate`), và cache đó giữ NGUYÊN VĂN body của phiên bản đã ghi nó.
+   * Một body ghi trước khi backend thêm trường vẫn được phục vụ cho lượt đọc stale đầu tiên
+   * sau khi mã mới lên — hình dạng ở đây là hình dạng lúc GHI cache, không phải của kiểu hôm
+   * nay.
+   */
+  metrics: HostMetricsShape | null | undefined;
   className?: string;
 }) {
   const t = useTranslations('Shops.metrics');
+
+  /*
+   * Không có số liệu thì không nói gì. `sampleCount: 0` là một khẳng định ("chưa ai gửi yêu
+   * cầu nào"); thiếu hẳn đối tượng thì không có gì để khẳng định, và im lặng đúng hơn là bịa
+   * ra một con số. Quan trọng hơn: khối uy tín là phần BỔ TRỢ của trang chi tiết xe — nó
+   * không được phép kéo sập cả trang ngay bên trên nút "Chọn thuê".
+   */
+  if (!metrics) return null;
 
   if (hostMetricState(metrics.sampleCount) !== HOST_METRIC_STATE.READY) {
     /*

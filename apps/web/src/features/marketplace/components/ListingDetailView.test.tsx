@@ -200,6 +200,28 @@ describe('ListingDetailView — điều kiện thuê công bố', () => {
     expect(screen.queryByText('Thủ tục & điều kiện thuê')).toBeNull();
     expect(screen.queryByText('Khung giờ giao nhận')).toBeNull();
   });
+
+  /*
+   * Body CŨ trong Data Cache của Next: `fetchListingDetail` cache 30 giây theo kiểu
+   * stale-while-revalidate, nên ngay sau khi backend thêm một trường, lượt đọc stale đầu tiên
+   * vẫn nhận body của phiên bản trước — thiếu hẳn `shopMetrics` dù kiểu sinh từ OpenAPI khai
+   * nó bắt buộc. Trước 22/09/2026 chỗ đó ném `Cannot read properties of undefined` và giết cả
+   * trang chi tiết xe, ngẫu nhiên theo đúng nhịp hết hạn cache.
+   */
+  it('body cũ thiếu hẳn shopMetrics: trang vẫn dựng, khối uy tín im lặng', async () => {
+    const { shopMetrics: _omitted, ...withoutMetrics } = LISTING;
+    renderWithIntl(
+      await ListingDetailView({
+        listing: withoutMetrics as unknown as PublicListingDetail,
+        catalog: EMPTY_CATALOG,
+      }),
+    );
+
+    expect(screen.getByText('VinFast Fadil 2022')).toBeTruthy();
+    expect(screen.getByText('Gian hàng Demo XePrime')).toBeTruthy();
+    // Không có số liệu thì không nói gì — kể cả câu "chưa đủ dữ liệu", vốn là một khẳng định.
+    expect(screen.queryByText(/Chưa đủ dữ liệu/)).toBeNull();
+  });
 });
 
 /**
