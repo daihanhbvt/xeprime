@@ -300,3 +300,106 @@ describe('Đặt lại theo gian hàng', () => {
     expect((screen.getByRole('switch', { name: 'Dùng chính sách chung của gian hàng' }) as HTMLButtonElement).disabled).toBe(true);
   });
 });
+
+/**
+ * HẠN MỨC QUÃNG ĐƯỜNG trên form chính sách theo xe (21/09/2026).
+ *
+ * Đây là đường CHỈNH SỬA sau khi xe đã đăng — wizard đăng xe nhanh chỉ hỏi một lần. Hai trường
+ * đi CẶP ở backend (`PricingService.validatePolicy` + CHECK ở DB), nên form phải nói cùng một
+ * luật: bật thì bắt buộc cả hai, tắt thì xoá cả hai.
+ */
+type SavedMileage = {
+  includedDistanceKmPerDay: number | null;
+  excessDistanceFeePerKm: string | null;
+};
+
+describe('Hạn mức quãng đường', () => {
+  const mileageSwitch = () =>
+    screen.getAllByRole('switch').find((el) => el.closest('section')?.getAttribute('aria-label')?.includes('Hạn mức'))!;
+
+  async function openOverride(over = {}) {
+    renderWorkspace(pricingFixture(over));
+    fireEvent.click(screen.getByRole('switch', { name: 'Dùng chính sách chung của gian hàng' }));
+    await screen.findByLabelText('Giá ngày thường');
+  }
+
+  it('đang kế thừa: thẻ chính sách nói rõ hạn mức của gian hàng', () => {
+    renderWorkspace(
+      pricingFixture({
+        policy: shopPolicy({ includedDistanceKmPerDay: 200, excessDistanceFeePerKm: '3000' }),
+        shopPolicy: shopPolicy({ includedDistanceKmPerDay: 200, excessDistanceFeePerKm: '3000' }),
+      }),
+    );
+
+    expect(screen.getByText('Hạn mức quãng đường')).toBeTruthy();
+    expect(screen.getByText(/200 km\/ngày/)).toBeTruthy();
+  });
+
+  it('gian hàng không đặt hạn mức: nói "Không giới hạn", không bịa một con số', () => {
+    renderWorkspace(pricingFixture());
+    expect(screen.getByText('Không giới hạn')).toBeTruthy();
+  });
+
+  it('ghi đè: nạp lại đúng hai giá trị đang hiệu lực và công tắc đang BẬT', async () => {
+    await openOverride({
+      policy: shopPolicy({ includedDistanceKmPerDay: 200, excessDistanceFeePerKm: '3000' }),
+      shopPolicy: shopPolicy({ includedDistanceKmPerDay: 200, excessDistanceFeePerKm: '3000' }),
+    });
+
+    expect((screen.getByLabelText('Số km mỗi ngày trong giá') as HTMLInputElement).value).toBe('200');
+    expect((screen.getByLabelText('Phí mỗi km vượt') as HTMLInputElement).value).toBe('3.000');
+  });
+
+  it('bật mà để trống: chặn ngay tại ô, không gửi nửa cặp xuống server', async () => {
+    await openOverride();
+    fireEvent.click(mileageSwitch());
+    await screen.findByLabelText('Số km mỗi ngày trong giá');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+
+    expect(await screen.findByText('Nhập số km tối đa trong một ngày')).toBeTruthy();
+    expect(screen.getByText('Nhập phí cho mỗi km vượt')).toBeTruthy();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('bật và nhập đủ: gửi cả hai, tiền là CHUỖI (ADR 0007)', async () => {
+    await openOverride();
+    fireEvent.click(mileageSwitch());
+    fireEvent.change(await screen.findByLabelText('Số km mỗi ngày trong giá'), {
+      target: { value: '200' },
+    });
+    fireEvent.change(screen.getByLabelText('Phí mỗi km vượt'), { target: { value: '3000' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+    expect((await screen.findAllByText('Lưu chính sách riêng cho xe này?')).length).toBeGreaterThan(
+      0,
+    );
+    const buttons = screen.getAllByRole('button', { name: 'Lưu thay đổi' });
+    fireEvent.click(buttons[buttons.length - 1]!);
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const body = onSave.mock.calls[0]![0] as { policy: SavedMileage };
+    expect(body.policy.includedDistanceKmPerDay).toBe(200);
+    expect(body.policy.excessDistanceFeePerKm).toBe('3000');
+  });
+
+  it('tắt công tắc: XOÁ cả hai, không giữ lại số cũ', async () => {
+    await openOverride({
+      policy: shopPolicy({ includedDistanceKmPerDay: 200, excessDistanceFeePerKm: '3000' }),
+      shopPolicy: shopPolicy({ includedDistanceKmPerDay: 200, excessDistanceFeePerKm: '3000' }),
+    });
+    fireEvent.click(mileageSwitch());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+    expect((await screen.findAllByText('Lưu chính sách riêng cho xe này?')).length).toBeGreaterThan(
+      0,
+    );
+    const buttons = screen.getAllByRole('button', { name: 'Lưu thay đổi' });
+    fireEvent.click(buttons[buttons.length - 1]!);
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const body = onSave.mock.calls[0]![0] as { policy: SavedMileage };
+    expect(body.policy.includedDistanceKmPerDay).toBeNull();
+    expect(body.policy.excessDistanceFeePerKm).toBeNull();
+  });
+});

@@ -10,6 +10,7 @@ import {
   POLICY_SOURCE,
   PUBLISH_REQUIREMENT,
   SERVICE_TYPE,
+  SURCHARGE_CATEGORY,
   TENANT_ROLE,
   TENANT_STATUS,
   TRANSMISSION_TYPE,
@@ -22,7 +23,13 @@ import { SettlementService } from '../src/modules/bookings/settlement/settlement
 import { AuditService } from '../src/modules/audit/audit.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeNotificationService, makePricingService, makeVehiclesService, seedBranch } from './helpers/service-factory';
+import {
+  makeNotificationService,
+  makePricingService,
+  makePublicListingsService,
+  makeVehiclesService,
+  seedBranch,
+} from './helpers/service-factory';
 
 /**
  * LUỒNG ĐĂNG XE NHANH — luật ở SERVER, trên PostgreSQL THẬT (09/09/2026).
@@ -44,6 +51,7 @@ const asService = prisma as unknown as PrismaService;
 
 const vehicles = makeVehiclesService(asService);
 const pricing = makePricingService(asService);
+const listings = makePublicListingsService(asService);
 const audit = new AuditService(asService);
 const notifications = makeNotificationService(asService);
 const settlement = new SettlementService(
@@ -416,6 +424,16 @@ describe('Phạm vi gian hàng', () => {
 });
 
 describe('Hạn mức quãng đường', () => {
+  /** Xe ĐÃ lên chợ — `getById` cố ý chỉ trả xe `approved_public` của gian hàng đang hoạt động. */
+  async function publicVehicle() {
+    const created = await createListableVehicle();
+    await prisma.vehicle.update({
+      where: { id: created.id },
+      data: { publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC },
+    });
+    return created;
+  }
+
   const basePolicy = {
     collateralMode: COLLATERAL_MODE.NONE,
     collateralAssetTypes: [],
@@ -463,6 +481,36 @@ describe('Hạn mức quãng đường', () => {
     expect(typeof effective?.values.excessDistanceFeePerKm).toBe('string');
   });
 
+  /**
+   * Hạn mức chỉ có nghĩa nếu khách ĐỌC ĐƯỢC nó trước khi đặt: phí vượt km không nằm trong báo
+   * giá, nên thứ duy nhất làm nó công bằng là được công bố trên trang xe.
+   */
+  maybe('công bố ra chợ: trang xe trả đúng km/ngày và tiền mỗi km vượt', async () => {
+    const created = await publicVehicle();
+    await vehicles.savePricing(tenantId, created.id, ownerId, {
+      source: POLICY_SOURCE.VEHICLE,
+      policy: { ...basePolicy, includedDistanceKmPerDay: 200, excessDistanceFeePerKm: '3000' },
+    } as never);
+
+    const detail = await listings.getById(created.id);
+    expect(detail.mileagePolicy).toEqual({ includedKmPerDay: 200, excessFeePerKm: '3000' });
+    // Tiền là CHUỖI trên dây (ADR 0007) — không bao giờ number.
+    expect(typeof detail.mileagePolicy!.excessFeePerKm).toBe('string');
+  });
+
+  maybe('xe KHÔNG đặt hạn mức: trang xe vẫn dựng được, mileagePolicy là null', async () => {
+    const created = await publicVehicle();
+    await vehicles.savePricing(tenantId, created.id, ownerId, {
+      source: POLICY_SOURCE.VEHICLE,
+      policy: basePolicy,
+    } as never);
+
+    const detail = await listings.getById(created.id);
+    expect(detail.mileagePolicy).toBeNull();
+    // Phần còn lại của trang không hề đổi — đây là hình dạng của MỌI xe trước 09/09/2026.
+    expect(detail.id).toBe(created.id);
+  });
+
   maybe('lưu chính sách qua wizard KHÔNG làm mất cọc/phí quá giờ đang có', async () => {
     const created = await createListableVehicle();
     // Gian hàng đã cấu hình cọc tiền + phí quá giờ ở bản ghi đè của xe.
@@ -507,6 +555,8 @@ describe('Đề xuất phí vượt km lúc quyết toán', () => {
     pickupKm: number;
     returnKm: number;
     days: number;
+    /** Mặc định TỰ LÁI — dịch vụ duy nhất mà hạn mức km áp dụng. */
+    serviceType?: string;
   }) {
     const vehicle = await createListableVehicle();
     const bookingId = newId();
@@ -546,7 +596,7 @@ describe('Đề xuất phí vượt km lúc quyết toán', () => {
         vehicleId: vehicle.id,
         code: `BK-KM-${RUN}-${seq}`,
         status: BOOKING_STATUS.COMPLETED,
-        serviceType: SERVICE_TYPE.SELF_DRIVE,
+        serviceType: options.serviceType ?? SERVICE_TYPE.SELF_DRIVE,
         customerName: 'Khách km',
         customerPhone: `0955${String(100000 + seq).slice(-6)}`,
         pickupAt,
@@ -675,6 +725,164 @@ describe('Đề xuất phí vượt km lúc quyết toán', () => {
     const result = await settlement.get(tenantId, bookingId);
     expect(result.excessMileage.available).toBe(false);
     expect(result.excessMileage.includedKmPerDay).toBe(300);
+  });
+
+  /**
+   * Đồng hồ lúc TRẢ nhỏ hơn lúc GIAO — gõ nhầm, thay đồng hồ, hoặc đảo ngược hai biên bản.
+   *
+   * Phép trừ vẫn ra một số (âm), và `Math.max(0, …)` sẽ biến nó thành "0 km vượt" — tức là một
+   * màn hình nói "khách chạy trong hạn mức" dựa trên dữ liệu vô nghĩa. Ở đây phải là CHƯA ĐỦ
+   * DỮ LIỆU, kèm hai chỉ số thô để chủ xe thấy ngay cái sai nằm ở đâu.
+   */
+  maybe('đồng hồ lúc trả NHỎ HƠN lúc giao: không đề xuất, trả lại hai chỉ số thô', async () => {
+    const bookingId = await bookingWithOdometer({
+      includedKmPerDay: 300,
+      feePerKm: '3000',
+      pickupKm: 11_000,
+      returnKm: 10_000,
+      days: 2,
+    });
+
+    const result = await settlement.get(tenantId, bookingId);
+    expect(result.excessMileage.available).toBe(false);
+    expect(result.excessMileage.amount).toBeNull();
+    expect(result.excessMileage.excessKm).toBe(0);
+    expect(result.excessMileage.pickupOdometerKm).toBe(11_000);
+    expect(result.excessMileage.returnOdometerKm).toBe(10_000);
+  });
+
+  maybe('đề xuất mang theo hai chỉ số đồng hồ để đối chiếu biên bản bàn giao', async () => {
+    const bookingId = await bookingWithOdometer({
+      includedKmPerDay: 300,
+      feePerKm: '3000',
+      pickupKm: 10_000,
+      returnKm: 11_000,
+      days: 2,
+    });
+
+    const result = await settlement.get(tenantId, bookingId);
+    expect(result.excessMileage.pickupOdometerKm).toBe(10_000);
+    expect(result.excessMileage.returnOdometerKm).toBe(11_000);
+  });
+
+  /**
+   * Một chuyến chỉ có MỘT cặp chỉ số đồng hồ, nên vượt km là một con số duy nhất. Ghi lần thứ
+   * hai là trừ tiền khách hai lần cho cùng quãng đường — và đây lại đúng là danh mục có nút
+   * "dùng số đề xuất", tức chỗ dễ bấm nhầm hai lần nhất.
+   */
+  maybe('không ghi được HAI khoản vượt km trên một đơn', async () => {
+    const bookingId = await bookingWithOdometer({
+      includedKmPerDay: 300,
+      feePerKm: '3000',
+      pickupKm: 10_000,
+      returnKm: 11_000,
+      days: 2,
+    });
+
+    const after = await settlement.addSurcharge(tenantId, bookingId, ownerId, {
+      category: SURCHARGE_CATEGORY.EXCESS_MILEAGE,
+      amount: '1200000',
+      reason: 'Vượt 400 km',
+    });
+    expect(after.surcharges).toHaveLength(1);
+
+    await expect(
+      settlement.addSurcharge(tenantId, bookingId, ownerId, {
+        category: SURCHARGE_CATEGORY.EXCESS_MILEAGE,
+        amount: '1200000',
+        reason: 'Ghi lại lần nữa',
+      }),
+    ).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.SURCHARGE_CATEGORY_DUPLICATE },
+    });
+
+    // Danh mục KHÁC vẫn ghi bình thường — luật chỉ áp cho danh mục một-khoản.
+    const withCleaning = await settlement.addSurcharge(tenantId, bookingId, ownerId, {
+      category: SURCHARGE_CATEGORY.CLEANING,
+      amount: '200000',
+      reason: 'Rửa xe',
+    });
+    expect(withCleaning.surcharges).toHaveLength(2);
+
+    // Gỡ khoản cũ rồi ghi lại là đường sửa HỢP LỆ — huỷ mềm không còn chặn.
+    const excess = after.surcharges.find(
+      (row) => row.category === SURCHARGE_CATEGORY.EXCESS_MILEAGE,
+    )!;
+    await settlement.voidSurcharge(tenantId, bookingId, excess.id, ownerId, {
+      reason: 'Ghi nhầm số',
+    });
+    const redone = await settlement.addSurcharge(tenantId, bookingId, ownerId, {
+      category: SURCHARGE_CATEGORY.EXCESS_MILEAGE,
+      amount: '900000',
+      reason: 'Ghi lại đúng số',
+    });
+    expect(
+      redone.surcharges.filter((row) => row.category === SURCHARGE_CATEGORY.EXCESS_MILEAGE),
+    ).toHaveLength(1);
+  });
+
+  /**
+   * HAI request VỀ CÙNG LÚC — đúng cảnh double-click nút "dùng số đề xuất".
+   *
+   * `requireNoDuplicateCategory` là một SELECT ngoài transaction, nên cả hai đều đọc "chưa có"
+   * và cả hai đều đi tiếp. Thứ chặn thật là partial unique `booking_surcharges_single_entry_uq`
+   * (CLAUDE.md §5: chống ghi đôi tiền bằng constraint DB). Test tuần tự ở trên xanh dù có hay
+   * không có ràng buộc đó — test này thì không.
+   */
+  maybe('hai request đồng thời: đúng MỘT khoản vượt km được ghi', async () => {
+    const bookingId = await bookingWithOdometer({
+      includedKmPerDay: 300,
+      feePerKm: '3000',
+      pickupKm: 10_000,
+      returnKm: 11_000,
+      days: 2,
+    });
+
+    const attempt = () =>
+      settlement.addSurcharge(tenantId, bookingId, ownerId, {
+        category: SURCHARGE_CATEGORY.EXCESS_MILEAGE,
+        amount: '1200000',
+        reason: 'Vượt 400 km',
+      });
+    const results = await Promise.allSettled([attempt(), attempt()]);
+
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    const rejected = results.find((r) => r.status === 'rejected');
+    expect(rejected).toBeDefined();
+    // Người thua cuộc nhận 409 nói đúng chuyện, KHÔNG phải một P2002 lọt ra thành 500.
+    expect(rejected).toMatchObject({
+      reason: { response: { code: API_ERROR_CODE.SURCHARGE_CATEGORY_DUPLICATE } },
+    });
+
+    const live = await prisma.bookingSurcharge.count({
+      where: { bookingId, category: SURCHARGE_CATEGORY.EXCESS_MILEAGE, voidedAt: null },
+    });
+    expect(live).toBe(1);
+  });
+
+  /**
+   * Hạn mức km CHỈ áp cho chuyến TỰ LÁI.
+   *
+   * `buildSnapshot` đóng băng cặp hạn mức cho MỌI dịch vụ, nên một xe vừa tự lái vừa có tài xế
+   * mang hạn mức sang cả đơn có tài xế. Km đó do TÀI XẾ CỦA SHOP chạy, và trang xe lẫn bước Xác
+   * nhận đều chỉ công bố điều khoản này cho tự lái — đề xuất thu ở đây là thu một khoản khách
+   * chưa bao giờ được cho xem.
+   */
+  maybe('chuyến CÓ TÀI XẾ: không đề xuất phí vượt km dù snapshot có hạn mức', async () => {
+    const bookingId = await bookingWithOdometer({
+      includedKmPerDay: 300,
+      feePerKm: '3000',
+      pickupKm: 10_000,
+      returnKm: 11_000,
+      days: 2,
+      serviceType: SERVICE_TYPE.WITH_DRIVER,
+    });
+
+    const result = await settlement.get(tenantId, bookingId);
+    expect(result.excessMileage.available).toBe(false);
+    expect(result.excessMileage.amount).toBeNull();
+    // Và KHÔNG rò hạn mức ra ngoài — giao diện đọc trường này để quyết định có hiện khối hay không.
+    expect(result.excessMileage.includedKmPerDay).toBeNull();
   });
 
   maybe('chủ xe siết hạn mức SAU chuyến: đề xuất vẫn theo mức đã công bố lúc đặt', async () => {

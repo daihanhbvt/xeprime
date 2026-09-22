@@ -1,0 +1,35 @@
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.feeRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.freeTag {
+  color: var(--xp-color-success);
+  /* Số tiền/nhãn tiền không được xuống dòng giữa chừng. */
+  white-space: nowrap;
+}
+
+.note {
+  margin: 0;
+  font-size: var(--xp-font-size-sm);
+  line-height: var(--xp-line-height);
+  color: var(--xp-color-text-tertiary);
+}
+
+/* Hai câu trong phần mô tả của Alert: nguyên nhân, rồi lối đi tiếp. */
+.alertBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}

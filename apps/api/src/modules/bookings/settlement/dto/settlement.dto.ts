@@ -92,6 +92,14 @@ export class ExcessMileageSuggestionDto {
   includedKmPerDay!: number | null;
   @ApiProperty({ description: 'Số ngày tính phí của chuyến' }) chargedDays!: number;
   @ApiProperty({ description: 'Hạn mức tổng = số ngày × km mỗi ngày' }) allowedKm!: number;
+  /*
+   * Hai chỉ số đồng hồ THÔ, kèm theo chứ không chỉ hiệu của chúng: chủ xe đối chiếu số trên
+   * biên bản bàn giao với số ở đây trước khi trừ tiền khách. Null = biên bản chưa ghi chỉ số.
+   */
+  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Đồng hồ km lúc GIAO xe' })
+  pickupOdometerKm!: number | null;
+  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Đồng hồ km lúc NHẬN LẠI xe' })
+  returnOdometerKm!: number | null;
   @ApiProperty({ description: 'Km thực tế đã chạy (đồng hồ trả − đồng hồ giao)' }) actualKm!: number;
   @ApiProperty({ description: 'Km vượt hạn mức (không âm)' }) excessKm!: number;
   @ApiPropertyOptional({ type: String, nullable: true }) feePerKm!: string | null;

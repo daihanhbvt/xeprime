@@ -50,6 +50,27 @@ export const SURCHARGE_CATEGORY_META: Readonly<Record<SurchargeCategory, StatusM
   [SURCHARGE_CATEGORY.OTHER]: { label: 'Khác', color: STATUS_COLOR.NEUTRAL },
 };
 
+/**
+ * Danh mục chỉ được có **một** khoản còn hiệu lực trên một đơn (21/09/2026).
+ *
+ * Vượt km suy ra từ đúng MỘT cặp chỉ số đồng hồ (lúc giao và lúc nhận lại), nên nó là một con
+ * số duy nhất của chuyến. Ghi thêm khoản thứ hai là trừ tiền khách hai lần cho cùng quãng
+ * đường — mà đây lại đúng là danh mục có nút "dùng số đề xuất", tức là bấm nhầm hai lần rất dễ.
+ *
+ * Vệ sinh, hư hại, chờ đợi… thì ngược lại: một chuyến có thể có nhiều khoản thật, mỗi khoản một
+ * lý do riêng. Đừng mở rộng danh sách này vì lý do "cho gọn".
+ *
+ * Chặn thật nằm ở `SettlementService` (mã lỗi `SURCHARGE_CATEGORY_DUPLICATE`); giao diện đọc
+ * cùng hằng số này để nói trước thay vì để người dùng ăn lỗi sau khi bấm.
+ */
+export const SINGLE_ENTRY_SURCHARGE_CATEGORIES: readonly SurchargeCategory[] = [
+  SURCHARGE_CATEGORY.EXCESS_MILEAGE,
+];
+
+export function isSingleEntrySurchargeCategory(value: string): boolean {
+  return (SINGLE_ENTRY_SURCHARGE_CATEGORIES as readonly string[]).includes(value);
+}
+
 export const SURCHARGE_CATEGORY_LABEL: Readonly<Record<SurchargeCategory, string>> = {
   [SURCHARGE_CATEGORY.OVERTIME]: 'Quá giờ',
   [SURCHARGE_CATEGORY.CLEANING]: 'Vệ sinh',
@@ -143,12 +164,14 @@ export function hasDepositToShow(status: DepositStatus): boolean {
   return status !== DEPOSIT_STATUS.NONE;
 }
 
-/**
- * Câu bắt buộc hiện ở mọi bề mặt hoàn cọc (§5.2). Đặt thành hằng số để không nơi nào diễn đạt
- * nhẹ đi thành "hệ thống đang chuyển khoản".
+/*
+ * `REFUND_DISCLAIMER` từng sống ở đây: câu bắt buộc hiện ở mọi bề mặt hoàn cọc (§5.2), đặt
+ * thành hằng số để không nơi nào diễn đạt nhẹ đi thành "hệ thống đang chuyển khoản".
+ *
+ * Gỡ 21/09/2026 — nó là một câu TIẾNG VIỆT cứng, nên giao diện tiếng Anh in ra tiếng Việt (ADR
+ * 0012). Câu đó nay là `Bookings.settlement.refund.disclaimer` ở `@xeprime/domain/messages`,
+ * có đủ hai ngôn ngữ, và vẫn chỉ có MỘT bản. Đừng dựng lại hằng số này.
  */
-export const REFUND_DISCLAIMER =
-  'XePrime chỉ ghi nhận trạng thái; hệ thống không thực hiện chuyển tiền.';
 
 /**
  * Tiền thu của một khoản thanh toán: tiền THUÊ hay tiền CỌC.

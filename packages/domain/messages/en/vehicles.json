@@ -998,7 +998,10 @@
       "discountMax": "Up to {percent}% off",
       "discountOff": "Off",
       "assetNone": "no type picked",
-      "emptyBody": "This vehicle has no security requirement, delivery or discounts yet. Set them up in <policies>the shop rental policy</policies>, or switch to a per-vehicle policy."
+      "emptyBody": "This vehicle has no security requirement, delivery or discounts yet. Set them up in <policies>the shop rental policy</policies>, or switch to a per-vehicle policy.",
+      "mileage": "Mileage allowance",
+      "mileageValue": "{km}/day · {fee} per extra km",
+      "mileageOff": "Unlimited"
     },
     "confirm": {
       "publicTitle": "Confirm pricing & policy change?",
@@ -1056,10 +1059,33 @@
       "discountDuplicate": "Duplicate discount tier \"{months} months\"",
       "discountAscending": "Discount tiers must follow increasing months",
       "discountNotLower": "The {months}-month discount cannot be lower than the {prev}-month tier",
-      "weekdayRequired": "Enter the daily rental price"
+      "weekdayRequired": "Enter the daily rental price",
+      "mileageRequired": "Enter the maximum kilometres per day",
+      "mileageInteger": "Kilometres must be a whole number",
+      "mileageMin": "The minimum allowance is 50 km/day",
+      "mileageMax": "The maximum allowance is 2000 km/day",
+      "excessFeeRequired": "Enter the fee for each extra kilometre",
+      "excessFeeMax": "That excess mileage fee is too high"
     },
     "calendarLink": "Custom prices by calendar",
-    "calendarHint": "Per-day prices (holidays, weekends, peak season) are set directly on the vehicle calendar — one price source, no second seasonal table."
+    "calendarHint": "Per-day prices (holidays, weekends, peak season) are set directly on the vehicle calendar — one price source, no second seasonal table.",
+    "mileage": {
+      "title": "Mileage allowance",
+      "hint": "Kilometres per day already included in the rental price. Anything beyond it is suggested as a surcharge at settlement; it is never added to the quote at booking time.",
+      "tipLabel": "About the mileage allowance",
+      "includedLabel": "Kilometres per day included",
+      "includedHint": "The trip allowance is this number × the chargeable days. Between 50 and 2000 km/day.",
+      "includedTipLabel": "About kilometres per day included",
+      "excessLabel": "Fee per extra kilometre",
+      "excessHint": "Suggested amount for each kilometre over the allowance. You can still edit it before recording the surcharge.",
+      "excessTipLabel": "About the fee per extra kilometre",
+      "unitPerDay": "km / day",
+      "unitPerKm": "₫ / km",
+      "previewTitle": "Renters will see this on the vehicle page:",
+      "preview": "Includes {km}/day. {fee} for each kilometre over the limit.",
+      "previewIncomplete": "Fill in both fields for the allowance to show on the vehicle page.",
+      "disabledNote": "Unlimited mileage — no excess mileage surcharge."
+    }
   },
   "documents": {
     "noPermissionTitle": "No permission to view documents",

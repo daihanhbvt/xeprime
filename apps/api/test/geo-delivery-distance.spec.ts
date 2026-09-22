@@ -3,6 +3,7 @@ import { createPrismaClient, newId } from '@xeprime/prisma';
 import type { GeoPoint } from '@xeprime/domain';
 import {
   DELIVERY_DISTANCE_STATUS,
+  DELIVERY_MANUAL_REASON,
   MEMBERSHIP_STATUS,
   TENANT_ROLE,
   TENANT_STATUS,
@@ -276,20 +277,51 @@ describe('GeoService — cache là thứ giữ hạn mức miễn phí đủ dù
   maybe('lọc trước bằng đường chim bay: ngoài bán kính thì KHÔNG gọi Routes API', async () => {
     await clearGeoCache();
 
-    const km = await geo.roadDistanceKm(BRANCH_POINT, FAR_POINT, 10);
+    const res = await geo.roadDistance(BRANCH_POINT, FAR_POINT, 10);
 
-    expect(km).toBeNull();
+    // Kết luận nói RÕ vì sao, và mang theo con số chim bay đã dùng để kết luận — người gọi phải
+    // phân biệt được ca này với ca "không có đường bộ" và ca "không hỏi được".
+    expect(res.outcome).toBe('outside_radius');
+    expect(res.outcome === 'outside_radius' && res.straightLineKm).toBeGreaterThan(1000);
     expect(provider.routeCalls).toBe(0);
+  });
+
+  maybe('không có tuyến đường bộ → no_route, KHÔNG phải ngoài bán kính', async () => {
+    await clearGeoCache();
+    // Nhà cung cấp trả lời bình thường, nhưng câu trả lời là "không có đường".
+    provider.roadDistanceKm = () => {
+      provider.routeCalls += 1;
+      return Promise.resolve(null);
+    };
+
+    const res = await geo.roadDistance(BRANCH_POINT, NEAR_POINT, 10);
+
+    expect(res.outcome).toBe('no_route');
+    expect(provider.routeCalls).toBe(1);
+  });
+
+  maybe('nhà cung cấp NÉM lỗi → unavailable, và KHÔNG ghi cache ca hỏng', async () => {
+    await clearGeoCache();
+    provider.roadDistanceKm = () => {
+      provider.routeCalls += 1;
+      return Promise.reject(new Error('HTTP 429'));
+    };
+
+    const res = await geo.roadDistance(BRANCH_POINT, NEAR_POINT, 10);
+
+    expect(res.outcome).toBe('unavailable');
+    // Nhớ một sự cố tạm thời trong 30 ngày tệ hơn nhiều so với tốn thêm một request.
+    expect(await prisma.geoRouteCache.count({ where: { provider: 'fake' } })).toBe(0);
   });
 
   maybe('trong bán kính thì có gọi, và lần thứ hai đọc cache', async () => {
     await clearGeoCache();
 
-    const first = await geo.roadDistanceKm(BRANCH_POINT, NEAR_POINT, 10);
-    const second = await geo.roadDistanceKm(BRANCH_POINT, NEAR_POINT, 10);
+    const first = await geo.roadDistance(BRANCH_POINT, NEAR_POINT, 10);
+    const second = await geo.roadDistance(BRANCH_POINT, NEAR_POINT, 10);
 
-    expect(first).toBe(1.2);
-    expect(second).toBe(1.2);
+    expect(first).toEqual({ outcome: 'ok', distanceKm: 1.2 });
+    expect(second).toEqual({ outcome: 'ok', distanceKm: 1.2 });
     expect(provider.routeCalls).toBe(1);
   });
 
@@ -304,8 +336,8 @@ describe('GeoService — cache là thứ giữ hạn mức miễn phí đủ dù
   maybe('toạ độ nhích vài mét trong cùng ô lưới dùng chung một bản ghi cache', async () => {
     await clearGeoCache();
 
-    await geo.roadDistanceKm(BRANCH_POINT, NEAR_POINT, 10);
-    await geo.roadDistanceKm(
+    await geo.roadDistance(BRANCH_POINT, NEAR_POINT, 10);
+    await geo.roadDistance(
       BRANCH_POINT,
       { lat: NEAR_POINT.lat + 0.00004, lng: NEAR_POINT.lng - 0.00004 },
       10,
@@ -315,11 +347,13 @@ describe('GeoService — cache là thứ giữ hạn mức miễn phí đủ dù
     expect(await prisma.geoRouteCache.count({ where: { provider: 'fake' } })).toBe(1);
   });
 
-  maybe('chưa cấu hình nhà cung cấp → trả null, KHÔNG ném lỗi ra luồng đặt xe', async () => {
+  maybe('chưa cấu hình nhà cung cấp → không ném lỗi ra luồng đặt xe', async () => {
     const offline = new GeoService(asService, new GeoNotConfiguredProvider());
 
     await expect(offline.geocode(NEAR_ADDRESS)).resolves.toBeNull();
-    await expect(offline.roadDistanceKm(BRANCH_POINT, NEAR_POINT)).resolves.toBeNull();
+    await expect(offline.roadDistance(BRANCH_POINT, NEAR_POINT)).resolves.toEqual({
+      outcome: 'unavailable',
+    });
     expect(offline.enabled).toBe(false);
   });
 });
@@ -346,10 +380,73 @@ describe('DeliveryDistanceService — năm trạng thái, không trạng thái n
     const res = await distance.forListing(vehicleId, FAR_ADDRESS);
 
     expect(res.status).toBe(DELIVERY_DISTANCE_STATUS.MANUAL);
+    expect(res.manualReason).toBe(DELIVERY_MANUAL_REASON.OUTSIDE_AUTO_RADIUS);
     expect(res.fee).toBeNull();
+    /*
+     * Chỉ có đường CHIM BAY, và nó nằm ở đúng trường mang tên đó — `distanceKm` (đường bộ) phải
+     * để trống, nếu không giao diện sẽ trưng một con số chim bay như quãng đường lái xe.
+     */
+    expect(res.distanceKm).toBeNull();
+    expect(res.straightLineKm).toBeGreaterThan(1000);
+    // Bán kính của chính sách đi kèm để giao diện nói đúng con số chủ xe đã đặt.
+    expect(res.maxRadiusKm).toBe(10);
     // Vẫn trả toạ độ để giao diện ghim được bản đồ, dù không có phí dự kiến.
     expect(res.destination).toEqual(FAR_POINT);
     expect(provider.routeCalls).toBe(0);
+  });
+
+  /**
+   * Ba ngả cùng rơi về `manual` nhưng KHÔNG cùng một câu với khách (21/09/2026).
+   *
+   * Trước đây cả ba dùng chung một dòng nói "ngoài phạm vi", nên một địa chỉ ngay trong thành
+   * phố vẫn bị báo là quá xa chỉ vì nhà cung cấp bản đồ timeout — và khách đi sửa một địa chỉ
+   * vốn đã đúng.
+   */
+  maybe('trong bán kính nhưng không có đường bộ → manual vì route_unavailable', async () => {
+    await clearGeoCache();
+    provider.roadDistanceKm = () => {
+      provider.routeCalls += 1;
+      return Promise.resolve(null);
+    };
+
+    const res = await distance.forListing(vehicleId, NEAR_ADDRESS);
+
+    expect(res.status).toBe(DELIVERY_DISTANCE_STATUS.MANUAL);
+    expect(res.manualReason).toBe(DELIVERY_MANUAL_REASON.ROUTE_UNAVAILABLE);
+    expect(res.distanceKm).toBeNull();
+    expect(res.straightLineKm).toBeNull();
+  });
+
+  maybe('nhà cung cấp lỗi ở bước đo đường → manual vì provider_unavailable', async () => {
+    await clearGeoCache();
+    provider.roadDistanceKm = () => {
+      provider.routeCalls += 1;
+      return Promise.reject(new Error('HTTP 500'));
+    };
+
+    const res = await distance.forListing(vehicleId, NEAR_ADDRESS);
+
+    expect(res.status).toBe(DELIVERY_DISTANCE_STATUS.MANUAL);
+    expect(res.manualReason).toBe(DELIVERY_MANUAL_REASON.PROVIDER_UNAVAILABLE);
+    // Lỗi thô của nhà cung cấp KHÔNG được lọt ra response công khai.
+    expect(JSON.stringify(res)).not.toContain('500');
+  });
+
+  maybe('đo được đường bộ nhưng bậc phí không phủ tới → vẫn là ngoài phạm vi tự báo', async () => {
+    await clearGeoCache();
+    // 12 km: trong bán kính lọc trước (chim bay ~0.7 km) nhưng vượt bậc cuối 10 km.
+    provider.roadDistanceKm = () => {
+      provider.routeCalls += 1;
+      return Promise.resolve(12);
+    };
+
+    const res = await distance.forListing(vehicleId, NEAR_ADDRESS);
+
+    expect(res.status).toBe(DELIVERY_DISTANCE_STATUS.MANUAL);
+    expect(res.manualReason).toBe(DELIVERY_MANUAL_REASON.OUTSIDE_AUTO_RADIUS);
+    // Ở đây là đường BỘ thật — giao diện được phép gọi nó bằng đúng tên.
+    expect(res.distanceKm).toBe(12);
+    expect(res.fee).toBeNull();
   });
 
   maybe('không định vị được địa chỉ → address_not_found (khách sửa được)', async () => {

@@ -191,7 +191,15 @@
       "estimatedDistance": "Quãng đường giao xe khoảng {distance} (một chiều). Phí trên là DỰ KIẾN theo bảng giá của gian hàng — chủ xe chốt lại khi duyệt yêu cầu.",
       "manualWithDistance": "Địa chỉ của bạn cách điểm giao xe khoảng {distance} (một chiều), ngoài phạm vi báo giá tự động. Chủ xe sẽ trao đổi phí giao trực tiếp với bạn.",
       "addressNotFound": "Chưa xác định được địa chỉ này trên bản đồ. Bạn thử ghi rõ hơn (số nhà, tên đường, phường/xã) để xem phí giao dự kiến.",
-      "resolvedAddress": "Bản đồ hiểu là: {address}"
+      "resolvedAddress": "Bản đồ hiểu là: {address}",
+      "addressNotFoundTitle": "Chưa tìm thấy địa chỉ này",
+      "outsideRadiusTitle": "Ngoài phạm vi giao xe tự động",
+      "outsideRadiusRoad": "Địa chỉ của bạn cách điểm giao xe khoảng {distance} đường bộ (một chiều), ngoài phạm vi báo giá tự động {radius} của chủ xe.",
+      "outsideRadiusStraight": "Địa chỉ của bạn cách điểm giao xe hơn {distance} theo đường chim bay, ngoài phạm vi báo giá tự động {radius} của chủ xe.",
+      "outsideRadiusUnknown": "Địa chỉ của bạn nằm ngoài phạm vi báo giá tự động của chủ xe.",
+      "routeUnavailableTitle": "Chưa ước tính được quãng đường",
+      "routeUnavailableBody": "Bản đồ không tìm được đường bộ tới địa chỉ này nên chưa có quãng đường và phí dự kiến.",
+      "stillCanSubmit": "Bạn vẫn gửi được yêu cầu — chủ xe sẽ liên hệ để xác nhận khả năng giao và chi phí."
     },
     "driver": {
       "pickupAddressLabel": "Địa chỉ đón",
@@ -236,7 +244,9 @@
       "termsCheckbox": "Tôi đã đọc và đồng ý điều khoản của chủ xe",
       "termsRequired": "Bạn cần đồng ý điều khoản của chủ xe trước khi gửi yêu cầu.",
       "instantBook": "Xe này hỗ trợ Đặt ngay",
-      "instantBookHint": "Yêu cầu của bạn sẽ được xác nhận tự động ngay sau khi gửi."
+      "instantBookHint": "Yêu cầu của bạn sẽ được xác nhận tự động ngay sau khi gửi.",
+      "mileage": "Hạn mức quãng đường",
+      "mileageValue": "Bao gồm {km}/ngày · phụ phí {fee}/km vượt"
     },
     "price": {
       "estimateTitle": "Tạm tính cho khoảng thời gian đã chọn",
@@ -264,7 +274,7 @@
       "onRequest": "Liên hệ báo giá",
       "savings": "Tiết kiệm {amount} nhờ ưu đãi thời hạn {months, plural, other {# tháng}}.",
       "finalNote": "Giá chốt cuối cùng do chủ xe xác nhận khi duyệt yêu cầu.",
-      "deliveryNote": "Phí giao nhận: Miễn phí.",
+      "deliveryNote": "Phí giao nhận chưa nằm trong tổng trên.",
       "loadError": "Chưa tải được giá tạm tính. Bạn vẫn tiếp tục được; chủ xe sẽ xác nhận giá."
     },
     "done": {

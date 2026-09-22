@@ -96,7 +96,8 @@
     "VEHICLE_PUBLISH_INCOMPLETE": "This vehicle is still missing required details, so it cannot be submitted.",
     "SHOP_ACCOUNT_CANNOT_BOOK": "You are signed in to a shop account. To rent a vehicle, sign in with a renter account using a different phone number.",
     "CANNOT_BOOK_OWN_VEHICLE": "This vehicle belongs to your own shop, so you cannot book it.",
-    "CANNOT_DECIDE_OWN_REQUEST": "You cannot approve or decline a request you sent yourself."
+    "CANNOT_DECIDE_OWN_REQUEST": "You cannot approve or decline a request you sent yourself.",
+    "SURCHARGE_CATEGORY_DUPLICATE": "This booking already has an excess mileage surcharge. Remove the existing one to record it again."
   },
   "upload": {
     "imageType": "Only JPG, PNG or WebP images are accepted",

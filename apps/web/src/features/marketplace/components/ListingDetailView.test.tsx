@@ -188,3 +188,48 @@ describe('ListingDetailView — điều kiện thuê công bố', () => {
     expect(screen.queryByText('Khung giờ giao nhận')).toBeNull();
   });
 });
+
+/**
+ * HẠN MỨC QUÃNG ĐƯỜNG (21/09/2026) — khách phải đọc được TRƯỚC khi gửi yêu cầu.
+ *
+ * Phí vượt km không nằm trong báo giá (lúc đặt chưa ai biết khách sẽ chạy bao xa), nên thứ duy
+ * nhất làm nó công bằng là được công bố ở đây. Hai điều bị khoá: nó chỉ thuộc chuyến TỰ LÁI, và
+ * xe không đặt hạn mức thì khối biến mất hoàn toàn — không có dòng "không giới hạn" nào.
+ */
+describe('ListingDetailView — hạn mức quãng đường', () => {
+  const WITH_MILEAGE = {
+    ...LISTING,
+    serviceTypes: ['self_drive', 'with_driver'],
+    withDriverDailyPrice: '1300000',
+    mileagePolicy: { includedKmPerDay: 200, excessFeePerKm: '3000' },
+  } as unknown as PublicListingDetail;
+
+  it('tự lái: hiện số km mỗi ngày và tiền mỗi km vượt', async () => {
+    render(await ListingDetailView({ listing: WITH_MILEAGE, catalog: EMPTY_CATALOG }));
+
+    expect(screen.getByText('Hạn mức quãng đường')).toBeTruthy();
+    expect(screen.getByText(/Bao gồm 200 km\/ngày/)).toBeTruthy();
+    expect(screen.getByText(/3\.000/)).toBeTruthy();
+    // Và nói rõ hạn mức phụ thuộc số ngày thuê có tính phí.
+    expect(screen.getByText(/số ngày thuê có tính phí/)).toBeTruthy();
+  });
+
+  it('có tài xế: KHÔNG hiện — đi xa là phụ phí đường dài, một khoản khác', async () => {
+    render(
+      await ListingDetailView({
+        listing: WITH_MILEAGE,
+        catalog: EMPTY_CATALOG,
+        serviceType: 'with_driver',
+      }),
+    );
+
+    expect(screen.queryByText('Hạn mức quãng đường')).toBeNull();
+  });
+
+  it('xe không đặt hạn mức: không có khối rỗng, không có số 0 nào', async () => {
+    render(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
+
+    expect(screen.queryByText('Hạn mức quãng đường')).toBeNull();
+    expect(screen.queryByText(/Bao gồm 0 km/)).toBeNull();
+  });
+});

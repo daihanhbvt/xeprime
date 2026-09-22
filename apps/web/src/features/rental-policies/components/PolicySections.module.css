@@ -264,6 +264,17 @@
   min-width: 0;
 }
 
+/*
+ * Hạn mức quãng đường chỉ có HAI ô (km/ngày và phí mỗi km vượt) — lưới riêng thay vì `.fieldRow`
+ * ba cột, để chúng không đứng lệch về bên trái với một cột trống bên phải.
+ */
+.mileageRow {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-md);
+}
+
 .formulaCard {
   display: flex;
   min-width: 0;
@@ -394,7 +405,8 @@
     padding-bottom: 0;
   }
 
-  .fieldRow {
+  .fieldRow,
+  .mileageRow {
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
   }

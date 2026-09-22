@@ -175,6 +175,15 @@ export const API_ERROR_CODE = {
    * cần làm là liên hệ chủ xe, không phải thử lại.
    */
   TRIP_CANCEL_NOT_ALLOWED: 'TRIP_CANCEL_NOT_ALLOWED',
+  /**
+   * Đơn đã có một khoản phát sinh còn hiệu lực ở danh mục CHỈ ĐƯỢC GHI MỘT LẦN (hiện là phí
+   * vượt km). `details` mang `{ category, surchargeId }` để FE chỉ thẳng vào khoản đang có.
+   *
+   * Mỗi chuyến chỉ có một cặp chỉ số đồng hồ, nên "vượt km" là một con số duy nhất: ghi lần thứ
+   * hai là trừ tiền khách hai lần cho cùng một quãng đường. Sửa số thì sửa khoản đang có, gỡ
+   * rồi ghi lại cũng được — nhưng phải là một hành động tường minh, không phải một cú bấm nữa.
+   */
+  SURCHARGE_CATEGORY_DUPLICATE: 'SURCHARGE_CATEGORY_DUPLICATE',
 
   // Gói/hạn (ADR 0010 · tách theo loại xe từ ADR 0015 điều 7)
   PLAN_LIMIT_REACHED: 'PLAN_LIMIT_REACHED',

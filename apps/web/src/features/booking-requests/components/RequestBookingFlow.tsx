@@ -25,7 +25,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import {
   addDateKeyDays,
   API_ERROR_CODE,
-  DELIVERY_DISTANCE_STATUS,
+  appliesExcessMileage,
   BOOKING_REQUEST_STATUS,
   LONG_TERM_PACKAGE_MONTHS,
   longTermReturnAt,
@@ -49,6 +49,7 @@ import {
   RentalDateTimeRangeField,
   type RentalMode,
 } from '@/components/form/RentalDateTimeRangeField';
+import { DeliveryEstimate } from './DeliveryEstimate';
 import { RenterAddressBlock } from './RenterAddressBlock';
 import { TextField } from '@/components/form/TextField';
 import { ROUTES, tripPath } from '@/constants/routes';
@@ -78,7 +79,6 @@ import {
   toAppTz,
   type Dayjs,
 } from '@/lib/datetime';
-import { isZeroMoney } from '@/lib/money';
 import { buildBusyDayIndex } from '@/lib/rental-busy';
 import {
   readDeliveryAddress,
@@ -550,7 +550,22 @@ export function RequestBookingFlow({
     staleTime: 10 * 60_000,
     retry: false,
   });
-  const delivery = deliveryQ.data ?? null;
+  /*
+   * Kết quả CŨ phải biến mất trước khi kết quả mới hiện ra.
+   *
+   * Đổi ghim thì khoá query đổi ngay và TanStack Query tự trả `undefined`. Đổi CHỮ thì không:
+   * khoá chỉ đổi sau 900ms debounce, nên trong quãng đó màn hình vẫn trưng quãng đường và phí
+   * của địa chỉ trước — một con số nói về một chỗ khác hẳn chỗ đang gõ.
+   */
+  const deliveryAddressSettled =
+    deliveryPin != null || (watchedDeliveryLine?.trim() ?? '') === debouncedDeliveryAddress;
+  const deliveryAskable =
+    deliveryPin != null || (watchedDeliveryLine?.trim().length ?? 0) >= MIN_DELIVERY_ADDRESS_LENGTH;
+  /** Kết quả trong tay có đúng là của địa chỉ/ghim ĐANG hiển thị không. */
+  const deliveryCurrent = deliveryAskable && deliveryAddressSettled && !deliveryQ.isFetching;
+  /** Chỉ "đang tính" khi thật sự có thứ để hỏi — địa chỉ còn quá ngắn thì không treo spinner. */
+  const deliveryPending = deliveryAskable && !deliveryCurrent;
+  const delivery = deliveryCurrent ? (deliveryQ.data ?? null) : null;
 
   const quoteQ = useQuery({
     queryKey: queryKeys.marketplace.quote(vehicleId, quoteParams ?? {}),
@@ -1579,44 +1594,7 @@ export function RequestBookingFlow({
                   dòng chữ cũ ("hai bên trao đổi trực tiếp"). Luồng đặt xe không đổi hành vi khi
                   bản đồ vắng mặt, nó chỉ mất phần ước lượng.
                 */}
-                {deliveryQ.isFetching ? (
-                  <p className={styles.deliveryNote} role="status">
-                    {t('pickup.estimating')}
-                  </p>
-                ) : delivery?.status === DELIVERY_DISTANCE_STATUS.AUTO ? (
-                  <>
-                    <div className={styles.deliveryFeeRow}>
-                      <span>{t('pickup.feeLabel')}</span>
-                      <b className={isZeroMoney(delivery.fee ?? '0') ? styles.freeTag : undefined}>
-                        {isZeroMoney(delivery.fee ?? '0')
-                          ? t('pickup.feeFree')
-                          : fmt.money(delivery.fee ?? '0')}
-                      </b>
-                    </div>
-                    <p className={styles.deliveryNote}>
-                      {t('pickup.estimatedDistance', {
-                        distance: fmt.distanceKm(delivery.distanceKm),
-                      })}
-                    </p>
-                  </>
-                ) : delivery?.status === DELIVERY_DISTANCE_STATUS.MANUAL ? (
-                  <p className={styles.deliveryNote}>
-                    {delivery.distanceKm != null
-                      ? t('pickup.manualWithDistance', {
-                          distance: fmt.distanceKm(delivery.distanceKm),
-                        })
-                      : t('pickup.feeNote')}
-                  </p>
-                ) : delivery?.status === DELIVERY_DISTANCE_STATUS.ADDRESS_NOT_FOUND ? (
-                  <p className={styles.deliveryNote}>{t('pickup.addressNotFound')}</p>
-                ) : (
-                  <p className={styles.deliveryNote}>{t('pickup.feeNote')}</p>
-                )}
-                {delivery?.formattedAddress ? (
-                  <p className={styles.deliveryNote}>
-                    {t('pickup.resolvedAddress', { address: delivery.formattedAddress })}
-                  </p>
-                ) : null}
+                <DeliveryEstimate pending={deliveryPending} result={delivery} />
                 {/*
                   KHÔNG có bản đồ thứ hai ở đây.
 
@@ -1857,7 +1835,46 @@ export function RequestBookingFlow({
                   <dd>{deliveryAddressPreview ?? '—'}</dd>
                 </div>
               ) : null}
+              {/*
+                HẠN MỨC QUÃNG ĐƯỜNG — nhắc lại ở lần soát cuối, không chỉ ở trang xe.
+
+                Phí vượt km là khoản DUY NHẤT có thể phát sinh sau chuyến mà không nằm trong bảng
+                giá bên cạnh; khách phải đọc nó ngay trước khi cam kết chứ không phải nhớ lại từ
+                một trang đã cuộn qua. Không tự nhân ra tổng km cho cả chuyến: số ngày TÍNH PHÍ
+                là của server, và một con số tự tính ở đây sẽ lệch với thứ dùng lúc quyết toán.
+
+                Điều kiện dịch vụ đọc `appliesExcessMileage` — CÙNG hàm mà `SettlementService`
+                dùng để quyết định có đề xuất phí vượt hay không, nên cổng CÔNG BỐ và cổng THU
+                TIỀN không thể lệch nhau.
+              */}
+              {appliesExcessMileage(watchedService) && listing?.mileagePolicy ? (
+                <div className={styles.reviewRow}>
+                  <dt>{t('review.mileage')}</dt>
+                  <dd>
+                    {t('review.mileageValue', {
+                      km: fmt.km(listing.mileagePolicy.includedKmPerDay),
+                      fee: fmt.money(listing.mileagePolicy.excessFeePerKm),
+                    })}
+                  </dd>
+                </div>
+              ) : null}
             </dl>
+
+            {/*
+              QUÃNG ĐƯỜNG + PHÍ GIAO DỰ KIẾN, nhắc lại ở lần soát cuối.
+
+              Con số này KHÔNG nằm trong "Tổng bạn trả" (ADR 0018: ước tính, chủ xe chốt lúc
+              duyệt), nên nếu nó chỉ xuất hiện ở bước trước rồi biến mất thì khách bấm gửi mà
+              không còn thấy khoản duy nhất có thể phát sinh thêm trước chuyến — hoặc tệ hơn,
+              không còn thấy cảnh báo "ngoài phạm vi, chủ xe sẽ liên hệ chốt phí".
+
+              Dùng lại ĐÚNG component của bước Chuyến đi, không dựng bản thứ hai: bảy ngả rẽ của
+              nó (auto · ba lý do manual · không tìm thấy địa chỉ · chưa cấu hình · đang tính)
+              phải nói y hệt nhau ở cả hai chỗ.
+            */}
+            {isDelivery ? (
+              <DeliveryEstimate pending={deliveryPending} result={delivery} />
+            ) : null}
 
             {/* Đặt ngay: server xem trước (`quote.autoAccept`) — chỉ NÓI khi không có blocker. */}
             {quoteQ.data?.autoAccept?.eligible ? (

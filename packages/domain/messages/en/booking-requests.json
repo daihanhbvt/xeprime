@@ -191,7 +191,15 @@
       "estimatedDistance": "The delivery distance is about {distance} one way. The fee above is an ESTIMATE from the shop's price list — the owner confirms it when approving your request.",
       "manualWithDistance": "Your address is about {distance} one way from the pickup point, outside the automatic quote range. The owner will discuss the delivery fee with you directly.",
       "addressNotFound": "We could not locate this address on the map. Try adding more detail (street number, street name, ward) to see the estimated delivery fee.",
-      "resolvedAddress": "The map reads this as: {address}"
+      "resolvedAddress": "The map reads this as: {address}",
+      "addressNotFoundTitle": "We could not find this address",
+      "outsideRadiusTitle": "Outside the automatic delivery range",
+      "outsideRadiusRoad": "Your address is about {distance} by road (one way) from the pickup point, beyond the host’s {radius} automatic quote range.",
+      "outsideRadiusStraight": "Your address is more than {distance} away in a straight line, beyond the host’s {radius} automatic quote range.",
+      "outsideRadiusUnknown": "Your address is outside the host’s automatic quote range.",
+      "routeUnavailableTitle": "We could not estimate the distance",
+      "routeUnavailableBody": "The map could not find a driving route to this address, so there is no estimated distance or fee yet.",
+      "stillCanSubmit": "You can still send the request — the host will contact you to confirm whether they can deliver and at what cost."
     },
     "driver": {
       "pickupAddressLabel": "Pick-up address",
@@ -236,7 +244,9 @@
       "termsCheckbox": "I have read and agree to the owner's terms",
       "termsRequired": "Please agree to the owner's terms before sending the request.",
       "instantBook": "This vehicle supports Instant book",
-      "instantBookHint": "Your request will be confirmed automatically right after sending."
+      "instantBookHint": "Your request will be confirmed automatically right after sending.",
+      "mileage": "Mileage allowance",
+      "mileageValue": "Includes {km}/day · {fee} per extra km"
     },
     "price": {
       "estimateTitle": "Estimate for the selected period",
@@ -264,7 +274,7 @@
       "onRequest": "Price on request",
       "savings": "You save {amount} with the {months, plural, one {# month} other {# months}} commitment discount.",
       "finalNote": "The final price is confirmed by the host when they approve your request.",
-      "deliveryNote": "Delivery fee: Free.",
+      "deliveryNote": "The delivery fee is not included in the total above.",
       "loadError": "We couldn't load the estimate. You can still continue; the host will confirm the price."
     },
     "done": {
