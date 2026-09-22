@@ -97,7 +97,9 @@
     "SHOP_ACCOUNT_CANNOT_BOOK": "You are signed in to a shop account. To rent a vehicle, sign in with a renter account using a different phone number.",
     "CANNOT_BOOK_OWN_VEHICLE": "This vehicle belongs to your own shop, so you cannot book it.",
     "CANNOT_DECIDE_OWN_REQUEST": "You cannot approve or decline a request you sent yourself.",
-    "SURCHARGE_CATEGORY_DUPLICATE": "This booking already has an excess mileage surcharge. Remove the existing one to record it again."
+    "SURCHARGE_CATEGORY_DUPLICATE": "This booking already has an excess mileage surcharge. Remove the existing one to record it again.",
+    "HOLD_LIMIT_REACHED": "You have too many trips awaiting payment. Pay for one, or cancel it, and try again.",
+    "BOOKING_CANCEL_NOT_ALLOWED": "This trip is no longer at a stage you can cancel from here."
   },
   "upload": {
     "imageType": "Only JPG, PNG or WebP images are accepted",

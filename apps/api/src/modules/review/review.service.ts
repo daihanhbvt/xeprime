@@ -14,6 +14,7 @@ import {
   REVIEW_STATUS,
   type PaginationMeta,
 } from '@xeprime/types';
+import { maskName } from '../../common/mask';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationService } from '../notification/notification.service';
 import { ListingsService } from '../public-listings/listings.service';
@@ -252,16 +253,6 @@ function toPublicDto(r: ReviewRow): ReviewDto {
     customerName: maskName(r.customer.displayName),
     createdAt: r.createdAt as unknown as string,
   };
-}
-
-/** Ẩn bớt tên khách khi hiển thị công khai: "Nguyễn Văn An" → "Nguyễn Văn A.". */
-function maskName(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return 'Khách';
-  if (parts.length === 1) return parts[0] ?? 'Khách';
-  const last = parts[parts.length - 1] ?? '';
-  const head = parts.slice(0, -1).join(' ');
-  return `${head} ${last.charAt(0)}.`;
 }
 
 function round1(n: number): number {

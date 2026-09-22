@@ -64,6 +64,13 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
           'hàng duyệt mới sinh đơn (ADR 0006, ADR 0011).',
       },
       {
+        name: 'public-promo-codes',
+        description:
+          'Xem trước mã khuyến mãi cho chuyến đang chọn (ADR 0046) — ĐỌC THUẦN, không giữ lượt. ' +
+          'Danh tính đến từ phiên, không từ payload: endpoint này không nhận SĐT và không nói gì ' +
+          'về lịch sử của một khách nào. Rate limit siết hơn mức chung để chặn dò mã.',
+      },
+      {
         name: 'public-reviews',
         description: 'Đánh giá hiển thị công khai trên tin đăng và trang gian hàng.',
       },
@@ -301,6 +308,13 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
         description:
           'Chính sách phí có phiên bản (ADR 0028/0029): phí dịch vụ, thuế, bảo hiểm. ' +
           'Đúng một bản hiệu lực; bản đã kích hoạt là bất biến và booking snapshot theo nó.',
+      },
+      {
+        name: 'platform-promo-codes',
+        description:
+          'Mã khuyến mãi do NỀN TẢNG tài trợ (ADR 0046): tạo, sửa, bật/tắt, xem lượt sử dụng. ' +
+          'Khác khuyến mãi trực tiếp của chủ xe — mã ở đây giảm số khách trả mà không bớt một ' +
+          'đồng nào của gian hàng. Mã đã phát sinh lượt thì mức giảm và điều kiện bị khoá.',
       },
       {
         name: 'platform-money',

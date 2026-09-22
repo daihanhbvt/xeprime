@@ -11,7 +11,7 @@ import { BOOKING_REQUEST_NEEDS_ACTION_STATUSES } from '../constants';
  * Số yêu cầu đặt xe đang chờ gian hàng duyệt — nuôi huy hiệu trên menu điều hướng.
  *
  * Lấy `meta.total` của chính danh sách đã lọc theo HAI trạng thái của tab gộp "Cần xử lý"
- * (`pending_host_approval` + `hold_paid`, ADR 0039) với `limit: 1`: backend đếm ở SERVER nên
+ * (`pending_host_approval` + `hold_paid` LEGACY, xem `constants.ts`) với `limit: 1`: backend đếm ở SERVER nên
  * con số đúng kể cả khi có hàng trăm yêu cầu, còn thân phản hồi chỉ mang một bản ghi. Không
  * cộng ở client và không tải cả trang inbox chỉ để hiện một con số.
  *

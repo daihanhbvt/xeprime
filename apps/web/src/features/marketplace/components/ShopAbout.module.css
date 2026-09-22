@@ -41,6 +41,11 @@
   overflow-wrap: anywhere;
 }
 
+/* Ba chỉ số đứng dưới phần chữ, cách ra một nhịp — chúng là một loại thông tin khác. */
+.metrics {
+  margin-top: 14px;
+}
+
 .address {
   margin: 10px 0 0;
   color: var(--xp-color-text-tertiary);

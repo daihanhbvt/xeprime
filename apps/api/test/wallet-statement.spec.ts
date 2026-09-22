@@ -1,5 +1,6 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  BOOKING_REQUEST_DECISION_SOURCE,
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
   MEMBERSHIP_STATUS,
@@ -15,6 +16,7 @@ import {
   WALLET_OWNER_TYPE,
   WALLET_STATEMENT_UNIT,
 } from '@xeprime/types';
+import { HostMetricsService } from '../src/modules/host-metrics/host-metrics.service';
 import { WalletStatementService } from '../src/modules/wallet/wallet-statement.service';
 import { WalletService } from '../src/modules/wallet/wallet.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
@@ -36,7 +38,11 @@ import type { PrismaService } from '../src/prisma/prisma.service';
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const wallet = new WalletService(asService);
-const statement = new WalletStatementService(asService, wallet);
+const statement = new WalletStatementService(
+  asService,
+  wallet,
+  new HostMetricsService(asService),
+);
 
 const RUN = newId().slice(-8).toLowerCase();
 const PERIOD = '2026-10';
@@ -461,9 +467,21 @@ describe('Chỉ số của kỳ', () => {
     expect(empty.items).toHaveLength(0);
   });
 
-  maybe('tỉ lệ phản hồi chỉ đếm yêu cầu đã ngã ngũ trong kỳ', async () => {
+  /*
+   * Sổ ví đọc CÙNG nguồn với trang công khai (`HostMetricsService`, ADR 0045 điều 2) và chỉ đổi
+   * hai tham số TRÌNH BÀY: cửa sổ là kỳ của bảng này, ngưỡng "đủ dữ liệu" hạ về 1 vì người đọc
+   * là chính gian hàng — họ đã sống qua từng yêu cầu của tháng đó.
+   *
+   * Chỗ dễ sai nhất là `responded`: nó đọc `decided_at`, KHÔNG đọc status. Worker
+   * `expirePaidAwaitingAccept` (dữ liệu LEGACY ADR 0039) cũng ghi `rejected_by_host` khi gian
+   * hàng KHÔNG hề phản hồi, và cố ý để trống `decided_at`.
+   */
+  maybe('tỉ lệ phản hồi + nhận-giữ chuyến: mẫu số và tử số theo đúng ADR 0045', async () => {
     const at = new Date('2026-04-10T03:00:00.000Z');
-    const mkRequest = async (status: string) => {
+    const mkRequest = async (
+      status: string,
+      extra: { decidedAt?: Date; respondBy?: Date } = {},
+    ) => {
       seq += 1;
       await prisma.bookingRequest.create({
         data: {
@@ -476,21 +494,69 @@ describe('Chỉ số của kỳ', () => {
           customerUserId,
           pickupAt: at,
           returnAt: new Date(at.getTime() + 24 * 3600_000),
-          respondBy: at,
+          respondBy: extra.respondBy ?? at,
           createdAt: at,
+          decidedAt: extra.decidedAt ?? null,
+          decisionSource: extra.decidedAt ? BOOKING_REQUEST_DECISION_SOURCE.HOST : null,
         },
       });
     };
-    await mkRequest(BOOKING_REQUEST_STATUS.APPROVED_BY_HOST);
-    await mkRequest(BOOKING_REQUEST_STATUS.REJECTED_BY_HOST);
+
+    // TRONG mẫu số.
+    await mkRequest(BOOKING_REQUEST_STATUS.APPROVED_BY_HOST, {
+      decidedAt: new Date(at.getTime() + 30 * 60_000),
+    });
+    // Từ chối TRONG hạn: có phản hồi, nhưng không phải đồng ý.
+    await mkRequest(BOOKING_REQUEST_STATUS.REJECTED_BY_HOST, {
+      decidedAt: new Date(at.getTime() + 20 * 60_000),
+    });
+    // Quá hạn không ai đụng tới: vẫn là mẫu, và không phản hồi.
     await mkRequest(BOOKING_REQUEST_STATUS.EXPIRED);
-    // Ngoài mẫu số: khách tự rút, và yêu cầu còn trong hạn.
-    await mkRequest(BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER);
-    await mkRequest(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
+
+    // NGOÀI mẫu số — bốn nhóm, bốn lý do khác nhau.
+    await mkRequest(BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER); // khách rút trước khi ai quyết
+    await mkRequest(BOOKING_REQUEST_STATUS.SLOT_TAKEN); // hệ thống đóng vì khung giờ mất
+    await mkRequest(BOOKING_REQUEST_STATUS.HOLD_EXPIRED); // LEGACY ADR 0039
+    await mkRequest(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL, {
+      respondBy: new Date(Date.now() + 24 * 3600_000), // còn trong hạn ⇒ chưa ai chậm trễ
+    });
 
     const april = await statement.tenantStatement(tenantId, owner(), { period: '2026-04' });
-    // 2 trả lời / 3 đã ngã ngũ
-    expect(april.stats.responseRatePercent).toBe(67);
+    expect(april.stats.responseSampleCount).toBe(3);
+    expect(april.stats.responseRatePercent).toBe(67); // 2 phản hồi / 3 mẫu
+    expect(april.stats.acceptKeepRatePercent).toBe(33); // 1 nhận-và-giữ / 3 mẫu
+  });
+
+  /** Cùng một status, hai sự thật khác nhau — phân biệt được bằng `decided_at`, không bằng nhãn. */
+  maybe('LEGACY ADR 0039: `rejected_by_host` do worker ghi KHÔNG phải là đã phản hồi', async () => {
+    const at = new Date('2026-07-10T03:00:00.000Z');
+    for (const decidedAt of [null, new Date(at.getTime() + 15 * 60_000)]) {
+      seq += 1;
+      await prisma.bookingRequest.create({
+        data: {
+          id: newId(),
+          tenantId,
+          vehicleId,
+          status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
+          customerName: `YC ${seq}`,
+          customerPhone: `0966${String(100000 + seq).slice(-6)}`,
+          customerUserId,
+          pickupAt: at,
+          returnAt: new Date(at.getTime() + 24 * 3600_000),
+          respondBy: at,
+          createdAt: at,
+          decidedAt,
+          decisionSource: decidedAt ? BOOKING_REQUEST_DECISION_SOURCE.HOST : null,
+        },
+      });
+    }
+
+    const july = await statement.tenantStatement(tenantId, owner(), { period: '2026-07' });
+    expect(july.stats.responseSampleCount).toBe(2);
+    // Chỉ bản có `decided_at` được tính là đã trả lời — suy từ status sẽ ra 100%.
+    expect(july.stats.responseRatePercent).toBe(50);
+    // Từ chối thì dù sao cũng không vào tử số "nhận và giữ chuyến".
+    expect(july.stats.acceptKeepRatePercent).toBe(0);
   });
 
   maybe('điểm đánh giá lấy các review NHẬN ĐƯỢC trong kỳ', async () => {

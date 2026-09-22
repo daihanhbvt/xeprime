@@ -44,7 +44,7 @@ import type { BookingRequestItem } from '../types';
 import styles from './BookingRequestCard.module.css';
 
 /** Thao tác đang chạy trên ĐÚNG yêu cầu này — chặn bấm chồng lên nhau. */
-export type BookingRequestAction = 'approve' | 'reject' | 'message';
+export type BookingRequestAction = 'approve' | 'reject' | 'cancel' | 'message';
 
 interface Props {
   request: BookingRequestItem;
@@ -57,6 +57,13 @@ interface Props {
   pendingAction: BookingRequestAction | null;
   onApprove: (request: BookingRequestItem) => void;
   onReject: (request: BookingRequestItem) => void;
+  /**
+   * HUỶ một chuyến ĐÃ NHẬN (ADR 0045 điều 1) — chỉ có ở `awaiting_hold`.
+   *
+   * Khác `onReject` về bản chất chứ không chỉ về nhãn: từ chối là trả lời một câu hỏi còn
+   * treo, huỷ là rút lại một lời đã hứa và phải nhả lịch + hoàn phần khách đã chuyển.
+   */
+  onCancel: (request: BookingRequestItem) => void;
   onMessage: (request: BookingRequestItem) => void;
   /**
    * Mở CHI TIẾT yêu cầu dưới dạng modal. Yêu cầu đã thành đơn mở chi tiết ĐƠN; yêu cầu chưa
@@ -97,6 +104,7 @@ export function BookingRequestCard({
   pendingAction,
   onApprove,
   onReject,
+  onCancel,
   onMessage,
   onOpenDetail,
   onOpenVehicle,
@@ -616,11 +624,43 @@ export function BookingRequestCard({
           <p className={styles.expiredHint}>{t('deadline.pastDueHint')}</p>
         ) : request.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD ? (
           /*
-           * Chưa có gì để quyết định (ADR 0039 — khách chưa chuyển khoản), nhưng im lặng ở đây
-           * đọc như thẻ bị mất nút. Nói thẳng lý do, cùng câu với `tabs.awaitingHold` đang dùng
-           * để tìm lại thẻ này (phản hồi người dùng 19/09/2026).
+           * Gian hàng ĐÃ nhận chuyến; việc còn lại thuộc về khách (ADR 0044 điều 2). Im lặng ở
+           * đây đọc như thẻ bị mất nút, nên nói thẳng tình trạng — kèm ĐÚNG mốc mà chỗ sẽ tự
+           * nhả nếu tiền không về, thứ quyết định người trực có nên gọi cho khách hay không.
+           *
+           * Mốc tuyệt đối chứ không phải đồng hồ chạy: cửa sổ này dài hai giờ, và một hộp thư
+           * mười thẻ với mười `setInterval` nhích mỗi giây là chi phí không đổi lại được gì.
            */
-          <p className={styles.expiredHint}>{t('awaitingHold.footerHint')}</p>
+          <div className={styles.awaitingHold}>
+            <p className={styles.expiredHint}>
+              {t('awaitingHold.footerHint')}
+              {request.holdExpiresAt
+                ? ` ${t('awaitingHold.deadline')} ${fmt.dateTime(request.holdExpiresAt)}`
+                : ''}
+            </p>
+            {/*
+              Nút HUỶ đứng ở đây và không ở đâu khác: đây là chặng duy nhất mà gian hàng đã hứa
+              nhận chuyến nhưng chuyến chưa thành đơn. Trước ADR 0045 chặng này không có nút
+              nào — xe hỏng lúc mười giờ tối thì đường duy nhất là gọi điện xin lỗi rồi ngồi
+              chờ hết cửa sổ hai giờ, trong lúc lịch xe vẫn bị giữ.
+
+              `type="link"` chứ không phải một nút đỏ to: nó là lối thoát hiếm khi dùng, không
+              phải việc chính của thẻ. Việc chính ở chặng này là ĐỢI.
+            */}
+            {canApprove ? (
+              <Button
+                type="link"
+                danger
+                size="small"
+                className={styles.cancelButton}
+                loading={pendingAction === 'cancel'}
+                disabled={busy && pendingAction !== 'cancel'}
+                onClick={() => onCancel(request)}
+              >
+                {t('actions.cancel')}
+              </Button>
+            ) : null}
+          </div>
         ) : hasBookingLink ? (
           /*
            * MỞ MODAL, không điều hướng: người trực đang quét cả hộp thư, nhảy sang một trang

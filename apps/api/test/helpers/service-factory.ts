@@ -2,6 +2,9 @@ import { newId } from '@xeprime/prisma';
 import { BRANCH_STATUS } from '@xeprime/types';
 import { ConfigService } from '@nestjs/config';
 import { AuditService } from '../../src/modules/audit/audit.service';
+import { CancellationsService } from '../../src/modules/cancellations/cancellations.service';
+import { PromoCodeEvaluatorService } from '../../src/modules/promo-codes/promo-code-evaluator.service';
+import { HostMetricsService } from '../../src/modules/host-metrics/host-metrics.service';
 import { BookingHoldsService } from '../../src/modules/holds/booking-holds.service';
 import { BookingRequestsService } from '../../src/modules/booking-requests/booking-requests.service';
 import { BookingsService } from '../../src/modules/bookings/bookings.service';
@@ -198,6 +201,14 @@ export function makeBookingRequestsService(
     stubs.settings ?? makeVehicleSettingsService(prisma),
     stubs.depositPolicy ?? makeDepositPolicyService(prisma),
     makeAddressService(prisma),
+    new CancellationsService(),
+    /*
+     * Service THẬT, không stub (ADR 0046): nó chỉ đọc `promo_codes` + `promo_redemptions` và ghi
+     * vòng đời lượt dùng qua `@xeprime/prisma`. Chính hai việc đó là thứ spec mã khuyến mãi cần
+     * kiểm — thay bằng stub là kiểm một vòng đời không tồn tại trong production. Yêu cầu không
+     * có mã thì mọi hàm của nó là no-op.
+     */
+    new PromoCodeEvaluatorService(prisma),
   );
 }
 
@@ -275,6 +286,7 @@ export function makeBookingsService(
     overrides.insurance ?? makeInsuranceService(prisma),
     makeAddressService(prisma),
     new TaxService(prisma, audit),
+    new CancellationsService(),
   );
 }
 
@@ -336,6 +348,7 @@ export function makePublicListingsService(prisma: PrismaService): PublicListings
     new ProvincesService(prisma, audit),
     makePricingService(prisma),
     makeVehicleSettingsService(prisma),
+    new HostMetricsService(prisma),
   );
 }
 

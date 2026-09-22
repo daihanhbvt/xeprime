@@ -111,6 +111,7 @@
     "bankTransactions": "Payment reconciliation",
     "sellers": "Seller verification",
     "feePolicies": "Fee policies",
+    "promoCodes": "Promo codes",
     "money": "Money operations",
     "support": "Support / disputes"
   }

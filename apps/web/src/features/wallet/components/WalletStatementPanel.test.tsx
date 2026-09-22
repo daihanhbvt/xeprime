@@ -60,6 +60,8 @@ function statement(overrides: Partial<WalletStatement> = {}): WalletStatement {
       ratingCount: 3,
       completedTripCount: 14,
       responseRatePercent: 100,
+      responseSampleCount: 6,
+      acceptKeepRatePercent: 83,
     },
     totals: {
       revenueTotal: '4050000',
@@ -164,6 +166,8 @@ describe('WalletStatementPanel', () => {
         ratingCount: 0,
         completedTripCount: 0,
         responseRatePercent: null,
+        responseSampleCount: 0,
+        acceptKeepRatePercent: null,
       },
       items: [],
       total: 0,

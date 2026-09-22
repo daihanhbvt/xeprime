@@ -13,6 +13,9 @@ import {
   MILEAGE_LIMIT,
   POLICY_SOURCE_VALUES,
   PRICE_ROW_VALUES,
+  PROMO_AUDIENCE_VALUES,
+  PROMO_DISCOUNT_TYPE_VALUES,
+  PROMO_VEHICLE_SCOPE_VALUES,
   ROUTE_TYPE_VALUES,
   type LongTermPackageMonths,
   SERVICE_TYPE,
@@ -579,6 +582,31 @@ export class FeePolicySnapshotDto {
 }
 
 /** Cùng shape `CustomerFeeBreakdown` ở @xeprime/types — snapshot vào `price_snapshot_json.fees`. */
+/**
+ * Mã khuyến mãi ĐÃ ÁP + điều kiện đóng băng — cùng shape `PromoCodeSnapshot` ở @xeprime/types.
+ *
+ * Đi trên dây để mọi bề mặt (báo giá, chi tiết chuyến, panel giữ chỗ, đơn cũ) nói đúng tên mã và
+ * đúng số giảm mà không phải tra lại chiến dịch — kể cả sau khi admin sửa, tắt hoặc xoá mềm nó
+ * (ADR 0046 điều 7).
+ */
+export class PromoCodeSnapshotDto {
+  @ApiProperty() promoCodeId!: string;
+  @ApiProperty({ description: 'Mã đã chuẩn hoá (in hoa)' }) code!: string;
+  @ApiProperty({ description: 'Tên chương trình lúc khách áp mã' }) name!: string;
+  @ApiProperty({ description: 'Số giảm ĐÃ ÁP (VND string — ADR 0007)' }) discountApplied!: string;
+  @ApiProperty({ enum: PROMO_DISCOUNT_TYPE_VALUES }) discountType!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) discountAmount!: string | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) discountPercent!: number | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) maxDiscountAmount!: string | null;
+  @ApiProperty() minOrderAmount!: string;
+  @ApiProperty({ enum: PROMO_AUDIENCE_VALUES }) audience!: string;
+  @ApiProperty({ enum: PROMO_VEHICLE_SCOPE_VALUES }) vehicleScope!: string;
+  @ApiProperty({ type: [String], enum: SERVICE_TYPE_VALUES }) serviceScope!: string[];
+  @ApiProperty({ type: [String] }) provinceCodes!: string[];
+  @ApiPropertyOptional({ type: Number, nullable: true }) perCustomerLimit!: number | null;
+  @ApiProperty({ description: 'ISO-8601' }) appliedAt!: string;
+}
+
 export class CustomerFeeBreakdownDto {
   @ApiProperty({ enum: BILLING_MODE_VALUES }) billingMode!: string;
   @ApiProperty({ type: FeePolicySnapshotDto }) policy!: FeePolicySnapshotDto;
@@ -589,7 +617,24 @@ export class CustomerFeeBreakdownDto {
   customerTotalAmount!: string;
   @ApiProperty({ description: 'D — cọc trả online cho XePrime; "0" khi chuyến không thu cọc' })
   depositAmount!: string;
-  @ApiProperty({ description: 'D + S + IV + IP — số quét QR trả ngay' }) onlineAmount!: string;
+  @ApiProperty({
+    description:
+      'D + S + IV + IP TRƯỚC tài trợ mã khuyến mãi — con số phân bổ quyền lợi làm việc trên',
+  })
+  grossOnlineAmount!: string;
+  @ApiProperty({
+    description:
+      'P — số XePrime TÀI TRỢ qua mã khuyến mãi (ADR 0046). "0" khi không có mã. Không đụng tiền gian hàng.',
+  })
+  promoDiscountAmount!: string;
+  @ApiPropertyOptional({
+    type: () => PromoCodeSnapshotDto,
+    nullable: true,
+    description: 'Mã đã áp + điều kiện đóng băng. null khi chuyến không dùng mã.',
+  })
+  promo!: PromoCodeSnapshotDto | null;
+  @ApiProperty({ description: 'D + S + IV + IP − P — số quét QR trả ngay' })
+  onlineAmount!: string;
   @ApiProperty({ description: 'B − D — khách trả TRỰC TIẾP chủ xe lúc nhận xe' })
   payAtPickupAmount!: string;
   @ApiProperty({ description: 'T — thuế khấu trừ khỏi tiền chủ xe, KHÔNG cộng vào tổng khách' })

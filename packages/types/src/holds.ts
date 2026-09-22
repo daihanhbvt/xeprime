@@ -28,67 +28,62 @@ const MS_PER_HOUR = 3_600_000;
 export const HOLD_FREE_CANCEL_HOURS = 4;
 
 /**
- * Khách có bấy nhiêu phút để chuyển khoản trước khi hold được GIA HẠN hoặc hết hạn và nhả lịch.
+ * Khách có bấy nhiêu phút để chuyển TIỀN GIỮ CHỖ trước khi hold hết hạn và chỗ được nhả.
  *
- * **10 phút** (16/09/2026 — ADR 0039), giảm từ 2 giờ của ADR 0032, và con số này đi kèm một
- * thay đổi khác không tách rời được: hold nay sinh ra lúc khách GỬI YÊU CẦU, không phải lúc chủ
- * xe duyệt. Một chỗ bị giữ trước cả khi chủ xe kịp nhìn thấy yêu cầu thì không thể giữ hai
- * tiếng — đó là hai tiếng khách khác không đặt được chiếc xe đó, đổi lấy một người có thể đã
- * đóng trình duyệt ngay sau khi bấm.
+ * **120 phút** (22/09/2026 — ADR 0044), trở lại đúng con số ADR 0032 điều 2 sau khi ADR 0039 bị
+ * ghi đè. Hai thứ này không tách rời nhau được: cửa sổ 10 phút của ADR 0039 chỉ hợp lý khi hold
+ * sinh ra lúc khách GỬI yêu cầu — khi đó chiếc xe bị khoá trước cả khi chủ xe kịp nhìn thấy,
+ * nên giữ lâu là lấy chỗ của khách khác. Ở thứ tự mới, hold chỉ sinh SAU khi chuyến đã được
+ * NHẬN: chỗ đó là của đúng một người, chủ xe đã đồng ý, và hai giờ là thời gian thật mà một
+ * người cần để mở app ngân hàng, chuyển tiền và chờ ngân hàng xử lý.
  *
- * Mười phút đủ cho quãng đường thật của khách: mở app ngân hàng, quét QR, nhập OTP, quay lại.
- * Ai chậm hơn thì được `HOLD_MAX_EXTENSIONS` lần gia hạn tự động — nên con số này là nhịp của
- * ĐỒNG HỒ, còn trần thật của một hold là `HOLD_TOTAL_WINDOW_MINUTES`.
+ * Hết hạn là HẾT — không còn lượt tự gia hạn nào (ADR 0044 điều 3). Đổi lại, khách được nhắc
+ * hai lần trước khi hết giờ (`HOLD_PAYMENT_REMINDER_REMAINING_MINUTES`).
  *
  * Con số thật của từng hold lấy từ chính sách phí hiện hành
  * (`FeePolicyValues.holdPaymentWindowMinutes`); hằng này là mặc định khi seed policy.
  */
-export const HOLD_PAYMENT_WINDOW_MINUTES = 10;
+export const HOLD_PAYMENT_WINDOW_MINUTES = 120;
 
 /**
- * Hold hết hạn mà chưa đủ tiền thì được cộng thêm một cửa sổ nữa — tối đa bấy nhiêu lần
- * (ADR 0039 điều 3).
+ * Hai mốc nhắc khách chuyển tiền giữ chỗ, tính bằng **số phút CÒN LẠI** tới hạn (ADR 0044 điều 3).
  *
- * Gia hạn TỰ ĐỘNG, khách không phải bấm gì. Đánh đổi đã biết và chấp nhận: một chiếc xe có thể
- * bị giữ đủ `HOLD_TOTAL_WINDOW_MINUTES` kể cả khi khách đã bỏ đi từ phút thứ hai. Đổi lại,
- * không ai mất chỗ chỉ vì ngân hàng xử lý chậm hơn một đồng hồ mười phút — và `booking_holds`
- * ghi `extension_count` nên số lần gia hạn thật vẫn đo được để hiệu chỉnh sau.
+ * Vì sao tính theo phần còn lại chứ không theo thời gian đã trôi: hạn trả tiền bị KẸP bởi giờ
+ * nhận xe, nên cửa sổ thật của một chuyến sát giờ có thể ngắn hơn hai tiếng. Một mốc "sau 60
+ * phút" sẽ bắn sau khi hold đã chết; một mốc "còn 60 phút" thì tự nằm đúng chỗ, và worker chỉ
+ * cần bỏ qua những hold chưa bao giờ dài tới ngần ấy.
  *
- * Mỗi lần gia hạn phát một thông báo: một đồng hồ tự nhảy về 10:00 mà không nói gì trông như
- * lỗi giao diện.
+ * `FIRST` trùng đúng ranh giới hai chặng đồng hồ (`HOLD_COUNTDOWN_SEGMENT_MINUTES`) — thông báo
+ * và đồng hồ trên màn hình vì thế nói cùng một điều tại cùng một thời điểm.
  */
-export const HOLD_MAX_EXTENSIONS = 2;
-
-/**
- * Trần thật của một khoản giữ chỗ: cửa sổ đầu + mọi lần gia hạn. **30 phút.**
- *
- * Đây là con số dùng khi nói về việc GIỮ XE (bao lâu thì chỗ chắc chắn được nhả), còn
- * `HOLD_PAYMENT_WINDOW_MINUTES` là con số hiện trên đồng hồ. Nhầm hai thứ này là nguồn của
- * những câu như "giữ 10 phút" trong khi lịch xe thật sự bị khoá gấp ba.
- */
-export const HOLD_TOTAL_WINDOW_MINUTES =
-  HOLD_PAYMENT_WINDOW_MINUTES * (HOLD_MAX_EXTENSIONS + 1);
+export const HOLD_PAYMENT_REMINDER_REMAINING_MINUTES = {
+  FIRST: 60,
+  FINAL: 15,
+} as const;
 
 /**
  * Cửa sổ ngắn nhất còn có nghĩa để đưa QR cho khách.
  *
- * Hạn trả tiền bị KẸP bởi giờ nhận xe — một hold còn "chờ tiền" sau khi xe đáng lẽ đã giao là
- * một chỗ bị khoá vô nghĩa. Với chuyến đặt sát giờ, phần kẹp đó có thể còn lại vài phút, và vài
- * phút thì không đủ để ai mở được app ngân hàng.
+ * Hạn chuyển tiền bị KẸP bởi giờ nhận xe — một hold còn "chờ tiền" sau khi xe đáng lẽ đã giao
+ * là một chỗ bị khoá vô nghĩa. Với chuyến đặt sát giờ, phần kẹp đó có thể còn lại vài phút, và
+ * vài phút thì không đủ để ai mở được app ngân hàng: chuyến đó phải đi đường thoả thuận trực
+ * tiếp với gian hàng, và người duyệt được nói rõ lý do (`HOLD_WINDOW_TOO_SHORT`).
  *
- * ⚠️ Hằng này phải NHỎ HƠN `HOLD_PAYMENT_WINDOW_MINUTES`. Trước ADR 0039 ngưỡng là 15 phút trong
- * khi cửa sổ là 120 — hợp lệ. Cửa sổ rút về 10 mà quên ngưỡng thì mọi hold đều bị từ chối ngay
- * lúc tạo, vì `expiresAt − now` không bao giờ vượt quá cửa sổ. `holds.test.ts` khoá quan hệ đó.
+ * ⚠️ Hằng này phải NHỎ HƠN `HOLD_PAYMENT_WINDOW_MINUTES` — `holds.test.ts` khoá quan hệ đó.
+ * `expiresAt − now` không bao giờ vượt quá cửa sổ, nên một ngưỡng lớn hơn cửa sổ sẽ từ chối
+ * MỌI hold ngay lúc tạo, tức là cả sàn ngừng nhận đơn, im lặng.
  */
-export const HOLD_MIN_USABLE_WINDOW_MINUTES = 5;
+export const HOLD_MIN_USABLE_WINDOW_MINUTES = 15;
 
 /**
- * Cửa sổ thanh toán được chia thành các chặng bấy nhiêu phút.
+ * Cửa sổ thanh toán được chia thành các chặng bấy nhiêu phút — **60** (ADR 0032 điều 2: "hai
+ * countdown 60 phút").
  *
- * Từ ADR 0039 nó BẰNG cửa sổ: mười phút là một chặng duy nhất, đồng hồ chạy một mạch. Hằng vẫn
- * còn vì giao diện đọc nó để vẽ đồng hồ, và vì chia chặng sẽ có nghĩa trở lại nếu cửa sổ dài ra.
+ * Một con số "còn 118 phút" không tạo được cảm giác cần hành động; chia thành hai chặng cho
+ * người dùng một đồng hồ họ đọc được ngay, và mốc giao giữa hai chặng đúng là lúc worker bắn
+ * lần nhắc thứ nhất — hai kênh nói cùng một điều.
  */
-export const HOLD_COUNTDOWN_SEGMENT_MINUTES = HOLD_PAYMENT_WINDOW_MINUTES;
+export const HOLD_COUNTDOWN_SEGMENT_MINUTES = 60;
 
 /**
  * Sàn số tiền giữ chỗ. Dưới mức này thì phí chuyển khoản và công đối soát vượt khoản thu.
@@ -100,10 +95,12 @@ export const HOLD_COUNTDOWN_SEGMENT_MINUTES = HOLD_PAYMENT_WINDOW_MINUTES;
 export const HOLD_MIN_AMOUNT = 20_000;
 
 /**
- * Số hold đang chờ tiền tối đa của một khách.
+ * Số hold đang chờ tiền tối đa của một khách (ADR 0021 ràng buộc 4).
  *
- * `awaiting_hold` chiếm chỗ thật mà chưa có tiền — đây là bề mặt phá hoại, và giới hạn này là
- * hàng rào rẻ nhất (ADR 0021 ràng buộc 4).
+ * Bề mặt phá hoại này HẸP HẲN từ ADR 0044: hold chỉ sinh ra sau khi một con người ở gian hàng
+ * (hoặc thiết lập "Đặt ngay" của chính họ) đã NHẬN chuyến, nên không ai tự khoá được ba chiếc
+ * xe chỉ bằng ba lượt bấm đặt. Trần vẫn giữ để một khách không giữ nhiều chỗ cùng lúc rồi chỉ
+ * trả tiền cho một chỗ.
  */
 export const HOLD_MAX_OPEN_PER_CUSTOMER = 3;
 

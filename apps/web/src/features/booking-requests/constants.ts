@@ -17,7 +17,8 @@ export const BOOKING_REQUEST_STATUS_ALL = 'all';
  * Tab GỘP "Cần xử lý" — KHÔNG phải một trạng thái thật của `BookingRequestStatus`, mà là HAI
  * trạng thái cùng cần gian hàng quyết định (`BookingRequestCard.needsDecision` đã đối xử với
  * chúng như nhau từ lâu — xem component đó): `pending_host_approval` (mới hỏi) và `hold_paid`
- * (ADR 0039 — đã cọc, tiền đang nằm ở XePrime, xe đang bị giữ chỗ).
+ * (**LEGACY ADR 0039** — khách đã trả đủ trước khi ai duyệt; ADR 0044 không sinh trạng thái này
+ * nữa, nhưng những yêu cầu đã ở đó vẫn có tiền thật bên trong và vẫn cần một cú bấm).
  *
  * Trước đây hai cái này là HAI TAB riêng vì sợ `hold_paid` — việc khẩn nhất hộp thư — chìm mất.
  * Nhưng nó chỉ chìm khi lẫn vào tab "Tất cả" (gồm cả yêu cầu đã chết); gộp với đúng
@@ -62,11 +63,11 @@ export const BOOKING_REQUEST_TABS: readonly BookingRequestTab[] = [
     labelKey: 'needsAction',
   },
   /*
-   * `awaiting_hold` (ADR 0039 — hold đã sinh, khách CHƯA chuyển khoản) CỐ Ý không có tab riêng
-   * (phản hồi người dùng 19/09/2026): chưa có gì để gian hàng quyết định, và một tab riêng cho
+   * `awaiting_hold` (ADR 0044 — đã nhận chuyến, đang chờ khách thanh toán) CỐ Ý không có tab
+   * riêng (phản hồi người dùng 19/09/2026): gian hàng đã quyết định xong, và một tab riêng cho
    * một trạng thái không-hành-động-được chỉ thêm rối. Nó vẫn xem được qua tab "Tất cả", và thẻ
-   * của nó tự nói rõ lý do không có nút Duyệt (`awaitingHold.footerHint` ở `BookingRequestCard`)
-   * thay vì để trống khó hiểu.
+   * của nó tự nói tình trạng cùng hạn khách phải thanh toán (`awaitingHold.*` ở
+   * `BookingRequestCard`) thay vì để trống khó hiểu.
    */
   {
     value: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,

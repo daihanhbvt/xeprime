@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BankAccountsModule } from '../bank-accounts/bank-accounts.module';
+import { HostMetricsModule } from '../host-metrics/host-metrics.module';
 import { PlatformWithdrawalService } from './platform-withdrawal.service';
 import { PlatformWithdrawalsController } from './platform-withdrawals.controller';
 import { AccountWalletController, ShopWalletController } from './wallet.controller';
@@ -20,7 +21,9 @@ import { WithdrawalService } from './withdrawal.service';
  * Export `WalletService`: `holds` ghi có trong transaction của chính nó, không đụng bảng trực tiếp.
  */
 @Module({
-  imports: [BankAccountsModule],
+  // HostMetricsModule: bảng tổng hợp kỳ đọc tỉ lệ phản hồi/nhận chuyến từ CÙNG nguồn với trang
+  // công khai (ADR 0045 điều 2) — chỉ khác cửa sổ, không khác phép phân loại.
+  imports: [BankAccountsModule, HostMetricsModule],
   controllers: [AccountWalletController, ShopWalletController, PlatformWithdrawalsController],
   providers: [
     WalletService,

@@ -1,7 +1,8 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { EMPTY_CATALOG } from '@/features/catalog/types';
+import { renderWithIntl } from '@/i18n/test-utils';
 import type { PublicListingDetail } from '../types';
 import { ListingDetailView } from './ListingDetailView';
 
@@ -65,6 +66,18 @@ const LISTING = {
   discountPercent: 15,
   shopName: 'Gian hàng Demo XePrime',
   shopSlug: 'demo-xeprime',
+  /*
+   * Ba chỉ số uy tín của chủ xe (ADR 0045 điều 3) — ở đây là gian hàng CHƯA đủ mẫu, nên khối
+   * chỉ hiện đúng một câu "chưa đủ dữ liệu" và không con số nào lọt vào những phép so giá bên
+   * dưới.
+   */
+  shopMetrics: {
+    sampleCount: 0,
+    responseRatePercent: null,
+    acceptKeepRatePercent: null,
+    responseMinutesMedian: null,
+    instantBook: false,
+  },
   shopProvince: 'Hồ Chí Minh',
   ratingAvg: '0',
   ratingCount: 0,
@@ -87,7 +100,7 @@ describe('ListingDetailView pricing', () => {
    * Chính bài test này là thứ bắt được nếu ai đó lỡ biến nó thành Client Component.
    */
   it('dùng DiscountTag chung và không hiển thị giá cuối tuần/thuê giờ', async () => {
-    render(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
+    renderWithIntl(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
 
     expect(screen.getByLabelText('Giảm 15%').textContent).toBe('-15%');
     expect(screen.getByText('408.000 ₫')).toBeTruthy();
@@ -143,7 +156,7 @@ describe('ListingDetailView — điều kiện thuê công bố', () => {
   } as unknown as PublicListingDetail;
 
   it('tự lái: hiện giấy tờ, cách đối chiếu, điều khoản và nhãn Đặt ngay', async () => {
-    render(await ListingDetailView({ listing: WITH_TERMS, catalog: EMPTY_CATALOG }));
+    renderWithIntl(await ListingDetailView({ listing: WITH_TERMS, catalog: EMPTY_CATALOG }));
 
     expect(screen.getByText('Thủ tục & điều kiện thuê')).toBeTruthy();
     expect(screen.getByText(/Giấy tờ cần có: Giấy phép lái xe/)).toBeTruthy();
@@ -154,7 +167,7 @@ describe('ListingDetailView — điều kiện thuê công bố', () => {
   });
 
   it('hiện khung giờ giao nhận nhưng KHÔNG lộ thời gian chết nội bộ của gian hàng', async () => {
-    render(await ListingDetailView({ listing: WITH_TERMS, catalog: EMPTY_CATALOG }));
+    renderWithIntl(await ListingDetailView({ listing: WITH_TERMS, catalog: EMPTY_CATALOG }));
 
     expect(screen.getByText('Khung giờ giao nhận')).toBeTruthy();
     expect(screen.getByText(/08:00–18:00/)).toBeTruthy();
@@ -162,13 +175,13 @@ describe('ListingDetailView — điều kiện thuê công bố', () => {
   });
 
   it('phụ phí tài xế chỉ hiện khi khách đang xem dịch vụ CÓ TÀI XẾ', async () => {
-    const { unmount } = render(
+    const { unmount } = renderWithIntl(
       await ListingDetailView({ listing: WITH_TERMS, catalog: EMPTY_CATALOG }),
     );
     expect(screen.queryByText('Phụ phí có thể phát sinh')).toBeNull();
     unmount();
 
-    render(
+    renderWithIntl(
       await ListingDetailView({
         listing: WITH_TERMS,
         catalog: EMPTY_CATALOG,
@@ -181,7 +194,7 @@ describe('ListingDetailView — điều kiện thuê công bố', () => {
   });
 
   it('API cũ chưa trả ba khối này: trang vẫn dựng, chỉ thiếu mục thông tin', async () => {
-    render(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
+    renderWithIntl(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
 
     expect(screen.getByText('VinFast Fadil 2022')).toBeTruthy();
     expect(screen.queryByText('Thủ tục & điều kiện thuê')).toBeNull();
@@ -205,7 +218,7 @@ describe('ListingDetailView — hạn mức quãng đường', () => {
   } as unknown as PublicListingDetail;
 
   it('tự lái: hiện số km mỗi ngày và tiền mỗi km vượt', async () => {
-    render(await ListingDetailView({ listing: WITH_MILEAGE, catalog: EMPTY_CATALOG }));
+    renderWithIntl(await ListingDetailView({ listing: WITH_MILEAGE, catalog: EMPTY_CATALOG }));
 
     expect(screen.getByText('Hạn mức quãng đường')).toBeTruthy();
     expect(screen.getByText(/Bao gồm 200 km\/ngày/)).toBeTruthy();
@@ -215,7 +228,7 @@ describe('ListingDetailView — hạn mức quãng đường', () => {
   });
 
   it('có tài xế: KHÔNG hiện — đi xa là phụ phí đường dài, một khoản khác', async () => {
-    render(
+    renderWithIntl(
       await ListingDetailView({
         listing: WITH_MILEAGE,
         catalog: EMPTY_CATALOG,
@@ -227,7 +240,7 @@ describe('ListingDetailView — hạn mức quãng đường', () => {
   });
 
   it('xe không đặt hạn mức: không có khối rỗng, không có số 0 nào', async () => {
-    render(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
+    renderWithIntl(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
 
     expect(screen.queryByText('Hạn mức quãng đường')).toBeNull();
     expect(screen.queryByText(/Bao gồm 0 km/)).toBeNull();

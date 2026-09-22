@@ -278,7 +278,9 @@ function buildData(
    * thấy hàng trong DB, nên nó không thể suy lại được điều đó.
    */
   const url = notificationDeepLink(
-    { targetType: payload.targetType, targetId: payload.targetId },
+    // `type` đi kèm vì một đích không suy được từ `targetType` một mình — xem docblock ở
+    // `NotificationTargetRef`.
+    { targetType: payload.targetType, targetId: payload.targetId, type: payload.type },
     audience,
   );
 

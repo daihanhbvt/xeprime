@@ -7,6 +7,16 @@ export type RequestDevice = CreateBookingRequestInput['device'];
 export function toRequestBody(
   values: BookingRequestFormValues,
   device: RequestDevice,
+  /**
+   * MÃ KHUYẾN MÃI đang áp — ADR 0046.
+   *
+   * Tham số RIÊNG chứ không nằm trong `values`: nó không phải một ô của biểu mẫu mà là kết quả
+   * của một lượt xem trước ở SERVER (`usePromoCode`), và một chuỗi khách gõ nhưng chưa áp được
+   * thì không bao giờ được đi kèm lượt gửi.
+   *
+   * Gửi CHUỖI MÃ, không gửi số giảm: số giảm do server tính ở cả ba cửa kiểm.
+   */
+  promoCode?: string | null,
 ): Omit<CreateBookingRequestInput, 'vehicleId'> {
   const withDriver = values.serviceType === SERVICE_TYPE.WITH_DRIVER;
   const longTerm = values.serviceType === SERVICE_TYPE.LONG_TERM;
@@ -76,5 +86,6 @@ export function toRequestBody(
         }
       : {}),
     ...(values.note ? { note: values.note } : {}),
+    ...(promoCode ? { promoCode } : {}),
   };
 }

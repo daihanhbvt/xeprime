@@ -13,6 +13,7 @@ import { ConversationSummaryDto } from '../chat/dto/chat.dto';
 import {
   ApproveBookingRequestDto,
   BookingRequestDto,
+  CancelBookingRequestDto,
   BookingRequestListQueryDto,
   BookingRequestPageDto,
   RejectBookingRequestDto,
@@ -88,6 +89,35 @@ export class BookingRequestsController {
     @Body() dto: RejectBookingRequestDto,
   ): Promise<BookingRequestDto> {
     return this.requests.reject(tenant.tenantId, user.id, id, dto.reason);
+  }
+
+  /**
+   * GIAN HÀNG RÚT LẠI một chuyến ĐÃ NHẬN (ADR 0045 điều 1).
+   *
+   * Endpoint RIÊNG, không phải một cờ trên `/reject`: hai việc khác nhau ở hậu quả (huỷ đóng
+   * hold, nhả lịch, hoàn tiền và vào chỉ số uy tín; từ chối thì không), nên trộn chúng vào một
+   * đường là mời người gọi tự chọn hậu quả bằng một tham số.
+   *
+   * Cùng quyền với duyệt/từ chối: ai nhận được chuyến thì cũng là người rút lại được nó. Nhân
+   * viên được uỷ quyền bấm VẪN tính là phía gian hàng — uỷ quyền là chuyện nội bộ của người bán.
+   */
+  @Post(':id/cancel')
+  @RequirePermissions(PERMISSION.BOOKING_REQUEST_APPROVE)
+  @ApiOperation({
+    summary: 'Huỷ một chuyến ĐÃ NHẬN (chưa có đơn thuê)',
+    description:
+      'Chỉ áp dụng cho awaiting_hold và hold_paid (LEGACY). Đóng hold, nhả lịch, hoàn phần đã ' +
+      'chuyển và ghi một dòng booking_cancellations tính vào chỉ số uy tín. Yêu cầu chưa được ' +
+      'nhận thì dùng /reject; đơn đã tạo thì dùng POST /bookings/:id/transition.',
+  })
+  @ApiOkResponse({ type: BookingRequestDto })
+  cancel(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: CancelBookingRequestDto,
+  ): Promise<BookingRequestDto> {
+    return this.requests.cancelByHost(tenant.tenantId, user.id, id, dto);
   }
 
   /**

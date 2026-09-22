@@ -1,4 +1,4 @@
-import { Prisma, type PrismaClient } from '@xeprime/prisma';
+import { Prisma, releasePromoRedemption, type PrismaClient } from '@xeprime/prisma';
 import {
   BOOKING_REQUEST_FINAL_REMINDER_REMAINING_MINUTES,
   BOOKING_REQUEST_REMINDER_MINUTES,
@@ -10,6 +10,7 @@ import {
   HOLD_REFUND_REASON,
   NOTIFICATION_TYPE,
   OCCUPANCY_SOURCE_TYPE,
+  PROMO_RELEASE_REASON,
 } from '@xeprime/types';
 import { notifyTenantMembers, notifyUser, recordSystemAudit } from '../lib/notify';
 import { upsertWorkerHoldRefund } from './booking-hold-expiry';
@@ -25,9 +26,12 @@ export interface DeadlineSweepResult {
   finalReminders: number;
   expired: number;
   /**
-   * Yêu cầu ĐÃ CỌC mà gian hàng không phản hồi trong hạn — đã hoàn tiền và nhả chỗ (ADR 0039).
-   * Đếm riêng với  vì đây là con số có TIỀN đi kèm: nó tăng bất thường nghĩa là gian
-   * hàng đang bỏ đơn đã thu tiền, và đó là việc vận hành phải biết ngay.
+   * **LEGACY ADR 0039** — yêu cầu khách ĐÃ TRẢ ĐỦ mà gian hàng không phản hồi trong hạn: đã hoàn
+   * tiền và nhả chỗ.
+   *
+   * Luồng hiện hành (ADR 0044) không sinh `hold_paid` nữa, nên ở dữ liệu mới con số này luôn 0.
+   * Đếm riêng vì đây là con số có TIỀN đi kèm: nó tăng nghĩa là còn yêu cầu của thời kỳ cũ đang
+   * bị bỏ quên với tiền thật bên trong, và đó là việc vận hành phải biết ngay.
    */
   expiredPaid: number;
 }
@@ -67,7 +71,11 @@ export async function sweepBookingRequestDeadlines(
 
 
 /**
- * QUÁ HẠN PHẢN HỒI SAU KHI KHÁCH ĐÃ CỌC ⇒ hoàn đủ, nhả chỗ (ADR 0039 điều 5).
+ * **LEGACY ADR 0039** — quá hạn phản hồi SAU KHI khách đã trả đủ ⇒ hoàn đủ, nhả chỗ.
+ *
+ * Luồng hiện hành (ADR 0044) thu tiền SAU khi chuyến đã được nhận, nên không còn chặng "đã trả
+ * mà chưa ai duyệt" để quá hạn. Nhánh này ở lại cho những yêu cầu sinh trong thời gian ADR 0039
+ * còn hiệu lực: bỏ nó đi là để tiền thật của khách nằm lại vô thời hạn.
  *
  * Tách khỏi `expire` ở trên vì hai tình huống chỉ giống nhau ở cái tên. Ở kia không ai mất gì:
  * yêu cầu chưa chiếm lịch và chưa có đồng nào của khách. Ở đây XePrime đang GIỮ TIỀN THẬT và
@@ -132,6 +140,19 @@ async function expirePaidAwaitingAccept(prisma: PrismaClient, now: Date): Promis
        */
       await tx.vehicleOccupancy.deleteMany({
         where: { sourceType: OCCUPANCY_SOURCE_TYPE.BOOKING_REQUEST, sourceId: req.id },
+      });
+
+      /*
+       * NHẢ lượt mã khuyến mãi (ADR 0046 điều 6) — dữ liệu LEGACY ADR 0039: khách đã trả đủ nhưng
+       * gian hàng không phản hồi, nên KHÔNG có đơn nào hình thành và lượt chưa bao giờ được tiêu.
+       *
+       * Yêu cầu của thời kỳ đó không thể mang mã (mã ra đời ở ADR 0046, sau ADR 0044), nên nhánh
+       * này thực tế là no-op. Vẫn gọi: một nhánh đóng yêu cầu mà KHÔNG nhả lượt là đúng loại lỗ
+       * hổng sẽ lộ ra khi luồng `hold_paid` được dùng lại vì một lý do nào đó.
+       */
+      await releasePromoRedemption(tx, {
+        bookingRequestId: req.id,
+        reason: PROMO_RELEASE_REASON.REQUEST_EXPIRED,
       });
 
       if (hold && hold.status === BOOKING_HOLD_STATUS.PAID && hold.outcome === null) {
@@ -327,6 +348,18 @@ async function expire(prisma: PrismaClient, now: Date): Promise<number> {
         data: { status: BOOKING_REQUEST_STATUS.EXPIRED },
       });
       if (claimed.count === 0) return false;
+
+      /*
+       * NHẢ lượt mã khuyến mãi (ADR 0046 điều 6) — yêu cầu chết trước khi thành đơn.
+       *
+       * Dùng CHÍNH hàm mà API dùng (`@xeprime/prisma`), không viết lại phép trừ bộ đếm ở đây:
+       * một bản sao thứ hai sẽ trôi khỏi bản gốc, và khi đó một chiến dịch sẽ "hết lượt" vĩnh
+       * viễn vì những yêu cầu đã chết không bao giờ trả lượt về kho.
+       */
+      await releasePromoRedemption(tx, {
+        bookingRequestId: req.id,
+        reason: PROMO_RELEASE_REASON.REQUEST_EXPIRED,
+      });
 
       await recordSystemAudit(tx, {
         tenantId: req.tenantId,

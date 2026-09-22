@@ -3,6 +3,8 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   COLLATERAL_MODE,
+  FEE_LINE,
+  promoEligibleAmount,
   discountTierFromStored,
   legacyDiscountTierFromStored,
   LONG_TERM_PACKAGE_MONTHS,
@@ -23,6 +25,9 @@ import {
   type DiscountTier,
   type LegacyDiscountTier,
   type PolicySource,
+  type PromoCodeSnapshot,
+  type ServiceType,
+  type VehicleType,
 } from '@xeprime/types';
 import { computeCustomerFees, type CustomerFeeBreakdown } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
@@ -65,6 +70,25 @@ const POLICY_SELECT = {
 type PolicyRow = Prisma.RentalPolicyGetPayload<{ select: typeof POLICY_SELECT }>;
 
 /** Chính sách hiệu lực của một xe: bản ghi đè thắng mặc định gian hàng. */
+/**
+ * Ngữ cảnh áp mã khuyến mãi của MỘT chuyến — mọi thứ `PromoCodeEvaluatorService` cần, dựng từ
+ * đúng một lượt báo giá (ADR 0046).
+ */
+export interface PromoQuoteContext {
+  tenantId: string;
+  quoteIsEstimate: boolean;
+  personalAccidentSelected: boolean;
+  scope: { vehicleType: VehicleType; serviceType: ServiceType; provinceCode: string | null };
+  breakdown: QuoteBreakdownDto;
+  fees: CustomerFeeBreakdown | null;
+  money: {
+    eligibleAmount: string;
+    grossOnlineAmount: string | null;
+    sponsorableAmount: string;
+    holdMinAmount: string;
+  };
+}
+
 export interface EffectivePolicy {
   values: RentalPolicyValuesDto;
   source: PolicySource;
@@ -129,6 +153,15 @@ export class PricingService {
       depositRequired?: boolean;
       /** Khách có GIỮ lựa chọn bảo hiểm tai nạn người không (`IP` — tuỳ chọn). */
       personalAccidentSelected?: boolean;
+      /**
+       * MÃ KHUYẾN MÃI nền tảng ĐÃ ĐÁNH GIÁ (ADR 0046).
+       *
+       * Máy giá KHÔNG tự tra mã: nó nhận một snapshot đã có `discountApplied` và chỉ áp con số
+       * đó. Đánh giá (tồn tại, còn hiệu lực, đúng đối tượng, còn lượt) là việc của
+       * `PromoCodeEvaluatorService` — giữ chiều phụ thuộc một hướng, nên module mã khuyến mãi
+       * dùng được máy giá mà máy giá không cần biết mã khuyến mãi tồn tại.
+       */
+      promo?: PromoCodeSnapshot | null;
     } = {},
   ): Promise<CustomerFeeBreakdown | null> {
     const policy = await this.feePolicies.findEffective();
@@ -157,6 +190,128 @@ export class PricingService {
       baseAmount,
       quoteIsEstimate,
       depositRequired: opts.depositRequired ?? deposit.required,
+      ...(opts.personalAccidentSelected === undefined
+        ? {}
+        : { personalAccidentSelected: opts.personalAccidentSelected }),
+      ...(opts.promo === undefined ? {} : { promo: opts.promo }),
+    });
+  }
+
+  /**
+   * NGỮ CẢNH ÁP MÃ của một chuyến công khai — ADR 0046.
+   *
+   * Gom đúng những gì `PromoCodeEvaluatorService` cần, và dựng báo giá ĐÚNG MỘT LẦN: bảng kê
+   * giá, bảng phí chưa có mã, phạm vi (loại xe · dịch vụ · tỉnh của xe) và bốn con số tiền.
+   *
+   * Vì sao ở đây chứ không ở module mã khuyến mãi: cả bốn con số tiền đều là dẫn xuất của bảng
+   * phí, và bảng phí chỉ có một nguồn. Để module kia tự cộng `deposit + serviceFee` là đẻ ra bản
+   * thứ hai của định nghĩa "phần tài trợ được" — thứ mà một lần đổi chính sách sẽ làm lệch.
+   *
+   * Trả `null` khi chuyến chưa báo giá được (thiếu giá, sai gói) — caller coi như không áp được
+   * mã, không ném lỗi: một ô nhập mã không được phép làm sập màn đặt xe.
+   */
+  async promoContextFor(
+    vehicleId: string,
+    query: {
+      pickupAt?: string;
+      returnAt?: string;
+      serviceType?: string;
+      routeType?: string;
+      packageMonths?: number;
+      personalAccidentSelected?: boolean;
+    },
+  ): Promise<PromoQuoteContext | null> {
+    const vehicle = await this.prisma.vehicle.findFirst({
+      where: {
+        id: vehicleId,
+        deletedAt: null,
+        publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+        tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        vehicleType: true,
+        /*
+         * Tỉnh của XE đọc từ `public_listings`, không từ `vehicles`: tỉnh là thuộc tính của CHI
+         * NHÁNH đang giữ xe, và bản đã denormalize ở đó là cùng con số mà bộ lọc ngoài chợ dùng
+         * (ADR 0008). Tự join sang chi nhánh ở đây sẽ ra một đường thứ hai, và hai đường sẽ lệch
+         * nhau đúng vào lúc xe được chuyển chi nhánh.
+         */
+        publicListing: { select: { provinceCode: true } },
+      },
+    });
+    if (!vehicle) return null;
+
+    let quote: PublicQuoteDto;
+    try {
+      quote = await this.publicQuote(vehicleId, query);
+    } catch {
+      return null;
+    }
+    const { breakdown } = quote;
+    /*
+     * `CustomerFeeBreakdownDto` là CHÍNH object mà `customerFeesFor` vừa trả về; nó chỉ khác
+     * `CustomerFeeBreakdown` ở chỗ các union (`billingMode`, `key`, `bearer`…) bị nới thành
+     * `string` để `@nestjs/swagger` sinh được enum. Thu hẹp lại ở đây thay vì dựng lại bảng phí
+     * lần hai — hai lượt tính cho cùng một chuyến là hai cơ hội để chúng lệch nhau.
+     */
+    const fees = (breakdown.fees ?? null) as CustomerFeeBreakdown | null;
+    return {
+      tenantId: vehicle.tenantId,
+      quoteIsEstimate: breakdown.estimateNote != null,
+      personalAccidentSelected: query.personalAccidentSelected === true,
+      scope: {
+        vehicleType: vehicle.vehicleType as VehicleType,
+        serviceType: (query.serviceType ?? SERVICE_TYPE.SELF_DRIVE) as ServiceType,
+        provinceCode: vehicle.publicListing?.provinceCode ?? null,
+      },
+      breakdown,
+      fees,
+      money: {
+        eligibleAmount: promoEligibleAmount(breakdown.rows),
+        /*
+         * `null` ⇒ `computePromoDiscount` trả `NO_ONLINE_PAYMENT`, và đó là câu trả lời ĐÚNG cho
+         * ba ca thật: chưa có chính sách phí hiệu lực, chưa xác định được tuyến của gian hàng, và
+         * — quan trọng nhất — chuyến KHÔNG có khoản giữ chỗ nào để giảm.
+         *
+         * Điều kiện là `holdAmount != null`, không phải `grossOnlineAmount > 0`. Một báo giá TẠM
+         * TÍNH (dài hạn chưa chốt lịch, giá lộ trình chưa niêm yết) vẫn có `S + IV + IP` khác 0
+         * nhưng XePrime chưa thu đồng nào của nó, nên không có dòng tiền nào để tài trợ vào —
+         * tài trợ ở đó là hứa một khoản giảm trên một con số chưa chốt (ADR 0044 điều 4).
+         */
+        grossOnlineAmount: fees?.holdAmount != null ? fees.grossOnlineAmount : null,
+        sponsorableAmount: fees
+          ? String(
+              Number(fees.depositAmount) +
+                Number(fees.lines.find((l) => l.key === FEE_LINE.SERVICE_FEE)?.amount ?? 0),
+            )
+          : '0',
+        holdMinAmount: fees?.policy.holdMinAmount ?? '0',
+      },
+    };
+  }
+
+  /**
+   * Bảng phí TÍNH LẠI với mã đã áp — lượt thứ hai của phép tính hai lượt (ADR 0046).
+   *
+   * Hai lượt là hệ quả của một vòng phụ thuộc thật: số giảm cần biết `grossOnlineAmount`, mà con
+   * số đó là kết quả của chính bảng phí. Vì `S`/`T`/`IV`/`IP`/`D` KHÔNG phụ thuộc mã, lượt hai
+   * chỉ trừ thêm một con số — nó không bao giờ ra một cơ sở tính khác với lượt một.
+   */
+  applyPromoToFees(
+    tenantId: string,
+    baseAmount: string,
+    opts: {
+      quoteIsEstimate: boolean;
+      promo: PromoCodeSnapshot | null;
+      depositRequired?: boolean;
+      personalAccidentSelected?: boolean;
+    },
+  ): Promise<CustomerFeeBreakdown | null> {
+    return this.customerFeesFor(tenantId, baseAmount, opts.quoteIsEstimate, {
+      promo: opts.promo,
+      ...(opts.depositRequired === undefined ? {} : { depositRequired: opts.depositRequired }),
       ...(opts.personalAccidentSelected === undefined
         ? {}
         : { personalAccidentSelected: opts.personalAccidentSelected }),

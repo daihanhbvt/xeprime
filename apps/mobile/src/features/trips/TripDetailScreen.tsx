@@ -738,6 +738,7 @@ const SUBTITLE_KEY = {
   [CUSTOMER_TRIP_STAGE.READY]: 'subtitle.ready',
   [CUSTOMER_TRIP_STAGE.ACTIVE]: 'subtitle.active',
   [CUSTOMER_TRIP_STAGE.COMPLETED]: 'subtitle.completed',
+  [CUSTOMER_TRIP_STAGE.SLOT_TAKEN]: 'subtitle.slot_taken',
   [CUSTOMER_TRIP_STAGE.CANCELLED]: 'subtitle.terminal',
   [CUSTOMER_TRIP_STAGE.REJECTED]: 'subtitle.terminal',
   [CUSTOMER_TRIP_STAGE.NO_SHOW]: 'subtitle.terminal',

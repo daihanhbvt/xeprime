@@ -66,11 +66,19 @@ function BookingRequestCardImpl({
   request,
   onApprove,
   onReject,
+  onCancel,
   onOpenDetail,
 }: {
   request: BookingRequestItem;
   onApprove: (request: BookingRequestItem) => void;
   onReject: (request: BookingRequestItem) => void;
+  /**
+   * HUỶ một chuyến ĐÃ NHẬN (ADR 0045 điều 1) — chỉ có ở `awaiting_hold`.
+   *
+   * Khác `onReject` về bản chất chứ không chỉ về nhãn: từ chối là trả lời một câu hỏi còn
+   * treo, huỷ là rút lại một lời đã hứa và phải nhả lịch + hoàn phần khách đã chuyển.
+   */
+  onCancel: (request: BookingRequestItem) => void;
   /**
    * "Xem chi tiết" — màn hộp thư quyết định nó dẫn tới ĐÂU, không phải thẻ này: đã thành đơn
    * thì mở chi tiết ĐƠN, chưa có đơn thì mở chi tiết YÊU CẦU. Cùng phân nhánh với web.
@@ -89,7 +97,7 @@ function BookingRequestCardImpl({
    * HAI chặng cần gian hàng quyết định, và chặng thứ hai là chặng TỐN KÉM hơn hẳn:
    *
    *   · `pending_host_approval` — khách mới hỏi, chưa ai mất gì;
-   *   · `hold_paid` (ADR 0039)  — khách ĐÃ TRẢ TIỀN và chỗ xe đang bị giữ. Bỏ sót chặng này là
+   *   · `hold_paid` (LEGACY ADR 0039) — khách ĐÃ TRẢ TIỀN và chỗ xe đang bị giữ. Bỏ sót chặng này là
    *     bày ra một thẻ ghi "chờ bạn duyệt" mà không có nút nào để duyệt, trong khi tiền của
    *     khách nằm ở XePrime và đồng hồ phản hồi đang chạy tới lượt hoàn tự động.
    */
@@ -522,12 +530,38 @@ function BookingRequestCardImpl({
               </Text>
             ) : status === BOOKING_REQUEST_STATUS.AWAITING_HOLD ? (
               /*
-               * Chưa có gì để quyết định (ADR 0039 — khách chưa chuyển khoản), nhưng im lặng ở
+               * Đã nhận chuyến, đang chờ khách thanh toán (ADR 0044), nhưng im lặng ở
                * đây đọc như thẻ bị mất nút. Nói thẳng lý do thay vì để trống khó hiểu.
                */
-              <Text col={colors.textMuted} fos={fontSize.label}>
-                {t('awaitingHold.footerHint')}
-              </Text>
+              <YStack gap={space.xs}>
+                <Text col={colors.textMuted} fos={fontSize.label}>
+                  {/*
+                    Kèm ĐÚNG mốc mà chỗ sẽ tự nhả nếu tiền không về — thứ quyết định người trực
+                    có nên gọi cho khách hay không. Mốc tuyệt đối, không phải đồng hồ chạy: một
+                    danh sách mười thẻ với mười nhịp mỗi giây là chi phí không đổi lại được gì.
+                  */}
+                  {request.holdExpiresAt
+                    ? `${t('awaitingHold.footerHint')} ${t('awaitingHold.deadline')} ${fmt.dateTime(request.holdExpiresAt)}`
+                    : t('awaitingHold.footerHint')}
+                </Text>
+                {/*
+                  Lối thoát HUỶ — chặng DUY NHẤT mà gian hàng đã hứa nhận nhưng chuyến chưa thành
+                  đơn. Trước ADR 0045 chặng này không có nút nào: xe hỏng lúc mười giờ tối thì
+                  đường duy nhất là gọi điện xin lỗi rồi ngồi chờ hết cửa sổ hai giờ, trong lúc
+                  lịch xe vẫn bị giữ.
+
+                  Cỡ `sm` và nền nhạt (`danger`) chứ không phải nút đỏ đặc: việc chính ở
+                  chặng này là ĐỢI.
+                */}
+                {canDecide ? (
+                  <Button
+                    label={t('actions.cancel')}
+                    variant="danger"
+                    size="sm"
+                    onPress={() => onCancel(request)}
+                  />
+                ) : null}
+              </YStack>
             ) : null}
           </YStack>
         </YStack>

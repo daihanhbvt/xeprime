@@ -4,7 +4,7 @@ import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { subtractMoney } from '@xeprime/domain';
-import { FEE_BEARER, PRICE_ROW } from '@xeprime/types';
+import { FEE_BEARER, FEE_LINE, PRICE_ROW } from '@xeprime/types';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
@@ -25,6 +25,15 @@ export interface PriceBreakdownFeesInput {
     partnerName?: string | null;
   }>;
   customerTotalAmount: string;
+  /**
+   * `P` — TÀI TRỢ mã khuyến mãi của XePrime (ADR 0046). `'0'`/vắng = chuyến không dùng mã.
+   *
+   * Dòng RIÊNG, không trộn vào `lines`: `lines` là các khoản khách PHẢI TRẢ THÊM, còn đây là
+   * khoản trừ đi — và nó khác `PRICE_ROW.DISCOUNT` (khuyến mãi của chủ xe) ở chỗ AI bỏ tiền.
+   */
+  promoDiscountAmount?: string | null;
+  /** Mã đã áp — tên hiển thị của dòng giảm trên. */
+  promo?: { code: string; name?: string } | null;
   /** Khách chuyển online để giữ chỗ; null/undefined = chuyến này không cần giữ chỗ. */
   holdAmount?: string | null;
   /**
@@ -54,7 +63,8 @@ export interface PriceBreakdownRowInput {
  * Ba quy tắc nhấn mạnh lấy nguyên từ `PriceBreakdown.module.css`, vì chúng mang NGHĨA chứ không
  * phải trang trí:
  *   - dòng `discount` tô ĐỎ cả nhãn lẫn số — đỏ là màu ngữ nghĩa của khoản giảm trừ;
- *   - số `'0'` tô mờ và bỏ đậm — có dòng nhưng không phát sinh tiền;
+ *   - dòng 0đ KHÔNG VẼ (ADR 0046) — trước đây chúng tô mờ, nhưng trên màn hẹp thì một bảng đầy
+ *     "0 ₫" đẩy những dòng có tiền thật xuống dưới nếp gấp;
  *   - TỔNG dùng `color-price` cỡ h3 đậm, nhãn viết hoa — đây là con số khách thật sự trả.
  *
  * **Tiền cọc KHÔNG nằm trong tổng.** Nó là khối riêng dưới gạch ngang, kèm câu giải thích hoàn
@@ -71,6 +81,7 @@ export function PriceBreakdown({
   fees,
   audience = 'customer',
   collapsible = false,
+  promoSlot,
 }: {
   rows: readonly PriceBreakdownRowInput[];
   /** Tổng khách trả TRƯỚC cọc. */
@@ -101,6 +112,12 @@ export function PriceBreakdown({
    * khi đã đặt (chi tiết chuyến) mới bật, nơi con số đã chốt và bảng dài chỉ còn là tra cứu.
    */
   collapsible?: boolean;
+  /**
+   * Khối HÀNH ĐỘNG chèn giữa bảng tạm tính và tổng cộng — ô áp mã khuyến mãi của luồng đặt xe
+   * (ADR 0046). Là một `slot` vì bảng này dùng chung cho báo giá, chi tiết chuyến và đơn cũ —
+   * chỉ MỘT trong ba bề mặt có ô áp mã.
+   */
+  promoSlot?: React.ReactNode;
 }) {
   const tCommon = useTranslations('Common.components.price');
   const fmt = useAppFormat();
@@ -122,7 +139,24 @@ export function PriceBreakdown({
    * `fees.customerTotalAmount` mới là. Vẽ to-đậm CẢ HAI khiến người đọc không biết số nào là
    * "cái phải trả" (phản hồi người dùng 18/09/2026), nên dòng này hạ xuống mức phụ khi có phí.
    */
-  const hasFees = Boolean(fees) && feeLines.length > 0;
+
+  /*
+   * DÒNG 0đ KHÔNG VẼ.
+   *
+   * `buildDailyQuote` cố ý sinh "Phí phát sinh ngoài giờ" và "Dịch vụ cộng thêm" bằng 0 để
+   * snapshot của đơn có chỗ cho chúng về sau. Đúng cho DỮ LIỆU, sai cho MÀN HÌNH — và trên màn
+   * 390px thì hai dòng "0 ₫" đẩy những dòng có tiền thật xuống dưới nếp gấp.
+   *
+   * Chỉ ẩn ở UI; TỔNG không bao giờ ẩn, kể cả khi bằng 0.
+   */
+  const visibleRows = rows.filter((row) => Number(row.amount) !== 0);
+  const visibleFeeLines = feeLines.filter((line) => Number(line.amount) !== 0);
+  const promoDiscount = Number(fees?.promoDiscountAmount ?? 0);
+  /*
+   * Mã khuyến mãi CŨNG kéo khối phụ phí ra (ADR 0046): một chuyến tuyến gói không có dòng phí nào
+   * nhưng có mã thì `customerTotalAmount` vẫn khác `totalAmount`.
+   */
+  const hasFees = Boolean(fees) && (visibleFeeLines.length > 0 || promoDiscount > 0);
   const payAtHandoverAmount =
     fees?.payAtPickupAmount ??
     (fees?.holdAmount ? subtractMoney(fees.customerTotalAmount, fees.holdAmount) : null);
@@ -161,11 +195,10 @@ export function PriceBreakdown({
         </Pressable>
       ) : null}
 
-      {showItems ? (
+      {showItems && visibleRows.length > 0 ? (
         <YStack gap={space.sm} pt={space.sm} borderTopWidth={1} borderColor={colors.borderSubtle}>
-          {rows.map((row, index) => {
+          {visibleRows.map((row, index) => {
             const isDiscount = row.key === PRICE_ROW.DISCOUNT;
-            const isZero = row.amount === '0';
 
             return (
               <XStack key={`${row.key}-${index}`} ai="flex-start" jc="space-between" gap={space.sm}>
@@ -184,9 +217,9 @@ export function PriceBreakdown({
                   ) : null}
                 </YStack>
                 <Text
-                  col={isDiscount ? colors.danger : isZero ? colors.placeholder : colors.text}
+                  col={isDiscount ? colors.danger : colors.text}
                   fos={fontSize.bodySm}
-                  fow={isZero && !isDiscount ? fontWeight.regular : fontWeight.semibold}
+                  fow={fontWeight.semibold}
                 >
                   {fmt.money(row.amount)}
                 </Text>
@@ -246,14 +279,20 @@ export function PriceBreakdown({
         ) : null}
       </YStack>
 
-      {fees && feeLines.length > 0 ? (
+      {/*
+        Ô ÁP MÃ — SAU bảng tạm tính, TRƯỚC tổng cộng. Ngoài khối phụ phí có chủ đích: nó phải hiện
+        cả khi chuyến chưa có phụ phí nào, vì một chuyến không có dòng phí vẫn áp mã được.
+      */}
+      {promoSlot}
+
+      {fees && hasFees ? (
         <YStack gap={space.sm} pt={space.sm} borderTopWidth={1} borderColor={colors.borderSubtle}>
           <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.semibold}>
             {tCommon('feesTitle')}
           </Text>
 
           {showItems
-            ? feeLines.map((line) => {
+            ? visibleFeeLines.map((line) => {
                 // Dòng do CHỦ XE chịu không cộng vào tổng khách — nói rõ ngay tại dòng, nếu không
                 // khách tự cộng vào rồi thấy tổng không khớp.
                 const ownerBorne = line.bearer === FEE_BEARER.OWNER;
@@ -280,6 +319,29 @@ export function PriceBreakdown({
                 );
               })
             : null}
+
+          {/*
+            MÃ KHUYẾN MÃI — dòng TRỪ, LUÔN hiện (không gấp theo `showItems`): khách vừa chủ động
+            áp mã, giấu nó sau nút "Xem chi tiết" là không cho họ thấy việc mình vừa làm có tác dụng.
+          */}
+          {promoDiscount > 0 ? (
+            <XStack ai="flex-start" jc="space-between" gap={space.sm}>
+              <YStack f={1} gap={2}>
+                <Text col={colors.danger} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                  {domainLabel('feeLine', FEE_LINE.PROMO)}
+                </Text>
+                {fees.promo ? (
+                  <Text col={colors.placeholder} fos={fontSize.label}>
+                    {fees.promo.code}
+                    {fees.promo.name ? ` · ${fees.promo.name}` : ''}
+                  </Text>
+                ) : null}
+              </YStack>
+              <Text col={colors.danger} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                −{fmt.money(String(promoDiscount))}
+              </Text>
+            </XStack>
+          ) : null}
 
           <XStack ai="baseline" jc="space-between" gap={space.sm}>
             <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.bold} letterSpacing={0.4}>

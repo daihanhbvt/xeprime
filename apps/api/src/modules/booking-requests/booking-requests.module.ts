@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BookingsModule } from '../bookings/bookings.module';
 import { CalendarModule } from '../calendar/calendar.module';
+import { CancellationsModule } from '../cancellations/cancellations.module';
 import { ChatModule } from '../chat/chat.module';
 import { CustomersModule } from '../customers/customers.module';
 import { DepositPolicyModule } from '../deposit-policy/deposit-policy.module';
@@ -8,6 +9,7 @@ import { HoldsModule } from '../holds/holds.module';
 import { LocationsModule } from '../locations/locations.module';
 import { PhoneVerificationModule } from '../phone-verification/phone-verification.module';
 import { PricingModule } from '../pricing/pricing.module';
+import { PromoCodesModule } from '../promo-codes/promo-codes.module';
 import { VehicleSettingsModule } from '../vehicle-settings/vehicle-settings.module';
 import { BookingRequestsController } from './booking-requests.controller';
 import { PublicBookingRequestsController } from './public-booking-requests.controller';
@@ -28,6 +30,8 @@ import { BookingRequestsService } from './booking-requests.service';
   imports: [
     BookingsModule,
     CalendarModule,
+    // Writer DUY NHẤT của `booking_cancellations` (ADR 0045 điều 1) — module LÁ, không tạo vòng.
+    CancellationsModule,
     ChatModule,
     CustomersModule,
     // Phase 6: công tắc thu cọc của gian hàng quyết định duyệt xong sinh hold hay tạo đơn ngay.
@@ -37,6 +41,9 @@ import { BookingRequestsService } from './booking-requests.service';
     LocationsModule,
     PhoneVerificationModule,
     PricingModule,
+    // ADR 0046: giữ lượt mã khuyến mãi lúc gửi, tính lại + chốt/nhả lúc duyệt. Module mã khuyến
+    // mãi phụ thuộc PricingModule chứ không ngược lại, nên không có vòng.
+    PromoCodesModule,
     // Khung giờ giao nhận, điều khoản và tự động nhận chuyến (08/09/2026).
     VehicleSettingsModule,
   ],

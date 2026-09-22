@@ -65,7 +65,12 @@
       "paidTitle": "Đơn đã ghi nhận {amount} tiền đã thu",
       "paidDescription": "XePrime không tự hoàn tiền và cũng không xóa khoản đã ghi nhận. Nếu cần trả lại cho khách, hãy chuyển tiền bên ngoài rồi ghi một phiếu chi ở sổ Thu-Chi.",
       "cancelSuccess": "Đã hủy đơn {code}",
-      "noShowSuccess": "Đã ghi nhận khách không đến cho đơn {code}"
+      "noShowSuccess": "Đã ghi nhận khách không đến cho đơn {code}",
+      "categoryLabel": "Nhóm lý do",
+      "categoryPlaceholder": "Chọn nhóm lý do huỷ",
+      "categoryHelp": "Dùng để thống kê vận hành và tính chỉ số uy tín của gian hàng.",
+      "categoryRequired": "Chọn một nhóm lý do",
+      "reasonHelpOther": "Chọn “Lý do khác” thì đây là chỗ duy nhất nói rõ chuyện gì đã xảy ra."
     },
     "noShowHint": "Chỉ ghi nhận được sau giờ nhận xe {minutes} phút, và chỉ khi chưa giao xe."
   },

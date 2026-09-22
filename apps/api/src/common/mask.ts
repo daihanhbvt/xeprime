@@ -55,6 +55,22 @@ export function maskEmail(email: string | null | undefined): string | null {
   return `${keep}${MASK_CHAR.repeat(Math.max(1, local.length - keep.length))}${domain}`;
 }
 
+/**
+ * Tên người: giữ nguyên phần đầu, rút phần cuối về một chữ cái — "Nguyễn Văn An" → "Nguyễn Văn A.".
+ *
+ * Khác `maskTail`: tên KHÔNG che bằng dấu sao. Một dòng đánh giá hay một dòng lượt dùng mã cần
+ * đọc được như tên người thật để nhân viên đối chiếu khi khách gọi lên, còn `Nguyễn Văn **` thì
+ * chỉ làm màn hình khó đọc mà không che thêm được gì.
+ */
+export function maskName(name: string | null | undefined): string {
+  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'Khách';
+  if (parts.length === 1) return parts[0] ?? 'Khách';
+  const last = parts[parts.length - 1] ?? '';
+  const head = parts.slice(0, -1).join(' ');
+  return `${head} ${last.charAt(0)}.`;
+}
+
 /** Che mọi thứ trừ 2 ký tự cuối — dùng cho chuỗi không rõ định dạng. */
 function maskTail(value: string): string {
   const tail = value.slice(-2);

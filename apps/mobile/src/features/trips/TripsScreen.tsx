@@ -4,6 +4,7 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
+  API_ERROR_CODE,
   CUSTOMER_TRIP_FILTER,
   CUSTOMER_TRIP_FILTER_DEFAULT,
   CUSTOMER_TRIP_FILTER_VALUES,
@@ -22,15 +23,21 @@ import { TripCardSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
+import { getErrorCode } from '@/lib/api-client';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { ApproveRequestSheet } from '@/features/booking-requests/components/ApproveRequestSheet';
 import { ApproveSuccessSheet } from '@/features/booking-requests/components/ApproveSuccessSheet';
+import { CancelRequestSheet } from '@/features/booking-requests/components/CancelRequestSheet';
 import { RejectRequestSheet } from '@/features/booking-requests/components/RejectRequestSheet';
 import {
   useApproveBookingRequest,
+  useCancelBookingRequest,
   useRejectBookingRequest,
 } from '@/features/booking-requests/hooks/use-booking-requests';
-import type { BookingRequestDecisionTarget } from '@/features/booking-requests/api';
+import type {
+  BookingRequestDecisionTarget,
+  CancelBookingRequestInput,
+} from '@/features/booking-requests/api';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { ROUTES } from '@/navigation/routes';
@@ -104,8 +111,11 @@ export function TripsScreen({ lockedRole }: { lockedRole?: TripRole } = {}) {
   const canApprove = permissions.has(PERMISSION.BOOKING_REQUEST_APPROVE);
   const approve = useApproveBookingRequest();
   const reject = useRejectBookingRequest();
+  const cancel = useCancelBookingRequest();
   const [approving, setApproving] = useState<BookingRequestDecisionTarget | null>(null);
   const [rejecting, setRejecting] = useState<BookingRequestDecisionTarget | null>(null);
+  /** Chuyến ĐÃ NHẬN đang chờ huỷ (ADR 0045 điều 1) — khác hẳn `rejecting` về đường tiền. */
+  const [cancelling, setCancelling] = useState<BookingRequestDecisionTarget | null>(null);
   const [approved, setApproved] = useState<BookingRequestDecisionTarget | null>(null);
 
   const [filter, setFilter] = useState<CustomerTripFilter>(CUSTOMER_TRIP_FILTER_DEFAULT);
@@ -193,6 +203,7 @@ export function TripsScreen({ lockedRole }: { lockedRole?: TripRole } = {}) {
         ? {
             onApprove: (trip: CustomerTrip) => setApproving(tripToDecisionTarget(trip)),
             onReject: (trip: CustomerTrip) => setRejecting(tripToDecisionTarget(trip)),
+            onCancel: (trip: CustomerTrip) => setCancelling(tripToDecisionTarget(trip)),
           }
         : undefined,
     [canApprove],
@@ -240,6 +251,30 @@ export function TripsScreen({ lockedRole }: { lockedRole?: TripRole } = {}) {
           setRejecting(null);
         },
         onError: (error) => toast.showError(errorMessage(error)),
+      },
+    );
+  }
+
+  function confirmCancel(body: CancelBookingRequestInput) {
+    if (!cancelling) return;
+    cancel.mutate(
+      { id: cancelling.id, body },
+      {
+        onSuccess: () => {
+          toast.showSuccess(tRequests('cancel.success'));
+          setCancelling(null);
+        },
+        /*
+         * Cuộc đua với đồng tiền: khách chuyển khoản đúng lúc chủ xe đang mở tấm trượt ⇒ webhook
+         * thắng, yêu cầu đã thành đơn, lệnh huỷ không claim được gì (409). Câu chung ("có lỗi
+         * xảy ra") sẽ khiến họ bấm lại vài lần rồi gọi hỗ trợ.
+         */
+        onError: (error) =>
+          toast.showError(
+            getErrorCode(error) === API_ERROR_CODE.CONFLICT
+              ? tRequests('cancel.raceLost')
+              : errorMessage(error),
+          ),
       },
     );
   }
@@ -356,6 +391,16 @@ export function TripsScreen({ lockedRole }: { lockedRole?: TripRole } = {}) {
           request={rejecting}
           onConfirm={confirmReject}
           loading={reject.isPending}
+        />
+      ) : null}
+
+      {cancelling ? (
+        <CancelRequestSheet
+          open
+          onClose={() => setCancelling(null)}
+          request={cancelling}
+          onConfirm={confirmCancel}
+          loading={cancel.isPending}
         />
       ) : null}
     </>

@@ -287,7 +287,7 @@ Thể hiện service variants:
 
 Tạo frame “12 — FL-04 Booking approval, QR Pay & contact unlock” theo swimlane Customer / Owner-or-Shop / XePrime / QR Pay:
 
-Customer gửi request → kiểm tra concurrency/lịch → chủ xe duyệt HOẶC auto-accept nếu bật tối ưu nhận chuyến → ghi acceptedAt và coi là “đặt xe thành công” → bắt đầu đồng thời timer thanh toán 2 giờ và timer hủy miễn phí 4 giờ → tạo trạng thái chờ QR Pay → giữ lịch → countdown 60 phút lần 1 → nếu chưa trả, tự gia hạn countdown 60 phút lần 2 → nếu vẫn chưa trả, auto-cancel + mở lịch + báo hai bên.
+Customer gửi request (CHƯA giữ lịch, CHƯA thu tiền) → chủ xe duyệt HOẶC auto-accept nếu bật tối ưu nhận chuyến → ghi acceptedAt, chốt lịch + giá, GIỮ LỊCH và phát QR Pay → bắt đầu đồng thời timer thanh toán 2 giờ và timer hủy miễn phí 4 giờ → countdown chặng 1 (60 phút) → nhắc khách khi còn 60 phút và còn 15 phút, KHÔNG gia hạn → tiền về đủ ⇒ ĐƠN THUÊ ra đời (mốc “đặt xe thành công” với khách) → hết 2 giờ vẫn chưa đủ tiền ⇒ auto-cancel + mở lịch + hoàn phần đã chuyển + báo hai bên. Các request khác trùng khung giờ được đóng ngay bằng slot_taken.
 
 Nếu QR Pay thành công:
 - Auto-match payment idempotently.

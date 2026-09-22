@@ -7,6 +7,8 @@ import {
   BOOKING_STATUS,
   CUSTOMER_TRIP_FILTER,
   CUSTOMER_TRIP_STAGE,
+  isCustomerTripClosed,
+  type CustomerTripStage,
   DEPOSIT_STATUS,
   HANDOVER_CONDITION,
   HANDOVER_PHOTO_SLOT,
@@ -25,10 +27,9 @@ import {
   TENANT_ROLE,
   TENANT_STATUS,
   VEHICLE_TYPE,
-  isCustomerTripClosed,
-  type CustomerTripStage,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
+import { CancellationsService } from '../src/modules/cancellations/cancellations.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { CustomerTripsService } from '../src/modules/customer-trips/customer-trips.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
@@ -97,6 +98,7 @@ const trips = new CustomerTripsService(
   new BankAccountsService(asService),
   notifications,
   audit,
+  new CancellationsService(),
 );
 
 let dbAvailable = false;
@@ -311,6 +313,33 @@ describe('Chiếu trạng thái sang chặng của khách', () => {
     const b = await seedTrip({ bookingStatus: BOOKING_STATUS.COMPLETED });
     expect((await trips.detail(customerId, a.requestId)).stage).toBe(CUSTOMER_TRIP_STAGE.ACTIVE);
     expect((await trips.detail(customerId, b.requestId)).stage).toBe(CUSTOMER_TRIP_STAGE.COMPLETED);
+  });
+
+  /**
+   * Ba chặng CHƯA CÓ ĐƠN nhưng khác nhau ở chỗ quan trọng nhất — VIỆC TIẾP THEO thuộc về ai
+   * (ADR 0044).
+   *
+   * `pending_approval`: khách chỉ có thể chờ. `awaiting_hold`: quả bóng ở chân khách, màn hình
+   * phải có số tiền và đồng hồ. `slot_taken`: chuyến đã hết đường và khách cần đi chọn xe khác.
+   * Gộp bất kỳ hai chặng nào trong ba là giấu mất việc mà người dùng phải làm.
+   */
+  maybe('ba chặng chưa-có-đơn được chiếu thành ba chặng KHÁC NHAU', async () => {
+    const awaiting = await seedTrip({
+      bookingStatus: null,
+      requestStatus: BOOKING_REQUEST_STATUS.AWAITING_HOLD,
+    });
+    const taken = await seedTrip({
+      bookingStatus: null,
+      requestStatus: BOOKING_REQUEST_STATUS.SLOT_TAKEN,
+    });
+
+    expect((await trips.detail(customerId, awaiting.requestId)).stage).toBe(
+      CUSTOMER_TRIP_STAGE.AWAITING_HOLD,
+    );
+    const takenTrip = await trips.detail(customerId, taken.requestId);
+    expect(takenTrip.stage).toBe(CUSTOMER_TRIP_STAGE.SLOT_TAKEN);
+    // Khung giờ bị lấy là một kết cục ĐÃ KHÉP — không nằm ở tab "chuyến hiện tại" nữa.
+    expect(isCustomerTripClosed(takenTrip.stage as CustomerTripStage)).toBe(true);
   });
 
   maybe('bị từ chối và không-nhận-xe là hai kết cục khác nhau', async () => {

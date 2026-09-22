@@ -80,6 +80,20 @@ const ALLOWED: { prefix: string; resolve: Resolver }[] = [
    */
   { prefix: 'account/vehicles', resolve: exact(ROUTES.account.vehicles) },
   { prefix: 'account', resolve: exact(ROUTES.account.home) },
+  /*
+   * Trang xe CÔNG KHAI — đích của "xe bạn hỏi đã rảnh lại" (ADR 0045 điều 6).
+   *
+   * Không dùng `listOrDetail`: `notificationDeepLink` trả `null` khi thiếu id cho loại này,
+   * nên một đích `/listings` trần không bao giờ được sinh ra, và nhận nó là nới allowlist rộng
+   * hơn thứ nó phải bảo vệ.
+   */
+  {
+    prefix: 'listings',
+    resolve: (rest) =>
+      rest.length === 1 && rest[0] && SEGMENT.test(rest[0])
+        ? ROUTES.explore.listingDetail(rest[0])
+        : null,
+  },
 ];
 
 /** Đích cần đăng nhập không? Toàn bộ đích của thông báo đều cần — không có ngoại lệ hôm nay. */

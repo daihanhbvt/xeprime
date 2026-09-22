@@ -62,6 +62,7 @@ vi.mock('@/features/booking-requests/hooks/use-booking-request-decisions', () =>
   useBookingRequestDecisions: () => ({
     openApprove: vi.fn(),
     openReject: vi.fn(),
+    openCancel: vi.fn(),
     decisionActionFor: () => null,
     dialogs: null,
   }),

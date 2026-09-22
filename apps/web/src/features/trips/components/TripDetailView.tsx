@@ -19,6 +19,7 @@ import {
   STOREFRONT_KIND,
   TRIP_ROLE,
   canCustomerCancelTrip,
+  canHostDecideTrip,
   customerTripTimeline,
   isAwaitingPayment,
   isCustomerTripClosed,
@@ -512,10 +513,13 @@ export function TripDetailView({ tripId, backHref = ROUTES.TRIPS }: TripDetailVi
             dưới, số điện thoại xuống dòng phụ để nhãn nút luôn ngắn.
           */}
           {/*
-            Cụm quyết định của chủ xe là component RIÊNG: nó cầm mutation và bốn hộp thoại, mà
+            Cụm quyết định của chủ xe là component RIÊNG: nó cầm mutation và năm hộp thoại, mà
             người đi thuê thì không có gì để quyết định ở đây.
+
+            Cổng đọc CHẶNG, không đọc `respondBy`. Từ ADR 0044, `respondBy` vẫn còn nguyên sau
+            khi chủ xe đã nhận chuyến — hỏi nó là bày nút "Duyệt" cho một chuyến đã duyệt rồi.
           */}
-          {isHost && data.respondBy ? <TripHostDecisions trip={data} /> : null}
+          {isHost && canHostDecideTrip(data.stage) ? <TripHostDecisions trip={data} /> : null}
 
           {/*
             Cụm hỗ trợ là của KHÁCH: nhắn tin với gian hàng, gọi gian hàng, đánh giá gian hàng.
@@ -638,6 +642,18 @@ function TerminalNotice({ trip, stage }: { trip: CustomerTripDetail; stage: Cust
     );
   }
 
+  /*
+   * Khung giờ bị khách khác lấy mất (ADR 0044 điều 6) — KHÔNG phải `REJECTED`.
+   *
+   * Chủ xe không từ chối ai cả, nên câu "chủ xe không thể tiếp nhận yêu cầu này" sẽ đẩy khách đi
+   * hỏi lại chủ xe thay vì làm điều duy nhất còn tác dụng: chọn xe khác hoặc đổi thời gian.
+   */
+  if (stage === CUSTOMER_TRIP_STAGE.SLOT_TAKEN) {
+    return (
+      <Alert type="info" showIcon title={t('slotTakenTitle')} description={t('slotTakenBody')} />
+    );
+  }
+
   if (stage === CUSTOMER_TRIP_STAGE.NO_SHOW) {
     return <Alert type="error" showIcon title={t('noShowTitle')} description={t('noShowBody')} />;
   }
@@ -660,6 +676,7 @@ const SUBTITLE_KEY = {
   [CUSTOMER_TRIP_STAGE.READY]: 'subtitle.ready',
   [CUSTOMER_TRIP_STAGE.ACTIVE]: 'subtitle.active',
   [CUSTOMER_TRIP_STAGE.COMPLETED]: 'subtitle.completed',
+  [CUSTOMER_TRIP_STAGE.SLOT_TAKEN]: 'subtitle.slot_taken',
   [CUSTOMER_TRIP_STAGE.CANCELLED]: 'subtitle.terminal',
   [CUSTOMER_TRIP_STAGE.REJECTED]: 'subtitle.terminal',
   [CUSTOMER_TRIP_STAGE.NO_SHOW]: 'subtitle.terminal',

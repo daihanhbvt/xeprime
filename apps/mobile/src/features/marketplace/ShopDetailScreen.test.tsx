@@ -42,7 +42,13 @@ function shop(overrides: Partial<PublicShop> = {}): PublicShop {
     ratingCount: 26,
     vehicleCount: 12,
     completedTripCount: 340,
-    responseRatePercent: 96,
+    metrics: {
+      sampleCount: 40,
+      responseRatePercent: 96,
+      acceptKeepRatePercent: 88,
+      responseMinutesMedian: 12,
+      instantBook: false,
+    },
     branchCount: 2,
     serviceProvinceNames: ['Đà Nẵng'],
     deliveryAvailable: true,
@@ -120,7 +126,7 @@ describe('ShopDetailScreen — hồ sơ công khai', () => {
     expect(view.getAllByText('Cho thuê xe Bình Minh').length).toBeGreaterThan(0);
     expect(view.getAllByText('Đà Nẵng').length).toBeGreaterThan(0);
     expect(view.getByText('Gian hàng 12 năm kinh nghiệm.')).toBeTruthy();
-    expect(view.getByText('Địa chỉ: 12 Nguyễn Văn Linh, Hải Châu')).toBeTruthy();
+    expect(view.getByText('12 Nguyễn Văn Linh, Hải Châu')).toBeTruthy();
     /*
       Liên hệ đi qua HỘP THƯ, không qua số điện thoại (ADR 0038): PublicShopDto đã bỏ trường phone.
       Trả nó ra là đăng số riêng của chủ xe lên một trang không cần đăng nhập.
@@ -189,8 +195,8 @@ describe('ShopDetailScreen — xe của gian hàng', () => {
     const view = await renderScreen();
 
     expect(await view.findByText('Không tải được danh sách xe')).toBeTruthy();
-    // Tên, địa chỉ và số điện thoại là thứ khách vào đây tìm — mất danh sách không được mất chúng.
+    // Tên và địa chỉ là thứ khách vào đây tìm — mất danh sách không được mất chúng.
     expect(view.getByText('Cho thuê xe Bình Minh')).toBeTruthy();
-    expect(view.getByText('Địa chỉ: 12 Nguyễn Văn Linh, Hải Châu')).toBeTruthy();
+    expect(view.getByText('12 Nguyễn Văn Linh, Hải Châu')).toBeTruthy();
   });
 });

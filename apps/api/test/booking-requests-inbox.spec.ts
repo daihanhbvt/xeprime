@@ -518,7 +518,13 @@ describe('BookingRequestsService.approve — chặn ở tầng dữ liệu', () 
     expect(held).toBe(1);
   });
 
-  maybe('CHÍNH constraint DB giữ chỗ: yêu cầu thứ hai trùng khung giờ nhận 409', async () => {
+  /**
+   * Yêu cầu trùng khung giờ ĐANG CHỜ khi chuyến kia được nhận ⇒ đóng bằng `slot_taken`
+   * (ADR 0044 điều 6).
+   *
+   * Chồng NỬA khoảng — kiểu trùng mà một phép kiểm "cùng ngày" ở tầng app hay bỏ sót.
+   */
+  maybe('nhận một yêu cầu ⇒ yêu cầu trùng khung giờ được đóng bằng `slot_taken`', async () => {
     const pickupAt = at(60);
     const first = await seedRequest({
       tenantId,
@@ -530,22 +536,53 @@ describe('BookingRequestsService.approve — chặn ở tầng dữ liệu', () 
       tenantId,
       vehicleId: vehicleAId,
       customerPhone: '0907777772',
-      // Chồng lên nhau NỬA khoảng — kiểu trùng mà một phép kiểm "cùng ngày" ở tầng app hay bỏ sót.
       pickupAt: new Date(pickupAt.getTime() + DAY),
     });
 
     await requests.approve(tenantId, ownerId, first);
-    /*
-     * Ở tầng service ta thấy ĐÚNG tên constraint đã nổ — bằng chứng rằng thứ chặn là ràng buộc
-     * DB chứ không phải một phép kiểm ở tầng app (ADR 0006). `AllExceptionsFilter` mới là chỗ
-     * đổi `23P01` thành 409 + `BOOKING_SCHEDULE_CONFLICT` ở tầng HTTP.
-     */
+
+    const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: second } });
+    expect(row.status).toBe(BOOKING_REQUEST_STATUS.SLOT_TAKEN);
+    expect(row.rejectReason).toBeTruthy();
+
+    // Và không còn duyệt được nữa — cửa đã đóng, không phải chỉ ẩn nút.
     await expect(requests.approve(tenantId, ownerId, second)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.INVALID_STATUS_TRANSITION },
+    });
+  });
+
+  /**
+   * CHÍNH constraint DB là trọng tài, không phải phép đóng ở trên (ADR 0006).
+   *
+   * Yêu cầu này tới SAU khi chỗ đã bị chiếm, nên không có lượt `slot_taken` nào chạm tới nó —
+   * và lượt duyệt của nó phải nổ ở đúng `vehicle_occupancies_no_overlap`. Đó là bằng chứng rằng
+   * thứ chặn cuối cùng vẫn là ràng buộc DB; `AllExceptionsFilter` mới là chỗ đổi `23P01` thành
+   * 409 + `BOOKING_SCHEDULE_CONFLICT` ở tầng HTTP.
+   */
+  maybe('CHÍNH constraint DB giữ chỗ: yêu cầu tới SAU vẫn bị chặn ở tầng dữ liệu', async () => {
+    const pickupAt = at(80);
+    const first = await seedRequest({
+      tenantId,
+      vehicleId: vehicleAId,
+      customerPhone: '0907777773',
+      pickupAt,
+    });
+    await requests.approve(tenantId, ownerId, first);
+
+    // Gửi SAU khi chỗ đã bị chiếm ⇒ không nằm trong lô bị đóng lúc duyệt.
+    const late = await seedRequest({
+      tenantId,
+      vehicleId: vehicleAId,
+      customerPhone: '0907777774',
+      pickupAt: new Date(pickupAt.getTime() + DAY),
+    });
+
+    await expect(requests.approve(tenantId, ownerId, late)).rejects.toMatchObject({
       message: expect.stringContaining('vehicle_occupancies_no_overlap'),
     });
 
     // Yêu cầu thua cuộc VẪN chờ duyệt — gian hàng chọn giờ khác hoặc từ chối (ADR 0006).
-    const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: second } });
+    const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: late } });
     expect(row.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
   });
 

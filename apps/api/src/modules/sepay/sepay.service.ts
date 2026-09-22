@@ -218,6 +218,32 @@ export class SepayService {
   }
 
   /**
+   * Ghi LÝ DO một giao dịch không khớp được — ADR 0045 điều 4.
+   *
+   * Trạng thái vẫn là `unmatched` (nó CHƯA được áp vào đâu, và đó là sự thật cần giữ), nhưng
+   * `match_note` nay nói vì sao. Trước đợt này một khoản đến muộn nằm trong hàng đợi đối soát
+   * không phân biệt được với một khoản webhook vừa mới nhận — và người trực phải tự đi tra từng
+   * mã để biết mình đang nhìn cái gì.
+   *
+   * KHÔNG ghi đè ghi chú của admin: điều kiện `match_status = unmatched` trong `updateMany` giữ
+   * cho một dòng đã được con người xử lý không bị máy viết lại.
+   */
+  private async noteUnmatched(
+    db: Prisma.TransactionClient,
+    providerTxId: string,
+    note: string,
+  ): Promise<void> {
+    await db.bankTransaction.updateMany({
+      where: {
+        provider: SEPAY_PROVIDER,
+        providerTxId,
+        matchStatus: BANK_MATCH_STATUS.UNMATCHED,
+      },
+      data: { matchNote: note },
+    });
+  }
+
+  /**
    * Áp một giao dịch đã ghi vào đích của nó — hold (`XPH…`) hoặc hoá đơn gói (`XPG…`).
    *
    * Lượt cập nhật `match_status` nằm TRONG chính transaction này, cùng với lượt cộng tiền: đó là
@@ -241,8 +267,31 @@ export class SepayService {
       });
       switch (applied.outcome) {
         case 'hold_not_found':
+          /*
+           * Mã đúng dạng nhưng không có hold nào — gõ nhầm, hoặc một mã từ môi trường khác.
+           * Ghi LÝ DO lên chính giao dịch: hàng đợi đối soát của admin phải nói được vì sao một
+           * dòng nằm đó, nếu không nó chỉ là một danh sách tiền không ai biết phải làm gì.
+           */
+          await this.noteUnmatched(
+            db,
+            tx.providerTxId,
+            `Không tìm thấy khoản giữ chỗ mang mã ${referenceCode}`,
+          );
           return { matched: false, note: 'hold_not_found' };
         case 'hold_closed':
+          /*
+           * TIỀN VỀ MUỘN — hold đã hết hạn/đã huỷ/đã chốt (ADR 0044 điều 7, ADR 0045 điều 4).
+           *
+           * Tuyệt đối KHÔNG tạo đơn: chỗ đó có thể đã thuộc về khách khác. Khoản tiền ở lại
+           * `bank_transactions` với `match_status = unmatched` và một ghi chú nói rõ nó là
+           * khoản đến muộn — đó là đầu vào của hàng đợi đối soát, nơi admin khớp tay vào đúng
+           * hold (nếu còn nhận được) hoặc mở đường hoàn cho khách.
+           */
+          await this.noteUnmatched(
+            db,
+            tx.providerTxId,
+            `Tiền về sau khi khoản giữ chỗ ${referenceCode} đã đóng (${applied.status}) — cần đối soát tay: khớp lại hoặc hoàn khách`,
+          );
           return { matched: false, note: `hold_${applied.status}` };
         case 'partial':
         case 'already_paid':

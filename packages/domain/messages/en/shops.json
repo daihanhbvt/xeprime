@@ -26,8 +26,6 @@
   "stats": {
     "sectionLabel": "Shop statistics",
     "vehicles": "Vehicles listed",
-    "responseRate": "Response rate",
-    "responseRateValue": "{percent}%",
     "completedTrips": "Completed trips",
     "rating": "Overall rating"
   },
@@ -45,5 +43,32 @@
     "ratingValue": "{rating} out of 5 stars",
     "empty": "This shop has no reviews yet.",
     "vehicle": "Rented: {name}"
+  },
+  "metrics": {
+    "sectionLabel": "Host metrics",
+    "responseRate": "Response rate",
+    "responseRateValue": "{percent}%",
+    "responseRateHintLabel": "About the response rate",
+    "responseRateHint": "The share of booking requests this host answered — accepted or declined — in the last {days} days. Requests closed because the dates went to another guest, or withdrawn before the host could decide, are left out.",
+    "responseTime": "Response time",
+    "responseTimeHintLabel": "About the response time",
+    "responseTimeHint": "Median time from a guest sending a request to the host answering it, over the last {days} days. Only decisions the host made in person count; vehicles on Instant Book are excluded.",
+    "acceptKeep": "Accepted and kept",
+    "acceptKeepValue": "{percent}%",
+    "acceptKeepHintLabel": "About the accepted-and-kept rate",
+    "acceptKeepHint": "The share of requests this host accepted AND saw through, over the last {days} days. Declining within the deadline does not count as accepting, and cancelling after accepting takes the trip back out of this number. A guest who does not pay, or who cancels, does not affect it.",
+    "instantBook": "Instant Book",
+    "instantBookHintLabel": "About Instant Book",
+    "instantBookHint": "This host accepts trips automatically, so requests are answered at once. Because a machine answers rather than a person, we do not turn that into a number of minutes.",
+    "basis": "Based on {count, plural, one {# request} other {# requests}} in the last {days} days.",
+    "insufficient": "Not enough data yet — only {count, plural, one {# request} other {# requests}} in the last {days} days.",
+    "insufficientHintLabel": "Why there are no figures yet",
+    "insufficientHint": "We only show percentages once there have been at least {min} requests. Below that, a single answer would read as 100% or 0% — a confident-sounding number that tells you nothing.",
+    "speed": {
+      "minutes": "Within minutes",
+      "hour": "Within an hour",
+      "hours": "Within a few hours",
+      "day": "Within a day"
+    }
   }
 }

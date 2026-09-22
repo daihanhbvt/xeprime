@@ -38,7 +38,8 @@
     "renterUnknown": "Unknown",
     "approve": "Approve",
     "reject": "Decline",
-    "estimated": "Estimate · final on approval"
+    "estimated": "Estimate · final on approval",
+    "cancel": "Cancel trip"
   },
   "pickup": {
     "delivery": "Delivered to you",
@@ -106,12 +107,13 @@
   },
   "subtitle": {
     "pending_approval": "Your rental request has been sent to the host",
-    "awaiting_hold": "Send the reservation payment to hold this car for you",
+    "awaiting_hold": "The host accepted your trip — pay the reservation amount to lock it in",
     "ready": "The host has confirmed your rental request",
     "active": "You have this car right now — drive safely",
     "completed": "The trip is complete. Thanks for riding with XePrime!",
     "terminal": "This trip ended early",
-    "pending_approval_paid": "Your slot is held and the reservation amount has been received. Waiting for the host to confirm — if they decline, the full amount is refunded right away."
+    "pending_approval_paid": "Your reservation payment has been received. Waiting for the host to confirm — if they decline, the full amount is refunded right away.",
+    "slot_taken": "Another customer booked these dates first"
   },
   "notice": {
     "pendingTitle": "Waiting for the host to confirm",
@@ -121,7 +123,9 @@
     "cancelledTitle": "Trip cancelled",
     "cancelledBody": "This trip was cancelled. Any hold on the schedule has been released.",
     "noShowTitle": "Marked as no-show",
-    "noShowBody": "This trip was marked as no-show at pick-up time. Contact the host if you think that's a mistake."
+    "noShowBody": "This trip was marked as no-show at pick-up time. Contact the host if you think that's a mistake.",
+    "slotTakenTitle": "Another customer got this car",
+    "slotTakenBody": "The dates you picked were just booked by someone else. You can choose another car or different dates."
   },
   "timeline": {
     "ariaDone": "Trip progress: completed",
@@ -216,16 +220,25 @@
     "expires": "If the full amount does not arrive in time, the vehicle reopens for other customers.",
     "freeCancel": "Cancel before {time} for a full refund of what you paid online.",
     "restAtHandover": "The remaining rental is paid directly to the host at pickup.",
-    "paid": "Reservation of {amount} received. Your slot stays held while the host confirms.",
-    "expired": "The reservation window closed, so the vehicle reopened for other customers. You can book another trip.",
+    "paid": "Reservation payment of {amount} received. Your trip is confirmed.",
+    "expired": "The payment window closed, so the vehicle reopened for other customers. You can book another trip.",
     "refundPaid": "XePrime refunded {amount} to the account you provided.",
     "refundPending": "Waiting for XePrime to transfer {amount} back to you.",
     "refundNeedsAccount": "{amount} is waiting to be refunded — tell us where to send it.",
     "countdownRemaining": "Time left to pay:",
-    "countdownSegment": "extension {index}/{total}",
+    "countdownSegment": "hour {index}/{total}",
     "countdownExpired": "Payment window closed",
     "freeCancelSoon": "This trip starts soon, so the free-cancellation window is shorter than usual — no refund after {time}.",
-    "qrCaption": "Scan to transfer"
+    "qrCaption": "Scan to transfer",
+    "vsDepositHint": "The reservation payment goes to XePrime to confirm the trip and counts towards your rental. It is not the security deposit — that is left with the host at pickup and returned when you bring the car back undamaged.",
+    "vsDepositHintLabel": "How the reservation payment differs from the security deposit",
+    "codeHint": "The transfer reference is what matches your money to this trip. Scanning the QR fills it in; if you type the transfer yourself, keep every character.",
+    "codeHintLabel": "Why the transfer reference must stay exact",
+    "checking": "Checking your transfer",
+    "checkingBody": "Banks usually report to XePrime within a few minutes. This page updates itself when the money lands — no need to send it again.",
+    "declarePaid": "I've made the transfer",
+    "qrFailed": "The QR code didn't load. Use the details beside it to transfer manually.",
+    "qrUnavailable": "No QR code is available for this payment. Use the amount and reference beside it to transfer."
   },
   "sides": {
     "ariaLabel": "Choose trip side",
@@ -265,7 +278,10 @@
     "decisionTitle": "Rental request",
     "decisionHint": "The guest is waiting for you. Approving holds the vehicle for that period.",
     "approve": "Approve & hold vehicle",
-    "reject": "Decline"
+    "reject": "Decline",
+    "acceptedTitle": "You accepted this trip",
+    "acceptedHint": "Waiting for the guest to send the reservation payment. The dates are held; if the payment does not arrive in time, they are released automatically.",
+    "cancel": "Cancel trip"
   },
   "estimate": {
     "title": "Price details",

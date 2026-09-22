@@ -265,6 +265,7 @@ export const ROUTES = {
     ADMIN_SELLERS: '/manage/admin/sellers',
     /** Quản trị chính sách phí có phiên bản (R3 — ADR 0028 điều 2–3). */
     ADMIN_FEE_POLICIES: '/manage/admin/fee-policies',
+    ADMIN_PROMO_CODES: '/manage/admin/promo-codes',
     /** Money operations: hàng đợi giữ chỗ, chuyển trả, đối chiếu ngày (R3 — ADR 0028 gate 6–7). */
     ADMIN_MONEY: '/manage/admin/money',
     /** Hàng đợi hỗ trợ/tranh chấp toàn sàn (R3 — ADR 0028 release gate 7). */

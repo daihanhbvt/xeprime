@@ -63,7 +63,8 @@
     "payAtHandover": "Pay the host at pickup"
   },
   "awaitingHold": {
-    "footerHint": "Waiting for the guest to transfer the hold — the Approve button appears once it's paid."
+    "footerHint": "The car is held — waiting for the guest to pay. The booking opens when the money arrives.",
+    "deadline": "Guest must pay by:"
   },
   "note": {
     "label": "Customer note",
@@ -94,7 +95,8 @@
     "call": "Call",
     "callAria": "Call {name} at {phone}",
     "zalo": "Zalo",
-    "zaloAria": "Open Zalo with {name} at {phone}"
+    "zaloAria": "Open Zalo with {name} at {phone}",
+    "cancel": "Cancel trip"
   },
   "approve": {
     "title": "Approve and hold the vehicle?",
@@ -280,20 +282,19 @@
     "done": {
       "title": "Request sent",
       "requestCode": "Request code: {code}",
-      "body": "The host will review your request and get back to you. You can follow its status under your trips.",
+      "body": "The host is reviewing it. You'll get a notification as soon as they reply.",
       "time": "Period",
       "pickupMethod": "Getting the car",
       "driverPickup": "Pick-up at: {address}",
-      "notReserved": "The car is not held yet. Your request needs the host's approval first.",
+      "notReserved": "The car is not held yet — the host has to accept your request first.",
       "myTrips": "My trips",
       "chatShop": "Message the host",
       "close": "Back",
-      "autoAccepted": "Your booking was confirmed automatically — the vehicle is reserved for you.",
-      "autoAcceptedHold": "Your booking was confirmed automatically — complete the hold to keep the reservation.",
-      "openHold": "Track this trip",
-      "holdLoadFailed": "Could not load the payment code. Open the trip under My trips to get it — your slot is still on hold.",
-      "heldTitle": "Your slot is on hold",
-      "heldSubtitle": "Complete the payment to confirm your booking.",
+      "autoAccepted": "Your trip was accepted automatically — the vehicle is reserved for you.",
+      "openHold": "Pay the reservation",
+      "holdLoadFailed": "Could not load the payment code. Open the trip under My trips to get it — your slot is still held.",
+      "heldTitle": "The host accepted your trip",
+      "heldSubtitle": "Pay the reservation amount before the timer runs out to lock it in.",
       "copyRequestCode": "Copy request code",
       "tripInfo": "Trip details"
     },
@@ -399,7 +400,11 @@
     "leadLongTerm": "The request is approved and the long-term booking is created on the schedule you just set.",
     "next": "Next: contact the renter to agree on a pick-up time, collect the deposit if any, then confirm handover right on the booking.",
     "viewBooking": "View booking",
-    "close": "Close"
+    "close": "Close",
+    "holdTitle": "Trip accepted — waiting for payment",
+    "holdLead": "The schedule is held and the payment code has been sent to the guest. The booking opens automatically once XePrime receives the reservation amount.",
+    "holdNext": "The guest has 2 hours to transfer. If the money does not arrive, the slot is released and you get a notification.",
+    "holdClose": "Back to requests"
   },
   "deadline": {
     "label": "Response deadline",
@@ -425,5 +430,28 @@
       "longTermPackage": "Choose a rental package",
       "requestedPickupDate": "Choose the date you want the car"
     }
+  },
+  "cancel": {
+    "title": "Cancel an accepted trip",
+    "context": "{customer} · {vehicle}",
+    "effects": {
+      "vehicle": "The vehicle goes back on the marketplace and these dates reopen.",
+      "customer": "The guest is notified, with the reason you write below.",
+      "money": "Any reservation payment the guest has made is refunded in full.",
+      "metrics": "This cancellation counts against your accepted-and-kept rate.",
+      "metricsHintLabel": "Effect on your public metrics",
+      "metricsHint": "A trip you accepted and then cancelled is taken back out of the accepted-and-kept rate shown on your public page. Declining a request within the deadline does not cost you that way — it simply does not count as accepting. A guest who does not pay, or who cancels, does not affect you at all."
+    },
+    "categoryLabel": "Why are you cancelling?",
+    "categoryRequired": "Pick a reason",
+    "reasonLabel": "Message to the guest (optional)",
+    "reasonLabelRequired": "Tell the guest what happened",
+    "reasonPlaceholder": "For example: the car was in a collision this morning and is at the garage.",
+    "reasonHint": "The guest reads exactly what you write here.",
+    "reasonRequired": "Choosing “Other reason” means writing it out for the guest",
+    "confirm": "Cancel trip",
+    "success": "Trip cancelled and the dates released",
+    "raceLost": "The guest has just paid, so this is now a booking — it can no longer be cancelled from here. Open the booking to continue.",
+    "notAllowed": "This trip is no longer at a stage you can cancel from the request inbox."
   }
 }

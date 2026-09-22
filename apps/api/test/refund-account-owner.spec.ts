@@ -11,6 +11,7 @@ import {
   WALLET_OWNER_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
+import { CancellationsService } from '../src/modules/cancellations/cancellations.service';
 import { BankAccountsService } from '../src/modules/bank-accounts/bank-accounts.service';
 import { CustomerTripsService } from '../src/modules/customer-trips/customer-trips.service';
 import { HoldSettlementService } from '../src/modules/holds/hold-settlement.service';
@@ -91,6 +92,7 @@ const trips = new CustomerTripsService(
   bankAccounts,
   notifications,
   audit,
+  new CancellationsService(),
 );
 
 let dbAvailable = false;

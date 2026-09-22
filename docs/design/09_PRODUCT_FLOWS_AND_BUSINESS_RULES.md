@@ -265,11 +265,12 @@ Trong ngôn ngữ sản phẩm, **“đặt xe thành công”** là mốc chủ
 
 ### 6.3 Cửa sổ thanh toán và giữ lịch
 
-- Sau khi yêu cầu được chấp nhận, xe được tạm giữ lịch tối đa **2 giờ**.
-- Giờ thứ nhất hiển thị countdown 60 phút để thúc đẩy thanh toán.
-- Nếu chưa thanh toán, hệ thống chuyển sang countdown gia hạn thêm 60 phút.
-- Hết tổng cộng 2 giờ vẫn chưa thanh toán: tự động hủy, mở lại lịch và thông báo cho khách lẫn chủ xe.
+- Sau khi yêu cầu được chấp nhận, xe được tạm giữ lịch tối đa **2 giờ** (ADR 0044).
+- Đồng hồ hiển thị thành hai chặng 60 phút; ranh giới giữa hai chặng là mốc hệ thống nhắc lần thứ nhất.
+- Hệ thống nhắc khách ở mốc còn **60 phút** và còn **15 phút**. KHÔNG có gia hạn: hết hạn là hết, để đồng hồ nói đúng thời điểm chiếc xe quay lại chợ.
+- Hết 2 giờ vẫn chưa đủ tiền: tự động hủy, mở lại lịch và thông báo cho khách lẫn chủ xe. Phần đã chuyển dở được hoàn.
 - Auto-cancel do chưa trả tiền không phát sinh phí hủy.
+- Giờ nhận xe quá gần để kịp thu (phần cửa sổ còn lại dưới 15 phút): không phát QR, lượt duyệt trả `HOLD_WINDOW_TOO_SHORT` và chuyến đi đường thoả thuận trực tiếp.
 
 ### 6.4 Mở thông tin liên hệ
 

@@ -245,8 +245,16 @@ describe('Public shop page (/shops/[slug])', () => {
     expect(shop.serviceProvinceNames).toEqual([PROV_NAME]);
     expect(shop.branchCount).toBe(1);
     expect(shop.completedTripCount).toBe(0);
-    // Chưa có yêu cầu thuê nào tới hạn quyết ⇒ null, KHÔNG phải 0%.
-    expect(shop.responseRatePercent).toBeNull();
+    /*
+     * Chưa có yêu cầu thuê nào tới hạn quyết ⇒ ba chỉ số đều `null` và `sampleCount = 0`
+     * (ADR 0045 điều 2). `null` KHÔNG phải 0%: "chưa ai hỏi" và "hỏi mà không trả lời" là hai
+     * điều hoàn toàn khác nhau với người đang cân nhắc thuê xe.
+     */
+    expect(shop.metrics.sampleCount).toBe(0);
+    expect(shop.metrics.responseRatePercent).toBeNull();
+    expect(shop.metrics.acceptKeepRatePercent).toBeNull();
+    expect(shop.metrics.responseMinutesMedian).toBeNull();
+    expect(shop.metrics.instantBook).toBe(false);
     expect(shop.deliveryAvailable).toBe(false);
     expect(new Date(shop.joinedAt).getTime()).toBeGreaterThan(0);
   });

@@ -33,6 +33,35 @@ export const NOTIFICATION_TYPE = {
    */
   BOOKING_REQUEST_EXPIRED: 'booking_request_expired',
   /**
+   * Khung giờ đã thuộc về khách khác — gửi cho KHÁCH bị đóng yêu cầu (ADR 0044 điều 6).
+   *
+   * Loại riêng chứ không mượn `BOOKING_REQUEST_REJECTED`: không ai từ chối người này, và câu
+   * "chủ xe từ chối bạn" sẽ khiến họ đi hỏi lại chủ xe thay vì làm điều duy nhất còn tác dụng —
+   * chọn xe khác hoặc đổi khung giờ. Cũng không mượn `BOOKING_REQUEST_EXPIRED`: gian hàng ĐÃ trả
+   * lời, chỉ là trả lời cho người hỏi trước.
+   */
+  BOOKING_REQUEST_SLOT_TAKEN: 'booking_request_slot_taken',
+  /**
+   * Khung giờ TRỐNG LẠI — gửi cho khách từng bị đóng yêu cầu bằng `slot_taken` (ADR 0044).
+   *
+   * Người thắng không trả tiền đúng hạn, chỗ được nhả, và những người hỏi trước đó là nhóm duy
+   * nhất ta biết chắc là còn quan tâm. Yêu cầu cũ của họ **không tự sống lại** (nó đã đóng, và
+   * hồi sinh một bản ghi đã chốt là cách nhanh nhất để có hai chỗ cho một khung giờ) — tin này
+   * chỉ mở đường cho họ ĐẶT LẠI.
+   *
+   * Idempotent bằng cột claim `slot_reopened_notified_at`: một chiếc xe có thể hết hạn nhiều
+   * lượt giữ chỗ trong một ngày, và một khách không được nhận cùng một lời mời bốn lần.
+   */
+  BOOKING_REQUEST_SLOT_REOPENED: 'booking_request_slot_reopened',
+  /**
+   * Gian hàng RÚT LẠI một chuyến đã nhận (ADR 0044 điều 7) — gửi cho KHÁCH.
+   *
+   * Loại riêng chứ không mượn `BOOKING_REQUEST_REJECTED`: khách đã được báo chuyến của họ được
+   * chấp nhận, có thể đã chuyển tiền, và có thể đang trên đường ra điểm nhận xe. Một tin "yêu
+   * cầu bị từ chối" ở thời điểm đó không khớp với bất cứ điều gì họ đang thấy trên màn hình.
+   */
+  BOOKING_CANCELLED_BY_HOST: 'booking_cancelled_by_host',
+  /**
    * Hệ thống TỰ ĐỘNG nhận một yêu cầu theo thiết lập của chủ xe (08/09/2026) — gửi cho gian
    * hàng. Loại riêng, không mượn `BOOKING_REQUEST_SUBMITTED`: người trực không phải bấm duyệt gì,
    * và không được nhận "có yêu cầu mới" rồi ngay sau đó "đã duyệt".
@@ -83,10 +112,11 @@ export const NOTIFICATION_TYPE = {
   /** Tiền giữ chỗ đã về, đơn đã tạo — cả hai bên. Webhook phát. */
   HOLD_PAID: 'hold_paid',
   /**
-   * Sắp hết hạn chuyển giữ chỗ — KHÁCH. Worker phát một lần ở giữa cửa sổ.
+   * Sắp hết hạn chuyển tiền giữ chỗ — KHÁCH. Worker phát ở HAI mốc trong cửa sổ
+   * (`HOLD_PAYMENT_REMINDER_REMAINING_MINUTES`: còn 60 phút, rồi còn 15 phút).
    *
-   * Có loại riêng vì cửa sổ chỉ còn 2 giờ (ADR 0032 điều 2): rút ngắn hạn mà không gọi khách
-   * là biến một luồng "quay lại lúc rảnh" thành một cái bẫy huỷ đơn.
+   * Có loại riêng vì cửa sổ chỉ dài 2 giờ (ADR 0032 điều 2 · ADR 0044 điều 3): một cửa sổ có
+   * hạn mà không gọi khách là biến luồng "quay lại lúc rảnh" thành một cái bẫy mất chỗ.
    */
   HOLD_EXPIRING: 'hold_expiring',
   /** Quá hạn chuyển giữ chỗ, chỗ đã nhả — cả hai bên. Worker phát. */
@@ -101,6 +131,16 @@ export const NOTIFICATION_TYPE = {
   HOLD_REFUNDED: 'hold_refunded',
   /** Admin đã chuyển trả khoản giữ chỗ — khách. */
   HOLD_REFUND_PAID: 'hold_refund_paid',
+
+  /**
+   * MÃ KHUYẾN MÃI không còn áp được lúc CHỐT GIÁ — KHÁCH (ADR 0046 điều 7).
+   *
+   * Loại riêng, và nó tồn tại vì một luật sản phẩm: không được âm thầm bỏ mã rồi tăng số tiền
+   * khách phải trả. Lượt duyệt vẫn đi tiếp (chặn nó là phạt gian hàng cho một chi tiết
+   * marketing), nhưng khách phải BIẾT trước khi quét mã QR — và họ luôn còn thời gian, vì
+   * ADR 0044 đặt việc thu tiền SAU lượt duyệt.
+   */
+  PROMO_CODE_DROPPED: 'promo_code_dropped',
 
   // Hồ sơ người bán (R3)
   SELLER_PROFILE_VERIFIED: 'seller_profile_verified',
@@ -198,6 +238,18 @@ export const NOTIFICATION_TYPE_META: Readonly<Record<NotificationType, Notificat
     label: 'Yêu cầu sắp hết hạn',
     color: STATUS_COLOR.WARNING,
   },
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_SLOT_TAKEN]: {
+    label: 'Xe đã có khách khác',
+    color: STATUS_COLOR.NEUTRAL,
+  },
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_SLOT_REOPENED]: {
+    label: 'Xe đã trống lại',
+    color: STATUS_COLOR.INFO,
+  },
+  [NOTIFICATION_TYPE.BOOKING_CANCELLED_BY_HOST]: {
+    label: 'Gian hàng đã huỷ chuyến',
+    color: STATUS_COLOR.DANGER,
+  },
   [NOTIFICATION_TYPE.BOOKING_AUTO_ACCEPTED]: {
     label: 'Tự động nhận chuyến',
     color: STATUS_COLOR.SUCCESS,
@@ -255,6 +307,10 @@ export const NOTIFICATION_TYPE_META: Readonly<Record<NotificationType, Notificat
     color: STATUS_COLOR.NEUTRAL,
   },
   [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: { label: 'Đã hoàn giữ chỗ', color: STATUS_COLOR.SUCCESS },
+  [NOTIFICATION_TYPE.PROMO_CODE_DROPPED]: {
+    label: 'Mã khuyến mãi không còn áp dụng',
+    color: STATUS_COLOR.WARNING,
+  },
   // R3 — hồ sơ người bán
   [NOTIFICATION_TYPE.SELLER_PROFILE_VERIFIED]: {
     label: 'Hồ sơ đã xác minh',

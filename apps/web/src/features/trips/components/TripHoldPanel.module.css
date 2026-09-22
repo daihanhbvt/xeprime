@@ -41,6 +41,59 @@
   }
 }
 
+/*
+ * HERO — số tiền và đồng hồ. Đây là hai thứ duy nhất khách phải nắm trước khi làm việc gì khác,
+ * nên chúng đứng trên cùng và to hơn hẳn phần còn lại của khối.
+ */
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.headLabel {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: 13px;
+}
+
+/*
+ * `tabular-nums`: con số này đứng ngay trên một đồng hồ đang chạy, và hai khối số nhảy chiều
+ * rộng cạnh nhau làm cả cụm rung.
+ */
+.headAmount {
+  margin: 0;
+  color: var(--xp-color-price);
+  font-size: 28px;
+  font-weight: var(--xp-font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+/*
+ * Chỗ của QR khi không dựng được nó — ảnh hỏng, hoặc nhóm SEPAY_* chưa khai.
+ *
+ * Giữ nguyên bề ngang của ảnh QR để bố cục không nhảy, nhưng nói THẲNG chuyện gì đang xảy ra và
+ * chỉ sang cột thông tin bên phải. Một khung trắng im lặng là chỗ khách bỏ cuộc.
+ */
+.qrFallback {
+  display: flex;
+  align-items: center;
+  width: 220px;
+  max-width: 100%;
+  min-height: 140px;
+  padding: var(--xp-space-md);
+  border: 1px dashed var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius);
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: 13px;
+  line-height: var(--xp-line-height);
+}
+
 /* Khung QR + chú thích đứng thành một cụm, viền bao cả hai. */
 .qrWrap {
   display: flex;

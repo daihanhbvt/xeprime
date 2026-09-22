@@ -83,6 +83,7 @@ const handlers = {
   onOpenDetail: vi.fn(),
   onOpenVehicle: vi.fn(),
   onOpenCustomer: vi.fn(),
+  onCancel: vi.fn(),
 };
 
 function renderCard(item: BookingRequestItem = request(), canApprove = true) {

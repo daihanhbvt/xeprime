@@ -330,8 +330,8 @@ describe('ca 2 — đăng xuất rồi đặt bằng OTP với CÙNG số điệ
 describe('ca 3 — tài khoản khách thuê KHÁC với số điện thoại khác: được đặt', () => {
   maybe('khách thuê thuần đặt xe của gian hàng gói ⇒ QUA', async () => {
     const receipt = await submit(shopVehicleId, '0900000009', renterId);
-    // Qua cổng tài khoản ⇒ giữ được chỗ ngay (ADR 0039): `awaiting_hold`, không phải chờ duyệt.
-    expect(receipt.receipt.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    // Qua cổng tài khoản ⇒ yêu cầu vào hàng chờ duyệt (ADR 0044): chưa ai nhận thì chưa thu tiền.
+    expect(receipt.receipt.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
   });
 
   maybe('khách vãng lai SĐT hoàn toàn mới ⇒ QUA và được cấp phiên', async () => {
@@ -339,7 +339,7 @@ describe('ca 3 — tài khoản khách thuê KHÁC với số điện thoại kh
       pickupAt: vnAt(6, 9).toISOString(),
       returnAt: vnAt(7, 9).toISOString(),
     });
-    expect(result.receipt.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    expect(result.receipt.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
     expect(result.loginUserId).toBeTruthy();
   });
 
@@ -349,7 +349,7 @@ describe('ca 3 — tài khoản khách thuê KHÁC với số điện thoại kh
       pickupAt: vnAt(9, 9).toISOString(),
       returnAt: vnAt(10, 9).toISOString(),
     });
-    expect(receipt.receipt.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    expect(receipt.receipt.status).toBe(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL);
   });
 });
 

@@ -4,6 +4,8 @@ import { memo, useCallback } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
+  canHostCancelTrip,
+  canHostDecideTrip,
   CUSTOMER_TRIP_STAGE_META,
   SERVICE_TYPE,
   STATUS_COLOR,
@@ -40,6 +42,8 @@ interface TripCardProps {
   decisions?: {
     onApprove: (trip: CustomerTrip) => void;
     onReject: (trip: CustomerTrip) => void;
+    /** HUỶ một chuyến ĐÃ NHẬN (ADR 0045 điều 1) — chỉ có ở `awaiting_hold`. */
+    onCancel: (trip: CustomerTrip) => void;
   };
 }
 
@@ -68,8 +72,18 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
   const domainLabel = useDomainLabel();
   const meta = CUSTOMER_TRIP_STAGE_META[trip.stage as CustomerTripStage];
   const isHost = (trip.role as TripRole) === TRIP_ROLE.HOST;
-  /* Chỉ chuyến của CHỦ XE còn chờ chính họ trả lời mới có gì để quyết định. */
-  const canDecide = Boolean(decisions && isHost && trip.respondBy);
+  /*
+   * Chặng nào chủ xe còn một nút để bấm — đọc từ `stage`, KHÔNG đọc `respondBy`.
+   *
+   * Từ ADR 0044, `respondBy` vẫn còn nguyên SAU khi chủ xe đã nhận chuyến, nên hỏi nó là bày
+   * nút "Duyệt" cho một chuyến họ vừa duyệt — và cú bấm đó chỉ trả về một lỗi khó hiểu.
+   *
+   * Hai chặng, hai bộ nút: còn chờ quyết ⇒ Duyệt/Từ chối; đã nhận và đang chờ khách trả tiền ⇒
+   * chỉ còn một lối thoát là HUỶ (ADR 0045 điều 1).
+   */
+  const stage = trip.stage as CustomerTripStage;
+  const canDecide = Boolean(decisions && isHost && canHostDecideTrip(stage));
+  const cancelOnly = canHostCancelTrip(stage);
 
   /*
    * MỘT hàm mở cho cả thẻ lẫn mũi tên. Viết `() => onPress(trip)` hai chỗ là hai closure mới ở
@@ -127,7 +141,14 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
                 size="sm"
               />
               {/* Hạn trả lời chỉ có nghĩa với người PHẢI trả lời — khách nhìn nó không làm gì được. */}
-              {isHost && trip.respondBy ? <RespondDeadline respondBy={trip.respondBy} /> : null}
+              {/*
+                Đồng hồ hạn phản hồi CHỈ có nghĩa khi chủ xe còn phải trả lời. Sau khi họ đã
+                nhận, mốc đang chạy là hạn THANH TOÁN của khách — một đồng hồ khác, của người
+                khác, và hiện nhầm nó ở đây là giục chủ xe cho một việc không phải của họ.
+              */}
+              {isHost && !cancelOnly && trip.respondBy ? (
+                <RespondDeadline respondBy={trip.respondBy} />
+              ) : null}
             </XStack>
 
             {/* Tên xe là NHÂN VẬT CHÍNH: cùng cỡ với dòng "Chủ xe" thì phải đọc mới biết đâu là xe. */}
@@ -208,25 +229,35 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
           chuyến còn chờ CHÍNH người đang xem trả lời.
         */}
         {canDecide && decisions ? (
-          <XStack gap={space.sm}>
-            <YStack f={1}>
-              <Button
-                label={t('card.reject')}
-                variant="secondary"
-                size="sm"
-                icon="close-circle-outline"
-                onPress={() => decisions.onReject(trip)}
-              />
-            </YStack>
-            <YStack f={1}>
-              <Button
-                label={t('card.approve')}
-                size="sm"
-                icon="checkmark-circle-outline"
-                onPress={() => decisions.onApprove(trip)}
-              />
-            </YStack>
-          </XStack>
+          cancelOnly ? (
+            <Button
+              label={t('card.cancel')}
+              variant="danger"
+              size="sm"
+              icon="close-circle-outline"
+              onPress={() => decisions.onCancel(trip)}
+            />
+          ) : (
+            <XStack gap={space.sm}>
+              <YStack f={1}>
+                <Button
+                  label={t('card.reject')}
+                  variant="secondary"
+                  size="sm"
+                  icon="close-circle-outline"
+                  onPress={() => decisions.onReject(trip)}
+                />
+              </YStack>
+              <YStack f={1}>
+                <Button
+                  label={t('card.approve')}
+                  size="sm"
+                  icon="checkmark-circle-outline"
+                  onPress={() => decisions.onApprove(trip)}
+                />
+              </YStack>
+            </XStack>
+          )
         ) : null}
         </YStack>
       </XStack>

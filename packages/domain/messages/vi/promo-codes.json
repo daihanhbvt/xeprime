@@ -1,0 +1,238 @@
+{
+  "field": {
+    "label": "Mã khuyến mãi",
+    "placeholder": "Nhập mã khuyến mãi",
+    "apply": "Áp dụng",
+    "remove": "Bỏ mã",
+    "removeLabel": "Bỏ mã khuyến mãi đang áp dụng",
+    "checking": "Đang kiểm tra mã…",
+    "browse": "Xem mã khả dụng",
+    "hint": "Mã do XePrime tài trợ. Số giảm trừ vào phần bạn thanh toán trước, không ảnh hưởng tiền chủ xe nhận.",
+    "hintLabel": "Giải thích về mã khuyến mãi",
+    "applied": "Đã áp dụng mã {code}",
+    "clamped": "Mã giảm tối đa {amount} cho chuyến này.",
+    "unavailableForTrip": "Chuyến này chưa chốt giá nên chưa áp được mã khuyến mãi.",
+    "revalidating": "Điều kiện thuê vừa đổi — đang kiểm tra lại mã…",
+    "dropped": "Mã {code} không còn áp dụng được cho chuyến đã đổi. Tổng tiền đã được cập nhật."
+  },
+  "picker": {
+    "title": "Mã khuyến mãi",
+    "manualLabel": "Nhập mã khuyến mãi",
+    "listTitle": "Mã khả dụng",
+    "empty": "Chưa có mã khuyến mãi nào cho chuyến này.",
+    "error": "Không tải được danh sách mã. Bạn vẫn có thể nhập mã bằng tay.",
+    "apply": "Áp dụng",
+    "applied": "Đang dùng",
+    "close": "Đóng",
+    "minOrder": "Đơn tối thiểu {amount}",
+    "maxDiscount": "Tối đa {amount}",
+    "expiresIn": "Hết hạn sau {days} ngày",
+    "expiresToday": "Hết hạn hôm nay",
+    "discountFixed": "Giảm {amount}",
+    "discountPercent": "Giảm {percent}%",
+    "savesAmount": "Tiết kiệm {amount}"
+  },
+  "reason": {
+    "not_found": "Mã khuyến mãi không tồn tại",
+    "disabled": "Mã khuyến mãi đã tạm dừng",
+    "not_started": "Mã chưa tới ngày áp dụng",
+    "expired": "Mã đã hết hạn",
+    "exhausted": "Mã đã hết lượt sử dụng",
+    "customer_limit_reached": "Bạn đã dùng hết lượt của mã này",
+    "audience_mismatch": "Mã chỉ áp dụng cho khách hàng mới",
+    "min_order_not_met": "Chuyến chưa đạt giá trị tối thiểu của mã",
+    "vehicle_scope_mismatch": "Mã không áp dụng cho loại xe này",
+    "service_scope_mismatch": "Mã không áp dụng cho dịch vụ này",
+    "province_mismatch": "Mã không áp dụng ở khu vực này",
+    "no_online_payment": "Chuyến này không thu trước nên chưa áp được mã",
+    "discount_below_floor": "Chuyến này quá nhỏ để áp mã",
+    "requires_identity": "Xác thực số điện thoại ở bước sau để áp mã này"
+  },
+  "admin": {
+    "title": "Mã khuyến mãi",
+    "subtitle": "Tạo, quản lý và theo dõi các mã khuyến mãi cho thuê xe.",
+    "create": "Tạo mã khuyến mãi",
+    "stats": {
+      "total": "Tổng mã",
+      "totalDelta": "{count} mã mới trong 30 ngày",
+      "active": "Đang hoạt động",
+      "endingSoon": "Sắp hết hạn",
+      "endingSoonHint": "Trong {days} ngày tới",
+      "expired": "Đã hết hạn"
+    },
+    "filter": {
+      "search": "Tìm mã, tên chương trình…",
+      "discountType": "Loại giảm giá",
+      "state": "Trạng thái",
+      "dateRange": "Thời gian áp dụng",
+      "all": "Tất cả",
+      "reset": "Đặt lại"
+    },
+    "pagination": {
+      "codes": "{count} mã",
+      "redemptions": "{count} lượt"
+    },
+    "column": {
+      "code": "Mã khuyến mãi",
+      "name": "Tên chương trình",
+      "discountType": "Loại giảm giá",
+      "value": "Giá trị",
+      "conditions": "Điều kiện áp dụng",
+      "window": "Thời gian áp dụng",
+      "usage": "Đã dùng",
+      "state": "Trạng thái",
+      "sponsored": "Đã tài trợ",
+      "actions": "Thao tác"
+    },
+    "value": {
+      "fixed": "{amount}",
+      "percent": "{percent}%",
+      "maxDiscount": "Tối đa {amount}",
+      "unlimited": "Không giới hạn"
+    },
+    "conditions": {
+      "minOrder": "Đơn tối thiểu {amount}",
+      "noMinOrder": "Không yêu cầu",
+      "newCustomer": "Khách hàng mới",
+      "vehicleScope": "Chỉ {scope}",
+      "serviceScope": "Dịch vụ: {list}",
+      "provinces": "{count} tỉnh/thành",
+      "allProvinces": "Toàn quốc",
+      "perCustomer": "{count} lượt/khách"
+    },
+    "usage": {
+      "value": "{used} / {limit}",
+      "unlimited": "{used} / không giới hạn",
+      "reserved": "{count} đang giữ"
+    },
+    "action": {
+      "edit": "Sửa",
+      "duplicate": "Nhân bản",
+      "enable": "Bật mã",
+      "disable": "Tạm dừng",
+      "redemptions": "Xem lượt sử dụng",
+      "delete": "Xoá mã"
+    },
+    "empty": {
+      "title": "Chưa có mã khuyến mãi nào",
+      "hint": "Tạo mã đầu tiên để chạy chương trình ưu đãi cho khách thuê."
+    },
+    "emptyFiltered": "Không có mã nào khớp bộ lọc.",
+    "error": "Không tải được danh sách mã khuyến mãi.",
+    "confirm": {
+      "disableTitle": "Tạm dừng mã {code}?",
+      "disableBody": "Khách sẽ không áp được mã này cho chuyến mới. Lượt đã giữ vẫn được tôn trọng tới khi yêu cầu kết thúc.",
+      "enableTitle": "Bật lại mã {code}?",
+      "enableBody": "Mã sẽ có hiệu lực trong khoảng thời gian đã cấu hình.",
+      "deleteTitle": "Xoá mã {code}?",
+      "deleteBody": "Mã bị ẩn khỏi mọi bề mặt và không áp được nữa. Lịch sử lượt dùng và giá của những đơn đã dùng mã vẫn giữ nguyên.",
+      "ok": "Xác nhận",
+      "cancel": "Huỷ"
+    },
+    "toast": {
+      "created": "Đã tạo mã {code}",
+      "updated": "Đã lưu mã {code}",
+      "enabled": "Đã bật mã {code}",
+      "disabled": "Đã tạm dừng mã {code}",
+      "duplicated": "Đã tạo bản sao {code} — đang tắt, hãy soát lại rồi bật",
+      "deleted": "Đã xoá mã {code}"
+    },
+    "form": {
+      "createTitle": "Tạo mã khuyến mãi",
+      "editTitle": "Sửa mã {code}",
+      "description": "Tạo mã giảm giá cho dịch vụ thuê xe. Các trường có dấu * là bắt buộc.",
+      "section": {
+        "basic": "Thông tin cơ bản",
+        "discount": "Hình thức giảm giá",
+        "conditions": "Điều kiện áp dụng",
+        "window": "Thời gian hiệu lực",
+        "state": "Trạng thái"
+      },
+      "code": "Mã khuyến mãi",
+      "codeHint": "Chỉ chữ in hoa và số. Ví dụ: BANMOI, XEPRIME30",
+      "name": "Tên chương trình",
+      "descriptionField": "Mô tả",
+      "descriptionHint": "Câu này hiện cho khách trong danh sách mã khả dụng.",
+      "typeFixed": "Giảm tiền (VND)",
+      "typeFixedHint": "Giảm một số tiền cố định",
+      "typePercent": "Giảm theo %",
+      "typePercentHint": "Giảm theo phần trăm tiền thuê",
+      "discountAmount": "Số tiền giảm",
+      "discountPercent": "Phần trăm giảm",
+      "maxDiscount": "Giảm tối đa (nếu có)",
+      "maxDiscountPlaceholder": "Không giới hạn",
+      "minOrder": "Đơn tối thiểu",
+      "minOrderPlaceholder": "Không yêu cầu",
+      "vehicleScope": "Áp dụng cho",
+      "serviceScope": "Dịch vụ áp dụng",
+      "serviceScopeAll": "Tất cả dịch vụ",
+      "audience": "Đối tượng khách hàng",
+      "provinces": "Khu vực áp dụng",
+      "provincesAll": "Tất cả tỉnh/thành",
+      "totalLimit": "Tổng lượt dùng",
+      "totalLimitPlaceholder": "Không giới hạn",
+      "perCustomerLimit": "Giới hạn mỗi khách",
+      "perCustomerLimitPlaceholder": "Không giới hạn",
+      "startsAt": "Ngày bắt đầu",
+      "endsAt": "Ngày kết thúc",
+      "isActive": "Kích hoạt ngay",
+      "isActiveHint": "Mã sẽ có hiệu lực trong thời gian đã chọn",
+      "listed": "Hiện trong danh sách mã của khách",
+      "listedHint": "Tắt để mã chỉ dùng được khi khách gõ tay",
+      "submitCreate": "Tạo mã khuyến mãi",
+      "submitEdit": "Lưu thay đổi",
+      "cancel": "Huỷ",
+      "lockedNotice": "Mã đã phát sinh lượt sử dụng. Mức giảm, điều kiện và phạm vi không sửa được nữa — dùng Nhân bản nếu cần bộ điều kiện khác.",
+      "redeemedFinalNotice": "Đơn đã hình thành rồi bị huỷ KHÔNG hoàn lại lượt dùng mã.",
+      "preview": {
+        "title": "Xem trước mã khuyến mãi",
+        "subtitle": "Đây là cách mã sẽ hiển thị với người dùng",
+        "scopeAll": "Áp dụng cho tất cả xe",
+        "scopeCar": "Áp dụng cho ô tô",
+        "scopeMotorbike": "Áp dụng cho xe máy",
+        "window": "Từ {from} đến {to}",
+        "notesTitle": "Một số lưu ý",
+        "noteType": "Mã khuyến mãi có thể áp dụng theo số tiền hoặc theo phần trăm.",
+        "noteLimit": "Bạn có thể giới hạn số lượt sử dụng và điều kiện áp dụng.",
+        "noteVisibility": "Mã chỉ hiển thị với người dùng khi còn hiệu lực.",
+        "noteToggle": "Có thể tạm dừng hoặc xoá mã bất kỳ lúc nào.",
+        "noteSponsored": "Số giảm do XePrime tài trợ — gian hàng vẫn nhận đủ tiền thuê."
+      }
+    },
+    "validation": {
+      "codeRequired": "Nhập mã khuyến mãi",
+      "codeFormat": "Mã chỉ gồm chữ và số, {min}–{max} ký tự",
+      "nameRequired": "Nhập tên chương trình",
+      "amountRequired": "Nhập số tiền giảm",
+      "amountRange": "Số tiền giảm phải lớn hơn 0 và không quá {max}",
+      "percentRange": "Phần trăm giảm phải từ {min} đến {max}",
+      "maxDiscountPositive": "Giảm tối đa phải lớn hơn 0",
+      "minOrderPositive": "Đơn tối thiểu không được âm",
+      "startRequired": "Chọn ngày bắt đầu",
+      "endRequired": "Chọn ngày kết thúc",
+      "endAfterStart": "Ngày kết thúc phải sau ngày bắt đầu",
+      "limitMin": "Giới hạn lượt phải từ 1 trở lên"
+    },
+    "redemptions": {
+      "title": "Lượt sử dụng mã {code}",
+      "empty": "Mã này chưa có lượt sử dụng nào.",
+      "column": {
+        "customer": "Khách hàng",
+        "status": "Trạng thái",
+        "discount": "Số giảm",
+        "booking": "Đơn thuê",
+        "reservedAt": "Giữ lượt",
+        "redeemedAt": "Đã dùng"
+      },
+      "noBooking": "Chưa có đơn",
+      "releaseReason": {
+        "request_rejected": "Gian hàng từ chối",
+        "request_expired": "Quá hạn phản hồi",
+        "request_cancelled": "Khách huỷ",
+        "slot_taken": "Khung giờ đã có khách khác",
+        "hold_expired": "Không thanh toán đúng hạn",
+        "no_longer_eligible": "Hết đủ điều kiện khi chốt giá"
+      }
+    }
+  }
+}

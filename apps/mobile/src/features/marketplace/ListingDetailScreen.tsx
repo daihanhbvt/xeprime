@@ -45,6 +45,7 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useListing, useListingReviews } from './hooks/use-marketplace-data';
 import type { PublicListingDetail } from './api';
 import { FeatureChip } from './components/FeatureChip';
+import { HostMetrics } from './components/HostMetrics';
 import { ServiceSelector } from './components/ServiceSelector';
 
 /**
@@ -597,6 +598,12 @@ function DetailBody({
                   {listing.shopBio}
                 </Text>
               ) : null}
+              {/*
+                Ba chỉ số uy tín (ADR 0045 điều 3) nằm ĐÚNG ở đây — trong thẻ chủ xe, cùng chỗ
+                với bản web. Đây là giây người đọc quyết định có gửi yêu cầu cho một người lạ
+                hay không, và "họ có trả lời không" là câu hỏi họ đang hỏi.
+              */}
+              <HostMetrics metrics={listing.shopMetrics} />
             </YStack>
           </XStack>
         </Card>

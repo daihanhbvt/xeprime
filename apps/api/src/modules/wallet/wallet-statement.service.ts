@@ -1,15 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
 import {
-  BOOKING_REQUEST_STATUS_ANSWERED,
-  BOOKING_REQUEST_STATUS_RESPONSE_RATE,
-  BOOKING_REQUEST_STATUS_UNANSWERED,
   BOOKING_STATUS,
   REVIEW_STATUS,
   SUBSCRIPTION_INVOICE_STATUS,
   WALLET_STATEMENT_UNIT,
   isTaxPeriodKey,
-  responseRatePercent,
   taxPeriodKeyVn,
   taxPeriodRangeVn,
   type BookingPriceSnapshot,
@@ -18,6 +14,7 @@ import {
 } from '@xeprime/types';
 import { resolvePaging } from '../../common/pagination';
 import { PrismaService } from '../../prisma/prisma.service';
+import { HostMetricsService } from '../host-metrics/host-metrics.service';
 import {
   STATEMENT_DEFAULT_LIMIT,
   STATEMENT_MAX_LIMIT,
@@ -76,6 +73,8 @@ export class WalletStatementService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly wallet: WalletService,
+    /** Tỉ lệ phản hồi / nhận chuyến — nguồn tính DUY NHẤT (ADR 0045 điều 2). */
+    private readonly hostMetrics: HostMetricsService,
   ) {}
 
   /** Kỳ hiện tại theo giờ Việt Nam — mặc định khi client không gửi `period`. */
@@ -173,7 +172,7 @@ export class WalletStatementService {
     start: Date,
     end: Date,
   ): Promise<Omit<WalletStatementStatsDto, 'completedTripCount'>> {
-    const [reviews, requestsByStatus] = await Promise.all([
+    const [reviews, metrics] = await Promise.all([
       this.prisma.review.aggregate({
         where: {
           tenantId,
@@ -184,20 +183,20 @@ export class WalletStatementService {
         _avg: { rating: true },
         _count: { _all: true },
       }),
-      this.prisma.bookingRequest.groupBy({
-        by: ['status'],
-        where: {
-          tenantId,
-          status: { in: [...BOOKING_REQUEST_STATUS_RESPONSE_RATE] },
-          createdAt: { gte: start, lt: end },
-        },
-        _count: { _all: true },
-      }),
+      /*
+       * Tỉ lệ phản hồi đi qua CÙNG nguồn với trang công khai (ADR 0045 điều 2) — chỉ khác hai
+       * tham số TRÌNH BÀY, còn phép phân loại thì y hệt. Trước đợt này hai nơi tự cộng lấy hai
+       * bộ mảng trạng thái và đã bắt đầu trôi khỏi nhau; một gian hàng đọc hai con số khác nhau
+       * về chính mình thì không tin con số nào nữa.
+       *
+       *   · CỬA SỔ — đúng kỳ của bảng này, không phải 90 ngày. Một con số 90 ngày đứng giữa
+       *     những con số của tháng 4 là thứ không ai đọc đúng được.
+       *   · NGƯỠNG — hạ về 1. Ngưỡng `HOST_METRIC_MIN_SAMPLES` bảo vệ người LẠ khỏi kết luận từ
+       *     một lần tung đồng xu; chủ xe đọc tháng của CHÍNH MÌNH đã sống qua cả ba yêu cầu đó,
+       *     và bảng in `responseSampleCount` ngay cạnh. Giấu "2/3" khỏi họ không bảo vệ ai.
+       */
+      this.hostMetrics.forTenant(tenantId, { since: start, until: end, minSamples: 1 }),
     ]);
-
-    const countBy = new Map(requestsByStatus.map((row) => [row.status, row._count._all]));
-    const sumOf = (statuses: readonly string[]): number =>
-      statuses.reduce((sum, status) => sum + (countBy.get(status) ?? 0), 0);
 
     const ratingCount = reviews._count._all;
     return {
@@ -207,10 +206,9 @@ export class WalletStatementService {
           ? null
           : Math.round(reviews._avg.rating * 10) / 10,
       ratingCount,
-      responseRatePercent: responseRatePercent(
-        sumOf(BOOKING_REQUEST_STATUS_ANSWERED),
-        sumOf(BOOKING_REQUEST_STATUS_UNANSWERED),
-      ),
+      responseRatePercent: metrics.responseRatePercent,
+      responseSampleCount: metrics.sampleCount,
+      acceptKeepRatePercent: metrics.acceptKeepRatePercent,
     };
   }
 

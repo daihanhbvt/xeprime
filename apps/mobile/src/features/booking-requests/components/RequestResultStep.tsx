@@ -52,11 +52,11 @@ import type { BookingRequestReceipt } from '../api';
  * lịch (ADR 0006), nhiều khách được phép cùng hỏi một xe cùng khung giờ, ai được duyệt trước
  * thì được xe. Bỏ câu này đi là để khách tưởng xe đã là của mình.
  *
- * `done` + `awaiting_hold`: **chặng thứ tư, và nó nói điều NGƯỢC LẠI** (ADR 0039 điều 1). Chỗ đã
- * được giữ, đồng hồ đang chạy, và việc tiếp theo thuộc về KHÁCH chứ không phải chủ xe. Màn này vì
- * thế đổi tiêu đề, bỏ câu "chưa giữ xe", dựng MÃ QR ngay tại đây và đổi nút chính thành đường về
- * chính chuyến đó. Nói "chủ xe sẽ phản hồi" ở chặng này là lý do khách đóng app rồi mất chuyến —
- * và mất luôn khoản tiền họ chưa kịp chuyển.
+ * `done` + `awaiting_hold`: **chặng thứ tư** — xe bật "Đặt ngay" nên hệ thống vừa NHẬN chuyến
+ * (ADR 0044 điều 2). Chỗ đã được giữ, đồng hồ đang chạy, và việc tiếp theo thuộc về KHÁCH chứ
+ * không phải chủ xe. Màn này vì thế đổi tiêu đề, bỏ câu "chưa giữ xe", dựng MÃ QR ngay tại đây và
+ * đổi nút chính thành đường về chính chuyến đó. Nói "chủ xe sẽ phản hồi" ở chặng này là lý do
+ * khách đóng app rồi mất chuyến — và mất luôn khoản tiền họ chưa kịp chuyển.
  */
 export function RequestResultStep({
   blocked,
@@ -211,8 +211,8 @@ function DoneResult({
 
             <YStack ai="center" gap={space.xs}>
               {/*
-                Ba chặng, ba câu — và chặng chờ tiền KHÔNG được nói "đã gửi yêu cầu, chủ xe sẽ
-                phản hồi": chỗ đã bị giữ, đồng hồ đang chạy, và việc tiếp theo thuộc về KHÁCH.
+                Ba chặng, ba câu. Chặng chờ tiền KHÔNG được nói "đã gửi yêu cầu, chủ xe sẽ
+                phản hồi": chuyến đã được nhận, đồng hồ đang chạy, việc tiếp theo thuộc về KHÁCH.
               */}
               <Text col={colors.text} fos={fontSize.h3} fow={fontWeight.bold} ta="center">
                 {t(awaitingHold ? 'done.heldTitle' : 'done.title')}
@@ -355,7 +355,7 @@ function DoneResult({
           )}
 
           {/*
-            MÃ QR NGAY TẠI ĐÂY — ADR 0039 điều 1.
+            MÃ QR NGAY TẠI ĐÂY — chỉ khi hệ thống vừa TỰ NHẬN chuyến (ADR 0044 điều 2).
 
             Dùng lại `TripHoldPanel` của màn chi tiết chuyến chứ không vẽ QR lần thứ hai: đó là nơi
             đã có đồng hồ đếm ngược, nút sao chép và mọi trạng thái hoàn tiền. Hai bản QR là hai

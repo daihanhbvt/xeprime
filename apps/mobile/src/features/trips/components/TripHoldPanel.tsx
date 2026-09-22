@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { useState, type ReactNode } from 'react';
 import { StyleSheet } from 'react-native';
-import { Text, YStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   BOOKING_HOLD_STATUS,
@@ -15,6 +15,7 @@ import { Card } from '@/components/ui/Card';
 import { Countdown } from '@/components/ui/Countdown';
 import { DataRow } from '@/components/ui/DataRow';
 import { IconButton } from '@/components/ui/IconButton';
+import { InfoHint } from '@/components/ui/InfoHint';
 import { useCopy } from '@/hooks/use-copy';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
@@ -37,13 +38,20 @@ const styles = StyleSheet.create({
 });
 
 /**
- * Khoản GIỮ CHỖ của một chuyến, nhìn từ phía KHÁCH (BKG-15) — bản native của `TripHoldPanel`.
+ * TIỀN GIỮ CHỖ của một chuyến đã được nhận, nhìn từ phía KHÁCH — bản native của `TripHoldPanel`.
  *
  * Panel trả lời đúng bốn câu, theo thứ tự khách cần:
  *   1. Phải chuyển bao nhiêu (và còn thiếu bao nhiêu nếu đã chuyển một phần);
- *   2. Nội dung chuyển khoản là gì — MÃ, thứ quyết định tiền khớp vào chuyến nào;
- *   3. Trước khi nào, nếu không thì chỗ được nhả;
+ *   2. Trước khi nào, và hết giờ thì sao;
+ *   3. Chuyển thế nào — MÃ là thứ quyết định tiền khớp vào chuyến nào;
  *   4. Phần còn lại trả cho ai (chủ xe, lúc nhận xe — ADR 0028 điều 7A).
+ *
+ * ⚠️ **"Tiền giữ chỗ" KHÁC "cọc thế chấp khi nhận xe"** — hai chủ, hai thời điểm, hai đường về.
+ * Dấu "i" cạnh tiêu đề nói rõ khác biệt đó (ADR 0044).
+ *
+ * **Không màn hình nào xác nhận "đã thanh toán" vì khách chạm một nút.** Nút "Tôi đã chuyển
+ * khoản" chỉ đổi cách trình bày sự chờ đợi; chuyến chỉ thành đơn khi backend đối soát xác nhận
+ * đã nhận đủ tiền.
  *
  * VietQR mang SẴN số tiền và nội dung (ADR 0016 điều 5): không bao giờ để khách tự gõ mã, vì một
  * ký tự sai là một khoản tiền không khớp được và phải chờ admin xử lý tay. Trên native còn có
@@ -71,8 +79,20 @@ export function TripHoldPanel({
   const fmt = useAppFormat();
   const copy = useCopy();
 
+  /**
+   * Khách đã chạm "Tôi đã chuyển khoản" — CHỈ là một trạng thái hiển thị.
+   *
+   * Không ghi gì lên server, không rút ngắn hạn nào. Lý do tồn tại: trên điện thoại khách rời
+   * hẳn sang app ngân hàng rồi quay lại, và thứ họ cần thấy lúc quay lại là "hệ thống đang xử
+   * lý khoản vừa chuyển" — không có nó, màn hình vẫn giục chuyển tiền và người ta chuyển lần hai.
+   */
+  const [declared, setDeclared] = useState(false);
+  /** Ảnh QR không tải được — có gì hiện nấy, không để một khung trống im lặng. */
+  const [qrFailed, setQrFailed] = useState(false);
+
   const awaiting =
     hold.status === BOOKING_HOLD_STATUS.PENDING || hold.status === BOOKING_HOLD_STATUS.UNDERPAID;
+  const underpaid = hold.status === BOOKING_HOLD_STATUS.UNDERPAID;
 
   /*
    * Cửa sổ huỷ miễn phí hẹp hơn cửa sổ trả tiền nghĩa là nó đã bị kẹp bởi giờ nhận xe — chuyến
@@ -108,19 +128,58 @@ export function TripHoldPanel({
   return (
     <Card>
       <YStack gap={space.md}>
-        <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
-          {t('title')}
-        </Text>
+        {/*
+          HERO: số tiền và đồng hồ đứng cùng một khối, to nhất màn. Đây là hai thứ duy nhất khách
+          phải nắm trước khi làm việc gì khác — đẩy chúng xuống dưới một đoạn văn là cách chắc
+          chắn để người ta bỏ lỡ hạn, và trên điện thoại thì "dưới" nghĩa là ngoài màn hình.
+        */}
+        <YStack gap={space.xs}>
+          <XStack ai="center" gap={space.xs}>
+            <Text col={colors.textMuted} fos={fontSize.bodySm}>
+              {t('title')}
+            </Text>
+            <InfoHint content={t('vsDepositHint')} label={t('vsDepositHintLabel')} />
+          </XStack>
+          <Text col={colors.price} fos={fontSize.h2} fow={fontWeight.bold}>
+            {fmt.money(hold.remainingAmount)}
+          </Text>
+          {/*
+            Đồng hồ CHẠY, không phải một dòng "hạn lúc 14:35": một mốc tuyệt đối bắt khách tự trừ
+            nhẩm đúng lúc cần hành động. Trên native điều đó nặng hơn — người dùng rời sang app
+            ngân hàng rồi quay lại, và thứ cần thấy ngay khi quay lại là "còn bao lâu".
 
-        <Callout tone={hold.status === BOOKING_HOLD_STATUS.UNDERPAID ? 'warning' : 'info'}>
-          {hold.status === BOOKING_HOLD_STATUS.UNDERPAID
-            ? t('partialIntro', { paid: fmt.money(hold.paidAmount) })
-            : t('intro')}
-        </Callout>
+            Hai chặng 60 phút: ranh giới giữa chúng chính là mốc hệ thống gửi lời nhắc, nên đồng
+            hồ và thông báo nói cùng một điều.
+          */}
+          <Countdown
+            deadline={hold.expiresAt}
+            urgentMs={HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000}
+            segmentMs={HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000}
+            labels={{
+              remaining: t('countdownRemaining'),
+              expired: t('countdownExpired'),
+              segment: (index, total) => t('countdownSegment', { index, total }),
+            }}
+          />
+        </YStack>
+
+        {/*
+          MỘT callout duy nhất, và chỉ khi có chuyện bất thường. Trạng thái bình thường ("hãy
+          chuyển khoản") đã được nói bằng chính số tiền và mã QR — thêm một dòng nữa là nói lại.
+        */}
+        {underpaid ? (
+          <Callout tone="warning">
+            {t('partialIntro', { paid: fmt.money(hold.paidAmount) })}
+          </Callout>
+        ) : declared ? (
+          <Callout tone="info" title={t('checking')}>
+            {t('checkingBody')}
+          </Callout>
+        ) : null}
 
         {summary}
 
-        {qrUrl ? (
+        {qrUrl && !qrFailed ? (
           <YStack ai="center" gap={space.xs}>
             <Image
               source={{ uri: qrUrl }}
@@ -128,13 +187,22 @@ export function TripHoldPanel({
               contentFit="contain"
               cachePolicy="memory-disk"
               accessibilityLabel={t('qrAlt')}
+              onError={() => setQrFailed(true)}
             />
             {/* Khách chưa quen chuyển khoản bằng QR sẽ đứng lại đúng ở bước này. */}
             <Text col={colors.textMuted} fos={fontSize.bodySm}>
               {t('qrCaption')}
             </Text>
           </YStack>
-        ) : null}
+        ) : (
+          /*
+            Mất QR thì nói THẲNG và chỉ xuống bảng thông tin ngay bên dưới, nơi có đủ mọi thứ để
+            chuyển tay. Một khung trắng im lặng là chỗ khách bỏ cuộc.
+          */
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            {qrUrl ? t('qrFailed') : t('qrUnavailable')}
+          </Text>
+        )}
 
         <YStack>
           {info.configured ? (
@@ -205,6 +273,7 @@ export function TripHoldPanel({
             label={t('code')}
             value={hold.code}
             strong
+            hint={<InfoHint content={t('codeHint')} label={t('codeHintLabel')} />}
             action={
               <IconButton
                 icon="copy-outline"
@@ -214,26 +283,6 @@ export function TripHoldPanel({
             }
           />
         </YStack>
-
-        {/*
-          Đồng hồ CHẠY, không phải một dòng "hạn lúc 14:35": cửa sổ chỉ còn 10 phút (ADR 0039
-          điều 2), và một mốc giờ tuyệt đối bắt khách tự trừ nhẩm đúng lúc họ cần hành động
-          nhanh. Trên native điều đó còn nặng hơn — người dùng rời app sang app ngân hàng rồi
-          quay lại, và thứ họ cần thấy ngay khi quay lại là "còn bao lâu".
-
-          `segmentMs` bằng đúng cửa sổ nên chỉ có MỘT chặng và nhãn chặng không hiện — giữ tham
-          số lại để cửa sổ dài ra là chia chặng chạy lại ngay, không phải nối lại dây.
-        */}
-        <Countdown
-          deadline={hold.expiresAt}
-          urgentMs={HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000}
-          segmentMs={HOLD_COUNTDOWN_SEGMENT_MINUTES * 60_000}
-          labels={{
-            remaining: t('countdownRemaining'),
-            expired: t('countdownExpired'),
-            segment: (index, total) => t('countdownSegment', { index, total }),
-          }}
-        />
 
         <YStack gap={space.xs}>
           <Text col={colors.warning} fos={fontSize.bodySm} fow={fontWeight.medium}>
@@ -255,6 +304,15 @@ export function TripHoldPanel({
             </Text>
           )}
         </YStack>
+
+        {/*
+          "Tôi đã chuyển khoản" KHÔNG xác nhận gì — nó chỉ chuyển màn sang trạng thái chờ đối
+          soát. Nút biến mất sau khi chạm: chạm lần hai không làm gì thêm, và một nút vô tác dụng
+          là lời mời hiểu nhầm rằng chạm nữa sẽ nhanh hơn.
+        */}
+        {declared ? null : (
+          <Button variant="secondary" label={t('declarePaid')} onPress={() => setDeclared(true)} />
+        )}
       </YStack>
     </Card>
   );
