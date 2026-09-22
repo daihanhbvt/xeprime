@@ -11,6 +11,12 @@ export type PublicShop = Schemas['PublicShopDto'];
 export type PublicDestination = Schemas['PublicDestinationDto'];
 /** Gian hàng trong danh sách công khai — "Gian hàng nổi bật". */
 export type PublicShopSummary = Schemas['PublicShopSummaryDto'];
+/**
+ * Khối "Xe phù hợp với bạn" ở trang chủ — danh sách đã xếp hạng + ngữ cảnh đã dùng để xếp.
+ * `meta.mixedProvinces` là thứ cho phép giao diện nói thật khi phải bù xe ngoài tỉnh ưu tiên.
+ */
+export type RecommendedListings = Schemas['RecommendedListingsDto'];
+
 /** Facet counts cho panel Bộ lọc — mỗi chiều đếm với mọi filter TRỪ chính nó. */
 export type PublicListingFacets = Schemas['ListingFacetsDto'];
 export type PublicBanner = Schemas['PublicBannerDto'];

@@ -17,6 +17,7 @@ import {
   VEHICLE_PUBLIC_STATUS,
   hasVehicleServiceSettings,
   hasVerifiedStorefront,
+  provinceRegionPeers,
   resolveEffectiveBilling,
   resolveStorefrontKind,
   responseRatePercent,
@@ -44,6 +45,8 @@ import type {
   PublicListingDto,
   PublicListingQueryDto,
   PublicShopDto,
+  RecommendedListingQueryDto,
+  RecommendedListingsDto,
   PublicShopListQueryDto,
   PublicShopSummaryDto,
   ShopListingQueryDto,
@@ -55,10 +58,33 @@ import {
   buildListingWhereSql,
   publicListingScope,
   seatBucketOf,
+  type ListingFilterQuery,
 } from './listing-filter';
 
 const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 48;
+
+/** Trang chủ xem TRƯỚC — tám ô, không phân trang. Trần để một client khác không biến nó thành list. */
+const DEFAULT_RECOMMENDED_LIMIT = 8;
+const MAX_RECOMMENDED_LIMIT = 24;
+
+/**
+ * Trần số xe của MỘT gian hàng trong khối gợi ý.
+ *
+ * Hai là con số nhỏ nhất còn cho người bán cơ hội trưng hai kiểu xe khác nhau. Lớn hơn thì với
+ * quy mô hiện tại (vài gian hàng lớn, nhiều chủ xe một chiếc) trang chủ lại thành mặt tiền của
+ * gian hàng đông xe nhất.
+ */
+const MAX_PER_SHOP = 2;
+
+/**
+ * Số ứng viên mà phép xếp hạng cân nhắc trước khi áp trần theo gian hàng.
+ *
+ * Có trần vì cửa sổ `ROW_NUMBER` không đẩy `LIMIT` xuống được: thiếu nó thì mỗi lượt mở trang
+ * chủ là một lần đánh số toàn bộ bảng. 200 đủ rộng để bậc "đúng tỉnh" không nuốt hết chỗ của
+ * bậc bù, và rộng hơn hai mươi lần số ô cần lấp.
+ */
+const RANK_CANDIDATE_POOL = 200;
 
 /**
  * Facet sống 60 giây trong bộ nhớ tiến trình.
@@ -314,6 +340,127 @@ export class PublicListingsService {
     return {
       data: rows.map((row) => toListingCard(row, completedTrips.get(row.vehicleId) ?? 0, now)),
       meta: paginationMeta(paging, total),
+    };
+  }
+
+  /**
+   * Khối "Xe phù hợp với bạn" ở trang chủ — GỢI Ý, không phải tìm kiếm.
+   *
+   * Ba luật, và cả ba đều khác `search`:
+   *
+   *   1. **Tỉnh là ưu tiên, không phải bộ lọc.** Xe đúng tỉnh lên trước, rồi xe cùng vùng, rồi
+   *      cả nước. Lọc cứng ở đây sẽ cho một trang chủ TRỐNG với khách ở tỉnh chưa có xe — trong
+   *      khi họ mới chỉ mở trang chủ, chưa hề nói là chỉ thuê ở đó.
+   *   2. **Mỗi gian hàng tối đa {@link MAX_PER_SHOP} xe.** Không có luật này thì một gian hàng
+   *      40 xe chiếm trọn tám ô, và trang chủ trở thành mặt tiền của đúng một người bán.
+   *   3. **Thứ tự trong cùng một bậc là `rank_score`** — điểm denormalize (xem
+   *      `refreshListingRankScore`), không phải `rating_avg` trần.
+   *
+   * ## Vì sao hai lượt truy vấn
+   *
+   * Lượt một chạy trên `public_listings` và chỉ mang về ID đã xếp hạng: phép xếp bậc địa lý và
+   * cửa sổ giới hạn theo gian hàng là SQL thuần, Prisma không diễn đạt được. Lượt hai hydrate
+   * đúng chừng đó ID qua Prisma để dùng lại nguyên `listingCardSelect` — hình thẻ xe chỉ có một
+   * định nghĩa, và nó không được phép khác nhau giữa trang chủ với trang kết quả.
+   */
+  async recommended(query: RecommendedListingQueryDto): Promise<RecommendedListingsDto> {
+    const now = new Date();
+    const limit = Math.min(MAX_RECOMMENDED_LIMIT, Math.max(1, query.limit ?? DEFAULT_RECOMMENDED_LIMIT));
+    const near = query.nearProvinceCode ?? null;
+    const peers = near ? provinceRegionPeers(near) : [];
+
+    /*
+     * Ngữ cảnh lọc CỨNG của khối: dịch vụ, loại xe, và xe còn rảnh trong khoảng khách đang chọn.
+     * Tỉnh CỐ Ý không có mặt ở đây — nó đi vào thứ tự, không vào điều kiện.
+     */
+    const filter: ListingFilterQuery = {
+      vehicleType: query.vehicleType,
+      serviceType: query.serviceType,
+      pickupAt: query.pickupAt,
+      returnAt: query.returnAt,
+    };
+
+    /*
+     * Bậc địa lý. Một biểu thức chứ không phải ba truy vấn nối nhau: ba truy vấn sẽ phải tự
+     * loại trùng và tự chia phần còn thiếu cho nhau, và mỗi chỗ chia là một chỗ để lệch.
+     */
+    const geoTier = near
+      ? Prisma.sql`CASE
+            WHEN pl."province_code" = ${near} THEN 2
+            WHEN pl."province_code" = ANY(${peers}::char(2)[]) THEN 1
+            ELSE 0
+          END`
+      : Prisma.sql`0`;
+
+    /*
+     * `shop_rn <= MAX_PER_SHOP` là một khoá SẮP XẾP, không phải một bộ lọc.
+     *
+     * Lọc thẳng sẽ trả về ít hơn `limit` xe ở một sàn mới có vài gian hàng — đúng lúc trang chủ
+     * cần nhất là trông có hàng. Đẩy phần vượt trần xuống cuối thì trần vẫn có tác dụng khi có
+     * đủ người bán, mà vẫn luôn lấp đầy chừng nào còn xe.
+     */
+    const ranked = await this.prisma.$queryRaw<Array<{ id: string; province_code: string | null }>>`
+      WITH pool AS (
+        SELECT pl."id",
+               pl."tenant_id",
+               pl."province_code",
+               pl."rank_score",
+               pl."created_at",
+               ${geoTier} AS geo_tier
+          FROM "public_listings" pl
+         WHERE ${buildListingWhereSql(filter)}
+         ORDER BY geo_tier DESC, pl."rank_score" DESC, pl."created_at" DESC
+         LIMIT ${RANK_CANDIDATE_POOL}
+      ),
+      capped AS (
+        SELECT "id",
+               "province_code",
+               geo_tier,
+               "rank_score",
+               "created_at",
+               ROW_NUMBER() OVER (
+                 PARTITION BY "tenant_id"
+                 ORDER BY geo_tier DESC, "rank_score" DESC, "created_at" DESC
+               ) AS shop_rn
+          FROM pool
+      )
+      SELECT "id", "province_code"
+        FROM capped
+       ORDER BY (shop_rn <= ${MAX_PER_SHOP}) DESC,
+                geo_tier DESC,
+                "rank_score" DESC,
+                "created_at" DESC
+       LIMIT ${limit}
+    `;
+
+    const total = await this.prisma.publicListing.count({ where: buildListingWhere(filter) });
+    if (ranked.length === 0) {
+      return { data: [], meta: { count: 0, total, nearProvinceCode: near, mixedProvinces: false } };
+    }
+
+    const ids = ranked.map((row) => row.id);
+    const rows = await this.prisma.publicListing.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, ...listingCardSelect(now) },
+    });
+    const completedTrips = await this.completedTripsByVehicle(rows.map((row) => row.vehicleId));
+
+    // Postgres không giữ thứ tự của `IN (...)`, nên thứ hạng vừa tính phải được áp lại ở đây —
+    // quên bước này là cả phép xếp hạng biến mất mà danh sách vẫn trông bình thường.
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    const data = ids
+      .map((id) => byId.get(id))
+      .filter((row): row is (typeof rows)[number] => row != null)
+      .map((row) => toListingCard(row, completedTrips.get(row.vehicleId) ?? 0, now));
+
+    return {
+      data,
+      meta: {
+        count: data.length,
+        total,
+        nearProvinceCode: near,
+        mixedProvinces: near != null && ranked.some((row) => row.province_code !== near),
+      },
     };
   }
 

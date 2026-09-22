@@ -8,6 +8,7 @@ import {
   FUEL_TYPE_VALUES,
   LISTING_SORT_VALUES,
   MOTORBIKE_CATEGORY_VALUES,
+  PROVINCE_CODES,
   SEAT_BUCKET_VALUES,
   SERVICE_TYPE_VALUES,
   STOREFRONT_KIND_VALUES,
@@ -229,6 +230,60 @@ export class PublicListingQueryDto {
   @IsInt()
   @Min(1)
   @Max(48)
+  limit?: number;
+}
+
+/**
+ * Query khối "Xe phù hợp với bạn" ở trang chủ — một danh sách GỢI Ý, không phải một lần tìm kiếm.
+ *
+ * Vì sao không dùng lại `PublicListingQueryDto`: hai bề mặt hỏi hai câu khác nhau.
+ *
+ *   · Trang kết quả hỏi "cho tôi đúng những xe thoả điều kiện này" — tỉnh là bộ lọc CỨNG, và
+ *     không có xe nào thoả thì câu trả lời đúng là danh sách rỗng.
+ *   · Trang chủ hỏi "xe nào hợp với tôi nhất" — tỉnh là ƯU TIÊN. Một trang chủ trống vì tỉnh
+ *     của khách chưa có xe là tệ hơn một trang chủ nói "ưu tiên Hà Nội" rồi bù bằng xe nơi khác,
+ *     vì khách còn chưa nói họ sẽ chỉ thuê ở Hà Nội — họ mới chỉ mở trang chủ.
+ *
+ * Đó là lý do tham số ở đây tên `nearProvinceCode` chứ không phải `provinceCode`: đổi tên là
+ * cách duy nhất để không ai vô tình đọc nó như một bộ lọc. Các chiều facet (hãng, tiện ích,
+ * khoảng giá…) cố ý KHÔNG có mặt — chúng thuộc về trang kết quả.
+ */
+export class RecommendedListingQueryDto {
+  @ApiPropertyOptional({ enum: VEHICLE_TYPE_VALUES, description: 'car | motorbike' })
+  @IsOptional()
+  @IsIn(VEHICLE_TYPE_VALUES)
+  vehicleType?: string;
+
+  @ApiPropertyOptional({ enum: SERVICE_TYPE_VALUES })
+  @IsOptional()
+  @IsIn(SERVICE_TYPE_VALUES)
+  serviceType?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Mã tỉnh 2 ký tự khách đang quan tâm — ƯU TIÊN xếp hạng, KHÔNG lọc bỏ xe tỉnh khác',
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(PROVINCE_CODES)
+  nearProvinceCode?: string;
+
+  @ApiPropertyOptional({ description: 'Nhận xe (ISO-8601) — loại xe đã bận trong khoảng' })
+  @IsOptional()
+  @IsISO8601()
+  pickupAt?: string;
+
+  @ApiPropertyOptional({ description: 'Trả xe (ISO-8601) — dùng cùng pickupAt' })
+  @IsOptional()
+  @IsISO8601()
+  returnAt?: string;
+
+  @ApiPropertyOptional({ default: 8, minimum: 1, maximum: 24 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(24)
   limit?: number;
 }
 
@@ -600,6 +655,41 @@ export class ListingFacetsDto {
   @ApiProperty({ type: [FacetBucketDto], description: 'Theo tiện ích xe (VEHICLE_FEATURE key)' })
   features!: FacetBucketDto[];
   @ApiProperty({ type: AmenityFacetsDto }) amenities!: AmenityFacetsDto;
+}
+
+/**
+ * Ngữ cảnh của khối gợi ý — có mặt để giao diện KHÔNG phải đoán.
+ *
+ * `nearProvinceCode` được TRẢ LẠI (chứ không chỉ nhận vào) vì server là nơi quyết định mã đó
+ * có dùng được hay không; `mixedProvinces` cho phép màn hình nói "ưu tiên Hà Nội" một cách
+ * trung thực thay vì hứa một điều danh sách không giữ.
+ */
+export class RecommendedListingsMetaDto {
+  @ApiProperty({ description: 'Số xe đang hiển thị trong khối' })
+  count!: number;
+
+  @ApiProperty({ description: 'Tổng số xe khớp ngữ cảnh (dịch vụ/loại xe/thời gian), toàn quốc' })
+  total!: number;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Tỉnh đã được ưu tiên khi xếp hạng; null nghĩa là xếp theo cả nước',
+  })
+  nearProvinceCode!: string | null;
+
+  @ApiProperty({
+    description: 'Kết quả có lẫn xe ngoài tỉnh được ưu tiên — UI cần nói rõ thay vì ngụ ý',
+  })
+  mixedProvinces!: boolean;
+}
+
+/**
+ * Kết quả khối gợi ý: danh sách đã xếp hạng + ngữ cảnh để giao diện nói THẬT về thứ nó đang làm.
+ */
+export class RecommendedListingsDto {
+  @ApiProperty({ type: [PublicListingDto] }) data!: PublicListingDto[];
+  @ApiProperty({ type: RecommendedListingsMetaDto }) meta!: RecommendedListingsMetaDto;
 }
 
 export class PublicListingPageDto {

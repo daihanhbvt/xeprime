@@ -12,6 +12,7 @@ export type {
   PublicListingFacets,
   PublicShop,
   PublicShopSummary,
+  RecommendedListings,
   ReviewItem,
   ReviewPage,
   ReviewSummary,

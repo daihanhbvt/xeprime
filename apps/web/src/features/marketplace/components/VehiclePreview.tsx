@@ -6,52 +6,78 @@ import Link from 'next/link';
 import { serviceTypeLabel } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
 import { applyFilterPatch } from '../filter-params';
+import { useDestinations } from '../hooks/use-destinations';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
-import { usePublicListings } from '../hooks/use-public-listings';
+import {
+  RECOMMENDED_LIMIT,
+  useNearProvinceCode,
+  useRecommendedListings,
+} from '../hooks/use-recommended-listings';
+import { provinceLabelOf } from '../province-options';
 import { VehicleCard } from './VehicleCard';
 import styles from './VehiclePreview.module.css';
 import { useTranslations } from 'next-intl';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 
-/** Trang chủ chỉ XEM TRƯỚC — tối đa 8 xe, không phân trang, không bộ lọc facet. */
-const PREVIEW_LIMIT = 8;
+/** Đủ 34 tỉnh — chỉ để tra TÊN của tỉnh đang ưu tiên; danh sách này đã được cache dùng chung. */
+const ALL_DESTINATIONS = 34;
 
 /**
- * Khối "Xe khả dụng" ở trang chủ.
+ * Khối "Xe phù hợp với bạn" ở trang chủ.
  *
- * ĐỌC ngữ cảnh dịch vụ từ URL (17/08): tab dịch vụ ở thẻ tìm kiếm (search/SearchCard) ghi `?serviceType=` lên `/`
- * (shallow, không reload) → khối này query lại ngay theo dịch vụ đó, và link "Khám phá xe"
- * mang trọn ngữ cảnh (dịch vụ, lộ trình, loại xe, tỉnh, ngày) sang `/search` — hai khối trên
- * cùng một trang không bao giờ nói hai dịch vụ khác nhau.
+ * ## Nó xếp hạng thế nào
+ *
+ * Backend (`GET /public/listings/recommended`) xếp theo hai tầng: BẬC ĐỊA LÝ trước (đúng tỉnh →
+ * cùng vùng → còn lại), rồi `rank_score` — điểm gộp từ chất lượng Bayes, số chuyến đã chạy, độ
+ * đầy hồ sơ và độ mới. Mỗi gian hàng tối đa hai xe, để một gian hàng đông xe không chiếm cả khối.
+ *
+ * Tỉnh ở đây là ƯU TIÊN chứ không phải bộ lọc: khách ở tỉnh chưa có xe vẫn thấy một khối đầy,
+ * chỉ là xe tỉnh khác. Khi điều đó xảy ra, khối NÓI RA (`meta.mixedProvinces`) thay vì để người
+ * xem tự phát hiện — hứa "xe ở Hà Nội" rồi hiện xe An Giang là cách nhanh nhất mất lòng tin.
+ *
+ * ## Nó lọc theo cái gì
+ *
+ * Dịch vụ / loại xe / khoảng thuê đọc từ URL (thẻ tìm kiếm ghi `?serviceType=` lên `/` bằng
+ * shallow replace), nên hai khối trên cùng một trang không bao giờ nói hai dịch vụ khác nhau.
+ * Facet sâu (hãng, tiện ích, giá) cố ý không có ở đây — chúng thuộc về trang kết quả.
  *
  * Hỏng khối này KHÔNG được làm hỏng cả trang chủ: lỗi hiện một alert gọn, các mục "Địa điểm nổi
- * bật"/"Gian hàng nổi bật" bên dưới vẫn dùng được.
+ * bật" / "Gian hàng nổi bật" bên dưới vẫn dùng được.
  */
 export function VehiclePreview() {
   const errorMessage = useErrorMessage();
   const domainLabel = useDomainLabel();
   const t = useTranslations('Marketplace.available');
   const { filters } = useMarketplaceFilters();
-  const { data, isLoading, isError, error } = usePublicListings({
-    // Ngữ cảnh từ hero (dịch vụ/loại xe/tỉnh/ngày) lọc luôn preview — facet sâu để cho /search.
-    serviceType: filters.serviceType,
+  const nearProvinceCode = useNearProvinceCode(filters);
+  const { data: destinations } = useDestinations(ALL_DESTINATIONS);
+
+  const { data, isLoading, isError, error } = useRecommendedListings({
     vehicleType: filters.vehicleType,
-    provinceCode: filters.provinceCode,
+    serviceType: filters.serviceType,
+    nearProvinceCode,
     pickupAt: filters.pickupAt,
     returnAt: filters.returnAt,
-    page: 1,
-    limit: PREVIEW_LIMIT,
   });
-  const items = data?.listings ?? [];
+  const items = data?.data ?? [];
 
-  // "Khám phá xe" giữ nguyên ngữ cảnh đang xem (kể cả routeType — key URL, không gửi API).
+  // Tên tỉnh chỉ tra được khi danh mục điểm đến đã về VÀ tỉnh đó còn xe. Không tra ra thì khối
+  // im lặng về địa lý thay vì hiện một mã hai chữ số — mã là dữ liệu, không phải chữ cho người đọc.
+  const nearProvinceName = provinceLabelOf(destinations, data?.meta.nearProvinceCode ?? undefined);
+
+  const serviceLabel = filters.serviceType
+    ? domainLabel('serviceType', filters.serviceType, serviceTypeLabel(filters.serviceType))
+    : null;
+
+  // "Khám phá xe" giữ nguyên ngữ cảnh đang xem (kể cả routeType — key URL, không gửi API). Tỉnh
+  // đi kèm ở dạng BỘ LỌC: sang trang kết quả thì khách đang thật sự tìm, không còn là xem lướt.
   const exploreQs = new URLSearchParams();
   applyFilterPatch(exploreQs, {
     serviceType: filters.serviceType,
     routeType: filters.routeType,
     vehicleType: filters.vehicleType,
-    provinceCode: filters.provinceCode,
+    provinceCode: filters.provinceCode ?? nearProvinceCode ?? undefined,
     pickupAt: filters.pickupAt,
     returnAt: filters.returnAt,
     hourly: filters.hourly,
@@ -66,19 +92,18 @@ export function VehiclePreview() {
       <div className={styles.head}>
         <div>
           <h2 id="home-vehicles" className={styles.title}>
-            {filters.serviceType
-              ? t('titleWithService', {
-                  service: domainLabel(
-                    'serviceType',
-                    filters.serviceType,
-                    serviceTypeLabel(filters.serviceType),
-                  ),
-                })
-              : t('title')}{' '}
+            {serviceLabel ? t('titleWithService', { service: serviceLabel }) : t('title')}{' '}
             {data ? (
               <span className={styles.count}>{t('count', { count: data.meta.total })}</span>
             ) : null}
           </h2>
+          {nearProvinceName ? (
+            <p className={styles.sub}>
+              {data?.meta.mixedProvinces
+                ? t('nearProvinceMixed', { province: nearProvinceName })
+                : t('nearProvince', { province: nearProvinceName })}
+            </p>
+          ) : null}
         </div>
         <Link href={exploreHref} className={styles.seeAll}>
           {t('exploreAll')} <RightOutlined />
@@ -88,7 +113,7 @@ export function VehiclePreview() {
       {isLoading ? (
         <ul className={styles.grid} aria-busy="true">
           {/* Khung chờ dựng đúng số ô và đúng tỉ lệ thẻ thật → không giật layout khi có dữ liệu. */}
-          {Array.from({ length: PREVIEW_LIMIT }, (_, i) => (
+          {Array.from({ length: RECOMMENDED_LIMIT }, (_, i) => (
             <li key={i} className={styles.skeletonCard}>
               <Skeleton.Image active className={styles.skeletonImg} />
               <Skeleton active paragraph={{ rows: 2 }} title={{ width: '70%' }} />
@@ -108,19 +133,7 @@ export function VehiclePreview() {
           }
         />
       ) : items.length === 0 ? (
-        <Empty
-          description={
-            filters.serviceType
-              ? t('emptyForService', {
-                  service: domainLabel(
-                    'serviceType',
-                    filters.serviceType,
-                    serviceTypeLabel(filters.serviceType),
-                  ),
-                })
-              : t('empty')
-          }
-        />
+        <Empty description={serviceLabel ? t('emptyForService', { service: serviceLabel }) : t('empty')} />
       ) : (
         <ul className={styles.grid}>
           {items.map((listing) => (

@@ -57,6 +57,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0040](0040-registration-track-split.md) | Hai tuyến ĐĂNG KÝ tách hẳn: ý định lưu ở `tenants.onboarding_state`, thanh toán mở Manage, cổng logo chỉ áp tuyến gói | **Accepted; ghi đè 0036 điều 4 (xác minh thôi làm cổng mua gói)** |
 | [0041](0041-plan-tiers-by-vehicle-count.md) | Ba bậc gian hàng bán theo SỐ XE và KỲ HẠN; bậc doanh nghiệp bán bằng tư vấn | **Accepted; ghi đè 0029 điều 3, 0015 điều 1/3/8, và 0038 điều 12 ở phần cách đếm tuyến gói** |
 | [0042](0042-confirmed-place-address-for-renters.md) | Địa chỉ có ghim phải được bản đồ xác nhận; bỏ hẳn ô xã/phường ở mọi ô địa chỉ có ghim; tỉnh đã chọn nhớ dùng chung | **Accepted; ghi đè 0035 điều 3 (phần xã/phường) và điều 5** |
+| [0043](0043-marketplace-relevance-ranking.md) | Xếp hạng "phù hợp" cho chợ xe: điểm denormalize `rank_score` + ưu tiên địa lý ở trang chủ | **Accepted; mở rộng 0008 (cột dẫn xuất mới), không ghi đè ADR nào** |
 
 ## Quy tắc thêm ADR
 

@@ -348,6 +348,12 @@ export const queryKeys = {
       ['marketplace', 'listings-infinite', params] as const,
     facets: (params: QueryParams) => ['marketplace', 'facets', params] as const,
     /**
+     * Khối gợi ý trang chủ. Khoá TÁCH khỏi `listings` vì hai bên hỏi hai endpoint khác nhau và
+     * hiểu tham số tỉnh theo hai nghĩa khác nhau (lọc cứng ↔ ưu tiên) — dùng chung tiền tố sẽ
+     * khiến một lần `invalidateQueries` xoá luôn thứ không liên quan.
+     */
+    recommended: (params: QueryParams) => ['marketplace', 'recommended', params] as const,
+    /**
      * Chi tiết một xe public, tải TỪ TRÌNH DUYỆT. Trang `/listings/[id]` render server nên không
      * dùng key này; overlay yêu cầu thuê mở từ thẻ xe thì cần (thẻ chỉ có dữ liệu tóm tắt).
      */
