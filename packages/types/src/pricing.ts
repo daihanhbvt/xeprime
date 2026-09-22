@@ -2,6 +2,7 @@ import type { DiscountTier, LegacyDiscountTier } from './long-term';
 import type { BillingMode } from './status/billing';
 import type { CustomerFeeBreakdown } from './fee-policy';
 import { STATUS_COLOR, type StatusMeta } from './status/meta';
+import { SERVICE_TYPE } from './status/vehicle';
 
 /**
  * Hợp đồng dùng chung cho chính sách thuê & tính giá (Wave 2 — B2).
@@ -56,6 +57,24 @@ export const MILEAGE_LIMIT = {
   /** Trần phí mỗi km vượt (VND) — chặn nhầm một số 0 thừa. */
   maxFeePerKm: 100_000,
 } as const;
+
+/**
+ * Hạn mức quãng đường CHỈ áp cho chuyến **TỰ LÁI** — và đây là nơi DUY NHẤT nói điều đó.
+ *
+ * Hàm này tồn tại vì một lý do cụ thể: phần CÔNG BỐ với khách (trang xe, bước Xác nhận) và phần
+ * TÍNH TIỀN lúc quyết toán là hai đoạn mã ở hai app khác nhau. Hai bên mà tự viết điều kiện
+ * riêng thì chúng sẽ lệch, và hướng lệch nguy hiểm chỉ có một: thu một khoản khách chưa bao giờ
+ * được cho xem.
+ *
+ * Vì sao loại hai dịch vụ kia:
+ *  - `with_driver`: km do TÀI XẾ CỦA SHOP chạy. Đi xa đã có phụ phí đường dài
+ *    (`SURCHARGE_CATEGORY.LONG_DISTANCE`) — một khoản khác, trả cho công sức người lái.
+ *  - `long_term`: giá theo GÓI tháng lịch, không có "số ngày tính phí" để nhân ra hạn mức
+ *    (ADR 0011). Snapshot của đơn dài hạn không mang `days`.
+ */
+export function appliesExcessMileage(serviceType: string | null | undefined): boolean {
+  return serviceType === SERVICE_TYPE.SELF_DRIVE;
+}
 
 export const COLLATERAL_MODE = {
   /** Khách đặt cọc TIỀN — số tiền nằm ở `depositAmount`, chảy vào sổ thu-chi. */
@@ -160,6 +179,36 @@ export type DeliveryDistanceStatus =
 export const DELIVERY_DISTANCE_STATUS_VALUES = Object.values(
   DELIVERY_DISTANCE_STATUS,
 ) as DeliveryDistanceStatus[];
+
+/**
+ * VÌ SAO một kết quả rơi về `manual` (21/09/2026).
+ *
+ * `manual` vốn gộp ba ngả khác hẳn nhau ở thứ khách phải làm tiếp: đi quá xa là chuyện của địa
+ * chỉ, không có đường bộ là chuyện của bản đồ, còn nhà cung cấp lỗi thì chẳng phải chuyện của
+ * ai cả. Ba ngả đó từng dẫn tới đúng MỘT câu — và câu đó nói "ngoài phạm vi" ngay cả khi hệ
+ * thống không hề biết địa chỉ nằm ở đâu.
+ *
+ * **Backend phân loại, giao diện chỉ đọc MÃ** (ADR 0012) — không đoán nguyên nhân từ câu chữ
+ * của nhà cung cấp. Trường mang mã này là TUỲ CHỌN: bản ghi/khách cũ không có nó, và khi vắng
+ * mặt thì `manual` giữ nguyên nghĩa lịch sử "ngoài bán kính tự báo".
+ */
+export const DELIVERY_MANUAL_REASON = {
+  /**
+   * Ngoài bán kính tự báo của gian hàng. Biết chắc: hoặc đường bộ đo được đã vượt bậc phí cuối,
+   * hoặc đường chim bay đã vượt bán kính (mà đường bộ luôn ≥ đường chim bay).
+   */
+  OUTSIDE_AUTO_RADIUS: 'outside_auto_radius',
+  /** Trong bán kính nhưng không có tuyến đường bộ nối hai điểm (đảo, toạ độ giữa sông…). */
+  ROUTE_UNAVAILABLE: 'route_unavailable',
+  /** Nhà cung cấp bản đồ lỗi/timeout ở bước đo đường. KHÔNG phải lỗi của khách, không nói gì. */
+  PROVIDER_UNAVAILABLE: 'provider_unavailable',
+} as const;
+
+export type DeliveryManualReason =
+  (typeof DELIVERY_MANUAL_REASON)[keyof typeof DELIVERY_MANUAL_REASON];
+export const DELIVERY_MANUAL_REASON_VALUES = Object.values(
+  DELIVERY_MANUAL_REASON,
+) as DeliveryManualReason[];
 
 /** Cấu trúc `booking_requests.delivery_quote_json` — ghi duy nhất qua BookingRequestsService. */
 export interface BookingRequestDeliveryQuote {

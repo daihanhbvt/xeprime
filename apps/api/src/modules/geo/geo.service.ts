@@ -36,6 +36,26 @@ export interface ResolvedAddress extends GeocodeResult {
 }
 
 /**
+ * Kết quả đo đường bộ — bốn ngả PHÂN BIỆT ĐƯỢC, không phải một `number | null`.
+ *
+ * Một `null` duy nhất từng gộp ba chuyện khác hẳn nhau ở việc khách phải làm tiếp: đi quá xa,
+ * không có đường bộ, và nhà cung cấp hỏng. Người gọi không có cách nào tách chúng ra, nên cả
+ * ba cùng hiện một câu — câu đó nói "ngoài phạm vi" kể cả khi hệ thống không biết gì.
+ */
+export type RoadDistanceResult =
+  | { outcome: 'ok'; distanceKm: number }
+  /**
+   * Đường chim bay đã vượt bán kính ⇒ đường bộ chắc chắn cũng vượt (đường bộ luôn ≥ chim bay).
+   * Kèm luôn con số chim bay: nó KHÔNG phải quãng đường lái xe, nhưng là bằng chứng duy nhất
+   * có trong tay và đủ để nói "cách hơn N km".
+   */
+  | { outcome: 'outside_radius'; straightLineKm: number }
+  /** Nhà cung cấp trả lời nhưng không có tuyến đường bộ nối hai điểm. */
+  | { outcome: 'no_route' }
+  /** Chưa cấu hình, toạ độ hỏng, lỗi mạng, hết hạn mức — hệ thống không hỏi được. */
+  | { outcome: 'unavailable' };
+
+/**
  * Tra cứu vị trí cho luồng giao xe tận nơi.
  *
  * Ba việc, theo đúng thứ tự đắt dần: đọc cache → loại sớm bằng đường chim bay → hỏi nhà cung
@@ -230,17 +250,23 @@ export class GeoService {
    * hoặc bằng đường bộ, nên vượt bán kính theo đường chim bay là bằng chứng chắc chắn rằng
    * đường bộ cũng vượt — kết luận được ngay mà không tốn request nào. Truyền nó vào bất cứ khi
    * nào biết, đó là chỗ tiết kiệm hạn mức lớn nhất.
+   *
+   * Trả về {@link RoadDistanceResult} chứ không phải `number | null`: ba ngả hỏng có ba câu
+   * khác nhau với khách, và người gọi không suy ngược được chúng từ một `null`.
    */
-  async roadDistanceKm(
+  async roadDistance(
     origin: GeoPoint,
     destination: GeoPoint,
     maxRadiusKm?: number | null,
-  ): Promise<number | null> {
-    if (!this.provider.enabled) return null;
-    if (!isValidGeoPoint(origin) || !isValidGeoPoint(destination)) return null;
+  ): Promise<RoadDistanceResult> {
+    if (!this.provider.enabled) return { outcome: 'unavailable' };
+    if (!isValidGeoPoint(origin) || !isValidGeoPoint(destination)) {
+      return { outcome: 'unavailable' };
+    }
 
-    if (maxRadiusKm != null && haversineKm(origin, destination) > maxRadiusKm) {
-      return null;
+    if (maxRadiusKm != null) {
+      const straightLineKm = haversineKm(origin, destination);
+      if (straightLineKm > maxRadiusKm) return { outcome: 'outside_radius', straightLineKm };
     }
 
     const from = { lat: roundCoord(origin.lat, ROUTE_KEY_DECIMALS), lng: roundCoord(origin.lng, ROUTE_KEY_DECIMALS) };
@@ -252,7 +278,11 @@ export class GeoService {
 
     const cached = await this.prisma.geoRouteCache.findUnique({ where: { routeHash: hash } });
     if (cached && this.isFresh(cached.fetchedAt)) {
-      return cached.distanceKm == null ? null : Number(cached.distanceKm);
+      // Bản ghi chỉ được viết SAU một câu trả lời thật, nên `distanceKm` null ở đây nghĩa là
+      // nhà cung cấp đã nói "không có tuyến" — không phải "chưa hỏi được".
+      return cached.distanceKm == null
+        ? { outcome: 'no_route' }
+        : { outcome: 'ok', distanceKm: Number(cached.distanceKm) };
     }
 
     let distanceKm: number | null;
@@ -260,7 +290,7 @@ export class GeoService {
       distanceKm = await this.provider.roadDistanceKm(origin, destination);
     } catch (err) {
       this.logger.warn(`Tra khoảng cách thất bại (${this.provider.name}): ${String(err)}`);
-      return null;
+      return { outcome: 'unavailable' };
     }
 
     const data = {
@@ -282,6 +312,6 @@ export class GeoService {
       this.logger.warn(`Không ghi được geo_route_cache: ${String(err)}`);
     }
 
-    return distanceKm;
+    return distanceKm == null ? { outcome: 'no_route' } : { outcome: 'ok', distanceKm };
   }
 }

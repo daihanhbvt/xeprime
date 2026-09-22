@@ -6,6 +6,8 @@ import {
   COLLATERAL_MODE_VALUES,
   DELIVERY_DISTANCE_STATUS_VALUES,
   type DeliveryDistanceStatus,
+  DELIVERY_MANUAL_REASON_VALUES,
+  type DeliveryManualReason,
   DELIVERY_QUOTE_SOURCE_VALUES,
   LONG_TERM_PACKAGE_MONTHS_VALUES,
   MILEAGE_LIMIT,
@@ -758,12 +760,44 @@ export class DeliveryDistanceDto {
   @ApiProperty({ enum: DELIVERY_DISTANCE_STATUS_VALUES })
   status!: DeliveryDistanceStatus;
 
+  /**
+   * VÌ SAO rơi về `manual` — chỉ có mặt khi `status = 'manual'`.
+   *
+   * Ba ngả dẫn tới `manual` có ba câu khác nhau với khách: đi quá xa là chuyện của địa chỉ,
+   * không có đường bộ là chuyện của bản đồ, nhà cung cấp hỏng thì không phải chuyện của ai.
+   * Thêm mới và TUỲ CHỌN: client cũ bỏ qua trường này và vẫn đọc `status` như trước.
+   */
+  @ApiPropertyOptional({
+    enum: DELIVERY_MANUAL_REASON_VALUES,
+    nullable: true,
+    description: "Nguyên nhân báo giá thủ công — chỉ khác null khi status = 'manual'",
+  })
+  manualReason!: DeliveryManualReason | null;
+
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
     description: 'Khoảng cách đường bộ MỘT CHIỀU (km). Null khi không tra được.',
   })
   distanceKm!: number | null;
+
+  /**
+   * Đường CHIM BAY (km) — chỉ có khi bộ lọc trước đã kết luận ngoài bán kính mà không gọi
+   * Routes API. Nó KHÔNG phải quãng đường lái xe và giao diện phải nói đúng tên nó.
+   */
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Khoảng cách đường chim bay (km) — chỉ có ở ca ngoài bán kính, không phải đường lái',
+  })
+  straightLineKm!: number | null;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Bán kính tự báo giá của chính sách hiệu lực (km) — để giao diện nói đúng con số',
+  })
+  maxRadiusKm!: number | null;
 
   @ApiPropertyOptional({
     type: String,

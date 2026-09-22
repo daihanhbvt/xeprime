@@ -281,7 +281,8 @@
       "ruleThreshold": "Applies beyond the threshold of {value}, per the rule the owner published at booking time.",
       "ruleHint": "Rule published by the owner at booking time — enter the actual amount for this trip.",
       "addButton": "Add surcharge",
-      "operationalNote": "These figures are operational records. The system creates no bank transaction and does not ask the customer to confirm."
+      "operationalNote": "These figures are operational records. The system creates no bank transaction and does not ask the customer to confirm.",
+      "mileageSuggestion": "Suggested from the mileage allowance: {amount}"
     },
     "overtime": {
       "title": "Late-return fee suggestion",
@@ -309,7 +310,10 @@
       "correctionReasonPlaceholder": "e.g. wrong amount entered, reconciled against the statement",
       "depositReceived": "Deposit received",
       "minusSurcharge": "Less surcharges",
-      "confirm": "Confirm refunded"
+      "confirm": "Confirm refunded",
+      "saveCorrection": "Save correction",
+      "amountRequired": "Enter the amount refunded.",
+      "reasonRequired": "Correcting a finalised record requires a reason."
     },
     "cardTitle": "Surcharges & Deposit",
     "surchargeHeading": "Surcharges",
@@ -332,7 +336,24 @@
     "refundMethod": "Method",
     "refundedAt": "Refunded at",
     "refundReference": "Reference",
-    "refundRecordedBy": "Recorded by"
+    "refundRecordedBy": "Recorded by",
+    "excessMileage": {
+      "title": "Distance driven",
+      "pickupOdometer": "Odometer at pickup",
+      "returnOdometer": "Odometer at return",
+      "actual": "Actually driven",
+      "allowed": "Allowance",
+      "allowedValue": "{total} ({days} days × {perDay})",
+      "excess": "Over the allowance",
+      "feePerKm": "Fee per extra km",
+      "suggestedAmount": "Suggested surcharge",
+      "withinLimit": "This trip stayed within the allowance — no excess mileage surcharge.",
+      "noPolicy": "This trip has no mileage allowance.",
+      "missingOdometer": "Not enough data: an odometer reading is needed on both the pickup and the return handover.",
+      "odometerReversed": "The return odometer is lower than the pickup one — check both handover records before recording a surcharge.",
+      "defaultReason": "Drove {actual} against a {allowed} allowance — {excess} over, at {fee} per km.",
+      "noChargedDays": "This trip has no chargeable days to derive an allowance from, so there is no excess mileage suggestion."
+    }
   },
   "payments": {
     "title": "Payment history",

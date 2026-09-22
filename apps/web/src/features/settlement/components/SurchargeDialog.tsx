@@ -5,15 +5,18 @@ import { App, Alert, Button, Input, Select } from 'antd';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
+  isSingleEntrySurchargeCategory,
   SURCHARGE_CATEGORY,
   SURCHARGE_CATEGORY_LABEL,
   SURCHARGE_CATEGORY_VALUES,
   type SurchargeCategory,
 } from '@xeprime/types';
 import { MoneyInput } from '@/components/form/MoneyInput';
+import { isZeroMoney } from '@/lib/money';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useAddSurcharge, useVoidSurcharge } from '../hooks';
 import type { BookingSettlement } from '../types';
+import { ExcessMileageFacts } from './ExcessMileageFacts';
 import styles from './SurchargeDialog.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -32,7 +35,14 @@ import { useErrorMessage } from '@/i18n/use-error-message';
  * 08/09/2026: đơn có tài xế mang theo bảng phụ phí chủ xe ĐÃ CÔNG BỐ lúc đặt
  * (`settlement.surchargeRules` — snapshot, không đọc lại cấu hình hiện tại). Chọn danh mục có
  * quy tắc thì số tiền/đơn vị được gợi ý sẵn; chủ xe vẫn nhập số thực tế và lý do.
+ *
+ * 21/09/2026: thêm đề xuất phí VƯỢT KM. Cùng luật với quá giờ — server tính, chủ xe nhận/sửa/bỏ
+ * — nhưng khác ở một điểm: mỗi đơn chỉ ghi được MỘT khoản vượt km, nên khi đã có thì danh mục
+ * đó biến mất khỏi ô chọn (chặn thật vẫn ở server).
  */
+/** Danh mục mở sẵn khi vừa mở hộp — cũng là chỗ con trỏ quay về khi danh mục đang chọn biến mất. */
+const DEFAULT_CATEGORY = SURCHARGE_CATEGORY.OVERTIME;
+
 export function SurchargeDialog({
   bookingId,
   settlement,
@@ -54,24 +64,74 @@ export function SurchargeDialog({
   const add = useAddSurcharge(bookingId);
   const remove = useVoidSurcharge(bookingId);
 
-  const [category, setCategory] = useState<SurchargeCategory>(SURCHARGE_CATEGORY.OVERTIME);
+  const [category, setCategory] = useState<SurchargeCategory>(DEFAULT_CATEGORY);
   const [amount, setAmount] = useState<number | null>(null);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const categoryLabel = (value: SurchargeCategory) =>
     domainLabel('surchargeCategory', value, SURCHARGE_CATEGORY_LABEL[value]);
-  const categoryOptions = SURCHARGE_CATEGORY_VALUES.map((value) => ({
-    value,
-    label: categoryLabel(value),
-  }));
+  /*
+   * Danh mục CHỈ GHI MỘT LẦN mà đơn đã có khoản còn hiệu lực thì biến mất khỏi danh sách chọn —
+   * khoản đó đang nằm ngay phía trên kèm nút gỡ, nên đường sửa đã có và rõ. Để nó ở lại rồi báo
+   * lỗi sau khi bấm là bắt người dùng đi tìm hiểu một luật nội bộ.
+   *
+   * Chặn THẬT vẫn ở server (`SURCHARGE_CATEGORY_DUPLICATE`) — ẩn một lựa chọn chỉ là lịch sự.
+   */
+  const recordedCategories = new Set(settlement.surcharges.map((row) => row.category));
+  const categoryOptions = SURCHARGE_CATEGORY_VALUES.filter(
+    (value) => !(isSingleEntrySurchargeCategory(value) && recordedCategories.has(value)),
+  ).map((value) => ({ value, label: categoryLabel(value) }));
 
   /** Gợi ý quá giờ do server tính từ chính sách + giờ trả thực tế — chủ xe nhận, sửa hoặc bỏ. */
   const overtime = settlement.overtime;
   const canSuggestOvertime =
     category === SURCHARGE_CATEGORY.OVERTIME && overtime.available && overtime.amount != null;
+  /**
+   * Đề xuất phí vượt km — cùng luật với quá giờ: SERVER tính, chủ xe nhận/sửa/bỏ.
+   *
+   * "Dùng được" = có đủ dữ kiện VÀ thật sự có km vượt. Chạy trong hạn mức thì đề xuất là 0, và
+   * một nút "dùng số này" cho số 0 chỉ dẫn tới một khoản phụ phí 0 đồng.
+   */
+  const mileage = settlement.excessMileage;
+  /*
+   * "Có tiền để đề xuất không" là một phép so sánh TIỀN — trả lời trên chuỗi (ADR 0007), không
+   * qua `Number`. `setAmount` bên dưới vẫn phải đổi sang number vì `MoneyInput` nhận number;
+   * đó là mối nối của component, không phải một phép tính tiền.
+   */
+  const hasMileageAmount = mileage.amount != null && !isZeroMoney(mileage.amount);
+  const canSuggestMileage =
+    category === SURCHARGE_CATEGORY.EXCESS_MILEAGE && mileage.available && hasMileageAmount;
+  /**
+   * Chuyến KHÔNG đặt hạn mức thì khối này biến mất hẳn — không có gì để đối chiếu, và một dòng
+   * "chuyến này không có hạn mức" trên mọi đơn cũ là nhiễu. Còn lại thì luôn hiện.
+   */
+  const showMileageBlock =
+    category === SURCHARGE_CATEGORY.EXCESS_MILEAGE && mileage.includedKmPerDay != null;
+  /** Câu ghi chú điền sẵn — dựng từ SỐ của backend, không tính lại gì. */
+  const mileageReason = t('excessMileage.defaultReason', {
+    actual: fmt.km(mileage.actualKm),
+    allowed: fmt.km(mileage.allowedKm),
+    excess: fmt.km(mileage.excessKm),
+    fee: fmt.money(mileage.feePerKm ?? '0'),
+  });
   /** Quy tắc phụ phí có tài xế đã công bố cho danh mục đang chọn (nếu có). */
   const rule = settlement.surchargeRules.find((r) => r.category === category) ?? null;
+
+  /**
+   * Điền sẵn số tiền + lý do khi chủ xe CHỌN danh mục vượt km.
+   *
+   * Chỉ điền vào ô đang trống — không đè lên thứ họ đã tự gõ. Và điền sẵn KHÔNG phải là ghi:
+   * khoản chỉ tồn tại sau khi bấm "Thêm phí phát sinh".
+   */
+  function changeCategory(next: SurchargeCategory) {
+    setCategory(next);
+    setError(null);
+    if (next !== SURCHARGE_CATEGORY.EXCESS_MILEAGE) return;
+    if (!mileage.available || !hasMileageAmount) return;
+    if (amount == null) setAmount(Number(mileage.amount));
+    if (!reason.trim()) setReason(mileageReason);
+  }
 
   function submit() {
     setError(null);
@@ -90,6 +150,12 @@ export function SurchargeDialog({
           message.success(t('surcharges.addSuccess'));
           setAmount(null);
           setReason('');
+          /*
+           * Danh mục vừa ghi là loại CHỈ MỘT KHOẢN ⇒ nó biến mất khỏi danh sách chọn ngay sau
+           * đây. Không dời con trỏ đi thì ô chọn còn trỏ vào một tuỳ chọn không còn tồn tại, và
+           * AntD sẽ hiện nguyên MÃ (`excess_mileage`) thay cho một cái nhãn.
+           */
+          if (isSingleEntrySurchargeCategory(category)) setCategory(DEFAULT_CATEGORY);
         },
         onError: (err) => setError(errorMessage(err)),
       },
@@ -153,7 +219,7 @@ export function SurchargeDialog({
               <span className={styles.label}>{t('surcharges.categoryLabel')}</span>
               <Select
                 value={category}
-                onChange={(next) => setCategory(next)}
+                onChange={changeCategory}
                 options={categoryOptions}
                 className={styles.control}
               />
@@ -179,6 +245,39 @@ export function SurchargeDialog({
                 <Button size="small" onClick={() => setAmount(Number(overtime.amount))}>
                   {t('overtime.apply')}
                 </Button>
+              }
+            />
+          ) : null}
+
+          {/*
+            Danh mục vượt km LUÔN kèm theo dữ kiện của server, kể cả khi không có gì để đề xuất.
+
+            Im lặng ở ca "chưa đủ dữ liệu" là tệ nhất: chủ xe sẽ tự gõ một con số mà không biết
+            hệ thống đang thiếu chỉ số đồng hồ nào. Chỉ ca CÓ km vượt mới có nút nhận số — một
+            nút "dùng số này" cho 0đ chỉ dẫn tới một khoản phụ phí rỗng.
+          */}
+          {showMileageBlock ? (
+            <Alert
+              type={canSuggestMileage ? 'warning' : 'info'}
+              showIcon
+              title={
+                canSuggestMileage
+                  ? t('surcharges.mileageSuggestion', { amount: fmt.money(mileage.amount!) })
+                  : t('excessMileage.title')
+              }
+              description={<ExcessMileageFacts suggestion={mileage} />}
+              action={
+                canSuggestMileage ? (
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setAmount(Number(mileage.amount));
+                      setReason(mileageReason);
+                    }}
+                  >
+                    {t('overtime.apply')}
+                  </Button>
+                ) : undefined
               }
             />
           ) : null}

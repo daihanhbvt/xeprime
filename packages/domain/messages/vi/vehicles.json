@@ -998,7 +998,10 @@
       "discountMax": "Mức giảm tối đa {percent}%",
       "discountOff": "Tắt",
       "assetNone": "chưa chọn loại",
-      "emptyBody": "Xe này chưa có yêu cầu bảo đảm, giao nhận hay ưu đãi. Cấu hình tại <policies>Chính sách thuê của gian hàng</policies> hoặc chuyển sang tùy chỉnh riêng cho xe."
+      "emptyBody": "Xe này chưa có yêu cầu bảo đảm, giao nhận hay ưu đãi. Cấu hình tại <policies>Chính sách thuê của gian hàng</policies> hoặc chuyển sang tùy chỉnh riêng cho xe.",
+      "mileage": "Hạn mức quãng đường",
+      "mileageValue": "{km}/ngày · {fee}/km vượt",
+      "mileageOff": "Không giới hạn"
     },
     "confirm": {
       "publicTitle": "Xác nhận thay đổi chính sách & giá thuê?",
@@ -1056,10 +1059,33 @@
       "discountDuplicate": "Trùng mốc ưu đãi \"{months} tháng\"",
       "discountAscending": "Các mốc ưu đãi phải theo số tháng tăng dần",
       "discountNotLower": "Ưu đãi {months} tháng không được thấp hơn mốc {prev} tháng",
-      "weekdayRequired": "Nhập giá thuê theo ngày"
+      "weekdayRequired": "Nhập giá thuê theo ngày",
+      "mileageRequired": "Nhập số km tối đa trong một ngày",
+      "mileageInteger": "Số km phải là số nguyên",
+      "mileageMin": "Hạn mức tối thiểu là 50 km/ngày",
+      "mileageMax": "Hạn mức tối đa là 2000 km/ngày",
+      "excessFeeRequired": "Nhập phí cho mỗi km vượt",
+      "excessFeeMax": "Phí vượt km quá lớn"
     },
     "calendarLink": "Tuỳ chỉnh giá theo lịch",
-    "calendarHint": "Giá riêng theo ngày (lễ, cuối tuần, mùa cao điểm) đặt trực tiếp trên lịch xe — một nguồn giá, không có bảng giá mùa vụ thứ hai."
+    "calendarHint": "Giá riêng theo ngày (lễ, cuối tuần, mùa cao điểm) đặt trực tiếp trên lịch xe — một nguồn giá, không có bảng giá mùa vụ thứ hai.",
+    "mileage": {
+      "title": "Hạn mức quãng đường",
+      "hint": "Số km mỗi ngày đã nằm trong giá thuê. Khách chạy vượt thì phần vượt được đề xuất thành phụ phí lúc quyết toán, không cộng vào báo giá lúc đặt.",
+      "tipLabel": "Giải thích hạn mức quãng đường",
+      "includedLabel": "Số km mỗi ngày trong giá",
+      "includedHint": "Hạn mức cả chuyến = số km này × số ngày tính phí. Tối thiểu 50, tối đa 2000 km/ngày.",
+      "includedTipLabel": "Giải thích số km mỗi ngày trong giá",
+      "excessLabel": "Phí mỗi km vượt",
+      "excessHint": "Mức tiền đề xuất cho mỗi km chạy quá hạn mức. Bạn vẫn sửa được số tiền trước khi ghi phụ phí.",
+      "excessTipLabel": "Giải thích phí mỗi km vượt",
+      "unitPerDay": "km / ngày",
+      "unitPerKm": "đ / km",
+      "previewTitle": "Khách sẽ thấy trên trang xe:",
+      "preview": "Bao gồm {km}/ngày. Phụ phí {fee} cho mỗi km vượt giới hạn.",
+      "previewIncomplete": "Nhập cả hai ô để khách nhìn thấy hạn mức trên trang xe.",
+      "disabledNote": "Không giới hạn quãng đường — không có phụ phí vượt km."
+    }
   },
   "documents": {
     "noPermissionTitle": "Không có quyền xem giấy tờ",

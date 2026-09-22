@@ -281,7 +281,8 @@
       "ruleThreshold": "Áp dụng từ ngưỡng {value} theo quy tắc chủ xe đã công bố lúc đặt.",
       "ruleHint": "Quy tắc chủ xe đã công bố lúc đặt — nhập số thực tế theo chuyến.",
       "addButton": "Thêm phí phát sinh",
-      "operationalNote": "Các con số trên là ghi nhận vận hành. Hệ thống không tạo giao dịch ngân hàng và không yêu cầu khách xác nhận."
+      "operationalNote": "Các con số trên là ghi nhận vận hành. Hệ thống không tạo giao dịch ngân hàng và không yêu cầu khách xác nhận.",
+      "mileageSuggestion": "Đề xuất từ hạn mức quãng đường: {amount}"
     },
     "overtime": {
       "title": "Gợi ý phí quá giờ",
@@ -309,7 +310,10 @@
       "correctionReasonPlaceholder": "Ví dụ: ghi nhầm số, đã đối chiếu lại sao kê",
       "depositReceived": "Cọc đã nhận",
       "minusSurcharge": "Trừ phát sinh",
-      "confirm": "Xác nhận đã hoàn"
+      "confirm": "Xác nhận đã hoàn",
+      "saveCorrection": "Lưu điều chỉnh",
+      "amountRequired": "Nhập số tiền đã hoàn.",
+      "reasonRequired": "Điều chỉnh một bản ghi đã chốt cần lý do."
     },
     "cardTitle": "Phát sinh & Tiền cọc",
     "surchargeHeading": "Chi phí phát sinh",
@@ -332,7 +336,24 @@
     "refundMethod": "Phương thức",
     "refundedAt": "Thời gian hoàn",
     "refundReference": "Mã giao dịch",
-    "refundRecordedBy": "Người ghi nhận"
+    "refundRecordedBy": "Người ghi nhận",
+    "excessMileage": {
+      "title": "Quãng đường đã chạy",
+      "pickupOdometer": "Đồng hồ lúc giao",
+      "returnOdometer": "Đồng hồ lúc nhận lại",
+      "actual": "Đã chạy thực tế",
+      "allowed": "Hạn mức",
+      "allowedValue": "{total} ({days} ngày × {perDay})",
+      "excess": "Vượt hạn mức",
+      "feePerKm": "Phí mỗi km vượt",
+      "suggestedAmount": "Phụ phí đề xuất",
+      "withinLimit": "Chuyến này chạy trong hạn mức — không có phụ phí vượt km.",
+      "noPolicy": "Chuyến này không đặt hạn mức quãng đường.",
+      "missingOdometer": "Chưa đủ dữ liệu: cần chỉ số đồng hồ km ở cả biên bản giao xe và biên bản nhận lại xe.",
+      "odometerReversed": "Chỉ số đồng hồ lúc nhận lại nhỏ hơn lúc giao — kiểm tra lại hai biên bản bàn giao trước khi ghi phụ phí.",
+      "defaultReason": "Chạy {actual}, hạn mức {allowed} — vượt {excess}, tính {fee} mỗi km vượt.",
+      "noChargedDays": "Chuyến này không có số ngày tính phí để suy ra hạn mức, nên không đề xuất phí vượt km."
+    }
   },
   "payments": {
     "title": "Lịch sử tiền của đơn",

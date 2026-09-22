@@ -11,3 +11,5 @@ export type DepositRefund = Schemas['DepositRefundDto'];
 export type RecordRefundInput = Schemas['RecordDepositRefundDto'];
 export type CorrectRefundInput = Schemas['CorrectDepositRefundDto'];
 export type OvertimeSuggestion = Schemas['OvertimeSuggestionDto'];
+/** Đề xuất phí vượt km — SERVER tính từ hạn mức đã đóng băng trên đơn + hai chỉ số đồng hồ. */
+export type ExcessMileageSuggestion = Schemas['ExcessMileageSuggestionDto'];

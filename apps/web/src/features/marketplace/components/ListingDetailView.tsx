@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import {
+  appliesExcessMileage,
   CATALOG_TYPE,
   COLLATERAL_ASSET_TYPE_LABEL,
   COLLATERAL_MODE,
@@ -261,6 +262,32 @@ export async function ListingDetailView({
                     .join(', '),
                 })}
               </p>
+            </section>
+          ) : null}
+
+          {/*
+            HẠN MỨC QUÃNG ĐƯỜNG (21/09/2026) — khách phải thấy TRƯỚC khi gửi yêu cầu.
+
+            Phí vượt km không nằm trong báo giá (lúc đặt chưa ai biết khách sẽ chạy bao xa); nó
+            chỉ xuất hiện lúc quyết toán. Thứ duy nhất làm nó công bằng là được công bố từ đây.
+
+            Điều kiện dịch vụ đọc `appliesExcessMileage` — CÙNG hàm mà `SettlementService` dùng
+            để quyết định có đề xuất phí vượt hay không. Hai bên viết điều kiện riêng là cách để
+            một hôm nào đó thu được một khoản mà chỗ này chưa từng công bố.
+
+            Xe chưa đặt hạn mức trả `mileagePolicy = null` và khối này biến mất hoàn toàn —
+            không có dòng "không giới hạn" nào phải đọc.
+          */}
+          {appliesExcessMileage(activeService) && listing.mileagePolicy ? (
+            <section className={styles.collateral} aria-label={t('mileage.title')}>
+              <h2 className={styles.collateralTitle}>{t('mileage.title')}</h2>
+              <p className={styles.collateralLine}>
+                {t('mileage.included', {
+                  km: fmt.km(listing.mileagePolicy.includedKmPerDay),
+                  fee: fmt.money(listing.mileagePolicy.excessFeePerKm),
+                })}
+              </p>
+              <p className={styles.collateralLine}>{t('mileage.note')}</p>
             </section>
           ) : null}
 

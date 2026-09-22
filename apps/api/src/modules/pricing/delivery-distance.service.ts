@@ -3,6 +3,7 @@ import { isValidGeoPoint, type GeoPoint } from '@xeprime/domain';
 import {
   API_ERROR_CODE,
   DELIVERY_DISTANCE_STATUS,
+  DELIVERY_MANUAL_REASON,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
 } from '@xeprime/types';
@@ -14,12 +15,21 @@ import { PricingService } from './pricing.service';
 /** Không tra được vì phía HỆ THỐNG — giao diện im lặng rơi về luồng cũ, không trách khách. */
 const UNAVAILABLE: DeliveryDistanceDto = {
   status: DELIVERY_DISTANCE_STATUS.UNAVAILABLE,
+  manualReason: null,
   distanceKm: null,
+  straightLineKm: null,
+  maxRadiusKm: null,
   fee: null,
   origin: null,
   destination: null,
   formattedAddress: null,
 };
+
+/**
+ * Hai số lẻ — cùng độ chính xác với đường bộ do nhà cung cấp trả (và cùng `Decimal(8,2)` của
+ * `geo_route_cache`), để hai loại khoảng cách không hiện ra với hai kiểu số lẻ khác nhau.
+ */
+const roundKm = (km: number): number => Math.round(km * 100) / 100;
 
 /**
  * Khoảng cách giao xe tận nơi cho khách trên Marketplace (24/08/2026).
@@ -109,23 +119,65 @@ export class DeliveryDistanceService {
     }
 
     const maxRadiusKm = policy.values.deliveryMaxRadiusKm;
-    const distanceKm = await this.geo.roadDistanceKm(origin, resolved.point, maxRadiusKm);
+    const road = await this.geo.roadDistance(origin, resolved.point, maxRadiusKm);
     const base = {
       origin,
       destination: resolved.point,
       formattedAddress: resolved.formattedAddress,
+      maxRadiusKm,
+      straightLineKm: null,
+      distanceKm: null,
+      fee: null,
     };
 
-    // Null ở đây gồm cả ca bị lọc trước bằng đường chim bay (chắc chắn ngoài bán kính) lẫn ca
-    // không có đường bộ. Cả hai đều dẫn tới cùng một câu với khách: chủ xe sẽ báo phí trực tiếp.
-    if (distanceKm == null) {
-      return { ...base, status: DELIVERY_DISTANCE_STATUS.MANUAL, distanceKm: null, fee: null };
+    /*
+     * Ba ngả KHÔNG đo được đường bộ, ba câu khác nhau với khách (ADR 0018 §4 mở rộng
+     * 21/09/2026). Trước đây cả ba cùng rơi về một dòng nói "ngoài phạm vi" — kể cả khi hệ
+     * thống chỉ đơn giản là không hỏi được nhà cung cấp.
+     */
+    switch (road.outcome) {
+      case 'outside_radius':
+        return {
+          ...base,
+          status: DELIVERY_DISTANCE_STATUS.MANUAL,
+          manualReason: DELIVERY_MANUAL_REASON.OUTSIDE_AUTO_RADIUS,
+          // Chỉ có đường chim bay — nói đúng tên nó, đừng trưng như quãng đường lái xe.
+          straightLineKm: roundKm(road.straightLineKm),
+        };
+      case 'no_route':
+        return {
+          ...base,
+          status: DELIVERY_DISTANCE_STATUS.MANUAL,
+          manualReason: DELIVERY_MANUAL_REASON.ROUTE_UNAVAILABLE,
+        };
+      case 'unavailable':
+        return {
+          ...base,
+          status: DELIVERY_DISTANCE_STATUS.MANUAL,
+          manualReason: DELIVERY_MANUAL_REASON.PROVIDER_UNAVAILABLE,
+        };
     }
 
+    const { distanceKm } = road;
     const result = this.pricing.deliveryFeeFor(policy.values, distanceKm);
     if (result.kind === 'auto') {
-      return { ...base, status: DELIVERY_DISTANCE_STATUS.AUTO, distanceKm, fee: result.fee };
+      return {
+        ...base,
+        status: DELIVERY_DISTANCE_STATUS.AUTO,
+        manualReason: null,
+        distanceKm,
+        fee: result.fee,
+      };
     }
-    return { ...base, status: DELIVERY_DISTANCE_STATUS.MANUAL, distanceKm, fee: null };
+    /*
+     * Đo được đường bộ nhưng bậc phí không phủ tới. Vẫn là "ngoài phạm vi tự báo" — chỉ khác ca
+     * trên ở chỗ đây là con số ĐƯỜNG BỘ thật, nên giao diện được phép gọi nó bằng đúng tên.
+     */
+    return {
+      ...base,
+      status: DELIVERY_DISTANCE_STATUS.MANUAL,
+      manualReason: DELIVERY_MANUAL_REASON.OUTSIDE_AUTO_RADIUS,
+      distanceKm,
+    };
   }
 }
