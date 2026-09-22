@@ -6,8 +6,9 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 import type { SubscriptionInvoice } from '@/api/subscription/api';
 import { usePlanPurchase } from '../plan-purchase';
 import { usePurchaseSubscription, useTenantPlans } from '../hooks/use-subscription';
@@ -28,6 +29,7 @@ export function PurchaseSheet({ open, onClose }: { open: boolean; onClose: () =>
   const t = useTranslations('Subscription');
   const tCommon = useTranslations('Common.actions');
   const toast = useAppToast();
+  const fmt = useAppFormat();
   const errorMessage = useErrorMessage();
 
   const plans = useTenantPlans(open);
@@ -95,8 +97,25 @@ export function PurchaseSheet({ open, onClose }: { open: boolean; onClose: () =>
           <LegalConsentNote place="subscription" />
 
           <YStack gap={space.sm}>
+            {/*
+              Tổng tiền đứng CẠNH nút tạo hoá đơn, không nằm trong bảng giá: đây là con số người
+              dùng xác nhận khi chạm, nên nó phải ở trong tầm mắt của chính cú chạm đó. Vùng sống
+              vì nó đổi do một cú chạm ở chỗ khác trên màn.
+            */}
+            <Text
+              accessibilityLiveRegion="polite"
+              col={selection.total == null ? colors.textMuted : colors.text}
+              fos={fontSize.bodySm}
+              fow={selection.total == null ? fontWeight.regular : fontWeight.semibold}
+              ta="center"
+            >
+              {selection.total == null
+                ? t('purchase.pickTerm')
+                : t('purchase.total', { amount: fmt.money(String(selection.total)) })}
+            </Text>
             <Button
               label={t('purchase.submit')}
+              icon="document-text-outline"
               loading={purchase.isPending}
               disabled={!selection.selection}
               onPress={submit}

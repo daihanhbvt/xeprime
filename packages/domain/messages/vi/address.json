@@ -23,8 +23,14 @@
     "pickHint": "Bấm lên bản đồ để đặt ghim.",
     "adjustHint": "Kéo ghim hoặc bấm lên bản đồ để chỉnh lại vị trí.",
     "readOnlyHint": "Bản đồ chỉ để xem. Chọn một gợi ý địa điểm khác nếu ghim chưa đúng.",
+    "pinHint": "Chọn một địa điểm ở ô phía trên để ghim đúng vị trí giao xe.",
     "unavailable": "Chưa hiện được bản đồ. Địa chỉ vẫn lưu bình thường.",
-    "openInMaps": "Mở trên OpenStreetMap"
+    "openInMaps": "Mở trên OpenStreetMap",
+    "sheetTitle": "Đặt ghim vị trí",
+    "editPin": "Chỉnh ghim trên bản đồ",
+    "useThisPoint": "Dùng vị trí này",
+    "openInGoogleMaps": "Mở bằng Google Maps",
+    "tapToEdit": "Bấm vào bản đồ để chỉnh vị trí."
   },
   "review": {
     "badge": "Cần cập nhật địa chỉ",

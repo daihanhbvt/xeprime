@@ -58,6 +58,47 @@ export function isPushAvailable(): boolean {
 }
 
 /**
+ * Người dùng ĐÃ cấp quyền thông báo chưa — ĐỌC THÔI, không bao giờ hiện hộp thoại.
+ *
+ * Tồn tại để tách hai việc từng bị gộp làm một: ĐĂNG KÝ thiết bị (phải làm ngay khi có phiên, nếu
+ * không máy im lặng) và XIN quyền (phải làm lúc người dùng hiểu vì sao — xem docblock của
+ * `usePushNotifications`). Ai đã cấp quyền từ lần cài trước thì đăng ký thẳng, không hỏi lại gì.
+ *
+ * Android không phân biệt được 'chưa hỏi' với 'đã từ chối' qua `check()`, và ở đây không cần
+ * phân biệt: cả hai đều nghĩa là 'chưa có quyền, phải đi qua cửa xin quyền'.
+ */
+export async function hasPushPermission(): Promise<boolean> {
+  const f = fcm();
+  if (!f) return false;
+
+  if (Platform.OS === 'android') {
+    if (
+      typeof Platform.Version === 'number' &&
+      Platform.Version < ANDROID_RUNTIME_NOTIFICATION_PERMISSION_API
+    ) {
+      return true;
+    }
+    try {
+      return await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+    } catch (error) {
+      logger.warn('[push] không đọc được trạng thái quyền Android', { error: String(error) });
+      return false;
+    }
+  }
+
+  try {
+    const status = await f.api.hasPermission(f.instance);
+    return (
+      status === f.api.AuthorizationStatus.AUTHORIZED ||
+      status === f.api.AuthorizationStatus.PROVISIONAL
+    );
+  } catch (error) {
+    logger.warn('[push] không đọc được trạng thái quyền', { error: String(error) });
+    return false;
+  }
+}
+
+/**
  * Xin quyền và trả về `true` nếu người dùng ĐỒNG Ý.
  *
  * Trên iOS `requestPermission()` chỉ hiện hộp thoại lần ĐẦU; các lần sau nó trả lại quyết định

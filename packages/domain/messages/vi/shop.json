@@ -242,7 +242,8 @@
     "legalHint": "Nơi khách nhận xe. Mã số thuế và giấy phép là tuỳ chọn.",
     "payout": "Tài khoản nhận tiền",
     "payoutHint": "Nơi XePrime chuyển tiền cho gian hàng.",
-    "plan": "Gói & hạn mức"
+    "plan": "Gói & hạn mức",
+    "planHint": "Gói hiện hành, hạn mức xe và hoá đơn thanh toán."
   },
   "owner": {
     "title": "Chủ gian hàng",

@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { Href } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { canUpgradeToPackageTrack } from '@xeprime/types';
 import { APP_SCOPE } from './app-scope';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -14,8 +15,8 @@ import { ROUTES } from '@/navigation/routes';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { useShellScope } from './use-shell-scope';
 
-/** Ba trạng thái của cùng một cửa — khớp một-một với `Account.shopEntry.<variant>` bên web. */
-type Variant = 'platform' | 'hasShop' | 'noShop';
+/** Bốn trạng thái của cùng một cửa — khớp một-một với `Account.shopEntry.<variant>` bên web. */
+type Variant = 'platform' | 'hasShop' | 'upgrade' | 'noShop';
 
 interface VariantConfig {
   readonly icon: IconName;
@@ -32,6 +33,13 @@ const CONFIG: Readonly<Record<Variant, VariantConfig>> = {
    */
   hasShop: { icon: 'storefront-outline', href: ROUTES.manage.home(), manage: true },
   /*
+   * CHỦ XE TUYẾN HOA HỒNG ⇒ màn Gói dịch vụ ở khu TÀI KHOẢN, nơi luồng nâng cấp sống.
+   *
+   * Không phải đích ở khu quản lý: họ chưa vào được cổng đó (ADR 0038 điều 4), và đây chính là
+   * cửa để họ mua quyền vào. `manage: false` vì vậy.
+   */
+  upgrade: { icon: 'trending-up-outline', href: ROUTES.account.subscription(), manage: false },
+  /*
    * Chưa có gian hàng ⇒ LANDING "Đăng xe cho thuê", không phải thẳng form đăng ký.
    *
    * Từ ADR 0040 có HAI cửa vào với hai hợp đồng khác nhau, và landing là nơi người dùng chọn cửa.
@@ -43,15 +51,16 @@ const CONFIG: Readonly<Record<Variant, VariantConfig>> = {
 };
 
 /**
- * Cửa đi từ khu TÀI KHOẢN sang khu QUẢN LÝ — bản native của `ShopEntryCard` bên web, cùng ba
+ * Cửa đi từ khu TÀI KHOẢN sang khu QUẢN LÝ — bản native của `ShopEntryCard` bên web, cùng bốn
  * trạng thái và cùng bó chữ (`Account.shopEntry`).
  *
  * ADR 0014: một con người có thể mang nhiều vai, nên thẻ đọc vai THỰC TẾ của người đang đăng
- * nhập thay vì bày sẵn cả ba:
- *  - nhân sự nền tảng → vào trang quản trị (vai nền tảng THẮNG vai gian hàng, và phải xét trước:
- *    một `platform_admin` không thuộc gian hàng nào vẫn tới được màn này);
- *  - có gian hàng     → vào cổng quản lý, tiêu đề là TÊN gian hàng thật;
- *  - chưa có          → mời mở gian hàng (cửa vào phễu thu phí của ADR 0015).
+ * nhập thay vì bày sẵn cả bốn:
+ *  - nhân sự nền tảng     → vào trang quản trị (vai nền tảng THẮNG vai gian hàng, và phải xét
+ *    trước: một `platform_admin` không thuộc gian hàng nào vẫn tới được màn này);
+ *  - có gian hàng gói     → vào cổng quản lý, tiêu đề là TÊN gian hàng thật;
+ *  - chủ xe tuyến hoa hồng → mời NÂNG CẤP lên gian hàng (ADR 0028 điều 1);
+ *  - chưa có gian hàng    → mời mở gian hàng (cửa vào phễu thu phí của ADR 0015).
  *
  * **KHÔNG thêm tab thứ 5.** Số mục trên thanh tab không được đổi theo vai: người có gian hàng và
  * người không có sẽ thấy hai thanh tab khác nhau, và thanh tab nhảy layout ngay sau khi đăng
@@ -82,9 +91,28 @@ export function ShopEntryCard() {
    * Nhân sự nền tảng xét TRƯỚC — một `platform_admin` không thuộc gian hàng nào vẫn cần lối vào
    * trang quản trị.
    */
-  if (!user.platformRole && user.tenant && !canUseManagePortal(user)) return null;
+  /*
+   * CHỦ XE TUYẾN HOA HỒNG — lời mời duy nhất đúng với họ là NÂNG CẤP, và nó xét trước nhánh
+   * "không vào được Manage thì thôi" ngay dưới.
+   *
+   * Đây là cửa vào duy nhất của phễu nâng cấp trên app: "Gói dịch vụ" cố ý KHÔNG là một mục
+   * menu thường trực (`account-nav.ts`) vì nâng cấp là việc làm MỘT LẦN.
+   *
+   * Điều kiện đọc từ `canUpgradeToPackageTrack` (ADR 0038 điều 1 · ADR 0040 điều 4), nên nhân
+   * viên gian hàng hoa hồng, tenant thiếu gói hiện hành và gian hàng đã từng trả tiền đều KHÔNG
+   * rơi vào đây — ba nhóm mà chữ "Nâng cấp lên gian hàng" nói sai.
+   */
+  const canUpgrade = !user.platformRole && canUpgradeToPackageTrack(user.tenant);
 
-  const variant: Variant = user.platformRole ? 'platform' : user.tenant ? 'hasShop' : 'noShop';
+  if (!user.platformRole && user.tenant && !canUseManagePortal(user) && !canUpgrade) return null;
+
+  const variant: Variant = user.platformRole
+    ? 'platform'
+    : canUpgrade
+      ? 'upgrade'
+      : user.tenant
+        ? 'hasShop'
+        : 'noShop';
   const config = CONFIG[variant];
   // Tên gian hàng thật đọc rõ hơn nhãn chung — nhưng chỉ khi đã có gian hàng.
   const title =
@@ -130,9 +158,10 @@ export function ShopEntryCard() {
           Nút chiếm TRỌN bề ngang trên một dòng riêng — đúng cách web bày thẻ này ở ≤640px. Nhét
           nút vào cạnh chữ ở 360dp thì hoặc tên gian hàng còn vài ký tự, hoặc nút hụt vùng chạm.
         */}
+        {/* Hai biến thể MỜI làm một việc mới đi nút chính; hai biến thể dẫn về nơi quen thuộc thì không. */}
         <Button
           label={action}
-          variant={variant === 'noShop' ? 'primary' : 'secondary'}
+          variant={variant === 'noShop' || variant === 'upgrade' ? 'primary' : 'secondary'}
           size="sm"
           onPress={open}
         />

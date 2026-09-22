@@ -12,6 +12,8 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { provinceCenter, type GeoPoint } from '@xeprime/domain';
 import { LOCATION_SOURCE } from '@xeprime/types';
+import { MapPinSheet } from '@/components/map/MapPinSheet';
+import { mapCenterNow } from '@/lib/map-center';
 import { Callout } from '@/components/ui/Callout';
 import { FieldLabel } from '@/components/ui/Field';
 import { RemoteImage } from '@/components/ui/RemoteImage';
@@ -21,10 +23,18 @@ import {
   PLACE_SEARCH_MIN_LENGTH,
   usePlaceDetail,
   usePlaceSearch,
+  useReverseGeocode,
 } from '@/features/locations/hooks/use-places';
 import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
 import { useWardOptions } from '@/features/locations/hooks/use-wards';
-import { MAP_PREVIEW_RATIO, mapAppUrl, mapPreviewUrl, toGeoPoint } from '@/lib/map-static';
+import { isInteractiveMapConfigured } from '@/lib/map-interactive';
+import {
+  MAP_PREVIEW_RATIO,
+  mapAppUrl,
+  mapAreaUrl,
+  mapPreviewUrl,
+  toGeoPoint,
+} from '@/lib/map-static';
 import { readRememberedProvince, rememberProvince } from '@/lib/province-memory';
 import { colors, fieldFontSize, fontSize, iconSize, radius, space } from '@/theme/tokens';
 
@@ -45,6 +55,8 @@ export interface AddressPinNames<T extends FieldValues> {
 
 const styles = StyleSheet.create({
   map: { width: '100%', aspectRatio: MAP_PREVIEW_RATIO },
+  /* Lớp phủ "đang đổi vị trí" — phủ kín khung ảnh bản đồ, xem `MapFrame`. */
+  mapBusy: { ...StyleSheet.absoluteFillObject },
 });
 
 /**
@@ -57,10 +69,12 @@ const styles = StyleSheet.create({
  * 3. **Số nhà, đường** thì GÕ, kèm danh sách gợi ý địa điểm. Không danh mục nhà nước nào phát
  *    hành số nhà và tên đường.
  *
- * **Khác web ở phần BẢN ĐỒ, và chỉ ở đó.** Web có bản đồ tương tác kéo được ghim; native hiện ẢNH
- * bản đồ tĩnh (Maps Static API) — chạm vào thì mở bản đồ THẬT của hệ điều hành. Lý do không kéo
- * `react-native-maps` vào cho đúng một khối kiểm ghim: `lib/map-static.ts`. Người dùng vẫn CHỈNH
- * được ghim: chọn một gợi ý địa điểm khác là ghim nhảy theo.
+ * **Phần BẢN ĐỒ bày khác web, nhưng làm được đúng những việc như nhau.** Trong form là một ẢNH
+ * bản đồ tĩnh — hiện ngay, không tốn một WebView cho mỗi ô địa chỉ, và phần lớn lần mở form
+ * người dùng chỉ liếc xem ghim đúng chưa. Chạm vào ảnh thì mở tấm CHỈNH GHIM (`MapPinSheet`):
+ * bản đồ tương tác toàn màn, phóng to/kéo/bấm để dời ghim, và ghim mới kéo theo một lượt tra
+ * ngược đổ địa chỉ vào ô — cùng ba thao tác và cùng luật với `MapPinPicker` bên web. Vì sao
+ * WebView chứ không phải một module bản đồ native: `lib/map-interactive.ts`.
  */
 export function AddressFields<T extends FieldValues>({
   control,
@@ -442,6 +456,12 @@ export function ConfirmedPlaceField<T extends FieldValues>({
     enabled: !disabled && searchEnabled,
   });
   const placeDetail = usePlaceDetail();
+  const reverse = useReverseGeocode();
+
+  /** Tấm chỉnh ghim đang mở — bản đồ tương tác sống trong đó, không nhúng vào form. */
+  const [pinSheetOpen, setPinSheetOpen] = useState(false);
+  /** Có dựng được bản đồ tương tác không (thiếu khoá thì khối bản đồ trở lại CHỈ-XEM). */
+  const interactive = isInteractiveMapConfigured();
 
   /*
    * Chưa hỏi lần nào thì mặc định coi bản đồ SỐNG: ô vẫn đòi xác nhận, và người dùng chưa gõ
@@ -514,6 +534,56 @@ export function ConfirmedPlaceField<T extends FieldValues>({
   };
 
   /**
+   * Người dùng tự đặt ghim trên bản đồ — bản native của `onMovePin` bên web, cùng bốn bước và
+   * cùng thứ tự.
+   *
+   * Đặt ghim tay LÀ một lời xác nhận vị trí, nên chữ đang có trong ô được chốt lại ngay, kể cả
+   * khi tra ngược hỏng sau đó. Đây là lối ra cho những địa chỉ nhà cung cấp bản đồ không biết
+   * (hẻm, số nhà mới); không có nó thì "phải chọn từ gợi ý" biến thành "không lưu được".
+   */
+  const onMovePin = (next: GeoPoint, resolvedLine: string | null) => {
+    latitude.field.onChange(next.lat as PathValue<T, Path<T>>);
+    longitude.field.onChange(next.lng as PathValue<T, Path<T>>);
+    locationSource.field.onChange(LOCATION_SOURCE.MAP_PIN as PathValue<T, Path<T>>);
+    /*
+     * Ghim tự đặt thì `placeId` cũ không còn mô tả đúng chỗ này nữa — giữ lại là nói dối về
+     * nguồn gốc của toạ độ.
+     */
+    placeId.field.onChange(null as PathValue<T, Path<T>>);
+    confirm((addressLine.field.value as string | null) ?? '');
+
+    /*
+     * Rồi ĐỔ địa chỉ tra ngược được vào chính ô đó, đè lên chữ cũ.
+     *
+     * Ghim mới là thứ vừa được đặt, nên nó là sự thật mới — giữ lại dòng chữ của vị trí trước đó
+     * là để ô nói một chỗ trong khi toạ độ trỏ một chỗ khác.
+     */
+    /*
+     * Tấm chỉnh ghim ĐÃ tra ngược đúng điểm này để in tên chỗ đó ra cho người dùng đọc trước khi
+     * bấm — dùng lại kết quả đó thay vì hỏi `/places/reverse` lần hai cho cùng một toạ độ. Lượt
+     * gọi thứ hai vừa tốn tiền vừa có thể trả về một chuỗi KHÁC chuỗi người dùng vừa đọc.
+     */
+    if (resolvedLine) {
+      addressLine.field.onChange(resolvedLine as PathValue<T, Path<T>>);
+      confirm(resolvedLine);
+      return;
+    }
+
+    // Tấm chưa kịp tra xong (người dùng bấm ngay) — tự hỏi ở đây, đúng như `onMovePin` bên web.
+    void reverse
+      .mutateAsync(next)
+      .then((result) => {
+        const resolved = result.place?.formattedAddress ?? result.place?.suggestedAddressLine ?? '';
+        if (!resolved) return;
+        addressLine.field.onChange(resolved as PathValue<T, Path<T>>);
+        confirm(resolved);
+      })
+      .catch(() => {
+        // Tra ngược hỏng không làm hỏng cái ghim: toạ độ đã vào form và đã được chốt ở trên.
+      });
+  };
+
+  /**
    * Rời ô mà chữ chưa được xác nhận nghĩa là trả về mốc đã xác nhận gần nhất — IM LẶNG, cùng
    * luật với web.
    *
@@ -558,7 +628,29 @@ export function ConfirmedPlaceField<T extends FieldValues>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const preview = mapPreviewUrl(point);
+  /*
+   * Bản đồ hiện NGAY, không đợi có ghim — đúng như web (`MapPinPicker` luôn được dựng, và mở ở
+   * `fallbackCenter` khi `value` còn rỗng).
+   *
+   * Trước đợt này app ẩn hẳn khối bản đồ cho tới khi server trả toạ độ, nên suốt lúc người
+   * dùng đang gõ địa chỉ — đúng lúc họ cần đối chiếu nhất — chỗ đó chỉ có một dòng "chưa hiện
+   * được bản đồ", đọc ra như một thứ đang hỏng.
+   *
+   * Ảnh vùng KHÔNG có ghim: một cái ghim giữa tâm tỉnh trông y hệt một vị trí đã xác nhận.
+   */
+  const pinned = mapPreviewUrl(point);
+  /*
+   * Chưa có ghim ⇒ ảnh VÙNG quanh điểm gần nhất mà app biết: tâm tỉnh đang chọn, hoặc — khi chưa
+   * chọn tỉnh — vị trí thiết bị nếu lượt chạy này đã đọc được.
+   *
+   * Bản ĐỒNG BỘ, cố ý: đây là một ảnh xem trước trong lúc người dùng đang gõ, không phải một cú
+   * chạm. Không đo, không hỏi quyền — một hộp thoại bật lên giữa lúc gõ địa chỉ là đúng thứ vừa
+   * bị gỡ khỏi màn OTP.
+   */
+  const area = mapCenterNow({ anchor });
+  // KHÔNG rơi về hằng số giữa Đà Nẵng ở đây: ảnh này không kéo được, nên một vùng không liên quan
+  // gì tới người đang gõ chỉ là nhiễu. Không biết gì thì giữ nguyên chỗ trống như trước.
+  const preview = pinned ?? (area.source === 'fallback' ? null : mapAreaUrl(area.center));
   const items = suggestions.data?.items ?? [];
   const queryReady =
     !disabled && searchEnabled && line.trim().length >= PLACE_SEARCH_MIN_LENGTH;
@@ -669,28 +761,69 @@ export function ConfirmedPlaceField<T extends FieldValues>({
 
       <YStack gap={space.xs}>
         <FieldLabel label={t('mapLabel')} />
-        {point && preview ? (
+        {preview ? (
           <>
-            <Pressable
-              onPress={() => void Linking.openURL(mapAppUrl(point))}
-              accessibilityRole="imagebutton"
-              accessibilityLabel={t('map.openInMaps')}
-            >
-              <YStack style={styles.map} br={radius.md} bw={1} bc={colors.border} ov="hidden">
-                <RemoteImage
-                  uri={preview}
-                  radius={radius.md}
-                  fallback={
-                    <Text col={colors.textMuted} fos={fontSize.label}>
-                      {tStates('imageUnavailable')}
-                    </Text>
-                  }
-                />
-              </YStack>
-            </Pressable>
-            <Text col={colors.textMuted} fos={fontSize.label}>
-              {t('map.readOnlyHint')}
-            </Text>
+            {/*
+              Chạm vào ảnh là MỞ TẤM CHỈNH GHIM, kể cả khi chưa có ghim nào: ở đó người dùng
+              phóng to, kéo bản đồ và bấm đúng chỗ mình muốn — cùng ba thao tác của web.
+
+              Thiếu khoá bản đồ thì không dựng được bản đồ tương tác, và lúc đó chạm vào ảnh trở
+              lại nghĩa cũ: mở app bản đồ của máy để xem kỹ. Chỉ ảnh CÓ GHIM mới mở được app đó —
+              một vùng chạm dẫn tới tâm tỉnh là hứa sai về thứ người dùng vừa chạm.
+            */}
+            <MapFrame
+              uri={preview}
+              unavailableLabel={tStates('imageUnavailable')}
+              /*
+               * Chỉ lượt tra CHI TIẾT địa điểm mới cần lớp phủ. Lượt tra NGƯỢC (`reverse`, sau
+               * khi tự đặt ghim) thì không: nó chạy sau khi toạ độ đã ghi vào form, nên ảnh bản
+               * đồ đã nhảy sang chỗ mới rồi — chỉ còn phần CHỮ là đang chờ, và chữ đó có khung
+               * chờ riêng của nó.
+               */
+              busy={placeDetail.isPending}
+              busyLabel={tStates('loading')}
+              {...(interactive && !disabled
+                ? { onOpen: () => setPinSheetOpen(true), openLabel: t('map.tapToEdit') }
+                : point && pinned
+                  ? {
+                      onOpen: () => void Linking.openURL(mapAppUrl(point)),
+                      openLabel: t('map.openInGoogleMaps'),
+                    }
+                  : {})}
+            />
+            {interactive && !disabled ? (
+              <>
+                <Text col={colors.textMuted} fos={fontSize.label}>
+                  {t('map.tapToEdit')}
+                </Text>
+                {/*
+                  Xem kỹ bằng GOOGLE MAPS vẫn còn, nhưng lùi xuống một liên kết phụ: cú chạm
+                  chính trên ảnh thuộc về việc CHỈNH ghim. Chưa có ghim thì không có gì để mở tới.
+                */}
+                {point && pinned ? (
+                  <Pressable
+                    accessibilityRole="link"
+                    accessibilityLabel={t('map.openInGoogleMaps')}
+                    onPress={() => void Linking.openURL(mapAppUrl(point))}
+                  >
+                    <XStack ai="center" gap={space.xs}>
+                      <Ionicons
+                        name="open-outline"
+                        size={iconSize.sm}
+                        color={colors.primaryActive}
+                      />
+                      <Text col={colors.primaryActive} fos={fontSize.label}>
+                        {t('map.openInGoogleMaps')}
+                      </Text>
+                    </XStack>
+                  </Pressable>
+                ) : null}
+              </>
+            ) : (
+              <Text col={colors.textMuted} fos={fontSize.label}>
+                {pinned ? t('map.readOnlyHint') : t('map.pinHint')}
+              </Text>
+            )}
           </>
         ) : (
           <Text col={colors.textMuted} fos={fontSize.label}>
@@ -699,11 +832,104 @@ export function ConfirmedPlaceField<T extends FieldValues>({
         )}
       </YStack>
 
+      {interactive && !disabled ? (
+        <MapPinSheet
+          open={pinSheetOpen}
+          value={point}
+          anchor={anchor}
+          onClose={() => setPinSheetOpen(false)}
+          onConfirm={onMovePin}
+        />
+      ) : null}
+
       {pinError ? (
         <Text col={colors.danger} fos={fontSize.label}>
           {pinError}
         </Text>
       ) : null}
     </YStack>
+  );
+}
+
+/**
+ * Khung ảnh bản đồ. Chạm được CHỈ KHI nơi gọi đưa `onOpen` — tức chỉ khi đã có ghim thật.
+ *
+ * Tách ra vì hai ca (có ghim / chưa ghim) chỉ khác nhau ở lớp ngoài cùng; lặp cả khối ảnh hai
+ * lần là hai chỗ để bo góc và viền trôi khỏi nhau.
+ *
+ * ## Vì sao có một lớp PHỦ thay vì một khung chờ
+ *
+ * Bấm một gợi ý địa chỉ xong, ghim không nhảy ngay: trước nó còn một lượt `/places/detail` lấy
+ * toạ độ, rồi một lượt tải ảnh bản đồ mới — cộng lại là hai ba giây trên mạng 3G. Suốt quãng đó
+ * ảnh CŨ vẫn nằm đó trọn vẹn (`expo-image` giữ khung cũ tới byte cuối của khung mới), nên khung
+ * bản đồ trông y như đã xong việc trong khi nó chưa: người dùng đọc ra là cú chạm bị trượt, và
+ * bấm lại.
+ *
+ * Thay ảnh bằng khung chờ thì mất luôn bản đồ — ô trắng giữa form, tệ hơn hẳn. Nên bản đồ ở lại
+ * và chỉ bị mờ đi dưới một lớp phủ có vòng xoay: thấy rõ là "đang đổi", mà vẫn còn thứ để đối
+ * chiếu khi nó đổi xong.
+ */
+function MapFrame({
+  uri,
+  unavailableLabel,
+  busy = false,
+  busyLabel,
+  onOpen,
+  openLabel,
+}: {
+  uri: string;
+  unavailableLabel: string;
+  /**
+   * Đang có một lượt gọi MẠNG sẽ dời ghim (tra chi tiết địa điểm) — `uri` còn là của vị trí cũ,
+   * nên không có gì trong tấm ảnh nói được rằng có việc đang chạy.
+   */
+  busy?: boolean;
+  busyLabel: string;
+  onOpen?: () => void;
+  openLabel?: string;
+}) {
+  /*
+   * MỘT node cho cả hai chặng đợi — lượt gọi mạng (`busy`) rồi lượt tải ảnh (`pendingOverlay`).
+   * Hai chặng nối nhau liền mạch nên chúng phải trông giống nhau; hai node riêng là hai chỗ để
+   * độ mờ và cỡ vòng xoay trôi khỏi nhau.
+   */
+  const busyOverlay = (
+    <YStack
+      style={styles.mapBusy}
+      bg={colors.overlay}
+      ai="center"
+      jc="center"
+      accessibilityRole="progressbar"
+      accessibilityLabel={busyLabel}
+    >
+      <ActivityIndicator color={colors.primaryActive} />
+    </YStack>
+  );
+
+  const frame = (
+    <YStack style={styles.map} br={radius.md} bw={1} bc={colors.border} ov="hidden">
+      <RemoteImage
+        uri={uri}
+        radius={radius.md}
+        /*
+         * Đang chờ mạng thì lớp phủ đã do `MapFrame` vẽ — đưa thêm một bản vào `RemoteImage` là
+         * hai lớp cùng nằm đó và nền tối gấp đôi ở đúng nhịp giao giữa hai chặng.
+         */
+        {...(busy ? {} : { pendingOverlay: busyOverlay })}
+        fallback={
+          <Text col={colors.textMuted} fos={fontSize.label}>
+            {unavailableLabel}
+          </Text>
+        }
+      />
+      {busy ? busyOverlay : null}
+    </YStack>
+  );
+
+  if (!onOpen) return frame;
+  return (
+    <Pressable onPress={onOpen} accessibilityRole="imagebutton" accessibilityLabel={openLabel}>
+      {frame}
+    </Pressable>
   );
 }

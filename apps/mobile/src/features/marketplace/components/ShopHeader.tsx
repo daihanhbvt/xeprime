@@ -4,8 +4,6 @@ import { useTranslations } from 'use-intl';
 import { STOREFRONT_KIND } from '@xeprime/types';
 import { VerifiedName } from '@/components/ui/VerifiedName';
 import { LIST_SEPARATOR } from '@xeprime/domain';
-import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
-import { useShopChatAvailable } from '@/features/chat/hooks/use-shop-chat-available';
 import { ShopCover, ShopLogo, SHOP_LOGO } from '@/components/ui/ShopCover';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { layout } from '@/theme/layout';
@@ -32,8 +30,6 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
 
   const rating = Number(shop.ratingAvg);
   const hasRating = (shop.ratingCount ?? 0) > 0 && Number.isFinite(rating);
-  /* Hỏi ở đây để bỏ luôn hàng chứa nút: một `XStack` rỗng vẫn ăn trọn một nhịp `gap` của cột. */
-  const canChat = useShopChatAvailable(shop.slug, shop.chatOpen);
 
   /*
    * HAI MẶT TIỀN, hai cách vẽ (ADR 0028).
@@ -107,24 +103,6 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
             </XStack>
           </XStack>
         </YStack>
-
-        {/*
-          Liên hệ đi qua HỘP THƯ, không qua số điện thoại (ADR 0038).
-
-          `PublicShopDto` đã bỏ `phone`: trả nó ra là đăng số riêng của chủ xe lên một trang không
-          cần đăng nhập, nơi mọi trình thu thập đều đọc được. Số vẫn tới tay khách — ở bước bàn
-          giao, sau khi đã có một chuyến thật.
-        */}
-        {canChat ? (
-          <XStack>
-            <ShopChatButton
-              shopSlug={shop.slug}
-              publicChatOpen={shop.chatOpen}
-              label={t('message')}
-              size="sm"
-            />
-          </XStack>
-        ) : null}
 
         {/*
           Giới thiệu và địa chỉ đã chuyển sang ShopAbout, nơi chúng đứng cạnh bốn con số của

@@ -14,9 +14,12 @@ import { refreshForNotification } from '@/features/badges/notification-refresh';
 import { queryKeys } from '@/queries/query-keys';
 import { useAppDispatch } from '@/store/hooks';
 import { notificationHref, pendingNotificationPath } from './deep-link';
+import { requestPermissionExclusively } from '@/lib/permission-queue';
+import { usePushPermissionGateOpen } from './push-permission-gate';
 import {
   getInitialPushMessage,
   getPushToken,
+  hasPushPermission,
   isPushAvailable,
   onPushMessage,
   onPushOpened,
@@ -36,8 +39,10 @@ import {
  * Ba ràng buộc:
  *  1. **Chỉ đăng ký khi ĐÃ đăng nhập.** `POST /notifications/device-token` cần phiên, và một
  *     thiết bị không gắn với ai thì không có thông báo nào để nhận.
- *  2. **Xin quyền đúng một lần mỗi phiên chạy.** Hộp thoại của cả hai hệ điều hành đã tự nhớ
- *     lựa chọn của người dùng, nhưng gọi lại mỗi lần render là một lời gọi native vô ích.
+ *  2. **Xin quyền KHÔNG diễn ra ở đây, mà sau khi người dùng vào được một màn chính**
+ *     (`push-permission-gate.ts`). Đăng ký thiết bị thì chạy ngay khi có phiên — nhưng chỉ khi
+ *     quyền ĐÃ có sẵn, nên nó im lặng tuyệt đối. Trước đây hai việc này là một, và hậu quả là hộp
+ *     thoại quyền nhảy lên ngay trên màn nhập mã OTP: xem docblock của cửa.
  *  3. **Không bao giờ log token.**
  */
 export function usePushNotifications(): void {
@@ -48,6 +53,8 @@ export function usePushNotifications(): void {
   const t = useTranslations('MobileShell.push');
   const { data: user, isPending: sessionLoading } = useCurrentUser();
   const userId = user?.id ?? null;
+  /** Người dùng đã vào một màn chính chưa — cửa DUY NHẤT cho phép hiện hộp thoại xin quyền. */
+  const gateOpen = usePushPermissionGateOpen();
 
   /** Đã đăng ký cho tài khoản nào rồi — đổi tài khoản thì đăng ký lại (server gán lại máy). */
   const registeredFor = useRef<string | null>(null);
@@ -113,8 +120,29 @@ export function usePushNotifications(): void {
     if (!available || registeredFor.current === userId) return;
 
     fireAndForget(async () => {
-      const granted = await requestPushPermission();
-      chatDebug.pushPermission(granted);
+      /*
+       * ĐÃ có quyền thì đi thẳng: không hộp thoại, không đợi cửa. Đây là đường của mọi lần mở app
+       * sau lần đầu, và nó phải chạy ngay — token FCM xoay được, và một thiết bị chưa đăng ký lại
+       * là một thiết bị im lặng.
+       */
+      let granted = await hasPushPermission();
+      if (granted) {
+        chatDebug.pushPermissionAlready();
+      } else {
+        /*
+         * CHƯA có quyền ⇒ phải hỏi, mà hỏi thì phải đúng chỗ. Cửa chưa mở nghĩa là người dùng còn
+         * đang ở giữa luồng đăng nhập (màn nhập OTP là ca kinh điển) — im lặng rút lui, effect này
+         * sẽ chạy lại khi cửa mở vì `gateOpen` nằm trong danh sách phụ thuộc.
+         */
+        if (!gateOpen) {
+          chatDebug.pushPermissionDeferred();
+          return;
+        }
+        // Qua hàng đợi: trang chủ cũng xin quyền VỊ TRÍ, và hai hộp thoại cùng lúc thì cái sau bị
+        // hệ điều hành từ chối thẳng mà không hỏi ai.
+        granted = await requestPermissionExclusively('notification', requestPushPermission);
+        chatDebug.pushPermission(granted);
+      }
       if (!granted) return;
 
       const token = await getPushToken();
@@ -139,7 +167,7 @@ export function usePushNotifications(): void {
        */
       chatDebug.pushRegistered(Date.now() - startedAt, device.pushEnabled);
     }, 'usePushNotifications.register');
-  }, [sessionLoading, userId]);
+  }, [gateOpen, sessionLoading, userId]);
 
   // FCM xoay token (khôi phục máy, cài lại app) → POST lại, nếu không máy im lặng vĩnh viễn.
   useEffect(() => {

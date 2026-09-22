@@ -45,6 +45,15 @@
         }
       ],
       [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "XePrime dùng vị trí của bạn để mở sẵn danh sách xe ở tỉnh/thành bạn đang đứng. Bạn có thể đổi địa điểm bất cứ lúc nào.",
+          "locationWhenInUsePermission": "XePrime dùng vị trí của bạn để mở sẵn danh sách xe ở tỉnh/thành bạn đang đứng. Bạn có thể đổi địa điểm bất cứ lúc nào.",
+          "isAndroidBackgroundLocationEnabled": false,
+          "isIosBackgroundLocationEnabled": false
+        }
+      ],
+      [
         "expo-camera",
         {
           "cameraPermission": "XePrime cần quyền máy ảnh để bạn chụp ảnh hiện trạng xe ngay trong ứng dụng.",

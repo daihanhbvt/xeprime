@@ -272,18 +272,6 @@ const SHOP_NAV: readonly ManageNavSection[] = [
         href: ROUTES.manage.shopPolicies(),
       },
       {
-        /*
-         * XEM gói là `subscription.view`; MUA là `subscription.purchase` và chỉ backend kiểm —
-         * ẩn nút mua ở client không phải một lớp chặn (CLAUDE.md §6). Không gác cờ gói: đây
-         * CHÍNH LÀ màn bán gói, khoá nó sau một cờ gói là khoá cửa từ bên trong.
-         */
-        key: 'subscription',
-        labelKey: 'manage.subscription',
-        icon: 'card-outline',
-        permission: PERMISSION.SUBSCRIPTION_VIEW,
-        href: ROUTES.manage.subscription(),
-      },
-      {
         key: 'shop-branches',
         labelKey: 'manage.shopBranches',
         icon: 'git-network-outline',
@@ -298,29 +286,6 @@ const SHOP_NAV: readonly ManageNavSection[] = [
         permission: PERMISSION.DRIVER_VIEW,
         feature: PLAN_FEATURE.DRIVERS,
         href: ROUTES.manage.drivers(),
-      },
-      {
-        /*
-         * Công tắc thu cọc (Phase 6). KHÔNG gắn `feature` dù đường GHI cần `escrow_hold`: gian
-         * hàng thiếu cờ phải vào được để hiểu tính năng thuộc gói nào, và tuyến hoa hồng phải
-         * thấy công tắc bật + khoá kèm giải thích (ADR 0027 điều 4).
-         */
-        key: 'shop-payment-settings',
-        labelKey: 'manage.shopPaymentSettings',
-        icon: 'wallet-outline',
-        permission: PERMISSION.SELLER_PROFILE_VIEW,
-        href: ROUTES.manage.shopPaymentSettings(),
-      },
-      {
-        /*
-         * Bộ CƠ BẢN (ADR 0027 điều 1): chủ xe cơ bản cũng phải khai được danh tính và tài khoản
-         * nhận tiền — KHÔNG gắn `feature`, nếu không thì chính họ là người không nhận được tiền.
-         */
-        key: 'seller-profile',
-        labelKey: 'manage.sellerProfile',
-        icon: 'id-card-outline',
-        permission: PERMISSION.SELLER_PROFILE_VIEW,
-        href: ROUTES.manage.sellerProfile(),
       },
       {
         key: 'members',
@@ -439,6 +404,12 @@ const PLATFORM_NAV: readonly ManageNavSection[] = [
         permission: PERMISSION.PLATFORM_BILLING_MANAGE,
       },
       {
+        key: 'admin-bank-transactions',
+        labelKey: 'platform.bankTransactions',
+        icon: 'swap-horizontal-outline',
+        permission: PERMISSION.PLATFORM_BILLING_MANAGE,
+      },
+      {
         key: 'admin-banners',
         labelKey: 'platform.banners',
         icon: 'image-outline',
@@ -461,6 +432,30 @@ const PLATFORM_NAV: readonly ManageNavSection[] = [
         labelKey: 'platform.audit',
         icon: 'time-outline',
         permission: PERMISSION.PLATFORM_AUDIT_VIEW,
+      },
+      {
+        key: 'admin-sellers',
+        labelKey: 'platform.sellers',
+        icon: 'id-card-outline',
+        permission: PERMISSION.PLATFORM_SELLER_VERIFY,
+      },
+      {
+        key: 'admin-fee-policies',
+        labelKey: 'platform.feePolicies',
+        icon: 'pricetags-outline',
+        permission: PERMISSION.PLATFORM_FEE_POLICY_MANAGE,
+      },
+      {
+        key: 'admin-money',
+        labelKey: 'platform.money',
+        icon: 'cash-outline',
+        permission: PERMISSION.PLATFORM_MONEY_MANAGE,
+      },
+      {
+        key: 'admin-support',
+        labelKey: 'platform.support',
+        icon: 'help-buoy-outline',
+        permission: PERMISSION.PLATFORM_SUPPORT_MANAGE,
       },
     ],
   },

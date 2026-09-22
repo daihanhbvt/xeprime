@@ -10,6 +10,24 @@ import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 const APP_HEADER_HEIGHT = 56;
 
+/**
+ * Nét VẠCH THƯƠNG HIỆU đóng đáy thanh trên.
+ *
+ * 2pt chứ không phải 1: một nét 1pt đọc ra là đường kẻ chia ô, còn ở 2pt màu gold thành một dải
+ * có chủ ý — thứ chia thanh điều hướng khỏi nội dung mà không cần đổ bóng. Dày hơn nữa thì nó
+ * bắt đầu tranh chú ý với chính nút hành động màu gold bên trong thanh.
+ */
+export const HEADER_RULE = 2;
+
+/**
+ * Độ đậm của vạch: cùng token gold, kéo mờ bớt.
+ *
+ * Gold đặc ở 2pt đọc ra như một dải trang trí và tranh chú ý với nút hành động cũng màu gold
+ * trong thanh. Làm nhạt thì nó lùi về đúng vai một RANH GIỚI. Không đổi sang một mã màu nhạt
+ * viết tay: bảng màu chỉ có gold đặc và gold-wash (gần trắng, tàng hình trên nền trang).
+ */
+export const HEADER_RULE_OPACITY = 0.45;
+
 type Variant = 'solid' | 'overlay';
 
 type Tone = 'surface' | 'brand';
@@ -120,13 +138,7 @@ export function AppHeader({
       py={space.xs}
       minHeight={APP_HEADER_HEIGHT}
       marginTop={overlay || flushTop ? 0 : insets.top}
-      {...(overlay
-        ? {}
-        : {
-            bg,
-            borderBottomWidth: 1,
-            bc: brand ? colors.primary : colors.borderSubtle,
-          })}
+      {...(overlay ? {} : { bg })}
     >
       {onBack ? (
         <IconButton
@@ -181,8 +193,26 @@ export function AppHeader({
   );
 
   if (!overlay) {
-    // Nền phủ luôn dải safe-area để chữ dưới thanh trạng thái không lộ nền trang bên dưới.
-    return <YStack bg={bg}>{bar}</YStack>;
+    /*
+      Nền phủ luôn dải safe-area để chữ dưới thanh trạng thái không lộ nền trang bên dưới.
+
+      Vạch đáy là một KHỐI RIÊNG chứ không phải `borderBottomWidth` của thanh: thanh có phần đệm
+      ngang, còn vạch phải chạm hai mép màn hình — một nét thụt vào hai bên đọc ra như thanh bị
+      hụt chứ không như một ranh giới.
+
+      Nền gold (`brand`) dùng sắc gold ĐẬM hơn: cùng `colors.primary` đặt trên chính nó thì vạch
+      biến mất, và thanh lại trôi vào nội dung đúng như trước.
+    */
+    return (
+      <YStack bg={bg}>
+        {bar}
+        <YStack
+          h={HEADER_RULE}
+          opacity={HEADER_RULE_OPACITY}
+          bg={brand ? colors.primaryActive : colors.primary}
+        />
+      </YStack>
+    );
   }
 
   return (

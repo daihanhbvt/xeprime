@@ -18,6 +18,7 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { DepositSettingsSection } from '@/features/shop/components/DepositSettingsSection';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { useDomainLabel } from '@/i18n/domain';
@@ -244,6 +245,13 @@ function PolicyWorkspace({
               />
             </YStack>
           ) : null}
+
+          {/*
+            THU CỌC QUA XEPRIME — khối cuối trang, đúng chỗ web đặt nó (16/09/2026): cả trang
+            riêng cũ chỉ có một công tắc, và gian hàng vốn đã ở đây để chỉnh tiền cọc/thế chấp.
+            Nó tự im lặng khi thiếu quyền `seller_profile.view`, nên không cần rào ở đây.
+          */}
+          <DepositSettingsSection />
         </YStack>
       </Screen>
 

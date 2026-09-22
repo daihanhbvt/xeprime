@@ -3,10 +3,8 @@ import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { DEPOSIT_POLICY_REASON, PERMISSION, STATUS_COLOR } from '@xeprime/types';
-import { Screen } from '@/components/layout/Screen';
-import { ScreenError } from '@/components/state/ScreenError';
-import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
+import { ScreenError } from '@/components/state/ScreenError';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
@@ -15,23 +13,28 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
 import { ToggleRow } from '@/features/rental-policies/components/PolicySections';
-import { ManageHeader } from '@/features/shell/ManageHeader';
-import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { ROUTES } from '@/navigation/routes';
 import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
-import type { PaymentSettings } from './api';
-import { usePaymentSettings, useUpdatePaymentSettings } from './hooks/use-shop';
+import type { PaymentSettings } from '../api';
+import { usePaymentSettings, useUpdatePaymentSettings } from '../hooks/use-shop';
 
 /**
- * Công tắc thu cọc qua XePrime (Phase 6) — bản native của `/manage/shop/payment-settings`.
+ * THU CỌC QUA XEPRIME — một KHỐI trong màn "Chính sách thuê", không còn là một màn riêng.
  *
- * Màn KHÔNG gác theo `PLAN_FEATURE.ESCROW_HOLD` (ADR 0027 điều 4): gian hàng thiếu cờ vào đây để
- * ĐỌC trạng thái và hiểu tính năng thuộc gói nào; chặn thật nằm ở server cho đường GHI.
+ * Gương của web (16/09/2026): cả trang cũ chỉ có đúng MỘT công tắc, nên nó về sống cạnh các
+ * thiết lập tiền cọc/thế chấp mà gian hàng vốn đã tới đó để chỉnh. Route cũ
+ * `/manage/shop/payment-settings` còn sống dưới dạng chuyển hướng, cho ai đã đặt lối tắt.
+ *
+ * KHÔNG gác theo `PLAN_FEATURE.ESCROW_HOLD` (ADR 0027 điều 4): gian hàng thiếu cờ phải ĐỌC được
+ * trạng thái và hiểu tính năng thuộc gói nào; chặn thật nằm ở server cho đường GHI.
+ *
+ * Tự IM LẶNG khi người dùng không có `seller_profile.view` — đây là một khối giữa trang, không
+ * phải một màn, nên không có chỗ để dựng một trạng thái "không có quyền" của riêng nó; màn chứa
+ * nó đã có trạng thái đó cho chính sách thuê.
  */
-export function ShopPaymentSettingsScreen() {
+export function DepositSettingsSection() {
   const t = useTranslations('Shop.paymentSettings');
-  const tShop = useTranslations('Shop.page');
   const { has } = usePermissions();
   const { tenant } = useTenantScope();
 
@@ -39,41 +42,35 @@ export function ShopPaymentSettingsScreen() {
   const canEdit = has(PERMISSION.SELLER_PROFILE_MANAGE);
   const query = usePaymentSettings(canView && Boolean(tenant));
 
-  if (!canView) {
-    return (
-      <>
-        <ManageHeader />
-        <Screen edges={['left', 'right', 'bottom']} scroll={false}>
-          <ScreenMessage
-            icon="lock-closed-outline"
-            title={t('forbidden.title')}
-            description={t('forbidden.description')}
-            actionLabel={tShop('forbidden.backHome')}
-          />
-        </Screen>
-      </>
-    );
-  }
+  if (!canView) return null;
 
   return (
-    <>
-      <ManageHeader />
-      <Screen edges={['left', 'right', 'bottom']}>
-        <ManagePageTitle title={t('title')} subtitle={t('subtitle')} />
+    <YStack gap={space.md}>
+      {/*
+        Tiêu đề khối tự dựng chứ không mượn `BlockTitle`: đây là một MỤC ngang hàng với các khối
+        chính sách của màn (thẻ trắng, tiêu đề cỡ thường), không phải một nhãn nhỏ bên trong thẻ.
+      */}
+      <YStack gap={2}>
+        <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.semibold}>
+          {t('title')}
+        </Text>
+        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          {t('subtitle')}
+        </Text>
+      </YStack>
 
-        {query.isLoading ? (
-          <MiniRowsSkeleton rows={5} />
-        ) : query.isError || !query.data ? (
-          <ScreenError
-            error={query.error}
-            title={t('loadError')}
-            onRetry={() => void query.refetch()}
-          />
-        ) : (
-          <DepositToggleCard settings={query.data} canEdit={canEdit} />
-        )}
-      </Screen>
-    </>
+      {query.isLoading ? (
+        <MiniRowsSkeleton rows={5} />
+      ) : query.isError || !query.data ? (
+        <ScreenError
+          error={query.error}
+          title={t('loadError')}
+          onRetry={() => void query.refetch()}
+        />
+      ) : (
+        <DepositToggleCard settings={query.data} canEdit={canEdit} />
+      )}
+    </YStack>
   );
 }
 
@@ -112,13 +109,7 @@ function lockReason(
  * Chặn THẬT nằm ở server (`DepositPolicyService.updateSettings` ném 403); `canEdit` ở đây chỉ để
  * không mời người dùng bấm một thứ chắc chắn hỏng.
  */
-function DepositToggleCard({
-  settings,
-  canEdit,
-}: {
-  settings: PaymentSettings;
-  canEdit: boolean;
-}) {
+function DepositToggleCard({ settings, canEdit }: { settings: PaymentSettings; canEdit: boolean }) {
   const t = useTranslations('Shop.paymentSettings');
   const router = useRouter();
   const toast = useAppToast();
