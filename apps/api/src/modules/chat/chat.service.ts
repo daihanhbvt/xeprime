@@ -27,7 +27,6 @@ import {
   OUTBOX_STATUS,
   SENDER_TYPE,
   TENANT_STATUS,
-  VEHICLE_PUBLIC_STATUS,
   resolveEffectiveBilling,
   resolveStorefrontKind,
   storefrontAllowsPublicChat,
@@ -42,6 +41,7 @@ import {
   effectiveSubscriptionWhere,
 } from '../../common/plan/feature-state';
 // CONVERSATION_STATUS.OPEN (misc.ts) — hội thoại mới mặc định "open".
+import { marketplaceVehicleWhere } from '../../common/marketplace-vehicle-scope';
 import { NotificationService } from '../notification/notification.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -132,17 +132,18 @@ export class ChatService {
     );
   }
 
-  /** Đường vào từ một chiếc xe: chỉ xe đã duyệt công khai của gian hàng đang hoạt động. */
+  /**
+   * Đường vào từ một chiếc xe: chỉ xe đang THẬT SỰ nằm ngoài chợ
+   * (`marketplaceVehicleWhere` — đã duyệt, chủ xe bật hiển thị, gian hàng hoạt động).
+   *
+   * Hội thoại ĐÃ MỞ không bị đụng tới: hàm này chỉ gác lối MỞ MỚI từ một trang xe. Chủ xe cất
+   * xe đi không phải là lý do để cắt liên lạc với người đang hỏi về chuyến của họ.
+   */
   private async resolveTargetByVehicle(
     vehicleId: string,
   ): Promise<{ tenantId: string; vehicleId: string | null }> {
     const vehicle = await this.prisma.vehicle.findFirst({
-      where: {
-        id: vehicleId,
-        deletedAt: null,
-        publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
-        tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
-      },
+      where: { id: vehicleId, ...marketplaceVehicleWhere() },
       select: { id: true, tenantId: true },
     });
     if (!vehicle) {

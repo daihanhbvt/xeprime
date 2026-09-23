@@ -474,7 +474,8 @@ describe('CalendarScheduler — lớp ngày lễ', () => {
     renderScheduler();
 
     const legend = screen.getByLabelText('Chú giải lịch');
-    for (const label of ['Đã giữ xe', 'Đang thuê']) {
+    // "Đã giữ xe" → "Chờ giao xe" (ADR 0047, đổi nhãn toàn cục của `reserved`).
+    for (const label of ['Chờ giao xe', 'Đang thuê']) {
       expect(within(legend).getByText(label), label).toBeTruthy();
     }
     expect(within(legend).queryByText('Đơn thuê')).toBeNull();
@@ -682,7 +683,7 @@ describe('CalendarScheduler — bản tiếng Anh', () => {
     const legend = screen.getByLabelText('Calendar legend');
     // Nhãn trạng thái ở chú giải đi qua `Domain.bookingStatus` — cùng nguồn với thẻ trạng thái,
     // nên khoá tiếng Anh ở đây cũng chứng minh hai chỗ không thể gọi tên khác nhau.
-    expect(within(legend).getByText('Vehicle held')).toBeTruthy();
+    expect(within(legend).getByText('Awaiting pickup')).toBeTruthy();
     expect(within(legend).getByText('On rent')).toBeTruthy();
     expect(within(legend).getByText('Holiday')).toBeTruthy();
 

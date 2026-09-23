@@ -221,6 +221,8 @@ export {
   type RemainingKmKind,
 } from './odometer';
 
+export { PICKUP_URGENCY, pickupUrgency, type PickupUrgency } from './pickup-queue';
+
 export { buildVietQrUrl } from './vietqr';
 
 export { VIETNAM_BANKS, findBank, bankDisplayName, bankInitials, type VietnamBank } from './banks';

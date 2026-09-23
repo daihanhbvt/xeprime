@@ -1,0 +1,58 @@
+/**
+ * Việc "đưa xe lên chợ" trong thẻ Việc cần làm.
+ *
+ * Dải màu bên trái thay cho chấm tròn của `VehicleAlertList`: việc này có nút bấm nên nó cao
+ * hơn hẳn một dòng cảnh báo, và một chấm ở đầu dòng đầu tiên sẽ trôi khỏi phần còn lại.
+ * Màu KHÔNG bao giờ là kênh thông tin duy nhất — tiêu đề đã nói đủ nghĩa (ADR 0012/WCAG).
+ */
+.task {
+  padding: var(--xp-space-sm) var(--xp-space-sm) var(--xp-space-sm) var(--xp-space-md);
+  border-left: 3px solid var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-sm);
+  margin-bottom: var(--xp-space-sm);
+  background: var(--xp-color-bg-muted);
+}
+
+.critical {
+  border-left-color: var(--xp-color-error);
+}
+
+.warning {
+  border-left-color: var(--xp-color-warning);
+}
+
+.info {
+  border-left-color: var(--xp-color-info);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.detail,
+.reason {
+  margin: var(--xp-space-xs) 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* Lý do người duyệt viết — trích dẫn để phân biệt với chữ của hệ thống. */
+.reason {
+  padding-left: var(--xp-space-sm);
+  border-left: 2px solid var(--xp-color-border);
+  color: var(--xp-color-text);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: var(--xp-space-sm);
+  gap: var(--xp-space-xs);
+}

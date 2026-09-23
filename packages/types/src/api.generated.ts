@@ -626,8 +626,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Duyệt yêu cầu → tạo đơn thuê (giữ chỗ lịch, phí giao nhận 0)
-         * @description Thuê dài hạn: body bắt buộc scheduledPickupAt — gian hàng chốt giờ nhận, server tính giờ trả theo gói tháng lịch (ADR 0011). Trùng lịch → 409, yêu cầu vẫn chờ duyệt.
+         * Duyệt yêu cầu → giữ lịch + chốt giá (đơn thuê chỉ ra đời khi khách thanh toán đủ)
+         * @description Có tiền giữ chỗ: request chuyển sang `awaiting_hold`, KHÔNG có Booking nào được tạo ở bước này. Không thu tiền giữ chỗ: Booking được tạo ngay trong cùng transaction. Thuê dài hạn: body bắt buộc scheduledPickupAt — gian hàng chốt giờ nhận, server tính giờ trả theo gói tháng lịch (ADR 0011). Trùng lịch → 409, yêu cầu vẫn chờ duyệt.
          *
          *     **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
@@ -7774,6 +7774,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vehicles/{id}/marketplace-visibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Bật/tắt hiển thị xe trên chợ (lựa chọn của chủ xe — ADR 0048)
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *
+         *     **Quyền yêu cầu:** `vehicles.submit_public` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        patch: operations["VehiclesController_setMarketplaceVisibility"];
+        trace?: never;
+    };
     "/vehicles/{id}/operation-settings": {
         parameters: {
             query?: never;
@@ -8580,6 +8604,18 @@ export interface components {
             pickupAt: string;
             /** @description ISO-8601 UTC — với thuê dài hạn do SERVER tính từ gói */
             returnAt: string;
+            /**
+             * @description Trạng thái biên bản GIAO XE còn hiệu lực (bản huỷ không tính). null = chưa lập biên bản nào
+             * @enum {string|null}
+             */
+            pickupHandoverStatus: "draft" | "ready" | "confirmed" | "canceled" | null;
+            /**
+             * @description Chỗ xe đổi tay — MÃ; nhãn do client dịch
+             * @enum {string|null}
+             */
+            handoverPlaceKind: "delivery" | "driver_pickup" | "branch" | null;
+            /** @description Địa chỉ hoặc tên chi nhánh đi kèm `handoverPlaceKind` — chuỗi thô, không dịch */
+            handoverPlace: string | null;
             /** @description Giá thuê đã chốt, KHÔNG gồm phụ phí. Tiền dạng string — ADR 0007 */
             totalAmount: string;
             /** @description Tiền thuê đã thu (`payments`) — writer duy nhất là PaymentsService */
@@ -8647,6 +8683,18 @@ export interface components {
             pickupAt: string;
             /** @description ISO-8601 UTC — với thuê dài hạn do SERVER tính từ gói */
             returnAt: string;
+            /**
+             * @description Trạng thái biên bản GIAO XE còn hiệu lực (bản huỷ không tính). null = chưa lập biên bản nào
+             * @enum {string|null}
+             */
+            pickupHandoverStatus: "draft" | "ready" | "confirmed" | "canceled" | null;
+            /**
+             * @description Chỗ xe đổi tay — MÃ; nhãn do client dịch
+             * @enum {string|null}
+             */
+            handoverPlaceKind: "delivery" | "driver_pickup" | "branch" | null;
+            /** @description Địa chỉ hoặc tên chi nhánh đi kèm `handoverPlaceKind` — chuỗi thô, không dịch */
+            handoverPlace: string | null;
             /** @description Giá thuê đã chốt, KHÔNG gồm phụ phí. Tiền dạng string — ADR 0007 */
             totalAmount: string;
             /** @description Tiền thuê đã thu (`payments`) — writer duy nhất là PaymentsService */
@@ -12102,6 +12150,15 @@ export interface components {
              * @enum {string|null}
              */
             listingStatus?: "active" | "hidden" | "suspended" | "archived" | null;
+            /** @description Chủ xe có đang cho xe hiện ngoài chợ không (ADR 0048) */
+            marketplaceEnabled: boolean;
+            /** @description Khách có thật sự thấy xe này không */
+            isMarketplaceVisible: boolean;
+            /**
+             * @description Vì sao xe đang (không) hiện ngoài chợ
+             * @enum {string}
+             */
+            marketplaceVisibilityReason: "visible" | "owner_paused" | "not_approved" | "platform_hidden" | "shop_inactive" | "archived";
             /** @description ISO-8601 UTC */
             createdAt: string;
             brand?: string | null;
@@ -12146,6 +12203,15 @@ export interface components {
              * @enum {string|null}
              */
             listingStatus?: "active" | "hidden" | "suspended" | "archived" | null;
+            /** @description Chủ xe có đang cho xe hiện ngoài chợ không (ADR 0048) */
+            marketplaceEnabled: boolean;
+            /** @description Khách có thật sự thấy xe này không */
+            isMarketplaceVisible: boolean;
+            /**
+             * @description Vì sao xe đang (không) hiện ngoài chợ
+             * @enum {string}
+             */
+            marketplaceVisibilityReason: "visible" | "owner_paused" | "not_approved" | "platform_hidden" | "shop_inactive" | "archived";
             /** @description ISO-8601 UTC */
             createdAt: string;
         };
@@ -12566,6 +12632,12 @@ export interface components {
             manufactureYear?: number | null;
             /** @description Giới thiệu gian hàng */
             shopBio?: string | null;
+            /** @description Điểm đánh giá trung bình CỦA GIAN HÀNG, string — ADR 0007 */
+            shopRatingAvg: string;
+            /** @description Số lượt đánh giá của gian hàng */
+            shopRatingCount: number;
+            /** @description Số chuyến đã hoàn thành của TOÀN gian hàng */
+            shopCompletedTripCount: number;
             /** @description URL ảnh gallery theo thứ tự */
             images: string[];
             /** @description Key tiện ích (VEHICLE_FEATURE_LABEL) */
@@ -13488,6 +13560,10 @@ export interface components {
              */
             success: true;
         };
+        SetMarketplaceVisibilityDto: {
+            /** @description true = cho xe hiện ngoài chợ; false = tạm cất khỏi chợ (không đụng kiểm duyệt) */
+            enabled: boolean;
+        };
         SetPasswordDto: {
             /** @example matkhau123 */
             password: string;
@@ -13972,10 +14048,10 @@ export interface components {
         };
         TransitionBookingDto: {
             /**
-             * @description Trạng thái đích
+             * @description Trạng thái đích — chỉ hai quyết định bấm tay: huỷ đơn hoặc khách không đến
              * @enum {string}
              */
-            status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
+            status: "cancelled" | "no_show";
             /** @description Lý do — BẮT BUỘC khi status = cancelled/no_show. Ghi vào audit (afterJson.reason), KHÔNG ghi vào note của đơn */
             reason?: string;
             /**
@@ -14633,8 +14709,20 @@ export interface components {
             discountPercent?: number | null;
             /** @enum {string} */
             operationStatus: "available" | "renting" | "maintenance" | "inactive";
-            /** @enum {string} */
+            /**
+             * @description Trục KIỂM DUYỆT của nền tảng — `hidden` = nền tảng gỡ xe xuống, không phải chủ xe tạm ẩn
+             * @enum {string}
+             */
             publicStatus: "draft" | "pending_public_review" | "approved_public" | "needs_revision" | "rejected" | "hidden" | "archived";
+            /** @description LỰA CHỌN của chủ xe: có cho xe hiện ngoài chợ không. Độc lập với publicStatus (ADR 0048) */
+            marketplaceEnabled: boolean;
+            /** @description Kết quả hiển thị THỰC TẾ — gộp xoá mềm + trạng thái gian hàng + kiểm duyệt + lựa chọn chủ xe */
+            isMarketplaceVisible: boolean;
+            /**
+             * @description Vì sao xe đang (không) hiện ngoài chợ. Server suy — client KHÔNG tự ghép lại từ nhiều status
+             * @enum {string}
+             */
+            marketplaceVisibilityReason: "visible" | "owner_paused" | "not_approved" | "platform_hidden" | "shop_inactive" | "archived";
             mainImageUrl?: string | null;
             /** @description Tiền dạng string — ADR 0007 */
             weekdayPrice?: string | null;
@@ -14799,8 +14887,20 @@ export interface components {
             discountPercent?: number | null;
             /** @enum {string} */
             operationStatus: "available" | "renting" | "maintenance" | "inactive";
-            /** @enum {string} */
+            /**
+             * @description Trục KIỂM DUYỆT của nền tảng — `hidden` = nền tảng gỡ xe xuống, không phải chủ xe tạm ẩn
+             * @enum {string}
+             */
             publicStatus: "draft" | "pending_public_review" | "approved_public" | "needs_revision" | "rejected" | "hidden" | "archived";
+            /** @description LỰA CHỌN của chủ xe: có cho xe hiện ngoài chợ không. Độc lập với publicStatus (ADR 0048) */
+            marketplaceEnabled: boolean;
+            /** @description Kết quả hiển thị THỰC TẾ — gộp xoá mềm + trạng thái gian hàng + kiểm duyệt + lựa chọn chủ xe */
+            isMarketplaceVisible: boolean;
+            /**
+             * @description Vì sao xe đang (không) hiện ngoài chợ. Server suy — client KHÔNG tự ghép lại từ nhiều status
+             * @enum {string}
+             */
+            marketplaceVisibilityReason: "visible" | "owner_paused" | "not_approved" | "platform_hidden" | "shop_inactive" | "archived";
             mainImageUrl?: string | null;
             /** @description Tiền dạng string — ADR 0007 */
             weekdayPrice?: string | null;
@@ -14863,7 +14963,7 @@ export interface components {
             /** @description % khuyến mãi trực tiếp cho dịch vụ tự lái; null/0 = không khuyến mãi */
             discountPercent?: number | null;
             serviceTypes: ("self_drive" | "with_driver" | "long_term")[];
-            /** @description Xe đang hiển thị công khai — lưu giá sẽ đưa xe về chờ duyệt lại (ADR 0008) */
+            /** @description Xe đã được nền tảng DUYỆT (`public_status = approved_public`) — trục KIỂM DUYỆT, không phải "khách có thấy xe không". Chủ xe có thể đang tạm ẩn xe đã duyệt: xem `marketplaceEnabled`/`isMarketplaceVisible` ở `GET /vehicles/:id` (ADR 0048) */
             isPublic: boolean;
         };
         VehicleProfitItemDto: {
@@ -19615,6 +19715,8 @@ export interface operations {
                 /** @description Tìm theo tên khách/SĐT/mã đơn */
                 q?: string;
                 status?: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
+                /** @description Nhóm việc dựng sẵn — awaiting_pickup: đơn đã tạo nhưng chưa bàn giao xe */
+                preset?: "awaiting_pickup";
                 /** @description Lọc theo xe */
                 vehicleId?: string;
                 /** @description Lọc theo chi nhánh (qua xe của đơn) */
@@ -52492,6 +52594,8 @@ export interface operations {
                 vehicleType?: "car" | "motorbike";
                 /** @description Trạng thái gian hàng chủ xe */
                 tenantStatus?: "draft" | "pending_review" | "needs_revision" | "active" | "suspended" | "rejected" | "expired";
+                /** @description true = chỉ xe ĐANG THẬT SỰ hiện ngoài chợ (đã duyệt + chủ xe bật + gian hàng hoạt động); false = mọi xe không hiện */
+                marketplaceVisible?: boolean;
                 page?: number;
                 limit?: number;
             };
@@ -69764,6 +69868,181 @@ export interface operations {
              * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
              *
              *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN` · `FEATURE_NOT_IN_PLAN` · `FEATURE_READ_ONLY`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
+             *
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    VehiclesController_setMarketplaceVisibility: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetMarketplaceVisibilityDto"];
+            };
+        };
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["VehicleDetailDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
              */
             403: {
                 headers: {

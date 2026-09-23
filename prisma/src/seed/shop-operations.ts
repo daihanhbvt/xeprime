@@ -304,9 +304,15 @@ function planBookings(
       });
     }
 
+    /*
+     * ADR 0047: `confirmed` không còn là trạng thái nghỉ hợp lệ — DB có CHECK constraint chặn
+     * ghi giá trị này. Nhánh cũ ở đây (`from: 4, to: 7`) đổi thành `RESERVED` thứ hai: vừa giữ
+     * đủ năm nhánh để đa dạng dữ liệu demo, vừa cho màn "Chờ giao xe" nhiều đơn hơn để xem badge
+     * mức khẩn (quá giờ/hôm nay/sắp tới) trên nhiều mốc khác nhau.
+     */
     const upcoming = [
       { status: BOOKING_STATUS.ACTIVE, from: -1, to: 2 },
-      { status: BOOKING_STATUS.CONFIRMED, from: 4, to: 7 },
+      { status: BOOKING_STATUS.RESERVED, from: 4, to: 7 },
       { status: BOOKING_STATUS.RESERVED, from: 9, to: 12 },
       { status: BOOKING_STATUS.CANCELLED, from: 5, to: 8 },
       null, // xe rảnh — phải có xe không vướng đơn nào để thử đặt mới
@@ -1221,7 +1227,8 @@ export async function buildBookingRequests(
   }
 
   // Yêu cầu đã DUYỆT và đã thành đơn — nối `bookingId` để mở được đơn từ yêu cầu.
-  const converted = bookings.find((b) => b.plan.status === BOOKING_STATUS.CONFIRMED);
+  // ADR 0047: không còn `confirmed` để tìm — lấy đại diện bằng đơn `reserved` đầu tiên.
+  const converted = bookings.find((b) => b.plan.status === BOOKING_STATUS.RESERVED);
   if (converted) {
     const id = seedId(`${spec.key}:request:converted`);
     await prisma.bookingRequest.upsert({

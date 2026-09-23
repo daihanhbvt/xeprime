@@ -266,11 +266,7 @@ describe('Cọc đã CẤU HÌNH khác cọc đã THU', () => {
    * Wave 11.1 — hai chặng từng bị nuốt vào `NONE`/`AWAITING_REFUND` và nói sai về tiền thật.
    */
   maybe('đã thu cọc nhưng chuyến CHƯA xong → Đã nhận cọc, không phải "không có cọc"', async () => {
-    for (const status of [
-      BOOKING_STATUS.RESERVED,
-      BOOKING_STATUS.CONFIRMED,
-      BOOKING_STATUS.ACTIVE,
-    ]) {
+    for (const status of [BOOKING_STATUS.RESERVED, BOOKING_STATUS.ACTIVE]) {
       const bookingId = await createBooking({ deposit: '5000000', status });
       await receiveDeposit(bookingId, '5000000');
 

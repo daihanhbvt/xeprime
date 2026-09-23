@@ -63,6 +63,7 @@
     "bookingsShort": "Đơn thuê",
     "bookingRequests": "Yêu cầu đặt xe",
     "bookingRequestsShort": "Yêu cầu",
+    "bookingsAwaitingPickup": "Chờ giao xe",
     "customers": "Khách hàng",
     "finance": "Tài chính",
     "financeOverview": "Tổng quan doanh thu",

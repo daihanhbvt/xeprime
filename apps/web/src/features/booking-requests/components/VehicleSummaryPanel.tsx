@@ -1,6 +1,5 @@
 'use client';
 
-import { StarFilled } from '@ant-design/icons';
 import { Skeleton } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -13,6 +12,7 @@ import type { PublicListingDetail } from '@/features/marketplace/types';
 import { applyDiscountPercent } from '@/lib/money';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
+import { ShopQuickInfoCard } from '@/components/shop/ShopQuickInfoCard';
 import styles from './VehicleSummaryPanel.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
@@ -193,36 +193,44 @@ export function VehicleSummaryPanel({
             </dl>
           ) : null}
 
+          {/*
+            Cùng thẻ với trang chi tiết xe (`ShopQuickInfoCard`, `compact`) — trước 23/09/2026 cột
+            này tự dựng avatar + tên + rating riêng, và rating ở đây thật ra là của CHIẾC XE đang
+            đặt chứ không phải của gian hàng. `variant="compact"` bỏ giới thiệu/ba chỉ số/banner:
+            panel đã có ảnh, giá, thông số ngay phía trên, không phải chỗ lặp lại cả hồ sơ gian
+            hàng.
+          */}
+          {/*
+            Bọc bằng MỘT div riêng thay vì nhét `styles.shop` làm className của thẻ — gốc của
+            `ShopQuickInfoCard` tự set `padding`/`display:flex` cho biến thể compact, và trộn nó
+            với `padding-top`/`border-top` (đường kẻ phân cách với khối thông số phía trên) của
+            chính panel này trên CÙNG một phần tử sẽ phụ thuộc thứ tự nạp CSS Module giữa hai
+            file — không đảm bảo được.
+          */}
           <div className={styles.shop}>
-            <span className={styles.shopAvatar} aria-hidden="true">
-              {listing.shopLogoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- logo shop từ storage ngoài
-                <img src={listing.shopLogoUrl} alt="" className={styles.shopLogo} />
-              ) : (
-                listing.shopName.charAt(0).toUpperCase()
-              )}
-            </span>
-            <span className={styles.shopBody}>
-              <span className={styles.shopName}>{listing.shopName}</span>
-              {/* Chỉ hiện đánh giá khi CÓ số thật — không dựng "0.0 · 0 chuyến" giả. */}
-              {listing.ratingAvg != null && listing.ratingCount > 0 ? (
-                <span className={styles.shopRating}>
-                  <StarFilled />{' '}
-                  {t('panel.ratingSummary', {
-                    avg: listing.ratingAvg,
-                    count: listing.ratingCount,
-                  })}
-                </span>
-              ) : null}
-            </span>
-            <Link
-              href={shopPath.detail(listing.shopSlug)}
-              className={styles.shopLink}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {t('panel.viewShop')}
-            </Link>
+            <ShopQuickInfoCard
+              shop={{
+                name: listing.shopName,
+                slug: listing.shopSlug,
+                logoUrl: listing.shopLogoUrl,
+                verified: listing.shopVerified,
+                ratingAvg: listing.shopRatingAvg,
+                ratingCount: listing.shopRatingCount,
+                completedTripCount: listing.shopCompletedTripCount,
+              }}
+              metrics={listing.shopMetrics}
+              variant="compact"
+              actions={
+                <Link
+                  href={shopPath.detail(listing.shopSlug)}
+                  className={styles.shopLink}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t('panel.viewShop')}
+                </Link>
+              }
+            />
           </div>
         </div>
       ) : null}

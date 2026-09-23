@@ -64,14 +64,18 @@ export function isHandoverEditable(status: HandoverStatus): boolean {
 /**
  * Trạng thái đơn thuê cho phép mở từng chiều bàn giao.
  *
- * Giao xe khi đơn đã xác nhận (chuyển sang `active`), nhận trả khi đơn đang thuê (chuyển sang
- * `completed`) — khớp `BOOKING_STATUS_TRANSITIONS`. Đơn đã hủy/không đến/hoàn thành thì không
- * mở bàn giao mới được nữa; backend là nơi chốt, đây chỉ để hai phía nói cùng một luật.
+ * Giao xe khi đơn đang `reserved` (xác nhận biên bản sẽ tự chuyển thẳng sang `active` — ADR
+ * 0047), nhận trả khi đơn đang thuê (chuyển sang `completed`) — khớp `BOOKING_STATUS_TRANSITIONS`.
+ * Đơn đã hủy/không đến/hoàn thành thì không mở bàn giao mới được nữa; backend là nơi chốt, đây
+ * chỉ để hai phía nói cùng một luật.
+ *
+ * `CONFIRMED` (deprecated) KHÔNG còn trong danh sách này: không còn writer nào tạo ra một đơn
+ * đứng yên ở `confirmed`, nên không có gì để mở bàn giao từ đó nữa.
  */
 export const HANDOVER_ELIGIBLE_BOOKING_STATUS: Readonly<
   Record<HandoverType, readonly BookingStatus[]>
 > = {
-  [HANDOVER_TYPE.PICKUP]: [BOOKING_STATUS.RESERVED, BOOKING_STATUS.CONFIRMED],
+  [HANDOVER_TYPE.PICKUP]: [BOOKING_STATUS.RESERVED],
   [HANDOVER_TYPE.RETURN]: [BOOKING_STATUS.ACTIVE],
 };
 
@@ -308,3 +312,31 @@ export function handoverOdometerSuspicion(
     thresholdKmPerDay,
   };
 }
+
+// ── Nơi giao xe ──────────────────────────────────────────────────────────────
+
+/**
+ * Chỗ chiếc xe đổi tay — MÃ, không phải chữ.
+ *
+ * Ba tình huống này khác nhau về VIỆC PHẢI LÀM chứ không chỉ khác địa chỉ: giao tận nơi là
+ * nhân viên phải lên đường, đón khách là chuyến có tài xế, còn nhận tại chi nhánh là khách tự
+ * tới. Danh sách "Chờ giao xe" bày ra để người trực nhìn một lượt biết ai phải đi đâu, nên nó
+ * cần phân biệt được ba việc đó.
+ *
+ * Server trả mã + chuỗi địa chỉ/tên chi nhánh THÔ; nhãn ("Giao tận nơi", "Đón khách tại"…) do
+ * client dịch. Ghép sẵn một câu tiếng Việt ở server là bán đứng bản tiếng Anh (ADR 0012).
+ */
+export const BOOKING_HANDOVER_PLACE = {
+  /** Gian hàng mang xe tới địa chỉ khách hẹn (`booking_requests.delivery_*`). */
+  DELIVERY: 'delivery',
+  /** Chuyến CÓ TÀI XẾ — xe tới đón khách tại `bookings.pickup_address`. */
+  DRIVER_PICKUP: 'driver_pickup',
+  /** Khách tự tới lấy xe tại chi nhánh giữ xe. */
+  BRANCH: 'branch',
+} as const;
+
+export type BookingHandoverPlace =
+  (typeof BOOKING_HANDOVER_PLACE)[keyof typeof BOOKING_HANDOVER_PLACE];
+export const BOOKING_HANDOVER_PLACE_VALUES = Object.values(
+  BOOKING_HANDOVER_PLACE,
+) as BookingHandoverPlace[];

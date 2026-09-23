@@ -4,9 +4,8 @@ import {
   API_ERROR_CODE,
   DELIVERY_DISTANCE_STATUS,
   DELIVERY_MANUAL_REASON,
-  TENANT_STATUS,
-  VEHICLE_PUBLIC_STATUS,
 } from '@xeprime/types';
+import { marketplaceVehicleWhere } from '../../common/marketplace-vehicle-scope';
 import { GeoService } from '../geo/geo.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { DeliveryDistanceDto } from './dto/pricing.dto';
@@ -69,14 +68,10 @@ export class DeliveryDistanceService {
     const pinned = pinnedPoint && isValidGeoPoint(pinnedPoint) ? pinnedPoint : null;
 
     const vehicle = await this.prisma.vehicle.findFirst({
-      // Cùng cổng vào với `publicQuote`: chỉ xe ĐÃ DUYỆT của gian hàng ĐANG HOẠT ĐỘNG. Không có
-      // điều kiện này thì endpoint công khai thành công cụ dò địa chỉ chi nhánh của xe ẩn.
-      where: {
-        id: vehicleId,
-        deletedAt: null,
-        publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
-        tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
-      },
+      // Cùng cổng vào với `publicQuote` (`marketplaceVehicleWhere`): chỉ xe ĐANG THẬT SỰ nằm
+      // ngoài chợ. Không có điều kiện này thì endpoint công khai thành công cụ dò địa chỉ chi
+      // nhánh của những chiếc xe đã bị gỡ xuống.
+      where: { id: vehicleId, ...marketplaceVehicleWhere() },
       select: {
         id: true,
         tenantId: true,

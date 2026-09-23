@@ -58,6 +58,7 @@ export class ListingsService {
         deliveryEnabled: true,
         discountPercent: true,
         publicStatus: true,
+        marketplaceEnabled: true,
         deletedAt: true,
         branchId: true,
         // Vị trí công khai của xe LẤY TỪ CHI NHÁNH, không còn từ hồ sơ gian hàng: một shop có
@@ -69,7 +70,7 @@ export class ListingsService {
     });
     if (!v) return;
 
-    const status = deriveStatus(v.publicStatus, v.deletedAt);
+    const status = deriveStatus(v.publicStatus, v.marketplaceEnabled, v.deletedAt);
     // "Miễn thế chấp" từ 20/08 là HỆ QUẢ của chính sách hiệu lực, không còn là cờ nhập tay trên
     // xe — trước đây hai thứ độc lập nên một xe có thể vừa gắn nhãn vừa đòi cọc 5 triệu.
     const noCollateral = await resolveNoCollateral(tx, v.tenantId, v.id, v.vehicleType);
@@ -306,11 +307,26 @@ async function resolveBilling(
   };
 }
 
-/** active khi đã duyệt & chưa xoá; archived khi xoá mềm; còn lại hidden (ADR 0008 §2). */
-function deriveStatus(publicStatus: string, deletedAt: Date | null): ListingStatus {
+/**
+ * archived khi xoá mềm; `active` khi CẢ HAI trục cùng thuận — nền tảng đã duyệt VÀ chủ xe đang
+ * bật công tắc hiển thị; còn lại hidden (ADR 0008 §2, mở rộng bởi ADR 0048).
+ *
+ * Đây là chỗ DUY NHẤT hai trục gặp nhau ở tầng ghi, và đó là lý do công tắc của chủ xe không cần
+ * một cột nào trên `public_listings`: bảng snapshot chỉ cần biết KẾT QUẢ. Thêm một cột
+ * `marketplace_enabled` ở đó là thêm một thứ có thể trôi khỏi bản gốc.
+ *
+ * `status` của một listing bị hạ xuống `hidden` vì chủ xe tạm ẩn KHÔNG phân biệt được với
+ * `hidden` vì bất cứ lý do nào khác — và đúng là không cần phân biệt: với khách, xe không có ở
+ * đó. Lý do là chuyện của màn quản lý, và nó đọc `vehicles` (xem `VehiclesService.toListItem`).
+ */
+function deriveStatus(
+  publicStatus: string,
+  marketplaceEnabled: boolean,
+  deletedAt: Date | null,
+): ListingStatus {
   if (deletedAt) return LISTING_STATUS.ARCHIVED;
-  if (publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC) return LISTING_STATUS.ACTIVE;
-  return LISTING_STATUS.HIDDEN;
+  if (publicStatus !== VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC) return LISTING_STATUS.HIDDEN;
+  return marketplaceEnabled ? LISTING_STATUS.ACTIVE : LISTING_STATUS.HIDDEN;
 }
 
 /**

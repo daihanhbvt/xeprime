@@ -78,7 +78,15 @@ Sáu hệ quả, mỗi cái là một chỗ dễ làm sai:
 5. **`responded` đọc `decided_at`, KHÔNG đọc `status = rejected_by_host`.** Worker `expirePaidAwaitingAccept` (dữ liệu LEGACY) cũng ghi status đó khi gian hàng **không** phản hồi, và cố ý để trống `decided_at`. Hỏi status ở đây là trao điểm phản hồi cho đúng nhóm không phản hồi.
 6. **Xe bật "Đặt ngay" không vào trung vị thời gian phản hồi** — nó quyết trong vài mili-giây, và trộn vào là quảng cáo một tốc độ trả lời thủ công không có thật. Nó hiện thành nhãn riêng ("Đặt ngay"), không bao giờ thành "0 phút".
 
-**Dưới `HOST_METRIC_MIN_SAMPLES` (5) mẫu thì KHÔNG hiện phần trăm.** Giao diện nói "Chưa đủ dữ liệu" kèm số mẫu thật. Một yêu cầu duy nhất cho ra 0% hoặc 100% — hai con số nghe như kết luận trong khi chúng là một lần tung đồng xu. Ngưỡng này bảo vệ người LẠ; sổ ví của chính gian hàng hạ nó về 1, vì chủ xe đã sống qua từng yêu cầu của tháng đó và bảng in số mẫu ngay cạnh.
+**Dưới `HOST_METRIC_MIN_SAMPLES` mẫu thì KHÔNG hiện phần trăm.** Giao diện nói "chưa có yêu cầu nào để tính" thay vì vẽ ba ô trống. `0` mẫu thì không có gì để nói, ở bất kỳ ngưỡng nào.
+
+> **Sửa 23/09/2026 — ngưỡng hạ từ 5 xuống 1**, theo đúng điều kiện xem lại đã ghi ở cuối ADR này.
+> Bản gốc đặt 5 để một lần tung đồng xu không thành "100%" hay "0%". Trên dữ liệu thực tế, phần
+> lớn chủ xe không đạt 5 yêu cầu trong 90 ngày, nên ngưỡng đó biến khối uy tín thành một dòng
+> "chưa đủ dữ liệu" ở gần như mọi gian hàng — nó không bảo vệ ai, chỉ giấu mất thứ khách muốn
+> đọc. `sampleCount` vẫn đi kèm nên "100% trên 1 yêu cầu" phân biệt được với "100% trên 200".
+> Đánh đổi đã biết: một chủ xe bỏ lỡ đúng một yêu cầu sẽ hiện "0%" công khai. Điểm xếp hạng
+> KHÔNG bị ảnh hưởng — nó đọc số thô đã làm mượt Bayes, không đọc con số đã chặn ngưỡng (điều 5).
 
 **Thẻ kết quả tìm kiếm KHÔNG mang chỉ số.** Một trang 48 xe là 48 phép gộp — đúng cái N+1 mà `rank_score` đã tránh được bằng cách denormalize. Chỉ số xuất hiện ở trang gian hàng và trang chi tiết xe, nơi mỗi lần xem là một gian hàng.
 
@@ -156,5 +164,5 @@ Kèm theo đó, **câu chữ `slot_taken` được sửa**. Lúc người thắn
 
 - Khi có **chính sách chế tài đã công bố** cho người bán: mở phần phạt/hạ hiển thị dựa trên `counts_against_host`, và ghi nó thành một ADR riêng.
 - Khi có **dữ liệu impression thật**: thay cửa sổ khám phá 30 ngày bằng một trần số lượt hiển thị. Cửa sổ thời gian là một xấp xỉ được chọn vì chưa đo được lượt nhìn — và nó là một giả định được ghi ra, không phải một sự thật.
-- Khi `HOST_METRIC_MIN_SAMPLES = 5` chứng tỏ quá thấp hoặc quá cao trên dữ liệu pilot.
+- ~~Khi `HOST_METRIC_MIN_SAMPLES = 5` chứng tỏ quá thấp hoặc quá cao trên dữ liệu pilot.~~ → đã dùng 23/09/2026, hạ về `1` (xem ghi chú ở điều 3). Xem lại tiếp khi có đủ gian hàng vượt vài chục mẫu để ngưỡng cao trở lại có ý nghĩa.
 - Khi vị trí tài trợ được mở: nhãn và ranh giới với organic phải đi qua một ADR (0028, 0043).

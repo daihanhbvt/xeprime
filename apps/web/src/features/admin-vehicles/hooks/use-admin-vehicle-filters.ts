@@ -12,6 +12,7 @@ export function useAdminVehicleFilters() {
     operationStatus: sp.get('operationStatus') ?? 'all',
     vehicleType: sp.get('vehicleType') ?? 'all',
     tenantStatus: sp.get('tenantStatus') ?? 'all',
+    marketplaceVisible: sp.get('marketplaceVisible') ?? 'all',
     page: positiveIntParam(sp, 'page'),
     limit: positiveIntParam(sp, 'limit'),
   }));

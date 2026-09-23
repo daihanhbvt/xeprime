@@ -1,6 +1,13 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
-import { API_ERROR_CODE, VEHICLE_PUBLIC_STATUS, type PaginationMeta } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  resolveMarketplaceVisibility,
+  TENANT_STATUS,
+  VEHICLE_PUBLIC_STATUS,
+  type PaginationMeta,
+} from '@xeprime/types';
+import { marketplaceVehicleWhere } from '../../common/marketplace-vehicle-scope';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -23,12 +30,22 @@ const LIST_SELECT = {
   serviceTypes: true,
   publicStatus: true,
   operationStatus: true,
+  // Trục HIỂN THỊ của chủ xe (ADR 0048) — admin đọc để hiểu vì sao bỏ ẩn không đưa xe lên lại.
+  // `deletedAt` đi kèm vì phép gộp hiển thị cần nó; truy vấn ở đây lọc `deletedAt: null`, nhưng
+  // luật thì không được dựa vào điều đó.
+  marketplaceEnabled: true,
+  deletedAt: true,
   mainImageUrl: true,
   weekdayPrice: true,
   tenantId: true,
   createdAt: true,
   tenant: {
-    select: { name: true, status: true, profile: { select: { provinceName: true } } },
+    select: {
+      name: true,
+      status: true,
+      deletedAt: true,
+      profile: { select: { provinceName: true } },
+    },
   },
   publicListing: { select: { status: true } },
 } satisfies Prisma.VehicleSelect;
@@ -39,8 +56,12 @@ const LIST_SELECT = {
  * Kiểm duyệt: ẩn xe vi phạm khỏi Marketplace bằng cách hạ `publicStatus` về `hidden`, rồi để
  * `ListingsService.syncFromVehicle` suy ra trạng thái snapshot trong CÙNG transaction — module
  * này KHÔNG tự ghi `public_listings` (ADR 0008). Bỏ ẩn là đường ngược lại và chỉ đi được từ
- * `hidden`: đó là trạng thái duy nhất mà nền tảng tạo ra, nên không có nguy cơ vô tình đưa lên
- * sàn một xe do shop tự hạ xuống.
+ * `hidden`: đó là trạng thái duy nhất mà nền tảng tạo ra.
+ *
+ * Từ ADR 0048, lựa chọn hiển thị của CHỦ XE là một cột riêng (`marketplace_enabled`) và module
+ * này không bao giờ ghi vào đó. Hệ quả cần nhớ khi đọc code ở đây: bỏ ẩn một chiếc xe mà chủ xe
+ * đang tắt sẽ đưa `public_status` về `approved_public` nhưng listing VẪN `hidden` — đúng ý, và
+ * là lý do `marketplaceEnabled` có mặt trong DTO để người kiểm duyệt nhìn thấy.
  */
 @Injectable()
 export class PlatformVehiclesService {
@@ -64,6 +85,16 @@ export class PlatformVehiclesService {
       ...(query.vehicleType ? { vehicleType: query.vehicleType } : {}),
       // Lọc theo trạng thái gian hàng: dùng để soát xe của shop đang bị khoá.
       ...(query.tenantStatus ? { tenant: { status: query.tenantStatus } } : {}),
+      /*
+       * "Đang thật sự hiện ngoài chợ" — bốn vế của `marketplaceVehicleWhere()`, đẩy vào `AND`
+       * chứ không spread phẳng: nó mang khoá `tenant` và `publicStatus`, đúng hai khoá mà bộ
+       * lọc ở trên có thể đã dùng. Spread sẽ ghi đè im lặng một trong hai.
+       */
+      ...(query.marketplaceVisible === undefined
+        ? {}
+        : query.marketplaceVisible
+          ? { AND: [marketplaceVehicleWhere()] }
+          : { NOT: marketplaceVehicleWhere() }),
       ...(q
         ? {
             OR: [
@@ -109,6 +140,9 @@ export class PlatformVehiclesService {
             name: true,
             slug: true,
             status: true,
+            // `deletedAt` phải có mặt: select này GHI ĐÈ nhánh `tenant` của `LIST_SELECT`, và
+            // `toListItem` đọc nó để suy trạng thái hiển thị (ADR 0048).
+            deletedAt: true,
             owner: { select: { displayName: true } },
             profile: { select: { provinceName: true } },
           },
@@ -150,7 +184,14 @@ export class PlatformVehiclesService {
     return this.getOne(id);
   }
 
-  /** Bỏ ẩn: `hidden` → `approved_public` (xe đã từng được duyệt), snapshot bật lại, ghi audit. */
+  /**
+   * Bỏ ẩn: `hidden` → `approved_public` (xe đã từng được duyệt), snapshot đồng bộ lại, ghi audit.
+   *
+   * KHÔNG đụng `marketplace_enabled` (ADR 0048 điều 4): nếu chủ xe đang tự tắt hiển thị thì bỏ
+   * ẩn chỉ trả lại trạng thái KIỂM DUYỆT, và xe vẫn nằm ngoài chợ cho tới khi chính họ bật lại.
+   * Bỏ ẩn kèm bật hộ là nền tảng đảo ngược một quyết định không thuộc về mình —
+   * `syncFromVehicle` nhân hai trục nên điều đó tự đúng, chỉ cần không ai ghi thêm gì ở đây.
+   */
   async unhide(id: string, actorUserId: string): Promise<PlatformVehicleDetailDto> {
     await this.transition(
       id,
@@ -224,6 +265,19 @@ export class PlatformVehiclesService {
 type VehicleRow = Prisma.VehicleGetPayload<{ select: typeof LIST_SELECT }>;
 
 function toListItem(r: VehicleRow): PlatformVehicleDto {
+  /*
+   * Server suy LÝ DO, màn kiểm duyệt không ghép lại (ADR 0048 điều 5).
+   *
+   * `shopActive` đọc từ CHÍNH hàng dữ liệu (`tenant.status`) chứ không từ một scope chung — danh
+   * sách này không tenant-scoped, nên mỗi dòng có một gian hàng khác nhau.
+   */
+  const visibility = resolveMarketplaceVisibility({
+    deletedAt: r.deletedAt,
+    publicStatus: r.publicStatus,
+    marketplaceEnabled: r.marketplaceEnabled,
+    shopActive: r.tenant.status === TENANT_STATUS.ACTIVE && r.tenant.deletedAt == null,
+  });
+
   return {
     id: r.id,
     code: r.code,
@@ -240,6 +294,9 @@ function toListItem(r: VehicleRow): PlatformVehicleDto {
     tenantStatus: r.tenant.status,
     provinceName: r.tenant.profile?.provinceName ?? null,
     listingStatus: r.publicListing?.status ?? null,
+    marketplaceEnabled: r.marketplaceEnabled,
+    isMarketplaceVisible: visibility.visible,
+    marketplaceVisibilityReason: visibility.reason,
     createdAt: (r.createdAt as Date).toISOString(),
   };
 }

@@ -6,57 +6,115 @@
 }
 
 /*
- * Ba chỉ số là một HÀNG chip gọn, không phải ba thẻ lớn.
+ * Một KHỐI ô số liệu: nền nhạt, ba cột chia đều, có vạch ngăn giữa các cột.
  *
  * Khối này xuất hiện ở hai chỗ có không gian rất khác nhau — cạnh phần giới thiệu ở trang gian
- * hàng, và trong thẻ chủ xe hẹp ở trang chi tiết xe. `flex-wrap` để nó tự xuống dòng thay vì
- * ép hai bố cục khác nhau.
+ * hàng (rộng), và trong thẻ chủ xe ở trang chi tiết xe (~480px).
+ *
+ * `flex-wrap: nowrap` + `flex: 1 1 0` + `min-width: 0`: ba cột CO lại thay vì xuống dòng, nên
+ * vạch ngăn không bao giờ mọc lẻ ở đầu một dòng mới. Dưới 520px thì đổi hẳn sang xếp dọc và vạch
+ * ngăn chuyển thành đường kẻ ngang — ép ba cột vào màn hình điện thoại chỉ làm nhãn vỡ chữ.
  */
 .list {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 18px;
+  flex-wrap: nowrap;
   margin: 0;
   padding: 0;
   list-style: none;
+  background: var(--xp-color-bg-muted);
+  border-radius: var(--xp-border-radius-lg);
+  overflow: hidden;
 }
 
 .item {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.item + .item {
+  border-left: 1px solid var(--xp-color-border);
+}
+
+.text {
   display: flex;
   flex-direction: column;
   gap: 1px;
   min-width: 0;
 }
 
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--xp-border-radius-pill);
+  font-size: 15px;
+}
+
+@media (max-width: 520px) {
+  .list {
+    flex-wrap: wrap;
+  }
+
+  .item {
+    flex: 1 1 100%;
+  }
+
+  .item + .item {
+    border-left: none;
+    border-top: 1px solid var(--xp-color-border);
+  }
+}
+
+.tone-success {
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.tone-warning {
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning);
+}
+
+.tone-info {
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info);
+}
+
+/*
+ * Con số là SANS đậm, không phải font display (serif) của thương hiệu.
+ *
+ * Serif đọc rất tệ ở cỡ nhỏ và ở chữ số: "60%" kiểu serif trông mảnh và cổ, lạc hẳn khỏi phần
+ * còn lại của thẻ. Bản thiết kế dùng sans đậm cho mọi con số ở khối này.
+ *
+ * KHÔNG cắt chữ bằng ellipsis: "Trong vài phút" bị cắt thành "Trong vài…" là mất hẳn nghĩa. Giá
+ * trị được phép xuống dòng, và ba cột cao bằng nhau nên một cột hai dòng không làm vỡ khối.
+ */
 .value {
-  font-family: var(--xp-font-family-display);
-  font-size: var(--xp-font-size-body-lg);
-  line-height: var(--xp-line-height-body-lg);
+  font-size: 16px;
+  line-height: 21px;
   font-weight: var(--xp-font-weight-bold);
   color: var(--xp-color-text);
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
 .label {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
+  font-size: 12px;
+  line-height: 16px;
   color: var(--xp-color-text-secondary);
 }
 
 .hint {
+  /* `inline-flex` để dấu "i" thẳng hàng chữ, nhưng vẫn chảy theo dòng cuối của nhãn. */
   display: inline-flex;
-  align-items: center;
-}
-
-/* Cơ sở của cả ba con số — cố ý nhỏ và mờ hơn, nó là chú thích chứ không phải một chỉ số. */
-.basis {
-  margin: 0;
-  font-size: var(--xp-font-size-body-sm);
-  line-height: var(--xp-line-height-body-sm);
-  color: var(--xp-color-text-tertiary);
+  vertical-align: -2px;
 }
 
 .insufficient {

@@ -38,6 +38,7 @@ import { VehicleSourceService } from './vehicle-source.service';
 import {
   CreateVehicleDto,
   FleetSummaryDto,
+  SetMarketplaceVisibilityDto,
   UpdateVehicleDto,
   Vehicle360SummaryDto,
   VehicleDetailDto,
@@ -320,6 +321,30 @@ export class VehiclesController {
     @Param('id') id: string,
   ): Promise<VehicleDetailDto> {
     return this.vehicles.submitForPublicReview(tenant.tenantId, id, user.id);
+  }
+
+  /**
+   * Công tắc hiển thị trên chợ của CHỦ XE (ADR 0048) — tách hẳn khỏi trạng thái kiểm duyệt.
+   *
+   * Cùng permission với gửi duyệt (`vehicles.submit_public`): cả hai trả lời đúng một câu hỏi —
+   * ai trong gian hàng được quyết định chiếc xe này có nằm ngoài chợ hay không. Tách ra một
+   * permission riêng sẽ tạo một vai "được đưa xe ra chợ nhưng không được rút về", thứ không ai
+   * muốn tồn tại.
+   *
+   * `PATCH` chứ không `POST`: đây là một thuộc tính hai chiều của chiếc xe, không phải một sự
+   * kiện chỉ đi một hướng như `submit-public`.
+   */
+  @Patch(':id/marketplace-visibility')
+  @RequirePermissions(PERMISSION.VEHICLE_SUBMIT_PUBLIC)
+  @ApiOperation({ summary: 'Bật/tắt hiển thị xe trên chợ (lựa chọn của chủ xe — ADR 0048)' })
+  @ApiOkResponse({ type: VehicleDetailDto })
+  setMarketplaceVisibility(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: SetMarketplaceVisibilityDto,
+  ): Promise<VehicleDetailDto> {
+    return this.vehicles.setMarketplaceVisibility(tenant.tenantId, id, user.id, dto.enabled);
   }
 
   @Delete(':id')

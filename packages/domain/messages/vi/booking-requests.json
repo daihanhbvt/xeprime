@@ -5,13 +5,11 @@
     "listLabel": "Danh sách yêu cầu thuê",
     "totalLabel": "{count, plural, other {# yêu cầu}}"
   },
-  "stats": {
-    "pending": "Chờ duyệt",
-    "converted": "Hoàn thành"
-  },
   "tabs": {
     "ariaLabel": "Lọc yêu cầu theo trạng thái",
     "needsAction": "Cần xử lý",
+    "awaitingPayment": "Chờ khách thanh toán",
+    "closed": "Đã đóng",
     "converted": "Đã tạo đơn",
     "rejected": "Đã từ chối",
     "cancelled": "Khách đã huỷ",
@@ -103,7 +101,7 @@
     "vehicle": "Xe",
     "customer": "Khách",
     "schedule": "Lịch thuê",
-    "effect": "Duyệt sẽ tạo đơn thuê ở trạng thái Đã giữ xe và CHIẾM CHỖ lịch của xe trong khoảng này. Giá chốt theo chính sách đang hiệu lực.",
+    "effect": "Duyệt sẽ giữ lịch xe và chốt giá. Đơn thuê được tạo khi khách thanh toán đủ; chuyến không thu tiền giữ chỗ được tạo ngay.",
     "deliveryNote": "Yêu cầu có giao xe tận nơi. Phí giao nhận để 0₫ khi tạo đơn — cập nhật lại trên đơn sau khi thoả thuận với khách.",
     "confirm": "Duyệt & giữ xe",
     "success": "Đã giữ xe — đã tạo đơn thuê",
@@ -310,8 +308,7 @@
       "seatCount": "{count, plural, other {# chỗ}}",
       "specBody": "Kiểu dáng",
       "specFuel": "Năng lượng",
-      "viewShop": "Xem gian hàng",
-      "ratingSummary": "{avg} · {count, plural, other {# đánh giá}}"
+      "viewShop": "Xem gian hàng"
     },
     "actions": {
       "cancel": "Huỷ",
@@ -453,5 +450,9 @@
     "success": "Đã huỷ chuyến và nhả lịch xe",
     "raceLost": "Khách vừa thanh toán xong nên chuyến đã thành đơn thuê — không huỷ từ đây được nữa. Mở đơn để xử lý tiếp.",
     "notAllowed": "Chuyến này không còn ở chặng huỷ được từ hộp thư yêu cầu."
+  },
+  "stats": {
+    "pending": "Chờ duyệt",
+    "converted": "Hoàn thành"
   }
 }

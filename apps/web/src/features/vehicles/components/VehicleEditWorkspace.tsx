@@ -178,13 +178,13 @@ export function VehicleEditWorkspace({
     return options;
   }, [branches.data, t, noProvince, vehicle.branch]);
 
-  const isPublic = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
+  const isApproved = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
   /**
-   * Xe đang trên chợ: bốn ô căn cước bị KHOÁ (biển số · hộp số · nhiên liệu · năm sản xuất) —
+   * Xe ĐÃ ĐƯỢC DUYỆT: bốn ô căn cước bị KHOÁ (biển số · hộp số · nhiên liệu · năm sản xuất) —
    * 09/09/2026, ghi đè luật "sửa là duyệt lại" của ADR 0008. Server chặn lại bằng
    * `VEHICLE_FIELD_LOCKED` nên đây chỉ là lớp trải nghiệm.
    */
-  const lockedNotice = isPublic ? t('lockedField') : undefined;
+  const lockedNotice = isApproved ? t('lockedField') : undefined;
   const activeFields = activeTab === 'media' ? MEDIA_FIELDS : INFORMATION_FIELDS;
   const activeErrors = activeFields.filter((field) => errors[field]).length;
 
@@ -336,7 +336,7 @@ export function VehicleEditWorkspace({
                 title={t('errors', { count: activeErrors })}
               />
             ) : null}
-            {isPublic ? (
+            {isApproved ? (
               <Alert
                 className={styles.formAlert}
                 type="info"

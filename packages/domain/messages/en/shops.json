@@ -23,6 +23,17 @@
     "titleShop": "About this business",
     "address": "Address: {address}"
   },
+  "card": {
+    "trips": "{count, plural, one {#{plus} trip} other {#{plus} trips}}",
+    "highlight": {
+      "topRated": "A {rating}-star host — quick to respond, accepts most requests, and consistently well reviewed by guests.",
+      "reliable": "This host replies quickly and sees through almost every request they accept.",
+      "wellRated": "Rated {rating} stars by guests across {count, plural, one {# review} other {# reviews}}.",
+      "instantBook": "Instant Book is on — your request is accepted automatically, with no wait for approval.",
+      "experienced": "This host has completed {count, plural, one {# trip} other {# trips}} on XePrime.",
+      "newHost": "New to XePrime — you could be one of this host's first guests."
+    }
+  },
   "stats": {
     "sectionLabel": "Shop statistics",
     "vehicles": "Vehicles listed",
@@ -60,15 +71,14 @@
     "instantBook": "Instant Book",
     "instantBookHintLabel": "About Instant Book",
     "instantBookHint": "This host accepts trips automatically, so requests are answered at once. Because a machine answers rather than a person, we do not turn that into a number of minutes.",
-    "basis": "Based on {count, plural, one {# request} other {# requests}} in the last {days} days.",
-    "insufficient": "Not enough data yet — only {count, plural, one {# request} other {# requests}} in the last {days} days.",
+    "insufficient": "No booking requests in the last {days} days, so there is nothing to measure yet.",
     "insufficientHintLabel": "Why there are no figures yet",
-    "insufficientHint": "We only show percentages once there have been at least {min} requests. Below that, a single answer would read as 100% or 0% — a confident-sounding number that tells you nothing.",
+    "insufficientHint": "These figures come from the booking requests a host receives, and need at least {min} request. This host has not received any in that window.",
     "speed": {
-      "minutes": "Within minutes",
-      "hour": "Within an hour",
-      "hours": "Within a few hours",
-      "day": "Within a day"
+      "minutes": "Minutes",
+      "hour": "Under an hour",
+      "hours": "A few hours",
+      "day": "Same day"
     }
   }
 }

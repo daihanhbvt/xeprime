@@ -170,10 +170,18 @@ describe('ADR 0006 — trạng thái chiếm lịch', () => {
 });
 
 describe('booking state machine', () => {
-  it('cho phép reserved → confirmed → active → completed', () => {
-    expect(canTransitionBooking(BOOKING_STATUS.RESERVED, BOOKING_STATUS.CONFIRMED)).toBe(true);
-    expect(canTransitionBooking(BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.ACTIVE)).toBe(true);
+  it('cho phép reserved → active trực tiếp → completed (ADR 0047)', () => {
+    expect(canTransitionBooking(BOOKING_STATUS.RESERVED, BOOKING_STATUS.ACTIVE)).toBe(true);
     expect(canTransitionBooking(BOOKING_STATUS.ACTIVE, BOOKING_STATUS.COMPLETED)).toBe(true);
+  });
+
+  /**
+   * `confirmed` là @deprecated (ADR 0047) — không còn writer nào tạo ra nó, nhưng cạnh đi ra
+   * của nó vẫn còn để một hàng dữ liệu cũ (mobile/legacy) không rơi vào ngõ cụt.
+   */
+  it('confirmed (deprecated) vẫn còn cạnh đi ra cho dữ liệu cũ', () => {
+    expect(canTransitionBooking(BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.ACTIVE)).toBe(true);
+    expect(canTransitionBooking(BOOKING_STATUS.RESERVED, BOOKING_STATUS.CONFIRMED)).toBe(false);
   });
 
   it('không cho nhảy cóc reserved → completed', () => {

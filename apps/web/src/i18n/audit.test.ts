@@ -41,9 +41,17 @@ describe('i18n:audit — dò được chuỗi giao diện thô', () => {
   });
 
   it('nêu tên khu vực CHƯA i18n hoá', () => {
-    // Cổng quản lý còn nguyên chuỗi tiếng Việt; nếu bộ dò im ở đây thì nó đang hỏng.
-    expect(audit.stdout).toContain('vehicles —');
-    expect(audit.stdout).toContain('booking-requests —');
+    /*
+     * Cổng quản lý còn nguyên chuỗi tiếng Việt; nếu bộ dò im ở đây thì nó đang hỏng.
+     *
+     * Neo vào HAI DẤU CÁCH đầu dòng — đúng cách bộ dò in tên khu vực. Bản trước khẳng định
+     * `'vehicles —'` và nó xanh suốt nhiều tháng nhờ khớp NHẦM vào `admin-vehicles — 12`: chính
+     * `src/features/vehicles/` thì đã sạch từ lâu. Khẳng định đó chỉ đỏ vào ngày 23/09/2026, khi
+     * `admin-vehicles` cũng được chuyển — tức là nó đang canh một thứ đã không còn tồn tại.
+     * Một canary khớp theo hậu tố là một canary không canh gì cả.
+     */
+    expect(audit.stdout).toContain('  handovers —');
+    expect(audit.stdout).toContain('  booking-requests —');
   });
 
   it('phân loại được vị trí, không chỉ nói "có chữ tiếng Việt"', () => {

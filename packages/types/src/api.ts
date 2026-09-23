@@ -669,6 +669,21 @@ export const API_ERROR_CODE = {
    * (ADR 0012) thay vì hiện một dòng "dữ liệu chưa hợp lệ".
    */
   VEHICLE_PUBLISH_INCOMPLETE: 'VEHICLE_PUBLISH_INCOMPLETE',
+  /**
+   * Bật công tắc hiển thị cho một chiếc xe CHƯA qua cổng duyệt (ADR 0048 điều 3).
+   *
+   * `details.publicStatus` là trạng thái kiểm duyệt hiện tại, để giao diện chỉ đúng lối đi tiếp:
+   * nháp/cần bổ sung/bị từ chối thì gửi duyệt, đang chờ duyệt thì đợi.
+   */
+  VEHICLE_NOT_APPROVED_PUBLIC: 'VEHICLE_NOT_APPROVED_PUBLIC',
+  /**
+   * Bật công tắc hiển thị cho một chiếc xe ĐANG BỊ NỀN TẢNG ẨN (`public_status = hidden`).
+   *
+   * Mã RIÊNG chứ không dùng chung `VEHICLE_NOT_APPROVED_PUBLIC`, vì lối đi tiếp khác hẳn: ở đây
+   * KHÔNG có nút nào chủ xe bấm được. Gộp hai mã là mời họ đi gửi duyệt lại một chiếc xe mà
+   * nền tảng vừa cố ý gỡ xuống (ADR 0048 điều 4).
+   */
+  VEHICLE_PLATFORM_HIDDEN: 'VEHICLE_PLATFORM_HIDDEN',
 
   // Hạ tầng
   RATE_LIMITED: 'RATE_LIMITED',

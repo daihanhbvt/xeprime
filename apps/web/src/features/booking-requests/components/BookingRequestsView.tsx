@@ -4,7 +4,7 @@ import { App, Button, Pagination, Tabs } from 'antd';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { BOOKING_REQUEST_STATUS, PERMISSION, SERVICE_TYPE_VALUES } from '@xeprime/types';
+import { PERMISSION, SERVICE_TYPE_VALUES } from '@xeprime/types';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
 import { LoadingState } from '@/components/feedback/LoadingState';
@@ -16,11 +16,7 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
 import { currentPathWithQuery } from '@/features/auth/safe-next';
-import {
-  BOOKING_REQUEST_NEEDS_ACTION_STATUSES,
-  BOOKING_REQUEST_TAB_NEEDS_ACTION,
-  BOOKING_REQUEST_TABS,
-} from '../constants';
+import { BOOKING_REQUEST_TAB_NEEDS_ACTION, BOOKING_REQUEST_TABS } from '../constants';
 import { useBookingRequestFilters } from '../hooks/use-booking-request-filters';
 import { useBookingRequestDecisions } from '../hooks/use-booking-request-decisions';
 import { useStartBookingRequestConversation } from '../hooks/use-booking-request-mutations';
@@ -186,35 +182,14 @@ export function BookingRequestsView() {
   const showEmpty = !isFirstLoad && !isError && items.length === 0;
   const isNeedsActionTab = activeTab === BOOKING_REQUEST_TAB_NEEDS_ACTION;
 
-  /*
-   * Hai con số quan trọng nhất của hộp thư, tách khỏi hàng tab: "còn bao nhiêu việc" và "đã
-   * chốt được bao nhiêu". Chúng lấy từ CÙNG `statusCounts` mà tab dùng, nên không có đường nào
-   * để hai chỗ nói hai con số khác nhau.
-   */
-  const headerStats = (
-    <dl className={styles.stats}>
-      <div className={styles.stat}>
-        <dt className={styles.statLabel}>{t('stats.pending')}</dt>
-        <dd className={styles.statValue}>
-          {fmt.count(countFor(statusCounts, BOOKING_REQUEST_NEEDS_ACTION_STATUSES))}
-        </dd>
-      </div>
-      <div className={styles.stat}>
-        <dt className={styles.statLabel}>{t('stats.converted')}</dt>
-        <dd className={styles.statValue}>
-          {fmt.count(countFor(statusCounts, [BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING]))}
-        </dd>
-      </div>
-    </dl>
-  );
-
   return (
     <div className={styles.page}>
-      <ManagePageHeader
-        title={t('page.title')}
-        subtitle={t('page.subtitle')}
-        extra={data ? headerStats : null}
-      />
+      {/*
+       * ADR 0047: bỏ khối "Chờ duyệt/Hoàn thành" từng nằm ở đây — nó đọc đúng CÙNG
+       * `statusCounts` với badge của tab "Cần xử lý" ở hàng dưới, nên chỉ là một cách đếm thứ
+       * hai cho đúng một con số đã hiện. Ba tab bây giờ tự nói đủ.
+       */}
+      <ManagePageHeader title={t('page.title')} subtitle={t('page.subtitle')} />
 
       <Tabs
         activeKey={activeTab}

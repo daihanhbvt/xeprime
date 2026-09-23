@@ -1,8 +1,9 @@
 import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
 import { apiPost, apiRequest, type QueryParams } from '@/services/api-client';
 import {
+  BOOKING_REQUEST_CLOSED_STATUSES,
   BOOKING_REQUEST_NEEDS_ACTION_STATUSES,
-  BOOKING_REQUEST_STATUS_ALL,
+  BOOKING_REQUEST_TAB_CLOSED,
   BOOKING_REQUEST_TAB_NEEDS_ACTION,
 } from './constants';
 import type {
@@ -34,21 +35,26 @@ export interface BookingRequestListResult {
 /**
  * Filter của giao diện → tham số API.
  *
- * `status=all` là trạng thái của TAB, không phải một mã nghiệp vụ: backend chỉ biết bộ mã thật
- * (ADR 0005) nên "Tất cả" được dịch thành *không gửi* `status`. Phép dịch nằm đúng ở đây, một
- * chỗ, để URL giữ được lựa chọn còn dây thì vẫn sạch.
+ * Hai tab GỘP (`needs_action`, `closed`) không phải mã nghiệp vụ thật (ADR 0005) — dịch thành
+ * các mã thật nối dấu phẩy. MỘT chuỗi, không phải mảng: `QueryParams` của `@xeprime/api-client`
+ * cố ý không có kiểu mảng (xem `url.ts`), backend tách chuỗi ở DTO. Tab "Chờ khách thanh toán"
+ * gửi thẳng `awaiting_hold` — nó đã là một mã thật, không cần dịch (ADR 0047).
  *
- * `status=needs_action` (tab GỘP) cũng không phải một mã thật — dịch thành hai mã thật nối
- * dấu phẩy (`pending_host_approval,hold_paid`). MỘT chuỗi, không phải mảng: `QueryParams` của
- * `@xeprime/api-client` cố ý không có kiểu mảng (xem `url.ts`), backend tách chuỗi ở DTO.
+ * `status=all` — TƯƠNG THÍCH NGƯỢC: tab "Tất cả" đã bị xoá (ADR 0047), nhưng ai đó có thể còn
+ * một liên kết/bookmark cũ mang `?status=all`. Dịch thành *không gửi* `status` (như hành vi cũ
+ * của giá trị này) thay vì gửi nguyên chữ `"all"` lên backend — backend sẽ từ chối một mã không
+ * nằm trong `BOOKING_REQUEST_STATUS_VALUES`, và một liên kết cũ vỡ ngay khi mở lại là trải
+ * nghiệm tệ hơn nhiều so với việc âm thầm rơi về "không lọc".
  */
 export function filtersToParams(filters: BookingRequestFilters): QueryParams {
   const status =
-    filters.status === BOOKING_REQUEST_STATUS_ALL
-      ? null
-      : filters.status === BOOKING_REQUEST_TAB_NEEDS_ACTION
-        ? BOOKING_REQUEST_NEEDS_ACTION_STATUSES.join(',')
-        : (filters.status ?? null);
+    filters.status === BOOKING_REQUEST_TAB_NEEDS_ACTION
+      ? BOOKING_REQUEST_NEEDS_ACTION_STATUSES.join(',')
+      : filters.status === BOOKING_REQUEST_TAB_CLOSED
+        ? BOOKING_REQUEST_CLOSED_STATUSES.join(',')
+        : filters.status === 'all'
+          ? null
+          : (filters.status ?? null);
   return {
     status,
     q: filters.q ?? null,

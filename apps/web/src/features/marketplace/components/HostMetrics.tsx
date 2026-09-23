@@ -1,5 +1,7 @@
 'use client';
 
+import { ClockCircleOutlined, MessageOutlined, RiseOutlined } from '@ant-design/icons';
+import type { ReactNode } from 'react';
 import {
   hostMetricState,
   HOST_METRIC_MIN_SAMPLES,
@@ -10,7 +12,16 @@ import {
 } from '@xeprime/types';
 import { useTranslations } from 'next-intl';
 import { InfoHint } from '@/components/data-display/InfoHint';
+import { cx } from '@/lib/cx';
 import styles from './HostMetrics.module.css';
+
+/** Icon + tông màu theo TỪNG chỉ số — thuần trang trí, không đổi ngưỡng hay dữ liệu bên dưới. */
+const ITEM_VISUAL: Record<string, { icon: ReactNode; tone: 'success' | 'warning' | 'info' }> = {
+  responseRate: { icon: <MessageOutlined />, tone: 'success' },
+  responseTime: { icon: <ClockCircleOutlined />, tone: 'warning' },
+  instant: { icon: <ClockCircleOutlined />, tone: 'warning' },
+  acceptKeep: { icon: <RiseOutlined />, tone: 'info' },
+};
 
 /**
  * BA CHỈ SỐ của một gian hàng — khối dùng chung cho trang gian hàng và trang chi tiết xe.
@@ -36,6 +47,13 @@ import styles from './HostMetrics.module.css';
  * Không "5 sao", không "100%", không vương miện. Một gian hàng 5/5 mẫu hoàn hảo và một gian
  * hàng 500/500 là hai thứ khác nhau, mà huy hiệu thì vẽ chúng giống hệt nhau. Con số kèm số mẫu
  * nói đúng thứ nó biết.
+ *
+ * ## Không còn dòng "tính trên N yêu cầu trong 90 ngày"
+ *
+ * Bỏ 23/09/2026 theo thiết kế đã chốt: nó là dòng chữ thứ tư dưới một khối vốn đã có ba con số,
+ * và nó lặp lại đúng thứ mà dấu "i" của từng ô đã nói kỹ hơn (mẫu số là gì, cửa sổ bao nhiêu
+ * ngày). Trạng thái CHƯA ĐỦ MẪU vẫn nói thẳng số mẫu thật — ở đó con số đó là nội dung chính,
+ * không phải chú thích.
  *
  * ## Dấu "i" giữ phần GIẢI THÍCH, không giữ thông tin bắt buộc
  *
@@ -145,18 +163,27 @@ export function HostMetrics({
       <ul className={styles.list} aria-label={t('sectionLabel')}>
         {items.map((item) => (
           <li key={item.key} className={styles.item}>
-            <span className={styles.value}>{item.value}</span>
-            <span className={styles.label}>
-              {item.label}
-              <InfoHint className={styles.hint} label={item.hintLabel} content={item.hint} />
+            <span
+              className={cx(styles.icon, styles[`tone-${ITEM_VISUAL[item.key]?.tone ?? 'info'}`])}
+              aria-hidden="true"
+            >
+              {ITEM_VISUAL[item.key]?.icon}
+            </span>
+            <span className={styles.text}>
+              <span className={styles.value}>{item.value}</span>
+              {/*
+                `label` là INLINE chứ không phải flex: nhãn dài ("Thời gian phản hồi") phải xuống
+                dòng được, và dấu "i" phải chảy theo ngay sau chữ cuối. Bản flex trước đó đẩy dấu
+                "i" ra một dòng riêng, lệch hẳn sang phải nhãn.
+              */}
+              <span className={styles.label}>
+                {item.label}{' '}
+                <InfoHint className={styles.hint} label={item.hintLabel} content={item.hint} />
+              </span>
             </span>
           </li>
         ))}
       </ul>
-      {/* Số mẫu đứng ngoài lưới: nó là CƠ SỞ của cả ba con số, không phải con số thứ tư. */}
-      <p className={styles.basis}>
-        {t('basis', { count: metrics.sampleCount, days: HOST_METRIC_WINDOW_DAYS })}
-      </p>
     </div>
   );
 }

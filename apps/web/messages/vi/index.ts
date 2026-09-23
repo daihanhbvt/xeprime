@@ -44,6 +44,7 @@ import branches from '@xeprime/domain/messages/vi/branches.json';
 import customers from '@xeprime/domain/messages/vi/customers.json';
 import finance from '@xeprime/domain/messages/vi/finance.json';
 import adminCatalog from '@xeprime/domain/messages/vi/admin-catalog.json';
+import adminVehicles from '@xeprime/domain/messages/vi/admin-vehicles.json';
 import adminPlans from '@xeprime/domain/messages/vi/admin-plans.json';
 import approvals from '@xeprime/domain/messages/vi/approvals.json';
 import bankTransactions from '@xeprime/domain/messages/vi/bank-transactions.json';
@@ -94,6 +95,7 @@ const messages = {
   Customers: customers,
   Finance: finance,
   AdminCatalog: adminCatalog,
+  AdminVehicles: adminVehicles,
   AdminPlans: adminPlans,
   Approvals: approvals,
   BankTransactions: bankTransactions,

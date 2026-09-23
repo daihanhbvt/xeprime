@@ -51,7 +51,7 @@
     "cancelled_by_host": "Cancelled by host"
   },
   "bookingStatus": {
-    "reserved": "Vehicle held",
+    "reserved": "Awaiting pickup",
     "confirmed": "Confirmed",
     "active": "On rent",
     "completed": "Completed",
@@ -187,6 +187,11 @@
   "handoverType": {
     "pickup": "Vehicle pickup",
     "return": "Vehicle return"
+  },
+  "bookingHandoverPlace": {
+    "delivery": "Deliver to",
+    "driver_pickup": "Pick customer up at",
+    "branch": "Customer collects at"
   },
   "holidayEventType": {
     "public_holiday": "Official public holiday",
@@ -588,8 +593,16 @@
     "approved_public": "Publicly listed",
     "needs_revision": "Changes required",
     "rejected": "Declined",
-    "hidden": "Hidden",
+    "hidden": "Hidden by XePrime",
     "archived": "Retired"
+  },
+  "marketplaceVisibility": {
+    "visible": "Live on marketplace",
+    "owner_paused": "Paused by you",
+    "not_approved": "Not approved yet",
+    "platform_hidden": "Hidden by XePrime",
+    "shop_inactive": "Shop not active",
+    "archived": "Archived"
   },
   "vehicleSourceType": {
     "owned": "Owned",

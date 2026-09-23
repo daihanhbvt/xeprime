@@ -226,10 +226,22 @@ describe('nav — cấu trúc khối', () => {
   it('Đơn đặt xe giữ nguyên route riêng, đứng dưới Đơn thuê', () => {
     const operations = SHOP_NAV.find((section) => section.key === 'operations')!;
     const orders = operations.children.filter(isNavBranch).find((node) => node.key === 'orders')!;
+    /*
+     * Thứ tự là NHỊP LÀM VIỆC, không phải bảng chữ cái: duyệt yêu cầu → giao xe hôm nay → tra
+     * cứu mọi đơn. "Chờ giao xe" đứng giữa vì nó là việc của hôm nay.
+     */
     expect(orders.children.map((leaf) => leaf.href)).toEqual([
       ROUTES.MANAGE.BOOKING_REQUESTS,
+      ROUTES.MANAGE.BOOKINGS_AWAITING_PICKUP,
       ROUTES.MANAGE.BOOKINGS,
     ]);
+  });
+
+  it('"Chờ giao xe" dùng đúng quyền của danh sách đơn — nó không mở thêm dữ liệu nào', () => {
+    const leaves = flattenLeaves(SHOP_NAV);
+    const shortcut = leaves.find((l) => l.href === ROUTES.MANAGE.BOOKINGS_AWAITING_PICKUP)!;
+    const all = leaves.find((l) => l.href === ROUTES.MANAGE.BOOKINGS)!;
+    expect(shortcut.permission).toBe(all.permission);
   });
 
   it('mọi mục lá có href riêng — không hai mục cùng đích', () => {
@@ -470,6 +482,22 @@ describe('matchSelectedKey — quy tắc mục đang mở', () => {
       '/manage/booking-requests',
     );
     expect(matchSelectedKey('/manage/bookings', shopLeaves)).toBe('/manage/bookings');
+  });
+
+  it('"Chờ giao xe" và "Tất cả đơn thuê" không bao giờ cùng sáng', () => {
+    /*
+     * Lý do lối tắt này là một ĐƯỜNG DẪN chứ không phải `?preset=…`: mục đang mở được quyết
+     * bằng pathname, nên một mục gắn query sẽ hoặc không bao giờ sáng, hoặc để "Tất cả đơn
+     * thuê" sáng thay nó. Tiền tố dài nhất thắng, và cả hai chiều đều phải đúng.
+     */
+    expect(matchSelectedKey(ROUTES.MANAGE.BOOKINGS_AWAITING_PICKUP, shopLeaves)).toBe(
+      ROUTES.MANAGE.BOOKINGS_AWAITING_PICKUP,
+    );
+    expect(matchSelectedKey(ROUTES.MANAGE.BOOKINGS, shopLeaves)).toBe(ROUTES.MANAGE.BOOKINGS);
+    // Trang chi tiết một đơn vẫn thuộc về "Tất cả đơn thuê", không dính vào lối tắt.
+    expect(matchSelectedKey('/manage/bookings/01HZZZZZZZZZZZZZZZZZZZZZZZ', shopLeaves)).toBe(
+      ROUTES.MANAGE.BOOKINGS,
+    );
   });
 
   it('`/manage/shop` không nuốt `/manage/shop/branches` — tiền tố dài nhất thắng', () => {

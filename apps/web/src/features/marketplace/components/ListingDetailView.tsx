@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import {
   appliesExcessMileage,
   CATALOG_TYPE,
@@ -18,12 +17,10 @@ import { catalogLabel, type CatalogMap } from '@/features/catalog/types';
 import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { StaticMap } from '@/components/data-display/StaticMap';
-import { VerifiedMark } from '@/components/common/VerifiedMark';
-import { shopPath } from '@/constants/routes';
+import { ShopQuickInfoCard } from '@/components/shop/ShopQuickInfoCard';
 import { mapPlaceUrl, toGeoPoint } from '@/lib/map-static';
 import { applyDiscountPercent } from '@/lib/money';
 import type { PublicListingDetail } from '../types';
-import { HostMetrics } from './HostMetrics';
 import { ListingGallery } from './ListingGallery';
 import { ListingReviews } from './ListingReviews';
 import { ListingServiceSelector } from './ListingServiceSelector';
@@ -397,78 +394,67 @@ export async function ListingDetailView({
             </div>
           ) : null}
 
-          {/* Thẻ gian hàng theo mockup: avatar (logo hoặc chữ cái đầu) + tick vàng đã duyệt. */}
-          <div className={styles.shop}>
-            <span className={styles.shopAvatar} aria-hidden="true">
-              {listing.shopLogoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- logo từ R2, host theo môi trường
-                <img src={listing.shopLogoUrl} alt="" className={styles.shopAvatarImg} />
-              ) : (
-                listing.shopName.charAt(0).toUpperCase()
-              )}
-            </span>
-            <div className={styles.shopBody}>
-              <div className={styles.shopNameRow}>
-                <Link href={shopPath.detail(listing.shopSlug)} className={styles.shopName}>
-                  {listing.shopName}
-                </Link>
-                {/*
-                  Dấu xác thực CHỈ cho gian hàng tuyến gói — cùng luật với thẻ xe ở lưới kết quả
-                  và với trang `/shops/[slug]`. Trước 16/09/2026 chỗ này vẽ một tick cho MỌI xe
-                  trên chợ: đã qua duyệt để lên chợ là điều kiện tối thiểu của mọi tin đăng, nên
-                  một dấu gắn cho tất cả thì không phân biệt được ai với ai.
-                */}
-                {listing.shopVerified ? (
-                  <VerifiedMark label={t('shopVerified')} size={16} className={styles.verified} />
-                ) : null}
-              </div>
-              {listing.shopProvince ? (
-                <div className={styles.shopMeta}>{listing.shopProvince}</div>
-              ) : null}
-              {listing.shopBio ? <p className={styles.shopBio}>{listing.shopBio}</p> : null}
-              {/*
-                Ba chỉ số uy tín (ADR 0045 điều 3) nằm ĐÚNG ở đây — trong thẻ chủ xe, ngay trên
-                nút "Chọn thuê". Đây là giây người đọc quyết định có gửi yêu cầu cho một người lạ
-                hay không, và "họ có trả lời không" là câu hỏi họ đang hỏi. Bắt cuộn lên trang
-                gian hàng để tìm câu trả lời là bắt họ rời trang ngay trước bước chuyển đổi.
-              */}
-              <HostMetrics metrics={listing.shopMetrics} className={styles.shopMetrics} />
-            </div>
-          </div>
+          {/*
+            Ba chỉ số uy tín (ADR 0045 điều 3) nằm ĐÚNG ở đây — trong thẻ chủ xe, ngay trên nút
+            "Chọn thuê". Đây là giây người đọc quyết định có gửi yêu cầu cho một người lạ hay
+            không, và "họ có trả lời không" là câu hỏi họ đang hỏi. Bắt cuộn lên trang gian hàng
+            để tìm câu trả lời là bắt họ rời trang ngay trước bước chuyển đổi.
 
-          <div className={styles.actions}>
-            {/* Trang này đã có hồ sơ xe đầy đủ — truyền xuống để overlay khỏi tải lại. */}
-            <RequestBookingButton
-              vehicleId={listing.id}
-              vehicleName={listing.name}
-              vehicleImageUrl={listing.mainImageUrl}
-              listing={listing}
-              pickupAt={pickupAt}
-              returnAt={returnAt}
-              // Cùng activeService với selector + khối giá — popup mở đúng dịch vụ đang xem.
-              serviceType={activeService}
-              routeType={routeType}
-              /*
-               * Tỉnh cho ô địa chỉ giao xe: tỉnh khách đang LỌC nếu có, không thì tỉnh của chính
-               * chiếc xe. Giao tận nơi có bán kính vài chục km nên hai giá trị này gần như luôn
-               * trùng — và khi không có gì để đoán thì tỉnh của xe vẫn đúng hơn là để trống.
-               */
-              deliveryProvinceCode={searchProvinceCode ?? listing.provinceCode ?? undefined}
-              size="large"
-              className={styles.cta}
-            />
-            {/*
-              Gian hàng tuyến gói: nút luôn có. Chủ xe cá nhân: chỉ hiện với khách ĐÃ gửi yêu cầu
-              thuê cho họ — nút "Chọn thuê" ngay bên trái chính là bước mở kênh đó.
-              `ShopChatButton` hỏi server câu đó; chặn thật nằm ở `ChatService`.
-            */}
-            <ShopChatButton
-              shopSlug={listing.shopSlug}
-              vehicleId={listing.id}
-              publicChatOpen={listing.shopChatOpen}
-              size="large"
-            />
-          </div>
+            `ShopQuickInfoCard` dùng chung với cột tóm tắt của luồng gửi yêu cầu thuê
+            (`VehicleSummaryPanel`) — một nơi giữ avatar/tên/rating của GIAN HÀNG, không còn hai
+            bản lệch nhau.
+          */}
+          <ShopQuickInfoCard
+            shop={{
+              name: listing.shopName,
+              slug: listing.shopSlug,
+              logoUrl: listing.shopLogoUrl,
+              verified: listing.shopVerified,
+              province: listing.shopProvince,
+              bio: listing.shopBio,
+              ratingAvg: listing.shopRatingAvg,
+              ratingCount: listing.shopRatingCount,
+              completedTripCount: listing.shopCompletedTripCount,
+            }}
+            metrics={listing.shopMetrics}
+            actions={
+              <>
+                {/* Trang này đã có hồ sơ xe đầy đủ — truyền xuống để overlay khỏi tải lại. */}
+                <RequestBookingButton
+                  vehicleId={listing.id}
+                  vehicleName={listing.name}
+                  vehicleImageUrl={listing.mainImageUrl}
+                  listing={listing}
+                  pickupAt={pickupAt}
+                  returnAt={returnAt}
+                  // Cùng activeService với selector + khối giá — popup mở đúng dịch vụ đang xem.
+                  serviceType={activeService}
+                  routeType={routeType}
+                  /*
+                   * Tỉnh cho ô địa chỉ giao xe: tỉnh khách đang LỌC nếu có, không thì tỉnh của
+                   * chính chiếc xe. Giao tận nơi có bán kính vài chục km nên hai giá trị này gần
+                   * như luôn trùng — và khi không có gì để đoán thì tỉnh của xe vẫn đúng hơn là
+                   * để trống.
+                   */
+                  deliveryProvinceCode={searchProvinceCode ?? listing.provinceCode ?? undefined}
+                  size="large"
+                  className={styles.cta}
+                />
+                {/*
+                  Gian hàng tuyến gói: nút luôn có. Chủ xe cá nhân: chỉ hiện với khách ĐÃ gửi yêu
+                  cầu thuê cho họ — nút "Chọn thuê" ngay bên cạnh chính là bước mở kênh đó.
+                  `ShopChatButton` hỏi server câu đó; chặn thật nằm ở `ChatService`.
+                */}
+                <ShopChatButton
+                  shopSlug={listing.shopSlug}
+                  vehicleId={listing.id}
+                  publicChatOpen={listing.shopChatOpen}
+                  size="large"
+                  className={styles.ctaSecondary}
+                />
+              </>
+            }
+          />
         </div>
       </div>
 

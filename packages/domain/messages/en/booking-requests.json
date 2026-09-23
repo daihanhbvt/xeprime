@@ -5,13 +5,11 @@
     "listLabel": "Rental request list",
     "totalLabel": "{count, plural, one {# request} other {# requests}}"
   },
-  "stats": {
-    "pending": "Pending",
-    "converted": "Completed"
-  },
   "tabs": {
     "ariaLabel": "Filter requests by status",
     "needsAction": "Needs action",
+    "awaitingPayment": "Awaiting payment",
+    "closed": "Closed",
     "converted": "Booking created",
     "rejected": "Rejected",
     "cancelled": "Cancelled",
@@ -103,7 +101,7 @@
     "vehicle": "Vehicle",
     "customer": "Customer",
     "schedule": "Schedule",
-    "effect": "Approving creates a booking in the Vehicle held state and takes this slot on the vehicle calendar. Pricing follows the policy in force.",
+    "effect": "Approving holds the vehicle calendar and locks in the price. The booking is created once the customer pays in full; a trip with no hold payment is created right away.",
     "deliveryNote": "This request asks for delivery. The booking starts with a 0₫ delivery fee — update it on the booking once you agree with the guest.",
     "confirm": "Approve & hold vehicle",
     "success": "Vehicle held — booking created",
@@ -310,8 +308,7 @@
       "seatCount": "{count, plural, one {# seat} other {# seats}}",
       "specBody": "Body type",
       "specFuel": "Fuel",
-      "viewShop": "View host",
-      "ratingSummary": "{avg} · {count, plural, one {# review} other {# reviews}}"
+      "viewShop": "View host"
     },
     "actions": {
       "cancel": "Cancel",
@@ -453,5 +450,9 @@
     "success": "Trip cancelled and the dates released",
     "raceLost": "The guest has just paid, so this is now a booking — it can no longer be cancelled from here. Open the booking to continue.",
     "notAllowed": "This trip is no longer at a stage you can cancel from the request inbox."
+  },
+  "stats": {
+    "pending": "Pending",
+    "converted": "Completed"
   }
 }

@@ -34,3 +34,16 @@
 .rowClickable {
   cursor: pointer;
 }
+
+/* Nhãn mức khẩn nằm DƯỚI giờ hẹn: giờ là thứ người ta đọc trước, nhãn chỉ để phân loại nhanh. */
+.urgency {
+  margin-top: 4px;
+  margin-inline-end: 0;
+}
+
+.place {
+  font-size: 13px;
+  color: var(--xp-color-text);
+  /* Địa chỉ dài phải xuống dòng chứ không đẩy bảng trượt ngang thêm một quãng. */
+  overflow-wrap: anywhere;
+}

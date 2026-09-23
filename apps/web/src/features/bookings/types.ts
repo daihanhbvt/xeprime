@@ -1,4 +1,4 @@
-import type { components } from '@xeprime/types';
+import type { BookingListPreset, components } from '@xeprime/types';
 
 /**
  * Shape đơn thuê lấy thẳng từ contract sinh bởi OpenAPI (ADR 0007) — KHÔNG viết tay lại DTO.
@@ -25,6 +25,13 @@ export type BookingSort = 'newest' | 'pickup_asc' | 'pickup_desc' | 'return_asc'
 export interface BookingFilters {
   q?: string;
   status?: string;
+  /**
+   * Nhóm việc dựng sẵn — do ROUTE quyết, không nằm trong searchParams.
+   *
+   * Cố ý không đi qua `useBookingFilters`: "đang xem nhóm nào" đã được đường dẫn nói rồi, và
+   * để nó sống ở hai chỗ là mở đường cho một URL tự mâu thuẫn với chính nó.
+   */
+  preset?: BookingListPreset;
   vehicleId?: string;
   /** Chi nhánh của XE trong đơn — ghép từ bộ chọn ở thanh trên. */
   branchId?: string;

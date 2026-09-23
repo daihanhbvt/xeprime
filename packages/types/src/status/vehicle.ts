@@ -29,12 +29,18 @@ export const VEHICLE_PUBLIC_STATUS_VALUES = Object.values(
 /**
  * Các trạng thái mà từ đó chủ shop được (lại) gửi xe đi duyệt công khai. Không gồm
  * `pending_public_review` (đang chờ) và `approved_public` (đã lên chợ) — chặn gửi trùng.
+ *
+ * **Không còn gồm `hidden` từ 23/09/2026 (ADR 0048 điều 4).** `hidden` là quyết định KIỂM DUYỆT
+ * của nền tảng, không phải một chỗ đứng chờ trong phễu của chủ xe: cho gửi duyệt lại từ đó nghĩa
+ * là chủ xe tự gỡ được án ẩn bằng cách bấm một nút và đợi một lượt duyệt — đúng thứ việc ẩn xe
+ * sinh ra để ngăn. Muốn xe hiện lại thì nền tảng bỏ ẩn (`POST /platform/vehicles/:id/unhide`).
+ * Chủ xe muốn TẠM cất xe của mình thì dùng công tắc hiển thị (`marketplace_enabled`) — nó không
+ * đi qua kiểm duyệt và bật lại được ngay.
  */
 export const VEHICLE_PUBLIC_STATUS_SUBMITTABLE: readonly VehiclePublicStatus[] = [
   VEHICLE_PUBLIC_STATUS.DRAFT,
   VEHICLE_PUBLIC_STATUS.NEEDS_REVISION,
   VEHICLE_PUBLIC_STATUS.REJECTED,
-  VEHICLE_PUBLIC_STATUS.HIDDEN,
 ];
 
 /**
@@ -138,7 +144,12 @@ export const VEHICLE_PUBLIC_STATUS_META: Readonly<Record<VehiclePublicStatus, St
     color: STATUS_COLOR.WARNING,
   },
   [VEHICLE_PUBLIC_STATUS.REJECTED]: { label: 'Bị từ chối', color: STATUS_COLOR.DANGER },
-  [VEHICLE_PUBLIC_STATUS.HIDDEN]: { label: 'Đã ẩn', color: STATUS_COLOR.NEUTRAL },
+  /*
+   * "Bị nền tảng ẩn", không phải "Đã ẩn" (ADR 0048 điều 4): từ 23/09/2026 chủ xe có công tắc
+   * hiển thị của riêng mình, nên một nhãn nói trống không "Đã ẩn" khiến hai việc hoàn toàn khác
+   * nhau — nền tảng gỡ xe vì vi phạm, và chủ xe tự cất xe đi — đọc lên y hệt nhau.
+   */
+  [VEHICLE_PUBLIC_STATUS.HIDDEN]: { label: 'Bị nền tảng ẩn', color: STATUS_COLOR.DANGER },
   [VEHICLE_PUBLIC_STATUS.ARCHIVED]: {
     label: 'Ngừng sử dụng',
     color: STATUS_COLOR.NEUTRAL,

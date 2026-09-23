@@ -371,7 +371,10 @@ export class VehiclePricingDto {
   serviceTypes!: string[];
 
   @ApiProperty({
-    description: 'Xe đang hiển thị công khai — lưu giá sẽ đưa xe về chờ duyệt lại (ADR 0008)',
+    description:
+      'Xe đã được nền tảng DUYỆT (`public_status = approved_public`) — trục KIỂM DUYỆT, ' +
+      'không phải "khách có thấy xe không". Chủ xe có thể đang tạm ẩn xe đã duyệt: xem ' +
+      '`marketplaceEnabled`/`isMarketplaceVisible` ở `GET /vehicles/:id` (ADR 0048)',
   })
   isPublic!: boolean;
 }

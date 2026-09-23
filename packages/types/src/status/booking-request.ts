@@ -8,6 +8,15 @@ import { STATUS_COLOR, type StatusMeta } from './meta';
  */
 export const BOOKING_REQUEST_STATUS = {
   PENDING_HOST_APPROVAL: 'pending_host_approval',
+  /**
+   * **@deprecated — CHẾT, không còn writer nào** (rà toàn bộ `apps/api`/`apps/web`/`apps/worker`
+   * 23/09/2026, ADR 0047: không có điểm ghi nào; DB dev lẫn test đều 0 hàng). Luồng duyệt hiện
+   * hành chuyển thẳng sang `converted_to_booking` (không hold) hoặc `awaiting_hold` (có hold)
+   * trong CÙNG transaction, không bao giờ dừng ở một chặng "đã duyệt, chưa gì khác" riêng.
+   *
+   * Vẫn giữ trong enum vì `apps/mobile` còn tham chiếu (test) — không xoá khỏi shared type nếu
+   * chưa phối hợp với đội mobile. Không dùng trong code mới.
+   */
   APPROVED_BY_HOST: 'approved_by_host',
   REJECTED_BY_HOST: 'rejected_by_host',
   CANCELLED_BY_CUSTOMER: 'cancelled_by_customer',

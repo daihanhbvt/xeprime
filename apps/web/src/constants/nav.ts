@@ -234,6 +234,20 @@ export const SHOP_NAV: readonly NavSection[] = [
             badge: NAV_BADGE.BOOKING_REQUESTS_PENDING,
           },
           {
+            /*
+             * Lối tắt tới nhóm việc "đơn đã có, xe chưa rời bãi" — KHÔNG phải một loại đơn và
+             * không phải một trạng thái mới. Nó đứng giữa vì nhịp làm việc đi đúng thứ tự đó:
+             * duyệt yêu cầu → giao xe hôm nay → tra cứu mọi đơn.
+             *
+             * Cùng quyền với "Tất cả đơn thuê": nó không mở thêm dữ liệu nào, chỉ lọc sẵn.
+             */
+            key: 'bookings-awaiting-pickup',
+            labelKey: 'manage.bookingsAwaitingPickup',
+            href: ROUTES.MANAGE.BOOKINGS_AWAITING_PICKUP,
+            permission: PERMISSION.BOOKING_VIEW,
+            icon: CarOutlined,
+          },
+          {
             key: 'bookings',
             labelKey: 'manage.bookings',
             href: ROUTES.MANAGE.BOOKINGS,

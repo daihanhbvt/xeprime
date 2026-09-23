@@ -5,6 +5,8 @@ import { Skeleton } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import {
+  MARKETPLACE_VISIBILITY_REASON,
+  MARKETPLACE_VISIBILITY_REASON_META,
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS_META,
   type VehicleOperationStatus,
@@ -102,6 +104,14 @@ export function VehicleListRow({
             meta={VEHICLE_PUBLIC_STATUS_META}
             group="vehiclePublicStatus"
           />
+          {/* Cùng luật với thẻ desktop — xem `VehicleManagementCard`. */}
+          {vehicle.marketplaceVisibilityReason === MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED ? (
+            <StatusTag
+              value={MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED}
+              meta={MARKETPLACE_VISIBILITY_REASON_META}
+              group="marketplaceVisibility"
+            />
+          ) : null}
         </div>
 
         {/* Cùng dữ liệu VÀ cùng ba trạng thái với thẻ desktop — chỉ khác cách xếp. */}

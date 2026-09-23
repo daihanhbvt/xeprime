@@ -11,6 +11,8 @@ import {
   APPROVAL_TARGET_TYPE,
   API_ERROR_CODE,
   BOOKING_STATUS,
+  canEnableMarketplace,
+  resolveMarketplaceVisibility,
   isPackageShopTrack,
   missingPackageShopListingRequirements,
   SHOP_ONBOARDING_STATE,
@@ -80,6 +82,10 @@ const LIST_SELECT = {
   discountPercent: true,
   operationStatus: true,
   publicStatus: true,
+  // Trục thứ ba của việc lên chợ (ADR 0048). `deletedAt` đi kèm vì phép gộp hiển thị cần nó —
+  // các truy vấn ở đây đều lọc `deletedAt: null`, nhưng luật thì không được dựa vào điều đó.
+  marketplaceEnabled: true,
+  deletedAt: true,
   mainImageUrl: true,
   weekdayPrice: true,
   weekendPrice: true,
@@ -393,10 +399,13 @@ export class VehiclesService {
       }),
     ]);
 
-    const reviews = await this.latestPublicReviews(rows.map((row) => row.id));
+    const [reviews, shopActive] = await Promise.all([
+      this.latestPublicReviews(rows.map((row) => row.id)),
+      this.shopActive(tenantId),
+    ]);
 
     return {
-      data: rows.map((row) => toListItem(row, reviews.get(row.id) ?? null)),
+      data: rows.map((row) => toListItem(row, reviews.get(row.id) ?? null, shopActive)),
       meta: paginationMeta(paging, total),
     };
   }
@@ -437,8 +446,8 @@ export class VehiclesService {
     });
     if (!row) throw notFound();
 
-    // Kèm lần gửi duyệt gần nhất + gallery ảnh + tiện ích.
-    const [latest, images, features] = await Promise.all([
+    // Kèm lần gửi duyệt gần nhất + gallery ảnh + tiện ích + trạng thái gian hàng (ADR 0048).
+    const [latest, images, features, shopActive] = await Promise.all([
       this.prisma.approvalTask.findFirst({
         where: { targetType: APPROVAL_TARGET_TYPE.VEHICLE, targetId: id },
         orderBy: { submittedAt: 'desc' },
@@ -453,6 +462,7 @@ export class VehiclesService {
         where: { vehicleId: id },
         select: { featureKey: true },
       }),
+      this.shopActive(tenantId),
     ]);
     const review: VehiclePublicReviewDto | null = latest ? toPublicReview(latest) : null;
 
@@ -466,7 +476,24 @@ export class VehiclesService {
         sortOrder: i.sortOrder,
       })),
       features.map((f) => f.featureKey),
+      shopActive,
     );
+  }
+
+  /**
+   * Gian hàng đang hoạt động và chưa xoá — một vế của phép gộp hiển thị ngoài chợ (ADR 0048).
+   *
+   * Đọc RIÊNG thay vì join vào `LIST_SELECT`: mọi bề mặt ở đây đều tenant-scoped, nên câu trả
+   * lời là một giá trị cho cả trang. Join vào select sẽ lặp cùng một cột trên mỗi dòng và kéo
+   * `VehicleRow` — thứ mà `vehicleSnapshot` và `publicationInput` cùng đọc — phình ra vì một
+   * thông tin không thuộc về chiếc xe nào.
+   */
+  private async shopActive(tenantId: string): Promise<boolean> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { status: true, deletedAt: true },
+    });
+    return tenant?.status === TENANT_STATUS.ACTIVE && tenant.deletedAt == null;
   }
 
   async create(tenantId: string, userId: string, dto: CreateVehicleDto): Promise<VehicleDetailDto> {
@@ -1067,6 +1094,129 @@ export class VehiclesService {
   }
 
   /**
+   * Công tắc HIỂN THỊ TRÊN CHỢ của chủ xe — trục thứ ba, tách khỏi kiểm duyệt (ADR 0048).
+   *
+   * ## Tắt thì luôn được; bật thì có cổng
+   *
+   * Gỡ xe của mình khỏi chợ không cần xin phép ai, và nó KHÔNG chạm vào bất cứ thứ gì đang
+   * chạy: `public_status` giữ nguyên (xe vẫn là xe đã duyệt), `operation_status` giữ nguyên, và
+   * mọi yêu cầu/đơn/lịch bận/khoản giữ chỗ đang sống tiếp tục sống. Đúng một thứ đổi:
+   * `public_listings.status` xuống `hidden` qua writer duy nhất của bảng đó (ADR 0008 §1).
+   *
+   * Bật lại thì phải qua hai cổng, và chúng là hai cổng về CHỖ ĐỨNG, không phải về hồ sơ xe:
+   *
+   *  1. **Xe phải đang `approved_public`.** `hidden` có mã lỗi RIÊNG vì đó là quyết định của
+   *     nền tảng — không có nút nào chủ xe bấm được, và nói với họ "hãy gửi duyệt lại" là chỉ
+   *     sai đường (ADR 0048 điều 4).
+   *  2. **Gian hàng đang hoạt động, và mặt tiền của gian hàng trả phí còn đủ** — cùng hai cổng
+   *     với `submitForPublicReview`, vì cả hai đều là lối ĐƯA XE RA CHỢ.
+   *
+   * ## Hai cổng CỐ Ý không chạy ở đây
+   *
+   * **Trần số xe của gói** (`assertVehicleQuota`) đếm theo `public_status`, mà công tắc này
+   * không đổi `public_status` — chiếc xe đang tạm ẩn vẫn nằm trong phép đếm suốt thời gian đó.
+   * Chạy nó ở đây nghĩa là một gian hàng vừa hạ bậc sẽ tắt được công tắc nhưng không bật lại
+   * được, tức là công tắc trở thành một cánh cửa một chiều — trong khi việc tắt nó chưa bao giờ
+   * nhả ra một chỗ nào cho ai.
+   *
+   * **Điều kiện hồ sơ xe** (`missingPublishRequirements`) đã được chấm ở cổng duyệt, và từ
+   * ADR 0030 thì giá/ảnh/mô tả sửa tự do sau đó mà xe vẫn ở ngoài chợ. Chấm lại ở đây tạo ra một
+   * bất đối xứng lạ: cùng một chiếc xe, cùng một hồ sơ, được phép ĐANG hiện nhưng không được
+   * phép hiện LẠI. Cổng đúng cho việc đó là cổng duyệt, không phải cái công tắc này.
+   *
+   * ## Bấm lại hai lần không đẻ ra hai dòng audit
+   *
+   * Phép ghi là compare-and-set: `updateMany` có `marketplace_enabled = !enabled` trong `where`.
+   * Hai request song song cùng đích thì chỉ một cái `count === 1` — cái còn lại không ghi audit,
+   * không sync lại listing, và trả về trạng thái hiện tại. Cùng `where` còn khoá luôn cuộc đua
+   * với một lượt ẩn của nền tảng chen vào giữa: bật chỉ ăn khi xe VẪN `approved_public` tại
+   * đúng thời điểm ghi, nên `vehicles` và `public_listings` không thể lệch nhau.
+   */
+  async setMarketplaceVisibility(
+    tenantId: string,
+    id: string,
+    userId: string,
+    enabled: boolean,
+  ): Promise<VehicleDetailDto> {
+    const current = await this.prisma.vehicle.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      select: { id: true, publicStatus: true, marketplaceEnabled: true },
+    });
+    if (!current) throw notFound();
+
+    // Idempotent: gửi lại đúng trạng thái đang có là một no-op, không phải một lỗi và cũng
+    // không phải một dòng audit thứ hai.
+    if (current.marketplaceEnabled === enabled) return this.getOne(tenantId, id);
+
+    if (enabled) {
+      const status = current.publicStatus as VehiclePublicStatus;
+      if (status === VEHICLE_PUBLIC_STATUS.HIDDEN) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.VEHICLE_PLATFORM_HIDDEN,
+          message: 'Nền tảng đang ẩn xe này nên chủ xe không tự hiển thị lại được.',
+        });
+      }
+      if (!canEnableMarketplace(status)) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.VEHICLE_NOT_APPROVED_PUBLIC,
+          message: 'Xe chưa được duyệt công khai nên chưa hiển thị trên chợ được.',
+          // MÃ trạng thái, không phải câu tiếng Việt — web chỉ đúng lối đi tiếp (ADR 0012).
+          details: { publicStatus: status },
+        });
+      }
+
+      const tenant = await this.prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { status: true },
+      });
+      if (tenant?.status !== TENANT_STATUS.ACTIVE) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.SHOP_NOT_ACTIVE,
+          message: 'Gian hàng đang bị khoá nên xe chưa hiển thị trên chợ được.',
+          details: { status: tenant?.status ?? null },
+        });
+      }
+
+      await this.assertPackageShopReadyToList(tenantId);
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const res = await tx.vehicle.updateMany({
+        where: {
+          id,
+          tenantId,
+          deletedAt: null,
+          marketplaceEnabled: !enabled,
+          // Bật chỉ ăn khi xe VẪN đã duyệt tại đúng thời điểm ghi — chặn cuộc đua với một lượt
+          // ẩn của nền tảng vừa chen vào sau các cổng ở trên.
+          ...(enabled ? { publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC } : {}),
+        },
+        data: { marketplaceEnabled: enabled },
+      });
+      // Không ghi được nghĩa là ai đó đã đổi trước — trạng thái thật trả ở `getOne` bên dưới.
+      if (res.count !== 1) return;
+
+      // ADR 0008 §1: chỉ ListingsService ghi `public_listings`, và trong CÙNG transaction.
+      await this.listings.syncFromVehicle(id, tx);
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: 'tenant',
+          action: 'vehicle.marketplace_visibility.update',
+          targetType: APPROVAL_TARGET_TYPE.VEHICLE,
+          targetId: id,
+          before: { marketplaceEnabled: !enabled },
+          after: { marketplaceEnabled: enabled },
+        },
+        tx,
+      );
+    });
+
+    return this.getOne(tenantId, id);
+  }
+
+  /**
    * MẶT TIỀN GIAN HÀNG đã đủ để bán chưa — cổng CHỈ áp với tuyến gói (ADR 0040).
    *
    * ## Vì sao chỉ tuyến gói
@@ -1534,9 +1684,27 @@ function toPublicReview(task: {
 function toListItem(
   v: Prisma.VehicleGetPayload<{ select: typeof LIST_SELECT }>,
   latestPublicReview: VehiclePublicReviewDto | null = null,
+  /**
+   * Gian hàng đang hoạt động — MỘT lượt đọc cho cả trang (xem `shopActive`), không phải một
+   * truy vấn mỗi dòng: mọi bề mặt ở đây đã tenant-scoped nên câu trả lời giống nhau cho toàn bộ
+   * danh sách.
+   */
+  shopActive = true,
 ): VehicleListItemDto {
+  // Server suy LÝ DO, client không ghép lại từ ba status (ADR 0048 điều 5) — hai bề mặt ghép
+  // lấy sẽ ghép ra hai câu khác nhau, và câu sai luôn là câu chủ xe đang đọc.
+  const visibility = resolveMarketplaceVisibility({
+    deletedAt: v.deletedAt,
+    publicStatus: v.publicStatus,
+    marketplaceEnabled: v.marketplaceEnabled,
+    shopActive,
+  });
+
   return {
     latestPublicReview,
+    marketplaceEnabled: v.marketplaceEnabled,
+    isMarketplaceVisible: visibility.visible,
+    marketplaceVisibilityReason: visibility.reason,
     id: v.id,
     code: v.code,
     name: v.name,
@@ -1584,9 +1752,10 @@ function toDetail(
   latestPublicReview: VehiclePublicReviewDto | null = null,
   media: VehicleMediaItemDto[] = [],
   features: string[] = [],
+  shopActive = true,
 ): VehicleDetailDto {
   return {
-    ...toListItem(v, latestPublicReview),
+    ...toListItem(v, latestPublicReview, shopActive),
     color: v.color,
     fuelType: v.fuelType,
     lengthMm: v.lengthMm,

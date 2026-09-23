@@ -1,30 +1,11 @@
 import { BOOKING_REQUEST_STATUS, type BookingRequestStatus } from '@xeprime/types';
 
 /**
- * "Tất cả trạng thái" ở inbox.
- *
- * Nó phải là một giá trị ĐI VÀO URL (`?status=all`), không phải sự vắng mặt của tham số: mặc
- * định của inbox là `pending_host_approval`, nên xoá tham số đi là quay về tab "Cần xử lý" chứ
- * không phải mở tab "Tất cả". Đây chính là lỗi của bản trước.
- *
- * Không nằm ở `@xeprime/types` vì nó KHÔNG phải một trạng thái nghiệp vụ: backend không bao giờ
- * nhận `status=all` (ADR 0005 — mã đi trên dây là mã thật), lớp gọi API dịch nó thành "không
- * gửi `status`".
- */
-export const BOOKING_REQUEST_STATUS_ALL = 'all';
-
-/**
  * Tab GỘP "Cần xử lý" — KHÔNG phải một trạng thái thật của `BookingRequestStatus`, mà là HAI
  * trạng thái cùng cần gian hàng quyết định (`BookingRequestCard.needsDecision` đã đối xử với
  * chúng như nhau từ lâu — xem component đó): `pending_host_approval` (mới hỏi) và `hold_paid`
  * (**LEGACY ADR 0039** — khách đã trả đủ trước khi ai duyệt; ADR 0044 không sinh trạng thái này
  * nữa, nhưng những yêu cầu đã ở đó vẫn có tiền thật bên trong và vẫn cần một cú bấm).
- *
- * Trước đây hai cái này là HAI TAB riêng vì sợ `hold_paid` — việc khẩn nhất hộp thư — chìm mất.
- * Nhưng nó chỉ chìm khi lẫn vào tab "Tất cả" (gồm cả yêu cầu đã chết); gộp với đúng
- * `pending_host_approval` — trạng thái CẦN QUYẾT ĐỊNH còn lại — không làm mất tính khẩn cấp:
- * đồng hồ đếm hạn phản hồi (`RespondDeadline`) đã hiện trên MỌI thẻ cần quyết định, không phân
- * biệt theo tab. Phản hồi người dùng 19/09/2026.
  *
  * Không phải một mã nghiệp vụ đi trên dây (ADR 0005) — `filtersToParams` dịch nó thành
  * `status=pending_host_approval,hold_paid` (một chuỗi, ngăn cách dấu phẩy: `@xeprime/api-client`
@@ -38,23 +19,69 @@ export const BOOKING_REQUEST_NEEDS_ACTION_STATUSES = [
   BOOKING_REQUEST_STATUS.HOLD_PAID,
 ] as const;
 
-/** Tab của inbox — `null` ở `status` nghĩa là tab "Tất cả". */
+/**
+ * Tab GỘP "Đã đóng" — SÁU kết cục thất bại/kết thúc của một yêu cầu, gộp thành một ngăn duy
+ * nhất (ADR 0047) thay vì bốn tab riêng như trước (Đã tạo đơn/Đã từ chối/Khách đã huỷ/Quá hạn)
+ * cộng hai trạng thái trước đây KHÔNG có tab nào (`hold_expired`, `slot_taken`,
+ * `cancelled_by_host` — chỉ thấy được qua tab "Tất cả" đã bị xoá).
+ *
+ * Gộp tab KHÔNG đồng nghĩa gộp nhãn: mỗi thẻ trong danh sách vẫn tự hiện đúng kết cục của nó
+ * qua `StatusTag`/`BOOKING_REQUEST_STATUS_META` — xem `BookingRequestCard`, không đổi gì ở đó.
+ * Tab chỉ là MỘT NGĂN LỌC, không phải một trạng thái mới.
+ *
+ * `converted_to_booking` KHÔNG nằm trong nhóm này — nó là kết cục THÀNH CÔNG (đơn đã ra đời),
+ * không phải "đã đóng" theo nghĩa hỏng việc. Không còn tab riêng cho nó nữa; xem lại yêu cầu đã
+ * chuyển đơn qua "Tất cả đơn thuê" (tìm theo tên khách/SĐT) — bấm vào một hàng ở đây mà đã có
+ * `bookingId` vẫn mở thẳng chi tiết ĐƠN, không đổi.
+ */
+export const BOOKING_REQUEST_TAB_CLOSED = 'closed';
+
+/** Sáu trạng thái gộp trong tab "Đã đóng" — cùng thứ tự với chuỗi gửi lên server. */
+export const BOOKING_REQUEST_CLOSED_STATUSES = [
+  BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
+  BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER,
+  BOOKING_REQUEST_STATUS.EXPIRED,
+  BOOKING_REQUEST_STATUS.HOLD_EXPIRED,
+  BOOKING_REQUEST_STATUS.SLOT_TAKEN,
+  BOOKING_REQUEST_STATUS.CANCELLED_BY_HOST,
+] as const;
+
+/** Tab của inbox. */
 export interface BookingRequestTab {
   /** Giá trị đi vào `?status=`. */
   readonly value: string;
-  /** Trạng thái để tra `statusCounts` (cộng dồn nếu nhiều); `null` = tab "Tất cả". */
-  readonly status: readonly BookingRequestStatus[] | null;
+  /** Trạng thái để tra `statusCounts` (cộng dồn nếu nhiều). */
+  readonly status: readonly BookingRequestStatus[];
   /** Khoá message trong namespace `BookingRequests.tabs`. */
-  readonly labelKey: 'needsAction' | 'converted' | 'rejected' | 'cancelled' | 'expired' | 'all';
+  readonly labelKey: 'needsAction' | 'awaitingPayment' | 'closed';
 }
 
 /**
- * Thứ tự tab theo VIỆC PHẢI LÀM, không theo thứ tự khai báo enum: việc cần xử lý đứng đầu,
- * rồi tới kết quả tích cực, rồi các nhánh kết thúc khác.
+ * ĐÚNG BA TAB (ADR 0047, đảo ngược quyết định 19/09/2026 dưới đây) — mỗi tab trả lời đúng MỘT
+ * câu hỏi vận hành, không câu nào chồng lấn câu nào:
  *
- * `approved_by_host` cố ý KHÔNG có tab riêng: luồng duyệt chuyển thẳng sang
- * `converted_to_booking` trong cùng transaction, nên đó là một trạng thái chỉ tồn tại ở dữ
- * liệu cũ. Nó vẫn được đếm trong tab "Tất cả" (tab đó cộng mọi trạng thái, không liệt kê tay).
+ *   1. Cần xử lý          — gian hàng phải bấm một quyết định.
+ *   2. Chờ khách thanh toán — quả bóng đã sang chân khách, gian hàng chỉ còn theo dõi/liên hệ.
+ *   3. Đã đóng             — mọi kết cục không-thành-đơn, gộp một chỗ nhưng giữ nhãn riêng từng
+ *      dòng.
+ *
+ * `converted_to_booking` không có tab riêng: nó là lịch sử của một ĐƠN THUÊ đang sống, và "Tất
+ * cả đơn thuê" mới là nơi đúng để tra cứu nó — giữ một tab ở đây chỉ lặp lại đúng thứ menu khác
+ * đã có. Tab "Tất cả" cũng bị bỏ cùng lý do: ba tab trên đã phủ hết 11 trạng thái, một tab tổng
+ * hợp không còn việc gì để làm ngoài đếm lại đúng ba con số đã hiện.
+ *
+ * ⚠️ Tab "Chờ khách thanh toán" từng KHÔNG tồn tại theo phản hồi người dùng 19/09/2026 (lý do
+ * lúc đó: "một tab riêng cho một trạng thái không-hành-động-được chỉ thêm rối"). Đảo ngược ngày
+ * 23/09/2026: chính người dùng đó xác nhận cần phân biệt RÕ bốn việc — cần xử lý / chờ khách
+ * thanh toán / chờ giao xe / tất cả đơn — và `awaiting_hold` trước đó chỉ ẩn trong tab "Tất cả"
+ * (đã xoá), nghĩa là nó thực chất KHÔNG có chỗ nào để xem riêng. `awaitingHold.*` ở
+ * `BookingRequestCard` (số tiền, hạn thanh toán, nút liên hệ/huỷ) vẫn giữ nguyên, không đổi.
+ *
+ * ⚠️ `packages/domain/messages/{vi,en}/booking-requests.json` vẫn còn các khoá CŨ
+ * (`tabs.converted/rejected/cancelled/expired/all`, cả khối `stats.*`) không được web dùng
+ * nữa — `apps/mobile` (tự có `REQUEST_INBOX_TABS`/`RequestStats` riêng, ADR 0031) vẫn đọc
+ * đúng những khoá đó. Xoá chúng làm mobile VỠ BIÊN DỊCH ngay lập tức dù không sửa file mobile
+ * nào — không xoá cho tới khi đội mobile chuyển sang cấu trúc 3 tab và tự dọn phần của họ.
  */
 export const BOOKING_REQUEST_TABS: readonly BookingRequestTab[] = [
   {
@@ -62,34 +89,16 @@ export const BOOKING_REQUEST_TABS: readonly BookingRequestTab[] = [
     status: BOOKING_REQUEST_NEEDS_ACTION_STATUSES,
     labelKey: 'needsAction',
   },
-  /*
-   * `awaiting_hold` (ADR 0044 — đã nhận chuyến, đang chờ khách thanh toán) CỐ Ý không có tab
-   * riêng (phản hồi người dùng 19/09/2026): gian hàng đã quyết định xong, và một tab riêng cho
-   * một trạng thái không-hành-động-được chỉ thêm rối. Nó vẫn xem được qua tab "Tất cả", và thẻ
-   * của nó tự nói tình trạng cùng hạn khách phải thanh toán (`awaitingHold.*` ở
-   * `BookingRequestCard`) thay vì để trống khó hiểu.
-   */
   {
-    value: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
-    status: [BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING],
-    labelKey: 'converted',
+    value: BOOKING_REQUEST_STATUS.AWAITING_HOLD,
+    status: [BOOKING_REQUEST_STATUS.AWAITING_HOLD],
+    labelKey: 'awaitingPayment',
   },
   {
-    value: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
-    status: [BOOKING_REQUEST_STATUS.REJECTED_BY_HOST],
-    labelKey: 'rejected',
+    value: BOOKING_REQUEST_TAB_CLOSED,
+    status: BOOKING_REQUEST_CLOSED_STATUSES,
+    labelKey: 'closed',
   },
-  {
-    value: BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER,
-    status: [BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER],
-    labelKey: 'cancelled',
-  },
-  {
-    value: BOOKING_REQUEST_STATUS.EXPIRED,
-    status: [BOOKING_REQUEST_STATUS.EXPIRED],
-    labelKey: 'expired',
-  },
-  { value: BOOKING_REQUEST_STATUS_ALL, status: null, labelKey: 'all' },
 ];
 
 /** Lý do từ chối bấm-là-điền. Chữ nằm ở message; đây chỉ là DANH SÁCH và thứ tự. */
