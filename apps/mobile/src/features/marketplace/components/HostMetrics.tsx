@@ -27,8 +27,22 @@ import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
  * Dấu "i" giữ phần GIẢI THÍCH, không giữ thông tin bắt buộc: chữ chính đọc được mà không cần
  * chạm gì, và không có số tiền hay hành động nào nằm sau nó.
  */
-export function HostMetrics({ metrics }: { metrics: HostMetricsShape }) {
+export function HostMetrics({ metrics }: { metrics?: HostMetricsShape | null }) {
   const t = useTranslations('Shops.metrics');
+
+  /*
+   * THIẾU HẲN khối chỉ số ≠ chưa đủ mẫu — và hai ca đó phải nói hai điều khác nhau.
+   *
+   * Hợp đồng API khai `metrics` là bắt buộc, nhưng một máy chủ chưa lên bản mới vẫn trả thiếu nó
+   * (staging đã gặp: cả trang chi tiết xe trắng màn vì một `.sampleCount` trên `undefined`). Một
+   * trường vắng mặt không được phép hạ cả màn hình — phần còn lại của trang vẫn là thứ khách vào
+   * đây để đọc.
+   *
+   * Rơi về `EMPTY_HOST_METRICS` thì sai theo hướng khác: nó in ra "mới có 0 yêu cầu trong 90
+   * ngày", một lời khẳng định về gian hàng mà app KHÔNG biết có đúng không. Không biết thì không
+   * nói gì.
+   */
+  if (!metrics) return null;
 
   if (hostMetricState(metrics.sampleCount) !== HOST_METRIC_STATE.READY) {
     /*

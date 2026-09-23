@@ -10,6 +10,7 @@ export type {
   BookingSurcharge,
   CorrectRefundInput,
   DepositRefund,
+  ExcessMileageSuggestion,
   OvertimeSuggestion,
   RecordRefundInput,
   SaveSurchargeInput,

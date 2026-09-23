@@ -106,12 +106,20 @@ export function RefundSheet({
   );
   const [pickingMoment, setPickingMoment] = useState(false);
 
+  /*
+   * Câu báo lỗi là câu GIẢI THÍCH, không phải cái nhãn ô lặp lại.
+   *
+   * Bản trước dùng `amountLabel` ("Số tiền hoàn (đ)") và `correctionReasonHint` ("Lý do và giá
+   * trị cũ đều được lưu vào nhật ký") làm thông báo: cái đầu báo lỗi bằng đúng tên của chính ô
+   * đó, cái sau nói về hậu quả chứ không nói phải làm gì. Web dùng `amountRequired` /
+   * `reasonRequired` — hai câu nói thẳng việc cần làm và vì sao.
+   */
   const schema = useMemo(
     () =>
       buildRefundSchema({
-        amount: t('amountLabel'),
+        amount: t('amountRequired'),
         method: t('methodLabel'),
-        reason: t('correctionReasonHint'),
+        reason: t('reasonRequired'),
       }),
     [t],
   );
@@ -166,8 +174,14 @@ export function RefundSheet({
       onClose={onClose}
       title={correcting ? t('correct') : t('record')}
       footer={
+        /*
+         * Nhãn NÚT khác nhãn TIÊU ĐỀ, đúng như web (`okText` vs `title`). Tiêu đề nói đang ở
+         * đâu ("Đánh dấu đã hoàn cọc"), nút nói bấm vào thì gì xảy ra ("Xác nhận đã hoàn").
+         * Lặp lại tiêu đề lên nút là bỏ mất một nửa thông tin ở đúng chỗ người dùng dừng lại
+         * lâu nhất trước khi ghi một khoản tiền.
+         */
         <Button
-          label={correcting ? t('correct') : t('record')}
+          label={correcting ? t('saveCorrection') : t('confirm')}
           icon={correcting ? 'create-outline' : 'arrow-undo-outline'}
           loading={record.isPending || correct.isPending}
           onPress={() => void submit()}

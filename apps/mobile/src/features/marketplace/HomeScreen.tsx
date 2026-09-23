@@ -159,15 +159,25 @@ function HomeContent() {
       >
         <HomeHero banners={banners ?? []} isLoading={bannersLoading} />
 
-        <YStack px={layout.screenX} mt={-layout.heroOverlap}>
+        {/*
+          Đè sâu hơn `layout.heroOverlap` một nấc (`+ space.sm`) — riêng ở đây, không sửa token
+          dùng chung (nó còn phục vụ `ListingDetailScreen`): hero trang chủ vừa bo góc dưới nên
+          thẻ tìm kiếm nổi hẳn lên thành một khối tách biệt, thay vì chỉ đè hờ lên mép ảnh.
+        */}
+        <YStack px={layout.screenX} mt={-(layout.heroOverlap + space.sm)}>
           <SearchCard onSearch={openSearch} />
         </YStack>
 
-        {/* Trang gian hàng (MKT-05) là task riêng chưa dựng. */}
+        {/*
+          Trang gian hàng (MKT-05) là task riêng chưa dựng.
+
+          `pt`/`gap` hạ tiếp xuống `space.sm` (8px) — sau khi thẻ tìm kiếm đã gọn lại,
+          `layout.block` (16px) vẫn còn rộng hơn hẳn nhịp còn lại của trang.
+        */}
         <YStack
           px={layout.screenX}
-          pt={layout.section}
-          gap={layout.section}
+          pt={space.sm}
+          gap={space.sm}
           onLayout={onPreviewLayout}
         >
           <VehiclePreview

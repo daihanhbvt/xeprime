@@ -58,7 +58,7 @@ interface ChipProps {
  * cho thứ chỉ là nhãn ngắn. Vùng CHẠM vẫn đủ chuẩn nhờ `hitSlop` bù đúng phần thiếu — mắt
  * thấy viên gọn, ngón tay vẫn có 44pt.
  */
-const CHIP_HEIGHT = { sm: 32, md: 38 } as const;
+const CHIP_HEIGHT = { sm: 36, md: 38 } as const;
 
 export function Chip({
   label,
@@ -120,9 +120,20 @@ export function Chip({
       ) : null}
       <Text
         col={selected ? colors.onPrimary : idleFg}
-        fos={size === 'sm' ? fontSize.label : fontSize.bodySm}
+        fos={size === 'sm' ? fontSize.bodySm : fontSize.body}
         fow={selected ? fontWeight.semibold : fontWeight.medium}
         numberOfLines={1}
+        /*
+         * Android cộng thêm đệm trên/dưới chữ theo font metric mặc định
+         * (`includeFontPadding`), lệch nhiều hơn về phía trên — viên chọn cao vừa đúng chữ thì
+         * phần đệm thừa đó đọc ra thành "chữ ngồi lệch xuống đáy". `includeFontPadding: false`
+         * bỏ đúng phần đệm đó; `lineHeight` khớp cỡ chữ giữ chữ không bị cắt trên iOS, nơi
+         * không có khái niệm này.
+         */
+        style={{
+          includeFontPadding: false,
+          lineHeight: (size === 'sm' ? fontSize.bodySm : fontSize.body) + 2,
+        }}
       >
         {label}
       </Text>

@@ -121,6 +121,12 @@ export function ShopAbout({ shop }: { shop: PublicShop }) {
                 p={space.sm}
                 br={radius.md}
                 bg={colors.surfaceMuted}
+                /*
+                  Ghim nói "đây là địa chỉ" bằng HÌNH, nên chữ không cần lặp lại tiền tố. Nhưng
+                  ghim bị ẩn khỏi cây khả truy cập, nên trình đọc màn hình sẽ nghe một chuỗi địa
+                  chỉ trơ trọi không biết là gì — nhãn ở đây trả lại đúng câu đầy đủ.
+                */
+                accessibilityLabel={t('about.address', { address: shop.address })}
               >
                 <Ionicons
                   name="location-outline"

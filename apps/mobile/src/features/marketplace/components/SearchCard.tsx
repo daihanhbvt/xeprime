@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
-import { Pressable } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -75,47 +75,73 @@ export function SearchCard({ onSearch }: { onSearch: () => void }) {
   const locationValue = provinceLabel(draft.provinceCode);
 
   return (
-    <Card lift="raised" padded={false} accessibilityLabel={t('card.searchLabel')}>
+    // Bo góc rộng hơn mặc định (`radius.lg` = 10px, dùng chung cho input/modal): thẻ này đè lên
+    // banner trang chủ và là điểm nhìn đầu tiên của màn, bo sâu hơn cho cảm giác nổi hẳn lên.
+    <Card
+      lift="raised"
+      padded={false}
+      radius={radius.lg * 2}
+      accessibilityLabel={t('card.searchLabel')}
+    >
+      {/* `py`/`gap` giữa hai bậc thang (`sm` 8px hụt, `md` 16px hơi rộng) — 12px là trung điểm. */}
       <YStack px={space.md} py={space.sm + space.xs} gap={space.sm + space.xs}>
         {/*
-          Hai TẦNG lựa chọn, không có nền hay kẻ ngang bọc quanh: chỉ viên đang chọn nổi lên
-          màu thương hiệu, phần còn lại chìm vào mặt thẻ — đúng cách web trình bày.
-        */}
-        <XStack gap={space.xs}>
-          {vehicleItems.map((item) => (
-            <Chip
-              key={item.value}
-              label={item.label}
-              icon={item.icon}
-              selected={draft.vehicleType === item.value}
-              onPress={() => setVehicleType(item.value)}
-              variant="segmented"
-              grow
-            />
-          ))}
-        </XStack>
+          Hai TẦNG lựa chọn, ngăn nhau bằng một ĐƯỜNG KẺ — không phải một dải nền chìm.
 
-        {/*
-          Kẻ ngang tách TẦNG loại xe khỏi phần còn lại: chọn Ô tô hay Xe máy là quyết định
-          đứng trên, nó đổi cả tập dịch vụ và tiêu chí bên dưới. Kẻ chạy hết bề ngang thẻ
-          (bù lại lề bằng `mx` âm) — dừng giữa chừng trông như một nét thừa.
-        */}
-        <YStack h={1} bg={colors.borderSubtle} mx={-space.md} />
+          Bản trước bọc cả hai hàng trong một khối `surfaceMuted`. Nó cho ra ba lớp màu chồng
+          lên nhau trên cùng một chỗ: mặt thẻ trắng → dải xám → viên đang chọn màu vàng đặc.
+          Trên màn hẹp, ba lớp đó đọc ra như một mảng màu loang chứ không như hai câu hỏi nối
+          tiếp ("xe gì" rồi "thuê kiểu nào").
 
-        <XStack gap={space.xs}>
-          {serviceItems.map((item) => (
-            <Chip
-              key={item.value}
-              label={item.label}
-              icon={item.icon}
-              selected={draft.serviceType === item.value}
-              onPress={() => setServiceType(item.value)}
-              variant="segmented"
-              size="sm"
-              grow
-            />
-          ))}
-        </XStack>
+          Một hairline làm đúng việc ngăn cách mà không thêm lớp màu nào, và trả lại cho viên
+          đang chọn quyền là thứ DUY NHẤT có màu trong khu vực này.
+
+          Cả hai hàng giữ cỡ `sm` — bản trước hàng loại xe cao hơn hẳn hàng dịch vụ, trông lệch.
+
+          Gap của khối này bằng ĐÚNG `py` của khối cha: khoảng từ mép thẻ xuống hàng "Ô tô/Xe
+          máy" và khoảng từ hàng đó xuống đường kẻ phải bằng nhau.
+        */}
+        <YStack gap={space.sm + space.xs}>
+          <XStack gap={space.xs}>
+            {vehicleItems.map((item) => (
+              <Chip
+                key={item.value}
+                label={item.label}
+                icon={item.icon}
+                selected={draft.vehicleType === item.value}
+                onPress={() => setVehicleType(item.value)}
+                variant="segmented"
+                size="sm"
+                grow
+              />
+            ))}
+          </XStack>
+
+          {/*
+            Màu thương hiệu (`primary`), không phải xám trung tính — `primaryLight` (#fdf6e3)
+            gần như biến mất trên nền trắng, còn `primary` đủ đậm để đọc ra là một đường NGĂN
+            có chủ đích, không phải viền lỗi hay hairline mặc định của hệ thống.
+
+            Chạy HẾT bề ngang thẻ (`mx` âm bù lại `px` của khối cha): dừng giữa chừng ở đúng lề
+            hai viên chip nhìn như một nét thừa bị cắt cụt, không như một đường NGĂN TẦNG thật.
+          */}
+          <YStack h={StyleSheet.hairlineWidth * 2} bg={colors.primary} mx={-space.md} />
+
+          <XStack gap={space.xs}>
+            {serviceItems.map((item) => (
+              <Chip
+                key={item.value}
+                label={item.label}
+                icon={item.icon}
+                selected={draft.serviceType === item.value}
+                onPress={() => setServiceType(item.value)}
+                variant="segmented"
+                size="sm"
+                grow
+              />
+            ))}
+          </XStack>
+        </YStack>
 
         {withDriver ? (
           <Field label={t('route.label')}>
@@ -140,6 +166,13 @@ export function SearchCard({ onSearch }: { onSearch: () => void }) {
           </Field>
         ) : null}
 
+        {/*
+          Nền TRẮNG + viền `borderInput`, không phải `surfaceMuted` như bản trước: dải chọn loại
+          xe/dịch vụ ở trên đã chiếm phần nền chìm rồi, ô địa điểm và ô thời gian dùng lại đúng
+          màu đó thì cả thẻ chỉ còn một sắc be duy nhất, mắt không tách được đâu là điều khiển.
+          Icon tô màu thương hiệu (`primaryActive`) thay vì xám — chấm phá màu duy nhất còn lại
+          ngoài viên chip đang chọn, và cũng là cách web tô icon field của thẻ tìm kiếm.
+        */}
         <Field label={t('location.label')}>
           <Pressable
             onPress={() => setPickerOpen(true)}
@@ -149,17 +182,18 @@ export function SearchCard({ onSearch }: { onSearch: () => void }) {
             <XStack
               ai="center"
               gap={space.sm}
-              bg={colors.surfaceMuted}
+              bg={colors.surface}
               br={radius.md}
-              bw={1}
-              bc={colors.borderSubtle}
-              px={space.md}
-              minHeight={sizing.touchTarget}
+              bw={1.5}
+              bc={colors.borderInput}
+              px={space.sm}
+              minHeight={sizing.touchTarget - space.xs}
             >
-              <Ionicons name="location-outline" size={17} color={colors.textMuted} />
-              <Text f={1} col={colors.text} fos={fontSize.body} numberOfLines={1}>
+              <Ionicons name="location-outline" size={17} color={colors.primaryActive} />
+              <Text f={1} col={colors.text} fos={fontSize.body} fow={fontWeight.medium} numberOfLines={1}>
                 {locationValue}
               </Text>
+              <Ionicons name="chevron-down" size={15} color={colors.textMuted} />
             </XStack>
           </Pressable>
         </Field>
@@ -182,7 +216,12 @@ export function SearchCard({ onSearch }: { onSearch: () => void }) {
           </Field>
         ) : null}
 
-        <Button label={t('card.submit')} icon="search" size="lg" onPress={onSearch} />
+        {/*
+          `size="md"`, không `"lg"`: nút này chỉ là hành động chính của MỘT thẻ trong dòng cuộn,
+          không phải hành động chính toàn màn — cỡ `lg` (56pt) làm nó nặng hơn hẳn mọi ô phía
+          trên và ăn đứt cảm giác "gọn" của cả thẻ.
+        */}
+        <Button label={t('card.submit')} icon="search" size="md" onPress={onSearch} />
 
         {longTerm ? (
           // ADR 0011: khách nêu NGUYỆN VỌNG ngày nhận sau khi chọn xe, gian hàng chốt lịch khi
