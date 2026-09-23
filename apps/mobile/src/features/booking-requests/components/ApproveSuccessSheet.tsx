@@ -14,8 +14,18 @@ import type { BookingRequestDecisionTarget } from '../api';
 /**
  * Kết quả sau khi DUYỆT — bản native của `ApproveSuccessDialog`.
  *
- * Là bàn giao việc, không phải lời chúc mừng: mọi thao tác còn lại của chuyến nằm trên ĐƠN vừa
- * tạo ở một màn khác, nên lối đi sang đó phải nằm ngay đây.
+ * Là bàn giao việc, không phải lời chúc mừng. Nhưng "việc tiếp theo" KHÔNG giống nhau ở hai kết
+ * cục, và đó là toàn bộ lý do tấm này tồn tại thay vì một dòng toast (ADR 0044 điều 2):
+ *
+ *  - **Có thu tiền giữ chỗ** (`bookingId` rỗng) — lịch đã giữ, mã thanh toán đã gửi cho khách,
+ *    và đơn thuê mở TỰ ĐỘNG khi tiền về. Chưa có đơn nào để mở, nên cũng không có nút dẫn tới
+ *    đơn; tấm nói thẳng điều đó thay vì để một nút biến mất không lời giải thích.
+ *  - **Không thu** (chính sách tắt, hoặc báo giá còn tạm tính) — đơn thuê đã có ngay, và việc
+ *    tiếp theo nằm trên chính nó.
+ *
+ * ⚠️ Nhánh thứ nhất là nhánh MẶC ĐỊNH của luồng hiện hành. Dùng chung một câu "đã tạo đơn thuê"
+ * cho cả hai là nói với gian hàng rằng chuyến đã chắc chắn, trong khi khách còn chưa chuyển đồng
+ * nào — đúng điều ADR 0044 sinh ra để chấm dứt.
  */
 export function ApproveSuccessSheet({
   request,
@@ -32,26 +42,34 @@ export function ApproveSuccessSheet({
   const dropoff = request.returnAt ? toAppTz(request.returnAt) : null;
   const longTerm = Boolean(request.longTermPackageMonths);
   const bookingId = request.bookingId;
+  /*
+   * Chưa có đơn ⇒ chuyến này thu tiền giữ chỗ và đang chờ khách chuyển khoản. Hỏi `bookingId`
+   * chứ không hỏi trạng thái: nó là thứ quyết định có nút "Xem chi tiết đơn" hay không, nên hai
+   * câu hỏi đó phải có cùng một câu trả lời.
+   */
+  const awaitingPayment = !bookingId;
 
   return (
     <BottomSheet
       open
       onClose={onClose}
-      title={t('approved.title')}
+      title={awaitingPayment ? t('approved.holdTitle') : t('approved.title')}
       footer={
-        <XStack gap={space.sm}>
-          {/*
-            "Đóng" co vừa chữ, "Xem chi tiết đơn" lấy phần còn lại — nhãn sau dài gấp bốn nhãn
-            trước, chia đôi là bỏ trống nửa trái và cắt đuôi nửa phải.
-
-            Khi không có `bookingId` thì chỉ còn "Đóng"; nó vẫn nằm trong `f={1}` nên hẹp, đúng
-            với vai một lối thoát chứ không phải hành động chính.
-          */}
-          <YStack flexShrink={0}>
-            <Button label={t('approved.close')} variant="ghost" onPress={onClose} />
-          </YStack>
-          {/* `bookingId` luôn có (đơn tạo cùng transaction với việc duyệt); kiểm tra vì kiểu để nó tuỳ chọn. */}
-          {bookingId ? (
+        awaitingPayment ? (
+          /*
+            Không có đơn để mở, nên việc duy nhất còn lại là quay về hộp thư và ĐỢI. Nút đó vì thế
+            là hành động CHÍNH, full-width — không phải một lối thoát nép bên trái.
+          */
+          <Button label={t('approved.holdClose')} size="lg" onPress={onClose} />
+        ) : (
+          <XStack gap={space.sm}>
+            {/*
+              "Đóng" co vừa chữ, "Xem chi tiết đơn" lấy phần còn lại — nhãn sau dài gấp bốn nhãn
+              trước, chia đôi là bỏ trống nửa trái và cắt đuôi nửa phải.
+            */}
+            <YStack flexShrink={0}>
+              <Button label={t('approved.close')} variant="ghost" onPress={onClose} />
+            </YStack>
             <YStack f={1}>
               <Button
                 label={t('approved.viewBooking')}
@@ -62,8 +80,8 @@ export function ApproveSuccessSheet({
                 }}
               />
             </YStack>
-          ) : null}
-        </XStack>
+          </XStack>
+        )
       }
     >
       <XStack ai="center" gap={space.sm} p={space.md} br={radius.md} bg={colors.successSurface}>
@@ -78,7 +96,11 @@ export function ApproveSuccessSheet({
           <Ionicons name="checkmark" size={iconSize.md} color={colors.success} />
         </YStack>
         <Text f={1} col={colors.text} fos={fontSize.bodySm}>
-          {longTerm ? t('approved.leadLongTerm') : t('approved.lead')}
+          {awaitingPayment
+            ? t('approved.holdLead')
+            : longTerm
+              ? t('approved.leadLongTerm')
+              : t('approved.lead')}
         </Text>
       </XStack>
 
@@ -107,7 +129,7 @@ export function ApproveSuccessSheet({
       </YStack>
 
       <Text col={colors.textMuted} fos={fontSize.label}>
-        {t('approved.next')}
+        {awaitingPayment ? t('approved.holdNext') : t('approved.next')}
       </Text>
     </BottomSheet>
   );

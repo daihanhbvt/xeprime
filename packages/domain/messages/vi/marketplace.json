@@ -1,17 +1,23 @@
 {
   "footer": {
-    "tagline": "XePrime là nền tảng kết nối chủ xe và người thuê xe trên toàn quốc. Thuê xe dễ dàng, an toàn và minh bạch.",
-    "copyright": "© {year} XePrime. All rights reserved.",
-    "country": "Nền tảng cho thuê xe tại Việt Nam",
-    "apps": {
-      "title": "Tải ứng dụng",
-      "downloadOn": "Tải trên",
-      "note": "Ứng dụng đang phát triển"
+    "tagline": "Nền tảng kết nối chủ xe và người thuê xe trên toàn quốc — dễ dàng, an toàn và minh bạch.",
+    "cta": {
+      "eyebrow": "Dành cho chủ xe",
+      "title": "Xe của bạn đang nằm không?",
+      "body": "Đăng xe lên XePrime, tự đặt giá và lịch trống, bắt đầu nhận chuyến trên toàn quốc.",
+      "action": "Đăng xe cho thuê"
     },
+    "socialsLabel": "XePrime trên mạng xã hội",
+    "socialsNote": "Kênh chính thức sẽ được công bố khi ra mắt.",
     "columns": {
-      "support": {
-        "title": "Hỗ trợ",
-        "helpCenter": "Trung tâm trợ giúp"
+      "explore": {
+        "title": "Khám phá"
+      },
+      "company": {
+        "title": "XePrime",
+        "about": "Giới thiệu XePrime",
+        "app": "Tải ứng dụng",
+        "support": "Trung tâm trợ giúp"
       },
       "legal": {
         "title": "Pháp lý",
@@ -19,13 +25,14 @@
         "privacy": "Chính sách bảo mật",
         "marketplaceRules": "Quy chế hoạt động sàn",
         "cancellation": "Chính sách huỷ và hoàn tiền"
-      },
-      "hosts": {
-        "title": "Dành cho chủ xe",
-        "listVehicle": "Đăng xe cho thuê",
-        "manageVehicles": "Quản lý xe"
       }
-    }
+    },
+    "apps": {
+      "heading": "Ứng dụng XePrime"
+    },
+    "backToTop": "Lên đầu trang",
+    "copyright": "© {year} XePrime",
+    "country": "Nền tảng cho thuê xe tại Việt Nam"
   },
   "steps": {
     "title": "Thuê xe chỉ với 4 bước",

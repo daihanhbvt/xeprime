@@ -8,8 +8,9 @@ import {
   LEGAL_SECTIONS,
   isLegalDoc,
   legalPath,
+  legalSectionKeys,
 } from './legal';
-import { FOOTER_COLUMNS } from '@/features/marketplace/constants';
+import { FOOTER_COLUMNS, FOOTER_SERVICE_LINKS } from '@/features/marketplace/constants';
 import { ROUTES } from './routes';
 
 /**
@@ -25,7 +26,10 @@ import { ROUTES } from './routes';
  *  3. **Chân trang không được trỏ vào hư không** — đó là lý do cả đợt này tồn tại.
  */
 
-type SectionBundle = Record<string, { heading: string; body: string }>;
+type SectionBundle = Record<
+  string,
+  { heading: string; body: string; items?: Record<string, string> }
+>;
 type DocBundle = { title: string; summary: string; sections: SectionBundle };
 
 const docs = (bundle: typeof viLegal) => bundle.docs as unknown as Record<string, DocBundle>;
@@ -44,10 +48,24 @@ describe('văn bản pháp lý — code và bản dịch phải khớp', () => {
         ['vi', viLegal],
         ['en', enLegal],
       ] as const) {
-        const entry = docOf(bundle, doc).sections[section];
-        expect(entry, `${locale}/legal.json thiếu mục "${section}" của "${doc}"`).toBeTruthy();
+        const entry = docOf(bundle, doc).sections[section.key];
+        expect(entry, `${locale}/legal.json thiếu mục "${section.key}" của "${doc}"`).toBeTruthy();
         expect(entry?.heading.trim()).not.toBe('');
         expect(entry?.body.trim()).not.toBe('');
+
+        /*
+         * Các KHOẢN trong một điều cũng khai thứ tự ở code. Thiếu bản dịch thì trang lặng lẽ
+         * bỏ qua khoản đó (`LegalDocumentView` lọc bằng `t.has`) — tức một điều khoản biến
+         * mất mà không có gì báo. Đúng kiểu sai không ai thấy trong một văn bản pháp lý.
+         */
+        for (const item of section.items ?? []) {
+          const value = entry?.items?.[item];
+          expect(
+            value,
+            `${locale}/legal.json thiếu khoản "${item}" của mục "${section.key}" trong "${doc}"`,
+          ).toBeTruthy();
+          expect(value?.trim()).not.toBe('');
+        }
       }
     }
   });
@@ -56,9 +74,19 @@ describe('văn bản pháp lý — code và bản dịch phải khớp', () => {
     '%s: không mục nào đã dịch mà bị bỏ quên khỏi LEGAL_SECTIONS',
     (doc) => {
       const translated = Object.keys(docOf(viLegal, doc).sections);
-      expect([...translated].sort()).toEqual([...LEGAL_SECTIONS[doc]].sort());
+      expect([...translated].sort()).toEqual([...legalSectionKeys(doc)].sort());
     },
   );
+
+  /** Chiều ngược lại cho các KHOẢN: viết ra rồi quên khai thứ tự thì không bao giờ hiện. */
+  it.each(LEGAL_DOC_VALUES)('%s: không khoản nào đã dịch mà thiếu trong LEGAL_SECTIONS', (doc) => {
+    for (const section of LEGAL_SECTIONS[doc]) {
+      const translated = Object.keys(docOf(viLegal, doc).sections[section.key]?.items ?? {});
+      expect([...translated].sort(), `mục "${section.key}" của "${doc}"`).toEqual(
+        [...(section.items ?? [])].sort(),
+      );
+    }
+  });
 
   it('mọi văn bản có tiêu đề và tóm tắt ở cả hai ngôn ngữ', () => {
     for (const doc of LEGAL_DOC_VALUES) {
@@ -120,7 +148,18 @@ describe('câu cam kết pháp lý cạnh nút hành động', () => {
 });
 
 describe('chân trang — không còn liên kết chết', () => {
-  const footerHrefs = FOOTER_COLUMNS.flatMap((col) => col.links.map((l) => l.href));
+  /**
+   * MỌI đích trong chân trang, không chỉ các cột.
+   *
+   * Từ 23/09/2026 chân trang có HAI nguồn liên kết chứ không còn một: hai cột khai tường minh
+   * (`FOOTER_COLUMNS` — XePrime và Pháp lý) và ba bộ lọc dịch vụ dựng riêng (`FOOTER_SERVICE_LINKS`,
+   * nhãn đến từ namespace khác). Bài test phải đọc cả hai, nếu không nó sẽ báo thiếu những liên
+   * kết vẫn đang nằm ngay trên màn hình.
+   */
+  const footerHrefs = [
+    ...FOOTER_COLUMNS.flatMap((col) => col.links.map((l) => l.href)),
+    ...FOOTER_SERVICE_LINKS.map((l) => l.href),
+  ];
 
   /**
    * Trước 03/09/2026, 9 trong 11 mục chân trang trỏ về `ROUTES.HOME` — gồm cả "Điều khoản dịch

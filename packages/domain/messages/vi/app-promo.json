@@ -1,0 +1,59 @@
+{
+  "meta": {
+    "title": "Ứng dụng XePrime cho điện thoại",
+    "description": "Tìm xe, gửi yêu cầu thuê, nhắn tin với chủ xe và theo dõi chuyến — ngay trên điện thoại."
+  },
+  "hero": {
+    "eyebrow": "Ứng dụng di động",
+    "title": "XePrime trong túi bạn",
+    "lead": "Toàn bộ hành trình thuê xe — tìm, hỏi, nhận xe, trả xe — gói trong một ứng dụng. Chủ xe quản lý lịch và đơn ngay trên cùng một app.",
+    "status": "Sắp ra mắt"
+  },
+  "preview": {
+    "heading": "Vài màn hình đầu tiên",
+    "note": "Ảnh minh hoạ giao diện đang hoàn thiện, không phải bản chính thức.",
+    "search": {
+      "title": "Tìm xe",
+      "desc": "Lọc theo dịch vụ, địa điểm và khung giờ; giá hiện ngay trên thẻ xe."
+    },
+    "trip": {
+      "title": "Chuyến của bạn",
+      "desc": "Mốc nhận và trả xe, từng dòng tiền, và nút thao tác đúng theo trạng thái chuyến."
+    },
+    "chat": {
+      "title": "Nhắn tin",
+      "desc": "Trao đổi trực tiếp với gian hàng, gửi kèm ảnh hiện trạng xe khi giao nhận."
+    }
+  },
+  "features": {
+    "heading": "Ứng dụng làm được gì",
+    "notify": {
+      "title": "Thông báo đúng lúc",
+      "desc": "Gian hàng nhận chuyến, cửa sổ thanh toán sắp hết, tới giờ nhận xe — báo ngay trên máy."
+    },
+    "chat": {
+      "title": "Nhắn tin trong chuyến",
+      "desc": "Hỏi chủ xe trước khi đặt, gửi ảnh và giấy tờ lúc giao nhận, tất cả lưu lại trong hồ sơ chuyến."
+    },
+    "handover": {
+      "title": "Giao nhận có bằng chứng",
+      "desc": "Chụp hiện trạng xe, ký biên bản và lưu ngay vào chuyến — khỏi phải nhớ gửi qua kênh khác."
+    },
+    "host": {
+      "title": "Dành cho chủ xe",
+      "desc": "Duyệt yêu cầu, chỉnh lịch bận và xem tiền của từng chuyến mà không cần mở máy tính."
+    }
+  },
+  "download": {
+    "heading": "Nhận thông báo khi app phát hành",
+    "body": "Ứng dụng chưa lên App Store và Google Play. Hai mã dưới đây hiện dẫn về trang chủ XePrime; khi app phát hành, chính hai mã này sẽ trỏ thẳng tới cửa hàng.",
+    "scanHint": "Quét bằng camera điện thoại",
+    "qrAlt": "Mã QR tải ứng dụng XePrime trên {store}",
+    "downloadOn": "Tải trên"
+  },
+  "web": {
+    "heading": "Chưa có app? Dùng ngay trên web",
+    "body": "Mọi việc trong ứng dụng đều làm được trên website, không phải cài gì cả.",
+    "action": "Tìm xe trên web"
+  }
+}

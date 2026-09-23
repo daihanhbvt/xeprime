@@ -1,0 +1,59 @@
+{
+  "meta": {
+    "title": "The XePrime mobile app",
+    "description": "Find a vehicle, send a booking request, message the owner and follow your trip — from your phone."
+  },
+  "hero": {
+    "eyebrow": "Mobile app",
+    "title": "XePrime in your pocket",
+    "lead": "The whole rental journey — search, ask, pick up, return — in one app. Owners manage their calendar and bookings from the very same place.",
+    "status": "Coming soon"
+  },
+  "preview": {
+    "heading": "A first look",
+    "note": "Illustrative screens of a design still in progress, not the final build.",
+    "search": {
+      "title": "Find a vehicle",
+      "desc": "Filter by service, location and time window; prices show right on the card."
+    },
+    "trip": {
+      "title": "Your trip",
+      "desc": "Pick-up and return times, every line of the price, and the action buttons that match the trip status."
+    },
+    "chat": {
+      "title": "Messaging",
+      "desc": "Talk to the shop directly and attach condition photos at handover."
+    }
+  },
+  "features": {
+    "heading": "What the app does",
+    "notify": {
+      "title": "Alerts when they matter",
+      "desc": "The shop accepted your trip, the payment window is closing, pick-up time is near — straight to your phone."
+    },
+    "chat": {
+      "title": "Messaging inside the trip",
+      "desc": "Ask before you book, send photos and documents at handover — all kept in the trip record."
+    },
+    "handover": {
+      "title": "Handover with evidence",
+      "desc": "Photograph the vehicle, sign the handover record and save it to the trip — nothing to remember to send elsewhere."
+    },
+    "host": {
+      "title": "Built for owners too",
+      "desc": "Approve requests, block dates and check the money on each trip without opening a laptop."
+    }
+  },
+  "download": {
+    "heading": "Be ready when it ships",
+    "body": "The app is not on the App Store or Google Play yet. The two codes below currently open the XePrime homepage; when the app ships, these same codes will point straight to the stores.",
+    "scanHint": "Scan with your phone camera",
+    "qrAlt": "QR code to download the XePrime app on {store}",
+    "downloadOn": "Download on"
+  },
+  "web": {
+    "heading": "No app yet? Use the web",
+    "body": "Everything the app does works on the website — nothing to install.",
+    "action": "Find a vehicle on the web"
+  }
+}

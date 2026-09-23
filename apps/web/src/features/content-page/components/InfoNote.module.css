@@ -1,0 +1,63 @@
+/*
+ * Khối ghi chú / cảnh báo.
+ *
+ * Dấu hiệu mức độ là VẠCH DÀY BÊN TRÁI chứ không phải viền kín bốn cạnh: một khối viền kín
+ * đọc thành "thẻ nội dung", còn vạch mép trái đọc thành "ghi chú bên lề" — đúng vai của nó, và
+ * nó không cắt mạch đọc của trang như một cái hộp.
+ *
+ * Màu lấy từ token trạng thái nghiệp vụ, không phải vàng thương hiệu: một cảnh báo màu vàng
+ * XePrime sẽ lẫn với mọi thứ khác đang dùng màu đó.
+ */
+.note {
+  padding: 13px 16px;
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.title {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--xp-color-text);
+}
+
+.body {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--xp-color-text-secondary);
+}
+
+.body > * + * {
+  margin-top: 6px;
+}
+
+.warning {
+  border-color: var(--xp-color-warning);
+  background: var(--xp-color-warning-bg);
+}
+
+.danger {
+  border-color: var(--xp-color-error);
+  background: var(--xp-color-error-bg);
+}
+.danger .title {
+  color: var(--xp-color-error);
+}
+/* Cảnh báo mức này người ta đọc khi đang hoảng — chữ đậm màu hơn phần còn lại của trang. */
+.danger .body {
+  color: var(--xp-color-text);
+}
+
+.info {
+  border-color: var(--xp-color-border-strong);
+  background: var(--xp-color-bg-muted);
+}
+
+/* Bản in: nền màu thành mảng xám, nhưng vạch mép trái vẫn giữ để cảnh báo không biến mất. */
+@media print {
+  .note {
+    background: none;
+  }
+}

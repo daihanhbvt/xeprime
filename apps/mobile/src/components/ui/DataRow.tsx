@@ -78,9 +78,14 @@ export function DataRow({
           {...(block
             ? {}
             : {
-                numberOfLines: 1,
-                adjustsFontSizeToFit: true,
-                minimumFontScale: 0.75,
+                /*
+                  XUỐNG DÒNG chứ KHÔNG bóp cỡ chữ. Bản trước dùng `adjustsFontSizeToFit` +
+                  `minimumFontScale: 0.75`, nên một giá trị dài ("Cọc tài sản · Cà vẹt (đăng ký
+                  xe máy)") bị co từ 12px xuống 9px — thấp hơn cả bậc cuối của thang chữ, và
+                  trên Android là chữ rỗ, mờ, đọc không ra. Hai dòng 12px luôn đọc được; một
+                  dòng 9px thì không, kể cả khi nó "vừa" bề ngang cột.
+                */
+                numberOfLines: 2,
               })}
         >
           {value}

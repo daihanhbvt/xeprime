@@ -1,0 +1,96 @@
+/*
+ * Bộ chuyển giữa bốn văn bản pháp lý.
+ *
+ * Dưới 1024px nó là một DẢI NGANG cuộn được đặt ngay dưới đầu trang — đúng chỗ và đúng hình
+ * dáng của một bộ tab trên điện thoại. Từ 1024px nó thành cột dọc đứng trên mục lục.
+ */
+.switcher {
+  min-width: 0;
+}
+
+.label {
+  margin-bottom: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--xp-color-text-tertiary);
+}
+
+.list {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  /* Bốn tên văn bản dài hơn bề ngang điện thoại: cho cuộn ngang thay vì xuống bốn hàng. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.list::-webkit-scrollbar {
+  display: none;
+}
+
+.item {
+  display: block;
+  padding: 8px 14px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  color: var(--xp-color-text-secondary);
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.item:hover {
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-primary-active);
+}
+
+.item:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-primary);
+  outline-offset: 2px;
+}
+
+/* Văn bản đang mở: nền vàng đặc. Không phải liên kết, nên cũng không có hiệu ứng rê chuột. */
+.itemCurrent,
+.itemCurrent:hover {
+  background: var(--xp-color-primary);
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+@media (min-width: 1024px) {
+  .list {
+    flex-direction: column;
+    gap: 6px;
+    overflow: visible;
+  }
+  .item {
+    border: none;
+    border-radius: var(--xp-border-radius-sm);
+    background: none;
+    padding: 7px 12px;
+    white-space: normal;
+  }
+  .item:hover {
+    background: var(--xp-color-bg-muted);
+  }
+  .itemCurrent,
+  .itemCurrent:hover {
+    background: var(--xp-color-primary-light);
+    color: var(--xp-color-primary-active);
+  }
+}
+
+/* Điều hướng là công cụ MÀN HÌNH — trên giấy nó chỉ là bốn dòng chữ vô nghĩa. */
+@media print {
+  .switcher {
+    display: none;
+  }
+}

@@ -1,0 +1,162 @@
+/*
+ * Trang giới thiệu ứng dụng — khổ cột rộng, nội dung là ẢNH và LƯỚI THẺ.
+ */
+.page {
+  max-width: var(--xp-container-max-width);
+  margin: 0 auto;
+  padding: 36px 20px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 44px;
+}
+
+/* ─── Ảnh minh hoạ trong khung máy ─────────────────────────────────────────
+ *
+ * Ba màn hình xếp ngang trên desktop. Dưới 760px chúng thành một dải cuộn NGANG chứ không xếp
+ * dọc: ba khung điện thoại xếp chồng trên một màn điện thoại là một trang dài vô lý, còn cuộn
+ * ngang đúng là cách người ta xem ảnh app trên chính cửa hàng ứng dụng.
+ */
+.screens {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/*
+ * Khung máy vẽ bằng CSS: viền dày bo tròn + đổ bóng. Không dùng ảnh khung — một file PNG khung
+ * điện thoại là 200KB cho thứ mà `border-radius` làm được, và nó sẽ sai khi đổi nền.
+ */
+.phone {
+  width: 100%;
+  max-width: 232px;
+  padding: 8px;
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: 28px;
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-overlay);
+}
+
+.phoneImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 20px;
+}
+
+.screenTitle {
+  margin-top: 18px;
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--xp-color-text);
+}
+
+.screenDesc {
+  margin-top: 6px;
+  max-width: 34ch;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--xp-color-text-secondary);
+}
+
+/* Nói rõ đây là ảnh minh hoạ. Không được nhỏ hơn mức đọc thoải mái — nó là thứ giữ cho ba
+   khung máy phía trên không thành một lời hứa về sản phẩm đã tồn tại. */
+.previewNote {
+  margin-top: 20px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--xp-color-text-tertiary);
+}
+
+@media (max-width: 760px) {
+  .screens {
+    grid-template-columns: repeat(3, 68vw);
+    /* Tràn ra hai mép để dải cuộn chạm mép màn hình, đúng cảm giác một băng ảnh. */
+    margin-inline: -16px;
+    padding-inline: 16px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .screens::-webkit-scrollbar {
+    display: none;
+  }
+  .screen {
+    scroll-snap-align: center;
+  }
+  .phone {
+    max-width: none;
+  }
+}
+
+/* ─── Tính năng ────────────────────────────────────────────────────────────── */
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+/* ─── Tải ứng dụng ─────────────────────────────────────────────────────────── */
+.download {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px 40px;
+  padding: 24px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-primary-light);
+}
+
+.downloadCopy {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.downloadBody {
+  max-width: 58ch;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--xp-color-text-secondary);
+}
+
+.scanHint {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--xp-color-primary-active);
+}
+
+.webLink {
+  font-weight: 600;
+  color: var(--xp-color-primary-active);
+}
+.webLink:hover {
+  text-decoration: underline;
+}
+.webLink:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-primary);
+  outline-offset: 2px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 28px 16px 48px;
+    gap: 36px;
+  }
+  .download {
+    padding: 18px;
+  }
+}

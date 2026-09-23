@@ -1,0 +1,51 @@
+/*
+ * Một mục nội dung. Nhịp dọc của mọi trang công khai đi qua đúng file này.
+ */
+.section {
+  /* Neo cuộn không được chui xuống dưới header dính. */
+  scroll-margin-top: calc(var(--xp-market-header-height) + 20px);
+}
+
+.head {
+  margin-bottom: 18px;
+}
+
+/*
+ * Vạch vàng ngắn đội trên tiêu đề — cùng dấu hiệu với tiêu đề cột ở chân trang, nên hai đầu
+ * trang nói cùng một thứ tiếng. Đây là chỗ DUY NHẤT màu thương hiệu xuất hiện trong một mục
+ * chữ: dùng nhiều hơn là bắt người đọc nhìn vào trang trí thay vì nội dung.
+ */
+.heading::before {
+  content: '';
+  display: block;
+  width: 20px;
+  height: 2px;
+  margin-bottom: 14px;
+  background: var(--xp-color-primary);
+  border-radius: var(--xp-border-radius-pill);
+}
+
+.heading {
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--xp-color-text);
+}
+
+.lead {
+  margin-top: 8px;
+  max-width: 68ch;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--xp-color-text-secondary);
+}
+
+@media (max-width: 640px) {
+  .heading {
+    font-size: 19px;
+  }
+  .head {
+    margin-bottom: 14px;
+  }
+}

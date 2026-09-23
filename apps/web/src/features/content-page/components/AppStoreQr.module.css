@@ -1,0 +1,91 @@
+/*
+ * Cụm hai mã QR tải ứng dụng.
+ *
+ * Ô mã luôn nền TRẮNG dù đặt ở đâu: mã QR cần module tối trên nền sáng, đảo màu là hỏng mã
+ * trên phần lớn camera điện thoại. Chỉ phần chữ đổi theo `tone`.
+ */
+.list {
+  display: flex;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * `min-width: 0` + `flex: 0 1 auto`: hai ô được phép CO LẠI khi chỗ hẹp. Không có nó, ở màn
+ * 320px hai mã 72px cộng đệm sẽ đẩy cả chân trang tràn ngang.
+ */
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.code {
+  display: block;
+  max-width: 100%;
+  padding: 8px;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-container);
+  /* `line-height: 0` để hộp ôm sát SVG — nếu không sẽ thừa một dải trắng dưới mã. */
+  line-height: 0;
+}
+
+/*
+ * `<QRCode type="svg">` xuất ra SVG có `width`/`height` cố định bằng `size`. Ép nó co theo hộp
+ * cha: mã QR là hình vector nên thu nhỏ vẫn quét được, còn một con số px cứng thì không thể
+ * đáp ứng bốn bề ngang điện thoại (320 · 375 · 390 · 430).
+ */
+.code svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.store {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  /* Nền tối là mặc định (chân trang); `.light` ghi đè cho trang nội dung. */
+  color: var(--xp-shell-sidebar-muted);
+}
+
+.storeIcon {
+  font-size: 16px;
+}
+
+.storeText {
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.storeText small {
+  display: block;
+  font-size: 9.5px;
+  font-weight: 400;
+  opacity: 0.8;
+  line-height: 1.1;
+}
+
+/* Trên nền sáng: ô mã cần một viền, vì nền trắng của nó trùng với nền thẻ bên dưới. */
+.light .code {
+  border: 1px solid var(--xp-color-border);
+}
+
+.light .store {
+  color: var(--xp-color-text);
+}
+
+.light .storeText {
+  font-size: 13px;
+}
+
+.light .storeText small {
+  color: var(--xp-color-text-tertiary);
+  opacity: 1;
+}

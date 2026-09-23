@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844" role="img" aria-hidden="true">
+  <!--
+    ẢNH MINH HOẠ TẠM — màn tìm xe của app native.
+
+    Đây KHÔNG phải ảnh chụp màn hình thật: app chưa phát hành. Nó là một phác thảo khối, cố ý
+    không có chữ nào (để không phải dịch, và để không giả vờ là giao diện thật).
+
+    Thay bằng ảnh thật: ghi đè đúng file này, giữ tỉ lệ 390×844 (9:19.5) — trang không phải sửa.
+    Màu lấy từ bảng token XePrime: nền #faf9f7, vàng #d6a02c, chữ #1a1a1a, viền #e8e4dd.
+  -->
+  <rect width="390" height="844" fill="#faf9f7"/>
+
+  <!-- thanh trạng thái + header -->
+  <rect x="0" y="0" width="390" height="96" fill="#ffffff"/>
+  <rect x="24" y="34" width="86" height="12" rx="6" fill="#d6a02c"/>
+  <circle cx="352" cy="66" r="14" fill="#f5f3ef"/>
+  <rect x="24" y="58" width="150" height="9" rx="4.5" fill="#e8e4dd"/>
+
+  <!-- thẻ tìm kiếm -->
+  <rect x="16" y="112" width="358" height="112" rx="14" fill="#ffffff" stroke="#e8e4dd"/>
+  <rect x="32" y="130" width="120" height="9" rx="4.5" fill="#d4cfc6"/>
+  <rect x="32" y="152" width="326" height="26" rx="8" fill="#f5f3ef"/>
+  <rect x="32" y="186" width="158" height="24" rx="8" fill="#f5f3ef"/>
+  <rect x="200" y="186" width="158" height="24" rx="8" fill="#d6a02c"/>
+
+  <!-- chip lọc -->
+  <rect x="16" y="242" width="78" height="28" rx="14" fill="#fdf6e3" stroke="#d6a02c"/>
+  <rect x="104" y="242" width="92" height="28" rx="14" fill="#ffffff" stroke="#e8e4dd"/>
+  <rect x="206" y="242" width="86" height="28" rx="14" fill="#ffffff" stroke="#e8e4dd"/>
+  <rect x="302" y="242" width="72" height="28" rx="14" fill="#ffffff" stroke="#e8e4dd"/>
+
+  <!-- thẻ xe 1 -->
+  <rect x="16" y="290" width="358" height="200" rx="14" fill="#ffffff" stroke="#e8e4dd"/>
+  <rect x="16" y="290" width="358" height="116" rx="14" fill="#ece8e1"/>
+  <path d="M96 378c8-30 26-46 42-46h48c18 0 32 16 42 46z" fill="#d4cfc6"/>
+  <circle cx="120" cy="378" r="11" fill="#9e9890"/>
+  <circle cx="266" cy="378" r="11" fill="#9e9890"/>
+  <rect x="32" y="308" width="64" height="20" rx="10" fill="#d6a02c"/>
+  <rect x="32" y="422" width="186" height="11" rx="5.5" fill="#1a1a1a"/>
+  <rect x="32" y="444" width="120" height="9" rx="4.5" fill="#d4cfc6"/>
+  <rect x="32" y="466" width="96" height="11" rx="5.5" fill="#a9761a"/>
+
+  <!-- thẻ xe 2 -->
+  <rect x="16" y="506" width="358" height="200" rx="14" fill="#ffffff" stroke="#e8e4dd"/>
+  <rect x="16" y="506" width="358" height="116" rx="14" fill="#ece8e1"/>
+  <path d="M96 594c8-30 26-46 42-46h48c18 0 32 16 42 46z" fill="#d4cfc6"/>
+  <circle cx="120" cy="594" r="11" fill="#9e9890"/>
+  <circle cx="266" cy="594" r="11" fill="#9e9890"/>
+  <rect x="32" y="638" width="204" height="11" rx="5.5" fill="#1a1a1a"/>
+  <rect x="32" y="660" width="132" height="9" rx="4.5" fill="#d4cfc6"/>
+  <rect x="32" y="682" width="88" height="11" rx="5.5" fill="#a9761a"/>
+
+  <!-- thanh tab dưới -->
+  <rect x="0" y="758" width="390" height="86" fill="#ffffff"/>
+  <rect x="0" y="758" width="390" height="1" fill="#e8e4dd"/>
+  <circle cx="60" cy="790" r="10" fill="#d6a02c"/>
+  <circle cx="160" cy="790" r="10" fill="#d4cfc6"/>
+  <circle cx="242" cy="790" r="10" fill="#d4cfc6"/>
+  <circle cx="330" cy="790" r="10" fill="#d4cfc6"/>
+  <rect x="44" y="808" width="32" height="6" rx="3" fill="#d6a02c"/>
+  <rect x="144" y="808" width="32" height="6" rx="3" fill="#e8e4dd"/>
+  <rect x="226" y="808" width="32" height="6" rx="3" fill="#e8e4dd"/>
+  <rect x="314" y="808" width="32" height="6" rx="3" fill="#e8e4dd"/>
+</svg>

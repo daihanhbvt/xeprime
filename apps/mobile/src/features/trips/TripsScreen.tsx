@@ -4,7 +4,6 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
-  API_ERROR_CODE,
   CUSTOMER_TRIP_FILTER,
   CUSTOMER_TRIP_FILTER_DEFAULT,
   CUSTOMER_TRIP_FILTER_VALUES,
@@ -25,6 +24,7 @@ import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { getErrorCode } from '@/lib/api-client';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { cancelErrorKey, decisionErrorKey } from '@/features/booking-requests/decision-error';
 import { ApproveRequestSheet } from '@/features/booking-requests/components/ApproveRequestSheet';
 import { ApproveSuccessSheet } from '@/features/booking-requests/components/ApproveSuccessSheet';
 import { CancelRequestSheet } from '@/features/booking-requests/components/CancelRequestSheet';
@@ -221,22 +221,30 @@ export function TripsScreen({ lockedRole }: { lockedRole?: TripRole } = {}) {
     [openTrip, decisions],
   );
 
+  /** Lỗi quyết định → câu có LỐI ĐI TIẾP; `null` thì rơi về ánh xạ chung theo MÃ. */
+  function decisionError(error: unknown): string {
+    const key = decisionErrorKey(getErrorCode(error));
+    return key ? tRequests(key) : errorMessage(error);
+  }
+
   function confirmApprove(body?: Parameters<typeof approve.mutate>[0]['body']) {
     if (!approving) return;
-    const target = approving;
     approve.mutate(
-      { id: target.id, ...(body ? { body } : {}) },
+      { id: approving.id, ...(body ? { body } : {}) },
       {
-        onSuccess: () => {
-          toast.showSuccess(
-            target.longTermPackageMonths
-              ? tRequests('approve.successLongTerm')
-              : tRequests('approve.success'),
-          );
+        /*
+         * Tấm kết quả đọc `bookingId` của BẢN GHI SERVER VỪA TRẢ VỀ (ADR 0044 điều 2) — truyền
+         * lại `approving` là truyền bản ghi TRƯỚC khi duyệt, nơi `bookingId` luôn `null`, nên
+         * mọi lượt duyệt đọc ra "chờ khách thanh toán" kể cả chuyến đã tạo đơn ngay.
+         *
+         * Cũng không còn toast: `approve.success` nói "đã tạo đơn thuê", một lời khẳng định SAI
+         * ở nhánh mặc định của luồng mới. Tấm trượt tự nói đúng cả hai kết cục.
+         */
+        onSuccess: (approved) => {
           setApproving(null);
-          setApproved(target);
+          setApproved(approved);
         },
-        onError: (error) => toast.showError(errorMessage(error)),
+        onError: (error) => toast.showError(decisionError(error)),
       },
     );
   }
@@ -250,7 +258,8 @@ export function TripsScreen({ lockedRole }: { lockedRole?: TripRole } = {}) {
           toast.showSuccess(tRequests('reject.success'));
           setRejecting(null);
         },
-        onError: (error) => toast.showError(errorMessage(error)),
+        /* Từ chối đi qua CÙNG cửa `claimPending` với duyệt ⇒ cùng bộ lỗi có lối đi tiếp. */
+        onError: (error) => toast.showError(decisionError(error)),
       },
     );
   }
@@ -264,17 +273,10 @@ export function TripsScreen({ lockedRole }: { lockedRole?: TripRole } = {}) {
           toast.showSuccess(tRequests('cancel.success'));
           setCancelling(null);
         },
-        /*
-         * Cuộc đua với đồng tiền: khách chuyển khoản đúng lúc chủ xe đang mở tấm trượt ⇒ webhook
-         * thắng, yêu cầu đã thành đơn, lệnh huỷ không claim được gì (409). Câu chung ("có lỗi
-         * xảy ra") sẽ khiến họ bấm lại vài lần rồi gọi hỗ trợ.
-         */
-        onError: (error) =>
-          toast.showError(
-            getErrorCode(error) === API_ERROR_CODE.CONFLICT
-              ? tRequests('cancel.raceLost')
-              : errorMessage(error),
-          ),
+        onError: (error) => {
+          const key = cancelErrorKey(getErrorCode(error));
+          toast.showError(key ? tRequests(key) : errorMessage(error));
+        },
       },
     );
   }

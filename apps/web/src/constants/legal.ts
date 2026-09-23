@@ -16,5 +16,7 @@ export {
   LEGAL_SECTIONS,
   isLegalDoc,
   legalPath,
+  legalSectionKeys,
   type LegalDoc,
+  type LegalSection,
 } from '@xeprime/domain';

@@ -10,6 +10,22 @@ export const ROUTES = {
   HOME: '/',
   /** Trang kết quả tìm xe — sở hữu bộ lọc, sắp xếp, phân trang (trang chủ chỉ xem trước). */
   SEARCH: '/search',
+  /**
+   * Giới thiệu XePrime — trang công khai trả lời "sàn này là gì, vận hành thế nào".
+   *
+   * Mục "Về Prime" trên thanh điều hướng trỏ về `HOME` cho tới 23/09/2026, tức một mục menu
+   * bấm vào thì không đi đâu cả. Trang này là đích thật của nó, và cũng là nơi duy nhất nói ra
+   * mô hình hai tuyến (ADR 0028) bằng ngôn ngữ người dùng thay vì ngôn ngữ ADR.
+   */
+  ABOUT: '/about',
+  /**
+   * Giới thiệu ỨNG DỤNG di động — trang đích của mục "Tải ứng dụng" ở chân trang.
+   *
+   * Tách khỏi `ABOUT` vì hai trang trả lời hai câu hỏi khác nhau ("sàn này là gì" ≠ "app làm
+   * được gì"), và vì khi app lên store thì đây là trang mang link store — chân trang chỉ cần
+   * trỏ vào đúng một chỗ.
+   */
+  APP: '/app',
   LOGIN: '/login',
   REGISTER: '/register',
   FORGOT_PASSWORD: '/forgot-password',

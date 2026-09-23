@@ -47,6 +47,10 @@ export const MESSAGE_NAMESPACES = [
   // được viện dẫn (có ngày hiệu lực, sửa là phải dời ngày), không phải chữ trang trí của chợ.
   { file: 'legal', namespace: 'Legal' },
   { file: 'support', namespace: 'Support' },
+  // Hai trang GIỚI THIỆU công khai. Tách khỏi `marketplace` vì chúng là nội dung tiếp thị có
+  // vòng đời riêng (đổi khi sản phẩm đổi), không phải chữ của chính chợ xe.
+  { file: 'about', namespace: 'About' },
+  { file: 'app-promo', namespace: 'AppPromo' },
 
   // — Cổng quản lý —
   { file: 'list-your-vehicle', namespace: 'ListYourVehicle' },
