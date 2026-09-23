@@ -31,7 +31,7 @@ export function TripEstimateCard({
   /**
    * Khách ĐÃ TRẢ khoản giữ chỗ ⇒ bảng này không còn là "tạm tính".
    *
-   * Từ ADR 0039, chuyến đã cọc đọc SNAPSHOT đã đóng băng trên hold thay vì một lượt báo giá mới,
+   * Chuyến đã có khoản giữ chỗ đọc SNAPSHOT đã đóng băng trên hold thay vì một lượt báo giá mới,
    * nên mọi con số ở đây đúng bằng thứ đã thu. Vẫn dán nhãn "tạm tính" lên nó là nói với người vừa
    * chuyển tiền rằng số họ trả có thể đổi.
    */

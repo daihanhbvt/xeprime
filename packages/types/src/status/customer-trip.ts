@@ -45,24 +45,23 @@ export const CUSTOMER_TRIP_STAGE = {
   /** Đã gửi yêu cầu, chủ xe chưa trả lời. Chưa có đơn thuê. */
   PENDING_APPROVAL: 'pending_approval',
   /**
-   * Tuyến hoa hồng: đang chờ CHÍNH KHÁCH chuyển khoản giữ chỗ (ADR 0021).
+   * **Đã được nhận · chờ CHÍNH KHÁCH thanh toán tiền giữ chỗ** (ADR 0044 điều 2).
    *
    * Cố ý KHÔNG gộp vào `PENDING_APPROVAL`. Hai chặng nhìn giống nhau ("chưa xong") nhưng
    * **việc cần làm tiếp thuộc về hai người khác nhau**: ở đây quả bóng đang ở chân khách và
-   * màn hình phải có nút chuyển tiền cùng đồng hồ đếm ngược; ở kia khách chỉ có thể chờ.
+   * màn hình phải có số tiền, mã QR cùng đồng hồ đếm ngược; ở kia khách chỉ có thể chờ.
    * Gộp lại là giấu mất việc duy nhất khách phải làm để có xe.
+   *
+   * Cũng KHÔNG phải `READY`: chưa có đơn thuê nào, và gọi một chuyến chưa thu được tiền là
+   * "sẵn sàng" chính là điều luồng mới sinh ra để chấm dứt.
    */
   AWAITING_HOLD: 'awaiting_hold',
   /**
-   * Đã giữ chỗ xong (tiền đã về), đang chờ chủ xe xác nhận — ADR 0039.
+   * **LEGACY (ADR 0039)** — khách đã trả tiền TRƯỚC khi có ai duyệt, đang chờ chủ xe xác nhận.
    *
-   * Tách khỏi `PENDING_APPROVAL` vì rủi ro của khách ở hai chặng này khác hẳn nhau: ở kia họ
-   * chưa mất gì, ở đây XePrime đang giữ tiền của họ. Màn hình vì thế phải nói được cả hai vế —
-   * "chỗ của bạn đã được giữ" và "từ chối thì hoàn đủ vào ví điểm" — thứ mà nhãn "Chờ xác nhận"
-   * suông không nói được.
-   *
-   * Cũng KHÔNG phải `READY`: chưa có đơn thuê nào, và gọi một yêu cầu chưa được duyệt là
-   * "sẵn sàng" đúng là điều lượt rà soát 16/09 cấm.
+   * Luồng hiện hành không dẫn tới chặng này nữa (tiền chỉ thu sau khi chuyến đã được nhận, nên
+   * "đã trả đủ" đồng nghĩa với "có đơn"). Giữ lại để những chuyến sinh trong thời gian ADR 0039
+   * còn hiệu lực đọc đúng tình trạng của chúng: XePrime đang giữ tiền và chủ xe còn phải quyết.
    */
   PENDING_APPROVAL_PAID: 'pending_approval_paid',
   /** Chủ xe đã nhận, chưa tới giờ giao xe. */
@@ -75,6 +74,15 @@ export const CUSTOMER_TRIP_STAGE = {
   CANCELLED: 'cancelled',
   /** Chủ xe từ chối yêu cầu, hoặc yêu cầu quá hạn phản hồi. */
   REJECTED: 'rejected',
+  /**
+   * Khung giờ đã thuộc về một khách khác — ADR 0044 điều 6.
+   *
+   * Chặng RIÊNG chứ không gộp vào `REJECTED` hay `CANCELLED`: cả hai nhãn kia đều nói sai về
+   * việc vừa xảy ra ("chủ xe không muốn nhận bạn" / "chuyến của bạn bị huỷ"), trong khi sự thật
+   * là chiếc xe vừa được đặt xong bởi người hỏi trước — và điều khách cần biết là **hãy chọn xe
+   * khác hoặc khung giờ khác**, không phải đi hỏi lại chủ xe.
+   */
+  SLOT_TAKEN: 'slot_taken',
   /** Tới giờ mà khách không nhận xe. */
   NO_SHOW: 'no_show',
 } as const;
@@ -89,11 +97,11 @@ export const CUSTOMER_TRIP_STAGE_META: Readonly<Record<CustomerTripStage, Status
     color: STATUS_COLOR.WAITING,
   },
   [CUSTOMER_TRIP_STAGE.AWAITING_HOLD]: {
-    label: 'Chờ chuyển giữ chỗ',
+    label: 'Đã được nhận · chờ thanh toán',
     color: STATUS_COLOR.WARNING,
   },
   [CUSTOMER_TRIP_STAGE.PENDING_APPROVAL_PAID]: {
-    label: 'Đã giữ chỗ · chờ chủ xe xác nhận',
+    label: 'Đã thanh toán · chờ chủ xe xác nhận',
     color: STATUS_COLOR.WAITING,
   },
   [CUSTOMER_TRIP_STAGE.READY]: { label: 'Sẵn sàng', color: STATUS_COLOR.INFO },
@@ -104,6 +112,10 @@ export const CUSTOMER_TRIP_STAGE_META: Readonly<Record<CustomerTripStage, Status
     color: STATUS_COLOR.NEUTRAL,
   },
   [CUSTOMER_TRIP_STAGE.REJECTED]: { label: 'Bị từ chối', color: STATUS_COLOR.DANGER },
+  [CUSTOMER_TRIP_STAGE.SLOT_TAKEN]: {
+    label: 'Xe đã có khách khác',
+    color: STATUS_COLOR.NEUTRAL,
+  },
   [CUSTOMER_TRIP_STAGE.NO_SHOW]: { label: 'Không nhận xe', color: STATUS_COLOR.DANGER },
 };
 
@@ -149,6 +161,16 @@ export function customerTripStage(input: {
     case BOOKING_REQUEST_STATUS.REJECTED_BY_HOST:
     case BOOKING_REQUEST_STATUS.EXPIRED:
       return CUSTOMER_TRIP_STAGE.REJECTED;
+    case BOOKING_REQUEST_STATUS.SLOT_TAKEN:
+      return CUSTOMER_TRIP_STAGE.SLOT_TAKEN;
+    /*
+     * Gian hàng RÚT LẠI một chuyến đã nhận (ADR 0044 điều 7) — chiếu về `CANCELLED`, không về
+     * `REJECTED`: với khách, 'chuyến của bạn bị huỷ' và 'yêu cầu của bạn bị từ chối' là hai
+     * chuyện khác nhau, và ở đây họ ĐÃ được nhận. Ai huỷ thì đọc từ `cancellation` trên DTO
+     * chuyến, không đoán từ chặng.
+     */
+    case BOOKING_REQUEST_STATUS.CANCELLED_BY_HOST:
+      return CUSTOMER_TRIP_STAGE.CANCELLED;
     // Đã duyệt/đã chuyển đơn mà chưa thấy đơn: dữ liệu cũ hoặc đơn bị xoá mềm. Coi như sắp tới
     // thay vì ném lỗi — khách không có gì để làm với một sự cố dữ liệu nội bộ.
     case BOOKING_REQUEST_STATUS.APPROVED_BY_HOST:
@@ -191,6 +213,7 @@ export function isCustomerTripClosed(stage: CustomerTripStage): boolean {
     stage === CUSTOMER_TRIP_STAGE.COMPLETED ||
     stage === CUSTOMER_TRIP_STAGE.CANCELLED ||
     stage === CUSTOMER_TRIP_STAGE.REJECTED ||
+    stage === CUSTOMER_TRIP_STAGE.SLOT_TAKEN ||
     stage === CUSTOMER_TRIP_STAGE.NO_SHOW
   );
 }
@@ -269,12 +292,14 @@ export function isCustomerTripFilter(value: unknown): value is CustomerTripFilte
  */
 export const CUSTOMER_CANCELLABLE_STAGES: readonly CustomerTripStage[] = [
   CUSTOMER_TRIP_STAGE.PENDING_APPROVAL,
-  // Đang chờ chuyển giữ chỗ (R3): chưa có tiền nào về, huỷ là nhả chỗ — không có gì để hoàn.
+  /*
+   * Đã được nhận, đang chờ khách thanh toán (ADR 0044). Huỷ là nhả chỗ và đóng khoản chờ; phần
+   * đã chuyển dở (hold `underpaid`) đi theo đường hoàn thường.
+   */
   CUSTOMER_TRIP_STAGE.AWAITING_HOLD,
   /*
-   * Đã cọc, đang chờ gian hàng nhận (ADR 0039). Huỷ được, và ĐÂY là chặng mà quyền huỷ có giá
-   * trị nhất: khách đã trả tiền và có thể phải chờ tới một giờ. Số tiền quay về theo đúng mốc
-   * `free_cancel_until` đã đóng băng trên hold — không có luật riêng cho chặng này.
+   * LEGACY ADR 0039 — đã trả đủ, đang chờ gian hàng nhận. Huỷ được, và số tiền quay về theo
+   * đúng mốc `free_cancel_until` đã đóng băng trên hold; không có luật riêng cho chặng này.
    */
   CUSTOMER_TRIP_STAGE.PENDING_APPROVAL_PAID,
   CUSTOMER_TRIP_STAGE.READY,
@@ -282,6 +307,40 @@ export const CUSTOMER_CANCELLABLE_STAGES: readonly CustomerTripStage[] = [
 
 export function canCustomerCancelTrip(stage: CustomerTripStage): boolean {
   return CUSTOMER_CANCELLABLE_STAGES.includes(stage);
+}
+
+/**
+ * Chặng mà CHỦ XE còn một quyết định để bấm ở màn chi tiết chuyến (ADR 0045 điều 1).
+ *
+ * Tồn tại vì màn đó trước đây hỏi `respondBy != null`, và từ ADR 0044 câu hỏi ấy trả lời sai:
+ * `respondBy` KHÔNG bị xoá khi chủ xe nhận chuyến, nên chính họ nhìn thấy nút "Duyệt" cho một
+ * chuyến mình vừa duyệt. Chặng thì nói đúng bóng đang ở chân ai.
+ *
+ * Ba chặng, nhưng KHÔNG cùng một bộ nút — `canHostCancelTrip` phân biệt tiếp:
+ *
+ *   · `pending_approval` và `pending_approval_paid` (LEGACY ADR 0039) — chủ xe còn phải quyết:
+ *     **Duyệt** hoặc **Từ chối**;
+ *   · `awaiting_hold` — đã nhận, đang chờ khách trả tiền. Lối duy nhất còn lại là **Huỷ**.
+ */
+export const HOST_DECIDABLE_STAGES: readonly CustomerTripStage[] = [
+  CUSTOMER_TRIP_STAGE.PENDING_APPROVAL,
+  CUSTOMER_TRIP_STAGE.PENDING_APPROVAL_PAID,
+  CUSTOMER_TRIP_STAGE.AWAITING_HOLD,
+];
+
+export function canHostDecideTrip(stage: CustomerTripStage): boolean {
+  return HOST_DECIDABLE_STAGES.includes(stage);
+}
+
+/**
+ * Chặng mà việc của chủ xe là HUỶ chứ không phải duyệt/từ chối.
+ *
+ * Chỉ một chặng, nhưng nó là một hàm chứ không phải một phép so viết thẳng ở component: ranh
+ * giới "từ chối" ↔ "huỷ" là ranh giới TIỀN (ADR 0045 điều 1), và hai bề mặt đang hỏi nó — màn
+ * chuyến và hộp thư gian hàng. Hai phép so chép tay sẽ lệch nhau vào ngày có chặng thứ hai.
+ */
+export function canHostCancelTrip(stage: CustomerTripStage): boolean {
+  return stage === CUSTOMER_TRIP_STAGE.AWAITING_HOLD;
 }
 
 /**

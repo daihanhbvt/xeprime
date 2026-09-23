@@ -8,9 +8,9 @@ import { IconButton } from '@/components/ui/IconButton';
 import { RemoteImage } from '@/components/ui/RemoteImage';
 import { useCopy } from '@/hooks/use-copy';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { colors, fontSize, radius, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { SubscriptionInvoice } from '@/api/subscription/api';
-import { usePaymentInfo } from '../hooks/use-subscription';
+import { usePaymentInfo, useTenantPlans } from '../hooks/use-subscription';
 
 /** Cỡ ảnh QR — đủ để camera ngân hàng bắt được ở khoảng cách cầm tay. */
 const QR_SIZE = 260;
@@ -32,9 +32,16 @@ const QR_RATIO = 260 / 308;
  */
 export function InvoicePaymentPanel({ invoice }: { invoice: SubscriptionInvoice }) {
   const t = useTranslations('Subscription.payment');
+  const tPurchase = useTranslations('Subscription.purchase');
   const fmt = useAppFormat();
   const copy = useCopy();
   const paymentInfo = usePaymentInfo();
+  /*
+   * Danh mục gói chỉ để lấy TÊN bậc: hoá đơn mang `planCode` (`shop-advanced`) chứ không mang
+   * tên người đọc được. Dùng chung query key với bảng giá nên khi người dùng vừa đi qua bước
+   * chọn gói thì đây là một lượt đọc cache, không phải một request nữa.
+   */
+  const plans = useTenantPlans();
 
   const partial = invoice.status === SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID;
   const remaining = partial
@@ -43,11 +50,37 @@ export function InvoicePaymentPanel({ invoice }: { invoice: SubscriptionInvoice 
 
   const info = paymentInfo.data;
   const qrUrl = info ? buildVietQrUrl(info, remaining, invoice.code) : null;
-
-
+  /* Danh mục chưa về (hoặc bậc đã lưu trữ) ⇒ rơi về MÃ bậc: một chuỗi kỹ thuật vẫn hơn một ô trống. */
+  const planName = plans.data?.find((plan) => plan.id === invoice.planId)?.name ?? invoice.planCode;
 
   return (
     <YStack gap={space.md}>
+      {/*
+        BẠN ĐANG MUA GÌ — trước cả hướng dẫn chuyển khoản.
+
+        Màn này sống qua một lần tắt app và qua một lần đăng nhập ở máy khác, nên không có gì bảo
+        đảm người đang đọc còn nhớ mình đã chọn bậc nào: thiếu khối này, thứ duy nhất họ thấy là
+        một số tiền và một mã. Dữ liệu lấy từ CHÍNH hoá đơn (bậc, kỳ hạn, kỳ áp dụng, hạn mức đã
+        đóng băng lúc tạo), không phải từ lựa chọn còn trong bộ nhớ của màn.
+      */}
+      <YStack gap={2} p={space.sm} br={radius.md} bg={colors.surfaceMuted}>
+        <Text col={colors.placeholder} fos={fontSize.label} fow={fontWeight.bold} letterSpacing={0.4}>
+          {t('buying').toLocaleUpperCase('vi')}
+        </Text>
+        <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold}>
+          {planName}
+          <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.medium}>
+            {` · ${tPurchase('termOption', { months: invoice.termMonths })}`}
+          </Text>
+        </Text>
+        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          {t('period', { from: fmt.date(invoice.periodFrom), to: fmt.date(invoice.periodTo) })}
+          {invoice.quota.maxVehicles == null
+            ? ` · ${tPurchase('limitVehiclesUnlimited')}`
+            : ` · ${tPurchase('limitVehicles', { count: invoice.quota.maxVehicles })}`}
+        </Text>
+      </YStack>
+
       <Callout tone="info">
         {partial ? t('partialIntro', { paid: fmt.money(invoice.paidAmount) }) : t('intro')}
       </Callout>

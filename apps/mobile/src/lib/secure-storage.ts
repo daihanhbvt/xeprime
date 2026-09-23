@@ -21,6 +21,8 @@ export const SECURE_KEY = {
   RENTAL_RANGE: 'xp.rentalRange',
   PROVINCE_CODE: 'xp.provinceCode',
   DELIVERY_ADDRESS: 'xp.deliveryAddress',
+  /** Tỉnh SUY RA từ vị trí thiết bị — gợi ý của máy, không phải lựa chọn của người dùng. */
+  GEO_PROVINCE: 'xp.geoProvince',
 } as const;
 
 export type SecureKey = (typeof SECURE_KEY)[keyof typeof SECURE_KEY];

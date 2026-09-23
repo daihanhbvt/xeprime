@@ -95,6 +95,8 @@ import {
 } from '../api';
 import { PICKUP_METHOD, requestFormSchema, type RequestFormValues } from '../schema';
 import { BookingPriceSummary } from './BookingPriceSummary';
+import { PromoCodeField } from '@/features/promo-codes/components/PromoCodeField';
+import { usePromoCode } from '@/features/promo-codes/use-promo-code';
 import { BookingSteps, type BookingStepItem, type BookingStepKey } from './BookingSteps';
 import { VehicleSummaryPanel } from './VehicleSummaryPanel';
 import styles from './RequestBookingFlow.module.css';
@@ -577,6 +579,26 @@ export function RequestBookingFlow({
   });
 
   /**
+   * MÃ KHUYẾN MÃI — ADR 0046.
+   *
+   * Tham số chuyến dùng CHÍNH `quoteParams` mà báo giá dùng: hai bên phải nói về đúng một chuyến,
+   * nếu không số giảm sẽ được tính trên một báo giá khác với báo giá đang hiện trên màn hình.
+   * `null` khi chưa chọn đủ ⇒ ô áp mã tự ẩn (`PromoCodeField` trả `null`).
+   *
+   * Hook tự XÁC MINH LẠI mã khi chuyến đổi (thời gian, dịch vụ, lộ trình, gói) — xem docblock của
+   * nó: giữ số giảm cũ là hiện một tổng tiền không tồn tại.
+   */
+  const promoTrip = quoteParams ? { vehicleId, ...quoteParams } : null;
+  const promo = usePromoCode(promoTrip);
+  /*
+   * Chuyến KHÔNG có khoản thu trước thì không có dòng tiền nào để tài trợ vào (báo giá tạm tính,
+   * thuê dài hạn chưa chốt lịch — ADR 0046 điều 2). Đọc từ `holdAmount` của SERVER, không tự suy
+   * theo dịch vụ: điều kiện thật là "XePrime có thu đồng nào online không", và chỉ server biết.
+   */
+  const promoUnavailable =
+    quoteQ.data != null && quoteQ.data.breakdown.fees?.holdAmount == null;
+
+  /**
    * Điền sẵn tên + SĐT của tài khoản. Chạy khi `/auth/me` về (có thể sau lần render đầu), và chỉ
    * điền vào ô đang trống — không đè lên thứ khách đã tự gõ.
    */
@@ -754,6 +776,11 @@ export function RequestBookingFlow({
             }
           : {}),
         ...(v.acceptedTerms ? { acceptedTerms: true } : {}),
+        /*
+         * Gửi CHUỖI MÃ, không gửi số giảm: server đánh giá lại và giữ lượt ở cửa kiểm thứ hai
+         * (ADR 0046 điều 7). Một client gửi lên "giảm 5.000.000đ" thì không có gì phản đối nó.
+         */
+        ...(promo.appliedCode ? { promoCode: promo.appliedCode } : {}),
       });
     },
     onSuccess: async (receipt) => {
@@ -793,6 +820,19 @@ export function RequestBookingFlow({
       }
       if (code === API_ERROR_CODE.CANNOT_BOOK_OWN_VEHICLE) {
         setBlocked('ownVehicle');
+        return;
+      }
+      /*
+       * MÃ KHUYẾN MÃI bị SERVER từ chối ở cửa gửi (ADR 0046) — mã vừa hết lượt, hoặc điều kiện
+       * vừa đổi. `rejectByServer` bỏ mã và bật dòng cảnh báo trong ô áp mã; lượt gửi KHÔNG đi
+       * tiếp, và khách bấm lại với con số đã cập nhật.
+       *
+       * Không hiện thêm một lỗi chung ở đây: giao diện đã nói đúng chỗ (ngay cạnh ô mã), và một
+       * alert thứ hai chỉ làm người ta đi tìm hai vấn đề khác nhau.
+       */
+      if (promo.rejectByServer(e)) {
+        void quoteQ.refetch();
+        setStepError(null);
         return;
       }
       /*
@@ -980,7 +1020,23 @@ export function RequestBookingFlow({
    */
   const priceDetail = (
     <div ref={priceDetailRef} className={styles.priceDetail}>
-      <BookingPriceSummary {...priceProps} variant="detail" />
+      <BookingPriceSummary
+        {...priceProps}
+        variant="detail"
+        promoSlot={
+          <PromoCodeField
+            trip={promoTrip}
+            appliedCode={promo.appliedCode}
+            applied={promo.applied}
+            checking={promo.checking}
+            reason={promo.reason}
+            unavailable={promoUnavailable}
+            droppedCode={promo.droppedCode}
+            onApply={promo.apply}
+            onRemove={promo.remove}
+          />
+        }
+      />
     </div>
   );
 
@@ -1143,9 +1199,9 @@ export function RequestBookingFlow({
             </span>
           </span>
 {/*
-            Ba chặng, ba câu — và chặng chờ tiền KHÔNG được nói "đã gửi yêu cầu, chủ xe sẽ phản
-            hồi": chỗ đã bị giữ, đồng hồ đang chạy, và việc tiếp theo thuộc về KHÁCH chứ không
-            phải chủ xe. Câu sai ở đây là lý do khách đóng tab rồi mất chuyến.
+            Ba chặng, ba câu. Chặng CHỜ TIỀN (xe bật "Đặt ngay" và hệ thống vừa nhận) không được
+            nói "đã gửi yêu cầu, chủ xe sẽ phản hồi": chuyến đã được nhận, đồng hồ đang chạy, và
+            việc tiếp theo thuộc về KHÁCH. Câu sai ở đây là lý do khách đóng tab rồi mất chuyến.
           */}
           <h3 className={styles.doneTitle}>
             {awaitingHold ? t('done.heldTitle') : t('done.title')}
@@ -1280,7 +1336,7 @@ export function RequestBookingFlow({
           )}
 
           {/*
-            MÃ QR NGAY TẠI ĐÂY — ADR 0039 điều 1.
+            MÃ QR NGAY TẠI ĐÂY — chỉ khi hệ thống vừa TỰ NHẬN chuyến (ADR 0044 điều 2).
 
             Dùng lại `TripHoldPanel` của màn chi tiết chuyến chứ không vẽ QR lần thứ hai: đó là
             nơi đã có đồng hồ đếm ngược, nút sao chép, và mọi trạng thái hoàn tiền. Hai bản QR

@@ -23,6 +23,7 @@ import { shopPath } from '@/constants/routes';
 import { mapPlaceUrl, toGeoPoint } from '@/lib/map-static';
 import { applyDiscountPercent } from '@/lib/money';
 import type { PublicListingDetail } from '../types';
+import { HostMetrics } from './HostMetrics';
 import { ListingGallery } from './ListingGallery';
 import { ListingReviews } from './ListingReviews';
 import { ListingServiceSelector } from './ListingServiceSelector';
@@ -425,6 +426,13 @@ export async function ListingDetailView({
                 <div className={styles.shopMeta}>{listing.shopProvince}</div>
               ) : null}
               {listing.shopBio ? <p className={styles.shopBio}>{listing.shopBio}</p> : null}
+              {/*
+                Ba chỉ số uy tín (ADR 0045 điều 3) nằm ĐÚNG ở đây — trong thẻ chủ xe, ngay trên
+                nút "Chọn thuê". Đây là giây người đọc quyết định có gửi yêu cầu cho một người lạ
+                hay không, và "họ có trả lời không" là câu hỏi họ đang hỏi. Bắt cuộn lên trang
+                gian hàng để tìm câu trả lời là bắt họ rời trang ngay trước bước chuyển đổi.
+              */}
+              <HostMetrics metrics={listing.shopMetrics} className={styles.shopMetrics} />
             </div>
           </div>
 

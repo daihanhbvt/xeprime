@@ -181,7 +181,7 @@ describe('RefundSheet — hoàn cọc', () => {
   it('mặc định là số ĐỀ XUẤT do server tính, không phải một phép trừ ở client', async () => {
     const recordSpy = jest.spyOn(settlementApi, 'recordRefund').mockResolvedValue({} as never);
 
-    const { findAllByText } = await render(
+    const { findByText } = await render(
       wrap(
         <RefundSheet
           open
@@ -193,9 +193,11 @@ describe('RefundSheet — hoàn cọc', () => {
       ),
     );
 
-    /* Tiêu đề tấm và nhãn nút trùng chuỗi — nút ở CHÂN nên là lần xuất hiện cuối trong cây. */
-    const buttons = await findAllByText('Đánh dấu đã hoàn cọc');
-    await fireEvent.press(buttons[buttons.length - 1]!);
+    /*
+     * Nút mang chữ KHÁC tiêu đề tấm ("Xác nhận đã hoàn" vs "Đánh dấu đã hoàn cọc"), đúng như
+     * `okText` của web — nên tìm thẳng được, không phải lấy lần xuất hiện cuối trong cây.
+     */
+    await fireEvent.press(await findByText('Xác nhận đã hoàn'));
 
     await waitFor(() =>
       expect(recordSpy).toHaveBeenCalledWith(
@@ -232,7 +234,7 @@ describe('RefundSheet — hoàn cọc', () => {
     );
     const onDone = jest.fn();
 
-    const { findAllByText } = await render(
+    const { findByText } = await render(
       wrap(
         <RefundSheet
           open
@@ -244,9 +246,11 @@ describe('RefundSheet — hoàn cọc', () => {
       ),
     );
 
-    /* Tiêu đề tấm và nhãn nút trùng chuỗi — nút ở CHÂN nên là lần xuất hiện cuối trong cây. */
-    const buttons = await findAllByText('Đánh dấu đã hoàn cọc');
-    await fireEvent.press(buttons[buttons.length - 1]!);
+    /*
+     * Nút mang chữ KHÁC tiêu đề tấm ("Xác nhận đã hoàn" vs "Đánh dấu đã hoàn cọc"), đúng như
+     * `okText` của web — nên tìm thẳng được, không phải lấy lần xuất hiện cuối trong cây.
+     */
+    await fireEvent.press(await findByText('Xác nhận đã hoàn'));
 
     await waitFor(() => expect(onDone).not.toHaveBeenCalled());
   });
@@ -266,7 +270,7 @@ describe('RefundSheet — hoàn cọc', () => {
       },
     } as never);
 
-    const { findAllByText, findByPlaceholderText } = await render(
+    const { findByText, findByPlaceholderText } = await render(
       wrap(
         <RefundSheet
           open
@@ -279,12 +283,11 @@ describe('RefundSheet — hoàn cọc', () => {
     );
 
     /*
-     * Tiêu đề tấm và nhãn nút là cùng một chuỗi; nút nằm ở CHÂN nên nó là lần xuất hiện cuối
-     * cùng trong cây (`BottomSheet` vẽ tiêu đề → nội dung → chân).
+     * Nút mang chữ KHÁC tiêu đề tấm ("Lưu điều chỉnh" vs "Điều chỉnh thông tin hoàn cọc"), đúng
+     * như `okText` của web.
      */
     const submit = async () => {
-      const all = await findAllByText('Điều chỉnh thông tin hoàn cọc');
-      await fireEvent.press(all[all.length - 1]!);
+      await fireEvent.press(await findByText('Lưu điều chỉnh'));
     };
 
     // Thiếu lý do thì KHÔNG gửi đi — sửa một con số tiền đã ghi sổ phải giải thích được.

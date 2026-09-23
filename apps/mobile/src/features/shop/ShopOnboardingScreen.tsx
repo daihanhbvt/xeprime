@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { StyleSheet } from 'react-native';
@@ -8,7 +7,6 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
   REGISTRATION_TRACK,
-  SUBSCRIPTION_INVOICE_STATUS,
   TENANT_TYPE,
   TENANT_TYPE_VALUES,
   tenantUsesManagePortal,
@@ -33,12 +31,11 @@ import { APP_SCOPE } from '@/features/shell/app-scope';
 import { useShellScope } from '@/features/shell/use-shell-scope';
 import { isPackageOnboarding, resolveWorkspaceHref } from '@/features/shell/workspace';
 import { PackageShopCheckout } from '@/features/subscription/components/PackageShopCheckout';
-import { usePendingInvoice } from '@/features/subscription/hooks/use-subscription';
+import { useSyncScopeWhenInvoiceSettles } from '@/features/subscription/hooks/use-subscription';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
-import { queryKeys } from '@/queries/query-keys';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
@@ -109,7 +106,6 @@ export function ShopOnboardingScreen({
   const [guideOpen, setGuideOpen] = useState(false);
   const navigateOnce = useNavigateOnce();
   const { switchTo } = useShellScope();
-  const queryClient = useQueryClient();
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
   const domainLabel = useDomainLabel();
@@ -125,7 +121,7 @@ export function ShopOnboardingScreen({
   /** Câu chữ và chỉ dẫn bước theo tuyến GÓI — bước 1 chọn cửa đó, hoặc đã sang bước 2. */
   const packageWording = isPackageTrack || packagePending;
 
-  useSyncScopeWhenInvoiceSettles(packagePending, queryClient);
+  useSyncScopeWhenInvoiceSettles(packagePending);
 
   /*
    * Điều hướng trong effect, KHÔNG giữa lúc render: đổi route trong thân render của một màn đang
@@ -578,38 +574,3 @@ export function ShopOnboardingScreen({
   );
 }
 
-/**
- * Hoá đơn vừa RỜI trạng thái chờ ⇒ hỏi lại scope thật.
- *
- * Tiền về là webhook SePay lật hoá đơn `paid`, bật thuê bao và hoàn tất onboarding trong MỘT
- * transaction (ADR 0040). Client không biết điều đó xảy ra lúc nào, nên `usePendingInvoice` hỏi
- * lại theo nhịp và tự dừng khi hoá đơn tới trạng thái kết thúc. Lượt hỏi CUỐI CÙNG đó — lượt trả
- * về `null` — là tín hiệu duy nhất đáng tin, và hook này biến nó thành một lần làm mới `/auth/me`.
- * Điều hướng thì để `useEffect` ở màn lo, sau khi scope mới thật sự về.
- *
- * `seenAwaiting` là thứ phân biệt "vừa trả xong" với "chưa bao giờ tạo hoá đơn": cả hai đều cho
- * `data === null`, và làm mới scope ở ca thứ hai là một lượt gọi vô ích mỗi lần màn mở.
- *
- * Cũng chạy đúng khi hoá đơn hết hạn (`void`): scope không đổi, màn hình quay về bộ chọn gói.
- */
-function useSyncScopeWhenInvoiceSettles(
-  enabled: boolean,
-  queryClient: ReturnType<typeof useQueryClient>,
-): void {
-  const pending = usePendingInvoice(enabled);
-  const status = pending.data?.status ?? null;
-  const awaiting =
-    status === SUBSCRIPTION_INVOICE_STATUS.ISSUED ||
-    status === SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID;
-  const seenAwaiting = useRef(false);
-
-  useEffect(() => {
-    if (awaiting) {
-      seenAwaiting.current = true;
-      return;
-    }
-    if (!seenAwaiting.current) return;
-    seenAwaiting.current = false;
-    void queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
-  }, [awaiting, queryClient]);
-}

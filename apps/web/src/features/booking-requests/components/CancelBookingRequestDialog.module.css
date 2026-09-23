@@ -1,0 +1,81 @@
+/* Hộp thoại huỷ chuyến đã nhận — cùng nhịp với hộp thoại từ chối. */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.context {
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-sm);
+  margin: 0;
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  overflow-wrap: anywhere;
+}
+
+/*
+ * Hệ quả nằm trên nền CẢNH BÁO, không phải nền trung tính.
+ *
+ * Đây là danh sách những việc sẽ xảy ra và không rút lại được. Nó phải khác về thị giác so với
+ * phần ngữ cảnh ở trên, nếu không mắt sẽ lướt qua cả hai như một khối chữ.
+ */
+.effects {
+  margin: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md) var(--xp-space-sm) 30px;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body);
+}
+
+.effects li + li {
+  margin-top: 2px;
+}
+
+.infoHint {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 2px;
+  vertical-align: middle;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  /* `fieldset` mang border + margin mặc định của trình duyệt — bỏ để khớp các ô khác. */
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.label {
+  padding: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* Sáu nhóm lý do xếp DỌC: đọc theo cột nhanh hơn, và câu dài không bị cắt giữa chừng. */
+.categories {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.hint {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.error {
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}

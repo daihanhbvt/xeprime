@@ -2,6 +2,7 @@ import { STOREFRONT_KIND } from '@xeprime/types';
 import { getAppFormat } from '@/i18n/server-format';
 import { getTranslations } from 'next-intl/server';
 import type { PublicShop } from '../types';
+import { HostMetrics } from './HostMetrics';
 import styles from './ShopAbout.module.css';
 
 /**
@@ -15,9 +16,15 @@ import styles from './ShopAbout.module.css';
  *
  * ## Ô nào vắng dữ liệu thì BIẾN MẤT, không hiện số 0
  *
- * `responseRatePercent = null` nghĩa là chưa có yêu cầu nào tới hạn phải quyết, không phải
- * "phản hồi 0%"; điểm đánh giá khi chưa ai đánh giá cũng vậy. Lấp chỗ trống bằng số 0 là bịa ra
- * một lời khẳng định xấu về một gian hàng mới mở.
+ * Điểm đánh giá khi chưa ai đánh giá không phải "0 sao". Lấp chỗ trống bằng số 0 là bịa ra một
+ * lời khẳng định xấu về một gian hàng mới mở.
+ *
+ * ## Ba chỉ số UY TÍN tách khỏi lưới số liệu này
+ *
+ * Bốn ô ở đây là những thứ ĐẾM ĐƯỢC không cần diễn giải (bao nhiêu xe, bao nhiêu chuyến). Ba
+ * chỉ số của ADR 0045 thì mỗi con số cần một định nghĩa mẫu số đi kèm, và chúng dùng chung một
+ * ngưỡng "đủ dữ liệu" — trộn vào cùng lưới sẽ có ô biến mất ô còn, trông như lỗi hiển thị.
+ * `HostMetrics` vì thế là một khối riêng, dùng chung với trang chi tiết xe.
  */
 export async function ShopAbout({ shop }: { shop: PublicShop }) {
   const [t, fmt] = await Promise.all([getTranslations('Shops'), getAppFormat()]);
@@ -26,13 +33,6 @@ export async function ShopAbout({ shop }: { shop: PublicShop }) {
 
   const stats = [
     { key: 'vehicles', value: fmt.count(shop.vehicleCount), label: t('stats.vehicles') },
-    typeof shop.responseRatePercent === 'number'
-      ? {
-          key: 'responseRate',
-          value: t('stats.responseRateValue', { percent: shop.responseRatePercent }),
-          label: t('stats.responseRate'),
-        }
-      : null,
     {
       key: 'completedTrips',
       value: fmt.count(shop.completedTripCount),
@@ -43,23 +43,22 @@ export async function ShopAbout({ shop }: { shop: PublicShop }) {
       : null,
   ].filter((stat): stat is { key: string; value: string; label: string } => stat !== null);
 
-  // Không có gì để kể VÀ không có số nào đáng trưng ⇒ không dựng thẻ rỗng.
-  if (!shop.bio && !shop.address && stats.length === 0) return null;
-
   return (
     <section className={styles.section}>
       <div className={styles.card}>
-        {shop.bio || shop.address ? (
-          <div className={styles.about}>
-            <h2 className={styles.title}>
-              {t(isShop ? 'about.titleShop' : 'about.titlePersonal')}
-            </h2>
-            {shop.bio ? <p className={styles.bio}>{shop.bio}</p> : null}
-            {shop.address ? (
-              <p className={styles.address}>{t('about.address', { address: shop.address })}</p>
-            ) : null}
-          </div>
-        ) : null}
+        {/*
+          Cột trái luôn có mặt vì `HostMetrics` luôn có điều để nói — ít nhất là "chưa đủ dữ
+          liệu, mới có N yêu cầu". Một gian hàng chưa viết giới thiệu vẫn là một gian hàng khách
+          cần đọc được ba chỉ số.
+        */}
+        <div className={styles.about}>
+          <h2 className={styles.title}>{t(isShop ? 'about.titleShop' : 'about.titlePersonal')}</h2>
+          {shop.bio ? <p className={styles.bio}>{shop.bio}</p> : null}
+          {shop.address ? (
+            <p className={styles.address}>{t('about.address', { address: shop.address })}</p>
+          ) : null}
+          <HostMetrics metrics={shop.metrics} className={styles.metrics} />
+        </div>
 
         {stats.length > 0 ? (
           <ul className={styles.stats} aria-label={t('stats.sectionLabel')}>

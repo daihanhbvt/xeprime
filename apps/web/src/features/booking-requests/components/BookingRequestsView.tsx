@@ -298,6 +298,7 @@ export function BookingRequestsView() {
                   pendingAction={pendingActionFor(request.id)}
                   onApprove={decisions.openApprove}
                   onReject={decisions.openReject}
+                  onCancel={decisions.openCancel}
                   onMessage={openConversation}
                   onOpenDetail={openDetail}
                   onOpenVehicle={openVehicleDetail}
@@ -352,6 +353,10 @@ export function BookingRequestsView() {
         onReject={(row) => {
           setDetailRequest(null);
           decisions.openReject(row);
+        }}
+        onCancel={(row) => {
+          setDetailRequest(null);
+          decisions.openCancel(row);
         }}
         onOpenVehicle={openVehicleDetail}
         onOpenCustomer={openCustomerDetail}

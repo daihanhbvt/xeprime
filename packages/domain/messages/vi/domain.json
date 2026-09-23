@@ -43,7 +43,12 @@
     "rejected_by_host": "Chủ shop từ chối",
     "cancelled_by_customer": "Khách đã hủy",
     "expired": "Quá hạn phản hồi",
-    "converted_to_booking": "Đã tạo đơn thuê"
+    "converted_to_booking": "Đã tạo đơn thuê",
+    "awaiting_hold": "Đã nhận · chờ khách thanh toán",
+    "hold_paid": "Đã thanh toán · chờ bạn duyệt",
+    "hold_expired": "Khách không thanh toán",
+    "slot_taken": "Khung giờ đã có khách khác",
+    "cancelled_by_host": "Chủ xe đã huỷ"
   },
   "bookingStatus": {
     "reserved": "Đã giữ xe",
@@ -108,13 +113,15 @@
   },
   "customerTripStage": {
     "pending_approval": "Chờ xác nhận",
-    "awaiting_hold": "Chờ chuyển giữ chỗ",
+    "awaiting_hold": "Đã được nhận · chờ thanh toán",
     "ready": "Sẵn sàng",
     "active": "Đang thuê",
     "completed": "Hoàn thành",
     "cancelled": "Đã hủy chuyến",
     "rejected": "Bị từ chối",
-    "no_show": "Không nhận xe"
+    "no_show": "Không nhận xe",
+    "pending_approval_paid": "Đã thanh toán · chờ chủ xe xác nhận",
+    "slot_taken": "Xe đã có khách khác"
   },
   "deliveryQuoteSource": {
     "auto": "Tự động tính",
@@ -275,7 +282,16 @@
     "free_trips_exhausted": "Hết lượt miễn phí",
     "subscription_activated": "Gói đã kích hoạt",
     "booking_auto_accepted": "Tự động nhận chuyến",
-    "chat_message_received": "Tin nhắn mới"
+    "chat_message_received": "Tin nhắn mới",
+    "booking_request_slot_taken": "Xe đã có khách khác",
+    "hold_requested": "Cần thanh toán giữ chỗ",
+    "hold_paid": "Đã nhận tiền giữ chỗ",
+    "hold_expiring": "Sắp hết hạn thanh toán",
+    "hold_expired": "Hết hạn thanh toán giữ chỗ",
+    "hold_refunded": "Chuyến không thành — đã hoàn",
+    "hold_refund_paid": "Đã hoàn tiền giữ chỗ",
+    "booking_request_slot_reopened": "Xe bạn hỏi đã rảnh lại",
+    "booking_cancelled_by_host": "Chủ xe đã huỷ chuyến"
   },
   "occupancySourceType": {
     "booking": "Đơn thuê",
@@ -589,7 +605,35 @@
     "service_fee": "Phí dịch vụ XePrime",
     "tax": "Thuế khấu trừ/nộp thay",
     "trip_insurance": "Bảo hiểm chuyến đi",
-    "vehicle_protection": "Bảo vệ xe"
+    "vehicle_protection": "Bảo vệ xe",
+    "deposit": "Cọc đặt chuyến",
+    "promo": "Mã khuyến mãi XePrime"
+  },
+  "promoCodeState": {
+    "disabled": "Đã tắt",
+    "upcoming": "Sắp diễn ra",
+    "active": "Đang hoạt động",
+    "ending_soon": "Sắp hết hạn",
+    "expired": "Đã hết hạn",
+    "exhausted": "Hết lượt"
+  },
+  "promoDiscountType": {
+    "fixed": "Giảm tiền",
+    "percent": "Giảm %"
+  },
+  "promoAudience": {
+    "all": "Tất cả khách hàng",
+    "new_customer": "Khách hàng mới"
+  },
+  "promoVehicleScope": {
+    "all": "Tất cả xe",
+    "car": "Ô tô",
+    "motorbike": "Xe máy"
+  },
+  "promoRedemptionStatus": {
+    "reserved": "Đang giữ lượt",
+    "redeemed": "Đã dùng",
+    "released": "Đã nhả lượt"
   },
   "sellerEntityType": {
     "individual": "Cá nhân",
@@ -787,5 +831,25 @@
     "declared": "Đã kê khai",
     "remitted": "Đã nộp",
     "reversed": "Đã đảo"
+  },
+  "cancellationParty": {
+    "host": "Chủ xe huỷ",
+    "customer": "Khách huỷ",
+    "platform": "XePrime huỷ",
+    "force_majeure": "Sự cố bất khả kháng"
+  },
+  "cancellationReasonCategory": {
+    "vehicle_unavailable": "Xe không sẵn sàng (hỏng, tai nạn, đang sửa)",
+    "schedule_conflict": "Trùng lịch với chuyến khác",
+    "customer_requirements": "Khách chưa đáp ứng điều kiện thuê",
+    "customer_unreachable": "Không liên hệ được với khách",
+    "customer_changed_plan": "Khách đổi kế hoạch",
+    "other": "Lý do khác"
+  },
+  "cancellationStage": {
+    "awaiting_hold": "Đã nhận, chờ khách thanh toán",
+    "hold_paid": "Khách đã thanh toán, chờ duyệt",
+    "booking_before_pickup": "Đã có đơn, chưa giao xe",
+    "booking_active": "Xe đang ở với khách"
   }
 }

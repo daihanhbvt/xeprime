@@ -1,6 +1,12 @@
 # ADR 0039 — Giữ chỗ trả tiền trước khi gian hàng duyệt
 
-Ngày: 16/09/2026 · Trạng thái: Accepted · Ghi đè một phần: 0032 (điều 2), 0027 (điều 2 trong phạm vi công tắc cọc) · Liên quan: 0006, 0011, 0021, 0022, 0024, 0033
+Ngày: 16/09/2026 · Trạng thái: **Superseded bởi [ADR 0044](0044-approve-before-hold.md) (22/09/2026)** · Ghi đè một phần: 0032 (điều 2), 0027 (điều 2 trong phạm vi công tắc cọc) · Liên quan: 0006, 0011, 0021, 0022, 0024, 0033
+
+> ⚠️ **KHÔNG dùng làm yêu cầu hiện hành.** Thứ tự mô tả ở đây — khách trả tiền trước, gian hàng
+> duyệt sau — đã bị ADR 0044 đảo ngược lại về đúng ADR 0032 điều 2, cùng với cửa sổ 10 phút và
+> hai lần tự gia hạn. Tài liệu này chỉ để đọc hiểu những bản ghi sinh trong khoảng 16–22/09/2026:
+> chúng nhận ra bằng `booking_requests.decided_at IS NULL` ở trạng thái `awaiting_hold`, và code
+> vẫn giữ đường xử lý riêng cho chúng.
 
 ## Bối cảnh
 

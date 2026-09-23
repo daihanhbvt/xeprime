@@ -368,6 +368,49 @@ describe('Mã chết và mã lạ', () => {
     expect(row.referenceCode).toBe('XPG23456789');
   });
 
+  /*
+   * MÃ GIỮ CHỖ KHÔNG TỒN TẠI — hàng đợi đối soát phải nói được VÌ SAO một dòng nằm ở đó.
+   *
+   * Trước ADR 0045 điều 6, một khoản không khớp được nằm trong hàng đợi không phân biệt nổi với
+   * một khoản webhook vừa mới nhận: cùng `unmatched`, cùng trống `match_note`. Người trực phải
+   * tự tra từng mã để biết mình đang nhìn cái gì — và một hàng đợi tiền như vậy thì không ai
+   * dọn hết được.
+   */
+  it('mã giữ chỗ không tồn tại: unmatched, và match_note nói rõ lý do', async () => {
+    if (!dbAvailable) return;
+    const result = await sepay.ingest(payload({ content: 'XPH23456789' }));
+    expect(result).toMatchObject({ matched: false, note: 'hold_not_found' });
+
+    const row = await prisma.bankTransaction.findFirstOrThrow({ where: ownRows });
+    expect(row.matchStatus).toBe(BANK_MATCH_STATUS.UNMATCHED);
+    expect(row.matchNote).toContain('XPH23456789');
+  });
+
+  /*
+   * GHI CHÚ CỦA ADMIN KHÔNG BỊ MÁY VIẾT LẠI.
+   *
+   * Một dòng đã được con người xử lý (`match_status` khác `unmatched`) là một quyết định; lượt
+   * webhook sau không được xoá nó. Điều kiện `match_status = unmatched` trong `updateMany` là
+   * thứ giữ điều đó, và đây là bài test khoá nó lại.
+   */
+  it('dòng admin đã xử lý: webhook lặp KHÔNG ghi đè ghi chú của họ', async () => {
+    if (!dbAvailable) return;
+    await sepay.ingest(payload({ content: 'XPH23456789' }));
+    const row = await prisma.bankTransaction.findFirstOrThrow({ where: ownRows });
+
+    await prisma.bankTransaction.update({
+      where: { id: row.id },
+      data: { matchStatus: BANK_MATCH_STATUS.MANUAL, matchNote: 'Đã hoàn khách qua chuyển khoản' },
+    });
+
+    // Webhook gửi lại đúng giao dịch đó — idempotent, và không đụng tới quyết định của admin.
+    await sepay.ingest(payload({ content: 'XPH23456789' }));
+
+    const after = await prisma.bankTransaction.findUniqueOrThrow({ where: { id: row.id } });
+    expect(after.matchStatus).toBe(BANK_MATCH_STATUS.MANUAL);
+    expect(after.matchNote).toBe('Đã hoàn khách qua chuyển khoản');
+  });
+
   it('tiền về cho hoá đơn đã VOID: đứng im chờ admin, không tự cộng vào đâu', async () => {
     if (!dbAvailable) return;
     const invoice = await issueInvoice();

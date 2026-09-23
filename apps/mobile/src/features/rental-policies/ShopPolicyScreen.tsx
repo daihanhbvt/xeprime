@@ -18,6 +18,7 @@ import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
+import { DepositSettingsSection } from '@/features/shop/components/DepositSettingsSection';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { useDomainLabel } from '@/i18n/domain';
@@ -190,6 +191,19 @@ function PolicyWorkspace({
         <ManagePageTitle title={t('title')} subtitle={t('subtitle')} />
 
         <YStack px={layout.screenX} gap={layout.section} pb={layout.section}>
+          {/*
+            THU CỌC QUA XEPRIME — ngay dưới tiêu đề, TRÊN dải chip loại xe, đúng thứ tự web.
+
+            Đây là hai khoản KHÁC NHAU mà tên gọi nghe gần giống nhau: khoản giữ chỗ XePrime thu
+            hộ trước khi có đơn, và tiền cọc/thế chấp gian hàng tự thu lúc giao xe (nằm ở mục 1
+            của form bên dưới). Đặt công tắc này SAU form là để người đọc gặp "số tiền cọc mặc
+            định" trước, rồi mới gặp một khối cũng nói về cọc — thứ tự đó mời gọi hiểu nhầm rằng
+            công tắc điều khiển chính con số vừa nhập.
+
+            Tự im lặng khi thiếu quyền `seller_profile.view`, nên không cần rào ở đây.
+          */}
+          <DepositSettingsSection />
+
           <YStack gap={layout.inline}>
             {/*
               Hai loại xe = hai bộ chính sách. Dải chip thay cho `Tabs` của web: ở 360dp hai tab

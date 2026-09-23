@@ -65,7 +65,12 @@
       "paidTitle": "{amount} has already been recorded as collected",
       "paidDescription": "XePrime does not refund automatically and does not delete what has been recorded. To pay the customer back, transfer the money outside the app and then record an expense in the shop ledger.",
       "cancelSuccess": "Booking {code} cancelled",
-      "noShowSuccess": "Booking {code} marked as no-show"
+      "noShowSuccess": "Booking {code} marked as no-show",
+      "categoryLabel": "Reason type",
+      "categoryPlaceholder": "Pick why this booking is being cancelled",
+      "categoryHelp": "Used for operations reporting and for the host reliability metrics.",
+      "categoryRequired": "Pick a reason",
+      "reasonHelpOther": "With “Other reason”, this is the only place that says what actually happened."
     },
     "noShowHint": "Available only {minutes} minutes past pickup time, and only while the vehicle has not been handed over."
   },

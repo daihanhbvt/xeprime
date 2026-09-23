@@ -172,10 +172,26 @@ export class WalletStatementStatsDto {
     type: Number,
     nullable: true,
     description:
-      'Tỉ lệ phản hồi yêu cầu thuê nhận trong kỳ. `null` = không có yêu cầu nào tới hạn quyết — ' +
-      'KHÔNG phải 0.',
+      'Tỉ lệ phản hồi yêu cầu thuê nhận trong kỳ. `null` = chưa đủ mẫu để nói — KHÔNG phải 0. ' +
+      'Cùng phép phân loại với chỉ số công khai (ADR 0045 điều 2), chỉ khác cửa sổ.',
   })
   responseRatePercent!: number | null;
+
+  @ApiProperty({
+    description:
+      'Số YÊU CẦU gian hàng phải quyết trong kỳ — mẫu số của hai tỉ lệ trên. Luôn hiện để ' +
+      '"chưa đủ dữ liệu" là một câu kiểm chứng được.',
+  })
+  responseSampleCount!: number;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description:
+      'Tỉ lệ NHẬN VÀ GIỮ chuyến trong kỳ (ADR 0045 điều 2). Gian hàng đọc chính con số mà ' +
+      'khách đang nhìn thấy trên trang công khai của họ.',
+  })
+  acceptKeepRatePercent!: number | null;
 }
 
 /**

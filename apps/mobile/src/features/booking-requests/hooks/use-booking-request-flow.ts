@@ -99,12 +99,17 @@ export function useDeliveryDistance(
   vehicleId: string,
   address: string,
   pin?: { lat: number; lng: number } | null,
+  /**
+   * Đã đủ điều kiện để HỎI chưa — do nơi gọi quyết định, vì ngưỡng độ dài địa chỉ là luật của
+   * màn hình chứ không phải của hook (web đặt nó ở `deliveryAskable`).
+   */
+  askable = true,
 ) {
   const key = pin ? `${pin.lat},${pin.lng}` : address;
   return useQuery({
     queryKey: queryKeys.marketplace.deliveryDistance(vehicleId, key),
     queryFn: () => deliveryDistance(vehicleId, address, pin ?? null),
-    enabled: Boolean(vehicleId) && (pin != null || address.trim().length > 0),
+    enabled: askable && Boolean(vehicleId) && (pin != null || address.trim().length > 0),
     retry: false,
     staleTime: STALE_TIME.REFERENCE,
   });

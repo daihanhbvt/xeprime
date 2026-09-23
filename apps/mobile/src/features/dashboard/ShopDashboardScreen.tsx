@@ -18,6 +18,7 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
 import { ReceiptDetailSheet } from '@/features/finance/components/ReceiptDetailSheet';
+import { useOpenPushPermissionGate } from '@/features/notifications/push-permission-gate';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -58,6 +59,9 @@ export function ShopDashboardScreen() {
   const navigateOnce = useNavigateOnce();
   const comingSoon = useComingSoon();
   const { tenant } = useTenantScope();
+  // Màn CHÍNH của tuyến gói (ADR 0040) — chủ gian hàng không bao giờ đi qua trang chủ marketplace,
+  // nên cửa xin quyền thông báo phải mở cả ở đây (`push-permission-gate.ts`).
+  useOpenPushPermissionGate();
 
   /*
    * Kéo-làm-mới đọc lại HỒ SƠ PHIÊN trước tiên: trạng thái gian hàng và quyền đều đến từ

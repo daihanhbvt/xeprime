@@ -26,8 +26,6 @@
   "stats": {
     "sectionLabel": "Số liệu gian hàng",
     "vehicles": "Xe cho thuê",
-    "responseRate": "Phản hồi",
-    "responseRateValue": "{percent}%",
     "completedTrips": "Chuyến hoàn thành",
     "rating": "Đánh giá chung"
   },
@@ -42,7 +40,35 @@
     "sectionLabel": "Đánh giá gian hàng",
     "title": "Đánh giá từ khách hàng",
     "titleWithCount": "Đánh giá từ khách hàng ({count})",
+    "ratingValue": "{rating} trên 5 sao",
     "empty": "Gian hàng chưa có đánh giá nào.",
     "vehicle": "Thuê xe: {name}"
+  },
+  "metrics": {
+    "sectionLabel": "Chỉ số của chủ xe",
+    "responseRate": "Tỉ lệ phản hồi",
+    "responseRateValue": "{percent}%",
+    "responseRateHintLabel": "Giải thích tỉ lệ phản hồi",
+    "responseRateHint": "Phần trăm yêu cầu thuê mà chủ xe đã trả lời (nhận hoặc từ chối) trong {days} ngày gần nhất. Yêu cầu bị đóng vì khung giờ đã có khách khác, hoặc khách tự rút trước khi chủ xe kịp quyết, không được tính vào đây.",
+    "responseTime": "Thời gian phản hồi",
+    "responseTimeHintLabel": "Giải thích thời gian phản hồi",
+    "responseTimeHint": "Thời gian trung vị từ lúc khách gửi yêu cầu tới lúc chủ xe trả lời, trong {days} ngày gần nhất. Chỉ tính những lần chính chủ xe quyết định; xe bật “Đặt ngay” không nằm trong phép tính này.",
+    "acceptKeep": "Nhận và giữ chuyến",
+    "acceptKeepValue": "{percent}%",
+    "acceptKeepHintLabel": "Giải thích tỉ lệ nhận và giữ chuyến",
+    "acceptKeepHint": "Phần trăm yêu cầu mà chủ xe đã nhận VÀ giữ tới cùng, trong {days} ngày gần nhất. Từ chối trong hạn không được tính là nhận, và nếu chủ xe huỷ chuyến sau khi đã nhận thì lần đó cũng bị trừ khỏi con số này. Khách không thanh toán hoặc khách tự huỷ thì không ảnh hưởng.",
+    "instantBook": "Đặt ngay",
+    "instantBookHintLabel": "Giải thích “Đặt ngay”",
+    "instantBookHint": "Chủ xe bật tự động nhận chuyến nên yêu cầu được trả lời ngay lập tức. Vì máy trả lời chứ không phải người, chúng tôi không quy đổi nó thành một con số phút.",
+    "basis": "Tính trên {count, plural, other {# yêu cầu}} trong {days} ngày gần nhất.",
+    "insufficient": "Chưa đủ dữ liệu để tính chỉ số — mới có {count, plural, other {# yêu cầu}} trong {days} ngày gần nhất.",
+    "insufficientHintLabel": "Vì sao chưa có chỉ số",
+    "insufficientHint": "Chúng tôi chỉ hiện tỉ lệ khi đã có ít nhất {min} yêu cầu. Dưới mức đó, một lần trả lời hay không trả lời sẽ thành 100% hoặc 0% — một con số nghe chắc chắn nhưng không nói lên điều gì.",
+    "speed": {
+      "minutes": "Trong vài phút",
+      "hour": "Trong 1 giờ",
+      "hours": "Trong vài giờ",
+      "day": "Trong ngày"
+    }
   }
 }

@@ -4,6 +4,7 @@ import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
   BOOKING_NO_SHOW_GRACE_MINUTES,
   BOOKING_STATUS,
+  CANCELLATION_REASON_CATEGORY,
   HANDOVER_STATUS,
   HANDOVER_TYPE,
   MEMBERSHIP_STATUS,
@@ -228,10 +229,37 @@ describe('DTO — lý do bắt buộc đúng chỗ', () => {
   it('lý do được trim trước khi vào service', async () => {
     const dto = plainToInstance(TransitionBookingDto, {
       status: BOOKING_STATUS.CANCELLED,
+      reasonCategory: CANCELLATION_REASON_CATEGORY.CUSTOMER_CHANGED_PLAN,
       reason: '  Khách báo hủy  ',
     });
     expect(await validate(dto)).toHaveLength(0);
     expect(dto.reason).toBe('Khách báo hủy');
+  });
+
+  /*
+   * ADR 0045 điều 1: huỷ một đơn phải nói RÕ vì sao, bằng một NHÓM lý do tra cứu được — không
+   * phải một câu văn tự do. Nhóm lý do là thứ quyết định chuyến đó có tính vào chỉ số của gian
+   * hàng hay không, nên để nó tuỳ chọn là để chính con số uy tín thành đoán mò.
+   */
+  it('huỷ mà thiếu NHÓM lý do → từ chối ngay ở biên', async () => {
+    const errors = await errorsFor({ status: BOOKING_STATUS.CANCELLED, reason: 'Khách báo hủy' });
+    expect(errors.map((e) => e.property)).toContain('reasonCategory');
+  });
+
+  it('nhóm lý do lạ → từ chối', async () => {
+    const errors = await errorsFor({
+      status: BOOKING_STATUS.CANCELLED,
+      reason: 'Khách báo hủy',
+      reasonCategory: 'vi_sao_cung_duoc',
+    });
+    expect(errors.map((e) => e.property)).toContain('reasonCategory');
+  });
+
+  /** `no_show` KHÔNG phải huỷ — nó là một kết cục vận hành, và không cần nhóm lý do. */
+  it('no_show chỉ cần lý do, không cần nhóm lý do', async () => {
+    expect(
+      await errorsFor({ status: BOOKING_STATUS.NO_SHOW, reason: 'Khách không tới' }),
+    ).toHaveLength(0);
   });
 
   /** Trần 500 ký tự phải có hiệu lực cả ở bước KHÔNG bắt buộc — xem ghi chú ở DTO. */

@@ -41,6 +41,7 @@ export function BookingPriceSummary({
   variant,
   expanded,
   onExpandedChange,
+  promoSlot,
 }: {
   listing: PublicListingDetail;
   serviceType: string;
@@ -53,6 +54,13 @@ export function BookingPriceSummary({
   variant: 'bar' | 'detail';
   expanded: boolean;
   onExpandedChange: (next: boolean) => void;
+  /**
+   * Ô ÁP MÃ KHUYẾN MÃI (ADR 0046) — chỉ hiện ở hình thái `detail`.
+   *
+   * Không hiện ở thanh thu gọn có chủ đích: thanh đó là một dòng để LIẾC trong lúc đổi thời gian,
+   * và nhét một ô nhập vào đó là nhét một mục tiêu chạm vào chỗ khách đang bấm "Tiếp tục".
+   */
+  promoSlot?: React.ReactNode;
 }) {
   const t = useTranslations('BookingRequests.flow');
   const tPrice = useTranslations('Common.components.price');
@@ -72,8 +80,14 @@ export function BookingPriceSummary({
    * "Tổng dự kiến" cho hai con số khác nhau tuỳ lúc bảng đang thu gọn hay mở (phản hồi người
    * dùng 18/09/2026): thu gọn hiện `customerTotalAmount` nên dùng nhãn "Tổng bạn trả"; bảng chi
    * tiết thì dòng đầu chỉ là tiền thuê, dùng nhãn "Tiền thuê".
+   *
+   * Mã khuyến mãi CŨNG làm `customerTotalAmount` khác `totalAmount` (ADR 0046) — nên nó cũng đổi
+   * nhãn của thanh thu gọn. Chỉ đếm dòng phụ phí sẽ để một chuyến tuyến gói có mã hiện nhãn
+   * "Tổng dự kiến" cho một con số đã trừ mã.
    */
-  const hasFees = Boolean(breakdown?.fees?.lines?.length);
+  const hasFees =
+    Boolean(breakdown?.fees?.lines?.length) ||
+    Number(breakdown?.fees?.promoDiscountAmount ?? 0) > 0;
   const rentalLabel = breakdown?.estimateNote
     ? t('price.subtotal')
     : hasFees
@@ -207,6 +221,7 @@ export function BookingPriceSummary({
             totalLabel={rentalLabel}
             depositAmount={breakdown.depositAmount}
             fees={breakdown.fees ?? null}
+            promoSlot={promoSlot}
             title={
               longTerm
                 ? // Tham số ICU tên là `months`. Truyền sai tên thì `use-intl` bỏ cả câu và in

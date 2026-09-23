@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { appliesExcessMileage } from '@xeprime/types';
 import {
   CATALOG_TYPE,
   COLLATERAL_ASSET_TYPE_LABEL,
@@ -45,6 +46,7 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useListing, useListingReviews } from './hooks/use-marketplace-data';
 import type { PublicListingDetail } from './api';
 import { FeatureChip } from './components/FeatureChip';
+import { HostMetrics } from './components/HostMetrics';
 import { ServiceSelector } from './components/ServiceSelector';
 
 /**
@@ -286,6 +288,7 @@ function DetailBody({
   onRefresh: () => void;
 }) {
   const t = useTranslations('Listings.detail');
+  const tMileage = useTranslations('Listings.detail.mileage');
   const tCard = useTranslations('Listings.card');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -468,6 +471,7 @@ function DetailBody({
           không phải lúc đến quầy mới biết mình thiếu cà vẹt. Chưa cấu hình thì im lặng còn hơn
           hứa sai.
         */}
+
         {listing.collateral ? (
           <Card lift="flat">
             <YStack gap={space.sm}>
@@ -509,6 +513,45 @@ function DetailBody({
                       .join(', '),
                   })}
                 />
+              </YStack>
+            </YStack>
+          </Card>
+        ) : null}
+
+        {/*
+          HẠN MỨC QUÃNG ĐƯỜNG — công bố ở ĐÂY hoặc không bao giờ.
+
+          Phí vượt km không nằm trong báo giá lúc đặt (lúc đó chưa ai biết khách chạy bao xa),
+          nó chỉ xuất hiện lúc quyết toán. Thứ duy nhất làm nó công bằng là được nói ra từ
+          trang xe, trước khi khách bấm thuê.
+
+          Điều kiện dịch vụ đọc `appliesExcessMileage` — CÙNG hàm mà `SettlementService` dùng
+          để quyết định có đề xuất phí vượt hay không. Hai bên viết điều kiện riêng là cách để
+          một hôm nào đó thu được một khoản mà chỗ này chưa từng công bố.
+
+          Xe chưa đặt hạn mức trả `mileagePolicy = null` và khối biến mất hoàn toàn — không có
+          dòng "không giới hạn" nào phải đọc.
+        */}
+        {appliesExcessMileage(activeService as ServiceType) && listing.mileagePolicy ? (
+          <Card lift="flat">
+            <YStack gap={space.sm}>
+              <XStack ai="center" gap={space.xs}>
+                <Ionicons name="speedometer-outline" size={17} color={colors.primaryActive} />
+                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+                  {tMileage('title')}
+                </Text>
+              </XStack>
+
+              <YStack gap={space.xs}>
+                <BulletLine
+                  text={tMileage('included', {
+                    km: fmt.km(listing.mileagePolicy.includedKmPerDay),
+                    fee: fmt.money(listing.mileagePolicy.excessFeePerKm),
+                  })}
+                />
+                <Text col={colors.textMuted} fos={fontSize.label}>
+                  {tMileage('note')}
+                </Text>
               </YStack>
             </YStack>
           </Card>
@@ -597,6 +640,12 @@ function DetailBody({
                   {listing.shopBio}
                 </Text>
               ) : null}
+              {/*
+                Ba chỉ số uy tín (ADR 0045 điều 3) nằm ĐÚNG ở đây — trong thẻ chủ xe, cùng chỗ
+                với bản web. Đây là giây người đọc quyết định có gửi yêu cầu cho một người lạ
+                hay không, và "họ có trả lời không" là câu hỏi họ đang hỏi.
+              */}
+              <HostMetrics metrics={listing.shopMetrics} />
             </YStack>
           </XStack>
         </Card>

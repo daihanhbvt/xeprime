@@ -5,6 +5,7 @@ import { HoldsModule } from '../holds/holds.module';
 import { VehiclesModule } from '../vehicles/vehicles.module';
 import { CustomerTripsController } from './customer-trips.controller';
 import { CustomerTripsService } from './customer-trips.service';
+import { CancellationsModule } from '../cancellations/cancellations.module';
 import { PricingModule } from '../pricing/pricing.module';
 
 /**
@@ -20,7 +21,15 @@ import { PricingModule } from '../pricing/pricing.module';
  * viết lại bốn điều kiện đó — và quên một trong bốn.
  */
 @Module({
-  imports: [PricingModule, BookingsModule, HoldsModule, VehiclesModule, BankAccountsModule],
+  // CancellationsModule: writer DUY NHẤT của `booking_cancellations` (ADR 0045 điều 1).
+  imports: [
+    PricingModule,
+    BookingsModule,
+    HoldsModule,
+    VehiclesModule,
+    BankAccountsModule,
+    CancellationsModule,
+  ],
   controllers: [CustomerTripsController],
   providers: [CustomerTripsService],
 })

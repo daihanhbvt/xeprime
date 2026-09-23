@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Image, type ImageContentFit } from 'expo-image';
 import { StyleSheet } from 'react-native';
 import { YStack } from 'tamagui';
+import { mapDebug } from '@/lib/map-debug';
 import { colors } from '@/theme/tokens';
 import { duration } from '@/theme/motion';
 import { Skeleton } from './Skeleton';
@@ -54,6 +55,7 @@ export function RemoteImage({
   contentFit = 'cover',
   radius,
   accessibilityLabel,
+  pendingOverlay,
 }: {
   uri?: string | null;
   recyclingKey?: string;
@@ -62,8 +64,26 @@ export function RemoteImage({
   contentFit?: ImageContentFit;
   radius?: number;
   accessibilityLabel?: string;
+  /**
+   * Vẽ TRÊN ảnh trong lúc THAY một ảnh đã hiện được bằng ảnh khác — cố ý không áp cho lượt tải
+   * đầu.
+   *
+   * Lượt đầu đã có khung chờ nằm dưới, và ô thì đang trống nên không có gì để che. Lượt THAY thì
+   * ngược lại: `expo-image` giữ nguyên ảnh cũ cho tới byte cuối của ảnh mới, nên ô trông y như
+   * đã xong trong khi nó đang tải — và người dùng đọc quãng đó ra "chạm không ăn". Nơi gọi nào
+   * cần nói ra quãng ấy (ảnh bản đồ đổi sang vị trí khác) thì đưa lớp phủ vào đây; nơi nào không
+   * cần (thẻ xe trong danh sách cuộn) giữ nguyên nếp cũ, không thêm một lớp nào.
+   */
+  pendingOverlay?: ReactNode;
 }) {
   const [phase, setPhase] = useState<Phase>('pending');
+  /**
+   * Ảnh trong instance này ĐÃ từng hiện được hay chưa — mốc phân biệt lượt tải ĐẦU với lượt THAY.
+   *
+   * Cố ý KHÔNG bị `uri` đổi dọn về `false`: nó nói về cái Ô, không về tấm ảnh. Ô đã có gì để
+   * nhìn thì mọi lượt thay sau đó đều là một lượt THAY, dù thay bao nhiêu lần.
+   */
+  const [shown, setShown] = useState(false);
   /*
    * `phase` phải theo `uri`, không theo lượt gắn kết: một item `FlatList` tái dùng view (đổi
    * `recyclingKey` + `uri` mà KHÔNG unmount), và nếu ảnh cũ từng hỏng thì `failed` đứng lại mãi
@@ -109,9 +129,24 @@ export function RemoteImage({
         transition={FADE_IN}
         {...(recyclingKey === undefined ? {} : { recyclingKey })}
         {...(accessibilityLabel === undefined ? { accessible: false } : { accessibilityLabel })}
-        onLoad={() => setPhase('ready')}
-        onError={() => setPhase('failed')}
+        onLoad={() => {
+          setShown(true);
+          setPhase('ready');
+        }}
+        /*
+         * Một ảnh hỏng chỉ để lại `fallback` trên màn — không mã lỗi, không URL, không gì để
+         * lần. Ghi lại ở mức DEV: đây là nửa thứ hai của chẩn đoán bản đồ (nửa đầu là
+         * `mapDebug.urlNull`), và nó phân biệt "app không dựng nổi URL" với "URL đúng nhưng
+         * mạng/khoá từ chối" — hai nguyên nhân sửa bằng hai cách hoàn toàn khác nhau.
+         */
+        onError={() => {
+          mapDebug.imageFailed(uri);
+          setPhase('failed');
+        }}
       />
+
+      {/* Lớp phủ của lượt THAY — nằm trên ảnh cũ, không thay chỗ nó. Xem `pendingOverlay`. */}
+      {phase === 'pending' && shown ? pendingOverlay : null}
     </YStack>
   );
 }

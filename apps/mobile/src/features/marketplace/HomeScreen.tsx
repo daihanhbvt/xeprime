@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { YStack } from 'tamagui';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
+import { useOpenPushPermissionGate } from '@/features/notifications/push-permission-gate';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { colors, space } from '@/theme/tokens';
@@ -41,7 +42,7 @@ const REVEAL_DISTANCE = 120;
  */
 export function HomeScreen() {
   return (
-    <SearchExperienceProvider>
+    <SearchExperienceProvider askLocation>
       <HomeContent />
     </SearchExperienceProvider>
   );
@@ -53,6 +54,9 @@ function HomeContent() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { data: user } = useCurrentUser();
+  // Trang chủ là một trong hai màn CHÍNH mà người dùng hạ cánh — mở cửa xin quyền thông báo ở đây,
+  // không phải ở màn nhập OTP (`push-permission-gate.ts`).
+  useOpenPushPermissionGate();
   const {
     data: banners,
     isLoading: bannersLoading,
@@ -155,15 +159,25 @@ function HomeContent() {
       >
         <HomeHero banners={banners ?? []} isLoading={bannersLoading} />
 
-        <YStack px={layout.screenX} mt={-layout.heroOverlap}>
+        {/*
+          Đè sâu hơn `layout.heroOverlap` một nấc (`+ space.sm`) — riêng ở đây, không sửa token
+          dùng chung (nó còn phục vụ `ListingDetailScreen`): hero trang chủ vừa bo góc dưới nên
+          thẻ tìm kiếm nổi hẳn lên thành một khối tách biệt, thay vì chỉ đè hờ lên mép ảnh.
+        */}
+        <YStack px={layout.screenX} mt={-(layout.heroOverlap + space.sm)}>
           <SearchCard onSearch={openSearch} />
         </YStack>
 
-        {/* Trang gian hàng (MKT-05) là task riêng chưa dựng. */}
+        {/*
+          Trang gian hàng (MKT-05) là task riêng chưa dựng.
+
+          `pt`/`gap` hạ tiếp xuống `space.sm` (8px) — sau khi thẻ tìm kiếm đã gọn lại,
+          `layout.block` (16px) vẫn còn rộng hơn hẳn nhịp còn lại của trang.
+        */}
         <YStack
           px={layout.screenX}
-          pt={layout.section}
-          gap={layout.section}
+          pt={space.sm}
+          gap={space.sm}
           onLayout={onPreviewLayout}
         >
           <VehiclePreview

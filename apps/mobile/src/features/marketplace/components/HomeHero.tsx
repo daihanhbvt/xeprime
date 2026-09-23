@@ -7,6 +7,7 @@ import {
   useWindowDimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  type ViewStyle,
 } from 'react-native';
 import Animated, {
   Easing,
@@ -94,16 +95,31 @@ export function HomeHero({ banners, isLoading }: { banners: PublicBanner[]; isLo
     return () => clearInterval(timer);
   }, [count, dragging, focused, reducedMotion, goTo]);
 
+  /*
+   * Bo hai góc DƯỚI của banner — mép trên vẫn vuông (chạm cạnh màn), mép dưới bo để ảnh mở đầu
+   * đọc như một khối nổi lên thay vì một dải chữ nhật cứng ngắt trước khi thẻ tìm kiếm đè lên.
+   * `overflow: hidden` bắt buộc đi kèm, không thì bo góc không cắt được ảnh/scrollview bên trong.
+   */
+  const heroCorners: ViewStyle = {
+    borderBottomLeftRadius: radius.lg,
+    borderBottomRightRadius: radius.lg,
+    overflow: 'hidden',
+  };
+
   if (isLoading) {
-    return <Skeleton width="100%" height={height} />;
+    return (
+      <YStack style={heroCorners}>
+        <Skeleton width="100%" height={height} />
+      </YStack>
+    );
   }
 
   if (count === 0) {
-    return <YStack w="100%" h={height} bg={colors.surfaceMuted} />;
+    return <YStack w="100%" h={height} bg={colors.surfaceMuted} style={heroCorners} />;
   }
 
   return (
-    <YStack>
+    <YStack style={heroCorners}>
       <ScrollView
         ref={scrollRef}
         horizontal

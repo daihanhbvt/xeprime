@@ -21,8 +21,10 @@
  * Framework-free: api tính, web/mobile hiển thị, worker đọc — cùng một phép tính.
  */
 
+import { HOLD_MIN_USABLE_WINDOW_MINUTES } from './holds';
 import { STATUS_COLOR, type StatusMeta } from './status/meta';
 import { BILLING_MODE, type BillingMode } from './status/billing';
+import type { PromoCodeSnapshot } from './promo-code';
 
 // ── Vòng đời một phiên bản chính sách ───────────────────────────────────────
 
@@ -93,6 +95,15 @@ export const FEE_LINE = {
    * Khoá này tồn tại để `allocation_json` của hold và sổ ví gọi tên được dòng tiền đó.
    */
   DEPOSIT: 'deposit',
+  /**
+   * `P` — TÀI TRỢ mã khuyến mãi của XePrime (ADR 0046). **Không phải phụ phí và không bao giờ
+   * nằm trong `lines`**: nó là một dòng CONTRA, mang dấu trừ trong hoá đơn của khách.
+   *
+   * Khoá này chỉ dùng để `allocation_json` gọi tên phần nền tảng đã bù, và để báo cáo tài trợ
+   * tách được nó khỏi `service_fee` — hai con số ngược chiều nhau, gộp một khoá là mất luôn khả
+   * năng trả lời "tháng này đã tài trợ bao nhiêu".
+   */
+  PROMO: 'promo',
 } as const;
 
 export type FeeLineKey = (typeof FEE_LINE)[keyof typeof FEE_LINE];
@@ -186,11 +197,17 @@ export interface FeePolicySnapshot extends FeePolicyValues {
  * Bốn con số khách cần, theo đúng thứ tự họ hỏi (ADR 0032 điều 2):
  *
  * ```text
- *   customerTotalAmount  = baseAmount + Σ(lines có bearer = customer)   ← tổng cả chuyến
- *   onlineAmount         = D + S + IV + IP                              ← trả NGAY qua QR
+ *   customerTotalAmount  = baseAmount + Σ(lines bearer = customer) − P  ← tổng cả chuyến
+ *   grossOnlineAmount    = D + S + IV + IP                              ← quyền lợi, để phân bổ
+ *   onlineAmount         = D + S + IV + IP − P                          ← trả NGAY qua QR
  *   payAtPickupAmount    = baseAmount − D                               ← trả TRỰC TIẾP chủ xe
  *   ownerPayableAmount   = D − T                                        ← XePrime nợ chủ xe
  * ```
+ *
+ * `P` là TÀI TRỢ mã khuyến mãi của XePrime (ADR 0046). Nó chỉ trừ vào `onlineAmount` và
+ * `customerTotalAmount`; `B`, `S`, `T`, `IV`, `IP`, `D`, `payAtPickupAmount`, `ownerPayableAmount`
+ * và `ownerNetAmount` KHÔNG đổi một đồng — đó là điều làm nó khác `PRICE_ROW.DISCOUNT`, khuyến
+ * mãi trực tiếp mà CHỦ XE tự bớt vào doanh thu của mình.
  *
  * Hai quy tắc không có núm xoay:
  *
@@ -213,7 +230,23 @@ export interface CustomerFeeBreakdown {
   customerTotalAmount: string;
   /** `D` — cọc khách chuyển cho XePrime. `'0'` khi chuyến không thu cọc. */
   depositAmount: string;
-  /** `D + S + IV + IP` — số quét QR trả ngay. Bằng `holdAmount` khi có giữ chỗ. */
+  /**
+   * `D + S + IV + IP` TRƯỚC tài trợ mã khuyến mãi, đã kẹp sàn `holdMinAmount`.
+   *
+   * Đây là con số phân bổ (`resolveHoldAllocation`) làm việc trên: quyền lợi của chủ xe, hãng
+   * bảo hiểm và ngân sách KHÔNG đổi vì XePrime giảm giá cho khách (ADR 0046 điều 2).
+   */
+  grossOnlineAmount: string;
+  /**
+   * `P` — số giảm của MÃ KHUYẾN MÃI nền tảng, đã áp cho chuyến này. `'0'` khi không có mã.
+   *
+   * Là một dòng CONTRA của XePrime, không phải một khoản phí: nó chỉ trừ vào phần khách chuyển
+   * online, và không xuất hiện trong `lines` (xem docblock `promo-code.ts`).
+   */
+  promoDiscountAmount: string;
+  /** Mã đã áp + điều kiện đóng băng. `null` khi chuyến không dùng mã. */
+  promo: PromoCodeSnapshot | null;
+  /** `D + S + IV + IP − P` — số quét QR trả ngay. Bằng `holdAmount` khi có giữ chỗ. */
   onlineAmount: string;
   /** `B − D` — khách trả TRỰC TIẾP chủ xe lúc nhận xe. XePrime không thu hộ, không đối soát. */
   payAtPickupAmount: string;
@@ -266,6 +299,16 @@ export function computeCustomerFees(input: {
   depositRequired?: boolean;
   /** Khách có GIỮ lựa chọn bảo hiểm tai nạn người (`IP`) không. Mặc định: không. */
   personalAccidentSelected?: boolean;
+  /**
+   * MÃ KHUYẾN MÃI nền tảng đã áp — snapshot có sẵn `discountApplied` (ADR 0046).
+   *
+   * Số tiền ở đây do `computePromoDiscount` tính TRƯỚC (nó cần `grossOnlineAmount`, mà con số
+   * đó lại là kết quả của chính hàm này — nên caller chạy hai lượt: lượt một không mã để lấy
+   * `grossOnlineAmount`, lượt hai có mã). Hàm này vẫn KẸP LẠI một lần nữa: bất biến
+   * "`onlineAmount` không bao giờ xuống dưới sàn đối soát" không được phép phụ thuộc vào việc
+   * mọi caller đều nhớ kẹp.
+   */
+  promo?: PromoCodeSnapshot | null;
 }): CustomerFeeBreakdown {
   const base = Number(input.baseAmount);
   if (!Number.isFinite(base) || base < 0) {
@@ -361,7 +404,35 @@ export function computeCustomerFees(input: {
    * sàn tồn tại để một lần chuyển khoản đáng công đối soát, và công đó tính trên cả giao dịch.
    */
   const onlineRaw = deposit + serviceFee + insuranceTotal;
-  const online = onlineRaw > 0 ? Math.max(onlineRaw, Number(p.holdMinAmount)) : 0;
+  const grossOnline = onlineRaw > 0 ? Math.max(onlineRaw, Number(p.holdMinAmount)) : 0;
+
+  /*
+   * TÀI TRỢ của XePrime (ADR 0046 điều 2). Kẹp bằng `grossOnline − holdMinAmount`, không bằng
+   * `grossOnline`: một mã ăn hết khoản online sẽ sinh ra mã QR 0đ — tức là một chuyến không ai
+   * phải chuyển đồng nào mà vẫn chiếm chỗ hai giờ, đúng thứ ADR 0044 điều 4 cấm.
+   *
+   * Kẹp cả về 0 ở dưới: một snapshot cũ/hỏng không được phép làm `onlineAmount` lớn hơn
+   * `grossOnlineAmount`.
+   */
+  /*
+   * `depositRequired` là điều kiện ĐẦU TIÊN, không phải điều kiện phụ.
+   *
+   * Không có nó thì một chuyến KHÔNG sinh khoản giữ chỗ (tuyến gói tắt công tắc, hoặc báo giá tạm
+   * tính) vẫn có `grossOnline > 0` nhờ `S`/`IV`/`IP`, và một snapshot mã lọt vào đây sẽ trừ
+   * `customerTotalAmount` trong khi XePrime không thu đồng nào — phần chênh rơi xuống tiền mặt
+   * chủ xe nhận tận tay, đúng thứ ADR 0046 điều 2 cấm.
+   *
+   * Tầng đánh giá (`promoContextFor` → `computePromoDiscount`) đã chặn ca này bằng cách truyền
+   * `grossOnlineAmount = null`. Chặn LẠI ở đây vì bất biến "mã chỉ trừ vào tiền XePrime thật sự
+   * cầm" không được phép phụ thuộc vào việc mọi caller đều nhớ làm đúng.
+   */
+  const promoRoom = depositRequired
+    ? Math.max(0, Math.min(grossOnline - Number(p.holdMinAmount), deposit + serviceFee))
+    : 0;
+  const promoDiscount = input.promo
+    ? Math.max(0, Math.min(Number(input.promo.discountApplied), promoRoom))
+    : 0;
+  const online = grossOnline - promoDiscount;
 
   return {
     billingMode: input.billingMode,
@@ -369,8 +440,18 @@ export function computeCustomerFees(input: {
     baseAmount: String(base),
     lines,
     customerFeeTotal: String(customerFeeTotal),
-    customerTotalAmount: String(base + customerFeeTotal),
+    customerTotalAmount: String(base + customerFeeTotal - promoDiscount),
     depositAmount: String(deposit),
+    grossOnlineAmount: String(grossOnline),
+    promoDiscountAmount: String(promoDiscount),
+    /*
+     * Snapshot đi kèm số đã KẸP, không phải số mã hứa: mọi màn hình đọc lại đơn cũ phải thấy
+     * đúng con số đã trừ vào tiền khách trả, kể cả khi mã hứa nhiều hơn phần trừ được.
+     */
+    promo:
+      input.promo && promoDiscount > 0
+        ? { ...input.promo, discountApplied: String(promoDiscount) }
+        : null,
     onlineAmount: String(online),
     payAtPickupAmount: String(base - deposit),
     taxAmount: String(taxAmount),
@@ -387,6 +468,7 @@ export const FEE_LINE_LABEL: Readonly<Record<FeeLineKey, string>> = {
   [FEE_LINE.TRIP_INSURANCE]: 'Bảo hiểm tai nạn người ngồi trên xe',
   [FEE_LINE.VEHICLE_PROTECTION]: 'Bảo hiểm xe cho chuyến đi',
   [FEE_LINE.DEPOSIT]: 'Cọc đặt chuyến',
+  [FEE_LINE.PROMO]: 'Mã khuyến mãi XePrime',
 };
 
 // ── Ràng buộc kích hoạt ─────────────────────────────────────────────────────
@@ -429,7 +511,18 @@ export function feePolicyActivationBlockers(values: FeePolicyValues): string[] {
   if (values.vehicleProtectionEnabled && values.vehicleProtectionPercent == null) {
     blockers.push('vehicle_protection_requires_rate');
   }
-  if (values.holdPaymentWindowMinutes < 5 || values.holdPaymentWindowMinutes > 7 * 24 * 60) {
+  /*
+   * Sàn là `HOLD_MIN_USABLE_WINDOW_MINUTES`, KHÔNG phải một con số gõ tay.
+   *
+   * `createForApprovedRequestWithinTx` từ chối mọi hold còn ít hơn ngần ấy phút, và
+   * `expiresAt − now` không bao giờ vượt quá cửa sổ của chính sách. Một chính sách có cửa sổ NHỎ
+   * HƠN ngưỡng vì thế không phát nổi một mã QR nào — cả sàn ngừng nhận đơn, im lặng, ngay khi nó
+   * được kích hoạt. Chặn ở cổng kích hoạt thay vì để phát hiện ra lúc khách đầu tiên bấm đặt.
+   */
+  if (
+    values.holdPaymentWindowMinutes < HOLD_MIN_USABLE_WINDOW_MINUTES ||
+    values.holdPaymentWindowMinutes > 7 * 24 * 60
+  ) {
     blockers.push('hold_window_out_of_range');
   }
   if (values.freeCancelHours < 0 || values.freeCancelHours > 24 * 30) {
@@ -496,6 +589,13 @@ export interface HoldMoneyLines {
   /** `S` */ serviceFee: string;
   /** `IV` */ vehicleInsurance: string;
   /** `IP` */ personalInsurance: string;
+  /**
+   * `P` — tài trợ mã khuyến mãi (ADR 0046). Khách đã chuyển ÍT hơn bốn dòng trên đúng bằng con
+   * số này, nên nó là hiệu giữa QUYỀN LỢI (bốn dòng) và TIỀN MẶT (`booking_holds.amount`).
+   *
+   * Bỏ trống ⇒ `'0'`: hold sinh trước ADR 0046 không có mã nào.
+   */
+  promoDiscount?: string;
 }
 
 export interface AllocationEntry {
@@ -533,14 +633,38 @@ export function resolveHoldAllocation(
   const s = Number(lines.serviceFee);
   const iv = Number(lines.vehicleInsurance);
   const ip = Number(lines.personalInsurance);
+  /*
+   * TÀI TRỢ mã khuyến mãi (ADR 0046 điều 4). Kẹp `min(d + s, …)` để bất biến "tổng phân bổ =
+   * tiền mặt đã nhận" không phụ thuộc vào dữ liệu của một bảng khác — cùng lý do `tax` ở dưới
+   * kẹp bằng `d`.
+   *
+   * Phần tài trợ luôn do NỀN TẢNG gánh, ở cả ba kết cục: quyền lợi của chủ xe, hãng bảo hiểm và
+   * ngân sách không được đổi vì XePrime giảm giá cho khách. Hệ quả là dòng
+   * `PLATFORM_REVENUE` ÂM ĐƯỢC khi khoản tài trợ lớn hơn phí dịch vụ của chuyến — đó là một
+   * khoản chi marketing thật, không phải một lỗi làm tròn.
+   */
+  const promo = Math.max(0, Math.min(Number(lines.promoDiscount ?? 0), d + s));
   const out: AllocationEntry[] = [];
   const push = (key: FeeLineKey, target: AllocationTarget, amount: number) => {
     if (amount > 0) out.push({ key, target, amount: String(amount) });
   };
+  /** Dòng nền tảng — dòng DUY NHẤT được phép âm, vì nó là dòng gánh tài trợ. */
+  const pushPlatform = (key: FeeLineKey, amount: number) => {
+    if (amount !== 0) out.push({ key, target: ALLOCATION_TARGET.PLATFORM_REVENUE, amount: String(amount) });
+  };
 
   if (kind === 'refund_all') {
-    push(FEE_LINE.DEPOSIT, ALLOCATION_TARGET.CUSTOMER_BALANCE, d);
-    push(FEE_LINE.SERVICE_FEE, ALLOCATION_TARGET.CUSTOMER_BALANCE, s);
+    /*
+     * Khách chỉ được hoàn ĐÚNG số họ đã chuyển (`D + S + IV + IP − P`), không phải quyền lợi
+     * gộp. Hoàn cả `P` là biến một mã khuyến mãi thành tiền mặt: đặt xe, huỷ trong cửa sổ miễn
+     * phí, và rút phần XePrime tài trợ về ví.
+     *
+     * Trừ theo thứ tự CỌC → PHÍ DỊCH VỤ và không bao giờ trừ vào bảo hiểm, đúng thứ tự mà
+     * `computePromoDiscount` đã dùng để tính trần — nên mọi dòng ở đây luôn ≥ 0.
+     */
+    const fromDeposit = Math.min(promo, d);
+    push(FEE_LINE.DEPOSIT, ALLOCATION_TARGET.CUSTOMER_BALANCE, d - fromDeposit);
+    push(FEE_LINE.SERVICE_FEE, ALLOCATION_TARGET.CUSTOMER_BALANCE, s - (promo - fromDeposit));
     push(FEE_LINE.VEHICLE_PROTECTION, ALLOCATION_TARGET.CUSTOMER_BALANCE, iv);
     push(FEE_LINE.TRIP_INSURANCE, ALLOCATION_TARGET.CUSTOMER_BALANCE, ip);
     return out;
@@ -553,7 +677,12 @@ export function resolveHoldAllocation(
     const splittable = d + s;
     const toOwner = Math.floor(splittable / 2);
     push(FEE_LINE.DEPOSIT, ALLOCATION_TARGET.OWNER_BALANCE, toOwner);
-    push(FEE_LINE.SERVICE_FEE, ALLOCATION_TARGET.PLATFORM_REVENUE, splittable - toOwner);
+    /*
+     * Chủ xe nhận đủ NỬA QUYỀN LỢI, không phải nửa tiền mặt: khoản họ được đền vì khách huỷ
+     * muộn không có lý do gì nhỏ đi vì nền tảng đã giảm giá cho khách. Phần tài trợ trừ vào dòng
+     * nền tảng, cùng chỗ với phần dư của phép chia đôi.
+     */
+    pushPlatform(FEE_LINE.SERVICE_FEE, splittable - toOwner - promo);
     return out;
   }
 
@@ -567,7 +696,8 @@ export function resolveHoldAllocation(
    * thuộc vào một CHECK ở bảng khác.
    */
   push(FEE_LINE.TAX, ALLOCATION_TARGET.TAX_LEDGER, tax);
-  push(FEE_LINE.SERVICE_FEE, ALLOCATION_TARGET.PLATFORM_REVENUE, s);
+  // Phí dịch vụ TRỪ tài trợ — chủ xe, ngân sách và hãng bảo hiểm ở trên/dưới nhận đủ quyền lợi.
+  pushPlatform(FEE_LINE.SERVICE_FEE, s - promo);
   push(FEE_LINE.VEHICLE_PROTECTION, ALLOCATION_TARGET.INSURER_PAYABLE, iv);
   push(FEE_LINE.TRIP_INSURANCE, ALLOCATION_TARGET.INSURER_PAYABLE, ip);
   return out;
@@ -576,7 +706,9 @@ export function resolveHoldAllocation(
 /**
  * Tổng phân bổ theo TỪNG đích — đúng thứ đối soát ba vế cần đóng băng lên `booking_holds`.
  *
- * Bất biến: tổng năm đích LUÔN bằng `D + S + IV + IP`. Không có đường nào cho một đồng biến mất
+ * Bất biến: tổng năm đích LUÔN bằng `D + S + IV + IP − P` = số tiền mặt hold đã nhận (ADR 0046
+ * điều 4 — trước khi có mã khuyến mãi thì `P = 0` và con số đó đúng bằng bốn dòng tiền). Không
+ * có đường nào cho một đồng biến mất
  * giữa chừng, và đó là điều khiến phép đối soát có nghĩa.
  */
 export function allocationTotals(

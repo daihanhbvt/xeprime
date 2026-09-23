@@ -12,6 +12,7 @@ import {
   ExclamationCircleOutlined,
   FileDoneOutlined,
   FileTextOutlined,
+  GiftOutlined,
   HistoryOutlined,
   IdcardOutlined,
   InboxOutlined,
@@ -529,6 +530,18 @@ export const PLATFORM_NAV: readonly NavSection[] = [
         href: ROUTES.MANAGE.ADMIN_FEE_POLICIES,
         permission: PERMISSION.PLATFORM_FEE_POLICY_MANAGE,
         icon: PercentageOutlined,
+      },
+      {
+        /*
+         * Mã khuyến mãi đứng cạnh chính sách phí có chủ đích: một bên đặt cách nền tảng THU,
+         * bên kia đặt cách nền tảng CHI tài trợ. Hai quyền tách nhau (ADR 0046 điều 1), nhưng
+         * người đọc menu nên thấy chúng là hai mặt của cùng một ngân sách.
+         */
+        key: 'admin-promo-codes',
+        labelKey: 'platform.promoCodes',
+        href: ROUTES.MANAGE.ADMIN_PROMO_CODES,
+        permission: PERMISSION.PLATFORM_PROMO_CODE_MANAGE,
+        icon: GiftOutlined,
       },
       {
         key: 'admin-money',

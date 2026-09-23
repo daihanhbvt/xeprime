@@ -3,6 +3,7 @@ import {
   ADDRESS_LINE_MAX_LENGTH,
   BOOKING_STATUS,
   BOOKING_STATUS_VALUES,
+  CANCELLATION_REASON_CATEGORY_VALUES,
   ROUTE_TYPE_VALUES,
   SERVICE_TYPE,
   LONG_TERM_PACKAGE_MONTHS_VALUES,
@@ -586,6 +587,24 @@ export class TransitionBookingDto {
   @IsNotEmpty({ message: 'Cần nêu lý do khi huỷ đơn hoặc ghi nhận khách không đến' })
   @MaxLength(500)
   reason?: string;
+
+  /**
+   * NHÓM lý do — bắt buộc khi `status = cancelled` (ADR 0045 điều 1).
+   *
+   * Có nhóm vì ô văn xuôi không thống kê được: vận hành cần biết "xe hỏng" chiếm bao nhiêu phần
+   * trăm để sửa đúng chỗ, và chỉ số uy tín cần một khoá để lọc. Ô chữ tự do (`reason`) vẫn còn
+   * và vẫn bắt buộc — nhóm đứng CẠNH nó, không thay nó.
+   *
+   * `no_show` KHÔNG cần nhóm: nó tự nó đã là một phân loại, và phía chịu trách nhiệm ở đó là
+   * khách chứ không phải gian hàng.
+   */
+  @ApiPropertyOptional({
+    enum: CANCELLATION_REASON_CATEGORY_VALUES,
+    description: 'Nhóm lý do — BẮT BUỘC khi status = cancelled',
+  })
+  @ValidateIf((o: TransitionBookingDto) => o.status === BOOKING_STATUS.CANCELLED)
+  @IsIn(CANCELLATION_REASON_CATEGORY_VALUES, { message: 'Chọn nhóm lý do khi huỷ đơn' })
+  reasonCategory?: string;
 
   @ApiPropertyOptional({ description: 'Thời điểm nhận xe thực tế (khi → active)' })
   @IsOptional()

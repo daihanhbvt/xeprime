@@ -55,6 +55,7 @@ import wallet from '@xeprime/domain/messages/vi/wallet.json';
 import sellerProfile from '@xeprime/domain/messages/vi/seller-profile.json';
 import supportCases from '@xeprime/domain/messages/vi/support-cases.json';
 import feePolicies from '@xeprime/domain/messages/vi/fee-policies.json';
+import promoCodes from '@xeprime/domain/messages/vi/promo-codes.json';
 import platformMoney from '@xeprime/domain/messages/vi/platform-money.json';
 import platformSellers from '@xeprime/domain/messages/vi/platform-sellers.json';
 
@@ -102,6 +103,7 @@ const messages = {
   SellerProfile: sellerProfile,
   SupportCases: supportCases,
   FeePolicies: feePolicies,
+  PromoCodes: promoCodes,
   PlatformMoney: platformMoney,
   PlatformSellers: platformSellers,
 };

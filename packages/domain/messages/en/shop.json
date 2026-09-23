@@ -242,7 +242,8 @@
     "legalHint": "Where customers pick the car up. Tax code and licence are optional.",
     "payout": "Payout account",
     "payoutHint": "Where XePrime transfers your shop’s money.",
-    "plan": "Plan & limits"
+    "plan": "Plan & limits",
+    "planHint": "Current plan, vehicle limit and billing invoices."
   },
   "owner": {
     "title": "Shop owner",

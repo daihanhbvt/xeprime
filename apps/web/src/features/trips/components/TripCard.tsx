@@ -31,7 +31,8 @@ interface TripCardProps {
     onApprove: (trip: CustomerTrip) => void;
     onReject: (trip: CustomerTrip) => void;
     /** Thao tác đang chạy trên ĐÚNG chuyến này — chặn bấm chồng lên nhau. */
-    pending: 'approve' | 'reject' | null;
+    /** `cancel` từ ADR 0045: chuyến ĐÃ NHẬN cũng có một thao tác đang chạy để khoá nút. */
+  pending: 'approve' | 'reject' | 'cancel' | null;
   };
   /** Mở chi tiết. Chuyến của chủ xe đi vào đơn/yêu cầu; khách đi vào `/trips/[id]`. */
   onOpenDetail?: (trip: CustomerTrip) => void;

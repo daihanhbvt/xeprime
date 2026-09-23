@@ -67,6 +67,19 @@ const BY_TYPE: Record<NotificationType, readonly QueryKey[]> = {
   [NOTIFICATION_TYPE.BOOKING_REQUEST_CANCELLED]: REQUEST_BRANCHES,
   [NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRING]: REQUEST_BRANCHES,
   [NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRED]: REQUEST_BRANCHES,
+  // Khung giờ bị khách khác lấy (ADR 0044) — chuyến của người nhận tin vừa đóng.
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_SLOT_TAKEN]: REQUEST_BRANCHES,
+  /*
+   * Xe rảnh lại (ADR 0045 điều 6). Yêu cầu cũ KHÔNG sống lại — nó vẫn đóng ở `slot_taken` —
+   * nên chỉ cần làm mới nhánh yêu cầu/chuyến để đồng hồ và nhãn của nó thôi lệch. Lời mời dẫn
+   * sang trang XE để đặt lại từ đầu, và trang đó tự tải dữ liệu của nó.
+   */
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_SLOT_REOPENED]: REQUEST_BRANCHES,
+  /*
+   * Chủ xe huỷ chuyến đã nhận. Đụng vào CẢ HAI nhánh: yêu cầu vừa đóng, và khoản giữ chỗ vừa
+   * bị huỷ kèm một lượt hoàn nếu khách đã chuyển dở.
+   */
+  [NOTIFICATION_TYPE.BOOKING_CANCELLED_BY_HOST]: [...REQUEST_BRANCHES, ...HOLD_BRANCHES],
 
   // Giữ chỗ (ADR 0028/0032).
   [NOTIFICATION_TYPE.HOLD_REQUESTED]: HOLD_BRANCHES,
@@ -75,6 +88,11 @@ const BY_TYPE: Record<NotificationType, readonly QueryKey[]> = {
   [NOTIFICATION_TYPE.HOLD_EXPIRED]: HOLD_BRANCHES,
   [NOTIFICATION_TYPE.HOLD_REFUNDED]: HOLD_BRANCHES,
   [NOTIFICATION_TYPE.HOLD_REFUND_PAID]: HOLD_BRANCHES,
+  /*
+   * Mã khuyến mãi bị BỎ lúc chốt giá (ADR 0046) — làm mới nhánh giữ chỗ và nhánh chuyến: số tiền
+   * khách phải chuyển vừa đổi, và cả hai màn đó đang hiện con số cũ.
+   */
+  [NOTIFICATION_TYPE.PROMO_CODE_DROPPED]: HOLD_BRANCHES,
 
   // Duyệt xe và duyệt gian hàng.
   [NOTIFICATION_TYPE.VEHICLE_APPROVED]: VEHICLE_BRANCHES,

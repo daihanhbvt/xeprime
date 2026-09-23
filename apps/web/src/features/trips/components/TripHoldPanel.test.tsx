@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { BOOKING_HOLD_STATUS, HOLD_REFUND_STATUS } from '@xeprime/types';
 import { describe, expect, it } from 'vitest';
@@ -90,10 +90,48 @@ describe('TripHoldPanel — đang chờ tiền', () => {
     renderPanel(BASE);
     expect(screen.getByText(/trả trực tiếp chủ xe/i)).toBeTruthy();
   });
+
+  /**
+   * "Tôi đã chuyển khoản" KHÔNG được nói chuyến đã xong (ADR 0044 điều 2).
+   *
+   * Xác nhận thành công vì một cú bấm là cách nhanh nhất để khách rời đi trong lúc tiền chưa về
+   * — rồi chỗ tự nhả và không ai hiểu vì sao. Màn hình chỉ được đổi sang "đang đối soát".
+   */
+  it('bấm "Tôi đã chuyển khoản" ⇒ ĐANG ĐỐI SOÁT, không phải đã thanh toán', () => {
+    renderPanel(BASE);
+
+    fireEvent.click(screen.getByRole('button', { name: /đã chuyển khoản/i }));
+
+    expect(screen.getByText(/đang đối soát/i)).toBeTruthy();
+    // Không có câu nào nói chuyến đã xác nhận — tiền vẫn chưa về.
+    expect(screen.queryByText(/đã được xác nhận/i)).toBeNull();
+    // Mã và số tiền VẪN còn: khách có thể cần chuyển bù, và đây không phải trạng thái kết thúc.
+    expect(screen.getByText('XPH23456789')).toBeTruthy();
+  });
+
+  /**
+   * QR hỏng không được biến khối này thành một khung trắng: mọi thứ cần để chuyển tay vẫn nằm
+   * ngay cạnh, và khách phải được nói rằng dùng chúng.
+   */
+  it('ảnh QR lỗi ⇒ nói thẳng và chỉ sang thông tin chuyển tay', () => {
+    const { container } = renderPanel(BASE);
+
+    fireEvent.error(container.querySelector('img')!);
+
+    expect(screen.getByText(/không tải được mã qr/i)).toBeTruthy();
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByText('XPH23456789')).toBeTruthy();
+  });
+
+  /** Đồng hồ đọc mốc của SERVER — không có đường nào để client tự tính lại một hạn tiền. */
+  it('đồng hồ đếm ngược tới đúng mốc server trả về', () => {
+    renderPanel({ ...BASE, expiresAt: new Date(Date.now() + 90 * 60_000).toISOString() });
+    expect(screen.getByText(/còn lại để thanh toán/i)).toBeTruthy();
+  });
 });
 
 describe('TripHoldPanel — đã chốt', () => {
-  it('đã trả đủ ⇒ báo đã giữ chỗ, không còn ô chuyển khoản', () => {
+  it('đã trả đủ ⇒ báo CHUYẾN ĐÃ XÁC NHẬN, không còn ô chuyển khoản', () => {
     const { container } = renderPanel({
       ...BASE,
       status: BOOKING_HOLD_STATUS.PAID,
@@ -101,7 +139,12 @@ describe('TripHoldPanel — đã chốt', () => {
       remainingAmount: '0',
     });
     expect(container.querySelector('img')).toBeNull();
-    expect(screen.getByText(/Đã giữ chỗ/)).toBeTruthy();
+    /*
+     * Chữ ở chặng này ĐỔI cùng thứ tự luồng (ADR 0044): tiền chỉ được thu sau khi chuyến đã
+     * được nhận, nên trả đủ nghĩa là ĐƠN THUÊ đã ra đời — không còn chặng 'đã giữ chỗ, chờ chủ
+     * xe xác nhận' nào nữa.
+     */
+    expect(screen.getByText(/đã được xác nhận/i)).toBeTruthy();
   });
 
   it('hết hạn ⇒ nói chỗ đã mở lại, gợi ý đặt chuyến khác', () => {

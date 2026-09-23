@@ -17,6 +17,7 @@ import {
   type CollateralMode,
   COLLATERAL_MODE_VALUES,
   LONG_TERM_PACKAGE_MONTHS,
+  MILEAGE_LIMIT,
 } from '@xeprime/types';
 import { deliverySummaryText, LIST_SEPARATOR } from '@xeprime/domain';
 import { Callout } from '@/components/ui/Callout';
@@ -64,6 +65,7 @@ const TONE = {
   deposit: { fg: colors.info, surface: colors.infoSurface, icon: 'shield-checkmark' },
   delivery: { fg: colors.primaryActive, surface: colors.primaryLight, icon: 'navigate' },
   overtime: { fg: colors.warning, surface: colors.warningSurface, icon: 'time' },
+  mileage: { fg: colors.info, surface: colors.infoSurface, icon: 'speedometer' },
   discount: { fg: colors.success, surface: colors.successSurface, icon: 'pricetags' },
 } as const satisfies Record<string, SectionTone>;
 
@@ -433,6 +435,7 @@ export function PolicySections({
     <YStack gap={space.md}>
       <DepositSection control={control} disabled={disabled} step={step} hint={depositHint} />
       <DeliverySection control={control} disabled={disabled} step={step} />
+      <MileageSection control={control} disabled={disabled} step={step} />
       <OvertimeSection control={control} disabled={disabled} step={step} />
       <LongTermDiscountSection
         control={control}
@@ -730,6 +733,105 @@ function DeliverySection({
   );
 }
 
+/**
+ * HẠN MỨC QUÃNG ĐƯỜNG của chuyến tự lái — một công tắc, hai ô đi CẶP.
+ *
+ * Cùng hình dạng và cùng mã lỗi với bước "Cho thuê" của wizard đăng xe nhanh
+ * (`QuickVehicleRentalStep`): hai màn hỏi cùng một chính sách thì phải hỏi giống nhau, nếu
+ * không chủ xe sẽ thấy hai bộ luật cho một con số.
+ *
+ * Bật/tắt là trường của FORM, không phải của API. Backend chỉ biết "cả hai null = không giới
+ * hạn" (`formToSaveInput` dịch qua lại), nên thiếu công tắc thì "đã tắt" và "mới nhập được một
+ * nửa" trông y hệt nhau trên màn hình.
+ *
+ * Phí vượt KHÔNG cộng vào báo giá lúc đặt — lúc đó chưa ai biết khách sẽ chạy bao xa. Nó chỉ
+ * thành một khoản ĐỀ XUẤT lúc quyết toán, và chủ xe vẫn phải bấm ghi. Dòng xem trước nói đúng
+ * câu mà khách sẽ đọc trên trang xe, nên chủ xe thấy được hệ quả trước khi lưu.
+ */
+function MileageSection({
+  control,
+  disabled,
+  step,
+}: {
+  control: PolicyControl;
+  disabled: boolean;
+  step: StepTitle;
+}) {
+  const t = useTranslations('Vehicles.pricing.mileage');
+  const fmt = useAppFormat();
+  const enabled = useWatch({ control, name: 'mileageLimitEnabled' });
+  const includedKm = useWatch({ control, name: 'includedDistanceKmPerDay' });
+  const feePerKm = useWatch({ control, name: 'excessDistanceFeePerKm' });
+
+  return (
+    <Card>
+      <YStack gap={space.md}>
+        <SectionHead
+          tone={TONE.mileage}
+          title={step(3, t('title'))}
+          hint={t('hint')}
+          toggle={
+            <Controller
+              control={control}
+              name="mileageLimitEnabled"
+              render={({ field }) => (
+                <PolicySwitch
+                  label={t('title')}
+                  checked={field.value === true}
+                  disabled={disabled}
+                  onToggle={() => field.onChange(!field.value)}
+                />
+              )}
+            />
+          }
+        />
+
+        {enabled ? (
+          <>
+            <NumberField
+              control={control}
+              name="includedDistanceKmPerDay"
+              label={t('includedLabel')}
+              hint={t('includedHint')}
+              suffix={t('unitPerDay')}
+              integer
+              min={MILEAGE_LIMIT.minKmPerDay}
+              max={MILEAGE_LIMIT.maxKmPerDay}
+              required
+              editable={!disabled}
+            />
+            <MoneyField
+              control={control}
+              name="excessDistanceFeePerKm"
+              label={t('excessLabel')}
+              hint={t('excessHint')}
+              unit={t('unitPerKm')}
+              required
+              editable={!disabled}
+            />
+
+            {/* Đúng câu khách sẽ đọc trên trang xe — chủ xe thấy hệ quả trước khi lưu. */}
+            <YStack gap={2} p={space.sm} br={radius.md} bg={colors.surfaceMuted}>
+              <Text col={colors.placeholder} fos={fontSize.label} fow={fontWeight.semibold}>
+                {t('previewTitle')}
+              </Text>
+              <Text col={colors.text} fos={fontSize.bodySm}>
+                {includedKm != null && feePerKm != null
+                  ? t('preview', { km: fmt.km(includedKm), fee: fmt.money(String(feePerKm)) })
+                  : t('previewIncomplete')}
+              </Text>
+            </YStack>
+          </>
+        ) : (
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            {t('disabledNote')}
+          </Text>
+        )}
+      </YStack>
+    </Card>
+  );
+}
+
 function OvertimeSection({
   control,
   disabled,
@@ -746,7 +848,7 @@ function OvertimeSection({
   return (
     <Card>
       <YStack gap={space.md}>
-        <SectionHead tone={TONE.overtime} title={step(3, t('title'))} hint={t('hint')} />
+        <SectionHead tone={TONE.overtime} title={step(4, t('title'))} hint={t('hint')} />
 
         <MoneyField
           control={control}
@@ -844,7 +946,7 @@ function LongTermDiscountSection({
       <YStack gap={space.md}>
         <SectionHead
           tone={TONE.discount}
-          title={step(4, t('title'))}
+          title={step(5, t('title'))}
           hint={t('hint')}
           toggle={
             <Controller
@@ -1024,6 +1126,35 @@ export function CollateralPolicySection<T extends PolicyFormValues>({
       step={PLAIN_STEP}
       {...(title === undefined ? {} : { title })}
       {...(optionDescriptions === undefined ? {} : { optionDescriptions })}
+    />
+  );
+}
+
+/**
+ * Hạn mức quãng đường đứng MỘT MÌNH — dùng ở màn "Thủ tục cho thuê" của một chiếc xe.
+ *
+ * Nó là một ĐIỀU KHOẢN công bố với khách (hiện ngay cạnh hình thức bảo đảm trên trang xe, và
+ * đóng băng vào đơn lúc đặt), nên thuộc màn đó chứ không phải một màn quản lý thứ sáu.
+ *
+ * Nơi gọi khoá nó sau CÙNG nút "Tuỳ chỉnh" với khối bảo đảm, và đó không phải sự lười: lưu ở màn
+ * ấy gửi `PUT /vehicles/:id/pricing` với `source: vehicle` và TOÀN BỘ chính sách. Một cú gạt
+ * công tắc hạn mức trên chiếc xe đang KẾ THỪA sẽ ghi xuống một bản sao đóng băng của
+ * cọc/giao nhận/quá giờ/ưu đãi, và chiếc xe đó âm thầm ngừng nhận mọi thay đổi chính sách của
+ * gian hàng về sau. Tách hạn mức ra khỏi bản ghi đè là một quyết định khác (cần cột riêng trên
+ * `vehicles`), không phải hệ quả của một công tắc.
+ */
+export function MileagePolicySection<T extends PolicyFormValues>({
+  control,
+  disabled,
+}: {
+  control: PolicyFormSuperset<T>;
+  disabled: boolean;
+}) {
+  return (
+    <MileageSection
+      control={control as unknown as PolicyControl}
+      disabled={disabled}
+      step={PLAIN_STEP}
     />
   );
 }

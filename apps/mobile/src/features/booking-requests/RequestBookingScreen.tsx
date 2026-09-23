@@ -29,6 +29,8 @@ import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { BookingPriceSummary } from './components/BookingPriceSummary';
+import { PromoCodeField } from '@/features/promo-codes/PromoCodeField';
+import { usePromoCode } from '@/features/promo-codes/use-promo-code';
 import { VehicleSummaryCard } from './components/VehicleSummaryCard';
 import { RequestTripStep } from './components/RequestTripStep';
 import { RequestOtpStep } from './components/RequestOtpStep';
@@ -358,6 +360,35 @@ function RequestBookingBody({
     routeType,
   });
   const quote = usePublicQuote(listing.id, quoteParams);
+
+  /*
+   * MÃ KHUYẾN MÃI — ADR 0046.
+   *
+   * Tham số chuyến dựng từ CHÍNH `quoteParams` mà báo giá dùng: hai bên phải nói về đúng một
+   * chuyến, nếu không số giảm được tính trên một báo giá khác với báo giá đang hiện trên màn hình.
+   * `null` khi chưa chọn đủ ⇒ ô áp mã tự ẩn.
+   */
+  const promoTrip = quoteParams ? { vehicleId: listing.id, ...quoteParams } : null;
+  const promo = usePromoCode(promoTrip);
+  /*
+   * Chuyến KHÔNG thu trước thì không có dòng tiền nào để tài trợ vào (báo giá tạm tính, dài hạn
+   * chưa chốt lịch — ADR 0046 điều 2). Đọc `holdAmount` của SERVER, không tự suy theo dịch vụ.
+   */
+  const promoUnavailable = quote.data != null && quote.data.breakdown.fees?.holdAmount == null;
+  const promoField = (
+    <PromoCodeField
+      trip={promoTrip}
+      appliedCode={promo.appliedCode}
+      applied={promo.applied}
+      checking={promo.checking}
+      reason={promo.reason}
+      unavailable={promoUnavailable}
+      droppedCode={promo.droppedCode}
+      onApply={promo.apply}
+      onRemove={promo.remove}
+    />
+  );
+
   const otp = usePhoneVerify(flow.otpPurpose);
 
   /** Rời bước Chuyến đi: SĐT đã xác thực thì sang thẳng Xác nhận, chưa thì dựng bước OTP. */
@@ -433,7 +464,7 @@ function RequestBookingBody({
 
   const submitRequest = useCallback(() => {
     setError(null);
-    flow.submit.mutate(toRequestBody(form.getValues(), describeDevice()), {
+    flow.submit.mutate(toRequestBody(form.getValues(), describeDevice(), promo.appliedCode), {
       /*
        * Nhớ địa chỉ giao xe CHỈ khi đã gửi thành công — đúng chỗ web gọi
        * `rememberDeliveryAddress`.
@@ -472,6 +503,16 @@ function RequestBookingBody({
           return;
         }
         /*
+         * MÃ KHUYẾN MÃI bị SERVER từ chối ở cửa gửi (ADR 0046) — mã vừa hết lượt, hoặc điều kiện
+         * vừa đổi. Bỏ mã, làm mới báo giá, và KHÔNG hiện thêm một lỗi chung: giao diện đã nói
+         * đúng chỗ (ngay cạnh ô mã), còn một dòng đỏ thứ hai chỉ làm người ta đi tìm hai vấn đề.
+         */
+        if (promo.rejectByServer(error)) {
+          void quote.refetch();
+          setError(null);
+          return;
+        }
+        /*
          * Backend nói SĐT chưa xác thực trong khi app tưởng được bỏ qua OTP ⇒ phiên vừa hết hạn
          * hoặc SĐT tài khoản vừa đổi. Đây là điểm khôi phục: lùi về bước xác thực, GIỮ NGUYÊN
          * mọi thứ đã nhập, gửi mã cho chính số đó.
@@ -487,7 +528,20 @@ function RequestBookingBody({
         setError(errorMessage(error));
       },
     });
-  }, [errorMessage, flow, form, otp, setBlocked, setDuplicate, setError, setOtpPhone, setStep, t]);
+  }, [
+    errorMessage,
+    flow,
+    form,
+    otp,
+    promo,
+    quote,
+    setBlocked,
+    setDuplicate,
+    setError,
+    setOtpPhone,
+    setStep,
+    t,
+  ]);
 
   /** Lui về bước Chuyến đi. `editContact` = mở lại ô liên hệ (nút 'Đổi' ở bước Xác nhận). */
   const backToTrip = useCallback(
@@ -648,14 +702,15 @@ function RequestBookingBody({
           {state.step === REQUEST_STEP.REVIEW ? (
             <RequestReviewStep
               values={form.getValues()}
+              form={form}
               listing={listing}
               rentalMode={rentalMode}
               accountPhoneVerified={flow.accountPhoneVerified}
             />
           ) : null}
 
-          {/* Bảng giá đầy đủ CHỈ ở bước Chuyến đi — bước Xác nhận đã có bảng giá riêng. */}
-          {state.step === REQUEST_STEP.TRIP ? (
+          {/* Chung một instance "chi tiết" cho cả hai bước — cùng cách web ghép `priceDetail`. */}
+          {state.step === REQUEST_STEP.TRIP || state.step === REQUEST_STEP.REVIEW ? (
             <BookingPriceSummary
               listing={listing}
               serviceType={serviceType}
@@ -667,6 +722,7 @@ function RequestBookingBody({
               variant="detail"
               expanded={priceExpanded}
               onExpandedChange={setPriceExpanded}
+              promoSlot={promoField}
             />
           ) : null}
         </YStack>

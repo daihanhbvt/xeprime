@@ -14,6 +14,7 @@ import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
 import { scrollThrottle } from '@/theme/motion';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 import type { PublicListing } from './api';
+import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
 import { ShopHeader } from './components/ShopHeader';
 import { ShopAbout } from './components/ShopAbout';
 import { ShopReviews } from './components/ShopReviews';
@@ -44,6 +45,7 @@ const Separator = () => <YStack h={layout.block} />;
 export function ShopDetailScreen({ slug, onBack }: { slug: string; onBack: () => void }) {
   const t = useTranslations('Shops.vehicles');
   const tResults = useTranslations('Marketplace.results');
+  const tShops = useTranslations('Shops.header');
   const insets = useSafeAreaInsets();
   const navigateOnce = useNavigateOnce();
 
@@ -109,7 +111,34 @@ export function ShopDetailScreen({ slug, onBack }: { slug: string; onBack: () =>
         phần trên của ảnh. Tên chỉ hiện sau khi cuộn qua khối hồ sơ — lúc đó tên ở thân trang đã
         khuất và header mới cần nhắc lại nó.
       */}
-      <AppHeader variant="overlay" onBack={onBack} title={shop.data.name} showTitle={scrolled} />
+      <AppHeader
+        variant="overlay"
+        onBack={onBack}
+        title={shop.data.name}
+        showTitle={scrolled}
+        /*
+          Nhắn tin nằm ở KHE HÀNH ĐỘNG của thanh trên, đối diện nút quay lại.
+
+          Hai bản trước đặt nó trong thân trang — cạnh tên, rồi cạnh logo — và cả hai đều hỏng
+          vì cùng một lý do: logo gian hàng đã là một vòng tròn vàng, nên thêm một vòng tròn
+          vàng nữa ngang tầm mắt là hai thứ tranh nhau, mà cái thắng lại là cái phụ.
+
+          Ở đây nó ghép cặp với nút quay lại: cùng sắc `surface`, cùng cỡ, hai đầu một hàng —
+          đúng khuôn mọi trang chi tiết có ảnh bìa. Và nó THEO SUỐT trang: khách cuộn xuống giữa
+          danh sách xe vẫn liên hệ được, thay vì phải cuộn ngược lên đầu.
+
+          `ShopChatButton` tự trả `null` khi gian hàng tắt hộp thư, nên không cần gác thêm ở đây.
+        */
+        right={
+          <ShopChatButton
+            shopSlug={shop.data.slug}
+            publicChatOpen={shop.data.chatOpen}
+            label={tShops('message')}
+            iconOnly
+            iconTone="surface"
+          />
+        }
+      />
 
       <FlatList
         data={listings.listings}

@@ -280,11 +280,34 @@ describe('Facets marketplace (đếm theo chiều + filter CSV)', () => {
     expect(ids).toContain(vMini);
   });
 
-  maybe('sort recommended: rating cao trước, đồng hạng thì nhiều review trước, null cuối', async () => {
+  /*
+   * Sort mặc định ("recommended") từ ADR 0045 điều 3 xếp theo `rank_score` — CÙNG cột trang chủ
+   * đã dùng từ ADR 0043 — chứ không còn theo `rating_avg` trần.
+   *
+   * Spec này cố ý KHÔNG khoá một thứ tự id cứng. Thứ tự cứng sẽ đỏ mỗi lần ai đó chỉnh trọng số
+   * dù hành vi vẫn đúng, và đỏ vì một lý do không nói lên điều gì. Thứ đáng khoá là HỢP ĐỒNG:
+   * danh sách trả về đúng theo `rank_score` giảm dần, và có một thứ tự XÁC ĐỊNH khi đồng điểm —
+   * thiếu vế sau thì phân trang sẽ trả cùng một xe ở hai trang khác nhau.
+   */
+  maybe('sort mặc định: đúng theo rank_score giảm dần, đồng điểm thì mới trước', async () => {
     const res = await service.search(sq({ sort: 'recommended' }));
-    expect(res.data.map((v) => v.id)).toEqual([vCuv, vSedan, vSuv, vMini]);
+    const ids = res.data.map((v) => v.id);
+    expect(ids).toHaveLength(4);
+
+    const ranked = await prisma.publicListing.findMany({
+      where: { vehicleId: { in: ids } },
+      select: { vehicleId: true, rankScore: true, createdAt: true },
+      orderBy: [{ rankScore: 'desc' }, { createdAt: 'desc' }],
+    });
+    expect(ids).toEqual(ranked.map((r) => r.vehicleId));
+    // Mọi xe phải có điểm thật — `rank_score = 0` khắp nơi cũng "đúng thứ tự" mà chẳng chứng minh gì.
+    expect(ranked.every((r) => Number(r.rankScore) > 0)).toBe(true);
+  });
+
+  maybe('card mang rating snapshot + tiện ích', async () => {
+    const res = await service.search(sq({ sort: 'recommended' }));
     // Card mang rating từ snapshot (1 chữ số thập phân) + field tiện ích mới.
-    const cuv = res.data[0]!;
+    const cuv = res.data.find((v) => v.id === vCuv)!;
     expect(cuv.ratingAvg).toBe('5.0');
     expect(cuv.ratingCount).toBe(2);
     expect(cuv.deliveryEnabled).toBe(true);

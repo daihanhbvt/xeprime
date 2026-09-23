@@ -387,6 +387,15 @@ export const queryKeys = {
      * bằng giá CỦA CHỢ, không phải hồ sơ chiếc xe đang khai — và nó dùng chung cho web lẫn app.
      */
     priceSuggestion: (params: QueryParams) => ['marketplace', 'price-suggestion', params] as const,
+    /**
+     * MÃ KHUYẾN MÃI khả dụng cho một chuyến (ADR 0046) — danh sách đã công bố, kèm lý do với
+     * từng mã không áp được.
+     *
+     * Tham số chuyến nằm TRONG key: một chuyến khác là một câu trả lời khác (đơn tối thiểu, loại
+     * xe, dịch vụ đều tham gia phép kiểm). Lượt XEM TRƯỚC một mã cụ thể KHÔNG có khoá ở đây —
+     * nó là một `POST` theo hành động của khách, không phải dữ liệu để cache.
+     */
+    promoCodes: (params: QueryParams) => ['marketplace', 'promo-codes', params] as const,
   },
   /**
    * Huy hiệu của khung ứng dụng (chuông + hai hộp thư chat) — MỘT khoá cho MỘT request.
@@ -508,6 +517,19 @@ export const queryKeys = {
   feePolicies: {
     all: ['fee-policies'] as const,
     list: () => ['fee-policies', 'list'] as const,
+  },
+  /**
+   * MÃ KHUYẾN MÃI nền tảng — màn QUẢN TRỊ (ADR 0046).
+   *
+   * Tách khỏi `marketplace.promoCodes` (danh sách khả dụng của KHÁCH) có chủ đích: hai bên hỏi
+   * hai endpoint khác nhau với hai bộ quyền khác nhau, và một lượt `invalidate` sau khi admin
+   * sửa mã không nên xoá cache báo giá của khách đang đặt xe.
+   */
+  promoCodes: {
+    all: ['promo-codes'] as const,
+    list: (params: QueryParams) => ['promo-codes', 'list', params] as const,
+    redemptions: (id: string, page: number) =>
+      ['promo-codes', 'redemptions', id, page] as const,
   },
   /** Khoản giữ chỗ + hoàn tiền + đối soát ngày, phạm vi nền tảng (R3 — ADR 0028). */
   platformMoney: {

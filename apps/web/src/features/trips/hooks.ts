@@ -1,7 +1,13 @@
 'use client';
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { API_ERROR_CODE, type HandoverPhotoSlot, type HandoverType } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  isAwaitingPayment,
+  type BookingHoldStatus,
+  type HandoverPhotoSlot,
+  type HandoverType,
+} from '@xeprime/types';
 import { getErrorCode } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
 import {
@@ -33,12 +39,36 @@ export function useTrips(filter: string, page: number, role?: string, enabled = 
   });
 }
 
-/** Một chuyến. `id` nhận cả id yêu cầu lẫn id đơn — thông báo trỏ vào cả hai loại. */
+/**
+ * Nhịp hỏi lại khi chuyến đang CHỜ TIỀN GIỮ CHỖ.
+ *
+ * Hai mươi giây là độ trễ tối đa giữa "ngân hàng báo về XePrime" và "màn hình của khách đổi" —
+ * đủ nhanh để người vừa chuyển khoản xong không phải tự tải lại trang, đủ thưa để một cửa sổ
+ * hai giờ không thành vài nghìn request. TanStack dừng hẳn nhịp này khi cửa sổ mất focus.
+ */
+const HOLD_POLL_INTERVAL_MS = 20_000;
+
+/**
+ * Một chuyến. `id` nhận cả id yêu cầu lẫn id đơn — thông báo trỏ vào cả hai loại.
+ *
+ * TỰ HỎI LẠI khi còn đang chờ tiền: khoản giữ chỗ được xác nhận bởi WEBHOOK đối soát, không bởi
+ * một thao tác nào của khách (ADR 0044 điều 2). Không có nhịp này thì người vừa chuyển khoản
+ * xong ngồi nhìn một màn hình đứng im và không có cách nào biết tiền đã về — trừ khi tự tải lại
+ * trang, thứ không ai nghĩ ra vào đúng lúc đó.
+ *
+ * Nhịp TẮT ở mọi chặng khác: một chuyến đã có đơn hoặc đã khép không có gì thay đổi theo giây.
+ */
 export function useTrip(id: string) {
   return useQuery({
     queryKey: queryKeys.trips.detail(id),
     queryFn: () => fetchTrip(id),
     enabled: Boolean(id),
+    refetchInterval: (query) => {
+      const hold = query.state.data?.hold;
+      return hold && isAwaitingPayment(hold.status as BookingHoldStatus)
+        ? HOLD_POLL_INTERVAL_MS
+        : false;
+    },
   });
 }
 

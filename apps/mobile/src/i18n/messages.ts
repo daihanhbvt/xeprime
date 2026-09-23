@@ -19,6 +19,7 @@ import enHomeSearch from '@xeprime/domain/messages/en/home-search.json';
 import enListYourVehicle from '@xeprime/domain/messages/en/list-your-vehicle.json';
 import enListings from '@xeprime/domain/messages/en/listings.json';
 import enMarketplace from '@xeprime/domain/messages/en/marketplace.json';
+import enPromoCodes from '@xeprime/domain/messages/en/promo-codes.json';
 import enMobileShell from '@xeprime/domain/messages/en/mobile-shell.json';
 import enNavigation from '@xeprime/domain/messages/en/navigation.json';
 import enManageCommon from '@xeprime/domain/messages/en/manage-common.json';
@@ -58,6 +59,7 @@ import viHomeSearch from '@xeprime/domain/messages/vi/home-search.json';
 import viListYourVehicle from '@xeprime/domain/messages/vi/list-your-vehicle.json';
 import viListings from '@xeprime/domain/messages/vi/listings.json';
 import viMarketplace from '@xeprime/domain/messages/vi/marketplace.json';
+import viPromoCodes from '@xeprime/domain/messages/vi/promo-codes.json';
 import viMobileShell from '@xeprime/domain/messages/vi/mobile-shell.json';
 import viNavigation from '@xeprime/domain/messages/vi/navigation.json';
 import viManageCommon from '@xeprime/domain/messages/vi/manage-common.json';
@@ -117,6 +119,7 @@ export const MESSAGES = {
     Chat: viChat,
     HomeSearch: viHomeSearch,
     Marketplace: viMarketplace,
+    PromoCodes: viPromoCodes,
     Listings: viListings,
     ListYourVehicle: viListYourVehicle,
     ManageCommon: viManageCommon,
@@ -158,6 +161,7 @@ export const MESSAGES = {
     Chat: enChat,
     HomeSearch: enHomeSearch,
     Marketplace: enMarketplace,
+    PromoCodes: enPromoCodes,
     Listings: enListings,
     ListYourVehicle: enListYourVehicle,
     ManageCommon: enManageCommon,

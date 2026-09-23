@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { XStack, YStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 import type { ReactNode } from 'react';
 import { useTranslations } from 'use-intl';
 import {
@@ -9,6 +9,7 @@ import {
   isPackageShopTrack,
   PERMISSION,
   SHOP_VERIFICATION,
+  TENANT_ROLE,
   TENANT_STATUS,
   type ShopVerification,
   type TenantStatus,
@@ -35,9 +36,12 @@ import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
-import { space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 import type { MyShop, UpdateShopProfileInput } from './api';
+import { BankAccountList } from '@/features/bank-accounts/components/BankAccountList';
+import { SubscriptionWorkspace } from '@/features/subscription/SubscriptionScreen';
 import { ShopIdentityCard } from './components/ShopIdentityCard';
+import { ShopOwnerCard } from './components/ShopOwnerCard';
 import { ShopProfileChecklist } from './components/ShopProfileChecklist';
 import { ShopStatusBanner } from './components/ShopStatusBanner';
 import { ShopWelcomeBanner } from './components/ShopWelcomeBanner';
@@ -272,6 +276,7 @@ function ProfileForm({
   const navigateOnce = useNavigateOnce();
 
   const { tenant } = useTenantScope();
+  const permissions = usePermissions();
   const updateProfile = useUpdateShopProfile();
   const submitReview = useSubmitShopReview();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -326,6 +331,15 @@ function ProfileForm({
     : canEdit
       ? null
       : t('form.readOnly');
+
+  /*
+   * Hai trục quyết định KHỐI nào có mặt cuối màn, và cả hai khớp với guard của API:
+   *  - "Tài khoản nhận tiền" theo SỞ HỮU — `/shop/bank-accounts` là `@ShopOwnerOnly()`
+   *    (ADR 0038 điều 3). Không hỏi permission: khoá đó uỷ quyền được, quyền sở hữu thì không.
+   *  - "Gói & hạn mức" theo `subscription.view`, đúng quyền mà mục menu cũ mang.
+   */
+  const isShopOwner = tenant?.roleKey === TENANT_ROLE.SHOP_OWNER;
+  const canSeePlan = permissions.has(PERMISSION.SUBSCRIPTION_VIEW);
 
   const dirty = formState.isDirty && !readOnly;
   /** Hồ sơ ở chặng "chưa gửi / bị trả về" — chỉ khi đó checklist và nút Gửi xác minh mới có nghĩa. */
@@ -509,11 +523,17 @@ function ProfileForm({
           </FormSection>
 
           {/*
-            KHÔNG còn khối "chủ gian hàng" (16/09/2026): ba cột `tenant_profiles.owner_*` đã
-            drop, và danh tính chủ đọc từ tài khoản (`MyShopDto.ownerAccount`). Nó đổi qua đúng
-            luồng của nó — tên ở hồ sơ cá nhân, email/SĐT qua xác minh OTP — chứ không phải qua
-            một form mà bất kỳ ai có `tenant.update` cũng ghi được (ADR 0038 điều 3).
+            CHỦ GIAN HÀNG — chỉ ĐỌC, đúng khối thứ hai của trang Cửa hàng bên web.
+
+            Không có ô nhập nào: ba cột `tenant_profiles.owner_*` đã drop, danh tính chủ đọc từ
+            tài khoản (`MyShopDto.ownerAccount`) và đổi qua đúng luồng của nó — tên ở hồ sơ cá
+            nhân, email/SĐT qua xác minh OTP — chứ không qua một form mà bất kỳ ai có
+            `tenant.update` cũng ghi được (ADR 0038 điều 3).
           */}
+          <ShopOwnerCard
+            owner={shop.ownerAccount}
+            onOpenSecurity={() => navigateOnce(ROUTES.manage.account())}
+          />
 
           <FormSection title={t('form.address.title')} icon="location-outline">
             {/*
@@ -562,10 +582,35 @@ function ProfileForm({
           </FormSection>
 
           {/*
-            KHÔNG còn khối "tài khoản nhận tiền" ở đây: nó sống ở `bank_accounts`
-            (`/shop/bank-accounts`) — nơi lệnh rút thật sự đọc. Bốn ô text cũ ghi vào chỗ không
-            đồng tiền nào chạy tới.
+            TÀI KHOẢN NHẬN TIỀN — sổ `bank_accounts` phạm vi gian hàng, nơi lệnh rút thật sự
+            đọc. Khối thứ tư của trang Cửa hàng bên web, và cùng một danh sách dùng chung với
+            khu cá nhân, khác đúng ở `scope` (ADR 0023 điều 7).
+
+            Gác bằng SỞ HỮU chứ không bằng permission: `/shop/bank-accounts` là `@ShopOwnerOnly()`
+            (ADR 0038 điều 3), và quản lý mở khối này chỉ để nhận 403.
           */}
+          {isShopOwner ? <BankAccountList scope="shop" title={t('sections.payout')} /> : null}
+
+          {/*
+            GÓI & HẠN MỨC — khối thứ NĂM của trang Cửa hàng, nhúng nguyên thân màn gói vào đây
+            đúng như web (`<SubscriptionWorkspace header={null} />` trong `ShopSectionCard`).
+
+            Nhúng THÂN chứ không nhúng màn: `SubscriptionWorkspace` không mang `<Screen>` nên
+            không có vùng cuộn thứ hai lồng trong vùng cuộn của màn này. Tấm trượt mua gói và
+            luồng nâng cấp là anh em của khối, không phải con của biểu mẫu — native không có
+            thẻ `<form>` để chúng lọt vào, nên hai luồng nút bấm không giẫm lên nhau.
+
+            Không bọc thêm `<Card>`: từng khối bên trong (gói hiện hành, chỗ xe, lượt miễn phí,
+            hoá đơn) đã tự mang thẻ của nó — đó chính là chỗ web phải tắt `framed`.
+          */}
+          {canSeePlan ? (
+            <YStack gap={space.md}>
+              <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.semibold}>
+                {t('sections.plan')}
+              </Text>
+              <SubscriptionWorkspace />
+            </YStack>
+          ) : null}
         </YStack>
       </Screen>
 

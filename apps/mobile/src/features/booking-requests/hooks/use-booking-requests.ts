@@ -11,6 +11,7 @@ import {
   BOOKING_REQUEST_STATUS_ALL,
   BOOKING_REQUEST_TAB_NEEDS_ACTION,
   type ApproveBookingRequestInput,
+  type CancelBookingRequestInput,
   type BookingRequestFilters,
   type BookingRequestListResult,
 } from '../api';
@@ -140,6 +141,29 @@ export function useRejectBookingRequest() {
       bookingRequestsApi.reject(input.id, input.reason),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
+    },
+  });
+}
+
+/**
+ * HUỶ một chuyến đã nhận (ADR 0045 điều 1) — dọn đúng những nhánh mà lượt DUYỆT đã đụng vào.
+ *
+ * Lượt duyệt chiếm lịch, sinh khoản giữ chỗ và đổi số liệu bảng điều khiển; huỷ gỡ lại đúng
+ * từng thứ đó. Chỉ invalidate `bookingRequests` sẽ để lại một vệt bận trên lịch cho một chiếc
+ * xe đã rảnh — và người trực sẽ từ chối khách tiếp theo vì tin vào vệt bận đó.
+ */
+export function useCancelBookingRequest() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: { id: string; body: CancelBookingRequestInput }) =>
+      bookingRequestsApi.cancel(input.id, input.body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.trips.all });
     },
   });

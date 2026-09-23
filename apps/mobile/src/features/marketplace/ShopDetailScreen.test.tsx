@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, waitFor } from '@testing-library/react-native';
 import { ApiClientError } from '@xeprime/api-client';
-import { API_ERROR_CODE, type PublicListing, type PublicShop } from '@xeprime/types';
+import { API_ERROR_CODE, EMPTY_HOST_METRICS, type PublicListing, type PublicShop } from '@xeprime/types';
 import { withIntl } from '@/i18n/test-utils';
 import { marketplaceApi } from './api';
 import { ShopDetailScreen } from './ShopDetailScreen';
@@ -42,10 +42,10 @@ function shop(overrides: Partial<PublicShop> = {}): PublicShop {
     ratingCount: 26,
     vehicleCount: 12,
     completedTripCount: 340,
-    responseRatePercent: 96,
     branchCount: 2,
     serviceProvinceNames: ['Đà Nẵng'],
     deliveryAvailable: true,
+    metrics: EMPTY_HOST_METRICS,
     ...overrides,
   };
 }
@@ -120,7 +120,7 @@ describe('ShopDetailScreen — hồ sơ công khai', () => {
     expect(view.getAllByText('Cho thuê xe Bình Minh').length).toBeGreaterThan(0);
     expect(view.getAllByText('Đà Nẵng').length).toBeGreaterThan(0);
     expect(view.getByText('Gian hàng 12 năm kinh nghiệm.')).toBeTruthy();
-    expect(view.getByText('Địa chỉ: 12 Nguyễn Văn Linh, Hải Châu')).toBeTruthy();
+    expect(view.getByLabelText('Địa chỉ: 12 Nguyễn Văn Linh, Hải Châu')).toBeTruthy();
     /*
       Liên hệ đi qua HỘP THƯ, không qua số điện thoại (ADR 0038): PublicShopDto đã bỏ trường phone.
       Trả nó ra là đăng số riêng của chủ xe lên một trang không cần đăng nhập.
@@ -191,6 +191,6 @@ describe('ShopDetailScreen — xe của gian hàng', () => {
     expect(await view.findByText('Không tải được danh sách xe')).toBeTruthy();
     // Tên, địa chỉ và số điện thoại là thứ khách vào đây tìm — mất danh sách không được mất chúng.
     expect(view.getByText('Cho thuê xe Bình Minh')).toBeTruthy();
-    expect(view.getByText('Địa chỉ: 12 Nguyễn Văn Linh, Hải Châu')).toBeTruthy();
+    expect(view.getByLabelText('Địa chỉ: 12 Nguyễn Văn Linh, Hải Châu')).toBeTruthy();
   });
 });

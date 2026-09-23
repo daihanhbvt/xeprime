@@ -15,6 +15,7 @@ import type {
   PublicListingFacets,
   PublicShopSummary,
   ReviewPage,
+  RecommendedListings,
   ShopReviewPage,
 } from '@xeprime/types';
 
@@ -94,6 +95,25 @@ export const marketplaceApi = {
   },
 
   /**
+   * Khối "Xe phù hợp với bạn" ở trang chủ (ADR 0043).
+   *
+   * Endpoint RIÊNG, không phải `/public/listings` với một cờ: ở đây tỉnh là ƯU TIÊN chứ không
+   * phải bộ lọc — không xe nào bị loại, chỉ đổi thứ tự. Tên tham số cũng khác
+   * (`nearProvinceCode` vs `provinceCode`) đúng để người đọc sau này không hiểu nhầm một cái
+   * thành cái kia.
+   *
+   * `request` chứ không `get`: `meta` mới là thứ cho giao diện biết tỉnh nào đã được ưu tiên
+   * và kết quả có phải bù từ tỉnh khác không — `get` bóc mất nó.
+   */
+  async recommended(params: RecommendedListingParams): Promise<RecommendedListings> {
+    const res = await getApiClient().request<RecommendedListings['data']>(
+      '/public/listings/recommended',
+      { query: recommendedParams(params) },
+    );
+    return { data: res.data, meta: res.meta as unknown as RecommendedListings['meta'] };
+  },
+
+  /**
    * Endpoint trả sẵn phong bì `{ summary, data, meta }` nên KHÔNG dùng `get` (nó bóc mất
    * `summary`); `request` giữ nguyên cả phong bì.
    */
@@ -133,11 +153,19 @@ export const marketplaceApi = {
    * lời được ở tầng gian hàng. Trả nguyên phong bì {summary, data, meta} — `summary` là điểm
    * trung bình của TOÀN BỘ đánh giá, không phải của trang đang xem, nên không suy lại từ `data`.
    */
-  shopReviews(slug: string, limit: number): Promise<ShopReviewPage> {
-    return getApiClient().get<ShopReviewPage>(
+  async shopReviews(slug: string, limit: number): Promise<ShopReviewPage> {
+    /*
+     * CÙNG cái bẫy với `reviews(vehicleId)` ở trên, và lần này đã sập: endpoint tự trả phong
+     * bì `{ summary, data, meta }` nên `ResponseInterceptor` không bọc thêm lớp nào. `get`
+     * bóc đúng một lớp và trả về `data` — tức MẢNG đánh giá — nên nơi gọi destructure ra
+     * `summary` và `data` đều `undefined`, và `data.length` ném "Cannot read property
+     * length of undefined" ngay khi mở trang gian hàng.
+     */
+    const res = await getApiClient().request<ShopReviewPage['data']>(
       `/public/shops/${encodeURIComponent(slug)}/reviews`,
-      { page: 1, limit },
+      { query: { page: 1, limit } },
     );
+    return res as unknown as ShopReviewPage;
   },
 
   /**
@@ -214,4 +242,33 @@ export function deliveryDistance(
     `/public/listings/${encodeURIComponent(vehicleId)}/delivery-distance`,
     { address, ...(pin ? { lat: pin.lat, lng: pin.lng } : {}) },
   );
+}
+
+/** Ngữ cảnh trang chủ gửi lên khối gợi ý. `null` ở đâu nghĩa là không ràng buộc chiều đó. */
+export interface RecommendedListingParams {
+  vehicleType?: string | undefined;
+  serviceType?: string | undefined;
+  /** Tỉnh ƯU TIÊN — đổi thứ tự, KHÔNG lọc. */
+  nearProvinceCode: string | null;
+  pickupAt?: string | undefined;
+  returnAt?: string | undefined;
+  limit: number;
+}
+
+/**
+ * Chuẩn hoá về đúng hình dạng backend đọc — và cũng là KHOÁ CACHE.
+ *
+ * Một hàm cho cả hai việc để khoá và request không thể lệch nhau: hai bản riêng là hai chỗ để
+ * một chiều lọt vào request mà không lọt vào khoá, và khi đó hai ngữ cảnh khác nhau dùng chung
+ * một ô cache.
+ */
+export function recommendedParams(params: RecommendedListingParams): QueryParams {
+  return {
+    vehicleType: params.vehicleType ?? null,
+    serviceType: params.serviceType ?? null,
+    nearProvinceCode: params.nearProvinceCode,
+    pickupAt: params.pickupAt ?? null,
+    returnAt: params.returnAt ?? null,
+    limit: params.limit,
+  };
 }

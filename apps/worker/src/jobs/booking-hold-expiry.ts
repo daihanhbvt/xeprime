@@ -1,14 +1,15 @@
-import { newId, Prisma, type PrismaClient } from '@xeprime/prisma';
+import { newId, Prisma, releasePromoRedemption, type PrismaClient } from '@xeprime/prisma';
 import {
   BOOKING_HOLD_STATUS,
   BOOKING_REQUEST_STATUS,
-  HOLD_MAX_EXTENSIONS,
+  HOLD_PAYMENT_REMINDER_REMAINING_MINUTES,
   HOLD_REFUND_REASON,
   type HoldRefundReason,
   HOLD_REFUND_STATUS,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   OCCUPANCY_SOURCE_TYPE,
+  PROMO_RELEASE_REASON,
   REFUND_SETTLEMENT_MODE,
   WALLET_ENTRY_KIND,
   WALLET_ENTRY_SOURCE,
@@ -18,6 +19,16 @@ import { notifyTenantMembers, notifyUser, recordSystemAudit } from '../lib/notif
 import { formatMoneyVndVi } from '@xeprime/domain';
 
 const BATCH = 200;
+
+/**
+ * Trần số khách được mời đặt lại cho MỘT chỗ vừa trống.
+ *
+ * Mười là "nhiều hơn mọi tình huống thật, ít hơn một trận spam": một khung giờ có hơn mười
+ * người cùng hỏi là dấu hiệu của một chiếc xe rất hot, và lúc đó mười lời mời đã quá đủ để
+ * chỗ được lấp trong vài phút. Phần dư giữ nguyên cột claim NULL nên lượt trống sau vẫn mời
+ * được họ.
+ */
+const REBOOK_INVITE_LIMIT = 10;
 
 /**
  * Hoàn phần khách đã chuyển cho một hold hết hạn khi chưa đủ tiền.
@@ -124,28 +135,46 @@ async function ensureUserWallet(
 }
 
 /**
- * GIA HẠN TỰ ĐỘNG cửa sổ trả tiền — ADR 0039 điều 3.
+ * NHẮC KHÁCH CHUYỂN TIỀN GIỮ CHỖ — hai mốc trong cửa sổ (ADR 0044 điều 3).
  *
- * Thay cho lượt "nhắc sắp hết hạn" của ADR 0032. Lượt nhắc đó sinh ra cho một cửa sổ 2 giờ chia
- * hai chặng 60 phút; với cửa sổ 10 phút nó sẽ bắn ngay khi hold vừa tạo (mọi hold đều nằm trong
- * một chặng tính từ lúc sinh), tức là một thông báo "sắp hết hạn" gửi cùng lúc với thông báo
- * "hãy chuyển khoản". Việc cần làm ở mốc đó nay là CỘNG THÊM THỜI GIAN, không phải hối thúc.
+ * Thay cho lượt tự gia hạn của ADR 0039. Gia hạn tồn tại vì cửa sổ mười phút quá ngắn để một
+ * ngân hàng chậm không làm khách mất chỗ; với cửa sổ hai giờ, việc cần làm ở giữa đường là GỌI
+ * khách, không phải âm thầm nới hạn — nới hạn giữ xe lâu hơn lời hứa mà chủ xe đang nhìn thấy.
  *
  * Hai điểm đáng chú ý:
  *
- *   * Hạn mới tính từ **`now`**, không phải từ `expires_at` cũ. Khách phải thấy đúng mười phút
- *     như lần đầu; cộng vào mốc cũ thì một nhịp worker chạy trễ sẽ trả về một đồng hồ bảy phút
- *     mà không ai giải thích được.
- *   * `extension_count < HOLD_MAX_EXTENSIONS` nằm TRONG `WHERE` của chính lượt `UPDATE`. Đó là
- *     thứ khiến hai worker chạy song song không thể cùng gia hạn một hold: người thua thấy
- *     `count = 0`. CHECK ở DB là lớp gác cuối.
+ *   * Mốc tính theo **phần CÒN LẠI** (`HOLD_PAYMENT_REMINDER_REMAINING_MINUTES`), không theo
+ *     thời gian đã trôi. Hạn trả tiền bị kẹp bởi giờ nhận xe, nên cửa sổ thật của một chuyến sát
+ *     giờ ngắn hơn hai tiếng; một mốc "sau 60 phút" sẽ bắn sau khi hold đã chết.
+ *   * Hold mà cửa sổ CHƯA BAO GIỜ dài tới ngưỡng thì bỏ qua mốc đó. Nếu không, một hold sinh ra
+ *     với 40 phút sẽ nhận ngay lần nhắc "còn 60 phút" cùng lúc với thông báo "hãy chuyển tiền" —
+ *     hai tin ngược nhau trong cùng một giây. So bằng `createdAt` thay vì một cột "cửa sổ gốc":
+ *     `expires_at − created_at` CHÍNH LÀ độ dài thật của cửa sổ, và không có đường nào dời
+ *     `expires_at` nữa nên phép trừ đó vẫn đúng về sau.
+ *
+ * Claim bằng chính câu `UPDATE` (`WHERE payment_reminded_at IS NULL`), nên hai worker chạy song
+ * song hoặc chạy lại sau crash cũng chỉ ra đúng một tin mỗi mốc — cùng kỷ luật
+ * `booking_requests.first_reminded_at`.
  */
-async function extendDueHolds(prisma: PrismaClient, now: Date): Promise<number> {
+type ReminderStage = 'first' | 'final';
+
+async function remindDueHolds(
+  prisma: PrismaClient,
+  now: Date,
+  stage: ReminderStage,
+): Promise<number> {
+  const remainingMinutes =
+    stage === 'first'
+      ? HOLD_PAYMENT_REMINDER_REMAINING_MINUTES.FIRST
+      : HOLD_PAYMENT_REMINDER_REMAINING_MINUTES.FINAL;
+  const thresholdMs = remainingMinutes * 60_000;
+
   const candidates = await prisma.bookingHold.findMany({
     where: {
       status: { in: [BOOKING_HOLD_STATUS.PENDING, BOOKING_HOLD_STATUS.UNDERPAID] },
-      expiresAt: { lte: now },
-      extensionCount: { lt: HOLD_MAX_EXTENSIONS },
+      // Đã vào vùng nhắc nhưng CHƯA hết hạn — hold đã chết thì lượt quét hết hạn lo, không nhắc.
+      expiresAt: { lte: new Date(now.getTime() + thresholdMs), gt: now },
+      ...(stage === 'first' ? { paymentRemindedAt: null } : { finalPaymentRemindedAt: null }),
     },
     orderBy: { expiresAt: 'asc' },
     take: BATCH,
@@ -157,78 +186,143 @@ async function extendDueHolds(prisma: PrismaClient, now: Date): Promise<number> 
       customerUserId: true,
       amount: true,
       paidAmount: true,
-      extensionCount: true,
+      expiresAt: true,
+      createdAt: true,
       vehicle: { select: { name: true } },
-      feePolicy: { select: { holdPaymentWindowMinutes: true } },
     },
   });
 
-  let extended = 0;
+  let sent = 0;
   for (const hold of candidates) {
-    /*
-     * Cửa sổ đọc từ CHÍNH SÁCH ĐÃ GẮN VỚI HOLD, không từ hằng số. Chính sách phí là bất biến
-     * theo phiên bản (ADR 0028 điều 2), nên một hold sinh dưới chính sách cũ phải được gia hạn
-     * bằng đúng cửa sổ của nó — không bị rút ngắn vì sàn vừa đổi số.
-     */
-    const windowMs = hold.feePolicy.holdPaymentWindowMinutes * 60_000;
-    const nextExpiry = new Date(now.getTime() + windowMs);
+    // Cửa sổ của hold này chưa bao giờ dài tới ngưỡng ⇒ mốc đó không tồn tại với nó.
+    if (hold.expiresAt.getTime() - hold.createdAt.getTime() <= thresholdMs) continue;
 
     const done = await prisma.$transaction(async (tx) => {
       const claimed = await tx.bookingHold.updateMany({
         where: {
           id: hold.id,
           status: { in: [BOOKING_HOLD_STATUS.PENDING, BOOKING_HOLD_STATUS.UNDERPAID] },
-          extensionCount: { lt: HOLD_MAX_EXTENSIONS },
+          ...(stage === 'first' ? { paymentRemindedAt: null } : { finalPaymentRemindedAt: null }),
         },
-        data: { expiresAt: nextExpiry, extensionCount: { increment: 1 } },
+        data: stage === 'first' ? { paymentRemindedAt: now } : { finalPaymentRemindedAt: now },
       });
       if (claimed.count === 0) return false;
 
-      await recordSystemAudit(tx, {
-        tenantId: hold.tenantId,
-        action: 'booking_hold.extend',
-        targetType: 'booking_hold',
-        targetId: hold.id,
-        after: {
-          code: hold.code,
-          extension: hold.extensionCount + 1,
-          expiresAt: nextExpiry.toISOString(),
-        },
-      });
-
-      // Khách vãng lai không có ai để báo trong app — vẫn gia hạn, chỉ không gửi gì.
+      // Khách vãng lai không có kho nào để gửi vào — vẫn claim để lượt sau không thử lại mãi.
       if (!hold.customerUserId) return true;
 
       const remaining = hold.amount.sub(hold.paidAmount);
-      const isLast = hold.extensionCount + 1 >= HOLD_MAX_EXTENSIONS;
       await notifyUser(tx, hold.customerUserId, {
         type: NOTIFICATION_TYPE.HOLD_EXPIRING,
-        /*
-         * Nói rõ đây là lần gia hạn thứ mấy và còn lần nào nữa không. Một đồng hồ tự nhảy về
-         * 10:00 mà không giải thích trông như lỗi giao diện, và khách sẽ không biết rằng lần
-         * sau thì chỗ mất thật.
-         */
-        title: isLast ? 'Gia hạn lần cuối — còn 10 phút' : 'Đã gia hạn thêm 10 phút',
+        title: `Còn ${remainingMinutes} phút để thanh toán giữ chỗ`,
         body:
           `${hold.vehicle.name} · còn ${formatMoneyVndVi(remaining.toString())} · ` +
           `nội dung ${hold.code}`,
         tenantId: hold.tenantId,
         targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
         targetId: hold.bookingRequestId,
+        /*
+         * Tin này có ĐỒNG HỒ ĐẾM NGƯỢC, nên nó cũng có hạn dùng: máy tắt nguồn cả buổi rồi bật
+         * lên mà nhận "còn 15 phút để thanh toán" cho một chỗ đã nhả từ lâu là một thông báo
+         * SAI — cùng kỷ luật với lượt nhắc hạn phản hồi của gian hàng.
+         */
+        pushExpiresAt: hold.expiresAt,
       });
       return true;
     });
-    if (done) extended += 1;
+    if (done) sent += 1;
   }
-  return extended;
+  return sent;
 }
 
 /**
- * Hold quá hạn chuyển khoản ⇒ `expired`, yêu cầu ⇒ `hold_expired`, NHẢ LỊCH (R3, ADR 0028).
+ * MỜI ĐẶT LẠI những khách từng bị đóng yêu cầu vì khung giờ đã có người — ADR 0045 điều 4.
+ *
+ * Người thắng không trả tiền đúng hạn, chỗ vừa được nhả, và nhóm duy nhất ta biết chắc là còn
+ * quan tâm chính là những người đã hỏi trước đó. Không nói gì với họ là để một chiếc xe trống
+ * nằm im trong khi có người thật đang muốn thuê nó.
+ *
+ * ## Yêu cầu cũ KHÔNG tự sống lại
+ *
+ * Và đây là phần quan trọng nhất. Hồi sinh một bản ghi đã đóng nghĩa là:
+ *
+ *   · hai yêu cầu cùng sống cho một khung giờ nếu có hai người từng bị đóng — rồi một lượt
+ *     duyệt sinh ra chỗ thứ hai mà constraint chỉ chặn được ở lượt thứ ba;
+ *   · giá và điều khoản đã đóng băng từ lúc gửi có thể đã cũ hàng giờ (ADR 0024);
+ *   · khách nhận một chuyến họ không còn nhớ mình từng hỏi.
+ *
+ * Nên tin này chỉ MỞ ĐƯỜNG: khách bấm vào, thấy chiếc xe còn trống, và gửi một yêu cầu MỚI.
+ *
+ * ## Chống trùng
+ *
+ * Cột claim `slot_reopened_notified_at` trong chính câu `UPDATE` — một chiếc xe có thể hết hạn
+ * nhiều lượt giữ chỗ trong một ngày, và một khách không được nhận cùng một lời mời bốn lần.
+ *
+ * ## Phạm vi
+ *
+ * Chỉ yêu cầu `slot_taken` của CHÍNH chiếc xe vừa nhả, có khung giờ CHỒNG LẤN với khung giờ vừa
+ * trống, và vẫn còn nằm trong tương lai. Không lọc theo thời điểm đóng: một yêu cầu bị đóng ba
+ * ngày trước cho một chuyến tháng sau vẫn là một khách đang chờ.
+ */
+async function inviteRebook(
+  tx: Prisma.TransactionClient,
+  slot: { requestId: string; vehicleId: string; vehicleName: string; tenantId: string },
+): Promise<void> {
+  const freed = await tx.bookingRequest.findUnique({
+    where: { id: slot.requestId },
+    select: { pickupAt: true, returnAt: true },
+  });
+  if (!freed?.pickupAt || !freed.returnAt) return;
+  // Chuyến đã qua thì không còn gì để mời — chỗ trống trong quá khứ không phải một cơ hội.
+  if (freed.returnAt.getTime() <= Date.now()) return;
+
+  const waiting = await tx.bookingRequest.findMany({
+    where: {
+      vehicleId: slot.vehicleId,
+      status: BOOKING_REQUEST_STATUS.SLOT_TAKEN,
+      slotReopenedNotifiedAt: null,
+      customerUserId: { not: null },
+      pickupAt: { lt: freed.returnAt },
+      returnAt: { gt: freed.pickupAt },
+    },
+    orderBy: { createdAt: "asc" },
+    take: REBOOK_INVITE_LIMIT,
+    select: { id: true, customerUserId: true },
+  });
+  if (waiting.length === 0) return;
+
+  /*
+   * Claim TRƯỚC khi gửi, và bằng chính câu `UPDATE`: nếu tin đi trước mà transaction hỏng thì
+   * mốc claim mất và lượt sau mời lại — khách nhận hai lời mời y hệt cho cùng một chiếc xe.
+   */
+  const claimed = await tx.bookingRequest.updateMany({
+    where: { id: { in: waiting.map((w) => w.id) }, slotReopenedNotifiedAt: null },
+    data: { slotReopenedNotifiedAt: new Date() },
+  });
+  if (claimed.count === 0) return;
+
+  for (const row of waiting) {
+    if (!row.customerUserId) continue;
+    await notifyUser(tx, row.customerUserId, {
+      type: NOTIFICATION_TYPE.BOOKING_REQUEST_SLOT_REOPENED,
+      title: "Xe bạn quan tâm đã trống lại",
+      body: `${slot.vehicleName} · khung giờ bạn hỏi vừa trống. Đặt lại để giữ chỗ.`,
+      tenantId: slot.tenantId,
+      targetType: NOTIFICATION_TARGET_TYPE.VEHICLE,
+      targetId: slot.vehicleId,
+    });
+  }
+}
+/**
+ * Hold quá hạn thanh toán ⇒ `expired`, yêu cầu ⇒ `hold_expired`, NHẢ LỊCH (R3, ADR 0028).
  *
  * Cùng luật với `isHoldPastDue` ở @xeprime/types: so MỐC `expires_at`, không so cột status. Đường
  * webhook đã tự từ chối tiền về cho hold quá mốc (`hold_closed`), nên worker chậm một nhịp không
  * mở được lỗ nào — nó chỉ dọn và báo.
+ *
+ * Từ ADR 0044 **không có nhánh gia hạn**: hết hạn là hết, và lượt quét này chỉ có hai việc —
+ * nhắc trước khi hết giờ, rồi dọn khi đã hết. Nhắc TRƯỚC trong cùng một nhịp để một hold vừa
+ * bước vào vùng nhắc không phải chờ tới nhịp sau.
  *
  * Claim bằng `updateMany` có điều kiện trạng thái, từng hold một trong transaction riêng: một
  * hold hỏng (vd occupancy đã bị xoá tay) không kéo cả lô theo. Chạy lại ra 0 dòng — idempotent.
@@ -236,16 +330,14 @@ async function extendDueHolds(prisma: PrismaClient, now: Date): Promise<number> 
 export async function sweepBookingHoldExpiry(
   prisma: PrismaClient,
   now: Date = new Date(),
-): Promise<{ expired: number; extended: number }> {
-  // Gia hạn TRƯỚC: hold vừa được cộng thêm thời gian sẽ không lọt vào lượt quét hết hạn bên dưới.
-  const extended = await extendDueHolds(prisma, now);
+): Promise<{ expired: number; firstReminders: number; finalReminders: number }> {
+  const firstReminders = await remindDueHolds(prisma, now, 'first');
+  const finalReminders = await remindDueHolds(prisma, now, 'final');
 
   const candidates = await prisma.bookingHold.findMany({
     where: {
       status: { in: [BOOKING_HOLD_STATUS.PENDING, BOOKING_HOLD_STATUS.UNDERPAID] },
       expiresAt: { lte: now },
-      // Còn lượt gia hạn thì  vừa dời hạn rồi — chỉ hold đã hết lượt mới chết.
-      extensionCount: { gte: HOLD_MAX_EXTENSIONS },
     },
     orderBy: { expiresAt: 'asc' },
     take: BATCH,
@@ -256,6 +348,8 @@ export async function sweepBookingHoldExpiry(
       bookingRequestId: true,
       customerUserId: true,
       paidAmount: true,
+      // `vehicleId` để mời đặt lại đúng chiếc xe vừa trống (ADR 0045 điều 4).
+      vehicleId: true,
       vehicle: { select: { name: true } },
       bookingRequest: { select: { customerName: true } },
     },
@@ -276,6 +370,18 @@ export async function sweepBookingHoldExpiry(
       await tx.bookingRequest.updateMany({
         where: { id: hold.bookingRequestId, status: BOOKING_REQUEST_STATUS.AWAITING_HOLD },
         data: { status: BOOKING_REQUEST_STATUS.HOLD_EXPIRED },
+      });
+
+      /*
+       * NHẢ lượt mã khuyến mãi (ADR 0046 điều 6) — chuyến được nhận nhưng khách không chuyển
+       * tiền, nên không có ĐƠN nào hình thành và lượt chưa bao giờ được tiêu.
+       *
+       * Cùng hàm dùng chung với API: bản sao thứ hai của phép trừ bộ đếm sẽ trôi khỏi bản gốc,
+       * và khi đó chiến dịch "hết lượt" vĩnh viễn vì những chỗ đã nhả không bao giờ quay về kho.
+       */
+      await releasePromoRedemption(tx, {
+        bookingRequestId: hold.bookingRequestId,
+        reason: PROMO_RELEASE_REASON.HOLD_EXPIRED,
       });
       /*
        * TIỀN ĐÃ CHUYỂN MỘT PHẦN PHẢI QUAY VỀ KHÁCH.
@@ -310,7 +416,7 @@ export async function sweepBookingHoldExpiry(
 
       await notifyTenantMembers(tx, hold.tenantId, {
         type: NOTIFICATION_TYPE.HOLD_EXPIRED,
-        title: 'Khách không chuyển giữ chỗ — chỗ đã nhả',
+        title: 'Khách không thanh toán giữ chỗ — chỗ đã nhả',
         body: `${hold.vehicle.name} · ${hold.bookingRequest.customerName}`,
         tenantId: hold.tenantId,
         targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
@@ -319,16 +425,29 @@ export async function sweepBookingHoldExpiry(
       if (hold.customerUserId) {
         await notifyUser(tx, hold.customerUserId, {
           type: NOTIFICATION_TYPE.HOLD_EXPIRED,
-          title: 'Hết hạn chuyển giữ chỗ',
+          title: 'Hết hạn thanh toán giữ chỗ',
           body: `${hold.vehicle.name} · chỗ đã được mở lại cho khách khác. Bạn có thể đặt lại.`,
           tenantId: hold.tenantId,
           targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
           targetId: hold.bookingRequestId,
         });
       }
+
+      /*
+       * Chỗ vừa trống ⇒ mời những khách từng bị đóng bằng `slot_taken` đặt lại (ADR 0045 điều
+       * 4). Trong CÙNG transaction với lượt nhả lịch: mời người ta đặt một chiếc xe mà lịch của
+       * nó chưa chắc đã được nhả là mời họ vào một lỗi 409.
+       */
+      await inviteRebook(tx, {
+        requestId: hold.bookingRequestId,
+        vehicleId: hold.vehicleId,
+        vehicleName: hold.vehicle.name,
+        tenantId: hold.tenantId,
+      });
+
       return true;
     });
     if (done) expired += 1;
   }
-  return { expired, extended };
+  return { expired, firstReminders, finalReminders };
 }

@@ -10,6 +10,7 @@ import {
   DEPOSIT_PERCENT_MAX,
   DEPOSIT_PERCENT_MIN,
   HOLD_FREE_CANCEL_HOURS,
+  HOLD_MIN_USABLE_WINDOW_MINUTES,
   HOLD_PAYMENT_WINDOW_MINUTES,
   SERVICE_FEE_PERCENT_MAX,
   SERVICE_FEE_PERCENT_MIN,
@@ -66,7 +67,8 @@ export function FeePolicyFormModal({
         .number()
         .required()
         .integer(t('form.validation.integer'))
-        .min(5)
+        // Cùng sàn với `feePolicyActivationBlockers`: dưới ngưỡng này không hold nào phát được QR.
+        .min(HOLD_MIN_USABLE_WINDOW_MINUTES)
         .max(7 * 24 * 60),
       freeCancelHours: yup
         .number()

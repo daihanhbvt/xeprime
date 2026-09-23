@@ -51,6 +51,16 @@ export type NotificationAudience =
 export interface NotificationTargetRef {
   targetType?: string | null | undefined;
   targetId?: string | null | undefined;
+  /**
+   * LOẠI thông báo — chỉ cần cho những đích mà `targetType` một mình không quyết được.
+   *
+   * Hôm nay có đúng một: "xe bạn hỏi đã rảnh lại" (ADR 0045 điều 6) trỏ vào một chiếc XE, nhưng
+   * người nhận là KHÁCH và việc họ cần làm là đặt lại — nên nó đi tới trang xe CÔNG KHAI, chứ
+   * không phải trang quản lý xe như mọi thông báo `vehicle` khác.
+   *
+   * Tuỳ chọn để dòng cũ và nơi gọi chưa truyền vẫn chạy đúng như trước.
+   */
+  type?: string | null | undefined;
 }
 
 /**
@@ -96,6 +106,18 @@ export function notificationDeepLink(
   if (target.targetType === NOTIFICATION_TARGET_TYPE.CONVERSATION) {
     const inbox = audience === NOTIFICATION_AUDIENCE.MANAGE ? '/manage/chat' : '/chat';
     return id ? `${inbox}/${id}` : inbox;
+  }
+
+  /*
+   * "Xe bạn hỏi đã rảnh lại" — đích là trang xe CÔNG KHAI, ở mọi bề mặt.
+   *
+   * Đây là ngoại lệ duy nhất của bảng `targetType` bên dưới, và nó là ngoại lệ có lý do: mọi
+   * thông báo `vehicle` khác nói về xe CỦA người nhận, còn tin này nói về một chiếc xe họ muốn
+   * THUÊ. Không có yêu cầu nào để mở — yêu cầu cũ cố ý ở lại `slot_taken`, vì giá và lịch phải
+   * chốt lại ở hiện tại chứ không hồi sinh từ một bản ghi đã nguội.
+   */
+  if (target.type === NOTIFICATION_TYPE.BOOKING_REQUEST_SLOT_REOPENED) {
+    return id ? `/listings/${id}` : null;
   }
 
   /*

@@ -76,6 +76,7 @@ model User {
   pushDevices                PushDevice[]              @relation("push_device_user")
   reviews                    Review[]                  @relation("review_customer")
   customerBookingRequests    BookingRequest[]          @relation("request_customer")
+  cancellationsActed         BookingCancellation[]     @relation("cancellation_actor")
   customerConversations      Conversation[]            @relation("conversation_customer")
   conversationParticipations ConversationParticipant[] @relation("participant_user")
   sentMessages               Message[]                 @relation("message_sender")
@@ -96,6 +97,8 @@ model User {
   updatedTenantPaymentSettings TenantPaymentSettings[] @relation("tenant_payment_settings_updated_by")
   enteredBankBalances        PlatformBankBalance[]     @relation("platform_bank_balance_entered_by")
   createdTaxWithholdings     TaxWithholding[]          @relation("tax_withholding_creator")
+  createdPromoCodes          PromoCode[]               @relation("promo_code_creator")
+  promoRedemptions           PromoRedemption[]         @relation("promo_redemption_customer")
 
   @@index([status])
   @@index([createdAt])
@@ -184,6 +187,7 @@ model Tenant {
   vehicles                      Vehicle[]
   bookings                      Booking[]
   bookingRequests               BookingRequest[]
+  bookingCancellations          BookingCancellation[]
   drivers                       Driver[]
   occupancies                   VehicleOccupancy[]
   approvalTasks                 ApprovalTask[]
@@ -1559,6 +1563,16 @@ model Booking {
   depositCollectionMode String?   @map("deposit_collection_mode") @db.VarChar(20)
   /// Phiên bản chính sách phí đã áp — để đọc lại snapshot mà không phải suy từ ngày.
   feePolicyId           String?   @map("fee_policy_id") @db.Char(26)
+  /// ── MÃ KHUYẾN MÃI nền tảng — ADR 0046. Đóng băng lúc tạo đơn, không tính lại. ──
+  /// Chiến dịch đã áp. NULL = đơn không dùng mã. `SetNull` là chủ đích ở tầng quan hệ, nhưng
+  /// thực tế không xảy ra: chiến dịch đã phát sinh lượt chỉ xoá MỀM được.
+  promoCodeId           String?   @map("promo_code_id") @db.Char(26)
+  /// `P` — số XePrime TÀI TRỢ cho đơn này.
+  ///
+  /// ⚠️ KHÔNG trừ vào `total_amount`: đó là doanh thu gian hàng và mã này không phải tiền của
+  /// họ. Nó đã được trừ vào `customer_total_amount` (số khách trả) và vào khoản giữ chỗ. Chi
+  /// tiết mã nằm ở `price_snapshot_json.fees.promo`.
+  promoDiscountAmount   Decimal   @default(0) @map("promo_discount_amount") @db.Decimal(14, 2)
   note                  String?   @db.Text
   /// Điều kiện thuê đã đóng băng — COPY từ `booking_requests.rental_terms_json` lúc duyệt; đơn
   /// gian hàng tự lập lấy thiết lập hiệu lực lúc tạo. NULL ở đơn trước 08/09/2026.
@@ -1592,10 +1606,13 @@ model Booking {
   surcharges        BookingSurcharge[]
   depositSettlement BookingDepositSettlement?
   feePolicy         FeePolicy?                @relation(fields: [feePolicyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  promoCode         PromoCode?                @relation(fields: [promoCodeId], references: [id], onDelete: SetNull)
+  promoRedemption   PromoRedemption?
   hold              BookingHold?
   insurancePolicies BookingInsurancePolicy[]
   taxWithholdings   TaxWithholding[]
   supportCases      SupportCase[]
+  cancellation      BookingCancellation?
 
   @@unique([tenantId, code])
   /// Mục tiêu cho composite FK của `vehicle_handovers`: một biên bản bàn giao phải trỏ về
@@ -1699,6 +1716,12 @@ model BookingRequest {
   /// còn NULL — một lần nhắc, dù chạy bao nhiêu instance hay bao nhiêu lượt lặp.
   firstRemindedAt       DateTime? @map("first_reminded_at") @db.Timestamptz(3)
   finalRemindedAt       DateTime? @map("final_reminded_at") @db.Timestamptz(3)
+  /// Đã mời khách ĐẶT LẠI sau khi khung giờ trống trở lại chưa (ADR 0044 điều 8).
+  ///
+  /// Cột CLAIM, không phải nhật ký: một chiếc xe có thể hết hạn nhiều lượt giữ chỗ trong một
+  /// ngày, và một khách không được nhận cùng một lời mời bốn lần. Chỉ có nghĩa với yêu cầu đã
+  /// đóng bằng `slot_taken` — mọi trạng thái khác không bao giờ được mời lại.
+  slotReopenedNotifiedAt DateTime? @map("slot_reopened_notified_at") @db.Timestamptz(3)
   /// Set khi duyệt → trỏ tới Booking đã tạo (1-1). Postgres cho nhiều NULL nên yêu cầu
   /// chưa duyệt không đụng ràng buộc unique.
   bookingId             String?   @unique @map("booking_id") @db.Char(26)
@@ -1716,16 +1739,29 @@ model BookingRequest {
   /// @xeprime/types → RentalTermsSnapshot. Copy nguyên sang `bookings.rental_terms_json` khi duyệt;
   /// chủ xe đổi thiết lập về sau KHÔNG viết lại cột này.
   rentalTerms           Json?     @map("rental_terms_json") @db.JsonB
+  /// ── MÃ KHUYẾN MÃI nền tảng — ADR 0046. Giữ lượt ngay khi khách GỬI yêu cầu. ──
+  /// Chiến dịch khách đã áp. NULL = không dùng mã. Lượt giữ sống ở `promo_redemptions`; cột này
+  /// chỉ để lọc/đọc nhanh mà không join.
+  promoCodeId           String?   @map("promo_code_id") @db.Char(26)
+  /// @xeprime/types → PromoCodeSnapshot. Điều kiện + mức giảm ĐÓNG BĂNG lúc khách áp mã.
+  ///
+  /// Lúc CHỐT GIÁ (duyệt/tự nhận) số giảm được tính lại từ ĐÂY, không từ chiến dịch đang hiệu
+  /// lực hôm nay: admin sửa mã giữa chừng không được viết lại lời hứa với khách, và mã đã bị xoá
+  /// mềm vẫn phải giải thích được (ADR 0046 điều 7).
+  promoSnapshot         Json?     @map("promo_snapshot_json") @db.JsonB
   createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   vehicle        Vehicle         @relation(fields: [vehicleId], references: [id])
   booking        Booking?        @relation("request_booking", fields: [bookingId], references: [id])
+  promoCode      PromoCode?      @relation(fields: [promoCodeId], references: [id], onDelete: SetNull)
+  promoRedemption PromoRedemption?
   customer       User?           @relation("request_customer", fields: [customerUserId], references: [id], onDelete: SetNull)
   /// Composite FK (tenant_customer_id, tenant_id) — chặn gắn chéo gian hàng ở tầng DB.
   tenantCustomer TenantCustomer? @relation(fields: [tenantCustomerId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction, map: "booking_requests_tenant_customer_fkey")
   hold           BookingHold?
+  cancellation   BookingCancellation?
   supportCases   SupportCase[]
 
   @@index([tenantId, status])
@@ -1741,6 +1777,70 @@ model BookingRequest {
   /// hỏi tới chúng, và một index toàn bảng bắt mọi lần ghi phải bảo trì phần vô ích đó.
   @@index([respondBy])
   @@map("booking_requests")
+}
+
+/// MỘT lượt huỷ — ai chịu trách nhiệm, vì lý do gì, ở chặng nào (ADR 0044 điều 7).
+///
+/// ## Vì sao là bảng riêng chứ không phải mấy cột trên `bookings`
+///
+/// Ba lý do, và cả ba đều là lý do nghiệp vụ chứ không phải thẩm mỹ schema:
+///
+///  1. **Một lượt huỷ có thể xảy ra TRƯỚC khi đơn tồn tại.** Chuyến bị rút lại ở chặng
+///     `awaiting_hold` không có `booking` nào để gắn cột vào, nhưng nó vẫn phải vào chỉ số uy
+///     tín. Cột trên `bookings` sẽ bỏ sót đúng nhóm mà chỉ số cần nhất.
+///  2. **Chỉ số công khai đọc nó bằng một phép gộp.** "Tỉ lệ nhận và giữ chuyến" cần đếm theo
+///     `responsible_party` trong một cửa sổ 90 ngày; một bảng hẹp có index đúng chiều trả lời
+///     được câu đó, còn việc suy từ `status` cuối của hai bảng thì sai ở ít nhất ba ca.
+///  3. **Trách nhiệm là dữ liệu ĐÓNG BĂNG.** Đổi luật phân loại về sau không được viết lại lịch
+///     sử của một gian hàng (cùng kỷ luật snapshot ADR 0024), nên nó là một CỘT đã lưu chứ
+///     không phải một biểu thức tính lại lúc đọc.
+///
+/// ## Idempotency
+///
+/// `booking_request_id` và `booking_id` đều UNIQUE. Một yêu cầu/đơn chỉ huỷ được một lần, và
+/// ràng buộc đó nằm ở DB chứ không ở một câu `if` nào: hai lượt bấm huỷ song song, hoặc một
+/// lượt huỷ đua với webhook tiền về, chỉ có đúng một bên ghi được.
+model BookingCancellation {
+  id               String  @id @db.Char(26)
+  tenantId         String  @map("tenant_id") @db.Char(26)
+  /// Yêu cầu bị huỷ. Luôn có với chuyến sinh từ chợ; NULL với đơn gian hàng tự lập.
+  bookingRequestId String? @unique @map("booking_request_id") @db.Char(26)
+  /// Đơn bị huỷ. NULL khi huỷ xảy ra TRƯỚC lúc đơn ra đời (`awaiting_hold`).
+  bookingId        String? @unique @map("booking_id") @db.Char(26)
+
+  /// @xeprime/types → CancellationParty. **SERVER suy từ người thao tác**, client không gửi —
+  /// nếu chủ xe tự chọn được `force_majeure` thì chỉ số uy tín mất nghĩa trong một tuần. Chỉ
+  /// `platform_admin` đặt được `platform`/`force_majeure`. DB canh CHECK.
+  responsibleParty String  @map("responsible_party") @db.VarChar(20)
+  /// @xeprime/types → CancellationReasonCategory — thứ DUY NHẤT người huỷ chọn. DB canh CHECK.
+  reasonCategory   String  @map("reason_category") @db.VarChar(40)
+  /// Chữ giải thích. Bắt buộc khi nhóm là `other` (kiểm ở DTO, không ở DB: một CHECK phụ thuộc
+  /// hai cột ở đây sẽ chặn cả những bản ghi nhập liệu lịch sử mà ta muốn giữ nguyên).
+  reason           String? @db.Text
+  /// @xeprime/types → CancellationStage. LƯU chứ không suy lại: sau khi huỷ, yêu cầu và đơn đều
+  /// mang một trạng thái kết thúc giống nhau bất kể lúc đó tiền đã về hay chưa. DB canh CHECK.
+  stage            String  @db.VarChar(30)
+
+  /// Người bấm. NULL khi worker/hệ thống huỷ.
+  actorUserId String? @map("actor_user_id") @db.Char(26)
+  /// @xeprime/types → AuditActorScope — BỀ MẶT người bấm đứng ở, khác `responsible_party` là
+  /// PHÍA chịu trách nhiệm. Nhân viên gian hàng bấm huỷ: scope `tenant`, party `host`.
+  actorScope  String  @map("actor_scope") @db.VarChar(20)
+
+  /// Có tính vào chỉ số uy tín của gian hàng không — `cancellationCountsAgainstHost(party)` lúc
+  /// ghi. Cột dẫn xuất nhưng ĐÔNG LẠNH: xem lý do 3 ở docblock trên.
+  countsAgainstHost Boolean  @map("counts_against_host")
+  cancelledAt       DateTime @default(now()) @map("cancelled_at") @db.Timestamptz(3)
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bookingRequest BookingRequest? @relation(fields: [bookingRequestId], references: [id], onDelete: Cascade)
+  booking        Booking?        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  actor          User?           @relation("cancellation_actor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  /// Chiều đọc DUY NHẤT của chỉ số uy tín: "gian hàng này, trong 90 ngày, có mấy lượt huỷ do
+  /// chính họ". Index phủ đúng ba cột đó nên phép gộp không chạm bảng.
+  @@index([tenantId, countsAgainstHost, cancelledAt])
+  @@map("booking_cancellations")
 }
 
 // ---------------------------------------------------------------------------
@@ -3604,10 +3704,10 @@ model FeePolicy {
   /// % phí dịch vụ áp cho TUYẾN HOA HỒNG. Tuyến gói luôn 0 (quy tắc trong code, không có cột).
   serviceFeePercent        Decimal @map("service_fee_percent") @db.Decimal(5, 2)
   holdMinAmount            Decimal @default(20000) @map("hold_min_amount") @db.Decimal(14, 2)
-  /// Cửa sổ trả cọc — 10 PHÚT (ADR 0039 điều 2), một chặng của đồng hồ. Trần thật của một
-  /// hold là 30 phút vì worker tự gia hạn tối đa hai lần (`booking_holds.extension_count`).
-  /// Bản chính sách cũ giữ nguyên số của nó — bản `active` là BẤT BIẾN (ADR 0028 điều 2).
-  holdPaymentWindowMinutes Int     @default(10) @map("hold_payment_window_minutes")
+  /// Cửa sổ thanh toán tiền giữ chỗ — **120 PHÚT** (ADR 0044 điều 3), hiển thị thành hai chặng
+  /// 60 phút. Hết hạn là HẾT: không còn lượt tự gia hạn nào, khách được nhắc ở mốc còn 60 và 15
+  /// phút. Bản chính sách cũ giữ nguyên số của nó — bản `active` là BẤT BIẾN (ADR 0028 điều 2).
+  holdPaymentWindowMinutes Int     @default(120) @map("hold_payment_window_minutes")
   freeCancelHours          Int     @default(4) @map("free_cancel_hours")
 
   /// `D` — % CỌC trên giá thuê gốc. NỀN TẢNG đặt, không phải gian hàng (ADR 0033 điều 7).
@@ -3646,6 +3746,152 @@ model FeePolicy {
   taxWithholdings TaxWithholding[]
 
   @@map("fee_policies")
+}
+
+/// MÃ KHUYẾN MÃI do NỀN TẢNG tài trợ — ADR 0046.
+///
+/// ## Vì sao không dùng lại `vehicles.discount_percent`
+///
+/// Đó là khuyến mãi TRỰC TIẾP của chủ xe: họ tự bớt tiền thuê của mình, và `PRICE_ROW.DISCOUNT`
+/// trừ thẳng vào `bookings.total_amount` — doanh thu của chính họ. Mã ở đây ngược lại: XePrime
+/// bỏ tiền, gian hàng nhận đủ. Hai loại giảm giá **cộng dồn được** trên cùng một chuyến (mã tính
+/// trên tiền thuê SAU khuyến mãi trực tiếp), nên chúng bắt buộc phải là hai dòng tiền tách biệt —
+/// gộp vào một cột `discount_amount` là mất vĩnh viễn khả năng trả lời "ai đã bớt tiền cho
+/// chuyến này", và đối soát ngân sách tài trợ không còn căn cứ nào.
+///
+/// ## Chỉ NỀN TẢNG ghi
+///
+/// Không có `tenant_id`, và đó là chủ đích: một mã thuộc về XePrime, không thuộc gian hàng nào.
+/// Đường ghi duy nhất là `PromoCodesService` sau `@PlatformOnly()` + `platform.promo_codes.manage`.
+///
+/// ## Bộ đếm
+///
+/// `reserved_count` là trần thật (giữ + đã chốt); `redeemed_count` chỉ để hiển thị "đã dùng".
+/// Cả hai là CỘT chứ không phải `count()` trên `promo_redemptions` vì trần lượt cuối được gác
+/// bằng một `UPDATE … WHERE reserved_count < total_usage_limit` — câu lệnh đó cần con số nằm
+/// ngay trên hàng đang khoá, không phải một phép gộp bảng khác (ADR 0046 điều 6).
+model PromoCode {
+  id   String @id @db.Char(26)
+  /// ĐÃ CHUẨN HOÁ (`normalizePromoCode`: bỏ khoảng trắng, in hoa) — unique toàn sàn. Chuẩn hoá
+  /// trước khi lưu chứ không so khớp `ILIKE` lúc đọc: unique phải gác được "banmoi" ≡ "BANMOI".
+  code String @unique @db.VarChar(20)
+  name String @db.VarChar(160)
+  /// Mô tả hiển thị cho khách trong danh sách mã khả dụng. NULL = không hiện dòng nào.
+  description String? @db.Text
+
+  /// @xeprime/types → PromoDiscountType (fixed | percent); DB canh CHECK.
+  discountType String @map("discount_type") @db.VarChar(20)
+  /// Số tiền giảm CỐ ĐỊNH. Bắt buộc khác NULL khi `discount_type = 'fixed'` (CHECK).
+  discountAmount Decimal? @map("discount_amount") @db.Decimal(14, 2)
+  /// % giảm. Bắt buộc khác NULL khi `discount_type = 'percent'` (CHECK).
+  discountPercent Int? @map("discount_percent") @db.SmallInt
+  /// Trần số tiền của mã %. NULL = không trần. CHECK: chỉ khác NULL với `percent`.
+  maxDiscountAmount Decimal? @map("max_discount_amount") @db.Decimal(14, 2)
+  /// Sàn TIỀN THUÊ ĐỦ ĐIỀU KIỆN (sau khuyến mãi trực tiếp, chưa gồm phí/bảo hiểm/cọc).
+  minOrderAmount Decimal @default(0) @map("min_order_amount") @db.Decimal(14, 2)
+
+  /// @xeprime/types → PromoAudience (all | new_customer). "Khách hàng mới" đo bằng số đơn ĐÃ
+  /// HÌNH THÀNH của `customer_user_id`, không bằng tên/SĐT khách tự gõ (ADR 0046 điều 5).
+  audience String @default("all") @db.VarChar(30)
+  /// @xeprime/types → PromoVehicleScope (all | car | motorbike).
+  vehicleScope String @default("all") @map("vehicle_scope") @db.VarChar(20)
+  /// @xeprime/types → ServiceType[]. Mảng RỖNG = mọi dịch vụ (không phải "không dịch vụ nào").
+  serviceScope String[] @default([]) @map("service_scope")
+  /// Mã tỉnh/thành áp dụng (`provinces.code`). Mảng RỖNG = toàn quốc. KHÔNG có FK: đây là một
+  /// bộ lọc, và một tỉnh bị gỡ khỏi danh mục không được phép chặn việc đọc lại một mã cũ.
+  provinceCodes String[] @default([]) @map("province_codes") @db.Char(2)
+
+  /// Tổng lượt cho cả chiến dịch. NULL = không giới hạn.
+  totalUsageLimit  Int? @map("total_usage_limit")
+  /// Trần lượt MỖI KHÁCH. NULL = không giới hạn.
+  perCustomerLimit Int? @map("per_customer_limit")
+  /// Lượt ĐANG GIỮ + ĐÃ CHỐT — con số mà trần tổng so sánh.
+  reservedCount    Int  @default(0) @map("reserved_count")
+  /// Lượt đã thành ĐƠN. Chỉ để hiển thị; đơn huỷ về sau KHÔNG trừ lại (ADR 0046 điều 6).
+  redeemedCount    Int  @default(0) @map("redeemed_count")
+
+  startsAt DateTime @map("starts_at") @db.Timestamptz(3)
+  endsAt   DateTime @map("ends_at") @db.Timestamptz(3)
+  /// Công tắc của admin — trạng thái DUY NHẤT được lưu. `upcoming`/`active`/`ending_soon`/
+  /// `expired`/`exhausted` suy ra lúc đọc bằng `promoCodeState()` (xem docblock ở types).
+  isActive Boolean  @default(true) @map("is_active")
+  /// Có hiện trong danh sách mã khả dụng của khách không. `false` = mã chỉ dùng được khi gõ tay
+  /// (mã riêng cho một chiến dịch gửi qua email/SMS).
+  listed   Boolean  @default(true)
+
+  createdBy String?   @map("created_by") @db.Char(26)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  /// XOÁ MỀM. Mã đã phát sinh lượt KHÔNG xoá cứng được — `promo_redemptions.promo_code_id` là
+  /// `RESTRICT`, nên DB chặn thay vì dựa vào code nhớ kiểm (ADR 0046 điều 8).
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  creator     User?             @relation("promo_code_creator", fields: [createdBy], references: [id], onDelete: SetNull)
+  redemptions PromoRedemption[]
+  requests    BookingRequest[]
+  bookings    Booking[]
+
+  /// Danh sách admin: lọc theo công tắc + sắp theo hạn, và quét "sắp hết hạn".
+  @@index([isActive, endsAt])
+  @@index([createdAt])
+  /// Tìm theo mã/tên chương trình ở màn admin (ILIKE '%q%').
+  @@index([code(ops: raw("gin_trgm_ops")), name(ops: raw("gin_trgm_ops"))], map: "promo_codes_search_trgm_idx", type: Gin)
+  @@map("promo_codes")
+}
+
+/// MỘT lượt dùng mã — GIỮ → CHỐT → NHẢ (ADR 0046 điều 6).
+///
+/// ## Vì sao là bảng riêng chứ không phải mấy cột trên `booking_requests`
+///
+/// Trần "mỗi khách N lượt" phải đếm được XUYÊN yêu cầu, và trần tổng phải nhả lại được khi một
+/// yêu cầu chết. Cột trên yêu cầu trả lời được câu thứ nhất bằng một phép quét, nhưng không trả
+/// lời được "lượt này đang giữ hay đã chốt" mà không nhân đôi vòng đời của hai bảng.
+///
+/// ## Idempotency
+///
+/// `booking_request_id` UNIQUE ⇒ **một yêu cầu chỉ có đúng một mã** (ADR 0046 điều 3), và ràng
+/// buộc đó nằm ở DB chứ không ở một câu `if`: hai lượt bấm gửi song song chỉ có một bên ghi được.
+/// `booking_id` cũng UNIQUE — một đơn không thể mang hai lượt mã.
+model PromoRedemption {
+  id          String @id @db.Char(26)
+  promoCodeId String @map("promo_code_id") @db.Char(26)
+  /// Mã đã chuẩn hoá, COPY lúc giữ lượt — bảng lượt sử dụng của admin đọc được mà không join, và
+  /// chuỗi này không đổi kể cả khi chiến dịch bị xoá mềm.
+  code        String @db.VarChar(20)
+  /// Danh tính ĐÃ XÁC THỰC của khách. NOT NULL: khách vãng lai cũng có tài khoản trước khi giữ
+  /// lượt (`resolveOrCreateUserByPhone` sau OTP — ADR 0046 điều 5). Không có danh tính thì không
+  /// có cách nào gác trần mỗi khách.
+  customerUserId String @map("customer_user_id") @db.Char(26)
+  bookingRequestId String  @unique @map("booking_request_id") @db.Char(26)
+  bookingId        String? @unique @map("booking_id") @db.Char(26)
+  /// @xeprime/types → PromoRedemptionStatus (reserved | redeemed | released); DB canh CHECK.
+  status           String  @default("reserved") @db.VarChar(20)
+  /// @xeprime/types → PromoReleaseReason. Bắt buộc khi `status = 'released'` (CHECK).
+  releaseReason    String? @map("release_reason") @db.VarChar(40)
+  /// Số giảm ĐÃ ÁP. Lúc giữ lượt đây là số TẠM (tính trên báo giá lúc gửi); lúc chốt giá nó được
+  /// ghi lại bằng con số đã đóng băng vào snapshot. Hai mốc có thể khác nhau khi gian hàng đổi
+  /// giá giữa chừng, và đó chính là lý do cột này được cập nhật đúng một lần, ở đúng lúc chốt.
+  discountAmount   Decimal @default(0) @map("discount_amount") @db.Decimal(14, 2)
+  /// @xeprime/types → PromoCodeSnapshot. Điều kiện + mức giảm ĐÓNG BĂNG lúc khách áp mã — đủ để
+  /// giải thích giá của một đơn cũ sau khi admin sửa/tắt/xoá mềm chiến dịch (ADR 0024, 0046 §7).
+  snapshot         Json    @map("snapshot_json") @db.JsonB
+
+  reservedAt DateTime  @default(now()) @map("reserved_at") @db.Timestamptz(3)
+  redeemedAt DateTime? @map("redeemed_at") @db.Timestamptz(3)
+  releasedAt DateTime? @map("released_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  /// RESTRICT: chiến dịch đã phát sinh lượt thì chỉ xoá MỀM được (ADR 0046 điều 8).
+  promoCode      PromoCode      @relation(fields: [promoCodeId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  customer       User           @relation("promo_redemption_customer", fields: [customerUserId], references: [id], onDelete: Cascade)
+  bookingRequest BookingRequest @relation(fields: [bookingRequestId], references: [id], onDelete: Cascade)
+  booking        Booking?       @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  /// Trần MỖI KHÁCH đếm theo chiều này (chỉ `reserved`/`redeemed` — `released` không tính).
+  @@index([promoCodeId, customerUserId, status])
+  /// Bảng "lượt sử dụng" của một chiến dịch trong màn admin.
+  @@index([promoCodeId, reservedAt])
+  @@map("promo_redemptions")
 }
 
 /// Khoản GIỮ CHỖ khách chuyển cho XePrime — ADR 0028 điều 6–7 (R3, tuyến hoa hồng).
@@ -3688,6 +3934,17 @@ model BookingHold {
   vehicleInsuranceAmount  Decimal @default(0) @map("vehicle_insurance_amount") @db.Decimal(14, 2)
   personalInsuranceAmount Decimal @default(0) @map("personal_insurance_amount") @db.Decimal(14, 2)
 
+  /// `P` — TÀI TRỢ mã khuyến mãi của XePrime (ADR 0046 điều 4).
+  ///
+  /// Cột này là HIỆU giữa quyền lợi và tiền mặt: CHECK ở migration là
+  /// `D + S + IV + IP − promo_discount_amount = amount`. Bốn dòng trên vẫn là QUYỀN LỢI đầy đủ
+  /// (chủ xe nhận đủ `D`, hãng bảo hiểm nhận đủ `IV + IP`), còn `amount` là con số in lên QR.
+  ///
+  /// CHECK thứ hai kẹp `promo_discount_amount <= deposit_amount + service_fee_amount`: tài trợ
+  /// chỉ được lấn vào tiền của chủ xe (nền tảng bù) và của chính nền tảng, KHÔNG BAO GIỜ vào
+  /// phần giữ hộ hãng bảo hiểm (ADR 0033 điều 4).
+  promoDiscountAmount     Decimal @default(0) @map("promo_discount_amount") @db.Decimal(14, 2)
+
   /// PHÂN BỔ ĐÃ CHỐT — đóng băng lúc `allocateWithinTx` chạy, KHÔNG suy lại lúc đọc (Phase 9).
   ///
   /// Vì sao là cột: doanh thu nền tảng KHÔNG bằng `service_fee_amount` ở nhánh huỷ muộn —
@@ -3715,14 +3972,19 @@ model BookingHold {
   freeCancelUntil   DateTime  @map("free_cancel_until") @db.Timestamptz(3)
   expiresAt         DateTime  @map("expires_at") @db.Timestamptz(3)
   paidAt            DateTime? @map("paid_at") @db.Timestamptz(3)
-  /// Đã bắn nhắc hạn giữa chừng chưa (mốc T+`HOLD_COUNTDOWN_SEGMENT_MINUTES`).
-  /// Cột CLAIM, không phải nhật ký: worker chỉ nhắc khi nó còn NULL, nên chạy lại bao nhiêu
-  /// lần cũng đúng một lần nhắc — cùng kỷ luật `booking_requests.first_reminded_at`.
+  /// Đã bắn lần nhắc THỨ NHẤT chưa — mốc còn `HOLD_PAYMENT_REMINDER_REMAINING_MINUTES.FIRST`
+  /// phút (ADR 0044 điều 3). Cột CLAIM, không phải nhật ký: worker chỉ nhắc khi nó còn NULL, nên
+  /// chạy lại bao nhiêu lần cũng đúng một lần nhắc — cùng kỷ luật `booking_requests.first_reminded_at`.
   paymentRemindedAt DateTime? @map("payment_reminded_at") @db.Timestamptz(3)
-  /// Đã tự gia hạn cửa sổ trả tiền bao nhiêu lần (ADR 0039 điều 3) — trần `HOLD_MAX_EXTENSIONS`.
-  /// Là BỘ ĐẾM chứ không phải cờ: worker cộng `expires_at` thêm một cửa sổ và tăng cột này
-  /// trong cùng một `updateMany` có điều kiện, nên hai worker chạy song song không thể gia hạn
-  /// quá số lần cho phép. Cũng là số liệu để biết mười phút có đủ không.
+  /// Cột CLAIM của lần nhắc CUỐI (mốc còn `…REMAINING_MINUTES.FINAL` phút).
+  ///
+  /// Cột thứ hai chứ không phải một bộ đếm: hai mốc có câu chữ khác nhau và phải bắn độc lập,
+  /// còn một bộ đếm thì không nói được mốc nào đã bắn khi worker bỏ lỡ mốc đầu (máy dừng, hoặc
+  /// hold sinh ra khi cửa sổ đã ngắn hơn 60 phút vì bị kẹp bởi giờ nhận xe).
+  finalPaymentRemindedAt DateTime? @map("final_payment_reminded_at") @db.Timestamptz(3)
+  /// **LEGACY (ADR 0039 điều 3, đã bị ADR 0044 ghi đè)** — số lần cửa sổ trả tiền từng được tự
+  /// cộng thêm. Không còn đường nào ghi vào cột này: cửa sổ nay là 120 phút và hết hạn là hết.
+  /// Giữ lại để đọc được lịch sử các hold sinh trong thời gian ADR 0039 còn hiệu lực.
   extensionCount    Int       @default(0) @map("extension_count")
   releasedAt        DateTime? @map("released_at") @db.Timestamptz(3)
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)

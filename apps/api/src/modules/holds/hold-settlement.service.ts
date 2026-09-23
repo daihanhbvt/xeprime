@@ -513,6 +513,7 @@ export class HoldSettlementService {
         serviceFeeAmount: true,
         vehicleInsuranceAmount: true,
         personalInsuranceAmount: true,
+        promoDiscountAmount: true,
         priceSnapshotJson: true,
       },
     });
@@ -530,6 +531,14 @@ export class HoldSettlementService {
         serviceFee: hold.serviceFeeAmount.toFixed(0),
         vehicleInsurance: hold.vehicleInsuranceAmount.toFixed(0),
         personalInsurance: hold.personalInsuranceAmount.toFixed(0),
+        /*
+         * TÀI TRỢ mã khuyến mãi (ADR 0046 điều 4) — đọc từ CỘT, không suy từ snapshot.
+         *
+         * Bốn dòng trên là QUYỀN LỢI; con số này là phần nền tảng đã bù, và tổng phân bổ phải
+         * khớp TIỀN MẶT (`amount`) chứ không khớp quyền lợi. Thiếu nó ở đây là phân bổ nhiều hơn
+         * số tiền hold từng cầm, và `booking_holds_settled_allocation_check` sẽ chặn đúng chỗ đó.
+         */
+        promoDiscount: hold.promoDiscountAmount.toFixed(0),
       },
       kind,
       taxAmount,

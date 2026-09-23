@@ -958,6 +958,24 @@ function InheritedPolicyCard({
                   : t('deliveryOff')
               }
             />
+            {/*
+              Hai trường đi CẶP ở backend, nên chỉ cần một trường có mặt là đang có hạn mức.
+              Đọc cả hai vẫn rẻ hơn việc hiện "Không giới hạn" cho một chiếc xe thật ra có hạn
+              mức — dòng đó là thứ chủ xe tin để quyết định có ghi đè chính sách hay không.
+            */}
+            <DataRow
+              labelWide
+              label={t('mileage')}
+              value={
+                policy.includedDistanceKmPerDay != null &&
+                policy.excessDistanceFeePerKm != null
+                  ? t('mileageValue', {
+                      km: fmt.km(policy.includedDistanceKmPerDay),
+                      fee: fmt.money(String(policy.excessDistanceFeePerKm)),
+                    })
+                  : t('mileageOff')
+              }
+            />
             <DataRow
               labelWide
               label={t('overtime')}

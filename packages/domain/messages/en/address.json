@@ -23,8 +23,14 @@
     "pickHint": "Tap the map to drop a pin.",
     "adjustHint": "Drag the pin or tap the map to move it.",
     "readOnlyHint": "This map is view-only. Pick a different suggested place if the pin is wrong.",
+    "pinHint": "Pick a place in the field above to pin the exact delivery spot.",
     "unavailable": "The map could not be shown. The address still saves normally.",
-    "openInMaps": "Open in OpenStreetMap"
+    "openInMaps": "Open in OpenStreetMap",
+    "sheetTitle": "Drop the location pin",
+    "editPin": "Adjust the pin on the map",
+    "useThisPoint": "Use this location",
+    "openInGoogleMaps": "Open in Google Maps",
+    "tapToEdit": "Tap the map to adjust the location."
   },
   "review": {
     "badge": "Address needs updating",

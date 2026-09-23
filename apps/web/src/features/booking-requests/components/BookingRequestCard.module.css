@@ -677,3 +677,22 @@
   line-height: var(--xp-line-height-body-sm);
   text-align: right;
 }
+
+/*
+ * Chặng "đã nhận, chờ khách trả tiền": một câu tình trạng + lối thoát HUỶ.
+ *
+ * Xếp dọc và canh phải để khớp đúng vị trí mà hàng nút quyết định vẫn đứng ở các thẻ khác —
+ * mắt người trực quét cả cột phải của hộp thư, và một cụm nhảy sang trái ở đúng chặng này sẽ
+ * đọc như một thẻ bị vỡ bố cục.
+ */
+.awaitingHold {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+/* Nút link đã có padding ngang của AntD — bỏ đi để nó thẳng mép phải với câu ở trên. */
+.cancelButton {
+  padding-inline: 0;
+}

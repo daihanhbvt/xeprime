@@ -65,20 +65,24 @@ export function RentalRangeField({
           end: point(value.returnAt),
         })}
       >
+        {/*
+          Cùng ngôn ngữ với ô địa điểm ngay trên (nền trắng + viền `borderInput`, icon màu
+          thương hiệu) — cả hai là ô nhập của cùng một thẻ tìm kiếm, `SearchCard.tsx`.
+        */}
         <XStack
           ai="center"
           gap={space.xs}
-          bg={colors.surfaceMuted}
+          bg={colors.surface}
           br={radius.md}
-          bw={1}
-          bc={colors.borderSubtle}
+          bw={1.5}
+          bc={colors.borderInput}
           px={space.sm}
-          minHeight={sizing.touchTarget}
+          minHeight={sizing.touchTarget - space.xs}
         >
-          <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
+          <Ionicons name="calendar-outline" size={16} color={colors.primaryActive} />
           <Text
             col={colors.text}
-            fos={fontSize.bodySm}
+            fos={fontSize.body}
             fow={fontWeight.medium}
             numberOfLines={1}
             flexShrink={1}
@@ -88,7 +92,7 @@ export function RentalRangeField({
           <Ionicons name="arrow-forward" size={12} color={colors.textMuted} />
           <Text
             col={colors.text}
-            fos={fontSize.bodySm}
+            fos={fontSize.body}
             fow={fontWeight.medium}
             numberOfLines={1}
             flexShrink={1}

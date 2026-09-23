@@ -1,0 +1,238 @@
+{
+  "field": {
+    "label": "Promo code",
+    "placeholder": "Enter promo code",
+    "apply": "Apply",
+    "remove": "Remove",
+    "removeLabel": "Remove the applied promo code",
+    "checking": "Checking code…",
+    "browse": "See available codes",
+    "hint": "Funded by XePrime. The discount comes off what you pay upfront and does not reduce what the host receives.",
+    "hintLabel": "About promo codes",
+    "applied": "Code {code} applied",
+    "clamped": "This code discounts at most {amount} for this trip.",
+    "unavailableForTrip": "This trip has no confirmed price yet, so a promo code cannot be applied.",
+    "revalidating": "Rental details changed — rechecking the code…",
+    "dropped": "Code {code} no longer applies to the updated trip. The total has been refreshed."
+  },
+  "picker": {
+    "title": "Promo codes",
+    "manualLabel": "Enter promo code",
+    "listTitle": "Available codes",
+    "empty": "No promo codes are available for this trip.",
+    "error": "Could not load the code list. You can still type a code manually.",
+    "apply": "Apply",
+    "applied": "In use",
+    "close": "Close",
+    "minOrder": "Minimum {amount}",
+    "maxDiscount": "Up to {amount}",
+    "expiresIn": "Expires in {days} days",
+    "expiresToday": "Expires today",
+    "discountFixed": "{amount} off",
+    "discountPercent": "{percent}% off",
+    "savesAmount": "Saves {amount}"
+  },
+  "reason": {
+    "not_found": "This promo code does not exist",
+    "disabled": "This promo code is paused",
+    "not_started": "This code is not active yet",
+    "expired": "This code has expired",
+    "exhausted": "This code has run out of uses",
+    "customer_limit_reached": "You have used all your allowance for this code",
+    "audience_mismatch": "This code is for first-time customers only",
+    "min_order_not_met": "This trip is below the code's minimum value",
+    "vehicle_scope_mismatch": "This code does not apply to this vehicle type",
+    "service_scope_mismatch": "This code does not apply to this service",
+    "province_mismatch": "This code does not apply in this area",
+    "no_online_payment": "This trip has no upfront payment, so a code cannot be applied",
+    "discount_below_floor": "This trip is too small to apply a code",
+    "requires_identity": "Verify your phone in the next step to use this code"
+  },
+  "admin": {
+    "title": "Promo codes",
+    "subtitle": "Create, manage and track promo codes for car rentals.",
+    "create": "Create promo code",
+    "stats": {
+      "total": "Total codes",
+      "totalDelta": "{count} new in the last 30 days",
+      "active": "Active",
+      "endingSoon": "Ending soon",
+      "endingSoonHint": "Within the next {days} days",
+      "expired": "Expired"
+    },
+    "filter": {
+      "search": "Search code or campaign…",
+      "discountType": "Discount type",
+      "state": "Status",
+      "dateRange": "Active period",
+      "all": "All",
+      "reset": "Reset"
+    },
+    "pagination": {
+      "codes": "{count} codes",
+      "redemptions": "{count} redemptions"
+    },
+    "column": {
+      "code": "Code",
+      "name": "Campaign",
+      "discountType": "Discount type",
+      "value": "Value",
+      "conditions": "Conditions",
+      "window": "Active period",
+      "usage": "Used",
+      "state": "Status",
+      "sponsored": "Sponsored",
+      "actions": "Actions"
+    },
+    "value": {
+      "fixed": "{amount}",
+      "percent": "{percent}%",
+      "maxDiscount": "Up to {amount}",
+      "unlimited": "Unlimited"
+    },
+    "conditions": {
+      "minOrder": "Minimum {amount}",
+      "noMinOrder": "No minimum",
+      "newCustomer": "First-time customers",
+      "vehicleScope": "{scope} only",
+      "serviceScope": "Services: {list}",
+      "provinces": "{count} provinces",
+      "allProvinces": "Nationwide",
+      "perCustomer": "{count} per customer"
+    },
+    "usage": {
+      "value": "{used} / {limit}",
+      "unlimited": "{used} / unlimited",
+      "reserved": "{count} on hold"
+    },
+    "action": {
+      "edit": "Edit",
+      "duplicate": "Duplicate",
+      "enable": "Enable",
+      "disable": "Pause",
+      "redemptions": "View redemptions",
+      "delete": "Delete"
+    },
+    "empty": {
+      "title": "No promo codes yet",
+      "hint": "Create the first code to run an offer for renters."
+    },
+    "emptyFiltered": "No codes match these filters.",
+    "error": "Could not load promo codes.",
+    "confirm": {
+      "disableTitle": "Pause code {code}?",
+      "disableBody": "Customers will not be able to apply it to new trips. Holds already taken stay honoured until their request ends.",
+      "enableTitle": "Re-enable code {code}?",
+      "enableBody": "The code becomes active again within its configured period.",
+      "deleteTitle": "Delete code {code}?",
+      "deleteBody": "The code disappears from every surface and can no longer be applied. Redemption history and the prices of bookings that used it stay intact.",
+      "ok": "Confirm",
+      "cancel": "Cancel"
+    },
+    "toast": {
+      "created": "Code {code} created",
+      "updated": "Code {code} saved",
+      "enabled": "Code {code} enabled",
+      "disabled": "Code {code} paused",
+      "duplicated": "Copy {code} created — it is paused, review it before enabling",
+      "deleted": "Code {code} deleted"
+    },
+    "form": {
+      "createTitle": "Create promo code",
+      "editTitle": "Edit code {code}",
+      "description": "Create a discount code for car rentals. Fields marked * are required.",
+      "section": {
+        "basic": "Basics",
+        "discount": "Discount type",
+        "conditions": "Conditions",
+        "window": "Active period",
+        "state": "Status"
+      },
+      "code": "Promo code",
+      "codeHint": "Uppercase letters and digits only. For example: BANMOI, XEPRIME30",
+      "name": "Campaign name",
+      "descriptionField": "Description",
+      "descriptionHint": "Shown to customers in the available-codes list.",
+      "typeFixed": "Fixed amount (VND)",
+      "typeFixedHint": "Take a fixed amount off",
+      "typePercent": "Percentage",
+      "typePercentHint": "Take a percentage off the rental",
+      "discountAmount": "Discount amount",
+      "discountPercent": "Discount percentage",
+      "maxDiscount": "Maximum discount (optional)",
+      "maxDiscountPlaceholder": "No cap",
+      "minOrder": "Minimum rental value",
+      "minOrderPlaceholder": "No minimum",
+      "vehicleScope": "Applies to",
+      "serviceScope": "Services",
+      "serviceScopeAll": "All services",
+      "audience": "Audience",
+      "provinces": "Areas",
+      "provincesAll": "All provinces",
+      "totalLimit": "Total uses",
+      "totalLimitPlaceholder": "Unlimited",
+      "perCustomerLimit": "Uses per customer",
+      "perCustomerLimitPlaceholder": "Unlimited",
+      "startsAt": "Start date",
+      "endsAt": "End date",
+      "isActive": "Activate now",
+      "isActiveHint": "The code becomes active within the selected period",
+      "listed": "Show in the customer's code list",
+      "listedHint": "Turn off so the code only works when typed manually",
+      "submitCreate": "Create promo code",
+      "submitEdit": "Save changes",
+      "cancel": "Cancel",
+      "lockedNotice": "This code has been used. Its discount, conditions and scope can no longer change — use Duplicate if you need a different set.",
+      "redeemedFinalNotice": "A booking that was created and then cancelled does NOT return the code use.",
+      "preview": {
+        "title": "Promo code preview",
+        "subtitle": "This is how the code appears to customers",
+        "scopeAll": "Applies to all vehicles",
+        "scopeCar": "Applies to cars",
+        "scopeMotorbike": "Applies to motorbikes",
+        "window": "From {from} to {to}",
+        "notesTitle": "Notes",
+        "noteType": "A code can discount a fixed amount or a percentage.",
+        "noteLimit": "You can cap total uses and set conditions.",
+        "noteVisibility": "Customers only see the code while it is valid.",
+        "noteToggle": "You can pause or delete a code at any time.",
+        "noteSponsored": "XePrime funds the discount — the host still receives the full rental."
+      }
+    },
+    "validation": {
+      "codeRequired": "Enter a promo code",
+      "codeFormat": "Letters and digits only, {min}–{max} characters",
+      "nameRequired": "Enter a campaign name",
+      "amountRequired": "Enter a discount amount",
+      "amountRange": "The discount must be above 0 and at most {max}",
+      "percentRange": "The percentage must be between {min} and {max}",
+      "maxDiscountPositive": "The maximum discount must be above 0",
+      "minOrderPositive": "The minimum value cannot be negative",
+      "startRequired": "Pick a start date",
+      "endRequired": "Pick an end date",
+      "endAfterStart": "The end date must be after the start date",
+      "limitMin": "A use limit must be 1 or more"
+    },
+    "redemptions": {
+      "title": "Redemptions for {code}",
+      "empty": "This code has no redemptions yet.",
+      "column": {
+        "customer": "Customer",
+        "status": "Status",
+        "discount": "Discount",
+        "booking": "Booking",
+        "reservedAt": "Held",
+        "redeemedAt": "Used"
+      },
+      "noBooking": "No booking yet",
+      "releaseReason": {
+        "request_rejected": "Host declined",
+        "request_expired": "Response window passed",
+        "request_cancelled": "Customer cancelled",
+        "slot_taken": "Slot taken by another customer",
+        "hold_expired": "Not paid in time",
+        "no_longer_eligible": "No longer eligible at price lock"
+      }
+    }
+  }
+}

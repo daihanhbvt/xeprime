@@ -9,6 +9,7 @@ import {
   resolveHoldAllocation,
   type FeePolicySnapshot,
 } from './fee-policy';
+import { HOLD_MIN_USABLE_WINDOW_MINUTES } from './holds';
 import { BILLING_MODE } from './status/billing';
 
 /**
@@ -409,5 +410,28 @@ describe('feePolicyActivationBlockers — ADR 0028 điều 4–5, ADR 0033', () 
     expect(
       feePolicyActivationBlockers({ ...PILOT, freeCancelHours: 1, holdPaymentWindowMinutes: 120 }),
     ).toContain('free_cancel_shorter_than_payment_window');
+  });
+
+  /**
+   * Cửa sổ NGẮN HƠN ngưỡng dùng được ⇒ chặn ngay ở cổng kích hoạt.
+   *
+   * `createForApprovedRequestWithinTx` từ chối mọi hold còn ít hơn `HOLD_MIN_USABLE_WINDOW_MINUTES`
+   * phút, và `expiresAt − now` không bao giờ vượt quá cửa sổ của chính sách. Một chính sách dưới
+   * ngưỡng vì thế không phát nổi một mã QR nào — cả sàn ngừng nhận đơn, im lặng. Ca này là cái
+   * chặn để hai hằng số không trôi khỏi nhau.
+   */
+  it('cửa sổ trả tiền ngắn hơn ngưỡng dùng được ⇒ chặn', () => {
+    expect(
+      feePolicyActivationBlockers({
+        ...PILOT,
+        holdPaymentWindowMinutes: HOLD_MIN_USABLE_WINDOW_MINUTES - 1,
+      }),
+    ).toContain('hold_window_out_of_range');
+    expect(
+      feePolicyActivationBlockers({
+        ...PILOT,
+        holdPaymentWindowMinutes: HOLD_MIN_USABLE_WINDOW_MINUTES,
+      }),
+    ).not.toContain('hold_window_out_of_range');
   });
 });

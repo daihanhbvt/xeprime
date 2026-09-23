@@ -55,11 +55,14 @@ export function BookingRequestDetailScreen({
   request,
   onApprove,
   onReject,
+  onCancel,
   onClose,
 }: {
   request: BookingRequestItem;
   onApprove: (request: BookingRequestItem) => void;
   onReject: (request: BookingRequestItem) => void;
+  /** HUỶ một chuyến ĐÃ NHẬN (ADR 0045 điều 1) — chỉ có ở `awaiting_hold`. */
+  onCancel: (request: BookingRequestItem) => void;
   onClose: () => void;
 }) {
   const t = useTranslations('BookingRequests');
@@ -75,7 +78,7 @@ export function BookingRequestDetailScreen({
    * HAI chặng cần gian hàng quyết định, và chặng thứ hai là chặng TỐN KÉM hơn hẳn:
    *
    *   · `pending_host_approval` — khách mới hỏi, chưa ai mất gì;
-   *   · `hold_paid` (ADR 0039)  — khách ĐÃ TRẢ TIỀN và chỗ xe đang bị giữ. Bỏ sót chặng này là
+   *   · `hold_paid` (LEGACY ADR 0039) — khách ĐÃ TRẢ TIỀN và chỗ xe đang bị giữ. Bỏ sót chặng này là
    *     bày ra một màn ghi "chờ bạn duyệt" mà không có nút nào để duyệt, trong khi tiền của
    *     khách nằm ở XePrime và đồng hồ phản hồi đang chạy tới lượt hoàn tự động.
    */
@@ -487,6 +490,19 @@ export function BookingRequestDetailScreen({
             <Text col={colors.textMuted} fos={fontSize.bodySm}>
               {t('deadline.pastDueHint')}
             </Text>
+          ) : request.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD && canApprove ? (
+            /*
+             * Chuyến đã nhận, đang chờ khách trả tiền: việc chính là ĐỢI, nên chỗ này chỉ có một
+             * lối thoát. Nút nhỏ, nền nhạt — người mở chi tiết ra hiếm khi để huỷ; họ mở để đọc
+             * lại lịch trình rồi gọi cho khách (ADR 0045 điều 1).
+             */
+            <Button
+              label={t('actions.cancel')}
+              icon="close-circle-outline"
+              variant="danger"
+              size="sm"
+              onPress={() => onCancel(request)}
+            />
           ) : null}
 
           <Button label={tCommon('close')} variant="ghost" onPress={onClose} />

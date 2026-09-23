@@ -11,7 +11,8 @@ import {
   BOOKING_STATUS,
   DEPOSIT_COLLECTION_MODE,
   FEE_POLICY_STATUS,
-  HOLD_MAX_EXTENSIONS,
+  NOTIFICATION_TYPE,
+  HOLD_PAYMENT_WINDOW_MINUTES,
   HOLD_REFUND_REASON,
   HOLD_REFUND_STATUS,
   OCCUPANCY_SOURCE_TYPE,
@@ -46,6 +47,7 @@ import { releaseWalletObligations } from './helpers/wallet-cleanup';
  * côi hoặc cộng đôi"*. Mỗi khối dưới đây là một case của gate đó:
  *
  *  1. Thiếu tiền → KHÔNG tạo đơn, giữ mã để chuyển bù; đủ → đơn ra đời trong CÙNG transaction.
+ *     Hold chỉ sinh SAU khi chuyến đã được nhận (ADR 0044), nên `decided_at` luôn có ở dữ liệu mới.
  *  2. Webhook gửi lại / hai giao dịch song song → đúng MỘT đơn, tiền không cộng đôi.
  *  3. Chuyển THỪA → ghi yêu cầu hoàn phần dư (giữ chỗ không có "kỳ sau" — ADR 0022 điều 5).
  *  4. Hết hạn → nhả lịch, không ai giữ chỗ của người khác.
@@ -164,6 +166,11 @@ function snapshotOf(): BookingPriceSnapshot {
       // Chính sách của spec này để cọc = 0 ⇒ toàn bộ khoản giữ chỗ là phí dịch vụ, đúng như
       // trước ADR 0032. Công thức D + S + IV + IP được khoá ở fee-policy.test.ts.
       depositAmount: '0',
+      // Không có mã khuyến mãi ⇒ `grossOnlineAmount === onlineAmount` (ADR 0046). Spec này khoá
+      // vòng đời hold, nên nó cố ý giữ trạng thái "không tài trợ" làm đường đối chiếu.
+      grossOnlineAmount: HOLD_AMOUNT,
+      promoDiscountAmount: '0',
+      promo: null,
       onlineAmount: HOLD_AMOUNT,
       payAtPickupAmount: BASE,
       taxAmount: '0',
@@ -367,7 +374,7 @@ const maybe = (name: string, fn: () => Promise<void>) =>
     await fn();
   });
 
-describe('Tạo hold khi duyệt — chiếm lịch, chưa có đơn', () => {
+describe('Nhận chuyến ⇒ tạo hold: chiếm lịch, phát QR, CHƯA có đơn (ADR 0044)', () => {
   maybe('hold `pending` + CHIẾM LỊCH ngay, chưa có đơn thuê nào', async () => {
     const { requestId, holdId } = await makeHold();
 
@@ -994,8 +1001,226 @@ describe('Tiền về khi đích đã đóng — không nửa vời, không mồ
  * giá tạm tính — ADR 0039 điều 4 giữ nguyên thứ tự cũ cho hai ca đó). Ở đây hold sinh lúc khách
  * GỬI, nên `decided_at` còn trống và tiền về KHÔNG mở đơn ngay.
  */
-describe('Cọc trước, duyệt sau — ADR 0039', () => {
-  /** Yêu cầu chờ tiền mà CHƯA ai quyết định — đúng hình dạng `trySecureHold` tạo ra. */
+/**
+ * CỬA SỔ THANH TOÁN — nhắc hai lần, rồi chết. Không gia hạn (ADR 0044 điều 3).
+ *
+ * Hold ở spec này dùng chính sách cửa sổ 1440 phút (xem `snapshotOf`), nên mọi ca dưới đây dời
+ * `expires_at` bằng tay để mô phỏng thời gian trôi thay vì phải chờ thật.
+ */
+describe('Cửa sổ thanh toán — nhắc rồi hết hạn, không gia hạn (ADR 0044)', () => {
+  /**
+   * Mô phỏng "đồng hồ đã chạy gần hết cửa sổ": còn `minutesLeft` phút, trên một cửa sổ dài
+   * `windowMinutes` phút.
+   *
+   * Dời CẢ `created_at` chứ không chỉ `expires_at`, vì worker đọc hiệu của hai cột để biết cửa
+   * sổ của hold này có bao giờ dài tới ngưỡng nhắc hay không. Chỉ dời `expires_at` thì một hold
+   * "còn 45 phút" trông như một hold có cửa sổ 45 phút, và mốc nhắc 60 phút bị bỏ qua — đúng
+   * nhánh mà ca "cửa sổ ngắn hơn ngưỡng" bên dưới kiểm riêng.
+   */
+  async function setRemaining(
+    holdId: string,
+    minutesLeft: number,
+    windowMinutes = HOLD_PAYMENT_WINDOW_MINUTES,
+  ): Promise<void> {
+    const now = Date.now();
+    await prisma.bookingHold.update({
+      where: { id: holdId },
+      data: {
+        createdAt: new Date(now - (windowMinutes - minutesLeft) * 60_000),
+        expiresAt: new Date(now + minutesLeft * 60_000),
+      },
+    });
+  }
+
+  maybe('mốc còn 60 phút: nhắc ĐÚNG MỘT lần, hold vẫn sống', async () => {
+    const { holdId } = await makeHold(30);
+    await setRemaining(holdId, 45);
+
+    /*
+     * Worker quét TOÀN SÀN, và jest chạy bốn spec song song trên cùng một database — nên con số
+     * trả về không bao giờ là một khẳng định chắc chắn. Thứ chắc chắn là TRẠNG THÁI của chính
+     * hold này và số thông báo của CHÍNH tenant này; mọi ca dưới đây khẳng định theo hai thứ đó.
+     */
+    await sweepBookingHoldExpiry(prisma, new Date());
+
+    const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+    expect(hold.status).toBe(BOOKING_HOLD_STATUS.PENDING);
+    expect(hold.paymentRemindedAt).not.toBeNull();
+    // Hạn KHÔNG bị dời: nhắc là nhắc, không phải gia hạn ngầm.
+    expect(hold.expiresAt.getTime()).toBeGreaterThan(Date.now());
+    expect(hold.extensionCount).toBe(0);
+
+    // Chạy lại KHÔNG nhắc lần hai — cột claim là thứ giữ cho thông báo còn đáng tin.
+    await sweepBookingHoldExpiry(prisma, new Date());
+    expect(
+      await prisma.notification.count({
+        where: { tenantId, type: NOTIFICATION_TYPE.HOLD_EXPIRING },
+      }),
+    ).toBe(1);
+  });
+
+  maybe('mốc còn 15 phút: nhắc lần CUỐI, độc lập với lần đầu', async () => {
+    const { holdId } = await makeHold(31);
+    await setRemaining(holdId, 10);
+
+    // Cùng một nhịp bắn cả hai mốc: hold này đã trôi qua cả hai mà chưa được nhắc lần nào.
+    await sweepBookingHoldExpiry(prisma, new Date());
+
+    const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+    expect(hold.paymentRemindedAt).not.toBeNull();
+    expect(hold.finalPaymentRemindedAt).not.toBeNull();
+
+    await sweepBookingHoldExpiry(prisma, new Date());
+    expect(
+      await prisma.notification.count({
+        where: { tenantId, type: NOTIFICATION_TYPE.HOLD_EXPIRING },
+      }),
+    ).toBe(2);
+  });
+
+  /**
+   * Cửa sổ bị KẸP bởi giờ nhận xe thì mốc nhắc "còn 60 phút" không tồn tại với hold đó.
+   *
+   * Không có cái chặn này, một chuyến sát giờ sẽ nhận thông báo "còn 60 phút để thanh toán"
+   * trong cùng giây với thông báo "hãy thanh toán tiền giữ chỗ" — hai tin ngược nhau.
+   */
+  maybe('cửa sổ ngắn hơn ngưỡng ⇒ KHÔNG nhắc mốc đó', async () => {
+    // Nhận xe sau 40 phút ⇒ hạn bị kẹp về giờ nhận, cửa sổ thật chỉ 40 phút < 60.
+    const { holdId } = await makeHold(40 / (24 * 60));
+
+    await sweepBookingHoldExpiry(prisma, new Date());
+
+    const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+    expect(hold.paymentRemindedAt).toBeNull();
+
+    // Nhưng mốc "còn 15 phút" thì vẫn tới được — nó nằm trong cửa sổ 40 phút này.
+    await setRemaining(holdId, 10, 40);
+    await sweepBookingHoldExpiry(prisma, new Date());
+    const reminded = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+    expect(reminded.finalPaymentRemindedAt).not.toBeNull();
+    expect(reminded.paymentRemindedAt).toBeNull();
+  });
+
+  maybe('quá hạn: hold chết NGAY lượt quét đầu, nhả chỗ, yêu cầu `hold_expired`', async () => {
+    const { holdId, requestId } = await makeHold(32);
+    await prisma.bookingHold.update({
+      where: { id: holdId },
+      data: { expiresAt: new Date(Date.now() - 1_000) },
+    });
+
+    await sweepBookingHoldExpiry(prisma, new Date());
+
+    const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+    expect(hold.status).toBe(BOOKING_HOLD_STATUS.EXPIRED);
+    // Không có lượt gia hạn nào chen vào giữa (ADR 0044 điều 3).
+    expect(hold.extensionCount).toBe(0);
+    expect(
+      (await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } })).status,
+    ).toBe(BOOKING_REQUEST_STATUS.HOLD_EXPIRED);
+    expect(await prisma.vehicleOccupancy.count({ where: { sourceId: requestId } })).toBe(0);
+
+    // Chạy lại: không có gì để làm nữa — trạng thái và mốc nhả đứng yên.
+    await sweepBookingHoldExpiry(prisma, new Date());
+    const after = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+    expect(after.status).toBe(BOOKING_HOLD_STATUS.EXPIRED);
+    expect(after.releasedAt?.getTime()).toBe(hold.releasedAt?.getTime());
+  });
+
+  /**
+   * KHÁCH HUỶ TRƯỚC KHI TRẢ TIỀN ⇒ nhả chỗ ngay, không có khoản hoàn nào (ADR 0044 điều 7).
+   *
+   * Đây là lợi ích trực tiếp của thứ tự mới: chiếc xe quay lại chợ trong vài giây thay vì phải
+   * chờ hết cửa sổ hai giờ, và không một đồng nào phải đi qua đường hoàn.
+   */
+  maybe('khách huỷ trước khi trả tiền: hold `cancelled`, nhả chỗ, KHÔNG có khoản hoàn', async () => {
+    const { holdId, requestId } = await makeHold(35);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.bookingRequest.updateMany({
+        where: { id: requestId },
+        data: { status: BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER },
+      });
+      await holds.cancelForRequestWithinTx(tx, {
+        requestId,
+        tenantId,
+        actorUserId: customerId,
+        actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
+      });
+    });
+
+    const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+    expect(hold.status).toBe(BOOKING_HOLD_STATUS.CANCELLED);
+    expect(await prisma.holdRefund.count({ where: { holdId } })).toBe(0);
+    expect(await prisma.vehicleOccupancy.count({ where: { sourceId: requestId } })).toBe(0);
+
+    // Và chỗ đã nhả thì tiền về muộn KHÔNG được kích hoạt lại nó.
+    const res = await sepay.ingest(payload(hold.code, 100_000));
+    expect(res).toMatchObject({ matched: false });
+    expect(await prisma.booking.count({ where: { tenantId } })).toBe(0);
+  });
+
+  /**
+   * TRẢ THIẾU rồi hết hạn — tiền đã chuyển phải quay về khách.
+   *
+   * Đây là ca dễ bị bỏ sót nhất của cả luồng: hold `underpaid` là tiền THẬT của một người thật,
+   * và nếu worker chỉ lật `expired` rồi nhả lịch thì khoản đó nằm lại trong tài khoản nền tảng
+   * mà không sổ nào ghi nợ.
+   */
+  maybe('trả THIẾU rồi hết hạn: hoàn đúng phần đã chuyển, không hoàn hai lần', async () => {
+    const { code, holdId } = await makeHold(33);
+    await sepay.ingest(payload(code, 40_000));
+    await prisma.bookingHold.update({
+      where: { id: holdId },
+      data: { expiresAt: new Date(Date.now() - 1_000) },
+    });
+
+    await sweepBookingHoldExpiry(prisma, new Date());
+
+    const refund = await prisma.holdRefund.findUniqueOrThrow({ where: { holdId } });
+    expect(refund.amount.toFixed(0)).toBe('40000');
+    expect(refund.reason).toBe(HOLD_REFUND_REASON.HOLD_EXPIRED);
+
+    await sweepBookingHoldExpiry(prisma, new Date());
+    expect(await prisma.holdRefund.count({ where: { holdId } })).toBe(1);
+  });
+
+  /**
+   * TIỀN VỀ MUỘN — sau khi hold đã hết hạn và chỗ đã nhả.
+   *
+   * Không tạo đơn từ một yêu cầu đã chết: chỗ đó có thể đã thuộc về khách khác. Giao dịch nằm
+   * lại `bank_transactions` cho admin xử lý tay, và đó là đường đối soát duy nhất đúng ở đây.
+   */
+  maybe('tiền về SAU khi hết hạn: không đơn, giao dịch nằm lại hàng đợi admin', async () => {
+    const { code, holdId, requestId } = await makeHold(34);
+    await prisma.bookingHold.update({
+      where: { id: holdId },
+      data: { expiresAt: new Date(Date.now() - 1_000) },
+    });
+    await sweepBookingHoldExpiry(prisma, new Date());
+
+    const res = await sepay.ingest(payload(code, 100_000));
+    expect(res).toMatchObject({ matched: false });
+
+    expect(await prisma.booking.count({ where: { tenantId } })).toBe(0);
+    expect(
+      (await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } })).status,
+    ).toBe(BOOKING_REQUEST_STATUS.HOLD_EXPIRED);
+    const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+    expect(hold.status).toBe(BOOKING_HOLD_STATUS.EXPIRED);
+    // Khoản tiền vẫn được GHI NHẬN — nó không được phép bốc hơi khỏi sổ.
+    expect(await prisma.bankTransaction.count({ where: ownRows })).toBe(1);
+  });
+});
+
+/**
+ * DỮ LIỆU LEGACY ADR 0039 — hold sinh lúc khách bấm đặt, trước khi có ai duyệt.
+ *
+ * ADR 0044 không tạo những bản ghi này nữa, nhưng các yêu cầu đã ở chặng đó phải đi hết đường
+ * của chúng: bỏ nhánh này đi là để tiền thật của khách nằm lại vô thời hạn. Dấu hiệu nhận biết
+ * là `booking_requests.decided_at IS NULL`.
+ */
+describe('Dữ liệu LEGACY ADR 0039 vẫn đi hết đường', () => {
+  /** Yêu cầu chờ tiền mà CHƯA ai quyết định — đúng hình dạng luồng ADR 0039 tạo ra. */
   async function makeUndecidedHold(offsetDays = 40) {
     const made = await makeHold(offsetDays);
     await prisma.bookingRequest.update({
@@ -1012,7 +1237,7 @@ describe('Cọc trước, duyệt sau — ADR 0039', () => {
 
     const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
     expect(hold.status).toBe(BOOKING_HOLD_STATUS.PAID);
-    // `booking_id` còn trống: tiền về KHÔNG còn đồng nghĩa với "có đơn" (ADR 0039 điều 1).
+    // `booking_id` còn trống: ở thời kỳ đó tiền về KHÔNG đồng nghĩa với "có đơn".
     expect(hold.bookingId).toBeNull();
     expect(await prisma.booking.count({ where: { tenantId } })).toBe(0);
 
@@ -1025,14 +1250,29 @@ describe('Cọc trước, duyệt sau — ADR 0039', () => {
       }),
     ).toBe(1);
 
-    /*
-     * Đồng hồ phản hồi của gian hàng BẮT ĐẦU LẠI từ đây (ADR 0039 điều 6). Giữ mốc đặt lúc
-     * khách gửi sẽ đẩy chủ xe vào thế quá hạn ngay khi khách trả ở phút cuối.
-     */
+    // Đồng hồ phản hồi của gian hàng bắt đầu lại từ đây — nếu không, khách trả ở phút cuối sẽ
+    // đẩy chủ xe vào thế quá hạn ngay lập tức.
     expect(req.respondBy.getTime()).toBeGreaterThan(Date.now());
   });
 
-  maybe('gian hàng TỪ CHỐI sau khi đã cọc: hoàn 100%, nhả chỗ, không chia đôi', async () => {
+  maybe('gian hàng NHẬN sau khi khách đã trả: đơn mở từ snapshot đã chốt', async () => {
+    const { code, holdId, requestId } = await makeUndecidedHold(45);
+    await sepay.ingest(payload(code, 100_000));
+
+    await requests.approve(tenantId, ownerId, requestId);
+
+    const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
+    expect(hold.bookingId).not.toBeNull();
+    const booking = await prisma.booking.findUniqueOrThrow({ where: { id: hold.bookingId! } });
+    // Giá KHÔNG được tính lại: khách đã trả theo con số đóng băng trên hold.
+    expect(booking.totalAmount.toFixed(0)).toBe(BASE);
+    expect(booking.serviceFeeAmount.toFixed(0)).toBe(HOLD_AMOUNT);
+    expect(
+      (await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } })).status,
+    ).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
+  });
+
+  maybe('gian hàng TỪ CHỐI sau khi đã trả tiền: hoàn 100%, nhả chỗ, không chia đôi', async () => {
     const { code, holdId, requestId } = await makeUndecidedHold(41);
     await sepay.ingest(payload(code, 100_000));
 
@@ -1090,49 +1330,5 @@ describe('Cọc trước, duyệt sau — ADR 0039', () => {
     const again = await sweepBookingRequestDeadlines(prisma, new Date());
     expect(again.expiredPaid).toBe(0);
     expect(await prisma.holdRefund.count({ where: { holdId } })).toBe(1);
-  });
-
-  /**
-   * GIA HẠN TỰ ĐỘNG (ADR 0039 điều 3) — hai lần, rồi mới chết.
-   *
-   * Đây là thứ giữ cho cửa sổ mười phút không biến thành cái bẫy: ngân hàng xử lý chậm hơn một
-   * đồng hồ không được làm khách mất chỗ.
-   */
-  maybe('hết hạn lần đầu: GIA HẠN thay vì chết, đồng hồ về đủ một cửa sổ', async () => {
-    const { holdId } = await makeUndecidedHold(43);
-    await prisma.bookingHold.update({
-      where: { id: holdId },
-      data: { expiresAt: new Date(Date.now() - 1_000) },
-    });
-
-    const swept = await sweepBookingHoldExpiry(prisma, new Date());
-    expect(swept.extended).toBeGreaterThanOrEqual(1);
-
-    const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
-    expect(hold.status).toBe(BOOKING_HOLD_STATUS.PENDING);
-    expect(hold.extensionCount).toBe(1);
-    // Hạn mới tính từ BÂY GIỜ, không cộng vào mốc cũ — khách phải thấy đủ mười phút như lần đầu.
-    expect(hold.expiresAt.getTime()).toBeGreaterThan(Date.now());
-  });
-
-  maybe('hết lượt gia hạn: hold chết, nhả chỗ, yêu cầu `hold_expired`', async () => {
-    const { holdId, requestId } = await makeUndecidedHold(44);
-
-    // Ba lần quá hạn: gia hạn, gia hạn, rồi chết.
-    for (let round = 0; round < HOLD_MAX_EXTENSIONS + 1; round += 1) {
-      await prisma.bookingHold.update({
-        where: { id: holdId },
-        data: { expiresAt: new Date(Date.now() - 1_000) },
-      });
-      await sweepBookingHoldExpiry(prisma, new Date());
-    }
-
-    const hold = await prisma.bookingHold.findUniqueOrThrow({ where: { id: holdId } });
-    expect(hold.extensionCount).toBe(HOLD_MAX_EXTENSIONS);
-    expect(hold.status).toBe(BOOKING_HOLD_STATUS.EXPIRED);
-    expect(
-      (await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } })).status,
-    ).toBe(BOOKING_REQUEST_STATUS.HOLD_EXPIRED);
-    expect(await prisma.vehicleOccupancy.count({ where: { sourceId: requestId } })).toBe(0);
   });
 });

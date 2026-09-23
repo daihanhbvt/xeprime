@@ -287,6 +287,63 @@ export class RecommendedListingQueryDto {
   limit?: number;
 }
 
+/**
+ * BA CHỈ SỐ CÔNG KHAI của một gian hàng/chủ xe — ADR 0045 điều 2.
+ *
+ * Xuất hiện ở HAI chỗ với cùng một hình dạng: trang gian hàng, và khối chủ xe trên trang chi
+ * tiết xe. Một DTO cho cả hai là có chủ đích — hai hình dạng khác nhau sẽ thành hai component
+ * khác nhau, rồi thành hai câu giải thích khác nhau cho cùng một con số.
+ *
+ * ⚠️ Ba trường phần trăm đều `null` được, và `null` mang đúng MỘT nghĩa: **chưa đủ dữ liệu để
+ * nói** (dưới `HOST_METRIC_MIN_SAMPLES` mẫu trong cửa sổ 90 ngày). Giao diện phải phân biệt nó
+ * với 0 — một gian hàng mới mở không phải một gian hàng không bao giờ trả lời. `sampleCount`
+ * luôn có mặt để câu "chưa đủ dữ liệu" là một câu kiểm chứng được.
+ */
+export class HostMetricsDto {
+  @ApiProperty({
+    description:
+      'Số YÊU CẦU mà gian hàng thật sự phải quyết, trong 90 ngày gần nhất. Không gồm ' +
+      'slot_taken, khách rút trước khi gian hàng quyết, và dữ liệu LEGACY ADR 0039 không có ' +
+      'quyết định nào.',
+  })
+  sampleCount!: number;
+
+  @ApiProperty({
+    required: true,
+    type: Number,
+    nullable: true,
+    description: 'Tỉ lệ phản hồi trong hạn (0–100). Null = chưa đủ mẫu, KHÔNG phải 0.',
+  })
+  responseRatePercent!: number | null;
+
+  @ApiProperty({
+    required: true,
+    type: Number,
+    nullable: true,
+    description:
+      'Tỉ lệ NHẬN VÀ GIỮ chuyến (0–100). Từ chối trong hạn KHÔNG nằm trong tử số; gian hàng ' +
+      'huỷ sau khi đã nhận thì mẫu đó rời tử số. Null = chưa đủ mẫu.',
+  })
+  acceptKeepRatePercent!: number | null;
+
+  @ApiProperty({
+    required: true,
+    type: Number,
+    nullable: true,
+    description:
+      'Trung vị số PHÚT tới quyết định của NGƯỜI. Lượt tự nhận không vào phép tính này — xem ' +
+      'instantBook. Null = chưa đủ mẫu do người quyết.',
+  })
+  responseMinutesMedian!: number | null;
+
+  @ApiProperty({
+    description:
+      'Gian hàng có xe bật "Đặt ngay" trong cửa sổ — giao diện hiện nhãn thay cho số phút, ' +
+      'thay vì quảng cáo một tốc độ trả lời thủ công không có thật.',
+  })
+  instantBook!: boolean;
+}
+
 /** Query facets — cùng bộ filter với search; sort/paging vô nghĩa với đếm nên bỏ. */
 export class ListingFacetsQueryDto extends OmitType(PublicListingQueryDto, [
   'sort',
@@ -387,6 +444,16 @@ export class PublicListingDto {
     description: 'Gian hàng tuyến gói — đeo dấu xác thực XePrime (hasVerifiedStorefront)',
   })
   shopVerified!: boolean;
+
+  /*
+   * ⚠️ THẺ KẾT QUẢ CỐ Ý KHÔNG MANG BA CHỈ SỐ của chủ xe (ADR 0045 điều 2).
+   *
+   * Một trang kết quả hiện 12–48 thẻ, và mỗi chỉ số là một phép gộp 90 ngày trên
+   * `booking_requests`. Gắn chúng vào thẻ nghĩa là hoặc 48 lượt gộp mỗi lần mở trang (đúng cái
+   * N+1 mà ADR cấm), hoặc một phép gộp khổng lồ cho dữ liệu mà phần lớn người xem lướt qua.
+   * Chúng sống ở TRANG CHI TIẾT (`PublicListingDetailDto.shopMetrics`) và TRANG GIAN HÀNG —
+   * hai nơi khách thật sự đang cân nhắc một người bán cụ thể.
+   */
 
   @ApiProperty({ description: 'Số chuyến đã hoàn thành của xe' })
   completedTripCount!: number;
@@ -499,6 +566,19 @@ export class ListingMileagePolicyDto {
 }
 
 export class PublicListingDetailDto extends PublicListingDto {
+  /**
+   * Ba chỉ số của CHỦ XE, ngay trong trang chi tiết xe (ADR 0045 điều 2).
+   *
+   * Ở đây chứ không chỉ ở trang gian hàng vì đây là nơi khách thật sự quyết định gửi yêu cầu —
+   * bắt họ mở thêm một trang nữa để biết người này có hay trả lời không là bắt họ làm việc mà
+   * phần lớn sẽ không làm.
+   *
+   * MỘT truy vấn gộp cho MỘT tenant (trang chi tiết chỉ có một chủ xe), nên không có N+1 nào ở
+   * đây — khác hẳn thẻ kết quả, xem docblock `PublicListingDto`.
+   */
+  @ApiProperty({ type: HostMetricsDto })
+  shopMetrics!: HostMetricsDto;
+
   /**
    * Gian hàng này có nhận tin nhắn từ khách CHƯA đặt xe không.
    *
@@ -769,16 +849,14 @@ export class PublicShopDto {
   completedTripCount!: number;
 
   /**
-   * Tỉ lệ gian hàng TRẢ LỜI yêu cầu thuê trong hạn, 0–100. `null` = chưa đủ dữ liệu để nói
-   * (chưa có yêu cầu nào cần chủ xe quyết) — FE ẩn ô đó thay vì hiện 0%, vì 0% và "chưa có yêu
-   * cầu nào" là hai câu hoàn toàn khác nhau với người đang cân nhắc thuê xe.
+   * BA CHỈ SỐ công khai — thay cho `responseRatePercent` đứng một mình (ADR 0045 điều 2).
+   *
+   * Gộp thành một object chứ không ba trường phẳng: chúng phải được đọc CÙNG NHAU (một tỉ lệ
+   * phản hồi 100% trên hai mẫu không nói được gì nếu không thấy `sampleCount`), và một object
+   * là thứ buộc giao diện phải nhận cả cụm thay vì bốc ra một con số nghe kêu nhất.
    */
-  @ApiPropertyOptional({
-    type: Number,
-    nullable: true,
-    description: 'Tỉ lệ phản hồi yêu cầu thuê (0–100). Null khi chưa đủ dữ liệu.',
-  })
-  responseRatePercent!: number | null;
+  @ApiProperty({ type: HostMetricsDto })
+  metrics!: HostMetricsDto;
 
   @ApiProperty({ description: 'Số chi nhánh đang hoạt động' })
   branchCount!: number;
@@ -792,6 +870,7 @@ export class PublicShopDto {
   @ApiProperty({ description: 'Có ít nhất một xe công khai hỗ trợ giao tận nơi' })
   deliveryAvailable!: boolean;
 }
+
 
 /**
  * Một tỉnh/thành có xe đang cho thuê — "Địa điểm nổi bật" ở trang chủ. Số liệu tính từ snapshot

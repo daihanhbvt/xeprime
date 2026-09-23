@@ -1,5 +1,5 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { newId, Prisma } from '@xeprime/prisma';
+import { BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
+import { newId, Prisma, redeemPromoRedemption } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
@@ -28,6 +28,8 @@ import {
   SUPPORT_CASE_STATUS_OPEN,
   TAX_WITHHOLDING_STATUS_UNPAID,
   WITHDRAWAL_STATUS,
+  BOOKING_HOLD_STATUS_AWAITING,
+  HOLD_MAX_OPEN_PER_CUSTOMER,
   HOLD_MIN_USABLE_WINDOW_MINUTES,
   bookingRequestRespondBy,
   holdExpiresAt,
@@ -80,9 +82,11 @@ export type HoldPaymentOutcome =
   | { outcome: 'partial'; holdId: string; tenantId: string; paid: string; amount: string }
   | { outcome: 'already_paid'; holdId: string; tenantId: string }
   /**
-   * Tiền đã ĐỦ. `bookingId` là `null` khi chuyến còn chờ chủ xe xác nhận — từ ADR 0039 đó là
-   * đường MẶC ĐỊNH, không phải lỗi: tiền đi trước, người nhận chuyến đến sau. Chỉ xe bật
-   * "Đặt ngay" mới có đơn ngay tại lượt trả tiền.
+   * Tiền đã ĐỦ. `bookingId` có giá trị ở luồng hiện hành (ADR 0044): hold chỉ tồn tại sau khi
+   * chuyến đã được nhận, nên đủ tiền là có đơn ngay trong cùng transaction.
+   *
+   * `null` chỉ xảy ra với dữ liệu LEGACY ADR 0039 — hold sinh trước khi ai duyệt, nên tiền về
+   * mà vẫn chưa có người nhận chuyến. Không phải lỗi; nó là chặng `hold_paid`.
    */
   | { outcome: 'activated'; holdId: string; tenantId: string; bookingId: string | null };
 
@@ -137,7 +141,7 @@ const PLATFORM_SELECT = {
  *
  * Vòng đời, và ai ghi bước nào:
  *
- *   duyệt yêu cầu ──► `createForApprovedRequestWithinTx`  (BookingRequestsService gọi)
+ *   chuyến ĐƯỢC NHẬN ─► `createForApprovedRequestWithinTx` (BookingRequestsService gọi)
  *        │               tạo hold `pending`, CHIẾM LỊCH (occupancy `booking_request`), báo khách
  *        ├─ tiền về ──► `applyBankPaymentWithinTx`         (SepayService / khớp tay gọi)
  *        │               thiếu → `underpaid` giữ mã; đủ → `paid` + TẠO ĐƠN cùng transaction
@@ -205,25 +209,30 @@ export class BookingHoldsService {
       throw new Error('createForApprovedRequestWithinTx: snapshot không có holdAmount');
     }
 
+    await this.assertHoldQuotaWithinTx(tx, input.customerUserId);
+
     const now = new Date();
     const windowEnd = holdExpiresAt(input.acceptedAt, fees.policy.holdPaymentWindowMinutes);
     /*
      * Hạn chuyển KHÔNG được vượt quá giờ nhận xe: một hold còn "chờ tiền" sau khi xe đáng lẽ đã
      * giao là một chỗ bị khoá vô nghĩa. Kẹp về giờ nhận; nếu phần còn lại quá ngắn để ai kịp mở
-     * app ngân hàng thì không phát QR nữa — chuyến sát giờ phải đi đường thoả thuận trực tiếp.
+     * app ngân hàng thì không phát QR nữa — chuyến sát giờ phải đi đường thoả thuận trực tiếp,
+     * và người vừa bấm duyệt được nói đúng câu đó qua `HOLD_WINDOW_TOO_SHORT`.
      *
-     * ⚠️ Ngưỡng đọc từ `HOLD_MIN_USABLE_WINDOW_MINUTES`, KHÔNG gõ tay. Trước ADR 0039 chỗ này là
-     * `15 * 60_000` trong khi cửa sổ là 120 phút; rút cửa sổ về 10 phút mà để nguyên số 15 thì
-     * `expiresAt − now` (tối đa bằng cửa sổ) không bao giờ vượt nổi ngưỡng, và MỌI hold bị từ
-     * chối ngay lúc tạo — tức là cả sàn ngừng nhận đơn, im lặng.
+     * ⚠️ Ngưỡng đọc từ `HOLD_MIN_USABLE_WINDOW_MINUTES`, KHÔNG gõ tay: `expiresAt − now` tối đa
+     * bằng cửa sổ thanh toán, nên một ngưỡng lớn hơn cửa sổ sẽ từ chối MỌI hold ngay lúc tạo —
+     * tức là cả sàn ngừng nhận đơn, im lặng. `holds.test.ts` khoá quan hệ giữa hai hằng đó.
      */
     const expiresAt = new Date(Math.min(windowEnd.getTime(), input.schedule.pickupAt.getTime()));
     if (expiresAt.getTime() - now.getTime() < HOLD_MIN_USABLE_WINDOW_MINUTES * 60_000) {
       throw new BadRequestException({
-        code: API_ERROR_CODE.VALIDATION_FAILED,
+        code: API_ERROR_CODE.HOLD_WINDOW_TOO_SHORT,
         message:
-          'Giờ nhận xe quá gần để kịp chuyển khoản giữ chỗ — liên hệ trực tiếp gian hàng để thoả thuận',
-        details: { pickupAt: input.schedule.pickupAt.toISOString() },
+          'Giờ nhận xe quá gần để kịp thu tiền giữ chỗ — liên hệ trực tiếp với khách để thoả thuận',
+        details: {
+          pickupAt: input.schedule.pickupAt.toISOString(),
+          minWindowMinutes: HOLD_MIN_USABLE_WINDOW_MINUTES,
+        },
       });
     }
     /*
@@ -250,8 +259,20 @@ export class BookingHoldsService {
     const serviceFeeAmount = lineAmount(FEE_LINE.SERVICE_FEE);
     const vehicleInsuranceAmount = lineAmount(FEE_LINE.VEHICLE_PROTECTION);
     const personalInsuranceAmount = lineAmount(FEE_LINE.TRIP_INSURANCE);
+    /*
+     * TÀI TRỢ mã khuyến mãi (ADR 0046 điều 4) — hiệu giữa QUYỀN LỢI và TIỀN MẶT.
+     *
+     * `holdAmount` là số khách chuyển (đã trừ tài trợ), còn bốn dòng tiền vẫn phải mang quyền lợi
+     * ĐẦY ĐỦ: chủ xe nhận đủ `D`, hãng bảo hiểm nhận đủ `IV + IP`. Nên cọc suy ra từ
+     * `grossOnlineAmount` chứ không từ `holdAmount` — trừ tài trợ vào dòng cọc là bắt chủ xe
+     * gánh khoản giảm giá của nền tảng.
+     *
+     * `CHECK booking_holds_money_lines_sum_check` gác đúng bất biến này:
+     * `D + S + IV + IP − promo = amount`.
+     */
+    const promoDiscountAmount = fees.promoDiscountAmount;
     const depositAmount = String(
-      Number(fees.holdAmount) -
+      Number(fees.grossOnlineAmount) -
         Number(serviceFeeAmount) -
         Number(vehicleInsuranceAmount) -
         Number(personalInsuranceAmount),
@@ -259,7 +280,14 @@ export class BookingHoldsService {
     if (Number(depositAmount) < 0) {
       // CHECK ở DB cũng chặn; nói rõ ở đây để lỗi không hiện thành một P2010 khó đọc.
       throw new Error(
-        `createForApprovedRequestWithinTx: bốn dòng tiền vượt quá holdAmount (${fees.holdAmount})`,
+        `createForApprovedRequestWithinTx: bốn dòng tiền vượt quá grossOnlineAmount (${fees.grossOnlineAmount})`,
+      );
+    }
+    if (Number(promoDiscountAmount) > Number(depositAmount) + Number(serviceFeeAmount)) {
+      // `CHECK booking_holds_promo_within_sponsorable_check` cũng chặn — nói rõ ở đây vì đây là
+      // một bất biến NGHIỆP VỤ (không lấn vào tiền giữ hộ bảo hiểm), không phải một lỗi kiểu.
+      throw new Error(
+        `createForApprovedRequestWithinTx: tài trợ ${promoDiscountAmount} vượt phần tài trợ được (D + S)`,
       );
     }
 
@@ -269,6 +297,17 @@ export class BookingHoldsService {
         beneficiary: FEE_BENEFICIARY.OWNER,
         bearer: FEE_BEARER.CUSTOMER,
         amount: depositAmount,
+      },
+      /*
+       * Dòng TÀI TRỢ nằm trong `allocation_json` để bảng giải thích đọc được "nền tảng đã bù
+       * bao nhiêu" mà không phải trừ hai con số. Nó KHÔNG phải một phụ phí và không có trong
+       * `fees.lines` — xem docblock `FEE_LINE.PROMO`.
+       */
+      {
+        key: FEE_LINE.PROMO,
+        beneficiary: FEE_BENEFICIARY.PLATFORM,
+        bearer: FEE_BEARER.CUSTOMER,
+        amount: promoDiscountAmount,
       },
       {
         key: FEE_LINE.SERVICE_FEE,
@@ -307,6 +346,7 @@ export class BookingHoldsService {
         serviceFeeAmount: new Prisma.Decimal(serviceFeeAmount),
         vehicleInsuranceAmount: new Prisma.Decimal(vehicleInsuranceAmount),
         personalInsuranceAmount: new Prisma.Decimal(personalInsuranceAmount),
+        promoDiscountAmount: new Prisma.Decimal(promoDiscountAmount),
         feePolicyId: fees.policy.policyId,
         allocationJson: allocation as unknown as Prisma.InputJsonValue,
         priceSnapshotJson: input.snapshot as unknown as Prisma.InputJsonValue,
@@ -343,6 +383,9 @@ export class BookingHoldsService {
         after: {
           code,
           amount: fees.holdAmount,
+          ...(Number(promoDiscountAmount) > 0
+            ? { promoCode: fees.promo?.code ?? null, promoDiscountAmount }
+            : {}),
           policyVersion: fees.policy.version,
           expiresAt: expiresAt.toISOString(),
           freeCancelUntil: freeCancelUntil.toISOString(),
@@ -356,8 +399,8 @@ export class BookingHoldsService {
         input.customerUserId,
         {
           type: NOTIFICATION_TYPE.HOLD_REQUESTED,
-          title: 'Chủ xe đã duyệt — chuyển khoản giữ chỗ để chốt chuyến',
-          body: `${input.vehicleName} · giữ chỗ ${formatMoneyVndVi(fees.holdAmount.toString())} · nội dung ${code}`,
+          title: 'Chuyến đã được nhận — thanh toán tiền giữ chỗ để chốt',
+          body: `${input.vehicleName} · tiền giữ chỗ ${formatMoneyVndVi(fees.holdAmount.toString())} · nội dung ${code}`,
           tenantId: input.tenantId,
           targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
           targetId: input.requestId,
@@ -367,6 +410,62 @@ export class BookingHoldsService {
     }
 
     return { id, code, amount: fees.holdAmount, expiresAt };
+  }
+
+  /**
+   * TRẦN SỐ CHỖ một khách giữ cùng lúc mà chưa trả tiền — `HOLD_MAX_OPEN_PER_CUSTOMER`.
+   *
+   * Không có trần thì một tài khoản mở được bao nhiêu yêu cầu cũng được, và mỗi lượt gian hàng
+   * bấm duyệt khoá thêm một chiếc xe trong hai giờ. Đó không phải giả thuyết: nó là cách rẻ nhất
+   * để làm tê liệt một gian hàng nhỏ trong một buổi sáng.
+   *
+   * ## Vì sao khoá tư vấn, không phải một câu `count` trần
+   *
+   * `READ COMMITTED` (mặc định của Postgres) cho hai transaction song song cùng đọc "đang có 2",
+   * rồi cùng ghi — và trần 3 thành 4. Không có ràng buộc DB nào diễn đạt được "≤ 3 dòng thoả một
+   * vị từ", nên thứ duy nhất còn lại là **tuần tự hoá theo KHÁCH**: `pg_advisory_xact_lock` trên
+   * hash của `customerUserId`, tự nhả khi transaction kết thúc.
+   *
+   * Khoá theo KHÁCH chứ không theo bảng: hai khách khác nhau vẫn duyệt song song được, và một
+   * khách thì không có lý do gì để duyệt song song với chính mình.
+   *
+   * ## Vì sao chặn ở đường DUYỆT, không ở đường gửi yêu cầu
+   *
+   * Gửi yêu cầu không khoá xe của ai (ADR 0044 điều 1) — chặn ở đó là chặn nhầm người. Chỗ tốn
+   * kém là lúc một chiếc xe thật bị giữ, và đó chính là đây.
+   *
+   * Khách VÃNG LAI không có `customerUserId`: bỏ qua. Không phải một lỗ hổng — `submitPublic`
+   * luôn quy SĐT về một tài khoản (`resolveOrCreateUserByPhone`) trước khi ghi yêu cầu, nên
+   * đường công khai không sinh ra hold nào thiếu cột này. Nhánh `null` chỉ còn cho dữ liệu cũ.
+   */
+  private async assertHoldQuotaWithinTx(
+    tx: Prisma.TransactionClient,
+    customerUserId: string | null,
+  ): Promise<void> {
+    if (!customerUserId) return;
+
+    // `hashtext` trả int4; `pg_advisory_xact_lock(key bigint)` nhận nó. Không gian khoá dùng
+    // chung toàn database, nên tiền tố `hold:` giữ nó không đụng advisory lock của worker.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'hold:' + customerUserId}))`;
+
+    const openHolds = await tx.bookingHold.count({
+      where: {
+        customerUserId,
+        status: { in: [...BOOKING_HOLD_STATUS_AWAITING] },
+        // Hold quá mốc nhưng worker chưa kịp lật vẫn là một chỗ CHẾT — không tính vào trần, nếu
+        // không một khách xui sẽ bị chặn bởi chính những chỗ họ đã mất.
+        expiresAt: { gt: new Date() },
+      },
+    });
+    if (openHolds >= HOLD_MAX_OPEN_PER_CUSTOMER) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.HOLD_LIMIT_REACHED,
+        message:
+          'Khách này đang giữ tối đa số chỗ chưa thanh toán cho phép — chờ họ thanh toán hoặc ' +
+          'huỷ bớt trước khi nhận thêm chuyến',
+        details: { openHolds, limit: HOLD_MAX_OPEN_PER_CUSTOMER },
+      });
+    }
   }
 
   // ── Tiền về ──────────────────────────────────────────────────────────────
@@ -503,16 +602,21 @@ export class BookingHoldsService {
   }
 
   /**
-   * Tiền ĐỦ — và từ ADR 0039 đây KHÔNG còn đồng nghĩa với "có đơn thuê".
+   * Tiền ĐỦ ⇒ **ĐƠN THUÊ** — đây là điểm duy nhất trong hệ thống biến một chuyến thành đơn
+   * (ADR 0044 điều 2). Không phải một cú bấm trên giao diện, không phải một lượt quét QR.
    *
-   * Thứ tự mới: tiền đi TRƯỚC, chủ xe duyệt SAU. Nên lượt trả đủ chỉ làm được hai việc chắc
-   * chắn đúng — chốt hold `paid` và đẩy yêu cầu sang `hold_paid` (vẫn CHIẾM LỊCH, vì khách đã
-   * trả tiền thật cho chỗ đó). Đơn thuê chỉ ra đời khi có người NHẬN chuyến:
+   * Hold chỉ tồn tại sau khi chuyến ĐÃ được nhận, nên `booking_requests.decided_at` luôn có giá
+   * trị ở luồng hiện hành và tiền về là mở đơn ngay, không hỏi lại ai. Bắt gian hàng duyệt lần
+   * thứ hai cho một chuyến họ đã đồng ý và khách đã trả tiền là một bước không ai hiểu nổi.
    *
-   *   - xe bật "Đặt ngay" và yêu cầu đủ điều kiện ⇒ hệ thống nhận ngay tại đây;
-   *   - còn lại ⇒ chờ chủ xe bấm duyệt (`convertPaidHoldWithinTx` gọi từ `BookingRequestsService`).
+   * **Nhánh LEGACY (`decided_at IS NULL`)** — hold sinh lúc khách bấm đặt, theo ADR 0039. Ở đó
+   * chưa ai nhận chuyến, nên tiền về chỉ làm được hai việc chắc chắn đúng: chốt hold `paid` và
+   * đẩy yêu cầu sang `hold_paid` (vẫn CHIẾM LỊCH). Đơn ra đời khi có người nhận — xe bật
+   * "Đặt ngay" thì hệ thống nhận ngay tại đây, còn lại chờ chủ xe bấm duyệt. Nhánh này phải ở
+   * lại cho tới khi không còn yêu cầu nào của thời kỳ đó chờ quyết định.
    *
-   * Trả `null` nghĩa là "tiền đã vào, chưa có đơn" — một kết cục HỢP LỆ, không phải lỗi.
+   * Trả `null` nghĩa là "tiền đã vào, chưa có đơn" — chỉ xảy ra ở nhánh legacy, và là một kết
+   * cục HỢP LỆ chứ không phải lỗi.
    */
   private async settleFullPaymentWithinTx(
     tx: Prisma.TransactionClient,
@@ -534,16 +638,16 @@ export class BookingHoldsService {
             serviceType: true,
             customerName: true,
             /*
-             * ĐÃ CÓ AI NHẬN CHUYẾN TRƯỚC KHI TIỀN VỀ CHƯA — đây là thứ phân biệt hai đường sinh
-             * hold, và nó quyết định tiền về thì mở đơn hay còn phải chờ:
+             * ĐÃ CÓ AI NHẬN CHUYẾN TRƯỚC KHI TIỀN VỀ CHƯA — thứ phân biệt hai thời kỳ sinh hold,
+             * và nó quyết định tiền về thì mở đơn hay còn phải chờ:
              *
-             *   - hold sinh lúc KHÁCH GỬI (ADR 0039, đường mặc định): `trySecureHold` cố ý KHÔNG
-             *     ghi `decided_*` vì chưa ai quyết định gì ⇒ tiền về mới đi tìm người nhận;
-             *   - hold sinh lúc GIAN HÀNG DUYỆT (thuê dài hạn và báo giá tạm tính — hai ca không
-             *     chốt được số tiền lúc gửi): gian hàng ĐÃ nhận rồi ⇒ tiền về là mở đơn ngay.
+             *   - hold sinh lúc CHUYẾN ĐƯỢC NHẬN (ADR 0044, đường hiện hành): `decided_at` luôn
+             *     có ⇒ tiền về là mở đơn ngay;
+             *   - hold LEGACY sinh lúc KHÁCH GỬI (ADR 0039): cột này cố ý để trống vì chưa ai
+             *     quyết định gì ⇒ tiền về mới đi tìm người nhận.
              *
-             * Thiếu phép phân biệt này thì đơn dài hạn bắt gian hàng duyệt HAI lần, lần sau cho
-             * một chuyến họ đã đồng ý và khách đã trả tiền.
+             * Thiếu phép phân biệt này thì mọi đơn của luồng hiện hành bắt gian hàng duyệt HAI
+             * lần, lần sau cho một chuyến họ đã đồng ý và khách đã trả tiền.
              */
             decidedAt: true,
             vehicle: { select: { name: true } },
@@ -594,12 +698,11 @@ export class BookingHoldsService {
     );
 
     /*
-     * GIAN HÀNG ĐÃ NHẬN TỪ TRƯỚC (hold sinh lúc duyệt — dài hạn, báo giá tạm tính) ⇒ tiền về là
-     * mở đơn, không hỏi lại ai. Bắt họ duyệt lần thứ hai cho một chuyến họ đã đồng ý và khách đã
-     * trả tiền là một bước không ai hiểu nổi.
+     * CHUYẾN ĐÃ ĐƯỢC NHẬN TỪ TRƯỚC (đường hiện hành — ADR 0044) ⇒ tiền về là mở đơn, không hỏi
+     * lại ai.
      *
-     * Ngược lại (đường mặc định ADR 0039) mới đi tìm người nhận: xe bật "Đặt ngay" thì hệ thống
-     * nhận ngay tại đây, còn lại nằm ở `hold_paid` chờ chủ xe.
+     * Chỉ dữ liệu LEGACY ADR 0039 mới phải đi tìm người nhận ở đây: xe bật "Đặt ngay" thì hệ
+     * thống nhận ngay, còn lại nằm ở `hold_paid` chờ chủ xe.
      */
     const bookingId =
       hold.bookingRequest.decidedAt != null
@@ -641,17 +744,21 @@ export class BookingHoldsService {
   }
 
   /**
-   * Xe bật "Đặt ngay" và yêu cầu đủ điều kiện ⇒ hệ thống nhận chuyến ngay khi tiền về.
+   * **CHỈ cho dữ liệu LEGACY ADR 0039.** Xe bật "Đặt ngay" và yêu cầu đủ điều kiện ⇒ hệ thống
+   * nhận chuyến ngay khi tiền về.
+   *
+   * Luồng hiện hành không đi qua đây: việc tự nhận xảy ra lúc khách GỬI yêu cầu, qua cùng đường
+   * duyệt tay (`BookingRequestsService.tryAutoAccept` → `commitDecision`), nên khi tiền về thì
+   * chuyến đã có người nhận từ trước. Hàm này còn để những hold sinh trước 22/09/2026 — lúc đó
+   * tiền đi trước quyết định — vẫn tự mở được đơn thay vì bắt chủ xe bấm thêm một lần.
    *
    * Điều kiện tiền bạc (`holdRequired`, `quoteIsEstimate`) KHÔNG hỏi lại ở đây: tiền đã về rồi,
    * và hai cờ đó chỉ có nghĩa ở thời điểm quyết định CÓ thu hay không. Thứ còn phải hỏi là điều
    * kiện VẬN HÀNH — xe có bật tự nhận không, giờ nhận có nằm trong khung giao xe không, chuyến
    * có đủ thời lượng tối thiểu không.
    *
-   * **Chuyến CÓ TÀI XẾ nay tự nhận được** — ADR 0032 từng chặn (`HOLD_REQUIRED_WITH_DRIVER`) vì
-   * lúc đó đơn chỉ ra đời hàng giờ sau khi duyệt, nên không thể hứa một tài xế rồi mới tạo đơn.
-   * Lập luận đó mất hiệu lực ở ADR 0039: tiền đã về và đơn được tạo NGAY trong transaction này,
-   * nên việc gán tài xế ở đây an toàn đúng bằng lúc gian hàng bấm duyệt tay —
+   * Chuyến CÓ TÀI XẾ tự nhận được ở đây vì tiền đã về và đơn được tạo NGAY trong transaction
+   * này, nên gán tài xế an toàn đúng bằng lúc gian hàng bấm duyệt tay —
    * `bookings_driver_schedule_excl` vẫn là trọng tài. Không gán được tài xế rảnh thì về chờ
    * duyệt tay, y như cũ.
    */
@@ -887,6 +994,21 @@ export class BookingHoldsService {
       throw new Error(`Yêu cầu ${req.id} không còn ở trạng thái đã cọc chờ duyệt`);
     }
     await tx.bookingHold.update({ where: { id: holdId }, data: { bookingId: booking.id } });
+
+    /*
+     * MÃ KHUYẾN MÃI — CHỐT lượt tại đây (ADR 0046 điều 6).
+     *
+     * Đây là điểm DUY NHẤT của nhánh có thu tiền giữ chỗ mà một ĐƠN ra đời (ADR 0044 điều 2),
+     * nên nó cũng là điểm duy nhất một lượt mã chuyển từ GIỮ sang ĐÃ DÙNG. Chốt bằng con số đã
+     * đóng băng trong snapshot giá của hold, không bằng số tạm lúc khách áp mã.
+     *
+     * Số 0 vẫn gọi: `redeemPromoRedemption` tự bỏ qua khi yêu cầu không có lượt nào.
+     */
+    await redeemPromoRedemption(tx, {
+      bookingRequestId: req.id,
+      bookingId: booking.id,
+      discountAmount: snapshot.fees?.promoDiscountAmount ?? '0',
+    });
 
     await this.audit.record(
       {

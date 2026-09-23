@@ -1,0 +1,228 @@
+/*
+ * Ô ÁP MÃ KHUYẾN MÃI — nằm SAU bảng tạm tính và TRƯỚC tổng cộng (ADR 0046, ảnh thiết kế 4).
+ *
+ * Nền nhạt để nó đọc thành một khối HÀNH ĐỘNG giữa hai khối con số, không đọc thành thêm một
+ * hàng giá nữa.
+ */
+.block {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  margin-top: var(--xp-space-sm);
+  border: 1px dashed var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  gap: var(--xp-space-xs);
+}
+
+/* Đã áp mã: viền liền + màu thành công, để trạng thái đọc được từ xa không cần đọc chữ. */
+.blockApplied {
+  border-style: solid;
+  border-color: var(--xp-color-success);
+  background: var(--xp-color-success-bg);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.icon {
+  color: var(--xp-color-primary);
+}
+
+/* Nút mở hộp thoại chọn mã — đẩy sang phải, cùng hàng với nhãn. */
+.browse {
+  padding: 0;
+  border: none;
+  margin-left: auto;
+  background: none;
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  cursor: pointer;
+}
+
+.browse:hover {
+  text-decoration: underline;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  /* Mã luôn in hoa — gõ chữ thường vẫn hiện đúng dạng sẽ được gửi lên. */
+  text-transform: uppercase;
+}
+
+/* Đã áp: mã + số giảm + nút bỏ, không còn ô nhập nào. */
+.appliedRow {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.appliedCode {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-bold);
+  letter-spacing: 0.04em;
+}
+
+.appliedName {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-overline);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.appliedAmount {
+  margin-left: auto;
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body-sm);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-bold);
+  white-space: nowrap;
+}
+
+.note {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-overline);
+}
+
+/* Lý do mã không áp được — màu lỗi, nhưng KHÔNG phải một alert đỏ toàn khối: đây là một câu
+   trả lời bình thường, không phải sự cố. */
+.error {
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.warn {
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* ── Hộp thoại chọn mã ─────────────────────────────────────────────────────── */
+
+.pickerManual {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  padding-bottom: var(--xp-space-md);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+  margin-bottom: var(--xp-space-md);
+}
+
+.pickerList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  max-height: 52vh;
+  overflow-y: auto;
+}
+
+.pickerItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+}
+
+/*
+ * Mã KHÔNG áp được: mờ đi và nút bị vô hiệu hoá. Không ẩn hẳn — khách vừa nhận mã qua email cần
+ * thấy nó với LÝ DO, chứ không thấy nó biến mất không giải thích.
+ */
+.pickerItemDisabled {
+  border-color: var(--xp-color-border-subtle);
+  background: var(--xp-color-bg-muted);
+}
+
+.pickerBadge {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-body);
+}
+
+.pickerBadgeDisabled {
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-tertiary);
+}
+
+.pickerBody {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pickerCode {
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-bold);
+  letter-spacing: 0.04em;
+}
+
+.pickerHeadline {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.pickerMeta {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-overline);
+}
+
+.pickerReason {
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.pickerAction {
+  flex: none;
+  align-self: center;
+}
+
+@media (max-width: 575px) {
+  .row,
+  .pickerManual {
+    flex-wrap: wrap;
+  }
+
+  .input {
+    flex-basis: 100%;
+  }
+
+  .pickerItem {
+    flex-wrap: wrap;
+  }
+
+  .pickerAction {
+    width: 100%;
+  }
+}

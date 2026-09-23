@@ -51,6 +51,8 @@ export type BookingRequestDecisionTarget = Omit<
 export type CreateBookingRequestInput = Schemas['CreateBookingRequestDto'];
 /** Body duyệt — thuê dài hạn bắt buộc `scheduledPickupAt` (ADR 0011). */
 export type ApproveBookingRequestInput = Schemas['ApproveBookingRequestDto'];
+/** Body huỷ chuyến đã nhận — nhóm lý do BẮT BUỘC, chữ tự do bắt buộc khi chọn "Lý do khác". */
+export type CancelBookingRequestInput = Schemas['CancelBookingRequestDto'];
 export type BookingRequestReceipt = Schemas['BookingRequestReceiptDto'];
 export type CheckAvailabilityInput = Schemas['CheckAvailabilityDto'];
 export type CheckAvailabilityResult = Schemas['CheckAvailabilityResultDto'];

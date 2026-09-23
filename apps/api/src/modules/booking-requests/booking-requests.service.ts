@@ -20,6 +20,8 @@ import {
   BOOKING_REQUEST_DECISION_SOURCE,
   BOOKING_REQUEST_STATUS,
   BOOKING_REQUEST_STATUS_VALUES,
+  CANCELLATION_STAGE,
+  cancellationReasonNeedsText,
   bookingRequestRespondBy,
   DEPOSIT_COLLECTION_MODE,
   isBookingRequestPastDue,
@@ -31,16 +33,24 @@ import {
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   PICKUP_PREFERENCE,
+  PROMO_INELIGIBLE_REASON,
+  PROMO_RELEASE_REASON,
+  normalizePromoCode,
+  promoEligibleAmount,
+  FEE_LINE,
   SERVICE_TYPE,
   TENANT_CUSTOMER_SOURCE,
   TENANT_STATUS,
   USER_STATUS,
   VEHICLE_PUBLIC_STATUS,
   type AutoAcceptBlocker,
+  type CancellationReasonCategory,
   type BookingRequestDecisionSource,
   type BookingRequestDeliveryQuote,
   type BookingPriceSnapshot,
   type CustomerFeeBreakdown,
+  type PromoCodeSnapshot,
+  type PromoIneligibleReason,
   type RentalTermsSnapshot,
   type ServiceType,
 } from '@xeprime/types';
@@ -54,6 +64,7 @@ import { normalizeRouteContext } from '../../common/route-context';
 import { addressViewOf, pinOf } from '../../common/address-view';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AddressService } from '../locations/address.service';
+import { CancellationsService } from '../cancellations/cancellations.service';
 import { AuditService } from '../audit/audit.service';
 import { AuthService } from '../auth/auth.service';
 import { OccupancyService } from '../calendar/occupancy.service';
@@ -67,11 +78,13 @@ import {
 } from '../deposit-policy/deposit-policy.service';
 import { PhoneVerificationService } from '../phone-verification/phone-verification.service';
 import { PricingService } from '../pricing/pricing.service';
+import { PromoCodeEvaluatorService } from '../promo-codes/promo-code-evaluator.service';
 import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
 import type { EffectivePolicy } from '../pricing/pricing.service';
 import {
   ApproveBookingRequestDto,
   BOOKING_REQUEST_DEFAULT_LIMIT,
+  CancelBookingRequestDto,
   BOOKING_REQUEST_MAX_LIMIT,
   BookingRequestDto,
   BookingRequestListQueryDto,
@@ -151,7 +164,7 @@ const SELECT = {
       mainImageUrl: true,
       // Bốn giá + khuyến mãi — CHỈ để ước TẠM TÍNH cho yêu cầu còn `pending_host_approval` chưa
       // từng có hold (`resolvePricing`). Không kéo `monthlyPrice`: dài hạn bị loại khỏi ước giá
-      // ngay từ `resolvePricing` (chưa chốt lịch thì chưa có giá — ADR 0011), giống `trySecureHold`.
+      // ngay từ `resolvePricing` (chưa chốt lịch thì chưa có giá — ADR 0011), giống `approve`.
       weekdayPrice: true,
       weekendPrice: true,
       withDriverDailyPrice: true,
@@ -166,7 +179,7 @@ const SELECT = {
    * Tiền của yêu cầu (`resolvePricing`) — ĐÚNG một quan hệ 1-1 mỗi loại, cùng một truy vấn với
    * phần còn lại của inbox, không phải một lượt tra thêm sau khi có danh sách.
    */
-  hold: { select: { amount: true, paidAmount: true, priceSnapshotJson: true } },
+  hold: { select: { amount: true, paidAmount: true, priceSnapshotJson: true, expiresAt: true } },
   booking: {
     select: { totalAmount: true, customerTotalAmount: true, paidAmount: true },
   },
@@ -242,6 +255,13 @@ export class BookingRequestsService {
     private readonly depositPolicy: DepositPolicyService,
     /** Địa chỉ đón/giao xe có cấu trúc (14/09/2026) — kiểm danh mục + ghép chuỗi hiển thị. */
     private readonly address: AddressService,
+    /** Writer DUY NHẤT của `booking_cancellations` (ADR 0045 điều 1). */
+    private readonly cancellations: CancellationsService,
+    /**
+     * MÃ KHUYẾN MÃI nền tảng — ADR 0046. Service này giữ/chốt/nhả lượt; nó KHÔNG tính giá và
+     * không đọc `promo_codes` ngoài đường của evaluator.
+     */
+    private readonly promos: PromoCodeEvaluatorService,
   ) {}
 
   private readonly logger = new Logger(BookingRequestsService.name);
@@ -585,6 +605,21 @@ export class BookingRequestsService {
       longTerm,
     );
 
+    /*
+     * MÃ KHUYẾN MÃI — cửa kiểm THỨ HAI của ba cửa (ADR 0046 điều 7).
+     *
+     * Đặt ở ĐÚNG đây: sau `resolveOrCreateUserByPhone` (nên đã có danh tính đã xác thực để gác
+     * "khách hàng mới" và trần lượt mỗi người — điều 5) và sau `assertCanBook`/duplicate (nên một
+     * yêu cầu chắc chắn bị từ chối không giữ lượt của ai). Việc GIỮ lượt thì nằm trong transaction
+     * ghi yêu cầu ở dưới — hai việc đó là một việc hoặc không việc nào.
+     *
+     * Không áp được ⇒ NÉM, không âm thầm bỏ mã. Bỏ mã làm số tiền khách phải trả tăng so với con
+     * số họ vừa đồng ý, và họ chỉ phát hiện ra lúc nhìn mã QR.
+     */
+    const promo = dto.promoCode?.trim()
+      ? await this.evaluateSubmittedPromo(dto, vehicle.id, effectiveUserId, serviceType)
+      : null;
+
     const id = newId();
     // Ghi yêu cầu + báo cả shop trong một transaction: yêu cầu mới luôn có thông báo đi kèm.
     try {
@@ -673,8 +708,27 @@ export class BookingRequestsService {
              */
             respondBy: bookingRequestRespondBy(new Date()),
             rentalTerms: rentalTerms as unknown as Prisma.InputJsonValue,
+            /*
+             * Điều kiện của mã ĐÓNG BĂNG ngay tại đây. Lúc chốt giá, số giảm được tính lại từ
+             * CỘT NÀY chứ không từ chiến dịch đang hiệu lực hôm nay — admin sửa/tắt/xoá mềm giữa
+             * lúc khách chờ duyệt không được viết lại lời hứa đã hiện trên màn hình của họ
+             * (ADR 0046 điều 7).
+             */
+            promoCodeId: promo?.promoCodeId ?? null,
+            promoSnapshot: (promo as unknown as Prisma.InputJsonValue) ?? Prisma.DbNull,
           },
         });
+
+        // GIỮ lượt trong CÙNG transaction: không có yêu cầu nào mang mã mà không giữ lượt, và
+        // không có lượt nào bị giữ cho một yêu cầu chưa tồn tại.
+        if (promo) {
+          await this.promos.reserveWithinTx(tx, {
+            snapshot: promo,
+            customerUserId: effectiveUserId,
+            bookingRequestId: id,
+            perCustomerLimit: promo.perCustomerLimit,
+          });
+        }
 
         /*
          * Ứng viên tự động nhận thì KHÔNG báo "có yêu cầu mới cần duyệt" ở đây: nếu hệ thống nhận
@@ -699,41 +753,226 @@ export class BookingRequestsService {
     }
 
     /*
-     * BA ĐƯỜNG, thử theo đúng thứ tự này (ADR 0039):
+     * HAI ĐƯỜNG (ADR 0044 — không còn đường "thu tiền trước khi duyệt" của ADR 0039):
      *
-     *   1. **Giữ chỗ trước** — chuyến có thu cọc và giá đã chốt: sinh hold, chiếm lịch, đưa QR
-     *      cho khách NGAY. Chủ xe duyệt sau khi tiền về. Đây là đường mặc định của cả sàn.
-     *   2. **Tự nhận** — chuyến KHÔNG thu cọc (dài hạn, báo giá tạm tính, chính sách tắt) mà xe
-     *      bật "Đặt ngay": tạo đơn luôn như trước.
-     *   3. **Chờ duyệt tay** — còn lại.
+     *   1. **Tự nhận** — xe bật "Đặt ngay" và chuyến đủ điều kiện: đi ĐÚNG đường của duyệt tay
+     *      (`commitDecision`), chỉ khác người ký. Chuyến có thu tiền giữ chỗ thì QR được phát
+     *      ngay tại đây và khách thấy nó trên màn kết quả; chuyến không thu thì có đơn luôn.
+     *   2. **Chờ duyệt tay** — còn lại. KHÔNG tạo hold, KHÔNG phát QR, KHÔNG chiếm lịch: chuyến
+     *      chưa được ai nhận thì chưa có số tiền nào để thu và chưa có chỗ nào để giữ.
      *
-     * Đường 1 KHÔNG bắn thông báo cho gian hàng: chỗ này chưa chắc chắn, và một thông báo cho
-     * mỗi lượt bấm đặt sẽ biến hộp thư của gian hàng thành nơi không ai đọc nữa. Họ được gọi
-     * khi tiền đã về — lúc đó mới có việc để làm.
+     * Thông báo cho gian hàng chỉ đi ở đường 2 — ở đường 1 họ nhận một tin "đã tự nhận" trong
+     * chính `commitDecision`, không phải hai tin trái ngược nhau.
      */
-    let auto: AutoAcceptOutcome | null = await this.trySecureHold(vehicle.tenantId, id);
-    const secured = auto != null;
-    if (!auto && autoCandidate) {
-      auto = await this.tryAutoAccept(vehicle.tenantId, id);
+    if (!autoCandidate) {
+      // Tin "có yêu cầu mới" đã đi TRONG transaction ghi yêu cầu ở trên — không bắn lần hai.
+      return submittedReceipt(id, null, loginUserId);
     }
-    if (!auto && !secured) {
-      // Không giữ chỗ trước được và cũng không tự nhận được → về luồng duyệt tay.
+
+    const auto = await this.tryAutoAccept(vehicle.tenantId, id);
+    if (!auto) {
+      /*
+       * Ứng viên tự nhận nhưng hệ thống KHÔNG nhận được (ngoài khung giờ giao xe, không có tài
+       * xế, chuyến quá sát giờ để kịp thu tiền…). Yêu cầu ở lại hàng chờ, nên người trực phải
+       * được gọi — và đây là lượt gọi DUY NHẤT của họ: nhánh trong transaction ở trên cố ý im
+       * lặng với ứng viên tự nhận để tránh "có yêu cầu mới" rồi ngay sau đó "đã tự nhận".
+       */
       await this.notifications.emitToTenantMembers(
         vehicle.tenantId,
         submittedNotification(dto.customerName, vehicle.name, id),
       );
     }
 
-    return {
-      receipt: {
-        id,
-        status: auto?.status ?? BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
-        authenticated: true,
-        autoAccepted: auto != null,
-        bookingId: auto?.bookingId ?? null,
+    return submittedReceipt(id, auto, loginUserId);
+  }
+
+  /**
+   * CHỐT hoặc NHẢ lượt mã khuyến mãi trong transaction của lượt duyệt — ADR 0046 điều 6.
+   *
+   * Ba ngả, và cả ba nằm ở MỘT chỗ để không nhánh nào quên:
+   *
+   *  - **mã hết đủ điều kiện** ⇒ nhả lượt + xoá dấu mã trên yêu cầu + BÁO KHÁCH. Báo là phần
+   *    bắt buộc: số tiền họ phải trả vừa tăng so với lúc họ đồng ý, và im lặng ở đây đúng là
+   *    thứ "âm thầm bỏ mã rồi tăng tiền" mà yêu cầu sản phẩm cấm.
+   *  - **đã có ĐƠN** (nhánh không thu tiền giữ chỗ) ⇒ chốt lượt bằng con số đã đóng băng.
+   *  - **chưa có đơn** (nhánh chờ tiền giữ chỗ) ⇒ không làm gì; lượt ở lại trạng thái GIỮ tới
+   *    khi đối soát xác nhận đủ tiền.
+   */
+  private async settlePromoWithinTx(
+    tx: Prisma.TransactionClient,
+    input: {
+      requestId: string;
+      bookingId: string | null;
+      fees: CustomerFeeBreakdown | null;
+      promoDropped: boolean;
+      customerUserId: string | null;
+      tenantId: string;
+      vehicleName: string;
+    },
+  ): Promise<void> {
+    if (input.promoDropped) {
+      await this.promos.releaseWithinTx(tx, {
+        bookingRequestId: input.requestId,
+        reason: PROMO_RELEASE_REASON.NO_LONGER_ELIGIBLE,
+      });
+      /*
+       * Xoá dấu mã trên yêu cầu: giữ lại `promo_code_id` cho một yêu cầu không được giảm đồng
+       * nào sẽ làm mọi bề mặt đọc lại đơn hiện một mã đã không còn tác dụng. Snapshot đi cùng nó
+       * — nó chỉ tồn tại để tính số giảm, và không còn số giảm nào.
+       */
+      await tx.bookingRequest.update({
+        where: { id: input.requestId },
+        data: { promoCodeId: null, promoSnapshot: Prisma.DbNull },
+      });
+      if (input.customerUserId) {
+        await this.notifications.emitToUser(
+          input.customerUserId,
+          {
+            type: NOTIFICATION_TYPE.PROMO_CODE_DROPPED,
+            title: 'Mã khuyến mãi không còn áp dụng được',
+            body: `${input.vehicleName} · số tiền cần thanh toán đã được cập nhật theo giá không có mã`,
+            tenantId: input.tenantId,
+            targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
+            targetId: input.requestId,
+          },
+          tx,
+        );
+      }
+      return;
+    }
+
+    if (input.bookingId && input.fees?.promo) {
+      await this.promos.redeemWithinTx(tx, {
+        bookingRequestId: input.requestId,
+        bookingId: input.bookingId,
+        discountAmount: input.fees.promoDiscountAmount,
+      });
+    }
+  }
+
+  /**
+   * BẢNG PHÍ ĐÓNG BĂNG của một lượt duyệt, đã áp mã khuyến mãi — cửa kiểm THỨ BA, và là điểm
+   * CHỐT GIÁ (ADR 0024 · ADR 0046 điều 7).
+   *
+   * Dùng chung cho duyệt tay và tự nhận — hai đường phải đóng băng cùng một con số, nên chúng
+   * gọi cùng một hàm.
+   *
+   * ## Hai lượt tính, và vì sao
+   *
+   * Số giảm cần biết khoản online (`D + S + IV + IP`), mà con số đó là kết quả của chính bảng
+   * phí. Nên: lượt MỘT không mã để lấy mẫu số, rồi tính số giảm, rồi lượt HAI có mã. Vì
+   * `S`/`T`/`IV`/`IP`/`D` không phụ thuộc mã, lượt hai không bao giờ ra một cơ sở tính khác.
+   *
+   * ## Mã hết đủ điều kiện lúc chốt giá
+   *
+   * Trả `promoDropped = true` thay vì ném. Chặn lượt duyệt vì một chi tiết marketing là phạt
+   * gian hàng cho việc họ không gây ra; và khách vẫn thấy con số thật TRƯỚC khi trả đồng nào
+   * (ADR 0044 đặt việc thu tiền sau lượt duyệt), kèm một thông báo nói rõ mã không còn áp được.
+   * Caller nhả lượt với `NO_LONGER_ELIGIBLE`.
+   */
+  private async resolveFeesWithPromo(
+    tenantId: string,
+    req: PendingRequestRow,
+    breakdown: { totalAmount: string; rows: { key: string; amount: string }[]; estimateNote: string | null },
+    deposit: DepositPolicyResolution,
+  ): Promise<{ fees: CustomerFeeBreakdown | null; promoDropped: boolean }> {
+    const quoteIsEstimate = breakdown.estimateNote != null;
+    const feeOpts = { depositRequired: deposit.required };
+
+    const frozen = this.promos.frozenTermsOf(req);
+    if (!frozen) {
+      const fees = await this.pricing.customerFeesFor(
+        tenantId,
+        breakdown.totalAmount,
+        quoteIsEstimate,
+        feeOpts,
+      );
+      return { fees, promoDropped: false };
+    }
+
+    const baseFees = await this.pricing.customerFeesFor(
+      tenantId,
+      breakdown.totalAmount,
+      quoteIsEstimate,
+      feeOpts,
+    );
+    const applied = this.promos.applyFrozenTerms({
+      snapshot: frozen,
+      money: {
+        eligibleAmount: promoEligibleAmount(breakdown.rows),
+        // Cùng một luật với lúc xem trước: không có khoản giữ chỗ nào thì không có gì để tài trợ.
+        grossOnlineAmount: baseFees?.holdAmount != null ? baseFees.grossOnlineAmount : null,
+        sponsorableAmount: baseFees
+          ? String(
+              Number(baseFees.depositAmount) +
+                Number(
+                  baseFees.lines.find((l) => l.key === FEE_LINE.SERVICE_FEE)?.amount ?? 0,
+                ),
+            )
+          : '0',
+        holdMinAmount: baseFees?.policy.holdMinAmount ?? '0',
       },
-      loginUserId,
-    };
+    });
+    if (!applied.snapshot) {
+      this.logger.warn(
+        `Mã ${frozen.code} không còn áp được cho yêu cầu ${req.id} lúc chốt giá (${applied.reason}) — nhả lượt`,
+      );
+      return { fees: baseFees, promoDropped: true };
+    }
+
+    const fees = await this.pricing.customerFeesFor(
+      tenantId,
+      breakdown.totalAmount,
+      quoteIsEstimate,
+      { ...feeOpts, promo: applied.snapshot },
+    );
+    /*
+     * `computeCustomerFees` kẹp lại một lần nữa và có thể đưa `promo` về `null` (snapshot cũ,
+     * hoặc trần tụt xuống 0). Khi đó lượt mã coi như KHÔNG áp — nhả lượt, đừng để một yêu cầu
+     * mang `promo_code_id` mà số giảm bằng 0.
+     */
+    return { fees, promoDropped: fees?.promo == null };
+  }
+
+  /**
+   * MÃ KHUYẾN MÃI ở bước GỬI yêu cầu — đánh giá lại trên báo giá của CHÍNH server.
+   *
+   * Không tin một con số nào từ client: DTO chỉ mang chuỗi mã, còn tiền thuê đủ điều kiện, khoản
+   * online và trần tài trợ đều dựng lại từ `PricingService`. Nếu tin payload thì một client gửi
+   * "giảm 5.000.000đ" sẽ không có gì phản đối nó.
+   *
+   * Ném `PROMO_CODE_NOT_APPLICABLE` kèm `details.reason` — giao diện ánh xạ từ MÃ lý do
+   * (ADR 0012), không hiện `message` của server làm chữ chính.
+   */
+  private async evaluateSubmittedPromo(
+    dto: CreateBookingRequestDto,
+    vehicleId: string,
+    customerUserId: string,
+    serviceType: string,
+  ): Promise<PromoCodeSnapshot> {
+    const context = await this.pricing.promoContextFor(vehicleId, {
+      ...(dto.pickupAt === undefined ? {} : { pickupAt: dto.pickupAt }),
+      ...(dto.returnAt === undefined ? {} : { returnAt: dto.returnAt }),
+      serviceType,
+      ...(dto.routeType === undefined ? {} : { routeType: dto.routeType }),
+      ...(dto.longTermPackageMonths === undefined
+        ? {}
+        : { packageMonths: dto.longTermPackageMonths }),
+    });
+    if (!context) {
+      throw promoNotApplicable(dto.promoCode ?? '', PROMO_INELIGIBLE_REASON.NO_ONLINE_PAYMENT);
+    }
+
+    const evaluation = await this.promos.evaluate({
+      code: dto.promoCode ?? '',
+      customerUserId,
+      scope: context.scope,
+      money: context.money,
+    });
+    if (!evaluation.applicable) {
+      throw promoNotApplicable(dto.promoCode ?? '', evaluation.reason);
+    }
+    return evaluation.snapshot;
   }
 
   /**
@@ -769,11 +1008,11 @@ export class BookingRequestsService {
         );
         return null;
       }
-      const fees = await this.pricing.customerFeesFor(
+      const { fees, promoDropped } = await this.resolveFeesWithPromo(
         tenantId,
-        breakdown.totalAmount,
-        breakdown.estimateNote != null,
-        { depositRequired: deposit.required },
+        req,
+        breakdown,
+        deposit,
       );
       const terms = req.rentalTerms as unknown as RentalTermsSnapshot | null;
       const blocker = this.settings.evaluateAutoAccept(setting, windows, {
@@ -812,7 +1051,7 @@ export class BookingRequestsService {
         snapshot,
         fees,
         deposit,
-        { driverId },
+        { driverId, promoDropped },
       );
       return { status: row.status, bookingId: row.bookingId };
     } catch (err) {
@@ -823,120 +1062,6 @@ export class BookingRequestsService {
        */
       this.logger.warn(
         `Tự động nhận yêu cầu ${id} thất bại — rơi về chờ duyệt tay: ${err instanceof Error ? err.message : String(err)}`,
-      );
-      return null;
-    }
-  }
-
-  /**
-   * GIỮ CHỖ NGAY LÚC GỬI YÊU CẦU — đường mặc định từ ADR 0039.
-   *
-   * Thứ tự cũ (chủ xe duyệt → mới phát QR) có một lỗ nghiệp vụ mà ADR 0039 sinh ra để vá: khách
-   * bấm đặt xong không có việc gì để làm và không có gì bảo đảm, còn chỗ xe thì chưa ai giữ —
-   * nên hai người có thể cùng "đặt" một chiếc xe rồi một người bị loại sau hàng giờ chờ đợi.
-   *
-   * Nay: tính giá, sinh hold `pending`, CHIẾM LỊCH, và trả về mã `XPH…` để khách quét ngay.
-   * Chủ xe duyệt SAU khi tiền về (`BookingHoldsService.settleFullPaymentWithinTx`).
-   *
-   * Trả `null` = chuyến này không cọc trước được, và caller rơi về đường cũ. Ba lý do, tất cả
-   * đều là "chưa có SỐ TIỀN nào chốt được để in lên QR":
-   *
-   *   1. **Thuê dài hạn** — khách mới chỉ nêu nguyện vọng ngày nhận, gian hàng chốt lịch lúc
-   *      duyệt (ADR 0011). Chưa có lịch thì chưa có giá.
-   *   2. **Báo giá còn tạm tính** (`estimateNote != null`) — CLAUDE.md cấm thu phần trăm trên
-   *      một con số chưa chốt.
-   *   3. **Chính sách không thu cọc** cho gian hàng này, hoặc chưa xác định được tuyến thu phí.
-   *
-   * KHÔNG bắn thông báo cho gian hàng ở đây: chỗ này chưa chắc chắn và có thể biến mất sau
-   * `HOLD_TOTAL_WINDOW_MINUTES`. Gian hàng được gọi khi tiền đã về — lúc đó mới có việc để làm.
-   */
-  private async trySecureHold(
-    tenantId: string,
-    id: string,
-  ): Promise<AutoAcceptOutcome | null> {
-    try {
-      const req = await this.loadPending(tenantId, id);
-      // (1) Dài hạn: chưa có lịch chốt ⇒ chưa có giá ⇒ không có gì để in lên QR.
-      if (req.serviceType === SERVICE_TYPE.LONG_TERM) return null;
-
-      const policy = await this.pricing.effectivePolicy(tenantId, req.vehicleId);
-      const schedule = this.resolveApprovalSchedule(req, {});
-      const breakdown = await this.quoteFor(req, schedule, policy);
-      // (2) Giá còn tạm tính — không thu % trên một con số chưa chốt.
-      if (breakdown.estimateNote != null) return null;
-
-      const deposit = await this.depositPolicy.resolveForTenant(tenantId);
-      // (3) Chưa xác định được tuyến ⇒ không đoán tiền của khách. Chủ xe duyệt tay, và
-      // `approve` sẽ ném `TENANT_BILLING_NOT_CONFIGURED` để lỗi cấu hình lộ ra đúng chỗ.
-      if (!deposit.billingMode) return null;
-
-      const fees = await this.pricing.customerFeesFor(tenantId, breakdown.totalAmount, false, {
-        depositRequired: deposit.required,
-      });
-      if (!fees?.holdAmount) return null;
-
-      const snapshot = this.pricing.buildSnapshot(breakdown, policy, fees);
-
-      /*
-       * MỘT mốc cho cả hai cửa sổ tiền. Từ ADR 0039 nó là lúc khách GỬI YÊU CẦU, không phải lúc
-       * chủ xe duyệt — vì đây mới là lúc khách cam kết và là lúc đồng hồ của họ bắt đầu chạy.
-       */
-      const anchorAt = new Date();
-      await this.prisma.$transaction(async (tx) => {
-        await this.holds.createForApprovedRequestWithinTx(tx, {
-          tenantId,
-          requestId: id,
-          vehicleId: req.vehicleId,
-          vehicleName: req.vehicle.name,
-          customerUserId: req.customerUserId,
-          schedule: {
-            pickupAt: schedule.pickupAt,
-            returnAt: schedule.returnAt,
-            packageMonths: schedule.packageMonths,
-          },
-          snapshot,
-          acceptedAt: anchorAt,
-          actorUserId: null,
-        });
-
-        /*
-         * Chiếm yêu cầu SAU khi hold đã tồn tại và lịch đã bị chiếm — cùng thứ tự với
-         * `commitDecision`. Đảo lại thì một lượt tạo hold hỏng (trùng lịch) sẽ để lại một yêu
-         * cầu `awaiting_hold` không có hold nào, tức là một chuyến chờ tiền mà không có mã.
-         */
-        await this.claimPending(tx, tenantId, id, {
-          status: BOOKING_REQUEST_STATUS.AWAITING_HOLD,
-          pickupAt: schedule.pickupAt,
-          returnAt: schedule.returnAt,
-          longTermPackageMonths: schedule.packageMonths,
-          // KHÔNG có `decidedBy`/`decidedAt`: chưa ai quyết định gì cả. Khách mới trả tiền giữ
-          // chỗ, còn quyết định nhận chuyến vẫn đang ở phía trước.
-          decisionSource: null,
-        });
-
-        await this.audit.record(
-          {
-            tenantId,
-            actorUserId: req.customerUserId,
-            actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
-            action: 'booking_request.hold_requested',
-            targetType: 'booking_request',
-            targetId: id,
-            after: { holdAmount: fees.holdAmount, anchorAt: anchorAt.toISOString() },
-          },
-          tx,
-        );
-      });
-
-      return { status: BOOKING_REQUEST_STATUS.AWAITING_HOLD, bookingId: null };
-    } catch (err) {
-      /*
-       * Trùng lịch (23P01), yêu cầu vừa hết hạn, giờ nhận quá sát để kịp chuyển khoản… — tất cả
-       * là "không giữ chỗ trước được", không phải lỗi của khách. Yêu cầu vẫn tồn tại và ở lại
-       * hàng chờ duyệt tay; ghi log để vận hành thấy vì sao.
-       */
-      this.logger.warn(
-        `Không giữ chỗ trước được cho yêu cầu ${id} — rơi về chờ duyệt tay: ${err instanceof Error ? err.message : String(err)}`,
       );
       return null;
     }
@@ -1001,7 +1126,7 @@ export class BookingRequestsService {
    *  2. Có hold (`row.hold`) — kể cả yêu cầu đã huỷ/từ chối/hết hạn SAU khi đã cọc — đọc
    *     snapshot đóng băng lúc hold sinh ra, không đọc lại policy hôm nay.
    *  3. Còn lại: CHỈ khi vẫn `pending_host_approval` và có đủ lịch (tự lái/có tài xế — dài hạn bỏ
-   *     qua, cùng lý do `trySecureHold` bỏ qua) mới ước TẠM TÍNH, bằng ĐÚNG máy giá `approve()`
+   *     qua, cùng lý do `approve()` phải chốt lịch trước) mới ước TẠM TÍNH, bằng ĐÚNG máy giá nó
    *     dùng. Yêu cầu đã chết (từ chối/huỷ/hết hạn) mà CHƯA TỪNG có hold thì không có gì để tính
    *     lại — trả `null`, không đoán một con số theo chính sách của hôm nay cho một việc đã qua.
    *
@@ -1074,7 +1199,7 @@ export class BookingRequestsService {
       };
     } catch (err) {
       // Không sập cả trang inbox vì MỘT yêu cầu không ước được giá — thiếu tiền trên một thẻ còn
-      // hơn thiếu cả danh sách (cùng kỷ luật `trySecureHold`/`autoAccept`).
+      // hơn thiếu cả danh sách (cùng kỷ luật `tryAutoAccept`).
       this.logger.warn(
         `Không ước được giá tạm tính cho yêu cầu ${r.id}: ${err instanceof Error ? err.message : String(err)}`,
       );
@@ -1402,10 +1527,13 @@ export class BookingRequestsService {
     dto: ApproveBookingRequestDto = {},
   ): Promise<BookingRequestDto> {
     /*
-     * ĐÃ CỌC RỒI thì duyệt là một việc KHÁC HẲN (ADR 0039): giá đã đóng băng lúc sinh hold,
-     * tiền đã nằm ở XePrime, lịch đã bị chiếm. Không tính lại gì cả — chỉ mở đơn từ snapshot đã
-     * chốt. Đi tiếp xuống dưới sẽ báo giá lần thứ hai và đóng băng một con số khác với con số
-     * khách đã trả.
+     * DỮ LIỆU LEGACY ADR 0039 — khách đã trả tiền TRƯỚC khi có ai duyệt. Duyệt ở đây là một
+     * việc KHÁC HẲN: giá đã đóng băng lúc sinh hold, tiền đã nằm ở XePrime, lịch đã bị chiếm.
+     * Không tính lại gì cả — chỉ mở đơn từ snapshot đã chốt. Đi tiếp xuống dưới sẽ báo giá lần
+     * thứ hai và đóng băng một con số khác với con số khách đã trả.
+     *
+     * Luồng hiện hành không sinh `hold_paid` nữa (ADR 0044), nhưng nhánh này phải ở lại cho tới
+     * khi không còn yêu cầu nào của thời kỳ đó chờ quyết định.
      */
     if (await this.isAwaitingAcceptAfterHold(tenantId, id)) {
       return this.acceptPaidRequest(tenantId, userId, id, dto);
@@ -1473,11 +1601,11 @@ export class BookingRequestsService {
         details: { reason: deposit.reason },
       });
     }
-    const fees = await this.pricing.customerFeesFor(
+    const { fees, promoDropped } = await this.resolveFeesWithPromo(
       tenantId,
-      breakdown.totalAmount,
-      breakdown.estimateNote != null,
-      { depositRequired: deposit.required },
+      req,
+      breakdown,
+      deposit,
     );
     const snapshot = this.pricing.buildSnapshot(breakdown, policy, fees);
 
@@ -1490,7 +1618,7 @@ export class BookingRequestsService {
       snapshot,
       fees,
       deposit,
-      {},
+      { promoDropped },
     );
     return toDto(row);
   }
@@ -1499,10 +1627,11 @@ export class BookingRequestsService {
    * ĐƯỜNG DUYỆT DUY NHẤT — gian hàng bấm duyệt và hệ thống tự nhận đều đi qua đây (08/09/2026),
    * nên giá, snapshot, giữ chỗ, chiếm quyền quyết định, audit và thông báo chỉ có MỘT bản.
    *
-   * HAI nhánh, tách theo việc chuyến này có khoản giữ chỗ hay không:
-   *  - CÓ (tuyến hoa hồng, giá đã chốt) → sinh `booking_holds`, yêu cầu sang `awaiting_hold`,
-   *    CHIẾM LỊCH ngay. Đơn thuê chỉ ra đời khi tiền về (webhook / khớp tay).
-   *  - KHÔNG (tuyến gói, hoặc báo giá tạm tính, hoặc chưa có chính sách phí) → tạo đơn ngay.
+   * HAI nhánh, tách theo việc chuyến này có thu TIỀN GIỮ CHỖ hay không (ADR 0044 điều 2–4):
+   *  - CÓ → sinh `booking_holds`, yêu cầu sang `awaiting_hold`, CHIẾM LỊCH và phát mã QR ngay.
+   *    Đơn thuê chỉ ra đời khi đối soát xác nhận đã nhận đủ tiền (webhook / khớp tay).
+   *  - KHÔNG (chính sách không thu, hoặc báo giá còn tạm tính nên không có số tiền nào chốt
+   *    được) → tạo đơn NGAY tại đây. Không có QR giả, không có chặng chờ tiền rỗng.
    *
    * `opts.driverId`: tài xế hệ thống chọn khi tự nhận chuyến có tài xế — gán TRONG transaction
    * tạo đơn để `bookings_driver_schedule_excl` gác; duyệt tay không dùng (gán sau ở đơn).
@@ -1516,10 +1645,27 @@ export class BookingRequestsService {
     snapshot: BookingPriceSnapshot,
     fees: CustomerFeeBreakdown | null,
     deposit: DepositPolicyResolution,
-    opts: { driverId?: string | null },
+    opts: {
+      driverId?: string | null;
+      /**
+       * Mã khuyến mãi đã đóng băng trên yêu cầu KHÔNG còn áp được lúc chốt giá (ADR 0046 điều 7).
+       * Lượt được nhả trong chính transaction của lượt duyệt, ở CẢ HAI nhánh — một yêu cầu đã
+       * quyết định xong không được để lại một lượt mã treo vô thời hạn.
+       */
+      promoDropped?: boolean;
+    },
   ): Promise<BookingRequestRow> {
     if (fees?.holdAmount) {
-      return this.approveWithHold(tenantId, actor, id, req, schedule, snapshot, fees.holdAmount);
+      return this.approveWithHold(
+        tenantId,
+        actor,
+        id,
+        req,
+        schedule,
+        snapshot,
+        fees.holdAmount,
+        opts,
+      );
     }
     const isSystem = actor.source === BOOKING_REQUEST_DECISION_SOURCE.SYSTEM;
 
@@ -1619,6 +1765,28 @@ export class BookingRequestsService {
         decisionSource: actor.source,
       });
 
+      /*
+       * MÃ KHUYẾN MÃI — nhánh này tạo ĐƠN ngay, nên lượt mã CHỐT tại đây (ADR 0046 điều 6).
+       * Chốt bằng con số ĐÃ ĐÓNG BĂNG vào snapshot, không bằng số tạm lúc giữ lượt.
+       */
+      await this.settlePromoWithinTx(tx, {
+        requestId: id,
+        bookingId: booking.id,
+        fees,
+        promoDropped: opts.promoDropped === true,
+        customerUserId: req.customerUserId,
+        tenantId,
+        vehicleName: req.vehicle.name,
+      });
+
+      // Chỗ đã thuộc về khách này ⇒ mọi yêu cầu còn chờ cho cùng khung giờ được trả lời ngay.
+      await this.closeSupersededRequests(tx, tenantId, {
+        id,
+        vehicleId: req.vehicleId,
+        pickupAt: schedule.pickupAt,
+        returnAt: schedule.returnAt,
+      });
+
       const updated = await tx.bookingRequest.findFirstOrThrow({
         where: { id, tenantId },
         select: SELECT,
@@ -1673,7 +1841,11 @@ export class BookingRequestsService {
   }
 
   /**
-   * Duyệt yêu cầu ở tuyến CÓ GIỮ CHỖ: chốt lịch + sinh hold, KHÔNG tạo đơn.
+   * NHẬN chuyến có thu tiền giữ chỗ: chốt lịch, chốt giá, giữ xe và phát QR — KHÔNG tạo đơn.
+   *
+   * Đây là chặng giữa của ADR 0044: chuyến đã được nhận (nên có `decided_at`, có occupancy và
+   * có một số tiền chốt), nhưng nó chỉ thành ĐƠN THUÊ khi đối soát xác nhận tiền đã về đủ. Một
+   * cú bấm trên giao diện hay một lượt quét QR không tạo đơn.
    *
    * Thứ tự trong transaction giống hệt nhánh tạo đơn: chiếm quyền quyết định SAU khi hold đã
    * tạo — worker expire chen vào giữa thì cả transaction quay đầu, không để lại hold mồ côi.
@@ -1686,6 +1858,7 @@ export class BookingRequestsService {
     schedule: ApprovalSchedule,
     snapshot: BookingPriceSnapshot,
     holdAmount: string,
+    opts: { promoDropped?: boolean },
   ): Promise<BookingRequestRow> {
     const isSystem = actor.source === BOOKING_REQUEST_DECISION_SOURCE.SYSTEM;
     /*
@@ -1722,6 +1895,33 @@ export class BookingRequestsService {
         decisionSource: actor.source,
       });
 
+      /*
+       * MÃ KHUYẾN MÃI — nhánh này CHƯA có đơn, nên lượt mã vẫn ở trạng thái GIỮ (nó chốt trong
+       * transaction của lượt đối soát tiền về). Chỉ xử lý ca mã đã hết đủ điều kiện: nhả lượt
+       * ngay và nói cho khách BIẾT trước khi họ quét mã QR.
+       */
+      await this.settlePromoWithinTx(tx, {
+        requestId: id,
+        bookingId: null,
+        fees: null,
+        promoDropped: opts.promoDropped === true,
+        customerUserId: req.customerUserId,
+        tenantId,
+        vehicleName: req.vehicle.name,
+      });
+
+      /*
+       * Chỗ đã bị chiếm bởi chuyến này (occupancy `booking_request` ở ngay trên) ⇒ trả lời luôn
+       * những khách còn đang chờ cùng khung giờ. Làm ở đây, không chờ tới lúc tiền về: chiếc xe
+       * đã bị khoá kể từ mili-giây này, nên một yêu cầu khác cho cùng khung giờ đã hết đường.
+       */
+      await this.closeSupersededRequests(tx, tenantId, {
+        id,
+        vehicleId: req.vehicleId,
+        pickupAt: schedule.pickupAt,
+        returnAt: schedule.returnAt,
+      });
+
       const updated = await tx.bookingRequest.findFirstOrThrow({
         where: { id, tenantId },
         select: SELECT,
@@ -1746,7 +1946,7 @@ export class BookingRequestsService {
           {
             type: NOTIFICATION_TYPE.BOOKING_AUTO_ACCEPTED,
             title: `Đã tự động nhận chuyến: ${req.customerName}`,
-            body: `${req.vehicle.name} · chờ khách chuyển giữ chỗ`,
+            body: `${req.vehicle.name} · đã giữ xe, chờ khách thanh toán tiền giữ chỗ`,
             targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
             targetId: id,
           },
@@ -1867,6 +2067,12 @@ export class BookingRequestsService {
         decisionSource: BOOKING_REQUEST_DECISION_SOURCE.HOST,
       });
 
+      // Yêu cầu chết trước khi thành đơn ⇒ NHẢ lượt mã về kho (ADR 0046 điều 6).
+      await this.promos.releaseWithinTx(tx, {
+        bookingRequestId: id,
+        reason: PROMO_RELEASE_REASON.REQUEST_REJECTED,
+      });
+
       const updated = await tx.bookingRequest.findFirstOrThrow({
         where: { id, tenantId },
         select: SELECT,
@@ -1916,7 +2122,12 @@ export class BookingRequestsService {
    * Đây vẫn chỉ là cửa ĐỌC TRƯỚC để báo lỗi cho đúng. Chốt chặn thật nằm ở lệnh `updateMany`
    * có điều kiện của `approve`/`reject`: giữa lúc đọc và lúc ghi, worker vẫn có thể chen vào.
    */
-  /** Yêu cầu này đang ở chặng "khách đã trả giữ chỗ, chờ gian hàng nhận" chưa. */
+  /**
+   * Yêu cầu này có phải bản ghi LEGACY ADR 0039 — "khách đã trả đủ, chờ gian hàng nhận" — không.
+   *
+   * Luồng ADR 0044 không tạo `hold_paid` nữa; hàm này là cái cầu để những yêu cầu đã ở đó đi
+   * hết đường của chúng thay vì bị mắc kẹt với tiền thật bên trong.
+   */
   private async isAwaitingAcceptAfterHold(tenantId: string, id: string): Promise<boolean> {
     const row = await this.prisma.bookingRequest.findFirst({
       where: { id, tenantId },
@@ -1986,6 +2197,215 @@ export class BookingRequestsService {
    *
    * Khách không có lỗi gì ở đây, nên hoàn **toàn bộ** — không chia đôi, không giữ phí dịch vụ.
    */
+
+  /**
+   * GIAN HÀNG RÚT LẠI một chuyến ĐÃ NHẬN — ADR 0045 điều 1.
+   *
+   * Khác `reject` ở đúng chỗ tốn kém nhất: ở kia gian hàng nói "không nhận" trước khi có bất kỳ
+   * cam kết nào; ở đây họ ĐÃ nhận, xe đã bị giữ, khách đã được báo là chuyến của họ được chấp
+   * nhận và có thể đang trên đường đi chuyển khoản. Nên nó là một trạng thái riêng
+   * (`cancelled_by_host`), một dòng `booking_cancellations`, và một chỉ số bị ảnh hưởng.
+   *
+   * Chặng áp dụng: `awaiting_hold` (đường hiện hành) và `hold_paid` (LEGACY ADR 0039). Sau khi
+   * ĐƠN đã tồn tại, huỷ thuộc về vòng đời đơn — `POST /bookings/:id/transition` với
+   * `to = cancelled`, nơi `HoldSettlementService` đã có sẵn luật hoàn cho phía gian hàng.
+   *
+   * ## Một transaction, và mọi thứ trong đó
+   *
+   * Chiếm trạng thái bằng điều kiện trong WHERE ⇒ tiền về đúng lúc huỷ chỉ có MỘT đường thắng:
+   * `settleFullPaymentWithinTx` cũng claim `status = awaiting_hold`, nên hai bên không thể cùng
+   * khớp. Bên thua quay đầu cả transaction — không có đơn mở ra từ một chuyến vừa bị huỷ, và
+   * không có khoản hoàn ghi hai lần.
+   *
+   * Dòng `booking_cancellations` có UNIQUE trên `booking_request_id`: hai lượt bấm huỷ song
+   * song thì bên thứ hai vỡ ở DB chứ không ở một câu `if` đọc trước.
+   */
+  async cancelByHost(
+    tenantId: string,
+    userId: string,
+    id: string,
+    dto: CancelBookingRequestDto,
+  ): Promise<BookingRequestDto> {
+    const reasonCategory = dto.reasonCategory as CancellationReasonCategory;
+    if (cancellationReasonNeedsText(reasonCategory) && !dto.reason?.trim()) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Chọn "Lý do khác" thì phải ghi rõ lý do cho khách',
+      });
+    }
+
+    const req = await this.prisma.bookingRequest.findFirst({
+      where: { id, tenantId },
+      select: {
+        id: true,
+        status: true,
+        customerUserId: true,
+        customerName: true,
+        vehicle: { select: { name: true } },
+      },
+    });
+    if (!req) throw notFound();
+
+    /*
+     * Chặng quyết định ĐƯỜNG TIỀN, nên nó được đọc một lần ở đây rồi đi cùng quyết định tới
+     * cuối — và được LƯU. Suy lại từ `status` sau khi huỷ là không được: lúc đó cả hai chặng
+     * đều mang `cancelled_by_host`.
+     */
+    const stage =
+      req.status === BOOKING_REQUEST_STATUS.AWAITING_HOLD
+        ? CANCELLATION_STAGE.AWAITING_HOLD
+        : req.status === BOOKING_REQUEST_STATUS.HOLD_PAID
+          ? CANCELLATION_STAGE.HOLD_PAID
+          : null;
+    if (!stage) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.BOOKING_CANCEL_NOT_ALLOWED,
+        message:
+          req.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL
+            ? 'Yêu cầu này chưa được nhận — dùng "Từ chối" thay vì huỷ'
+            : 'Chuyến này không còn ở chặng huỷ được từ hộp thư yêu cầu',
+        details: { stage: req.status },
+      });
+    }
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.bookingRequest.updateMany({
+        where: { id, tenantId, status: req.status },
+        data: {
+          status: BOOKING_REQUEST_STATUS.CANCELLED_BY_HOST,
+          rejectReason: dto.reason?.trim() || null,
+        },
+      });
+      /*
+       * 0 dòng = tiền vừa về (yêu cầu đã thành `converted_to_booking`/`hold_paid`), hoặc khách
+       * vừa huỷ, hoặc một nhân viên khác vừa bấm. Ai cũng thắng trước ta; quay đầu, không ghi đè.
+       */
+      if (claimed.count === 0) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.CONFLICT,
+          message: 'Chuyến vừa được cập nhật — tải lại rồi thử lại',
+        });
+      }
+
+      /*
+       * Ba cột QUYẾT ĐỊNH chỉ được ghi khi chúng còn trống — và lượt huỷ này KHÔNG bao giờ ghi
+       * đè một quyết định đã có.
+       *
+       * Ở chặng `awaiting_hold`, ba cột đó đã mang lượt NHẬN (ADR 0044 điều 2). Ghi đè chúng
+       * hỏng hai con số cùng lúc: trung vị thời gian phản hồi sẽ đo "bao lâu thì huỷ" thay vì
+       * "bao lâu thì trả lời", và một chuyến do xe "Đặt ngay" tự nhận sẽ bị ghi thành người
+       * quyết (ADR 0045 điều 3, hệ quả 6). Lượt huỷ có chỗ ghi riêng của nó:
+       * `booking_cancellations` giữ ai bấm và bấm lúc nào.
+       *
+       * Ở chặng LEGACY `hold_paid` thì ngược lại — ba cột còn trống vì ở thứ tự ADR 0039 gian
+       * hàng chưa từng quyết gì. Cú huỷ này CHÍNH LÀ câu trả lời đầu tiên của họ, nên nó phải
+       * được ghi, đúng như đường `rejectPaidRequest` vẫn làm.
+       */
+      await tx.bookingRequest.updateMany({
+        where: { id, tenantId, decidedAt: null },
+        data: {
+          decidedAt: new Date(),
+          decidedBy: userId,
+          decisionSource: BOOKING_REQUEST_DECISION_SOURCE.HOST,
+        },
+      });
+
+      /*
+       * Đóng hold + nhả lịch + hoàn phần đã chuyển. HAI đường vì hai chặng có hai hình dạng
+       * tiền khác nhau, và cả hai đã tồn tại sẵn — không viết lại phép ghi tiền ở đây.
+       */
+      if (stage === CANCELLATION_STAGE.AWAITING_HOLD) {
+        // `pending`/`underpaid`: đóng hold, nhả lịch, và phần đã chuyển dở thành khoản hoàn.
+        await this.holds.cancelForRequestWithinTx(tx, {
+          requestId: id,
+          tenantId,
+          actorUserId: userId,
+          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+        });
+      } else {
+        // LEGACY `hold_paid`: khách đã trả ĐỦ ⇒ hoàn 100%, cùng đường với lượt từ chối.
+        await this.holds.releasePaidHoldWithinTx(tx, {
+          requestId: id,
+          tenantId,
+          reason: 'owner_reject',
+          actorUserId: userId,
+          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+        });
+      }
+
+      /*
+       * NHẢ lượt mã khuyến mãi (ADR 0046 điều 6) — gian hàng rút lại chuyến TRƯỚC khi có đơn.
+       * Khách không làm gì sai ở đây, nên mã của họ quay lại kho và dùng được cho chuyến sau.
+       */
+      await this.promos.releaseWithinTx(tx, {
+        bookingRequestId: id,
+        reason: PROMO_RELEASE_REASON.REQUEST_CANCELLED,
+      });
+
+      await this.cancellations.recordWithinTx(tx, {
+        tenantId,
+        bookingRequestId: id,
+        stage,
+        reasonCategory,
+        reason: dto.reason,
+        actorUserId: userId,
+        actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+      });
+
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+          action: 'booking_request.cancel_by_host',
+          targetType: 'booking_request',
+          targetId: id,
+          before: { status: req.status },
+          after: { status: BOOKING_REQUEST_STATUS.CANCELLED_BY_HOST, reasonCategory, stage },
+        },
+        tx,
+      );
+
+      if (req.customerUserId) {
+        await this.notifications.emitToUser(
+          req.customerUserId,
+          {
+            type: NOTIFICATION_TYPE.BOOKING_CANCELLED_BY_HOST,
+            title: 'Chủ xe đã huỷ chuyến của bạn',
+            body: dto.reason?.trim()
+              ? `${req.vehicle.name} · ${dto.reason.trim()}`
+              : `${req.vehicle.name} · toàn bộ số tiền đã chuyển được hoàn lại`,
+            tenantId,
+            targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
+            targetId: id,
+          },
+          tx,
+        );
+      }
+
+      /*
+       * Người TRỰC KHÁC trong gian hàng cũng phải biết: xe vừa được nhả và hộp thư của họ vừa
+       * mất một chuyến. `excludeUserId` để người vừa bấm không nhận lại chính việc mình làm.
+       */
+      await this.notifications.emitToTenantMembers(
+        tenantId,
+        {
+          type: NOTIFICATION_TYPE.BOOKING_REQUEST_CANCELLED,
+          title: `Đã huỷ chuyến: ${req.customerName}`,
+          body: req.vehicle.name,
+          targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
+          targetId: id,
+        },
+        tx,
+        { excludeUserId: userId },
+      );
+
+      return tx.bookingRequest.findFirstOrThrow({ where: { id, tenantId }, select: SELECT });
+    });
+
+    return toDto(row);
+  }
+
   private async rejectPaidRequest(
     tenantId: string,
     userId: string,
@@ -2017,6 +2437,13 @@ export class BookingRequestsService {
         reason: 'owner_reject',
         actorUserId: userId,
         actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+      });
+
+      // Yêu cầu LEGACY (ADR 0039) bị từ chối sau khi đã trả tiền — vẫn chưa có đơn, nên lượt
+      // mã quay lại kho như mọi đường từ chối khác (ADR 0046 điều 6).
+      await this.promos.releaseWithinTx(tx, {
+        bookingRequestId: id,
+        reason: PROMO_RELEASE_REASON.REQUEST_REJECTED,
       });
 
       await this.audit.record(
@@ -2085,7 +2512,148 @@ export class BookingRequestsService {
     });
     if (claimed.count === 0) throw requestExpired();
   }
+
+  /**
+   * ĐÓNG những yêu cầu còn chờ mà khung giờ của chúng vừa bị lấy — ADR 0044 điều 6.
+   *
+   * Nhiều khách được phép cùng hỏi một chiếc xe cho cùng khung giờ: yêu cầu `pending_host_approval`
+   * cố ý không chiếm lịch (ADR 0006). Nhưng khi MỘT lượt duyệt/tự nhận đã giữ chỗ, những yêu cầu
+   * còn lại không còn duyệt được nữa — `vehicle_occupancies_no_overlap` sẽ từ chối, và người bấm
+   * duyệt chỉ nhận một lỗi 409 không giải thích được gì cho khách.
+   *
+   * Để chúng nằm im tới khi hết hạn phản hồi là tệ theo cả hai hướng: khách chờ thêm tới một giờ
+   * một câu trả lời đã có sẵn, còn gian hàng bị tính một lượt "không phản hồi" cho việc họ không
+   * gây ra. Nên đóng ngay, bằng trạng thái nói đúng chuyện đã xảy ra (`slot_taken`) và một thông
+   * báo riêng.
+   *
+   * Chạy TRONG transaction của lượt duyệt: chỗ giữ được thì những yêu cầu kia mới mất chỗ. Lượt
+   * duyệt hỏng (trùng lịch, 23P01) quay đầu cả transaction và không ai bị đóng oan.
+   *
+   * ## Phép so khung giờ
+   *
+   * Occupancy nới `end_at` thêm thời gian chuẩn bị của xe (`buffer_minutes`), nên hai yêu cầu
+   * đụng nhau khi `p2 < return + B` **và** `r2 + B > pickup`. Dùng đúng phép đó ở đây thay vì so
+   * khoảng trần: so trần sẽ bỏ sót những yêu cầu chỉ đụng phần đệm — đúng nhóm mà lượt duyệt sau
+   * sẽ nhận 409.
+   *
+   * Yêu cầu THUÊ DÀI HẠN chưa có lịch (`pickup_at IS NULL`) không nằm trong phép so này và không
+   * bị đóng: gian hàng còn phải tự chốt ngày nhận cho chúng, và chốt vào khoảng nào thì chưa ai
+   * biết. Bộ lọc `lt`/`gt` của Prisma tự loại `null`.
+   *
+   * Trần `SUPERSEDED_SCAN_LIMIT` giữ cho một lượt duyệt không biến thành một job: quá trần thì
+   * phần dư ở lại hàng chờ và rơi vào hạn phản hồi như trước — chậm hơn, không sai.
+   */
+  private async closeSupersededRequests(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    winner: { id: string; vehicleId: string; pickupAt: Date; returnAt: Date },
+  ): Promise<void> {
+    const bufferMs = (await this.settings.turnaroundBufferFor(tx, winner.vehicleId)) * 60_000;
+    const losers = await tx.bookingRequest.findMany({
+      where: {
+        tenantId,
+        vehicleId: winner.vehicleId,
+        id: { not: winner.id },
+        status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+        pickupAt: { lt: new Date(winner.returnAt.getTime() + bufferMs) },
+        returnAt: { gt: new Date(winner.pickupAt.getTime() - bufferMs) },
+      },
+      orderBy: { createdAt: 'asc' },
+      take: SUPERSEDED_SCAN_LIMIT,
+      select: {
+        id: true,
+        customerUserId: true,
+        customerName: true,
+        vehicle: { select: { name: true } },
+      },
+    });
+    if (losers.length === 0) return;
+
+    /*
+     * MỘT câu `UPDATE` cho cả lô, vẫn mang điều kiện trạng thái: giữa lúc đọc và lúc ghi, một
+     * yêu cầu trong lô có thể vừa được khách rút hoặc vừa bị worker cho quá hạn. Những dòng đó
+     * đơn giản là không khớp, và chúng ta không ghi đè quyết định của ai.
+     */
+    await tx.bookingRequest.updateMany({
+      where: {
+        id: { in: losers.map((l) => l.id) },
+        tenantId,
+        status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+      },
+      data: {
+        status: BOOKING_REQUEST_STATUS.SLOT_TAKEN,
+        decidedAt: new Date(),
+        decisionSource: BOOKING_REQUEST_DECISION_SOURCE.SYSTEM,
+        /*
+         * Lý do đi vào `reject_reason` vì đó là cột mà mọi bề mặt đang đọc để giải thích một
+         * yêu cầu đã đóng. Chữ tiếng Việt: cột này vốn là nơi chủ xe tự gõ, nên không có bản
+         * dịch nào cho nó — giao diện dịch từ MÃ trạng thái, còn dòng này là ghi chú vận hành.
+         */
+        rejectReason: 'Khung giờ này đang được tạm giữ cho một khách khác',
+      },
+    });
+
+    /*
+     * NHẢ lượt mã của những yêu cầu vừa bị đóng (ADR 0046 điều 6).
+     *
+     * Một vòng lặp chứ không một câu `updateMany`: `releaseWithinTx` còn phải trả lượt vào bộ
+     * đếm của ĐÚNG chiến dịch mà từng yêu cầu dùng, và mỗi yêu cầu có thể dùng một mã khác nhau.
+     * Trần `SUPERSEDED_SCAN_LIMIT` giữ vòng lặp này ở mức 50 lượt — bounded, không phải một job.
+     */
+    for (const loser of losers) {
+      await this.promos.releaseWithinTx(tx, {
+        bookingRequestId: loser.id,
+        reason: PROMO_RELEASE_REASON.SLOT_TAKEN,
+      });
+    }
+
+    await this.audit.record(
+      {
+        tenantId,
+        actorUserId: null,
+        actorScope: AUDIT_ACTOR_SCOPE.SYSTEM,
+        action: 'booking_request.slot_taken',
+        targetType: 'booking_request',
+        targetId: winner.id,
+        after: { supersededIds: losers.map((l) => l.id) },
+      },
+      tx,
+    );
+
+    for (const loser of losers) {
+      if (!loser.customerUserId) continue;
+      await this.notifications.emitToUser(
+        loser.customerUserId,
+        {
+          type: NOTIFICATION_TYPE.BOOKING_REQUEST_SLOT_TAKEN,
+          /*
+           * "ĐANG TẠM GIỮ", không phải "đã đặt thành công" — ADR 0045 điều 4.
+           *
+           * Ở thời điểm tin này đi, người thắng MỚI được nhận chuyến và chưa trả đồng nào; hold
+           * của họ có thể hết hạn trong hai giờ tới và chỗ quay lại chợ. Nói "đã đặt thành công"
+           * là khẳng định một việc chưa xảy ra, và tệ hơn: nó làm người đọc thôi quan tâm tới
+           * chiếc xe mà vài giờ sau họ lại đặt được.
+           */
+          title: 'Xe vừa được khách khác nhận',
+          body: `${loser.vehicle.name} · khung giờ bạn chọn đang được tạm giữ cho một khách khác. Bạn có thể chọn xe khác hoặc đổi thời gian — nếu chỗ trống lại, XePrime sẽ báo bạn.`,
+          tenantId,
+          targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
+          targetId: loser.id,
+        },
+        tx,
+      );
+    }
+  }
 }
+
+/**
+ * Trần số yêu cầu bị đóng trong MỘT lượt duyệt (ADR 0044 điều 6).
+ *
+ * 50 là con số "nhiều hơn mọi tình huống thật, ít hơn một job": một chiếc xe có 50 yêu cầu chờ
+ * chồng nhau cùng khung giờ là dấu hiệu của tấn công, không phải của thị trường. Quá trần thì
+ * phần dư ở lại hàng chờ và rơi vào hạn phản hồi 60 phút như trước — chậm hơn, không sai.
+ */
+const SUPERSEDED_SCAN_LIMIT = 50;
 
 /** Cột cần để duyệt/từ chối một yêu cầu — gồm nguyện vọng dài hạn và giá của xe. */
 const PENDING_SELECT = {
@@ -2122,9 +2690,14 @@ const PENDING_SELECT = {
   deliveryQuote: true,
   /// Điều kiện thuê đã đóng băng lúc khách gửi — copy sang đơn khi duyệt (08/09/2026).
   rentalTerms: true,
+  /// Mã khuyến mãi + điều kiện ĐÃ ĐÓNG BĂNG lúc khách áp mã (ADR 0046). Lúc chốt giá, số giảm
+  /// tính lại từ snapshot này, KHÔNG từ chiến dịch đang hiệu lực hôm nay.
+  promoCodeId: true,
+  promoSnapshot: true,
   vehicle: {
     select: {
       name: true,
+      vehicleType: true,
       weekdayPrice: true,
       weekendPrice: true,
       monthlyPrice: true,
@@ -2213,6 +2786,32 @@ function toDto(r: BookingRequestRow): BookingRequestDto {
     respondBy: r.respondBy as unknown as string,
     decidedAt: (r.decidedAt as unknown as string | null) ?? null,
     decisionSource: r.decisionSource ?? null,
+    // Hạn của KHÁCH, không phải của gian hàng — xem docblock ở DTO.
+    holdExpiresAt: (r.hold?.expiresAt as unknown as string | null) ?? null,
+  };
+}
+
+/**
+ * Phiếu trả về cho khách sau khi gửi yêu cầu — MỘT bản cho cả hai lối ra của `submitPublic`.
+ *
+ * `auto` null nghĩa là chuyến ở lại hàng chờ: chưa ai nhận, nên chưa có đơn và chưa có mã QR
+ * (ADR 0044 điều 1). Có `auto` thì `status` nói tiếp chuyện gì đã xảy ra — `awaiting_hold` (đã
+ * nhận, khách cần thanh toán) hoặc `converted_to_booking` (chuyến không thu tiền giữ chỗ).
+ */
+function submittedReceipt(
+  id: string,
+  auto: AutoAcceptOutcome | null,
+  loginUserId: string | null,
+): { receipt: BookingRequestReceiptDto; loginUserId: string | null } {
+  return {
+    receipt: {
+      id,
+      status: auto?.status ?? BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+      authenticated: true,
+      autoAccepted: auto != null,
+      bookingId: auto?.bookingId ?? null,
+    },
+    loginUserId,
   };
 }
 
@@ -2258,6 +2857,20 @@ function rowAmount(rows: { key: string; amount: string }[], key: string): string
 function rowAmountAbs(rows: { key: string; amount: string }[], key: string): string {
   const raw = rowAmount(rows, key);
   return raw.startsWith('-') ? raw.slice(1) : raw;
+}
+
+/**
+ * Mã khuyến mãi không áp được — MỘT mã lỗi, lý do nằm ở `details.reason` (ADR 0046).
+ *
+ * `details.code` là mã đã CHUẨN HOÁ để giao diện nói đúng thứ khách vừa gõ, kể cả khi họ gõ chữ
+ * thường hoặc dán kèm khoảng trắng.
+ */
+function promoNotApplicable(code: string, reason: PromoIneligibleReason): ConflictException {
+  return new ConflictException({
+    code: API_ERROR_CODE.PROMO_CODE_NOT_APPLICABLE,
+    message: 'Mã khuyến mãi không áp dụng được cho chuyến này',
+    details: { code: normalizePromoCode(code), reason },
+  });
 }
 
 function notFound(): NotFoundException {

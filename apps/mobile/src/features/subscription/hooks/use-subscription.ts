@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { SUBSCRIPTION_INVOICE_STATUS } from '@xeprime/types';
 import { useAppActive, useRefetchOnForeground } from '@/hooks/use-app-active';
@@ -118,4 +118,45 @@ export function usePurchaseSubscription() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.subscription.all });
     },
   });
+}
+
+/**
+ * Hoá đơn vừa RỜI trạng thái chờ ⇒ hỏi lại scope thật.
+ *
+ * Tiền về là webhook SePay lật hoá đơn `paid`, bật thuê bao và hoàn tất onboarding trong MỘT
+ * transaction (ADR 0040). Client không biết điều đó xảy ra lúc nào, nên `usePendingInvoice` hỏi
+ * lại theo nhịp và tự dừng khi hoá đơn tới trạng thái kết thúc. Lượt hỏi CUỐI CÙNG đó — lượt trả
+ * về `null` — là tín hiệu duy nhất đáng tin, và hook này biến nó thành một lần làm mới
+ * `/auth/me`. Điều hướng thì để nơi gọi lo, sau khi scope mới thật sự về.
+ *
+ * Dùng ở CẢ HAI màn dẫn tới cùng một khoảnh khắc: bước 2 của onboarding gian hàng trả phí, và
+ * bước 3 của luồng nâng cấp từ tuyến hoa hồng. Thiếu nó ở màn thứ hai, người vừa chuyển khoản
+ * xong sẽ thấy màn thanh toán lặng lẽ quay về BẢNG GIÁ — vì hoá đơn hết "chờ" trong khi scope
+ * vẫn nói họ ở tuyến hoa hồng.
+ *
+ * `seenAwaiting` là thứ phân biệt "vừa trả xong" với "chưa bao giờ tạo hoá đơn": cả hai đều cho
+ * `data === null`, và làm mới scope ở ca thứ hai là một lượt gọi vô ích mỗi lần màn mở.
+ *
+ * Cũng chạy đúng khi hoá đơn hết hạn (`void`): scope không đổi, màn hình quay về bộ chọn gói.
+ */
+export function useSyncScopeWhenInvoiceSettles(enabled = true): void {
+  const queryClient = useQueryClient();
+  const pending = usePendingInvoice(enabled);
+  const status = pending.data?.status ?? null;
+  const awaiting =
+    status === SUBSCRIPTION_INVOICE_STATUS.ISSUED ||
+    status === SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID;
+  const seenAwaiting = useRef(false);
+
+  useEffect(() => {
+    if (awaiting) {
+      seenAwaiting.current = true;
+      return;
+    }
+    if (!seenAwaiting.current) return;
+    seenAwaiting.current = false;
+    void queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
+    // Gói hiện hành đổi cùng lúc — khối "Gói & hạn mức" phải nói con số mới, không phải bậc cũ.
+    void queryClient.invalidateQueries({ queryKey: queryKeys.subscription.all });
+  }, [awaiting, queryClient]);
 }

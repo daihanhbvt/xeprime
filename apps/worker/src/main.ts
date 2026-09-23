@@ -85,7 +85,10 @@ const LOCK_HOLD_EXPIRY = 4_207;
 /** Phase 7 — phát hành bảo hiểm chuyến. Lock RIÊNG: nó gọi ra ngoài, không được chặn việc khác. */
 const LOCK_INSURANCE_ISSUE = 4_210;
 const INSURANCE_ISSUE_INTERVAL_MS = 60_000;
-/** Hold hết hạn theo phút; một phút một nhịp là đủ mịn và job chạy lại ra 0 dòng. */
+/**
+ * Hold nhắc và hết hạn theo phút; một phút một nhịp là đủ mịn cho cả hai mốc nhắc (còn 60 và
+ * 15 phút — ADR 0044 điều 3) và job chạy lại ra 0 dòng.
+ */
 const HOLD_EXPIRY_INTERVAL_MS = 60_000;
 
 const LOCK_PUSH = 4_208;
@@ -254,17 +257,19 @@ async function main(): Promise<void> {
       }
     }),
     /*
-     * Khoản giữ chỗ quá hạn (R3 — ADR 0028): lật `expired`, yêu cầu `hold_expired`, nhả lịch, báo
-     * hai bên. Việc nghiệp vụ lõi — chạy ở mọi cấu hình.
+     * Tiền giữ chỗ (R3 — ADR 0028 · ADR 0044 điều 3): nhắc khách ở mốc còn 60 và 15 phút, rồi khi
+     * quá hạn thì lật `expired`, yêu cầu `hold_expired`, nhả lịch và báo hai bên. KHÔNG còn nhánh
+     * tự gia hạn. Việc nghiệp vụ lõi — chạy ở mọi cấu hình.
      */
     loop(
-      'hết hạn giữ chỗ',
+      'nhắc + hết hạn giữ chỗ',
       LOCK_HOLD_EXPIRY,
       HOLD_EXPIRY_INTERVAL_MS,
       async () => {
         const result = await sweepBookingHoldExpiry(prisma);
-        if (result.expired || result.extended) {
-          console.log(`giữ chỗ: gia hạn ${result.extended}, hết hạn ${result.expired}`);
+        const reminders = result.firstReminders + result.finalReminders;
+        if (result.expired || reminders) {
+          console.log(`giữ chỗ: nhắc ${reminders}, hết hạn ${result.expired}`);
         }
       },
       { critical: true },

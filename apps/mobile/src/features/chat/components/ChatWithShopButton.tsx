@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useTranslations } from 'use-intl';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { Button } from '@/components/ui/Button';
+import { IconButton } from '@/components/ui/IconButton';
 import { chatApi } from '@/features/chat/api';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
@@ -25,6 +26,8 @@ export function ChatWithShopButton({
   label,
   variant = 'secondary',
   size,
+  iconOnly = false,
+  iconTone = 'primary',
   onNavigate,
 }: {
   /** Mở hội thoại VỀ MỘT XE. Loại trừ nhau với `shopSlug` — truyền đúng một trong hai. */
@@ -41,6 +44,23 @@ export function ChatWithShopButton({
   label?: string;
   variant?: 'primary' | 'secondary';
   size?: 'sm' | 'md' | 'lg';
+  /**
+   * Chỉ biểu tượng, không chữ — cho hàng TÊN của trang gian hàng.
+   *
+   * Cùng một hành động nên vẫn là component này, không phải một nút thứ hai dựng riêng:
+   * toàn bộ phần khó (idempotent theo khách+xe, nhánh chưa đăng nhập, điều hướng vào thread)
+   * nằm ở đây, và một bản sao chỉ để đổi hình dáng là một bản sao sẽ trôi.
+   *
+   * `label` vẫn BẮT BUỘC có nghĩa: nó thành nhãn cho trình đọc màn hình. Một nút chỉ có hình
+   * mà không có nhãn là một nút câm với người không nhìn thấy nó.
+   */
+  iconOnly?: boolean;
+  /**
+   * Sắc của dạng chỉ-icon. `primary` (vàng đặc) khi nó đứng trên nền trang; `surface` khi nó
+   * NỔI TRÊN ẢNH — ở đó một vòng tròn vàng chọi với ảnh bìa, còn vòng tròn trắng thì đọc
+   * được trên mọi bức ảnh và ghép cặp với nút quay lại ngay đối diện.
+   */
+  iconTone?: 'primary' | 'surface' | 'accent';
   /**
    * Gọi NGAY TRƯỚC khi rời màn. Nơi gọi nằm trong một tấm trượt phải đóng nó lại ở đây — nếu
    * không nó treo trên màn chat vừa mở.
@@ -73,6 +93,21 @@ export function ChatWithShopButton({
       toast.showError(errorMessage(error));
     },
   });
+
+  if (iconOnly) {
+    return (
+      <IconButton
+        icon="chatbubble-ellipses"
+        label={label ?? t('messageShop')}
+        tone={iconTone}
+        /* 20 là mặc định cho hình trên nền TRONG SUỐT; trên nền đặc nó tụt lại thành một
+           chấm giữa vòng tròn, nên cần thêm hai điểm để cân quang học. */
+        size={22}
+        loading={start.isPending}
+        onPress={() => start.mutate()}
+      />
+    );
+  }
 
   return (
     <Button

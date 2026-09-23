@@ -149,10 +149,43 @@ implement `GeoProvider` cộng một dòng ở `geo.module.ts`; khớp nối nà
 động.
 
 **Đã hoàn tất (16/09/2026):** `apps/mobile` đã chuyển theo. `apps/mobile/src/lib/map-static.ts`
-dùng Geoapify Static Maps với `EXPO_PUBLIC_GEOAPIFY_MAP_KEY`, và `mapAppUrl()` trả lược đồ `geo:`
-để hệ điều hành chọn app bản đồ mặc định thay vì ép mở Google Maps. Không còn bề mặt Google nào
-trong sản phẩm.
+dùng Geoapify Static Maps với `EXPO_PUBLIC_GEOAPIFY_MAP_KEY`. Không còn bề mặt bản đồ Google nào
+trong sản phẩm — mọi dữ liệu bản đồ XePrime tự vẽ đều là Geoapify/OSM.
 
-App native KHÔNG có bản đồ tương tác (không cài Leaflet/MapLibre/react-native-maps): ở đó bản đồ
-chỉ trả lời "cái ghim đúng chỗ chưa", và một ảnh tĩnh trả lời xong câu đó. Ghi nguồn ODbL đi qua
-hằng `MAP_ATTRIBUTION` — ảnh tĩnh không tự mang dòng đó như bản đồ tương tác.
+> **Sửa 21/09/2026 — `mapAppUrl()`.** Bản trước trả lược đồ `geo:` để hệ điều hành chọn app bản
+> đồ mặc định. iOS KHÔNG đăng ký `geo:`, nên trên iPhone `Linking.openURL` ném và cú chạm không
+> mở được gì. Nay nó trả link phổ quát `google.com/maps/search/?api=1` — máy có app Google Maps
+> thì vào thẳng app, không có thì mở web. Đây là một LIÊN KẾT RA NGOÀI, không phải một bề mặt bản
+> đồ có tính tiền: quyết định về nhà cung cấp ở trên không đổi.
+
+App native KHÔNG cài module bản đồ NATIVE nào (không `react-native-maps`, không MapLibre): một
+module native vắng mặt trong dev build thì crash lúc CHẠY chứ không phải lúc build.
+
+**Bổ sung 21/09/2026 — app native ĐÃ có bản đồ tương tác, bằng WebView.** Bản trước dừng ở ảnh
+tĩnh chỉ-xem với lập luận "bản đồ ở đây chỉ trả lời cái ghim đúng chỗ chưa". Lập luận đó chỉ đúng
+cho việc XEM. Nó bỏ sót việc SỬA: máy tra địa chỉ trên dữ liệu OSM Việt Nam thường ghim ra mặt
+đường lớn thay vì trong hẻm, và toạ độ đó là thứ tính phí giao xe (ADR 0018) và là chỗ tài xế lái
+tới. Trên web người dùng kéo ghim lại được; trên app họ chỉ còn cách chọn một gợi ý khác — tức là
+không sửa được những địa chỉ mà nhà cung cấp bản đồ không biết.
+
+Lối ra KHÔNG phải một module native. `react-native-webview` vốn đã nằm trong bundle (màn văn bản
+pháp lý dùng nó), nên cùng Leaflet + tile Geoapify của web chạy được ngay trong đó, không thêm
+một module native nào:
+
+| Việc | Ở đâu |
+| --- | --- |
+| Xem trước trong form | Ảnh tĩnh `map-static.ts` — hiện tức thì, không dựng WebView cho mỗi ô địa chỉ |
+| Sửa ghim (phóng to · kéo · bấm sang chỗ khác) | `map-interactive.ts` + `MapPinSheet` — Leaflet trong WebView, chỉ dựng khi người dùng mở tấm |
+| Sau khi đặt ghim | `/places/reverse` đổ địa chỉ mới vào ô, đúng như `onMovePin` bên web |
+
+Ba điểm ràng buộc, cả ba đều hỏng im lặng nếu làm sai:
+
+1. **Tấm trượt RIÊNG, không nhúng bản đồ vào form.** Bản đồ và `ScrollView` tranh nhau cùng một
+   cử chỉ kéo dọc; không có cách chia nào đúng cho cả hai.
+2. **`baseUrl` của WebView là gốc web XePrime.** Khoá bản đồ Geoapify khoá theo referrer, và một
+   trang không gốc nhận về 401 dưới dạng một lưới ô xám không kèm lỗi nào.
+3. **Ghi nguồn ODbL do trang HTML tự in** (`attributionControl` của Leaflet): khác ảnh tĩnh —
+   Geoapify nung dòng ghi nguồn vào chính tấm ảnh — tile rời không mang dòng nào.
+
+Thiếu `EXPO_PUBLIC_GEOAPIFY_MAP_KEY` thì khối bản đồ trở lại đúng hành vi cũ: ảnh tĩnh chỉ-xem,
+chạm để mở app bản đồ của máy. Đó vẫn là một sản phẩm hoàn chỉnh, chỉ mất thao tác kéo ghim.

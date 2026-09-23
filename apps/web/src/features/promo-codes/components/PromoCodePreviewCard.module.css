@@ -1,0 +1,118 @@
+/* Thẻ XEM TRƯỚC mã khuyến mãi trong form quản trị (ảnh thiết kế 6). */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-overline);
+}
+
+/*
+ * "Vé" khuyến mãi — nền nhấn nhẹ của thương hiệu để nó đọc thành một VẬT THỂ khách sẽ nhìn
+ * thấy, không đọc thành thêm một khối thông tin của form.
+ */
+.ticket {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-primary);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-primary-light);
+  gap: 6px;
+}
+
+.ticketHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.ticketCode {
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-bold);
+  letter-spacing: 0.06em;
+}
+
+.ticketType {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-semibold);
+  white-space: nowrap;
+}
+
+.ticketHeadline {
+  margin: 0;
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.ticketCap {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-regular);
+}
+
+.ticketNote {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.ticketFoot {
+  display: flex;
+  flex-wrap: wrap;
+  padding-top: var(--xp-space-sm);
+  border-top: 1px dashed var(--xp-color-primary);
+  margin-top: 2px;
+  gap: var(--xp-space-sm) var(--xp-space-md);
+}
+
+.ticketMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-overline);
+}
+
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.notesTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.notesList {
+  padding-left: 18px;
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-overline);
+  line-height: 1.6;
+}

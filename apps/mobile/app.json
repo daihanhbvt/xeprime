@@ -41,13 +41,23 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "XePrime cần quyền truy cập thư viện ảnh để bạn chọn ảnh hiện trạng xe khi lập biên bản bàn giao."
+          "photosPermission": "XePrime cần quyền truy cập thư viện ảnh để bạn chọn ảnh từ máy (ảnh đại diện, hồ sơ, xe, giấy tờ và các nội dung khác trong ứng dụng)."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "XePrime dùng vị trí của bạn để mở sẵn danh sách xe ở tỉnh/thành bạn đang đứng. Bạn có thể đổi địa điểm bất cứ lúc nào.",
+          "locationWhenInUsePermission": "XePrime dùng vị trí của bạn để mở sẵn danh sách xe ở tỉnh/thành bạn đang đứng. Bạn có thể đổi địa điểm bất cứ lúc nào.",
+          "isAndroidBackgroundLocationEnabled": false,
+          "isIosBackgroundLocationEnabled": false
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "XePrime cần quyền máy ảnh để bạn chụp ảnh hiện trạng xe ngay trong ứng dụng.",
+          "cameraPermission": "XePrime cần quyền máy ảnh để bạn chụp ảnh ngay trong ứng dụng (ảnh đại diện, hồ sơ, xe, giấy tờ và các nội dung khác).",
+          "microphonePermission": false,
           "recordAudioAndroid": false
         }
       ]
