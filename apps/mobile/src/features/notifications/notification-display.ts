@@ -129,7 +129,12 @@ export function notificationIcon(type: string): IconName {
  * hành hay từ chuông trong app.
  */
 export function notificationHref(
-  notification: { targetType?: string | null; targetId?: string | null },
+  /**
+   * `type` đi kèm vì một đích KHÔNG suy được từ `targetType` một mình: "xe bạn hỏi đã rảnh lại"
+   * trỏ vào một chiếc xe nhưng đi tới trang xe CÔNG KHAI, không phải trang quản lý xe như mọi
+   * thông báo `vehicle` khác (ADR 0045 điều 6). Bỏ nó ở đây là để dòng cũ mở sai chỗ.
+   */
+  notification: { targetType?: string | null; targetId?: string | null; type?: string | null },
   context: NotificationContext,
 ): Href | null {
   return hrefFromPath(notificationDeepLink(notification, AUDIENCE_OF[context]));

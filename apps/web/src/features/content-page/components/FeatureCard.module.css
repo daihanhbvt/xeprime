@@ -1,0 +1,87 @@
+/*
+ * Thẻ "một ý".
+ *
+ * Nền trắng, viền mảnh, bo 10px — cùng hình dáng với thẻ xe và thẻ bước thuê ở trang chủ, nên
+ * trang thông tin không trông như một hệ khác ghép vào.
+ */
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+/* Huy hiệu: chấm vàng mang số thứ tự hoặc một icon. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.title {
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--xp-color-text);
+}
+
+.desc {
+  margin-top: 7px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--xp-color-text-secondary);
+}
+
+/* ─── Dạng bấm được ──────────────────────────────────────────────────────── */
+.clickable {
+  /* Chừa chỗ cho mũi tên ở góc dưới bên phải để chữ không chạy vào nó. */
+  padding-bottom: 42px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.clickable:hover {
+  border-color: var(--xp-color-primary);
+  box-shadow: var(--xp-shadow-raised);
+  transform: translateY(-2px);
+}
+
+.clickable:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-primary);
+  outline-offset: 2px;
+}
+
+/* Mũi tên ">" vẽ bằng hai cạnh viền — không kéo `@ant-design/icons` vào một Server Component. */
+.arrow {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  width: 8px;
+  height: 8px;
+  border-top: 1.5px solid var(--xp-color-text-tertiary);
+  border-right: 1.5px solid var(--xp-color-text-tertiary);
+  transform: rotate(45deg);
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.clickable:hover .arrow {
+  border-color: var(--xp-color-primary);
+  transform: rotate(45deg) translate(2px, -2px);
+}

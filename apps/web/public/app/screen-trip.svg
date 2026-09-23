@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844" role="img" aria-hidden="true">
+  <!--
+    ẢNH MINH HOẠ TẠM — màn chi tiết chuyến của app native. Xem ghi chú đầy đủ ở
+    `screen-search.svg`; thay bằng ảnh thật thì ghi đè file này, giữ tỉ lệ 390×844.
+  -->
+  <rect width="390" height="844" fill="#faf9f7"/>
+
+  <!-- header -->
+  <rect x="0" y="0" width="390" height="96" fill="#ffffff"/>
+  <rect x="24" y="52" width="16" height="16" rx="3" fill="#d4cfc6"/>
+  <rect x="56" y="55" width="132" height="11" rx="5.5" fill="#1a1a1a"/>
+
+  <!-- dải trạng thái chuyến -->
+  <rect x="16" y="112" width="358" height="72" rx="14" fill="#fdf6e3" stroke="#d6a02c"/>
+  <circle cx="50" cy="148" r="16" fill="#d6a02c"/>
+  <rect x="80" y="134" width="150" height="11" rx="5.5" fill="#1a1a1a"/>
+  <rect x="80" y="155" width="220" height="9" rx="4.5" fill="#a9761a"/>
+
+  <!-- mốc thời gian nhận / trả -->
+  <rect x="16" y="200" width="358" height="126" rx="14" fill="#ffffff" stroke="#e8e4dd"/>
+  <circle cx="44" cy="238" r="7" fill="#d6a02c"/>
+  <rect x="44" y="245" width="2" height="40" fill="#e8e4dd"/>
+  <circle cx="44" cy="292" r="7" fill="#d4cfc6"/>
+  <rect x="66" y="226" width="90" height="9" rx="4.5" fill="#d4cfc6"/>
+  <rect x="66" y="243" width="180" height="11" rx="5.5" fill="#1a1a1a"/>
+  <rect x="66" y="280" width="90" height="9" rx="4.5" fill="#d4cfc6"/>
+  <rect x="66" y="297" width="180" height="11" rx="5.5" fill="#1a1a1a"/>
+
+  <!-- bảng tiền -->
+  <rect x="16" y="342" width="358" height="184" rx="14" fill="#ffffff" stroke="#e8e4dd"/>
+  <rect x="32" y="362" width="104" height="9" rx="4.5" fill="#d4cfc6"/>
+  <rect x="32" y="392" width="130" height="9" rx="4.5" fill="#6b6560"/>
+  <rect x="264" y="392" width="94" height="9" rx="4.5" fill="#1a1a1a"/>
+  <rect x="32" y="420" width="112" height="9" rx="4.5" fill="#6b6560"/>
+  <rect x="284" y="420" width="74" height="9" rx="4.5" fill="#1a1a1a"/>
+  <rect x="32" y="448" width="126" height="9" rx="4.5" fill="#6b6560"/>
+  <rect x="274" y="448" width="84" height="9" rx="4.5" fill="#1a1a1a"/>
+  <rect x="32" y="474" width="326" height="1" fill="#e8e4dd"/>
+  <rect x="32" y="490" width="88" height="12" rx="6" fill="#1a1a1a"/>
+  <rect x="252" y="489" width="106" height="14" rx="7" fill="#a9761a"/>
+
+  <!-- gian hàng -->
+  <rect x="16" y="542" width="358" height="88" rx="14" fill="#ffffff" stroke="#e8e4dd"/>
+  <circle cx="56" cy="586" r="22" fill="#fdf6e3"/>
+  <circle cx="56" cy="580" r="7" fill="#d6a02c"/>
+  <path d="M44 598c2-8 6-11 12-11s10 3 12 11z" fill="#d6a02c"/>
+  <rect x="92" y="570" width="150" height="11" rx="5.5" fill="#1a1a1a"/>
+  <rect x="92" y="591" width="104" height="9" rx="4.5" fill="#d4cfc6"/>
+  <circle cx="340" cy="586" r="18" fill="#f5f3ef"/>
+
+  <!-- nút hành động -->
+  <rect x="16" y="654" width="358" height="48" rx="24" fill="#d6a02c"/>
+  <rect x="150" y="673" width="90" height="10" rx="5" fill="#2a2318"/>
+  <rect x="16" y="714" width="358" height="48" rx="24" fill="#ffffff" stroke="#d4cfc6"/>
+  <rect x="150" y="733" width="90" height="10" rx="5" fill="#6b6560"/>
+</svg>

@@ -1,162 +1,249 @@
 /*
- * Văn bản pháp lý là thứ người ta ĐỌC HẾT, không lướt: cột hẹp (~68 ký tự), dòng thưa, và
- * neo cuộn chừa chỗ cho header dính ở trên.
+ * Trang văn bản pháp lý.
+ *
+ * Ba ràng buộc quyết định bố cục này, theo thứ tự:
+ *
+ *  1. Văn bản pháp lý là thứ người ta ĐỌC HẾT chứ không lướt — cột chữ giữ ở ~68 ký tự, dòng
+ *     thưa (1.8), cỡ chữ 16px chứ không phải 14px của giao diện.
+ *  2. Bản điều khoản có 14 mục. Không có mục lục đứng yên thì người đọc mất dấu ngay sau mục
+ *     thứ ba, và cách duy nhất quay lại là cuộn ngược hết trang.
+ *  3. Trang này được MỜI in ra (`meta.printHint`), nên nó phải ra giấy tử tế — xem khối
+ *     `@media print` ở cuối file.
  */
-.page {
-  max-width: 760px;
+.layout {
+  max-width: 1120px;
   margin: 0 auto;
-  padding: 24px 16px 56px;
+  padding: 0 20px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/*
+ * Từ 1024px: văn bản | cột bên 276px.
+ *
+ * Cột bên đứng SAU trong DOM (thứ tự đọc của bàn phím và trình đọc màn hình gặp nội dung
+ * trước), nên ở đây không cần `order` — lưới tự đặt nó vào cột hai.
+ */
+@media (min-width: 1024px) {
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 276px;
+    align-items: start;
+    column-gap: 56px;
+    padding-top: 12px;
+  }
+}
+
+/* ─── Thân văn bản ───────────────────────────────────────────────────────── */
+.doc {
+  min-width: 0;
+  padding-top: 24px;
 }
 
 .draft {
-  margin-bottom: 24px;
-  padding: 12px 14px;
-  border: 1px solid var(--xp-color-warning);
-  border-radius: 10px;
-  background: var(--xp-color-warning-bg);
-}
-
-.draftTitle {
-  display: block;
-  font-size: 13.5px;
-  color: var(--xp-color-text);
-}
-
-.draftBody {
-  margin-top: 4px;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--xp-color-text-secondary);
-}
-
-/* Bậc điều hướng duy nhất của trang — nhỏ, mờ, không tranh chỗ với tiêu đề văn bản. */
-.upLink {
-  display: inline-block;
-  margin-bottom: 12px;
-  font-size: 13px;
-  color: var(--xp-color-text-tertiary);
-}
-
-.upLink:hover {
-  color: var(--xp-color-primary);
-}
-
-.header {
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--xp-color-border-secondary);
-}
-
-.title {
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1.25;
-  color: var(--xp-color-text);
-  letter-spacing: -0.01em;
-}
-
-.summary {
-  margin-top: 8px;
-  font-size: 15px;
-  line-height: 1.65;
-  color: var(--xp-color-text-secondary);
-}
-
-.effective {
-  margin-top: 10px;
-  font-size: 13px;
-  color: var(--xp-color-text-tertiary);
-}
-
-.toc {
-  margin-top: 24px;
-  padding: 16px 18px;
-  border: 1px solid var(--xp-color-border-secondary);
-  border-radius: 12px;
-  background: var(--xp-color-bg-layout);
-}
-
-.tocTitle {
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--xp-color-text-tertiary);
-}
-
-.tocList {
-  margin-top: 10px;
-  padding-left: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  list-style: decimal;
-}
-
-.tocLink {
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--xp-color-text-secondary);
-}
-
-.tocLink:hover {
-  color: var(--xp-color-primary);
-  text-decoration: underline;
+  margin-bottom: 4px;
 }
 
 .body {
-  margin-top: 32px;
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
+  max-width: 68ch;
 }
 
-/* Neo cuộn không được chui xuống dưới header dính. */
 .section {
-  scroll-margin-top: 88px;
+  padding-top: 30px;
+  /* Neo cuộn không được chui xuống dưới header dính. */
+  scroll-margin-top: calc(var(--xp-market-header-height) + 20px);
+}
+
+/* Mục vừa được nhảy tới từ mục lục sáng lên — không có nó, một cú bấm mục lục trông hệt như
+   trang không phản ứng gì. */
+.section:target .heading {
+  color: var(--xp-color-primary-active);
 }
 
 .heading {
-  font-size: 17px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 19px;
   font-weight: 700;
   line-height: 1.4;
+  letter-spacing: -0.005em;
   color: var(--xp-color-text);
 }
 
-.paragraph {
-  margin-top: 8px;
+/*
+ * Neo chia sẻ. Ẩn bằng `opacity` chứ không phải `display: none`: một phần tử `display: none`
+ * biến mất khỏi luồng Tab, và người dùng bàn phím sẽ không bao giờ tới được nó.
+ */
+.anchor {
+  opacity: 0;
   font-size: 15px;
-  line-height: 1.75;
+  font-weight: 400;
+  color: var(--xp-color-text-tertiary);
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease;
+}
+
+.section:hover .anchor,
+.anchor:focus-visible {
+  opacity: 1;
+}
+
+.anchor:hover {
+  color: var(--xp-color-primary);
+}
+
+.anchor:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-primary);
+  outline-offset: 2px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+/* Trên màn cảm ứng không có "rê chuột": neo hiện mờ sẵn thay vì không bao giờ xuất hiện. */
+@media (hover: none) {
+  .anchor {
+    opacity: 0.45;
+  }
+}
+
+.paragraph {
+  margin-top: 10px;
+  font-size: 16px;
+  line-height: 1.8;
   color: var(--xp-color-text-secondary);
 }
 
+/*
+ * Các khoản trong một điều.
+ *
+ * Dấu đầu dòng là một chấm VÀNG nhỏ vẽ bằng `::before`, không phải `list-style` mặc định:
+ * `globals.css` đã tắt list-style toàn cục, và một chấm màu thương hiệu làm mắt tách được
+ * "khoản" khỏi "đoạn văn" mà không cần thụt lề sâu.
+ *
+ * Giãn dòng nhỏ hơn đoạn văn (1.7 so với 1.8) vì mỗi khoản là một câu ngắn — giữ 1.8 thì các
+ * khoản trôi xa nhau và không còn đọc thành một danh sách.
+ */
+.itemList {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item {
+  position: relative;
+  padding-left: 20px;
+  font-size: 15.5px;
+  line-height: 1.7;
+  color: var(--xp-color-text-secondary);
+}
+
+.item::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  /* Canh chấm theo DÒNG ĐẦU của khoản, không theo giữa cả khối nhiều dòng. */
+  top: 0.62em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--xp-color-primary);
+}
+
+/*
+ * Chân văn bản giờ chỉ còn MỘT câu (lời mời in trang). Cặp trước/sau đã lấy hết vai "đi tiếp",
+ * nên khối này không còn là một cái thẻ — chỉ là một dòng mờ dưới một đường kẻ, đúng trọng
+ * lượng của nó.
+ */
 .footer {
-  margin-top: 40px;
-  padding-top: 20px;
-  border-top: 1px solid var(--xp-color-border-secondary);
+  margin-top: 24px;
+  padding-top: 16px;
+  max-width: 68ch;
+  border-top: 1px solid var(--xp-color-border-subtle);
 }
 
 .printHint {
   font-size: 13px;
+  line-height: 1.6;
   color: var(--xp-color-text-tertiary);
 }
 
-.relatedTitle {
-  margin-top: 18px;
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--xp-color-text-tertiary);
+/* ─── Cột bên ────────────────────────────────────────────────────────────── */
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 20px;
+  min-width: 0;
 }
 
+/*
+ * Dưới 1024px cột bên nổi lên TRÊN văn bản: bộ chuyển bốn văn bản là thứ đầu tiên người ta cần
+ * trên điện thoại (họ thường vào nhầm văn bản), còn mục lục gập sẵn nên không tốn chỗ.
+ * `order: -1` chỉ có tác dụng trong flex column ở bậc này; từ 1024px lưới tiếp quản.
+ */
+@media (max-width: 1023px) {
+  .side {
+    order: -1;
+    padding-top: 20px;
+  }
+  .doc {
+    padding-top: 4px;
+  }
+}
 
-@media (max-width: 600px) {
-  .title {
-    font-size: 23px;
+@media (max-width: 640px) {
+  .layout {
+    padding: 0 16px 48px;
+  }
+  .paragraph {
+    font-size: 15.5px;
+  }
+}
+
+/*
+ * ─── Bản in ─────────────────────────────────────────────────────────────────
+ *
+ * `[data-print-root]` (globals.css) đã ẩn vỏ app. Còn lại là bỏ những thứ chỉ có nghĩa trên
+ * màn hình: cột bên (liên kết neo không bấm được trên giấy), khối "văn bản liên quan", và
+ * ràng buộc bề ngang của cột chữ.
+ *
+ * Băng bản thảo GIỮ LẠI: bản in không mang cảnh báo "chưa qua rà soát pháp lý" là bản in
+ * trông như đã có hiệu lực.
+ */
+@media print {
+  .side,
+  .footer,
+  .anchor {
+    display: none !important;
+  }
+
+  .layout {
+    display: block;
+    max-width: none;
+    padding: 0;
+  }
+
+  .doc {
+    padding-top: 0;
+  }
+
+  .body {
+    max-width: none;
+  }
+
+  .section {
+    padding-top: 18px;
+    /* Không tách tiêu đề khỏi đoạn của nó sang trang sau. */
+    break-inside: avoid;
   }
 
   .paragraph,
-  .summary {
-    font-size: 14.5px;
+  .item {
+    font-size: 11.5pt;
+    line-height: 1.6;
+    color: var(--xp-color-text);
   }
 }

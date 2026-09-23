@@ -8,6 +8,7 @@ import { useTranslations } from 'use-intl';
 import {
   API_ERROR_CODE,
   canCustomerCancelTrip,
+  canHostDecideTrip,
   CUSTOMER_TRIP_STAGE,
   CUSTOMER_TRIP_STAGE_META,
   DEPOSIT_COLLECTION_MODE,
@@ -47,8 +48,11 @@ import { TripEstimateCard } from './components/TripEstimateCard';
 import { TripFinanceCard } from './components/TripFinanceCard';
 import { TripHoldPanel } from './components/TripHoldPanel';
 import { TripHandoverEvidence } from './components/TripHandoverEvidence';
+import { ApproveSuccessSheet } from '@/features/booking-requests/components/ApproveSuccessSheet';
+import type { BookingRequestDecisionTarget } from '@/features/booking-requests/api';
 import { TripHostDecisions } from './components/TripHostDecisions';
 import { TripTimeline } from './components/TripTimeline';
+import { stageNotice } from './stage-notice';
 import { useCancelTrip, useTrip } from './hooks/use-trips';
 import type { CustomerTripDetail } from './api';
 
@@ -135,6 +139,17 @@ function TripDetailBody({ trip }: { trip: CustomerTripDetail }) {
 
   const [cancelling, setCancelling] = useState(false);
   const [reviewing, setReviewing] = useState(false);
+  /**
+   * Bản ghi server trả về sau lượt duyệt — state ở ĐÂY, không ở `TripHostDecisions`.
+   *
+   * Cụm quyết định bị gác bằng `canHostDecideTrip(stage)`, mà chính lượt duyệt làm `stage` đổi:
+   * nhánh không thu giữ chỗ đi thẳng sang `ready`, cổng trả `false`, cụm unmount. Nếu tấm kết
+   * quả sống trong đó thì nó chớp lên rồi biến mất ngay khi truy vấn refetch — mang theo nút
+   * "Xem chi tiết đơn", tức lối DUY NHẤT sang đơn vừa tạo.
+   *
+   * Ở màn cha thì nó sống độc lập với chặng, và tự đóng khi người dùng bấm.
+   */
+  const [approved, setApproved] = useState<BookingRequestDecisionTarget | null>(null);
   const cancelTrip = useCancelTrip(trip.id);
 
   const stage = trip.stage as CustomerTripStage;
@@ -337,11 +352,17 @@ function TripDetailBody({ trip }: { trip: CustomerTripDetail }) {
           )}
 
           {/*
-            Cụm quyết định của CHỦ XE — component riêng vì nó cầm hai mutation và ba tấm trượt, và
+            Cụm quyết định của CHỦ XE — component riêng vì nó cầm ba mutation và bốn tấm trượt, và
             người đi thuê thì không có gì để quyết định ở đây. Thiếu nó, một chủ xe mở chuyến đã
             nhận tiền giữ chỗ của khách không có đường nào duyệt hay từ chối ngay tại chỗ.
+
+            Cổng đọc CHẶNG, không đọc `respondBy`. Từ ADR 0044, `respondBy` vẫn còn nguyên SAU khi
+            chủ xe đã nhận chuyến — hỏi nó là bày nút "Duyệt" cho một chuyến đã duyệt rồi, và cú
+            chạm đó chỉ trả về một lỗi khó hiểu.
           */}
-          {isHost && trip.respondBy ? <TripHostDecisions trip={trip} /> : null}
+          {isHost && canHostDecideTrip(stage) ? (
+            <TripHostDecisions trip={trip} onApproved={setApproved} />
+          ) : null}
 
           {/* Chỉ hỏi bằng chứng bàn giao khi chuyến ĐÃ đi tới đó — chờ duyệt thì chắc chắn rỗng. */}
           <TripHandoverEvidence
@@ -396,6 +417,14 @@ function TripDetailBody({ trip }: { trip: CustomerTripDetail }) {
         loading={cancelTrip.isPending}
       />
       <ReviewSheet open={reviewing} onClose={() => setReviewing(false)} trip={trip} />
+
+      {/*
+        Tấm kết quả duyệt đứng NGOÀI cổng `canHostDecideTrip` — xem docblock của `approved`.
+        Dựng có điều kiện để một màn của KHÁCH không mang theo nó.
+      */}
+      {approved ? (
+        <ApproveSuccessSheet request={approved} onClose={() => setApproved(null)} />
+      ) : null}
     </>
   );
 }
@@ -658,27 +687,16 @@ function StageNotice({
 }) {
   const t = useTranslations('Trips.notice');
 
-  /*
-   * Tông màu lấy ĐÚNG theo `TerminalNotice` của web: chờ duyệt là `warning` (không phải `info`),
-   * bị từ chối và vắng mặt là `error`, huỷ là `info`. Chờ duyệt màu cam vì nó là một VIỆC CHƯA
-   * XONG mà khách cần để mắt — xe chưa được giữ chỗ; tô xanh làm nó đọc như một thông báo đã ổn.
-   */
-  const notice =
-    stage === CUSTOMER_TRIP_STAGE.PENDING_APPROVAL
-      ? { tone: 'warning' as const, title: t('pendingTitle'), body: t('pendingBody') }
-      : stage === CUSTOMER_TRIP_STAGE.REJECTED
-        ? {
-            tone: 'danger' as const,
-            title: t('rejectedTitle'),
-            body: rejectReason || t('rejectedBody'),
-          }
-        : stage === CUSTOMER_TRIP_STAGE.CANCELLED
-          ? { tone: 'info' as const, title: t('cancelledTitle'), body: t('cancelledBody') }
-          : stage === CUSTOMER_TRIP_STAGE.NO_SHOW
-            ? { tone: 'danger' as const, title: t('noShowTitle'), body: t('noShowBody') }
-            : null;
+  /* Bảng chặng → khối giải thích là hàm THUẦN (`stage-notice.ts`) để test được từng chặng. */
+  const notice = stageNotice(stage);
 
   if (!notice) return null;
+
+  /*
+   * Lý do TỪ CHỐI do chủ xe tự gõ — giữ nguyên chữ của họ, không có bản dịch nào cho câu đó.
+   * Đây là chỗ DUY NHẤT nội dung không đến từ bó message, nên nó nằm ngoài bảng tra.
+   */
+  const body = notice.bodyKey === 'rejectedBody' && rejectReason ? rejectReason : t(notice.bodyKey);
 
   const skin =
     notice.tone === 'danger'
@@ -704,10 +722,10 @@ function StageNotice({
       <Ionicons name={skin.icon} size={iconSize.md} color={skin.fg} />
       <YStack f={1} gap={2}>
         <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.bold}>
-          {notice.title}
+          {t(notice.titleKey)}
         </Text>
         <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {notice.body}
+          {body}
         </Text>
       </YStack>
     </XStack>

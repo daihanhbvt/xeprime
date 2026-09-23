@@ -7,7 +7,7 @@ import {
   useQueryClient,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import { BOOKING_HOLD_STATUS } from '@xeprime/types';
+import { isAwaitingPayment, type BookingHoldStatus } from '@xeprime/types';
 import { useAppActive, useRefetchOnForeground } from '@/hooks/use-app-active';
 import { queryKeys } from '@/queries/query-keys';
 import {
@@ -59,10 +59,16 @@ export function useTripsInfinite(filter: string, role?: string, enabled = true) 
 /** Nhịp hỏi lại trong lúc chờ tiền giữ chỗ về — cùng 8 giây với hoá đơn gói (ADR 0039). */
 const HOLD_POLL_MS = 8_000;
 
-/** Hold còn có thể nhận thêm tiền ⇒ còn đáng hỏi lại. */
+/**
+ * Hold còn có thể nhận thêm tiền ⇒ còn đáng hỏi lại.
+ *
+ * Vị từ đến từ `@xeprime/types` (`isAwaitingPayment`) chứ không phải một phép so chép tay: nó là
+ * cùng câu hỏi mà web hỏi để bật nhịp poll, và một bản sao ở đây sẽ lặng lẽ trôi khỏi bản kia vào
+ * ngày `BOOKING_HOLD_STATUS` có giá trị thứ ba còn chờ tiền.
+ */
 function isAwaitingHold(trip: CustomerTripDetail | null | undefined): boolean {
   const status = trip?.hold?.status;
-  return status === BOOKING_HOLD_STATUS.PENDING || status === BOOKING_HOLD_STATUS.UNDERPAID;
+  return status != null && isAwaitingPayment(status as BookingHoldStatus);
 }
 
 /**

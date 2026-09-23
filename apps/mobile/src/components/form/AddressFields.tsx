@@ -7,16 +7,16 @@ import {
   type Path,
   type PathValue,
 } from 'react-hook-form';
-import { ActivityIndicator, Linking, Pressable, StyleSheet } from 'react-native';
+import { ActivityIndicator, Linking, Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { provinceCenter, type GeoPoint } from '@xeprime/domain';
 import { LOCATION_SOURCE } from '@xeprime/types';
 import { MapPinSheet } from '@/components/map/MapPinSheet';
+import { MapPreview } from '@/components/map/MapPreview';
 import { mapCenterNow } from '@/lib/map-center';
 import { Callout } from '@/components/ui/Callout';
 import { FieldLabel } from '@/components/ui/Field';
-import { RemoteImage } from '@/components/ui/RemoteImage';
 import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
 import {
@@ -28,13 +28,7 @@ import {
 import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
 import { useWardOptions } from '@/features/locations/hooks/use-wards';
 import { isInteractiveMapConfigured } from '@/lib/map-interactive';
-import {
-  MAP_PREVIEW_RATIO,
-  mapAppUrl,
-  mapAreaUrl,
-  mapPreviewUrl,
-  toGeoPoint,
-} from '@/lib/map-static';
+import { mapAppUrl, mapAreaUrl, mapPreviewUrl, toGeoPoint } from '@/lib/map-static';
 import { readRememberedProvince, rememberProvince } from '@/lib/province-memory';
 import { colors, fieldFontSize, fontSize, iconSize, radius, space } from '@/theme/tokens';
 
@@ -52,12 +46,6 @@ export interface AddressPinNames<T extends FieldValues> {
   longitude: Path<T>;
   locationSource: Path<T>;
 }
-
-const styles = StyleSheet.create({
-  map: { width: '100%', aspectRatio: MAP_PREVIEW_RATIO },
-  /* Lớp phủ "đang đổi vị trí" — phủ kín khung ảnh bản đồ, xem `MapFrame`. */
-  mapBusy: { ...StyleSheet.absoluteFillObject },
-});
 
 /**
  * Ô nhập ĐỊA CHỈ VẬT LÝ trên native — cùng ba bước với `AddressField` của web, cùng dữ liệu,
@@ -771,7 +759,7 @@ export function ConfirmedPlaceField<T extends FieldValues>({
               lại nghĩa cũ: mở app bản đồ của máy để xem kỹ. Chỉ ảnh CÓ GHIM mới mở được app đó —
               một vùng chạm dẫn tới tâm tỉnh là hứa sai về thứ người dùng vừa chạm.
             */}
-            <MapFrame
+            <MapPreview
               uri={preview}
               unavailableLabel={tStates('imageUnavailable')}
               /*
@@ -848,88 +836,5 @@ export function ConfirmedPlaceField<T extends FieldValues>({
         </Text>
       ) : null}
     </YStack>
-  );
-}
-
-/**
- * Khung ảnh bản đồ. Chạm được CHỈ KHI nơi gọi đưa `onOpen` — tức chỉ khi đã có ghim thật.
- *
- * Tách ra vì hai ca (có ghim / chưa ghim) chỉ khác nhau ở lớp ngoài cùng; lặp cả khối ảnh hai
- * lần là hai chỗ để bo góc và viền trôi khỏi nhau.
- *
- * ## Vì sao có một lớp PHỦ thay vì một khung chờ
- *
- * Bấm một gợi ý địa chỉ xong, ghim không nhảy ngay: trước nó còn một lượt `/places/detail` lấy
- * toạ độ, rồi một lượt tải ảnh bản đồ mới — cộng lại là hai ba giây trên mạng 3G. Suốt quãng đó
- * ảnh CŨ vẫn nằm đó trọn vẹn (`expo-image` giữ khung cũ tới byte cuối của khung mới), nên khung
- * bản đồ trông y như đã xong việc trong khi nó chưa: người dùng đọc ra là cú chạm bị trượt, và
- * bấm lại.
- *
- * Thay ảnh bằng khung chờ thì mất luôn bản đồ — ô trắng giữa form, tệ hơn hẳn. Nên bản đồ ở lại
- * và chỉ bị mờ đi dưới một lớp phủ có vòng xoay: thấy rõ là "đang đổi", mà vẫn còn thứ để đối
- * chiếu khi nó đổi xong.
- */
-function MapFrame({
-  uri,
-  unavailableLabel,
-  busy = false,
-  busyLabel,
-  onOpen,
-  openLabel,
-}: {
-  uri: string;
-  unavailableLabel: string;
-  /**
-   * Đang có một lượt gọi MẠNG sẽ dời ghim (tra chi tiết địa điểm) — `uri` còn là của vị trí cũ,
-   * nên không có gì trong tấm ảnh nói được rằng có việc đang chạy.
-   */
-  busy?: boolean;
-  busyLabel: string;
-  onOpen?: () => void;
-  openLabel?: string;
-}) {
-  /*
-   * MỘT node cho cả hai chặng đợi — lượt gọi mạng (`busy`) rồi lượt tải ảnh (`pendingOverlay`).
-   * Hai chặng nối nhau liền mạch nên chúng phải trông giống nhau; hai node riêng là hai chỗ để
-   * độ mờ và cỡ vòng xoay trôi khỏi nhau.
-   */
-  const busyOverlay = (
-    <YStack
-      style={styles.mapBusy}
-      bg={colors.overlay}
-      ai="center"
-      jc="center"
-      accessibilityRole="progressbar"
-      accessibilityLabel={busyLabel}
-    >
-      <ActivityIndicator color={colors.primaryActive} />
-    </YStack>
-  );
-
-  const frame = (
-    <YStack style={styles.map} br={radius.md} bw={1} bc={colors.border} ov="hidden">
-      <RemoteImage
-        uri={uri}
-        radius={radius.md}
-        /*
-         * Đang chờ mạng thì lớp phủ đã do `MapFrame` vẽ — đưa thêm một bản vào `RemoteImage` là
-         * hai lớp cùng nằm đó và nền tối gấp đôi ở đúng nhịp giao giữa hai chặng.
-         */
-        {...(busy ? {} : { pendingOverlay: busyOverlay })}
-        fallback={
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {unavailableLabel}
-          </Text>
-        }
-      />
-      {busy ? busyOverlay : null}
-    </YStack>
-  );
-
-  if (!onOpen) return frame;
-  return (
-    <Pressable onPress={onOpen} accessibilityRole="imagebutton" accessibilityLabel={openLabel}>
-      {frame}
-    </Pressable>
   );
 }

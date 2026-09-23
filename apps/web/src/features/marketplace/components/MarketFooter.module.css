@@ -1,149 +1,476 @@
+/*
+ * Chân trang marketplace — MỘT dải, lưới bất đối xứng ba vùng.
+ *
+ * Ý tưởng bố cục và sơ đồ vùng: xem docblock `MarketFooter.tsx`. File này chỉ giải thích những
+ * chỗ đọc CSS không tự suy ra được.
+ *
+ * ── Bảng màu ────────────────────────────────────────────────────────────────
+ * Sáu biến dưới đây là BÍ DANH trỏ về token hệ thống, lấy từ đúng bộ bề mặt tối mà vỏ portal
+ * đang dùng (`--xp-shell-sidebar-*`) — nhờ vậy chân trang công khai và sidebar khu quản lý
+ * không bao giờ trôi khỏi nhau. Ngoại lệ DUY NHẤT là ba màu nhận diện mạng xã hội; lý do ghi
+ * ngay tại chỗ đó.
+ *
+ * `--xp-footer-link` tính bằng `color-mix` thay vì đọc token có sẵn, vì bộ sidebar chỉ định
+ * nghĩa MỘT bậc mờ (62%) — quá tối cho chữ liên kết. Tỉ lệ chọn theo tương phản đo được trên
+ * `--xp-footer-bg`: 78% ≈ 8:1 và 62% ≈ 6:1, đều vượt ngưỡng AA 4.5:1.
+ *
+ * ── Ba bậc bề ngang ─────────────────────────────────────────────────────────
+ *   • dưới 640px  — một cột, điều hướng là accordion, thanh chân xuống hai hàng.
+ *   • từ 640px    — thương hiệu | điều hướng (3 cột); vùng ứng dụng nằm dưới, kẻ NGANG ngăn.
+ *   • từ 1100px   — ba vùng trên một hàng, vùng ứng dụng ngăn bằng kẻ DỌC.
+ */
 .footer {
+  --xp-footer-bg: var(--xp-shell-sidebar-bg);
+  --xp-footer-text: var(--xp-shell-sidebar-text);
+  --xp-footer-link: color-mix(
+    in srgb,
+    var(--xp-shell-sidebar-text) 78%,
+    var(--xp-shell-sidebar-bg)
+  );
+  --xp-footer-muted: var(--xp-shell-sidebar-muted);
+  --xp-footer-border: var(--xp-shell-sidebar-border);
+  --xp-footer-raised: var(--xp-shell-sidebar-hover);
+
+  position: relative;
   margin-top: 56px;
-  background: var(--xp-color-bg-container);
-  border-top: 1px solid var(--xp-color-border);
+  background: var(--xp-footer-bg);
+  color: var(--xp-footer-text);
+  /* Chốt chặn cuối: không có gì trong chân trang được phép đẩy trang trượt ngang. */
+  overflow-x: clip;
 }
 
-.inner {
+/*
+ * Vạch vàng ở mép trên — đường chỉ giữa vùng nội dung sáng và chân trang tối.
+ * Tắt dần về hai đầu để nó là một tia sáng chứ không phải một sợi kẻ cắt ngang trang.
+ */
+.footer::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 1;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--xp-color-primary) 24%,
+    var(--xp-color-primary) 76%,
+    transparent
+  );
+  pointer-events: none;
+}
+
+/* Khổ cột dùng chung cho cả ba dải — lệch một pixel giữa hai dải là nhìn thấy ngay. */
+.ctaInner,
+.grid,
+.bottomInner {
   max-width: var(--xp-container-max-width);
   margin: 0 auto;
-  padding: 32px 16px 20px;
+  padding-inline: clamp(16px, 4vw, 20px);
+}
+
+/* ═══ Dải mời đăng xe ═══════════════════════════════════════════════════════
+ *
+ * CÙNG nền với phần còn lại của chân trang — khác biệt duy nhất là quầng sáng vàng và một
+ * đường chỉ dưới. Quầng neo ở mép TRÊN, đúng chỗ trang vừa kết thúc; cùng thủ pháp với
+ * `HomeHero.module.css`, nên hero và chân trang là hai đầu của một cặp.
+ */
+.cta {
+  border-bottom: 1px solid var(--xp-footer-border);
+  background: radial-gradient(
+    100% 200% at 50% -60%,
+    color-mix(in srgb, var(--xp-color-primary) 20%, transparent),
+    transparent 62%
+  );
+}
+
+.ctaInner {
+  padding-block: clamp(20px, 4vw, 26px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 32px;
+}
+
+.ctaCopy {
+  min-width: 0;
+}
+
+/* Nhãn dẫn — chữ nhỏ, giãn ký tự, màu vàng. Nó nói CHO AI trước khi tiêu đề nói CÁI GÌ. */
+.eyebrow {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--xp-color-primary);
+}
+
+/*
+ * Serif là chi tiết ký tên của chân trang này. `--xp-font-family-display` (Playfair) đã có
+ * trong hệ thống từ hero marketplace nhưng gần như chưa nơi nào dùng — một câu serif giữa rừng
+ * sans làm dải này đọc như một trang tạp chí chứ không phải một banner CTA.
+ */
+.ctaTitle {
+  margin-top: 4px;
+  font-family: var(--xp-font-family-display);
+  font-size: clamp(19px, 2.1vw, 26px);
+  font-weight: 700;
+  line-height: 1.22;
+  letter-spacing: -0.01em;
+  color: var(--xp-footer-text);
+}
+
+/*
+ * Câu mô tả là cột GIỮA trên màn rộng: nó lấp khoảng trống giữa tiêu đề và nút. Dưới 900px nó
+ * xuống hàng riêng; dưới 560px nó vẫn ở lại (hai dòng) vì đó là câu DUY NHẤT nói cho chủ xe
+ * biết họ được gì — bỏ nó đi thì nút chỉ còn là một mệnh lệnh.
+ */
+.ctaBody {
+  flex: 1 1 260px;
+  min-width: 0;
+  max-width: 46ch;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--xp-footer-muted);
+}
+
+.ctaAction {
+  flex: none;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  /* 44px cao — đúng `--xp-touch-target-min` (WCAG 2.5.5). */
+  min-height: var(--xp-touch-target-min);
+  padding: 0 22px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--xp-color-primary) 26%, transparent);
+  transition:
+    background 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
+}
+
+.ctaAction:hover {
+  background: var(--xp-color-primary-hover);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--xp-color-primary) 36%, transparent);
+  transform: translateY(-2px);
+}
+
+/* Mũi tên nhích theo cú rê chuột — chuyển động duy nhất trên nút, đủ để nó "sống". */
+.ctaArrow {
+  transition: transform 0.16s ease;
+}
+.ctaAction:hover .ctaArrow {
+  transform: translateX(4px);
+}
+
+.ctaAction:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-primary);
+  outline-offset: 4px;
+}
+
+@media (max-width: 700px) {
+  .ctaAction {
+    margin-left: 0;
+    width: 100%;
+    margin-top: 4px;
+  }
+}
+
+/* ═══ Lưới ═══════════════════════════════════════════════════════════════════
+ *
+ * Cột ứng dụng cố định 288px chứ không phải `fr`: nội dung của nó là hai mã QR và một tiêu đề
+ * KHÔNG được xuống dòng, nên nó cần một bề ngang biết trước chứ không phải phần còn thừa.
+ */
+.grid {
+  padding-block: clamp(24px, 5vw, 40px) clamp(20px, 4vw, 32px);
   display: grid;
   grid-template-columns: 1fr;
   gap: 24px;
 }
-@media (min-width: 900px) {
-  .inner {
-    grid-template-columns: 1.1fr 2.4fr;
-    gap: 40px;
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: minmax(200px, 0.95fr) minmax(0, 1.9fr);
+    column-gap: 40px;
+    row-gap: 28px;
+  }
+}
+@media (min-width: 1100px) {
+  .grid {
+    grid-template-columns: minmax(230px, 1fr) minmax(0, 1.8fr) 288px;
+    column-gap: clamp(32px, 3.5vw, 48px);
   }
 }
 
-.brandCol {
+/* ─── Vùng 1 · Thương hiệu ─────────────────────────────────────────────── */
+.brandZone {
   display: flex;
   flex-direction: column;
-  gap: 12px;
   align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
 }
 
 .tagline {
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--xp-color-text-secondary);
-  max-width: 42ch;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--xp-footer-muted);
+  max-width: 38ch;
 }
 
+/* ─── Mạng xã hội ───────────────────────────────────────────────────────────
+ *
+ * Icon là NHÃN, không phải liên kết — XePrime chưa công bố kênh chính thức nào. Vì vậy:
+ * không `cursor: pointer`, không `<a>`, không focus ring (không có gì để focus). Chỉ có một
+ * cú sáng nhẹ khi rê chuột, đủ để cụm không chết cứng mà không hứa hẹn một cú bấm.
+ * `.socialsNote` ngay dưới nói rõ lý do.
+ *
+ * **Màu nền là màu nhận diện của CHÍNH các mạng đó**, không phải token XePrime — đó là ngoại
+ * lệ có chủ đích với quy tắc "màu lấy từ token": #1877F2 là màu của Facebook, không phải một
+ * bậc trong bảng màu XePrime, và đưa nó vào `tokens.css` là nói dối về nguồn gốc của nó.
+ * Icon trắng trên cả ba nền, và cả ba nền đều đủ sáng để nổi trên nền chân trang tối.
+ */
 .socials {
   display: flex;
   gap: 10px;
 }
 
 .social {
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 15px;
-  color: var(--xp-color-text);
-  background: var(--xp-color-bg-layout);
-  border: 1px solid var(--xp-color-border-secondary);
+  font-size: 17px;
+  color: #fff;
+  /* Viền trong mờ tách vòng tròn khỏi nền tối mà không thêm một màu thứ tư. */
+  border: 1px solid rgb(255 255 255 / 12%);
+  transition:
+    filter 0.16s ease,
+    transform 0.16s ease;
 }
 
-.cols {
+.socials:hover .social {
+  /* Cả cụm mờ đi một chút để cái đang trỏ vào nổi lên — không phóng to, chỉ đổi độ sáng. */
+  filter: brightness(0.82);
+}
+.socials .social:hover {
+  filter: brightness(1.12);
+  transform: translateY(-2px);
+}
+
+.socialFacebook {
+  background: #1877f2;
+}
+
+/* Gradient chính thức của Instagram: cam vàng → hồng → tím, chéo từ góc dưới trái. */
+.socialInstagram {
+  background: radial-gradient(
+    circle at 30% 107%,
+    #fdf497 0%,
+    #fd5949 45%,
+    #d6249f 60%,
+    #285aeb 90%
+  );
+}
+
+/*
+ * TikTok: nền đen của thương hiệu, cộng hai quầng cyan (#25f4ee) và đỏ (#fe2c55) lệch nhau —
+ * đúng thủ pháp "lệch màu" trong logo của họ, nhưng không dựng lại logo.
+ */
+.socialTiktok {
+  background:
+    radial-gradient(circle at 30% 30%, rgb(37 244 238 / 55%), transparent 55%),
+    radial-gradient(circle at 72% 70%, rgb(254 44 85 / 55%), transparent 55%), #010101;
+}
+
+.socialsNote {
+  margin-top: -4px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--xp-footer-muted);
+  max-width: 32ch;
+}
+
+/* ─── Vùng 2 · Điều hướng ──────────────────────────────────────────────── */
+.navZone {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0;
+  min-width: 0;
 }
-@media (min-width: 900px) {
-  .cols {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 24px;
+@media (min-width: 640px) {
+  .navZone {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px;
   }
 }
 
-/* Mobile: mỗi cột là một `<details>` gập/mở, có vạch ngăn. */
+/* Mobile: mỗi cột là một `<details>` gập/mở, ngăn nhau bằng một vạch. */
 .col {
-  border-bottom: 1px solid var(--xp-color-border-secondary);
+  border-bottom: 1px solid var(--xp-footer-border);
+  min-width: 0;
 }
 
 .colTitle {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 13px 0;
-  font-size: 13.5px;
-  font-weight: 700;
-  color: var(--xp-color-text);
+  gap: 12px;
+  /* 48px cao — vùng bấm của accordion phải vượt `--xp-touch-target-min` (44px). */
+  min-height: 48px;
   cursor: pointer;
   list-style: none;
 }
 .colTitle::-webkit-details-marker {
   display: none;
 }
-
-.caret {
-  font-size: 11px;
-  color: var(--xp-color-text-tertiary);
-  transition: transform 0.16s ease;
+.colTitle:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-primary);
+  outline-offset: 2px;
+  border-radius: var(--xp-border-radius-sm);
 }
+
+.colTitleText {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--xp-footer-text);
+}
+
+/*
+ * Mũi tên gập/mở vẽ bằng HAI CẠNH VIỀN, không dùng `@ant-design/icons`.
+ *
+ * AntD tiêm `.anticon { ... }` vào `<head>` LÚC CHẠY, tức sau file CSS Module, và hai selector
+ * cùng độ ưu tiên (0,1,0) nên bản của AntD thắng — `display: none` của ta bị lơ và mũi tên vẫn
+ * hiện ở desktop.
+ *
+ * Vòng tròn quanh mũi tên là dấu hiệu "bấm được": trên điện thoại, một tiêu đề in hoa trơn
+ * không nói cho ai biết rằng nó mở ra được.
+ */
+.caret {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--xp-footer-raised);
+  border: 1px solid var(--xp-footer-border);
+  transition:
+    transform 0.18s ease,
+    border-color 0.16s ease;
+}
+
+.caret::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 9px;
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid var(--xp-footer-link);
+  border-bottom: 1.5px solid var(--xp-footer-link);
+  transform: rotate(45deg);
+}
+
 .col[open] .caret {
   transform: rotate(180deg);
+  border-color: var(--xp-color-primary);
 }
 
 .colLinks {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-bottom: 14px;
-}
-
-.link {
-  font-size: 13px;
-  color: var(--xp-color-text-secondary);
-}
-.link:hover {
-  color: var(--xp-color-primary);
-}
-
-/* Nút cửa hàng ứng dụng — dựng bằng token, chưa dùng ảnh badge chính chủ. */
-.store {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  padding: 7px 12px;
-  border-radius: 8px;
-  background: var(--xp-color-text);
-  color: #fff;
-  font-size: 13.5px;
-  font-weight: 600;
-  width: fit-content;
-}
-
-.store small {
-  display: block;
-  font-size: 9.5px;
-  font-weight: 400;
-  opacity: 0.75;
-  line-height: 1.1;
-}
-
-.storeNote {
-  font-size: 11.5px;
-  color: var(--xp-color-text-tertiary);
+  padding-bottom: 8px;
 }
 
 /*
- * Desktop: bỏ hành vi accordion — luôn hiện nội dung dù `<details>` đang đóng.
- * Ghi đè UA stylesheet bằng selector của tác giả (đủ độ ưu tiên).
+ * Liên kết mọc ra một gạch vàng khi rê chuột và đẩy chữ sang phải.
+ *
+ * Gạch là một `<span>` rỗng bề ngang 0 trong lưới flex: khi nó nở ra 12px thì chữ bị đẩy theo,
+ * nên chỉ cần animate MỘT thuộc tính (`width`) để có cả hai chuyển động.
+ *
+ * `prefers-reduced-motion` đã được `globals.css` xử lý toàn cục — không lặp lại ở đây.
  */
-@media (min-width: 900px) {
+.link {
+  display: flex;
+  align-items: center;
+  /* 40px trên mobile: trên ngưỡng vùng chạm AA (24px) và đủ thoáng để không bấm nhầm dòng. */
+  min-height: 40px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--xp-footer-link);
+  transition: color 0.16s ease;
+}
+
+.linkDash {
+  width: 0;
+  height: 1.5px;
+  flex: none;
+  background: var(--xp-color-primary);
+  transition:
+    width 0.18s ease,
+    margin-right 0.18s ease;
+}
+
+.link:hover {
+  color: var(--xp-color-primary);
+}
+.link:hover .linkDash {
+  width: 12px;
+  margin-right: 8px;
+}
+
+.link:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-primary);
+  outline-offset: 2px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+/*
+ * Mục ĐANG XEM: chữ vàng + nét đậm hơn.
+ *
+ * KHÔNG thêm gạch đầu dòng (yêu cầu 23/09/2026). Gạch vàng là dấu hiệu của trạng thái RÊ CHUỘT;
+ * dùng lại nó cho "đang xem" làm hai trạng thái khác nhau trông giống hệt nhau, và nó đẩy chữ
+ * sang phải nên cột liên kết mất thẳng hàng ở đúng một dòng.
+ *
+ * Màu không phải dấu hiệu duy nhất: `font-weight` đổi theo (người mù màu vẫn thấy khác biệt),
+ * và `aria-current="page"` ở TSX lo phần trình đọc màn hình.
+ */
+.linkActive,
+.linkActive:hover {
+  color: var(--xp-color-primary);
+  font-weight: 600;
+}
+
+/*
+ * Từ 640px: bỏ hành vi accordion — luôn hiện nội dung dù `<details>` đang đóng.
+ *
+ * ⚠️ PHẢI có CẢ HAI quy tắc, và đây là lý do:
+ *
+ *  • Trình duyệt cũ giấu thân `<details>` đang đóng bằng `display: none` trên các con không
+ *    phải `<summary>` — ghi đè `display` là đủ.
+ *  • Chrome từ 131 đổi cách làm: thân nằm trong pseudo-element `::details-content` mang
+ *    `content-visibility: hidden`, mà `display` không với tới. Chỉ ghi đè `display` thì chân
+ *    trang hiện đúng ba cái TIÊU ĐỀ và không liên kết nào — bấm vào tiêu đề cũng không mở
+ *    được, vì `pointer-events: none` ngay dưới đã tắt cú bấm.
+ *
+ * Bỏ một trong hai là chân trang trống ở một nửa số trình duyệt.
+ */
+@media (min-width: 640px) {
   .col {
     border-bottom: none;
   }
   .colTitle {
-    padding: 0 0 12px;
+    min-height: 0;
+    padding: 0;
     cursor: default;
     pointer-events: none;
   }
@@ -154,17 +481,278 @@
     display: flex;
     padding-bottom: 0;
   }
+  .col::details-content {
+    content-visibility: visible;
+    block-size: auto;
+  }
+
+  /*
+   * Vạch vàng ngắn đội trên mỗi tiêu đề cột — dấu hiệu nhận diện thay cho kiểu chữ hoa trần.
+   * Chỉ có ở bản nhiều cột: trên accordion nó sẽ chen vào giữa các hàng gập/mở.
+   */
+  .colTitleText::before {
+    content: '';
+    display: block;
+    width: 18px;
+    height: 2px;
+    margin-bottom: 11px;
+    background: var(--xp-color-primary);
+    border-radius: var(--xp-border-radius-pill);
+  }
+  .colLinks {
+    margin-top: 4px;
+  }
+  .link {
+    min-height: 30px;
+  }
 }
 
+/* ─── Vùng 3 · Ứng dụng ────────────────────────────────────────────────── */
+/*
+ * KHÔNG phải một cái hộp. Vùng này được ngăn bằng MỘT đường kẻ — ngang khi nó nằm dưới, dọc
+ * khi nó đứng thành cột thứ ba — đúng thủ pháp cột bên của một trang báo.
+ */
+.appZone {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  padding-top: 22px;
+  border-top: 1px solid var(--xp-footer-border);
+  min-width: 0;
+}
+@media (min-width: 1100px) {
+  .appZone {
+    padding-top: 0;
+    padding-left: clamp(28px, 3vw, 44px);
+    border-top: none;
+    border-left: 1px solid var(--xp-footer-border);
+  }
+}
+
+/*
+ * Tiêu đề vùng PHẢI nằm một hàng — "ỨNG DỤNG XEPRIME" vỡ thành hai dòng trông như một lỗi bố
+ * cục, và nó là nhãn ngắn nhất trong cả chân trang. `white-space: nowrap` chốt điều đó; cỡ chữ
+ * dùng `clamp` để ở bề ngang hẹp nó tự hạ xuống 10.5px thay vì đẩy tràn — vẫn trên ngưỡng đọc
+ * được cho một nhãn in hoa.
+ */
+.appTitle {
+  max-width: 100%;
+  font-size: clamp(10.5px, 1vw, 11.5px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  white-space: nowrap;
+}
+
+/* Tiêu đề vùng là liên kết sang `/app` — mũi tên là lời hứa "chỗ này dẫn đi đâu đó". */
+.appTitleLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--xp-footer-text);
+  transition: color 0.16s ease;
+}
+.appTitleLink:hover {
+  color: var(--xp-color-primary);
+}
+/* Đang ở chính trang `/app` — cùng quy ước màu với mục điều hướng đang xem. */
+.appTitleCurrent,
+.appTitleCurrent:hover {
+  color: var(--xp-color-primary);
+}
+
+.appTitleLink:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-primary);
+  outline-offset: 3px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.appTitleArrow {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-top: 1.5px solid currentcolor;
+  border-right: 1.5px solid currentcolor;
+  transform: rotate(45deg);
+  transition: transform 0.16s ease;
+}
+.appTitleLink:hover .appTitleArrow {
+  transform: rotate(45deg) translate(2px, -2px);
+}
+
+/*
+ * Cụm hai mã QR (`AppStoreQr`). Bề ngang tối đa giữ hai ô cạnh nhau ở MỌI bề ngang từ 320px:
+ * các ô bên trong đã khai `flex: 0 1 auto` + SVG co theo hộp, nên chúng thu nhỏ đều thay vì
+ * đẩy nhau xuống hàng hoặc tràn ra ngoài màn hình.
+ */
+.qrList {
+  width: 100%;
+  max-width: 220px;
+}
+
+/* ═══ Thanh tiện ích ════════════════════════════════════════════════════════ */
 .bottom {
-  border-top: 1px solid var(--xp-color-border-secondary);
-  padding: 14px 16px;
-  max-width: var(--xp-container-max-width);
-  margin: 0 auto;
+  border-top: 1px solid var(--xp-footer-border);
+}
+
+.bottomInner {
+  padding-block: 14px;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  justify-content: space-between;
+  align-items: center;
+  gap: 10px 14px;
   font-size: 12.5px;
-  color: var(--xp-color-text-tertiary);
+  line-height: 1.5;
+  color: var(--xp-footer-muted);
+}
+
+.copyright {
+  font-weight: 600;
+  color: var(--xp-footer-link);
+}
+
+/* Dấu chấm ngăn — nhỏ hơn một dấu gạch, đủ để hai mẩu chữ không dính vào nhau. */
+.dot {
+  width: 3px;
+  height: 3px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--xp-footer-muted);
+}
+
+.country {
+  min-width: 0;
+}
+
+.tools {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toolLink {
+  display: inline-flex;
+  align-items: center;
+  color: var(--xp-footer-link);
+  font-weight: 600;
+  transition: color 0.16s ease;
+}
+.toolLink:hover {
+  color: var(--xp-color-primary);
+}
+.toolLink:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-primary);
+  outline-offset: 3px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+/*
+ * `LocaleSwitcher` mang style của CHÍNH nó cho nền sáng. CSS Module sinh class riêng cho mỗi
+ * file nên hai class cùng độ ưu tiên (0,1,0) và thứ tự trong bundle quyết định — thứ không có
+ * gì bảo đảm. Nhân đôi tên class đẩy độ ưu tiên lên (0,2,0) để bản nền tối luôn thắng, mà
+ * không phải dùng `!important`.
+ */
+.localeBtn.localeBtn {
+  height: 36px;
+  border-color: var(--xp-footer-border);
+  background: var(--xp-footer-raised);
+  color: var(--xp-footer-link);
+}
+
+.localeBtn.localeBtn:hover:not(:disabled) {
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-primary);
+}
+
+.toTop {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border: 1px solid var(--xp-footer-border);
+  border-radius: 50%;
+  background: var(--xp-footer-raised);
+  color: var(--xp-footer-link);
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    color 0.16s ease,
+    border-color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.toTop:hover {
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-primary);
+  transform: translateY(-2px);
+}
+
+.toTop:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-primary);
+  outline-offset: 2px;
+}
+
+/*
+ * ─── Mobile (dưới 640px) ────────────────────────────────────────────────────
+ *
+ * Thanh chân xuống HAI hàng thay vì chen bốn thứ vào một: hàng trên là bản quyền và dòng quốc
+ * gia, hàng dưới là ba công cụ dàn đều hết bề ngang. Ở 320px, một hàng duy nhất sẽ ép "Trung
+ * tâm trợ giúp" xuống dòng giữa hai cái nút tròn.
+ *
+ * Ba công cụ lên 44px — đây là những thứ người ta thật sự bấm bằng ngón tay ở chân trang.
+ */
+@media (max-width: 639px) {
+  .dot {
+    display: none;
+  }
+
+  .bottomInner {
+    padding-block: 12px 16px;
+    gap: 4px;
+  }
+
+  .copyright,
+  .country {
+    flex: 1 0 100%;
+  }
+
+  .tools {
+    margin-left: 0;
+    margin-top: 8px;
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .toolLink {
+    min-height: var(--xp-touch-target-min);
+  }
+
+  .localeBtn.localeBtn,
+  .toTop {
+    height: var(--xp-touch-target-min);
+  }
+
+  .toTop {
+    width: var(--xp-touch-target-min);
+  }
+
+  /* Logo nhỏ lại một bậc: ở 320px bản `md` chiếm gần nửa bề ngang khả dụng. */
+  .brandZone img {
+    height: 32px;
+  }
+}
+
+/*
+ * Chân trang không bao giờ được in ra giấy. Trang văn bản pháp lý dùng `[data-print-root]`
+ * (globals.css) nên đã tự ẩn phần vỏ; quy tắc này lo cho mọi trang công khai còn lại.
+ */
+@media print {
+  .footer {
+    display: none;
+  }
 }

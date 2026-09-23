@@ -14,10 +14,12 @@ import {
 } from '@ant-design/icons';
 import { Avatar, Badge, Button, Dropdown, type MenuProps } from 'antd';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { Logo } from '@/components/brand/Logo';
 import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
+import { isActivePath } from '@/lib/active-path';
 import { useLocaleMenuGroup } from '@/components/i18n/locale-menu';
 import { APP_NAME } from '@/constants/app-name';
 import { ROUTES } from '@/constants/routes';
@@ -25,7 +27,12 @@ import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components
 import { useMarketLogout } from '@/features/auth/hooks/use-market-logout';
 import { AUTH_MODE, resolveOwnerCtaHref } from '@/features/auth/post-auth-destination';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
-import { ACCOUNT_TRACK, CHAT_SIDE, resolveAccountTrack, tenantUsesManagePortal } from '@xeprime/types';
+import {
+  ACCOUNT_TRACK,
+  CHAT_SIDE,
+  resolveAccountTrack,
+  tenantUsesManagePortal,
+} from '@xeprime/types';
 import { isCommissionOwner } from '@/constants/account-nav';
 import { VerifiedMark } from '@/components/common/VerifiedMark';
 import { ChatMenu } from '@/features/chat/components/ChatMenu';
@@ -40,8 +47,20 @@ import styles from './MarketHeader.module.css';
  * chợ này, nên "Chuyến của tôi" thành "Quản lý gian hàng". Xem `navFor`.
  */
 const NAV_BASE = [
-  { key: 'explore', labelKey: 'explore', href: ROUTES.HOME },
-  { key: 'about', labelKey: 'about', href: ROUTES.HOME },
+  {
+    key: 'explore',
+    labelKey: 'explore',
+    href: ROUTES.HOME,
+    /*
+     * "Khám phá" bao trùm cả việc TÌM và việc XEM một chiếc xe hay một gian hàng — người dùng
+     * ở `/search` hay `/listings/abc` vẫn đang khám phá chợ. Không có danh sách này thì mục
+     * sáng lên đúng ở trang chủ rồi tắt ngay khi bấm Tìm xe, trông như menu bị hỏng.
+     */
+    activeWhen: [ROUTES.HOME, ROUTES.SEARCH, '/listings', '/shops'],
+  },
+  // Trỏ về `HOME` cho tới 23/09/2026 — một mục menu bấm vào thì đứng yên. Đích thật là
+  // `/about` (`ROUTES.ABOUT`), trang duy nhất nói sàn này là gì và tiền đi đâu.
+  { key: 'about', labelKey: 'about', href: ROUTES.ABOUT },
 ] as const;
 
 /**
@@ -62,6 +81,7 @@ function navFor(isShopMember: boolean) {
 export function MarketHeader() {
   const t = useTranslations('Navigation.public');
   const { data: user } = useCurrentUser();
+  const pathname = usePathname();
   const { open } = useAuthModal();
   const logout = useMarketLogout();
   const nextFromHere = useNextFromCurrentPath();
@@ -95,15 +115,27 @@ export function MarketHeader() {
         </Link>
 
         <nav className={styles.nav} aria-label={t('mainNavLabel')}>
-          {navFor(isShopMember).map((item, i) => (
-            <Link
-              key={item.key}
-              href={item.href}
-              className={i === 0 ? styles.navActive : styles.navLink}
-            >
-              {t(item.labelKey)}
-            </Link>
-          ))}
+          {navFor(isShopMember).map((item) => {
+            /*
+             * Trước 23/09/2026 dòng này là `i === 0`, tức mục đầu luôn sáng vàng — ở trang điều
+             * khoản sử dụng, thanh trên cùng vẫn khẳng định người dùng đang "Khám phá".
+             *
+             * `activeWhen` cho mục nào cần bao nhiều đường dẫn; mặc định là chính `href` của nó.
+             */
+            const current = ('activeWhen' in item ? item.activeWhen : [item.href]).some((path) =>
+              isActivePath(pathname, path),
+            );
+            return (
+              <Link
+                key={item.key}
+                href={item.href}
+                className={current ? styles.navActive : styles.navLink}
+                aria-current={current ? 'page' : undefined}
+              >
+                {t(item.labelKey)}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className={styles.right}>
@@ -276,7 +308,7 @@ function accountMenu({
               ) : null}
             </span>
             {/* Email là thứ phân biệt hai tài khoản trùng tên; thiếu email thì SĐT làm việc đó. */}
-            {user.email ?? user.phone ? (
+            {(user.email ?? user.phone) ? (
               <span className={styles.identityContact}>{user.email ?? user.phone}</span>
             ) : null}
           </span>
@@ -319,14 +351,7 @@ function accountMenu({
       user.tenant ? t('manageShop') : t('becomeOwner'),
     ),
     ...(user.platformRole
-      ? [
-          row(
-            'admin',
-            <SafetyCertificateOutlined />,
-            ROUTES.MANAGE.ADMIN,
-            t('platformAdmin'),
-          ),
-        ]
+      ? [row('admin', <SafetyCertificateOutlined />, ROUTES.MANAGE.ADMIN, t('platformAdmin'))]
       : []),
     { type: 'divider' },
     localeGroup,

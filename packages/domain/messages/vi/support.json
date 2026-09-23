@@ -18,7 +18,10 @@
       "label": "Giờ trực",
       "value": "«điền khung giờ trực»",
       "note": "Ngoài giờ trực, yêu cầu vẫn được ghi nhận và xử lý vào ca kế tiếp."
-    }
+    },
+    "lead": "Ba kênh dưới đây là cách XePrime tiếp nhận yêu cầu. Nội dung liên hệ cụ thể sẽ được công bố trước khi sàn mở chính thức.",
+    "pendingBadge": "Sắp công bố",
+    "pendingNote": "Chưa có số tổng đài, email và khung giờ trực chính thức. Chúng tôi để trống thay vì đăng một thông tin liên hệ không gọi được."
   },
   "beforeContact": {
     "heading": "Gửi kèm những thông tin này để được xử lý nhanh",
@@ -39,5 +42,44 @@
   "legal": {
     "heading": "Điều khoản và chính sách",
     "body": "Quyền và nghĩa vụ của các bên nằm ở các văn bản dưới đây."
+  },
+  "eyebrow": "Trung tâm trợ giúp",
+  "topics": {
+    "heading": "Câu trả lời có sẵn theo chủ đề",
+    "lead": "Phần lớn thắc mắc đã được trả lời trong các trang dưới đây.",
+    "renterHeading": "Người thuê xe",
+    "ownerHeading": "Chủ xe và gian hàng",
+    "how": {
+      "title": "Đặt xe diễn ra thế nào",
+      "desc": "Bốn bước từ lúc gửi yêu cầu tới lúc trả xe, và thời điểm nào mới thật sự thu tiền."
+    },
+    "money": {
+      "title": "Tôi phải trả những khoản nào",
+      "desc": "Phần chuyển online, phần trả trực tiếp chủ xe lúc nhận xe, và từng dòng phí riêng."
+    },
+    "cancel": {
+      "title": "Huỷ chuyến và hoàn tiền",
+      "desc": "Mốc huỷ miễn phí, mức hoàn theo từng chặng và trách nhiệm của mỗi bên."
+    },
+    "privacy": {
+      "title": "Dữ liệu cá nhân của tôi",
+      "desc": "Chúng tôi thu thập gì, chia sẻ với ai, giữ bao lâu và bạn yêu cầu xoá bằng cách nào."
+    },
+    "start": {
+      "title": "Bắt đầu cho thuê xe",
+      "desc": "Hai cách tham gia, hồ sơ cần chuẩn bị và vòng duyệt trước khi xe lên chợ."
+    },
+    "rules": {
+      "title": "Quy tắc trên sàn",
+      "desc": "Nghĩa vụ của gian hàng, hành vi bị cấm và cách nền tảng xử lý vi phạm."
+    },
+    "terms": {
+      "title": "Điều khoản sử dụng",
+      "desc": "Quyền và nghĩa vụ chung của mọi người dùng XePrime."
+    },
+    "manage": {
+      "title": "Quản lý xe và đơn thuê",
+      "desc": "Đăng nhập khu làm việc để duyệt yêu cầu, chỉnh lịch bận và xem tiền của từng chuyến."
+    }
   }
 }

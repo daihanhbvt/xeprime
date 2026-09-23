@@ -1,0 +1,171 @@
+/*
+ * Mục lục văn bản pháp lý.
+ *
+ * Dưới 1024px: khối `<details>` gập/mở — 14 mục mở sẵn sẽ đẩy đoạn đầu tiên của văn bản xuống
+ * dưới nếp gấp. Từ 1024px: luôn mở, dính ở cột bên, có vạch dọc thay cho khung viền kín.
+ */
+.toc {
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  /* ~48px — vùng bấm gập/mở phải vượt `--xp-touch-target-min` (44px). */
+  padding: 14px 16px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+  list-style: none;
+}
+.title::-webkit-details-marker {
+  display: none;
+}
+.title:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-primary);
+  outline-offset: 2px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+/* Mũi tên vẽ bằng hai cạnh viền — AntD tiêm `.anticon` lúc chạy và sẽ thắng `display: none`. */
+.caret {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-right: 1.5px solid var(--xp-color-text-tertiary);
+  border-bottom: 1.5px solid var(--xp-color-text-tertiary);
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.18s ease;
+}
+.toc[open] .caret {
+  transform: translateY(1px) rotate(225deg);
+}
+
+.list {
+  margin: 0;
+  padding: 0 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  list-style: none;
+  counter-reset: xp-toc;
+}
+
+/*
+ * Số thứ tự do CSS đếm, không phải `list-style: decimal`: tiêu đề trong bó message đã mang sẵn
+ * số ("1. Phạm vi") ở bản tiếng Việt nhưng KHÔNG chắc có ở mọi ngôn ngữ, nên mục lục tự đánh
+ * số để hai cột số không bao giờ lệch nhau.
+ */
+.link {
+  position: relative;
+  display: block;
+  padding: 7px 10px 7px 30px;
+  border-radius: var(--xp-border-radius-sm);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--xp-color-text-secondary);
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.link::before {
+  counter-increment: xp-toc;
+  content: counter(xp-toc);
+  position: absolute;
+  left: 10px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--xp-color-text-tertiary);
+}
+
+.link:hover {
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text);
+}
+
+.link:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-primary);
+  outline-offset: 1px;
+}
+
+/*
+ * Mục đang đọc: nền cát + chữ vàng đậm + vạch vàng ở mép trái.
+ *
+ * Ba dấu hiệu cho một trạng thái nghe như thừa, nhưng chỉ đổi MÀU CHỮ thì người mù màu không
+ * thấy gì, và chỉ đổi NỀN thì nó lẫn với trạng thái rê chuột.
+ */
+.linkActive {
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+  font-weight: 600;
+}
+
+.linkActive::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary);
+}
+
+.linkActive::before {
+  color: var(--xp-color-primary-active);
+}
+
+/* ─── Desktop: luôn mở, dính ─────────────────────────────────────────────── */
+@media (min-width: 1024px) {
+  .toc {
+    position: sticky;
+    /* Dính ngay dưới header marketplace, tự cuộn khi văn bản dài hơn khung nhìn. */
+    top: calc(var(--xp-market-header-height) + 16px);
+    max-height: calc(100vh - var(--xp-market-header-height) - 48px);
+    overflow-y: auto;
+    border: none;
+    border-left: 1px solid var(--xp-color-border);
+    border-radius: 0;
+    background: none;
+  }
+  .title {
+    padding: 0 0 10px 12px;
+    cursor: default;
+    pointer-events: none;
+  }
+  .caret {
+    display: none;
+  }
+  .list {
+    padding: 0;
+  }
+
+  /*
+   * PHẢI có cả hai: trình duyệt cũ giấu thân `<details>` bằng `display: none` trên các con,
+   * còn Chrome từ 131 dùng `::details-content` mang `content-visibility: hidden` mà `display`
+   * không với tới. Thiếu quy tắc thứ hai thì mục lục desktop trống trơn và không bấm mở được
+   * (vì `pointer-events: none` ngay trên).
+   */
+  .toc > nav {
+    display: block;
+  }
+  .toc::details-content {
+    content-visibility: visible;
+    block-size: auto;
+  }
+}
+
+/* Mục lục là công cụ MÀN HÌNH: liên kết neo không bấm được trên giấy. */
+@media print {
+  .toc {
+    display: none;
+  }
+}

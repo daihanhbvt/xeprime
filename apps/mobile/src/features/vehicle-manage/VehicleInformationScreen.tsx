@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { Controller, useForm, useWatch, type Control } from 'react-hook-form';
+import { Linking, Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { CATALOG_TYPE, VEHICLE_PUBLIC_STATUS, vehicleFeatureAppliesTo } from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
 import { useAppToast } from '@/components/feedback/use-app-toast';
+import { MapPreview } from '@/components/map/MapPreview';
 import { BlockTitle } from '@/components/ui/BlockTitle';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
@@ -23,6 +25,7 @@ import {
 import { VehicleIdentityFields } from '@/features/vehicles/components/VehicleIdentityFields';
 import { useUpdateVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { manageInformationValuesToInput, vehicleToFormValues } from '@/features/vehicles/mappers';
+import { mapAppUrl, mapPreviewUrl, toGeoPoint } from '@/lib/map-static';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
@@ -315,6 +318,8 @@ function InformationForm({
  */
 function AddressCard({ vehicle }: { vehicle: VehicleDetail }) {
   const t = useTranslations('VehicleManage.information');
+  const tAddress = useTranslations('Address');
+  const tStates = useTranslations('Common.states');
   const branchId = vehicle.branch?.id ?? null;
   const branches = useBranches({}, branchId !== null);
   const branch = branches.data?.items.find((b) => b.id === branchId) ?? null;
@@ -327,6 +332,13 @@ function AddressCard({ vehicle }: { vehicle: VehicleDetail }) {
    */
   const addressLine = branch?.address ?? vehicle.branch?.provinceName ?? '';
   const branchName = branch?.name ?? vehicle.branch?.name ?? null;
+
+  /*
+   * Toạ độ chỉ đến từ CHI NHÁNH đã tải về được — `vehicle.branch` rút gọn không mang lat/lng.
+   * Không có thì khối bản đồ tự vắng mặt, y như `StaticMap` bên web.
+   */
+  const mapGeo = toGeoPoint(branch?.latitude ?? null, branch?.longitude ?? null);
+  const mapUri = mapPreviewUrl(mapGeo);
   const shared = (branch?.vehicleCount ?? 0) > 1;
 
   return (
@@ -347,10 +359,34 @@ function AddressCard({ vehicle }: { vehicle: VehicleDetail }) {
               </Text>
             ) : null}
             {/*
-              Không có bản đồ nhúng trên native (web dùng `EmbedMap` + key Google Maps). Câu
-              "chưa định vị được" vẫn đúng và vẫn là thứ cần nói khi địa chỉ chưa tra ra toạ độ.
+              Bản đồ vị trí xe — cùng khối `StaticMap` mà `InformationSection` bên web dựng, qua
+              ảnh tĩnh Geoapify (ADR 0037). Chú thích cũ ở đây nói native "không có bản đồ nhúng"
+              và web dùng `EmbedMap` + khoá Google: cả hai vế đều đã hết đúng.
+
+              Chưa tra được toạ độ thì câu "chưa định vị được" ở lại nguyên chỗ cũ — đó vẫn là
+              thứ cần nói, và nó phân biệt "chưa có gì để chỉ" với "bản đồ hỏng".
             */}
-            {branch?.address && branch.latitude == null ? (
+            {mapGeo && mapUri ? (
+              <YStack gap={space.xs}>
+                <MapPreview
+                  uri={mapUri}
+                  unavailableLabel={tStates('imageUnavailable')}
+                  busyLabel={tStates('loading')}
+                  onOpen={() => void Linking.openURL(mapAppUrl(mapGeo))}
+                  openLabel={t('addressMapTitle')}
+                />
+                {/* Nhắc ra thành chữ: một tấm ảnh bản đồ không tự nói rằng nó bấm được. */}
+                <Pressable
+                  accessibilityRole="link"
+                  accessibilityLabel={tAddress('map.openInGoogleMaps')}
+                  onPress={() => void Linking.openURL(mapAppUrl(mapGeo))}
+                >
+                  <Text col={colors.primaryActive} fos={fontSize.label}>
+                    {tAddress('map.openInGoogleMaps')}
+                  </Text>
+                </Pressable>
+              </YStack>
+            ) : branch?.address ? (
               <Text col={colors.placeholder} fos={fontSize.label}>
                 {t('addressMapPending')}
               </Text>

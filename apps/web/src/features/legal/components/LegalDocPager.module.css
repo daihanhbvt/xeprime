@@ -1,0 +1,108 @@
+/*
+ * Cặp "văn bản trước / tiếp theo" ở cuối một văn bản pháp lý.
+ *
+ * Hai thẻ dàn về hai mép — quy ước đọc quen thuộc của mọi tài liệu nhiều trang: lùi ở trái,
+ * tiến ở phải. Ô nào không có thì để TRỐNG chứ không dồn ô còn lại vào giữa, để vị trí của
+ * "tiếp theo" không nhảy giữa bốn văn bản.
+ */
+.pager {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.item:hover {
+  border-color: var(--xp-color-primary);
+  box-shadow: var(--xp-shadow-card);
+}
+
+.item:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-primary);
+  outline-offset: 2px;
+}
+
+/* Thẻ "tiếp theo" canh phải — cả chữ lẫn mũi tên, để hai thẻ soi gương nhau. */
+.itemNext {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.direction {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--xp-color-text-tertiary);
+}
+
+.title {
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--xp-color-text);
+}
+
+.item:hover .title {
+  color: var(--xp-color-primary-active);
+}
+
+/* Mũi tên vẽ bằng hai cạnh viền — không kéo `@ant-design/icons` vào một Server Component. */
+.arrowPrev,
+.arrowNext {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-top: 1.5px solid currentcolor;
+  border-right: 1.5px solid currentcolor;
+  transition: transform 0.15s ease;
+}
+
+.arrowPrev {
+  transform: rotate(-135deg);
+}
+
+.arrowNext {
+  transform: rotate(45deg);
+}
+
+.item:hover .arrowPrev {
+  transform: rotate(-135deg) translate(2px, -2px);
+}
+.item:hover .arrowNext {
+  transform: rotate(45deg) translate(2px, -2px);
+}
+
+@media (max-width: 560px) {
+  .pager {
+    grid-template-columns: 1fr;
+  }
+  /* Một cột: thẻ "tiếp theo" canh trái như mọi thứ khác, mũi tên vẫn ở cuối dòng nhãn. */
+  .itemNext {
+    text-align: left;
+    align-items: flex-start;
+  }
+}
+
+/* Điều hướng là công cụ MÀN HÌNH — trên giấy nó chỉ là hai dòng chữ vô nghĩa. */
+@media print {
+  .pager {
+    display: none;
+  }
+}

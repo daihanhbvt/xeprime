@@ -75,6 +75,8 @@ vi.mock('@/i18n/actions', () => ({ setLocale: vi.fn().mockResolvedValue({ ok: tr
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn(), refresh: vi.fn() }),
+  // Thanh điều hướng và chân trang đánh dấu mục ĐANG XEM từ pathname (`isActivePath`).
+  usePathname: () => '/',
 }));
 
 beforeEach(() => {

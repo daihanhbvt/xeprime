@@ -142,11 +142,16 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
               />
               {/* Hạn trả lời chỉ có nghĩa với người PHẢI trả lời — khách nhìn nó không làm gì được. */}
               {/*
-                Đồng hồ hạn phản hồi CHỈ có nghĩa khi chủ xe còn phải trả lời. Sau khi họ đã
-                nhận, mốc đang chạy là hạn THANH TOÁN của khách — một đồng hồ khác, của người
-                khác, và hiện nhầm nó ở đây là giục chủ xe cho một việc không phải của họ.
+                Đồng hồ hạn phản hồi CHỈ có nghĩa khi chủ xe còn phải trả lời — và điều kiện đó
+                là CHẶNG, không phải sự tồn tại của `respondBy`.
+
+                `respondBy` KHÔNG bị xoá sau khi duyệt (ADR 0044), nên hỏi mình nó là bày một
+                đồng hồ "hạn phản hồi" trên chuyến đã `ready`, đã `active`, thậm chí đã xong —
+                giục chủ xe cho một việc không còn tồn tại. Loại thêm `cancelOnly` vì ở
+                `awaiting_hold` mốc đang chạy là hạn THANH TOÁN của khách: một đồng hồ khác, của
+                người khác.
               */}
-              {isHost && !cancelOnly && trip.respondBy ? (
+              {isHost && canHostDecideTrip(stage) && !cancelOnly && trip.respondBy ? (
                 <RespondDeadline respondBy={trip.respondBy} />
               ) : null}
             </XStack>

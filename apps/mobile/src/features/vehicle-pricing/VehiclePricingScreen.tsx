@@ -948,7 +948,14 @@ function InheritedPolicyCard({
 
         {policy ? (
           <YStack gap={space.xs}>
-            <DataRow labelWide label={t('collateral')} value={collateral() ?? ''} />
+            {/*
+              `block` chứ không hai cột như bốn dòng dưới: giá trị ở đây là một câu GHÉP
+              ("Cọc tài sản · Cà vẹt (đăng ký xe máy), Xe máy, Hộ chiếu") chứ không phải một
+              con số. Nhét nó vào cột phải 40% bề ngang thì nó phải xuống ba dòng rồi bị cắt —
+              mà cắt đúng cái danh sách giấy tờ khách phải mang theo là bỏ đi phần duy nhất
+              chủ xe cần đọc. Cùng lựa chọn với các dòng địa chỉ ở màn yêu cầu thuê.
+            */}
+            <DataRow block label={t('collateral')} value={collateral() ?? ''} />
             <DataRow
               labelWide
               label={t('delivery')}
