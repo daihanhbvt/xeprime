@@ -1,13 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ADDRESS_LINE_MAX_LENGTH,
+  BOOKING_HANDOVER_PLACE_VALUES,
+  BOOKING_LIST_PRESET_VALUES,
   BOOKING_STATUS,
   BOOKING_STATUS_VALUES,
   CANCELLATION_REASON_CATEGORY_VALUES,
+  HANDOVER_STATUS_VALUES,
   ROUTE_TYPE_VALUES,
   SERVICE_TYPE,
   LONG_TERM_PACKAGE_MONTHS_VALUES,
   SERVICE_TYPE_VALUES,
+  type BookingListPreset,
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -57,6 +61,21 @@ export class BookingListQueryDto {
   @IsOptional()
   @IsIn(BOOKING_STATUS_VALUES)
   status?: string;
+
+  /**
+   * Nhóm việc dựng sẵn — CỘNG THÊM vào các bộ lọc khác, không thay thế chúng.
+   *
+   * `awaiting_pickup` là một câu ba vế (trạng thái đơn + chưa có mốc giao thật + chưa có biên
+   * bản giao đã xác nhận) mà `status` không diễn đạt nổi. Nó ở server để mọi client hỏi cùng
+   * một câu; `q`, `branchId`, `vehicleId`, phân trang và sắp xếp vẫn áp bình thường lên trên.
+   */
+  @ApiPropertyOptional({
+    enum: BOOKING_LIST_PRESET_VALUES,
+    description: 'Nhóm việc dựng sẵn — awaiting_pickup: đơn đã tạo nhưng chưa bàn giao xe',
+  })
+  @IsOptional()
+  @IsIn(BOOKING_LIST_PRESET_VALUES)
+  preset?: BookingListPreset;
 
   @ApiPropertyOptional({ description: 'Lọc theo xe' })
   @IsOptional()
@@ -125,6 +144,38 @@ export class BookingListItemDto {
   @ApiProperty({ description: 'ISO-8601 UTC' }) pickupAt!: string;
   @ApiProperty({ description: 'ISO-8601 UTC — với thuê dài hạn do SERVER tính từ gói' })
   returnAt!: string;
+  /*
+   * Ba trường BÀN GIAO bên dưới phục vụ nhóm việc "Chờ giao xe". Chúng nằm ở danh sách chứ
+   * không để client tự hỏi thêm: một trang 20 đơn mà mỗi dòng gọi `/handovers` là 20 lượt gọi
+   * cho một câu hỏi mà cùng một truy vấn đã trả lời được.
+   *
+   * `required: true` + `nullable`: contract sinh ra `string | null` chứ không phải `| undefined`
+   * — mọi đơn đều có ba trường này, chỉ là giá trị có thể trống (ADR 0007).
+   */
+  @ApiProperty({
+    required: true,
+    type: String,
+    nullable: true,
+    enum: HANDOVER_STATUS_VALUES,
+    description:
+      'Trạng thái biên bản GIAO XE còn hiệu lực (bản huỷ không tính). null = chưa lập biên bản nào',
+  })
+  pickupHandoverStatus!: string | null;
+  @ApiProperty({
+    required: true,
+    type: String,
+    nullable: true,
+    enum: BOOKING_HANDOVER_PLACE_VALUES,
+    description: 'Chỗ xe đổi tay — MÃ; nhãn do client dịch',
+  })
+  handoverPlaceKind!: string | null;
+  @ApiProperty({
+    required: true,
+    type: String,
+    nullable: true,
+    description: 'Địa chỉ hoặc tên chi nhánh đi kèm `handoverPlaceKind` — chuỗi thô, không dịch',
+  })
+  handoverPlace!: string | null;
   @ApiProperty({ description: 'Giá thuê đã chốt, KHÔNG gồm phụ phí. Tiền dạng string — ADR 0007' })
   totalAmount!: string;
   @ApiProperty({
@@ -308,7 +359,6 @@ export class CreateBookingDto {
   @IsLongitude()
   destinationLongitude?: number;
 
-
   @ApiProperty({ description: 'Nhận xe (ISO-8601)' })
   @IsDateString()
   pickupAt!: string;
@@ -454,7 +504,6 @@ export class UpdateBookingDto {
   @IsLongitude()
   destinationLongitude?: number;
 
-
   @ApiPropertyOptional({ description: 'Nhận xe (ISO-8601)' })
   @IsOptional()
   @IsDateString()
@@ -537,18 +586,26 @@ export class AssignBookingDriverDto {
 }
 
 /**
- * Trạng thái đích nào BẮT BUỘC phải nêu lý do.
+ * Trạng thái đích mà ENDPOINT CÔNG KHAI `POST /bookings/:id/transition` được phép nhận (ADR
+ * 0047) — đây là một quyết định BẤM TAY khép đơn, không phải một bộ chọn trạng thái tự do.
  *
- * Hai kết thúc tiêu cực (`cancelled`, `no_show`) khép đơn lại vĩnh viễn và nhả lịch xe ngay —
- * sáu tháng sau, khi khách gọi hỏi "vì sao đơn của tôi bị huỷ", thứ duy nhất còn lại là dòng
- * audit. Một dòng audit không có lý do trả lời được "ai" và "lúc nào" nhưng không trả lời được
- * câu người ta thật sự hỏi. `confirmed` thì ngược lại: nó là bước đi tới bình thường của quy
- * trình, bắt gõ lý do ở đó chỉ tạo ra những chữ "ok" vô nghĩa trong sổ.
+ * `active`/`completed` KHÔNG có mặt: chúng chỉ đến từ một biên bản bàn giao thật, do
+ * `HandoversService` gọi `transitionWithinTx` NỘI BỘ — cho client tự đặt `active` là cho phép
+ * bỏ qua bằng chứng bàn giao (số KM, ảnh hiện trạng) hoàn toàn. `confirmed` (deprecated) cũng
+ * không có mặt — không còn ai "xác nhận đơn" thủ công (xem `BookingStatusActions`): duyệt yêu
+ * cầu ở `Duyệt & giữ xe` CHÍNH LÀ sự xác nhận.
+ *
+ * Cả hai giá trị còn lại đều là kết thúc tiêu cực, khép đơn vĩnh viễn và nhả lịch xe ngay — sáu
+ * tháng sau, khi khách gọi hỏi "vì sao đơn của tôi bị huỷ", thứ duy nhất còn lại là dòng audit.
+ * Nên cả hai đều BẮT BUỘC nêu lý do (`TRANSITION_REASON_REQUIRED` trùng chính danh sách này —
+ * không phải trùng hợp, mà vì đây giờ là hai kết thúc DUY NHẤT endpoint này còn làm được).
  */
-const TRANSITION_REASON_REQUIRED: readonly string[] = [
+const BOOKING_TRANSITION_ALLOWED_VALUES: readonly string[] = [
   BOOKING_STATUS.CANCELLED,
   BOOKING_STATUS.NO_SHOW,
 ];
+
+const TRANSITION_REASON_REQUIRED: readonly string[] = BOOKING_TRANSITION_ALLOWED_VALUES;
 
 function transitionNeedsReason(status: string): boolean {
   return TRANSITION_REASON_REQUIRED.includes(status);
@@ -556,8 +613,11 @@ function transitionNeedsReason(status: string): boolean {
 
 /** Chuyển trạng thái đơn — server validate bằng canTransitionBooking(), không tin client. */
 export class TransitionBookingDto {
-  @ApiProperty({ enum: BOOKING_STATUS_VALUES, description: 'Trạng thái đích' })
-  @IsIn(BOOKING_STATUS_VALUES)
+  @ApiProperty({
+    enum: BOOKING_TRANSITION_ALLOWED_VALUES,
+    description: 'Trạng thái đích — chỉ hai quyết định bấm tay: huỷ đơn hoặc khách không đến',
+  })
+  @IsIn(BOOKING_TRANSITION_ALLOWED_VALUES)
   status!: string;
 
   /**

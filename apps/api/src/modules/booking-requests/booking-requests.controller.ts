@@ -63,8 +63,15 @@ export class BookingRequestsController {
   @Post(':id/approve')
   @RequirePermissions(PERMISSION.BOOKING_REQUEST_APPROVE)
   @ApiOperation({
-    summary: 'Duyệt yêu cầu → tạo đơn thuê (giữ chỗ lịch, phí giao nhận 0)',
+    /*
+     * ADR 0047: sửa summary trước đây "→ tạo đơn thuê" — chỉ đúng cho chuyến KHÔNG thu tiền
+     * giữ chỗ. Nhánh phổ biến hơn (có hold) chỉ giữ lịch + chốt giá ở đây; đơn thuê thật ra
+     * đời trong lượt đối soát khi khách thanh toán đủ (`settleFullPaymentWithinTx`).
+     */
+    summary: 'Duyệt yêu cầu → giữ lịch + chốt giá (đơn thuê chỉ ra đời khi khách thanh toán đủ)',
     description:
+      'Có tiền giữ chỗ: request chuyển sang `awaiting_hold`, KHÔNG có Booking nào được tạo ở ' +
+      'bước này. Không thu tiền giữ chỗ: Booking được tạo ngay trong cùng transaction. ' +
       'Thuê dài hạn: body bắt buộc scheduledPickupAt — gian hàng chốt giờ nhận, server tính ' +
       'giờ trả theo gói tháng lịch (ADR 0011). Trùng lịch → 409, yêu cầu vẫn chờ duyệt.',
   })

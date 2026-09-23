@@ -135,45 +135,6 @@
   min-width: 0;
 }
 
-.shopAvatar {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: var(--xp-space-xl);
-  height: var(--xp-space-xl);
-  border-radius: var(--xp-border-radius-pill);
-  overflow: hidden;
-  background: var(--xp-color-primary-light);
-  color: var(--xp-color-primary);
-  font-weight: 700;
-}
-
-.shopLogo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.shopBody {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1;
-}
-
-.shopName {
-  font-weight: 600;
-  color: var(--xp-color-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.shopRating {
-  font-size: var(--xp-font-size-sm);
-  color: var(--xp-color-text-secondary);
-}
-
 .shopLink {
   flex: none;
   font-size: var(--xp-font-size-sm);

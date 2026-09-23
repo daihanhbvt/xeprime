@@ -39,6 +39,10 @@ const BOOKING: BookingDetail = {
   status: BOOKING_STATUS.CONFIRMED,
   serviceType: SERVICE_TYPE.SELF_DRIVE,
   longTermPackageMonths: null,
+  // Ba trường bàn giao phục vụ danh sách "Chờ giao xe"; màn chi tiết không đọc tới chúng.
+  pickupHandoverStatus: null,
+  handoverPlaceKind: null,
+  handoverPlace: null,
   pickupAt: '2026-09-24T10:00:00.000Z',
   returnAt: '2026-09-25T03:00:00.000Z',
   totalAmount: '468000',

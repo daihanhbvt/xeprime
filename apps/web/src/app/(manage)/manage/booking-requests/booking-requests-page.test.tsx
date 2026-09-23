@@ -141,6 +141,11 @@ function request(overrides: Partial<BookingRequestItem> = {}): BookingRequestIte
   } as BookingRequestItem;
 }
 
+/**
+ * `statusCounts` đủ cả 11 trạng thái — đúng như backend luôn trả (một `groupBy` phủ toàn bộ
+ * `BOOKING_REQUEST_STATUS_VALUES`, kể cả đếm 0), để ba tab (ADR 0047) đều có số thật để kiểm
+ * thay vì chỉ non-zero ở những trạng thái tab CŨ từng quan tâm.
+ */
 function meta(overrides: Partial<BookingRequestListMeta> = {}): BookingRequestListMeta {
   return {
     page: 1,
@@ -149,10 +154,15 @@ function meta(overrides: Partial<BookingRequestListMeta> = {}): BookingRequestLi
     hasNext: false,
     statusCounts: [
       { status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL, count: 7 },
+      { status: BOOKING_REQUEST_STATUS.HOLD_PAID, count: 0 },
+      { status: BOOKING_REQUEST_STATUS.AWAITING_HOLD, count: 4 },
       { status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING, count: 12 },
       { status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST, count: 3 },
       { status: BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER, count: 2 },
       { status: BOOKING_REQUEST_STATUS.EXPIRED, count: 1 },
+      { status: BOOKING_REQUEST_STATUS.HOLD_EXPIRED, count: 2 },
+      { status: BOOKING_REQUEST_STATUS.SLOT_TAKEN, count: 1 },
+      { status: BOOKING_REQUEST_STATUS.CANCELLED_BY_HOST, count: 1 },
       { status: BOOKING_REQUEST_STATUS.APPROVED_BY_HOST, count: 0 },
     ],
     ...overrides,
@@ -203,43 +213,60 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('/manage/booking-requests — bộ lọc trạng thái ở URL', () => {
+describe('/manage/booking-requests — bộ lọc trạng thái ở URL (ba tab, ADR 0047)', () => {
   it('không có tham số ⇒ mặc định lọc tab gộp "Cần xử lý"', () => {
     renderPage();
     expect(queries.lastFilters?.status).toBe(BOOKING_REQUEST_TAB_NEEDS_ACTION);
   });
 
-  it('chọn tab "Tất cả" ⇒ ghi `status=all` vào URL (không phải xoá tham số)', () => {
+  it('chọn tab "Đã đóng" ⇒ ghi `status=closed` vào URL', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('tab', { name: /Tất cả/ }));
-    expect(nav.replace).toHaveBeenCalledWith('/manage/booking-requests?status=all', {
+    fireEvent.click(screen.getByRole('tab', { name: /Đã đóng/ }));
+    expect(nav.replace).toHaveBeenCalledWith('/manage/booking-requests?status=closed', {
       scroll: false,
     });
   });
 
-  it('`status=all` trong URL được GIỮ và không gửi `status` lên API', () => {
+  it('chọn tab "Chờ khách thanh toán" ⇒ ghi thẳng `status=awaiting_hold`', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('tab', { name: /Chờ khách thanh toán/ }));
+    expect(nav.replace).toHaveBeenCalledWith('/manage/booking-requests?status=awaiting_hold', {
+      scroll: false,
+    });
+  });
+
+  /*
+   * Tab "Tất cả" đã bị xoá (ADR 0047: ba tab hiện có phủ hết 11 trạng thái). Một liên kết cũ
+   * còn mang `?status=all` không được VỠ — nó phải render bình thường, không văng lỗi vì backend
+   * từ chối một mã lạ. Không tab nào sáng là chấp nhận được cho một đường dẫn đã lỗi thời.
+   */
+  it('liên kết cũ mang `status=all` không làm vỡ trang, và không gửi mã lạ lên API', () => {
     nav.params = new URLSearchParams('status=all');
     renderPage();
+    expect(screen.getByText('Kia Carnival 2025')).toBeTruthy();
     expect(queries.lastFilters?.status).toBe('all');
-    expect(screen.getByRole('tab', { name: /Tất cả/ }).getAttribute('aria-selected')).toBe('true');
   });
 
   it('đổi trạng thái ⇒ về trang 1 (tham số `page` bị xoá khỏi URL)', () => {
     nav.params = new URLSearchParams('status=pending_host_approval&page=4');
     renderPage();
-    fireEvent.click(screen.getByRole('tab', { name: /Đã từ chối/ }));
-    expect(nav.replace).toHaveBeenCalledWith('/manage/booking-requests?status=rejected_by_host', {
+    fireEvent.click(screen.getByRole('tab', { name: /Đã đóng/ }));
+    expect(nav.replace).toHaveBeenCalledWith('/manage/booking-requests?status=closed', {
       scroll: false,
     });
   });
 
-  it('đếm trên tab lấy từ backend, kể cả tab đang KHÔNG mở; "Tất cả" là tổng', () => {
+  it('đếm trên tab lấy từ backend, kể cả tab đang KHÔNG mở; mỗi tab cộng ĐÚNG nhóm của nó', () => {
     renderPage();
+    // Cần xử lý = pending_host_approval(7) + hold_paid(0).
     expect(within(screen.getByRole('tab', { name: /Cần xử lý/ })).getByText('7')).toBeTruthy();
-    expect(within(screen.getByRole('tab', { name: /Đã tạo đơn/ })).getByText('12')).toBeTruthy();
-    expect(within(screen.getByRole('tab', { name: /Đã từ chối/ })).getByText('3')).toBeTruthy();
-    // 7 + 12 + 3 + 2 + 1 + 0 — cộng ĐỦ bộ trạng thái, không chỉ các tab hiện ra.
-    expect(within(screen.getByRole('tab', { name: /Tất cả/ })).getByText('25')).toBeTruthy();
+    // Chờ khách thanh toán = awaiting_hold(4) — một mã thật, không gộp.
+    expect(
+      within(screen.getByRole('tab', { name: /Chờ khách thanh toán/ })).getByText('4'),
+    ).toBeTruthy();
+    // Đã đóng = rejected(3) + cancelled_by_customer(2) + expired(1) + hold_expired(2) +
+    // slot_taken(1) + cancelled_by_host(1) = 10 — sáu trạng thái, một tab, số cộng dồn thật.
+    expect(within(screen.getByRole('tab', { name: /Đã đóng/ })).getByText('10')).toBeTruthy();
   });
 
   /**
@@ -279,7 +306,7 @@ describe('/manage/booking-requests — tìm kiếm và lọc dịch vụ', () =>
   });
 
   it('gõ vào ô tìm kiếm ⇒ ghi `q` vào URL và về trang 1', async () => {
-    nav.params = new URLSearchParams('status=all&page=3');
+    nav.params = new URLSearchParams('status=closed&page=3');
     renderPage();
 
     fireEvent.change(screen.getByPlaceholderText(/Tên khách/), { target: { value: 'Ngọc' } });
@@ -287,7 +314,7 @@ describe('/manage/booking-requests — tìm kiếm và lọc dịch vụ', () =>
     await waitFor(() => expect(nav.replace).toHaveBeenCalled());
     const url = nav.replace.mock.calls.at(-1)![0] as string;
     expect(url).toContain('q=Ng');
-    expect(url).toContain('status=all');
+    expect(url).toContain('status=closed');
     expect(url).not.toContain('page=');
   });
 
@@ -458,17 +485,17 @@ describe('/manage/booking-requests — tiền trên thẻ', () => {
 });
 
 /**
- * `awaiting_hold` (ADR 0039 — hold đã sinh, khách CHƯA chuyển khoản) — phản hồi người dùng
- * 19/09/2026: trạng thái này trước đây hoàn toàn vô hình với gian hàng, nên một yêu cầu thật
- * trông như biến mất và mất luôn nút Duyệt. KHÔNG có tab riêng (phản hồi 19/09/2026, lượt hai:
- * chỉ "Cần xử lý" và "Tất cả" là đủ, một trạng thái không-hành-động-được không đáng một tab) —
- * vẫn xem được qua "Tất cả", và thẻ tự nói rõ lý do thay vì để trống.
+ * `awaiting_hold` (ADR 0044 — gian hàng ĐÃ NHẬN chuyến, khách CHƯA chuyển khoản) — có tab
+ * RIÊNG "Chờ khách thanh toán" từ 23/09/2026 (ADR 0047), đảo ngược quyết định 19/09/2026 ghi
+ * trong `constants.ts` (lúc đó: "một trạng thái không-hành-động-được không đáng một tab" — tab
+ * "Tất cả" khi ấy vẫn còn nên `awaiting_hold` chưa thực sự vô hình; sau khi tab đó bị xoá, nó
+ * sẽ không còn cách nào xem riêng nếu không có tab của chính nó).
  *
- * Từ ADR 0044 chặng này nghĩa là GIAN HÀNG ĐÃ NHẬN và đang chờ khách trả tiền, nên thẻ còn phải
- * nói ĐÚNG mốc chỗ sẽ tự nhả — thứ quyết định người trực có nên gọi cho khách hay không.
+ * Thẻ vẫn phải nói ĐÚNG mốc chỗ sẽ tự nhả — thứ quyết định người trực có nên gọi cho khách hay
+ * không (không đổi, xem `awaitingHold.*` ở `BookingRequestCard`).
  */
 describe('/manage/booking-requests — awaiting_hold (đã nhận, chờ khách thanh toán)', () => {
-  it('KHÔNG có tab riêng — vẫn đếm đúng ở "Tất cả", không lẫn vào "Cần xử lý"', () => {
+  it('CÓ tab riêng, đếm đúng, không lẫn vào "Cần xử lý"', () => {
     setRows([request({ status: BOOKING_REQUEST_STATUS.AWAITING_HOLD, bookingId: null })], {
       total: 1,
       statusCounts: [
@@ -484,8 +511,21 @@ describe('/manage/booking-requests — awaiting_hold (đã nhận, chờ khách 
     renderPage();
 
     expect(within(screen.getByRole('tab', { name: /Cần xử lý/ })).getByText('0')).toBeTruthy();
-    expect(screen.queryByRole('tab', { name: /Chờ chuyển khoản/ })).toBeNull();
-    expect(within(screen.getByRole('tab', { name: /Tất cả/ })).getByText('2')).toBeTruthy();
+    expect(
+      within(screen.getByRole('tab', { name: /Chờ khách thanh toán/ })).getByText('2'),
+    ).toBeTruthy();
+  });
+
+  it('bấm tab "Chờ khách thanh toán" ⇒ lọc đúng danh sách, chỉ còn yêu cầu ở trạng thái đó', () => {
+    nav.params = new URLSearchParams('status=awaiting_hold');
+    setRows([request({ status: BOOKING_REQUEST_STATUS.AWAITING_HOLD, bookingId: null })]);
+    renderPage();
+
+    expect(
+      screen.getByRole('tab', { name: /Chờ khách thanh toán/ }).getAttribute('aria-selected'),
+    ).toBe('true');
+    expect(queries.lastFilters?.status).toBe(BOOKING_REQUEST_STATUS.AWAITING_HOLD);
+    expect(screen.getByText('Kia Carnival 2025')).toBeTruthy();
   });
 
   it('thẻ KHÔNG có nút Duyệt/Từ chối, nhưng nói RÕ vì sao thay vì để trống', () => {
@@ -632,7 +672,9 @@ describe('/manage/booking-requests — quyết định duyệt/từ chối', () 
     fireEvent.click(within(cardFor('Kia Carnival 2025')).getByRole('button', { name: /Duyệt/ }));
 
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText(/CHIẾM CHỖ lịch của xe/)).toBeTruthy();
+    // ADR 0047: nội dung sửa lại cho đúng — duyệt không LUÔN tạo đơn thuê ngay (chỉ đúng khi
+    // chuyến không thu tiền giữ chỗ); có hold thì chỉ giữ lịch, đơn ra đời khi khách thanh toán.
+    expect(within(dialog).getByText(/giữ lịch xe và chốt giá/)).toBeTruthy();
     expect(within(dialog).getByText('Kia Carnival 2025 · 51A-123.45')).toBeTruthy();
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Duyệt & giữ xe' }));
@@ -917,7 +959,7 @@ describe('/manage/booking-requests — xe và khách mở dạng modal', () => {
 
 describe('/manage/booking-requests — xem lịch của chính chiếc xe', () => {
   it('link sang màn lịch đã lọc sẵn theo BIỂN SỐ, kèm đường quay lại', () => {
-    nav.params = new URLSearchParams('status=all&page=3');
+    nav.params = new URLSearchParams('status=closed&page=3');
     renderPage();
 
     const link = screen.getByRole('link', {
@@ -931,7 +973,7 @@ describe('/manage/booking-requests — xem lịch của chính chiếc xe', () =
     // Biển số phân biệt tốt hơn tên xe khi gian hàng có nhiều xe trùng tên.
     expect(params.get('q')).toBe('51A-123.45');
     // Quay lại ĐÚNG chỗ đang đứng: giữ cả tab lẫn trang.
-    expect(params.get('back')).toBe('/manage/booking-requests?status=all&page=3');
+    expect(params.get('back')).toBe('/manage/booking-requests?status=closed&page=3');
   });
 
   it('xe chưa có biển số ⇒ lọc theo tên', () => {

@@ -174,6 +174,17 @@
   gap: var(--xp-space-xs);
 }
 
+/*
+ * Nhóm nút tách khỏi hàng "Trên chợ" vì hai thứ biến mất ở hai nhịp khác nhau: ở mobile các nút
+ * chuyển xuống thanh CTA đáy màn, còn hàng công tắc ở lại đầu trang.
+ */
+.profileButtons {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--xp-space-xs);
+}
+
 /* ─── Ba thẻ nhanh (`236:2354`) ───────────────────────────────────────────── */
 
 .quickRow {
@@ -506,7 +517,16 @@
     aspect-ratio: 2 / 1;
   }
 
+  /*
+   * Các NÚT chuyển xuống thanh CTA đáy màn (xem `.mobileActions`), nhưng CỘT vẫn còn: hàng
+   * "Trên chợ" không có chỗ nào khác để đi, và nó là câu trả lời đầu tiên chủ xe tìm khi mở
+   * hồ sơ xe. Nó trải hết chiều ngang, nằm trên nhóm nút, công tắc vẫn ở mép phải.
+   */
   .profileActions {
+    width: 100%;
+  }
+
+  .profileButtons {
     display: none;
   }
 

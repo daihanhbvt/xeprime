@@ -1,5 +1,6 @@
 'use client';
 
+import { CarOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -56,6 +57,7 @@ export function RequestBookingButton({
     <>
       <Button
         type="primary"
+        icon={<CarOutlined />}
         block={block}
         size={size}
         className={className}

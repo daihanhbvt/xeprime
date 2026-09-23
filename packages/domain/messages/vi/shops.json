@@ -23,6 +23,17 @@
     "titleShop": "Giới thiệu doanh nghiệp",
     "address": "Địa chỉ: {address}"
   },
+  "card": {
+    "trips": "{count, plural, other {#{plus} chuyến}}",
+    "highlight": {
+      "topRated": "Chủ xe {rating} sao có thời gian phản hồi nhanh chóng, tỉ lệ đồng ý cao & dịch vụ nhận được nhiều đánh giá tốt từ khách hàng.",
+      "reliable": "Chủ xe phản hồi nhanh và giữ đúng cam kết với hầu hết yêu cầu đã nhận.",
+      "wellRated": "Chủ xe được khách đánh giá {rating} sao qua {count, plural, other {# lượt}} đánh giá.",
+      "instantBook": "Xe bật Đặt ngay — yêu cầu của bạn được nhận tự động, không phải chờ duyệt.",
+      "experienced": "Chủ xe đã hoàn thành {count, plural, other {# chuyến}} cho khách trên XePrime.",
+      "newHost": "Chủ xe mới trên XePrime — bạn có thể là một trong những khách đầu tiên."
+    }
+  },
   "stats": {
     "sectionLabel": "Số liệu gian hàng",
     "vehicles": "Xe cho thuê",
@@ -60,14 +71,13 @@
     "instantBook": "Đặt ngay",
     "instantBookHintLabel": "Giải thích “Đặt ngay”",
     "instantBookHint": "Chủ xe bật tự động nhận chuyến nên yêu cầu được trả lời ngay lập tức. Vì máy trả lời chứ không phải người, chúng tôi không quy đổi nó thành một con số phút.",
-    "basis": "Tính trên {count, plural, other {# yêu cầu}} trong {days} ngày gần nhất.",
-    "insufficient": "Chưa đủ dữ liệu để tính chỉ số — mới có {count, plural, other {# yêu cầu}} trong {days} ngày gần nhất.",
+    "insufficient": "Chưa có yêu cầu thuê nào trong {days} ngày gần nhất để tính chỉ số.",
     "insufficientHintLabel": "Vì sao chưa có chỉ số",
-    "insufficientHint": "Chúng tôi chỉ hiện tỉ lệ khi đã có ít nhất {min} yêu cầu. Dưới mức đó, một lần trả lời hay không trả lời sẽ thành 100% hoặc 0% — một con số nghe chắc chắn nhưng không nói lên điều gì.",
+    "insufficientHint": "Ba chỉ số được tính từ các yêu cầu thuê gian hàng nhận được gần đây, và cần ít nhất {min} yêu cầu. Gian hàng này chưa nhận yêu cầu nào trong khoảng thời gian đó.",
     "speed": {
-      "minutes": "Trong vài phút",
+      "minutes": "Vài phút",
       "hour": "Trong 1 giờ",
-      "hours": "Trong vài giờ",
+      "hours": "Vài giờ",
       "day": "Trong ngày"
     }
   }

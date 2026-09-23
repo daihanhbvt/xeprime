@@ -459,8 +459,8 @@
         "description": "Hãy bổ sung thông tin còn thiếu rồi gửi duyệt lại."
       },
       "hidden": {
-        "message": "Xe đang bị ẩn khỏi chợ",
-        "description": "Gửi duyệt lại để xe hiển thị trở lại trên marketplace."
+        "message": "Xe đang bị nền tảng ẩn",
+        "description": "XePrime đã gỡ xe khỏi chợ. Liên hệ hỗ trợ XePrime để được xem xét lại."
       },
       "draft": {
         "message": "Xe chưa đăng lên chợ",
@@ -487,12 +487,77 @@
       }
     },
     "panel": {
-      "title": "Tiến trình gửi duyệt công khai",
+      "title": "Tiến trình xét duyệt",
+      "titleApproved": "Thông tin xét duyệt",
       "met": "Đã có",
       "unmet": "Chưa có",
+      "submittedAt": "Đã gửi",
+      "reviewedAt": "Đã duyệt",
       "submit": "Gửi duyệt công khai",
       "resubmit": "Gửi duyệt lại",
       "submitted": "Đã gửi xe đi duyệt công khai"
+    },
+    "visibility": {
+      "label": "Trên chợ",
+      "ariaLabel": "Bật hoặc tắt hiển thị xe {name} trên chợ",
+      "on": "Đang hiển thị",
+      "off": "Tạm ẩn",
+      "hintLabel": "Giải thích về công tắc hiển thị trên chợ",
+      "hint": "Tắt hiển thị không ảnh hưởng các yêu cầu và đơn thuê hiện có.",
+      "enabled": "Xe đã hiển thị trên chợ",
+      "disabled": "Đã tạm ẩn xe khỏi chợ",
+      "moderationTag": {
+        "draft": "Chưa hiển thị",
+        "pending_public_review": "Đang chờ duyệt",
+        "needs_revision": "Cần bổ sung",
+        "rejected": "Không được duyệt",
+        "hidden": "Bị nền tảng ẩn",
+        "archived": "Đã lưu trữ",
+        "approved_public": "Đang hiển thị"
+      }
+    },
+    "task": {
+      "submitted": "Đã gửi xe đi duyệt công khai",
+      "missingHintLabel": "Xem đầy đủ các mục còn thiếu",
+      "missingHint": "Còn thiếu: {list}.",
+      "missingSummary": "{count, plural, =0 {Còn thiếu: {list}.} other {Còn thiếu: {list} và # mục khác.}}",
+      "actions": {
+        "completeProfile": "Hoàn tất hồ sơ",
+        "updateProfile": "Cập nhật hồ sơ",
+        "submit": "Gửi duyệt",
+        "resubmit": "Gửi duyệt lại",
+        "enableMarketplace": "Bật hiển thị",
+        "viewStatus": "Xem trạng thái",
+        "contactSupport": "Liên hệ hỗ trợ"
+      },
+      "completeProfile": {
+        "title": "Hoàn tất hồ sơ để đưa xe lên chợ",
+        "description": "Bổ sung các mục bắt buộc rồi gửi nền tảng xét duyệt."
+      },
+      "readyToSubmit": {
+        "title": "Xe đã sẵn sàng để xét duyệt",
+        "description": "Gửi hồ sơ để nền tảng kiểm tra trước khi hiển thị."
+      },
+      "underReview": {
+        "title": "Hồ sơ đang được xét duyệt",
+        "description": "Nền tảng sẽ phản hồi trong thời gian sớm nhất."
+      },
+      "needsRevision": {
+        "title": "Cần bổ sung thông tin",
+        "description": "Nền tảng cần thêm thông tin trước khi duyệt xe."
+      },
+      "rejected": {
+        "title": "Xe chưa được chấp thuận",
+        "description": "Chỉnh sửa theo yêu cầu của nền tảng rồi gửi lại."
+      },
+      "platformHidden": {
+        "title": "Xe đang bị nền tảng ẩn",
+        "description": "XePrime đã gỡ xe khỏi chợ. Chủ xe không tự hiển thị lại được."
+      },
+      "ownerPaused": {
+        "title": "Xe đang tạm ẩn khỏi chợ",
+        "description": "Khách không tìm thấy xe cho tới khi bạn bật hiển thị."
+      }
     }
   },
   "overview": {
@@ -500,7 +565,7 @@
     "plate": "Biển số: <b>{value}</b>",
     "odometer": "Số KM: <b>{value}</b>",
     "axisOperation": "Vận hành",
-    "axisPublic": "Public",
+    "axisPublic": "Kiểm duyệt",
     "edit": "Chỉnh sửa",
     "schedule": "Xem lịch",
     "editMobile": "Chỉnh sửa xe",

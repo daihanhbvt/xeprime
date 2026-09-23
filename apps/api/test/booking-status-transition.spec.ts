@@ -206,10 +206,6 @@ describe('DTO — lý do bắt buộc đúng chỗ', () => {
   const errorsFor = (payload: Record<string, unknown>) =>
     validate(plainToInstance(TransitionBookingDto, payload));
 
-  it('xác nhận đơn KHÔNG cần lý do', async () => {
-    expect(await errorsFor({ status: BOOKING_STATUS.CONFIRMED })).toHaveLength(0);
-  });
-
   it.each([BOOKING_STATUS.CANCELLED, BOOKING_STATUS.NO_SHOW])(
     '%s thiếu lý do → từ chối ngay ở biên',
     async (status) => {
@@ -269,18 +265,20 @@ describe('DTO — lý do bắt buộc đúng chỗ', () => {
   });
 });
 
-describe('Xác nhận đơn', () => {
-  maybe('reserved → confirmed, và xe vẫn giữ chỗ', async () => {
-    const { id } = await seedBooking(BOOKING_STATUS.RESERVED);
-
-    const updated = await bookings.transition(tenantId, id, ownerId, {
-      status: BOOKING_STATUS.CONFIRMED,
-    });
-
-    expect(updated.status).toBe(BOOKING_STATUS.CONFIRMED);
-    // `confirmed` vẫn nằm trong tập chiếm lịch (ADR 0006) — nhả ở đây là mở cửa cho đơn trùng.
-    expect(await countOccupancy(id)).toBe(1);
-  });
+/**
+ * ADR 0047: endpoint chuyển trạng thái công khai chỉ còn đúng hai quyết định bấm tay — huỷ đơn
+ * và ghi nhận khách không đến. `active`/`completed` chỉ đến từ một biên bản bàn giao thật (nội
+ * bộ, không qua endpoint này); `confirmed` (deprecated) không còn ai "xác nhận" thủ công nữa —
+ * duyệt yêu cầu ở `Duyệt & giữ xe` CHÍNH LÀ sự xác nhận (xem `BookingStatusActions`).
+ */
+describe('Endpoint công khai không còn đặt được active/completed/confirmed', () => {
+  it.each([BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.ACTIVE, BOOKING_STATUS.COMPLETED])(
+    '%s bị DTO từ chối ngay ở biên — không còn là đích hợp lệ',
+    async (status) => {
+      const errors = await validate(plainToInstance(TransitionBookingDto, { status }));
+      expect(errors.map((e) => e.property)).toContain('status');
+    },
+  );
 });
 
 describe('Hủy đơn', () => {
@@ -303,15 +301,12 @@ describe('Hủy đơn', () => {
     expect(log?.beforeJson).toEqual({ status: BOOKING_STATUS.RESERVED });
   });
 
-  maybe('confirmed → cancelled cũng nhả lịch, và khung giờ đó đặt lại được ngay', async () => {
-    const { id, startAt } = await seedBooking(BOOKING_STATUS.CONFIRMED);
-
+  maybe('nhả lịch thật sự trống — khung giờ vừa huỷ đặt lại được ngay', async () => {
+    const { id, startAt } = await seedBooking(BOOKING_STATUS.RESERVED);
     await bookings.transition(tenantId, id, ownerId, {
       status: BOOKING_STATUS.CANCELLED,
       reason: 'Xe hỏng đột xuất',
     });
-
-    expect(await countOccupancy(id)).toBe(0);
 
     // Bằng chứng lịch thật sự trống: giữ lại đúng khung vừa nhả, constraint không chặn.
     const otherId = newId();
@@ -363,7 +358,7 @@ describe('Ghi nhận khách không đến', () => {
 
   maybe('quá ân hạn, chưa giao xe → thành công, nhả lịch, audit ghi cả lý do', async () => {
     const { id } = await seedBooking(
-      BOOKING_STATUS.CONFIRMED,
+      BOOKING_STATUS.RESERVED,
       pickedUpAgo(BOOKING_NO_SHOW_GRACE_MINUTES + 30),
     );
 
@@ -380,23 +375,9 @@ describe('Ghi nhận khách không đến', () => {
     });
   });
 
-  maybe('reserved cũng ghi nhận được — không chỉ đơn đã xác nhận', async () => {
-    const { id } = await seedBooking(
-      BOOKING_STATUS.RESERVED,
-      pickedUpAgo(BOOKING_NO_SHOW_GRACE_MINUTES + 5),
-    );
-
-    await expect(
-      bookings.transition(tenantId, id, ownerId, {
-        status: BOOKING_STATUS.NO_SHOW,
-        reason: 'Khách không tới',
-      }),
-    ).resolves.toMatchObject({ status: BOOKING_STATUS.NO_SHOW });
-  });
-
   maybe('CHƯA qua ân hạn → 409, đơn và lịch không nhúc nhích', async () => {
     const { id } = await seedBooking(
-      BOOKING_STATUS.CONFIRMED,
+      BOOKING_STATUS.RESERVED,
       // Ngay sau giờ hẹn, còn trong ân hạn — khách có thể đang trên đường.
       pickedUpAgo(BOOKING_NO_SHOW_GRACE_MINUTES - 10),
     );
@@ -412,12 +393,12 @@ describe('Ghi nhận khách không đến', () => {
       where: { id },
       select: { status: true },
     });
-    expect(after.status).toBe(BOOKING_STATUS.CONFIRMED);
+    expect(after.status).toBe(BOOKING_STATUS.RESERVED);
     expect(await countOccupancy(id)).toBe(1);
   });
 
   maybe('chuyến chưa tới giờ hẹn → 409 (mốc tương lai càng phải bị chặn)', async () => {
-    const { id } = await seedBooking(BOOKING_STATUS.CONFIRMED);
+    const { id } = await seedBooking(BOOKING_STATUS.RESERVED);
 
     await expect(
       bookings.transition(tenantId, id, ownerId, {
@@ -430,11 +411,12 @@ describe('Ghi nhận khách không đến', () => {
   /**
    * Có biên bản GIAO XE đã xác nhận nghĩa là khách đã cầm chìa khoá. Trong đời sống bình thường
    * lần xác nhận đó đã đẩy đơn sang `active` và máy trạng thái tự chặn; ở đây dựng đúng cái
-   * trạng thái LỆCH (biên bản có, đơn chưa theo) để chứng minh cửa thứ hai thật sự tồn tại.
+   * trạng thái LỆCH (biên bản có, cột trạng thái của đơn chưa theo kịp) để chứng minh cửa thứ
+   * hai thật sự tồn tại — hai nguồn sự thật, không phải một.
    */
-  maybe('đã có biên bản giao xe → 409 dù đơn vẫn còn confirmed', async () => {
+  maybe('đã có biên bản giao xe → 409 dù cột trạng thái đơn vẫn còn reserved', async () => {
     const { id } = await seedBooking(
-      BOOKING_STATUS.CONFIRMED,
+      BOOKING_STATUS.RESERVED,
       pickedUpAgo(BOOKING_NO_SHOW_GRACE_MINUTES + 60),
     );
     const booked = await prisma.booking.findUniqueOrThrow({

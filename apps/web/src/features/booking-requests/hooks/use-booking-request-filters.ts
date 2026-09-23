@@ -2,19 +2,16 @@
 
 import { useCallback, useMemo } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { BOOKING_REQUEST_STATUS_ALL, BOOKING_REQUEST_TAB_NEEDS_ACTION } from '../constants';
+import { BOOKING_REQUEST_TAB_NEEDS_ACTION } from '../constants';
 import type { BookingRequestFilters } from '../types';
 
 /**
  * Filter inbox ở URL searchParams (ADR 0004). Mặc định lọc tab GỘP "Cần xử lý" — inbox mở ra
  * là thấy ngay việc cần xử lý, kể cả yêu cầu đã cọc (`BOOKING_REQUEST_TAB_NEEDS_ACTION`).
  *
- * "Tất cả" là `?status=all`, KHÔNG phải "xoá tham số".
- *
- * Trước đây chọn "Tất cả trạng thái" xoá tham số đi, rồi chính hook này lại đọc thiếu tham số
- * là `pending_host_approval` — hai luật đúng riêng lẻ nhưng triệt tiêu nhau, nên tab "Tất cả"
- * bật xong lập tức nhảy về "Cần xử lý". Vì thế `all` phải là một giá trị THẬT trong URL, và
- * `useUrlFilters` dùng chung không dùng được ở đây (nó xoá mọi giá trị `'all'` theo thiết kế).
+ * Ba tab (ADR 0047) phủ hết 11 trạng thái nên không còn tab "Tất cả" — `useUrlFilters` dùng
+ * chung vẫn không hợp ở đây vì tab vẫn cần một giá trị mặc định KHÁC "xoá tham số" (mở hộp thư
+ * ra là "Cần xử lý", không phải rỗng).
  */
 export function useBookingRequestFilters() {
   const router = useRouter();
@@ -74,7 +71,7 @@ export function useBookingRequestFilters() {
 
   /** Đổi tab → về trang 1 (không truyền `page` nên tham số bị xoá, tức trang 1). */
   const selectTab = useCallback(
-    (value: string) => setFilters({ status: value || BOOKING_REQUEST_STATUS_ALL }),
+    (value: string) => setFilters({ status: value }),
     [setFilters],
   );
 

@@ -20,6 +20,8 @@ export function filtersToParams(filters: AdminVehicleFilters): QueryParams {
     operationStatus: pickFilter(filters.operationStatus),
     vehicleType: pickFilter(filters.vehicleType),
     tenantStatus: pickFilter(filters.tenantStatus),
+    // `'all'` → bỏ hẳn tham số; `'true'`/`'false'` đi thẳng lên dây, backend tự ép kiểu boolean.
+    marketplaceVisible: pickFilter(filters.marketplaceVisible),
     page: filters.page ?? 1,
     limit: filters.limit ?? ADMIN_VEHICLES_DEFAULT_LIMIT,
   };

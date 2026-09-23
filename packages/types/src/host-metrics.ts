@@ -53,11 +53,23 @@ export const HOST_METRIC_WINDOW_DAYS = 90;
 /**
  * Dưới bấy nhiêu mẫu thì KHÔNG hiện phần trăm.
  *
- * Một yêu cầu duy nhất cho ra 0% hoặc 100% — hai con số nghe như một kết luận trong khi chúng
- * chỉ là một lần tung đồng xu. Giao diện hiện "Chưa đủ dữ liệu" kèm số mẫu thật; nói thẳng là
- * chưa biết bao giờ cũng tốt hơn một con số tự tin và sai.
+ * **Hạ từ 5 xuống 1 ngày 23/09/2026** — đúng điều khoản "xem lại" mà ADR 0045 đã đặt sẵn cho
+ * chính con số này. Lý do đổi:
+ *
+ *   · ở quy mô hiện tại, phần lớn chủ xe không đạt nổi 5 yêu cầu trong 90 ngày, nên ngưỡng cũ
+ *     biến khối uy tín thành một dòng "chưa đủ dữ liệu" cho gần như mọi gian hàng — tức là nó
+ *     không bảo vệ ai, chỉ giấu đi thứ duy nhất khách muốn đọc;
+ *   · `sampleCount` luôn đi kèm con số, nên người đọc vẫn thấy được "100% trên 1 yêu cầu" khác
+ *     "100% trên 200 yêu cầu";
+ *   · ĐIỂM XẾP HẠNG không đọc con số đã chặn ngưỡng này — nó dùng số thô đã làm mượt Bayes
+ *     (`HOST_RELIABILITY_PRIOR`), nên hạ ngưỡng hiển thị không đụng tới thứ tự tìm kiếm.
+ *
+ * Đánh đổi đã biết và được chấp nhận: một chủ xe bỏ lỡ đúng MỘT yêu cầu sẽ hiện "0%" công khai.
+ * Con số đó đúng theo định nghĩa, nhưng nó nặng hơn nhiều so với thứ nó đo được.
+ *
+ * `0` mẫu thì vẫn KHÔNG có gì để nói, ở bất kỳ ngưỡng nào — `hostMetricPercent` trả `null`.
  */
-export const HOST_METRIC_MIN_SAMPLES = 5;
+export const HOST_METRIC_MIN_SAMPLES = 1;
 
 /**
  * Prior của tỉ lệ "nhận và giữ chuyến" khi đưa vào ĐIỂM XẾP HẠNG — `(kept + w·p) / (n + w)`.
@@ -111,10 +123,10 @@ export const EMPTY_HOST_METRICS: HostMetrics = {
 /**
  * Đủ mẫu để hiện phần trăm chưa. MỘT phép so, dùng chung cho cả ba bề mặt.
  *
- * `minSamples` để mở cho đúng một nhóm người đọc: CHÍNH gian hàng, trong sổ ví của họ. Ngưỡng
- * này bảo vệ người LẠ khỏi kết luận từ một lần tung đồng xu — chủ xe đọc tháng của mình thì đã
- * sống qua đủ ba yêu cầu đó rồi, và bảng in số mẫu ngay cạnh con số. Mọi bề mặt CÔNG KHAI bỏ
- * trống tham số này và nhận `HOST_METRIC_MIN_SAMPLES`.
+ * `minSamples` để mở vì ngưỡng là một quyết định TRÌNH BÀY, không phải một phép đo: cùng một
+ * phép đếm có thể được kể lại khác nhau cho hai nhóm người đọc. Từ 23/09/2026 ngưỡng công khai
+ * và ngưỡng của sổ ví cùng bằng 1, nhưng tham số vẫn để mở — nó là chỗ duy nhất đổi được con số
+ * đó mà không phải sửa phép đếm ở `HostMetricsService`.
  */
 export function hostMetricState(
   sampleCount: number,

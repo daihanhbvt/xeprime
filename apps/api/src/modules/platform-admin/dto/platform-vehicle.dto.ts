@@ -1,20 +1,37 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   LISTING_STATUS_VALUES,
+  MARKETPLACE_VISIBILITY_REASON_VALUES,
   SERVICE_TYPE_VALUES,
   TENANT_STATUS_VALUES,
   VEHICLE_OPERATION_STATUS_VALUES,
   VEHICLE_PUBLIC_STATUS_VALUES,
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
-import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
 export { DEFAULT_LIMIT as PLATFORM_VEHICLE_DEFAULT_LIMIT, MAX_LIMIT as PLATFORM_VEHICLE_MAX_LIMIT };
+
+/** Query param boolean-ish (`1`/`true`) → boolean; giá trị lạ giữ nguyên để `@IsBoolean` chặn. */
+const toBool = ({ value }: { value: unknown }): unknown => {
+  if (value === true || value === 'true' || value === '1') return true;
+  if (value === false || value === 'false' || value === '0') return false;
+  return value;
+};
 
 /** Lọc xe toàn hệ thống (admin nền tảng). Mọi filter là AND. */
 export class PlatformVehicleListQueryDto {
@@ -49,6 +66,28 @@ export class PlatformVehicleListQueryDto {
   @IsOptional()
   @IsIn(TENANT_STATUS_VALUES)
   tenantStatus?: string;
+
+  /**
+   * Lọc theo KẾT QUẢ hiển thị thật ngoài chợ, không theo một trạng thái lẻ nào (ADR 0048).
+   *
+   * `publicStatus = approved_public` KHÔNG phải câu trả lời: một chiếc xe đã duyệt vẫn biến khỏi
+   * chợ khi chủ xe tắt công tắc, hoặc khi gian hàng bị khoá. Lọc bằng cột đó rồi gắn nhãn "Đang
+   * hiển thị" là đưa cho người kiểm duyệt một danh sách có lẫn xe không ai thấy — và họ sẽ kết
+   * luận sai về đúng cái việc họ đang soát.
+   *
+   * Vị từ dùng lại `marketplaceVehicleWhere()` — CÙNG bốn vế mà các đường đọc công khai dùng, nên
+   * bộ lọc của admin không thể nói khác với thứ khách thật sự tìm được.
+   */
+  @ApiPropertyOptional({
+    type: Boolean,
+    description:
+      'true = chỉ xe ĐANG THẬT SỰ hiện ngoài chợ (đã duyệt + chủ xe bật + gian hàng hoạt động); ' +
+      'false = mọi xe không hiện',
+  })
+  @IsOptional()
+  @Transform(toBool)
+  @IsBoolean()
+  marketplaceVisible?: boolean;
 
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
@@ -90,6 +129,33 @@ export class PlatformVehicleDto {
     description: 'Trạng thái snapshot trên Marketplace; null = xe chưa từng lên sàn',
   })
   listingStatus!: string | null;
+  /**
+   * Lựa chọn HIỂN THỊ của chủ xe (ADR 0048) — CHỈ ĐỌC với nền tảng; không endpoint admin nào
+   * ghi vào nó.
+   *
+   * Có mặt vì nếu thiếu, bảng xe toàn hệ thống trả về một bộ ba `publicStatus` +
+   * `listingStatus` không giải thích được cho nhau: bỏ ẩn xong mà `listingStatus` vẫn `hidden`
+   * là ĐÚNG khi chủ xe đang tắt, nhưng nhìn từ payload thì giống một lỗi đồng bộ.
+   */
+  @ApiProperty({ description: 'Chủ xe có đang cho xe hiện ngoài chợ không (ADR 0048)' })
+  marketplaceEnabled!: boolean;
+
+  /**
+   * KẾT QUẢ hiển thị thật + LÝ DO, do SERVER suy (ADR 0048 điều 5).
+   *
+   * Màn kiểm duyệt không được tự ghép lại từ `publicStatus` + `marketplaceEnabled` +
+   * `tenantStatus`: đó là bản sao thứ ba của cùng một luật, và bản sai luôn là bản người kiểm
+   * duyệt đang đọc khi họ quyết định gỡ ẩn một chiếc xe.
+   */
+  @ApiProperty({ description: 'Khách có thật sự thấy xe này không' })
+  isMarketplaceVisible!: boolean;
+
+  @ApiProperty({
+    enum: MARKETPLACE_VISIBILITY_REASON_VALUES,
+    description: 'Vì sao xe đang (không) hiện ngoài chợ',
+  })
+  marketplaceVisibilityReason!: string;
+
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
 }
 

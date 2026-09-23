@@ -63,6 +63,7 @@
     "bookingsShort": "Bookings",
     "bookingRequests": "Rental requests",
     "bookingRequestsShort": "Requests",
+    "bookingsAwaitingPickup": "Awaiting pickup",
     "customers": "Customers",
     "finance": "Finance",
     "financeOverview": "Revenue overview",

@@ -2,10 +2,22 @@
 
 import { EyeOutlined } from '@ant-design/icons';
 import { Button, Tooltip } from 'antd';
+import { useTranslations } from 'next-intl';
 import {
-  LISTING_STATUS_META, TENANT_STATUS, TENANT_STATUS_META, VEHICLE_OPERATION_STATUS_META, VEHICLE_PUBLIC_STATUS_META, VEHICLE_TYPE_LABEL, type ListingStatus, type PaginationMeta, type TenantStatus, type VehicleOperationStatus, type VehiclePublicStatus, type VehicleType, } from '@xeprime/types';
+  MARKETPLACE_VISIBILITY_REASON_META,
+  TENANT_STATUS,
+  TENANT_STATUS_META,
+  VEHICLE_OPERATION_STATUS_META,
+  VEHICLE_PUBLIC_STATUS_META,
+  type MarketplaceVisibilityReason,
+  type PaginationMeta,
+  type TenantStatus,
+  type VehicleOperationStatus,
+  type VehiclePublicStatus,
+} from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import type { AdminVehicle } from '../types';
 import styles from './AdminVehicleTable.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -37,11 +49,13 @@ export function AdminVehicleTable({
   onView,
   onPageChange,
 }: AdminVehicleTableProps) {
+  const t = useTranslations('AdminVehicles.table');
+  const domainLabel = useDomainLabel();
   const fmt = useAppFormat();
 
   const columns: DataTableColumn<AdminVehicle>[] = [
     {
-      title: 'Xe',
+      title: t('vehicle'),
       key: 'name',
       width: 240,
       render: (_, r) => (
@@ -50,13 +64,13 @@ export function AdminVehicleTable({
           <div className={styles.meta}>
             {r.code}
             {r.plateNumber ? ` · ${r.plateNumber}` : ''}
-            {` · ${VEHICLE_TYPE_LABEL[r.vehicleType as VehicleType] ?? r.vehicleType}`}
+            {` · ${domainLabel('vehicleType', r.vehicleType)}`}
           </div>
         </div>
       ),
     },
     {
-      title: 'Gian hàng',
+      title: t('tenant'),
       key: 'tenant',
       width: 190,
       render: (_, r) => (
@@ -65,7 +79,11 @@ export function AdminVehicleTable({
             {r.tenantName}
             {/* Chỉ gắn nhãn khi shop BỊ KHOÁ — nhãn "đang hoạt động" ở mọi hàng là nhiễu. */}
             {r.tenantStatus === TENANT_STATUS.SUSPENDED ? (
-              <StatusTag value={r.tenantStatus as TenantStatus} meta={TENANT_STATUS_META} group="tenantStatus" />
+              <StatusTag
+                value={r.tenantStatus as TenantStatus}
+                meta={TENANT_STATUS_META}
+                group="tenantStatus"
+              />
             ) : null}
           </div>
           {r.provinceName ? <div className={styles.meta}>{r.provinceName}</div> : null}
@@ -73,70 +91,89 @@ export function AdminVehicleTable({
       ),
     },
     {
-      title: 'Duyệt public',
+      title: t('publicStatus'),
       key: 'publicStatus',
       width: 140,
       render: (_, r) => (
         <StatusTag
           value={r.publicStatus as VehiclePublicStatus}
-          meta={VEHICLE_PUBLIC_STATUS_META} group="vehiclePublicStatus"
+          meta={VEHICLE_PUBLIC_STATUS_META}
+          group="vehiclePublicStatus"
         />
       ),
     },
     {
-      title: 'Trên sàn',
-      key: 'listingStatus',
-      width: 130,
+      /*
+       * Cột này đọc KẾT QUẢ hiển thị hiệu lực, không đọc `public_listings.status` như trước
+       * (ADR 0048). Hai thứ trùng nhau ở hầu hết hàng, nhưng khác nhau đúng ở ca đáng chú ý
+       * nhất — xe đã duyệt mà chủ xe tắt công tắc — và lý do nói thẳng ra ở đây thì người kiểm
+       * duyệt không phải mở từng chiếc để đoán.
+       *
+       * `listingStatus = null` là "chưa từng lên sàn": không phải một trạng thái nghiệp vụ, nên
+       * không dựng StatusTag giả cho nó.
+       */
+      title: t('marketplace'),
+      key: 'marketplace',
+      width: 160,
       render: (_, r) =>
         r.listingStatus ? (
-          <StatusTag value={r.listingStatus as ListingStatus} meta={LISTING_STATUS_META} group="listingStatus" />
+          <StatusTag
+            value={r.marketplaceVisibilityReason as MarketplaceVisibilityReason}
+            meta={MARKETPLACE_VISIBILITY_REASON_META}
+            group="marketplaceVisibility"
+          />
         ) : (
-          // Chưa từng lên sàn KHÔNG phải một trạng thái nghiệp vụ — không dựng StatusTag giả cho nó.
-          <Tooltip title="Xe chưa từng được duyệt lên Marketplace">
-            <span className={styles.meta}>Chưa lên sàn</span>
+          <Tooltip title={t('notListedHint')}>
+            <span className={styles.meta}>{t('notListed')}</span>
           </Tooltip>
         ),
     },
     {
-      title: 'Vận hành',
+      title: t('operationStatus'),
       key: 'operationStatus',
       width: 120,
       render: (_, r) => (
         <StatusTag
           value={r.operationStatus as VehicleOperationStatus}
-          meta={VEHICLE_OPERATION_STATUS_META} group="vehicleOperationStatus"
+          meta={VEHICLE_OPERATION_STATUS_META}
+          group="vehicleOperationStatus"
         />
       ),
     },
     {
-      title: 'Giá ngày thường',
+      title: t('weekdayPrice'),
       key: 'weekdayPrice',
       align: 'right',
       width: 140,
       render: (_, r) => fmt.money(r.weekdayPrice),
     },
-    { title: 'Ngày tạo', key: 'createdAt', width: 120, render: (_, r) => fmt.date(r.createdAt) },
+    {
+      title: t('createdAt'),
+      key: 'createdAt',
+      width: 120,
+      render: (_, r) => fmt.date(r.createdAt),
+    },
     actionColumn<AdminVehicle>((row) => [
-      { key: 'view', label: 'Xem chi tiết', icon: <EyeOutlined />, onClick: () => onView(row.id) },
+      { key: 'view', label: t('view'), icon: <EyeOutlined />, onClick: () => onView(row.id) },
     ]),
   ];
 
   return (
     <DataTable<AdminVehicle>
-      label="Xe toàn hệ thống"
+      label={t('label')}
       columns={columns}
       items={items}
       onRowClick={(row) => onView(row.id)}
       minWidth={MIN_TABLE_WIDTH}
       loading={loading}
-      error={error ? { title: 'Không tải được danh sách xe', onRetry: error.onRetry } : null}
+      error={error ? { title: t('loadError'), onRetry: error.onRetry } : null}
       filtered={filtered}
-      empty={{ title: 'Chưa có xe nào trong hệ thống' }}
+      empty={{ title: t('empty') }}
       noResults={{
-        title: 'Không có xe khớp bộ lọc',
-        action: onClearFilters ? <Button onClick={onClearFilters}>Xoá bộ lọc</Button> : undefined,
+        title: t('noResults'),
+        action: onClearFilters ? <Button onClick={onClearFilters}>{t('clearFilters')}</Button> : undefined,
       }}
-      pagination={{ meta, onChange: onPageChange, totalLabel: (total) => `${total} xe` }}
+      pagination={{ meta, onChange: onPageChange, totalLabel: (total) => t('total', { count: total }) }}
     />
   );
 }

@@ -1,86 +1,58 @@
 'use client';
 
-import { CheckCircleFilled, CloseCircleOutlined, CloudUploadOutlined } from '@ant-design/icons';
-import { Alert, App, Button, Card } from 'antd';
+import { CheckCircleFilled, CloseCircleOutlined } from '@ant-design/icons';
+import { Alert, Card, Collapse } from 'antd';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
-import {
-  PERMISSION,
-  VEHICLE_PUBLIC_STATUS,
-  VEHICLE_PUBLIC_STATUS_SUBMITTABLE,
-  type VehiclePublicStatus,
-} from '@xeprime/types';
-import { ShopListingGateAlert } from '@/features/shop/components/ShopListingGateAlert';
-import { packageShopListingGateFrom } from '@xeprime/domain';
-import { usePermissions } from '@/hooks/use-permissions';
-import { useErrorMessage } from '@/i18n/use-error-message';
+import { VEHICLE_PUBLIC_STATUS, type VehiclePublicStatus } from '@xeprime/types';
 import { decorativeIcon } from '@/lib/decorative-icon';
-import { useSubmitVehiclePublic } from '../hooks/use-vehicle-mutations';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { usePublicationLabels } from '../hooks/use-publication-labels';
 import { publishChecklist } from '../publication';
 import type { VehicleDetail } from '../types';
 import styles from './VehiclePublicReviewPanel.module.css';
 
+/** Neo để CTA "Xem trạng thái" ở thẻ Việc cần làm cuộn xuống đúng thẻ này. */
+export const REVIEW_PANEL_ANCHOR = 'vehicle-review-panel';
+
 /**
- * Tiến trình gửi duyệt công khai (Figma `65:240` cột phải · `65:3754` Requirements Checklist).
+ * HỒ SƠ XÉT DUYỆT của một chiếc xe — thẻ tham chiếu, không phải nơi hành động (23/09/2026).
  *
- * Khác bản trước Wave 3A: hiện **toàn bộ** danh sách điều kiện kèm trạng thái đạt/chưa đạt, thay
- * vì chỉ liệt kê phần còn thiếu. Chủ xe cần thấy mình còn cách bao xa, không chỉ thấy lỗi.
+ * ## Nó vừa mất hai thứ, và đó là điểm chính
  *
- * Gửi duyệt đi qua luồng nền tảng (ADR 0008) — client không tự set `approved_public`.
+ * Trước đây thẻ này giữ cả nút "Gửi duyệt công khai" lẫn công tắc hiển thị, ở gần cuối một
+ * trang dài. Hai hành động quan trọng nhất của một chiếc xe nằm ở chỗ phải cuộn mới thấy, trong
+ * khi thẻ "Việc cần làm" ngay đầu trang có thể đang nói "Không có việc cần làm".
+ *
+ * Giờ: công tắc lên cột thao tác đầu trang (`MarketplaceVisibilitySwitch`), nút gửi duyệt vào
+ * thẻ Việc cần làm (`VehiclePublicationTaskItem`). Thẻ này còn lại phần **tra cứu**: tình trạng
+ * hồ sơ, checklist đánh dấu từng mục, mốc gửi và mốc duyệt. Không lặp lại CTA nào ở trên —
+ * hai nút cho cùng một việc là hai chỗ để lệch nhau.
+ *
+ * ## Vì sao vẫn giữ checklist
+ *
+ * Thẻ Việc cần làm chỉ nêu vài mục còn thiếu rồi đẩy phần còn lại vào dấu "i" — nó phải ngắn vì
+ * đứng cạnh việc bảo dưỡng và giấy tờ. Chủ xe muốn xem mình còn cách bao xa thì cần bản đầy đủ
+ * có đánh dấu đạt/chưa đạt, và đây là chỗ của nó.
+ *
+ * Xe ĐÃ DUYỆT thì thẻ tự thu gọn: hồ sơ xét duyệt lúc đó là lịch sử, không phải việc đang làm.
  */
 export function VehiclePublicReviewPanel({ vehicle }: { vehicle: VehicleDetail }) {
   const t = useTranslations('Vehicles.publish.panel');
-  const { message } = App.useApp();
-  const errorMessage = useErrorMessage();
+  const fmt = useAppFormat();
   const { requirement, statusCopy } = usePublicationLabels();
-  const { has } = usePermissions();
-  const submit = useSubmitVehiclePublic(vehicle.id);
-  /**
-   * Hồ sơ GIAN HÀNG còn thiếu gì (ADR 0040) — `null` = không phải lỗi đó.
-   *
-   * Giữ trong state thay vì đọc từ `submit.error`: dải này phải ĐỨNG LẠI cho tới khi người dùng
-   * sửa xong (họ sẽ mở tab khác để tải logo rồi quay về), còn `submit.error` biến mất ngay khi
-   * mutation được gọi lại. Và nó phải tự dọn khi lượt gửi kế tiếp đi qua được — nếu không, một
-   * dải nói về logo còn đứng đó sau khi logo đã có.
-   */
-  const [listingGate, setListingGate] = useState<ReturnType<
-    typeof packageShopListingGateFrom
-  > | null>(null);
 
   const status = vehicle.publicStatus as VehiclePublicStatus;
-  const canSubmit =
-    has(PERMISSION.VEHICLE_SUBMIT_PUBLIC) && VEHICLE_PUBLIC_STATUS_SUBMITTABLE.includes(status);
+  const approved = status === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
+  const presentation = statusCopy(status, vehicle.latestPublicReview?.reason);
   // Checklist chỉ gồm điều kiện ÁP DỤNG với xe này — giá kiểm theo dịch vụ xe đăng (17/08).
   const checklist = publishChecklist(vehicle).map((item) => ({
     ...item,
     label: requirement(item.key),
   }));
-  const missingCount = checklist.filter((item) => !item.met).length;
-  const isResubmit = status !== VEHICLE_PUBLIC_STATUS.DRAFT;
-  const presentation = statusCopy(status, vehicle.latestPublicReview?.reason);
+  const review = vehicle.latestPublicReview;
 
-  function onSubmit() {
-    submit.mutate(undefined, {
-      onSuccess: () => {
-        setListingGate(null);
-        message.success(t('submitted'));
-      },
-      onError: (err) => {
-        /*
-         * Cổng hồ sơ gian hàng có một dải RIÊNG vì nó cần một cái link (xem
-         * `ShopListingGateAlert`). Mọi lỗi khác vẫn là một toast — chúng không có lối đi tiếp
-         * nào ngoài "thử lại".
-         */
-        const gate = packageShopListingGateFrom(err);
-        setListingGate(gate);
-        if (!gate) message.error(errorMessage(err));
-      },
-    });
-  }
-
-  return (
-    <Card title={t('title')} className={styles.panel}>
+  const body = (
+    <>
       <Alert
         type={presentation.type}
         showIcon
@@ -88,35 +60,51 @@ export function VehiclePublicReviewPanel({ vehicle }: { vehicle: VehicleDetail }
         description={presentation.description}
       />
 
-      {listingGate ? <ShopListingGateAlert missing={listingGate} /> : null}
+      <ul className={styles.checklist}>
+        {checklist.map((item) => (
+          <li key={item.key} className={item.met ? styles.met : styles.unmet}>
+            {item.met ? decorativeIcon(<CheckCircleFilled />) : decorativeIcon(<CloseCircleOutlined />)}
+            <span>{item.label}</span>
+            {/* Chữ mang nghĩa, không phải icon — icon là trang trí nên trình đọc bỏ qua. */}
+            <span className={styles.state}>{item.met ? t('met') : t('unmet')}</span>
+          </li>
+        ))}
+      </ul>
 
-      {canSubmit ? (
-        <>
-          <ul className={styles.checklist}>
-            {checklist.map((item) => (
-              <li key={item.key} className={item.met ? styles.met : styles.unmet}>
-                {item.met
-                  ? decorativeIcon(<CheckCircleFilled />)
-                  : decorativeIcon(<CloseCircleOutlined />)}
-                <span>{item.label}</span>
-                {/* Chữ mang nghĩa, không phải icon — icon là trang trí nên trình đọc bỏ qua. */}
-                <span className={styles.state}>{item.met ? t('met') : t('unmet')}</span>
-              </li>
-            ))}
-          </ul>
-
-          <Button
-            type="primary"
-            block
-            icon={<CloudUploadOutlined />}
-            loading={submit.isPending}
-            disabled={missingCount > 0}
-            onClick={onSubmit}
-          >
-            {isResubmit ? t('resubmit') : t('submit')}
-          </Button>
-        </>
+      {/* Mốc gửi/duyệt — xe chưa từng gửi thì không có gì để kể, và một dòng "—" không nói gì. */}
+      {review ? (
+        <dl className={styles.timeline}>
+          <dt>{t('submittedAt')}</dt>
+          <dd>{fmt.dateTime(review.submittedAt)}</dd>
+          {review.reviewedAt ? (
+            <>
+              <dt>{t('reviewedAt')}</dt>
+              <dd>{fmt.dateTime(review.reviewedAt)}</dd>
+            </>
+          ) : null}
+        </dl>
       ) : null}
+    </>
+  );
+
+  /*
+   * Xe đã duyệt: thu gọn mặc định. `Collapse` chứ không một nút tự dựng — nó đã lo `aria-expanded`,
+   * `aria-controls` và điều hướng bàn phím, ba thứ mà một `<div onClick>` không bao giờ có.
+   */
+  if (approved) {
+    return (
+      <Card id={REVIEW_PANEL_ANCHOR} className={styles.panel} styles={{ body: { padding: 0 } }}>
+        <Collapse
+          ghost
+          items={[{ key: 'review', label: t('titleApproved'), children: body }]}
+        />
+      </Card>
+    );
+  }
+
+  return (
+    <Card id={REVIEW_PANEL_ANCHOR} title={t('title')} className={styles.panel}>
+      {body}
     </Card>
   );
 }

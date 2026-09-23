@@ -62,13 +62,27 @@ export function VehicleAlertChips({ alerts }: { alerts: VehicleAlertItem[] }) {
  * Danh sách việc cần làm ở Hồ sơ 360: tối đa 3 việc quan trọng nhất, phần còn lại nằm sau
  * `Xem tất cả` (§3 Wave 8). Ba việc đó luôn là ba việc ưu tiên cao nhất vì server đã sắp sẵn.
  */
-export function VehicleAlertList({ alerts }: { alerts: VehicleAlertItem[] }) {
+export function VehicleAlertList({
+  alerts,
+  showEmpty = true,
+}: {
+  alerts: VehicleAlertItem[];
+  /**
+   * `false` = im lặng khi danh sách rỗng, vì nơi gọi đã dựng một việc khác trong CÙNG thẻ.
+   *
+   * Hồ sơ 360 thêm việc "đưa xe lên chợ" dựng từ bản ghi xe (ADR 0048), và nó không đi qua
+   * danh sách này. Không có công tắc thì một chiếc xe còn là nháp sẽ hiện "Không có việc cần
+   * làm" ngay dưới việc "Hoàn tất hồ sơ để đưa xe lên chợ" — đúng câu tự mâu thuẫn mà đợt này
+   * sửa. Mặc định `true` để thẻ xe ngoài danh sách không đổi hành vi.
+   */
+  showEmpty?: boolean;
+}) {
   const t = useTranslations('Vehicles.alerts');
   const domainLabel = useDomainLabel();
   const [expanded, setExpanded] = useState(false);
 
   if (alerts.length === 0) {
-    return <p className={styles.empty}>{t('empty')}</p>;
+    return showEmpty ? <p className={styles.empty}>{t('empty')}</p> : null;
   }
 
   const visible = expanded ? alerts : alerts.slice(0, VEHICLE_ALERT_PRIMARY_LIMIT);

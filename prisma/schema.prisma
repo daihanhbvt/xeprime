@@ -1011,7 +1011,20 @@ model Vehicle {
   operationStatus                String    @default("available") @map("operation_status") @db.VarChar(50)
   /// @xeprime/types → VehiclePublicStatus.
   /// CLAUDE.md mục 5: chỉ ApprovalService đổi được sang `approved_public`.
+  ///
+  /// Đây là trục KIỂM DUYỆT CỦA NỀN TẢNG, không phải "khách có thấy xe không" — `hidden` nghĩa
+  /// là NỀN TẢNG gỡ xe xuống. Lựa chọn hiển thị của chủ xe nằm ở `marketplace_enabled` (ADR 0048).
   publicStatus                   String    @default("draft") @map("public_status") @db.VarChar(50)
+  /// Trục thứ BA của việc lên chợ (ADR 0048): LỰA CHỌN của chủ xe, tách khỏi trạng thái vận hành
+  /// và trạng thái kiểm duyệt.
+  ///
+  /// `false` = chủ xe tạm cất xe khỏi chợ. KHÔNG đụng `public_status`, `operation_status`, và
+  /// không chạm tới yêu cầu/đơn/lịch bận/hold đang chạy — nó chỉ hạ `public_listings.status`
+  /// xuống `hidden` qua `ListingsService.syncFromVehicle` (ADR 0008 §1).
+  ///
+  /// `true` mặc định, và migration backfill toàn bộ dữ liệu cũ thành `true`: trước ADR 0048 mọi
+  /// xe đã duyệt đều đang hiện, nên giá trị nào khác cũng là âm thầm gỡ cả chợ xuống.
+  marketplaceEnabled             Boolean   @default(true) @map("marketplace_enabled")
   description                    String?   @db.Text
   mainImageUrl                   String?   @map("main_image_url") @db.Text
   /// Giá tham chiếu Phase 0 (bảng vehicle_pricing riêng trong design §9.6 KHÔNG tách nữa —

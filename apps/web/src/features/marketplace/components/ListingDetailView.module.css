@@ -8,9 +8,14 @@
  * Biên cuộn của gallery sticky chỉ là khối ảnh + thông tin. Mô tả/đánh giá nằm
  * ngoài `.top`, vì thế gallery dừng trước khi chạm hàng nội dung phía dưới.
  */
+/*
+ * Cột phải (giá · điều kiện · thẻ gian hàng · CTA) nhường chỗ ít hơn cho ảnh so với bản đầu:
+ * ảnh xe đã đủ lớn ở 1.08fr, còn cột phải là nơi khách ĐỌC để quyết định, và nó phải chứa ba
+ * chỉ số nằm ngang mà không bóp chữ.
+ */
 .top {
   display: grid;
-  grid-template-columns: minmax(0, 1.18fr) minmax(480px, 0.92fr);
+  grid-template-columns: minmax(0, 1.08fr) minmax(520px, 1fr);
   align-items: start;
   gap: 40px;
 }
@@ -159,91 +164,25 @@
   overflow-wrap: anywhere;
 }
 
-.shop {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-  background: var(--xp-color-bg-container);
-  border: 1px solid var(--xp-color-border-secondary);
-  border-radius: 12px;
-}
-
-/* Avatar gian hàng — logo thật hoặc chữ cái đầu trên nền cát (mockup đợt 4). */
-.shopAvatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  overflow: hidden;
-  background: var(--xp-color-bg-sand);
-  color: var(--xp-gold-deep);
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.shopAvatarImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.shopBody {
-  min-width: 0;
-}
-
-.shopNameRow {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* Tick "đã duyệt" — vòng vàng nhỏ cạnh tên gian hàng, đúng mockup. */
-.verified {
-  flex: none;
-}
-
-.shopName {
-  display: inline-block;
-  font-weight: 700;
-  color: var(--xp-color-text);
-}
-
-.shopName:hover {
-  color: var(--xp-color-primary);
-  text-decoration: underline;
-}
-
-.shopMeta {
-  font-size: 13px;
-  color: var(--xp-color-text-tertiary);
-}
-
-.shopBio {
-  margin-top: 8px;
-  font-size: 13.5px;
-  color: var(--xp-color-text-secondary);
-}
-
-/* Ba chỉ số uy tín trong thẻ chủ xe — cách phần giới thiệu một nhịp rõ hơn khoảng cách dòng. */
-.shopMetrics {
-  margin-top: 10px;
-}
-
-.actions {
-  display: flex;
-  gap: 10px;
-  align-items: stretch;
-}
-
-.cta {
-  flex: 1;
+/*
+ * Hai nút trong thẻ gian hàng là một CẶP: cùng chiều cao, cùng bo góc, chỉ khác sức nặng thị
+ * giác. Trước 23/09/2026 chỉ nút chính mang class này nên nút "Nhắn shop" giữ chiều cao mặc định
+ * của AntD (40px) và đứng cạnh một nút 48px — nhìn như lỗi dựng, không như một lựa chọn.
+ */
+.cta,
+.ctaSecondary {
   height: 48px;
-  border-radius: 10px;
+  border-radius: 12px;
   font-weight: 700;
+}
+
+/* Hành động chính rộng gấp đôi hành động phụ — đúng thứ tự ưu tiên của trang này. */
+.cta {
+  flex: 2;
+}
+
+.ctaSecondary {
+  flex: 1;
 }
 
 .description {

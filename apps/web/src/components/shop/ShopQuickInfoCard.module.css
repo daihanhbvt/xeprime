@@ -1,0 +1,234 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  padding: 20px;
+  background: var(--xp-color-bg-container);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: 16px;
+}
+
+/* Cột tóm tắt của luồng đặt xe: một hàng gọn, không viền/nền riêng — nó đã nằm trong panel có viền. */
+.card.compact {
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  gap: 0;
+  width: 100%;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+}
+
+/*
+ * Avatar là mỏ neo thị giác của thẻ — đủ lớn để đọc được chữ cái đầu từ xa, như mẫu thiết kế.
+ *
+ * Chữ cái đầu dùng SANS đậm, không phải font display: một chữ cái serif đơn độc trong vòng tròn
+ * trông như một logo cổ điển, lệch hẳn khỏi phần còn lại của trang.
+ */
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--xp-border-radius-pill);
+  overflow: hidden;
+  background: var(--xp-color-bg-sand);
+  color: var(--xp-gold-deep);
+  font-size: 26px;
+  line-height: 1;
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.avatarSm {
+  width: 40px;
+  height: 40px;
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.body {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Tên gian hàng là SANS đậm cỡ lớn theo thiết kế — không dùng font display (serif) của thương hiệu. */
+.name {
+  display: inline-block;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 800;
+  color: var(--xp-color-text);
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compact .name {
+  font-size: var(--xp-font-size-body-lg);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+.name:hover {
+  color: var(--xp-color-primary);
+  text-decoration: underline;
+}
+
+.verified {
+  flex: none;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--xp-color-text-secondary);
+}
+
+/* Dòng uy tín ngắn gọn: sao + điểm, vạch ngăn, số chuyến — đọc được trong một nhịp mắt. */
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 7px;
+  font-size: 13px;
+  color: var(--xp-color-text-secondary);
+}
+
+.compact .summary {
+  margin-top: 2px;
+  font-size: var(--xp-font-size-sm);
+}
+
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: var(--xp-font-weight-bold);
+  color: var(--xp-color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.compact .rating {
+  font-size: var(--xp-font-size);
+  line-height: var(--xp-line-height-body);
+}
+
+/*
+ * HAI class trong selector là CỐ Ý, không phải thừa.
+ *
+ * AntD nhúng `.anticon { color: inherit }` bằng CSS-in-JS vào cuối `<head>`, tức là SAU mọi
+ * stylesheet của CSS Modules. Một selector `.star` đơn (cùng độ cụ thể) sẽ thua ở bước "khai
+ * báo đến sau thắng", và ngôi sao lấy màu chữ đen của `.rating` thay vì vàng thương hiệu.
+ */
+.rating .star {
+  color: var(--xp-color-primary);
+  font-size: 15px;
+}
+
+.compact .star {
+  font-size: var(--xp-font-size-sm);
+}
+
+.divider {
+  width: 1px;
+  height: 16px;
+  background: var(--xp-color-border-strong);
+}
+
+.trips {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inlineActions {
+  flex: none;
+  align-self: center;
+}
+
+.bio {
+  margin: 8px 0 0;
+  font-size: var(--xp-font-size);
+  line-height: var(--xp-line-height-body-lg);
+  color: var(--xp-color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.metrics {
+  margin-top: 0;
+}
+
+/*
+ * Dòng ghi chú về gian hàng — LUÔN có, nội dung tuỳ số liệu (`shopHighlightOf`).
+ *
+ * Nền cát + vương miện vàng: cùng họ màu thương hiệu nhưng KHÔNG phải nút bấm, nên nó không
+ * cạnh tranh với CTA vàng đặc ngay bên dưới. Viền pha từ chính màu thương hiệu thay vì một mã
+ * màu mới, để đổi màu thương hiệu là viền đi theo.
+ */
+.highlight {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--xp-color-bg-sand);
+  border: 1px solid color-mix(in srgb, var(--xp-color-primary) 22%, transparent);
+  border-radius: var(--xp-border-radius);
+  color: var(--xp-color-text);
+  font-size: 13px;
+  line-height: 19px;
+}
+
+/* Cùng lý do với `.rating .star`: phải thắng `.anticon { color: inherit }` của AntD. */
+.highlight .crown {
+  flex: none;
+  margin-top: 1px;
+  color: var(--xp-color-primary);
+  font-size: 17px;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+@media (max-width: 520px) {
+  .card {
+    padding: 16px;
+  }
+
+  .avatar {
+    width: 52px;
+    height: 52px;
+    font-size: 22px;
+  }
+
+  .name {
+    font-size: var(--xp-font-size-body-lg);
+    line-height: var(--xp-line-height-body-lg);
+  }
+}

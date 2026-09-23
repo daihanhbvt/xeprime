@@ -1,0 +1,52 @@
+/**
+ * Hàng "Trên chợ" ở đầu cột thao tác của hồ sơ xe.
+ *
+ * `flex-wrap` chứ không `nowrap`: nhãn có thể dài ("Show on marketplace" + trạng thái + công
+ * tắc), và ở cột hẹp thì xuống dòng là đúng — cắt chữ bằng `ellipsis` sẽ biến "Đang hiển thị"
+ * thành "Đang hi…", tức là xoá đúng phần mang nghĩa.
+ */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding-bottom: var(--xp-space-sm);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+  margin-bottom: var(--xp-space-xs);
+  gap: var(--xp-space-xs) var(--xp-space-sm);
+}
+
+.label {
+  display: inline-flex;
+  align-items: center;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* Công tắc về sát mép phải; trạng thái bằng chữ bám ngay trước nó. */
+.row > :last-child {
+  margin-left: auto;
+}
+
+.state {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.live {
+  color: var(--xp-color-success);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/*
+ * Mobile: cột thao tác nằm dưới khối thông tin, nên hàng này trải hết chiều ngang và công tắc
+ * vẫn ở mép phải — cùng vị trí quen thuộc với mọi hàng cài đặt khác trong app.
+ */
+@media (max-width: 767px) {
+  .row {
+    width: 100%;
+    padding-bottom: var(--xp-space-xs);
+  }
+}

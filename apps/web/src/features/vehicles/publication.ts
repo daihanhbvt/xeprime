@@ -1,11 +1,13 @@
 import {
   applicablePublishRequirements as applicableRequirements,
   missingPublishRequirements as missingRequirements,
+  PUBLISH_REQUIREMENT,
   VEHICLE_PUBLIC_STATUS,
   type PublishRequirement,
   type VehiclePublicationInput,
   type VehiclePublicStatus,
 } from '@xeprime/types';
+import { VEHICLE_EDIT_TAB, vehicleTabPath, type VehicleEditTab } from '@/constants/routes';
 import type { VehicleDetail } from './types';
 
 /**
@@ -113,4 +115,158 @@ export function publicStatusPresentation(status: VehiclePublicStatus): PublicSta
     default:
       return { type: 'info', key: 'draft', useReason: false };
   }
+}
+
+/* ─── Việc cần làm để đưa xe lên chợ ──────────────────────────────────────── */
+
+/**
+ * MỘT việc "đưa xe lên chợ" của một chiếc xe — `null` = không có việc nào.
+ *
+ * Trước 23/09/2026, câu chuyện lên chợ chỉ sống ở thẻ xét duyệt nằm gần cuối trang, trong khi
+ * thẻ "Việc cần làm" ở đầu trang có thể nói "Không có việc cần làm" cho một chiếc xe còn là
+ * NHÁP. Hai khối trên cùng một trang nói hai điều trái ngược về cùng một xe, và khối nói SAI là
+ * khối người dùng đọc trước.
+ *
+ * Hàm này là luật chung cho cả hai khối. Nó THUẦN và không biết chữ: trả `key` + hành động, còn
+ * câu chữ do `Vehicles.publish.task` dựng ở nơi gọi (ADR 0012).
+ */
+export type VehiclePublicationTaskKey =
+  | 'completeProfile'
+  | 'readyToSubmit'
+  | 'underReview'
+  | 'needsRevision'
+  | 'rejected'
+  | 'platformHidden'
+  | 'ownerPaused';
+
+/**
+ * `kind` = việc nút đó LÀM; `cta` = khoá chữ trên nút.
+ *
+ * Tách đôi vì cùng một hành động mang hai câu khác nhau tuỳ hoàn cảnh: `edit` là "Hoàn tất hồ
+ * sơ" với xe nháp còn thiếu, và "Cập nhật hồ sơ" với xe bị trả về. Ghép chúng lại sẽ cho một
+ * cái nút nói sai ở một trong hai chỗ.
+ *
+ * `cta` là một union ĐÓNG chứ không phải chuỗi ghép từ `key` — nhờ vậy `t()` kiểm được khoá lúc
+ * biên dịch, thay vì phải ép kiểu để TypeScript thôi kêu.
+ */
+export type VehiclePublicationActionKind =
+  | 'edit'
+  | 'submit'
+  | 'enableMarketplace'
+  | 'viewStatus'
+  | 'contactSupport';
+
+export type VehiclePublicationCta =
+  | 'completeProfile'
+  | 'updateProfile'
+  | 'submit'
+  | 'resubmit'
+  | 'enableMarketplace'
+  | 'viewStatus'
+  | 'contactSupport';
+
+export interface VehiclePublicationAction {
+  kind: VehiclePublicationActionKind;
+  cta: VehiclePublicationCta;
+}
+
+export interface VehiclePublicationTask {
+  key: VehiclePublicationTaskKey;
+  /**
+   * Mức độ. `info` là GỢI Ý — nó xuống cuối danh sách việc cần làm và không được lấn át việc
+   * vận hành thật (xe sắp phải giao, giấy tờ sắp hết hạn).
+   */
+  tone: 'critical' | 'warning' | 'info';
+  primary: VehiclePublicationAction | null;
+  secondary: VehiclePublicationAction | null;
+  /** Điều kiện còn thiếu — rỗng khi hồ sơ đã đủ hoặc khi việc không nói về hồ sơ. */
+  missing: PublishRequirement[];
+  /** Câu NGƯỜI DUYỆT viết. Đi qua nguyên văn, không dịch được. */
+  reason: string | null;
+}
+
+const EDIT_TO_COMPLETE: VehiclePublicationAction = { kind: 'edit', cta: 'completeProfile' };
+const EDIT_TO_UPDATE: VehiclePublicationAction = { kind: 'edit', cta: 'updateProfile' };
+const SUBMIT: VehiclePublicationAction = { kind: 'submit', cta: 'submit' };
+const RESUBMIT: VehiclePublicationAction = { kind: 'submit', cta: 'resubmit' };
+const ENABLE: VehiclePublicationAction = { kind: 'enableMarketplace', cta: 'enableMarketplace' };
+const VIEW_STATUS: VehiclePublicationAction = { kind: 'viewStatus', cta: 'viewStatus' };
+const CONTACT_SUPPORT: VehiclePublicationAction = { kind: 'contactSupport', cta: 'contactSupport' };
+
+export function vehiclePublicationTask(vehicle: VehicleDetail): VehiclePublicationTask | null {
+  const status = vehicle.publicStatus as VehiclePublicStatus;
+  const reason = vehicle.latestPublicReview?.reason ?? null;
+  const missing = missingPublishRequirements(vehicle);
+  /*
+   * `submit` chỉ hiện khi checklist đã đủ: `submitForPublicReview` sẽ từ chối bằng
+   * `VEHICLE_PUBLISH_INCOMPLETE` nếu không, và một cái nút chắc chắn dẫn tới lỗi là một cái nút
+   * không nên vẽ ra.
+   */
+  const complete = missing.length === 0;
+
+  switch (status) {
+    case VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC:
+      // Đã duyệt thì KHÔNG còn việc xét duyệt nào. Chỉ còn một gợi ý, và chỉ khi chính chủ xe
+      // đang tắt công tắc — cái họ có thể đã quên bật lại.
+      if (vehicle.marketplaceEnabled) return null;
+      return task('ownerPaused', 'info', ENABLE, null, [], null);
+
+    case VEHICLE_PUBLIC_STATUS.HIDDEN:
+      // KHÔNG có đường tự phục vụ nào: `hidden` là quyết định kiểm duyệt và
+      // `VEHICLE_PUBLIC_STATUS_SUBMITTABLE` đã loại nó (ADR 0048 điều 4). Lối duy nhất là hỗ trợ.
+      return task('platformHidden', 'critical', CONTACT_SUPPORT, null, [], reason);
+
+    case VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW:
+      return task('underReview', 'info', null, VIEW_STATUS, [], null);
+
+    case VEHICLE_PUBLIC_STATUS.NEEDS_REVISION:
+      return task('needsRevision', 'warning', EDIT_TO_UPDATE, complete ? RESUBMIT : null, missing, reason);
+
+    case VEHICLE_PUBLIC_STATUS.REJECTED:
+      return task('rejected', 'critical', EDIT_TO_UPDATE, complete ? RESUBMIT : null, missing, reason);
+
+    case VEHICLE_PUBLIC_STATUS.ARCHIVED:
+      // Xe đã lưu trữ không còn đường nào ra chợ, và không có việc gì để giục.
+      return null;
+
+    default:
+      return complete
+        ? task('readyToSubmit', 'warning', SUBMIT, null, [], null)
+        : task('completeProfile', 'warning', EDIT_TO_COMPLETE, null, missing, null);
+  }
+}
+
+function task(
+  key: VehiclePublicationTaskKey,
+  tone: VehiclePublicationTask['tone'],
+  primary: VehiclePublicationAction | null,
+  secondary: VehiclePublicationAction | null,
+  missing: PublishRequirement[],
+  reason: string | null,
+): VehiclePublicationTask {
+  return { key, tone, primary, secondary, missing, reason };
+}
+
+/**
+ * Tab sửa xe chứa điều kiện còn thiếu ĐẦU TIÊN — để nút "Hoàn tất hồ sơ" mở đúng chỗ cần sửa
+ * thay vì thả người dùng vào tab mặc định rồi để họ tự đi tìm.
+ *
+ * Không có mục nào thiếu ⇒ tab thông tin. Đây là bản đồ TRÌNH BÀY, cố ý sống ở web: backend
+ * không biết màn sửa xe chia tab thế nào.
+ */
+const REQUIREMENT_TAB: Readonly<Record<PublishRequirement, VehicleEditTab>> = {
+  [PUBLISH_REQUIREMENT.SELF_DRIVE_PRICE]: VEHICLE_EDIT_TAB.PRICING,
+  [PUBLISH_REQUIREMENT.LONG_TERM_PRICE]: VEHICLE_EDIT_TAB.PRICING,
+  [PUBLISH_REQUIREMENT.WITH_DRIVER_PRICE]: VEHICLE_EDIT_TAB.PRICING,
+  [PUBLISH_REQUIREMENT.MAIN_IMAGE]: VEHICLE_EDIT_TAB.MEDIA,
+  [PUBLISH_REQUIREMENT.PHOTOS]: VEHICLE_EDIT_TAB.MEDIA,
+  [PUBLISH_REQUIREMENT.PLATE_NUMBER]: VEHICLE_EDIT_TAB.INFORMATION,
+  [PUBLISH_REQUIREMENT.IDENTITY]: VEHICLE_EDIT_TAB.INFORMATION,
+  [PUBLISH_REQUIREMENT.ENERGY_SPEC]: VEHICLE_EDIT_TAB.INFORMATION,
+  [PUBLISH_REQUIREMENT.BRANCH_LOCATION]: VEHICLE_EDIT_TAB.INFORMATION,
+};
+
+export function publicationEditPath(vehicleId: string, missing: PublishRequirement[]): string {
+  const first = missing[0];
+  return vehicleTabPath(vehicleId, first ? REQUIREMENT_TAB[first] : VEHICLE_EDIT_TAB.INFORMATION);
 }

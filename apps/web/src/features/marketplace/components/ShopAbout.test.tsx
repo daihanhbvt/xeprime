@@ -77,26 +77,29 @@ describe('ShopAbout', () => {
    * Ba chỉ số uy tín (ADR 0045 điều 3) là một KHỐI RIÊNG, không phải ô thứ năm của lưới số
    * liệu: mỗi con số cần một định nghĩa mẫu số đi kèm, và cả ba chia chung một ngưỡng "đủ dữ
    * liệu" — trộn vào lưới sẽ có ô biến mất ô còn, trông như lỗi hiển thị.
+   *
+   * Từ 23/09/2026 khối này KHÔNG còn dòng "tính trên N yêu cầu trong 90 ngày" (thiết kế đã
+   * chốt) — mẫu số và cửa sổ thời gian nằm trong dấu "i" của từng ô.
    */
-  it('đủ mẫu ⇒ ba chỉ số uy tín hiện kèm CƠ SỞ tính', async () => {
+  it('đủ mẫu ⇒ ba chỉ số uy tín hiện, không kèm dòng cơ sở tính', async () => {
     await renderAbout(shop({}));
 
     expect(screen.getByText('98%')).toBeTruthy();
     expect(screen.getByText('85%')).toBeTruthy();
     expect(screen.getByText('Trong 1 giờ')).toBeTruthy();
-    // Số mẫu luôn đi kèm: một tỉ lệ không có mẫu số là một con số không kiểm chứng được.
-    expect(screen.getByText(/40 yêu cầu/)).toBeTruthy();
+    expect(screen.queryByText(/Tính trên/)).toBeNull();
   });
 
   /*
-   * Dưới ngưỡng thì nói MỘT câu kèm số mẫu thật, không vẽ ba ô "—". "2 yêu cầu trong 90 ngày"
-   * là một sự thật; "0%" từ hai yêu cầu là một lời vu khống.
+   * Ngưỡng công khai hạ về 1 (ADR 0045, sửa 23/09/2026), nên trạng thái "chưa nói được gì" chỉ
+   * còn đúng một trường hợp: KHÔNG có yêu cầu nào. Vẽ ba ô "—" ở đó vẫn sai như cũ — không mẫu
+   * nào thì không có gì để nói, và "0%" là một lời vu khống chứ không phải một phép đo.
    */
-  it('chưa đủ mẫu ⇒ một câu "chưa đủ dữ liệu" kèm số mẫu, không có phần trăm nào', async () => {
+  it('không có mẫu nào ⇒ một câu giải thích, không có phần trăm nào', async () => {
     await renderAbout(
       shop({
         metrics: {
-          sampleCount: 2,
+          sampleCount: 0,
           responseRatePercent: null,
           acceptKeepRatePercent: null,
           responseMinutesMedian: null,
@@ -105,8 +108,7 @@ describe('ShopAbout', () => {
       }),
     );
 
-    expect(screen.getByText(/Chưa đủ dữ liệu/)).toBeTruthy();
-    expect(screen.getByText(/2 yêu cầu/)).toBeTruthy();
+    expect(screen.getByText(/Chưa có yêu cầu thuê nào/)).toBeTruthy();
     expect(screen.queryByText('0%')).toBeNull();
     expect(screen.queryByText('100%')).toBeNull();
   });

@@ -11,7 +11,6 @@ import {
   SERVICE_TYPE,
   STOREFRONT_KIND,
   TENANT_STATUS,
-  VEHICLE_PUBLIC_STATUS,
   hasVehicleServiceSettings,
   hasVerifiedStorefront,
   provinceRegionPeers,
@@ -26,6 +25,7 @@ import {
   EFFECTIVE_SUBSCRIPTION_ARGS,
   effectiveSubscriptionWhere,
 } from '../../common/plan/feature-state';
+import { marketplaceVehicleWhere } from '../../common/marketplace-vehicle-scope';
 import { ProvincesService } from '../locations/provinces.service';
 import { PricingService } from '../pricing/pricing.service';
 import { VehicleSettingsService } from '../vehicle-settings/vehicle-settings.service';
@@ -974,9 +974,9 @@ export class PublicListingsService {
     const v = await this.prisma.vehicle.findFirst({
       where: {
         id,
-        deletedAt: null,
-        publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
-        tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
+        // Bốn vế dùng chung với mọi đường đi thẳng tới một chiếc xe (`marketplaceVehicleWhere`)
+        // — gồm cả công tắc hiển thị của chủ xe (ADR 0048).
+        ...marketplaceVehicleWhere(),
         // Link trực tiếp tới chi tiết xe KHÔNG được là đường vòng qua luật hiển thị theo tỉnh:
         // ẩn một tỉnh mà URL cũ vẫn mở được xe ở đó thì việc ẩn chỉ là trang trí.
         branch: { province: { isPublicVisible: true } },
@@ -1040,6 +1040,10 @@ export class PublicListingsService {
               where: effectiveSubscriptionWhere(now),
               ...EFFECTIVE_SUBSCRIPTION_ARGS,
             },
+            // Điểm đánh giá CỦA GIAN HÀNG — cột sẵn có, cùng nguồn `PublicShopDto` dùng cho trang
+            // gian hàng (không phải một truy vấn tổng hợp mới).
+            ratingAvg: true,
+            ratingCount: true,
           },
         },
         images: { orderBy: { sortOrder: 'asc' }, select: { imageUrl: true } },
@@ -1061,6 +1065,7 @@ export class PublicListingsService {
     const [
       rating,
       completedTripCount,
+      shopCompletedTripCount,
       policy,
       handover,
       surchargeRules,
@@ -1070,6 +1075,11 @@ export class PublicListingsService {
         this.ratingsByVehicle([v.id]).then((ratings) => ratings.get(v.id)),
         this.prisma.booking.count({
           where: { vehicleId: v.id, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
+        }),
+        // Cùng phép đếm với `shopStats` dùng cho trang gian hàng, nhưng theo TENANT thay vì xe —
+        // thẻ gian hàng ở trang chi tiết xe nói về người bán, không phải riêng chiếc xe đang xem.
+        this.prisma.booking.count({
+          where: { tenantId: v.tenantId, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
         }),
         this.pricing.effectivePolicy(v.tenantId, v.id),
         this.settings.handoverWindowsFor(this.prisma, v.id),
@@ -1189,6 +1199,9 @@ export class PublicListingsService {
         detailKind,
       ),
       shopBio: v.tenant.profile?.bio ?? null,
+      shopRatingAvg: v.tenant.ratingAvg as unknown as string,
+      shopRatingCount: v.tenant.ratingCount,
+      shopCompletedTripCount,
       images: v.images.map((i) => i.imageUrl),
       features: v.features.map((f) => f.featureKey),
       ratingAvg: rating?.avg ?? null,

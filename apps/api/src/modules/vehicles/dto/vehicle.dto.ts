@@ -5,6 +5,7 @@ import {
   APPROVAL_STATUS_VALUES,
   BOOKING_STATUS_VALUES,
   CATALOG_KEY_PATTERN,
+  MARKETPLACE_VISIBILITY_REASON_VALUES,
   SERVICE_TYPE_VALUES,
   VEHICLE_GALLERY_MAX_IMAGES,
   VEHICLE_IMAGE_TYPE_VALUES,
@@ -189,7 +190,38 @@ export class VehicleListItemDto {
   })
   discountPercent!: number | null;
   @ApiProperty({ enum: VEHICLE_OPERATION_STATUS_VALUES }) operationStatus!: string;
-  @ApiProperty({ enum: VEHICLE_PUBLIC_STATUS_VALUES }) publicStatus!: string;
+  @ApiProperty({
+    enum: VEHICLE_PUBLIC_STATUS_VALUES,
+    description:
+      'Trục KIỂM DUYỆT của nền tảng — `hidden` = nền tảng gỡ xe xuống, không phải chủ xe tạm ẩn',
+  })
+  publicStatus!: string;
+
+  /*
+   * Ba trường dưới là trục THỨ BA của việc lên chợ (ADR 0048), và chúng nằm ở DANH SÁCH chứ
+   * không chỉ ở chi tiết: nếu chỉ chi tiết mới biết một chiếc xe đang bị chủ tạm ẩn thì thẻ xe
+   * ngoài danh sách sẽ trông y hệt một chiếc đang bán — và chủ xe không có cách nào nhìn ra chiếc
+   * mình quên bật lại.
+   */
+  @ApiProperty({
+    description:
+      'LỰA CHỌN của chủ xe: có cho xe hiện ngoài chợ không. Độc lập với publicStatus (ADR 0048)',
+  })
+  marketplaceEnabled!: boolean;
+
+  @ApiProperty({
+    description:
+      'Kết quả hiển thị THỰC TẾ — gộp xoá mềm + trạng thái gian hàng + kiểm duyệt + lựa chọn chủ xe',
+  })
+  isMarketplaceVisible!: boolean;
+
+  @ApiProperty({
+    enum: MARKETPLACE_VISIBILITY_REASON_VALUES,
+    description:
+      'Vì sao xe đang (không) hiện ngoài chợ. Server suy — client KHÔNG tự ghép lại từ nhiều status',
+  })
+  marketplaceVisibilityReason!: string;
+
   @ApiPropertyOptional({ type: String, nullable: true }) mainImageUrl!: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Tiền dạng string — ADR 0007' })
@@ -760,6 +792,25 @@ export class CreateVehicleDto {
  * của gian hàng nên cho sửa ở đây.
  */
 export class UpdateVehicleDto extends PartialType(CreateVehicleDto) {}
+
+/**
+ * `PATCH /vehicles/:id/marketplace-visibility` — công tắc hiển thị của CHỦ XE (ADR 0048).
+ *
+ * Endpoint riêng chứ không phải một trường trong `UpdateVehicleDto`, vì đây không phải một lần
+ * sửa hồ sơ xe: nó có permission riêng (`vehicles.submit_public` — cùng quyền đưa xe ra chợ),
+ * luật riêng khi BẬT, một dòng audit riêng, và nó phải chạy được khi người dùng không có quyền
+ * sửa xe. Nhét vào `PATCH /vehicles/:id` là gói tất cả những thứ đó vào một endpoint đã đông.
+ *
+ * Chỉ nhận boolean THẬT: `ValidationPipe` chạy với `enableImplicitConversion: false`, nên
+ * `"false"` (chuỗi) bị từ chối thay vì lặng lẽ hoá thành `true`.
+ */
+export class SetMarketplaceVisibilityDto {
+  @ApiProperty({
+    description: 'true = cho xe hiện ngoài chợ; false = tạm cất khỏi chợ (không đụng kiểm duyệt)',
+  })
+  @IsBoolean()
+  enabled!: boolean;
+}
 
 /**
  * Chỉ số vận hành + tài chính của MỘT xe, dùng cho thẻ xe ở `/manage/vehicles`.

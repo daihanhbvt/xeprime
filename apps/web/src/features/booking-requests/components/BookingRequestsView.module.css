@@ -17,52 +17,6 @@
   min-width: 0;
 }
 
-/* ── Hai con số tóm tắt ở góc phải tiêu đề ──────────────────────────────── */
-
-.stats {
-  display: flex;
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  margin: 0;
-  background: var(--xp-color-bg-container);
-  gap: var(--xp-space-md);
-}
-
-.stat {
-  display: flex;
-  min-width: 72px;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-/* Đường kẻ dọc giữa hai chỉ số — dựng bằng viền của chỉ số sau, không thêm một phần tử rỗng. */
-.stat + .stat {
-  padding-inline-start: var(--xp-space-md);
-  border-inline-start: 1px solid var(--xp-color-border);
-}
-
-.statLabel {
-  margin: 0;
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-overline);
-  font-weight: var(--xp-font-weight-semibold);
-  letter-spacing: 0.06em;
-  line-height: var(--xp-line-height-overline);
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.statValue {
-  margin: 0;
-  color: var(--xp-color-primary-active);
-  font-size: var(--xp-font-size-h3);
-  font-weight: var(--xp-font-weight-bold);
-  font-variant-numeric: tabular-nums;
-  line-height: var(--xp-line-height-h3);
-}
-
 /* ── Tab trạng thái ─────────────────────────────────────────────────────── */
 
 .tabs {
@@ -146,11 +100,6 @@
 }
 
 @media (max-width: 640px) {
-  .stats {
-    width: 100%;
-    justify-content: space-around;
-  }
-
   .pagination {
     justify-content: center;
   }

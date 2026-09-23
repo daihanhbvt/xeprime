@@ -2,6 +2,7 @@ import { App } from 'antd';
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  MARKETPLACE_VISIBILITY_REASON,
   PERMISSION,
   SERVICE_TYPE,
   VEHICLE_OPERATION_STATUS,
@@ -102,6 +103,10 @@ function vehicle(overrides: Partial<VehicleDetail> = {}): VehicleDetail {
     serviceTypes: [SERVICE_TYPE.SELF_DRIVE],
     operationStatus: VEHICLE_OPERATION_STATUS.AVAILABLE,
     publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+    // Trục thứ ba (ADR 0048): đã duyệt VÀ chủ xe đang bật ⇒ mới thật sự nằm ngoài chợ.
+    marketplaceEnabled: true,
+    isMarketplaceVisible: true,
+    marketplaceVisibilityReason: MARKETPLACE_VISIBILITY_REASON.VISIBLE,
     mainImageUrl: null,
     images: [],
     media: [],
@@ -263,12 +268,36 @@ describe('Đầu trang — không bịa dữ liệu', () => {
   it('xe chưa duyệt công khai: không mời bấm "Xem trang xe"', () => {
     queries.vehicle = {
       ...queries.vehicle,
-      data: vehicle({ publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW }),
+      data: vehicle({
+        publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW,
+        isMarketplaceVisible: false,
+        marketplaceVisibilityReason: MARKETPLACE_VISIBILITY_REASON.NOT_APPROVED,
+      }),
     };
     renderWorkspace();
 
     const link = screen.queryByRole('link', { name: /xem trang xe/i });
     expect(link).toBeNull();
+  });
+
+  /*
+   * ADR 0048: "Xem trang xe" bám vào KẾT QUẢ hiển thị, không vào trạng thái kiểm duyệt. Một
+   * chiếc xe đã duyệt mà chủ xe đang tạm ẩn thì `/listings/:id` trả 404 — một link sáng ở đây
+   * là dẫn người dùng tới một trang không tồn tại.
+   */
+  it('xe đã duyệt nhưng chủ xe tạm ẩn: KHÔNG có link ra trang xe', () => {
+    queries.vehicle = {
+      ...queries.vehicle,
+      data: vehicle({
+        marketplaceEnabled: false,
+        isMarketplaceVisible: false,
+        marketplaceVisibilityReason: MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED,
+      }),
+    };
+    renderWorkspace();
+
+    expect(screen.queryByRole('link', { name: /xem trang xe/i })).toBeNull();
+    expect(screen.getByText('Chủ xe tạm ẩn')).toBeTruthy();
   });
 
   it('xe đã duyệt: link sang trang xe công khai đúng địa chỉ', () => {

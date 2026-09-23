@@ -1,20 +1,17 @@
 'use client';
 
 import { Segmented } from 'antd';
+import { useTranslations } from 'next-intl';
 import { Suspense, useState } from 'react';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ADMIN_VEHICLES_DEFAULT_LIMIT } from '@/features/admin-vehicles/api';
-import {
-  ADMIN_VEHICLE_OPERATION_STATUS_OPTIONS,
-  ADMIN_VEHICLE_PUBLIC_STATUS_OPTIONS,
-  ADMIN_VEHICLE_QUICK_FILTERS,
-  ADMIN_VEHICLE_TYPE_OPTIONS,
-} from '@/features/admin-vehicles/constants';
+import { ADMIN_VEHICLE_QUICK_FILTERS } from '@/features/admin-vehicles/constants';
 import { AdminVehicleDetailDrawer } from '@/features/admin-vehicles/components/AdminVehicleDetailDrawer';
 import { AdminVehicleTable } from '@/features/admin-vehicles/components/AdminVehicleTable';
 import { useAdminVehicleFilters } from '@/features/admin-vehicles/hooks/use-admin-vehicle-filters';
+import { useAdminVehicleOptions } from '@/features/admin-vehicles/hooks/use-admin-vehicle-options';
 import { useAdminVehicles } from '@/features/admin-vehicles/hooks/use-admin-vehicles';
 import type { AdminVehicleFilters } from '@/features/admin-vehicles/types';
 import styles from './vehicles-page.module.css';
@@ -25,43 +22,26 @@ const CLEARED: Partial<AdminVehicleFilters> = {
   operationStatus: 'all',
   vehicleType: 'all',
   tenantStatus: 'all',
+  marketplaceVisible: 'all',
   tenantId: undefined,
 };
 
-const FILTER_FIELDS: FilterField[] = [
-  { kind: 'search', key: 'q', label: 'Tìm xe', placeholder: 'Tìm tên xe / biển số / mã' },
-  {
-    kind: 'select',
-    key: 'publicStatus',
-    label: 'Duyệt public',
-    options: ADMIN_VEHICLE_PUBLIC_STATUS_OPTIONS,
-    allowClear: false,
-  },
-  {
-    kind: 'select',
-    key: 'operationStatus',
-    label: 'Vận hành',
-    options: ADMIN_VEHICLE_OPERATION_STATUS_OPTIONS,
-    allowClear: false,
-  },
-  {
-    kind: 'select',
-    key: 'vehicleType',
-    label: 'Loại xe',
-    options: ADMIN_VEHICLE_TYPE_OPTIONS,
-    allowClear: false,
-  },
-];
+function PageFallback() {
+  const t = useTranslations('AdminVehicles.page');
+  return <LoadingState variant="page" label={t('loading')} />;
+}
 
 export default function AdminVehiclesPage() {
   return (
-    <Suspense fallback={<LoadingState variant="page" label="Đang tải xe toàn hệ thống…" />}>
+    <Suspense fallback={<PageFallback />}>
       <AdminVehiclesView />
     </Suspense>
   );
 }
 
 function AdminVehiclesView() {
+  const t = useTranslations('AdminVehicles');
+  const options = useAdminVehicleOptions();
   const { filters, setFilters } = useAdminVehicleFilters();
   const { data, isError, refetch, isFetching } = useAdminVehicles(filters);
   const [selected, setSelected] = useState<string | null>(null);
@@ -74,31 +54,68 @@ function AdminVehiclesView() {
     hasNext: false,
   };
 
+  const filterFields: FilterField[] = [
+    {
+      kind: 'search',
+      key: 'q',
+      label: t('filters.searchLabel'),
+      placeholder: t('filters.searchPlaceholder'),
+    },
+    {
+      kind: 'select',
+      key: 'publicStatus',
+      label: t('filters.publicStatus'),
+      options: options.publicStatus,
+      allowClear: false,
+    },
+    {
+      kind: 'select',
+      key: 'operationStatus',
+      label: t('filters.operationStatus'),
+      options: options.operationStatus,
+      allowClear: false,
+    },
+    {
+      kind: 'select',
+      key: 'vehicleType',
+      label: t('filters.vehicleType'),
+      options: options.vehicleType,
+      allowClear: false,
+    },
+  ];
+
   const isSet = (value: string | undefined) => Boolean(value && value !== 'all');
   const hasFilters = Boolean(
     filters.q ||
-    filters.tenantId ||
-    isSet(filters.publicStatus) ||
-    isSet(filters.operationStatus) ||
-    isSet(filters.vehicleType) ||
-    isSet(filters.tenantStatus),
+      filters.tenantId ||
+      isSet(filters.publicStatus) ||
+      isSet(filters.operationStatus) ||
+      isSet(filters.vehicleType) ||
+      isSet(filters.tenantStatus) ||
+      isSet(filters.marketplaceVisible),
   );
 
-  // Lối tắt nào đang khớp chính xác bộ lọc hiện tại — không khớp thì không sáng cái nào.
-  //
-  // Cố ý KHÔNG đưa vào `FilterBar`: giá trị của nó SUY RA từ hai tham số (`publicStatus` +
-  // `tenantStatus`) chứ không phải một tham số, và chọn một lối tắt ghi một *patch* nhiều khoá.
-  // Đó là luật riêng của module giám sát xe — nhét vào component chung sẽ làm nó biết nghiệp vụ.
+  /*
+   * Lối tắt nào đang khớp CHÍNH XÁC bộ lọc hiện tại — không khớp thì không sáng cái nào.
+   *
+   * Cố ý KHÔNG đưa vào `FilterBar`: giá trị của nó SUY RA từ ba tham số chứ không phải một, và
+   * chọn một lối tắt ghi một *patch* nhiều khoá. Đó là luật riêng của module giám sát xe — nhét
+   * vào component chung sẽ làm nó biết nghiệp vụ.
+   *
+   * So khớp phải gồm CẢ `marketplaceVisible` (ADR 0048): thiếu nó thì lối tắt "Đang hiển thị"
+   * và "Tất cả" trông giống hệt nhau, vì cả hai cùng để `publicStatus`/`tenantStatus` ở `all`.
+   */
   const activeQuick =
     ADMIN_VEHICLE_QUICK_FILTERS.find(
       (f) =>
-        (f.patch.publicStatus ?? 'all') === (filters.publicStatus ?? 'all') &&
-        (f.patch.tenantStatus ?? 'all') === (filters.tenantStatus ?? 'all'),
+        f.patch.publicStatus === (filters.publicStatus ?? 'all') &&
+        f.patch.tenantStatus === (filters.tenantStatus ?? 'all') &&
+        f.patch.marketplaceVisible === (filters.marketplaceVisible ?? 'all'),
     )?.key ?? '';
 
   return (
     <div>
-      <ManagePageHeader title="Xe toàn hệ thống" />
+      <ManagePageHeader title={t('page.title')} />
 
       {/*
         Cố ý KHÔNG truyền `onClear`: lối xoá lọc của trang này nằm trong màn "không có kết quả",
@@ -106,22 +123,23 @@ function AdminVehiclesView() {
         hiện là UI MỚI (Figma `127:2339` R5) — thuộc quyết định P24, chưa được chốt.
       */}
       <FilterBar
-        fields={FILTER_FIELDS}
+        fields={filterFields}
         values={filters as Record<string, string | undefined>}
         onChange={(patch) => setFilters(patch)}
       />
 
       <div className={styles.quickRow}>
         <Segmented
-          aria-label="Lối tắt lọc xe"
+          aria-label={t('quick.ariaLabel')}
           value={activeQuick}
-          options={[
-            { value: '', label: 'Tất cả' },
-            ...ADMIN_VEHICLE_QUICK_FILTERS.map((f) => ({ value: f.key, label: f.label })),
-          ]}
+          options={options.quickFilters}
           onChange={(value) => {
             const hit = ADMIN_VEHICLE_QUICK_FILTERS.find((f) => f.key === value);
-            setFilters(hit ? hit.patch : { publicStatus: 'all', tenantStatus: 'all' });
+            setFilters(
+              hit
+                ? { ...hit.patch }
+                : { publicStatus: 'all', tenantStatus: 'all', marketplaceVisible: 'all' },
+            );
           }}
         />
       </div>

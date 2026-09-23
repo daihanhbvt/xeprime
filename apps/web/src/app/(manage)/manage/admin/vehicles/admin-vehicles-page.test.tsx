@@ -64,6 +64,9 @@ function vehicle(over: Partial<AdminVehicle> = {}): AdminVehicle {
     operationStatus: 'available',
     publicStatus: 'approved_public',
     listingStatus: 'active',
+    marketplaceEnabled: true,
+    isMarketplaceVisible: true,
+    marketplaceVisibilityReason: 'visible',
     weekdayPrice: '350000',
     tenantId: 't1',
     tenantName: 'Gian hàng Demo',
@@ -157,7 +160,7 @@ describe('/manage/admin/vehicles — trạng thái', () => {
 });
 
 describe('/manage/admin/vehicles — filter và URL', () => {
-  it('bốn bộ lọc mặc định là "all" và được truyền xuống lớp dữ liệu', () => {
+  it('năm bộ lọc mặc định là "all" và được truyền xuống lớp dữ liệu', () => {
     setQuery({ data: { items: [vehicle()], meta: META } });
     renderPage();
 
@@ -168,14 +171,15 @@ describe('/manage/admin/vehicles — filter và URL', () => {
       operationStatus: 'all',
       vehicleType: 'all',
       tenantStatus: 'all',
+      marketplaceVisible: 'all',
       page: undefined,
       limit: undefined,
     });
   });
 
-  it('"Xoá bộ lọc" trả cả sáu tham số về mặc định', () => {
+  it('"Xoá bộ lọc" trả mọi tham số về mặc định', () => {
     nav.params = new URLSearchParams(
-      'q=abc&tenantId=t9&publicStatus=hidden&operationStatus=maintenance&vehicleType=car&tenantStatus=suspended&page=4',
+      'q=abc&tenantId=t9&publicStatus=hidden&operationStatus=maintenance&vehicleType=car&tenantStatus=suspended&marketplaceVisible=true&page=4',
     );
     setQuery({ data: { items: [], meta: { ...META, total: 0 } } });
     renderPage();
@@ -191,22 +195,24 @@ describe('/manage/admin/vehicles — filter và URL', () => {
       'operationStatus=',
       'vehicleType=',
       'tenantStatus=',
+      'marketplaceVisible=',
       'page=',
     ]) {
       expect(url).not.toContain(key);
     }
   });
 
-  it('lối tắt suy trạng thái từ HAI tham số cùng lúc', () => {
+  it('lối tắt suy trạng thái từ BA tham số cùng lúc', () => {
     // Đây là logic riêng của module — nó phải ở lại trang, không được đẩy vào FilterBar.
-    // "Của shop bị khoá" chỉ sáng khi publicStatus=all VÀ tenantStatus=suspended — một tham số
-    // đúng là chưa đủ.
-    nav.params = new URLSearchParams('publicStatus=all&tenantStatus=suspended');
+    // "Của gian hàng bị khoá" chỉ sáng khi cả ba tham số cùng khớp — một tham số đúng là chưa đủ.
+    nav.params = new URLSearchParams(
+      'publicStatus=all&tenantStatus=suspended&marketplaceVisible=all',
+    );
     setQuery({ data: { items: [vehicle()], meta: META } });
     const { container } = renderPage();
 
     expect(container.querySelector('.ant-segmented-item-selected')!.textContent).toBe(
-      'Của shop bị khoá',
+      'Của gian hàng bị khoá',
     );
 
     cleanup();
@@ -215,6 +221,25 @@ describe('/manage/admin/vehicles — filter và URL', () => {
     expect(second.container.querySelector('.ant-segmented-item-selected')!.textContent).toBe(
       'Tất cả',
     );
+  });
+
+  /*
+   * ADR 0048: "Đang hiển thị" KHÔNG được lọc bằng `publicStatus=approved_public`.
+   *
+   * Cột đó vẫn là `approved_public` khi chủ xe tắt công tắc hoặc gian hàng bị khoá, nên bộ lọc
+   * cũ trả về một danh sách có lẫn xe không ai nhìn thấy — dưới đúng cái nhãn "Đang hiển thị".
+   */
+  it('lối tắt "Đang hiển thị" lọc theo kết quả hiệu lực, không theo trạng thái kiểm duyệt', () => {
+    setQuery({ data: { items: [vehicle()], meta: META } });
+    const { container } = renderPage();
+
+    // Bấm ở THANH LỐI TẮT: nhãn "Đang hiển thị" còn xuất hiện ở cột trạng thái của bảng.
+    const shortcuts = container.querySelector('.ant-segmented') as HTMLElement;
+    fireEvent.click(within(shortcuts).getByText('Đang hiển thị'));
+
+    const url = lastUrl();
+    expect(url).toContain('marketplaceVisible=true');
+    expect(url).not.toContain('publicStatus=approved_public');
   });
 
   it('không lối tắt nào khớp thì không sáng cái nào ngoài "Tất cả"', () => {

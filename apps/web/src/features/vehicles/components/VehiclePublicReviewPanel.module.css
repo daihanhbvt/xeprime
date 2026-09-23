@@ -36,3 +36,22 @@
 .unmet {
   color: var(--xp-color-text-secondary);
 }
+
+/* Mốc gửi / mốc duyệt — hai cột, nhãn xám, giá trị đậm hơn. */
+.timeline {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  margin: var(--xp-space-md) 0 0;
+  gap: var(--xp-space-xs) var(--xp-space-sm);
+}
+
+.timeline dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.timeline dd {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+}

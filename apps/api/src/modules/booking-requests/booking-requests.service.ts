@@ -40,9 +40,7 @@ import {
   FEE_LINE,
   SERVICE_TYPE,
   TENANT_CUSTOMER_SOURCE,
-  TENANT_STATUS,
   USER_STATUS,
-  VEHICLE_PUBLIC_STATUS,
   type AutoAcceptBlocker,
   type CancellationReasonCategory,
   type BookingRequestDecisionSource,
@@ -60,6 +58,7 @@ import {
 } from '../../common/plan/feature-state';
 import { fromDateOnly, toDateOnly } from '../../common/date-only';
 import { normalizePhone, phoneLookupVariants } from '../../common/phone';
+import { marketplaceVehicleWhere } from '../../common/marketplace-vehicle-scope';
 import { normalizeRouteContext } from '../../common/route-context';
 import { addressViewOf, pinOf } from '../../common/address-view';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -267,19 +266,17 @@ export class BookingRequestsService {
   private readonly logger = new Logger(BookingRequestsService.name);
 
   /**
-   * Xe khả dụng để đặt: đã `approved_public` và thuộc shop `active`. `tenantId` suy từ xe ở server
-   * (không tin client). Dùng chung cho submit + check-availability.
+   * Xe khả dụng để đặt — cùng bốn vế với mọi đường đi thẳng tới một chiếc xe
+   * (`marketplaceVehicleWhere`): chưa xoá, nền tảng đã duyệt, CHỦ XE ĐANG BẬT HIỂN THỊ
+   * (ADR 0048), gian hàng đang hoạt động. `tenantId` suy từ xe ở server (không tin client).
+   * Dùng chung cho submit + check-availability, nên một link cũ tới chiếc xe vừa bị cất đi
+   * không gửi được yêu cầu.
    */
   private async loadBookableVehicle(
     vehicleId: string,
   ): Promise<{ id: string; tenantId: string; name: string; serviceTypes: string[] }> {
     const vehicle = await this.prisma.vehicle.findFirst({
-      where: {
-        id: vehicleId,
-        deletedAt: null,
-        publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
-        tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
-      },
+      where: { id: vehicleId, ...marketplaceVehicleWhere() },
       select: { id: true, tenantId: true, name: true, serviceTypes: true },
     });
     if (!vehicle) {

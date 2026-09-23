@@ -168,6 +168,20 @@ export const ROUTES = {
     /** Trung tâm bảo dưỡng toàn đội xe (Wave 6 — docs/design/12 §9.2). */
     MAINTENANCE: '/manage/maintenance',
     BOOKINGS: '/manage/bookings',
+    /**
+     * Lối tắt "Chờ giao xe" — CÙNG danh sách, cùng endpoint, chỉ khác một nhóm việc dựng sẵn
+     * (`preset=awaiting_pickup` gửi lên server).
+     *
+     * Vì sao là một ĐƯỜNG DẪN chứ không phải `/manage/bookings?preset=…`: mục menu đang mở được
+     * quyết bằng `matchSelectedKey(pathname, …)`, và `usePathname()` không mang query. Một mục
+     * menu gắn query sẽ hoặc không bao giờ sáng, hoặc làm sáng luôn cả "Tất cả đơn thuê". Sửa
+     * bằng cách cho khung ứng dụng đọc `useSearchParams()` thì đắt hơn nhiều: `AppShell` không
+     * nằm trong `Suspense` nào, nên cả cổng quản lý sẽ rơi xuống render phía client.
+     *
+     * Đứng cạnh `/manage/bookings/[id]` là an toàn: Next ưu tiên đoạn TĨNH, và id đơn là ULID
+     * 26 ký tự nên không có đơn nào mang tên này.
+     */
+    BOOKINGS_AWAITING_PICKUP: '/manage/bookings/awaiting-pickup',
     BOOKING_REQUESTS: '/manage/booking-requests',
     CUSTOMERS: '/manage/customers',
     FINANCE: '/manage/finance',

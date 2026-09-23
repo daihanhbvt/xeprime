@@ -301,11 +301,15 @@ describe('Chiếu trạng thái sang chặng của khách', () => {
     expect(trip.finance).toBeNull();
   });
 
-  maybe('`reserved` và `confirmed` cùng ra `Sẵn sàng`', async () => {
+  /*
+   * `confirmed` là @deprecated (ADR 0047) — DB không còn nhận giá trị này (CHECK constraint),
+   * nên không dựng được một chuyến THẬT ở trạng thái đó nữa để test qua service. Bản đồ
+   * `customerTripStage()` vẫn giữ nhánh phòng thủ cho nó (dữ liệu cũ/mobile) — bằng chứng đó
+   * nằm ở `packages/types/src/status/customer-trip.test.ts`, đúng tầng của một hàm THUẦN.
+   */
+  maybe('`reserved` ra `Sẵn sàng`', async () => {
     const a = await seedTrip({ bookingStatus: BOOKING_STATUS.RESERVED });
-    const b = await seedTrip({ bookingStatus: BOOKING_STATUS.CONFIRMED });
     expect((await trips.detail(customerId, a.requestId)).stage).toBe(CUSTOMER_TRIP_STAGE.READY);
-    expect((await trips.detail(customerId, b.requestId)).stage).toBe(CUSTOMER_TRIP_STAGE.READY);
   });
 
   maybe('`active` → Đang thuê; `completed` → Hoàn thành', async () => {
@@ -933,7 +937,7 @@ describe('Hoàn cọc — khách chỉ đọc', () => {
   });
 
   maybe('chuyến bắt đầu và kết thúc VẪN báo cho khách', async () => {
-    const { bookingId } = await seedTrip({ bookingStatus: BOOKING_STATUS.CONFIRMED });
+    const { bookingId } = await seedTrip({ bookingStatus: BOOKING_STATUS.RESERVED });
 
     await bookings.transition(tenantId, bookingId!, ownerId, { status: BOOKING_STATUS.ACTIVE });
     await bookings.transition(tenantId, bookingId!, ownerId, { status: BOOKING_STATUS.COMPLETED });
@@ -1018,7 +1022,7 @@ describe('Không lộ dữ liệu của chủ xe', () => {
     // Đơn đã tồn tại thì mọi kết cục về sau vẫn giữ quyền liên hệ — kể cả chuyến bị huỷ, khách
     // vẫn cần gọi được chủ xe để xử lý nốt.
     const statuses = [
-      BOOKING_STATUS.CONFIRMED,
+      BOOKING_STATUS.RESERVED,
       BOOKING_STATUS.ACTIVE,
       BOOKING_STATUS.COMPLETED,
       BOOKING_STATUS.CANCELLED,
@@ -1174,7 +1178,7 @@ describe('Khách tự huỷ chuyến', () => {
   });
 
   maybe('đơn đã duyệt nhưng CHƯA giao xe → huỷ được và NHẢ LỊCH', async () => {
-    const { requestId, bookingId } = await seedTrip({ bookingStatus: BOOKING_STATUS.CONFIRMED });
+    const { requestId, bookingId } = await seedTrip({ bookingStatus: BOOKING_STATUS.RESERVED });
     const booking = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId! } });
     await prisma.$transaction((tx) =>
       occupancy.reserve(tx, {

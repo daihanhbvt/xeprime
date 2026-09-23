@@ -19,7 +19,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0002](0002-auth-session-cookie.md) | Web session bằng httpOnly cookie | Accepted; social provider được 0019 sửa |
 | [0003](0003-styling-css-modules.md) | AntD token + CSS Modules | Accepted |
 | [0004](0004-client-state.md) | Redux; filter ở URL | Accepted |
-| [0005](0005-status-enums.md) | Status enum tập trung | Accepted |
+| [0005](0005-status-enums.md) | Status enum tập trung | Accepted; **điều `booking.status` bị 0047 ghi đè một phần** |
 | [0006](0006-booking-concurrency.md) | DB constraint chống trùng lịch | Accepted |
 | [0007](0007-api-type-contract.md) | Client type sinh từ OpenAPI | Accepted |
 | [0008](0008-public-listings-sync.md) | Đồng bộ public listing qua một writer | Accepted; **điều 2 bị 0030 ghi đè** |
@@ -61,6 +61,9 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0044](0044-approve-before-hold.md) | Duyệt trước, thu tiền giữ chỗ sau: cửa sổ 120 phút + hai mốc nhắc, không gia hạn; khung giờ đã mất đóng bằng `slot_taken` | **Accepted; ghi đè TOÀN BỘ 0039, khôi phục 0032 điều 2** |
 | [0045](0045-host-cancellation-and-reputation.md) | Chủ xe huỷ được theo từng chặng và lượt huỷ được ghi nhận; ba chỉ số uy tín công khai một nguồn tính; sort mặc định của chợ về `rank_score` + hai vế uy tín/khám phá | **Accepted; mở rộng 0043 (trọng số) và 0044 (điều 7), không ghi đè ADR nào** |
 | [0046](0046-platform-funded-promo-codes.md) | Mã khuyến mãi do NỀN TẢNG tài trợ: giảm số khách trả mà không bớt tiền gian hàng; chỉ trừ vào khoản online; lượt dùng GIỮ → CHỐT → NHẢ | **Accepted; mở rộng 0029 điều 1–2, 0032 điều 2, 0033 điều 3–4 và 0044, không ghi đè ADR nào** |
+| [0047](0047-booking-status-simplification.md) | Rút gọn `booking.status` còn 5 giá trị thật; endpoint transition công khai chỉ còn huỷ/không-đến; ba tab "Yêu cầu đặt xe"; bỏ ô lọc/cột trạng thái ở "Chờ giao xe"; đổi nhãn `reserved` toàn cục | **Accepted; ghi đè 0005 điều `booking.status`, kích hoạt bởi 0044, không ảnh hưởng ADR khác** |
+
+| [0048](0048-owner-marketplace-visibility.md) | Công tắc hiển thị trên chợ của CHỦ XE là trục thứ ba (`vehicles.marketplace_enabled`), tách hẳn khỏi trạng thái kiểm duyệt; `hidden` là quyết định của NỀN TẢNG và rời khỏi bộ trạng thái gửi duyệt lại; một phép gộp lý do do server suy; công tắc lên cột thao tác đầu hồ sơ xe và việc lên chợ vào thẻ "Việc cần làm" | **Accepted; ghi đè 0005 điều `VEHICLE_PUBLIC_STATUS_SUBMITTABLE`, mở rộng 0008 §2** |
 
 ## Quy tắc thêm ADR
 

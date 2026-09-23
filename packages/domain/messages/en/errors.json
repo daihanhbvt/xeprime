@@ -94,6 +94,8 @@
     "SHOP_NOT_ACTIVE": "Your shop is locked, so this action is not available.",
     "TENANT_BILLING_NOT_CONFIGURED": "This shop has no active service plan, so fees cannot be calculated. Contact XePrime support before accepting new bookings.",
     "VEHICLE_PUBLISH_INCOMPLETE": "This vehicle is still missing required details, so it cannot be submitted.",
+    "VEHICLE_NOT_APPROVED_PUBLIC": "XePrime has not approved this vehicle yet, so it cannot go live on the marketplace. Submit it for review first.",
+    "VEHICLE_PLATFORM_HIDDEN": "XePrime has hidden this vehicle. Contact XePrime support to have it reviewed again.",
     "SHOP_ACCOUNT_CANNOT_BOOK": "You are signed in to a shop account. To rent a vehicle, sign in with a renter account using a different phone number.",
     "CANNOT_BOOK_OWN_VEHICLE": "This vehicle belongs to your own shop, so you cannot book it.",
     "CANNOT_DECIDE_OWN_REQUEST": "You cannot approve or decline a request you sent yourself.",

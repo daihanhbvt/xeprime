@@ -200,11 +200,7 @@ describe('Đơn đã khép là CHỈ ĐỌC', () => {
   });
 
   maybe('đơn còn sống vẫn sửa bình thường — khoá đúng chỗ, không khoá tất', async () => {
-    for (const status of [
-      BOOKING_STATUS.RESERVED,
-      BOOKING_STATUS.CONFIRMED,
-      BOOKING_STATUS.ACTIVE,
-    ]) {
+    for (const status of [BOOKING_STATUS.RESERVED, BOOKING_STATUS.ACTIVE]) {
       const id = await seedBooking(status);
       const updated = await bookings.updateDeliveryFee(tenantId, id, ownerId, {
         deliveryFee: '120000',

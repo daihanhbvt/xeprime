@@ -75,7 +75,7 @@
     "noShowHint": "Available only {minutes} minutes past pickup time, and only while the vehicle has not been handed over."
   },
   "list": {
-    "title": "Bookings",
+    "title": "All bookings",
     "searchLabel": "Search bookings",
     "searchPlaceholder": "Search by customer name, phone or booking code",
     "statusAll": "All statuses",
@@ -91,14 +91,40 @@
     "emptyFilteredTitle": "No bookings found for these filters",
     "emptyFilteredBody": "Change the status or drop the search term to see the full list.",
     "errorTitle": "Could not load bookings",
-    "totalLabel": "{count, plural, one {# booking} other {# bookings}}"
+    "totalLabel": "{count, plural, one {# booking} other {# bookings}}",
+    "statusLabel": "Status",
+    "tableLabel": "Booking list",
+    "create": "New booking",
+    "createFirst": "Create the first booking"
+  },
+  "awaitingPickup": {
+    "title": "Awaiting pickup",
+    "tableLabel": "Bookings awaiting pickup",
+    "whenColumn": "Pickup time",
+    "placeColumn": "Pickup place",
+    "handoverColumn": "Handover",
+    "handoverNotStarted": "Not prepared",
+    "handoverPreparing": "In progress",
+    "handoverReady": "Ready to confirm",
+    "overdue": "Past pickup time",
+    "today": "Today",
+    "upcoming": "Upcoming",
+    "placeUnknown": "Place not set",
+    "action": "Process handover",
+    "emptyTitle": "No bookings are awaiting pickup",
+    "emptyBody": "A booking stays here from the moment it is created until you confirm the handover.",
+    "goToAll": "View all bookings",
+    "emptyFilteredTitle": "No bookings awaiting pickup match these filters",
+    "emptyFilteredBody": "Drop a keyword or switch branch to see this group again.",
+    "totalLabel": "{count, plural, one {# booking awaiting pickup} other {# bookings awaiting pickup}}"
   },
   "card": {
     "settled": "Fully paid",
     "vehicle": "Vehicle",
     "period": "Rental period",
     "total": "Total",
-    "status": "Status"
+    "status": "Status",
+    "customer": "Customer"
   },
   "money": {
     "baseAmount": "Rental",
