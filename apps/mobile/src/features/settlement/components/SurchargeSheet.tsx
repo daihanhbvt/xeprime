@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
 import { Text, YStack } from 'tamagui';
@@ -9,7 +9,9 @@ import {
   SURCHARGE_CATEGORY_VALUES,
   type SurchargeCategory,
 } from '@xeprime/types';
+import { isZeroMoney } from '@xeprime/domain';
 import { REASON_MAX } from '@/lib/reason';
+import { visibleSurchargeCategories } from '../surcharge-categories';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { MoneyField } from '@/components/ui/MoneyField';
@@ -18,7 +20,13 @@ import { TextField } from '@/components/ui/TextField';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
-import type { BookingSettlement, OvertimeSuggestion, SaveSurchargeInput } from '../api';
+import { ExcessMileageFacts } from '@/features/bookings/components/ExcessMileageFacts';
+import type {
+  BookingSettlement,
+  ExcessMileageSuggestion,
+  OvertimeSuggestion,
+  SaveSurchargeInput,
+} from '../api';
 
 /**
  * Hình dạng form suy từ CHÍNH schema, không viết tay.
@@ -67,6 +75,8 @@ export function SurchargeSheet({
   open,
   onClose,
   overtime,
+  excessMileage,
+  recorded,
   surchargeRules,
   onConfirm,
   loading,
@@ -75,6 +85,16 @@ export function SurchargeSheet({
   onClose: () => void;
   /** Gợi ý quá giờ do SERVER tính từ chính sách + giờ trả thực tế. */
   overtime: OvertimeSuggestion;
+  /** Đề xuất phí VƯỢT KM — cùng luật với quá giờ: server tính, chủ xe nhận/sửa/bỏ. */
+  excessMileage: ExcessMileageSuggestion;
+  /**
+   * Các khoản ĐÃ ghi của chuyến — chỉ dùng để LOẠI danh mục một-lần khỏi ô chọn.
+   *
+   * Backend từ chối khoản thứ hai ở những danh mục đó. Vẫn bày chúng ra nghĩa là mời người
+   * dùng đi hết một biểu mẫu rồi mới ăn lỗi ở bước gửi — trong khi câu trả lời đã biết từ
+   * lúc mở tấm.
+   */
+  recorded: BookingSettlement['surcharges'];
   /**
    * Bảng phụ phí chủ xe ĐÃ CÔNG BỐ lúc đặt — snapshot trên đơn, không đọc lại cấu hình hiện tại.
    *
@@ -87,6 +107,7 @@ export function SurchargeSheet({
 }) {
   const t = useTranslations('Bookings.settlement.surcharges');
   const tOvertime = useTranslations('Bookings.settlement.overtime');
+  const tMileage = useTranslations('Bookings.settlement.excessMileage');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
 
@@ -105,7 +126,7 @@ export function SurchargeSheet({
     [t],
   );
 
-  const { control, handleSubmit, setValue } = useForm<SurchargeFormValues>({
+  const { control, handleSubmit, setValue, getValues } = useForm<SurchargeFormValues>({
     resolver: yupResolver(schema),
     defaultValues: {
       /*
@@ -123,9 +144,48 @@ export function SurchargeSheet({
    * còn bảng phụ phí có tài xế thì mỗi danh mục một quy tắc.
    */
   const category = useWatch({ control, name: 'category' }) as SurchargeCategory;
+
+  /* Luật "danh mục nào còn chọn được" — xem `visibleSurchargeCategories`. */
+  const categoryOptions = visibleSurchargeCategories(recorded);
   const canSuggestOvertime =
     category === SURCHARGE_CATEGORY.OVERTIME && overtime.available && overtime.amount != null;
+  const hasMileageAmount =
+    excessMileage.amount != null && !isZeroMoney(excessMileage.amount);
+  const canSuggestMileage =
+    category === SURCHARGE_CATEGORY.EXCESS_MILEAGE &&
+    excessMileage.available &&
+    hasMileageAmount;
+  const showMileageFacts =
+    category === SURCHARGE_CATEGORY.EXCESS_MILEAGE && excessMileage.includedKmPerDay != null;
+  /** Câu ghi chú điền sẵn — dựng từ SỐ của backend, không tính lại gì. */
+  const mileageReason = tMileage('defaultReason', {
+    actual: fmt.km(excessMileage.actualKm),
+    allowed: fmt.km(excessMileage.allowedKm),
+    excess: fmt.km(excessMileage.excessKm),
+    fee: fmt.money(excessMileage.feePerKm ?? '0'),
+  });
   const rule = surchargeRules.find((r) => r.category === category) ?? null;
+
+  /*
+   * Điền sẵn số tiền + lý do ngay khi chủ xe CHỌN danh mục vượt km — đúng như `changeCategory`
+   * của web, không bắt bấm thêm "Áp dụng".
+   *
+   * Hai rào chắn giữ cho nó không phá thứ người dùng đã gõ: chỉ điền vào ô ĐANG TRỐNG, và chỉ
+   * khi thật sự có km vượt (`canSuggestMileage`). Điền sẵn KHÔNG phải là ghi — khoản chỉ tồn tại
+   * sau khi bấm "Thêm phí phát sinh".
+   *
+   * Hiệu ứng chạy theo `category` chứ không nằm trong một handler, vì ô danh mục do RHF điều
+   * khiển: `SelectField` ghi thẳng vào form, không đi qua tay component này.
+   */
+  useEffect(() => {
+    if (!canSuggestMileage) return;
+    if (getValues('amount') == null) {
+      setValue('amount', Number(excessMileage.amount), { shouldValidate: true });
+    }
+    if (!getValues('reason').trim()) {
+      setValue('reason', mileageReason, { shouldValidate: true });
+    }
+  }, [canSuggestMileage, excessMileage.amount, mileageReason, getValues, setValue]);
 
   const submit = handleSubmit((values) =>
     onConfirm({
@@ -153,7 +213,7 @@ export function SurchargeSheet({
         control={control}
         name="category"
         label={t('categoryLabel')}
-        options={SURCHARGE_CATEGORY_VALUES.map((category) => ({
+        options={categoryOptions.map((category) => ({
           value: category,
           label: domainLabel('surchargeCategory', category),
         }))}
@@ -178,6 +238,40 @@ export function SurchargeSheet({
           }
           actionLabel={tOvertime('apply')}
           onApply={() => setValue('amount', Number(overtime.amount), { shouldValidate: true })}
+        />
+      ) : null}
+
+      {/*
+        ĐỀ XUẤT PHÍ VƯỢT KM — cùng luật với quá giờ: server tính, chủ xe nhận / sửa / bỏ.
+
+        "Dùng được" đòi HAI điều, không phải một: đủ dữ kiện VÀ thật sự có km vượt. Chạy trong
+        hạn mức thì đề xuất là 0, và một nút "dùng số này" cho số 0 chỉ dẫn tới một khoản phụ
+        phí 0 đồng.
+
+        Phép so "có tiền không" chạy trên CHUỖI (ADR 0007). `Number` chỉ xuất hiện ở mối nối
+        với ô nhập, nơi component đòi một số — đó là chuyển kiểu, không phải phép tính tiền.
+
+        Nút điền cả SỐ TIỀN lẫn LÝ DO: một khoản trừ tiền khách mà ô lý do trống là thứ không
+        ai giải thích được về sau. Câu lý do dựng từ số của backend, không tính lại gì.
+      */}
+      {showMileageFacts ? (
+        <Suggestion
+          tone={canSuggestMileage ? 'warning' : 'info'}
+          title={
+            canSuggestMileage
+              ? t('mileageSuggestion', { amount: fmt.money(excessMileage.amount as string) })
+              : tMileage('title')
+          }
+          body={<ExcessMileageFacts suggestion={excessMileage} />}
+          {...(canSuggestMileage
+            ? {
+                actionLabel: tOvertime('apply'),
+                onApply: () => {
+                  setValue('amount', Number(excessMileage.amount), { shouldValidate: true });
+                  setValue('reason', mileageReason, { shouldValidate: true });
+                },
+              }
+            : {})}
         />
       ) : null}
 
@@ -224,8 +318,8 @@ export function SurchargeSheet({
  * Một GỢI Ý số tiền — nói con số, nói vì sao ra con số đó, và cho một nút điền vào ô.
  *
  * Không tự điền: đây là tiền trừ vào khách, nên con số cuối cùng phải là một hành động của chủ
- * xe. Hai nhánh (quá giờ · bảng phụ phí đã công bố) dùng CHUNG khối này vì chúng là cùng một
- * loại lời khuyên — dựng hai khối riêng là hai chỗ để cách nói trôi khỏi nhau.
+ * xe. Ba nhánh (quá giờ · phí vượt km · bảng phụ phí đã công bố) dùng CHUNG khối này vì chúng
+ * là cùng một loại lời khuyên — dựng ba khối riêng là ba chỗ để cách nói trôi khỏi nhau.
  */
 function Suggestion({
   tone,
@@ -236,9 +330,23 @@ function Suggestion({
 }: {
   tone: 'info' | 'warning';
   title: string;
-  body: string;
-  actionLabel: string;
-  onApply: () => void;
+  /**
+   * Chuỗi, hoặc cả một khối dựng sẵn.
+   *
+   * Đề xuất phí vượt km cần bày SÁU dòng dữ kiện (hai chỉ số đồng hồ, hạn mức, công thức) —
+   * nhồi chúng vào một chuỗi là mất hết căn hàng và mất luôn màu nhấn ở dòng km vượt.
+   */
+  body: ReactNode;
+  /**
+   * Vắng cả hai = khối chỉ ĐỌC.
+   *
+   * Có ca phải bày dữ kiện mà KHÔNG được mời nhận số: chuyến có hạn mức nhưng chạy trong
+   * hạn mức, hoặc thiếu chỉ số đồng hồ. Im lặng ở đó là tệ nhất — chủ xe sẽ tự gõ một con số
+   * mà không biết hệ thống đang thiếu gì. Còn một nút "dùng số này" cho 0đ thì dẫn thẳng tới
+   * một khoản phụ phí rỗng.
+   */
+  actionLabel?: string;
+  onApply?: () => void;
 }) {
   const surface = tone === 'warning' ? colors.warningSurface : colors.infoSurface;
 
@@ -247,10 +355,16 @@ function Suggestion({
       <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
         {title}
       </Text>
-      <Text col={colors.textMuted} fos={fontSize.label}>
-        {body}
-      </Text>
-      <Button label={actionLabel} variant="secondary" size="sm" onPress={onApply} />
+      {typeof body === 'string' ? (
+        <Text col={colors.textMuted} fos={fontSize.label}>
+          {body}
+        </Text>
+      ) : (
+        body
+      )}
+      {actionLabel && onApply ? (
+        <Button label={actionLabel} variant="secondary" size="sm" onPress={onApply} />
+      ) : null}
     </YStack>
   );
 }

@@ -229,6 +229,18 @@ function SettlementBody({
               )}
 
               {/*
+                Ngay dưới bốn con số, đúng chỗ web đặt nó.
+
+                Đây là câu chặn một hiểu nhầm cụ thể: bốn dòng trên trông y như một bảng thanh
+                toán, nên người đọc dễ tưởng bấm xong là tiền tự chạy. Không — chúng là GHI NHẬN
+                VẬN HÀNH; hệ thống không tạo giao dịch ngân hàng nào và cũng không hỏi khách xác
+                nhận. Tách nó ra xa mấy con số thì nó không còn chặn được gì.
+              */}
+              <Text col={colors.textMuted} fos={fontSize.label}>
+                {t('surcharges.operationalNote')}
+              </Text>
+
+              {/*
                 Ba dải LOẠI TRỪ nhau, mỗi dải cho một trạng thái mà câu hỏi "bao giờ hoàn cọc?" có
                 một câu trả lời khác hẳn. Thiếu chúng, người dùng nhìn một khối không có nút nào và
                 không biết mình đang chờ điều gì — đây là ba câu duy nhất giải thích được điều đó.
@@ -363,6 +375,9 @@ function SettlementBody({
           open
           onClose={() => setRecording(false)}
           overtime={settlement.overtime}
+          excessMileage={settlement.excessMileage}
+          /* Khoản ĐÃ ghi — tấm dùng để loại danh mục một-lần khỏi ô chọn. */
+          recorded={settlement.surcharges}
           surchargeRules={settlement.surchargeRules}
           loading={addSurcharge.isPending}
           onConfirm={(body) =>

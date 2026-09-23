@@ -25,6 +25,8 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
+import { ExcessMileageFacts } from './ExcessMileageFacts';
+import { showsExcessMileageFacts } from '@/features/settlement/excess-mileage-visibility';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 /**
@@ -42,6 +44,7 @@ import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/t
 export function BookingSettlementCard({ bookingId }: { bookingId: string }) {
   const t = useTranslations('Bookings.settlement');
   const fmt = useAppFormat();
+  const tMileage = useTranslations('Bookings.settlement.excessMileage');
   const domainLabel = useDomainLabel();
   const permissions = usePermissions();
   const navigateOnce = useNavigateOnce();
@@ -158,6 +161,27 @@ export function BookingSettlementCard({ bookingId }: { bookingId: string }) {
             </Text>
           )}
         </YStack>
+
+        {/*
+          DỮ KIỆN phí vượt km — đặt ngay dưới danh sách phát sinh, nơi chủ xe sắp bấm ghi.
+
+          Nó KHÔNG phải một khoản đã ghi: phí vượt chỉ thành phụ phí khi chủ xe chủ động ghi,
+          và họ vẫn sửa được số tiền. Bày ở đây để quyết định đó dựa trên số thật — hai chỉ số
+          đồng hồ, hạn mức của đơn, và công thức — thay vì một con số xuất hiện từ hư không.
+
+          Cổng là `includedKmPerDay != null`, KHÔNG phải sự tồn tại của `excessMileage`: DTO khai
+          trường đó `!` (luôn có), nên phép kiểm object luôn đúng và khối "chưa đặt hạn mức" sẽ
+          hiện trên MỌI đơn. Xe không đặt hạn mức thì không có gì để nói, và một dòng thừa trên
+          màn hình đang nói về tiền là nhiễu. Cùng cổng với web.
+        */}
+        {showsExcessMileageFacts(data.excessMileage) ? (
+          <YStack gap={space.sm}>
+            <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+              {tMileage('title')}
+            </Text>
+            <ExcessMileageFacts suggestion={data.excessMileage} />
+          </YStack>
+        ) : null}
 
         {/* Cọc */}
         <YStack gap={space.xs}>

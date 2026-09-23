@@ -28,6 +28,7 @@ import { RadioField } from '@/components/ui/RadioField';
 import { TextField } from '@/components/ui/TextField';
 import {
   CollateralPolicySection,
+  MileagePolicySection,
   ToggleRow,
 } from '@/features/rental-policies/components/PolicySections';
 import { formToSaveInput, policyToForm } from '@/features/rental-policies/form';
@@ -241,7 +242,10 @@ function TermsForm({
         collateralEditable &&
         (formState.dirtyFields.collateralMode ||
           formState.dirtyFields.depositAmount ||
-          formState.dirtyFields.collateralAssetTypes);
+          formState.dirtyFields.collateralAssetTypes ||
+          formState.dirtyFields.mileageLimitEnabled ||
+          formState.dirtyFields.includedDistanceKmPerDay ||
+          formState.dirtyFields.excessDistanceFeePerKm);
       if (policyTouched) {
         await savePricing.mutateAsync({
           source: POLICY_SOURCE.VEHICLE,
@@ -322,6 +326,7 @@ function TermsForm({
               */
               optionDescriptions={{ [COLLATERAL_MODE.NONE]: t('collateralNoneHint') }}
             />
+            <MileagePolicySection control={control} disabled={!canEdit || !editingCollateral} />
           </YStack>
         </Card>
       )}

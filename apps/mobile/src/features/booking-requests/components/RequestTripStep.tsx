@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Controller, useWatch } from 'react-hook-form';
 import { Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { useTranslations } from 'use-intl';
 import type { components } from '@xeprime/types';
 import {
   DELIVERY_DISTANCE_STATUS,
+  DELIVERY_MANUAL_REASON,
   PICKUP_PREFERENCE,
   PICKUP_PREFERENCE_VALUES,
   ROUTE_TYPE,
@@ -21,6 +22,7 @@ import {
   type Dayjs,
   type RentalMode,
 } from '@xeprime/domain';
+import { Callout, CalloutBody } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { DatePickerSheet } from '@/components/ui/DatePickerSheet';
@@ -37,6 +39,8 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 
+import type { DeliveryDistance } from '../api';
+import { deliveryEstimateState } from '../delivery-estimate-state';
 import { useDeliveryDistance } from '../hooks/use-booking-request-flow';
 import type { RequestForm } from '../RequestBookingScreen';
 
@@ -72,7 +76,7 @@ const DELIVERY_PIN_NAMES = {
  *
  * Web cũng gộp: tách thành hai bước làm khách phải bấm "Tiếp tục" cho một màn chỉ có hai ô.
  * Điều kiện hiện/ẩn thì y hệt web và đến từ chính DỮ LIỆU XE:
- *   - giao tận nơi chỉ hỏi khi `deliveryEnabled` của xe đang bật;
+ *   - giao tận nơi chỉ hỏi khi CHÍNH SÁCH HIỆU LỰC cho phép (`deliveryAvailable`);
  *   - lộ trình + địa chỉ đón chỉ hỏi với dịch vụ có tài xế;
  *   - gói tháng + nguyện vọng nhận xe chỉ hỏi với thuê dài hạn (ADR 0011).
  */
@@ -124,10 +128,22 @@ export function RequestTripStep({
   const routeType = useWatch({ control: form.control, name: 'routeType' });
   const deliveryRequested = useWatch({ control: form.control, name: 'deliveryRequested' });
 
+  const deliveryAvailable = Boolean(listing.deliveryAvailable);
   const withDriver = serviceType === SERVICE_TYPE.WITH_DRIVER;
   const longTerm = serviceType === SERVICE_TYPE.LONG_TERM;
   const interCity =
     routeType === ROUTE_TYPE.INTER_CITY || routeType === ROUTE_TYPE.INTER_CITY_ONE_WAY;
+
+  /*
+   * Chính sách tắt giao xe mà form còn giữ lựa chọn cũ (khách đổi dịch vụ, hoặc hồ sơ xe về
+   * muộn) ⇒ kéo về tự nhận. Thiếu bước này thì payload vẫn mang `deliveryRequested` trong khi
+   * giao diện không còn ô nào để sửa, và backend từ chối ở đúng nút cuối cùng.
+   */
+  useEffect(() => {
+    if (!deliveryAvailable && form.getValues('deliveryRequested')) {
+      form.setValue('deliveryRequested', false, { shouldValidate: true });
+    }
+  }, [deliveryAvailable, form]);
 
   return (
     <YStack gap={space.lg}>
@@ -235,10 +251,18 @@ export function RequestTripStep({
       ) : null}
 
       {/*
-        Giao tận nơi chỉ hỏi khi chính sách giao nhận của xe ĐANG BẬT — server từ chối
-        `deliveryRequested` với xe không bật, nên bày ra ở đây là hứa một thứ sẽ bị từ chối.
+        Cổng là `deliveryAvailable`, KHÔNG phải `deliveryEnabled` — hai cờ này lệch nhau được,
+        và DTO của API nói thẳng điều đó:
+
+          - `deliveryEnabled`  = TIỆN ÍCH khai trên hồ sơ xe, chỉ để gắn chip trên thẻ/trang xe;
+          - `deliveryAvailable` = CHÍNH SÁCH HIỆU LỰC (`rental_policies`), đúng thứ
+            `BookingRequestsService` dùng để nhận hay từ chối `deliveryRequested`.
+
+        Hỏi nhầm cờ hỏng theo cả hai chiều: tiện ích bật mà chính sách tắt thì khách đi hết luồng
+        rồi ăn `DELIVERY_NOT_SUPPORTED` ở đúng nút cuối; ngược lại thì app giấu mất một lựa chọn
+        server vẫn nhận.
       */}
-      {!withDriver && listing.deliveryEnabled ? (
+      {!withDriver && deliveryAvailable ? (
         /*
           `boxed={false}`: hai thẻ lựa chọn bên dưới ĐÃ là mặt phẳng có viền, lồng chúng vào một
           thẻ nữa là viền trong viền. Web chia đúng như vậy — nhóm lựa chọn để trần
@@ -295,7 +319,7 @@ export function RequestTripStep({
         Xe TẮT giao nhận ⇒ chỉ còn một cách nhận xe. Vẫn hiện ra, nhưng là THÔNG TIN chứ không
         phải câu hỏi — ẩn hẳn thì khách không biết phải tới đâu lấy xe cho tới bước Xác nhận.
       */}
-      {!withDriver && !listing.deliveryEnabled ? (
+      {!withDriver && !deliveryAvailable ? (
         <FormSection title={t('pickup.groupLabel')} icon="location-outline" boxed={false}>
           <XStack
             ai="center"
@@ -425,15 +449,21 @@ function PickupOption({
   );
 }
 
-/** Địa chỉ điểm nhận xe, gộp tên chi nhánh + địa chỉ + tỉnh. `null` = xe chưa khai điểm nhận. */
+/**
+ * Địa chỉ điểm nhận xe. `null` = xe chưa khai điểm nhận.
+ *
+ * Chỉ `address`, KHÔNG nối thêm `provinceName` — cùng thứ web hiển thị. Chuỗi `address` do server
+ * ghép bằng `formatAddress` và đã MANG tỉnh ở cuối, nên nối thêm cho ra "… Hồ Chí Minh, Hồ Chí
+ * Minh". `provinceName` vẫn có ích, nhưng ở chỗ khác: nó là mốc để hỏi bản đồ, không phải chữ
+ * để đọc.
+ */
 function pickupPointLabel(listing: PublicListingDetail): string | null {
-  const point = listing.pickupPoint;
-  if (!point) return null;
-  return [point.address, point.provinceName].filter(Boolean).join(', ');
+  return listing.pickupPoint?.address ?? null;
 }
 
 /** Chờ khách gõ xong địa chỉ rồi mới tra — mỗi phím một lượt gọi bản đồ là đốt hạn mức. */
 const ADDRESS_DEBOUNCE_MS = 600;
+
 
 /**
  * Ước lượng khoảng cách và phí giao xe.
@@ -445,7 +475,14 @@ const ADDRESS_DEBOUNCE_MS = 600;
  * Con số là **ƯỚC LƯỢNG một chiều theo đường bộ**; chủ xe vẫn chốt phí trên đơn (ADR 0014). Vì
  * thế nó nằm ở dòng ghi chú, không cộng vào tổng tiền nào.
  */
-function DeliveryEstimate({ form, vehicleId }: { form: RequestForm; vehicleId: string }) {
+/**
+ * Quãng đường + phí giao dự kiến.
+ *
+ * **Bước Xác nhận dùng lại ĐÚNG component này, không dựng bản thứ hai.** Bảy ngả rẽ của nó
+ * (auto · ba lý do `manual` · không tìm thấy địa chỉ · chưa cấu hình · đang tính) phải nói y hệt
+ * nhau ở cả hai chỗ — cùng lý do khiến web tách nó ra thay vì chép lại.
+ */
+export function DeliveryEstimate({ form, vehicleId }: { form: RequestForm; vehicleId: string }) {
   const t = useTranslations('BookingRequests.flow');
   const fmt = useAppFormat();
 
@@ -455,9 +492,20 @@ function DeliveryEstimate({ form, vehicleId }: { form: RequestForm; vehicleId: s
   const debounced = useDebouncedValue(address ?? '', ADDRESS_DEBOUNCE_MS);
   // Ghim khách đã xác nhận THẮNG chuỗi chữ — xem `deliveryDistance` ở tầng api.
   const pin = lat != null && lng != null ? { lat, lng } : null;
-  const query = useDeliveryDistance(vehicleId, debounced.trim(), pin);
+  const typed = address?.trim() ?? '';
+  const settledAddress = debounced.trim();
+  /* Bốn phép kiểm — xem `deliveryEstimateState`, nơi có test cho ca lệch một nhịp. */
+  const { queryable, askable, settled } = deliveryEstimateState({
+    typed,
+    debounced: settledAddress,
+    hasPin: pin != null,
+    fetching: false,
+  });
+  const query = useDeliveryDistance(vehicleId, settledAddress, pin, queryable);
+  const current = askable && settled && !query.isFetching;
 
-  if (query.isFetching) {
+  /* Chỉ "đang tính" khi thật sự có thứ để hỏi — địa chỉ còn quá ngắn thì không treo spinner. */
+  if (askable && !current) {
     return (
       <Text col={colors.textMuted} fos={fontSize.label}>
         {t('pickup.estimating')}
@@ -465,7 +513,7 @@ function DeliveryEstimate({ form, vehicleId }: { form: RequestForm; vehicleId: s
     );
   }
 
-  const delivery = query.data;
+  const delivery = current ? query.data : undefined;
   if (!delivery) {
     return (
       <Text col={colors.textMuted} fos={fontSize.label}>
@@ -497,15 +545,13 @@ function DeliveryEstimate({ form, vehicleId }: { form: RequestForm; vehicleId: s
           </Text>
         </>
       ) : delivery.status === DELIVERY_DISTANCE_STATUS.MANUAL ? (
-        <Text col={colors.textMuted} fos={fontSize.label}>
-          {delivery.distanceKm != null
-            ? t('pickup.manualWithDistance', { distance: fmt.distanceKm(delivery.distanceKm) })
-            : t('pickup.feeNote')}
-        </Text>
+        <ManualNotice delivery={delivery} />
       ) : delivery.status === DELIVERY_DISTANCE_STATUS.ADDRESS_NOT_FOUND ? (
-        <Text col={colors.warning} fos={fontSize.label}>
-          {t('pickup.addressNotFound')}
-        </Text>
+        /* Việc khách SỬA ĐƯỢC — nói thẳng phải sửa gì, và tuyệt đối không gọi nó là
+           "ngoài phạm vi": hai câu đó dẫn tới hai hành động khác hẳn nhau. */
+        <Callout tone="info" title={t('pickup.addressNotFoundTitle')}>
+          <CalloutBody>{t('pickup.addressNotFound')}</CalloutBody>
+        </Callout>
       ) : (
         <Text col={colors.textMuted} fos={fontSize.label}>
           {t('pickup.feeNote')}
@@ -519,6 +565,72 @@ function DeliveryEstimate({ form, vehicleId }: { form: RequestForm; vehicleId: s
         </Text>
       ) : null}
     </YStack>
+  );
+}
+
+/**
+ * Ba lý do KHÁC HẲN nhau đằng sau cùng một trạng thái `manual`.
+ *
+ * Trước đợt này app gộp cả ba thành một dòng chữ xám: "ngoài phạm vi báo giá tự động". Câu đó
+ * SAI với hai trong ba ca, và sai theo hướng đổ lỗi cho khách:
+ *
+ * | Lý do | Ai gây ra | Khách phải làm gì |
+ * | --- | --- | --- |
+ * | `provider_unavailable` | sự cố phía hệ thống | không gì cả — im lặng rơi về luồng cũ (ADR 0018 §4) |
+ * | `route_unavailable` | bản đồ không tìm được đường bộ | không gì cả, nhưng phải được BÁO |
+ * | ngoài bán kính | địa chỉ thật sự xa | cân nhắc, và biết CÁCH BAO XA so với bán kính nào |
+ *
+ * Ca đầu cố ý im lặng: đổ một cảnh báo lên đầu khách vì một sự cố họ không liên quan và không
+ * làm gì được là tự tạo ra một rào cản. Hai ca sau đều kèm câu "vẫn gửi được yêu cầu" — thiếu
+ * nó thì một dải cảnh báo đọc ra như một lệnh cấm.
+ */
+function ManualNotice({ delivery }: { delivery: DeliveryDistance }) {
+  const t = useTranslations('BookingRequests.flow');
+  const fmt = useAppFormat();
+
+  if (delivery.manualReason === DELIVERY_MANUAL_REASON.PROVIDER_UNAVAILABLE) {
+    return (
+      <Text col={colors.textMuted} fos={fontSize.label}>
+        {t('pickup.feeNote')}
+      </Text>
+    );
+  }
+
+  if (delivery.manualReason === DELIVERY_MANUAL_REASON.ROUTE_UNAVAILABLE) {
+    return (
+      <Callout tone="info" title={t('pickup.routeUnavailableTitle')}>
+        <CalloutBody>{t('pickup.routeUnavailableBody')}</CalloutBody>
+        <CalloutBody>{t('pickup.stillCanSubmit')}</CalloutBody>
+      </Callout>
+    );
+  }
+
+  /*
+   * Ngoài bán kính — nói ĐƯỢC BAO NHIÊU thì nói bấy nhiêu, theo thứ tự đáng tin giảm dần:
+   * quãng đường bộ thật, rồi đường chim bay, rồi chỉ còn một câu chung. Một con số kèm bán
+   * kính cho khách tự quyết; "ngoài phạm vi" trơ trọi thì không.
+   */
+  const radius = delivery.maxRadiusKm;
+  const reason =
+    delivery.distanceKm != null && radius != null
+      ? t('pickup.outsideRadiusRoad', {
+          distance: fmt.distanceKm(delivery.distanceKm),
+          radius: fmt.km(radius),
+        })
+      : delivery.straightLineKm != null && radius != null
+        ? t('pickup.outsideRadiusStraight', {
+            distance: fmt.distanceKm(delivery.straightLineKm),
+            radius: fmt.km(radius),
+          })
+        : delivery.distanceKm != null
+          ? t('pickup.manualWithDistance', { distance: fmt.distanceKm(delivery.distanceKm) })
+          : t('pickup.outsideRadiusUnknown');
+
+  return (
+    <Callout tone="warning" title={t('pickup.outsideRadiusTitle')}>
+      <CalloutBody>{reason}</CalloutBody>
+      <CalloutBody>{t('pickup.stillCanSubmit')}</CalloutBody>
+    </Callout>
   );
 }
 

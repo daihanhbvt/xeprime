@@ -702,15 +702,15 @@ function RequestBookingBody({
           {state.step === REQUEST_STEP.REVIEW ? (
             <RequestReviewStep
               values={form.getValues()}
+              form={form}
               listing={listing}
               rentalMode={rentalMode}
               accountPhoneVerified={flow.accountPhoneVerified}
-              promoSlot={promoField}
             />
           ) : null}
 
-          {/* Bảng giá đầy đủ CHỈ ở bước Chuyến đi — bước Xác nhận đã có bảng giá riêng. */}
-          {state.step === REQUEST_STEP.TRIP ? (
+          {/* Chung một instance "chi tiết" cho cả hai bước — cùng cách web ghép `priceDetail`. */}
+          {state.step === REQUEST_STEP.TRIP || state.step === REQUEST_STEP.REVIEW ? (
             <BookingPriceSummary
               listing={listing}
               serviceType={serviceType}

@@ -27,6 +27,13 @@ interface CardProps {
   padded?: boolean;
   onPress?: () => void;
   accessibilityLabel?: string;
+  /**
+   * Bo góc riêng cho thẻ này — mặc định `radius.lg`.
+   *
+   * Chỉ dùng khi một thẻ cụ thể cần nổi bật hơn mặt bằng chung (thẻ tìm kiếm trang chủ đè lên
+   * banner chẳng hạn); không đổi mặc định chung vì `radius.lg` đang khớp input/modal toàn app.
+   */
+  radius?: number;
 }
 
 /**
@@ -43,6 +50,7 @@ export function Card({
   padded = true,
   onPress,
   accessibilityLabel,
+  radius: cornerRadius = radius.lg,
 }: CardProps) {
   const skin = TONE[tone];
   const shadow: ViewStyle = lift === 'flat' ? {} : elevation[lift];
@@ -50,7 +58,7 @@ export function Card({
   const body = (
     <YStack
       bg={skin.bg}
-      br={radius.lg}
+      br={cornerRadius}
       bw={1}
       bc={skin.border}
       ov="hidden"

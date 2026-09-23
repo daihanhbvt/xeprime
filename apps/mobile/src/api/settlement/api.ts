@@ -10,6 +10,7 @@ export type DepositRefund = Schemas['DepositRefundDto'];
 export type RecordRefundInput = Schemas['RecordDepositRefundDto'];
 export type CorrectRefundInput = Schemas['CorrectDepositRefundDto'];
 export type OvertimeSuggestion = Schemas['OvertimeSuggestionDto'];
+export type ExcessMileageSuggestion = Schemas['ExcessMileageSuggestionDto'];
 
 /**
  * Quyết toán cuối chuyến — gắn thẳng vào route đơn thuê, không có "đơn" thứ hai.
