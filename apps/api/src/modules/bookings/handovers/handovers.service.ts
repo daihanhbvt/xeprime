@@ -8,7 +8,6 @@ import {
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
-  BOOKING_STATUS,
   HANDOVER_CONFIRM_BOOKING_TARGET,
   HANDOVER_ENERGY_KIND,
   HANDOVER_MAX_PHOTOS,
@@ -431,35 +430,23 @@ export class HandoversService {
         const target = HANDOVER_CONFIRM_BOOKING_TARGET[type];
         if (target) {
           /**
-           * Đơn shop tự lập nằm ở `reserved`, và bản đồ trạng thái KHÔNG có cạnh thẳng
-           * `reserved → active` — cố ý: `POST /bookings/:id/transition` là endpoint chung, thêm
-           * cạnh đó vào là mở một đường đổi đơn sang `Đang thuê` mà chẳng cần biên bản bàn giao
-           * nào (Wave 10 §3: trạng thái đơn chỉ đổi như HỆ QUẢ của một lần xác nhận thật).
+           * Đơn chuyển thẳng `reserved → active` trong CÙNG transaction với việc xác nhận biên
+           * bản (ADR 0047) — một cạnh trực tiếp, không còn đường vòng qua `confirmed`.
            *
-           * Giao xe hàm ý shop đã xác nhận đơn, nên ở đây đi đúng hai cạnh hợp lệ trong CÙNG
-           * transaction. Chặng giữa `silent` vì nó là bút toán, không phải một sự kiện người
-           * trong shop cần nhận tin riêng.
+           * Trước đây bảng chuyển trạng thái cố ý KHÔNG có cạnh thẳng này: `POST
+           * /bookings/:id/transition` là endpoint CHUNG, và thêm cạnh đó vào bảng nghĩa là mở
+           * một đường đổi đơn sang `Đang thuê` mà chẳng cần biên bản bàn giao nào (Wave 10 §3:
+           * trạng thái đơn chỉ đổi như HỆ QUẢ của một lần xác nhận thật). Giờ an toàn thêm cạnh
+           * thẳng vì `TransitionBookingDto` đã khoá endpoint công khai đó chỉ còn nhận
+           * `cancelled`/`no_show` — `active` chỉ còn tới được từ đúng nơi này, không qua
+           * client. Xem docblock `BOOKING_STATUS_TRANSITIONS`.
            */
-          let from = bookingStatus;
-          if (target === BOOKING_STATUS.ACTIVE && from === BOOKING_STATUS.RESERVED) {
-            await this.bookings.transitionWithinTx(
-              tx,
-              tenantId,
-              bookingId,
-              userId,
-              from,
-              BOOKING_STATUS.CONFIRMED,
-              { silent: true },
-            );
-            from = BOOKING_STATUS.CONFIRMED;
-          }
-
           await this.bookings.transitionWithinTx(
             tx,
             tenantId,
             bookingId,
             userId,
-            from,
+            bookingStatus,
             target,
             // Giờ nhận/trả THỰC TẾ của đơn lấy mốc vận hành, không phải lúc bấm ghi nhận.
             type === HANDOVER_TYPE.PICKUP

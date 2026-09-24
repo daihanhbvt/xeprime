@@ -1,7 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
   BILLING_MODE,
-  BOOKING_STATUS,
   HANDOVER_PHOTO_SLOT,
   HANDOVER_TYPE,
   MEMBERSHIP_STATUS,
@@ -272,7 +271,8 @@ async function makeMissingReturnKm(vehicleId: string, dayOffset: number) {
     returnAt: days(dayOffset + 3).toISOString(),
     baseAmount: '1000000',
   });
-  await bookings.transition(tenantId, booking.id, ownerId, { status: BOOKING_STATUS.CONFIRMED });
+  // Đơn ở `reserved` đã đủ điều kiện mở bàn giao GIAO (ADR 0047) — không cần đệm qua `confirmed`
+  // nữa; vòng lặp bên dưới tự đưa đơn sang `active` ở lượt PICKUP.
 
   // KM giao phải ≥ KM hiện tại của xe (luật không-tụt-số của Wave 6) — lấy từ chính hồ sơ.
   const profile = await maintenance.getProfile(tenantId, vehicleId);

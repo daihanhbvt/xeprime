@@ -47,6 +47,10 @@ export const MESSAGE_NAMESPACES = [
   // được viện dẫn (có ngày hiệu lực, sửa là phải dời ngày), không phải chữ trang trí của chợ.
   { file: 'legal', namespace: 'Legal' },
   { file: 'support', namespace: 'Support' },
+  // Hai trang GIỚI THIỆU công khai. Tách khỏi `marketplace` vì chúng là nội dung tiếp thị có
+  // vòng đời riêng (đổi khi sản phẩm đổi), không phải chữ của chính chợ xe.
+  { file: 'about', namespace: 'About' },
+  { file: 'app-promo', namespace: 'AppPromo' },
 
   // — Cổng quản lý —
   { file: 'list-your-vehicle', namespace: 'ListYourVehicle' },
@@ -66,6 +70,9 @@ export const MESSAGE_NAMESPACES = [
   { file: 'finance', namespace: 'Finance' },
   // Quản trị gói dịch vụ (admin nền tảng) — chuyển đợt W1 (ADR 0015/0020).
   { file: 'admin-catalog', namespace: 'AdminCatalog' },
+  // Giám sát xe toàn hệ thống của admin nền tảng — chuyển sang t() ngày 23/09/2026 cùng đợt
+  // tách trục hiển thị (ADR 0048), vì màn này phải giải thích được vì sao gỡ ẩn không đủ.
+  { file: 'admin-vehicles', namespace: 'AdminVehicles' },
   { file: 'admin-plans', namespace: 'AdminPlans' },
   // Hàng đợi duyệt hồ sơ gian hàng/xe của admin nền tảng — chuyển sang t() ngày 14/09/2026.
   { file: 'approvals', namespace: 'Approvals' },

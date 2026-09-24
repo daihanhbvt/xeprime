@@ -16,8 +16,6 @@ import {
   ROUTE_TYPE,
   routeTypeLabel,
   SERVICE_TYPE,
-  TENANT_STATUS,
-  VEHICLE_PUBLIC_STATUS,
   type BookingPriceSnapshot,
   type CollateralAssetType,
   type CollateralMode,
@@ -34,6 +32,7 @@ import { AuditService } from '../audit/audit.service';
 import { DepositPolicyService } from '../deposit-policy/deposit-policy.service';
 import { FeePoliciesService } from '../fee-policies/fee-policies.service';
 import { ListingsService } from '../public-listings/listings.service';
+import { marketplaceVehicleWhere } from '../../common/marketplace-vehicle-scope';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   DeliverySummaryDto,
@@ -222,12 +221,8 @@ export class PricingService {
     },
   ): Promise<PromoQuoteContext | null> {
     const vehicle = await this.prisma.vehicle.findFirst({
-      where: {
-        id: vehicleId,
-        deletedAt: null,
-        publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
-        tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
-      },
+      // Cùng cổng vào với `publicQuote` — xem `marketplaceVehicleWhere`.
+      where: { id: vehicleId, ...marketplaceVehicleWhere() },
       select: {
         id: true,
         tenantId: true,
@@ -1257,12 +1252,13 @@ export class PricingService {
   ): Promise<PublicQuoteDto> {
     const { serviceType, routeType } = query;
     const vehicle = await this.prisma.vehicle.findFirst({
-      where: {
-        id: vehicleId,
-        deletedAt: null,
-        publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
-        tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
-      },
+      /*
+       * Báo giá công khai chỉ cho chiếc xe ĐANG THẬT SỰ nằm ngoài chợ (`marketplaceVehicleWhere`
+       * — gồm cả công tắc hiển thị của chủ xe, ADR 0048). Không thì một link cũ vẫn dựng được
+       * bảng giá đầy đủ cho một chiếc xe đã cất đi, và khách đi tiếp tới bước gửi yêu cầu chỉ để
+       * nhận 404 ở đó.
+       */
+      where: { id: vehicleId, ...marketplaceVehicleWhere() },
       select: {
         id: true,
         tenantId: true,

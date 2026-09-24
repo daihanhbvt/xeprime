@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { LEGAL_DOC_VALUES, LEGAL_EFFECTIVE_FROM, legalPath } from '@/constants/legal';
 import { ROUTES } from '@/constants/routes';
+import { ContentSection } from '@/features/content-page/components/ContentSection';
+import { FeatureCard } from '@/features/content-page/components/FeatureCard';
+import { InfoNote } from '@/features/content-page/components/InfoNote';
+import { PageHero } from '@/features/content-page/components/PageHero';
 import { getAppFormat } from '@/i18n/server-format';
 import styles from './page.module.css';
 
@@ -16,6 +19,9 @@ import styles from './page.module.css';
  *  2. Email, hợp đồng và chữ ký cần MỘT địa chỉ để viện dẫn cả bộ, không phải bốn.
  *  3. Nó là nơi duy nhất nói ra thứ mà từng văn bản riêng lẻ không nói: bốn bản này là một bộ,
  *     cùng một ngày hiệu lực, và chỗ để phản ánh là trung tâm hỗ trợ.
+ *
+ * Dùng chung `PageHero` / `ContentSection` / `FeatureCard` với trang giới thiệu, trang ứng dụng
+ * và trung tâm trợ giúp — bốn khu này người dùng đi qua lại liên tục, nên chúng phải là MỘT hệ.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('Legal');
@@ -30,56 +36,54 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function LegalIndexPage() {
   const t = await getTranslations('Legal');
+  const tNav = await getTranslations('Navigation.public');
   const fmt = await getAppFormat();
   const effectiveFrom = fmt.dateKey(LEGAL_EFFECTIVE_FROM);
 
   return (
-    <div className={styles.page}>
-      <aside className={styles.draft} role="note">
-        <strong className={styles.draftTitle}>{t('draftBanner.title')}</strong>
-        <p className={styles.draftBody}>{t('draftBanner.body')}</p>
-      </aside>
+    <>
+      <PageHero
+        breadcrumb={[{ label: tNav('home'), href: ROUTES.HOME }, { label: t('index.title') }]}
+        eyebrow={t('meta.eyebrow')}
+        title={t('index.title')}
+        lead={t('index.subtitle', { date: effectiveFrom })}
+        meta={t('meta.effectiveFrom', { date: effectiveFrom })}
+      />
 
-      <header className={styles.header}>
-        <h1 className={styles.title}>{t('index.title')}</h1>
-        <p className={styles.subtitle}>{t('index.subtitle', { date: effectiveFrom })}</p>
-      </header>
+      <div className={styles.page}>
+        <InfoNote tone="warning" title={t('draftBanner.title')}>
+          <p>{t('draftBanner.body')}</p>
+        </InfoNote>
 
-      {/*
-        Danh sách này KHÔNG dùng `LegalDocLinks`: ở đây mỗi văn bản cần cả câu tóm tắt để người
-        đọc chọn đúng bản cần, còn `LegalDocLinks` là dải liên kết trần cho những chỗ pháp lý
-        chỉ là mục phụ.
-      */}
-      <ul className={styles.docs}>
-        {LEGAL_DOC_VALUES.map((doc) => (
-          <li key={doc}>
-            <Link href={legalPath.doc(doc)} className={styles.doc}>
-              <span className={styles.docTitle}>{t(`docs.${doc}.title` as never)}</span>
-              <span className={styles.docSummary}>{t(`docs.${doc}.summary` as never)}</span>
-              <span className={styles.docMeta}>
-                {t('meta.effectiveFrom', { date: effectiveFrom })}
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+        {/*
+          Danh sách này KHÔNG dùng `LegalDocLinks`: ở đây mỗi văn bản cần cả câu tóm tắt để
+          người đọc chọn đúng bản cần, còn `LegalDocLinks` là dải liên kết trần cho những chỗ
+          pháp lý chỉ là mục phụ.
+        */}
+        <ContentSection id="legal-docs" heading={t('index.title')}>
+          <div className={styles.docs}>
+            {LEGAL_DOC_VALUES.map((doc) => (
+              <FeatureCard
+                key={doc}
+                href={legalPath.doc(doc)}
+                title={t(`docs.${doc}.title` as never)}
+                desc={t(`docs.${doc}.summary` as never)}
+              />
+            ))}
+          </div>
+        </ContentSection>
 
-      <section className={styles.support} aria-labelledby="xp-legal-support">
-        <h2 id="xp-legal-support" className={styles.supportTitle}>
-          {t('index.supportHeading')}
-        </h2>
-        <p className={styles.supportBody}>{t('index.supportBody')}</p>
-        <Link href={ROUTES.SUPPORT} className={styles.supportLink}>
-          {t('index.supportLink')}
-        </Link>
-      </section>
-
-      <section className={styles.entity} aria-labelledby="xp-legal-entity">
-        <h2 id="xp-legal-entity" className={styles.entityTitle}>
-          {t('entity.heading')}
-        </h2>
-        <p className={styles.entityBody}>{t('entity.body')}</p>
-      </section>
-    </div>
+        <ContentSection id="legal-support" heading={t('index.supportHeading')}>
+          <div className={styles.notes}>
+            <FeatureCard
+              href={ROUTES.SUPPORT}
+              title={t('index.supportLink')}
+              desc={t('index.supportBody')}
+            />
+            <FeatureCard title={t('entity.heading')} desc={t('entity.body')} />
+          </div>
+        </ContentSection>
+      </div>
+    </>
   );
 }

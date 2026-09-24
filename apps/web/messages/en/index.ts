@@ -28,6 +28,8 @@ import trips from '@xeprime/domain/messages/en/trips.json';
 import account from '@xeprime/domain/messages/en/account.json';
 import legal from '@xeprime/domain/messages/en/legal.json';
 import support from '@xeprime/domain/messages/en/support.json';
+import about from '@xeprime/domain/messages/en/about.json';
+import appPromo from '@xeprime/domain/messages/en/app-promo.json';
 import listYourVehicle from '@xeprime/domain/messages/en/list-your-vehicle.json';
 import manageCommon from '@xeprime/domain/messages/en/manage-common.json';
 import dashboard from '@xeprime/domain/messages/en/dashboard.json';
@@ -42,6 +44,7 @@ import branches from '@xeprime/domain/messages/en/branches.json';
 import customers from '@xeprime/domain/messages/en/customers.json';
 import finance from '@xeprime/domain/messages/en/finance.json';
 import adminCatalog from '@xeprime/domain/messages/en/admin-catalog.json';
+import adminVehicles from '@xeprime/domain/messages/en/admin-vehicles.json';
 import adminPlans from '@xeprime/domain/messages/en/admin-plans.json';
 import approvals from '@xeprime/domain/messages/en/approvals.json';
 import bankTransactions from '@xeprime/domain/messages/en/bank-transactions.json';
@@ -76,6 +79,8 @@ const messages = {
   Account: account,
   Legal: legal,
   Support: support,
+  About: about,
+  AppPromo: appPromo,
   ListYourVehicle: listYourVehicle,
   ManageCommon: manageCommon,
   Dashboard: dashboard,
@@ -90,6 +95,7 @@ const messages = {
   Customers: customers,
   Finance: finance,
   AdminCatalog: adminCatalog,
+  AdminVehicles: adminVehicles,
   AdminPlans: adminPlans,
   Approvals: approvals,
   BankTransactions: bankTransactions,

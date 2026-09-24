@@ -1,5 +1,6 @@
 'use client';
 
+import { CarOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -20,6 +21,10 @@ import { RequestBookingModal } from './RequestBookingModal';
  * tiết.
  *
  * `listing` truyền xuống khi nơi gọi ĐÃ có hồ sơ xe đầy đủ, để modal khỏi tải lại.
+ *
+ * Icon để `aria-hidden`: `@ant-design/icons` render ra `<span role="img" aria-label="car">`, và
+ * nếu không ẩn thì tên khả truy cập của nút thành `car Chọn thuê` — trình đọc màn hình đọc thừa
+ * một từ vô nghĩa, và mọi truy vấn theo nhãn nút đều trượt.
  */
 export function RequestBookingButton({
   vehicleId,
@@ -56,6 +61,7 @@ export function RequestBookingButton({
     <>
       <Button
         type="primary"
+        icon={<CarOutlined aria-hidden />}
         block={block}
         size={size}
         className={className}

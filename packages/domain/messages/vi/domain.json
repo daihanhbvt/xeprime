@@ -51,7 +51,7 @@
     "cancelled_by_host": "Chủ xe đã huỷ"
   },
   "bookingStatus": {
-    "reserved": "Đã giữ xe",
+    "reserved": "Chờ giao xe",
     "confirmed": "Đã xác nhận",
     "active": "Đang thuê",
     "completed": "Hoàn thành",
@@ -187,6 +187,11 @@
   "handoverType": {
     "pickup": "Giao xe",
     "return": "Nhận xe trả"
+  },
+  "bookingHandoverPlace": {
+    "delivery": "Giao tận nơi",
+    "driver_pickup": "Đón khách tại",
+    "branch": "Khách nhận tại"
   },
   "holidayEventType": {
     "public_holiday": "Nghỉ lễ chính thức",
@@ -588,8 +593,16 @@
     "approved_public": "Đã duyệt public",
     "needs_revision": "Cần bổ sung",
     "rejected": "Bị từ chối",
-    "hidden": "Đã ẩn",
+    "hidden": "Bị nền tảng ẩn",
     "archived": "Ngừng sử dụng"
+  },
+  "marketplaceVisibility": {
+    "visible": "Đang hiển thị",
+    "owner_paused": "Chủ xe tạm ẩn",
+    "not_approved": "Chưa được duyệt",
+    "platform_hidden": "Bị nền tảng ẩn",
+    "shop_inactive": "Gian hàng ngừng hoạt động",
+    "archived": "Đã lưu trữ"
   },
   "vehicleSourceType": {
     "owned": "Sở hữu",

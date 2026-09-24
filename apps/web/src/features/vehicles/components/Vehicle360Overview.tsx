@@ -62,8 +62,14 @@ import { vehicleSchedulePath } from '../calendar-link';
 import { usePublicationLabels } from '../hooks/use-publication-labels';
 import { useVehicleSource } from '../hooks/use-vehicle-source';
 import { discountedPriceVnd } from '../pricing';
+import { vehiclePublicationTask } from '../publication';
 import type { Vehicle360Summary, VehicleBookingBrief, VehicleDetail } from '../types';
 import { VehicleAlertList } from './VehicleAlerts';
+import { MarketplaceVisibilitySwitch } from './MarketplaceVisibilitySwitch';
+import {
+  MARKETPLACE_SWITCH_ANCHOR,
+  VehiclePublicationTaskItem,
+} from './VehiclePublicationTaskItem';
 import { VehiclePublicReviewPanel } from './VehiclePublicReviewPanel';
 import styles from './Vehicle360Overview.module.css';
 import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
@@ -146,7 +152,12 @@ export function Vehicle360Overview({
       />
 
       <div className={styles.quickRow}>
-        <TodoCard summary={summary} loading={summaryLoading} failed={summaryFailed} />
+        <TodoCard
+          vehicle={vehicle}
+          summary={summary}
+          loading={summaryLoading}
+          failed={summaryFailed}
+        />
         {summary?.upcomingBookings !== undefined || summaryLoading || summaryFailed ? (
           <ScheduleCard
             bookings={summary?.upcomingBookings}
@@ -319,6 +330,11 @@ function ProfileHeader({
                 group="vehicleOperationStatus"
               />
             </span>
+            {/*
+              Trục KIỂM DUYỆT (ADR 0048). Trục thứ ba — "xe có ngoài chợ không" — KHÔNG nằm ở
+              đây mà ở cột thao tác bên phải, cạnh chính cái công tắc đổi nó. Hai chỗ nói cùng
+              một điều là hai chỗ để lệch nhau, và chỗ có nút bấm là chỗ người dùng nhìn.
+            */}
             <span className={styles.axis}>
               <span className={styles.axisLabel}>{t('axisPublic')}</span>
               <StatusTag
@@ -330,49 +346,61 @@ function ProfileHeader({
           </div>
         </div>
 
-        <div className={styles.profileActions}>
-          {canEdit ? (
-            <Button type="primary" block onClick={onEdit}>
-              {t('edit')}
+        <div className={styles.profileActions} id={MARKETPLACE_SWITCH_ANCHOR}>
+          {/*
+            "Trên chợ" đứng TRÊN nhóm nút thao tác (ADR 0048): đây là thứ chủ xe kiểm tra thường
+            xuyên nhất, và trước 23/09/2026 nó nằm ở một thẻ gần cuối trang.
+          */}
+          <MarketplaceVisibilitySwitch vehicle={vehicle} />
+          {/*
+            Nhóm nút tách riêng khỏi hàng công tắc vì chúng biến mất ở hai nhịp khác nhau: ở
+            mobile các nút chuyển xuống thanh CTA đáy màn (`mobileActions`), còn "Trên chợ" thì
+            KHÔNG có chỗ nào khác để đi và phải ở lại đầu trang.
+          */}
+          <div className={styles.profileButtons}>
+            {canEdit ? (
+              <Button type="primary" block onClick={onEdit}>
+                {t('edit')}
+              </Button>
+            ) : null}
+            <Button block onClick={onSchedule}>
+              {t('schedule')}
             </Button>
-          ) : null}
-          <Button block onClick={onSchedule}>
-            {t('schedule')}
-          </Button>
-          {menuItems.length > 0 ? (
+            {menuItems.length > 0 ? (
             // Xác nhận điều khiển bằng state và neo vào nút ⋮ — mục menu đã biến mất khi menu
             // đóng, không còn chỗ khác để neo (cùng pattern với `RowActions`).
-            <Popconfirm
-              open={confirmingDelete}
-              trigger={[]}
-              title={t('deleteConfirmTitle', { name: vehicle.name })}
-              description={t('deleteConfirmBody')}
-              okText={tActions('delete')}
-              okButtonProps={{ danger: true, loading: deletePending }}
-              cancelText={tActions('cancel')}
-              onConfirm={() => {
-                setConfirmingDelete(false);
-                onDelete();
-              }}
-              onCancel={() => setConfirmingDelete(false)}
-            >
-              <Dropdown
-                menu={{
-                  items: menuItems,
-                  onClick: ({ key }) => {
-                    if (key === 'delete') setConfirmingDelete(true);
-                  },
+              <Popconfirm
+                open={confirmingDelete}
+                trigger={[]}
+                title={t('deleteConfirmTitle', { name: vehicle.name })}
+                description={t('deleteConfirmBody')}
+                okText={tActions('delete')}
+                okButtonProps={{ danger: true, loading: deletePending }}
+                cancelText={tActions('cancel')}
+                onConfirm={() => {
+                  setConfirmingDelete(false);
+                  onDelete();
                 }}
-                trigger={['click']}
+                onCancel={() => setConfirmingDelete(false)}
               >
-                <Button
-                  icon={decorativeIcon(<MoreOutlined />)}
-                  aria-label={t('moreActions', { name: vehicle.name })}
-                  loading={deletePending}
-                />
-              </Dropdown>
-            </Popconfirm>
-          ) : null}
+                <Dropdown
+                  menu={{
+                    items: menuItems,
+                    onClick: ({ key }) => {
+                      if (key === 'delete') setConfirmingDelete(true);
+                    },
+                  }}
+                  trigger={['click']}
+                >
+                  <Button
+                    icon={decorativeIcon(<MoreOutlined />)}
+                    aria-label={t('moreActions', { name: vehicle.name })}
+                    loading={deletePending}
+                  />
+                </Dropdown>
+              </Popconfirm>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -391,37 +419,71 @@ function ProfileHeader({
 /* ─── Ba thẻ nhanh ────────────────────────────────────────────────────────── */
 
 /**
- * Việc cần làm — lấy TỪ SERVER (`VehicleAlertsService`), cùng phép tính với thẻ xe ở danh sách.
+ * Cảnh báo server nói TRÙNG với việc "đưa xe lên chợ" dựng ở client.
  *
- * Wave 8 gỡ bản suy diễn tại chỗ trước đây: nó chỉ nhìn thấy điều kiện đăng công khai, nên xe
- * quá hạn bảo dưỡng hay thiếu KM trả vẫn hiện "Không có việc cần làm" — trang chi tiết và thẻ
- * xe kể hai câu chuyện khác nhau về cùng một xe.
+ * `VehicleAlertsService` chỉ nhìn thấy `public_status` + ba trường bắt buộc, nên nó cho ra hai
+ * dòng chữ không có nút ("Cần xử lý để xe hiển thị trên sàn", "Thiếu thông tin để gửi duyệt").
+ * Trang chi tiết có trong tay cả bản ghi xe nên dựng được việc ĐẦY ĐỦ, có checklist và có CTA —
+ * giữ cả hai là kể cùng một chuyện hai lần, lần thứ hai cụt hơn.
+ *
+ * Lọc ở ĐÂY chứ không ở server: thẻ xe ngoài danh sách vẫn cần hai cảnh báo đó, vì ở đó không
+ * có chỗ cho một việc có nút.
+ */
+const PUBLICATION_ALERT_KINDS: readonly string[] = [
+  VEHICLE_ALERT_KIND.PUBLIC_ACTION_REQUIRED,
+  VEHICLE_ALERT_KIND.MISSING_VEHICLE_INFO,
+];
+
+/**
+ * Việc cần làm — cảnh báo vận hành TỪ SERVER (`VehicleAlertsService`, cùng phép tính với thẻ xe
+ * ở danh sách) cộng MỘT việc "đưa xe lên chợ" dựng tại chỗ từ bản ghi xe (ADR 0048).
+ *
+ * Wave 8 gỡ bản suy diễn tại chỗ trước đây vì nó chỉ nhìn thấy điều kiện đăng công khai và bỏ
+ * sót bảo dưỡng/KM. Bản này KHÔNG quay lại lỗi đó: cảnh báo vận hành vẫn đến nguyên vẹn từ
+ * server và không bị sắp xếp lại; phần thêm vào là đúng một việc, và nó thay thế hai cảnh báo
+ * server nói trùng thay vì cộng thêm.
+ *
+ * Thứ tự: việc lên chợ mức `critical`/`warning` lên ĐẦU (xe không bán được thì mọi việc khác là
+ * thứ yếu); mức `info` — lời nhắc "xe đang tạm ẩn", "đang chờ duyệt" — xuống CUỐI, vì một gợi ý
+ * không được đẩy một chuyến sắp phải giao ra khỏi ba dòng đầu.
  */
 function TodoCard({
+  vehicle,
   summary,
   loading,
   failed,
 }: {
+  vehicle: VehicleDetail;
   summary: Vehicle360Summary | undefined;
   loading: boolean;
   failed: boolean;
 }) {
   const t = useTranslations('Vehicles.overview');
-  const alerts = summary?.alerts ?? [];
+  const task = vehiclePublicationTask(vehicle);
+  const alerts = (summary?.alerts ?? []).filter(
+    (alert) => !task || !PUBLICATION_ALERT_KINDS.includes(alert.kind),
+  );
+  // Gợi ý không phải "việc cần làm" nên không vào số đếm — badge là số việc thật.
+  const count = alerts.length + (task && task.tone !== 'info' ? 1 : 0);
+  const taskItem = task ? <VehiclePublicationTaskItem vehicle={vehicle} task={task} /> : null;
 
   return (
     <Card
       title={t('todo.title')}
-      extra={alerts.length > 0 ? <Badge count={alerts.length} /> : null}
+      extra={count > 0 ? <Badge count={count} /> : null}
       className={styles.quickCard}
     >
+      {task?.tone !== 'info' ? taskItem : null}
       {loading ? (
         <Skeleton active title={false} paragraph={{ rows: 2 }} />
       ) : failed || !summary ? (
         <p className={styles.muted}>{t('loadFailed')}</p>
       ) : (
-        <VehicleAlertList alerts={alerts} />
+        // `showEmpty` tắt khi đã có việc lên chợ: "Không có việc cần làm" ngay dưới một việc
+        // đang hiện là câu tự mâu thuẫn — và đó chính là lỗi đợt này sửa.
+        <VehicleAlertList alerts={alerts} showEmpty={!task} />
       )}
+      {task?.tone === 'info' ? taskItem : null}
     </Card>
   );
 }

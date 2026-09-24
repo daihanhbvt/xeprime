@@ -10,10 +10,14 @@ import {
   AUDIT_ACTOR_SCOPE,
   CANCELLATION_REASON_CATEGORY,
   CANCELLATION_STAGE,
+  BOOKING_HANDOVER_PLACE,
+  BOOKING_LIST_PRESET,
   BOOKING_NO_SHOW_GRACE_MINUTES,
   BOOKING_STATUS,
   BOOKING_STATUS_META,
   FEE_LINE,
+  HANDOVER_ELIGIBLE_BOOKING_STATUS,
+  HANDOVER_STATUS,
   HANDOVER_TYPE,
   isNoShowGracePassed,
   NOTIFICATION_TARGET_TYPE,
@@ -33,6 +37,7 @@ import {
   type DepositCollectionMode,
   type InsuranceConsentSource,
   type RentalTermsSnapshot,
+  type BookingListPreset,
   type BookingStatus,
   type PaginationMeta,
 } from '@xeprime/types';
@@ -84,16 +89,47 @@ const LIST_SELECT = {
   serviceFeeAmount: true,
   customerTotalAmount: true,
   createdAt: true,
-  vehicle: { select: { name: true, plateNumber: true } },
+  // Hai cột hành trình có mặt ở DANH SÁCH vì "nơi giao xe" suy từ chúng (xem `handoverPlaceOf`).
+  routeType: true,
+  pickupAddress: true,
+  vehicle: {
+    select: { name: true, plateNumber: true, branch: { select: { name: true } } },
+  },
   driver: { select: { id: true, name: true, phone: true } },
+  /*
+   * Biên bản GIAO XE còn hiệu lực. `take: 1` là chính xác chứ không phải phỏng đoán: partial
+   * unique `(booking_id, type) WHERE status <> 'canceled'` bảo đảm mỗi đơn chỉ có tối đa một
+   * bản mỗi chiều (xem docblock `VehicleHandover`).
+   */
+  handovers: {
+    where: { type: HANDOVER_TYPE.PICKUP, status: { not: HANDOVER_STATUS.CANCELED } },
+    select: { status: true },
+    take: 1,
+  },
+  /*
+   * Nơi GIAO tận tay khách sống ở YÊU CẦU chứ không ở đơn: `bookings` chưa bao giờ có cột
+   * `delivery_address` (đơn gian hàng tự lập không đi qua yêu cầu nào). Đọc qua quan hệ
+   * `request_booking` thay vì thêm cột thứ hai để rồi phải giữ hai cột đồng bộ.
+   */
+  bookingRequest: {
+    select: { deliveryRequested: true, deliveryAddress: true, deliveryAddressLine: true },
+  },
 } satisfies Prisma.BookingSelect;
 
 const DETAIL_SELECT = {
   ...LIST_SELECT,
   tenantCustomerId: true,
   // Ảnh đại diện xe: một cột trên chính bảng `vehicles`, không join gallery — chi tiết đơn
-  // cần NHẬN RA chiếc xe, không cần xem bộ ảnh.
-  vehicle: { select: { name: true, plateNumber: true, mainImageUrl: true } },
+  // cần NHẬN RA chiếc xe, không cần xem bộ ảnh. `branch` giữ lại từ LIST_SELECT: khối này
+  // GHI ĐÈ `vehicle` của bản spread, bỏ quên nó là `toListItem` mất nơi giao xe.
+  vehicle: {
+    select: {
+      name: true,
+      plateNumber: true,
+      mainImageUrl: true,
+      branch: { select: { name: true } },
+    },
+  },
   baseAmount: true,
   deliveryFee: true,
   discountAmount: true,
@@ -101,8 +137,8 @@ const DETAIL_SELECT = {
   // Một đơn chỉ có tối đa một khoản giữ chỗ. Đọc số THỰC THU để màn chi tiết không diễn giải
   // `fees.holdAmount` (số phải thu trong snapshot) thành số khách đã chuyển.
   hold: { select: { paidAmount: true } },
-  routeType: true,
-  pickupAddress: true,
+  // `routeType` + `pickupAddress` đã nằm trong LIST_SELECT ở trên; phần còn lại của địa chỉ đón
+  // chỉ chi tiết mới cần (dựng `AddressView` có ghim toạ độ).
   pickupAddressLine: true,
   pickupProvinceCode: true,
   pickupWardCode: true,
@@ -198,6 +234,9 @@ export class BookingsService {
           }
         : {}),
       ...(query.q ? { OR: searchOr(query.q) } : {}),
+      // Nhóm việc đi qua `AND` chứ không trộn vào cùng một object: nó cũng nói về `status`, và
+      // một phép spread sẽ âm thầm ghi đè `query.status` mà khách chọn.
+      ...(query.preset ? { AND: [presetWhere(query.preset)] } : {}),
     };
 
     // Đếm và lấy trang trong một transaction: total khớp data cùng thời điểm.
@@ -205,7 +244,7 @@ export class BookingsService {
       this.prisma.booking.count({ where }),
       this.prisma.booking.findMany({
         where,
-        orderBy: orderByOf(query.sort),
+        orderBy: orderByOf(query.sort, query.preset),
         skip: paging.skip,
         take: paging.take,
         select: LIST_SELECT,
@@ -604,8 +643,7 @@ export class BookingsService {
             {
               provinceCode: dto.pickupProvinceCode ?? current.pickupProvinceCode,
               wardCode: dto.pickupWardCode ?? current.pickupWardCode,
-              addressLine:
-                dto.pickupAddressLine ?? dto.pickupAddress ?? current.pickupAddressLine,
+              addressLine: dto.pickupAddressLine ?? dto.pickupAddress ?? current.pickupAddressLine,
               placeId: dto.pickupPlaceId ?? current.pickupPlaceId,
               latitude: dto.pickupLatitude ?? numberOrNull(current.pickupLatitude),
               longitude: dto.pickupLongitude ?? numberOrNull(current.pickupLongitude),
@@ -1307,7 +1345,10 @@ function searchOr(q: string): Prisma.BookingWhereInput[] {
   return [{ customerName: contains }, { code: contains }, { customerPhone: contains }];
 }
 
-function orderByOf(sort: BookingListQueryDto['sort']): Prisma.BookingOrderByWithRelationInput {
+function orderByOf(
+  sort: BookingListQueryDto['sort'],
+  preset?: BookingListPreset,
+): Prisma.BookingOrderByWithRelationInput {
   switch (sort) {
     case 'pickup_asc':
       return { pickupAt: 'asc' };
@@ -1316,8 +1357,77 @@ function orderByOf(sort: BookingListQueryDto['sort']): Prisma.BookingOrderByWith
     case 'return_asc':
       return { returnAt: 'asc' };
     default:
-      return { createdAt: 'desc' };
+      /*
+       * "Chờ giao xe" mặc định xếp theo GIỜ HẸN tăng dần, không theo ngày tạo: danh sách này
+       * là một ca trực, và thứ tự đúng của một ca trực là quá giờ → hôm nay → sắp tới. Mặc
+       * định nằm ở server để client nào cũng nhận đúng thứ tự đó mà không phải tự nhớ.
+       * Khách chọn cách sắp xếp khác thì ba nhánh trên vẫn thắng.
+       */
+      return preset === BOOKING_LIST_PRESET.AWAITING_PICKUP
+        ? { pickupAt: 'asc' }
+        : { createdAt: 'desc' };
   }
+}
+
+/**
+ * Điều kiện của một NHÓM VIỆC — phát biểu đúng một lần, ở server (ADR 0005 tinh thần).
+ *
+ * "Chờ giao xe" là ba vế phải đúng cùng lúc:
+ *
+ *  1. đơn đang ở trạng thái còn MỞ ĐƯỢC biên bản giao xe — đọc thẳng
+ *     `HANDOVER_ELIGIBLE_BOOKING_STATUS[pickup]` thay vì chép lại `[reserved, confirmed]`, để
+ *     một ngày nào đó luật bàn giao đổi thì danh sách này đổi theo chứ không lệch âm thầm;
+ *  2. chưa có mốc GIAO THẬT (`actual_pickup_at`) — cột này chỉ được ghi khi đơn sang `active`;
+ *  3. chưa có biên bản giao xe ĐÃ XÁC NHẬN.
+ *
+ * Vế (2) và (3) trùng nhau ở mọi dữ liệu do luồng hiện tại sinh ra, và chúng ở cả hai vì đó
+ * là hai NGUỒN khác nhau của cùng một sự thật: một đơn nhập tay có thể mang `actual_pickup_at`
+ * mà không có biên bản, và một biên bản đã xác nhận là bằng chứng mạnh hơn mọi cột.
+ *
+ * ⚠️ CỐ Ý không có vế "đã qua `pickup_at`": quá giờ hẹn KHÔNG phải là đã giao xe. Đơn quá giờ
+ * là đơn cần chú ý NHẤT, nó phải nằm lại trong danh sách chứ không được tự rụng ra.
+ */
+function presetWhere(preset: BookingListPreset): Prisma.BookingWhereInput {
+  switch (preset) {
+    case BOOKING_LIST_PRESET.AWAITING_PICKUP:
+      return {
+        status: { in: [...HANDOVER_ELIGIBLE_BOOKING_STATUS[HANDOVER_TYPE.PICKUP]] },
+        actualPickupAt: null,
+        handovers: { none: { type: HANDOVER_TYPE.PICKUP, status: HANDOVER_STATUS.CONFIRMED } },
+      };
+    default:
+      return {};
+  }
+}
+
+/**
+ * Chỗ chiếc xe đổi tay — MÃ + chuỗi thô, nhãn để client dịch (ADR 0012).
+ *
+ * Thứ tự ưu tiên đi theo việc phải làm, từ nặng tới nhẹ: có hẹn giao tận nơi thì nhân viên
+ * phải lên đường, chuyến có tài xế thì xe đi đón, còn lại là khách tự tới chi nhánh.
+ */
+function handoverPlaceOf(b: BookingListRow): {
+  handoverPlaceKind: string | null;
+  handoverPlace: string | null;
+} {
+  const delivery = b.bookingRequest?.deliveryRequested
+    ? (b.bookingRequest.deliveryAddress?.trim() ?? b.bookingRequest.deliveryAddressLine?.trim())
+    : null;
+  if (delivery) {
+    return { handoverPlaceKind: BOOKING_HANDOVER_PLACE.DELIVERY, handoverPlace: delivery };
+  }
+  if (b.pickupAddress?.trim()) {
+    return {
+      handoverPlaceKind: BOOKING_HANDOVER_PLACE.DRIVER_PICKUP,
+      handoverPlace: b.pickupAddress.trim(),
+    };
+  }
+  // Chi nhánh có thể trống (xe chưa gán chi nhánh) — trả `branch` với chỗ trống chứ không bịa
+  // một cái tên: người trực vẫn biết là khách tự tới lấy, chỉ không biết lấy ở đâu.
+  return {
+    handoverPlaceKind: BOOKING_HANDOVER_PLACE.BRANCH,
+    handoverPlace: b.vehicle.branch?.name ?? null,
+  };
 }
 
 /** Decimal → string do ResponseInterceptor lo (ADR 0007); ở đây giữ nguyên kiểu. */
@@ -1390,6 +1500,8 @@ function toListItem(b: BookingListRow): BookingListItemDto {
     depositAmount: b.depositAmount as unknown as string,
     driver: b.driver,
     createdAt: b.createdAt as unknown as string,
+    pickupHandoverStatus: b.handovers[0]?.status ?? null,
+    ...handoverPlaceOf(b),
   };
 }
 

@@ -1,0 +1,78 @@
+/*
+ * Trang giới thiệu — khổ cột rộng vì nội dung là LƯỚI THẺ, không phải văn bản chạy dài.
+ * (Trang pháp lý ngược lại: cột hẹp, xem `LegalDocumentView.module.css`.)
+ */
+.page {
+  max-width: var(--xp-container-max-width);
+  margin: 0 auto;
+  padding: 36px 20px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 44px;
+}
+
+/*
+ * Ba lưới, một quy tắc: `auto-fit` + `minmax` thay vì số cột cứng theo breakpoint.
+ * Thẻ tự xuống hàng khi hết chỗ, nên lưới đúng ở mọi bề ngang kể cả khoảng giữa các breakpoint.
+ * `list-style: none` vì lưới 4 bước là `<ol>` — thứ tự là nội dung, nhưng chấm số đã nằm trong
+ * huy hiệu của thẻ rồi.
+ */
+.grid2,
+.grid3,
+.grid4 {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.grid2 {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.grid3 {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.grid4 {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+/* Nút chính — cùng hình dáng với nút CTA ở chân trang để hai lời mời "đăng xe" là một thứ. */
+.primaryAction {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 20px;
+  /* 44px cao — `--xp-touch-target-min`. */
+  padding: 12px 24px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  font-size: 14.5px;
+  font-weight: 700;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+.primaryAction:hover {
+  background: var(--xp-color-primary-hover);
+  transform: translateY(-2px);
+}
+
+.primaryAction:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-primary);
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 28px 16px 48px;
+    gap: 36px;
+  }
+  .primaryAction {
+    width: 100%;
+    justify-content: center;
+  }
+}

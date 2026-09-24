@@ -18,7 +18,10 @@
       "label": "Staffed hours",
       "value": "«enter staffed hours»",
       "note": "Outside these hours your request is still logged and picked up on the next shift."
-    }
+    },
+    "lead": "These three channels are how XePrime receives requests. The actual contact details will be published before the marketplace opens properly.",
+    "pendingBadge": "Coming soon",
+    "pendingNote": "There is no official phone number, email or staffed-hours window yet. We leave them blank rather than publish contact details nobody answers."
   },
   "beforeContact": {
     "heading": "Include these so we can help faster",
@@ -39,5 +42,44 @@
   "legal": {
     "heading": "Terms and policies",
     "body": "The rights and obligations of each party are set out in the documents below."
+  },
+  "eyebrow": "Help centre",
+  "topics": {
+    "heading": "Answers already written up",
+    "lead": "Most questions are answered on the pages below.",
+    "renterHeading": "For renters",
+    "ownerHeading": "For owners and shops",
+    "how": {
+      "title": "How booking works",
+      "desc": "The four steps from sending a request to returning the vehicle, and when money actually changes hands."
+    },
+    "money": {
+      "title": "What exactly do I pay",
+      "desc": "What is transferred online, what is paid to the owner at pick-up, and every fee as its own line."
+    },
+    "cancel": {
+      "title": "Cancellations and refunds",
+      "desc": "The free-cancellation deadline, what is refunded at each stage, and who is responsible."
+    },
+    "privacy": {
+      "title": "My personal data",
+      "desc": "What we collect, who we share it with, how long we keep it and how you ask for deletion."
+    },
+    "start": {
+      "title": "Start renting out a vehicle",
+      "desc": "The two ways to join, the records you need, and the review before a vehicle goes live."
+    },
+    "rules": {
+      "title": "Marketplace rules",
+      "desc": "A shop's obligations, prohibited behaviour, and how the platform handles breaches."
+    },
+    "terms": {
+      "title": "Terms of service",
+      "desc": "The rights and obligations that apply to everyone using XePrime."
+    },
+    "manage": {
+      "title": "Manage vehicles and bookings",
+      "desc": "Sign in to the workspace to approve requests, block dates and see the money on each trip."
+    }
   }
 }

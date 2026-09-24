@@ -636,8 +636,8 @@ describe('Kết cục — tiền về tay ai (ADR 0028 điều 6)', () => {
   maybe('chuyến HOÀN THÀNH ⇒ `settled`: phân bổ theo bốn cột, không sinh khoản hoàn', async () => {
     const { holdId, bookingId } = await paidHold();
     await prisma.$transaction(async (tx) => {
-      await bookings.transitionWithinTx(tx, tenantId, bookingId, ownerId, BOOKING_STATUS.RESERVED, BOOKING_STATUS.CONFIRMED);
-      await bookings.transitionWithinTx(tx, tenantId, bookingId, ownerId, BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.ACTIVE);
+      // ADR 0047: reserved → active là cạnh trực tiếp, không còn đệm qua `confirmed`.
+      await bookings.transitionWithinTx(tx, tenantId, bookingId, ownerId, BOOKING_STATUS.RESERVED, BOOKING_STATUS.ACTIVE);
       await bookings.transitionWithinTx(tx, tenantId, bookingId, ownerId, BOOKING_STATUS.ACTIVE, BOOKING_STATUS.COMPLETED);
     });
 

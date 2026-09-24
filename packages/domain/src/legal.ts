@@ -36,7 +36,23 @@ export const LEGAL_DOC_VALUES = Object.values(LEGAL_DOC) as LegalDoc[];
  * quy chế nói về phí mà bản điều khoản chưa nói thì người đọc không biết bản nào thắng.
  * Sửa nội dung một văn bản là phải dời ngày này và ghi lại ở phần lịch sử.
  */
-export const LEGAL_EFFECTIVE_FROM = '2026-09-03';
+export const LEGAL_EFFECTIVE_FROM = '2026-09-23';
+
+/**
+ * Một mục của văn bản: tên mục + (tuỳ chọn) thứ tự các GẠCH ĐẦU DÒNG bên trong nó.
+ *
+ * Vì sao danh sách con cũng khai ở code, không phải một mảng trong bundle: `i18n:check` từ chối
+ * mảng trong message bundle (nó không đối chiếu được thứ tự giữa hai ngôn ngữ), và thứ tự các
+ * khoản trong một điều là một quyết định PHÁP LÝ chứ không phải hệ quả của thứ tự khoá JSON.
+ *
+ * Khoá message tương ứng:
+ *   - đoạn mở đầu:  `docs.<doc>.sections.<key>.body`
+ *   - từng gạch:    `docs.<doc>.sections.<key>.items.<item>`
+ */
+export interface LegalSection {
+  readonly key: string;
+  readonly items?: readonly string[];
+}
 
 /**
  * Thứ tự các mục trong từng văn bản.
@@ -48,49 +64,86 @@ export const LEGAL_EFFECTIVE_FROM = '2026-09-03';
  * Thêm một mục = thêm khoá ở CẢ HAI ngôn ngữ rồi thêm tên mục vào đây. Quên bước sau thì mục
  * không hiện; quên bước trước thì `i18n:check` đỏ.
  */
-export const LEGAL_SECTIONS: Readonly<Record<LegalDoc, readonly string[]>> = {
+export const LEGAL_SECTIONS: Readonly<Record<LegalDoc, readonly LegalSection[]>> = {
   [LEGAL_DOC.TERMS]: [
-    'scope',
-    'role',
-    'account',
-    'owner',
-    'renter',
-    'fees',
-    'tax',
-    'payment',
-    'offPlatform',
-    'content',
-    'liability',
-    'suspension',
-    'changes',
-    'law',
+    { key: 'scope' },
+    { key: 'role', items: ['isMarketplace', 'notLessor', 'contractBetween', 'toolsProvided'] },
+    { key: 'account', items: ['accurate', 'secret', 'report', 'oneAccount'] },
+    {
+      key: 'booking',
+      items: ['request', 'decision', 'holdPayment', 'bookingCreated', 'slotLost'],
+    },
+    { key: 'money', items: ['online', 'atHandover', 'deposit', 'frozen'] },
+    { key: 'owner', items: ['rightToRent', 'truthful', 'calendar', 'respond', 'handover'] },
+    { key: 'renter', items: ['licence', 'lawfulUse', 'noSublet', 'careAndCost'] },
+    { key: 'fees' },
+    { key: 'tax' },
+    { key: 'offPlatform' },
+    { key: 'content' },
+    { key: 'liability' },
+    { key: 'suspension' },
+    { key: 'changes' },
+    { key: 'law' },
   ],
   [LEGAL_DOC.PRIVACY]: [
-    'scope',
-    'collected',
-    'purpose',
-    'sharing',
-    'masking',
-    'retention',
-    'security',
-    'rights',
-    'cookies',
-    'changes',
+    { key: 'scope' },
+    { key: 'collected', items: ['provided', 'generated', 'documents', 'notCollected'] },
+    { key: 'purpose', items: ['account', 'booking', 'support', 'safety', 'improve', 'marketing'] },
+    { key: 'sharing', items: ['betweenParties', 'processors', 'authorities', 'noSale'] },
+    { key: 'masking' },
+    { key: 'retention' },
+    { key: 'security', items: ['transport', 'session', 'hashing', 'privateStorage'] },
+    { key: 'rights', items: ['access', 'correct', 'delete', 'withdraw', 'complain'] },
+    { key: 'cookies' },
+    { key: 'changes' },
   ],
   [LEGAL_DOC.MARKETPLACE_RULES]: [
-    'purpose',
-    'members',
-    'listing',
-    'prohibited',
-    'ranking',
-    'transaction',
-    'fees',
-    'violation',
-    'dispute',
-    'privacyRef',
+    { key: 'purpose' },
+    { key: 'members' },
+    { key: 'listing' },
+    {
+      key: 'prohibited',
+      items: [
+        'noRight',
+        'stolenPhotos',
+        'falsePrice',
+        'duplicate',
+        'unlawful',
+        'harassment',
+        'scraping',
+      ],
+    },
+    { key: 'ranking' },
+    {
+      key: 'transaction',
+      items: ['request', 'decision', 'holdPayment', 'bookingCreated', 'handover'],
+    },
+    { key: 'metrics' },
+    { key: 'fees' },
+    { key: 'violation', items: ['remind', 'hide', 'demote', 'suspend', 'terminate'] },
+    { key: 'dispute' },
+    { key: 'privacyRef' },
   ],
-  [LEGAL_DOC.CANCELLATION]: ['principle', 'renter', 'owner', 'force', 'refund', 'dispute'],
+  [LEGAL_DOC.CANCELLATION]: [
+    { key: 'principle' },
+    { key: 'beforeDecision' },
+    { key: 'paymentWindow' },
+    { key: 'freeCancel' },
+    { key: 'afterFreeCancel' },
+    {
+      key: 'ownerCancel',
+      items: ['beforeDecision', 'beforePayment', 'afterBooking', 'duringTrip'],
+    },
+    { key: 'force' },
+    { key: 'refund' },
+    { key: 'dispute' },
+  ],
 };
+
+/** Tên mục của một văn bản, phẳng — cho những chỗ chỉ cần danh sách khoá. */
+export function legalSectionKeys(doc: LegalDoc): readonly string[] {
+  return LEGAL_SECTIONS[doc].map((section) => section.key);
+}
 
 export const legalPath = {
   /** Trang chủ khu pháp lý — địa chỉ viện dẫn CẢ BỘ bốn văn bản. */

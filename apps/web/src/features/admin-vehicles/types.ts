@@ -14,6 +14,14 @@ export interface AdminVehicleFilters {
   operationStatus?: string;
   vehicleType?: string;
   tenantStatus?: string;
+  /**
+   * Kết quả hiển thị HIỆU LỰC ngoài chợ (ADR 0048) — `'true'` · `'false'` · `'all'`.
+   *
+   * Chuỗi chứ không boolean vì nó sống ở URL cùng các filter khác, và `'all'` là cách cả module
+   * này diễn đạt "không lọc chiều đó" (xem `pickFilter`). Nó KHÔNG suy được từ `publicStatus`:
+   * một chiếc `approved_public` vẫn biến khỏi chợ khi chủ xe tắt công tắc hoặc gian hàng bị khoá.
+   */
+  marketplaceVisible?: string;
   page?: number;
   limit?: number;
 }

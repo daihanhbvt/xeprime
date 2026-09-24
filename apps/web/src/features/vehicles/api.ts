@@ -67,6 +67,17 @@ export const submitVehiclePublic = (id: string): Promise<VehicleDetail> =>
   apiPost<VehicleDetail>(`/vehicles/${id}/submit-public`, {});
 
 /**
+ * Công tắc hiển thị trên chợ của chủ xe (ADR 0048) — KHÁC hẳn gửi duyệt: nó không đụng trạng
+ * thái kiểm duyệt, và không tạo phiếu duyệt nào. Trả về bản ghi xe đã cập nhật để chi tiết khỏi
+ * phải tải lại một vòng nữa.
+ */
+export const setVehicleMarketplaceVisibility = (
+  id: string,
+  enabled: boolean,
+): Promise<VehicleDetail> =>
+  apiPatch<VehicleDetail>(`/vehicles/${id}/marketplace-visibility`, { enabled });
+
+/**
  * Chỉ số cho thẻ xe — gọi RIÊNG, sau khi đã có trang danh sách.
  *
  * Tách khỏi `fetchVehicles` để danh sách hiện ngay: tổng hợp thu/chi chậm hơn truy vấn xe, gộp

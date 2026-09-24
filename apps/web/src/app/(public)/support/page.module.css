@@ -1,148 +1,174 @@
+/*
+ * Trung tâm hỗ trợ.
+ *
+ * Khổ cột rộng: nội dung là LƯỚI THẺ chủ đề, không phải văn bản chạy dài. (Trang pháp lý
+ * ngược lại — cột hẹp 68 ký tự.)
+ */
 .page {
-  max-width: 760px;
+  max-width: var(--xp-container-max-width);
   margin: 0 auto;
-  padding: 24px 16px 56px;
+  padding: 28px 20px 64px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 40px;
 }
 
-.header {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.title {
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1.25;
-  color: var(--xp-color-text);
-  letter-spacing: -0.01em;
-}
-
-.subtitle {
-  font-size: 15px;
-  line-height: 1.65;
-  color: var(--xp-color-text-secondary);
-}
-
-.draft {
-  padding: 12px 14px;
-  border: 1px solid var(--xp-color-warning);
-  border-radius: 10px;
-  background: var(--xp-color-warning-bg);
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--xp-color-text-secondary);
-}
-
-/* Khối cấp cứu phải đọc được trong hai giây — viền đỏ, không phải một đoạn văn giữa trang. */
-.emergency {
-  padding: 14px 16px;
-  border: 1px solid var(--xp-color-error);
-  border-radius: 12px;
-  background: var(--xp-color-error-bg);
-}
-
-.emergencyTitle {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--xp-color-error);
-}
-
-.emergencyBody {
-  margin-top: 6px;
-  font-size: 14.5px;
-  line-height: 1.7;
-  color: var(--xp-color-text);
-}
-
-.block {
-  padding-top: 4px;
-}
-
-.blockTitle {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--xp-color-text);
-}
-
+/* ─── Kênh liên hệ ─────────────────────────────────────────────────────────
+ *
+ * Ba thẻ, mỗi thẻ là một kênh. Chỗ đáng lẽ là số điện thoại / email / khung giờ hiện một viên
+ * trạng thái — xem docblock của `page.tsx` về vì sao không hiện chỗ trống «điền số hotline».
+ */
 .channels {
-  margin-top: 12px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .channel {
-  padding: 14px 16px;
-  border: 1px solid var(--xp-color-border-secondary);
-  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 20px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
   background: var(--xp-color-bg-container);
 }
 
 .channelLabel {
-  font-size: 12.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--xp-color-text-tertiary);
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--xp-color-text);
 }
 
-.channelValue {
-  margin-top: 4px;
-  font-size: 17px;
+/* Viên trạng thái dùng màu CẢNH BÁO, không phải vàng thương hiệu: đây là một chỗ còn thiếu,
+   không phải một tính năng đáng khoe. */
+.pending {
+  padding: 4px 12px;
+  border: 1px solid var(--xp-color-warning);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-warning-bg);
+  font-size: 11.5px;
   font-weight: 700;
   color: var(--xp-color-text);
-  overflow-wrap: anywhere;
 }
 
 .channelNote {
-  margin-top: 6px;
-  font-size: 13px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--xp-color-text-secondary);
+}
+
+.pendingNote {
+  margin-top: 16px;
+}
+
+/* ─── Chủ đề ───────────────────────────────────────────────────────────────── */
+.topicGroup + .topicGroup {
+  margin-top: 28px;
+}
+
+/*
+ * `h3` dưới `h2` của `ContentSection` — nhỏ hơn hẳn và giãn ký tự, để mắt đọc nó thành "nhãn
+ * nhóm" chứ không phải một tiêu đề mục thứ hai ngang hàng.
+ */
+.groupTitle {
+  margin-bottom: 14px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--xp-color-text-tertiary);
+}
+
+.topics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+/* ─── Việc cần chuẩn bị ─────────────────────────────────────────────────────
+ *
+ * `<ol>` đánh số bằng CSS counter: chấm số vàng cùng hình dáng với huy hiệu của `FeatureCard`,
+ * nên danh sách này và lưới bốn bước ở trang giới thiệu đọc thành một hệ.
+ */
+.checklist {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: xp-check;
+}
+
+.checkItem {
+  position: relative;
+  padding: 14px 16px 14px 52px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  font-size: 14px;
   line-height: 1.6;
   color: var(--xp-color-text-secondary);
 }
 
-.checklist {
-  margin-top: 10px;
-  padding-left: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  list-style: disc;
-  font-size: 14.5px;
-  line-height: 1.7;
-  color: var(--xp-color-text-secondary);
+.checkItem::before {
+  counter-increment: xp-check;
+  content: counter(xp-check);
+  position: absolute;
+  left: 16px;
+  top: 14px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  font-size: 12px;
+  font-weight: 700;
 }
 
-.paragraph {
-  margin-top: 8px;
-  font-size: 14.5px;
+/* ─── Phạm vi hỗ trợ ───────────────────────────────────────────────────────── */
+.scopeCan {
+  max-width: 72ch;
+  font-size: 15px;
   line-height: 1.75;
   color: var(--xp-color-text-secondary);
 }
 
-.paragraphMuted {
-  margin-top: 8px;
-  font-size: 14.5px;
-  line-height: 1.75;
-  color: var(--xp-color-text-tertiary);
+.scopeCannot {
+  margin-top: 16px;
+  max-width: 72ch;
 }
 
-.legalIndexLink {
-  display: inline-block;
-  margin-top: 12px;
-  font-size: 13.5px;
-  color: var(--xp-color-text-tertiary);
+/* ─── Pháp lý ───────────────────────────────────────────────────────────────── */
+.allDocs {
+  margin-top: 14px;
 }
 
-.legalIndexLink:hover {
-  color: var(--xp-color-primary);
+.allDocsLink {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--xp-color-primary-active);
+}
+.allDocsLink:hover {
+  text-decoration: underline;
+}
+.allDocsLink:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-primary);
+  outline-offset: 2px;
+  border-radius: var(--xp-border-radius-sm);
 }
 
-@media (max-width: 600px) {
-  .title {
-    font-size: 23px;
+@media (max-width: 640px) {
+  .page {
+    padding: 22px 16px 48px;
+    gap: 32px;
   }
 }

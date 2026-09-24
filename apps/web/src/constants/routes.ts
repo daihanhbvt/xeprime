@@ -10,6 +10,22 @@ export const ROUTES = {
   HOME: '/',
   /** Trang kết quả tìm xe — sở hữu bộ lọc, sắp xếp, phân trang (trang chủ chỉ xem trước). */
   SEARCH: '/search',
+  /**
+   * Giới thiệu XePrime — trang công khai trả lời "sàn này là gì, vận hành thế nào".
+   *
+   * Mục "Về Prime" trên thanh điều hướng trỏ về `HOME` cho tới 23/09/2026, tức một mục menu
+   * bấm vào thì không đi đâu cả. Trang này là đích thật của nó, và cũng là nơi duy nhất nói ra
+   * mô hình hai tuyến (ADR 0028) bằng ngôn ngữ người dùng thay vì ngôn ngữ ADR.
+   */
+  ABOUT: '/about',
+  /**
+   * Giới thiệu ỨNG DỤNG di động — trang đích của mục "Tải ứng dụng" ở chân trang.
+   *
+   * Tách khỏi `ABOUT` vì hai trang trả lời hai câu hỏi khác nhau ("sàn này là gì" ≠ "app làm
+   * được gì"), và vì khi app lên store thì đây là trang mang link store — chân trang chỉ cần
+   * trỏ vào đúng một chỗ.
+   */
+  APP: '/app',
   LOGIN: '/login',
   REGISTER: '/register',
   FORGOT_PASSWORD: '/forgot-password',
@@ -152,6 +168,20 @@ export const ROUTES = {
     /** Trung tâm bảo dưỡng toàn đội xe (Wave 6 — docs/design/12 §9.2). */
     MAINTENANCE: '/manage/maintenance',
     BOOKINGS: '/manage/bookings',
+    /**
+     * Lối tắt "Chờ giao xe" — CÙNG danh sách, cùng endpoint, chỉ khác một nhóm việc dựng sẵn
+     * (`preset=awaiting_pickup` gửi lên server).
+     *
+     * Vì sao là một ĐƯỜNG DẪN chứ không phải `/manage/bookings?preset=…`: mục menu đang mở được
+     * quyết bằng `matchSelectedKey(pathname, …)`, và `usePathname()` không mang query. Một mục
+     * menu gắn query sẽ hoặc không bao giờ sáng, hoặc làm sáng luôn cả "Tất cả đơn thuê". Sửa
+     * bằng cách cho khung ứng dụng đọc `useSearchParams()` thì đắt hơn nhiều: `AppShell` không
+     * nằm trong `Suspense` nào, nên cả cổng quản lý sẽ rơi xuống render phía client.
+     *
+     * Đứng cạnh `/manage/bookings/[id]` là an toàn: Next ưu tiên đoạn TĨNH, và id đơn là ULID
+     * 26 ký tự nên không có đơn nào mang tên này.
+     */
+    BOOKINGS_AWAITING_PICKUP: '/manage/bookings/awaiting-pickup',
     BOOKING_REQUESTS: '/manage/booking-requests',
     CUSTOMERS: '/manage/customers',
     FINANCE: '/manage/finance',

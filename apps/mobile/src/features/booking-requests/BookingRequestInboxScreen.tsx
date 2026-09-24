@@ -3,12 +3,7 @@ import { FlatList, RefreshControl, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import {
-  API_ERROR_CODE,
-  BOOKING_REQUEST_STATUS,
-  PERMISSION,
-  SERVICE_TYPE_VALUES,
-} from '@xeprime/types';
+import { BOOKING_REQUEST_STATUS, PERMISSION, SERVICE_TYPE_VALUES } from '@xeprime/types';
 import { Screen } from '@/components/layout/Screen';
 import { Chip } from '@/components/ui/Chip';
 import { RecordCardSkeleton } from '@/components/ui/Skeleton';
@@ -32,6 +27,7 @@ import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
+import { cancelErrorKey, decisionErrorKey } from './decision-error';
 import { BookingRequestDetailScreen } from './BookingRequestDetailScreen';
 import { BookingRequestCard } from './components/BookingRequestCard';
 import { ApproveRequestSheet } from './components/ApproveRequestSheet';
@@ -197,31 +193,72 @@ export function BookingRequestInboxScreen() {
     [permissions, navigateOnce],
   );
 
+  /*
+   * Mở một thao tác thì ĐÓNG màn chi tiết trước — đúng thứ tự web làm ở `BookingRequestsView`.
+   *
+   * `detail` là một BẢN CHỤP nằm trong state, không phải một truy vấn: lượt duyệt invalidate
+   * cache nhưng không đụng được vào nó. Giữ màn chi tiết mở phía sau tấm trượt nghĩa là đóng tấm
+   * kết quả xong, người trực quay lại đúng bản ghi CŨ — vẫn ghi "chờ bạn duyệt", vẫn còn nút
+   * Duyệt — cho một yêu cầu họ vừa duyệt xong. Bấm lần nữa là một lượt gọi chắc chắn lỗi.
+   *
+   * Dùng chung cho CẢ thẻ trong danh sách lẫn màn chi tiết: ở danh sách `detail` vốn đã `null`
+   * nên phép đóng là vô hại, và một đường duy nhất thì không có nhánh nào để quên.
+   */
+  const startApprove = useCallback((request: BookingRequestItem) => {
+    setDetail(null);
+    setApproving(request);
+  }, []);
+
+  const startReject = useCallback((request: BookingRequestItem) => {
+    setDetail(null);
+    setRejecting(request);
+  }, []);
+
+  const startCancel = useCallback((request: BookingRequestItem) => {
+    setDetail(null);
+    setCancelling(request);
+  }, []);
+
   const renderItem = useCallback<ListRenderItem<BookingRequestItem>>(
     ({ item }) => (
       <BookingRequestCard
         request={item}
-        onApprove={setApproving}
-        onReject={setRejecting}
-        onCancel={setCancelling}
+        onApprove={startApprove}
+        onReject={startReject}
+        onCancel={startCancel}
         onOpenDetail={openDetail}
       />
     ),
-    [openDetail],
+    [openDetail, startApprove, startReject, startCancel],
   );
+
+  /** Lỗi quyết định → câu có LỐI ĐI TIẾP; `null` thì rơi về ánh xạ chung theo MÃ. */
+  function decisionError(error: unknown): string {
+    const key = decisionErrorKey(getErrorCode(error));
+    return key ? t(key) : errorMessage(error);
+  }
 
   function confirmApprove(body?: Parameters<typeof approve.mutate>[0]['body']) {
     if (!approving) return;
     approve.mutate(
       { id: approving.id, ...(body ? { body } : {}) },
       {
-        onSuccess: () => {
-          toast.showSuccess(
-            approving.longTermPackageMonths ? t('approve.successLongTerm') : t('approve.success'),
-          );
+        /*
+         * Kết quả mở thành TẤM TRƯỢT, không phải toast — và tấm đó đọc `bookingId` của BẢN GHI
+         * SERVER VỪA TRẢ VỀ để chọn một trong hai câu chuyện (ADR 0044 điều 2).
+         *
+         * Hai thứ ở đây từng sai và cả hai đều im lặng:
+         *   · truyền lại `approving` (bản ghi TRƯỚC khi duyệt) — `bookingId` khi đó luôn `null`,
+         *     nên mọi lượt duyệt đọc ra "chờ khách thanh toán" kể cả chuyến đã tạo đơn ngay;
+         *   · toast `approve.success` ("Đã giữ xe — đã tạo đơn thuê") — một lời khẳng định SAI ở
+         *     nhánh mặc định của luồng mới, đúng câu ADR 0044 sinh ra để chấm dứt. Web không có
+         *     toast ở lượt duyệt, và đó là lý do.
+         */
+        onSuccess: (approved) => {
           setApproving(null);
+          setApproved(approved);
         },
-        onError: (error) => toast.showError(errorMessage(error)),
+        onError: (error) => toast.showError(decisionError(error)),
       },
     );
   }
@@ -234,9 +271,9 @@ export function BookingRequestInboxScreen() {
         onSuccess: () => {
           toast.showSuccess(t('reject.success'));
           setRejecting(null);
-          setDetail(null);
         },
-        onError: (error) => toast.showError(errorMessage(error)),
+        /* Từ chối đi qua CÙNG cửa `claimPending` với duyệt ⇒ cùng bộ lỗi có lối đi tiếp. */
+        onError: (error) => toast.showError(decisionError(error)),
       },
     );
   }
@@ -249,19 +286,16 @@ export function BookingRequestInboxScreen() {
         onSuccess: () => {
           toast.showSuccess(t('cancel.success'));
           setCancelling(null);
-          setDetail(null);
         },
         /*
          * Cuộc đua với đồng tiền: khách chuyển khoản đúng lúc người trực đang mở tấm trượt ⇒
          * webhook thắng, yêu cầu đã thành đơn, lệnh huỷ không claim được gì (409). Câu chung
          * ("có lỗi xảy ra") sẽ khiến họ bấm lại vài lần rồi gọi hỗ trợ.
          */
-        onError: (error) =>
-          toast.showError(
-            getErrorCode(error) === API_ERROR_CODE.CONFLICT
-              ? t('cancel.raceLost')
-              : errorMessage(error),
-          ),
+        onError: (error) => {
+          const key = cancelErrorKey(getErrorCode(error));
+          toast.showError(key ? t(key) : errorMessage(error));
+        },
       },
     );
   }
@@ -331,9 +365,9 @@ export function BookingRequestInboxScreen() {
       <>
         <BookingRequestDetailScreen
           request={detail}
-          onApprove={setApproving}
-          onReject={setRejecting}
-          onCancel={setCancelling}
+          onApprove={startApprove}
+          onReject={startReject}
+          onCancel={startCancel}
           onClose={() => setDetail(null)}
         />
         {decisionSheets}

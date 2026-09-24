@@ -3,6 +3,8 @@ import { VerifiedName } from '@/components/ui/VerifiedName';
 import { useCallback, useState } from 'react';
 import { Image } from 'expo-image';
 import {
+  Linking,
+  Pressable,
   RefreshControl,
   ScrollView,
   useWindowDimensions,
@@ -25,6 +27,7 @@ import {
 import { applyDiscountPercent, LIST_SEPARATOR } from '@xeprime/domain';
 import { catalogLabel } from '@/api/catalog';
 import { AppHeader } from '@/components/layout/AppHeader';
+import { MapPreview } from '@/components/map/MapPreview';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ListingDetailSkeleton } from '@/components/ui/Skeleton';
 import { Avatar } from '@/components/ui/Avatar';
@@ -41,6 +44,7 @@ import { elevation } from '@/theme/elevation';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
+import { mapAppUrl, mapPreviewUrl, toGeoPoint } from '@/lib/map-static';
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useListing, useListingReviews } from './hooks/use-marketplace-data';
@@ -659,28 +663,7 @@ function DetailBody({
 
         <Reviews vehicleId={listing.id} />
 
-        {/*
-          Điểm nhận xe: địa chỉ là thông tin CHÍNH, web còn nhúng thêm bản đồ minh hoạ. Native
-          chưa nhúng bản đồ — đó cần một thư viện map riêng (ADR 0018 để provider trung lập), và
-          phần chữ đã đủ để khách biết đến đâu lấy xe.
-        */}
-        {listing.pickupPoint ? (
-          <Card lift="flat">
-            <YStack gap={space.xs}>
-              <SectionTitle icon="navigate-outline">{t('pickupPoint.title')}</SectionTitle>
-              <Body>
-                {[listing.pickupPoint.branchName, listing.pickupPoint.address]
-                  .filter(Boolean)
-                  .join(LIST_SEPARATOR)}
-              </Body>
-              {listing.pickupPoint.provinceName ? (
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {listing.pickupPoint.provinceName}
-                </Text>
-              ) : null}
-            </YStack>
-          </Card>
-        ) : null}
+        {listing.pickupPoint ? <PickupPointCard point={listing.pickupPoint} /> : null}
       </YStack>
     </ScrollView>
   );
@@ -914,6 +897,71 @@ function Reviews({ vehicleId }: { vehicleId: string }) {
             ))}
           </YStack>
         )}
+      </YStack>
+    </Card>
+  );
+}
+
+/**
+ * Khối ĐIỂM NHẬN XE — địa chỉ là thông tin chính, bản đồ chỉ minh hoạ, đúng như web
+ * (`ListingDetailView`).
+ *
+ * Trước đợt này native cố ý bỏ trống phần bản đồ vì "cần một thư viện map riêng". Lý do đó đã
+ * hết hiệu lực: ảnh tĩnh Geoapify (`lib/map-static.ts`, ADR 0037) là một tấm `<Image>` — cùng
+ * thứ mà ô địa chỉ trong form đang dùng, không thêm một dòng JavaScript của bên thứ ba nào.
+ *
+ * Bản đồ TỰ BIẾN MẤT khi thiếu toạ độ hoặc chưa cấu hình khoá; phần chữ ở lại nguyên vẹn — cùng
+ * cách xử lý với `StaticMap` bên web, để một điểm nhận chưa được ghim không thành một ô vỡ.
+ *
+ * Chạm vào ảnh mở GOOGLE MAPS để khách chỉ đường: đó là việc native làm được mà web không —
+ * ảnh ở đây chỉ để XEM, không có ghim nào để kéo.
+ */
+function PickupPointCard({
+  point,
+}: {
+  point: NonNullable<PublicListingDetail['pickupPoint']>;
+}) {
+  const t = useTranslations('Listings.detail');
+  const tAddress = useTranslations('Address');
+  const tStates = useTranslations('Common.states');
+
+  const geo = toGeoPoint(point.latitude, point.longitude);
+  const mapUri = mapPreviewUrl(geo);
+
+  return (
+    <Card lift="flat">
+      <YStack gap={space.xs}>
+        <SectionTitle icon="navigate-outline">{t('pickupPoint.title')}</SectionTitle>
+        <Body>{[point.branchName, point.address].filter(Boolean).join(LIST_SEPARATOR)}</Body>
+        {point.provinceName ? (
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            {point.provinceName}
+          </Text>
+        ) : null}
+        {geo && mapUri ? (
+          <YStack gap={space.xs} mt={space.xs}>
+            <MapPreview
+              uri={mapUri}
+              unavailableLabel={tStates('imageUnavailable')}
+              busyLabel={tStates('loading')}
+              onOpen={() => void Linking.openURL(mapAppUrl(geo))}
+              openLabel={t('pickupPoint.mapTitle')}
+            />
+            {/* Nhắc ra thành chữ: một tấm ảnh bản đồ không tự nói rằng nó bấm được. */}
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel={tAddress('map.openInGoogleMaps')}
+              onPress={() => void Linking.openURL(mapAppUrl(geo))}
+            >
+              <XStack ai="center" gap={space.xs}>
+                <Ionicons name="open-outline" size={iconSize.sm} color={colors.primaryActive} />
+                <Text col={colors.primaryActive} fos={fontSize.label}>
+                  {tAddress('map.openInGoogleMaps')}
+                </Text>
+              </XStack>
+            </Pressable>
+          </YStack>
+        ) : null}
       </YStack>
     </Card>
   );

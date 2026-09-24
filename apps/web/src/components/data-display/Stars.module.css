@@ -10,8 +10,13 @@
   font-size: 12.5px;
 }
 
+/*
+ * MỘT sắc vàng cho mọi ngôi sao trong sản phẩm — cùng token với sao ở thẻ xe, thẻ gian hàng và
+ * khối gian hàng nổi bật. Trước 23/09/2026 chỗ này dùng `--xp-gold-deep` (nâu hơn), nên dãy sao
+ * ở khối đánh giá lệch tông với ngôi sao ngay phía trên nó trên cùng một trang.
+ */
 .on {
-  color: var(--xp-gold-deep);
+  color: var(--xp-color-primary);
 }
 
 .off {

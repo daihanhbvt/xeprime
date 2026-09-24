@@ -1,25 +1,19 @@
 import {
   BOOKING_STATUS,
-  BOOKING_STATUS_META,
-  BOOKING_STATUS_VALUES,
   SERVICE_TYPE_LABEL,
   SERVICE_TYPE_VALUES,
   type BookingStatus,
   type ServiceType,
 } from '@xeprime/types';
 
-/** Option cho Select lọc trạng thái — nhãn lấy từ META (CLAUDE.md mục 5, không hardcode). */
-export const BOOKING_STATUS_OPTIONS = BOOKING_STATUS_VALUES.map((value) => ({
-  value,
-  label: BOOKING_STATUS_META[value].label,
-}));
-
-export const BOOKING_SORT_OPTIONS = [
-  { value: 'newest', label: 'Mới nhất' },
-  { value: 'pickup_asc', label: 'Nhận xe sớm nhất' },
-  { value: 'pickup_desc', label: 'Nhận xe muộn nhất' },
-  { value: 'return_asc', label: 'Trả xe sớm nhất' },
-] as const;
+/*
+ * CỐ Ý KHÔNG còn hai mảng option của ô lọc ở đây (22/09/2026).
+ *
+ * Cả hai từng dựng nhãn bằng chuỗi tiếng Việt cứng (`BOOKING_STATUS_META[...].label` và một
+ * mảng viết tay), nên bộ lọc đơn thuê vẫn nói tiếng Việt trong bản tiếng Anh. Option nay dựng
+ * ngay trong `BookingsListView` bằng `useDomainLabel('bookingStatus', …)` và
+ * `t('list.sort.*')` — nhãn đi theo ngôn ngữ người xem, mã đi trên dây giữ nguyên (ADR 0012).
+ */
 
 export const SERVICE_TYPE_OPTIONS = SERVICE_TYPE_VALUES.map((value) => ({
   value,

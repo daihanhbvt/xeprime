@@ -177,11 +177,11 @@ describe('summary360 — tổng hợp Hồ sơ 360', () => {
 
   maybe('đơn sắp tới: chỉ đơn còn chiếm lịch, xếp theo ngày nhận gần nhất', async () => {
     await prisma.booking.deleteMany({ where: { tenantId } });
-    // Còn chiếm lịch: reserved/confirmed/active với return trong tương lai.
+    // Còn chiếm lịch: reserved/active với return trong tương lai.
     await createBooking({
       tenantId,
       vehicleId,
-      status: BOOKING_STATUS.CONFIRMED,
+      status: BOOKING_STATUS.RESERVED,
       customerName: 'Khách B',
       pickupAt: inHours(48),
       returnAt: inHours(72),

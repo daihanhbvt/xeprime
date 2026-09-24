@@ -5,9 +5,10 @@ import { Button, Tooltip } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import {
+  MARKETPLACE_VISIBILITY_REASON_META,
   VEHICLE_OPERATION_STATUS_META,
-  VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
+  type MarketplaceVisibilityReason,
   type VehicleOperationStatus,
   type VehiclePublicStatus,
 } from '@xeprime/types';
@@ -38,7 +39,12 @@ export function VehicleManageHeader({ vehicle, stats }: Props) {
   const t = useTranslations('VehicleManage.header');
   const tRoot = useTranslations('VehicleManage');
   const fmt = useAppFormat();
-  const isPublic = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
+  /*
+   * "Xem trang xe" theo KẾT QUẢ hiển thị thật, không theo trạng thái kiểm duyệt (ADR 0048): một
+   * chiếc xe đã duyệt nhưng chủ xe đang tạm ẩn thì `/listings/:id` trả 404, nên một đường dẫn
+   * sáng ở đây là dẫn người dùng tới một trang không tồn tại.
+   */
+  const isPublic = vehicle.isMarketplaceVisible;
 
   return (
     <header className={styles.header}>
@@ -65,6 +71,12 @@ export function VehicleManageHeader({ vehicle, stats }: Props) {
             value={vehicle.publicStatus as VehiclePublicStatus}
             meta={VEHICLE_PUBLIC_STATUS_META}
             group="vehiclePublicStatus"
+          />
+          {/* Kết quả hiển thị thật — server suy, web không ghép lại từ ba status (ADR 0048). */}
+          <StatusTag
+            value={vehicle.marketplaceVisibilityReason as MarketplaceVisibilityReason}
+            meta={MARKETPLACE_VISIBILITY_REASON_META}
+            group="marketplaceVisibility"
           />
         </div>
         <p className={styles.meta}>

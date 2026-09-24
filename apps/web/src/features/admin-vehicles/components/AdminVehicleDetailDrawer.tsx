@@ -1,17 +1,34 @@
 'use client';
 
 import { EyeInvisibleOutlined, EyeOutlined } from '@ant-design/icons';
-import { App, Button, Descriptions, Input, Popconfirm } from 'antd';
+import { App, Button, Descriptions, Input, Popconfirm, Tag } from 'antd';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import {
-  LISTING_STATUS_META, PERMISSION, TENANT_STATUS_META, VEHICLE_OPERATION_STATUS_META, VEHICLE_PUBLIC_STATUS, VEHICLE_PUBLIC_STATUS_META, VEHICLE_TYPE_LABEL, serviceTypesLabel, type ListingStatus, type TenantStatus, type VehicleOperationStatus, type VehiclePublicStatus, type VehicleType, } from '@xeprime/types';
+  LISTING_STATUS_META,
+  MARKETPLACE_VISIBILITY_REASON_META,
+  PERMISSION,
+  STATUS_COLOR,
+  TENANT_STATUS_META,
+  VEHICLE_OPERATION_STATUS_META,
+  VEHICLE_PUBLIC_STATUS,
+  VEHICLE_PUBLIC_STATUS_META,
+  serviceTypesLabel,
+  type ListingStatus,
+  type MarketplaceVisibilityReason,
+  type TenantStatus,
+  type VehicleOperationStatus,
+  type VehiclePublicStatus,
+} from '@xeprime/types';
+import { InfoHint } from '@/components/data-display/InfoHint';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { useCatalogLabels, type CatalogLabels } from '@/features/catalog/use-catalog';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { listingPath, shopPath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { getErrorMessage } from '@/services/api-client';
 import { useAdminVehicle, useVehicleModeration } from '../hooks/use-admin-vehicles';
 import type { AdminVehicleDetail } from '../types';
@@ -26,23 +43,25 @@ export function AdminVehicleDetailDrawer({
   vehicleId: string | null;
   onClose: () => void;
 }) {
+  const t = useTranslations('AdminVehicles.drawer');
   const { data, isLoading, isError, refetch } = useAdminVehicle(vehicleId);
 
   return (
     <DetailDrawer
-      title={data ? data.name : 'Xe'}
+      title={data ? data.name : t('fallbackTitle')}
       size="md"
       open={Boolean(vehicleId)}
       onClose={onClose}
       loading={!isError && (isLoading || !data)}
       error={isError}
-      errorTitle="Không tải được thông tin xe"
+      errorTitle={t('loadError')}
       onRetry={() => void refetch()}
       extra={
         data ? (
           <StatusTag
             value={data.publicStatus as VehiclePublicStatus}
-            meta={VEHICLE_PUBLIC_STATUS_META} group="vehiclePublicStatus"
+            meta={VEHICLE_PUBLIC_STATUS_META}
+            group="vehiclePublicStatus"
           />
         ) : null
       }
@@ -53,7 +72,10 @@ export function AdminVehicleDetailDrawer({
 }
 
 function Body({ vehicle }: { vehicle: AdminVehicleDetail }) {
+  const t = useTranslations('AdminVehicles.moderation');
+  const tCommon = useTranslations('Common.actions');
   const fmt = useAppFormat();
+  const detail = useDetailItems();
   const { message } = App.useApp();
   const { has } = usePermissions();
   const moderation = useVehicleModeration(vehicle.id);
@@ -66,13 +88,21 @@ function Body({ vehicle }: { vehicle: AdminVehicleDetail }) {
   const isHidden = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.HIDDEN;
   const trimmedReason = reason.trim();
 
+  /*
+   * Gỡ ẩn CHỈ trả lại trạng thái kiểm duyệt (ADR 0048 điều 4): nếu chủ xe đang tắt công tắc của
+   * họ thì xe vẫn nằm ngoài chợ sau thao tác này. Người kiểm duyệt phải biết điều đó TRƯỚC khi
+   * bấm và được nhắc lại sau khi bấm — nếu không, họ thấy `listingStatus` vẫn `hidden` và kết
+   * luận rằng hệ thống hỏng.
+   */
+  const stillPausedByOwner = !vehicle.marketplaceEnabled;
+
   function submitHide() {
     if (!trimmedReason) return;
     moderation.mutate(
       { kind: 'hide', reason: trimmedReason },
       {
         onSuccess: () => {
-          message.success('Đã ẩn xe khỏi Marketplace');
+          message.success(t('hideSuccess'));
           setHideOpen(false);
           setReason('');
         },
@@ -85,7 +115,8 @@ function Body({ vehicle }: { vehicle: AdminVehicleDetail }) {
     moderation.mutate(
       { kind: 'unhide' },
       {
-        onSuccess: () => message.success('Đã hiển thị lại xe trên Marketplace'),
+        onSuccess: () =>
+          message.success(stillPausedByOwner ? t('unhideSuccessOwnerPaused') : t('unhideSuccess')),
         onError: (err) => message.error(getErrorMessage(err)),
       },
     );
@@ -93,11 +124,11 @@ function Body({ vehicle }: { vehicle: AdminVehicleDetail }) {
 
   return (
     <div>
-      <Descriptions column={1} size="small" bordered items={detailItems(vehicle, labels, fmt)} />
+      <Descriptions column={1} size="small" bordered items={detail(vehicle, labels, fmt)} />
 
       <div className={styles.actions}>
         {!canModerate ? (
-          <div className={styles.hint}>Bạn không có quyền kiểm duyệt xe.</div>
+          <div className={styles.hint}>{t('noPermission')}</div>
         ) : isPublic ? (
           <Button
             danger
@@ -106,48 +137,44 @@ function Body({ vehicle }: { vehicle: AdminVehicleDetail }) {
             loading={moderation.isPending}
             onClick={() => setHideOpen(true)}
           >
-            Ẩn xe khỏi Marketplace
+            {t('hide')}
           </Button>
         ) : isHidden ? (
           <Popconfirm
-            title="Hiển thị lại xe này trên Marketplace?"
-            okText="Bỏ ẩn"
-            cancelText="Đóng"
+            title={t('unhideTitle')}
+            description={stillPausedByOwner ? t('unhideNoteOwnerPaused') : t('unhideNote')}
+            okText={t('unhideOk')}
+            cancelText={tCommon('close')}
             onConfirm={submitUnhide}
           >
             <Button type="primary" block icon={<EyeOutlined />} loading={moderation.isPending}>
-              Bỏ ẩn xe
+              {t('unhide')}
             </Button>
           </Popconfirm>
         ) : (
-          <div className={styles.hint}>
-            Chỉ ẩn được xe đang hiển thị công khai, và chỉ bỏ ẩn được xe do nền tảng ẩn.
-          </div>
+          <div className={styles.hint}>{t('unavailable')}</div>
         )}
       </div>
 
       <ResponsiveDialog
-        title="Ẩn xe khỏi Marketplace"
+        title={t('hide')}
         open={hideOpen}
         size="sm"
-        okText="Ẩn xe"
-        cancelText="Huỷ"
+        okText={t('hideOk')}
+        cancelText={tCommon('cancel')}
         destructive
         okDisabled={!trimmedReason}
         confirmLoading={moderation.isPending}
         onOk={submitHide}
         onClose={() => setHideOpen(false)}
       >
-        <p className={styles.note}>
-          Xe biến mất khỏi Marketplace ngay lập tức. Chủ shop có thể sửa rồi gửi duyệt lại. Lý do
-          được lưu vào nhật ký hệ thống nên bắt buộc nhập.
-        </p>
+        <p className={styles.note}>{t('hideNote')}</p>
         <Input.TextArea
           rows={3}
           maxLength={500}
           showCount
           value={reason}
-          placeholder="Lý do ẩn xe…"
+          placeholder={t('reasonPlaceholder')}
           onChange={(e) => setReason(e.target.value)}
         />
       </ResponsiveDialog>
@@ -155,72 +182,134 @@ function Body({ vehicle }: { vehicle: AdminVehicleDetail }) {
   );
 }
 
-function detailItems(v: AdminVehicleDetail, labels: CatalogLabels, fmt: AppFormat) {
-  const specs = [
-    labels.brandLabel(v.brand),
-    v.model,
-    v.manufactureYear ? String(v.manufactureYear) : null,
-    v.seatCount ? `${v.seatCount} chỗ` : null,
-    labels.fuelTypeLabel(v.fuelType),
-  ]
-    .filter(Boolean)
-    .join(LIST_SEPARATOR);
+/**
+ * Bảng thuộc tính của một xe trên màn kiểm duyệt.
+ *
+ * Là HOOK trả về hàm dựng (chứ không một hàm thuần như trước) vì mọi nhãn ở đây đã đi qua `t()`.
+ * Ba dòng cuối cùng của khối trạng thái là phần thêm ngày 23/09/2026 và chúng đi thành một BỘ:
+ *
+ *  - **Bản ghi trên sàn** — `public_listings.status`, tức dữ liệu thô;
+ *  - **Chủ xe cho hiển thị** — `marketplace_enabled`, CHỈ ĐỌC với nền tảng (ADR 0048 điều 4);
+ *  - **Kết quả trên chợ** — phép gộp do SERVER suy, kèm LÝ DO khi đang ẩn.
+ *
+ * Thiếu hai dòng sau, người kiểm duyệt bỏ ẩn một chiếc xe rồi thấy "Trên sàn: Đã ẩn" và không
+ * có gì giải thích tại sao — đúng cái kết luận "hệ thống lỗi" mà bộ ba này sinh ra để chặn.
+ */
+function useDetailItems() {
+  const t = useTranslations('AdminVehicles.detail');
+  const domainLabel = useDomainLabel();
 
-  return [
-    { key: 'code', label: 'Mã xe', children: v.code },
-    { key: 'plate', label: 'Biển số', children: v.plateNumber ?? '—' },
-    {
-      key: 'type',
-      label: 'Loại · dịch vụ',
-      children: `${VEHICLE_TYPE_LABEL[v.vehicleType as VehicleType] ?? v.vehicleType} · ${serviceTypesLabel(v.serviceTypes ?? [])}`,
-    },
-    ...(specs ? [{ key: 'specs', label: 'Thông số', children: specs }] : []),
-    {
-      key: 'tenant',
-      label: 'Gian hàng',
-      children: (
-        <span className={styles.inline}>
-          <Link href={shopPath.detail(v.tenantSlug)} target="_blank">
-            {v.tenantName}
-          </Link>
-          <StatusTag value={v.tenantStatus as TenantStatus} meta={TENANT_STATUS_META} group="tenantStatus" />
-        </span>
-      ),
-    },
-    { key: 'owner', label: 'Chủ shop', children: v.ownerName ?? '—' },
-    { key: 'province', label: 'Tỉnh/TP', children: v.provinceName ?? '—' },
-    {
-      key: 'operation',
-      label: 'Vận hành',
-      children: (
-        <StatusTag
-          value={v.operationStatus as VehicleOperationStatus}
-          meta={VEHICLE_OPERATION_STATUS_META} group="vehicleOperationStatus"
-        />
-      ),
-    },
-    {
-      key: 'listing',
-      label: 'Trên sàn',
-      children: v.listingStatus ? (
-        <span className={styles.inline}>
-          <StatusTag value={v.listingStatus as ListingStatus} meta={LISTING_STATUS_META} group="listingStatus" />
-          <Link href={listingPath.detail(v.id)} target="_blank">
-            Xem trang xe
-          </Link>
-        </span>
-      ) : (
-        'Chưa lên sàn'
-      ),
-    },
-    {
-      key: 'prices',
-      label: 'Giá thường · cuối tuần · giờ',
-      children: `${fmt.money(v.weekdayPrice)} · ${fmt.money(v.weekendPrice)} · ${fmt.money(v.hourlyPrice)}`,
-    },
-    { key: 'bookings', label: 'Số đơn thuê', children: String(v.bookingCount) },
-    { key: 'reviews', label: 'Số đánh giá', children: String(v.reviewCount) },
-    { key: 'created', label: 'Ngày tạo', children: fmt.date(v.createdAt) },
-    { key: 'updated', label: 'Cập nhật', children: fmt.date(v.updatedAt) },
-  ];
+  return (v: AdminVehicleDetail, labels: CatalogLabels, fmt: AppFormat) => {
+    const specs = [
+      labels.brandLabel(v.brand),
+      v.model,
+      v.manufactureYear ? String(v.manufactureYear) : null,
+      v.seatCount ? t('seats', { count: v.seatCount }) : null,
+      labels.fuelTypeLabel(v.fuelType),
+    ]
+      .filter(Boolean)
+      .join(LIST_SEPARATOR);
+
+    const empty = '—';
+    const reason = v.marketplaceVisibilityReason as MarketplaceVisibilityReason;
+
+    return [
+      { key: 'code', label: t('code'), children: v.code },
+      { key: 'plate', label: t('plate'), children: v.plateNumber ?? empty },
+      {
+        key: 'type',
+        label: t('type'),
+        children: `${domainLabel('vehicleType', v.vehicleType)} · ${serviceTypesLabel(v.serviceTypes ?? [])}`,
+      },
+      ...(specs ? [{ key: 'specs', label: t('specs'), children: specs }] : []),
+      {
+        key: 'tenant',
+        label: t('tenant'),
+        children: (
+          <span className={styles.inline}>
+            <Link href={shopPath.detail(v.tenantSlug)} target="_blank">
+              {v.tenantName}
+            </Link>
+            <StatusTag
+              value={v.tenantStatus as TenantStatus}
+              meta={TENANT_STATUS_META}
+              group="tenantStatus"
+            />
+          </span>
+        ),
+      },
+      { key: 'owner', label: t('owner'), children: v.ownerName ?? empty },
+      { key: 'province', label: t('province'), children: v.provinceName ?? empty },
+      {
+        key: 'operation',
+        label: t('operation'),
+        children: (
+          <StatusTag
+            value={v.operationStatus as VehicleOperationStatus}
+            meta={VEHICLE_OPERATION_STATUS_META}
+            group="vehicleOperationStatus"
+          />
+        ),
+      },
+      {
+        key: 'listing',
+        label: t('listing'),
+        children: v.listingStatus ? (
+          <StatusTag
+            value={v.listingStatus as ListingStatus}
+            meta={LISTING_STATUS_META}
+            group="listingStatus"
+          />
+        ) : (
+          t('notListed')
+        ),
+      },
+      {
+        key: 'ownerVisibility',
+        label: (
+          <span className={styles.inline}>
+            {t('ownerVisibility')}
+            {/* Dấu "i" nói rõ đây là ô CHỈ ĐỌC với nền tảng — không có endpoint admin nào ghi nó. */}
+            <InfoHint label={t('ownerVisibilityHintLabel')} content={t('ownerVisibilityHint')} />
+          </span>
+        ),
+        children: (
+          <Tag color={v.marketplaceEnabled ? STATUS_COLOR.SUCCESS : STATUS_COLOR.NEUTRAL}>
+            {v.marketplaceEnabled ? t('ownerVisibilityOn') : t('ownerVisibilityOff')}
+          </Tag>
+        ),
+      },
+      {
+        key: 'effective',
+        label: t('effective'),
+        children: v.isMarketplaceVisible ? (
+          <span className={styles.inline}>
+            <Tag color={STATUS_COLOR.SUCCESS}>{t('effectiveVisible')}</Tag>
+            <Link href={listingPath.detail(v.id)} target="_blank">
+              {t('viewListing')}
+            </Link>
+          </span>
+        ) : (
+          <span className={styles.inline}>
+            <Tag color={STATUS_COLOR.NEUTRAL}>{t('effectiveHidden')}</Tag>
+            {/* LÝ DO hiệu lực — thứ trả lời "gỡ ẩn xong rồi sao vẫn không thấy xe". */}
+            <StatusTag
+              value={reason}
+              meta={MARKETPLACE_VISIBILITY_REASON_META}
+              group="marketplaceVisibility"
+            />
+          </span>
+        ),
+      },
+      {
+        key: 'prices',
+        label: t('prices'),
+        children: `${fmt.money(v.weekdayPrice)} · ${fmt.money(v.weekendPrice)} · ${fmt.money(v.hourlyPrice)}`,
+      },
+      { key: 'bookings', label: t('bookings'), children: String(v.bookingCount) },
+      { key: 'reviews', label: t('reviews'), children: String(v.reviewCount) },
+      { key: 'created', label: t('created'), children: fmt.date(v.createdAt) },
+      { key: 'updated', label: t('updated'), children: fmt.date(v.updatedAt) },
+    ];
+  };
 }

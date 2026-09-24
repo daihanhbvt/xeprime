@@ -1,0 +1,144 @@
+/*
+ * Đầu trang dùng chung cho các trang nội dung công khai.
+ *
+ * Dải cát chuyển dần xuống nền trang: mép dưới KHÔNG phải một đường cắt, nên nó ngồi liền với
+ * nội dung bên dưới thay vì trông như một banner dán lên. Đường kẻ mảnh cuối dải là thứ duy
+ * nhất nói "hết phần đầu trang".
+ */
+.hero {
+  background: linear-gradient(180deg, var(--xp-color-primary-light), var(--xp-color-bg));
+  border-bottom: 1px solid var(--xp-color-border);
+}
+
+.inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px 20px 30px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px 32px;
+}
+
+/* Trang có lưới thẻ (hỗ trợ, giới thiệu) cần đúng khổ cột với lưới bên dưới nó. */
+.innerWide {
+  max-width: var(--xp-container-max-width);
+}
+
+.main {
+  min-width: 0;
+}
+
+/* ─── Breadcrumb ─────────────────────────────────────────────────────────── */
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.crumbItem {
+  display: inline-flex;
+  align-items: center;
+}
+
+.crumbSep {
+  margin: 0 8px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.crumbLink {
+  color: var(--xp-color-text-secondary);
+  transition: color 0.15s ease;
+}
+.crumbLink:hover {
+  color: var(--xp-color-primary-active);
+}
+.crumbLink:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-primary);
+  outline-offset: 2px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.crumbCurrent {
+  color: var(--xp-color-text-tertiary);
+}
+
+/* ─── Chữ ────────────────────────────────────────────────────────────────── */
+.eyebrow {
+  margin-bottom: 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--xp-color-primary-active);
+}
+
+/*
+ * Serif cho tiêu đề trang. Cùng bộ chữ với hero marketplace và dải CTA ở chân trang, nên ba
+ * điểm "nói to" nhất của khu công khai dùng chung một giọng.
+ */
+.title {
+  font-family: var(--xp-font-family-display);
+  font-size: clamp(25px, 3vw, 34px);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  color: var(--xp-color-text);
+}
+
+.lead {
+  margin-top: 10px;
+  max-width: 62ch;
+  font-size: 15.5px;
+  line-height: 1.7;
+  color: var(--xp-color-text-secondary);
+}
+
+/* Dữ kiện (ngày hiệu lực…) — viên thuốc có viền để đọc được ngay, không lẫn vào đoạn văn. */
+.meta {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 5px 12px;
+  border: 1px solid var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--xp-color-text-secondary);
+}
+
+.aside {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .inner {
+    padding: 20px 16px 24px;
+  }
+  .lead {
+    font-size: 15px;
+  }
+}
+
+/* Bản in: dải nền cát in ra là một mảng xám tốn mực, và breadcrumb không bấm được trên giấy. */
+@media print {
+  .hero {
+    background: none;
+    border-bottom: 1px solid var(--xp-color-border-strong);
+  }
+  .crumbs,
+  .aside {
+    display: none;
+  }
+  .inner {
+    max-width: none;
+    padding: 0 0 12px;
+  }
+}

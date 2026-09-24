@@ -1,0 +1,84 @@
+{
+  "page": {
+    "title": "Xe toàn hệ thống",
+    "loading": "Đang tải xe toàn hệ thống…"
+  },
+  "filters": {
+    "searchLabel": "Tìm xe",
+    "searchPlaceholder": "Tìm tên xe / biển số / mã",
+    "publicStatus": "Kiểm duyệt",
+    "operationStatus": "Vận hành",
+    "vehicleType": "Loại xe"
+  },
+  "quick": {
+    "ariaLabel": "Lối tắt lọc xe",
+    "visible": "Đang hiển thị",
+    "platformHidden": "Nền tảng đã ẩn",
+    "suspendedShop": "Của gian hàng bị khoá"
+  },
+  "table": {
+    "label": "Xe toàn hệ thống",
+    "vehicle": "Xe",
+    "tenant": "Gian hàng",
+    "publicStatus": "Kiểm duyệt",
+    "marketplace": "Trên chợ",
+    "operationStatus": "Vận hành",
+    "weekdayPrice": "Giá ngày thường",
+    "createdAt": "Ngày tạo",
+    "view": "Xem chi tiết",
+    "notListed": "Chưa lên sàn",
+    "notListedHint": "Xe chưa từng được duyệt lên Marketplace",
+    "loadError": "Không tải được danh sách xe",
+    "empty": "Chưa có xe nào trong hệ thống",
+    "noResults": "Không có xe khớp bộ lọc",
+    "clearFilters": "Xoá bộ lọc",
+    "total": "{count} xe"
+  },
+  "drawer": {
+    "fallbackTitle": "Xe",
+    "loadError": "Không tải được thông tin xe"
+  },
+  "detail": {
+    "code": "Mã xe",
+    "plate": "Biển số",
+    "type": "Loại · dịch vụ",
+    "specs": "Thông số",
+    "seats": "{count} chỗ",
+    "tenant": "Gian hàng",
+    "owner": "Chủ shop",
+    "province": "Tỉnh/TP",
+    "operation": "Vận hành",
+    "listing": "Bản ghi trên sàn",
+    "notListed": "Chưa lên sàn",
+    "viewListing": "Xem trang xe",
+    "ownerVisibility": "Chủ xe cho hiển thị",
+    "ownerVisibilityOn": "Bật",
+    "ownerVisibilityOff": "Tắt",
+    "ownerVisibilityHintLabel": "Vì sao nền tảng không đổi được mục này",
+    "ownerVisibilityHint": "Đây là lựa chọn của chủ xe. Nền tảng chỉ xem — gỡ ẩn không bật hộ công tắc này.",
+    "effective": "Kết quả trên chợ",
+    "effectiveVisible": "Đang hiển thị",
+    "effectiveHidden": "Đang ẩn",
+    "prices": "Giá thường · cuối tuần · giờ",
+    "bookings": "Số đơn thuê",
+    "reviews": "Số đánh giá",
+    "created": "Ngày tạo",
+    "updated": "Cập nhật"
+  },
+  "moderation": {
+    "noPermission": "Bạn không có quyền kiểm duyệt xe.",
+    "unavailable": "Chỉ ẩn được xe đang hiển thị công khai, và chỉ gỡ ẩn được xe do nền tảng ẩn.",
+    "hide": "Ẩn xe khỏi Marketplace",
+    "hideOk": "Ẩn xe",
+    "hideNote": "Xe biến mất khỏi Marketplace ngay lập tức. Lý do được lưu vào nhật ký hệ thống nên bắt buộc nhập.",
+    "reasonPlaceholder": "Lý do ẩn xe…",
+    "hideSuccess": "Đã ẩn xe khỏi Marketplace",
+    "unhide": "Gỡ ẩn của nền tảng",
+    "unhideOk": "Gỡ ẩn",
+    "unhideTitle": "Gỡ trạng thái ẩn của nền tảng cho xe này?",
+    "unhideNote": "Xe hiển thị lại trên Marketplace ngay sau khi gỡ.",
+    "unhideNoteOwnerPaused": "Chủ xe đang tắt hiển thị, nên xe vẫn chưa lên chợ sau khi gỡ ẩn.",
+    "unhideSuccess": "Đã gỡ ẩn của nền tảng. Xe hiển thị lại trên Marketplace.",
+    "unhideSuccessOwnerPaused": "Đã gỡ ẩn của nền tảng. Xe vẫn đang tạm ẩn theo lựa chọn của chủ xe."
+  }
+}

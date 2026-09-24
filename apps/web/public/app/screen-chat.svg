@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844" role="img" aria-hidden="true">
+  <!--
+    ẢNH MINH HOẠ TẠM — màn tin nhắn của app native. Xem ghi chú đầy đủ ở `screen-search.svg`;
+    thay bằng ảnh thật thì ghi đè file này, giữ tỉ lệ 390×844.
+  -->
+  <rect width="390" height="844" fill="#faf9f7"/>
+
+  <!-- header hội thoại -->
+  <rect x="0" y="0" width="390" height="110" fill="#ffffff"/>
+  <rect x="0" y="109" width="390" height="1" fill="#e8e4dd"/>
+  <rect x="20" y="62" width="14" height="14" rx="3" fill="#d4cfc6"/>
+  <circle cx="66" cy="69" r="18" fill="#fdf6e3"/>
+  <circle cx="66" cy="63" r="6" fill="#d6a02c"/>
+  <path d="M56 80c1-7 5-9 10-9s9 2 10 9z" fill="#d6a02c"/>
+  <rect x="96" y="56" width="128" height="11" rx="5.5" fill="#1a1a1a"/>
+  <rect x="96" y="76" width="72" height="8" rx="4" fill="#16a34a"/>
+
+  <!-- dấu ngày -->
+  <rect x="158" y="132" width="74" height="18" rx="9" fill="#ece8e1"/>
+
+  <!-- bong bóng đến -->
+  <rect x="16" y="168" width="230" height="58" rx="14" fill="#ffffff" stroke="#e8e4dd"/>
+  <rect x="32" y="186" width="182" height="9" rx="4.5" fill="#6b6560"/>
+  <rect x="32" y="203" width="128" height="9" rx="4.5" fill="#6b6560"/>
+
+  <!-- bong bóng đi -->
+  <rect x="144" y="240" width="230" height="40" rx="14" fill="#d6a02c"/>
+  <rect x="160" y="256" width="168" height="9" rx="4.5" fill="#2a2318"/>
+
+  <!-- thẻ xe chia sẻ trong hội thoại -->
+  <rect x="16" y="294" width="252" height="132" rx="14" fill="#ffffff" stroke="#e8e4dd"/>
+  <rect x="16" y="294" width="252" height="76" rx="14" fill="#ece8e1"/>
+  <path d="M82 352c6-22 19-34 31-34h34c13 0 23 12 31 34z" fill="#d4cfc6"/>
+  <circle cx="100" cy="352" r="8" fill="#9e9890"/>
+  <circle cx="204" cy="352" r="8" fill="#9e9890"/>
+  <rect x="32" y="384" width="140" height="10" rx="5" fill="#1a1a1a"/>
+  <rect x="32" y="402" width="86" height="9" rx="4.5" fill="#a9761a"/>
+
+  <!-- bong bóng đến -->
+  <rect x="16" y="440" width="196" height="40" rx="14" fill="#ffffff" stroke="#e8e4dd"/>
+  <rect x="32" y="456" width="148" height="9" rx="4.5" fill="#6b6560"/>
+
+  <!-- bong bóng đi + ảnh đính kèm -->
+  <rect x="206" y="494" width="168" height="112" rx="14" fill="#d6a02c"/>
+  <rect x="218" y="506" width="144" height="76" rx="8" fill="#c4920f"/>
+  <circle cx="248" cy="534" r="10" fill="#fdf6e3"/>
+  <path d="M226 574l32-30 22 20 18-14 24 24z" fill="#fdf6e3"/>
+  <rect x="218" y="590" width="92" height="7" rx="3.5" fill="#2a2318"/>
+
+  <!-- ô soạn tin -->
+  <rect x="0" y="742" width="390" height="102" fill="#ffffff"/>
+  <rect x="0" y="742" width="390" height="1" fill="#e8e4dd"/>
+  <rect x="16" y="762" width="286" height="44" rx="22" fill="#f5f3ef"/>
+  <rect x="36" y="779" width="130" height="9" rx="4.5" fill="#d4cfc6"/>
+  <circle cx="346" cy="784" r="22" fill="#d6a02c"/>
+  <path d="M338 784l16-8-4 8 4 8z" fill="#2a2318"/>
+</svg>

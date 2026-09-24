@@ -79,8 +79,10 @@ export function InformationSection() {
   // Nguồn năng lượng quyết định bộ truyền động hợp lệ — theo dõi để ô chọn đổi ngay khi
   // người dùng đổi từ xăng sang điện, chứ không đợi lưu rồi mới biết.
   const fuelType = useWatch({ control, name: `fuelType` });
-  /** Xe đã lên chợ: căn cước bị khoá (biển số, hộp số, nhiên liệu, năm SX) — server chặn lại. */
-  const isPublic = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
+  /** Xe ĐÃ ĐƯỢC DUYỆT: căn cước bị khoá (biển số, hộp số, nhiên liệu, năm SX) — server chặn lại.
+   *  Trục KIỂM DUYỆT, không phải công tắc hiển thị của chủ xe: tạm ẩn xe KHÔNG mở khoá lại
+   *  mấy ô này, vì listing đã kiểm duyệt vẫn là listing đã kiểm duyệt (ADR 0048). */
+  const isApproved = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
 
   async function save() {
     if (!(await trigger([...FIELDS]))) return;
@@ -119,7 +121,7 @@ export function InformationSection() {
           Xe đang trên chợ: căn cước của nó bị khoá, phần còn lại sửa là hiệu lực ngay. Nói rõ
           ở đầu màn để chủ xe không phải thử từng ô mới biết ô nào không bấm được.
         */}
-        {isPublic ? (
+        {isApproved ? (
           <Alert type="info" showIcon title={t('information.lockedNotice')} />
         ) : null}
 
@@ -131,8 +133,8 @@ export function InformationSection() {
                 name="plateNumber"
                 label={<PublishRequiredLabel label={tForm('specs.plateNumber')} />}
                 placeholder={tForm('specs.platePlaceholder')}
-                help={isPublic ? t('information.lockedField') : t('information.plateHelp')}
-                disabled={!canEdit || isPublic}
+                help={isApproved ? t('information.lockedField') : t('information.plateHelp')}
+                disabled={!canEdit || isApproved}
               />
             </SectionCard>
             <AddressCard canEdit={canEdit} />
@@ -148,7 +150,7 @@ export function InformationSection() {
                 <VehicleIdentityFields
                   control={control}
                   vehicleType={vehicle.vehicleType}
-                  lockedNotice={isPublic ? t('information.lockedField') : undefined}
+                  lockedNotice={isApproved ? t('information.lockedField') : undefined}
                   disabled={!canEdit}
                   setValue={setValue}
                 />
@@ -171,8 +173,8 @@ export function InformationSection() {
                   control={control}
                   vehicleType={vehicle.vehicleType}
                   transmissionOptions={transmissionOptions}
-                  lockedNotice={isPublic ? t('information.lockedField') : undefined}
-                  disabled={!canEdit || isPublic}
+                  lockedNotice={isApproved ? t('information.lockedField') : undefined}
+                  disabled={!canEdit || isApproved}
                   setValue={setValue}
                 />
               </Col>
@@ -183,8 +185,8 @@ export function InformationSection() {
                   label={tForm('specs.manufactureYear')}
                   min={1980}
                   max={new Date().getFullYear() + 1}
-                  help={isPublic ? t('information.lockedField') : undefined}
-                  disabled={!canEdit || isPublic}
+                  help={isApproved ? t('information.lockedField') : undefined}
+                  disabled={!canEdit || isApproved}
                 />
               </Col>
               <Col xs={24} sm={12}>

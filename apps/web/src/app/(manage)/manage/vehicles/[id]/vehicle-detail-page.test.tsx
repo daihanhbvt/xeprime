@@ -109,9 +109,14 @@ vi.mock('@/features/vehicle-maintenance/hooks', () => ({
 const deleteVehicle = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
 const submitPublic = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
 
+const setVisibility = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
+
 vi.mock('@/features/vehicles/hooks/use-vehicle-mutations', () => ({
   useDeleteVehicle: () => deleteVehicle,
   useSubmitVehiclePublic: () => submitPublic,
+  // Công tắc hiển thị trên chợ (ADR 0048) — hành vi riêng của nó ở
+  // `marketplace-visibility-switch.test.tsx`; ở đây chỉ cần trang dựng được.
+  useSetVehicleMarketplaceVisibility: () => setVisibility,
 }));
 
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
@@ -153,6 +158,10 @@ function vehicle(over: Partial<VehicleDetail> = {}): VehicleDetail {
     serviceTypes: ['self_drive'],
     operationStatus: 'available',
     publicStatus: 'draft',
+    // Trục thứ ba (ADR 0048): xe nháp thì chưa qua cổng duyệt, công tắc của chủ xe bật sẵn.
+    marketplaceEnabled: true,
+    isMarketplaceVisible: false,
+    marketplaceVisibilityReason: 'not_approved',
     brand: 'Ford',
     model: 'Transit',
     color: 'Trắng',
@@ -181,6 +190,18 @@ function vehicle(over: Partial<VehicleDetail> = {}): VehicleDetail {
     updatedAt: '2026-08-01T00:00:00.000Z',
     ...over,
   } as VehicleDetail;
+}
+
+/**
+ * Tổng hợp KHÔNG có cảnh báo vận hành nào — để test khoá riêng phần "việc lên chợ" mà không bị
+ * một cảnh báo bảo dưỡng của fixture khác chen vào.
+ */
+function emptyAlertSummary(): Vehicle360Summary {
+  return {
+    stats: { vehicleId: 'v1', activeBookings: 0, completedBookings: 0 },
+    currentOdometerKm: null,
+    alerts: [],
+  } as unknown as Vehicle360Summary;
 }
 
 function summaryOf(over: Partial<Vehicle360Summary> = {}): Vehicle360Summary {
@@ -240,9 +261,16 @@ function renderPage() {
   );
 }
 
-/** Panel "Tiến trình gửi duyệt công khai" — để câu hỏi 'Chưa có' không dính các khối khác. */
+/**
+ * Thẻ xét duyệt phía dưới — để câu hỏi 'Chưa có' không dính các khối khác.
+ *
+ * Hai tiêu đề vì thẻ đổi vai theo trạng thái (bố cục 23/09/2026): xe chưa duyệt thì nó là
+ * "Tiến trình xét duyệt", xe đã duyệt thì nó thu gọn thành "Thông tin xét duyệt".
+ */
 function reviewPanel(): HTMLElement {
-  return screen.getByText('Tiến trình gửi duyệt công khai').closest('.ant-card') as HTMLElement;
+  const title =
+    screen.queryByText('Tiến trình xét duyệt') ?? screen.getByText('Thông tin xét duyệt');
+  return title.closest('.ant-card') as HTMLElement;
 }
 
 beforeEach(() => {
@@ -375,13 +403,52 @@ describe('/manage/vehicles/[id] — hồ sơ hiển thị', () => {
     expect(screen.getByText('XE-014')).toBeTruthy();
   });
 
-  it('hiện CẢ HAI trục trạng thái — vận hành và public — kèm nhãn trục', () => {
+  it('hiện hai trục trạng thái — vận hành và kiểm duyệt — kèm nhãn trục', () => {
     renderPage();
 
     expect(screen.getByText('Vận hành')).toBeTruthy();
     expect(screen.getByText('Sẵn sàng')).toBeTruthy();
-    expect(screen.getByText('Public')).toBeTruthy();
+    // Nhãn trục đổi từ "Public" 23/09/2026 — nó nói về KIỂM DUYỆT, không nói về việc khách có
+    // thấy xe hay không (ADR 0048). "Xe có ngoài chợ không" nằm ở cột thao tác.
+    expect(screen.getByText('Kiểm duyệt')).toBeTruthy();
     expect(screen.getByText('Nháp')).toBeTruthy();
+  });
+
+  /*
+   * Bố cục 23/09/2026: công tắc "Trên chợ" ở ĐẦU trang, không phải ở thẻ gần cuối. Ba test dưới
+   * khoá đúng điều đó — trước đây chủ xe phải cuộn qua tiền, thông số và giấy tờ mới biết xe có
+   * đang bán hay không.
+   */
+  it('xe đã duyệt: công tắc "Trên chợ" ở cột thao tác đầu trang, và CHỈ có một cái', () => {
+    grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
+    detail.data = vehicle({ publicStatus: 'approved_public', isMarketplaceVisible: true });
+    renderPage();
+
+    expect(screen.getByText('Trên chợ')).toBeTruthy();
+    expect(screen.getAllByRole('switch')).toHaveLength(1);
+    expect(screen.getByText('Đang hiển thị')).toBeTruthy();
+  });
+
+  it('xe đã duyệt nhưng chủ xe tạm ẩn: công tắc tắt, trạng thái đọc "Tạm ẩn"', () => {
+    grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
+    detail.data = vehicle({
+      publicStatus: 'approved_public',
+      marketplaceEnabled: false,
+      isMarketplaceVisible: false,
+      marketplaceVisibilityReason: 'owner_paused',
+    });
+    renderPage();
+
+    expect(screen.getByText('Đã duyệt public')).toBeTruthy();
+    expect(screen.getByText('Tạm ẩn')).toBeTruthy();
+    expect(screen.getByRole('switch').getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('xe chưa duyệt: KHÔNG có công tắc nào — chỉ một thẻ trạng thái', () => {
+    renderPage();
+
+    expect(screen.queryByRole('switch')).toBeNull();
+    expect(screen.getByText('Chưa hiển thị')).toBeTruthy();
   });
 
   it('thông số kỹ thuật hiện đúng giá trị đang lưu', () => {
@@ -412,32 +479,101 @@ describe('/manage/vehicles/[id] — hồ sơ hiển thị', () => {
     expect(screen.queryByText('Giá hiển thị sàn')).toBeNull();
   });
 
-  it('việc-cần-làm lấy TỪ SERVER, không suy lại ở client (Wave 8)', () => {
-    detail.data = vehicle({ mainImageUrl: null });
+  it('việc-cần-làm VẬN HÀNH lấy TỪ SERVER, không suy lại ở client (Wave 8)', () => {
+    detail.data = vehicle({ publicStatus: 'approved_public', isMarketplaceVisible: true });
     summary.data = {
       stats: { vehicleId: 'vehicle-1', activeBookings: 0, completedBookings: 0 },
       currentOdometerKm: 45_230,
       currentOdometerSource: 'booking_return',
       alerts: [
         {
-          kind: 'missing_vehicle_info',
+          kind: 'document_expiring',
           severity: 'warning',
-          title: 'Thiếu thông tin để gửi duyệt công khai',
-          detail: 'Còn thiếu: ảnh đại diện',
+          title: 'Có giấy tờ sắp hết hạn',
+          detail: 'Đăng kiểm còn 10 ngày',
           count: 1,
-          href: '/manage/vehicles/v1/edit?tab=information',
+          href: '/manage/vehicles/v1/edit?tab=documents',
         },
       ],
     } as unknown as typeof summary.data;
     renderPage();
 
-    expect(screen.getByText('Thiếu thông tin để gửi duyệt công khai')).toBeTruthy();
-    expect(screen.getByText('Còn thiếu: ảnh đại diện')).toBeTruthy();
+    expect(screen.getByText('Có giấy tờ sắp hết hạn')).toBeTruthy();
+    expect(screen.getByText('Đăng kiểm còn 10 ngày')).toBeTruthy();
     // Mức nghiêm trọng nói bằng CHỮ, không chỉ bằng màu chấm.
     expect(screen.getAllByText('Cần chú ý').length).toBeGreaterThan(0);
     // KM có thẩm quyền + nguồn của nó hiện ngay trên header.
     expect(screen.getByText('45.230 km')).toBeTruthy();
     expect(screen.getByText(/Bàn giao trả xe/)).toBeTruthy();
+  });
+
+  /*
+   * ADR 0048 / bố cục 23/09/2026 — thẻ "Việc cần làm" phải kể cả chuyện LÊN CHỢ.
+   *
+   * Trước đợt này nó chỉ đọc cảnh báo server, nên một chiếc xe còn là NHÁP hiện "Không có việc
+   * cần làm" ngay đầu trang trong khi việc thật nằm ở một thẻ gần cuối.
+   */
+  it('xe nháp còn thiếu dữ liệu: việc lên chợ ở thẻ Việc cần làm, có CTA thật', () => {
+    grant(PERMISSION.VEHICLE_UPDATE);
+    detail.data = vehicle({ weekdayPrice: null });
+    summary.data = emptyAlertSummary();
+    renderPage();
+
+    expect(screen.getByText('Hoàn tất hồ sơ để đưa xe lên chợ')).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Hoàn tất hồ sơ/ })).toBeTruthy();
+    expect(screen.queryByText('Không có việc cần làm.')).toBeNull();
+  });
+
+  it('xe nháp đã đủ dữ liệu: CTA "Gửi duyệt" ngay trong Việc cần làm', () => {
+    grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
+    summary.data = emptyAlertSummary();
+    renderPage();
+
+    expect(screen.getByText('Xe đã sẵn sàng để xét duyệt')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi duyệt' }));
+    expect(submitPublic.mutate).toHaveBeenCalledTimes(1);
+  });
+
+  it('đang chờ duyệt: KHÔNG có nút gửi lại ở bất kỳ đâu trên trang', () => {
+    grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
+    detail.data = vehicle({ publicStatus: 'pending_public_review' });
+    summary.data = emptyAlertSummary();
+    renderPage();
+
+    expect(screen.getByText('Hồ sơ đang được xét duyệt')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Gửi duyệt/ })).toBeNull();
+  });
+
+  it('xe đã duyệt và đang bật: không nhét chuyện xét duyệt vào Việc cần làm', () => {
+    detail.data = vehicle({ publicStatus: 'approved_public', isMarketplaceVisible: true });
+    summary.data = emptyAlertSummary();
+    renderPage();
+
+    expect(screen.getByText('Không có việc cần làm.')).toBeTruthy();
+  });
+
+  /*
+   * Server cũng sinh `missing_vehicle_info`/`public_action_required`, nhưng chúng chỉ có CHỮ.
+   * Trang chi tiết dựng được việc đầy đủ có CTA nên nó LỌC hai cảnh báo đó ra — giữ cả hai là
+   * kể cùng một chuyện hai lần, lần thứ hai cụt hơn.
+   */
+  it('không kể hai lần: cảnh báo server trùng nội dung bị lọc khỏi thẻ', () => {
+    detail.data = vehicle({ weekdayPrice: null });
+    summary.data = {
+      ...emptyAlertSummary(),
+      alerts: [
+        {
+          kind: 'missing_vehicle_info',
+          severity: 'warning',
+          title: 'Thiếu thông tin để gửi duyệt công khai',
+          count: 1,
+        },
+      ],
+    } as unknown as typeof summary.data;
+    renderPage();
+
+    expect(screen.getByText('Hoàn tất hồ sơ để đưa xe lên chợ')).toBeTruthy();
+    expect(screen.queryByText('Thiếu thông tin để gửi duyệt công khai')).toBeNull();
   });
 
   it('chỉ hiện 3 việc quan trọng nhất, phần còn lại sau "Xem tất cả"', () => {
@@ -598,55 +734,68 @@ describe('/manage/vehicles/[id] — khu vực chưa có dữ liệu', () => {
 
 /* ------------------------------------------------------------------ gửi duyệt công khai */
 
-describe('/manage/vehicles/[id] — tiến trình gửi duyệt', () => {
-  it('không có quyền gửi duyệt: không có danh sách điều kiện và không có nút gửi', () => {
-    renderPage();
-
-    expect(screen.queryByRole('button', { name: /Gửi duyệt/ })).toBeNull();
-  });
-
-  // ADR 0030: mô tả KHÔNG còn là điều kiện lên chợ, checklist còn ba mục (giá · ảnh · biển số).
+describe('/manage/vehicles/[id] — thẻ xét duyệt phía dưới', () => {
   /*
-   * Checklist chạy CÙNG hàm với backend (`missingPublishRequirements` ở `@xeprime/types`, ADR
-   * 0036): giá tự lái · ảnh đại diện · đủ 4 ảnh · biển số · danh tính xe · thông số nguồn năng
-   * lượng · chi nhánh có tỉnh. BẢY mục.
+   * Bố cục 23/09/2026: thẻ này KHÔNG còn là nơi hành động.
    *
-   * Mục thứ bảy là một sửa lỗi, không phải thêm việc: backend vẫn luôn chặn khi chi nhánh chưa
-   * có tỉnh, chỉ là ở một nhánh riêng — nên checklist xanh hết mà nút bấm vào vẫn 400.
+   * Nút gửi duyệt dời lên "Việc cần làm", công tắc hiển thị lên cột thao tác. Thẻ còn lại phần
+   * TRA CỨU — checklist đánh dấu từng mục, mốc gửi/duyệt. Các test dưới khoá lại chuyện "hai CTA
+   * cho cùng một việc" không quay về.
    */
-  it('đủ điều kiện: mọi mục đều "Đã có" và nút gửi bấm được', () => {
+  it('checklist chạy CÙNG luật với backend — bảy mục, đủ hết thì "Đã có" cả bảy', () => {
     grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
     renderPage();
 
     expect(within(reviewPanel()).getAllByText('Đã có')).toHaveLength(7);
     expect(within(reviewPanel()).queryByText('Chưa có')).toBeNull();
-    const button = screen.getByRole('button', { name: /Gửi duyệt công khai/ });
-    fireEvent.click(button);
-    expect(submitPublic.mutate).toHaveBeenCalledTimes(1);
   });
 
-  it('thiếu điều kiện: nêu đúng mục còn thiếu và KHOÁ nút gửi', () => {
+  it('thiếu điều kiện: đánh dấu đúng mục còn thiếu', () => {
     grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
-    // Thiếu MÔ TẢ không còn chặn gửi duyệt; thiếu biển số và thiếu ảnh thì có.
+    // Thiếu MÔ TẢ không còn chặn gửi duyệt (ADR 0030); thiếu biển số và thiếu ảnh thì có.
     detail.data = vehicle({ description: null, plateNumber: null, images: [] });
     renderPage();
 
     expect(within(reviewPanel()).getAllByText('Chưa có')).toHaveLength(2);
     expect(within(reviewPanel()).getAllByText('Đã có')).toHaveLength(5);
-    const button = screen.getByRole('button', { name: /Gửi duyệt công khai/ });
-    expect(button.hasAttribute('disabled')).toBe(true);
-
-    fireEvent.click(button);
-    expect(submitPublic.mutate).not.toHaveBeenCalled();
   });
 
-  it('xe đã duyệt: không mời gửi lại, chỉ báo đang hiển thị trên chợ', () => {
+  it('KHÔNG lặp lại CTA hay công tắc đã có ở đầu trang', () => {
     grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
-    detail.data = vehicle({ publicStatus: 'approved_public' });
+    summary.data = emptyAlertSummary();
     renderPage();
 
-    expect(screen.getByText('Xe đang hiển thị trên chợ')).toBeTruthy();
+    // Đúng MỘT nút gửi duyệt trên cả trang, và nó nằm ở thẻ Việc cần làm.
+    expect(screen.getAllByRole('button', { name: /Gửi duyệt/ })).toHaveLength(1);
+    expect(within(reviewPanel()).queryByRole('button', { name: /Gửi duyệt/ })).toBeNull();
+    expect(within(reviewPanel()).queryByRole('switch')).toBeNull();
+  });
+
+  it('xe đã duyệt: thẻ đổi tên thành "Thông tin xét duyệt" và thu gọn sẵn', () => {
+    grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
+    detail.data = vehicle({ publicStatus: 'approved_public', isMarketplaceVisible: true });
+    renderPage();
+
+    expect(screen.getByText('Thông tin xét duyệt')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Gửi duyệt/ })).toBeNull();
+    // Thu gọn: nội dung checklist chưa dựng ra cho tới khi người dùng mở.
+    expect(screen.queryByText('Ảnh đại diện')).toBeNull();
+  });
+
+  it('có mốc gửi/duyệt thì kể ra', () => {
+    detail.data = vehicle({
+      publicStatus: 'needs_revision',
+      latestPublicReview: {
+        status: 'needs_revision',
+        reason: 'Ảnh mờ.',
+        submittedAt: '2026-09-20T02:00:00.000Z',
+        reviewedAt: '2026-09-21T02:00:00.000Z',
+      },
+    });
+    renderPage();
+
+    expect(within(reviewPanel()).getByText('Đã gửi')).toBeTruthy();
+    expect(within(reviewPanel()).getByText('Đã duyệt')).toBeTruthy();
   });
 });
 

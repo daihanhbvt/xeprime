@@ -5,6 +5,8 @@ import { Skeleton } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import {
+  MARKETPLACE_VISIBILITY_REASON,
+  MARKETPLACE_VISIBILITY_REASON_META,
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
@@ -140,6 +142,19 @@ export function VehicleManagementCard({
               meta={VEHICLE_PUBLIC_STATUS_META}
               group="vehiclePublicStatus"
             />
+            {/*
+             * Chip thứ ba CHỈ khi chủ xe đang tự tạm ẩn (ADR 0048). Mọi lý do ẩn khác đã đọc
+             * được từ chip kiểm duyệt bên cạnh, nên hiện chúng lần nữa là lặp; còn "đã duyệt
+             * nhưng chủ xe tắt" thì KHÔNG đọc được từ chỗ nào khác — và không hiện nó nghĩa là
+             * một chiếc xe đang cất đi trông y hệt một chiếc đang bán.
+             */}
+            {vehicle.marketplaceVisibilityReason === MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED ? (
+              <StatusTag
+                value={MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED}
+                meta={MARKETPLACE_VISIBILITY_REASON_META}
+                group="marketplaceVisibility"
+              />
+            ) : null}
           </span>
         </div>
 

@@ -94,6 +94,8 @@
     "SHOP_NOT_ACTIVE": "Gian hàng đang bị khoá nên chưa thực hiện được thao tác này.",
     "TENANT_BILLING_NOT_CONFIGURED": "Gian hàng chưa có gói dịch vụ hiệu lực nên chưa xác định được cách tính phí. Liên hệ hỗ trợ XePrime trước khi nhận đơn mới.",
     "VEHICLE_PUBLISH_INCOMPLETE": "Xe còn thiếu thông tin bắt buộc nên chưa gửi duyệt được.",
+    "VEHICLE_NOT_APPROVED_PUBLIC": "Xe chưa được nền tảng duyệt nên chưa hiển thị trên chợ được. Hãy gửi duyệt công khai trước.",
+    "VEHICLE_PLATFORM_HIDDEN": "Nền tảng đang ẩn xe này. Liên hệ hỗ trợ XePrime để được xem xét lại.",
     "SHOP_ACCOUNT_CANNOT_BOOK": "Bạn đang dùng tài khoản của gian hàng. Để thuê xe, hãy đăng nhập bằng một tài khoản khách thuê với số điện thoại khác.",
     "CANNOT_BOOK_OWN_VEHICLE": "Đây là xe của chính gian hàng bạn nên không đặt thuê được.",
     "CANNOT_DECIDE_OWN_REQUEST": "Bạn không thể tự duyệt hoặc tự từ chối yêu cầu do chính mình gửi.",

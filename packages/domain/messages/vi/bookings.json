@@ -75,7 +75,7 @@
     "noShowHint": "Chỉ ghi nhận được sau giờ nhận xe {minutes} phút, và chỉ khi chưa giao xe."
   },
   "list": {
-    "title": "Đơn thuê",
+    "title": "Tất cả đơn thuê",
     "searchLabel": "Tìm đơn thuê",
     "searchPlaceholder": "Tìm theo tên khách, SĐT, mã đơn",
     "statusAll": "Tất cả trạng thái",
@@ -91,14 +91,40 @@
     "emptyFilteredTitle": "Không tìm thấy đơn khớp bộ lọc",
     "emptyFilteredBody": "Đổi trạng thái hoặc bỏ bớt từ khoá để xem lại toàn bộ danh sách.",
     "errorTitle": "Không tải được danh sách đơn",
-    "totalLabel": "{count, plural, other {# đơn}}"
+    "totalLabel": "{count, plural, other {# đơn}}",
+    "statusLabel": "Trạng thái",
+    "tableLabel": "Danh sách đơn thuê",
+    "create": "Tạo đơn",
+    "createFirst": "Tạo đơn đầu tiên"
+  },
+  "awaitingPickup": {
+    "title": "Chờ giao xe",
+    "tableLabel": "Danh sách đơn chờ giao xe",
+    "whenColumn": "Giờ giao xe",
+    "placeColumn": "Nơi giao xe",
+    "handoverColumn": "Bàn giao",
+    "handoverNotStarted": "Chưa chuẩn bị",
+    "handoverPreparing": "Đang chuẩn bị",
+    "handoverReady": "Sẵn sàng xác nhận",
+    "overdue": "Quá giờ giao xe",
+    "today": "Hôm nay",
+    "upcoming": "Sắp tới",
+    "placeUnknown": "Chưa rõ địa điểm",
+    "action": "Xử lý giao xe",
+    "emptyTitle": "Chưa có đơn nào chờ giao xe",
+    "emptyBody": "Đơn xuất hiện ở đây từ lúc được tạo cho tới khi bạn xác nhận đã giao xe.",
+    "goToAll": "Xem tất cả đơn thuê",
+    "emptyFilteredTitle": "Không có đơn chờ giao xe nào khớp bộ lọc",
+    "emptyFilteredBody": "Bỏ bớt từ khoá hoặc đổi chi nhánh để xem lại nhóm này.",
+    "totalLabel": "{count, plural, other {# đơn chờ giao}}"
   },
   "card": {
     "settled": "Đã thu đủ",
     "vehicle": "Xe",
     "period": "Thời gian thuê",
     "total": "Tổng tiền",
-    "status": "Trạng thái"
+    "status": "Trạng thái",
+    "customer": "Khách hàng"
   },
   "money": {
     "baseAmount": "Tiền thuê",

@@ -1,0 +1,103 @@
+{
+  "meta": {
+    "title": "About XePrime",
+    "description": "XePrime is the marketplace connecting vehicle owners and renters across Vietnam: self-drive, with driver and long-term rentals, with prices and responsibilities stated before you book."
+  },
+  "hero": {
+    "eyebrow": "About us",
+    "title": "Renting a vehicle without the guesswork",
+    "lead": "XePrime connects people who need a vehicle with the people who own one, across Vietnam. We do not own a single vehicle — our job is to make the price, the calendar and each side's responsibilities clear before anyone pays."
+  },
+  "services": {
+    "heading": "Three ways to rent",
+    "selfDrive": {
+      "title": "Self-drive",
+      "desc": "You drive. Collect at the shop or ask for delivery, priced by the hour or by the day."
+    },
+    "withDriver": {
+      "title": "With driver",
+      "desc": "Intercity trips, airport runs or half-day hire — the shop assigns the driver and the route is agreed up front."
+    },
+    "longTerm": {
+      "title": "Long-term",
+      "desc": "Fixed packages from 1 to 12 months for regular travel, with the return date counted in calendar months."
+    }
+  },
+  "how": {
+    "heading": "How a rental works",
+    "lead": "Four steps, and none of them takes your money before the owner agrees.",
+    "request": {
+      "title": "Send a request",
+      "desc": "Pick the vehicle, the time window and where you want it. This step charges nothing and holds nothing."
+    },
+    "accept": {
+      "title": "The shop accepts",
+      "desc": "The owner reviews your request. Only now is the calendar held, the price fixed, and the exact amount to transfer shown to you."
+    },
+    "hold": {
+      "title": "Transfer the holding amount",
+      "desc": "You pay within the payment window. The booking is created only once reconciliation confirms the money arrived in full."
+    },
+    "trip": {
+      "title": "Pick up and return",
+      "desc": "Both sides sign a handover record with condition photos; the rest of the rental is paid directly to the owner at pick-up."
+    }
+  },
+  "money": {
+    "heading": "Where the money goes",
+    "lead": "Every amount has an owner, and we show each line instead of rolling them into one number.",
+    "hold": {
+      "title": "Paid online",
+      "desc": "The holding amount, the service fee and insurance where it applies. This is not the security deposit taken at pick-up."
+    },
+    "pickup": {
+      "title": "Paid at pick-up",
+      "desc": "The rest of the rental goes directly to the owner when you collect the vehicle — XePrime does not collect it on their behalf."
+    },
+    "lines": {
+      "title": "Nothing bundled",
+      "desc": "Service fee, tax and insurance are three separate lines, frozen into the booking when it is created and never recalculated afterwards."
+    }
+  },
+  "owners": {
+    "heading": "If you own a vehicle",
+    "lead": "Two ways to join the same marketplace — pick by scale, switch later.",
+    "basic": {
+      "title": "Individual owner",
+      "desc": "A few vehicles, no subscription. You only pay a service fee on trips that actually happen."
+    },
+    "shop": {
+      "title": "Shop",
+      "desc": "A larger fleet on a plan priced by vehicle count and term. No XePrime percentage per trip, with the full management toolset."
+    },
+    "action": "List your vehicle"
+  },
+  "trust": {
+    "heading": "What we keep in check",
+    "listing": {
+      "title": "Vehicles are reviewed before listing",
+      "desc": "Vehicle records and documents go through platform review before any renter sees them."
+    },
+    "calendar": {
+      "title": "No double bookings",
+      "desc": "One vehicle cannot be booked twice for the same window — the rule lives in the database, not in a screen."
+    },
+    "metrics": {
+      "title": "Reputation measured from behaviour",
+      "desc": "A shop's response rate, response time and kept-trip rate come from the last 90 days of real data, not from self-reporting."
+    }
+  },
+  "status": {
+    "title": "XePrime is still being finished",
+    "body": "The product is not open to real users yet. The legal documents are drafts, and the operating entity will be published before we open properly."
+  },
+  "next": {
+    "heading": "Where to next",
+    "search": "Find a vehicle",
+    "legal": "Legal documents",
+    "support": "Help centre",
+    "searchDesc": "Browse the vehicles on offer for your location and time window.",
+    "legalDesc": "Terms of service, privacy policy, marketplace rules and the cancellation policy.",
+    "supportDesc": "Where reports, complaints and in-trip incidents are received."
+  }
+}

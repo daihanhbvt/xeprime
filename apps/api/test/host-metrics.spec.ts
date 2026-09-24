@@ -376,12 +376,16 @@ describe('Tử số — phản hồi ≠ đồng ý', () => {
 });
 
 describe('Ngưỡng "đủ dữ liệu" — `null` KHÔNG phải 0', () => {
+  /*
+   * Từ 23/09/2026 ngưỡng công khai là 1 (ADR 0045, điều kiện xem lại đã dùng), nên MỘT yêu cầu
+   * đã đủ để nói. Bài test giữ nguyên ý nghĩa cũ bằng cách hỏi ở một ngưỡng cao hơn — thứ cần
+   * khoá là "dưới ngưỡng thì `null`, và số mẫu vẫn nói thật", không phải con số 5.
+   */
   maybe('dưới ngưỡng ⇒ ba chỉ số `null`, nhưng số mẫu vẫn nói thật', async () => {
     await seedRequest({ status: BOOKING_REQUEST_STATUS.EXPIRED });
 
-    const m = await metrics.forTenant(tenantId);
+    const m = await metrics.forTenant(tenantId, { minSamples: 5 });
     expect(m.sampleCount).toBe(1);
-    // Một yêu cầu duy nhất cho ra 0% — một lần tung đồng xu nghe như một kết luận.
     expect(m.responseRatePercent).toBeNull();
     expect(m.acceptKeepRatePercent).toBeNull();
   });
@@ -499,7 +503,9 @@ describe('Điểm uy tín cho XẾP HẠNG — làm mượt, không chặn ngư�
       });
     }
 
-    const display = await metrics.forTenant(tenantId);
+    // Ngưỡng cao TƯỜNG MINH: bất biến cần khoá là "xếp hạng không đọc bản đã chặn ngưỡng",
+    // và nó phải đúng ở mọi ngưỡng — không phụ thuộc con số mặc định hôm nay là 5 hay 1.
+    const display = await metrics.forTenant(tenantId, { minSamples: 5 });
     expect(display.acceptKeepRatePercent).toBeNull();
 
     const reliability = await metrics.reliabilityFor([tenantId]);

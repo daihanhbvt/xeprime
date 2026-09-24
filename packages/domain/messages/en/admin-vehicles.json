@@ -1,0 +1,84 @@
+{
+  "page": {
+    "title": "All vehicles",
+    "loading": "Loading platform vehicles…"
+  },
+  "filters": {
+    "searchLabel": "Search vehicles",
+    "searchPlaceholder": "Name, licence plate or code",
+    "publicStatus": "Review",
+    "operationStatus": "Operation",
+    "vehicleType": "Vehicle type"
+  },
+  "quick": {
+    "ariaLabel": "Vehicle filter shortcuts",
+    "visible": "Live on marketplace",
+    "platformHidden": "Hidden by XePrime",
+    "suspendedShop": "From locked shops"
+  },
+  "table": {
+    "label": "All vehicles",
+    "vehicle": "Vehicle",
+    "tenant": "Shop",
+    "publicStatus": "Review",
+    "marketplace": "Marketplace",
+    "operationStatus": "Operation",
+    "weekdayPrice": "Weekday price",
+    "createdAt": "Created",
+    "view": "View details",
+    "notListed": "Never listed",
+    "notListedHint": "This vehicle has never been approved for the marketplace",
+    "loadError": "Could not load the vehicle list",
+    "empty": "There are no vehicles on the platform yet",
+    "noResults": "No vehicle matches these filters",
+    "clearFilters": "Clear filters",
+    "total": "{count} vehicles"
+  },
+  "drawer": {
+    "fallbackTitle": "Vehicle",
+    "loadError": "Could not load this vehicle"
+  },
+  "detail": {
+    "code": "Vehicle code",
+    "plate": "Licence plate",
+    "type": "Type · services",
+    "specs": "Specs",
+    "seats": "{count} seats",
+    "tenant": "Shop",
+    "owner": "Shop owner",
+    "province": "Province",
+    "operation": "Operation",
+    "listing": "Listing record",
+    "notListed": "Never listed",
+    "viewListing": "Open listing",
+    "ownerVisibility": "Owner shows on marketplace",
+    "ownerVisibilityOn": "On",
+    "ownerVisibilityOff": "Off",
+    "ownerVisibilityHintLabel": "Why XePrime cannot change this",
+    "ownerVisibilityHint": "This is the owner's own choice. XePrime can only read it — unhiding does not turn this switch back on.",
+    "effective": "Marketplace result",
+    "effectiveVisible": "Live",
+    "effectiveHidden": "Not showing",
+    "prices": "Weekday · weekend · hourly",
+    "bookings": "Bookings",
+    "reviews": "Reviews",
+    "created": "Created",
+    "updated": "Updated"
+  },
+  "moderation": {
+    "noPermission": "You do not have permission to moderate vehicles.",
+    "unavailable": "Only a publicly listed vehicle can be hidden, and only a vehicle XePrime hid can be unhidden.",
+    "hide": "Hide from marketplace",
+    "hideOk": "Hide vehicle",
+    "hideNote": "The vehicle disappears from the marketplace immediately. The reason is written to the audit log, so it is required.",
+    "reasonPlaceholder": "Reason for hiding…",
+    "hideSuccess": "The vehicle is hidden from the marketplace",
+    "unhide": "Remove XePrime's hide",
+    "unhideOk": "Remove hide",
+    "unhideTitle": "Remove XePrime's hide from this vehicle?",
+    "unhideNote": "The vehicle goes back on the marketplace right away.",
+    "unhideNoteOwnerPaused": "The owner has visibility turned off, so the vehicle still will not appear on the marketplace.",
+    "unhideSuccess": "XePrime's hide is removed. The vehicle is back on the marketplace.",
+    "unhideSuccessOwnerPaused": "XePrime's hide is removed. The vehicle is still paused by its owner."
+  }
+}

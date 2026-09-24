@@ -186,19 +186,15 @@ async function createVehicle(fuelType: string = FUEL_TYPE.GASOLINE) {
   });
 }
 
-/** Đơn đã xác nhận, sẵn sàng giao xe. */
+/** Đơn `reserved`, sẵn sàng giao xe (ADR 0047: `reserved` là đủ, không cần đệm qua `confirmed`). */
 async function createBooking(vehicleId: string, dayOffset = 0, rentalDays = 5) {
-  const booking = await bookings.create(tenantId, ownerId, {
+  return bookings.create(tenantId, ownerId, {
     vehicleId,
     customerName: 'Nguyễn Văn B',
     pickupAt: days(dayOffset).toISOString(),
     returnAt: days(dayOffset + rentalDays).toISOString(),
     baseAmount: '2000000',
   });
-  await bookings.transition(tenantId, booking.id, ownerId, {
-    status: BOOKING_STATUS.CONFIRMED,
-  });
-  return booking;
 }
 
 /** Đặt KM ban đầu của xe qua đúng đường nghiệp vụ (chỉnh tay có lý do). */
@@ -330,7 +326,7 @@ describe('Bản nháp bàn giao', () => {
     const profile = await maintenance.getProfile(tenantId, vehicle.id);
     expect(profile.currentOdometerKm).toBe(45_230);
     expect(profile.currentOdometerSource).toBe(ODOMETER_SOURCE.MANUAL_CORRECTION);
-    expect(resumed.bookingStatus).toBe(BOOKING_STATUS.CONFIRMED);
+    expect(resumed.bookingStatus).toBe(BOOKING_STATUS.RESERVED);
   });
 
   maybe('sửa bản nháp phải nộp rowVersion đang thấy — lệch là 409, không ghi đè', async () => {
@@ -890,47 +886,42 @@ describe('Odo và ảnh là tuỳ chọn (Wave 10)', () => {
   });
 
   /**
-   * Đơn shop tự lập nằm ở `reserved`, và bản đồ trạng thái không có cạnh `reserved → active`.
-   * Trước đây `isHandoverEligible` cho phép giao xe từ `reserved` còn `canTransitionBooking`
-   * thì không — hai luật cãi nhau, và người dùng lãnh đủ ngay ở nút chính: `Không thể chuyển
-   * đơn từ "reserved" sang "active"`. Bàn giao phải tự đi qua `confirmed`.
+   * ADR 0047: `reserved → active` giờ là cạnh TRỰC TIẾP trong `BOOKING_STATUS_TRANSITIONS` —
+   * không còn đường vòng qua `confirmed`. Đơn shop tự lập nằm ở `reserved`, và giao xe không
+   * bắt bấm "xác nhận đơn" nào trước cả (không có nút đó — duyệt yêu cầu chính là xác nhận).
    */
-  maybe(
-    'giao xe từ đơn `reserved`: tự đi qua `confirmed`, không bắt bấm xác nhận đơn trước',
-    async () => {
-      const vehicle = await createVehicle();
-      const booking = await bookings.create(tenantId, ownerId, {
-        vehicleId: vehicle.id,
-        customerName: 'Nguyễn Văn C',
-        pickupAt: days(0).toISOString(),
-        returnAt: days(2).toISOString(),
-        baseAmount: '1300000',
-      });
-      expect(booking.status).toBe(BOOKING_STATUS.RESERVED);
+  maybe('giao xe từ đơn `reserved`: chuyển thẳng sang `active`, không qua `confirmed`', async () => {
+    const vehicle = await createVehicle();
+    const booking = await bookings.create(tenantId, ownerId, {
+      vehicleId: vehicle.id,
+      customerName: 'Nguyễn Văn C',
+      pickupAt: days(0).toISOString(),
+      returnAt: days(2).toISOString(),
+      baseAmount: '1300000',
+    });
+    expect(booking.status).toBe(BOOKING_STATUS.RESERVED);
 
-      const after = await handovers.confirm(
-        tenantId,
-        booking.id,
-        HANDOVER_TYPE.PICKUP,
-        ownerId,
-        {},
-        FULL_SCOPE,
-      );
+    const after = await handovers.confirm(
+      tenantId,
+      booking.id,
+      HANDOVER_TYPE.PICKUP,
+      ownerId,
+      {},
+      FULL_SCOPE,
+    );
 
-      expect(after.bookingStatus).toBe(BOOKING_STATUS.ACTIVE);
+    expect(after.bookingStatus).toBe(BOOKING_STATUS.ACTIVE);
 
-      // Cả hai chặng đều để lại vết: audit là nơi truy ngược, không phải thông báo.
-      const trail = await prisma.auditLog.findMany({
-        where: { targetType: 'booking', targetId: booking.id, action: 'booking.transition' },
-        orderBy: { createdAt: 'asc' },
-        select: { afterJson: true },
-      });
-      expect(trail.map((row) => (row.afterJson as { status: string }).status)).toEqual([
-        BOOKING_STATUS.CONFIRMED,
-        BOOKING_STATUS.ACTIVE,
-      ]);
-    },
-  );
+    // MỘT dòng audit duy nhất — không còn chặng `confirmed` thoáng qua để ghi hai dòng.
+    const trail = await prisma.auditLog.findMany({
+      where: { targetType: 'booking', targetId: booking.id, action: 'booking.transition' },
+      orderBy: { createdAt: 'asc' },
+      select: { afterJson: true },
+    });
+    expect(trail.map((row) => (row.afterJson as { status: string }).status)).toEqual([
+      BOOKING_STATUS.ACTIVE,
+    ]);
+  });
 
   maybe('giao xe kèm Odo tuỳ chọn: ghi thẳng trong một lần gọi', async () => {
     const vehicle = await createVehicle();

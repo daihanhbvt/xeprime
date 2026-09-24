@@ -1,0 +1,103 @@
+{
+  "meta": {
+    "title": "Về XePrime",
+    "description": "XePrime là sàn kết nối chủ xe và người thuê xe trên toàn quốc: xe tự lái, xe có tài xế và thuê dài hạn, với giá và trách nhiệm được nói rõ trước khi đặt."
+  },
+  "hero": {
+    "eyebrow": "Về chúng tôi",
+    "title": "Một chỗ để thuê xe mà không phải đoán",
+    "lead": "XePrime là sàn kết nối người cần xe với chủ xe trên toàn quốc. Chúng tôi không sở hữu chiếc xe nào — việc của chúng tôi là làm cho giá, lịch và trách nhiệm của hai bên rõ ràng trước khi ai đó trả tiền."
+  },
+  "services": {
+    "heading": "Ba cách thuê",
+    "selfDrive": {
+      "title": "Xe tự lái",
+      "desc": "Bạn cầm lái. Nhận xe tại gian hàng hoặc yêu cầu giao tận nơi, tính giá theo giờ hoặc theo ngày."
+    },
+    "withDriver": {
+      "title": "Xe có tài xế",
+      "desc": "Đi tỉnh, đón sân bay hay thuê theo buổi — tài xế do gian hàng bố trí, lộ trình thống nhất trước."
+    },
+    "longTerm": {
+      "title": "Thuê dài hạn",
+      "desc": "Gói cố định 1 đến 12 tháng cho nhu cầu đi lại thường xuyên, ngày trả tính theo tháng lịch."
+    }
+  },
+  "how": {
+    "heading": "Một chuyến thuê diễn ra thế nào",
+    "lead": "Bốn bước, và không bước nào thu tiền trước khi chủ xe đồng ý.",
+    "request": {
+      "title": "Gửi yêu cầu",
+      "desc": "Chọn xe, khung giờ và nơi nhận. Bước này chưa thu tiền và chưa giữ chỗ."
+    },
+    "accept": {
+      "title": "Gian hàng nhận chuyến",
+      "desc": "Chủ xe duyệt yêu cầu. Đến đây lịch mới được giữ, giá được chốt và bạn thấy chính xác phải chuyển bao nhiêu."
+    },
+    "hold": {
+      "title": "Chuyển tiền giữ chỗ",
+      "desc": "Bạn chuyển khoản trong cửa sổ thanh toán. Đơn thuê chỉ hình thành khi đối soát xác nhận đã nhận đủ tiền."
+    },
+    "trip": {
+      "title": "Nhận xe và trả xe",
+      "desc": "Hai bên ký biên bản giao nhận kèm ảnh hiện trạng; phần tiền thuê còn lại trả trực tiếp chủ xe lúc nhận xe."
+    }
+  },
+  "money": {
+    "heading": "Tiền đi đâu",
+    "lead": "Mỗi khoản có một chủ sở hữu, và chúng tôi hiện từng dòng thay vì gộp thành một con số.",
+    "hold": {
+      "title": "Khoản chuyển online",
+      "desc": "Gồm tiền giữ chỗ, phí dịch vụ và bảo hiểm nếu có. Đây không phải cọc thế chấp khi nhận xe."
+    },
+    "pickup": {
+      "title": "Phần trả tại chỗ",
+      "desc": "Số tiền thuê còn lại trả trực tiếp cho chủ xe lúc nhận xe — XePrime không thu hộ khoản này."
+    },
+    "lines": {
+      "title": "Không gộp dòng",
+      "desc": "Phí dịch vụ, thuế và bảo hiểm là ba dòng riêng, đóng băng vào đơn lúc tạo và không tính lại về sau."
+    }
+  },
+  "owners": {
+    "heading": "Nếu bạn có xe",
+    "lead": "Hai cách tham gia trên cùng một chợ — chọn theo quy mô, đổi được về sau.",
+    "basic": {
+      "title": "Chủ xe cá nhân",
+      "desc": "Vài chiếc xe, không thuê bao. Bạn chỉ trả phí dịch vụ theo chuyến thật sự phát sinh."
+    },
+    "shop": {
+      "title": "Gian hàng",
+      "desc": "Đội xe lớn hơn, mua gói theo số xe và kỳ hạn. Không mất phần trăm cho XePrime trên mỗi chuyến, kèm bộ công cụ quản lý đầy đủ."
+    },
+    "action": "Đăng xe cho thuê"
+  },
+  "trust": {
+    "heading": "Những gì chúng tôi kiểm soát",
+    "listing": {
+      "title": "Xe được duyệt trước khi lên chợ",
+      "desc": "Hồ sơ xe và giấy tờ đi qua vòng kiểm duyệt của nền tảng trước khi khách nhìn thấy."
+    },
+    "calendar": {
+      "title": "Không trùng lịch",
+      "desc": "Một chiếc xe không thể bị đặt hai lần cho cùng một khung giờ — ràng buộc nằm ở tầng cơ sở dữ liệu."
+    },
+    "metrics": {
+      "title": "Uy tín đo bằng hành vi thật",
+      "desc": "Tỉ lệ phản hồi, thời gian phản hồi và tỉ lệ giữ chuyến của gian hàng tính từ dữ liệu 90 ngày gần nhất, không phải tự khai."
+    }
+  },
+  "status": {
+    "title": "XePrime đang trong giai đoạn hoàn thiện",
+    "body": "Sản phẩm chưa mở cho người dùng thật. Các văn bản pháp lý còn là bản thảo, và thông tin pháp nhân vận hành sẽ được công bố trước khi mở chính thức."
+  },
+  "next": {
+    "heading": "Đi tiếp",
+    "search": "Tìm xe",
+    "legal": "Văn bản pháp lý",
+    "support": "Trung tâm trợ giúp",
+    "searchDesc": "Xem xe đang cho thuê theo địa điểm và khung giờ bạn cần.",
+    "legalDesc": "Điều khoản sử dụng, chính sách bảo mật, quy chế sàn và chính sách huỷ.",
+    "supportDesc": "Kênh tiếp nhận phản ánh, khiếu nại và sự cố trong chuyến."
+  }
+}

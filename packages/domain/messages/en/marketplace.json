@@ -1,17 +1,23 @@
 {
   "footer": {
-    "tagline": "XePrime connects vehicle owners with renters across Vietnam. Renting a car made easy, safe and transparent.",
-    "copyright": "© {year} XePrime. All rights reserved.",
-    "country": "A car rental platform in Vietnam",
-    "apps": {
-      "title": "Get the app",
-      "downloadOn": "Download on",
-      "note": "The app is in development"
+    "tagline": "The marketplace connecting vehicle owners and renters across Vietnam — easy, safe and transparent.",
+    "cta": {
+      "eyebrow": "For vehicle owners",
+      "title": "Is your vehicle sitting idle?",
+      "body": "List it on XePrime, set your own prices and availability, and start taking bookings nationwide.",
+      "action": "List your vehicle"
     },
+    "socialsLabel": "XePrime on social media",
+    "socialsNote": "Official channels will be announced at launch.",
     "columns": {
-      "support": {
-        "title": "Support",
-        "helpCenter": "Help centre"
+      "explore": {
+        "title": "Explore"
+      },
+      "company": {
+        "title": "XePrime",
+        "about": "About XePrime",
+        "app": "Get the app",
+        "support": "Help centre"
       },
       "legal": {
         "title": "Legal",
@@ -19,13 +25,14 @@
         "privacy": "Privacy Policy",
         "marketplaceRules": "Marketplace Operating Rules",
         "cancellation": "Cancellation and Refund Policy"
-      },
-      "hosts": {
-        "title": "For owners",
-        "listVehicle": "List your vehicle",
-        "manageVehicles": "Manage vehicles"
       }
-    }
+    },
+    "apps": {
+      "heading": "XePrime app"
+    },
+    "backToTop": "Back to top",
+    "copyright": "© {year} XePrime",
+    "country": "A car rental platform in Vietnam"
   },
   "steps": {
     "title": "Rent a car in 4 steps",

@@ -221,15 +221,11 @@ export {
   type RemainingKmKind,
 } from './odometer';
 
+export { PICKUP_URGENCY, pickupUrgency, type PickupUrgency } from './pickup-queue';
+
 export { buildVietQrUrl } from './vietqr';
 
-export {
-  VIETNAM_BANKS,
-  findBank,
-  bankDisplayName,
-  bankInitials,
-  type VietnamBank,
-} from './banks';
+export { VIETNAM_BANKS, findBank, bankDisplayName, bankInitials, type VietnamBank } from './banks';
 
 /**
  * Hợp nhất tin nhắn của một thread chat — dùng chung web ↔ native.
@@ -268,7 +264,9 @@ export {
   LEGAL_SECTIONS,
   isLegalDoc,
   legalPath,
+  legalSectionKeys,
   type LegalDoc,
+  type LegalSection,
 } from './legal';
 
 /**

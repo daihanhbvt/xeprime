@@ -28,6 +28,7 @@ export function filtersToParams(filters: BookingFilters): QueryParams {
   return {
     q: filters.q ?? null,
     status: filters.status ?? null,
+    preset: filters.preset ?? null,
     vehicleId: filters.vehicleId ?? null,
     branchId: filters.branchId ?? null,
     returnFrom: filters.returnFrom ?? null,
@@ -65,10 +66,8 @@ export const updateBookingDeliveryFee = (
 ): Promise<BookingDetail> => apiPatch<BookingDetail>(`/bookings/${id}/delivery-fee`, body);
 
 /** Gán/bỏ gán tài xế cho đơn (17/08) — `driverId: null` là bỏ gán tường minh; server có audit. */
-export const assignBookingDriver = (
-  id: string,
-  driverId: string | null,
-): Promise<BookingDetail> => apiPatch<BookingDetail>(`/bookings/${id}/driver`, { driverId });
+export const assignBookingDriver = (id: string, driverId: string | null): Promise<BookingDetail> =>
+  apiPatch<BookingDetail>(`/bookings/${id}/driver`, { driverId });
 
 /** Preview trùng lịch — chỉ để cảnh báo sớm cho UX, không phải lớp bảo vệ (ADR 0006). */
 export const checkConflict = (body: CheckConflictInput): Promise<CheckConflictResult> =>

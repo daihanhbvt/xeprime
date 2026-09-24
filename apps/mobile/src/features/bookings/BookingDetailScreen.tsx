@@ -15,6 +15,7 @@ import {
   PERMISSION,
   SERVICE_TYPE,
   type BookingStatus,
+  type CancellationReasonCategory,
 } from '@xeprime/types';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
@@ -203,10 +204,14 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
   const canUpdate = permissions.has(PERMISSION.BOOKING_UPDATE);
   const withDriver = booking.serviceType === SERVICE_TYPE.WITH_DRIVER;
 
-  function confirmDecision(reason: string) {
+  /**
+   * NHÓM lý do đi kèm CHỈ khi huỷ — `TransitionBookingDto` đòi nó ở đúng nhánh đó (ADR 0045
+   * điều 1), và gửi thừa ở `no_show` là ghi một phân loại cho một việc không phải lượt huỷ.
+   */
+  function confirmDecision(input: { reason: string; reasonCategory?: CancellationReasonCategory }) {
     if (!decision) return;
     transition.mutate(
-      { status: decision, reason },
+      { status: decision, ...input },
       {
         onSuccess: () => {
           toast.showSuccess(

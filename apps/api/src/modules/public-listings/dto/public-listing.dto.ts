@@ -602,6 +602,24 @@ export class PublicListingDetailDto extends PublicListingDto {
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Giới thiệu gian hàng' })
   shopBio!: string | null;
 
+  /**
+   * Ba số CỦA CẢ GIAN HÀNG (toàn bộ xe), khác `ratingAvg`/`ratingCount`/`completedTripCount` kế
+   * thừa từ `PublicListingDto` — những trường đó chỉ đếm RIÊNG chiếc xe đang xem. Thẻ gian hàng ở
+   * trang chi tiết xe nói về NGƯỜI BÁN, không phải một chiếc xe, nên nó cần số của người bán.
+   *
+   * Cùng cột `tenants.rating_avg`/`rating_count` mà `PublicShopDto` đã dùng cho trang gian hàng
+   * (không phải một truy vấn tổng hợp mới) — `ratingCount === 0` nghĩa là chưa có đánh giá, đọc
+   * `shopRatingAvg` (mặc định 0) lúc đó là bịa một điểm số.
+   */
+  @ApiProperty({ description: 'Điểm đánh giá trung bình CỦA GIAN HÀNG, string — ADR 0007' })
+  shopRatingAvg!: string;
+
+  @ApiProperty({ description: 'Số lượt đánh giá của gian hàng' })
+  shopRatingCount!: number;
+
+  @ApiProperty({ description: 'Số chuyến đã hoàn thành của TOÀN gian hàng' })
+  shopCompletedTripCount!: number;
+
   @ApiProperty({ type: [String], description: 'URL ảnh gallery theo thứ tự' })
   images!: string[];
 

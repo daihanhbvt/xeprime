@@ -110,7 +110,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-.star {
+/* Hai class là CỐ Ý — phải thắng `.anticon { color: inherit }` mà AntD nhúng sau stylesheet. */
+.rating .star {
   color: var(--xp-color-primary);
 }
 
