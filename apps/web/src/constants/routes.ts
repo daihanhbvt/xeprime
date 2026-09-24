@@ -560,6 +560,18 @@ export const contractPath = {
 };
 
 /**
+ * Nhật ký kiểm toán của MỘT đối tượng (admin nền tảng).
+ *
+ * Trang audit đọc sẵn `targetType`/`targetId` từ URL (tham số "sâu" — có test ở
+ * `audit-page.test.tsx`), nên đây là một đường link thật chứ không phải URL đoán. `targetType`
+ * là mã API ghi vào `audit_logs.target_type` — xem `AUDIT_TARGET_TYPE` ở `features/admin-audit`.
+ */
+export const adminAuditPath = {
+  forTarget: (targetType: string, targetId: string): string =>
+    `${ROUTES.MANAGE.ADMIN_AUDIT}?${new URLSearchParams({ targetType, targetId }).toString()}`,
+};
+
+/**
  * Sổ Thu-Chi đã LỌC SẴN — đường đi từ một đơn / một xe / một khách / một con số tổng sang đúng
  * tập phiếu sinh ra nó.
  *

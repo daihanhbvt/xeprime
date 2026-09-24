@@ -177,12 +177,23 @@ describe('VehiclePublicationTaskItem — nháp', () => {
 });
 
 describe('VehiclePublicationTaskItem — các trạng thái còn lại', () => {
-  it('đang chờ duyệt: KHÔNG có nút gửi lại, chỉ một lối xem trạng thái', () => {
+  /*
+   * 24/09/2026 — trạng thái chờ duyệt có lối SỬA, và vẫn không có nút gửi lại.
+   *
+   * Hai điều đó chỉ cùng đúng được từ khi mỗi lượt lưu dựng lại snapshot của phiếu: sửa xong là
+   * người duyệt thấy bản mới, nên không còn gì để "gửi lại". Trước đó, ô này chỉ có lối xem
+   * trạng thái và chủ xe phát hiện mình gõ sai biển số thì không có đường nào đi tiếp.
+   */
+  it('đang chờ duyệt: có lối SỬA hồ sơ, vẫn không có nút gửi lại', () => {
     renderTask({ publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW });
 
     expect(screen.getByText('Hồ sơ đang được xét duyệt')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Gửi duyệt/ })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Cập nhật hồ sơ' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Xem trạng thái' })).toBeTruthy();
+    // Gửi lại là thao tác của xe BỊ TRẢ VỀ. Ở đây phiếu vẫn đang chờ và đã mang bản mới nhất.
+    expect(screen.queryByRole('button', { name: /Gửi duyệt/ })).toBeNull();
+    // …và câu mô tả phải NÓI RA điều đó, nếu không chẳng ai biết sửa là đủ.
+    expect(screen.getByText(/mỗi lần lưu, người duyệt sẽ thấy bản mới nhất/i)).toBeTruthy();
   });
 
   it('cần bổ sung: CTA "Cập nhật hồ sơ" và hiện nguyên văn lời người duyệt', () => {

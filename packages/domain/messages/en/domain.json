@@ -12,7 +12,8 @@
     "approve": "Approved",
     "reject": "Rejected",
     "request_revision": "Changes requested",
-    "cancel": "Cancelled"
+    "cancel": "Cancelled",
+    "profile_updated": "Owner updated the profile"
   },
   "auditActorScope": {
     "tenant": "Shop",

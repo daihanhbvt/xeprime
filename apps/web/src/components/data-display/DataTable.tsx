@@ -81,6 +81,12 @@ export interface DataTableProps<T> {
   noResults?: DataTableEmptySlot;
   onRowClick?: (row: T) => void;
   /**
+   * Khoá (`rowKey`) của bản ghi đang mở ở panel chi tiết cạnh bảng. Hàng đó được tô nền chọn +
+   * vạch nhấn ở mép trái và mang `aria-current`, để người dùng không mất dấu mình đang xem dòng
+   * nào khi panel che bớt màn hình. Chỉ là trạng thái HIỂN THỊ — không phải `rowSelection`.
+   */
+  selectedRowKey?: string | null;
+  /**
    * Ở ≤640px render thẻ do feature thiết kế. Không truyền thì `DataTable` tự chuyển các cột
    * thành thẻ nhãn–giá trị, để không còn bảng desktop bị ép ngang trên điện thoại.
    */
@@ -216,6 +222,7 @@ export function DataTable<T>({
   empty,
   noResults,
   onRowClick,
+  selectedRowKey = null,
   renderCard,
   loadingLabel,
   striped = true,
@@ -265,6 +272,8 @@ export function DataTable<T>({
     );
   }
 
+  const isSelected = (row: T) => selectedRowKey !== null && rowKey(row) === selectedRowKey;
+
   if (asCards) {
     return (
       <div className={styles.cardsRoot}>
@@ -272,9 +281,14 @@ export function DataTable<T>({
           {items.map((row, index) => (
             <li
               key={rowKey(row)}
-              className={[styles.card, onRowClick ? styles.cardClickable : '']
+              className={[
+                styles.card,
+                onRowClick ? styles.cardClickable : '',
+                isSelected(row) ? styles.cardSelected : '',
+              ]
                 .filter(Boolean)
                 .join(' ')}
+              aria-current={isSelected(row) || undefined}
               onClick={
                 onRowClick
                   ? (event: MouseEvent<HTMLLIElement>) => {
@@ -318,20 +332,26 @@ export function DataTable<T>({
         loading={loading}
         tableLayout="auto"
         scroll={{ x: minWidth }}
-        rowClassName={(_, index) =>
-          [striped && index % 2 === 1 ? styles.rowStriped : ''].filter(Boolean).join(' ')
+        rowClassName={(row, index) =>
+          [
+            striped && index % 2 === 1 ? styles.rowStriped : '',
+            isSelected(row) ? styles.rowSelected : '',
+          ]
+            .filter(Boolean)
+            .join(' ')
         }
-        onRow={
-          onRowClick
-            ? (row) => ({
-                onClick: (event) => {
+        onRow={(row) => ({
+          'aria-current': isSelected(row) || undefined,
+          ...(onRowClick
+            ? {
+                onClick: (event: MouseEvent<HTMLElement>) => {
                   // Link/nút/select trong ô có hành vi riêng; không được mở hàng thêm lần nữa.
                   if (!isInteractiveTarget(event.target)) onRowClick(row);
                 },
                 className: styles.rowClickable,
-              })
-            : undefined
-        }
+              }
+            : {}),
+        })}
         pagination={
           pagination
             ? {

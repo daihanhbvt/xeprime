@@ -224,6 +224,7 @@
     75vw,
     1400px
   );
+  --xp-drawer-width-split: clamp(560px, 46vw, 780px);
   --xp-container-max-width: 1280px;
 
   /* ─── Khung app ───────────────────────────────────────────────────────── */

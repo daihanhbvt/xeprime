@@ -716,6 +716,16 @@ export const API_ERROR_CODE = {
    * `{ changedLockedFields, missingRequirements }`. Lối đi tiếp: yêu cầu bổ sung để chủ xe gửi lại.
    */
   APPROVAL_SUBJECT_CHANGED: 'APPROVAL_SUBJECT_CHANGED',
+  /**
+   * Người duyệt bấm Phê duyệt trên một hồ sơ đã CŨ: chủ xe sửa xe sau khi màn duyệt được tải,
+   * nên snapshot đã được dựng lại và `capturedAt` không còn khớp (24/09/2026).
+   *
+   * Đây là cái giá của việc snapshot tự làm mới theo mỗi lần chủ xe lưu — đổi lại, không ai còn
+   * kẹt giữa "admin không duyệt được" và "chủ xe không gửi lại được". `details` là
+   * `{ expectedCapturedAt, currentCapturedAt }`. Lối đi tiếp: tải lại phiếu và đọc bản mới —
+   * KHÔNG phải thử lại cùng một mốc.
+   */
+  APPROVAL_SNAPSHOT_STALE: 'APPROVAL_SNAPSHOT_STALE',
 
   // Hạ tầng
   RATE_LIMITED: 'RATE_LIMITED',

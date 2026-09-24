@@ -11,6 +11,7 @@ import {
   LISTING_STATUS,
   MEMBERSHIP_STATUS,
   NOTIFICATION_TYPE,
+  POLICY_SOURCE,
   SERVICE_TYPE,
   STOREFRONT_KIND,
   TENANT_ROLE,
@@ -913,15 +914,23 @@ describe('6. Xe SỐNG lệch ảnh chụp: cổng phê duyệt đọc xe sẽ l
    * Cuộc đua thật: lượt sửa của chủ xe đã ghi biển số mới nhưng CHƯA commit khi người duyệt bấm
    * Phê duyệt. Không khoá dòng xe thì lượt duyệt đọc biển số CŨ, qua cổng, rồi chờ ghi xe và
    * commit `approved_public` cho một chiếc xe mang biển số không ai xem. Có khoá thì lượt duyệt
-   * chờ lượt sửa commit xong rồi mới đọc — và thấy xe đã khác hồ sơ.
+   * chờ lượt sửa commit xong rồi mới đọc.
+   *
+   * ⚠️ Cái CHẶN đã đổi ngày 24/09/2026, kết quả thì không. Trước đây lượt sửa để lại một snapshot
+   * cũ và cổng `APPROVAL_SUBJECT_CHANGED` bắt được chênh lệch căn cước. Nay lượt sửa DỰNG LẠI
+   * snapshot, nên không còn chênh lệch nào để bắt — thứ chặn là mốc `capturedAt` mà người duyệt
+   * mang theo từ màn hình họ đã đọc. Cả hai đời đều từ chối duyệt một biển số chưa ai xem; đời
+   * mới còn nói đúng tên việc vừa xảy ra và cho chủ xe một lối đi (sửa tiếp) thay vì một ngõ cụt.
    */
   maybe(
-    'chủ xe đang sửa biển số (chưa commit) khi Phê duyệt → duyệt CHỜ rồi thấy xe đã khác',
+    'chủ xe đang sửa biển số (chưa commit) khi Phê duyệt → duyệt CHỜ rồi từ chối vì bản đã cũ',
     async () => {
       const id = await seedVehicle(personalTenantId, { name: `Mazda CX-5 ${RUN}` });
       await vehicles.submitForPublicReview(personalTenantId, id, personalOwnerId);
       const taskId = await pendingTaskOf(id);
       await passVehicleReviewChecks(prisma, taskId, reviewerA);
+      // Mốc người duyệt ĐANG NHÌN, lấy trước khi chủ xe đụng vào xe.
+      const { capturedAt } = await vehicleApprovals.detail(taskId);
 
       let signalLocked!: () => void;
       const locked = new Promise<void>((resolve) => (signalLocked = resolve));
@@ -939,10 +948,14 @@ describe('6. Xe SỐNG lệch ảnh chụp: cổng phê duyệt đọc xe sẽ l
       );
       await locked;
 
-      const approve = vehicleApprovals.decide(APPROVAL_DECISION.APPROVE, taskId, reviewerA).then(
-        () => null,
-        (error: unknown) => error,
-      );
+      const approve = vehicleApprovals
+        .decide(APPROVAL_DECISION.APPROVE, taskId, reviewerA, undefined, {
+          expectedCapturedAt: capturedAt,
+        })
+        .then(
+          () => null,
+          (error: unknown) => error,
+        );
       // Cho lượt duyệt kịp chạm tới khoá dòng xe trước khi lượt sửa commit.
       await new Promise((resolve) => setTimeout(resolve, 300));
       release();
@@ -950,10 +963,7 @@ describe('6. Xe SỐNG lệch ảnh chụp: cổng phê duyệt đọc xe sẽ l
 
       expect(await approve).toMatchObject({
         status: 409,
-        response: {
-          code: API_ERROR_CODE.APPROVAL_SUBJECT_CHANGED,
-          details: { changedLockedFields: ['plateNumber'] },
-        },
+        response: { code: API_ERROR_CODE.APPROVAL_SNAPSHOT_STALE },
       });
       const vehicle = await prisma.vehicle.findUniqueOrThrow({
         where: { id },
@@ -963,6 +973,8 @@ describe('6. Xe SỐNG lệch ảnh chụp: cổng phê duyệt đọc xe sẽ l
         publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW,
         plateNumber: '88Z-888.88',
       });
+      // …và phiếu mang biển số MỚI: người duyệt tải lại là đọc được đúng thứ vừa đổi.
+      expect((await vehicleApprovals.detail(taskId)).vehicle.plateNumber).toBe('88Z-888.88');
     },
   );
 
@@ -992,4 +1004,130 @@ describe('6. Xe SỐNG lệch ảnh chụp: cổng phê duyệt đọc xe sẽ l
       ).rejects.toMatchObject({ status: expect.any(Number) });
     },
   );
+});
+
+/*
+ * Sửa xe TRONG LÚC phiếu còn chờ (24/09/2026).
+ *
+ * Trước ngày này, chủ xe sửa xe lúc chờ duyệt là rơi vào một ngõ cụt: nút gửi lại đã biến mất
+ * (`pending_public_review` không nằm trong `VEHICLE_PUBLIC_STATUS_SUBMITTABLE`), còn phiếu thì
+ * giữ nguyên ảnh chụp cũ — người duyệt hoặc phê chuẩn một bản không còn tồn tại, hoặc bị chặn bởi
+ * `APPROVAL_SUBJECT_CHANGED` và phải TỪ CHỐI một hồ sơ không sai gì để chủ xe gửi lại được.
+ *
+ * Nay mỗi lượt ghi của chủ xe dựng lại snapshot. Bộ này khoá bốn điều phải đúng CÙNG LÚC, vì
+ * thiếu một là hỏng cả cơ chế: phiếu mang bản mới · hàng đợi mang bản mới · tick của người duyệt
+ * bị đặt lại · có một dòng lịch sử giải thích vì sao.
+ *
+ * Đường ghi thứ ba (thiết lập theo dịch vụ, ở module LÁ `VehicleSettingsModule`) được khoá trong
+ * `vehicle-settings.spec.ts` — đặt cạnh service sở hữu đường ghi đó.
+ */
+describe('8. Chủ xe sửa xe khi phiếu còn chờ: phiếu mang bản mới nhất', () => {
+  maybe('sửa hồ sơ → snapshot, hàng đợi và lịch sử đều theo bản mới; tick bị đặt lại', async () => {
+    const id = await seedVehicle(personalTenantId, { name: `Honda City ${RUN}` });
+    await vehicles.submitForPublicReview(personalTenantId, id, personalOwnerId);
+    const taskId = await pendingTaskOf(id);
+    await passVehicleReviewChecks(prisma, taskId, reviewerA);
+
+    const before = await vehicleApprovals.detail(taskId);
+    expect(before.manualChecks.filter((c) => c.passed)).toHaveLength(
+      VEHICLE_REVIEW_CHECK_VALUES.length,
+    );
+
+    await vehicles.update(personalTenantId, id, personalOwnerId, {
+      name: `Honda City G ${RUN}`,
+      plateNumber: '51A-999.99',
+    });
+
+    const after = await vehicleApprovals.detail(taskId);
+    // 1. Thứ người duyệt ĐỌC là bản mới…
+    expect(after.vehicle.name).toBe(`Honda City G ${RUN}`);
+    expect(after.vehicle.plateNumber).toBe('51A-999.99');
+    expect(after.capturedAt).not.toBe(before.capturedAt);
+    // 2. …và không còn chênh lệch căn cước nào để chặn duyệt.
+    expect(after.approvalBlockers.changedLockedFields).toEqual([]);
+    // 3. Tick là bằng chứng về bản CŨ — phải trắng.
+    expect(after.manualChecks.filter((c) => c.passed)).toHaveLength(0);
+    // 4. Có dòng giải thích, và phiếu KHÔNG bị coi là gửi lại (giữ nguyên chỗ trong hàng đợi).
+    expect(after.logs.map((l) => l.action)).toEqual([
+      APPROVAL_ACTION.SUBMIT,
+      APPROVAL_ACTION.PROFILE_UPDATED,
+    ]);
+
+    // Hình chiếu hàng đợi đi cùng — không để hàng đợi hiện tên cũ mà mở ra lại thấy tên mới.
+    const queue = await vehicleApprovals.list({ q: `Honda City G ${RUN}` });
+    expect(queue.data).toHaveLength(1);
+    expect(queue.data[0]).toMatchObject({ plateNumber: '51A-999.99' });
+  });
+
+  maybe('sửa GIÁ khi phiếu còn chờ → phiếu mang giá mới', async () => {
+    const id = await seedVehicle(personalTenantId, { name: `Kia Morning ${RUN}` });
+    await vehicles.submitForPublicReview(personalTenantId, id, personalOwnerId);
+    const taskId = await pendingTaskOf(id);
+
+    await vehicles.savePricing(personalTenantId, id, personalOwnerId, {
+      source: POLICY_SOURCE.SHOP,
+      weekdayPrice: '777000',
+    });
+
+    const detail = await vehicleApprovals.detail(taskId);
+    expect(detail.pricing.weekdayPrice).toBe('777000');
+    expect(detail.logs.map((l) => l.action)).toContain(APPROVAL_ACTION.PROFILE_UPDATED);
+  });
+
+  maybe('người duyệt đọc lại bản mới rồi duyệt → qua', async () => {
+    const id = await seedVehicle(personalTenantId, { name: `Hyundai Accent ${RUN}` });
+    await vehicles.submitForPublicReview(personalTenantId, id, personalOwnerId);
+    const taskId = await pendingTaskOf(id);
+    const stale = (await vehicleApprovals.detail(taskId)).capturedAt;
+
+    await vehicles.update(personalTenantId, id, personalOwnerId, { plateNumber: '51A-111.11' });
+    // Tick phải làm LẠI — chúng vừa bị đặt lại cùng lượt sửa.
+    await passVehicleReviewChecks(prisma, taskId, reviewerA);
+
+    // Mốc cũ ⇒ chặn, và chặn bằng đúng lý do (không phải "danh mục thiếu").
+    await expect(
+      vehicleApprovals.decide(APPROVAL_DECISION.APPROVE, taskId, reviewerA, undefined, {
+        expectedCapturedAt: stale,
+      }),
+    ).rejects.toMatchObject({
+      status: 409,
+      response: { code: API_ERROR_CODE.APPROVAL_SNAPSHOT_STALE },
+    });
+
+    // Tải lại, đọc bản mới, duyệt ⇒ qua.
+    const fresh = (await vehicleApprovals.detail(taskId)).capturedAt;
+    await vehicleApprovals.decide(APPROVAL_DECISION.APPROVE, taskId, reviewerA, undefined, {
+      expectedCapturedAt: fresh,
+    });
+
+    const vehicle = await prisma.vehicle.findUniqueOrThrow({
+      where: { id },
+      select: { publicStatus: true, plateNumber: true },
+    });
+    expect(vehicle).toEqual({
+      publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+      plateNumber: '51A-111.11',
+    });
+  });
+
+  /*
+   * Đại đa số lượt sửa xe KHÔNG có phiếu nào đang chờ (xe nháp, xe đã duyệt). Đường đó phải
+   * không đẻ ra phiếu và không đổi trạng thái xe — nếu không, mỗi lần sửa một chiếc xe đang chạy
+   * lại tự rơi vào hàng đợi duyệt.
+   */
+  maybe('sửa xe KHÔNG có phiếu chờ → không tạo phiếu nào', async () => {
+    const id = await seedVehicle(personalTenantId, { name: `Suzuki XL7 ${RUN}` });
+
+    await vehicles.update(personalTenantId, id, personalOwnerId, { name: `Suzuki XL7 GLX ${RUN}` });
+
+    const tasks = await prisma.approvalTask.count({
+      where: { targetType: APPROVAL_TARGET_TYPE.VEHICLE, targetId: id },
+    });
+    expect(tasks).toBe(0);
+    const vehicle = await prisma.vehicle.findUniqueOrThrow({
+      where: { id },
+      select: { publicStatus: true },
+    });
+    expect(vehicle.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.DRAFT);
+  });
 });

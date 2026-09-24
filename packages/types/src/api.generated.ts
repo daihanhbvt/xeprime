@@ -8476,7 +8476,7 @@ export interface components {
         };
         ApprovalLogEntryDto: {
             /** @enum {string} */
-            action: "submit" | "approve" | "reject" | "request_revision" | "cancel" | "resubmit";
+            action: "submit" | "approve" | "reject" | "request_revision" | "cancel" | "resubmit" | "profile_updated";
             fromStatus?: string | null;
             toStatus: string;
             note?: string | null;
@@ -14783,6 +14783,10 @@ export interface components {
         };
         VehicleAlertsListDto: {
             data: components["schemas"]["VehicleAlertsDto"][];
+        };
+        VehicleApprovalApproveDto: {
+            /** @description `capturedAt` của snapshot lúc bạn tải phiếu. Lệch với bản đang lưu ⇒ 409 APPROVAL_SNAPSHOT_STALE */
+            expectedCapturedAt?: string;
         };
         VehicleApprovalBlockersDto: {
             /** @description Điều kiện lên chợ xe hiện tại không còn đạt */
@@ -53239,7 +53243,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VehicleApprovalApproveDto"];
+            };
+        };
         responses: {
             /** @description Thành công */
             200: {

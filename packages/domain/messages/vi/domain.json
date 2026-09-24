@@ -12,7 +12,8 @@
     "approve": "Phê duyệt",
     "reject": "Từ chối",
     "request_revision": "Yêu cầu bổ sung",
-    "cancel": "Huỷ phiếu"
+    "cancel": "Huỷ phiếu",
+    "profile_updated": "Chủ xe cập nhật hồ sơ"
   },
   "auditActorScope": {
     "tenant": "Gian hàng",

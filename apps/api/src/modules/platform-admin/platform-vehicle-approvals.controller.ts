@@ -16,6 +16,7 @@ import type { AuthenticatedUser } from '../../common/types/request-context';
 import {
   SaveApprovalInternalNoteDto,
   SetVehicleApprovalCheckDto,
+  VehicleApprovalApproveDto,
   VehicleApprovalChecksDto,
   VehicleApprovalDetailDto,
   VehicleApprovalInternalNoteDto,
@@ -91,8 +92,11 @@ export class PlatformVehicleApprovalsController {
   approve(
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: VehicleApprovalApproveDto,
   ): Promise<VehicleApprovalDetailDto> {
-    return this.vehicleApprovals.decide(APPROVAL_DECISION.APPROVE, id, user.id);
+    return this.vehicleApprovals.decide(APPROVAL_DECISION.APPROVE, id, user.id, undefined, {
+      expectedCapturedAt: dto.expectedCapturedAt,
+    });
   }
 
   @Post(':id/reject')

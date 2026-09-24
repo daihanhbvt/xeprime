@@ -17,13 +17,26 @@
 }
 
 /*
- * Panel `xl` phủ kín màn hình từ tablet trở xuống (1024px = `--xp-bp-tablet`; CSS var không dùng
- * được trong `@media`). `!important` là bắt buộc: AntD đặt bề rộng panel bằng style inline từ
- * prop `size`, và đó là thứ duy nhất ở đây cần thắng.
+ * Panel `xl`/`split` phủ kín màn hình từ tablet trở xuống (1024px = `--xp-bp-tablet`; CSS var
+ * không dùng được trong `@media`). `!important` là bắt buộc: AntD đặt bề rộng panel bằng style
+ * inline từ prop `size`, và đó là thứ duy nhất ở đây cần thắng.
  */
 @media (max-width: 1024px) {
-  .xlWrapper {
+  .tabletFullWrapper {
     width: 100% !important;
+  }
+}
+
+/*
+ * Panel `modeless` ở desktop bắt đầu DƯỚI topbar của AppShell: panel này mở suốt lúc người dùng
+ * làm việc với danh sách, phủ lên topbar là giấu chuông thông báo và menu tài khoản chừng ấy thời
+ * gian. Selector dài hơn luật đặt chỗ của AntD (`.ant-drawer-right > .ant-drawer-content-wrapper`)
+ * một bậc nên thắng mà không cần `!important`. Từ tablet trở xuống panel là một trang toàn màn
+ * hình, phủ topbar là đúng.
+ */
+@media (min-width: 1025px) {
+  :global(.ant-drawer.ant-drawer-right) > .modelessWrapper {
+    top: var(--xp-shell-topbar-height);
   }
 }
 

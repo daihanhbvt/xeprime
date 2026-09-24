@@ -1,0 +1,90 @@
+{
+  "page": {
+    "title": "Đơn thuê toàn hệ thống",
+    "loading": "Đang tải đơn thuê toàn hệ thống…"
+  },
+  "filters": {
+    "searchPlaceholder": "Tìm mã đơn / tên khách",
+    "searchLabel": "Tìm mã đơn hoặc tên khách",
+    "phonePlaceholder": "Tra đúng SĐT khách",
+    "phoneLabel": "Tra số điện thoại khách",
+    "statusLabel": "Lọc theo trạng thái đơn",
+    "allStatuses": "Tất cả trạng thái",
+    "dateFieldLabel": "Khoảng ngày áp theo",
+    "dateRangeLabel": "Khoảng ngày"
+  },
+  "table": {
+    "label": "Đơn thuê toàn hệ thống",
+    "code": "Mã đơn",
+    "customer": "Khách thuê",
+    "tenant": "Gian hàng · xe",
+    "period": "Thời gian thuê",
+    "totalAmount": "Tổng tiền",
+    "debtAmount": "Còn nợ",
+    "openDetail": "Xem chi tiết đơn {code}",
+    "loadError": "Không tải được danh sách đơn thuê",
+    "empty": "Chưa có đơn thuê nào",
+    "noResults": "Không có đơn khớp bộ lọc",
+    "total": "{count, plural, other {# đơn}}"
+  },
+  "drawer": {
+    "fallbackTitle": "Đơn thuê",
+    "title": "Đơn {code}",
+    "createdAt": "Tạo lúc {time} · {date}",
+    "loadError": "Không tải được thông tin đơn",
+    "viewHistory": "Xem lịch sử"
+  },
+  "info": {
+    "title": "Thông tin đơn",
+    "customer": "Khách thuê",
+    "tenant": "Gian hàng",
+    "vehicle": "Xe",
+    "service": "Dịch vụ",
+    "note": "Ghi chú"
+  },
+  "timeline": {
+    "title": "Lịch trình",
+    "ariaLabel": "Tiến trình đơn thuê",
+    "steps": {
+      "created": "Tạo đơn",
+      "pickedUp": "Đã giao xe",
+      "completed": "Hoàn thành",
+      "cancelled": "Đã hủy",
+      "noShow": "Khách không đến"
+    },
+    "srDone": "đã xong",
+    "srTodo": "chưa tới",
+    "srFailed": "đơn kết thúc tại đây",
+    "planned": "Thời gian dự kiến",
+    "actual": "Thời gian thực tế",
+    "actualOngoing": "{from} → chưa trả xe"
+  },
+  "payment": {
+    "title": "Thanh toán",
+    "summaryLabel": "Tóm tắt thanh toán",
+    "base": "Tiền thuê",
+    "delivery": "Phí giao xe",
+    "otherCharges": "Phụ phí & khoản khác",
+    "discount": "Giảm giá",
+    "discountValue": "− {amount}",
+    "total": "Tổng thanh toán",
+    "paid": "Đã thanh toán",
+    "debt": "Còn phải thanh toán",
+    "debtOverdue": "Chuyến đã hoàn thành nhưng vẫn còn nợ",
+    "collateral": {
+      "title": "Tài sản bảo đảm khi nhận xe",
+      "hintLabel": "Giải thích về tài sản bảo đảm",
+      "hint": "Đây là mức cọc đơn khai — chưa chắc đã thu.",
+      "none": "Đơn không khai cọc tiền",
+      "note": "Đây là cọc thế chấp khi nhận xe, không phải tiền giữ chỗ và không tính vào tổng thanh toán. Sẽ được hoàn trả sau khi kết thúc thuê nếu không phát sinh hư hại."
+    }
+  },
+  "documents": {
+    "title": "Hồ sơ & giao dịch",
+    "payments": "{count, plural, =0 {Chưa có giao dịch} other {# giao dịch}}",
+    "receipts": "{count, plural, =0 {Chưa có phiếu thu/chi} other {# phiếu thu/chi}}",
+    "contracts": "{count, plural, =0 {Chưa có hợp đồng} other {# hợp đồng}}",
+    "createdBy": "Người tạo: {name}",
+    "updatedAt": "Cập nhật: {dateTime}"
+  }
+}

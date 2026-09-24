@@ -374,6 +374,25 @@ export class SaveApprovalInternalNoteDto {
   expectedUpdatedAt?: string | null;
 }
 
+/**
+ * Khoá lạc quan của lượt PHÊ DUYỆT — cùng kiểu với `expectedUpdatedAt` của ghi chú nội bộ.
+ *
+ * Từ 24/09/2026 chủ xe sửa xe lúc phiếu còn chờ thì snapshot được dựng lại, nên một màn duyệt mở
+ * lâu có thể đang trưng bản cũ. Gửi kèm mốc đã đọc để máy chủ từ chối thay vì duyệt nhầm.
+ *
+ * Chỉ Phê duyệt cần: Từ chối và Yêu cầu bổ sung đều trả hồ sơ về cho chủ xe, nên quyết định trên
+ * bản cũ hay mới đều dẫn tới cùng một chỗ.
+ */
+export class VehicleApprovalApproveDto {
+  @ApiPropertyOptional({
+    description:
+      '`capturedAt` của snapshot lúc bạn tải phiếu. Lệch với bản đang lưu ⇒ 409 APPROVAL_SNAPSHOT_STALE',
+  })
+  @IsOptional()
+  @IsISO8601()
+  expectedCapturedAt?: string;
+}
+
 /** Lý do gửi CHỦ XE — bắt buộc khi từ chối / yêu cầu bổ sung. */
 export class VehicleApprovalReasonDto {
   @ApiProperty({ maxLength: APPROVAL_REASON_MAX_LENGTH })

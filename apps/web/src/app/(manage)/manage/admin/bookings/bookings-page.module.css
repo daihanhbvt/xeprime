@@ -1,9 +1,3 @@
-.state {
-  display: block;
-  margin: 64px auto;
-  text-align: center;
-}
-
 .search {
   width: 230px;
 }
@@ -22,6 +16,30 @@
 
 .rangePicker {
   width: 250px;
+}
+
+.page {
+  min-width: 0;
+  transition: padding-inline-end 0.2s ease;
+}
+
+/*
+ * Panel chi tiết đang mở ở desktop (>1024px = `--xp-bp-tablet`; CSS var không dùng được trong
+ * `@media`): chừa đúng bề rộng panel cho CẢ trang — bộ lọc bị panel che là bộ lọc không dùng được.
+ * Vùng nội dung của AppShell đã có lề phải `--xp-space-md`, nên chừa trọn bề rộng panel để lại
+ * đúng một khoảng thở giữa trang và panel. Từ tablet trở xuống panel phủ kín màn hình
+ * (`DetailDrawer` cỡ `split`), không cần chừa.
+ */
+@media (min-width: 1025px) {
+  .pageWithPanel {
+    padding-inline-end: var(--xp-drawer-width-split);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page {
+    transition: none;
+  }
 }
 
 @media (max-width: 560px) {
