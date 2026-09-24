@@ -120,10 +120,17 @@ describe('MobileNav — thanh tab dưới đáy', () => {
 
   it('nền tảng: bộ tab khác hẳn, không lẫn tab gian hàng', () => {
     user.platformRole = 'platform_admin';
+    /*
+     * Bốn quyền = bốn tab của `PLATFORM_MOBILE_TABS`, theo đúng thứ tự.
+     *
+     * Tab 3 là VẬN HÀNH TIỀN chứ không phải "Xe" kể từ đợt dọn IA 23/09/2026: bốn ô dưới đáy
+     * dành cho việc người trực làm mỗi ngày, và đối soát tiền là một trong số đó còn tra cứu xe
+     * thì không. Danh sách xe vẫn còn nguyên trong khối "Chợ xe" của sidebar.
+     */
     grant(
       PERMISSION.PLATFORM_DASHBOARD_VIEW,
       PERMISSION.PLATFORM_APPROVAL_REVIEW,
-      PERMISSION.PLATFORM_VEHICLE_VIEW,
+      PERMISSION.PLATFORM_MONEY_MANAGE,
       PERMISSION.PLATFORM_BOOKING_VIEW,
     );
     const { container } = renderNav();
@@ -131,7 +138,7 @@ describe('MobileNav — thanh tab dưới đáy', () => {
     const labels = within(bottomBar(container))
       .getAllByRole('link')
       .map((a) => a.textContent);
-    expect(labels).toEqual(['Tổng quan', 'Duyệt xe', 'Xe', 'Đơn thuê']);
+    expect(labels).toEqual(['Tổng quan', 'Duyệt xe', 'Vận hành tiền', 'Đơn thuê']);
     expect(labels).not.toContain('Lịch xe');
   });
 
