@@ -6,6 +6,14 @@
     "needs_revision": "Yêu cầu bổ sung",
     "cancelled": "Đã hủy"
   },
+  "approvalAction": {
+    "submit": "Gửi duyệt",
+    "resubmit": "Gửi lại",
+    "approve": "Phê duyệt",
+    "reject": "Từ chối",
+    "request_revision": "Yêu cầu bổ sung",
+    "cancel": "Huỷ phiếu"
+  },
   "auditActorScope": {
     "tenant": "Gian hàng",
     "platform": "Nền tảng",
@@ -864,5 +872,9 @@
     "hold_paid": "Khách đã thanh toán, chờ duyệt",
     "booking_before_pickup": "Đã có đơn, chưa giao xe",
     "booking_active": "Xe đang ở với khách"
+  },
+  "storefrontKind": {
+    "personal": "Cá nhân",
+    "shop": "Gian hàng"
   }
 }

@@ -324,7 +324,12 @@ export function PriceBreakdown({
             MÃ KHUYẾN MÃI — dòng TRỪ, LUÔN hiện (không gấp theo `showItems`): khách vừa chủ động
             áp mã, giấu nó sau nút "Xem chi tiết" là không cho họ thấy việc mình vừa làm có tác dụng.
           */}
-          {promoDiscount > 0 ? (
+          {/*
+            `promoSlot` có mặt ⇒ ô nhập mã đang hiện chính con số này ở đầu bảng; vẽ thêm dòng
+            dưới đây là cùng một khoản giảm hiện HAI lần, đọc ra như được giảm gấp đôi. Màn chỉ
+            ĐỌC không có ô nhập, và ở đó dòng này là nơi duy nhất mã hiện ra.
+          */}
+          {promoDiscount > 0 && !promoSlot ? (
             <XStack ai="flex-start" jc="space-between" gap={space.sm}>
               <YStack f={1} gap={2}>
                 <Text col={colors.danger} fos={fontSize.bodySm} fow={fontWeight.semibold}>

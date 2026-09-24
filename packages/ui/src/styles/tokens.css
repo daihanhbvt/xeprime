@@ -219,6 +219,11 @@
   --xp-modal-width-xl: 1180px;
   --xp-drawer-width: 560px;
   --xp-drawer-width-lg: 720px;
+  --xp-drawer-width-xl: clamp(
+    min(calc(100vw - var(--xp-shell-sidebar-width)), 1000px),
+    75vw,
+    1400px
+  );
   --xp-container-max-width: 1280px;
 
   /* ─── Khung app ───────────────────────────────────────────────────────── */

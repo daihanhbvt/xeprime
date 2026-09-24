@@ -104,6 +104,9 @@ const SELECT = {
   id: true,
   vehicleId: true,
   status: true,
+  /// Mã đã đóng băng lúc khách áp — `resolvePricing` phải mang nó vào ước tính, nếu không thẻ
+  /// trong hộp thư gian hàng hiện nguyên giá cho một chuyến đã được hứa giảm (ADR 0046 điều 7).
+  promoSnapshot: true,
   customerName: true,
   customerPhone: true,
   customerEmail: true,
@@ -1182,10 +1185,17 @@ export class BookingRequestsService {
         packageMonths: null,
       };
       const breakdown = await this.quoteFor(r, schedule, policy);
+      /*
+       * Mã đã đóng băng trên yêu cầu đi cùng ước tính này. Bỏ nó ra thì thẻ trong hộp thư của
+       * gian hàng hiện một con số khác với thứ khách đang nhìn, và khác cả với số sẽ chốt lúc
+       * duyệt — ba màn, ba giá (lỗi 24/09/2026).
+       */
+      const frozen = this.promos.frozenTermsOf(r);
       const fees = await this.pricing.customerFeesFor(
         tenantId,
         breakdown.totalAmount,
         breakdown.estimateNote != null,
+        frozen ? { promo: frozen } : {},
       );
       return {
         isEstimate: true,

@@ -15,6 +15,7 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
+import { passVehicleReviewChecks } from './helpers/vehicle-review-fixture';
 import { PlatformApprovalService } from '../src/modules/platform-admin/platform-approval.service';
 import { PlatformVehiclesService } from '../src/modules/platform-admin/platform-vehicles.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
@@ -105,6 +106,7 @@ async function approve(vehicleId: string, forTenant = tenantId): Promise<void> {
     },
     select: { id: true },
   });
+  await passVehicleReviewChecks(prisma, task.id, reviewerId);
   await approvals.approve(task.id, reviewerId);
 }
 

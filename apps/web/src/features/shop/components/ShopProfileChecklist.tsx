@@ -3,7 +3,7 @@
 import { CheckCircleFilled, MinusCircleOutlined } from '@ant-design/icons';
 import { Progress } from 'antd';
 import { useTranslations } from 'next-intl';
-import { useWatch, type Control } from 'react-hook-form';
+import { useFormState, useWatch, type Control } from 'react-hook-form';
 import {
   missingShopProfileRequirements,
   missingShopProfileSuggestions,
@@ -22,21 +22,23 @@ type ChecklistItem = ShopProfileRequirement | ShopProfileSuggestion;
 /**
  * "Hoàn thiện hồ sơ" trước đây không có định nghĩa nào cả.
  *
- * Chủ gian hàng mới được bảo là hãy hoàn thiện hồ sơ rồi gửi duyệt, nhưng không đâu nói hoàn
- * thiện gồm những gì — mọi ô đều tuỳ chọn ở API, và nút Gửi duyệt sáng ngay cả khi hai ô bắt
- * buộc còn trống. Thẻ này là bản kiểm kê đó, chia đúng theo HỆ QUẢ: nhóm trên chặn gửi duyệt,
- * nhóm dưới thì không.
+ * Chủ gian hàng được bảo là hãy hoàn thiện hồ sơ, nhưng không đâu nói hoàn thiện gồm những gì —
+ * mọi ô đều tuỳ chọn ở API. Thẻ này là bản kiểm kê đó, chia đúng theo HỆ QUẢ: nhóm trên là thông
+ * tin bắt buộc, nhóm dưới là thứ giúp khách chọn gian hàng.
  *
- * Đọc giá trị ĐANG NHẬP (`useWatch`) chứ không phải hồ sơ đã lưu, vì nút Gửi duyệt lưu nốt thay
- * đổi còn dở trước khi gửi — nếu thẻ này đọc bản đã lưu thì người vừa gõ xong tên vẫn thấy mục
- * đó đỏ, và họ sẽ không tin bảng này nữa. `useWatch` cũng khoanh việc render lại vào riêng thẻ
+ * Web không còn nút gửi xác minh gian hàng (24/09/2026 — nền tảng tạm ngừng xác minh), nên chữ ở
+ * đây KHÔNG nhắc tới "gửi duyệt": dùng `profileRequired*`, còn `required*` là của app native,
+ * nơi nút gửi vẫn còn.
+ *
+ * Đọc giá trị ĐANG NHẬP (`useWatch`) chứ không phải hồ sơ đã lưu — nếu thẻ này đọc bản đã lưu
+ * thì người vừa gõ xong tên vẫn thấy mục đó đỏ, và họ sẽ không tin bảng này nữa. `useWatch` cũng khoanh việc render lại vào riêng thẻ
  * này, thay vì cả trang hồ sơ nhấp nháy theo từng phím gõ.
  *
  * Cố ý KHÔNG có nút "Điền" nhảy tới từng ô: cách duy nhất để nhảy được là nối `ref` của RHF vào
  * `SelectField`/`ImageUploadField`, và rule `react-hooks/refs` coi mọi truy cập `field.*` sau đó
  * là đọc ref trong lúc render — cả hai primitive dùng chung sẽ phải mang `eslint-disable`. Bảng
- * này nằm ngay trên chính form chứa các ô đó, còn nút Gửi duyệt thì tự đưa con trỏ tới ô thiếu
- * đầu tiên; một nút "Điền" chết ở ba dòng còn tệ hơn là không có nút nào.
+ * này nằm ngay trên chính form chứa các ô đó, còn nút Lưu thì tự đưa con trỏ tới ô lỗi đầu
+ * tiên; một nút "Điền" chết ở ba dòng còn tệ hơn là không có nút nào.
  */
 export function ShopProfileChecklist({
   control,
@@ -72,18 +74,8 @@ export function ShopProfileChecklist({
 }) {
   const t = useTranslations('Shop.checklist');
   const values = useWatch({ control }) as Partial<ShopProfileValues>;
-
-  /*
-   * Mục "địa chỉ" của checklist chấm phần CHI TIẾT người dùng gõ (`addressLine`), không chấm
-   * chuỗi hiển thị: chuỗi đó do server ghép và luôn có ít nhất tên tỉnh, nên chấm theo nó là
-   * mục này không bao giờ thiếu — một dòng checklist luôn xanh không nói lên điều gì.
-   */
-  const completeness = {
-    ...values,
-    address: values.addressLine,
-    ownerFullName: ownerAccount.displayName,
-    ownerPhone: ownerAccount.phone,
-  };
+  // Bản ĐÃ LƯU: form `reset` về nó sau mỗi lần lưu, nên `defaultValues` là hồ sơ trên server.
+  const { defaultValues } = useFormState({ control });
   /*
    * Logo đổi NHÓM, không đổi cách chấm: cùng một phép kiểm "đã có chưa", chỉ khác hệ quả. Dựng
    * hai bảng luật song song ở đây là mời chúng trôi khỏi nhau — xem docblock của `logoRequired`.
@@ -95,16 +87,24 @@ export function ShopProfileChecklist({
     ? SHOP_PROFILE_SUGGESTION_VALUES.filter((key) => key !== SHOP_PROFILE_SUGGESTION.LOGO)
     : SHOP_PROFILE_SUGGESTION_VALUES;
 
-  const suggestedMissing = new Set<string>(missingShopProfileSuggestions(completeness));
-  const missingRequired = new Set<string>([
-    ...missingShopProfileRequirements(completeness),
-    ...(logoRequired && suggestedMissing.has(SHOP_PROFILE_SUGGESTION.LOGO)
-      ? [SHOP_PROFILE_SUGGESTION.LOGO]
-      : []),
-  ]);
-  const missingSuggested = new Set<string>(
-    [...suggestedMissing].filter((key) => !missingRequired.has(key)),
+  const { missingRequired, missingSuggested } = missingItems(values, ownerAccount, logoRequired);
+
+  /*
+   * Hồ sơ đã ĐỦ HẾT — cả bản đã lưu lẫn bản đang gõ — thì không còn gì để kiểm kê: một thẻ 100%
+   * đứng thường trực chỉ dạy người dùng bỏ qua vùng này. Xét cả bản đã lưu để thẻ không biến mất
+   * ngay giữa lúc gõ ô cuối; nó rời đi sau lần Lưu làm hồ sơ đủ.
+   */
+  const saved = missingItems(
+    (defaultValues ?? {}) as Partial<ShopProfileValues>,
+    ownerAccount,
+    logoRequired,
   );
+  if (
+    missingRequired.size + missingSuggested.size === 0 &&
+    saved.missingRequired.size + saved.missingSuggested.size === 0
+  ) {
+    return null;
+  }
 
   const total = requiredItems.length + suggestedItems.length;
   const done = total - missingRequired.size - missingSuggested.size;
@@ -128,7 +128,7 @@ export function ShopProfileChecklist({
       </header>
 
       <Group
-        label={ready ? t('requiredDone') : t('requiredTitle')}
+        label={ready ? t('profileRequiredDone') : t('profileRequiredTitle')}
         tone={ready ? 'done' : 'required'}
         items={requiredItems}
         missing={missingRequired}
@@ -141,6 +141,36 @@ export function ShopProfileChecklist({
       />
     </section>
   );
+}
+
+/** Mục còn thiếu, chia theo HỆ QUẢ: nhóm bắt buộc (kể cả logo với gian hàng tuyến gói) và nhóm nên có. */
+function missingItems(
+  values: Partial<ShopProfileValues>,
+  ownerAccount: ShopOwnerAccount,
+  logoRequired: boolean,
+): { missingRequired: ReadonlySet<string>; missingSuggested: ReadonlySet<string> } {
+  /*
+   * Mục "địa chỉ" của checklist chấm phần CHI TIẾT người dùng gõ (`addressLine`), không chấm
+   * chuỗi hiển thị: chuỗi đó do server ghép và luôn có ít nhất tên tỉnh, nên chấm theo nó là
+   * mục này không bao giờ thiếu — một dòng checklist luôn xanh không nói lên điều gì.
+   */
+  const completeness = {
+    ...values,
+    address: values.addressLine,
+    ownerFullName: ownerAccount.displayName,
+    ownerPhone: ownerAccount.phone,
+  };
+  const suggestedMissing = new Set<string>(missingShopProfileSuggestions(completeness));
+  const missingRequired = new Set<string>([
+    ...missingShopProfileRequirements(completeness),
+    ...(logoRequired && suggestedMissing.has(SHOP_PROFILE_SUGGESTION.LOGO)
+      ? [SHOP_PROFILE_SUGGESTION.LOGO]
+      : []),
+  ]);
+  const missingSuggested = new Set<string>(
+    [...suggestedMissing].filter((key) => !missingRequired.has(key)),
+  );
+  return { missingRequired, missingSuggested };
 }
 
 function Group({

@@ -1268,3 +1268,91 @@ describe('Mã khuyến mãi không nới một luật nào khác', () => {
     });
   });
 });
+
+/*
+ * Đường ĐỌC LẠI một yêu cầu đang chờ — `/trips` và `/trips/:id`.
+ *
+ * Bộ này khoá lỗi ngày 24/09/2026: mã được lưu đúng và được áp đúng lúc duyệt, nhưng mọi màn
+ * khách đọc TRƯỚC đó lại báo giá không mã, nên khách bị hứa một số rồi nhìn thấy một số khác.
+ * Nguyên nhân sâu là `estimateQuote` từng truyền `quoteIsEstimate = true` cứng, mà
+ * `computeCustomerFees` suy `depositRequired = … && !quoteIsEstimate` ⇒ `promoRoom = 0` ⇒ số
+ * giảm bị triệt tiêu ÂM THẦM, không một lỗi nào.
+ */
+describe('Báo giá lại yêu cầu đang chờ — phải mang theo mã đã đóng băng', () => {
+  /** Chuyến của `submit()`: 2 ngày × 700.000đ, không giảm trực tiếp. */
+  async function estimateOf(requestId: string) {
+    const row = await prisma.bookingRequest.findUniqueOrThrow({
+      where: { id: requestId },
+      select: {
+        tenantId: true,
+        serviceType: true,
+        routeType: true,
+        pickupAt: true,
+        returnAt: true,
+        longTermPackageMonths: true,
+        promoSnapshot: true,
+        vehicle: {
+          select: {
+            weekdayPrice: true,
+            weekendPrice: true,
+            monthlyPrice: true,
+            withDriverDailyPrice: true,
+            withDriverInterCityPrice: true,
+            withDriverOneWayPrice: true,
+            discountPercent: true,
+          },
+        },
+      },
+    });
+    return pricing.estimateQuote({
+      tenantId: row.tenantId,
+      vehicleId: vehicleId,
+      serviceType: row.serviceType,
+      routeType: row.routeType,
+      pickupAt: row.pickupAt,
+      returnAt: row.returnAt,
+      longTermPackageMonths: row.longTermPackageMonths,
+      vehicle: row.vehicle,
+      promo: row.promoSnapshot as never,
+    });
+  }
+
+  maybe('yêu cầu CÓ mã: ước tính trừ đúng số đã hứa, không phải nguyên giá', async () => {
+    const code = `RQ1${RUN.slice(0, 4)}`.toUpperCase();
+    await seedPromo({ code, discountAmount: '100000' });
+    const { receipt } = await submit({ promoCode: code });
+
+    const est = await estimateOf(receipt.id);
+    expect(est?.fees?.promoDiscountAmount).toBe('100000');
+    expect(est?.fees?.customerTotalAmount).toBe(String(CUSTOMER_TOTAL - 100_000));
+    // Tiền thuê `B` và phần trả chủ xe KHÔNG đổi — XePrime tài trợ (ADR 0046 điều 2).
+    expect(est?.breakdown.totalAmount).toBe(String(RENTAL));
+    expect(est?.fees?.payAtPickupAmount).toBe(String(RENTAL - DEPOSIT));
+  });
+
+  maybe('yêu cầu KHÔNG mã: ước tính giữ nguyên giá, không tự sinh khoản giảm', async () => {
+    const { receipt } = await submit();
+    const est = await estimateOf(receipt.id);
+    expect(Number(est?.fees?.promoDiscountAmount ?? 0)).toBe(0);
+    expect(est?.fees?.customerTotalAmount).toBe(String(CUSTOMER_TOTAL));
+  });
+
+  maybe('ước tính và lượt DUYỆT nói cùng một con số', async () => {
+    /*
+     * Đây là bất biến mà khách cảm nhận được: số trên thẻ "Chuyến của tôi" phải là số sẽ bị thu
+     * khi gian hàng bấm duyệt. Hai đường đi qua hai hàm khác nhau (`estimateQuote` và
+     * `resolveFeesWithPromo`), nên chỉ một test so trực tiếp mới giữ chúng bằng nhau.
+     */
+    const code = `RQ3${RUN.slice(0, 4)}`.toUpperCase();
+    await seedPromo({ code, discountAmount: '100000' });
+    const { receipt } = await submit({ promoCode: code });
+
+    const est = await estimateOf(receipt.id);
+    await requests.approve(tenantId, ownerId, receipt.id);
+    const hold = await prisma.bookingHold.findUniqueOrThrow({
+      where: { bookingRequestId: receipt.id },
+    });
+
+    expect(est?.fees?.holdAmount).toBe(hold.amount.toFixed(0));
+  });
+});

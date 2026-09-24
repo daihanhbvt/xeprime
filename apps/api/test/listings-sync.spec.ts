@@ -11,6 +11,7 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
+import { passVehicleReviewChecks } from './helpers/vehicle-review-fixture';
 import { PlatformApprovalService } from '../src/modules/platform-admin/platform-approval.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { makeNotificationService, makePricingService, makePublicListingsService, makeVehiclesService, seedBranch, seedProvince } from './helpers/service-factory';
@@ -102,6 +103,7 @@ async function approve(vehicleId: string): Promise<void> {
     },
     select: { id: true },
   });
+  await passVehicleReviewChecks(prisma, task.id, reviewerId);
   await approvals.approve(task.id, reviewerId);
 }
 
@@ -325,7 +327,7 @@ describe('public_listings sync (ADR 0008)', () => {
   );
 
   maybe('xoá mềm xe → listing archived, getById cũ trả 404, không search ra', async () => {
-    await vehicles.remove(tenantId, vDelete);
+    await vehicles.remove(tenantId, vDelete, ownerId);
 
     const listing = await prisma.publicListing.findUniqueOrThrow({
       where: { vehicleId: vDelete },

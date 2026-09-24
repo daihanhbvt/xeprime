@@ -14,21 +14,19 @@ import { useTenantScope } from '@/hooks/use-tenant-scope';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { ShopWorkspace } from '@/features/shop/components/ShopWorkspace';
-import {
-  useMyShop,
-  useSubmitShopReview,
-  useUpdateShopProfile,
-} from '@/features/shop/hooks/use-shop';
-import type { UpdateProfileInput } from '@/features/shop/types';
+import { useMyShop, useUpdateShopProfile } from '@/features/shop/hooks/use-shop';
 
 import styles from './page.module.css';
 
 /**
  * Route lo năm việc: quyền, dữ liệu, mutation, các trạng thái chưa-có-dữ-liệu, và `?section=`.
  *
- * Tiêu đề, mục lục, dải trạng thái, checklist và cả hai nút (Lưu · Gửi duyệt) nằm trong
- * `ShopWorkspace` chứ không ở đây: tất cả chỉ có nghĩa khi biết form CÓ THAY ĐỔI HAY CHƯA và CÒN
- * THIẾU GÌ — hai câu hỏi mà chỉ form trả lời được.
+ * Tiêu đề, mục lục, dải trạng thái, checklist và nút Lưu nằm trong `ShopWorkspace` chứ không ở
+ * đây: tất cả chỉ có nghĩa khi biết form CÓ THAY ĐỔI HAY CHƯA và CÒN THIẾU GÌ — hai câu hỏi mà chỉ
+ * form trả lời được.
+ *
+ * Không còn nút "Gửi xác minh" (24/09/2026): nền tảng tạm ngừng xác minh gian hàng, và màn duyệt
+ * của nền tảng chỉ nhận phiếu XE — một phiếu xác minh gửi lúc này không có ai xử lý.
  *
  * `?section=` đọc và ghi ở ĐÂY (ADR 0004: filter/điều hướng trong trang sống ở URL), rồi truyền
  * xuống như một giá trị đã phân giải — workspace không bao giờ phải nghĩ về chuỗi rác trong query.
@@ -58,11 +56,9 @@ export default function ShopPage() {
 
   const canView = has(PERMISSION.TENANT_VIEW);
   const canEdit = has(PERMISSION.TENANT_UPDATE);
-  const canSubmit = has(PERMISSION.TENANT_SUBMIT_REVIEW);
 
   const { data: shop, isLoading, isError, refetch } = useMyShop(canView && Boolean(tenant));
   const updateProfile = useUpdateShopProfile();
-  const submitReview = useSubmitShopReview();
   /*
    * "Đã có xe nào chưa" — CHỈ hỏi khi dải chào mừng đang mở.
    *
@@ -71,27 +67,6 @@ export default function ShopPage() {
    * không được trả giá cho một dải chỉ hiện đúng một lần trong đời gian hàng.
    */
   const vehicles = useVehicles({ page: 1, limit: 1 }, { enabled: filters.welcome && canView });
-
-  /**
-   * Gửi duyệt = (lưu nốt nếu còn dở) → gửi.
-   *
-   * Backend snapshot hồ sơ TỪ DATABASE, nên gửi thẳng khi form còn thay đổi chưa lưu sẽ đưa cho
-   * người duyệt đúng bản cũ mà chủ shop vừa sửa xong và tưởng đã gửi đi. Nối hai bước ở đây
-   * thay vì bắt người dùng nhớ bấm Lưu trước — họ vừa bấm "Gửi duyệt" trên chính thứ đang nhìn.
-   */
-  function submitForReview(pendingChanges: UpdateProfileInput | null) {
-    const send = () =>
-      submitReview.mutate(undefined, {
-        onSuccess: () => message.success(t('status.submitted')),
-        onError: (error) => message.error(errorMessage(error)),
-      });
-
-    if (!pendingChanges) return send();
-    updateProfile.mutate(pendingChanges, {
-      onSuccess: send,
-      onError: (error) => message.error(errorMessage(error)),
-    });
-  }
 
   if (!canView) {
     return (
@@ -137,11 +112,7 @@ export default function ShopPage() {
       <ShopWorkspace
         shop={shop}
         canEdit={canEdit}
-        canSubmit={canSubmit}
         saving={updateProfile.isPending}
-        // Bước lưu-trước cũng là một phần của "đang gửi duyệt": nút phải quay suốt cả hai chặng,
-        // nếu không nó sáng lại giữa chừng và mời bấm lần thứ hai.
-        submitting={submitReview.isPending || updateProfile.isPending}
         errorMessage={updateProfile.isError ? errorMessage(updateProfile.error) : null}
         section={filters.section}
         sectionInUrl={filters.sectionInUrl}
@@ -167,7 +138,6 @@ export default function ShopPage() {
             onError: (error) => message.error(errorMessage(error)),
           })
         }
-        onSubmitReview={submitForReview}
       />
     </div>
   );

@@ -125,6 +125,8 @@
     "title": "Complete your profile",
     "requiredTitle": "Required before you can submit",
     "requiredDone": "Ready to submit for review",
+    "profileRequiredTitle": "Required details",
+    "profileRequiredDone": "All required details are filled in",
     "suggestedTitle": "Recommended — helps renters pick your shop",
     "goToField": "Fill in",
     "items": {

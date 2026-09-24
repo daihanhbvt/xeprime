@@ -26,10 +26,11 @@ export const queryKeys = {
     /** Công tắc thu cọc của gian hàng — `GET /shop/payment-settings` (Phase 6). */
     paymentSettings: () => ['shop', 'payment-settings'] as const,
   },
-  approvals: {
-    all: ['approvals'] as const,
-    list: (params: QueryParams) => ['approvals', 'list', params] as const,
-    detail: (id: string) => ['approvals', 'detail', id] as const,
+  /** Màn "Duyệt xe" của nền tảng — `/platform/vehicle-approvals` (chỉ phiếu xe). */
+  vehicleApprovals: {
+    all: ['vehicle-approvals'] as const,
+    list: (params: QueryParams) => ['vehicle-approvals', 'list', params] as const,
+    detail: (id: string) => ['vehicle-approvals', 'detail', id] as const,
   },
   calendar: {
     all: ['calendar'] as const,
@@ -528,8 +529,7 @@ export const queryKeys = {
   promoCodes: {
     all: ['promo-codes'] as const,
     list: (params: QueryParams) => ['promo-codes', 'list', params] as const,
-    redemptions: (id: string, page: number) =>
-      ['promo-codes', 'redemptions', id, page] as const,
+    redemptions: (id: string, page: number) => ['promo-codes', 'redemptions', id, page] as const,
   },
   /** Khoản giữ chỗ + hoàn tiền + đối soát ngày, phạm vi nền tảng (R3 — ADR 0028). */
   platformMoney: {

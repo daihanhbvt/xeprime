@@ -1,0 +1,71 @@
+/*
+ * Hàng đợi "Duyệt xe" — dòng GỌN để quét nhanh: ảnh nhỏ 56×40, tên 14px, dòng phụ 12px.
+ * Mọi giá trị lấy từ token (ADR 0003).
+ */
+
+.vehicle {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+/* Ảnh đại diện nhỏ — tỉ lệ 7:5 gần với ảnh xe ngang, không méo (`object-fit`). */
+.thumb {
+  flex: none;
+  width: 56px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+}
+
+.thumb :global(img) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbEmpty {
+  composes: thumb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.vehicleText,
+.stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.vehicleName {
+  font-weight: 600;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.caption {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Tên gian hàng/người gửi dài: tối đa hai dòng, không đẩy cột khác ra khỏi bảng. */
+.clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}

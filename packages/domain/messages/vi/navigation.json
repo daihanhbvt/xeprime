@@ -92,11 +92,15 @@
     "storefront": "Gian hàng",
     "settings": "Cấu hình",
     "support": "Hỗ trợ",
-    "platform": "Quản trị nền tảng"
+    "platform": "Quản trị nền tảng",
+    "platformMarketplace": "Chợ xe",
+    "platformFinance": "Tiền & vận hành",
+    "platformPolicy": "Chính sách & gói",
+    "platformSystem": "Hệ thống"
   },
   "platform": {
     "dashboard": "Tổng quan",
-    "approvals": "Duyệt hồ sơ",
+    "approvals": "Duyệt xe",
     "tenants": "Gian hàng",
     "vehicles": "Xe toàn hệ thống",
     "vehiclesShort": "Xe",
@@ -113,7 +117,9 @@
     "sellers": "Xác minh người bán",
     "feePolicies": "Chính sách phí",
     "promoCodes": "Mã khuyến mãi",
-    "money": "Money operations",
-    "support": "Hỗ trợ / tranh chấp"
+    "money": "Vận hành tiền",
+    "support": "Hỗ trợ / tranh chấp",
+    "shops": "Gian hàng & xe",
+    "billing": "Gói & phí"
   }
 }

@@ -1,19 +1,16 @@
 'use client';
 
 import { ExportOutlined, SaveOutlined } from '@ant-design/icons';
-import { Alert, App, Avatar, Button, Form, Modal } from 'antd';
+import { Alert, Avatar, Button, Form } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import {
-  canSubmitShopVerification,
   isPackageShopTrack,
   PERMISSION,
-  SHOP_VERIFICATION,
   TENANT_ROLE,
   TENANT_STATUS,
   TENANT_STATUS_META,
-  type ShopVerification,
   type TenantStatus,
 } from '@xeprime/types';
 
@@ -43,12 +40,9 @@ const PROFILE_FORM_ID = 'shop-profile-form';
 
 export interface ShopWorkspaceProps {
   shop: MyShop;
-  /** Quyền `tenant.update`. Thiếu quyền và "đang chờ duyệt" đều dẫn tới chỉ-xem. */
+  /** Quyền `tenant.update`. Thiếu quyền thì chỉ-xem. */
   canEdit: boolean;
-  /** Quyền `tenant.submit_review` — đổi TRẠNG THÁI hồ sơ, không phải "lưu". */
-  canSubmit: boolean;
   saving: boolean;
-  submitting: boolean;
   errorMessage?: string | null;
   /** Section đang mở, đọc từ `?section=` (đã phân giải, không bao giờ là giá trị lạ). */
   section: ShopSection;
@@ -72,7 +66,6 @@ export interface ShopWorkspaceProps {
   hasVehicle?: boolean;
   onSectionChange: (section: ShopSection) => void;
   onSave: (body: UpdateProfileInput) => void;
-  onSubmitReview: (pendingChanges: UpdateProfileInput | null) => void;
 }
 
 /**
@@ -107,9 +100,7 @@ export interface ShopWorkspaceProps {
 export function ShopWorkspace({
   shop,
   canEdit,
-  canSubmit,
   saving,
-  submitting,
   errorMessage,
   section,
   sectionInUrl,
@@ -117,30 +108,22 @@ export function ShopWorkspace({
   hasVehicle = false,
   onSectionChange,
   onSave,
-  onSubmitReview,
 }: ShopWorkspaceProps) {
   const t = useTranslations('Shop');
   const tSections = useTranslations('Shop.sections');
-  const tCommon = useTranslations('Common');
-  const { message } = App.useApp();
   const { has } = usePermissions();
   const { data: user } = useCurrentUser();
-  const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const { control, handleSubmit, reset, formState, getValues } = useShopProfileForm(shop);
+  const { control, handleSubmit, reset, formState } = useShopProfileForm(shop);
 
   const status = shop.status as TenantStatus;
   /*
-   * Backend cũng từ chối ghi khi đang chờ XÁC MINH (`SHOP_VERIFICATION_PENDING`). Khoá ở đây để
-   * người dùng biết TRƯỚC khi gõ, chứ không phải sau khi bấm Lưu.
+   * Chỉ-xem CHỈ vì thiếu quyền. Tới 24/09/2026 hồ sơ còn bị khoá suốt lúc chờ XÁC MINH; nền tảng
+   * đã tạm ngừng xác minh gian hàng, nên một phiếu chờ không còn ai xử lý và cái khoá đó thành
+   * vĩnh viễn — backend cũng đã gỡ nó (`TenantsService.updateProfile`).
    */
-  const pendingReview = shop.verification === SHOP_VERIFICATION.PENDING;
-  const readOnly = pendingReview || !canEdit;
-  const readOnlyReason = pendingReview
-    ? t('form.lockedWhilePending')
-    : canEdit
-      ? null
-      : t('form.readOnly');
+  const readOnly = !canEdit;
+  const readOnlyReason = canEdit ? null : t('form.readOnly');
 
   /**
    * `isDirty` quyết định CẢ HAI nút: chưa sửa gì thì không có gì để lưu (nút mờ) và không có gì
@@ -148,9 +131,6 @@ export function ShopWorkspace({
    * và một nút Huỷ luôn đứng đó gợi ý rằng có thứ gì đang dở dang.
    */
   const dirty = formState.isDirty && !readOnly;
-
-  /** Hồ sơ ở chặng "chưa gửi / bị trả về" — chỉ khi đó checklist mới có gì để nói. */
-  const submittable = canSubmitShopVerification(shop.verification as ShopVerification);
 
   /*
    * Ba trục quyết định section nào có mặt, và cả ba KHỚP với guard của API:
@@ -175,40 +155,8 @@ export function ShopWorkspace({
 
   const submit = handleSubmit((v) => onSave(toShopProfileBody(v)));
 
-  /**
-   * "Gửi duyệt" chạy VALIDATE TRƯỚC, rồi mới hỏi xác nhận — hỏi "gửi nhé?" rồi mới báo "thiếu 2
-   * mục" là bắt người dùng đi qua một hộp thoại vô ích. `shouldFocusError` của RHF tự đưa con trỏ
-   * tới ô sai ĐẦU TIÊN; câu thông báo lo phần còn lại.
-   */
-  const openSubmitConfirm = handleSubmit(
-    () => setConfirmOpen(true),
-    (errors) => message.warning(t('status.incomplete', { count: Object.keys(errors).length })),
-  );
-
-  const confirmSubmitReview = () => {
-    setConfirmOpen(false);
-    onSubmitReview(dirty ? toShopProfileBody(getValues()) : null);
-  };
-
   return (
     <>
-      {/* Hộp xác nhận nằm NGOÀI `<form>`: nút OK là hành động riêng, không phải submit form. */}
-      <Modal
-        open={confirmOpen}
-        title={t('status.submitConfirm.title')}
-        okText={t('status.submitConfirm.ok')}
-        cancelText={tCommon('actions.cancel')}
-        confirmLoading={submitting}
-        onCancel={() => setConfirmOpen(false)}
-        onOk={confirmSubmitReview}
-      >
-        <p>
-          {dirty
-            ? t('status.submitConfirm.descriptionWithSave')
-            : t('status.submitConfirm.description')}
-        </p>
-      </Modal>
-
       <header className={styles.header}>
         <div className={styles.identity}>
           {/*
@@ -276,12 +224,7 @@ export function ShopWorkspace({
         <ShopWelcomeBanner missingLogo={!shop.profile.logoUrl} hasVehicle={hasVehicle} />
       ) : null}
 
-      <ShopStatusBanner
-        shop={shop}
-        canSubmit={canSubmit}
-        submitting={submitting}
-        onSubmit={openSubmitConfirm}
-      />
+      <ShopStatusBanner shop={shop} />
 
       {errorMessage ? (
         <Alert type="error" showIcon title={errorMessage} className={styles.alert} />
@@ -329,11 +272,11 @@ export function ShopWorkspace({
                   hint={tSections('legalHint')}
                 >
                   {/*
-                    Checklist đứng trong section pháp lý vì đây là nơi còn ô để điền. Chỉ ở chặng
-                    chưa gửi / bị trả về: hồ sơ đang chờ duyệt hay đã hoạt động thì nó không nói
-                    gì mới — người dùng đâu sửa được nữa.
+                    Checklist đứng trong section pháp lý vì đây là nơi còn ô để điền. Chỉ hiện khi
+                    người xem SỬA được hồ sơ — bảng "còn thiếu gì" không có nghĩa với người chỉ xem.
+                    Không còn gắn với trạng thái xác minh: web đã bỏ luồng đó (24/09/2026).
                   */}
-                  {submittable ? (
+                  {!readOnly ? (
                     <ShopProfileChecklist
                       control={control}
                       ownerAccount={shop.ownerAccount}

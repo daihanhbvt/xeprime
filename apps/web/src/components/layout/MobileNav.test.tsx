@@ -131,7 +131,7 @@ describe('MobileNav — thanh tab dưới đáy', () => {
     const labels = within(bottomBar(container))
       .getAllByRole('link')
       .map((a) => a.textContent);
-    expect(labels).toEqual(['Tổng quan', 'Duyệt hồ sơ', 'Xe', 'Đơn thuê']);
+    expect(labels).toEqual(['Tổng quan', 'Duyệt xe', 'Xe', 'Đơn thuê']);
     expect(labels).not.toContain('Lịch xe');
   });
 

@@ -125,6 +125,8 @@
     "title": "Hoàn thiện hồ sơ",
     "requiredTitle": "Bắt buộc để gửi duyệt",
     "requiredDone": "Đã đủ điều kiện gửi duyệt",
+    "profileRequiredTitle": "Thông tin bắt buộc",
+    "profileRequiredDone": "Đã đủ thông tin bắt buộc",
     "suggestedTitle": "Nên có — giúp khách chọn gian hàng của bạn",
     "goToField": "Điền",
     "items": {

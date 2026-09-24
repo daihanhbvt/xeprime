@@ -111,8 +111,56 @@ describe('nav — cấu trúc khối', () => {
     expect(pinned).toEqual(['overview', 'support']);
   });
 
-  it('nền tảng: 2 khối — cây này KHÔNG bị sắp lại', () => {
-    expect(PLATFORM_NAV.map((section) => section.key)).toEqual(['overview', 'platform']);
+  /*
+   * 23/09/2026 — cây nền tảng thôi là 17 mục ngang cấp trong một khối.
+   *
+   * Bản trước khoá `['overview', 'platform']` kèm tiêu đề "cây này KHÔNG bị sắp lại" — đó là
+   * phát biểu của đợt dọn 16/09, khi chỉ `SHOP_NAV` được đụng tới. Giờ nền tảng được chia theo
+   * cùng nguyên tắc: mỗi khối trả lời một câu hỏi của người trực.
+   */
+  it('nền tảng: 5 khối theo câu hỏi của người trực, đúng thứ tự', () => {
+    expect(PLATFORM_NAV.map((section) => section.key)).toEqual([
+      'overview',
+      'platform-marketplace',
+      'platform-finance',
+      'platform-policy',
+      'platform-system',
+    ]);
+  });
+
+  /*
+   * Bất biến THẬT của một đợt sắp lại menu: gom nhóm không được làm MẤT lối vào nào.
+   *
+   * Đây là thứ đáng khoá thay cho "đếm 2 khối" — một lần gộp sai làm một trang admin không còn
+   * đường tới sẽ đỏ ở đây, còn việc đổi chỗ một mục giữa hai khối thì không (và không nên).
+   */
+  it('sắp lại khối KHÔNG làm mất lối vào nào của nền tảng', () => {
+    const hrefs = flattenLeaves(PLATFORM_NAV).map((leaf) => leaf.href);
+
+    expect([...hrefs].sort()).toEqual(
+      [
+        ROUTES.MANAGE.ROOT,
+        ROUTES.MANAGE.ADMIN,
+        ROUTES.MANAGE.ADMIN_TENANTS,
+        ROUTES.MANAGE.ADMIN_VEHICLES,
+        ROUTES.MANAGE.ADMIN_BOOKINGS,
+        ROUTES.MANAGE.ADMIN_CUSTOMERS,
+        ROUTES.MANAGE.ADMIN_BANK_TRANSACTIONS,
+        ROUTES.MANAGE.ADMIN_MONEY,
+        ROUTES.MANAGE.ADMIN_SUPPORT,
+        ROUTES.MANAGE.ADMIN_PLANS,
+        ROUTES.MANAGE.ADMIN_FEE_POLICIES,
+        ROUTES.MANAGE.ADMIN_PROMO_CODES,
+        ROUTES.MANAGE.ADMIN_SELLERS,
+        ROUTES.MANAGE.ADMIN_STAFF,
+        ROUTES.MANAGE.ADMIN_CATALOG,
+        ROUTES.MANAGE.ADMIN_LOCATIONS,
+        ROUTES.MANAGE.ADMIN_BANNERS,
+        ROUTES.MANAGE.ADMIN_AUDIT,
+      ].sort(),
+    );
+    // …và không mục nào bị khai hai lần khi chuyển sang mô hình khối.
+    expect(new Set(hrefs).size).toBe(hrefs.length);
   });
 
   /*

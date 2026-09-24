@@ -147,3 +147,31 @@ describe('PriceBreakdown — mã khuyến mãi nền tảng', () => {
     expect(screen.getByTestId('promo-slot')).toBeTruthy();
   });
 });
+
+/*
+ * Bộ test dưới đây khoá lại lỗi ngày 24/09/2026: dòng "−100.000đ" hiện ra trong khi "Tổng bạn
+ * trả" và "Tiền giữ chỗ" vẫn là con số CHƯA trừ, vì bảng giá đọc `fees` của báo giá gốc còn ô
+ * mã đọc kết quả xem trước — hai nguồn cho cùng một chuyến.
+ */
+describe('PriceBreakdown — số giảm và tổng phải cùng MỘT bảng phí', () => {
+  it('tổng bạn trả là con số ĐÃ trừ mã, không phải tiền thuê cộng phí', () => {
+    renderIt(FEES_WITH_PROMO);
+    // 1.400.000 + 140.000 − 100.000 = 1.440.000 ⇒ đúng `customerTotalAmount` của server.
+    expect(screen.getAllByText(moneyText('1.440.000 ₫')).length).toBeGreaterThan(0);
+    // Con số CHƯA trừ mã không được xuất hiện ở đâu cả.
+    expect(screen.queryAllByText(moneyText('1.540.000 ₫'))).toHaveLength(0);
+  });
+
+  it('có ô nhập mã ⇒ KHÔNG vẽ thêm dòng giảm (ô nhập đã hiện số đó rồi)', () => {
+    renderIt(FEES_WITH_PROMO, <div data-testid="promo-slot">slot</div>);
+    expect(screen.queryAllByText(moneyText('−100.000 ₫'))).toHaveLength(0);
+    // Tổng vẫn phải là số đã trừ — ẩn dòng chỉ là chuyện trình bày, không đụng tiền.
+    expect(screen.getAllByText(moneyText('1.440.000 ₫')).length).toBeGreaterThan(0);
+  });
+
+  it('màn chỉ ĐỌC (không có ô nhập) vẫn vẽ dòng giảm kèm mã', () => {
+    renderIt(FEES_WITH_PROMO);
+    expect(screen.getAllByText(moneyText('−100.000 ₫')).length).toBeGreaterThan(0);
+    expect(screen.getByText(/BANMOI/)).toBeTruthy();
+  });
+});

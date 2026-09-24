@@ -221,18 +221,25 @@ describe('Thông tin chủ gian hàng', () => {
     await prisma.user.update({ where: { id: ownerId }, data: { displayName: 'Chủ shop' } });
   });
 
-  maybe('đang chờ xác minh: mọi cập nhật hồ sơ bị từ chối ở BACKEND', async () => {
-    await expect(
-      tenants.updateProfile(tenantId, ownerId, { displayName: 'Đổi lén khi đang chờ' }),
-    ).rejects.toMatchObject({
-      response: { code: API_ERROR_CODE.SHOP_VERIFICATION_PENDING },
-    });
-
-    const row = await prisma.tenantProfile.findUniqueOrThrow({
+  /*
+   * 24/09/2026: phiếu xác minh CHỜ không còn khoá hồ sơ. Nền tảng tạm ngừng xác minh gian hàng
+   * (màn "Duyệt xe" chỉ nhận phiếu xe), nên một phiếu còn chờ không ai xử lý — giữ khoá là khoá
+   * hồ sơ vĩnh viễn mà người dùng không có đường tự gỡ.
+   */
+  maybe('đang chờ xác minh: hồ sơ VẪN sửa được (không còn khoá vĩnh viễn)', async () => {
+    const before = await prisma.tenantProfile.findUniqueOrThrow({
       where: { tenantId },
       select: { displayName: true },
     });
-    expect(row.displayName).not.toBe('Đổi lén khi đang chờ');
+
+    const shop = await tenants.updateProfile(tenantId, ownerId, {
+      displayName: 'Sửa khi đang chờ',
+    });
+    expect(shop.profile.displayName).toBe('Sửa khi đang chờ');
+
+    await tenants.updateProfile(tenantId, ownerId, {
+      displayName: before.displayName ?? undefined,
+    });
   });
 
   maybe('gửi phiếu xác minh thứ hai khi phiếu cũ còn chờ bị chặn', async () => {

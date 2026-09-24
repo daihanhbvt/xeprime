@@ -76,7 +76,6 @@ const shopQuery = vi.hoisted(() => ({
 vi.mock('@/features/shop/hooks/use-shop', () => ({
   useMyShop: () => shopQuery,
   useUpdateShopProfile: () => ({ mutate: vi.fn(), isPending: false, isError: false }),
-  useSubmitShopReview: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 /** `?section=` sống ở URL (ADR 0004) — ở đây chặn ở đúng ranh giới đó. */

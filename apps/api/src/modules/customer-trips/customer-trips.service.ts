@@ -43,6 +43,7 @@ import {
   type HandoverPhotoSlot,
   type HandoverType,
   type PaginationMeta,
+  type PromoCodeSnapshot,
   type TripRole,
 } from '@xeprime/types';
 import { fromDateOnly } from '../../common/date-only';
@@ -285,6 +286,12 @@ export class CustomerTripsService {
           returnAt: row.returnAt,
           longTermPackageMonths: row.longTermPackageMonths,
           vehicle: row.vehicle,
+          /*
+           * Mã khuyến mãi đã chốt lúc GỬI yêu cầu phải đi cùng báo giá lại, nếu không màn
+           * "Chuyến của tôi" hiện nguyên giá cho một chuyến khách đã được hứa giảm — lỗi thấy
+           * ngày 24/09/2026. Dùng snapshot, không tra lại bảng mã (ADR 0046 điều 7).
+           */
+          promo: (row.promoSnapshot as unknown as PromoCodeSnapshot | null) ?? null,
         });
         return [row.id, quote] as const;
       }),
@@ -946,6 +953,8 @@ const listSelect = (now: Date) => ({
   createdAt: true,
   bookingId: true,
   tenantId: true,
+  // Mã khuyến mãi đã đóng băng lúc gửi — báo giá lại phải mang nó theo (ADR 0046 điều 7).
+  promoSnapshot: true,
   // Ba trường dưới đây phục vụ PHÍA CHỦ XE: ai đang thuê, và còn bao lâu phải trả lời.
   customerUserId: true,
   customerName: true,

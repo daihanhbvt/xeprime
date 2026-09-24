@@ -1,0 +1,23 @@
+{
+  "title": "Tổng quan nền tảng",
+  "loadError": "Không tải được số liệu nền tảng",
+  "stats": {
+    "tenantTotal": "Tổng gian hàng",
+    "tenantActive": "Đang hoạt động",
+    "tenantSuspended": "Bị khoá",
+    "vehiclesPending": "Xe chờ duyệt",
+    "listingActive": "Xe đang hiển thị",
+    "bookingThisMonth": "Đơn thuê tháng này"
+  },
+  "pending": {
+    "title": "Chờ duyệt",
+    "vehicles": "Xe chờ duyệt",
+    "count": "{count, plural, other {# xe}}",
+    "open": "Mở màn duyệt xe"
+  },
+  "recent": {
+    "title": "Gian hàng mới",
+    "empty": "Chưa có gian hàng nào",
+    "manage": "Quản lý gian hàng"
+  }
+}

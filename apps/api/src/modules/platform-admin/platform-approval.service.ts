@@ -1,8 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import { NOTIFICATION_AUDIENCE } from '@xeprime/domain';
 import {
   APPROVAL_ACTION,
+  APPROVAL_DECISION,
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
   API_ERROR_CODE,
@@ -12,12 +13,15 @@ import {
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   type ApprovalAction,
+  type ApprovalDecision,
   type ApprovalStatus,
+  type ApprovalTargetType,
   type NotificationType,
   type PaginationMeta,
   type ShopVerification,
   type TenantStatus,
   type VehiclePublicStatus,
+  type VehicleReviewCheck,
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
 import { ListingsService } from '../public-listings/listings.service';
@@ -33,17 +37,40 @@ import {
 } from './dto/approval.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { currentSubscriptionWhere } from '../../common/plan/feature-state';
+import {
+  approvalNotFound,
+  assertApprovalPending,
+  assertVehicleChecksComplete,
+  lockApprovalTask,
+  reasonRequired,
+  type LockedApprovalTask,
+} from './approval-task-lock';
+import {
+  buildVehicleReviewSnapshot,
+  readVehicleReviewSnapshot,
+  vehicleApprovalBlockers,
+} from '../vehicles/vehicle-review-snapshot';
+import { lockVehicleRow } from '../vehicles/vehicle-row-lock';
 
-type ReviewKind = 'approve' | 'reject' | 'request_revision';
+/** Ba quyết định trên một phiếu duyệt — `APPROVAL_DECISION` ở @xeprime/types (ADR 0005). */
+export type ApprovalDecisionKind = ApprovalDecision;
 
 /** Phần chung, độc lập với loại đối tượng: status phiếu, action ghi log, có bắt buộc lý do. */
 const DECISION: Record<
-  ReviewKind,
+  ApprovalDecisionKind,
   { approval: ApprovalStatus; logAction: ApprovalAction; needsReason: boolean }
 > = {
-  approve: { approval: APPROVAL_STATUS.APPROVED, logAction: APPROVAL_ACTION.APPROVE, needsReason: false },
-  reject: { approval: APPROVAL_STATUS.REJECTED, logAction: APPROVAL_ACTION.REJECT, needsReason: true },
-  request_revision: {
+  [APPROVAL_DECISION.APPROVE]: {
+    approval: APPROVAL_STATUS.APPROVED,
+    logAction: APPROVAL_ACTION.APPROVE,
+    needsReason: false,
+  },
+  [APPROVAL_DECISION.REJECT]: {
+    approval: APPROVAL_STATUS.REJECTED,
+    logAction: APPROVAL_ACTION.REJECT,
+    needsReason: true,
+  },
+  [APPROVAL_DECISION.REQUEST_REVISION]: {
     approval: APPROVAL_STATUS.NEEDS_REVISION,
     logAction: APPROVAL_ACTION.REQUEST_REVISION,
     needsReason: true,
@@ -62,22 +89,22 @@ const DECISION: Record<
  * chỉ đổi bằng khoá/mở khoá của `PlatformTenantsService` — cộng đúng một đường chữa dữ liệu cũ
  * ở `applyTenantDecision`.
  */
-const SHOP_VERIFICATION_BY_KIND: Record<ReviewKind, ShopVerification> = {
-  approve: SHOP_VERIFICATION.VERIFIED,
-  reject: SHOP_VERIFICATION.REJECTED,
-  request_revision: SHOP_VERIFICATION.NEEDS_REVISION,
+const SHOP_VERIFICATION_BY_KIND: Record<ApprovalDecisionKind, ShopVerification> = {
+  [APPROVAL_DECISION.APPROVE]: SHOP_VERIFICATION.VERIFIED,
+  [APPROVAL_DECISION.REJECT]: SHOP_VERIFICATION.REJECTED,
+  [APPROVAL_DECISION.REQUEST_REVISION]: SHOP_VERIFICATION.NEEDS_REVISION,
 };
-const TENANT_NOTIFY_BY_KIND: Record<ReviewKind, NotificationType> = {
-  approve: NOTIFICATION_TYPE.SHOP_APPROVED,
-  reject: NOTIFICATION_TYPE.SHOP_REJECTED,
-  request_revision: NOTIFICATION_TYPE.SHOP_NEEDS_REVISION,
+const TENANT_NOTIFY_BY_KIND: Record<ApprovalDecisionKind, NotificationType> = {
+  [APPROVAL_DECISION.APPROVE]: NOTIFICATION_TYPE.SHOP_APPROVED,
+  [APPROVAL_DECISION.REJECT]: NOTIFICATION_TYPE.SHOP_REJECTED,
+  [APPROVAL_DECISION.REQUEST_REVISION]: NOTIFICATION_TYPE.SHOP_NEEDS_REVISION,
 };
 
 /** Status public của xe + loại thông báo theo quyết định (phiếu duyệt xe). */
-const VEHICLE_STATUS_BY_KIND: Record<ReviewKind, VehiclePublicStatus> = {
-  approve: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
-  reject: VEHICLE_PUBLIC_STATUS.REJECTED,
-  request_revision: VEHICLE_PUBLIC_STATUS.NEEDS_REVISION,
+const VEHICLE_STATUS_BY_KIND: Record<ApprovalDecisionKind, VehiclePublicStatus> = {
+  [APPROVAL_DECISION.APPROVE]: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+  [APPROVAL_DECISION.REJECT]: VEHICLE_PUBLIC_STATUS.REJECTED,
+  [APPROVAL_DECISION.REQUEST_REVISION]: VEHICLE_PUBLIC_STATUS.NEEDS_REVISION,
 };
 /**
  * `request_revision` có loại thông báo RIÊNG từ 14/09/2026 — trước đó nó không gửi gì.
@@ -86,22 +113,22 @@ const VEHICLE_STATUS_BY_KIND: Record<ReviewKind, VehiclePublicStatus> = {
  * Không báo thì nó nằm im ở `needs_revision` vô thời hạn, và chủ xe chỉ biết nếu tự mở lại đúng
  * màn xe đó. Mượn `VEHICLE_REJECTED` cũng không được — hai việc phải làm khác hẳn nhau.
  */
-const VEHICLE_NOTIFY_BY_KIND: Record<ReviewKind, NotificationType> = {
-  approve: NOTIFICATION_TYPE.VEHICLE_APPROVED,
-  reject: NOTIFICATION_TYPE.VEHICLE_REJECTED,
-  request_revision: NOTIFICATION_TYPE.VEHICLE_NEEDS_REVISION,
+const VEHICLE_NOTIFY_BY_KIND: Record<ApprovalDecisionKind, NotificationType> = {
+  [APPROVAL_DECISION.APPROVE]: NOTIFICATION_TYPE.VEHICLE_APPROVED,
+  [APPROVAL_DECISION.REJECT]: NOTIFICATION_TYPE.VEHICLE_REJECTED,
+  [APPROVAL_DECISION.REQUEST_REVISION]: NOTIFICATION_TYPE.VEHICLE_NEEDS_REVISION,
 };
 
-const SHOP_NOTIFY_TITLE: Record<ReviewKind, string> = {
-  approve: 'Gian hàng đã được xác minh',
-  reject: 'Hồ sơ gian hàng bị từ chối',
-  request_revision: 'Hồ sơ gian hàng cần bổ sung',
+const SHOP_NOTIFY_TITLE: Record<ApprovalDecisionKind, string> = {
+  [APPROVAL_DECISION.APPROVE]: 'Gian hàng đã được xác minh',
+  [APPROVAL_DECISION.REJECT]: 'Hồ sơ gian hàng bị từ chối',
+  [APPROVAL_DECISION.REQUEST_REVISION]: 'Hồ sơ gian hàng cần bổ sung',
 };
 
-const VEHICLE_NOTIFY_TITLE: Record<ReviewKind, string> = {
-  approve: 'Xe đã được duyệt công khai',
-  reject: 'Xe bị từ chối',
-  request_revision: 'Xe cần bổ sung để lên chợ',
+const VEHICLE_NOTIFY_TITLE: Record<ApprovalDecisionKind, string> = {
+  [APPROVAL_DECISION.APPROVE]: 'Xe đã được duyệt công khai',
+  [APPROVAL_DECISION.REJECT]: 'Xe bị từ chối',
+  [APPROVAL_DECISION.REQUEST_REVISION]: 'Xe cần bổ sung để lên chợ',
 };
 
 /**
@@ -232,7 +259,7 @@ export class PlatformApprovalService {
         },
       },
     });
-    if (!task) throw notFound();
+    if (!task) throw approvalNotFound();
 
     return {
       id: task.id,
@@ -271,71 +298,121 @@ export class PlatformApprovalService {
     };
   }
 
-  approve(id: string, reviewerId: string, reason?: string): Promise<ApprovalTaskDetailDto> {
-    return this.review('approve', id, reviewerId, reason);
+  async approve(id: string, reviewerId: string, reason?: string): Promise<ApprovalTaskDetailDto> {
+    await this.decide(APPROVAL_DECISION.APPROVE, id, reviewerId, reason);
+    return this.getTask(id);
   }
 
-  reject(id: string, reviewerId: string, reason?: string): Promise<ApprovalTaskDetailDto> {
-    return this.review('reject', id, reviewerId, reason);
+  async reject(id: string, reviewerId: string, reason?: string): Promise<ApprovalTaskDetailDto> {
+    await this.decide(APPROVAL_DECISION.REJECT, id, reviewerId, reason);
+    return this.getTask(id);
   }
 
-  requestRevision(id: string, reviewerId: string, reason?: string): Promise<ApprovalTaskDetailDto> {
-    return this.review('request_revision', id, reviewerId, reason);
-  }
-
-  /**
-   * Duyệt/từ chối/yêu cầu bổ sung một phiếu. Điều phối theo loại đối tượng (gian hàng | xe);
-   * mỗi nhánh đổi status đối tượng + ghi approval_log + audit + thông báo trong MỘT transaction —
-   * quyết định duyệt và dấu vết của nó cùng sống cùng chết (CLAUDE.md mục 6, lằn ranh 3).
-   */
-  private async review(
-    kind: ReviewKind,
+  async requestRevision(
     id: string,
     reviewerId: string,
     reason?: string,
   ): Promise<ApprovalTaskDetailDto> {
+    await this.decide(APPROVAL_DECISION.REQUEST_REVISION, id, reviewerId, reason);
+    return this.getTask(id);
+  }
+
+  /**
+   * Duyệt/từ chối/yêu cầu bổ sung một phiếu — MỘT transaction từ đầu tới cuối.
+   *
+   * Thứ tự bên trong là điều quan trọng nhất của hàm này:
+   *
+   *  1. **Khoá dòng phiếu** (`lockApprovalTask`), rồi mới đọc `status`. Bản cũ đọc NGOÀI
+   *     transaction, nên hai người duyệt bấm cùng lúc đều thấy `pending` và cùng ghi.
+   *  2. **Phiếu xe + Phê duyệt ⇒ danh mục kiểm tra thủ công phải đủ** — đọc DƯỚI khoá, nên không
+   *     có lượt bỏ đánh dấu nào chen được vào giữa. Từ chối và yêu cầu bổ sung KHÔNG qua cổng này:
+   *     người duyệt được trả xe về ngay khi thấy vấn đề đầu tiên, không phải đi hết danh mục.
+   *  3. Đổi trạng thái đối tượng + chốt phiếu + log + audit + thông báo (+ listing với xe) — cùng
+   *     sống cùng chết (CLAUDE.md mục 6, lằn ranh 3).
+   *
+   * `targetType` (tuỳ chọn): nơi gọi khẳng định loại phiếu nó đang xử lý. Màn "Duyệt xe" truyền
+   * `vehicle`, nên một id phiếu gian hàng gửi nhầm vào route xe là 404 — không phải một quyết
+   * định xác minh gian hàng đi ra từ màn duyệt xe.
+   */
+  async decide(
+    kind: ApprovalDecisionKind,
+    id: string,
+    reviewerId: string,
+    reason?: string,
+    opts: { targetType?: ApprovalTargetType } = {},
+  ): Promise<void> {
     const decision = DECISION[kind];
     const trimmedReason = reason?.trim() || undefined;
-    if (decision.needsReason && !trimmedReason) {
-      throw new BadRequestException({
-        code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Vui lòng nhập lý do gửi cho chủ shop',
-      });
-    }
+    if (decision.needsReason && !trimmedReason) throw reasonRequired();
 
-    const task = await this.prisma.approvalTask.findUnique({
-      where: { id },
-      select: { id: true, status: true, tenantId: true, targetType: true, targetId: true },
+    await this.prisma.$transaction(async (tx) => {
+      const task = await lockApprovalTask(tx, id);
+      if (!task || (opts.targetType && task.targetType !== opts.targetType)) {
+        throw approvalNotFound();
+      }
+      assertApprovalPending(task);
+
+      if (task.targetType === APPROVAL_TARGET_TYPE.TENANT) {
+        await this.applyTenantDecision(tx, kind, task, reviewerId, trimmedReason);
+      } else if (task.targetType === APPROVAL_TARGET_TYPE.VEHICLE) {
+        const passedChecks =
+          kind === APPROVAL_DECISION.APPROVE ? await this.assertVehicleApprovable(tx, task) : null;
+        await this.applyVehicleDecision(tx, kind, task, reviewerId, trimmedReason, passedChecks);
+      } else {
+        // Phiếu giấy tờ (tenant_document/vehicle_document) mở ở phase sau.
+        throw new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message: 'Loại phiếu này chưa được hỗ trợ duyệt.',
+        });
+      }
     });
-    if (!task) throw notFound();
+  }
 
-    if (task.status !== APPROVAL_STATUS.PENDING) {
+  /**
+   * Cổng THẬT của nút Phê duyệt xe — chạy DƯỚI khoá dòng phiếu, rồi khoá dòng XE (`lockVehicleRow`)
+   * trước khi đọc xe sống: một lượt sửa của chủ xe đang dở phải commit xong (và bị so) hoặc chờ
+   * sau lượt duyệt (và gặp `VEHICLE_FIELD_LOCKED`), không lọt vào giữa "đọc" và "chốt":
+   *
+   *  1. đủ năm mục kiểm tra thủ công (`APPROVAL_CHECKLIST_INCOMPLETE`);
+   *  2. xe SỐNG khớp hồ sơ đã duyệt (`APPROVAL_SUBJECT_CHANGED`, `details` = `VehicleApprovalBlockers`):
+   *     - vẫn qua cổng lên chợ — Phê duyệt đưa xe SỐNG lên chợ, không phải ảnh chụp;
+   *     - căn cước khớp ảnh chụp lúc gửi — duyệt là khoá căn cước, không được khoá giá trị chưa ai
+   *       duyệt.
+   *     Một mã cho cả hai vì lối đi tiếp là MỘT: yêu cầu bổ sung để chủ xe gửi lại. (Không dùng
+   *     `VEHICLE_PUBLISH_INCOMPLETE` — mã đó nói với CHỦ XE rằng họ chưa gửi duyệt được.)
+   *
+   * Trả các mục thủ công đã đạt để ghi vào audit của quyết định.
+   */
+  private async assertVehicleApprovable(
+    tx: Prisma.TransactionClient,
+    task: LockedApprovalTask,
+  ): Promise<VehicleReviewCheck[]> {
+    const passed = await assertVehicleChecksComplete(tx, task.id);
+    if (!(await lockVehicleRow(tx, task.targetId))) throw approvalNotFound();
+
+    const [live, stored] = await Promise.all([
+      // Chính sách thuê không tham gia hai phép kiểm dưới — không cần nạp.
+      buildVehicleReviewSnapshot(tx, { vehicleId: task.targetId, policy: null, now: new Date() }),
+      tx.approvalTask.findUniqueOrThrow({ where: { id: task.id }, select: { snapshot: true } }),
+    ]);
+    if (!live) throw approvalNotFound();
+
+    const blockers = vehicleApprovalBlockers(live, readVehicleReviewSnapshot(stored.snapshot));
+    if (blockers.missingRequirements.length > 0 || blockers.changedLockedFields.length > 0) {
       throw new ConflictException({
-        code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-        message: 'Phiếu này đã được xử lý.',
+        code: API_ERROR_CODE.APPROVAL_SUBJECT_CHANGED,
+        message: 'Xe đã khác hồ sơ gửi duyệt nên chưa phê duyệt được.',
+        details: blockers,
       });
     }
-
-    if (task.targetType === APPROVAL_TARGET_TYPE.TENANT) {
-      await this.applyTenantDecision(kind, task, reviewerId, trimmedReason);
-    } else if (task.targetType === APPROVAL_TARGET_TYPE.VEHICLE) {
-      await this.applyVehicleDecision(kind, task, reviewerId, trimmedReason);
-    } else {
-      // Phiếu giấy tờ (tenant_document/vehicle_document) mở ở phase sau.
-      throw new BadRequestException({
-        code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Loại phiếu này chưa được hỗ trợ duyệt.',
-      });
-    }
-
-    return this.getTask(id);
+    return passed;
   }
 
   /** Cập nhật phiếu + ghi approval_log (phần chung mọi loại đối tượng). */
   private async finalizeTask(
     tx: Prisma.TransactionClient,
-    task: ReviewTask,
-    kind: ReviewKind,
+    task: LockedApprovalTask,
+    kind: ApprovalDecisionKind,
     reviewerId: string,
     reason?: string,
   ): Promise<void> {
@@ -375,142 +452,138 @@ export class PlatformApprovalService {
    * moderation của con người, và gỡ chúng phải đi qua chính đường mở khoá.
    */
   private async applyTenantDecision(
-    kind: ReviewKind,
-    task: ReviewTask,
+    tx: Prisma.TransactionClient,
+    kind: ApprovalDecisionKind,
+    task: LockedApprovalTask,
     reviewerId: string,
     reason?: string,
   ): Promise<void> {
-    if (!task.tenantId) throw notFound();
+    if (!task.tenantId) throw approvalNotFound();
     const tenantId = task.tenantId;
     const decision = DECISION[kind];
     const verification = SHOP_VERIFICATION_BY_KIND[kind];
     const notifyType = TENANT_NOTIFY_BY_KIND[kind];
 
-    await this.prisma.$transaction(async (tx) => {
-      const tenant = await tx.tenant.findUniqueOrThrow({
-        where: { id: tenantId },
-        select: { status: true, name: true, ownerUserId: true },
-      });
-
-      await this.finalizeTask(tx, task, kind, reviewerId, reason);
-
-      const healStatus =
-        kind === 'approve' && LEGACY_UNOPENED_TENANT_STATUS.includes(tenant.status as TenantStatus);
-      if (healStatus) {
-        await tx.tenant.update({
-          where: { id: tenantId },
-          data: { status: TENANT_STATUS.ACTIVE },
-        });
-      }
-
-      await this.audit.record(
-        {
-          tenantId,
-          actorUserId: reviewerId,
-          actorScope: 'platform',
-          action: `approval.${decision.logAction}`,
-          targetType: APPROVAL_TARGET_TYPE.TENANT,
-          targetId: tenantId,
-          before: { tenantStatus: tenant.status, approvalStatus: task.status },
-          after: {
-            tenantStatus: healStatus ? TENANT_STATUS.ACTIVE : tenant.status,
-            approvalStatus: decision.approval,
-            verification,
-          },
-        },
-        tx,
-      );
-
-      await this.notifications.emitToUser(
-        tenant.ownerUserId,
-        {
-          type: notifyType,
-          title: SHOP_NOTIFY_TITLE[kind],
-          body: reason ? `${tenant.name} · ${reason}` : tenant.name,
-          tenantId,
-          targetType: NOTIFICATION_TARGET_TYPE.TENANT,
-          targetId: tenantId,
-          // Người nhận là CHỦ gian hàng, nên đích là khu quản lý — không phải mặc định
-          // "khu khách" của `emitToUser`.
-          audience: NOTIFICATION_AUDIENCE.MANAGE,
-        },
-        tx,
-      );
+    const tenant = await tx.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+      select: { status: true, name: true, ownerUserId: true },
     });
+
+    await this.finalizeTask(tx, task, kind, reviewerId, reason);
+
+    const healStatus =
+      kind === APPROVAL_DECISION.APPROVE &&
+      LEGACY_UNOPENED_TENANT_STATUS.includes(tenant.status as TenantStatus);
+    if (healStatus) {
+      await tx.tenant.update({
+        where: { id: tenantId },
+        data: { status: TENANT_STATUS.ACTIVE },
+      });
+    }
+
+    await this.audit.record(
+      {
+        tenantId,
+        actorUserId: reviewerId,
+        actorScope: 'platform',
+        action: `approval.${decision.logAction}`,
+        targetType: APPROVAL_TARGET_TYPE.TENANT,
+        targetId: tenantId,
+        before: { tenantStatus: tenant.status, approvalStatus: task.status },
+        after: {
+          tenantStatus: healStatus ? TENANT_STATUS.ACTIVE : tenant.status,
+          approvalStatus: decision.approval,
+          verification,
+        },
+      },
+      tx,
+    );
+
+    await this.notifications.emitToUser(
+      tenant.ownerUserId,
+      {
+        type: notifyType,
+        title: SHOP_NOTIFY_TITLE[kind],
+        body: reason ? `${tenant.name} · ${reason}` : tenant.name,
+        tenantId,
+        targetType: NOTIFICATION_TARGET_TYPE.TENANT,
+        targetId: tenantId,
+        // Người nhận là CHỦ gian hàng, nên đích là khu quản lý — không phải mặc định
+        // "khu khách" của `emitToUser`.
+        audience: NOTIFICATION_AUDIENCE.MANAGE,
+      },
+      tx,
+    );
   }
 
-  /** Nhánh duyệt xe: đổi vehicle.publicStatus + audit + báo chủ shop (ADR 0008). */
+  /**
+   * Nhánh duyệt xe: đổi vehicle.publicStatus + đồng bộ listing + audit + báo chủ xe (ADR 0008).
+   *
+   * `passedChecks` chỉ có ở lượt PHÊ DUYỆT — các mục kiểm tra thủ công đã đạt, ghi vào audit để
+   * quyết định mang theo bằng chứng nó dựa trên.
+   */
   private async applyVehicleDecision(
-    kind: ReviewKind,
-    task: ReviewTask,
+    tx: Prisma.TransactionClient,
+    kind: ApprovalDecisionKind,
+    task: LockedApprovalTask,
     reviewerId: string,
-    reason?: string,
+    reason: string | undefined,
+    passedChecks: readonly string[] | null,
   ): Promise<void> {
     const decision = DECISION[kind];
     const publicStatus = VEHICLE_STATUS_BY_KIND[kind];
     const notifyType = VEHICLE_NOTIFY_BY_KIND[kind];
 
-    await this.prisma.$transaction(async (tx) => {
-      const vehicle = await tx.vehicle.findUnique({
-        where: { id: task.targetId },
-        select: { id: true, tenantId: true, name: true, publicStatus: true },
-      });
-      if (!vehicle) throw notFound();
-
-      await this.finalizeTask(tx, task, kind, reviewerId, reason);
-      await tx.vehicle.update({ where: { id: vehicle.id }, data: { publicStatus } });
-      // Đồng bộ snapshot: duyệt → listing active; từ chối/bổ sung → ẩn (ADR 0008).
-      await this.listings.syncFromVehicle(vehicle.id, tx);
-
-      await this.audit.record(
-        {
-          tenantId: vehicle.tenantId,
-          actorUserId: reviewerId,
-          actorScope: 'platform',
-          action: `approval.${decision.logAction}`,
-          targetType: APPROVAL_TARGET_TYPE.VEHICLE,
-          targetId: vehicle.id,
-          before: { publicStatus: vehicle.publicStatus, approvalStatus: task.status },
-          after: { publicStatus, approvalStatus: decision.approval },
-        },
-        tx,
-      );
-
-      const owner = await tx.tenant.findUnique({
-        where: { id: vehicle.tenantId },
-        select: { ownerUserId: true },
-      });
-      if (owner) {
-        await this.notifications.emitToUser(
-          owner.ownerUserId,
-          {
-            type: notifyType,
-            title: VEHICLE_NOTIFY_TITLE[kind],
-            body: reason ? `${vehicle.name} · ${reason}` : vehicle.name,
-            tenantId: vehicle.tenantId,
-            targetType: NOTIFICATION_TARGET_TYPE.VEHICLE,
-            targetId: vehicle.id,
-            audience: NOTIFICATION_AUDIENCE.MANAGE,
-          },
-          tx,
-        );
-      }
+    // Xe đã xoá mềm không còn gì để quyết: duyệt nó là báo chủ xe "xe đã lên chợ" cho một chiếc
+    // xe họ đã bỏ. `VehiclesService.remove` huỷ phiếu chờ; đây là chốt cho dữ liệu cũ.
+    const vehicle = await tx.vehicle.findFirst({
+      where: { id: task.targetId, deletedAt: null },
+      select: {
+        id: true,
+        tenantId: true,
+        name: true,
+        publicStatus: true,
+        tenant: { select: { ownerUserId: true } },
+      },
     });
+    if (!vehicle) throw approvalNotFound();
+
+    await this.finalizeTask(tx, task, kind, reviewerId, reason);
+    await tx.vehicle.update({ where: { id: vehicle.id }, data: { publicStatus } });
+    // Đồng bộ snapshot: duyệt → listing active; từ chối/bổ sung → ẩn (ADR 0008).
+    await this.listings.syncFromVehicle(vehicle.id, tx);
+
+    await this.audit.record(
+      {
+        tenantId: vehicle.tenantId,
+        actorUserId: reviewerId,
+        actorScope: 'platform',
+        action: `approval.${decision.logAction}`,
+        targetType: APPROVAL_TARGET_TYPE.VEHICLE,
+        targetId: vehicle.id,
+        before: { publicStatus: vehicle.publicStatus, approvalStatus: task.status },
+        after: {
+          publicStatus,
+          approvalStatus: decision.approval,
+          approvalTaskId: task.id,
+          ...(passedChecks ? { manualChecks: [...passedChecks] } : {}),
+        },
+      },
+      tx,
+    );
+
+    await this.notifications.emitToUser(
+      vehicle.tenant.ownerUserId,
+      {
+        type: notifyType,
+        title: VEHICLE_NOTIFY_TITLE[kind],
+        body: reason ? `${vehicle.name} · ${reason}` : vehicle.name,
+        tenantId: vehicle.tenantId,
+        targetType: NOTIFICATION_TARGET_TYPE.VEHICLE,
+        targetId: vehicle.id,
+        audience: NOTIFICATION_AUDIENCE.MANAGE,
+      },
+      tx,
+    );
   }
-}
-
-/** Phiếu duyệt đã nạp đủ cột lõi để điều phối + ghi log. */
-interface ReviewTask {
-  id: string;
-  status: string;
-  tenantId: string | null;
-  targetType: string;
-  targetId: string;
-}
-
-function notFound(): NotFoundException {
-  return new NotFoundException({
-    code: API_ERROR_CODE.NOT_FOUND,
-    message: 'Không tìm thấy phiếu duyệt',
-  });
 }

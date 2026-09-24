@@ -399,11 +399,11 @@ export class TenantsService {
    *
    * Hai thứ KHÔNG phải là "ghi thẳng vào `tenant_profiles`" và được tách riêng ở đây:
    *
-   * 1. **Đang chờ XÁC MINH thì khoá.** Frontend đã nói "tạm khoá chỉnh sửa" từ lâu nhưng backend
-   *    vẫn nhận — nghĩa là lời hứa đó chỉ là một thuộc tính `disabled`. Reviewer duyệt hồ sơ
-   *    LIVE, nên sửa trong lúc chờ là duyệt một đằng công khai một nẻo. Điều kiện đọc từ PHIẾU
-   *    (`SHOP_VERIFICATION.PENDING`), không từ `tenants.status` — cột đó không còn mang nghĩa
-   *    "đang chờ duyệt" từ [ADR 0036].
+   * 1. **KHÔNG còn khoá khi đang chờ xác minh (24/09/2026).** Tới ngày này hồ sơ bị khoá suốt
+   *    thời gian phiếu xác minh gian hàng còn `pending` (`SHOP_VERIFICATION_PENDING`). Nền tảng đã
+   *    tạm ngừng xác minh gian hàng: web không còn nút gửi, và màn "Duyệt xe" chỉ nhận phiếu XE —
+   *    nên một phiếu gian hàng còn chờ không bao giờ được ai xử lý, và cái khoá thành vĩnh viễn
+   *    mà người dùng không có đường nào tự gỡ.
    * 2. **Tỉnh/thành đi qua `BranchesService`.** Hai cột tỉnh trên hồ sơ là BẢN SAO của chi nhánh
    *    mặc định (xem `syncProfileFromDefaultBranch`); ghi thẳng vào chúng sẽ đúng cho tới lần
    *    chạm chi nhánh kế tiếp rồi âm thầm bị ghi đè, và trong lúc đó xe vẫn hiển thị ở tỉnh cũ
@@ -416,23 +416,9 @@ export class TenantsService {
   ): Promise<MyShopDto> {
     const tenant = await this.prisma.tenant.findFirst({
       where: { id: tenantId, deletedAt: null },
-      select: {
-        status: true,
-        approvalTasks: {
-          where: { targetType: APPROVAL_TARGET_TYPE.TENANT },
-          orderBy: { submittedAt: 'desc' },
-          select: { status: true },
-          take: 1,
-        },
-      },
+      select: { status: true },
     });
     if (!tenant) throw notFound();
-    if (resolveShopVerification(tenant.approvalTasks[0]?.status) === SHOP_VERIFICATION.PENDING) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.SHOP_VERIFICATION_PENDING,
-        message: 'Hồ sơ đang chờ nền tảng xác minh nên không sửa được.',
-      });
-    }
 
     /*
      * MỌI mảnh địa chỉ đi qua chi nhánh mặc định, không chỉ mã tỉnh như trước. Bốn cột địa chỉ
@@ -604,8 +590,9 @@ export class TenantsService {
            * phiếu đã duyệt xong cũng không còn kể được nó đã duyệt cái gì.
            *
            * Ba khoá giữ NGUYÊN TÊN `ownerFullName`/`ownerPhone`/`ownerEmail`: phiếu cũ trong
-           * DB mang đúng ba khoá đó, và `SHOP_SNAPSHOT_FIELDS` ở web vẽ theo khoá. Snapshot là
-           * jsonb đông cứng, không migrate — đổi tên khoá là làm mù mọi phiếu đã lưu.
+           * DB mang đúng ba khoá đó. Snapshot là jsonb đông cứng, không migrate — đổi tên khoá
+           * là làm mù mọi phiếu đã lưu. (Từ 24/09/2026 web không còn màn duyệt phiếu gian hàng —
+           * xác minh gian hàng tạm ngừng, ADR 0049 điều 7.)
            */
           snapshot: {
             ...(tenant.profile ?? {}),

@@ -34,6 +34,7 @@ export class PlatformDashboardService {
       bookingTotal,
       bookingThisMonth,
       pendingByTarget,
+      pendingVehicles,
       recentTenants,
     ] = await Promise.all([
       this.prisma.tenant.groupBy({
@@ -53,6 +54,18 @@ export class PlatformDashboardService {
         where: { status: APPROVAL_STATUS.PENDING },
         orderBy: { targetType: 'asc' },
         _count: true,
+      }),
+      /*
+       * Xe chờ duyệt đếm ĐÚNG như hàng đợi "Duyệt xe" đếm (ADR 0049): phiếu có hình chiếu hàng
+       * đợi và xe chưa bị xoá. Đếm thô theo `target_type` sẽ nói "3 xe chờ" trong khi mở màn ra
+       * chỉ thấy 2.
+       */
+      this.prisma.approvalTask.count({
+        where: {
+          targetType: APPROVAL_TARGET_TYPE.VEHICLE,
+          status: APPROVAL_STATUS.PENDING,
+          vehicleSubject: { is: { vehicle: { deletedAt: null } } },
+        },
       }),
       this.prisma.tenant.findMany({
         where: { deletedAt: null },
@@ -93,7 +106,7 @@ export class PlatformDashboardService {
       bookingThisMonth,
       approvalPending,
       approvalPendingTenant: pendingCount(APPROVAL_TARGET_TYPE.TENANT),
-      approvalPendingVehicle: pendingCount(APPROVAL_TARGET_TYPE.VEHICLE),
+      approvalPendingVehicle: pendingVehicles,
       recentTenants: recentTenants.map((t) => ({
         id: t.id,
         name: t.name,

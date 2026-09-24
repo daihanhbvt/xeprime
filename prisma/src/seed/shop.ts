@@ -32,6 +32,7 @@ import {
   TENANT_ROLE,
   TENANT_STATUS,
   VEHICLE_TYPE,
+  resolveStorefrontKind,
 } from '@xeprime/types';
 import { upsertPasswordUser, type CustomerAccounts, type PlatformAccounts } from './accounts';
 import { VEHICLE_MODEL_BY_KEY } from './catalog';
@@ -494,7 +495,18 @@ async function buildOnboarding(
   }
 }
 
-/** Vài xe đã qua duyệt public — để màn lịch sử duyệt của nền tảng có dữ liệu thật. */
+/**
+ * Vài xe đã qua duyệt public — để màn "Duyệt xe" của nền tảng có dữ liệu thật.
+ *
+ * Mỗi phiếu kèm dòng HÌNH CHIẾU HÀNG ĐỢI (`approval_vehicle_subjects`): màn duyệt xe chỉ liệt kê
+ * phiếu có dòng đó, nên thiếu nó là hàng đợi rỗng trên một DB vừa seed. Giá trị chụp từ xe seed +
+ * tuyến của gian hàng (`resolveStorefrontKind`, không từ `tenant_type`).
+ *
+ * Phiếu seed KHÔNG mang `snapshot_json`: bộ dựng snapshot v2 sống ở API (nó cần chính sách thuê
+ * hiệu lực của `PricingService`), và chép nó sang đây là một bản luật thứ hai. Màn chi tiết đọc
+ * những phiếu này ở chế độ `basis = live` và NÓI RÕ điều đó — đúng như với phiếu thật gửi trước
+ * 24/09/2026. Phiếu gửi qua giao diện đăng xe luôn có snapshot v2.
+ */
 async function buildVehicleApprovals(
   spec: ShopSpec,
   tenantId: string,
@@ -502,7 +514,26 @@ async function buildVehicleApprovals(
   platform: PlatformAccounts,
   units: ReadonlyArray<{ id: string; code: string; approved: boolean }>,
 ): Promise<void> {
-  for (const unit of units.slice(0, 6)) {
+  const picked = units.slice(0, 6);
+  const vehicles = await prisma.vehicle.findMany({
+    where: { id: { in: picked.map((unit) => unit.id) } },
+    select: {
+      id: true,
+      vehicleType: true,
+      name: true,
+      code: true,
+      plateNumber: true,
+      mainImageUrl: true,
+    },
+  });
+  const byId = new Map(vehicles.map((v) => [v.id, v]));
+  const storefrontKind = resolveStorefrontKind(
+    PACKAGE_PLAN_CODES.has(spec.planCode ?? '') ? BILLING_MODE.PACKAGE : null,
+  );
+
+  for (const unit of picked) {
+    const vehicle = byId.get(unit.id);
+    if (!vehicle) continue;
     const id = seedId(`${spec.key}:approval:vehicle:${unit.code}`);
     await prisma.approvalTask.upsert({
       where: { id },
@@ -517,8 +548,25 @@ async function buildVehicleApprovals(
         submittedAt: daysFromToday(-100, 2),
         reviewedBy: unit.approved ? platform.reviewerUserId : null,
         reviewedAt: unit.approved ? daysFromToday(-99, 4) : null,
-        reason: unit.approved ? 'Ảnh và giấy tờ hợp lệ.' : null,
+        // Không nhắc "giấy tờ": luồng đăng xe không thu đăng ký/đăng kiểm/bảo hiểm, nên một lý do
+        // duyệt nói giấy tờ hợp lệ là bịa ra một lần kiểm tra chưa từng có.
+        reason: unit.approved ? 'Ảnh rõ, thông tin xe hợp lệ.' : null,
       },
+    });
+    const subject = {
+      vehicleId: vehicle.id,
+      vehicleType: vehicle.vehicleType,
+      name: vehicle.name,
+      code: vehicle.code,
+      plateNumber: vehicle.plateNumber,
+      mainImageUrl: vehicle.mainImageUrl,
+      storefrontKind,
+      sourceName: spec.name,
+    };
+    await prisma.approvalVehicleSubject.upsert({
+      where: { approvalTaskId: id },
+      update: subject,
+      create: { approvalTaskId: id, ...subject },
     });
   }
 }
