@@ -6,6 +6,14 @@
     "needs_revision": "Changes requested",
     "cancelled": "Cancelled"
   },
+  "approvalAction": {
+    "submit": "Submitted",
+    "resubmit": "Resubmitted",
+    "approve": "Approved",
+    "reject": "Rejected",
+    "request_revision": "Changes requested",
+    "cancel": "Cancelled"
+  },
   "auditActorScope": {
     "tenant": "Shop",
     "platform": "Platform",
@@ -864,5 +872,9 @@
     "hold_paid": "Paid, awaiting approval",
     "booking_before_pickup": "Booked, not yet picked up",
     "booking_active": "Vehicle with the guest"
+  },
+  "storefrontKind": {
+    "personal": "Individual",
+    "shop": "Shop"
   }
 }

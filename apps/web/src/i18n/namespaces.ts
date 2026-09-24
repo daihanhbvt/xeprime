@@ -74,8 +74,11 @@ export const MESSAGE_NAMESPACES = [
   // tách trục hiển thị (ADR 0048), vì màn này phải giải thích được vì sao gỡ ẩn không đủ.
   { file: 'admin-vehicles', namespace: 'AdminVehicles' },
   { file: 'admin-plans', namespace: 'AdminPlans' },
-  // Hàng đợi duyệt hồ sơ gian hàng/xe của admin nền tảng — chuyển sang t() ngày 14/09/2026.
+  // Màn "Duyệt xe" của admin nền tảng — CHỈ phiếu xe (viết lại 24/09/2026; trước đó là hàng đợi
+  // chung hồ sơ gian hàng/xe, chuyển sang t() ngày 14/09/2026).
   { file: 'approvals', namespace: 'Approvals' },
+  // Tổng quan nền tảng — chuyển sang t() ngày 24/09/2026 khi lối tắt "Chờ duyệt" chỉ còn phiếu xe.
+  { file: 'platform-dashboard', namespace: 'PlatformDashboard' },
   // Hàng đợi đối soát tiền vào của admin nền tảng (R2 — ADR 0022).
   { file: 'bank-transactions', namespace: 'BankTransactions' },
   { file: 'members', namespace: 'Members' },

@@ -1,110 +1,262 @@
 {
   "page": {
-    "title": "Duyệt hồ sơ"
+    "title": "Duyệt xe",
+    "subtitle": "Kiểm tra xe trước khi hiển thị trên nền tảng",
+    "loading": "Đang tải hàng đợi duyệt xe…"
   },
-  "filters": {
+  "tabs": {
+    "ariaLabel": "Lọc theo loại xe",
     "all": "Tất cả"
   },
-  "targetType": {
-    "tenant": "Gian hàng",
-    "vehicle": "Xe",
-    "tenant_document": "Giấy tờ gian hàng",
-    "vehicle_document": "Giấy tờ xe",
-    "seller_profile": "Hồ sơ người bán"
+  "filters": {
+    "searchLabel": "Tìm kiếm",
+    "searchPlaceholder": "Tìm theo tên xe, mã xe, biển số…",
+    "source": "Nguồn đăng",
+    "status": "Trạng thái",
+    "submittedAt": "Ngày gửi",
+    "all": "Tất cả",
+    "anyStatus": "Tất cả trạng thái"
   },
   "table": {
-    "tenant": "Gian hàng",
-    "targetType": "Loại",
+    "label": "Danh sách xe chờ duyệt",
+    "vehicle": "Xe",
+    "vehicleType": "Loại xe",
+    "source": "Nguồn đăng",
     "submittedBy": "Người gửi",
-    "submittedAt": "Gửi lúc",
+    "submittedAt": "Thời gian gửi",
     "status": "Trạng thái",
     "view": "Xem chi tiết",
-    "loadError": "Không tải được hàng đợi duyệt",
-    "empty": "Không có phiếu nào"
+    "imageAlt": "Ảnh đại diện của {name}",
+    "noImage": "Chưa có ảnh",
+    "loadError": "Không tải được danh sách duyệt xe",
+    "empty": "Không có xe nào chờ duyệt",
+    "emptyDescription": "Xe chủ xe gửi duyệt sẽ xuất hiện ở đây.",
+    "noResults": "Không có xe khớp bộ lọc",
+    "noResultsDescription": "Thử đổi từ khoá hoặc bỏ bớt bộ lọc.",
+    "clearFilters": "Xoá bộ lọc"
   },
   "drawer": {
-    "title": "Phiếu duyệt"
+    "title": "Chi tiết xe",
+    "ariaLabel": "Chi tiết xe {name}",
+    "loadError": "Không tải được hồ sơ xe",
+    "previous": "Xe trước",
+    "next": "Xe sau",
+    "sourceChip": "{kind}: {name}",
+    "liveBasis": {
+      "title": "Phiếu này gửi trước khi hệ thống lưu ảnh chụp hồ sơ đầy đủ",
+      "body": "Thông tin dưới đây là dữ liệu HIỆN TẠI của xe, có thể khác với lúc chủ xe gửi duyệt."
+    },
+    "decided": {
+      "title": "Phiếu đã được xử lý: {status}",
+      "byline": "{at} · {name}",
+      "reason": "Lý do đã gửi chủ xe: {reason}"
+    },
+    "unsavedNote": {
+      "title": "Bỏ ghi chú chưa lưu?",
+      "body": "Ghi chú nội bộ bạn vừa gõ cho xe này chưa được lưu và sẽ mất nếu rời đi.",
+      "discard": "Bỏ ghi chú",
+      "stay": "Ở lại"
+    },
+    "blockers": {
+      "title": "Chưa thể phê duyệt: xe đã khác hồ sơ gửi duyệt",
+      "changed": "Chủ xe đã sửa sau khi gửi duyệt:",
+      "missing": "Xe hiện tại không còn đạt:",
+      "next": "Hãy yêu cầu bổ sung để chủ xe kiểm tra và gửi lại hồ sơ."
+    }
   },
-  "unsupported": {
-    "title": "Loại phiếu này không duyệt ở đây",
-    "body": "Hàng đợi này chỉ xử lý hồ sơ gian hàng và xe. Hồ sơ người bán được duyệt ở màn xác minh người bán.",
-    "openSellers": "Mở xác minh người bán"
+  "sections": {
+    "gallery": "Thư viện ảnh",
+    "vehicle": "Thông tin xe",
+    "pricing": "Giá & chính sách cho thuê",
+    "pickup": "Điểm nhận xe & người đăng",
+    "features": "Tiện nghi & mô tả",
+    "history": "Lịch sử xử lý"
   },
-  "tenant": {
-    "title": "Gian hàng",
-    "name": "Tên",
-    "code": "Mã",
-    "status": "Trạng thái",
-    "tenantType": "Loại hình",
-    "track": "Tuyến",
-    "noPlan": "Không có gói hiệu lực",
-    "publicVehicles": "{count, plural, =0 {chưa có xe trên chợ} other {# xe đang trên chợ}}",
+  "gallery": {
+    "count": "{count, plural, other {# ảnh}}",
+    "imageAlt": "Ảnh {index} của {name}",
+    "main": "Ảnh đại diện",
+    "empty": "Hồ sơ không có ảnh"
+  },
+  "fields": {
+    "vehicleType": "Loại xe",
+    "name": "Tên xe",
+    "code": "Mã xe",
+    "plateNumber": "Biển số",
+    "brand": "Hãng xe",
+    "model": "Dòng xe",
+    "manufactureYear": "Năm sản xuất",
+    "color": "Màu xe",
+    "fuelType": "Nhiên liệu",
+    "transmission": "Hộp số",
+    "services": "Dịch vụ hỗ trợ",
+    "seatCount": "Số chỗ",
+    "bodyType": "Kiểu dáng",
+    "motorbikeCategory": "Phân khúc",
+    "engineDisplacement": "Dung tích động cơ",
+    "fuelConsumption": "Mức tiêu thụ nhiên liệu",
+    "electricRange": "Quãng đường mỗi lần sạc",
+    "batteryCapacity": "Dung lượng pin",
+    "electricConsumption": "Mức tiêu thụ điện",
+    "weekdayPrice": "Giá ngày thường",
+    "weekendPrice": "Giá cuối tuần",
+    "hourlyPrice": "Giá theo giờ",
+    "discountPercent": "Giảm giá",
+    "monthlyPrice": "Giá tháng (thuê dài hạn)",
+    "longTermDiscount": "Ưu đãi thuê dài hạn",
+    "withDriverDailyPrice": "Giá/ngày có tài xế",
+    "withDriverInterCityPrice": "Giá liên tỉnh (khứ hồi)",
+    "withDriverOneWayPrice": "Giá liên tỉnh một chiều",
+    "autoAccept": "Tự động nhận chuyến",
+    "delivery": "Giao xe tận nơi",
+    "deliveryRadius": "Bán kính giao xe tối đa",
+    "deliveryFree": "Miễn phí giao xe",
+    "deliveryFees": "Phí giao xe",
+    "mileageLimit": "Giới hạn quãng đường",
+    "excessFee": "Phí vượt giới hạn",
+    "collateral": "Hình thức đảm bảo",
+    "deposit": "Tiền cọc thế chấp",
+    "collateralAssets": "Tài sản thế chấp",
+    "overtimeFee": "Phí quá giờ",
+    "terms": "Điều khoản riêng"
+  },
+  "fieldForService": "{label} ({service})",
+  "units": {
+    "seats": "{value} chỗ",
+    "cc": "{value} cc",
+    "litrePer100km": "{value} L/100km",
+    "km": "{value} km",
+    "kwh": "{value} kWh",
+    "kwhPer100km": "{value} kWh/100km",
+    "kmPerDay": "{value} km/ngày",
+    "withinKm": "Trong {value} km",
+    "perKm": "{price}/km",
+    "percent": "{value}%"
+  },
+  "values": {
+    "on": "Bật",
+    "off": "Tắt",
+    "unlimited": "Không giới hạn",
+    "tier": "{from}–{to} km: {fee}",
+    "longTermTier": "Từ {months}: giảm {percent}%",
+    "noPolicy": "Gian hàng chưa cấu hình chính sách thuê cho xe này",
+    "policySource": {
+      "shop": "Theo chính sách chung của gian hàng",
+      "vehicle": "Chính sách riêng của xe"
+    },
+    "free": "Miễn phí"
+  },
+  "pickup": {
+    "branch": "Điểm nhận xe",
+    "address": "Địa chỉ",
+    "none": "Xe chưa gắn điểm nhận"
+  },
+  "people": {
+    "sourceKind": "Nguồn đăng",
+    "sourceName": "Tên nguồn đăng",
+    "owner": "Chủ xe",
+    "submitter": "Người gửi duyệt",
     "phone": "Điện thoại",
     "email": "Email",
-    "targetType": "Loại phiếu"
+    "sameAsOwner": "Chủ xe tự gửi"
   },
-  "snapshot": {
-    "shopTitle": "Hồ sơ đã gửi",
-    "vehicleTitle": "Xe gửi duyệt",
-    "openShop": "Mở trang gian hàng",
-    "openVehicle": "Mở hồ sơ xe",
-    "imageAlt": "Ảnh xe {index}",
-    "empty": "Không có hồ sơ đính kèm",
-    "fields": {
-      "ownerFullName": "Họ tên chủ gian hàng",
-      "ownerPhone": "SĐT chủ gian hàng",
-      "ownerEmail": "Email chủ gian hàng",
-      "displayName": "Tên hiển thị",
-      "bio": "Giới thiệu",
-      "address": "Địa chỉ",
-      "wardName": "Xã/Phường",
-      "provinceName": "Tỉnh/Thành",
-      "taxCode": "Mã số thuế",
-      "businessLicenseNo": "Số giấy phép KD",
-      "bankName": "Ngân hàng",
-      "bankAccountNo": "Số tài khoản",
-      "bankAccountName": "Chủ tài khoản",
-      "logoUrl": "Logo",
-      "vehicleName": "Tên xe",
-      "vehicleCode": "Mã xe",
-      "plateNumber": "Biển số",
-      "branchName": "Chi nhánh giữ xe",
-      "vehicleType": "Loại xe",
-      "serviceType": "Dịch vụ",
-      "brand": "Hãng",
-      "model": "Dòng xe",
-      "manufactureYear": "Đời xe",
-      "seatCount": "Số chỗ",
-      "fuelType": "Nguồn năng lượng",
-      "bodyType": "Kiểu dáng",
-      "color": "Màu sắc",
-      "weekdayPrice": "Giá ngày thường",
-      "weekendPrice": "Giá cuối tuần",
-      "hourlyPrice": "Giá thuê giờ",
-      "monthlyPrice": "Giá tháng (dài hạn)",
-      "withDriverDailyPrice": "Giá/ngày có tài xế",
-      "discountPercent": "Giảm giá",
-      "description": "Mô tả"
-    }
+  "features": {
+    "list": "Tiện nghi",
+    "none": "Chủ xe chưa khai tiện nghi",
+    "description": "Mô tả",
+    "noDescription": "Chưa có mô tả"
   },
   "history": {
-    "title": "Lịch sử",
-    "system": "Hệ thống"
+    "system": "Hệ thống",
+    "empty": "Chưa có lịch sử",
+    "reason": "Lý do: {note}"
   },
-  "review": {
-    "approve": "Duyệt",
-    "requestRevision": "Yêu cầu bổ sung",
-    "reject": "Từ chối",
-    "done": {
-      "approve": "Đã duyệt",
-      "request_revision": "Đã yêu cầu bổ sung",
-      "reject": "Đã từ chối"
+  "checklist": {
+    "title": "Danh mục kiểm tra",
+    "progress": "{passed}/{total} đạt",
+    "passed": "Đạt",
+    "failed": "Chưa đạt",
+    "pending": "Cần kiểm tra",
+    "auto": {
+      "title": "Kiểm tra tự động",
+      "hint": "Hệ thống tính từ hồ sơ đã gửi — chỉ đọc.",
+      "items": {
+        "selfDrivePrice": "Có giá thuê tự lái",
+        "longTermPrice": "Có giá thuê dài hạn",
+        "withDriverPrice": "Có giá thuê có tài xế",
+        "mainImage": "Có ảnh đại diện",
+        "photos": "Đủ tối thiểu {min} ảnh khác nhau",
+        "plateNumber": "Đã nhập biển số",
+        "identity": "Đủ thông tin nhận diện xe",
+        "energySpec": "Đủ thông số năng lượng",
+        "branchLocation": "Có điểm nhận xe (tỉnh/thành)"
+      }
+    },
+    "manual": {
+      "title": "Kiểm tra thủ công",
+      "hint": "Đánh dấu từng mục sau khi tự đối chiếu hồ sơ.",
+      "items": {
+        "photos_match": "Ảnh đúng với xe đăng",
+        "plate_visible": "Biển số hiển thị rõ trong ảnh",
+        "info_plausible": "Thông tin xe hợp lý",
+        "not_duplicate": "Không trùng xe trên hệ thống",
+        "content_not_misleading": "Nội dung không gây hiểu nhầm"
+      },
+      "updatedBy": "{name} · {at}",
+      "locked": "Phiếu đã xử lý — danh mục chỉ để xem."
     }
   },
-  "reason": {
-    "rejectTitle": "Từ chối hồ sơ",
-    "reviseTitle": "Yêu cầu bổ sung",
-    "hint": "Lý do sẽ được gửi cho chủ gian hàng.",
-    "placeholder": "Nhập lý do…"
+  "note": {
+    "title": "Ghi chú nội bộ",
+    "hint": "Chỉ đội vận hành thấy — không gửi cho chủ xe.",
+    "placeholder": "Nhập ghi chú cho đội vận hành…",
+    "tooLong": "Ghi chú tối đa {max} ký tự.",
+    "save": "Lưu ghi chú",
+    "saved": "Đã lưu ghi chú",
+    "lastUpdated": "Cập nhật lần cuối: {at} · {name}",
+    "conflict": {
+      "title": "Ghi chú vừa được người khác sửa",
+      "current": "Bản đang lưu ({name}, {at}):",
+      "empty": "(trống)",
+      "keepMine": "Ghi đè bằng bản của tôi",
+      "useLatest": "Dùng bản mới nhất"
+    }
+  },
+  "footer": {
+    "hint": "Hoàn tất kiểm tra thủ công trước khi phê duyệt",
+    "ready": "Đã hoàn tất kiểm tra thủ công",
+    "decided": "Phiếu đã được xử lý — không còn thao tác",
+    "blocked": "Xe đã khác hồ sơ gửi duyệt — chỉ có thể yêu cầu bổ sung hoặc từ chối"
+  },
+  "actions": {
+    "approve": "Phê duyệt",
+    "reject": "Từ chối",
+    "requestRevision": "Yêu cầu bổ sung"
+  },
+  "dialog": {
+    "reasonLabel": "Lý do gửi chủ xe",
+    "reasonPlaceholder": "Nhập lý do…",
+    "reasonRequired": "Vui lòng nhập lý do gửi chủ xe.",
+    "reasonTooLong": "Lý do tối đa {max} ký tự.",
+    "revision": {
+      "title": "Yêu cầu bổ sung",
+      "hint": "Chủ xe nhận được lý do này và gửi lại sau khi bổ sung. Nói rõ cần bổ sung gì.",
+      "ok": "Gửi yêu cầu"
+    },
+    "reject": {
+      "title": "Từ chối xe",
+      "hint": "Xe sẽ không hiển thị trên nền tảng. Chủ xe nhận được lý do này.",
+      "ok": "Từ chối xe"
+    },
+    "approve": {
+      "title": "Phê duyệt xe này?",
+      "body": "{name} sẽ hiển thị trên nền tảng và chủ xe nhận được thông báo.",
+      "ok": "Phê duyệt"
+    }
+  },
+  "done": {
+    "approve": "Đã phê duyệt xe",
+    "reject": "Đã từ chối xe",
+    "request_revision": "Đã gửi yêu cầu bổ sung"
   }
 }

@@ -16,6 +16,17 @@
   padding: var(--xp-space-md);
 }
 
+/*
+ * Panel `xl` phủ kín màn hình từ tablet trở xuống (1024px = `--xp-bp-tablet`; CSS var không dùng
+ * được trong `@media`). `!important` là bắt buộc: AntD đặt bề rộng panel bằng style inline từ
+ * prop `size`, và đó là thứ duy nhất ở đây cần thắng.
+ */
+@media (max-width: 1024px) {
+  .xlWrapper {
+    width: 100% !important;
+  }
+}
+
 /* 640px = `--xp-bp-mobile`; CSS var không dùng được trong `@media` (P8, Wave 1A). */
 @media (max-width: 640px) {
   .footer {

@@ -31,6 +31,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
+import { CustomerFeeBreakdownDto } from '../../pricing/dto/pricing.dto';
 
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 100;
@@ -430,6 +431,19 @@ export class PromoPreviewDto {
   customerTotalAmount!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Tiền giữ chỗ sau khi áp mã' })
   holdAmount!: string | null;
+  /**
+   * BẢNG PHÍ đầy đủ đã áp mã — thứ giao diện thay vào chỗ `quote.breakdown.fees`.
+   *
+   * Hai con số `customerTotalAmount`/`holdAmount` ở trên không đủ: bảng giá còn phải vẽ dòng
+   * giảm, tiền trả chủ xe khi nhận, và nhãn thu gọn đổi theo `promoDiscountAmount`. Trả về hai
+   * con số rồi để client tự ghép vào bảng cũ chính là lỗi đã thấy 24/09/2026 — dòng mã hiện
+   * ra mà tổng vẫn nguyên giá.
+   *
+   * Báo giá công khai KHÔNG nhận mã (`PricingModule` không biết gì về khuyến mãi, và chiều phụ
+   * thuộc đó là cố ý), nên đây là nơi duy nhất sinh ra bảng phí có mã cho một chuyến chưa gửi.
+   */
+  @ApiPropertyOptional({ type: () => CustomerFeeBreakdownDto, nullable: true })
+  fees!: CustomerFeeBreakdownDto | null;
   @ApiProperty() name!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
   @ApiProperty({ enum: PROMO_DISCOUNT_TYPE_VALUES }) discountType!: string;

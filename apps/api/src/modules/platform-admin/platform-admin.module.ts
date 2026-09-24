@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BillingModule } from '../billing/billing.module';
+import { PricingModule } from '../pricing/pricing.module';
 import { PublicListingsModule } from '../public-listings/public-listings.module';
 import { PlatformAdminController } from './platform-admin.controller';
 import { PlatformApprovalService } from './platform-approval.service';
@@ -17,6 +18,8 @@ import { PlatformTenantsController } from './platform-tenants.controller';
 import { PlatformTenantsService } from './platform-tenants.service';
 import { PlatformVehiclesController } from './platform-vehicles.controller';
 import { PlatformVehiclesService } from './platform-vehicles.service';
+import { PlatformVehicleApprovalsController } from './platform-vehicle-approvals.controller';
+import { PlatformVehicleApprovalService } from './platform-vehicle-approval.service';
 
 /**
  * Nền tảng — duyệt gian hàng (Phase 2) + Phase 7: quản lý gian hàng (list + khoá/mở khoá),
@@ -26,9 +29,11 @@ import { PlatformVehiclesService } from './platform-vehicles.service';
  * mọi thao tác ghi `audit_logs`. AuditService là @Global (chỉ GHI — đường đọc ở PlatformAuditService).
  */
 @Module({
-  imports: [PublicListingsModule, BillingModule],
+  // PricingModule: chính sách thuê HIỆU LỰC của xe cho màn duyệt xe (phiếu cũ đọc dữ liệu sống).
+  imports: [PublicListingsModule, BillingModule, PricingModule],
   controllers: [
     PlatformAdminController,
+    PlatformVehicleApprovalsController,
     PlatformTenantsController,
     PlatformDashboardController,
     PlatformAuditController,
@@ -39,6 +44,7 @@ import { PlatformVehiclesService } from './platform-vehicles.service';
   ],
   providers: [
     PlatformApprovalService,
+    PlatformVehicleApprovalService,
     PlatformTenantsService,
     PlatformDashboardService,
     PlatformAuditService,

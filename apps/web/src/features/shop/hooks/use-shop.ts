@@ -6,7 +6,6 @@ import {
   fetchMyShop,
   fetchPaymentSettings,
   registerShop,
-  submitShopReview,
   updatePaymentSettings,
   updateShopProfile,
 } from '../api';
@@ -59,19 +58,6 @@ export function useUpdateShopProfile() {
       queryClient.setQueryData(queryKeys.shop.current(), shop);
       void queryClient.invalidateQueries({ queryKey: queryKeys.branches.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
-    },
-  });
-}
-
-/** Gửi duyệt đổi trạng thái tenant → làm mới cả /auth/me (banner AppShell đọc status ở đó). */
-export function useSubmitShopReview() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: () => submitShopReview(),
-    onSuccess: (shop) => {
-      queryClient.setQueryData(queryKeys.shop.current(), shop);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.tenants.all });
     },
   });
 }

@@ -422,9 +422,23 @@ export const SHOP_NAV: readonly NavSection[] = [
 /**
  * Sidebar của NỀN TẢNG (platform_admin/staff).
  *
- * Cùng mô hình khối như gian hàng, nhưng KHÔNG đổi thứ tự hay cách gom: bản thiết kế lại lần
- * này nói về hành trình của chủ xe. Đổi cả hai cây trong một nhịp là gộp hai quyết định khác
- * nhau vào cùng một diff.
+ * Đợt dọn 23/09/2026 — thuần IA, **không mục nào bị bỏ và không route nào đổi**. Trước đợt này
+ * cây nền tảng là 17 mục ngang cấp trong một khối duy nhất: phải đọc hết mới biết mình đang tìm
+ * gì, và mục dùng mỗi ngày (duyệt hồ sơ, tiền vào) nằm lẫn với mục đụng một lần một quý (danh
+ * mục lọc, tỉnh/thành).
+ *
+ * Bốn khối dưới đây trả lời bốn câu hỏi khác nhau của người trực:
+ *
+ *  1. **Chợ xe** — ai đang bán, bán cái gì, khách đặt gì. Việc của reviewer và support.
+ *  2. **Tiền & vận hành** — tiền vào khớp chưa, ai chờ nhận tiền, ai đang khiếu nại. Việc của
+ *     `finance_admin`, và là vòng phải khép kín trước Gate R2/R3.
+ *  3. **Chính sách & gói** — nền tảng THU thế nào (gói, phí) và CHI tài trợ thế nào (mã khuyến
+ *     mãi). Đụng ít, nhưng mỗi lần đụng là đổi tiền của mọi đơn sau đó.
+ *  4. **Hệ thống** — dữ liệu nền và dấu vết: nhân sự, danh mục, địa chỉ, banner, nhật ký.
+ *
+ * Hai mục cha (`platform-shops`, `platform-billing`) gộp ở tầng ĐIỀU HƯỚNG chứ không gộp route
+ * — giống cách `SHOP_NAV` gộp "Xe của tôi" và "Tài chính". Mọi URL, quyền và hành vi trang giữ
+ * nguyên.
  */
 export const PLATFORM_NAV: readonly NavSection[] = [
   {
@@ -442,10 +456,14 @@ export const PLATFORM_NAV: readonly NavSection[] = [
     ],
   },
   {
-    key: 'platform',
-    labelKey: 'manageGroups.platform',
+    key: 'platform-marketplace',
+    labelKey: 'manageGroups.platformMarketplace',
     children: [
       {
+        /*
+         * Duyệt xe đứng đầu khối: đây là hàng đợi có người CHỜ ở đầu kia — một chiếc xe chưa
+         * được duyệt thì không lên chợ được. Ba mục còn lại trong khối là tra cứu.
+         */
         key: 'approvals',
         labelKey: 'platform.approvals',
         href: ROUTES.MANAGE.ADMIN,
@@ -453,18 +471,30 @@ export const PLATFORM_NAV: readonly NavSection[] = [
         icon: AuditOutlined,
       },
       {
-        key: 'admin-tenants',
-        labelKey: 'platform.tenants',
-        href: ROUTES.MANAGE.ADMIN_TENANTS,
-        permission: PERMISSION.PLATFORM_TENANT_MANAGE,
+        /*
+         * Gian hàng và xe là một cặp: xe luôn thuộc một gian hàng, và người trực đi từ gian
+         * hàng sang xe của nó rồi ngược lại. Hai route giữ nguyên, chỉ đứng chung một mục cha.
+         */
+        type: 'branch',
+        key: 'platform-shops',
+        labelKey: 'platform.shops',
         icon: ShopOutlined,
-      },
-      {
-        key: 'admin-vehicles',
-        labelKey: 'platform.vehicles',
-        href: ROUTES.MANAGE.ADMIN_VEHICLES,
-        permission: PERMISSION.PLATFORM_VEHICLE_VIEW,
-        icon: CarOutlined,
+        children: [
+          {
+            key: 'admin-tenants',
+            labelKey: 'platform.tenants',
+            href: ROUTES.MANAGE.ADMIN_TENANTS,
+            permission: PERMISSION.PLATFORM_TENANT_MANAGE,
+            icon: ShopOutlined,
+          },
+          {
+            key: 'admin-vehicles',
+            labelKey: 'platform.vehicles',
+            href: ROUTES.MANAGE.ADMIN_VEHICLES,
+            permission: PERMISSION.PLATFORM_VEHICLE_VIEW,
+            icon: CarOutlined,
+          },
+        ],
       },
       {
         key: 'admin-bookings',
@@ -480,23 +510,20 @@ export const PLATFORM_NAV: readonly NavSection[] = [
         permission: PERMISSION.PLATFORM_CUSTOMER_VIEW,
         icon: TeamOutlined,
       },
+    ],
+  },
+  {
+    key: 'platform-finance',
+    labelKey: 'manageGroups.platformFinance',
+    children: [
       {
-        key: 'admin-staff',
-        labelKey: 'platform.staff',
-        href: ROUTES.MANAGE.ADMIN_STAFF,
-        permission: PERMISSION.PLATFORM_STAFF_MANAGE,
-        icon: UsergroupAddOutlined,
-      },
-      {
-        key: 'admin-plans',
-        labelKey: 'platform.plans',
-        href: ROUTES.MANAGE.ADMIN_PLANS,
-        permission: PERMISSION.PLATFORM_BILLING_MANAGE,
-        icon: CreditCardOutlined,
-      },
-      {
-        // Cùng quyền với quản trị gói: cả hai đều là việc TIỀN của nền tảng, và
-        // `finance_admin` có sẵn quyền đó.
+        /*
+         * Tiền VÀO đứng trước tiền RA: một khoản chưa khớp ở đây là một gian hàng chưa được
+         * kích hoạt hoặc một chuyến chưa thành đơn (ADR 0022 · ADR 0044).
+         *
+         * Cùng quyền với quản trị gói: cả hai đều là việc TIỀN của nền tảng, và `finance_admin`
+         * có sẵn quyền đó.
+         */
         key: 'admin-bank-transactions',
         labelKey: 'platform.bankTransactions',
         href: ROUTES.MANAGE.ADMIN_BANK_TRANSACTIONS,
@@ -504,11 +531,92 @@ export const PLATFORM_NAV: readonly NavSection[] = [
         icon: BankOutlined,
       },
       {
-        key: 'admin-banners',
-        labelKey: 'platform.banners',
-        href: ROUTES.MANAGE.ADMIN_BANNERS,
-        permission: PERMISSION.PLATFORM_BANNER_MANAGE,
-        icon: PictureOutlined,
+        key: 'admin-money',
+        labelKey: 'platform.money',
+        href: ROUTES.MANAGE.ADMIN_MONEY,
+        permission: PERMISSION.PLATFORM_MONEY_MANAGE,
+        icon: WalletOutlined,
+      },
+      {
+        /*
+         * Hỗ trợ/tranh chấp nằm trong khối TIỀN, không đứng riêng: một tranh chấp mở ra là một
+         * khoản quyết toán bị tạm giữ, nên người xử lý nó và người xử lý sổ là cùng một ca trực.
+         */
+        key: 'admin-support',
+        labelKey: 'platform.support',
+        href: ROUTES.MANAGE.ADMIN_SUPPORT,
+        permission: PERMISSION.PLATFORM_SUPPORT_MANAGE,
+        icon: CustomerServiceOutlined,
+      },
+    ],
+  },
+  {
+    key: 'platform-policy',
+    labelKey: 'manageGroups.platformPolicy',
+    children: [
+      {
+        /*
+         * Gói và chính sách phí là hai nửa của cùng một câu: bậc gói quyết định gian hàng trả
+         * BAO NHIÊU cho nền tảng, chính sách phí quyết định mỗi CHUYẾN cộng thêm những dòng nào
+         * (ADR 0041 · ADR 0028). Sửa một bên mà không nhìn bên kia là cách tạo ra một bậc gói
+         * "0% hoa hồng" vẫn đang cộng phí dịch vụ vào giá khách.
+         */
+        type: 'branch',
+        key: 'platform-billing',
+        labelKey: 'platform.billing',
+        icon: CreditCardOutlined,
+        children: [
+          {
+            key: 'admin-plans',
+            labelKey: 'platform.plans',
+            href: ROUTES.MANAGE.ADMIN_PLANS,
+            permission: PERMISSION.PLATFORM_BILLING_MANAGE,
+            icon: CreditCardOutlined,
+          },
+          {
+            key: 'admin-fee-policies',
+            labelKey: 'platform.feePolicies',
+            href: ROUTES.MANAGE.ADMIN_FEE_POLICIES,
+            permission: PERMISSION.PLATFORM_FEE_POLICY_MANAGE,
+            icon: PercentageOutlined,
+          },
+        ],
+      },
+      {
+        /*
+         * Mã khuyến mãi đứng cạnh gói và phí có chủ đích: một bên đặt cách nền tảng THU, bên kia
+         * đặt cách nền tảng CHI tài trợ. Hai quyền tách nhau (ADR 0046 điều 1), nhưng người đọc
+         * menu nên thấy chúng là hai mặt của cùng một ngân sách.
+         */
+        key: 'admin-promo-codes',
+        labelKey: 'platform.promoCodes',
+        href: ROUTES.MANAGE.ADMIN_PROMO_CODES,
+        permission: PERMISSION.PLATFORM_PROMO_CODE_MANAGE,
+        icon: GiftOutlined,
+      },
+      {
+        /*
+         * Xác minh người bán là TRỤC KIỂM DUYỆT, không phải cổng mua gói (ADR 0040 điều 5) —
+         * nên nó đứng ở khối chính sách chứ không chen vào hàng đợi duyệt hồ sơ hằng ngày.
+         */
+        key: 'admin-sellers',
+        labelKey: 'platform.sellers',
+        href: ROUTES.MANAGE.ADMIN_SELLERS,
+        permission: PERMISSION.PLATFORM_SELLER_VERIFY,
+        icon: IdcardOutlined,
+      },
+    ],
+  },
+  {
+    key: 'platform-system',
+    labelKey: 'manageGroups.platformSystem',
+    children: [
+      {
+        key: 'admin-staff',
+        labelKey: 'platform.staff',
+        href: ROUTES.MANAGE.ADMIN_STAFF,
+        permission: PERMISSION.PLATFORM_STAFF_MANAGE,
+        icon: UsergroupAddOutlined,
       },
       {
         key: 'admin-catalog',
@@ -525,51 +633,18 @@ export const PLATFORM_NAV: readonly NavSection[] = [
         icon: EnvironmentOutlined,
       },
       {
+        key: 'admin-banners',
+        labelKey: 'platform.banners',
+        href: ROUTES.MANAGE.ADMIN_BANNERS,
+        permission: PERMISSION.PLATFORM_BANNER_MANAGE,
+        icon: PictureOutlined,
+      },
+      {
         key: 'admin-audit',
         labelKey: 'platform.audit',
         href: ROUTES.MANAGE.ADMIN_AUDIT,
         permission: PERMISSION.PLATFORM_AUDIT_VIEW,
         icon: HistoryOutlined,
-      },
-      {
-        key: 'admin-sellers',
-        labelKey: 'platform.sellers',
-        href: ROUTES.MANAGE.ADMIN_SELLERS,
-        permission: PERMISSION.PLATFORM_SELLER_VERIFY,
-        icon: IdcardOutlined,
-      },
-      {
-        key: 'admin-fee-policies',
-        labelKey: 'platform.feePolicies',
-        href: ROUTES.MANAGE.ADMIN_FEE_POLICIES,
-        permission: PERMISSION.PLATFORM_FEE_POLICY_MANAGE,
-        icon: PercentageOutlined,
-      },
-      {
-        /*
-         * Mã khuyến mãi đứng cạnh chính sách phí có chủ đích: một bên đặt cách nền tảng THU,
-         * bên kia đặt cách nền tảng CHI tài trợ. Hai quyền tách nhau (ADR 0046 điều 1), nhưng
-         * người đọc menu nên thấy chúng là hai mặt của cùng một ngân sách.
-         */
-        key: 'admin-promo-codes',
-        labelKey: 'platform.promoCodes',
-        href: ROUTES.MANAGE.ADMIN_PROMO_CODES,
-        permission: PERMISSION.PLATFORM_PROMO_CODE_MANAGE,
-        icon: GiftOutlined,
-      },
-      {
-        key: 'admin-money',
-        labelKey: 'platform.money',
-        href: ROUTES.MANAGE.ADMIN_MONEY,
-        permission: PERMISSION.PLATFORM_MONEY_MANAGE,
-        icon: WalletOutlined,
-      },
-      {
-        key: 'admin-support',
-        labelKey: 'platform.support',
-        href: ROUTES.MANAGE.ADMIN_SUPPORT,
-        permission: PERMISSION.PLATFORM_SUPPORT_MANAGE,
-        icon: CustomerServiceOutlined,
       },
     ],
   },
@@ -644,6 +719,7 @@ const PLATFORM_MOBILE_TABS: readonly MobileTab[] = [
     icon: DashboardOutlined,
   },
   {
+    // Tab 2: Approvals — xác minh gian hàng/xe
     key: 'approvals',
     labelKey: 'platform.approvals',
     href: ROUTES.MANAGE.ADMIN,
@@ -651,13 +727,15 @@ const PLATFORM_MOBILE_TABS: readonly MobileTab[] = [
     icon: AuditOutlined,
   },
   {
-    key: 'admin-vehicles',
-    labelKey: 'platform.vehiclesShort',
-    href: ROUTES.MANAGE.ADMIN_VEHICLES,
-    permission: PERMISSION.PLATFORM_VEHICLE_VIEW,
-    icon: CarOutlined,
+    // Tab 3: Money Ops — tiền, đối soát, hỗ trợ
+    key: 'admin-money',
+    labelKey: 'platform.money',
+    href: ROUTES.MANAGE.ADMIN_MONEY,
+    permission: PERMISSION.PLATFORM_MONEY_MANAGE,
+    icon: WalletOutlined,
   },
   {
+    // Tab 4: Bookings — đơn thuê toàn hệ thống
     key: 'admin-bookings',
     labelKey: 'platform.bookingsShort',
     href: ROUTES.MANAGE.ADMIN_BOOKINGS,

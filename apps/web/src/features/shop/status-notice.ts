@@ -1,10 +1,4 @@
-import {
-  isTenantStatus,
-  SHOP_VERIFICATION,
-  TENANT_STATUS,
-  type ShopVerification,
-  type TenantStatus,
-} from '@xeprime/types';
+import { isTenantStatus, TENANT_STATUS, type TenantStatus } from '@xeprime/types';
 import type { WorkspacePaths } from '@/constants/routes';
 
 /**
@@ -105,86 +99,4 @@ const NOTICE: Readonly<Record<TenantStatus, ShopStatusNotice>> = {
  */
 export function shopStatusNotice(status: string): ShopStatusNotice {
   return NOTICE[isTenantStatus(status) ? status : TENANT_STATUS.DRAFT];
-}
-
-/**
- * Trạng thái XÁC MINH gian hàng → thông báo hiển thị (ADR 0036).
- *
- * Bảng THỨ HAI, cạnh `NOTICE` ở trên, vì từ ADR 0036 có hai trục và chúng trả lời hai câu hỏi
- * khác nhau:
- *
- *  - `tenants.status` — *gian hàng còn được hoạt động không?* Chỉ còn `active` ↔ `suspended`
- *    (cộng vài giá trị cũ), và nó là thứ quyết định xe có nằm trên chợ hay không.
- *  - `verification` — *nền tảng đã xem xét pháp nhân chưa?* Không chặn đăng xe; nó là cổng để
- *    MUA GÓI thuê bao.
- *
- * Gộp hai bảng lại là quay về đúng chỗ cũ: một quyết định "cần bổ sung hồ sơ pháp nhân" lại
- * hiện ra như "gian hàng của bạn chưa hoạt động", và chủ xe đi tìm xem xe mình biến đi đâu.
- */
-export type ShopVerificationNoticeKey =
-  'unverified' | 'pending' | 'needsRevision' | 'rejected' | 'verified';
-
-export interface ShopVerificationNotice {
-  key: ShopVerificationNoticeKey;
-  tone: ShopNoticeTone;
-  /** Nút gửi (lại) hồ sơ xác minh có ý nghĩa ở trạng thái này không. */
-  canSubmit: boolean;
-  /** `true` = phần mô tả ghép thêm nguyên văn lý do người duyệt viết. */
-  useReason: boolean;
-}
-
-const VERIFICATION_NOTICE: Readonly<Record<ShopVerification, ShopVerificationNotice>> = {
-  /*
-   * CHƯA XÁC MINH = KHÔNG CÓ TIN GÌ, KHÔNG CÓ VIỆC GÌ (16/09/2026 — ADR 0040).
-   *
-   * Tới 16/09/2026 trạng thái này mang một dải "Gian hàng chưa được xác minh" kèm nút "Gửi xác
-   * minh", và câu chữ hứa rằng xác minh là điều kiện để MUA GÓI (ADR 0036). ADR 0040 gỡ cổng đó:
-   * thanh toán mở tuyến gói, không cần một cái gật đầu nào trước.
-   *
-   * Nên nút ấy không còn đổi lấy được gì cho người bấm nó — trong khi nó vẫn KHOÁ hồ sơ khỏi việc
-   * sửa suốt thời gian chờ (`SHOP_VERIFICATION_PENDING`). Một hành động chỉ có giá mà không có
-   * giá trị thì ẩn hẳn, không đổi thành một dòng giải thích luật nội bộ.
-   *
-   * Ba trạng thái CÒN LẠI vẫn hiện: `pending` giải thích vì sao hồ sơ đang bị khoá, còn
-   * `needs_revision`/`rejected` là cuộc trao đổi đang mở với người duyệt và vẫn gửi lại được.
-   * Backend không đổi — `SHOP_VERIFICATION_SUBMITTABLE` vẫn nhận `unverified`, nên hồ sơ cũ và
-   * đường quản trị vẫn chạy nguyên.
-   */
-  [SHOP_VERIFICATION.UNVERIFIED]: {
-    key: 'unverified',
-    tone: 'info',
-    canSubmit: false,
-    useReason: false,
-  },
-  [SHOP_VERIFICATION.PENDING]: { key: 'pending', tone: 'info', canSubmit: false, useReason: false },
-  [SHOP_VERIFICATION.NEEDS_REVISION]: {
-    key: 'needsRevision',
-    tone: 'warning',
-    canSubmit: true,
-    useReason: true,
-  },
-  [SHOP_VERIFICATION.REJECTED]: {
-    key: 'rejected',
-    tone: 'error',
-    canSubmit: true,
-    useReason: true,
-  },
-  [SHOP_VERIFICATION.VERIFIED]: {
-    key: 'verified',
-    tone: 'success',
-    canSubmit: false,
-    useReason: false,
-  },
-};
-
-/**
- * Giá trị lạ rơi về `unverified` — cùng lý do với `shopStatusNotice`: câu an toàn nhất khi không
- * hiểu mã là "chưa xác minh", vì nó không hứa hẹn gì và không cấp gì.
- */
-export function shopVerificationNotice(verification: string): ShopVerificationNotice {
-  return VERIFICATION_NOTICE[
-    (VERIFICATION_NOTICE as Record<string, ShopVerificationNotice | undefined>)[verification]
-      ? (verification as ShopVerification)
-      : SHOP_VERIFICATION.UNVERIFIED
-  ];
 }

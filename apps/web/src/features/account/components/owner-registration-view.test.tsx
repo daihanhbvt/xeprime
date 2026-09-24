@@ -38,7 +38,6 @@ const vehicles = vi.hoisted(() => ({ data: { items: [] as unknown[] } }));
 vi.mock('@/features/shop/hooks/use-shop', () => ({
   useMyShop: () => shop,
   useUpdateShopProfile: () => ({ mutate: vi.fn(), isPending: false, isError: false, error: null }),
-  useSubmitShopReview: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 vi.mock('@/features/vehicles/hooks/use-vehicles', () => ({ useVehicles: () => vehicles }));
 

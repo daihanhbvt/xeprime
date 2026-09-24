@@ -18,8 +18,9 @@ import type { MyShop, UpdateProfileInput } from '../types';
  * 3. **Chủ gian hàng KHÔNG còn là ô nhập** (16/09/2026). Ba cột `tenant_profiles.owner_*` đã
  *    drop; cổng gửi duyệt đọc họ tên + SĐT từ TÀI KHOẢN CHỦ. Form này vì thế không được gửi lên
  *    ba khoá đó nữa, và checklist phải chấm theo `ownerAccount`.
- * 4. **Gửi duyệt VALIDATE TRƯỚC**, và **LƯU NỐT thay đổi còn dở**: backend snapshot hồ sơ từ
- *    DATABASE, nên gửi thẳng khi form còn dirty là đưa cho người duyệt đúng bản cũ.
+ * 4. **Không còn luồng xin XÁC MINH** (24/09/2026): nền tảng tạm ngừng xác minh gian hàng, nên
+ *    màn này không có nút gửi, không có dải "đang chờ / cần bổ sung", và một phiếu chờ cũ KHÔNG
+ *    còn khoá hồ sơ — không ai xử lý nó nữa, nên cái khoá sẽ là vĩnh viễn.
  */
 const provinces = vi.hoisted(() => ({
   options: [
@@ -107,50 +108,28 @@ function makeShop(
 
 /** Mock đúng chữ ký của prop — nhờ vậy `mock.calls[0][0]` có kiểu, không phải `any`. */
 type SaveMock = ReturnType<typeof vi.fn<(body: UpdateProfileInput) => void>>;
-type SubmitMock = ReturnType<typeof vi.fn<(pending: UpdateProfileInput | null) => void>>;
 
 function renderWorkspace(
   shop: MyShop,
   {
     onSave = vi.fn<(body: UpdateProfileInput) => void>(),
-    onSubmitReview = vi.fn<(pending: UpdateProfileInput | null) => void>(),
     canEdit = true,
-    canSubmit = true,
   }: {
     onSave?: SaveMock;
-    onSubmitReview?: SubmitMock;
     canEdit?: boolean;
-    canSubmit?: boolean;
   } = {},
 ) {
   const view = render(
     <App>
-      <ShopProfileWorkspace
-        shop={shop}
-        canEdit={canEdit}
-        canSubmit={canSubmit}
-        saving={false}
-        submitting={false}
-        onSave={onSave}
-        onSubmitReview={onSubmitReview}
-      />
+      <ShopProfileWorkspace shop={shop} canEdit={canEdit} saving={false} onSave={onSave} />
     </App>,
   );
-  return { ...view, onSave, onSubmitReview };
+  return { ...view, onSave };
 }
 
 const saveButton = () => screen.getByRole('button', { name: /Lưu thông tin/ });
 const displayNameInput = () => screen.getByLabelText(/Tên hiển thị/);
-/**
- * Nút trên DẢI trạng thái, không phải nút OK trong hộp xác nhận (hai nút cùng chữ).
- *
- * Từ ADR 0040 nó CHỈ xuất hiện khi người duyệt đang yêu cầu bổ sung / đã từ chối: thanh toán mở
- * tuyến gói, nên ở `unverified` việc gửi xác minh không đổi lấy được gì cho người bấm (mà vẫn
- * khoá hồ sơ suốt thời gian chờ). Nhãn nút đổi theo trạng thái — `resubmit` ở hai trạng thái đó.
- */
-const submitReviewButton = () => screen.getAllByRole('button', { name: /^Gửi lại xác minh$/ })[0]!;
-
-/** Hồ sơ BỊ TRẢ VỀ — trạng thái duy nhất còn dựng nút gửi (lại) xác minh. */
+/** Hồ sơ từng BỊ TRẢ VỀ trước khi nền tảng ngừng xác minh — dữ liệu cũ vẫn có thể mang nó. */
 function needsRevisionShop(
   overrides: Partial<MyShop['profile']> = {},
   owner: Partial<MyShop['ownerAccount']> = {},
@@ -172,13 +151,6 @@ const checklist = () => within(screen.getByRole('region', { name: 'Hoàn thiện
 /** Một chỉnh sửa bất kỳ để form chuyển sang trạng thái "có thay đổi". */
 function editSomething(value = 'Demo XePrime đổi tên') {
   fireEvent.change(displayNameInput(), { target: { value } });
-}
-
-/** Mở hộp xác nhận rồi bấm OK trong CHÍNH hộp đó. */
-async function confirmSubmitReview() {
-  fireEvent.click(submitReviewButton());
-  const dialog = await screen.findByRole('dialog');
-  fireEvent.click(within(dialog).getByRole('button', { name: /Gửi duyệt/ }));
 }
 
 beforeEach(() => {
@@ -244,14 +216,23 @@ describe('Hai nút ở tiêu đề đi theo trạng thái chỉnh sửa', () => 
     expect(screen.getByText('Bạn chỉ có quyền xem hồ sơ gian hàng.')).toBeTruthy();
   });
 
-  it('hồ sơ đang chờ xác minh: khoá sửa và nói rõ vì sao', () => {
-    const { container } = renderWorkspace({
+  /*
+   * 24/09/2026: phiếu xác minh CŨ còn chờ không còn khoá hồ sơ. Nền tảng đã ngừng xử lý loại
+   * phiếu đó, nên giữ khoá là khoá vĩnh viễn — và backend cũng đã gỡ nó.
+   */
+  it('còn phiếu xác minh chờ (dữ liệu cũ): VẪN sửa được, không có câu "tạm khoá"', async () => {
+    const { container, onSave } = renderWorkspace({
       ...makeShop(),
       verification: SHOP_VERIFICATION.PENDING,
     });
 
-    expect(container.querySelector('fieldset')).toHaveProperty('disabled', true);
-    expect(screen.getByText('Hồ sơ đang chờ duyệt nên tạm khoá chỉnh sửa.')).toBeTruthy();
+    expect(container.querySelector('fieldset')).toHaveProperty('disabled', false);
+    expect(screen.queryByText('Hồ sơ đang chờ duyệt nên tạm khoá chỉnh sửa.')).toBeNull();
+
+    editSomething();
+    await waitFor(() => expect(saveButton()).toHaveProperty('disabled', false));
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
   });
 });
 
@@ -324,11 +305,11 @@ describe('Nội dung gửi lên', () => {
 });
 
 describe('Checklist hồ sơ', () => {
-  it('đủ bốn mục bắt buộc: nhóm đó báo đã đủ điều kiện, mục NÊN CÓ vẫn liệt kê nhưng không chặn', () => {
+  it('đủ bốn mục bắt buộc: nhóm đó báo đã đủ, mục NÊN CÓ vẫn liệt kê nhưng không chặn', () => {
     renderWorkspace(makeShop());
 
-    expect(checklist().getByText('Đã đủ điều kiện gửi duyệt')).toBeTruthy();
-    // Logo chưa có, và nó vẫn nằm trong bảng — chỉ là không cản đường gửi duyệt.
+    expect(checklist().getByText('Đã đủ thông tin bắt buộc')).toBeTruthy();
+    // Logo chưa có, và nó vẫn nằm trong bảng — chỉ là không bắt buộc.
     expect(checklist().getByText('Logo gian hàng')).toBeTruthy();
     expect(checklist().getByText('Nên có — giúp khách chọn gian hàng của bạn')).toBeTruthy();
   });
@@ -341,19 +322,18 @@ describe('Checklist hồ sơ', () => {
   it('tài khoản chủ thiếu SĐT → mục bắt buộc chưa đủ, dù form không có ô nào của nó', () => {
     renderWorkspace(makeShop({}, { phone: null }));
 
-    expect(checklist().getByText('Bắt buộc để gửi duyệt')).toBeTruthy();
-    expect(checklist().queryByText('Đã đủ điều kiện gửi duyệt')).toBeNull();
+    expect(checklist().getByText('Thông tin bắt buộc')).toBeTruthy();
+    expect(checklist().queryByText('Đã đủ thông tin bắt buộc')).toBeNull();
   });
 
   it('checklist đi theo ô ĐANG NHẬP, không phải hồ sơ đã lưu', async () => {
     renderWorkspace(makeShop({ displayName: '' }));
-    expect(checklist().queryByText('Đã đủ điều kiện gửi duyệt')).toBeNull();
+    expect(checklist().queryByText('Đã đủ thông tin bắt buộc')).toBeNull();
 
-    // Vừa gõ xong là mục đó tick ngay — nút Gửi duyệt sẽ lưu nốt trước khi gửi, nên bảng này
-    // đọc bản đang gõ mới đúng với thứ sắp được gửi đi.
+    // Vừa gõ xong là mục đó tick ngay — bảng đọc bản đang gõ, không đợi bấm Lưu.
     editSomething('Demo XePrime');
 
-    await waitFor(() => expect(checklist().getByText('Đã đủ điều kiện gửi duyệt')).toBeTruthy());
+    await waitFor(() => expect(checklist().getByText('Đã đủ thông tin bắt buộc')).toBeTruthy());
   });
 
   /* Tài khoản nhận tiền không còn là một mục — nó không sống trên hồ sơ này nữa. */
@@ -363,104 +343,76 @@ describe('Checklist hồ sơ', () => {
     expect(checklist().queryByText('Tài khoản nhận tiền')).toBeNull();
   });
 
-  it('hồ sơ đang chờ xác minh: không còn checklist — không có gì để sửa nữa', () => {
+  /*
+   * Không còn gắn với trạng thái xác minh: web đã bỏ luồng đó, nên một phiếu chờ cũ không che
+   * mất bảng — và không chữ nào trong bảng nhắc tới một nút gửi duyệt đã không còn.
+   */
+  it('còn phiếu xác minh chờ (dữ liệu cũ): checklist vẫn hiện, không nhắc "gửi duyệt"', () => {
     renderWorkspace({ ...makeShop(), verification: SHOP_VERIFICATION.PENDING });
+
+    expect(checklist().getByText('Đã đủ thông tin bắt buộc')).toBeTruthy();
+    expect(checklist().queryByText(/gửi duyệt/i)).toBeNull();
+  });
+
+  it('hồ sơ đã ĐỦ HẾT: không dựng thẻ 100% thường trực', () => {
+    renderWorkspace(
+      makeShop({
+        logoUrl: 'https://cdn.example/logo.png',
+        coverUrl: 'https://cdn.example/cover.png',
+      }),
+    );
+
+    expect(screen.queryByRole('region', { name: 'Hoàn thiện hồ sơ' })).toBeNull();
+  });
+
+  it('chỉ xem (thiếu quyền sửa): không dựng checklist "còn thiếu gì"', () => {
+    renderWorkspace(makeShop(), { canEdit: false });
 
     expect(screen.queryByRole('region', { name: 'Hoàn thiện hồ sơ' })).toBeNull();
   });
 });
 
-describe('Gửi duyệt', () => {
-  it('hồ sơ thiếu mục bắt buộc → KHÔNG mở hộp xác nhận, không gọi API, nói còn thiếu mấy mục', async () => {
-    const { onSubmitReview } = renderWorkspace(needsRevisionShop({ displayName: '' }));
-
-    fireEvent.click(submitReviewButton());
-
-    await waitFor(() => expect(screen.getByText(/Còn 1 mục chưa điền đúng/)).toBeTruthy());
-    expect(screen.queryByRole('dialog')).toBeNull();
-    expect(onSubmitReview).not.toHaveBeenCalled();
-  });
-
-  it('hồ sơ đủ và không có thay đổi chưa lưu → gửi thẳng, không kèm bản sửa', async () => {
-    const { onSubmitReview } = renderWorkspace(needsRevisionShop());
-
-    await confirmSubmitReview();
-
-    await waitFor(() => expect(onSubmitReview).toHaveBeenCalledTimes(1));
-    expect(onSubmitReview.mock.calls[0]?.[0]).toBeNull();
-  });
-
-  it('còn thay đổi chưa lưu → gửi kèm bản sửa để trang lưu trước rồi mới gửi', async () => {
-    const { onSubmitReview } = renderWorkspace(needsRevisionShop());
-
-    editSomething('Demo XePrime đổi tên');
-    await waitFor(() => expect(saveButton()).toHaveProperty('disabled', false));
-    await confirmSubmitReview();
-
-    await waitFor(() => expect(onSubmitReview).toHaveBeenCalledTimes(1));
-    const body = onSubmitReview.mock.calls[0]?.[0];
-    expect(body?.displayName).toBe('Demo XePrime đổi tên');
-  });
-
-  it('thiếu quyền `tenant.submit_review` → không có nút Gửi duyệt', () => {
-    renderWorkspace(needsRevisionShop(), { canSubmit: false });
-
-    expect(screen.queryByRole('button', { name: /^Gửi lại xác minh$/ })).toBeNull();
-  });
-
+describe('Không còn luồng xin xác minh gian hàng', () => {
   /*
-   * ADR 0040 — thanh toán mở tuyến gói, không còn cổng "phải xác minh trước". Nút gửi xác minh ở
-   * trạng thái `unverified` vì thế không đổi lấy được gì cho người bấm, trong khi nó vẫn KHOÁ hồ
-   * sơ khỏi việc sửa suốt thời gian chờ. Một hành động chỉ có giá mà không có giá trị thì ẩn hẳn.
+   * Nút gửi / gửi lại xác minh không còn ở bất kỳ trạng thái nào: phiếu gửi đi sẽ không có ai ở
+   * đầu kia. Ẩn hẳn, không thay bằng một dòng giải thích luật nội bộ.
    */
-  it('chưa xác minh: KHÔNG mời gửi xác minh — nó không còn mở ra gì', () => {
-    renderWorkspace(makeShop());
+  it.each([
+    SHOP_VERIFICATION.UNVERIFIED,
+    SHOP_VERIFICATION.PENDING,
+    SHOP_VERIFICATION.NEEDS_REVISION,
+    SHOP_VERIFICATION.REJECTED,
+  ])('trạng thái %s: KHÔNG có nút gửi xác minh', (verification) => {
+    renderWorkspace({ ...needsRevisionShop(), verification });
 
     expect(screen.queryByRole('button', { name: /Gửi.*xác minh/ })).toBeNull();
-  });
-
-  /*
-   * 16/09/2026 — dải trạng thái KHÔNG còn rơi về nút "Thêm xe" khi không có gì để gửi. Đăng xe
-   * chẳng liên quan gì tới chủ đề của dải, và đặt nó đúng chỗ người dùng vừa học được là "nút ở
-   * đây giải quyết tình trạng ở đây" là một nút nói dối.
-   */
-  it('đang chờ xác minh: dải chỉ còn là thông tin, không có nút nào', () => {
-    renderWorkspace({ ...makeShop(), verification: SHOP_VERIFICATION.PENDING });
-
-    expect(screen.queryByRole('button', { name: /Gửi.*xác minh/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Gửi duyệt/ })).toBeNull();
+    // Và không rơi về một nút chẳng liên quan ("Thêm xe") ở chỗ nút cũ đứng.
     expect(screen.queryByRole('button', { name: /Thêm xe/ })).toBeNull();
-    expect(screen.getByText('Hồ sơ đang chờ nền tảng xác minh')).toBeTruthy();
   });
 });
 
-describe('Dải trạng thái nói đúng chặng đang đứng', () => {
-  /*
-   * ADR 0036: dải này nói về trục XÁC MINH, không về `tenants.status`. Và nó tuyệt đối không
-   * được nói "xe chỉ lên chợ sau khi hồ sơ được duyệt" nữa — câu đó đúng trước ADR 0036 và sai
-   * sau nó, vì tuyến hoa hồng đăng xe thẳng qua cổng duyệt XE.
-   */
-  /*
-   * ADR 0040: "chưa xác minh" thôi là một tin. Nó không chặn gì và không còn việc gì để làm, nên
-   * một dải chiếm trọn bề ngang nói về nó chỉ dạy người dùng bỏ qua vùng đó.
-   */
-  it('chưa xác minh: KHÔNG dựng dải nào', () => {
-    renderWorkspace(makeShop());
-
-    expect(screen.queryByText('Gian hàng chưa được xác minh')).toBeNull();
+describe('Dải trạng thái chỉ nói về trạng thái VẬN HÀNH', () => {
+  it('đang chờ / bị trả về xác minh: KHÔNG dựng dải nào về xác minh', () => {
+    renderWorkspace({ ...makeShop(), verification: SHOP_VERIFICATION.PENDING });
     expect(screen.queryByText('Hồ sơ đang chờ nền tảng xác minh')).toBeNull();
-  });
+    cleanup();
 
-  it('bị trả về: hiện NGUYÊN VĂN lý do đội duyệt viết', () => {
     renderWorkspace(needsRevisionShop());
-
-    expect(screen.getByText('Nền tảng yêu cầu bổ sung hồ sơ')).toBeTruthy();
-    expect(screen.getByText(/Ảnh giấy phép kinh doanh bị mờ/)).toBeTruthy();
+    expect(screen.queryByText('Nền tảng yêu cầu bổ sung hồ sơ')).toBeNull();
+    expect(screen.queryByText(/Ảnh giấy phép kinh doanh bị mờ/)).toBeNull();
   });
 
-  /* Đã xác minh xong = không có tin gì. Nhãn trạng thái cạnh tên gian hàng đã nói điều đó. */
-  it('đã xác minh: KHÔNG dựng dải nào — một dải "mọi thứ đều ổn" chỉ dạy người dùng bỏ qua nó', () => {
+  it('gian hàng bị KHOÁ: dải cảnh báo vẫn hiện — xe đang rời chợ ngay lúc này', () => {
+    renderWorkspace({ ...makeShop(), status: TENANT_STATUS.SUSPENDED });
+
+    expect(screen.getByText('Gian hàng đang bị khoá')).toBeTruthy();
+  });
+
+  it('đang hoạt động: KHÔNG dựng dải nào — nhãn cạnh tên gian hàng đã nói điều đó', () => {
     renderWorkspace({ ...makeShop(), verification: SHOP_VERIFICATION.VERIFIED });
 
     expect(screen.queryByText('Gian hàng đã được xác minh')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });

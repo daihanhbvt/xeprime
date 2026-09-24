@@ -299,6 +299,11 @@ export const XP_TOKENS = {
   'modal-width-xl': '1180px',
   'drawer-width': '560px',
   'drawer-width-lg': '720px',
+  // Panel chi tiết RỘNG (màn duyệt xe): ~75% màn lớn, trần 1400px; màn desktop nhỏ phủ gần hết
+  // vùng nội dung (trừ sidebar), không bao giờ hẹp hơn 1000px khi còn chỗ. Tablet/mobile do
+  // `DetailDrawer` chuyển sang toàn màn hình. Dùng được trực tiếp làm `width` inline.
+  'drawer-width-xl':
+    'clamp(min(calc(100vw - var(--xp-shell-sidebar-width)), 1000px), 75vw, 1400px)',
   // Figma `117:1203` (Pagination/Desktop) · `127:2060` vẽ vùng nội dung 1200. Chốt 14/08/2026:
   // nới lên 1280 cho MỌI trang (marketplace lẫn portal) — 1200/1120 để lại quá nhiều lề chết
   // trên màn 1440. Đây là nguồn duy nhất của bề rộng trang; không gõ số ở CSS Module.

@@ -1182,6 +1182,14 @@ export class PricingService {
       withDriverOneWayPrice: Prisma.Decimal | null;
       discountPercent: number | null;
     };
+    /**
+     * Snapshot mã khuyến mãi ĐÃ ĐÓNG BĂNG trên yêu cầu (`promo_snapshot_json`), nếu có.
+     *
+     * Nhận SNAPSHOT chứ không nhận chuỗi mã, và đó là điều giữ chiều phụ thuộc: máy giá không
+     * cần biết `PromoCodesModule` tồn tại, còn số giảm thì đã do server chốt lúc gửi yêu cầu.
+     * Đọc lại theo `promo_codes` hôm nay là viết lại lời hứa đã hiện cho khách (ADR 0046 điều 7).
+     */
+    promo?: PromoCodeSnapshot | null;
   }): Promise<{ breakdown: QuoteBreakdownDto; fees: CustomerFeeBreakdown | null } | null> {
     const { vehicle } = input;
     const money = (value: Prisma.Decimal | null) => value?.toFixed(0) ?? null;
@@ -1224,11 +1232,25 @@ export class PricingService {
       if (!breakdown) return null;
 
       /*
-       * `quoteIsEstimate = true` LUÔN LUÔN ở đây: chuyến chưa duyệt nên chưa có khoản giữ chỗ nào
-       * được chốt, và ADR 0029 cấm thu phần trăm trên một báo giá chưa chốt. Cờ này chỉ ảnh
-       * hưởng `holdAmount`; các dòng phụ phí vẫn được cộng vào tổng khách nhìn thấy.
+       * CÙNG MỘT CỜ với `publicQuote` — `estimateNote != null`, không phải `true` cứng.
+       *
+       * Trước 24/09/2026 chỗ này luôn truyền `true` với lý do "chuyến chưa duyệt nên chưa có
+       * khoản giữ chỗ nào được chốt". Nhưng "chưa duyệt" KHÁC "chưa chốt giá": ADR 0029 cấm thu
+       * phần trăm trên một báo giá còn phụ phí chưa tính, và thứ nói lên điều đó là
+       * `estimateNote`. Một chuyến tự lái theo ngày có giá xác định ngay lúc khách gõ — chính
+       * `publicQuote` hiện "Tiền giữ chỗ" cho nó trong hộp đặt xe.
+       *
+       * Hai cờ lệch nhau làm CÙNG MỘT chuyến ra hai bảng giá: hộp đặt xe có cọc và có tiền giữ
+       * chỗ, còn "Chuyến của tôi" thì không. Nặng hơn: `computeCustomerFees` suy
+       * `depositRequired = … && !quoteIsEstimate`, nên `true` cứng kéo `promoRoom` về 0 và mã
+       * khuyến mãi bị triệt tiêu âm thầm — số giảm đã hứa với khách biến mất khỏi màn chuyến.
        */
-      const fees = await this.customerFeesFor(input.tenantId, breakdown.totalAmount, true);
+      const fees = await this.customerFeesFor(
+        input.tenantId,
+        breakdown.totalAmount,
+        breakdown.estimateNote != null,
+        { ...(input.promo ? { promo: input.promo } : {}) },
+      );
       return { breakdown, fees };
     } catch {
       /*

@@ -599,6 +599,23 @@ export function RequestBookingFlow({
     quoteQ.data != null && quoteQ.data.breakdown.fees?.holdAmount == null;
 
   /**
+   * Báo giá đã ÁP MÃ — nguồn duy nhất cho mọi con số trong bảng giá.
+   *
+   * Báo giá công khai không nhận mã khuyến mãi (`PricingModule` cố tình không biết gì về chúng),
+   * nên bảng phí có mã do endpoint xem trước trả về. Thay CẢ `fees` chứ không ghép từng số: ghép
+   * tay chính là lỗi đã thấy ngày 24/09/2026 — dòng "−100.000đ" hiện ra trong khi "Tổng bạn trả"
+   * và "Tiền giữ chỗ" vẫn là con số chưa trừ, vì chúng đến từ một bảng phí khác.
+   *
+   * Không có mã, hoặc mã không áp được ⇒ `fees` của báo giá gốc, không đụng gì.
+   */
+  const quoteWithPromo = useMemo(() => {
+    const q = quoteQ.data ?? null;
+    const promoFees = promo.applied?.fees;
+    if (!q || !promoFees) return q;
+    return { ...q, breakdown: { ...q.breakdown, fees: promoFees } };
+  }, [quoteQ.data, promo.applied]);
+
+  /**
    * Điền sẵn tên + SĐT của tài khoản. Chạy khi `/auth/me` về (có thể sau lần render đầu), và chỉ
    * điền vào ô đang trống — không đè lên thứ khách đã tự gõ.
    */
@@ -1006,7 +1023,7 @@ export function RequestBookingFlow({
     listing,
     serviceType: watchedService,
     routeType: watchedRoute,
-    quote: quoteQ.data ?? null,
+    quote: quoteWithPromo,
     quoteLoading: quoteQ.isLoading,
     hasSelection: hasPriceSelection,
     isDelivery,
@@ -1300,15 +1317,24 @@ export function RequestBookingFlow({
                     : t('pickup.self')}
               </dd>
             </div>
-            {quoteQ.data ? (
+            {quoteWithPromo ? (
               <div className={styles.doneRow}>
                 {/* Còn phụ phí chưa tính (estimateNote) thì KHÔNG gọi "Tổng dự kiến" — 17/08. */}
                 <dt>
                   <FileTextOutlined aria-hidden />
-                  {quoteQ.data.breakdown.estimateNote ? t('price.subtotal') : t('price.total')}
+                  {quoteWithPromo.breakdown.estimateNote ? t('price.subtotal') : t('price.total')}
                 </dt>
-                {/* Tiền LUÔN qua bộ format — `1800000` trần là con số thô lọt ra ngoài. */}
-                <dd className={styles.doneMoney}>{fmt.money(quoteQ.data.breakdown.totalAmount)}</dd>
+                {/*
+                  Số khách PHẢI CHUẨN BỊ, không phải tiền thuê. `totalAmount` là `B` — nó bỏ cả
+                  phụ phí lẫn mã khuyến mãi, nên màn xác nhận từng hiện một con số thứ ba khác
+                  với bảng giá vừa bấm qua (24/09/2026). Tiền LUÔN qua bộ format.
+                */}
+                <dd className={styles.doneMoney}>
+                  {fmt.money(
+                    quoteWithPromo.breakdown.fees?.customerTotalAmount ??
+                      quoteWithPromo.breakdown.totalAmount,
+                  )}
+                </dd>
               </div>
             ) : null}
             </dl>

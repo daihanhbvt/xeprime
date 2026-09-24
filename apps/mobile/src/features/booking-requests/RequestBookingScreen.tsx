@@ -375,6 +375,21 @@ function RequestBookingBody({
    * chưa chốt lịch — ADR 0046 điều 2). Đọc `holdAmount` của SERVER, không tự suy theo dịch vụ.
    */
   const promoUnavailable = quote.data != null && quote.data.breakdown.fees?.holdAmount == null;
+
+  /**
+   * Báo giá đã ÁP MÃ — cùng luật với bản web (`RequestBookingFlow`).
+   *
+   * Báo giá công khai không nhận mã, nên bảng phí có mã đến từ endpoint xem trước. Thay CẢ
+   * `fees` chứ không ghép từng số: ghép tay là lỗi 24/09/2026 — dòng giảm hiện ra mà tổng và
+   * tiền giữ chỗ vẫn nguyên giá vì chúng đọc từ một bảng phí khác.
+   */
+  const quoteWithPromo = useMemo(() => {
+    const q = quote.data ?? null;
+    const promoFees = promo.applied?.fees;
+    if (!q || !promoFees) return q;
+    return { ...q, breakdown: { ...q.breakdown, fees: promoFees } };
+  }, [quote.data, promo.applied]);
+
   const promoField = (
     <PromoCodeField
       trip={promoTrip}
@@ -591,7 +606,7 @@ function RequestBookingBody({
             listing={listing}
             serviceType={serviceType}
             routeType={routeType}
-            quote={quote.data ?? null}
+            quote={quoteWithPromo}
             quoteLoading={quote.isPending && quoteParams !== null}
             hasSelection={quoteParams !== null}
             isDelivery={deliveryRequested}
@@ -715,7 +730,7 @@ function RequestBookingBody({
               listing={listing}
               serviceType={serviceType}
               routeType={routeType}
-              quote={quote.data ?? null}
+              quote={quoteWithPromo}
               quoteLoading={quote.isPending && quoteParams !== null}
               hasSelection={quoteParams !== null}
               isDelivery={deliveryRequested}

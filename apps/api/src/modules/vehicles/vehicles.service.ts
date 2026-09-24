@@ -62,6 +62,8 @@ import {
   VehiclePublicReviewDto,
 } from './dto/vehicle.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
+import { buildVehicleReviewSnapshot } from './vehicle-review-snapshot';
+import { lockVehicleRow } from './vehicle-row-lock';
 
 /** Cột dùng cho một dòng bảng — không kéo `description` dài. */
 const LIST_SELECT = {
@@ -485,7 +487,7 @@ export class VehiclesService {
    *
    * Đọc RIÊNG thay vì join vào `LIST_SELECT`: mọi bề mặt ở đây đều tenant-scoped, nên câu trả
    * lời là một giá trị cho cả trang. Join vào select sẽ lặp cùng một cột trên mỗi dòng và kéo
-   * `VehicleRow` — thứ mà `vehicleSnapshot` và `publicationInput` cùng đọc — phình ra vì một
+   * `VehicleRow` — thứ mà `publicationInput` đọc — phình ra vì một
    * thông tin không thuộc về chiếc xe nào.
    */
   private async shopActive(tenantId: string): Promise<boolean> {
@@ -577,6 +579,9 @@ export class VehiclesService {
     userId: string,
     dto: UpdateVehicleDto,
   ): Promise<void> {
+    // Khoá xe TRƯỚC khi đọc bản hiện tại — cùng khoá lượt Phê duyệt giữ (ADR 0049 điều 7), để
+    // "trường nào còn sửa được" được quyết trên trạng thái duyệt đã commit, không phải bản cũ.
+    await lockVehicleRow(tx, id);
     const current = await tx.vehicle.findFirst({
       where: { id, tenantId, deletedAt: null },
       select: SENSITIVE_SELECT,
@@ -1072,7 +1077,6 @@ export class VehiclesService {
           tenantId,
           actorUserId: userId,
           fromStatus: status,
-          snapshot: vehicle,
           action: isResubmit ? 'resubmit' : 'submit',
         });
         // Gửi lại duyệt: nếu xe từng công khai thì listing về ẩn cho tới khi duyệt lại (ADR 0008).
@@ -1302,8 +1306,15 @@ export class VehiclesService {
   }
 
   /**
-   * Tạo phiếu duyệt xe + approval_log + audit (dùng chung cho submit thủ công và knock-back
-   * khi sửa trường nhạy cảm). Luôn chạy trong transaction của caller.
+   * Tạo phiếu duyệt xe + ảnh chụp hồ sơ + hình chiếu hàng đợi + approval_log + audit. Luôn chạy
+   * trong transaction của caller.
+   *
+   * Ảnh chụp (`VehicleReviewSnapshot` v2) dựng TRONG transaction này từ chính các bảng mà chợ
+   * đọc — xe, ảnh, tiện nghi, chính sách thuê hiệu lực, thiết lập theo dịch vụ, chi nhánh — nên
+   * thứ người duyệt thấy đúng là thứ chủ xe vừa bấm gửi, kể cả khi họ sửa xe một phút sau.
+   *
+   * Dòng `approval_vehicle_subjects` là hình chiếu của CHÍNH ảnh chụp đó (tên, mã, biển số, loại,
+   * nguồn đăng) để hàng đợi lọc/tìm/đếm ở DB. Hàm này là writer duy nhất của bảng ấy (cùng seed).
    */
   private async createVehicleApprovalTask(
     tx: Prisma.TransactionClient,
@@ -1312,27 +1323,16 @@ export class VehiclesService {
       tenantId: string;
       actorUserId: string;
       fromStatus: VehiclePublicStatus;
-      snapshot: VehicleRow;
       action: 'submit' | 'resubmit';
     },
   ): Promise<void> {
-    /*
-     * Thư viện ảnh đọc trong CÙNG transaction với phiếu: chụp ở đây thay vì bắt hai nơi gọi tự
-     * truyền vào, để đường knock-back (sửa trường nhạy cảm khi xe đang công khai) cũng có ảnh —
-     * nó không hề chạy qua `countDistinctImages`.
-     */
-    const gallery = await tx.vehicleImage.findMany({
-      where: { vehicleId: args.vehicleId },
-      orderBy: { sortOrder: 'asc' },
-      select: { imageUrl: true },
+    const policy = await this.pricing.effectivePolicy(args.tenantId, args.vehicleId, tx);
+    const snapshot = await buildVehicleReviewSnapshot(tx, {
+      vehicleId: args.vehicleId,
+      policy,
+      now: new Date(),
     });
-    const imageUrls = [
-      ...new Set(
-        [args.snapshot.mainImageUrl, ...gallery.map((image) => image.imageUrl)].filter(
-          (url): url is string => Boolean(url),
-        ),
-      ),
-    ];
+    if (!snapshot) throw notFound();
 
     const task = await tx.approvalTask.create({
       data: {
@@ -1342,7 +1342,20 @@ export class VehiclesService {
         targetId: args.vehicleId,
         status: APPROVAL_STATUS.PENDING,
         submittedBy: args.actorUserId,
-        snapshot: vehicleSnapshot(args.snapshot, imageUrls) as Prisma.InputJsonValue,
+        snapshot: snapshot as unknown as Prisma.InputJsonValue,
+      },
+    });
+    await tx.approvalVehicleSubject.create({
+      data: {
+        approvalTaskId: task.id,
+        vehicleId: args.vehicleId,
+        vehicleType: snapshot.vehicle.vehicleType,
+        name: snapshot.vehicle.name,
+        code: snapshot.vehicle.code,
+        plateNumber: snapshot.vehicle.plateNumber,
+        mainImageUrl: snapshot.vehicle.images[0] ?? null,
+        storefrontKind: snapshot.source.storefrontKind,
+        sourceName: snapshot.source.name,
       },
     });
     await tx.approvalLog.create({
@@ -1374,7 +1387,7 @@ export class VehiclesService {
    * Xoá mềm. Chặn nếu xe còn lịch hiện tại/tương lai — occupancies là nguồn sự thật của
    * "xe bận" (ADR 0006); xoá xe đang có đơn sẽ để lại lịch mồ côi.
    */
-  async remove(tenantId: string, id: string): Promise<{ id: string }> {
+  async remove(tenantId: string, id: string, userId: string): Promise<{ id: string }> {
     const current = await this.prisma.vehicle.findFirst({
       where: { id, tenantId, deletedAt: null },
       select: { id: true },
@@ -1393,11 +1406,68 @@ export class VehiclesService {
     }
 
     await this.prisma.$transaction(async (tx) => {
+      // PHIẾU trước, XE sau — đúng thứ tự khoá của lượt Phê duyệt (`lockVehicleRow`); làm ngược
+      // lại thì một lượt xoá và một lượt duyệt cùng lúc sẽ chờ nhau tới deadlock.
+      await this.cancelPendingApprovalWithinTx(tx, { tenantId, vehicleId: current.id, userId });
       await tx.vehicle.update({ where: { id: current.id }, data: { deletedAt: new Date() } });
       // Xoá mềm xe → listing archived, biến khỏi marketplace (ADR 0008 §2).
       await this.listings.syncFromVehicle(current.id, tx);
     });
     return { id: current.id };
+  }
+
+  /**
+   * Xe bị xoá khi còn phiếu duyệt CHỜ ⇒ huỷ phiếu đó trong cùng transaction (ADR 0049).
+   *
+   * Không huỷ thì phiếu nằm lại hàng đợi của nền tảng: người duyệt mất thời gian cho một chiếc xe
+   * không còn, và nếu bấm Phê duyệt thì chủ xe nhận thông báo "xe đã lên chợ" cho chiếc xe họ đã
+   * bỏ. Huỷ là một bước có dấu vết (log `cancel` + audit), không phải xoá phiếu — lịch sử gửi duyệt
+   * của chiếc xe vẫn đọc được.
+   */
+  private async cancelPendingApprovalWithinTx(
+    tx: Prisma.TransactionClient,
+    args: { tenantId: string; vehicleId: string; userId: string },
+  ): Promise<void> {
+    const pending = await tx.approvalTask.findFirst({
+      where: {
+        targetType: APPROVAL_TARGET_TYPE.VEHICLE,
+        targetId: args.vehicleId,
+        status: APPROVAL_STATUS.PENDING,
+      },
+      select: { id: true },
+    });
+    if (!pending) return;
+
+    const claimed = await tx.approvalTask.updateMany({
+      where: { id: pending.id, status: APPROVAL_STATUS.PENDING },
+      data: { status: APPROVAL_STATUS.CANCELLED },
+    });
+    // Người duyệt vừa quyết trước một nhịp — phiếu đó đã có kết cục của nó, không huỷ đè.
+    if (claimed.count === 0) return;
+
+    await tx.approvalLog.create({
+      data: {
+        id: newId(),
+        approvalTaskId: pending.id,
+        action: APPROVAL_ACTION.CANCEL,
+        fromStatus: APPROVAL_STATUS.PENDING,
+        toStatus: APPROVAL_STATUS.CANCELLED,
+        actorUserId: args.userId,
+      },
+    });
+    await this.audit.record(
+      {
+        tenantId: args.tenantId,
+        actorUserId: args.userId,
+        actorScope: 'tenant',
+        action: 'vehicle.cancel_public_review',
+        targetType: APPROVAL_TARGET_TYPE.VEHICLE,
+        targetId: args.vehicleId,
+        before: { approvalStatus: APPROVAL_STATUS.PENDING },
+        after: { approvalStatus: APPROVAL_STATUS.CANCELLED, approvalTaskId: pending.id },
+      },
+      tx,
+    );
   }
 
   private async assertCodeFree(
@@ -1939,51 +2009,6 @@ async function countDistinctImages(
   const urls = new Set(rows.map((row) => row.imageUrl));
   if (mainImageUrl) urls.add(mainImageUrl);
   return urls.size;
-}
-
-/**
- * Ảnh chụp hồ sơ xe lúc gửi duyệt — reviewer thấy đúng thứ đã gửi (Decimal → string).
- *
- * `images` và `branchName`/`provinceName` là hai thứ bổ sung 14/09/2026, và chúng không phải
- * trang trí: cổng gửi duyệt bắt buộc **≥4 ảnh** và **chi nhánh phải có tỉnh**, nhưng snapshot cũ
- * chỉ mang `mainImageUrl` — nghĩa là reviewer phải duyệt một chiếc xe lên chợ khi chỉ nhìn được
- * một tấm ảnh và không biết nó nằm ở tỉnh nào. Không thể duyệt đúng thứ mình không thấy.
- *
- * Snapshot là jsonb ĐÓNG BĂNG, không migrate: phiếu cũ thiếu ba key này và màn duyệt chỉ hiện
- * key có mặt, nên thêm vào đây là an toàn với mọi phiếu đã tồn tại.
- */
-function vehicleSnapshot(v: VehicleRow, imageUrls: string[]): Record<string, unknown> {
-  return {
-    images: imageUrls,
-    branchName: v.branch?.name ?? null,
-    provinceName: v.branch?.province?.name ?? null,
-    name: v.name,
-    code: v.code,
-    plateNumber: v.plateNumber,
-    vehicleType: v.vehicleType,
-    // Key MỚI `serviceTypes` (mảng) — snapshot cũ trong approval_tasks còn key `serviceType`
-    // (string, có thể 'both'); FE approvals đọc được cả hai shape.
-    serviceTypes: v.serviceTypes,
-    brand: v.brand,
-    model: v.model,
-    manufactureYear: v.manufactureYear,
-    seatCount: v.seatCount,
-    fuelType: v.fuelType,
-    bodyType: v.bodyType,
-    color: v.color,
-    mainImageUrl: v.mainImageUrl,
-    description: v.description,
-    weekdayPrice: v.weekdayPrice == null ? null : String(v.weekdayPrice),
-    weekendPrice: v.weekendPrice == null ? null : String(v.weekendPrice),
-    hourlyPrice: v.hourlyPrice == null ? null : String(v.hourlyPrice),
-    monthlyPrice: v.monthlyPrice == null ? null : String(v.monthlyPrice),
-    withDriverDailyPrice: v.withDriverDailyPrice == null ? null : String(v.withDriverDailyPrice),
-    withDriverInterCityPrice:
-      v.withDriverInterCityPrice == null ? null : String(v.withDriverInterCityPrice),
-    withDriverOneWayPrice: v.withDriverOneWayPrice == null ? null : String(v.withDriverOneWayPrice),
-    deliveryEnabled: v.deliveryEnabled,
-    discountPercent: v.discountPercent,
-  };
 }
 
 function notFound(): NotFoundException {

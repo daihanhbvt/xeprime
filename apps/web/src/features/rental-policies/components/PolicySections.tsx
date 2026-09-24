@@ -24,7 +24,7 @@ import {
   MILEAGE_LIMIT,
   type CollateralMode,
 } from '@xeprime/types';
-import { LIST_SEPARATOR } from '@xeprime/domain';
+import { LIST_SEPARATOR, isFreeDeliveryFee } from '@xeprime/domain';
 import { CheckboxGroupField } from '@/components/form/CheckboxGroupField';
 import { NumberField } from '@/components/form/NumberField';
 import { RadioGroupField } from '@/components/form/RadioGroupField';
@@ -334,9 +334,7 @@ export function DeliveryPolicySection<T extends PolicyFormValues>({
                   name={`deliveryTiers.${index}.fee`}
                   label={t('tierFeeLabel', { index: index + 1 })}
                   money
-                  help={
-                    tiers[index]?.fee === 0 || tiers[index]?.fee == null ? t('free') : undefined
-                  }
+                  help={isFreeDeliveryFee(tiers[index]?.fee) ? t('free') : undefined}
                   disabled={disabled}
                 />
                 <Button

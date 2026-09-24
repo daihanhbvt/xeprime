@@ -47,6 +47,7 @@ import adminCatalog from '@xeprime/domain/messages/vi/admin-catalog.json';
 import adminVehicles from '@xeprime/domain/messages/vi/admin-vehicles.json';
 import adminPlans from '@xeprime/domain/messages/vi/admin-plans.json';
 import approvals from '@xeprime/domain/messages/vi/approvals.json';
+import platformDashboard from '@xeprime/domain/messages/vi/platform-dashboard.json';
 import bankTransactions from '@xeprime/domain/messages/vi/bank-transactions.json';
 import subscription from '@xeprime/domain/messages/vi/subscription.json';
 import members from '@xeprime/domain/messages/vi/members.json';
@@ -98,6 +99,7 @@ const messages = {
   AdminVehicles: adminVehicles,
   AdminPlans: adminPlans,
   Approvals: approvals,
+  PlatformDashboard: platformDashboard,
   BankTransactions: bankTransactions,
   Subscription: subscription,
   Members: members,

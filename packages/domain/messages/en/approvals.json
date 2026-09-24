@@ -1,110 +1,262 @@
 {
   "page": {
-    "title": "Approvals"
+    "title": "Vehicle review",
+    "subtitle": "Check vehicles before they appear on the platform",
+    "loading": "Loading the vehicle review queue…"
   },
-  "filters": {
+  "tabs": {
+    "ariaLabel": "Filter by vehicle type",
     "all": "All"
   },
-  "targetType": {
-    "tenant": "Shop",
-    "vehicle": "Vehicle",
-    "tenant_document": "Shop document",
-    "vehicle_document": "Vehicle document",
-    "seller_profile": "Seller profile"
+  "filters": {
+    "searchLabel": "Search",
+    "searchPlaceholder": "Search by vehicle name, code or plate…",
+    "source": "Listed by",
+    "status": "Status",
+    "submittedAt": "Submitted",
+    "all": "All",
+    "anyStatus": "All statuses"
   },
   "table": {
-    "tenant": "Shop",
-    "targetType": "Type",
+    "label": "Vehicles awaiting review",
+    "vehicle": "Vehicle",
+    "vehicleType": "Type",
+    "source": "Listed by",
     "submittedBy": "Submitted by",
     "submittedAt": "Submitted at",
     "status": "Status",
     "view": "View details",
-    "loadError": "Could not load the approval queue",
-    "empty": "No approval requests"
+    "imageAlt": "Cover photo of {name}",
+    "noImage": "No photo",
+    "loadError": "Couldn't load the vehicle review queue",
+    "empty": "No vehicles awaiting review",
+    "emptyDescription": "Vehicles owners submit for review will appear here.",
+    "noResults": "No vehicles match these filters",
+    "noResultsDescription": "Try another keyword or remove some filters.",
+    "clearFilters": "Clear filters"
   },
   "drawer": {
-    "title": "Approval request"
+    "title": "Vehicle details",
+    "ariaLabel": "Vehicle details for {name}",
+    "loadError": "Couldn't load this vehicle",
+    "previous": "Previous vehicle",
+    "next": "Next vehicle",
+    "sourceChip": "{kind}: {name}",
+    "liveBasis": {
+      "title": "This request predates full listing snapshots",
+      "body": "The details below are the vehicle's CURRENT data and may differ from what the owner submitted."
+    },
+    "decided": {
+      "title": "This request has been handled: {status}",
+      "byline": "{at} · {name}",
+      "reason": "Reason sent to the owner: {reason}"
+    },
+    "unsavedNote": {
+      "title": "Discard your unsaved note?",
+      "body": "The internal note you typed for this vehicle has not been saved and will be lost if you leave.",
+      "discard": "Discard note",
+      "stay": "Stay"
+    },
+    "blockers": {
+      "title": "Can't approve yet: the vehicle no longer matches its submission",
+      "changed": "Changed by the owner after submission:",
+      "missing": "The vehicle no longer meets:",
+      "next": "Request changes so the owner can check the vehicle and resubmit."
+    }
   },
-  "unsupported": {
-    "title": "This request is not reviewed here",
-    "body": "This queue only handles shop and vehicle profiles. Seller profiles are reviewed on the seller verification screen.",
-    "openSellers": "Open seller verification"
+  "sections": {
+    "gallery": "Photo gallery",
+    "vehicle": "Vehicle information",
+    "pricing": "Pricing & rental policy",
+    "pickup": "Pickup point & lister",
+    "features": "Features & description",
+    "history": "Review history"
   },
-  "tenant": {
-    "title": "Shop",
-    "name": "Name",
-    "code": "Code",
-    "status": "Status",
-    "tenantType": "Entity type",
-    "track": "Track",
-    "noPlan": "No active plan",
-    "publicVehicles": "{count, plural, =0 {no vehicles listed} one {# vehicle listed} other {# vehicles listed}}",
+  "gallery": {
+    "count": "{count, plural, one {# photo} other {# photos}}",
+    "imageAlt": "Photo {index} of {name}",
+    "main": "Cover photo",
+    "empty": "This listing has no photos"
+  },
+  "fields": {
+    "vehicleType": "Vehicle type",
+    "name": "Vehicle name",
+    "code": "Vehicle code",
+    "plateNumber": "Plate number",
+    "brand": "Brand",
+    "model": "Model",
+    "manufactureYear": "Year",
+    "color": "Colour",
+    "fuelType": "Fuel",
+    "transmission": "Transmission",
+    "services": "Services offered",
+    "seatCount": "Seats",
+    "bodyType": "Body style",
+    "motorbikeCategory": "Category",
+    "engineDisplacement": "Engine size",
+    "fuelConsumption": "Fuel consumption",
+    "electricRange": "Range per charge",
+    "batteryCapacity": "Battery capacity",
+    "electricConsumption": "Energy consumption",
+    "weekdayPrice": "Weekday price",
+    "weekendPrice": "Weekend price",
+    "hourlyPrice": "Hourly price",
+    "discountPercent": "Discount",
+    "monthlyPrice": "Monthly price (long-term)",
+    "longTermDiscount": "Long-term discounts",
+    "withDriverDailyPrice": "Daily price with driver",
+    "withDriverInterCityPrice": "Inter-city price (return)",
+    "withDriverOneWayPrice": "Inter-city price (one way)",
+    "autoAccept": "Instant booking",
+    "delivery": "Delivery",
+    "deliveryRadius": "Maximum delivery radius",
+    "deliveryFree": "Free delivery",
+    "deliveryFees": "Delivery fees",
+    "mileageLimit": "Mileage limit",
+    "excessFee": "Excess mileage fee",
+    "collateral": "Security",
+    "deposit": "Security deposit",
+    "collateralAssets": "Accepted collateral",
+    "overtimeFee": "Late return fee",
+    "terms": "Owner's terms"
+  },
+  "fieldForService": "{label} ({service})",
+  "units": {
+    "seats": "{value} seats",
+    "cc": "{value} cc",
+    "litrePer100km": "{value} L/100km",
+    "km": "{value} km",
+    "kwh": "{value} kWh",
+    "kwhPer100km": "{value} kWh/100km",
+    "kmPerDay": "{value} km/day",
+    "withinKm": "Within {value} km",
+    "perKm": "{price}/km",
+    "percent": "{value}%"
+  },
+  "values": {
+    "on": "On",
+    "off": "Off",
+    "unlimited": "Unlimited",
+    "tier": "{from}–{to} km: {fee}",
+    "longTermTier": "From {months}: {percent}% off",
+    "noPolicy": "The shop hasn't set a rental policy for this vehicle",
+    "policySource": {
+      "shop": "Follows the shop's general policy",
+      "vehicle": "Vehicle-specific policy"
+    },
+    "free": "Free"
+  },
+  "pickup": {
+    "branch": "Pickup point",
+    "address": "Address",
+    "none": "No pickup point assigned"
+  },
+  "people": {
+    "sourceKind": "Listed by",
+    "sourceName": "Lister name",
+    "owner": "Owner",
+    "submitter": "Submitted by",
     "phone": "Phone",
     "email": "Email",
-    "targetType": "Request type"
+    "sameAsOwner": "Submitted by the owner"
   },
-  "snapshot": {
-    "shopTitle": "Submitted profile",
-    "vehicleTitle": "Vehicle submitted",
-    "openShop": "Open shop page",
-    "openVehicle": "Open vehicle profile",
-    "imageAlt": "Vehicle photo {index}",
-    "empty": "No profile attached",
-    "fields": {
-      "ownerFullName": "Owner full name",
-      "ownerPhone": "Owner phone",
-      "ownerEmail": "Owner email",
-      "displayName": "Display name",
-      "bio": "About",
-      "address": "Address",
-      "wardName": "Ward",
-      "provinceName": "Province",
-      "taxCode": "Tax code",
-      "businessLicenseNo": "Business licence no.",
-      "bankName": "Bank",
-      "bankAccountNo": "Account number",
-      "bankAccountName": "Account holder",
-      "logoUrl": "Logo",
-      "vehicleName": "Vehicle name",
-      "vehicleCode": "Vehicle code",
-      "plateNumber": "Plate number",
-      "branchName": "Branch holding the vehicle",
-      "vehicleType": "Vehicle type",
-      "serviceType": "Services",
-      "brand": "Make",
-      "model": "Model",
-      "manufactureYear": "Year",
-      "seatCount": "Seats",
-      "fuelType": "Fuel",
-      "bodyType": "Body type",
-      "color": "Colour",
-      "weekdayPrice": "Weekday price",
-      "weekendPrice": "Weekend price",
-      "hourlyPrice": "Hourly price",
-      "monthlyPrice": "Monthly price (long term)",
-      "withDriverDailyPrice": "Daily price with driver",
-      "discountPercent": "Discount",
-      "description": "Description"
-    }
+  "features": {
+    "list": "Features",
+    "none": "The owner hasn't listed any features",
+    "description": "Description",
+    "noDescription": "No description"
   },
   "history": {
-    "title": "History",
-    "system": "System"
+    "system": "System",
+    "empty": "No history yet",
+    "reason": "Reason: {note}"
   },
-  "review": {
-    "approve": "Approve",
-    "requestRevision": "Request changes",
-    "reject": "Reject",
-    "done": {
-      "approve": "Approved",
-      "request_revision": "Changes requested",
-      "reject": "Rejected"
+  "checklist": {
+    "title": "Review checklist",
+    "progress": "{passed}/{total} passed",
+    "passed": "Passed",
+    "failed": "Not met",
+    "pending": "To check",
+    "auto": {
+      "title": "Automatic checks",
+      "hint": "Calculated from the submitted listing — read only.",
+      "items": {
+        "selfDrivePrice": "Has a self-drive price",
+        "longTermPrice": "Has a long-term price",
+        "withDriverPrice": "Has a with-driver price",
+        "mainImage": "Has a cover photo",
+        "photos": "At least {min} different photos",
+        "plateNumber": "Plate number entered",
+        "identity": "Vehicle identity complete",
+        "energySpec": "Energy specs complete",
+        "branchLocation": "Has a pickup point (province/city)"
+      }
+    },
+    "manual": {
+      "title": "Manual checks",
+      "hint": "Tick each item after checking the listing yourself.",
+      "items": {
+        "photos_match": "Photos match the listed vehicle",
+        "plate_visible": "Plate clearly visible in the photos",
+        "info_plausible": "Vehicle details are plausible",
+        "not_duplicate": "Not a duplicate of another vehicle",
+        "content_not_misleading": "Content isn't misleading"
+      },
+      "updatedBy": "{name} · {at}",
+      "locked": "This request has been handled — the checklist is read only."
     }
   },
-  "reason": {
-    "rejectTitle": "Reject profile",
-    "reviseTitle": "Request changes",
-    "hint": "The reason is sent to the shop owner.",
-    "placeholder": "Enter a reason…"
+  "note": {
+    "title": "Internal note",
+    "hint": "Visible to the operations team only — never sent to the owner.",
+    "placeholder": "Add a note for the operations team…",
+    "tooLong": "The note can be at most {max} characters.",
+    "save": "Save note",
+    "saved": "Note saved",
+    "lastUpdated": "Last updated: {at} · {name}",
+    "conflict": {
+      "title": "Someone else just edited this note",
+      "current": "Saved version ({name}, {at}):",
+      "empty": "(empty)",
+      "keepMine": "Overwrite with mine",
+      "useLatest": "Use the latest version"
+    }
+  },
+  "footer": {
+    "hint": "Complete the manual checks before approving",
+    "ready": "Manual checks complete",
+    "decided": "This request has been handled — no actions left",
+    "blocked": "The vehicle no longer matches its submission — you can only request changes or reject"
+  },
+  "actions": {
+    "approve": "Approve",
+    "reject": "Reject",
+    "requestRevision": "Request changes"
+  },
+  "dialog": {
+    "reasonLabel": "Reason sent to the owner",
+    "reasonPlaceholder": "Enter a reason…",
+    "reasonRequired": "Please enter a reason for the owner.",
+    "reasonTooLong": "The reason can be at most {max} characters.",
+    "revision": {
+      "title": "Request changes",
+      "hint": "The owner receives this reason and can resubmit after making changes. Say exactly what's needed.",
+      "ok": "Send request"
+    },
+    "reject": {
+      "title": "Reject vehicle",
+      "hint": "The vehicle won't appear on the platform. The owner receives this reason.",
+      "ok": "Reject vehicle"
+    },
+    "approve": {
+      "title": "Approve this vehicle?",
+      "body": "{name} will appear on the platform and the owner will be notified.",
+      "ok": "Approve"
+    }
+  },
+  "done": {
+    "approve": "Vehicle approved",
+    "reject": "Vehicle rejected",
+    "request_revision": "Change request sent"
   }
 }

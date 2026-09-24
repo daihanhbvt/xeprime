@@ -388,6 +388,10 @@ describe('useManageNav — hiển thị theo quyền (nền tảng)', () => {
     grant(PERMISSION.PLATFORM_DASHBOARD_VIEW, PERMISSION.PLATFORM_TENANT_MANAGE);
     renderMenu();
 
+    // Từ 23/09/2026 "Gian hàng" nằm trong mục cha "Gian hàng & xe" — mục cha hiện, mục con là
+    // link sau khi bung ra (giống nhánh "Tài chính" của gian hàng).
+    fireEvent.click(screen.getByText('Gian hàng & xe'));
+
     const labels = itemLabels();
     expect(labels).toContain('Gian hàng');
     expect(labels).not.toContain('Lịch thuê');
@@ -404,6 +408,8 @@ describe('useManageNav — hiển thị theo quyền (nền tảng)', () => {
     );
     renderMenu();
 
+    fireEvent.click(screen.getByText('Gian hàng & xe'));
+
     const labels = itemLabels();
     expect(labels).toEqual([
       'Tổng quan',
@@ -411,6 +417,8 @@ describe('useManageNav — hiển thị theo quyền (nền tảng)', () => {
       'Đơn thuê toàn hệ thống',
       'Khách thuê',
     ]);
+    // Không có `PLATFORM_TENANT_MANAGE` ⇒ mục cha chỉ còn đúng một mục con.
+    expect(labels).not.toContain('Gian hàng');
     expect(labels).not.toContain('Nhân sự nền tảng');
     expect(labels).not.toContain('Nhật ký hệ thống');
   });

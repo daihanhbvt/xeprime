@@ -316,7 +316,12 @@ function DoneResult({
                 {breakdown ? (
                   <DataRow
                     label={breakdown.estimateNote ? t('price.subtotal') : t('price.total')}
-                    value={fmt.money(breakdown.totalAmount)}
+                    /*
+                      Số khách PHẢI CHUẨN BỊ, không phải tiền thuê: `totalAmount` là `B`, bỏ cả
+                      phụ phí lẫn mã khuyến mãi, nên màn xác nhận từng hiện một con số thứ ba
+                      khác với bảng giá vừa bấm qua (24/09/2026).
+                    */
+                    value={fmt.money(breakdown.fees?.customerTotalAmount ?? breakdown.totalAmount)}
                     tone="price"
                   />
                 ) : null}

@@ -585,8 +585,12 @@ export const API_ERROR_CODE = {
    * mã này, nên nó ra khỏi hợp đồng thay vì ở lại như một nhánh chết mà client vẫn phải dịch.
    *
    * Xác minh KHÔNG bị xoá — nó vẫn là trục riêng (`SHOP_VERIFICATION`, đọc từ phiếu duyệt
-   * `tenant`) và vẫn chặn sửa hồ sơ khi đang trong hàng đợi (`SHOP_VERIFICATION_PENDING` ngay
-   * trên). Nó chỉ thôi làm cổng THU TIỀN.
+   * `tenant`). Nó chỉ thôi làm cổng THU TIỀN.
+   *
+   * Từ 24/09/2026 nó cũng thôi KHOÁ sửa hồ sơ khi đang chờ: nền tảng tạm ngừng xác minh gian
+   * hàng (web không còn nút gửi, màn "Duyệt xe" chỉ nhận phiếu xe), nên một phiếu chờ không còn
+   * ai xử lý sẽ khoá hồ sơ vĩnh viễn. `SHOP_VERIFICATION_PENDING` giờ chỉ còn nghĩa "đã có một
+   * phiếu chờ, không gửi phiếu thứ hai".
    */
   /**
    * Thao tác này chỉ dành cho CHỦ GIAN HÀNG — tiền của gian hàng (ví, sổ cái, lệnh rút, tài
@@ -684,6 +688,34 @@ export const API_ERROR_CODE = {
    * nền tảng vừa cố ý gỡ xuống (ADR 0048 điều 4).
    */
   VEHICLE_PLATFORM_HIDDEN: 'VEHICLE_PLATFORM_HIDDEN',
+
+  /**
+   * Phiếu duyệt đã được một người duyệt KHÁC xử lý (hoặc đã rời hàng đợi) — mọi thao tác ghi lên
+   * phiếu đó (quyết định, đánh dấu kiểm tra, ghi chú) dừng lại.
+   *
+   * Mã riêng thay vì `INVALID_STATUS_TRANSITION` chung: giao diện cần nói đúng chuyện đã xảy ra
+   * ("phiếu vừa được xử lý, đang tải lại") và làm mới phiếu, chứ không hiện một lỗi trạng thái
+   * khiến người duyệt bấm lại lần nữa. `details.status` là trạng thái hiện tại của phiếu.
+   */
+  APPROVAL_ALREADY_DECIDED: 'APPROVAL_ALREADY_DECIDED',
+  /**
+   * Phê duyệt khi danh mục kiểm tra THỦ CÔNG còn mục chưa đạt. `details.missing[]` mang khoá
+   * `VEHICLE_REVIEW_CHECK` — cùng luật `missingVehicleReviewChecks` mà web dùng để khoá nút.
+   */
+  APPROVAL_CHECKLIST_INCOMPLETE: 'APPROVAL_CHECKLIST_INCOMPLETE',
+  /**
+   * Ghi chú nội bộ đã được người khác sửa sau lần bạn tải phiếu — không ghi đè âm thầm.
+   * `details.current` là bản đang lưu (nội dung, người sửa, thời điểm) để giao diện cho người
+   * duyệt đọc trước khi quyết định ghi lại.
+   */
+  APPROVAL_NOTE_CONFLICT: 'APPROVAL_NOTE_CONFLICT',
+  /**
+   * Phê duyệt một chiếc xe mà xe SỐNG đã khác hồ sơ gửi duyệt: thông tin CĂN CƯỚC (biển số, loại
+   * xe, hộp số, nhiên liệu, năm sản xuất) bị sửa sau khi gửi — duyệt là KHOÁ các trường đó, không
+   * được khoá giá trị người duyệt chưa từng thấy — hoặc xe không còn qua cổng lên chợ. `details` là
+   * `{ changedLockedFields, missingRequirements }`. Lối đi tiếp: yêu cầu bổ sung để chủ xe gửi lại.
+   */
+  APPROVAL_SUBJECT_CHANGED: 'APPROVAL_SUBJECT_CHANGED',
 
   // Hạ tầng
   RATE_LIMITED: 'RATE_LIMITED',

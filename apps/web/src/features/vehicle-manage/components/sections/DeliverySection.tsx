@@ -5,6 +5,7 @@ import { Alert, App, Form, Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { freeDeliveryWithinKm } from '@xeprime/domain';
 import { POLICY_SOURCE } from '@xeprime/types';
 
 import { StickyFormActions } from '@/components/form/StickyFormActions';
@@ -80,7 +81,8 @@ function DeliveryForm({
   const enabled = useWatch({ control, name: 'deliveryEnabled' });
   const tiers = useWatch({ control, name: 'deliveryTiers' }) ?? [];
   const radius = useWatch({ control, name: 'deliveryMaxRadiusKm' });
-  const firstTierFree = tiers[0]?.toKm != null && (!tiers[0]?.fee || tiers[0]?.fee === 0);
+  // Cùng luật "miễn phí" với dòng tóm tắt khách thấy và màn duyệt xe (@xeprime/domain).
+  const freeWithinKm = freeDeliveryWithinKm(tiers);
 
   const submit = handleSubmit(async (next) => {
     try {
@@ -122,9 +124,7 @@ function DeliveryForm({
 
           {enabled ? (
             <div className={styles.summary}>
-              {firstTierFree && tiers[0]?.toKm != null ? (
-                <span>{t('freeWithin', { km: tiers[0].toKm })}</span>
-              ) : null}
+              {freeWithinKm !== null ? <span>{t('freeWithin', { km: freeWithinKm })}</span> : null}
               {radius != null ? <span>{t('manualBeyond', { km: radius })}</span> : null}
               <span className={styles.note}>{t('estimateNote')}</span>
               <span className={styles.note}>{t('tiersHint')}</span>
