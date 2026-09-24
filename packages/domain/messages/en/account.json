@@ -101,7 +101,7 @@
     },
     "platform": {
       "title": "Platform administration",
-      "body": "Review applications and monitor shops across the whole system.",
+      "body": "Review vehicles and monitor shops across the whole system.",
       "action": "Open admin portal"
     }
   },

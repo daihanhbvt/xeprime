@@ -291,7 +291,13 @@ export function PriceBreakdown({
             Không gấp vì nó là thứ khách vừa chủ động làm: giấu nó sau nút "Xem chi tiết" sẽ
             khiến họ không thấy việc mình vừa làm có tác dụng gì.
           */}
-          {promoDiscount > 0 ? (
+          {/*
+            `promoSlot` có mặt ⇒ ô nhập mã đang hiện chính con số này ngay trên đầu bảng, nên
+            dòng dưới đây sẽ là lần thứ HAI cùng một khoản giảm và người đọc sẽ tưởng được giảm
+            gấp đôi. Màn chỉ ĐỌC (chi tiết chuyến, hộp thư gian hàng) không có ô nhập nào, và ở
+            đó dòng này là nơi duy nhất mã hiện ra.
+          */}
+          {promoDiscount > 0 && !promoSlot ? (
             <div className={styles.row}>
               <dt className={styles.rowLabel}>
                 <span className={styles.discountText}>

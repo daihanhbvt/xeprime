@@ -1,0 +1,23 @@
+{
+  "title": "Platform overview",
+  "loadError": "Couldn't load platform figures",
+  "stats": {
+    "tenantTotal": "Total shops",
+    "tenantActive": "Active",
+    "tenantSuspended": "Suspended",
+    "vehiclesPending": "Vehicles awaiting review",
+    "listingActive": "Live listings",
+    "bookingThisMonth": "Bookings this month"
+  },
+  "pending": {
+    "title": "Awaiting review",
+    "vehicles": "Vehicles awaiting review",
+    "count": "{count, plural, one {# vehicle} other {# vehicles}}",
+    "open": "Open vehicle review"
+  },
+  "recent": {
+    "title": "New shops",
+    "empty": "No shops yet",
+    "manage": "Manage shops"
+  }
+}

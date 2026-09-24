@@ -64,6 +64,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0047](0047-booking-status-simplification.md) | Rút gọn `booking.status` còn 5 giá trị thật; endpoint transition công khai chỉ còn huỷ/không-đến; ba tab "Yêu cầu đặt xe"; bỏ ô lọc/cột trạng thái ở "Chờ giao xe"; đổi nhãn `reserved` toàn cục | **Accepted; ghi đè 0005 điều `booking.status`, kích hoạt bởi 0044, không ảnh hưởng ADR khác** |
 
 | [0048](0048-owner-marketplace-visibility.md) | Công tắc hiển thị trên chợ của CHỦ XE là trục thứ ba (`vehicles.marketplace_enabled`), tách hẳn khỏi trạng thái kiểm duyệt; `hidden` là quyết định của NỀN TẢNG và rời khỏi bộ trạng thái gửi duyệt lại; một phép gộp lý do do server suy; công tắc lên cột thao tác đầu hồ sơ xe và việc lên chợ vào thẻ "Việc cần làm" | **Accepted; ghi đè 0005 điều `VEHICLE_PUBLIC_STATUS_SUBMITTABLE`, mở rộng 0008 §2** |
+| [0049](0049-vehicle-review-workbench.md) | Màn "Duyệt xe" chỉ nhận phiếu XE; duyệt trên ảnh chụp v2 lúc gửi; nguồn đăng đóng băng lúc gửi và hình chiếu hàng đợi lọc/đếm ở DB; danh mục kiểm tra thủ công là cổng BACKEND của Phê duyệt; mọi ghi lên phiếu khoá dòng; ghi chú nội bộ tách khỏi lý do; tạm ngừng xác minh gian hàng | **Accepted; tạm dừng (không xoá) 0036 điều 3, mở rộng 0008 và 0036 điều 1 & 6** |
 
 ## Quy tắc thêm ADR
 

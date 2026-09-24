@@ -18,12 +18,7 @@ import {
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { accountVehiclePath } from '@/constants/routes';
 import { ShopProfileWorkspace } from '@/features/shop/components/ShopProfileWorkspace';
-import {
-  useMyShop,
-  useSubmitShopReview,
-  useUpdateShopProfile,
-} from '@/features/shop/hooks/use-shop';
-import type { UpdateProfileInput } from '@/features/shop/types';
+import { useMyShop, useUpdateShopProfile } from '@/features/shop/hooks/use-shop';
 import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
 import type { VehicleListItem } from '@/features/vehicles/types';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -101,31 +96,14 @@ export function OwnerRegistrationView() {
 
   const canView = has(PERMISSION.TENANT_VIEW);
   const canEdit = has(PERMISSION.TENANT_UPDATE);
-  const canSubmit = has(PERMISSION.TENANT_SUBMIT_REVIEW);
 
   const { data: shop, isLoading, isError, refetch } = useMyShop(canView);
   const updateProfile = useUpdateShopProfile();
-  const submitReview = useSubmitShopReview();
   /*
    * Chỉ cần BIẾT có xe nào và xe đang ở đâu, không cần bộ lọc URL của trang danh sách — nên gọi
    * thẳng `useVehicles` với trang đầu thay vì kéo `useVehicleFilters` vào một màn không có ô lọc.
    */
   const vehicles = useVehicles({ page: 1, limit: 20 });
-
-  /** Gửi XÁC MINH gian hàng = (lưu nốt nếu còn dở) → gửi. Cùng luật với `/manage/shop`. */
-  function submitForReview(pendingChanges: UpdateProfileInput | null) {
-    const send = () =>
-      submitReview.mutate(undefined, {
-        onSuccess: () => message.success(t('submitted')),
-        onError: (error) => message.error(errorMessage(error)),
-      });
-
-    if (!pendingChanges) return send();
-    updateProfile.mutate(pendingChanges, {
-      onSuccess: send,
-      onError: (error) => message.error(errorMessage(error)),
-    });
-  }
 
   // Đang bị đẩy sang khu đúng của họ (effect ở trên) — không dựng gì của màn này.
   if (wrongWorkspace) return <Skeleton active paragraph={{ rows: 8 }} />;
@@ -273,9 +251,7 @@ export function OwnerRegistrationView() {
       <ShopProfileWorkspace
         shop={shop}
         canEdit={canEdit}
-        canSubmit={canSubmit}
         saving={updateProfile.isPending}
-        submitting={submitReview.isPending || updateProfile.isPending}
         errorMessage={updateProfile.isError ? errorMessage(updateProfile.error) : null}
         onSave={(body) =>
           updateProfile.mutate(body, {
@@ -283,7 +259,6 @@ export function OwnerRegistrationView() {
             onError: (error) => message.error(errorMessage(error)),
           })
         }
-        onSubmitReview={submitForReview}
       />
     </div>
   );

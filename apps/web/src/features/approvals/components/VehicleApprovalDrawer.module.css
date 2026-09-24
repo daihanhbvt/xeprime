@@ -1,0 +1,556 @@
+/*
+ * Màn "Duyệt xe" — panel chi tiết (ADR 0003: CSS Modules + token).
+ *
+ * Thang chữ CỐ Ý nhỏ và đều: tên xe 20px (h3), tiêu đề panel 16px, tiêu đề khối 14px đậm, nội dung 14px, chú thích
+ * 12px. Không có chữ nào trên 20px trong panel — đây là một bàn làm việc để quét, không phải một
+ * trang giới thiệu. Khoảng cách chỉ dùng nhịp 8/16/24 (`--xp-space-sm/md/lg`) và 12px ở vài chỗ
+ * cần gọn hơn 16 nhưng thoáng hơn 8.
+ */
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+
+.headTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.headLabel {
+  font-size: var(--xp-font-size-h4);
+  line-height: var(--xp-line-height-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+.headCode {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  font-weight: var(--xp-font-weight-regular);
+  color: var(--xp-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.headNav {
+  display: flex;
+  gap: var(--xp-space-xs);
+}
+
+/* ─── Bố cục hai cột ─────────────────────────────────────────────────────── */
+
+/*
+ * Vùng cuộn DUY NHẤT là thân panel (`DetailDrawer` → `.ant-drawer-body`). Cột phải dính (`sticky`)
+ * trong chính vùng đó — không có thanh cuộn lồng thứ hai.
+ */
+.body {
+  padding: var(--xp-space-md) var(--xp-space-lg);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--xp-space-lg);
+  align-items: start;
+  /* Mốc cho `scrollIntoView` khi chuyển phiếu: cách mép trên một khoảng thở. */
+  scroll-margin-top: var(--xp-space-md);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.side {
+  min-width: 0;
+}
+
+/*
+ * Hai cột (68% / 32%) chỉ khi panel đủ rộng. Panel `xl` rộng tối thiểu ~1000px từ màn 1201px trở
+ * lên (token `drawer-width-xl`), nên đây là ngưỡng mà cột phải không bị ép dưới ~300px. Dưới đó:
+ * một cột, danh mục kiểm tra đứng SAU hồ sơ — đọc hết rồi mới đánh dấu.
+ */
+@media (min-width: 1201px) {
+  .layout {
+    grid-template-columns: minmax(0, 68fr) minmax(300px, 32fr);
+  }
+
+  .side {
+    position: sticky;
+    top: 0;
+  }
+}
+
+/* ─── Phần mở đầu ────────────────────────────────────────────────────────── */
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.vehicleName {
+  margin: 0;
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+  overflow-wrap: anywhere;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+.chip {
+  margin-inline-end: 0;
+  font-size: var(--xp-font-size-label);
+}
+
+.introAlert {
+  font-size: var(--xp-font-size-body);
+}
+
+.introAlert :global(.ant-alert-description) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+/* ─── Các khối thu gọn ───────────────────────────────────────────────────── */
+
+.collapse {
+  background: var(--xp-color-bg-container);
+}
+
+.sectionLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.caption {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+  margin: 0;
+}
+
+.muted {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text-tertiary);
+}
+
+/* Chữ người dùng gõ (mô tả, điều khoản, lý do): giữ xuống dòng của họ, bẻ chuỗi dài. */
+.prose {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.subheading {
+  margin: 0 0 var(--xp-space-xs);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text-secondary);
+}
+
+/* ─── Lưới nhãn–giá trị (chỉ đọc) ────────────────────────────────────────── */
+
+/*
+ * Tự dàn 2 cột khi đủ chỗ (≥ 2 × 280px), 1 cột khi hẹp — không có nhánh JS. Nhãn màu trung
+ * tính, giá trị đậm hơn: mắt quét cột giá trị, nhãn chỉ để định vị.
+ */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  column-gap: var(--xp-space-lg);
+  row-gap: var(--xp-space-sm);
+  margin: 0;
+}
+
+.gridItem {
+  display: grid;
+  grid-template-columns: minmax(120px, 40%) minmax(0, 1fr);
+  gap: var(--xp-space-sm);
+  align-items: baseline;
+  min-width: 0;
+}
+
+.gridItemWide {
+  grid-column: 1 / -1;
+}
+
+.gridLabel {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text-secondary);
+}
+
+.gridValue {
+  margin: 0;
+  min-width: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text);
+  overflow-wrap: anywhere;
+}
+
+.gridValueText {
+  white-space: pre-line;
+}
+
+.blockerList {
+  margin: 0;
+  padding-inline-start: var(--xp-space-md);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.inlineList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.split {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.person {
+  display: flex;
+  flex-direction: column;
+}
+
+.tagList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+.tagList :global(.ant-tag) {
+  margin-inline-end: 0;
+}
+
+/* ─── Thư viện ảnh ───────────────────────────────────────────────────────── */
+
+.gallery {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--xp-space-sm);
+}
+
+.galleryCover {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.galleryCoverImage {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  max-height: 360px;
+  border-radius: var(--xp-border-radius);
+  overflow: hidden;
+  background: var(--xp-color-bg-muted);
+}
+
+.galleryCoverImage :global(img) {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.galleryCaption {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.galleryThumbs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: var(--xp-space-sm);
+}
+
+.galleryThumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--xp-border-radius-sm);
+  overflow: hidden;
+  background: var(--xp-color-bg-muted);
+}
+
+.galleryThumb :global(img) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Màn rộng: ảnh lớn bên trái, lưới ảnh nhỏ bên phải — thấy cả bộ không cần cuộn. */
+@media (min-width: 1201px) {
+  .gallery {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    align-items: start;
+  }
+
+  .galleryThumbs {
+    grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  }
+}
+
+/* ─── Lịch sử ────────────────────────────────────────────────────────────── */
+
+.timeline {
+  padding-top: var(--xp-space-xs);
+}
+
+.timelineItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.timelineAction {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text);
+}
+
+.timelineNote {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+/* ─── Danh mục kiểm tra (cột phải) ───────────────────────────────────────── */
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.sideTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-h4);
+  line-height: var(--xp-line-height-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+.checkGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  padding: 12px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.checkGroupHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.checkGroupTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+.progress {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.progressDone {
+  color: var(--xp-color-success);
+}
+
+.progressTodo {
+  color: var(--xp-color-warning);
+}
+
+.checkList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.checkRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--xp-space-sm);
+  min-height: 28px;
+}
+
+/* Hàng thủ công: ô tick đã có nhãn riêng nên chỉ còn hai cột; dòng "ai · lúc nào" xuống dưới. */
+.checkRowManual {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.checkLabel {
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text);
+  min-width: 0;
+}
+
+.checkMeta {
+  grid-column: 1 / -1;
+  padding-inline-start: 24px;
+}
+
+.iconPass {
+  color: var(--xp-color-success);
+}
+
+.iconFail {
+  color: var(--xp-color-error);
+}
+
+.stateTag {
+  margin-inline-end: 0;
+  font-size: var(--xp-font-size-label);
+}
+
+/* ─── Ghi chú nội bộ ─────────────────────────────────────────────────────── */
+
+.noteSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.noteSection :global(.ant-form-item) {
+  margin-bottom: var(--xp-space-sm);
+}
+
+.noteConflict :global(.ant-alert-description) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.noteConflictActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.noteFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+/* ─── Chân panel (dính đáy) ──────────────────────────────────────────────── */
+
+.footerBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm) var(--xp-space-md);
+  width: 100%;
+}
+
+.footerHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.footerHintReady {
+  color: var(--xp-color-success);
+}
+
+/* Chữ giữ màu thường (tương phản đủ); chỉ biểu tượng mang màu cảnh báo. */
+.footerHintBlocked {
+  color: var(--xp-color-text);
+}
+
+.footerHintBlocked :global(.anticon) {
+  color: var(--xp-color-warning);
+}
+
+.footerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+}
+
+/* 640px = `--xp-bp-mobile`: nút xếp dọc, đủ vùng chạm (DetailDrawer lo chiều cao nút). */
+@media (max-width: 640px) {
+  .footerBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .footerActions {
+    flex-direction: column-reverse;
+  }
+}
+
+/* ─── Hộp thoại ──────────────────────────────────────────────────────────── */
+
+.dialogHint {
+  margin: 0 0 var(--xp-space-md);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  color: var(--xp-color-text-secondary);
+}

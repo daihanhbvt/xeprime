@@ -13,9 +13,11 @@ import {
   TENANT_TYPE,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
+  type VehicleReviewSnapshot,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
+import { passVehicleReviewChecks } from './helpers/vehicle-review-fixture';
 import { PlatformApprovalService } from '../src/modules/platform-admin/platform-approval.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
@@ -303,15 +305,16 @@ describe('2. Gửi duyệt xe: một cổng, một phiếu', () => {
   maybe('reviewer thấy đủ ẢNH và VỊ TRÍ để quyết định', async () => {
     const taskId = await pendingTaskId(vehicleId);
     const detail = await approvals.getTask(taskId);
-    const snapshot = detail.snapshot as Record<string, unknown>;
+    // Snapshot v2 (24/09/2026) — hình dạng `VehicleReviewSnapshot`, không còn phẳng.
+    const snapshot = detail.snapshot as unknown as VehicleReviewSnapshot;
 
     /*
      * Cổng gửi duyệt bắt buộc ≥4 ảnh và chi nhánh có tỉnh, nhưng snapshot cũ chỉ mang
      * `mainImageUrl` — reviewer phải duyệt một chiếc xe lên chợ khi chỉ nhìn được một tấm ảnh và
      * không biết nó nằm ở tỉnh nào. Không thể duyệt đúng thứ mình không thấy.
      */
-    expect(Array.isArray(snapshot.images) && (snapshot.images as string[]).length).toBe(4);
-    expect(snapshot.provinceName).toBe('Hồ Chí Minh');
+    expect(snapshot.vehicle.images).toHaveLength(4);
+    expect(snapshot.pickup?.provinceName).toBe('Hồ Chí Minh');
     // Thông tin liên hệ của chủ xe đi kèm phiếu, không phải reviewer tự đi tra.
     expect(detail.tenant?.phone).toBe('84901234567');
   });
@@ -341,6 +344,7 @@ describe('2. Gửi duyệt xe: một cổng, một phiếu', () => {
 
   maybe('admin duyệt → xe công khai + có trên marketplace + báo chủ xe', async () => {
     const taskId = await pendingTaskId(vehicleId);
+    await passVehicleReviewChecks(prisma, taskId, reviewerId);
     const detail = await approvals.approve(taskId, reviewerId);
     expect(detail.status).toBe(APPROVAL_STATUS.APPROVED);
 

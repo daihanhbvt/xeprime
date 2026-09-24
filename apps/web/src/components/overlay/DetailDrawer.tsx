@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeftOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, CloseOutlined } from '@ant-design/icons';
 import { Button, Drawer, Result, Skeleton } from 'antd';
 import type { ReactNode } from 'react';
 
@@ -11,10 +11,17 @@ import { XP_TOKENS } from '@/styles/theme';
 import styles from './DetailDrawer.module.css';
 import { useTranslations } from 'next-intl';
 
-/** Bề rộng panel desktop — token Wave 1A (`--xp-drawer-width` / `-lg`). */
+/**
+ * Bề rộng panel desktop — token Wave 1A (`--xp-drawer-width` / `-lg`) + `xl` (24/09/2026).
+ *
+ * `xl` là panel làm việc RỘNG (màn duyệt xe: hồ sơ + danh mục kiểm tra hai cột): ~75% màn lớn,
+ * trần 1400px, phủ gần hết vùng nội dung ở desktop nhỏ — một biểu thức `clamp()` trong token,
+ * không phải một con số, nên không có nhánh JS theo bề rộng màn hình.
+ */
 const DRAWER_WIDTH = {
   md: XP_TOKENS['drawer-width'],
   lg: XP_TOKENS['drawer-width-lg'],
+  xl: XP_TOKENS['drawer-width-xl'],
 } as const;
 
 export type DetailDrawerSize = keyof typeof DRAWER_WIDTH;
@@ -45,6 +52,12 @@ interface DetailDrawerProps {
   ariaLabel?: string;
   /** Mặc định `true`: đóng panel là bỏ nội dung, mở lại nạp mới. */
   destroyOnClose?: boolean;
+  /**
+   * Nút đóng ở CUỐI header (sau `extra`) thay cho đầu header — cho panel mà `extra` là một cụm
+   * điều hướng (trước/sau) và dấu X đứng cuối cụm là thứ tự người dùng quen. Chỉ áp ở desktop:
+   * toàn màn hình vẫn là mũi tên quay lại ở ĐẦU (Figma quy tắc 6).
+   */
+  closeAtEnd?: boolean;
   className?: string;
   bodyClassName?: string;
   'data-testid'?: string;
@@ -85,6 +98,7 @@ export function DetailDrawer({
   retryText,
   ariaLabel,
   destroyOnClose = true,
+  closeAtEnd = false,
   className,
   bodyClassName,
   'data-testid': testId,
@@ -107,10 +121,26 @@ export function DetailDrawer({
       placement="right"
       // AntD 6: `size` thay cả `width` lẫn `height` (chọn theo `placement`); `width` đã deprecated.
       size={isMobile ? '100%' : DRAWER_WIDTH[size]}
-      closeIcon={isMobile ? <ArrowLeftOutlined /> : undefined}
+      closable={
+        isMobile
+          ? { closeIcon: <ArrowLeftOutlined /> }
+          : closeAtEnd
+            ? { placement: 'end', closeIcon: <CloseOutlined /> }
+            : true
+      }
       destroyOnHidden={destroyOnClose}
       className={className}
-      classNames={{ body: cx(styles.body, bodyClassName), footer: styles.footer }}
+      classNames={{
+        body: cx(styles.body, bodyClassName),
+        footer: styles.footer,
+        /*
+         * Panel `xl` là một bàn làm việc hai cột: ở tablet nó chỉ còn cách phủ kín màn hình (một
+         * panel 75% của 900px là hai cột 400px — không đọc được cột nào). Làm bằng CSS thay vì
+         * thêm một hook media query: `md`/`lg` giữ nguyên hành vi cũ, và không có thêm một
+         * nhánh render theo bề rộng màn hình.
+         */
+        wrapper: size === 'xl' ? styles.xlWrapper : undefined,
+      }}
       data-testid={testId}
     >
       {renderContent()}

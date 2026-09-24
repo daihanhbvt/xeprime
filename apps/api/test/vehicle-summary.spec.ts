@@ -146,7 +146,7 @@ describe('fleetSummary — đếm đội xe theo trạng thái vận hành', () 
       name: 'Xe sẽ xoá',
       vehicleType: VEHICLE_TYPE.CAR,
     });
-    await vehicles.remove(tenantId, deleted.id);
+    await vehicles.remove(tenantId, deleted.id, ownerId);
 
     const summary = await vehicles.fleetSummary(tenantId);
 

@@ -15,9 +15,6 @@ export const fetchMyShop = (): Promise<MyShop> => apiGet<MyShop>('/tenants/curre
 export const updateShopProfile = (body: UpdateProfileInput): Promise<MyShop> =>
   apiPatch<MyShop>('/tenants/current/profile', body);
 
-export const submitShopReview = (): Promise<MyShop> =>
-  apiPost<MyShop>('/tenants/current/submit-review');
-
 /**
  * Công tắc thu cọc (Phase 6).
  *
@@ -27,6 +24,5 @@ export const submitShopReview = (): Promise<MyShop> =>
 export const fetchPaymentSettings = (): Promise<PaymentSettings> =>
   apiGet<PaymentSettings>('/shop/payment-settings');
 
-export const updatePaymentSettings = (
-  body: UpdatePaymentSettingsInput,
-): Promise<PaymentSettings> => apiPatch<PaymentSettings>('/shop/payment-settings', body);
+export const updatePaymentSettings = (body: UpdatePaymentSettingsInput): Promise<PaymentSettings> =>
+  apiPatch<PaymentSettings>('/shop/payment-settings', body);

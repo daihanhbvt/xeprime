@@ -1,39 +1,124 @@
-import { APPROVAL_STATUS } from '@xeprime/types';
-import { DEFAULT_PAGE_SIZE, pickFilter } from '@/constants/filters';
 import {
-  apiGet,
-  apiPost,
-  fetchPage,
-  type Paged,
-  type QueryParams,
-} from '@/services/api-client';
-import type { ApprovalDetail, ApprovalFilters, ApprovalTask } from './types';
+  APPROVAL_DECISION,
+  APPROVAL_STATUS,
+  type ApprovalDecision,
+  type PaginationMeta,
+} from '@xeprime/types';
+import { DEFAULT_PAGE_SIZE, pickFilter } from '@/constants/filters';
+import { startOfAppDay } from '@/lib/datetime';
+import { apiGet, apiPost, apiPut, apiRequest, type QueryParams } from '@/services/api-client';
+import { APPROVAL_STATUS_ANY } from './constants';
+import type {
+  VehicleApprovalCheck,
+  VehicleApprovalCounts,
+  VehicleApprovalDetail,
+  VehicleApprovalFilters,
+  VehicleApprovalInternalNote,
+  VehicleApprovalRow,
+} from './types';
 
-export const APPROVALS_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
+export const VEHICLE_APPROVALS_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
 
-export type ApprovalListResult = Paged<ApprovalTask>;
+/**
+ * Mặc định của hàng đợi: phiếu CHỜ duyệt — đó là việc phải làm, không phải toàn bộ lịch sử.
+ * `'all'` ở URL là lựa chọn tường minh "xem mọi trạng thái".
+ */
+export const VEHICLE_APPROVALS_DEFAULT_STATUS = APPROVAL_STATUS.PENDING;
 
-export function filtersToParams(filters: ApprovalFilters): QueryParams {
+const BASE = '/platform/vehicle-approvals';
+
+const EMPTY_COUNTS: VehicleApprovalCounts = { all: 0, car: 0, motorbike: 0 };
+
+export interface VehicleApprovalListResult {
+  items: VehicleApprovalRow[];
+  meta: PaginationMeta;
+  counts: VehicleApprovalCounts;
+}
+
+/**
+ * Bộ lọc → tham số `GET /platform/vehicle-approvals`. Mọi chiều đi lên SERVER — không chiều nào
+ * được lọc trên một trang đã cắt ở client.
+ *
+ * Ngày gửi: `FilterBar` ghi NGÀY theo giờ Việt Nam; server nhận MỐC, nên "đến ngày X" là hết
+ * ngày X (00:00 hôm sau trừ 1ms), không phải 00:00 của chính ngày đó.
+ */
+export function filtersToParams(filters: VehicleApprovalFilters): QueryParams {
   return {
-    // Mặc định chỉ xem hàng đợi CHỜ DUYỆT — đó là việc phải làm, không phải toàn bộ lịch sử.
-    status: pickFilter(filters.status ?? APPROVAL_STATUS.PENDING),
-    targetType: filters.targetType ?? null,
+    status: filters.status === APPROVAL_STATUS_ANY ? null : pickFilter(filters.status),
+    vehicleType: pickFilter(filters.vehicleType),
+    storefrontKind: pickFilter(filters.storefrontKind),
+    q: filters.q?.trim() || null,
+    submittedFrom: filters.submittedFrom
+      ? startOfAppDay(filters.submittedFrom).toISOString()
+      : null,
+    submittedTo: filters.submittedTo
+      ? startOfAppDay(filters.submittedTo).add(1, 'day').subtract(1, 'millisecond').toISOString()
+      : null,
     page: filters.page ?? 1,
-    limit: filters.limit ?? APPROVALS_DEFAULT_LIMIT,
+    limit: filters.limit ?? VEHICLE_APPROVALS_DEFAULT_LIMIT,
   };
 }
 
-export const fetchApprovals = (filters: ApprovalFilters): Promise<ApprovalListResult> =>
-  fetchPage<ApprovalTask>('/platform/approvals', filtersToParams(filters), APPROVALS_DEFAULT_LIMIT);
+/**
+ * Envelope riêng: ngoài `data`/`meta` còn mang `counts` cho ba tab loại xe. Số trên tab và danh
+ * sách đến từ CÙNG một lần đọc — tách ra request thứ hai là mở đường cho tab "Ô tô (3)" trong khi
+ * danh sách hiện hai dòng.
+ */
+interface VehicleApprovalEnvelope {
+  data: VehicleApprovalRow[];
+  meta?: PaginationMeta;
+  counts?: VehicleApprovalCounts;
+}
 
-export const fetchApproval = (id: string): Promise<ApprovalDetail> =>
-  apiGet<ApprovalDetail>(`/platform/approvals/${id}`);
+export async function fetchVehicleApprovals(
+  filters: VehicleApprovalFilters,
+): Promise<VehicleApprovalListResult> {
+  const params = filtersToParams(filters);
+  const res = (await apiRequest<VehicleApprovalRow[]>(BASE, {
+    query: params,
+  })) as VehicleApprovalEnvelope;
+  return {
+    items: res.data,
+    meta: res.meta ?? {
+      page: 1,
+      limit: VEHICLE_APPROVALS_DEFAULT_LIMIT,
+      total: res.data.length,
+      hasNext: false,
+    },
+    counts: res.counts ?? EMPTY_COUNTS,
+  };
+}
 
-export const approveTask = (id: string, reason?: string): Promise<ApprovalDetail> =>
-  apiPost<ApprovalDetail>(`/platform/approvals/${id}/approve`, { reason });
+export const fetchVehicleApproval = (id: string): Promise<VehicleApprovalDetail> =>
+  apiGet<VehicleApprovalDetail>(`${BASE}/${id}`);
 
-export const rejectTask = (id: string, reason: string): Promise<ApprovalDetail> =>
-  apiPost<ApprovalDetail>(`/platform/approvals/${id}/reject`, { reason });
+export const setVehicleApprovalCheck = (
+  id: string,
+  checkKey: string,
+  passed: boolean,
+): Promise<{ items: VehicleApprovalCheck[] }> =>
+  apiPut<{ items: VehicleApprovalCheck[] }>(`${BASE}/${id}/checks/${checkKey}`, { passed });
 
-export const requestRevisionTask = (id: string, reason: string): Promise<ApprovalDetail> =>
-  apiPost<ApprovalDetail>(`/platform/approvals/${id}/request-revision`, { reason });
+export const saveVehicleApprovalNote = (
+  id: string,
+  note: string,
+  expectedUpdatedAt: string | null,
+): Promise<VehicleApprovalInternalNote> =>
+  apiPut<VehicleApprovalInternalNote>(`${BASE}/${id}/internal-note`, { note, expectedUpdatedAt });
+
+const DECISION_PATH: Record<ApprovalDecision, string> = {
+  [APPROVAL_DECISION.APPROVE]: 'approve',
+  [APPROVAL_DECISION.REJECT]: 'reject',
+  [APPROVAL_DECISION.REQUEST_REVISION]: 'request-revision',
+};
+
+/** Ba quyết định. Lý do chỉ đi kèm từ chối / yêu cầu bổ sung — phê duyệt không có body. */
+export const decideVehicleApproval = (
+  id: string,
+  kind: ApprovalDecision,
+  reason?: string,
+): Promise<VehicleApprovalDetail> =>
+  apiPost<VehicleApprovalDetail>(
+    `${BASE}/${id}/${DECISION_PATH[kind]}`,
+    kind === APPROVAL_DECISION.APPROVE ? undefined : { reason },
+  );

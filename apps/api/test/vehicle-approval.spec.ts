@@ -13,6 +13,7 @@ import {
   TRANSMISSION_TYPE,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
+  type VehicleReviewSnapshot,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
@@ -25,6 +26,7 @@ import {
   seedBranch,
 } from './helpers/service-factory';
 import { giveTenantPlan } from './helpers/billing-fixture';
+import { passVehicleReviewChecks } from './helpers/vehicle-review-fixture';
 
 /**
  * WS0 — vòng đăng xe → duyệt → công khai (ADR 0008) chạy trên PostgreSQL THẬT. Kiểm chứng:
@@ -220,8 +222,8 @@ describe('Vehicle public approval (WS0)', () => {
     });
     expect(task.status).toBe(APPROVAL_STATUS.PENDING);
     expect(task.tenantId).toBe(tenantId);
-    // Snapshot chụp giá dạng string (ADR 0007), không phải Decimal.
-    expect((task.snapshot as Record<string, unknown>).weekdayPrice).toBe('600000');
+    // Snapshot v2 chụp giá dạng string (ADR 0007), không phải Decimal.
+    expect((task.snapshot as unknown as VehicleReviewSnapshot).pricing.weekdayPrice).toBe('600000');
   });
 
   /*
@@ -245,6 +247,8 @@ describe('Vehicle public approval (WS0)', () => {
 
   maybe('platform duyệt → xe approved_public + thông báo chủ shop', async () => {
     const taskId = await pendingTaskId(vehicleId);
+    // Cổng checklist thủ công có spec riêng (platform-vehicle-approvals) — ở đây chỉ dựng tiền đề.
+    await passVehicleReviewChecks(prisma, taskId, reviewerId);
     const detail = await approvals.approve(taskId, reviewerId);
     expect(detail.status).toBe(APPROVAL_STATUS.APPROVED);
 

@@ -70,6 +70,8 @@ model User {
   acceptedInvites            TenantInvite[]            @relation("invite_acceptor")
   submittedApprovals         ApprovalTask[]            @relation("approval_submitter")
   reviewedApprovals          ApprovalTask[]            @relation("approval_reviewer")
+  approvalNotesEdited        ApprovalTask[]            @relation("approval_note_editor")
+  approvalReviewChecks       ApprovalReviewCheck[]     @relation("approval_review_check_updater")
   approvalLogs               ApprovalLog[]
   adminNotes                 AdminNote[]
   notifications              Notification[]            @relation("notification_recipient")
@@ -882,16 +884,30 @@ model ApprovalTask {
   reviewedAt  DateTime? @map("reviewed_at") @db.Timestamptz(3)
   reason      String?   @db.Text
   /// Snapshot lúc gửi duyệt — để reviewer thấy đúng thứ shop đã gửi kể cả khi shop sửa sau.
+  /// Phiếu XE từ 24/09/2026 mang hình dạng `VehicleReviewSnapshot` (@xeprime/types, v2).
   snapshot    Json?     @map("snapshot_json") @db.JsonB
+  /// Ghi chú NỘI BỘ của người duyệt — không bao giờ gửi cho chủ xe, và KHÔNG thay cho `reason`
+  /// (lý do gửi chủ xe). Trần 2000 ký tự giữ bằng CHECK ở migration
+  /// `20260924090000_vehicle_approval_review`. Hai cột dưới là khoá lạc quan của lần sửa: ghi
+  /// đè chỉ khi `internal_note_updated_at` còn đúng mốc người sửa đã đọc.
+  internalNote          String?   @map("internal_note") @db.Text
+  internalNoteUpdatedBy String?   @map("internal_note_updated_by") @db.Char(26)
+  internalNoteUpdatedAt DateTime? @map("internal_note_updated_at") @db.Timestamptz(3)
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant    Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  submitter User          @relation("approval_submitter", fields: [submittedBy], references: [id])
-  reviewer  User?         @relation("approval_reviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
-  logs      ApprovalLog[]
+  tenant         Tenant?                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  submitter      User                    @relation("approval_submitter", fields: [submittedBy], references: [id])
+  reviewer       User?                   @relation("approval_reviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  noteEditor     User?                   @relation("approval_note_editor", fields: [internalNoteUpdatedBy], references: [id], onDelete: SetNull)
+  logs           ApprovalLog[]
+  /// Chỉ phiếu `target_type = vehicle` có dòng này — hình chiếu HÀNG ĐỢI để lọc/tìm/đếm.
+  vehicleSubject ApprovalVehicleSubject?
+  reviewChecks   ApprovalReviewCheck[]
 
   @@index([status, targetType])
+  /// Hàng đợi "Duyệt xe": `target_type` cố định + trạng thái + CŨ NHẤT TRƯỚC (và lọc ngày gửi).
+  @@index([targetType, status, submittedAt])
   @@index([tenantId, status])
   @@index([targetType, targetId])
   /// ⚠ MỘT phiếu CHỜ cho mỗi đối tượng — unique index MỘT PHẦN `approval_tasks_pending_target_uq`
@@ -923,6 +939,65 @@ model ApprovalLog {
 
   @@index([approvalTaskId])
   @@map("approval_logs")
+}
+
+/// HÌNH CHIẾU HÀNG ĐỢI của một phiếu duyệt XE (1-1 với `approval_tasks`, 24/09/2026).
+///
+/// Vì sao là bảng riêng thay vì đọc `snapshot_json`: hàng đợi phải lọc (loại xe, nguồn đăng),
+/// tìm (tên · mã · biển số) và ĐẾM theo tab ở DB, trước phân trang. Làm việc đó trên jsonb cần
+/// index biểu thức viết tay mà Prisma không mô tả được — và `migrate dev` sẽ lặng lẽ DROP nó.
+/// Ở đây mọi index đều khai được trong schema.
+///
+/// Giá trị CHỤP lúc gửi, cùng transaction với snapshot, bởi writer DUY NHẤT
+/// `VehiclesService.createVehicleApprovalTask` (và seed). Bất biến sau đó: danh sách hiện đúng
+/// thứ đang được duyệt, không phải bản ghi xe sống.
+model ApprovalVehicleSubject {
+  approvalTaskId String   @id @map("approval_task_id") @db.Char(26)
+  vehicleId      String   @map("vehicle_id") @db.Char(26)
+  /// @xeprime/types → VehicleType
+  vehicleType    String   @map("vehicle_type") @db.VarChar(50)
+  name           String   @db.VarChar(255)
+  code           String   @db.VarChar(80)
+  plateNumber    String?  @map("plate_number") @db.VarChar(50)
+  mainImageUrl   String?  @map("main_image_url") @db.Text
+  /// @xeprime/types → StorefrontKind — NGUỒN ĐĂNG lúc gửi, suy bằng `resolveStorefrontKind` từ
+  /// tuyến thu phí hiệu lực (KHÔNG từ `tenant_type`). CHECK ở migration.
+  storefrontKind String   @map("storefront_kind") @db.VarChar(20)
+  /// Tên gian hàng / chủ xe lúc gửi.
+  sourceName     String   @map("source_name") @db.VarChar(255)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  task    ApprovalTask @relation(fields: [approvalTaskId], references: [id], onDelete: Cascade)
+  vehicle Vehicle      @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId])
+  @@index([vehicleType, storefrontKind])
+  @@index([name(ops: raw("gin_trgm_ops")), plateNumber(ops: raw("gin_trgm_ops")), code(ops: raw("gin_trgm_ops"))], map: "approval_vehicle_subjects_search_trgm_idx", type: Gin)
+  @@map("approval_vehicle_subjects")
+}
+
+/// Một mục KIỂM TRA THỦ CÔNG của người duyệt trên một phiếu (24/09/2026).
+///
+/// Một dòng mỗi (phiếu, mục) — unique — nên hai người duyệt cùng đánh dấu hai mục khác nhau
+/// không ghi đè nhau như một cột jsonb chung. Bỏ đánh dấu KHÔNG xoá dòng: `passed = false` giữ
+/// lại ai đã bỏ và lúc nào. Khoá mục: `VehicleReviewCheck` ở @xeprime/types (DTO kiểm `IsIn`).
+///
+/// Ghi và phê duyệt cùng khoá dòng phiếu (`SELECT … FOR UPDATE`), nên một lượt bỏ đánh dấu
+/// không thể chen vào giữa lúc phê duyệt đọc danh mục và lúc chốt phiếu.
+model ApprovalReviewCheck {
+  id             String   @id @db.Char(26)
+  approvalTaskId String   @map("approval_task_id") @db.Char(26)
+  checkKey       String   @map("check_key") @db.VarChar(50)
+  passed         Boolean
+  updatedBy      String   @map("updated_by") @db.Char(26)
+  updatedAt      DateTime @map("updated_at") @db.Timestamptz(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  task    ApprovalTask @relation(fields: [approvalTaskId], references: [id], onDelete: Cascade)
+  updater User         @relation("approval_review_check_updater", fields: [updatedBy], references: [id])
+
+  @@unique([approvalTaskId, checkKey])
+  @@map("approval_review_checks")
 }
 
 /// Ghi chú nội bộ của admin/support gắn vào tenant/xe/đơn/khách.
@@ -1100,6 +1175,7 @@ model Vehicle {
   handoverWindows        VehicleHandoverWindow[]
   serviceSettings        VehicleServiceSetting[]
   driverSurchargeRules   VehicleDriverSurchargeRule[]
+  approvalSubjects       ApprovalVehicleSubject[]
 
   @@unique([tenantId, code])
   /// Mục tiêu cho composite FK (vehicle_id, tenant_id) của các bảng con nhạy cảm — DB tự chặn

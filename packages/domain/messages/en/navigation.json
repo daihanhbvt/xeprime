@@ -92,11 +92,15 @@
     "storefront": "Storefront",
     "settings": "Configuration",
     "support": "Help",
-    "platform": "Platform admin"
+    "platform": "Platform admin",
+    "platformMarketplace": "Marketplace",
+    "platformFinance": "Money & operations",
+    "platformPolicy": "Policies & plans",
+    "platformSystem": "System"
   },
   "platform": {
     "dashboard": "Overview",
-    "approvals": "Approvals",
+    "approvals": "Vehicle review",
     "tenants": "Shops",
     "vehicles": "All vehicles",
     "vehiclesShort": "Vehicles",
@@ -114,6 +118,8 @@
     "feePolicies": "Fee policies",
     "promoCodes": "Promo codes",
     "money": "Money operations",
-    "support": "Support / disputes"
+    "support": "Support / disputes",
+    "shops": "Shops & vehicles",
+    "billing": "Plans & fees"
   }
 }

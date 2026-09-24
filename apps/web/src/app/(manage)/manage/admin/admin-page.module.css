@@ -1,7 +1,28 @@
-.state {
-  padding: 32px 0;
+/* Màn "Duyệt xe" — tab loại xe gọn: nhãn 14px + ô đếm 12px, không có số thống kê cỡ lớn. */
+
+.tabs {
+  margin-bottom: var(--xp-space-sm);
 }
 
-.statusSelect {
-  min-width: 160px;
+.tabs :global(.ant-tabs-nav) {
+  margin-bottom: 0;
+}
+
+.tabLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body);
+}
+
+.tabCount {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-label);
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }

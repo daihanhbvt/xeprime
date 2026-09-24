@@ -351,7 +351,11 @@ export class VehiclesController {
   @RequirePermissions(PERMISSION.VEHICLE_DELETE)
   @ApiOperation({ summary: 'Xoá mềm xe (chặn nếu còn lịch hiện tại/tương lai)' })
   @ApiOkResponse({ type: IdResultDto })
-  remove(@CurrentTenant() tenant: TenantContext, @Param('id') id: string): Promise<{ id: string }> {
-    return this.vehicles.remove(tenant.tenantId, id);
+  remove(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ id: string }> {
+    return this.vehicles.remove(tenant.tenantId, id, user.id);
   }
 }

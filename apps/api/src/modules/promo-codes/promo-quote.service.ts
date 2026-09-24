@@ -114,6 +114,11 @@ export class PromoQuoteService {
       clamped: evaluation.clamped,
       customerTotalAmount: fees?.customerTotalAmount ?? null,
       holdAmount: fees?.holdAmount ?? null,
+      /*
+       * Cả bảng, không chỉ hai con số: giao diện THAY `quote.breakdown.fees` bằng nó, nên mọi
+       * dòng dẫn xuất (tiền giữ chỗ, trả chủ xe khi nhận, nhãn thu gọn) cùng một nguồn.
+       */
+      fees: fees ?? null,
       name: evaluation.snapshot.name,
       description: terms?.description ?? null,
       discountType: evaluation.snapshot.discountType,
@@ -148,6 +153,8 @@ function notApplicable(code: string, reason: string): PromoPreviewDto {
     clamped: null,
     customerTotalAmount: null,
     holdAmount: null,
+    // Không áp được ⇒ giao diện giữ nguyên bảng phí của báo giá, không thay bằng gì cả.
+    fees: null,
     name: '',
     description: null,
     discountType: '',

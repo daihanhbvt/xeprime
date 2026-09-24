@@ -212,7 +212,13 @@ export {
 /** Ký hiệu trình bày dùng chung — không phải chữ, nên không nằm trong bó message. */
 export { LIST_SEPARATOR, vehicleLabel } from './display';
 
-export { deliverySummaryText } from './rental-policy';
+export {
+  deliverySummaryText,
+  deliveryTierRanges,
+  freeDeliveryWithinKm,
+  isFreeDeliveryFee,
+  type DeliveryTierRange,
+} from './rental-policy';
 
 export {
   maintenanceCyclePercent,
