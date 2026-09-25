@@ -73,6 +73,9 @@ export const MESSAGE_NAMESPACES = [
   // Giám sát xe toàn hệ thống của admin nền tảng — chuyển sang t() ngày 23/09/2026 cùng đợt
   // tách trục hiển thị (ADR 0048), vì màn này phải giải thích được vì sao gỡ ẩn không đủ.
   { file: 'admin-vehicles', namespace: 'AdminVehicles' },
+  // Giám sát đơn thuê toàn hệ thống của admin nền tảng — chuyển sang t() ngày 24/09/2026 cùng đợt
+  // dựng lại panel chi tiết đơn đứng cạnh bảng.
+  { file: 'admin-bookings', namespace: 'AdminBookings' },
   { file: 'admin-plans', namespace: 'AdminPlans' },
   // Màn "Duyệt xe" của admin nền tảng — CHỈ phiếu xe (viết lại 24/09/2026; trước đó là hàng đợi
   // chung hồ sơ gian hàng/xe, chuyển sang t() ngày 14/09/2026).

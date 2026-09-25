@@ -125,11 +125,11 @@ describe('endpoint — luôn là hàng đợi XE', () => {
       expectedUpdatedAt: '2026-06-08T02:00:00.000Z',
     });
 
-    await decideVehicleApproval('T1', 'approve');
-    expect(client.apiPost).toHaveBeenLastCalledWith(
-      '/platform/vehicle-approvals/T1/approve',
-      undefined,
-    );
+    // Phê duyệt mang mốc snapshot người duyệt đã đọc — khoá lạc quan của 24/09/2026.
+    await decideVehicleApproval('T1', 'approve', undefined, '2026-09-24T03:00:00.000Z');
+    expect(client.apiPost).toHaveBeenLastCalledWith('/platform/vehicle-approvals/T1/approve', {
+      expectedCapturedAt: '2026-09-24T03:00:00.000Z',
+    });
 
     await decideVehicleApproval('T1', 'request_revision', 'Bổ sung ảnh nội thất');
     expect(client.apiPost).toHaveBeenLastCalledWith(

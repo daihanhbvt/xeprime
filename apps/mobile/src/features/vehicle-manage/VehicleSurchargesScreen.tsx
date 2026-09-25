@@ -95,7 +95,7 @@ export function VehicleSurchargesScreen({ vehicleId }: { vehicleId: string }) {
   );
 }
 
-function SurchargesBody({ vehicleId, canEdit }: { vehicleId: string; canEdit: boolean }) {
+export function SurchargesBody({ vehicleId, canEdit }: { vehicleId: string; canEdit: boolean }) {
   const t = useTranslations('VehicleManage');
   const rules = useDriverSurchargeRules(vehicleId);
 

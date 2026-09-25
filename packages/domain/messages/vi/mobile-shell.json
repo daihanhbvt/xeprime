@@ -54,5 +54,9 @@
   },
   "push": {
     "fallback": "Bạn có thông báo mới"
+  },
+  "appVersion": {
+    "label": "Phiên bản {version}",
+    "labelWithBuild": "Phiên bản {version} ({build})"
   }
 }

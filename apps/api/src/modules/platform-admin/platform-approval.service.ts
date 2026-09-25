@@ -339,7 +339,7 @@ export class PlatformApprovalService {
     id: string,
     reviewerId: string,
     reason?: string,
-    opts: { targetType?: ApprovalTargetType } = {},
+    opts: { targetType?: ApprovalTargetType; expectedCapturedAt?: string } = {},
   ): Promise<void> {
     const decision = DECISION[kind];
     const trimmedReason = reason?.trim() || undefined;
@@ -356,7 +356,9 @@ export class PlatformApprovalService {
         await this.applyTenantDecision(tx, kind, task, reviewerId, trimmedReason);
       } else if (task.targetType === APPROVAL_TARGET_TYPE.VEHICLE) {
         const passedChecks =
-          kind === APPROVAL_DECISION.APPROVE ? await this.assertVehicleApprovable(tx, task) : null;
+          kind === APPROVAL_DECISION.APPROVE
+            ? await this.assertVehicleApprovable(tx, task, opts.expectedCapturedAt)
+            : null;
         await this.applyVehicleDecision(tx, kind, task, reviewerId, trimmedReason, passedChecks);
       } else {
         // Phiếu giấy tờ (tenant_document/vehicle_document) mở ở phase sau.
@@ -386,8 +388,8 @@ export class PlatformApprovalService {
   private async assertVehicleApprovable(
     tx: Prisma.TransactionClient,
     task: LockedApprovalTask,
+    expectedCapturedAt?: string,
   ): Promise<VehicleReviewCheck[]> {
-    const passed = await assertVehicleChecksComplete(tx, task.id);
     if (!(await lockVehicleRow(tx, task.targetId))) throw approvalNotFound();
 
     const [live, stored] = await Promise.all([
@@ -396,6 +398,35 @@ export class PlatformApprovalService {
       tx.approvalTask.findUniqueOrThrow({ where: { id: task.id }, select: { snapshot: true } }),
     ]);
     if (!live) throw approvalNotFound();
+
+    /*
+     * Cổng SỐ KHÔNG — người duyệt có đang nhìn đúng bản này không (24/09/2026).
+     *
+     * Từ khi snapshot tự dựng lại theo mỗi lần chủ xe lưu, "phiếu đang chờ" không còn đồng nghĩa
+     * với "phiếu không đổi". Khoá dòng ở trên chặn được cuộc đua của hai TRANSACTION, nhưng không
+     * chặn được thứ thật sự xảy ra: người duyệt mở phiếu lúc 14:00, đọc kỹ, bấm Phê duyệt lúc
+     * 14:06, còn chủ xe đã sửa lúc 14:03.
+     *
+     * ĐỨNG TRƯỚC cổng danh mục kiểm tra, dù nó tốn một lượt đọc snapshot. Một lượt sửa của chủ xe
+     * XOÁ các tick (chúng là bằng chứng về bản cũ), nên nếu để cổng kia chạy trước thì người duyệt
+     * nhận `APPROVAL_CHECKLIST_INCOMPLETE` — đúng về mặt trạng thái nhưng nói sai nguyên nhân, và
+     * bỏ họ lại trước một danh mục vừa tự trắng mà không rõ vì sao. Cổng này gọi đúng tên việc đã
+     * xảy ra và bảo họ tải lại.
+     *
+     * Mốc đến từ màn duyệt chứ không phải từ máy chủ, nên đây là lời khẳng định "tôi đã đọc bản
+     * này". Thiếu mốc ⇒ bỏ qua: các đường gọi cũ (và Từ chối / Yêu cầu bổ sung, vốn trả hồ sơ về
+     * cho chủ xe nên không cần khoá) không bị bẻ gãy.
+     */
+    const currentCapturedAt = readVehicleReviewSnapshot(stored.snapshot)?.capturedAt ?? null;
+    if (expectedCapturedAt && currentCapturedAt && expectedCapturedAt !== currentCapturedAt) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.APPROVAL_SNAPSHOT_STALE,
+        message: 'Chủ xe vừa cập nhật hồ sơ — tải lại phiếu để đọc bản mới trước khi duyệt.',
+        details: { expectedCapturedAt, currentCapturedAt },
+      });
+    }
+
+    const passed = await assertVehicleChecksComplete(tx, task.id);
 
     const blockers = vehicleApprovalBlockers(live, readVehicleReviewSnapshot(stored.snapshot));
     if (blockers.missingRequirements.length > 0 || blockers.changedLockedFields.length > 0) {

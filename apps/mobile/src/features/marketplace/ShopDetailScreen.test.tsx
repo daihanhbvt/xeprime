@@ -14,6 +14,16 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, replace: jest.fn(), back: jest.fn() }),
 }));
 
+/*
+ * Phiên đang đăng nhập — nút nhắn tin đọc nó để biết đây có phải gian hàng của CHÍNH người đang
+ * xem không. `null` là khách vãng lai, tức đường đi mặc định của trang công khai này.
+ */
+const mockMe: { value: { tenant: { slug: string } | null } | null } = { value: null };
+
+jest.mock('@/features/auth/hooks/use-auth', () => ({
+  useCurrentUser: () => ({ data: mockMe.value }),
+}));
+
 /* Danh mục là một truy vấn RIÊNG (hãng, nhiên liệu, tiện ích) — không phải thứ màn này kiểm. */
 jest.mock('@/features/catalog/use-catalog', () => ({
   useCatalog: () => ({ catalog: {} }),
@@ -96,6 +106,7 @@ function renderScreen() {
 beforeEach(() => {
   jest.restoreAllMocks();
   mockPush.mockClear();
+  mockMe.value = null;
 });
 
 function mockShop(value: PublicShop = shop()) {
@@ -143,6 +154,31 @@ describe('ShopDetailScreen — hồ sơ công khai', () => {
     const view = await renderScreen();
 
     expect(view.queryByRole('button', { name: 'Nhắn tin' })).toBeNull();
+  });
+
+  /*
+   * Khu quản lý có lối "Xem gian hàng" mở đúng màn này, nên người bán vào đây thường xuyên. Nút
+   * nhắn tin ở đó mở một hội thoại của họ VỚI CHÍNH HỌ — thread hiện ở cả hai hộp thư và không
+   * ai đóng được. Gian hàng vẫn mở hộp thư công khai (`chatOpen: true`): thứ đổi là NGƯỜI XEM.
+   */
+  it('gian hàng của CHÍNH người đang xem: KHÔNG dựng nút nhắn tin', async () => {
+    mockMe.value = { tenant: { slug: 'binh-minh' } };
+    mockShop();
+    mockListings([listing()]);
+    const view = await renderScreen();
+
+    expect(await view.findByText('4,8 (26 đánh giá)')).toBeTruthy();
+    expect(view.queryByRole('button', { name: 'Nhắn tin' })).toBeNull();
+  });
+
+  /* Chủ xe khác vẫn nhắn được — phép so là theo GIAN HÀNG, không phải "ai có gian hàng". */
+  it('người xem có gian hàng KHÁC: nút nhắn tin vẫn hiện', async () => {
+    mockMe.value = { tenant: { slug: 'xe-nha-can-tho' } };
+    mockShop();
+    mockListings([listing()]);
+    const view = await renderScreen();
+
+    expect(await view.findByRole('button', { name: 'Nhắn tin' })).toBeTruthy();
   });
 
   it('hồ sơ hỏng: cả màn báo lỗi — không còn gì để nói về gian hàng', async () => {

@@ -26,6 +26,17 @@ export const ROUTES = {
    * trỏ vào đúng một chỗ.
    */
   APP: '/app',
+  /**
+   * Yêu cầu xoá tài khoản — bề mặt CÔNG KHAI, không cần phiên.
+   *
+   * App Store và Google Play đều bắt buộc một app có tài khoản phải công bố một địa chỉ web để
+   * người dùng yêu cầu xoá tài khoản, truy cập được mà KHÔNG cần cài app và KHÔNG cần đăng nhập —
+   * người duyệt app không có tài khoản thật. Đây là địa chỉ điền vào hồ sơ nộp store.
+   *
+   * KHÁC `ACCOUNT.DELETE_ACCOUNT`: đường đó nằm trong khu tài khoản, cần đăng nhập, mở support
+   * case và theo dõi/rút được yêu cầu. Trang công khai này chỉ ghi nhận.
+   */
+  DELETE_ACCOUNT: '/delete-account',
   LOGIN: '/login',
   REGISTER: '/register',
   FORGOT_PASSWORD: '/forgot-password',
@@ -557,6 +568,18 @@ export const customerPath = {
 /** Trang xem/in hợp đồng thuê. */
 export const contractPath = {
   detail: (id: string): string => `/manage/contracts/${id}`,
+};
+
+/**
+ * Nhật ký kiểm toán của MỘT đối tượng (admin nền tảng).
+ *
+ * Trang audit đọc sẵn `targetType`/`targetId` từ URL (tham số "sâu" — có test ở
+ * `audit-page.test.tsx`), nên đây là một đường link thật chứ không phải URL đoán. `targetType`
+ * là mã API ghi vào `audit_logs.target_type` — xem `AUDIT_TARGET_TYPE` ở `features/admin-audit`.
+ */
+export const adminAuditPath = {
+  forTarget: (targetType: string, targetId: string): string =>
+    `${ROUTES.MANAGE.ADMIN_AUDIT}?${new URLSearchParams({ targetType, targetId }).toString()}`,
 };
 
 /**

@@ -27,17 +27,31 @@ function dotColor(severity: VehicleAlertSeverity): string {
  * `href` của web KHÔNG dùng ở đây: nó là đường dẫn của web (`/manage/...`), và app có bản đồ
  * route riêng — bấm vào một chuỗi web sinh ra sẽ dẫn tới màn không tồn tại.
  */
-export function VehicleAlertList({ alerts }: { alerts: readonly VehicleAlertItem[] }) {
+export function VehicleAlertList({
+  alerts,
+  showEmpty = true,
+}: {
+  alerts: readonly VehicleAlertItem[];
+  /**
+   * `false` = im lặng khi danh sách rỗng, vì nơi gọi đã dựng một việc khác trong CÙNG thẻ.
+   *
+   * Hồ sơ 360 thêm việc "đưa xe lên chợ" dựng từ bản ghi xe (ADR 0048), và nó không đi qua danh
+   * sách này. Không có công tắc thì một chiếc xe còn là nháp sẽ hiện "Không có việc cần làm"
+   * ngay dưới việc "Hoàn tất hồ sơ để đưa xe lên chợ" — đúng câu tự mâu thuẫn mà đợt này sửa.
+   * Mặc định `true` để thẻ xe ngoài danh sách không đổi hành vi.
+   */
+  showEmpty?: boolean;
+}) {
   const t = useTranslations('Vehicles.alerts');
   const domainLabel = useDomainLabel();
   const [expanded, setExpanded] = useState(false);
 
   if (alerts.length === 0) {
-    return (
+    return showEmpty ? (
       <Text col={colors.textMuted} fos={fontSize.bodySm}>
         {t('empty')}
       </Text>
-    );
+    ) : null;
   }
 
   const visible = expanded ? alerts : alerts.slice(0, VEHICLE_ALERT_PRIMARY_LIMIT);

@@ -1,0 +1,11 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+/* Nút đứng cách hai ô một nhịp rõ hơn khoảng cách giữa hai ô: nó là một hành động không rút lại
+   được, không phải ô thứ ba. */
+.submit {
+  margin-top: var(--xp-space-sm);
+}

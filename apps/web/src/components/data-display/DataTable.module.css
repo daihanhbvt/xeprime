@@ -57,6 +57,27 @@
   background: var(--xp-color-bg-hover);
 }
 
+/* ---------------------------------------------------------------- hàng đang mở ở panel
+ *
+ * Nền chọn (vàng rất nhạt) + vạch vàng ở mép trái — kể cả khi chuột đang nằm trên chính hàng đó,
+ * người dùng vẫn phải thấy "đây là dòng đang mở". Chữ `tr` trong selector là CỐ Ý: nó đẩy độ
+ * ưu tiên lên (0,4,2) — cao hơn zebra (0,4,1), zebra-hover (0,4,1) và ô dính phải lúc hover
+ * (0,4,0) — nên thắng bằng độ ưu tiên chứ không nhờ thứ tự khai báo. Bản `:hover` (0,6,2) thắng
+ * cả luật hover của hàng zebra ở ô dính phải (0,5,0).
+ * Vạch vẽ bằng `box-shadow inset` ở ô ĐẦU TIÊN thay vì `border-left` của `tr`: AntD để
+ * `border-collapse: separate`, viền của `tr` không hiển thị. */
+.tableRoot :global(.ant-table-tbody) tr.rowSelected > :global(td.ant-table-cell),
+.tableRoot
+  :global(.ant-table-tbody)
+  tr.rowSelected:global(.ant-table-row:hover)
+  > :global(td.ant-table-cell) {
+  background: var(--xp-color-bg-selected);
+}
+
+.tableRoot :global(.ant-table-tbody) tr.rowSelected > :global(td.ant-table-cell:first-child) {
+  box-shadow: inset 3px 0 0 var(--xp-color-primary);
+}
+
 /* Padding trái tách cột hành động khỏi cột dữ liệu cuối (R5: 16px). */
 .actionsCell {
   padding-left: var(--xp-space-md) !important;
@@ -103,6 +124,13 @@
 .cardClickable:focus-visible {
   outline: var(--xp-focus-outline-width) solid var(--xp-color-primary);
   outline-offset: 2px;
+}
+
+/* Thẻ của bản ghi đang mở. `.card.cardSelected` (0,2,0) thắng `.card` (0,1,0) bằng độ ưu tiên;
+   với `.cardClickable:hover` hai luật chỉ chung thuộc tính viền và cùng một màu nhấn. */
+.card.cardSelected {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-bg-selected);
 }
 
 .autoCard {

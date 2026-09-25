@@ -75,6 +75,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
        * chỉ khai được những khoá Expo đã định nghĩa sẵn. Xem chú thích trong file plugin.
        */
       './plugins/with-android-camera-memory',
+      /*
+       * Hai plugin cho đường BUILD RELEASE, không liên quan tới bản debug hằng ngày:
+       * ký bằng upload key thật thay debug key của template, và gỡ cờ JVM mà JDK 21 không hiểu.
+       * Cả hai phải là plugin vì `/android` bị gitignore — sửa tay trong đó mất sau prebuild.
+       */
+      './plugins/with-android-release-signing',
+      './plugins/with-android-gradle-jvmargs',
       ...(pushConfigured
         ? ([
             '@react-native-firebase/app',

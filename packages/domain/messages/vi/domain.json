@@ -12,7 +12,8 @@
     "approve": "Phê duyệt",
     "reject": "Từ chối",
     "request_revision": "Yêu cầu bổ sung",
-    "cancel": "Huỷ phiếu"
+    "cancel": "Huỷ phiếu",
+    "profile_updated": "Chủ xe cập nhật hồ sơ"
   },
   "auditActorScope": {
     "tenant": "Gian hàng",
@@ -289,6 +290,13 @@
     "vehicle_needs_revision": "Xe cần bổ sung",
     "review_received": "Đánh giá mới",
     "booking_request_cancelled": "Khách đã huỷ yêu cầu",
+    "booking_request_expiring": "Yêu cầu sắp hết hạn",
+    "booking_request_expired": "Yêu cầu quá hạn phản hồi",
+    "promo_code_dropped": "Mã khuyến mãi không còn áp dụng",
+    "seller_profile_verified": "Hồ sơ người bán đã xác minh",
+    "seller_profile_changes_requested": "Hồ sơ người bán cần bổ sung",
+    "seller_profile_rejected": "Hồ sơ người bán bị từ chối",
+    "support_case_updated": "Cập nhật yêu cầu hỗ trợ",
     "subscription_expiring": "Gói sắp hết hạn",
     "subscription_expired": "Gói đã hết hạn",
     "subscription_lapsed": "Đã chuyển sang tính hoa hồng",
@@ -692,6 +700,8 @@
   },
   "bookingHoldOutcome": {
     "kept": "Đã dùng cho chuyến",
+    "settled": "Đã quyết toán",
+    "split_late_cancel": "Huỷ muộn — chia đôi",
     "refunded": "Đã hoàn khách",
     "forfeited": "Bồi thường chủ xe",
     "released_to_shop": "Đã chuyển gian hàng"
@@ -699,12 +709,14 @@
   "holdRefundStatus": {
     "pending": "Chờ chuyển trả",
     "paid": "Đã chuyển trả",
+    "credited": "Đã vào ví điểm",
     "rejected": "Từ chối hoàn"
   },
   "holdRefundReason": {
     "early_cancel": "Khách huỷ trước mốc miễn phí",
     "owner_cancel": "Chủ xe huỷ chuyến",
     "overpaid": "Chuyển thừa",
+    "hold_expired": "Hết hạn thanh toán giữ chỗ",
     "admin_decision": "Quyết định của XePrime"
   },
   "supportCaseStatus": {
@@ -776,7 +788,8 @@
     "schedule_busy": "Xe bận trong khoảng thời gian này",
     "no_driver": "Không có tài xế rảnh cho khung giờ này",
     "hold_required_with_driver": "Chuyến có tài xế cần chủ xe xác nhận trước khi giữ chỗ",
-    "terms_not_accepted": "Khách chưa đồng ý điều khoản thuê"
+    "terms_not_accepted": "Khách chưa đồng ý điều khoản thuê",
+    "billing_not_configured": "Gian hàng chưa có chế độ tính phí hiệu lực"
   },
   "bookingRequestDecisionSource": {
     "host": "Chủ xe quyết định",

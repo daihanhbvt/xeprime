@@ -144,6 +144,7 @@ export function ShopProfileScreen({
   header,
   intro,
   welcome = false,
+  variant = 'settings',
 }: {
   header?: ReactNode;
   intro?: ReactNode;
@@ -154,6 +155,21 @@ export function ShopProfileScreen({
    * điều hướng, và kịch bản xấu nhất là ai đó thấy một dòng chào không dành cho mình.
    */
   welcome?: boolean;
+  /**
+   * BỀ MẶT đang dựng màn này — web tách nó thành HAI component, app dùng lại một.
+   *
+   * - `settings` (mặc định) = `ShopWorkspace` của web, trang Cửa hàng ở cổng quản lý: đủ năm
+   *   khối, gồm Chủ gian hàng · Tài khoản nhận tiền · Gói & hạn mức.
+   * - `profileForm` = `ShopProfileWorkspace` của web, phần nhúng trong "Hồ sơ chủ xe" ở khu
+   *   tài khoản: CHỈ hai nhóm ô của hồ sơ (hiển thị + địa chỉ/pháp lý) kèm dải trạng thái và
+   *   checklist.
+   *
+   * Ba khối kia không thuộc về màn đăng ký, và không chỉ vì bố cục: người đứng ở đó là chủ xe
+   * TUYẾN HOA HỒNG, còn "Quản lý thông tin đăng nhập" và "Tài khoản nhận tiền" đều dẫn vào cổng
+   * quản lý — nơi họ không vào được (ADR 0027/0028). Một nút chắc chắn dẫn tới màn từ chối còn
+   * tệ hơn là không có nút.
+   */
+  variant?: 'settings' | 'profileForm';
 } = {}) {
   const t = useTranslations('Shop');
   const shell = header ?? <ManageHeader />;
@@ -228,6 +244,7 @@ export function ShopProfileScreen({
        * tuyến hoa hồng bắt được tham số từ một link chia sẻ.
        */
       welcome={welcome && isEstablishedPackageShop(tenant)}
+      variant={variant}
     />
   );
 }
@@ -259,6 +276,7 @@ function ProfileForm({
   canEdit,
   canSubmit,
   welcome,
+  variant,
 }: {
   shell: ReactNode;
   /** Khối của khu gọi, đặt TRÊN biểu mẫu — tiến trình đăng ký ở khu khách, không có gì ở Manage. */
@@ -268,7 +286,11 @@ function ProfileForm({
   canSubmit: boolean;
   /** Đã lọc theo tuyến ở nơi gọi — ở đây chỉ còn là "có dựng dải chào hay không". */
   welcome: boolean;
+  /** Xem docblock cùng tên ở `ShopProfileScreen`. */
+  variant: 'settings' | 'profileForm';
 }) {
+  /** Trang Cửa hàng đầy đủ của cổng quản lý — ba khối cuối chỉ thuộc về nó. */
+  const isSettings = variant === 'settings';
   const t = useTranslations('Shop');
   const tActions = useTranslations('Common.actions');
   const toast = useAppToast();
@@ -530,10 +552,12 @@ function ProfileForm({
             nhân, email/SĐT qua xác minh OTP — chứ không qua một form mà bất kỳ ai có
             `tenant.update` cũng ghi được (ADR 0038 điều 3).
           */}
-          <ShopOwnerCard
-            owner={shop.ownerAccount}
-            onOpenSecurity={() => navigateOnce(ROUTES.manage.account())}
-          />
+          {isSettings ? (
+            <ShopOwnerCard
+              owner={shop.ownerAccount}
+              onOpenSecurity={() => navigateOnce(ROUTES.manage.account())}
+            />
+          ) : null}
 
           <FormSection title={t('form.address.title')} icon="location-outline">
             {/*
@@ -589,7 +613,9 @@ function ProfileForm({
             Gác bằng SỞ HỮU chứ không bằng permission: `/shop/bank-accounts` là `@ShopOwnerOnly()`
             (ADR 0038 điều 3), và quản lý mở khối này chỉ để nhận 403.
           */}
-          {isShopOwner ? <BankAccountList scope="shop" title={t('sections.payout')} /> : null}
+          {isSettings && isShopOwner ? (
+            <BankAccountList scope="shop" title={t('sections.payout')} />
+          ) : null}
 
           {/*
             GÓI & HẠN MỨC — khối thứ NĂM của trang Cửa hàng, nhúng nguyên thân màn gói vào đây
@@ -603,7 +629,7 @@ function ProfileForm({
             Không bọc thêm `<Card>`: từng khối bên trong (gói hiện hành, chỗ xe, lượt miễn phí,
             hoá đơn) đã tự mang thẻ của nó — đó chính là chỗ web phải tắt `framed`.
           */}
-          {canSeePlan ? (
+          {isSettings && canSeePlan ? (
             <YStack gap={space.md}>
               <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.semibold}>
                 {t('sections.plan')}

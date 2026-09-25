@@ -7,9 +7,10 @@ import { useTranslations } from 'use-intl';
 import {
   API_ERROR_CODE,
   PERMISSION,
+  MARKETPLACE_VISIBILITY_REASON_META,
   VEHICLE_OPERATION_STATUS_META,
-  VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
+  type MarketplaceVisibilityReason,
   type VehicleOperationStatus,
   type VehiclePublicStatus,
 } from '@xeprime/types';
@@ -207,7 +208,12 @@ function VehicleSummaryCard({ vehicle }: { vehicle: VehicleDetail }) {
   const navigateOnce = useNavigateOnce();
   const summary = useVehicleSummary(vehicle.id);
   const stats = summary.data?.stats;
-  const isPublic = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
+  /*
+   * "Xem trang xe" theo KẾT QUẢ hiển thị thật, không theo trạng thái kiểm duyệt (ADR 0048 điều 7):
+   * một chiếc xe đã duyệt nhưng chủ xe đang tạm ẩn thì `/listings/:id` trả 404, nên một liên kết
+   * sáng ở đây là dẫn người dùng tới một trang không tồn tại.
+   */
+  const isPublic = vehicle.isMarketplaceVisible;
 
   return (
     <Card>
@@ -246,6 +252,22 @@ function VehicleSummaryCard({ vehicle }: { vehicle: VehicleDetail }) {
           <StatusBadge
             label={domainLabel('vehiclePublicStatus', vehicle.publicStatus)}
             color={VEHICLE_PUBLIC_STATUS_META[vehicle.publicStatus as VehiclePublicStatus].color}
+            size="sm"
+          />
+          {/* Kết quả hiển thị THẬT — server suy, client không ghép lại từ ba status (ADR 0048). */}
+          <StatusBadge
+            label={domainLabel(
+              'marketplaceVisibility',
+              vehicle.marketplaceVisibilityReason,
+              MARKETPLACE_VISIBILITY_REASON_META[
+                vehicle.marketplaceVisibilityReason as MarketplaceVisibilityReason
+              ].label,
+            )}
+            color={
+              MARKETPLACE_VISIBILITY_REASON_META[
+                vehicle.marketplaceVisibilityReason as MarketplaceVisibilityReason
+              ].color
+            }
             size="sm"
           />
         </XStack>

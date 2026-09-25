@@ -31,8 +31,16 @@ function trip(stage: CustomerTripStage): CustomerTripDetail {
      * Từ ADR 0044, cột này KHÔNG bị xoá khi chủ xe nhận chuyến. Bản trước của màn hỏi nó để quyết
      * định bày nút gì, nên một chuyến đã duyệt vẫn hiện nút "Duyệt" — và cú chạm đó chỉ trả về
      * một lỗi khó hiểu từ server.
+     *
+     * Mốc tính TƯƠNG ĐỐI với lúc chạy, không ghi cứng một ngày giờ.
+     *
+     * Bản trước để `'2026-09-24T02:00:00.000Z'`. `ApproveRequestSheet` khoá nút xác nhận khi đã
+     * quá `respondBy` (cùng vị từ server dùng), nên sáu bài trong file này xanh cho tới đúng
+     * 09:00 giờ VN ngày 24/09/2026 rồi đỏ — không ai sửa gì cả. Triệu chứng đọc ra như một bài
+     * test chập chờn ("Unable to find text: Đã tạo đơn thuê"), và nó che mất chỗ hỏng thật:
+     * lượt duyệt không bao giờ chạy.
      */
-    respondBy: '2026-09-24T02:00:00.000Z',
+    respondBy: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
     bookingId: null,
     vehicle: { id: '01JQZX0000000000000000000V', name: 'Toyota Vios 2022', plateNumber: '51A-123.45' },
     renter: { name: 'Nguyễn Văn An', phone: '0901234567' },

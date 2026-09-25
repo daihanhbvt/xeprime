@@ -3,6 +3,7 @@ import { useTranslations } from 'use-intl';
 import { Screen } from '@/components/layout/Screen';
 import { ProfileSkeleton } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
+import { AppVersion } from '@/components/ui/AppVersion';
 import { Card } from '@/components/ui/Card';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
@@ -131,6 +132,8 @@ export function ManageAccountScreen() {
               />
             </YStack>
           </Card>
+
+          <AppVersion />
         </YStack>
       </Screen>
     </>

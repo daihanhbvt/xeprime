@@ -12,17 +12,29 @@ import styles from './DetailDrawer.module.css';
 import { useTranslations } from 'next-intl';
 
 /**
- * Bề rộng panel desktop — token Wave 1A (`--xp-drawer-width` / `-lg`) + `xl` (24/09/2026).
+ * Bề rộng panel desktop — token Wave 1A (`--xp-drawer-width` / `-lg`) + `xl` và `split`
+ * (24/09/2026).
  *
  * `xl` là panel làm việc RỘNG (màn duyệt xe: hồ sơ + danh mục kiểm tra hai cột): ~75% màn lớn,
  * trần 1400px, phủ gần hết vùng nội dung ở desktop nhỏ — một biểu thức `clamp()` trong token,
  * không phải một con số, nên không có nhánh JS theo bề rộng màn hình.
+ *
+ * `split` là panel ĐỨNG CẠNH danh sách (đi cùng `modeless`): ~46% màn hình, 560–780px — đủ cho
+ * nội dung hai cột mà phần bảng còn lại vẫn đọc được. Trang chừa chỗ cho bảng bằng CHÍNH token
+ * này (`--xp-drawer-width-split`), nên hai bên không thể lệch nhau.
  */
 const DRAWER_WIDTH = {
   md: XP_TOKENS['drawer-width'],
   lg: XP_TOKENS['drawer-width-lg'],
   xl: XP_TOKENS['drawer-width-xl'],
+  split: XP_TOKENS['drawer-width-split'],
 } as const;
+
+/** Props riêng của panel `modeless` — xem prop `modeless` và chỗ trải nó bên dưới. */
+const MODELESS_PROPS = { mask: false, 'aria-modal': false } as const;
+
+/** Hai cỡ phủ kín màn hình từ tablet trở xuống — xem `.tabletFullWrapper`. */
+const FULL_ON_TABLET: ReadonlySet<DetailDrawerSize> = new Set<DetailDrawerSize>(['xl', 'split']);
 
 export type DetailDrawerSize = keyof typeof DRAWER_WIDTH;
 
@@ -58,6 +70,18 @@ interface DetailDrawerProps {
    * toàn màn hình vẫn là mũi tên quay lại ở ĐẦU (Figma quy tắc 6).
    */
   closeAtEnd?: boolean;
+  /**
+   * Panel ĐỨNG CẠNH nội dung trang thay vì chặn nó: không mask tối, không khoá cuộn trang, không
+   * bẫy focus, không `aria-modal` — người dùng (kể cả trình đọc màn hình) vẫn đọc và bấm được
+   * danh sách phía sau (chọn đơn khác là đổi nội dung panel). Ở desktop panel nằm DƯỚI topbar của
+   * AppShell để chuông thông báo và menu tài khoản không bị che suốt lúc panel mở. Esc vẫn đóng
+   * panel kể cả khi focus đang ở ngoài nó: rc-drawer bắt Esc ở `window` theo ngăn xếp portal,
+   * nên một dropdown đang mở vẫn được đóng TRƯỚC.
+   *
+   * Trang dùng cờ này phải tự chừa chỗ cho nội dung (xem cỡ `split`), nếu không panel sẽ đè lên
+   * đúng phần người dùng đang cần nhìn.
+   */
+  modeless?: boolean;
   className?: string;
   bodyClassName?: string;
   'data-testid'?: string;
@@ -99,6 +123,7 @@ export function DetailDrawer({
   ariaLabel,
   destroyOnClose = true,
   closeAtEnd = false,
+  modeless = false,
   className,
   bodyClassName,
   'data-testid': testId,
@@ -129,17 +154,29 @@ export function DetailDrawer({
             : true
       }
       destroyOnHidden={destroyOnClose}
+      /*
+       * Chỉ TRẢI hai prop này khi modeless — không bao giờ truyền `undefined` tường minh.
+       * rc-drawer gắn cứng `aria-modal="true"` rồi trải props của ta lên SAU, nên một khoá
+       * `aria-modal: undefined` sẽ xoá luôn giá trị mặc định của mọi panel thường. Panel không
+       * chặn trang thì không mask và không được báo trình đọc màn hình rằng trang phía sau đã trơ.
+       */
+      {...(modeless ? MODELESS_PROPS : {})}
       className={className}
       classNames={{
         body: cx(styles.body, bodyClassName),
         footer: styles.footer,
         /*
          * Panel `xl` là một bàn làm việc hai cột: ở tablet nó chỉ còn cách phủ kín màn hình (một
-         * panel 75% của 900px là hai cột 400px — không đọc được cột nào). Làm bằng CSS thay vì
-         * thêm một hook media query: `md`/`lg` giữ nguyên hành vi cũ, và không có thêm một
-         * nhánh render theo bề rộng màn hình.
+         * panel 75% của 900px là hai cột 400px — không đọc được cột nào). `split` cũng vậy: ở
+         * tablet không còn chỗ để đứng cạnh danh sách. Làm bằng CSS thay vì thêm một hook media
+         * query: `md`/`lg` giữ nguyên hành vi cũ, và không có thêm một nhánh render theo bề
+         * rộng màn hình.
          */
-        wrapper: size === 'xl' ? styles.xlWrapper : undefined,
+        wrapper:
+          cx(
+            FULL_ON_TABLET.has(size) && styles.tabletFullWrapper,
+            modeless && styles.modelessWrapper,
+          ) || undefined,
       }}
       data-testid={testId}
     >

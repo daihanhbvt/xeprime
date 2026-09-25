@@ -73,13 +73,13 @@ interface HubGroup {
 }
 
 /**
- * Hub SỬA XE (VEH-04) — sáu mục, mỗi mục một màn riêng.
+ * Hub SỬA XE (VEH-04) — BẢY mục, mỗi mục một màn riêng.
  *
- * Web dựng sáu tab trong một trang; ở 390px sáu tab chữ không vừa một hàng, nên native tách
- * thành sáu route. Đây là khác biệt ĐIỀU HƯỚNG, không phải nghiệp vụ: cùng sáu mục, cùng thứ
+ * Web dựng bảy tab trong một trang; ở 390px bảy tab chữ không vừa một hàng, nên native tách
+ * thành bảy route. Đây là khác biệt ĐIỀU HƯỚNG, không phải nghiệp vụ: cùng bảy mục, cùng thứ
  * tự, cùng nhãn (`Vehicles.edit.tabs.*`), cùng payload từng mục — web vốn đã tách payload
- * (`informationValuesToInput` ≠ `mediaValuesToInput`), còn Giá/Nguồn/Giấy tờ/Bảo dưỡng là bốn
- * feature riêng có form riêng.
+ * (`informationValuesToInput` ≠ `mediaValuesToInput`), còn Giá/Vận hành/Nguồn/Giấy tờ/Bảo dưỡng
+ * là năm feature riêng có form riêng.
  *
  * Lợi thế đi kèm: guard "bỏ thay đổi" gắn vào nút Lui của TỪNG màn con, không phải một hộp
  * thoại đổi tab tự dựng.
@@ -90,6 +90,7 @@ interface HubGroup {
  */
 export function VehicleEditHubScreen({ vehicleId }: { vehicleId: string }) {
   const t = useTranslations('Vehicles.edit');
+  const tOperations = useTranslations('VehicleManage.operationsTab');
   const router = useRouter();
   const navigateOnce = useNavigateOnce();
   const { has, isLoading: permissionsLoading } = usePermissions();
@@ -112,13 +113,13 @@ export function VehicleEditHubScreen({ vehicleId }: { vehicleId: string }) {
   };
 
   /**
-   * Sáu mục — quyền của TỪNG mục khớp guard backend của endpoint nó mở ra.
+   * Bảy mục — quyền của TỪNG mục khớp guard backend của endpoint nó mở ra.
    *
    * `Giá & chính sách` trỏ thẳng route VEH-05 (`/pricing`), không có màn con `edit/pricing`:
    * web cũng vậy — một màn, hai lối vào.
    *
    * Chia hai NHÓM vì đó là hai loại việc khác nhau: ba mục trên là thứ khách nhìn thấy trên chợ,
-   * ba mục dưới là hồ sơ nội bộ — và quyền của chúng cũng khác hẳn nhau.
+   * bốn mục dưới là hồ sơ và vận hành nội bộ — và quyền của chúng cũng khác hẳn nhau.
    */
   const allGroups: HubGroup[] = [
     {
@@ -152,6 +153,19 @@ export function VehicleEditHubScreen({ vehicleId }: { vehicleId: string }) {
       key: 'records',
       label: t('groups.records'),
       items: [
+        /*
+          VẬN HÀNH đứng ĐẦU nhóm "Hồ sơ & vận hành": nó là thứ duy nhất trong nhóm mà khách nhìn
+          thấy hệ quả (giờ giao xe, điều khoản, phụ phí), còn nguồn xe/giấy tờ/bảo dưỡng là sổ
+          nội bộ. Câu mô tả dùng lại `operationsTab.hint` — cùng chữ với tiêu đề màn đích, không
+          chép ra một khoá thứ hai.
+        */
+        {
+          tab: VEHICLE_EDIT_TAB.OPERATIONS,
+          label: t('tabs.operations'),
+          hint: tOperations('hint'),
+          icon: 'options-outline',
+          permission: PERMISSION.VEHICLE_VIEW,
+        },
         {
           tab: VEHICLE_EDIT_TAB.SOURCE,
           label: t('tabs.source'),

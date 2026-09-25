@@ -101,6 +101,31 @@ export function useSubmitVehiclePublic(id: string) {
 }
 
 /**
+ * Bật/tắt hiển thị xe trên chợ (ADR 0048).
+ *
+ * Làm mới thêm nhánh `marketplace` — thứ mà các mutation xe khác không cần: chi tiết xe ngoài
+ * chợ, kết quả tìm kiếm, trang gian hàng và khối gợi ý đều vừa đổi nội dung, và một cache cũ ở
+ * đó nghĩa là chiếc xe vừa bị cất đi vẫn bày ra cho tới khi người dùng tự tải lại. Nhánh
+ * `vehicles` phủ chi tiết + danh sách + `stats`/`alerts` của khu quản lý.
+ *
+ * KHÔNG ghi lạc quan vào CACHE: chỉ server biết một chiếc xe bật lên có thật sự ra chợ không (ba
+ * cổng của ADR 0048), nên dòng chữ trạng thái phải đợi câu trả lời thật. Vị trí HÌNH ẢNH của công
+ * tắc thì `MarketplaceVisibilityRow` tự giữ trong lúc bay — xem docblock ở đó; đây là hai thứ
+ * khác nhau và chúng từng bị gộp làm một.
+ */
+export function useSetVehicleMarketplaceVisibility(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (enabled: boolean) => vehiclesApi.setMarketplaceVisibility(id, enabled),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(queryKeys.vehicles.detail(id), updated);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.marketplace.all });
+    },
+  });
+}
+
+/**
  * Lưu hồ sơ nguồn xe.
  *
  * Invalidate cả nhánh `vehicles`: đổi hình thức nguồn làm lệch chip nguồn ở thẻ danh sách và

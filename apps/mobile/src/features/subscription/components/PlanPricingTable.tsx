@@ -1,11 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
+import { STATUS_COLOR } from '@xeprime/types';
 import { useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { Button } from '@/components/ui/Button';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Card } from '@/components/ui/Card';
+import { CardAccent } from '@/components/ui/CardAccent';
 import { Chip } from '@/components/ui/Chip';
+import { Divider } from '@/components/ui/DataRow';
+import { IconDisc } from '@/components/ui/IconDisc';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
@@ -76,8 +81,7 @@ export function PlanPricingTable({ state }: { state: PlanPurchaseState }) {
    * Từ lúc bảng kỳ hạn dời vào tấm trượt, trang không còn chỗ nào nói người dùng đã chọn kỳ
    * nào — tấm đóng lại là lựa chọn biến mất khỏi tầm mắt. Thẻ bậc phải tự mang nó.
    */
-  const chosenTerm =
-    selected?.terms.find((choice) => choice.months === termMonths) ?? null;
+  const chosenTerm = selected?.terms.find((choice) => choice.months === termMonths) ?? null;
 
   /*
    * Chạm một bậc = chọn bậc VÀ hỏi kỳ hạn. Chạm lại đúng bậc đang chọn thì mở lại tấm — đó là
@@ -89,7 +93,7 @@ export function PlanPricingTable({ state }: { state: PlanPurchaseState }) {
   };
 
   return (
-    <YStack gap={space.md}>
+    <YStack gap={space.sm}>
       <YStack gap={space.sm} accessibilityRole="radiogroup" accessibilityLabel={t('planLabel')}>
         {tiers.map((tier) => (
           <TierCard
@@ -196,129 +200,141 @@ function TierCard({
 
   /* Mốc rẻ nhất để so ngang ba bậc — bậc không bán kỳ 1 tháng thì lấy kỳ ngắn nhất nó có. */
   const monthly = tier.terms.find((term) => term.months === 1) ?? tier.terms[0];
+  const leadColor = active
+    ? STATUS_COLOR.SUCCESS
+    : tier.limits.recommended
+      ? STATUS_COLOR.WARNING
+      : STATUS_COLOR.NEUTRAL;
 
   return (
-    <Card tone={active ? 'accent' : 'surface'}>
-      <YStack gap={space.sm}>
-        <XStack ai="center" gap={space.xs} flexWrap="wrap">
-          <Text f={1} col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
-            {tier.plan.name}
-          </Text>
-          {tier.limits.recommended ? <Chip label={t('recommendedTag')} size="sm" /> : null}
-          {tier.selfServe ? null : <Chip label={t('enterpriseTag')} size="sm" />}
-        </XStack>
+    <Card padded={false}>
+      <XStack>
+        <CardAccent color={leadColor} />
+        <YStack f={1} p={space.md} gap={space.sm}>
+          <XStack ai="center" gap={space.sm}>
+            <IconDisc
+              icon={tier.selfServe ? 'ribbon-outline' : 'business-outline'}
+              tone={active ? colors.primary : colors.primaryActive}
+              surface={colors.primaryLight}
+              filled={active}
+            />
+            <YStack f={1} minWidth={0} gap={2}>
+              <Text col={colors.textMuted} fos={fontSize.meta} fow={fontWeight.semibold}>
+                {t('tierLabel').toUpperCase()}
+              </Text>
+              <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold} numberOfLines={2}>
+                {tier.plan.name}
+              </Text>
+            </YStack>
+            {active ? (
+              <StatusBadge label={t('tierSelected')} color={STATUS_COLOR.SUCCESS} size="sm" />
+            ) : tier.limits.recommended ? (
+              <StatusBadge label={t('recommendedTag')} color={STATUS_COLOR.WARNING} size="sm" />
+            ) : tier.selfServe ? null : (
+              <StatusBadge label={t('enterpriseTag')} color={STATUS_COLOR.NEUTRAL} size="sm" />
+            )}
+          </XStack>
 
-        {tier.plan.description ? (
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {tier.plan.description}
-          </Text>
-        ) : null}
+          {tier.plan.description ? (
+            <Text col={colors.textMuted} fos={fontSize.bodySm}>
+              {tier.plan.description}
+            </Text>
+          ) : null}
 
-        <YStack gap={space.xs}>
-          <LimitLine
-            text={
-              tier.limits.maxVehicles == null
-                ? t('limitVehiclesUnlimited')
-                : t('limitVehicles', { count: tier.limits.maxVehicles })
-            }
-          />
-          <LimitLine
-            text={
-              tier.limits.maxBranches == null
-                ? t('limitBranchesUnlimited')
-                : t('limitBranches', { count: tier.limits.maxBranches })
-            }
-          />
-          {/*
+          <Divider />
+
+          <YStack gap={space.xs}>
+            <LimitLine
+              text={
+                tier.limits.maxVehicles == null
+                  ? t('limitVehiclesUnlimited')
+                  : t('limitVehicles', { count: tier.limits.maxVehicles })
+              }
+            />
+            <LimitLine
+              text={
+                tier.limits.maxBranches == null
+                  ? t('limitBranchesUnlimited')
+                  : t('limitBranches', { count: tier.limits.maxBranches })
+              }
+            />
+            {/*
             Hai NĂNG LỰC đầu của bậc, viết bằng ngôn ngữ người dùng (`Domain.planFeature`) — hạn mức
             nói được "bao nhiêu xe" nhưng không nói được "rồi làm gì với chúng". Dừng ở hai để
             ba thẻ bậc còn so ngang được trong một tầm mắt; danh sách đủ nằm ở khối "mở khoá".
           */}
-          {tier.limits.features.slice(0, FEATURE_LINES).map((feature) => (
-            <LimitLine key={feature} text={domainLabel('planFeature', feature)} />
-          ))}
-        </YStack>
+            {tier.limits.features.slice(0, FEATURE_LINES).map((feature) => (
+              <LimitLine key={feature} text={domainLabel('planFeature', feature)} />
+            ))}
+          </YStack>
 
-        {tier.selfServe && monthly ? (
-          <XStack ai="baseline" gap={space.xs}>
-            <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
-              {fmt.money(String(monthly.total))}
+          {tier.selfServe && monthly ? (
+            <XStack ai="baseline" gap={space.xs}>
+              <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
+                {fmt.money(String(monthly.total))}
+              </Text>
+              <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                {/* Kỳ 1 tháng đọc là "/ tháng" — "/1 tháng" là một con số không ai cần đọc. */}
+                {monthly.months === 1 ? t('perMonth') : t('perTerm', { months: monthly.months })}
+              </Text>
+            </XStack>
+          ) : (
+            <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.medium}>
+              {t('contactForQuote')}
             </Text>
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
-              {/* Kỳ 1 tháng đọc là "/ tháng" — "/1 tháng" là một con số không ai cần đọc. */}
-              {monthly.months === 1
-                ? t('perMonth')
-                : t('perTerm', { months: monthly.months })}
-            </Text>
-          </XStack>
-        ) : (
-          <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.medium}>
-            {t('contactForQuote')}
-          </Text>
-        )}
+          )}
 
-        {/*
+          {/*
           Bậc ĐANG CHỌN đi nút chính kèm dấu tích; bậc còn lại là vàng nhạt — vẫn mời chạm,
           nhưng không tranh chấp với bậc đã chọn.
         */}
-        {/*
+          {/*
           Kỳ hạn đã chốt, nói bằng CHỮ ngay trên thẻ: giá tháng phía trên là mốc so sánh giữa
           các bậc, còn đây mới là thứ người dùng sắp trả. Thiếu dòng này thì sau khi tấm trượt
           đóng, lựa chọn của họ chỉ còn tồn tại trong một con số tổng ở tận cuối màn.
         */}
-        {chosenTerm ? (
-          <XStack
-            ai="center"
-            gap={space.sm}
-            p={space.sm}
-            br={radius.md}
-            bw={1}
-            bc={colors.primary}
-            bg={colors.primaryLight}
-          >
-            <Ionicons
-              name="calendar-clear"
-              size={iconSize.md}
-              color={colors.primaryActive}
-              accessibilityElementsHidden
-            />
-            <YStack f={1} minWidth={0}>
-              {/*
-                Nhãn nhỏ phía trên nói ĐÂY LÀ GÌ, con số lớn phía dưới là thứ mắt bắt trước.
-                Một dòng ngang cỡ chữ phụ thì lựa chọn vừa chốt đọc ngang hàng với hai dòng hạn
-                mức phía trên — trong khi nó mới là thứ người dùng sắp trả tiền.
-              */}
-              <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.medium}>
-                {t('termsTitle')}
-              </Text>
-              <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
+          {chosenTerm ? (
+            <XStack
+              ai="center"
+              gap={space.xs}
+              pt={space.xs}
+              borderTopWidth={1}
+              borderColor={colors.borderSubtle}
+            >
+              <Ionicons
+                name="calendar-clear"
+                size={iconSize.sm}
+                color={colors.primaryActive}
+                accessibilityElementsHidden
+              />
+              <Text f={1} col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
                 {t('termOption', { months: chosenTerm.months })}
               </Text>
-            </YStack>
-            <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
-              {fmt.money(String(chosenTerm.total))}
-            </Text>
-          </XStack>
-        ) : null}
+              <Text col={colors.price} fos={fontSize.bodySm} fow={fontWeight.bold}>
+                {fmt.money(String(chosenTerm.total))}
+              </Text>
+            </XStack>
+          ) : null}
 
-        {tier.selfServe ? (
-          <Button
-            label={active ? t('tierSelected') : t('tierSelect')}
-            variant={active ? 'primary' : 'accent'}
-            size="sm"
-            {...(active ? { icon: 'checkmark-circle-outline' as const } : {})}
-            onPress={onSelect}
-          />
-        ) : (
-          <Button
-            label={t('contactSales')}
-            variant="accent"
-            size="sm"
-            icon="headset-outline"
-            onPress={onContact}
-          />
-        )}
-      </YStack>
+          {tier.selfServe ? (
+            <Button
+              label={active ? t('tierSelected') : t('tierSelect')}
+              variant={active ? 'primary' : 'accent'}
+              size="sm"
+              {...(active ? { icon: 'checkmark-circle-outline' as const } : {})}
+              onPress={onSelect}
+            />
+          ) : (
+            <Button
+              label={t('contactSales')}
+              variant="accent"
+              size="sm"
+              icon="headset-outline"
+              onPress={onContact}
+            />
+          )}
+        </YStack>
+      </XStack>
     </Card>
   );
 }

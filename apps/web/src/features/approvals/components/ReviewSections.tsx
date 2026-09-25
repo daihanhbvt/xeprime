@@ -184,6 +184,12 @@ const ACTION_COLOR: Record<ApprovalAction, string> = {
   [APPROVAL_ACTION.REJECT]: 'red',
   [APPROVAL_ACTION.REQUEST_REVISION]: 'orange',
   [APPROVAL_ACTION.CANCEL]: 'gray',
+  /*
+   * Chủ xe sửa hồ sơ giữa chừng — `orange` như "yêu cầu bổ sung", không phải `blue` như lượt
+   * gửi: cả hai đều là mốc mà thứ người duyệt đã đọc không còn dùng được, và ở mốc này các tick
+   * trong danh mục kiểm tra vừa bị đặt lại.
+   */
+  [APPROVAL_ACTION.PROFILE_UPDATED]: 'orange',
 };
 
 export function ReviewHistory({ logs }: { logs: VehicleApprovalDetail['logs'] }) {

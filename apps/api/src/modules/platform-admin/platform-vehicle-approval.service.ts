@@ -473,8 +473,12 @@ export class PlatformVehicleApprovalService {
     id: string,
     reviewerId: string,
     reason?: string,
+    opts: { expectedCapturedAt?: string } = {},
   ): Promise<VehicleApprovalDetailDto> {
-    await this.approvals.decide(kind, id, reviewerId, reason, { targetType: VEHICLE_TARGET });
+    await this.approvals.decide(kind, id, reviewerId, reason, {
+      targetType: VEHICLE_TARGET,
+      expectedCapturedAt: opts.expectedCapturedAt,
+    });
     return this.detail(id);
   }
 

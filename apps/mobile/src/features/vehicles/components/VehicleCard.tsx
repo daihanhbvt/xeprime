@@ -3,6 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
+  MARKETPLACE_VISIBILITY_REASON,
+  MARKETPLACE_VISIBILITY_REASON_META,
   SERVICE_TYPE,
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS_META,
@@ -20,11 +22,29 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import type { IconName } from '@/components/ui/Chip';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { useDomainLabel } from '@/i18n/domain';
+import { useDomainLabel, type DomainLabel } from '@/i18n/domain';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { discountedPriceVnd } from '../pricing';
 import { useVehicleAlertBadges } from './vehicle-alert-badges';
 import type { VehicleAlertGroup, VehicleListItem, VehicleStats } from '../api';
+
+/**
+ * Viên "Chủ xe tạm ẩn" — dựng ở module scope vì nội dung của nó chỉ phụ thuộc bộ dịch, không
+ * phụ thuộc chiếc xe nào.
+ */
+function ownerPausedBadge(domainLabel: DomainLabel): BadgeRowItem {
+  const meta = MARKETPLACE_VISIBILITY_REASON_META[MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED];
+  const label = domainLabel(
+    'marketplaceVisibility',
+    MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED,
+    meta.label,
+  );
+  return {
+    key: 'ownerPaused',
+    label,
+    node: <StatusBadge label={label} color={meta.color} size="sm" />,
+  };
+}
 
 /**
  * Tỉ lệ khung ảnh — 2:1.
@@ -170,6 +190,16 @@ function VehicleCardImpl({
         />
       ),
     },
+    /*
+     * Viên thứ hai CHỈ khi chính chủ xe đang tạm ẩn (ADR 0048 điều 5).
+     *
+     * Mọi lý do ẩn khác đã đọc được từ viên kiểm duyệt ngay bên cạnh, nên hiện lại là lặp; còn
+     * "đã duyệt nhưng chủ xe tắt" thì KHÔNG đọc được từ chỗ nào khác — và không hiện nó nghĩa là
+     * một chiếc xe đang cất đi trông y hệt một chiếc đang bán.
+     */
+    ...(vehicle.marketplaceVisibilityReason === MARKETPLACE_VISIBILITY_REASON.OWNER_PAUSED
+      ? [ownerPausedBadge(domainLabel)]
+      : []),
     ...(alertsFailed ? [] : alertBadges),
   ];
 

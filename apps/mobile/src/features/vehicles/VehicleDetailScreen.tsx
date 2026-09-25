@@ -57,7 +57,11 @@ import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { FinanceEntityPanel } from '@/features/finance/components/FinanceEntityPanel';
 import { VehicleAlertList } from './components/VehicleAlertList';
+import { vehiclePublicationTask } from './publication';
+import { MarketplaceVisibilityRow } from './components/MarketplaceVisibilityRow';
+import { VehiclePublicationTaskItem } from './components/VehiclePublicationTaskItem';
 import { VehiclePublishCard } from './components/VehiclePublishCard';
+import { VehicleMaintenanceCard } from '@/features/vehicle-maintenance/components/VehicleMaintenanceCard';
 import { vehicleSchedulePath } from './calendar-link';
 import { discountedPriceVnd } from './pricing';
 import {
@@ -87,6 +91,16 @@ const EDIT_TAB_TO_SECTION: Readonly<Record<VehicleEditTab, VehicleManageSection>
    */
   [VEHICLE_EDIT_TAB.MAINTENANCE]: VEHICLE_MANAGE_SECTION.INFORMATION,
   [VEHICLE_EDIT_TAB.SOURCE]: VEHICLE_MANAGE_SECTION.INFORMATION,
+  /*
+   * VẬN HÀNH gộp BỐN mục của khu tài khoản (giao nhận · tự nhận · điều khoản · phụ phí) vào một
+   * màn của cổng quản lý, nên không có cặp đôi 1-1. Trỏ về mục đầu tiên trong số đó — "Thời gian
+   * giao nhận" — vì đó là khối duy nhất áp dụng cho mọi xe bất kể dịch vụ, và cũng là khối web
+   * mở sẵn.
+   *
+   * Nhánh này không bao giờ chạy ở thực tế: mục Vận hành chỉ có trong hub sửa xe của cổng quản
+   * lý (`VehicleEditHubScreen`), còn khu tài khoản đã có bốn mục rời trong mục lục của nó.
+   */
+  [VEHICLE_EDIT_TAB.OPERATIONS]: VEHICLE_MANAGE_SECTION.SELF_DRIVE_HANDOVER_TIME,
 };
 
 const HERO_HEIGHT = 200;
@@ -287,7 +301,12 @@ function VehicleDetailBody({
         <YStack gap={layout.section}>
           <ProfileCard vehicle={vehicle} summary={summary.data} />
 
-          <TodoCard summary={summary.data} loading={summary.isPending} failed={summary.isError} />
+          <TodoCard
+            vehicle={vehicle}
+            summary={summary.data}
+            loading={summary.isPending}
+            failed={summary.isError}
+          />
 
           {has(PERMISSION.BOOKING_VIEW) ? (
             <ScheduleCard
@@ -323,6 +342,8 @@ function VehicleDetailBody({
 
           <PricingCard vehicle={vehicle} canEdit={canEdit} />
 
+          <AutomationCard vehicle={vehicle} canEdit={canEdit} />
+
           {has(PERMISSION.VEHICLE_DOCUMENT_VIEW) ? (
             <DocumentsCard vehicleId={vehicle.id} summary={summary.data} />
           ) : null}
@@ -337,6 +358,9 @@ function VehicleDetailBody({
             gửi duyệt. Ở mobile hai cột đó xếp nối nhau.
           */}
           <SourceCard vehicle={vehicle} />
+
+          {/* Bảo dưỡng & số KM — đúng vị trí web đặt nó: giữa nguồn xe và thẻ gửi duyệt. */}
+          <VehicleMaintenanceCard vehicleId={vehicle.id} />
 
           <VehiclePublishCard vehicle={vehicle} />
 
@@ -566,47 +590,109 @@ function ProfileCard({
             />
           </XStack>
         </XStack>
+
+        {/*
+          Trục THỨ BA — "chủ xe có muốn bán chiếc này lúc này không" (ADR 0048).
+
+          KHÔNG nằm trong hàng hai trục phía trên: hai viên kia là trạng thái ĐỌC, còn hàng này
+          mang một công tắc GHI. Nó trải hết bề ngang, ngay dưới chúng — đúng chỗ ADR 0048 điều 6
+          đặt nó ở khổ hẹp ("các NÚT chuyển xuống thanh CTA đáy màn còn hàng này ở lại").
+
+          Và chỉ có MỘT chỗ này trên cả màn: thẻ xét duyệt phía dưới cố ý không mang công tắc
+          thứ hai cho cùng một trạng thái.
+        */}
+        <YStack pt={space.xs} borderTopWidth={1} borderColor={colors.borderSubtle}>
+          <MarketplaceVisibilityRow vehicle={vehicle} />
+        </YStack>
       </YStack>
     </Card>
   );
 }
 
+/**
+ * Cảnh báo server nói TRÙNG với việc "đưa xe lên chợ" dựng ở client.
+ *
+ * `VehicleAlertsService` chỉ nhìn thấy `public_status` + ba trường bắt buộc, nên nó cho ra hai
+ * dòng chữ không có nút ("Cần xử lý để xe hiển thị trên sàn", "Thiếu thông tin để gửi duyệt").
+ * Màn chi tiết có trong tay cả bản ghi xe nên dựng được việc ĐẦY ĐỦ, có checklist và có CTA —
+ * giữ cả hai là kể cùng một chuyện hai lần, lần thứ hai cụt hơn.
+ *
+ * Lọc ở ĐÂY chứ không ở server: thẻ xe ngoài danh sách vẫn cần hai cảnh báo đó, vì ở đó không có
+ * chỗ cho một việc có nút.
+ */
+const PUBLICATION_ALERT_KINDS: readonly string[] = [
+  VEHICLE_ALERT_KIND.PUBLIC_ACTION_REQUIRED,
+  VEHICLE_ALERT_KIND.MISSING_VEHICLE_INFO,
+];
+
+/**
+ * Việc cần làm — cảnh báo vận hành TỪ SERVER (`VehicleAlertsService`, cùng phép tính với thẻ xe
+ * ngoài danh sách) cộng MỘT việc "đưa xe lên chợ" dựng tại chỗ từ bản ghi xe (ADR 0048).
+ *
+ * Cảnh báo vận hành vẫn đến nguyên vẹn từ server và KHÔNG bị sắp xếp lại; phần thêm vào là đúng
+ * một việc, và nó THAY hai cảnh báo server nói trùng thay vì cộng thêm.
+ *
+ * Thứ tự: việc lên chợ mức `critical`/`warning` lên ĐẦU (xe không bán được thì mọi việc khác là
+ * thứ yếu); mức `info` — lời nhắc "xe đang tạm ẩn", "đang chờ duyệt" — xuống CUỐI, vì một gợi ý
+ * không được đẩy một chuyến sắp phải giao ra khỏi ba dòng đầu.
+ */
 function TodoCard({
+  vehicle,
   summary,
   loading,
   failed,
 }: {
+  vehicle: VehicleDetail;
   summary: Vehicle360Summary | undefined;
   loading: boolean;
   failed: boolean;
 }) {
   const t = useTranslations('Vehicles.overview');
-  const alerts = summary?.alerts ?? [];
+  const task = vehiclePublicationTask(vehicle);
+  const alerts = (summary?.alerts ?? []).filter(
+    (alert) => !task || !PUBLICATION_ALERT_KINDS.includes(alert.kind),
+  );
+  // Gợi ý không phải "việc cần làm" nên không vào số đếm — viên đếm là số việc thật.
+  const count = alerts.length + (task && task.tone !== 'info' ? 1 : 0);
+  /*
+   * `onEnableMarketplace` CỐ Ý không truyền ở native.
+   *
+   * Web neo nút "Bật hiển thị" xuống chính công tắc bằng `#anchor`. Ở app, công tắc nằm trong
+   * thẻ NGAY TRÊN thẻ này — người dùng đã nhìn thấy nó, và `Screen` không phơi ra ref cuộn để
+   * neo tới. Một nút không đưa đi đâu cả thì tệ hơn là không có nút; câu chữ của việc (tiêu đề
+   * + mô tả) vẫn nguyên vẹn. Bật hộ từ đây thì ADR 0048 cấm — đó là chỗ ghi thứ hai cho cùng
+   * một trạng thái.
+   */
+  const taskItem = task ? <VehiclePublicationTaskItem vehicle={vehicle} task={task} /> : null;
 
   return (
     <Card>
       <YStack gap={space.sm}>
         {/*
-          Viên đếm CHỈ hiện khi có việc — `alerts.length > 0`, đúng điều kiện của web.
+          Viên đếm CHỈ hiện khi có việc — đúng điều kiện của web.
 
           Hiện "0" thì con số đỏ mất hết sức nặng: nó phải là thứ chỉ xuất hiện khi có chuyện,
           không phải một ô luôn nằm đó. Đang tải cũng không hiện, vì lúc đó `alerts` rỗng nhưng
           chưa biết thật sự có việc hay không.
         */}
         <BlockTitle
-          {...(alerts.length > 0
-            ? { action: <CountBadge count={alerts.length} tone="danger" /> }
-            : {})}
+          {...(count > 0 ? { action: <CountBadge count={count} tone="danger" /> } : {})}
         >
           {t('todo.title')}
         </BlockTitle>
+        {task?.tone !== 'info' ? taskItem : null}
         {loading ? (
           <SkeletonText lines={2} />
         ) : failed || !summary ? (
           <Muted>{t('loadFailed')}</Muted>
         ) : (
-          <VehicleAlertList alerts={summary.alerts ?? []} />
+          /*
+            `showEmpty` tắt khi đã có việc lên chợ: "Không có việc cần làm" ngay dưới một việc
+            đang hiện là đúng câu tự mâu thuẫn mà ADR 0048 điều 6 sửa.
+          */
+          <VehicleAlertList alerts={alerts} showEmpty={!task} />
         )}
+        {task?.tone === 'info' ? taskItem : null}
       </YStack>
     </Card>
   );
@@ -710,9 +796,6 @@ function ModuleLinks({
   customerScope: boolean;
 }) {
   const t = useTranslations('Vehicles.overview.links');
-  /* Nhãn mục "Tối ưu nhận chuyến" dùng lại CHÍNH chữ của thẻ tương ứng bên web, không chép ra
-     một khoá thứ hai — hai chuỗi cho một mục là hai chuỗi sẽ trôi khỏi nhau. */
-  const tAutomation = useTranslations('Vehicles.overview.automation');
   const tStates = useTranslations('Common.states');
   const { has } = usePermissions();
   const navigateOnce = useNavigateOnce();
@@ -759,23 +842,12 @@ function ModuleLinks({
       },
     );
     /*
-     * TỐI ƯU NHẬN CHUYẾN — chỉ ở cổng QUẢN LÝ. Khu tài khoản đã có mục này trong mục lục quản
-     * lý xe của chính nó (`VEHICLE_MANAGE_NAV`), nên thêm ở đây là hai lối vào cùng một màn.
+     * TỐI ƯU NHẬN CHUYẾN KHÔNG nằm ở đây, và đó là chủ đích (24/09/2026).
      *
-     * Ẩn khi xe không phục vụ dịch vụ nào CÓ thiết lập riêng: thuê dài hạn luôn do gian hàng
-     * chốt lịch tay (ADR 0011), nên với xe chỉ cho thuê dài hạn thì mục này mở ra một màn rỗng.
+     * Nó là một thẻ riêng trên hồ sơ — `AutomationCard`, đúng như web — vì một dòng trơ trong
+     * dải mười liên kết không nói được "tự động nhận chuyến" là gì. Đặt cả hai nơi là hai lối
+     * vào cùng một màn, đúng thứ mà chú thích của khu tài khoản ngay dưới đang tránh.
      */
-    if (
-      !customerScope &&
-      VEHICLE_SERVICE_SETTING_SERVICES.some((service) => vehicle.serviceTypes.includes(service))
-    ) {
-      links.push({
-        key: 'optimization',
-        label: tAutomation('title'),
-        icon: 'flash-outline',
-        href: ROUTES.manage.vehicleOptimization(vehicle.id),
-      });
-    }
     if (has(PERMISSION.FINANCE_VIEW) && !customerScope) {
       links.push({
         key: 'source',
@@ -942,6 +1014,50 @@ function PerformanceCard({
             />
           </XStack>
         )}
+      </YStack>
+    </Card>
+  );
+}
+
+/**
+ * TỐI ƯU NHẬN CHUYẾN — thẻ riêng trên hồ sơ xe, đúng `AutomationCard` của web.
+ *
+ * Trước đợt này app chỉ có MỘT dòng trong dải liên kết `ModuleLinks`. Về mặt điều hướng thì tới
+ * được, nhưng nó nằm lẫn giữa chín mục khác và không mang câu giải thích nào — người dùng đọc
+ * hết hồ sơ xe vẫn không biết "tự động nhận chuyến" là gì và bật nó được ở đâu. Web cố ý tách nó
+ * thành thẻ có tiêu đề + một câu mô tả + lối "Cấu hình"; app giờ cũng vậy, và dòng trong
+ * `ModuleLinks` được gỡ đi để không còn hai lối vào cùng một màn.
+ *
+ * Ẩn khi xe không phục vụ dịch vụ nào CÓ thiết lập riêng: thuê dài hạn luôn do gian hàng chốt
+ * lịch tay (ADR 0011), nên với xe chỉ cho thuê dài hạn thẻ này không có gì để nói.
+ */
+function AutomationCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
+  const t = useTranslations('Vehicles.overview');
+  const navigateOnce = useNavigateOnce();
+
+  const hasConfigurableService = VEHICLE_SERVICE_SETTING_SERVICES.some((service) =>
+    vehicle.serviceTypes.includes(service),
+  );
+  if (!hasConfigurableService) return null;
+
+  return (
+    <Card>
+      <YStack gap={space.sm}>
+        <BlockTitle
+          {...(canEdit
+            ? {
+                action: (
+                  <BlockLink
+                    label={t('automation.editLink')}
+                    onPress={() => navigateOnce(ROUTES.manage.vehicleOptimization(vehicle.id))}
+                  />
+                ),
+              }
+            : {})}
+        >
+          {t('automation.title')}
+        </BlockTitle>
+        <Muted>{t('automation.hint')}</Muted>
       </YStack>
     </Card>
   );

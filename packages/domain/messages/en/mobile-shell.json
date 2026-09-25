@@ -54,5 +54,9 @@
   },
   "push": {
     "fallback": "You have a new notification"
+  },
+  "appVersion": {
+    "label": "Version {version}",
+    "labelWithBuild": "Version {version} ({build})"
   }
 }

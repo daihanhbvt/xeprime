@@ -304,6 +304,11 @@ export const XP_TOKENS = {
   // `DetailDrawer` chuyển sang toàn màn hình. Dùng được trực tiếp làm `width` inline.
   'drawer-width-xl':
     'clamp(min(calc(100vw - var(--xp-shell-sidebar-width)), 1000px), 75vw, 1400px)',
+  // Panel chi tiết ĐỨNG CẠNH danh sách (không mask — màn "Đơn thuê toàn hệ thống"): 46% màn
+  // hình, sàn 560px để nội dung hai cột không bị bó, trần 780px để phần bảng còn lại vẫn đọc
+  // được. Ở 1280–1600px nó chiếm ~52–56% vùng nội dung, ở 1920px ~46%. Trang dùng cùng token
+  // này để chừa chỗ cho bảng; tablet/mobile do `DetailDrawer` chuyển sang toàn màn hình.
+  'drawer-width-split': 'clamp(560px, 46vw, 780px)',
   // Figma `117:1203` (Pagination/Desktop) · `127:2060` vẽ vùng nội dung 1200. Chốt 14/08/2026:
   // nới lên 1280 cho MỌI trang (marketplace lẫn portal) — 1200/1120 để lại quá nhiều lề chết
   // trên màn 1440. Đây là nguồn duy nhất của bề rộng trang; không gõ số ở CSS Module.

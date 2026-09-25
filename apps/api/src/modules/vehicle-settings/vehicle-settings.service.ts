@@ -45,6 +45,8 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { OccupancyService } from '../calendar/occupancy.service';
+// HÀM THUẦN, không phải service: không tạo cạnh DI nào nên module lá này vẫn là lá.
+import { refreshPendingApprovalSnapshot } from '../vehicles/refresh-pending-approval-snapshot';
 import {
   DriverSurchargeRuleDto,
   HandoverWindowDto,
@@ -362,6 +364,17 @@ export class VehicleSettingsService {
         create: { id: newId(), tenantId, vehicleId, serviceType, ...data },
         update: data,
       });
+      /*
+       * Xe đang chờ duyệt → phiếu mang thiết lập vừa lưu (24/09/2026). Điều kiện thuê
+       * (`termsText`) và tự động nhận chuyến nằm TRONG thứ người duyệt đọc, nên bỏ qua đây là để
+       * người duyệt phê chuẩn một bộ điều kiện chưa ai xem.
+       *
+       * `policy: 'unchanged'` vì đường ghi này không đụng được tới chính sách thuê — phần đó của
+       * snapshot cũ mang sang nguyên vẹn. Đây cũng là lý do hàm kia nhận `'unchanged'` thay vì
+       * bắt module lá này phải có `PricingService`, thứ nó cố ý không import (docblock của
+       * `VehicleSettingsModule`).
+       */
+      await refreshPendingApprovalSnapshot(tx, { vehicleId, actorUserId: userId, policy: 'unchanged' });
       await this.audit.record(
         {
           tenantId,

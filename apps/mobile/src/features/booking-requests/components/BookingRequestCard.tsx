@@ -157,15 +157,6 @@ function BookingRequestCardImpl({
         <CardAccent color={meta.color} />
 
         <YStack f={1} minWidth={0} p={space.md} gap={space.md}>
-          <XStack ai="center" gap={space.sm} rowGap={space.xs} flexWrap="wrap">
-            <StatusBadge
-              label={domainLabel('bookingRequestStatus', status, meta.label)}
-              color={meta.color}
-              size="sm"
-            />
-            {needsDecision ? <RespondDeadline respondBy={request.respondBy} /> : null}
-          </XStack>
-
           {/* Xe: mỏ neo thị giác đầu tiên, y như web. */}
           <XStack gap={space.sm}>
             {request.vehicleImageUrl ? (
@@ -184,9 +175,39 @@ function BookingRequestCardImpl({
             )}
 
             <YStack f={1} gap={space.xs}>
-              <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold} numberOfLines={2}>
-                {request.vehicleName}
-              </Text>
+              {/*
+                Tên xe TRÁI (co được) + trạng thái PHẢI — đúng chuẩn thẻ của khu quản lý, và giống
+                hệt thẻ Đơn thuê ngay cạnh trong cùng menu.
+
+                Trước 24/09/2026 viên nhãn đứng MỘT MÌNH trên một hàng riêng phía trên, căn trái:
+                mắt đọc "Khách không thanh toán" trước khi biết đó là yêu cầu nào, nó ăn trọn một
+                hàng (~50px kể cả `gap`) trên một thẻ vốn cao gần hết màn, và một viên pill xám
+                đứng lẻ đọc ra như cái nút — cách đúng 200px bên dưới là "Xem lịch xe", cùng hình
+                dạng, nhưng cái đó mới bấm được.
+
+                Bề ngang ở 360dp: cột chữ còn ~240dp sau ảnh, nhãn chặn ở 50%. Nhãn dài thì CẮT
+                bằng "…" (người dùng chốt 24/09/2026) — mười nhãn trạng thái của yêu cầu vẫn phân
+                biệt được ở chừng 15 ký tự đầu ("Khung giờ đã có k…" ≠ "Khách không thanh…" ≠
+                "Khách đã huỷ"), và một viên cao gấp đôi đẩy cả hàng đầu thẻ xuống.
+              */}
+              <XStack ai="flex-start" gap={space.sm}>
+                <Text
+                  f={1}
+                  col={colors.text}
+                  fos={fontSize.bodyLg}
+                  fow={fontWeight.bold}
+                  numberOfLines={2}
+                >
+                  {request.vehicleName}
+                </Text>
+                <YStack flexShrink={1} maxWidth="50%">
+                  <StatusBadge
+                    label={domainLabel('bookingRequestStatus', status, meta.label)}
+                    color={meta.color}
+                    size="sm"
+                  />
+                </YStack>
+              </XStack>
               {vehicleMeta ? (
                 <Text col={colors.textMuted} fos={fontSize.bodySm} numberOfLines={2}>
                   {vehicleMeta}
@@ -505,6 +526,18 @@ function BookingRequestCardImpl({
           {/* Chân thẻ: liên hệ trước, quyết định sau. */}
           <YStack gap={space.sm} pt={space.sm} borderTopWidth={1} bc={colors.borderSubtle}>
             <ContactRow request={request} />
+
+            {/*
+              Đồng hồ hạn phản hồi đi THEO hai nút quyết định, không theo viên trạng thái ở đầu
+              thẻ. Nó là áp lực cho đúng một việc — bấm Duyệt hay Từ chối — nên nó thuộc về chỗ
+              việc đó xảy ra. Vẫn hiện khi người xem KHÔNG có quyền quyết định: họ cũng cần biết
+              yêu cầu này sắp hết hạn để còn gọi người có quyền.
+            */}
+            {needsDecision ? (
+              <XStack jc="flex-end">
+                <RespondDeadline respondBy={request.respondBy} />
+              </XStack>
+            ) : null}
 
             {/* Chỉ yêu cầu CÒN chờ VÀ CHƯA quá hạn mới có nút quyết định. */}
             {decidable && canDecide ? (

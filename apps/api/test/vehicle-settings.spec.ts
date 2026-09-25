@@ -14,6 +14,10 @@ import {
   PLAN_FEATURE,
   PLAN_FEATURE_VALUES,
   ROUTE_TYPE,
+  APPROVAL_ACTION,
+  APPROVAL_STATUS,
+  APPROVAL_TARGET_TYPE,
+  COLLATERAL_MODE,
   SERVICE_TYPE,
   SURCHARGE_CATEGORY,
   TENANT_ROLE,
@@ -25,9 +29,10 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
+import { buildVehicleReviewSnapshot } from '../src/modules/vehicles/vehicle-review-snapshot';
 import { VehicleSettingsService } from '../src/modules/vehicle-settings/vehicle-settings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBookingsService } from './helpers/service-factory';
+import { makeBookingsService, makePricingService } from './helpers/service-factory';
 
 /**
  * THIẾT LẬP VẬN HÀNH THEO XE — không gian "Quản lý xe" (08/09/2026), trên PostgreSQL THẬT.
@@ -930,5 +935,89 @@ describe('Phụ phí công bố ≠ phụ phí đã ghi', () => {
       null,
     );
     expect(now?.termsText).toBe('Bản B');
+  });
+});
+
+/*
+ * Đường ghi THỨ BA của "phiếu duyệt mang bản mới nhất" (24/09/2026).
+ *
+ * `VehicleSettingsModule` là module LÁ — nó cố ý không import VehiclesModule/PricingModule để
+ * không tạo vòng Nest, nên nó gọi hàm THUẦN `refreshPendingApprovalSnapshot`. Test này tồn tại
+ * vì đó chính là đường dễ bị quên nhất: hai đường kia nằm trong `VehiclesService` cạnh chỗ tạo
+ * phiếu, còn đường này ở một module khác hẳn.
+ *
+ * Điều kiện thuê (`termsText`) là thứ KHÁCH đọc trước khi đặt, nên để nó trôi khỏi snapshot là
+ * để người duyệt phê chuẩn một bộ điều khoản chưa ai xem.
+ */
+describe('Sửa thiết lập dịch vụ khi phiếu duyệt còn chờ', () => {
+  maybe('phiếu mang điều kiện mới, và KHÔNG mất chính sách thuê', async () => {
+    // Chính sách thuê của xe — phần mà đường ghi này không nạp lại được (`policy: 'unchanged'`).
+    await prisma.rentalPolicy.create({
+      data: {
+        id: newId(),
+        tenantId: tenantA,
+        vehicleId: vehicleA,
+        collateralMode: COLLATERAL_MODE.NONE,
+        depositAmount: 0,
+        deliveryEnabled: true,
+        deliveryMaxRadiusKm: 25,
+        includedDistanceKmPerDay: 300,
+        excessDistanceFeePerKm: 3000,
+      },
+    });
+
+    const snapshot = await buildVehicleReviewSnapshot(prisma, {
+      vehicleId: vehicleA,
+      policy: await makePricingService(asService).effectivePolicy(tenantA, vehicleA),
+      now: new Date(),
+    });
+    expect(snapshot?.policy).not.toBeNull();
+
+    const taskId = newId();
+    await prisma.approvalTask.create({
+      data: {
+        id: taskId,
+        tenantId: tenantA,
+        targetType: APPROVAL_TARGET_TYPE.VEHICLE,
+        targetId: vehicleA,
+        status: APPROVAL_STATUS.PENDING,
+        submittedBy: ownerA,
+        snapshot: snapshot as never,
+      },
+    });
+    await prisma.approvalVehicleSubject.create({
+      data: {
+        approvalTaskId: taskId,
+        vehicleId: vehicleA,
+        vehicleType: snapshot!.vehicle.vehicleType,
+        name: snapshot!.vehicle.name,
+        code: snapshot!.vehicle.code,
+        plateNumber: snapshot!.vehicle.plateNumber,
+        storefrontKind: snapshot!.source.storefrontKind,
+        sourceName: snapshot!.source.name,
+      },
+    });
+
+    await settings.patchServiceSetting(
+      tenantA,
+      vehicleA,
+      SERVICE_TYPE.SELF_DRIVE,
+      ownerA,
+      { termsText: `Không hút thuốc trong xe ${RUN}` },
+      features(),
+    );
+
+    const task = await prisma.approvalTask.findUniqueOrThrow({
+      where: { id: taskId },
+      select: { snapshot: true, logs: { select: { action: true } } },
+    });
+    const next = task.snapshot as unknown as NonNullable<typeof snapshot>;
+
+    expect(
+      next.services.find((s) => s.serviceType === SERVICE_TYPE.SELF_DRIVE)?.termsText,
+    ).toBe(`Không hút thuốc trong xe ${RUN}`);
+    // Chính sách mang sang nguyên vẹn — không bị `null` hoá vì đường ghi này không nạp được nó.
+    expect(next.policy).toEqual(snapshot!.policy);
+    expect(task.logs.map((l) => l.action)).toEqual([APPROVAL_ACTION.PROFILE_UPDATED]);
   });
 });
