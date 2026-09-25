@@ -1,6 +1,14 @@
 'use client';
 
-import { useCallback, useLayoutEffect, useRef, useState, type RefCallback } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+
+/**
+ * Callback ref kiểu React 19 (trả về hàm dọn dẹp). Tự khai thay vì dùng `RefCallback` của `react`:
+ * workspace có hai bản `@types/react` (19.2 của web, 19.1 của mobile) và trên CI `RefCallback`
+ * import ở đây với `Ref` trong JSX có thể đến từ hai bản khác nhau — `VoidOrUndefinedOnly` của
+ * chúng là hai kiểu unique-symbol không gán được cho nhau. Một kiểu hàm trần thì bản nào cũng nhận.
+ */
+export type ElementRefCallback<T> = (node: T | null) => (() => void) | undefined;
 
 const identity = (width: number): number => width;
 
@@ -24,7 +32,7 @@ const identity = (width: number): number => width;
  */
 export function useElementWidth<T extends HTMLElement, R = number>(
   select: (width: number) => R = identity as unknown as (width: number) => R,
-): [RefCallback<T>, R | null] {
+): [ElementRefCallback<T>, R | null] {
   const [value, setValue] = useState<R | null>(null);
   // Giữ `select` mới nhất trong ref: đưa nó vào deps của callback ref thì mỗi lần render với một
   // lambda mới, React sẽ gỡ observer cũ rồi gắn observer mới.
@@ -35,7 +43,7 @@ export function useElementWidth<T extends HTMLElement, R = number>(
     selectRef.current = select;
   });
 
-  const ref = useCallback<RefCallback<T>>((node) => {
+  const ref = useCallback<ElementRefCallback<T>>((node) => {
     if (!node || typeof ResizeObserver === 'undefined') return undefined;
 
     const observer = new ResizeObserver((entries) => {
