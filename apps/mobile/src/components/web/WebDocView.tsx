@@ -21,15 +21,20 @@ import { colors } from '@/theme/tokens';
  * hướng THỨ HAI chồng lên điều hướng thật — thanh tab của web thậm chí nằm đúng chỗ ngón cái tìm
  * thanh tab của app.
  *
- * Chọn theo THẺ NGỮ NGHĨA (`header`/`footer`/`nav` đứng sau `main`), không theo tên class băm của
- * CSS Module: tên class đổi mỗi lần build web, thẻ ngữ nghĩa thì không. Web đổi cấu trúc thì tệ
- * nhất là vỏ hiện trở lại — trang vẫn đọc được, không có gì vỡ.
+ * Chọn theo THẺ NGỮ NGHĨA (`header`/`footer` NẰM NGOÀI `main`, `nav` đứng sau `main`), không theo
+ * tên class băm của CSS Module: tên class đổi mỗi lần build web, thẻ ngữ nghĩa thì không. Web đổi
+ * cấu trúc thì tệ nhất là vỏ hiện trở lại — trang vẫn đọc được, không có gì vỡ.
+ *
+ * ⚠️ `:not(main *)` là BẮT BUỘC. Bản trước ẩn MỌI `header`/`footer`, mà nội dung của chính trang
+ * cũng dùng hai thẻ đó: `PageHero` (breadcrumb, tiêu đề, lời dẫn, NGÀY HIỆU LỰC của văn bản pháp
+ * lý) là một `<header>` và chân văn bản pháp lý là một `<footer>`, cả hai nằm TRONG `main`. Người
+ * đọc mất đúng dòng nói văn bản có hiệu lực từ ngày nào (sửa 25/09/2026).
  */
 const HIDE_SITE_CHROME = `
   (function () {
     var style = document.createElement('style');
     style.textContent =
-      'header, footer, main ~ nav { display: none !important; }' +
+      'header:not(main *), footer:not(main *), main ~ nav { display: none !important; }' +
       'main { padding-top: 0 !important; }';
     document.head.appendChild(style);
   })();
@@ -92,13 +97,7 @@ export interface WebDocViewProps {
  * cùng nút lui hiểu lịch sử WebView. Để hai bản là để hai bản lệch nhau: lần này cả hai đều cần
  * cùng một sửa chữa, và bản thứ hai đã bị bỏ sót đúng một vòng rà soát.
  */
-export function WebDocView({
-  uri,
-  title,
-  allowNavigation,
-  onBack,
-  logLabel,
-}: WebDocViewProps) {
+export function WebDocView({ uri, title, allowNavigation, onBack, logLabel }: WebDocViewProps) {
   const tCommon = useTranslations('Common');
   const { locale } = useAppLocale();
 
@@ -259,7 +258,12 @@ export function WebDocView({
             }
             startInLoadingState
             renderLoading={() => (
-              <YStack style={StyleSheet.absoluteFill} ai="center" jc="center" bg={colors.background}>
+              <YStack
+                style={StyleSheet.absoluteFill}
+                ai="center"
+                jc="center"
+                bg={colors.background}
+              >
                 <ActivityIndicator color={colors.primary} />
               </YStack>
             )}

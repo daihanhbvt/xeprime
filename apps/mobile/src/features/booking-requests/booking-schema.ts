@@ -16,7 +16,9 @@ import {
  * là lớp báo sớm để khách không gõ xong cả đoạn rồi mới bị trả về.
  */
 export const NAME_MAX = 255;
-const ADDRESS_MAX = 500;
+/** Điểm đến tối đa — `DESTINATION_MAX` của schema web. */
+export const DESTINATION_MAX = 500;
+const ADDRESS_MAX = DESTINATION_MAX;
 /** Phần "số nhà, đường" — khớp `ADDRESS_LINE_MAX_LENGTH` của `@xeprime/types` và cột DB. */
 const ADDRESS_LINE_MAX = ADDRESS_LINE_MAX_LENGTH;
 export const NOTE_MAX = 2000;
@@ -31,6 +33,12 @@ export interface BookingRequestSchemaLabels {
   serviceRequired: string;
   pickupAtRequired: string;
   returnAtRequired: string;
+  /** Trả phải SAU nhận — `errors.returnAfterPickup` của web. */
+  returnAfterPickup: string;
+  /** Vượt độ dài ô địa chỉ chi tiết — `errors.addressLineMax` của web. */
+  addressLineMax: string;
+  /** Vượt độ dài điểm đến — `errors.destinationMax` của web. */
+  destinationMax: string;
   packageRequired: string;
   pickupPreferenceRequired: string;
   requestedPickupDateRequired: string;
@@ -103,6 +111,11 @@ export function buildBookingRequestSchema(
       .when('serviceType', {
         is: (value: string) => value !== SERVICE_TYPE.LONG_TERM,
         then: (s) => s.required(labels.returnAtRequired),
+      })
+      // Cùng phép kiểm `after-pickup` của schema web — hai mốc là chuỗi ISO (mốc tuyệt đối).
+      .test('after-pickup', labels.returnAfterPickup, (value, ctx) => {
+        const pickup = ctx.parent.pickupAt as string;
+        return !value || !pickup || Date.parse(value) > Date.parse(pickup);
       }),
 
     longTermPackageMonths: yup
@@ -162,7 +175,7 @@ export function buildBookingRequestSchema(
     pickupAddressLine: yup
       .string()
       .trim()
-      .max(ADDRESS_LINE_MAX)
+      .max(ADDRESS_LINE_MAX, labels.addressLineMax)
       .default('')
       .when('serviceType', {
         is: SERVICE_TYPE.WITH_DRIVER,
@@ -190,7 +203,7 @@ export function buildBookingRequestSchema(
     destination: yup
       .string()
       .trim()
-      .max(ADDRESS_MAX)
+      .max(ADDRESS_MAX, labels.destinationMax)
       .default('')
       .when('routeType', {
         is: (value: string | null) =>
@@ -208,7 +221,7 @@ export function buildBookingRequestSchema(
     deliveryAddressLine: yup
       .string()
       .trim()
-      .max(ADDRESS_LINE_MAX)
+      .max(ADDRESS_LINE_MAX, labels.addressLineMax)
       .default('')
       .when('deliveryRequested', {
         is: true,

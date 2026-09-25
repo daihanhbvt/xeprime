@@ -5,8 +5,8 @@ import type { UploadMeta, UploadPresign } from '@/api/vehicles/api';
 import { BottomSheet } from './BottomSheet';
 import { Button } from './Button';
 import { useAppToast } from '@/components/feedback/use-app-toast';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { useImageErrorMessage } from '@/lib/image-permission-message';
+import { getErrorMessage } from '@/lib/get-error-message';
 import { IMAGE_SOURCE, pickImages, uploadImageToR2, type ImageSource } from '@/lib/r2-image-upload';
 import { colors, fieldFontSize, space } from '@/theme/tokens';
 
@@ -64,8 +64,12 @@ export function useImageUpload({
 }: Options): ImageUpload {
   const t = useTranslations('Common.image');
   const toast = useAppToast();
-  /* Thiếu quyền máy ảnh/thư viện có câu riêng — xem `useImageErrorMessage`. */
-  const errorMessage = useImageErrorMessage(useErrorMessage());
+  /*
+   * Câu NGUYÊN VĂN của server (`getErrorMessage`), như ô tải ảnh/tệp bên web: hỏng ở bước PUT lên
+   * R2 không có mã lỗi, và câu của nó là thứ duy nhất nói được đã ngã ở đâu. Thiếu quyền máy
+   * ảnh/thư viện vẫn có câu riêng — xem `useImageErrorMessage`.
+   */
+  const errorMessage = useImageErrorMessage(getErrorMessage);
 
   const [choosing, setChoosing] = useState(false);
   const [busy, setBusy] = useState(false);

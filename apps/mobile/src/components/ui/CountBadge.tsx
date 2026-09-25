@@ -52,11 +52,14 @@ export function CountBadge({
   count,
   tone = 'primary',
   size = 'md',
+  max = MAX,
 }: {
   count: number;
   tone?: keyof typeof TONE;
   /** `sm` khi viên đè lên một biểu tượng ở thanh trên — xem `SIZES`. */
   size?: keyof typeof SIZES;
+  /** Trần hiện số — quá trần thì thành "<trần>+". Mặc định 99; thanh tab dùng 9 (web `overflowCount`). */
+  max?: number;
 }) {
   const skin = TONE[tone];
   const dim = SIZES[size];
@@ -72,7 +75,7 @@ export function CountBadge({
       jc="center"
     >
       <Text col={skin.fg} fos={dim.font} fow={fontWeight.bold} style={styles.text}>
-        {count > MAX ? `${MAX}+` : count}
+        {count > max ? `${max}+` : count}
       </Text>
     </YStack>
   );

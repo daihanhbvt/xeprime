@@ -19,7 +19,7 @@ import {
   LONG_TERM_PACKAGE_MONTHS,
   MILEAGE_LIMIT,
 } from '@xeprime/types';
-import { deliverySummaryText, LIST_SEPARATOR } from '@xeprime/domain';
+import { deliverySummaryText, isFreeDeliveryFee, LIST_SEPARATOR } from '@xeprime/domain';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import type { IconName } from '@/components/ui/Chip';
@@ -679,7 +679,8 @@ function DeliverySection({
                       control={control}
                       name={`deliveryTiers.${index}.fee`}
                       label={t('feeLabel')}
-                      hint={tiers[index]?.fee ? undefined : t('free')}
+                      // Cùng luật "miễn phí" với dòng tóm tắt khách thấy (@xeprime/domain) — y như web.
+                      hint={isFreeDeliveryFee(tiers[index]?.fee) ? t('free') : undefined}
                       editable={!disabled}
                     />
                   </TierCard>

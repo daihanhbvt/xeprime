@@ -6,10 +6,13 @@ import { useTranslations } from 'use-intl';
 import { VEHICLE_OPERATION_STATUS } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
+import { Button } from '@/components/ui/Button';
+import { Callout } from '@/components/ui/Callout';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { getErrorMessage } from '@/lib/get-error-message';
 import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { useVehiclePicker } from '../hooks/use-bookings';
 import type { VehicleListItem } from '../api';
@@ -37,6 +40,7 @@ export function VehiclePickerSheet({
   onSelect: (vehicle: VehicleListItem) => void;
 }) {
   const t = useTranslations('Bookings.create.vehicle');
+  const tActions = useTranslations('Common.actions');
   const [search, setSearch] = useState('');
   const debounced = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
 
@@ -59,9 +63,24 @@ export function VehiclePickerSheet({
           <Skeleton height={64} />
         </YStack>
       ) : query.isError ? (
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {t('errorTitle')}
-        </Text>
+        // Web `StaffVehiclePicker`: tiêu đề + câu nguyên văn của server + nút thử lại — không để
+        // người trực đoán vì sao danh sách trống.
+        <Callout tone="danger" title={t('errorTitle')}>
+          <YStack gap={space.xs}>
+            <Text col={colors.danger} fos={fontSize.bodySm}>
+              {getErrorMessage(query.error)}
+            </Text>
+            <XStack>
+              <Button
+                label={tActions('retry')}
+                variant="secondary"
+                size="sm"
+                block={false}
+                onPress={() => void query.refetch()}
+              />
+            </XStack>
+          </YStack>
+        </Callout>
       ) : items.length === 0 ? (
         <Text col={colors.textMuted} fos={fontSize.bodySm}>
           {t('empty')}

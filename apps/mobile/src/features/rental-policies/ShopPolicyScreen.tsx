@@ -2,12 +2,7 @@ import { useCallback, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import {
-  PERMISSION,
-  VEHICLE_TYPE,
-  VEHICLE_TYPE_VALUES,
-  type VehicleType,
-} from '@xeprime/types';
+import { PERMISSION, VEHICLE_TYPE, VEHICLE_TYPE_VALUES, type VehicleType } from '@xeprime/types';
 import { Screen } from '@/components/layout/Screen';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Button } from '@/components/ui/Button';
@@ -22,7 +17,6 @@ import { DepositSettingsSection } from '@/features/shop/components/DepositSettin
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { useDomainLabel } from '@/i18n/domain';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { layout } from '@/theme/layout';
 import { space } from '@/theme/tokens';
@@ -31,6 +25,7 @@ import { formToSaveInput, policyToForm } from './form';
 import { policyFormSchema, type PolicyFormValues } from './schema';
 import { useSaveShopPolicy, useShopPolicy } from './hooks/use-shop-policy';
 import type { ShopRentalPolicy } from './api';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /**
  * Chính sách thuê MẶC ĐỊNH của gian hàng (SHP-04) — bản native của `/manage/shop/policies`.
@@ -105,7 +100,6 @@ function PolicyWorkspace({
   const tActions = useTranslations('Common.actions');
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
 
   const query = useShopPolicy(vehicleType, canView);
   const save = useSaveShopPolicy(vehicleType);
@@ -137,10 +131,10 @@ function PolicyWorkspace({
       },
       onError: (err) => {
         setConfirming(null);
-        toast.showError(errorMessage(err));
+        toast.showError(getErrorMessage(err));
       },
     });
-  }, [confirming, domainLabel, errorMessage, save, t, toast, vehicleType]);
+  }, [confirming, domainLabel, save, t, toast, vehicleType]);
 
   const data = query.data;
 
@@ -298,7 +292,9 @@ function AppliedSummary({
 
   return (
     <Callout tone="info" title={t('applied', { count: data.inheritingVehicles, vehicle: label })}>
-      {data.overriddenVehicles > 0 ? t('overridden', { count: data.overriddenVehicles }) : undefined}
+      {data.overriddenVehicles > 0
+        ? t('overridden', { count: data.overriddenVehicles })
+        : undefined}
     </Callout>
   );
 }

@@ -32,10 +32,10 @@ import { SelectControl } from '@/components/ui/SelectControl';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { CalendarFilters } from '../api';
 import { useBulkDayPreview, useBulkPriceDay, useBulkRestoreDayPrices } from '../hooks/use-bulk-day';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 export interface BulkDayPriceState {
   date: string;
@@ -101,7 +101,6 @@ function PriceSheetInner({
   const tCommon = useTranslations('Common.actions');
   const fmt = useAppFormat();
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
 
   const suggested = state.suggestedRange;
   const suggestsRange = suggested.to !== suggested.from;
@@ -232,7 +231,7 @@ function PriceSheetInner({
           );
           onClose();
         },
-        onError: (error) => toast.showError(errorMessage(error)),
+        onError: (error) => toast.showError(getErrorMessage(error)),
       },
     );
   }
@@ -254,7 +253,7 @@ function PriceSheetInner({
         },
         onError: (error) => {
           setConfirmingRestore(false);
-          toast.showError(errorMessage(error));
+          toast.showError(getErrorMessage(error));
         },
       },
     );
@@ -406,7 +405,7 @@ function PriceSheetInner({
           {preview.isPending ? (
             <SkeletonText lines={4} />
           ) : preview.isError ? (
-            <Callout tone="danger">{errorMessage(preview.error)}</Callout>
+            <Callout tone="danger">{getErrorMessage(preview.error)}</Callout>
           ) : (
             <YStack gap={space.xs}>
               {mode === 'range' ? (
@@ -457,7 +456,10 @@ function PriceSheetInner({
                   accessible
                   accessibilityLabel={t('bulkPrice.rowAria', {
                     vehicle: row.plateNumber ? `${row.name} · ${row.plateNumber}` : row.name,
-                    base: row.basePrice === null ? t('bulkPrice.rowAriaNoBase') : fmt.money(row.basePrice),
+                    base:
+                      row.basePrice === null
+                        ? t('bulkPrice.rowAriaNoBase')
+                        : fmt.money(row.basePrice),
                     next:
                       row.nextPrice === null ? t('bulkPrice.skipped') : fmt.money(row.nextPrice),
                   })}

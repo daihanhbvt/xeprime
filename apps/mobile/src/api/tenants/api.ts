@@ -16,14 +16,16 @@ export type UpdateShopProfileInput = Schemas['UpdateTenantProfileDto'];
 export type CurrentTenant = Schemas['CurrentTenantDto'];
 
 /**
- * Gian hàng của TÔI — đăng ký (SHP-01), hồ sơ và gửi duyệt (SHP-02).
+ * Gian hàng của TÔI — đăng ký (SHP-01) và hồ sơ (SHP-02).
  *
  * Không endpoint nào ở đây nhận `tenantId`: backend lấy từ membership của phiên
  * (CLAUDE.md mục 5). `register` là ngoại lệ duy nhất không cần tenant scope — nó dành cho người
  * CHƯA thuộc gian hàng nào, và service từ chối nếu họ đã có.
  *
- * Client KHÔNG bao giờ đặt `status`/`approved_public`: trạng thái duyệt do backend quyết định,
- * `submitReview` chỉ là yêu cầu chuyển trạng thái.
+ * Client KHÔNG bao giờ đặt `status`/`approved_public`: trạng thái duyệt do backend quyết định.
+ *
+ * Không còn lời gọi `submit-review` (24/09/2026): nền tảng tạm ngừng xác minh gian hàng và web đã
+ * gỡ `submitShopReview` khỏi `features/shop/api.ts` — ADR 0031, hai bản sửa cùng nhau.
  */
 export type PaymentSettings = Schemas['PaymentSettingsDto'];
 export type UpdatePaymentSettingsInput = Schemas['UpdatePaymentSettingsDto'];
@@ -43,10 +45,6 @@ export const tenantsApi = {
 
   updateProfile(body: UpdateShopProfileInput): Promise<MyShop> {
     return getApiClient().patch<MyShop>('/tenants/current/profile', body);
-  },
-
-  submitReview(): Promise<MyShop> {
-    return getApiClient().post<MyShop>('/tenants/current/submit-review', {});
   },
 
   /**

@@ -26,6 +26,7 @@ import { IconButton } from '@/components/ui/IconButton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
 import { ScreenError } from '@/components/state/ScreenError';
+import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useIsFetching, useQueryClient } from '@tanstack/react-query';
@@ -56,6 +57,7 @@ import {
   useUpdateDeliveryFee,
 } from './hooks/use-bookings';
 import type { BookingDetail } from './api';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /** Ảnh xe: tỉ lệ cố định để hàng thẳng dù ảnh nguồn dọc hay ngang — cùng cách thẻ hộp thư làm. */
 const VEHICLE_IMAGE = { width: 96, height: 72 } as const;
@@ -117,15 +119,31 @@ export function BookingDetailScreen({ bookingId }: { bookingId: string }) {
   }
 
   if (query.isError) {
+    /*
+     * Đơn bị xoá và lỗi mạng là hai chuyện khác nhau — không mời "thử lại" cho cái đã biến mất.
+     * Cùng phép nhận biết với `BookingDetailContent` bên web (câu của server có "Không tìm thấy").
+     */
+    const notFound = getErrorMessage(query.error).includes('Không tìm thấy');
     return (
       <>
         <AppHeader title={t('title')} onBack={back} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
-          <ScreenError
-            error={query.error}
-            title={t('errorTitle')}
-            onRetry={() => void query.refetch()}
-          />
+          {notFound ? (
+            <ScreenMessage
+              icon="document-text-outline"
+              title={t('notFoundTitle')}
+              description={t('notFoundBody')}
+              actionLabel={t('backToList')}
+              onAction={() => router.replace(ROUTES.manage.bookings())}
+            />
+          ) : (
+            <ScreenError
+              messageFrom="backend"
+              error={query.error}
+              title={t('errorTitle')}
+              onRetry={() => void query.refetch()}
+            />
+          )}
         </Screen>
       </>
     );
@@ -191,9 +209,9 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
     () =>
       assignDriver.mutate(null, {
         onSuccess: () => toast.showSuccess(t('driver.unassignSuccess')),
-        onError: (error) => toast.showError(errorMessage(error)),
+        onError: (error) => toast.showError(getErrorMessage(error)),
       }),
-    [assignDriver, errorMessage, t, toast],
+    [assignDriver, t, toast],
   );
   const updateFee = useUpdateDeliveryFee(booking.id);
 
@@ -571,7 +589,7 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
               toast.showSuccess(t('driver.assignSuccess'));
               setAssigningDriver(false);
             },
-            onError: (error) => toast.showError(errorMessage(error)),
+            onError: (error) => toast.showError(getErrorMessage(error)),
           })
         }
       />
@@ -591,7 +609,7 @@ function BookingDetailBody({ booking, onBack }: { booking: BookingDetail; onBack
                 toast.showSuccess(t('deliveryFee.success'));
                 setEditingFee(false);
               },
-              onError: (error) => toast.showError(errorMessage(error)),
+              onError: (error) => toast.showError(getErrorMessage(error)),
             })
           }
         />

@@ -120,15 +120,15 @@ describe('OtpLoginForm', () => {
     await fireEvent.changeText(view.getByPlaceholderText('0901234567'), '0901000003');
     await fireEvent.press(view.getByRole('button', { name: 'Gửi mã xác thực' }));
 
-    // Toast hiện NGUYÊN VĂN câu của backend — giống `getErrorMessage` của web, và đó là chỗ
-    // duy nhất có con số giây thật.
+    // Câu NGUYÊN VĂN của server — đúng `PhoneLoginForm`/`usePhoneVerify` bên web, hai chỗ đó dùng
+    // `getErrorMessage` chứ không dịch theo mã.
     expect(await view.findByText('Vui lòng đợi 26s trước khi gửi lại mã')).toBeTruthy();
 
     // 26 là con số của SERVER, không phải chu kỳ 60 giây mặc định của client.
     expect(await view.findByRole('button', { name: 'Gửi lại (26s)' })).toBeTruthy();
   });
 
-  it('hiện NGUYÊN VĂN câu của backend khi nhập sai mã', async () => {
+  it('nhập sai mã: hiện câu nguyên văn của server, như web (getErrorMessage)', async () => {
     stubSendOtp();
     jest.spyOn(authApi, 'loginWithOtp').mockRejectedValue(
       new ApiClientError({

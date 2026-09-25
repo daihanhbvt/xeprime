@@ -94,7 +94,10 @@ describe('ChatWithShopButton', () => {
 
     fireEvent.press(view.getByRole('button', { name: 'Nhắn shop' }));
 
-    await waitFor(() => expect(mockShowError).toHaveBeenCalledWith('Xe không tồn tại'));
+    // Câu NGUYÊN VĂN của server — đúng `ChatWithShopButton` bên web (`getErrorMessage`).
+    await waitFor(() =>
+      expect(mockShowError).toHaveBeenCalledWith('Xe không tồn tại'),
+    );
     expect(mockPush).not.toHaveBeenCalled();
   });
 });

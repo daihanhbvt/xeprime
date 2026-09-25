@@ -171,6 +171,24 @@ export function useCancelBookingRequest() {
 }
 
 /**
+ * Mở (hoặc lấy lại) hội thoại với khách của một yêu cầu — bản native của
+ * `useStartBookingRequestConversation` bên web.
+ *
+ * Tiền tố `chat` phủ cả hai bề mặt: thread vừa mở nằm ở inbox gian hàng, nhưng cùng tài khoản đó
+ * có thể đang giữ cache hộp thư khách.
+ */
+export function useStartBookingRequestConversation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => bookingRequestsApi.conversation(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.chat.all });
+    },
+  });
+}
+
+/**
  * Số yêu cầu của một trạng thái.
  *
  * Nhận thẳng MẢNG ĐẾM chứ không nhận `result`: nguồn của nó là `useStickyStatusCounts`, không

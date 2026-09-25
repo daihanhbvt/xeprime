@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, type ListRenderItemInfo } from 'react-native';
+import type { Href } from 'expo-router';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -15,6 +16,7 @@ import {
   type TripRole,
 } from '@xeprime/types';
 import { Screen } from '@/components/layout/Screen';
+import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Chip } from '@/components/ui/Chip';
 import { MenuOption, MenuOptionList } from '@/components/ui/MenuOption';
@@ -92,7 +94,21 @@ const STAGE_FILTER_MIN_ROWS = 6;
  * và hai hàng điều khiển chồng nhau buộc người đọc phải hiểu cái nào lồng trong cái nào trước khi
  * đọc được chuyến nào. Chiều vai vẫn sống ở SERVER qua tham số `role`.
  */
-export function TripsScreen({ lockedRole }: { lockedRole?: TripRole } = {}) {
+export function TripsScreen({
+  lockedRole,
+  detailHref = ROUTES.booking.detail,
+  heading = false,
+}: {
+  lockedRole?: TripRole;
+  /** Đích của một thẻ chuyến — web `TripCard.basePath`: `/trips/:id` hay `/manage/account/trips/:id`. */
+  detailHref?: (id: string) => Href;
+  /**
+   * Vẽ tiêu đề trang (`list.heading` + `list.sub`) như `TripsView` bên web. Ở tab "Chuyến" của khu
+   * khách thanh trên + nhãn tab đã nói điều đó; lối chuyển tiếp trong khu quản lý thì không có gì
+   * khác nói người dùng đang ở đâu.
+   */
+  heading?: boolean;
+} = {}) {
   const t = useTranslations('Trips');
   const tRequests = useTranslations('BookingRequests');
   const domainLabel = useDomainLabel();
@@ -143,8 +159,8 @@ export function TripsScreen({ lockedRole }: { lockedRole?: TripRole } = {}) {
    */
   const navigateOnce = useNavigateOnce();
   const openTrip = useCallback(
-    (trip: CustomerTrip) => navigateOnce(ROUTES.booking.detail(trip.id)),
-    [navigateOnce],
+    (trip: CustomerTrip) => navigateOnce(detailHref(trip.id)),
+    [detailHref, navigateOnce],
   );
 
   /*
@@ -291,6 +307,7 @@ export function TripsScreen({ lockedRole }: { lockedRole?: TripRole } = {}) {
         một dải trống đứng im ngay trên thanh tab, và danh sách không bao giờ chạm tới đáy.
       */}
       <Screen edges={['left', 'right']} scroll={false} padded={false}>
+        {heading ? <ManagePageTitle title={t('list.heading')} subtitle={t('list.sub')} /> : null}
         <FilterTabs
           value={filter}
           counts={counts}
@@ -532,7 +549,11 @@ const StageFilter = memo(function StageFilter({
         <MenuOptionList>
           {/* "Tất cả" là một dòng trong CÙNG danh sách, không phải nút xoá riêng: xoá lọc và đổi
               lọc là một cử chỉ, và dòng này cho thấy mình đang được chọn khi chưa lọc gì. */}
-          <MenuOption label={t('stageAll')} selected={value === null} onPress={() => select(null)} />
+          <MenuOption
+            label={t('stageAll')}
+            selected={value === null}
+            onPress={() => select(null)}
+          />
           {CUSTOMER_TRIP_STAGE_VALUES.map((item) => (
             <MenuOption
               key={item}

@@ -42,11 +42,15 @@ export function shopAccountRedirect(
   if (!inAccount && !inTrips) return null;
 
   /*
-   * Chuyến đi vào lối CHUYỂN TIẾP. Không mang id sang: bản native của lối này là một danh sách
-   * khoá vai `renter` (`/manage/account/trips`), và nó chưa có màn chi tiết riêng — đẩy thẳng một
-   * id vào đó sẽ mở một route không tồn tại.
+   * Chuyến đi vào lối CHUYỂN TIẾP trong khu quản lý — danh sách khoá vai `renter`
+   * (`/manage/account/trips`) và chi tiết của nó (`/manage/account/trips/[id]`), đúng cặp route
+   * của web. Mang id sang: đẩy `/trips/:id` về DANH SÁCH là để người dùng chạm vào một chuyến rồi
+   * bị trả ngược về chỗ vừa đứng.
    */
-  if (inTrips) return ROUTES.manage.accountTrips();
+  if (inTrips) {
+    const id = pathname.slice(tripsRoot.length + 1).split('/')[0];
+    return id ? ROUTES.manage.accountTripDetail(id) : ROUTES.manage.accountTrips();
+  }
 
   // Ba màn của CON NGƯỜI: cho qua, vì chính khu quản lý dẫn tới đây (xem docblock trên).
   const personal: readonly string[] = [

@@ -11,11 +11,18 @@ import { AccountScreen } from './AccountScreen';
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
+/* Đổi khu đi bằng `dismissTo` (POP_TO) — không dựng `(tabs)` thứ hai trên ngăn xếp gốc. */
+const mockDismissTo = jest.fn();
 
 jest.mock('expo-router', () => ({
   // `useNavigateOnce` cần `useNavigation().isFocused()` — thiếu nó là màn nổ giữa lúc render.
   useNavigation: () => ({ isFocused: () => true }),
-  useRouter: () => ({ push: mockPush, replace: mockReplace, back: jest.fn() }),
+  useRouter: () => ({
+    push: mockPush,
+    replace: mockReplace,
+    dismissTo: mockDismissTo,
+    back: jest.fn(),
+  }),
   // Menu tài khoản đánh dấu mục đang mở theo đường dẫn — màn này LÀ `/account`.
   usePathname: () => '/account',
 }));
@@ -102,6 +109,7 @@ const PROFILE_CARD_TEXT = 'Thông tin đăng nhập';
 beforeEach(() => {
   mockPush.mockClear();
   mockReplace.mockClear();
+  mockDismissTo.mockClear();
 });
 
 describe('AccountScreen — hồ sơ (CUS-04)', () => {
@@ -312,6 +320,7 @@ describe('AccountScreen — điều hướng tài khoản', () => {
 
     await fireEvent.press(profileItem);
     expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockDismissTo).not.toHaveBeenCalled();
     expect(mockPush).not.toHaveBeenCalled();
   });
 
@@ -326,6 +335,7 @@ describe('AccountScreen — điều hướng tài khoản', () => {
     await fireEvent.press(view.getAllByRole('menuitem', { name: 'Lịch xe' })[0]!);
     expect(mockPush).toHaveBeenCalledWith('/account/calendar');
     expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockDismissTo).not.toHaveBeenCalled();
   });
 
   it('chủ xe bấm "Danh sách xe": mở danh sách xe của khu tài khoản', async () => {
@@ -419,7 +429,7 @@ describe('AccountScreen — thẻ gian hàng', () => {
     await view.findByText(PROFILE_CARD_TEXT);
 
     await fireEvent.press(view.getByRole('button', { name: /Vào quản lý gian hàng/ }));
-    expect(mockReplace).toHaveBeenCalledWith('/manage');
+    expect(mockDismissTo).toHaveBeenCalledWith('/manage');
   });
 
   it('tài khoản nền tảng: "Quản trị nền tảng" thắng cả vai gian hàng', async () => {

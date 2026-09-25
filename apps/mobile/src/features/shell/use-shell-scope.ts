@@ -96,7 +96,14 @@ export function useShellScope(): ShellScope {
         ? undefined
         : (lastRoute[target] as Href | undefined);
       // Đích đã nhớ là một chuỗi đường dẫn thật đã từng render — dùng thẳng làm `Href`.
-      router.replace(destination ?? remembered ?? fallback);
+      //
+      // `dismissTo` (POP_TO) chứ KHÔNG `replace`: chủ gian hàng đăng nhập từ màn Khám phá có ngăn
+      // xếp gốc `[(tabs), manage]`. `replace` thay `manage` bằng MỘT `(tabs)` THỨ HAI, bản cũ nằm
+      // lại (native đã tháo, React vẫn giữ) và nhận cập nhật khi đổi tab ⇒ Fabric
+      // `addViewAt … already has a parent` ngay cú chạm tab "Chuyến" (tái hiện trên emulator
+      // 25/09/2026). POP_TO lùi về khu đã có trong ngăn xếp; chưa có thì thay màn hiện tại — đúng
+      // như `replace` cũ.
+      router.dismissTo(destination ?? remembered ?? fallback);
     },
     [dispatch, lastRoute, packageOnboardingPending, router, scope],
   );

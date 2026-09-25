@@ -69,6 +69,38 @@ export const SHOP_WELCOME_PARAM = 'welcome';
 export const MANAGE_ONBOARDING_PATHNAME = '/manage/onboarding';
 export const MANAGE_SHOP_PATHNAME = '/manage/shop';
 
+/**
+ * Bộ lọc của màn lịch — dùng chung cho lịch cổng quản lý và lịch khu tài khoản (cùng màn, cùng
+ * tham số — web cũng vậy: `vehicleSchedulePath(vehicle, { basePath: paths.calendar })`).
+ */
+export interface CalendarFilters {
+  q?: string;
+  from?: string;
+  days?: number;
+  /**
+   * Đã tới đây TỪ một màn khác ⇒ thanh công cụ bày nút quay lại.
+   *
+   * Web mang cả ĐƯỜNG DẪN quay lại (`?back=/manage/vehicles`) vì trình duyệt có thể mở
+   * thẳng một URL bất kỳ. Ở app thì ngăn xếp điều hướng đã giữ sẵn lịch sử, nên chỉ cần biết
+   * CÓ hay KHÔNG — mang thêm một đường dẫn là mở lại đúng lỗ open-redirect mà web phải chống
+   * bằng `isSafeNextPath`.
+   */
+  back?: boolean;
+}
+
+function calendarHref(
+  pathname: '/manage/calendar' | '/account/calendar',
+  filters?: CalendarFilters,
+): Href {
+  const params = Object.fromEntries(
+    Object.entries(filters ?? {})
+      .filter(([, value]) => Boolean(value))
+      // `back` là một CỜ: hoá thành `'1'`, đúng quy ước `create` của sổ Thu-Chi.
+      .map(([key, value]) => [key, value === true ? '1' : String(value)]),
+  ) as Record<string, string>;
+  return Object.keys(params).length > 0 ? { pathname, params } : pathname;
+}
+
 export const ROUTES = {
   /** Chợ xe: trang khám phá, tìm kiếm, chi tiết xe. */
   explore: {
@@ -159,7 +191,11 @@ export const ROUTES = {
      * (`app/manage/vehicles/[id]/…`), nên mở từ đây vẫn lui về đúng danh sách này.
      */
     vehicles: (): Href => '/account/vehicles',
-    calendar: (): Href => '/account/calendar',
+    /**
+     * Lịch của khu tài khoản — cùng màn, cùng tham số (`q`, `back`) với `manage.calendar`.
+     * Web: hồ sơ xe mở lịch ở `paths.calendar`, và ở khu tài khoản đó là `/account/calendar`.
+     */
+    calendar: (filters?: CalendarFilters): Href => calendarHref('/account/calendar', filters),
     /** Hồ sơ 360 của một xe — cùng màn với `/manage`, mở từ danh sách xe của khu tài khoản. */
     vehicleDetail: (vehicleId: string): Href => ({
       pathname: '/account/vehicles/[id]',
@@ -389,30 +425,7 @@ export const ROUTES = {
      * (`vehicleSchedulePath`), vì màn lịch dùng chung nhận `q` và không có route lịch-một-xe.
      * Bịa một route mới ở đây là làm "Xem lịch" dẫn tới hai kết quả khác nhau trên hai client.
      */
-    calendar: (filters?: {
-      q?: string;
-      from?: string;
-      days?: number;
-      /**
-       * Đã tới đây TỪ một màn khác ⇒ thanh công cụ bày nút quay lại.
-       *
-       * Web mang cả ĐƯỜNG DẪN quay lại (`?back=/manage/vehicles`) vì trình duyệt có thể mở
-       * thẳng một URL bất kỳ. Ở app thì ngăn xếp điều hướng đã giữ sẵn lịch sử, nên chỉ cần biết
-       * CÓ hay KHÔNG — mang thêm một đường dẫn là mở lại đúng lỗ open-redirect mà web phải chống
-       * bằng `isSafeNextPath`.
-       */
-      back?: boolean;
-    }): Href => {
-      const params = Object.fromEntries(
-        Object.entries(filters ?? {})
-          .filter(([, value]) => Boolean(value))
-          // `back` là một CỜ: hoá thành `'1'`, đúng quy ước `create` của sổ Thu-Chi.
-          .map(([key, value]) => [key, value === true ? '1' : String(value)]),
-      ) as Record<string, string>;
-      return Object.keys(params).length > 0
-        ? { pathname: '/manage/calendar', params }
-        : '/manage/calendar';
-    },
+    calendar: (filters?: CalendarFilters): Href => calendarHref('/manage/calendar', filters),
 
     /** Sổ khách của gian hàng (CUS-01) — mục `customers` của menu quản lý. */
     customers: (): Href => '/manage/customers',
@@ -476,6 +489,15 @@ export const ROUTES = {
      * hiện rồi biến mất theo ngày khiến hai người cùng vai nhìn thấy hai menu khác nhau.
      */
     accountTrips: (): Href => '/manage/account/trips',
+    /**
+     * Chi tiết MỘT chuyến đi thuê của chủ gian hàng — web `/manage/account/trips/[id]`. Lối
+     * `/trips/:id` của khu khách bị cổng `shopAccountRedirect` chặn với tài khoản gian hàng, nên
+     * chuyến của họ phải có chỗ mở ngay trong khu quản lý.
+     */
+    accountTripDetail: (id: string): Href => ({
+      pathname: '/manage/account/trips/[id]',
+      params: { id },
+    }),
 
     /** Chi nhánh gian hàng (SHP-03) — nơi xe thực sự nằm. */
     shopBranches: (): Href => '/manage/shop/branches',

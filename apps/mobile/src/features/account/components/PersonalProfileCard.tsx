@@ -12,7 +12,6 @@ import { ImageUploadField } from '@/components/ui/ImageUploadField';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { uploadsApi } from '@/api/uploads/api';
@@ -21,6 +20,7 @@ import { AccountIdentityHero } from './AccountIdentityHero';
 import { ContactVerifySheet } from './ContactVerifySheet';
 import { useUpdateMyProfile } from '../hooks/use-account';
 import { CONTACT_CHANNEL, type ContactChannel, type UserProfile } from '../api';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /** Đường kính hình tròn dẫn đầu một dòng liên hệ — cùng cỡ với đĩa của `IconDisc`. */
 const DISC = 32;
@@ -60,7 +60,6 @@ export function PersonalProfileCard({
   const t = useTranslations('Account');
   const tCommon = useTranslations('Common.actions');
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   const update = useUpdateMyProfile();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -99,7 +98,7 @@ export function PersonalProfileCard({
           toast.showSuccess(t('saved'));
           setIsEditing(false);
         },
-        onError: (err) => toast.showError(errorMessage(err)),
+        onError: (err) => toast.showError(getErrorMessage(err)),
       },
     );
   });
@@ -244,9 +243,7 @@ export function PersonalProfileCard({
                 value={profile.email}
                 emptyLabel={t('noEmail')}
                 verified={profile.emailVerified}
-                {...(editable
-                  ? { onEdit: () => setEditingContact(CONTACT_CHANNEL.EMAIL) }
-                  : {})}
+                {...(editable ? { onEdit: () => setEditingContact(CONTACT_CHANNEL.EMAIL) } : {})}
               />
               <YStack h={1} bg={colors.borderSubtle} />
               <ContactRow
@@ -255,9 +252,7 @@ export function PersonalProfileCard({
                 value={profile.phone}
                 emptyLabel={t('noPhone')}
                 verified={profile.phoneVerified}
-                {...(editable
-                  ? { onEdit: () => setEditingContact(CONTACT_CHANNEL.PHONE) }
-                  : {})}
+                {...(editable ? { onEdit: () => setEditingContact(CONTACT_CHANNEL.PHONE) } : {})}
               />
             </YStack>
 
@@ -363,7 +358,9 @@ function ContactRow({
         <Text col={colors.textMuted} fos={fontSize.label} f={1} minWidth={0} numberOfLines={1}>
           {label}
         </Text>
-        {onEdit ? <InlineAction label={value ? t('contact.change') : t('contact.add')} onPress={onEdit} /> : null}
+        {onEdit ? (
+          <InlineAction label={value ? t('contact.change') : t('contact.add')} onPress={onEdit} />
+        ) : null}
       </XStack>
 
       {/*

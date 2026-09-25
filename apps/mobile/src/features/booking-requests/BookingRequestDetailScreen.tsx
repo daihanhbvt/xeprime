@@ -34,7 +34,6 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
-import { RespondDeadline } from './components/RespondDeadline';
 import type { BookingRequestItem } from './api';
 
 const VEHICLE_THUMB = { width: 96, height: 72 } as const;
@@ -121,19 +120,10 @@ export function BookingRequestDetailScreen({
 
   return (
     <>
-      {/*
-        Trạng thái đứng NGAY CẠNH tiêu đề màn — `AppHeader.badge` sinh ra đúng cho việc này (tiêu
-        đề co lại nhường chỗ, nhãn không co).
-
-        Trước 24/09/2026 nó là một `Card tone="accent"` chỉ chở đúng một viên nhãn. Viên đó đứng
-        một mình trong một khối nên đọc ra như một NÚT BẤM — cùng hình pill, cùng sắc độ xám với
-        những nút thật ở dưới — và nó chiếm trọn khối đầu tiên trước khi người đọc kịp biết mình
-        đang xem yêu cầu nào. Gắn vào tiêu đề là gắn trạng thái vào thứ nó nói về.
-      */}
+      {/* Trạng thái đi cùng hàng tiêu đề của khối XE đầu tiên — xem chú thích ở khối đó. */}
       <AppHeader title={t('detail.title')} onBack={onClose} />
       <Screen edges={['left', 'right', 'bottom']}>
         <YStack gap={layout.section}>
-
           {/*
             Mở được HỒ SƠ 360 của xe ngay từ đây — web cũng vậy (`VehicleDetailDialog` mở từ hộp
             thư). Đang duyệt yêu cầu mà muốn kiểm hạn đăng kiểm hay KM của xe thì xem tại chỗ,
@@ -291,6 +281,26 @@ export function BookingRequestDetailScreen({
                   ) : null}
                 </YStack>
               </XStack>
+
+              {/*
+                "Mở hồ sơ khách" — cùng điều kiện web (`request.tenantCustomerId`): khách đã có hồ sơ
+                trong sổ khách của gian hàng. Web mở hộp thoại hồ sơ khách; native đẩy màn hồ sơ và
+                nút Lui trả về đúng đây.
+              */}
+              {request.tenantCustomerId ? (
+                <XStack>
+                  <Button
+                    label={t('detail.openCustomer')}
+                    icon="person-outline"
+                    variant="secondary"
+                    size="sm"
+                    block={false}
+                    onPress={() =>
+                      navigateOnce(ROUTES.manage.customerDetail(request.tenantCustomerId as string))
+                    }
+                  />
+                </XStack>
+              ) : null}
 
               {/* Số điện thoại bấm gọi được — trên điện thoại đó là việc gần nhất làm được. */}
               <DataRow
@@ -496,17 +506,10 @@ export function BookingRequestDetailScreen({
           </Card>
 
           {/*
-            Đồng hồ hạn phản hồi đứng NGAY TRÊN hai nút quyết định, không ở đầu màn.
-            Nó là áp lực cho đúng một việc — bấm Duyệt hay Từ chối — nên nó phải nằm ở chỗ việc đó
-            xảy ra, chứ không phải ở nơi người đọc còn chưa biết mình sắp quyết cái gì. Mốc hạn
-            TUYỆT ĐỐI vẫn có ở khối dữ liệu phía trên (`deadline.label`); đây là phần đếm ngược.
+            KHÔNG có đồng hồ đếm lùi ở đây — đúng như `BookingRequestDetailDialog` bên web: chi
+            tiết chỉ nói mốc hạn TUYỆT ĐỐI (`deadline.label` ở khối trên). Đồng hồ sống ở thẻ trong
+            hộp thư, nơi người trực lướt tìm yêu cầu sắp hết hạn.
           */}
-          {needsDecision ? (
-            <XStack jc="center">
-              <RespondDeadline respondBy={request.respondBy} />
-            </XStack>
-          ) : null}
-
           {decidable && canApprove ? (
             <YStack gap={space.sm}>
               <Button

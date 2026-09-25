@@ -11,10 +11,17 @@ import { tenantsApi, type MyShop } from './api';
 import { ShopOnboardingScreen } from './ShopOnboardingScreen';
 
 const mockReplace = jest.fn();
+/* Đổi khu đi bằng `dismissTo` (POP_TO) — không dựng `(tabs)` thứ hai trên ngăn xếp gốc. */
+const mockDismissTo = jest.fn();
 
 jest.mock('expo-router', () => ({
   useNavigation: () => ({ isFocused: () => true }),
-  useRouter: () => ({ push: jest.fn(), replace: mockReplace, back: jest.fn() }),
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: mockReplace,
+    dismissTo: mockDismissTo,
+    back: jest.fn(),
+  }),
 }));
 
 /** Người dùng đã đăng nhập nhưng CHƯA có gian hàng — đúng đối tượng của SHP-01. */
@@ -102,6 +109,7 @@ async function renderScreen(tenant: authApi.CurrentUser['tenant'] = null) {
 beforeEach(() => {
   jest.restoreAllMocks();
   mockReplace.mockClear();
+  mockDismissTo.mockClear();
 });
 
 describe('ShopOnboardingScreen (SHP-01)', () => {
@@ -140,7 +148,7 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
      * `ShopProfileScreen` còn lọc lại theo `isEstablishedPackageShop`.
      */
     await waitFor(() =>
-      expect(mockReplace).toHaveBeenCalledWith({
+      expect(mockDismissTo).toHaveBeenCalledWith({
         pathname: '/manage/shop',
         params: { welcome: '1' },
       }),
@@ -207,5 +215,6 @@ describe('ShopOnboardingScreen (SHP-01)', () => {
       expect(view.getByLabelText('Tên gian hàng').props.value).toBe('Cho thuê xe Bình Minh'),
     );
     expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockDismissTo).not.toHaveBeenCalled();
   });
 });

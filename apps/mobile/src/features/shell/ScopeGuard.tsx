@@ -89,7 +89,11 @@ export function ScopeGuard({ children }: { children: ReactNode }) {
    * lý, nhân viên, người xem rời khu quản lý cùng lúc — vì câu hỏi hỏi TENANT, không hỏi vai.
    */
   const outsideManagePortal =
-    ready && !tenantUsesManagePortal(tenant) && !user?.platformRole && insideManage && !onOnboarding;
+    ready &&
+    !tenantUsesManagePortal(tenant) &&
+    !user?.platformRole &&
+    insideManage &&
+    !onOnboarding;
 
   /**
    * Gian hàng trả phí CHƯA chuyển khoản, đang đứng ở một màn quản lý khác (ADR 0040).
@@ -121,7 +125,8 @@ export function ScopeGuard({ children }: { children: ReactNode }) {
     dispatch(scopeChanged(APP_SCOPE.CUSTOMER));
     fireAndForget(forgetScope, 'ScopeGuard.forgetScope');
     toast.showInfo(t('lostAccess'));
-    router.replace(scopeHome(APP_SCOPE.CUSTOMER));
+    // `dismissTo`: lùi về `(tabs)` đã có dưới ngăn xếp thay vì dựng bản thứ hai — xem `switchTo`.
+    router.dismissTo(scopeHome(APP_SCOPE.CUSTOMER));
   }, [dispatch, evicted, needsOnboarding, router, t, toast]);
 
   switch (status) {

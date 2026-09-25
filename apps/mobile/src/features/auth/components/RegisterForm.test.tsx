@@ -88,7 +88,7 @@ describe('RegisterForm', () => {
     await waitFor(() => expect(onSuccess.mock.calls[0]?.[0]).toEqual(NEW_USER));
   });
 
-  it('SĐT đã có tài khoản: hiện câu của backend và KHÔNG báo thành công', async () => {
+  it('SĐT đã có tài khoản: hiện câu theo MÃ lỗi và KHÔNG báo thành công', async () => {
     jest.spyOn(authApi, 'registerWithPassword').mockRejectedValue(
       new ApiClientError({
         code: API_ERROR_CODE.PHONE_TAKEN,
@@ -102,7 +102,9 @@ describe('RegisterForm', () => {
     await fillValidForm(view);
     await fireEvent.press(view.getByRole('button', { name: 'Tạo tài khoản' }));
 
-    expect(await view.findByText('Số điện thoại đã được sử dụng')).toBeTruthy();
+    // Câu hiện ra đi theo MÃ lỗi (`Errors.code.*`), không theo `message` tiếng Việt của backend —
+    // đúng `useErrorMessage` bên web (ADR 0012).
+    expect(await view.findByText('Số điện thoại này đã có tài khoản.')).toBeTruthy();
     expect(onSuccess).not.toHaveBeenCalled();
   });
 });

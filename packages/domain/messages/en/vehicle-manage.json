@@ -287,16 +287,10 @@
   },
   "operationsTab": {
     "title": "Operations & rental terms",
-    "overviewTitle": "Configure how this vehicle serves guests",
     "hint": "Handover hours, instant booking, rental terms and surcharges",
     "handover": "Handover hours",
-    "handoverHint": "Pickup, return, and preparation time between bookings",
     "selfDrive": "Self-drive",
-    "selfDriveHint": "Instant booking, documents, collateral, and rental terms",
     "withDriver": "Chauffeured",
-    "withDriverHint": "Driver bookings, surcharges, and service terms",
-    "openTag": "Open",
-    "disabledTag": "Not enabled",
     "serviceOff": "This vehicle does not offer this service."
   }
 }

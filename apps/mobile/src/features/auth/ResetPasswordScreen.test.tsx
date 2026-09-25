@@ -80,7 +80,7 @@ describe('ResetPasswordScreen', () => {
     expect(onBackToLogin).toHaveBeenCalled();
   });
 
-  it('token hết hạn: hiện câu của backend, giữ nguyên form để thử liên kết khác', async () => {
+  it('token hết hạn: hiện câu theo MÃ lỗi, giữ nguyên form để thử liên kết khác', async () => {
     jest.spyOn(authApi, 'resetPasswordWithToken').mockRejectedValue(
       new ApiClientError({
         code: API_ERROR_CODE.INVALID_RESET_TOKEN,
@@ -93,7 +93,11 @@ describe('ResetPasswordScreen', () => {
     await fillNewPassword(view);
     await fireEvent.press(view.getByRole('button', { name: 'Đặt lại mật khẩu' }));
 
-    expect(await view.findByText('Liên kết đặt lại không hợp lệ hoặc đã hết hạn')).toBeTruthy();
+    // Câu hiện ra đi theo MÃ lỗi (`Errors.code.*`), không theo `message` tiếng Việt của backend —
+    // đúng `useErrorMessage` bên web (ADR 0012).
+    expect(
+      await view.findByText('Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.'),
+    ).toBeTruthy();
     expect(view.queryByText('Đã đổi mật khẩu')).toBeNull();
   });
 });

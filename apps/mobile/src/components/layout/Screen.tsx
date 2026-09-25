@@ -1,12 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import {
-  Dimensions,
-  Keyboard,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { Dimensions, Keyboard, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, {
   KeyboardState,
   runOnJS,
@@ -34,9 +27,6 @@ const KEYBOARD_TAIL = space.xl;
  */
 const SCROLL_REPORT_MS = 100;
 
-
-
-
 /**
  * Mép trên bàn phím, quy về HỆ TOẠ ĐỘ CỬA SỔ.
  *
@@ -61,7 +51,6 @@ export function keyboardTopInWindow(screenY: number, windowH: number, screenH: n
   if (!(windowH > 0) || !(screenH > 0) || screenH < windowH) return screenY;
   return windowH - (screenH - screenY);
 }
-
 
 interface ScreenProps {
   children: ReactNode;
@@ -102,6 +91,12 @@ interface ScreenProps {
    * yên và tự bỏ qua bên trong.
    */
   onRefresh?: () => void;
+  /**
+   * Ref tới `ScrollView` của màn — cho màn cần CUỘN TỚI một khối của chính nó (bản native của một
+   * liên kết `#anchor` bên web). Chỉ đọc để gọi `scrollTo`; bàn phím và vị trí cuộn vẫn do
+   * `Screen` giữ. Bỏ qua khi `scroll={false}`.
+   */
+  scrollRef?: RefObject<ScrollView | null>;
 }
 
 /**
@@ -118,6 +113,7 @@ export function Screen({
   footer,
   refreshing = false,
   onRefresh,
+  scrollRef,
 }: ScreenProps) {
   /**
    * Chiều cao bàn phím đọc từ WINDOW INSET, không từ sự kiện `keyboardDidShow`.
@@ -170,8 +166,7 @@ export function Screen({
    */
   useDerivedValue(() => {
     const settled =
-      keyboard.state.value === KeyboardState.OPEN ||
-      keyboard.state.value === KeyboardState.CLOSED;
+      keyboard.state.value === KeyboardState.OPEN || keyboard.state.value === KeyboardState.CLOSED;
     if (!settled) return;
     // Cùng một giá trị thì không đánh thức JS: trạng thái OPEN giữ nguyên qua nhiều khung.
     if (keyboard.height.value === lastPushed.value) return;
@@ -197,6 +192,17 @@ export function Screen({
    * không phải bù chiều cao thanh trên như phép tính nội-dung-tương-đối của `ScrollView`.
    */
   const scroller = useRef<ScrollView>(null);
+  /*
+   * Ref gộp: `Screen` cần `ScrollView` cho việc tránh bàn phím, màn gọi (tuỳ chọn) cần nó để cuộn
+   * tới một khối của chính nó. `useCallback` để React không gọi lại ref mỗi lần render.
+   */
+  const attachScroller = useCallback(
+    (node: ScrollView | null) => {
+      scroller.current = node;
+      if (scrollRef) scrollRef.current = node;
+    },
+    [scrollRef],
+  );
   const scrollY = useRef(0);
 
   /** Mép trên bàn phím trong hệ CỬA SỔ — `null` khi bàn phím đang đóng. */
@@ -282,7 +288,7 @@ export function Screen({
 
   const body = scroll ? (
     <ScrollView
-      ref={scroller}
+      ref={attachScroller}
       contentContainerStyle={[
         contentStyle,
         keyboardTail > 0 ? { paddingBottom: (padded ? space.lg : 0) + keyboardTail } : null,
@@ -313,10 +319,7 @@ export function Screen({
   );
 
   return (
-    <SafeAreaView
-      style={styles.flex}
-      {...(edges ? { edges } : {})}
-    >
+    <SafeAreaView style={styles.flex} {...(edges ? { edges } : {})}>
       {/*
         CÙNG cơ chế với `BottomSheet` (`behavior="padding"` cho cả hai nền), cộng thêm thứ tấm
         trượt không cần: `keyboardVerticalOffset`.

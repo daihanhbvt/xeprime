@@ -45,6 +45,7 @@ import { useCalendarData } from './hooks/use-calendar-data';
 import { useCalendarFilters } from './hooks/use-calendar-filters';
 import { useCalendarHolidays } from './hooks/use-calendar-holidays';
 import { listDays, type DayCell } from './utils/calendar-date.util';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /** Giờ nhận xe mặc định khi tạo đơn từ ô lịch (giờ Việt Nam) — cùng con số web dùng. */
 const DEFAULT_PICKUP_HOUR = 8;
@@ -269,11 +270,11 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
                 : t('dayPanel.quickBlocked', { count: result.fullyBlockedVehicles }),
             );
           },
-          onError: (error) => toast.showError(errorMessage(error)),
+          onError: (error) => toast.showError(getErrorMessage(error)),
         },
       );
     },
-    [errorMessage, panelPreview.data, quickBlock, t, toast],
+    [panelPreview.data, quickBlock, t, toast],
   );
 
   /** Chạm ô TRỐNG → mở bộ chọn hành động. Không thao tác nào chạy thẳng từ một cú chạm ô. */
@@ -437,7 +438,13 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
           searchValue={search}
           onSearchChange={setSearch}
           {...(params.back === '1'
-            ? { onBack: () => goBackOr(router, ROUTES.manage.vehicles()) }
+            ? {
+                onBack: () =>
+                  goBackOr(
+                    router,
+                    shell === 'account' ? ROUTES.account.vehicles() : ROUTES.manage.vehicles(),
+                  ),
+              }
             : {})}
         />
 
@@ -446,7 +453,12 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
         {data.isLoading ? (
           <CalendarGridSkeleton />
         ) : data.error && !data.resources ? (
-          <ScreenError error={data.error} title={t('states.loadFailed')} onRetry={data.refetch} />
+          <ScreenError
+            messageFrom="backend"
+            error={data.error}
+            title={t('states.loadFailed')}
+            onRetry={data.refetch}
+          />
         ) : resources.length === 0 ? (
           <ScreenMessage
             icon={filtered ? 'search-outline' : 'car-outline'}
@@ -473,7 +485,7 @@ export function CalendarScreen({ shell = 'manage' }: { shell?: CalendarShell } =
             {data.error ? (
               <YStack px={layout.screenX} pb={space.xs}>
                 <Callout tone="danger" title={t('states.loadFailed')}>
-                  {errorMessage(data.error)}
+                  {getErrorMessage(data.error)}
                 </Callout>
                 <InlineAction label={t('states.retry')} onPress={data.refetch} />
               </YStack>

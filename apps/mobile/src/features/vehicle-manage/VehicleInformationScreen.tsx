@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Controller, useForm, useWatch, type Control } from 'react-hook-form';
 import { Linking, Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
@@ -7,7 +7,8 @@ import { CATALOG_TYPE, VEHICLE_PUBLIC_STATUS, vehicleFeatureAppliesTo } from '@x
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { MapPreview } from '@/components/map/MapPreview';
-import { BlockTitle } from '@/components/ui/BlockTitle';
+import { BlockLink, BlockTitle } from '@/components/ui/BlockTitle';
+import { BranchFormSheet } from '@/features/branches/components/BranchFormSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
@@ -151,14 +152,14 @@ function InformationForm({
         toast.showSuccess(t('saved'));
         reset(vehicleToFormValues(saved));
       },
-        /*
-         * Lỗi validate của SERVER được đặt ĐÚNG Ô nó nói tới, không gom vào một toast chung.
-         *
-         * Hai lớp validate (yup ở client, class-validator ở server) không bao giờ trùng khít; khi
-         * server bắt được thứ yup bỏ lọt — biển số trùng, đời xe ngoài dải — một câu chung buộc
-         * người dùng tự dò trên một form vài chục ô. Lọc theo `FIELDS` là bắt buộc: `setError` với
-         * một tên không có ô nào sẽ khoá `handleSubmit` vĩnh viễn mà không hiện gì.
-         */
+      /*
+       * Lỗi validate của SERVER được đặt ĐÚNG Ô nó nói tới, không gom vào một toast chung.
+       *
+       * Hai lớp validate (yup ở client, class-validator ở server) không bao giờ trùng khít; khi
+       * server bắt được thứ yup bỏ lọt — biển số trùng, đời xe ngoài dải — một câu chung buộc
+       * người dùng tự dò trên một form vài chục ô. Lọc theo `FIELDS` là bắt buộc: `setError` với
+       * một tên không có ô nào sẽ khoá `handleSubmit` vĩnh viễn mà không hiện gì.
+       */
       onError: (error) => {
         const applied = applyApiFieldErrors(error, setError, { fields: FIELDS });
         if (applied.length === 0) toast.showError(errorMessage(error));
@@ -191,7 +192,7 @@ function InformationForm({
         </YStack>
       </Card>
 
-      <AddressCard vehicle={vehicle} />
+      <AddressCard vehicle={vehicle} canEdit={canEdit} />
 
       <Card>
         <YStack gap={space.md}>
@@ -307,16 +308,17 @@ function InformationForm({
  * cho những nhãn hai chữ, nên một câu 30 chữ rơi xuống tám dòng ép sát bên trái trong khi tên chi
  * nhánh đứng một mình bên phải. Đó không phải một bảng, đó là một đoạn văn.
  *
- * Chỉ ĐỌC ở đây: web mở `BranchFormDialog` tại chỗ, nhưng chi nhánh là dữ liệu của GIAN HÀNG và
- * khu tài khoản đã thống nhất không mở đường sang `/manage`. Cảnh báo "chi nhánh đang giữ nhiều
- * xe" vì thế hiện THẲNG ra thẻ thay vì nằm trong hộp thoại sửa như web — nó là thứ chủ xe cần
- * biết trước khi đi tìm chỗ sửa, không phải sau.
+ * "Sửa địa chỉ" mở `BranchFormSheet` NGAY TẠI CHỖ — đúng `BranchFormDialog` bên web, không điều
+ * hướng đi đâu (không có lối nào sang `/manage`). Cảnh báo "chi nhánh đang giữ nhiều xe" / câu
+ * "địa chỉ lấy từ chi nhánh" nằm TRONG tấm sửa, đúng chỗ web đặt chúng: đó là điều cần biết lúc
+ * sửa, còn thẻ chỉ nói xe đang ở đâu.
  *
  * Địa chỉ đường phố và số xe không nằm trong `vehicle.branch` (chỉ có id/tên/tỉnh), nên phải đọc
  * danh sách chi nhánh — đúng nguồn web dùng. Thiếu quyền hay lỗi mạng thì lùi về phần tóm tắt đã
  * có sẵn, không bao giờ để trống thẻ.
  */
-function AddressCard({ vehicle }: { vehicle: VehicleDetail }) {
+function AddressCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
+  const [editing, setEditing] = useState(false);
   const t = useTranslations('VehicleManage.information');
   const tAddress = useTranslations('Address');
   const tStates = useTranslations('Common.states');
@@ -344,7 +346,15 @@ function AddressCard({ vehicle }: { vehicle: VehicleDetail }) {
   return (
     <Card>
       <YStack gap={space.sm}>
-        <BlockTitle>{t('addressTitle')}</BlockTitle>
+        <BlockTitle
+          action={
+            branch && canEdit ? (
+              <BlockLink label={t('addressEdit')} onPress={() => setEditing(true)} />
+            ) : undefined
+          }
+        >
+          {t('addressTitle')}
+        </BlockTitle>
 
         {!vehicle.branch ? (
           <Callout tone="warning">{t('addressMissing')}</Callout>
@@ -391,22 +401,29 @@ function AddressCard({ vehicle }: { vehicle: VehicleDetail }) {
                 {t('addressMapPending')}
               </Text>
             ) : null}
+          </>
+        )}
+      </YStack>
 
-            {shared ? (
+      {branch && editing ? (
+        <BranchFormSheet
+          open
+          branch={branch}
+          onClose={() => setEditing(false)}
+          notice={
+            shared ? (
               <Callout
                 tone="warning"
-                title={t('addressSharedTitle', { count: branch?.vehicleCount ?? 0 })}
+                title={t('addressSharedTitle', { count: branch.vehicleCount })}
               >
                 {t('addressSharedBody')}
               </Callout>
             ) : (
-              <Text col={colors.placeholder} fos={fontSize.label}>
-                {t('addressBranchHint')}
-              </Text>
-            )}
-          </>
-        )}
-      </YStack>
+              <Callout tone="info">{t('addressBranchHint')}</Callout>
+            )
+          }
+        />
+      ) : null}
     </Card>
   );
 }

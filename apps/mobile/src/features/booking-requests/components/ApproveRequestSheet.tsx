@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { isBookingRequestPastDue, LONG_TERM_PACKAGE_MONTHS, SERVICE_TYPE } from '@xeprime/types';
-import { LIST_SEPARATOR, type Dayjs } from '@xeprime/domain';
+import { appWallClockToIso, LIST_SEPARATOR, type Dayjs } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -57,7 +57,8 @@ export function ApproveRequestSheet({
     }
     if (!pickupAt || !packageMonths) return;
     onConfirm({
-      scheduledPickupAt: pickupAt.toISOString(),
+      // Giờ nhận đã chốt = mặt đồng hồ GIỜ VIỆT NAM — đúng `ApproveLongTermDialog` bên web.
+      scheduledPickupAt: appWallClockToIso(pickupAt),
       longTermPackageMonths: packageMonths as ApproveBookingRequestInput['longTermPackageMonths'],
     });
   }
@@ -95,7 +96,9 @@ export function ApproveRequestSheet({
           */}
           <DataRow
             label={t('approve.customer')}
-            value={[request.customerName, request.customerPhone].filter(Boolean).join(LIST_SEPARATOR)}
+            value={[request.customerName, request.customerPhone]
+              .filter(Boolean)
+              .join(LIST_SEPARATOR)}
           />
           {longTerm ? (
             <DataRow label={t('longTerm.pickupWish')} value={fmt.pickupWish(request)} />

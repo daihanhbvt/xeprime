@@ -7,9 +7,9 @@ import { Card } from '@/components/ui/Card';
 import { OtpCodeInput, OTP_LENGTH } from '@/features/phone-verification/components/OtpCodeInput';
 import { maskPhone } from '@/features/phone-verification/mask';
 import type { usePhoneVerify } from '@/features/phone-verification/hooks/use-phone-verify';
-import { useAppToast } from '@/components/feedback/use-app-toast';
-import { useErrorMessage } from '@/i18n/use-error-message';
+import { Callout } from '@/components/ui/Callout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /**
  * Bước xác thực SĐT — CHỈ xuất hiện khi hệ thống chưa biết số này là của khách.
@@ -31,14 +31,11 @@ export function RequestOtpStep({
 }) {
   const t = useTranslations('BookingRequests.flow.otp');
   const tActions = useTranslations('BookingRequests.flow.actions');
-  const errorMessage = useErrorMessage();
-  const toast = useAppToast();
   const [code, setCode] = useState('');
 
-  // Lỗi đi bằng TOAST chứ không phải dòng đỏ dưới ô: bàn phím che nửa dưới màn, đúng chỗ dòng đỏ rơi vào.
   function confirm(next = code) {
     if (next.length !== OTP_LENGTH || otp.verifying) return;
-    otp.verify(phone, next, { onError: (error) => toast.showError(errorMessage(error)) });
+    otp.verify(phone, next);
   }
 
   function resend() {
@@ -73,6 +70,18 @@ export function RequestOtpStep({
             {t('hint', { phone: maskPhone(phone) })}
           </Text>
         </YStack>
+
+        {/*
+          Lỗi gửi mã (kể cả gửi lại và lượt tự gửi khi phiên xác minh hết hạn) và lỗi xác minh —
+          đúng `vp.error` mà web in thành cảnh báo trong bước này, câu nguyên văn của server.
+          Đặt TRÊN ô nhập mã: bàn phím che nửa dưới màn, đúng chỗ một dòng đỏ dưới ô sẽ rơi vào.
+          Trước đây lỗi gửi lại không hiện ở đâu cả — hook giữ lỗi nhưng không ai vẽ nó.
+        */}
+        {otp.error ? (
+          <YStack alignSelf="stretch">
+            <Callout tone="danger">{getErrorMessage(otp.error)}</Callout>
+          </YStack>
+        ) : null}
 
         <OtpCodeInput
           value={code}

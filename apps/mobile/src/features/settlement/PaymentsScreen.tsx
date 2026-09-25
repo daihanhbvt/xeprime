@@ -22,13 +22,13 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 import { usePaymentHistory, useVoidPayment } from './hooks/use-settlement';
 import type { Payment } from './api';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /**
  * LỊCH SỬ tiền của một đơn (FIN-06) — bản native của `PaymentHistory`.
@@ -97,7 +97,6 @@ function PaymentRow({ bookingId, payment }: { bookingId: string; payment: Paymen
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   const permissions = usePermissions();
   const voidPayment = useVoidPayment(bookingId);
   const [confirming, setConfirming] = useState(false);
@@ -171,7 +170,7 @@ function PaymentRow({ bookingId, payment }: { bookingId: string; payment: Paymen
                     setConfirming(false);
                   },
                   onError: (error) => {
-                    toast.showError(errorMessage(error));
+                    toast.showError(getErrorMessage(error));
                     setConfirming(false);
                   },
                 })

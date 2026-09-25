@@ -25,7 +25,6 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useFormRefresh } from '@/hooks/use-form-refresh';
 import { useActiveBranches } from '@/features/branches/hooks/use-branches';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { goBackOr } from '@/navigation/go-back-or';
@@ -45,6 +44,7 @@ import {
 import { informationValuesToInput, mediaValuesToInput, vehicleToFormValues } from './mappers';
 import { useUpdateVehicle, useVehicle } from './hooks/use-vehicle';
 import { branchLabel, type UpdateVehicleInput, type VehicleDetail } from './api';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /** Hai màn con của hub sửa xe dùng chung khung này — khác nhau ở PAYLOAD và ở khối hiển thị. */
 export type VehicleEditFormTab =
@@ -181,7 +181,6 @@ function EditForm({
   const tActions = useTranslations('Common.actions');
   const tBranches = useTranslations('Branches');
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   const update = useUpdateVehicle(vehicle.id);
 
   const initialValues = useMemo(() => vehicleToFormValues(vehicle), [vehicle]);
@@ -284,7 +283,7 @@ function EditForm({
        * sang tab nào.
        */
       const applied = applyApiFieldErrors(error, setError, { fields: activeFields });
-      if (applied.length === 0) toast.showError(errorMessage(error));
+      if (applied.length === 0) toast.showError(getErrorMessage(error));
     }
   }
 
