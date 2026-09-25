@@ -2,6 +2,7 @@ import { useTranslations } from 'use-intl';
 import { tenantUsesManagePortal } from '@xeprime/types';
 import { YStack } from 'tamagui';
 import { Screen } from '@/components/layout/Screen';
+import { AppVersion } from '@/components/ui/AppVersion';
 import { Card } from '@/components/ui/Card';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { ProfileSkeleton } from '@/components/ui/Skeleton';
@@ -153,6 +154,9 @@ function AccountBody({
             </YStack>
           </Card>
         ) : null}
+
+        {/* Chân màn: số phiên bản để người dùng đọc khi báo lỗi (yêu cầu duyệt của hai cửa hàng). */}
+        <AppVersion />
       </YStack>
     </Screen>
   );

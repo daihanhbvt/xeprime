@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { FlatList, RefreshControl, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { Text, XStack, YStack } from 'tamagui';
+import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { BOOKING_REQUEST_STATUS, PERMISSION, SERVICE_TYPE_VALUES } from '@xeprime/types';
+import { PERMISSION, SERVICE_TYPE_VALUES } from '@xeprime/types';
 import { Screen } from '@/components/layout/Screen';
 import { Chip } from '@/components/ui/Chip';
 import { RecordCardSkeleton } from '@/components/ui/Skeleton';
@@ -18,14 +18,13 @@ import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
 import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { FIRST_PAGE, useClampedPage } from '@/queries/use-clamped-page';
-import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { LIST_TUNING } from '@/theme/list-tuning';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { colors, space } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
 import { cancelErrorKey, decisionErrorKey } from './decision-error';
 import { BookingRequestDetailScreen } from './BookingRequestDetailScreen';
@@ -44,11 +43,7 @@ import {
   useRejectBookingRequest,
 } from './hooks/use-booking-requests';
 import { useStickyStatusCounts, type StatusCounts } from './hooks/use-status-counts';
-import {
-  BOOKING_REQUEST_TAB_NEEDS_ACTION,
-  type BookingRequestItem,
-  type CancelBookingRequestInput,
-} from './api';
+import { type BookingRequestItem, type CancelBookingRequestInput } from './api';
 
 /** Sentinel "mọi loại dịch vụ" của giao diện — API nhận `serviceType` vắng, không nhận `all`. */
 const SERVICE_ALL = 'all';
@@ -63,12 +58,13 @@ const tabKeyOf = (tab: { value: string }) => tab.value;
 /**
  * Hộp thư yêu cầu thuê (BKG-02 → 05).
  *
- * Tab theo VIỆC PHẢI LÀM, mặc định là `pending_host_approval` — mở màn ra là thấy đúng thứ cần
- * xử lý, không phải một danh sách trộn lẫn mọi thứ đã xong.
+ * ĐÚNG BA TAB (ADR 0047), mỗi tab một câu hỏi vận hành: **Cần xử lý** (gian hàng phải bấm một
+ * quyết định) · **Chờ khách thanh toán** (quả bóng sang chân khách) · **Đã đóng** (mọi kết cục
+ * không-thành-đơn). Mặc định mở ở tab đầu — vào màn là thấy đúng thứ cần xử lý, không phải một
+ * danh sách trộn lẫn mọi thứ đã xong.
  *
- * `all` là giá trị THẬT của tab, không phải "không lọc": bỏ tham số đi thì màn rơi về mặc định
- * `pending_host_approval` và "Tất cả" không bao giờ giữ được. Nó chỉ được dịch thành "không gửi
- * `status`" ở lớp gọi API.
+ * Không còn tab "Tất cả" và không còn khối hai con số ở đầu màn: ba tab đã phủ hết 11 trạng
+ * thái, và badge trên mỗi tab đã nói đúng những con số đó (xem ghi chú ở `StatusTabs`).
  *
  * Lọc và phân trang đều ở SERVER. Không có chỗ nào kéo cả kho về rồi cắt tại chỗ.
  */
@@ -78,6 +74,7 @@ export function BookingRequestInboxScreen() {
   const errorMessage = useErrorMessage();
   const permissions = usePermissions();
   const tLabels = useTranslations('Common.labels');
+  const tActions = useTranslations('Common.actions');
   const domainLabel = useDomainLabel();
   const navigateOnce = useNavigateOnce();
 
@@ -179,6 +176,13 @@ export function BookingRequestInboxScreen() {
   // "Đang lọc" gồm CẢ ô tìm kiếm lẫn bộ chọn dịch vụ: chỉ xét từ khoá thì màn rỗng sẽ đổ lỗi cho
   // tab trong khi thủ phạm là bộ lọc, và người dùng không được mời gỡ nó.
   const hasFilters = debouncedSearch.trim().length > 0 || serviceType !== null;
+
+  /** Cùng phạm vi với `clearFilters` của web: gỡ `q` + `serviceType`, GIỮ tab đang mở. */
+  const clearFilters = useCallback(() => {
+    setSearch('');
+    setServiceType(null);
+    setPage(FIRST_PAGE);
+  }, []);
 
   // "Xem chi tiết" dẫn tới ĐÂU là quyết định của màn này, không phải của thẻ: đã thành đơn thì mở
   // chi tiết ĐƠN, chưa có thì mở chi tiết YÊU CẦU.
@@ -382,7 +386,6 @@ export function BookingRequestInboxScreen() {
         <ManageListShell
           title={t('page.title')}
           {...(meta === undefined ? {} : { total: t('page.totalLabel', { count: meta.total }) })}
-          summary={<RequestStats counts={statusCounts} />}
           tabs={<StatusTabs value={status} onChange={changeStatus} counts={statusCounts} />}
           searchValue={search}
           searchLabel={t('filters.searchLabel')}
@@ -441,6 +444,17 @@ export function BookingRequestInboxScreen() {
                     icon="search-outline"
                     title={t('states.emptySearchTitle')}
                     description={t('states.emptySearchBody')}
+                    /*
+                      Lối ra phải nằm NGAY ĐÓ — đúng `onClear` của web. Không có nút, người dùng
+                      đứng trước một màn trắng và cách duy nhất là tự nhớ mình đã lọc gì rồi mở
+                      lại tấm trượt để gỡ từng chiều.
+
+                      Xoá `q` + `serviceType`, KHÔNG xoá tab: tab là chỗ người dùng đang đứng, và
+                      kéo họ về "Cần xử lý" là một lượt điều hướng không ai yêu cầu (cùng phạm vi
+                      với `clearFilters` của web).
+                    */
+                    actionLabel={tActions('clear')}
+                    onAction={clearFilters}
                   />
                 ) : status === DEFAULT_REQUEST_TAB ? (
                   <ScreenMessage
@@ -490,66 +504,19 @@ export function BookingRequestInboxScreen() {
   );
 }
 
-/**
- * Hai con số quan trọng nhất của hộp thư, tách khỏi dải tab: **còn bao nhiêu việc** và **đã chốt
- * được bao nhiêu**. Gương `headerStats` của web.
+/*
+ * Khối HAI CON SỐ ("Chờ duyệt" / "Hoàn thành") đã bị GỠ ngày 23/09/2026 cùng lúc với bản web
+ * (ADR 0047 điều 4).
  *
- * Lấy từ CÙNG bảng đếm mà tab dùng, nên không có đường nào để hai chỗ nói hai con số khác nhau.
+ * Nó đọc đúng cùng `statusCounts` mà badge trên dải tab đọc, tức là lặp lại 100% một thông tin
+ * đang nằm cách nó 8dp — và nó chiếm trọn một hàng ở đầu một màn hình mà việc thật (thẻ yêu cầu
+ * kèm đồng hồ đếm hạn phản hồi) mới là thứ cần nằm trên nếp gấp.
+ *
+ * ⚠️ Khoá `BookingRequests.stats.*` vẫn CÒN trong bó message dùng chung. Đó là chủ ý của ADR
+ * 0047 điều 8: lúc viết ADR, chính màn này còn đọc chúng, nên web giữ lại để không làm vỡ biên
+ * dịch mobile. Nay mobile đã thôi đọc — xoá được, nhưng việc đó thuộc về một lượt dọn message
+ * chung chứ không phải một đợt đồng bộ.
  */
-function RequestStats({ counts }: { counts: StatusCounts }) {
-  const t = useTranslations('BookingRequests.stats');
-
-  return (
-    <XStack
-      mx={layout.screenX}
-      mb={space.sm}
-      px={space.md}
-      py={space.sm}
-      br={radius.md}
-      borderWidth={1}
-      borderColor={colors.border}
-      bg={colors.surface}
-    >
-      {/* Cùng bộ trạng thái với tab "Cần xử lý" — hai con số lệch nhau là người trực đi tìm việc
-          không có ở đâu cả. */}
-      <StatCell label={t('pending')} count={statusCountOf(counts, BOOKING_REQUEST_TAB_NEEDS_ACTION)} />
-      {/* Đường kẻ dọc dựng bằng viền của ô sau, không thêm một phần tử rỗng — như web. */}
-      <StatCell
-        label={t('converted')}
-        count={statusCountOf(counts, BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING)}
-        divided
-      />
-    </XStack>
-  );
-}
-
-function StatCell({
-  label,
-  count,
-  divided = false,
-}: {
-  label: string;
-  count: number;
-  divided?: boolean;
-}) {
-  const fmt = useAppFormat();
-
-  return (
-    <YStack
-      f={1}
-      ai="center"
-      gap={2}
-      {...(divided ? { pl: space.md, borderLeftWidth: 1, borderColor: colors.border } : {})}
-    >
-      <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.semibold}>
-        {label.toUpperCase()}
-      </Text>
-      <Text col={colors.primaryActive} fos={fontSize.h3} fow={fontWeight.bold}>
-        {fmt.count(count)}
-      </Text>
-    </YStack>
-  );
-}
 
 function StatusTabs({
   value,

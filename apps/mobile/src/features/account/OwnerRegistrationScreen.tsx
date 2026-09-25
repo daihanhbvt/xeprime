@@ -119,6 +119,12 @@ export function OwnerRegistrationScreen() {
 
   return (
     <ShopProfileScreen
+      /*
+        CHỈ hai nhóm ô của hồ sơ — đúng `ShopProfileWorkspace` mà web nhúng vào màn này. Chủ gian
+        hàng, tài khoản nhận tiền và gói & hạn mức thuộc trang Cửa hàng ở cổng quản lý, nơi người
+        đứng ở đây (tuyến hoa hồng) không vào được.
+      */
+      variant="profileForm"
       header={
         <AppHeader
           /*

@@ -281,6 +281,28 @@
     "withdrawn": "Đã rút yêu cầu xoá tài khoản.",
     "loadError": "Không kiểm tra được yêu cầu hiện có."
   },
+  "publicDeletion": {
+    "eyebrow": "Tài khoản XePrime",
+    "title": "Yêu cầu xoá tài khoản",
+    "lead": "Điền email hoặc số điện thoại của tài khoản để gửi yêu cầu xoá. Trang này dùng được mà không cần cài ứng dụng.",
+    "formHeading": "Gửi yêu cầu",
+    "formLead": "Chúng tôi dùng thông tin này để tìm đúng tài khoản của bạn và liên hệ lại nếu cần xác minh thêm.",
+    "identifier": "Email hoặc số điện thoại",
+    "identifierPlaceholder": "ban@congty.vn hoặc 0901234567",
+    "password": "Mật khẩu",
+    "passwordPlaceholder": "Mật khẩu tài khoản XePrime của bạn",
+    "submit": "Gửi yêu cầu xoá tài khoản",
+    "submitting": "Đang gửi…",
+    "successTitle": "Đã ghi nhận",
+    "successBody": "Yêu cầu xoá tài khoản của bạn đã được ghi nhận.",
+    "whatHeading": "Sau khi yêu cầu được chấp nhận",
+    "whatLead": "Những nhóm dữ liệu sau được xử lý theo Chính sách bảo mật và nghĩa vụ lưu trữ hiện hành:",
+    "retentionHeading": "Dữ liệu phải giữ lại",
+    "retentionBody": "Hoá đơn, chứng từ thuế và nhật ký giao dịch có thể phải lưu theo thời hạn pháp luật quy định trước khi xoá hẳn. Đây là nghĩa vụ pháp lý, không phải lựa chọn của XePrime.",
+    "inAppHeading": "Đang đăng nhập được?",
+    "inAppBody": "Nếu vẫn vào được tài khoản, bạn gửi yêu cầu ngay trong ứng dụng hoặc ở khu tài khoản trên web — ở đó bạn theo dõi được tiến trình và rút yêu cầu khi cần.",
+    "inAppLink": "Mở khu tài khoản"
+  },
   "registration": {
     "title": "Hồ sơ chủ xe",
     "subtitle": "Theo dõi hồ sơ và chiếc xe đầu tiên của bạn trên đường lên chợ.",

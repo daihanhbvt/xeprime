@@ -115,7 +115,7 @@ export function VehicleTermsScreen({
   );
 }
 
-function TermsBody({
+export function TermsBody({
   vehicleId,
   serviceType,
   canEdit,

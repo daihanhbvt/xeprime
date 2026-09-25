@@ -33,7 +33,20 @@ export default function ManageTabsLayout() {
       >
         <Tabs.Screen name="index" />
         <Tabs.Screen name="requests" />
-        <Tabs.Screen name="bookings" />
+        {/*
+          `bookings/` KHÔNG có `_layout` riêng — cùng thủ pháp với `shop/` ở dưới: hai màn của nó
+          là hai SCREEN phẳng của chính bộ tab này, nên đi từ "Tất cả đơn thuê" sang "Chờ giao xe"
+          là ĐỔI mục chứ không chồng thêm một nấc lui, còn URL vẫn `/manage/bookings/awaiting-pickup`
+          trùng web.
+
+          Cả hai PHẢI ở trong nhóm `(tabs)`: `ManageDrawerHost` chỉ bọc nhóm này, mà
+          `ManageListShell` của chúng dựng `ManageHeader` — và header đó gọi `useManageDrawer`. Đặt
+          ở stack ngoài thì màn nổ ngay khi mở, với đúng câu "useManageDrawer phải nằm trong
+          <ManageDrawerHost>" (đo trên máy 24/09/2026). `bookings/new` và `bookings/[id]` thì
+          NGƯỢC LẠI — chúng là màn đi sâu, không có nút menu, nên ở lại stack ngoài.
+        */}
+        <Tabs.Screen name="bookings/index" />
+        <Tabs.Screen name="bookings/awaiting-pickup" />
         <Tabs.Screen name="vehicles" />
         <Tabs.Screen name="maintenance" />
         <Tabs.Screen name="calendar" />

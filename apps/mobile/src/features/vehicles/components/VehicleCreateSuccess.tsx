@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Pressable, StyleSheet } from 'react-native';
+import { useRouter, type Href } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -16,11 +16,43 @@ import { Card } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
+import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import type { VehicleDetail } from '../api';
 
 const THUMB = 64;
+
+/**
+ * Bốn việc còn lại sau khi wizard đóng — CÙNG bộ với `VehicleCreateSuccess` bên web, cùng thứ tự
+ * và cùng đích.
+ *
+ * Khai ở module scope vì mỗi mục là một CẶP khoá dịch (`checkX` + `checkXLink`) đi với một đích;
+ * tách ba mảnh đó ra ba nơi là cách chắc chắn nhất để một mục trỏ sang màn của mục bên cạnh.
+ * Không có "giấy tờ xe": luồng tạo chưa mở nó, và nó được kể riêng ở dòng cuối checklist.
+ */
+const CHECKLIST = [
+  {
+    key: 'checkInfo',
+    link: 'checkInfoLink',
+    href: (id: string): Href => ROUTES.manage.vehicleEditTab(id, VEHICLE_EDIT_TAB.INFORMATION),
+  },
+  {
+    key: 'checkMedia',
+    link: 'checkMediaLink',
+    href: (id: string): Href => ROUTES.manage.vehicleEditTab(id, VEHICLE_EDIT_TAB.MEDIA),
+  },
+  {
+    key: 'checkPricing',
+    link: 'checkPricingLink',
+    href: (id: string): Href => ROUTES.manage.vehiclePricing(id),
+  },
+  {
+    key: 'checkSource',
+    link: 'checkSourceLink',
+    href: (id: string): Href => ROUTES.manage.vehicleEditTab(id, VEHICLE_EDIT_TAB.SOURCE),
+  },
+] as const;
 
 const styles = StyleSheet.create({
   thumb: {
@@ -94,7 +126,29 @@ export function VehicleCreateSuccess({
           </YStack>
 
           <Card>
-            <XStack ai="center" gap={space.sm}>
+            {/*
+              Web gắn `aria-label="Xe vừa tạo"` lên một `<section>` — một LANDMARK có nhãn, thứ
+              React Native không có. Bản native gộp thẻ thành MỘT nút đọc được kèm nguyên nội dung
+              vào nhãn: `accessibilityLabel` trên một View không `accessible` là một thuộc tính
+              không ai đọc, và một dòng parity giả còn tệ hơn là không có.
+            */}
+            <XStack
+              ai="center"
+              gap={space.sm}
+              accessible
+              accessibilityLabel={[
+                t('cardLabel'),
+                vehicle.name,
+                identity,
+                domainLabel(
+                  'vehicleOperationStatus',
+                  operationStatus,
+                  VEHICLE_OPERATION_STATUS_META[operationStatus].label,
+                ),
+              ]
+                .filter(Boolean)
+                .join(LIST_SEPARATOR)}
+            >
               {vehicle.mainImageUrl ? (
                 <Image
                   source={{ uri: vehicle.mainImageUrl }}
@@ -135,21 +189,57 @@ export function VehicleCreateSuccess({
               <Text col={colors.textMuted} fos={fontSize.bodySm}>
                 {t('checklistBody')}
               </Text>
-              {[t('checkInfo'), t('checkMedia'), t('checkPricing'), t('checkSource')].map(
-                (line) => (
-                  <XStack key={line} ai="flex-start" gap={space.xs}>
+              {/*
+                Mỗi mục là một LỐI ĐI, không phải một dòng chữ. Web gắn liên kết vào từng mục
+                ("Tab Thông tin →", "Giá & chính sách →"…); bỏ chúng đi thì checklist nói ra việc
+                phải làm rồi bắt người dùng tự dò menu để tìm chỗ làm nó — đúng lúc họ vừa xong
+                một wizard bốn bước và ít kiên nhẫn nhất.
+              */}
+              {CHECKLIST.map((item) => (
+                <Pressable
+                  key={item.key}
+                  accessibilityRole="link"
+                  accessibilityLabel={`${t(item.key)} — ${t(item.link)}`}
+                  onPress={() => router.push(item.href(vehicle.id))}
+                  style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+                >
+                  <XStack ai="center" gap={space.xs} minHeight={sizing.touchTarget}>
                     <Ionicons
                       name="ellipse-outline"
                       size={iconSize.xs}
                       color={colors.textMuted}
-                      style={{ marginTop: 4 }}
                     />
-                    <Text f={1} col={colors.text} fos={fontSize.bodySm}>
-                      {line}
-                    </Text>
+                    <YStack f={1} gap={2}>
+                      <Text col={colors.text} fos={fontSize.bodySm}>
+                        {t(item.key)}
+                      </Text>
+                      <Text col={colors.primaryActive} fos={fontSize.label} fow={fontWeight.medium}>
+                        {t(item.link)}
+                      </Text>
+                    </YStack>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={iconSize.sm}
+                      color={colors.placeholder}
+                    />
                   </XStack>
-                ),
-              )}
+                </Pressable>
+              ))}
+
+              {/*
+                Mục CHƯA mở — không có đích để đi, nên nó là chữ chứ không phải một hàng bấm được.
+                Vẫn phải có mặt: nó trả lời trước câu "giấy tờ xe khai ở đâu" mà người vừa tạo xe
+                chắc chắn sẽ hỏi.
+              */}
+              <XStack ai="center" gap={space.xs} opacity={0.6}>
+                <Ionicons name="ellipse-outline" size={iconSize.xs} color={colors.textMuted} />
+                <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
+                  {t('checkFuture')}
+                </Text>
+                <Text col={colors.textMuted} fos={fontSize.label}>
+                  {t('checkFutureNote')}
+                </Text>
+              </XStack>
             </YStack>
           </Card>
         </YStack>

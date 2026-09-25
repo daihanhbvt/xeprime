@@ -76,6 +76,7 @@
   "purchase": {
     "title": "Mua / gia hạn gói",
     "planLabel": "Chọn gói dịch vụ",
+    "tierLabel": "Gói dịch vụ",
     "recommendedTag": "Được đề xuất",
     "enterpriseTag": "Doanh nghiệp",
     "limitVehicles": "Tối đa {count} xe",

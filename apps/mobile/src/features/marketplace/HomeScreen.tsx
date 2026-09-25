@@ -20,6 +20,7 @@ import { useBanners } from './hooks/use-marketplace-data';
 import { FeaturedHosts } from './components/FeaturedHosts';
 import { FeaturedLocations } from './components/FeaturedLocations';
 import { HomeHero } from './components/HomeHero';
+import { HomeFooter } from './components/HomeFooter';
 import { RentalSteps } from './components/RentalSteps';
 import { SearchCard } from './components/SearchCard';
 import { StickySearchBar, stickyThreshold } from './components/StickySearchBar';
@@ -190,6 +191,12 @@ function HomeContent() {
           <FeaturedLocations onPicked={scrollToPreview} />
           <FeaturedHosts onOpenShop={(slug) => navigateOnce(ROUTES.explore.shopDetail(slug))} />
           <RentalSteps />
+          {/*
+            Chân màn: lối vào trang giới thiệu, trung tâm trợ giúp và bốn văn bản pháp lý — đúng
+            chỗ web đặt chân trang trên trang chủ, và là bề mặt CÔNG KHAI duy nhất của app (không
+            đòi phiên). Xem docblock `HomeFooter`.
+          */}
+          <HomeFooter />
         </YStack>
       </Animated.ScrollView>
     </YStack>

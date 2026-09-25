@@ -32,9 +32,11 @@ import { VehicleClassificationFields } from './VehicleClassificationFields';
 import { VehicleEnergyFields, useTransmissionOptions } from './VehicleEnergyFields';
 import { VehicleIdentityFields } from './VehicleIdentityFields';
 import { useDomainLabel } from '@/i18n/domain';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { uploadsApi } from '../api';
+import { discountedPriceVnd } from '../pricing';
 
 interface StepProps {
   control: Control<VehicleFormValues>;
@@ -471,6 +473,8 @@ function ServicePriceRemovalWarning({ control }: { control: Control<VehicleFormV
 export function PricingStep({ control }: StepProps) {
   const t = useTranslations('Vehicles.form.prices');
   const tPolicies = useTranslations('Vehicles.form.policies');
+  const tWizard = useTranslations('Vehicles.form.wizard');
+  const fmt = useAppFormat();
   const serviceTypes = useWatch({ control, name: 'serviceTypes' }) ?? [];
   const offersLongTerm = serviceTypes.includes(SERVICE_TYPE.LONG_TERM);
   const offersWithDriver = serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER);
@@ -480,6 +484,19 @@ export function PricingStep({ control }: StepProps) {
    */
   const weekdayPrice = useWatch({ control, name: 'weekdayPrice' });
   const monthlyPrice = useWatch({ control, name: 'monthlyPrice' });
+  /*
+   * GIÁ HIỂN THỊ TRÊN SÀN sau khi trừ khuyến mãi trực tiếp — chỉ để XEM, không gửi lên API:
+   * backend tự tính lại khi dựng `public_listings` (ADR 0008).
+   *
+   * Đặt ở cuối khối giá, trước công tắc giao xe — đúng chỗ web đặt nó (`PricesSection`). Người
+   * đang gõ hai con số rời nhau (giá ngày + % giảm) cần thấy TÍCH của chúng ngay tại đây; để họ
+   * tự nhân nhẩm là cách một chiếc xe lên chợ với mức giá chủ xe không định đưa ra.
+   */
+  const discountPercent = useWatch({ control, name: 'discountPercent' });
+  const discounted = discountedPriceVnd(
+    weekdayPrice == null ? null : String(weekdayPrice),
+    discountPercent,
+  );
 
   return (
     <YStack gap={space.md}>
@@ -552,6 +569,10 @@ export function PricingStep({ control }: StepProps) {
             hint={t('withDriverOneWayHelp')}
           />
         </>
+      ) : null}
+
+      {discounted != null ? (
+        <Notice tone="info" title={tWizard('pricePreview', { price: fmt.money(discounted) })} />
       ) : null}
 
       <Controller

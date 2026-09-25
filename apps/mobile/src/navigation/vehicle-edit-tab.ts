@@ -13,6 +13,13 @@ export const VEHICLE_EDIT_TAB = {
   MEDIA: 'media',
   PRICING: 'pricing',
   SOURCE: 'source',
+  /**
+   * Vận hành & điều kiện thuê — khung giờ giao nhận, tự động nhận chuyến, điều khoản, phụ phí.
+   *
+   * Cùng giá trị chuỗi với `VEHICLE_EDIT_TAB.OPERATIONS` của web, nơi nó là một tab của
+   * `/manage/vehicles/:id/edit`. Ở app nó là một màn riêng như năm mục còn lại.
+   */
+  OPERATIONS: 'operations',
   DOCUMENTS: 'documents',
   MAINTENANCE: 'maintenance',
 } as const;

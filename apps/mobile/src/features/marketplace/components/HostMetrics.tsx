@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -11,6 +12,31 @@ import {
 import { InfoHint } from '@/components/ui/InfoHint';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
+interface MetricVisual {
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+}
+
+/**
+ * Icon + tông màu theo TỪNG chỉ số — thuần trang trí, không đổi ngưỡng hay dữ liệu bên dưới.
+ *
+ * Cùng bảng với `ITEM_VISUAL` của bản web; tên icon đổi theo bộ Ionicons của app, nhưng NGHĨA
+ * và tông màu phải trùng — ba ô này đứng cạnh nhau ở hai bề mặt của cùng một gian hàng.
+ */
+const ITEM_VISUAL: Record<string, MetricVisual> = {
+  responseRate: { icon: 'chatbubble-ellipses-outline', color: colors.success },
+  responseTime: { icon: 'time-outline', color: colors.warning },
+  instant: { icon: 'time-outline', color: colors.warning },
+  acceptKeep: { icon: 'trending-up-outline', color: colors.info },
+};
+
+/**
+ * Ô mang khoá lạ vẫn phải vẽ được. Không khoá nào ngoài bốn cái trên tới được đây hôm nay, nhưng
+ * `noUncheckedIndexedAccess` nói đúng: một phép tra bảng vẫn có thể trượt, và vỡ cả khối uy tín
+ * vì một icon là cái giá sai cho một chi tiết trang trí.
+ */
+const FALLBACK_VISUAL: MetricVisual = { icon: 'trending-up-outline', color: colors.info };
+
 /**
  * BA CHỈ SỐ của một gian hàng — bản native, dùng chung cho trang gian hàng và trang chi tiết xe.
  *
@@ -23,6 +49,14 @@ import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
  * `null` nghĩa là chưa đủ dữ liệu để nói (ADR 0045 điều 3), và điều đó đúng cho cả ba con số
  * cùng lúc vì chúng chung một mẫu số. Một câu kèm SỐ MẪU THẬT vừa ngắn hơn ba ô "—" vừa kiểm
  * chứng được: "mới có 2 yêu cầu trong 90 ngày" là một sự thật, còn "0%" là một lời vu khống.
+ *
+ * ## Không còn dòng "tính trên N yêu cầu trong 90 ngày"
+ *
+ * Bỏ 23/09/2026 cùng lúc với bản web: nó là dòng chữ thứ tư dưới một khối vốn đã có ba con số,
+ * và nó lặp lại đúng thứ mà dấu "i" của từng ô đã nói kỹ hơn (mẫu số là gì, cửa sổ bao nhiêu
+ * ngày). Khoá `Shops.metrics.basis` đã bị XOÁ khỏi bó message dùng chung — gọi lại nó không
+ * phải một dòng chữ thừa mà là một lỗi biên dịch. Trạng thái CHƯA ĐỦ MẪU vẫn nói thẳng số mẫu
+ * thật, vì ở đó con số đó là nội dung chính chứ không phải chú thích.
  *
  * Dấu "i" giữ phần GIẢI THÍCH, không giữ thông tin bắt buộc: chữ chính đọc được mà không cần
  * chạm gì, và không có số tiền hay hành động nào nằm sau nó.
@@ -114,27 +148,32 @@ export function HostMetrics({ metrics }: { metrics?: HostMetricsShape | null }) 
   if (items.length === 0) return null;
 
   return (
-    <YStack gap={space.xs}>
-      <XStack flexWrap="wrap" gap={space.md} accessibilityLabel={t('sectionLabel')}>
-        {items.map((item) => (
-          <YStack key={item.key} gap={1} minWidth={104}>
-            <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold}>
-              {item.value}
-            </Text>
-            <XStack ai="center" gap={4}>
-              <Text col={colors.textMuted} fos={fontSize.label}>
-                {item.label}
+    <XStack flexWrap="wrap" gap={space.md} rowGap={space.sm} accessibilityLabel={t('sectionLabel')}>
+      {items.map((item) => {
+        const visual = ITEM_VISUAL[item.key] ?? FALLBACK_VISUAL;
+        return (
+          <XStack key={item.key} ai="flex-start" gap={space.xs} minWidth={116} f={1}>
+            <Ionicons name={visual.icon} size={16} color={visual.color} />
+            <YStack f={1} gap={1}>
+              <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold}>
+                {item.value}
               </Text>
-              <InfoHint label={item.hintLabel} content={item.hint} />
-            </XStack>
-          </YStack>
-        ))}
-      </XStack>
-      {/* Số mẫu đứng ngoài lưới: nó là CƠ SỞ của cả ba con số, không phải con số thứ tư. */}
-      <Text col={colors.placeholder} fos={fontSize.label}>
-        {t('basis', { count: metrics.sampleCount, days: HOST_METRIC_WINDOW_DAYS })}
-      </Text>
-    </YStack>
+              {/*
+                Nhãn và dấu "i" nằm trong MỘT hàng biết xuống dòng: nhãn dài ("Thời gian phản
+                hồi") phải gãy dòng được ở bề ngang hẹp, và dấu "i" chảy theo ngay sau chữ cuối
+                thay vì bị đẩy sang một cột riêng — đúng lý do bản web bỏ flex ở chỗ này.
+              */}
+              <XStack ai="center" gap={4} flexWrap="wrap">
+                <Text col={colors.textMuted} fos={fontSize.label} flexShrink={1}>
+                  {item.label}
+                </Text>
+                <InfoHint label={item.hintLabel} content={item.hint} />
+              </XStack>
+            </YStack>
+          </XStack>
+        );
+      })}
+    </XStack>
   );
 }
 

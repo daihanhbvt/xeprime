@@ -2,15 +2,24 @@ import { useCallback, useMemo, useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { absoluteMoney, dayjs, isNegativeMoney, isZeroMoney, nowInAppTz } from '@xeprime/domain';
-import { ACCOUNT_TRACK, WALLET_STATEMENT_UNIT, resolveAccountTrack } from '@xeprime/types';
+import {
+  ACCOUNT_TRACK,
+  STATUS_COLOR,
+  WALLET_STATEMENT_UNIT,
+  resolveAccountTrack,
+} from '@xeprime/types';
 import { BlockTitle } from '@/components/ui/BlockTitle';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
+import { CardAccent } from '@/components/ui/CardAccent';
+import type { IconName } from '@/components/ui/Chip';
 import { Divider } from '@/components/ui/DataRow';
+import { IconDisc } from '@/components/ui/IconDisc';
 import { Pagination } from '@/components/ui/Pagination';
 import { SelectControl } from '@/components/ui/SelectControl';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
@@ -153,21 +162,32 @@ export function WalletStatementPanel({
           {query.isFetching ? <MiniRowsSkeleton rows={4} /> : null}
 
           {stats ? (
-            <Card>
-              <XStack ai="flex-start">
-                <StatCell
+            <Card padded={false}>
+              <XStack ai="stretch" py={space.sm}>
+                <MetricCell
+                  icon="star-outline"
+                  tone={colors.warning}
+                  surface={colors.warningSurface}
                   value={
                     stats.ratingAvg == null
                       ? tCommon('labels.emptyValue')
-                      : `★ ${fmt.rating(stats.ratingAvg)}`
+                      : fmt.rating(stats.ratingAvg)
                   }
                   label={t('stats.rating', { count: stats.ratingCount ?? 0 })}
                 />
-                <StatCell
+                <MetricDivider />
+                <MetricCell
+                  icon="checkmark-circle-outline"
+                  tone={colors.success}
+                  surface={colors.successSurface}
                   value={t('stats.tripsValue', { count: stats.completedTripCount })}
                   label={t('stats.trips')}
                 />
-                <StatCell
+                <MetricDivider />
+                <MetricCell
+                  icon="chatbubbles-outline"
+                  tone={colors.info}
+                  surface={colors.infoSurface}
                   value={
                     stats.responseRatePercent == null
                       ? tCommon('labels.emptyValue')
@@ -211,11 +231,11 @@ export function WalletStatementPanel({
           ) : null}
 
           {totals ? (
-            <Card>
-              <YStack gap={space.xs}>
+            <Card padded={false}>
+              <YStack p={space.md} gap={space.sm}>
                 <SummaryRow
                   label={t('totals.balanceChange')}
-                  value={<SignedAmount value={totals.balanceChangeTotal} />}
+                  value={<SignedAmount value={totals.balanceChangeTotal} strong />}
                 />
                 {/*
               Phần khách trả TAY: chỉ hiện khi thật sự có. Ở gian hàng tắt thu cọc qua sàn thì
@@ -257,13 +277,15 @@ export function WalletStatementPanel({
                     )
                   }
                 />
-                <Divider />
+              </YStack>
+              <Divider />
+              <YStack px={space.md} py={space.sm} bg={colors.primaryLight}>
                 <SummaryRow
                   label={t(`totals.${incomeLabelKey}`)}
                   hint={t('totals.ownerIncomeHint')}
                   highlight
                   value={
-                    <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold}>
+                    <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
                       {fmt.money(totals.ownerIncome)}
                     </Text>
                   }
@@ -288,69 +310,87 @@ function TripCard({ trip }: { trip: WalletStatementTrip }) {
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
+  const accent = isZeroMoney(trip.balanceChange)
+    ? STATUS_COLOR.NEUTRAL
+    : isNegativeMoney(trip.balanceChange)
+      ? STATUS_COLOR.DANGER
+      : STATUS_COLOR.SUCCESS;
 
   return (
-    <Card>
-      <YStack gap={space.xs}>
-        <XStack ai="center" jc="space-between" gap={space.sm}>
-          <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
-            {trip.code}
-          </Text>
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {domainLabel('serviceType', trip.serviceType, trip.serviceType)}
-          </Text>
-        </XStack>
+    <Card padded={false}>
+      <XStack>
+        {/* Cùng ngôn ngữ với thẻ phiếu Thu–Chi: xanh = tiền vào, đỏ = tiền ra, xám = không đổi. */}
+        <CardAccent color={accent} />
 
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {`${fmt.shortDateTime(trip.pickupAt)} → ${fmt.shortDateTime(trip.returnAt)}`}
-        </Text>
+        <YStack f={1} minWidth={0} p={space.md} gap={space.sm}>
+          <XStack ai="flex-start" gap={space.sm}>
+            <YStack f={1} minWidth={0} gap={space.xs}>
+              <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold} numberOfLines={1}>
+                {trip.code}
+              </Text>
+              <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+                {`${fmt.shortDateTime(trip.pickupAt)} → ${fmt.shortDateTime(trip.returnAt)}`}
+              </Text>
+              <StatusBadge
+                label={domainLabel('serviceType', trip.serviceType, trip.serviceType)}
+                color={STATUS_COLOR.ACCENT}
+                size="sm"
+              />
+            </YStack>
 
-        <Divider />
+            <YStack ai="flex-end" gap={2}>
+              <Text col={colors.textMuted} fos={fontSize.label}>
+                {t('columns.balanceChange')}
+              </Text>
+              <SignedAmount value={trip.balanceChange} prominent />
+            </YStack>
+          </XStack>
 
-        <Row
-          label={t('columns.unitAmount')}
-          value={
-            trip.unitAmount == null ? (
-              <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                {tCommon('labels.emptyValue')}
-              </Text>
-            ) : (
-              <Text col={colors.text} fos={fontSize.bodySm}>
-                {trip.unitKind === WALLET_STATEMENT_UNIT.MONTH
-                  ? fmt.pricePerMonth(trip.unitAmount)
-                  : fmt.pricePerDay(trip.unitAmount)}
-              </Text>
-            )
-          }
-        />
-        <Row
-          label={t('columns.revenue')}
-          value={
-            <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-              {fmt.money(trip.revenueAmount)}
-            </Text>
-          }
-        />
-        {/* Thuế là khoản TRỪ khỏi tiền chủ xe — hiện dấu trừ, không chỉ là một số nhỏ. */}
-        <Row
-          label={t('columns.tax')}
-          value={
-            isZeroMoney(trip.taxAmount) ? (
-              <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                {fmt.money('0')}
-              </Text>
-            ) : (
-              <Text col={colors.danger} fos={fontSize.bodySm}>
-                {`−${fmt.money(trip.taxAmount)}`}
-              </Text>
-            )
-          }
-        />
-        <Row
-          label={t('columns.balanceChange')}
-          value={<SignedAmount value={trip.balanceChange} />}
-        />
-      </YStack>
+          <Divider />
+
+          <YStack gap={space.xs}>
+            <Row
+              label={t('columns.unitAmount')}
+              value={
+                trip.unitAmount == null ? (
+                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                    {tCommon('labels.emptyValue')}
+                  </Text>
+                ) : (
+                  <Text col={colors.text} fos={fontSize.bodySm}>
+                    {trip.unitKind === WALLET_STATEMENT_UNIT.MONTH
+                      ? fmt.pricePerMonth(trip.unitAmount)
+                      : fmt.pricePerDay(trip.unitAmount)}
+                  </Text>
+                )
+              }
+            />
+            <Row
+              label={t('columns.revenue')}
+              value={
+                <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+                  {fmt.money(trip.revenueAmount)}
+                </Text>
+              }
+            />
+            {/* Thuế là khoản TRỪ khỏi tiền chủ xe — hiện dấu trừ, không chỉ là một số nhỏ. */}
+            <Row
+              label={t('columns.tax')}
+              value={
+                isZeroMoney(trip.taxAmount) ? (
+                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                    {fmt.money('0')}
+                  </Text>
+                ) : (
+                  <Text col={colors.danger} fos={fontSize.bodySm}>
+                    {`−${fmt.money(trip.taxAmount)}`}
+                  </Text>
+                )
+              }
+            />
+          </YStack>
+        </YStack>
+      </XStack>
     </Card>
   );
 }
@@ -398,17 +438,35 @@ function SummaryRow({
   );
 }
 
-function StatCell({ value, label }: { value: string; label: string }) {
+function MetricCell({
+  icon,
+  tone,
+  surface,
+  value,
+  label,
+}: {
+  icon: IconName;
+  tone: string;
+  surface: string;
+  value: string;
+  label: string;
+}) {
   return (
-    <YStack f={1} ai="center" gap={2}>
+    <YStack f={1} minWidth={0} ai="center" gap={space.xs} px={space.xs}>
+      <IconDisc icon={icon} tone={tone} surface={surface} size={32} />
       <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold} ta="center">
         {value}
       </Text>
-      <Text col={colors.textMuted} fos={fontSize.label} ta="center">
+      <Text col={colors.textMuted} fos={fontSize.label} ta="center" numberOfLines={2}>
         {label}
       </Text>
     </YStack>
   );
+}
+
+/** Kẻ dọc giữ ba chỉ số thành một dải, thay vì ba mẩu chữ rời trên nền trắng. */
+function MetricDivider() {
+  return <YStack w={1} bg={colors.borderSubtle} alignSelf="stretch" />;
 }
 
 /**
@@ -417,12 +475,22 @@ function StatCell({ value, label }: { value: string; label: string }) {
  * Dấu đứng trước và có màu riêng: trên một sổ tiền, hướng dòng tiền là thứ mắt phải bắt được trước
  * giá trị. Dùng cả dấu lẫn màu để không phụ thuộc khả năng phân biệt màu.
  */
-function SignedAmount({ value }: { value: string }) {
+function SignedAmount({
+  value,
+  prominent = false,
+  strong = false,
+}: {
+  value: string;
+  prominent?: boolean;
+  strong?: boolean;
+}) {
   const fmt = useAppFormat();
+  const size = prominent ? fontSize.h4 : fontSize.bodySm;
+  const weight = prominent || strong ? fontWeight.bold : fontWeight.regular;
 
   if (isZeroMoney(value)) {
     return (
-      <Text col={colors.textMuted} fos={fontSize.bodySm}>
+      <Text col={colors.textMuted} fos={size} fow={weight}>
         {fmt.money('0')}
       </Text>
     );
@@ -436,7 +504,7 @@ function SignedAmount({ value }: { value: string }) {
    */
   const negative = isNegativeMoney(value);
   return (
-    <Text col={negative ? colors.danger : colors.success} fos={fontSize.bodySm}>
+    <Text col={negative ? colors.danger : colors.success} fos={size} fow={weight}>
       {`${negative ? '−' : '+'}${fmt.money(absoluteMoney(value) ?? '0')}`}
     </Text>
   );

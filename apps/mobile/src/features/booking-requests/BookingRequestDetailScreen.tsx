@@ -121,19 +121,18 @@ export function BookingRequestDetailScreen({
 
   return (
     <>
+      {/*
+        Trạng thái đứng NGAY CẠNH tiêu đề màn — `AppHeader.badge` sinh ra đúng cho việc này (tiêu
+        đề co lại nhường chỗ, nhãn không co).
+
+        Trước 24/09/2026 nó là một `Card tone="accent"` chỉ chở đúng một viên nhãn. Viên đó đứng
+        một mình trong một khối nên đọc ra như một NÚT BẤM — cùng hình pill, cùng sắc độ xám với
+        những nút thật ở dưới — và nó chiếm trọn khối đầu tiên trước khi người đọc kịp biết mình
+        đang xem yêu cầu nào. Gắn vào tiêu đề là gắn trạng thái vào thứ nó nói về.
+      */}
       <AppHeader title={t('detail.title')} onBack={onClose} />
       <Screen edges={['left', 'right', 'bottom']}>
         <YStack gap={layout.section}>
-          <Card tone="accent" lift="flat">
-            <XStack ai="center" jc="space-between" gap={space.sm}>
-              <StatusBadge
-                label={domainLabel('bookingRequestStatus', status, meta.label)}
-                color={meta.color}
-                size="sm"
-              />
-              {needsDecision ? <RespondDeadline respondBy={request.respondBy} /> : null}
-            </XStack>
-          </Card>
 
           {/*
             Mở được HỒ SƠ 360 của xe ngay từ đây — web cũng vậy (`VehicleDetailDialog` mở từ hộp
@@ -154,7 +153,29 @@ export function BookingRequestDetailScreen({
               : {})}
           >
             <YStack gap={space.sm}>
-              <SectionTitle>{t('vehicle.heading')}</SectionTitle>
+              {/*
+                Trạng thái đi cùng HÀNG TIÊU ĐỀ của khối đầu tiên (người dùng chốt 24/09/2026).
+
+                Trước đó nó là một `Card tone="accent"` chỉ chở đúng một viên nhãn: viên đó đứng
+                một mình nên đọc ra như một NÚT BẤM — cùng hình pill, cùng sắc độ xám với những nút
+                thật trên màn. Thử tiếp ở `AppHeader.badge` thì nhãn dài ("Khung giờ đã có khách
+                khác") chạm sát mép phải và ép tiêu đề màn phải cắt bớt; hàng tiêu đề khối có sẵn
+                cả một khoảng trống bên phải.
+              */}
+              <XStack ai="center" gap={space.sm}>
+                <YStack f={1} minWidth={0}>
+                  <SectionTitle>{t('vehicle.heading')}</SectionTitle>
+                </YStack>
+                {/*
+                  Nhãn KHÔNG co: tiêu đề khối ("Xe được yêu cầu") ngắn và còn thừa ~190dp bên phải
+                  ở màn 360dp, đủ cho cả nhãn dài nhất — ở đây không phải cắt chữ nào.
+                */}
+                <StatusBadge
+                  label={domainLabel('bookingRequestStatus', status, meta.label)}
+                  color={meta.color}
+                  size="sm"
+                />
+              </XStack>
               {/*
                 Cả thẻ đã bắt chạm (`onPress` ở trên) nên mũi tên chỉ đi KÈM nội dung, không phải
                 một đích chạm riêng — thêm `DetailArrow` nổi ở đây sẽ là lối vào thứ hai cho đúng
@@ -198,12 +219,19 @@ export function BookingRequestDetailScreen({
                       />
                     ) : null}
                     <Chip label={domainLabel('serviceType', request.serviceType)} size="sm" />
-                    {/*
-                      Lịch của CHÍNH chiếc xe này — web có lối này ở CẢ thẻ lẫn chi tiết
-                      (`BookingRequestDetailDialog`), và chi tiết mới là nơi quyết định duyệt hay
-                      từ chối được đưa ra. Bỏ nó ở đây là bỏ đúng chỗ nó cần nhất.
-                    */}
-                    {canViewVehicle ? (
+                  </XStack>
+
+                  {/*
+                    Lịch của CHÍNH chiếc xe này — web có lối này ở CẢ thẻ lẫn chi tiết
+                    (`BookingRequestDetailDialog`), và chi tiết mới là nơi quyết định duyệt hay
+                    từ chối được đưa ra. Bỏ nó ở đây là bỏ đúng chỗ nó cần nhất.
+
+                    HÀNG RIÊNG, không chen vào dải viên nhãn ở trên (đổi 24/09/2026): ở đó nó là
+                    hình pill thứ ba đứng cạnh "Ô tô" và "Tự lái" — ba hình giống hệt nhau mà chỉ
+                    một cái bấm được. Web cũng tách nó thành một dòng riêng dưới dải nhãn.
+                  */}
+                  {canViewVehicle ? (
+                    <XStack>
                       <Chip
                         label={t('vehicle.viewSchedule')}
                         icon="calendar-outline"
@@ -219,8 +247,8 @@ export function BookingRequestDetailScreen({
                           )
                         }
                       />
-                    ) : null}
-                  </XStack>
+                    </XStack>
+                  ) : null}
                 </YStack>
                 {canViewVehicle ? <DetailChevron /> : null}
               </XStack>
@@ -466,6 +494,18 @@ export function BookingRequestDetailScreen({
               ) : null}
             </YStack>
           </Card>
+
+          {/*
+            Đồng hồ hạn phản hồi đứng NGAY TRÊN hai nút quyết định, không ở đầu màn.
+            Nó là áp lực cho đúng một việc — bấm Duyệt hay Từ chối — nên nó phải nằm ở chỗ việc đó
+            xảy ra, chứ không phải ở nơi người đọc còn chưa biết mình sắp quyết cái gì. Mốc hạn
+            TUYỆT ĐỐI vẫn có ở khối dữ liệu phía trên (`deadline.label`); đây là phần đếm ngược.
+          */}
+          {needsDecision ? (
+            <XStack jc="center">
+              <RespondDeadline respondBy={request.respondBy} />
+            </XStack>
+          ) : null}
 
           {decidable && canApprove ? (
             <YStack gap={space.sm}>

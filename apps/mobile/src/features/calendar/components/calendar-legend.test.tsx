@@ -27,16 +27,21 @@ describe('CalendarLegend', () => {
    * Bảy mục, SINH RA từ META chứ không chép tay: hai trạng thái đơn chiếm lịch mà người dùng
    * thật sự gặp, ba nguồn chiếm lịch khác, rồi giá riêng và ngày lễ.
    *
-   * Bản trước liệt kê "Đơn thuê" — không phải một trạng thái nào cả — và bỏ sót "Đã giữ xe".
-   * Web đã sửa ở `fix(web): sync calendar status colors and legend`; test này khoá bộ mới, và
-   * nhãn phải đến từ `Domain` để chú giải với viên trạng thái ở màn chi tiết không bao giờ gọi
-   * tên khác nhau.
+   * Bản trước liệt kê "Đơn thuê" — không phải một trạng thái nào cả — và bỏ sót trạng thái giữ
+   * chỗ. Web đã sửa ở `fix(web): sync calendar status colors and legend`; test này khoá bộ mới,
+   * và nhãn phải đến từ `Domain` để chú giải với viên trạng thái ở màn chi tiết không bao giờ
+   * gọi tên khác nhau.
+   *
+   * ADR 0047 đổi nhãn `bookingStatus.reserved` từ "Đã giữ xe" sang **"Chờ giao xe"** ở bó
+   * message DÙNG CHUNG — nhãn cũ trả lời "khoảnh khắc nào chiếm lịch", nhãn mới trả lời câu
+   * người vận hành thật sự cần: việc tiếp theo là gì. Không có file mobile nào phải sửa, nhưng
+   * assertion thì có: nó đang khoá đúng con chữ.
    */
   it('bày đủ BẢY mục, nhãn lấy từ Domain đúng như web', async () => {
     const view = await render(withIntl(<CalendarLegend />));
 
     for (const label of [
-      'Đã giữ xe',
+      'Chờ giao xe',
       'Đang thuê',
       'Chờ giữ chỗ',
       'Bảo dưỡng',

@@ -76,6 +76,7 @@
   "purchase": {
     "title": "Buy / renew plan",
     "planLabel": "Choose a service plan",
+    "tierLabel": "Service plan",
     "recommendedTag": "Recommended",
     "enterpriseTag": "Enterprise",
     "limitVehicles": "Up to {count} vehicles",

@@ -290,6 +290,13 @@
     "vehicle_needs_revision": "Vehicle needs more details",
     "review_received": "New review",
     "booking_request_cancelled": "Renter cancelled the request",
+    "booking_request_expiring": "Request expiring soon",
+    "booking_request_expired": "Request expired without a reply",
+    "promo_code_dropped": "Promo code no longer applies",
+    "seller_profile_verified": "Seller profile verified",
+    "seller_profile_changes_requested": "Seller profile needs more details",
+    "seller_profile_rejected": "Seller profile declined",
+    "support_case_updated": "Support case updated",
     "subscription_expiring": "Plan expiring soon",
     "subscription_expired": "Plan expired",
     "subscription_lapsed": "Switched to per-trip commission",
@@ -693,6 +700,8 @@
   },
   "bookingHoldOutcome": {
     "kept": "Used for the trip",
+    "settled": "Settled",
+    "split_late_cancel": "Late cancellation — split",
     "refunded": "Refunded to customer",
     "forfeited": "Compensated to owner",
     "released_to_shop": "Released to shop"
@@ -700,12 +709,14 @@
   "holdRefundStatus": {
     "pending": "Pending transfer",
     "paid": "Transferred",
+    "credited": "Credited to points wallet",
     "rejected": "Refund rejected"
   },
   "holdRefundReason": {
     "early_cancel": "Cancelled before free-cancel deadline",
     "owner_cancel": "Owner cancelled the trip",
     "overpaid": "Overpaid",
+    "hold_expired": "Reservation payment window expired",
     "admin_decision": "XePrime decision"
   },
   "supportCaseStatus": {
@@ -777,7 +788,8 @@
     "schedule_busy": "The vehicle is busy in this period",
     "no_driver": "No driver is available for this window",
     "hold_required_with_driver": "Chauffeured trips need host confirmation before a hold",
-    "terms_not_accepted": "The renter has not accepted the rental terms"
+    "terms_not_accepted": "The renter has not accepted the rental terms",
+    "billing_not_configured": "The shop has no effective billing mode"
   },
   "bookingRequestDecisionSource": {
     "host": "Decided by host",

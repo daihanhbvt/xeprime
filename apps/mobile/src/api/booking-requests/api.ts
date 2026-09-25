@@ -98,7 +98,16 @@ export interface BookingRequestFilters {
 
 export const BOOKING_REQUESTS_DEFAULT_LIMIT = 20;
 
-/** Sentinel "mọi trạng thái" của giao diện — không endpoint nào nhận `status=all`. */
+/**
+ * Sentinel "mọi trạng thái" — KHÔNG còn một tab nào dùng tới nó kể từ ADR 0047 (ba tab đã phủ
+ * hết 11 trạng thái).
+ *
+ * Giữ lại vì hai lý do, cả hai đều là TƯƠNG THÍCH NGƯỢC chứ không phải một lựa chọn còn sống:
+ * deep link cũ có thể mang `status=all`, và `bookingRequestFiltersToParams` phải dịch nó thành
+ * *không gửi* `status` thay vì đẩy nguyên chữ `"all"` lên backend — backend từ chối một mã
+ * không nằm trong `BOOKING_REQUEST_STATUS_VALUES`, và một liên kết cũ vỡ ngay khi mở còn tệ
+ * hơn nhiều so với việc âm thầm rơi về "không lọc".
+ */
 export const BOOKING_REQUEST_STATUS_ALL = 'all';
 
 /**
@@ -121,18 +130,47 @@ export const BOOKING_REQUEST_NEEDS_ACTION_STATUSES = [
 ] as const;
 
 /**
- * `status=all` là trạng thái của TAB, không phải mã nghiệp vụ (ADR 0005) — dịch thành *không
- * gửi* `status`. `status=needs_action` cũng vậy: dịch thành hai mã thật nối dấu phẩy. MỘT chuỗi,
- * không phải mảng — `QueryParams` của `@xeprime/api-client` cố ý không có kiểu mảng, backend
- * tách chuỗi ở DTO (`BookingRequestListQueryDto`).
+ * Tab GỘP "Đã đóng" — SÁU kết cục kết thúc của một yêu cầu, gộp thành MỘT ngăn (ADR 0047) thay
+ * vì bốn tab riêng như trước, cộng hai trạng thái trước đây KHÔNG có tab nào (`slot_taken`,
+ * `cancelled_by_host` — chỉ thấy được qua tab "Tất cả" nay đã bỏ).
+ *
+ * Gộp tab KHÔNG đồng nghĩa gộp nhãn: mỗi thẻ vẫn tự hiện đúng kết cục của nó qua
+ * `StatusBadge`/`BOOKING_REQUEST_STATUS_META`. Tab chỉ là một NGĂN LỌC, không phải một trạng
+ * thái mới.
+ *
+ * `converted_to_booking` KHÔNG nằm trong nhóm này — nó là kết cục THÀNH CÔNG (đơn đã ra đời),
+ * không phải "đã đóng" theo nghĩa hỏng việc. Tra cứu nó ở danh sách đơn thuê; chạm vào một thẻ
+ * đã có `bookingId` vẫn mở thẳng chi tiết ĐƠN, không đổi.
+ */
+export const BOOKING_REQUEST_TAB_CLOSED = 'closed';
+
+/** Sáu trạng thái gộp trong tab "Đã đóng" — cùng thứ tự với chuỗi gửi lên server. */
+export const BOOKING_REQUEST_CLOSED_STATUSES = [
+  BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
+  BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER,
+  BOOKING_REQUEST_STATUS.EXPIRED,
+  BOOKING_REQUEST_STATUS.HOLD_EXPIRED,
+  BOOKING_REQUEST_STATUS.SLOT_TAKEN,
+  BOOKING_REQUEST_STATUS.CANCELLED_BY_HOST,
+] as const;
+
+/**
+ * Hai tab GỘP (`needs_action`, `closed`) không phải mã nghiệp vụ (ADR 0005) — dịch thành các mã
+ * thật nối dấu phẩy. MỘT chuỗi, không phải mảng: `QueryParams` của `@xeprime/api-client` cố ý
+ * không có kiểu mảng, backend tách chuỗi ở DTO (`BookingRequestListQueryDto`).
+ *
+ * Tab "Chờ khách thanh toán" gửi thẳng `awaiting_hold` — nó đã là một mã thật, không cần dịch.
+ * `status=all` là đường LÙI cho liên kết cũ: dịch thành *không gửi* `status`.
  */
 export function bookingRequestFiltersToParams(filters: BookingRequestFilters): QueryParams {
   const status =
-    filters.status === BOOKING_REQUEST_STATUS_ALL
-      ? null
-      : filters.status === BOOKING_REQUEST_TAB_NEEDS_ACTION
-        ? BOOKING_REQUEST_NEEDS_ACTION_STATUSES.join(',')
-        : (filters.status ?? null);
+    filters.status === BOOKING_REQUEST_TAB_NEEDS_ACTION
+      ? BOOKING_REQUEST_NEEDS_ACTION_STATUSES.join(',')
+      : filters.status === BOOKING_REQUEST_TAB_CLOSED
+        ? BOOKING_REQUEST_CLOSED_STATUSES.join(',')
+        : filters.status === BOOKING_REQUEST_STATUS_ALL
+          ? null
+          : (filters.status ?? null);
   return {
     status,
     q: filters.q ?? null,

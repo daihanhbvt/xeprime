@@ -288,6 +288,14 @@ export const ROUTES = {
         ? { pathname: '/manage/bookings', params: { vehicleId: filters.vehicleId } }
         : '/manage/bookings',
     /**
+     * Lối tắt "Chờ giao xe" — CÙNG danh sách, cùng endpoint, chỉ khác một nhóm việc dựng sẵn
+     * (`preset=awaiting_pickup` gửi lên server — ADR 0047).
+     *
+     * Một đường dẫn riêng chứ không phải một tham số trên `/manage/bookings`: mục đang sáng
+     * trong ngăn kéo quản lý được quyết bằng đường dẫn, y như web.
+     */
+    bookingsAwaitingPickup: (): Href => '/manage/bookings/awaiting-pickup',
+    /**
      * Tạo đơn tại quầy. `prefill` mang tên + SĐT của một khách đã có trong sổ — cùng vai với
      * `?customerName=&customerPhone=` mà web đặt lên URL khi bấm "Tạo đơn thuê" ở hồ sơ khách —
      * và có thể mang sẵn XE + KHOẢNG THUÊ khi vào từ một ô trên lịch.
@@ -362,6 +370,8 @@ export const ROUTES = {
           return { pathname: '/manage/vehicles/[id]/edit/media', params };
         case VEHICLE_EDIT_TAB.SOURCE:
           return { pathname: '/manage/vehicles/[id]/edit/source', params };
+        case VEHICLE_EDIT_TAB.OPERATIONS:
+          return { pathname: '/manage/vehicles/[id]/edit/operations', params };
         case VEHICLE_EDIT_TAB.DOCUMENTS:
           return { pathname: '/manage/vehicles/[id]/edit/documents', params };
         case VEHICLE_EDIT_TAB.MAINTENANCE:
@@ -574,6 +584,12 @@ export const ROUTES = {
    * một bản app mới qua vòng duyệt store (ADR 0028 điều 9 — xem `LegalDocScreen`).
    */
   legal: {
+    /**
+     * Trang chủ khu pháp lý. Màn đích là NATIVE, không WebView: nội dung của nó là bốn cái tên,
+     * một ngày hiệu lực và hai câu ghi chú — thứ đổi theo bản app, không theo chính sách. Ranh
+     * giới đúng là vậy: điều hướng thì native, VĂN BẢN có hiệu lực thì đọc từ web.
+     */
+    index: (): Href => '/legal',
     doc: (doc: LegalDoc): Href => ({ pathname: '/legal/[doc]', params: { doc } }),
   },
 
@@ -585,6 +601,17 @@ export const ROUTES = {
    */
   support: {
     home: (): Href => '/support',
+  },
+
+  /**
+   * Trang nội dung CÔNG KHAI — cùng địa chỉ với web, đọc trong app bằng WebView.
+   *
+   * `anchor` là phần `#…` của web, đi qua tham số vì expo-router không phơi hash của một `Href`
+   * ra cho màn đọc. Trung tâm hỗ trợ dùng đúng hai neo mà trang hỗ trợ của web dùng.
+   */
+  content: {
+    about: (anchor?: string): Href =>
+      anchor ? { pathname: '/about', params: { anchor } } : '/about',
   },
 
   /** Gốc app — chỉ dùng cho fallback khi không có màn nào để lui về. */

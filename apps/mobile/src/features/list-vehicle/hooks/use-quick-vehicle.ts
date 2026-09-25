@@ -241,6 +241,16 @@ export function useQuickVehicleRegistration() {
         }
 
         await queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
+        /*
+         * Bậc chủ xe (`resolveOwnerStage`) đọc `publicVehicleCount` từ `/auth/me`, và menu tài
+         * khoản đổi theo nó. Chiếc xe vừa vào hàng đợi chưa làm bậc đổi, nhưng phiên có thể đã cũ
+         * từ trước — làm mới ở đây rẻ hơn nhiều so với việc chủ xe thấy một menu sai.
+         *
+         * `ensureShop` cũng làm mới `auth`, nhưng CHỈ khi nó thật sự mở gian hàng. Chủ xe đã có
+         * gian hàng đăng chiếc xe công khai đầu tiên không đi qua nhánh đó, và đúng họ là người
+         * vừa đổi bậc.
+         */
+        await queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
         return { vehicle, submitted, missingRequirements, partialError };
       } finally {
         runningRef.current = false;

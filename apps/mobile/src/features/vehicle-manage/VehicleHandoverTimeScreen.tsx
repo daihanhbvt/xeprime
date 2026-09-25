@@ -103,7 +103,7 @@ export function VehicleHandoverTimeScreen({ vehicleId }: { vehicleId: string }) 
   );
 }
 
-function HandoverBody({ vehicleId, canEdit }: { vehicleId: string; canEdit: boolean }) {
+export function HandoverBody({ vehicleId, canEdit }: { vehicleId: string; canEdit: boolean }) {
   const t = useTranslations('VehicleManage');
   const settings = useVehicleOperationSettings(vehicleId);
 

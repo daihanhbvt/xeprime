@@ -161,6 +161,20 @@ const SHOP_NAV: readonly ManageNavSection[] = [
             badge: MANAGE_NAV_BADGE.BOOKING_REQUESTS_PENDING,
           },
           {
+            /*
+             * Lối tắt tới nhóm việc "đơn đã có, xe chưa rời bãi" — KHÔNG phải một loại đơn và
+             * không phải một trạng thái mới (ADR 0047). Nó đứng GIỮA vì nhịp làm việc đi đúng
+             * thứ tự đó: duyệt yêu cầu → giao xe hôm nay → tra cứu mọi đơn.
+             *
+             * Cùng quyền với "Tất cả đơn thuê": nó không mở thêm dữ liệu nào, chỉ lọc sẵn.
+             */
+            key: 'bookings-awaiting-pickup',
+            labelKey: 'manage.bookingsAwaitingPickup',
+            icon: 'car-outline',
+            permission: PERMISSION.BOOKING_VIEW,
+            href: ROUTES.manage.bookingsAwaitingPickup(),
+          },
+          {
             key: 'bookings',
             labelKey: 'manage.bookings',
             icon: 'checkbox-outline',
