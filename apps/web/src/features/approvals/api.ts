@@ -112,13 +112,22 @@ const DECISION_PATH: Record<ApprovalDecision, string> = {
   [APPROVAL_DECISION.REQUEST_REVISION]: 'request-revision',
 };
 
-/** Ba quyết định. Lý do chỉ đi kèm từ chối / yêu cầu bổ sung — phê duyệt không có body. */
+/**
+ * Ba quyết định, mỗi quyết định một body khác nhau:
+ *
+ *  - **Phê duyệt** mang `expectedCapturedAt` — mốc của snapshot đang hiện trên màn. Chủ xe sửa xe
+ *    lúc phiếu còn chờ thì snapshot được dựng lại (24/09/2026), nên một màn mở lâu có thể đang
+ *    trưng bản cũ; máy chủ trả `APPROVAL_SNAPSHOT_STALE` thay vì duyệt nhầm.
+ *  - **Từ chối / yêu cầu bổ sung** mang lý do. Không cần khoá: cả hai trả hồ sơ về cho chủ xe, nên
+ *    quyết định trên bản cũ hay mới đều dẫn tới cùng một chỗ.
+ */
 export const decideVehicleApproval = (
   id: string,
   kind: ApprovalDecision,
   reason?: string,
+  expectedCapturedAt?: string,
 ): Promise<VehicleApprovalDetail> =>
   apiPost<VehicleApprovalDetail>(
     `${BASE}/${id}/${DECISION_PATH[kind]}`,
-    kind === APPROVAL_DECISION.APPROVE ? undefined : { reason },
+    kind === APPROVAL_DECISION.APPROVE ? { expectedCapturedAt } : { reason },
   );

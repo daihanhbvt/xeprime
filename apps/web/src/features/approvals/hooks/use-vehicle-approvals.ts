@@ -50,6 +50,7 @@ const STALE_CODES: ReadonlySet<string> = new Set([
   API_ERROR_CODE.APPROVAL_ALREADY_DECIDED,
   API_ERROR_CODE.APPROVAL_CHECKLIST_INCOMPLETE,
   API_ERROR_CODE.APPROVAL_SUBJECT_CHANGED,
+  API_ERROR_CODE.APPROVAL_SNAPSHOT_STALE,
   API_ERROR_CODE.NOT_FOUND,
 ]);
 
@@ -197,8 +198,18 @@ export function useVehicleApprovalDecision() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, kind, reason }: { id: string; kind: ApprovalDecision; reason?: string }) =>
-      decideVehicleApproval(id, kind, reason),
+    mutationFn: ({
+      id,
+      kind,
+      reason,
+      expectedCapturedAt,
+    }: {
+      id: string;
+      kind: ApprovalDecision;
+      reason?: string;
+      /** Mốc snapshot đang hiện trên màn — chỉ Phê duyệt dùng tới. */
+      expectedCapturedAt?: string;
+    }) => decideVehicleApproval(id, kind, reason, expectedCapturedAt),
     onSuccess: (detail, { id }) => {
       queryClient.setQueryData(queryKeys.vehicleApprovals.detail(id), detail);
       void queryClient.invalidateQueries({

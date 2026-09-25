@@ -1,21 +1,33 @@
 'use client';
 
-import { App, Descriptions, Tag } from 'antd';
+import { HistoryOutlined } from '@ant-design/icons';
+import { Button } from 'antd';
 import Link from 'next/link';
-import {
-  BOOKING_STATUS_META, PERMISSION, SERVICE_TYPE_LABEL, TENANT_STATUS_META, type BookingStatus, type ServiceType, type TenantStatus, } from '@xeprime/types';
-import { MaskedContact } from '@/components/data-display/MaskedContact';
-import { StatusTag } from '@/components/data-display/StatusTag';
+import { useTranslations } from 'next-intl';
+import { PERMISSION } from '@xeprime/types';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
-import { ROUTES } from '@/constants/routes';
+import { adminAuditPath } from '@/constants/routes';
+import { AUDIT_TARGET_TYPE } from '@/features/admin-audit/constants';
 import { usePermissions } from '@/hooks/use-permissions';
-import { isZeroMoney } from '@/lib/money';
-import { getErrorMessage } from '@/services/api-client';
-import { useAdminBooking, useRevealBookingContact } from '../hooks/use-admin-bookings';
+import { useAdminBooking } from '../hooks/use-admin-bookings';
 import type { AdminBookingDetail } from '../types';
-import styles from './AdminBookingDetailDrawer.module.css';
-import { useAppFormat } from '@/i18n/use-app-format';
+import { BookingDocuments } from './booking-detail/BookingDocuments';
+import { BookingDrawerHeader } from './booking-detail/BookingDrawerHeader';
+import { BookingInformation } from './booking-detail/BookingInformation';
+import { BookingPaymentSummary } from './booking-detail/BookingPaymentSummary';
+import { BookingTimeline } from './booking-detail/BookingTimeline';
 
+/**
+ * Panel chi tiết một đơn — ĐỨNG CẠNH bảng (`modeless`, cỡ `split`), không mask: người dùng vẫn
+ * thấy danh sách và bấm dòng khác để đổi đơn. Trang chừa chỗ cho bảng bằng cùng token bề rộng.
+ *
+ * Header (mã + trạng thái) và footer của AntD Drawer nằm ngoài vùng cuộn, nên cả hai dính cố định
+ * khi nội dung dài.
+ *
+ * Không có nút "Mở chi tiết đầy đủ": trang chi tiết đơn duy nhất (`/manage/bookings/:id`) thuộc
+ * phạm vi GIAN HÀNG và API chặn admin nền tảng. "Xem lịch sử" trỏ vào nhật ký kiểm toán lọc sẵn
+ * theo đơn — route có thật, và chỉ hiện với người có quyền xem nhật ký.
+ */
 export function AdminBookingDetailDrawer({
   bookingId,
   onClose,
@@ -23,21 +35,31 @@ export function AdminBookingDetailDrawer({
   bookingId: string | null;
   onClose: () => void;
 }) {
+  const t = useTranslations('AdminBookings.drawer');
+  const { has } = usePermissions();
   const { data, isLoading, isError, refetch } = useAdminBooking(bookingId);
+
+  const canViewHistory = has(PERMISSION.PLATFORM_AUDIT_VIEW);
 
   return (
     <DetailDrawer
-      title={data ? `Đơn ${data.code}` : 'Đơn thuê'}
-      size="md"
+      title={data ? <BookingDrawerHeader booking={data} /> : t('fallbackTitle')}
+      ariaLabel={data ? t('title', { code: data.code }) : t('fallbackTitle')}
+      size="split"
+      modeless
       open={Boolean(bookingId)}
       onClose={onClose}
-      extra={
-        data ? <StatusTag value={data.status as BookingStatus} meta={BOOKING_STATUS_META} group="bookingStatus" /> : null
-      }
       loading={!isError && (isLoading || !data)}
       error={isError}
-      errorTitle="Không tải được thông tin đơn"
+      errorTitle={t('loadError')}
       onRetry={() => void refetch()}
+      footer={
+        data && canViewHistory ? (
+          <Link href={adminAuditPath.forTarget(AUDIT_TARGET_TYPE.BOOKING, data.id)}>
+            <Button icon={<HistoryOutlined />}>{t('viewHistory')}</Button>
+          </Link>
+        ) : undefined
+      }
     >
       {/* `key` ép remount khi đổi đơn: SĐT đã bỏ che của đơn trước không được rớt sang đơn sau. */}
       {data ? <Body key={data.id} booking={data} /> : null}
@@ -46,139 +68,12 @@ export function AdminBookingDetailDrawer({
 }
 
 function Body({ booking }: { booking: AdminBookingDetail }) {
-  const fmt = useAppFormat();
-
-  const { message } = App.useApp();
-  const { has } = usePermissions();
-  const reveal = useRevealBookingContact(booking.id);
-
   return (
     <div>
-      <Descriptions
-        column={1}
-        size="small"
-        bordered
-        items={[
-          { key: 'customer', label: 'Khách', children: booking.customerName },
-          {
-            key: 'phone',
-            label: 'SĐT khách',
-            children: (
-              <MaskedContact
-                masked={booking.customerPhoneMasked}
-                revealed={reveal.data?.customerPhone}
-                canReveal={has(PERMISSION.PLATFORM_CUSTOMER_PII_VIEW)}
-                loading={reveal.isPending}
-                onReveal={() =>
-                  reveal.mutate(undefined, {
-                    onError: (err) => message.error(getErrorMessage(err)),
-                  })
-                }
-              />
-            ),
-          },
-          {
-            key: 'tenant',
-            label: 'Gian hàng',
-            children: (
-              <span className={styles.inline}>
-                <Link
-                  href={`${ROUTES.MANAGE.ADMIN_TENANTS}?q=${encodeURIComponent(booking.tenantName)}`}
-                >
-                  {booking.tenantName}
-                </Link>
-                <StatusTag value={booking.tenantStatus as TenantStatus} meta={TENANT_STATUS_META} group="tenantStatus" />
-              </span>
-            ),
-          },
-          {
-            key: 'vehicle',
-            label: 'Xe',
-            children: (
-              <Link
-                href={`${ROUTES.MANAGE.ADMIN_VEHICLES}?q=${encodeURIComponent(booking.vehicleName)}`}
-              >
-                {booking.vehicleName}
-                {booking.vehiclePlateNumber ? ` · ${booking.vehiclePlateNumber}` : ''}
-              </Link>
-            ),
-          },
-          {
-            key: 'service',
-            label: 'Dịch vụ',
-            children: SERVICE_TYPE_LABEL[booking.serviceType as ServiceType] ?? booking.serviceType,
-          },
-          {
-            key: 'plan',
-            label: 'Kế hoạch',
-            children: fmt.shortDateTimeRange(booking.pickupAt, booking.returnAt),
-          },
-          {
-            key: 'actual',
-            label: 'Thực tế',
-            children:
-              booking.actualPickupAt || booking.actualReturnAt
-                ? fmt.shortDateTimeRange(booking.actualPickupAt, booking.actualReturnAt)
-                : 'Chưa giao/nhận xe',
-          },
-        ]}
-      />
-
-      <div className={styles.sectionTitle}>Tiền</div>
-      <Descriptions
-        column={1}
-        size="small"
-        bordered
-        items={[
-          { key: 'base', label: 'Tiền thuê', children: fmt.money(booking.baseAmount) },
-          ...(isZeroMoney(booking.deliveryFee)
-            ? []
-            : [
-                {
-                  key: 'delivery',
-                  label: 'Phí giao xe',
-                  children: fmt.money(booking.deliveryFee),
-                },
-              ]),
-          ...(isZeroMoney(booking.discountAmount)
-            ? []
-            : [
-                {
-                  key: 'discount',
-                  label: 'Giảm giá',
-                  children: `− ${fmt.money(booking.discountAmount)}`,
-                },
-              ]),
-          { key: 'total', label: 'Tổng cộng', children: fmt.money(booking.totalAmount) },
-          { key: 'deposit', label: 'Đặt cọc', children: fmt.money(booking.depositAmount) },
-          { key: 'paid', label: 'Đã thu', children: fmt.money(booking.paidAmount) },
-          {
-            key: 'debt',
-            label: 'Còn nợ',
-            children: (
-              <span className={isZeroMoney(booking.debtAmount) ? undefined : styles.debt}>
-                {fmt.money(booking.debtAmount)}
-              </span>
-            ),
-          },
-        ]}
-      />
-
-      <div className={styles.sectionTitle}>Hồ sơ</div>
-      <div className={styles.tags}>
-        <Tag>{booking.receiptCount} phiếu thu/chi</Tag>
-        <Tag>{booking.paymentCount} lần thanh toán</Tag>
-        <Tag color={booking.hasContract ? 'green' : undefined}>
-          {booking.hasContract ? 'Đã lập hợp đồng' : 'Chưa có hợp đồng'}
-        </Tag>
-      </div>
-
-      {booking.note ? <div className={styles.note}>{booking.note}</div> : null}
-
-      <div className={styles.footer}>
-        Người tạo: {booking.createdByName ?? '—'} · Tạo {fmt.dateTime(booking.createdAt)} · Cập
-        nhật {fmt.dateTime(booking.updatedAt)}
-      </div>
+      <BookingInformation booking={booking} />
+      <BookingTimeline booking={booking} />
+      <BookingPaymentSummary booking={booking} />
+      <BookingDocuments booking={booking} />
     </div>
   );
 }

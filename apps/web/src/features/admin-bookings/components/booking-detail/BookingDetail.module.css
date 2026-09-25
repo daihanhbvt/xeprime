@@ -1,0 +1,401 @@
+/**
+ * Panel chi tiết đơn thuê (admin nền tảng) — một module cho cả năm khối con, vì chúng là MỘT
+ * mặt giao diện dùng chung khung section/thẻ. Mọi giá trị lấy từ token (ADR 0003).
+ */
+
+/* ---------------------------------------------------------------- header */
+
+.header {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.headerTitleRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+}
+
+.headerTitle {
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+  overflow-wrap: anywhere;
+}
+
+.headerMeta {
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-regular);
+  color: var(--xp-color-text-tertiary);
+}
+
+/* ---------------------------------------------------------------- khung section */
+
+.section {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.section + .section {
+  margin-top: var(--xp-space-lg);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-h4);
+  line-height: var(--xp-line-height-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+/* Bề mặt thẻ dùng chung: viền nhạt, bo 10px. Các khối bên dưới `composes` nó thay vì chép lại. */
+.surface {
+  min-width: 0;
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.card {
+  composes: surface;
+  padding: var(--xp-space-md);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------------------------------------------------------------- Thông tin đơn */
+
+/* Cột nhãn nền nhạt + đường chia dọc, giống bảng mô tả có viền — nhưng co được về một cột. */
+.fields {
+  composes: surface;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  overflow: hidden;
+}
+
+.field {
+  display: grid;
+  grid-template-columns: minmax(112px, 30%) minmax(0, 1fr);
+}
+
+.field + .field {
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+.field dt {
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-inline-end: 1px solid var(--xp-color-border-subtle);
+  background: var(--xp-color-bg-muted);
+  font-size: var(--xp-font-size-body);
+  color: var(--xp-color-text-secondary);
+}
+
+.field dd {
+  min-width: 0;
+  margin: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  color: var(--xp-color-text);
+  overflow-wrap: anywhere;
+}
+
+.fieldPrimary {
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.inline {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+}
+
+.note {
+  white-space: pre-wrap;
+  color: var(--xp-color-text-secondary);
+}
+
+/* ---------------------------------------------------------------- Lịch trình */
+
+.timelineScroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+/* Mỗi mốc một cột BẰNG NHAU — đoạn nối vẽ từ tâm mốc trước tới tâm mốc này dựa vào điều đó. */
+.timeline {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(104px, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  --xp-timeline-marker: 28px;
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-inline: var(--xp-space-xs);
+  text-align: center;
+}
+
+.connector {
+  position: absolute;
+  top: calc(var(--xp-timeline-marker) / 2 - 1px);
+  inset-inline-end: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--xp-color-border);
+}
+
+.connectorDone {
+  background: var(--xp-color-primary);
+}
+
+.marker {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--xp-timeline-marker);
+  height: var(--xp-timeline-marker);
+  margin-bottom: var(--xp-space-xs);
+  border: 2px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text-tertiary);
+}
+
+/* Mốc xong: tròn vàng thương hiệu, dấu tích màu chữ-trên-vàng (tương phản đủ, không dùng trắng). */
+.stepDone .marker {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+.stepFailed .marker {
+  border-color: var(--xp-color-neutral);
+  background: var(--xp-color-neutral-bg);
+  color: var(--xp-color-neutral);
+}
+
+.stepLabel {
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text);
+}
+
+.stepTodo .stepLabel {
+  font-weight: var(--xp-font-weight-regular);
+  color: var(--xp-color-text-tertiary);
+}
+
+.stepFailed .stepLabel {
+  color: var(--xp-color-text-secondary);
+}
+
+.stepTime {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--xp-font-size-body-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--xp-color-text-tertiary);
+}
+
+.schedule {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-top: var(--xp-space-md);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-primary-light);
+}
+
+.scheduleCell {
+  min-width: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+}
+
+/* Đường chia giữa hai ô khi chúng đứng cạnh nhau; xuống hàng thì thành đường ngang. */
+.scheduleCell + .scheduleCell {
+  box-shadow: inset 1px 0 0 var(--xp-color-border-subtle);
+}
+
+.scheduleLabel {
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-price);
+}
+
+.scheduleValue {
+  font-variant-numeric: tabular-nums;
+  color: var(--xp-color-text);
+}
+
+.scheduleEmpty {
+  color: var(--xp-color-text-tertiary);
+}
+
+/* ---------------------------------------------------------------- Thanh toán */
+
+/* Hai cột khi panel đủ rộng; hẹp (tablet/mobile toàn màn hình vẫn có thể hẹp) thì một cột. */
+.paymentGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: start;
+  gap: var(--xp-space-md);
+}
+
+.moneyTable {
+  composes: surface;
+  margin: 0;
+  overflow: hidden;
+}
+
+.moneyRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+}
+
+.moneyRow + .moneyRow {
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+.moneyRow dt {
+  color: var(--xp-color-text-secondary);
+}
+
+.moneyRow dd {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin: 0;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  color: var(--xp-color-text);
+}
+
+.moneyRowTotal {
+  background: var(--xp-color-primary-light);
+}
+
+.moneyRowTotal dt,
+.moneyRowTotal dd {
+  font-weight: var(--xp-font-weight-bold);
+  color: var(--xp-color-price);
+}
+
+.debtOverdue {
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-error);
+}
+
+.debtOverdueNote {
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-error);
+}
+
+.collateral {
+  composes: card;
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.collateralHead {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text);
+}
+
+.collateralAmount {
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
+  font-weight: var(--xp-font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--xp-color-text);
+}
+
+.collateralNone {
+  color: var(--xp-color-text-tertiary);
+}
+
+.collateralNote {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-info-bg);
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.collateralNote :global(.anticon) {
+  margin-top: 2px;
+  color: var(--xp-color-info);
+}
+
+/* ---------------------------------------------------------------- Hồ sơ & giao dịch */
+
+.docs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.doc {
+  composes: surface;
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  color: var(--xp-color-text);
+}
+
+.docIcon {
+  display: inline-flex;
+  font-size: var(--xp-font-size-body-lg);
+  color: var(--xp-color-text-tertiary);
+}
+
+.audit {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--xp-space-xs) var(--xp-space-md);
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-tertiary);
+}

@@ -63,6 +63,7 @@ import {
 } from './dto/vehicle.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { buildVehicleReviewSnapshot } from './vehicle-review-snapshot';
+import { refreshPendingApprovalSnapshot } from './refresh-pending-approval-snapshot';
 import { lockVehicleRow } from './vehicle-row-lock';
 
 /** Cột dùng cho một dòng bảng — không kéo `description` dài. */
@@ -652,6 +653,18 @@ export class VehiclesService {
     await this.replaceMedia(tx, current.id, tenantId, input, vehicleType);
     // Mọi sửa xe → đồng bộ snapshot public_listings ngay, để chợ không trưng thông tin cũ.
     await this.listings.syncFromVehicle(current.id, tx);
+    /*
+     * …và nếu xe đang nằm ở hàng đợi duyệt thì phiếu mang bản mới luôn (24/09/2026). Chạy SAU
+     * `replaceMedia` vì snapshot chụp cả ảnh lẫn tiện ích — đứng trước sẽ chụp bộ ảnh cũ.
+     *
+     * Chính sách thuê đọc lại thay vì `'unchanged'`: đổi chi nhánh cũng có thể đổi chính sách
+     * hiệu lực, và lượt đọc này chỉ tốn một truy vấn trên đường đã ghi nhiều bảng.
+     */
+    await refreshPendingApprovalSnapshot(tx, {
+      vehicleId: current.id,
+      actorUserId: userId,
+      policy: await this.pricing.effectivePolicy(tenantId, current.id, tx),
+    });
 
     if (branchChanged) {
       await this.audit.record(
@@ -847,6 +860,20 @@ export class VehiclesService {
       if (Object.keys(vehicleData).length > 0 || policyChanged) {
         await this.listings.syncFromVehicle(current.id, tx);
       }
+
+      /*
+       * Xe đang chờ duyệt → phiếu mang giá và chính sách vừa lưu (24/09/2026).
+       *
+       * KHÔNG gác sau `if` ở trên: đây là điểm khác nhau thật giữa hai việc. `syncFromVehicle`
+       * dựng lại một thẻ hàng hoá, nên bỏ qua khi không có gì đổi là tiết kiệm đúng chỗ. Còn
+       * phiếu duyệt thì `refreshPendingApprovalSnapshot` tự trả `false` ngay ở truy vấn đầu khi
+       * xe không có phiếu chờ — mà đó là đại đa số lượt lưu giá.
+       */
+      await refreshPendingApprovalSnapshot(tx, {
+        vehicleId: current.id,
+        actorUserId: userId,
+        policy: await this.pricing.effectivePolicy(tenantId, current.id, tx),
+      });
 
       // Thay đổi nhạy cảm về tiền → audit đủ before/after để đối soát.
       await this.audit.record(

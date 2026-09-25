@@ -135,6 +135,16 @@ export const APPROVAL_ACTION = {
   REQUEST_REVISION: 'request_revision',
   CANCEL: 'cancel',
   RESUBMIT: 'resubmit',
+  /**
+   * Chủ xe sửa hồ sơ TRONG LÚC phiếu còn chờ, và snapshot đã được dựng lại theo bản mới
+   * (24/09/2026). Đây là dòng DUY NHẤT không đổi trạng thái phiếu: `from_status` và `to_status`
+   * cùng là `pending_public_review`.
+   *
+   * Vì sao phải có một dòng riêng thay vì im lặng ghi đè: người duyệt mở phiếu ra và thấy một hồ
+   * sơ khác thứ đồng nghiệp vừa nhắc trong ca trước thì cần biết TẠI SAO. Dòng này cũng là mốc
+   * giải thích vì sao các tick trong danh mục kiểm tra thủ công biến mất.
+   */
+  PROFILE_UPDATED: 'profile_updated',
 } as const;
 export type ApprovalAction = (typeof APPROVAL_ACTION)[keyof typeof APPROVAL_ACTION];
 export const APPROVAL_ACTION_VALUES = Object.values(APPROVAL_ACTION) as ApprovalAction[];

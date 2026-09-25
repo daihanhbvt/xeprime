@@ -246,6 +246,39 @@ describe('DataTable — bảng ở desktop', () => {
     expect(container.querySelector('.ant-table')).toBeNull();
     expect(container.querySelector('[class*="rowStriped"]')).toBeNull();
   });
+
+  it('selectedRowKey: đúng hàng đang mở mang class chọn + aria-current, hàng khác không', () => {
+    const { container } = renderTable({ selectedRowKey: 'r2', onRowClick: vi.fn() });
+
+    const rows = container.querySelectorAll('.ant-table-tbody .ant-table-row');
+    expect(rows[0]!.className).not.toContain('rowSelected');
+    expect(rows[0]!.getAttribute('aria-current')).toBeNull();
+    expect(rows[1]!.className).toContain('rowSelected');
+    expect(rows[1]!.getAttribute('aria-current')).toBe('true');
+    // Chọn sống chung với zebra và hàng bấm được — ba class trên cùng một hàng.
+    expect(rows[1]!.className).toContain('rowStriped');
+    expect(rows[1]!.className).toContain('rowClickable');
+  });
+
+  it('không truyền selectedRowKey thì không hàng nào bị đánh dấu', () => {
+    const { container } = renderTable({ onRowClick: vi.fn() });
+
+    expect(container.querySelector('[class*="rowSelected"]')).toBeNull();
+    expect(container.querySelector('[aria-current]')).toBeNull();
+  });
+
+  it('chế độ thẻ mobile: thẻ của bản ghi đang mở cũng được đánh dấu', () => {
+    viewport.mobile = true;
+    const { container } = renderTable({
+      selectedRowKey: 'r1',
+      renderCard: (row) => <span>{row.name}</span>,
+    });
+
+    const cards = container.querySelectorAll('li');
+    expect(cards[0]!.className).toContain('cardSelected');
+    expect(cards[0]!.getAttribute('aria-current')).toBe('true');
+    expect(cards[1]!.className).not.toContain('cardSelected');
+  });
 });
 
 /* ------------------------------------------------------------------ cột hành động */

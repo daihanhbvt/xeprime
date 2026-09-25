@@ -158,7 +158,10 @@ export function VehicleApprovalDrawer({
     if (!taskId) return;
     const id = taskId;
     decision.mutate(
-      { id, kind, reason },
+      // `capturedAt` của bản ĐANG HIỆN: khẳng định "tôi duyệt đúng hồ sơ này". Chủ xe sửa xe
+      // trong lúc phiếu chờ sẽ làm snapshot dựng lại, và máy chủ từ chối thay vì duyệt bản
+      // người duyệt chưa đọc (`APPROVAL_SNAPSHOT_STALE`).
+      { id, kind, reason, expectedCapturedAt: detail?.capturedAt },
       {
         onSuccess: () => {
           message.success(t(`done.${kind}`));

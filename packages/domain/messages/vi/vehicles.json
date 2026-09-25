@@ -540,7 +540,7 @@
       },
       "underReview": {
         "title": "Hồ sơ đang được xét duyệt",
-        "description": "Nền tảng sẽ phản hồi trong thời gian sớm nhất."
+        "description": "Nền tảng sẽ phản hồi trong thời gian sớm nhất. Bạn vẫn sửa được hồ sơ — mỗi lần lưu, người duyệt sẽ thấy bản mới nhất."
       },
       "needsRevision": {
         "title": "Cần bổ sung thông tin",

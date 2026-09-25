@@ -1,0 +1,90 @@
+{
+  "page": {
+    "title": "All bookings",
+    "loading": "Loading all bookings…"
+  },
+  "filters": {
+    "searchPlaceholder": "Search booking code / customer name",
+    "searchLabel": "Search by booking code or customer name",
+    "phonePlaceholder": "Exact customer phone",
+    "phoneLabel": "Look up customer phone number",
+    "statusLabel": "Filter by booking status",
+    "allStatuses": "All statuses",
+    "dateFieldLabel": "Apply date range to",
+    "dateRangeLabel": "Date range"
+  },
+  "table": {
+    "label": "All bookings",
+    "code": "Booking code",
+    "customer": "Customer",
+    "tenant": "Shop · vehicle",
+    "period": "Rental period",
+    "totalAmount": "Total",
+    "debtAmount": "Outstanding",
+    "openDetail": "View booking {code}",
+    "loadError": "Couldn't load bookings",
+    "empty": "No bookings yet",
+    "noResults": "No bookings match your filters",
+    "total": "{count, plural, one {# booking} other {# bookings}}"
+  },
+  "drawer": {
+    "fallbackTitle": "Booking",
+    "title": "Booking {code}",
+    "createdAt": "Created at {time} · {date}",
+    "loadError": "Couldn't load booking details",
+    "viewHistory": "View history"
+  },
+  "info": {
+    "title": "Booking details",
+    "customer": "Customer",
+    "tenant": "Shop",
+    "vehicle": "Vehicle",
+    "service": "Service",
+    "note": "Note"
+  },
+  "timeline": {
+    "title": "Timeline",
+    "ariaLabel": "Booking progress",
+    "steps": {
+      "created": "Booking created",
+      "pickedUp": "Vehicle handed over",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "noShow": "Customer no-show"
+    },
+    "srDone": "done",
+    "srTodo": "not yet",
+    "srFailed": "booking ended here",
+    "planned": "Scheduled",
+    "actual": "Actual",
+    "actualOngoing": "{from} → not returned yet"
+  },
+  "payment": {
+    "title": "Payment",
+    "summaryLabel": "Payment summary",
+    "base": "Rental fee",
+    "delivery": "Delivery fee",
+    "otherCharges": "Surcharges & other charges",
+    "discount": "Discount",
+    "discountValue": "− {amount}",
+    "total": "Total payable",
+    "paid": "Paid",
+    "debt": "Remaining",
+    "debtOverdue": "Trip completed but still unpaid",
+    "collateral": {
+      "title": "Security deposit at pickup",
+      "hintLabel": "About the security deposit",
+      "hint": "This is the deposit declared on the booking — it may not have been collected.",
+      "none": "No cash deposit declared",
+      "note": "This is the security deposit taken at pickup — not the reservation payment, and not part of the total payable. It is refunded after the rental ends if there is no damage."
+    }
+  },
+  "documents": {
+    "title": "Records & transactions",
+    "payments": "{count, plural, =0 {No transactions} one {# transaction} other {# transactions}}",
+    "receipts": "{count, plural, =0 {No receipts/payment vouchers} one {# receipt/voucher} other {# receipts/vouchers}}",
+    "contracts": "{count, plural, =0 {No contract} one {# contract} other {# contracts}}",
+    "createdBy": "Created by: {name}",
+    "updatedAt": "Updated: {dateTime}"
+  }
+}

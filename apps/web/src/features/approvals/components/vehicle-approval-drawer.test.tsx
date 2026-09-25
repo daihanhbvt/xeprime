@@ -362,7 +362,13 @@ describe('Quyết định', () => {
     const dialog = await findModal('Phê duyệt xe này?');
     fireEvent.click(within(dialog).getByRole('button', { name: 'Phê duyệt' }));
     expect(decision.mutate).toHaveBeenCalledWith(
-      { id: carReview().approvalTaskId, kind: APPROVAL_DECISION.APPROVE, reason: undefined },
+      {
+        id: carReview().approvalTaskId,
+        kind: APPROVAL_DECISION.APPROVE,
+        reason: undefined,
+        // Mốc bản ĐANG HIỆN — máy chủ dùng nó để từ chối duyệt một hồ sơ vừa bị chủ xe sửa.
+        expectedCapturedAt: carReview().capturedAt,
+      },
       expect.anything(),
     );
   });
@@ -387,6 +393,7 @@ describe('Quyết định', () => {
           id: carReview().approvalTaskId,
           kind: APPROVAL_DECISION.REJECT,
           reason: 'Ảnh không phải xe thật',
+          expectedCapturedAt: carReview().capturedAt,
         },
         expect.anything(),
       ),

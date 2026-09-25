@@ -57,11 +57,19 @@ export const AUDIT_SCOPE_OPTIONS = [
   { value: AUDIT_ACTOR_SCOPE.SYSTEM, label: 'Hệ thống' },
 ];
 
+/**
+ * Mã loại đối tượng audit mà màn KHÁC cần trỏ link tới (`adminAuditPath.forTarget`). Khớp
+ * `targetType` phía API ghi — thêm mã ở đây khi có màn đầu tiên cần nó, không khai trước.
+ */
+export const AUDIT_TARGET_TYPE = {
+  BOOKING: 'booking',
+} as const;
+
 /** Nhãn VN cho loại đối tượng trong audit (nguồn: grep `targetType` phía API). */
 export const AUDIT_TARGET_TYPE_LABEL: Record<string, string> = {
   tenant: 'Gian hàng',
   vehicle: 'Xe',
-  booking: 'Đơn thuê',
+  [AUDIT_TARGET_TYPE.BOOKING]: 'Đơn thuê',
   booking_request: 'Yêu cầu đặt xe',
   receipt: 'Phiếu thu/chi',
   payment: 'Thanh toán',

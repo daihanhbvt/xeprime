@@ -1,20 +1,58 @@
-.code {
-  font-weight: 600;
+/* Hai dòng mỗi ô: dòng chính đậm, dòng phụ nhỏ và xám. */
+.primary {
+  font-weight: var(--xp-font-weight-medium);
   color: var(--xp-color-text);
+  overflow-wrap: anywhere;
 }
 
 .meta {
-  font-size: 12.5px;
+  font-size: var(--xp-font-size-body-sm);
   color: var(--xp-color-text-tertiary);
+}
+
+/*
+ * Mã đơn là một nút thật (mở panel) nhưng trông như chữ đậm của dòng chính — hàng nào cũng có
+ * một nút xanh gạch chân thì bảng thành một bức tường link. Trạng thái tương tác vẫn phải thấy:
+ * hover đổi màu + gạch chân, focus có vòng viền chuẩn.
+ */
+.codeButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+  text-align: start;
+  cursor: pointer;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.codeButton:hover {
+  color: var(--xp-color-primary-active);
+  text-decoration: underline;
+}
+
+.codeButton:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-primary);
+  outline-offset: 2px;
 }
 
 .tenantName {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--xp-space-xs);
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text);
 }
 
-.debt {
-  font-weight: 600;
+/* Mốc thuê đọc như MỘT cụm — xuống dòng giữa "10:00 ·" và "21/09" là mất nghĩa. */
+.period {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Chỉ tô khi quá hạn thật (`isDebtOverdue`), không phải mọi khoản > 0. */
+.debtOverdue {
+  font-weight: var(--xp-font-weight-semibold);
   color: var(--xp-color-error);
 }

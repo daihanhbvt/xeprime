@@ -217,7 +217,17 @@ export function vehiclePublicationTask(vehicle: VehicleDetail): VehiclePublicati
       return task('platformHidden', 'critical', CONTACT_SUPPORT, null, [], reason);
 
     case VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW:
-      return task('underReview', 'info', null, VIEW_STATUS, [], null);
+      /*
+       * Sửa được, và sửa là ĐỦ (24/09/2026).
+       *
+       * Trước đây ô này không có hành động chính nào: chủ xe nhìn thấy "đang chờ duyệt" rồi hết,
+       * trong khi thứ họ cần làm — sửa nốt chỗ sai vừa phát hiện — thì không có lối vào, và kể cả
+       * có tự mò tới trang sửa thì phiếu vẫn mang bản cũ. Nay mỗi lần lưu là phiếu mang bản mới,
+       * nên nút sửa ở đây là một lời hứa giữ được.
+       *
+       * Vẫn là `info`: xe đang nằm đúng chỗ của nó, không có gì hỏng để giục.
+       */
+      return task('underReview', 'info', EDIT_TO_UPDATE, VIEW_STATUS, [], null);
 
     case VEHICLE_PUBLIC_STATUS.NEEDS_REVISION:
       return task('needsRevision', 'warning', EDIT_TO_UPDATE, complete ? RESUBMIT : null, missing, reason);
