@@ -129,7 +129,12 @@
     "SEPAY_NOT_CONFIGURED": "SePay reconciliation is not configured.",
     "SHOP_OWNER_ONLY": "Only the shop owner can view and withdraw the shop’s money.",
     "SUBSCRIPTION_TRACK_ONLY": "This area is for shops on a paid plan.",
-    "APPROVAL_SNAPSHOT_STALE": "The owner just updated this profile. Reload the request and review the new version before approving — the manual checks have been reset too."
+    "APPROVAL_SNAPSHOT_STALE": "The owner just updated this profile. Reload the request and review the new version before approving — the manual checks have been reset too.",
+    "SUPPORT_CONTEXT_INVALID": "This support session is not valid for your account or current sign-in session.",
+    "SUPPORT_CONTEXT_EXPIRED": "The support session has expired or ended. Open a new one from the Shops screen.",
+    "SUPPORT_ACTION_NOT_ALLOWED": "This action is outside the scope of the support session.",
+    "SUPPORT_FIELD_NOT_ALLOWED": "The support session cannot change these fields (price, services, branch, operating status…).",
+    "SUPPORT_MEDIA_OUT_OF_SCOPE": "This photo is not in this shop's photo storage. Upload it again within the support session."
   },
   "upload": {
     "imageType": "Only JPG, PNG or WebP images are accepted",

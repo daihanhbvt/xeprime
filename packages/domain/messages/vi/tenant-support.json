@@ -1,0 +1,89 @@
+{
+  "banner": {
+    "regionLabel": "Phiên hỗ trợ gian hàng",
+    "title": "Đang hỗ trợ: {tenant}",
+    "workspace": {
+      "manage": "Tuyến gói · Bộ quản lý đầy đủ",
+      "owner_lite": "Tuyến hoa hồng · Owner Lite",
+      "onboarding": "Chờ thanh toán gói đầu tiên"
+    },
+    "mode": {
+      "view": "Chỉ xem",
+      "assist": "Hỗ trợ thao tác"
+    },
+    "actor": "Người thao tác: {name}",
+    "expiresAt": "Hết hạn lúc {time}",
+    "restriction": {
+      "tenant_locked": "Gian hàng đang bị khoá — phiên chỉ còn xem được.",
+      "assist_permission_revoked": "Tài khoản của bạn không còn quyền hỗ trợ thao tác — phiên chỉ còn xem được."
+    },
+    "exit": "Thoát chế độ hỗ trợ"
+  },
+  "session": {
+    "pageTitle": "Không gian hỗ trợ gian hàng",
+    "loading": "Đang mở phiên hỗ trợ…",
+    "backToTenants": "Về danh sách gian hàng",
+    "expired": {
+      "title": "Phiên hỗ trợ đã kết thúc",
+      "body": "Phiên đã hết hạn hoặc đã thoát. Mở phiên mới từ màn Gian hàng, kèm lý do hỗ trợ."
+    },
+    "invalid": {
+      "title": "Không mở được phiên hỗ trợ này",
+      "body": "Phiên không thuộc tài khoản hoặc phiên đăng nhập hiện tại của bạn."
+    },
+    "error": {
+      "title": "Không tải được phiên hỗ trợ",
+      "body": "Có lỗi khi đọc phiên. Vui lòng thử lại."
+    }
+  },
+  "start": {
+    "title": "Mở không gian hỗ trợ · {tenant}",
+    "lead": "Bạn vào khu làm việc của gian hàng bằng chính tài khoản của mình — không đăng nhập thay chủ xe. Phiên hết hạn sau {minutes} phút, mọi thao tác đều ghi nhật ký kèm lý do dưới đây.",
+    "modeLabel": "Chế độ",
+    "mode": {
+      "view": {
+        "label": "Chỉ xem",
+        "description": "Xem xe, ảnh và bảo dưỡng của gian hàng. Không sửa được gì."
+      },
+      "assist": {
+        "label": "Hỗ trợ thao tác",
+        "description": "Sửa hộ thông tin xe, ảnh xe và phiếu bảo dưỡng. Giá, lịch, dịch vụ, tiền và thành viên vẫn nằm ngoài phiên.",
+        "noPermission": "Tài khoản của bạn chưa có quyền hỗ trợ thao tác."
+      }
+    },
+    "reasonLabel": "Lý do hỗ trợ",
+    "reasonPlaceholder": "VD: Chủ xe nhờ cập nhật ảnh xe theo ticket #1234",
+    "reasonHelp": "Tối thiểu {min} ký tự. Lý do được lưu cùng phiên và mọi dòng nhật ký của phiên.",
+    "submit": "Bắt đầu hỗ trợ",
+    "validation": {
+      "modeInvalid": "Chọn chế độ hỗ trợ",
+      "reasonRequired": "Nhập lý do hỗ trợ",
+      "reasonMin": "Lý do cần ít nhất 10 ký tự",
+      "reasonMax": "Lý do tối đa 500 ký tự"
+    }
+  },
+  "home": {
+    "title": "Xe của gian hàng",
+    "subtitle": "Mở một xe để xem hoặc sửa thông tin, ảnh và bảo dưỡng trong phạm vi phiên hỗ trợ.",
+    "loading": "Đang tải danh sách xe…",
+    "open": "Mở"
+  },
+  "onboarding": {
+    "title": "Gian hàng chưa hoàn tất đăng ký gói",
+    "body": "Gian hàng đang chờ thanh toán gói đầu tiên nên chưa có khu làm việc để mở. Bộ quản lý chỉ mở khi hoá đơn gói được thanh toán.",
+    "fields": {
+      "status": "Trạng thái gian hàng",
+      "plan": "Gói",
+      "planEndsAt": "Hạn gói",
+      "noPlan": "Chưa có"
+    }
+  },
+  "gate": {
+    "title": "Mục này không thuộc bộ giao diện của gian hàng",
+    "body": "Gian hàng đang dùng bộ giao diện khác (có thể vừa đổi tuyến). Quay lại trang đầu của phiên để mở đúng màn.",
+    "back": "Về trang đầu của phiên"
+  },
+  "navigation": {
+    "blocked": "Màn này không mở trong phiên hỗ trợ gian hàng."
+  }
+}

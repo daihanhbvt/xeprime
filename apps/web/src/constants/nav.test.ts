@@ -3,6 +3,7 @@ import {
   DEFAULT_TENANT_ROLE_PERMISSIONS,
   FEATURE_STATE,
   PLATFORM_ROLE,
+  SUPPORT_WORKSPACE,
   TENANT_ROLE,
   isFeatureVisible,
   type FeatureState,
@@ -23,10 +24,12 @@ import {
   mobileTabsForScope,
   navForScope,
   sectionKeyOf,
+  supportMobileTabs,
+  supportNavSections,
 } from './nav';
 import enNavigation from '@xeprime/domain/messages/en/navigation.json';
 import viNavigation from '@xeprime/domain/messages/vi/navigation.json';
-import { ROUTES } from './routes';
+import { ROUTES, adminTenantSupportPath } from './routes';
 
 /**
  * Test ĐẶC TẢ cho cây điều hướng theo mô hình khối (Tổng quan · Quản lý · Kinh doanh · Gian
@@ -515,6 +518,16 @@ describe('matchSelectedKey — quy tắc mục đang mở', () => {
     expect(matchSelectedKey('/manage/vehicles', shopLeaves)).toBe('/manage/vehicles');
   });
 
+  it('phiên hỗ trợ gian hàng sáng mục "Gian hàng", không sáng hàng đợi hỗ trợ/tranh chấp (ADR 0050)', () => {
+    const session = adminTenantSupportPath.vehicleEdit('A1B2C3D4E5F6G7H8J9K0M1N2P3', 'v1');
+    expect(matchSelectedKey(session, platformLeaves)).toBe(ROUTES.MANAGE.ADMIN_TENANTS);
+    expect(matchSelectedKey(session, platformLeaves)).not.toBe(ROUTES.MANAGE.ADMIN_SUPPORT);
+    // Hàng đợi hỗ trợ/tranh chấp của chính nó vẫn sáng đúng mục.
+    expect(matchSelectedKey(ROUTES.MANAGE.ADMIN_SUPPORT, platformLeaves)).toBe(
+      ROUTES.MANAGE.ADMIN_SUPPORT,
+    );
+  });
+
   it('route con khớp mục cha', () => {
     expect(matchSelectedKey('/manage/vehicles/new', shopLeaves)).toBe('/manage/vehicles');
     expect(matchSelectedKey('/manage/vehicles/01H/edit', shopLeaves)).toBe('/manage/vehicles');
@@ -644,6 +657,9 @@ describe('nav — mọi khoá nhãn đều có bản dịch ở cả hai ngôn n
     ...flattenLeaves(allSections).map((leaf) => leaf.labelKey),
     ...mobileTabsForScope(false).map((tab) => tab.labelKey),
     ...mobileTabsForScope(true).map((tab) => tab.labelKey),
+    ...flattenLeaves(supportNavSections('X', SUPPORT_WORKSPACE.OWNER_LITE)).map((leaf) => leaf.labelKey),
+    ...supportNavSections('X', SUPPORT_WORKSPACE.OWNER_LITE).map((section) => section.labelKey),
+    ...supportMobileTabs('X', SUPPORT_WORKSPACE.OWNER_LITE).map((tab) => tab.labelKey),
   ];
 
   it.each([
@@ -652,5 +668,76 @@ describe('nav — mọi khoá nhãn đều có bản dịch ở cả hai ngôn n
   ])('%s có đủ nhãn', (_locale, bundle) => {
     const missing = allKeys.filter((key) => typeof lookup(bundle, key) !== 'string');
     expect(missing).toEqual([]);
+  });
+});
+
+/**
+ * Menu của một phiên hỗ trợ gian hàng (ADR 0050 §12): CHÍNH cây của gian hàng, href trong phiên,
+ * không một mục nào dẫn ra ngoài phiên hay vào khu bị ẩn (tài chính, ví, chat, tài khoản…).
+ */
+describe('supportNavSections — menu của phiên hỗ trợ', () => {
+  const CTX = 'A1B2C3D4E5F6G7H8J9K0M1N2P3';
+  const base = adminTenantSupportPath.root(CTX);
+  const manage = flattenLeaves(supportNavSections(CTX, SUPPORT_WORKSPACE.MANAGE));
+  const lite = flattenLeaves(supportNavSections(CTX, SUPPORT_WORKSPACE.OWNER_LITE));
+
+  it('Full Manage: mọi mục đều nằm trong phiên, đúng các màn đọc của gian hàng', () => {
+    expect(manage.every((leaf) => leaf.href.startsWith(`${base}/`))).toBe(true);
+    const rel = manage.map((leaf) => leaf.href.slice(base.length + 1));
+    expect(rel).toEqual(
+      expect.arrayContaining([
+        'dashboard',
+        'vehicles',
+        'calendar',
+        'booking-requests',
+        'bookings',
+        'customers',
+        'shop',
+        'shop/branches',
+        'shop/policies',
+        'drivers',
+        'members',
+        'support/cases',
+      ]),
+    );
+  });
+
+  it('Full Manage: không có mục tài chính/ví/chat/tài khoản/mua gói', () => {
+    const rel = manage.map((leaf) => leaf.href.slice(base.length + 1));
+    for (const hidden of ['finance', 'wallet', 'debts', 'chat', 'billing', 'account', 'tax', 'contracts']) {
+      expect(rel.some((r) => r.startsWith(hidden))).toBe(false);
+    }
+    // Mục chỉ-chủ-shop (ví, tài khoản ngân hàng) không bao giờ vào phiên.
+    expect(manage.some((leaf) => leaf.ownerOnly)).toBe(false);
+  });
+
+  it('Owner Lite: chỉ công việc cho thuê — không Tổng quan, không sổ khách, không khu tài khoản', () => {
+    const rel = lite.map((leaf) => leaf.href.slice(base.length + 1));
+    expect(rel).toEqual(['vehicles', 'calendar', 'booking-requests', 'bookings', 'support/cases']);
+  });
+
+  it('package_pending: không có menu nào (chỉ trạng thái đăng ký)', () => {
+    expect(supportNavSections(CTX, SUPPORT_WORKSPACE.ONBOARDING)).toEqual([]);
+    expect(supportMobileTabs(CTX, SUPPORT_WORKSPACE.ONBOARDING)).toEqual([]);
+  });
+
+  it('tab dưới đáy (mobile) cũng nằm trong phiên', () => {
+    for (const workspace of [SUPPORT_WORKSPACE.MANAGE, SUPPORT_WORKSPACE.OWNER_LITE]) {
+      const tabs = supportMobileTabs(CTX, workspace);
+      expect(tabs.length).toBeGreaterThan(0);
+      expect(tabs.every((tab) => tab.href.startsWith(`${base}/`))).toBe(true);
+    }
+  });
+
+  it('mục đang mở trong phiên là mục của GIAN HÀNG, kể cả ở trang con', () => {
+    expect(matchSelectedKey(`${base}/vehicles`, manage)).toBe(`${base}/vehicles`);
+    expect(matchSelectedKey(`${base}/vehicles/v1/edit`, manage)).toBe(`${base}/vehicles`);
+    expect(matchSelectedKey(`${base}/dashboard`, manage)).toBe(`${base}/dashboard`);
+    expect(matchSelectedKey(`${base}/bookings/b1`, lite)).toBe(`${base}/bookings`);
+  });
+
+  it('mục của phiên KHÁC không bao giờ sáng', () => {
+    const other = adminTenantSupportPath.root('Z9Y8X7W6V5T4S3R2Q1P0N9M8K7');
+    expect(matchSelectedKey(`${other}/vehicles`, manage)).toBeUndefined();
   });
 });

@@ -19,7 +19,7 @@ import { trailingRequiredMark } from '@/components/form/required-mark';
 import { BankAccountList } from '@/features/bank-accounts/components/BankAccountList';
 import { SubscriptionWorkspace } from '@/features/subscription/components/SubscriptionWorkspace';
 import { shopPath, shopSectionDomId, SHOP_SECTION, type ShopSection } from '@/constants/routes';
-import { useCurrentUser } from '@/hooks/use-current-user';
+import { useTenantScope } from '@/hooks/use-tenant-scope';
 import { usePermissions } from '@/hooks/use-permissions';
 import { initialOf } from '@/lib/initials';
 
@@ -33,6 +33,7 @@ import { ShopSectionCard } from './ShopSectionCard';
 import { ShopSectionNav, type ShopSectionItem } from './ShopSectionNav';
 import { ShopStatusBanner } from './ShopStatusBanner';
 import { ShopWelcomeBanner } from './ShopWelcomeBanner';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import styles from './ShopWorkspace.module.css';
 
 /** `id` của thẻ `<form>` — nút Lưu sống ở tiêu đề, NGOÀI form, nên nó submit bằng thuộc tính `form`. */
@@ -112,7 +113,6 @@ export function ShopWorkspace({
   const t = useTranslations('Shop');
   const tSections = useTranslations('Shop.sections');
   const { has } = usePermissions();
-  const { data: user } = useCurrentUser();
 
   const { control, handleSubmit, reset, formState } = useShopProfileForm(shop);
 
@@ -123,7 +123,9 @@ export function ShopWorkspace({
    * vĩnh viễn — backend cũng đã gỡ nó (`TenantsService.updateProfile`).
    */
   const readOnly = !canEdit;
-  const readOnlyReason = canEdit ? null : t('form.readOnly');
+  // Phiên hỗ trợ gian hàng (ADR 0050 §12): hồ sơ chỉ đọc — không nút Lưu, không lời giải thích quyền.
+  const hidesDenied = useSupportHides(SUPPORT_HIDDEN_AREA.DENIED_ACTIONS);
+  const readOnlyReason = canEdit || hidesDenied ? null : t('form.readOnly');
 
   /**
    * `isDirty` quyết định CẢ HAI nút: chưa sửa gì thì không có gì để lưu (nút mờ) và không có gì
@@ -140,7 +142,8 @@ export function ShopWorkspace({
    *    `SubscriptionWorkspace` tự giấu CTA lẫn modal khi thiếu.
    *  - Ba section còn lại đi cùng `tenant.view`, thứ mà trang này đã đòi để vào.
    */
-  const isOwner = user?.tenant?.roleKey === TENANT_ROLE.SHOP_OWNER;
+  const { tenant } = useTenantScope();
+  const isOwner = tenant?.roleKey === TENANT_ROLE.SHOP_OWNER;
   const canSeePlan = has(PERMISSION.SUBSCRIPTION_VIEW);
 
   const items: ShopSectionItem[] = [
@@ -202,16 +205,18 @@ export function ShopWorkspace({
             </Button>
           ) : null}
 
-          <Button
-            type="primary"
-            icon={<SaveOutlined />}
-            htmlType="submit"
-            form={PROFILE_FORM_ID}
-            loading={saving}
-            disabled={!dirty}
-          >
-            {t('form.submit')}
-          </Button>
+          {readOnly && hidesDenied ? null : (
+            <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              htmlType="submit"
+              form={PROFILE_FORM_ID}
+              loading={saving}
+              disabled={!dirty}
+            >
+              {t('form.submit')}
+            </Button>
+          )}
         </div>
       </header>
 
@@ -259,7 +264,7 @@ export function ShopWorkspace({
                   title={tSections('profile')}
                   hint={tSections('profileHint')}
                 >
-                  <ShopDisplayFields control={control} />
+                  <ShopDisplayFields control={control} readOnly={readOnly && hidesDenied} />
                 </ShopSectionCard>
               </fieldset>
 
@@ -285,7 +290,7 @@ export function ShopWorkspace({
                        * `submitForPublicReview` từ chối thật (ADR 0040 điều 7). Chủ xe tuyến hoa
                        * hồng không bị cổng đó chạm tới, nên với họ nó vẫn là gợi ý.
                        */
-                      logoRequired={isPackageShopTrack(user?.tenant)}
+                      logoRequired={isPackageShopTrack(tenant)}
                     />
                   ) : null}
                   <ShopLegalFields control={control} readOnly={readOnly} />

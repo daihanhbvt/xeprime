@@ -1,4 +1,12 @@
-import { ApiClientError, configureApiClient, webAuthTransport } from '@xeprime/api-client';
+import {
+  ApiClientError,
+  configureApiClient,
+  webAuthTransport,
+  type AuthTransport,
+} from '@xeprime/api-client';
+import { SUPPORT_CONTEXT_HEADER } from '@xeprime/types';
+import { tenantSupportContextIdFromPath } from '@/constants/routes';
+import { activeSupportContextId } from './active-support-context';
 
 /**
  * Lối vào API của WEB — lớp vỏ mỏng quanh `@xeprime/api-client`.
@@ -9,12 +17,43 @@ import { ApiClientError, configureApiClient, webAuthTransport } from '@xeprime/a
  *  1. đọc `NEXT_PUBLIC_API_URL` — biến này chỉ tồn tại trong bundle Next, package dùng chung
  *     không được biết tới nó;
  *  2. cắm web transport — ADR 0002: session là httpOnly cookie, nên `credentials: 'include'`;
+ *     cộng header phiên hỗ trợ gian hàng khi trang đang mở là một phiên (ADR 0050);
  *  3. `getErrorMessage` (xem docblock của nó ở dưới).
  *
  * 143 chỗ `import … from '@/services/api-client'` không phải sửa: mọi ký hiệu cũ vẫn xuất ra từ
  * đây với đúng chữ ký cũ.
  */
 const DEFAULT_API_URL = 'http://localhost:4000';
+
+/**
+ * Cookie phiên như mọi request web (ADR 0002), cộng header `x-support-context` khi tab đang ở
+ * trong một phiên hỗ trợ gian hàng của nhân sự nền tảng (ADR 0050).
+ *
+ * Nguồn id: phiên ĐANG MOUNT (`activeSupportContextId`, `SupportSessionBoundary` đăng ký trong
+ * layout effect — trước mọi fetch của cây con) — đúng cả trong lúc điều hướng client, khi thanh địa
+ * chỉ còn là trang cũ. Chưa có đăng ký (request đầu tiên sau F5, trước khi ranh giới commit) thì
+ * suy từ URL. Id sai dạng không bao giờ được gắn.
+ *
+ * Header chỉ mang ID PHIÊN; tenant do server tra từ bản ghi phiên sau khi kiểm người + phiên đăng
+ * nhập. Trên server (SSR) không bao giờ gắn — trang hỗ trợ là client.
+ */
+export function supportAwareWebTransport(
+  pathname: () => string | null = () =>
+    typeof window === 'undefined' ? null : window.location.pathname,
+  registered: () => string | null = activeSupportContextId,
+): AuthTransport {
+  const base = webAuthTransport();
+  return {
+    credentials: async () => {
+      const auth = await base.credentials();
+      const path = pathname();
+      const contextId =
+        registered() ?? (path ? tenantSupportContextIdFromPath(path) : null);
+      if (!contextId) return auth;
+      return { ...auth, headers: { ...auth.headers, [SUPPORT_CONTEXT_HEADER]: contextId } };
+    },
+  };
+}
 
 /*
  * Cấu hình ở MODULE SCOPE, không lười.
@@ -25,7 +64,7 @@ const DEFAULT_API_URL = 'http://localhost:4000';
  */
 configureApiClient({
   baseUrl: process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API_URL,
-  transport: webAuthTransport(),
+  transport: supportAwareWebTransport(),
 });
 
 export {

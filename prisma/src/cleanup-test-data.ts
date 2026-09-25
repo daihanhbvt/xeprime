@@ -182,6 +182,18 @@ async function main(): Promise<void> {
       where: { OR: [{ ownerUserId: { in: userIds } }, { ownerTenantId: { in: tenantIds } }] },
     });
 
+    // Phiên hỗ trợ (ADR 0050) là `RESTRICT` cả về tenant lẫn người mở, và audit trỏ về nó cũng
+    // `RESTRICT` — dữ liệu THẬT không bao giờ xoá nó. Đây là dữ liệu test: gỡ liên kết audit
+    // (dòng audit vẫn còn) rồi xoá phiên.
+    const supportWhere = {
+      OR: [{ tenantId: { in: tenantIds } }, { actorUserId: { in: userIds } }],
+    };
+    await tx.auditLog.updateMany({
+      where: { supportContext: supportWhere },
+      data: { supportContextId: null, supportCapability: null },
+    });
+    await tx.tenantSupportContext.deleteMany({ where: supportWhere });
+
     const tenantsDeleted = tenantIds.length
       ? (await tx.tenant.deleteMany({ where: { id: { in: tenantIds } } })).count
       : 0;

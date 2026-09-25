@@ -27,7 +27,9 @@
     "noPhone": "No phone number",
     "unknown": "Not provided",
     "noteBlock": "Note",
-    "cardTitle": "Booking details"
+    "cardTitle": "Booking details",
+    "pageSubtitle": "Manage the trip and the current rental",
+    "backToList": "Back to bookings"
   },
   "actionBar": {
     "contract": "Contract",
@@ -500,7 +502,14 @@
     "pickedUp": "Vehicle handed over",
     "returned": "Vehicle returned",
     "noOdometer": "No odometer reading recorded.",
-    "odometer": "Odometer recorded: {km} km."
+    "odometer": "Odometer recorded: {km} km.",
+    "odometerRecorded": "Odometer recorded: {km}.",
+    "doneAt": "{action} at {when}",
+    "forbiddenTitle": "You cannot view handovers",
+    "forbiddenBody": "Contact an administrator if you need to follow vehicle handovers.",
+    "loadError": "Could not load handover information",
+    "confirmForbiddenTitle": "You cannot confirm handovers",
+    "confirmForbiddenBody": "The handovers.confirm permission is required to confirm a pickup or return."
   },
   "contract": {
     "title": "Vehicle rental agreement",

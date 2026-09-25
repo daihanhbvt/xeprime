@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
+import { PERMISSION, PLAN_FEATURE, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
@@ -8,6 +8,7 @@ import {
   RequiresFeature,
   SubscriptionTrackOnly,
   TenantScoped,
+  SupportAction,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { BranchesService } from './branches.service';
@@ -57,6 +58,8 @@ export class BranchesController {
 
   @Get()
   @RequirePermissions(PERMISSION.BRANCH_VIEW)
+  // Ô "chi nhánh giữ xe" ở tab Thông tin xe đọc danh sách này — phiên hỗ trợ chỉ ĐỌC (ADR 0050).
+  @SupportAction(SUPPORT_CAPABILITY.BRANCH_VIEW)
   @ApiOperation({ summary: 'Danh sách chi nhánh của gian hàng (kèm số xe mỗi chi nhánh)' })
   @ApiOkResponse({ type: BranchListDto })
   list(
@@ -82,6 +85,7 @@ export class BranchesController {
 
   @Get(':id')
   @RequirePermissions(PERMISSION.BRANCH_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.BRANCH_VIEW)
   @ApiOperation({ summary: 'Chi tiết một chi nhánh' })
   @ApiOkResponse({ type: BranchDto })
   get(@CurrentTenant() tenant: TenantContext, @Param('id') id: string): Promise<BranchDto> {

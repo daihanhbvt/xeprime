@@ -7,6 +7,7 @@ import {
   BOOKING_STATUS_META,
   HANDOVER_STATUS,
   HANDOVER_STATUS_META,
+  PERMISSION,
   STATUS_COLOR,
   type BookingStatus,
   type PaginationMeta,
@@ -18,6 +19,8 @@ import styles from './BookingTable.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useTranslations } from 'next-intl';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface BookingTableProps {
   items: BookingListItem[];
@@ -84,6 +87,11 @@ export function BookingTable({
   const t = useTranslations('Bookings');
   const tCommon = useTranslations('Common');
   const label = useDomainLabel();
+  const { has } = usePermissions();
+  const hidesDenied = useSupportHides(SUPPORT_HIDDEN_AREA.DENIED_ACTIONS);
+  // "Xử lý giao xe" hứa một việc bàn giao; người không xác nhận được bàn giao trong phiên hỗ trợ
+  // (ADR 0050 §12) chỉ XEM đơn, nên nút mang đúng nhãn đó.
+  const handles = awaitingPickup && (has(PERMISSION.HANDOVER_CONFIRM) || !hidesDenied);
 
   const customerColumn: DataTableColumn<BookingListItem> = {
     title: t('card.customer'),
@@ -221,8 +229,8 @@ export function BookingTable({
     actionColumn<BookingListItem>((row) => [
       {
         key: 'view',
-        label: awaitingPickup ? t('awaitingPickup.action') : tCommon('actions.viewDetail'),
-        icon: awaitingPickup ? <SwapRightOutlined /> : <EyeOutlined />,
+        label: handles ? t('awaitingPickup.action') : tCommon('actions.viewDetail'),
+        icon: handles ? <SwapRightOutlined /> : <EyeOutlined />,
         onClick: () => onView(row.id),
       },
     ]),

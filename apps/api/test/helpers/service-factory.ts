@@ -1,6 +1,7 @@
 import { newId } from '@xeprime/prisma';
 import { BRANCH_STATUS } from '@xeprime/types';
 import { ConfigService } from '@nestjs/config';
+import { SupportRequestStore } from '../../src/common/support/support-request.store';
 import { AuditService } from '../../src/modules/audit/audit.service';
 import { CancellationsService } from '../../src/modules/cancellations/cancellations.service';
 import { PromoCodeEvaluatorService } from '../../src/modules/promo-codes/promo-code-evaluator.service';
@@ -309,7 +310,7 @@ export function makeCustomersService(prisma: PrismaService, audit: AuditService)
 
 export function makeVehiclesService(
   prisma: PrismaService,
-  overrides: { listings?: ListingsService } = {},
+  overrides: { listings?: ListingsService; config?: ConfigService } = {},
 ): VehiclesService {
   const audit = new AuditService(prisma);
   return new VehiclesService(
@@ -321,6 +322,9 @@ export function makeVehiclesService(
     new CatalogService(prisma, audit),
     new CatalogModelService(prisma, audit),
     makePricingService(prisma),
+    // ConfigService trần đọc process.env — spec phiên hỗ trợ truyền bản có R2_PUBLIC_BASE_URL.
+    overrides.config ?? new ConfigService(),
+    new SupportRequestStore(),
   );
 }
 

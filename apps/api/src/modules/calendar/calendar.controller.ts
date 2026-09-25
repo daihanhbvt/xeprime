@@ -16,8 +16,9 @@ import {
   PERMISSION,
   SERVICE_TYPE,
   type OccupancySourceType,
+  SUPPORT_CAPABILITY,
 } from '@xeprime/types';
-import { CurrentTenant, RequirePermissions, TenantScoped } from '../../common/decorators';
+import { CurrentTenant, RequirePermissions, TenantScoped, SupportAction } from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PricingService } from '../pricing/pricing.service';
@@ -77,6 +78,7 @@ export class CalendarController {
 
   @Get('resources')
   @RequirePermissions(PERMISSION.CALENDAR_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.CALENDAR_VIEW)
   @ApiOperation({ summary: 'Danh sách xe làm hàng của resource timeline' })
   @ApiOkResponse({ type: CalendarResourceDto, isArray: true })
   async resources(
@@ -249,6 +251,7 @@ export class CalendarController {
    */
   @Get('availability')
   @RequirePermissions(PERMISSION.CALENDAR_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.CALENDAR_VIEW)
   @ApiOperation({ summary: 'Số xe còn trống theo từng ngày của khoảng đang xem' })
   @ApiOkResponse({ type: CalendarAvailabilityDto })
   async availability(
@@ -313,6 +316,7 @@ export class CalendarController {
    */
   @Get('daily-prices')
   @RequirePermissions(PERMISSION.CALENDAR_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.CALENDAR_VIEW)
   @ApiOperation({ summary: 'Bản ghi đè giá theo ngày của các xe đang lọc, trong khoảng xem' })
   @ApiOkResponse({ type: CalendarDailyPriceDto, isArray: true })
   async dailyPrices(
@@ -352,6 +356,7 @@ export class CalendarController {
    */
   @Get('events')
   @RequirePermissions(PERMISSION.CALENDAR_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.CALENDAR_VIEW)
   @ApiOperation({ summary: 'Sự kiện chiếm lịch trong khoảng thời gian' })
   @ApiOkResponse({ type: CalendarEventDto, isArray: true })
   async events(

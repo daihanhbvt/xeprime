@@ -37,6 +37,7 @@ import { CustomerFormModal } from './CustomerFormModal';
 import { CustomerNotesPanel } from './CustomerNotesPanel';
 import { CustomerRiskModal } from './CustomerRiskModal';
 import styles from './CustomerDetailView.module.css';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { useAppFormat } from '@/i18n/use-app-format';
 
 /** Nhãn kèm biểu tượng giải thích — icon NGOÀI ô nhập, không chồng lên nội dung. */
@@ -112,6 +113,12 @@ export function CustomerDetailView({
   const canCreateBooking = has(PERMISSION.BOOKING_CREATE);
   const canManageDocuments = has(PERMISSION.CUSTOMER_DOCUMENT_MANAGE);
   const canViewDocumentFiles = has(PERMISSION.CUSTOMER_DOCUMENT_FILE_VIEW);
+  /*
+   * Ghi chú và giấy tờ của khách là sổ RIÊNG của gian hàng — phiên hỗ trợ của nền tảng không mở
+   * chúng (không `@SupportAction`, ADR 0050 §10). Cùng `customers.view` nên quyền không phân biệt
+   * được; ẩn hẳn hai tab thay vì để chúng 403.
+   */
+  const showPrivateTabs = !useSupportHides(SUPPORT_HIDDEN_AREA.CUSTOMER_PRIVATE);
 
   const { data, isLoading, isError, error, refetch, isFetching } = useCustomer(
     canView ? customerId : null,
@@ -445,29 +452,33 @@ export function CustomerDetailView({
                     },
                   ]
                 : []),
-              {
-                key: 'notes',
-                label: t('tabs.notes'),
-                children: (
-                  <CustomerNotesPanel
-                    customerId={customerId}
-                    canManage={canManage}
-                    disabled={archived}
-                  />
-                ),
-              },
-              {
-                key: 'documents',
-                label: t('tabs.documents'),
-                children: (
-                  <CustomerDocumentsPanel
-                    customerId={customerId}
-                    canManage={canManageDocuments}
-                    canViewFiles={canViewDocumentFiles}
-                    disabled={archived}
-                  />
-                ),
-              },
+              ...(showPrivateTabs
+                ? [
+                    {
+                      key: 'notes',
+                      label: t('tabs.notes'),
+                      children: (
+                        <CustomerNotesPanel
+                          customerId={customerId}
+                          canManage={canManage}
+                          disabled={archived}
+                        />
+                      ),
+                    },
+                    {
+                      key: 'documents',
+                      label: t('tabs.documents'),
+                      children: (
+                        <CustomerDocumentsPanel
+                          customerId={customerId}
+                          canManage={canManageDocuments}
+                          canViewFiles={canViewDocumentFiles}
+                          disabled={archived}
+                        />
+                      ),
+                    },
+                  ]
+                : []),
             ]}
           />
         </div>

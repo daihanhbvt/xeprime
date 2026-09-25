@@ -33,10 +33,18 @@ import {
 } from '@ant-design/icons';
 import type { ComponentType } from 'react';
 
-import { PERMISSION, PLAN_FEATURE, type Permission, type PlanFeature } from '@xeprime/types';
+import {
+  PERMISSION,
+  PLAN_FEATURE,
+  SUPPORT_WORKSPACE,
+  type Permission,
+  type PlanFeature,
+  type SupportWorkspace,
+} from '@xeprime/types';
 import type { useTranslations } from 'next-intl';
 
-import { ROUTES } from './routes';
+import { ROUTES, adminTenantSupportPath, tenantSupportContextIdFromPath } from './routes';
+import { tenantSupportHref } from './tenant-support-routes';
 
 /**
  * Khoá nhãn menu — một chuỗi trong namespace `Navigation`.
@@ -484,7 +492,7 @@ export const PLATFORM_NAV: readonly NavSection[] = [
             key: 'admin-tenants',
             labelKey: 'platform.tenants',
             href: ROUTES.MANAGE.ADMIN_TENANTS,
-            permission: PERMISSION.PLATFORM_TENANT_MANAGE,
+            permission: PERMISSION.PLATFORM_TENANT_VIEW,
             icon: ShopOutlined,
           },
           {
@@ -765,16 +773,30 @@ export function flattenLeaves(sections: readonly NavSection[]): NavLeaf[] {
  * `/manage` (Tổng quan) chỉ khớp tuyệt đối, không thì mọi trang đều dính vì đều bắt đầu bằng nó.
  */
 export function matchSelectedKey(pathname: string, leaves: readonly NavLeaf[]): string | undefined {
+  const direct = longestPrefixLeaf(pathname, leaves);
+  const contextId = tenantSupportContextIdFromPath(pathname);
+  if (!contextId) return direct?.href;
+  /*
+   * Phiên hỗ trợ gian hàng (ADR 0050) sống dưới `/manage/admin/tenant-support/<id phiên>`. Trong
+   * phiên, cây menu là cây của GIAN HÀNG với href đã ánh xạ vào phiên — khớp thẳng ở trên. Cây nền
+   * tảng (vd. băng hết gói của AppShell tra trên cây chưa lọc) không có mục nào mang tiền tố đó:
+   * phiên thuộc về màn Gian hàng (nơi nó được mở), nên sáng mục đó — không phải "Tổng quan nền
+   * tảng" (`/manage/admin`), mục mà đường dẫn phiên tình cờ nhận làm tiền tố.
+   */
+  if (direct?.href.startsWith(adminTenantSupportPath.root(contextId))) return direct.href;
+  return longestPrefixLeaf(ROUTES.MANAGE.ADMIN_TENANTS, leaves)?.href;
+}
+
+function longestPrefixLeaf(path: string, leaves: readonly NavLeaf[]): NavLeaf | undefined {
   let best: NavLeaf | undefined;
   for (const leaf of leaves) {
     const isMatch =
-      pathname === leaf.href ||
-      (leaf.href !== ROUTES.MANAGE.ROOT && pathname.startsWith(`${leaf.href}/`));
+      path === leaf.href || (leaf.href !== ROUTES.MANAGE.ROOT && path.startsWith(`${leaf.href}/`));
     if (isMatch && (!best || leaf.href.length > best.href.length)) {
       best = leaf;
     }
   }
-  return best?.href;
+  return best;
 }
 
 /**
@@ -805,4 +827,128 @@ export function branchKeyOf(
     }
   }
   return undefined;
+}
+
+// ── Không gian hỗ trợ gian hàng (ADR 0050 §12) ────────────────────────────────────────────────
+
+/**
+ * Owner Lite trong phiên hỗ trợ — CHỈ công việc cho thuê, dùng lại đúng nhãn của `OWNER_NAV`.
+ *
+ * Không hồ sơ/mật khẩu/ví/thuế/chuyến đi thuê: đó là tài khoản CÁ NHÂN của chủ xe, không phải khu
+ * vận hành của gian hàng. "Chuyến của tôi" (`/trips`) đọc theo NGƯỜI ĐĂNG NHẬP nên không dùng được
+ * trong phiên — chuyến phía chủ xe đi qua hai màn tenant-scoped Yêu cầu thuê / Đơn thuê.
+ */
+const OWNER_LITE_SUPPORT_NAV: readonly NavSection[] = [
+  {
+    key: 'owner-operations',
+    labelKey: 'manageGroups.operations',
+    pinned: true,
+    children: [
+      {
+        key: 'vehicles',
+        labelKey: 'account.vehicles',
+        href: ROUTES.ACCOUNT.VEHICLES,
+        permission: PERMISSION.VEHICLE_VIEW,
+        icon: UnorderedListOutlined,
+      },
+      {
+        key: 'calendar',
+        labelKey: 'account.calendar',
+        href: ROUTES.ACCOUNT.CALENDAR,
+        permission: PERMISSION.CALENDAR_VIEW,
+        icon: CalendarOutlined,
+      },
+      {
+        key: 'booking-requests',
+        labelKey: 'manage.bookingRequestsShort',
+        href: ROUTES.MANAGE.BOOKING_REQUESTS,
+        permission: PERMISSION.BOOKING_REQUEST_VIEW,
+        icon: InboxOutlined,
+      },
+      {
+        key: 'bookings',
+        labelKey: 'manage.bookingsShort',
+        href: ROUTES.MANAGE.BOOKINGS,
+        permission: PERMISSION.BOOKING_VIEW,
+        icon: FileDoneOutlined,
+      },
+      {
+        key: 'support-cases',
+        labelKey: 'manage.supportCases',
+        href: ROUTES.ACCOUNT.SUPPORT,
+        permission: PERMISSION.SUPPORT_VIEW,
+        icon: ExclamationCircleOutlined,
+      },
+    ],
+  },
+];
+
+const OWNER_LITE_SUPPORT_TABS: readonly MobileTab[] = [
+  {
+    key: 'vehicles',
+    labelKey: 'account.vehicles',
+    href: ROUTES.ACCOUNT.VEHICLES,
+    permission: PERMISSION.VEHICLE_VIEW,
+    icon: UnorderedListOutlined,
+  },
+  {
+    key: 'calendar',
+    labelKey: 'account.calendar',
+    href: ROUTES.ACCOUNT.CALENDAR,
+    permission: PERMISSION.CALENDAR_VIEW,
+    icon: CalendarOutlined,
+  },
+  {
+    key: 'booking-requests',
+    labelKey: 'manage.bookingRequestsShort',
+    href: ROUTES.MANAGE.BOOKING_REQUESTS,
+    permission: PERMISSION.BOOKING_REQUEST_VIEW,
+    icon: InboxOutlined,
+  },
+];
+
+function mapLeaf(contextId: string, leaf: NavLeaf): NavLeaf | null {
+  // Ví/tiền của CHỦ gian hàng không bao giờ mở trong phiên (vai của phiên là người xem).
+  if (leaf.ownerOnly) return null;
+  const href = tenantSupportHref(contextId, leaf.href);
+  return href ? { ...leaf, href } : null;
+}
+
+/**
+ * Cây menu của một phiên hỗ trợ: CHÍNH cây của gian hàng (Full Manage hoặc Owner Lite), href đã
+ * ánh xạ sang route của phiên, bỏ mọi mục không có trang trong phiên (tài chính, chat, trung tâm
+ * hỗ trợ của gian hàng…). Quyền/cờ gói vẫn lọc tiếp ở `useManageNav` như với chính gian hàng.
+ */
+export function supportNavSections(
+  contextId: string,
+  workspace: SupportWorkspace,
+): NavSection[] {
+  if (workspace === SUPPORT_WORKSPACE.ONBOARDING) return [];
+  const tree = workspace === SUPPORT_WORKSPACE.MANAGE ? SHOP_NAV : OWNER_LITE_SUPPORT_NAV;
+  return tree
+    .map((section) => ({
+      ...section,
+      children: section.children
+        .map((node): NavNode | null => {
+          if (!isNavBranch(node)) return mapLeaf(contextId, node);
+          const children = node.children
+            .map((leaf) => mapLeaf(contextId, leaf))
+            .filter((leaf): leaf is NavLeaf => leaf !== null);
+          return children.length > 0 ? { ...node, children } : null;
+        })
+        .filter((node): node is NavNode => node !== null),
+    }))
+    .filter((section) => section.children.length > 0);
+}
+
+export function supportMobileTabs(
+  contextId: string,
+  workspace: SupportWorkspace,
+): MobileTab[] {
+  if (workspace === SUPPORT_WORKSPACE.ONBOARDING) return [];
+  const tabs = workspace === SUPPORT_WORKSPACE.MANAGE ? SHOP_MOBILE_TABS : OWNER_LITE_SUPPORT_TABS;
+  return tabs.flatMap((tab) => {
+    const href = tenantSupportHref(contextId, tab.href);
+    return href ? [{ ...tab, href }] : [];
+  });
 }

@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
@@ -35,6 +36,8 @@ import { AuditService } from '../../audit/audit.service';
 import { OccupancyService } from '../../calendar/occupancy.service';
 import { ReceiptsService } from '../../finance/receipts.service';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { SupportRequestStore } from '../../../common/support/support-request.store';
+import { assertAndStripSupportPinned, assertCostWritable } from './maintenance-field-policy';
 import { VehicleContractsService } from '../vehicle-contracts.service';
 import { OdometerService } from './odometer.service';
 import {
@@ -83,6 +86,8 @@ export class MaintenanceService {
     private readonly files: VehicleContractsService,
     private readonly audit: AuditService,
     private readonly receipts: ReceiptsService,
+    // Mặc định tự dựng (store đọc AsyncLocalStorage dùng chung) — nhiều spec dựng service bằng tay.
+    private readonly supportStore: SupportRequestStore = new SupportRequestStore(),
   ) {}
 
   // ── Hồ sơ bảo dưỡng của một xe ────────────────────────────────────────────
@@ -191,6 +196,7 @@ export class MaintenanceService {
   ): Promise<MaintenanceRecordDto> {
     await this.assertVehicle(tenantId, vehicleId);
     assertRecordInput(dto);
+    assertCostWritable(dto, scope.canViewCost);
 
     const id = newId();
     const plannedStartAt = toDateTime(dto.plannedStartAt);
@@ -243,9 +249,9 @@ export class MaintenanceService {
             targetId: id,
             after: {
               vehicleId,
-              type: dto.type,
-              plannedStartAt: plannedStartAt?.toISOString() ?? null,
-              plannedEndAt: plannedEndAt?.toISOString() ?? null,
+              ...maintenanceRecordAuditView(
+                await tx.vehicleMaintenanceRecord.findUniqueOrThrow({ where: { id } }),
+              ),
             },
           },
           tx,
@@ -265,7 +271,18 @@ export class MaintenanceService {
     scope: MaintenanceViewScope,
   ): Promise<MaintenanceRecordDto> {
     await this.assertVehicle(tenantId, vehicleId);
+    /*
+     * Phiên hỗ trợ (ADR 0050): lịch + KM ghim theo bản đang lưu và bị bỏ khỏi lệnh TRƯỚC mọi bước
+     * khác — lệnh sửa của phiên không bao giờ dời/nhả/giữ chỗ lịch xe, và lệnh đổi lịch bị từ
+     * chối vì LÝ DO ĐÓ chứ không vì một luật cặp giờ phía sau.
+     */
+    const support = this.supportStore.current();
+    if (support) {
+      assertAndStripSupportPinned(await this.requireRecord(tenantId, vehicleId, recordId), dto);
+    }
     assertRecordInput(dto);
+    // Vắng mặt = giữ nguyên chi phí đang lưu; có mặt mà không thấy chi phí = 403.
+    assertCostWritable(dto, scope.canViewCost);
     if (dto.expectedRowVersion == null) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
@@ -324,8 +341,9 @@ export class MaintenanceService {
         // Phiếu chưa hoàn tất thì chưa có phiếu chi nào để đồng bộ (`syncCostReceipt` chỉ chạy ở
         // `completeRecord`). Sửa chi phí SAU khi hoàn tất đi đường riêng: `correctCost`.
 
-        // Lịch đổi → dời/nhả/giữ chỗ tương ứng, cùng transaction với phiếu.
-        await this.syncOccupancy(tx, {
+        // Lịch đổi → dời/nhả/giữ chỗ tương ứng, cùng transaction với phiếu. Phiên hỗ trợ không
+        // có đường nào tới đây: khung giờ đã bị ghim và bỏ khỏi lệnh ở trên (ADR 0050).
+        if (!support) await this.syncOccupancy(tx, {
           tenantId,
           vehicleId,
           recordId,
@@ -343,15 +361,12 @@ export class MaintenanceService {
             action: 'vehicle.maintenance.update',
             targetType: 'vehicle_maintenance_record',
             targetId: recordId,
-            before: {
-              plannedStartAt: current.plannedStartAt?.toISOString() ?? null,
-              plannedEndAt: current.plannedEndAt?.toISOString() ?? null,
-              status: current.status,
-            },
-            after: {
-              plannedStartAt: plannedStartAt?.toISOString() ?? null,
-              plannedEndAt: plannedEndAt?.toISOString() ?? null,
-            },
+            // Toàn bộ trường nghiệp vụ của phiếu, trước và sau — audit phải trả lời được "đã đổi
+            // gì", kể cả khi người sửa là nhân sự nền tảng trong phiên hỗ trợ (ADR 0050).
+            before: maintenanceRecordAuditView(current),
+            after: maintenanceRecordAuditView(
+              await tx.vehicleMaintenanceRecord.findUniqueOrThrow({ where: { id: recordId } }),
+            ),
           },
           tx,
         );
@@ -391,6 +406,7 @@ export class MaintenanceService {
     scope: MaintenanceViewScope,
   ): Promise<MaintenanceRecordDto> {
     await this.assertVehicle(tenantId, vehicleId);
+    assertCostWritable(dto, scope.canViewCost);
     const current = await this.requireRecord(tenantId, vehicleId, recordId);
     assertTransition(current.status as MaintenanceStatus, MAINTENANCE_STATUS.COMPLETED);
 
@@ -1127,6 +1143,16 @@ export class MaintenanceService {
     const keep = new Set(fileIds);
     const removed = existing.map((row) => row.privateFileId).filter((id) => !keep.has(id));
 
+    // Phiên hỗ trợ (ADR 0050) chỉ THÊM chứng từ — một danh sách thiếu file đang có là lệnh xoá
+    // chứng từ, việc không thuộc Đợt 1 (và không để lại dấu ở before/after của phiếu).
+    if (removed.length > 0 && this.supportStore.current()) {
+      throw new ForbiddenException({
+        code: API_ERROR_CODE.SUPPORT_FIELD_NOT_ALLOWED,
+        message: 'Phiên hỗ trợ không gỡ được chứng từ của phiếu bảo dưỡng',
+        details: { fields: ['attachmentFileIds'] },
+      });
+    }
+
     if (removed.length > 0) {
       await tx.vehicleMaintenanceAttachment.deleteMany({
         where: { recordId, tenantId, privateFileId: { in: removed } },
@@ -1527,4 +1553,33 @@ function staleProfile(): ConflictException {
     code: API_ERROR_CODE.CONFLICT,
     message: 'Hồ sơ bảo dưỡng vừa được người khác cập nhật — tải lại rồi thử lại',
   });
+}
+
+/** Trường nghiệp vụ của một phiếu bảo dưỡng cho before/after của audit — ngày ra ISO, tiền ra chuỗi. */
+function maintenanceRecordAuditView(row: {
+  type: string;
+  customTypeName: string | null;
+  title: string | null;
+  status: string;
+  plannedStartAt: Date | null;
+  plannedEndAt: Date | null;
+  odometerKm: number | null;
+  providerName: string | null;
+  cost: Prisma.Decimal | null;
+  receiptCode: string | null;
+  notes: string | null;
+}): Record<string, unknown> {
+  return {
+    type: row.type,
+    customTypeName: row.customTypeName,
+    title: row.title,
+    status: row.status,
+    plannedStartAt: row.plannedStartAt?.toISOString() ?? null,
+    plannedEndAt: row.plannedEndAt?.toISOString() ?? null,
+    odometerKm: row.odometerKm,
+    providerName: row.providerName,
+    cost: row.cost?.toFixed(0) ?? null,
+    receiptCode: row.receiptCode,
+    notes: row.notes,
+  };
 }

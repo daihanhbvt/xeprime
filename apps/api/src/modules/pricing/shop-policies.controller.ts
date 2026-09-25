@@ -1,11 +1,12 @@
 import { Body, Controller, Get, Put, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
+import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
   TenantScoped,
+  SupportAction,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
@@ -30,6 +31,7 @@ export class ShopPoliciesController {
 
   @Get()
   @RequirePermissions(PERMISSION.TENANT_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.RENTAL_POLICY_VIEW)
   @ApiOperation({ summary: 'Chính sách thuê mặc định (theo loại xe) + số xe kế thừa/ghi đè' })
   @ApiOkResponse({ type: ShopRentalPolicyDto })
   get(

@@ -10,6 +10,7 @@ import {
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
   API_ERROR_CODE,
+  AUDIT_ACTOR_SCOPE,
   BOOKING_STATUS,
   canEnableMarketplace,
   resolveMarketplaceVisibility,
@@ -36,6 +37,8 @@ import {
   type PaginationMeta,
   type VehiclePublicStatus,
 } from '@xeprime/types';
+import { ConfigService } from '@nestjs/config';
+import { SupportRequestStore } from '../../common/support/support-request.store';
 import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
 import { BranchesService } from '../branches/branches.service';
@@ -44,6 +47,12 @@ import { CatalogService } from '../catalog/catalog.service';
 import { policyData, PricingService } from '../pricing/pricing.service';
 import { SaveVehiclePricingDto, VehiclePricingDto } from '../pricing/dto/pricing.dto';
 import { ListingsService } from '../public-listings/listings.service';
+import {
+  assertSupportMediaInScope,
+  assertSupportPinnedFields,
+  stripSupportPinnedFields,
+  supportVehicleAuditSnapshot,
+} from './vehicle-support-policy';
 import { businessWhere } from '../../common/finance-period';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -151,6 +160,8 @@ const SENSITIVE_SELECT = {
   serviceTypes: true,
   mainImageUrl: true,
   deliveryEnabled: true,
+  // Trường "ghim" của phiên hỗ trợ (ADR 0050) so với bản đang lưu — xem `assertSupportPinnedFields`.
+  operationStatus: true,
 } satisfies Prisma.VehicleSelect;
 
 /**
@@ -174,6 +185,8 @@ export class VehiclesService {
     private readonly catalog: CatalogService,
     private readonly catalogModels: CatalogModelService,
     private readonly pricing: PricingService,
+    private readonly config: ConfigService,
+    private readonly supportStore: SupportRequestStore,
   ) {}
 
   /**
@@ -625,6 +638,25 @@ export class VehiclesService {
      */
     assertNoLockedFieldChange(current, dto);
 
+    /*
+     * Phiên hỗ trợ của nhân sự nền tảng (ADR 0050): guard đã lọc TÊN trường; ở đây — sau khi khoá
+     * xe — so trường ghim với bản đang lưu và chặn ảnh ngoài kho của gian hàng, rồi chụp before
+     * cho dòng audit ghi cùng transaction. Luật khoá căn cước ngay trên vẫn áp nguyên vẹn.
+     */
+    const support = this.supportStore.current();
+    let supportBefore: Record<string, unknown> | null = null;
+    if (support) {
+      assertSupportPinnedFields(current, dto);
+      stripSupportPinnedFields(dto);
+      await assertSupportMediaInScope(tx, {
+        vehicleId: current.id,
+        tenantId,
+        publicBase: this.config.get<string>('R2_PUBLIC_BASE_URL'),
+        dto,
+      });
+      supportBefore = await supportVehicleAuditSnapshot(tx, current.id, dto);
+    }
+
     // Chuyển xe sang chi nhánh khác = đổi VỊ TRÍ CÔNG KHAI của nó. Kiểm quyền sở hữu + trạng
     // thái ngay đây, và ghi audit riêng: "xe này chuyển từ đâu sang đâu" là câu hỏi có thật khi
     // đối soát, không suy được từ bản ghi sửa xe chung.
@@ -665,6 +697,23 @@ export class VehiclesService {
       actorUserId: userId,
       policy: await this.pricing.effectivePolicy(tenantId, current.id, tx),
     });
+
+    if (support && supportBefore) {
+      // `AuditService` tự gắn actorScope = platform + id phiên + capability từ request.
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+          action: 'vehicle.support.update',
+          targetType: 'vehicle',
+          targetId: current.id,
+          before: supportBefore,
+          after: await supportVehicleAuditSnapshot(tx, current.id, dto),
+        },
+        tx,
+      );
+    }
 
     if (branchChanged) {
       await this.audit.record(

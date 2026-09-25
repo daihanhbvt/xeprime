@@ -165,7 +165,8 @@
       "progressLabel": "Upload progress",
       "alt": "Selected image",
       "change": "Replace",
-      "remove": "Remove image"
+      "remove": "Remove image",
+      "empty": "No image"
     },
     "price": {
       "subtotal": "Subtotal before deposit",
@@ -245,6 +246,10 @@
       "downloadFile": "Download {name}",
       "removeFile": "Remove file {name}",
       "legacyNote": "This older document must be re-uploaded to keep it private"
+    },
+    "dateRange": {
+      "fromDate": "From date",
+      "toDate": "To date"
     }
   },
   "filters": {

@@ -47,6 +47,7 @@ import { PublishRequiredLabel } from './VehicleCompleteness';
 import { VehicleClassificationFields } from './VehicleClassificationFields';
 import { VehicleEnergyFields } from './VehicleEnergyFields';
 import { VehicleIdentityFields } from './VehicleIdentityFields';
+import { useSupportPinnedField } from '@/features/tenant-support/support-session';
 import styles from './VehicleForm.module.css';
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -223,6 +224,8 @@ export function BasicSection({
 }: SectionProps) {
   const t = useTranslations('Vehicles.form.basic');
   const options = useVehicleOptions();
+  // Phiên hỗ trợ (ADR 0050): chi nhánh, loại xe, dịch vụ không đổi được — backend cũng chặn.
+  const pinned = useSupportPinnedField();
 
   return (
     <Row gutter={24}>
@@ -258,7 +261,7 @@ export function BasicSection({
           label={t('branch')}
           options={branchOptions}
           loading={branchLoading}
-          disabled={branchDisabled}
+          disabled={branchDisabled || pinned('branchId')}
           showSearch
           required
           help={t('branchHelp')}
@@ -275,6 +278,7 @@ export function BasicSection({
           name="vehicleType"
           label={t('vehicleType')}
           options={options.vehicleType}
+          disabled={pinned('vehicleType')}
           required
         />
       </Col>
@@ -286,6 +290,7 @@ export function BasicSection({
           label={t('serviceTypes')}
           options={options.serviceType}
           mode="multiple"
+          disabled={pinned('serviceTypes')}
           required
           help={t('serviceTypesHelp')}
         />
@@ -377,6 +382,7 @@ function ServicePriceRemovalWarning({ control }: Pick<SectionProps, 'control'>) 
 export function StatusSection({ control }: Pick<SectionProps, 'control'>) {
   const t = useTranslations('Vehicles.form.status');
   const options = useVehicleOptions();
+  const pinned = useSupportPinnedField();
 
   return (
     <Row gutter={24}>
@@ -386,6 +392,7 @@ export function StatusSection({ control }: Pick<SectionProps, 'control'>) {
           name="operationStatus"
           label={t('operationStatus')}
           options={options.operationStatus}
+          disabled={pinned('operationStatus')}
           required
         />
       </Col>

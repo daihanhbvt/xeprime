@@ -1,0 +1,39 @@
+{
+  "detail": {
+    "fallbackTitle": "Shop",
+    "fields": {
+      "code": "Code",
+      "type": "Type",
+      "owner": "Owner",
+      "ownerContact": "Owner contact",
+      "phone": "Shop phone",
+      "province": "Province/City",
+      "address": "Address",
+      "taxCode": "Tax ID",
+      "businessLicense": "Business licence",
+      "vehicleCount": "Vehicles",
+      "bookingCount": "Bookings",
+      "createdAt": "Created"
+    },
+    "support": {
+      "open": "Open support workspace"
+    },
+    "lock": {
+      "button": "Lock shop",
+      "title": "Lock shop",
+      "ok": "Lock",
+      "cancel": "Cancel",
+      "note": "The shop's vehicles will be hidden from the marketplace immediately. Enter a reason (optional) to store in the log.",
+      "reasonPlaceholder": "Reason for locking…",
+      "done": "Shop locked",
+      "unavailable": "Only active or locked shops can be locked/unlocked."
+    },
+    "unlock": {
+      "button": "Unlock shop",
+      "confirm": "Unlock this shop?",
+      "ok": "Unlock",
+      "cancel": "Close",
+      "done": "Shop unlocked"
+    }
+  }
+}

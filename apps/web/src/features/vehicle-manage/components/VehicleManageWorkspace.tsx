@@ -10,11 +10,13 @@ import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { PermissionState } from '@/components/feedback/PermissionState';
-import { ROUTES, vehicleManageSectionOf } from '@/constants/routes';
+import { vehicleManageSectionOf } from '@/constants/routes';
+import { useSupportSession } from '@/features/tenant-support/support-session';
 import { useVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { useVehicleSummary } from '@/features/vehicles/hooks/use-vehicle-summary';
 import type { VehicleDetail, VehicleStats } from '@/features/vehicles/types';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useWorkspace } from '@/hooks/use-workspace';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { getErrorCode } from '@/services/api-client';
 
@@ -46,6 +48,7 @@ export function VehicleManageWorkspace({ vehicleId, children }: Props) {
   const domainLabel = useDomainLabel();
   const router = useRouter();
   const pathname = usePathname();
+  const { paths } = useWorkspace();
   const { has } = usePermissions();
   const canView = has(PERMISSION.VEHICLE_VIEW);
   const canEdit = has(PERMISSION.VEHICLE_UPDATE);
@@ -61,7 +64,7 @@ export function VehicleManageWorkspace({ vehicleId, children }: Props) {
         description={t('forbiddenBody')}
         missingPermissions={[PERMISSION.VEHICLE_VIEW]}
         action={
-          <Link href={ROUTES.ACCOUNT.VEHICLES}>
+          <Link href={paths.vehicles}>
             <Button type="primary">{tManage('backHome')}</Button>
           </Link>
         }
@@ -80,7 +83,7 @@ export function VehicleManageWorkspace({ vehicleId, children }: Props) {
         description={notFound ? t('notFoundBody') : t('loadErrorBody')}
         onRetry={notFound ? undefined : () => void vehicleQ.refetch()}
         action={
-          <Button onClick={() => router.push(ROUTES.ACCOUNT.VEHICLES)}>{t('backToList')}</Button>
+          <Button onClick={() => router.push(paths.vehicles)}>{t('backToList')}</Button>
         }
       />
     );
@@ -116,7 +119,9 @@ function WorkspaceBody({
   children: ReactNode;
 }) {
   const t = useTranslations('VehicleManage');
-  const toggle = useServiceToggle(vehicle, canEdit);
+  // Bật/tắt dịch vụ nằm ngoài phiên hỗ trợ (ADR 0050) — backend cũng chặn `serviceTypes`.
+  const support = useSupportSession();
+  const toggle = useServiceToggle(vehicle, canEdit && !support);
 
   const section = vehicleManageSectionOf(pathname);
   const service = section ? sectionServiceType(section) : null;

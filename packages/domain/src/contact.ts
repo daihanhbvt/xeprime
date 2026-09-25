@@ -19,6 +19,9 @@ export const TEL_SCHEME = 'tel:';
 /** Gốc liên kết hồ sơ Zalo. Zalo định danh người dùng bằng SĐT nên phần đuôi chính là số nội địa. */
 export const ZALO_PROFILE_BASE_URL = 'https://zalo.me/';
 
+/** Ký tự che của `maskPhone` ở backend. */
+const MASK_CHAR = '*';
+
 /** `tel:0901234567`. `null` khi không có số để gọi — chỗ gọi hiện chữ thay vì một link chết. */
 export function telHref(phone: string | null | undefined): string | null {
   const normalized = normalizeContactPhone(phone);
@@ -37,9 +40,13 @@ export function zaloHref(phone: string | null | undefined): string | null {
   return normalized ? `${ZALO_PROFILE_BASE_URL}${normalized}` : null;
 }
 
-/** Dạng nội địa `0xxxxxxxxx` đã bỏ khoảng trắng; `null` nếu rỗng sau khi chuẩn hoá. */
+/**
+ * Dạng nội địa `0xxxxxxxxx` đã bỏ khoảng trắng; `null` nếu rỗng sau khi chuẩn hoá — hoặc nếu số đã
+ * bị CHE (`091****678`, phiên hỗ trợ gian hàng — ADR 0050 §11): một link `tel:` dựng từ số che
+ * quay tới một số khác hẳn, nên chỗ gọi hiện chữ thay vì link.
+ */
 function normalizeContactPhone(phone: string | null | undefined): string | null {
-  if (!phone) return null;
+  if (!phone || phone.includes(MASK_CHAR)) return null;
   const normalized = toLocalVnPhone(phone);
   return normalized.length > 0 ? normalized : null;
 }

@@ -727,6 +727,28 @@ export const API_ERROR_CODE = {
    */
   APPROVAL_SNAPSHOT_STALE: 'APPROVAL_SNAPSHOT_STALE',
 
+  // ── Không gian hỗ trợ gian hàng (ADR 0050) ────────────────────────────────────────────────
+  /**
+   * Phiên hỗ trợ không dùng được: không tồn tại, không phải của người đang gọi, hoặc mở từ một
+   * phiên đăng nhập KHÁC. Ba trường hợp gộp một mã để một id đoán được không cho biết nó có
+   * tồn tại hay không.
+   */
+  SUPPORT_CONTEXT_INVALID: 'SUPPORT_CONTEXT_INVALID',
+  /** Phiên hỗ trợ đã hết hạn hoặc đã thoát — mở phiên mới từ màn Gian hàng. */
+  SUPPORT_CONTEXT_EXPIRED: 'SUPPORT_CONTEXT_EXPIRED',
+  /**
+   * Thao tác không nằm trong danh sách cho phép của không gian hỗ trợ, hoặc phiên không được
+   * cấp capability cho nó. `details.capability` là capability còn thiếu (nếu có).
+   */
+  SUPPORT_ACTION_NOT_ALLOWED: 'SUPPORT_ACTION_NOT_ALLOWED',
+  /**
+   * Lệnh sửa xe trong phiên hỗ trợ chạm vào trường ngoài danh sách cho phép (giá, dịch vụ,
+   * chi nhánh…). `details.fields` liệt kê các trường bị từ chối.
+   */
+  SUPPORT_FIELD_NOT_ALLOWED: 'SUPPORT_FIELD_NOT_ALLOWED',
+  /** Ảnh gắn vào xe trong phiên hỗ trợ không nằm trong kho ảnh của CHÍNH gian hàng đó. */
+  SUPPORT_MEDIA_OUT_OF_SCOPE: 'SUPPORT_MEDIA_OUT_OF_SCOPE',
+
   // Hạ tầng
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',

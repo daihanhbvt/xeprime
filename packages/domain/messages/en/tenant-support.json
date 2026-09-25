@@ -1,0 +1,89 @@
+{
+  "banner": {
+    "regionLabel": "Shop support session",
+    "title": "Supporting: {tenant}",
+    "workspace": {
+      "manage": "Subscription track · Full management",
+      "owner_lite": "Commission track · Owner Lite",
+      "onboarding": "Awaiting first subscription payment"
+    },
+    "mode": {
+      "view": "View only",
+      "assist": "Assist"
+    },
+    "actor": "Acting as: {name}",
+    "expiresAt": "Expires at {time}",
+    "restriction": {
+      "tenant_locked": "This shop is locked — the session is now view only.",
+      "assist_permission_revoked": "Your account no longer has the assist permission — the session is now view only."
+    },
+    "exit": "Exit support mode"
+  },
+  "session": {
+    "pageTitle": "Shop support workspace",
+    "loading": "Opening support session…",
+    "backToTenants": "Back to shops",
+    "expired": {
+      "title": "Support session has ended",
+      "body": "The session expired or was exited. Open a new one from the Shops screen, with a support reason."
+    },
+    "invalid": {
+      "title": "Cannot open this support session",
+      "body": "The session does not belong to your account or your current sign-in session."
+    },
+    "error": {
+      "title": "Could not load the support session",
+      "body": "Something went wrong while reading the session. Please try again."
+    }
+  },
+  "start": {
+    "title": "Open support workspace · {tenant}",
+    "lead": "You enter the shop's workspace with your own account — you do not sign in as the owner. The session expires after {minutes} minutes, and every action is logged with the reason below.",
+    "modeLabel": "Mode",
+    "mode": {
+      "view": {
+        "label": "View only",
+        "description": "See the shop's vehicles, photos and maintenance. Nothing can be changed."
+      },
+      "assist": {
+        "label": "Assist",
+        "description": "Edit vehicle details, vehicle photos and maintenance records on the shop's behalf. Prices, calendar, services, money and members stay out of the session.",
+        "noPermission": "Your account does not have the assist permission yet."
+      }
+    },
+    "reasonLabel": "Support reason",
+    "reasonPlaceholder": "e.g. Owner asked us to update vehicle photos, ticket #1234",
+    "reasonHelp": "At least {min} characters. The reason is stored with the session and every log entry of the session.",
+    "submit": "Start support",
+    "validation": {
+      "modeInvalid": "Choose a support mode",
+      "reasonRequired": "Enter a support reason",
+      "reasonMin": "The reason needs at least 10 characters",
+      "reasonMax": "The reason can be at most 500 characters"
+    }
+  },
+  "home": {
+    "title": "Shop vehicles",
+    "subtitle": "Open a vehicle to view or edit its details, photos and maintenance within the support session.",
+    "loading": "Loading vehicles…",
+    "open": "Open"
+  },
+  "onboarding": {
+    "title": "Shop has not finished subscribing",
+    "body": "The shop is waiting for its first subscription payment, so there is no workspace to open yet. The management workspace opens once the subscription invoice is paid.",
+    "fields": {
+      "status": "Shop status",
+      "plan": "Plan",
+      "planEndsAt": "Plan end date",
+      "noPlan": "None"
+    }
+  },
+  "gate": {
+    "title": "This screen is not part of the shop's workspace",
+    "body": "The shop uses a different workspace (it may have just switched tracks). Go back to the session home to open the right screen.",
+    "back": "Back to session home"
+  },
+  "navigation": {
+    "blocked": "This screen is not available in a shop support session."
+  }
+}

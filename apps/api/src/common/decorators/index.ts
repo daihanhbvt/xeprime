@@ -4,7 +4,7 @@ import {
   UnauthorizedException,
   type ExecutionContext,
 } from '@nestjs/common';
-import type { Permission, PlanFeature } from '@xeprime/types';
+import type { Permission, PlanFeature, SupportCapability } from '@xeprime/types';
 import { API_ERROR_CODE } from '@xeprime/types';
 import type { AuthenticatedUser, RequestContext, TenantContext } from '../types/request-context';
 
@@ -100,6 +100,35 @@ export const RequiresFeature = (feature: PlanFeature) => SetMetadata(PLAN_FEATUR
  */
 export const FEATURE_READ_SAFE_KEY = 'xeprime:featureReadSafe';
 export const FeatureReadSafe = () => SetMetadata(FEATURE_READ_SAFE_KEY, true);
+
+/**
+ * Endpoint tenant-scoped này CHẤP NHẬN request trong phiên hỗ trợ của nhân sự nền tảng, với
+ * capability đã khai (ADR 0050).
+ *
+ * DEFAULT-DENY: endpoint không có decorator này thì mọi request mang `x-support-context` bị từ
+ * chối `SUPPORT_ACTION_NOT_ALLOWED` ở `TenantScopeGuard`, trước khi chạm DB. Thêm một endpoint
+ * vào không gian hỗ trợ là một dòng khai báo có chủ đích, không phải hệ quả của việc nó
+ * tình cờ tenant-scoped.
+ *
+ * Nhận một capability cố định, hoặc một HÀM suy capability từ request — cho endpoint mà việc nó
+ * làm phụ thuộc thân request (`PATCH /vehicles/:id` vừa sửa thông tin, vừa sửa ảnh, vừa sửa
+ * giá). Hàm trả `SupportActionDenial` để từ chối kèm lý do cụ thể.
+ */
+export const SUPPORT_ACTION_KEY = 'xeprime:supportAction';
+
+export interface SupportActionDenial {
+  readonly denied: true;
+  readonly code: string;
+  readonly message: string;
+  readonly details?: Record<string, unknown>;
+}
+
+export type SupportActionResolver = (
+  req: RequestContext,
+) => readonly SupportCapability[] | SupportActionDenial;
+
+export const SupportAction = (capability: SupportCapability | SupportActionResolver) =>
+  SetMetadata(SUPPORT_ACTION_KEY, capability);
 
 export const CurrentUser = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): AuthenticatedUser => {

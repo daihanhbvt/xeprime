@@ -19,7 +19,7 @@ import {
 import { nowInAppTz, toAppTz } from '@/lib/datetime';
 
 import { VEHICLE_TYPE_ICON } from '@/components/data-display/VehicleTypeIcon';
-import { useCurrentUser } from '@/hooks/use-current-user';
+import { useTenantScope } from '@/hooks/use-tenant-scope';
 import { cx } from '@/lib/cx';
 
 import type { MySubscription } from '../types';
@@ -81,7 +81,7 @@ export function PlanSummaryPanel({
   onPurchase: () => void;
 }) {
   const t = useTranslations('Subscription');
-  const { data: user } = useCurrentUser();
+  const { tenant } = useTenantScope();
 
   const { currentPlan, usage, fleetQuota } = data;
   const isCommission = currentPlan?.billingMode === BILLING_MODE.COMMISSION;
@@ -90,8 +90,8 @@ export function PlanSummaryPanel({
    * `grace` có cùng một `endsAt` trong quá khứ nhưng khác nhau ở toàn bộ quyền dùng Manage, và
    * chỉ server biết `graceDays` của gói là bao nhiêu (ADR 0038 điều 1).
    */
-  const phase = (user?.tenant?.billingPhase ?? null) as BillingPhase | null;
-  const serviceFeePercent = user?.tenant?.serviceFeePercent ?? null;
+  const phase = (tenant?.billingPhase ?? null) as BillingPhase | null;
+  const serviceFeePercent = tenant?.serviceFeePercent ?? null;
 
   return (
     <section className={cx(styles.panel, framed && styles.framed)}>

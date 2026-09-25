@@ -6,9 +6,14 @@ import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { ServiceType } from '@xeprime/types';
 
-import { accountVehicleManagePath, vehicleManageSectionOf } from '@/constants/routes';
+import { vehicleManageSectionOf } from '@/constants/routes';
+import {
+  supportAllowsVehicleSection,
+  useSupportSession,
+} from '@/features/tenant-support/support-session';
 import type { VehicleDetail } from '@/features/vehicles/types';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { useWorkspace } from '@/hooks/use-workspace';
 import { useAccountIdentityLabel } from '@/features/account/hooks/use-account-identity-label';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { cx } from '@/lib/cx';
@@ -37,6 +42,10 @@ export function VehicleManageSidebar({ vehicle, toggle }: Props) {
   const domainLabel = useDomainLabel();
   const pathname = usePathname();
   const { data: user } = useCurrentUser();
+  const { vehicles: vehiclePaths } = useWorkspace();
+  // Phiên hỗ trợ (ADR 0050): chỉ các mục của Đợt 1, và không có công tắc dịch vụ — bật/tắt dịch
+  // vụ là quyết định kinh doanh của chủ xe. Thẻ người dùng ở chân vẫn là NHÂN SỰ NỀN TẢNG.
+  const support = useSupportSession();
   const active = vehicleManageSectionOf(pathname);
   const services = vehicle.serviceTypes ?? [];
 
@@ -58,12 +67,16 @@ export function VehicleManageSidebar({ vehicle, toggle }: Props) {
 
       <div className={styles.groups}>
         {VEHICLE_MANAGE_NAV.map((group) => {
+          const items = group.items.filter((item) =>
+            supportAllowsVehicleSection(support, item.section),
+          );
+          if (items.length === 0) return null;
           const service = group.serviceType;
           const enabled = service ? services.includes(service) : true;
           const serviceLabel = service ? domainLabel('serviceType', service) : '';
           const blocked = service ? toggle.blockedReason(service as ServiceType, !enabled) : null;
 
-          const control = service ? (
+          const control = service && !support ? (
             <Tooltip title={blocked ?? undefined}>
               <Switch
                 size="small"
@@ -83,13 +96,13 @@ export function VehicleManageSidebar({ vehicle, toggle }: Props) {
                 {control}
               </div>
               <ul className={cx(styles.list, !enabled && styles.listOff)}>
-                {group.items.map((item) => {
+                {items.map((item) => {
                   const Icon = item.icon;
                   const isActive = item.section === active;
                   return (
                     <li key={item.section}>
                       <Link
-                        href={accountVehicleManagePath.section(vehicle.id, item.section)}
+                        href={vehiclePaths.manageSection(vehicle.id, item.section)}
                         className={cx(styles.item, isActive && styles.active)}
                         aria-current={isActive ? 'page' : undefined}
                         aria-disabled={!enabled || undefined}

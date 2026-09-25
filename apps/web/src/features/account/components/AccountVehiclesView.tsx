@@ -23,6 +23,7 @@ import { useVehicleOptions } from '@/features/vehicles/hooks/use-vehicle-options
 import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
 import type { VehicleListItem } from '@/features/vehicles/types';
 import { usePermissions } from '@/hooks/use-permissions';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 
 import { AccountPageHeader } from './AccountPageHeader';
 import styles from './AccountVehiclesView.module.css';
@@ -42,6 +43,9 @@ import styles from './AccountVehiclesView.module.css';
  */
 export function AccountVehiclesView() {
   const t = useTranslations('Account.vehicles');
+  // Cẩm nang + chứng từ mẫu là tài liệu CÁ NHÂN của chủ xe ở khu tài khoản — phiên hỗ trợ gian hàng
+  // không mở khu đó (ADR 0050 §12), nên hai thẻ dẫn đường không dựng.
+  const inSupport = useSupportHides(SUPPORT_HIDDEN_AREA.OWNER_GUIDES);
   const tManage = useTranslations('ManageCommon.permission');
   const router = useRouter();
   const { has } = usePermissions();
@@ -62,10 +66,10 @@ export function AccountVehiclesView() {
    */
   const hasFilters = Boolean(
     filters.q ||
-      filters.vehicleType ||
-      filters.serviceType ||
-      filters.operationStatus ||
-      filters.publicStatus,
+    filters.vehicleType ||
+    filters.serviceType ||
+    filters.operationStatus ||
+    filters.publicStatus,
   );
 
   function clearFilters() {
@@ -96,9 +100,7 @@ export function AccountVehiclesView() {
     <Button
       type="primary"
       icon={<PlusOutlined />}
-      onClick={() =>
-        router.push(listYourVehicleRegisterPath(VEHICLE_REGISTRATION_SOURCE.ACCOUNT))
-      }
+      onClick={() => router.push(listYourVehicleRegisterPath(VEHICLE_REGISTRATION_SOURCE.ACCOUNT))}
     >
       {t('addVehicle')}
     </Button>
@@ -127,28 +129,30 @@ export function AccountVehiclesView() {
       <AccountPageHeader title={t('title')} subtitle={t('subtitle')} extra={addButton} />
 
       {/* Hai thẻ dẫn đường — trỏ tới tài liệu THẬT trong khu này, không nhắc nghị định/tỷ lệ. */}
-      <div className={styles.tips}>
-        <Link href={ROUTES.ACCOUNT.HOST_GUIDE} className={styles.tip}>
-          <span className={styles.tipIcon} aria-hidden="true">
-            <BookOutlined />
-          </span>
-          <span className={styles.tipText}>
-            <span className={styles.tipTitle}>{t('tips.guideTitle')}</span>
-            <span className={styles.tipBody}>{t('tips.guideBody')}</span>
-          </span>
-          <RightOutlined className={styles.tipChevron} aria-hidden="true" />
-        </Link>
-        <Link href={ROUTES.ACCOUNT.CONTRACTS_DOCUMENTS} className={styles.tip}>
-          <span className={styles.tipIcon} aria-hidden="true">
-            <FileProtectOutlined />
-          </span>
-          <span className={styles.tipText}>
-            <span className={styles.tipTitle}>{t('tips.documentsTitle')}</span>
-            <span className={styles.tipBody}>{t('tips.documentsBody')}</span>
-          </span>
-          <RightOutlined className={styles.tipChevron} aria-hidden="true" />
-        </Link>
-      </div>
+      {inSupport ? null : (
+        <div className={styles.tips}>
+          <Link href={ROUTES.ACCOUNT.HOST_GUIDE} className={styles.tip}>
+            <span className={styles.tipIcon} aria-hidden="true">
+              <BookOutlined />
+            </span>
+            <span className={styles.tipText}>
+              <span className={styles.tipTitle}>{t('tips.guideTitle')}</span>
+              <span className={styles.tipBody}>{t('tips.guideBody')}</span>
+            </span>
+            <RightOutlined className={styles.tipChevron} aria-hidden="true" />
+          </Link>
+          <Link href={ROUTES.ACCOUNT.CONTRACTS_DOCUMENTS} className={styles.tip}>
+            <span className={styles.tipIcon} aria-hidden="true">
+              <FileProtectOutlined />
+            </span>
+            <span className={styles.tipText}>
+              <span className={styles.tipTitle}>{t('tips.documentsTitle')}</span>
+              <span className={styles.tipBody}>{t('tips.documentsBody')}</span>
+            </span>
+            <RightOutlined className={styles.tipChevron} aria-hidden="true" />
+          </Link>
+        </div>
+      )}
 
       <div className={styles.filters}>
         <VehicleStatusChips

@@ -7,7 +7,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, type ReactNode } from 'react';
 import { FEATURE_STATE } from '@xeprime/types';
 import { flattenLeaves, matchSelectedKey, navForScope } from '@/constants/nav';
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, tenantSupportContextIdFromPath } from '@/constants/routes';
+import { tenantSupportHref } from '@/constants/tenant-support-routes';
+import { SupportNavigationScope } from '@/features/tenant-support/components/SupportNavigationScope';
+import { SupportSessionBoundary } from '@/features/tenant-support/components/SupportWorkspaceProvider';
 import { FeatureExpiredNotice } from '@/components/feedback/FeatureExpiredNotice';
 import {
   canUseManagePortal,
@@ -145,7 +148,16 @@ export function AppShell({ children }: { children: ReactNode }) {
     return <WrongWorkspaceRedirect href={resolveWorkspaceHref(user) ?? ROUTES.ACCOUNT.ROOT} />;
   }
 
-  const isViewportPath = VIEWPORT_PORTAL_PATHS.includes(pathname);
+  /*
+   * Phiên hỗ trợ gian hàng (ADR 0050 §12): khung trang dựng MENU CỦA GIAN HÀNG, không phải menu nền
+   * tảng — ranh giới phiên bọc cả sidebar, breadcrumb và menu dưới đáy. Trang lịch của phiên cũng
+   * khoá chiều cao như lịch của chính gian hàng.
+   */
+  const supportContextId = tenantSupportContextIdFromPath(pathname);
+  const isViewportPath =
+    VIEWPORT_PORTAL_PATHS.includes(pathname) ||
+    (supportContextId !== null &&
+      pathname === tenantSupportHref(supportContextId, ROUTES.MANAGE.CALENDAR));
 
   /**
    * Dải trạng thái gian hàng, đầu vùng nội dung của MỌI trang quản lý.
@@ -188,13 +200,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     return featureStates[feature] === FEATURE_STATE.READ_ONLY ? feature : null;
   })();
 
-  return (
+  const shell = (
     <div
       className={[styles.shell, isViewportPath ? styles.shellViewport : '']
         .filter(Boolean)
         .join(' ')}
     >
-      <Sidebar />
+      <SupportNavigationScope>
+        <Sidebar />
+      </SupportNavigationScope>
       <div className={styles.main}>
         <Topbar user={user} />
         <main
@@ -202,30 +216,46 @@ export function AppShell({ children }: { children: ReactNode }) {
             .filter(Boolean)
             .join(' ')}
         >
-          {shopNotice ? (
-            <Alert
-              className={styles.statusNotice}
-              type={shopNotice.tone}
-              showIcon
-              title={tShop(`status.${shopNotice.key}.title`)}
-              description={tShop(`status.${shopNotice.key}.shell`)}
-              action={
-                shopNotice.action ? (
-                  <Link href={workspace.paths[shopNotice.action.target]}>
-                    <Button size="small">{tShop(`status.action.${shopNotice.action.key}`)}</Button>
-                  </Link>
-                ) : null
-              }
-            />
-          ) : null}
-          {expiredFeature ? (
-            <FeatureExpiredNotice feature={expiredFeature} planEndsAt={planEndsAt} />
-          ) : null}
-          {children}
+          <SupportNavigationScope>
+            {shopNotice ? (
+              <Alert
+                className={styles.statusNotice}
+                type={shopNotice.tone}
+                showIcon
+                title={tShop(`status.${shopNotice.key}.title`)}
+                description={tShop(`status.${shopNotice.key}.shell`)}
+                action={
+                  shopNotice.action ? (
+                    <Link href={workspace.paths[shopNotice.action.target]}>
+                      <Button size="small">
+                        {tShop(`status.action.${shopNotice.action.key}`)}
+                      </Button>
+                    </Link>
+                  ) : null
+                }
+              />
+            ) : null}
+            {expiredFeature ? (
+              <FeatureExpiredNotice feature={expiredFeature} planEndsAt={planEndsAt} />
+            ) : null}
+            {children}
+          </SupportNavigationScope>
         </main>
-        {isViewportPath ? null : <MobileNav />}
+        {isViewportPath ? null : (
+          <SupportNavigationScope>
+            <MobileNav />
+          </SupportNavigationScope>
+        )}
       </div>
     </div>
+  );
+
+  return supportContextId ? (
+    <SupportSessionBoundary key={supportContextId} contextId={supportContextId}>
+      {shell}
+    </SupportSessionBoundary>
+  ) : (
+    shell
   );
 }
 

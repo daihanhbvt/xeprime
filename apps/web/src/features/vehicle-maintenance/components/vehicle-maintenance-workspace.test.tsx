@@ -1,3 +1,6 @@
+import { SUPPORT_WORKSPACE } from '@xeprime/types';
+import { SupportSessionScope, supportSessionOf } from '@/features/tenant-support/support-session';
+import { supportContextFixture } from '@/features/tenant-support/test-utils';
 import { App } from 'antd';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -197,7 +200,10 @@ describe('Tab Bảo dưỡng & KM (Wave 6)', () => {
     fireEvent.change(interval, { target: { value: '10000' } });
     fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
     await waitFor(() => expect(api.saveMaintenanceProfile).toHaveBeenCalledTimes(1));
-    const [, body] = api.saveMaintenanceProfile.mock.calls[0] as [string, { expectedRowVersion: number }];
+    const [, body] = api.saveMaintenanceProfile.mock.calls[0] as [
+      string,
+      { expectedRowVersion: number },
+    ];
     expect(body.expectedRowVersion).toBe(3);
   });
 
@@ -358,5 +364,102 @@ describe('Tab Bảo dưỡng & KM (Wave 6)', () => {
     expect(actions).toBeTruthy();
     // Quy tắc nằm ở CSS module (media query ≤640px) — kiểm sự tồn tại của lớp mang luật.
     expect(within(actions as HTMLElement).getAllByRole('button').length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * CÙNG tab, trong phiên hỗ trợ gian hàng (ADR 0050): phiên chỉ TẠO và SỬA phiếu. Hoàn tất phiếu
+ * (ghi KM, dời mốc, sinh phiếu chi) và sửa chu kỳ nằm ngoài Đợt 1 — backend cũng chặn.
+ */
+describe('Tab Bảo dưỡng & KM — trong phiên hỗ trợ', () => {
+  function renderInSupport() {
+    const context = supportContextFixture({ workspace: SUPPORT_WORKSPACE.MANAGE });
+    return render(
+      <App>
+        <SupportSessionScope session={supportSessionOf(context)}>
+          <VehicleMaintenanceWorkspace vehicle={vehicle} />
+        </SupportSessionScope>
+      </App>,
+    );
+  }
+
+  it('vẫn thêm và sửa được phiếu; KHÔNG có Hoàn tất, KHÔNG lưu được chu kỳ', () => {
+    queries.records = { data: [recordOf()], isLoading: false, isError: false };
+    renderInSupport();
+    expect(screen.getByRole('button', { name: /Thêm bảo dưỡng/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sửa' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Hoàn tất' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Lưu thay đổi' })).toBeNull();
+  });
+});
+
+/**
+ * Ranh giới CHI PHÍ của phiếu — áp cho mọi người thiếu `vehicles.maintenance.view_cost`, không
+ * riêng phiên hỗ trợ. Trước đây form luôn gửi `cost: null`, nên một nhân viên thiếu quyền tiền sửa
+ * ghi chú là xoá chi phí của phiếu.
+ */
+describe('Phiếu bảo dưỡng — chi phí và lịch theo quyền', () => {
+  async function saveEdit(render: () => unknown) {
+    queries.records = {
+      data: [recordOf({ cost: '500000', receiptCode: 'PC-01' } as Partial<MaintenanceRecord>)],
+      isLoading: false,
+      isError: false,
+    };
+    api.updateMaintenanceRecord.mockResolvedValue(recordOf());
+    render();
+    fireEvent.click(screen.getByRole('button', { name: 'Sửa' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Lưu thay đổi' }));
+    await waitFor(() => expect(api.updateMaintenanceRecord).toHaveBeenCalledTimes(1));
+    return (
+      api.updateMaintenanceRecord.mock.calls[0] as [string, string, Record<string, unknown>]
+    )[2];
+  }
+
+  it('thiếu quyền tiền: không có ô chi phí/mã phiếu chi, và lệnh sửa KHÔNG mang hai trường đó', async () => {
+    permissions.granted = new Set([
+      PERMISSION.VEHICLE_MAINTENANCE_VIEW,
+      PERMISSION.VEHICLE_MAINTENANCE_MANAGE,
+    ]);
+    const body = await saveEdit(renderTab);
+    expect(screen.queryByLabelText('Chi phí (VNĐ)')).toBeNull();
+    expect(screen.queryByLabelText('Mã phiếu chi / chứng từ')).toBeNull();
+    expect('cost' in body).toBe(false);
+    expect('receiptCode' in body).toBe(false);
+    // Lịch vẫn là của gian hàng — người có quyền quản lý vẫn gửi nó như cũ.
+    expect('plannedStartAt' in body).toBe(true);
+  });
+
+  it('có quyền tiền: form và lệnh gửi giữ nguyên như cũ', async () => {
+    const body = await saveEdit(renderTab);
+    expect(body.cost).toBe('500000');
+    expect(body.receiptCode).toBe('PC-01');
+  });
+
+  it('trong phiên hỗ trợ: lịch + KM chỉ đọc, không chi phí, lệnh chỉ mang nội dung phiếu', async () => {
+    // Đúng bộ quyền server cấp cho phiên (`SUPPORT_CAPABILITY_PERMISSIONS`) — không có view_cost.
+    permissions.granted = new Set([
+      PERMISSION.VEHICLE_MAINTENANCE_VIEW,
+      PERMISSION.VEHICLE_MAINTENANCE_FILE_VIEW,
+      PERMISSION.VEHICLE_MAINTENANCE_MANAGE,
+    ]);
+    const body = await saveEdit(() => {
+      const context = supportContextFixture({ workspace: SUPPORT_WORKSPACE.MANAGE });
+      return render(
+        <App>
+          <SupportSessionScope session={supportSessionOf(context)}>
+            <VehicleMaintenanceWorkspace vehicle={vehicle} />
+          </SupportSessionScope>
+        </App>,
+      );
+    });
+    expect((screen.getByLabelText('Bắt đầu dự kiến') as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByLabelText('Kết thúc dự kiến') as HTMLInputElement).disabled).toBe(true);
+    for (const key of ['plannedStartAt', 'plannedEndAt', 'odometerKm']) {
+      expect(key in body).toBe(false);
+    }
+    expect(Object.keys(body).sort()).toEqual(
+      ['customTypeName', 'expectedRowVersion', 'notes', 'providerName', 'title', 'type'].sort(),
+    );
   });
 });

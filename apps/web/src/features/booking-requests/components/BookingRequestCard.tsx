@@ -37,6 +37,7 @@ import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { telHref, zaloHref } from '@/lib/contact';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { openOverlayOnPlainClick } from '@/lib/modal-link';
 import { toAppTz } from '@/lib/datetime';
 import { RespondDeadline } from './RespondDeadline';
@@ -148,13 +149,17 @@ export function BookingRequestCard({
    * dùng để gọi một yêu cầu ("cái Carnival hôm qua").
    */
   const titleId = `booking-request-${request.id}-title`;
-  const vehicleMeta = [request.vehicleCode, request.vehiclePlate].filter(Boolean).join(LIST_SEPARATOR);
+  const vehicleMeta = [request.vehicleCode, request.vehiclePlate]
+    .filter(Boolean)
+    .join(LIST_SEPARATOR);
 
   const riskLevel = request.customerRiskLevel as TenantCustomerRiskLevel | null;
   const showRisk = riskLevel != null && riskLevel !== TENANT_CUSTOMER_RISK_LEVEL.NORMAL;
 
   const customerLinkable = canViewCustomer && Boolean(request.tenantCustomerId);
   const phoneLink = telHref(request.customerPhone);
+  // Phiên hỗ trợ gian hàng không nhắn tin thay gian hàng (ADR 0050 §10).
+  const chatHidden = useSupportHides(SUPPORT_HIDDEN_AREA.CHAT);
   const zaloLink = zaloHref(request.customerPhone);
 
   const pickup = request.pickupAt ? toAppTz(request.pickupAt) : null;
@@ -443,7 +448,9 @@ export function BookingRequestCard({
                 </Fact>
               ) : null}
               {request.pricing.paidAmount != null ? (
-                <Fact label={t('pricing.paidViaPlatform')}>{fmt.money(request.pricing.paidAmount)}</Fact>
+                <Fact label={t('pricing.paidViaPlatform')}>
+                  {fmt.money(request.pricing.paidAmount)}
+                </Fact>
               ) : null}
               {request.pricing.remainingAmount != null ? (
                 <Fact label={t('pricing.payAtHandover')}>
@@ -552,28 +559,30 @@ export function BookingRequestCard({
       {/* ── Chân thẻ: liên hệ bên trái, quyết định / đường sang đơn bên phải. ── */}
       <div className={styles.footer}>
         <div className={styles.contact}>
-          <Tooltip
-            title={request.canMessageOnPlatform ? undefined : t('actions.messageUnavailable')}
-          >
-            {/*
+          {chatHidden ? null : (
+            <Tooltip
+              title={request.canMessageOnPlatform ? undefined : t('actions.messageUnavailable')}
+            >
+              {/*
               `<span>` bọc để tooltip vẫn nhận được sự kiện chuột khi nút bị disable — một nút
               xám không lý do là thứ người dùng không có cách nào tự giải thích.
             */}
-            <span className={styles.contactSlot}>
-              <Button
-                variant="filled"
-                color="default"
-                className={styles.contactButton}
-                icon={<MessageOutlined aria-hidden="true" />}
-                loading={pendingAction === 'message'}
-                disabled={!request.canMessageOnPlatform || (busy && pendingAction !== 'message')}
-                aria-label={t('actions.messageAria', { name: request.customerName })}
-                onClick={() => onMessage(request)}
-              >
-                {t('actions.message')}
-              </Button>
-            </span>
-          </Tooltip>
+              <span className={styles.contactSlot}>
+                <Button
+                  variant="filled"
+                  color="default"
+                  className={styles.contactButton}
+                  icon={<MessageOutlined aria-hidden="true" />}
+                  loading={pendingAction === 'message'}
+                  disabled={!request.canMessageOnPlatform || (busy && pendingAction !== 'message')}
+                  aria-label={t('actions.messageAria', { name: request.customerName })}
+                  onClick={() => onMessage(request)}
+                >
+                  {t('actions.message')}
+                </Button>
+              </span>
+            </Tooltip>
+          )}
 
           {phoneLink ? (
             <Button

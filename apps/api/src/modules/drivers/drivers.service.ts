@@ -2,6 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { newId, Prisma } from '@xeprime/prisma';
 import { API_ERROR_CODE, BOOKING_STATUS, DRIVER_STATUS } from '@xeprime/types';
 import { fromDateOnly, toDateOnly } from '../../common/date-only';
+import { piiSearch } from '../../common/support/support-search';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import {
@@ -60,11 +61,7 @@ export class DriversService {
       ...(query.driverType ? { driverType: query.driverType } : {}),
       ...(query.q
         ? {
-            OR: [
-              { name: { contains: query.q, mode: 'insensitive' } },
-              { phone: { contains: query.q } },
-              { licenseNo: { contains: query.q, mode: 'insensitive' } },
-            ],
+            OR: driverSearchOr(query.q),
           }
         : {}),
     };
@@ -342,4 +339,23 @@ function licenseExpiredFor(licenseExpiresAt: Date | null, returnAt: Date): boole
   if (!licenseExpiresAt) return false;
   const returnDay = new Date(returnAt.toISOString().slice(0, 10) + 'T00:00:00.000Z');
   return licenseExpiresAt.getTime() < returnDay.getTime();
+}
+
+/**
+ * Tìm tài xế theo tên · SĐT · số GPLX. Trong phiên hỗ trợ gian hàng (ADR 0050 §11) SĐT chỉ khớp đủ
+ * số và GPLX không bao giờ là điều kiện tìm — không thì ô tìm kiếm dò ngược được phần đã che.
+ */
+function driverSearchOr(q: string): Prisma.DriverWhereInput[] {
+  const pii = piiSearch(q);
+  if (pii.substring) {
+    return [
+      { name: { contains: q, mode: 'insensitive' } },
+      { phone: { contains: q } },
+      { licenseNo: { contains: q, mode: 'insensitive' } },
+    ];
+  }
+  return [
+    { name: { contains: q, mode: 'insensitive' } },
+    ...(pii.phones.length > 0 ? [{ phone: { in: [...pii.phones] } }] : []),
+  ];
 }

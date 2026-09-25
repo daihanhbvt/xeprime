@@ -24,6 +24,8 @@ const query = vi.hoisted(() => ({
   isFetching: false,
   refetch: vi.fn(),
   lastSurface: undefined as unknown,
+  /** Thành viên gian hàng có `support.manage` không (bề mặt gian hàng). */
+  tenantCanManage: true,
 }));
 
 vi.mock('../hooks/use-support-cases', () => ({
@@ -36,6 +38,7 @@ vi.mock('../hooks/use-support-cases', () => ({
   useTransitionSupportCase: () => ({ mutate: vi.fn(), isPending: false }),
   useResolveSupportCase: () => ({ mutate: vi.fn(), isPending: false }),
   useOpenSupportCase: () => ({ mutate: vi.fn(), isPending: false }),
+  useCanWriteSupportCase: (surface: unknown) => surface !== 'tenant' || query.tenantCanManage,
 }));
 
 vi.mock('@/hooks/use-media-query', () => ({
@@ -84,6 +87,7 @@ beforeEach(() => {
   query.isError = false;
   query.isFetching = false;
   query.refetch.mockReset();
+  query.tenantCanManage = true;
 });
 
 afterEach(cleanup);
@@ -101,6 +105,14 @@ describe('SupportCasesView — theo bề mặt', () => {
 
     expect(screen.getByRole('button', { name: /Mở yêu cầu/ })).toBeTruthy();
     expect(query.lastSurface).toBe('tenant');
+  });
+
+  it('thành viên gian hàng chỉ có quyền xem (hoặc phiên hỗ trợ): không có nút mở case', () => {
+    query.tenantCanManage = false;
+    renderView(SUPPORT_SURFACE.TENANT);
+
+    expect(screen.queryByRole('button', { name: /Mở yêu cầu/ })).toBeNull();
+    expect(screen.getByText('SC-000123')).toBeTruthy();
   });
 
   it('nền tảng KHÔNG mở case thay người khác', () => {

@@ -1,0 +1,15 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lead {
+  margin: 0 0 12px;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.error {
+  margin-bottom: 12px;
+}

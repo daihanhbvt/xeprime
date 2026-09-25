@@ -44,6 +44,12 @@ interface ImageUploadFieldProps<T extends FieldValues> {
    * còn nút này là thứ thật sự mở hộp chọn file.
    */
   triggerId?: string;
+  /**
+   * Chỉ XEM: dựng ảnh (hoặc "Chưa có ảnh"), không ô chọn file, không Thay đổi/Xoá. Khác với
+   * `disabled` của một `fieldset`: nút mờ vẫn nói "ở đây tải ảnh được" với người không bao giờ
+   * được tải — vd. phiên hỗ trợ gian hàng (ADR 0050 §12).
+   */
+  readOnly?: boolean;
 }
 
 /**
@@ -61,6 +67,7 @@ export function ImageUploadField<T extends FieldValues>({
   previewAspectRatio,
   required,
   triggerId,
+  readOnly = false,
 }: ImageUploadFieldProps<T>) {
   const t = useTranslations('Common.components.imageUpload');
   const tCommon = useTranslations('Common');
@@ -101,6 +108,29 @@ export function ImageUploadField<T extends FieldValues>({
     startUpload(file);
     // Luôn chặn upload mặc định của AntD — mình tự PUT lên R2.
     return false;
+  }
+
+  if (readOnly) {
+    return (
+      <Form.Item
+        label={label}
+        help={help}
+        className={cx(fieldStyles.item, cardMode && styles.cardItem)}
+      >
+        <div className={cx(styles.wrap, cardMode && styles.cardWrap)}>
+          {url ? (
+            // eslint-disable-next-line @next/next/no-img-element -- ảnh trên R2, không qua next/image
+            <img
+              src={url}
+              alt={t('alt')}
+              className={cx(styles.tile, styles.preview, cardMode && styles.cardPreview)}
+            />
+          ) : (
+            <span className={styles.placeholder}>{t('empty')}</span>
+          )}
+        </div>
+      </Form.Item>
+    );
   }
 
   return (

@@ -13,3 +13,7 @@
   font-size: 13.5px;
   color: var(--xp-color-text-secondary);
 }
+
+.supportAction {
+  margin-bottom: 8px;
+}
