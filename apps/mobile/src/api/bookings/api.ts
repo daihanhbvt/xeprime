@@ -1,4 +1,4 @@
-import type { components } from '@xeprime/types';
+import type { BookingListPreset, components } from '@xeprime/types';
 import { getApiClient, type Paged, type QueryParams } from '@xeprime/api-client';
 
 type Schemas = components['schemas'];
@@ -19,6 +19,17 @@ export type BookingSort = 'newest' | 'pickup_asc' | 'pickup_desc' | 'return_asc'
 export interface BookingFilters {
   q?: string;
   status?: string;
+  /**
+   * Nhóm việc dựng sẵn — CỘNG THÊM vào các bộ lọc khác, không thay thế chúng.
+   *
+   * `awaiting_pickup` là một câu BA VẾ (trạng thái đơn + chưa có mốc giao thật + chưa có biên bản
+   * giao đã xác nhận) mà `status` không diễn đạt nổi. Câu đó sống ở SERVER để mọi client hỏi cùng
+   * một câu — cho client tự ghép ba tham số nghĩa là mỗi client giữ một bản, và bản nào lạc hậu
+   * thì nó âm thầm đếm sai mà không có gì đỏ lên (ADR 0047).
+   *
+   * KHÔNG nằm trong bộ lọc người dùng đổi được: "đang xem nhóm nào" do chính MÀN quyết.
+   */
+  preset?: BookingListPreset;
   vehicleId?: string;
   /** Chi nhánh của XE trong đơn. */
   branchId?: string;
@@ -36,6 +47,7 @@ export function bookingFiltersToParams(filters: BookingFilters): QueryParams {
   return {
     q: filters.q ?? null,
     status: filters.status ?? null,
+    preset: filters.preset ?? null,
     vehicleId: filters.vehicleId ?? null,
     branchId: filters.branchId ?? null,
     returnFrom: filters.returnFrom ?? null,

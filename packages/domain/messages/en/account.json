@@ -281,6 +281,28 @@
     "withdrawn": "Deletion request withdrawn.",
     "loadError": "Couldn't check for an existing request."
   },
+  "publicDeletion": {
+    "eyebrow": "XePrime account",
+    "title": "Request account deletion",
+    "lead": "Enter the email or phone number on the account to send a deletion request. This page works without installing the app.",
+    "formHeading": "Send a request",
+    "formLead": "We use this to find the right account and to reach you if we need to verify anything.",
+    "identifier": "Email or phone number",
+    "identifierPlaceholder": "you@company.com or 0901234567",
+    "password": "Password",
+    "passwordPlaceholder": "Your XePrime account password",
+    "submit": "Send deletion request",
+    "submitting": "Sending…",
+    "successTitle": "Received",
+    "successBody": "Your account deletion request has been received.",
+    "whatHeading": "Once the request is accepted",
+    "whatLead": "The following data is handled under our Privacy Policy and the retention obligations that apply:",
+    "retentionHeading": "Data we must keep",
+    "retentionBody": "Invoices, tax records and transaction logs may have to be retained for a period set by law before they can be deleted. That is a legal obligation, not a XePrime choice.",
+    "inAppHeading": "Can you still sign in?",
+    "inAppBody": "If you can still access your account, send the request from inside the app or from the account area on the web — there you can track its progress and withdraw it if you change your mind.",
+    "inAppLink": "Open the account area"
+  },
   "registration": {
     "title": "Host profile",
     "subtitle": "Track your profile and your first vehicle on their way to the marketplace.",

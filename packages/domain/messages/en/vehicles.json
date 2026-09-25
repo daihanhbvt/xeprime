@@ -85,6 +85,7 @@
     },
     "page": {
       "title": "Vehicles",
+      "backToList": "Back to vehicle list",
       "loading": "Loading the vehicle list…",
       "addVehicle": "Add vehicle",
       "addFirstVehicle": "Add the first vehicle",

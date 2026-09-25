@@ -11,6 +11,7 @@ import {
   canHostDecideTrip,
   CUSTOMER_TRIP_STAGE,
   CUSTOMER_TRIP_STAGE_META,
+  customerTripTimeline,
   DEPOSIT_COLLECTION_MODE,
   isCustomerTripClosed,
   SERVICE_TYPE,
@@ -173,27 +174,41 @@ function TripDetailBody({ trip }: { trip: CustomerTripDetail }) {
 
   return (
     <>
+      {/*
+        Chặng của chuyến đi CÙNG tiêu đề màn (`AppHeader.badge`), không dẫn một thẻ riêng ở đầu
+        thân màn — cùng lý do và cùng hình với màn Chi tiết yêu cầu thuê.
+
+        Đồng thời bỏ được một câu in HAI LẦN: `subtitleOf(t, stage)` vốn vừa là dòng phụ của thanh
+        đầu màn, vừa là dòng chữ ngay dưới viên nhãn trong thẻ — hai bản của cùng một câu cách nhau
+        chừng 100px.
+      */}
       <AppHeader
         title={trip.code ? t('detail.headingWithCode', { code: trip.code }) : t('detail.heading')}
         subtitle={subtitleOf(t, stage)}
         onBack={() => goBackOr(router, ROUTES.booking.list())}
+        badge={
+          <StatusBadge
+            label={domainLabel('customerTripStage', stage, meta.label)}
+            color={meta.color}
+            size="sm"
+          />
+        }
       />
       <Screen edges={['left', 'right', 'bottom']}>
         <YStack gap={layout.section}>
-          <Card>
-            <YStack gap={space.md}>
-              <YStack gap={space.xs}>
-                <StatusBadge
-                  label={domainLabel('customerTripStage', stage, meta.label)}
-                  color={meta.color}
-                />
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {subtitleOf(t, stage)}
-                </Text>
-              </YStack>
+          {/*
+            Thẻ còn đúng việc của nó: vẽ chuyến đang ở chặng nào trên cả hành trình.
+
+            Hỏi `visible` ở ĐÂY chứ không để `TripTimeline` tự trả `null`: chặng đầu (chờ chủ xe
+            xác nhận) không có dải nào để vẽ, và một cái thẻ rỗng thì vẫn chiếm chỗ — người dùng
+            nhìn thấy đúng một hộp trắng trống ngay dưới thanh đầu màn (bắt trên máy 24/09/2026).
+            Chặng đó đã có `StageNotice` ngay dưới nói rõ đang chờ gì.
+          */}
+          {customerTripTimeline(stage).visible ? (
+            <Card>
               <TripTimeline stage={stage} />
-            </YStack>
-          </Card>
+            </Card>
+          ) : null}
 
           <StageNotice stage={stage} rejectReason={trip.rejectReason} />
 

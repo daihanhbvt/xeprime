@@ -166,6 +166,28 @@ export const vehiclesApi = {
     );
   },
 
+  /**
+   * Công tắc hiển thị trên chợ của CHỦ XE (ADR 0048) — KHÁC hẳn `submitPublic`.
+   *
+   * `submitPublic` xin nền tảng duyệt (trục KIỂM DUYỆT, tạo phiếu duyệt); cái này chỉ nói "lúc
+   * này tôi có muốn bán chiếc xe của mình hay không" (trục HIỂN THỊ) và không đụng tới
+   * `public_status`, đơn thuê, yêu cầu hay lịch bận nào đang chạy.
+   *
+   * `PATCH` chứ không `POST`: đây là một thuộc tính HAI CHIỀU của chiếc xe, không phải một sự
+   * kiện chỉ đi một hướng. Tắt thì luôn được; bật có ba cổng ở server (đã duyệt · gian hàng
+   * `active` · mặt tiền gian hàng trả phí còn đủ) và server trả mã lỗi riêng cho từng cổng —
+   * `VEHICLE_PLATFORM_HIDDEN` KHÔNG gộp với `VEHICLE_NOT_APPROVED_PUBLIC` vì lối đi tiếp của
+   * hai ca đó khác hẳn nhau.
+   *
+   * Trả về bản ghi xe ĐÃ cập nhật để nơi gọi khỏi phải tải lại một vòng nữa.
+   */
+  setMarketplaceVisibility(id: string, enabled: boolean): Promise<VehicleDetail> {
+    return getApiClient().patch<VehicleDetail>(
+      `/vehicles/${encodeURIComponent(id)}/marketplace-visibility`,
+      { enabled },
+    );
+  },
+
   /** Hồ sơ nguồn xe & tài chính — GET cần `finance.view`, PUT thêm `vehicles.update`. */
   source(id: string): Promise<VehicleSource> {
     return getApiClient().get<VehicleSource>(`/vehicles/${encodeURIComponent(id)}/source`);

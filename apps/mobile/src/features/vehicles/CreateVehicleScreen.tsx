@@ -154,6 +154,8 @@ export function CreateVehicleScreen() {
   const t = useTranslations('Vehicles.form');
   const tCommon = useTranslations('Common.actions');
   const tBranches = useTranslations('Branches');
+  const tPage = useTranslations('Vehicles.list.page');
+  const tPermission = useTranslations('ManageCommon.permission');
   const router = useRouter();
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
@@ -294,12 +296,27 @@ export function CreateVehicleScreen() {
     if (valid) setStep(step + 1);
   }
 
+  /*
+   * Thiếu quyền tạo → thay TOÀN BỘ nội dung, không dựng một form không gửi được. Đây chỉ là lớp
+   * trải nghiệm; chặn thật là guard backend trên `POST /vehicles`.
+   *
+   * Tiêu đề là tên của MÀN ("Thêm xe"), không phải tên bước đang mở: bước 1 tên "Cơ bản", và
+   * một màn báo thiếu quyền mang tiêu đề "Cơ bản" không nói cho ai biết họ vừa bị chặn khỏi cái
+   * gì. Câu và tên quyền dùng chung với mọi màn manage khác (`ManageCommon.permission`), giống
+   * hệt `AccountVehiclesScreen`.
+   */
   if (!permissionsLoading && !has(PERMISSION.VEHICLE_CREATE)) {
     return (
       <>
-        <AppHeader title={t('wizard.basic.title')} onBack={back} />
+        <AppHeader title={tPage('addVehicle')} onBack={back} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
-          <ScreenMessage icon="lock-closed-outline" title={t('wizard.basic.title')} />
+          <ScreenMessage
+            icon="lock-closed-outline"
+            title={tPermission('deniedTitle')}
+            description={`${tPermission('deniedBody')}\n${tPermission('requires')} ${PERMISSION.VEHICLE_CREATE}`}
+            actionLabel={tPage('backToList')}
+            onAction={back}
+          />
         </Screen>
       </>
     );

@@ -52,11 +52,37 @@ export function PurchaseSheet({ open, onClose }: { open: boolean; onClose: () =>
     onClose();
   }
 
+  const purchaseFooter =
+    !invoice && !plans.isLoading && !plans.isError && selection.tiers.length > 0 ? (
+      <YStack gap={space.sm}>
+        <Text
+          accessibilityLiveRegion="polite"
+          col={selection.total == null ? colors.textMuted : colors.text}
+          fos={fontSize.bodySm}
+          fow={selection.total == null ? fontWeight.regular : fontWeight.semibold}
+          ta="center"
+        >
+          {selection.total == null
+            ? t('purchase.pickTerm')
+            : t('purchase.total', { amount: fmt.money(String(selection.total)) })}
+        </Text>
+        <Button
+          label={t('purchase.submit')}
+          icon="document-text-outline"
+          loading={purchase.isPending}
+          disabled={!selection.selection}
+          onPress={submit}
+        />
+      </YStack>
+    ) : undefined;
+
   return (
     <BottomSheet
       open={open}
       onClose={close}
       title={invoice ? t('payment.title') : t('purchase.title')}
+      footer={purchaseFooter}
+      maxRatio={0.92}
     >
       {invoice ? (
         <YStack gap={space.md}>
@@ -95,38 +121,6 @@ export function PurchaseSheet({ open, onClose }: { open: boolean; onClose: () =>
             nên nếu không đặt ở đây thì không có đường nào khác.
           */}
           <LegalConsentNote place="subscription" />
-
-          <YStack gap={space.sm}>
-            {/*
-              Tổng tiền đứng CẠNH nút tạo hoá đơn, không nằm trong bảng giá: đây là con số người
-              dùng xác nhận khi chạm, nên nó phải ở trong tầm mắt của chính cú chạm đó. Vùng sống
-              vì nó đổi do một cú chạm ở chỗ khác trên màn.
-            */}
-            <Text
-              accessibilityLiveRegion="polite"
-              col={selection.total == null ? colors.textMuted : colors.text}
-              fos={fontSize.bodySm}
-              fow={selection.total == null ? fontWeight.regular : fontWeight.semibold}
-              ta="center"
-            >
-              {selection.total == null
-                ? t('purchase.pickTerm')
-                : t('purchase.total', { amount: fmt.money(String(selection.total)) })}
-            </Text>
-            <Button
-              label={t('purchase.submit')}
-              icon="document-text-outline"
-              loading={purchase.isPending}
-              disabled={!selection.selection}
-              onPress={submit}
-            />
-            <Button
-              label={tCommon('close')}
-              variant="ghost"
-              disabled={purchase.isPending}
-              onPress={close}
-            />
-          </YStack>
         </YStack>
       )}
     </BottomSheet>

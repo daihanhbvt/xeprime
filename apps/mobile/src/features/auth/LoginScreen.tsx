@@ -5,6 +5,7 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { type CurrentUser } from '@/features/auth/api';
 import { LOGIN_METHOD, type LoginMethod } from './post-login-destination';
 import { Screen } from '@/components/layout/Screen';
+import { AppVersion } from '@/components/ui/AppVersion';
 import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { APP_NAME } from '@/lib/app-name';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
@@ -100,6 +101,9 @@ export function LoginScreen({
             actionLabel={t('switchMode.toRegister')}
             onPress={onSwitchToRegister}
           />
+
+          {/* Chưa đăng nhập vẫn đọc được số phiên bản — người kẹt ở màn này là người cần báo lỗi nhất. */}
+          <AppVersion />
         </YStack>
       </Screen>
     </>

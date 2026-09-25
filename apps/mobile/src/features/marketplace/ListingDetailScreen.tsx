@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { VerifiedName } from '@/components/ui/VerifiedName';
 import { useCallback, useState } from 'react';
 import { Image } from 'expo-image';
 import {
@@ -30,7 +29,7 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { MapPreview } from '@/components/map/MapPreview';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ListingDetailSkeleton } from '@/components/ui/Skeleton';
-import { Avatar } from '@/components/ui/Avatar';
+import { ShopQuickInfoCard } from '@/components/shop/ShopQuickInfoCard';
 import { Button } from '@/components/ui/Button';
 import { ShopChatButton } from '@/features/chat/components/ShopChatButton';
 import { useShopChatAvailable } from '@/features/chat/hooks/use-shop-chat-available';
@@ -50,7 +49,6 @@ import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useListing, useListingReviews } from './hooks/use-marketplace-data';
 import type { PublicListingDetail } from './api';
 import { FeatureChip } from './components/FeatureChip';
-import { HostMetrics } from './components/HostMetrics';
 import { ServiceSelector } from './components/ServiceSelector';
 
 /**
@@ -296,7 +294,6 @@ function DetailBody({
   const tCard = useTranslations('Listings.card');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
-  const navigateOnce = useNavigateOnce();
   const { catalog } = useCatalog();
   const insets = useSafeAreaInsets();
 
@@ -602,57 +599,32 @@ function DetailBody({
         ) : null}
 
         {/*
-          CẢ THẺ mở trang gian hàng, không phải riêng cái tên như web: một dòng chữ 14px là đích
-          chạm quá nhỏ, và ở đây không có gì khác để bấm nên mở rộng vùng chạm không cướp thao
-          tác nào.
-        */}
-        <Card
-          lift="flat"
-          onPress={() => navigateOnce(ROUTES.explore.shopDetail(listing.shopSlug))}
-          accessibilityLabel={listing.shopName}
-        >
-          <XStack ai="center" gap={space.md}>
-            <Avatar
-              name={listing.shopName}
-              url={listing.shopLogoUrl}
-              size={44}
-              verifiedLabel={listing.shopVerified ? t('shopVerified') : undefined}
-            />
-            <YStack f={1} gap={2}>
-              {/*
-                Dấu xác minh CÓ ĐIỀU KIỆN (ADR 0028).
+          Thẻ gian hàng DÙNG CHUNG với cột tóm tắt của luồng gửi yêu cầu (`VehicleSummaryCard`) —
+          một nơi giữ avatar/tên/điểm đánh giá của GIAN HÀNG, không còn hai bản lệch nhau
+          (23/09/2026, cùng đợt với web).
 
-                Bản trước hiện tick cho MỌI tin đăng với lý do "xe lên chợ đồng nghĩa gian hàng
-                đã qua duyệt" — đúng với quy trình duyệt, nhưng sai với thứ dấu này hứa: nó nói
-                gian hàng thuê bao đã xác minh, mà chủ xe cá nhân tuyến hoa hồng cũng lên chợ
-                được. Gắn tick cho tất cả là làm dấu mất hết nghĩa.
-              */}
-              <VerifiedName
-                name={listing.shopName}
-                verifiedLabel={listing.shopVerified ? t('shopVerified') : undefined}
-                size={fontSize.body}
-                markSize={16}
-                decorativeMark
-              />
-              {listing.shopProvince ? (
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {listing.shopProvince}
-                </Text>
-              ) : null}
-              {listing.shopBio ? (
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {listing.shopBio}
-                </Text>
-              ) : null}
-              {/*
-                Ba chỉ số uy tín (ADR 0045 điều 3) nằm ĐÚNG ở đây — trong thẻ chủ xe, cùng chỗ
-                với bản web. Đây là giây người đọc quyết định có gửi yêu cầu cho một người lạ
-                hay không, và "họ có trả lời không" là câu hỏi họ đang hỏi.
-              */}
-              <HostMetrics metrics={listing.shopMetrics} />
-            </YStack>
-          </XStack>
-        </Card>
+          Ba chỉ số uy tín (ADR 0045 điều 3) nằm bên trong thẻ, ngay trên nút "Chọn thuê": đây là
+          giây người đọc quyết định có gửi yêu cầu cho một người lạ hay không, và "họ có trả lời
+          không" là câu hỏi họ đang hỏi.
+
+          Điểm đánh giá và số chuyến lấy từ ba trường CỦA GIAN HÀNG (`shopRatingAvg`,
+          `shopRatingCount`, `shopCompletedTripCount`) chứ không phải `ratingAvg`/`ratingCount`
+          kế thừa — hai cái sau chỉ đếm riêng chiếc xe đang xem.
+        */}
+        <ShopQuickInfoCard
+          shop={{
+            name: listing.shopName,
+            slug: listing.shopSlug,
+            logoUrl: listing.shopLogoUrl,
+            verified: listing.shopVerified,
+            province: listing.shopProvince,
+            bio: listing.shopBio,
+            ratingAvg: listing.shopRatingAvg,
+            ratingCount: listing.shopRatingCount,
+            completedTripCount: listing.shopCompletedTripCount,
+          }}
+          metrics={listing.shopMetrics}
+        />
 
         <Card lift="flat">
           <YStack gap={space.xs}>

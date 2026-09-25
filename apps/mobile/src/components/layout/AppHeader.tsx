@@ -160,7 +160,16 @@ export function AppHeader({
             <BrandMark tone={tone} />
           ) : showTitle && title ? (
             <>
-              <XStack ai="center" gap={space.xs}>
+              {/*
+                `f={1}` khai TƯỜNG MINH bề rộng của hàng tiêu đề.
+
+                Thiếu nó thì hàng tự co theo nội dung, và bề rộng nó nhận được phụ thuộc vào lượt
+                đo — trên màn có `WebView` (tấm splash che lúc đầu) nó đo trúng lúc cha chưa có bề
+                rộng, rồi `numberOfLines={1}` chốt luôn dấu "…" và không đo lại: "Trung tâm hỗ trợ"
+                hiện ra thành "Trung tâm hỗ…" giữa một thanh còn trống hai phần ba (đo trên máy
+                24/09/2026).
+              */}
+              <XStack f={1} ai="center" gap={space.xs}>
                 {/*
                   `flexShrink` phải khai TƯỜNG MINH: trong React Native nó mặc định là 0, không
                   phải 1 như CSS. Thiếu nó thì một tên dài giữ nguyên bề rộng tự nhiên và đẩy

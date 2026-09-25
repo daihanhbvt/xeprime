@@ -1,19 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { CATALOG_TYPE, SERVICE_TYPE, type PublicListingDetail } from '@xeprime/types';
 import { applyDiscountPercent, LIST_SEPARATOR } from '@xeprime/domain';
 import { catalogLabel } from '@/api/catalog';
-import { Avatar } from '@/components/ui/Avatar';
+import { ShopQuickInfoCard } from '@/components/shop/ShopQuickInfoCard';
 import { Card } from '@/components/ui/Card';
 import { RemoteImage } from '@/components/ui/RemoteImage';
 import { useCatalog } from '@/features/catalog/use-catalog';
-import { useNavigateOnce } from '@/hooks/use-navigate-once';
-import { ROUTES } from '@/navigation/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /** Thumbnail ngang giữ mốc nhận diện xe nhưng vẫn để step và trường đầu tiên nằm gần màn đầu. */
 const VEHICLE_THUMB = { width: 112, height: 84 } as const;
@@ -40,7 +37,6 @@ export function VehicleSummaryCard({
   const t = useTranslations('BookingRequests.flow');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
-  const navigateOnce = useNavigateOnce();
   const { catalog } = useCatalog();
 
   const isLongTerm = serviceType === SERVICE_TYPE.LONG_TERM;
@@ -89,14 +85,6 @@ export function VehicleSummaryCard({
         }
       : null,
   ].filter(Boolean) as Array<{ label: string; value: string }>;
-
-  const rating = Number(listing.ratingAvg);
-  /*
-   * `ratingCount` khai KHÔNG optional ở DTO, nhưng cột DB cho phép NULL ở những xe chưa từng
-   * được đồng bộ lại rating (dữ liệu cũ) — hợp đồng kiểu và thực tế lệch nhau. `?? 0` chặn
-   * đúng khe hở đó thay vì tin tuyệt đối vào kiểu khai báo.
-   */
-  const hasRating = (listing.ratingCount ?? 0) > 0 && Number.isFinite(rating);
 
   return (
     <Card>
@@ -192,45 +180,32 @@ export function VehicleSummaryCard({
           Hàng gian hàng mở trang gian hàng công khai — web có liên kết "Xem gian hàng" ở đúng
           chỗ này. Web mở TAB MỚI để không đánh mất wizard; native đẩy màn lên trên, và wizard
           vẫn nằm nguyên trong stack nên lui về là về đúng bước đang dở.
+
+          `ShopQuickInfoCard` biến thể `compact` — CÙNG thẻ với trang chi tiết xe (23/09/2026,
+          cùng đợt với web). Trước đó chỗ này tự dựng avatar + tên + điểm đánh giá riêng, và con
+          số đó là rating của CHIẾC XE đang đặt chứ không phải của gian hàng: một dòng sao nằm
+          ngay dưới tên gian hàng nhưng nói về thứ khác.
+
+          `compact` bỏ giới thiệu, ba chỉ số và dòng tóm tắt uy tín — thẻ này đã có ảnh xe, giá
+          và thông số ngay phía trên, không phải chỗ lặp lại cả một hồ sơ gian hàng.
         */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('panel.viewShop')}
-          onPress={() => navigateOnce(ROUTES.explore.shopDetail(listing.shopSlug))}
-        >
-          <XStack
-            ai="center"
-            gap={space.sm}
-            pt={space.md}
-            borderTopWidth={1}
-            borderColor={colors.borderSubtle}
-          >
-            <Avatar name={listing.shopName} url={listing.shopLogoUrl} size={36} />
-            <YStack f={1} gap={2}>
-              <Text
-                col={colors.text}
-                fos={fontSize.bodySm}
-                fow={fontWeight.semibold}
-                numberOfLines={1}
-              >
-                {listing.shopName}
-              </Text>
-              {/* Chỉ hiện đánh giá khi CÓ số thật — không dựng "0.0 · 0 đánh giá" giả. */}
-              {hasRating ? (
-                <XStack ai="center" gap={space.xs}>
-                  <Ionicons name="star" size={12} color={colors.primary} />
-                  <Text col={colors.textMuted} fos={fontSize.label}>
-                    {t('panel.ratingSummary', {
-                      avg: fmt.rating(rating),
-                      count: listing.ratingCount,
-                    })}
-                  </Text>
-                </XStack>
-              ) : null}
-            </YStack>
-            <Ionicons name="chevron-forward" size={iconSize.xs} color={colors.placeholder} />
-          </XStack>
-        </Pressable>
+        <YStack pt={space.md} borderTopWidth={1} borderColor={colors.borderSubtle}>
+          <ShopQuickInfoCard
+            shop={{
+              name: listing.shopName,
+              slug: listing.shopSlug,
+              logoUrl: listing.shopLogoUrl,
+              verified: listing.shopVerified,
+              ratingAvg: listing.shopRatingAvg,
+              ratingCount: listing.shopRatingCount,
+              completedTripCount: listing.shopCompletedTripCount,
+            }}
+            metrics={listing.shopMetrics}
+            variant="compact"
+            /* Cùng chữ với liên kết "Xem gian hàng" mà web đặt ở đúng chỗ này. */
+            openLabel={t('panel.viewShop')}
+          />
+        </YStack>
       </YStack>
     </Card>
   );

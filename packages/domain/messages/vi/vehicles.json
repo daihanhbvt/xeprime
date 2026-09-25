@@ -85,6 +85,7 @@
     },
     "page": {
       "title": "Danh sách xe",
+      "backToList": "Về danh sách xe",
       "loading": "Đang tải danh sách xe…",
       "addVehicle": "Thêm xe",
       "addFirstVehicle": "Thêm xe đầu tiên",

@@ -3,7 +3,12 @@ import { RefreshControl, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { BOOKING_STATUS_VALUES, PERMISSION } from '@xeprime/types';
+import {
+  BOOKING_LIST_PRESET,
+  BOOKING_STATUS_SELECTABLE_VALUES,
+  PERMISSION,
+  type BookingListPreset,
+} from '@xeprime/types';
 import { IconButton } from '@/components/ui/IconButton';
 import { Screen } from '@/components/layout/Screen';
 import { RecordCardSkeleton } from '@/components/ui/Skeleton';
@@ -53,21 +58,43 @@ const keyOf = (booking: BookingListItem) => booking.id;
  * cả kho về rồi lọc tại chỗ. Bộ lọc sống ở state màn hình: mobile không có URL để chia sẻ, và bộ
  * lọc này chết theo màn (ADR 0004).
  */
-export function BookingListScreen({ vehicleId }: { vehicleId?: string }) {
+export function BookingListScreen({
+  vehicleId,
+  preset,
+}: {
+  vehicleId?: string;
+  /**
+   * Nhóm việc dựng sẵn gửi thẳng lên server. Bỏ trống = danh sách đầy đủ.
+   *
+   * Hai MÀN dùng chung component này và cả hai gọi cùng một endpoint: nhóm việc chỉ thêm một
+   * tham số vào truy vấn, nó không phải một màn thứ hai với dữ liệu riêng.
+   */
+  preset?: BookingListPreset;
+}) {
   const t = useTranslations('Bookings.list');
+  const tRoot = useTranslations('Bookings');
   const tCreate = useTranslations('Bookings.create');
+  const tActions = useTranslations('Common.actions');
   const navigateOnce = useNavigateOnce();
   const permissions = usePermissions();
   const domainLabel = useDomainLabel();
 
+  const awaitingPickup = preset === BOOKING_LIST_PRESET.AWAITING_PICKUP;
+
   const [status, setStatus] = useState<string>(STATUS_ALL);
-  const [sort, setSort] = useState<BookingSort>(DEFAULT_SORT);
+  /*
+   * Nhóm việc quyết cách sắp xếp MẶC ĐỊNH: một ca trực đọc theo giờ hẹn, không theo ngày tạo.
+   * Server cũng mặc định đúng như vậy — đặt tường minh ở đây chỉ để ô "Sắp xếp" trên màn không
+   * nói một đằng còn dữ liệu một nẻo.
+   */
+  const [sort, setSort] = useState<BookingSort>(awaitingPickup ? 'pickup_asc' : DEFAULT_SORT);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(FIRST_PAGE);
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
 
   const query = useBookingsPage({
     ...(status === STATUS_ALL ? {} : { status }),
+    ...(preset ? { preset } : {}),
     // Lọc theo xe đến từ ĐƯỜNG DẪN, không phải tấm lọc: nó là ngữ cảnh của lối đi từ hồ sơ xe,
     // giống hệt `?vehicleId=` bên web.
     ...(vehicleId ? { vehicleId } : {}),
@@ -111,28 +138,42 @@ export function BookingListScreen({ vehicleId }: { vehicleId?: string }) {
    */
   const groups = useMemo<readonly FilterGroup[]>(
     () => [
-      {
-        key: 'status',
-        label: t('statusAll'),
-        value: status,
-        resetValue: STATUS_ALL,
-        options: [
-          { value: STATUS_ALL, label: t('statusAll') },
-          ...BOOKING_STATUS_VALUES.map((value) => ({
-            value,
-            label: domainLabel('bookingStatus', value),
-          })),
-        ],
-      },
+      /*
+       * ADR 0047: "Chờ giao xe" đã LÀ một nhóm việc lọc sẵn — ô lọc trạng thái ở đó là thừa, và
+       * sau khi `confirmed` rời khỏi luồng thật thì giá trị khả dĩ duy nhất của nhóm này chỉ còn
+       * đúng MỘT (`reserved`). Một ô lọc một lựa chọn không phải bộ lọc, nó là trang trí — bỏ
+       * hẳn chiều lọc thay vì chỉ thu hẹp danh sách.
+       *
+       * "Tất cả đơn thuê" giữ ô lọc, nhưng chỉ còn 5 trạng thái nghiệp vụ thật
+       * (`BOOKING_STATUS_SELECTABLE_VALUES`) — loại `confirmed` (deprecated), thứ chưa từng là
+       * một trạng thái nghỉ hợp lệ trong bất kỳ luồng sản phẩm nào.
+       */
+      ...(awaitingPickup
+        ? []
+        : [
+            {
+              key: 'status',
+              label: t('statusLabel'),
+              value: status,
+              resetValue: STATUS_ALL,
+              options: [
+                { value: STATUS_ALL, label: t('statusAll') },
+                ...BOOKING_STATUS_SELECTABLE_VALUES.map((value) => ({
+                  value,
+                  label: domainLabel('bookingStatus', value),
+                })),
+              ],
+            },
+          ]),
       {
         key: 'sort',
         label: t('sortLabel'),
         value: sort,
-        resetValue: DEFAULT_SORT,
+        resetValue: awaitingPickup ? 'pickup_asc' : DEFAULT_SORT,
         options: BOOKING_SORT_VALUES.map((value) => ({ value, label: sortLabel(t, value) })),
       },
     ],
-    [t, domainLabel, status, sort],
+    [t, domainLabel, status, sort, awaitingPickup],
   );
 
   const openBooking = useCallback(
@@ -141,11 +182,25 @@ export function BookingListScreen({ vehicleId }: { vehicleId?: string }) {
   );
 
   const renderItem = useCallback<ListRenderItem<BookingListItem>>(
-    ({ item }) => <BookingCard booking={item} onPress={openBooking} />,
-    [openBooking],
+    ({ item }) => (
+      <BookingCard booking={item} onPress={openBooking} awaitingPickup={awaitingPickup} />
+    ),
+    [openBooking, awaitingPickup],
   );
 
   const filtered = status !== STATUS_ALL || debouncedSearch.trim().length > 0;
+
+  /**
+   * Gỡ hai chiều LỌC, giữ nguyên cách SẮP XẾP — cùng phạm vi `onClearFilters` của web.
+   *
+   * Sắp xếp không phải bộ lọc: nó không giấu bản ghi nào, nên "xoá bộ lọc" mà đổi luôn thứ tự
+   * là làm một việc người dùng không yêu cầu.
+   */
+  const clearFilters = useCallback(() => {
+    setStatus(STATUS_ALL);
+    setSearch('');
+    setPage(FIRST_PAGE);
+  }, []);
 
   // Thiếu quyền là 403 của CHÍNH màn này — hiện trạng thái lỗi của nó, không đá về đăng nhập.
   if (!permissions.isLoading && !permissions.has(PERMISSION.BOOKING_VIEW)) {
@@ -164,10 +219,21 @@ export function BookingListScreen({ vehicleId }: { vehicleId?: string }) {
       <ManageHeader />
       <Screen edges={['left', 'right', 'bottom']} scroll={false} padded={false}>
         <ManageListShell
-          title={t('title')}
-          {...(meta === undefined ? {} : { total: t('totalLabel', { count: meta.total }) })}
+          title={awaitingPickup ? tRoot('awaitingPickup.title') : t('title')}
+          {...(meta === undefined
+            ? {}
+            : {
+                total: awaitingPickup
+                  ? tRoot('awaitingPickup.totalLabel', { count: meta.total })
+                  : t('totalLabel', { count: meta.total }),
+              })}
+          /*
+           * Nhóm việc KHÔNG có nút tạo đơn: đây là hàng đợi của việc đang chạy, không phải chỗ
+           * mở một chuyến mới. Lối tạo đơn nằm ở "Tất cả đơn thuê" và ở lịch — và trạng thái
+           * rỗng bên dưới dẫn thẳng sang đó.
+           */
           action={
-            permissions.has(PERMISSION.BOOKING_CREATE) ? (
+            permissions.has(PERMISSION.BOOKING_CREATE) && !awaitingPickup ? (
               <IconButton
                 icon="add"
                 label={tCreate('open')}
@@ -231,14 +297,48 @@ export function BookingListScreen({ vehicleId }: { vehicleId?: string }) {
                 filtered ? (
                   <ScreenMessage
                     icon="search-outline"
-                    title={t('emptyFilteredTitle')}
-                    description={t('emptyFilteredBody')}
+                    title={
+                      awaitingPickup
+                        ? tRoot('awaitingPickup.emptyFilteredTitle')
+                        : t('emptyFilteredTitle')
+                    }
+                    description={
+                      awaitingPickup
+                        ? tRoot('awaitingPickup.emptyFilteredBody')
+                        : t('emptyFilteredBody')
+                    }
+                    /* Đúng `onClearFilters` của web: gỡ từ khoá + trạng thái, GIỮ cách sắp xếp. */
+                    actionLabel={tActions('clear')}
+                    onAction={clearFilters}
+                  />
+                ) : awaitingPickup ? (
+                  /*
+                    Rỗng ở hàng đợi là tin TỐT (không còn xe nào phải giao), nên nó không dùng
+                    hình "chưa có gì" mà dẫn thẳng sang danh sách đầy đủ — đúng `goToAll` của web.
+                  */
+                  <ScreenMessage
+                    icon="checkmark-done-outline"
+                    title={tRoot('awaitingPickup.emptyTitle')}
+                    description={tRoot('awaitingPickup.emptyBody')}
+                    actionLabel={tRoot('awaitingPickup.goToAll')}
+                    onAction={() => navigateOnce(ROUTES.manage.bookings())}
                   />
                 ) : (
                   <ScreenMessage
                     icon="document-text-outline"
                     title={t('emptyTitle')}
                     description={t('emptyBody')}
+                    /*
+                      Danh sách rỗng lần đầu thì lối ra là TẠO đơn — đúng `list.createFirst` của
+                      web. Nút ở đầu màn là một icon nhỏ, còn ở đây nó là hành động duy nhất trên
+                      cả màn hình và phải đọc được thành chữ.
+                    */
+                    {...(permissions.has(PERMISSION.BOOKING_CREATE)
+                      ? {
+                          actionLabel: t('createFirst'),
+                          onAction: () => navigateOnce(ROUTES.manage.bookingCreate()),
+                        }
+                      : {})}
                   />
                 ),
               )

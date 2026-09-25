@@ -22,7 +22,12 @@ import {
  * 409, hoặc tệ hơn, một nút làm đúng thứ người dùng không định làm.
  */
 describe('hai quyết định bấm tay của gian hàng', () => {
-  it('đơn đã giữ xe / đã xác nhận thì huỷ được', () => {
+  /**
+   * `confirmed` giữ nguyên cạnh ĐI RA sau ADR 0047 (không dùng trong luồng mới) để một hàng dữ
+   * liệu cũ lỡ còn ở đó không rơi vào ngõ cụt — khác hẳn cạnh ĐI VÀO chiều bàn giao, thứ đã bị
+   * đóng ở `HANDOVER_ELIGIBLE_BOOKING_STATUS`.
+   */
+  it('đơn chờ giao xe (và dữ liệu cũ ở đã xác nhận) thì huỷ được', () => {
     expect(canTransitionBooking(BOOKING_STATUS.RESERVED, BOOKING_STATUS.CANCELLED)).toBe(true);
     expect(canTransitionBooking(BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.CANCELLED)).toBe(true);
   });
@@ -76,9 +81,16 @@ describe('ân hạn khách không đến', () => {
 });
 
 describe('chiều bàn giao nào mở được', () => {
-  it('giao xe mở ở đơn đã giữ xe / đã xác nhận', () => {
+  /**
+   * ADR 0047: `confirmed` RỜI khỏi danh sách mở được chiều giao xe.
+   *
+   * Không còn writer nào tạo ra một đơn đứng yên ở `confirmed` — xác nhận biên bản giao xe nay
+   * đi thẳng `reserved → active` trong cùng một transaction. Một đơn không ai tạo ra được thì
+   * cũng không có gì để mở bàn giao từ đó.
+   */
+  it('giao xe CHỈ mở ở đơn chờ giao xe', () => {
     expect(isHandoverEligible(HANDOVER_TYPE.PICKUP, BOOKING_STATUS.RESERVED)).toBe(true);
-    expect(isHandoverEligible(HANDOVER_TYPE.PICKUP, BOOKING_STATUS.CONFIRMED)).toBe(true);
+    expect(isHandoverEligible(HANDOVER_TYPE.PICKUP, BOOKING_STATUS.CONFIRMED)).toBe(false);
     expect(isHandoverEligible(HANDOVER_TYPE.PICKUP, BOOKING_STATUS.ACTIVE)).toBe(false);
   });
 

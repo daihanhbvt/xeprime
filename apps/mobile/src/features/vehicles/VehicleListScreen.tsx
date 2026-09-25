@@ -11,6 +11,7 @@ import {
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
 import { Screen } from '@/components/layout/Screen';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import type { CardAction } from '@/components/ui/CardActionBar';
@@ -24,12 +25,14 @@ import { ManageStateScroll } from '@/features/shell/ManageStateScroll';
 import type { FilterGroup } from '@/features/shell/ManageFilterSheet';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useDomainLabel } from '@/i18n/domain';
+import { SheetActionRow } from '@/features/calendar/components/SheetActionRow';
 import { ROUTES } from '@/navigation/routes';
+import { VEHICLE_REGISTRATION_SOURCE } from '@/navigation/vehicle-registration-source';
 import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { MEDIA_LIST_TUNING } from '@/theme/list-tuning';
-import { colors } from '@/theme/tokens';
+import { colors, space } from '@/theme/tokens';
 import { scrollThrottle } from '@/theme/motion';
 import { FleetSummaryBar } from './components/FleetSummaryBar';
 import { VehicleCard } from './components/VehicleCard';
@@ -85,6 +88,8 @@ export function VehicleListScreen() {
   const [publicStatus, setPublicStatus] = useState<string>(ALL);
   const [sort, setSort] = useState<VehicleSort>(DEFAULT_SORT);
   const [search, setSearch] = useState('');
+  /** Tấm trượt chọn LỐI thêm xe — đăng nhanh hay thiết lập nâng cao. */
+  const [adding, setAdding] = useState(false);
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
 
   const query = useInfiniteVehicles({
@@ -302,11 +307,22 @@ export function VehicleListScreen() {
           {...(query.total > 0 ? { total: t('summary.vehicleCount', { count: query.total }) } : {})}
           action={
             permissions.has(PERMISSION.VEHICLE_CREATE) ? (
+              /*
+                HAI lối thêm xe, đúng như web (09/09/2026): "đăng nhanh" cho chiếc xe tự lái
+                thông thường, và wizard nâng cao cho xe nhiều dịch vụ / có nguồn xe / nhiều chi
+                nhánh. Trước đợt này app chỉ có lối NÂNG CAO — wizard đăng nhanh tồn tại nhưng
+                không màn nào trong cổng quản lý trỏ tới nó, nên gian hàng không có cách nào
+                dùng bốn bước ngắn.
+
+                Web dựng cặp nút tách (nút chính + nút xổ menu); native thì một nút "+" mở tấm
+                trượt hai lựa chọn — một hàng nút tách ở thanh tiêu đề điện thoại chỉ còn chỗ cho
+                hai biểu tượng không nhãn.
+              */
               <IconButton
                 icon="add"
                 label={t('page.addVehicle')}
                 tone="primary"
-                onPress={() => navigateOnce(ROUTES.manage.vehicleNew())}
+                onPress={() => setAdding(true)}
               />
             ) : null
           }
@@ -416,6 +432,33 @@ export function VehicleListScreen() {
           }}
         </ManageListShell>
       </Screen>
+
+      <BottomSheet open={adding} onClose={() => setAdding(false)} title={t('page.addVehicle')}>
+        <YStack gap={space.xs}>
+          {/*
+            "Đăng nhanh" đứng TRƯỚC và mang tông chính — đúng thứ tự web: nó là nút chính, còn
+            "Thiết lập nâng cao" nằm trong menu xổ. Phần lớn xe thêm mới là xe tự lái thông
+            thường, và bốn bước ngắn là đường đúng cho chúng.
+          */}
+          <SheetActionRow
+            icon="flash-outline"
+            tone="primary"
+            label={t('page.addVehicleQuick')}
+            onPress={() => {
+              setAdding(false);
+              navigateOnce(ROUTES.listYourVehicle.register(VEHICLE_REGISTRATION_SOURCE.MANAGE));
+            }}
+          />
+          <SheetActionRow
+            icon="options-outline"
+            label={t('page.addVehicleAdvanced')}
+            onPress={() => {
+              setAdding(false);
+              navigateOnce(ROUTES.manage.vehicleNew());
+            }}
+          />
+        </YStack>
+      </BottomSheet>
     </>
   );
 }

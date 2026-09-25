@@ -372,7 +372,13 @@ export function QuickVehicleWizardScreen({ source }: { source: VehicleRegistrati
         ownerProfile,
       });
       setResult(outcome);
-      if (!outcome.partialError) {
+      /*
+       * Toast nói đúng cái VỪA xảy ra. "Còn thiếu điều kiện" cố ý KHÔNG có toast: màn kết quả đã
+       * liệt kê từng mục ngay bên dưới, và một toast biến mất sau vài giây là chỗ tệ nhất để đặt
+       * một danh sách việc phải làm — tệ hơn nữa khi nó nói "đã gửi duyệt" cho một chiếc xe vừa
+       * bị từ chối gửi.
+       */
+      if (!outcome.partialError && outcome.missingRequirements.length === 0) {
         toast.showSuccess(outcome.submitted ? t('savedAndSubmitted') : t('savedDraft'));
       }
     } catch (err) {
