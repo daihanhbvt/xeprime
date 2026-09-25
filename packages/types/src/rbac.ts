@@ -226,6 +226,11 @@ export const PERMISSION = {
 
   // Nền tảng
   PLATFORM_DASHBOARD_VIEW: 'platform.dashboard.view',
+  /**
+   * XEM danh sách + chi tiết gian hàng (ADR 0050). Tách khỏi `platform.tenants.manage` (khoá/mở
+   * khoá): đội hỗ trợ cần tìm gian hàng để mở phiên hỗ trợ, không cần quyền khoá nó.
+   */
+  PLATFORM_TENANT_VIEW: 'platform.tenants.view',
   PLATFORM_TENANT_MANAGE: 'platform.tenants.manage',
   PLATFORM_APPROVAL_REVIEW: 'platform.approvals.review',
   PLATFORM_AUDIT_VIEW: 'platform.audit.view',
@@ -242,6 +247,18 @@ export const PERMISSION = {
    * khách truy cập — không gộp vào quyền quản trị nội bộ nào khác.
    */
   PLATFORM_BANNER_MANAGE: 'platform.banners.manage',
+  /**
+   * Mở "không gian hỗ trợ" của một gian hàng ở chế độ CHỈ XEM (ADR 0050).
+   *
+   * Không phải `platform.tenants.manage`: khoá/mở khoá gian hàng là quyết định về gian hàng, còn
+   * đây là nhìn vào khu làm việc của họ — hai việc, hai người có thể khác nhau.
+   */
+  PLATFORM_TENANT_SUPPORT_VIEW: 'platform.tenant_support.view',
+  /**
+   * Mở không gian hỗ trợ ở chế độ HỖ TRỢ THAO TÁC — sửa thông tin/ảnh xe, phiếu bảo dưỡng thay
+   * gian hàng (ADR 0050). Luôn đi kèm `platform.tenant_support.view`; một mình nó không mở gì.
+   */
+  PLATFORM_TENANT_SUPPORT_ASSIST: 'platform.tenant_support.assist',
 
   // Nền tảng — giám sát toàn hệ thống (build plan §11.1). Tách khỏi `vehicles.*`/`bookings.*`
   // của gian hàng: quyền tenant chỉ có nghĩa TRONG một tenant, còn đây là đọc xuyên tenant.
@@ -440,10 +457,17 @@ export const DEFAULT_PLATFORM_ROLE_PERMISSIONS: Readonly<
     PERMISSION.PLATFORM_CUSTOMER_PII_VIEW,
     // Support xử lý case/tranh chấp — và cần đọc được hồ sơ hỗ trợ của gian hàng.
     PERMISSION.PLATFORM_SUPPORT_MANAGE,
+    // Không gian hỗ trợ gian hàng (ADR 0050): tìm gian hàng (CHỈ XEM — không khoá/mở khoá, không
+    // gói/hoá đơn) rồi mở phiên xem hoặc hỗ trợ thao tác. Mỗi phiên có lý do, có hạn, có audit.
+    PERMISSION.PLATFORM_TENANT_VIEW,
+    PERMISSION.PLATFORM_TENANT_SUPPORT_VIEW,
+    PERMISSION.PLATFORM_TENANT_SUPPORT_ASSIST,
   ],
   [PLATFORM_ROLE.FINANCE_ADMIN]: [
     PERMISSION.PLATFORM_DASHBOARD_VIEW,
     PERMISSION.FINANCE_VIEW,
+    // Khoá/mở khoá cần THẤY gian hàng trước — hai quyền đi cặp từ khi tách xem khỏi quản lý.
+    PERMISSION.PLATFORM_TENANT_VIEW,
     PERMISSION.PLATFORM_TENANT_MANAGE,
     PERMISSION.PLATFORM_BILLING_MANAGE,
     PERMISSION.PLATFORM_BOOKING_VIEW,

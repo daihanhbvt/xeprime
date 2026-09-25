@@ -1,12 +1,13 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
+import { PERMISSION, PLAN_FEATURE, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   CurrentTenant,
   RequirePermissions,
   RequiresFeature,
   SubscriptionTrackOnly,
   TenantScoped,
+  SupportAction,
 } from '../../../common/decorators';
 import type { TenantContext } from '../../../common/types/request-context';
 import {
@@ -34,6 +35,7 @@ export class MaintenanceBoardController {
 
   @Get()
   @RequirePermissions(PERMISSION.VEHICLE_MAINTENANCE_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.MAINTENANCE_VIEW)
   @ApiOperation({ summary: 'Danh sách xe theo việc cần làm (quá hạn / sắp hạn / thiếu KM…)' })
   @ApiOkResponse({ type: MaintenanceBoardListDto })
   list(
@@ -45,6 +47,7 @@ export class MaintenanceBoardController {
 
   @Get('summary')
   @RequirePermissions(PERMISSION.VEHICLE_MAINTENANCE_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.MAINTENANCE_VIEW)
   @ApiOperation({ summary: 'Đếm theo từng nhóm việc — độc lập với trang/bộ lọc hiện tại' })
   @ApiOkResponse({ type: MaintenanceBoardSummaryDto })
   summary(@CurrentTenant() tenant: TenantContext): Promise<MaintenanceBoardSummaryDto> {

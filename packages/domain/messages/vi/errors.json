@@ -129,7 +129,12 @@
     "SEPAY_NOT_CONFIGURED": "Đối soát SePay chưa được cấu hình.",
     "SHOP_OWNER_ONLY": "Chỉ chủ gian hàng mới xem và rút được tiền của gian hàng.",
     "SUBSCRIPTION_TRACK_ONLY": "Khu vực này dành cho gian hàng đang dùng gói dịch vụ.",
-    "APPROVAL_SNAPSHOT_STALE": "Chủ xe vừa cập nhật hồ sơ. Tải lại phiếu và đọc bản mới trước khi duyệt — các mục kiểm tra đã đánh dấu cũng được đặt lại."
+    "APPROVAL_SNAPSHOT_STALE": "Chủ xe vừa cập nhật hồ sơ. Tải lại phiếu và đọc bản mới trước khi duyệt — các mục kiểm tra đã đánh dấu cũng được đặt lại.",
+    "SUPPORT_CONTEXT_INVALID": "Phiên hỗ trợ không hợp lệ với tài khoản hoặc phiên đăng nhập hiện tại.",
+    "SUPPORT_CONTEXT_EXPIRED": "Phiên hỗ trợ đã hết hạn hoặc đã kết thúc. Mở phiên mới từ màn Gian hàng.",
+    "SUPPORT_ACTION_NOT_ALLOWED": "Thao tác này không nằm trong phạm vi của phiên hỗ trợ.",
+    "SUPPORT_FIELD_NOT_ALLOWED": "Phiên hỗ trợ không được sửa các trường này (giá, dịch vụ, chi nhánh, trạng thái vận hành…).",
+    "SUPPORT_MEDIA_OUT_OF_SCOPE": "Ảnh không thuộc kho ảnh của gian hàng này. Tải ảnh lên lại trong phiên hỗ trợ."
   },
   "upload": {
     "imageType": "Chỉ nhận ảnh JPG, PNG hoặc WebP",

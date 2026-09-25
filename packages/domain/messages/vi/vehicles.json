@@ -726,7 +726,14 @@
       "media": "Đã lưu hình ảnh & tiện ích"
     },
     "lockedNotice": "Xe đang hiển thị trên chợ: biển số, hộp số, nhiên liệu và năm sản xuất đã khoá. Mọi thông tin khác — gồm cả giá — sửa là có hiệu lực ngay.",
-    "lockedField": "Đã khoá vì xe đang trên chợ. Gỡ xe khỏi chợ nếu cần đổi."
+    "lockedField": "Đã khoá vì xe đang trên chợ. Gỡ xe khỏi chợ nếu cần đổi.",
+    "page": {
+      "title": "Chỉnh sửa xe",
+      "saved": "Đã lưu thay đổi",
+      "forbiddenTitle": "Không có quyền sửa xe",
+      "forbiddenBody": "Bạn cần quyền dưới đây để chỉnh sửa thông tin xe. Liên hệ quản trị viên để được cấp quyền.",
+      "viewDetail": "Xem chi tiết xe"
+    }
   },
   "source": {
     "noPermission": "Bạn không có quyền xem thông tin tài chính của xe này. Vui lòng liên hệ chủ gian hàng hoặc quản trị viên hệ thống để được cấp quyền.",

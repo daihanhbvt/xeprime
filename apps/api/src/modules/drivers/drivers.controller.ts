@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
+import { PERMISSION, PLAN_FEATURE, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
@@ -8,6 +8,7 @@ import {
   TenantScoped,
   RequiresFeature,
   SubscriptionTrackOnly,
+  SupportAction,
 } from '../../common/decorators';
 import { OkResultDto } from '../../common/dto/api-response.dto';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
@@ -37,6 +38,7 @@ export class DriversController {
 
   @Get()
   @RequirePermissions(PERMISSION.DRIVER_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.DRIVER_VIEW)
   @ApiOperation({ summary: 'Danh sách tài xế (tìm kiếm/lọc trạng thái, phân trang)' })
   @ApiOkResponse({ type: DriverPageDto })
   list(
@@ -48,6 +50,7 @@ export class DriversController {
 
   @Get('assignable')
   @RequirePermissions(PERMISSION.DRIVER_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.DRIVER_VIEW)
   @ApiOperation({
     summary: 'Tài xế cho bộ chọn gán đơn — kèm cờ bận khung giờ / GPLX hết hạn (17/08)',
   })

@@ -16,7 +16,8 @@ import { LIST_SEPARATOR } from '@xeprime/domain';
 
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { BackButton } from '@/components/navigation/BackButton';
-import { ROUTES, listingPath } from '@/constants/routes';
+import { listingPath } from '@/constants/routes';
+import { useWorkspace } from '@/hooks/use-workspace';
 import type { VehicleDetail, VehicleStats } from '@/features/vehicles/types';
 import { useAppFormat } from '@/i18n/use-app-format';
 
@@ -39,6 +40,7 @@ export function VehicleManageHeader({ vehicle, stats }: Props) {
   const t = useTranslations('VehicleManage.header');
   const tRoot = useTranslations('VehicleManage');
   const fmt = useAppFormat();
+  const { paths } = useWorkspace();
   /*
    * "Xem trang xe" theo KẾT QUẢ hiển thị thật, không theo trạng thái kiểm duyệt (ADR 0048): một
    * chiếc xe đã duyệt nhưng chủ xe đang tạm ẩn thì `/listings/:id` trả 404, nên một đường dẫn
@@ -49,7 +51,7 @@ export function VehicleManageHeader({ vehicle, stats }: Props) {
   return (
     <header className={styles.header}>
       <BackButton
-        href={ROUTES.ACCOUNT.VEHICLES}
+        href={paths.vehicles}
         label={tRoot('backToList')}
         className={styles.back}
       />

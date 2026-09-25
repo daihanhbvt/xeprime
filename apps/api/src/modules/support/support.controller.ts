@@ -1,11 +1,12 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, SUPPORT_PARTY, type SupportCaseStatus } from '@xeprime/types';
+import { PERMISSION, SUPPORT_PARTY, type SupportCaseStatus, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
   TenantScoped,
+  SupportAction,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
@@ -36,6 +37,7 @@ export class SupportController {
 
   @Get()
   @RequirePermissions(PERMISSION.SUPPORT_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.SUPPORT_CASE_VIEW)
   @ApiOperation({ summary: 'Case của gian hàng — mặc định chỉ case còn MỞ' })
   @ApiOkResponse({ type: SupportCasePageDto })
   list(
@@ -48,6 +50,7 @@ export class SupportController {
 
   @Get(':id')
   @RequirePermissions(PERMISSION.SUPPORT_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.SUPPORT_CASE_VIEW)
   @ApiOperation({ summary: 'Chi tiết + dòng thời gian (ghi chú nội bộ của XePrime KHÔNG hiện)' })
   @ApiOkResponse({ type: SupportCaseDetailDto })
   detail(

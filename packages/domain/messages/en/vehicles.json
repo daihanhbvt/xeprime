@@ -726,7 +726,14 @@
       "media": "Photos and features saved"
     },
     "lockedNotice": "This vehicle is live on the marketplace: plate number, transmission, fuel type and manufacture year are locked. Everything else — pricing included — takes effect immediately.",
-    "lockedField": "Locked while the vehicle is on the marketplace. Remove it from the marketplace to change this."
+    "lockedField": "Locked while the vehicle is on the marketplace. Remove it from the marketplace to change this.",
+    "page": {
+      "title": "Edit vehicle",
+      "saved": "Changes saved",
+      "forbiddenTitle": "No permission to edit vehicles",
+      "forbiddenBody": "You need the permission below to edit vehicle information. Contact an administrator to request it.",
+      "viewDetail": "View vehicle details"
+    }
   },
   "source": {
     "noPermission": "You do not have permission to view this vehicle's financial information. Contact the shop owner or a system administrator to request access.",

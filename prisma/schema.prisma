@@ -101,6 +101,8 @@ model User {
   createdTaxWithholdings     TaxWithholding[]          @relation("tax_withholding_creator")
   createdPromoCodes          PromoCode[]               @relation("promo_code_creator")
   promoRedemptions           PromoRedemption[]         @relation("promo_redemption_customer")
+  supportContextsOpened      TenantSupportContext[]    @relation("tenant_support_context_actor")
+  supportContextsRevoked     TenantSupportContext[]    @relation("tenant_support_context_revoker")
 
   @@index([status])
   @@index([createdAt])
@@ -237,6 +239,7 @@ model Tenant {
   insurancePolicies             BookingInsurancePolicy[]
   taxWithholdings               TaxWithholding[]
   supportCases                  SupportCase[]
+  supportContexts               TenantSupportContext[]
 
   @@index([status])
   @@index([ownerUserId])
@@ -2844,17 +2847,66 @@ model AuditLog {
   afterJson   Json?    @map("after_json") @db.JsonB
   ipAddress   String?  @map("ip_address") @db.VarChar(80)
   userAgent   String?  @map("user_agent") @db.Text
+  /// Phiên hỗ trợ gian hàng mà thao tác này chạy trong đó (ADR 0050). NULL = thao tác thường.
+  /// Lý do hỗ trợ đọc qua FK — bản ghi phiên không bao giờ bị xoá (RESTRICT).
+  supportContextId  String? @map("support_context_id") @db.Char(26)
+  /// Capability của phiên mà endpoint đã đòi (vd. `vehicle.media.manage`). Chỉ có khi có phiên.
+  supportCapability String? @map("support_capability") @db.VarChar(60)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
-  actor  User?   @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  tenant         Tenant?               @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  actor          User?                 @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  supportContext TenantSupportContext? @relation(fields: [supportContextId], references: [id], onDelete: Restrict)
 
   @@index([tenantId, createdAt])
   @@index([targetType, targetId])
   @@index([actorUserId, createdAt])
   @@index([createdAt])
   @@index([action, createdAt])
+  @@index([supportContextId, createdAt])
   @@map("audit_logs")
+}
+
+/// Phiên hỗ trợ gian hàng — ADR 0050.
+///
+/// Nhân sự nền tảng nhìn/sửa hộ khu làm việc của MỘT gian hàng mà KHÔNG đổi danh tính: không có
+/// membership tạm, không đăng nhập thành chủ xe. Phiên gắn với đúng người + đúng phiên đăng nhập
+/// đã mở nó, có lý do và hạn cứng. Server là nguồn duy nhất của `capabilities` — client chỉ
+/// gửi id phiên qua header `x-support-context`.
+///
+/// Không bao giờ xoá: `audit_logs.support_context_id` trỏ về đây (RESTRICT) để mọi thao tác trong
+/// phiên đọc lại được lý do.
+model TenantSupportContext {
+  /// Ngẫu nhiên ~130 bit (Crockford base32, 26 ký tự) — KHÔNG phải ULID: id nằm trên URL, không
+  /// được để lộ thời điểm mở hay cho đoán id kế tiếp.
+  id          String  @id @db.Char(26)
+  actorUserId String  @map("actor_user_id") @db.Char(26)
+  /// `sid` của phiên đăng nhập đã mở (cookie web hoặc native) — request từ phiên khác bị từ chối.
+  sessionId   String  @map("session_id") @db.VarChar(64)
+  tenantId    String  @map("tenant_id") @db.Char(26)
+  /// @xeprime/types → SupportMode (view | assist); DB canh CHECK.
+  mode        String  @db.VarChar(20)
+  /// @xeprime/types → SupportWorkspace, SUY lúc mở từ tuyến của gian hàng (manage | owner_lite | onboarding).
+  workspace   String  @db.VarChar(20)
+  reason      String  @db.Text
+  /// Capability server cấp lúc mở. Mỗi request lấy GIAO của nó với bộ suy lại từ hiện trạng —
+  /// gian hàng bị khoá hay người mở mất quyền giữa chừng thì quyền ghi rơi ngay.
+  capabilities String[] @default([]) @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz(3)
+  revokedBy   String?   @map("revoked_by") @db.Char(26)
+  ipAddress   String?   @map("ip_address") @db.VarChar(80)
+  userAgent   String?   @map("user_agent") @db.Text
+
+  actor     User       @relation("tenant_support_context_actor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  revoker   User?      @relation("tenant_support_context_revoker", fields: [revokedBy], references: [id], onDelete: SetNull)
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  auditLogs AuditLog[]
+
+  @@index([actorUserId, createdAt])
+  @@index([tenantId, createdAt])
+  @@map("tenant_support_contexts")
 }
 
 // ---------------------------------------------------------------------------

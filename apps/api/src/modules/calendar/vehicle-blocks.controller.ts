@@ -16,12 +16,13 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
+import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
   TenantScoped,
+  SupportAction,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { VehicleBlocksService } from './vehicle-blocks.service';
@@ -46,6 +47,7 @@ export class VehicleBlocksController {
 
   @Get(':id')
   @RequirePermissions(PERMISSION.CALENDAR_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.CALENDAR_VIEW)
   @ApiOperation({ summary: 'Chi tiết một lịch khoá xe' })
   @ApiOkResponse({ type: VehicleBlockDto })
   getOne(

@@ -1,8 +1,9 @@
 import { Body, Controller, Post, ServiceUnavailableException } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
-import { CurrentTenant, RequirePermissions, TenantScoped } from '../../common/decorators';
+import { API_ERROR_CODE, PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
+import { CurrentTenant, RequirePermissions, SupportAction, TenantScoped } from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
+import { vehicleImageObjectPrefix } from './object-keys';
 import { PresignDocumentDto, PresignImageDto, UploadPresignDto } from './dto/storage.dto';
 import { R2Service } from './r2.service';
 
@@ -22,6 +23,9 @@ export class StorageController {
 
   @Post('vehicle-images/presign')
   @RequirePermissions(PERMISSION.VEHICLE_UPDATE)
+  // Phiên hỗ trợ (ADR 0050): tiền tố object lấy từ tenant CỦA PHIÊN — không ghi được sang kho
+  // ảnh của gian hàng khác, và ảnh ngoài kho bị `assertSupportMediaInScope` chặn lúc gắn vào xe.
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_MEDIA_MANAGE)
   @ApiOperation({ summary: 'Presign upload ảnh xe (đại diện/gallery) lên R2' })
   @ApiCreatedResponse({ type: UploadPresignDto })
   presignVehicleImage(
@@ -30,7 +34,7 @@ export class StorageController {
   ): Promise<UploadPresignDto> {
     this.assertConfigured();
     return this.r2.presignUpload({
-      prefix: `tenants/${tenant.tenantId}/vehicles`,
+      prefix: vehicleImageObjectPrefix(tenant.tenantId),
       fileName: dto.fileName,
       contentType: dto.contentType,
       contentLength: dto.fileSize,

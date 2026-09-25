@@ -1,11 +1,12 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
+import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
   TenantScoped,
+  SupportAction,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -47,6 +48,7 @@ export class TenantsController {
   @Get('current')
   @TenantScoped()
   @RequirePermissions(PERMISSION.TENANT_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.TENANT_PROFILE_VIEW)
   @ApiOperation({ summary: 'Gian hàng của user hiện tại (scope lấy từ membership)' })
   @ApiOkResponse({ type: CurrentTenantDto })
   async current(@CurrentTenant() tenant: TenantContext): Promise<CurrentTenantDto> {
@@ -87,6 +89,7 @@ export class TenantsController {
   @Get('current/shop')
   @TenantScoped()
   @RequirePermissions(PERMISSION.TENANT_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.TENANT_PROFILE_VIEW)
   @ApiOperation({ summary: 'Hồ sơ gian hàng của tôi + trạng thái duyệt' })
   @ApiOkResponse({ type: MyShopDto })
   myShop(@CurrentTenant() tenant: TenantContext): Promise<MyShopDto> {

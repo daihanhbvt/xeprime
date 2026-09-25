@@ -1,11 +1,12 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
+import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
   TenantScoped,
+  SupportAction,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { ChatService } from '../chat/chat.service';
@@ -35,6 +36,7 @@ export class BookingRequestsController {
 
   @Get()
   @RequirePermissions(PERMISSION.BOOKING_REQUEST_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.BOOKING_REQUEST_VIEW)
   @ApiOperation({ summary: 'Danh sách yêu cầu đặt xe (phân trang, filter trạng thái)' })
   @ApiOkResponse({ type: BookingRequestPageDto })
   list(
@@ -46,6 +48,7 @@ export class BookingRequestsController {
 
   @Get(':id')
   @RequirePermissions(PERMISSION.BOOKING_REQUEST_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.BOOKING_REQUEST_VIEW)
   @ApiOperation({ summary: 'Chi tiết một yêu cầu' })
   @ApiOkResponse({ type: BookingRequestDto })
   getOne(

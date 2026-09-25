@@ -24,6 +24,7 @@ import { DataTable, type DataTableColumn } from '@/components/data-display/DataT
 import { FeatureWriteTooltip } from '@/components/feedback/FeatureWriteTooltip';
 import { AutoSearchInput } from '@/components/filter/AutoSearchInput';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -54,6 +55,7 @@ export function BranchesView() {
   const permissions = usePermissions();
   const canManage = permissions.has(PERMISSION.BRANCH_MANAGE);
   const canView = permissions.has(PERMISSION.BRANCH_VIEW);
+  const hideWrites = useSupportHides(SUPPORT_HIDDEN_AREA.DENIED_ACTIONS) && !canManage;
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<BranchStatus | ''>('');
   const [editing, setEditing] = useState<Branch | null>(null);
@@ -84,6 +86,7 @@ export function BranchesView() {
    * (và ở đây lý do là luật nghiệp vụ thật: gian hàng phải luôn có một chi nhánh mặc định).
    */
   function actionsOf(branch: Branch): RowAction[] {
+    if (hideWrites) return [];
     const list: RowAction[] = [
       {
         key: 'edit',
@@ -201,15 +204,21 @@ export function BranchesView() {
         <StatusTag value={v} meta={BRANCH_STATUS_META} group="branchStatus" />
       ),
     },
-    {
-      title: tc('labels.actions'),
-      key: 'actions',
-      width: 420,
-      // Cột hành động ghim mép phải: bảng cuộn ngang thì nút vẫn ở trong tầm với.
-      fixed: 'right',
-      // Desktop để ba thao tác thường dùng có nhãn rõ; thẻ mobile vẫn chỉ giữ hai icon rồi gom dư.
-      render: (_v, row) => <RowActions actions={actionsOf(row)} maxInline={3} variant="filled" />,
-    },
+    ...(hideWrites
+      ? []
+      : [
+          {
+            title: tc('labels.actions'),
+            key: 'actions',
+            width: 420,
+            // Cột hành động ghim mép phải: bảng cuộn ngang thì nút vẫn ở trong tầm với.
+            fixed: 'right' as const,
+            // Desktop để ba thao tác thường dùng có nhãn rõ; thẻ mobile vẫn chỉ giữ hai icon rồi gom dư.
+            render: (_v: unknown, row: Branch) => (
+              <RowActions actions={actionsOf(row)} maxInline={3} variant="filled" />
+            ),
+          },
+        ]),
   ];
 
   return (
@@ -218,20 +227,22 @@ export function BranchesView() {
         title={t('page.title')}
         subtitle={t('page.subtitle')}
         extra={
-          /* Nhiều chi nhánh là tính năng của GÓI (ADR 0027) — hết hạn thì xem/sửa chi nhánh
+          hideWrites ? null : (
+            /* Nhiều chi nhánh là tính năng của GÓI (ADR 0027) — hết hạn thì xem/sửa chi nhánh
              hiện có được, không mở thêm chi nhánh mới. Server chặn ở POST /branches. */
-          <FeatureWriteTooltip feature={PLAN_FEATURE.BRANCHES}>
-            {(locked) => (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={openCreate}
-                disabled={!canManage || locked}
-              >
-                {t('page.add')}
-              </Button>
-            )}
-          </FeatureWriteTooltip>
+            <FeatureWriteTooltip feature={PLAN_FEATURE.BRANCHES}>
+              {(locked) => (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={openCreate}
+                  disabled={!canManage || locked}
+                >
+                  {t('page.add')}
+                </Button>
+              )}
+            </FeatureWriteTooltip>
+          )
         }
       />
 

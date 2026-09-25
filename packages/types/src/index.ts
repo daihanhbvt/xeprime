@@ -36,6 +36,7 @@ export * from './owner-stage';
 export * from './workspace-target';
 export * from './account-track';
 export * from './rbac';
+export * from './tenant-support';
 export * from './notifications';
 export * from './push';
 export * from './badges';

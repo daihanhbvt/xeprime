@@ -15,6 +15,11 @@ import { PlatformTenantsService } from './platform-tenants.service';
  * Quản lý gian hàng ở cấp nền tảng (Phase 7). `@PlatformOnly` (PlatformScopeGuard) — KHÔNG dùng
  * chung guard với API gian hàng. Khoá/mở khoá đổi `Tenant.status` (marketplace tôn trọng tức thì,
  * ADR 0008) + ghi audit.
+ *
+ * Quyền (ADR 0050): class mang `platform.tenants.manage` làm MẶC ĐỊNH — handler mới quên khai là
+ * đòi quyền mạnh nhất, không phải mở. Hai handler ĐỌC ghi đè xuống `platform.tenants.view`
+ * (`Reflector.getAllAndOverride` lấy metadata handler trước class, không gộp); khoá/mở khoá khai
+ * lại `manage` tường minh để đọc code không phải suy.
  */
 @ApiTags('platform-tenants')
 @Controller('platform/tenants')
@@ -24,6 +29,7 @@ export class PlatformTenantsController {
   constructor(private readonly tenants: PlatformTenantsService) {}
 
   @Get()
+  @RequirePermissions(PERMISSION.PLATFORM_TENANT_VIEW)
   @ApiOperation({ summary: 'Danh sách gian hàng (phân trang, lọc trạng thái, tìm kiếm)' })
   @ApiOkResponse({ type: PlatformTenantPageDto })
   list(@Query() query: PlatformTenantListQueryDto): Promise<PlatformTenantPageDto> {
@@ -31,6 +37,7 @@ export class PlatformTenantsController {
   }
 
   @Get(':id')
+  @RequirePermissions(PERMISSION.PLATFORM_TENANT_VIEW)
   @ApiOperation({ summary: 'Chi tiết một gian hàng' })
   @ApiOkResponse({ type: PlatformTenantDetailDto })
   getOne(@Param('id') id: string): Promise<PlatformTenantDetailDto> {
@@ -38,6 +45,7 @@ export class PlatformTenantsController {
   }
 
   @Post(':id/lock')
+  @RequirePermissions(PERMISSION.PLATFORM_TENANT_MANAGE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Khoá gian hàng (đang hoạt động → bị khoá)' })
   @ApiOkResponse({ type: PlatformTenantDetailDto })
@@ -50,6 +58,7 @@ export class PlatformTenantsController {
   }
 
   @Post(':id/unlock')
+  @RequirePermissions(PERMISSION.PLATFORM_TENANT_MANAGE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Mở khoá gian hàng (bị khoá → hoạt động)' })
   @ApiOkResponse({ type: PlatformTenantDetailDto })

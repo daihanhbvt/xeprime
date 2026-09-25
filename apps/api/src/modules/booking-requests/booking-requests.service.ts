@@ -58,6 +58,7 @@ import {
 } from '../../common/plan/feature-state';
 import { fromDateOnly, toDateOnly } from '../../common/date-only';
 import { normalizePhone, phoneLookupVariants } from '../../common/phone';
+import { piiSearch } from '../../common/support/support-search';
 import { marketplaceVehicleWhere } from '../../common/marketplace-vehicle-scope';
 import { normalizeRouteContext } from '../../common/route-context';
 import { addressViewOf, pinOf } from '../../common/address-view';
@@ -2845,10 +2846,17 @@ function searchWhere(q: string | undefined): Prisma.BookingRequestWhereInput {
   const term = q?.trim();
   if (!term) return {};
   const contains = { contains: term, mode: 'insensitive' } as const;
+  // Phiên hỗ trợ: SĐT chỉ khớp đủ số (ADR 0050 §11 — `piiSearch`).
+  const pii = piiSearch(term);
+  const phone: Prisma.BookingRequestWhereInput[] = pii.substring
+    ? [{ customerPhone: contains }]
+    : pii.phones.length > 0
+      ? [{ customerPhone: { in: [...pii.phones] } }]
+      : [];
   return {
     OR: [
       { customerName: contains },
-      { customerPhone: contains },
+      ...phone,
       { vehicle: { name: contains } },
       { vehicle: { plateNumber: contains } },
     ],

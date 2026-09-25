@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   BILLING_MODE,
+  PERMISSION,
   SUBSCRIPTION_STATUS,
   SUBSCRIPTION_STATUS_META,
   SUBSCRIPTION_TERM_MONTHS,
@@ -27,6 +28,7 @@ import type { CurrentPlan, Plan, Subscription } from '../types';
 import styles from './TenantPlanSection.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { usePermissions } from '@/hooks/use-permissions';
 
 /**
  * Section "Gói dịch vụ" trong drawer gian hàng (ADR 0010/0015): gói hiện hành (kèm chế độ thu
@@ -47,7 +49,14 @@ export function TenantPlanSection({
 
   const { message } = App.useApp();
   const [assignOpen, setAssignOpen] = useState(false);
-  const history = useTenantSubscriptions(tenantId);
+  /*
+   * Gói và lịch sử thuê bao là việc của người quản lý GÓI (`platform.billing.manage`). Người chỉ
+   * xem gian hàng (vai support, ADR 0050) vẫn thấy gói HIỆN HÀNH — đi kèm chi tiết gian hàng —
+   * nhưng không có nút gán/gia hạn/huỷ, và lịch sử (endpoint đòi quyền đó) không được gọi.
+   */
+  const { has } = usePermissions();
+  const canManageBilling = has(PERMISSION.PLATFORM_BILLING_MANAGE);
+  const history = useTenantSubscriptions(canManageBilling ? tenantId : null);
   const cancel = useCancelSubscription(tenantId);
 
   function handleCancel(sub: Subscription) {
@@ -94,12 +103,14 @@ export function TenantPlanSection({
         ) : (
           <div className={styles.meta}>{t('tenant.noPlan')}</div>
         )}
-        <Button size="small" type="primary" onClick={() => setAssignOpen(true)}>
-          {currentPlan ? t('tenant.renewButton') : t('tenant.assignButton')}
-        </Button>
+        {canManageBilling ? (
+          <Button size="small" type="primary" onClick={() => setAssignOpen(true)}>
+            {currentPlan ? t('tenant.renewButton') : t('tenant.assignButton')}
+          </Button>
+        ) : null}
       </div>
 
-      {history.isLoading ? (
+      {!canManageBilling ? null : history.isLoading ? (
         <div className={styles.center}>
           <Spin size="small" />
         </div>
@@ -125,12 +136,15 @@ export function TenantPlanSection({
         </ul>
       )}
 
-      <AssignPlanModal
-        open={assignOpen}
-        tenantId={tenantId}
-        currentEndsAt={currentPlan?.endsAt ?? null}
-        onClose={() => setAssignOpen(false)}
-      />
+      {/* Hộp gán gói đọc danh sách bậc gói (`platform.billing.manage`) — không mount là không gọi. */}
+      {canManageBilling ? (
+        <AssignPlanModal
+          open={assignOpen}
+          tenantId={tenantId}
+          currentEndsAt={currentPlan?.endsAt ?? null}
+          onClose={() => setAssignOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -157,9 +171,7 @@ function HistoryRow({
         <div>{sub.planName}</div>
         <div className={styles.meta}>
           {fmt.date(sub.startsAt)} → {fmt.date(sub.endsAt)} · {fmt.money(sub.price)}
-          {sub.termMonths != null
-            ? ` · ${t('tenant.termMonths', { months: sub.termMonths })}`
-            : ''}
+          {sub.termMonths != null ? ` · ${t('tenant.termMonths', { months: sub.termMonths })}` : ''}
           {sub.note ? ` · ${sub.note}` : ''}
         </div>
       </div>

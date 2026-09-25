@@ -8,9 +8,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FEATURE_STATE, isFeatureVisible } from '@xeprime/types';
 import { Logo } from '@/components/brand/Logo';
-import { mobileTabsForScope } from '@/constants/nav';
+import { useManageNavTree } from './use-manage-nav-tree';
 import { ROUTES } from '@/constants/routes';
-import { useCurrentUser } from '@/hooks/use-current-user';
 import { useFeatureStates } from '@/hooks/use-feature';
 import { usePermissions } from '@/hooks/use-permissions';
 import { cx } from '@/lib/cx';
@@ -47,7 +46,6 @@ export function MobileNav() {
   const pathname = usePathname();
   const dispatch = useAppDispatch();
   const open = useAppSelector((s) => s.app.mobileNavOpen);
-  const { data: user } = useCurrentUser();
   const { has } = usePermissions();
   const featureStates = useFeatureStates();
   // Trả tiêu điểm về đúng nút đã mở Drawer — nếu không, đóng xong tiêu điểm rơi về <body> và
@@ -66,7 +64,7 @@ export function MobileNav() {
    *
    * Cờ vắng trong cache ⇒ `enabled`, cùng mặc định "cho qua" của `useFeature`.
    */
-  const tabs = mobileTabsForScope(Boolean(user?.platformRole)).filter(
+  const tabs = useManageNavTree().mobileTabs.filter(
     (tab) =>
       has(tab.permission) &&
       (tab.feature === undefined ||

@@ -31,6 +31,7 @@ import {
   SQL_DEBT,
 } from '../../common/booking-money';
 import { normalizePhone, toLocalPhone } from '../../common/phone';
+import { piiSearch } from '../../common/support/support-search';
 import { resolvePaging, paginationMeta } from '../../common/pagination';
 import { addressViewOf } from '../../common/address-view';
 import { AddressService } from '../locations/address.service';
@@ -952,11 +953,21 @@ const STATS_COLUMNS = Prisma.sql`
  * SĐT so trên cột ĐÃ CHUẨN HOÁ và người dùng gõ kiểu gì cũng được: `0901`, `+84901`, `84901`
  * đều quy về cùng một chuỗi trước khi so. Không làm bước này thì ô tìm kiếm trả rỗng đúng
  * những lúc người ta cần nó nhất.
+ *
+ * Trong phiên hỗ trợ gian hàng SĐT/email chỉ khớp NGUYÊN VĂN (`piiSearch`, ADR 0050 §11) — không
+ * thì ô tìm kiếm dò ngược được phần đã che.
  */
 function searchSql(raw: string | undefined): Prisma.Sql | null {
   const q = raw?.trim();
   if (!q) return null;
   const like = `%${q}%`;
+  const pii = piiSearch(q);
+  if (!pii.substring) {
+    const exact: Prisma.Sql[] = [Prisma.sql`c.full_name ILIKE ${like}`];
+    for (const phone of pii.phones) exact.push(Prisma.sql`c.normalized_phone = ${normalizePhone(phone)}`);
+    if (pii.email) exact.push(Prisma.sql`lower(c.email) = ${pii.email}`);
+    return Prisma.sql`(${Prisma.join(exact, ' OR ')})`;
+  }
   const digits = q.replace(/\D/g, '');
   const phoneParts: Prisma.Sql[] = [];
   if (digits.length >= 3) {

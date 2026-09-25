@@ -27,7 +27,9 @@
     "noPhone": "Không có số điện thoại",
     "unknown": "Chưa có thông tin",
     "noteBlock": "Ghi chú",
-    "cardTitle": "Chi tiết đơn đặt xe"
+    "cardTitle": "Chi tiết đơn đặt xe",
+    "pageSubtitle": "Quản lý chuyến đi và quá trình cho thuê hiện tại",
+    "backToList": "Về danh sách đơn"
   },
   "actionBar": {
     "contract": "Hợp đồng",
@@ -500,7 +502,14 @@
     "pickedUp": "Đã giao xe",
     "returned": "Đã nhận lại xe",
     "noOdometer": "Không ghi nhận chỉ số Odo.",
-    "odometer": "Chỉ số Odo ghi nhận: {km} km."
+    "odometer": "Chỉ số Odo ghi nhận: {km} km.",
+    "odometerRecorded": "Chỉ số Odo ghi nhận: {km}.",
+    "doneAt": "{action} lúc {when}",
+    "forbiddenTitle": "Không có quyền xem bàn giao",
+    "forbiddenBody": "Liên hệ quản trị viên nếu bạn cần theo dõi việc giao/nhận xe.",
+    "loadError": "Không tải được thông tin bàn giao",
+    "confirmForbiddenTitle": "Bạn không có quyền xác nhận bàn giao",
+    "confirmForbiddenBody": "Cần quyền handovers.confirm để chốt việc giao/nhận xe."
   },
   "contract": {
     "title": "Hợp đồng thuê xe",

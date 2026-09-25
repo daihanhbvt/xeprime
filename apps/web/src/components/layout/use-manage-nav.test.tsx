@@ -385,7 +385,7 @@ describe('useManageNav — huy hiệu cần xử lý', () => {
 describe('useManageNav — hiển thị theo quyền (nền tảng)', () => {
   it('platformRole → cây nền tảng, KHÔNG có mục gian hàng nào', () => {
     user.platformRole = 'platform_admin';
-    grant(PERMISSION.PLATFORM_DASHBOARD_VIEW, PERMISSION.PLATFORM_TENANT_MANAGE);
+    grant(PERMISSION.PLATFORM_DASHBOARD_VIEW, PERMISSION.PLATFORM_TENANT_VIEW);
     renderMenu();
 
     // Từ 23/09/2026 "Gian hàng" nằm trong mục cha "Gian hàng & xe" — mục cha hiện, mục con là
@@ -396,6 +396,21 @@ describe('useManageNav — hiển thị theo quyền (nền tảng)', () => {
     expect(labels).toContain('Gian hàng');
     expect(labels).not.toContain('Lịch thuê');
     expect(labels).not.toContain('Công nợ');
+  });
+
+  it('vai support: THẤY "Gian hàng" chỉ với quyền XEM (ADR 0050), không cần quyền quản lý', () => {
+    user.platformRole = 'support';
+    grant(PERMISSION.PLATFORM_DASHBOARD_VIEW, PERMISSION.PLATFORM_TENANT_VIEW);
+    renderMenu();
+    fireEvent.click(screen.getByText('Gian hàng & xe'));
+    expect(itemLabels()).toContain('Gian hàng');
+  });
+
+  it('chỉ có quyền QUẢN LÝ mà thiếu quyền xem: không có "Gian hàng" — hai quyền đi cặp', () => {
+    user.platformRole = 'finance_admin';
+    grant(PERMISSION.PLATFORM_DASHBOARD_VIEW, PERMISSION.PLATFORM_TENANT_MANAGE);
+    renderMenu();
+    expect(itemLabels()).not.toContain('Gian hàng');
   });
 
   it('platform_staff KHÔNG thấy mục chỉ dành cho super admin', () => {
@@ -417,7 +432,7 @@ describe('useManageNav — hiển thị theo quyền (nền tảng)', () => {
       'Đơn thuê toàn hệ thống',
       'Khách thuê',
     ]);
-    // Không có `PLATFORM_TENANT_MANAGE` ⇒ mục cha chỉ còn đúng một mục con.
+    // Không có `PLATFORM_TENANT_VIEW` ⇒ mục cha chỉ còn đúng một mục con.
     expect(labels).not.toContain('Gian hàng');
     expect(labels).not.toContain('Nhân sự nền tảng');
     expect(labels).not.toContain('Nhật ký hệ thống');

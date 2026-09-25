@@ -1,25 +1,28 @@
 'use client';
 
-import { LockOutlined, UnlockOutlined } from '@ant-design/icons';
+import { CustomerServiceOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
 import { App, Button, Descriptions, Input, Popconfirm } from 'antd';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import {
+  PERMISSION,
   TENANT_STATUS,
   TENANT_STATUS_META,
-  TENANT_TYPE_LABEL,
   type TenantStatus,
-  type TenantType,
 } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { getErrorMessage } from '@/services/api-client';
 import { TenantPlanSection } from '@/features/admin-plans/components/TenantPlanSection';
+import { StartSupportDialog } from '@/features/tenant-support/components/StartSupportDialog';
+import { usePermissions } from '@/hooks/use-permissions';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import { useAdminTenant, useTenantActions } from '../hooks/use-admin-tenants';
 import type { AdminTenantDetail } from '../types';
 import styles from './AdminTenantDetailDrawer.module.css';
-import { useAppFormat, type AppFormat } from '@/i18n/use-app-format';
 
 export function AdminTenantDetailDrawer({
   tenantId,
@@ -28,11 +31,12 @@ export function AdminTenantDetailDrawer({
   tenantId: string | null;
   onClose: () => void;
 }) {
+  const t = useTranslations('AdminTenants.detail');
   const { data, isLoading } = useAdminTenant(tenantId);
 
   return (
     <DetailDrawer
-      title={data ? data.name : 'Gian hàng'}
+      title={data ? data.name : t('fallbackTitle')}
       size="md"
       open={Boolean(tenantId)}
       onClose={onClose}
@@ -53,25 +57,32 @@ export function AdminTenantDetailDrawer({
 }
 
 function Body({ tenant }: { tenant: AdminTenantDetail }) {
-  const fmt = useAppFormat();
+  const t = useTranslations('AdminTenants.detail');
   const { message } = App.useApp();
+  const errorMessage = useErrorMessage();
+  const { has } = usePermissions();
   const actions = useTenantActions(tenant.id);
   const [lockOpen, setLockOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
   const [reason, setReason] = useState('');
 
   const isActive = tenant.status === TENANT_STATUS.ACTIVE;
   const isSuspended = tenant.status === TENANT_STATUS.SUSPENDED;
+  // Phiên hỗ trợ là quyền RIÊNG (ADR 0050), không suy từ `platform.tenants.manage`.
+  const canSupport = has(PERMISSION.PLATFORM_TENANT_SUPPORT_VIEW);
+  // Khoá/mở khoá là quyền QUẢN LÝ — người chỉ xem (vai support) không thấy nút nào để rồi bị 403.
+  const canManage = has(PERMISSION.PLATFORM_TENANT_MANAGE);
 
   function submitLock() {
     actions.mutate(
       { kind: 'lock', reason: reason.trim() || undefined },
       {
         onSuccess: () => {
-          message.success('Đã khoá gian hàng');
+          message.success(t('lock.done'));
           setLockOpen(false);
           setReason('');
         },
-        onError: (err) => message.error(getErrorMessage(err)),
+        onError: (err) => message.error(errorMessage(err)),
       },
     );
   }
@@ -80,20 +91,31 @@ function Body({ tenant }: { tenant: AdminTenantDetail }) {
     actions.mutate(
       { kind: 'unlock' },
       {
-        onSuccess: () => message.success('Đã mở khoá gian hàng'),
-        onError: (err) => message.error(getErrorMessage(err)),
+        onSuccess: () => message.success(t('unlock.done')),
+        onError: (err) => message.error(errorMessage(err)),
       },
     );
   }
 
   return (
     <div>
-      <Descriptions column={1} size="small" bordered items={detailItems(tenant, fmt)} />
+      <Descriptions column={1} size="small" bordered items={useDetailItems(tenant)} />
 
       <TenantPlanSection tenantId={tenant.id} currentPlan={tenant.currentPlan ?? null} />
 
       <div className={styles.actions}>
-        {isActive ? (
+        {canSupport ? (
+          <Button
+            type="primary"
+            icon={<CustomerServiceOutlined />}
+            block
+            className={styles.supportAction}
+            onClick={() => setSupportOpen(true)}
+          >
+            {t('support.open')}
+          </Button>
+        ) : null}
+        {!canManage ? null : isActive ? (
           <Button
             danger
             icon={<LockOutlined />}
@@ -101,75 +123,88 @@ function Body({ tenant }: { tenant: AdminTenantDetail }) {
             loading={actions.isPending}
             onClick={() => setLockOpen(true)}
           >
-            Khoá gian hàng
+            {t('lock.button')}
           </Button>
         ) : isSuspended ? (
           <Popconfirm
-            title="Mở khoá gian hàng này?"
-            okText="Mở khoá"
-            cancelText="Đóng"
+            title={t('unlock.confirm')}
+            okText={t('unlock.ok')}
+            cancelText={t('unlock.cancel')}
             onConfirm={submitUnlock}
           >
             <Button type="primary" icon={<UnlockOutlined />} block loading={actions.isPending}>
-              Mở khoá gian hàng
+              {t('unlock.button')}
             </Button>
           </Popconfirm>
         ) : (
-          <div className={styles.hint}>Chỉ khoá/mở khoá gian hàng đang hoạt động hoặc bị khoá.</div>
+          <div className={styles.hint}>{t('lock.unavailable')}</div>
         )}
       </div>
 
       <ResponsiveDialog
-        title="Khoá gian hàng"
+        title={t('lock.title')}
         open={lockOpen}
         size="sm"
-        okText="Khoá"
-        cancelText="Huỷ"
+        okText={t('lock.ok')}
+        cancelText={t('lock.cancel')}
         destructive
         confirmLoading={actions.isPending}
         onOk={submitLock}
         onClose={() => setLockOpen(false)}
       >
-        <p className={styles.lockNote}>
-          Xe của gian hàng sẽ bị ẩn khỏi marketplace ngay lập tức. Nhập lý do (tuỳ chọn) để lưu vào
-          nhật ký.
-        </p>
+        <p className={styles.lockNote}>{t('lock.note')}</p>
         <Input.TextArea
           rows={3}
           maxLength={1000}
           showCount
           value={reason}
-          placeholder="Lý do khoá…"
+          placeholder={t('lock.reasonPlaceholder')}
+          aria-label={t('lock.reasonPlaceholder')}
           onChange={(e) => setReason(e.target.value)}
         />
       </ResponsiveDialog>
+
+      {canSupport ? (
+        <StartSupportDialog
+          tenantId={tenant.id}
+          tenantName={tenant.name}
+          open={supportOpen}
+          onClose={() => setSupportOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }
 
-function detailItems(t: AdminTenantDetail, fmt: AppFormat) {
+function useDetailItems(tenant: AdminTenantDetail) {
+  const t = useTranslations('AdminTenants.detail.fields');
+  const tCommon = useTranslations('Common.labels');
+  const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
+  const empty = tCommon('emptyValue');
+
   return [
-    { key: 'code', label: 'Mã', children: t.code },
+    { key: 'code', label: t('code'), children: tenant.code },
     {
       key: 'type',
-      label: 'Loại',
-      children: TENANT_TYPE_LABEL[t.tenantType as TenantType] ?? t.tenantType,
+      label: t('type'),
+      children: domainLabel('tenantType', tenant.tenantType, tenant.tenantType),
     },
-    { key: 'owner', label: 'Chủ shop', children: t.ownerName ?? '—' },
+    { key: 'owner', label: t('owner'), children: tenant.ownerName ?? empty },
     {
       key: 'ownerContact',
-      label: 'Liên hệ chủ',
-      children: [t.ownerPhone, t.ownerEmail].filter(Boolean).join(LIST_SEPARATOR) || '—',
+      label: t('ownerContact'),
+      children: [tenant.ownerPhone, tenant.ownerEmail].filter(Boolean).join(LIST_SEPARATOR) || empty,
     },
-    { key: 'phone', label: 'SĐT shop', children: t.phone ?? '—' },
-    { key: 'province', label: 'Tỉnh/TP', children: t.provinceName ?? '—' },
-    { key: 'address', label: 'Địa chỉ', children: t.address ?? '—' },
-    ...(t.taxCode ? [{ key: 'tax', label: 'MST', children: t.taxCode }] : []),
-    ...(t.businessLicenseNo
-      ? [{ key: 'license', label: 'GPKD', children: t.businessLicenseNo }]
+    { key: 'phone', label: t('phone'), children: tenant.phone ?? empty },
+    { key: 'province', label: t('province'), children: tenant.provinceName ?? empty },
+    { key: 'address', label: t('address'), children: tenant.address ?? empty },
+    ...(tenant.taxCode ? [{ key: 'tax', label: t('taxCode'), children: tenant.taxCode }] : []),
+    ...(tenant.businessLicenseNo
+      ? [{ key: 'license', label: t('businessLicense'), children: tenant.businessLicenseNo }]
       : []),
-    { key: 'vehicles', label: 'Số xe', children: String(t.vehicleCount) },
-    { key: 'bookings', label: 'Số đơn', children: String(t.bookingCount) },
-    { key: 'created', label: 'Ngày tạo', children: fmt.date(t.createdAt) },
+    { key: 'vehicles', label: t('vehicleCount'), children: String(tenant.vehicleCount) },
+    { key: 'bookings', label: t('bookingCount'), children: String(tenant.bookingCount) },
+    { key: 'created', label: t('createdAt'), children: fmt.date(tenant.createdAt) },
   ];
 }

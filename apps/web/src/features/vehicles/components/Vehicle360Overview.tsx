@@ -72,6 +72,7 @@ import {
 } from './VehiclePublicationTaskItem';
 import { VehiclePublicReviewPanel } from './VehiclePublicReviewPanel';
 import styles from './Vehicle360Overview.module.css';
+import { useAvailableHref } from '@/features/tenant-support/support-session';
 import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
 
 /**
@@ -617,6 +618,8 @@ function AutomationCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit:
 
 function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
   const t = useTranslations('Vehicles.overview');
+  // Phiên hỗ trợ không mở giá & chính sách của xe (ADR 0050) — link không có đích thì không dựng.
+  const pricingHref = useAvailableHref()(vehiclePath.pricing(vehicle.id));
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
 
@@ -627,9 +630,9 @@ function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
     <Card
       title={t('pricing.title')}
       extra={
-        canEdit ? (
+        canEdit && pricingHref ? (
           // Wave 2: giá & chính sách có workspace riêng (kế thừa/ghi đè) — không đi qua wizard.
-          <Link href={vehiclePath.pricing(vehicle.id)} className={styles.cardLink}>
+          <Link href={pricingHref} className={styles.cardLink}>
             {t('pricing.editLink')}
           </Link>
         ) : null
@@ -698,6 +701,7 @@ function ModuleLinks({
   const t = useTranslations('Vehicles.overview.links');
   const { has } = usePermissions();
   const { paths, isManage } = useWorkspace();
+  const available = useAvailableHref();
   const links: { href: string; label: string }[] = [];
 
   /*
@@ -770,11 +774,16 @@ function ModuleLinks({
     // nên đây mới là chỗ trả lời được "xe này lãi thật bao nhiêu".
     links.push({ href: receiptsPath.filtered({ vehicleId }), label: t('receipts') });
   }
-  if (links.length === 0) return null;
+  // Trong phiên hỗ trợ: bỏ mục dẫn tới màn không mở trong phiên (giá, giấy tờ…).
+  const shown = links.flatMap((link) => {
+    const href = available(link.href);
+    return href ? [{ ...link, href }] : [];
+  });
+  if (shown.length === 0) return null;
 
   return (
     <nav className={styles.moduleLinks} aria-label={t('ariaLabel')}>
-      {links.map((link) => (
+      {shown.map((link) => (
         <Link key={link.href} href={link.href} className={styles.moduleLink}>
           {link.label}
         </Link>

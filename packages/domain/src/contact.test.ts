@@ -31,4 +31,9 @@ describe('telHref / zaloHref', () => {
     expect(zaloHref(null)).toBeNull();
     expect(zaloHref('   ')).toBeNull();
   });
+
+  it('số đã CHE (phiên hỗ trợ gian hàng) → null: tel:/Zalo từ số che gọi tới một người khác', () => {
+    expect(telHref('091****678')).toBeNull();
+    expect(zaloHref('091****678')).toBeNull();
+  });
 });

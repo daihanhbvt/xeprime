@@ -165,7 +165,8 @@
       "progressLabel": "Tiến độ tải ảnh",
       "alt": "Ảnh đã chọn",
       "change": "Thay đổi",
-      "remove": "Xoá ảnh"
+      "remove": "Xoá ảnh",
+      "empty": "Chưa có ảnh"
     },
     "price": {
       "subtotal": "Tổng trước cọc",
@@ -245,6 +246,10 @@
       "downloadFile": "Tải xuống {name}",
       "removeFile": "Gỡ tệp {name}",
       "legacyNote": "Tài liệu cũ cần được tải lên lại để bảo đảm quyền riêng tư"
+    },
+    "dateRange": {
+      "fromDate": "Từ ngày",
+      "toDate": "Đến ngày"
     }
   },
   "filters": {

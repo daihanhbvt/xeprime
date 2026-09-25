@@ -1,6 +1,8 @@
 'use client';
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { PERMISSION } from '@xeprime/types';
+import { usePermissions } from '@/hooks/use-permissions';
 import { queryKeys } from '@/services/query-keys';
 import {
   fetchSupportCase,
@@ -20,6 +22,7 @@ import type {
   SupportSurface,
   TransitionSupportCaseInput,
 } from '../types';
+import { SUPPORT_SURFACE } from '../types';
 
 export function useSupportCases(surface: SupportSurface, filters: SupportCaseFilters) {
   return useQuery({
@@ -94,4 +97,17 @@ export function useResolveSupportCase() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.platformMoney.all });
     },
   });
+}
+
+/**
+ * Có được GHI vào case (mở case, trả lời, đổi trạng thái) ở bề mặt này không.
+ *
+ * Bề mặt gian hàng: mọi lệnh ghi đòi `support.manage` ở server — một thành viên chỉ có
+ * `support.view` (và phiên hỗ trợ của nền tảng, ADR 0050 §10) chỉ ĐỌC case, nên không dựng ô trả lời
+ * hay nút mở case chắc chắn nhận 403. Khách tự mở case của mình; nền tảng xử lý case theo quyền nền
+ * tảng riêng của màn đó.
+ */
+export function useCanWriteSupportCase(surface: SupportSurface): boolean {
+  const { has } = usePermissions();
+  return surface !== SUPPORT_SURFACE.TENANT || has(PERMISSION.SUPPORT_MANAGE);
 }

@@ -7,6 +7,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import {
   MAINTENANCE_TYPE,
   MAINTENANCE_TYPE_LABEL,
+  PERMISSION,
   MAINTENANCE_TYPE_VALUES,
   type MaintenanceType,
 } from '@xeprime/types';
@@ -17,6 +18,8 @@ import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { appWallClockToIso, toAppTz } from '@/lib/datetime';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
+import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorCode } from '@/services/api-client';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import type { ApiClientError } from '@/services/api-client';
@@ -80,6 +83,18 @@ export function MaintenanceRecordDialog({
   const [conflicts, setConflicts] = useState<ScheduleConflict[]>([]);
   const record = state && state.mode !== 'create' ? state.record : null;
   const completing = state?.mode === 'complete';
+  /*
+   * Chi phí + mã phiếu chi đi theo `vehicles.maintenance.view_cost`: thiếu quyền thì hai ô không
+   * có mặt và KHÔNG có trong lệnh gửi — gửi `null` là xoá chi phí đang lưu, và backend từ chối
+   * lệnh có hai trường này từ người không thấy chúng.
+   */
+  const { has } = usePermissions();
+  const canViewCost = has(PERMISSION.VEHICLE_MAINTENANCE_COST_VIEW);
+  /*
+   * Phiên hỗ trợ gian hàng (ADR 0050): lịch (giữ chỗ lịch xe) và KM hiện ở dạng CHỈ ĐỌC và không
+   * có trong lệnh — lập lịch bảo dưỡng không thuộc Đợt 1. Backend cũng chặn.
+   */
+  const scheduleLocked = useSupportHides(SUPPORT_HIDDEN_AREA.MAINTENANCE_SCHEDULE);
 
   const defaults = useMemo<MaintenanceRecordFormValues>(
     () => ({
@@ -127,8 +142,12 @@ export function MaintenanceRecordDialog({
       if (completing && record) {
         await completeMaintenanceRecord(vehicleId, record.id, {
           odometerKm: values.odometerKm,
-          cost: values.cost != null ? String(values.cost) : null,
-          receiptCode: text(values.receiptCode),
+          ...(canViewCost
+            ? {
+                cost: values.cost != null ? String(values.cost) : null,
+                receiptCode: text(values.receiptCode),
+              }
+            : {}),
           notes: text(values.notes),
           expectedRowVersion: record.rowVersion,
         });
@@ -139,13 +158,23 @@ export function MaintenanceRecordDialog({
           customTypeName:
             values.type === MAINTENANCE_TYPE.OTHER ? text(values.customTypeName) : null,
           title: text(values.title),
-          // API nhận ISO 8601 (UTC) — CLAUDE.md §9: lưu UTC, hiển thị Asia/Ho_Chi_Minh.
-          plannedStartAt: values.plannedStartAt ? appWallClockToIso(values.plannedStartAt) : null,
-          plannedEndAt: values.plannedEndAt ? appWallClockToIso(values.plannedEndAt) : null,
-          odometerKm: values.odometerKm,
+          ...(scheduleLocked
+            ? {}
+            : {
+                // API nhận ISO 8601 (UTC) — CLAUDE.md §9: lưu UTC, hiển thị Asia/Ho_Chi_Minh.
+                plannedStartAt: values.plannedStartAt
+                  ? appWallClockToIso(values.plannedStartAt)
+                  : null,
+                plannedEndAt: values.plannedEndAt ? appWallClockToIso(values.plannedEndAt) : null,
+                odometerKm: values.odometerKm,
+              }),
           providerName: text(values.providerName),
-          cost: values.cost != null ? String(values.cost) : null,
-          receiptCode: text(values.receiptCode),
+          ...(canViewCost
+            ? {
+                cost: values.cost != null ? String(values.cost) : null,
+                receiptCode: text(values.receiptCode),
+              }
+            : {}),
           notes: text(values.notes),
         };
         if (record) {
@@ -261,6 +290,7 @@ export function MaintenanceRecordDialog({
                     control={control}
                     name="plannedStartAt"
                     label={t('record.plannedStart')}
+                    disabled={scheduleLocked}
                   />
                 </Col>
                 <Col xs={24} sm={12}>
@@ -268,11 +298,14 @@ export function MaintenanceRecordDialog({
                     control={control}
                     name="plannedEndAt"
                     label={t('record.plannedEnd')}
+                    disabled={scheduleLocked}
                   />
                 </Col>
-                <Col xs={24}>
-                  <p className={styles.attachmentNote}>{t('record.scheduleHoldNote')}</p>
-                </Col>
+                {scheduleLocked ? null : (
+                  <Col xs={24}>
+                    <p className={styles.attachmentNote}>{t('record.scheduleHoldNote')}</p>
+                  </Col>
+                )}
                 <Col xs={24} sm={12}>
                   <TextField
                     control={control}
@@ -291,20 +324,31 @@ export function MaintenanceRecordDialog({
                 placeholder={t('record.odometerPlaceholder')}
                 addonAfter="km"
                 min={0}
+                disabled={scheduleLocked}
                 help={completing ? t('record.odometerHelp') : undefined}
               />
             </Col>
-            <Col xs={24} sm={12}>
-              <NumberField control={control} name="cost" label={t('record.cost')} money min={0} />
-            </Col>
-            <Col xs={24} sm={12}>
-              <TextField
-                control={control}
-                name="receiptCode"
-                label={t('record.receipt')}
-                placeholder={t('record.receiptPlaceholder')}
-              />
-            </Col>
+            {canViewCost ? (
+              <>
+                <Col xs={24} sm={12}>
+                  <NumberField
+                    control={control}
+                    name="cost"
+                    label={t('record.cost')}
+                    money
+                    min={0}
+                  />
+                </Col>
+                <Col xs={24} sm={12}>
+                  <TextField
+                    control={control}
+                    name="receiptCode"
+                    label={t('record.receipt')}
+                    placeholder={t('record.receiptPlaceholder')}
+                  />
+                </Col>
+              </>
+            ) : null}
             <Col xs={24}>
               <TextAreaField
                 control={control}

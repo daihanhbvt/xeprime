@@ -1,0 +1,39 @@
+{
+  "detail": {
+    "fallbackTitle": "Gian hàng",
+    "fields": {
+      "code": "Mã",
+      "type": "Loại",
+      "owner": "Chủ shop",
+      "ownerContact": "Liên hệ chủ",
+      "phone": "SĐT shop",
+      "province": "Tỉnh/TP",
+      "address": "Địa chỉ",
+      "taxCode": "MST",
+      "businessLicense": "GPKD",
+      "vehicleCount": "Số xe",
+      "bookingCount": "Số đơn",
+      "createdAt": "Ngày tạo"
+    },
+    "support": {
+      "open": "Mở không gian hỗ trợ"
+    },
+    "lock": {
+      "button": "Khoá gian hàng",
+      "title": "Khoá gian hàng",
+      "ok": "Khoá",
+      "cancel": "Huỷ",
+      "note": "Xe của gian hàng sẽ bị ẩn khỏi marketplace ngay lập tức. Nhập lý do (tuỳ chọn) để lưu vào nhật ký.",
+      "reasonPlaceholder": "Lý do khoá…",
+      "done": "Đã khoá gian hàng",
+      "unavailable": "Chỉ khoá/mở khoá gian hàng đang hoạt động hoặc bị khoá."
+    },
+    "unlock": {
+      "button": "Mở khoá gian hàng",
+      "confirm": "Mở khoá gian hàng này?",
+      "ok": "Mở khoá",
+      "cancel": "Đóng",
+      "done": "Đã mở khoá gian hàng"
+    }
+  }
+}
