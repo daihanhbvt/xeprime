@@ -10,10 +10,8 @@
     "heroBenefit3": "A brand of your own"
   },
   "current": {
-    "title": "Current plan",
     "none": "No plan yet — this shop is on the per-trip commission track.",
     "noneHint": "Buy a slot-based plan to stop paying per trip.",
-    "expires": "Expires {date}",
     "activeTag": "In use",
     "commissionSummary": "You are on the commission track. Commission is charged per completed trip.",
     "packageSummary": "Prepaid per vehicle slot — nothing charged per trip.",
@@ -24,13 +22,8 @@
   },
   "usage": {
     "fleetTotal": "Total vehicles",
-    "fleetTotalHint": "Individual owners can list up to {limit} vehicles, cars and motorbikes combined. Buy a shop plan to list more.",
-    "title": "Fleet in use",
     "car": "Cars",
     "motorbike": "Motorbikes",
-    "fleet": "Fleet",
-    "onMarketplace": "On marketplace",
-    "ofLimit": "{used} / {limit}",
     "unlimited": "Unlimited",
     "atLimitTotal": "You have reached the {limit}-vehicle limit.",
     "atLimitUpgrade": "Move up to a larger plan tier to list more vehicles.",
@@ -76,7 +69,6 @@
   "purchase": {
     "title": "Buy / renew plan",
     "planLabel": "Choose a service plan",
-    "tierLabel": "Service plan",
     "recommendedTag": "Recommended",
     "enterpriseTag": "Enterprise",
     "limitVehicles": "Up to {count} vehicles",
@@ -170,7 +162,6 @@
   },
   "term": {
     "pillLabel": "Term",
-    "label": "Term",
     "daysLeft": "{days, plural, one {# day left} other {# days left}}",
     "grace": "In grace period",
     "lapsed": "Expired"

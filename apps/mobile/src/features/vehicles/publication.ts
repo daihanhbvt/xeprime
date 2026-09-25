@@ -138,11 +138,7 @@ export type VehiclePublicationTaskKey =
  * biên dịch, thay vì phải ép kiểu để TypeScript thôi kêu.
  */
 export type VehiclePublicationActionKind =
-  | 'edit'
-  | 'submit'
-  | 'enableMarketplace'
-  | 'viewStatus'
-  | 'contactSupport';
+  'edit' | 'submit' | 'enableMarketplace' | 'viewStatus' | 'contactSupport';
 
 export type VehiclePublicationCta =
   | 'completeProfile'
@@ -205,7 +201,17 @@ export function vehiclePublicationTask(vehicle: VehicleDetail): VehiclePublicati
       return task('platformHidden', 'critical', CONTACT_SUPPORT, null, [], reason);
 
     case VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW:
-      return task('underReview', 'info', null, VIEW_STATUS, [], null);
+      /*
+       * Sửa được, và sửa là ĐỦ (24/09/2026 — cùng luật với web).
+       *
+       * Mỗi lần chủ xe lưu, backend dựng lại hồ sơ gửi duyệt của phiếu đang chờ
+       * (`refreshPendingApprovalSnapshot`), nên nút sửa ở đây là một lời hứa giữ được. Trước đó ô này
+       * không có hành động chính nào, trong khi thứ chủ xe cần làm — sửa nốt chỗ sai vừa phát hiện —
+       * thì không có lối vào.
+       *
+       * Vẫn là `info`: xe đang nằm đúng chỗ của nó, không có gì hỏng để giục.
+       */
+      return task('underReview', 'info', EDIT_TO_UPDATE, VIEW_STATUS, [], null);
 
     case VEHICLE_PUBLIC_STATUS.NEEDS_REVISION:
       return task(

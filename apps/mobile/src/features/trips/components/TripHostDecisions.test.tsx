@@ -42,7 +42,11 @@ function trip(stage: CustomerTripStage): CustomerTripDetail {
      */
     respondBy: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
     bookingId: null,
-    vehicle: { id: '01JQZX0000000000000000000V', name: 'Toyota Vios 2022', plateNumber: '51A-123.45' },
+    vehicle: {
+      id: '01JQZX0000000000000000000V',
+      name: 'Toyota Vios 2022',
+      plateNumber: '51A-123.45',
+    },
     renter: { name: 'Nguyễn Văn An', phone: '0901234567' },
     serviceType: 'self_drive',
     deliveryRequested: false,
@@ -99,10 +103,7 @@ async function renderBlock(stage: CustomerTripStage, stageAfterApprove?: Custome
   return await render(
     withIntl(
       <QueryClientProvider client={queryClient}>
-        <Harness
-          stage={stage}
-          {...(stageAfterApprove ? { stageAfterApprove } : {})}
-        />
+        <Harness stage={stage} {...(stageAfterApprove ? { stageAfterApprove } : {})} />
       </QueryClientProvider>,
     ),
   );
@@ -173,11 +174,16 @@ describe('TripHostDecisions — duyệt xong đọc `bookingId` của BẢN GHI 
 
   /** Bản ghi server trả sau lượt duyệt — `bookingId` là thứ DUY NHẤT quyết định câu chuyện. */
   function approvedRecord(bookingId: string | null): BookingRequestItem {
-    return { ...trip(CUSTOMER_TRIP_STAGE.PENDING_APPROVAL), bookingId } as unknown as BookingRequestItem;
+    return {
+      ...trip(CUSTOMER_TRIP_STAGE.PENDING_APPROVAL),
+      bookingId,
+    } as unknown as BookingRequestItem;
   }
 
   async function approveWith(bookingId: string | null, stageAfterApprove?: CustomerTripStage) {
-    const spy = jest.spyOn(bookingRequestsApi, 'approve').mockResolvedValue(approvedRecord(bookingId));
+    const spy = jest
+      .spyOn(bookingRequestsApi, 'approve')
+      .mockResolvedValue(approvedRecord(bookingId));
     const view = await renderBlock(CUSTOMER_TRIP_STAGE.PENDING_APPROVAL, stageAfterApprove);
 
     await fireEvent.press(await view.findByText(host.approve));
@@ -238,10 +244,7 @@ describe('TripHostDecisions — duyệt xong đọc `bookingId` của BẢN GHI 
    * Vì thế tấm phải nằm ở màn CHA, ngoài cổng. Bài test này đỏ nếu ai đó đẩy nó trở vào.
    */
   it('tấm kết quả SỐNG SÓT qua nhịp refetch làm cụm quyết định unmount', async () => {
-    const { view } = await approveWith(
-      '01JQZX0000000000000000000B',
-      CUSTOMER_TRIP_STAGE.READY,
-    );
+    const { view } = await approveWith('01JQZX0000000000000000000B', CUSTOMER_TRIP_STAGE.READY);
 
     // Cụm quyết định đã biến mất (chặng mới không còn gì để quyết)…
     expect(view.queryByText(host.decisionTitle)).toBeNull();

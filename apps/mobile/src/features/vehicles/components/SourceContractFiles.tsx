@@ -9,8 +9,8 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { FieldLabel } from '@/components/ui/Field';
 import { useAppToast } from '@/components/feedback/use-app-toast';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { useImageErrorMessage } from '@/lib/image-permission-message';
+import { getErrorMessage } from '@/lib/get-error-message';
 import {
   IMAGE_SOURCE,
   pickImages,
@@ -65,8 +65,12 @@ export function SourceContractFiles<T extends FieldValues>({
   const tActions = useTranslations('Common.actions');
   const tImage = useTranslations('Common.image');
   const toast = useAppToast();
-  /* Thiếu quyền máy ảnh/thư viện có câu riêng — xem `useImageErrorMessage`. */
-  const errorMessage = useImageErrorMessage(useErrorMessage());
+  /*
+   * Câu NGUYÊN VĂN của server (`getErrorMessage`), như ô tải ảnh/tệp bên web: hỏng ở bước PUT lên
+   * R2 không có mã lỗi, và câu của nó là thứ duy nhất nói được đã ngã ở đâu. Thiếu quyền máy
+   * ảnh/thư viện vẫn có câu riêng — xem `useImageErrorMessage`.
+   */
+  const errorMessage = useImageErrorMessage(getErrorMessage);
   const { field, fieldState } = useController({ control, name });
 
   const [choosing, setChoosing] = useState(false);

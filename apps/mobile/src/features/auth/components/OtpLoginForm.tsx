@@ -15,8 +15,8 @@ import { useOtpLogin } from '@/features/auth/hooks/use-auth';
 import { OtpCodeInput, OTP_LENGTH } from '@/features/phone-verification/components/OtpCodeInput';
 import { usePhoneVerify } from '@/features/phone-verification/hooks/use-phone-verify';
 import { maskPhone } from '@/features/phone-verification/mask';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /**
  * Đăng nhập passwordless bằng SĐT + OTP — cùng nghiệp vụ với `PhoneLoginForm` của web: nhập SĐT →
@@ -29,7 +29,6 @@ import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
  */
 export function OtpLoginForm({ onSuccess }: { onSuccess: (user: CurrentUser) => void }) {
   const t = useTranslations('Auth');
-  const errorMessage = useErrorMessage();
   const toast = useAppToast();
   const [code, setCode] = useState('');
 
@@ -66,7 +65,7 @@ export function OtpLoginForm({ onSuccess }: { onSuccess: (user: CurrentUser) => 
       toast.showSuccess(t('otp.sent'));
     } catch (error) {
       // Câu của backend đã mang sẵn số giây còn phải đợi — xem `useErrorMessage`.
-      toast.showError(errorMessage(error));
+      toast.showError(getErrorMessage(error));
     }
   });
 
@@ -74,7 +73,7 @@ export function OtpLoginForm({ onSuccess }: { onSuccess: (user: CurrentUser) => 
     if (next.length !== OTP_LENGTH || login.isPending) return;
     login.mutate(
       { phone, code: next },
-      { onSuccess, onError: (error) => toast.showError(errorMessage(error)) },
+      { onSuccess, onError: (error) => toast.showError(getErrorMessage(error)) },
     );
   }
 

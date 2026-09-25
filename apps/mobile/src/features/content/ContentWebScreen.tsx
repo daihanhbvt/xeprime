@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useTranslations } from 'use-intl';
-import type { Href } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { WebDocView } from '@/components/web/WebDocView';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
@@ -14,6 +14,7 @@ import {
 
 /** Màn NATIVE nào nhận đích nào — phần LUẬT nằm ở `content-navigation.ts` và có test riêng. */
 const NATIVE_HREF: Readonly<Record<ContentNativeTarget, () => Href>> = {
+  [CONTENT_NATIVE_TARGET.HOME]: () => ROUTES.explore.home(),
   [CONTENT_NATIVE_TARGET.LIST_YOUR_VEHICLE]: () => ROUTES.listYourVehicle.root(),
   [CONTENT_NATIVE_TARGET.SEARCH]: () => ROUTES.explore.search(),
   [CONTENT_NATIVE_TARGET.MANAGE]: () => ROUTES.manage.home(),
@@ -61,20 +62,29 @@ export function ContentWebScreen({
    */
   const tCompany = useTranslations('Marketplace.footer.columns.company');
   const navigateOnce = useNavigateOnce();
+  const router = useRouter();
 
-  const uri = `${resolveWebBaseUrl()}${path}${anchor ? `#${anchor}` : ''}`;
+  const webBaseUrl = resolveWebBaseUrl();
+  const uri = `${webBaseUrl}${path}${anchor ? `#${anchor}` : ''}`;
 
   /** Luật ở `contentNavigation()` (thuần, có test); ở đây chỉ còn phép THI HÀNH nó. */
   const allowNavigation = useCallback(
     (url: string) => {
-      const next = contentNavigation(url);
+      const next = contentNavigation(url, webBaseUrl);
       if (next.kind === 'native') {
-        navigateOnce(NATIVE_HREF[next.target]());
+        /*
+         * Trang chủ là một TAB đã có sẵn dưới màn này — `dismissTo` lui về đúng bản đó (hoặc thay
+         * màn hiện tại nếu không có). `push` sẽ dựng một bản `(tabs)` THỨ HAI chồng lên: mất vùng
+         * an toàn trên đầu, và chạm tab kế tiếp làm Fabric ném `addViewAt … already has a parent`.
+         */
+        if (next.target === CONTENT_NATIVE_TARGET.HOME)
+          router.dismissTo(NATIVE_HREF[next.target]());
+        else navigateOnce(NATIVE_HREF[next.target]());
         return false;
       }
       return next.kind === 'webview';
     },
-    [navigateOnce],
+    [navigateOnce, router, webBaseUrl],
   );
 
   const title = useCallback(

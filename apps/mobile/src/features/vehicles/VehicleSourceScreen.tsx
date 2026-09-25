@@ -35,7 +35,6 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useFormRefresh } from '@/hooks/use-form-refresh';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { goBackOr } from '@/navigation/go-back-or';
 import { useLeaveGuard } from '@/hooks/use-leave-guard';
@@ -52,6 +51,7 @@ import {
 } from './source-mappers';
 import { useSaveVehicleSource, useVehicle, useVehicleSource } from './hooks/use-vehicle';
 import type { VehicleDetail, VehicleSource } from './api';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /** Đường kính viên hình ở dải trạng thái đầu màn. */
 const BANNER_ICON = 40;
@@ -166,7 +166,6 @@ function SourceForm({
   /* Câu "bỏ thay đổi chưa lưu" là của TAB SỬA XE nói chung — ba tab hỏi cùng một câu. */
   const tEditTab = useTranslations('Vehicles.edit');
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   const domainLabel = useDomainLabel();
   const save = useSaveVehicleSource(vehicle.id);
 
@@ -218,7 +217,7 @@ function SourceForm({
         toast.showSuccess(t('saved'));
       },
       // Giữ nguyên form để sửa/thử lại — giá trị đã nhập không được mất vì một lần lưu hỏng.
-      onError: (error) => toast.showError(errorMessage(error)),
+      onError: (error) => toast.showError(getErrorMessage(error)),
     });
   }
 

@@ -96,7 +96,12 @@ export function VehiclePublishCard({ vehicle }: { vehicle: VehicleDetail }) {
           {approved ? t('panel.titleApproved') : t('panel.title')}
         </BlockTitle>
 
-        {collapsed ? null : (
+        {/*
+          Chỉ gập khi xe ĐANG ở trạng thái đã duyệt. `collapsed` khởi tạo một lần; nếu xe rời trạng
+          thái đó lúc màn còn mở (sửa trường nhạy cảm, nền tảng ẩn) thì nút gập biến mất — đọc
+          `collapsed` trần sẽ để lại một thẻ chỉ còn tiêu đề và không có đường nào mở ra.
+        */}
+        {approved && collapsed ? null : (
           <>
             <YStack bg={tone.bg} br={radius.sm} p={space.sm} gap={2}>
               <Text col={tone.fg} fos={fontSize.bodySm} fow={fontWeight.semibold}>

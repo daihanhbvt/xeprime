@@ -9,7 +9,13 @@ import {
   SERVICE_TYPE,
   type PublicListingDetail,
 } from '@xeprime/types';
-import { dayjs, DAY_PARAM_FORMAT, type RentalMode, LIST_SEPARATOR } from '@xeprime/domain';
+import {
+  dayjs,
+  DAY_PARAM_FORMAT,
+  nowInAppTz,
+  type RentalMode,
+  LIST_SEPARATOR,
+} from '@xeprime/domain';
 import type { BookingRequestFormValues } from '../booking-schema';
 import type { RequestForm } from '../RequestBookingScreen';
 import { Callout, CalloutBody } from '@/components/ui/Callout';
@@ -128,9 +134,9 @@ export function RequestReviewStep({
                   values.requestedPickupDate
                     ? ` · ${fmt.dateKey(values.requestedPickupDate)}`
                     : ` · ${t('longTerm.windowValue', {
-                        start: dayjs().add(PICKUP_WINDOW_START_DAYS, 'day').format('DD/MM'),
+                        start: nowInAppTz().add(PICKUP_WINDOW_START_DAYS, 'day').format('DD/MM'),
                         end: fmt.dateKey(
-                          dayjs().add(PICKUP_WINDOW_END_DAYS, 'day').format(DAY_PARAM_FORMAT),
+                          nowInAppTz().add(PICKUP_WINDOW_END_DAYS, 'day').format(DAY_PARAM_FORMAT),
                         ),
                       })}`)
                 }
@@ -184,11 +190,7 @@ export function RequestReviewStep({
 
           {withDriver ? (
             <>
-              <DataRow
-                block
-                label={t('review.driverPickupAddress')}
-                value={pickupAddress ?? '—'}
-              />
+              <DataRow block label={t('review.driverPickupAddress')} value={pickupAddress ?? '—'} />
               {values.routeType !== ROUTE_TYPE.IN_CITY ? (
                 <DataRow block label={t('review.destination')} value={values.destination || '—'} />
               ) : null}

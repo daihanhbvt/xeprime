@@ -2,11 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { BOOKING_STATUS, PERMISSION, type BookingStatus } from '@xeprime/types';
+import { Button } from '@/components/ui/Button';
+import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { SkeletonText } from '@/components/ui/Skeleton';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useHandoverContext } from '@/features/handovers/hooks/use-handovers';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { getErrorMessage } from '@/lib/get-error-message';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 
 /**
@@ -24,6 +27,7 @@ export function BookingTripCard({
   bookingStatus: BookingStatus;
 }) {
   const t = useTranslations('Bookings.trip');
+  const tActions = useTranslations('Common.actions');
   const permissions = usePermissions();
   const canView = permissions.has(PERMISSION.HANDOVER_VIEW);
   const query = useHandoverContext(bookingId, canView);
@@ -37,6 +41,36 @@ export function BookingTripCard({
         <YStack gap={space.sm}>
           <CardTitle>{t('title')}</CardTitle>
           <SkeletonText lines={2} />
+        </YStack>
+      </Card>
+    );
+  }
+
+  /*
+   * Lỗi tải KHÔNG được nuốt im: thẻ biến mất thì người trực tưởng đơn chưa có gì để bàn giao.
+   * Web `BookingOperationPanel` giữ thẻ, nói lý do (câu nguyên văn của server) và cho thử lại.
+   */
+  if (query.isError) {
+    return (
+      <Card>
+        <YStack gap={space.sm}>
+          <CardTitle>{t('title')}</CardTitle>
+          <Callout tone="danger" title={t('loadError')}>
+            <YStack gap={space.xs}>
+              <Text col={colors.danger} fos={fontSize.bodySm}>
+                {getErrorMessage(query.error)}
+              </Text>
+              <XStack>
+                <Button
+                  label={tActions('retry')}
+                  variant="secondary"
+                  size="sm"
+                  block={false}
+                  onPress={() => void query.refetch()}
+                />
+              </XStack>
+            </YStack>
+          </Callout>
         </YStack>
       </Card>
     );

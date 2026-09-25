@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Linking, Pressable, StyleSheet } from 'react-native';
@@ -29,6 +29,10 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
+import { useAppToast } from '@/components/feedback/use-app-toast';
+import { useErrorMessage } from '@/i18n/use-error-message';
+import { ROUTES } from '@/navigation/routes';
+import { useStartBookingRequestConversation } from '../hooks/use-booking-requests';
 import { useDomainLabel } from '@/i18n/domain';
 import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { RespondDeadline } from './RespondDeadline';
@@ -57,8 +61,10 @@ const styles = StyleSheet.create({
 /**
  * MỘT YÊU CẦU THUÊ trong hộp thư của gian hàng — bản native của `BookingRequestCard` bên web.
  *
- * Bốn vùng xếp dọc cùng thứ tự với web (web xếp lưới vì có bề ngang, ở đây chỉ có một cột):
- * xe · khách hàng · yêu cầu thuê · dấu vết, rồi chân thẻ liên hệ và quyết định.
+ * Các vùng xếp dọc cùng thứ tự với web ở khổ hẹp (web xếp lưới vì có bề ngang, ở đây chỉ có
+ * một cột): THÂN — xe · khách hàng · yêu cầu thuê · tiền · dấu vết; rồi phần MỞ RỘNG chỉ một số
+ * yêu cầu có — cảnh báo rủi ro · lộ trình · địa chỉ giao · ghi chú · lý do từ chối; rồi chân thẻ
+ * liên hệ và quyết định.
  *
  * Quyền thiếu thì **ẩn** nút, không disable — một nút xám không tự giải thích được.
  */
@@ -117,6 +123,10 @@ function BookingRequestCardImpl({
   const canDecide = permissions.has(PERMISSION.BOOKING_REQUEST_APPROVE);
   /** Lối "Xem lịch" gác bằng ĐÚNG quyền web gác nó (`canViewVehicle` = `vehicles.view`). */
   const canViewVehicle = permissions.has(PERMISSION.VEHICLE_VIEW);
+  /** Tên khách là LỐI VÀO hồ sơ khách — chỉ khi có hồ sơ trong sổ VÀ người xem đọc được sổ. */
+  const customerLinkable =
+    permissions.has(PERMISSION.CUSTOMER_VIEW) && Boolean(request.tenantCustomerId);
+  const [noteExpanded, setNoteExpanded] = useState(false);
 
   /*
    * Có ĐƠN để mở hay không quyết định CHỮ trên lối đi ("Xem đơn" vs "Xem chi tiết"), không
@@ -126,6 +136,13 @@ function BookingRequestCardImpl({
   const openableBooking = Boolean(request.bookingId) && permissions.has(PERMISSION.BOOKING_VIEW);
 
   const openDetail = () => onOpenDetail(request);
+  const openVehicle = () => navigateOnce(ROUTES.manage.vehicleDetail(request.vehicleId));
+  const openCustomer = () =>
+    request.tenantCustomerId
+      ? navigateOnce(ROUTES.manage.customerDetail(request.tenantCustomerId))
+      : undefined;
+  // `telHref` chứ không ghép tay `tel:${phone}` — ghép tay hỏng im lặng với dạng `84…`/`+84…`.
+  const tel = telHref(request.customerPhone);
 
   const vehicleMeta = [request.vehicleCode, request.vehiclePlate]
     .filter(Boolean)
@@ -159,20 +176,40 @@ function BookingRequestCardImpl({
         <YStack f={1} minWidth={0} p={space.md} gap={space.md}>
           {/* Xe: mỏ neo thị giác đầu tiên, y như web. */}
           <XStack gap={space.sm}>
-            {request.vehicleImageUrl ? (
-              <Image
-                source={{ uri: request.vehicleImageUrl }}
-                style={styles.thumb}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-                transition={150}
-                accessibilityLabel={request.vehicleName}
-              />
-            ) : (
-              <YStack style={styles.thumb} ai="center" jc="center">
-                <Ionicons name="car-outline" size={iconSize.lg} color={colors.placeholder} />
-              </YStack>
-            )}
+            {/*
+              Ảnh + tên xe là LỐI VÀO hồ sơ xe khi người xem đọc được xe — đúng như web (link tới
+              `vehiclePath.detail`). Thiếu quyền thì chỉ là ảnh + chữ, không dẫn vào màn 403.
+            */}
+            <Pressable
+              disabled={!canViewVehicle}
+              onPress={openVehicle}
+              /*
+                Ảnh là vùng chạm PHỤ cho người nhìn thấy màn hình; trình đọc màn hình đã có liên
+                kết ở tên xe ngay cạnh — hai liên kết cùng tên đọc liền nhau chỉ là lặp.
+              */
+              accessible={false}
+              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+            >
+              {request.vehicleImageUrl ? (
+                <Image
+                  source={{ uri: request.vehicleImageUrl }}
+                  style={styles.thumb}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  transition={150}
+                  accessibilityLabel={request.vehicleName}
+                />
+              ) : (
+                <YStack
+                  style={styles.thumb}
+                  ai="center"
+                  jc="center"
+                  accessibilityLabel={t('vehicle.noImage')}
+                >
+                  <Ionicons name="car-outline" size={iconSize.lg} color={colors.placeholder} />
+                </YStack>
+              )}
+            </Pressable>
 
             <YStack f={1} gap={space.xs}>
               {/*
@@ -193,10 +230,13 @@ function BookingRequestCardImpl({
               <XStack ai="flex-start" gap={space.sm}>
                 <Text
                   f={1}
-                  col={colors.text}
+                  col={canViewVehicle ? colors.primaryActive : colors.text}
                   fos={fontSize.bodyLg}
                   fow={fontWeight.bold}
                   numberOfLines={2}
+                  {...(canViewVehicle
+                    ? { onPress: openVehicle, accessibilityRole: 'link' as const }
+                    : {})}
                 >
                   {request.vehicleName}
                 </Text>
@@ -291,15 +331,30 @@ function BookingRequestCardImpl({
                 </YStack>
               )}
               <YStack f={1} gap={1}>
+                {/* Tên khách mở hồ sơ trong sổ khách — đúng link `customerPath.detail` bên web. */}
                 <Text
-                  col={colors.text}
+                  col={customerLinkable ? colors.primaryActive : colors.text}
                   fos={fontSize.body}
                   fow={fontWeight.semibold}
                   numberOfLines={1}
+                  {...(customerLinkable
+                    ? { onPress: openCustomer, accessibilityRole: 'link' as const }
+                    : {})}
                 >
                   {request.customerName}
                 </Text>
-                <Text col={colors.primaryActive} fos={fontSize.bodySm} numberOfLines={1}>
+                {/* Số điện thoại là liên kết `tel:` như web — chạm là gọi. */}
+                <Text
+                  col={colors.primaryActive}
+                  fos={fontSize.bodySm}
+                  numberOfLines={1}
+                  {...(tel
+                    ? {
+                        onPress: () => void Linking.openURL(tel),
+                        accessibilityRole: 'link' as const,
+                      }
+                    : {})}
+                >
                   {request.customerPhone}
                 </Text>
                 {request.customerEmail ? (
@@ -321,11 +376,7 @@ function BookingRequestCardImpl({
           <Pressable
             onPress={openDetail}
             accessibilityRole="button"
-            accessibilityLabel={
-              openableBooking
-                ? t('trace.viewBookingFor', { vehicle: request.vehicleName })
-                : t('detail.title')
-            }
+            accessibilityLabel={t('trace.viewBookingFor', { vehicle: request.vehicleName })}
             style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
           >
             <YStack gap={space.xs} p={space.sm} br={radius.md} bg={colors.surfaceMuted}>
@@ -382,51 +433,16 @@ function BookingRequestCardImpl({
                   fow={fontWeight.semibold}
                   numberOfLines={1}
                 >
-                  {openableBooking ? t('trace.viewBooking') : t('detail.title')}
+                  {/*
+                    Web: `openableDetail = true` — mọi yêu cầu đều mở chi tiết, và nhãn luôn là
+                    `trace.viewBooking`, kể cả khi chưa có đơn thuê.
+                  */}
+                  {t('trace.viewBooking')}
                 </Text>
                 <Ionicons name="chevron-forward" size={iconSize.xs} color={colors.primaryActive} />
               </XStack>
             </YStack>
           </Pressable>
-
-          {/* Ngữ cảnh chỉ MỘT SỐ yêu cầu có. */}
-          {isWithDriver && (routeType || request.pickupAddress || request.destination) ? (
-            <YStack gap={space.xs}>
-              {routeType ? (
-                <XStack ai="center" gap={space.xs} rowGap={space.xs} flexWrap="wrap">
-                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                    {t('schedule.route')}
-                  </Text>
-                  {/* `StatusBadge` chứ không `Chip`: `Chip` không có biến thể cảnh báo. */}
-                  <StatusBadge
-                    label={domainLabel('routeType', routeType)}
-                    color={longDistance ? STATUS_COLOR.WARNING : STATUS_COLOR.NEUTRAL}
-                    size="sm"
-                  />
-                </XStack>
-              ) : null}
-              {request.pickupAddress ? (
-                <DataRow label={t('schedule.pickupAddress')} value={request.pickupAddress} block />
-              ) : null}
-              {request.destination ? (
-                <DataRow label={t('schedule.destination')} value={request.destination} block />
-              ) : null}
-            </YStack>
-          ) : null}
-
-          {request.deliveryRequested ? (
-            <YStack gap={space.xs}>
-              {request.deliveryAddress ? (
-                <DataRow
-                  label={t('schedule.deliveryAddress')}
-                  value={request.deliveryAddress}
-                  block
-                />
-              ) : null}
-              {/* KHÔNG hứa giao nhận miễn phí: đơn sinh ra phí 0₫ rồi chủ xe chốt lại sau. */}
-              <Hint>{t('schedule.deliveryFeeHint')}</Hint>
-            </YStack>
-          ) : null}
 
           {/*
             TIỀN — vùng riêng cạnh lịch trình (mẫu 19/09): "khi nào" và "bao nhiêu" là hai loại
@@ -474,35 +490,6 @@ function BookingRequestCardImpl({
             </YStack>
           ) : null}
 
-          {request.note ? (
-            <NotePanel icon="chatbox-ellipses-outline" title={t('note.label')} tone="muted">
-              {request.note}
-            </NotePanel>
-          ) : null}
-
-          {request.rejectReason ? (
-            <NotePanel icon="close-circle-outline" title={t('trace.rejectReason')} tone="danger">
-              {request.rejectReason}
-            </NotePanel>
-          ) : null}
-
-          {showRisk ? (
-            <XStack
-              ai="flex-start"
-              gap={space.xs}
-              p={space.sm}
-              br={radius.md}
-              bg={colors.warningSurface}
-            >
-              <Ionicons name="alert-circle-outline" size={iconSize.sm} color={colors.warning} />
-              <Text f={1} col={colors.text} fos={fontSize.bodySm}>
-                {t('customer.riskWarning', {
-                  level: domainLabel('tenantCustomerRiskLevel', riskLevel),
-                })}
-              </Text>
-            </XStack>
-          ) : null}
-
           {/*
             Dấu vết xử lý — MỘT hàng có icon dẫn, không phải hai dòng chữ mờ trôi nổi.
 
@@ -522,6 +509,95 @@ function BookingRequestCardImpl({
               ) : null}
             </YStack>
           </XStack>
+
+          {/*
+            Phần MỞ RỘNG — chỉ một số yêu cầu có. Cảnh báo rủi ro đứng ĐẦU như web: nó là thứ duy
+            nhất ở đây có thể đổi quyết định duyệt.
+          */}
+          {showRisk ? (
+            <XStack
+              ai="flex-start"
+              gap={space.xs}
+              p={space.sm}
+              br={radius.md}
+              bg={colors.warningSurface}
+            >
+              <Ionicons name="alert-circle-outline" size={iconSize.sm} color={colors.warning} />
+              <Text f={1} col={colors.text} fos={fontSize.bodySm}>
+                {t('customer.riskWarning', {
+                  level: domainLabel('tenantCustomerRiskLevel', riskLevel),
+                })}
+              </Text>
+            </XStack>
+          ) : null}
+
+          {isWithDriver && (routeType || request.pickupAddress || request.destination) ? (
+            <YStack gap={space.xs}>
+              {routeType ? (
+                <XStack ai="center" gap={space.xs} rowGap={space.xs} flexWrap="wrap">
+                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                    {t('schedule.route')}
+                  </Text>
+                  {/* `StatusBadge` chứ không `Chip`: `Chip` không có biến thể cảnh báo. */}
+                  <StatusBadge
+                    label={domainLabel('routeType', routeType)}
+                    color={longDistance ? STATUS_COLOR.WARNING : STATUS_COLOR.NEUTRAL}
+                    size="sm"
+                  />
+                </XStack>
+              ) : null}
+              {request.pickupAddress ? (
+                <DataRow label={t('schedule.pickupAddress')} value={request.pickupAddress} block />
+              ) : null}
+              {request.destination ? (
+                <DataRow label={t('schedule.destination')} value={request.destination} block />
+              ) : null}
+            </YStack>
+          ) : null}
+
+          {request.deliveryRequested ? (
+            <YStack gap={space.xs}>
+              {request.deliveryAddress ? (
+                <DataRow
+                  label={t('schedule.deliveryAddress')}
+                  value={request.deliveryAddress}
+                  block
+                />
+              ) : null}
+              {/* KHÔNG hứa giao nhận miễn phí: đơn sinh ra phí 0₫ rồi chủ xe chốt lại sau. */}
+              <Hint>{t('schedule.deliveryFeeHint')}</Hint>
+            </YStack>
+          ) : null}
+
+          {request.note ? (
+            <NotePanel
+              icon="chatbox-ellipses-outline"
+              title={t('note.label')}
+              tone="muted"
+              expanded={noteExpanded}
+              /*
+                Nút mở rộng luôn có mặt khi CÓ ghi chú — cùng lý do web: đo xem hai dòng đã đủ chưa
+                cần layout thật, còn một nút thừa thì vô hại hơn là giấu mất phần cuối của một
+                ghi chú quan trọng.
+              */
+              toggleLabel={noteExpanded ? t('note.collapse') : t('note.expand')}
+              onToggle={() => setNoteExpanded((open) => !open)}
+            >
+              {request.note}
+            </NotePanel>
+          ) : null}
+
+          {/* Lý do từ chối đọc TRỌN — web dựng nó ở dạng đầy đủ, không cắt dòng. */}
+          {request.rejectReason ? (
+            <NotePanel
+              icon="close-circle-outline"
+              title={t('trace.rejectReason')}
+              tone="danger"
+              expanded
+            >
+              {request.rejectReason}
+            </NotePanel>
+          ) : null}
 
           {/* Chân thẻ: liên hệ trước, quyết định sau. */}
           <YStack gap={space.sm} pt={space.sm} borderTopWidth={1} bc={colors.borderSubtle}>
@@ -595,6 +671,18 @@ function BookingRequestCardImpl({
                   />
                 ) : null}
               </YStack>
+            ) : openableBooking ? (
+              // Web: nhánh cuối `hasBookingLink` — yêu cầu đã thành đơn có thêm lối "Xem chi tiết
+              // đơn thuê" ở chân thẻ, mở cùng tấm chi tiết với khối lịch trình.
+              <XStack jc="flex-end">
+                <Button
+                  label={t('trace.viewBooking')}
+                  variant="ghost"
+                  size="sm"
+                  block={false}
+                  onPress={openDetail}
+                />
+              </XStack>
             ) : null}
           </YStack>
         </YStack>
@@ -604,34 +692,60 @@ function BookingRequestCardImpl({
 }
 
 /**
- * Ba lối liên hệ, cùng bộ với web.
+ * Ba lối liên hệ, cùng bộ và cùng luật với web.
  *
- * Gọi điện LUÔN có mặt: khách gửi yêu cầu bằng SĐT, và với người chưa có tài khoản XePrime thì
- * đó là cách liên hệ duy nhất. "Nhắn tin" chỉ hiện khi `canMessageOnPlatform` — nhắn cho một
- * người không có tài khoản thì tin đi vào hư không.
+ * "Nhắn tin" LUÔN có mặt: mở (hoặc lấy lại) hội thoại với khách trên XePrime rồi sang đúng thread
+ * đó ở inbox gian hàng — `POST /booking-requests/:id/conversation`, KHÔNG phải endpoint mở chat
+ * của khách. Khách gửi bằng SĐT và chưa có tài khoản (`!canMessageOnPlatform`) thì nút MỜ đi, và
+ * chạm vào nó nói lý do (`messageUnavailable`) — bản native của tooltip trên nút bị khoá bên web:
+ * một nút xám không lý do là thứ người dùng không tự giải thích được.
+ *
+ * Gọi điện / Zalo có mặt khi có số gọi được.
  */
 function ContactRow({ request }: { request: BookingRequestItem }) {
   const t = useTranslations('BookingRequests.actions');
+  const toast = useAppToast();
+  const errorMessage = useErrorMessage();
+  const navigateOnce = useNavigateOnce();
+  const startConversation = useStartBookingRequestConversation();
   const phone = request.customerPhone;
   // Dùng `telHref`/`zaloHref` chứ không ghép tay `tel:${phone}`: ghép tay hỏng im lặng với dạng
   // `84…`/`+84…` mà `users.phone` đang lưu. `null` = không có số gọi được → ẩn nút.
   const tel = telHref(phone);
   const zalo = zaloHref(phone);
-  const call = tel ? () => void Linking.openURL(tel) : null;
+  const canMessage = request.canMessageOnPlatform;
+
+  const message = () => {
+    if (!canMessage) {
+      toast.showInfo(t('messageUnavailable'));
+      return;
+    }
+    startConversation.mutate(request.id, {
+      onSuccess: (conversation) => navigateOnce(ROUTES.manage.chatThread(conversation.id)),
+      onError: (err) => toast.showError(errorMessage(err)),
+    });
+  };
 
   return (
     <XStack gap={space.xs} rowGap={space.xs} flexWrap="wrap">
-      {request.canMessageOnPlatform && call ? (
+      <ContactButton
+        label={t('message')}
+        accessibilityLabel={t('messageAria', { name: request.customerName })}
+        icon="chatbubble-outline"
+        disabled={!canMessage}
+        {...(canMessage ? {} : { accessibilityHint: t('messageUnavailable') })}
+        loading={startConversation.isPending}
+        onPress={message}
+      />
+
+      {tel ? (
         <ContactButton
-          label={t('message')}
-          icon="chatbubble-outline"
-          // Chat realtime chưa dựng ở app (ADR 0009): nút giữ chỗ để bố cục không đổi khi chat
-          // lên, tạm mở luồng gọi.
-          onPress={call}
+          label={t('call')}
+          accessibilityLabel={t('callAria', { name: request.customerName, phone })}
+          icon="call-outline"
+          onPress={() => void Linking.openURL(tel)}
         />
       ) : null}
-
-      {call ? <ContactButton label={t('call')} icon="call-outline" onPress={call} /> : null}
 
       {/*
         Icon Ionicons, KHÔNG phải logo Zalo tự vẽ.
@@ -660,19 +774,37 @@ function ContactRow({ request }: { request: BookingRequestItem }) {
  */
 function ContactButton({
   label,
+  accessibilityLabel,
+  accessibilityHint,
   icon,
+  disabled = false,
+  loading = false,
   onPress,
 }: {
   label: string;
+  /** Tên đầy đủ cho trình đọc màn hình — web dùng `messageAria`/`callAria`. */
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
   icon: keyof typeof Ionicons.glyphMap;
+  /**
+   * MỜ đi nhưng VẪN nhận chạm — chạm vào thì nơi gọi nói lý do. Không dùng `disabled` của
+   * `Pressable`: nó nuốt luôn cú chạm, và lý do sẽ không bao giờ tới được người dùng.
+   */
+  disabled?: boolean;
+  loading?: boolean;
   onPress: () => void;
 }) {
   return (
     <Pressable
-      onPress={onPress}
+      onPress={loading ? undefined : onPress}
       accessibilityRole="button"
-      accessibilityLabel={label}
-      style={({ pressed }) => [styles.contactButton, { opacity: pressed ? 0.7 : 1 }]}
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityState={{ disabled, busy: loading }}
+      {...(accessibilityHint ? { accessibilityHint } : {})}
+      style={({ pressed }) => [
+        styles.contactButton,
+        { opacity: disabled ? 0.45 : pressed || loading ? 0.7 : 1 },
+      ]}
     >
       <XStack
         ai="center"
@@ -710,11 +842,19 @@ function NotePanel({
   icon,
   title,
   tone,
+  expanded,
+  toggleLabel,
+  onToggle,
   children,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   tone: 'muted' | 'danger';
+  /** `false` = cắt ở 2 dòng để các thẻ trong danh sách cao đều nhau. */
+  expanded: boolean;
+  /** Nhãn nút "Xem đầy đủ"/"Thu gọn" — không truyền thì không có nút. */
+  toggleLabel?: string;
+  onToggle?: () => void;
   children: string;
 }) {
   const danger = tone === 'danger';
@@ -736,13 +876,23 @@ function NotePanel({
         >
           {title}
         </Text>
-        {/*
-          `numberOfLines` giữ nguyên 2 như bản cũ: thẻ trong danh sách phải cao đều nhau, và
-          bản đầy đủ nằm ở màn chi tiết.
-        */}
-        <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={2}>
+        <Text col={colors.text} fos={fontSize.bodySm} {...(expanded ? {} : { numberOfLines: 2 })}>
           {children}
         </Text>
+        {toggleLabel && onToggle ? (
+          <XStack>
+            <Text
+              col={colors.primaryActive}
+              fos={fontSize.label}
+              fow={fontWeight.semibold}
+              accessibilityRole="button"
+              onPress={onToggle}
+              suppressHighlighting
+            >
+              {toggleLabel}
+            </Text>
+          </XStack>
+        ) : null}
       </YStack>
     </XStack>
   );

@@ -37,7 +37,11 @@ export function useTripsInfinite(filter: string, role?: string, enabled = true) 
     // và danh sách không bao giờ nối lại được.
     // `role` PHẢI nằm trong khoá: hai vai là hai tập khác nhau, và dùng chung cache sẽ hiện
     // danh sách của vai kia trong một khung hình trước khi dữ liệu đúng về.
-    queryKey: queryKeys.trips.list({ filter, limit: TRIPS_DEFAULT_LIMIT, ...(role ? { role } : {}) }),
+    queryKey: queryKeys.trips.list({
+      filter,
+      limit: TRIPS_DEFAULT_LIMIT,
+      ...(role ? { role } : {}),
+    }),
     queryFn: ({ pageParam }) => tripsApi.list(filter, pageParam, role),
     initialPageParam: 1,
     getNextPageParam: (last: TripsResult) => (last.meta.hasNext ? last.meta.page + 1 : undefined),

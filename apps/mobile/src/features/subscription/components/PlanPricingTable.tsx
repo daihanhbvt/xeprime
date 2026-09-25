@@ -218,21 +218,26 @@ function TierCard({
               surface={colors.primaryLight}
               filled={active}
             />
-            <YStack f={1} minWidth={0} gap={2}>
-              <Text col={colors.textMuted} fos={fontSize.meta} fow={fontWeight.semibold}>
-                {t('tierLabel').toUpperCase()}
-              </Text>
-              <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold} numberOfLines={2}>
-                {tier.plan.name}
-              </Text>
-            </YStack>
-            {active ? (
-              <StatusBadge label={t('tierSelected')} color={STATUS_COLOR.SUCCESS} size="sm" />
-            ) : tier.limits.recommended ? (
+            <Text
+              f={1}
+              minWidth={0}
+              col={colors.text}
+              fos={fontSize.bodyLg}
+              fow={fontWeight.bold}
+              numberOfLines={2}
+            >
+              {tier.plan.name}
+            </Text>
+            {/*
+              Hàng tiêu đề đúng như web: tên bậc + viên "Được đề xuất" KHI VÀ CHỈ KHI
+              `limits.recommended` — kể cả lúc bậc đó đang được chọn (trạng thái chọn đã nằm ở nút
+              "Đã chọn" bên dưới). Không có nhãn "gói dịch vụ" phía trên tên, không có viên
+              "Doanh nghiệp" cho bậc tư vấn: web không dựng chúng, và ô giá "Liên hệ" đã nói ra
+              điểm khác của bậc đó.
+            */}
+            {tier.limits.recommended ? (
               <StatusBadge label={t('recommendedTag')} color={STATUS_COLOR.WARNING} size="sm" />
-            ) : tier.selfServe ? null : (
-              <StatusBadge label={t('enterpriseTag')} color={STATUS_COLOR.NEUTRAL} size="sm" />
-            )}
+            ) : null}
           </XStack>
 
           {tier.plan.description ? (

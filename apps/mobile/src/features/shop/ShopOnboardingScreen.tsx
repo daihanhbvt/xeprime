@@ -33,13 +33,13 @@ import { isPackageOnboarding, resolveWorkspaceHref } from '@/features/shell/work
 import { PackageShopCheckout } from '@/features/subscription/components/PackageShopCheckout';
 import { useSyncScopeWhenInvoiceSettles } from '@/features/subscription/hooks/use-subscription';
 import { useDomainLabel } from '@/i18n/domain';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { useRegisterShop } from './hooks/use-shop';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /** Viên tròn của khoang giới thiệu và cỡ hình bên trong — đúng `.introIcon` bên web. */
 const INTRO_ICON = 72;
@@ -107,7 +107,6 @@ export function ShopOnboardingScreen({
   const navigateOnce = useNavigateOnce();
   const { switchTo } = useShellScope();
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   const domainLabel = useDomainLabel();
   const register = useRegisterShop();
 
@@ -218,7 +217,7 @@ export function ShopOnboardingScreen({
          * đi — MỘT đường đi cho cả hai lối vào màn này.
          */
         onSuccess: () => toast.showSuccess(t('created')),
-        onError: (err) => toast.showError(errorMessage(err)),
+        onError: (err) => toast.showError(getErrorMessage(err)),
       },
     );
   });
@@ -365,12 +364,7 @@ export function ShopOnboardingScreen({
                         color={colors.primaryActive}
                       />
                     </YStack>
-                    <Text
-                      col={colors.text}
-                      fos={fontSize.h4}
-                      fow={fontWeight.semibold}
-                      ta="center"
-                    >
+                    <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.semibold} ta="center">
                       {t('form.title')}
                     </Text>
                     <Text col={colors.textMuted} fos={fontSize.body} ta="center">
@@ -573,4 +567,3 @@ export function ShopOnboardingScreen({
     </>
   );
 }
-

@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useWatch, type Control } from 'react-hook-form';
+import { useFormState, useWatch, type Control } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -20,17 +20,18 @@ import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 type ChecklistItem = ShopProfileRequirement | ShopProfileSuggestion;
 
 /**
- * "Hoàn thiện hồ sơ" — bản kiểm kê chia đúng theo HỆ QUẢ: nhóm trên CHẶN gửi duyệt, nhóm dưới
- * thì không.
+ * "Hoàn thiện hồ sơ" — bản kiểm kê chia đúng theo HỆ QUẢ: nhóm trên là thông tin bắt buộc, nhóm
+ * dưới là thứ giúp khách chọn gian hàng. Bản native của `ShopProfileChecklist` bên web.
  *
  * Quy tắc chấm đến từ `@xeprime/types` (`missingShopProfileRequirements`) — CÙNG hàm mà backend
- * dùng để từ chối `submit-review`. Chép luật sang client là hẹn ngày checklist xanh hết mà server
- * vẫn trả lỗi.
+ * dùng làm cổng thật. Chép luật sang client là hẹn ngày checklist xanh hết mà server vẫn trả lỗi.
  *
- * Đọc giá trị ĐANG NHẬP (`useWatch`) chứ không phải hồ sơ đã lưu: nút Gửi duyệt lưu nốt thay đổi
- * còn dở trước khi gửi, nên nếu thẻ này đọc bản đã lưu thì người vừa gõ xong tên vẫn thấy mục đó
- * đỏ — và họ sẽ không tin bảng này nữa. `useWatch` cũng khoanh việc render lại vào riêng thẻ này
- * thay vì cả màn hồ sơ nhấp nháy theo từng phím gõ.
+ * Không còn nút gửi xác minh gian hàng (24/09/2026 — nền tảng tạm ngừng xác minh), nên chữ ở đây
+ * KHÔNG nhắc tới "gửi duyệt": dùng `profileRequired*`, đúng như web.
+ *
+ * Đọc giá trị ĐANG NHẬP (`useWatch`) chứ không phải hồ sơ đã lưu — nếu thẻ này đọc bản đã lưu thì
+ * người vừa gõ xong tên vẫn thấy mục đó đỏ, và họ sẽ không tin bảng này nữa. `useWatch` cũng
+ * khoanh việc render lại vào riêng thẻ này thay vì cả màn hồ sơ nhấp nháy theo từng phím gõ.
  */
 export function ShopProfileChecklist({
   control,
@@ -60,19 +61,11 @@ export function ShopProfileChecklist({
 }) {
   const t = useTranslations('Shop.checklist');
   const values = useWatch({ control }) as Partial<ShopProfileValues>;
-
   /*
-   * Mục "địa chỉ" của checklist chấm phần CHI TIẾT người dùng gõ (`addressLine`), không chấm
-   * chuỗi hiển thị: biểu mẫu native KHÔNG có ô `address` nào cả (chuỗi đó do server ghép), nên
-   * đưa `values` thô vào hàm chấm là mục này không bao giờ xanh — app đếm 4/9 trong khi web đếm
-   * 5/9 trên cùng một hồ sơ.
+   * Bản ĐÃ LƯU: màn hồ sơ nạp form bằng `values: toValues(shop)`, nên sau mỗi lần lưu query trả
+   * hồ sơ mới và RHF đặt lại `defaultValues` theo nó — `defaultValues` là hồ sơ trên server.
    */
-  const completeness = {
-    ...values,
-    address: values.addressLine,
-    ownerFullName: ownerAccount.displayName,
-    ownerPhone: ownerAccount.phone,
-  };
+  const { defaultValues } = useFormState({ control });
   /*
    * Logo đổi NHÓM, không đổi cách chấm: cùng một phép kiểm "đã có chưa", chỉ khác hệ quả. Dựng hai
    * bảng luật song song ở đây là mời chúng trôi khỏi nhau — xem docblock của `logoRequired`.
@@ -84,16 +77,24 @@ export function ShopProfileChecklist({
     ? SHOP_PROFILE_SUGGESTION_VALUES.filter((key) => key !== SHOP_PROFILE_SUGGESTION.LOGO)
     : SHOP_PROFILE_SUGGESTION_VALUES;
 
-  const suggestedMissing = new Set<string>(missingShopProfileSuggestions(completeness));
-  const missingRequired = new Set<string>([
-    ...missingShopProfileRequirements(completeness),
-    ...(logoRequired && suggestedMissing.has(SHOP_PROFILE_SUGGESTION.LOGO)
-      ? [SHOP_PROFILE_SUGGESTION.LOGO]
-      : []),
-  ]);
-  const missingSuggested = new Set<string>(
-    [...suggestedMissing].filter((key) => !missingRequired.has(key)),
+  const { missingRequired, missingSuggested } = missingItems(values, ownerAccount, logoRequired);
+
+  /*
+   * Hồ sơ đã ĐỦ HẾT — cả bản đã lưu lẫn bản đang gõ — thì không còn gì để kiểm kê: một thẻ 100%
+   * đứng thường trực chỉ dạy người dùng bỏ qua vùng này. Xét cả bản đã lưu để thẻ không biến mất
+   * ngay giữa lúc gõ ô cuối; nó rời đi sau lần Lưu làm hồ sơ đủ. Cùng luật với web.
+   */
+  const saved = missingItems(
+    (defaultValues ?? {}) as Partial<ShopProfileValues>,
+    ownerAccount,
+    logoRequired,
   );
+  if (
+    missingRequired.size + missingSuggested.size === 0 &&
+    saved.missingRequired.size + saved.missingSuggested.size === 0
+  ) {
+    return null;
+  }
 
   const total = requiredItems.length + suggestedItems.length;
   const done = total - missingRequired.size - missingSuggested.size;
@@ -114,7 +115,7 @@ export function ShopProfileChecklist({
         </YStack>
 
         <Group
-          label={ready ? t('requiredDone') : t('requiredTitle')}
+          label={ready ? t('profileRequiredDone') : t('profileRequiredTitle')}
           items={requiredItems}
           missing={missingRequired}
           tone={ready ? 'done' : 'required'}
@@ -128,6 +129,37 @@ export function ShopProfileChecklist({
       </YStack>
     </Card>
   );
+}
+
+/** Mục còn thiếu, chia theo HỆ QUẢ: nhóm bắt buộc (kể cả logo với gian hàng tuyến gói) và nhóm nên có. */
+function missingItems(
+  values: Partial<ShopProfileValues>,
+  ownerAccount: ShopOwnerAccount,
+  logoRequired: boolean,
+): { missingRequired: ReadonlySet<string>; missingSuggested: ReadonlySet<string> } {
+  /*
+   * Mục "địa chỉ" của checklist chấm phần CHI TIẾT người dùng gõ (`addressLine`), không chấm
+   * chuỗi hiển thị: biểu mẫu native KHÔNG có ô `address` nào cả (chuỗi đó do server ghép), nên
+   * đưa `values` thô vào hàm chấm là mục này không bao giờ xanh — app đếm 4/9 trong khi web đếm
+   * 5/9 trên cùng một hồ sơ.
+   */
+  const completeness = {
+    ...values,
+    address: values.addressLine,
+    ownerFullName: ownerAccount.displayName,
+    ownerPhone: ownerAccount.phone,
+  };
+  const suggestedMissing = new Set<string>(missingShopProfileSuggestions(completeness));
+  const missingRequired = new Set<string>([
+    ...missingShopProfileRequirements(completeness),
+    ...(logoRequired && suggestedMissing.has(SHOP_PROFILE_SUGGESTION.LOGO)
+      ? [SHOP_PROFILE_SUGGESTION.LOGO]
+      : []),
+  ]);
+  const missingSuggested = new Set<string>(
+    [...suggestedMissing].filter((key) => !missingRequired.has(key)),
+  );
+  return { missingRequired, missingSuggested };
 }
 
 function Group({
@@ -167,11 +199,7 @@ function Group({
                   : colors.success
               }
             />
-            <Text
-              f={1}
-              col={isMissing ? colors.text : colors.textMuted}
-              fos={fontSize.bodySm}
-            >
+            <Text f={1} col={isMissing ? colors.text : colors.textMuted} fos={fontSize.bodySm}>
               {t(`items.${item}` as 'items.displayName')}
             </Text>
           </XStack>

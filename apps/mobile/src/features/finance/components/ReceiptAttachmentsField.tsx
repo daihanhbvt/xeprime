@@ -9,7 +9,6 @@ import { DOCUMENT_UPLOAD_MAX_BYTES } from '@xeprime/types';
 import { FieldLabel, FieldMessage } from '@/components/ui/Field';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { useAppToast } from '@/components/feedback/use-app-toast';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { logger } from '@/lib/logger';
 import {
   IMAGE_SOURCE,
@@ -20,6 +19,7 @@ import {
   type ImageSource,
 } from '@/lib/r2-image-upload';
 import { useImageErrorMessage } from '@/lib/image-permission-message';
+import { getErrorMessage } from '@/lib/get-error-message';
 import { receiptsApi } from '../api';
 import { RECEIPT_ATTACHMENTS_MAX } from '../constants';
 import { colors, fontSize, iconSize, radius, space } from '@/theme/tokens';
@@ -61,9 +61,9 @@ export function ReceiptAttachmentsField<T extends FieldValues>({
   const t = useTranslations('Finance.receipts.form.attachments');
   const tActions = useTranslations('Common.actions');
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   /* Thiếu quyền máy ảnh · tệp bị từ chối · lỗi mạng — MỘT chỗ đổi lỗi thành chữ cho cả ba. */
-  const imageErrorMessage = useImageErrorMessage(errorMessage);
+  // Web `ReceiptAttachmentsField` nói câu nguyên văn của server khi tải tệp hỏng.
+  const imageErrorMessage = useImageErrorMessage(getErrorMessage);
   const { field, fieldState } = useController({ control, name });
 
   const [picking, setPicking] = useState(false);

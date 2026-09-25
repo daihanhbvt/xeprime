@@ -18,7 +18,7 @@ import {
   type HandoverStatus,
   type HandoverType,
 } from '@xeprime/types';
-import { appWallClockToIso, dayjs, nowInAppTz, toAppTz, type Dayjs } from '@xeprime/domain';
+import { appWallClockToIso, nowInAppTz, toAppTz, type Dayjs } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -36,7 +36,6 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { getErrorCode } from '@/lib/api-client';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
@@ -50,6 +49,7 @@ import {
   useSaveHandoverDraft,
 } from './hooks/use-handovers';
 import type { Handover, HandoverContext, HandoverBelowPickupDetails } from './api';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 const NOTE_MAX = 2000;
 
@@ -184,7 +184,6 @@ function HandoverForm({
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   const permissions = usePermissions();
 
   const isPickup = type === HANDOVER_TYPE.PICKUP;
@@ -291,11 +290,11 @@ function HandoverForm({
                     entered: fmt.kmNumber(details.odometerKm),
                     pickup: fmt.kmNumber(details.pickupKm),
                   })
-                : errorMessage(err),
+                : getErrorMessage(err),
             );
             return;
           }
-          setError(errorMessage(err));
+          setError(getErrorMessage(err));
         },
       },
     );
@@ -505,7 +504,7 @@ function HandoverForm({
           onClose={() => setPickingMoment(false)}
           value={occurredAt}
           onChange={setOccurredAt}
-          notAfter={dayjs()}
+          notAfter={nowInAppTz()}
           title={isPickup ? t('occurredAt.labelPickup') : t('occurredAt.labelReturn')}
         />
       ) : null}

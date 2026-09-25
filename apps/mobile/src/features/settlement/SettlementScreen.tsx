@@ -78,6 +78,7 @@ export function SettlementScreen({ bookingId }: { bookingId: string }) {
         <AppHeader title={t('title')} onBack={back} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenError
+            messageFrom="backend"
             error={query.error}
             title={t('errorTitle')}
             onRetry={() => void query.refetch()}

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
-import { LIST_SEPARATOR } from '@xeprime/domain';
 import { useTranslations } from 'use-intl';
 import {
   BILLING_MODE,
@@ -13,6 +12,8 @@ import {
   type SubscriptionInvoiceStatus,
 } from '@xeprime/types';
 import { nowInAppTz, toAppTz } from '@xeprime/domain';
+import { useRouter } from 'expo-router';
+import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
@@ -20,7 +21,6 @@ import { BlockTitle } from '@/components/ui/BlockTitle';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import type { IconName } from '@/components/ui/Chip';
-import { BadgeRows } from '@/components/ui/BadgeRows';
 import { Card } from '@/components/ui/Card';
 import { CardAccent } from '@/components/ui/CardAccent';
 import { Divider } from '@/components/ui/DataRow';
@@ -37,6 +37,8 @@ import type { ReactNode } from 'react';
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { useCopy } from '@/hooks/use-copy';
+import { goBackOr } from '@/navigation/go-back-or';
+import { ROUTES } from '@/navigation/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
@@ -85,14 +87,44 @@ import {
 /** Dưới ngưỡng này thì ô thời hạn đổi sang sắc cảnh báo — cùng mốc web dùng. */
 const TERM_WARNING_DAYS = 7;
 
-export function SubscriptionScreen({ header }: { header?: ReactNode } = {}) {
+export function SubscriptionScreen({
+  header,
+  shell = 'manage',
+}: {
+  header?: ReactNode;
+  /**
+   * Vỏ của màn. `account` = mở từ khu TÀI KHOẢN (`/account/subscription`, chủ xe tuyến hoa hồng):
+   * không có sidebar quản lý nên KHÔNG được dựng `ManageHeader` (nó đòi `ManageDrawerHost` và
+   * ném lỗi ngoài đó — màn trắng). Tiêu đề + mô tả theo đúng trang web của khu đó
+   * (`page.accountSubtitle`).
+   */
+  shell?: 'manage' | 'account';
+} = {}) {
   const t = useTranslations('Subscription');
+  const router = useRouter();
+  const account = shell === 'account';
 
   return (
     <>
-      {header ?? <ManageHeader />}
+      {header ??
+        (account ? (
+          <AppHeader
+            title={t('page.title')}
+            onBack={() => goBackOr(router, ROUTES.account.home())}
+          />
+        ) : (
+          <ManageHeader />
+        ))}
       <Screen edges={['left', 'right', 'bottom']}>
-        <ManagePageTitle title={t('page.title')} />
+        {account ? (
+          // Khu tài khoản: tiêu đề đã đứng ở thanh trên (như mọi màn của khu này) — dưới đây chỉ còn
+          // câu mô tả của trang web `/account/subscription`, không lặp lại tiêu đề lần hai.
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            {t('page.accountSubtitle')}
+          </Text>
+        ) : (
+          <ManagePageTitle title={t('page.title')} />
+        )}
         <SubscriptionWorkspace />
       </Screen>
     </>
@@ -189,9 +221,6 @@ export function SubscriptionWorkspace() {
 
         <Card>
           <YStack gap={space.md}>
-            <CardHeading icon="speedometer-outline" tone={colors.info} surface={colors.infoSurface}>
-              {t('usage.title')}
-            </CardHeading>
             {/*
                 MỘT dòng trần cho cả đội xe (ADR 0041 điều 4) — cả hai tuyến nay đếm TỔNG ô tô +
                 xe máy. Hai dòng theo loại bên dưới chỉ nói MỨC DÙNG, không mang trần nào: viết
@@ -203,15 +232,7 @@ export function SubscriptionWorkspace() {
             <UsageRow label={t('usage.car')} usage={usage.car} icon="car-sport-outline" />
             <UsageRow label={t('usage.motorbike')} usage={usage.motorbike} icon="bicycle-outline" />
 
-            {/*
-                THỜI HẠN và PHÍ DỊCH VỤ là hai dòng nói về HỢP ĐỒNG, không phải về chỗ xe — một
-                vạch ngăn tách chúng khỏi ba dòng hạn mức phía trên, thay vì để cả năm dòng đổ
-                liền nhau và người đọc phải tự đoán dòng nào thuộc nhóm nào.
-              */}
-            {currentPlan != null || serviceFeePercent != null ? <Divider /> : null}
-
-            {/* Còn bao lâu nữa hết hạn — con số thứ ba của web, và là thứ quyết định gia hạn. */}
-            {currentPlan ? <TermRow endsAt={currentPlan.endsAt} /> : null}
+            {serviceFeePercent != null ? <Divider /> : null}
 
             {/*
                 PHÍ DỊCH VỤ đọc từ CHÍNH SÁCH PHÍ hiệu lực (`/auth/me`), KHÔNG từ `commissionPercent`
@@ -377,8 +398,6 @@ function CurrentPlanCard({
   onPurchase: () => void;
 }) {
   const t = useTranslations('Subscription');
-  const fmt = useAppFormat();
-  const domainLabel = useDomainLabel();
 
   const isCommission = plan?.billingMode === BILLING_MODE.COMMISSION;
 
@@ -404,9 +423,6 @@ function CurrentPlanCard({
             */}
             <IconDisc icon="ribbon-outline" tone={colors.primary} filled />
             <YStack f={1} minWidth={0} gap={2}>
-              <Text col={colors.textMuted} fos={fontSize.meta} fow={fontWeight.semibold}>
-                {t('current.title').toUpperCase()}
-              </Text>
               <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold} numberOfLines={2}>
                 {plan ? plan.planName : t('current.none')}
               </Text>
@@ -417,60 +433,20 @@ function CurrentPlanCard({
             ) : null}
           </XStack>
 
-          {plan ? (
-            <>
-              {/*
-                Chế độ thu phí là thông tin PHÂN LOẠI, không phải trạng thái — nó xuống dải viên
-                nhãn dưới tên chứ không tranh góc trên phải với viên "đang chạy".
-              */}
-              {plan.billingMode ? (
-                <BadgeRows
-                  items={[
-                    {
-                      key: 'billingMode',
-                      label: domainLabel('billingMode', plan.billingMode),
-                      node: (
-                        <StatusBadge
-                          label={domainLabel('billingMode', plan.billingMode)}
-                          color={STATUS_COLOR.NEUTRAL}
-                          size="sm"
-                        />
-                      ),
-                    },
-                  ]}
-                />
-              ) : null}
+          {/*
+            Đúng đầu `PlanSummaryPanel` bên web (sau đợt gọn 7a9d6bb8): tên gói + viên "đang chạy",
+            MỘT câu tóm tắt tuyến, rồi viên THỜI HẠN. Không còn dòng "Hết hạn …/Tối đa … xe" hay viên
+            chế độ thu phí — ô "Tổng số xe" bên dưới đã nói trần, viên thời hạn nói còn bao lâu.
+          */}
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            {plan
+              ? isCommission
+                ? t('current.commissionSummary')
+                : t('current.packageSummary')
+              : t('current.noneHint')}
+          </Text>
 
-              <Divider />
-
-              {/*
-              Hạn mức đọc từ SNAPSHOT trên dòng thuê bao (`quota`), không xuyên qua bậc gói
-              (ADR 0041 điều 3): admin sửa trần của một bậc là quyết định về DANH MỤC, và để nó
-              lật hạn mức của gian hàng đang chạy giữa kỳ là đổi điều kiện một hợp đồng đã thu tiền.
-
-              `maxVehicles === null` nghĩa là KHÔNG GIỚI HẠN và phải thắng — đọc nó thành "chưa
-              khai" rồi rơi về một con số là sai ở đúng chỗ tốn tiền nhất.
-            */}
-              <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                {t('current.expires', { date: fmt.date(plan.endsAt) })}
-                {plan.quota
-                  ? `${LIST_SEPARATOR}${
-                      plan.quota.maxVehicles == null
-                        ? t('purchase.limitVehiclesUnlimited')
-                        : t('purchase.limitVehicles', { count: plan.quota.maxVehicles })
-                    }`
-                  : ''}
-              </Text>
-
-              <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                {isCommission ? t('current.commissionSummary') : t('current.packageSummary')}
-              </Text>
-            </>
-          ) : (
-            <Text col={colors.textMuted} fos={fontSize.bodySm}>
-              {t('current.noneHint')}
-            </Text>
-          )}
+          {plan ? <TermRow endsAt={plan.endsAt} /> : null}
 
           {/* Gia hạn là một VÒNG LẶP, mua lần đầu là một giao dịch — hai hình khác nhau. */}
           {canPurchase ? (
@@ -509,11 +485,13 @@ function FleetTotalRow({ used, limit }: { used: number; limit: number | null }) 
           {t('usage.fleetTotal')}
         </Text>
         <Text col={full ? colors.warning : colors.text} fos={fontSize.body} fow={fontWeight.bold}>
-          {limit == null
-            ? `${used}${LIST_SEPARATOR}${t('usage.unlimited')}`
-            : t('usage.ofLimit', { used, limit })}
+          {limit == null ? used : `${used}/${limit}`}
         </Text>
       </XStack>
+      {/* Chú thích dưới con số — `usage.fleetLimitSub` / `usage.unlimited` như ô của web. */}
+      <Text col={colors.textMuted} fos={fontSize.label}>
+        {limit == null ? t('usage.unlimited') : t('usage.fleetLimitSub')}
+      </Text>
 
       {/*
         `limit == null` = KHÔNG giới hạn (bậc doanh nghiệp) ⇒ không vẽ thanh và không nhắc mua
@@ -526,11 +504,7 @@ function FleetTotalRow({ used, limit }: { used: number; limit: number | null }) 
             percent={Math.min(100, Math.round((used / limit) * 100))}
             tone={full ? 'exception' : 'active'}
             size="sm"
-            label={t('usage.fleetTotal')}
           />
-          <Text col={colors.textMuted} fos={fontSize.label}>
-            {t('usage.fleetTotalHint', { limit })}
-          </Text>
         </>
       ) : null}
     </YStack>
@@ -560,7 +534,7 @@ function TermRow({ endsAt }: { endsAt: string }) {
   return (
     <XStack ai="center" jc="space-between" gap={space.sm}>
       <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
-        {t('term.label')}
+        {t('term.pillLabel')}
       </Text>
       <Text
         col={urgent ? colors.warning : colors.textMuted}
@@ -612,11 +586,9 @@ function QuotaWarning({ fleetQuota }: { fleetQuota: MySubscription['fleetQuota']
  * trong khi backend chặn ở "3 xe", và chủ xe sẽ đăng đủ 3 ô tô rồi ngạc nhiên vì chiếc xe máy đầu
  * tiên bị từ chối — đúng lỗi mà điều 4 vừa gỡ bỏ.
  *
- * Dòng này vì thế chỉ trả lời "đang có mấy chiếc", tách bạch đội xe với số đang bán trên chợ.
+ * Dòng này vì thế chỉ trả lời "đang có mấy chiếc" — đúng `CountTile` của web (không tách số trên chợ).
  */
 function UsageRow({ label, usage, icon }: { label: string; usage: SlotUsage; icon: IconName }) {
-  const t = useTranslations('Subscription');
-
   return (
     /*
       Đĩa hình NHẠT dẫn đầu dòng: ô tô và xe máy là hai dòng chữ gần giống nhau, và hình là thứ
@@ -625,16 +597,9 @@ function UsageRow({ label, usage, icon }: { label: string; usage: SlotUsage; ico
     */
     <XStack ai="center" gap={space.sm}>
       <IconDisc icon={icon} tone={colors.info} surface={colors.infoSurface} />
-      <YStack f={1} minWidth={0} gap={2}>
-        <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
-          {label}
-        </Text>
-        <Text col={colors.textMuted} fos={fontSize.label}>
-          {t('usage.fleet')}: {usage.used}
-          {LIST_SEPARATOR}
-          {t('usage.onMarketplace')}: {usage.onMarketplace}
-        </Text>
-      </YStack>
+      <Text f={1} minWidth={0} col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
+        {label}
+      </Text>
       <Text col={colors.text} fos={fontSize.body} fow={fontWeight.bold}>
         {usage.used}
       </Text>

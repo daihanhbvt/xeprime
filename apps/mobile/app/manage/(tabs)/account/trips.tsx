@@ -1,5 +1,7 @@
 import { TRIP_ROLE } from '@xeprime/types';
+import { ManageHeader } from '@/features/shell/ManageHeader';
 import { TripsScreen } from '@/features/trips/TripsScreen';
+import { ROUTES } from '@/navigation/routes';
 
 /**
  * Lối CHUYỂN TIẾP — chuyến ĐI THUÊ cũ của người đăng nhập, bên trong khu quản lý.
@@ -9,5 +11,15 @@ import { TripsScreen } from '@/features/trips/TripsScreen';
  * của từng chuyến (ADR 0038 điều 8).
  */
 export default function ManageAccountTripsRoute() {
-  return <TripsScreen lockedRole={TRIP_ROLE.RENTER} />;
+  return (
+    <>
+      {/* Màn của khu quản lý: có vỏ quản lý (thanh trên + sidebar) như mọi màn cùng cấp. */}
+      <ManageHeader />
+      <TripsScreen
+        lockedRole={TRIP_ROLE.RENTER}
+        detailHref={ROUTES.manage.accountTripDetail}
+        heading
+      />
+    </>
+  );
 }

@@ -13,7 +13,7 @@ import { BlockTitle } from '@/components/ui/BlockTitle';
 import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { Divider } from '@/components/ui/DataRow';
-import { SelectControl } from '@/components/ui/SelectControl';
+import { MonthPeriodField } from '@/components/ui/MonthPeriodField';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { StatGrid, type StatCell } from '@/components/ui/StatGrid';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -23,16 +23,6 @@ import { useDomainLabel } from '@/i18n/domain';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 import { TAX_PERIOD_FORMAT, type TaxRow } from '@/api/tax/api';
 import { useShopTaxSummary } from '../hooks/use-tax';
-
-/**
- * Số kỳ chọn được trong tấm chọn.
- *
- * Web dùng `DatePicker picker="month"` — một cái lịch tháng vô hạn. Native không có ô đó, và dựng
- * một lịch tháng riêng cho một thẻ là thừa: thứ người ta mở màn thuế để xem là kỳ vừa rồi, còn kỳ
- * của hai năm trước thì đã nằm trong tờ khai đã nộp. Mười hai kỳ gần nhất phủ trọn một năm tài
- * chính, đúng phạm vi người ta còn phải đối chiếu.
- */
-const PERIOD_CHOICES = 12;
 
 /**
  * "Thuế đã khấu trừ trong kỳ" — bề mặt của CHỦ XE. Bản native của `ShopTaxWithheldCard`.
@@ -57,14 +47,6 @@ export function ShopTaxWithheldCard() {
   const canView = has(PERMISSION.FINANCE_VIEW);
 
   const { data, isLoading, isError, error, refetch } = useShopTaxSummary(period, canView);
-
-  const periodOptions = useMemo(() => {
-    const now = nowInAppTz();
-    return Array.from({ length: PERIOD_CHOICES }, (_, index) => {
-      const month = now.subtract(index, 'month');
-      return { value: month.format(TAX_PERIOD_FORMAT), label: fmt.monthYear(month.toDate()) };
-    });
-  }, [fmt]);
 
   const stats = useMemo<readonly StatCell[]>(() => {
     if (!data) return [];
@@ -102,12 +84,11 @@ export function ShopTaxWithheldCard() {
     <YStack gap={space.sm}>
       <BlockTitle>{t('title')}</BlockTitle>
 
-      <SelectControl
-        label={t('period')}
-        value={period}
-        options={periodOptions}
-        onChange={setPeriod}
-      />
+      {/*
+        Web: `DatePicker picker="month"` KHÔNG đặt trần ở thẻ này — nên không truyền `maxPeriod`.
+        12 kỳ gần nhất là lối tắt; ‹ › tới mọi tháng khác.
+      */}
+      <MonthPeriodField label={t('period')} value={period} onChange={setPeriod} />
 
       {/*
         Câu giải thích đứng TRƯỚC con số — y như web. Thuế là khoản duy nhất làm chủ xe nhận ít

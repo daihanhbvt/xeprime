@@ -1,9 +1,5 @@
 import { LEGAL_DOC } from '@xeprime/domain';
-import {
-  contentNavigation,
-  contentPage,
-  CONTENT_NATIVE_TARGET,
-} from './content-navigation';
+import { contentNavigation, contentPage, CONTENT_NATIVE_TARGET } from './content-navigation';
 
 const WEB = 'https://xeprime.vn';
 
@@ -18,26 +14,26 @@ const WEB = 'https://xeprime.vn';
 describe('contentNavigation', () => {
   describe('đi tiếp TRONG WebView', () => {
     it('cả ba khu nội dung và các neo của chúng', () => {
-      expect(contentNavigation(`${WEB}/about`)).toEqual({ kind: 'webview' });
-      expect(contentNavigation(`${WEB}/about#about-money`)).toEqual({ kind: 'webview' });
-      expect(contentNavigation(`${WEB}/support`)).toEqual({ kind: 'webview' });
-      expect(contentNavigation(`${WEB}/support#support-topics`)).toEqual({ kind: 'webview' });
-      expect(contentNavigation(`${WEB}/legal`)).toEqual({ kind: 'webview' });
-      expect(contentNavigation(`${WEB}/legal/terms`)).toEqual({ kind: 'webview' });
-      expect(contentNavigation(`${WEB}/legal/terms#section-3`)).toEqual({ kind: 'webview' });
+      expect(contentNavigation(`${WEB}/about`, WEB)).toEqual({ kind: 'webview' });
+      expect(contentNavigation(`${WEB}/about#about-money`, WEB)).toEqual({ kind: 'webview' });
+      expect(contentNavigation(`${WEB}/support`, WEB)).toEqual({ kind: 'webview' });
+      expect(contentNavigation(`${WEB}/support#support-topics`, WEB)).toEqual({ kind: 'webview' });
+      expect(contentNavigation(`${WEB}/legal`, WEB)).toEqual({ kind: 'webview' });
+      expect(contentNavigation(`${WEB}/legal/terms`, WEB)).toEqual({ kind: 'webview' });
+      expect(contentNavigation(`${WEB}/legal/terms#section-3`, WEB)).toEqual({ kind: 'webview' });
     });
   });
 
   describe('đích có màn NATIVE — rời WebView', () => {
     it('“Đăng xe cho thuê” mở wizard đăng xe', () => {
-      expect(contentNavigation(`${WEB}/list-your-vehicle`)).toEqual({
+      expect(contentNavigation(`${WEB}/list-your-vehicle`, WEB)).toEqual({
         kind: 'native',
         target: CONTENT_NATIVE_TARGET.LIST_YOUR_VEHICLE,
       });
     });
 
     it('“Tìm xe” mở màn tìm kiếm', () => {
-      expect(contentNavigation(`${WEB}/search`)).toEqual({
+      expect(contentNavigation(`${WEB}/search`, WEB)).toEqual({
         kind: 'native',
         target: CONTENT_NATIVE_TARGET.SEARCH,
       });
@@ -45,16 +41,55 @@ describe('contentNavigation', () => {
 
     /** Bản web của khu quản lý đòi session cookie mà app không có. */
     it('khu quản lý mở khu quản lý NATIVE, không phải màn đăng nhập thứ hai', () => {
-      expect(contentNavigation(`${WEB}/manage/login`)).toEqual({
+      expect(contentNavigation(`${WEB}/manage/login`, WEB)).toEqual({
         kind: 'native',
         target: CONTENT_NATIVE_TARGET.MANAGE,
       });
-      expect(contentNavigation(`${WEB}/manage`).kind).toBe('native');
+      expect(contentNavigation(`${WEB}/manage`, WEB).kind).toBe('native');
     });
 
     it('nhận ra đích dù có query hoặc hash', () => {
-      expect(contentNavigation(`${WEB}/search?provinceCode=79`).kind).toBe('native');
-      expect(contentNavigation(`${WEB}/list-your-vehicle?from=about`).kind).toBe('native');
+      expect(contentNavigation(`${WEB}/search?provinceCode=79`, WEB).kind).toBe('native');
+      expect(contentNavigation(`${WEB}/list-your-vehicle?from=about`, WEB).kind).toBe('native');
+    });
+  });
+
+  /*
+   * Breadcrumb "Trang chủ" của mọi trang nội dung (`PageHero`) trỏ `/`. Trước 25/09/2026 nó rơi
+   * vào nhánh CHẶN — bấm không phản hồi — và bị che luôn vì CSS ẩn nhầm cả `PageHero`.
+   */
+  describe('breadcrumb "Trang chủ"', () => {
+    it('`/` (kể cả query/hash) mở màn Khám phá native', () => {
+      const home = { kind: 'native', target: CONTENT_NATIVE_TARGET.HOME };
+      expect(contentNavigation(`${WEB}/`, WEB)).toEqual(home);
+      expect(contentNavigation(WEB, WEB)).toEqual(home);
+      expect(contentNavigation(`${WEB}/?ref=legal`, WEB)).toEqual(home);
+    });
+  });
+
+  /*
+   * Luật cũ chỉ xét ĐƯỜNG DẪN: một trang ở tên miền lạ có `/legal/terms` chạy tiếp trong WebView,
+   * dưới tiêu đề "Điều khoản sử dụng" của app.
+   */
+  describe('tên miền', () => {
+    it('tên miền LẠ bị chặn dù đường dẫn trông như trang nội dung hay đích native', () => {
+      for (const path of ['/legal/terms', '/about', '/support', '/search', '/manage', '/']) {
+        expect(contentNavigation(`https://la.example${path}`, WEB)).toEqual({ kind: 'block' });
+      }
+      expect(contentNavigation('https://xeprime.vn.evil.test/legal', WEB)).toEqual({
+        kind: 'block',
+      });
+      expect(contentNavigation('http://xeprime.vn/legal', WEB)).toEqual({ kind: 'block' });
+    });
+
+    it('so tên miền không phân biệt hoa thường, và gốc web có thể kèm dấu /', () => {
+      expect(contentNavigation('https://XePrime.vn/legal', WEB)).toEqual({ kind: 'webview' });
+      expect(contentNavigation(`${WEB}/legal`, `${WEB}/`)).toEqual({ kind: 'webview' });
+    });
+
+    it('đường dẫn phải bắt đầu bằng khu nội dung, không chỉ CHỨA nó', () => {
+      expect(contentNavigation(`${WEB}/shops/abc/legal`, WEB)).toEqual({ kind: 'block' });
+      expect(contentNavigation(`${WEB}/listings/x/search`, WEB)).toEqual({ kind: 'block' });
     });
   });
 
@@ -64,17 +99,18 @@ describe('contentNavigation', () => {
      * hiểu người dùng đang ở đâu.
      */
     it('phần còn lại của chợ xe và tên miền lạ', () => {
-      expect(contentNavigation(`${WEB}/`)).toEqual({ kind: 'block' });
-      expect(contentNavigation(`${WEB}/listings/abc`)).toEqual({ kind: 'block' });
-      expect(contentNavigation(`${WEB}/shops/gara-abc`)).toEqual({ kind: 'block' });
-      expect(contentNavigation('https://example.com/phishing')).toEqual({ kind: 'block' });
+      expect(contentNavigation(`${WEB}/listings/abc`, WEB)).toEqual({ kind: 'block' });
+      expect(contentNavigation(`${WEB}/shops/gara-abc`, WEB)).toEqual({ kind: 'block' });
+      expect(contentNavigation('https://example.com/phishing', WEB)).toEqual({ kind: 'block' });
     });
 
     /** `includes('/legal')` cũ cho một tên miền lạ lọt vào chỉ vì có chữ đó trong đường dẫn. */
     it('KHÔNG lọt vì đường dẫn chỉ CHỨA tên một khu nội dung', () => {
-      expect(contentNavigation('https://example.com/not-legal/terms')).toEqual({ kind: 'block' });
-      expect(contentNavigation(`${WEB}/legalese`)).toEqual({ kind: 'block' });
-      expect(contentNavigation(`${WEB}/aboutus`)).toEqual({ kind: 'block' });
+      expect(contentNavigation('https://example.com/not-legal/terms', WEB)).toEqual({
+        kind: 'block',
+      });
+      expect(contentNavigation(`${WEB}/legalese`, WEB)).toEqual({ kind: 'block' });
+      expect(contentNavigation(`${WEB}/aboutus`, WEB)).toEqual({ kind: 'block' });
     });
   });
 
@@ -86,8 +122,8 @@ describe('contentNavigation', () => {
    * điều khoản.
    */
   it('KHÔNG bắt nhầm một đoạn đường dẫn chỉ CHỨA tên đích', () => {
-    expect(contentNavigation(`${WEB}/legal/support-policy`)).toEqual({ kind: 'webview' });
-    expect(contentNavigation(`${WEB}/legal/search-terms`)).toEqual({ kind: 'webview' });
+    expect(contentNavigation(`${WEB}/legal/support-policy`, WEB)).toEqual({ kind: 'webview' });
+    expect(contentNavigation(`${WEB}/legal/search-terms`, WEB)).toEqual({ kind: 'webview' });
   });
 });
 

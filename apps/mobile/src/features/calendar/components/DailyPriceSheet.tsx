@@ -18,10 +18,10 @@ import { MoneyField } from '@/components/ui/MoneyField';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { space } from '@/theme/tokens';
 import { calendarApi } from '../api';
 import { useDeleteDailyPrices, useSaveDailyPrices } from '../hooks/use-calendar-mutations';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /** Trần theo `DAILY_PRICE_MAX_DATES` của backend — khớp khoảng xem lớn nhất của lịch. */
 const MAX_RANGE_DAYS = 62;
@@ -72,7 +72,6 @@ function PriceForm({ state, onClose }: { state: DailyPriceSheetState; onClose: (
   const tCommon = useTranslations('Common.actions');
   const fmt = useAppFormat();
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
 
   const anchor = state.date;
   const [from, setFrom] = useState(anchor);
@@ -181,7 +180,7 @@ function PriceForm({ state, onClose }: { state: DailyPriceSheetState; onClose: (
           toast.showSuccess(t('dailyPrice.saved'));
           onClose();
         },
-        onError: (error) => toast.showError(errorMessage(error)),
+        onError: (error) => toast.showError(getErrorMessage(error)),
       },
     );
   });
@@ -201,7 +200,7 @@ function PriceForm({ state, onClose }: { state: DailyPriceSheetState; onClose: (
         },
         onError: (error) => {
           setConfirmingRestore(false);
-          toast.showError(errorMessage(error));
+          toast.showError(getErrorMessage(error));
         },
       },
     );

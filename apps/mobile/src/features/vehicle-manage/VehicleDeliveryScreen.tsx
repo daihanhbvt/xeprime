@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
+import { freeDeliveryWithinKm } from '@xeprime/domain';
 import { POLICY_SOURCE } from '@xeprime/types';
 import { ScreenError } from '@/components/state/ScreenError';
 import { useAppToast } from '@/components/feedback/use-app-toast';
@@ -91,8 +92,8 @@ function DeliveryForm({
   const enabled = useWatch({ control, name: 'deliveryEnabled' });
   const tiers = useWatch({ control, name: 'deliveryTiers' }) ?? [];
   const radius = useWatch({ control, name: 'deliveryMaxRadiusKm' });
-  const firstTier = tiers[0];
-  const firstTierFree = firstTier?.toKm != null && !firstTier.fee;
+  // Cùng luật "miễn phí" với dòng tóm tắt khách thấy và màn duyệt xe (@xeprime/domain) — y như web.
+  const freeWithinKm = freeDeliveryWithinKm(tiers);
 
   const submit = handleSubmit((next) => {
     save.mutate(
@@ -126,9 +127,9 @@ function DeliveryForm({
 
       {enabled ? (
         <YStack gap={space.xs}>
-          {firstTierFree && firstTier?.toKm != null ? (
+          {freeWithinKm !== null ? (
             <Text col={colors.textMuted} fos={fontSize.label}>
-              {t('freeWithin', { km: firstTier.toKm })}
+              {t('freeWithin', { km: freeWithinKm })}
             </Text>
           ) : null}
           {radius != null ? (
