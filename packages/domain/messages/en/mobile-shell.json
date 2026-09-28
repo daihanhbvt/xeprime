@@ -58,5 +58,19 @@
   "appVersion": {
     "label": "Version {version}",
     "labelWithBuild": "Version {version} ({build})"
+  },
+  "partner": {
+    "title": "XePrime Partner app",
+    "intro": "The shop management workspace lives in XePrime Partner — a separate app for partners.",
+    "open": "Open XePrime Partner",
+    "download": "Get XePrime Partner",
+    "later": "Later",
+    "openFailed": "Could not open XePrime Partner. If it is not installed yet, tap Get XePrime Partner.",
+    "successTitle": "Shop registration successful",
+    "successDescription": "Your shop profile has been created. Open or install the XePrime Partner app and sign in with this same account to finish paying for your plan and manage your shop.",
+    "notAvailableTitle": "This part lives in the XePrime app",
+    "notAvailableDescription": "XePrime Partner is only for managing your shop. To find and rent vehicles, please use the XePrime app.",
+    "notEligibleTitle": "This account is not eligible for XePrime Partner",
+    "notEligibleDescription": "This app is for shops on a service plan. If you are a renter or a commission-track owner, please use the XePrime app."
   }
 }

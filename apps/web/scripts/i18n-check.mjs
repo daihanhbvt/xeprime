@@ -42,7 +42,8 @@ const CONFIG_FILE = path.join(WEB_ROOT, 'src/i18n/config.ts');
  */
 const LOCALE_SOURCE_FILE = path.resolve(WEB_ROOT, '../../packages/types/src/locale.ts');
 /** Bảng gom của app native — client thứ hai đọc cùng gốc message. */
-const MOBILE_MESSAGES_FILE = path.resolve(WEB_ROOT, '../mobile/src/i18n/messages.ts');
+// Tách app 25/09/2026: bảng gom mobile sống ở shared (dùng chung cho cả hai app).
+const MOBILE_MESSAGES_FILE = path.resolve(WEB_ROOT, '../mobile/shared/src/i18n/messages.ts');
 
 /** Tiếng Việt là bó CHUẨN về cấu trúc; tiếng Anh phải khớp nó (và ngược lại). */
 const CANONICAL_LOCALE = 'vi';

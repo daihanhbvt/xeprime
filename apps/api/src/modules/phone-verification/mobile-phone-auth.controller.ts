@@ -1,9 +1,10 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
+import { API_ERROR_CODE, MOBILE_CLIENT_APP, PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
 import { Public, VerifiesCredentials } from '../../common/decorators';
 import { AuthService } from '../auth/auth.service';
+import { assertMobileAppAccess } from '../auth/mobile-app-access';
 import { NativeSessionService } from '../auth/native-session.service';
 import { MobileDeviceDto, MobileSessionDto } from '../auth/dto/mobile-auth.dto';
 import { MobilePhoneLoginDto } from './dto/phone-verification.dto';
@@ -52,11 +53,37 @@ export class MobilePhoneAuthController {
   async login(@Body() dto: MobilePhoneLoginDto): Promise<MobileSessionDto> {
     // Đúng thứ tự của bản web: verify OTP đúng mục đích → tìm/tạo tài khoản → mới phát phiên.
     await this.service.verifyOtp(dto.phone, PHONE_VERIFICATION_PURPOSE.LOGIN, dto.code, null);
-    const { userId } = await this.auth.resolveOrCreateUserByPhone(dto.phone);
+    /*
+     * XePrime Partner KHÔNG tạo tài khoản: ở app đó, một số chưa đăng ký phải dừng lại bằng
+     * `PARTNER_REGISTRATION_NOT_SUPPORTED` chứ không được âm thầm thành tài khoản mới — tài
+     * khoản ấy chắc chắn không có gian hàng nên sẽ bị chặn ngay câu lệnh sau, và thứ còn lại
+     * là một hàng rác đã chiếm mất số điện thoại của chính người dùng đó.
+     *
+     * Partner có tài khoản THẬT vẫn đăng nhập OTP bình thường — nhánh này chỉ khác ở chỗ
+     * không tạo mới.
+     */
+    const userId =
+      dto.clientApp === MOBILE_CLIENT_APP.PARTNER
+        ? (await this.auth.resolveExistingUserByPhone(dto.phone))?.userId
+        : (await this.auth.resolveOrCreateUserByPhone(dto.phone)).userId;
 
-    const pair = await this.nativeSessions.issueSession(userId, toDeviceInfo(dto.device));
-    // Quyền + tenant scope đi trong BODY, không trong token (ADR 0017 §1).
+    if (!userId) {
+      throw new ForbiddenException({
+        code: API_ERROR_CODE.PARTNER_REGISTRATION_NOT_SUPPORTED,
+        message: 'Ứng dụng XePrime Partner không tạo tài khoản mới',
+      });
+    }
+
+    // Quyền + tenant scope đi trong BODY, không trong token (ADR 0017 §1). Đọc TRƯỚC khi phát
+    // phiên: lượt bị chặn phạm vi app (403 PARTNER_ACCESS_REQUIRED) không để lại phiên sống.
     const user = await this.auth.me(userId);
+    assertMobileAppAccess(user, dto.clientApp);
+
+    const pair = await this.nativeSessions.issueSession(
+      userId,
+      toDeviceInfo(dto.device),
+      dto.clientApp ?? MOBILE_CLIENT_APP.CUSTOMER,
+    );
 
     return {
       tokens: {

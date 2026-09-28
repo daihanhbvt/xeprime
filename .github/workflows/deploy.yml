@@ -432,7 +432,7 @@ jobs:
           kv MOBILE_ACCESS_TTL_MINUTES "${V_MOBILE_ACCESS_TTL_MINUTES:-15}"
           kv MOBILE_REFRESH_TTL_DAYS "${V_MOBILE_REFRESH_TTL_DAYS:-60}"
           kv MOBILE_JWT_AUDIENCE "${V_MOBILE_JWT_AUDIENCE:-xeprime-mobile}"
-          kv MOBILE_AUTH_REDIRECT_URIS "${V_MOBILE_AUTH_REDIRECT_URIS:-xeprime://auth/callback}"
+          kv MOBILE_AUTH_REDIRECT_URIS "${V_MOBILE_AUTH_REDIRECT_URIS:-xeprime://auth/callback,xeprimepartner://auth/callback}"
 
           kv GOOGLE_OAUTH_CLIENT_ID "${V_GOOGLE_OAUTH_CLIENT_ID:-}"
           kv GOOGLE_OAUTH_CLIENT_SECRET "${S_GOOGLE_OAUTH_CLIENT_SECRET:-}"

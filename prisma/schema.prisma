@@ -507,6 +507,12 @@ model NativeAuthCode {
   /// PKCE S256 challenge do app gửi lúc bắt đầu. Đổi code phải kèm `code_verifier` khớp nó.
   codeChallenge String @map("code_challenge") @db.VarChar(128)
 
+  /// App đã KHỞI TẠO lượt social login — suy từ `redirect_uri` đã allowlist lúc begin
+  /// (`customer` | `partner`, @xeprime/types → MobileClientApp). `consume()` đối chiếu nó với
+  /// `clientApp` của lời gọi exchange: một code xin cho XePrime không đổi được phiên
+  /// XePrime Partner. CHECK `native_auth_codes_client_app_check`.
+  clientApp String @default("customer") @map("client_app") @db.VarChar(20)
+
   expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
   consumedAt DateTime? @map("consumed_at") @db.Timestamptz(3)
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -529,6 +535,12 @@ model NativeAuthSession {
   /// Luôn `mobile` hôm nay. Có cột để ngày thêm client khác (CLI, thiết bị POS) không phải sửa
   /// schema, và để log/audit đọc được phiên này thuộc loại nào.
   clientType String @default("mobile") @map("client_type") @db.VarChar(30)
+
+  /// App mobile đã mở phiên này (`customer` | `partner` — @xeprime/types → MobileClientApp).
+  /// Default `customer` vì app hợp nhất CŨ không gửi trường này. Refresh token buộc vào phiên,
+  /// phiên buộc vào app ⇒ token của app này không tái tạo được phiên cho app kia.
+  /// CHECK `native_auth_sessions_client_app_check`.
+  clientApp String @default("customer") @map("client_app") @db.VarChar(20)
 
   /// Metadata thiết bị — CHỈ để người dùng nhận ra máy nào trong màn "thiết bị đang đăng nhập".
   /// Không dùng cho quyết định bảo mật nào: client tự khai, nên nó không chứng minh được gì.
@@ -2989,6 +3001,12 @@ model PushDevice {
   appVersion String? @map("app_version") @db.VarChar(30)
   /// Tên máy do client tự khai — chỉ để người dùng nhận ra thiết bị, không dùng cho bảo mật.
   deviceName String? @map("device_name") @db.VarChar(120)
+
+  /// App đã đăng ký token này (`customer` | `partner`). NULL = app hợp nhất CŨ, nhận MỌI
+  /// audience — worker lọc `client_app IS NULL OR client_app = <app đích của thông báo>`.
+  /// Hai app cài cùng máy là hai BẢN CÀI FCM khác nhau ⇒ hai token ⇒ hai hàng độc lập; tắt
+  /// hàng của app này không đụng hàng của app kia. CHECK `push_devices_client_app_check`.
+  clientApp String? @map("client_app") @db.VarChar(20)
 
   /// Tắt thay vì xoá: `push_deliveries` còn trỏ tới đây, và lịch sử "vì sao tin này không tới"
   /// là thứ duy nhất trả lời được khiếu nại của người dùng.

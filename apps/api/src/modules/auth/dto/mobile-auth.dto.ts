@@ -1,8 +1,20 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
+import { MOBILE_CLIENT_APP_VALUES, type MobileClientApp } from '@xeprime/types';
 import { IsLoginIdentifier } from '../../../common/login-identifier';
 import { MeDto, RegisterDto } from './auth.dto';
+
+/**
+ * Mô tả dùng chung cho trường `clientApp` của mọi endpoint PHÁT HÀNH phiên native.
+ *
+ * Optional có chủ đích: app hợp nhất CŨ ngoài thị trường không gửi trường này — thiếu là
+ * `customer`, không siết gì thêm. `partner` mở thêm phép kiểm eligibility (403
+ * `PARTNER_ACCESS_REQUIRED` khi tài khoản không thuộc phạm vi XePrime Partner) và ghi vào
+ * `native_auth_sessions.client_app` để refresh token không tái tạo được phiên cho app kia.
+ */
+const CLIENT_APP_DESCRIPTION =
+  'App đang gọi: `customer` (XePrime) hay `partner` (XePrime Partner). Thiếu = `customer` (app hợp nhất cũ).';
 
 /**
  * DTO của bốn endpoint `/auth/mobile/*` — ADR 0017.
@@ -64,6 +76,11 @@ export class MobileLoginDto {
   @IsOptional()
   @Type(() => MobileDeviceDto)
   device?: MobileDeviceDto;
+
+  @ApiPropertyOptional({ enum: MOBILE_CLIENT_APP_VALUES, description: CLIENT_APP_DESCRIPTION })
+  @IsOptional()
+  @IsIn(MOBILE_CLIENT_APP_VALUES)
+  clientApp?: MobileClientApp;
 }
 
 /**
@@ -153,6 +170,11 @@ export class MobileSocialExchangeDto {
   @IsOptional()
   @Type(() => MobileDeviceDto)
   device?: MobileDeviceDto;
+
+  @ApiPropertyOptional({ enum: MOBILE_CLIENT_APP_VALUES, description: CLIENT_APP_DESCRIPTION })
+  @IsOptional()
+  @IsIn(MOBILE_CLIENT_APP_VALUES)
+  clientApp?: MobileClientApp;
 }
 
 /**
@@ -168,4 +190,9 @@ export class MobileRegisterDto extends RegisterDto {
   @IsOptional()
   @Type(() => MobileDeviceDto)
   device?: MobileDeviceDto;
+
+  @ApiPropertyOptional({ enum: MOBILE_CLIENT_APP_VALUES, description: CLIENT_APP_DESCRIPTION })
+  @IsOptional()
+  @IsIn(MOBILE_CLIENT_APP_VALUES)
+  clientApp?: MobileClientApp;
 }

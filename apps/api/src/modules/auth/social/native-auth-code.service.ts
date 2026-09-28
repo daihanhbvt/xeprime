@@ -1,7 +1,11 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { newId } from '@xeprime/prisma';
-import { API_ERROR_CODE } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  MOBILE_CLIENT_APP,
+  type MobileClientApp,
+} from '@xeprime/types';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { SocialAuthFailure } from './social-auth.error';
 
@@ -34,8 +38,17 @@ function sha256Hex(value: string): string {
 export class NativeAuthCodeService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Phát mã cho một user vừa xác thực xong. Trả CODE TRẦN — chỉ hash của nó được lưu. */
-  async issue(params: { userId: string; codeChallenge: string }): Promise<string> {
+  /**
+   * Phát mã cho một user vừa xác thực xong. Trả CODE TRẦN — chỉ hash của nó được lưu.
+   *
+   * `clientApp` đóng băng app ĐÃ khởi tạo luồng (suy từ `redirect_uri` qua allowlist) — bước
+   * `consume` đối chiếu lại, nên không app nào đổi được ĐÍCH của một code sau khi nhận nó.
+   */
+  async issue(params: {
+    userId: string;
+    codeChallenge: string;
+    clientApp: MobileClientApp;
+  }): Promise<string> {
     const code = randomBytes(32).toString('base64url');
 
     await this.prisma.nativeAuthCode.create({
@@ -44,6 +57,7 @@ export class NativeAuthCodeService {
         userId: params.userId,
         codeHash: sha256Hex(code),
         codeChallenge: params.codeChallenge,
+        clientApp: params.clientApp,
         expiresAt: new Date(Date.now() + CODE_TTL_MS),
       },
     });
@@ -61,7 +75,11 @@ export class NativeAuthCodeService {
    * Điều kiện hết hạn nằm TRONG cùng câu update, không tách ra kiểm sau — tách ra là mở lại đúng
    * khe thời gian vừa đóng.
    */
-  async consume(code: string, codeVerifier: string): Promise<{ userId: string }> {
+  async consume(
+    code: string,
+    codeVerifier: string,
+    clientApp: MobileClientApp | undefined,
+  ): Promise<{ userId: string }> {
     const codeHash = sha256Hex(code);
 
     const { count } = await this.prisma.nativeAuthCode.updateMany({
@@ -72,9 +90,17 @@ export class NativeAuthCodeService {
 
     const row = await this.prisma.nativeAuthCode.findUnique({
       where: { codeHash },
-      select: { userId: true, codeChallenge: true },
+      select: { userId: true, codeChallenge: true, clientApp: true },
     });
     if (!row) throw this.invalid('code biến mất sau khi consume');
+
+    /*
+     * Ràng buộc app: code đã được phát cho ĐÚNG app mở trình duyệt (suy từ `redirect_uri`
+     * allowlist). Lời gọi exchange khai app khác — hoặc app cũ không khai (`undefined` =
+     * customer) cầm code của Partner — đều đốt mã và nhận cùng một lỗi mờ.
+     */
+    const caller = clientApp ?? MOBILE_CLIENT_APP.CUSTOMER;
+    if (caller !== row.clientApp) throw this.invalid('clientApp không khớp app đã khởi tạo');
 
     /*
      * PKCE: `code_verifier` là thứ duy nhất chứng minh người gọi `exchange` chính là app đã mở
