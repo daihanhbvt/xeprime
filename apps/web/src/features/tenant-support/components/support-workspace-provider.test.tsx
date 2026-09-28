@@ -12,7 +12,7 @@ import {
   SUPPORT_WORKSPACE,
 } from '@xeprime/types';
 import { useFeature } from '@/hooks/use-feature';
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, adminPartnerPath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { renderWithIntl } from '@/i18n/test-utils';
@@ -173,7 +173,12 @@ describe('SupportSessionBoundary + SupportDataScope', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Thoát chế độ hỗ trợ/ }));
     await waitFor(() => expect(api.revokeSupportContext).toHaveBeenCalledWith(CONTEXT_A));
-    await waitFor(() => expect(nav.push).toHaveBeenCalledWith(ROUTES.MANAGE.ADMIN_TENANTS));
+    // Về đúng danh sách của gian hàng vừa hỗ trợ (loại do server tra), panel chi tiết mở sẵn.
+    await waitFor(() =>
+      expect(nav.push).toHaveBeenCalledWith(
+        adminPartnerPath.resolveTenant(supportContextFixture().tenant.id),
+      ),
+    );
   });
 
   it('phiên hết hạn: nói rõ đã kết thúc và không dựng khu làm việc', async () => {

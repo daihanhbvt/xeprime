@@ -30,7 +30,10 @@ export class PlatformTenantsController {
 
   @Get()
   @RequirePermissions(PERMISSION.PLATFORM_TENANT_VIEW)
-  @ApiOperation({ summary: 'Danh sách gian hàng (phân trang, lọc trạng thái, tìm kiếm)' })
+  @ApiOperation({
+    summary:
+      'Danh sách đối tác theo loại (gian hàng gói / chủ xe cá nhân) — phân trang, lọc, sắp xếp',
+  })
   @ApiOkResponse({ type: PlatformTenantPageDto })
   list(@Query() query: PlatformTenantListQueryDto): Promise<PlatformTenantPageDto> {
     return this.tenants.list(query) as Promise<PlatformTenantPageDto>;

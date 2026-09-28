@@ -4,7 +4,13 @@
  * CLAUDE.md mục 5 cấm rải string literal nghiệp vụ trong component; route cũng vậy — đổi
  * cấu trúc URL mà phải grep chuỗi `/manage/...` khắp source là cách sinh link chết.
  */
-import { REGISTRATION_TRACK, isSupportContextId, type RegistrationTrack } from '@xeprime/types';
+import {
+  PLATFORM_PARTNER_KIND,
+  REGISTRATION_TRACK,
+  isSupportContextId,
+  type PlatformPartnerKind,
+  type RegistrationTrack,
+} from '@xeprime/types';
 
 export const ROUTES = {
   HOME: '/',
@@ -288,8 +294,21 @@ export const ROUTES = {
     SUPPORT_CASES: '/manage/support/cases',
 
     // Quản trị nền tảng
+    /** "Kiểm duyệt xe" — hàng đợi duyệt xe lên chợ. Chỉ khớp TUYỆT ĐỐI trên menu (`NavLeaf.exact`). */
     ADMIN: '/manage/admin',
+    /**
+     * BỘ TRA LOẠI ĐỐI TÁC — và là URL cũ của danh sách gian hàng chung (trước 28/09/2026).
+     *
+     * ⚠️ KHÔNG xoá như một route "legacy": `adminPartnerPath.resolveTenant` dựa vào nó cho chi tiết
+     * đơn thuê, lối thoát phiên hỗ trợ và dashboard nền tảng. `?tenant=<id>` tra loại của gian
+     * hàng đó ở server rồi mở đúng danh sách với chi tiết mở sẵn; không có `tenant` thì về "Gian
+     * hàng gói" kèm nguyên bộ lọc.
+     */
     ADMIN_TENANTS: '/manage/admin/tenants',
+    /** Gốc hai danh sách đối tác — chuyển tiếp về "Gian hàng gói". */
+    ADMIN_PARTNERS: '/manage/admin/partners',
+    ADMIN_PARTNER_SHOPS: '/manage/admin/partners/shops',
+    ADMIN_PARTNER_OWNERS: '/manage/admin/partners/owners',
     ADMIN_VEHICLES: '/manage/admin/vehicles',
     ADMIN_BOOKINGS: '/manage/admin/bookings',
     ADMIN_CUSTOMERS: '/manage/admin/customers',
@@ -549,6 +568,32 @@ export const adminTenantSupportPath = {
     `${ROUTES.MANAGE.ADMIN_TENANT_SUPPORT}/${contextId}/vehicles/${id}/edit`,
   vehicleManageSection: (contextId: string, id: string, section: VehicleManageSection): string =>
     `${ROUTES.MANAGE.ADMIN_TENANT_SUPPORT}/${contextId}/vehicles/${id}/manage/${section}`,
+};
+
+/** Tham số URL mở sẵn chi tiết một gian hàng trên danh sách đối tác (ADR 0004 — sống qua F5). */
+export const ADMIN_PARTNER_TENANT_PARAM = 'tenant';
+
+/** Tab đang mở của drawer chi tiết đối tác — cùng URL với `tenant`, để F5/Back mở lại đúng tab. */
+export const ADMIN_PARTNER_TAB_PARAM = 'tab';
+
+const ADMIN_PARTNER_LIST_ROUTE: Readonly<Record<PlatformPartnerKind, string>> = {
+  [PLATFORM_PARTNER_KIND.PACKAGE_SHOP]: ROUTES.MANAGE.ADMIN_PARTNER_SHOPS,
+  [PLATFORM_PARTNER_KIND.INDIVIDUAL_OWNER]: ROUTES.MANAGE.ADMIN_PARTNER_OWNERS,
+};
+
+/**
+ * Hai danh sách đối tác của Platform Admin — MỘT chỗ ghép URL.
+ *
+ * `resolveTenant` dành cho nơi biết gian hàng nhưng KHÔNG biết loại (một đơn thuê, lối thoát phiên
+ * hỗ trợ): nó đi qua URL cũ `ADMIN_TENANTS`, nơi server nói gian hàng thuộc danh sách nào. Client
+ * không bao giờ tự đoán loại.
+ */
+export const adminPartnerPath = {
+  list: (kind: PlatformPartnerKind): string => ADMIN_PARTNER_LIST_ROUTE[kind],
+  tenant: (kind: PlatformPartnerKind, tenantId: string): string =>
+    `${ADMIN_PARTNER_LIST_ROUTE[kind]}?${new URLSearchParams({ [ADMIN_PARTNER_TENANT_PARAM]: tenantId })}`,
+  resolveTenant: (tenantId: string): string =>
+    `${ROUTES.MANAGE.ADMIN_TENANTS}?${new URLSearchParams({ [ADMIN_PARTNER_TENANT_PARAM]: tenantId })}`,
 };
 
 export function tenantSupportContextIdFromPath(pathname: string): string | null {

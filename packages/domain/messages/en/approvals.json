@@ -15,7 +15,7 @@
     "status": "Status",
     "submittedAt": "Submitted",
     "all": "All",
-    "anyStatus": "All statuses"
+    "anyStatus": "All review records"
   },
   "table": {
     "label": "Vehicles awaiting review",

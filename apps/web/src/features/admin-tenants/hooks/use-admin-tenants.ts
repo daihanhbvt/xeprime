@@ -8,11 +8,23 @@ import {
   lockTenant,
   unlockTenant,
 } from '../api';
+import { adminPartnerKeys } from '../partner-detail/hooks';
 import type { AdminTenantFilters } from '../types';
+
+/**
+ * Khoá cache của đối tác ở Platform Admin — MỘT chỗ khai, vì feature khác cũng phải làm mới nó:
+ * gán/huỷ gói (`admin-plans`) có thể chuyển một gian hàng từ danh sách này sang danh sách kia.
+ */
+export const adminTenantQueryKeys = {
+  /** Mọi trang của CẢ HAI danh sách đối tác. */
+  lists: ['admin-tenants'] as const,
+  list: (filters: AdminTenantFilters) => ['admin-tenants', filtersToParams(filters)] as const,
+  detail: (id: string | null) => ['admin-tenant', id] as const,
+};
 
 export function useAdminTenants(filters: AdminTenantFilters) {
   return useQuery({
-    queryKey: ['admin-tenants', filtersToParams(filters)],
+    queryKey: adminTenantQueryKeys.list(filters),
     queryFn: () => fetchAdminTenants(filters),
     placeholderData: keepPreviousData,
   });
@@ -20,7 +32,7 @@ export function useAdminTenants(filters: AdminTenantFilters) {
 
 export function useAdminTenant(id: string | null) {
   return useQuery({
-    queryKey: ['admin-tenant', id],
+    queryKey: adminTenantQueryKeys.detail(id),
     queryFn: () => fetchAdminTenant(id as string),
     enabled: Boolean(id),
   });
@@ -33,8 +45,10 @@ export function useTenantActions(id: string) {
     mutationFn: ({ kind, reason }: { kind: 'lock' | 'unlock'; reason?: string }) =>
       kind === 'lock' ? lockTenant(id, reason) : unlockTenant(id),
     onSuccess: (detail) => {
-      queryClient.setQueryData(['admin-tenant', id], detail);
-      void queryClient.invalidateQueries({ queryKey: ['admin-tenants'] });
+      queryClient.setQueryData(adminTenantQueryKeys.detail(id), detail);
+      void queryClient.invalidateQueries({ queryKey: adminTenantQueryKeys.lists });
+      // Đầu drawer chi tiết đối tác hiện trạng thái — không được giữ "Đang hoạt động" sau khi khoá.
+      void queryClient.invalidateQueries({ queryKey: adminPartnerKeys.tenant(id) });
     },
   });
 }

@@ -469,6 +469,12 @@
     "watchlist": "Watchlist",
     "blocked": "Refused service"
   },
+  "platformTenantSort": {
+    "newest": "Newest first",
+    "oldest": "Oldest first",
+    "name": "Name A → Z",
+    "vehicles": "Most vehicles"
+  },
   "tenantCustomerSort": {
     "last_rental": "Most recent rental",
     "rental_count": "Most rentals",
@@ -889,5 +895,111 @@
   "storefrontKind": {
     "personal": "Individual",
     "shop": "Shop"
+  },
+  "auditActionCategory": {
+    "vehicle": "Vehicles",
+    "vehicle_document": "Vehicle documents",
+    "maintenance": "Maintenance",
+    "booking": "Bookings",
+    "booking_request": "Booking requests",
+    "finance": "Money",
+    "branch": "Branches",
+    "member": "Staff",
+    "subscription": "Subscription",
+    "profile": "Profile",
+    "partner_status": "Partner status",
+    "customer": "Customers",
+    "support_session": "Support sessions",
+    "support_case": "Support / disputes",
+    "other": "Other"
+  },
+  "auditActionVerb": {
+    "create": "Created",
+    "update": "Updated",
+    "delete": "Deleted",
+    "archive": "Archived",
+    "restore": "Restored",
+    "submit": "Submitted",
+    "submit_review": "Submitted for review",
+    "submit_public": "Submitted for review",
+    "cancel_public_review": "Review request withdrawn",
+    "open": "Opened",
+    "revoke": "Ended",
+    "approve": "Approved",
+    "reject": "Rejected",
+    "cancel": "Cancelled",
+    "transition": "Status changed",
+    "lock": "Locked",
+    "unlock": "Unlocked",
+    "assign": "Assigned",
+    "resolve": "Resolved",
+    "withdraw": "Withdrawn",
+    "record": "Recorded",
+    "void": "Voided",
+    "requested": "Requested",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "paid": "Paid out",
+    "cancelled": "Cancelled",
+    "reversed": "Reversed",
+    "reassign": "Branch changed",
+    "repair": "Sync repaired",
+    "create_draft": "Draft vehicle created",
+    "invite": "Invited",
+    "invite_accept": "Invitation accepted",
+    "invite_decline": "Invitation declined",
+    "invite_revoke": "Invitation revoked",
+    "remove": "Removed",
+    "update_role": "Role changed",
+    "add": "Added",
+    "activate": "Activated",
+    "deactivate": "Deactivated",
+    "set_default": "Set as default",
+    "expire": "Expired",
+    "save": "Saved",
+    "start": "Started",
+    "complete": "Completed",
+    "settle": "Settled",
+    "issue": "Issued",
+    "activate_from_payment": "Activated from payment",
+    "contact_reveal": "Full contact viewed",
+    "bulk_create": "Created in bulk",
+    "bulk_release": "Released in bulk",
+    "attach": "Attached"
+  },
+  "billingPhase": {
+    "current": "Active",
+    "grace": "In grace period",
+    "lapsed": "Expired",
+    "unconfigured": "Plan not set"
+  },
+  "featureState": {
+    "enabled": "On",
+    "read_only": "Read-only",
+    "hidden": "Not included"
+  },
+  "shopVerification": {
+    "unverified": "Not verified",
+    "pending": "Verifying",
+    "verified": "Verified",
+    "needs_revision": "Needs changes",
+    "rejected": "Rejected"
+  },
+  "supportSessionStatus": {
+    "active": "Open",
+    "expired": "Expired",
+    "revoked": "Exited"
+  },
+  "tenantDocumentStatus": {
+    "pending": "Awaiting review",
+    "approved": "Valid",
+    "rejected": "Invalid"
+  },
+  "tenantDocumentType": {
+    "cccd_front": "ID card (front)",
+    "cccd_back": "ID card (back)",
+    "business_license": "Business licence",
+    "contract": "Contract",
+    "other": "Other document"
   }
 }

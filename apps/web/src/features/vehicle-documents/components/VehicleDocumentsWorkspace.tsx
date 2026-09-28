@@ -62,6 +62,7 @@ import { PermissionState } from '@/components/feedback/PermissionState';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
+import { isForbiddenError } from '@/lib/http-status';
 import { ApiClientError, getErrorCode, getErrorMessage } from '@/services/api-client';
 import { validateDocumentFile, uploadToR2 } from '@/services/upload';
 import type { VehicleDetail } from '@/features/vehicles/types';
@@ -147,10 +148,6 @@ function titleOf(
   return doc?.type === VEHICLE_DOCUMENT_TYPE.OTHER && doc.customTypeName
     ? domainLabel('vehicleDocumentPreset', doc.customTypeName, doc.customTypeName)
     : domainLabel('vehicleDocumentType', type);
-}
-
-function isForbidden(error: unknown): boolean {
-  return error instanceof ApiClientError && error.status === 403;
 }
 
 /**
@@ -382,11 +379,7 @@ function DocumentsList({
         }
         extra={
           canManage ? (
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setAdding(true)}
-            >
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setAdding(true)}>
               {isMobile ? t('addTypeCompact') : t('addType')}
             </Button>
           ) : null
@@ -635,9 +628,7 @@ function DocumentRow({
           className={`${styles.rowTile} ${styles.rowTileAction}`}
           data-type={row.type}
           aria-label={
-            tileMode === 'upload'
-              ? t('row.uploadFor', { title })
-              : t('row.downloadFor', { title })
+            tileMode === 'upload' ? t('row.uploadFor', { title }) : t('row.downloadFor', { title })
           }
           onClick={tileMode === 'upload' ? pickFile : onOpen}
         >
@@ -1123,7 +1114,7 @@ function DocumentDetailDialog({
     values: defaults,
   });
 
-  const blocked = Boolean(document) && (!canViewDetails || isForbidden(detail.error));
+  const blocked = Boolean(document) && (!canViewDetails || isForbiddenError(detail.error));
   const loading = Boolean(document) && canViewDetails && detail.isLoading;
 
   async function save(values: VehicleDocumentFormValues) {
@@ -1343,7 +1334,7 @@ function DocumentHistoryDialog({
       onClose={onClose}
       footer={null}
     >
-      {!canViewFiles || isForbidden(versions.error) ? (
+      {!canViewFiles || isForbiddenError(versions.error) ? (
         <Alert
           type="warning"
           showIcon
@@ -1353,9 +1344,7 @@ function DocumentHistoryDialog({
       ) : (
         <>
           {versions.isLoading ? <Skeleton active paragraph={{ rows: 3 }} /> : null}
-          {versions.isError ? (
-            <Alert type="error" showIcon title={t('history.loadError')} />
-          ) : null}
+          {versions.isError ? <Alert type="error" showIcon title={t('history.loadError')} /> : null}
           {versions.data ? (
             <List
               dataSource={versions.data}

@@ -9,16 +9,7 @@ import {
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
-import {
-  IsBoolean,
-  IsIn,
-  IsInt,
-  IsOptional,
-  IsString,
-  Max,
-  MaxLength,
-  Min,
-} from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 
 const DEFAULT_LIMIT = 20;
@@ -116,7 +107,11 @@ export class PlatformVehicleDto {
   @ApiProperty({ enum: VEHICLE_PUBLIC_STATUS_VALUES }) publicStatus!: string;
   @ApiProperty({ enum: VEHICLE_OPERATION_STATUS_VALUES }) operationStatus!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) mainImageUrl!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Số tiền dạng string (ADR 0007)' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Số tiền dạng string (ADR 0007)',
+  })
   weekdayPrice!: string | null;
   @ApiProperty() tenantId!: string;
   @ApiProperty() tenantName!: string;

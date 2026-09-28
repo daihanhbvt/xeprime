@@ -12,10 +12,13 @@ export function DashboardPanel({
   title,
   icon,
   empty,
+  extra,
   children,
 }: {
   title: string;
   icon?: ReactNode;
+  /** Góc phải đầu panel — một link đi tiếp ("Xem tất cả") hoặc nhãn ngữ cảnh ("Chỉ xem"). */
+  extra?: ReactNode;
   /** Câu trạng thái rỗng riêng của panel. Bỏ trống thì dùng câu chung của `Common`. */
   empty?: string;
   children?: ReactNode;
@@ -28,6 +31,7 @@ export function DashboardPanel({
       <header className={styles.head}>
         {icon ? <span className={styles.headIcon}>{icon}</span> : null}
         <span className={styles.title}>{title}</span>
+        {extra ? <span className={styles.extra}>{extra}</span> : null}
       </header>
       <div className={styles.body}>
         {hasContent ? children : <div className={styles.empty}>{emptyText}</div>}
