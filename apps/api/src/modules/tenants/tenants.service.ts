@@ -24,6 +24,7 @@ import {
   TENANT_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
+import type { BranchUpdatePlan } from '../branches/branches.service';
 import { BillingService } from '../billing/billing.service';
 import { BranchesService } from '../branches/branches.service';
 import { WalletService } from '../wallet/wallet.service';
@@ -427,53 +428,57 @@ export class TenantsService {
      * thị ở địa chỉ cũ trên marketplace vì `public_listings` không hề biết có thay đổi.
      */
     const { provinceCode, wardCode, addressLine, address, ...profile } = dto;
-    if (
+
+    // Tra địa chỉ (có gọi mạng) TRƯỚC transaction — rồi dời chi nhánh mặc định và lưu hồ sơ trong
+    // MỘT transaction: không còn trạng thái "chi nhánh đã dời mà hồ sơ chưa lưu".
+    const branchPlan =
       provinceCode !== undefined ||
       wardCode !== undefined ||
       addressLine !== undefined ||
       address !== undefined
-    ) {
-      await this.moveDefaultBranch(tenantId, userId, {
-        provinceCode,
-        wardCode,
-        addressLine: addressLine ?? address,
-      });
-    }
+        ? await this.planDefaultBranchMove(tenantId, {
+            provinceCode,
+            wardCode,
+            addressLine: addressLine ?? address,
+          })
+        : null;
 
     const data = normalizeProfileWrite(profile);
-    // upsert: tenant tạo qua đường khác có thể chưa có hồ sơ.
-    await this.prisma.tenantProfile.upsert({
-      where: { tenantId },
-      create: { tenantId, ...data },
-      update: data,
+    await this.prisma.$transaction(async (tx) => {
+      if (branchPlan) await this.branches.applyUpdate(tx, tenantId, userId, branchPlan);
+      // upsert: tenant tạo qua đường khác có thể chưa có hồ sơ.
+      await tx.tenantProfile.upsert({
+        where: { tenantId },
+        create: { tenantId, ...data },
+        update: data,
+      });
     });
     return this.getMyShop(tenantId);
   }
 
   /**
    * Đổi tỉnh của chi nhánh mặc định — hệ quả (đồng bộ `public_listings`, đồng bộ lại hai cột
-   * sao chép trên hồ sơ, ghi audit) nằm trọn trong `BranchesService.update`.
+   * sao chép trên hồ sơ, ghi audit) nằm trọn trong `BranchesService.applyUpdate`.
    */
-  private async moveDefaultBranch(
+  private async planDefaultBranchMove(
     tenantId: string,
-    userId: string,
     patch: { provinceCode?: string; wardCode?: string; addressLine?: string },
-  ): Promise<void> {
+  ): Promise<BranchUpdatePlan | null> {
     const branch = await this.prisma.tenantBranch.findFirst({
       where: { tenantId, isDefault: true, deletedAt: null },
       select: { id: true, provinceCode: true, wardCode: true, addressLine: true },
     });
     // Dữ liệu cũ chưa qua migration chi nhánh: không có gì để dời, và tuyệt đối không tự ghi các
     // cột sao chép — làm vậy là tạo ra đúng cái lệch mà hàm này sinh ra để tránh.
-    if (!branch) return;
+    if (!branch) return null;
 
     const unchanged =
       (patch.provinceCode === undefined || patch.provinceCode === branch.provinceCode) &&
       (patch.wardCode === undefined || patch.wardCode === branch.wardCode) &&
       (patch.addressLine === undefined || patch.addressLine === branch.addressLine);
-    if (unchanged) return;
+    if (unchanged) return null;
 
-    await this.branches.update(tenantId, branch.id, userId, patch);
+    return this.branches.planUpdate(tenantId, branch.id, patch);
   }
 
   /**

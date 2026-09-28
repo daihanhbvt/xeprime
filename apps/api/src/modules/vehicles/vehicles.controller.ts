@@ -47,8 +47,12 @@ import {
   VehicleListQueryDto,
   VehicleStatsListDto,
   VehicleStatsQueryDto,
+  ListingRepairResultDto,
 } from './dto/vehicle.dto';
-import { supportVehicleUpdateCapabilities } from './vehicle-support-policy';
+import {
+  supportVehicleCreateCapabilities,
+  supportVehicleUpdateCapabilities,
+} from './vehicle-support-policy';
 import { VehiclesService } from './vehicles.service';
 
 /**
@@ -294,6 +298,8 @@ export class VehiclesController {
 
   @Post()
   @RequirePermissions(PERMISSION.VEHICLE_CREATE)
+  // Phiên hỗ trợ: xe NHÁP, đúng danh sách trường — không giá, không nguồn xe (ADR 0050 §13).
+  @SupportAction(supportVehicleCreateCapabilities)
   @ApiOperation({ summary: 'Thêm xe mới (mặc định trạng thái public = nháp)' })
   @ApiCreatedResponse({ type: VehicleDetailDto })
   create(
@@ -324,6 +330,8 @@ export class VehiclesController {
   @Post(':id/submit-public')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.VEHICLE_SUBMIT_PUBLIC)
+  // Phiên hỗ trợ gửi DUYỆT thay chủ xe — phiếu vào hàng đợi của đội duyệt, không bao giờ tự duyệt.
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_SUBMIT_REVIEW)
   @ApiOperation({ summary: 'Gửi xe đi duyệt công khai (đi qua luồng duyệt nền tảng — ADR 0008)' })
   @ApiOkResponse({ type: VehicleDetailDto })
   submitPublic(
@@ -356,6 +364,26 @@ export class VehiclesController {
     @Body() dto: SetMarketplaceVisibilityDto,
   ): Promise<VehicleDetailDto> {
     return this.vehicles.setMarketplaceVisibility(tenant.tenantId, id, user.id, dto.enabled);
+  }
+
+  /**
+   * Đồng bộ lại snapshot công khai của MỘT xe từ dữ liệu nguồn (ADR 0050 §13) — sửa chữa của NỀN
+   * TẢNG khi snapshot kẹt, chỉ chạy trong phiên hỗ trợ. Không nhận payload: `ListingsService` tự
+   * suy lại từ xe, nên gọi lại bao nhiêu lần cũng cùng kết quả, và không đổi kiểm duyệt hay công tắc
+   * lên chợ của chủ xe.
+   */
+  @Post(':id/listing/resync')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions(PERMISSION.VEHICLE_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.LISTING_REPAIR)
+  @ApiOperation({ summary: 'Đồng bộ lại snapshot công khai của xe (phiên hỗ trợ — ADR 0050)' })
+  @ApiOkResponse({ type: ListingRepairResultDto })
+  repairListing(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<ListingRepairResultDto> {
+    return this.vehicles.repairListing(tenant.tenantId, id, user.id);
   }
 
   @Delete(':id')

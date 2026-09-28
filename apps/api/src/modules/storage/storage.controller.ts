@@ -46,6 +46,8 @@ export class StorageController {
 
   @Post('shop-media/presign')
   @RequirePermissions(PERMISSION.TENANT_UPDATE)
+  // CỐ Ý không `@SupportAction`: phiên hỗ trợ không sửa mặt tiền, nên cũng không tải logo/ảnh bìa
+  // (ADR 0050 §13) — default-deny.
   @ApiOperation({ summary: 'Presign upload logo/ảnh bìa gian hàng lên R2' })
   @ApiCreatedResponse({ type: UploadPresignDto })
   presignShopMedia(

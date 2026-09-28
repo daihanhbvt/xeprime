@@ -1,11 +1,12 @@
 import { Body, Controller, Get, Param, Patch, Put, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
+import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
   TenantScoped,
+  SupportAction,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
@@ -19,6 +20,7 @@ import {
   VehicleTripHistoryPageDto,
   VehicleTripHistoryQueryDto,
 } from './dto/vehicle-settings.dto';
+import { supportServiceSettingCapabilities } from './service-setting-support-policy';
 import { VehicleSettingsService } from './vehicle-settings.service';
 import { VehicleTripHistoryService } from './vehicle-trip-history.service';
 
@@ -40,6 +42,7 @@ export class VehicleSettingsController {
 
   @Get(':id/operation-settings')
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_VIEW)
   @ApiOperation({ summary: 'Khung giờ giao/nhận và thời gian chết giữa hai chuyến của xe' })
   @ApiOkResponse({ type: VehicleOperationSettingsDto })
   getOperation(
@@ -51,6 +54,8 @@ export class VehicleSettingsController {
 
   @Put(':id/operation-settings')
   @RequirePermissions(PERMISSION.VEHICLE_UPDATE)
+  // Khung giờ giao/nhận + thời gian chết — điều kiện vận hành, không dính tiền (ADR 0050 §13).
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE)
   @ApiOperation({
     summary: 'Lưu khung giờ giao/nhận + thời gian chết (áp cho lịch giữ mới, không sửa lịch cũ)',
   })
@@ -66,6 +71,7 @@ export class VehicleSettingsController {
 
   @Get(':id/service-settings')
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_VIEW)
   @ApiOperation({ summary: 'Thiết lập tự động nhận / giấy tờ / điều khoản theo dịch vụ của xe' })
   @ApiOkResponse({ type: VehicleServiceSettingsDto })
   async listServiceSettings(
@@ -77,6 +83,7 @@ export class VehicleSettingsController {
 
   @Patch(':id/service-settings/:serviceType')
   @RequirePermissions(PERMISSION.VEHICLE_UPDATE)
+  @SupportAction(supportServiceSettingCapabilities)
   @ApiOperation({
     summary: 'Sửa một phần thiết lập của một dịch vụ (trường không gửi giữ nguyên)',
   })

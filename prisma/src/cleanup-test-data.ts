@@ -190,7 +190,12 @@ async function main(): Promise<void> {
     };
     await tx.auditLog.updateMany({
       where: { supportContext: supportWhere },
-      data: { supportContextId: null, supportCapability: null },
+      data: { supportContextId: null, supportCapability: null, supportReason: null },
+    });
+    // Khoá lịch do phiên đặt hộ (Đợt 2B) cũng trỏ về phiên bằng `RESTRICT`.
+    await tx.vehicleBlock.updateMany({
+      where: { supportContext: supportWhere },
+      data: { supportContextId: null },
     });
     await tx.tenantSupportContext.deleteMany({ where: supportWhere });
 

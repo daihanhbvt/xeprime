@@ -2784,17 +2784,21 @@ model VehicleBlock {
   /// đoán sai nghĩa là gỡ nhầm một lịch khoá ai đó đặt tay vì lý do thật.
   bulkBatchId String?  @map("bulk_batch_id") @db.Char(26)
   createdBy   String?  @map("created_by") @db.Char(26)
+  /// Phiên hỗ trợ của nền tảng đã tạo khoá này (ADR 0050 §13) — phiên chỉ sửa/gỡ khoá của CHÍNH nó.
+  supportContextId String? @map("support_context_id") @db.Char(26)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   creator User?   @relation("vehicle_block_creator", fields: [createdBy], references: [id])
+  supportContext TenantSupportContext? @relation(fields: [supportContextId], references: [id], onDelete: Restrict)
 
   @@index([tenantId, vehicleId, startAt])
   @@index([tenantId, startAt])
   /// Gỡ trọn một lô: `WHERE tenant_id = ? AND bulk_batch_id = ?`.
   @@index([tenantId, bulkBatchId])
+  @@index([supportContextId])
   @@map("vehicle_blocks")
 }
 
@@ -2851,7 +2855,9 @@ model AuditLog {
   /// Lý do hỗ trợ đọc qua FK — bản ghi phiên không bao giờ bị xoá (RESTRICT).
   supportContextId  String? @map("support_context_id") @db.Char(26)
   /// Capability của phiên mà endpoint đã đòi (vd. `vehicle.media.manage`). Chỉ có khi có phiên.
-  supportCapability String? @map("support_capability") @db.VarChar(60)
+  supportCapability String? @map("support_capability") @db.VarChar(500)
+  /// Lý do RIÊNG của một thao tác mức trung bình/cao trong phiên (ADR 0050 §13) — khác lý do mở phiên.
+  supportReason     String? @map("support_reason") @db.VarChar(500)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   tenant         Tenant?               @relation(fields: [tenantId], references: [id], onDelete: SetNull)
@@ -2903,6 +2909,7 @@ model TenantSupportContext {
   revoker   User?      @relation("tenant_support_context_revoker", fields: [revokedBy], references: [id], onDelete: SetNull)
   tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   auditLogs AuditLog[]
+  vehicleBlocks VehicleBlock[]
 
   @@index([actorUserId, createdAt])
   @@index([tenantId, createdAt])

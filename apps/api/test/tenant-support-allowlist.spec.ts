@@ -62,6 +62,27 @@ const SUPPORT_ALLOWLIST = [
   'TenantsController.myShop',
   'VehicleBlocksController.getOne',
   'VehiclesController.getPricing',
+  // ── Đợt 2B: GHI hẹp, mỗi thao tác một capability (ADR 0050 §13) ──
+  'BranchesController.create',
+  'BranchesController.update',
+  'CalendarController.checkConflict',
+  // CỐ Ý không có `TenantsController.updateProfile` / `StorageController.presignShopMedia`: hồ sơ
+  // gian hàng chỉ đọc trong phiên (ADR 0050 §13, sửa 28/09/2026).
+  'VehicleBlocksController.create',
+  'VehicleBlocksController.remove',
+  'VehicleBlocksController.update',
+  'VehicleDocumentsController.attach',
+  'VehicleDocumentsController.create',
+  'VehicleDocumentsController.list',
+  'VehicleDocumentsController.presign',
+  'VehicleDocumentsController.update',
+  'VehicleSettingsController.getOperation',
+  'VehicleSettingsController.listServiceSettings',
+  'VehicleSettingsController.patchServiceSetting',
+  'VehicleSettingsController.saveOperation',
+  'VehiclesController.create',
+  'VehiclesController.repairListing',
+  'VehiclesController.submitPublic',
 ].sort();
 
 type Ctor = abstract new (...args: never[]) => unknown;
@@ -102,7 +123,7 @@ describe('Allowlist của phiên hỗ trợ gian hàng (ADR 0050)', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('tập handler mở cho phiên đúng bằng allowlist Đợt 1 + 2A', () => {
+  it('tập handler mở cho phiên đúng bằng allowlist Đợt 1 + 2A + 2B', () => {
     const opened = controllers.flatMap((c) =>
       methodNames(c.prototype)
         .filter((name) => {

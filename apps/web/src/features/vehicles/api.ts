@@ -12,6 +12,7 @@ import {
 import type {
   CreateVehicleInput,
   FleetSummary,
+  ListingRepairResult,
   SaveVehicleSourceInput,
   SourceContractDownload,
   SourceContractPresign,
@@ -65,6 +66,10 @@ export const deleteVehicle = (id: string): Promise<{ id: string }> =>
 /** Gửi xe đi duyệt công khai (ADR 0008) — backend tạo phiếu duyệt, không tự set approved_public. */
 export const submitVehiclePublic = (id: string): Promise<VehicleDetail> =>
   apiPost<VehicleDetail>(`/vehicles/${id}/submit-public`, {});
+
+/** Đồng bộ lại snapshot công khai của xe — chỉ có trong phiên hỗ trợ (ADR 0050 §13). */
+export const repairVehicleListing = (id: string): Promise<ListingRepairResult> =>
+  apiPost<ListingRepairResult>(`/vehicles/${id}/listing/resync`, {});
 
 /**
  * Công tắc hiển thị trên chợ của chủ xe (ADR 0048) — KHÁC hẳn gửi duyệt: nó không đụng trạng

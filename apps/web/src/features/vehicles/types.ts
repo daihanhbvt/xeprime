@@ -8,6 +8,8 @@ type Schemas = components['schemas'];
 
 export type VehicleListItem = Schemas['VehicleListItemDto'];
 export type VehicleDetail = Schemas['VehicleDetailDto'];
+/** Kết quả đồng bộ lại snapshot công khai — thao tác sửa chữa của phiên hỗ trợ (ADR 0050 §13). */
+export type ListingRepairResult = Schemas['ListingRepairResultDto'];
 export type CreateVehicleInput = Schemas['CreateVehicleDto'];
 export type UpdateVehicleInput = Schemas['UpdateVehicleDto'];
 

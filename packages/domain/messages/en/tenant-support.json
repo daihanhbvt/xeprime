@@ -59,7 +59,8 @@
       "modeInvalid": "Choose a support mode",
       "reasonRequired": "Enter a support reason",
       "reasonMin": "The reason needs at least 10 characters",
-      "reasonMax": "The reason can be at most 500 characters"
+      "reasonMax": "The reason can be at most 500 characters",
+      "reasonGeneric": "Not specific enough — \"support\", \"admin fix\", \"as requested\" don't say why"
     }
   },
   "home": {
@@ -85,5 +86,54 @@
   },
   "navigation": {
     "blocked": "This screen is not available in a shop support session."
+  },
+  "reason": {
+    "title": "Confirm support action",
+    "label": "Reason for this action",
+    "placeholder": "E.g. Owner called the hotline at 2pm to move the car to the Thu Duc branch — ticket #5521",
+    "help": "Say why, or give the owner's request code. The reason is logged with the change.",
+    "submit": "Confirm and continue",
+    "invalid": "That reason isn't specific enough — say why, or give the owner's request code.",
+    "ownerRequested": "I confirm the owner asked for this vehicle to be submitted for review.",
+    "validation": {
+      "reasonRequired": "Enter a reason for this action",
+      "reasonMax": "The reason can be at most 500 characters",
+      "reasonGeneric": "Not specific enough — \"support\", \"admin fix\", \"as requested\" don't say why",
+      "ownerRequestRequired": "Confirm that the owner requested this"
+    },
+    "consequence": {
+      "createDraft": {
+        "title": "Create a draft vehicle for the shop",
+        "body": "The vehicle is created as a draft with no price. It isn't submitted for review and doesn't go on the marketplace. The owner will see it in their list."
+      },
+      "documentManage": {
+        "title": "Update vehicle documents",
+        "body": "The document is saved to the vehicle profile and earlier versions stay in history. This doesn't mark the document as verified."
+      },
+      "branchReassign": {
+        "title": "Move the vehicle to another branch",
+        "body": "The vehicle's public location on the marketplace changes to the new branch. Renters searching by area will see it at the new address."
+      },
+      "operationsUpdate": {
+        "title": "Change the vehicle's operating settings",
+        "body": "New bookings follow the new service types, operating status or handover windows. Existing trips are not changed."
+      },
+      "scheduleBlock": {
+        "title": "Block the vehicle calendar",
+        "body": "During the blocked period, the vehicle stops taking new trips on the marketplace."
+      },
+      "branchBasic": {
+        "title": "Update a branch",
+        "body": "Changing a branch address changes the public location of every vehicle in that branch."
+      },
+      "submitReview": {
+        "title": "Submit the vehicle for review on behalf of the owner",
+        "body": "The vehicle joins the platform review queue under your name. Someone else reviews it — this action doesn't approve anything."
+      },
+      "listingRepair": {
+        "title": "Resync the public listing",
+        "body": "The vehicle's public snapshot is rebuilt from its current data. Review status and the owner's marketplace switch are not changed."
+      }
+    }
   }
 }

@@ -55,7 +55,8 @@ export function supportContextFixture(overrides: Partial<SupportContext> = {}): 
         workspace === SUPPORT_WORKSPACE.MANAGE
           ? SHOP_ONBOARDING_STATE.PACKAGE_ACTIVE
           : SHOP_ONBOARDING_STATE.COMMISSION,
-      billingMode: workspace === SUPPORT_WORKSPACE.MANAGE ? BILLING_MODE.PACKAGE : BILLING_MODE.COMMISSION,
+      billingMode:
+        workspace === SUPPORT_WORKSPACE.MANAGE ? BILLING_MODE.PACKAGE : BILLING_MODE.COMMISSION,
       billingPhase: BILLING_PHASE.CURRENT,
       planCode: null,
       planName: null,

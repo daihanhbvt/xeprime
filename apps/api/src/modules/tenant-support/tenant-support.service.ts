@@ -1,5 +1,10 @@
 import { randomBytes } from 'node:crypto';
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
@@ -17,6 +22,7 @@ import {
   VEHICLE_PUBLIC_STATUS,
   canWriteFeature,
   isFeatureVisible,
+  isMeaningfulSupportReason,
   isPackageOnboardingPending,
   isSupportCapability,
   isSupportContextId,
@@ -159,8 +165,9 @@ export function supportWorkspaceOf(tenant: TenantContext): SupportWorkspace {
  *  - Đọc (Đợt 2A): bộ của TUYẾN — `SUPPORT_READS_BY_WORKSPACE`; capability gắn với một cờ gói
  *    (`SUPPORT_READ_FEATURE`) chỉ có khi cờ đó còn HIỆN (`enabled` hoặc `read_only`) — phiên không mở
  *    màn mà chính gian hàng không thấy.
- *  - Ghi: phiên `assist` + người mở còn quyền assist + gian hàng không bị khoá. Bảo dưỡng ghi được
- *    khi cờ gói cho ghi — phiên hỗ trợ không vượt cổng gói (ADR 0050 điều 5).
+ *  - Ghi: phiên `assist` + người mở còn quyền assist + gian hàng không bị khoá (ADR 0050 §13). Việc
+ *    trên chiếc xe: cả hai bộ. Hồ sơ gian hàng: chỉ đọc ở MỌI bộ, mọi chế độ. Tạo xe nháp: Full Manage. Bảo dưỡng / chi nhánh: Full
+ *    Manage VÀ cờ gói cho ghi — phiên hỗ trợ không vượt cổng gói (ADR 0050 điều 5).
  */
 export function deriveSupportCapabilities(input: {
   workspace: SupportWorkspace;
@@ -194,8 +201,27 @@ export function deriveSupportCapabilities(input: {
     };
   }
 
-  out.push(SUPPORT_CAPABILITY.VEHICLE_INFO_EDIT, SUPPORT_CAPABILITY.VEHICLE_MEDIA_MANAGE);
-  if (isManage && canWriteFeature(maintenance)) out.push(SUPPORT_CAPABILITY.MAINTENANCE_MANAGE);
+  // Cả hai bộ giao diện: việc trên CHÍNH chiếc xe — đúng những màn cả hai tuyến có. Hồ sơ gian hàng
+  // (mặt tiền công khai) KHÔNG có capability ghi nào: phiên chỉ xem nó qua `tenant_profile.view`.
+  out.push(
+    SUPPORT_CAPABILITY.VEHICLE_INFO_EDIT,
+    SUPPORT_CAPABILITY.VEHICLE_MEDIA_MANAGE,
+    SUPPORT_CAPABILITY.VEHICLE_DOCUMENT_MANAGE,
+    SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
+    SUPPORT_CAPABILITY.VEHICLE_SCHEDULE_BLOCK_MANAGE,
+    SUPPORT_CAPABILITY.VEHICLE_SUBMIT_REVIEW,
+    SUPPORT_CAPABILITY.LISTING_REPAIR,
+  );
+  if (isManage) {
+    // Tạo xe nháp dùng form của bộ Full Manage; Owner Lite tạo xe qua luồng đăng ký công khai.
+    out.push(SUPPORT_CAPABILITY.VEHICLE_CREATE_DRAFT);
+    if (canWriteFeature(maintenance)) out.push(SUPPORT_CAPABILITY.MAINTENANCE_MANAGE);
+    // Nhiều chi nhánh là tính năng của GÓI (ADR 0027) — chuyển xe giữa chi nhánh và quản lý chi
+    // nhánh chỉ có khi chính gian hàng được GHI tính năng đó; phiên không vượt cổng gói.
+    if (canWriteFeature(tenant.features[PLAN_FEATURE.BRANCHES])) {
+      out.push(SUPPORT_CAPABILITY.VEHICLE_BRANCH_REASSIGN, SUPPORT_CAPABILITY.BRANCH_BASIC_MANAGE);
+    }
+  }
   return { capabilities: out, writeRestriction: null };
 }
 
@@ -234,6 +260,14 @@ export class TenantSupportService {
     dto: OpenSupportContextDto,
   ): Promise<SupportContextDto> {
     const mode = dto.mode as SupportMode;
+    // Lý do phải nói VÌ SAO (ADR 0050 §13) — "hỗ trợ", "admin sửa", "theo yêu cầu" thì không.
+    if (!isMeaningfulSupportReason(dto.reason)) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Lý do chưa đủ cụ thể — ghi rõ vì sao hoặc mã yêu cầu của chủ xe',
+        details: { field: 'reason' },
+      });
+    }
     if (
       mode === SUPPORT_MODE.ASSIST &&
       !platformPermissions.includes(PERMISSION.PLATFORM_TENANT_SUPPORT_ASSIST)
@@ -413,8 +447,8 @@ export class TenantSupportService {
   }
 
   /** Gắn phiên đã xác minh vào request đang chạy — audit đọc lại từ đây. */
-  bindRequest(support: SupportScope, capability: string | null): void {
-    this.store.bind(support, capability);
+  bindRequest(support: SupportScope, capability: string | null, reason: string | null = null): void {
+    this.store.bind(support, capability, reason);
   }
 
   private buildResolved(

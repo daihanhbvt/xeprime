@@ -433,6 +433,9 @@ export class CalendarController {
    */
   @Post('check-conflict')
   @RequirePermissions(PERMISSION.CALENDAR_VIEW)
+  // Phiên hỗ trợ: hộp thoại khoá lịch gọi nó để cảnh báo sớm. POST nhưng KHÔNG ghi gì — capability
+  // đọc, không đòi lý do (ADR 0050 §13).
+  @SupportAction(SUPPORT_CAPABILITY.CALENDAR_VIEW)
   @ApiOperation({ summary: 'Xem trước trùng lịch (preview, không phải lớp bảo vệ)' })
   @ApiOkResponse({ type: CheckConflictResultDto })
   async checkConflict(

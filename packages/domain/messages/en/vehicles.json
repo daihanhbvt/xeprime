@@ -672,6 +672,11 @@
       "title": "Booking automation",
       "editLink": "Configure",
       "hint": "Turn on instant booking so a paid request becomes an order without waiting for your approval. Set the conditions that apply to this vehicle."
+    },
+    "repairListing": {
+      "action": "Resync public listing",
+      "fixed": "Resynced — the marketplace listing now matches the vehicle data",
+      "unchanged": "The marketplace listing already matched the vehicle data — nothing changed"
     }
   },
   "edit": {
@@ -1446,5 +1451,14 @@
       "description": "Instant booking applies to self-drive and with-driver rentals. Long-term rentals are always scheduled by the shop, so they have no such setting.",
       "action": "Edit vehicle services"
     }
+  },
+  "create": {
+    "title": "Add vehicle",
+    "savedDraft": "Vehicle saved as draft",
+    "createdAndSubmitted": "Vehicle created and submitted for public review",
+    "createdNotSubmitted": "Vehicle created, but it could not be submitted for review: {error}",
+    "forbiddenTitle": "You cannot add vehicles",
+    "forbiddenBody": "You need the permission below to add vehicles to the shop. Ask an administrator to grant it.",
+    "backToList": "Back to vehicles"
   }
 }

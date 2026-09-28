@@ -10,10 +10,7 @@ import {
   SUPPORT_MODE,
   SUPPORT_REASON_LIMITS,
 } from '@xeprime/types';
-import {
-  openSupportContextSchema,
-  type OpenSupportContextValues,
-} from '@xeprime/validators';
+import { openSupportContextSchema, type OpenSupportContextValues } from '@xeprime/validators';
 import { RadioGroupField } from '@/components/form/RadioGroupField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
@@ -82,9 +79,7 @@ export function StartSupportDialog({
       confirmLoading={start.isPending}
     >
       <form className={styles.form} noValidate onSubmit={(event) => void submit(event)}>
-        <p className={styles.lead}>
-          {t('lead', { minutes: SUPPORT_CONTEXT_TTL_MINUTES })}
-        </p>
+        <p className={styles.lead}>{t('lead', { minutes: SUPPORT_CONTEXT_TTL_MINUTES })}</p>
         {start.isError ? (
           <Alert type="error" showIcon title={errorMessage(start.error)} className={styles.error} />
         ) : null}
@@ -102,9 +97,7 @@ export function StartSupportDialog({
             {
               value: SUPPORT_MODE.ASSIST,
               label: t('mode.assist.label'),
-              description: canAssist
-                ? t('mode.assist.description')
-                : t('mode.assist.noPermission'),
+              description: canAssist ? t('mode.assist.description') : t('mode.assist.noPermission'),
               disabled: !canAssist,
             },
           ]}

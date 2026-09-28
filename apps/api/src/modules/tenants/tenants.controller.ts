@@ -97,6 +97,8 @@ export class TenantsController {
   }
 
   @Patch('current/profile')
+  // CỐ Ý không `@SupportAction`: phiên hỗ trợ chỉ XEM hồ sơ gian hàng, không sửa mặt tiền công khai
+  // — default-deny trả `SUPPORT_ACTION_NOT_ALLOWED` (ADR 0050 §13).
   @TenantScoped()
   @RequirePermissions(PERMISSION.TENANT_UPDATE)
   @ApiOperation({ summary: 'Cập nhật hồ sơ gian hàng' })

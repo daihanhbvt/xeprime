@@ -6,6 +6,8 @@ import {
   SUPPORT_CONTEXT_HEADER,
   type Permission,
   type TenantRole,
+  SUPPORT_REASON_HEADER,
+  supportCapabilityNeedsReason,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RbacService } from '../../modules/rbac/rbac.service';
@@ -17,6 +19,7 @@ import {
   type SupportActionResolver,
 } from '../decorators';
 import { buildTenantContext, tenantContextSelect } from '../plan/tenant-context';
+import { readSupportReason, supportReasonRequired } from '../support/support-escalation';
 import type { SupportCapability } from '@xeprime/types';
 import type { RequestContext } from '../types/request-context';
 
@@ -165,8 +168,25 @@ export class TenantScopeGuard implements CanActivate {
       });
     }
 
+    /*
+     * Thao tác mức trung bình/cao cần LÝ DO RIÊNG (ADR 0050 §13) — kiểm SAU khi phiên hợp lệ và
+     * capability có mặt, để một phiên chỉ-xem nhận đúng 403 chứ không bị mời nhập lý do vô ích.
+     */
+    const header = readSupportReason(req.headers[SUPPORT_REASON_HEADER]);
+    // Lý do đi kèm LỆNH GHI. Một lượt đọc được gác bằng capability ghi (danh sách giấy tờ chỉ mở
+    // cho phiên được quản lý giấy tờ) vẫn là lượt đọc — không có gì để giải trình.
+    const isRead = req.method === 'GET' || req.method === 'HEAD';
+    const needsReason = isRead ? [] : required.filter(supportCapabilityNeedsReason);
+    if (needsReason.length > 0 && header.kind !== 'ok') {
+      throw supportReasonRequired(needsReason, header.kind === 'invalid');
+    }
+
     req.tenant = resolved.tenant;
-    this.support.bindRequest(resolved.support, required.length > 0 ? required.join(',') : null);
+    this.support.bindRequest(
+      resolved.support,
+      required.length > 0 ? required.join(',') : null,
+      header.kind === 'ok' ? header.reason : null,
+    );
     return true;
   }
 }

@@ -43,6 +43,7 @@ import { useSupportContext } from '../hooks/use-tenant-support';
 import { SupportSessionScope, supportSessionOf, useSupportSession } from '../support-session';
 import type { SupportContext } from '../types';
 import { SupportBanner } from './SupportBanner';
+import { SupportReasonDialog } from './SupportReasonDialog';
 
 /** Hai mã nói "phiên này không còn dùng được" — gặp ở bất kỳ request nào là đọc lại phiên ngay. */
 const DEAD_SESSION_CODES: readonly string[] = [
@@ -244,6 +245,8 @@ export function SupportDataScope({ children }: { children: ReactNode }) {
   return (
     <>
       <SupportBanner context={session.context} />
+      {/* Lý do RIÊNG của thao tác mức trung bình/cao — server đòi, hộp thoại hỏi (ADR 0050 §13). */}
+      <SupportReasonDialog />
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     </>
   );

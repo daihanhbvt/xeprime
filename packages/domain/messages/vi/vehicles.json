@@ -672,6 +672,11 @@
       "title": "Tối ưu nhận chuyến",
       "editLink": "Cấu hình",
       "hint": "Bật tự động nhận chuyến để khách đặt xong là có đơn ngay, không phải chờ bạn bấm duyệt. Đặt kèm điều kiện áp dụng riêng cho xe này."
+    },
+    "repairListing": {
+      "action": "Đồng bộ lại hiển thị công khai",
+      "fixed": "Đã đồng bộ lại — hiển thị ngoài chợ đã khớp dữ liệu xe",
+      "unchanged": "Hiển thị ngoài chợ vốn đã khớp dữ liệu xe — không có gì thay đổi"
     }
   },
   "edit": {
@@ -1446,5 +1451,14 @@
       "description": "Tự động nhận chuyến áp dụng cho thuê tự lái và thuê có tài xế. Thuê dài hạn luôn do gian hàng chốt lịch tay nên không có thiết lập này.",
       "action": "Sửa dịch vụ của xe"
     }
+  },
+  "create": {
+    "title": "Thêm xe",
+    "savedDraft": "Đã lưu nháp xe",
+    "createdAndSubmitted": "Đã tạo xe và gửi duyệt công khai",
+    "createdNotSubmitted": "Đã tạo xe nhưng chưa gửi duyệt được: {error}",
+    "forbiddenTitle": "Không có quyền thêm xe",
+    "forbiddenBody": "Bạn cần quyền dưới đây để thêm xe vào gian hàng. Liên hệ quản trị viên để được cấp quyền.",
+    "backToList": "Về danh sách xe"
   }
 }

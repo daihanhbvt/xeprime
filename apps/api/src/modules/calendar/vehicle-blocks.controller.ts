@@ -59,6 +59,8 @@ export class VehicleBlocksController {
 
   @Post()
   @RequirePermissions(PERMISSION.VEHICLE_BLOCK_SCHEDULE)
+  // Phiên hỗ trợ: khoá lịch TƯƠNG LAI, lý do riêng, chống trùng bằng constraint lịch (ADR 0050 §13).
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_SCHEDULE_BLOCK_MANAGE)
   @ApiOperation({ summary: 'Khoá xe một khoảng thời gian (giữ chỗ lịch trong cùng transaction)' })
   @ApiCreatedResponse({ type: VehicleBlockDto })
   create(
@@ -71,6 +73,7 @@ export class VehicleBlocksController {
 
   @Patch(':id')
   @RequirePermissions(PERMISSION.VEHICLE_BLOCK_SCHEDULE)
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_SCHEDULE_BLOCK_MANAGE)
   @ApiOperation({ summary: 'Sửa lịch khoá (optimistic concurrency, đồng bộ lịch xe)' })
   @ApiOkResponse({ type: VehicleBlockDto })
   update(
@@ -85,6 +88,7 @@ export class VehicleBlocksController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @RequirePermissions(PERMISSION.VEHICLE_BLOCK_SCHEDULE)
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_SCHEDULE_BLOCK_MANAGE)
   @ApiOperation({ summary: 'Gỡ khoá — NHẢ chỗ trên lịch xe trong cùng transaction' })
   @ApiNoContentResponse()
   async remove(

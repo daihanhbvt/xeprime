@@ -92,6 +92,7 @@ import type { DomainLabel } from '@/i18n/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 
 const STANDARD_TYPES: readonly VehicleDocumentType[] = [
@@ -225,6 +226,8 @@ function DocumentsList({
   canViewFiles: boolean;
 }) {
   const t = useTranslations('Vehicles.documents');
+  // Phiên hỗ trợ (ADR 0050 §13): thêm/cập nhật giấy tờ được; lưu trữ, OCR (đọc nội dung file) thì không.
+  const privateHidden = useSupportHides(SUPPORT_HIDDEN_AREA.DOCUMENT_PRIVATE);
   const domainLabel = useDomainLabel();
   const uploadRejectionMessage = useUploadRejectionMessage();
   const isMobile = useIsMobile();
@@ -399,6 +402,7 @@ function DocumentsList({
               title={titleOf(row.type, row.document, domainLabel)}
               uploading={uploading[row.key] ?? null}
               canManage={canManage}
+              canRemove={canManage && !privateHidden}
               canViewDetails={canViewDetails}
               canViewFiles={canViewFiles}
               downloading={downloadingId === row.document?.id}
@@ -421,13 +425,15 @@ function DocumentsList({
         />
       </Card>
 
-      <Alert
-        type="info"
-        showIcon
-        className={styles.ocrNote}
-        title={t('ocrNoteTitle')}
-        description={t('ocrNoteBody')}
-      />
+      {privateHidden ? null : (
+        <Alert
+          type="info"
+          showIcon
+          className={styles.ocrNote}
+          title={t('ocrNoteTitle')}
+          description={t('ocrNoteBody')}
+        />
+      )}
 
       <AddDocumentDialog
         vehicleId={vehicle.id}
@@ -481,6 +487,7 @@ function DocumentRow({
   title,
   uploading,
   canManage,
+  canRemove,
   canViewDetails,
   canViewFiles,
   downloading,
@@ -498,6 +505,8 @@ function DocumentRow({
   title: string;
   uploading: UploadingState | null;
   canManage: boolean;
+  /** Lưu trữ giấy tờ — tách khỏi `canManage` vì phiên hỗ trợ quản lý được nhưng không lưu trữ. */
+  canRemove: boolean;
   canViewDetails: boolean;
   canViewFiles: boolean;
   downloading: boolean;
@@ -602,7 +611,7 @@ function DocumentRow({
       icon: <DeleteOutlined />,
       danger: true,
       loading: removing,
-      hidden: !doc || !canManage,
+      hidden: !doc || !canRemove,
       confirm: {
         title: t('remove.title'),
         description: <span className={styles.removeConfirm}>{t('remove.body', { title })}</span>,

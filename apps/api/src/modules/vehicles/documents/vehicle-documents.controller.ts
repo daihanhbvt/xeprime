@@ -10,11 +10,12 @@ import {
   Post,
 } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
+import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
+  SupportAction,
   TenantScoped,
 } from '../../../common/decorators';
 import { IdResultDto } from '../../../common/dto/api-response.dto';
@@ -31,6 +32,10 @@ import {
   VehicleDocumentVersionListDto,
 } from './dto/vehicle-document.dto';
 import { VehicleDocumentsService } from './vehicle-documents.service';
+import {
+  supportDocumentCreateCapabilities,
+  supportDocumentUpdateCapabilities,
+} from './vehicle-document-support-policy';
 
 /**
  * Giấy tờ xe (Wave 5 + 5.1) — tài liệu pháp lý RIÊNG TƯ, BỐN mức quyền tách bạch
@@ -50,6 +55,8 @@ export class VehicleDocumentsController {
 
   @Get()
   @RequirePermissions(PERMISSION.VEHICLE_DOCUMENT_VIEW)
+  // Danh sách TRẠNG THÁI (không chi tiết/file) — chỉ phiên hỗ trợ thao tác giấy tờ mới cần đọc nó.
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_DOCUMENT_MANAGE)
   @ApiOperation({ summary: 'Danh sách TRẠNG THÁI giấy tờ của một xe (summary — không PII)' })
   @ApiOkResponse({ type: VehicleDocumentListDto })
   async list(
@@ -87,6 +94,7 @@ export class VehicleDocumentsController {
 
   @Post()
   @RequirePermissions(PERMISSION.VEHICLE_DOCUMENT_MANAGE)
+  @SupportAction(supportDocumentCreateCapabilities)
   @ApiOperation({ summary: 'Tạo hồ sơ giấy tờ (metadata — file gắn sau)' })
   @ApiCreatedResponse({ type: VehicleDocumentDetailDto })
   create(
@@ -100,6 +108,7 @@ export class VehicleDocumentsController {
 
   @Patch(':documentId')
   @RequirePermissions(PERMISSION.VEHICLE_DOCUMENT_MANAGE)
+  @SupportAction(supportDocumentUpdateCapabilities)
   @ApiOperation({ summary: 'Cập nhật metadata giấy tờ (optimistic concurrency)' })
   @ApiOkResponse({ type: VehicleDocumentDetailDto })
   update(
@@ -128,6 +137,7 @@ export class VehicleDocumentsController {
 
   @Post(':documentId/versions/presign')
   @RequirePermissions(PERMISSION.VEHICLE_DOCUMENT_MANAGE)
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_DOCUMENT_MANAGE)
   @ApiOperation({ summary: 'Presign upload file giấy tờ vào kho riêng tư (Wave 4.1)' })
   @ApiCreatedResponse({ type: SourceContractPresignDto })
   presign(
@@ -143,6 +153,8 @@ export class VehicleDocumentsController {
   @Post(':documentId/versions')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.VEHICLE_DOCUMENT_MANAGE)
+  // Phiên bản mới: bản cũ vào lịch sử theo đúng workflow hiện tại — không xoá, không ghi đè.
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_DOCUMENT_MANAGE)
   @ApiOperation({ summary: 'Xác minh object rồi gắn thành phiên bản mới (bản cũ vào lịch sử)' })
   @ApiOkResponse({ type: VehicleDocumentDetailDto })
   attach(

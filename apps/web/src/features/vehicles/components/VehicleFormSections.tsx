@@ -48,6 +48,7 @@ import { VehicleClassificationFields } from './VehicleClassificationFields';
 import { VehicleEnergyFields } from './VehicleEnergyFields';
 import { VehicleIdentityFields } from './VehicleIdentityFields';
 import { useSupportPinnedField } from '@/features/tenant-support/support-session';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import styles from './VehicleForm.module.css';
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -148,39 +149,42 @@ const FIELDS_OF = Object.fromEntries(
  */
 export function useCreateWizardSteps(): readonly VehicleWizardStep[] {
   const t = useTranslations('Vehicles.form.wizard');
+  // Phiên hỗ trợ tạo xe NHÁP không giá (ADR 0050 §13): bước giá + giao xe không dựng.
+  const pricingHidden = useSupportHides(SUPPORT_HIDDEN_AREA.MONEY_TERMS);
 
   return useMemo(
-    () => [
-      {
-        key: 'basic',
-        title: t('basic.title'),
-        shortTitle: t('basic.shortTitle'),
-        heading: t('basic.heading'),
-        fields: FIELDS_OF.basic,
-      },
-      {
-        key: 'pricing',
-        title: t('pricing.title'),
-        shortTitle: t('pricing.shortTitle'),
-        heading: t('pricing.heading'),
-        fields: FIELDS_OF.pricing,
-      },
-      {
-        key: 'media',
-        title: t('media.title'),
-        shortTitle: t('media.shortTitle'),
-        heading: t('media.heading'),
-        fields: FIELDS_OF.media,
-      },
-      {
-        key: 'review',
-        title: t('review.title'),
-        shortTitle: t('review.shortTitle'),
-        heading: t('review.heading'),
-        fields: [],
-      },
-    ],
-    [t],
+    () =>
+      [
+        {
+          key: 'basic',
+          title: t('basic.title'),
+          shortTitle: t('basic.shortTitle'),
+          heading: t('basic.heading'),
+          fields: FIELDS_OF.basic,
+        },
+        {
+          key: 'pricing',
+          title: t('pricing.title'),
+          shortTitle: t('pricing.shortTitle'),
+          heading: t('pricing.heading'),
+          fields: FIELDS_OF.pricing,
+        },
+        {
+          key: 'media',
+          title: t('media.title'),
+          shortTitle: t('media.shortTitle'),
+          heading: t('media.heading'),
+          fields: FIELDS_OF.media,
+        },
+        {
+          key: 'review',
+          title: t('review.title'),
+          shortTitle: t('review.shortTitle'),
+          heading: t('review.heading'),
+          fields: [],
+        },
+      ].filter((step) => !(pricingHidden && step.key === 'pricing')),
+    [pricingHidden, t],
   );
 }
 
@@ -188,6 +192,8 @@ export interface SectionProps {
   control: Control<VehicleFormValues>;
   isCar: boolean;
   codeReadOnly?: boolean;
+  /** Wizard TẠO xe — luật khoá ô của phiên hỗ trợ chỉ áp cho lượt sửa (ADR 0050 §13). */
+  creating?: boolean;
   /**
    * Options chi nhánh (id → tên · tỉnh). Caller nạp vì hai màn dùng nguồn khác nhau: wizard tạo
    * xe lấy chi nhánh ĐANG HOẠT ĐỘNG, còn workspace sửa xe phải kèm cả chi nhánh hiện tại của xe
@@ -218,14 +224,15 @@ export function BasicSection({
   control,
   isCar: _isCar,
   codeReadOnly = false,
+  creating = false,
   branchOptions = [],
   branchLoading = false,
   branchDisabled = false,
 }: SectionProps) {
   const t = useTranslations('Vehicles.form.basic');
   const options = useVehicleOptions();
-  // Phiên hỗ trợ (ADR 0050): chi nhánh, loại xe, dịch vụ không đổi được — backend cũng chặn.
-  const pinned = useSupportPinnedField();
+  // Phiên hỗ trợ (ADR 0050 §13): khi SỬA, loại xe luôn khoá; chi nhánh/dịch vụ theo capability riêng.
+  const pinned = useSupportPinnedField({ creating });
 
   return (
     <Row gutter={24}>
@@ -359,9 +366,7 @@ function ServicePriceRemovalWarning({ control }: Pick<SectionProps, 'control'>) 
    * "and" ở đúng chỗ này. Chỉ có tối đa hai mục nên không cần `Intl.ListFormat`.
    */
   const summary =
-    losses.length === 1
-      ? losses[0]!
-      : t('lossJoin', { first: losses[0]!, second: losses[1]! });
+    losses.length === 1 ? losses[0]! : t('lossJoin', { first: losses[0]!, second: losses[1]! });
 
   return (
     <Alert
