@@ -5,19 +5,12 @@ import {
   LISTING_STATUS,
   TENANT_STATUS_VALUES,
 } from '@xeprime/types';
+import { vnMonthStartUtc } from '../../common/day-range';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   PlatformDashboardSummaryDto,
   PlatformTenantStatusCountsDto,
 } from './dto/platform-dashboard.dto';
-
-/** Giờ VN cố định UTC+7 (không DST) — "tháng này" tính theo lịch VN. */
-const VN_UTC_OFFSET_MS = 7 * 60 * 60 * 1000;
-
-function startOfVnMonth(now: Date): Date {
-  const vn = new Date(now.getTime() + VN_UTC_OFFSET_MS);
-  return new Date(Date.UTC(vn.getUTCFullYear(), vn.getUTCMonth(), 1) - VN_UTC_OFFSET_MS);
-}
 
 @Injectable()
 export class PlatformDashboardService {
@@ -25,7 +18,7 @@ export class PlatformDashboardService {
 
   /** Toàn bộ số liệu dashboard nền tảng — count song song (pattern finance-overview). */
   async summary(): Promise<PlatformDashboardSummaryDto> {
-    const monthStart = startOfVnMonth(new Date());
+    const monthStart = vnMonthStartUtc(new Date());
 
     const [
       tenantsByStatus,

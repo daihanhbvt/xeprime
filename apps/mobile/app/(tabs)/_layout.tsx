@@ -1,8 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import type { ComponentProps } from 'react';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslations } from 'use-intl';
 import { AppTopBar } from '@/components/layout/AppTopBar';
+import { CountBadge } from '@/components/ui/CountBadge';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { useBadges } from '@/features/badges/hooks/use-badges';
 import { FONT_FAMILY } from '@/theme/fonts';
@@ -55,6 +66,111 @@ const TAB_BAR_HEIGHT = 60;
  */
 const TAB_BADGE_MAX = 9;
 
+const styles = StyleSheet.create({
+  bar: { flexDirection: 'row' },
+  item: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
+  icon: { alignItems: 'center', justifyContent: 'center' },
+  badge: { position: 'absolute', top: -space.xs, left: '60%' },
+});
+
+type TabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
+
+/**
+ * Thanh tab TỰ VẼ — thay thanh mặc định của react-navigation (25/09/2026).
+ *
+ * Thanh mặc định vẽ MỖI biểu tượng HAI lần (bản "đang chọn" và "không chọn") trong hai lớp bọc
+ * bật/tắt bằng `opacity`. Trên kiến trúc mới (Fabric), lớp `opacity: 1` bị làm phẳng (flatten)
+ * còn lớp `opacity: 0` thì không, nên mỗi lần đổi tab Fabric phải nhấc biểu tượng ra khỏi cha này
+ * nhét vào cha kia. Chủ gian hàng đổi sang "Tìm & thuê xe" rồi chạm tab "Chuyến" là đủ để lượt
+ * nhấc/nhét đó trật nhịp: `addViewAt … The specified child already has a parent` (tái hiện trên
+ * emulator; logcat trỏ vào mục "Tin nhắn" của thanh này, trạng thái điều hướng khi đó sạch — một
+ * `(tabs)` duy nhất).
+ *
+ * Ở đây mỗi mục có MỘT biểu tượng, đổi MÀU theo trạng thái chọn — không có lớp bọc nào đổi cấu
+ * trúc nữa. Cấu hình vẫn đọc từ `screenOptions`/`options` như cũ (màu, cỡ chữ, chiều cao, mục ẩn
+ * bằng `href: null` ⇒ `tabBarItemStyle.display = 'none'`), nên thanh này không giữ luật riêng nào.
+ */
+function AppTabBar({ state, descriptors, navigation }: TabBarProps) {
+  const focusedOptions = descriptors[state.routes[state.index]!.key]!.options;
+  const barStyle = focusedOptions.tabBarStyle as StyleProp<ViewStyle>;
+  if (StyleSheet.flatten(barStyle)?.display === 'none') return null;
+
+  return (
+    <View style={[styles.bar, barStyle]} accessibilityRole="tablist">
+      {state.routes.map((route, index) => {
+        const { options } = descriptors[route.key]!;
+        if (
+          StyleSheet.flatten(options.tabBarItemStyle as StyleProp<ViewStyle>)?.display === 'none'
+        ) {
+          return null;
+        }
+        const focused = state.index === index;
+        const color =
+          (focused ? options.tabBarActiveTintColor : options.tabBarInactiveTintColor) ??
+          colors.textMuted;
+        const label = options.title ?? route.name;
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (!focused && !event.defaultPrevented) navigation.navigate(route.name, route.params);
+        };
+        const onLongPress = () => navigation.emit({ type: 'tabLongPress', target: route.key });
+
+        return (
+          <Pressable
+            key={route.key}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: focused }}
+            accessibilityLabel={label}
+            onPress={onPress}
+            onLongPress={onLongPress}
+            style={[styles.item, options.tabBarItemStyle as StyleProp<ViewStyle>]}
+          >
+            {options.tabBarIcon?.({ focused, color, size: iconSize.lg })}
+            <Text
+              numberOfLines={1}
+              style={[options.tabBarLabelStyle as StyleProp<TextStyle>, { color }]}
+            >
+              {label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * Biểu tượng tab, kèm huy hiệu đếm (nếu có) VẼ TĨNH ngay trong biểu tượng.
+ *
+ * Huy hiệu nằm trong biểu tượng vì `AppTabBar` không vẽ `tabBarBadge` của react-navigation (một
+ * `Animated.Text` hiện/ẩn bằng hoạt ảnh native). Trần hiện số là `TAB_BADGE_MAX`, như web.
+ */
+function TabIcon({
+  name,
+  color,
+  badge,
+}: {
+  name: keyof typeof Ionicons.glyphMap;
+  color: string;
+  badge?: number;
+}) {
+  return (
+    <View style={styles.icon}>
+      <Ionicons name={name} color={color} size={iconSize.lg} />
+      {badge ? (
+        <View style={styles.badge} pointerEvents="none">
+          <CountBadge count={badge} tone="danger" size="sm" max={TAB_BADGE_MAX} />
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 export default function TabsLayout() {
   const t = useTranslations('Navigation.public');
   const insets = useSafeAreaInsets();
@@ -72,14 +188,12 @@ export default function TabsLayout() {
    * hiệu menu, không còn một lời gọi `/conversations/unread-count?side=customer` riêng.
    */
   const { chatCustomer } = useBadges();
-  const chatBadge = chatCustomer
-    ? { tabBarBadge: chatCustomer > TAB_BADGE_MAX ? `${TAB_BADGE_MAX}+` : chatCustomer }
-    : {};
 
   return (
     <SafeAreaView edges={['top']} style={{ backgroundColor: colors.background, flex: 1 }}>
       <AppTopBar />
       <Tabs
+        tabBar={(props) => <AppTabBar {...props} />}
         screenOptions={{
           headerShown: false,
           animation: 'none',
@@ -132,19 +246,16 @@ export default function TabsLayout() {
           name="explore"
           options={{
             title: t('explore'),
-            tabBarIcon: ({ color }) => (
-              <Ionicons name="home-outline" color={color} size={iconSize.lg} />
-            ),
+            tabBarIcon: ({ color }) => <TabIcon name="home-outline" color={color} />,
           }}
         />
         <Tabs.Screen
           name="chat"
           options={{
             ...authOnly,
-            ...chatBadge,
             title: t('chat'),
             tabBarIcon: ({ color }) => (
-              <Ionicons name="chatbubble-ellipses-outline" color={color} size={iconSize.lg} />
+              <TabIcon name="chatbubble-ellipses-outline" color={color} badge={chatCustomer} />
             ),
           }}
         />
@@ -153,9 +264,7 @@ export default function TabsLayout() {
           options={{
             ...authOnly,
             title: t('tripsShort'),
-            tabBarIcon: ({ color }) => (
-              <Ionicons name="calendar-outline" color={color} size={iconSize.lg} />
-            ),
+            tabBarIcon: ({ color }) => <TabIcon name="calendar-outline" color={color} />,
           }}
         />
         <Tabs.Screen
@@ -163,9 +272,7 @@ export default function TabsLayout() {
           options={{
             ...authOnly,
             title: t('account'),
-            tabBarIcon: ({ color }) => (
-              <Ionicons name="person-outline" color={color} size={iconSize.lg} />
-            ),
+            tabBarIcon: ({ color }) => <TabIcon name="person-outline" color={color} />,
           }}
         />
       </Tabs>

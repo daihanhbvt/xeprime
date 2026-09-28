@@ -12,7 +12,7 @@ import {
   SERVICE_TYPE_VALUES,
   VN_PHONE_PATTERN,
 } from '@xeprime/types';
-import { dayjs, type Dayjs, type RentalMode } from '@xeprime/domain';
+import { appWallClockToIso, toAppTz, type Dayjs, type RentalMode } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -24,10 +24,10 @@ import { RentalRangeSheet } from '@/features/marketplace/components/RentalRangeS
 import { getErrorCode } from '@/lib/api-client';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { useUpdateBooking } from '../hooks/use-bookings';
 import type { BookingDetail, UpdateBookingInput } from '../api';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 const NOTE_MAX = 2000;
 
@@ -95,15 +95,14 @@ export function EditBookingSheet({
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   const update = useUpdateBooking(booking.id);
 
   const [scheduling, setScheduling] = useState(false);
   const [rentalMode, setRentalMode] = useState<RentalMode>('daily');
   const [conflict, setConflict] = useState(false);
   const [range, setRange] = useState<{ pickupAt: Dayjs | null; returnAt: Dayjs | null }>({
-    pickupAt: dayjs(booking.pickupAt),
-    returnAt: dayjs(booking.returnAt),
+    pickupAt: toAppTz(booking.pickupAt),
+    returnAt: toAppTz(booking.returnAt),
   });
 
   const schema = useMemo(
@@ -156,8 +155,9 @@ export function EditBookingSheet({
       customerName: values.customerName,
       ...(values.customerPhone ? { customerPhone: values.customerPhone } : {}),
       serviceType: values.serviceType,
-      ...(range.pickupAt ? { pickupAt: range.pickupAt.toISOString() } : {}),
-      ...(range.returnAt ? { returnAt: range.returnAt.toISOString() } : {}),
+      // Mặt đồng hồ giờ Việt Nam — đúng `BookingFormDialog` bên web.
+      ...(range.pickupAt ? { pickupAt: appWallClockToIso(range.pickupAt) } : {}),
+      ...(range.returnAt ? { returnAt: appWallClockToIso(range.returnAt) } : {}),
       ...moneyField(values.baseAmount, 'baseAmount'),
       ...moneyField(values.discountAmount, 'discountAmount'),
       ...moneyField(values.depositAmount, 'depositAmount'),
@@ -185,7 +185,7 @@ export function EditBookingSheet({
           setConflict(true);
           return;
         }
-        toast.showError(errorMessage(error));
+        toast.showError(getErrorMessage(error));
       },
     });
   });

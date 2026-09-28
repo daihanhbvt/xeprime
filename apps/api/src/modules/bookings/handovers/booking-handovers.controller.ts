@@ -11,12 +11,13 @@ import {
   Put,
 } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, type HandoverPhotoSlot } from '@xeprime/types';
+import { PERMISSION, type HandoverPhotoSlot, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
   TenantScoped,
+  SupportAction,
 } from '../../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../../common/types/request-context';
 import {
@@ -57,6 +58,7 @@ export class BookingHandoversController {
 
   @Get()
   @RequirePermissions(PERMISSION.HANDOVER_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.HANDOVER_VIEW)
   @ApiOperation({ summary: 'Ngữ cảnh bàn giao của đơn: biên bản giao + trả + số liệu suy ra' })
   @ApiOkResponse({ type: HandoverContextDto })
   context(

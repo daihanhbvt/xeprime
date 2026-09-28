@@ -951,3 +951,18 @@ export class Vehicle360SummaryDto {
   @ApiPropertyOptional({ type: [VehicleAlertDto], description: 'Đã sắp theo ưu tiên tất định' })
   alerts?: VehicleAlertDto[];
 }
+
+/**
+ * Kết quả đồng bộ lại snapshot công khai của một xe (`POST /vehicles/:id/listing/resync`) — thao
+ * tác sửa chữa của nền tảng trong phiên hỗ trợ (ADR 0050 §13).
+ */
+export class ListingRepairResultDto {
+  @ApiProperty({ description: 'Snapshot có khác đi sau lượt đồng bộ không (false = vốn đã đúng).' })
+  changed!: boolean;
+
+  @ApiProperty({ description: 'Xe có dòng trên `public_listings` sau lượt đồng bộ không.' })
+  listed!: boolean;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Trạng thái listing sau đồng bộ.' })
+  status!: string | null;
+}

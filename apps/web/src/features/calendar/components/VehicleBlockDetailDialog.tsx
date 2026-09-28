@@ -14,6 +14,7 @@ import { fetchVehicleBlock } from '../api';
 import { useDeleteVehicleBlock } from '../hooks/use-calendar-mutations';
 import { formatDateTime } from '../utils/calendar-date.util';
 import type { VehicleBlock } from '../types/calendar.types';
+import { supportCanTouchBlock, useSupportSession } from '@/features/tenant-support/support-session';
 import styles from './VehicleBlockDialog.module.css';
 
 /**
@@ -39,6 +40,8 @@ export function VehicleBlockDetailDialog({
   const tCommon = useTranslations('Common');
   const { modal, message } = App.useApp();
   const canManage = has(PERMISSION.VEHICLE_BLOCK_SCHEDULE);
+  // Phiên hỗ trợ: chỉ khoá tương lai do CHÍNH phiên đặt (ADR 0050 §13).
+  const support = useSupportSession();
   const remove = useDeleteVehicleBlock();
 
   const block = useQuery({
@@ -134,7 +137,7 @@ export function VehicleBlockDetailDialog({
           />
           <div className={styles.actions}>
             <Button onClick={onClose}>{tCommon('actions.close')}</Button>
-            {canManage ? (
+            {canManage && supportCanTouchBlock(support, data) ? (
               <>
                 <Button danger loading={remove.isPending} onClick={() => confirmDelete(data)}>
                   {t('blockDetail.release')}

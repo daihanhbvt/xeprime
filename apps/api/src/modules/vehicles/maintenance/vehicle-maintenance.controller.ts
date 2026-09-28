@@ -12,7 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
+import { PERMISSION, PLAN_FEATURE, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
@@ -20,6 +20,7 @@ import {
   TenantScoped,
   RequiresFeature,
   SubscriptionTrackOnly,
+  SupportAction,
 } from '../../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../../common/types/request-context';
 import { SourceContractDownloadDto, SourceContractPresignDto } from '../dto/vehicle-source.dto';
@@ -35,6 +36,7 @@ import {
   SaveMaintenanceProfileDto,
   SaveMaintenanceRecordDto,
 } from './dto/vehicle-maintenance.dto';
+import { supportMaintenanceCreate, supportMaintenanceUpdate } from './maintenance-field-policy';
 import { MaintenanceService, type MaintenanceViewScope } from './maintenance.service';
 import { OdometerService } from './odometer.service';
 
@@ -63,6 +65,7 @@ export class VehicleMaintenanceController {
 
   @Get('profile')
   @RequirePermissions(PERMISSION.VEHICLE_MAINTENANCE_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.MAINTENANCE_VIEW)
   @ApiOperation({ summary: 'KM hiện tại + chu kỳ + mốc bảo dưỡng suy ra' })
   @ApiOkResponse({ type: MaintenanceProfileDto })
   getProfile(
@@ -87,6 +90,7 @@ export class VehicleMaintenanceController {
 
   @Get('odometer/history')
   @RequirePermissions(PERMISSION.VEHICLE_MAINTENANCE_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.MAINTENANCE_VIEW)
   @ApiOperation({ summary: 'Lịch sử KM (chỉ-thêm), mới nhất trước' })
   @ApiOkResponse({ type: OdometerHistoryDto })
   odometerHistory(
@@ -127,6 +131,7 @@ export class VehicleMaintenanceController {
 
   @Get('records')
   @RequirePermissions(PERMISSION.VEHICLE_MAINTENANCE_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.MAINTENANCE_VIEW)
   @ApiOperation({ summary: 'Lịch sắp tới + lịch sử bảo dưỡng của xe' })
   @ApiOkResponse({ type: MaintenanceRecordListDto })
   async records(
@@ -140,6 +145,8 @@ export class VehicleMaintenanceController {
 
   @Post('records')
   @RequirePermissions(PERMISSION.VEHICLE_MAINTENANCE_MANAGE)
+  // Phiên hỗ trợ: chỉ nội dung phiếu — không khung giờ, KM, chi phí (ADR 0050).
+  @SupportAction(supportMaintenanceCreate)
   @ApiOperation({ summary: 'Tạo phiếu/lịch bảo dưỡng (có khoảng thời gian → giữ chỗ lịch xe)' })
   @ApiCreatedResponse({ type: MaintenanceRecordDto })
   createRecord(
@@ -159,6 +166,7 @@ export class VehicleMaintenanceController {
 
   @Put('records/:recordId')
   @RequirePermissions(PERMISSION.VEHICLE_MAINTENANCE_MANAGE)
+  @SupportAction(supportMaintenanceUpdate)
   @ApiOperation({ summary: 'Sửa phiếu bảo dưỡng (optimistic concurrency, đồng bộ lịch xe)' })
   @ApiOkResponse({ type: MaintenanceRecordDto })
   updateRecord(
@@ -272,6 +280,7 @@ export class VehicleMaintenanceController {
 
   @Post('records/:recordId/attachments/presign')
   @RequirePermissions(PERMISSION.VEHICLE_MAINTENANCE_MANAGE)
+  @SupportAction(SUPPORT_CAPABILITY.MAINTENANCE_MANAGE)
   @ApiOperation({ summary: 'Presign upload chứng từ vào kho riêng tư (Wave 4.1)' })
   @ApiCreatedResponse({ type: SourceContractPresignDto })
   presignAttachment(
@@ -293,6 +302,7 @@ export class VehicleMaintenanceController {
   @Post('records/:recordId/attachments')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.VEHICLE_MAINTENANCE_MANAGE)
+  @SupportAction(SUPPORT_CAPABILITY.MAINTENANCE_MANAGE)
   @ApiOperation({ summary: 'Xác minh object rồi đính chứng từ vào phiếu' })
   @ApiOkResponse({ type: MaintenanceRecordDto })
   attach(
@@ -316,6 +326,7 @@ export class VehicleMaintenanceController {
   @Get('records/:recordId/attachments/:fileId/download')
   @Header('Cache-Control', 'no-store')
   @RequirePermissions(PERMISSION.VEHICLE_MAINTENANCE_FILE_VIEW)
+  // KHÔNG có `@SupportAction`: chứng từ là hoá đơn/biên lai — dữ liệu chi phí (ADR 0050 §9).
   @ApiOperation({ summary: 'Phát signed URL ngắn hạn xem/tải một chứng từ' })
   @ApiOkResponse({ type: SourceContractDownloadDto })
   download(

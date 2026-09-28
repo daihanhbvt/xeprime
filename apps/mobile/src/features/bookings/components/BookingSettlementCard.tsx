@@ -13,6 +13,7 @@ import {
   type SurchargeCategory,
 } from '@xeprime/types';
 import { Button } from '@/components/ui/Button';
+import { Callout } from '@/components/ui/Callout';
 import { Card } from '@/components/ui/Card';
 import { DataRow } from '@/components/ui/DataRow';
 import { InlineAction } from '@/components/ui/InlineAction';
@@ -22,6 +23,7 @@ import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { RecordPaymentSheet } from '@/features/settlement/components/RecordPaymentSheet';
 import { useSettlement } from '@/features/settlement/hooks/use-settlement';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { getErrorMessage } from '@/lib/get-error-message';
 import { useDomainLabel } from '@/i18n/domain';
 import { ROUTES } from '@/navigation/routes';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
@@ -43,6 +45,7 @@ import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/t
  */
 export function BookingSettlementCard({ bookingId }: { bookingId: string }) {
   const t = useTranslations('Bookings.settlement');
+  const tActions = useTranslations('Common.actions');
   const fmt = useAppFormat();
   const tMileage = useTranslations('Bookings.settlement.excessMileage');
   const domainLabel = useDomainLabel();
@@ -67,6 +70,34 @@ export function BookingSettlementCard({ bookingId }: { bookingId: string }) {
         <YStack gap={space.sm}>
           <CardTitle>{t('cardTitle')}</CardTitle>
           <SkeletonText lines={3} />
+        </YStack>
+      </Card>
+    );
+  }
+
+  // Web `SettlementCard`: lỗi tải giữ nguyên thẻ, nói lý do (câu của server) và cho thử lại —
+  // thẻ biến mất thì người trực tưởng đơn chưa có tiền nào cần quyết toán.
+  if (query.isError) {
+    return (
+      <Card>
+        <YStack gap={space.sm}>
+          <CardTitle>{t('cardTitle')}</CardTitle>
+          <Callout tone="danger" title={t('errorTitle')}>
+            <YStack gap={space.xs}>
+              <Text col={colors.danger} fos={fontSize.bodySm}>
+                {getErrorMessage(query.error)}
+              </Text>
+              <XStack>
+                <Button
+                  label={tActions('retry')}
+                  variant="secondary"
+                  size="sm"
+                  block={false}
+                  onPress={() => void query.refetch()}
+                />
+              </XStack>
+            </YStack>
+          </Callout>
         </YStack>
       </Card>
     );

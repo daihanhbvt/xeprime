@@ -68,7 +68,8 @@ export function SubscriptionInvoicesPanel({
   const invoices = useSubscriptionInvoices(filters.page);
 
   const items = invoices.data?.items ?? [];
-  const pendingInvoice = usePendingInvoice().data ?? null;
+  // Không hiện thì không hỏi — khi đang nâng cấp, luồng nâng cấp tự giữ query này.
+  const pendingInvoice = usePendingInvoice(showPending).data ?? null;
   const hasHistory = items.length > 0;
 
   const invoiceColumns: DataTableColumn<SubscriptionInvoice>[] = [

@@ -5,7 +5,7 @@ import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import * as yup from 'yup';
 import { REFUND_METHOD_VALUES } from '@xeprime/types';
-import { dayjs, isZeroMoney, type Dayjs } from '@xeprime/domain';
+import { appWallClockToIso, isZeroMoney, nowInAppTz, toAppTz, type Dayjs } from '@xeprime/domain';
 import { REASON_MAX } from '@/lib/reason';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
@@ -102,7 +102,8 @@ export function RefundSheet({
    * chính bộ chọn (server cũng từ chối).
    */
   const [refundedAt, setRefundedAt] = useState<Dayjs>(() =>
-    existing?.refundedAt ? dayjs(existing.refundedAt) : dayjs(),
+    // Mặt đồng hồ GIỜ VIỆT NAM, không phải giờ máy — đúng `RecordRefundDialog` bên web.
+    existing?.refundedAt ? toAppTz(existing.refundedAt) : nowInAppTz(),
   );
   const [pickingMoment, setPickingMoment] = useState(false);
 
@@ -143,7 +144,7 @@ export function RefundSheet({
       refundMethod: values.refundMethod as RecordRefundInput['refundMethod'],
       ...(values.reference ? { reference: values.reference } : {}),
       ...(values.note ? { note: values.note } : {}),
-      refundedAt: refundedAt.toISOString(),
+      refundedAt: appWallClockToIso(refundedAt),
     };
 
     const done = {
@@ -272,7 +273,7 @@ export function RefundSheet({
           onClose={() => setPickingMoment(false)}
           value={refundedAt}
           onChange={setRefundedAt}
-          notAfter={dayjs()}
+          notAfter={nowInAppTz()}
           title={t('refundedAtLabel')}
         />
       ) : null}

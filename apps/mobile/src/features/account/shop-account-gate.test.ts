@@ -52,12 +52,12 @@ describe('shopAccountRedirect', () => {
     }
   });
 
-  it('chuyến phía khách đi vào lối CHUYỂN TIẾP, kể cả khi mang id', () => {
+  it('chuyến phía khách đi vào lối CHUYỂN TIẾP; có id thì mở đúng chuyến đó (web /manage/account/trips/[id])', () => {
     expect(asPath(shopAccountRedirect(shopUser, '/trips'))).toBe(
       asPath(ROUTES.manage.accountTrips()),
     );
-    expect(asPath(shopAccountRedirect(shopUser, '/trips/abc'))).toBe(
-      asPath(ROUTES.manage.accountTrips()),
+    expect(shopAccountRedirect(shopUser, '/trips/abc')).toEqual(
+      ROUTES.manage.accountTripDetail('abc'),
     );
   });
 

@@ -1,7 +1,12 @@
 import { App } from 'antd';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
+import { API_ERROR_CODE, PERMISSION, SUPPORT_WORKSPACE } from '@xeprime/types';
+import { adminTenantSupportPath } from '@/constants/routes';
+import { supportWorkspaceValue } from '@/features/tenant-support/components/SupportWorkspaceProvider';
+import { SupportSessionScope, supportSessionOf } from '@/features/tenant-support/support-session';
+import { CONTEXT_A, supportContextFixture } from '@/features/tenant-support/test-utils';
+import { WorkspaceScope } from '@/hooks/use-workspace';
 import EditVehiclePage from './page';
 
 const nav = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
@@ -383,5 +388,54 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
     const field = await screen.findByLabelText('Dung tích động cơ (cc)');
     expect(field.getAttribute('aria-invalid')).toBe('true');
     expect(await screen.findByText('Giá trị này chưa hợp lệ. Kiểm tra lại giúp bạn nhé.')).toBeTruthy();
+  });
+});
+
+/**
+ * CÙNG trang, dựng trong phiên hỗ trợ gian hàng tuyến gói (ADR 0050): không có bản admin nào của
+ * màn này. Trang tự thu về các tab của Đợt 1 và khoá các ô "ghim" nhờ đọc ngữ cảnh phiên.
+ */
+describe('/manage/vehicles/[id]/edit — trong phiên hỗ trợ của nhân sự nền tảng', () => {
+  function renderInSupport() {
+    const context = supportContextFixture({ workspace: SUPPORT_WORKSPACE.MANAGE });
+    return render(
+      <App>
+        <SupportSessionScope session={supportSessionOf(context)}>
+          <WorkspaceScope value={supportWorkspaceValue(context)}>
+            <EditVehiclePage />
+          </WorkspaceScope>
+        </SupportSessionScope>
+      </App>,
+    );
+  }
+
+  function fieldDisabled(label: string): boolean {
+    const item = screen.getByText(label).closest('.ant-form-item');
+    return Boolean(item?.querySelector('.ant-select-disabled'));
+  }
+
+  it('chỉ còn ba tab của Đợt 1 — giá, nguồn xe, giấy tờ, vận hành không có mặt', () => {
+    renderInSupport();
+    // Chỉ tab của workspace — vùng thu gọn "thông số nâng cao" cũng mang role=tab.
+    const tabs = [...document.querySelectorAll('.ant-tabs-tab-btn')].map((tab) => tab.textContent);
+    expect(tabs).toEqual(['Thông tin xe', 'Hình ảnh & tiện ích', 'Bảo dưỡng & KM']);
+  });
+
+  it('chi nhánh, loại xe, dịch vụ, trạng thái vận hành bị khoá; tên xe vẫn sửa được', () => {
+    renderInSupport();
+    expect(fieldDisabled('Chi nhánh giữ xe')).toBe(true);
+    expect(fieldDisabled('Loại xe')).toBe(true);
+    expect(fieldDisabled('Loại dịch vụ')).toBe(true);
+    expect(fieldDisabled('Trạng thái vận hành')).toBe(true);
+    expect((screen.getByDisplayValue(vehicle.name) as HTMLInputElement).disabled).toBe(false);
+  });
+
+  it('đổi tab ghi URL của PHIÊN, không nhảy sang /manage/vehicles', async () => {
+    renderInSupport();
+    fireEvent.click(screen.getByRole('tab', { name: 'Hình ảnh & tiện ích' }));
+    await waitFor(() => expect(nav.replace).toHaveBeenCalled());
+    expect(nav.replace.mock.calls[0]?.[0]).toBe(
+      `${adminTenantSupportPath.vehicleEdit(CONTEXT_A, 'vehicle-1')}?tab=media`,
+    );
   });
 });

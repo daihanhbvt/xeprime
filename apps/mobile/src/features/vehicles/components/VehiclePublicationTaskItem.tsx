@@ -11,6 +11,7 @@ import { ShopListingGateAlert } from '@/features/shop/components/ShopListingGate
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
+import { vehicleEditHref } from '../workspace-links';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { useSubmitVehiclePublic } from '../hooks/use-vehicle';
 import {
@@ -50,6 +51,8 @@ export function VehiclePublicationTaskItem({
   vehicle,
   task,
   onEnableMarketplace,
+  onViewStatus,
+  customerScope = false,
 }: {
   vehicle: VehicleDetail;
   task: VehiclePublicationTask;
@@ -60,6 +63,17 @@ export function VehiclePublicationTaskItem({
    * nhìn thấy cái công tắc vừa đổi.
    */
   onEnableMarketplace?: () => void;
+  /**
+   * Cuộn tới thẻ xét duyệt trong CÙNG màn — bản native của liên kết `#${REVIEW_PANEL_ANCHOR}` bên
+   * web. Không truyền thì không vẽ nút: một nút không đưa đi đâu tệ hơn không có nút.
+   */
+  onViewStatus?: () => void;
+  /**
+   * Màn đang mở từ khu TÀI KHOẢN (chủ xe tuyến hoa hồng — `/account/vehicles/[id]`). Web chọn
+   * đích hỗ trợ theo khu làm việc (`useWorkspace().paths.support`): `/account/support` ở khu tài
+   * khoản, `/manage/support` ở cổng quản lý.
+   */
+  customerScope?: boolean;
 }) {
   const t = useTranslations('Vehicles.publish.task');
   const tPublish = useTranslations('Vehicles.publish');
@@ -130,7 +144,7 @@ export function VehiclePublicationTaskItem({
             block={false}
             onPress={() =>
               navigateOnce(
-                ROUTES.manage.vehicleEditTab(vehicle.id, publicationEditTab(task.missing)),
+                vehicleEditHref(vehicle.id, publicationEditTab(task.missing), customerScope),
               )
             }
           />
@@ -147,13 +161,10 @@ export function VehiclePublicationTaskItem({
           />
         ) : null;
       case 'viewStatus':
-        /*
-         * Web neo xuống thẻ xét duyệt bằng `#anchor` trong cùng trang. Native KHÔNG vẽ nút này:
-         * cuộn tới một khối nằm gần cuối một màn rất dài cần một ref `ScrollView` mà thẻ việc
-         * không có, và chính khối đó đã nằm trong cùng màn. Mức của việc này là `info` (chỉ báo
-         * "đang chờ duyệt"), nên mất một nút phụ ở đây không cắt đường đi nào.
-         */
-        return null;
+        // Không gác quyền — đúng như web: đọc tình trạng xét duyệt là việc của mọi người xem hồ sơ.
+        return onViewStatus ? (
+          <Button label={label} size="sm" variant={variant} block={false} onPress={onViewStatus} />
+        ) : null;
       case 'contactSupport':
         // `hidden` không có đường tự phục vụ nào (ADR 0048 điều 4) — lối duy nhất là hỗ trợ.
         return (
@@ -162,7 +173,9 @@ export function VehiclePublicationTaskItem({
             size="sm"
             variant={variant}
             block={false}
-            onPress={() => navigateOnce(ROUTES.manage.support())}
+            onPress={() =>
+              navigateOnce(customerScope ? ROUTES.account.support() : ROUTES.manage.support())
+            }
           />
         );
     }

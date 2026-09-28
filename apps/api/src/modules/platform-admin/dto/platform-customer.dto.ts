@@ -97,7 +97,11 @@ export class PlatformCustomerRequestDto {
   @ApiProperty({ description: 'ISO-8601 UTC' }) returnAt!: string;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Đơn thuê đã tạo, nếu có' })
   bookingId!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Mã đơn để tra ở màn đơn thuê' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Mã đơn để tra ở màn đơn thuê',
+  })
   bookingCode!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
 }

@@ -62,6 +62,7 @@ import { PermissionState } from '@/components/feedback/PermissionState';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
+import { isForbiddenError } from '@/lib/http-status';
 import { ApiClientError, getErrorCode, getErrorMessage } from '@/services/api-client';
 import { validateDocumentFile, uploadToR2 } from '@/services/upload';
 import type { VehicleDetail } from '@/features/vehicles/types';
@@ -92,6 +93,7 @@ import type { DomainLabel } from '@/i18n/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 
 const STANDARD_TYPES: readonly VehicleDocumentType[] = [
@@ -146,10 +148,6 @@ function titleOf(
   return doc?.type === VEHICLE_DOCUMENT_TYPE.OTHER && doc.customTypeName
     ? domainLabel('vehicleDocumentPreset', doc.customTypeName, doc.customTypeName)
     : domainLabel('vehicleDocumentType', type);
-}
-
-function isForbidden(error: unknown): boolean {
-  return error instanceof ApiClientError && error.status === 403;
 }
 
 /**
@@ -225,6 +223,8 @@ function DocumentsList({
   canViewFiles: boolean;
 }) {
   const t = useTranslations('Vehicles.documents');
+  // Phiên hỗ trợ (ADR 0050 §13): thêm/cập nhật giấy tờ được; lưu trữ, OCR (đọc nội dung file) thì không.
+  const privateHidden = useSupportHides(SUPPORT_HIDDEN_AREA.DOCUMENT_PRIVATE);
   const domainLabel = useDomainLabel();
   const uploadRejectionMessage = useUploadRejectionMessage();
   const isMobile = useIsMobile();
@@ -379,11 +379,7 @@ function DocumentsList({
         }
         extra={
           canManage ? (
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setAdding(true)}
-            >
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setAdding(true)}>
               {isMobile ? t('addTypeCompact') : t('addType')}
             </Button>
           ) : null
@@ -399,6 +395,7 @@ function DocumentsList({
               title={titleOf(row.type, row.document, domainLabel)}
               uploading={uploading[row.key] ?? null}
               canManage={canManage}
+              canRemove={canManage && !privateHidden}
               canViewDetails={canViewDetails}
               canViewFiles={canViewFiles}
               downloading={downloadingId === row.document?.id}
@@ -421,13 +418,15 @@ function DocumentsList({
         />
       </Card>
 
-      <Alert
-        type="info"
-        showIcon
-        className={styles.ocrNote}
-        title={t('ocrNoteTitle')}
-        description={t('ocrNoteBody')}
-      />
+      {privateHidden ? null : (
+        <Alert
+          type="info"
+          showIcon
+          className={styles.ocrNote}
+          title={t('ocrNoteTitle')}
+          description={t('ocrNoteBody')}
+        />
+      )}
 
       <AddDocumentDialog
         vehicleId={vehicle.id}
@@ -481,6 +480,7 @@ function DocumentRow({
   title,
   uploading,
   canManage,
+  canRemove,
   canViewDetails,
   canViewFiles,
   downloading,
@@ -498,6 +498,8 @@ function DocumentRow({
   title: string;
   uploading: UploadingState | null;
   canManage: boolean;
+  /** Lưu trữ giấy tờ — tách khỏi `canManage` vì phiên hỗ trợ quản lý được nhưng không lưu trữ. */
+  canRemove: boolean;
   canViewDetails: boolean;
   canViewFiles: boolean;
   downloading: boolean;
@@ -602,7 +604,7 @@ function DocumentRow({
       icon: <DeleteOutlined />,
       danger: true,
       loading: removing,
-      hidden: !doc || !canManage,
+      hidden: !doc || !canRemove,
       confirm: {
         title: t('remove.title'),
         description: <span className={styles.removeConfirm}>{t('remove.body', { title })}</span>,
@@ -626,9 +628,7 @@ function DocumentRow({
           className={`${styles.rowTile} ${styles.rowTileAction}`}
           data-type={row.type}
           aria-label={
-            tileMode === 'upload'
-              ? t('row.uploadFor', { title })
-              : t('row.downloadFor', { title })
+            tileMode === 'upload' ? t('row.uploadFor', { title }) : t('row.downloadFor', { title })
           }
           onClick={tileMode === 'upload' ? pickFile : onOpen}
         >
@@ -1114,7 +1114,7 @@ function DocumentDetailDialog({
     values: defaults,
   });
 
-  const blocked = Boolean(document) && (!canViewDetails || isForbidden(detail.error));
+  const blocked = Boolean(document) && (!canViewDetails || isForbiddenError(detail.error));
   const loading = Boolean(document) && canViewDetails && detail.isLoading;
 
   async function save(values: VehicleDocumentFormValues) {
@@ -1334,7 +1334,7 @@ function DocumentHistoryDialog({
       onClose={onClose}
       footer={null}
     >
-      {!canViewFiles || isForbidden(versions.error) ? (
+      {!canViewFiles || isForbiddenError(versions.error) ? (
         <Alert
           type="warning"
           showIcon
@@ -1344,9 +1344,7 @@ function DocumentHistoryDialog({
       ) : (
         <>
           {versions.isLoading ? <Skeleton active paragraph={{ rows: 3 }} /> : null}
-          {versions.isError ? (
-            <Alert type="error" showIcon title={t('history.loadError')} />
-          ) : null}
+          {versions.isError ? <Alert type="error" showIcon title={t('history.loadError')} /> : null}
           {versions.data ? (
             <List
               dataSource={versions.data}

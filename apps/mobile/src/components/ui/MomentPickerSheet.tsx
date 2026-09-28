@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { dayjs, DAY_PARAM_FORMAT, type Dayjs } from '@xeprime/domain';
+import { dayjs, DAY_PARAM_FORMAT, nowInAppTz, type Dayjs } from '@xeprime/domain';
 import { BottomSheet } from './BottomSheet';
 import { Button } from './Button';
 import { DayCell, MonthGrid, type DayMark, visibleDays } from './MonthGrid';
@@ -186,7 +186,8 @@ export function MomentPickerSheet({
    * 12 bấm nút này sẽ thấy không có gì đổi, vì ngày vừa chọn nằm ở tháng khác.
    */
   const jumpToNow = () => {
-    const now = dayjs();
+    // "Bây giờ" theo GIỜ VIỆT NAM — mọi mốc của app đọc theo múi giờ nghiệp vụ, không theo máy.
+    const now = nowInAppTz();
     setDraft(now);
     setMonth(now.startOf('month'));
   };

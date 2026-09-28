@@ -1,0 +1,524 @@
+{
+  "list": {
+    "filters": {
+      "status": "Trạng thái",
+      "allStatuses": "Tất cả",
+      "sort": "Sắp xếp"
+    },
+    "columns": {
+      "type": "Pháp nhân",
+      "vehicles": "Xe",
+      "status": "Trạng thái",
+      "createdAt": "Ngày tạo"
+    },
+    "view": "Xem chi tiết",
+    "clearFilters": "Xoá bộ lọc",
+    "kinds": {
+      "package_shop": {
+        "title": "Gian hàng gói",
+        "subtitle": "Gian hàng tuyến gói, gồm cả gian hàng đang chờ kích hoạt gói.",
+        "loading": "Đang tải danh sách gian hàng…",
+        "searchLabel": "Tìm gian hàng",
+        "searchPlaceholder": "Tìm tên / mã / SĐT",
+        "name": "Gian hàng",
+        "owner": "Chủ shop",
+        "tableLabel": "Danh sách gian hàng gói",
+        "loadError": "Không tải được danh sách gian hàng",
+        "empty": "Chưa có gian hàng nào",
+        "noResults": "Không có gian hàng khớp bộ lọc",
+        "total": "{count, plural, other {# gian hàng}}"
+      },
+      "individual_owner": {
+        "title": "Chủ xe cá nhân",
+        "subtitle": "Chủ xe tuyến hoa hồng, quản lý xe ở Owner Lite.",
+        "loading": "Đang tải danh sách chủ xe…",
+        "searchLabel": "Tìm chủ xe",
+        "searchPlaceholder": "Tìm tên / mã / SĐT",
+        "name": "Tên hiển thị",
+        "owner": "Chủ xe",
+        "tableLabel": "Danh sách chủ xe cá nhân",
+        "loadError": "Không tải được danh sách chủ xe",
+        "empty": "Chưa có chủ xe cá nhân nào",
+        "noResults": "Không có chủ xe khớp bộ lọc",
+        "total": "{count, plural, other {# chủ xe}}"
+      }
+    }
+  },
+  "legacyRedirect": {
+    "loading": "Đang mở gian hàng…",
+    "notFoundTitle": "Không mở được gian hàng này",
+    "notFoundBody": "Gian hàng không tồn tại, đã bị xoá hoặc bạn không có quyền xem. Chọn một danh sách đối tác để tiếp tục."
+  },
+  "detail": {
+    "lock": {
+      "button": "Khoá gian hàng",
+      "title": "Khoá gian hàng",
+      "ok": "Khoá",
+      "cancel": "Huỷ",
+      "note": "Xe của gian hàng sẽ bị ẩn khỏi marketplace ngay lập tức. Nhập lý do (tuỳ chọn) để lưu vào nhật ký.",
+      "reasonPlaceholder": "Lý do khoá…",
+      "done": "Đã khoá gian hàng",
+      "unavailable": "Chỉ khoá/mở khoá gian hàng đang hoạt động hoặc bị khoá."
+    },
+    "unlock": {
+      "button": "Mở khoá gian hàng",
+      "confirm": "Mở khoá gian hàng này?",
+      "ok": "Mở khoá",
+      "cancel": "Đóng",
+      "done": "Đã mở khoá gian hàng"
+    }
+  },
+  "partnerDetail": {
+    "fallbackTitle": "Chi tiết đối tác",
+    "ariaLabel": "Chi tiết đối tác {name}",
+    "readOnly": "Chỉ xem",
+    "joinedAt": "Tham gia {date}",
+    "commissionTrack": "Tuyến hoa hồng",
+    "kind": {
+      "package_shop": "Gian hàng gói",
+      "individual_owner": "Chủ xe cá nhân"
+    },
+    "actions": {
+      "support": "Mở chế độ hỗ trợ",
+      "storefront": "Xem mặt tiền",
+      "marketplace": "Xem xe trên chợ",
+      "more": "Thao tác khác",
+      "admin": "Thao tác quản trị nền tảng…"
+    },
+    "tabs": {
+      "overview": "Tổng quan",
+      "vehicles": "Xe",
+      "bookings": "Đơn thuê",
+      "profile": "Hồ sơ",
+      "billing": "Gói & phí",
+      "commission": "Hoa hồng & đối soát",
+      "activity": "Nhật ký"
+    },
+    "states": {
+      "loading": "Đang tải…",
+      "loadError": "Không tải được dữ liệu",
+      "loadErrorBody": "Có lỗi khi đọc dữ liệu của đối tác. Vui lòng thử lại.",
+      "none": "Không có",
+      "notFound": "Không tìm thấy đối tác",
+      "notFoundBody": "Đối tác không tồn tại hoặc đã bị xoá. Đóng khung này và chọn đối tác khác từ danh sách."
+    },
+    "denied": {
+      "title": "Bạn không có quyền xem mục này",
+      "overview": "Cần quyền xem đối tác của nền tảng.",
+      "vehicles": "Cần quyền xem xe toàn hệ thống.",
+      "bookings": "Cần quyền xem đơn thuê toàn hệ thống.",
+      "profile": "Cần quyền xem đối tác của nền tảng.",
+      "billing": "Chỉ người có quyền quản lý Gói & thanh toán mới xem được tab này.",
+      "commission": "Cần quyền xem đối tác của nền tảng.",
+      "activity": "Chỉ người có quyền xem nhật ký hệ thống mới xem được tab này."
+    },
+    "money": {
+      "hidden": "Ẩn",
+      "hiddenHint": "Cần quyền vận hành tiền của nền tảng để xem số tiền"
+    },
+    "overview": {
+      "issuesBanner": "{count, plural, other {# xe cần chú ý}}",
+      "issueItem": "{count, plural, other {# xe}} {label}",
+      "stats": {
+        "vehicles": "Xe",
+        "listed": "Đang công khai",
+        "renting": "Đang cho thuê",
+        "alerts": "Xe có cảnh báo"
+      },
+      "info": {
+        "shopTitle": "Thông tin gian hàng",
+        "ownerTitle": "Thông tin chủ xe",
+        "shopName": "Tên gian hàng",
+        "shopCode": "Mã gian hàng",
+        "ownerName": "Họ tên",
+        "ownerCode": "Mã chủ xe",
+        "area": "Khu vực hoạt động",
+        "joined": "Ngày tham gia",
+        "publicAddress": "Địa chỉ công khai",
+        "phone": "Số điện thoại",
+        "email": "Email"
+      },
+      "recentVehicles": "Xe gần đây",
+      "viewAllVehicles": "Xem tất cả xe",
+      "recentBookings": "Đơn thuê gần đây",
+      "viewAllBookings": "Xem tất cả đơn thuê",
+      "branches": {
+        "title": "Chi nhánh",
+        "empty": "Chưa có chi nhánh nào",
+        "default": "Chính",
+        "vehicles": "{count, plural, other {# xe}}"
+      },
+      "operating": {
+        "shopTitle": "Trạng thái vận hành",
+        "ownerTitle": "Trạng thái tài khoản",
+        "verification": "Trạng thái xác minh",
+        "onboarding": "Hoàn tất onboarding",
+        "onboardingDone": "Đã hoàn thành",
+        "onboardingPending": "Chờ thanh toán gói đầu tiên",
+        "listing": "Đủ điều kiện đăng xe",
+        "listingReady": "Được phép",
+        "listingMissing": "Còn thiếu: {items}",
+        "accountStatus": "Trạng thái tài khoản",
+        "lastActivity": "Hoạt động gần nhất",
+        "never": "Chưa có"
+      },
+      "plan": {
+        "title": "Gói hiện tại",
+        "none": "Chưa có gói hiệu lực",
+        "name": "Gói",
+        "phase": "Trạng thái gói",
+        "endsAt": "Ngày gia hạn",
+        "daysLeft": "(còn {days, plural, other {# ngày}})",
+        "quota": "Hạn mức xe"
+      },
+      "issues": {
+        "title": "Cần xử lý",
+        "empty": "Không có việc nào cần xử lý",
+        "vehicles": "{count, plural, other {# xe}}"
+      },
+      "owner": {
+        "title": "Chủ gian hàng"
+      },
+      "commission": {
+        "title": "Tháng hiện tại",
+        "empty": "Chưa có số liệu",
+        "viewDetail": "Xem chi tiết",
+        "period": "Tháng",
+        "completed": "Chuyến hoàn tất",
+        "revenue": "Tổng tiền thuê",
+        "serviceFee": "Phí dịch vụ XePrime"
+      }
+    },
+    "vehicles": {
+      "filters": {
+        "all": "Tất cả",
+        "search": "Tìm xe",
+        "searchPlaceholder": "Tên xe, mã xe, biển số…",
+        "operation": "Vận hành",
+        "branch": "Chi nhánh",
+        "service": "Dịch vụ",
+        "marketplace": "Trên chợ",
+        "sort": "Sắp xếp"
+      },
+      "sort": {
+        "updated": "Mới cập nhật",
+        "newest": "Mới thêm",
+        "name": "Tên A → Z"
+      },
+      "summary": {
+        "total": "{count, plural, other {# xe}}",
+        "listed": "{count, plural, other {# đang công khai}}",
+        "renting": "{count, plural, other {# đang cho thuê}}",
+        "attention": "{count, plural, other {# cần chú ý}}"
+      },
+      "columns": {
+        "vehicle": "Xe",
+        "branch": "Chi nhánh",
+        "pickupArea": "Khu vực nhận xe",
+        "service": "Dịch vụ",
+        "operation": "Vận hành",
+        "marketplace": "Trên chợ",
+        "alerts": "Cảnh báo",
+        "updated": "Cập nhật"
+      },
+      "notVisible": "Không hiển thị trên chợ",
+      "moreAlerts": "+{count}",
+      "tableLabel": "Danh sách xe của đối tác",
+      "empty": "Đối tác chưa có xe nào",
+      "noResults": "Không có xe khớp bộ lọc",
+      "clearFilters": "Xoá bộ lọc",
+      "total": "{count, plural, other {# xe}}"
+    },
+    "bookings": {
+      "segments": {
+        "bookings": "Đơn thuê ({count})",
+        "requests": "Yêu cầu thuê ({count})"
+      },
+      "pendingRequests": "{count, plural, other {# yêu cầu chờ duyệt}}",
+      "filters": {
+        "all": "Tất cả",
+        "search": "Tìm đơn",
+        "searchPlaceholder": "Mã đơn, biển số…",
+        "status": "Trạng thái",
+        "range": "Giờ nhận xe",
+        "service": "Dịch vụ"
+      },
+      "range": {
+        "all": "Mọi thời gian",
+        "past_30": "30 ngày qua",
+        "next_30": "30 ngày tới"
+      },
+      "stats": {
+        "upcoming": "Sắp nhận xe",
+        "active": "Đang thuê",
+        "completed": "Hoàn thành",
+        "cancelled": "Đã huỷ"
+      },
+      "pickupSoon": "{count, plural, other {# đơn}} sắp đến giờ nhận xe trong {hours} giờ",
+      "columns": {
+        "code": "Mã đơn",
+        "vehicle": "Xe",
+        "customer": "Khách thuê",
+        "time": "Thời gian",
+        "service": "Dịch vụ",
+        "status": "Trạng thái",
+        "total": "Tổng tiền",
+        "respondBy": "Hạn phản hồi",
+        "created": "Gửi lúc"
+      },
+      "tableLabel": "Đơn thuê của đối tác",
+      "empty": "Chưa có đơn thuê nào",
+      "noResults": "Không có đơn khớp bộ lọc",
+      "clearFilters": "Xoá bộ lọc",
+      "total": "{count, plural, other {# đơn thuê}}",
+      "requestsTableLabel": "Yêu cầu thuê của đối tác",
+      "requestsEmpty": "Chưa có yêu cầu thuê nào",
+      "requestsNoResults": "Không có yêu cầu khớp bộ lọc",
+      "requestsTotal": "{count, plural, other {# yêu cầu}}"
+    },
+    "profile": {
+      "note": "Hồ sơ chỉ xem tại đây. Thao tác xác minh thực hiện tại khu Xác minh người bán.",
+      "goToSellers": "Mở Xác minh người bán",
+      "noAddress": "Chưa có địa chỉ",
+      "areas": "Khu vực hoạt động",
+      "public": {
+        "title": "Thông tin công khai",
+        "coverAlt": "Ảnh bìa gian hàng",
+        "noBio": "Chưa có mô tả",
+        "storefront": "Xem mặt tiền"
+      },
+      "legal": {
+        "title": "Thông tin pháp lý",
+        "entityType": "Loại hình kinh doanh",
+        "legalName": "Tên pháp lý",
+        "taxId": "Mã số thuế",
+        "license": "Giấy phép kinh doanh",
+        "sellerStatus": "Hồ sơ người bán",
+        "noSeller": "Chưa gửi hồ sơ người bán",
+        "verifiedAt": "Ngày xác minh"
+      },
+      "personal": {
+        "title": "Thông tin cá nhân"
+      },
+      "identity": {
+        "title": "Xác minh danh tính",
+        "status": "Trạng thái xác minh",
+        "notSubmitted": "Chưa gửi hồ sơ",
+        "idNumber": "Số CCCD",
+        "phone": "Số điện thoại",
+        "email": "Email",
+        "verified": "Đã xác thực",
+        "notVerified": "Chưa xác thực",
+        "verifiedAt": "Ngày xác minh"
+      },
+      "owner": {
+        "title": "Chủ gian hàng",
+        "name": "Họ tên",
+        "phone": "Số điện thoại",
+        "email": "Email",
+        "accountStatus": "Trạng thái tài khoản",
+        "joined": "Ngày tham gia"
+      },
+      "contact": {
+        "title": "Địa chỉ & liên hệ",
+        "defaultBranch": "Chi nhánh chính",
+        "defaultPoint": "Điểm nhận xe chính",
+        "noAddress": "Chưa khai báo địa chỉ",
+        "publicPhone": "Điện thoại công khai",
+        "publicEmail": "Email công khai"
+      },
+      "documents": {
+        "title": "Tài liệu hồ sơ",
+        "sensitive": "Tài liệu nhạy cảm",
+        "empty": "Chưa có tài liệu nào",
+        "locked": "Chỉ người có quyền xác minh người bán mới xem được danh sách giấy tờ. File giấy tờ chỉ mở tại khu Xác minh người bán."
+      },
+      "vehicleDocuments": {
+        "title": "Tài liệu xe",
+        "empty": "Chưa có giấy tờ xe nào",
+        "locked": "Cần quyền xem xe toàn hệ thống để xem giấy tờ xe.",
+        "noExpiry": "Không thời hạn"
+      },
+      "history": {
+        "title": "Lịch sử xác minh",
+        "empty": "Chưa có lượt xác minh nào",
+        "subject": {
+          "tenant": "Hồ sơ gian hàng",
+          "sellerProfile": "Hồ sơ người bán"
+        }
+      },
+      "privacy": {
+        "title": "Quyền riêng tư",
+        "body": "Số điện thoại, email và số giấy tờ đã được che một phần ngay từ máy chủ. Màn này không hiện bản đầy đủ hay file giấy tờ — các thông tin đó chỉ mở ở màn chuyên trách, theo quyền riêng và có ghi nhật ký."
+      }
+    },
+    "billing": {
+      "permissionNote": "Chỉ người có quyền quản lý Gói & thanh toán mới xem được tab này. Tab chỉ để xem — gán, gia hạn hay huỷ gói nằm ở “Thao tác quản trị nền tảng”.",
+      "expired": "Đã hết hạn",
+      "plan": {
+        "title": "Gói hiện tại",
+        "none": "Chưa có gói hiệu lực",
+        "name": "Gói",
+        "phase": "Trạng thái",
+        "term": "Chu kỳ gói",
+        "renewal": "Gia hạn sau",
+        "daysLeft": "{days, plural, other {Còn # ngày}}"
+      },
+      "quota": {
+        "title": "Hạn mức sử dụng",
+        "vehicles": "Xe",
+        "branches": "Chi nhánh",
+        "members": "Nhân sự",
+        "features": "Tính năng theo gói"
+      },
+      "fee": {
+        "title": "Chính sách phí",
+        "none": "Chưa có chính sách phí hiệu lực",
+        "serviceFee": "Phí dịch vụ XePrime",
+        "percent": "{value}%",
+        "version": "Phiên bản chính sách",
+        "effectiveFrom": "Áp dụng từ",
+        "noteLabel": "Ghi chú",
+        "note": "Chính sách phí chung của nền tảng. Gian hàng gói không bị trừ hoa hồng trên chuyến."
+      },
+      "invoices": {
+        "statusTitle": "Tình trạng hoá đơn",
+        "unpaid": "Chưa thanh toán",
+        "dueSoon": "Sắp đến hạn",
+        "overdue": "Quá hạn",
+        "nextDue": "Hạn thanh toán gần nhất",
+        "noneDue": "Không có"
+      },
+      "history": {
+        "subscriptions": "Lịch sử gói",
+        "subscriptionsEmpty": "Chưa có dòng thuê bao nào",
+        "invoices": "Hoá đơn gói",
+        "invoicesEmpty": "Chưa có hoá đơn nào"
+      },
+      "columns": {
+        "period": "Kỳ",
+        "plan": "Gói",
+        "price": "Số tiền",
+        "status": "Trạng thái",
+        "code": "Mã hoá đơn",
+        "total": "Tổng tiền",
+        "paidAt": "Ngày thanh toán"
+      },
+      "milestones": {
+        "title": "Mốc quan trọng",
+        "joined": "Tham gia nền tảng",
+        "started": "Bắt đầu gói {plan}",
+        "renewal": "Hết kỳ hiện tại — gia hạn tiếp theo"
+      }
+    },
+    "commission": {
+      "moneyNote": "Chỉ người có quyền vận hành tiền của nền tảng mới xem được số tiền.",
+      "noSettlement": "Nền tảng chưa có kỳ đối soát chốt sổ. Số liệu dưới đây gộp từ các chuyến đã hoàn tất theo tháng, từ số tiền đã chốt trên từng đơn.",
+      "policy": {
+        "title": "Chính sách phí dịch vụ",
+        "none": "Chưa có chính sách phí hiệu lực",
+        "rate": "Tỷ lệ hiện tại",
+        "percent": "{value}%",
+        "basis": "Cơ sở tính",
+        "basisValue": "Tiền thuê của chuyến — khách trả phí dịch vụ",
+        "effectiveFrom": "Áp dụng từ",
+        "version": "Phiên bản chính sách"
+      },
+      "current": {
+        "title": "Tháng hiện tại",
+        "empty": "Chưa có số liệu",
+        "period": "Tháng",
+        "completed": "Chuyến hoàn tất",
+        "revenue": "Tổng tiền thuê",
+        "serviceFee": "Phí dịch vụ XePrime",
+        "tax": "Thuế khấu trừ"
+      },
+      "stats": {
+        "completed": "Chuyến hoàn tất",
+        "completedHint": "{months, plural, other {# tháng gần nhất}}",
+        "open": "Đơn đang chạy",
+        "disputes": "Tranh chấp đang mở"
+      },
+      "history": {
+        "title": "Số liệu theo tháng",
+        "empty": "Chưa có chuyến hoàn tất nào"
+      },
+      "columns": {
+        "month": "Tháng",
+        "completed": "Chuyến",
+        "revenue": "Tổng tiền thuê",
+        "serviceFee": "Phí dịch vụ",
+        "tax": "Thuế khấu trừ",
+        "state": "Tình trạng"
+      },
+      "stateOpen": "Tháng hiện tại",
+      "stateClosed": "Đã khép tháng",
+      "rules": {
+        "title": "Nguyên tắc tính phí",
+        "rule1": "Phí dịch vụ tính trên tiền thuê của chuyến, theo chính sách phí có hiệu lực lúc chốt đơn.",
+        "rule2": "Số tiền được chốt (đóng băng) trên từng đơn khi đơn hình thành — không tính lại khi chính sách đổi.",
+        "rule3": "Chuyến bị huỷ hoặc khách không đến nhận không được tính vào số liệu.",
+        "rule4": "Thuế khấu trừ do chủ xe chịu, không cộng vào số tiền khách trả."
+      }
+    },
+    "activity": {
+      "segments": {
+        "activity": "Hoạt động",
+        "sessions": "Phiên hỗ trợ"
+      },
+      "filters": {
+        "all": "Tất cả",
+        "search": "Tìm hoạt động",
+        "searchPlaceholder": "Hành động, người thực hiện…",
+        "source": "Nguồn",
+        "category": "Hành động",
+        "range": "Thời gian"
+      },
+      "range": {
+        "all": "Mọi thời gian",
+        "d7": "7 ngày qua",
+        "d30": "30 ngày qua",
+        "d90": "90 ngày qua"
+      },
+      "title": "{category} · {verb}",
+      "systemActor": "Hệ thống",
+      "viaSupport": "Qua phiên hỗ trợ",
+      "viewDetail": "Xem chi tiết",
+      "today": "Hôm nay",
+      "yesterday": "Hôm qua",
+      "empty": "Chưa có hoạt động nào",
+      "noResults": "Không có hoạt động khớp bộ lọc",
+      "total": "{count, plural, other {# hoạt động}}",
+      "ipNote": {
+        "title": "IP và thiết bị",
+        "body": "IP và thiết bị không hiện ở đây. Mở “Xem chi tiết” để sang Nhật ký hệ thống — các trường đó chỉ hiện với tài khoản có quyền xem nhật ký."
+      },
+      "sessions": {
+        "columns": {
+          "opened": "Mở lúc",
+          "actor": "Người mở",
+          "mode": "Chế độ",
+          "workspace": "Không gian",
+          "reason": "Lý do",
+          "status": "Trạng thái"
+        },
+        "tableLabel": "Các phiên hỗ trợ",
+        "empty": "Chưa có phiên hỗ trợ nào",
+        "total": "{count, plural, other {# phiên}}"
+      }
+    },
+    "admin": {
+      "title": "Thao tác quản trị nền tảng · {name}",
+      "note": "Các thao tác dưới đây là quyết định của nền tảng về đối tác (khoá/mở khoá, gói) và được ghi nhật ký. Chỉnh sửa dữ liệu của đối tác thực hiện trong chế độ hỗ trợ.",
+      "statusTitle": "Trạng thái đối tác"
+    },
+    "quota": {
+      "usedOf": "{used} / {limit}",
+      "usedOfVehicles": "{used} / {limit} xe",
+      "unlimited": "{used} · không giới hạn",
+      "notApplicable": "{used} · không áp dụng cho tuyến này",
+      "ownerLite": "trần Owner Lite (đã hết gói)",
+      "unconfigured": "chưa xác định được gói"
+    }
+  }
+}

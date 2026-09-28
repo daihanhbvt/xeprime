@@ -1,21 +1,14 @@
 import type { Metadata } from 'next';
-import { CalendarScheduler } from '@/features/calendar/components/CalendarScheduler';
-import styles from './calendar-page.module.css';
+import { getTranslations } from 'next-intl/server';
+import { CalendarPage } from '@/features/calendar/components/CalendarPage';
 
-export const metadata: Metadata = { title: 'Lịch thuê xe' };
+/** Tiêu đề tab theo ngôn ngữ của cookie `XP_LOCALE` (ADR 0012) — cùng nhãn với mục menu. */
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Navigation');
+  return { title: t('manage.calendar') };
+}
 
-/**
- * Route lịch — shell đã khoá viewport cho đường dẫn này (AppShell), nên trang chỉ cần cột dọc
- * `min-height: 0` và để CalendarScheduler chiếm phần còn lại; vùng cuộn dọc nằm TRONG lưới.
- *
- * KHÔNG có khối tiêu đề/mô tả chiếm chỗ: breadcrumb của Topbar đã nói "Lịch thuê xe", còn mọi
- * pixel dọc ở màn này thuộc về LƯỚI (yêu cầu review 14/08). Tiêu đề ngữ nghĩa đã do header
- * chung của portal cung cấp, nên trang không dựng thêm `h1` ẩn gây trùng cấu trúc.
- */
-export default function CalendarPage() {
-  return (
-    <div className={styles.page}>
-      <CalendarScheduler />
-    </div>
-  );
+/** Thân trang ở `src/features/calendar/components/CalendarPage`. */
+export default function Page() {
+  return <CalendarPage />;
 }

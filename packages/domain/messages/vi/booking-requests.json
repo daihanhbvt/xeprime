@@ -354,26 +354,12 @@
     "stepsLabel": "Tiến trình đặt xe",
     "stepDone": "(đã xong)",
     "validation": {
-      "nameRequired": "Vui lòng nhập họ tên",
       "nameTooLong": "Họ tên tối đa {max} ký tự",
-      "phoneRequired": "Vui lòng nhập số điện thoại",
-      "phoneInvalid": "Số điện thoại không hợp lệ",
       "emailInvalid": "Email không hợp lệ",
       "serviceRequired": "Chọn loại dịch vụ",
-      "pickupAtRequired": "Chọn thời gian nhận xe",
-      "returnAtRequired": "Chọn thời gian trả xe",
-      "packageRequired": "Chọn gói thuê",
       "pickupPreferenceRequired": "Chọn nguyện vọng nhận xe",
-      "requestedPickupDateRequired": "Chọn ngày mong muốn nhận xe",
       "routeRequired": "Chọn lộ trình",
-      "pickupAddressRequired": "Nhập địa chỉ đón",
-      "destinationRequired": "Nhập điểm đến",
-      "deliveryAddressRequired": "Nhập địa chỉ giao xe",
-      "noteTooLong": "Ghi chú tối đa {max} ký tự",
-      "pickupProvinceRequired": "Chọn tỉnh/thành phố nơi đón",
-      "pickupWardRequired": "Chọn xã/phường nơi đón",
-      "deliveryProvinceRequired": "Chọn tỉnh/thành phố nơi giao xe",
-      "deliveryWardRequired": "Chọn xã/phường nơi giao xe"
+      "noteTooLong": "Ghi chú tối đa {max} ký tự"
     },
     "blocked": {
       "close": "Đóng",

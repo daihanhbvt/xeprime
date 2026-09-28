@@ -81,6 +81,13 @@ export class VehicleBlockDto {
     description: 'Tên người tạo (đã xoá tài khoản → null)',
   })
   createdByName!: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Phiên hỗ trợ của nền tảng đã đặt khoá này (ADR 0050 §13) — null = gian hàng tự đặt.',
+  })
+  supportContextId!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
   @ApiProperty({ description: 'ISO-8601 UTC' }) updatedAt!: string;
 }

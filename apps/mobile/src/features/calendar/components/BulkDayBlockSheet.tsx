@@ -20,10 +20,10 @@ import { TextControl } from '@/components/ui/TextControl';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { space } from '@/theme/tokens';
 import type { CalendarFilters } from '../api';
 import { useBulkBlockDay, useBulkDayPreview } from '../hooks/use-bulk-day';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 const NOTE_MAX = 2000;
 
@@ -76,7 +76,6 @@ function BlockSheetInner({
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
 
   const suggested = state.suggestedRange;
   /** Cụm ngày lễ dài hơn một ngày ⇒ mở thẳng ở chế độ khoảng, đúng thứ người dùng đang định làm. */
@@ -131,7 +130,7 @@ function BlockSheetInner({
           );
           onClose();
         },
-        onError: (error) => toast.showError(errorMessage(error)),
+        onError: (error) => toast.showError(getErrorMessage(error)),
       },
     );
   }
@@ -245,7 +244,7 @@ function BlockSheetInner({
           {preview.isPending ? (
             <SkeletonText lines={2} />
           ) : preview.isError ? (
-            <Callout tone="danger">{errorMessage(preview.error)}</Callout>
+            <Callout tone="danger">{getErrorMessage(preview.error)}</Callout>
           ) : (
             <Callout
               tone={blockable.length === 0 ? 'warning' : 'info'}

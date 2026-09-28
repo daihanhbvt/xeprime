@@ -6,6 +6,7 @@ import {
   createVehicle,
   deleteVehicle,
   setVehicleMarketplaceVisibility,
+  repairVehicleListing,
   submitVehiclePublic,
   updateVehicle,
 } from '../api';
@@ -47,6 +48,17 @@ export function useSubmitVehiclePublic(id: string) {
     onSuccess: (updated) => {
       queryClient.setQueryData(queryKeys.vehicles.detail(id), updated);
       void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
+    },
+  });
+}
+
+/** Đồng bộ lại snapshot công khai của xe (phiên hỗ trợ) — chi tiết xe đọc lại để thấy trạng thái mới. */
+export function useRepairVehicleListing(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => repairVehicleListing(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.detail(id) });
     },
   });
 }

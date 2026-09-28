@@ -1,0 +1,4 @@
+/* Không thêm hộp nào vào bố cục: lớp này chỉ để bắt click trong cây con. */
+.scope {
+  display: contents;
+}

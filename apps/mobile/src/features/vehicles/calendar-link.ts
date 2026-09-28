@@ -14,10 +14,20 @@ import { ROUTES } from '@/navigation/routes';
  */
 export function vehicleSchedulePath(
   vehicle: { name: string; plateNumber?: string | null },
-  options?: { back?: boolean },
+  options?: {
+    back?: boolean;
+    /**
+     * Mở từ khu TÀI KHOẢN ⇒ lịch của khu tài khoản (`/account/calendar`), đúng
+     * `basePath: paths.calendar` bên web. Bỏ trống = lịch cổng quản lý.
+     */
+    customerScope?: boolean;
+  },
 ): Href {
-  return ROUTES.manage.calendar({
+  const filters = {
     q: vehicle.plateNumber || vehicle.name,
     ...(options?.back ? { back: true } : {}),
-  });
+  };
+  return options?.customerScope
+    ? ROUTES.account.calendar(filters)
+    : ROUTES.manage.calendar(filters);
 }

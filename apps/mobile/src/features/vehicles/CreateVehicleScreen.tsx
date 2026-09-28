@@ -25,7 +25,6 @@ import { useActiveBranches } from '@/features/branches/hooks/use-branches';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { goBackOr } from '@/navigation/go-back-or';
@@ -44,6 +43,7 @@ import { VehicleCreateSuccess } from './components/VehicleCreateSuccess';
 import { formValuesToInput } from './mappers';
 import { useCreateVehicle } from './hooks/use-vehicle';
 import { branchLabel, vehiclesApi, type VehicleDetail } from './api';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /** Mặc định khi tạo mới: chọn sẵn giá trị hợp lệ để các ô bắt buộc không rỗng. */
 const EMPTY_DEFAULTS: VehicleFormValues = {
@@ -158,7 +158,6 @@ export function CreateVehicleScreen() {
   const tPermission = useTranslations('ManageCommon.permission');
   const router = useRouter();
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   const { has, isLoading: permissionsLoading } = usePermissions();
 
   const create = useCreateVehicle();
@@ -252,7 +251,7 @@ export function CreateVehicleScreen() {
               setCreated({ vehicle: submitted, submittedForReview: true });
             } catch (error) {
               // Xe ĐÃ tạo — nói đúng điều đó, đừng để người dùng bấm lại và tạo xe thứ hai.
-              toast.showError(t('success.submitFailed', { reason: errorMessage(error) }));
+              toast.showError(t('success.submitFailed', { reason: getErrorMessage(error) }));
               setCreated({ vehicle, submittedForReview: false });
             }
           },
@@ -265,7 +264,7 @@ export function CreateVehicleScreen() {
              */
             const applied = applyApiFieldErrors(error, setError, { fields: WIZARD_FIELDS });
             if (applied.length === 0) {
-              toast.showError(errorMessage(error));
+              toast.showError(getErrorMessage(error));
               return;
             }
             const bad = new Set<string>(applied);

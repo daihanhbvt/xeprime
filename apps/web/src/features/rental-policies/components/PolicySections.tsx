@@ -36,6 +36,7 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { deliverySummaryText } from '../form';
 import type { PolicyFormValues } from '../schema';
 import { PolicyInfoTip } from './PolicyInfoTip';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 
 import styles from './PolicySections.module.css';
 
@@ -264,6 +265,8 @@ export function DeliveryPolicySection<T extends PolicyFormValues>({
   const radius = useWatch({ control, name: 'deliveryMaxRadiusKm' });
   const { errors } = useFormState({ control, name: ['deliveryTiers', 'deliveryMaxRadiusKm'] });
   const { fields, append, remove } = useFieldArray({ control, name: 'deliveryTiers' });
+  // Phiên hỗ trợ (ADR 0050 §12): form chỉ đọc thì không dựng nút thêm/xoá mốc.
+  const hideControls = useSupportHides(SUPPORT_HIDDEN_AREA.DENIED_ACTIONS) && disabled;
 
   const tierErrors = errors.deliveryTiers as
     | (FieldErrors<PolicyFormValues>['deliveryTiers'] & {
@@ -337,29 +340,33 @@ export function DeliveryPolicySection<T extends PolicyFormValues>({
                   help={isFreeDeliveryFee(tiers[index]?.fee) ? t('free') : undefined}
                   disabled={disabled}
                 />
-                <Button
-                  className={styles.deleteButton}
-                  type="text"
-                  danger
-                  icon={<DeleteOutlined aria-hidden="true" />}
-                  aria-label={t('removeTierAt', { index: index + 1 })}
-                  onClick={() => remove(index)}
-                  disabled={disabled}
-                >
-                  <span className={styles.deleteText}>{tActions('delete')}</span>
-                </Button>
+                {hideControls ? null : (
+                  <Button
+                    className={styles.deleteButton}
+                    type="text"
+                    danger
+                    icon={<DeleteOutlined aria-hidden="true" />}
+                    aria-label={t('removeTierAt', { index: index + 1 })}
+                    onClick={() => remove(index)}
+                    disabled={disabled}
+                  >
+                    <span className={styles.deleteText}>{tActions('delete')}</span>
+                  </Button>
+                )}
               </div>
             ))}
           </div>
 
           <div className={styles.tierFooter}>
-            <Button
-              icon={<PlusOutlined aria-hidden="true" />}
-              onClick={() => append({ toKm: null, fee: null })}
-              disabled={disabled}
-            >
-              {t('addTier')}
-            </Button>
+            {hideControls ? null : (
+              <Button
+                icon={<PlusOutlined aria-hidden="true" />}
+                onClick={() => append({ toKm: null, fee: null })}
+                disabled={disabled}
+              >
+                {t('addTier')}
+              </Button>
+            )}
             {crossError ? (
               <span className={styles.tierError} role="alert">
                 ⚠ {crossError}
@@ -600,6 +607,7 @@ function DiscountSection({
   const tiers = useWatch({ control, name: 'discountTiers' }) ?? [];
   const { errors } = useFormState({ control, name: 'discountTiers' });
   const { fields, append, remove } = useFieldArray({ control, name: 'discountTiers' });
+  const hideControls = useSupportHides(SUPPORT_HIDDEN_AREA.DENIED_ACTIONS) && disabled;
 
   const optionsFor = (index: number) =>
     LONG_TERM_PACKAGE_MONTHS.filter(
@@ -667,29 +675,33 @@ function DiscountSection({
                   placeholder={t('notePlaceholder')}
                   disabled={disabled}
                 />
-                <Button
-                  className={styles.deleteButton}
-                  type="text"
-                  danger
-                  icon={<DeleteOutlined aria-hidden="true" />}
-                  aria-label={t('removeTierAt', { index: index + 1 })}
-                  onClick={() => remove(index)}
-                  disabled={disabled}
-                >
-                  <span className={styles.deleteText}>{tActions('delete')}</span>
-                </Button>
+                {hideControls ? null : (
+                  <Button
+                    className={styles.deleteButton}
+                    type="text"
+                    danger
+                    icon={<DeleteOutlined aria-hidden="true" />}
+                    aria-label={t('removeTierAt', { index: index + 1 })}
+                    onClick={() => remove(index)}
+                    disabled={disabled}
+                  >
+                    <span className={styles.deleteText}>{tActions('delete')}</span>
+                  </Button>
+                )}
               </div>
             ))}
           </div>
 
           <div className={styles.tierFooter}>
-            <Button
-              icon={<PlusOutlined aria-hidden="true" />}
-              disabled={disabled || nextUnusedMonths == null}
-              onClick={() => append({ minMonths: nextUnusedMonths, percent: null, note: '' })}
-            >
-              {t('addTier')}
-            </Button>
+            {hideControls ? null : (
+              <Button
+                icon={<PlusOutlined aria-hidden="true" />}
+                disabled={disabled || nextUnusedMonths == null}
+                onClick={() => append({ minMonths: nextUnusedMonths, percent: null, note: '' })}
+              >
+                {t('addTier')}
+              </Button>
+            )}
             {crossError ? (
               <span className={styles.tierError} role="alert">
                 ⚠ {crossError}

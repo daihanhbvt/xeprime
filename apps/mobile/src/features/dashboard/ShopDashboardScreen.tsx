@@ -22,7 +22,6 @@ import { useOpenPushPermissionGate } from '@/features/notifications/push-permiss
 import { ManageHeader } from '@/features/shell/ManageHeader';
 import { ManagePageTitle } from '@/features/shell/ManagePageTitle';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { useComingSoon } from '@/hooks/use-coming-soon';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { ROUTES } from '@/navigation/routes';
 import { layout } from '@/theme/layout';
@@ -57,7 +56,6 @@ export function ShopDashboardScreen() {
   const fmt = useAppFormat();
   const permissions = usePermissions();
   const navigateOnce = useNavigateOnce();
-  const comingSoon = useComingSoon();
   const { tenant } = useTenantScope();
   // Màn CHÍNH của tuyến gói (ADR 0040) — chủ gian hàng không bao giờ đi qua trang chủ marketplace,
   // nên cửa xin quyền thông báo phải mở cả ở đây (`push-permission-gate.ts`).
@@ -90,10 +88,7 @@ export function ShopDashboardScreen() {
   const today = fmt.fullDate(nowInAppTz());
   const todayLabel = today.charAt(0).toLocaleUpperCase() + today.slice(1);
 
-  const goBookings = useCallback(
-    () => navigateOnce(ROUTES.manage.bookings()),
-    [navigateOnce],
-  );
+  const goBookings = useCallback(() => navigateOnce(ROUTES.manage.bookings()), [navigateOnce]);
 
   /*
    * Đích của hai thẻ tiền phải LỌC ĐÚNG bộ mà con số trên thẻ được cộng ra — cùng bộ tham số mà
@@ -126,7 +121,6 @@ export function ShopDashboardScreen() {
       ),
     [navigateOnce],
   );
-
 
   /**
    * Giá trị của một ô số: lỗi nói ra thành CHỮ, chưa có dữ liệu thì `—`.
@@ -253,9 +247,6 @@ export function ShopDashboardScreen() {
                 Nút nằm TRONG dải, không đứng dưới nó: một nút rời bên ngoài đọc ra như hành động
                 của cả trang, trong khi nó chỉ giải quyết đúng chuyện mà dải vừa nói. Cỡ `sm` và
                 không chiếm trọn bề ngang vì đây là hành động của MỘT khối, không phải của màn.
-
-                `href` vắng = web CÓ lối đi này nhưng app chưa dựng màn (Hỗ trợ — SYS-05). Nút
-                vẫn hiện và báo "đang phát triển", đúng quy ước của menu quản lý.
               */}
               {notice.action ? (
                 <XStack>
@@ -266,9 +257,7 @@ export function ShopDashboardScreen() {
                     shape="square"
                     block={false}
                     onPress={() => {
-                      const href = notice.action?.href;
-                      if (href) navigateOnce(href);
-                      else comingSoon();
+                      if (notice.action) navigateOnce(notice.action.href);
                     }}
                   />
                 </XStack>
@@ -318,9 +307,7 @@ export function ShopDashboardScreen() {
                 {bookings.recent.data?.items.length ? (
                   <BookingMiniList
                     items={bookings.recent.data.items}
-                    onSelect={(booking) =>
-                      navigateOnce(ROUTES.manage.bookingDetail(booking.id))
-                    }
+                    onSelect={(booking) => navigateOnce(ROUTES.manage.bookingDetail(booking.id))}
                   />
                 ) : null}
               </DashboardPanel>
@@ -336,9 +323,7 @@ export function ShopDashboardScreen() {
                 {bookings.dueToday.data?.items.length ? (
                   <BookingMiniList
                     items={bookings.dueToday.data.items}
-                    onSelect={(booking) =>
-                      navigateOnce(ROUTES.manage.bookingDetail(booking.id))
-                    }
+                    onSelect={(booking) => navigateOnce(ROUTES.manage.bookingDetail(booking.id))}
                   />
                 ) : null}
               </DashboardPanel>
@@ -354,9 +339,7 @@ export function ShopDashboardScreen() {
                 {bookings.upcoming.data?.items.length ? (
                   <BookingMiniList
                     items={bookings.upcoming.data.items}
-                    onSelect={(booking) =>
-                      navigateOnce(ROUTES.manage.bookingDetail(booking.id))
-                    }
+                    onSelect={(booking) => navigateOnce(ROUTES.manage.bookingDetail(booking.id))}
                   />
                 ) : null}
               </DashboardPanel>
@@ -394,10 +377,7 @@ export function ShopDashboardScreen() {
         Tấm trượt KHÔNG phát request nào khi `receiptId` là `null` — nó nằm ngoài `Screen` để lớp
         phủ che trọn màn thay vì nằm trong vùng cuộn.
       */}
-      <ReceiptDetailSheet
-        receiptId={receiptDetailId}
-        onClose={() => setReceiptDetailId(null)}
-      />
+      <ReceiptDetailSheet receiptId={receiptDetailId} onClose={() => setReceiptDetailId(null)} />
     </>
   );
 }

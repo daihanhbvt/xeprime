@@ -43,6 +43,7 @@ import {
 } from '@xeprime/types';
 import { bookingMoney, emptyMoneySides, loadBookingMoneySides } from '../../common/booking-money';
 import { bookingDebt } from '../../common/money';
+import { piiSearch } from '../../common/support/support-search';
 import { addressViewOf, pinOf } from '../../common/address-view';
 import { normalizeRouteContext } from '../../common/route-context';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -1342,7 +1343,14 @@ function assertRange(pickupAt: Date, returnAt: Date): void {
 
 function searchOr(q: string): Prisma.BookingWhereInput[] {
   const contains = { contains: q, mode: 'insensitive' } as const;
-  return [{ customerName: contains }, { code: contains }, { customerPhone: contains }];
+  // Phiên hỗ trợ: SĐT chỉ khớp đủ số (ADR 0050 §11 — `piiSearch`).
+  const pii = piiSearch(q);
+  const phone: Prisma.BookingWhereInput[] = pii.substring
+    ? [{ customerPhone: contains }]
+    : pii.phones.length > 0
+      ? [{ customerPhone: { in: [...pii.phones] } }]
+      : [];
+  return [{ customerName: contains }, { code: contains }, ...phone];
 }
 
 function orderByOf(

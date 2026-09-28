@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
+import { PERMISSION, PLAN_FEATURE, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
@@ -8,6 +8,7 @@ import {
   RequiresFeature,
   SubscriptionTrackOnly,
   TenantScoped,
+  SupportAction,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
@@ -32,6 +33,7 @@ export class MembersController {
 
   @Get()
   @RequirePermissions(PERMISSION.MEMBER_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.MEMBER_VIEW)
   @ApiOperation({ summary: 'Danh sách thành viên gian hàng (phân trang, filter)' })
   @ApiOkResponse({ type: MemberPageDto })
   list(

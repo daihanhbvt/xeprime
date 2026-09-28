@@ -35,6 +35,7 @@ import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { getErrorCode } from '@/lib/api-client';
 import { useImageErrorMessage } from '@/lib/image-permission-message';
+import { getErrorMessage } from '@/lib/get-error-message';
 import {
   IMAGE_SOURCE,
   pickImages,
@@ -96,7 +97,9 @@ export function CustomerDocumentsPanel({
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
-  const imageErrorMessage = useImageErrorMessage(errorMessage);
+  // Tải tệp hỏng: câu nguyên văn của server (`getErrorMessage`), đúng nhánh chung của web — bước
+  // PUT lên R2 không có mã lỗi. Mở/xác minh/gỡ tệp vẫn dịch theo mã như web.
+  const imageErrorMessage = useImageErrorMessage(getErrorMessage);
   const toast = useAppToast();
   const invalidate = useInvalidateCustomers();
 

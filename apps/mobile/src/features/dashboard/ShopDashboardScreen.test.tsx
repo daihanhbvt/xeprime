@@ -147,9 +147,7 @@ async function renderScreen(permissions: Permission[], options: Options = {}) {
     .mockResolvedValue(currentUser(permissions, { status, features }));
 
   const fail = () =>
-    Promise.reject(
-      new ApiClientError({ status: 500, code: 'INTERNAL_ERROR', message: 'Hỏng' }),
-    );
+    Promise.reject(new ApiClientError({ status: 500, code: 'INTERNAL_ERROR', message: 'Hỏng' }));
 
   const fleetSpy = jest.spyOn(vehiclesApi, 'fleetSummary');
   if (fleetError) fleetSpy.mockImplementation(fail);
@@ -286,7 +284,10 @@ describe('ShopDashboardScreen — số liệu dùng CHUNG với module nguồn',
     await fireEvent.press(await view.findByText('Doanh thu'));
 
     await waitFor(() => expect(mockPush).toHaveBeenCalled());
-    const target = mockPush.mock.calls[0]?.[0] as { pathname: string; params: Record<string, string> };
+    const target = mockPush.mock.calls[0]?.[0] as {
+      pathname: string;
+      params: Record<string, string>;
+    };
     expect(target.pathname).toBe('/manage/receipts');
     expect(target.params).toMatchObject({
       status: RECEIPT_STATUS.APPROVED,
@@ -364,5 +365,21 @@ describe('ShopDashboardScreen — dải trạng thái và ba bước mở gian h
 
     await fireEvent.press(view.getByRole('button', { name: 'Điền hồ sơ' }));
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/manage/shop'));
+  });
+
+  /*
+   * Web: `action: { key: 'support', target: 'support' }` → `workspacePaths(MANAGE).support`
+   * = `/manage/support`. Bản trước báo "đang phát triển" dù màn Hỗ trợ đã có ở app.
+   */
+  it.each([
+    [TENANT_STATUS.SUSPENDED, 'Gian hàng đang bị khoá'],
+    [TENANT_STATUS.EXPIRED, 'Gói dịch vụ đã hết hạn'],
+  ])('gian hàng %s: nút "Liên hệ hỗ trợ" mở /manage/support', async (status, title) => {
+    const view = await renderScreen(FULL, { status });
+
+    expect(await view.findByText(title)).toBeTruthy();
+    await fireEvent.press(view.getByRole('button', { name: 'Liên hệ hỗ trợ' }));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/manage/support'));
+    expect(mockPush).toHaveBeenCalledTimes(1);
   });
 });

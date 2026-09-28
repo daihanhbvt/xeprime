@@ -79,6 +79,7 @@ import {
   type VehicleDocumentOcrJob,
   type VehicleDocumentSummary,
 } from './api';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /** Ba loại chuẩn LUÔN có mặt trong danh mục, kể cả khi chưa có hồ sơ nào — như web. */
 const STANDARD_TYPES: readonly VehicleDocumentType[] = [
@@ -219,7 +220,7 @@ export function VehicleDocumentsScreen({
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
   /* Thiếu quyền máy ảnh/thư viện có câu riêng — xem `useImageErrorMessage`. */
-  const errorMessage = useImageErrorMessage(useErrorMessage());
+  const errorMessage = useImageErrorMessage(getErrorMessage);
 
   const canView = has(PERMISSION.VEHICLE_DOCUMENT_VIEW);
   const canViewDetails = has(PERMISSION.VEHICLE_DOCUMENT_DETAIL_VIEW);
@@ -979,7 +980,7 @@ function AddDocumentSheet({
   const tImage = useTranslations('Common.image');
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
-  const errorMessage = useImageErrorMessage(useErrorMessage());
+  const errorMessage = useImageErrorMessage(getErrorMessage);
 
   const [image, setImage] = useState<PickedImage | null>(null);
   const [picking, setPicking] = useState(false);
@@ -1345,7 +1346,7 @@ function DocumentDetailSheet({
         onError: (error) => {
           // Sửa đè: người khác vừa lưu — không âm thầm ghi đè, mời tải lại.
           toast.showError(
-            getErrorCode(error) === 'CONFLICT' ? t('metadata.conflict') : errorMessage(error),
+            getErrorCode(error) === 'CONFLICT' ? t('metadata.conflict') : getErrorMessage(error),
           );
         },
       },
@@ -1604,7 +1605,6 @@ function DocumentHistorySheet({
   const t = useTranslations('Vehicles.documents.history');
   const fmt = useAppFormat();
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   // Lịch sử chứa tên file → endpoint riêng sau quyền view_files.
   const versions = useVehicleDocumentVersions(vehicleId, documentId, canViewFiles);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -1615,7 +1615,7 @@ function DocumentHistorySheet({
       const ticket = await vehicleDocumentsApi.versionDownload(vehicleId, documentId, versionId);
       await Linking.openURL(ticket.downloadUrl);
     } catch (error) {
-      toast.showError(errorMessage(error));
+      toast.showError(getErrorMessage(error));
     } finally {
       setDownloadingId(null);
     }
@@ -1686,7 +1686,6 @@ function OcrReviewSheet({
   const tCommon = useTranslations('Common');
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [applyPlateToVehicle, setApplyPlateToVehicle] = useState(false);
@@ -1732,7 +1731,9 @@ function OcrReviewSheet({
           onApplied();
         },
         onError: (error) => {
-          toast.showError(getErrorCode(error) === 'CONFLICT' ? t('conflict') : errorMessage(error));
+          toast.showError(
+            getErrorCode(error) === 'CONFLICT' ? t('conflict') : getErrorMessage(error),
+          );
         },
       },
     );

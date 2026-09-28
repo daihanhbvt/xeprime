@@ -49,6 +49,7 @@ export function TextAreaField<T extends FieldValues>({
 
   const errorMessage = fieldState.error?.message;
   const helpText = errorMessage ?? help;
+  const counted = showCount ?? Boolean(maxLength);
 
   return (
     <Form.Item
@@ -57,7 +58,7 @@ export function TextAreaField<T extends FieldValues>({
       required={required}
       validateStatus={fieldState.error ? 'error' : ''}
       help={helpText ? <span id={describedById}>{helpText}</span> : undefined}
-      className={styles.item}
+      className={counted ? `${styles.item} ${styles.withCount}` : styles.item}
     >
       <Input.TextArea
         {...field}
@@ -65,7 +66,7 @@ export function TextAreaField<T extends FieldValues>({
         value={(field.value as string | null | undefined) ?? ''}
         rows={rows}
         maxLength={maxLength}
-        showCount={showCount ?? Boolean(maxLength)}
+        showCount={counted}
         placeholder={placeholder}
         aria-describedby={helpText ? describedById : undefined}
         aria-invalid={fieldState.error ? true : undefined}

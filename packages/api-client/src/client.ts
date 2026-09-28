@@ -58,6 +58,19 @@ export interface ApiClientOptions {
    * tự gọi lại chính mình là vòng lặp.
    */
   onUnauthorized?: (error: ApiClientError) => Promise<boolean> | boolean;
+  /**
+   * Cơ hội BỔ SUNG một điều kiện mà server đòi rồi gửi lại request **đúng một lần** — vd. web hỏi
+   * lý do riêng khi phiên hỗ trợ gian hàng gặp `SUPPORT_REASON_REQUIRED` (428, ADR 0050 §13).
+   *
+   * Trả header cần thêm ⇒ gửi lại kèm chúng; trả `null` ⇒ lỗi đi tiếp lên chỗ gọi như cũ. Lần gửi
+   * lại không gọi lại hook (không vòng lặp). Package không biết mã lỗi nào đáng khôi phục — app
+   * quyết, để client vẫn chỉ là hạ tầng HTTP (ADR 0031). `request` cho app biết lệnh nào đang được
+   * khôi phục (vd. để không dùng lại một lý do cho một đối tượng khác).
+   */
+  recover?: (
+    error: ApiClientError,
+    request: { readonly method: string; readonly path: string },
+  ) => Promise<Readonly<Record<string, string>> | null> | Readonly<Record<string, string>> | null;
 }
 
 export interface ApiClient {
@@ -112,6 +125,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   const transport = options.transport ?? webAuthTransport();
   const fetchImpl = options.fetch;
   const onUnauthorized = options.onUnauthorized;
+  const recover = options.recover;
 
   async function attempt<TData>(
     path: string,
@@ -181,11 +195,19 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     try {
       return await attempt<TData>(path, requestOptions);
     } catch (error) {
-      if (!onUnauthorized || !(error instanceof ApiClientError) || error.status !== 401) {
-        throw error;
+      if (!(error instanceof ApiClientError)) throw error;
+      if (onUnauthorized && error.status === 401) {
+        if (!(await onUnauthorized(error))) throw error;
+        return attempt<TData>(path, requestOptions);
       }
-      if (!(await onUnauthorized(error))) throw error;
-      return attempt<TData>(path, requestOptions);
+      const extra = recover
+        ? await recover(error, { method: requestOptions.method ?? 'GET', path })
+        : null;
+      if (!extra) throw error;
+      return attempt<TData>(path, {
+        ...requestOptions,
+        headers: { ...requestOptions.headers, ...extra },
+      });
     }
   }
 

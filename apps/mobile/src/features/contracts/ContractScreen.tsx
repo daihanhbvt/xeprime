@@ -58,6 +58,7 @@ export function ContractScreen({ contractId }: { contractId: string }) {
         <AppHeader title={t('title')} onBack={back} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenError
+            messageFrom="backend"
             error={query.error}
             title={t('errorTitle')}
             onRetry={() => void query.refetch()}
@@ -95,7 +96,9 @@ function ContractBody({
   const s = contract.snapshot;
 
   const bankLine = s.shop.bankAccountNo
-    ? [s.shop.bankAccountNo, s.shop.bankName, s.shop.bankAccountName].filter(Boolean).join(LIST_SEPARATOR)
+    ? [s.shop.bankAccountNo, s.shop.bankName, s.shop.bankAccountName]
+        .filter(Boolean)
+        .join(LIST_SEPARATOR)
     : null;
   const brandModel = [s.vehicle.brand, s.vehicle.model].filter(Boolean).join(' ');
 

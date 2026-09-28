@@ -5,12 +5,19 @@ import { useForm, useWatch } from 'react-hook-form';
 import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { SERVICE_TYPE, type PublicListingDetail } from '@xeprime/types';
+import {
+  ADDRESS_LINE_MAX_LENGTH,
+  PICKUP_PREFERENCE,
+  ROUTE_TYPE,
+  SERVICE_TYPE,
+  type PublicListingDetail,
+} from '@xeprime/types';
 import { readDeliveryAddress, rememberDeliveryAddress } from '@/lib/delivery-address-memory';
 import type { RentalMode } from '@xeprime/domain';
 import {
   buildBookingRequestSchema,
   NAME_MAX,
+  DESTINATION_MAX,
   NOTE_MAX,
   type BookingRequestFormValues,
 } from './booking-schema';
@@ -45,6 +52,7 @@ import {
 } from './hooks/use-booking-request-flow';
 import { toQuoteParams } from './quote-params';
 import { toRequestBody } from './request-body';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /**
  * Hình dạng form của wizard, suy từ chính `useForm` thay vì viết tay `UseFormReturn<...>`:
@@ -190,21 +198,30 @@ function RequestBookingBody({
     () =>
       buildBookingRequestSchema(
         {
-          nameRequired: t('validation.nameRequired'),
+          /*
+           * Câu lỗi theo đúng `BookingRequests.form.errors.*` mà `requestFormSchema` bên web dùng.
+           * Chỉ những ô web KHÔNG có câu riêng mới còn đọc `flow.validation.*` (độ dài họ tên —
+           * web để yup tự sinh câu tiếng Anh; loại dịch vụ, lộ trình, nguyện vọng — web chọn sẵn
+           * mặc định nên không bao giờ báo thiếu).
+           */
+          nameRequired: tFormErrors('customerName'),
           nameTooLong: t('validation.nameTooLong', { max: NAME_MAX }),
-          phoneRequired: t('validation.phoneRequired'),
-          phoneInvalid: t('validation.phoneInvalid'),
+          phoneRequired: tFormErrors('customerPhone'),
+          phoneInvalid: tFormErrors('customerPhoneFormat'),
           emailInvalid: t('validation.emailInvalid'),
           serviceRequired: t('validation.serviceRequired'),
-          pickupAtRequired: t('validation.pickupAtRequired'),
-          returnAtRequired: t('validation.returnAtRequired'),
-          packageRequired: t('validation.packageRequired'),
+          pickupAtRequired: tFormErrors('pickupAt'),
+          returnAtRequired: tFormErrors('returnAt'),
+          returnAfterPickup: tFormErrors('returnAfterPickup'),
+          packageRequired: tFormErrors('longTermPackage'),
           pickupPreferenceRequired: t('validation.pickupPreferenceRequired'),
-          requestedPickupDateRequired: t('validation.requestedPickupDateRequired'),
+          requestedPickupDateRequired: tFormErrors('requestedPickupDate'),
           routeRequired: t('validation.routeRequired'),
-          pickupAddressRequired: t('validation.pickupAddressRequired'),
-          destinationRequired: t('validation.destinationRequired'),
-          deliveryAddressRequired: t('validation.deliveryAddressRequired'),
+          pickupAddressRequired: tFormErrors('pickupAddressLine'),
+          destinationRequired: tFormErrors('destination'),
+          deliveryAddressRequired: tFormErrors('deliveryAddressLine'),
+          addressLineMax: tFormErrors('addressLineMax', { max: ADDRESS_LINE_MAX_LENGTH }),
+          destinationMax: tFormErrors('destinationMax', { max: DESTINATION_MAX }),
           addressNotConfirmed: tFormErrors('addressNotConfirmed'),
           noteTooLong: t('validation.noteTooLong', { max: NOTE_MAX }),
         },
@@ -224,9 +241,10 @@ function RequestBookingBody({
       pickupAt: '',
       returnAt: '',
       longTermPackageMonths: null,
-      pickupPreference: null,
+      // Web chọn sẵn "trong 7 ngày" và "nội thành" (`requestFormSchema` `.default(...)`).
+      pickupPreference: PICKUP_PREFERENCE.WITHIN_7_DAYS,
       requestedPickupDate: '',
-      routeType: null,
+      routeType: ROUTE_TYPE.IN_CITY,
       pickupProvinceCode: '',
       pickupWardCode: '',
       pickupAddressLine: '',
@@ -421,9 +439,9 @@ function RequestBookingBody({
     } catch (error) {
       // Lỗi GỬI mã cũng đi bằng toast: ô số điện thoại đang ở cuối form, dòng đỏ dưới nó nằm
       // đúng vùng bàn phím che.
-      toast.showError(errorMessage(error));
+      toast.showError(getErrorMessage(error));
     }
-  }, [errorMessage, flow, form, otp, setOtpPhone, setStep, toast]);
+  }, [flow, form, otp, setOtpPhone, setStep, toast]);
 
   /** Một nút "Tiếp tục": kiểm dữ liệu → kiểm khung giờ còn trống → quyết định đi qua OTP hay không. */
   const continueFromTrip = useCallback(async () => {
@@ -583,6 +601,7 @@ function RequestBookingBody({
         receipt={state.receipt}
         values={form.getValues()}
         listing={listing}
+        quote={quoteWithPromo}
         onClose={closeFlow}
       />
     );

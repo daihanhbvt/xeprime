@@ -12,8 +12,8 @@ import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { setAccountPassword } from '@/features/auth/api';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /**
  * Bước gợi ý đặt mật khẩu sau khi đăng nhập bằng SĐT + OTP — bản native của
@@ -35,7 +35,6 @@ import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 export function SetPasswordScreen({ onDone }: { onDone: () => void }) {
   const t = useTranslations('Auth');
   const tSet = useTranslations('Auth.setPassword');
-  const errorMessage = useErrorMessage();
   const toast = useAppToast();
 
   /*
@@ -62,7 +61,7 @@ export function SetPasswordScreen({ onDone }: { onDone: () => void }) {
       toast.showSuccess(tSet('done'));
       onDone();
     },
-    onError: (error) => toast.showError(errorMessage(error)),
+    onError: (error) => toast.showError(getErrorMessage(error)),
   });
 
   const onSubmit = handleSubmit((values) => save.mutate(values));

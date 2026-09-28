@@ -4,7 +4,13 @@
  * CLAUDE.md mục 5 cấm rải string literal nghiệp vụ trong component; route cũng vậy — đổi
  * cấu trúc URL mà phải grep chuỗi `/manage/...` khắp source là cách sinh link chết.
  */
-import { REGISTRATION_TRACK, type RegistrationTrack } from '@xeprime/types';
+import {
+  PLATFORM_PARTNER_KIND,
+  REGISTRATION_TRACK,
+  isSupportContextId,
+  type PlatformPartnerKind,
+  type RegistrationTrack,
+} from '@xeprime/types';
 
 export const ROUTES = {
   HOME: '/',
@@ -288,8 +294,21 @@ export const ROUTES = {
     SUPPORT_CASES: '/manage/support/cases',
 
     // Quản trị nền tảng
+    /** "Kiểm duyệt xe" — hàng đợi duyệt xe lên chợ. Chỉ khớp TUYỆT ĐỐI trên menu (`NavLeaf.exact`). */
     ADMIN: '/manage/admin',
+    /**
+     * BỘ TRA LOẠI ĐỐI TÁC — và là URL cũ của danh sách gian hàng chung (trước 28/09/2026).
+     *
+     * ⚠️ KHÔNG xoá như một route "legacy": `adminPartnerPath.resolveTenant` dựa vào nó cho chi tiết
+     * đơn thuê, lối thoát phiên hỗ trợ và dashboard nền tảng. `?tenant=<id>` tra loại của gian
+     * hàng đó ở server rồi mở đúng danh sách với chi tiết mở sẵn; không có `tenant` thì về "Gian
+     * hàng gói" kèm nguyên bộ lọc.
+     */
     ADMIN_TENANTS: '/manage/admin/tenants',
+    /** Gốc hai danh sách đối tác — chuyển tiếp về "Gian hàng gói". */
+    ADMIN_PARTNERS: '/manage/admin/partners',
+    ADMIN_PARTNER_SHOPS: '/manage/admin/partners/shops',
+    ADMIN_PARTNER_OWNERS: '/manage/admin/partners/owners',
     ADMIN_VEHICLES: '/manage/admin/vehicles',
     ADMIN_BOOKINGS: '/manage/admin/bookings',
     ADMIN_CUSTOMERS: '/manage/admin/customers',
@@ -311,6 +330,11 @@ export const ROUTES = {
     ADMIN_MONEY: '/manage/admin/money',
     /** Hàng đợi hỗ trợ/tranh chấp toàn sàn (R3 — ADR 0028 release gate 7). */
     ADMIN_SUPPORT: '/manage/admin/support',
+    /**
+     * Không gian hỗ trợ gian hàng (ADR 0050) — gốc của các phiên `/…/<id phiên>/…`. Tách hẳn khỏi
+     * `ADMIN_SUPPORT` (hàng đợi hỗ trợ/tranh chấp): hai tính năng khác nhau, không chung tiền tố.
+     */
+    ADMIN_TENANT_SUPPORT: '/manage/admin/tenant-support',
   },
 } as const;
 
@@ -372,9 +396,14 @@ export function isAccountVehicleManagePath(pathname: string): boolean {
   return /^\/account\/vehicles\/[^/]+\/manage(\/|$)/.test(pathname);
 }
 
-/** Mục đang mở suy từ đường dẫn — `null` khi đang ở gốc hoặc một mục lạ. */
+/**
+ * Mục đang mở suy từ đường dẫn — `null` khi đang ở gốc hoặc một mục lạ.
+ *
+ * Khớp theo ĐUÔI `/vehicles/<id>/manage/<mục>`, không theo gốc `/account`: cùng không gian quản lý
+ * xe còn được dựng dưới phiên hỗ trợ của nhân sự nền tảng (ADR 0050), với một gốc khác.
+ */
 export function vehicleManageSectionOf(pathname: string): VehicleManageSection | null {
-  const match = /^\/account\/vehicles\/[^/]+\/manage\/(.+?)\/?$/.exec(pathname);
+  const match = /\/vehicles\/[^/]+\/manage\/(.+?)\/?$/.exec(pathname);
   const candidate = match?.[1];
   return candidate && (VEHICLE_MANAGE_SECTION_VALUES as string[]).includes(candidate)
     ? (candidate as VehicleManageSection)
@@ -503,6 +532,76 @@ export function workspacePaths(workspace: Workspace): {
 }
 
 export type WorkspacePaths = ReturnType<typeof workspacePaths>;
+
+/**
+ * Đường dẫn tới MỘT chiếc xe theo khu đang đứng — cùng lý do tồn tại với `workspacePaths`: không
+ * component nào của `vehicles`/`vehicle-manage` tự biết mình đang ở `/account`, `/manage` hay
+ * trong một phiên hỗ trợ của nhân sự nền tảng (ADR 0050). Tách khỏi `WorkspacePaths` vì bảng đó
+ * là bảng CHUỖI (nơi khác dùng `keyof` của nó làm đích link).
+ */
+export interface WorkspaceVehiclePaths {
+  /** Trang chính của một xe khi bấm vào nó từ danh sách. */
+  detail: (id: string) => string;
+  /** Một mục của không gian "Quản lý xe" (Owner Lite). */
+  manageSection: (id: string, section: VehicleManageSection) => string;
+  /** Màn sửa xe nhiều tab (Full Manage). */
+  edit: (id: string) => string;
+}
+
+export function workspaceVehiclePaths(workspace: Workspace): WorkspaceVehiclePaths {
+  return {
+    detail: workspace === WORKSPACE.MANAGE ? vehiclePath.detail : accountVehiclePath.manage,
+    manageSection: accountVehicleManagePath.section,
+    edit: (id) => vehiclePath.edit(id),
+  };
+}
+
+/**
+ * Không gian hỗ trợ gian hàng của nhân sự nền tảng — ADR 0050.
+ *
+ * MỘT chỗ dựng gốc: ngày khu quản lý tách sang tên miền riêng, chỉ bảng này và
+ * `tenantSupportContextIdFromPath` phải đổi. Không component nào tự ghép chuỗi `/manage/admin/tenant-support/`.
+ */
+export const adminTenantSupportPath = {
+  root: (contextId: string): string => `${ROUTES.MANAGE.ADMIN_TENANT_SUPPORT}/${contextId}`,
+  vehicleEdit: (contextId: string, id: string): string =>
+    `${ROUTES.MANAGE.ADMIN_TENANT_SUPPORT}/${contextId}/vehicles/${id}/edit`,
+  vehicleManageSection: (contextId: string, id: string, section: VehicleManageSection): string =>
+    `${ROUTES.MANAGE.ADMIN_TENANT_SUPPORT}/${contextId}/vehicles/${id}/manage/${section}`,
+};
+
+/** Tham số URL mở sẵn chi tiết một gian hàng trên danh sách đối tác (ADR 0004 — sống qua F5). */
+export const ADMIN_PARTNER_TENANT_PARAM = 'tenant';
+
+/** Tab đang mở của drawer chi tiết đối tác — cùng URL với `tenant`, để F5/Back mở lại đúng tab. */
+export const ADMIN_PARTNER_TAB_PARAM = 'tab';
+
+const ADMIN_PARTNER_LIST_ROUTE: Readonly<Record<PlatformPartnerKind, string>> = {
+  [PLATFORM_PARTNER_KIND.PACKAGE_SHOP]: ROUTES.MANAGE.ADMIN_PARTNER_SHOPS,
+  [PLATFORM_PARTNER_KIND.INDIVIDUAL_OWNER]: ROUTES.MANAGE.ADMIN_PARTNER_OWNERS,
+};
+
+/**
+ * Hai danh sách đối tác của Platform Admin — MỘT chỗ ghép URL.
+ *
+ * `resolveTenant` dành cho nơi biết gian hàng nhưng KHÔNG biết loại (một đơn thuê, lối thoát phiên
+ * hỗ trợ): nó đi qua URL cũ `ADMIN_TENANTS`, nơi server nói gian hàng thuộc danh sách nào. Client
+ * không bao giờ tự đoán loại.
+ */
+export const adminPartnerPath = {
+  list: (kind: PlatformPartnerKind): string => ADMIN_PARTNER_LIST_ROUTE[kind],
+  tenant: (kind: PlatformPartnerKind, tenantId: string): string =>
+    `${ADMIN_PARTNER_LIST_ROUTE[kind]}?${new URLSearchParams({ [ADMIN_PARTNER_TENANT_PARAM]: tenantId })}`,
+  resolveTenant: (tenantId: string): string =>
+    `${ROUTES.MANAGE.ADMIN_TENANTS}?${new URLSearchParams({ [ADMIN_PARTNER_TENANT_PARAM]: tenantId })}`,
+};
+
+export function tenantSupportContextIdFromPath(pathname: string): string | null {
+  const prefix = `${ROUTES.MANAGE.ADMIN_TENANT_SUPPORT}/`;
+  if (!pathname.startsWith(prefix)) return null;
+  const segment = pathname.slice(prefix.length).split('/')[0];
+  return isSupportContextId(segment) ? segment : null;
+}
 
 export const vehiclePath = {
   detail: (id: string): string => `/manage/vehicles/${id}`,

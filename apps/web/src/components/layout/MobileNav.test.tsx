@@ -138,7 +138,7 @@ describe('MobileNav — thanh tab dưới đáy', () => {
     const labels = within(bottomBar(container))
       .getAllByRole('link')
       .map((a) => a.textContent);
-    expect(labels).toEqual(['Tổng quan', 'Duyệt xe', 'Vận hành tiền', 'Đơn thuê']);
+    expect(labels).toEqual(['Tổng quan', 'Kiểm duyệt', 'Vận hành tiền', 'Đơn thuê']);
     expect(labels).not.toContain('Lịch xe');
   });
 
@@ -237,6 +237,36 @@ describe('MobileNav — tab đang sáng', () => {
     for (const link of within(bottomBar(container)).getAllByRole('link')) {
       expect(link.getAttribute('aria-current')).toBeNull();
     }
+  });
+
+  /*
+   * Tab "Kiểm duyệt" sống ở `/manage/admin` — tiền tố của mọi trang quản trị. Nó chỉ sáng khi đứng
+   * đúng ở đó; ở trang khác, đúng MỘT tab (hoặc "Thêm") sáng — cùng luật với sidebar.
+   */
+  it.each([
+    ['/manage/admin', 'Kiểm duyệt'],
+    ['/manage/admin/bookings', 'Đơn thuê'],
+    ['/manage/admin/bookings/01H', 'Đơn thuê'],
+    ['/manage/admin/money', 'Vận hành tiền'],
+    ['/manage/admin/partners/shops', null],
+    ['/manage/admin/partners/owners', null],
+  ])('nền tảng %s → chỉ %s sáng', (pathname, expected) => {
+    user.platformRole = 'platform_admin';
+    grant(
+      PERMISSION.PLATFORM_DASHBOARD_VIEW,
+      PERMISSION.PLATFORM_APPROVAL_REVIEW,
+      PERMISSION.PLATFORM_MONEY_MANAGE,
+      PERMISSION.PLATFORM_BOOKING_VIEW,
+    );
+    nav.pathname = pathname;
+    const { container } = renderNav();
+
+    const marked = within(bottomBar(container))
+      .getAllByRole('link')
+      .filter((link) => link.getAttribute('aria-current') === 'page')
+      .map((link) => link.textContent);
+    // `null` = trang thuộc Drawer "Thêm" — không tab chính nào sáng.
+    expect(marked).toEqual(expected ? [expected] : []);
   });
 
   it('tên icon KHÔNG còn lọt vào tên truy cập được (D16.1 đã sửa ở 1D-C)', () => {

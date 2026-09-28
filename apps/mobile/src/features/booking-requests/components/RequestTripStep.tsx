@@ -16,8 +16,10 @@ import {
   type PublicListingDetail,
 } from '@xeprime/types';
 import {
+  appWallClockToIso,
   dayjs,
   isZeroMoney,
+  toAppTz,
   type BusyDayIndex,
   type Dayjs,
   type RentalMode,
@@ -306,7 +308,7 @@ export function RequestTripStep({
                   vehicleProvinceName={vehicleProvinceName}
                   vehiclePoint={vehiclePoint}
                   {...(onServiceAvailabilityChange ? { onServiceAvailabilityChange } : {})}
-            {...(onServiceAvailabilityChange ? { onServiceAvailabilityChange } : {})}
+                  {...(onServiceAvailabilityChange ? { onServiceAvailabilityChange } : {})}
                 />
                 <DeliveryEstimate form={form} vehicleId={listing.id} />
               </YStack>
@@ -463,7 +465,6 @@ function pickupPointLabel(listing: PublicListingDetail): string | null {
 
 /** Chờ khách gõ xong địa chỉ rồi mới tra — mỗi phím một lượt gọi bản đồ là đốt hạn mức. */
 const ADDRESS_DEBOUNCE_MS = 600;
-
 
 /**
  * Ước lượng khoảng cách và phí giao xe.
@@ -660,14 +661,15 @@ function TimeField({
   const error = form.formState.errors.pickupAt ?? form.formState.errors.returnAt;
 
   const [draft, setDraft] = useState<{ pickupAt: Dayjs | null; returnAt: Dayjs | null }>({
-    pickupAt: pickupAt ? dayjs(pickupAt) : null,
-    returnAt: returnAt ? dayjs(returnAt) : null,
+    pickupAt: pickupAt ? toAppTz(pickupAt) : null,
+    returnAt: returnAt ? toAppTz(returnAt) : null,
   });
 
   function apply() {
     if (!draft.pickupAt || !draft.returnAt) return;
-    form.setValue('pickupAt', draft.pickupAt.toISOString(), { shouldValidate: true });
-    form.setValue('returnAt', draft.returnAt.toISOString(), { shouldValidate: true });
+    // Đọc MẶT ĐỒNG HỒ theo giờ Việt Nam — đúng `appWallClockToIso` web dùng khi gửi yêu cầu.
+    form.setValue('pickupAt', appWallClockToIso(draft.pickupAt), { shouldValidate: true });
+    form.setValue('returnAt', appWallClockToIso(draft.returnAt), { shouldValidate: true });
     setOpen(false);
   }
 

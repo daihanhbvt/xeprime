@@ -47,6 +47,13 @@ export class FeatureUsageInterceptor implements NestInterceptor {
 
     const req = ctx.switchToHttp().getRequest<RequestContext>();
     if (!req.tenant || !isFeatureWriteMethod(req.method)) return next.handle();
+    /*
+     * Phiên hỗ trợ của nhân sự nền tảng (ADR 0050) KHÔNG đánh dấu gian hàng "đã dùng" một tính
+     * năng: dấu này không đảo ngược được và quyết định gian hàng thấy `read_only` hay `hidden` khi
+     * hạ gói (ADR 0027 điều 3) — đó phải là hệ quả của việc CHÍNH gian hàng dùng, không phải của
+     * một lượt hỗ trợ.
+     */
+    if (req.tenant.support) return next.handle();
     if (req.tenant.features[feature] !== FEATURE_STATE.ENABLED) return next.handle();
     if (req.tenant.usedFeatures.includes(feature)) return next.handle();
 

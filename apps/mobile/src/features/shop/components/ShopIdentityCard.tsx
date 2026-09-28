@@ -102,8 +102,8 @@ export function ShopIdentityCard({
      * CHỈ đưa tay ra khi hồ sơ đang SỬA ĐƯỢC.
      *
      * Ô logo trong khối này đã bị `disabled={!editable}` chặn; một CTA ở ngoài gọi thẳng
-     * `logoUpload.open` thì đi vòng qua đúng cái chặn đó. Ở chế độ chỉ-đọc (`verification =
-     * pending`, hoặc thành viên không có `tenant.update`) màn không dựng nút Lưu, nên ảnh vừa tải
+     * `logoUpload.open` thì đi vòng qua đúng cái chặn đó. Ở chế độ chỉ-đọc (thành viên không có
+     * `tenant.update` — trục xác minh không còn khoá hồ sơ) màn không dựng nút Lưu, nên ảnh vừa tải
      * lên R2 sẽ ghi vào một form không có đường ra và mất trắng — người dùng thấy logo đổi rồi mất
      * sau lần mở lại. Web no-op ở đúng ca này vì section chứa ô logo không được dựng.
      */

@@ -30,13 +30,8 @@ import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButto
 import { TripHoldPanel } from '@/features/trips/components/TripHoldPanel';
 import { useTrip } from '@/features/trips/hooks/use-trips';
 import { useCopy } from '@/hooks/use-copy';
-import {
-  BOOKING_BLOCKED,
-  usePublicQuote,
-  type BookingBlocked,
-} from '../hooks/use-booking-request-flow';
-import { toQuoteParams } from '../quote-params';
-import type { BookingRequestReceipt } from '../api';
+import { BOOKING_BLOCKED, type BookingBlocked } from '../hooks/use-booking-request-flow';
+import type { BookingRequestReceipt, PublicQuote } from '../api';
 
 /**
  * Màn kết thúc của wizard — ba nhánh, và **không nhánh nào là lỗi đỏ**.
@@ -64,6 +59,7 @@ export function RequestResultStep({
   receipt,
   values,
   listing,
+  quote,
   onClose,
 }: {
   blocked?: BookingBlocked | null;
@@ -71,6 +67,12 @@ export function RequestResultStep({
   receipt: BookingRequestReceipt | null;
   values: BookingRequestFormValues;
   listing: PublicListingDetail;
+  /**
+   * Báo giá ĐÃ ÁP MÃ của chính luồng vừa gửi (`quoteWithPromo`) — cùng nguồn web đọc ở màn
+   * "đã gửi". Không tự gọi lại báo giá công khai ở đây: báo giá đó KHÔNG nhận mã khuyến mãi, nên
+   * màn kết quả sẽ hiện nguyên giá trong khi bảng giá khách vừa bấm qua đã trừ mã.
+   */
+  quote: PublicQuote | null;
   onClose: () => void;
 }) {
   const t = useTranslations('BookingRequests.flow');
@@ -143,24 +145,26 @@ export function RequestResultStep({
     );
   }
 
-  return <DoneResult values={values} listing={listing} receipt={receipt} />;
+  return <DoneResult values={values} listing={listing} receipt={receipt} quote={quote} />;
 }
 
 /**
  * Nhánh "đã gửi xong" — năm dòng tóm tắt cùng thứ tự với web: Xe · Thời gian · Dịch vụ · Nhận xe
  * · Tổng dự kiến.
  *
- * Là component riêng vì nó gọi `usePublicQuote` (receipt không mang tiền), mà hook không đặt được
- * trong thân `RequestResultStep` do nhánh `duplicate` return sớm.
+ * Là component riêng vì nó gọi `useTrip`/`useCopy`, mà hook không đặt được trong thân
+ * `RequestResultStep` do nhánh `duplicate` return sớm.
  */
 function DoneResult({
   values,
   listing,
   receipt,
+  quote,
 }: {
   values: BookingRequestFormValues;
   listing: PublicListingDetail;
   receipt: BookingRequestReceipt | null;
+  quote: PublicQuote | null;
 }) {
   const t = useTranslations('BookingRequests.flow');
   const router = useRouter();
@@ -185,8 +189,7 @@ function DoneResult({
 
   const longTerm = values.serviceType === SERVICE_TYPE.LONG_TERM;
   const withDriver = values.serviceType === SERVICE_TYPE.WITH_DRIVER;
-  const quote = usePublicQuote(listing.id, toQuoteParams(values));
-  const breakdown = quote.data?.breakdown ?? null;
+  const breakdown = quote?.breakdown ?? null;
   // Ghép bằng CHÍNH hàm server dùng để dựng chuỗi lưu xuống DB — xem `useAddressPreview`.
   const pickupAddress = useAddressPreview(
     values.pickupProvinceCode,

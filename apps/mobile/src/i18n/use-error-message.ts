@@ -1,59 +1,55 @@
 import { useCallback } from 'react';
 import { useTranslations } from 'use-intl';
-import { ApiClientError, getErrorCode } from '@/lib/api-client';
+import { getErrorCode } from '@/lib/api-client';
 import { logger } from '@/lib/logger';
 import type { AppMessages } from './messages';
 
 type ErrorCodeKey = keyof AppMessages['Errors']['code'];
 
 /**
- * Chữ hiện cho người dùng khi một lời gọi API hỏng.
+ * Lỗi từ API → câu tiếng người theo ngôn ngữ đang dùng — bản native của `useErrorMessage` bên web
+ * (`apps/web/src/i18n/use-error-message.ts`), CÙNG thứ tự.
  *
- * ## Ưu tiên `message` của backend — giống hệt `apps/web`
+ * ## Nguồn chữ là MÃ, không phải `message` của backend (ADR 0012)
  *
- * `getErrorMessage` của web (`services/api-client.ts`) trả thẳng `error.message`, và app phải
- * nói cùng một câu với web cho cùng một sự cố. Quan trọng hơn: câu của backend mang DỮ LIỆU mà
- * bảng dịch không thể có — "Vui lòng đợi 38s trước khi gửi lại mã", "Thử lại sau 1 giờ". Dịch
- * theo MÃ sẽ biến cả hai thành một câu chung chung, và người dùng mất đúng thông tin họ cần để
- * biết phải làm gì tiếp.
+ * Backend trả `{ code, message }`, và `message` của nó là **tiếng Việt**. Hiện thẳng nó thì giao
+ * diện tiếng Anh nhận một câu tiếng Việt đúng vào lúc người dùng đang gặp sự cố — và ngay cả ở
+ * tiếng Việt, câu đó KHÁC câu web đã soạn cho cùng mã trong `Errors.code.*` (web có test canh mọi
+ * mã đều có câu ở cả hai ngôn ngữ: `apps/web/src/i18n/error-codes.test.ts`).
  *
- * ## Nhưng chỉ khi backend THỰC SỰ nói
+ * Tới 25/09/2026 bản native còn đi ngược: ưu tiên `message` của backend, với lý do câu đó mang dữ
+ * liệu ("đợi 38s"). Web đã chọn bỏ dữ liệu đó để giữ đúng ngôn ngữ (`OTP_COOLDOWN` → câu chung),
+ * nên app theo cùng lựa chọn — hai bề mặt, một câu cho một sự cố.
  *
- * `status > 0` nghĩa là đã có response từ server, tức `message` là câu backend soạn cho người
- * dùng. `status === 0` là lỗi do CHÍNH client dựng ra khi request không tới nơi
- * (`toNetworkError`), và `message` của nó là chuỗi log tiếng Anh — "Request to /auth/me failed".
- * Đưa câu đó lên màn hình là rò chi tiết kỹ thuật cho người dùng, nên nhánh này dịch từ mã
- * (`CLIENT_NETWORK_ERROR`, `CLIENT_TIMEOUT` đều đã có bản dịch).
+ * `message` kỹ thuật của backend vẫn hữu ích để lần dấu, nên nó đi vào log chứ không lên màn hình.
  *
- * Đây là chỗ app **tốt hơn** web một chút: web hiện luôn cả chuỗi log đó.
+ * ## Lỗi không có response
  *
- * ## Hệ quả còn nợ
+ * `toNetworkError` của client native dựng `ApiClientError` với mã `CLIENT_NETWORK_ERROR` /
+ * `CLIENT_TIMEOUT` (đều có câu dịch), nên nhánh MÃ ở trên đã bắt chúng. `TypeError` trần (fetch hỏng
+ * ngoài client) rơi về `Errors.network`, đúng như web.
  *
- * Câu của backend hiện chỉ có tiếng Việt, nên giao diện tiếng Anh vẫn nhận câu tiếng Việt cho
- * lỗi có response — đúng thứ ADR 0012 muốn tránh. Trả nợ này cần backend trả về `details` có
- * cấu trúc (ví dụ `{ waitSec }`) để bảng dịch tự ghép số; tới lúc đó, bảng `Errors.code.*` bên
- * dưới vẫn giữ nguyên và trở thành nhánh chính.
+ * Mã lạ (backend mới hơn app) rơi về câu chung — không bao giờ in mã thô cho người dùng đọc.
  */
 export function useErrorMessage(): (error: unknown) => string {
   const t = useTranslations('Errors');
 
   return useCallback(
     (error: unknown) => {
-      if (error instanceof ApiClientError && error.status > 0 && error.message) {
-        return error.message;
-      }
-
       const code = getErrorCode(error);
-      if (!code) {
-        return t('fallback');
+      if (code) {
+        // Mã lỗi đến từ mạng nên chỉ là `string`; `t.has` mới là bộ chặn thật, ép kiểu ở đây
+        // chỉ để nói với TypeScript rằng khoá nằm trong nhánh `code.*`.
+        const key = `code.${code}` as `code.${ErrorCodeKey}`;
+        if (t.has(key)) return t(key);
       }
 
-      // Mã lỗi đến từ mạng nên chỉ là `string`; `t.has` mới là bộ chặn thật, ép kiểu ở đây
-      // chỉ để nói với TypeScript rằng khoá nằm trong nhánh `code.*`.
-      const key = `code.${code}` as `code.${ErrorCodeKey}`;
-      if (t.has(key)) return t(key);
+      if (error instanceof TypeError) return t('network');
 
-      logger.warn(`Mã lỗi chưa có bản dịch: ${code}`);
+      logger.warn('Lỗi chưa có câu dịch', {
+        code,
+        message: error instanceof Error ? error.message : null,
+      });
       return t('fallback');
     },
     [t],

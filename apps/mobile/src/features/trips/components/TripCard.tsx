@@ -99,49 +99,49 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
         <CardAccent color={meta.color} />
 
         <YStack f={1} minWidth={0} p={space.md} gap={space.sm}>
-        <DetailArrow label={t('card.viewDetailOf', { name: trip.vehicle.name })} onPress={open} />
+          <DetailArrow label={t('card.viewDetailOf', { name: trip.vehicle.name })} onPress={open} />
 
-        <XStack gap={space.md}>
-          {trip.vehicle.imageUrl ? (
-            <Image
-              source={{ uri: trip.vehicle.imageUrl }}
-              style={THUMB_STYLE}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-              transition={150}
-            />
-          ) : (
-            <YStack
-              w={THUMB}
-              h={THUMB}
-              br={radius.md}
-              bg={colors.surfaceMuted}
-              ai="center"
-              jc="center"
-            >
-              <Ionicons name="car-outline" size={28} color={colors.placeholder} />
-            </YStack>
-          )}
-
-          <YStack f={1} gap={space.xs}>
-            <XStack ai="center" gap={space.xs} rowGap={space.xs} flexWrap="wrap">
-              <StatusBadge
-                label={domainLabel('customerTripStage', trip.stage, meta.label)}
-                color={meta.color}
-                size="sm"
+          <XStack gap={space.md}>
+            {trip.vehicle.imageUrl ? (
+              <Image
+                source={{ uri: trip.vehicle.imageUrl }}
+                style={THUMB_STYLE}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={150}
               />
-              {/*
+            ) : (
+              <YStack
+                w={THUMB}
+                h={THUMB}
+                br={radius.md}
+                bg={colors.surfaceMuted}
+                ai="center"
+                jc="center"
+              >
+                <Ionicons name="car-outline" size={28} color={colors.placeholder} />
+              </YStack>
+            )}
+
+            <YStack f={1} gap={space.xs}>
+              <XStack ai="center" gap={space.xs} rowGap={space.xs} flexWrap="wrap">
+                <StatusBadge
+                  label={domainLabel('customerTripStage', trip.stage, meta.label)}
+                  color={meta.color}
+                  size="sm"
+                />
+                {/*
                 NHÃN VAI — thứ hai người đọc cần để biết mình đang nhìn gì. Không có nó, một chủ
                 xe mở danh sách thấy chuyến của CHÍNH MÌNH ghi "Chủ xe: cửa hàng của tôi" và không
                 hiểu vì sao mình lại đi thuê xe mình.
               */}
-              <StatusBadge
-                label={t(isHost ? 'card.roleHost' : 'card.roleRenter')}
-                color={STATUS_COLOR.INFO}
-                size="sm"
-              />
-              {/* Hạn trả lời chỉ có nghĩa với người PHẢI trả lời — khách nhìn nó không làm gì được. */}
-              {/*
+                <StatusBadge
+                  label={t(isHost ? 'card.roleHost' : 'card.roleRenter')}
+                  color={STATUS_COLOR.INFO}
+                  size="sm"
+                />
+                {/* Hạn trả lời chỉ có nghĩa với người PHẢI trả lời — khách nhìn nó không làm gì được. */}
+                {/*
                 Đồng hồ hạn phản hồi CHỈ có nghĩa khi chủ xe còn phải trả lời — và điều kiện đó
                 là CHẶNG, không phải sự tồn tại của `respondBy`.
 
@@ -151,119 +151,119 @@ function TripCardImpl({ trip, onPress, decisions }: TripCardProps) {
                 `awaiting_hold` mốc đang chạy là hạn THANH TOÁN của khách: một đồng hồ khác, của
                 người khác.
               */}
-              {isHost && canHostDecideTrip(stage) && !cancelOnly && trip.respondBy ? (
-                <RespondDeadline respondBy={trip.respondBy} />
-              ) : null}
-            </XStack>
+                {isHost && canHostDecideTrip(stage) && !cancelOnly && trip.respondBy ? (
+                  <RespondDeadline respondBy={trip.respondBy} />
+                ) : null}
+              </XStack>
 
-            {/* Tên xe là NHÂN VẬT CHÍNH: cùng cỡ với dòng "Chủ xe" thì phải đọc mới biết đâu là xe. */}
-            <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold} numberOfLines={2}>
-              {trip.vehicle.name}
-            </Text>
-            {/*
+              {/* Tên xe là NHÂN VẬT CHÍNH: cùng cỡ với dòng "Chủ xe" thì phải đọc mới biết đâu là xe. */}
+              <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold} numberOfLines={2}>
+                {trip.vehicle.name}
+              </Text>
+              {/*
               Người ĐỐI DIỆN, đổi theo vai. Chủ xe cần tên khách thuê — đó là thứ họ dùng để gọi
               một chuyến; khách cần tên gian hàng.
             */}
-            <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
-              {isHost
-                ? `${t('card.renter')}: ${trip.renter?.name ?? t('card.renterUnknown')}`
-                : `${t('card.owner')}: ${trip.shop.name}`}
-            </Text>
-            {/*
+              <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={1}>
+                {isHost
+                  ? `${t('card.renter')}: ${trip.renter?.name ?? t('card.renterUnknown')}`
+                  : `${t('card.owner')}: ${trip.shop.name}`}
+              </Text>
+              {/*
               Biển số và mã đơn — hai mẩu chỉ tồn tại SAU khi chuyến được nhận, và là thứ duy nhất
               phân biệt hai chiếc cùng đời trong một danh sách.
             */}
-            {trip.vehicle.plateNumber || trip.code ? (
-              <Text col={colors.placeholder} fos={fontSize.label} numberOfLines={1}>
-                {[trip.vehicle.plateNumber, trip.code ? `#${trip.code}` : null]
-                  .filter(Boolean)
-                  .join(LIST_SEPARATOR)}
-              </Text>
-            ) : null}
+              {trip.vehicle.plateNumber || trip.code ? (
+                <Text col={colors.placeholder} fos={fontSize.label} numberOfLines={1}>
+                  {[trip.vehicle.plateNumber, trip.code ? `#${trip.code}` : null]
+                    .filter(Boolean)
+                    .join(LIST_SEPARATOR)}
+                </Text>
+              ) : null}
+            </YStack>
+          </XStack>
+
+          <Divider />
+
+          <YStack gap={space.xs}>
+            <ScheduleLine trip={trip} />
+            <PickupLine trip={trip} />
           </YStack>
-        </XStack>
 
-        <Divider />
-
-        <YStack gap={space.xs}>
-          <ScheduleLine trip={trip} />
-          <PickupLine trip={trip} />
-        </YStack>
-
-        <XStack
-          ai="center"
-          jc="space-between"
-          gap={space.sm}
-          pt={space.sm}
-          borderTopWidth={1}
-          borderColor={colors.borderSubtle}
-        >
-          <Text col={colors.textMuted} fos={fontSize.bodySm}>
-            {t('card.total')}
-          </Text>
-          {/*
+          <XStack
+            ai="center"
+            jc="space-between"
+            gap={space.sm}
+            pt={space.sm}
+            borderTopWidth={1}
+            borderColor={colors.borderSubtle}
+          >
+            <Text col={colors.textMuted} fos={fontSize.bodySm}>
+              {t('card.total')}
+            </Text>
+            {/*
             Chuyến chưa duyệt CHƯA có giá chốt: gian hàng báo giá lúc duyệt (ADR 0014). Hiện một
             con số ở đây là hứa một mức giá chưa ai cam kết — nên chỗ đó là CHỮ, và chữ thì tô
             mờ chứ không tô màu tiền: màu tiền dành cho con số thật.
           */}
-          {trip.totalAmount ? (
-            <YStack ai="flex-end">
-              <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
-                {fmt.money(trip.totalAmount)}
-              </Text>
-              {/*
+            {trip.totalAmount ? (
+              <YStack ai="flex-end">
+                <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
+                  {fmt.money(trip.totalAmount)}
+                </Text>
+                {/*
                 Tạm tính trưng ra như giá chốt là một lời hứa hệ thống không giữ (ADR 0024): giá
                 chỉ đóng băng lúc tạo đơn, và trước đó con số này còn đổi được.
               */}
-              {trip.totalIsEstimate ? (
-                <Text col={colors.textMuted} fos={fontSize.label}>
-                  {t('card.estimated')}
-                </Text>
-              ) : null}
-            </YStack>
-          ) : (
-            <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.medium}>
-              {t('card.awaitingQuote')}
-            </Text>
-          )}
-        </XStack>
+                {trip.totalIsEstimate ? (
+                  <Text col={colors.textMuted} fos={fontSize.label}>
+                    {t('card.estimated')}
+                  </Text>
+                ) : null}
+              </YStack>
+            ) : (
+              <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.medium}>
+                {t('card.awaitingQuote')}
+              </Text>
+            )}
+          </XStack>
 
-        {/*
+          {/*
           Hai quyết định NGAY TRÊN THẺ, không bắt mở chi tiết trước: đây là việc có hạn, và với
           chuyến đã trả tiền giữ chỗ thì mỗi phút chậm là tiền của khách đang bị giữ. Chỉ hiện khi
           chuyến còn chờ CHÍNH người đang xem trả lời.
         */}
-        {canDecide && decisions ? (
-          cancelOnly ? (
-            <Button
-              label={t('card.cancel')}
-              variant="danger"
-              size="sm"
-              icon="close-circle-outline"
-              onPress={() => decisions.onCancel(trip)}
-            />
-          ) : (
-            <XStack gap={space.sm}>
-              <YStack f={1}>
-                <Button
-                  label={t('card.reject')}
-                  variant="secondary"
-                  size="sm"
-                  icon="close-circle-outline"
-                  onPress={() => decisions.onReject(trip)}
-                />
-              </YStack>
-              <YStack f={1}>
-                <Button
-                  label={t('card.approve')}
-                  size="sm"
-                  icon="checkmark-circle-outline"
-                  onPress={() => decisions.onApprove(trip)}
-                />
-              </YStack>
-            </XStack>
-          )
-        ) : null}
+          {canDecide && decisions ? (
+            cancelOnly ? (
+              <Button
+                label={t('card.cancel')}
+                variant="danger"
+                size="sm"
+                icon="close-circle-outline"
+                onPress={() => decisions.onCancel(trip)}
+              />
+            ) : (
+              <XStack gap={space.sm}>
+                <YStack f={1}>
+                  <Button
+                    label={t('card.reject')}
+                    variant="secondary"
+                    size="sm"
+                    icon="close-circle-outline"
+                    onPress={() => decisions.onReject(trip)}
+                  />
+                </YStack>
+                <YStack f={1}>
+                  <Button
+                    label={t('card.approve')}
+                    size="sm"
+                    icon="checkmark-circle-outline"
+                    onPress={() => decisions.onApprove(trip)}
+                  />
+                </YStack>
+              </XStack>
+            )
+          ) : null}
         </YStack>
       </XStack>
     </Card>

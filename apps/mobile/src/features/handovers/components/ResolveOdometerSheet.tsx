@@ -20,13 +20,13 @@ import { NumberField } from '@/components/ui/NumberField';
 import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
-import { ApiClientError, getErrorCode } from '@/lib/api-client';
+import { getErrorCode } from '@/lib/api-client';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { colors, radius, space } from '@/theme/tokens';
 import { useResolveHandoverOdometer } from '../hooks/use-handovers';
 import type { Handover, HandoverContext } from '../api';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /** Suy từ CHÍNH schema — `yup.oneOf` thu hẹp kiểu, interface viết tay sẽ lệch với resolver. */
 type ResolveFormValues = yup.InferType<ReturnType<typeof buildSchema>>;
@@ -89,7 +89,6 @@ export function ResolveOdometerSheet({
   const domainLabel = useDomainLabel();
   const fmt = useAppFormat();
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   const resolve = useResolveHandoverOdometer(bookingId, type);
 
   /*
@@ -101,9 +100,7 @@ export function ResolveOdometerSheet({
    * Gộp hai thứ đó vào một câu đỏ như trước là khoá cứng người có thẩm quyền: họ không bao giờ
    * giảm được số KM từ app, trong khi web cho họ bấm "vẫn giảm".
    */
-  const [decrease, setDecrease] = useState<{ message: string; canConfirm: boolean } | null>(
-    null,
-  );
+  const [decrease, setDecrease] = useState<{ message: string; canConfirm: boolean } | null>(null);
 
   const schema = useMemo(
     () =>
@@ -158,18 +155,15 @@ export function ResolveOdometerSheet({
               return;
             }
             if (code !== API_ERROR_CODE.ODOMETER_DECREASE_FORBIDDEN) {
-              toast.showError(errorMessage(error));
+              toast.showError(getErrorMessage(error));
               return;
             }
-            const details = error instanceof ApiClientError ? error.details : null;
-            const canConfirm =
-              typeof details === 'object' &&
-              details !== null &&
-              (details as { requiresConfirmation?: boolean }).requiresConfirmation === true;
-            setDecrease({
-              message: canConfirm ? t('decreaseConfirm') : t('decreaseForbidden'),
-              canConfirm,
-            });
+            /*
+             * Đúng `ResolveOdometerDialog` bên web: câu NGUYÊN VĂN của server (nó nói rõ thiếu
+             * quyền hay cần xác nhận) và LUÔN kèm lối "vẫn giảm" — server mới là nơi quyết định
+             * người này có được giảm hay không; bấm mà thiếu quyền thì server trả lỗi lần nữa.
+             */
+            setDecrease({ message: getErrorMessage(error), canConfirm: true });
           },
         },
       );
@@ -202,7 +196,13 @@ export function ResolveOdometerSheet({
           Hai con số để ĐỐI CHIẾU trước khi gõ: KM hiện tại của xe và KM lúc giao. Không có chúng
           thì người dùng nhập một số vào khoảng không và chỉ biết mình sai khi server từ chối.
         */}
-        <YStack p={space.sm} br={radius.md} bg={colors.surfaceMuted} bw={1} bc={colors.borderSubtle}>
+        <YStack
+          p={space.sm}
+          br={radius.md}
+          bg={colors.surfaceMuted}
+          bw={1}
+          bc={colors.borderSubtle}
+        >
           <DataRow label={t('currentVehicleKm')} value={fmt.km(context.vehicleOdometerKm)} />
           {context.pickupOdometerKm == null ? null : (
             <DataRow label={t('pickupKm')} value={fmt.km(context.pickupOdometerKm)} />

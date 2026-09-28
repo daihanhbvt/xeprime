@@ -9,6 +9,7 @@ import { formToSaveInput, policyToForm } from '../form';
 import { policyFormSchema, type PolicyFormValues } from '../schema';
 import type { SaveRentalPolicyInput, ShopRentalPolicy } from '../types';
 import { PolicySections } from './PolicySections';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 
 import styles from './ShopPolicyForm.module.css';
 
@@ -28,6 +29,8 @@ interface ShopPolicyFormProps {
  */
 export function ShopPolicyForm({ initial, canEdit, submitting, onSubmit }: ShopPolicyFormProps) {
   const t = useTranslations('Shop.policies');
+  // Phiên hỗ trợ (ADR 0050 §12): chính sách chỉ đọc — không dựng thanh Lưu/Đặt lại.
+  const hideActions = useSupportHides(SUPPORT_HIDDEN_AREA.DENIED_ACTIONS) && !canEdit;
   const { modal } = App.useApp();
   const resolver = useValidationResolver<PolicyFormValues>(
     policyFormSchema,
@@ -89,13 +92,15 @@ export function ShopPolicyForm({ initial, canEdit, submitting, onSubmit }: ShopP
         }
       />
 
-      <StickyFormActions
-        submitLabel={t('submit')}
-        cancelLabel={t('reset')}
-        onCancel={formState.isDirty ? () => reset() : undefined}
-        submitting={submitting}
-        disabled={!canEdit}
-      />
+      {hideActions ? null : (
+        <StickyFormActions
+          submitLabel={t('submit')}
+          cancelLabel={t('reset')}
+          onCancel={formState.isDirty ? () => reset() : undefined}
+          submitting={submitting}
+          disabled={!canEdit}
+        />
+      )}
     </form>
   );
 }

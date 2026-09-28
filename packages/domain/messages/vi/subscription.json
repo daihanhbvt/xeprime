@@ -10,10 +10,8 @@
     "heroBenefit3": "Xây dựng thương hiệu"
   },
   "current": {
-    "title": "Gói hiện hành",
     "none": "Chưa có gói — gian hàng đang ở tuyến hoa hồng theo chuyến.",
     "noneHint": "Mua gói theo chỗ để không mất phí trên từng chuyến.",
-    "expires": "Hết hạn {date}",
     "activeTag": "Đang sử dụng",
     "commissionSummary": "Bạn đang là chủ xe tuyến hoa hồng. Hoa hồng được tính theo từng chuyến thực tế hoàn thành.",
     "packageSummary": "Trả trước theo chỗ xe — không thu gì trên chuyến.",
@@ -24,13 +22,8 @@
   },
   "usage": {
     "fleetTotal": "Tổng số xe",
-    "fleetTotalHint": "Chủ xe cá nhân đăng tối đa {limit} xe, tính cả ô tô và xe máy. Mua gói gian hàng để đăng thêm.",
-    "title": "Đội xe đang dùng",
     "car": "Ô tô",
     "motorbike": "Xe máy",
-    "fleet": "Đội xe",
-    "onMarketplace": "Trên chợ",
-    "ofLimit": "{used} / {limit}",
     "unlimited": "Không giới hạn",
     "atLimitTotal": "Đã dùng hết hạn mức {limit} xe.",
     "atLimitUpgrade": "Nâng lên bậc gói lớn hơn để đăng thêm xe.",
@@ -76,7 +69,6 @@
   "purchase": {
     "title": "Mua / gia hạn gói",
     "planLabel": "Chọn gói dịch vụ",
-    "tierLabel": "Gói dịch vụ",
     "recommendedTag": "Được đề xuất",
     "enterpriseTag": "Doanh nghiệp",
     "limitVehicles": "Tối đa {count} xe",
@@ -170,7 +162,6 @@
   },
   "term": {
     "pillLabel": "Thời hạn",
-    "label": "Thời hạn",
     "daysLeft": "{days, plural, other {Còn # ngày}}",
     "grace": "Đang trong thời gian ân hạn",
     "lapsed": "Đã hết hạn"

@@ -63,19 +63,6 @@ export function useUpdateShopProfile() {
   });
 }
 
-/** Gửi duyệt đổi TRẠNG THÁI tenant → làm mới cả `/auth/me` (vỏ quản lý đọc status ở đó). */
-export function useSubmitShopReview() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: () => tenantsApi.submitReview(),
-    onSuccess: (shop) => {
-      queryClient.setQueryData(queryKeys.shop.current(), shop);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.tenants.all });
-    },
-  });
-}
-
 export function usePaymentSettings(enabled: boolean) {
   return useQuery({
     queryKey: queryKeys.shop.paymentSettings(),

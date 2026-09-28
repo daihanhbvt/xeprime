@@ -13,12 +13,13 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
+import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
   TenantScoped,
+  SupportAction,
 } from '../../common/decorators';
 import { IdResultDto } from '../../common/dto/api-response.dto';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
@@ -46,7 +47,12 @@ import {
   VehicleListQueryDto,
   VehicleStatsListDto,
   VehicleStatsQueryDto,
+  ListingRepairResultDto,
 } from './dto/vehicle.dto';
+import {
+  supportVehicleCreateCapabilities,
+  supportVehicleUpdateCapabilities,
+} from './vehicle-support-policy';
 import { VehiclesService } from './vehicles.service';
 
 /**
@@ -69,6 +75,7 @@ export class VehiclesController {
 
   @Get()
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_VIEW)
   @ApiOperation({ summary: 'Danh sách xe của gian hàng (phân trang, filter, sort)' })
   @ApiOkResponse({ type: VehiclePageDto })
   list(
@@ -89,6 +96,7 @@ export class VehiclesController {
    */
   @Get('stats')
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_VIEW)
   @ApiOperation({ summary: 'Chỉ số vận hành/tài chính luỹ kế theo xe' })
   @ApiOkResponse({ type: VehicleStatsListDto })
   async stats(
@@ -108,6 +116,7 @@ export class VehiclesController {
    */
   @Get('alerts')
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_VIEW)
   @ApiOperation({ summary: 'Việc cần làm + KM hiện tại theo lô xe (thẻ xe ở danh sách)' })
   @ApiOkResponse({ type: VehicleAlertsListDto })
   async alerts(
@@ -128,6 +137,7 @@ export class VehiclesController {
   /** Cùng lý do thứ tự với `stats`: route tĩnh phải đứng trước `:id`. */
   @Get('fleet-summary')
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_VIEW)
   @ApiOperation({ summary: 'Đếm đội xe theo trạng thái vận hành (dải chỉ số đầu danh sách)' })
   @ApiOkResponse({ type: FleetSummaryDto })
   fleetSummary(@CurrentTenant() tenant: TenantContext): Promise<FleetSummaryDto> {
@@ -136,6 +146,7 @@ export class VehiclesController {
 
   @Get(':id')
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_VIEW)
   @ApiOperation({ summary: 'Chi tiết một xe' })
   @ApiOkResponse({ type: VehicleDetailDto })
   getOne(
@@ -152,6 +163,7 @@ export class VehiclesController {
    */
   @Get(':id/summary')
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_VIEW)
   @ApiOperation({ summary: 'Tổng hợp Hồ sơ 360 của một xe (chỉ số + đơn thuê theo quyền)' })
   @ApiOkResponse({ type: Vehicle360SummaryDto })
   async summary(
@@ -174,6 +186,7 @@ export class VehiclesController {
 
   @Get(':id/pricing')
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.RENTAL_POLICY_VIEW)
   @ApiOperation({ summary: 'Giá & chính sách của một xe (nguồn kế thừa/ghi đè + bản gian hàng)' })
   @ApiOkResponse({ type: VehiclePricingDto })
   getPricing(
@@ -285,6 +298,8 @@ export class VehiclesController {
 
   @Post()
   @RequirePermissions(PERMISSION.VEHICLE_CREATE)
+  // Phiên hỗ trợ: xe NHÁP, đúng danh sách trường — không giá, không nguồn xe (ADR 0050 §13).
+  @SupportAction(supportVehicleCreateCapabilities)
   @ApiOperation({ summary: 'Thêm xe mới (mặc định trạng thái public = nháp)' })
   @ApiCreatedResponse({ type: VehicleDetailDto })
   create(
@@ -297,6 +312,8 @@ export class VehiclesController {
 
   @Patch(':id')
   @RequirePermissions(PERMISSION.VEHICLE_UPDATE)
+  // Phiên hỗ trợ (ADR 0050): capability suy từ TÊN trường — giá/dịch vụ/chi nhánh bị chặn ở guard.
+  @SupportAction(supportVehicleUpdateCapabilities)
   @ApiOperation({
     summary: 'Sửa thông tin xe (sửa trường nhạy cảm khi đang công khai → chờ duyệt lại)',
   })
@@ -313,6 +330,8 @@ export class VehiclesController {
   @Post(':id/submit-public')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.VEHICLE_SUBMIT_PUBLIC)
+  // Phiên hỗ trợ gửi DUYỆT thay chủ xe — phiếu vào hàng đợi của đội duyệt, không bao giờ tự duyệt.
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_SUBMIT_REVIEW)
   @ApiOperation({ summary: 'Gửi xe đi duyệt công khai (đi qua luồng duyệt nền tảng — ADR 0008)' })
   @ApiOkResponse({ type: VehicleDetailDto })
   submitPublic(
@@ -345,6 +364,26 @@ export class VehiclesController {
     @Body() dto: SetMarketplaceVisibilityDto,
   ): Promise<VehicleDetailDto> {
     return this.vehicles.setMarketplaceVisibility(tenant.tenantId, id, user.id, dto.enabled);
+  }
+
+  /**
+   * Đồng bộ lại snapshot công khai của MỘT xe từ dữ liệu nguồn (ADR 0050 §13) — sửa chữa của NỀN
+   * TẢNG khi snapshot kẹt, chỉ chạy trong phiên hỗ trợ. Không nhận payload: `ListingsService` tự
+   * suy lại từ xe, nên gọi lại bao nhiêu lần cũng cùng kết quả, và không đổi kiểm duyệt hay công tắc
+   * lên chợ của chủ xe.
+   */
+  @Post(':id/listing/resync')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions(PERMISSION.VEHICLE_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.LISTING_REPAIR)
+  @ApiOperation({ summary: 'Đồng bộ lại snapshot công khai của xe (phiên hỗ trợ — ADR 0050)' })
+  @ApiOkResponse({ type: ListingRepairResultDto })
+  repairListing(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<ListingRepairResultDto> {
+    return this.vehicles.repairListing(tenant.tenantId, id, user.id);
   }
 
   @Delete(':id')

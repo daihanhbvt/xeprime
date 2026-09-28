@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import {
   Alert,
+  App,
   Badge,
   Button,
   Card,
@@ -25,6 +26,7 @@ import { useTranslations } from 'next-intl';
 import {
   BOOKING_STATUS,
   PERMISSION,
+  SUPPORT_CAPABILITY,
   VEHICLE_SERVICE_SETTING_SERVICES,
   VEHICLE_ALERT_KIND,
   VEHICLE_OPERATION_STATUS_META,
@@ -72,6 +74,9 @@ import {
 } from './VehiclePublicationTaskItem';
 import { VehiclePublicReviewPanel } from './VehiclePublicReviewPanel';
 import styles from './Vehicle360Overview.module.css';
+import { useAvailableHref, useSupportSession } from '@/features/tenant-support/support-session';
+import { useErrorMessage } from '@/i18n/use-error-message';
+import { useRepairVehicleListing } from '../hooks/use-vehicle-mutations';
 import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
 
 /**
@@ -269,7 +274,19 @@ function ProfileHeader({
     status === VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW;
   const banner = needsBanner ? statusCopy(status, vehicle.latestPublicReview?.reason) : null;
 
-  const menuItems = canDelete ? [{ key: 'delete', danger: true, label: t('delete') }] : [];
+  /*
+   * Phiên hỗ trợ gian hàng (ADR 0050 §13): "Đồng bộ lại hiển thị công khai" là thao tác SỬA CHỮA của
+   * nền tảng khi snapshot ngoài chợ kẹt — không phải việc của chủ xe, nên chỉ có trong phiên.
+   */
+  const support = useSupportSession();
+  const canRepairListing = support?.can(SUPPORT_CAPABILITY.LISTING_REPAIR) ?? false;
+  const repairListing = useRepairVehicleListing(vehicle.id);
+  const { message } = App.useApp();
+  const errorMessage = useErrorMessage();
+  const menuItems = [
+    ...(canRepairListing ? [{ key: 'repair-listing', label: t('repairListing.action') }] : []),
+    ...(canDelete ? [{ key: 'delete', danger: true, label: t('delete') }] : []),
+  ];
 
   return (
     <section className={styles.profile} aria-label={t('profileLabel')}>
@@ -388,6 +405,15 @@ function ProfileHeader({
                     items: menuItems,
                     onClick: ({ key }) => {
                       if (key === 'delete') setConfirmingDelete(true);
+                      if (key === 'repair-listing') {
+                        repairListing.mutate(undefined, {
+                          onSuccess: (result) =>
+                            message.success(
+                              result.changed ? t('repairListing.fixed') : t('repairListing.unchanged'),
+                            ),
+                          onError: (err) => message.error(errorMessage(err)),
+                        });
+                      }
                     },
                   }}
                   trigger={['click']}
@@ -395,7 +421,7 @@ function ProfileHeader({
                   <Button
                     icon={decorativeIcon(<MoreOutlined />)}
                     aria-label={t('moreActions', { name: vehicle.name })}
-                    loading={deletePending}
+                    loading={deletePending || repairListing.isPending}
                   />
                 </Dropdown>
               </Popconfirm>
@@ -617,6 +643,8 @@ function AutomationCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit:
 
 function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
   const t = useTranslations('Vehicles.overview');
+  // Phiên hỗ trợ không mở giá & chính sách của xe (ADR 0050) — link không có đích thì không dựng.
+  const pricingHref = useAvailableHref()(vehiclePath.pricing(vehicle.id));
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
 
@@ -627,9 +655,9 @@ function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
     <Card
       title={t('pricing.title')}
       extra={
-        canEdit ? (
+        canEdit && pricingHref ? (
           // Wave 2: giá & chính sách có workspace riêng (kế thừa/ghi đè) — không đi qua wizard.
-          <Link href={vehiclePath.pricing(vehicle.id)} className={styles.cardLink}>
+          <Link href={pricingHref} className={styles.cardLink}>
             {t('pricing.editLink')}
           </Link>
         ) : null
@@ -698,6 +726,7 @@ function ModuleLinks({
   const t = useTranslations('Vehicles.overview.links');
   const { has } = usePermissions();
   const { paths, isManage } = useWorkspace();
+  const available = useAvailableHref();
   const links: { href: string; label: string }[] = [];
 
   /*
@@ -770,11 +799,16 @@ function ModuleLinks({
     // nên đây mới là chỗ trả lời được "xe này lãi thật bao nhiêu".
     links.push({ href: receiptsPath.filtered({ vehicleId }), label: t('receipts') });
   }
-  if (links.length === 0) return null;
+  // Trong phiên hỗ trợ: bỏ mục dẫn tới màn không mở trong phiên (giá, giấy tờ…).
+  const shown = links.flatMap((link) => {
+    const href = available(link.href);
+    return href ? [{ ...link, href }] : [];
+  });
+  if (shown.length === 0) return null;
 
   return (
     <nav className={styles.moduleLinks} aria-label={t('ariaLabel')}>
-      {links.map((link) => (
+      {shown.map((link) => (
         <Link key={link.href} href={link.href} className={styles.moduleLink}>
           {link.label}
         </Link>

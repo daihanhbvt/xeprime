@@ -7,6 +7,9 @@ import type {
   PlanFeature,
   PlatformRole,
   ShopOnboardingState,
+  SupportCapability,
+  SupportMode,
+  SupportWorkspace,
   TenantRole,
 } from '@xeprime/types';
 
@@ -66,6 +69,28 @@ export interface TenantContext {
   readonly billingPhase: BillingPhase;
   /** ISO-8601 UTC. `null` khi gói còn hạn hoặc chưa có dòng thuê bao nào. */
   readonly graceEndsAt: string | null;
+  /**
+   * Có mặt KHI VÀ CHỈ KHI request chạy trong một phiên hỗ trợ của nhân sự nền tảng (ADR 0050).
+   *
+   * Khi đó `tenantId` đến từ bản ghi phiên đã xác minh (người mở + phiên đăng nhập + hạn), không
+   * từ membership; `permissions` là quyền SUY từ capability, không phải quyền nền tảng; và
+   * `roleKey` là `shop_viewer` — không bao giờ là chủ gian hàng, để không cổng chỉ-chủ nào mở ra.
+   */
+  readonly support?: SupportScope;
+}
+
+/** Phiên hỗ trợ đã xác minh cho request hiện tại — ADR 0050. */
+export interface SupportScope {
+  readonly contextId: string;
+  /** Nhân sự nền tảng THẬT đang thao tác — luôn bằng `req.user.id`. */
+  readonly actorUserId: string;
+  readonly tenantId: string;
+  readonly mode: SupportMode;
+  readonly workspace: SupportWorkspace;
+  readonly reason: string;
+  /** Capability CÒN HIỆU LỰC ở request này: giao của bộ đã cấp với bộ suy lại từ hiện trạng. */
+  readonly capabilities: readonly SupportCapability[];
+  readonly expiresAt: Date;
 }
 
 export interface PlatformContext {

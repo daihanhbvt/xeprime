@@ -5,7 +5,7 @@ import type { VehicleApprovalRow } from '@/features/approvals/types';
 import VehicleApprovalsPage from './page';
 
 /**
- * Trang "Duyệt xe" (`/manage/admin`).
+ * Trang "Kiểm duyệt xe" (`/manage/admin`).
  *
  * Khoá: bộ lọc/trang/phiếu đang mở sống ở URL (ADR 0004) và đi nguyên vào hook truy vấn SERVER;
  * tab mang số đếm từ cùng lần đọc; không có nút quyết định trên dòng; đủ trạng thái rỗng/lỗi.
@@ -108,17 +108,29 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('Tiêu đề + bộ lọc mặc định', () => {
-  it('tiêu đề "Duyệt xe" + mô tả; hàng đợi mặc định là phiếu CHỜ, mọi loại xe, mọi nguồn', () => {
+  it('tiêu đề "Kiểm duyệt xe" + mô tả; hàng đợi mặc định là phiếu CHỜ, mọi loại xe, mọi nguồn', () => {
     setData([row()]);
     renderPage();
 
-    expect(screen.getByRole('heading', { name: 'Duyệt xe' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Kiểm duyệt xe' })).toBeTruthy();
     expect(screen.getByText('Kiểm tra xe trước khi hiển thị trên nền tảng')).toBeTruthy();
     expect(query.lastFilters).toMatchObject({
       status: 'pending',
       vehicleType: 'all',
       storefrontKind: 'all',
     });
+  });
+
+  it('"Tất cả hồ sơ kiểm duyệt" vẫn là hàng đợi KIỂM DUYỆT (status=any), không phải danh sách mọi xe', () => {
+    nav.params = new URLSearchParams('status=any');
+    setData([row()]);
+    renderPage();
+
+    // Status nằm trong popover tràn của FilterBar; nhãn hiện trên chip bộ lọc đang áp dụng.
+    expect(screen.getAllByText(/Tất cả hồ sơ kiểm duyệt/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Tất cả trạng thái/)).toBeNull();
+    // Vẫn đi qua hook hàng đợi duyệt với sentinel `any` — không đổi sang nguồn "Tất cả xe".
+    expect(query.lastFilters).toMatchObject({ status: 'any' });
   });
 
   it('tab mang số đếm từ server: Tất cả 16 · Ô tô 10 · Xe máy 6', () => {

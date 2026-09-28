@@ -30,6 +30,7 @@ import { BookingFormDialog } from './BookingFormDialog';
 import { BookingStatusActions } from './BookingStatusActions';
 import type { BookingDetail } from '../types';
 import styles from './BookingActionBar.module.css';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 
 /**
  * Thanh hành động ở CHÂN thẻ chi tiết đơn — **một hành động chính duy nhất**, mọi thứ khác lùi
@@ -66,6 +67,9 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
   const canRecordPayment = has(PERMISSION.PAYMENT_RECORD);
   const canUpdate = has(PERMISSION.BOOKING_UPDATE);
   const canViewFinance = has(PERMISSION.FINANCE_VIEW);
+  // Phiên hỗ trợ gian hàng không bao giờ xác nhận bàn giao (ADR 0050 §10): nút chính ẩn hẳn thay vì
+  // mờ đi kèm lời "thiếu quyền" — với nhân sự nền tảng đó không phải một quyền còn thiếu.
+  const inSupport = useSupportHides(SUPPORT_HIDDEN_AREA.HANDOVER_ACTIONS);
 
   /*
    * Trục NĂNG LỰC theo gói (ADR 0027 điều 2) — kiểm NỐI TIẾP với quyền, không thay nó.
@@ -185,7 +189,7 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
         </div>
 
         <div className={styles.primary}>
-          {primary ? (
+          {primary && !(inSupport && !canConfirm) ? (
             <Button
               type="primary"
               size="large"

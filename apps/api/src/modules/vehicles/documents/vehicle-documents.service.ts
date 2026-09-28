@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
+  AUDIT_ACTOR_SCOPE,
   API_ERROR_CODE,
   PRIVATE_FILE_PURPOSE,
   PRIVATE_FILE_STATUS,
@@ -51,9 +52,7 @@ type StoredOcrFields = Partial<Record<VehicleDocumentOcrField, OcrExtractedField
 
 /** Nhận diện vi phạm unique của Prisma bằng duck-typing (cùng lý do all-exceptions.filter). */
 function isUniqueViolation(err: unknown): boolean {
-  return (
-    typeof err === 'object' && err !== null && (err as { code?: unknown }).code === 'P2002'
-  );
+  return typeof err === 'object' && err !== null && (err as { code?: unknown }).code === 'P2002';
 }
 
 /**
@@ -156,33 +155,44 @@ export class VehicleDocumentsService {
       if (existing) throw docTypeConflict();
     }
 
+    // Bản ghi + audit trong MỘT transaction: audit hỏng thì không có giấy tờ nào "tự xuất hiện"
+    // không dấu vết — nhất là trong phiên hỗ trợ (ADR 0050 §13).
     let row;
     try {
-      row = await this.prisma.vehicleDocument.create({
-        data: {
-          id: newId(),
-          tenantId,
-          vehicleId: vehicle.id,
-          ...state,
-          createdBy: userId,
-        },
-        include: DETAIL_INCLUDE,
+      row = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.vehicleDocument.create({
+          data: {
+            id: newId(),
+            tenantId,
+            vehicleId: vehicle.id,
+            ...state,
+            createdBy: userId,
+          },
+          include: DETAIL_INCLUDE,
+        });
+        await this.audit.record(
+          {
+            tenantId,
+            actorUserId: userId,
+            actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+            action: 'vehicle.document.create',
+            targetType: 'vehicle_document',
+            targetId: created.id,
+            after: {
+              vehicleId: vehicle.id,
+              type: created.type,
+              customTypeName: created.customTypeName,
+            },
+          },
+          tx,
+        );
+        return created;
       });
     } catch (err) {
       // Hai người cùng tạo một loại chuẩn: partial unique nổ — trả 409 ổn định, không 500.
       if (isUniqueViolation(err)) throw docTypeConflict();
       throw err;
     }
-
-    await this.audit.record({
-      tenantId,
-      actorUserId: userId,
-      actorScope: 'tenant',
-      action: 'vehicle.document.create',
-      targetType: 'vehicle_document',
-      targetId: row.id,
-      after: { vehicleId: vehicle.id, type: row.type, customTypeName: row.customTypeName },
-    });
 
     return toDetailDto(row, await this.warningDays(tenantId));
   }
@@ -201,6 +211,7 @@ export class VehicleDocumentsService {
         message: 'Thiếu expectedRowVersion — cần cho phát hiện sửa đè',
       });
     }
+    const expectedRowVersion = dto.expectedRowVersion;
 
     const current = await this.prisma.vehicleDocument.findFirst({
       where: { id: documentId, tenantId, vehicleId, archivedAt: null },
@@ -218,27 +229,32 @@ export class VehicleDocumentsService {
     const patch = patchState(dto);
     validateDocumentMetadata({ ...currentState(current), ...patch });
 
-    // Optimistic concurrency: updateMany có điều kiện rowVersion — 0 dòng = ai đó vừa sửa.
-    const result = await this.prisma.vehicleDocument.updateMany({
-      where: { id: documentId, tenantId, vehicleId, rowVersion: dto.expectedRowVersion },
-      data: { ...patch, rowVersion: { increment: 1 } },
-    });
-    if (result.count === 0) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.CONFLICT,
-        message: 'Giấy tờ vừa được người khác cập nhật — tải lại rồi sửa tiếp',
+    await this.prisma.$transaction(async (tx) => {
+      // Optimistic concurrency: updateMany có điều kiện rowVersion — 0 dòng = ai đó vừa sửa.
+      const result = await tx.vehicleDocument.updateMany({
+        where: { id: documentId, tenantId, vehicleId, rowVersion: expectedRowVersion },
+        data: { ...patch, rowVersion: { increment: 1 } },
       });
-    }
+      if (result.count === 0) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.CONFLICT,
+          message: 'Giấy tờ vừa được người khác cập nhật — tải lại rồi sửa tiếp',
+        });
+      }
 
-    await this.audit.record({
-      tenantId,
-      actorUserId: userId,
-      actorScope: 'tenant',
-      action: 'vehicle.document.update',
-      targetType: 'vehicle_document',
-      targetId: documentId,
-      before: metadataAudit(currentState(current)),
-      after: metadataAudit({ ...currentState(current), ...patch }),
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+          action: 'vehicle.document.update',
+          targetType: 'vehicle_document',
+          targetId: documentId,
+          before: metadataAudit(currentState(current)),
+          after: metadataAudit({ ...currentState(current), ...patch }),
+        },
+        tx,
+      );
     });
 
     return this.readDetail(tenantId, vehicleId, documentId);
@@ -259,7 +275,7 @@ export class VehicleDocumentsService {
     await this.audit.record({
       tenantId,
       actorUserId: userId,
-      actorScope: 'tenant',
+      actorScope: AUDIT_ACTOR_SCOPE.TENANT,
       action: 'vehicle.document.archive',
       targetType: 'vehicle_document',
       targetId: documentId,
@@ -383,7 +399,7 @@ export class VehicleDocumentsService {
           {
             tenantId,
             actorUserId: userId,
-            actorScope: 'tenant',
+            actorScope: AUDIT_ACTOR_SCOPE.TENANT,
             action: 'vehicle.document.version.attach',
             targetType: 'vehicle_document',
             targetId: documentId,
@@ -618,7 +634,7 @@ export class VehicleDocumentsService {
         {
           tenantId,
           actorUserId: userId,
-          actorScope: 'tenant',
+          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
           action: 'vehicle.document.ocr.apply',
           targetType: 'vehicle_document',
           targetId: documentId,
@@ -892,6 +908,7 @@ function ocrProcessingConflict(): ConflictException {
 function ocrStaleConflict(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.CONFLICT,
-    message: 'Kết quả OCR này đã được đối soát hoặc không còn hiệu lực — tải lại rồi chạy lại nếu cần',
+    message:
+      'Kết quả OCR này đã được đối soát hoặc không còn hiệu lực — tải lại rồi chạy lại nếu cần',
   });
 }

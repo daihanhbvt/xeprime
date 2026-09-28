@@ -19,6 +19,7 @@ import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { space } from '@/theme/tokens';
 import { duplicateCustomerId, type TenantCustomerDetail } from '../api';
 import { useCreateCustomer, useUpdateCustomer } from '../hooks/use-customers';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 const EMPTY: CustomerFormValues = {
   fullName: '',
@@ -146,7 +147,7 @@ function CustomerForm({
       },
       onError: (err: unknown) => {
         if (getErrorCode(err) === API_ERROR_CODE.CUSTOMER_PHONE_DUPLICATE) {
-          setDuplicate({ message: errorMessage(err), customerId: duplicateCustomerId(err) });
+          setDuplicate({ message: getErrorMessage(err), customerId: duplicateCustomerId(err) });
           return;
         }
         toast.showError(errorMessage(err));

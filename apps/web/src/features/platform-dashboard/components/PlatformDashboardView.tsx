@@ -13,7 +13,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { TENANT_STATUS_META, type TenantStatus } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, adminPartnerPath } from '@/constants/routes';
 import { dayjs } from '@/lib/datetime';
 import { DashboardPanel } from '@/features/dashboard/components/DashboardPanel';
 import { StatCard } from '@/features/dashboard/components/StatCard';
@@ -29,7 +29,7 @@ function todayLabel(fmt: AppFormat): string {
 }
 
 /**
- * Dashboard nền tảng — số liệu toàn hệ thống + lối tắt sang màn "Duyệt xe" / gian hàng.
+ * Dashboard nền tảng — số liệu toàn hệ thống + lối tắt sang màn "Kiểm duyệt xe" / đối tác.
  *
  * Lối tắt "Chờ duyệt" chỉ còn PHIẾU XE (24/09/2026): nền tảng tạm ngừng xác minh gian hàng, và
  * màn duyệt chỉ nhận phiếu xe — một dòng "Hồ sơ gian hàng · N phiếu" trỏ vào đó là mời người
@@ -149,10 +149,10 @@ export function PlatformDashboardView() {
             <>
               <RecentTenantList
                 items={data.recentTenants}
-                onSelect={() => router.push(ROUTES.MANAGE.ADMIN_TENANTS)}
+                onSelect={(id) => router.push(adminPartnerPath.resolveTenant(id))}
               />
               <div className={styles.panelFoot}>
-                <Button size="small" onClick={() => router.push(ROUTES.MANAGE.ADMIN_TENANTS)}>
+                <Button size="small" onClick={() => router.push(ROUTES.MANAGE.ADMIN_PARTNER_SHOPS)}>
                   {t('recent.manage')}
                 </Button>
               </div>
@@ -169,7 +169,7 @@ function RecentTenantList({
   onSelect,
 }: {
   items: PlatformRecentTenant[];
-  onSelect: () => void;
+  onSelect: (tenantId: string) => void;
 }) {
   const fmt = useAppFormat();
 
@@ -177,7 +177,7 @@ function RecentTenantList({
     <ul className={styles.miniList}>
       {items.map((t) => (
         <li key={t.id} className={styles.miniRow}>
-          <button type="button" className={styles.miniBtn} onClick={onSelect}>
+          <button type="button" className={styles.miniBtn} onClick={() => onSelect(t.id)}>
             <div>
               <div className={styles.miniName}>{t.name}</div>
               <div className={styles.miniMeta}>

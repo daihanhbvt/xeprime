@@ -137,12 +137,7 @@ describe('useManageNav — hiển thị theo quyền (gian hàng)', () => {
 
     const labels = itemLabels();
     expect(labels).toEqual(
-      expect.arrayContaining([
-        'Tổng quan',
-        'Cửa hàng',
-        'Trò chuyện',
-        'Trung tâm hỗ trợ',
-      ]),
+      expect.arrayContaining(['Tổng quan', 'Cửa hàng', 'Trò chuyện', 'Trung tâm hỗ trợ']),
     );
     expect(labels).not.toContain('Xe của tôi');
     expect(labels).not.toContain('Người dùng & phân quyền');
@@ -385,17 +380,66 @@ describe('useManageNav — huy hiệu cần xử lý', () => {
 describe('useManageNav — hiển thị theo quyền (nền tảng)', () => {
   it('platformRole → cây nền tảng, KHÔNG có mục gian hàng nào', () => {
     user.platformRole = 'platform_admin';
-    grant(PERMISSION.PLATFORM_DASHBOARD_VIEW, PERMISSION.PLATFORM_TENANT_MANAGE);
+    grant(PERMISSION.PLATFORM_DASHBOARD_VIEW, PERMISSION.PLATFORM_TENANT_VIEW);
     renderMenu();
 
-    // Từ 23/09/2026 "Gian hàng" nằm trong mục cha "Gian hàng & xe" — mục cha hiện, mục con là
-    // link sau khi bung ra (giống nhánh "Tài chính" của gian hàng).
-    fireEvent.click(screen.getByText('Gian hàng & xe'));
-
+    // Từ 28/09/2026 hai danh sách đối tác là hai mục LÁ trong khối "Đối tác" — không còn mục cha
+    // "Gian hàng & xe" phải bung ra.
     const labels = itemLabels();
-    expect(labels).toContain('Gian hàng');
+    expect(labels).toEqual(['Tổng quan', 'Gian hàng gói', 'Chủ xe cá nhân']);
+    expect(screen.queryByText('Gian hàng & xe')).toBeNull();
     expect(labels).not.toContain('Lịch thuê');
     expect(labels).not.toContain('Công nợ');
+  });
+
+  it('super admin: đủ các khối mới, đúng thứ tự mục, "Kiểm duyệt xe" và "Tất cả xe" cùng cấp', () => {
+    user.platformRole = 'platform_admin';
+    grant(
+      PERMISSION.PLATFORM_DASHBOARD_VIEW,
+      PERMISSION.PLATFORM_APPROVAL_REVIEW,
+      PERMISSION.PLATFORM_VEHICLE_VIEW,
+      PERMISSION.PLATFORM_TENANT_VIEW,
+      PERMISSION.PLATFORM_BOOKING_VIEW,
+      PERMISSION.PLATFORM_CUSTOMER_VIEW,
+    );
+    renderMenu();
+
+    expect(itemLabels()).toEqual([
+      'Tổng quan',
+      'Kiểm duyệt xe',
+      'Tất cả xe',
+      'Gian hàng gói',
+      'Chủ xe cá nhân',
+      'Đơn thuê toàn hệ thống',
+      'Khách thuê',
+    ]);
+    for (const group of ['Chợ xe', 'Đối tác', 'Đơn & khách hàng']) {
+      expect(screen.getByText(group)).toBeTruthy();
+    }
+    expect(screen.queryByText('Duyệt xe')).toBeNull();
+  });
+
+  it('vai support: THẤY hai danh sách đối tác chỉ với quyền XEM (ADR 0050), không cần quyền quản lý', () => {
+    user.platformRole = 'support';
+    grant(PERMISSION.PLATFORM_DASHBOARD_VIEW, PERMISSION.PLATFORM_TENANT_VIEW);
+    renderMenu();
+    expect(itemLabels()).toEqual(expect.arrayContaining(['Gian hàng gói', 'Chủ xe cá nhân']));
+  });
+
+  it('chỉ có quyền QUẢN LÝ mà thiếu quyền xem: không có danh sách đối tác nào, khối "Đối tác" biến mất', () => {
+    user.platformRole = 'finance_admin';
+    grant(PERMISSION.PLATFORM_DASHBOARD_VIEW, PERMISSION.PLATFORM_TENANT_MANAGE);
+    renderMenu();
+    expect(itemLabels()).not.toContain('Gian hàng gói');
+    expect(itemLabels()).not.toContain('Chủ xe cá nhân');
+    expect(screen.queryByText('Đối tác')).toBeNull();
+  });
+
+  it('thiếu quyền kiểm duyệt: không thấy "Kiểm duyệt xe" nhưng vẫn thấy "Tất cả xe"', () => {
+    user.platformRole = 'platform_staff';
+    grant(PERMISSION.PLATFORM_DASHBOARD_VIEW, PERMISSION.PLATFORM_VEHICLE_VIEW);
+    renderMenu();
+    expect(itemLabels()).toEqual(['Tổng quan', 'Tất cả xe']);
   });
 
   it('platform_staff KHÔNG thấy mục chỉ dành cho super admin', () => {
@@ -408,17 +452,11 @@ describe('useManageNav — hiển thị theo quyền (nền tảng)', () => {
     );
     renderMenu();
 
-    fireEvent.click(screen.getByText('Gian hàng & xe'));
-
     const labels = itemLabels();
-    expect(labels).toEqual([
-      'Tổng quan',
-      'Xe toàn hệ thống',
-      'Đơn thuê toàn hệ thống',
-      'Khách thuê',
-    ]);
-    // Không có `PLATFORM_TENANT_MANAGE` ⇒ mục cha chỉ còn đúng một mục con.
-    expect(labels).not.toContain('Gian hàng');
+    expect(labels).toEqual(['Tổng quan', 'Tất cả xe', 'Đơn thuê toàn hệ thống', 'Khách thuê']);
+    // Không có `PLATFORM_TENANT_VIEW` ⇒ không danh sách đối tác nào.
+    expect(labels).not.toContain('Gian hàng gói');
+    expect(labels).not.toContain('Chủ xe cá nhân');
     expect(labels).not.toContain('Nhân sự nền tảng');
     expect(labels).not.toContain('Nhật ký hệ thống');
   });
@@ -516,6 +554,51 @@ describe('useManageNav — mục đang sáng', () => {
     for (const link of screen.getAllByRole('link')) {
       expect(link.getAttribute('aria-current')).toBeNull();
     }
+  });
+});
+
+describe('useManageNav — mục đang sáng (nền tảng)', () => {
+  beforeEach(() => {
+    user.platformRole = 'platform_admin';
+    grant(
+      PERMISSION.PLATFORM_DASHBOARD_VIEW,
+      PERMISSION.PLATFORM_APPROVAL_REVIEW,
+      PERMISSION.PLATFORM_VEHICLE_VIEW,
+      PERMISSION.PLATFORM_TENANT_VIEW,
+      PERMISSION.PLATFORM_BOOKING_VIEW,
+      PERMISSION.PLATFORM_CUSTOMER_VIEW,
+    );
+  });
+
+  function currentLinks(): string[] {
+    return screen
+      .getAllByRole('link')
+      .filter((link) => link.getAttribute('aria-current') === 'page')
+      .map((link) => link.textContent ?? '');
+  }
+
+  it.each([
+    ['/manage/admin', 'Kiểm duyệt xe'],
+    ['/manage/admin/vehicles', 'Tất cả xe'],
+    ['/manage/admin/partners/shops', 'Gian hàng gói'],
+    ['/manage/admin/partners/owners', 'Chủ xe cá nhân'],
+    ['/manage/admin/bookings', 'Đơn thuê toàn hệ thống'],
+    ['/manage/admin/customers', 'Khách thuê'],
+  ])('%s → CHỈ "%s" sáng', (pathname, label) => {
+    nav.pathname = pathname;
+    const { container } = renderMenu();
+
+    expect(selectedLabel(container)).toBe(label);
+    expect(container.querySelectorAll('.ant-menu-item-selected')).toHaveLength(1);
+    expect(currentLinks()).toEqual([label]);
+  });
+
+  it('trang admin không có mục riêng (URL cũ /manage/admin/tenants) KHÔNG làm "Kiểm duyệt xe" sáng', () => {
+    nav.pathname = '/manage/admin/tenants';
+    const { container } = renderMenu();
+
+    expect(selectedLabel(container)).toBeNull();
+    expect(currentLinks()).toEqual([]);
   });
 });
 

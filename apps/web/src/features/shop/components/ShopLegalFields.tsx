@@ -10,6 +10,7 @@ import { TextField } from '@/components/form/TextField';
 import { useWorkspace } from '@/hooks/use-workspace';
 
 import { SHOP_ADDRESS_FIELD_NAMES, SHOP_ADDRESS_PIN_NAMES } from '../shop-profile-form';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import styles from './ShopFields.module.css';
 
 /**
@@ -33,6 +34,9 @@ export function ShopLegalFields({
 }) {
   const t = useTranslations('Shop');
   const { paths, isManage } = useWorkspace();
+  // Phiên hỗ trợ (ADR 0050 §10): địa chỉ gian hàng — thứ khách cũng thấy — vẫn hiện; MST và số giấy
+  // phép kinh doanh (dù đã che ở server) thì không.
+  const legalHidden = useSupportHides(SUPPORT_HIDDEN_AREA.SHOP_LEGAL);
 
   return (
     <>
@@ -63,6 +67,7 @@ export function ShopLegalFields({
           </p>
         }
       />
+      {legalHidden ? null : (
       <div className={styles.pairRow}>
         <TextField
           control={control}
@@ -77,6 +82,7 @@ export function ShopLegalFields({
           placeholder={t('form.address.businessLicenseNo.placeholder')}
         />
       </div>
+      )}
     </>
   );
 }

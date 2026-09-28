@@ -20,7 +20,11 @@ import { LIST_SEPARATOR } from '@xeprime/domain';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { VEHICLE_EDIT_TAB, VEHICLE_EDIT_TAB_VALUES, vehiclePath } from '@/constants/routes';
+import { VEHICLE_EDIT_TAB, VEHICLE_EDIT_TAB_VALUES } from '@/constants/routes';
+import {
+  supportAllowsVehicleTab,
+  useSupportSession,
+} from '@/features/tenant-support/support-session';
 import { getErrorMessage } from '@/services/api-client';
 import { VehiclePricingWorkspace } from '@/features/rental-policies/components/VehiclePricingWorkspace';
 import {
@@ -46,6 +50,7 @@ import { useActiveBranches } from '@/features/branches/hooks/use-branches';
 import { branchLabel } from '@/features/branches/branch-label';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useWorkspace } from '@/hooks/use-workspace';
 import styles from './VehicleEditWorkspace.module.css';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 
@@ -121,8 +126,17 @@ export function VehicleEditWorkspace({
   const applyApiFieldErrors = useApiFieldErrors();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { vehicles: vehiclePaths } = useWorkspace();
+  /*
+   * Phiên hỗ trợ của nhân sự nền tảng (ADR 0050): chỉ các tab của Đợt 1 (thông tin, ảnh, bảo
+   * dưỡng). Tab khác không mờ đi — chúng không có mặt. Tab lạ trên URL rơi về "Thông tin".
+   */
+  const support = useSupportSession();
   const initialValues = useMemo(() => vehicleToFormValues(vehicle), [vehicle]);
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>(() => parseTab(searchParams.get('tab')));
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>(() => {
+    const tab = parseTab(searchParams.get('tab'));
+    return supportAllowsVehicleTab(support, tab) ? tab : VEHICLE_EDIT_TAB.INFORMATION;
+  });
   const [pendingTab, setPendingTab] = useState<WorkspaceTab | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   /**
@@ -209,7 +223,7 @@ export function VehicleEditWorkspace({
     setActiveTab(next);
     const params = new URLSearchParams(searchParams.toString());
     params.set('tab', next);
-    router.replace(`${vehiclePath.edit(vehicle.id)}?${params.toString()}`, { scroll: false });
+    router.replace(`${vehiclePaths.edit(vehicle.id)}?${params.toString()}`, { scroll: false });
   }
 
   function requestTab(next: string) {
@@ -257,7 +271,7 @@ export function VehicleEditWorkspace({
     }
   }
 
-  const tabItems = [
+  const allTabItems = [
     { key: 'information', label: t('tabs.information') },
     { key: 'media', label: t('tabs.media') },
     {
@@ -293,6 +307,7 @@ export function VehicleEditWorkspace({
       children: <VehicleMaintenanceWorkspace vehicle={vehicle} />,
     },
   ];
+  const tabItems = allTabItems.filter((item) => supportAllowsVehicleTab(support, item.key));
 
   return (
     <div className={styles.workspace}>
@@ -319,7 +334,11 @@ export function VehicleEditWorkspace({
       <Tabs className={styles.tabs} activeKey={activeTab} onChange={requestTab} items={tabItems} />
 
       {activeTab === 'information' || activeTab === 'media' ? (
-        <Form component={false} layout="vertical" colon={false}>
+        /*
+         * Không có `vehicles.update` thì form CHỈ XEM. Chỉ tới được đây trong phiên hỗ trợ chế độ xem
+         * (ADR 0050) — người của gian hàng thiếu quyền sửa bị trang chặn từ trước.
+         */
+        <Form component={false} layout="vertical" colon={false} disabled={!canUpdate}>
           <form
             noValidate
             onSubmit={(event) => {
@@ -402,13 +421,15 @@ export function VehicleEditWorkspace({
               </div>
             )}
 
-            <StickyFormActions
-              submitLabel={tActions('saveChanges')}
-              cancelLabel={isDirty ? t('revert') : tActions('cancel')}
-              onCancel={isDirty ? () => reset(initialValues) : onCancel}
-              submitting={submitting}
-              disabled={!isDirty}
-            />
+            {canUpdate ? (
+              <StickyFormActions
+                submitLabel={tActions('saveChanges')}
+                cancelLabel={isDirty ? t('revert') : tActions('cancel')}
+                onCancel={isDirty ? () => reset(initialValues) : onCancel}
+                submitting={submitting}
+                disabled={!isDirty}
+              />
+            ) : null}
           </form>
         </Form>
       ) : null}

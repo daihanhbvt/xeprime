@@ -672,6 +672,11 @@
       "title": "Booking automation",
       "editLink": "Configure",
       "hint": "Turn on instant booking so a paid request becomes an order without waiting for your approval. Set the conditions that apply to this vehicle."
+    },
+    "repairListing": {
+      "action": "Resync public listing",
+      "fixed": "Resynced — the marketplace listing now matches the vehicle data",
+      "unchanged": "The marketplace listing already matched the vehicle data — nothing changed"
     }
   },
   "edit": {
@@ -726,7 +731,14 @@
       "media": "Photos and features saved"
     },
     "lockedNotice": "This vehicle is live on the marketplace: plate number, transmission, fuel type and manufacture year are locked. Everything else — pricing included — takes effect immediately.",
-    "lockedField": "Locked while the vehicle is on the marketplace. Remove it from the marketplace to change this."
+    "lockedField": "Locked while the vehicle is on the marketplace. Remove it from the marketplace to change this.",
+    "page": {
+      "title": "Edit vehicle",
+      "saved": "Changes saved",
+      "forbiddenTitle": "No permission to edit vehicles",
+      "forbiddenBody": "You need the permission below to edit vehicle information. Contact an administrator to request it.",
+      "viewDetail": "View vehicle details"
+    }
   },
   "source": {
     "noPermission": "You do not have permission to view this vehicle's financial information. Contact the shop owner or a system administrator to request access.",
@@ -1439,5 +1451,14 @@
       "description": "Instant booking applies to self-drive and with-driver rentals. Long-term rentals are always scheduled by the shop, so they have no such setting.",
       "action": "Edit vehicle services"
     }
+  },
+  "create": {
+    "title": "Add vehicle",
+    "savedDraft": "Vehicle saved as draft",
+    "createdAndSubmitted": "Vehicle created and submitted for public review",
+    "createdNotSubmitted": "Vehicle created, but it could not be submitted for review: {error}",
+    "forbiddenTitle": "You cannot add vehicles",
+    "forbiddenBody": "You need the permission below to add vehicles to the shop. Ask an administrator to grant it.",
+    "backToList": "Back to vehicles"
   }
 }

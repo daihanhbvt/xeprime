@@ -117,6 +117,8 @@ vi.mock('@/features/vehicles/hooks/use-vehicle-mutations', () => ({
   // Công tắc hiển thị trên chợ (ADR 0048) — hành vi riêng của nó ở
   // `marketplace-visibility-switch.test.tsx`; ở đây chỉ cần trang dựng được.
   useSetVehicleMarketplaceVisibility: () => setVisibility,
+  // Sửa listing chỉ có trong phiên hỗ trợ (ADR 0050 §13) — ở đây trang của chủ xe, không dùng tới.
+  useRepairVehicleListing: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));

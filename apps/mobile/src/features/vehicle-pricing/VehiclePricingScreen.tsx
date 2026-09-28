@@ -39,6 +39,7 @@ import { discountedPriceVnd } from '@/features/vehicles/pricing';
 import { useDomainLabel } from '@/i18n/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { getErrorMessage } from '@/lib/get-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { goBackOr } from '@/navigation/go-back-or';
 import { useLeaveGuard } from '@/hooks/use-leave-guard';
@@ -330,7 +331,9 @@ function VehiclePricingForm({
       },
       onError: (error) => {
         setPending(null);
-        toast.showError(errorMessage(error));
+        // Web: trang giá của cổng quản lý nói câu của server (`getErrorMessage`); mục giá trong
+        // không gian quản lý xe của khu tài khoản (`VehiclePricingSection`) dịch theo mã.
+        toast.showError(customerScope ? errorMessage(error) : getErrorMessage(error));
       },
     });
   }
@@ -974,8 +977,7 @@ function InheritedPolicyCard({
               labelWide
               label={t('mileage')}
               value={
-                policy.includedDistanceKmPerDay != null &&
-                policy.excessDistanceFeePerKm != null
+                policy.includedDistanceKmPerDay != null && policy.excessDistanceFeePerKm != null
                   ? t('mileageValue', {
                       km: fmt.km(policy.includedDistanceKmPerDay),
                       fee: fmt.money(String(policy.excessDistanceFeePerKm)),

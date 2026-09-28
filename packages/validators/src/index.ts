@@ -1461,3 +1461,4 @@ export const vehiclePricingFormSchema = policyFormSchema.shape({
 });
 
 export type VehiclePricingFormValues = yup.InferType<typeof vehiclePricingFormSchema>;
+export * from './tenant-support';

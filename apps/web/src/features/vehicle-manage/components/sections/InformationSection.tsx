@@ -14,6 +14,7 @@ import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { BranchFormDialog } from '@/features/branches/components/BranchFormDialog';
 import { useBranches } from '@/features/branches/hooks/use-branches';
+import { useSupportSession } from '@/features/tenant-support/support-session';
 import { PublishRequiredLabel } from '@/features/vehicles/components/VehicleCompleteness';
 import { VehicleClassificationFields } from '@/features/vehicles/components/VehicleClassificationFields';
 import { VehicleEnergyFields } from '@/features/vehicles/components/VehicleEnergyFields';
@@ -63,6 +64,7 @@ const FIELDS: ReadonlyArray<keyof VehicleFormValues> = [
  */
 export function InformationSection() {
   const { vehicle, canEdit } = useManagedVehicle();
+  const support = useSupportSession();
   const t = useTranslations('VehicleManage');
   const tForm = useTranslations('Vehicles.form');
   const tEdit = useTranslations('Vehicles.edit');
@@ -137,7 +139,8 @@ export function InformationSection() {
                 disabled={!canEdit || isApproved}
               />
             </SectionCard>
-            <AddressCard canEdit={canEdit} />
+            {/* Địa chỉ xe = chi nhánh (vị trí công khai, điểm nhận xe) — ngoài phiên hỗ trợ (ADR 0050). */}
+            <AddressCard canEdit={canEdit && !support} />
           </div>
 
           <SectionCard title={t('information.basicTitle')}>

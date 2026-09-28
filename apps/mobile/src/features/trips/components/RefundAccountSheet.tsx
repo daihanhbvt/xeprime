@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { BANK_ACCOUNT_SCOPE, type BankAccount, type BankAccountScope } from '@/api/bank-accounts/api';
+import {
+  BANK_ACCOUNT_SCOPE,
+  type BankAccount,
+  type BankAccountScope,
+} from '@/api/bank-accounts/api';
 import { WALLET_SCOPE } from '@/api/wallet/api';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { BottomSheet } from '@/components/ui/BottomSheet';

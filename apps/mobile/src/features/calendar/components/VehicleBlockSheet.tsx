@@ -28,10 +28,10 @@ import { bookingsApi } from '@/features/bookings/api';
 import { RentalRangeSheet } from '@/features/marketplace/components/RentalRangeSheet';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { space } from '@/theme/tokens';
 import type { VehicleBlock } from '../api';
 import { useCreateVehicleBlock, useUpdateVehicleBlock } from '../hooks/use-calendar-mutations';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /** Ghi chú tối đa — khớp `@MaxLength(2000)` của `CreateVehicleBlockDto`. */
 const NOTE_MAX = 2000;
@@ -83,7 +83,6 @@ function BlockForm({
   const domainLabel = useDomainLabel();
   const fmt = useAppFormat();
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
 
   const editing = state.mode === 'edit' ? state.block : null;
   /*
@@ -175,7 +174,7 @@ function BlockForm({
       // 409 trùng lịch là câu trả lời NGHIỆP VỤ, không phải sự cố — nói tại chỗ, không bằng toast
       // đỏ chung chung, và giữ nguyên form để người dùng đổi giờ ngay.
       if (getErrorCode(error) === API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT) setConflict(true);
-      else toast.showError(errorMessage(error));
+      else toast.showError(getErrorMessage(error));
     };
     const onSuccess = () => {
       toast.showSuccess(t(editing ? 'block.updated' : 'block.created'));

@@ -214,9 +214,11 @@ export function DeleteAccountScreen() {
                   render={({ field, fieldState }) => (
                     <YStack gap={2}>
                       <Pressable
-                        onPress={() => !openCase.isPending && field.onChange(!field.value)}
+                        // Khoá trong lúc gửi — web cũng `disabled` ô này khi đang gửi yêu cầu.
+                        disabled={openCase.isPending}
+                        onPress={() => field.onChange(!field.value)}
                         accessibilityRole="checkbox"
-                        accessibilityState={{ checked: field.value }}
+                        accessibilityState={{ checked: field.value, disabled: openCase.isPending }}
                         accessibilityLabel={t('acknowledge')}
                       >
                         <XStack

@@ -18,7 +18,7 @@ export default function AccountSubscriptionRoute() {
   return (
     <RequireSession>
       <OwnerGate minStage={OWNER_STAGE.REGISTERING}>
-        <SubscriptionScreen />
+        <SubscriptionScreen shell="account" />
       </OwnerGate>
     </RequireSession>
   );

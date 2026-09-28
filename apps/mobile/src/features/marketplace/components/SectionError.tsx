@@ -3,6 +3,7 @@ import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /**
  * Lỗi CỤC BỘ của một khối trang chủ — hỏng một mục không kéo cả trang về màn lỗi.
@@ -14,11 +15,14 @@ export function SectionError({
   title,
   error,
   action,
+  messageFrom = 'code',
 }: {
   title: string;
   error: unknown;
   /** Lối thoát khi khối hỏng — web đính một nút ngay trong cảnh báo, không để ngõ cụt. */
   action?: { label: string; onPress: () => void };
+  /** Câu lỗi theo MÃ (mặc định) hay câu nguyên văn của server — theo màn tương ứng bên web. */
+  messageFrom?: 'code' | 'backend';
 }) {
   const errorMessage = useErrorMessage();
 
@@ -36,7 +40,7 @@ export function SectionError({
           {title}
         </Text>
         <Text col={colors.danger} fos={fontSize.bodySm}>
-          {errorMessage(error)}
+          {messageFrom === 'backend' ? getErrorMessage(error) : errorMessage(error)}
         </Text>
         {action ? (
           <Pressable

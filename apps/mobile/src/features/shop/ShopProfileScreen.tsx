@@ -1,23 +1,19 @@
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import type { ReactNode } from 'react';
 import { useTranslations } from 'use-intl';
 import {
-  canSubmitShopVerification,
   isEstablishedPackageShop,
   isPackageShopTrack,
   PERMISSION,
-  SHOP_VERIFICATION,
   TENANT_ROLE,
   TENANT_STATUS,
-  type ShopVerification,
   type TenantStatus,
 } from '@xeprime/types';
 import { guessAddressLine } from '@xeprime/domain';
 import { shopProfileSchema, type ShopProfileValues } from '@xeprime/validators';
 import { Screen } from '@/components/layout/Screen';
-import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { FormSection } from '@/components/ui/FormSection';
@@ -46,7 +42,7 @@ import { ShopProfileChecklist } from './components/ShopProfileChecklist';
 import { ShopStatusBanner } from './components/ShopStatusBanner';
 import { ShopWelcomeBanner } from './components/ShopWelcomeBanner';
 import { useVehiclesPage } from '@/features/vehicles/hooks/use-vehicles';
-import { useMyShop, useSubmitShopReview, useUpdateShopProfile } from './hooks/use-shop';
+import { useMyShop, useUpdateShopProfile } from './hooks/use-shop';
 
 /** Tên trường địa chỉ trong `shopProfileSchema` — hằng ngoài component, định danh ổn định. */
 const ADDRESS_FIELD_NAMES = {
@@ -64,7 +60,7 @@ const ADDRESS_PIN_NAMES = {
 /** Dải chào chỉ hỏi "đã có xe nào chưa" — MỘT bản ghi là đủ để trả lời, đúng cỡ web hỏi. */
 const WELCOME_VEHICLE_PAGE = { page: 1, limit: 1 };
 
-/** Giá trị form → thân request. Dùng cho CẢ hai đường ra: lưu, và lưu-rồi-gửi-duyệt. */
+/** Giá trị form → thân request của lượt Lưu. */
 function toBody(v: ShopProfileValues): UpdateShopProfileInput {
   return {
     displayName: v.displayName,
@@ -120,23 +116,26 @@ function toValues(shop: MyShop): ShopProfileValues {
 }
 
 /**
- * Hồ sơ gian hàng + gửi duyệt (SHP-02) — bản native của `/manage/shop`.
+ * Hồ sơ gian hàng (SHP-02) — bản native của `/manage/shop`.
  *
  * Route chỉ lo bốn việc: quyền, dữ liệu, mutation và các trạng thái chưa-có-dữ-liệu. Toàn bộ
  * phần phụ thuộc "form có thay đổi chưa / còn thiếu gì" nằm trong `ProfileForm` — hai câu hỏi mà
  * chỉ form trả lời được.
  *
- * Ba trục quyền TÁCH BẠCH, không gộp: `tenant.view` để xem, `tenant.update` để lưu,
- * `tenant.submit_review` để gửi duyệt. Và "không có quyền" KHÁC "gian hàng đang chờ duyệt" —
- * cái sau khoá form vì backend từ chối ghi (`INVALID_STATUS_TRANSITION`), không phải vì vai trò.
+ * Hai trục quyền TÁCH BẠCH, không gộp: `tenant.view` để xem, `tenant.update` để lưu.
+ *
+ * Không còn nút "Gửi xác minh" (24/09/2026): nền tảng tạm ngừng xác minh gian hàng, và màn duyệt
+ * của nền tảng chỉ nhận phiếu XE — một phiếu xác minh gửi lúc này không có ai xử lý. Một phiếu chờ
+ * CŨ cũng không còn khoá hồ sơ (backend đã gỡ khoá ở `TenantsService.updateProfile`). Web gỡ
+ * cùng lúc ở cả `/manage/shop` lẫn `/account/registration`.
  */
 /**
  * `header` — VỎ điều hướng của khu đang đứng.
  *
  * Cùng màn này phục vụ hai khu: khu quản lý (`/manage/shop`) và khu khách
  * (`/account/registration`, nơi chủ xe tuyến hoa hồng sửa hồ sơ gian hàng của mình — họ KHÔNG
- * vào khu quản lý được, ADR 0038 điều 4). Chỉ cái đầu trang khác nhau; luật lưu, luật gửi
- * duyệt và quyền thì giống hệt, nên clone màn là hai chỗ phải sửa mỗi lần đổi luật.
+ * vào khu quản lý được, ADR 0038 điều 4). Chỉ cái đầu trang khác nhau; luật lưu và quyền thì
+ * giống hệt, nên clone màn là hai chỗ phải sửa mỗi lần đổi luật.
  *
  * Mặc định là đầu trang khu quản lý — nơi màn này ra đời.
  */
@@ -172,13 +171,13 @@ export function ShopProfileScreen({
   variant?: 'settings' | 'profileForm';
 } = {}) {
   const t = useTranslations('Shop');
+  const tRegistration = useTranslations('Account.registration');
   const shell = header ?? <ManageHeader />;
   const permissions = usePermissions();
   const { tenant } = useTenantScope();
 
   const canView = permissions.has(PERMISSION.TENANT_VIEW);
   const canEdit = permissions.has(PERMISSION.TENANT_UPDATE);
-  const canSubmit = permissions.has(PERMISSION.TENANT_SUBMIT_REVIEW);
 
   const query = useMyShop(canView && Boolean(tenant));
 
@@ -212,7 +211,11 @@ export function ShopProfileScreen({
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           <ScreenError
             error={query.error}
-            title={t('page.loadError')}
+            /*
+              Câu của KHU đang đứng: màn "Hồ sơ chủ xe" bên web nói "Không tải được hồ sơ chủ xe"
+              (`Account.registration.loadError`), trang Cửa hàng nói về gian hàng.
+            */
+            title={variant === 'profileForm' ? tRegistration('loadError') : t('page.loadError')}
             onRetry={() => void query.refetch()}
           />
         </Screen>
@@ -238,7 +241,6 @@ export function ShopProfileScreen({
       intro={intro}
       shop={query.data}
       canEdit={canEdit}
-      canSubmit={canSubmit}
       /*
        * Dải chào chỉ dành cho gian hàng ĐÃ đi qua cửa gói và trả tiền — không cho một chủ xe
        * tuyến hoa hồng bắt được tham số từ một link chia sẻ.
@@ -274,7 +276,6 @@ function ProfileForm({
   intro,
   shop,
   canEdit,
-  canSubmit,
   welcome,
   variant,
 }: {
@@ -283,7 +284,6 @@ function ProfileForm({
   intro?: ReactNode;
   shop: MyShop;
   canEdit: boolean;
-  canSubmit: boolean;
   /** Đã lọc theo tuyến ở nơi gọi — ở đây chỉ còn là "có dựng dải chào hay không". */
   welcome: boolean;
   /** Xem docblock cùng tên ở `ShopProfileScreen`. */
@@ -292,7 +292,6 @@ function ProfileForm({
   /** Trang Cửa hàng đầy đủ của cổng quản lý — ba khối cuối chỉ thuộc về nó. */
   const isSettings = variant === 'settings';
   const t = useTranslations('Shop');
-  const tActions = useTranslations('Common.actions');
   const toast = useAppToast();
   const errorMessage = useErrorMessage();
   const navigateOnce = useNavigateOnce();
@@ -300,8 +299,6 @@ function ProfileForm({
   const { tenant } = useTenantScope();
   const permissions = usePermissions();
   const updateProfile = useUpdateShopProfile();
-  const submitReview = useSubmitShopReview();
-  const [confirmOpen, setConfirmOpen] = useState(false);
   /**
    * Hàm mở tấm chọn ảnh LOGO, do `ShopIdentityCard` đặt vào — CTA của dải chào gọi nó.
    *
@@ -333,26 +330,19 @@ function ProfileForm({
    * `values` (không phải `defaultValues`): sau khi lưu, query trả hồ sơ mới và form phải theo —
    * nếu không, "Huỷ bỏ" mời người dùng hoàn tác thứ đã lưu xong rồi.
    */
-  const { control, handleSubmit, reset, formState, getValues } = useForm<ShopProfileValues>({
+  const { control, handleSubmit, reset, formState } = useForm<ShopProfileValues>({
     resolver,
     values: toValues(shop),
   });
 
   const status = shop.status as TenantStatus;
   /*
-   * Backend cũng từ chối ghi khi đang chờ XÁC MINH (`SHOP_VERIFICATION_PENDING`). Khoá ở đây để
-   * người dùng biết TRƯỚC khi gõ, chứ không phải sau khi bấm Lưu.
-   *
-   * Điều kiện đọc từ trục xác minh, không từ `tenants.status`: từ ADR 0036 cột đó không còn mang
-   * nghĩa "đang chờ duyệt", nên hỏi nó là hỏi nhầm chỗ và ô nhập sẽ mở ra đúng lúc phải khoá.
+   * Chỉ-xem CHỈ vì thiếu quyền. Tới 24/09/2026 hồ sơ còn bị khoá suốt lúc chờ XÁC MINH; nền tảng
+   * đã tạm ngừng xác minh gian hàng, nên một phiếu chờ không còn ai xử lý và cái khoá đó thành
+   * vĩnh viễn — backend cũng đã gỡ nó (`TenantsService.updateProfile`). Cùng luật với web.
    */
-  const pendingReview = shop.verification === SHOP_VERIFICATION.PENDING;
-  const readOnly = pendingReview || !canEdit;
-  const readOnlyReason = pendingReview
-    ? t('form.lockedWhilePending')
-    : canEdit
-      ? null
-      : t('form.readOnly');
+  const readOnly = !canEdit;
+  const readOnlyReason = canEdit ? null : t('form.readOnly');
 
   /*
    * Hai trục quyết định KHỐI nào có mặt cuối màn, và cả hai khớp với guard của API:
@@ -364,10 +354,7 @@ function ProfileForm({
   const canSeePlan = permissions.has(PERMISSION.SUBSCRIPTION_VIEW);
 
   const dirty = formState.isDirty && !readOnly;
-  /** Hồ sơ ở chặng "chưa gửi / bị trả về" — chỉ khi đó checklist và nút Gửi xác minh mới có nghĩa. */
-  const submittable = canSubmitShopVerification(shop.verification as ShopVerification);
   const saving = updateProfile.isPending;
-  const submitting = submitReview.isPending || updateProfile.isPending;
 
   const save = handleSubmit((v) =>
     updateProfile.mutate(toBody(v), {
@@ -376,40 +363,26 @@ function ProfileForm({
     }),
   );
 
-  /**
-   * Bấm "Gửi duyệt" chạy VALIDATE TRƯỚC, rồi mới hỏi xác nhận.
-   *
-   * Không có bước này thì nút sáng ngay cả khi họ tên và SĐT chủ gian hàng còn trống, và người
-   * duyệt nhận một hồ sơ không liên hệ được với ai. Thứ tự cũng có chủ ý — hỏi "gửi nhé?" rồi
-   * mới báo "thiếu 2 mục" là bắt người dùng đi qua một hộp thoại vô ích.
-   */
-  const askSubmitReview = handleSubmit(
-    () => setConfirmOpen(true),
-    (errors) => toast.showError(t('status.incomplete', { count: Object.keys(errors).length })),
-  );
-
-  /**
-   * Gửi duyệt = (lưu nốt nếu còn dở) → gửi.
-   *
-   * Backend snapshot hồ sơ TỪ DATABASE, nên gửi thẳng khi form còn thay đổi chưa lưu sẽ đưa cho
-   * người duyệt đúng bản cũ mà chủ shop vừa sửa xong và tưởng đã gửi đi.
-   */
-  const confirmSubmitReview = () => {
-    setConfirmOpen(false);
-    const send = () =>
-      submitReview.mutate(undefined, {
-        onSuccess: () => toast.showSuccess(t('status.submitted')),
-        onError: (err) => toast.showError(errorMessage(err)),
-      });
-
-    if (!dirty) return send();
-    updateProfile.mutate(toBody(getValues()), {
-      onSuccess: send,
-      onError: (err) => toast.showError(errorMessage(err)),
-    });
-  };
-
   const editable = !readOnly && !saving;
+
+  /*
+   * Checklist chỉ hiện khi người xem SỬA được hồ sơ — bảng "còn thiếu gì" không có nghĩa với người
+   * chỉ xem. Không còn gắn với trạng thái xác minh: web đã bỏ luồng đó (24/09/2026). Nó tự im lặng
+   * khi hồ sơ đã đủ hết (xem `ShopProfileChecklist`).
+   */
+  const checklist = readOnly ? null : (
+    <ShopProfileChecklist
+      control={control}
+      ownerAccount={shop.ownerAccount}
+      /*
+       * Logo là mục CHẶN với gian hàng TUYẾN GÓI (ADR 0040 điều 7): thiếu nó thì
+       * `submitForPublicReview` từ chối thật. Chủ xe tuyến hoa hồng không bị cổng đó chạm tới —
+       * bắt một người có một chiếc xe phải có logo gian hàng là dựng lại đúng rào cản mà ADR 0036
+       * vừa gỡ.
+       */
+      logoRequired={isPackageShopTrack(tenant)}
+    />
+  );
 
   return (
     <>
@@ -422,9 +395,8 @@ function ProfileForm({
           sự có thay đổi, đúng như `ShopProfileWorkspace` bên web.
 
           Bản trước ẩn cả thanh cho tới lúc form dirty. Với một chủ xe tuyến hoa hồng đã được
-          duyệt, màn "Hồ sơ chủ xe" khi đó KHÔNG CÒN CÁI NÚT NÀO: hồ sơ đang `active` nên dải
-          trạng thái cũng không có nút gửi duyệt, và người dùng đọc màn đó ra là một trang chỉ
-          để xem. Một nút mờ nói "sửa đi rồi lưu được"; không có nút thì không nói gì cả.
+          duyệt, màn "Hồ sơ chủ xe" khi đó KHÔNG CÒN CÁI NÚT NÀO, và người dùng đọc màn đó ra là
+          một trang chỉ để xem. Một nút mờ nói "sửa đi rồi lưu được"; không có nút thì không nói gì cả.
 
           "Đặt lại" thì vẫn chỉ mọc khi có thay đổi — nó là thao tác HOÀN TÁC, và một nút hoàn
           tác thường trực mời người ta bấm vào thứ chẳng có gì để hoàn.
@@ -478,8 +450,8 @@ function ProfileForm({
         <YStack px={layout.screenX} pt={layout.section} gap={layout.section} pb={layout.section}>
           {/*
             Khối của khu gọi — tiến trình đăng ký ở khu khách, không có gì ở khu quản lý. Đặt TRÊN
-            dải trạng thái: người mới đăng ký cần biết mình đang ở bước nào trước khi đọc một câu
-            về việc gửi duyệt.
+            dải trạng thái: người mới đăng ký cần biết mình đang ở bước nào trước khi đọc bất cứ
+            tin gì khác.
           */}
           {intro}
 
@@ -495,30 +467,14 @@ function ProfileForm({
             />
           ) : null}
 
-          <ShopStatusBanner
-            shop={shop}
-            canSubmit={canSubmit}
-            submitting={submitting}
-            onSubmit={() => void askSubmitReview()}
-          />
+          <ShopStatusBanner shop={shop} />
 
           {/*
-            Checklist chỉ ở chặng chưa gửi / bị trả về. Hồ sơ đang chờ duyệt hay đã hoạt động thì
-            nó không còn nói gì mới — người dùng đâu sửa được nữa.
+            "Hồ sơ chủ xe" (`ShopProfileWorkspace` bên web): checklist đứng ngay dưới dải trạng
+            thái. Trang Cửa hàng (`ShopWorkspace`) thì đặt nó TRONG khối địa chỉ & pháp lý — nơi
+            còn ô để điền; xem khối đó bên dưới.
           */}
-          {submittable ? (
-            <ShopProfileChecklist
-              control={control}
-              ownerAccount={shop.ownerAccount}
-              /*
-               * Logo là mục CHẶN với gian hàng TUYẾN GÓI (ADR 0040 điều 7): thiếu nó thì
-               * `submitForPublicReview` từ chối thật. Chủ xe tuyến hoa hồng không bị cổng đó chạm
-               * tới — bắt một người có một chiếc xe phải có logo gian hàng là dựng lại đúng rào cản
-               * mà ADR 0036 vừa gỡ.
-               */
-              logoRequired={isPackageShopTrack(tenant)}
-            />
-          ) : null}
+          {isSettings ? null : checklist}
 
           {readOnlyReason ? <Callout tone="info">{readOnlyReason}</Callout> : null}
 
@@ -560,6 +516,7 @@ function ProfileForm({
           ) : null}
 
           <FormSection title={t('form.address.title')} icon="location-outline">
+            {isSettings ? checklist : null}
             {/*
               Địa chỉ ở đây là địa chỉ của CHI NHÁNH MẶC ĐỊNH: đổi nó là backend dời chi nhánh đó
               và đồng bộ lại vị trí công khai của mọi xe thuộc nó. Không có nguồn địa chỉ thứ hai
@@ -639,21 +596,6 @@ function ProfileForm({
           ) : null}
         </YStack>
       </Screen>
-
-      <AlertDialog
-        open={confirmOpen}
-        title={t('status.submitConfirm.title')}
-        message={
-          dirty
-            ? t('status.submitConfirm.descriptionWithSave')
-            : t('status.submitConfirm.description')
-        }
-        confirmLabel={t('status.submitConfirm.ok')}
-        cancelLabel={tActions('cancel')}
-        loading={submitting}
-        onConfirm={confirmSubmitReview}
-        onCancel={() => setConfirmOpen(false)}
-      />
     </>
   );
 }

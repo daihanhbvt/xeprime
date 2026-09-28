@@ -16,6 +16,7 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import {
+  useCanWriteSupportCase,
   usePostSupportMessage,
   useResolveSupportCase,
   useSupportCase,
@@ -54,6 +55,7 @@ export function SupportCaseDetailPanel({
   const [resolution, setResolution] = useState('');
 
   const isPlatform = surface === SUPPORT_SURFACE.PLATFORM;
+  const canWrite = useCanWriteSupportCase(surface);
   const row = detail.data;
 
   if (!id) return <div className={styles.placeholder}>{t('detail.pickOne')}</div>;
@@ -203,7 +205,7 @@ export function SupportCaseDetailPanel({
 
       {closed ? (
         <Alert type="info" showIcon title={t('detail.closedNotice')} />
-      ) : (
+      ) : !canWrite ? null : (
         <section aria-labelledby="xp-support-reply" className={styles.reply}>
           <h3 id="xp-support-reply" className={styles.sectionTitle}>
             {t('detail.reply')}

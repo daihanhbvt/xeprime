@@ -16,6 +16,7 @@ import {
   UpdateMemberRoleDto,
 } from './dto/member.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
+import { piiSearch } from '../../common/support/support-search';
 
 const SELECT = {
   userId: true,
@@ -46,10 +47,7 @@ export class MembersService {
       ...(query.q
         ? {
             user: {
-              OR: [
-                { displayName: { contains: query.q, mode: 'insensitive' } },
-                { email: { contains: query.q, mode: 'insensitive' } },
-              ],
+              OR: memberSearchOr(query.q),
             },
           }
         : {}),
@@ -202,4 +200,12 @@ function toDto(m: MembershipRow): MemberDto {
     joinedAt: (m.joinedAt as unknown as string | null) ?? null,
     createdAt: m.createdAt as unknown as string,
   };
+}
+
+/** Tên gần đúng · email — trong phiên hỗ trợ (ADR 0050 §11) email chỉ khớp nguyên văn. */
+function memberSearchOr(q: string): Prisma.UserWhereInput[] {
+  const pii = piiSearch(q);
+  const name: Prisma.UserWhereInput = { displayName: { contains: q, mode: 'insensitive' } };
+  if (pii.substring) return [name, { email: { contains: q, mode: 'insensitive' } }];
+  return [name, ...(pii.email ? [{ email: { equals: pii.email, mode: 'insensitive' as const } }] : [])];
 }

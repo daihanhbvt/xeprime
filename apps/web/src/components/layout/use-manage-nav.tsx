@@ -11,7 +11,6 @@ import {
   isNavBranch,
   leavesOfSection,
   matchSelectedKey,
-  navForScope,
   sectionKeyOf,
   type NavBranch,
   type NavLeaf,
@@ -28,6 +27,7 @@ import { NavBadge } from './NavBadge';
 import { SidebarSectionTitle } from './SidebarSectionTitle';
 import { useNavBadges, type NavBadgeCounts } from './use-nav-badges';
 import styles from './ManageMenu.module.css';
+import { useManageNavTree } from './use-manage-nav-tree';
 
 type MenuItem = NonNullable<MenuProps['items']>[number];
 
@@ -102,7 +102,8 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
     (leaf.feature === undefined ||
       isFeatureVisible(featureStates[leaf.feature] ?? FEATURE_STATE.ENABLED));
 
-  const sections = navForScope(Boolean(user?.platformRole));
+  // Cây của gian hàng trong phiên hỗ trợ, cây nền tảng/gian hàng ngoài phiên (ADR 0050 §12).
+  const { sections } = useManageNavTree();
   const selectedKey = matchSelectedKey(pathname, flattenLeaves(sections));
   const activeSectionKey = sectionKeyOf(sections, selectedKey);
   const activeBranchKey = branchKeyOf(sections, selectedKey);
@@ -144,7 +145,8 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
     const count = badgeCountOf(leaf);
     // Huy hiệu phải nói được thành lời: người dùng trình đọc màn hình nghe "Yêu cầu đặt xe, 3
     // việc cần xử lý" chứ không phải một con số trôi nổi cạnh tên mục.
-    const accessibleName = count > 0 ? `${label}, ${tShell('shell.needsAction', { count })}` : label;
+    const accessibleName =
+      count > 0 ? `${label}, ${tShell('shell.needsAction', { count })}` : label;
     return {
       key: leaf.href,
       icon: iconOf(leaf, count),
@@ -182,9 +184,7 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
     const isOpen = collapsed ? false : openKeys.includes(key);
     const hiddenCount = isOpen
       ? 0
-      : branch.children
-          .filter(canSeeLeaf)
-          .reduce((sum, leaf) => sum + badgeCountOf(leaf), 0);
+      : branch.children.filter(canSeeLeaf).reduce((sum, leaf) => sum + badgeCountOf(leaf), 0);
 
     return {
       key,

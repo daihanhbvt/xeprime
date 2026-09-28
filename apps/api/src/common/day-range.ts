@@ -58,3 +58,24 @@ export function dayRangeFilter(
   if (!gte && !lte) return undefined;
   return { ...(gte ? { gte } : {}), ...(lte ? { lte } : {}) };
 }
+
+/** Ngày lịch Việt Nam `YYYY-MM-DD` của một thời điểm. */
+export function vnDateKey(date: Date): string {
+  return new Date(date.getTime() + VN_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+/** Tháng lịch Việt Nam `YYYY-MM` của một thời điểm. */
+export function vnMonthKey(date: Date): string {
+  return new Date(date.getTime() + VN_OFFSET_MS).toISOString().slice(0, 7);
+}
+
+/**
+ * Thời điểm UTC của 00:00 ngày 1 (giờ VN) của tháng chứa `now`, lùi `monthsBack` tháng.
+ * `Date.UTC` nhận tháng âm và tự lùi năm, nên lùi qua tháng Giêng không cần nhánh riêng.
+ */
+export function vnMonthStartUtc(now: Date, monthsBack = 0): Date {
+  const local = new Date(now.getTime() + VN_OFFSET_MS);
+  return new Date(
+    Date.UTC(local.getUTCFullYear(), local.getUTCMonth() - monthsBack, 1) - VN_OFFSET_MS,
+  );
+}

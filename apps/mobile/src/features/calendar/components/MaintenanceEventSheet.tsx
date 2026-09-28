@@ -25,8 +25,8 @@ import {
 } from '@/features/vehicle-maintenance/hooks/use-maintenance';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { space } from '@/theme/tokens';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /**
  * Chi tiết lịch bảo dưỡng NGAY TRÊN LỊCH — chạm event `maintenance` mở ra đây.
@@ -58,7 +58,6 @@ export function MaintenanceEventSheet({
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   const { has } = usePermissions();
 
   const canView = has(PERMISSION.VEHICLE_MAINTENANCE_VIEW);
@@ -83,7 +82,7 @@ export function MaintenanceEventSheet({
       { action: 'start', recordId: current.id, expectedRowVersion: current.rowVersion },
       {
         onSuccess: () => toast.showSuccess(t('maintenance.started')),
-        onError: (error) => toast.showError(errorMessage(error)),
+        onError: (error) => toast.showError(getErrorMessage(error)),
       },
     );
   }
@@ -99,7 +98,7 @@ export function MaintenanceEventSheet({
         },
         onError: (error) => {
           setConfirmingCancel(false);
-          toast.showError(errorMessage(error));
+          toast.showError(getErrorMessage(error));
         },
       },
     );

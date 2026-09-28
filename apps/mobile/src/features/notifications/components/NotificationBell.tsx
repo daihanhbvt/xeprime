@@ -78,10 +78,7 @@ export function NotificationBell({
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
 
-  const items = useMemo(
-    () => list.data?.pages.flatMap((page) => page.items) ?? [],
-    [list.data],
-  );
+  const items = useMemo(() => list.data?.pages.flatMap((page) => page.items) ?? [], [list.data]);
 
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = list;
   const loadMore = useCallback(() => {
@@ -145,7 +142,10 @@ export function NotificationBell({
         {unreadCount > 0 ? (
           <YStack
             pos="absolute"
-            {...badgeOffset(compact ? sizing.compactBox : sizing.touchTarget, compact ? iconSize.sm : iconSize.md)}
+            {...badgeOffset(
+              compact ? sizing.compactBox : sizing.touchTarget,
+              compact ? iconSize.sm : iconSize.md,
+            )}
           >
             <CountBadge count={unreadCount} tone="danger" size="sm" />
           </YStack>
@@ -192,7 +192,11 @@ export function NotificationBell({
             ))}
           </YStack>
         ) : list.isError ? (
-          <ScreenError error={list.error} onRetry={() => void list.refetch()} />
+          <ScreenError
+            messageFrom="backend"
+            error={list.error}
+            onRetry={() => void list.refetch()}
+          />
         ) : items.length === 0 ? (
           <ScreenMessage icon="notifications-outline" title={t('empty')} />
         ) : (

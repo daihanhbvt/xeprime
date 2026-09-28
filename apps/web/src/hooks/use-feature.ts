@@ -3,11 +3,13 @@
 import { useMemo } from 'react';
 import {
   FEATURE_STATE,
+  SUPPORT_HIDDEN_FEATURES,
   canWriteFeature,
   isFeatureVisible,
   type FeatureState,
   type PlanFeature,
 } from '@xeprime/types';
+import { useSupportSession } from '@/features/tenant-support/support-session';
 import { useCurrentUser } from '@/hooks/use-current-user';
 
 export interface FeatureAccess {
@@ -51,18 +53,28 @@ export function useFeature(feature: PlanFeature): FeatureAccess {
  */
 export function useFeatureStates(): Partial<Record<PlanFeature, FeatureState>> {
   const { data: user } = useCurrentUser();
-  const features = user?.tenant?.features;
+  // Phiên hỗ trợ (ADR 0050): cờ gói của GIAN HÀNG đang được hỗ trợ, không phải của người đăng nhập.
+  const support = useSupportSession();
+  const features = support ? support.context.tenant.features : user?.tenant?.features;
+
+  const inSupport = support !== null;
 
   return useMemo(() => {
-    if (!features) return {};
-    return Object.fromEntries(features.map((f) => [f.feature, f.state])) as Partial<
+    const states = Object.fromEntries((features ?? []).map((f) => [f.feature, f.state])) as Partial<
       Record<PlanFeature, FeatureState>
     >;
-  }, [features]);
+    // Trong phiên: khu tiền/công nợ/hợp đồng không bao giờ mở, bất kể gói (ADR 0050 §10).
+    if (inSupport) {
+      for (const feature of SUPPORT_HIDDEN_FEATURES) states[feature] = FEATURE_STATE.HIDDEN;
+    }
+    return states;
+  }, [features, inSupport]);
 }
 
 /** Ngày hết hạn của gói hiện hành — `null` khi không có gói hoặc chưa nạp xong. */
 export function usePlanEndsAt(): string | null {
   const { data: user } = useCurrentUser();
+  const support = useSupportSession();
+  if (support) return support.context.tenant.planEndsAt ?? null;
   return user?.tenant?.planEndsAt ?? null;
 }

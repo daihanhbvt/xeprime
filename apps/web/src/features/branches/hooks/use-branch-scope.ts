@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo } from 'react';
 import { BRANCH_STATUS, PERMISSION } from '@xeprime/types';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { setBranch } from '@/store/slices/scope.slice';
@@ -35,10 +36,18 @@ export function useBranchScope(): BranchScope {
   const dispatch = useAppDispatch();
   const branchId = useAppSelector((s) => s.scope.branchId);
   const permissions = usePermissions();
-  const canView = permissions.has(PERMISSION.BRANCH_VIEW);
+  const { data: user } = useCurrentUser();
+  /*
+   * Chỉ hỏi server khi người dùng THẬT SỰ thuộc một gian hàng. Hook này chạy trong vỏ trang cho
+   * mọi người (huy hiệu menu đọc phạm vi chi nhánh), kể cả nhân sự nền tảng — `platform_admin` có
+   * sẵn `branches.view` trong bộ quyền nhưng không đứng trong tenant nào (403 `NO_TENANT_SCOPE`).
+   * Và trong trang phiên hỗ trợ gian hàng (ADR 0050), request của vỏ trang mang header phiên: hỏi
+   * ở đây là kéo chi nhánh của gian hàng đang được hỗ trợ vào cache CHÍNH.
+   */
+  const canView = permissions.has(PERMISSION.BRANCH_VIEW) && Boolean(user?.tenant);
 
-  // Không có quyền thì KHÔNG gọi API — tránh 403 lặp lại ở mọi trang.
-  const query = useBranches(canView ? { status: BRANCH_STATUS.ACTIVE } : {});
+  // Không có quyền / không thuộc gian hàng thì KHÔNG gọi API — tránh 403 lặp lại ở mọi trang.
+  const query = useBranches({ status: BRANCH_STATUS.ACTIVE }, canView);
   const enabled = canView && !query.isError;
   const options = useMemo(() => (enabled ? (query.data?.items ?? []) : []), [enabled, query.data]);
 

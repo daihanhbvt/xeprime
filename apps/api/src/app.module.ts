@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, type MiddlewareConsumer, type NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -15,6 +15,10 @@ import { FeatureUsageInterceptor } from './common/interceptors/feature-usage.int
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { HttpCacheInterceptor } from './common/http-cache';
 import { PrismaModule } from './prisma/prisma.module';
+import { SupportRequestModule } from './common/support/support-request.module';
+import { SupportRequestMiddleware } from './common/support/support-request.store';
+import { SupportMaskInterceptor } from './common/support/support-mask.interceptor';
+import { TenantSupportModule } from './modules/tenant-support/tenant-support.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { RbacModule } from './modules/rbac/rbac.module';
 import { HealthModule } from './modules/health/health.module';
@@ -154,6 +158,9 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
     TaxModule,
     SellerProfileModule,
     SupportModule,
+    // Không gian hỗ trợ gian hàng của nhân sự nền tảng — ADR 0050.
+    SupportRequestModule,
+    TenantSupportModule,
   ],
   providers: [
     // Thứ tự quan trọng (guard global chạy theo đúng thứ tự khai báo): Throttler chặn trước
@@ -190,6 +197,14 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
     // Ghi `used_features` SAU khi handler trả 2xx — xem docblock của interceptor về việc vì sao
     // đây không thể là một guard.
     { provide: APP_INTERCEPTOR, useClass: FeatureUsageInterceptor },
+    // Che PII trong response của phiên hỗ trợ gian hàng (ADR 0050 §11) — đăng ký SAU CÙNG để nó là
+    // lớp TRONG CÙNG, chạm dữ liệu handler trả về trước khi bọc `{ data, meta }`.
+    { provide: APP_INTERCEPTOR, useClass: SupportMaskInterceptor },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    // Mỗi request một store phiên hỗ trợ (ADR 0050) — `TenantScopeGuard` điền, `AuditService` đọc.
+    consumer.apply(SupportRequestMiddleware).forRoutes('{*splat}');
+  }
+}

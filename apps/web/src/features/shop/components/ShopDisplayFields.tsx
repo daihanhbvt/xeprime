@@ -25,7 +25,14 @@ import styles from './ShopFields.module.css';
  * đều đọc nó qua `/auth/me`). Không có đường nào chép nó sang `users.avatar_url` và ngược lại:
  * một tấm là mặt tiền của cửa hàng, tấm kia là ảnh của một con người trên marketplace.
  */
-export function ShopDisplayFields({ control }: { control: Control<ShopProfileValues> }) {
+export function ShopDisplayFields({
+  control,
+  readOnly = false,
+}: {
+  control: Control<ShopProfileValues>;
+  /** Chỉ xem ảnh — không ô tải/đổi/xoá (xem `ImageUploadField.readOnly`). */
+  readOnly?: boolean;
+}) {
   const t = useTranslations('Shop');
 
   return (
@@ -43,13 +50,14 @@ export function ShopDisplayFields({ control }: { control: Control<ShopProfileVal
         hàng của tôi trông thế nào"), nên nhìn thấy cả hai cùng lúc mới so được.
       */}
       <div className={styles.imageRow}>
-        <ShopLogoField control={control} />
+        <ShopLogoField control={control} readOnly={readOnly} />
         <ImageUploadField
           control={control}
           name="coverUrl"
           label={t('form.display.cover.label')}
           help={t('form.display.cover.hint')}
           presign={presignShopMedia}
+          readOnly={readOnly}
         />
       </div>
     </>
@@ -89,8 +97,10 @@ export function ShopDisplayNameField<T extends FieldValues & { displayName: stri
 export function ShopLogoField<T extends FieldValues & { logoUrl?: string | null }>({
   control,
   help,
+  readOnly = false,
 }: {
   control: Control<T>;
+  readOnly?: boolean;
   /** Gợi ý thay thế — luồng nâng cấp nói rõ logo bắt buộc TRƯỚC KHI gửi xe lên chợ, không phải lúc mua gói. */
   help?: ReactNode;
 }) {
@@ -108,6 +118,7 @@ export function ShopLogoField<T extends FieldValues & { logoUrl?: string | null 
        * `id` — gõ sai là nút cuộn về hư không, và không có gì đỏ lên để báo.
        */
       triggerId={SHOP_LOGO_TRIGGER_ID}
+      readOnly={readOnly}
     />
   );
 }

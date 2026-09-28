@@ -2,15 +2,23 @@
 
 import { EyeOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
+import { useTranslations } from 'next-intl';
 import {
-  TENANT_STATUS_META, TENANT_TYPE_LABEL, type PaginationMeta, type TenantStatus, type TenantType, } from '@xeprime/types';
+  TENANT_STATUS_META,
+  type PaginationMeta,
+  type PlatformPartnerKind,
+  type TenantStatus,
+} from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import type { AdminTenant } from '../types';
 import styles from './AdminTenantTable.module.css';
-import { useAppFormat } from '@/i18n/use-app-format';
 
 interface AdminTenantTableProps {
+  /** Danh sách đang hiển thị — chỉ đổi câu chữ; dữ liệu đã được server lọc theo loại. */
+  partnerKind: PlatformPartnerKind;
   items: AdminTenant[];
   meta: PaginationMeta;
   loading: boolean;
@@ -25,6 +33,7 @@ interface AdminTenantTableProps {
 const MIN_TABLE_WIDTH = 950;
 
 export function AdminTenantTable({
+  partnerKind,
   items,
   meta,
   loading,
@@ -34,11 +43,16 @@ export function AdminTenantTable({
   onView,
   onPageChange,
 }: AdminTenantTableProps) {
+  const t = useTranslations('AdminTenants.list');
+  const tKind = useTranslations(`AdminTenants.list.kinds.${partnerKind}`);
+  const tCommon = useTranslations('Common.labels');
   const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
+  const empty = tCommon('emptyValue');
 
   const columns: DataTableColumn<AdminTenant>[] = [
     {
-      title: 'Gian hàng',
+      title: tKind('name'),
       key: 'name',
       width: 230,
       render: (_, r) => (
@@ -52,54 +66,73 @@ export function AdminTenantTable({
       ),
     },
     {
-      title: 'Chủ shop',
+      title: tKind('owner'),
       key: 'owner',
       width: 180,
       render: (_, r) => (
         <div>
-          <div>{r.ownerName ?? '—'}</div>
+          <div>{r.ownerName ?? empty}</div>
           {r.phone ? <div className={styles.meta}>{r.phone}</div> : null}
         </div>
       ),
     },
     {
-      title: 'Loại',
+      title: t('columns.type'),
       key: 'type',
       width: 120,
-      render: (_, r) => TENANT_TYPE_LABEL[r.tenantType as TenantType] ?? r.tenantType,
+      render: (_, r) => domainLabel('tenantType', r.tenantType, r.tenantType),
     },
-    { title: 'Xe', key: 'vehicles', align: 'right', width: 80, render: (_, r) => r.vehicleCount },
     {
-      title: 'Trạng thái',
+      title: t('columns.vehicles'),
+      key: 'vehicles',
+      align: 'right',
+      width: 80,
+      render: (_, r) => r.vehicleCount,
+    },
+    {
+      title: t('columns.status'),
       key: 'status',
       width: 130,
-      render: (_, r) => <StatusTag value={r.status as TenantStatus} meta={TENANT_STATUS_META} group="tenantStatus" />,
+      render: (_, r) => (
+        <StatusTag
+          value={r.status as TenantStatus}
+          meta={TENANT_STATUS_META}
+          group="tenantStatus"
+        />
+      ),
     },
-    { title: 'Ngày tạo', key: 'createdAt', width: 120, render: (_, r) => fmt.date(r.createdAt) },
+    {
+      title: t('columns.createdAt'),
+      key: 'createdAt',
+      width: 120,
+      render: (_, r) => fmt.date(r.createdAt),
+    },
     actionColumn<AdminTenant>((row) => [
-      { key: 'view', label: 'Xem chi tiết', icon: <EyeOutlined />, onClick: () => onView(row.id) },
+      { key: 'view', label: t('view'), icon: <EyeOutlined />, onClick: () => onView(row.id) },
     ]),
   ];
 
   return (
     <DataTable<AdminTenant>
-      label="Danh sách gian hàng"
+      label={tKind('tableLabel')}
       columns={columns}
       items={items}
       onRowClick={(row) => onView(row.id)}
       minWidth={MIN_TABLE_WIDTH}
       loading={loading}
-      error={error ? { title: 'Không tải được danh sách gian hàng', onRetry: error.onRetry } : null}
+      error={error ? { title: tKind('loadError'), onRetry: error.onRetry } : null}
       filtered={filtered}
-      empty={{ title: 'Chưa có gian hàng nào' }}
+      empty={{ title: tKind('empty') }}
       noResults={{
-        title: 'Không có gian hàng khớp bộ lọc',
-        action: onClearFilters ? <Button onClick={onClearFilters}>Xoá bộ lọc</Button> : undefined,
+        title: tKind('noResults'),
+        action: onClearFilters ? (
+          <Button onClick={onClearFilters}>{t('clearFilters')}</Button>
+        ) : undefined,
       }}
       pagination={{
         meta,
         onChange: onPageChange,
-        totalLabel: (total) => `${total} gian hàng`,
+        totalLabel: (total) => tKind('total', { count: total }),
       }}
     />
   );

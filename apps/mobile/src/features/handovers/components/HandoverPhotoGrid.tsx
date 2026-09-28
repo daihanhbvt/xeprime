@@ -19,7 +19,6 @@ import { PhotoViewer } from '@/components/ui/PhotoViewer';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useDomainLabel } from '@/i18n/domain';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import {
   requestHandoverPhotoUrl,
@@ -35,6 +34,7 @@ import {
   type PickedPhoto,
 } from '../photo-upload';
 import type { Handover } from '../api';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /** Bốn góc ngoại thất + đồng hồ Odo — thứ tự cố định để hai bên nhìn CÙNG một góc. */
 const SLOTS: readonly HandoverPhotoSlot[] = [
@@ -132,7 +132,6 @@ export function HandoverPhotoGrid({
 }) {
   const t = useTranslations('Bookings.handover.photos');
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   const permissions = usePermissions();
 
   const attach = useAttachHandoverPhoto(bookingId, type);
@@ -169,7 +168,8 @@ export function HandoverPhotoGrid({
       } catch (error) {
         setBusySlot(null);
         reportUploadFailure('ensure-handover', slot, photo, error);
-        toast.showError(t('uploadFailed'));
+        // Web nói câu nguyên văn của server ở ô ảnh hỏng (getErrorMessage).
+        toast.showError(getErrorMessage(error));
         return;
       }
 
@@ -179,13 +179,14 @@ export function HandoverPhotoGrid({
           // Ảnh mất khi upload hỏng: nói thẳng ra để người dùng chụp lại, đừng im lặng.
           onError: (error) => {
             reportUploadFailure('attach', slot, photo, error);
-            toast.showError(t('uploadFailed'));
+            // Web nói câu nguyên văn của server ở ô ảnh hỏng (getErrorMessage).
+            toast.showError(getErrorMessage(error));
           },
           onSettled: () => setBusySlot(null),
         },
       );
     },
-    [attach, ensureHandover, t, toast],
+    [attach, ensureHandover, toast],
   );
 
   /** Mở lại một ảnh — URL ký xin lại TỪNG cú bấm, không giữ trong state quá lần xem này. */
@@ -199,12 +200,12 @@ export function HandoverPhotoGrid({
         const ticket = await requestHandoverPhotoUrl(bookingId, type, photo.fileId);
         setPreview(ticket.downloadUrl);
       } catch (error) {
-        toast.showError(errorMessage(error));
+        toast.showError(getErrorMessage(error));
       } finally {
         setBusySlot(null);
       }
     },
-    [bookingId, errorMessage, taken, toast, type],
+    [bookingId, taken, toast, type],
   );
 
   // Chuyển `open` (async) thành một handler void ổn định — `PhotoSlot` chỉ cần bấm-là-chạy.
@@ -301,7 +302,7 @@ export function HandoverPhotoGrid({
         onConfirm={() => {
           if (!removingSlot) return;
           remove.mutate(removingSlot, {
-            onError: (error) => toast.showError(errorMessage(error)),
+            onError: (error) => toast.showError(getErrorMessage(error)),
             onSettled: () => setRemovingSlot(null),
           });
         }}
@@ -485,4 +486,3 @@ const PhotoSlot = memo(function PhotoSlot({
     </YStack>
   );
 });
-

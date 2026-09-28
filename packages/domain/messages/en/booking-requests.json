@@ -354,26 +354,12 @@
     "stepsLabel": "Booking progress",
     "stepDone": "(done)",
     "validation": {
-      "nameRequired": "Enter your full name",
       "nameTooLong": "Full name can be at most {max} characters",
-      "phoneRequired": "Enter your phone number",
-      "phoneInvalid": "That phone number is not valid",
       "emailInvalid": "That email address is not valid",
       "serviceRequired": "Pick a service",
-      "pickupAtRequired": "Pick a pickup time",
-      "returnAtRequired": "Pick a return time",
-      "packageRequired": "Pick a rental package",
       "pickupPreferenceRequired": "Pick when you would like the car",
-      "requestedPickupDateRequired": "Pick your preferred pickup date",
       "routeRequired": "Pick a route type",
-      "pickupAddressRequired": "Enter the pickup address",
-      "destinationRequired": "Enter the destination",
-      "deliveryAddressRequired": "Enter the delivery address",
-      "noteTooLong": "Note can be at most {max} characters",
-      "pickupProvinceRequired": "Select the pickup province or city",
-      "pickupWardRequired": "Select the pickup ward",
-      "deliveryProvinceRequired": "Select the delivery province or city",
-      "deliveryWardRequired": "Select the delivery ward"
+      "noteTooLong": "Note can be at most {max} characters"
     },
     "blocked": {
       "close": "Close",

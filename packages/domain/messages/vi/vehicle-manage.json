@@ -287,16 +287,10 @@
   },
   "operationsTab": {
     "title": "Vận hành & điều kiện thuê",
-    "overviewTitle": "Thiết lập cách xe phục vụ khách",
     "hint": "Khung giờ giao nhận, tự động nhận chuyến, thủ tục và phụ phí",
     "handover": "Thời gian giao nhận",
-    "handoverHint": "Giờ nhận, trả xe và thời gian chuẩn bị giữa hai chuyến",
     "selfDrive": "Tự lái",
-    "selfDriveHint": "Tự động nhận chuyến, giấy tờ, cọc và điều khoản tự lái",
     "withDriver": "Có tài xế",
-    "withDriverHint": "Nhận chuyến có tài xế, phụ phí và điều khoản dịch vụ",
-    "openTag": "Đang mở",
-    "disabledTag": "Chưa bật",
     "serviceOff": "Xe không đăng dịch vụ này."
   }
 }

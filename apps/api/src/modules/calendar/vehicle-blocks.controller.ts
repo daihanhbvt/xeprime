@@ -16,12 +16,13 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
+import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
   TenantScoped,
+  SupportAction,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { VehicleBlocksService } from './vehicle-blocks.service';
@@ -46,6 +47,7 @@ export class VehicleBlocksController {
 
   @Get(':id')
   @RequirePermissions(PERMISSION.CALENDAR_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.CALENDAR_VIEW)
   @ApiOperation({ summary: 'Chi tiết một lịch khoá xe' })
   @ApiOkResponse({ type: VehicleBlockDto })
   getOne(
@@ -57,6 +59,8 @@ export class VehicleBlocksController {
 
   @Post()
   @RequirePermissions(PERMISSION.VEHICLE_BLOCK_SCHEDULE)
+  // Phiên hỗ trợ: khoá lịch TƯƠNG LAI, lý do riêng, chống trùng bằng constraint lịch (ADR 0050 §13).
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_SCHEDULE_BLOCK_MANAGE)
   @ApiOperation({ summary: 'Khoá xe một khoảng thời gian (giữ chỗ lịch trong cùng transaction)' })
   @ApiCreatedResponse({ type: VehicleBlockDto })
   create(
@@ -69,6 +73,7 @@ export class VehicleBlocksController {
 
   @Patch(':id')
   @RequirePermissions(PERMISSION.VEHICLE_BLOCK_SCHEDULE)
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_SCHEDULE_BLOCK_MANAGE)
   @ApiOperation({ summary: 'Sửa lịch khoá (optimistic concurrency, đồng bộ lịch xe)' })
   @ApiOkResponse({ type: VehicleBlockDto })
   update(
@@ -83,6 +88,7 @@ export class VehicleBlocksController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @RequirePermissions(PERMISSION.VEHICLE_BLOCK_SCHEDULE)
+  @SupportAction(SUPPORT_CAPABILITY.VEHICLE_SCHEDULE_BLOCK_MANAGE)
   @ApiOperation({ summary: 'Gỡ khoá — NHẢ chỗ trên lịch xe trong cùng transaction' })
   @ApiNoContentResponse()
   async remove(

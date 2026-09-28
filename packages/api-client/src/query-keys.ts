@@ -20,6 +20,14 @@ export const queryKeys = {
     all: ['tenants'] as const,
     current: () => ['tenants', 'current'] as const,
   },
+  /**
+   * Phiên hỗ trợ gian hàng của nhân sự nền tảng (ADR 0050). Chỉ bản ghi PHIÊN nằm ở đây; dữ liệu
+   * của gian hàng đọc trong phiên sống ở một QueryClient RIÊNG của phiên, không chung cache chính.
+   */
+  tenantSupport: {
+    all: ['tenant-support'] as const,
+    context: (id: string) => ['tenant-support', 'context', id] as const,
+  },
   shop: {
     all: ['shop'] as const,
     current: () => ['shop', 'current'] as const,

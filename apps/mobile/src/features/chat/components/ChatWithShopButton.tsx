@@ -4,10 +4,10 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { chatApi } from '@/features/chat/api';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { isUnauthenticated } from '@/lib/api-client';
 import { ROUTES } from '@/navigation/routes';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /**
  * Nút "Nhắn shop" — mở/lấy hội thoại với gian hàng của một chiếc xe rồi vào thẳng thread.
@@ -69,7 +69,6 @@ export function ChatWithShopButton({
 }) {
   const t = useTranslations('Chat');
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   const navigateOnce = useNavigateOnce();
 
   const start = useMutation({
@@ -90,7 +89,7 @@ export function ChatWithShopButton({
         navigateOnce(ROUTES.account.login());
         return;
       }
-      toast.showError(errorMessage(error));
+      toast.showError(getErrorMessage(error));
     },
   });
 

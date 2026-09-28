@@ -5,7 +5,7 @@ import { useController, useForm, useWatch, type Control } from 'react-hook-form'
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { API_ERROR_CODE, MAINTENANCE_TYPE, MAINTENANCE_TYPE_VALUES } from '@xeprime/types';
-import { dayjs, type Dayjs } from '@xeprime/domain';
+import { appWallClockToIso, nowInAppTz, toAppTz, type Dayjs } from '@xeprime/domain';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { Callout, CalloutBody } from '@/components/ui/Callout';
@@ -92,8 +92,8 @@ export function MaintenanceRecordSheet({
       customTypeName: record?.customTypeName ?? '',
       title: record?.title ?? '',
       // ISO từ API → Dayjs cho bộ chọn; chiều ngược lại serialize lúc gửi.
-      plannedStartAt: record?.plannedStartAt ? dayjs(record.plannedStartAt) : null,
-      plannedEndAt: record?.plannedEndAt ? dayjs(record.plannedEndAt) : null,
+      plannedStartAt: record?.plannedStartAt ? toAppTz(record.plannedStartAt) : null,
+      plannedEndAt: record?.plannedEndAt ? toAppTz(record.plannedEndAt) : null,
       odometerKm: record?.odometerKm ?? null,
       providerName: record?.providerName ?? '',
       // `cost` VẮNG MẶT khi thiếu quyền xem tiền — không dựng số 0 giả vào form.
@@ -158,11 +158,11 @@ export function MaintenanceRecordSheet({
 
       const body = {
         type: values.type,
-        customTypeName:
-          values.type === MAINTENANCE_TYPE.OTHER ? text(values.customTypeName) : null,
+        customTypeName: values.type === MAINTENANCE_TYPE.OTHER ? text(values.customTypeName) : null,
         title: text(values.title),
-        plannedStartAt: values.plannedStartAt?.toISOString() ?? null,
-        plannedEndAt: values.plannedEndAt?.toISOString() ?? null,
+        // Mặt đồng hồ giờ Việt Nam — đúng `MaintenanceRecordDialog` bên web.
+        plannedStartAt: values.plannedStartAt ? appWallClockToIso(values.plannedStartAt) : null,
+        plannedEndAt: values.plannedEndAt ? appWallClockToIso(values.plannedEndAt) : null,
         odometerKm: values.odometerKm,
         providerName: text(values.providerName),
         cost: values.cost != null ? String(values.cost) : null,
@@ -192,7 +192,11 @@ export function MaintenanceRecordSheet({
       ? t('form.submitEdit')
       : t('form.submitCreate');
   /* Ba việc khác nhau, ba hình: đóng phiếu · lưu sửa đổi · đặt một mốc lịch mới. */
-  const submitIcon = completing ? 'checkmark-outline' : record ? 'save-outline' : 'calendar-outline';
+  const submitIcon = completing
+    ? 'checkmark-outline'
+    : record
+      ? 'save-outline'
+      : 'calendar-outline';
 
   return (
     <BottomSheet
@@ -343,7 +347,11 @@ function MomentField({
     <YStack gap={space.xs}>
       <FieldLabel label={label} />
 
-      <Pressable onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel={label}>
+      <Pressable
+        onPress={() => setOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+      >
         <FieldShell focused={open} invalid={Boolean(error)} align="center">
           <Text f={1} col={value ? colors.text : colors.placeholder} fos={fieldFontSize.value}>
             {value ? fmt.rentalPoint(value, { withTime: true }) : tCommon('labels.selectDate')}
@@ -373,7 +381,7 @@ function MomentField({
         <MomentPickerSheet
           open
           onClose={() => setOpen(false)}
-          value={value ?? dayjs()}
+          value={value ?? nowInAppTz()}
           title={label}
           onChange={(next) => {
             field.onChange(next);

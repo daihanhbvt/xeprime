@@ -30,6 +30,8 @@ export const CONTENT_PATH = {
 
 /** Màn NATIVE mà một liên kết rời WebView để mở. */
 export const CONTENT_NATIVE_TARGET = {
+  /** Mẩu "Trang chủ" của breadcrumb (`PageHero` bên web trỏ `ROUTES.HOME` = `/`). */
+  HOME: 'home',
   LIST_YOUR_VEHICLE: 'listYourVehicle',
   SEARCH: 'search',
   MANAGE: 'manage',
@@ -46,19 +48,40 @@ export type ContentNativeTarget =
  * - `{ kind: 'block' }` — chặn.
  */
 export type ContentNavigation =
-  | { kind: 'native'; target: ContentNativeTarget }
-  | { kind: 'webview' }
-  | { kind: 'block' };
+  { kind: 'native'; target: ContentNativeTarget } | { kind: 'webview' } | { kind: 'block' };
 
 /**
- * Mọi mẫu neo vào RANH GIỚI đoạn đường dẫn (`/`, `?`, `#`, hết chuỗi), KHÔNG `includes(...)`.
+ * Mọi mẫu neo từ GỐC đường dẫn và vào RANH GIỚI đoạn (`/`, `?`, `#`, hết chuỗi), KHÔNG
+ * `includes(...)`.
  *
  * `includes('/support')` cũng khớp `/legal/support-policy`, và bắt nhầm nó là kéo người đọc ra
  * khỏi văn bản họ đang mở. Cùng lý do cho `/search`: `/legal/search-terms` không phải trang tìm xe.
+ * Mẫu chạy trên PHẦN ĐƯỜNG DẪN đã tách khỏi tên miền (xem `splitUrl`), nên `^` là gốc thật.
  */
 function boundary(path: string): RegExp {
-  return new RegExp(`${path}(?:[/?#]|$)`);
+  return new RegExp(`^${path}(?:[/?#]|$)`);
 }
+
+/**
+ * Tách một địa chỉ tuyệt đối thành `origin` + phần còn lại. Tự tách bằng regex thay vì `URL`:
+ * `URL` của React Native không đảm bảo đủ `origin`/`pathname` trên mọi runtime.
+ */
+const URL_PARTS = /^(https?:\/\/[^/?#]+)(.*)$/i;
+
+function splitUrl(url: string): { origin: string; rest: string } | null {
+  const match = URL_PARTS.exec(url.trim());
+  if (!match) return null;
+  const rest = match[2] ?? '';
+  return { origin: match[1]!.toLowerCase(), rest: rest.startsWith('/') ? rest : `/${rest}` };
+}
+
+/** Gốc của bản web (`resolveWebBaseUrl()`), chuẩn hoá để so với địa chỉ WebView báo về. */
+function originOf(webBaseUrl: string): string | null {
+  return splitUrl(webBaseUrl)?.origin ?? null;
+}
+
+/** Trang chủ: `/` trần, kể cả kèm query/hash. */
+const HOME_PATTERN = /^\/(?:[?#]|$)/;
 
 const ABOUT_PATTERN = boundary(CONTENT_PATH.ABOUT);
 const SUPPORT_PATTERN = boundary(CONTENT_PATH.SUPPORT);
@@ -77,11 +100,28 @@ const NATIVE_PATTERNS: readonly { pattern: RegExp; target: ContentNativeTarget }
   { pattern: boundary('/manage'), target: CONTENT_NATIVE_TARGET.MANAGE },
 ];
 
-export function contentNavigation(url: string): ContentNavigation {
-  const native = NATIVE_PATTERNS.find(({ pattern }) => pattern.test(url));
+/**
+ * @param webBaseUrl gốc bản web mà app đọc (`resolveWebBaseUrl()`). Địa chỉ ở TÊN MIỀN KHÁC luôn
+ *   bị chặn, dù đường dẫn trông như một trang nội dung — `https://la.example/legal/terms` không
+ *   phải văn bản pháp lý của XePrime, và cho nó chạy dưới tiêu đề "Điều khoản sử dụng" là để một
+ *   trang lạ mạo danh văn bản có hiệu lực.
+ */
+export function contentNavigation(url: string, webBaseUrl: string): ContentNavigation {
+  const parts = splitUrl(url);
+  if (!parts || parts.origin !== originOf(webBaseUrl)) return { kind: 'block' };
+  const path = parts.rest;
+
+  /*
+   * Breadcrumb "Trang chủ" của mọi trang nội dung trỏ `/`. Trang chủ của web trong app là màn
+   * Khám phá — chặn nó là một liên kết bấm không phản hồi, mở nó trong WebView là dựng lại cả
+   * chợ xe web bên trong app.
+   */
+  if (HOME_PATTERN.test(path)) return { kind: 'native', target: CONTENT_NATIVE_TARGET.HOME };
+
+  const native = NATIVE_PATTERNS.find(({ pattern }) => pattern.test(path));
   if (native) return { kind: 'native', target: native.target };
 
-  if (ABOUT_PATTERN.test(url) || SUPPORT_PATTERN.test(url) || LEGAL_PATTERN.test(url)) {
+  if (ABOUT_PATTERN.test(path) || SUPPORT_PATTERN.test(path) || LEGAL_PATTERN.test(path)) {
     return { kind: 'webview' };
   }
 
@@ -100,7 +140,7 @@ export type ContentPage =
   | { kind: 'legalDoc'; doc: LegalDoc };
 
 /** Đoạn `/legal/<slug>` trong một địa chỉ. Chỉ nhận slug kebab-case nên không cần giải mã URL. */
-const LEGAL_DOC_PATTERN = /\/legal\/([a-z0-9-]+)(?:[/?#]|$)/;
+const LEGAL_DOC_PATTERN = /^\/legal\/([a-z0-9-]+)(?:[/?#]|$)/;
 
 /**
  * `null` = địa chỉ không phải trang nội dung nào (địa chỉ trung gian, hoặc một cú chuyển vừa bị
@@ -112,12 +152,14 @@ const LEGAL_DOC_PATTERN = /\/legal\/([a-z0-9-]+)(?:[/?#]|$)/;
  * bản pháp lý thì đó không phải lỗi thẩm mỹ, nó trả lời sai câu "tôi đang đồng ý với văn bản nào".
  */
 export function contentPage(url: string): ContentPage | null {
-  if (ABOUT_PATTERN.test(url)) return { kind: 'about' };
-  if (SUPPORT_PATTERN.test(url)) return { kind: 'support' };
+  const path = splitUrl(url)?.rest;
+  if (!path) return null;
+  if (ABOUT_PATTERN.test(path)) return { kind: 'about' };
+  if (SUPPORT_PATTERN.test(path)) return { kind: 'support' };
 
-  if (!LEGAL_PATTERN.test(url)) return null;
+  if (!LEGAL_PATTERN.test(path)) return null;
 
-  const slug = LEGAL_DOC_PATTERN.exec(url)?.[1];
+  const slug = LEGAL_DOC_PATTERN.exec(path)?.[1];
   /*
    * Slug lạ rơi về CHỈ MỤC, không đoán: một địa chỉ `/legal/gi-do` chỉ có thể là trang 404 của
    * web, và thanh đầu màn thà nói "Văn bản pháp lý" còn hơn nói tên một văn bản không nằm dưới nó.

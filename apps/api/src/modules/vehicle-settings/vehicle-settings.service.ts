@@ -44,6 +44,8 @@ import {
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { currentSupportScope } from '../../common/support/support-request.store';
+import { assertSupportServiceSettingPinned } from './service-setting-support-policy';
 import { OccupancyService } from '../calendar/occupancy.service';
 // HÀM THUẦN, không phải service: không tạo cạnh DI nào nên module lá này vẫn là lá.
 import { refreshPendingApprovalSnapshot } from '../vehicles/refresh-pending-approval-snapshot';
@@ -299,6 +301,8 @@ export class VehicleSettingsService {
     }
     await this.assertOwned(this.prisma, tenantId, vehicleId);
     const current = await this.serviceSettingFor(this.prisma, vehicleId, serviceType as ServiceType);
+    // Phiên hỗ trợ (ADR 0050 §13): tự nhận chuyến / điều khoản / cọc có mặt thì phải giữ nguyên.
+    if (currentSupportScope()) assertSupportServiceSettingPinned(current, dto);
 
     const next: EffectiveServiceSetting = {
       ...current,
@@ -362,7 +366,20 @@ export class VehicleSettingsService {
       await tx.vehicleServiceSetting.upsert({
         where: { vehicleId_serviceType: { vehicleId, serviceType } },
         create: { id: newId(), tenantId, vehicleId, serviceType, ...data },
-        update: data,
+        /*
+         * Phiên hỗ trợ: trường GHIM (tự nhận chuyến, điều khoản, cọc) không nằm trong câu UPDATE.
+         * `current` được đọc trước transaction — ghi lại nó là để một lượt lưu của phiên âm thầm
+         * đảo thay đổi chủ xe vừa làm cùng lúc. Hàng chưa có thì tạo với mặc định như thường.
+         */
+        update: currentSupportScope()
+          ? {
+              minRentalMinutes: data.minRentalMinutes,
+              preferredRouteTypes: data.preferredRouteTypes,
+              requiredDocuments: data.requiredDocuments,
+              identityVerifyMethod: data.identityVerifyMethod,
+              updatedBy: data.updatedBy,
+            }
+          : data,
       });
       /*
        * Xe đang chờ duyệt → phiếu mang thiết lập vừa lưu (24/09/2026). Điều kiện thuê

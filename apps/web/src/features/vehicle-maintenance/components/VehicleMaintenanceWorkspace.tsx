@@ -15,6 +15,7 @@ import { NumberField } from '@/components/form/NumberField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { DateTimeField } from '@/components/form/DateTimeField';
 import { ROUTES } from '@/constants/routes';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorCode } from '@/services/api-client';
 import type { VehicleDetail } from '@/features/vehicles/types';
@@ -125,6 +126,13 @@ function MaintenanceTab({
 
   const { message } = App.useApp();
   const invalidate = useInvalidateMaintenance(vehicle.id);
+  /*
+   * Phiên hỗ trợ của nhân sự nền tảng (ADR 0050) chỉ tạo và sửa phiếu. Chu kỳ bảo dưỡng, hoàn tất
+   * phiếu (ghi KM, dời mốc, sinh phiếu chi) và bảng bảo dưỡng toàn đội xe nằm ngoài Đợt 1 —
+   * backend cũng chặn chúng. Sửa KM đã tự ẩn vì phiên không có quyền đó.
+   */
+  const scheduleHidden = useSupportHides(SUPPORT_HIDDEN_AREA.MAINTENANCE_SCHEDULE);
+  const canEditCycle = canManage && !scheduleHidden;
   const [correctionOpen, setCorrectionOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [recordDialog, setRecordDialog] = useState<
@@ -261,7 +269,7 @@ function MaintenanceTab({
         title={t('workspace.oilCard')}
         extra={<StatusTag value={dueStatus} meta={MAINTENANCE_DUE_STATUS_META} group="maintenanceDueStatus" />}
       >
-        <Form component={false} layout="vertical" colon={false} disabled={!canManage}>
+        <Form component={false} layout="vertical" colon={false} disabled={!canEditCycle}>
           <Row gutter={16}>
             <Col xs={24} sm={8}>
               <NumberField
@@ -333,7 +341,7 @@ function MaintenanceTab({
           </p>
         </div>
 
-        <Form component={false} layout="vertical" colon={false} disabled={!canManage}>
+        <Form component={false} layout="vertical" colon={false} disabled={!canEditCycle}>
           <TextAreaField
             control={control}
             name="notes"
@@ -343,7 +351,7 @@ function MaintenanceTab({
           />
         </Form>
 
-        {canManage ? (
+        {canEditCycle ? (
           <div className={styles.configActions}>
             <Button
               type="primary"
@@ -382,8 +390,13 @@ function MaintenanceTab({
           />
         ) : upcoming.length === 0 ? (
           <p className={styles.emptyText}>
-            {t('workspace.upcomingEmpty')}{' '}
-            <Link href={ROUTES.MANAGE.MAINTENANCE}>{t('workspace.boardLink')}</Link>
+            {t('workspace.upcomingEmpty')}
+            {scheduleHidden ? null : (
+              <>
+                {' '}
+                <Link href={ROUTES.MANAGE.MAINTENANCE}>{t('workspace.boardLink')}</Link>
+              </>
+            )}
           </p>
         ) : (
           <List
@@ -394,7 +407,9 @@ function MaintenanceTab({
                 record={record}
                 canManage={canManage}
                 onEdit={() => setRecordDialog({ mode: 'edit', record })}
-                onComplete={() => setRecordDialog({ mode: 'complete', record })}
+                onComplete={
+                  scheduleHidden ? undefined : () => setRecordDialog({ mode: 'complete', record })
+                }
               />
             )}
           />

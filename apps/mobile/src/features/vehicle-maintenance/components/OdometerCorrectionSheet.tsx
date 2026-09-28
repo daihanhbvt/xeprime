@@ -1,7 +1,7 @@
 import { useForm, useWatch } from 'react-hook-form';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { ODOMETER_CORRECTION_REASON_VALUES, PERMISSION } from '@xeprime/types';
+import { API_ERROR_CODE, ODOMETER_CORRECTION_REASON_VALUES, PERMISSION } from '@xeprime/types';
 import {
   odometerCorrectionFormSchema,
   type OdometerCorrectionFormValues,
@@ -16,7 +16,8 @@ import { TextField } from '@/components/ui/TextField';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useDomainLabel } from '@/i18n/domain';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { useErrorMessage } from '@/i18n/use-error-message';
+import { getErrorCode } from '@/lib/api-client';
+import { getErrorMessage } from '@/lib/get-error-message';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { useCorrectOdometer } from '../hooks/use-maintenance';
@@ -54,7 +55,8 @@ export function OdometerCorrectionSheet({
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
+  // Hai câu lỗi có lối đi tiếp — cùng khoá `Maintenance.odometer.*` mà hộp thoại web đọc.
+  const tErrors = useTranslations('Maintenance.odometer');
   const { has } = usePermissions();
   const canDecrease = has(PERMISSION.VEHICLE_ODOMETER_DECREASE);
 
@@ -103,7 +105,15 @@ export function OdometerCorrectionSheet({
             onSaved?.();
             toast.showSuccess(t('corrected'));
           },
-          onError: (error) => toast.showError(errorMessage(error)),
+          onError: (error) => {
+            // Đúng ba nhánh của `OdometerCorrectionDialog` bên web: thiếu quyền giảm KM, dữ liệu
+            // đã cũ (người khác vừa sửa), còn lại là câu nguyên văn của server.
+            const code = getErrorCode(error);
+            if (code === API_ERROR_CODE.ODOMETER_DECREASE_FORBIDDEN)
+              toast.showError(tErrors('decreaseForbidden'));
+            else if (code === API_ERROR_CODE.CONFLICT) toast.showError(tErrors('stale'));
+            else toast.showError(getErrorMessage(error));
+          },
         },
       );
     })();

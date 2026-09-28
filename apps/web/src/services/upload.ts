@@ -72,10 +72,7 @@ export async function uploadToR2(
  * biết người dùng đang đọc ngôn ngữ nào. `useUploadRejectionMessage()` đổi lý do thành chữ.
  */
 export type UploadRejectionReason =
-  | 'imageType'
-  | 'imageTooLarge'
-  | 'documentType'
-  | 'documentTooLarge';
+  'imageType' | 'imageTooLarge' | 'documentType' | 'documentTooLarge';
 
 export interface UploadRejection {
   readonly reason: UploadRejectionReason;
@@ -156,11 +153,12 @@ export async function uploadImage(
   onProgress?: (percent: number) => void,
 ): Promise<string> {
   const invalid = validateImageFile(file);
-  if (invalid) throw new ApiClientError({
-    code: `UPLOAD_REJECTED_${invalid.reason}`,
-    message: `Upload rejected: ${invalid.reason}`,
-    status: 0,
-  });
+  if (invalid)
+    throw new ApiClientError({
+      code: `UPLOAD_REJECTED_${invalid.reason}`,
+      message: `Upload rejected: ${invalid.reason}`,
+      status: 0,
+    });
   const ticket = await presign(file);
   await uploadToR2(ticket.uploadUrl, file, onProgress);
   return ticket.publicUrl;

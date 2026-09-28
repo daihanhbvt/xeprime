@@ -4,7 +4,7 @@ import { Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { PERMISSION, SERVICE_TYPE, STATUS_COLOR, type StatusColor } from '@xeprime/types';
+import { PERMISSION, SERVICE_TYPE, STATUS_COLOR } from '@xeprime/types';
 import { LIST_SEPARATOR } from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
@@ -13,7 +13,6 @@ import { CardAccent } from '@/components/ui/CardAccent';
 import type { IconName } from '@/components/ui/Chip';
 import { IconDisc } from '@/components/ui/IconDisc';
 import { SkeletonText } from '@/components/ui/Skeleton';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
@@ -122,35 +121,21 @@ export function VehicleOperationsScreen({ vehicleId }: { vehicleId: string }) {
         onRefresh={() => void query.refetch()}
       >
         <YStack gap={layout.section}>
-          <Card tone="accent" lift="flat">
-            <XStack ai="flex-start" gap={space.sm}>
-              <IconDisc icon="options-outline" tone={colors.primary} filled />
-              <YStack f={1} gap={2}>
-                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                  {t('overviewTitle')}
-                </Text>
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {t('hint')}
-                </Text>
-              </YStack>
-            </XStack>
-          </Card>
+          {/* Đúng một đoạn `hint` như web — không tiêu đề phụ, không thẻ riêng. */}
+          <Text col={colors.textMuted} fos={fontSize.bodySm}>
+            {t('hint')}
+          </Text>
 
           {/*
             Ba nhóm, đúng thứ tự và đúng nhãn của `Collapse` bên web — và "Thời gian giao nhận" mở
             sẵn, đúng `defaultActiveKey={['handover']}`. Nó là khối áp dụng cho MỌI xe; hai khối
             còn lại chỉ có nghĩa với dịch vụ chiếc xe đang đăng.
           */}
-          <Group label={t('handover')} hint={t('handoverHint')} icon="time-outline" defaultOpen>
+          <Group label={t('handover')} icon="time-outline" defaultOpen>
             <HandoverBody vehicleId={vehicleId} canEdit={canEdit} />
           </Group>
 
-          <Group
-            label={t('selfDrive')}
-            hint={t('selfDriveHint')}
-            icon="car-sport-outline"
-            enabled={selfDrive}
-          >
+          <Group label={t('selfDrive')} icon="car-sport-outline">
             {selfDrive ? (
               <YStack gap={layout.section}>
                 <AutoAcceptBody
@@ -169,12 +154,7 @@ export function VehicleOperationsScreen({ vehicleId }: { vehicleId: string }) {
             )}
           </Group>
 
-          <Group
-            label={t('withDriver')}
-            hint={t('withDriverHint')}
-            icon="person-outline"
-            enabled={withDriver}
-          >
+          <Group label={t('withDriver')} icon="person-outline">
             {withDriver ? (
               <YStack gap={layout.section}>
                 <AutoAcceptBody
@@ -200,36 +180,37 @@ export function VehicleOperationsScreen({ vehicleId }: { vehicleId: string }) {
 }
 
 /**
- * Một nhóm gập được — bản native của một mục `Collapse`.
+ * Một nhóm gập được — bản native của một mục `Collapse` bên web: tiêu đề + mũi tên, không gì hơn.
  *
  * Gập KHÔNG phải trang trí ở đây: ba nhóm trải hết ra là gần hai chục ô nhập trên một màn điện
  * thoại, và người vào để sửa đúng một thứ phải cuộn qua tất cả.
  *
- * Nội dung chỉ gắn vào cây khi MỞ, và đó mới là lý do chính: bốn thân form bên trong mỗi cái tự
- * bắn truy vấn của nó, nên dựng sẵn cả ba nhóm là ba lượt tải cho hai nhóm chưa ai nhìn.
+ * Nội dung gắn vào cây ở lần MỞ ĐẦU TIÊN (bốn thân form bên trong tự bắn truy vấn của nó — dựng
+ * sẵn cả ba nhóm là ba lượt tải cho hai nhóm chưa ai nhìn), rồi ở LẠI khi gập: đúng hành vi mặc
+ * định của `Collapse` (AntD giữ panel đã mở). Tháo nó khỏi cây lúc gập là vứt mất thứ người dùng
+ * đang gõ dở mà chưa bấm Lưu.
+ *
+ * Không có viên "Đang mở"/"Chưa bật" hay mép màu theo dịch vụ: web không có tín hiệu nào như vậy ở
+ * tiêu đề nhóm — xe không đăng dịch vụ thì câu `serviceOff` nằm BÊN TRONG nhóm, đúng như web.
  */
 function Group({
   label,
-  hint,
   icon,
-  enabled = true,
   defaultOpen = false,
   children,
 }: {
   label: string;
-  hint: string;
   icon: IconName;
-  enabled?: boolean;
   defaultOpen?: boolean;
   children: ReactNode;
 }) {
-  const t = useTranslations('VehicleManage.operationsTab');
   const [open, setOpen] = useState(defaultOpen);
-  const leadColor: StatusColor = open
-    ? STATUS_COLOR.ACCENT
-    : enabled
-      ? STATUS_COLOR.NEUTRAL
-      : STATUS_COLOR.WARNING;
+  const [mounted, setMounted] = useState(defaultOpen);
+
+  const toggle = () => {
+    setMounted(true);
+    setOpen((prev) => !prev);
+  };
 
   return (
     <YStack gap={space.sm}>
@@ -237,44 +218,42 @@ function Group({
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         accessibilityLabel={label}
-        onPress={() => setOpen((prev) => !prev)}
+        onPress={toggle}
         style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
       >
         <Card padded={false} tone={open ? 'accent' : 'surface'}>
           <XStack minHeight={sizing.touchTarget}>
-            <CardAccent color={leadColor} />
+            <CardAccent color={open ? STATUS_COLOR.ACCENT : STATUS_COLOR.NEUTRAL} />
             <XStack f={1} ai="center" gap={space.sm} p={space.md}>
               <IconDisc
                 icon={icon}
                 tone={open ? colors.primaryActive : colors.textMuted}
                 surface={open ? colors.primaryLight : colors.surfaceMuted}
               />
-              <YStack f={1} minWidth={0} gap={2}>
-                <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold}>
-                  {label}
-                </Text>
-                <Text col={colors.textMuted} fos={fontSize.label} numberOfLines={2}>
-                  {hint}
-                </Text>
-              </YStack>
-              <YStack ai="flex-end" gap={space.xs}>
-                {open ? (
-                  <StatusBadge label={t('openTag')} color={STATUS_COLOR.ACCENT} size="sm" />
-                ) : !enabled ? (
-                  <StatusBadge label={t('disabledTag')} color={STATUS_COLOR.WARNING} size="sm" />
-                ) : null}
-                <Ionicons
-                  name={open ? 'chevron-up' : 'chevron-down'}
-                  size={iconSize.sm}
-                  color={open ? colors.primaryActive : colors.textMuted}
-                />
-              </YStack>
+              <Text
+                f={1}
+                minWidth={0}
+                col={colors.text}
+                fos={fontSize.bodyLg}
+                fow={fontWeight.bold}
+              >
+                {label}
+              </Text>
+              <Ionicons
+                name={open ? 'chevron-up' : 'chevron-down'}
+                size={iconSize.sm}
+                color={open ? colors.primaryActive : colors.textMuted}
+              />
             </XStack>
           </XStack>
         </Card>
       </Pressable>
 
-      {open ? <YStack gap={layout.inline}>{children}</YStack> : null}
+      {mounted ? (
+        <YStack gap={layout.inline} display={open ? 'flex' : 'none'}>
+          {children}
+        </YStack>
+      ) : null}
     </YStack>
   );
 }

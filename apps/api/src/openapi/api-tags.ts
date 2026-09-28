@@ -295,6 +295,11 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
       },
       { name: 'platform-dashboard', description: 'Số liệu tổng quan toàn nền tảng.' },
       { name: 'platform-tenants', description: 'Quản lý gian hàng: duyệt, tạm ngưng, xem chi tiết.' },
+      {
+        name: 'platform-tenant-support',
+        description:
+          'Phiên hỗ trợ gian hàng (ADR 0050): mở/đọc/thoát. Thao tác trong khu gian hàng đi qua endpoint tenant-scoped kèm header `x-support-context`.',
+      },
       { name: 'platform-vehicles', description: 'Duyệt xe lên marketplace và gỡ tin vi phạm.' },
       { name: 'platform-bookings', description: 'Tra cứu đơn thuê xuyên gian hàng để hỗ trợ.' },
       { name: 'platform-customers', description: 'Tra cứu tài khoản khách toàn nền tảng.' },

@@ -1,6 +1,12 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
+import {
+  PERMISSION,
+  PLAN_FEATURE,
+  SUPPORT_BRANCH_FIELDS,
+  SUPPORT_CAPABILITY,
+} from '@xeprime/types';
+import { supportFieldAllowlist } from '../../common/support/support-field-allowlist';
 import {
   CurrentTenant,
   CurrentUser,
@@ -8,6 +14,7 @@ import {
   RequiresFeature,
   SubscriptionTrackOnly,
   TenantScoped,
+  SupportAction,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { BranchesService } from './branches.service';
@@ -57,6 +64,8 @@ export class BranchesController {
 
   @Get()
   @RequirePermissions(PERMISSION.BRANCH_VIEW)
+  // Ô "chi nhánh giữ xe" ở tab Thông tin xe đọc danh sách này — phiên hỗ trợ chỉ ĐỌC (ADR 0050).
+  @SupportAction(SUPPORT_CAPABILITY.BRANCH_VIEW)
   @ApiOperation({ summary: 'Danh sách chi nhánh của gian hàng (kèm số xe mỗi chi nhánh)' })
   @ApiOkResponse({ type: BranchListDto })
   list(
@@ -70,6 +79,8 @@ export class BranchesController {
   @RequiresFeature(PLAN_FEATURE.BRANCHES)
   @SubscriptionTrackOnly()
   @RequirePermissions(PERMISSION.BRANCH_MANAGE)
+  // Phiên hỗ trợ: tạo chi nhánh — tên, liên hệ, địa chỉ; cổng gói + trần chi nhánh vẫn chạy.
+  @SupportAction(supportFieldAllowlist(SUPPORT_CAPABILITY.BRANCH_BASIC_MANAGE, SUPPORT_BRANCH_FIELDS))
   @ApiOperation({ summary: 'Tạo chi nhánh mới (mã CNxx sinh ở server)' })
   @ApiCreatedResponse({ type: BranchDto })
   create(
@@ -82,6 +93,7 @@ export class BranchesController {
 
   @Get(':id')
   @RequirePermissions(PERMISSION.BRANCH_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.BRANCH_VIEW)
   @ApiOperation({ summary: 'Chi tiết một chi nhánh' })
   @ApiOkResponse({ type: BranchDto })
   get(@CurrentTenant() tenant: TenantContext, @Param('id') id: string): Promise<BranchDto> {
@@ -90,6 +102,9 @@ export class BranchesController {
 
   @Patch(':id')
   @RequirePermissions(PERMISSION.BRANCH_MANAGE)
+  // Phiên hỗ trợ: sửa tên/liên hệ/địa chỉ; đổi địa chỉ khi còn chuyến mở bị từ chối ở service.
+  // Ngưng / mở lại / đổi mặc định là endpoint riêng và KHÔNG mở cho phiên.
+  @SupportAction(supportFieldAllowlist(SUPPORT_CAPABILITY.BRANCH_BASIC_MANAGE, SUPPORT_BRANCH_FIELDS))
   @ApiOperation({ summary: 'Sửa chi nhánh (đổi tỉnh sẽ đồng bộ lại vị trí công khai của xe)' })
   @ApiOkResponse({ type: BranchDto })
   update(

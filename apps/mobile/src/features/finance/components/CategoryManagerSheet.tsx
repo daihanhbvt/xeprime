@@ -26,10 +26,10 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { useFeature } from '@/features/auth/hooks/use-feature';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useDomainLabel } from '@/i18n/domain';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { colors, fontSize, fontWeight, sizing, space } from '@/theme/tokens';
 import { useCreateCategory, useDeleteCategory, useFinanceCategories } from '../hooks/use-finance';
 import type { CreateCategoryInput, FinanceCategory } from '../api';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /**
  * Bề rộng hai cột nhãn của một hàng danh mục.
@@ -68,7 +68,6 @@ export function CategoryManagerSheet({ open, onClose }: { open: boolean; onClose
   const tFeature = useTranslations('ManageCommon.feature');
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   const permissions = usePermissions();
   const finance = useFeature(PLAN_FEATURE.FINANCE);
 
@@ -94,7 +93,7 @@ export function CategoryManagerSheet({ open, onClose }: { open: boolean; onClose
           setName('');
           toast.showSuccess(t('added'));
         },
-        onError: (error) => toast.showError(errorMessage(error)),
+        onError: (error) => toast.showError(getErrorMessage(error)),
       },
     );
   };
@@ -104,7 +103,7 @@ export function CategoryManagerSheet({ open, onClose }: { open: boolean; onClose
     remove.mutate(removing.id, {
       onSuccess: () => setRemoving(null),
       onError: (error) => {
-        toast.showError(errorMessage(error));
+        toast.showError(getErrorMessage(error));
         setRemoving(null);
       },
     });

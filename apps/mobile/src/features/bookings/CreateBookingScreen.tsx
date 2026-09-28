@@ -24,7 +24,15 @@ import {
   type ServiceType,
 } from '@xeprime/types';
 import { STALE_TIME } from '@xeprime/api-client';
-import { dayjs, toAppTz, type Dayjs, type RentalMode, LIST_SEPARATOR } from '@xeprime/domain';
+import {
+  appWallClockToInstant,
+  appWallClockToIso,
+  nowInAppTz,
+  toAppTz,
+  type Dayjs,
+  type RentalMode,
+  LIST_SEPARATOR,
+} from '@xeprime/domain';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
@@ -47,7 +55,6 @@ import { useVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { getErrorCode } from '@/lib/api-client';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 import { queryKeys } from '@/queries/query-keys';
@@ -66,6 +73,7 @@ import { useListing } from '@/features/marketplace/hooks/use-marketplace-data';
 import { useCheckConflict, useCreateBooking } from './hooks/use-bookings';
 import { bookingsApi } from './api';
 import type { CreateBookingInput, VehicleListItem } from './api';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 const NOTE_MAX = 2000;
 
@@ -234,7 +242,6 @@ function StaffBookingFlow({
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   const router = useRouter();
 
   /*
@@ -330,7 +337,7 @@ function StaffBookingFlow({
   /** Ngày trả suy từ gói — chỉ để HIỂN THỊ; con số ghi vào đơn do server tính lại (ADR 0011). */
   const derivedReturnAt =
     isLongTerm && packageMonths != null && range.pickupAt
-      ? dayjs(longTermReturnAt(range.pickupAt.toDate(), packageMonths))
+      ? toAppTz(longTermReturnAt(appWallClockToInstant(range.pickupAt).toDate(), packageMonths))
       : null;
 
   const hasRange = isLongTerm
@@ -349,8 +356,8 @@ function StaffBookingFlow({
     return {
       vehicleId: vehicle.id,
       serviceType,
-      pickupAt: range.pickupAt!.toISOString(),
-      returnAt: range.returnAt!.toISOString(),
+      pickupAt: appWallClockToIso(range.pickupAt!),
+      returnAt: appWallClockToIso(range.returnAt!),
       ...(isWithDriver ? { routeType } : {}),
     };
   }, [vehicle, hasRange, isLongTerm, serviceType, packageMonths, range, isWithDriver, routeType]);
@@ -409,17 +416,18 @@ function StaffBookingFlow({
      * Kiểm trùng lịch trên KHOẢNG SẼ CHIẾM — với đơn dài hạn đó là [nhận, nhận + gói tháng lịch).
      * Đây là PREVIEW cho UX; chốt chặn thật là exclusion constraint lúc ghi (ADR 0006).
      */
-    const endAt = (derivedReturnAt ?? range.returnAt)?.toISOString();
+    const end = derivedReturnAt ?? range.returnAt;
+    const endAt = end ? appWallClockToIso(end) : undefined;
     if (!endAt) return;
 
     checkConflict.mutate(
-      { vehicleId: vehicle.id, startAt: range.pickupAt.toISOString(), endAt },
+      { vehicleId: vehicle.id, startAt: appWallClockToIso(range.pickupAt), endAt },
       {
         onSuccess: (result) => {
           if (result.hasConflict) setStepError(t('conflict'));
           else setStep(STEP.CONTACT);
         },
-        onError: (error) => setStepError(errorMessage(error)),
+        onError: (error) => setStepError(getErrorMessage(error)),
       },
     );
   }
@@ -463,11 +471,11 @@ function StaffBookingFlow({
               ...(v.routeType !== ROUTE_TYPE.IN_CITY ? { destination: v.destination } : {}),
             }
           : {}),
-        pickupAt: range.pickupAt.toISOString(),
+        pickupAt: appWallClockToIso(range.pickupAt),
         // Dài hạn: KHÔNG gửi ngày trả — server suy từ gói bằng tháng lịch (ADR 0011).
         ...(isLongTerm
           ? { longTermPackageMonths: packageMonths ?? undefined }
-          : { returnAt: range.returnAt!.toISOString() }),
+          : { returnAt: appWallClockToIso(range.returnAt!) }),
         // Tiền từ báo giá server; giảm giá là dòng ÂM trong bảng giá → tách về dương.
         baseAmount: quote
           ? (rowAmount(quote, PRICE_ROW.BASE) ?? quote.totalAmount)
@@ -488,7 +496,7 @@ function StaffBookingFlow({
             setStepError(t('conflictOnCreate'));
             return;
           }
-          toast.showError(errorMessage(error));
+          toast.showError(getErrorMessage(error));
         },
       },
     );
@@ -595,8 +603,8 @@ function StaffBookingFlow({
                   <DataRow
                     label={t('doneSchedule')}
                     value={fmt.shortDateTimeRange(
-                      range.pickupAt?.toISOString(),
-                      returnAt?.toISOString(),
+                      range.pickupAt ? appWallClockToIso(range.pickupAt) : undefined,
+                      returnAt ? appWallClockToIso(returnAt) : undefined,
                     )}
                   />
                   <DataRow
@@ -1012,7 +1020,7 @@ function StaffBookingFlow({
         <MomentPickerSheet
           open
           onClose={() => setPickingPickup(false)}
-          value={range.pickupAt ?? dayjs()}
+          value={range.pickupAt ?? nowInAppTz()}
           onChange={(next) => setRange({ pickupAt: next, returnAt: null })}
           title={t('pickupAtField')}
         />

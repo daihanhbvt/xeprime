@@ -18,6 +18,7 @@ import { useErrorMessage } from '@/i18n/use-error-message';
 import { useSetVehicleMarketplaceVisibility } from '../hooks/use-vehicle-mutations';
 import type { VehicleDetail } from '../types';
 import styles from './MarketplaceVisibilitySwitch.module.css';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 
 /**
  * Hàng "Trên chợ" ở CỘT THAO TÁC đầu trang hồ sơ xe — câu trả lời đầu tiên cho "xe của tôi có
@@ -54,7 +55,9 @@ export function MarketplaceVisibilitySwitch({ vehicle }: { vehicle: VehicleDetai
   const status = vehicle.publicStatus as VehiclePublicStatus;
   const approved = status === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
   // Cùng permission với gửi duyệt: ai được đưa xe ra chợ thì được rút xe về (xem controller).
-  const canManage = has(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
+  // Phiên hỗ trợ gửi duyệt được nhưng KHÔNG bật/tắt chợ thay chủ xe (ADR 0050 §13) — chỉ thấy trạng thái.
+  const toggleHidden = useSupportHides(SUPPORT_HIDDEN_AREA.MARKETPLACE_TOGGLE);
+  const canManage = has(PERMISSION.VEHICLE_SUBMIT_PUBLIC) && !toggleHidden;
 
   /*
    * Xe chưa qua cổng duyệt: một THẺ, không phải một công tắc. Nhãn đọc theo trục "có ngoài chợ

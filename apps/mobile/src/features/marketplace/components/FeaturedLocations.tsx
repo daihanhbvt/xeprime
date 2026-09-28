@@ -60,7 +60,7 @@ export function FeaturedLocations({ onPicked }: { onPicked?: () => void }) {
       />
 
       {destinationsError ? (
-        <SectionError title={t('loadError')} error={destinationsError} />
+        <SectionError title={t('loadError')} error={destinationsError} messageFrom="backend" />
       ) : destinationsLoading ? (
         <YStack gap={space.sm}>
           {Array.from({ length: 3 }, (_, i) => (

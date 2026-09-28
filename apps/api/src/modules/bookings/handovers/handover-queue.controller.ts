@@ -1,7 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
-import { CurrentTenant, RequirePermissions, TenantScoped } from '../../../common/decorators';
+import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
+import { CurrentTenant, RequirePermissions, TenantScoped, SupportAction } from '../../../common/decorators';
 import type { TenantContext } from '../../../common/types/request-context';
 import { MissingOdometerQueryDto, MissingOdometerQueueDto } from './dto/handover.dto';
 import { HandoversService } from './handovers.service';
@@ -28,6 +28,7 @@ export class HandoverQueueController {
    */
   @Get('missing-odometer')
   @RequirePermissions(PERMISSION.HANDOVER_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.HANDOVER_VIEW)
   @ApiOperation({ summary: 'Hàng đợi "Thiếu KM trả" toàn gian hàng (phân trang)' })
   @ApiOkResponse({ type: MissingOdometerQueueDto })
   missingOdometer(

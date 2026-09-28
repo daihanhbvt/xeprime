@@ -5,7 +5,8 @@ import { useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { PERMISSION, canUpgradeToPackageTrack } from '@xeprime/types';
 
-import { useCurrentUser } from '@/hooks/use-current-user';
+import { useTenantScope } from '@/hooks/use-tenant-scope';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { usePermissions } from '@/hooks/use-permissions';
 
 import { useMySubscription } from '../hooks/use-subscription';
@@ -67,14 +68,19 @@ export function SubscriptionWorkspace({
   const tCommon = useTranslations('Common');
   const { has } = usePermissions();
   const canPurchase = has(PERMISSION.SUBSCRIPTION_PURCHASE);
-  const { data: user } = useCurrentUser();
+  const { tenant } = useTenantScope();
+  /*
+   * Phiên hỗ trợ gian hàng (ADR 0050 §10) chỉ XEM gói đang dùng và sổ hoá đơn: không lời mời nâng
+   * cấp (đó là việc MUA gói) và không khối chuyển khoản của hoá đơn đang chờ.
+   */
+  const inSupport = useSupportHides(SUPPORT_HIDDEN_AREA.PLAN_PURCHASE);
 
   /*
    * Chủ xe tuyến hoa hồng ⇒ màn NÂNG CẤP thay cho hộp thoại mua. Điều kiện đọc từ luật dùng chung
    * (ADR 0038 điều 1 · ADR 0040 điều 4): nhân viên gian hàng hoa hồng, tenant thiếu gói hiện hành
    * và gian hàng đã từng trả tiền đều KHÔNG rơi vào đây — với họ đây vẫn là màn gia hạn.
    */
-  const upgrading = canPurchase && canUpgradeToPackageTrack(user?.tenant);
+  const upgrading = canPurchase && canUpgradeToPackageTrack(tenant);
 
   const me = useMySubscription();
   const [purchaseOpen, setPurchaseOpen] = useState(false);
@@ -123,13 +129,17 @@ export function SubscriptionWorkspace({
         dùng chưa có, và lồng nó vào trong thẻ trắng của gói hiện hành làm hai chuyện khác nhau
         đọc ra như một. Tự biến mất khi không còn tính năng nào bị khoá.
       */}
-      <PlanFeatureList onUpgrade={canPurchase && !upgrading ? () => setPurchaseOpen(true) : undefined} />
+      {inSupport ? null : (
+        <PlanFeatureList
+          onUpgrade={canPurchase && !upgrading ? () => setPurchaseOpen(true) : undefined}
+        />
+      )}
       {upgrading ? <PackageUpgradeWizard /> : null}
       {/*
         Luồng nâng cấp đã dựng khối chuyển khoản ở bước 3 của nó. Để sổ hoá đơn dựng thêm một
         khối nữa là hai mã QR cho CÙNG một hoá đơn trên cùng một trang.
       */}
-      <SubscriptionInvoicesPanel showPending={!upgrading} />
+      <SubscriptionInvoicesPanel showPending={!upgrading && !inSupport} />
       {/* Tuyến hoa hồng KHÔNG dựng hộp thoại mua: luồng của họ đã nằm ngay trên trang. */}
       {canPurchase && !upgrading ? (
         <PurchaseModal open={purchaseOpen} onClose={() => setPurchaseOpen(false)} />

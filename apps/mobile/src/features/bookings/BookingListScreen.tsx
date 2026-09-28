@@ -73,7 +73,6 @@ export function BookingListScreen({
 }) {
   const t = useTranslations('Bookings.list');
   const tRoot = useTranslations('Bookings');
-  const tCreate = useTranslations('Bookings.create');
   const tActions = useTranslations('Common.actions');
   const navigateOnce = useNavigateOnce();
   const permissions = usePermissions();
@@ -236,7 +235,8 @@ export function BookingListScreen({
             permissions.has(PERMISSION.BOOKING_CREATE) && !awaitingPickup ? (
               <IconButton
                 icon="add"
-                label={tCreate('open')}
+                // Nút ở đầu danh sách: `Bookings.list.create` ("Tạo đơn") — đúng nút của web.
+                label={t('create')}
                 tone="primary"
                 onPress={() => navigateOnce(ROUTES.manage.bookingCreate())}
               />

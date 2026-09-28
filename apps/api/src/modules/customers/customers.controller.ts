@@ -1,11 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
+import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
   TenantScoped,
+  SupportAction,
 } from '../../common/decorators';
 import { OkResultDto } from '../../common/dto/api-response.dto';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
@@ -43,6 +44,7 @@ export class CustomersController {
 
   @Get()
   @RequirePermissions(PERMISSION.CUSTOMER_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.CUSTOMER_VIEW_MASKED)
   @ApiOperation({
     summary: 'Sổ khách của gian hàng (tìm kiếm / lọc nhóm / sắp xếp / phân trang)',
     description:
@@ -59,6 +61,7 @@ export class CustomersController {
 
   @Get('summary')
   @RequirePermissions(PERMISSION.CUSTOMER_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.CUSTOMER_VIEW_MASKED)
   @ApiOperation({ summary: 'Dải chỉ số đầu trang sổ khách' })
   @ApiOkResponse({ type: TenantCustomerSummaryDto })
   summary(@CurrentTenant() tenant: TenantContext): Promise<TenantCustomerSummaryDto> {
@@ -89,6 +92,7 @@ export class CustomersController {
 
   @Get(':id')
   @RequirePermissions(PERMISSION.CUSTOMER_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.CUSTOMER_VIEW_MASKED)
   @ApiOperation({ summary: 'Hồ sơ khách + số liệu tổng hợp + hoạt động gần đây' })
   @ApiOkResponse({ type: TenantCustomerDetailDto })
   detail(
@@ -165,6 +169,7 @@ export class CustomersController {
    */
   @Get(':id/bookings')
   @RequirePermissions(PERMISSION.CUSTOMER_VIEW, PERMISSION.BOOKING_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.CUSTOMER_VIEW_MASKED)
   @ApiOperation({ summary: 'Lịch sử thuê của khách (phân trang)' })
   @ApiOkResponse({ type: CustomerBookingPageDto })
   bookings(

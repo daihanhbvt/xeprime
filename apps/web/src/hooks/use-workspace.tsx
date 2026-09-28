@@ -2,13 +2,22 @@
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
-import { WORKSPACE, workspacePaths, type Workspace, type WorkspacePaths } from '@/constants/routes';
+import {
+  WORKSPACE,
+  workspacePaths,
+  workspaceVehiclePaths,
+  type Workspace,
+  type WorkspacePaths,
+  type WorkspaceVehiclePaths,
+} from '@/constants/routes';
 import { canUseManagePortal, isPackageOnboarding } from '@/features/auth/post-auth-destination';
 import { useCurrentUser } from '@/hooks/use-current-user';
 
 export interface WorkspaceContextValue {
   workspace: Workspace;
   paths: WorkspacePaths;
+  /** Đường dẫn tới một chiếc xe — xem `workspaceVehiclePaths`. */
+  vehicles: WorkspaceVehiclePaths;
   /** Người này làm việc ở cổng quản lý — gian hàng có gói, hoặc nhân viên của một gian hàng. */
   isManage: boolean;
 }
@@ -24,6 +33,7 @@ export interface WorkspaceContextValue {
 const DEFAULT_VALUE: WorkspaceContextValue = {
   workspace: WORKSPACE.MANAGE,
   paths: workspacePaths(WORKSPACE.MANAGE),
+  vehicles: workspaceVehiclePaths(WORKSPACE.MANAGE),
   isManage: true,
 };
 
@@ -59,10 +69,26 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     return {
       workspace: WORKSPACE.ACCOUNT,
       paths: workspacePaths(WORKSPACE.ACCOUNT),
+      vehicles: workspaceVehiclePaths(WORKSPACE.ACCOUNT),
       isManage: false,
     };
   }, [user]);
 
+  return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
+}
+
+/**
+ * Ghi đè khu làm việc cho MỘT nhánh cây — dùng DUY NHẤT bởi phiên hỗ trợ gian hàng (ADR 0050):
+ * nhân sự nền tảng đứng ở `/manage/admin/...` nhưng các component xe tái dùng phải dẫn link về
+ * đúng gốc của phiên, không về `/account` hay `/manage/vehicles`.
+ */
+export function WorkspaceScope({
+  value,
+  children,
+}: {
+  value: WorkspaceContextValue;
+  children: ReactNode;
+}) {
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }
 

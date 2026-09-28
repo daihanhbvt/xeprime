@@ -1,0 +1,524 @@
+{
+  "list": {
+    "filters": {
+      "status": "Status",
+      "allStatuses": "All",
+      "sort": "Sort by"
+    },
+    "columns": {
+      "type": "Legal entity",
+      "vehicles": "Vehicles",
+      "status": "Status",
+      "createdAt": "Created"
+    },
+    "view": "View details",
+    "clearFilters": "Clear filters",
+    "kinds": {
+      "package_shop": {
+        "title": "Subscription shops",
+        "subtitle": "Shops on a subscription plan, including shops waiting for their plan to activate.",
+        "loading": "Loading shops…",
+        "searchLabel": "Search shops",
+        "searchPlaceholder": "Search name / code / phone",
+        "name": "Shop",
+        "owner": "Shop owner",
+        "tableLabel": "Subscription shop list",
+        "loadError": "Could not load the shop list",
+        "empty": "No shops yet",
+        "noResults": "No shops match the filters",
+        "total": "{count, plural, one {# shop} other {# shops}}"
+      },
+      "individual_owner": {
+        "title": "Individual owners",
+        "subtitle": "Commission-based owners who manage their vehicles in Owner Lite.",
+        "loading": "Loading owners…",
+        "searchLabel": "Search owners",
+        "searchPlaceholder": "Search name / code / phone",
+        "name": "Display name",
+        "owner": "Owner",
+        "tableLabel": "Individual owner list",
+        "loadError": "Could not load the owner list",
+        "empty": "No individual owners yet",
+        "noResults": "No owners match the filters",
+        "total": "{count, plural, one {# owner} other {# owners}}"
+      }
+    }
+  },
+  "legacyRedirect": {
+    "loading": "Opening shop…",
+    "notFoundTitle": "This shop could not be opened",
+    "notFoundBody": "The shop does not exist, was removed, or you do not have access. Pick a partner list to continue."
+  },
+  "detail": {
+    "lock": {
+      "button": "Lock shop",
+      "title": "Lock shop",
+      "ok": "Lock",
+      "cancel": "Cancel",
+      "note": "The shop's vehicles will be hidden from the marketplace immediately. Enter a reason (optional) to store in the log.",
+      "reasonPlaceholder": "Reason for locking…",
+      "done": "Shop locked",
+      "unavailable": "Only active or locked shops can be locked/unlocked."
+    },
+    "unlock": {
+      "button": "Unlock shop",
+      "confirm": "Unlock this shop?",
+      "ok": "Unlock",
+      "cancel": "Close",
+      "done": "Shop unlocked"
+    }
+  },
+  "partnerDetail": {
+    "fallbackTitle": "Partner details",
+    "ariaLabel": "Partner details for {name}",
+    "readOnly": "Read-only",
+    "joinedAt": "Joined {date}",
+    "commissionTrack": "Commission plan",
+    "kind": {
+      "package_shop": "Subscription shop",
+      "individual_owner": "Individual owner"
+    },
+    "actions": {
+      "support": "Open support mode",
+      "storefront": "View storefront",
+      "marketplace": "View on marketplace",
+      "more": "More actions",
+      "admin": "Platform admin actions…"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "vehicles": "Vehicles",
+      "bookings": "Bookings",
+      "profile": "Profile",
+      "billing": "Plan & fees",
+      "commission": "Commission & statements",
+      "activity": "Activity log"
+    },
+    "states": {
+      "loading": "Loading…",
+      "loadError": "Could not load data",
+      "loadErrorBody": "Something went wrong while reading this partner. Please try again.",
+      "none": "None",
+      "notFound": "Partner not found",
+      "notFoundBody": "This partner does not exist or has been removed. Close this panel and pick another partner from the list."
+    },
+    "denied": {
+      "title": "You do not have access to this section",
+      "overview": "Requires permission to view platform partners.",
+      "vehicles": "Requires permission to view all vehicles.",
+      "bookings": "Requires permission to view all bookings.",
+      "profile": "Requires permission to view platform partners.",
+      "billing": "Only people who manage plans & billing can view this tab.",
+      "commission": "Requires permission to view platform partners.",
+      "activity": "Only people who can view the system audit log can view this tab."
+    },
+    "money": {
+      "hidden": "Hidden",
+      "hiddenHint": "Requires the platform money operations permission to see amounts"
+    },
+    "overview": {
+      "issuesBanner": "{count, plural, one {# vehicle needs attention} other {# vehicles need attention}}",
+      "issueItem": "{count, plural, one {# vehicle} other {# vehicles}}: {label}",
+      "stats": {
+        "vehicles": "Vehicles",
+        "listed": "Listed",
+        "renting": "On rent",
+        "alerts": "Vehicles with alerts"
+      },
+      "info": {
+        "shopTitle": "Shop information",
+        "ownerTitle": "Owner information",
+        "shopName": "Shop name",
+        "shopCode": "Shop code",
+        "ownerName": "Full name",
+        "ownerCode": "Owner code",
+        "area": "Operating area",
+        "joined": "Joined",
+        "publicAddress": "Public address",
+        "phone": "Phone",
+        "email": "Email"
+      },
+      "recentVehicles": "Recent vehicles",
+      "viewAllVehicles": "View all vehicles",
+      "recentBookings": "Recent bookings",
+      "viewAllBookings": "View all bookings",
+      "branches": {
+        "title": "Branches",
+        "empty": "No branches yet",
+        "default": "Main",
+        "vehicles": "{count, plural, one {# vehicle} other {# vehicles}}"
+      },
+      "operating": {
+        "shopTitle": "Operating status",
+        "ownerTitle": "Account status",
+        "verification": "Verification",
+        "onboarding": "Onboarding",
+        "onboardingDone": "Completed",
+        "onboardingPending": "Waiting for the first plan payment",
+        "listing": "Can list vehicles",
+        "listingReady": "Allowed",
+        "listingMissing": "Missing: {items}",
+        "accountStatus": "Account status",
+        "lastActivity": "Last activity",
+        "never": "None yet"
+      },
+      "plan": {
+        "title": "Current plan",
+        "none": "No active plan",
+        "name": "Plan",
+        "phase": "Plan status",
+        "endsAt": "Renews on",
+        "daysLeft": "({days, plural, one {# day left} other {# days left}})",
+        "quota": "Vehicle quota"
+      },
+      "issues": {
+        "title": "Needs attention",
+        "empty": "Nothing needs attention",
+        "vehicles": "{count, plural, one {# vehicle} other {# vehicles}}"
+      },
+      "owner": {
+        "title": "Shop owner"
+      },
+      "commission": {
+        "title": "This month",
+        "empty": "No figures yet",
+        "viewDetail": "View details",
+        "period": "Month",
+        "completed": "Completed trips",
+        "revenue": "Total rental value",
+        "serviceFee": "XePrime service fee"
+      }
+    },
+    "vehicles": {
+      "filters": {
+        "all": "All",
+        "search": "Search vehicles",
+        "searchPlaceholder": "Name, code, plate…",
+        "operation": "Operation",
+        "branch": "Branch",
+        "service": "Service",
+        "marketplace": "On marketplace",
+        "sort": "Sort by"
+      },
+      "sort": {
+        "updated": "Recently updated",
+        "newest": "Newest",
+        "name": "Name A → Z"
+      },
+      "summary": {
+        "total": "{count, plural, one {# vehicle} other {# vehicles}}",
+        "listed": "{count, plural, other {# listed}}",
+        "renting": "{count, plural, other {# on rent}}",
+        "attention": "{count, plural, one {# needs attention} other {# need attention}}"
+      },
+      "columns": {
+        "vehicle": "Vehicle",
+        "branch": "Branch",
+        "pickupArea": "Pickup area",
+        "service": "Service",
+        "operation": "Operation",
+        "marketplace": "On marketplace",
+        "alerts": "Alerts",
+        "updated": "Updated"
+      },
+      "notVisible": "Not shown on the marketplace",
+      "moreAlerts": "+{count}",
+      "tableLabel": "Partner vehicle list",
+      "empty": "This partner has no vehicles yet",
+      "noResults": "No vehicles match the filters",
+      "clearFilters": "Clear filters",
+      "total": "{count, plural, one {# vehicle} other {# vehicles}}"
+    },
+    "bookings": {
+      "segments": {
+        "bookings": "Bookings ({count})",
+        "requests": "Booking requests ({count})"
+      },
+      "pendingRequests": "{count, plural, one {# request awaiting approval} other {# requests awaiting approval}}",
+      "filters": {
+        "all": "All",
+        "search": "Search bookings",
+        "searchPlaceholder": "Booking code, plate…",
+        "status": "Status",
+        "range": "Pickup time",
+        "service": "Service"
+      },
+      "range": {
+        "all": "Any time",
+        "past_30": "Last 30 days",
+        "next_30": "Next 30 days"
+      },
+      "stats": {
+        "upcoming": "Upcoming pickup",
+        "active": "On rent",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      },
+      "pickupSoon": "{count, plural, one {# booking} other {# bookings}} due for pickup within {hours} hours",
+      "columns": {
+        "code": "Booking code",
+        "vehicle": "Vehicle",
+        "customer": "Renter",
+        "time": "Time",
+        "service": "Service",
+        "status": "Status",
+        "total": "Total",
+        "respondBy": "Respond by",
+        "created": "Sent at"
+      },
+      "tableLabel": "Partner bookings",
+      "empty": "No bookings yet",
+      "noResults": "No bookings match the filters",
+      "clearFilters": "Clear filters",
+      "total": "{count, plural, one {# booking} other {# bookings}}",
+      "requestsTableLabel": "Partner booking requests",
+      "requestsEmpty": "No booking requests yet",
+      "requestsNoResults": "No requests match the filters",
+      "requestsTotal": "{count, plural, one {# request} other {# requests}}"
+    },
+    "profile": {
+      "note": "This profile is read-only here. Verification is done in Seller verification.",
+      "goToSellers": "Open Seller verification",
+      "noAddress": "No address yet",
+      "areas": "Operating area",
+      "public": {
+        "title": "Public information",
+        "coverAlt": "Shop cover image",
+        "noBio": "No description yet",
+        "storefront": "View storefront"
+      },
+      "legal": {
+        "title": "Legal information",
+        "entityType": "Business type",
+        "legalName": "Legal name",
+        "taxId": "Tax ID",
+        "license": "Business licence",
+        "sellerStatus": "Seller profile",
+        "noSeller": "Seller profile not submitted",
+        "verifiedAt": "Verified on"
+      },
+      "personal": {
+        "title": "Personal information"
+      },
+      "identity": {
+        "title": "Identity verification",
+        "status": "Verification status",
+        "notSubmitted": "Not submitted",
+        "idNumber": "ID card number",
+        "phone": "Phone",
+        "email": "Email",
+        "verified": "Confirmed",
+        "notVerified": "Not confirmed",
+        "verifiedAt": "Verified on"
+      },
+      "owner": {
+        "title": "Shop owner",
+        "name": "Full name",
+        "phone": "Phone",
+        "email": "Email",
+        "accountStatus": "Account status",
+        "joined": "Joined"
+      },
+      "contact": {
+        "title": "Address & contact",
+        "defaultBranch": "Main branch",
+        "defaultPoint": "Main pickup point",
+        "noAddress": "No address declared",
+        "publicPhone": "Public phone",
+        "publicEmail": "Public email"
+      },
+      "documents": {
+        "title": "Profile documents",
+        "sensitive": "Sensitive documents",
+        "empty": "No documents yet",
+        "locked": "Only people with the seller verification permission can see the document list. Document files open only in Seller verification."
+      },
+      "vehicleDocuments": {
+        "title": "Vehicle documents",
+        "empty": "No vehicle documents yet",
+        "locked": "Requires permission to view all vehicles to see vehicle documents.",
+        "noExpiry": "No expiry"
+      },
+      "history": {
+        "title": "Verification history",
+        "empty": "No verification activity yet",
+        "subject": {
+          "tenant": "Shop profile",
+          "sellerProfile": "Seller profile"
+        }
+      },
+      "privacy": {
+        "title": "Privacy",
+        "body": "Phone numbers, emails and document numbers are partially masked by the server. This screen never shows full values or document files — those open only on the dedicated screens, behind their own permissions and with audit logging."
+      }
+    },
+    "billing": {
+      "permissionNote": "Only people who manage plans & billing can view this tab. It is read-only — assigning, renewing or cancelling a plan lives under “Platform admin actions”.",
+      "expired": "Expired",
+      "plan": {
+        "title": "Current plan",
+        "none": "No active plan",
+        "name": "Plan",
+        "phase": "Status",
+        "term": "Plan period",
+        "renewal": "Renews in",
+        "daysLeft": "{days, plural, one {# day left} other {# days left}}"
+      },
+      "quota": {
+        "title": "Usage & quota",
+        "vehicles": "Vehicles",
+        "branches": "Branches",
+        "members": "Staff",
+        "features": "Plan features"
+      },
+      "fee": {
+        "title": "Fee policy",
+        "none": "No active fee policy",
+        "serviceFee": "XePrime service fee",
+        "percent": "{value}%",
+        "version": "Policy version",
+        "effectiveFrom": "Effective from",
+        "noteLabel": "Note",
+        "note": "The platform-wide fee policy. Subscription shops pay no commission on trips."
+      },
+      "invoices": {
+        "statusTitle": "Invoice status",
+        "unpaid": "Unpaid",
+        "dueSoon": "Due soon",
+        "overdue": "Overdue",
+        "nextDue": "Next due date",
+        "noneDue": "None"
+      },
+      "history": {
+        "subscriptions": "Plan history",
+        "subscriptionsEmpty": "No subscription rows yet",
+        "invoices": "Plan invoices",
+        "invoicesEmpty": "No invoices yet"
+      },
+      "columns": {
+        "period": "Period",
+        "plan": "Plan",
+        "price": "Amount",
+        "status": "Status",
+        "code": "Invoice code",
+        "total": "Total",
+        "paidAt": "Paid on"
+      },
+      "milestones": {
+        "title": "Key dates",
+        "joined": "Joined the platform",
+        "started": "Started plan {plan}",
+        "renewal": "Current period ends — next renewal"
+      }
+    },
+    "commission": {
+      "moneyNote": "Only people with the platform money operations permission can see amounts.",
+      "noSettlement": "The platform has no closed statement periods yet. The figures below total completed trips per month, using the amounts locked on each booking.",
+      "policy": {
+        "title": "Service fee policy",
+        "none": "No active fee policy",
+        "rate": "Current rate",
+        "percent": "{value}%",
+        "basis": "Basis",
+        "basisValue": "Trip rental value — the renter pays the service fee",
+        "effectiveFrom": "Effective from",
+        "version": "Policy version"
+      },
+      "current": {
+        "title": "This month",
+        "empty": "No figures yet",
+        "period": "Month",
+        "completed": "Completed trips",
+        "revenue": "Total rental value",
+        "serviceFee": "XePrime service fee",
+        "tax": "Tax withheld"
+      },
+      "stats": {
+        "completed": "Completed trips",
+        "completedHint": "{months, plural, one {Last # month} other {Last # months}}",
+        "open": "Open bookings",
+        "disputes": "Open disputes"
+      },
+      "history": {
+        "title": "Monthly figures",
+        "empty": "No completed trips yet"
+      },
+      "columns": {
+        "month": "Month",
+        "completed": "Trips",
+        "revenue": "Total rental value",
+        "serviceFee": "Service fee",
+        "tax": "Tax withheld",
+        "state": "State"
+      },
+      "stateOpen": "Current month",
+      "stateClosed": "Month closed",
+      "rules": {
+        "title": "How fees are calculated",
+        "rule1": "The service fee is calculated on the trip rental value, under the fee policy in effect when the booking was confirmed.",
+        "rule2": "Amounts are locked on each booking when it is created — they are not recalculated when the policy changes.",
+        "rule3": "Cancelled and no-show trips are not counted.",
+        "rule4": "Withheld tax is borne by the owner and is never added to what the renter pays."
+      }
+    },
+    "activity": {
+      "segments": {
+        "activity": "Activity",
+        "sessions": "Support sessions"
+      },
+      "filters": {
+        "all": "All",
+        "search": "Search activity",
+        "searchPlaceholder": "Action, performed by…",
+        "source": "Source",
+        "category": "Action",
+        "range": "Time"
+      },
+      "range": {
+        "all": "Any time",
+        "d7": "Last 7 days",
+        "d30": "Last 30 days",
+        "d90": "Last 90 days"
+      },
+      "title": "{category} · {verb}",
+      "systemActor": "System",
+      "viaSupport": "Via support session",
+      "viewDetail": "View details",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "empty": "No activity yet",
+      "noResults": "No activity matches the filters",
+      "total": "{count, plural, one {# entry} other {# entries}}",
+      "ipNote": {
+        "title": "IP and device",
+        "body": "IP address and device are not shown here. Use “View details” to open the system audit log — those fields are shown only to accounts allowed to view the log."
+      },
+      "sessions": {
+        "columns": {
+          "opened": "Opened at",
+          "actor": "Opened by",
+          "mode": "Mode",
+          "workspace": "Workspace",
+          "reason": "Reason",
+          "status": "Status"
+        },
+        "tableLabel": "Support sessions",
+        "empty": "No support sessions yet",
+        "total": "{count, plural, one {# session} other {# sessions}}"
+      }
+    },
+    "admin": {
+      "title": "Platform admin actions · {name}",
+      "note": "These are platform decisions about the partner (lock/unlock, plan) and are recorded in the audit log. Editing the partner’s data happens in support mode.",
+      "statusTitle": "Partner status"
+    },
+    "quota": {
+      "usedOf": "{used} / {limit}",
+      "usedOfVehicles": "{used} / {limit} vehicles",
+      "unlimited": "{used} · unlimited",
+      "notApplicable": "{used} · not applicable on this plan type",
+      "ownerLite": "Owner Lite cap (plan expired)",
+      "unconfigured": "plan not determined"
+    }
+  }
+}

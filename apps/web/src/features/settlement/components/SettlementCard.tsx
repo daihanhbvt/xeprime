@@ -26,6 +26,7 @@ import styles from './SettlementCard.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useTranslations } from 'next-intl';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 
 /**
  * Thẻ "Phát sinh & Tiền cọc" trên chi tiết đơn (Wave 10).
@@ -35,6 +36,9 @@ import { useTranslations } from 'next-intl';
  * "hoàn 5 triệu" cho khoản chưa ai thu là cách nhanh nhất để chủ xe mất tiền thật.
  *
  * Hoàn cọc là việc THEO DÕI, không chặn hoàn tất chuyến: đơn đã `Hoàn tất` từ lúc nhận xe.
+ *
+ * Phiên hỗ trợ gian hàng không mở quyết toán — cọc, phụ phí, hoàn tiền là tiền của gian hàng và
+ * khách (ADR 0050 §10): thẻ không dựng và không gọi endpoint.
  */
 export function SettlementCard({ bookingId, canView }: { bookingId: string; canView: boolean }) {
   const tSettlement = useTranslations('Bookings.settlement');
@@ -45,14 +49,16 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
   const { has } = usePermissions();
   const canRecord = has(PERMISSION.PAYMENT_RECORD);
   const canCorrect = has(PERMISSION.PAYMENT_VOID);
-  const { data, isLoading, isError, error, refetch } = useSettlement(bookingId, canView);
+  const inSupport = useSupportHides(SUPPORT_HIDDEN_AREA.SETTLEMENT);
+  const visible = canView && !inSupport;
+  const { data, isLoading, isError, error, refetch } = useSettlement(bookingId, visible);
 
   const [surchargeOpen, setSurchargeOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
   const [correcting, setCorrecting] = useState(false);
 
-  if (!canView) return null;
+  if (!visible) return null;
 
   if (isLoading) {
     return (

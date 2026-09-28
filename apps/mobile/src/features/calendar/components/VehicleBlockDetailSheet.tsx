@@ -15,11 +15,11 @@ import { useAppToast } from '@/components/feedback/use-app-toast';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { space } from '@/theme/tokens';
 import { calendarApi, type VehicleBlock } from '../api';
 import { useDeleteVehicleBlock } from '../hooks/use-calendar-mutations';
 import { blockReasonColor } from '../event-tone';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /**
  * Chi tiết một lịch khoá xe — chạm event `blocked_range` trên lịch mở ra đây.
@@ -44,7 +44,6 @@ export function VehicleBlockDetailSheet({
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   const { has } = usePermissions();
 
   const canManage = has(PERMISSION.VEHICLE_BLOCK_SCHEDULE);
@@ -70,7 +69,7 @@ export function VehicleBlockDetailSheet({
       },
       onError: (error) => {
         setConfirming(false);
-        toast.showError(errorMessage(error));
+        toast.showError(getErrorMessage(error));
       },
     });
   }

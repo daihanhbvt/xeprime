@@ -1,7 +1,7 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -13,6 +13,7 @@ import {
   BOOKING_STATUS_META,
   VEHICLE_ALERT_KIND,
   VEHICLE_OPERATION_STATUS_META,
+  VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
   VEHICLE_SERVICE_SETTING_SERVICES,
   VEHICLE_SOURCE_TYPE,
@@ -44,25 +45,28 @@ import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { usePermissions } from '@/features/auth/hooks/use-permissions';
 import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
-import { VEHICLE_EDIT_TAB, type VehicleEditTab } from '@/navigation/vehicle-edit-tab';
-import {
-  VEHICLE_MANAGE_SECTION,
-  type VehicleManageSection,
-} from '@/navigation/vehicle-manage-section';
+import { VEHICLE_EDIT_TAB } from '@/navigation/vehicle-edit-tab';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { FinanceEntityPanel } from '@/features/finance/components/FinanceEntityPanel';
 import { VehicleAlertList } from './components/VehicleAlertList';
-import { vehiclePublicationTask } from './publication';
+import { publicStatusPresentation, vehiclePublicationTask } from './publication';
+import { Callout, type CalloutTone } from '@/components/ui/Callout';
 import { MarketplaceVisibilityRow } from './components/MarketplaceVisibilityRow';
 import { VehiclePublicationTaskItem } from './components/VehiclePublicationTaskItem';
 import { VehiclePublishCard } from './components/VehiclePublishCard';
 import { VehicleMaintenanceCard } from '@/features/vehicle-maintenance/components/VehicleMaintenanceCard';
 import { vehicleSchedulePath } from './calendar-link';
+import { vehicleModuleLinks } from './module-links';
+import {
+  vehicleEditHref,
+  vehicleEditHubHref,
+  vehicleOptimizationHref,
+  vehiclePricingHref,
+} from './workspace-links';
 import { discountedPriceVnd } from './pricing';
 import {
   useDeleteVehicle,
@@ -71,37 +75,7 @@ import {
   useVehicleSummary,
 } from './hooks/use-vehicle';
 import type { Vehicle360Summary, VehicleBookingBrief, VehicleDetail } from './api';
-
-/**
- * Tab của form sửa xe → mục tương ứng trong không gian QUẢN LÝ XE của khu tài khoản.
- *
- * Hai khu gọi cùng một nội dung bằng hai đường khác nhau: cổng quản lý mở form sửa theo `?tab=`,
- * khu tài khoản có một màn riêng cho từng mục. Bản đồ này là chỗ DUY NHẤT biết cặp đôi đó, nên
- * đổi tên một mục chỉ phải sửa ở đây.
- */
-const EDIT_TAB_TO_SECTION: Readonly<Record<VehicleEditTab, VehicleManageSection>> = {
-  [VEHICLE_EDIT_TAB.INFORMATION]: VEHICLE_MANAGE_SECTION.INFORMATION,
-  [VEHICLE_EDIT_TAB.MEDIA]: VEHICLE_MANAGE_SECTION.IMAGES,
-  [VEHICLE_EDIT_TAB.DOCUMENTS]: VEHICLE_MANAGE_SECTION.DOCUMENTS,
-  [VEHICLE_EDIT_TAB.PRICING]: VEHICLE_MANAGE_SECTION.SELF_DRIVE_PRICING,
-  /*
-   * Bảo dưỡng và Nguồn xe KHÔNG có mục riêng trong không gian quản lý xe của khu tài khoản —
-   * chúng là việc của cổng quản lý. Trỏ về "Thông tin" để bản đồ không có ô trống; hai mục này
-   * đằng nào cũng bị ẩn ở khu khách (xem `ModuleLinks`), nên nhánh này không bao giờ chạy.
-   */
-  [VEHICLE_EDIT_TAB.MAINTENANCE]: VEHICLE_MANAGE_SECTION.INFORMATION,
-  [VEHICLE_EDIT_TAB.SOURCE]: VEHICLE_MANAGE_SECTION.INFORMATION,
-  /*
-   * VẬN HÀNH gộp BỐN mục của khu tài khoản (giao nhận · tự nhận · điều khoản · phụ phí) vào một
-   * màn của cổng quản lý, nên không có cặp đôi 1-1. Trỏ về mục đầu tiên trong số đó — "Thời gian
-   * giao nhận" — vì đó là khối duy nhất áp dụng cho mọi xe bất kể dịch vụ, và cũng là khối web
-   * mở sẵn.
-   *
-   * Nhánh này không bao giờ chạy ở thực tế: mục Vận hành chỉ có trong hub sửa xe của cổng quản
-   * lý (`VehicleEditHubScreen`), còn khu tài khoản đã có bốn mục rời trong mục lục của nó.
-   */
-  [VEHICLE_EDIT_TAB.OPERATIONS]: VEHICLE_MANAGE_SECTION.SELF_DRIVE_HANDOVER_TIME,
-};
+import { getErrorMessage } from '@/lib/get-error-message';
 
 const HERO_HEIGHT = 200;
 const GALLERY_THUMB = 96;
@@ -253,12 +227,28 @@ function VehicleDetailBody({
   const router = useRouter();
   const navigateOnce = useNavigateOnce();
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   const { has } = usePermissions();
 
   const summary = useVehicleSummary(vehicle.id);
   const remove = useDeleteVehicle();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  /*
+   * Bản native của hai liên kết `#anchor` bên web (`VehiclePublicationTaskItem`): "Bật hiển thị"
+   * neo lên công tắc ở thẻ hồ sơ đầu màn, "Xem trạng thái" neo xuống thẻ xét duyệt. Vị trí đo
+   * bằng `onLayout` của chính khối đó — tính theo khung cha là cột nội dung của `Screen`.
+   *
+   * Công tắc "Trên chợ" nằm ở ĐÁY thẻ hồ sơ (dưới ảnh bìa), nên neo lên MÉP DƯỚI của thẻ, đặt ở
+   * khoảng 60% chiều cao màn — cuộn tới mép trên sẽ để công tắc lọt dưới nếp gấp ở màn thấp.
+   */
+  const scrollRef = useRef<ScrollView>(null);
+  const { height: windowHeight } = useWindowDimensions();
+  const profileBox = useRef({ y: 0, height: 0 });
+  const reviewPanelY = useRef(0);
+  const scrollToY = (y: number) =>
+    scrollRef.current?.scrollTo({ y: Math.max(0, y - space.sm), animated: true });
+  const scrollToMarketplaceSwitch = () =>
+    scrollToY(profileBox.current.y + profileBox.current.height - windowHeight * 0.6);
 
   const canDelete = has(PERMISSION.VEHICLE_DELETE);
   const canEdit = has(PERMISSION.VEHICLE_UPDATE);
@@ -272,7 +262,7 @@ function VehicleDetailBody({
       },
       onError: (error) => {
         setConfirmingDelete(false);
-        toast.showError(errorMessage(error));
+        toast.showError(getErrorMessage(error));
       },
     });
   }
@@ -297,15 +287,26 @@ function VehicleDetailBody({
         edges={['left', 'right', 'bottom']}
         refreshing={summary.isRefetching}
         onRefresh={() => void summary.refetch()}
+        scrollRef={scrollRef}
       >
         <YStack gap={layout.section}>
-          <ProfileCard vehicle={vehicle} summary={summary.data} />
+          <YStack
+            onLayout={(event) => {
+              const { y, height } = event.nativeEvent.layout;
+              profileBox.current = { y, height };
+            }}
+          >
+            <ProfileCard vehicle={vehicle} summary={summary.data} />
+          </YStack>
 
           <TodoCard
             vehicle={vehicle}
             summary={summary.data}
             loading={summary.isPending}
             failed={summary.isError}
+            onEnableMarketplace={scrollToMarketplaceSwitch}
+            customerScope={customerScope}
+            onViewStatus={() => scrollToY(reviewPanelY.current)}
           />
 
           {has(PERMISSION.BOOKING_VIEW) ? (
@@ -340,12 +341,16 @@ function VehicleDetailBody({
             />
           ) : null}
 
-          <PricingCard vehicle={vehicle} canEdit={canEdit} />
+          <PricingCard vehicle={vehicle} canEdit={canEdit} customerScope={customerScope} />
 
-          <AutomationCard vehicle={vehicle} canEdit={canEdit} />
+          <AutomationCard vehicle={vehicle} canEdit={canEdit} customerScope={customerScope} />
 
           {has(PERMISSION.VEHICLE_DOCUMENT_VIEW) ? (
-            <DocumentsCard vehicleId={vehicle.id} summary={summary.data} />
+            <DocumentsCard
+              vehicleId={vehicle.id}
+              summary={summary.data}
+              customerScope={customerScope}
+            />
           ) : null}
 
           <SpecsCard vehicle={vehicle} />
@@ -357,12 +362,19 @@ function VehicleDetailBody({
             web là giá → giấy tờ → thông số → ảnh, rồi mới sang cột phải nguồn xe → bảo dưỡng →
             gửi duyệt. Ở mobile hai cột đó xếp nối nhau.
           */}
-          <SourceCard vehicle={vehicle} />
+          <SourceCard vehicle={vehicle} customerScope={customerScope} />
 
-          {/* Bảo dưỡng & số KM — đúng vị trí web đặt nó: giữa nguồn xe và thẻ gửi duyệt. */}
-          <VehicleMaintenanceCard vehicleId={vehicle.id} />
+          {/*
+            Bảo dưỡng & số KM — đúng vị trí web đặt nó: giữa nguồn xe và thẻ gửi duyệt.
+            KHÔNG ở khu tài khoản: bảo dưỡng là tính năng của GÓI (ADR 0027 điều 1) và không có
+            mục nào ở không gian quản lý xe của khu đó — web ẩn cả hai lối vào bảo dưỡng khi không
+            ở cổng quản lý.
+          */}
+          {customerScope ? null : <VehicleMaintenanceCard vehicleId={vehicle.id} />}
 
-          <VehiclePublishCard vehicle={vehicle} />
+          <YStack onLayout={(event) => (reviewPanelY.current = event.nativeEvent.layout.y)}>
+            <VehiclePublishCard vehicle={vehicle} />
+          </YStack>
 
           {has(PERMISSION.BOOKING_VIEW) ? (
             <ActivityCard
@@ -393,7 +405,7 @@ function VehicleDetailBody({
                   label={t('editMobile')}
                   variant="primary"
                   size="sm"
-                  onPress={() => navigateOnce(ROUTES.manage.vehicleEdit(vehicle.id))}
+                  onPress={() => navigateOnce(vehicleEditHubHref(vehicle.id, customerScope))}
                 />
               </YStack>
             ) : null}
@@ -404,7 +416,9 @@ function VehicleDetailBody({
                 size="sm"
                 /* Cùng đích với viên "Lịch xe" ở mục lục và với nút Lịch ở thẻ đội xe —
                    `onSchedule` của web cũng dẫn tới đúng màn lịch đã lọc theo chính xe này. */
-                onPress={() => navigateOnce(vehicleSchedulePath(vehicle, { back: true }))}
+                onPress={() =>
+                  navigateOnce(vehicleSchedulePath(vehicle, { back: true, customerScope }))
+                }
               />
             </YStack>
           </XStack>
@@ -485,6 +499,22 @@ function Strong({ children }: { children: ReactNode }) {
   );
 }
 
+/** Bốn trạng thái có dải trên thẻ hồ sơ — đúng `needsBanner` của `Vehicle360Overview` bên web. */
+const BANNER_STATUSES: ReadonlySet<string> = new Set([
+  VEHICLE_PUBLIC_STATUS.REJECTED,
+  VEHICLE_PUBLIC_STATUS.NEEDS_REVISION,
+  VEHICLE_PUBLIC_STATUS.HIDDEN,
+  VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW,
+]);
+
+/** `type` của `publicStatusPresentation` (tông `Alert` web) → tông `Callout`. */
+const CALLOUT_TONE: Readonly<Record<'success' | 'info' | 'warning' | 'error', CalloutTone>> = {
+  success: 'success',
+  info: 'info',
+  warning: 'warning',
+  error: 'danger',
+};
+
 function ProfileCard({
   vehicle,
   summary,
@@ -493,11 +523,15 @@ function ProfileCard({
   summary: Vehicle360Summary | undefined;
 }) {
   const t = useTranslations('Vehicles.overview');
+  const tPublish = useTranslations('Vehicles.publish');
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
 
   const operationStatus = vehicle.operationStatus as VehicleOperationStatus;
+  const banner = BANNER_STATUSES.has(vehicle.publicStatus)
+    ? publicStatusPresentation(vehicle.publicStatus as VehiclePublicStatus)
+    : null;
   const publicStatus = vehicle.publicStatus as VehiclePublicStatus;
 
   return (
@@ -604,6 +638,23 @@ function ProfileCard({
         <YStack pt={space.xs} borderTopWidth={1} borderColor={colors.borderSubtle}>
           <MarketplaceVisibilityRow vehicle={vehicle} />
         </YStack>
+
+        {/*
+          Dải trạng thái xét duyệt ở CUỐI thẻ hồ sơ — đúng `Alert` của `Vehicle360Overview` bên web:
+          chỉ bốn trạng thái cần chú ý (từ chối · cần bổ sung · bị ẩn · chờ duyệt); đã duyệt và nháp
+          thì không (nháp đã có "Việc cần làm", thẻ xét duyệt nói chi tiết hơn). Câu của người
+          duyệt đi nguyên văn khi trạng thái dùng lý do.
+        */}
+        {banner ? (
+          <Callout
+            tone={CALLOUT_TONE[banner.type]}
+            title={tPublish(`status.${banner.key}.message`)}
+          >
+            {banner.useReason && vehicle.latestPublicReview?.reason
+              ? vehicle.latestPublicReview.reason
+              : tPublish(`status.${banner.key}.description`)}
+          </Callout>
+        ) : null}
       </YStack>
     </Card>
   );
@@ -641,11 +692,20 @@ function TodoCard({
   summary,
   loading,
   failed,
+  onEnableMarketplace,
+  onViewStatus,
+  customerScope,
 }: {
   vehicle: VehicleDetail;
   summary: Vehicle360Summary | undefined;
   loading: boolean;
   failed: boolean;
+  /** Cuộn lên công tắc "Trên chợ" ở thẻ hồ sơ — web neo `#MARKETPLACE_SWITCH_ANCHOR`. */
+  onEnableMarketplace: () => void;
+  /** Cuộn xuống thẻ xét duyệt — web neo `#REVIEW_PANEL_ANCHOR`. */
+  onViewStatus: () => void;
+  /** Mở từ khu tài khoản — đích "Liên hệ hỗ trợ" là hỗ trợ của khu đó. */
+  customerScope: boolean;
 }) {
   const t = useTranslations('Vehicles.overview');
   const task = vehiclePublicationTask(vehicle);
@@ -655,15 +715,19 @@ function TodoCard({
   // Gợi ý không phải "việc cần làm" nên không vào số đếm — viên đếm là số việc thật.
   const count = alerts.length + (task && task.tone !== 'info' ? 1 : 0);
   /*
-   * `onEnableMarketplace` CỐ Ý không truyền ở native.
-   *
-   * Web neo nút "Bật hiển thị" xuống chính công tắc bằng `#anchor`. Ở app, công tắc nằm trong
-   * thẻ NGAY TRÊN thẻ này — người dùng đã nhìn thấy nó, và `Screen` không phơi ra ref cuộn để
-   * neo tới. Một nút không đưa đi đâu cả thì tệ hơn là không có nút; câu chữ của việc (tiêu đề
-   * + mô tả) vẫn nguyên vẹn. Bật hộ từ đây thì ADR 0048 cấm — đó là chỗ ghi thứ hai cho cùng
+   * Hai nút neo ("Bật hiển thị" · "Xem trạng thái") CUỘN tới khối tương ứng trong cùng màn — đúng
+   * như hai liên kết `#anchor` bên web. Không bật hộ từ đây: ADR 0048 cấm chỗ ghi thứ hai cho cùng
    * một trạng thái.
    */
-  const taskItem = task ? <VehiclePublicationTaskItem vehicle={vehicle} task={task} /> : null;
+  const taskItem = task ? (
+    <VehiclePublicationTaskItem
+      vehicle={vehicle}
+      task={task}
+      onEnableMarketplace={onEnableMarketplace}
+      onViewStatus={onViewStatus}
+      customerScope={customerScope}
+    />
+  ) : null;
 
   return (
     <Card>
@@ -675,9 +739,7 @@ function TodoCard({
           không phải một ô luôn nằm đó. Đang tải cũng không hiện, vì lúc đó `alerts` rỗng nhưng
           chưa biết thật sự có việc hay không.
         */}
-        <BlockTitle
-          {...(count > 0 ? { action: <CountBadge count={count} tone="danger" /> } : {})}
-        >
+        <BlockTitle {...(count > 0 ? { action: <CountBadge count={count} tone="danger" /> } : {})}>
           {t('todo.title')}
         </BlockTitle>
         {task?.tone !== 'info' ? taskItem : null}
@@ -767,11 +829,8 @@ function ScheduleCard({
 }
 
 /**
- * Dải LIÊN KẾT NHANH tới các mục con của xe — bản native của `ModuleLinks` bên web.
- *
- * Cùng danh sách, cùng thứ tự, cùng điều kiện quyền, và từ CAL-01 thì mọi mục đều có đích thật.
- * `href` vẫn được phép vắng: mục nào web có mà app chưa dựng thì hiện đúng chỗ và chạm vào báo
- * "đang phát triển", đúng quy ước `comingSoon`.
+ * Dải LIÊN KẾT NHANH tới các mục con của xe — bản native của `ModuleLinks` bên web. Danh sách,
+ * thứ tự, quyền và đích theo khu nằm ở `vehicleModuleLinks` (hàm thuần, có test).
  *
  * Chip chứ không phải danh sách dọc: chín lối đi mà mỗi lối một hàng thì khối này dài hơn cả
  * phần nội dung nó dẫn tới.
@@ -784,137 +843,16 @@ function ModuleLinks({
   vehicle: VehicleDetail;
   canEdit: boolean;
   /**
-   * Mở từ KHU KHÁCH (hồ sơ cá nhân) hay từ cổng quản lý.
-   *
-   * Khu khách ẩn mọi lối dẫn sang `/manage`: chủ xe tuyến hoa hồng không có quyền vào đó, nên
-   * một mục như "Sổ Thu-Chi" hay "Đơn thuê của xe" chạm vào là ăn thẳng màn "Bạn không còn
-   * quyền truy cập gian hàng này". Bày một nút chắc chắn hỏng còn tệ hơn là không bày.
-   *
-   * Những mục CÒN LẠI (thông tin, ảnh, giấy tờ, giá) không biến mất — chúng đổi đích sang không
-   * gian quản lý xe của chính khu tài khoản, nơi chủ xe cá nhân vào được.
+   * Mở từ KHU TÀI KHOẢN (chủ xe tuyến hoa hồng) hay từ cổng quản lý. Chủ xe tuyến hoa hồng không
+   * vào được `/manage` (ADR 0038 điều 4) — mọi mục đổi đích sang khu của họ hoặc không hiện.
    */
   customerScope: boolean;
 }) {
   const t = useTranslations('Vehicles.overview.links');
-  const tStates = useTranslations('Common.states');
   const { has } = usePermissions();
   const navigateOnce = useNavigateOnce();
-  const toast = useAppToast();
 
-  /**
-   * `href` trống = mục CÓ ở web nhưng app chưa có màn đích.
-   *
-   * Vẫn hiện đúng chỗ của nó và chạm vào báo "đang phát triển" — cùng quy ước `comingSoon` mà
-   * `ManageDrawer` đang dùng. Ẩn đi thì người dùng không biết chức năng có tồn tại, và người
-   * dựng app quên mất còn nợ cái gì.
-   */
-  const links: { key: string; label: string; icon: IconName; href?: Href }[] = [];
-  /* Cùng một mục, hai đích: khu khách đi vào không gian quản lý xe của chính nó. */
-  const tab = (value: VehicleEditTab) =>
-    customerScope
-      ? ROUTES.account.vehicleManageSection(vehicle.id, EDIT_TAB_TO_SECTION[value])
-      : ROUTES.manage.vehicleEditTab(vehicle.id, value);
-
-  if (canEdit) {
-    links.push(
-      {
-        key: 'information',
-        label: t('information'),
-        icon: 'car-outline',
-        href: tab(VEHICLE_EDIT_TAB.INFORMATION),
-      },
-      {
-        key: 'media',
-        label: t('media'),
-        icon: 'images-outline',
-        href: tab(VEHICLE_EDIT_TAB.MEDIA),
-      },
-      {
-        key: 'pricing',
-        label: t('pricing'),
-        icon: 'pricetag-outline',
-        href: customerScope
-          ? ROUTES.account.vehicleManageSection(
-              vehicle.id,
-              VEHICLE_MANAGE_SECTION.SELF_DRIVE_PRICING,
-            )
-          : ROUTES.manage.vehiclePricing(vehicle.id),
-      },
-    );
-    /*
-     * TỐI ƯU NHẬN CHUYẾN KHÔNG nằm ở đây, và đó là chủ đích (24/09/2026).
-     *
-     * Nó là một thẻ riêng trên hồ sơ — `AutomationCard`, đúng như web — vì một dòng trơ trong
-     * dải mười liên kết không nói được "tự động nhận chuyến" là gì. Đặt cả hai nơi là hai lối
-     * vào cùng một màn, đúng thứ mà chú thích của khu tài khoản ngay dưới đang tránh.
-     */
-    if (has(PERMISSION.FINANCE_VIEW) && !customerScope) {
-      links.push({
-        key: 'source',
-        label: t('source'),
-        icon: 'wallet-outline',
-        href: tab(VEHICLE_EDIT_TAB.SOURCE),
-      });
-    }
-  }
-  if (has(PERMISSION.VEHICLE_DOCUMENT_VIEW)) {
-    links.push({
-      key: 'documents',
-      label: t('documents'),
-      icon: 'document-text-outline',
-      href: tab(VEHICLE_EDIT_TAB.DOCUMENTS),
-    });
-  }
-  if (has(PERMISSION.VEHICLE_MAINTENANCE_VIEW)) {
-    links.push(
-      {
-        key: 'maintenance',
-        label: t('maintenance'),
-        icon: 'construct-outline',
-        href: tab(VEHICLE_EDIT_TAB.MAINTENANCE),
-      },
-      /* Trung tâm bảo dưỡng là màn TOÀN ĐỘI XE của cổng quản lý — không thuộc một chiếc xe. */
-      ...(customerScope
-        ? []
-        : [
-            {
-              key: 'maintenanceCenter',
-              label: t('maintenanceCenter'),
-              icon: 'build-outline' as IconName,
-              href: ROUTES.manage.maintenance(),
-            },
-          ]),
-    );
-  }
-  if (has(PERMISSION.CALENDAR_VIEW)) {
-    // Lịch ĐÃ LỌC SẴN theo chính chiếc xe này — cùng cách `vehicleSchedulePath` bên web dựng
-    // đường đi (`?q=<biển số || tên>`); màn lịch dùng chung, không có route lịch-một-xe.
-    links.push({
-      key: 'calendar',
-      label: t('calendar'),
-      icon: 'calendar-outline',
-      href: vehicleSchedulePath(vehicle, { back: true }),
-    });
-  }
-  if (has(PERMISSION.BOOKING_VIEW) && !customerScope) {
-    // Kèm `vehicleId` như web: bấm từ hồ sơ xe thì ra đơn CỦA XE NÀY, không phải cả gian hàng.
-    links.push({
-      key: 'bookings',
-      label: t('bookings'),
-      icon: 'receipt-outline',
-      href: ROUTES.manage.bookings({ vehicleId: vehicle.id }),
-    });
-  }
-  if (has(PERMISSION.FINANCE_VIEW) && !customerScope) {
-    // Sổ Thu-Chi ĐÃ LỌC theo chính chiếc xe này — cùng tham số `?vehicleId=` web đặt trên URL.
-    links.push({
-      key: 'receipts',
-      label: t('receipts'),
-      icon: 'cash-outline',
-      href: ROUTES.manage.receipts({ vehicleId: vehicle.id }),
-    });
-  }
-
+  const links = vehicleModuleLinks({ vehicle, canEdit, customerScope, has });
   if (links.length === 0) return null;
 
   return (
@@ -934,14 +872,12 @@ function ModuleLinks({
         {links.map((link) => (
           <Chip
             key={link.key}
-            label={link.label}
+            label={t(link.key)}
             icon={link.icon}
             tone="accent"
             role="button"
             size="sm"
-            onPress={() =>
-              link.href ? navigateOnce(link.href) : toast.showInfo(tStates('featureComingSoon'))
-            }
+            onPress={() => navigateOnce(link.href)}
           />
         ))}
       </XStack>
@@ -1031,7 +967,15 @@ function PerformanceCard({
  * Ẩn khi xe không phục vụ dịch vụ nào CÓ thiết lập riêng: thuê dài hạn luôn do gian hàng chốt
  * lịch tay (ADR 0011), nên với xe chỉ cho thuê dài hạn thẻ này không có gì để nói.
  */
-function AutomationCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
+function AutomationCard({
+  vehicle,
+  canEdit,
+  customerScope,
+}: {
+  vehicle: VehicleDetail;
+  canEdit: boolean;
+  customerScope: boolean;
+}) {
   const t = useTranslations('Vehicles.overview');
   const navigateOnce = useNavigateOnce();
 
@@ -1049,7 +993,7 @@ function AutomationCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit:
                 action: (
                   <BlockLink
                     label={t('automation.editLink')}
-                    onPress={() => navigateOnce(ROUTES.manage.vehicleOptimization(vehicle.id))}
+                    onPress={() => navigateOnce(vehicleOptimizationHref(vehicle, customerScope))}
                   />
                 ),
               }
@@ -1063,7 +1007,15 @@ function AutomationCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit:
   );
 }
 
-function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
+function PricingCard({
+  vehicle,
+  canEdit,
+  customerScope,
+}: {
+  vehicle: VehicleDetail;
+  canEdit: boolean;
+  customerScope: boolean;
+}) {
   const t = useTranslations('Vehicles.overview');
   const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
@@ -1081,7 +1033,7 @@ function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
                 action: (
                   <BlockLink
                     label={t('pricing.editLink')}
-                    onPress={() => navigateOnce(ROUTES.manage.vehiclePricing(vehicle.id))}
+                    onPress={() => navigateOnce(vehiclePricingHref(vehicle.id, customerScope))}
                   />
                 ),
               }
@@ -1128,9 +1080,11 @@ function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
 function DocumentsCard({
   vehicleId,
   summary,
+  customerScope,
 }: {
   vehicleId: string;
   summary: Vehicle360Summary | undefined;
+  customerScope: boolean;
 }) {
   const t = useTranslations('Vehicles.overview');
   const navigateOnce = useNavigateOnce();
@@ -1146,7 +1100,7 @@ function DocumentsCard({
             <BlockLink
               label={t('documents.manageLink')}
               onPress={() =>
-                navigateOnce(ROUTES.manage.vehicleEditTab(vehicleId, VEHICLE_EDIT_TAB.DOCUMENTS))
+                navigateOnce(vehicleEditHref(vehicleId, VEHICLE_EDIT_TAB.DOCUMENTS, customerScope))
               }
             />
           }
@@ -1273,7 +1227,14 @@ function SpecsCard({ vehicle }: { vehicle: VehicleDetail }) {
  * Tóm tắt nguồn xe. Chi tiết tài chính chỉ tải khi người xem có `finance.view` — người không có
  * quyền chỉ thấy HÌNH THỨC (đã nằm sẵn trên bản ghi xe), không thấy con số.
  */
-function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
+function SourceCard({
+  vehicle,
+  customerScope,
+}: {
+  vehicle: VehicleDetail;
+  /** Khu tài khoản: nguồn xe là sổ sách gian hàng, không có mục nào ở đó — không bày lối vào. */
+  customerScope: boolean;
+}) {
   const t = useTranslations('Vehicles.overview');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
@@ -1334,7 +1295,7 @@ function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
           Liên kết xuống hồ sơ nguồn xe & tài chính — web có, app thiếu cho tới giờ.
           Chưa khai nguồn xe thì đổi thành lời mời bổ sung, đúng hai nhánh của web.
         */}
-        {canViewFinance && !source.isPending ? (
+        {canViewFinance && !customerScope && !source.isPending ? (
           detail ? (
             <BlockLink
               label={t('source.detailLink')}

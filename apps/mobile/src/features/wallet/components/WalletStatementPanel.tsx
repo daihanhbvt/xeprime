@@ -1,7 +1,7 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { absoluteMoney, dayjs, isNegativeMoney, isZeroMoney, nowInAppTz } from '@xeprime/domain';
+import { absoluteMoney, isNegativeMoney, isZeroMoney, nowInAppTz } from '@xeprime/domain';
 import {
   ACCOUNT_TRACK,
   STATUS_COLOR,
@@ -17,7 +17,7 @@ import type { IconName } from '@/components/ui/Chip';
 import { Divider } from '@/components/ui/DataRow';
 import { IconDisc } from '@/components/ui/IconDisc';
 import { Pagination } from '@/components/ui/Pagination';
-import { SelectControl } from '@/components/ui/SelectControl';
+import { MONTH_PERIOD_FORMAT, MonthPeriodField } from '@/components/ui/MonthPeriodField';
 import { MiniRowsSkeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
@@ -30,18 +30,6 @@ import {
   type WalletStatementTrip,
 } from '@/api/wallet/api';
 import { useWalletStatement } from '../hooks/use-wallet';
-
-/** Kỳ là `YYYY-MM` — cùng định dạng mà server nhận, và cùng cách web đánh dấu một kỳ sổ. */
-const PERIOD_FORMAT = 'YYYY-MM';
-
-/**
- * Số kỳ bày ra trong ô chọn.
- *
- * 12 tháng gần nhất: đủ để đối chiếu cả một năm làm ăn, và vẫn là một danh sách cuộn được bằng
- * ngón tay. Web dùng `DatePicker picker="month"` — thứ không có bản native tương đương mà không
- * kéo thêm một thư viện lịch thứ hai cho đúng một ô chọn.
- */
-const PERIOD_CHOICES = 12;
 
 /**
  * BẢNG TỔNG HỢP GIAO DỊCH — một tháng làm ăn của gian hàng, đọc từ `/shop/wallet/statement`.
@@ -77,14 +65,6 @@ export function WalletStatementPanel({
   const fmt = useAppFormat();
   const { data: user } = useCurrentUser();
   /*
-   * Cùng mặc định với khối Thống kê của màn Giao dịch thu chi: người dùng mở màn để xem số dư
-   * và rút tiền không phải cuộn qua cả một tháng chuyến xe trước khi tới lệnh rút và lịch sử.
-   * Khi cần đối chiếu theo kỳ, mở khối chỉ tốn một lần chạm vào cả hàng tiêu đề.
-   */
-  const [collapsed, setCollapsed] = useState(true);
-  const toggle = useCallback(() => setCollapsed((current) => !current), []);
-
-  /*
    * Dòng thu nhập gọi người đọc bằng ĐÚNG tên của họ.
    *
    * Cùng một bảng phục vụ hai người: chủ gian hàng tuyến gói ở khu quản lý, và chủ xe cá nhân tuyến
@@ -94,64 +74,43 @@ export function WalletStatementPanel({
    */
   const incomeLabelKey = ownerIncomeKeyFor(user?.tenant);
 
-  const query = useWalletStatement(filters, !collapsed);
+  /*
+   * Luôn hiện và luôn tải — đúng web (25/09/2026). Bản trước thu gọn khối này mặc định và chỉ tải
+   * khi mở, một khác biệt mà web không có.
+   */
+  const query = useWalletStatement(filters, true);
   const data = query.data;
   const items = data?.items ?? [];
   const stats = data?.stats;
   const totals = data?.totals;
 
-  /*
-   * Kỳ dựng từ đồng hồ VN, không từ đồng hồ máy: một người ở múi giờ khác mở app lúc nửa đêm
-   * 01/10 vẫn phải thấy tháng 9 là kỳ gần nhất đã xong, đúng như server chia kỳ.
-   */
-  const periodOptions = useMemo(() => {
-    const now = nowInAppTz();
-    return Array.from({ length: PERIOD_CHOICES }, (_, index) => {
-      const month = now.subtract(index, 'month');
-      return { value: month.format(PERIOD_FORMAT), label: fmt.monthYear(month.toDate()) };
-    });
-  }, [fmt]);
-
-  /*
-   * Kỳ đang chọn có thể nằm ngoài 12 tháng gần nhất (deep link, hoặc app mở rất lâu qua giao thừa
-   * tháng). Thêm nó vào danh sách thay vì để ô chọn hiện trống — một ô nói "chưa chọn gì" trong khi
-   * bảng bên dưới đang hiện đúng kỳ đó là hai câu mâu thuẫn trên cùng một màn.
-   */
-  const options = periodOptions.some((option) => option.value === filters.period)
-    ? periodOptions
-    : [
-        { value: filters.period, label: fmt.monthYear(dayjs(filters.period).toDate()) },
-        ...periodOptions,
-      ];
+  /** Tháng sau chưa xảy ra — trần là tháng HIỆN TẠI theo giờ VN, đúng `maxDate` của web. */
+  const maxPeriod = useMemo(() => nowInAppTz().format(MONTH_PERIOD_FORMAT), []);
 
   return (
     <YStack gap={space.sm}>
-      <BlockTitle collapsed={collapsed} onToggleCollapsed={toggle}>
-        {t('title')}
-      </BlockTitle>
+      <BlockTitle>{t('title')}</BlockTitle>
 
-      {collapsed ? null : (
-        <>
-          <SelectControl
-            label={t('period')}
-            value={filters.period}
-            options={options}
-            onChange={(period) => onFiltersChange({ period, page: 1 })}
+      <MonthPeriodField
+        label={t('period')}
+        value={filters.period}
+        maxPeriod={maxPeriod}
+        onChange={(period) => onFiltersChange({ period, page: 1 })}
+      />
+
+      {query.isError && !data ? (
+        <Callout tone="danger" title={t('loadError')}>
+          <Button
+            label={tCommon('actions.retry')}
+            variant="secondary"
+            size="sm"
+            block={false}
+            onPress={() => void query.refetch()}
           />
+        </Callout>
+      ) : null}
 
-          {query.isError && !data ? (
-            <Callout tone="danger" title={t('loadError')}>
-              <Button
-                label={tCommon('actions.retry')}
-                variant="secondary"
-                size="sm"
-                block={false}
-                onPress={() => void query.refetch()}
-              />
-            </Callout>
-          ) : null}
-
-          {/*
+      {/*
         Khung xương cho lần tải ĐẦU, và cho cả lượt đổi kỳ/lật trang.
 
         `placeholderData: keepPreviousData` giữ bảng cũ trong lúc tải — thứ đúng cho nhịp cuộn,
@@ -159,142 +118,136 @@ export function WalletStatementPanel({
         ra. Web nói bằng `loading` của `DataTable`; ở đây khung xương THAY CHỖ các thẻ chuyến,
         nên không bao giờ có hai bộ số cùng lúc trên màn.
       */}
-          {query.isFetching ? <MiniRowsSkeleton rows={4} /> : null}
+      {query.isFetching ? <MiniRowsSkeleton rows={4} /> : null}
 
-          {stats ? (
-            <Card padded={false}>
-              <XStack ai="stretch" py={space.sm}>
-                <MetricCell
-                  icon="star-outline"
-                  tone={colors.warning}
-                  surface={colors.warningSurface}
-                  value={
-                    stats.ratingAvg == null
-                      ? tCommon('labels.emptyValue')
-                      : fmt.rating(stats.ratingAvg)
-                  }
-                  label={t('stats.rating', { count: stats.ratingCount ?? 0 })}
-                />
-                <MetricDivider />
-                <MetricCell
-                  icon="checkmark-circle-outline"
-                  tone={colors.success}
-                  surface={colors.successSurface}
-                  value={t('stats.tripsValue', { count: stats.completedTripCount })}
-                  label={t('stats.trips')}
-                />
-                <MetricDivider />
-                <MetricCell
-                  icon="chatbubbles-outline"
-                  tone={colors.info}
-                  surface={colors.infoSurface}
-                  value={
-                    stats.responseRatePercent == null
-                      ? tCommon('labels.emptyValue')
-                      : t('stats.responseValue', { percent: stats.responseRatePercent })
-                  }
-                  label={t('stats.response')}
-                />
-              </XStack>
-            </Card>
-          ) : null}
+      {stats ? (
+        <Card padded={false}>
+          <XStack ai="stretch" py={space.sm}>
+            <MetricCell
+              icon="star-outline"
+              tone={colors.warning}
+              surface={colors.warningSurface}
+              value={
+                stats.ratingAvg == null ? tCommon('labels.emptyValue') : fmt.rating(stats.ratingAvg)
+              }
+              label={t('stats.rating', { count: stats.ratingCount ?? 0 })}
+            />
+            <MetricDivider />
+            <MetricCell
+              icon="checkmark-circle-outline"
+              tone={colors.success}
+              surface={colors.successSurface}
+              value={t('stats.tripsValue', { count: stats.completedTripCount })}
+              label={t('stats.trips')}
+            />
+            <MetricDivider />
+            <MetricCell
+              icon="chatbubbles-outline"
+              tone={colors.info}
+              surface={colors.infoSurface}
+              value={
+                stats.responseRatePercent == null
+                  ? tCommon('labels.emptyValue')
+                  : t('stats.responseValue', { percent: stats.responseRatePercent })
+              }
+              label={t('stats.response')}
+            />
+          </XStack>
+        </Card>
+      ) : null}
 
-          {!query.isFetching && items.length === 0 ? (
-            <Card>
-              <YStack gap={space.xs}>
-                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                  {t('empty.title')}
-                </Text>
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {t('empty.body')}
-                </Text>
-              </YStack>
-            </Card>
-          ) : null}
+      {!query.isFetching && items.length === 0 ? (
+        <Card>
+          <YStack gap={space.xs}>
+            <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+              {t('empty.title')}
+            </Text>
+            <Text col={colors.textMuted} fos={fontSize.bodySm}>
+              {t('empty.body')}
+            </Text>
+          </YStack>
+        </Card>
+      ) : null}
 
-          {query.isFetching
-            ? null
-            : items.map((trip) => <TripCard key={trip.bookingId} trip={trip} />)}
+      {query.isFetching ? null : items.map((trip) => <TripCard key={trip.bookingId} trip={trip} />)}
 
-          {(data?.total ?? 0) > 0 ? (
-            <YStack gap={space.xs}>
-              <Text col={colors.textMuted} fos={fontSize.label} ta="center">
-                {t('totalLabel', { count: data?.total ?? 0 })}
-              </Text>
-              <Pagination
-                page={data?.page ?? filters.page}
-                limit={data?.limit ?? WALLET_STATEMENT_PAGE_SIZE}
-                total={data?.total ?? 0}
-                onChange={(page) => onFiltersChange({ page })}
-              />
-            </YStack>
-          ) : null}
+      {(data?.total ?? 0) > 0 ? (
+        <YStack gap={space.xs}>
+          <Text col={colors.textMuted} fos={fontSize.label} ta="center">
+            {t('totalLabel', { count: data?.total ?? 0 })}
+          </Text>
+          <Pagination
+            page={data?.page ?? filters.page}
+            limit={data?.limit ?? WALLET_STATEMENT_PAGE_SIZE}
+            total={data?.total ?? 0}
+            onChange={(page) => onFiltersChange({ page })}
+          />
+        </YStack>
+      ) : null}
 
-          {totals ? (
-            <Card padded={false}>
-              <YStack p={space.md} gap={space.sm}>
-                <SummaryRow
-                  label={t('totals.balanceChange')}
-                  value={<SignedAmount value={totals.balanceChangeTotal} strong />}
-                />
-                {/*
+      {totals ? (
+        <Card padded={false}>
+          <YStack p={space.md} gap={space.sm}>
+            <SummaryRow
+              label={t('totals.balanceChange')}
+              value={<SignedAmount value={totals.balanceChangeTotal} strong />}
+            />
+            {/*
               Phần khách trả TAY: chỉ hiện khi thật sự có. Ở gian hàng tắt thu cọc qua sàn thì
               `D = 0` và toàn bộ tiền thuê đi thẳng cho chủ xe — dòng này khi đó là cả doanh thu, và
               giấu nó đi sẽ khiến "thu nhập" trông như từ trên trời rơi xuống.
             */}
-                {isZeroMoney(totals.payAtPickupTotal) ? null : (
-                  <SummaryRow
-                    label={t('totals.payAtPickup')}
-                    hint={t('totals.payAtPickupHint')}
-                    value={
-                      <Text col={colors.text} fos={fontSize.bodySm}>
-                        {fmt.money(totals.payAtPickupTotal)}
-                      </Text>
-                    }
-                  />
-                )}
-                {isZeroMoney(totals.subscriptionFeeTotal) ? null : (
-                  <SummaryRow
-                    label={t('totals.subscriptionFee')}
-                    value={
-                      <Text col={colors.danger} fos={fontSize.bodySm}>
-                        {`−${fmt.money(totals.subscriptionFeeTotal)}`}
-                      </Text>
-                    }
-                  />
-                )}
-                <SummaryRow
-                  label={t('totals.tax')}
-                  value={
-                    isZeroMoney(totals.taxTotal) ? (
-                      <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                        {fmt.money('0')}
-                      </Text>
-                    ) : (
-                      <Text col={colors.danger} fos={fontSize.bodySm}>
-                        {`−${fmt.money(totals.taxTotal)}`}
-                      </Text>
-                    )
-                  }
-                />
-              </YStack>
-              <Divider />
-              <YStack px={space.md} py={space.sm} bg={colors.primaryLight}>
-                <SummaryRow
-                  label={t(`totals.${incomeLabelKey}`)}
-                  hint={t('totals.ownerIncomeHint')}
-                  highlight
-                  value={
-                    <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
-                      {fmt.money(totals.ownerIncome)}
-                    </Text>
-                  }
-                />
-              </YStack>
-            </Card>
-          ) : null}
-        </>
-      )}
+            {isZeroMoney(totals.payAtPickupTotal) ? null : (
+              <SummaryRow
+                label={t('totals.payAtPickup')}
+                hint={t('totals.payAtPickupHint')}
+                value={
+                  <Text col={colors.text} fos={fontSize.bodySm}>
+                    {fmt.money(totals.payAtPickupTotal)}
+                  </Text>
+                }
+              />
+            )}
+            {isZeroMoney(totals.subscriptionFeeTotal) ? null : (
+              <SummaryRow
+                label={t('totals.subscriptionFee')}
+                value={
+                  <Text col={colors.danger} fos={fontSize.bodySm}>
+                    {`−${fmt.money(totals.subscriptionFeeTotal)}`}
+                  </Text>
+                }
+              />
+            )}
+            <SummaryRow
+              label={t('totals.tax')}
+              value={
+                isZeroMoney(totals.taxTotal) ? (
+                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                    {fmt.money('0')}
+                  </Text>
+                ) : (
+                  <Text col={colors.danger} fos={fontSize.bodySm}>
+                    {`−${fmt.money(totals.taxTotal)}`}
+                  </Text>
+                )
+              }
+            />
+          </YStack>
+          <Divider />
+          <YStack px={space.md} py={space.sm} bg={colors.primaryLight}>
+            <SummaryRow
+              label={t(`totals.${incomeLabelKey}`)}
+              hint={t('totals.ownerIncomeHint')}
+              highlight
+              value={
+                <Text col={colors.price} fos={fontSize.h4} fow={fontWeight.bold}>
+                  {fmt.money(totals.ownerIncome)}
+                </Text>
+              }
+            />
+          </YStack>
+        </Card>
+      ) : null}
     </YStack>
   );
 }

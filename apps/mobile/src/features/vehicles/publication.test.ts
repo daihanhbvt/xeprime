@@ -80,9 +80,7 @@ describe('vehiclePublicationTask', () => {
    * bấm. Lối duy nhất là hỗ trợ.
    */
   it('bị nền tảng ẩn ⇒ chỉ còn liên hệ hỗ trợ, mức critical', () => {
-    const task = vehiclePublicationTask(
-      vehicle({ publicStatus: VEHICLE_PUBLIC_STATUS.HIDDEN }),
-    );
+    const task = vehiclePublicationTask(vehicle({ publicStatus: VEHICLE_PUBLIC_STATUS.HIDDEN }));
     expect(task).toMatchObject({
       key: 'platformHidden',
       tone: 'critical',
@@ -92,10 +90,18 @@ describe('vehiclePublicationTask', () => {
     expect(task?.primary?.kind).not.toBe('submit');
   });
 
-  it('đang chờ duyệt ⇒ chỉ báo trạng thái, mức info', () => {
+  it('đang chờ duyệt ⇒ mời SỬA (bản mới đi thẳng vào phiếu), mức info', () => {
     expect(
-      vehiclePublicationTask(vehicle({ publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW })),
-    ).toMatchObject({ key: 'underReview', tone: 'info', primary: null });
+      vehiclePublicationTask(
+        vehicle({ publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW }),
+      ),
+    ).toMatchObject({
+      key: 'underReview',
+      tone: 'info',
+      // Sửa khi đang chờ là ĐỦ: backend dựng lại hồ sơ gửi duyệt ở mỗi lần lưu (24/09/2026).
+      primary: { kind: 'edit', cta: 'updateProfile' },
+      secondary: { kind: 'viewStatus', cta: 'viewStatus' },
+    });
   });
 
   it('nháp ĐÃ đủ hồ sơ ⇒ mời gửi duyệt', () => {

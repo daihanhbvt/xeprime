@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { DatePicker, Form } from 'antd';
 import { useId } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
@@ -14,6 +15,8 @@ interface DateTimeFieldBaseProps<T extends FieldValues> {
   name: Path<T>;
   label: string;
   placeholder?: string;
+  /** Chỉ đọc — vẫn hiện giá trị (vd. lịch bảo dưỡng trong phiên hỗ trợ gian hàng, ADR 0050). */
+  disabled?: boolean;
 }
 
 /**
@@ -52,7 +55,8 @@ const TIME_CONFIG = { format: 'HH:mm', minuteStep: 15 } as const;
  * `undefined`), để `dirty`/validation của Yup nhìn thấy một giá trị rỗng tường minh.
  */
 export function DateTimeField<T extends FieldValues>(props: DateTimeFieldProps<T>) {
-  const { control, name, label, placeholder } = props;
+  const { control, name, label, placeholder, disabled } = props;
+  const t = useTranslations('Common.components.dateRange');
   const datePattern = useDatePickerPattern();
   const { field, fieldState } = useController({ control, name });
   const id = useId();
@@ -65,6 +69,7 @@ export function DateTimeField<T extends FieldValues>(props: DateTimeFieldProps<T
     format: dateOnly ? datePattern.date : datePattern.dateTime,
     onBlur: field.onBlur,
     status: fieldState.error ? ('error' as const) : undefined,
+    disabled,
   };
 
   return (
@@ -87,7 +92,7 @@ export function DateTimeField<T extends FieldValues>(props: DateTimeFieldProps<T
       ) : props.range ? (
         <DatePicker.RangePicker
           {...shared}
-          placeholder={props.rangePlaceholder ?? ['Từ ngày', 'Đến ngày']}
+          placeholder={props.rangePlaceholder ?? [t('fromDate'), t('toDate')]}
           value={(field.value as [Dayjs | null, Dayjs | null] | null) ?? null}
           onChange={(value) => field.onChange(value ?? null)}
         />

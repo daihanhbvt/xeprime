@@ -18,10 +18,10 @@ import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { getErrorCode } from '@/lib/api-client';
-import { useErrorMessage } from '@/i18n/use-error-message';
 import { colors, fontSize, fontWeight, sizing, space } from '@/theme/tokens';
 import { useCreateReview } from '../hooks/use-trips';
 import type { CustomerTripDetail } from '../api';
+import { getErrorMessage } from '@/lib/get-error-message';
 
 /**
  * Đánh giá chuyến (BKG-16) — chỉ mở khi đơn đã `completed`, và SERVER là nơi chốt điều kiện đó.
@@ -41,7 +41,6 @@ export function ReviewSheet({
 }) {
   const t = useTranslations('Trips.review');
   const toast = useAppToast();
-  const errorMessage = useErrorMessage();
   const createReview = useCreateReview(trip.id);
 
   /*
@@ -84,7 +83,7 @@ export function ReviewSheet({
             onClose();
             return;
           }
-          toast.showError(errorMessage(error));
+          toast.showError(getErrorMessage(error));
         },
       },
     );

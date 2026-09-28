@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Linking, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import {
@@ -66,7 +66,17 @@ import type { CustomerTripDetail } from './api';
  * Đường GHI duy nhất của khách ở đây là **huỷ chuyến**. Phát sinh, hoàn cọc, đổi lịch đều thuộc
  * luồng chủ xe; mở thêm đường ghi cho khách là dựng một máy trạng thái thứ hai chạy song song.
  */
-export function TripDetailScreen({ tripId }: { tripId: string }) {
+export function TripDetailScreen({
+  tripId,
+  listHref = ROUTES.booking.list(),
+}: {
+  tripId: string;
+  /**
+   * Danh sách chứa chuyến này — nút lui rơi về đây khi không còn gì để lui. Web
+   * `TripDetailView.backHref`: `/trips` ở khu khách, `/manage/account/trips` ở khu quản lý.
+   */
+  listHref?: Href;
+}) {
   const t = useTranslations('Trips');
   const router = useRouter();
   const query = useTrip(tripId);
@@ -74,10 +84,7 @@ export function TripDetailScreen({ tripId }: { tripId: string }) {
   if (query.isPending) {
     return (
       <>
-        <AppHeader
-          title={t('detail.heading')}
-          onBack={() => goBackOr(router, ROUTES.booking.list())}
-        />
+        <AppHeader title={t('detail.heading')} onBack={() => goBackOr(router, listHref)} />
         <Screen
           edges={['left', 'right', 'bottom']}
           refreshing={query.isRefetching}
@@ -102,10 +109,7 @@ export function TripDetailScreen({ tripId }: { tripId: string }) {
 
     return (
       <>
-        <AppHeader
-          title={t('detail.heading')}
-          onBack={() => goBackOr(router, ROUTES.booking.list())}
-        />
+        <AppHeader title={t('detail.heading')} onBack={() => goBackOr(router, listHref)} />
         <Screen edges={['left', 'right', 'bottom']} scroll={false}>
           {missing ? (
             <ScreenMessage
@@ -113,7 +117,7 @@ export function TripDetailScreen({ tripId }: { tripId: string }) {
               title={t('detail.notFoundTitle')}
               description={t('detail.notFoundBody')}
               actionLabel={t('detail.backToTrips')}
-              onAction={() => router.replace(ROUTES.booking.list())}
+              onAction={() => router.replace(listHref)}
             />
           ) : (
             <ScreenError
@@ -127,10 +131,10 @@ export function TripDetailScreen({ tripId }: { tripId: string }) {
     );
   }
 
-  return <TripDetailBody trip={query.data} />;
+  return <TripDetailBody trip={query.data} listHref={listHref} />;
 }
 
-function TripDetailBody({ trip }: { trip: CustomerTripDetail }) {
+function TripDetailBody({ trip, listHref }: { trip: CustomerTripDetail; listHref: Href }) {
   const t = useTranslations('Trips');
   const router = useRouter();
   const fmt = useAppFormat();
@@ -185,7 +189,7 @@ function TripDetailBody({ trip }: { trip: CustomerTripDetail }) {
       <AppHeader
         title={trip.code ? t('detail.headingWithCode', { code: trip.code }) : t('detail.heading')}
         subtitle={subtitleOf(t, stage)}
-        onBack={() => goBackOr(router, ROUTES.booking.list())}
+        onBack={() => goBackOr(router, listHref)}
         badge={
           <StatusBadge
             label={domainLabel('customerTripStage', stage, meta.label)}
@@ -290,6 +294,24 @@ function TripDetailBody({ trip }: { trip: CustomerTripDetail }) {
             </YStack>
           </Card>
 
+          {/*
+            THỨ TỰ KHỐI = thứ tự web xếp ở khổ một cột (≤1024px): cột CHÍNH (tóm tắt → giữ chỗ →
+            mốc thực tế → bằng chứng bàn giao → ghi chú → đánh giá) rồi cột PHỤ (thu cọc trực tiếp
+            → tiền → quyết định của chủ xe → hỗ trợ/huỷ của khách).
+
+            Khoản GIỮ CHỖ đứng ngay sau tóm tắt: khi chuyến đang chờ tiền thì đây là việc DUY
+            NHẤT khách cần làm, và nó không được nằm dưới một bảng số liệu mà họ chưa có lý do để
+            đọc.
+          */}
+          {trip.hold ? (
+            <TripHoldPanel
+              hold={trip.hold}
+              tripId={trip.id}
+              tripTotalAmount={trip.estimate?.fees?.customerTotalAmount ?? null}
+              payAtHandoverAmount={trip.estimate?.fees?.payAtPickupAmount ?? null}
+            />
+          ) : null}
+
           {trip.actualPickupAt || trip.actualReturnAt ? (
             <Card>
               <YStack gap={space.sm}>
@@ -313,17 +335,44 @@ function TripDetailBody({ trip }: { trip: CustomerTripDetail }) {
           ) : null}
 
           {/*
-            Khoản GIỮ CHỖ đứng TRƯỚC khối tiền của chuyến, đúng thứ tự web đặt: khi chuyến đang
-            chờ tiền thì đây là việc DUY NHẤT khách cần làm, và nó không được nằm dưới một bảng
-            số liệu mà họ chưa có lý do để đọc.
+            Bằng chứng bàn giao đứng NGAY SAU mốc thực tế — hai khối trả lời cùng một câu hỏi
+            ("chuyến đã diễn ra thế nào"). Chỉ gọi API khi chuyến ĐÃ có mốc bàn giao thật, đúng
+            điều kiện web: `actualPickupAt`/`actualReturnAt` do chính lần xác nhận bàn giao ghi
+            (cùng transaction), nên "chưa có mốc nào" đồng nghĩa "chưa có biên bản nào".
           */}
-          {trip.hold ? (
-            <TripHoldPanel
-              hold={trip.hold}
-              tripId={trip.id}
-              tripTotalAmount={trip.estimate?.fees?.customerTotalAmount ?? null}
-              payAtHandoverAmount={trip.estimate?.fees?.payAtPickupAmount ?? null}
-            />
+          <TripHandoverEvidence
+            tripId={trip.id}
+            enabled={Boolean(trip.actualPickupAt || trip.actualReturnAt)}
+          />
+
+          {/* Ghi chú khách gửi kèm yêu cầu — web có khối này, và nó là chữ của chính họ. */}
+          {trip.customerNote ? (
+            <Card>
+              <YStack gap={space.xs}>
+                <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
+                  {t('detail.noteBlock')}
+                </Text>
+                <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                  {trip.customerNote}
+                </Text>
+              </YStack>
+            </Card>
+          ) : null}
+
+          {trip.review ? (
+            <Card>
+              <YStack gap={space.xs}>
+                <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
+                  {t('detail.reviewBlock')}
+                </Text>
+                <Stars value={trip.review.rating} size={iconSize.sm} />
+                {trip.review.comment ? (
+                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                    {trip.review.comment}
+                  </Text>
+                ) : null}
+              </YStack>
+            </Card>
           ) : null}
 
           {/*
@@ -379,48 +428,19 @@ function TripDetailBody({ trip }: { trip: CustomerTripDetail }) {
             <TripHostDecisions trip={trip} onApproved={setApproved} />
           ) : null}
 
-          {/* Chỉ hỏi bằng chứng bàn giao khi chuyến ĐÃ đi tới đó — chờ duyệt thì chắc chắn rỗng. */}
-          <TripHandoverEvidence
-            tripId={trip.id}
-            enabled={stage === CUSTOMER_TRIP_STAGE.ACTIVE || closed}
-          />
-
-          {/* Ghi chú khách gửi kèm yêu cầu — web có khối này, và nó là chữ của chính họ. */}
-          {trip.customerNote ? (
-            <Card>
-              <YStack gap={space.xs}>
-                <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
-                  {t('detail.noteBlock')}
-                </Text>
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {trip.customerNote}
-                </Text>
-              </YStack>
-            </Card>
-          ) : null}
-
-          {trip.review ? (
-            <Card>
-              <YStack gap={space.xs}>
-                <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.bold}>
-                  {t('detail.reviewBlock')}
-                </Text>
-                <Stars value={trip.review.rating} size={iconSize.sm} />
-                {trip.review.comment ? (
-                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                    {trip.review.comment}
-                  </Text>
-                ) : null}
-              </YStack>
-            </Card>
-          ) : null}
-
-          <TripActions
-            trip={trip}
-            stage={stage}
-            onCancel={() => setCancelling(true)}
-            onReview={() => setReviewing(true)}
-          />
+          {/*
+            Cụm hỗ trợ + huỷ là của KHÁCH — đúng như web (`isHost ? null : …`). Chủ xe nhìn vào đó
+            sẽ thấy lối liên hệ với chính mình, và `POST /trips/:id/cancel` khoá theo
+            `customerUserId` nên nút Huỷ ở phía chủ xe luôn nhận 404. Chủ xe huỷ ở chi tiết đơn thuê.
+          */}
+          {isHost ? null : (
+            <TripActions
+              trip={trip}
+              stage={stage}
+              onCancel={() => setCancelling(true)}
+              onReview={() => setReviewing(true)}
+            />
+          )}
         </YStack>
       </Screen>
 
@@ -625,7 +645,7 @@ function PickupMethod({ trip }: { trip: CustomerTripDetail }) {
 }
 
 /**
- * Hành động của khách.
+ * Hành động của khách — nơi gọi CHỈ dựng khối này khi `!isHost`, đúng như web.
  *
  * `canReview` do SERVER quyết (đơn phải `completed` và chưa có đánh giá) — client không tự suy
  * từ chặng, vì "hoàn thành" ở phía khách và "được đánh giá" ở phía server không phải một điều.

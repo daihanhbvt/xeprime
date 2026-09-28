@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
+import { PERMISSION, PLAN_FEATURE, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
@@ -9,6 +9,7 @@ import {
   RequiresFeature,
   SubscriptionTrackOnly,
   TenantScoped,
+  SupportAction,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
@@ -38,6 +39,7 @@ export class InvitesController {
 
   @Get()
   @RequirePermissions(PERMISSION.MEMBER_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.MEMBER_VIEW)
   @ApiOperation({ summary: 'Lời mời của gian hàng — mặc định chỉ những lời đang chờ' })
   @ApiOkResponse({ type: InvitePageDto })
   list(

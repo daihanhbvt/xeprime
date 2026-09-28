@@ -49,6 +49,7 @@ const BOOKING = {
   status: 'active',
   customerName: 'Nguyễn Văn A',
   customerPhoneMasked: '090****567',
+  tenantId: 'T-ABC',
   tenantName: 'Gian hàng ABC',
   tenantStatus: 'active',
   vehicleName: 'Toyota Vios',
@@ -174,7 +175,9 @@ describe('AdminBookingDetailDrawer — Thông tin đơn', () => {
     renderDrawer();
     expect(screen.getByText('Nguyễn Văn A')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Gian hàng ABC' }).getAttribute('href')).toBe(
-      '/manage/admin/tenants?q=Gian%20h%C3%A0ng%20ABC',
+      // Mở ĐÚNG gian hàng theo id (không tìm theo tên — tên trùng được); danh sách đối tác nào
+      // thì server nói, qua URL cũ đang làm bộ tra loại.
+      '/manage/admin/tenants?tenant=T-ABC',
     );
     expect(screen.getByText('Đang hoạt động')).toBeTruthy();
     // Link xe tra theo BIỂN SỐ — tên xe trùng nhau giữa nhiều gian hàng.

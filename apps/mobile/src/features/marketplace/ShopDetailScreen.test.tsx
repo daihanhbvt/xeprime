@@ -1,7 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, waitFor } from '@testing-library/react-native';
 import { ApiClientError } from '@xeprime/api-client';
-import { API_ERROR_CODE, EMPTY_HOST_METRICS, type PublicListing, type PublicShop } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  EMPTY_HOST_METRICS,
+  type PublicListing,
+  type PublicShop,
+} from '@xeprime/types';
 import { withIntl } from '@/i18n/test-utils';
 import { marketplaceApi } from './api';
 import { ShopDetailScreen } from './ShopDetailScreen';
@@ -15,8 +20,8 @@ jest.mock('expo-router', () => ({
 }));
 
 /*
- * Phiên đang đăng nhập — nút nhắn tin đọc nó để biết đây có phải gian hàng của CHÍNH người đang
- * xem không. `null` là khách vãng lai, tức đường đi mặc định của trang công khai này.
+ * Phiên đang đăng nhập. `null` là khách vãng lai, tức đường đi mặc định của trang công khai này.
+ * Nút nhắn tin KHÔNG đọc nó (xem bài "nút nhắn tin hiện như web").
  */
 const mockMe: { value: { tenant: { slug: string } | null } | null } = { value: null };
 
@@ -157,23 +162,16 @@ describe('ShopDetailScreen — hồ sơ công khai', () => {
   });
 
   /*
-   * Khu quản lý có lối "Xem gian hàng" mở đúng màn này, nên người bán vào đây thường xuyên. Nút
-   * nhắn tin ở đó mở một hội thoại của họ VỚI CHÍNH HỌ — thread hiện ở cả hai hộp thư và không
-   * ai đóng được. Gian hàng vẫn mở hộp thư công khai (`chatOpen: true`): thứ đổi là NGƯỜI XEM.
+   * Hiện/ẩn nút nhắn tin CHỈ theo gian hàng (`chatOpen` / eligibility) — đúng `ShopChatButton`
+   * bên web, không theo NGƯỜI XEM. Đợt 24/09 thêm riêng ở app một lớp ẩn nút trên gian hàng của
+   * chính người xem; web không có lớp đó nên nó bị gỡ (25/09/2026) — lỗ hổng tự-nhắn-mình phải chặn
+   * ở backend cho cả hai app, không phải vá riêng một bề mặt.
    */
-  it('gian hàng của CHÍNH người đang xem: KHÔNG dựng nút nhắn tin', async () => {
-    mockMe.value = { tenant: { slug: 'binh-minh' } };
-    mockShop();
-    mockListings([listing()]);
-    const view = await renderScreen();
-
-    expect(await view.findByText('4,8 (26 đánh giá)')).toBeTruthy();
-    expect(view.queryByRole('button', { name: 'Nhắn tin' })).toBeNull();
-  });
-
-  /* Chủ xe khác vẫn nhắn được — phép so là theo GIAN HÀNG, không phải "ai có gian hàng". */
-  it('người xem có gian hàng KHÁC: nút nhắn tin vẫn hiện', async () => {
-    mockMe.value = { tenant: { slug: 'xe-nha-can-tho' } };
+  it.each([
+    ['gian hàng của CHÍNH người đang xem', 'binh-minh'],
+    ['người xem có gian hàng KHÁC', 'xe-nha-can-tho'],
+  ])('%s: nút nhắn tin hiện như web', async (_label, slug) => {
+    mockMe.value = { tenant: { slug } };
     mockShop();
     mockListings([listing()]);
     const view = await renderScreen();
@@ -221,7 +219,9 @@ describe('ShopDetailScreen — xe của gian hàng', () => {
     mockShop();
     jest
       .spyOn(marketplaceApi, 'shopListings')
-      .mockRejectedValue(new ApiClientError({ status: 500, code: API_ERROR_CODE.INTERNAL_ERROR, message: 'Lỗi' }));
+      .mockRejectedValue(
+        new ApiClientError({ status: 500, code: API_ERROR_CODE.INTERNAL_ERROR, message: 'Lỗi' }),
+      );
     const view = await renderScreen();
 
     expect(await view.findByText('Không tải được danh sách xe')).toBeTruthy();

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,6 +11,7 @@ import {
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
   API_ERROR_CODE,
+  AUDIT_ACTOR_SCOPE,
   BOOKING_STATUS,
   canEnableMarketplace,
   resolveMarketplaceVisibility,
@@ -36,6 +38,9 @@ import {
   type PaginationMeta,
   type VehiclePublicStatus,
 } from '@xeprime/types';
+import { ConfigService } from '@nestjs/config';
+import { SupportRequestStore } from '../../common/support/support-request.store';
+import { assertNoOpenTrips } from '../../common/support/support-open-trips';
 import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
 import { BranchesService } from '../branches/branches.service';
@@ -44,6 +49,12 @@ import { CatalogService } from '../catalog/catalog.service';
 import { policyData, PricingService } from '../pricing/pricing.service';
 import { SaveVehiclePricingDto, VehiclePricingDto } from '../pricing/dto/pricing.dto';
 import { ListingsService } from '../public-listings/listings.service';
+import {
+  assertSupportMediaInScope,
+  resolveSupportConditionalFields,
+  stripSupportCreateFields,
+  supportVehicleAuditSnapshot,
+} from './vehicle-support-policy';
 import { businessWhere } from '../../common/finance-period';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -60,6 +71,7 @@ import {
   VehicleMediaItemDto,
   VehicleStatsDto,
   VehiclePublicReviewDto,
+  ListingRepairResultDto,
 } from './dto/vehicle.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { buildVehicleReviewSnapshot } from './vehicle-review-snapshot';
@@ -151,6 +163,8 @@ const SENSITIVE_SELECT = {
   serviceTypes: true,
   mainImageUrl: true,
   deliveryEnabled: true,
+  // Trường "ghim" của phiên hỗ trợ (ADR 0050) so với bản đang lưu — xem `assertSupportPinnedFields`.
+  operationStatus: true,
 } satisfies Prisma.VehicleSelect;
 
 /**
@@ -174,6 +188,8 @@ export class VehiclesService {
     private readonly catalog: CatalogService,
     private readonly catalogModels: CatalogModelService,
     private readonly pricing: PricingService,
+    private readonly config: ConfigService,
+    private readonly supportStore: SupportRequestStore,
   ) {}
 
   /**
@@ -500,6 +516,13 @@ export class VehiclesService {
   }
 
   async create(tenantId: string, userId: string, dto: CreateVehicleDto): Promise<VehicleDetailDto> {
+    /*
+     * Phiên hỗ trợ (ADR 0050 §13): tạo xe NHÁP. Guard đã chặn trường giá/nguồn xe/trạng thái vận
+     * hành mang giá trị; ở đây bỏ nốt các ô rỗng của chúng để không cái gì ngoài danh sách chạm DB.
+     * Cùng trần số xe, cùng validator, cùng chi nhánh thuộc gian hàng như chủ xe — không lối tắt.
+     */
+    const support = this.supportStore.current();
+    if (support) stripSupportCreateFields(dto);
     // Trần TỔNG số xe của bậc gói / Owner Lite (ADR 0041 điều 4, điểm chặn 1) —
     // chạm trần thì PLAN_LIMIT_REACHED, và thông điệp nói đúng lối đi tiếp theo NGUỒN của trần.
     await this.billing.assertVehicleQuota(tenantId);
@@ -526,6 +549,17 @@ export class VehiclesService {
       // Chi nhánh kiểm TRONG transaction: nó phải thuộc đúng gian hàng và đang hoạt động ngay
       // tại thời điểm ghi. FK composite `(branch_id, tenant_id)` là chốt chặn cuối ở DB.
       const branch = await this.branches.assertAssignable(tx, tenantId, dto.branchId);
+      if (support) {
+        // Kiểm TRƯỚC khi ghi xe — ảnh đại diện nằm trên chính hàng xe, ghi rồi thì nó thành "đã biết".
+        // Xe mới chưa có ảnh nào: mọi URL phải nằm trong kho ảnh của CHÍNH gian hàng, không gắn ảnh
+        // ngoài hay object của gian hàng khác (cùng luật với lượt sửa).
+        await assertSupportMediaInScope(tx, {
+          vehicleId: id,
+          tenantId,
+          publicBase: this.config.get<string>('R2_PUBLIC_BASE_URL'),
+          dto: input,
+        });
+      }
       await tx.vehicle.create({
         data: {
           id,
@@ -536,6 +570,8 @@ export class VehiclesService {
           name: dto.name,
           vehicleType: dto.vehicleType,
           ...writableFields(input),
+          // Xe do phiên hỗ trợ tạo KHÔNG tự bật lên chợ: chủ xe tự quyết sau khi xe được duyệt.
+          ...(support ? { marketplaceEnabled: false } : {}),
           // Giá chuyên biệt của dịch vụ không đăng bị loại ngay từ lúc tạo — không có giá mồ côi.
           ...orphanPriceClears(dto.serviceTypes ?? [SERVICE_TYPE.SELF_DRIVE]),
           // Trường không có nghĩa với loại xe này bị dọn ngay từ lúc tạo, không đợi tới lần sửa
@@ -551,6 +587,21 @@ export class VehiclesService {
         },
       });
       await this.replaceMedia(tx, id, tenantId, input, dto.vehicleType);
+      if (support) {
+        // Toàn bộ dữ liệu tạo ban đầu, trong CÙNG transaction (AuditService gắn phiên + lý do).
+        await this.audit.record(
+          {
+            tenantId,
+            actorUserId: userId,
+            actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+            action: 'vehicle.support.create_draft',
+            targetType: 'vehicle',
+            targetId: id,
+            after: { code, branchId: branch.id, ...(dto as unknown as Record<string, unknown>) },
+          },
+          tx,
+        );
+      }
     });
     return this.getOne(tenantId, id);
   }
@@ -625,6 +676,64 @@ export class VehiclesService {
      */
     assertNoLockedFieldChange(current, dto);
 
+    /*
+     * Phiên hỗ trợ của nhân sự nền tảng (ADR 0050): guard đã lọc TÊN trường; ở đây — sau khi khoá
+     * xe — so trường ghim với bản đang lưu và chặn ảnh ngoài kho của gian hàng, rồi chụp before
+     * cho dòng audit ghi cùng transaction. Luật khoá căn cước ngay trên vẫn áp nguyên vẹn.
+     */
+    const support = this.supportStore.current();
+    let supportBefore: Record<string, unknown> | null = null;
+    if (support) {
+      const changes = resolveSupportConditionalFields(current, dto);
+      if (changes.branchId) {
+        // Đổi nơi giao xe của một chuyến đang sống là âm thầm đổi cam kết với khách — từ chối.
+        await assertNoOpenTrips(tx, { tenantId, vehicleId: current.id });
+        const target = await this.branches.assertAssignable(tx, tenantId, changes.branchId);
+        if (!target.provinceCode) {
+          throw new ConflictException({
+            code: API_ERROR_CODE.BRANCH_LOCATION_REQUIRED,
+            message: 'Chi nhánh đích chưa có tỉnh/thành — xe không hiển thị được trên chợ ở đó',
+            details: { field: 'branchId' },
+          });
+        }
+      }
+      if (
+        changes.operationStatus !== null &&
+        changes.operationStatus !== VEHICLE_OPERATION_STATUS.AVAILABLE
+      ) {
+        // Cho xe nghỉ (bảo dưỡng/ngưng) khi còn chuyến đang sống là bỏ rơi khách — từ chối.
+        await assertNoOpenTrips(tx, { tenantId, vehicleId: current.id });
+      }
+      if (changes.removedServiceTypes.length > 0) {
+        await assertNoOpenTrips(tx, {
+          tenantId,
+          vehicleId: current.id,
+          serviceTypes: changes.removedServiceTypes,
+        });
+        /*
+         * Bỏ một dịch vụ thì `orphanPriceClears` xoá giá riêng của nó — tức một lần GHI GIÁ, thứ
+         * phiên không được làm. Giá đang trống thì không có gì bị xoá: cho qua.
+         */
+        const cleared = Object.keys(
+          orphanPriceClears(dto.serviceTypes ?? current.serviceTypes),
+        ).filter((field) => (current as Record<string, unknown>)[field] != null);
+        if (cleared.length > 0) {
+          throw new ForbiddenException({
+            code: API_ERROR_CODE.SUPPORT_FIELD_NOT_ALLOWED,
+            message: 'Bỏ dịch vụ này sẽ xoá giá riêng chủ xe đã đặt — phiên hỗ trợ không sửa giá',
+            details: { fields: ['serviceTypes'], priceFields: cleared },
+          });
+        }
+      }
+      await assertSupportMediaInScope(tx, {
+        vehicleId: current.id,
+        tenantId,
+        publicBase: this.config.get<string>('R2_PUBLIC_BASE_URL'),
+        dto,
+      });
+      supportBefore = await supportVehicleAuditSnapshot(tx, current.id, dto);
+    }
+
     // Chuyển xe sang chi nhánh khác = đổi VỊ TRÍ CÔNG KHAI của nó. Kiểm quyền sở hữu + trạng
     // thái ngay đây, và ghi audit riêng: "xe này chuyển từ đâu sang đâu" là câu hỏi có thật khi
     // đối soát, không suy được từ bản ghi sửa xe chung.
@@ -633,15 +742,17 @@ export class VehiclesService {
       await this.branches.assertAssignable(tx, tenantId, dto.branchId!);
     }
 
-    const data: Prisma.VehicleUpdateInput = {
+    /*
+     * Input UNCHECKED (cột FK thô) như nhánh tạo xe: `writableFields` mang `vehicleCatalogModelId`,
+     * và Prisma không cho trộn nó với một `branch: { connect }` — form sửa gửi cả hai nên đổi chi
+     * nhánh từng nổ 500. Chéo gian hàng vẫn không có đường: `assertAssignable` vừa kiểm chi nhánh
+     * thuộc tenant, và FK tổ hợp `(branch_id, tenant_id)` dưới DB là chốt chặn cuối.
+     */
+    const data: Prisma.VehicleUncheckedUpdateInput = {
       ...(dto.code !== undefined ? { code: dto.code } : {}),
       ...(dto.name !== undefined ? { name: dto.name } : {}),
       ...(dto.vehicleType !== undefined ? { vehicleType: dto.vehicleType } : {}),
-      // `connect` theo khoá COMPOSITE `(id, tenant_id)` — cùng cặp mà FK dưới DB ràng buộc, nên
-      // không có đường nào nối xe sang chi nhánh của gian hàng khác.
-      ...(branchChanged
-        ? { branch: { connect: { id_tenantId: { id: dto.branchId!, tenantId } } } }
-        : {}),
+      ...(branchChanged ? { branchId: dto.branchId! } : {}),
       ...writableFields(input),
       // Bỏ một dịch vụ → giá chuyên biệt của nó bị xoá theo (FE đã cảnh báo trước khi lưu).
       ...(dto.serviceTypes !== undefined ? orphanPriceClears(dto.serviceTypes) : {}),
@@ -666,12 +777,29 @@ export class VehiclesService {
       policy: await this.pricing.effectivePolicy(tenantId, current.id, tx),
     });
 
+    if (support && supportBefore) {
+      // `AuditService` tự gắn actorScope = platform + id phiên + capability từ request.
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+          action: 'vehicle.support.update',
+          targetType: 'vehicle',
+          targetId: current.id,
+          before: supportBefore,
+          after: await supportVehicleAuditSnapshot(tx, current.id, dto),
+        },
+        tx,
+      );
+    }
+
     if (branchChanged) {
       await this.audit.record(
         {
           tenantId,
           actorUserId: userId,
-          actorScope: 'tenant',
+          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
           action: 'vehicle.branch.reassign',
           targetType: 'vehicle',
           targetId: current.id,
@@ -880,7 +1008,7 @@ export class VehiclesService {
         {
           tenantId,
           actorUserId: userId,
-          actorScope: 'tenant',
+          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
           action: 'vehicle.pricing.update',
           targetType: 'vehicle',
           targetId: id,
@@ -1108,6 +1236,26 @@ export class VehiclesService {
         });
         // Gửi lại duyệt: nếu xe từng công khai thì listing về ẩn cho tới khi duyệt lại (ADR 0008).
         await this.listings.syncFromVehicle(id, tx);
+        if (this.supportStore.current()) {
+          /*
+           * Phiên hỗ trợ GỬI duyệt thay chủ xe (ADR 0050 §13). Dòng này là hành động "gửi" của nhân
+           * sự nền tảng; lượt DUYỆT là một hành động khác, của người khác, ở màn duyệt của nền tảng
+           * — phiên không có quyền duyệt nào.
+           */
+          await this.audit.record(
+            {
+              tenantId,
+              actorUserId: userId,
+              actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+              action: 'vehicle.support.submit_review',
+              targetType: 'vehicle',
+              targetId: id,
+              before: { publicStatus: status },
+              after: { publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW },
+            },
+            tx,
+          );
+        }
       });
     } catch (error) {
       /*
@@ -1122,6 +1270,55 @@ export class VehiclesService {
     }
 
     return this.getOne(tenantId, id);
+  }
+
+  /**
+   * Đồng bộ lại snapshot công khai của một xe — sửa chữa của nền tảng (ADR 0050 §13).
+   *
+   * Chỉ có trong phiên hỗ trợ: đây không phải một thao tác của gian hàng. Dữ liệu NGUỒN (xe, chi
+   * nhánh, gói) là sự thật; lượt này chỉ gọi lại đúng writer duy nhất của `public_listings`
+   * (`ListingsService.syncFromVehicle`, ADR 0008) rồi ghi lại before/after. Idempotent: gọi lần
+   * hai trên dữ liệu đã đúng thì `changed = false` và không có gì khác đi.
+   */
+  async repairListing(
+    tenantId: string,
+    id: string,
+    userId: string,
+  ): Promise<ListingRepairResultDto> {
+    if (!this.supportStore.current()) {
+      throw new ForbiddenException({
+        code: API_ERROR_CODE.SUPPORT_ACTION_NOT_ALLOWED,
+        message: 'Đồng bộ lại listing là thao tác sửa chữa của nền tảng, chỉ có trong phiên hỗ trợ',
+      });
+    }
+    return this.prisma.$transaction(async (tx) => {
+      await lockVehicleRow(tx, id);
+      const vehicle = await tx.vehicle.findFirst({
+        where: { id, tenantId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!vehicle) throw notFound();
+
+      const before = await listingSnapshot(tx, id);
+      await this.listings.syncFromVehicle(id, tx);
+      const after = await listingSnapshot(tx, id);
+      const changed = JSON.stringify(before) !== JSON.stringify(after);
+
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: AUDIT_ACTOR_SCOPE.PLATFORM,
+          action: 'listing.support.repair',
+          targetType: 'vehicle',
+          targetId: id,
+          before: { listing: before },
+          after: { listing: after, changed },
+        },
+        tx,
+      );
+      return { changed, listed: after !== null, status: after?.status ?? null };
+    });
   }
 
   /**
@@ -1233,7 +1430,7 @@ export class VehiclesService {
         {
           tenantId,
           actorUserId: userId,
-          actorScope: 'tenant',
+          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
           action: 'vehicle.marketplace_visibility.update',
           targetType: APPROVAL_TARGET_TYPE.VEHICLE,
           targetId: id,
@@ -1399,7 +1596,7 @@ export class VehiclesService {
       {
         tenantId: args.tenantId,
         actorUserId: args.actorUserId,
-        actorScope: 'tenant',
+        actorScope: AUDIT_ACTOR_SCOPE.TENANT,
         action: 'vehicle.submit_public',
         targetType: APPROVAL_TARGET_TYPE.VEHICLE,
         targetId: args.vehicleId,
@@ -1486,7 +1683,7 @@ export class VehiclesService {
       {
         tenantId: args.tenantId,
         actorUserId: args.userId,
-        actorScope: 'tenant',
+        actorScope: AUDIT_ACTOR_SCOPE.TENANT,
         action: 'vehicle.cancel_public_review',
         targetType: APPROVAL_TARGET_TYPE.VEHICLE,
         targetId: args.vehicleId,
@@ -2043,4 +2240,45 @@ function notFound(): NotFoundException {
     code: API_ERROR_CODE.NOT_FOUND,
     message: 'Không tìm thấy xe',
   });
+}
+
+/**
+ * Phần snapshot công khai mà khách nhìn thấy — before/after của lượt sửa listing. Không có
+ * `updatedAt`: một lượt đồng bộ không đổi gì vẫn chạm cột đó, và "changed" phải nói về NỘI DUNG.
+ */
+async function listingSnapshot(
+  tx: Prisma.TransactionClient,
+  vehicleId: string,
+): Promise<{ status: string; [key: string]: unknown } | null> {
+  const row = await tx.publicListing.findUnique({
+    where: { vehicleId },
+    select: {
+      status: true,
+      title: true,
+      shopSlug: true,
+      vehicleType: true,
+      serviceTypes: true,
+      branchId: true,
+      provinceCode: true,
+      mainImageUrl: true,
+      weekdayPrice: true,
+      weekendPrice: true,
+      hourlyPrice: true,
+      monthlyPrice: true,
+      withDriverDailyPrice: true,
+      deliveryEnabled: true,
+      noCollateral: true,
+      billingMode: true,
+      serviceFeePercent: true,
+      discountPercent: true,
+      features: true,
+    },
+  });
+  if (!row) return null;
+  return Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [
+      key,
+      value !== null && typeof value === 'object' && !Array.isArray(value) ? String(value) : value,
+    ]),
+  ) as { status: string; [key: string]: unknown };
 }

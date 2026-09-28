@@ -111,6 +111,9 @@ async function renderScreen(
   permissions: Permission[],
   data: MyShop = shop(),
   tenantStatus: TenantStatus = data.status as TenantStatus,
+  variant: 'settings' | 'profileForm' = 'settings',
+  /** `GET /tenants/current/shop` hỏng — dựng trạng thái lỗi tải. */
+  loadFails = false,
 ) {
   jest.spyOn(authApi, 'fetchCurrentUser').mockResolvedValue(
     currentUser(permissions, {
@@ -137,9 +140,10 @@ async function renderScreen(
     .mockResolvedValue([
       { code: '48', name: 'Đà Nẵng', administrativeType: 'municipality', slug: 'da-nang' },
     ]);
-  const shopSpy = jest.spyOn(tenantsApi, 'myShop').mockResolvedValue(data);
+  const shopSpy = jest.spyOn(tenantsApi, 'myShop');
+  if (loadFails) shopSpy.mockRejectedValue(new Error('network down'));
+  else shopSpy.mockResolvedValue(data);
   const updateSpy = jest.spyOn(tenantsApi, 'updateProfile').mockResolvedValue(data);
-  const submitSpy = jest.spyOn(tenantsApi, 'submitReview').mockResolvedValue(data);
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -148,13 +152,21 @@ async function renderScreen(
     withIntl(
       <ReduxProvider store={store}>
         <QueryClientProvider client={queryClient}>
-          <ShopProfileScreen />
+          <ShopProfileScreen variant={variant} />
         </QueryClientProvider>
       </ReduxProvider>,
     ),
   );
-  return { ...view, shopSpy, updateSpy, submitSpy };
+  return { ...view, shopSpy, updateSpy };
 }
+
+/** Hồ sơ ĐỦ HẾT — bốn mục bắt buộc (tên chủ + SĐT đọc từ tài khoản) và bốn mục nên có. */
+const COMPLETE_PROFILE = {
+  bio: 'Xe đời mới, giao tận nơi',
+  address: '12 Bạch Đằng, Hải Châu, Đà Nẵng',
+  logoUrl: 'https://cdn.example/logo.png',
+  coverUrl: 'https://cdn.example/cover.png',
+} as const;
 
 beforeEach(() => jest.restoreAllMocks());
 
@@ -171,32 +183,15 @@ describe('ShopProfileScreen — quyền', () => {
 
     expect(await view.findByText('Bạn chỉ có quyền xem hồ sơ gian hàng.')).toBeTruthy();
     expect(view.queryByText('Lưu thông tin')).toBeNull();
-  });
-
-  it('thiếu `tenant.submit_review`: đọc được dải xác minh nhưng KHÔNG có nút gửi lại', async () => {
-    const view = await renderScreen(
-      [PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE],
-      shop({ ...ACTIVE, verification: SHOP_VERIFICATION.NEEDS_REVISION }),
-      TENANT_STATUS.ACTIVE,
-    );
-
-    expect(await view.findByText('Nền tảng yêu cầu bổ sung hồ sơ')).toBeTruthy();
-    expect(view.queryByText('Gửi lại xác minh')).toBeNull();
+    // Bảng "còn thiếu gì" không có nghĩa với người chỉ xem — đúng như web (`!readOnly`).
+    expect(view.queryByText('Hoàn thiện hồ sơ')).toBeNull();
   });
 });
 
-describe('ShopProfileScreen — trục TRẠNG THÁI gian hàng (tenants.status)', () => {
-  const all: Permission[] = [
-    PERMISSION.TENANT_VIEW,
-    PERMISSION.TENANT_UPDATE,
-    PERMISSION.TENANT_SUBMIT_REVIEW,
-  ];
+describe('ShopProfileScreen — dải trạng thái chỉ nói về trạng thái VẬN HÀNH', () => {
+  const all: Permission[] = [PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE];
 
-  /*
-   * Từ ADR 0036 trục này chỉ còn trả lời "gian hàng còn được hoạt động không?". Khi nó KHÔNG bình
-   * thường, dải nói về nó và không mời gửi xác minh — tin xe đang biến khỏi chợ quan trọng hơn.
-   */
-  it('suspended: nói rõ đang bị khoá, KHÔNG mời gửi xác minh', async () => {
+  it('suspended: dải cảnh báo vẫn hiện — xe đang rời chợ ngay lúc này', async () => {
     const view = await renderScreen(
       all,
       shop({ status: TENANT_STATUS.SUSPENDED }),
@@ -204,8 +199,6 @@ describe('ShopProfileScreen — trục TRẠNG THÁI gian hàng (tenants.status)
     );
 
     expect(await view.findByText('Gian hàng đang bị khoá')).toBeTruthy();
-    expect(view.queryByText('Hồ sơ đang chờ nền tảng xác minh')).toBeNull();
-    expect(view.queryByText('Gửi lại xác minh')).toBeNull();
   });
 
   it('expired: hết hạn GÓI vẫn xem được hồ sơ của chính mình (ADR 0027 điều 3)', async () => {
@@ -220,62 +213,34 @@ describe('ShopProfileScreen — trục TRẠNG THÁI gian hàng (tenants.status)
   });
 });
 
-describe('ShopProfileScreen — trục XÁC MINH (ADR 0036)', () => {
+/*
+ * 24/09/2026 — web gỡ HẲN luồng xin xác minh gian hàng (`/manage/shop` lẫn
+ * `/account/registration`): nền tảng tạm ngừng xác minh, màn duyệt của nền tảng chỉ nhận phiếu
+ * XE, nên một phiếu gửi đi không có ai ở đầu kia. Backend gỡ luôn cái khoá "đang chờ" ở
+ * `TenantsService.updateProfile`. App theo đúng như vậy.
+ */
+describe('ShopProfileScreen — không còn luồng xin xác minh gian hàng', () => {
   const all: Permission[] = [
     PERMISSION.TENANT_VIEW,
     PERMISSION.TENANT_UPDATE,
     PERMISSION.TENANT_SUBMIT_REVIEW,
   ];
 
-  /**
-   * CHƯA XÁC MINH = KHÔNG CÓ TIN GÌ, KHÔNG CÓ VIỆC GÌ (ADR 0040).
-   *
-   * Tới 16/09/2026 trạng thái này mang một dải kèm nút "Gửi xác minh", và câu chữ hứa rằng xác
-   * minh là điều kiện để MUA GÓI. ADR 0040 gỡ cổng đó — nút không còn đổi lấy được gì cho người
-   * bấm, trong khi nó vẫn KHOÁ hồ sơ khỏi việc sửa suốt thời gian chờ. Nên dải im lặng hẳn.
-   *
-   * Checklist thì VẪN còn: hồ sơ vẫn gửi xác minh được (`SHOP_VERIFICATION_SUBMITTABLE` không
-   * đổi), và nó là bảng kiểm kê cho cả cổng gửi duyệt xe.
-   */
-  it('chưa xác minh: KHÔNG dựng dải nào, nhưng checklist vẫn còn', async () => {
-    const view = await renderScreen(all, shop(ACTIVE), TENANT_STATUS.ACTIVE);
-
-    expect(await view.findByText('Hoàn thiện hồ sơ')).toBeTruthy();
-    expect(view.queryByText('Gian hàng chưa được xác minh')).toBeNull();
-    expect(view.queryByText('Hồ sơ đang chờ nền tảng xác minh')).toBeNull();
-    expect(view.queryByText('Gửi xác minh')).toBeNull();
-    expect(view.queryByText('Gửi lại xác minh')).toBeNull();
-  });
-
-  it('đang chờ xác minh: KHOÁ form vì backend từ chối ghi, KHÔNG phải vì thiếu quyền', async () => {
-    const view = await renderScreen(
-      all,
-      shop({ ...ACTIVE, verification: SHOP_VERIFICATION.PENDING }),
-      TENANT_STATUS.ACTIVE,
-    );
-
-    expect(await view.findByText('Hồ sơ đang chờ duyệt nên tạm khoá chỉnh sửa.')).toBeTruthy();
-    // Câu của "thiếu quyền" phải KHÁC hẳn — hai tình huống, hai lối ra.
-    expect(view.queryByText('Bạn chỉ có quyền xem hồ sơ gian hàng.')).toBeNull();
-    expect(view.queryByText('Gửi lại xác minh')).toBeNull();
-    expect(view.queryByText('Hoàn thiện hồ sơ')).toBeNull();
-    /*
-     * Dải nói VÌ SAO đang khoá — xe không bị ảnh hưởng. Đây là khác biệt so với nhánh trạng thái
-     * vận hành: ở đó tin là "gian hàng không chạy", ở đây là "hồ sơ đang trong hàng đợi".
-     */
-    expect(view.getByText('Hồ sơ đang chờ nền tảng xác minh')).toBeTruthy();
-  });
-
-  it('bị trả về: hiện NGUYÊN VĂN lý do của đội duyệt + nút gửi lại', async () => {
+  it.each([
+    SHOP_VERIFICATION.UNVERIFIED,
+    SHOP_VERIFICATION.PENDING,
+    SHOP_VERIFICATION.NEEDS_REVISION,
+    SHOP_VERIFICATION.REJECTED,
+    SHOP_VERIFICATION.VERIFIED,
+  ])('trạng thái %s: KHÔNG có nút gửi xác minh, KHÔNG có dải về xác minh', async (verification) => {
     const view = await renderScreen(
       all,
       shop({
         ...ACTIVE,
-        verification: SHOP_VERIFICATION.NEEDS_REVISION,
-        onboardingState: 'commission',
+        verification,
         latestApproval: {
           status: 'needs_revision',
-          reason: 'Thiếu ảnh giấy phép kinh doanh',
+          reason: 'Ảnh giấy phép kinh doanh bị mờ',
           submittedAt: '2026-09-01T02:00:00.000Z',
           reviewedAt: '2026-09-02T02:00:00.000Z',
         },
@@ -283,88 +248,106 @@ describe('ShopProfileScreen — trục XÁC MINH (ADR 0036)', () => {
       TENANT_STATUS.ACTIVE,
     );
 
-    expect(await view.findByText(/Thiếu ảnh giấy phép kinh doanh/)).toBeTruthy();
-    expect(view.getByText('Gửi lại xác minh')).toBeTruthy();
-  });
-
-  it('đã xác minh: không còn checklist, không còn nút gửi', async () => {
-    const view = await renderScreen(
-      all,
-      shop({ ...ACTIVE, verification: SHOP_VERIFICATION.VERIFIED }),
-      TENANT_STATUS.ACTIVE,
-    );
-
     expect(await view.findByLabelText('Tên hiển thị')).toBeTruthy();
-    /*
-     * Một dải xanh "mọi thứ đều ổn" chiếm trọn bề ngang chỉ dạy người dùng bỏ qua vùng ấy — và
-     * đúng lúc có tin xấu thì họ cũng không đọc nữa. Nhãn trạng thái cạnh tên gian hàng đã đủ.
-     */
-    expect(view.queryByText('Gian hàng đã được xác minh')).toBeNull();
-    expect(view.queryByText('Hoàn thiện hồ sơ')).toBeNull();
+    expect(view.queryByText('Gửi xác minh')).toBeNull();
     expect(view.queryByText('Gửi lại xác minh')).toBeNull();
-  });
-});
-
-describe('ShopProfileScreen — gửi xác minh', () => {
-  const all: Permission[] = [
-    PERMISSION.TENANT_VIEW,
-    PERMISSION.TENANT_UPDATE,
-    PERMISSION.TENANT_SUBMIT_REVIEW,
-  ];
-
-  /**
-   * Cổng CLIENT là schema của chính biểu mẫu, không phải `missingShopProfileRequirements`.
-   *
-   * Hai bộ khác nhau có chủ đích, và web gác đúng như vậy (`openSubmitConfirm = handleSubmit(...)`):
-   * họ tên + SĐT chủ đọc từ TÀI KHOẢN (16/09/2026), không còn là ô trong form này, nên màn không có
-   * cách nào bắt người dùng sửa chúng ở đây — cổng thật cho nhóm đó là backend
-   * (`PROFILE_INCOMPLETE`), và checklist ngay trên nút mới là chỗ nói ra chúng còn thiếu.
-   *
-   * Thứ màn này chặn được là ô của chính nó: thiếu tên hiển thị thì không mở hộp xác nhận, không
-   * gọi API, và toast đếm đúng số ô hỏng.
-   */
-  it('ô bắt buộc của form còn trống: chặn ngay, không mở hộp xác nhận và không gọi API', async () => {
-    const view = await renderScreen(
-      all,
-      shop({ ...ACTIVE, verification: SHOP_VERIFICATION.NEEDS_REVISION }, { displayName: '' }),
-      TENANT_STATUS.ACTIVE,
-    );
-
-    await fireEvent.press(await view.findByText('Gửi lại xác minh'));
-
-    await waitFor(() => expect(view.submitSpy).not.toHaveBeenCalled());
-    expect(view.queryByText('Gửi hồ sơ cho nền tảng duyệt?')).toBeNull();
+    expect(view.queryByText('Hồ sơ đang chờ nền tảng xác minh')).toBeNull();
+    expect(view.queryByText('Nền tảng yêu cầu bổ sung hồ sơ')).toBeNull();
+    expect(view.queryByText(/Ảnh giấy phép kinh doanh bị mờ/)).toBeNull();
   });
 
-  it('hồ sơ đủ: xác nhận rồi mới gửi', async () => {
+  it('còn phiếu xác minh chờ (dữ liệu cũ): VẪN sửa và lưu được, không có câu "tạm khoá"', async () => {
     const view = await renderScreen(
       all,
-      shop({ ...ACTIVE, verification: SHOP_VERIFICATION.NEEDS_REVISION }),
-      TENANT_STATUS.ACTIVE,
-    );
-
-    await fireEvent.press(await view.findByText('Gửi lại xác minh'));
-    expect(await view.findByText('Gửi hồ sơ cho nền tảng duyệt?')).toBeTruthy();
-    expect(view.submitSpy).not.toHaveBeenCalled();
-
-    await fireEvent.press(view.getByText('Gửi duyệt'));
-    await waitFor(() => expect(view.submitSpy).toHaveBeenCalled());
-  });
-
-  it('còn thay đổi chưa lưu: LƯU trước rồi mới gửi (backend snapshot từ DB)', async () => {
-    const view = await renderScreen(
-      all,
-      shop({ ...ACTIVE, verification: SHOP_VERIFICATION.NEEDS_REVISION }),
+      shop({ ...ACTIVE, verification: SHOP_VERIFICATION.PENDING }),
       TENANT_STATUS.ACTIVE,
     );
 
     await fireEvent.changeText(await view.findByLabelText('Tên hiển thị'), 'Bình Minh Xe');
-    await fireEvent.press(view.getByText('Gửi lại xác minh'));
-    await fireEvent.press(await view.findByText('Gửi duyệt'));
+    expect(view.queryByText('Hồ sơ đang chờ duyệt nên tạm khoá chỉnh sửa.')).toBeNull();
 
-    await waitFor(() => expect(view.updateSpy).toHaveBeenCalled());
+    await fireEvent.press(view.getByText('Lưu thông tin'));
+    await waitFor(() => expect(view.updateSpy).toHaveBeenCalledTimes(1));
     expect(view.updateSpy.mock.calls[0]?.[0]).toMatchObject({ displayName: 'Bình Minh Xe' });
-    await waitFor(() => expect(view.submitSpy).toHaveBeenCalled());
+  });
+
+  it('đang hoạt động: KHÔNG dựng dải nào — nhãn cạnh tên gian hàng đã nói điều đó', async () => {
+    const view = await renderScreen(all, shop(ACTIVE), TENANT_STATUS.ACTIVE);
+
+    expect(await view.findByLabelText('Tên hiển thị')).toBeTruthy();
+    expect(view.queryByText('Gian hàng đang bị khoá')).toBeNull();
+    expect(view.queryByText('Gói dịch vụ đã hết hạn')).toBeNull();
+  });
+});
+
+describe('ShopProfileScreen — checklist "Hoàn thiện hồ sơ"', () => {
+  const all: Permission[] = [PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE];
+
+  it('còn thiếu: hiện bảng, chữ KHÔNG nhắc tới "gửi duyệt"', async () => {
+    const view = await renderScreen(all, shop(ACTIVE, { displayName: '' }), TENANT_STATUS.ACTIVE);
+
+    expect(await view.findByText('Hoàn thiện hồ sơ')).toBeTruthy();
+    expect(view.getByText('Thông tin bắt buộc')).toBeTruthy();
+    expect(view.queryByText('Bắt buộc để gửi duyệt')).toBeNull();
+    expect(view.queryByText(/gửi duyệt/i)).toBeNull();
+  });
+
+  it('đủ mục bắt buộc nhưng còn mục nên có: báo đã đủ, vẫn liệt kê phần nên có', async () => {
+    // Tenant của `renderScreen` là tuyến GÓI ⇒ logo là mục bắt buộc (ADR 0040 điều 7).
+    const view = await renderScreen(
+      all,
+      shop(ACTIVE, { logoUrl: 'https://cdn.example/logo.png' }),
+      TENANT_STATUS.ACTIVE,
+    );
+
+    expect(await view.findByText('Đã đủ thông tin bắt buộc')).toBeTruthy();
+    expect(view.queryByText('Đã đủ điều kiện gửi duyệt')).toBeNull();
+  });
+
+  it('hồ sơ đã ĐỦ HẾT: không dựng thẻ 100% thường trực', async () => {
+    const view = await renderScreen(all, shop(ACTIVE, COMPLETE_PROFILE), TENANT_STATUS.ACTIVE);
+
+    expect(await view.findByLabelText('Tên hiển thị')).toBeTruthy();
+    expect(view.queryByText('Hoàn thiện hồ sơ')).toBeNull();
+  });
+
+  it('đang gõ làm hồ sơ thiếu đi: bảng hiện lại ngay (đọc bản ĐANG NHẬP)', async () => {
+    const view = await renderScreen(all, shop(ACTIVE, COMPLETE_PROFILE), TENANT_STATUS.ACTIVE);
+
+    await fireEvent.changeText(await view.findByLabelText('Tên hiển thị'), '');
+    expect(await view.findByText('Hoàn thiện hồ sơ')).toBeTruthy();
+  });
+});
+
+/*
+ * Hai khu, hai câu — đúng như web: `/manage/shop` nói về gian hàng, còn "Hồ sơ chủ xe" ở khu tài
+ * khoản (`OwnerRegistrationView`) nói `Account.registration.loadError`.
+ */
+describe('ShopProfileScreen — lỗi tải theo khu đang đứng', () => {
+  it('trang Cửa hàng: câu về GIAN HÀNG', async () => {
+    const view = await renderScreen(
+      [PERMISSION.TENANT_VIEW],
+      shop(ACTIVE),
+      TENANT_STATUS.ACTIVE,
+      'settings',
+      true,
+    );
+
+    expect(await view.findByText('Không tải được hồ sơ gian hàng')).toBeTruthy();
+    expect(view.queryByText('Không tải được hồ sơ chủ xe')).toBeNull();
+  });
+
+  it('"Hồ sơ chủ xe": câu về HỒ SƠ CHỦ XE', async () => {
+    const view = await renderScreen(
+      [PERMISSION.TENANT_VIEW],
+      shop(ACTIVE),
+      TENANT_STATUS.ACTIVE,
+      'profileForm',
+      true,
+    );
+
+    expect(await view.findByText('Không tải được hồ sơ chủ xe')).toBeTruthy();
+    expect(view.queryByText('Không tải được hồ sơ gian hàng')).toBeNull();
   });
 });
 

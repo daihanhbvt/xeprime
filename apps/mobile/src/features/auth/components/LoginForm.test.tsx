@@ -122,7 +122,7 @@ describe('LoginForm', () => {
     expect(view.queryByText(/Request to/)).toBeNull();
   });
 
-  it('hiện NGUYÊN VĂN câu của backend khi sai mật khẩu — giống getErrorMessage của web', async () => {
+  it('sai mật khẩu: hiện câu theo MÃ lỗi — giống useErrorMessage của web (AuthPanel)', async () => {
     jest.spyOn(authApi, 'loginWithPassword').mockRejectedValue(
       new ApiClientError({
         code: API_ERROR_CODE.INVALID_CREDENTIALS,
@@ -139,6 +139,9 @@ describe('LoginForm', () => {
     await fireEvent.changeText(view.getByPlaceholderText('Nhập mật khẩu'), 'saibet123');
     await fireEvent.press(view.getByRole('button', { name: 'Đăng nhập' }));
 
-    expect(await view.findByText('Sai thông tin đăng nhập')).toBeTruthy();
+    // Câu hiện ra đi theo MÃ lỗi (`Errors.code.*`), không theo `message` tiếng Việt của backend —
+    // đúng `useErrorMessage` bên web (ADR 0012).
+    expect(await view.findByText('Email/số điện thoại hoặc mật khẩu không đúng.')).toBeTruthy();
+    expect(view.queryByText('Sai thông tin đăng nhập')).toBeNull();
   });
 });

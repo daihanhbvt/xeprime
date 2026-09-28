@@ -30,6 +30,7 @@ import { usePatchVehicleServiceSetting, useVehicleServiceSettings } from '../../
 import type { VehicleServiceSetting } from '../../types';
 import { useManagedVehicle } from '../VehicleManageContext';
 import { SectionCard } from '../SectionCard';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import styles from './AutoAcceptSection.module.css';
 
 const HOUR = 60;
@@ -133,6 +134,13 @@ function AutoAcceptForm({
   const withDriver = serviceType === SERVICE_TYPE.WITH_DRIVER;
   const capability = setting.withDriverAutoAccept;
   const capabilityBlocked = withDriver && capability ? !capability.available : false;
+  /*
+   * Phiên hỗ trợ (ADR 0050 §13): công tắc tự nhận chuyến tự tạo cam kết với khách thay chủ xe —
+   * phiên chỉ thấy trạng thái. Điều kiện vận hành (thời lượng tối thiểu, tuyến) vẫn sửa được.
+   */
+  const autoAcceptLocked = useSupportHides(SUPPORT_HIDDEN_AREA.AUTO_ACCEPT);
+  // Tự lái chỉ có đúng công tắc đó — khoá nó thì form không còn gì để lưu.
+  const nothingEditable = !canEdit || (autoAcceptLocked && !withDriver);
 
   const values = useMemo<FormValues>(
     () => ({
@@ -237,7 +245,9 @@ function AutoAcceptForm({
                 </span>
               </Popover>
             }
-            disabled={!canEdit || (capabilityBlocked && !setting.autoAcceptEnabled)}
+            disabled={
+              !canEdit || autoAcceptLocked || (capabilityBlocked && !setting.autoAcceptEnabled)
+            }
           />
         </SectionCard>
 
@@ -267,12 +277,14 @@ function AutoAcceptForm({
           </SectionCard>
         ) : null}
 
-        <StickyFormActions
-          submitLabel={tActions('saveChanges')}
-          onCancel={formState.isDirty ? () => reset(values) : undefined}
-          submitting={patch.isPending}
-          disabled={!canEdit || !formState.isDirty}
-        />
+        {nothingEditable && autoAcceptLocked ? null : (
+          <StickyFormActions
+            submitLabel={tActions('saveChanges')}
+            onCancel={formState.isDirty ? () => reset(values) : undefined}
+            submitting={patch.isPending}
+            disabled={!canEdit || !formState.isDirty}
+          />
+        )}
       </form>
     </Form>
   );

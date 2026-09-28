@@ -17,7 +17,7 @@ import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { SUPPORT_DEFAULT_LIMIT } from '../api';
-import { useSupportCases } from '../hooks/use-support-cases';
+import { useCanWriteSupportCase, useSupportCases } from '../hooks/use-support-cases';
 import { SUPPORT_SURFACE, type SupportCase, type SupportCaseFilters, type SupportSurface } from '../types';
 import { OpenCaseModal } from './OpenCaseModal';
 import { SupportCaseDetailPanel } from './SupportCaseDetailPanel';
@@ -47,7 +47,8 @@ export function SupportCasesView({ surface }: { surface: SupportSurface }) {
 
   // Nền tảng KHÔNG mở case thay người khác: một case phải có người mở thật, và tự mở hộ là cách
   // nhanh nhất để một khiếu nại mất chủ.
-  const canOpen = surface !== SUPPORT_SURFACE.PLATFORM;
+  const canWrite = useCanWriteSupportCase(surface);
+  const canOpen = surface !== SUPPORT_SURFACE.PLATFORM && canWrite;
 
   function patch(next: Partial<SupportCaseFilters>) {
     setFilters((prev) => ({ ...prev, ...next, ...('page' in next ? {} : { page: 1 }) }));

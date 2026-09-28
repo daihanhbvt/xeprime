@@ -1,11 +1,12 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
+import { PERMISSION, SUPPORT_CAPABILITY } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
   TenantScoped,
+  SupportAction,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { BillingService } from './billing.service';
@@ -34,6 +35,7 @@ export class SubscriptionController {
 
   @Get()
   @RequirePermissions(PERMISSION.SUBSCRIPTION_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.SUBSCRIPTION_STATUS_VIEW)
   @ApiOperation({ summary: 'Gói hiện hành + mức dùng chỗ theo loại xe + lượt miễn phí (ADR 0026)' })
   @ApiOkResponse({ type: MySubscriptionDto })
   mySubscription(@CurrentTenant() tenant: TenantContext): Promise<MySubscriptionDto> {
@@ -60,6 +62,7 @@ export class SubscriptionController {
 
   @Get('invoices')
   @RequirePermissions(PERMISSION.SUBSCRIPTION_VIEW)
+  @SupportAction(SUPPORT_CAPABILITY.SUBSCRIPTION_STATUS_VIEW)
   @ApiOperation({ summary: 'Lịch sử hoá đơn gói (mới nhất trước)' })
   @ApiOkResponse({ type: SubscriptionInvoicePageDto })
   invoices(
