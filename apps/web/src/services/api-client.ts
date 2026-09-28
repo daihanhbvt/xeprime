@@ -7,6 +7,7 @@ import {
 import { SUPPORT_CONTEXT_HEADER } from '@xeprime/types';
 import { tenantSupportContextIdFromPath } from '@/constants/routes';
 import { activeSupportContextId } from './active-support-context';
+import { recoverSupportReason } from './support-reason';
 
 /**
  * Lối vào API của WEB — lớp vỏ mỏng quanh `@xeprime/api-client`.
@@ -47,8 +48,7 @@ export function supportAwareWebTransport(
     credentials: async () => {
       const auth = await base.credentials();
       const path = pathname();
-      const contextId =
-        registered() ?? (path ? tenantSupportContextIdFromPath(path) : null);
+      const contextId = registered() ?? (path ? tenantSupportContextIdFromPath(path) : null);
       if (!contextId) return auth;
       return { ...auth, headers: { ...auth.headers, [SUPPORT_CONTEXT_HEADER]: contextId } };
     },
@@ -65,6 +65,8 @@ export function supportAwareWebTransport(
 configureApiClient({
   baseUrl: process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API_URL,
   transport: supportAwareWebTransport(),
+  // Phiên hỗ trợ: thao tác cần LÝ DO RIÊNG (428) → hỏi rồi gửi lại một lần (ADR 0050 §13).
+  recover: recoverSupportReason,
 });
 
 export {

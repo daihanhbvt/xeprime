@@ -155,3 +155,71 @@ describe('onUnauthorized — gửi lại đúng một lần', () => {
     expect(seq.count()).toBe(1);
   });
 });
+
+/**
+ * `recover` — app bổ sung điều kiện server đòi (vd. lý do riêng của phiên hỗ trợ, 428) rồi gửi lại
+ * ĐÚNG MỘT LẦN kèm header mới. Package không biết mã nào đáng khôi phục — app quyết.
+ */
+describe('recover — bổ sung header rồi gửi lại đúng một lần', () => {
+  const REASON_REQUIRED = {
+    status: 428,
+    body: { error: { code: 'SUPPORT_REASON_REQUIRED', message: 'x', details: { capabilities: ['c'] } } },
+  };
+
+  it('trả header ⇒ gửi lại kèm header đó và thành công', async () => {
+    const seen: Array<string | undefined> = [];
+    let call = 0;
+    const capture: FetchLike = (_url, init) => {
+      call += 1;
+      seen.push(init?.headers?.['x-support-reason']);
+      const next = call === 1 ? REASON_REQUIRED : { status: 200, body: { data: { ok: true } } };
+      return Promise.resolve({
+        ok: next.status < 300,
+        status: next.status,
+        text: () => Promise.resolve(JSON.stringify(next.body)),
+      });
+    };
+    const recover = vi.fn().mockResolvedValue({ 'x-support-reason': 'ly%20do' });
+
+    const result = await createApiClient({
+      baseUrl: BASE_URL,
+      transport: anonymousAuthTransport(),
+      fetch: capture,
+      recover,
+    }).post('/vehicles', {});
+
+    expect(result).toEqual({ ok: true });
+    expect(seen).toEqual([undefined, 'ly%20do']);
+    expect(recover).toHaveBeenCalledTimes(1);
+    expect(recover.mock.calls[0]![0]).toMatchObject({ code: 'SUPPORT_REASON_REQUIRED', status: 428 });
+    expect(recover.mock.calls[0]![1]).toMatchObject({ path: expect.any(String) as unknown });
+  });
+
+  it('trả null (người dùng huỷ) ⇒ lỗi gốc đi tiếp, không gửi lại', async () => {
+    const seq = sequence(REASON_REQUIRED);
+    await expect(
+      createApiClient({
+        baseUrl: BASE_URL,
+        transport: anonymousAuthTransport(),
+        fetch: seq.fetch,
+        recover: () => null,
+      }).post('/vehicles', {}),
+    ).rejects.toMatchObject({ status: 428 });
+    expect(seq.count()).toBe(1);
+  });
+
+  it('lần gửi lại vẫn lỗi ⇒ dừng, không gọi lại hook', async () => {
+    const seq = sequence(REASON_REQUIRED);
+    const recover = vi.fn().mockResolvedValue({ 'x-support-reason': 'a' });
+    await expect(
+      createApiClient({
+        baseUrl: BASE_URL,
+        transport: anonymousAuthTransport(),
+        fetch: seq.fetch,
+        recover,
+      }).post('/vehicles', {}),
+    ).rejects.toMatchObject({ status: 428 });
+    expect(seq.count()).toBe(2);
+    expect(recover).toHaveBeenCalledTimes(1);
+  });
+});

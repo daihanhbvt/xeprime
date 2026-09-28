@@ -47,7 +47,9 @@ describe('supportAwareWebTransport', () => {
   });
 
   it('giữ nguyên cookie phiên của web (ADR 0002)', async () => {
-    const auth = await supportAwareWebTransport(() => adminTenantSupportPath.root(ID)).credentials();
+    const auth = await supportAwareWebTransport(() =>
+      adminTenantSupportPath.root(ID),
+    ).credentials();
     expect(auth.credentials).toBe('include');
   });
 

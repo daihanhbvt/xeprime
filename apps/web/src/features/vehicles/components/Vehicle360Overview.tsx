@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import {
   Alert,
+  App,
   Badge,
   Button,
   Card,
@@ -25,6 +26,7 @@ import { useTranslations } from 'next-intl';
 import {
   BOOKING_STATUS,
   PERMISSION,
+  SUPPORT_CAPABILITY,
   VEHICLE_SERVICE_SETTING_SERVICES,
   VEHICLE_ALERT_KIND,
   VEHICLE_OPERATION_STATUS_META,
@@ -72,7 +74,9 @@ import {
 } from './VehiclePublicationTaskItem';
 import { VehiclePublicReviewPanel } from './VehiclePublicReviewPanel';
 import styles from './Vehicle360Overview.module.css';
-import { useAvailableHref } from '@/features/tenant-support/support-session';
+import { useAvailableHref, useSupportSession } from '@/features/tenant-support/support-session';
+import { useErrorMessage } from '@/i18n/use-error-message';
+import { useRepairVehicleListing } from '../hooks/use-vehicle-mutations';
 import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
 
 /**
@@ -270,7 +274,19 @@ function ProfileHeader({
     status === VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW;
   const banner = needsBanner ? statusCopy(status, vehicle.latestPublicReview?.reason) : null;
 
-  const menuItems = canDelete ? [{ key: 'delete', danger: true, label: t('delete') }] : [];
+  /*
+   * Phiên hỗ trợ gian hàng (ADR 0050 §13): "Đồng bộ lại hiển thị công khai" là thao tác SỬA CHỮA của
+   * nền tảng khi snapshot ngoài chợ kẹt — không phải việc của chủ xe, nên chỉ có trong phiên.
+   */
+  const support = useSupportSession();
+  const canRepairListing = support?.can(SUPPORT_CAPABILITY.LISTING_REPAIR) ?? false;
+  const repairListing = useRepairVehicleListing(vehicle.id);
+  const { message } = App.useApp();
+  const errorMessage = useErrorMessage();
+  const menuItems = [
+    ...(canRepairListing ? [{ key: 'repair-listing', label: t('repairListing.action') }] : []),
+    ...(canDelete ? [{ key: 'delete', danger: true, label: t('delete') }] : []),
+  ];
 
   return (
     <section className={styles.profile} aria-label={t('profileLabel')}>
@@ -389,6 +405,15 @@ function ProfileHeader({
                     items: menuItems,
                     onClick: ({ key }) => {
                       if (key === 'delete') setConfirmingDelete(true);
+                      if (key === 'repair-listing') {
+                        repairListing.mutate(undefined, {
+                          onSuccess: (result) =>
+                            message.success(
+                              result.changed ? t('repairListing.fixed') : t('repairListing.unchanged'),
+                            ),
+                          onError: (err) => message.error(errorMessage(err)),
+                        });
+                      }
                     },
                   }}
                   trigger={['click']}
@@ -396,7 +421,7 @@ function ProfileHeader({
                   <Button
                     icon={decorativeIcon(<MoreOutlined />)}
                     aria-label={t('moreActions', { name: vehicle.name })}
-                    loading={deletePending}
+                    loading={deletePending || repairListing.isPending}
                   />
                 </Dropdown>
               </Popconfirm>

@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
+  AUDIT_ACTOR_SCOPE,
   API_ERROR_CODE,
   BOOKING_STATUS_OCCUPYING,
   BRANCH_STATUS,
@@ -17,6 +18,8 @@ import { BillingService } from '../billing/billing.service';
 import { AddressService, type ResolvedAddress } from '../locations/address.service';
 import { ListingsService } from '../public-listings/listings.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { currentSupportScope } from '../../common/support/support-request.store';
+import { assertNoOpenTrips } from '../../common/support/support-open-trips';
 import {
   BranchDto,
   BranchListDto,
@@ -48,7 +51,7 @@ const BRANCH_SELECT = {
   ward: { select: { name: true, administrativeType: true } },
 } satisfies Prisma.TenantBranchSelect;
 
-type BranchRow = Prisma.TenantBranchGetPayload<{ select: typeof BRANCH_SELECT }>;
+export type BranchRow = Prisma.TenantBranchGetPayload<{ select: typeof BRANCH_SELECT }>;
 
 /**
  * Chi nhánh gian hàng — nơi xe thực sự nằm.
@@ -171,7 +174,7 @@ export class BranchesService {
         where: { tenantId, isDefault: true, deletedAt: null },
       });
 
-      return tx.tenantBranch.create({
+      const created = await tx.tenantBranch.create({
         data: {
           id: newId(),
           tenantId,
@@ -185,16 +188,26 @@ export class BranchesService {
         },
         select: BRANCH_SELECT,
       });
-    });
-
-    await this.audit.record({
-      tenantId,
-      actorUserId: userId,
-      actorScope: 'tenant',
-      action: 'branch.create',
-      targetType: 'tenant_branch',
-      targetId: branch.id,
-      after: { code: branch.code, name: branch.name, provinceCode: branch.provinceCode },
+      // Audit cùng transaction với lần ghi (ADR 0050 §13 — phiên hỗ trợ; đúng cho mọi người).
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+          action: 'branch.create',
+          targetType: 'tenant_branch',
+          targetId: created.id,
+          after: {
+            code: created.code,
+            name: created.name,
+            provinceCode: created.provinceCode,
+            wardCode: created.wardCode,
+            address: created.address,
+          },
+        },
+        tx,
+      );
+      return created;
     });
 
     return toDto(branch, 0);
@@ -203,6 +216,10 @@ export class BranchesService {
   /**
    * Sửa chi nhánh. Đổi tỉnh là thay đổi có HỆ QUẢ RA NGOÀI: mọi xe của chi nhánh đang hiển thị
    * ở tỉnh cũ trên marketplace phải chuyển sang tỉnh mới trong cùng transaction.
+   *
+   * Hai bước: `planUpdate` (tra địa chỉ — có gọi mạng, nên NGOÀI transaction) rồi `applyUpdate`
+   * trong transaction của người gọi. Tách ra để hồ sơ gian hàng dời chi nhánh mặc định và lưu mặt
+   * tiền trong MỘT transaction (`TenantsService.updateProfile`).
    */
   async update(
     tenantId: string,
@@ -210,6 +227,16 @@ export class BranchesService {
     userId: string,
     dto: UpdateBranchDto,
   ): Promise<BranchDto> {
+    const plan = await this.planUpdate(tenantId, id, dto);
+    const updated = await this.prisma.$transaction((tx) =>
+      this.applyUpdate(tx, tenantId, userId, plan),
+    );
+    const counts = await this.vehicleCounts(tenantId, [id]);
+    return toDto(updated, counts.get(id) ?? 0);
+  }
+
+  /** Bước 1 của `update`: đọc bản đang lưu + dựng lại địa chỉ (NGOÀI transaction). */
+  async planUpdate(tenantId: string, id: string, dto: UpdateBranchDto): Promise<BranchUpdatePlan> {
     const before = await this.findOwned(tenantId, id);
 
     /*
@@ -253,51 +280,69 @@ export class BranchesService {
       nextAddress && nextAddress.provinceCode !== before.provinceCode,
     );
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const row = await tx.tenantBranch.update({
-        where: { id },
-        data: {
-          ...(dto.name !== undefined ? { name: dto.name } : {}),
-          ...(nextAddress ? addressColumns(nextAddress) : {}),
-          ...(dto.phone !== undefined ? { phone: dto.phone } : {}),
+    return { id, dto, before, nextAddress, provinceChanged };
+  }
+
+  /** Bước 2 của `update`: ghi + đồng bộ listing/hồ sơ + audit, trong transaction của người gọi. */
+  async applyUpdate(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    userId: string,
+    plan: BranchUpdatePlan,
+  ): Promise<BranchRow> {
+    const { id, dto, before, nextAddress, provinceChanged } = plan;
+    /*
+     * Phiên hỗ trợ (ADR 0050 §13): đổi ĐỊA CHỈ một chi nhánh đang có chuyến mở là đổi nơi giao xe
+     * của khách đã hẹn — từ chối. Đổi tên/số điện thoại thì không chạm tới chuyến nào.
+     */
+    if (nextAddress && addressMoved(before, nextAddress) && currentSupportScope()) {
+      await assertNoOpenTrips(tx, { tenantId, branchId: id });
+    }
+    const row = await tx.tenantBranch.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name } : {}),
+        ...(nextAddress ? addressColumns(nextAddress) : {}),
+        ...(dto.phone !== undefined ? { phone: dto.phone } : {}),
+      },
+      select: BRANCH_SELECT,
+    });
+
+    if (provinceChanged) {
+      await this.listings.syncBranchLocation(id, tx);
+    }
+    // Chi nhánh MẶC ĐỊNH đổi địa chỉ (kể cả chỉ đổi xã) thì hồ sơ gian hàng phải theo — hai
+    // cột mirror ở `tenant_profiles` là thứ trang gian hàng công khai đang đọc.
+    if (nextAddress && row.isDefault) {
+      await this.syncProfileFromDefaultBranch(tx, tenantId);
+    }
+
+    await this.audit.record(
+      {
+        tenantId,
+        actorUserId: userId,
+        actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+        action: 'branch.update',
+        targetType: 'tenant_branch',
+        targetId: id,
+        before: {
+          name: before.name,
+          phone: before.phone,
+          provinceCode: before.provinceCode,
+          wardCode: before.wardCode,
+          address: before.address,
         },
-        select: BRANCH_SELECT,
-      });
-
-      if (provinceChanged) {
-        await this.listings.syncBranchLocation(id, tx);
-      }
-      // Chi nhánh MẶC ĐỊNH đổi địa chỉ (kể cả chỉ đổi xã) thì hồ sơ gian hàng phải theo — hai
-      // cột mirror ở `tenant_profiles` là thứ trang gian hàng công khai đang đọc.
-      if (nextAddress && row.isDefault) {
-        await this.syncProfileFromDefaultBranch(tx, tenantId);
-      }
-      return row;
-    });
-
-    await this.audit.record({
-      tenantId,
-      actorUserId: userId,
-      actorScope: 'tenant',
-      action: 'branch.update',
-      targetType: 'tenant_branch',
-      targetId: id,
-      before: {
-        name: before.name,
-        provinceCode: before.provinceCode,
-        wardCode: before.wardCode,
-        address: before.address,
+        after: {
+          name: row.name,
+          phone: row.phone,
+          provinceCode: row.provinceCode,
+          wardCode: row.wardCode,
+          address: row.address,
+        },
       },
-      after: {
-        name: updated.name,
-        provinceCode: updated.provinceCode,
-        wardCode: updated.wardCode,
-        address: updated.address,
-      },
-    });
-
-    const counts = await this.vehicleCounts(tenantId, [id]);
-    return toDto(updated, counts.get(id) ?? 0);
+      tx,
+    );
+    return row;
   }
 
   /** Đổi chi nhánh mặc định. Chi nhánh phải đang hoạt động và phải có tỉnh hợp lệ. */
@@ -337,7 +382,7 @@ export class BranchesService {
     await this.audit.record({
       tenantId,
       actorUserId: userId,
-      actorScope: 'tenant',
+      actorScope: AUDIT_ACTOR_SCOPE.TENANT,
       action: 'branch.set_default',
       targetType: 'tenant_branch',
       targetId: id,
@@ -394,7 +439,7 @@ export class BranchesService {
     await this.audit.record({
       tenantId,
       actorUserId: userId,
-      actorScope: 'tenant',
+      actorScope: AUDIT_ACTOR_SCOPE.TENANT,
       action: 'branch.deactivate',
       targetType: 'tenant_branch',
       targetId: id,
@@ -418,7 +463,7 @@ export class BranchesService {
     await this.audit.record({
       tenantId,
       actorUserId: userId,
-      actorScope: 'tenant',
+      actorScope: AUDIT_ACTOR_SCOPE.TENANT,
       action: 'branch.activate',
       targetType: 'tenant_branch',
       targetId: id,
@@ -582,10 +627,7 @@ async function nextBranchCode(tx: Prisma.TransactionClient, tenantId: string): P
  * sai nghiêm trọng hơn là không có ghim nào — nó trông như dữ liệu thật và sẽ đi thẳng vào phép
  * tính phí giao xe. Đổi tỉnh/xã mà không gửi ghim mới ⇒ bỏ ghim cũ, để server tra lại.
  */
-function keepPin(
-  dto: UpdateBranchDto,
-  before: BranchRow,
-): { lat: number; lng: number } | null {
+function keepPin(dto: UpdateBranchDto, before: BranchRow): { lat: number; lng: number } | null {
   const adminChanged =
     (dto.provinceCode !== undefined && dto.provinceCode !== before.provinceCode) ||
     (dto.wardCode !== undefined && dto.wardCode !== before.wardCode) ||
@@ -606,6 +648,21 @@ function addressInputOf(dto: CreateBranchDto) {
     longitude: dto.longitude,
     locationSource: dto.locationSource,
   };
+}
+
+/**
+ * Địa chỉ có ĐỔI THẬT không — form chi nhánh luôn gửi cả cụm địa chỉ, nên "có mặt" không có nghĩa
+ * là "đổi". So tỉnh, xã, dòng địa chỉ và ghim toạ độ.
+ */
+function addressMoved(before: BranchRow, next: ResolvedAddress): boolean {
+  const coord = (value: unknown) => (value == null ? null : Number(value));
+  return (
+    next.provinceCode !== before.provinceCode ||
+    (next.wardCode ?? null) !== (before.wardCode ?? null) ||
+    (next.addressLine ?? null) !== (before.addressLine ?? null) ||
+    coord(next.latitude) !== coord(before.latitude) ||
+    coord(next.longitude) !== coord(before.longitude)
+  );
 }
 
 /**
@@ -660,4 +717,13 @@ function branchNotFound(): NotFoundException {
     code: API_ERROR_CODE.NOT_FOUND,
     message: 'Không tìm thấy chi nhánh',
   });
+}
+
+/** Kết quả bước lập kế hoạch của `BranchesService.update` — xem `planUpdate`/`applyUpdate`. */
+export interface BranchUpdatePlan {
+  id: string;
+  dto: UpdateBranchDto;
+  before: BranchRow;
+  nextAddress: ResolvedAddress | null;
+  provinceChanged: boolean;
 }

@@ -433,7 +433,7 @@ beforeAll(async () => {
   app = moduleRef.createNestApplication();
   // Cùng việc `SupportRequestMiddleware` làm ở AppModule: mỗi request một store.
   app.use((req: RequestContext, _res: unknown, next: () => void) =>
-    store.run({ support: null, capability: null, ipAddress: '10.0.0.9', userAgent: 'jest' }, next),
+    store.run({ support: null, capability: null, reason: null, ipAddress: '10.0.0.9', userAgent: 'jest' }, next),
   );
   app.useGlobalPipes(createValidationPipe());
   app.useGlobalFilters(new AllExceptionsFilter(false));
@@ -614,16 +614,24 @@ describe('Bộ giao diện theo tuyến (7, 8, 10)', () => {
       );
       // Người thao tác là nhân sự nền tảng, không phải chủ xe.
       expect(res.body.actor.id).toBe(ids.adminA);
-      // Quyền phiên = đúng bảng của capability Owner Lite (+ ghi Đợt 1) — không gì thêm.
+      // Quyền phiên = đúng bảng của capability Owner Lite (+ ghi Đợt 1 + 2B của bộ Owner Lite) —
+      // không gì thêm: không tạo xe, không chi nhánh, không bảo dưỡng (ADR 0050 §13).
       expect(res.body.permissions.sort()).toEqual(
         supportPermissionsFor([
           ...OWNER_LITE_READS,
           SUPPORT_CAPABILITY.VEHICLE_INFO_EDIT,
           SUPPORT_CAPABILITY.VEHICLE_MEDIA_MANAGE,
+          SUPPORT_CAPABILITY.VEHICLE_DOCUMENT_MANAGE,
+          SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
+          SUPPORT_CAPABILITY.VEHICLE_SCHEDULE_BLOCK_MANAGE,
+          SUPPORT_CAPABILITY.VEHICLE_SUBMIT_REVIEW,
+          SUPPORT_CAPABILITY.LISTING_REPAIR,
         ]).sort(),
       );
-      // Không ví, không tài chính, không sổ khách, không thành viên, không chat, không file riêng tư.
+      // Không ví, không tài chính, không sổ khách, không thành viên, không chat, không file riêng tư,
+      // không sửa hồ sơ gian hàng (mặt tiền chỉ đọc).
       for (const sensitive of [
+        PERMISSION.TENANT_UPDATE,
         PERMISSION.FINANCE_VIEW,
         PERMISSION.CUSTOMER_VIEW,
         PERMISSION.MEMBER_VIEW,
@@ -790,13 +798,11 @@ describe('Danh sách thao tác cho phép (11)', () => {
     expect(res.body.error.code).toBe(API_ERROR_CODE.SUPPORT_ACTION_NOT_ALLOWED);
   });
 
-  maybe('tạo xe, xoá xe, gửi duyệt, công tắc lên chợ, giá — đều bị từ chối', async () => {
+  maybe('xoá xe, công tắc lên chợ, giá — đều bị từ chối', async () => {
     const id = await openId(ids.packageTenant);
     const server = app.getHttpServer();
     const attempts = [
-      request(server).post('/vehicles').set(inContext(id)).send({}),
       request(server).delete(`/vehicles/${packageVehicleId}`).set(inContext(id)),
-      request(server).post(`/vehicles/${packageVehicleId}/submit-public`).set(inContext(id)),
       request(server)
         .patch(`/vehicles/${packageVehicleId}/marketplace-visibility`)
         .set(inContext(id))
@@ -809,6 +815,20 @@ describe('Danh sách thao tác cho phép (11)', () => {
     }
   });
 
+  maybe('tạo xe nháp / gửi duyệt (2B) thiếu lý do RIÊNG → 428, không ghi gì', async () => {
+    const id = await openId(ids.packageTenant);
+    const server = app.getHttpServer();
+    const before = await prisma.vehicle.count({ where: { tenantId: ids.packageTenant } });
+    for (const res of await Promise.all([
+      request(server).post('/vehicles').set(inContext(id)).send({}),
+      request(server).post(`/vehicles/${packageVehicleId}/submit-public`).set(inContext(id)),
+    ])) {
+      expect(res.status).toBe(428);
+      expect(res.body.error.code).toBe(API_ERROR_CODE.SUPPORT_REASON_REQUIRED);
+    }
+    expect(await prisma.vehicle.count({ where: { tenantId: ids.packageTenant } })).toBe(before);
+  });
+
   maybe(
     'lệnh sửa xe chạm giá / giao nhận / mã xe → SUPPORT_FIELD_NOT_ALLOWED, không ghi gì',
     async () => {
@@ -816,7 +836,7 @@ describe('Danh sách thao tác cho phép (11)', () => {
       const before = await prisma.vehicle.findUniqueOrThrow({ where: { id: packageVehicleId } });
       for (const body of [
         { weekdayPrice: '1' },
-        { color: 'Xanh', deliveryEnabled: true },
+        { color: 'Xanh', withDriverDailyPrice: '1' },
         { code: 'HACK' },
         { discountPercent: 50 },
       ]) {
@@ -839,13 +859,24 @@ describe('Danh sách thao tác cho phép (11)', () => {
       const id = await openId(ids.packageTenant);
       const current = await prisma.vehicle.findUniqueOrThrow({ where: { id: packageVehicleId } });
 
+      // Loại xe: căn cước — không capability nào đổi được.
+      const type = await request(app.getHttpServer())
+        .patch(`/vehicles/${packageVehicleId}`)
+        .set(inContext(id))
+        .send({ color: 'Tím', vehicleType: 'motorbike' });
+      expect(type.status).toBe(403);
+      expect(type.body.error.details.fields).toEqual(['vehicleType']);
+
+      // Dịch vụ (2B): đổi thật đòi capability vận hành + LÝ DO RIÊNG — thiếu thì 428, rollback.
       const changed = await request(app.getHttpServer())
         .patch(`/vehicles/${packageVehicleId}`)
         .set(inContext(id))
         .send({ color: 'Tím', serviceTypes: ['with_driver'] });
-      expect(changed.status).toBe(403);
-      expect(changed.body.error.code).toBe(API_ERROR_CODE.SUPPORT_FIELD_NOT_ALLOWED);
-      expect(changed.body.error.details.fields).toEqual(['serviceTypes']);
+      expect(changed.status).toBe(428);
+      expect(changed.body.error.code).toBe(API_ERROR_CODE.SUPPORT_REASON_REQUIRED);
+      expect(changed.body.error.details.capabilities).toEqual([
+        SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
+      ]);
       expect(
         (await prisma.vehicle.findUniqueOrThrow({ where: { id: packageVehicleId } })).color,
       ).toBe(current.color);
@@ -1578,6 +1609,7 @@ describe('AuditService tự điền IP/UA — hành vi chung có chủ đích (l
   const state = (ip: string) => ({
     support: null,
     capability: null,
+    reason: null,
     ipAddress: ip,
     userAgent: `ua-${ip}`,
   });

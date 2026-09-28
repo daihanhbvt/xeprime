@@ -59,7 +59,8 @@
       "modeInvalid": "Chọn chế độ hỗ trợ",
       "reasonRequired": "Nhập lý do hỗ trợ",
       "reasonMin": "Lý do cần ít nhất 10 ký tự",
-      "reasonMax": "Lý do tối đa 500 ký tự"
+      "reasonMax": "Lý do tối đa 500 ký tự",
+      "reasonGeneric": "Lý do chưa đủ cụ thể — \"hỗ trợ\", \"admin sửa\", \"theo yêu cầu\" chưa nói vì sao"
     }
   },
   "home": {
@@ -85,5 +86,54 @@
   },
   "navigation": {
     "blocked": "Màn này không mở trong phiên hỗ trợ gian hàng."
+  },
+  "reason": {
+    "title": "Xác nhận thao tác hỗ trợ",
+    "label": "Lý do cho thao tác này",
+    "placeholder": "VD: Chủ xe gọi hotline 14h nhờ chuyển xe sang chi nhánh Thủ Đức — ticket #5521",
+    "help": "Ghi rõ vì sao, hoặc mã yêu cầu của chủ xe. Lý do được ghi vào nhật ký cùng thay đổi.",
+    "submit": "Xác nhận và thực hiện",
+    "invalid": "Lý do vừa nhập chưa đủ cụ thể — ghi rõ vì sao hoặc mã yêu cầu của chủ xe.",
+    "ownerRequested": "Tôi xác nhận chính chủ xe đã yêu cầu gửi xe đi duyệt.",
+    "validation": {
+      "reasonRequired": "Nhập lý do cho thao tác này",
+      "reasonMax": "Lý do tối đa 500 ký tự",
+      "reasonGeneric": "Lý do chưa đủ cụ thể — \"hỗ trợ\", \"admin sửa\", \"theo yêu cầu\" chưa nói vì sao",
+      "ownerRequestRequired": "Cần xác nhận chủ xe đã yêu cầu"
+    },
+    "consequence": {
+      "createDraft": {
+        "title": "Tạo xe nháp thay gian hàng",
+        "body": "Xe được tạo ở trạng thái nháp, chưa có giá, không gửi duyệt và không lên chợ. Chủ xe sẽ thấy xe này trong danh sách của mình."
+      },
+      "documentManage": {
+        "title": "Cập nhật giấy tờ xe",
+        "body": "Giấy tờ được lưu vào hồ sơ xe; bản cũ vẫn giữ trong lịch sử. Thao tác này không đánh dấu giấy tờ là đã xác minh."
+      },
+      "branchReassign": {
+        "title": "Chuyển xe sang chi nhánh khác",
+        "body": "Vị trí công khai của xe trên chợ sẽ đổi sang chi nhánh mới. Khách tìm xe theo khu vực sẽ thấy xe ở địa chỉ mới."
+      },
+      "operationsUpdate": {
+        "title": "Đổi cấu hình vận hành của xe",
+        "body": "Loại dịch vụ, trạng thái vận hành hoặc khung giờ giao nhận đổi thì khách đặt MỚI sẽ theo cấu hình mới. Chuyến đã đặt không bị đổi."
+      },
+      "scheduleBlock": {
+        "title": "Khoá lịch xe",
+        "body": "Trong khoảng thời gian bị khoá, xe ngừng nhận chuyến mới trên chợ."
+      },
+      "branchBasic": {
+        "title": "Cập nhật chi nhánh",
+        "body": "Đổi địa chỉ chi nhánh làm đổi vị trí công khai của mọi xe thuộc chi nhánh đó."
+      },
+      "submitReview": {
+        "title": "Gửi xe đi duyệt thay chủ xe",
+        "body": "Xe sẽ vào hàng đợi duyệt của nền tảng dưới tên bạn. Người duyệt là người khác — thao tác này không duyệt xe."
+      },
+      "listingRepair": {
+        "title": "Đồng bộ lại hiển thị công khai",
+        "body": "Snapshot công khai của xe được dựng lại từ dữ liệu hiện tại. Không đổi trạng thái duyệt hay công tắc lên chợ của chủ xe."
+      }
+    }
   }
 }

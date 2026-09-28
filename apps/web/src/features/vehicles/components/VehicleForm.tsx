@@ -30,6 +30,7 @@ import { branchLabel } from '@/features/branches/branch-label';
 import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import styles from './VehicleForm.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 
 /** Mặc định khi tạo mới: chọn sẵn giá trị hợp lệ để select bắt buộc không rỗng. */
@@ -106,6 +107,10 @@ interface VehicleFormProps {
  * đây được nói "đã lưu nháp" giữa chừng.
  */
 export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: VehicleFormProps) {
+  // Phiên hỗ trợ tạo xe NHÁP (ADR 0050 §13): gửi duyệt là thao tác riêng, có lý do + xác nhận hai lần.
+  const draftOnly = useSupportHides(SUPPORT_HIDDEN_AREA.CREATE_AND_SUBMIT);
+  // Không chọn hình thức nguồn xe (trục tài chính) — xe nháp giữ mặc định "Sở hữu".
+  const sourceHidden = useSupportHides(SUPPORT_HIDDEN_AREA.VEHICLE_SOURCE);
   const t = useTranslations('Vehicles.form');
   const tCommon = useTranslations('Common.actions');
   const tBranches = useTranslations('Branches');
@@ -145,7 +150,8 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
   const branchId = useWatch({ control, name: 'branchId' });
   const noProvince = tBranches('labels.noProvince');
   const branchOptions = useMemo(
-    () => (branches.data?.items ?? []).map((b) => ({ value: b.id, label: branchLabel(b, noProvince) })),
+    () =>
+      (branches.data?.items ?? []).map((b) => ({ value: b.id, label: branchLabel(b, noProvince) })),
     [branches.data, noProvince],
   );
   useEffect(() => {
@@ -257,7 +263,8 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
       return;
     }
 
-    submitNow({ submitForReview: true });
+    // Phiên hỗ trợ: Enter ở bước cuối chỉ LƯU NHÁP — không có đường gửi duyệt trong wizard.
+    submitNow({ submitForReview: !draftOnly });
   }
 
   function renderStep() {
@@ -272,6 +279,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
               <h3 className={styles.subSectionTitle}>{t('sections.basic')}</h3>
               <BasicSection
                 {...props}
+                creating
                 branchOptions={branchOptions}
                 branchLoading={branches.isLoading}
                 branchDisabled={branches.isError}
@@ -281,7 +289,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
               <h3 className={styles.subSectionTitle}>{t('sections.operatingSpecs')}</h3>
               <SpecsSection {...props} />
             </section>
-            <SourceTypeSection control={control} />
+            {!sourceHidden && <SourceTypeSection control={control} />}
           </div>
         );
       case 'pricing':
@@ -331,12 +339,20 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
           {tCommon('back')}
         </Button>
         <div className={styles.finalActions}>
-          <Button loading={submitting} onClick={() => submitNow({ submitForReview: false })}>
-            {t('wizard.saveDraft')}
-          </Button>
-          <Button type="primary" htmlType="submit" loading={submitting}>
-            {t('wizard.saveAndSubmit')}
-          </Button>
+          {draftOnly ? (
+            <Button type="primary" htmlType="submit" loading={submitting}>
+              {t('wizard.saveDraft')}
+            </Button>
+          ) : (
+            <>
+              <Button loading={submitting} onClick={() => submitNow({ submitForReview: false })}>
+                {t('wizard.saveDraft')}
+              </Button>
+              <Button type="primary" htmlType="submit" loading={submitting}>
+                {t('wizard.saveAndSubmit')}
+              </Button>
+            </>
+          )}
         </div>
       </>
     );

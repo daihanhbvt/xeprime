@@ -72,6 +72,7 @@ export class AuditService {
         userAgent: entry.userAgent ?? state?.userAgent ?? null,
         supportContextId,
         supportCapability: support ? (state?.capability ?? null) : null,
+        supportReason: support ? (state?.reason ?? null) : null,
       },
     });
   }

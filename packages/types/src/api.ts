@@ -748,6 +748,19 @@ export const API_ERROR_CODE = {
   SUPPORT_FIELD_NOT_ALLOWED: 'SUPPORT_FIELD_NOT_ALLOWED',
   /** Ảnh gắn vào xe trong phiên hỗ trợ không nằm trong kho ảnh của CHÍNH gian hàng đó. */
   SUPPORT_MEDIA_OUT_OF_SCOPE: 'SUPPORT_MEDIA_OUT_OF_SCOPE',
+  /**
+   * Thao tác mức trung bình/cao trong phiên hỗ trợ cần LÝ DO RIÊNG (ngoài lý do của phiên) — hoặc
+   * lý do gửi kèm quá chung chung. `details.capabilities` nói thao tác nào đòi (ADR 0050 §13).
+   * HTTP 428: chưa có gì bị ghi; gửi lại kèm lý do là đủ.
+   */
+  SUPPORT_REASON_REQUIRED: 'SUPPORT_REASON_REQUIRED',
+  /**
+   * Phiên hỗ trợ không được làm việc này khi xe còn chuyến mở (đơn chưa kết thúc / yêu cầu đang
+   * chờ): chuyển chi nhánh, bỏ một loại dịch vụ đang có khách hỏi. Không âm thầm làm hỏng chuyến.
+   */
+  SUPPORT_OPEN_TRIPS: 'SUPPORT_OPEN_TRIPS',
+  /** Khoá lịch không do CHÍNH phiên này tạo, hoặc đã bắt đầu — phiên không sửa/gỡ được. */
+  SUPPORT_BLOCK_NOT_OWNED: 'SUPPORT_BLOCK_NOT_OWNED',
 
   // Hạ tầng
   RATE_LIMITED: 'RATE_LIMITED',

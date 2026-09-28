@@ -134,7 +134,10 @@
     "SUPPORT_CONTEXT_EXPIRED": "Phiên hỗ trợ đã hết hạn hoặc đã kết thúc. Mở phiên mới từ màn Gian hàng.",
     "SUPPORT_ACTION_NOT_ALLOWED": "Thao tác này không nằm trong phạm vi của phiên hỗ trợ.",
     "SUPPORT_FIELD_NOT_ALLOWED": "Phiên hỗ trợ không được sửa các trường này (giá, dịch vụ, chi nhánh, trạng thái vận hành…).",
-    "SUPPORT_MEDIA_OUT_OF_SCOPE": "Ảnh không thuộc kho ảnh của gian hàng này. Tải ảnh lên lại trong phiên hỗ trợ."
+    "SUPPORT_MEDIA_OUT_OF_SCOPE": "Ảnh không thuộc kho ảnh của gian hàng này. Tải ảnh lên lại trong phiên hỗ trợ.",
+    "SUPPORT_REASON_REQUIRED": "Thao tác này cần lý do riêng — ghi rõ vì sao hoặc mã yêu cầu của chủ xe.",
+    "SUPPORT_OPEN_TRIPS": "Xe đang có chuyến chưa kết thúc — không thay đổi được lúc này.",
+    "SUPPORT_BLOCK_NOT_OWNED": "Phiên hỗ trợ chỉ sửa hoặc gỡ lịch khoá tương lai do chính phiên này đặt."
   },
   "upload": {
     "imageType": "Chỉ nhận ảnh JPG, PNG hoặc WebP",

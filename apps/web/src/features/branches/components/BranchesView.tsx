@@ -56,6 +56,8 @@ export function BranchesView() {
   const canManage = permissions.has(PERMISSION.BRANCH_MANAGE);
   const canView = permissions.has(PERMISSION.BRANCH_VIEW);
   const hideWrites = useSupportHides(SUPPORT_HIDDEN_AREA.DENIED_ACTIONS) && !canManage;
+  // Phiên hỗ trợ (ADR 0050 §13): tạo/sửa chi nhánh được; ngưng, mở lại, đổi mặc định thì không.
+  const lifecycleHidden = useSupportHides(SUPPORT_HIDDEN_AREA.BRANCH_LIFECYCLE);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<BranchStatus | ''>('');
   const [editing, setEditing] = useState<Branch | null>(null);
@@ -97,6 +99,8 @@ export function BranchesView() {
         onClick: () => openEdit(branch),
       },
     ];
+
+    if (lifecycleHidden) return list;
 
     if (!branch.isDefault) {
       list.push({

@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, type ReactNode } from 'react';
 import {
   SUPPORT_CAPABILITY,
+  SUPPORT_VEHICLE_CONDITIONAL_FIELDS,
   SUPPORT_VEHICLE_PINNED_FIELDS,
   type SupportCapability,
 } from '@xeprime/types';
@@ -86,6 +87,30 @@ export const SUPPORT_HIDDEN_AREA = {
   OWNER_GUIDES: 'owner_guides',
   /** Lên lịch / dời lịch / hoàn tất phiếu bảo dưỡng, sửa chu kỳ — chiếm lịch xe, ghi KM, sinh phiếu chi. */
   MAINTENANCE_SCHEDULE: 'maintenance_schedule',
+  // ── Đợt 2B: quyền tenant của capability ghi RỘNG hơn capability — các khu dưới đây cùng quyền
+  //    nhưng KHÔNG mở cho phiên (backend không khai `@SupportAction`), nên phải ẩn ở màn dùng lại.
+  /** Công tắc lên chợ của chủ xe — cùng quyền `vehicles.submit_public` với gửi duyệt. */
+  MARKETPLACE_TOGGLE: 'marketplace_toggle',
+  /** Ngưng / mở lại / đặt mặc định chi nhánh — cùng quyền `branches.manage` với tạo/sửa chi nhánh. */
+  BRANCH_LIFECYCLE: 'branch_lifecycle',
+  /** Nhận dạng giấy tờ (OCR — đọc NỘI DUNG file) và lưu trữ giấy tờ. */
+  DOCUMENT_PRIVATE: 'document_private',
+  /** Giá, giao xe có phí, điều khoản, phụ phí có tài xế trong khu vận hành của xe — tiền và pháp lý. */
+  MONEY_TERMS: 'money_terms',
+  /** Công tắc tự động nhận chuyến — tự tạo cam kết với khách thay chủ xe. */
+  AUTO_ACCEPT: 'auto_accept',
+  /** Khoá cả ngày cho mọi xe một lượt (bulk) — không mở cho phiên. */
+  BULK_BLOCK: 'bulk_block',
+  /**
+   * "Lưu & Gửi duyệt" gộp trong một bước ở wizard tạo xe — phiên chỉ tạo NHÁP; gửi duyệt là thao
+   * tác riêng, có lý do riêng và xác nhận hai lần.
+   */
+  CREATE_AND_SUBMIT: 'create_and_submit',
+  /**
+   * Hình thức nguồn xe (sở hữu / trả góp / thuê lại / hợp tác) — trục tài chính của xe, không nằm
+   * trong allowlist tạo xe. Tab "Nguồn xe" ở màn sửa cũng không mở cho phiên.
+   */
+  VEHICLE_SOURCE: 'vehicle_source',
 } as const;
 
 export type SupportHiddenArea = (typeof SUPPORT_HIDDEN_AREA)[keyof typeof SUPPORT_HIDDEN_AREA];
@@ -94,6 +119,16 @@ export type SupportHiddenArea = (typeof SUPPORT_HIDDEN_AREA)[keyof typeof SUPPOR
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- `area` là câu hỏi có tên; mọi khu hiện ẩn như nhau
 export function useSupportHides(area: SupportHiddenArea): boolean {
   return useSupportSession() !== null;
+}
+
+/**
+ * Phiên có capability này không — ngoài phiên luôn `true` (quyết định thuộc về quyền/cờ gói như
+ * trước). Dùng cho điều khiển mà quyền tenant không phân biệt được (cùng `vehicles.update` mà một bên
+ * đổi khung giờ giao nhận, một bên sửa giá). Server kiểm lại — đây chỉ là hiện/ẩn.
+ */
+export function useSupportCan(capability: SupportCapability): boolean {
+  const session = useSupportSession();
+  return session === null || session.can(capability);
 }
 
 /**
@@ -114,6 +149,18 @@ export function useAvailableHref(): (href: string) => string | null {
   );
 }
 
+/**
+ * Phiên sửa/gỡ được khoá lịch này không (ADR 0050 §13): chỉ khoá TƯƠNG LAI do CHÍNH phiên đặt —
+ * cùng luật với backend (`SUPPORT_BLOCK_NOT_OWNED`). Ngoài phiên: không giới hạn thêm.
+ */
+export function supportCanTouchBlock(
+  session: SupportSession | null,
+  block: { supportContextId?: string | null; startAt: string },
+): boolean {
+  if (session === null) return true;
+  return block.supportContextId === session.contextId && Date.parse(block.startAt) > Date.now();
+}
+
 export function supportSessionOf(context: SupportContext): SupportSession {
   const granted = new Set<string>(context.capabilities);
   return {
@@ -124,19 +171,26 @@ export function supportSessionOf(context: SupportContext): SupportSession {
 }
 
 /**
- * Mục của không gian "Quản lý xe" (Owner Lite) mở trong phiên — thông tin và ảnh. Mọi mục còn lại
- * (giá, giao nhận, điều khoản, giấy tờ, lịch sử chuyến) nằm ngoài Đợt 1 và bị ẩn hẳn.
+ * Mục của không gian "Quản lý xe" (Owner Lite) mở trong phiên, kèm capability cần để THẤY mục.
+ * Giá, giao xe có phí, điều khoản, phụ phí, lịch sử chuyến không có ở đây — ẩn hẳn.
  */
-const SUPPORT_VEHICLE_SECTIONS: ReadonlySet<VehicleManageSection> = new Set([
-  VEHICLE_MANAGE_SECTION.INFORMATION,
-  VEHICLE_MANAGE_SECTION.IMAGES,
-]);
+const SUPPORT_VEHICLE_SECTIONS: Readonly<Partial<Record<VehicleManageSection, SupportCapability>>> =
+  {
+    [VEHICLE_MANAGE_SECTION.INFORMATION]: SUPPORT_CAPABILITY.VEHICLE_VIEW,
+    [VEHICLE_MANAGE_SECTION.IMAGES]: SUPPORT_CAPABILITY.VEHICLE_VIEW,
+    [VEHICLE_MANAGE_SECTION.DOCUMENTS]: SUPPORT_CAPABILITY.VEHICLE_DOCUMENT_MANAGE,
+    [VEHICLE_MANAGE_SECTION.SELF_DRIVE_HANDOVER_TIME]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
+    [VEHICLE_MANAGE_SECTION.SELF_DRIVE_OPTIMIZATION]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
+    [VEHICLE_MANAGE_SECTION.WITH_DRIVER_OPTIMIZATION]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
+  };
 
 /** Tab của màn sửa xe (Full Manage) mở trong phiên, kèm capability cần để THẤY tab. */
 const SUPPORT_VEHICLE_TABS: Readonly<Partial<Record<VehicleEditTab, SupportCapability>>> = {
   [VEHICLE_EDIT_TAB.INFORMATION]: SUPPORT_CAPABILITY.VEHICLE_VIEW,
   [VEHICLE_EDIT_TAB.MEDIA]: SUPPORT_CAPABILITY.VEHICLE_VIEW,
   [VEHICLE_EDIT_TAB.MAINTENANCE]: SUPPORT_CAPABILITY.MAINTENANCE_VIEW,
+  [VEHICLE_EDIT_TAB.DOCUMENTS]: SUPPORT_CAPABILITY.VEHICLE_DOCUMENT_MANAGE,
+  [VEHICLE_EDIT_TAB.OPERATIONS]: SUPPORT_CAPABILITY.VEHICLE_OPERATIONS_UPDATE,
 };
 
 const PINNED = new Set(SUPPORT_VEHICLE_PINNED_FIELDS);
@@ -146,7 +200,9 @@ export function supportAllowsVehicleSection(
   session: SupportSession | null,
   section: VehicleManageSection,
 ): boolean {
-  return session === null || SUPPORT_VEHICLE_SECTIONS.has(section);
+  if (session === null) return true;
+  const capability = SUPPORT_VEHICLE_SECTIONS[section];
+  return capability !== undefined && session.can(capability);
 }
 
 export function supportAllowsVehicleTab(session: SupportSession | null, tab: string): boolean {
@@ -156,11 +212,20 @@ export function supportAllowsVehicleTab(session: SupportSession | null, tab: str
 }
 
 /**
- * Ô của form xe mà phiên KHÔNG được đổi (chi nhánh, loại xe, dịch vụ, trạng thái vận hành) — khoá
- * ô cho khớp với luật backend (`SUPPORT_VEHICLE_PINNED_FIELDS`), để người hỗ trợ không gõ một
- * thay đổi chắc chắn bị từ chối.
+ * Ô của form xe mà phiên KHÔNG được đổi — khoá ô cho khớp với luật backend: loại xe luôn khoá
+ * (`SUPPORT_VEHICLE_PINNED_FIELDS`); chi nhánh / dịch vụ / trạng thái vận hành / giao xe khoá khi
+ * phiên THIẾU capability riêng của chúng (`SUPPORT_VEHICLE_CONDITIONAL_FIELDS`, ADR 0050 §13).
  */
-export function useSupportPinnedField(): (field: string) => boolean {
+export function useSupportPinnedField({ creating = false }: { creating?: boolean } = {}): (
+  field: string,
+) => boolean {
   const session = useSupportSession();
-  return (field) => session !== null && PINNED.has(field);
+  return (field) => {
+    // Tạo nháp: loại xe / chi nhánh / dịch vụ là dữ liệu KHỞI TẠO trong `SUPPORT_VEHICLE_CREATE_FIELDS`,
+    // capability `vehicle.create_draft` đã bao chúng — luật khoá chỉ áp cho lượt SỬA.
+    if (session === null || creating) return false;
+    if (PINNED.has(field)) return true;
+    const capability = SUPPORT_VEHICLE_CONDITIONAL_FIELDS[field];
+    return capability !== undefined && !session.can(capability);
+  };
 }

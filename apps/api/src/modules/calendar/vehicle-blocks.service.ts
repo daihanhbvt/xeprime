@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -8,6 +9,7 @@ import { newId, Prisma } from '@xeprime/prisma';
 import { API_ERROR_CODE, OCCUPANCY_SOURCE_TYPE } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { currentSupportScope } from '../../common/support/support-request.store';
 import { OccupancyService } from './occupancy.service';
 import {
   CreateVehicleBlockDto,
@@ -23,6 +25,7 @@ const BLOCK_SELECT = {
   reason: true,
   note: true,
   rowVersion: true,
+  supportContextId: true,
   createdAt: true,
   updatedAt: true,
   vehicle: { select: { name: true, plateNumber: true } },
@@ -62,6 +65,9 @@ export class VehicleBlocksService {
     dto: CreateVehicleBlockDto,
   ): Promise<VehicleBlockDto> {
     assertRange(dto.startAt, dto.endAt);
+    // Phiên hỗ trợ (ADR 0050 §13): chỉ khoá TƯƠNG LAI — không lùi ngày một khoảng đã qua.
+    const support = currentSupportScope();
+    if (support) assertSupportFuture(dto.startAt);
 
     // Xe phải thuộc gian hàng và chưa xoá — id đoán được của shop khác ra 404, không lộ gì.
     const vehicle = await this.prisma.vehicle.findFirst({
@@ -87,6 +93,7 @@ export class VehicleBlocksService {
           reason: dto.reason,
           note: dto.note?.trim() || null,
           createdBy: userId,
+          supportContextId: support?.contextId ?? null,
         },
         select: BLOCK_SELECT,
       });
@@ -135,9 +142,19 @@ export class VehicleBlocksService {
 
     const current = await this.prisma.vehicleBlock.findFirst({
       where: { id, tenantId },
-      select: { id: true, vehicleId: true, startAt: true, endAt: true, reason: true, note: true },
+      select: {
+        id: true,
+        vehicleId: true,
+        startAt: true,
+        endAt: true,
+        reason: true,
+        note: true,
+        supportContextId: true,
+      },
     });
     if (!current) throw notFound();
+    assertSupportOwnsBlock(current);
+    if (currentSupportScope()) assertSupportFuture(dto.startAt);
 
     const row = await this.prisma.$transaction(async (tx) => {
       // Điều kiện rowVersion trong WHERE: người khác vừa sửa thì 0 dòng khớp → 409, không ghi đè.
@@ -203,9 +220,17 @@ export class VehicleBlocksService {
   async remove(tenantId: string, id: string, userId: string): Promise<void> {
     const current = await this.prisma.vehicleBlock.findFirst({
       where: { id, tenantId },
-      select: { id: true, vehicleId: true, startAt: true, endAt: true, reason: true },
+      select: {
+        id: true,
+        vehicleId: true,
+        startAt: true,
+        endAt: true,
+        reason: true,
+        supportContextId: true,
+      },
     });
     if (!current) throw notFound();
+    assertSupportOwnsBlock(current);
 
     await this.prisma.$transaction(async (tx) => {
       await tx.vehicleBlock.delete({ where: { id: current.id } });
@@ -243,6 +268,7 @@ function toDto(row: BlockRow): VehicleBlockDto {
     note: row.note,
     rowVersion: row.rowVersion,
     createdByName: row.creator?.displayName ?? null,
+    supportContextId: row.supportContextId,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -262,4 +288,31 @@ function notFound(): NotFoundException {
     code: API_ERROR_CODE.NOT_FOUND,
     message: 'Không tìm thấy lịch khoá xe',
   });
+}
+
+/** Phiên hỗ trợ không đặt/dời khoá vào quá khứ — không viết lại một khoảng thời gian đã qua. */
+function assertSupportFuture(startAt: Date): void {
+  if (startAt.getTime() < Date.now()) {
+    throw new BadRequestException({
+      code: API_ERROR_CODE.VALIDATION_FAILED,
+      message: 'Phiên hỗ trợ chỉ khoá lịch từ bây giờ trở đi',
+      details: { field: 'startAt' },
+    });
+  }
+}
+
+/**
+ * Phiên hỗ trợ chỉ sửa/gỡ khoá lịch do CHÍNH phiên đó đặt, và chỉ khi khoá chưa bắt đầu (ADR 0050
+ * §13). Khoá của chủ xe, của nhân viên, của phiên khác — hay một khoá đang chạy — thuộc về người
+ * đã đặt nó. Ngoài phiên: không làm gì.
+ */
+function assertSupportOwnsBlock(block: { supportContextId: string | null; startAt: Date }): void {
+  const support = currentSupportScope();
+  if (!support) return;
+  if (block.supportContextId !== support.contextId || block.startAt.getTime() <= Date.now()) {
+    throw new ForbiddenException({
+      code: API_ERROR_CODE.SUPPORT_BLOCK_NOT_OWNED,
+      message: 'Phiên hỗ trợ chỉ sửa/gỡ khoá lịch tương lai do chính phiên này đặt',
+    });
+  }
 }

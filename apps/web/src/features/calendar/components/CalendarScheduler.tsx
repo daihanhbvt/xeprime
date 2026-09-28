@@ -70,6 +70,7 @@ import { MaintenanceEventDialog } from './MaintenanceEventDialog';
 import { VehicleBlockDetailDialog } from './VehicleBlockDetailDialog';
 import { VehicleBlockDialog, type VehicleBlockDialogState } from './VehicleBlockDialog';
 import styles from './CalendarScheduler.module.css';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 
@@ -150,7 +151,13 @@ export function CalendarScheduler() {
   const canView = has(PERMISSION.CALENDAR_VIEW);
   const canCreate = has(PERMISSION.BOOKING_CREATE);
   const canBlock = has(PERMISSION.VEHICLE_BLOCK_SCHEDULE);
-  const canPrice = has(PERMISSION.VEHICLE_UPDATE);
+  /*
+   * Phiên hỗ trợ gian hàng (ADR 0050 §13): `vehicles.update` của phiên là để sửa thông tin/vận hành
+   * — giá theo ngày không mở; khoá cả ngày cho mọi xe (một lô) cũng không, chỉ khoá lẻ từng xe.
+   */
+  const priceHidden = useSupportHides(SUPPORT_HIDDEN_AREA.MONEY_TERMS);
+  const bulkBlockHidden = useSupportHides(SUPPORT_HIDDEN_AREA.BULK_BLOCK);
+  const canPrice = has(PERMISSION.VEHICLE_UPDATE) && !priceHidden;
   const cellActions = useMemo<CellActionKey[]>(
     () => [
       ...(canCreate ? (['booking'] as const) : []),
@@ -215,8 +222,11 @@ export function CalendarScheduler() {
 
   /** Thao tác cả-đội-xe dùng ĐÚNG quyền của thao tác lẻ tương ứng — làm hàng loạt không mở thêm quyền. */
   const dayActions = useMemo<DayActionKey[]>(
-    () => [...(canBlock ? (['block'] as const) : []), ...(canPrice ? (['price'] as const) : [])],
-    [canBlock, canPrice],
+    () => [
+      ...(canBlock && !bulkBlockHidden ? (['block'] as const) : []),
+      ...(canPrice ? (['price'] as const) : []),
+    ],
+    [bulkBlockHidden, canBlock, canPrice],
   );
 
   /*

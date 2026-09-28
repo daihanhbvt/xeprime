@@ -103,3 +103,12 @@
   font-size: var(--xp-font-size-body-sm);
   line-height: var(--xp-line-height-body-sm);
 }
+
+/*
+ * Bộ đếm ký tự của `TextArea` (AntD) nằm TUYỆT ĐỐI ở góc phải, đúng một dòng dưới ô nhập — trùng
+ * dòng với gợi ý/lỗi của `Form.Item`. Chừa lề phải cho dòng đó để chữ xuống dòng trước bộ đếm
+ * thay vì đè lên "0 / 500". Nhân đôi class vì style AntD tiêm lúc chạy (xem `.control`).
+ */
+.withCount.withCount :global(.ant-form-item-explain) {
+  padding-inline-end: 72px;
+}

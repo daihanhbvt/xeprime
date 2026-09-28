@@ -256,7 +256,104 @@ nhật ký là của "một thành viên gian hàng".
       (server vốn đã đòi) — `useCanWriteSupportCase`. Sửa này áp cho MỌI thành viên chỉ có
       `support.view`, không riêng phiên.
 
+13. **Đợt 2B — GHI hẹp gần-chủ-xe, mỗi thao tác một capability (25/09/2026).** Chỉ phiên `assist`
+    nhận; `view` luôn chỉ-đọc (CHECK `view_readonly_check`). Không membership, không vai, không quyền
+    tenant đầy đủ — capability vẫn phải đi qua `@RequirePermissions` (quyền tenant tương ứng dưới đây
+    được CẤP cho phiên) VÀ `@SupportAction`, cổng gói/tính năng/trạng thái chạy như với chủ xe.
+
+    | Capability | Quyền tenant | Bộ giao diện | Endpoint |
+    | --- | --- | --- | --- |
+    | `vehicle.create_draft` | `vehicles.create` | Full Manage | `POST /vehicles` |
+    | `vehicle.info.edit` · `vehicle.media.manage` (Đợt 1) | `vehicles.update` | cả hai | `PATCH /vehicles/:id`, presign ảnh |
+    | `vehicle.document.manage` | `vehicles.documents.view` + `.manage` | cả hai | list/tạo/sửa/presign/gắn file giấy tờ |
+    | `vehicle.branch.reassign` | `vehicles.update` | Full Manage + cờ chi nhánh | `branchId` trong `PATCH /vehicles/:id` |
+    | `vehicle.operations.update` | `vehicles.update` | cả hai | `PUT operation-settings`, `PATCH service-settings/:type`, `serviceTypes`/`operationStatus`/`deliveryEnabled` trong `PATCH /vehicles/:id` |
+    | `vehicle.schedule_block.manage` | `vehicles.block_schedule` | cả hai | `POST/PATCH/DELETE /vehicle-blocks` |
+    | `maintenance.manage` (giữ tên Đợt 1) | như Đợt 1 | Full Manage + cờ bảo dưỡng ghi được | phiếu bảo dưỡng |
+    | `branch.basic_manage` | `branches.manage` | Full Manage + cờ chi nhánh | `POST /branches`, `PATCH /branches/:id` |
+    | `vehicle.submit_review` | `vehicles.submit_public` | cả hai | `POST /vehicles/:id/submit-public` |
+    | `listing.repair` | — (chỉ `vehicles.view`) | cả hai | `POST /vehicles/:id/listing/resync` |
+
+    Tên cấm: `act_as_owner`, `full_tenant_access`, `all_write`, `bypass_validation`, `shop_owner_mode`.
+
+    - **Hồ sơ gian hàng CHỈ ĐỌC trong phiên (sửa 28/09/2026).** Bản đầu của Đợt 2B có
+      `tenant.public_profile.update` (mặt tiền: tên hiển thị, giới thiệu, logo, ảnh bìa, địa chỉ). Đã
+      RÚT: mặt tiền là lời gian hàng tự nói với khách, và nhân sự nền tảng không nói thay họ — kể cả
+      khi chủ xe nhờ; họ tự sửa ở màn của mình. Phiên chỉ còn `tenant_profile.view` (`GET
+      /tenants/current/shop`), ở MỌI bộ giao diện và MỌI chế độ; không capability nào mang
+      `tenant.update` vào phiên. `PATCH /tenants/current/profile` và `POST /uploads/shop-media/presign`
+      không khai `@SupportAction` ⇒ default-deny 403 `SUPPORT_ACTION_NOT_ALLOWED` (cả `view` lẫn
+      `assist`, có hay không lý do riêng). Migration `20260928090000_tenant_support_drop_public_profile_update`
+      gỡ capability khỏi các phiên đã lưu và viết lại hai CHECK; dòng audit cũ giữ nguyên. Chủ xe ngoài
+      phiên sửa hồ sơ và tải ảnh như trước.
+
+    - **Lý do riêng.** Mọi capability ghi ở bảng trên (`SUPPORT_REASON_REQUIRED_CAPABILITIES`) đòi
+      header `x-support-reason` (encodeURIComponent, 10–500 ký tự). Thiếu hoặc chung chung ("hỗ trợ",
+      "admin sửa", "theo yêu cầu" — `isMeaningfulSupportReason`; mã ticket `#1234`/`SC-000123` thì qua)
+      ⇒ 428 `SUPPORT_REASON_REQUIRED` `{capabilities, invalid}` TRƯỚC khi chạm DB. GET/HEAD không bao
+      giờ đòi lý do dù được gác bằng capability ghi (danh sách giấy tờ). Trường mới lộ ra SAU khi khoá
+      hàng (đổi chi nhánh, bỏ dịch vụ) nâng capability giữa request bằng `escalateSupportCapability` —
+      cũng đòi lý do. Lý do ghi vào `audit_logs.support_reason` (CHECK: chỉ có khi có `support_context_id`); `support_capability` nới lên
+      VARCHAR(500) vì một lệnh có thể nâng tới ba capability.
+    - **Web hỏi lý do, form không biết.** `@xeprime/api-client` có móc `recover` (thử lại ĐÚNG MỘT lần
+      với header bổ sung); web nối `recoverSupportReason` → `SupportReasonDialog` (chỉ mount trong
+      phiên) nói hậu quả theo capability, gửi duyệt đòi thêm tick "chủ xe đã yêu cầu". Lý do CHỈ dùng lại
+      cho chuỗi tải giấy tờ của CÙNG một xe (tạo hồ sơ → presign → gắn file; 2 phút; khoá = capability +
+      `/vehicles/:id`); mọi thao tác khác — kể cả gửi duyệt — hỏi lại mỗi lần. Không dùng lại khi server
+      báo `invalid`, xoá khi rời phiên. `recover` nhận `(error, { method, path })`.
+    - **Allowlist trường nằm ở backend** (`@xeprime/types` `SUPPORT_*_FIELDS`, web cùng đọc để khoá ô):
+      - Tạo nháp: `SUPPORT_VEHICLE_CREATE_FIELDS` (mã, tên, chi nhánh, loại xe, dịch vụ, giao xe + trường
+        thông tin/ảnh). Luôn `draft`, `marketplaceEnabled=false`, không gửi duyệt, không giá, không nguồn
+        xe. Trường lạ có giá trị ⇒ 403. Ảnh phải nằm trong kho ảnh của gian hàng (kiểm TRƯỚC khi ghi xe,
+        403 `SUPPORT_MEDIA_OUT_OF_SCOPE`). Phiên không xoá xe.
+      - Sửa xe: `vehicleType` ghim; `branchId`/`serviceTypes`/`operationStatus`/`deliveryEnabled` giữ
+        nguyên thì bỏ qua, đổi thì nâng capability và vào before/after của audit. Bỏ dịch vụ mà xoá giá chủ
+        xe đã đặt ⇒ 403. `operationStatus = renting` ⇒ 403 (chỉ luồng bàn giao đặt); cho xe nghỉ khi còn
+        chuyến/yêu cầu sống ⇒ 409 `SUPPORT_OPEN_TRIPS`.
+      - Chuyển chi nhánh: chi nhánh đích thuộc tenant + đang hoạt động (`assertAssignable`) + có tỉnh
+        (409 `BRANCH_LOCATION_REQUIRED`); xe có đơn mở/yêu cầu đang sống ⇒ 409 `SUPPORT_OPEN_TRIPS`
+        (`assertNoOpenTrips`); không viết lại địa chỉ đơn; đồng bộ listing + phiếu duyệt đang chờ; audit
+        riêng `vehicle.branch.reassign` (cũ/mới).
+      - Vận hành: `SUPPORT_SERVICE_SETTING_FIELDS` (thời lượng tối thiểu, tuyến ưu tiên, giấy tờ yêu cầu,
+        cách xác minh); GHIM `autoAcceptEnabled`, `termsText`, `requireTermsAcceptance`, `depositMode`.
+        Trong phiên, câu UPDATE không ghi trường ghim (không đảo thay đổi đồng thời của chủ xe).
+        Giá, phụ phí (kể cả phụ phí có tài xế), phí giao xe, khuyến mãi, cọc, huỷ/hoàn: không endpoint nào.
+      - Khoá lịch: chỉ TƯƠNG LAI; sửa/gỡ chỉ khoá do CHÍNH phiên tạo (`vehicle_blocks.support_context_id`,
+        403 `SUPPORT_BLOCK_NOT_OWNED`); trùng lịch do `OccupancyService` + exclusion constraint chặn;
+        không chạm khoá của đơn/bàn giao/hệ thống; không khoá hàng loạt. `POST /calendar/check-conflict`
+        (xem trước, không ghi) mở bằng `calendar.view`.
+      - Giấy tờ: `SUPPORT_VEHICLE_DOCUMENT_FIELDS` (loại, tên loại tự đặt, ngày cấp/hết hạn, ghi chú);
+        trường định danh (`documentNumber`, chủ xe, số khung/máy, biển) chỉ được để TRỐNG, và bị lược khỏi
+        response. Không có trạng thái "đã xác minh" để đặt; không xoá/lưu trữ, không OCR, không tải file.
+      - Hồ sơ gian hàng: KHÔNG có allowlist nào — chỉ đọc (xem trên). Form hồ sơ trong phiên hiện ở
+        chế độ xem vì phiên không có `tenant.update`; MST + giấy phép vẫn lược khỏi bản đọc (§11).
+      - Chi nhánh: `SUPPORT_BRANCH_FIELDS` (tên, SĐT, địa chỉ, toạ độ); đổi địa chỉ THẬT (so với bản đang
+        lưu) của chi nhánh có chuyến mở ⇒ 409. SĐT đọc ra đã bị che: form để trống, số che làm placeholder,
+        chỉ số gõ mới được gửi. Không xoá/ngưng/đặt mặc định/chuyển hàng loạt.
+      - Gửi duyệt: checklist + hồ sơ gian hàng như chủ xe, lý do + xác nhận hai lần; audit
+        `vehicle.support.submit_review` tách người gửi (nền tảng) khỏi người duyệt. Phiên không có quyền
+        reviewer.
+      - Sửa listing: chỉ gọi `ListingsService.syncFromVehicle` (idempotent, trả `{changed, listed,
+        status}`), không đổi kiểm duyệt/công tắc chợ, không nhận payload.
+    - **Audit** trong CÙNG transaction: `vehicle.support.create_draft` · `vehicle.support.update` ·
+      `vehicle.branch.reassign` · `vehicle.support.submit_review` · `listing.support.repair` ·
+      `branch.create`/`branch.update` · audit khoá lịch/giấy tờ
+      sẵn có — đều mang `actorScope=platform`, người thật, phiên, capability, lý do, IP/UA.
+    - **Giao diện**: form/hộp thoại của gian hàng dùng lại nguyên vẹn; điều khiển chỉ hiện khi có
+      capability (`useSupportCan`); khu cùng quyền tenant nhưng KHÔNG mở cho phiên ẩn qua
+      `SUPPORT_HIDDEN_AREA` (công tắc chợ, vòng đời chi nhánh, OCR/lưu trữ giấy tờ, tiền & điều khoản,
+      tự nhận chuyến, khoá hàng loạt, "Lưu & Gửi duyệt", nguồn xe). Hồ sơ gian hàng và chính sách thuê
+      không cần khu ẩn riêng: phiên không có `tenant.update`, nên chính cổng quyền sẵn có đã khoá form
+      của chúng. Màn chủ xe không đổi.
+    - **Vẫn cấm**: tiền (ví, rút, ngân hàng, sổ, công nợ, thu chi, thu/hoàn/cọc/đền bù, giá, phụ phí,
+      khuyến mãi, mua gói, hoá đơn) · KYC/thuế/pháp lý/đổi chủ · thành viên/vai · rủi ro/giấy tờ khách ·
+      chat thay chủ · duyệt/từ chối yêu cầu · chuyển trạng thái/huỷ đơn · xác nhận bàn giao · sửa KM ·
+      bắt đầu/hoàn tất/huỷ bảo dưỡng · duyệt/ẩn xe · xoá xe/chi nhánh/lịch sử · mật khẩu/OTP/phiên ·
+      đánh giá khách · mọi endpoint `@ShopOwnerOnly`.
+
 ## Nằm ngoài Đợt 1 (bị chặn ở backend, ẩn ở giao diện)
+
+> Từ Đợt 2B (điều 13) một phần danh sách dưới đây mở theo capability hẹp; phần còn lại vẫn cấm.
 
 Tạo/xoá xe · gửi duyệt · duyệt/từ chối · ẩn/bỏ ẩn xe (vẫn đi qua Platform Vehicles với quyền riêng) ·
 công tắc lên chợ · giá & chính sách · lịch/khoá lịch · dịch vụ/giao nhận · thành viên/vai/quyền ·
@@ -281,7 +378,7 @@ Lập lịch bảo dưỡng (khung giờ giữ chỗ `vehicle_occupancies`) và 
 - `apps/mobile` vẫn gác mục Gian hàng bằng `platform.tenants.manage` — chưa đổi (mobile do nhóm khác
   làm); vai support chưa thấy mục đó trên app.
 - Allowlist thật được khoá bằng `tenant-support-allowlist.spec.ts`: quét mọi controller của
-  `AppModule`, cấm `@SupportAction` cấp class và so tập handler được mở với danh sách Đợt 1 + 2A.
+  `AppModule`, cấm `@SupportAction` cấp class và so tập handler được mở với danh sách Đợt 1 + 2A + 2B.
 - Thêm một trang vào phiên là HAI khai báo: một dòng ở `SUPPORT_PAGES` (web) và `@SupportAction` ở
   endpoint nó gọi (api). Thiếu vế web là link bị chặn; thiếu vế api là trang 403.
 - Trang Manage có logic được tách thân sang `features/<feature>/components/*Page.tsx`; route
@@ -289,6 +386,7 @@ Lập lịch bảo dưỡng (khung giờ giữ chỗ `vehicle_occupancies`) và 
 
 ## Điều kiện xem lại
 
-- Đợt 2B (thêm việc GHI vào phiên): mỗi việc là một capability + endpoint khai báo + ADR bổ sung.
+- Thêm việc GHI mới vào phiên (sau Đợt 2B): mỗi việc là một capability + endpoint khai báo + lý do riêng nếu mức trung bình/cao + cập nhật điều 13.
+- Chưa có mẫu thông báo cho chủ xe khi phiên tạo nháp/đổi dữ liệu: chủ xe thấy qua danh sách xe + nhật ký; thêm thông báo là việc riêng.
 - Khi cần phiên cho nhiều người cùng gian hàng/gia hạn phiên/phê duyệt hai người cho chế độ assist.
 - Khi tách khu quản lý sang tên miền riêng: đổi `adminTenantSupportPath` + `tenantSupportContextIdFromPath`.

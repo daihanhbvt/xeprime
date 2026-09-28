@@ -20,6 +20,8 @@ export interface SupportRequestState {
   support: SupportScope | null;
   /** Capability endpoint đang chạy đã đòi (nhiều cái thì nối bằng dấu phẩy) — `audit_logs.support_capability`. */
   capability: string | null;
+  /** Lý do RIÊNG của thao tác (header `x-support-reason`, đã kiểm) — `audit_logs.support_reason`. */
+  reason: string | null;
   ipAddress: string | null;
   userAgent: string | null;
 }
@@ -32,6 +34,11 @@ const storage = new AsyncLocalStorage<SupportRequestState>();
  */
 export function currentSupportScope(): SupportScope | null {
   return storage.getStore()?.support ?? null;
+}
+
+/** Cả trạng thái — cho helper nâng capability giữa chừng (`escalateSupportCapability`). */
+export function currentSupportState(): SupportRequestState | null {
+  return storage.getStore() ?? null;
 }
 
 @Injectable()
@@ -47,12 +54,13 @@ export class SupportRequestStore {
   }
 
   /** Chỉ `TenantScopeGuard` gọi, sau khi đã xác minh phiên. */
-  bind(support: SupportScope, capability: string | null): void {
+  bind(support: SupportScope, capability: string | null, reason: string | null = null): void {
     const state = storage.getStore();
     // Không có store nghĩa là middleware không chạy — thà từ chối còn hơn để audit ghi sai phía.
     if (!state) throw new Error('SupportRequestStore: request chưa đi qua SupportRequestMiddleware');
     state.support = support;
     state.capability = capability;
+    state.reason = reason;
   }
 
   /** Chạy `fn` trong một store mới — cho test và cho middleware. */
@@ -71,6 +79,7 @@ export class SupportRequestMiddleware implements NestMiddleware {
       {
         support: null,
         capability: null,
+        reason: null,
         ipAddress: req.ip ?? null,
         userAgent: typeof userAgent === 'string' ? userAgent.slice(0, 1000) : null,
       },

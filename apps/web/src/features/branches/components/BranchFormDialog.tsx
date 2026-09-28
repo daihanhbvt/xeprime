@@ -10,6 +10,7 @@ import { AddressField } from '@/components/form/AddressField';
 import { TextField } from '@/components/form/TextField';
 import { DialogForm } from '@/components/form/DialogForm';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { useSupportSession } from '@/features/tenant-support/support-session';
 import { useValidationResolver } from '@/i18n/use-validation-resolver';
 import { useCreateBranch, useUpdateBranch } from '../hooks/use-branches';
 import type { Branch } from '../types';
@@ -65,11 +66,14 @@ export function BranchFormDialog({
   const create = useCreateBranch();
   const update = useUpdateBranch();
   const submitting = create.isPending || update.isPending;
+  /*
+   * Phiên hỗ trợ (ADR 0050 §13): SĐT chi nhánh đến đã bị che (`090****001`). Nạp nó làm GIÁ TRỊ là
+   * vừa trượt validator, vừa có nguy cơ ghi đè số thật bằng số che — nên ô để trống, số che chỉ làm
+   * placeholder, và chỉ số người thao tác GÕ MỚI mới được gửi (payload bỏ chuỗi rỗng).
+   */
+  const phoneMasked = useSupportSession() !== null && Boolean(branch?.phone);
 
-  const resolver = useValidationResolver<BranchFormValues>(
-    branchFormSchema,
-    'Branches.validation',
-  );
+  const resolver = useValidationResolver<BranchFormValues>(branchFormSchema, 'Branches.validation');
   const { control, handleSubmit } = useForm<BranchFormValues>({
     resolver,
     defaultValues: {
@@ -86,7 +90,7 @@ export function BranchFormDialog({
       latitude: branch?.latitude == null ? null : Number(branch.latitude),
       longitude: branch?.longitude == null ? null : Number(branch.longitude),
       locationSource: branch?.locationSource ?? null,
-      phone: branch?.phone ?? '',
+      phone: phoneMasked ? '' : (branch?.phone ?? ''),
     },
   });
 
@@ -169,7 +173,7 @@ export function BranchFormDialog({
           control={control}
           name="phone"
           label={t('form.phoneLabel')}
-          placeholder={t('form.phonePlaceholder')}
+          placeholder={phoneMasked ? (branch?.phone ?? undefined) : t('form.phonePlaceholder')}
         />
       </DialogForm>
     </ResponsiveDialog>

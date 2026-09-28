@@ -26,6 +26,7 @@ import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { useVehicleRowActions } from '@/features/vehicles/hooks/use-vehicle-row-actions';
 import { useVehicleFilters } from '@/features/vehicles/hooks/use-vehicle-filters';
 import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
+import { SUPPORT_HIDDEN_AREA, useSupportHides } from '@/features/tenant-support/support-session';
 import { VEHICLES_DEFAULT_LIMIT } from '@/features/vehicles/api';
 
 export function ManageVehiclesPage() {
@@ -51,6 +52,11 @@ function VehiclesView() {
 
   const canView = has(PERMISSION.VEHICLE_VIEW);
   const canCreate = has(PERMISSION.VEHICLE_CREATE);
+  /*
+   * Phiên hỗ trợ (ADR 0050 §13): chỉ wizard tạo xe NHÁP của gian hàng. "Đăng nhanh" là luồng công
+   * khai tạo-và-gửi-duyệt trong một bước — nó nằm ngoài khu làm việc và không mở cho phiên.
+   */
+  const quickHidden = useSupportHides(SUPPORT_HIDDEN_AREA.CREATE_AND_SUBMIT);
   const canEdit = has(PERMISSION.VEHICLE_UPDATE);
 
   const items = data?.items ?? [];
@@ -109,7 +115,15 @@ function VehiclesView() {
       <ManagePageHeader
         title={t('title')}
         extra={
-          canCreate ? (
+          canCreate && quickHidden ? (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => router.push(ROUTES.MANAGE.VEHICLE_NEW)}
+            >
+              {t('addVehicleAdvanced')}
+            </Button>
+          ) : canCreate ? (
             /*
              * Hai lối thêm xe (09/09/2026): "đăng nhanh" cho chiếc xe tự lái thông thường, và
              * wizard nâng cao của gian hàng cho xe nhiều dịch vụ / có nguồn xe / nhiều chi

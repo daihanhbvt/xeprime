@@ -81,7 +81,11 @@ export function SupportNavigationScope({ children }: { children: ReactNode }) {
       return;
     }
     const newTab =
-      anchor.target === '_blank' || event.ctrlKey || event.metaKey || event.shiftKey || event.button === 1;
+      anchor.target === '_blank' ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.button === 1;
     if (newTab) window.open(route.href, '_blank', 'noopener');
     else value!.push(route.href);
   }

@@ -48,13 +48,30 @@ const CUSTOMER_DEBT_KEYS = new Set(['totalDebt', 'debtCustomers']);
  * 0050 §10). Mức rủi ro (`riskLevel`) vẫn hiện: đó là nhãn, không phải lời bình.
  */
 const CUSTOMER_PRIVATE_KEYS = new Set(['riskReason']);
+/**
+ * Dữ liệu định danh của giấy tờ xe (ADR 0050 §13): phiên QUẢN LÝ giấy tờ nhưng không có quyền XEM chi
+ * tiết — mà lệnh tạo/gắn phiên bản lại trả bản chi tiết. Trong response của endpoint giấy tờ, lược.
+ */
+const DOCUMENT_PRIVATE_KEYS = new Set([
+  'documentNumber',
+  'holderName',
+  'holderAddress',
+  'chassisNumber',
+  'engineNumber',
+  'plateNumber',
+]);
 
 export function maskIdentifier(value: string): string {
   if (value.length <= 2) return '*'.repeat(value.length);
   return `${'*'.repeat(value.length - 2)}${value.slice(-2)}`;
 }
 
-export function maskSupportPayload(value: unknown, opts: { customerScope: boolean }): unknown {
+export interface SupportMaskOptions {
+  customerScope: boolean;
+  documentScope?: boolean;
+}
+
+export function maskSupportPayload(value: unknown, opts: SupportMaskOptions): unknown {
   if (Array.isArray(value)) return value.map((item) => maskSupportPayload(item, opts));
   if (value === null || typeof value !== 'object') return value;
   // Giá trị có dạng JSON riêng (`Prisma.Decimal`, `Date`, `Buffer`) là LÁ: đi vào nó sẽ biến tiền thành
@@ -69,6 +86,7 @@ export function maskSupportPayload(value: unknown, opts: { customerScope: boolea
     else if (opts.customerScope && CUSTOMER_ADDRESS_KEYS.has(key)) out[key] = null;
     else if (opts.customerScope && CUSTOMER_DEBT_KEYS.has(key)) out[key] = null;
     else if (opts.customerScope && CUSTOMER_PRIVATE_KEYS.has(key)) out[key] = null;
+    else if (opts.documentScope && DOCUMENT_PRIVATE_KEYS.has(key)) out[key] = null;
     else out[key] = maskSupportPayload(raw, opts);
   }
   return out;
@@ -84,7 +102,11 @@ export class SupportMaskInterceptor implements NestInterceptor {
     // Endpoint của sổ khách (capability nó khai, guard ghi vào store): địa chỉ nhà + tổng công nợ
     // cũng bị lược, không chỉ liên hệ.
     const capability = this.store.state()?.capability ?? '';
-    const customerScope = capability.split(',').includes(SUPPORT_CAPABILITY.CUSTOMER_VIEW_MASKED);
-    return next.handle().pipe(map((body) => maskSupportPayload(body, { customerScope })));
+    const capabilities = capability.split(',');
+    const customerScope = capabilities.includes(SUPPORT_CAPABILITY.CUSTOMER_VIEW_MASKED);
+    const documentScope = capabilities.includes(SUPPORT_CAPABILITY.VEHICLE_DOCUMENT_MANAGE);
+    return next
+      .handle()
+      .pipe(map((body) => maskSupportPayload(body, { customerScope, documentScope })));
   }
 }
