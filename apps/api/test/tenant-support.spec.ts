@@ -433,7 +433,10 @@ beforeAll(async () => {
   app = moduleRef.createNestApplication();
   // Cùng việc `SupportRequestMiddleware` làm ở AppModule: mỗi request một store.
   app.use((req: RequestContext, _res: unknown, next: () => void) =>
-    store.run({ support: null, capability: null, reason: null, ipAddress: '10.0.0.9', userAgent: 'jest' }, next),
+    store.run(
+      { support: null, capability: null, reason: null, ipAddress: '10.0.0.9', userAgent: 'jest' },
+      next,
+    ),
   );
   app.useGlobalPipes(createValidationPipe());
   app.useGlobalFilters(new AllExceptionsFilter(false));
@@ -801,15 +804,20 @@ describe('Danh sách thao tác cho phép (11)', () => {
   maybe('xoá xe, công tắc lên chợ, giá — đều bị từ chối', async () => {
     const id = await openId(ids.packageTenant);
     const server = app.getHttpServer();
+    // Chạy TUẦN TỰ, không `Promise.all`: server chưa listen thì supertest tự `listen(0)` ở request
+    // đầu và đóng nó khi request đó xong — các request song song còn đang bay bị `ECONNRESET`.
     const attempts = [
-      request(server).delete(`/vehicles/${packageVehicleId}`).set(inContext(id)),
-      request(server)
-        .patch(`/vehicles/${packageVehicleId}/marketplace-visibility`)
-        .set(inContext(id))
-        .send({ enabled: false }),
-      request(server).put(`/vehicles/${packageVehicleId}/pricing`).set(inContext(id)).send({}),
+      () => request(server).delete(`/vehicles/${packageVehicleId}`).set(inContext(id)),
+      () =>
+        request(server)
+          .patch(`/vehicles/${packageVehicleId}/marketplace-visibility`)
+          .set(inContext(id))
+          .send({ enabled: false }),
+      () =>
+        request(server).put(`/vehicles/${packageVehicleId}/pricing`).set(inContext(id)).send({}),
     ];
-    for (const res of await Promise.all(attempts)) {
+    for (const attempt of attempts) {
+      const res = await attempt();
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe(API_ERROR_CODE.SUPPORT_ACTION_NOT_ALLOWED);
     }
@@ -819,10 +827,11 @@ describe('Danh sách thao tác cho phép (11)', () => {
     const id = await openId(ids.packageTenant);
     const server = app.getHttpServer();
     const before = await prisma.vehicle.count({ where: { tenantId: ids.packageTenant } });
-    for (const res of await Promise.all([
-      request(server).post('/vehicles').set(inContext(id)).send({}),
-      request(server).post(`/vehicles/${packageVehicleId}/submit-public`).set(inContext(id)),
-    ])) {
+    for (const attempt of [
+      () => request(server).post('/vehicles').set(inContext(id)).send({}),
+      () => request(server).post(`/vehicles/${packageVehicleId}/submit-public`).set(inContext(id)),
+    ]) {
+      const res = await attempt();
       expect(res.status).toBe(428);
       expect(res.body.error.code).toBe(API_ERROR_CODE.SUPPORT_REASON_REQUIRED);
     }
@@ -911,14 +920,16 @@ describe('Danh sách thao tác cho phép (11)', () => {
     const base = `/vehicles/${packageVehicleId}/maintenance`;
     const server = app.getHttpServer();
     const attempts = [
-      request(server).post(`${base}/records/${recordId}/complete`).set(inContext(id)).send({}),
-      request(server).post(`${base}/records/${recordId}/start`).set(inContext(id)).send({}),
-      request(server).post(`${base}/records/${recordId}/cancel`).set(inContext(id)).send({}),
-      request(server).patch(`${base}/records/${recordId}/cost`).set(inContext(id)).send({}),
-      request(server).post(`${base}/odometer/correction`).set(inContext(id)).send({}),
-      request(server).put(`${base}/profile`).set(inContext(id)).send({}),
+      () =>
+        request(server).post(`${base}/records/${recordId}/complete`).set(inContext(id)).send({}),
+      () => request(server).post(`${base}/records/${recordId}/start`).set(inContext(id)).send({}),
+      () => request(server).post(`${base}/records/${recordId}/cancel`).set(inContext(id)).send({}),
+      () => request(server).patch(`${base}/records/${recordId}/cost`).set(inContext(id)).send({}),
+      () => request(server).post(`${base}/odometer/correction`).set(inContext(id)).send({}),
+      () => request(server).put(`${base}/profile`).set(inContext(id)).send({}),
     ];
-    for (const res of await Promise.all(attempts)) {
+    for (const attempt of attempts) {
+      const res = await attempt();
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe(API_ERROR_CODE.SUPPORT_ACTION_NOT_ALLOWED);
     }
@@ -1314,11 +1325,12 @@ describe('Quyền gian hàng tách xem/quản lý — vai hệ thống thật, q
   maybe('support KHÔNG xem lịch sử gói, KHÔNG gán hay huỷ gói', async () => {
     const base = `/platform/tenants/${ids.packageTenant}/subscriptions`;
     const attempts = [
-      request(server()).get(base).set(as(ids.supportStaff)),
-      request(server()).post(base).set(as(ids.supportStaff)).send({}),
-      request(server()).post(`${base}/${newId()}/cancel`).set(as(ids.supportStaff)),
+      () => request(server()).get(base).set(as(ids.supportStaff)),
+      () => request(server()).post(base).set(as(ids.supportStaff)).send({}),
+      () => request(server()).post(`${base}/${newId()}/cancel`).set(as(ids.supportStaff)),
     ];
-    for (const res of await Promise.all(attempts)) {
+    for (const attempt of attempts) {
+      const res = await attempt();
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe(API_ERROR_CODE.MISSING_PERMISSION);
     }
@@ -1811,7 +1823,9 @@ describe('Đợt 2A — màn đọc của gian hàng trong phiên', () => {
       const hits = async (q: string) => {
         const res = await request(server()).get('/customers').query({ q }).set(inContext(id));
         expect(res.status).toBe(200);
-        return (res.body.items ?? res.body.data ?? []).some((c: { id: string }) => c.id === customerId);
+        return (res.body.items ?? res.body.data ?? []).some(
+          (c: { id: string }) => c.id === customerId,
+        );
       };
       // Tiền tố/đoạn giữa của SĐT, đoạn email: không khớp — không có "oracle".
       expect(await hits('091234')).toBe(false);
@@ -1828,7 +1842,9 @@ describe('Đợt 2A — màn đọc của gian hàng trong phiên', () => {
         .get('/customers')
         .query({ q: '091234' })
         .set(as(ids.owner, 'OWNER-SESSION'));
-      expect((own.body.items ?? own.body.data ?? []).some((c: { id: string }) => c.id === customerId)).toBe(true);
+      expect(
+        (own.body.items ?? own.body.data ?? []).some((c: { id: string }) => c.id === customerId),
+      ).toBe(true);
     },
   );
 
