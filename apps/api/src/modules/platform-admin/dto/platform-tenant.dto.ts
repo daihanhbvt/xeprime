@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { TENANT_STATUS_VALUES } from '@xeprime/types';
+import {
+  DEFAULT_PLATFORM_TENANT_SORT,
+  PLATFORM_PARTNER_KIND_VALUES,
+  PLATFORM_TENANT_SORT_VALUES,
+  TENANT_STATUS_VALUES,
+  type PlatformPartnerKind,
+  type PlatformTenantSort,
+} from '@xeprime/types';
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
@@ -12,6 +19,22 @@ export { DEFAULT_LIMIT as PLATFORM_TENANT_DEFAULT_LIMIT, MAX_LIMIT as PLATFORM_T
 
 /** Lọc danh sách gian hàng ở admin nền tảng. */
 export class PlatformTenantListQueryDto {
+  @ApiPropertyOptional({
+    enum: PLATFORM_PARTNER_KIND_VALUES,
+    description:
+      'Loại đối tác — lọc ở DB TRƯỚC phân trang/đếm. `package_shop` = tuyến gói (gồm cả đang ' +
+      'onboarding chờ kích hoạt gói), `individual_owner` = tuyến hoa hồng / Owner Lite. Bỏ trống ' +
+      '= mọi gian hàng.',
+  })
+  @IsOptional()
+  @IsIn(PLATFORM_PARTNER_KIND_VALUES)
+  partnerKind?: PlatformPartnerKind;
+
+  @ApiPropertyOptional({ enum: PLATFORM_TENANT_SORT_VALUES, default: DEFAULT_PLATFORM_TENANT_SORT })
+  @IsOptional()
+  @IsIn(PLATFORM_TENANT_SORT_VALUES)
+  sort?: PlatformTenantSort;
+
   @ApiPropertyOptional({ enum: TENANT_STATUS_VALUES })
   @IsOptional()
   @IsIn(TENANT_STATUS_VALUES)
@@ -56,6 +79,11 @@ export class PlatformTenantDto {
   @ApiProperty() slug!: string;
   @ApiProperty({ description: 'individual | business' }) tenantType!: string;
   @ApiProperty({ enum: TENANT_STATUS_VALUES }) status!: string;
+  @ApiProperty({
+    enum: PLATFORM_PARTNER_KIND_VALUES,
+    description: 'Danh sách đối tác chứa gian hàng này — server suy từ tuyến, không nhận từ client',
+  })
+  partnerKind!: PlatformPartnerKind;
   @ApiPropertyOptional({ type: String, nullable: true }) phone!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) email!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) ownerName!: string | null;

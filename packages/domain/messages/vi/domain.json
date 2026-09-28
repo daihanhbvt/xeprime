@@ -469,6 +469,12 @@
     "watchlist": "Cần lưu ý",
     "blocked": "Từ chối phục vụ"
   },
+  "platformTenantSort": {
+    "newest": "Mới tạo gần nhất",
+    "oldest": "Tạo lâu nhất",
+    "name": "Tên A → Z",
+    "vehicles": "Nhiều xe nhất"
+  },
   "tenantCustomerSort": {
     "last_rental": "Thuê gần đây nhất",
     "rental_count": "Số lần thuê nhiều nhất",
@@ -889,5 +895,111 @@
   "storefrontKind": {
     "personal": "Cá nhân",
     "shop": "Gian hàng"
+  },
+  "auditActionCategory": {
+    "vehicle": "Xe",
+    "vehicle_document": "Giấy tờ xe",
+    "maintenance": "Bảo dưỡng",
+    "booking": "Đơn thuê",
+    "booking_request": "Yêu cầu thuê",
+    "finance": "Tiền",
+    "branch": "Chi nhánh",
+    "member": "Nhân sự",
+    "subscription": "Gói thuê bao",
+    "profile": "Hồ sơ",
+    "partner_status": "Trạng thái đối tác",
+    "customer": "Khách hàng",
+    "support_session": "Phiên hỗ trợ",
+    "support_case": "Hỗ trợ / tranh chấp",
+    "other": "Khác"
+  },
+  "auditActionVerb": {
+    "create": "Tạo mới",
+    "update": "Cập nhật",
+    "delete": "Xoá",
+    "archive": "Lưu trữ",
+    "restore": "Khôi phục",
+    "submit": "Gửi duyệt",
+    "submit_review": "Gửi kiểm duyệt",
+    "submit_public": "Gửi kiểm duyệt",
+    "cancel_public_review": "Rút yêu cầu kiểm duyệt",
+    "open": "Mở",
+    "revoke": "Kết thúc",
+    "approve": "Duyệt",
+    "reject": "Từ chối",
+    "cancel": "Huỷ",
+    "transition": "Chuyển trạng thái",
+    "lock": "Khoá",
+    "unlock": "Mở khoá",
+    "assign": "Phân công",
+    "resolve": "Giải quyết",
+    "withdraw": "Rút lại",
+    "record": "Ghi nhận",
+    "void": "Huỷ bỏ",
+    "requested": "Yêu cầu",
+    "approved": "Được duyệt",
+    "rejected": "Bị từ chối",
+    "paid": "Đã chi",
+    "cancelled": "Đã huỷ",
+    "reversed": "Đảo bút toán",
+    "reassign": "Chuyển chi nhánh",
+    "repair": "Sửa đồng bộ",
+    "create_draft": "Tạo xe nháp",
+    "invite": "Mời",
+    "invite_accept": "Chấp nhận lời mời",
+    "invite_decline": "Từ chối lời mời",
+    "invite_revoke": "Thu hồi lời mời",
+    "remove": "Gỡ",
+    "update_role": "Đổi vai trò",
+    "add": "Thêm",
+    "activate": "Kích hoạt",
+    "deactivate": "Ngừng hoạt động",
+    "set_default": "Đặt làm mặc định",
+    "expire": "Hết hạn",
+    "save": "Lưu",
+    "start": "Bắt đầu",
+    "complete": "Hoàn tất",
+    "settle": "Quyết toán",
+    "issue": "Phát hành",
+    "activate_from_payment": "Kích hoạt từ thanh toán",
+    "contact_reveal": "Xem liên hệ đầy đủ",
+    "bulk_create": "Tạo hàng loạt",
+    "bulk_release": "Nhả hàng loạt",
+    "attach": "Đính kèm"
+  },
+  "billingPhase": {
+    "current": "Đang hiệu lực",
+    "grace": "Đang ân hạn",
+    "lapsed": "Đã hết hạn",
+    "unconfigured": "Chưa xác định gói"
+  },
+  "featureState": {
+    "enabled": "Đang bật",
+    "read_only": "Chỉ xem",
+    "hidden": "Không có"
+  },
+  "shopVerification": {
+    "unverified": "Chưa xác minh",
+    "pending": "Đang xác minh",
+    "verified": "Đã xác minh",
+    "needs_revision": "Cần bổ sung",
+    "rejected": "Bị từ chối"
+  },
+  "supportSessionStatus": {
+    "active": "Đang mở",
+    "expired": "Đã hết hạn",
+    "revoked": "Đã thoát"
+  },
+  "tenantDocumentStatus": {
+    "pending": "Chờ xem xét",
+    "approved": "Hợp lệ",
+    "rejected": "Không hợp lệ"
+  },
+  "tenantDocumentType": {
+    "cccd_front": "CCCD mặt trước",
+    "cccd_back": "CCCD mặt sau",
+    "business_license": "Giấy phép kinh doanh",
+    "contract": "Hợp đồng",
+    "other": "Giấy tờ khác"
   }
 }

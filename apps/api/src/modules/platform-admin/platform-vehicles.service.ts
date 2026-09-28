@@ -171,7 +171,11 @@ export class PlatformVehiclesService {
   }
 
   /** Ẩn xe vi phạm: `approved_public` → `hidden`, snapshot Marketplace hạ theo, ghi audit. */
-  async hide(id: string, actorUserId: string, dto: HideVehicleDto): Promise<PlatformVehicleDetailDto> {
+  async hide(
+    id: string,
+    actorUserId: string,
+    dto: HideVehicleDto,
+  ): Promise<PlatformVehicleDetailDto> {
     await this.transition(
       id,
       actorUserId,

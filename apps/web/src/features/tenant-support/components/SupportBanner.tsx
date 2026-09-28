@@ -5,7 +5,7 @@ import { App, Button, Tag } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { SUPPORT_MODE } from '@xeprime/types';
-import { ROUTES } from '@/constants/routes';
+import { adminPartnerPath } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useRevokeSupportContext } from '../hooks/use-tenant-support';
@@ -29,7 +29,8 @@ export function SupportBanner({ context }: { context: SupportContext }) {
 
   function exit() {
     revoke.mutate(undefined, {
-      onSuccess: () => router.push(ROUTES.MANAGE.ADMIN_TENANTS),
+      // Về đúng danh sách của gian hàng vừa hỗ trợ, panel chi tiết mở sẵn — server nói loại.
+      onSuccess: () => router.push(adminPartnerPath.resolveTenant(context.tenant.id)),
       onError: (err) => message.error(errorMessage(err)),
     });
   }

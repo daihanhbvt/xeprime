@@ -1,12 +1,17 @@
-import { TENANT_STATUS } from '@xeprime/types';
+import { PLATFORM_TENANT_SORT_VALUES, TENANT_STATUS, type TenantStatus } from '@xeprime/types';
 
-/** Lựa chọn lọc trạng thái gian hàng (đưa các trạng thái hay dùng lên trước). */
-export const ADMIN_TENANT_STATUS_OPTIONS = [
-  { value: 'all', label: 'Tất cả' },
-  { value: TENANT_STATUS.ACTIVE, label: 'Đang hoạt động' },
-  { value: TENANT_STATUS.SUSPENDED, label: 'Bị khóa' },
-  { value: TENANT_STATUS.PENDING_REVIEW, label: 'Chờ duyệt' },
-  { value: TENANT_STATUS.NEEDS_REVISION, label: 'Cần bổ sung' },
-  { value: TENANT_STATUS.DRAFT, label: 'Nháp' },
-  { value: TENANT_STATUS.REJECTED, label: 'Bị từ chối' },
+/**
+ * Thứ tự trạng thái trong bộ lọc — trạng thái hay dùng đứng trước. Nhãn dịch qua
+ * `useDomainLabel('tenantStatus', …)`, không viết ở đây.
+ */
+export const ADMIN_TENANT_STATUS_FILTER_ORDER: readonly TenantStatus[] = [
+  TENANT_STATUS.ACTIVE,
+  TENANT_STATUS.SUSPENDED,
+  TENANT_STATUS.PENDING_REVIEW,
+  TENANT_STATUS.NEEDS_REVISION,
+  TENANT_STATUS.DRAFT,
+  TENANT_STATUS.REJECTED,
 ];
+
+/** Sắp xếp danh sách đối tác — nhãn dịch qua `useDomainLabel('platformTenantSort', …)`. */
+export const ADMIN_TENANT_SORT_OPTIONS = PLATFORM_TENANT_SORT_VALUES;

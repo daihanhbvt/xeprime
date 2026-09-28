@@ -1,75 +1,41 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { Suspense, useState } from 'react';
-import { LoadingState } from '@/components/feedback/LoadingState';
-import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
-import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
-import { ADMIN_TENANTS_DEFAULT_LIMIT } from '@/features/admin-tenants/api';
-import { ADMIN_TENANT_STATUS_OPTIONS } from '@/features/admin-tenants/constants';
-import { AdminTenantDetailDrawer } from '@/features/admin-tenants/components/AdminTenantDetailDrawer';
-import { AdminTenantTable } from '@/features/admin-tenants/components/AdminTenantTable';
-import { useAdminTenantFilters } from '@/features/admin-tenants/hooks/use-admin-tenant-filters';
-import { useAdminTenants } from '@/features/admin-tenants/hooks/use-admin-tenants';
+import { ADMIN_PARTNER_TENANT_PARAM, ROUTES } from '@/constants/routes';
+import { LegacyTenantRedirect } from '@/features/admin-tenants/components/LegacyTenantRedirect';
 
-const FILTER_FIELDS: FilterField[] = [
-  { kind: 'search', key: 'q', label: 'Tìm gian hàng', placeholder: 'Tìm tên / mã / SĐT' },
-  {
-    kind: 'select',
-    key: 'status',
-    label: 'Trạng thái',
-    options: ADMIN_TENANT_STATUS_OPTIONS,
-    allowClear: false,
-  },
-];
+type SearchParams = Record<string, string | string[] | undefined>;
 
-const CLEARED = { q: undefined, status: 'all' } as const;
+/**
+ * URL CŨ của danh sách gian hàng chung — từ 28/09/2026 chia thành hai danh sách đối tác.
+ *
+ * Link và bookmark cũ không được chết, nên route còn sống dưới dạng chuyển tiếp:
+ *
+ *  - `?tenant=<id>` → tra loại của CHÍNH gian hàng đó ở server, rồi vào đúng danh sách với panel
+ *    chi tiết mở sẵn (`LegacyTenantRedirect`). Đây cũng là lối mà chi tiết đơn thuê và lối thoát
+ *    phiên hỗ trợ dùng — hai nơi biết gian hàng nhưng không biết loại.
+ *  - còn lại → "Gian hàng gói", GIỮ nguyên `q`/`status`/`page`/… (hai danh sách chung bộ tham số).
+ *    Link cũ không mang loại nào, và danh sách chung cũ vốn mở đầu bằng gian hàng.
+ */
+export default async function LegacyAdminTenantsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
+  const tenantId = firstValue(params[ADMIN_PARTNER_TENANT_PARAM]);
+  if (tenantId) return <LegacyTenantRedirect tenantId={tenantId} />;
 
-export default function AdminTenantsPage() {
-  return (
-    <Suspense fallback={<LoadingState variant="page" label="Đang tải danh sách gian hàng…" />}>
-      <AdminTenantsView />
-    </Suspense>
-  );
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    for (const item of Array.isArray(value) ? value : value === undefined ? [] : [value]) {
+      query.append(key, item);
+    }
+  }
+  const qs = query.toString();
+  redirect(qs ? `${ROUTES.MANAGE.ADMIN_PARTNER_SHOPS}?${qs}` : ROUTES.MANAGE.ADMIN_PARTNER_SHOPS);
 }
 
-function AdminTenantsView() {
-  const { filters, setFilters } = useAdminTenantFilters();
-  const { data, isError, refetch, isFetching } = useAdminTenants(filters);
-  const [selected, setSelected] = useState<string | null>(null);
-
-  const items = data?.items ?? [];
-  const meta = data?.meta ?? {
-    page: 1,
-    limit: ADMIN_TENANTS_DEFAULT_LIMIT,
-    total: 0,
-    hasNext: false,
-  };
-  const hasFilters = Boolean(
-    (filters.q && filters.q.length > 0) || (filters.status && filters.status !== 'all'),
-  );
-
-  return (
-    <div>
-      <ManagePageHeader title="Gian hàng" />
-
-      <FilterBar
-        fields={FILTER_FIELDS}
-        values={filters as Record<string, string | undefined>}
-        onChange={(patch) => setFilters(patch)}
-      />
-
-      <AdminTenantTable
-        items={items}
-        meta={meta}
-        loading={isFetching}
-        error={isError && !data ? { onRetry: () => void refetch() } : null}
-        filtered={hasFilters}
-        onClearFilters={() => setFilters(CLEARED)}
-        onView={(id) => setSelected(id)}
-        onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
-      />
-
-      <AdminTenantDetailDrawer tenantId={selected} onClose={() => setSelected(null)} />
-    </div>
-  );
+function firstValue(value: string | string[] | undefined): string | undefined {
+  const first = Array.isArray(value) ? value[0] : value;
+  return first?.trim() || undefined;
 }

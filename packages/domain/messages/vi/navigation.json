@@ -94,15 +94,20 @@
     "support": "Hỗ trợ",
     "platform": "Quản trị nền tảng",
     "platformMarketplace": "Chợ xe",
+    "platformPartners": "Đối tác",
+    "platformOrders": "Đơn & khách hàng",
     "platformFinance": "Tiền & vận hành",
     "platformPolicy": "Chính sách & gói",
     "platformSystem": "Hệ thống"
   },
   "platform": {
     "dashboard": "Tổng quan",
-    "approvals": "Duyệt xe",
+    "approvals": "Kiểm duyệt xe",
+    "approvalsShort": "Kiểm duyệt",
     "tenants": "Gian hàng",
-    "vehicles": "Xe toàn hệ thống",
+    "packageShops": "Gian hàng gói",
+    "individualOwners": "Chủ xe cá nhân",
+    "vehicles": "Tất cả xe",
     "vehiclesShort": "Xe",
     "bookings": "Đơn thuê toàn hệ thống",
     "bookingsShort": "Đơn thuê",
@@ -119,7 +124,6 @@
     "promoCodes": "Mã khuyến mãi",
     "money": "Vận hành tiền",
     "support": "Hỗ trợ / tranh chấp",
-    "shops": "Gian hàng & xe",
     "billing": "Gói & phí"
   }
 }

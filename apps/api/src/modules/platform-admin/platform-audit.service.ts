@@ -34,9 +34,7 @@ const LIST_SELECT = {
 export class PlatformAuditService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(
-    query: AuditLogListQueryDto,
-  ): Promise<{ data: AuditLogDto[]; meta: PaginationMeta }> {
+  async list(query: AuditLogListQueryDto): Promise<{ data: AuditLogDto[]; meta: PaginationMeta }> {
     const paging = resolvePaging(query, AUDIT_LOG_DEFAULT_LIMIT, AUDIT_LOG_MAX_LIMIT);
 
     const createdAt =

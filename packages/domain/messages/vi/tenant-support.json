@@ -22,7 +22,7 @@
   "session": {
     "pageTitle": "Không gian hỗ trợ gian hàng",
     "loading": "Đang mở phiên hỗ trợ…",
-    "backToTenants": "Về danh sách gian hàng",
+    "backToTenants": "Về danh sách đối tác",
     "expired": {
       "title": "Phiên hỗ trợ đã kết thúc",
       "body": "Phiên đã hết hạn hoặc đã thoát. Mở phiên mới từ màn Gian hàng, kèm lý do hỗ trợ."

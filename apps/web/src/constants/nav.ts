@@ -111,6 +111,14 @@ export interface NavLeaf {
    * KHÔNG phải nới guard cho khớp menu.
    */
   readonly ownerOnly?: true;
+  /**
+   * Chỉ sáng khi đường dẫn KHỚP TUYỆT ĐỐI, không nhận route con.
+   *
+   * Dành cho mục có `href` là tiền tố của cả một khu: "Kiểm duyệt xe" sống ở `/manage/admin`, tức
+   * là tiền tố của MỌI trang quản trị. Để nó nhận route con thì một trang admin chưa có mục riêng
+   * (URL cũ đang chuyển tiếp, một route mới quên khai) sẽ sáng nhầm "Kiểm duyệt xe".
+   */
+  readonly exact?: true;
 }
 
 /**
@@ -435,18 +443,28 @@ export const SHOP_NAV: readonly NavSection[] = [
  * gì, và mục dùng mỗi ngày (duyệt hồ sơ, tiền vào) nằm lẫn với mục đụng một lần một quý (danh
  * mục lọc, tỉnh/thành).
  *
- * Bốn khối dưới đây trả lời bốn câu hỏi khác nhau của người trực:
+ * Sáu khối dưới Tổng quan trả lời sáu câu hỏi khác nhau của người trực:
  *
- *  1. **Chợ xe** — ai đang bán, bán cái gì, khách đặt gì. Việc của reviewer và support.
- *  2. **Tiền & vận hành** — tiền vào khớp chưa, ai chờ nhận tiền, ai đang khiếu nại. Việc của
+ *  1. **Chợ xe** — xe nào chờ duyệt, xe nào đang có trên sàn. Việc của reviewer.
+ *  2. **Đối tác** — ai đang bán: gian hàng gói và chủ xe cá nhân, hai danh sách riêng.
+ *  3. **Đơn & khách hàng** — khách đặt gì, khách là ai. Việc của support.
+ *  4. **Tiền & vận hành** — tiền vào khớp chưa, ai chờ nhận tiền, ai đang khiếu nại. Việc của
  *     `finance_admin`, và là vòng phải khép kín trước Gate R2/R3.
- *  3. **Chính sách & gói** — nền tảng THU thế nào (gói, phí) và CHI tài trợ thế nào (mã khuyến
+ *  5. **Chính sách & gói** — nền tảng THU thế nào (gói, phí) và CHI tài trợ thế nào (mã khuyến
  *     mãi). Đụng ít, nhưng mỗi lần đụng là đổi tiền của mọi đơn sau đó.
- *  4. **Hệ thống** — dữ liệu nền và dấu vết: nhân sự, danh mục, địa chỉ, banner, nhật ký.
+ *  6. **Hệ thống** — dữ liệu nền và dấu vết: nhân sự, danh mục, địa chỉ, banner, nhật ký.
  *
- * Hai mục cha (`platform-shops`, `platform-billing`) gộp ở tầng ĐIỀU HƯỚNG chứ không gộp route
- * — giống cách `SHOP_NAV` gộp "Xe của tôi" và "Tài chính". Mọi URL, quyền và hành vi trang giữ
- * nguyên.
+ * Mục cha `platform-billing` gộp ở tầng ĐIỀU HƯỚNG chứ không gộp route — giống cách `SHOP_NAV`
+ * gộp "Xe của tôi" và "Tài chính".
+ *
+ * Đợt dọn 28/09/2026 — khối "Chợ xe" cũ ôm cả đối tác lẫn đơn/khách, nên tách làm ba khối:
+ *
+ *  - **Chợ xe** chỉ còn XE: "Kiểm duyệt xe" (hàng đợi — đổi tên từ "Duyệt xe") và "Tất cả xe" (tra
+ *    cứu), cùng cấp. Mục cha "Gian hàng & xe" biến mất. Hai màn vẫn là hai route, hai nguồn dữ liệu.
+ *  - **Đối tác** — hai danh sách ĐỘC LẬP, mỗi danh sách một URL: "Gian hàng gói" và "Chủ xe cá
+ *    nhân" (`PLATFORM_PARTNER_KIND`). Không phải hai tab: người trực hai nhóm này làm hai loại việc
+ *    khác nhau (Full Manage vs Owner Lite). URL cũ `/manage/admin/tenants` chuyển tiếp.
+ *  - **Đơn & khách hàng** — đơn thuê toàn hệ thống và khách thuê.
  */
 export const PLATFORM_NAV: readonly NavSection[] = [
   {
@@ -469,41 +487,52 @@ export const PLATFORM_NAV: readonly NavSection[] = [
     children: [
       {
         /*
-         * Duyệt xe đứng đầu khối: đây là hàng đợi có người CHỜ ở đầu kia — một chiếc xe chưa
-         * được duyệt thì không lên chợ được. Ba mục còn lại trong khối là tra cứu.
+         * Kiểm duyệt xe đứng đầu khối: đây là hàng đợi có người CHỜ ở đầu kia — một chiếc xe chưa
+         * được duyệt thì không lên chợ được. "Tất cả xe" ngay dưới là tra cứu.
+         *
+         * `exact`: href này là gốc của cả khu quản trị — xem docblock `NavLeaf.exact`.
          */
         key: 'approvals',
         labelKey: 'platform.approvals',
         href: ROUTES.MANAGE.ADMIN,
         permission: PERMISSION.PLATFORM_APPROVAL_REVIEW,
         icon: AuditOutlined,
+        exact: true,
       },
       {
-        /*
-         * Gian hàng và xe là một cặp: xe luôn thuộc một gian hàng, và người trực đi từ gian
-         * hàng sang xe của nó rồi ngược lại. Hai route giữ nguyên, chỉ đứng chung một mục cha.
-         */
-        type: 'branch',
-        key: 'platform-shops',
-        labelKey: 'platform.shops',
-        icon: ShopOutlined,
-        children: [
-          {
-            key: 'admin-tenants',
-            labelKey: 'platform.tenants',
-            href: ROUTES.MANAGE.ADMIN_TENANTS,
-            permission: PERMISSION.PLATFORM_TENANT_VIEW,
-            icon: ShopOutlined,
-          },
-          {
-            key: 'admin-vehicles',
-            labelKey: 'platform.vehicles',
-            href: ROUTES.MANAGE.ADMIN_VEHICLES,
-            permission: PERMISSION.PLATFORM_VEHICLE_VIEW,
-            icon: CarOutlined,
-          },
-        ],
+        key: 'admin-vehicles',
+        labelKey: 'platform.vehicles',
+        href: ROUTES.MANAGE.ADMIN_VEHICLES,
+        permission: PERMISSION.PLATFORM_VEHICLE_VIEW,
+        icon: CarOutlined,
       },
+    ],
+  },
+  {
+    key: 'platform-partners',
+    labelKey: 'manageGroups.platformPartners',
+    children: [
+      {
+        // Cùng quyền với danh sách chung cũ: tách danh sách không mở thêm dữ liệu nào.
+        key: 'admin-partner-shops',
+        labelKey: 'platform.packageShops',
+        href: ROUTES.MANAGE.ADMIN_PARTNER_SHOPS,
+        permission: PERMISSION.PLATFORM_TENANT_VIEW,
+        icon: ShopOutlined,
+      },
+      {
+        key: 'admin-partner-owners',
+        labelKey: 'platform.individualOwners',
+        href: ROUTES.MANAGE.ADMIN_PARTNER_OWNERS,
+        permission: PERMISSION.PLATFORM_TENANT_VIEW,
+        icon: IdcardOutlined,
+      },
+    ],
+  },
+  {
+    key: 'platform-orders',
+    labelKey: 'manageGroups.platformOrders',
+    children: [
       {
         key: 'admin-bookings',
         labelKey: 'platform.bookings',
@@ -684,6 +713,8 @@ export interface MobileTab {
    * nào dùng — trường có mặt để lần sau không ai thêm được một tab bị gác mà quên lọc.
    */
   readonly feature?: PlanFeature;
+  /** Cùng nghĩa với `NavLeaf.exact` — tab có href là tiền tố của cả một khu. */
+  readonly exact?: true;
 }
 
 const SHOP_MOBILE_TABS: readonly MobileTab[] = [
@@ -727,12 +758,13 @@ const PLATFORM_MOBILE_TABS: readonly MobileTab[] = [
     icon: DashboardOutlined,
   },
   {
-    // Tab 2: Approvals — xác minh gian hàng/xe
+    // Tab 2: Kiểm duyệt xe — nhãn ngắn vì bốn tab chia nhau bề ngang màn điện thoại.
     key: 'approvals',
-    labelKey: 'platform.approvals',
+    labelKey: 'platform.approvalsShort',
     href: ROUTES.MANAGE.ADMIN,
     permission: PERMISSION.PLATFORM_APPROVAL_REVIEW,
     icon: AuditOutlined,
+    exact: true,
   },
   {
     // Tab 3: Money Ops — tiền, đối soát, hỗ trợ
@@ -768,9 +800,12 @@ export function flattenLeaves(sections: readonly NavSection[]): NavLeaf[] {
 }
 
 /**
- * Key menu khớp với đường dẫn hiện tại: ưu tiên khớp tuyệt đối, nếu không thì lấy mục lá
- * có href là tiền tố dài nhất (để `/manage/vehicles/new` vẫn sáng mục "Danh sách xe").
- * `/manage` (Tổng quan) chỉ khớp tuyệt đối, không thì mọi trang đều dính vì đều bắt đầu bằng nó.
+ * Key menu khớp với đường dẫn hiện tại — trả về NHIỀU NHẤT một href: ưu tiên khớp tuyệt đối, nếu
+ * không thì lấy mục lá có href là tiền tố dài nhất (để `/manage/vehicles/new` vẫn sáng mục "Danh
+ * sách xe").
+ *
+ * Mục chỉ khớp tuyệt đối: `/manage` (Tổng quan) và mọi mục khai `exact` (vd. "Kiểm duyệt xe" ở
+ * `/manage/admin`) — href của chúng là tiền tố của cả một khu, nhận route con là sáng nhầm.
  */
 export function matchSelectedKey(pathname: string, leaves: readonly NavLeaf[]): string | undefined {
   const direct = longestPrefixLeaf(pathname, leaves);
@@ -778,20 +813,37 @@ export function matchSelectedKey(pathname: string, leaves: readonly NavLeaf[]): 
   if (!contextId) return direct?.href;
   /*
    * Phiên hỗ trợ gian hàng (ADR 0050) sống dưới `/manage/admin/tenant-support/<id phiên>`. Trong
-   * phiên, cây menu là cây của GIAN HÀNG với href đã ánh xạ vào phiên — khớp thẳng ở trên. Cây nền
-   * tảng (vd. băng hết gói của AppShell tra trên cây chưa lọc) không có mục nào mang tiền tố đó:
-   * phiên thuộc về màn Gian hàng (nơi nó được mở), nên sáng mục đó — không phải "Tổng quan nền
-   * tảng" (`/manage/admin`), mục mà đường dẫn phiên tình cờ nhận làm tiền tố.
+   * phiên, cây menu là cây của GIAN HÀNG với href đã ánh xạ vào phiên — khớp thẳng ở trên. Cây
+   * nền tảng (vd. băng hết gói của AppShell tra trên cây chưa lọc) KHÔNG sáng mục nào: phiên được
+   * mở từ một trong hai danh sách đối tác, và đường dẫn không nói là danh sách nào — đoán là sáng
+   * sai một nửa số lần.
    */
-  if (direct?.href.startsWith(adminTenantSupportPath.root(contextId))) return direct.href;
-  return longestPrefixLeaf(ROUTES.MANAGE.ADMIN_TENANTS, leaves)?.href;
+  return direct?.href.startsWith(adminTenantSupportPath.root(contextId)) ? direct.href : undefined;
 }
 
-function longestPrefixLeaf(path: string, leaves: readonly NavLeaf[]): NavLeaf | undefined {
-  let best: NavLeaf | undefined;
+/** Hình dạng tối thiểu để dò mục đang mở — dùng chung cho mục sidebar và tab dưới đáy. */
+interface NavTarget {
+  readonly href: string;
+  readonly exact?: true;
+}
+
+/**
+ * Tab dưới đáy (mobile) đang mở — CÙNG luật với sidebar (`matchSelectedKey`): tiền tố dài nhất
+ * thắng, mục `exact`/Tổng quan chỉ khớp tuyệt đối. Trả về nhiều nhất một href, nên hai tab không
+ * bao giờ cùng sáng.
+ */
+export function matchActiveHref(
+  pathname: string,
+  targets: readonly NavTarget[],
+): string | undefined {
+  return longestPrefixLeaf(pathname, targets)?.href;
+}
+
+function longestPrefixLeaf<T extends NavTarget>(path: string, leaves: readonly T[]): T | undefined {
+  let best: T | undefined;
   for (const leaf of leaves) {
-    const isMatch =
-      path === leaf.href || (leaf.href !== ROUTES.MANAGE.ROOT && path.startsWith(`${leaf.href}/`));
+    const exactOnly = leaf.exact === true || leaf.href === ROUTES.MANAGE.ROOT;
+    const isMatch = path === leaf.href || (!exactOnly && path.startsWith(`${leaf.href}/`));
     if (isMatch && (!best || leaf.href.length > best.href.length)) {
       best = leaf;
     }
@@ -919,10 +971,7 @@ function mapLeaf(contextId: string, leaf: NavLeaf): NavLeaf | null {
  * ánh xạ sang route của phiên, bỏ mọi mục không có trang trong phiên (tài chính, chat, trung tâm
  * hỗ trợ của gian hàng…). Quyền/cờ gói vẫn lọc tiếp ở `useManageNav` như với chính gian hàng.
  */
-export function supportNavSections(
-  contextId: string,
-  workspace: SupportWorkspace,
-): NavSection[] {
+export function supportNavSections(contextId: string, workspace: SupportWorkspace): NavSection[] {
   if (workspace === SUPPORT_WORKSPACE.ONBOARDING) return [];
   const tree = workspace === SUPPORT_WORKSPACE.MANAGE ? SHOP_NAV : OWNER_LITE_SUPPORT_NAV;
   return tree
@@ -941,10 +990,7 @@ export function supportNavSections(
     .filter((section) => section.children.length > 0);
 }
 
-export function supportMobileTabs(
-  contextId: string,
-  workspace: SupportWorkspace,
-): MobileTab[] {
+export function supportMobileTabs(contextId: string, workspace: SupportWorkspace): MobileTab[] {
   if (workspace === SUPPORT_WORKSPACE.ONBOARDING) return [];
   const tabs = workspace === SUPPORT_WORKSPACE.MANAGE ? SHOP_MOBILE_TABS : OWNER_LITE_SUPPORT_TABS;
   return tabs.flatMap((tab) => {

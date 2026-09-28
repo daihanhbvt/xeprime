@@ -13,10 +13,7 @@ import { OdometerService } from './maintenance/odometer.service';
 import { VehicleMaintenanceController } from './maintenance/vehicle-maintenance.controller';
 import { VehicleDocumentsController } from './documents/vehicle-documents.controller';
 import { VehicleDocumentsService } from './documents/vehicle-documents.service';
-import {
-  OcrNotConfiguredProvider,
-  VEHICLE_DOCUMENT_OCR_PROVIDER,
-} from './documents/ocr-provider';
+import { OcrNotConfiguredProvider, VEHICLE_DOCUMENT_OCR_PROVIDER } from './documents/ocr-provider';
 import { VehicleAlertsService } from './vehicle-alerts.service';
 import { VehicleContractsService } from './vehicle-contracts.service';
 import { VehicleSourceService } from './vehicle-source.service';
@@ -74,6 +71,13 @@ import { VehiclesService } from './vehicles.service';
    * Bàn giao (Wave 7, ở BookingsModule) tái dùng nguyên ba service này thay vì tự ghi KM /
    * tự tạo phiếu bảo dưỡng / tự dựng luồng file riêng tư — mỗi bảng chỉ có một writer.
    */
-  exports: [VehiclesService, OdometerService, MaintenanceService, VehicleContractsService],
+  exports: [
+    VehiclesService,
+    OdometerService,
+    MaintenanceService,
+    VehicleContractsService,
+    // Drawer chi tiết đối tác của nền tảng đọc cảnh báo xe từ CHÍNH nguồn này (chỉ đọc).
+    VehicleAlertsService,
+  ],
 })
 export class VehiclesModule {}

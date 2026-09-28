@@ -22,7 +22,7 @@
   "session": {
     "pageTitle": "Shop support workspace",
     "loading": "Opening support session…",
-    "backToTenants": "Back to shops",
+    "backToTenants": "Back to partners",
     "expired": {
       "title": "Support session has ended",
       "body": "The session expired or was exited. Open a new one from the Shops screen, with a support reason."

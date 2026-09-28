@@ -94,6 +94,8 @@
     "support": "Help",
     "platform": "Platform admin",
     "platformMarketplace": "Marketplace",
+    "platformPartners": "Partners",
+    "platformOrders": "Bookings & renters",
     "platformFinance": "Money & operations",
     "platformPolicy": "Policies & plans",
     "platformSystem": "System"
@@ -101,7 +103,10 @@
   "platform": {
     "dashboard": "Overview",
     "approvals": "Vehicle review",
+    "approvalsShort": "Review",
     "tenants": "Shops",
+    "packageShops": "Subscription shops",
+    "individualOwners": "Individual owners",
     "vehicles": "All vehicles",
     "vehiclesShort": "Vehicles",
     "bookings": "All bookings",
@@ -119,7 +124,6 @@
     "promoCodes": "Promo codes",
     "money": "Money operations",
     "support": "Support / disputes",
-    "shops": "Shops & vehicles",
     "billing": "Plans & fees"
   }
 }

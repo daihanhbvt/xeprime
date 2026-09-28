@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { PERMISSION, TENANT_STATUS_META, type TenantStatus } from '@xeprime/types';
 import { MaskedContact } from '@/components/data-display/MaskedContact';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, adminPartnerPath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -62,9 +62,7 @@ export function BookingInformation({ booking }: { booking: AdminBookingDetail })
           <dt>{t('tenant')}</dt>
           <dd>
             <span className={styles.inline}>
-              <Link
-                href={`${ROUTES.MANAGE.ADMIN_TENANTS}?q=${encodeURIComponent(booking.tenantName)}`}
-              >
+              <Link href={adminPartnerPath.resolveTenant(booking.tenantId)}>
                 {booking.tenantName}
               </Link>
               <StatusTag

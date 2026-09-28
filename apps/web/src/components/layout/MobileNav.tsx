@@ -7,9 +7,9 @@ import { Drawer } from 'antd';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FEATURE_STATE, isFeatureVisible } from '@xeprime/types';
+import { matchActiveHref } from '@/constants/nav';
 import { Logo } from '@/components/brand/Logo';
 import { useManageNavTree } from './use-manage-nav-tree';
-import { ROUTES } from '@/constants/routes';
 import { useFeatureStates } from '@/hooks/use-feature';
 import { usePermissions } from '@/hooks/use-permissions';
 import { cx } from '@/lib/cx';
@@ -22,11 +22,6 @@ import { NavBadge } from './NavBadge';
 import { useManageNav } from './use-manage-nav';
 import { useNavBadges } from './use-nav-badges';
 import styles from './MobileNav.module.css';
-
-function isTabActive(pathname: string, href: string): boolean {
-  if (href === ROUTES.MANAGE.ROOT) return pathname === href;
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
 
 /**
  * Điều hướng mobile của cổng quản lý: thanh tab cố định dưới đáy (Figma `14:1641`, 4 đích
@@ -73,14 +68,17 @@ export function MobileNav() {
   const badges = useNavBadges();
   const { items, selectedKey, openKeys, onOpenChange } = useManageNav({ onNavigate: close });
 
+  // MỘT tab sáng, cùng luật với sidebar (`matchActiveHref`): tiền tố dài nhất thắng, tab `exact`
+  // chỉ khớp tuyệt đối — "Kiểm duyệt" ở `/manage/admin` không được sáng trên mọi trang admin.
   // "Thêm" sáng khi trang hiện tại không thuộc tab chính nào (đang ở mục trong Drawer).
-  const anyPrimaryActive = tabs.some((tab) => isTabActive(pathname, tab.href));
+  const activeHref = matchActiveHref(pathname, tabs);
+  const anyPrimaryActive = activeHref !== undefined;
 
   return (
     <>
       <nav className={styles.bar} aria-label={t('public.quickNavLabel')}>
         {tabs.map((tab) => {
-          const active = isTabActive(pathname, tab.href);
+          const active = tab.href === activeHref;
           const label = t(tab.labelKey);
           const count = tab.badge ? badges[tab.badge] : 0;
           return (

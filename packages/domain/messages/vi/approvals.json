@@ -1,6 +1,6 @@
 {
   "page": {
-    "title": "Duyệt xe",
+    "title": "Kiểm duyệt xe",
     "subtitle": "Kiểm tra xe trước khi hiển thị trên nền tảng",
     "loading": "Đang tải hàng đợi duyệt xe…"
   },
@@ -15,7 +15,7 @@
     "status": "Trạng thái",
     "submittedAt": "Ngày gửi",
     "all": "Tất cả",
-    "anyStatus": "Tất cả trạng thái"
+    "anyStatus": "Tất cả hồ sơ kiểm duyệt"
   },
   "table": {
     "label": "Danh sách xe chờ duyệt",

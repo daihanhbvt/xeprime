@@ -2,11 +2,7 @@ import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION } from '@xeprime/types';
 import { PlatformOnly, RequirePermissions } from '../../common/decorators';
-import {
-  AuditLogDetailDto,
-  AuditLogListQueryDto,
-  AuditLogPageDto,
-} from './dto/audit-log.dto';
+import { AuditLogDetailDto, AuditLogListQueryDto, AuditLogPageDto } from './dto/audit-log.dto';
 import { PlatformAuditService } from './platform-audit.service';
 
 /** Nhật ký hệ thống (Phase 7) — chỉ ĐỌC. `@PlatformOnly` — không dùng chung guard với gian hàng. */

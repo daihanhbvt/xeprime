@@ -1,12 +1,18 @@
 import {
   createParamDecorator,
+  InternalServerErrorException,
   SetMetadata,
   UnauthorizedException,
   type ExecutionContext,
 } from '@nestjs/common';
 import type { Permission, PlanFeature, SupportCapability } from '@xeprime/types';
 import { API_ERROR_CODE } from '@xeprime/types';
-import type { AuthenticatedUser, RequestContext, TenantContext } from '../types/request-context';
+import type {
+  AuthenticatedUser,
+  PlatformContext,
+  RequestContext,
+  TenantContext,
+} from '../types/request-context';
 
 /** Endpoint không cần đăng nhập. Mặc định MỌI endpoint đều cần — đây là opt-out có chủ đích. */
 export const IS_PUBLIC_KEY = 'xeprime:isPublic';
@@ -137,6 +143,27 @@ export const CurrentUser = createParamDecorator(
       throw new UnauthorizedException({ code: API_ERROR_CODE.UNAUTHENTICATED });
     }
     return req.user;
+  },
+);
+
+/**
+ * Platform scope hiện tại — vai và quyền nền tảng đã đọc từ DB ở `PlatformScopeGuard`.
+ *
+ * Dùng khi một endpoint ĐỌC phải tự lọc phần dữ liệu theo quyền của người gọi (che tiền, bỏ khối
+ * nhạy cảm) thay vì chặn cả endpoint. Ném 500 thay vì trả undefined: handler quên `@PlatformOnly()`
+ * sẽ fail ngay (và lộ ra như một lỗi cấu hình) thay vì chạy như thể người gọi không có quyền nào.
+ */
+export const CurrentPlatform = createParamDecorator(
+  (_data: unknown, ctx: ExecutionContext): PlatformContext => {
+    const req = ctx.switchToHttp().getRequest<RequestContext>();
+    if (!req.platform) {
+      // Lỗi NỐI DÂY của controller (quên `@PlatformOnly()`), không phải lỗi của người gọi.
+      throw new InternalServerErrorException({
+        code: API_ERROR_CODE.INTERNAL_ERROR,
+        message: 'Request chưa có platform scope — thiếu @PlatformOnly() trên controller?',
+      });
+    }
+    return req.platform;
   },
 );
 
