@@ -9,7 +9,7 @@ import {
   SUBSCRIPTION_TERM_MONTHS,
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
@@ -159,7 +159,13 @@ export class PlanListQueryDto {
 }
 
 export class CreatePlanDto {
-  @ApiProperty({ example: 'basic', description: 'Mã gói — unique, không đổi sau khi tạo' })
+  @ApiProperty({
+    example: 'basic',
+    description:
+      'Mã gói — unique, không đổi sau khi tạo. Chữ hoa được nhận và chuẩn hoá về chữ thường, để ' +
+      '"BASIC" và "basic" không thành hai gói khác nhau (unique ở DB phân biệt hoa/thường).',
+  })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
   @IsString()
   @Matches(/^[a-z0-9][a-z0-9_-]{1,49}$/, {
     message: 'code chỉ gồm chữ thường/số/gạch, 2-50 ký tự',
@@ -268,6 +274,12 @@ export class PlanDto {
   @ApiProperty() sortOrder!: number;
   @ApiProperty({ description: 'Số thuê bao đã gán từ gói này (mọi trạng thái)' })
   subscriptionCount!: number;
+  @ApiProperty({
+    description:
+      'Xoá hẳn được không: chưa từng có thuê bao hay hoá đơn nào trỏ tới, và không phải tuyến ' +
+      'hoa hồng. `DELETE /platform/plans/:id` là lớp chặn thật (`PLAN_IN_USE`).',
+  })
+  deletable!: boolean;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
 }
 
@@ -559,7 +571,7 @@ export class MySubscriptionDto {
  * Gói cho GIAN HÀNG chọn mua: như PlanDto nhưng không lộ `subscriptionCount` — số liệu vận hành
  * của nền tảng, không phải thông tin của người đang chọn gói.
  */
-export class TenantPlanDto extends OmitType(PlanDto, ['subscriptionCount'] as const) {}
+export class TenantPlanDto extends OmitType(PlanDto, ['subscriptionCount', 'deletable'] as const) {}
 
 /** Gói hiện hành của tenant — nhúng vào PlatformTenantDetailDto. */
 export class CurrentPlanDto {

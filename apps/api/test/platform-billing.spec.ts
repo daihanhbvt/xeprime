@@ -9,7 +9,10 @@ import {
   VEHICLE_TYPE,
   addCalendarMonthsVn,
 } from '@xeprime/types';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { CreatePlanDto } from '../src/modules/billing/dto/billing.dto';
 import {
   makeVehiclesService,
   vehicleCreator,
@@ -88,6 +91,23 @@ async function mkCommissionPlanDirect(code: string) {
   });
   planIds.push(plan.id);
   return plan;
+}
+
+/** Tenant riêng cho một test — không đụng lịch sử thuê bao của bốn tenant cố định. */
+async function mkScratchTenant(tag: string): Promise<string> {
+  const id = newId();
+  await prisma.tenant.create({
+    data: {
+      id,
+      code: `T-${id.slice(-8)}`,
+      slug: `t-${id.toLowerCase().slice(-10)}`,
+      name: `BillShop-${tag}-${RUN}`,
+      status: 'active',
+      ownerUserId: actorId,
+    },
+  });
+  cleanupTenantIds.push(id);
+  return id;
 }
 
 beforeAll(async () => {
@@ -190,6 +210,139 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
     await expect(
       billing.assign(tenantId, actorId, { planId: toArchive.id, termMonths: 1 }),
     ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.CONFLICT } });
+  });
+
+  maybe('plan: mở bán lại (+audit) → gán được lại; lật trùng chiều → INVALID_STATUS_TRANSITION', async () => {
+    const plan = await mkPlan('reopen');
+    await billing.archivePlan(actorId, plan.id);
+    // Ngừng bán hai lần: lượt thứ hai không có gì để đổi.
+    await expect(billing.archivePlan(actorId, plan.id)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.INVALID_STATUS_TRANSITION },
+    });
+
+    const reopened = await billing.activatePlan(actorId, plan.id);
+    expect(reopened.status).toBe(PLAN_STATUS.ACTIVE);
+    const auditRow = await prisma.auditLog.findFirst({
+      where: { targetId: plan.id, action: 'plan.activate' },
+    });
+    expect(auditRow?.actorScope).toBe('platform');
+    expect(auditRow?.afterJson).toEqual({ status: PLAN_STATUS.ACTIVE });
+
+    await expect(billing.activatePlan(actorId, plan.id)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.INVALID_STATUS_TRANSITION },
+    });
+
+    // Mở lại là bán lại thật: admin gán được, không còn "Gói đã ngừng bán". Tenant riêng — các
+    // test sau đếm lịch sử thuê bao của `tenantId`.
+    const reopenTenantId = await mkScratchTenant('reopen');
+    const sub = await billing.assign(reopenTenantId, actorId, { planId: plan.id, termMonths: 1 });
+    expect(sub.planId).toBe(plan.id);
+  });
+
+  maybe('plan: mã gói chữ hoa được chuẩn hoá về chữ thường ở DTO', async () => {
+    const dto = plainToInstance(CreatePlanDto, {
+      code: '  Shop-VIP  ',
+      name: 'VIP',
+      billingMode: BILLING_MODE.PACKAGE,
+    });
+    expect(await validate(dto)).toEqual([]);
+    expect(dto.code).toBe('shop-vip');
+  });
+
+  maybe('plan: xoá bản nháp chưa dùng (+audit), cờ `deletable` khớp với lớp chặn', async () => {
+    const draft = await mkPlan('draft');
+    expect(draft.deletable).toBe(true);
+    const listed = (await billing.listPlans({ status: 'all' })).find((p) => p.id === draft.id);
+    expect(listed?.deletable).toBe(true);
+
+    await billing.deletePlan(actorId, draft.id);
+    expect(await prisma.plan.findUnique({ where: { id: draft.id } })).toBeNull();
+    const auditRow = await prisma.auditLog.findFirst({
+      where: { targetId: draft.id, action: 'plan.delete' },
+    });
+    expect((auditRow?.beforeJson as { code?: string } | null)?.code).toBe(draft.code);
+
+    await expect(billing.deletePlan(actorId, draft.id)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.NOT_FOUND },
+    });
+  });
+
+  maybe('plan: đã có THUÊ BAO hoặc HOÁ ĐƠN (kể cả chưa trả) → PLAN_IN_USE, deletable = false', async () => {
+    const assigned = await mkPlan('del-sub');
+    await billing.assign(await mkScratchTenant('del-sub'), actorId, {
+      planId: assigned.id,
+      termMonths: 1,
+    });
+
+    // Hoá đơn chưa trả, CHƯA có thuê bao nào — vế dễ bỏ sót nhất: nó trỏ tới bậc qua
+    // `lines_json.planId`, không có FK, và lúc tiền về webhook cần đọc lại đúng bậc này.
+    const invoiced = await mkPlan('del-inv');
+    await billing.purchase(await mkScratchTenant('del-inv'), actorId, {
+      planId: invoiced.id,
+      termMonths: 1,
+    });
+
+    const listed = await billing.listPlans({ status: 'all' });
+    for (const [plan, subscriptions, invoices] of [
+      // Gán tay cũng phát một hoá đơn (đã trả) cho lượt gán — nên có cả hai.
+      [assigned, 1, 1],
+      [invoiced, 0, 1],
+    ] as const) {
+      expect(listed.find((p) => p.id === plan.id)?.deletable).toBe(false);
+      await expect(billing.deletePlan(actorId, plan.id)).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.PLAN_IN_USE, details: { subscriptions, invoices } },
+      });
+      expect(await prisma.plan.findUnique({ where: { id: plan.id } })).not.toBeNull();
+    }
+  });
+
+  maybe('plan: xoá ĐUA với một lượt mua — không bao giờ để lại hoá đơn trỏ tới bậc đã xoá', async () => {
+    const plan = await mkPlan('del-race');
+    const buyer = await mkScratchTenant('del-race');
+
+    const [deleted, purchased] = await Promise.allSettled([
+      billing.deletePlan(actorId, plan.id),
+      billing.purchase(buyer, actorId, { planId: plan.id, termMonths: 1 }),
+    ]);
+    // Đúng MỘT bên thắng, và trạng thái cuối nhất quán với bên thắng.
+    expect([deleted.status, purchased.status].filter((s) => s === 'fulfilled')).toHaveLength(1);
+    const stillThere = await prisma.plan.findUnique({ where: { id: plan.id } });
+    if (purchased.status === 'fulfilled') {
+      expect(stillThere).not.toBeNull();
+      expect((deleted as PromiseRejectedResult).reason).toMatchObject({
+        response: { code: API_ERROR_CODE.PLAN_IN_USE },
+      });
+    } else {
+      expect(stillThere).toBeNull();
+      expect((purchased as PromiseRejectedResult).reason).toMatchObject({
+        response: { code: API_ERROR_CODE.NOT_FOUND },
+      });
+    }
+  });
+
+  maybe('plan: tuyến hoa hồng không xoá được', async () => {
+    const commission = await mkCommissionPlanDirect('del-comm');
+    await expect(billing.deletePlan(actorId, commission.id)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.DEFAULT_PLAN_PROTECTED, details: { operation: 'delete' } },
+    });
+  });
+
+  maybe('plan: hai lượt lật công tắc SONG SONG — đúng một lượt thắng, một dòng audit', async () => {
+    const plan = await mkPlan('race');
+    await billing.archivePlan(actorId, plan.id);
+
+    const results = await Promise.allSettled([
+      billing.activatePlan(actorId, plan.id),
+      billing.activatePlan(actorId, plan.id),
+    ]);
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    const rejected = results.find((r) => r.status === 'rejected') as PromiseRejectedResult;
+    expect(rejected.reason).toMatchObject({
+      response: { code: API_ERROR_CODE.INVALID_STATUS_TRANSITION },
+    });
+    expect(
+      await prisma.auditLog.count({ where: { targetId: plan.id, action: 'plan.activate' } }),
+    ).toBe(1);
   });
 
   maybe(

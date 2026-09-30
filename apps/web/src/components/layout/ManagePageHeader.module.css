@@ -50,3 +50,24 @@
   gap: var(--xp-space-sm);
   flex-wrap: wrap;
 }
+
+/* Ô icon tròn nền vàng nhạt trước tiêu đề (prop `icon`) — cùng tông với ô icon của thẻ số liệu. */
+.icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--xp-gold-wash);
+  color: var(--xp-gold-deep);
+  font-size: 26px;
+}
+
+@media (max-width: 640px) {
+  .icon {
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+  }
+}

@@ -366,8 +366,8 @@
     "escrow_hold": "Thu giữ chỗ qua sàn"
   },
   "planStatus": {
-    "active": "Đang bán",
-    "archived": "Ngừng bán"
+    "active": "Đang hoạt động",
+    "archived": "Ngừng hoạt động"
   },
   "platformRole": {
     "platform_admin": "Super Admin",

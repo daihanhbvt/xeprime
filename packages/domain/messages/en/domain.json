@@ -366,8 +366,8 @@
     "escrow_hold": "Reservation holds via the platform"
   },
   "planStatus": {
-    "active": "On sale",
-    "archived": "Withdrawn"
+    "active": "Active",
+    "archived": "Inactive"
   },
   "platformRole": {
     "platform_admin": "Super Admin",

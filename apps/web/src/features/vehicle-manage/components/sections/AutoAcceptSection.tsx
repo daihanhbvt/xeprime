@@ -5,7 +5,7 @@ import { InfoCircleOutlined, ThunderboltFilled } from '@ant-design/icons';
 import { Alert, App, Button, Form, Popover } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useMemo, type MouseEvent } from 'react';
+import { useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import * as yup from 'yup';
 import {
@@ -231,15 +231,14 @@ function AutoAcceptForm({
                 placement="topLeft"
               >
                 {/*
-                  `preventDefault` vì cả hàng là một `<label>`: thiếu nó thì chạm vào icon để đọc
-                  điều kiện cũng lật luôn công tắc — đúng thứ người dùng chưa quyết định.
+                  Cả hàng là một `<label>` — `SwitchField` tự chặn cú bấm trong `labelExtra`, nên
+                  chạm vào icon để đọc điều kiện không lật công tắc.
                 */}
                 <span
                   role="button"
                   tabIndex={0}
                   aria-label={t('autoAccept.rulesTitle')}
                   className={styles.infoTrigger}
-                  onClick={(event: MouseEvent<HTMLSpanElement>) => event.preventDefault()}
                 >
                   <InfoCircleOutlined aria-hidden="true" />
                 </span>
