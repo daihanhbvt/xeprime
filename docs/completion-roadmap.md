@@ -339,6 +339,7 @@ Hệ quả cần nói thẳng: **không có H1 thì không một gate nào từ 
 | T4 | **Mobile chưa có luồng tiền** (payment/hold) | Gate R6 |
 | T5 | **i18n audit: 1.077 chuỗi thô trong 24 khu vực** (đo 14/09/2026, khu nặng nhất là platform dashboard/ops; các màn của luồng tiền đã i18n hoá xong) | Không chặn gate nào, nhưng chặn bản tiếng Anh dùng được |
 | T6 | Dọn lệch tên index + `brand_catalog_type` ở mục 6 | Nhỏ, nhưng để lâu sẽ đẻ migration rác |
+| T7 | **Tách bề mặt theo ADR 0051** (30/09/2026): pha 1 rào chắn → pha 2 web ba host + API (CSRF/`Origin`, URL theo zone) → pha 3 mobile hai variant → pha 4 tenant đang làm việc. Chưa bắt đầu | Pha 2 nên xong trước người dùng thật; deploy chờ H1 |
 
 ### 8.5 Điều KHÔNG được kết luận từ tài liệu này
 
